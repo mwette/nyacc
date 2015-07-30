@@ -1,0 +1,13 @@
+module/nyacc/lang/README
+
+Copyright (C) 2015 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+The intention of this directory is to provide parsers for languages.
+The parsers will be built with attributed grammar semantics.  The
+parse tree will be in sxml format.
+

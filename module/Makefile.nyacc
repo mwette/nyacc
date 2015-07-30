@@ -1,0 +1,40 @@
+# module/Makefile.nyacc
+#
+# Copyright (C) 2015 -  Matthew R. Wette
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+#
+# v160704a
+
+# in nyacc/
+NYACC_LANG_SOURCES =				\
+  nyacc/lalr.scm				\
+  nyacc/lex.scm					\
+  nyacc/util.scm
+
+SITE_SCM_DIR=$(shell guile -c '(display (%site-dir))')
+SITE_SCM_GO_DIR=$(shell guile -c '(display (%site-ccache-dir))')
+
+show:
+	@echo SITE_SCM_DIR = $(SITE_SCM_DIR)
+	@echo SITE_SCM_GO_DIR = $(SITE_SCM_GO_DIR)
+
+.PHONY: install
+install:
+	mkdir -p $(SITE_SCM_DIR)
+	mkdir -p $(SITE_SCM_GO_DIR)
+	for file in $(NYACC_LANG_SOURCES); do \
+	  mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
+	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
+	done
+	for file in $(NYACC_LANG_SOURCES); do \
+	  mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${file}`; \
+	  dest=`echo $${file} | sed -e 's/.scm/.go/'`; \
+	  guild compile -o $(SITE_SCM_GO_DIR)/$${dest} $${file}; \
+	done
+
+
+# --- last line

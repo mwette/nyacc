@@ -1,0 +1,733 @@
+\input texinfo.tex
+@setfilename nyacc.info
+@settitle Not Yet Another Compiler-Compiler!
+
+@copying
+Copyright (C) 2015 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+@end copying
+
+@clear skip
+
+@titlepage
+@title Not Yet Another Compiler-Compiler!
+@subtitle A LALR(1) Parser Generator Implemented in Guile
+@author Matt Wette
+@end titlepage
+
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top NYACC Manual
+@end ifnottex
+
+@menu
+* Introduction::
+* Modules::
+* Random Notes::
+* Implementation::
+* Administrative::
+* Todos::
+* References::
+@end menu
+
+
+@node Introduction
+@chapter Introduction
+
+WARNING: This manual is currently in a very immature state.
+
+A LALR(1) parser is a pushdown automata for parsing computer languages.
+In this tool the automata, along with its auxiliary parameters
+(e.g., actions), is called a @emph{machine}.  The grammar is called 
+the @emph{specification}.  The program that processes, driven by the 
+machine, input token to generate a final output, or error, is 
+the @emph{parser}.
+
+@node Example
+@section Example
+
+A simplest way to introduce working with @code{nyacc} is to work through
+an example.  Consider the following contents of the file @file{calc.scm}.
+@example
+(use-modules (nyacc lalr))
+(use-modules (nyacc lex))
+
+(define calc-spec
+  (lalr-spec
+   (precedence< (left "+" "-") (left "*" "/"))
+   (start expr)
+   (grammar
+    (expr
+     (expr "+" expr ($$ (+ $1 $3)))
+     (expr "-" expr ($$ (- $1 $3)))
+     (expr "*" expr ($$ (* $1 $3)))
+     (expr "/" expr ($$ (/ $1 $3)))
+     ('$fx ($$ (string->number $1)))))))
+
+(define calc-mach (make-lalr-machine calc-spec))
+
+(define parse-expr
+  (let ((gen-lexer (make-lexer-generator (assq-ref calc-mach 'mtab)))
+	(calc-parser (make-lalr-parser calc-mach)))
+    (lambda () (calc-parser (gen-lexer)))))
+
+(define res (with-input-from-string "1 + 4 / 2 * 3 - 5" parse-expr))
+(simple-format #t "expect 2; get ~S\n" res) ;; expect: 2
+@end example
+Here is an explanation of the code:
+@enumerate
+@item
+The relevent modules are imported using guile's @code{use-modules} syntax.
+@item
+The @code{lalr-spec} syntax is used to generate a (canonical)
+specification from the grammar and options.  The syntax is imported
+from the module @code{(nyacc lalr)}.
+@item
+The @code{precedence<} directive indicates that 
+the tokens appearing in the sequence of associativity directives
+should be interpreted in increasing order of precedence.  The
+associativity statements @code{left} indicate that the tokens have left
+associativity.  So, in this grammar @code{+}, @code{-}, @code{*}, and
+@code{/} are left associative, @code{*} and @code{/} have equal
+precedence, @code{+} and @code{-} have equal precedence, but @code{*}
+and @code{/} have higher precedence than @code{+} and @code{-}.
+(Note: this syntax may change in the future.)
+@item
+The @code{start} directive indicates which left-hand symbol in the
+grammar is the starting symbol for the grammar.
+@item
+The @code{grammar} directive is used to specify the production rules.
+In the example above one left-hand side is associated with multiple
+right hand sides.  But this is not required.
+@itemize
+@item
+Multiple right-hand sides can be written for a single left-hand side.  
+@item
+Non-terminals are indicated as normal identifiers.
+@item
+Terminals are indicated as non-identifiers using double-quotes
+(e.g., @code{"+"}), scheme character syntax (e.g., @code{#\+}), or
+quoted identifiers (e.g., @code{'+}).  There is no syntax to declare
+tokens.
+@item
+The reserved symbol @code{'$fx} indicates an unsigned integer.  The
+lexical analyzer tools will emit this token when an integer is
+detected in the input.
+@item
+A quoted identifier cannot match a normal identifier.  For
+example, one could not use @code{function} to indicate a non-terminal
+and @code{"function"} to indicate a terminal.  The reader will signal
+an error when this condition is detected.
+@item
+Within the right-hand side specification a @code{$$} form is used to
+specify an action associated with the rule.  Ordinarily, the action
+appears as the last element of a right-hand side, but mid-rule
+actions are possible (see Section TBD).
+@item
+The output of @code{lalr-spec} is an associative array so you can
+peek at the internals using standard Scheme procedures.
+@end itemize
+@item
+The machine is generated using the procedure @code{make-lalr-machine}.
+This routine does the bulk of the processing to produce an LALR(1)
+automata.
+@item
+Generating a parser function requires a few steps.  The first step we
+use is to create a lexical analyzer (generator).
+@example
+(gen-lexer (make-lexer-generator (assq-ref calc-mach 'mtab)))
+@end example
+We build a generator because a lexical analyzer may require state
+(e.g., line number, mode).  The generator is constructed from the
+@dfn{match table} provided by the machine.  The procedure
+@code{make-lexer-generator} is imported from the module @code{(nyacc
+lex)}.  Optional arguments to @code{make-lexer-generator} allow the
+user to specify how identifiers, comments, numbers, etc are read in.
+@item
+The next item in the program is
+@example
+  (calc-parser (make-lalr-parser calc-mach)))
+@end example
+This code generates a parser (procedure) from the machine and the
+match table.  The match table is the handshake between the lexical
+analyzer and the parser for encoding tokens.  In this example the
+match table is symbol based, but there is an option to hash these
+symbols into integers.  See Section TBD.
+@item
+The actual parser that we use calls the generated parser with a
+lexical analyser created from the generator.
+@example
+    (lambda () (calc-parser (gen-lexer)))))
+@end example
+Note that @code{parse-expr} is a thunk: a procedure of no arguments.
+@item
+Now we run the parser on an input string.  The lexical analyzer reads
+code from @code{(current-input-port)} so we set up the environment
+using @code{with-input-from-string}.   See the Input/Ouput section of
+the Guile Reference Manual for more information.
+@example
+(define res (with-input-from-string "1 + 4 / 2 * 3 - 5" parse-expr))
+@end example
+@item
+Lastly, we print the result out along with the expected result.
+@end enumerate
+
+If we execute the example file above we should get the following:
+@example
+$ guile calc.scm
+expect 2; get 2
+$
+@end example
+
+@node Match Table
+@section The Match Table
+In some parser generators one declares terminals in the grammar file
+and the generator will provide an include file providing the list of
+terminals along with the associated ``hash codes''.  In @sc{nyacc} the
+terminals are detected in the grammar as non-identifiers: strings
+(e.g., @code{"for"}), symbols (e.g., @code{'$ident}) or characters
+(e.g., @code{#\+}).   The machine generation phase of the parser 
+generates a match table which is an a-list of these objects along with
+the token code.  These codes are what the lexical analyzer should return.
+BLA Bla bla.  So in the end we have
+@itemize
+@item
+The user specifies the grammar with terminals in natural form
+(e.g., @code{"for"}).
+@item
+The parser generator internalizes these to symbols or integers, and generates
+an a-list, the match table,  of (natural form, internal form).
+@item
+The programmer provides the match table to the procedure that builds 
+a lexical analyzer generator (e.g., @code{make-lexer-generator}).
+@item
+The lexical analyzer uses this table to associate strings in the input
+with entries in the match table.   In the case of keywords the keys will
+appear as strings (e.g., @code{for}), whereas in the case of special items,
+processed in the lexical analyzer by readers (e.g., @code{read-num}), the
+keys will be symbols (e.g., @code{'$fl}).
+@item
+The lexical analyzer returns pairs in the form (internal form, natural form)
+to the parser.  Note the reflexive behavior of the lexical analyzer.  It
+was built with pairs of the form (natural form, internal form) and returns
+pairs of the form (internal form, natural form).
+@end itemize
+
+Now one item need to be dealt with and that is the token value for the 
+default.  It should be @code{-1} or @code{'$default}. WORK ON THIS.
+
+@node Modules
+@chapter Modules
+
+@emph{nyacc} provides several modules:
+@table @asis
+@item lalr
+This is a module providing macros for generating specifications, 
+machines and parsers.
+@item lex
+This is a module providing procedures for generating lexical analyzers.
+@item util
+This is a module providing utilities used by the other modules.
+@end table
+
+@section The @code{lalr} Module
+WARNING: This section is quite crufty.
+
+The @code{lalr1} module provides syntax and procedures for building LALR
+parsers.  The following syntax and procedures are exported:
+@itemize
+@item
+@code{lalr-spec} syntax
+@item
+@code{make-lalr-machine} procedure
+@end itemize
+
+We have (experimental) convenience macros:
+@example
+($? foo bar baz) => ``foo bar baz'' occurs never or once
+($* foo bar baz) => ``foo bar baz'' occurs zero or more times
+($+ foo bar baz) => ``foo bar baz'' occurs one or more times
+@end example
+@noindent
+However, these have hardcoded actions and are considered to be,
+in current form, unattractive for practical use.
+
+Todo: discuss
+@itemize
+@item
+reserved symbols (e.g., @code{'$fx}, @code{'$ident})
+@item
+Strings of length one are equivalent to the corresponding character.
+@item
+@code{(pp-lalr-grammar calc-spec)}
+@item
+@code{(pp-lalr-machine calc-mach)}
+@item
+@code{(define calc-mach (compact-mach calc-mach))}
+@item
+@code{(define calc-mach (hashify-machine calc-mach))}
+@item
+The specification for @code{expr} could have been expressed using
+@example
+  (expr (expr "+" expr ($$ (+ $1 $3))))
+  (expr (expr "-" expr ($$ (- $1 $3))))
+  (expr (expr "*" expr ($$ (* $1 $3))))
+  (expr (expr #\/ expr ($$ (/ $1 $3))))
+  (expr ('$fx ($$ (string->number $1))))
+@end example
+@end itemize
+
+@section The @code{lex} Module
+
+The @sc{nyacc} @code{lex} module provide routines for constructing
+lexical analyzers.  The intension is to provide routines to make
+construction easy, not necessarily the most efficient.
+
+@section The @code{export} Module
+@sc{Nyacc} provides routines for exporting @sc{nyacc} grammar
+specifications to other LALR parser generators.
+
+The Bison exporter uses the following rules:
+@itemize
+@item
+Terminals expressed as strings which look like C identifiers are
+converted to symbols of all capitals.  For example @code{"for"} is
+converted to @code{FOR}.
+@item
+Strings which are not like C identifiers and are of length 1 are
+converted to characters.  For example, @code{"+"} is converted to @code{'+'}.
+@item
+Characters are converted to C characters.
+For example, @code{#\!} is converted to @code{'!'}.
+@item
+Multi-character strings that do not look like identifiers are
+converted to symbols of the form @code{ChSeq_@i{i}_@i{j}_@i{k}} where
+@i{i}, @i{j} and @i{k} are decimal representations of the character
+code.  For example @code{"+="} is converted to @code{ChSeq_43_61}.
+@item
+Terminals expressed as symbols are converted as-is but @code{$} and @code{-}
+are replaced with @code{_}.
+@end itemize
+
+TODO: Export to Bison xml format.
+
+The Guile exporter uses the following rules: TBD.
+
+
+@node Random Notes
+@chapter Random Implementation Notes
+Notes on mid-rule actions:
+To support mid-rule actions we track:
+@enumerate
+@item length of rule (len or l)
+@item size of stack reduction (red or x)
+@item number of args to action (narg or n)
+@end enumerate
+@example
+X: A B C ()                      l=3, x=3, n=3
+@end example            
+Mid-rule actions are expanded via proxy as illustrated in the following:
+@example
+Z   => A ($$ foo) B C ($$ bar) D ($$ baz)
+is converted to
+Z   => A $P1 B C $P2 D ($$ baz)  l=6, x=6, n=6
+$P1 => ($$ foo)                  l=0, x=0, n=1
+$P2 => ($$ bar)                  l=0, x=0, n=4
+@end example            
+
+All symbols starting with @code{$} are reserved.  The following
+reserved symbols are in use:
+@table @code
+@item $start
+used in specification to indicate the real start
+@item $end
+long emitted by the lexical analysis to indicate end of input
+@item $ident
+emitted by the lexical analyzer to indicate an identifier
+@item $fx
+emitted by the lexical analyzer to indicate an unsigned integer
+@item $fl
+emitted by the lexical analyzer to indicate an unsigned floating point number
+@item $P1, ...
+used as symbols for proxy productions
+@item $?, $*, $+
+macros used for grammar specification
+@item $$, $$-ref, $$/ref
+definition of an action, an action reference or an action with reference
+@item $action, $action-ref, $action/ref
+long name for @code{$$}, @code{$$-ref} and @code{$$/ref}
+@item $1, $2, ...
+arguments to user-supplied actions
+@item $default
+used in the generated parser to indicate a default action
+@item $@
+used as a dummy, or anchor, token in the machine generation stage to
+track epsilon productions 
+@item $epsilon
+used in the machine generation stage to indicate an empty production
+@item $cpp-ident (C parser)
+used in the (not yet distributed) C parser to indicate a C preprocessor symbol
+@end table
+@c $error
+
+@node Implementation
+@chapter Implementation
+The implementation is based on algorithms laid out in the Dragon Book.
+@xref{References}.  In @sc{nyacc} one writes out a (context-free)
+grammer using Backus-Naur form.  See the example in Chapter TBD.  In
+addition to the grammar the start symbol must be provided.  Optional
+inputs include specifiers for precedence and associativity.
+
+The macro @code{lalr-spec}, with the aid of the procedure
+@code{process-spec} reads the user-specified grammar and generates an
+a-list of the specification in canonical form.   The fields of the
+a-list include
+@table @code
+@item non-terms
+The list of non-terminals.
+@item start
+The start symbol representing the starting rule for the grammar.
+@item lhs-v
+The vector of left-hand side symbols for each production rule.
+@item rhs-v
+The vector of vectors of right-hand side symbols for each production
+rule.
+@item act-v
+The vector of actions corresponding to each associated production
+rule.
+@item ref-v
+The vector of action references corresponding to each associated
+production rule.  This will be explained later.
+@item nrg-v
+The number of arguments to each action.  This is necessary for
+handling mid-rule-actions.
+@item expect
+The expected number of undirected shift-reduce conflicts.
+@item err-l
+Not used yet.
+@end table
+The canonical form has no mid-rule-actions: they are reposed using
+proxy symbols (e.g., @code{$P1}).
+
+The machine adds the following items:
+@table @code
+@item pat-v
+This is the parse action table, that provide per-state transition map.
+@item kit-v
+xxx
+@item kip-v
+xxx
+@end table
+
+@section Theory
+
+Consdider a set of symbols @emph{T}.  A @dfn{string} is a sequence of symbols
+from @emph{T}.  A @dfn{language} is a set of strings.   Now we can
+introduce the following.  A @dfn{context free grammar} is defined by
+the aggregate [CHECK]
+@table @dfn
+@item terminals
+A set of symbols @emph{T} which are used to compose a language.
+@item non-terminals
+A set of symbols @emph{N}, disjoint from @emph{T}, used in production rules.
+@item production rules
+A set of production rules, to be defined below.
+@item start symbol
+This is a symbol which represents an entire string from the language. (CHECK)
+@end table
+A @dfn{production} consists of a left-hand side (LHS) symbol from
+@emph{N} and a right-hand side (RHS) which is a sequence of symbols
+from the union of @emph{T} and @emph{N}.
+
+In @sc{nyacc} the canonical grammer will always include the internally
+generated accept production
+@example
+$start => S
+@end example
+@noindent
+where @samp{S} is the start symbol of the grammer.  The symbol @code{$start}
+has only this single production, and this production always has index
+zero.  (Note that Bison includes the endmarker @code{$end} in this
+production, which results in a difference of one state between the 
+number of states generated by Bison and by @sc{nyacc}.)
+
+In the following we use capital letters for non-terminals, the lower case
+letters a-h for terminals and the lower case letters p-z (sometimes in
+italics) for strings, where a string is defined as a sequence of
+non-terminals and terminals. 
+
+An @emph{item} is a position within a production rule.  It is represented
+by the notation
+@example
+A => @i{p}.@i{q}
+@end example
+@noindent
+where the dot @code{.} represents the position in the production rule.
+In @sc{nyacc} we use a cons of integers to represent an item: the car is
+the index of the p-rule in the grammar (@code{lhs-v} and @code{rhs-v})
+and the cdr is the index of the location in the RHS.  If the position
+is at the end (past the last symbol in the RHS), then the index value
+is -1.
+
+Given a production rule, a @dfn{lookahead} is a terminal that can
+appear after a production.  We will associate an item with the set
+of possible lookaheads in the context of parsing an input
+string from left to right.  A @dfn{la-item} (sometimes called
+a LR(1) item) is the explicit association of the item with the
+lookahead set.   We denote this with the following notation
+@example
+A => @i{p}.@i{q}, @{a, b, c@}
+@end example
+@noindent
+
+Consider the initial al-item derived from the cananical 0-index
+production, with the singleton lookahead set consisting of @{ $end @}:
+@example
+$start => .S, @{$end@}
+@end example
+@noindent
+Now consider an expansion of S:
+@example
+S => A@i{p}
+@end example
+@noindent
+Then, we have the lookahead item
+@example
+S => A.@i{p}, first(@i{p}, @{$end$})
+@end example
+@noindent
+
+One can imagine that during process of parsing an input left-to-right the
+parser may be at a state where several productions may be candidates
+for matching the input.  Each (partial) production is represented by an
+item and the set of these partial productions is called an
+@dfn{itemset}.  If the items are associated with a set of lookaheads
+(i.e., the items are actually la-items) then we may call this a
+@dfn{la-itemset}.
+
+An important function used in @sc{nyacc} is @code{first}.  It has
+the following signature:
+@example
+first @i{string} @i{t-set} => @i{t-set}
+@end example
+@noindent
+where @i{string} is a sequence of grammar symbols and the argument
+@i{t-set} and the result are lists of terminals.  The routine
+@code{first} computes the set of tokens that apear the front of
+@i{string} followed by any terminals in the argument @i{t-set}.  If
+@i{string} is empty, then the result is identical to the argument
+@i{t-set}.  If @i{string} starts with a terminal, then the result
+is the singleton of that terminal. Consider
+@example
+A => @i{p}.B@i{q}, @{c@}
+@end example
+@noindent
+
+@c [ADD EXAMPLE TO ILLUSTRATE KIS, then define kernel itemsets.]
+It turns out that each state in the parsing automaton is an itemset.
+We can associate an integer with each state of the (finite) automaton.
+Now consdier, some state @i{i} with la-item as follows:
+@example
+@i{i}: A => @i{p}.B@i{q}, @{c@}
+@end example
+@noindent
+There will be a transition from state @i{i} to state @i{j} on symbol B
+after a reduction of a production for B.  This says that the tokens in
+@example
+first(@i{q},@{c@})
+@end example
+@noindent
+are lookaheads the associated item in some state @i{j}:
+@example
+@i{j}: B => @i{r}. 
+@end example
+@noindent
+If there is a production
+@example
+@i{i}: B => .C@i{s} 
+@end example
+@noindent
+then the tokens in
+@example
+first(@i{s}@i{q},@{c@})
+@end example
+@noindent
+are lookaheads for the associated item in some state @i{k}:
+@example
+@i{k}: B => C.@i{s}
+@end example
+@noindent
+
+Now let us assume the set
+of lookaheads for the first item above is the singleton @{@@@}
+consisting of the dummy, or anchor, token @@.  In the code we
+currently use @code{$dummy} to represent the dummy token but this will
+be changed to @code{$@@}.  We compute the set
+@example
+@i{J} = first(B@i{q},@@)
+@end example
+@noindent
+If @@ is in @i{J} then we say the lookaheads for XXX propagate
+
+The generation of the automaton (aka the @dfn{machine}) is processed
+in four steps:
+@table @asis
+@item Step 1
+Generate the set of automaton states and transitions.  This is much
+(maybe exactly?) like the process of converting a nondeterministic finite
+automaton into a deterministic finite automaton.  This is called the
+LR(0) atomaton.
+@item Step 2
+For each production, generate the set of spontaneously generated
+lookaheads and the set of lookahead propagations.
+@item Step 3
+Iterate through the productions to propagate lookaheads to items
+in the itemsets until no more lookaheads propagate.  That is, compute
+the fixed-point of the lookahead propgation.
+@item Step 4
+Determine, for each state, the parse actions: shift, reduce and
+accept.  If there are conflicts, use associativity and precedence
+rules to resolve them, or report the conflicts as fatal.
+@end table
+
+@ifset skip
+@example
+for-each item I in some itemset
+  for-each la-item J in closure(I,#)
+    for-each token T in lookaheads(J)
+      if LA is #, then add to J propagate-to list
+      otherwise add T to spontaneously-generated list
+@end example
+@end ifset
+
+Now condider the la-item
+@example
+$start => .S, $end
+@end example
+@noindent
+where @code{$end} represents the end of input.  Now @code{$end} will also
+be the lookahead for any productions of @code{S}.  Say we have read token
+@code{x} and our state includes an item of the form
+@example
+S => x.By, $end
+@end example
+@noindent
+The lookahead @code{$end} is there because it was propagated from the
+accept production.
+@example
+B => .z, FIRST(zy, $end)
+@end example
+@noindent
+This says if @code{z} and @code{y} have epsilon productions then
+@code{$end} will be included in the lookaheads for this la-item in it's
+associated state.
+
+We define terms
+@itemize
+@item
+handle: If S => aAw => abw, then A => b is a handle of abw where
+w only contains terminals.
+@end itemize
+
+@c @include lalr_scm.texi
+
+@node Administrative
+@chapter Administrative Notes
+
+@section Installation
+Installation instructions are included in the top-level file
+@file{README.nyacc} of the source distribution.
+
+@section Reporting Bugs
+Bug reporting will be dealt with once the package is place on a 
+publically accessible source repository.
+
+@section The Free Documentation License
+The Free Documentation License is included in the Guile Reference
+Manual.  It is included with the @sc{nyacc} source as the file 
+COPYING.DOC.
+
+@node Todos
+@chapter Todos, Notes, Ideas
+Todo/Notes/Ideas:
+@table @asis
+@item 16
+add error handling
+@item 3
+support other target languages:
+(write-lalr-parser pgen "foo.py" #:lang 'python)
+@item 6
+export functions to allow user to control the flow
+i.e., something like: (parse-1 state) => state
+@item 9
+macros - gotta be scheme macros but how to deal with other stuff
+(macro ($? val ...) () (val ...))
+(macro ($* val ...) () (_ val ...))
+(macro ($+ val ...) (val ...) (_ val ...))
+idea: use $0 for LHS
+@item 10
+support semantic forms: (1) attribute grammars, (2) translational
+semantics, (3) operational semantics, (4) denotational semantics
+@item 13
+add ($abort) and ($accept)
+@item 18
+keep resolved shift/reduce conflicts for pp-lalr-machine
+(now have rat-v -- removed action table -- in mach, need to add to pp)
+@item 19
+add a location stack to the parser/lexer
+@item 22
+write parser file generator (working prototype)
+@item 25
+think
+@end table
+
+
+@node References
+@chapter References
+
+@table @asis
+@item [DB]
+Aho, A.V., Sethi, R., and Ullman, J. D., ``Compilers: Principles,
+Techniques and Tools,'' Addison-Wesley, 1985 (aka the Dragon Book)
+@item [DP]
+DeRemer, F., and Pennello, T., ``Efficient Computation of LALR(1)
+Look-Ahead Sets.'' ACM Trans. Prog. Lang. and Systems, Vol. 4, No. 4.,
+Oct. 1982, pp. 615-649.
+@item [RPC]
+R. P. Corbett, ``Static Semantics and Compiler Error Recovery,''
+Ph.D. Thesis, UC Berkeley, 1985.
+@end table
+
+
+@c Old Stuff, to be removed
+@ifset skip
+In the DB an item is used to refer to the position in a production and
+the position with associated lookaheads that give the possible set of
+terminals that can generate a reduction when the item is a candidate for
+reduction (i.e., the dot appears at the end of the p-rule). In this
+report we use the terms @emph{item} for the position and @emph{la-item}
+for the position and associated lookaheads.  An example of an la-item
+is as follows:
+@example
+A => B . C D, e/f/g
+@end example
+@noindent
+where @code{e/f/g} is a tuple of terminals which can appear at
+@example
+A => B C D ., e/f/g
+@end example
+@noindent
+We denote an item in the code using a cons with the index of the p-rule
+in the car and the index of the right-hand side symbol after the dot
+in the cdr.  The end of p-rule will be denoted with index @code{-1}.
+So if the rule @samp{A=>BCD} appears as index 7, then the above would
+be item @code{(7 . 1)} or la-item @code{((7 . 1) e f g)}.
+@end ifset
+
+@bye
+@c --- last line

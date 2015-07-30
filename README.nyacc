@@ -1,0 +1,32 @@
+This is a version 0.60.0 of NYACC (Not Yet Another Compiler Compiler!).
+
+Copyright (C) 2015 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+There is an incomplete manual in doc/nyacc/.
+
+There is a demo program calc.scm in test-squite/nyacc/.
+
+The module code is in module/nyacc.  Modules are imported as follows:
+  (use-modules (nyacc lalr))
+  (use-modules (nyacc lex))
+
+If you have a personal guile directory then you can copy modules/nyacc
+to that directory.  To install in the global guile distribution:
+  user$ sudo -s 
+  root# cd module
+  root# make -f Makefile.nyacc install
+  root# exit
+  user$ cd test-suite/nyacc
+  user$ guile calc.scm
+  ;; compiling ... calc.scm
+  ;; compiled ... calc.scm.go
+  expect 2; get 2
+  user$
+
+The syntax and nomenclature should be considered not stable.
+
