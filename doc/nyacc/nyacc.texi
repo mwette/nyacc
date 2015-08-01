@@ -657,7 +657,7 @@ COPYING.DOC.
 Todo/Notes/Ideas:
 @table @asis
 @item 16
-add error handling
+add error handling (lalr-spec will now return #f for fatal error)
 @item 3
 support other target languages:
 (write-lalr-parser pgen "foo.py" #:lang 'python)

@@ -36,7 +36,7 @@
   #:use-module (nyacc util)
   )
 
-(define *nyacc-version* "0.51.1")
+(define *nyacc-version* "0.60.2")
 
 #|
 (define-syntax $?
@@ -113,23 +113,36 @@
 (define-syntax lalr-spec
   (syntax-rules +++ () 
     ((_ <expr> +++)
-     (let* ((xtra-rules '())		; symbols for optional's
-	    (nxsymb 0)			; number of extra symbols
-	    (make-symb
+     (let* (#;(xtra-rules '())		; symbols for optional's
+	    #;(nxsymb 0)			; number of extra symbols
+	    #;(make-symb
 	     (lambda ()
 	       (let ((n nxsymb))
 		 (set! nxsymb (1+ n))
 		 (string->symbol
-		  (string-append "$opt-" (number->string n)))))))
+		  (string-append "$opt-" (number->string n))))))
+	    )
        (letrec-syntax
-	   ((parse-rhs
+	   ((with-attr-list
+	     (syntax-rules ($prune)
+	       ((_ ($prune <symb>) <ex> ...)
+		(cons '(prune . <symb>) (with-attr-list <ex> ...)))
+	       ((_) '())))
+	    (parse-rhs
 	     (lambda (x)
 	       ;; The following is syntax-case because we use a fender.
-	       (syntax-case x (quote $$ $action $action/ref $action-ref
-				     $? $* $+)
+	       (syntax-case x (quote
+			       $$ $$/ref $$-ref
+			       $action $action/ref $action-ref
+			       $with
+			       $? $* $+)
 		 ;; action specifications
 		 ((_ ($$ <guts> ...) <e2> ...)
 		  #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
+		 ((_ ($$-ref <ref>) <e2> ...)
+		  #'(cons '(action #f '<ref> #f) (parse-rhs <e2> ...)))
+		 ((_ ($$/ref <ref> <guts> ...) <e2> ...)
+		  #'(cons '(action #f <ref> <guts> ...) (parse-rhs <e2> ...)))
 		 ((_ ($action <guts> ...) <e2> ...)
 		  #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
 		 ((_ ($action-ref <ref>) <e2> ...)
@@ -137,7 +150,12 @@
 		 ((_ ($action/ref <ref> <guts> ...) <e2> ...)
 		  #'(cons '(action #f <ref> <guts> ...) (parse-rhs <e2> ...)))
 
-		 ;; proxies
+		 ;; other internal $-syntax
+		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
+		  #'(cons `(with <lhs-ref> ,@(with-attr-list <ex> ...))
+			  (parse-rhs <e2> ...)))
+		 
+		 ;; (experimental) proxies
 		 ((_ ($? <s1> <s2> ...) <e2> ...)
 		  #'(cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
 			  (parse-rhs <e2> ...)))
@@ -197,7 +215,7 @@
 		(cons (cons 'grammar (parse-grammar <prod> ...))
 		      (lalr-spec-1 <e> ...))) 
 	       ((_) '()))))
-       (process-spec (lalr-spec-1 <expr> +++)))))))
+	 (process-spec (lalr-spec-1 <expr> +++)))))))
 
 ;; @item atomize terminal => object
 ;; Generate an atomic object for a terminal.   Expected terminals are strings,
@@ -276,7 +294,37 @@
   (define (make-mra-proxy sy pel act)
     (list sy (list (cons* 'action (length pel) (cdr act)))))
 
-  ;; duplicate terminals under atomize (e.g., 'foo "foo")
+  ;; fatal: symbol used as terminal and non-terminal
+  (define (gram-check-2 tl nl err-l)
+    (let ((cf (lset-intersection eqv? (map atomize tl) nl)))
+      (if (pair? cf)
+	  (cons (fmtstr "*** symbol is terminal and non-terminal: ~S" cf)
+		err-l) err-l)))
+	       
+  ;; fatal: non-terminal's w/o production rule		  
+  (define (gram-check-3 ll nl err-l)
+    (fold-left
+     (lambda (l n)
+       (if (not (memq n ll))
+	   (cons (fmtstr "*** non-terminal with no production rule: ~A" n) l)
+	   l))
+     err-l nl))
+
+  ;; warning: unused LHS
+  ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
+  (define (gram-check-4 ll nl err-l)
+    (fold-left
+     (lambda (l s) (cons (fmtstr "+++ LHS not used in any RHS: ~A" s) l))
+     err-l
+     (let iter ((ull '()) (all ll)) ; unused LHSs, all LHS's
+       (if (null? all) ull
+	   (iter (if (or (memq (car all) nl)
+			 (memq (car all) ull)
+			 (eq? (car all) '$start))
+		     ull (cons (car all) ull))
+		 (cdr all))))))
+	       
+  ;; warning: duplicate terminals under atomize (e.g., 'foo "foo")
   (define (gram-check-5 terminals prev-errs)
     (let ((f "warning: similar terminals: ~A ~A"))
       (let iter ((errs prev-errs) (head '()) (tail terminals))
@@ -305,6 +353,7 @@
 	       (xl (list 1))		     ; reduction size
 	       (tl (list '$end))	; set of terminals (add $end?)
 	       (nl (list start-symbol))	; set of non-terminals
+	       (zl (list))		; wierd stuff
 	       ;;
 	       (head gram)	       ; head of grammar productions
 	       (prox '())	       ; proxy productions for MRA
@@ -319,29 +368,41 @@
 	;; Capture info on RHS term.
 	(case (caar rhs)
 	  ((terminal)
-	   (iter ll rl al xl (add-el (cdar rhs) tl) nl head prox lhs tail
+	   (iter ll rl al xl (add-el (cdar rhs) tl) nl zl head prox lhs tail
 		 rhs-l act (cons (atomize (cdar rhs)) pel) (cdr rhs)))
 	  ((non-terminal)
-	   ;; check for strings?
-	   (if (string? (cdar rhs)) (error "*** strings not yet supported"))
-	   (iter ll rl al xl tl (add-el (cdar rhs) nl) head prox lhs tail
+	   (iter ll rl al xl tl (add-el (cdar rhs) nl) zl head prox lhs tail
 		 rhs-l act (cons (cdar rhs) pel) (cdr rhs)))
 	  ((action)
 	   (if (pair? (cdr rhs)) ;; not last elemnt in RHS
 	       ;; mid-rule action: generate a proxy (car act is # args)
 	       (let* ((sy (maksy))
 		      (pr (make-mra-proxy sy pel (cdar rhs))))
-		 (iter ll rl al xl tl (cons sy nl) head (cons pr prox)
+		 (iter ll rl al xl tl (cons sy nl) zl head (cons pr prox)
 		       lhs tail rhs-l act (cons sy pel) (cdr rhs)))
 	       ;; end-rule action
-	       (iter ll rl al xl tl nl head prox lhs tail
+	       (iter ll rl al xl tl nl zl head prox lhs tail
 		     rhs-l (cdar rhs) pel (cdr rhs))))
 	  ((proxy)
 	   (let* ((sy (maksy))
 		  (pf (cadar rhs))	; proxy function
 		  (p1 (pf sy (cddar rhs))))
-	     (iter ll rl al xl tl (cons sy nl) head (cons p1 prox) lhs tail
+	     (iter ll rl al xl tl (cons sy nl) zl head (cons p1 prox) lhs tail
 		   rhs-l act (cons sy pel) (cdr rhs))))
+
+	  ((with)
+	   (let* ((psy (maksy))		; proxy symbol
+		  (rhsx (cadar rhs))	; symbol to expand
+		  (p-l (map cdr (cddar rhs))) ; prune list
+		  (p1 (list psy `((non-terminal . ,rhsx)
+				  (action #f #f $1))))
+		  )
+	     ;;(fmtout "with: psy=~S\n" psy)
+	     ;;(fmtout "      rhsx=~S\n" rhsx)
+	     ;;(fmtout "      prune=~S\n" p1)
+	     (iter ll rl al xl tl (cons psy nl) (acons psy p-l zl) head
+		   (cons p1 prox) lhs tail rhs-l act (cons psy pel) (cdr rhs))))
+
 	  (else
 	   (error (fmtstr "bug=~S" (caar rhs))))))
 
@@ -354,23 +415,23 @@
 			 ((null? pel) (list 0 #f '(list))) ; def act w/ 0 RHS
 			 (else (list ln #f '$1))))) ; def act w/ 1+ RHS
 	  (iter (cons lhs ll) (cons r1 rl) (cons a1 al)
-		(cons ln xl) tl nl head prox lhs tail rhs-l act pel #f)))
+		(cons ln xl) tl nl zl head prox lhs tail rhs-l act pel #f)))
 
        ((pair? rhs-l)
 	;; Work through next RHS.
-	(iter ll rl al xl tl nl head prox lhs tail
+	(iter ll rl al xl tl nl zl head prox lhs tail
 	      (cdr rhs-l) #f '() (car rhs-l)))
 
        ((pair? tail)
 	;; Check the next CAR of the tail.  If it matches
 	;; the current LHS process it, else skip it.
-	(iter ll rl al xl tl nl head prox lhs (cdr tail) 
+	(iter ll rl al xl tl nl zl head prox lhs (cdr tail) 
 	      (if (eqv? (caar tail) lhs) (cdar tail) '())
 	      act pel #f))
 
        ((pair? prox)
 	;; If a proxy then we have ((lhs RHS) (lhs RHS))
-	(iter ll rl al xl tl nl (cons (car prox) head) (cdr prox)
+	(iter ll rl al xl tl nl zl (cons (car prox) head) (cdr prox)
 		lhs tail rhs-l act pel rhs))
 
        ((pair? head)
@@ -380,78 +441,45 @@
 	(let ((lhs (caar head)) (rhs-l (cdar head))
 	      (rest (cdr head)))
 	  (if (memq lhs ll)
-	      (iter ll rl al xl tl nl rest prox #f '() '() act pel #f)
-	      (iter ll rl al xl tl nl rest prox lhs rest rhs-l act pel rhs))))
+	      (iter ll rl al xl tl nl zl rest prox
+		    #f '() '() act pel #f)
+	      (iter ll rl al xl tl nl zl rest prox
+		    lhs rest rhs-l act pel rhs))))
 
        (else
+	;;(simple-format #t "rl=~S\n" rl)
 	(let* ((rv (list->vector (map list->vector (reverse rl))))
 	       (ral (reverse al))
-
-	       (errp-1 ;; symbols used as terminal and non-terminal
-		;;NOT WORKING
-		(lambda (l t)
-		  ;;(if (memq t nl) (fmterr "conf: ~S in ~S\n" t nl))
-		  (if (memq t nl)
-		      (cons
-		       (fmtstr "symbol used as terminal and non-terminal: ~S" t)
-		       l) l)))
-	       (err-1 '()) ;;(fold-left errp-1 '() tl))
-
-	       (err-2 ;; symbol used as terminal and non-terminal
-		(let ((cf (lset-intersection eqv? (map atomize tl) nl)))
-		  (if (pair? cf)
-		      (cons
-		       (fmtstr
-			"symbol(s) used as terminal and non-terminal: ~S" cf)
-		       err-1)
-		      err-1)))
-
-	       (errp-3 ;; non-terminal's w/o production rule
-		(lambda (l n)
-		  (if (not (memq n ll))
-		      (cons
-		       (fmtstr "non-terminal with no production rule: ~A" n) l)
-		      l)))
-	       (err-3 (fold-left errp-3 err-2 nl))
-
-	       (errp-4 ;; LHSs (except $start) which don't appear in RHS
-		;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo)) 
-		(lambda (l s)
-		  (cons (fmtstr "LHS not used in any RHS: ~A" s) l)))
-	       (err-4 (fold-left
-		       errp-4 err-3 
-		       (let iter ((ull '()) ; unused LHS list
-				  (all ll)) ; all LHS's
-			 (if (null? all) ull
-			     (iter (if (or (memq (car all) nl)
-					   (memq (car all) ull)
-					   (eq? (car all) '$start))
-				       ull (cons (car all) ull))
-				   (cdr all))))))
-	       
+	       (err-1 '()) ;; not used
+	       ;; symbol used as terminal and non-terminal
+	       (err-2 (gram-check-2 tl nl err-1))
+	       ;; non-terminal's w/o production rule		  
+	       (err-3 (gram-check-3 ll nl err-2))
+	       ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
+	       (err-4 (gram-check-4 ll nl err-3))
 	       ;; Get duplicate terminals under atomize (e.g., 'foo "foo"):
 	       (err-5 (gram-check-5 tl err-4))
-	       
+	       ;; todo: Check that with withs are not mixed
 	       (err-l err-5))
-
-	  (for-each (lambda (e) (fmterr "+++ ~A\n" e)) err-l)
-
-	  (list
-	   ;; most referenced
-	   (cons 'non-terms nl)
-	   (cons 'lhs-v (list->vector (reverse ll)))
-	   (cons 'rhs-v rv)
-	   ;; not as much
-	   (cons 'terminals tl)
-	   (cons 'start start-symbol)
-	   (cons 'attr (list (cons 'expect expect)))
-	   (cons 'prec (assq-ref pna 'prec))
-	   (cons 'assc (assq-ref pna 'assc))
-	   (cons 'act-v (list->vector (map cddr ral)))
-	   (cons 'ref-v (list->vector (map cadr ral)))
-	   (cons 'nrg-v (list->vector (map car ral)))
-	   (cons 'err-l err-l))))))))
-
+	  (for-each (lambda (e) (fmterr "~A\n" e)) err-l)
+	  (if (pair? (filter (lambda (s) (char=? #\* (string-ref s 0))) err-l))
+	      #f
+	      (list
+	       ;; most referenced
+	       (cons 'non-terms nl)
+	       (cons 'lhs-v (list->vector (reverse ll)))
+	       (cons 'rhs-v rv)
+	       ;; not as much
+	       (cons 'terminals tl)
+	       (cons 'start start-symbol)
+	       (cons 'attr (list (cons 'expect expect)))
+	       (cons 'prec (assq-ref pna 'prec))
+	       (cons 'assc (assq-ref pna 'assc))
+	       (cons 'act-v (list->vector (map cddr ral)))
+	       (cons 'ref-v (list->vector (map cadr ral)))
+	       (cons 'nrg-v (list->vector (map car ral)))
+	       (cons 'prune zl)
+	       (cons 'err-l err-l)))))))))
   
 ;;; === Code for processing the specification. ================================
 
@@ -830,6 +858,7 @@
 (define (first symbol-list end-token-list)
   (let* ((core (fluid-ref *lalr-core*))
 	 (eps-l (core-eps-l core))
+	 ;; new: (prune-al (core-prune-al core)) ;; alist of symb -> prune
 	 (stng symbol-list)
 	 (latoks end-token-list))
     ;; This loop strips off the leading symbol from stng and then adds to
@@ -864,6 +893,8 @@
 
       ((pair? todo)
        ;; Process the next non-terminal for grammar rules.
+       ;; new: (if (assq-ref prune-al (car todo) (add to prune-l)))
+       ;;      (if (memq (car toto) prune-l) skip else:
        (iter rslt stng hzeps done (cdr todo) (prule-range (car todo)) '()))
 
       ((and hzeps (pair? stng))
