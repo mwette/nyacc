@@ -1,3 +1,8 @@
+// Copyright (C) 2015 Matthew R. Wette
+// 
+// This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+// or any later version published by the Free Software Foundation.  See the
+// file COPYING included with the nyacc distribution.
 %token FUNCTION
 %token FINALLY
 %token CATCH
@@ -224,6 +229,7 @@ Expression: AssignmentExpression ;
 Expression: Expression ',' AssignmentExpression ;
 ExpressionNoIn: AssignmentExpressionNoIn ;
 ExpressionNoIn: ExpressionNoIn ',' AssignmentExpressionNoIn ;
+Statement: Block ;
 Statement: VariableStatement ;
 Statement: EmptyStatement ;
 Statement: ExpressionStatement ;
@@ -253,7 +259,8 @@ VariableDeclarationNoIn: Identifier ;
 Initializer: '=' AssignmentExpression ;
 InitializerNoIn: '=' AssignmentExpressionNoIn ;
 EmptyStatement: ';' ;
-ExpressionStatement: Expression ';' ;
+ExpressionStatement: _P3 ';' ;
+_P3: Expression ;
 IfStatement: IF '(' Expression ')' Statement ELSE Statement ;
 IfStatement: IF '(' Expression ')' Statement ;
 IterationStatement: DO Statement WHILE '(' Expression ')' ';' ;
@@ -268,15 +275,15 @@ OptExprStmt: ';' ;
 OptExprStmt: Expression ';' ;
 OptExprClose: ';' ;
 OptExprClose: Expression ')' ;
-ContinueStatement: CONTINUE _P3 Identifier ';' ;
+ContinueStatement: CONTINUE _P4 Identifier ';' ;
 ContinueStatement: CONTINUE ';' ;
-_P3: %empty ;
-BreakStatement: BREAK _P4 Identifier ';' ;
-BreakStatement: BREAK ';' ;
 _P4: %empty ;
-ReturnStatement: RETURN _P5 Expression ';' ;
-ReturnStatement: RETURN ';' ;
+BreakStatement: BREAK _P5 Identifier ';' ;
+BreakStatement: BREAK ';' ;
 _P5: %empty ;
+ReturnStatement: RETURN _P6 Expression ';' ;
+ReturnStatement: RETURN ';' ;
+_P6: %empty ;
 WithStatement: WITH '(' Expression ')' Statement ;
 SwitchStatement: SWITCH '(' Expression ')' CaseBlock ;
 CaseBlock: '{' CaseClauses '}' ;
@@ -292,8 +299,8 @@ CaseClause: CASE Expression ':' ;
 DefaultClause: DEFAULT ':' StatementList ;
 DefaultClause: DEFAULT ':' ;
 LabelledStatement: Identifier ':' Statement ;
-ThrowStatement: THROW _P6 Expression ';' ;
-_P6: %empty ;
+ThrowStatement: THROW _P7 Expression ';' ;
+_P7: %empty ;
 TryStatement: TRY Block Catch ;
 TryStatement: TRY Block Finally ;
 TryStatement: TRY Block Catch Finally ;

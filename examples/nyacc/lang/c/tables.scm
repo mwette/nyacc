@@ -1,5 +1,11 @@
 ;; lang/c/tables.scm
 
+;; Copyright (C) 2015 Matthew R. Wette
+;; 
+;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+;; or any later version published by the Free Software Foundation.  See the
+;; file COPYING included with the nyacc distribution.
+
 (define len-v
   #(1 1 5 0 1 2 1 2 1 2 1 2 1 3 1 3 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 3 
     1 1 1 2 2 1 3 2 1 2 5 4 4 3 5 4 1 2 1 1 1 1 1 4 4 3 1 3 1 3 2 2 1 1 3 1 4 
@@ -969,13 +975,13 @@
      (make-tl 'decl-spec-list `(type-qual ,$1)))
    ;; declaration-specifiers => type-qualifier declaration-specifiers
    (lambda ($2 $1 . $rest)
-     (tl-insert `(type-qual ,$1)))
+     (tl-insert $2 `(type-qual ,$1)))
    ;; declaration-specifiers => function-specifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list `(fctn-spec ,$1)))
    ;; declaration-specifiers => function-specifier declaration-specifiers
    (lambda ($2 $1 . $rest)
-     (tl-insert `(fctn-spec ,$1)))
+     (tl-insert $2 `(fctn-spec ,$1)))
    ;; initialized-declarator-list => initialized-declarator
    (lambda ($1 . $rest)
      (make-tl 'init-declr-list $1))

@@ -97,6 +97,11 @@
 	 (rhs-v (assq-ref spec 'rhs-v))
 	 (nrule (vector-length lhs-v))
 	 (terms (assq-ref spec 'terminals)))
+    ;; copyright notice
+    (let* ((notice (assq-ref (assq-ref spec 'attr) 'notice))
+	   (lines (if notice (string-split notice #\newline) '())))
+      (for-each (lambda (l) (fmt port "// ~A\n" l))
+		lines))
     ;;
     (for-each 
      (lambda (term) (fmt port "%token ~A\n" (token->bison term)))

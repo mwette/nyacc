@@ -1,13 +1,27 @@
-;; modelica/mach.scm - from Appendix B of the Modelica 3.3r1 Spec
-;;
-;; 150726a - M.Wette
+;;; lang/modelica/pgen.scm
+;;;
+;;; Copyright (C) 2015 Matthew R. Wette
+;;;
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Lesser General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 3 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Lesser General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Lesser General Public
+;;; License along with this library; if not, write to the Free Software
+;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 ;; idea: make changes and call it Modzillica
 
 (define-module (lang modelica pgen)
-  #:export (mod-spec
-	    mod-mach
-	    mod-parser
+  #:export (modelica-spec
+	    modelica-mach
+	    modelica-parser
 	    gen-mod-lexer
 	    parse-mo)
   #:use-module (nyacc lalr)
@@ -23,8 +37,15 @@
 (strerr "  SR: primary => \"initial\"\n")
 (strerr "  SR: primary => \"end\"\n")
 
-(define mod-spec
+(define crn "Copyright (C) 2015 Matthew R. Wette
+
+This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+or any later version published by the Free Software Foundation.  See the
+file COPYING included with the nyacc distribution.")
+
+(define modelica-spec
   (lalr-spec
+   (notice crn)
    (start stored-definition)
    (grammar
     
@@ -657,19 +678,19 @@
     (string ('$string ($$ `(string ,$1))))
     )))
 
-(define mod-mach
+(define modelica-mach
   (identity ;; hashify-machine
    (identity ;; compact-machine
-    (make-lalr-machine mod-spec))))
+    (make-lalr-machine modelica-spec))))
 
 ;; does not support Q-ident (single quoted identifier)
 (define gen-mod-lexer
-  (make-lexer-generator (lalr-match-table mod-mach)
+  (make-lexer-generator (lalr-match-table modelica-mach)
 			#:comm-skipper read-c-comm
 			))
 
-(define mod-parser (make-lalr-parser mod-mach))
+(define modelica-parser (make-lalr-parser modelica-mach))
 
-(define (parse-mo) (mod-parser (gen-mod-lexer)))
+(define (parse-mo) (modelica-parser (gen-mod-lexer)))
 
 ;; --- last line

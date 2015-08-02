@@ -1,5 +1,11 @@
 ;; lang/modelica/tables.scm
 
+;; Copyright (C) 2015 Matthew R. Wette
+;; 
+;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+;; or any later version published by the Free Software Foundation.  See the
+;; file COPYING included with the nyacc distribution.
+
 (define len-v
   #(1 0 2 1 3 2 3 2 4 3 3 2 2 1 1 1 2 1 1 2 1 1 1 3 3 2 2 2 1 1 1 1 1 5 7 6 
     7 6 6 5 7 0 1 1 9 1 3 0 1 1 3 2 4 3 3 2 1 2 1 2 1 2 1 1 5 4 4 4 3 3 3 2 1 
@@ -2402,6 +2408,8 @@
         $3))
    ;; class-definition => class-prefixes class-specifier
    (lambda ($2 $1 . $rest)
+     (simple-format #t "$2=~S\n" $2)
+     (simple-format #t "  >~S\n" (tl->list $2))
      `(class-def ,(tl->list $2)))
    ;; class-prefixes => "partial" class-prefixes-1
    (lambda ($2 $1 . $rest)

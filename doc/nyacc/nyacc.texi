@@ -281,6 +281,9 @@ The specification for @code{expr} could have been expressed using
 @end example
 @end itemize
 
+@c (expect 1)
+@c (notice "Copyright (C) 2099 John Doe")
+
 @section The @code{lex} Module
 
 The @sc{nyacc} @code{lex} module provide routines for constructing

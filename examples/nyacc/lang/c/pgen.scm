@@ -1,7 +1,4 @@
-;; pgen.scm -> lang/c/parsegen.scm
-;;
-;; Copyright (C) 2015 - Matthew R.Wette - all rights reserved
-;;; nyacc/import.scm
+;;; lang/c/pgen.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -18,9 +15,6 @@
 ;;; You should have received a copy of the GNU Lesser General Public
 ;;; License along with this library; if not, write to the Free Software
 ;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-
-;; 
-;; v150628a - M.Wette
 
 ;; todo/idea/bugs
 
@@ -41,6 +35,12 @@
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
+(define crn "Copyright (C) 2015 Matthew R. Wette
+
+This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+or any later version published by the Free Software Foundation.  See the
+file COPYING included with the nyacc distribution.")
+
 ;; Objective is to generate a sxml tree.
 ;; Strategy for building the tree:
 ;; @itemize
@@ -51,6 +51,7 @@
 ;; but modified to handle comments and CPP statements.
 (define clang-spec
   (lalr-spec
+   (notice crn)
    (expect 1)				; expect 1 shift-reduce conflict
    (start translation-unit-proxy)
    (grammar

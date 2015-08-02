@@ -205,6 +205,8 @@
 		(cons (cons 'start '<symb>) (lalr-spec-1 <e> ...)))
 	       ((_ (expect <n>) <e> ...)
 		(cons (cons 'expect <n>) (lalr-spec-1 <e> ...)))
+	       ((_ (notice <str>) <e> ...)
+		(cons (cons 'notice <str>) (lalr-spec-1 <e> ...)))
 	       ((_ (precedence< <ex> ...) <e> ...)
 		(cons (cons 'prece (reverse (parse-precedence <ex> ...)))
 		      (lalr-spec-1 <e> ...)))
@@ -337,7 +339,6 @@
 
   (let* ((gram (assq-ref tree 'grammar))
 	 (start-symbol (assq-ref tree 'start))
-	 (expect (or (assq-ref tree 'expect) 0))
 	 (start-rule (lambda () (list start-symbol)))
 	 (add-el (lambda (e l) (if (memq e l) l (cons e l))))
 	 (pna (prec-n-assc tree)))
@@ -469,7 +470,9 @@
 	       ;; not as much
 	       (cons 'terminals tl)
 	       (cons 'start start-symbol)
-	       (cons 'attr (list (cons 'expect expect)))
+	       (cons 'attr (list (cons 'expect (or (assq-ref tree 'expect) 0))
+				 (cons 'notice (assq-ref tree 'notice))
+				 ))
 	       (cons 'prec (assq-ref pna 'prec))
 	       (cons 'assc (assq-ref pna 'assc))
 	       (cons 'act-v (list->vector (map cddr ral)))
@@ -1900,6 +1903,15 @@
 ;; write-lalr-tables mach "tables.tcl" #:lang 'tcl
 ;; @end example
 (define* (write-lalr-tables mach filename #:key (lang 'scheme))
+  (define comm-leader ";; ")
+
+  (define (write-notice mach port)
+    (let* ((notice (assq-ref (assq-ref mach 'attr) 'notice))
+	   (lines (if notice (string-split notice #\newline) '())))
+      (for-each
+       (lambda (l) (fmt port "~A~A\n" comm-leader l))
+       lines)
+      (if (pair? lines) (newline port))))
 
   (define (write-table mach name port)
     (fmt port "(define ~A\n  " name)
@@ -1937,6 +1949,7 @@
     (lambda (port)
       (fmt port ";; ~A\n\n"
 	   (regexp-substitute #f (string-match ".new$" filename) 'pre))
+      (write-notice mach port)
       (write-table mach 'len-v port)
       (write-table mach 'pat-v port)
       (write-table mach 'rto-v port)
