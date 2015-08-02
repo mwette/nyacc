@@ -36,7 +36,7 @@
   #:use-module (nyacc util)
   )
 
-(define *nyacc-version* "0.60.2")
+(define *nyacc-version* "0.61.0")
 
 #|
 (define-syntax $?
