@@ -21,7 +21,7 @@ SCM_FILES_W_TEXI: \
 %.pdf: %.texi
 	texi2dvi --pdf --batch $<
 
-nyacc.pdf: nyacc.texi lalr_scm.texi
+nyacc.pdf: nyacc.texi
 	texi2dvi --pdf --batch $<
 
 COPYING.DOC: fdl.texi

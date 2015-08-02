@@ -27,7 +27,7 @@
 	    write-lalr-tables
 	    wrap-action
 	    )
-  ;;#:use-module ((rnrs base) #:select (vector-map))
+  ;; Clean this up: (e.g., (srfi srfi-1) preferred over (rnrs lists))
   #:use-module ((rnrs lists) #:select (remq remp remove fold-left fold-right))
   #:use-module ((srfi srfi-1)
 		#:select (lset-intersection lset-union lset-difference fold))
@@ -395,11 +395,7 @@
 		  (rhsx (cadar rhs))	; symbol to expand
 		  (p-l (map cdr (cddar rhs))) ; prune list
 		  (p1 (list psy `((non-terminal . ,rhsx)
-				  (action #f #f $1))))
-		  )
-	     ;;(fmtout "with: psy=~S\n" psy)
-	     ;;(fmtout "      rhsx=~S\n" rhsx)
-	     ;;(fmtout "      prune=~S\n" p1)
+				  (action #f #f $1)))))
 	     (iter ll rl al xl tl (cons psy nl) (acons psy p-l zl) head
 		   (cons p1 prox) lhs tail rhs-l act (cons psy pel) (cdr rhs))))
 
@@ -469,6 +465,7 @@
 	       (cons 'non-terms nl)
 	       (cons 'lhs-v (list->vector (reverse ll)))
 	       (cons 'rhs-v rv)
+	       (cons 'prune-al zl)	; new prunage al
 	       ;; not as much
 	       (cons 'terminals tl)
 	       (cons 'start start-symbol)
@@ -478,7 +475,6 @@
 	       (cons 'act-v (list->vector (map cddr ral)))
 	       (cons 'ref-v (list->vector (map cadr ral)))
 	       (cons 'nrg-v (list->vector (map car ral)))
-	       (cons 'prune zl)
 	       (cons 'err-l err-l)))))))))
   
 ;;; === Code for processing the specification. ================================
@@ -493,23 +489,22 @@
 ;; This record holds the minimum data from the grammar needed to build the
 ;; machine from the grammar specification.
 (define-record-type lalr-core-type
-  (make-lalr-core non-terms terminals lhs-v rhs-v eps-l)
+  (make-lalr-core non-terms terminals lhs-v rhs-v prune-al eps-l)
   lalr-core-type?
   (non-terms core-non-terms)	      ; list of non-terminals
   (terminals core-terminals)	      ; list of non-terminals
   (lhs-v core-lhs-v)		      ; vec of left hand sides
   (rhs-v core-rhs-v)		      ; vec of right hand sides
+  (prune-al core-prune-al)	      ; a-list of prunage
   (eps-l core-eps-l))		      ; non-terms w/ eps prod's
 
 ;; @item make-core spec => lalr-core-type
-;; Need to add @code{terminals} if we want @code{pp-lalr-machine} to work
-;; right.
 (define (make-core spec)
   (make-lalr-core (assq-ref spec 'non-terms)
 		  (assq-ref spec 'terminals)
 		  (assq-ref spec 'lhs-v)
 		  (assq-ref spec 'rhs-v)
-		  '()))
+		  '() '()))
 
 ;; @item make-core/eps spec => lalr-core-type
 ;; Add list of symbols with epsilon productions.
@@ -519,6 +514,7 @@
 	(lhs-v (assq-ref spec 'lhs-v))
 	(rhs-v (assq-ref spec 'rhs-v)))
     (make-lalr-core non-terms terminals lhs-v rhs-v
+		    (assq-ref spec 'prune-al)
 		    (find-eps non-terms lhs-v rhs-v))))
 
 
@@ -711,9 +707,31 @@
 	      (list k-item)
 	      (non-kernels (looking-at k-item)))))
 
+;; @item its-equal?
+;; Helper for step1
+(define (its-equal? its-1 its-2)
+  (let iter ((its1 its-1) (its2 its-2)) ; cdr to strip off the ind
+    (if (and (null? its1) (null? its2)) #t ; completed run through => #f
+	(if (or (null? its1) (null? its2)) #f ; lists not equal length => #f
+	    (if (not (member (car its1) its-2)) #f ; mismatch => #f
+		(iter (cdr its1) (cdr its2)))))))
+
+;; @item its-member its its-l
+;; Helper for step1
+;; If itemset @code{its} is a member of itemset list @code{its-l} return the
+;; index, else return #f.
+(define (its-member its its-l)
+  (let iter ((itsl its-l))
+    (if (null? itsl) #f
+	(if (its-equal? its (cdar itsl)) (caar itsl)
+	    (iter (cdr itsl))))))
+  
 ;; @item its-trans itemset => alist of (symb . itemset)
-;; Map a list of kernel items to a list of (symbol . post-shift items).
-;; ((0 . 1) (2 . 3) => ((A . ((0 . 2) (2 . 4))) (B . (...)))
+;; Compute transitions from an itemset.   Thatis, map a list of kernel
+;; items to a list of (symbol post-shift items).
+;; @example
+;; ((0 . 1) (2 . 3) => ((A (0 . 2) (2 . 4)) (B (2 . 4) ...))
+;; @end example
 (define (its-trans items)
   (let iter ((rslt '())			; result
 	     (k-items items)		; items
@@ -743,25 +761,6 @@
      (else
       rslt))))
 
-;; @item its-equal?
-;; Helper for step1
-(define (its-equal? its-1 its-2)
-  (let iter ((its1 its-1) (its2 its-2)) ; cdr to strip off the ind
-    (if (and (null? its1) (null? its2)) #t ; completed run through => #f
-	(if (or (null? its1) (null? its2)) #f ; lists not equal length => #f
-	    (if (not (member (car its1) its-2)) #f ; mismatch => #f
-		(iter (cdr its1) (cdr its2)))))))
-
-;; @item its-member its its-l
-;; Helper for step1
-;; If itemset @code{its} is a member of itemset list @code{its-l} return the
-;; index, else return #f.
-(define (its-member its its-l)
-  (let iter ((itsl its-l))
-    (if (null? itsl) #f
-	(if (its-equal? its (cdar itsl)) (caar itsl)
-	    (iter (cdr itsl))))))
-  
 ;; @item step1 [input-a-list] => output-a-list
 ;; Compute the sets of LR(0) kernel items and the transitions associated with
 ;; spec.  These are returned as vectors in the alist with keys @code{'kis-v}
@@ -858,54 +857,65 @@
 (define (first symbol-list end-token-list)
   (let* ((core (fluid-ref *lalr-core*))
 	 (eps-l (core-eps-l core))
-	 ;; new: (prune-al (core-prune-al core)) ;; alist of symb -> prune
+	 (prune-al (core-prune-al core)) ; alist of (symb . prunage-list)
 	 (stng symbol-list)
 	 (latoks end-token-list))
     ;; This loop strips off the leading symbol from stng and then adds to
     ;; todo list, which results in range of p-rules getting checked for
     ;; terminals.
     (let iter ((rslt '())		; terminals collected
+	       (pngl '())		; prunage-list: may need stack
 	       (stng stng)		; what's left of input string
-	       (hzeps #t)		; haseps
+	       (hzeps #t)		; has epsilon production
 	       (done '())		; non-terminals checked
 	       (todo '())		; non-terminals to assess
 	       (p-range '())		; range of p-rules to check
-	       (it '()))
+	       (item '()))		; item in production
       (cond
-       ((pair? it)
-	(let ((sym (looking-at it)))
+       ((pair? item)
+	(let ((sym (looking-at item)))
 	  (cond
 	   ((eq? sym '$epsilon)		; at end of rule, go next
-	    (iter rslt stng hzeps done todo p-range '()))
-	   ((terminal? sym)
-	    (iter (merge1 sym rslt) stng hzeps done todo p-range '()))
+	    (iter rslt pngl stng hzeps done todo p-range '()))
+	   ((terminal? sym)		; terminal, log it
+	    (iter (merge1 sym rslt) pngl stng hzeps done todo p-range '()))
 	   ((memq sym eps-l)		; symbol has eps prod
-	    (iter rslt stng hzeps (merge1 sym done) (merge2 sym todo done)
-		  p-range (next-item it)))
+	    (iter rslt pngl stng hzeps (merge1 sym done) (merge2 sym todo done)
+		  p-range (next-item item)))
 	   (else ;; non-terminal, add to todo/done, goto next
-	    (iter rslt stng hzeps
+	    (iter rslt pngl stng hzeps
 		  (merge1 sym done) (merge2 sym todo done) p-range '())))))
        
        ((pair? p-range)			; next one to do
 	;; run through next rule
-	(iter rslt stng hzeps done todo
+	(iter rslt pngl stng hzeps done todo
 	      (range-next p-range) (first-item (car p-range))))
 
       ((pair? todo)
-       ;; Process the next non-terminal for grammar rules.
-       ;; new: (if (assq-ref prune-al (car todo) (add to prune-l)))
-       ;;      (if (memq (car toto) prune-l) skip else:
-       (iter rslt stng hzeps done (cdr todo) (prule-range (car todo)) '()))
+       ;; Process the next non-terminal for grammar rules, unless it
+       ;; is in the prungage list.  And if it has prunage, add that.
+       (cond
+	((memq (car todo) pngl)		; on prunage-list, skip
+	 ;;(fmtout "skipping ~S\n" (car todo))
+	 (iter rslt pngl stng hzeps done (cdr todo) '() '()))
+	((assq-ref prune-al (car todo)) => ; has prunage, add, and go
+	 (lambda (l)
+	   (iter rslt (append l pngl) stng hzeps done
+	       (cdr todo) (prule-range (car todo)) '())))
+	(else				; just go
+	 (iter rslt pngl stng hzeps done
+	       (cdr todo) (prule-range (car todo)) '())))
+       )
 
       ((and hzeps (pair? stng))
        ;; Last pass saw an $epsilon so check the next input symbol,
        ;; with saweps reset to #f.
        (let* ((symb (car stng)) (stng1 (cdr stng)) (symbl (list symb)))
 	 (if (terminal? symb)
-	     (iter (cons symb rslt) stng1
+	     (iter (cons symb rslt) pngl stng1
 		   (and hzeps (memq symb eps-l))
 		   done todo p-range '())
-	     (iter rslt stng1
+	     (iter rslt pngl stng1
 		   (or (eq? symb '$epsilon) (memq symb eps-l))
 		   symbl symbl '() '()))))
       (hzeps
@@ -1050,10 +1060,9 @@
 
        ((< (1+ kx) nkset)
 	(iter (1+ kx)
-	      ;; Don't propagate end-items.
+	      ;; End-items don't shift, so don't propagate.
 	      (remp last-item? (vector-ref kis-v (1+ kx)))))))
-    ;;(pp-kip-v kip-v)
-    ;;(pp-kit-v kit-v)
+    (when #f (pp-kip-v kip-v) (pp-kit-v kit-v)) ; for debugging
     (cons* (cons 'kit-v kit-v) (cons 'kip-v kip-v) subm)))
 
 ;; debug for step2
