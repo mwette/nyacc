@@ -7,7 +7,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-The intention of this directory is to provide parsers for languages.
-The parsers will be built with attributed grammar semantics.  The
-parse tree will be in sxml format.
+lang
+  The directory lang has example parsers for several languages.
+  See lang/README.
 

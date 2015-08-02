@@ -1,0 +1,50 @@
+module/nyacc/lang/README
+
+Copyright (C) 2015 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+The intention of this directory is to provide parsers for languages.
+The parsers will be built with attributed grammar semantics.  The
+parse tree will be in sxml format.
+
+This directory hosts parsers, typically with attributed grammar semantics.
+
+The output is typically a tree with sxml syntax.  This has the grammar
+@example
+sexp => (symbol expr ...)
+expr => sexp | string
+@end example
+@noindent
+That is, the tree consists of s-expressions with the first element 
+always symbol.  The first symbol in such a list may be referred to as
+the @dfn{tag}.  The remaining elements are either lists or text strings.
+The parsers will identifty numbers for example, but they will appear as
+symbols with the source text string (e.g., @code{(float "2.13e4")}).
+
+Tags may not consist of any of the characters
+ @code{!"#$%&'()*+,/;<=>?@@[\]^`@{|@}~,} and may not start with
+@code{.} or @code{-}.
+
+The second element of a s-expression can be a list with the special
+tag @code{@@}.  This indicates a list of attributes.  For example, if
+a parser returned the following s-exp
+@example
+(add (fixed "12") (float "2.3"))
+@end example
+@noindent
+then a type checker may convert it to the following:
+@example
+(add (@ (type "fixed")) (fixed-to-float (fixed "12")) (float "2.3"))
+@end example
+
+element conventions:
+  (name "." ident)	-> `(sel ,$3 ,$1)	selection
+  (expr "+" expr) 	-> `(add ,$1 ,$3)	arithmatic
+  (ex ":" ex ":" ex)	-> `(colon ,$1 ,$5 ,$3)
+  (id "=" ex) 		-> `(assign ,$1 ,$3)
+  (id "+=" ex) 		-> `(add-assign ,$1 ,$3)
+
