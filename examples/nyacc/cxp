@@ -1,0 +1,57 @@
+#!/usr/bin/env guile
+!#
+;;; examples/nyacc/cxp
+;;;
+;;; Copyright (C) 2015 Matthew R. Wette
+;;;
+;;; This program is free software: you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published by 
+;;; the Free Software Foundation, either version 3 of the License, or 
+;;; (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of 
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;; usage: cxp -Ilang/c lang/c/ex1.c
+
+(use-modules (ice-9 pretty-print))
+(use-modules (lang c pgen))
+
+(define (scan-for-flagged flag argl)
+  (let iter ((res '()) (argl argl))
+    (if (null? argl) (reverse res)
+	(iter (if (string=? flag (substring (car argl) 0 2))
+		  (cons (substring (car argl) 2) res) res) (cdr argl)))))
+
+(define (scan-for-rest argl)
+  (let iter ((res '()) (argl argl))
+    (if (null? argl) (reverse res)
+	(iter (if (char=? #\- (string-ref (car argl) 0))
+		  res (cons (car argl) res)) (cdr argl)))))
+
+(define (split-def def)
+  (let* ((ix (string-index def #\=)))
+    (if ix
+	(cons (string->symbol (substring def 0 ix))
+	      (substring def (1+ ix)))
+	(cons (string->symbol def) " "))))
+
+(let* ((argl (cdr (program-arguments)))
+       (incs (scan-for-flagged "-I" argl))
+       (defs (map split-def (scan-for-flagged "-D" argl)))
+       (files (scan-for-rest argl)))
+  (for-each
+   (lambda (file)
+     (let ((tree (with-input-from-file file
+		   (lambda () (parse-c #:incs incs #:defs defs)))))
+       (simple-format #t "~A:\n" file)
+       (pretty-print tree)))
+   files)
+  )
+
+;; last line

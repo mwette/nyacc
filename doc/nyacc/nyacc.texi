@@ -352,7 +352,8 @@ from the union of @emph{T} and @emph{N}.
 In the following we use capital letters for non-terminals, the lower case
 letters a-h for terminals and the lower case letters p-z (sometimes in
 italics) for strings, where a string is defined as a sequence of
-non-terminals and terminals. 
+non-terminals and terminals.  We occasionally use italic capital T
+(i.e., @i{T}) to represent a set of terminals.
 
 An @emph{item} is a position within a production rule.  It is represented
 by the notation
@@ -404,22 +405,28 @@ always has index zero.  (Note that Bison includes the endmarker
 @code{$end} in this production, which results in Bison parsers having
 one additional state with respect to @sc{nyacc}.)
 
-Now consider the initial al-item derived from the cananical 0-index
-production, with the singleton lookahead set consisting of @code{@{$end@}}:
+Now consider starting to parser an input, left to right.  The initial
+al-item derived from the cananical 0-index production, with the
+singleton lookahead set consisting of @code{@{$end@}}, will be in effect: 
 @example
 $start => .S, @{$end@}
 @end example
 @noindent
-Note that @code{$end} is the only lookahead for the 0-index production.
-Now consider some production rule for @code{S}:
+Note that @code{$end} is the only lookahead for the 0-index
+production.  Now @code{S} may have have several associated production
+rules.  Assume they are the following:
 @example
 S => A@i{p}
+S => B@i{q}
 @end example
-@noindent
-Then, the above production for @code{S} will have a la-item as follows:
+Then the following la-items are in effect
 @example
-S => A.@i{p}, first(@i{p}, @{$end@})
+S => .A@i{p}, @{$end,...@}
+S => .B@i{p}, @{$end,...@}
 @end example
+At this point we don't know the entire set of possible lookaheads
+because @code{A} and @code{B} may appear as right-hand sides in other
+rules.
 
 One can imagine that during process of parsing an input left-to-right the
 parser may be at a state where several productions may be candidates
@@ -427,7 +434,48 @@ for matching the input.  Each (partial) production is represented by an
 item and the set of these partial productions is called an
 @dfn{itemset}.  If the items are associated with a set of lookaheads
 (i.e., the items are actually la-items) then we may call this a
-@dfn{la-itemset}.
+@dfn{la-itemset}.  These itemsets correspond to the states of the
+automaton which is the parser.
+
+At the start of parsing the 0-th rule will have all items with dots at
+position zero.  For the remainder of parsing (after we have acted on
+the first input token, or terminal) at least one effective item will
+have the dot at position greater than zero.  For those itemsets the
+subset of items with positive dot positions will be called the
+@dfn{kernel itemsets}.  For the initial state the kernel
+itemset is the 0-dot position for the 0-th production rule.
+
+Now consider, in state @i{i}, an item as follows
+@example
+@i{i}: A => B.@i{q}
+@end example
+@noindent
+We can associate this with a phony lookahead @code{$@@},
+which we call the @dfn{anchor}, to make an la-item:
+@example
+@i{i}: A => B.@i{q}, @{@@@} 
+@end example
+@noindent
+Let @code{@i{T} = first(@i{q},@{@@@})} and notice then if @code{@@} is
+in @i{T} then any lookaheads for this production must also be
+lookaheads for XXX 
+@vskip 1cm
+Here is the algorithm from @code{lalr.scm}
+
+
+@vskip 1cm
+
+working toward explaining closure:
+Compute the fixed point of I, aka @code{la-item-l}, with procedure
+@example
+for each item [A => x.By, a] in I
+  each production B => z in G
+  and each terminal b in FIRST(ya)
+  such that [B => .z, b] is not in I do
+    add [B => .z, b] to I
+@end example
+
+@vskip 1cm
 
 @c [ADD EXAMPLE TO ILLUSTRATE KIS, then define kernel itemsets.]
 It turns out that each state in the parsing automaton is an itemset.
@@ -475,6 +523,7 @@ consisting of the dummy, or anchor, token @code{$@@}.  We compute the set
 @noindent
 If @code{$@@} is in @i{J} then we say the lookaheads for XXX propagate
 
+@ifset skip
 The generation of the automaton (aka the @dfn{machine}) in @sc{nyacc}
 is processed in four steps:
 @table @asis
@@ -495,8 +544,8 @@ Determine, for each state, the parse actions: shift, reduce and
 accept.  If there are conflicts, use associativity and precedence
 rules to resolve them, or report the conflicts as fatal.
 @end table
+@end ifset
 
-@ifset skip
 @example
 for-each item I in some itemset
   for-each la-item J in closure(I,#)
@@ -504,7 +553,6 @@ for-each item I in some itemset
       if LA is #, then add to J propagate-to list
       otherwise add T to spontaneously-generated list
 @end example
-@end ifset
 
 Now condider the la-item
 @example

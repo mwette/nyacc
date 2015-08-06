@@ -1,4 +1,4 @@
-;;; t-util.scm - parsing utilities
+;;; examples/nyacc/lang/t-util.scm
 ;;; 
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;; 
@@ -6,6 +6,9 @@
 ;;; are permitted in any medium without royalty provided the copyright
 ;;; notice and this notice are preserved.  This file is offered as-is,
 ;;; without any warranty.
+
+;; Test the runtime parsing utilities.
+;; examples/nyacc$ guile lang/t-util.scm
 
 (add-to-load-path (getcwd))
 
@@ -21,4 +24,18 @@
   ;; expect (abc (@ (x "true")) z a 1 2 20)
   (simple-format #t "~S\n" (tl->list tlx))
   )
+
+(let* ((tl (make-tl 'abc 1)))
+  (set! tl (tl-append tl 2))
+  (set! tl (tl-insert tl 'a))
+  (set! tl (tl+attr tl 'x "true"))
+  (set! tl (tl-append tl 20))
+  (set! tl (tl+attr tl 'y "true"))
+  (set! tl (tl-append tl 30))
+  (set! tl (tl+attr tl 'z "true"))
+  (set! tl (tl-append tl 40))
+  (set! tl (tl-insert tl 'z))
+  (simple-format #t "~S\n" (tl->list tl))
+  )
+
 ;;; --- last line

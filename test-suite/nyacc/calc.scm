@@ -7,7 +7,6 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
 
@@ -18,15 +17,16 @@
    (grammar
     (expr
      (expr "+" expr ($$ (+ $1 $3)))
-     (expr "-" expr ($$ (- $1 $3)))
-     (expr "*" expr ($$ (* $1 $3)))
-     (expr "/" expr ($$ (/ $1 $3)))
+     ;;(expr "-" expr ($$ (- $1 $3)))
+     ;;(expr "*" expr ($$ (* $1 $3)))
+     ;;(expr "/" expr ($$ (/ $1 $3)))
      ('$fx ($$ (string->number $1))))
     )))
 
-;;(pp-lalr-grammar calc-spec)
+(pp-lalr-grammar calc-spec)
 ;;(pp-lalr-machine calc-mach)
 
+#|
 (define calc-mach (make-lalr-machine calc-spec))
 ;;(define calc-mach (compact-machine calc-mach))
 (define calc-mach (hashify-machine calc-mach))
@@ -38,5 +38,6 @@
 
 (define res (with-input-from-string "1 + 4 / 2 * 3 - 5" parse-expr))
 (simple-format #t "expect 2; get ~S\n" res) ;; expect: 2
+|#
 
 ;; --- last line

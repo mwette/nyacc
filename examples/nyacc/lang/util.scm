@@ -1,10 +1,12 @@
-;;; util.scm - parsing utilities
+;;; examples/nyacc/util.scm
 ;;;
+;;; Copyright (C) 2015 Matthew R. Wette
+;;;
+;;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+;;; or any later version published by the Free Software Foundation.  See the
+;;; file COPYING included with the nyacc distribution.")
 
-;; this needs work.
-;; Can we do w/o ! ?
-;; 1) pair w/ car used for inserts and cdr used for (reversed) appends
-;;    but tag would have to be on cdr
+;; runtime utilities for the parsers -- needs work
 
 (define-module (lang util)
   #:export (make-tl
@@ -41,6 +43,9 @@
 
 ;; @item tl+attr tl key val)
 ;; Add an attribute to a tagged list.  Return the tl.
+;; @example
+;; (tl+attr tl 'type "int")
+;; @end example
 (define (tl+attr tl key val)
   (tl-insert tl (cons '@ (list key val))))
 

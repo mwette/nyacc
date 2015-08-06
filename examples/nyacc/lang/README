@@ -38,7 +38,7 @@ a parser returned the following s-exp
 @noindent
 then a type checker may convert it to the following:
 @example
-(add (@ (type "fixed")) (fixed-to-float (fixed "12")) (float "2.3"))
+(add (@ (type "float")) (fixed-to-float (fixed "12")) (float "2.3"))
 @end example
 
 element conventions:

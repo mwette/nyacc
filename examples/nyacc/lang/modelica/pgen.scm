@@ -2,19 +2,18 @@
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Lesser General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 3 of the License, or (at your option) any later version.
+;;; This program is free software: you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published by 
+;;; the Free Software Foundation, either version 3 of the License, or 
+;;; (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of 
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU Lesser General Public
-;;; License along with this library; if not, write to the Free Software
-;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; idea: make changes and call it Modzillica
 
@@ -30,12 +29,9 @@
   #:use-module (ice-9 pretty-print)
   )
 
-(define (strerr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
-
-(strerr "modelica/pgen.scm grammar conflicts:\n")
-(strerr "  SR: primary => \"initial\"\n")
-(strerr "  SR: primary => \"end\"\n")
+(fmterr "modelica/pgen.scm grammar conflicts:\n")
+(fmterr "  SR: primary => \"initial\"\n")
+(fmterr "  SR: primary => \"end\"\n")
 
 (define crn "Copyright (C) 2015 Matthew R. Wette
 
@@ -78,8 +74,7 @@ file COPYING included with the nyacc distribution.")
      )
     ;; modified from spec to deal with conflicts
     (class-prefixes
-     ("partial" class-prefixes-1
-      ($$ (tl+attr $2 'partial "yes")))
+     ("partial" class-prefixes-1 ($$ (tl+attr $2 'partial "yes")))
      (class-prefixes-1)
      )
     (class-prefixes-1

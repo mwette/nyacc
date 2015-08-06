@@ -26,6 +26,8 @@
 	    pp-lalr-grammar pp-lalr-machine
 	    write-lalr-tables
 	    wrap-action
+	    pp-rule find-terminal	; used by (nyacc export)
+	    with-gram new-non-kernels
 	    )
   ;; Clean this up: (e.g., (srfi srfi-1) preferred over (rnrs lists))
   #:use-module ((rnrs lists) #:select (remq remp remove fold-left fold-right))
@@ -36,18 +38,7 @@
   #:use-module (nyacc util)
   )
 
-(define *nyacc-version* "0.61.0")
-
-#|
-(define-syntax $?
-  (syntax-rules ()
-    ((_ <symb>)
-     (let* ((s (symbol->string (quote <symb>)))
-	    (os (string-append "opt-" s))
-	    (sy (string->symbol os)))
-       `(rule ,sy (,sy () (<symb>)))))))
-|#
-;; maybe?: (rule-macro $* ((_ ssss ($$ ...)
+(define *nyacc-version* "0.61.1")
 
 ;; @item proxy-? sym rhs
 ;; @example
@@ -663,44 +654,107 @@
 	(cons p-ix r-ixm1))))
 
 ;; @item non-kernels symb => list of prule indices
-;; Compute the set of non-kernel rules for symbol @code{symb}.
-;; If A => Bcd, B => Cde, B => Abe then non-kerns A gives TBD
-(define (non-kernels symb)
+;; Compute the set of non-kernel rules for symbol @code{symb}.  If grammaer
+;; looks like
+;; @example
+;; 1: A => Bcd
+;; ...
+;; 5: B => Cde
+;; ...
+;; 7: B => Abe
+;; @end example
+;; @noindent
+;; then @code{non-kernels 'A} results in @code{(1 5 7)}.
+;; Note: To support pruning this routine will need to be rewritten.
+(define (old-non-kernels symb)
   (let* ((core (fluid-ref *lalr-core*))
 	 (lhs-v (core-lhs-v core))
 	 (glen (vector-length lhs-v))
 	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx))))
-    (let iter ((rslt '())		; result is set of states
+    (let iter ((rslt '())		; result is set of p-rule indices
 	       (done '())		; symbols completed or queued
 	       (next '())		; next round of symbols to process
 	       (curr (list symb))	; this round of symbols to process
 	       (gx 0))			; p-rule index
       (cond
-       ((and (< gx glen) (memq (lhs-symb gx) curr))
-	;; Add rhs to next and rslt if not already done.
-	(let* ((rslt1 (if (memq gx rslt) rslt (cons gx rslt)))
-	       ;;(rhs1 (looking-at (cons gx 0)))
-	       (rhs1 (looking-at (first-item gx)))
-	       (done1 (if (memq rhs1 done) done (cons rhs1 done)))
-	       (next1 (cond
-		       ((memq rhs1 done) next)
-		       ((terminal? rhs1) next)
-		       (else (cons rhs1 next)))))
-	  (iter rslt1 done1 next1 curr (1+ gx))))
        ((< gx glen)
-	;; Nothing to check; process next rule.
-	(iter rslt done next curr (1+ gx)))
+	(if (memq (lhs-symb gx) curr)
+	    ;; Add rhs to next and rslt if not already done.
+	    (let* ((rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym|$eps
+		   (rslt1 (if (memq gx rslt) rslt (cons gx rslt)))
+		   (done1 (if (memq rhs1 done) done (cons rhs1 done)))
+		   (next1 (cond ((memq rhs1 done) next)
+				((terminal? rhs1) next)
+				(else (cons rhs1 next)))))
+	      (iter rslt1 done1 next1 curr (1+ gx)))
+	    ;; Nothing to check; process next rule.
+	    (iter rslt done next curr (1+ gx))))
        ((pair? next)
 	;; Start another sweep throught the grammar.
 	(iter rslt done '() next 0))
        (else
 	;; Done, so return.
 	(reverse rslt))))))
-
-;; @item non-kernel-items symb
-;; Compute the set of non-kernel states for symbol @code{symb}.
-(define (non-kernel-items symb)
-  (map (lambda (gx) (cons gx 0)) (non-kernels symb)))
+;; To support pruning:
+;; Maybe replace each symbol in next, done with a list, reflecting derivations.
+;; That is,
+;; 1: A  -> B | C
+;; 2: B  -> P1
+;; 3: P1 -> E, prune F
+;; 4: B  -> P2
+;; 5: P2 -> E, prune G
+;; 6: E  -> F
+;; 7: E  -> G
+;; 8: C  -> ";"
+;; curr=A next=((B A) (C A)) done=(A) rslt=(1)
+;;
+;; OR
+;;
+;; curr=((A)) next=(B C) done=(A) rslt=(1)
+;; curr=((B) (C)) next=(P1 P2) done=(A B C) rslt=(1 2 4)
+;; curr=((P1 F) (P2 G)) next=((E F) (E G))
+;;     done=(A B C P1 P2) rslt=(1 2 4 3 5)
+;; curr=((P1 F) (P2 G)) next=((E F) (E G) => (E (intersection F G))
+;; curr=((E)) next=((E F) (E G) => (E (intersection F G))
+(define (with-gram gram thunk)
+  (fluid-set! *lalr-core* (make-core/eps gram))
+  (thunk))
+#;(define (new-non-kernels symb)
+  (let* ((core (fluid-ref *lalr-core*))
+	 (lhs-v (core-lhs-v core))
+	 (glen (vector-length lhs-v))
+	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx))))
+    (let iter ((rslt '())		; result is set of p-rule indices
+	       (done '())		; symbols completed or queued
+	       (next '())		; next round of symbols to process
+	       (curr (list (list symb))) ; this round of symbols to process
+	       (gx 0))			; p-rule index
+      (cond
+       ((< gx glen)
+	(if (assq (lhs-symb gx) curr)
+	    ;; Add rhs to next and rslt if not already done.
+	    (let* ((assq-ref curr (lhs-symb gx))
+		   (rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym|$eps
+		   (rslt1 (if (memq gx rslt) rslt (cons gx rslt)))
+		   
+		   ;;(done1 (if (memq rhs1 done) done (cons rhs1 done))) ???
+		   (done1 done)
+		   
+		   (next1 (cond ((memq rhs1 done) next)
+				((terminal? rhs1) next)
+				(else (cons rhs1 next))))
+		   
+		   )
+	      (iter rslt1 done1 next1 curr (1+ gx)))
+	    ;; Nothing to check; process next rule.
+	    (iter rslt done next curr (1+ gx))))
+       ((pair? next)
+	;; Start another sweep throught the grammar.
+	(iter rslt done '() next 0))
+       (else
+	;; Done, so return.
+	(reverse rslt))))))
+(define non-kernels old-non-kernels)
 
 ;; @item expand-k-item => item-set
 ;; Expand a kernel-item into a list with the non-kernels.
@@ -770,11 +824,11 @@
 ;; and @code{'kix-v}, repspectively.   Each entry in @code{kis-v} is a list of
 ;; items in the form @code{(px . rx)} where @code{px} is the production rule
 ;; index and @code{rx} is the index of the RHS symbol.  Each entry in the
-;; vector @code{kix-v} is an a-list of the form @code{sy . kx} where @code{sy}
-;; is a (terminal or non-terminal) symbol and @code{kx} is the index of the
-;; kernel itemset.  The basic algorithm is discussed on pp. 228-229 of the
-;; DB except that we compute non-kernel items on the fly using
-;; @code{expand-k-item}.  See Example 4.46 on p. 241 of the DB.
+;; vector @code{kix-v} is an a-list with entries @code{(sy . kx)} where
+;; @code{sy} is a (terminal or non-terminal) symbol and @code{kx} is the
+;; index of the kernel itemset.  The basic algorithm is discussed on
+;; pp. 228-229 of the DB except that we compute non-kernel items on the fly
+;; using @code{expand-k-item}.  See Example 4.46 on p. 241 of the DB.
 (define (step1 . rest)
   (let* ((al-in (if (pair? rest) (car rest) '()))
 	 (add-kset (lambda (upd kstz)	; give upd a ks-ix and add to kstz
@@ -860,16 +914,15 @@
 (define (first symbol-list end-token-list)
   (let* ((core (fluid-ref *lalr-core*))
 	 (eps-l (core-eps-l core))
-	 (prune-al (core-prune-al core)) ; alist of (symb . prunage-list)
-	 (stng symbol-list)
-	 (latoks end-token-list))
+	 (prune-al (core-prune-al core)) ; alist: lhs -> prune-l
+	 )
     ;; This loop strips off the leading symbol from stng and then adds to
     ;; todo list, which results in range of p-rules getting checked for
     ;; terminals.
     (let iter ((rslt '())		; terminals collected
 	       (pngl '())		; prunage-list: may need stack
-	       (stng stng)		; what's left of input string
-	       (hzeps #t)		; has epsilon production
+	       (stng symbol-list)	; what's left of input string
+	       (hzeps #t)		; if eps-prod so far
 	       (done '())		; non-terminals checked
 	       (todo '())		; non-terminals to assess
 	       (p-range '())		; range of p-rules to check
@@ -922,9 +975,10 @@
 		   (or (eq? symb '$epsilon) (memq symb eps-l))
 		   symbl symbl '() '()))))
       (hzeps
-       ;; $epsilon passes all the way through.  If latoks provided use that.
-       (if (pair? latoks)
-	   (lset-union eqv? rslt latoks)
+       ;; $epsilon passes all the way through.
+       ;; If end-token-list provided use that.
+       (if (pair? end-token-list)
+	   (lset-union eqv? rslt end-token-list)
 	   (cons '$epsilon rslt)))
       (else
        rslt)))))
