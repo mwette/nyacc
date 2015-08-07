@@ -104,15 +104,7 @@
 (define-syntax lalr-spec
   (syntax-rules +++ () 
     ((_ <expr> +++)
-     (let* (#;(xtra-rules '())		; symbols for optional's
-	    #;(nxsymb 0)			; number of extra symbols
-	    #;(make-symb
-	     (lambda ()
-	       (let ((n nxsymb))
-		 (set! nxsymb (1+ n))
-		 (string->symbol
-		  (string-append "$opt-" (number->string n))))))
-	    )
+     (let* ()
        (letrec-syntax
 	   ((with-attr-list
 	     (syntax-rules ($prune)

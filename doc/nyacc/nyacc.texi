@@ -58,7 +58,7 @@ an example.  Consider the following contents of the file @file{calc.scm}.
 
 (define calc-spec
   (lalr-spec
-   (precedence< (left "+" "-") (left "*" "/"))
+   (prec< (left "+" "-") (left "*" "/"))
    (start expr)
    (grammar
     (expr
@@ -87,7 +87,7 @@ The @code{lalr-spec} syntax is used to generate a (canonical)
 specification from the grammar and options.  The syntax is imported
 from the module @code{(nyacc lalr)}.
 @item
-The @code{precedence<} directive indicates that 
+The @code{prec<} directive indicates that 
 the tokens appearing in the sequence of associativity directives
 should be interpreted in increasing order of precedence.  The
 associativity statements @code{left} indicate that the tokens have left

@@ -24,6 +24,7 @@
      (expr "/" expr ($$ (/ $1 $3)))
      ('$fx ($$ (string->number $1))))
     )))
+
 (define calc-mach (make-lalr-machine calc-spec))
 ;;(define calc-mach (compact-machine calc-mach))
 (define calc-mach (hashify-machine calc-mach))
