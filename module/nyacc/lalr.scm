@@ -635,7 +635,7 @@
 	(cons p-ix r-ixm1))))
 
 ;; @item non-kernels symb => list of prule indices
-;; Compute the set of non-kernel rules for symbol @code{symb}.  If grammaer
+;; Compute the set of non-kernel rules for symbol @code{symb}.  If grammar
 ;; looks like
 ;; @example
 ;; 1: A => Bcd
@@ -647,7 +647,7 @@
 ;; @noindent
 ;; then @code{non-kernels 'A} results in @code{(1 5 7)}.
 ;; Note: To support pruning this routine will need to be rewritten.
-(define (old-non-kernels symb)
+(define (non-kernels symb)
   (let* ((core (fluid-ref *lalr-core*))
 	 (lhs-v (core-lhs-v core))
 	 (glen (vector-length lhs-v))
@@ -698,27 +698,26 @@
 ;; curr=((P1 F) (P2 G)) next=((E F) (E G) => (E (intersection F G))
 ;; curr=((E)) next=((E F) (E G) => (E (intersection F G))
 
-;; @item p-upd symbol prunage spl
+;; @item p-todo symbol prunage spl
 ;; updates to be handled
 ;; if want stuff in spl not in E
 ;; @example
 ;; p-memb 'E '(F) '((E G)) => 
 ;; @end example
-#|
-(define (p-memb symbol prunage spl)
-  (let ((pnag (assq-ref symbol spl)))
-    (if pnag
-	(if (and (null? prunage) (null? pnag))
+(define (p-todo symbol prunage spl)
+  (let* ((pnag (assq-ref symbol spl))
+	 (pset (and=> pnag (lambda (p) (lset-intersection p prunage))))
+	 )
+    (if (and pnag pset)
+	#f
+	#t)))
 
-  (and=> (assq-ref symbol spl)
-	 (lambda (p) (null? (lset-intersection p prunage)))))
-|#
 (define (p-cons symbol prunage spl)
   #f)
 (define (with-gram gram thunk)
   (fluid-set! *lalr-core* (make-core/extras gram))
   (thunk))
-(define (new-non-kernels symb)
+(define (non-kernels/prunage symb)
   (let* ((core (fluid-ref *lalr-core*))
 	 (lhs-v (core-lhs-v core))
 	 (prune (core-prune-al core))
@@ -759,7 +758,6 @@
        (else
 	;; Done, so return.
 	(reverse rslt))))))
-(define non-kernels old-non-kernels)
 
 ;; @item expand-k-item => item-set
 ;; Expand a kernel-item into a list with the non-kernels.
