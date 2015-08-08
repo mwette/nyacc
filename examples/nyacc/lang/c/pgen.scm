@@ -34,12 +34,6 @@
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
-(define crn "Copyright (C) 2015 Matthew R. Wette
-
-This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-or any later version published by the Free Software Foundation.  See the
-file COPYING included with the nyacc distribution.")
-
 ;; Objective is to generate a sxml tree.
 ;; Strategy for building the tree:
 ;; @itemize
@@ -50,7 +44,7 @@ file COPYING included with the nyacc distribution.")
 ;; but modified to handle comments and CPP statements.
 (define clang-spec
   (lalr-spec
-   (notice crn)
+   (notice lang-crn)
    (expect 1)				; expect 1 shift-reduce conflict
    (start translation-unit-proxy)
    (grammar

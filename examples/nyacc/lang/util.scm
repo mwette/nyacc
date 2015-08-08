@@ -9,11 +9,19 @@
 ;; runtime utilities for the parsers -- needs work
 
 (define-module (lang util)
-  #:export (make-tl
+  #:export (lang-crn
+	    make-tl
 	    tl-append tl-insert
 	    tl+attr tl->list
             fmterr)
   )
+
+(define lang-crn "Copyright (C) 2015 Matthew R. Wette
+
+This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+or any later version published by the Free Software Foundation.  See the
+file COPYING included with the this distribution.")
+
 
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))

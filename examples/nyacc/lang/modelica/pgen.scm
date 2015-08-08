@@ -33,15 +33,9 @@
 (fmterr "  SR: primary => \"initial\"\n")
 (fmterr "  SR: primary => \"end\"\n")
 
-(define crn "Copyright (C) 2015 Matthew R. Wette
-
-This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-or any later version published by the Free Software Foundation.  See the
-file COPYING included with the nyacc distribution.")
-
 (define modelica-spec
   (lalr-spec
-   (notice crn)
+   (notice lang-crn)
    (start stored-definition)
    (grammar
     

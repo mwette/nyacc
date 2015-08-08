@@ -2,7 +2,7 @@
 // 
 // This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 // or any later version published by the Free Software Foundation.  See the
-// file COPYING included with the nyacc distribution.
+// file COPYING included with the this distribution.
 %token _lone_comm
 %token _string
 %token _fl

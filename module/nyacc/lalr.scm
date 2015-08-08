@@ -114,23 +114,13 @@
 	    (parse-rhs
 	     (lambda (x)
 	       ;; The following is syntax-case because we use a fender.
-	       (syntax-case x (quote
-			       $$ $$/ref $$-ref
-			       $action $action/ref $action-ref
-			       $with
-			       $? $* $+)
+	       (syntax-case x (quote $$ $$/ref $$-ref $with $? $* $+)
 		 ;; action specifications
 		 ((_ ($$ <guts> ...) <e2> ...)
 		  #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
 		 ((_ ($$-ref <ref>) <e2> ...)
 		  #'(cons '(action #f '<ref> #f) (parse-rhs <e2> ...)))
 		 ((_ ($$/ref <ref> <guts> ...) <e2> ...)
-		  #'(cons '(action #f <ref> <guts> ...) (parse-rhs <e2> ...)))
-		 ((_ ($action <guts> ...) <e2> ...)
-		  #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
-		 ((_ ($action-ref <ref>) <e2> ...)
-		  #'(cons '(action #f '<ref> #f) (parse-rhs <e2> ...)))
-		 ((_ ($action/ref <ref> <guts> ...) <e2> ...)
 		  #'(cons '(action #f <ref> <guts> ...) (parse-rhs <e2> ...)))
 
 		 ;; other internal $-syntax
@@ -149,6 +139,7 @@
 		  #'(cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
 			  (parse-rhs <e2> ...)))
 		 
+		 ;; terminals and non-terminals
 		 ((_ (quote <e1>) <e2> ...)
 		  #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
 		 ((_ (<f> ...) <e2> ...)
@@ -490,9 +481,9 @@
 		  (assq-ref spec 'rhs-v)
 		  '() '()))
 
-;; @item make-core/eps spec => lalr-core-type
+;; @item make-core/extras spec => lalr-core-type
 ;; Add list of symbols with epsilon productions.
-(define (make-core/eps spec)
+(define (make-core/extras spec)
   (let ((non-terms (assq-ref spec 'non-terms))
 	(terminals (assq-ref spec 'terminals))
 	(lhs-v (assq-ref spec 'lhs-v))
@@ -696,24 +687,45 @@
 ;; 6: E  -> F
 ;; 7: E  -> G
 ;; 8: C  -> ";"
+;;
 ;; curr=A next=((B A) (C A)) done=(A) rslt=(1)
-;;
 ;; OR
-;;
+;; use alist of LHS to add, but prune xxx
 ;; curr=((A)) next=(B C) done=(A) rslt=(1)
 ;; curr=((B) (C)) next=(P1 P2) done=(A B C) rslt=(1 2 4)
 ;; curr=((P1 F) (P2 G)) next=((E F) (E G))
 ;;     done=(A B C P1 P2) rslt=(1 2 4 3 5)
 ;; curr=((P1 F) (P2 G)) next=((E F) (E G) => (E (intersection F G))
 ;; curr=((E)) next=((E F) (E G) => (E (intersection F G))
+
+;; @item p-upd symbol prunage spl
+;; updates to be handled
+;; if want stuff in spl not in E
+;; @example
+;; p-memb 'E '(F) '((E G)) => 
+;; @end example
+#|
+(define (p-memb symbol prunage spl)
+  (let ((pnag (assq-ref symbol spl)))
+    (if pnag
+	(if (and (null? prunage) (null? pnag))
+
+  (and=> (assq-ref symbol spl)
+	 (lambda (p) (null? (lset-intersection p prunage)))))
+|#
+(define (p-cons symbol prunage spl)
+  #f)
 (define (with-gram gram thunk)
-  (fluid-set! *lalr-core* (make-core/eps gram))
+  (fluid-set! *lalr-core* (make-core/extras gram))
   (thunk))
-#;(define (new-non-kernels symb)
+(define (new-non-kernels symb)
   (let* ((core (fluid-ref *lalr-core*))
 	 (lhs-v (core-lhs-v core))
+	 (prune (core-prune-al core))
 	 (glen (vector-length lhs-v))
-	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx))))
+	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx)))
+	 (inters lset-intersection)
+	 )
     (let iter ((rslt '())		; result is set of p-rule indices
 	       (done '())		; symbols completed or queued
 	       (next '())		; next round of symbols to process
@@ -722,14 +734,17 @@
       (cond
        ((< gx glen)
 	(if (assq (lhs-symb gx) curr)
-	    ;; Add rhs to next and rslt if not already done.
-	    (let* ((assq-ref curr (lhs-symb gx))
-		   (rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym|$eps
-		   (rslt1 (if (memq gx rslt) rslt (cons gx rslt)))
-		   
-		   ;;(done1 (if (memq rhs1 done) done (cons rhs1 done))) ???
-		   (done1 done)
-		   
+	    (let* ((pair (assq (lhs-symb gx) curr))
+		   (rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym | $eps
+		   (pnge (assq-ref prune rhs1))	      ; prunage, AA null
+		   (rhsx (assq rhs1 prune))
+		   ;;
+		   (rslt1 (if (memq gx rslt) rslt (cons gc rslt)))
+		   (done1 (if (assq rhs1 done)
+			      (cons 
+			       (cons rhs1 (inters (assq-ref done rhs1) rhsx))
+			       done)
+			      done))
 		   (next1 (cond ((memq rhs1 done) next)
 				((terminal? rhs1) next)
 				(else (cons rhs1 next))))
@@ -1587,7 +1602,7 @@
 (define (make-lalr-machine spec)
   (let ((prev-core (fluid-ref *lalr-core*)))
     (dynamic-wind
-	(lambda () (fluid-set! *lalr-core* (make-core/eps spec)))
+	(lambda () (fluid-set! *lalr-core* (make-core/extras spec)))
 	(lambda ()
 	  ;; build up "sub-machines"
 	  (let* ((sm1 (step1 spec))

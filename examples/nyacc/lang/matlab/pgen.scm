@@ -31,15 +31,9 @@
   #:use-module (ice-9 pretty-print)
   )
 
-(define crn "Copyright (C) 2015 Matthew R. Wette
-
-This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-or any later version published by the Free Software Foundation.  See the
-file COPYING included with the nyacc distribution.")
-
 (define matlab-spec
   (lalr-spec
-   (notice crn)
+   (notice lang-crn)
    (start mfile)
    (grammar
     

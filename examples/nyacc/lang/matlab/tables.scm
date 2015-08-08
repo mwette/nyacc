@@ -4,7 +4,7 @@
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 ;; or any later version published by the Free Software Foundation.  See the
-;; file COPYING included with the nyacc distribution.
+;; file COPYING included with the this distribution.
 
 (define len-v
   #(1 1 1 1 2 4 3 2 0 2 2 1 1 2 10 9 8 7 6 5 1 3 1 2 1 1 1 5 4 8 9 8 6 9 8 6
