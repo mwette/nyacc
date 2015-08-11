@@ -710,7 +710,6 @@
     (if (and pnag pset)
 	#f
 	#t)))
-
 (define (p-cons symbol prunage spl)
   #f)
 (define (with-gram gram thunk)

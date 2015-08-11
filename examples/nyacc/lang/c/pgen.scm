@@ -483,7 +483,7 @@
 
     ;; 5.10, p 168
     ;;(typedef-name (identifier)) must be hacked w/ the lexical analyzer
-    (typedef-name ('typename ($$ `(ident ,$1))))
+    (typedef-name ('typename ($$ `(typename ,$1))))
 
     ;; 5.12, p 176
     (type-name

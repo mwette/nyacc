@@ -12,9 +12,7 @@
 
 (use-modules (lang c pgen))
 (use-modules (nyacc lalr))
-(use-modules (nyacc lex))
 (use-modules (nyacc export))
-(use-modules (sxml simple))
 (use-modules (ice-9 pretty-print))
 
 (with-output-to-file "lang/c/lang.txt.new"
@@ -31,7 +29,6 @@
 (let ((sx (with-input-from-file "lang/c/ex1.c"
 	    (lambda () (parse-c #:cpp-defs defs #:inc-dirs incs)))))
   (pretty-print sx)
-  ;;(sxml->xml sx) (newline)
   #f)
 
 ;; --- last line

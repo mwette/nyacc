@@ -1,4 +1,4 @@
-lang/matlab/
+lang/c/
 
 Copyright (C) 2015 Matthew R. Wette
 
@@ -8,7 +8,6 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 The following files are also covered by the above copyright and license:
-  Tnull.m
-  Tone.m
-  ex1.m
+  ex1.c
+  inc.h
 
