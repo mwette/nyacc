@@ -29,10 +29,9 @@
 	    pp-rule find-terminal	; used by (nyacc export)
 	    with-gram new-non-kernels
 	    )
-  ;; Clean this up: (e.g., (srfi srfi-1) preferred over (rnrs lists))
-  #:use-module ((rnrs lists) #:select (remq remp remove fold-left fold-right))
   #:use-module ((srfi srfi-1)
-		#:select (lset-intersection lset-union lset-difference fold))
+		#:select (fold fold-right remove
+			       lset-intersection lset-union lset-difference))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (nyacc util)
@@ -277,8 +276,8 @@
 	       
   ;; fatal: non-terminal's w/o production rule		  
   (define (gram-check-3 ll nl err-l)
-    (fold-left
-     (lambda (l n)
+    (fold
+     (lambda (n l)
        (if (not (memq n ll))
 	   (cons (fmtstr "*** non-terminal with no production rule: ~A" n) l)
 	   l))
@@ -287,8 +286,8 @@
   ;; warning: unused LHS
   ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
   (define (gram-check-4 ll nl err-l)
-    (fold-left
-     (lambda (l s) (cons (fmtstr "+++ LHS not used in any RHS: ~A" s) l))
+    (fold
+     (lambda (s l) (cons (fmtstr "+++ LHS not used in any RHS: ~A" s) l))
      err-l
      (let iter ((ull '()) (all ll)) ; unused LHSs, all LHS's
        (if (null? all) ull
@@ -763,7 +762,7 @@
 ;; Expand a kernel-item into a list with the non-kernels.
 (define (expand-k-item k-item)
   (reverse
-   (fold-left (lambda (items gx) (cons (first-item gx) items))
+   (fold (lambda (gx items) (cons (first-item gx) items))
 	      (list k-item)
 	      (non-kernels (looking-at k-item)))))
 
@@ -1110,10 +1109,10 @@
 		  (item1 (next-item item)) ; next item after sym
 		  (sx1 (assq-ref (vector-ref kix-v kx) sym)) ; goto(I,sym)
 		  (item0 (car kset)))	   ; kernel item
-	     (kit-add kit-v (remq '$@ tokl) sx1 item1) ; spontaneous
+	     (kit-add kit-v (delq '$@ tokl) sx1 item1) ; spontaneous
 	     (if (memq '$@ tokl)	; propagates
 		 (kip-add kip-v kx item0 sx1 item1))))
-	 (remp ;; todo: check this remove
+	 (remove ;; todo: check this remove
 	  (lambda (li) (last-item? (car li)))
 	  (closure (list (cons (car kset) '($@))))))
 	(iter kx (cdr kset)))
@@ -1121,7 +1120,7 @@
        ((< (1+ kx) nkset)
 	(iter (1+ kx)
 	      ;; End-items don't shift, so don't propagate.
-	      (remp last-item? (vector-ref kis-v (1+ kx)))))))
+	      (remove last-item? (vector-ref kis-v (1+ kx)))))))
     (when #f (pp-kip-v kip-v) (pp-kit-v kit-v)) ; for debugging
     (cons* (cons 'kit-v kit-v) (cons 'kip-v kip-v) subm)))
 
@@ -1303,7 +1302,7 @@
 	  ;; the parser using precedence/associativity rules so we remove the
 	  ;; reduction from the reduction-list.
 	  (iter (cons (cons* term 'srconf goto (car redl)) res)
-		(cdr sal) (remove redp ral)))
+		(cdr sal) (delete redp ral)))
 	 (else
 	  ;; The terminal (aka token) signals a shift only.
 	  (iter (cons (cons* term 'shift goto) res)

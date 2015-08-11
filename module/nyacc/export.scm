@@ -21,11 +21,11 @@
 	    lalr->guile
 	    c-char token->bison elt->bison
 	    )
-  #:use-module ((rnrs base) #:select (vector-for-each))
-  #:use-module (ice-9 regex)
   #:use-module ((nyacc lalr) #:select (find-terminal pp-rule))
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
+  #:use-module ((srfi srfi-43) #:select (vector-for-each))
+  #:use-module (ice-9 regex)
   )
 
 ;; The code below, for exporting to guile and bison, should be moved to
@@ -113,7 +113,7 @@
       (let* ((lhs (vector-ref lhs-v i)) (rhs (vector-ref rhs-v i)))
 	(fmt port "~A:" (elt->bison lhs terms))
 	(vector-for-each
-	 (lambda (e) (fmt port " ~A" (elt->bison e terms)))
+	 (lambda (ix e) (fmt port " ~A" (elt->bison e terms)))
 	 rhs)
 	(if (zero? (vector-length rhs)) (fmt port " %empty"))
 	(fmt port " ;\n")))

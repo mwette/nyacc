@@ -38,6 +38,6 @@
     (lambda () (calc-parser (gen-lexer)))))
 
 (define res (with-input-from-string "1 + 4 / 2 * 3 - 5" parse-expr))
-(simple-format #t "expect 2; get ~S\n" res) ;; expect: 2
+(simple-format #t "~A\n" (if (= res 2) "PASS" "FAIL")) ;; expect: 2
 
 ;; --- last line

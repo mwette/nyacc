@@ -23,7 +23,7 @@
 (define-module (nyacc import)
   #:export-syntax (lalr-parser)
   #:export (guile-lalr->nyacc-lalr)
-  #:use-module ((rnrs lists) #:select (fold-right))
+  #:use-module ((srfi srfi-1) #:select (fold-right))
   )
 
 (define (convert-tree spec0)
