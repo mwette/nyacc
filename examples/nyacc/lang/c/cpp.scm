@@ -192,46 +192,5 @@
 	   ((else endif) (list cmd))
 	   (else '())))))))
     
-;; @item read-cpp-line ch => #f | (cpp-xxxx)??
-;; Given if ch is #\# read a cpp-statement
-#|	  
-(define (read-cpp-line ch)
-  (if (not (eq? ch #\#)) #f
-      (let iter ((cl '()) (ch (read-char)))
-	(cond
-	 ((eq? ch #\newline) (list->string (reverse cl)))
-	 ((eq? ch #\\)
-	  (let ((c2 (read-char)))
-	    (if (eq? c2 #\newline)
-		(iter cl (read-char))
-		(iter (cons* c2 ch cl) (read-char)))))
-	 (else (iter (cons ch cl) (read-char)))))))
-
-
-
-	  (define (exec-cpp line)
-	    ;; Parse the line into a CPP stmt, execute it, and return it.
-	    (let* ((stmt (parse-cpp-line line)) (tree (cdr stmt)))
-	      (case (car tree)
-		((include)
-		 (let* ((parg (cadr tree)) (leng (string-length parg))
-			(file (substring parg 1 (1- leng)))
-			(path (find-file-in-dirl file (cpi-incs info)))
-			(tree (with-input-from-file path run-parse)))
-		   ;; (for-each add-typenames-from-decl (xp2 tree))
-		   (for-each add-define (xp1 tree))))
-		((define)
-		 (add-define tree))
-		((if)
-		 (let ((val (eval-cpp-expr (cadr tree) (cpi-defs info))))
-		   (cond ((not val)
-			  (fmterr "*** unresolved: ~S" (cadr tree)))
-			 ((zero? val) (set! skip (cons #t skip)))
-			 (else (set! skip (cons #f skip))))))
-		((endif)
-		 (set! skip (cons 'd skip))))
-	      stmt))
-|#	  
-
 ;; mode: scheme ***
 ;; --- last line
