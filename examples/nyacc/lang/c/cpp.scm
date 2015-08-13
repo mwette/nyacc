@@ -50,18 +50,20 @@
 	  ch)))
 
 ;; grammar:
-;; expr   => expr == equal | equal
-;; equal  => equal || term | term
-;; term   => term && factor | factor
-;; factor => defined '(' ident ')' | const
+;;   expr   => equal | expr == equal
+;;   equal  => term | equal "||" term
+;;   term   => factor | term "&&" factor
+;;   factor => "defined" "(" ident ")" | const
 ;; TO
-;; expr => equal expr'
-;; expr' => == equal | $eps
-;; equal => term equal'
-;; equal' => || term | $eps
-;; term => factor term'
-;; term' => && factor | $eps
-;; factor => defined | const
+;;   expr => equal expr'
+;;   expr' => == equal | $eps
+;;   equal => term equal'
+;;   equal' => || term | $eps
+;;   term => factor term'
+;;   term' => && factor | $eps
+;;   factor => defined | const
+;; TODO:
+;;   factor => ident "(" ident-list ")"
 (define (parse-cpp-expr)
   ;; defined(X) && define(Y) ...
   (letrec
