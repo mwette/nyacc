@@ -18,13 +18,14 @@
 ;; C parser generator
 
 (define-module (lang c pgen)
-  #:export (clang-spec clang-mach)
+  #:export (clang-spec clang-mach dev-parse-c)
   #:use-module (lang c cpp)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (lang util)
   #:use-module ((srfi srfi-1) #:select (last remove))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
+  #:use-module ((srfi srfi-43) #:select (vector-map))
   #:use-module ((sxml fold) #:select (foldts*-values foldts))
   #:use-module ((sxml xpath) #:select (sxpath))
   ;; debug:
@@ -263,7 +264,7 @@
 
     (designator-list
      (designator ($$ (make-tl 'desgr-list $1)))
-     (designator-list designator ($$ (tl->append $1 $2)))
+     (designator-list designator ($$ (tl-append $1 $2)))
      )
 
     (designator
@@ -849,9 +850,9 @@
 
     (for-expressions
      ("(" initial-clause expression ";" expression ")" ($$ (list $2 $3 $5)))
-     ("(" initial-clause expression ";" ")" ($$ (list $2 $3 (expr))))
-     ("(" initial-clause ";" expression ")" ($$ (list $2 (expr) $4)))
-     ("(" initial-clause ";" ")" ($$ (list $2 (expr) (expr))))
+     ("(" initial-clause expression ";" ")" ($$ (list $2 $3 '(expr))))
+     ("(" initial-clause ";" expression ")" ($$ (list $2 '(expr) $4)))
+     ("(" initial-clause ";" ")" ($$ (list $2 '(expr) '(expr))))
      )
     
     (initial-clause
@@ -892,7 +893,7 @@
 
     ;; 8.11, p 281
     (null-statement
-     (";" ($$ (null-stmt))))
+     (";" ($$ '(null-stmt))))
 
     ;; 9.1, p 286
     (translation-unit
@@ -961,15 +962,25 @@
     ;;(identity
     (make-lalr-machine clang-spec))))
 
-(define len-v (assq-ref js-mach 'len-v))
-(define pat-v (assq-ref js-mach 'pat-v))
-(define rto-v (assq-ref js-mach 'rto-v))
-(define mtab (assq-ref js-mach 'mtab))
+(define len-v (assq-ref clang-mach 'len-v))
+(define pat-v (assq-ref clang-mach 'pat-v))
+(define rto-v (assq-ref clang-mach 'rto-v))
+(define mtab (assq-ref clang-mach 'mtab))
 (define sya-v (vector-map
                (lambda (ix nrg guts) (wrap-action nrg guts))
-               (assq-ref js-mach 'nrg-v) (assq-ref js-mach 'act-v)))
+               (assq-ref clang-mach 'nrg-v) (assq-ref clang-mach 'act-v)))
 (define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
 
 (include "pbody.scm")
+
+(define raw-parser (make-lalr-parser clang-mach))
+
+(define (run-parse) (raw-parser (gen-c-lexer)))
+
+(define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()))
+  (let ((info (make-cpi cpp-defs inc-dirs)))
+    (with-fluid* *info* info (lambda () (raw-parser (gen-c-lexer))))))
+
+;(define dev-parse-c parse-c)
 
 ;; --- last line

@@ -97,15 +97,15 @@
 	(let ((p (string-append (car dirl) "/" file)))
 	  (if (access? p R_OK) p (iter (cdr dirl)))))))
 
-;; @item make-c-lexer match-table => proc
-;; Context-sensitive lexer for the C language.
-;; This gets ugly in order to handle cpp.
-;;.need to add support for num's w/ letters like @code{14L} and @code{1.3f}.
-;; todo: I think there is a bug wrt the comment reader because // ... \n will
-;; end up in same mode...  so after
-;; int x; // comment
-;; the lexer will think we are not at BOL.
+;; @item gen-c-lexer => thunk
+;; Generate a context-sensitive lexer for the C language.
 (define gen-c-lexer
+  ;; This gets ugly in order to handle cpp.
+  ;;.need to add support for num's w/ letters like @code{14L} and @code{1.3f}.
+  ;; todo: I think there is a bug wrt the comment reader because // ... \n
+  ;; will end up in same mode...  so after
+  ;; int x; // comment
+  ;; the lexer will think we are not at BOL.
   (let* ((match-table mtab)
 	 (read-ident read-c-ident)
 	 (read-comm read-c-comm)
@@ -205,21 +205,5 @@
 	      ((d) (let ((fl (cadr skip))) ;; d for endif: delayed pop
 		     (set! skip (cddr skip))
 		     (if fl (loop (read-token)) pair))))))))))
-
-;; ------------------------------------------------------------------------
-
-;; Parse given a token generator.  Uses fluid @code{*info*}.
-(define parse/tokgen (make-lalr-parser clang-mach))
-
-;; Generate a function to provide instances of a token generator.
-(define gen-c-lexer (make-c-lexer-generator (assq-ref clang-mach 'mtab)))
-
-;; Thunk to parser the current input with a new token generator.
-(define (run-parse) (parse/tokgen (gen-c-lexer)))
-
-(define* (parse-c #:key (cpp-defs '()) (inc-dirs '()))
-  (let ((info (make-cpi cpp-defs inc-dirs)))
-    (with-fluid* *info* info run-parse)
-    ))
 
 ;; --- last line

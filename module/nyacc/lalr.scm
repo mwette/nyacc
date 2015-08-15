@@ -25,6 +25,8 @@
 	    make-lalr-parser
 	    pp-lalr-grammar pp-lalr-machine
 	    write-lalr-tables
+	    write-lalr-actions
+	    ;;write-lalr-parser
 	    wrap-action
 	    pp-rule find-terminal	; used by (nyacc export)
 	    with-gram new-non-kernels
@@ -1880,11 +1882,18 @@
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))	; reduce to
 	 (pat-v (assq-ref mach 'pat-v))
-	 (sya-v (vector-map ;; symbolic action
-		 (lambda (ix nrg guts) (wrap-action nrg guts))
-		 (assq-ref mach 'nrg-v) (assq-ref mach 'act-v)))
-	 ;; Turn symbolic action into executable procedures:
-	 (act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
+	 (act-v (cond
+		 ((assq-ref mach 'nrg-v) =>
+		  (lambda (v)
+		    (vector-map
+		     ;; Turn symbolic action into executable procedures:
+		     (lambda (ix f) (eval f (current-module)))
+		     (vector-map
+		      ;; symbolic action
+		      (lambda (ix nrg guts) (wrap-action nrg guts))
+		      (assq-ref mach 'nrg-v) (assq-ref mach 'act-v)))))
+		 (else ;; have tables: no conversion needed
+		  (assq-ref mach 'act-v))))
 	 ;;
 	 (dmsg (lambda (s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a)))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
@@ -1947,9 +1956,46 @@
 	   (else ;; accept
 	    (car stack))))))))
 
+#;(define hashed-parser-code
+  '(define* (lexr #:key debug)
+     (define (dmsg s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a))
+     (let iter ((state (list 0)) (stack (list '$@)) (nval #f) (lval (lexr)))
+       (let* ((tval (car (if nval nval lval)))
+	      (sval (cdr (if nval nval lval)))
+	      (stxl (vector-ref pat-v (car state)))
+	      (stx (or (assq-ref stxl tval) (assq-ref stxl -1) #f)))
+	 (when debug (dmsg (car state) (if nval tval sval) stx))
+	 (cond
+	  ((eq? #f stx)
+	   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
+		 (ln (1+ (port-line (current-input-port)))))
+	     (fmterr "~A: ~A: parse failed at state ~A, on input ~S\n"
+		     fn ln (car state) sval))
+	   #f)
+	  ((positive? stx)
+	   (iter (cons (shift-to stx) state) (cons sval stack)
+		 #f (if nval lval (lexr))))
+	  ((negative? stx)
+	   (let* ((gx (abs stx)) (gl (vector-ref len-v gx))
+		  ($$ (apply (vector-ref act-v gx) stack)))
+	     (iter (list-tail state gl) 
+		   (list-tail stack gl)
+		   (cons (vector-ref rto-v gx) $$)
+		   lval)))
+	  (else (car stack)))))))
+
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 regex))
+
+(define (write-notice mach port)
+  (let* ((comm-leader ";; ")
+	 (notice (assq-ref (assq-ref mach 'attr) 'notice))
+	 (lines (if notice (string-split notice #\newline) '())))
+    (for-each
+     (lambda (l) (fmt port "~A~A\n" comm-leader l))
+     lines)
+    (if (pair? lines) (newline port))))
 
 ;; @item write-lalr-tables mach filename [#:lang output-lang]
 ;; For example,
@@ -1958,15 +2004,6 @@
 ;; write-lalr-tables mach "tables.tcl" #:lang 'tcl
 ;; @end example
 (define* (write-lalr-tables mach filename #:key (lang 'scheme))
-  (define comm-leader ";; ")
-
-  (define (write-notice mach port)
-    (let* ((notice (assq-ref (assq-ref mach 'attr) 'notice))
-	   (lines (if notice (string-split notice #\newline) '())))
-      (for-each
-       (lambda (l) (fmt port "~A~A\n" comm-leader l))
-       lines)
-      (if (pair? lines) (newline port))))
 
   (define (write-table mach name port)
     (fmt port "(define ~A\n  " name)
@@ -2009,22 +2046,51 @@
       (write-table mach 'pat-v port)
       (write-table mach 'rto-v port)
       (write-table mach 'mtab port)
-      (write-actions mach port)
+      ;;(write-actions mach port)
       (display ";;; end tables" port)
       (newline port))))
 
-#;(define (write-lalr-tables-in-tcl mach filename)
+(define* (write-lalr-actions mach filename #:key (lang 'scheme))
+  (define (pp-rule/ts gx)
+    (let* ((core (fluid-ref *lalr-core*))
+	   (lhs (vector-ref (core-lhs-v core) gx))
+	   (rhs (vector-ref (core-rhs-v core) gx))
+	   (tl (core-terminals core))
+	   (line (string-append
+		  (symbol->string lhs) " => "
+		  (string-join 
+		   (map (lambda (elt) (elt->str elt tl))
+			(vector->list rhs))
+		   " "))))
+      (if (> (string-length line) 72)
+	  (string-append (substring/shared line 0 69) "...")
+	  line)))
+    
+  (define (write-actions mach port)
+    (with-fluid*
+     *lalr-core* (make-core mach)
+     (lambda ()
+       (fmt port "(define act-v\n  (vector\n")
+       (vector-for-each
+	(lambda (ix nrg act)
+	  (fmt port "   ;; ~A\n" (pp-rule/ts ix))
+	  (pretty-print (wrap-action nrg act) port #:per-line-prefix "   "))
+	(assq-ref mach 'nrg-v) (assq-ref mach 'act-v))
+       (fmt port "   ))\n\n"))))
 
-  (define (write-table mach name port)
-    (fmt port "(define ~A\n  " name)
-    (ugly-print-to-tcl (assq-ref mach name) port)
-    (fmt port ")\n\n"))
-			
   (call-with-output-file filename
     (lambda (port)
       (fmt port ";; ~A\n\n"
 	   (regexp-substitute #f (string-match ".new$" filename) 'pre))
-      (write-table mach 'len-v port)
+      (write-notice mach port)
+      (write-actions mach port)
+      (display ";;; end tables" port)
+      (newline port))))
+
+#;(define* (write-lalr-parser mach filename #:key (lang 'scheme))
+  (call-with-output-file filename
+    (lambda (port)
+      (pretty-print hashed-parser-code port)
       )))
 
 ;; @end itemize

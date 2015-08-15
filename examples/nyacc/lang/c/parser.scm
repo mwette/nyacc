@@ -18,11 +18,39 @@
 ;; C parser
 
 (define-module (lang c parser)
-  #export (parse-c)
-  #use-module (lang c cpp)
+  #:export (parse-c)
+  #:use-module ((srfi srfi-9) #:select (define-record-type))
+  #:use-module ((sxml fold) #:select (foldts*-values foldts))
+  #:use-module ((sxml xpath) #:select (sxpath))
+  #:use-module (nyacc lex)
+  #:use-module (nyacc lalr)
+  #:use-module (lang util)
+  #:use-module (lang c cpp)
   )
+
+;; utility routines
+;; match table
+;; lexical analyzer
+;; actions
 
 (include "tables.scm")
 (include "pbody.scm")
+(include "actions.scm")
+
+;; Parse given a token generator.  Uses fluid @code{*info*}.
+(define raw-parser
+  (make-lalr-parser 
+   (list
+    (cons 'len-v len-v)
+    (cons 'pat-v pat-v)
+    (cons 'rto-v rto-v)
+    (cons 'mtab mtab)
+    (cons 'act-v act-v))))
+
+(define (run-parse) (raw-parser (gen-c-lexer)))
+
+(define* (parse-c #:key (cpp-defs '()) (inc-dirs '()))
+  (let ((info (make-cpi cpp-defs inc-dirs)))
+    (with-fluid* *info* info (lambda () (raw-parser (gen-c-lexer))))))
 
 ;; --- last line
