@@ -41,11 +41,14 @@ file COPYING included with the this distribution.")
   (set-car! tl (cons item (car tl)))
   tl)
 
-;; @item tl-append tl item
+;; @item tl-append tl item ...
 ;; Append item at end of tagged list.
-(define (tl-append tl item)
-  (cons (car tl) (cons item (cdr tl))))
-(define (tl-append! tl item)
+(define (tl-append tl . rest)
+  (cons (car tl)
+	(let iter ((tail (cdr tl)) (items rest))
+	  (if (null? items) tail
+	      (iter (cons (car items) tail) (cdr items))))))
+(define (tl-append! tl item) ;; NEEDS FIXUP
   (set-cdr! tl (cons item (cdr tl)))
   tl)
 

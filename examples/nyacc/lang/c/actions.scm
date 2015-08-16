@@ -32,10 +32,9 @@
    (lambda ($2 $1 . $rest) (tl-insert $2 $1))
    ;; declaration-specifiers => type-qualifier
    (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list `(type-qual ,$1)))
+     (make-tl 'decl-spec-list $1))
    ;; declaration-specifiers => type-qualifier declaration-specifiers
-   (lambda ($2 $1 . $rest)
-     (tl-insert $2 `(type-qual ,$1)))
+   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
    ;; declaration-specifiers => function-specifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list `(fctn-spec ,$1)))
@@ -197,7 +196,7 @@
    ;; designator-list => designator
    (lambda ($1 . $rest) (make-tl 'desgr-list $1))
    ;; designator-list => designator-list designator
-   (lambda ($2 $1 . $rest) (tl->append $1 $2))
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; designator => "[" constant-expression "]"
    (lambda ($3 $2 $1 . $rest) (list 'array-dsgr $2))
    ;; designator => "." identifier
@@ -319,7 +318,7 @@
    ;; union-tag => identifier
    (lambda ($1 . $rest) $1)
    ;; void-type-specifier => "void"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) '(void))
    ;; typedef-name => 'typename
    (lambda ($1 . $rest) `(typename ,$1))
    ;; type-name => declaration-specifiers abstract-declarator
@@ -633,13 +632,13 @@
      (list $2 $3 $5))
    ;; for-expressions => "(" initial-clause expression ";" ")"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (list $2 $3 (expr)))
+     (list $2 $3 '(expr)))
    ;; for-expressions => "(" initial-clause ";" expression ")"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (list $2 (expr) $4))
+     (list $2 '(expr) $4))
    ;; for-expressions => "(" initial-clause ";" ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     (list $2 (expr) (expr)))
+     (list $2 '(expr) '(expr)))
    ;; initial-clause => expression ";"
    (lambda ($2 $1 . $rest) $1)
    ;; initial-clause => ";"
@@ -665,7 +664,7 @@
    ;; named-label => identifier
    (lambda ($1 . $rest) $1)
    ;; null-statement => ";"
-   (lambda ($1 . $rest) (null-stmt))
+   (lambda ($1 . $rest) '(null-stmt))
    ;; translation-unit => top-level-declaration
    (lambda ($1 . $rest) (make-tl 'trans-unit $1))
    ;; translation-unit => translation-unit top-level-declaration

@@ -77,9 +77,9 @@
 		     ($$ (tl-insert $2 $1)))
      ;; type-qualifier declaration-specifiers_opt
      (type-qualifier
-      ($$ (make-tl 'decl-spec-list `(type-qual ,$1))))
+      ($$ (make-tl 'decl-spec-list $1)))
      (type-qualifier declaration-specifiers
-		     ($$ (tl-insert $2 `(type-qual ,$1))))
+		     ($$ (tl-insert $2 $1)))
      ;; function-specifier declaration-specifiers_opt
      (function-specifier
       ($$ (make-tl 'decl-spec-list `(fctn-spec ,$1))))
@@ -481,7 +481,7 @@
     (union-tag (identifier))
 
     ;; 5.9, p 168
-    (void-type-specifier ("void"))
+    (void-type-specifier ("void" ($$ '(void))))
 
     ;; 5.10, p 168
     ;;(typedef-name (identifier)) must be hacked w/ the lexical analyzer
