@@ -1997,6 +1997,12 @@
      lines)
     (if (pair? lines) (newline port))))
 
+(define (string-sub str pat repl)
+  (let ((m (string-match pat str)))
+    (if m
+	(regexp-substitute #f m 'pre repl 'post)
+	str)))
+
 ;; @item write-lalr-tables mach filename [#:lang output-lang]
 ;; For example,
 ;; @example
@@ -2080,8 +2086,9 @@
 
   (call-with-output-file filename
     (lambda (port)
-      (fmt port ";; ~A\n\n"
-	   (regexp-substitute #f (string-match ".new$" filename) 'pre))
+      #;(fmt port ";; ~A\n\n"
+      (regexp-substitute #f (string-match ".new$" filename) 'pre))
+      (fmt port ";; ~A\n\n" (string-sub filename ".new$" ""))
       (write-notice mach port)
       (write-actions mach port)
       (display ";;; end tables" port)
@@ -2091,7 +2098,7 @@
   (call-with-output-file filename
     (lambda (port)
       (pretty-print hashed-parser-code port)
-      )))
+)))
 
 ;; @end itemize
 

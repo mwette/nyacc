@@ -154,7 +154,7 @@
      ("*" type-qualifier-list ($$ `(pointer ,$2)))
      ("*" ($$ '(pointer)))
      ("*" type-qualifier-list pointer ($$ `(pointer ,(tl->list $2) ,$3)))
-     ("*" pointer ($$ `(pointer ,$1)))
+     ("*" pointer ($$ `(pointer ,$2)))
      )
 
     (type-qualifier-list ; (C89)
@@ -175,16 +175,16 @@
      (direct-declarator
       "[" array-size-expression "]"
       ($$ `(array-of ,$1 ,$3)))
-      (direct-declarator
-       "[" "]"
-       ($$ `(array-of ,$1)))
-      (direct-declarator
-       "[" array-qualifier-list "*" "]"
-       ($$ `(array-of ,$1 ,$3 "*???")))
-      (direct-declarator
-       "[" "*" "]"
-       ($$ `(array-of ,$1 "*???")))
-      )
+     (direct-declarator
+      "[" "]"
+      ($$ `(array-of ,$1)))
+     (direct-declarator
+      "[" array-qualifier-list "*" "]"
+      ($$ `(array-of ,$1 ,$3 "*???")))
+     (direct-declarator
+      "[" "*" "]"
+      ($$ `(array-of ,$1 "*???")))
+     )
 
     (array-qualifier-list
      (array-qualifier ($$ (make-tl 'array-qual-list (list $1))))
@@ -497,9 +497,9 @@
      )
 
     (abstract-declarator
-     (pointer)
+     (pointer ($$ `(abs-declr ,$1)))
      (pointer direct-abstract-declarator ($$ `(abs-declr ,$1 ,$2)))
-     (direct-abstract-declarator)
+     (direct-abstract-declarator ($$ `(abs-declr ,$1)))
      )
 
     ;; The following in 4.5.2

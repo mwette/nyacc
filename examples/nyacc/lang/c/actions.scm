@@ -106,7 +106,7 @@
    (lambda ($3 $2 $1 . $rest)
      `(pointer ,(tl->list $2) ,$3))
    ;; pointer => "*" pointer
-   (lambda ($2 $1 . $rest) `(pointer ,$1))
+   (lambda ($2 $1 . $rest) `(pointer ,$2))
    ;; type-qualifier-list => type-qualifier
    (lambda ($1 . $rest)
      (make-tl 'type-qual-list $1))
@@ -327,11 +327,11 @@
    ;; type-name => declaration-specifiers
    (lambda ($1 . $rest) `(type-name ,(tl->list $1)))
    ;; abstract-declarator => pointer
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(abs-declr ,$1))
    ;; abstract-declarator => pointer direct-abstract-declarator
    (lambda ($2 $1 . $rest) `(abs-declr ,$1 ,$2))
    ;; abstract-declarator => direct-abstract-declarator
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(abs-declr ,$1))
    ;; direct-abstract-declarator => "(" abstract-declarator ")"
    (lambda ($3 $2 $1 . $rest) `(declr-scope ,$2))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "]"
