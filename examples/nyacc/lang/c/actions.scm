@@ -229,7 +229,7 @@
    ;; signed-type-specifier => "long" "int"
    (lambda ($2 $1 . $rest) '(fixed "long int"))
    ;; signed-type-specifier => "signed" "long"
-   (lambda ($2 $1 . $rest) '(fixed "singed long"))
+   (lambda ($2 $1 . $rest) '(fixed "signed long"))
    ;; signed-type-specifier => "signed" "long" "int"
    (lambda ($3 $2 $1 . $rest)
      '(fixed "signed long int"))
