@@ -63,19 +63,19 @@
    ;; function-specifier => "inline"
    (lambda ($1 . $rest) $1)
    ;; type-specifier => enumeration-type-specifier
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => floating-point-type-specifier
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => integer-type-specifier
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => structure-type-specifier
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => typedef-name
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => union-type-specifier
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => void-type-specifier
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-qualifier => "const"
    (lambda ($1 . $rest) '(type-qual (const)))
    ;; type-qualifier => "volatile"
@@ -97,7 +97,7 @@
    ;; simple-declarator => identifier
    (lambda ($1 . $rest) $1)
    ;; pointer-declarator => pointer direct-declarator
-   (lambda ($2 $1 . $rest) `(pointer-declr ,$1 ,$2))
+   (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
    ;; pointer => "*" type-qualifier-list
    (lambda ($2 $1 . $rest) `(pointer ,$2))
    ;; pointer => "*"
@@ -146,12 +146,12 @@
    (lambda ($1 . $rest) $1)
    ;; function-declarator => direct-declarator "(" parameter-type-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(fctn-declr ,$1 ,(tl->list $3)))
+     `(ftn-declr ,$1 ,(tl->list $3)))
    ;; function-declarator => direct-declarator "(" identifier-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(fctn-declr ,$1 ,(tl->list $3)))
+     `(ftn-declr ,$1 ,(tl->list $3)))
    ;; function-declarator => direct-declarator "(" ")"
-   (lambda ($3 $2 $1 . $rest) `(fctn-declr ,$1))
+   (lambda ($3 $2 $1 . $rest) `(ftn-declr ,$1))
    ;; parameter-type-list => parameter-list
    (lambda ($1 . $rest) $1)
    ;; parameter-type-list => parameter-list "," "..."
@@ -210,27 +210,88 @@
    ;; integer-type-specifier => bool-type-specifier
    (lambda ($1 . $rest) $1)
    ;; signed-type-specifier => "short"
-   (lambda ($1 . $rest) '(short))
+   (lambda ($1 . $rest) '(fixed "short"))
+   ;; signed-type-specifier => "short" "int"
+   (lambda ($2 $1 . $rest) '(fixed "short int"))
+   ;; signed-type-specifier => "signed" "short"
+   (lambda ($2 $1 . $rest) '(fixed "signed short"))
+   ;; signed-type-specifier => "signed" "short" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed "signed short int"))
    ;; signed-type-specifier => "int"
-   (lambda ($1 . $rest) '(int))
+   (lambda ($1 . $rest) '(fixed "int"))
    ;; signed-type-specifier => "signed"
-   (lambda ($1 . $rest) '(int))
+   (lambda ($1 . $rest) '(fixed "signed"))
+   ;; signed-type-specifier => "signed" "int"
+   (lambda ($2 $1 . $rest) '(fixed "signed int"))
    ;; signed-type-specifier => "long"
-   (lambda ($1 . $rest) '(long))
+   (lambda ($1 . $rest) '(fixed "long"))
+   ;; signed-type-specifier => "long" "int"
+   (lambda ($2 $1 . $rest) '(fixed "long int"))
+   ;; signed-type-specifier => "signed" "long"
+   (lambda ($2 $1 . $rest) '(fixed "singed long"))
+   ;; signed-type-specifier => "signed" "long" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed "signed long int"))
+   ;; signed-type-specifier => "long" "long"
+   (lambda ($2 $1 . $rest) '(fixed "long long"))
+   ;; signed-type-specifier => "long" "long" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed "long long int"))
+   ;; signed-type-specifier => "signed" "long" "long"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed "singed long long"))
+   ;; signed-type-specifier => "signed" "long" "long" "int"
+   (lambda ($4 $3 $2 $1 . $rest)
+     '(fixed "signed long long int"))
+   ;; unsigned-type-specifier => "unsigned" "short" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed "unsigned short int"))
+   ;; unsigned-type-specifier => "unsigned" "short"
+   (lambda ($2 $1 . $rest)
+     '(fixed "unsinged short"))
+   ;; unsigned-type-specifier => "unsigned" "int"
+   (lambda ($2 $1 . $rest) '(fixed "unsigned int"))
    ;; unsigned-type-specifier => "unsigned"
-   (lambda ($1 . $rest) '(unsigned))
+   (lambda ($1 . $rest) '(fixed "unsigned"))
+   ;; unsigned-type-specifier => "unsigned" "long" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed "unsigned long"))
+   ;; unsigned-type-specifier => "unsigned" "long"
+   (lambda ($2 $1 . $rest) '(fixed "unsigned long"))
+   ;; unsigned-type-specifier => "unsigned" "long" "long" "int"
+   (lambda ($4 $3 $2 $1 . $rest)
+     '(fixed "unsigned long long int"))
+   ;; unsigned-type-specifier => "unsigned" "long" "long"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed "unsigned long long"))
    ;; character-type-specifier => "char"
-   (lambda ($1 . $rest) '(char))
+   (lambda ($1 . $rest) '(fixed "char"))
+   ;; character-type-specifier => "signed" "char"
+   (lambda ($2 $1 . $rest) '(fixed "signed char"))
+   ;; character-type-specifier => "unsigned" "char"
+   (lambda ($2 $1 . $rest) '(fixed "unsigned char"))
    ;; bool-type-specifier => "_Bool"
-   (lambda ($1 . $rest) '(bool))
+   (lambda ($1 . $rest) '(fixed "_Bool"))
    ;; floating-point-type-specifier => "float"
-   (lambda ($1 . $rest) '(float))
+   (lambda ($1 . $rest) '(float "float"))
    ;; floating-point-type-specifier => "double"
-   (lambda ($1 . $rest) '(double))
+   (lambda ($1 . $rest) '(float "float"))
+   ;; floating-point-type-specifier => "long" "double"
+   (lambda ($2 $1 . $rest) '(float "float"))
    ;; floating-point-type-specifier => complex-type-specifier
    (lambda ($1 . $rest) $1)
    ;; complex-type-specifier => "_Complex"
-   (lambda ($1 . $rest) '(complex))
+   (lambda ($1 . $rest) '(complex "_Complex"))
+   ;; complex-type-specifier => "float" "_Complex"
+   (lambda ($2 $1 . $rest)
+     '(complex "float _Complex"))
+   ;; complex-type-specifier => "double" "_Complex"
+   (lambda ($2 $1 . $rest)
+     '(complex "double _Complex"))
+   ;; complex-type-specifier => "long" "double" "_Complex"
+   (lambda ($3 $2 $1 . $rest)
+     '(complex "long double _Complex"))
    ;; enumeration-type-specifier => enumeration-type-definition
    (lambda ($1 . $rest) $1)
    ;; enumeration-type-specifier => enumeration-type-reference

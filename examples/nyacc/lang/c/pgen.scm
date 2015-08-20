@@ -15,7 +15,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; C parser generator
+;; C parser generator: based on ISO-C99; with comments and CPP statements
 
 (define-module (lang c pgen)
   #:export (clang-spec clang-mach dev-parse-c)
@@ -28,13 +28,7 @@
   #:use-module ((srfi srfi-43) #:select (vector-map))
   #:use-module ((sxml fold) #:select (foldts*-values foldts))
   #:use-module ((sxml xpath) #:select (sxpath))
-  ;; debug:
-  ;;#:re-export (read-c-ident)
-  #:use-module (ice-9 pretty-print)
   )
-
-(define (fmterr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
 
 ;; Objective is to generate a sxml tree.
 ;; Strategy for building the tree:
@@ -47,7 +41,7 @@
 (define clang-spec
   (lalr-spec
    (notice lang-crn)
-   (expect 1)				; expect 1 shift-reduce conflict
+   (expect 25)				; else plus tons from type-spec
    (start translation-unit-proxy)
    (grammar
 
@@ -64,6 +58,7 @@
       ($$ (if (pair? $5) (append $3 (list $5)) $3)))
      )
 
+    ;; At most one storage class specifier and one type specifier may appear.
     (declaration-specifiers
      ;; storage-class-specifier declaration-specifiers_opt
      (storage-class-specifier
@@ -112,13 +107,13 @@
 
     ;; 4.4, p 86
     (type-specifier
-     (enumeration-type-specifier)
-     (floating-point-type-specifier)
-     (integer-type-specifier)
-     (structure-type-specifier)
-     (typedef-name)
-     (union-type-specifier)
-     (void-type-specifier)
+     (enumeration-type-specifier ($$ `(type-spec ,$1)))
+     (floating-point-type-specifier ($$ `(type-spec ,$1)))
+     (integer-type-specifier ($$ `(type-spec ,$1)))
+     (structure-type-specifier ($$ `(type-spec ,$1)))
+     (typedef-name ($$ `(type-spec ,$1)))
+     (union-type-specifier ($$ `(type-spec ,$1)))
+     (void-type-specifier ($$ `(type-spec ,$1)))
      )
 
     (type-qualifier
@@ -147,7 +142,7 @@
 
     ;; 4.5.2, p 96
     (pointer-declarator
-     (pointer direct-declarator ($$ `(pointer-declr ,$1 ,$2)))
+     (pointer direct-declarator ($$ `(ptr-declr ,$1 ,$2)))
      )
 
     (pointer
@@ -195,12 +190,12 @@
      ("static") ("restrict") ("const") ("volatile"))
 
     (array-size-expression
-     ;; I think the following may be an error:
-     ;; It conflicts with xxx which uses constant-expression
+     ;; I don't know how to handle 'constant-expression here.  It generates
+     ;; a conflict with (to be documented).
+     ;;(constant-expression) =>
      (assignment-expression)
-     ;;(constant-expression)
-     ;; I think the following may be an error:
-     ;; it is handled by array-declarator.
+     ;; I don't know how to deal with "*" here.  It seems to be handled
+     ;; by 'array-declarator.
      ;;("*")
      )
 
@@ -208,13 +203,13 @@
     (function-declarator
      (direct-declarator
       "(" parameter-type-list ")"
-      ($$ `(fctn-declr ,$1 ,(tl->list $3))))
+      ($$ `(ftn-declr ,$1 ,(tl->list $3))))
      (direct-declarator
       "(" identifier-list ")"
-      ($$ `(fctn-declr ,$1 ,(tl->list $3))))
+      ($$ `(ftn-declr ,$1 ,(tl->list $3))))
      (direct-declarator
       "(" ")"
-      ($$ `(fctn-declr ,$1)))
+      ($$ `(ftn-declr ,$1)))
      )
 
     (parameter-type-list
@@ -283,93 +278,63 @@
     ;; 5.1.1, p 125
     ;; The productions shown in the book are not LALR1 so we will need to use
     ;; static semantics.
-    (signed-type-specifier
-     ("short" ($$ '(short)))
-     ("int" ($$ '(int)))
-     ("signed" ($$ '(int)))
-     ("long" ($$ '(long)))
-     )
-    #| 
     (signed-type-specifier ;; Enforce with static semantics.
-     ("short" ($$ '(signed (short-int))))
-     ("short" "int" ($$ '(signed (short-int))))
-     ("signed" "short" ($$ '(signed (short-int))))
-     ("signed" "short" "int" ($$ '(signed (short-int))))
-     ("int" ($$ '(signed (int))))
-     ("signed" ($$ '(signed (int))))
-     ("signed" "int" ($$ '(signed (int))))
-     ("long" ($$ '(signed (long-int))))
-     ("long" "int" ($$ '(signed (long-int))))
-     ("signed" "long" ($$ '(signed (long-int))))
-     ("signed" "long" "int" ($$ '(signed (long-int))))
-     ("long" "long" ($$ '(signed (long-long-int))))
-     ("long" "long" "int" ($$ '(signed (long-long-int))))
-     ("signed" "long" "long" ($$ '(signed (long-long-int))))
-     ("signed" "long" "long" "int" ($$ '(signed (long-long-int))))
+     ("short" ($$ '(fixed "short")))
+     ("short" "int" ($$ '(fixed "short int")))
+     ("signed" "short" ($$ '(fixed "signed short")))
+     ("signed" "short" "int" ($$ '(fixed "signed short int")))
+     ("int" ($$ '(fixed "int")))
+     ("signed" ($$ '(fixed "signed")))
+     ("signed" "int" ($$ '(fixed "signed int")))
+     ("long" ($$ '(fixed "long")))
+     ("long" "int" ($$ '(fixed "long int")))
+     ("signed" "long" ($$ '(fixed "singed long")))
+     ("signed" "long" "int" ($$ '(fixed "signed long int")))
+     ("long" "long" ($$ '(fixed "long long")))
+     ("long" "long" "int" ($$ '(fixed "long long int")))
+     ("signed" "long" "long" ($$ '(fixed "singed long long")))
+     ("signed" "long" "long" "int" ($$ '(fixed "signed long long int")))
      )
-    |#
 
     ;; 5.1.2, p 128
     (unsigned-type-specifier
-     ("unsigned" ($$ '(unsigned)))
+     ("unsigned" "short" "int" ($$ '(fixed "unsigned short int")))
+     ("unsigned" "short" ($$ '(fixed "unsinged short")))
+     ("unsigned" "int" ($$ '(fixed "unsigned int")))
+     ("unsigned" ($$ '(fixed "unsigned")))
+     ("unsigned" "long" "int" ($$ '(fixed "unsigned long")))
+     ("unsigned" "long" ($$ '(fixed "unsigned long")))
+     ("unsigned" "long" "long" "int" ($$ '(fixed "unsigned long long int")))
+     ("unsigned" "long" "long" ($$ '(fixed "unsigned long long")))
      )
-    #|
-    (unsigned-type-specifier
-     ("unsigned" "short" "int" ($$ '(unsigned (short-int))))
-     ("unsigned" "short" ($$ '(unsigned (short-int))))
-     ("unsigned" "int" ($$ '(unsigned (int))))
-     ("unsigned" ($$ '(unsigned (int))))
-     ("unsigned" "long" "int" ($$ '(unsigned (long-int))))
-     ("unsigned" "long" ($$ '(unsigned (long-int))))
-     ("unsigned" "long" "long" "int" ($$ '(unsigned (long-long-int))))
-     ("unsigned" "long" "long" ($$ '(unsigned (long-long-int))))
-     )
-    |#
 
     ;; 5.1.3, p 129
     (character-type-specifier ;; Enforce with static semantics.
-     ("char" ($$ '(char)))
+     ("char" ($$ '(fixed "char")))
+     ("signed" "char" ($$ '(fixed "signed char")))
+     ("unsigned" "char" ($$ '(fixed "unsigned char")))
      )
-    #|
-    (character-type-specifier ;; Enforce with static semantics.
-     ("char" ($$ '(char)))
-     ("signed" "char" ($$ '(signed (char))))
-     ("unsigned" "char" ($$ '(unsigned (char))))
-     )
-    |#
 
     ;; 5.1.5, p 132, discussed but not defined
     (bool-type-specifier
-     ("_Bool" ($$ '(bool)))
+     ("_Bool" ($$ '(fixed "_Bool")))
      )
 
     ;; 5.2, p 132
     (floating-point-type-specifier
-     ("float" ($$ '(float)))
-     ("double" ($$ '(double)))
+     ("float" ($$ '(float "float")))
+     ("double" ($$ '(float "float")))
+     ("long" "double" ($$ '(float "float")))
      (complex-type-specifier)
      )
-    #|
-    (floating-point-type-specifier
-     ("float" ($$ '(float)))
-     ("double" ($$ '(double)))
-     ("long" "double" ($$ '(long-double)))
-     (complex-type-specifier)
-     )
-    |#
 
     ;; 5.2.1, p 136
     (complex-type-specifier
-     ("_Complex" ($$ '(complex)))
+     ("_Complex" ($$ '(complex "_Complex")))
+     ("float" "_Complex" ($$ '(complex "float _Complex")))
+     ("double" "_Complex" ($$ '(complex "double _Complex")))
+     ("long" "double" "_Complex" ($$ '(complex "long double _Complex")))
      )
-    #|
-    (complex-type-specifier
-     ("_Complex" ($$ '(complex)))
-     ("float" "_Complex" ($$ '(complex (float))))
-     ("double" "_Complex" ($$ '(complex (double))))
-     ("long" "double" "_Complex" ($$ '(complex (long-double))))
-     )
-    |#
 
     ;; 5.5, p 145
     (enumeration-type-specifier
@@ -402,10 +367,10 @@
 
     (enumeration-constant-definition
      (enumeration-constant ($$ `(enum-defn ,$1)))
-     ;; I think this may be an error.  It's replacement follows.
-     ;; If expression, then comma-expressions are allowed but enum uses
-     ;; commas in list of enumerations.
-     ;;(enumeration-constant "=" expression)  ;;  --[change to]--> 
+     ;; I'm not not sure how to get this working. With 'expression, then
+     ;; comma-expressions are allowed but enum uses commas in list of
+     ;; enumerations.  So I'm using 'constant-expression instead for now.
+     ;; (enumeration-constant "=" expression)  ;;  --[change to]--> 
      (enumeration-constant "=" constant-expression
 			   ($$ `(enum-defn ,$1 ,$3)))
      )
@@ -506,11 +471,11 @@
     ;; pointer =>
     ;; type-qualifier-list => 
 
-    ;; I have removed the constant-expression productions below because
-    ;; these will conflict with expression which expands to constant-expr.
+    ;; I have removed 'constant-expression productions below because
+    ;; these conflict with expression which expands to constant-expression.
     (direct-abstract-declarator
      ("(" abstract-declarator ")" ($$ `(declr-scope ,$2)))
-     ;;(direct-abstract-declarator "[" constant-expression "]")
+     ;;(direct-abstract-declarator "[" constant-expression "]") 
      (direct-abstract-declarator "[" "]" ($$ `(declr-array ,$1)))
      ;;("[" constant-expression "]")
      ("[" "]")

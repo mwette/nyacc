@@ -16,6 +16,8 @@
             fmterr)
   )
 
+;; This is a generic copyright/licence that will be printed in the output
+;; of nyacc: the actions.scm and tables.scm files.
 (define lang-crn "Copyright (C) 2015 Matthew R. Wette
 
 This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,

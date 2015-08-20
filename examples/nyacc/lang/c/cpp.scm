@@ -15,17 +15,12 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; C preprocessor (an admitted hack, OK?)
+;; C preprocessor (a bit of a hack for now)
 
 (define-module (lang c cpp)
   #:export (parse-cpp-line eval-cpp-expr)
   #:use-module (nyacc lex)
   #:use-module (lang util)
-  ;;#:use-module ((srfi srfi-1) #:select (last remove))
-  ;;#:use-module ((srfi srfi-9) #:select (define-record-type))
-  ;;#:use-module ((sxml fold) #:select (foldts*-values foldts))
-  ;;#:use-module ((sxml xpath) #:select (sxpath))
-  ;;#:use-module (ice-9 pretty-print)
   )
 
 (define (fmterr fmt . args)
@@ -33,7 +28,7 @@
 
 #|
   #define  #undef  #include  #if  #ifdef  #ifndef  #else  #endif  #elif
-  #line  defined  # <operator>  ## <operator>  #pragma  #error
+  #line  defined  #-operator  ##-operator  #pragma  #error
 
   need mini-cpp and full-cpp
   mini-cpp:
