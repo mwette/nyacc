@@ -50,9 +50,7 @@
     (declaration
      (declaration-specifiers
       initialized-declarator-list
-      ($$ (let ((decl `(decl ,(tl->list $1) ,(tl->list $2))))
-	    (for-each add-typename (find-new-typenames decl))
-	    decl))
+      ($$ (save-typenames `(decl ,(tl->list $1) ,(tl->list $2))))
       ";" opt-code-comment
       ($$ (if (pair? $5) (append $3 (list $5)) $3)))
      )
@@ -322,8 +320,8 @@
     ;; 5.2, p 132
     (floating-point-type-specifier
      ("float" ($$ '(float "float")))
-     ("double" ($$ '(float "float")))
-     ("long" "double" ($$ '(float "float")))
+     ("double" ($$ '(float "double")))
+     ("long" "double" ($$ '(float "long double")))
      (complex-type-specifier)
      )
 
@@ -345,11 +343,11 @@
      ("enum" enumeration-tag "{" enumeration-definition-list "}"
       ($$ `(enum-def ,$1 ,(tl->list $4))))
      ("enum" "{" enumeration-definition-list "}"
-      ($$ `(enum-def ,(tl->list $4))))
+      ($$ `(enum-def ,(tl->list $3))))
      ("enum" enumeration-tag "{" enumeration-definition-list "," "}"
       ($$ `(enum-def ,$1 ,(tl->list $4))))
      ("enum" "{" enumeration-definition-list "," "}"
-      ($$ `(enum-def ,(tl->list $4))))
+      ($$ `(enum-def ,(tl->list $3))))
      )
     
     (enumeration-type-reference

@@ -17,9 +17,8 @@
      (if (pair? $5) (append $3 (list $5)) $3))
    ;; $P1 => 
    (lambda ($2 $1 . $rest)
-     (let ((decl `(decl ,(tl->list $1) ,(tl->list $2))))
-       (for-each add-typename (find-new-typenames decl))
-       decl))
+     (save-typenames
+       `(decl ,(tl->list $1) ,(tl->list $2))))
    ;; declaration-specifiers => storage-class-specifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list $1))
@@ -276,9 +275,9 @@
    ;; floating-point-type-specifier => "float"
    (lambda ($1 . $rest) '(float "float"))
    ;; floating-point-type-specifier => "double"
-   (lambda ($1 . $rest) '(float "float"))
+   (lambda ($1 . $rest) '(float "double"))
    ;; floating-point-type-specifier => "long" "double"
-   (lambda ($2 $1 . $rest) '(float "float"))
+   (lambda ($2 $1 . $rest) '(float "long double"))
    ;; floating-point-type-specifier => complex-type-specifier
    (lambda ($1 . $rest) $1)
    ;; complex-type-specifier => "_Complex"
@@ -301,13 +300,13 @@
      `(enum-def ,$1 ,(tl->list $4)))
    ;; enumeration-type-definition => "enum" "{" enumeration-definition-list...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(enum-def ,(tl->list $4)))
+     `(enum-def ,(tl->list $3)))
    ;; enumeration-type-definition => "enum" enumeration-tag "{" enumeration...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(enum-def ,$1 ,(tl->list $4)))
    ;; enumeration-type-definition => "enum" "{" enumeration-definition-list...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(enum-def ,(tl->list $4)))
+     `(enum-def ,(tl->list $3)))
    ;; enumeration-type-reference => "enum" enumeration-tag
    (lambda ($2 $1 . $rest) `(enum-ref ,$2))
    ;; enumeration-tag => identifier

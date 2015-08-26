@@ -41,21 +41,14 @@
     (memq name (cpi-tyns info))))
 
 ;; @item add-typename name
-;; Called by parser to tell lexer this is a new typename.
+;; Helper for @code{save-typenames}.
 (define (add-typename name)
   ;;(simple-format #t "add-typename: ~S\n" name)
   (let ((info (fluid-ref *info*)))
     (set-cpi-tyns! info (cons (string->symbol name) (cpi-tyns info)))))
 
-;; @item add-typenames-from-decl
-;; This finds typenames using @code{find-new-typenames} and adds via
-;; @code{add-typename}.
-(define (add-typenames-from-decl decl)
-  (for-each add-typename (find-new-typenames decl)))
-
-(use-modules (ice-9 pretty-print))
-
 ;; @item find-new-typenames decl
+;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
 (define find-new-typenames
   (let ((sxtd (sxpath '(stor-spec typedef)))
@@ -66,13 +59,15 @@
        ((< (length decl) 3) '())
        (else (let* ((spec-list (list-ref decl 1))
 		    (init-list (list-ref decl 2)))
-	       ;;(simple-format #t "\nelse:\n")
-	       ;;(pretty-print spec-list)
-	       ;;(pretty-print init-list)
-	       ;;(simple-format #t "\nsxtd=>~S\n" (sxtd spec-list))
-	       ;;(simple-format #t "\nsxid=>~S\n" (sxid init-list))
 	       (if (pair? (sxtd spec-list)) (sxid init-list) '())))))))
 
+;; @item save-typenames decl
+;; Save the typenames for the lexical analyzer and return the decl.
+(define (save-typenames decl)
+  ;; This finds typenames using @code{find-new-typenames} and adds via
+  ;; @code{add-typename}.  Then return the decl.
+  (for-each add-typename (find-new-typenames decl))
+  decl)
 
 ;; ------------------------------------------------------------------------
 
@@ -150,7 +145,7 @@
 			(file (substring parg 1 (1- leng)))
 			(path (find-file-in-dirl file (cpi-incs info)))
 			(tree (with-input-from-file path run-parse)))
-		   ;; (for-each add-typenames-from-decl (xp2 tree))
+		   ;; (for-each save-typenames-from-decl (xp2 tree))
 		   (for-each add-define (xp1 tree))))
 		((define)
 		 (add-define tree))
