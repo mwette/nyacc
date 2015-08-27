@@ -20,9 +20,10 @@
 (define-record-type cpi
   (make-cpi-1)
   cpi?
-  (defines cpi-defs set-cpi-defs!)
-  (incdirs cpi-incs set-cpi-incs!)
-  (typnams cpi-tyns set-cpi-tyns!)
+  (defines cpi-defs set-cpi-defs!)	; #defines
+  (incdirs cpi-incs set-cpi-incs!)	; #includes
+  (typnams cpi-tyns set-cpi-tyns!)	; typedef names
+  #;(typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
   )
 
 (define (make-cpi defines incdirs)
@@ -30,6 +31,7 @@
     (set-cpi-defs! cpi (if defines defines '()))
     (set-cpi-incs! cpi (if incdirs incdirs '()))
     (set-cpi-tyns! cpi '())
+    #;(set-cpi-tdls! cpi '())
     cpi))
 
 (define *info* (make-fluid #f))
@@ -47,6 +49,13 @@
   (let ((info (fluid-ref *info*)))
     (set-cpi-tyns! info (cons (string->symbol name) (cpi-tyns info)))))
 
+;; @item add-typdecl name decl
+;; Helper for @code{save-typenames}.
+;; Adds type declaration.
+(define (add-typedecl name decl)
+  (let ((info (fluid-ref *info*)))
+    (set-cpi-tdls! info (cons (cons name decl) (cpi-tdls info)))))
+
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
@@ -60,6 +69,19 @@
        (else (let* ((spec-list (list-ref decl 1))
 		    (init-list (list-ref decl 2)))
 	       (if (pair? (sxtd spec-list)) (sxid init-list) '())))))))
+#;(define find-new-typedecls
+  (let ((sxtd (sxpath '(stor-spec typedef)))
+	(sxid (sxpath '(init-declr ident *text*))))
+    (lambda (decl)
+      (cond
+       ((not (eq? 'decl (car decl))) '())
+       ((< (length decl) 3) '())
+       (else (let* ((spec-list (list-ref decl 1))
+		    (init-list (list-ref decl 2)))
+	       ;;(simple-format #t "~S => ~S\n" decl dcl)
+	       (if (pair? (sxtd spec-list))
+		   (map (lambda (tid) (cons tid spec-list)) (sxid init-list))
+		   '())))))))
 
 ;; @item save-typenames decl
 ;; Save the typenames for the lexical analyzer and return the decl.
@@ -67,6 +89,11 @@
   ;; This finds typenames using @code{find-new-typenames} and adds via
   ;; @code{add-typename}.  Then return the decl.
   (for-each add-typename (find-new-typenames decl))
+  #;(for-each
+   (lambda (d-pair)
+     (add-typename (car d-pair))
+     (add-typedecl (car d-pair) (cdr d-pair)))
+   (find-new-typedecls decl))
   decl)
 
 ;; ------------------------------------------------------------------------
