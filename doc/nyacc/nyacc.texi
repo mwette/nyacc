@@ -654,8 +654,8 @@ $P1 => ($$ foo)                  l=0, x=0, n=1
 $P2 => ($$ bar)                  l=0, x=0, n=4
 @end example            
 
-All symbols starting with @code{$} are reserved.  The following
-reserved symbols are in use:
+All symbols starting with @code{$} are reserved.  Unused reserved symbols
+will likely not signal an error.  The following reserved symbols are in use:
 @table @code
 @item $start
 This is used in specification to indicate the real start

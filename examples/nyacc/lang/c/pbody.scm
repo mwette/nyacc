@@ -23,7 +23,7 @@
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
   (typnams cpi-tyns set-cpi-tyns!)	; typedef names
-  #;(typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
+  (typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
   )
 
 (define (make-cpi defines incdirs)
@@ -31,7 +31,7 @@
     (set-cpi-defs! cpi (if defines defines '()))
     (set-cpi-incs! cpi (if incdirs incdirs '()))
     (set-cpi-tyns! cpi '())
-    #;(set-cpi-tdls! cpi '())
+    (set-cpi-tdls! cpi '())
     cpi))
 
 (define *info* (make-fluid #f))
@@ -49,13 +49,6 @@
   (let ((info (fluid-ref *info*)))
     (set-cpi-tyns! info (cons (string->symbol name) (cpi-tyns info)))))
 
-;; @item add-typdecl name decl
-;; Helper for @code{save-typenames}.
-;; Adds type declaration.
-(define (add-typedecl name decl)
-  (let ((info (fluid-ref *info*)))
-    (set-cpi-tdls! info (cons (cons name decl) (cpi-tdls info)))))
-
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
@@ -69,7 +62,18 @@
        (else (let* ((spec-list (list-ref decl 1))
 		    (init-list (list-ref decl 2)))
 	       (if (pair? (sxtd spec-list)) (sxid init-list) '())))))))
-#;(define find-new-typedecls
+
+;; @item add-typdecl name decl
+;; Helper for @code{save-typenames}.
+;; Adds type declaration.
+(define (add-typedecl name decl)
+  (let ((info (fluid-ref *info*)))
+    (set-cpi-tdls! info (cons (cons name decl) (cpi-tdls info)))))
+
+;; @item find-new-typenames decl
+;; Helper for @code{save-typenames}.
+;; Given declaration return a list of new typenames (via @code{typedef}).
+(define find-new-typedecls
   (let ((sxtd (sxpath '(stor-spec typedef)))
 	(sxid (sxpath '(init-declr ident *text*))))
     (lambda (decl)
@@ -85,16 +89,23 @@
 
 ;; @item save-typenames decl
 ;; Save the typenames for the lexical analyzer and return the decl.
-(define (save-typenames decl)
+(define (save-typenames-only decl)
   ;; This finds typenames using @code{find-new-typenames} and adds via
   ;; @code{add-typename}.  Then return the decl.
   (for-each add-typename (find-new-typenames decl))
-  #;(for-each
+  decl)
+
+(define (save-typenames/decls decl)
+  ;; This finds typenames using @code{find-new-typenames} and adds via
+  ;; @code{add-typename}.  Then return the decl.
+  (for-each
    (lambda (d-pair)
      (add-typename (car d-pair))
      (add-typedecl (car d-pair) (cdr d-pair)))
    (find-new-typedecls decl))
   decl)
+
+(define save-typenames save-typenames-only)
 
 ;; ------------------------------------------------------------------------
 
@@ -165,21 +176,23 @@
 	  
 	  (define (exec-cpp line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
-	    (let* ((stmt (parse-cpp-line line)) (tree (cdr stmt)))
-	      (case (car tree)
+	    (let* ((stmt (parse-cpp-line line)) (cppx (cdr stmt)))
+	      (case (car cppx)
 		((include)
-		 (let* ((parg (cadr tree)) (leng (string-length parg))
+		 (let* ((parg (cadr cppx)) (leng (string-length parg))
 			(file (substring parg 1 (1- leng)))
 			(path (find-file-in-dirl file (cpi-incs info)))
 			(tree (with-input-from-file path run-parse)))
-		   ;; (for-each save-typenames-from-decl (xp2 tree))
-		   (for-each add-define (xp1 tree))))
+		   (for-each add-define (xp1 tree)) ; add def's 
+		   ;; Attach tree onto "include" statement:
+		   ;;(set! stmt (append stmt (list tree)))
+		   ))
 		((define)
-		 (add-define tree))
+		 (add-define cppx))
 		((if)
-		 (let ((val (eval-cpp-expr (cadr tree) (cpi-defs info))))
+		 (let ((val (eval-cpp-expr (cadr cppx) (cpi-defs info))))
 		   (cond ((not val)
-			  (fmterr "*** unresolved: ~S" (cadr tree)))
+			  (fmterr "*** unresolved: ~S" (cadr cppx)))
 			 ((zero? val) (set! skip (cons #t skip)))
 			 (else (set! skip (cons #f skip))))))
 		((endif)
