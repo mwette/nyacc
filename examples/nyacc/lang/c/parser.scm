@@ -50,7 +50,7 @@
 (define (run-parse) (raw-parser (gen-c-lexer)))
 
 (define* (parse-c #:key (cpp-defs '()) (inc-dirs '()))
-  (let ((info (make-cpi cpp-defs inc-dirs)))
+  (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
     (with-fluid* *info* info (lambda () (raw-parser (gen-c-lexer))))))
 
 ;; --- last line

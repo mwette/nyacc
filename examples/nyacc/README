@@ -11,3 +11,8 @@ lang
   The directory lang has example parsers for several languages.
   See lang/README.
 
+usage
+  $ guile Tlangc.scm
+  $ guile Tlangm.scm
+  $ guile Tlangmo.scm
+

@@ -29,13 +29,12 @@
 #|
   #define  #undef  #include  #if  #ifdef  #ifndef  #else  #endif  #elif
   #line  defined  #-operator  ##-operator  #pragma  #error
-
-  need mini-cpp and full-cpp
-  mini-cpp:
+strategy:
   don't expand macro calls -- treat like function calls, but provide dict
   if ifdef args not defined hmmm -- for now make sure they are
      ... need script to get #defines from cc
   provide dict of #defines
+provide util to exapnd
 |#
 
 (define (skip-ws ch)
@@ -43,6 +42,15 @@
       (if (char-set-contains? c:ws ch)
 	  (skip-ws (read-char))
 	  ch)))
+
+;; @section C Pre-Processor
+;; The preprocessor maintains a list of include directories (strings) and
+;; an a-list keyed by symbol.   The value is either a string (the replacement)
+;; or a pair with the car a list of symbols (?) and the cdr the replacment.
+;; @example
+;; #define DOIT 1 => '(DOIT . "1")
+;; #define MINUS(X) (-(X)) => '(MINUS (X) . "(-(X))")
+;; @end example
 
 ;; grammar:
 ;;   expr   => equal | expr == equal
@@ -64,12 +72,14 @@
   (letrec
       ((p-expr
 	(lambda (la)
+	  ;;(simple-format #t "p-expr ~S\n" la)
 	  (let* ((equal (p-equal la)) (la1 (read-char))
 		 (expr1 (if (eof-object? la1) #f (p-expr1 la1))))
 	    ;;(simple-format #t "p-expr la=~S\n" la)
 	    (if expr1 (cons equal expr1) equal))))
        (p-expr1
 	(lambda (la)
+	  ;;(simple-format #t "p-expr1 ~S\n" la)
 	  #f))
        (p-equal
 	(lambda (la)
@@ -91,6 +101,7 @@
 	  #f))
        (p-factor
 	(lambda (la)
+	  ;;(simple-format #t "p-factor ~S\n" la)
 	  (let ((la1 (skip-ws la)))
 	    (cond
 	     ((p-cnst la1))
@@ -108,6 +119,7 @@
 		    `(defined_p ,ident)))))))
        (p-cnst
 	(lambda (la)
+	  ;;(simple-format #t "p-cnst ~S\n" la)
 	  (let ((num (read-c-num la)))
 	    (if num `(num ,(cdr (read-c-num la))) #f))))
        )
@@ -122,8 +134,8 @@
        (string->number (cadr tree)))
       ((ident) ;; ref
        (let* ((repl (assoc-ref dict (cadr tree))) ; replacement
-	      (tree (and repl (with-input-from-string repl parse-cpp-expr)))
-	      (value (and tree (eval-cpp-expr tree dict))))
+	      (tree1 (and repl (with-input-from-string repl parse-cpp-expr)))
+	      (value (and tree1 (eval-cpp-expr tree1 dict))))
 	 ;; returns value of #f if not ident not defined
 	 value))
       ((not)

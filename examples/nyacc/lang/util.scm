@@ -10,14 +10,13 @@
 
 (define-module (lang util)
   #:export (lang-crn
-	    make-tl
-	    tl-append tl-insert
-	    tl+attr tl->list
+	    make-tl tl->list
+	    tl-append tl-insert tl-extend tl+attr
             fmterr)
   )
 
 ;; This is a generic copyright/licence that will be printed in the output
-;; of nyacc: the actions.scm and tables.scm files.
+;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
 (define lang-crn "Copyright (C) 2015 Matthew R. Wette
 
 This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
@@ -28,39 +27,24 @@ file COPYING included with the this distribution.")
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
+
+;; @section Tagged Lists
+;; Tagged lists are
+;; They are implemented as a cons cell with the car and the cdr a list.
+;; The cdr is used to accumulate appended items and the car is used to
+;; keep the tag, attributes and inserted items.
+;; @example
+;; tl => '(H . T), H => (c a b 'tag); T =>
+;; @end example
+
+;; @table code
+
 ;; @item make-tl tag [item item ...]
 ;; Create a tagged-list structure.
 (define (make-tl tag . rest)
   (let iter ((tail tag) (l rest))
     (if (null? l) (cons '() tail)
 	(iter (cons (car l) tail) (cdr l)))))
-
-;; @item tl-insert tl item
-;; Insert item at front of tagged list (but after tag).
-(define (tl-insert tl item)
-  (cons (cons item (car tl)) (cdr tl)))
-(define (tl-insert! tl item)
-  (set-car! tl (cons item (car tl)))
-  tl)
-
-;; @item tl-append tl item ...
-;; Append item at end of tagged list.
-(define (tl-append tl . rest)
-  (cons (car tl)
-	(let iter ((tail (cdr tl)) (items rest))
-	  (if (null? items) tail
-	      (iter (cons (car items) tail) (cdr items))))))
-(define (tl-append! tl item) ;; NEEDS FIXUP
-  (set-cdr! tl (cons item (cdr tl)))
-  tl)
-
-;; @item tl+attr tl key val)
-;; Add an attribute to a tagged list.  Return the tl.
-;; @example
-;; (tl+attr tl 'type "int")
-;; @end example
-(define (tl+attr tl key val)
-  (tl-insert tl (cons '@ (list key val))))
 
 ;; @item tl->list tl
 ;; Convert a tagged list structure to a list.  This collects added attributes
@@ -83,34 +67,39 @@ file COPYING included with the this distribution.")
 	  (iter (cons (car tl-tail) tail) (cdr tl-tail))
 	  (cons tl-tail (append head tail))))))
 
+;; @item tl-insert tl item
+;; Insert item at front of tagged list (but after tag).
+(define (tl-insert tl item)
+  (cons (cons item (car tl)) (cdr tl)))
+
+;; @item tl-append tl item ...
+;; Append item at end of tagged list.
+(define (tl-append tl . rest)
+  (cons (car tl)
+	(let iter ((tail (cdr tl)) (items rest))
+	  (if (null? items) tail
+	      (iter (cons (car items) tail) (cdr items))))))
+
+;; @item tl-extend tl item-l
+;; Extend with a list of items.  Like xxx
+(define (tl-extend tl item-l)
+  (apply tl-append tl item-l))
+
+;; @item tl+attr tl key val)
+;; Add an attribute to a tagged list.  Return the tl.
+;; @example
+;; (tl+attr tl 'type "int")
+;; @end example
+(define (tl+attr tl key val)
+  (tl-insert tl (cons '@ (list key val))))
+
 ;; @item tl-merge tl tl1
 ;; Merge guts of phony-tl @code{tl1} into @code{tl}.
 (define (tl-merge tl tl1)
   (error "not implemented (yet)")
   )
 
-#|
-;; tl: tagged-list, with make, append, insert, ->list
-(define (make-tl0 . rest)
-  (if (null? rest)
-      (cons '() #f)
-      (cons rest (last-pair rest))))
+;; @table code
 
-(define (tl0-app! tl . rest)
-  (set-cdr! (cdr tl) rest)		; append items to list
-  (set-cdr! tl (last-pair rest))	; set tail
-  tl)					; return list
-(define tl0-append! tl0-app!)
-
-(define (tl0-ins+1! tl item)
-  (let ((pair (cons item (cdar tl))))
-    (set-cdr! (car tl) pair)
-    (if (eq? (car tl) (cdr tl)) (set-cdr! tl pair))
-    tl))				; return list
-(define tl0-insert! tl0-ins+1!)
-
-(define (tl0->list tl)
-  (car tl))
-|#
 
 ;;; --- last line

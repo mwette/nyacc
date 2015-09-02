@@ -239,7 +239,7 @@
      '(fixed "long long int"))
    ;; signed-type-specifier => "signed" "long" "long"
    (lambda ($3 $2 $1 . $rest)
-     '(fixed "singed long long"))
+     '(fixed "signed long long"))
    ;; signed-type-specifier => "signed" "long" "long" "int"
    (lambda ($4 $3 $2 $1 . $rest)
      '(fixed "signed long long int"))
@@ -248,7 +248,7 @@
      '(fixed "unsigned short int"))
    ;; unsigned-type-specifier => "unsigned" "short"
    (lambda ($2 $1 . $rest)
-     '(fixed "unsinged short"))
+     '(fixed "unsigned short"))
    ;; unsigned-type-specifier => "unsigned" "int"
    (lambda ($2 $1 . $rest) '(fixed "unsigned int"))
    ;; unsigned-type-specifier => "unsigned"
@@ -374,7 +374,7 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(union-def ,(tl->list $3)))
    ;; union-type-reference => "union" union-tag
-   (lambda ($2 $1 . $rest) `(struct-ref ,$1))
+   (lambda ($2 $1 . $rest) `(union-ref ,$1))
    ;; union-tag => identifier
    (lambda ($1 . $rest) $1)
    ;; void-type-specifier => "void"

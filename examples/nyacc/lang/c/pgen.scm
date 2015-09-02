@@ -289,14 +289,14 @@
      ("signed" "long" "int" ($$ '(fixed "signed long int")))
      ("long" "long" ($$ '(fixed "long long")))
      ("long" "long" "int" ($$ '(fixed "long long int")))
-     ("signed" "long" "long" ($$ '(fixed "singed long long")))
+     ("signed" "long" "long" ($$ '(fixed "signed long long")))
      ("signed" "long" "long" "int" ($$ '(fixed "signed long long int")))
      )
 
     ;; 5.1.2, p 128
     (unsigned-type-specifier
      ("unsigned" "short" "int" ($$ '(fixed "unsigned short int")))
-     ("unsigned" "short" ($$ '(fixed "unsinged short")))
+     ("unsigned" "short" ($$ '(fixed "unsigned short")))
      ("unsigned" "int" ($$ '(fixed "unsigned int")))
      ("unsigned" ($$ '(fixed "unsigned")))
      ("unsigned" "long" "int" ($$ '(fixed "unsigned long")))
@@ -438,7 +438,7 @@
      )
 
     (union-type-reference
-     ("union" union-tag ($$ `(struct-ref ,$1)))
+     ("union" union-tag ($$ `(union-ref ,$1)))
      )
     (union-tag (identifier))
 
@@ -940,7 +940,7 @@
 (define (run-parse) (raw-parser (gen-c-lexer)))
 
 (define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()))
-  (let ((info (make-cpi cpp-defs inc-dirs)))
+  (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
     (with-fluid* *info* info (lambda () (raw-parser (gen-c-lexer))))))
 
 ;(define dev-parse-c parse-c)

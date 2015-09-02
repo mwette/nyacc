@@ -82,7 +82,6 @@
        ((< (length decl) 3) '())
        (else (let* ((spec-list (list-ref decl 1))
 		    (init-list (list-ref decl 2)))
-	       ;;(simple-format #t "~S => ~S\n" decl dcl)
 	       (if (pair? (sxtd spec-list))
 		   (map (lambda (tid) (cons tid spec-list)) (sxid init-list))
 		   '())))))))
@@ -184,8 +183,8 @@
 			(path (find-file-in-dirl file (cpi-incs info)))
 			(tree (with-input-from-file path run-parse)))
 		   (for-each add-define (xp1 tree)) ; add def's 
-		   ;; Attach tree onto "include" statement:
-		   ;;(set! stmt (append stmt (list tree)))
+		   ;; Attach tree onto "include" statement: -- clean this up
+		   (set! stmt (append stmt (list tree)))
 		   ))
 		((define)
 		 (add-define cppx))
