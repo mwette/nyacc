@@ -759,12 +759,10 @@
    (lambda ($1 . $rest) `(ident ,$1))
    ;; identifier => 'cpp-ident
    (lambda ($1 . $rest) `(ident ,$1))
-   ;; constant => '$fx
+   ;; constant => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
-   ;; constant => '$fl
+   ;; constant => '$float
    (lambda ($1 . $rest) `(float ,$1))
-   ;; constant => '$ch
-   (lambda ($1 . $rest) `(char ,$1))
    ;; constant => '$string
    (lambda ($1 . $rest) `(string ,$1))
    ;; code-comment => '$code-comm

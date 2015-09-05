@@ -18,7 +18,11 @@
 ;; C preprocessor (a bit of a hack for now)
 
 (define-module (lang c cpp)
-  #:export (parse-cpp-line eval-cpp-expr)
+  #:export (parse-cpp-line
+	    eval-cpp-expr
+	    ;;
+	    n-parse-cpp-expr
+	    )
   #:use-module (nyacc lex)
   #:use-module (lang util)
   )
@@ -43,15 +47,6 @@ provide util to exapnd
 	  (skip-ws (read-char))
 	  ch)))
 
-;; @section C Pre-Processor
-;; The preprocessor maintains a list of include directories (strings) and
-;; an a-list keyed by symbol.   The value is either a string (the replacement)
-;; or a pair with the car a list of symbols (?) and the cdr the replacment.
-;; @example
-;; #define DOIT 1 => '(DOIT . "1")
-;; #define MINUS(X) (-(X)) => '(MINUS (X) . "(-(X))")
-;; @end example
-
 ;; grammar:
 ;;   expr   => equal | expr == equal
 ;;   equal  => term | equal "||" term
@@ -68,12 +63,14 @@ provide util to exapnd
 ;; TODO:
 ;;   factor => ident "(" ident-list ")"
 (define (parse-cpp-expr)
-  ;; defined(X) && define(Y) ...
+  ;; defined(X) && defined(Y) ...
   (letrec
-      ((p-expr
+      ((next-ch
+	(lambda () (skip-ws (read-char))))
+       (p-expr
 	(lambda (la)
 	  ;;(simple-format #t "p-expr ~S\n" la)
-	  (let* ((equal (p-equal la)) (la1 (read-char))
+	  (let* ((equal (p-eqexp la)) (la1 (next-ch))
 		 (expr1 (if (eof-object? la1) #f (p-expr1 la1))))
 	    ;;(simple-format #t "p-expr la=~S\n" la)
 	    (if expr1 (cons equal expr1) equal))))
@@ -81,18 +78,18 @@ provide util to exapnd
 	(lambda (la)
 	  ;;(simple-format #t "p-expr1 ~S\n" la)
 	  #f))
-       (p-equal
+       (p-eqexp
 	(lambda (la)
-	  (let* ((term (p-term la)) (la1 (if term (read-char) la))
-		 (equal1 (if (eof-object? la1) #f (p-equal1 la1))))
+	  (let* ((term (p-term la)) (la1 (if term (next-ch) la))
+		 (equal1 (if (eof-object? la1) #f (p-eqexp1 la1))))
 	    ;;(simple-format #t "p-equal la=~S\n" la)
 	    (if equal1 (cons term equal1) term))))
-       (p-equal1
+       (p-eqexp1
 	(lambda (la)
 	  #f))
        (p-term
 	(lambda (la)
-	  (let* ((factor (p-factor la)) (la1 (if factor (read-char) la))
+	  (let* ((factor (p-factor la)) (la1 (if factor (next-ch) la))
 		 (term1 (if (eof-object? la1) #f (p-term1 la1))))
 	    ;;(simple-format #t "p-term la=~S factor=~S\n" la factor)
 	    (if term1 (cons factor term1) factor))))
@@ -102,12 +99,11 @@ provide util to exapnd
        (p-factor
 	(lambda (la)
 	  ;;(simple-format #t "p-factor ~S\n" la)
-	  (let ((la1 (skip-ws la)))
-	    (cond
-	     ((p-cnst la1))
-	     ((p-defd la1))
-	     ((read-c-ident la1) => (lambda (id) `(ident ,id)))
-	     (else #f)))))
+	  (cond
+	   ((p-cnst la))
+	   ((p-defd la))
+	   ((read-c-ident la) => (lambda (id) `(ident ,id)))
+	   (else #f))))
        (p-defd		    ; "defined(IDENT)" => '(defined_p "IDENT")
  	(let ((rd-defd (make-chseq-reader '(("defined" . defined_p)))))
 	  (lambda (la)

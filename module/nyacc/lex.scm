@@ -16,12 +16,13 @@
 ;;; License along with this library; if not, write to the Free Software
 ;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-;; A module for building lexical analyzers.  Not super mature but usable.
+;; A module providing procedures for constructing lexical analyzers.
 
 (define-module (nyacc lex)
   #:export (make-lexer-generator
 	    make-ident-reader
 	    make-comm-reader
+	    make-string-reader
 	    make-chseq-reader
 	    make-num-reader
 	    eval-reader
@@ -29,6 +30,7 @@
  	    read-c-ident
  	    read-c-comm
 	    read-c-string
+	    read-c-chlit
 	    read-c-num
 	    like-c-ident?
 	    filter-mt remove-mt map-mt make-ident-like-p 
@@ -125,63 +127,6 @@
 (define make-ident-like-p make-like-ident-p)
 (define like-c-ident? (make-like-ident-p read-c-ident))
 
-;; @item make-num-reader
-;; integer decimal(#t/#f) fraction exponent looking-at
-;; i, f and e are lists of characters
-;; returns pair ('$fx . "123") or ('$fl . "1.3e0")
-;;           or ERROR? (dot by itself)
-;; will add "0" before or after dot but otherwise same
-;; may want to replace "eEdD" w/ "e"
-;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
-;; Removed support for leading '.' to be a number.
-;; TODO: add 0x reader
-(define (make-num-reader)
-  (let ((fix-dot (lambda (l) (if (char=? #\. (car l)) (cons #\0 l) l))))
-    (lambda (ch1)
-      (let iter ((chl '()) (ty #f) (st 0) (ch ch1))
-	(case st
-	  ((0)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ;;((char=? #\. ch) (iter (list #\. #\0) '$fx 2 (read-char)))
-	    ((char-numeric? ch) (iter chl '$fx 1 ch))
-	    (else #f)))
-	  ((1)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((char-numeric? ch) (iter (cons ch chl) ty 1 (read-char)))
-	    ((char=? #\. ch) (iter (cons #\. chl) '$fl 2 (read-char)))
-	    ((char-set-contains? c:if ch) (error "syntax1"))
-	    (else (iter chl '$fx 5 ch))))
-	  ((2)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((char-numeric? ch) (iter (cons ch chl) ty 2 (read-char)))
-	    ((char-set-contains? c:nx ch)
-	     (iter (cons ch (fix-dot chl)) ty 3 (read-char)))
-	    ((char-set-contains? c:if ch) (error "syntax2"))
-	    (else (iter (fix-dot chl) ty 5 ch))))
-	  ((3)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((or (char=? #\+ ch) (char=? #\- ch))
-	     (iter (cons ch chl) ty 4 (read-char)))
-	    ((char-numeric? ch) (iter chl ty 4 ch))
-	    (else (error "syntax3"))))
-	  ((4)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((char-numeric? ch) (iter (cons ch chl) ty 4 (read-char)))
-	    ((char-set-contains? c:if ch) (error "syntax4"))
-	    (else (iter chl ty 5 ch))))
-	  ((5)
-	   (unless (eof-object? ch) (unread-char ch))
-	   (cons ty (list->string (reverse chl)))))))))
-
-;; @item read-c-num ch => #f|string
-;; Reader for unsigned numbers as used in C (or close to it).
-(define read-c-num (make-num-reader))
-
 
 ;; @item make-string-reader delim
 ;; Generate a reader that uses @code{delim} as delimiter for strings.
@@ -214,6 +159,77 @@
 	      ((eq? ch #\") (list->string (reverse cl)))
 	      (else (iter (cons ch cl) (read-char)))))))
 
+
+;; @item make-chlit-reader
+;; Generate a reader for character literals. NOT DONE.
+;; For C, this reads @code{'c'} or @code{'\n'}.
+(define (make-chlit-reader . rest) (error "NOT IMPLEMENTED"))
+
+;; @item read-c-chlit ch
+;; @example
+;; ... 'c' ... => (read-c-chlit #\') => '($ch-lit . #\c)
+;; @end example
+(define (read-c-chlit ch)
+  (if (not (eqv? ch #\')) #f
+      (error "NOT IMPLEMENTED")
+      ))
+
+;; @item make-num-reader
+;; integer decimal(#t/#f) fraction exponent looking-at
+;; i, f and e are lists of characters
+;; returns pair ('$fixed . "123") or ('$float . "1.3e0")
+;;           or ERROR? (dot by itself)
+;; will add "0" before or after dot but otherwise same
+;; may want to replace "eEdD" w/ "e"
+;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
+;; Removed support for leading '.' to be a number.
+;; TODO: add 0x reader
+(define (make-num-reader)
+  (let ((fix-dot (lambda (l) (if (char=? #\. (car l)) (cons #\0 l) l))))
+    (lambda (ch1)
+      (let iter ((chl '()) (ty #f) (st 0) (ch ch1))
+	(case st
+	  ((0)
+	   (cond
+	    ((eof-object? ch) (iter chl ty 5 ch))
+	    ;;((char=? #\. ch) (iter (list #\. #\0) '$fixed 2 (read-char)))
+	    ((char-numeric? ch) (iter chl '$fixed 1 ch))
+	    (else #f)))
+	  ((1)
+	   (cond
+	    ((eof-object? ch) (iter chl ty 5 ch))
+	    ((char-numeric? ch) (iter (cons ch chl) ty 1 (read-char)))
+	    ((char=? #\. ch) (iter (cons #\. chl) '$float 2 (read-char)))
+	    ((char-set-contains? c:if ch) (error "syntax1"))
+	    (else (iter chl '$fixed 5 ch))))
+	  ((2)
+	   (cond
+	    ((eof-object? ch) (iter chl ty 5 ch))
+	    ((char-numeric? ch) (iter (cons ch chl) ty 2 (read-char)))
+	    ((char-set-contains? c:nx ch)
+	     (iter (cons ch (fix-dot chl)) ty 3 (read-char)))
+	    ((char-set-contains? c:if ch) (error "syntax2"))
+	    (else (iter (fix-dot chl) ty 5 ch))))
+	  ((3)
+	   (cond
+	    ((eof-object? ch) (iter chl ty 5 ch))
+	    ((or (char=? #\+ ch) (char=? #\- ch))
+	     (iter (cons ch chl) ty 4 (read-char)))
+	    ((char-numeric? ch) (iter chl ty 4 ch))
+	    (else (error "syntax3"))))
+	  ((4)
+	   (cond
+	    ((eof-object? ch) (iter chl ty 5 ch))
+	    ((char-numeric? ch) (iter (cons ch chl) ty 4 (read-char)))
+	    ((char-set-contains? c:if ch) (error "syntax4"))
+	    (else (iter chl ty 5 ch))))
+	  ((5)
+	   (unless (eof-object? ch) (unread-char ch))
+	   (cons ty (list->string (reverse chl)))))))))
+
+;; @item read-c-num ch => #f|string
+;; Reader for unsigned numbers as used in C (or close to it).
+(define read-c-num (make-num-reader))
 
 ;;.@item si-map string-list ix => a-list
 ;; Convert list of strings to alist of char at ix and strings.
@@ -341,7 +357,7 @@
 ;; Return a thunk that returns tokens.
 ;; Change this to have user pass the following routines (optionally?)
 ;; read-num, read-ident, read-comm
-;; reztab = reserved ($ident, $fx, $fl ...
+;; reztab = reserved ($ident, $fixed, $float ...
 ;; chrtab = characters
 ;; comm-reader : if parser does not deal with comments must return #f
 ;;               but problem with character ..
@@ -353,11 +369,14 @@
 ;; @end enumerate
 ;; todo: add bol status
 (define* (make-lexer-generator match-table
-			       #:key ident-reader num-reader string-reader
-			       comm-reader comm-skipper space-chars)
+			       #:key ident-reader num-reader
+			       string-reader chlit-reader
+			       comm-reader comm-skipper
+			       space-chars)
   (let* ((read-ident (or ident-reader (make-ident-reader c:if c:ir)))
 	 (read-num (or num-reader (make-num-reader)))
 	 (read-string (or string-reader (make-string-reader #\")))
+	 (read-chlit (or chlit-reader (lambda (ch) #f)))
 	 (read-comm (or comm-reader (lambda (ch) #f)))
 	 (skip-comm (or comm-skipper (lambda (ch) #f)))
 	 (spaces (or space-chars " \t\r\n"))
@@ -397,8 +416,9 @@
 	      (lambda (s) (or (and=> (assq-ref keytab (string->symbol s))
 				     (lambda (tval) (cons tval s)))
 			      (assc-$ (cons '$ident s)))))
-	     ((read-num ch) => assc-$)	  ; => $fx or $fl
+	     ((read-num ch) => assc-$)	  ; => $fixed or $float
 	     ((read-string ch) => assc-$) ; => $string
+	     ((read-chlit ch) => assc-$)  ; => $chlit
 	     ((read-chseq ch) => identity)
 	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	     (else (cons ch ch))))))))) ; should be error

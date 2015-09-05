@@ -23,6 +23,7 @@
 (with-output-to-file "lang/matlab/gram.y.new"
   (lambda () (lalr->bison matlab-spec)))
 (write-lalr-tables matlab-mach "lang/matlab/tables.scm.new")
+(write-lalr-actions matlab-mach "lang/matlab/actions.scm.new")
 
 (define res (with-input-from-file "lang/matlab/ex1.m"
 	      (lambda () (matlab-parser (gen-matlab-lexer) #:debug #f))))

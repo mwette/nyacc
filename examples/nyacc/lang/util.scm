@@ -9,7 +9,7 @@
 ;; runtime utilities for the parsers -- needs work
 
 (define-module (lang util)
-  #:export (lang-crn
+  #:export (lang-crn-lic
 	    make-tl tl->list
 	    tl-append tl-insert tl-extend tl+attr
             fmterr)
@@ -17,7 +17,7 @@
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
-(define lang-crn "Copyright (C) 2015 Matthew R. Wette
+(define lang-crn-lic "Copyright (C) 2015 Matthew R. Wette
 
 This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 or any later version published by the Free Software Foundation.  See the

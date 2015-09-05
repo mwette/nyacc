@@ -39,7 +39,7 @@
 ;; but modified to handle comments and CPP statements.
 (define clang-spec
   (lalr-spec
-   (notice lang-crn)
+   (notice lang-crn-lic)
    (expect 25)				; else plus tons from type-spec
    (start translation-unit-proxy)
    (grammar
@@ -907,9 +907,9 @@
      ('cpp-ident ($$ `(ident ,$1)))
      )
     (constant
-     ('$fx ($$ `(fixed ,$1)))		; integer-constant
-     ('$fl ($$ `(float ,$1)))		; floating-constant
-     ('$ch ($$ `(char ,$1)))		; char-constant
+     ('$fixed ($$ `(fixed ,$1)))	; integer-constant
+     ('$float ($$ `(float ,$1)))	; floating-constant
+     ('$ch-lit ($$ `(char ,$1)))		; char-constant
      ('$string ($$ `(string ,$1)))	; string-constant
      )
     (code-comment ('$code-comm ($$ `(comment ,$1))))
@@ -939,10 +939,9 @@
 
 (define (run-parse) (raw-parser (gen-c-lexer)))
 
-(define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()))
+(define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()) debug)
   (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
-    (with-fluid* *info* info (lambda () (raw-parser (gen-c-lexer))))))
-
-;(define dev-parse-c parse-c)
+    (with-fluid* *info* info
+		 (lambda () (raw-parser (gen-c-lexer) #:debug debug)))))
 
 ;; --- last line

@@ -35,7 +35,7 @@
 
 (define modelica-spec
   (lalr-spec
-   (notice lang-crn)
+   (notice lang-crn-lic)
    (start stored-definition)
    (grammar
     
@@ -661,8 +661,8 @@
 
     ;; end of grammar
     (unsigned-number
-     ('$fx ($$ `(unsigned-number ,$1)))
-     ('$fl ($$ `(unsigned-number ,$1))))
+     ('$fixed ($$ `(unsigned-number ,$1)))
+     ('$float ($$ `(unsigned-number ,$1))))
     (ident ('$ident ($$ `(ident ,$1))))
     (string ('$string ($$ `(string ,$1))))
     )))

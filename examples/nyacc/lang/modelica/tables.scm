@@ -435,13 +435,13 @@
     283) ($:annotation reduce . 186) ($:equation reduce . 186) ($:algorithm 
     reduce . 186) ($:initial reduce . 186) ($:protected reduce . 186) (
     $:public reduce . 186) ($:external reduce . 186) ($:end reduce . 186)) ((
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) (#{$:\x7b;}# shift
-    . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift 
-    . 200) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
-    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
-    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
-    (relation shift . 211) (logical-factor shift . 212) ($ident shift . 26) (
-    logical-term shift . 213) ($:. shift . 27) (ident shift . 28) (
+    $string shift . 50) ($float shift . 195) ($fixed shift . 196) (#{$:\x7b;}#
+    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
+    shift . 200) ($:true shift . 202) ($:false shift . 203) (string shift . 
+    204) (unsigned-number shift . 205) (primary shift . 206) (factor shift . 
+    207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift 
+    . 210) (relation shift . 211) (logical-factor shift . 212) ($ident shift 
+    . 26) (logical-term shift . 213) ($:. shift . 27) (ident shift . 28) (
     logical-expression shift . 214) ($:connect shift . 255) ($:when shift . 
     256) ($:for shift . 257) ($:if shift . 258) (name shift . 259) (
     when-equation shift . 260) (connect-clause shift . 261) (for-equation 
@@ -587,14 +587,14 @@
     #{$:;}# reduce . 116)) (($ident shift . 26) (ident shift . 136) (
     declaration shift . 137) (component-declaration shift . 138) (
     component-list shift . 221) (#{$:\x5b;}# shift . 134) (array-subscripts 
-    shift . 222)) (($ident shift . 26) ($string shift . 50) ($fl shift . 195) 
-    ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift 
-    . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 
-    200) (name shift . 201) ($:true shift . 202) ($:false shift . 203) (string
-    shift . 204) (unsigned-number shift . 205) (primary shift . 206) (factor 
-    shift . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not
-    shift . 210) (relation shift . 211) (logical-factor shift . 212) (
-    logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
+    shift . 222)) (($ident shift . 26) ($string shift . 50) ($float shift . 
+    195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}#
+    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
+    shift . 200) (name shift . 201) ($:true shift . 202) ($:false shift . 203)
+    (string shift . 204) (unsigned-number shift . 205) (primary shift . 206) 
+    (factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209
+    ) ($:not shift . 210) (relation shift . 211) (logical-factor shift . 212) 
+    (logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
     215) (simple-expression shift . 216) (expression shift . 217) ($:: shift 
     . 218) (subscript shift . 219) (array-subscript-list shift . 220)) ((
     $ident shift . 26) (ident shift . 136) (declaration shift . 137) (
@@ -717,70 +717,70 @@
     $:partial reduce . 170) ($:stream reduce . 170) ($:flow reduce . 170) (
     $:constant reduce . 170) ($:parameter reduce . 170) ($:discrete reduce . 
     170) ($:output reduce . 170) ($:input reduce . 170) ($:replaceable reduce 
-    . 170)) (($ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx 
-    shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197)
-    (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
+    . 170)) (($ident shift . 26) ($string shift . 50) ($float shift . 195) (
+    $fixed shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift
+    . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift 
+    . 200) (name shift . 201) ($:true shift . 202) ($:false shift . 203) (
+    string shift . 204) (unsigned-number shift . 205) (primary shift . 206) (
+    factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209)
+    ($:not shift . 210) (relation shift . 211) (logical-factor shift . 212) (
+    logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
+    215) (simple-expression shift . 216) (expression shift . 396)) (($ident 
+    shift . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196)
+    ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
+    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
     name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
     . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
     . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
     . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
     shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
-    simple-expression shift . 216) (expression shift . 396)) (($ident shift . 
-    26) ($string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 
-    27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198)
-    (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
+    simple-expression shift . 216) (expression shift . 395)) (($:= shift . 394
+    ) ($string reduce . 149) (#{$:\x29;}# reduce . 149) ($:, reduce . 149) (
+    $:annotation reduce . 149) ($:if reduce . 149) (#{$:;}# reduce . 149) (
+    $:constrainedby reduce . 149)) (($string reduce . 166) (#{$:\x29;}# reduce
+    . 166) ($:, reduce . 166)) (($string shift . 50) (string shift . 51) (
+    string-cat shift . 52) (string-comment shift . 393) ($:, reduce . 340) (
+    #{$:\x29;}# reduce . 340)) (($ident shift . 26) (ident shift . 391) (
+    short-class-specifier shift . 392)) (($:output shift . 70) ($:input shift 
+    . 71) ($:constant shift . 72) ($:parameter shift . 73) ($:discrete shift 
+    . 74) ($:stream shift . 75) ($:flow shift . 76) (type-prefix-3 shift . 77)
+    (type-prefix-2 shift . 78) (type-prefix-1 shift . 79) (type-prefix shift 
+    . 389) (component-clause1 shift . 390)) (($:end shift . 388)) (($:, shift 
+    . 387) ($:. shift . 59)) (($string shift . 50) (string shift . 51) (
+    string-cat shift . 52) (string-comment shift . 184) (comment shift . 386) 
+    (#{$:\x29;}# reduce . 340) ($:, reduce . 340) ($:annotation reduce . 340))
+    ((#{$:\x29;}# reduce . 49) ($:, reduce . 49)) ((#{$:\x29;}# reduce . 43))
+    (($:, shift . 385) (#{$:\x29;}# reduce . 42)) ((#{$:\x29;}# shift . 384))
+    (($ident reduce . 123) ($:. reduce . 123)) (($:annotation shift . 114) (
+    annotation shift . 383) (#{$:;}# reduce . 339) ($:, reduce . 339) (
+    $:constrainedby reduce . 339) (#{$:\x29;}# reduce . 339) ($:stream reduce 
+    . 339) ($:flow reduce . 339) ($:constant reduce . 339) ($:parameter reduce
+    . 339) ($:discrete reduce . 339) ($:output reduce . 339) ($:input reduce 
+    . 339)) ((#{$:;}# reduce . 39) ($:constrainedby reduce . 39) ($:stream 
+    reduce . 39) ($:flow reduce . 39) ($:constant reduce . 39) ($:parameter 
+    reduce . 39) ($:discrete reduce . 39) ($:output reduce . 39) ($:input 
+    reduce . 39) (#{$:\x29;}# reduce . 39) ($:, reduce . 39)) (($string shift 
+    . 50) (string shift . 51) (string-cat shift . 52) (string-comment shift . 
+    184) (comment shift . 382) (#{$:;}# reduce . 340) ($:constrainedby reduce 
+    . 340) ($:stream reduce . 340) ($:flow reduce . 340) ($:constant reduce . 
+    340) ($:parameter reduce . 340) ($:discrete reduce . 340) ($:output reduce
+    . 340) ($:input reduce . 340) (#{$:\x29;}# reduce . 340) ($:, reduce . 
+    340) ($:annotation reduce . 340)) ((#{$:\x28;}# shift . 66) (
+    class-modification shift . 380) ($string shift . 50) (string shift . 51) (
+    string-cat shift . 52) (string-comment shift . 184) (comment shift . 381) 
+    (#{$:;}# reduce . 340) ($:constrainedby reduce . 340) ($:stream reduce . 
+    340) ($:flow reduce . 340) ($:constant reduce . 340) ($:parameter reduce 
+    . 340) ($:discrete reduce . 340) ($:output reduce . 340) ($:input reduce 
+    . 340) (#{$:\x29;}# reduce . 340) ($:, reduce . 340) ($:annotation reduce 
+    . 340)) (($ident shift . 26) (ident shift . 136) (declaration shift . 137)
+    (component-declaration shift . 379)) (($ident shift . 26) ($string shift 
+    . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident 
+    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
     shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
     shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
     (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
     . 211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 395)) (($:= shift . 394) ($string reduce 
-    . 149) (#{$:\x29;}# reduce . 149) ($:, reduce . 149) ($:annotation reduce 
-    . 149) ($:if reduce . 149) (#{$:;}# reduce . 149) ($:constrainedby reduce 
-    . 149)) (($string reduce . 166) (#{$:\x29;}# reduce . 166) ($:, reduce . 
-    166)) (($string shift . 50) (string shift . 51) (string-cat shift . 52) (
-    string-comment shift . 393) ($:, reduce . 340) (#{$:\x29;}# reduce . 340))
-    (($ident shift . 26) (ident shift . 391) (short-class-specifier shift . 
-    392)) (($:output shift . 70) ($:input shift . 71) ($:constant shift . 72) 
-    ($:parameter shift . 73) ($:discrete shift . 74) ($:stream shift . 75) (
-    $:flow shift . 76) (type-prefix-3 shift . 77) (type-prefix-2 shift . 78) (
-    type-prefix-1 shift . 79) (type-prefix shift . 389) (component-clause1 
-    shift . 390)) (($:end shift . 388)) (($:, shift . 387) ($:. shift . 59)) (
-    ($string shift . 50) (string shift . 51) (string-cat shift . 52) (
-    string-comment shift . 184) (comment shift . 386) (#{$:\x29;}# reduce . 
-    340) ($:, reduce . 340) ($:annotation reduce . 340)) ((#{$:\x29;}# reduce 
-    . 49) ($:, reduce . 49)) ((#{$:\x29;}# reduce . 43)) (($:, shift . 385) (
-    #{$:\x29;}# reduce . 42)) ((#{$:\x29;}# shift . 384)) (($ident reduce . 
-    123) ($:. reduce . 123)) (($:annotation shift . 114) (annotation shift . 
-    383) (#{$:;}# reduce . 339) ($:, reduce . 339) ($:constrainedby reduce . 
-    339) (#{$:\x29;}# reduce . 339) ($:stream reduce . 339) ($:flow reduce . 
-    339) ($:constant reduce . 339) ($:parameter reduce . 339) ($:discrete 
-    reduce . 339) ($:output reduce . 339) ($:input reduce . 339)) ((#{$:;}# 
-    reduce . 39) ($:constrainedby reduce . 39) ($:stream reduce . 39) ($:flow 
-    reduce . 39) ($:constant reduce . 39) ($:parameter reduce . 39) (
-    $:discrete reduce . 39) ($:output reduce . 39) ($:input reduce . 39) (
-    #{$:\x29;}# reduce . 39) ($:, reduce . 39)) (($string shift . 50) (string 
-    shift . 51) (string-cat shift . 52) (string-comment shift . 184) (comment 
-    shift . 382) (#{$:;}# reduce . 340) ($:constrainedby reduce . 340) (
-    $:stream reduce . 340) ($:flow reduce . 340) ($:constant reduce . 340) (
-    $:parameter reduce . 340) ($:discrete reduce . 340) ($:output reduce . 340
-    ) ($:input reduce . 340) (#{$:\x29;}# reduce . 340) ($:, reduce . 340) (
-    $:annotation reduce . 340)) ((#{$:\x28;}# shift . 66) (class-modification 
-    shift . 380) ($string shift . 50) (string shift . 51) (string-cat shift . 
-    52) (string-comment shift . 184) (comment shift . 381) (#{$:;}# reduce . 
-    340) ($:constrainedby reduce . 340) ($:stream reduce . 340) ($:flow reduce
-    . 340) ($:constant reduce . 340) ($:parameter reduce . 340) ($:discrete 
-    reduce . 340) ($:output reduce . 340) ($:input reduce . 340) (#{$:\x29;}# 
-    reduce . 340) ($:, reduce . 340) ($:annotation reduce . 340)) (($ident 
-    shift . 26) (ident shift . 136) (declaration shift . 137) (
-    component-declaration shift . 379)) (($ident shift . 26) ($string shift . 
-    50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28
-    ) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift 
-    . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
-    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
-    primary shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
     logical-expression shift . 214) ($:if shift . 215) (simple-expression 
     shift . 216) (expression shift . 378)) (($string shift . 50) (string shift
     . 51) (string-cat shift . 52) (string-comment shift . 184) (comment shift
@@ -816,35 +816,35 @@
     347) ($:loop reduce . 347) ($:else reduce . 347) ($:elseif reduce . 347) (
     $string reduce . 347) ($:annotation reduce . 347) ($:constrainedby reduce 
     . 347) (#{$:\x7d;}# reduce . 347) ($:end reduce . 347) ($:elsewhen reduce 
-    . 347) ($:if reduce . 347)) (($string shift . 50) ($fl shift . 195) ($fx 
-    shift . 196) ($:. shift . 27) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift
-    . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
-    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
-    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
-    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
-    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
-    213) ($ident shift . 26) (logical-expression shift . 214) (ident shift . 
-    368) ($:if shift . 215) (simple-expression shift . 216) (expression shift 
-    . 369) ($:function shift . 370) (named-argument shift . 371) (
-    named-arguments shift . 372) (function-argument shift . 373) (
+    . 347) ($:if reduce . 347)) (($string shift . 50) ($float shift . 195) (
+    $fixed shift . 196) ($:. shift . 27) (#{$:\x7b;}# shift . 197) (
+    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
+    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
+    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
+    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
+    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
+    shift . 213) ($ident shift . 26) (logical-expression shift . 214) (ident 
+    shift . 368) ($:if shift . 215) (simple-expression shift . 216) (
+    expression shift . 369) ($:function shift . 370) (named-argument shift . 
+    371) (named-arguments shift . 372) (function-argument shift . 373) (
     function-arguments shift . 374)) (($ident shift . 26) ($string shift . 50)
-    ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
+    ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift 
+    . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# 
+    shift . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
+    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
+    primary shift . 206) (factor shift . 207) (term shift . 208) (
     arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
     211) (logical-factor shift . 212) (logical-term shift . 213) (
     logical-expression shift . 214) ($:if shift . 215) (simple-expression 
     shift . 216) (expression shift . 365) (expression-list shift . 366) (
     expression-list-list shift . 367)) (($ident shift . 26) ($string shift . 
-    50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28
-    ) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift 
-    . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
-    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
-    primary shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
+    50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident 
+    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
+    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
+    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
+    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
+    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
     logical-expression shift . 214) ($:if shift . 215) (simple-expression 
     shift . 216) (expression shift . 291) ($:, shift . 292) (
     output-expression-list shift . 364)) ((#{$:\x28;}# shift . 289) (
@@ -945,93 +945,93 @@
     reduce . 267) ($:else reduce . 267) ($:elseif reduce . 267) ($string 
     reduce . 267) ($:annotation reduce . 267) ($:constrainedby reduce . 267) (
     #{$:\x7d;}# reduce . 267) ($:end reduce . 267) ($:elsewhen reduce . 267) (
-    $:if reduce . 267)) (($ident shift . 26) ($string shift . 50) ($fl shift 
-    . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# 
-    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
-    shift . 200) (name shift . 201) ($:true shift . 202) ($:false shift . 203)
-    (string shift . 204) (unsigned-number shift . 205) (primary shift . 206) 
-    (factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209
-    ) (relation shift . 349)) (($:<> shift . 342) ($:== shift . 343) ($:>= 
-    shift . 344) ($:> shift . 345) ($:<= shift . 346) ($:< shift . 347) (
-    rel-op shift . 348) ($:: reduce . 265) ($:= reduce . 265) ($:or reduce . 
-    265) ($:and reduce . 265) (#{$:\x5d;}# reduce . 265) ($:, reduce . 265) (
-    $:for reduce . 265) (#{$:;}# reduce . 265) (#{$:\x29;}# reduce . 265) (
-    $:then reduce . 265) ($:loop reduce . 265) ($:else reduce . 265) ($:elseif
-    reduce . 265) ($string reduce . 265) ($:annotation reduce . 265) (
-    $:constrainedby reduce . 265) (#{$:\x7d;}# reduce . 265) ($:end reduce . 
-    265) ($:elsewhen reduce . 265) ($:if reduce . 265)) (($:= reduce . 263) (
-    $:: reduce . 263) ($:and reduce . 263) ($:or reduce . 263) (#{$:\x5d;}# 
-    reduce . 263) ($:, reduce . 263) ($:for reduce . 263) (#{$:;}# reduce . 
-    263) (#{$:\x29;}# reduce . 263) ($:then reduce . 263) ($:loop reduce . 263
-    ) ($:else reduce . 263) ($:elseif reduce . 263) ($string reduce . 263) (
-    $:annotation reduce . 263) ($:constrainedby reduce . 263) (#{$:\x7d;}# 
-    reduce . 263) ($:end reduce . 263) ($:elsewhen reduce . 263) ($:if reduce 
-    . 263)) (($:and shift . 341) ($:: reduce . 261) ($:= reduce . 261) ($:or 
-    reduce . 261) (#{$:\x5d;}# reduce . 261) ($:, reduce . 261) ($:for reduce 
-    . 261) (#{$:;}# reduce . 261) (#{$:\x29;}# reduce . 261) ($:then reduce . 
-    261) ($:loop reduce . 261) ($:else reduce . 261) ($:elseif reduce . 261) (
-    $string reduce . 261) ($:annotation reduce . 261) ($:constrainedby reduce 
-    . 261) (#{$:\x7d;}# reduce . 261) ($:end reduce . 261) ($:elsewhen reduce 
-    . 261) ($:if reduce . 261)) (($:: shift . 339) ($:or shift . 340) ($:= 
-    reduce . 258) (#{$:\x5d;}# reduce . 258) ($:, reduce . 258) ($:for reduce 
-    . 258) (#{$:;}# reduce . 258) (#{$:\x29;}# reduce . 258) ($:then reduce . 
-    258) ($:loop reduce . 258) ($:else reduce . 258) ($:elseif reduce . 258) (
-    $string reduce . 258) ($:annotation reduce . 258) ($:constrainedby reduce 
-    . 258) (#{$:\x7d;}# reduce . 258) ($:end reduce . 258) ($:elsewhen reduce 
-    . 258) ($:if reduce . 258)) (($ident shift . 26) ($string shift . 50) ($fl
-    shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
+    $:if reduce . 267)) (($ident shift . 26) ($string shift . 50) ($float 
+    shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 28) (
     #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
     199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
     shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
     shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 338)) ((#{$:\x5d;}# reduce . 253) ($:, 
-    reduce . 253) ($:for reduce . 253) (#{$:;}# reduce . 253) (#{$:\x29;}# 
-    reduce . 253) ($:then reduce . 253) ($:loop reduce . 253) ($:else reduce 
-    . 253) ($:elseif reduce . 253) ($string reduce . 253) ($:annotation reduce
-    . 253) ($:constrainedby reduce . 253) (#{$:\x7d;}# reduce . 253) ($:end 
-    reduce . 253) ($:elsewhen reduce . 253) ($:if reduce . 253)) ((#{$:\x5d;}#
-    reduce . 337) ($:, reduce . 337)) ((#{$:\x5d;}# reduce . 336) ($:, reduce
-    . 336)) ((#{$:\x5d;}# reduce . 334) ($:, reduce . 334)) ((#{$:\x5d;}# 
-    shift . 336) ($:, shift . 337)) (($:, shift . 188) (#{$:;}# reduce . 120) 
-    ($:constrainedby reduce . 120)) (($ident shift . 26) (ident shift . 136) (
-    declaration shift . 137) (component-declaration shift . 138) (
-    component-list shift . 335)) ((#{$:;}# reduce . 115)) (($:annotation shift
-    . 114) (annotation shift . 334) (#{$:;}# reduce . 114)) ((#{$:;}# reduce 
-    . 104)) (($ident shift . 26) ($:. shift . 27) (ident shift . 28) (name 
-    shift . 333)) (($ident shift . 26) (ident shift . 64) (#{$:\x7b;}# shift 
-    . 330) ($:* shift . 331) (import-clause-2 shift . 332)) (($ident shift . 
-    26) ($:. shift . 27) (ident shift . 28) (name shift . 329)) (($string 
-    shift . 50) (string shift . 51) (string-cat shift . 52) (string-comment 
-    shift . 184) (comment shift . 328) (#{$:;}# reduce . 340) ($:annotation 
-    reduce . 340)) ((#{$:;}# reduce . 83)) (($:function reduce . 95) ($:pure 
-    reduce . 95) ($:impure reduce . 95) ($:package reduce . 95) ($:type reduce
-    . 95) ($:connector reduce . 95) ($:expandable reduce . 95) ($:block 
-    reduce . 95) ($:record reduce . 95) ($:operator reduce . 95) ($:model 
-    reduce . 95) ($:class reduce . 95) ($:partial reduce . 95) ($:encapsulated
-    reduce . 95) ($:stream reduce . 95) ($:flow reduce . 95) ($:constant 
-    reduce . 95) ($:parameter reduce . 95) ($:discrete reduce . 95) ($:output 
-    reduce . 95) ($:input reduce . 95) ($ident reduce . 95) ($:. reduce . 95) 
-    ($:replaceable reduce . 95)) (($ident shift . 26) ($:. shift . 27) (ident 
-    shift . 28) ($:output shift . 70) ($:input shift . 71) ($:constant shift 
-    . 72) ($:parameter shift . 73) ($:discrete shift . 74) ($:stream shift . 
-    75) ($:flow shift . 76) ($:function shift . 1) ($:pure shift . 2) (
-    $:impure shift . 3) ($:package shift . 4) ($:type shift . 5) ($:connector 
-    shift . 6) ($:expandable shift . 7) ($:block shift . 8) ($:record shift . 
-    9) ($:operator shift . 10) ($:model shift . 11) ($:class shift . 12) (name
-    shift . 82) (type-prefix-3 shift . 77) (type-prefix-2 shift . 78) (
-    type-prefix-1 shift . 79) (class-prefixes-1 shift . 13) ($:partial shift 
-    . 14) (type-specifier shift . 83) (type-prefix shift . 84) (class-prefixes
-    shift . 15) ($:encapsulated shift . 16) ($:replaceable shift . 87) (
-    component-clause shift . 88) (class-definition shift . 89) (element-1 
-    shift . 327)) (($:function reduce . 89) ($:pure reduce . 89) ($:impure 
-    reduce . 89) ($:package reduce . 89) ($:type reduce . 89) ($:connector 
-    reduce . 89) ($:expandable reduce . 89) ($:block reduce . 89) ($:record 
-    reduce . 89) ($:operator reduce . 89) ($:model reduce . 89) ($:class 
-    reduce . 89) ($:partial reduce . 89) ($:encapsulated reduce . 89) (
-    $:stream reduce . 89) ($:flow reduce . 89) ($:constant reduce . 89) (
+    arithmetic-expression shift . 209) (relation shift . 349)) (($:<> shift . 
+    342) ($:== shift . 343) ($:>= shift . 344) ($:> shift . 345) ($:<= shift 
+    . 346) ($:< shift . 347) (rel-op shift . 348) ($:: reduce . 265) ($:= 
+    reduce . 265) ($:or reduce . 265) ($:and reduce . 265) (#{$:\x5d;}# reduce
+    . 265) ($:, reduce . 265) ($:for reduce . 265) (#{$:;}# reduce . 265) (
+    #{$:\x29;}# reduce . 265) ($:then reduce . 265) ($:loop reduce . 265) (
+    $:else reduce . 265) ($:elseif reduce . 265) ($string reduce . 265) (
+    $:annotation reduce . 265) ($:constrainedby reduce . 265) (#{$:\x7d;}# 
+    reduce . 265) ($:end reduce . 265) ($:elsewhen reduce . 265) ($:if reduce 
+    . 265)) (($:= reduce . 263) ($:: reduce . 263) ($:and reduce . 263) ($:or 
+    reduce . 263) (#{$:\x5d;}# reduce . 263) ($:, reduce . 263) ($:for reduce 
+    . 263) (#{$:;}# reduce . 263) (#{$:\x29;}# reduce . 263) ($:then reduce . 
+    263) ($:loop reduce . 263) ($:else reduce . 263) ($:elseif reduce . 263) (
+    $string reduce . 263) ($:annotation reduce . 263) ($:constrainedby reduce 
+    . 263) (#{$:\x7d;}# reduce . 263) ($:end reduce . 263) ($:elsewhen reduce 
+    . 263) ($:if reduce . 263)) (($:and shift . 341) ($:: reduce . 261) ($:= 
+    reduce . 261) ($:or reduce . 261) (#{$:\x5d;}# reduce . 261) ($:, reduce 
+    . 261) ($:for reduce . 261) (#{$:;}# reduce . 261) (#{$:\x29;}# reduce . 
+    261) ($:then reduce . 261) ($:loop reduce . 261) ($:else reduce . 261) (
+    $:elseif reduce . 261) ($string reduce . 261) ($:annotation reduce . 261) 
+    ($:constrainedby reduce . 261) (#{$:\x7d;}# reduce . 261) ($:end reduce . 
+    261) ($:elsewhen reduce . 261) ($:if reduce . 261)) (($:: shift . 339) (
+    $:or shift . 340) ($:= reduce . 258) (#{$:\x5d;}# reduce . 258) ($:, 
+    reduce . 258) ($:for reduce . 258) (#{$:;}# reduce . 258) (#{$:\x29;}# 
+    reduce . 258) ($:then reduce . 258) ($:loop reduce . 258) ($:else reduce 
+    . 258) ($:elseif reduce . 258) ($string reduce . 258) ($:annotation reduce
+    . 258) ($:constrainedby reduce . 258) (#{$:\x7d;}# reduce . 258) ($:end 
+    reduce . 258) ($:elsewhen reduce . 258) ($:if reduce . 258)) (($ident 
+    shift . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196)
+    ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
+    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
+    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
+    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
+    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
+    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
+    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 338)) ((#{$:\x5d;}# 
+    reduce . 253) ($:, reduce . 253) ($:for reduce . 253) (#{$:;}# reduce . 
+    253) (#{$:\x29;}# reduce . 253) ($:then reduce . 253) ($:loop reduce . 253
+    ) ($:else reduce . 253) ($:elseif reduce . 253) ($string reduce . 253) (
+    $:annotation reduce . 253) ($:constrainedby reduce . 253) (#{$:\x7d;}# 
+    reduce . 253) ($:end reduce . 253) ($:elsewhen reduce . 253) ($:if reduce 
+    . 253)) ((#{$:\x5d;}# reduce . 337) ($:, reduce . 337)) ((#{$:\x5d;}# 
+    reduce . 336) ($:, reduce . 336)) ((#{$:\x5d;}# reduce . 334) ($:, reduce 
+    . 334)) ((#{$:\x5d;}# shift . 336) ($:, shift . 337)) (($:, shift . 188) (
+    #{$:;}# reduce . 120) ($:constrainedby reduce . 120)) (($ident shift . 26)
+    (ident shift . 136) (declaration shift . 137) (component-declaration 
+    shift . 138) (component-list shift . 335)) ((#{$:;}# reduce . 115)) ((
+    $:annotation shift . 114) (annotation shift . 334) (#{$:;}# reduce . 114))
+    ((#{$:;}# reduce . 104)) (($ident shift . 26) ($:. shift . 27) (ident 
+    shift . 28) (name shift . 333)) (($ident shift . 26) (ident shift . 64) (
+    #{$:\x7b;}# shift . 330) ($:* shift . 331) (import-clause-2 shift . 332)) 
+    (($ident shift . 26) ($:. shift . 27) (ident shift . 28) (name shift . 329
+    )) (($string shift . 50) (string shift . 51) (string-cat shift . 52) (
+    string-comment shift . 184) (comment shift . 328) (#{$:;}# reduce . 340) (
+    $:annotation reduce . 340)) ((#{$:;}# reduce . 83)) (($:function reduce . 
+    95) ($:pure reduce . 95) ($:impure reduce . 95) ($:package reduce . 95) (
+    $:type reduce . 95) ($:connector reduce . 95) ($:expandable reduce . 95) (
+    $:block reduce . 95) ($:record reduce . 95) ($:operator reduce . 95) (
+    $:model reduce . 95) ($:class reduce . 95) ($:partial reduce . 95) (
+    $:encapsulated reduce . 95) ($:stream reduce . 95) ($:flow reduce . 95) (
+    $:constant reduce . 95) ($:parameter reduce . 95) ($:discrete reduce . 95)
+    ($:output reduce . 95) ($:input reduce . 95) ($ident reduce . 95) ($:. 
+    reduce . 95) ($:replaceable reduce . 95)) (($ident shift . 26) ($:. shift 
+    . 27) (ident shift . 28) ($:output shift . 70) ($:input shift . 71) (
+    $:constant shift . 72) ($:parameter shift . 73) ($:discrete shift . 74) (
+    $:stream shift . 75) ($:flow shift . 76) ($:function shift . 1) ($:pure 
+    shift . 2) ($:impure shift . 3) ($:package shift . 4) ($:type shift . 5) (
+    $:connector shift . 6) ($:expandable shift . 7) ($:block shift . 8) (
+    $:record shift . 9) ($:operator shift . 10) ($:model shift . 11) ($:class 
+    shift . 12) (name shift . 82) (type-prefix-3 shift . 77) (type-prefix-2 
+    shift . 78) (type-prefix-1 shift . 79) (class-prefixes-1 shift . 13) (
+    $:partial shift . 14) (type-specifier shift . 83) (type-prefix shift . 84)
+    (class-prefixes shift . 15) ($:encapsulated shift . 16) ($:replaceable 
+    shift . 87) (component-clause shift . 88) (class-definition shift . 89) (
+    element-1 shift . 327)) (($:function reduce . 89) ($:pure reduce . 89) (
+    $:impure reduce . 89) ($:package reduce . 89) ($:type reduce . 89) (
+    $:connector reduce . 89) ($:expandable reduce . 89) ($:block reduce . 89) 
+    ($:record reduce . 89) ($:operator reduce . 89) ($:model reduce . 89) (
+    $:class reduce . 89) ($:partial reduce . 89) ($:encapsulated reduce . 89) 
+    ($:stream reduce . 89) ($:flow reduce . 89) ($:constant reduce . 89) (
     $:parameter reduce . 89) ($:discrete reduce . 89) ($:output reduce . 89) (
     $:input reduce . 89) ($ident reduce . 89) ($:. reduce . 89) ($:replaceable
     reduce . 89) ($:outer reduce . 89)) (($:outer shift . 325) ($P3 shift . 
@@ -1111,49 +1111,50 @@
     shift . 96) (element shift . 117) ($:annotation reduce . 61) ($:public 
     reduce . 61) ($:protected reduce . 61) ($:initial reduce . 61) (
     $:algorithm reduce . 61) ($:equation reduce . 61) ($:external reduce . 61)
-    ($:end reduce . 61)) (($string shift . 50) ($fl shift . 195) ($fx shift 
-    . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# 
-    shift . 199) ($:der shift . 200) ($:true shift . 202) ($:false shift . 203
-    ) (string shift . 204) (unsigned-number shift . 205) (primary shift . 206)
-    (factor shift . 207) (term shift . 208) (arithmetic-expression shift . 
-    209) ($:not shift . 210) (relation shift . 211) (logical-factor shift . 
-    212) ($ident shift . 26) (logical-term shift . 213) ($:. shift . 27) (
-    ident shift . 28) (logical-expression shift . 214) ($:connect shift . 255)
-    ($:when shift . 256) ($:for shift . 257) ($:if shift . 258) (name shift 
-    . 259) (when-equation shift . 260) (connect-clause shift . 261) (
-    for-equation shift . 262) (if-equation shift . 263) (simple-expression 
-    shift . 264) (equation-1 shift . 265) (equation shift . 266) (
-    equation-list shift . 313) ($:annotation reduce . 181) ($:equation reduce 
-    . 181) ($:algorithm reduce . 181) ($:initial reduce . 181) ($:protected 
-    reduce . 181) ($:public reduce . 181) ($:external reduce . 181) ($:end 
-    reduce . 181)) (($ident shift . 26) ($:. shift . 241) (ident shift . 268) 
-    (component-reference-1 shift . 242) ($:when shift . 269) ($:while shift . 
-    270) ($:for shift . 271) ($:if shift . 272) (when-statement shift . 273) (
-    while-statement shift . 274) (for-statement shift . 275) (if-statement 
-    shift . 276) ($:return shift . 277) ($:break shift . 278) (#{$:\x28;}# 
-    shift . 279) (component-reference shift . 280) (statement-1 shift . 281) (
-    statement shift . 282) (statement-list shift . 312) ($:annotation reduce 
-    . 185) ($:equation reduce . 185) ($:algorithm reduce . 185) ($:initial 
-    reduce . 185) ($:protected reduce . 185) ($:public reduce . 185) (
-    $:external reduce . 185) ($:end reduce . 185)) ((#{$:\x28;}# shift . 311))
-    (($ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 
-    196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
-    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
-    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
-    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
-    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
-    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
-    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
-    simple-expression shift . 216) (expression shift . 310)) (($ident shift . 
-    26) (ident shift . 295) (for-index shift . 296) (for-indices shift . 309))
-    (($ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 
-    196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
-    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
-    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
-    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
-    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
-    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
-    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
+    ($:end reduce . 61)) (($string shift . 50) ($float shift . 195) ($fixed 
+    shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    #{$:\x28;}# shift . 199) ($:der shift . 200) ($:true shift . 202) ($:false
+    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
+    shift . 206) (factor shift . 207) (term shift . 208) (
+    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
+    211) (logical-factor shift . 212) ($ident shift . 26) (logical-term shift 
+    . 213) ($:. shift . 27) (ident shift . 28) (logical-expression shift . 214
+    ) ($:connect shift . 255) ($:when shift . 256) ($:for shift . 257) ($:if 
+    shift . 258) (name shift . 259) (when-equation shift . 260) (
+    connect-clause shift . 261) (for-equation shift . 262) (if-equation shift 
+    . 263) (simple-expression shift . 264) (equation-1 shift . 265) (equation 
+    shift . 266) (equation-list shift . 313) ($:annotation reduce . 181) (
+    $:equation reduce . 181) ($:algorithm reduce . 181) ($:initial reduce . 
+    181) ($:protected reduce . 181) ($:public reduce . 181) ($:external reduce
+    . 181) ($:end reduce . 181)) (($ident shift . 26) ($:. shift . 241) (
+    ident shift . 268) (component-reference-1 shift . 242) ($:when shift . 269
+    ) ($:while shift . 270) ($:for shift . 271) ($:if shift . 272) (
+    when-statement shift . 273) (while-statement shift . 274) (for-statement 
+    shift . 275) (if-statement shift . 276) ($:return shift . 277) ($:break 
+    shift . 278) (#{$:\x28;}# shift . 279) (component-reference shift . 280) (
+    statement-1 shift . 281) (statement shift . 282) (statement-list shift . 
+    312) ($:annotation reduce . 185) ($:equation reduce . 185) ($:algorithm 
+    reduce . 185) ($:initial reduce . 185) ($:protected reduce . 185) (
+    $:public reduce . 185) ($:external reduce . 185) ($:end reduce . 185)) ((
+    #{$:\x28;}# shift . 311)) (($ident shift . 26) ($string shift . 50) (
+    $float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 
+    28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift
+    . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
+    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
+    primary shift . 206) (factor shift . 207) (term shift . 208) (
+    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
+    211) (logical-factor shift . 212) (logical-term shift . 213) (
+    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
+    shift . 216) (expression shift . 310)) (($ident shift . 26) (ident shift 
+    . 295) (for-index shift . 296) (for-indices shift . 309)) (($ident shift 
+    . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. 
+    shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
+    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 
+    201) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
     simple-expression shift . 216) (expression shift . 308)) (($:. shift . 59)
     (#{$:\x28;}# shift . 289) (function-call-args shift . 306) (#{$:\x5b;}# 
     shift . 134) (array-subscripts shift . 307) ($:= reduce . 296) ($:: reduce
@@ -1169,7 +1170,7 @@
     reduce . 191)) (($:= shift . 305)) (($string shift . 50) (string shift . 
     51) (string-cat shift . 52) (string-comment shift . 184) (comment shift . 
     304) (#{$:;}# reduce . 340) ($:annotation reduce . 340)) ((#{$:;}# shift 
-    . 303)) (($string shift . 50) ($fl shift . 195) ($fx shift . 196) (
+    . 303)) (($string shift . 50) ($float shift . 195) ($fixed shift . 196) (
     #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
     199) ($:der shift . 200) ($:true shift . 202) ($:false shift . 203) (
     string shift . 204) (unsigned-number shift . 205) (primary shift . 206) (
@@ -1186,16 +1187,27 @@
     ($:external reduce . 180) ($:end reduce . 180)) ((#{$:\x5b;}# shift . 134
     ) (array-subscripts shift . 300) ($P13 shift . 301) (#{$:\x29;}# reduce . 
     312) ($:, reduce . 312) (#{$:\x28;}# reduce . 312) ($::= reduce . 312) (
-    $:. reduce . 312)) (($ident shift . 26) ($string shift . 50) ($fl shift . 
-    195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# 
-    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
-    shift . 200) (name shift . 201) ($:true shift . 202) ($:false shift . 203)
-    (string shift . 204) (unsigned-number shift . 205) (primary shift . 206) 
-    (factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209
-    ) ($:not shift . 210) (relation shift . 211) (logical-factor shift . 212) 
-    (logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
-    215) (simple-expression shift . 216) (expression shift . 299)) (($ident 
-    shift . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. 
+    $:. reduce . 312)) (($ident shift . 26) ($string shift . 50) ($float shift
+    . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 28) (
+    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
+    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
+    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
+    shift . 206) (factor shift . 207) (term shift . 208) (
+    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
+    211) (logical-factor shift . 212) (logical-term shift . 213) (
+    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
+    shift . 216) (expression shift . 299)) (($ident shift . 26) ($string shift
+    . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident 
+    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
+    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
+    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
+    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
+    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
+    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
+    shift . 216) (expression shift . 298)) (($ident shift . 26) (ident shift 
+    . 295) (for-index shift . 296) (for-indices shift . 297)) (($ident shift 
+    . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. 
     shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
     shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 
     201) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
@@ -1203,16 +1215,6 @@
     term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
     (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
     213) (logical-expression shift . 214) ($:if shift . 215) (
-    simple-expression shift . 216) (expression shift . 298)) (($ident shift . 
-    26) (ident shift . 295) (for-index shift . 296) (for-indices shift . 297))
-    (($ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 
-    196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
-    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
-    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
-    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
-    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
-    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
-    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
     simple-expression shift . 216) (expression shift . 294)) ((#{$:;}# reduce 
     . 207) ($string reduce . 207) ($:annotation reduce . 207)) ((#{$:;}# 
     reduce . 206) ($string reduce . 206) ($:annotation reduce . 206)) ((
@@ -1220,136 +1222,38 @@
     ((#{$:;}# reduce . 204) ($string reduce . 204) ($:annotation reduce . 204)
     ) ((#{$:;}# reduce . 203) ($string reduce . 203) ($:annotation reduce . 
     203)) ((#{$:;}# reduce . 202) ($string reduce . 202) ($:annotation reduce 
-    . 202)) (($ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx 
-    shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197)
-    (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
-    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
-    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
-    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
-    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
-    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
-    simple-expression shift . 216) (expression shift . 291) ($:, shift . 292) 
-    (output-expression-list shift . 293)) (($::= shift . 288) (#{$:\x28;}# 
-    shift . 289) (function-call-args shift . 290)) (($string shift . 50) (
-    string shift . 51) (string-cat shift . 52) (string-comment shift . 184) (
-    comment shift . 287) (#{$:;}# reduce . 340) ($:annotation reduce . 340)) (
-    (#{$:;}# shift . 286)) (($ident shift . 26) ($:. shift . 241) (ident shift
-    . 268) (component-reference-1 shift . 242) ($:when shift . 269) ($:while 
-    shift . 270) ($:for shift . 271) ($:if shift . 272) (when-statement shift 
-    . 273) (while-statement shift . 274) (for-statement shift . 275) (
-    if-statement shift . 276) ($:return shift . 277) ($:break shift . 278) (
-    #{$:\x28;}# shift . 279) (component-reference shift . 280) (statement-1 
-    shift . 281) (statement shift . 285) ($:annotation reduce . 184) (
-    $:equation reduce . 184) ($:algorithm reduce . 184) ($:initial reduce . 
-    184) ($:protected reduce . 184) ($:public reduce . 184) ($:external reduce
-    . 184) ($:end reduce . 184)) ((#{$:;}# reduce . 33) ($:constrainedby 
-    reduce . 33)) ((#{$:;}# shift . 471)) (($ident reduce . 196) ($:. reduce 
-    . 196) ($:if reduce . 196) ($:for reduce . 196) ($:while reduce . 196) (
-    $:when reduce . 196) ($:return reduce . 196) ($:break reduce . 196) (
-    #{$:\x28;}# reduce . 196) ($:end reduce . 196) ($:annotation reduce . 196)
-    ($:equation reduce . 196) ($:algorithm reduce . 196) ($:initial reduce . 
-    196) ($:protected reduce . 196) ($:public reduce . 196) ($:external reduce
-    . 196) ($:elseif reduce . 196) ($:else reduce . 196) ($:elsewhen reduce 
-    . 196)) ((#{$:;}# reduce . 198)) (($ident shift . 26) ($string shift . 50)
-    ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 470)) (($string shift . 50) ($fl shift . 
-    195) ($fx shift . 196) ($:. shift . 27) (#{$:\x7b;}# shift . 197) (
-    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
-    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
-    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
-    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
-    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
-    shift . 213) ($ident shift . 26) (logical-expression shift . 214) (ident 
-    shift . 368) ($:if shift . 215) (simple-expression shift . 216) (
-    expression shift . 369) ($:function shift . 370) (named-argument shift . 
-    371) (named-arguments shift . 372) (function-argument shift . 373) (
-    function-arguments shift . 468) (#{$:\x29;}# shift . 469)) ((#{$:;}# 
-    reduce . 200) ($string reduce . 200) ($:annotation reduce . 200)) ((
-    #{$:\x29;}# reduce . 329) ($:, reduce . 329)) ((#{$:\x29;}# reduce . 328) 
-    ($:, reduce . 328)) ((#{$:\x29;}# shift . 467) ($:, shift . 427)) (($:then
-    shift . 461) (then-st-part shift . 466)) (($:in shift . 465) ($:loop 
-    reduce . 239) ($:, reduce . 239) (#{$:\x7d;}# reduce . 239) (#{$:\x29;}# 
-    reduce . 239)) (($:loop reduce . 236) ($:, reduce . 236) (#{$:\x7d;}# 
-    reduce . 236) (#{$:\x29;}# reduce . 236)) (($:, shift . 456) ($:loop shift
-    . 464)) (($:loop shift . 463)) (($:then shift . 461) (then-st-part shift 
-    . 462)) (($:. reduce . 313) ($:= reduce . 313) ($::= reduce . 313) (
-    #{$:\x28;}# reduce . 313) ($:, reduce . 313) (#{$:\x29;}# reduce . 313)) (
-    ($:. reduce . 310) ($:= reduce . 310) ($::= reduce . 310) (#{$:\x28;}# 
-    reduce . 310) ($:, reduce . 310) (#{$:\x29;}# reduce . 310)) ((#{$:;}# 
-    shift . 460)) (($fl reduce . 187) ($fx reduce . 187) ($string reduce . 187
-    ) (#{$:\x7b;}# reduce . 187) (#{$:\x5b;}# reduce . 187) (#{$:\x28;}# 
-    reduce . 187) ($:der reduce . 187) ($:true reduce . 187) ($:false reduce 
-    . 187) ($:not reduce . 187) ($:if reduce . 187) ($:for reduce . 187) (
-    $:connect reduce . 187) ($:when reduce . 187) ($ident reduce . 187) ($:. 
-    reduce . 187) ($:end reduce . 187) ($:annotation reduce . 187) ($:equation
-    reduce . 187) ($:algorithm reduce . 187) ($:initial reduce . 187) (
-    $:protected reduce . 187) ($:public reduce . 187) ($:external reduce . 187
-    ) ($:elseif reduce . 187) ($:else reduce . 187) ($:elsewhen reduce . 187))
-    ((#{$:;}# reduce . 189)) (($ident shift . 26) ($string shift . 50) ($fl 
-    shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 459)) (($:= reduce . 294) ($:: reduce . 
-    294) ($:^ reduce . 294) ($:.^ reduce . 294) ($:./ reduce . 294) ($:.* 
-    reduce . 294) ($:/ reduce . 294) ($:* reduce . 294) ($:+ reduce . 294) (
-    $:- reduce . 294) ($:.+ reduce . 294) ($:.- reduce . 294) ($:<> reduce . 
-    294) ($:== reduce . 294) ($:>= reduce . 294) ($:> reduce . 294) ($:<= 
-    reduce . 294) ($:< reduce . 294) ($:and reduce . 294) ($:or reduce . 294) 
-    (#{$:;}# reduce . 195) ($string reduce . 195) ($:annotation reduce . 195))
-    ((#{$:\x5d;}# reduce . 297) ($:: reduce . 297) ($:^ reduce . 297) ($:.^ 
-    reduce . 297) ($:./ reduce . 297) ($:.* reduce . 297) ($:/ reduce . 297) (
-    $:* reduce . 297) ($:+ reduce . 297) ($:- reduce . 297) ($:.+ reduce . 297
-    ) ($:.- reduce . 297) ($:<> reduce . 297) ($:== reduce . 297) ($:>= reduce
-    . 297) ($:> reduce . 297) ($:<= reduce . 297) ($:< reduce . 297) ($:and 
-    reduce . 297) ($:or reduce . 297) ($:, reduce . 297) ($:for reduce . 297) 
-    (#{$:;}# reduce . 297) (#{$:\x29;}# reduce . 297) ($:then reduce . 297) (
-    $:loop reduce . 297) ($:else reduce . 297) ($:elseif reduce . 297) (
-    $string reduce . 297) ($:annotation reduce . 297) ($:constrainedby reduce 
-    . 297) ($:= reduce . 297) (#{$:\x7d;}# reduce . 297) ($:end reduce . 297) 
-    ($:elsewhen reduce . 297) ($:if reduce . 297)) (($:then shift . 454) (
-    then-eq-part shift . 458)) (($:, shift . 456) ($:loop shift . 457)) ((
-    $:then shift . 454) (then-eq-part shift . 455)) (($ident shift . 26) ($:. 
-    shift . 241) (ident shift . 268) (component-reference-1 shift . 242) (
-    component-reference shift . 453)) (($ident shift . 26) ($:. shift . 241) (
+    . 202)) (($ident shift . 26) ($string shift . 50) ($float shift . 195) (
+    $fixed shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift
+    . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift 
+    . 200) (name shift . 201) ($:true shift . 202) ($:false shift . 203) (
+    string shift . 204) (unsigned-number shift . 205) (primary shift . 206) (
+    factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209)
+    ($:not shift . 210) (relation shift . 211) (logical-factor shift . 212) (
+    logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
+    215) (simple-expression shift . 216) (expression shift . 291) ($:, shift 
+    . 292) (output-expression-list shift . 293)) (($::= shift . 288) (
+    #{$:\x28;}# shift . 289) (function-call-args shift . 290)) (($string shift
+    . 50) (string shift . 51) (string-cat shift . 52) (string-comment shift 
+    . 184) (comment shift . 287) (#{$:;}# reduce . 340) ($:annotation reduce 
+    . 340)) ((#{$:;}# shift . 286)) (($ident shift . 26) ($:. shift . 241) (
     ident shift . 268) (component-reference-1 shift . 242) ($:when shift . 269
     ) ($:while shift . 270) ($:for shift . 271) ($:if shift . 272) (
     when-statement shift . 273) (while-statement shift . 274) (for-statement 
     shift . 275) (if-statement shift . 276) ($:return shift . 277) ($:break 
     shift . 278) (#{$:\x28;}# shift . 279) (component-reference shift . 280) (
     statement-1 shift . 281) (statement shift . 285) ($:annotation reduce . 
-    183) ($:equation reduce . 183) ($:algorithm reduce . 183) ($:initial 
-    reduce . 183) ($:protected reduce . 183) ($:public reduce . 183) (
-    $:external reduce . 183) ($:end reduce . 183)) (($string shift . 50) ($fl 
-    shift . 195) ($fx shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
-    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) ($:true shift 
-    . 202) ($:false shift . 203) (string shift . 204) (unsigned-number shift 
-    . 205) (primary shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) ($ident shift . 26) (logical-term shift 
-    . 213) ($:. shift . 27) (ident shift . 28) (logical-expression shift . 214
-    ) ($:connect shift . 255) ($:when shift . 256) ($:for shift . 257) ($:if 
-    shift . 258) (name shift . 259) (when-equation shift . 260) (
-    connect-clause shift . 261) (for-equation shift . 262) (if-equation shift 
-    . 263) (simple-expression shift . 264) (equation-1 shift . 265) (equation 
-    shift . 302) ($:annotation reduce . 179) ($:equation reduce . 179) (
-    $:algorithm reduce . 179) ($:initial reduce . 179) ($:protected reduce . 
-    179) ($:public reduce . 179) ($:external reduce . 179) ($:end reduce . 179
-    )) (($:end reduce . 52)) (($:annotation reduce . 70) ($:end reduce . 70)) 
-    (($:annotation reduce . 69) ($:end reduce . 69)) ((#{$:;}# shift . 452)) (
-    ($ident shift . 26) (ident shift . 451)) ((#{$:\x29;}# shift . 449) (
-    $ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 196
+    184) ($:equation reduce . 184) ($:algorithm reduce . 184) ($:initial 
+    reduce . 184) ($:protected reduce . 184) ($:public reduce . 184) (
+    $:external reduce . 184) ($:end reduce . 184)) ((#{$:;}# reduce . 33) (
+    $:constrainedby reduce . 33)) ((#{$:;}# shift . 471)) (($ident reduce . 
+    196) ($:. reduce . 196) ($:if reduce . 196) ($:for reduce . 196) ($:while 
+    reduce . 196) ($:when reduce . 196) ($:return reduce . 196) ($:break 
+    reduce . 196) (#{$:\x28;}# reduce . 196) ($:end reduce . 196) (
+    $:annotation reduce . 196) ($:equation reduce . 196) ($:algorithm reduce 
+    . 196) ($:initial reduce . 196) ($:protected reduce . 196) ($:public 
+    reduce . 196) ($:external reduce . 196) ($:elseif reduce . 196) ($:else 
+    reduce . 196) ($:elsewhen reduce . 196)) ((#{$:;}# reduce . 198)) (($ident
+    shift . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196
     ) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
     #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
     name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
@@ -1357,58 +1261,98 @@
     . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
     . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
     shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
-    simple-expression shift . 216) (expression shift . 365) (expression-list 
-    shift . 450)) (($ident shift . 26) (ident shift . 448)) ((#{$:\x5b;}# 
-    shift . 134) (array-subscripts shift . 446) ($P14 shift . 447) (
-    #{$:\x29;}# reduce . 314) ($:, reduce . 314) ($:= reduce . 314) (
-    #{$:\x28;}# reduce . 314) ($::= reduce . 314) ($:. reduce . 314)) ((
-    $:annotation reduce . 68) ($:end reduce . 68)) ((#{$:;}# shift . 445)) ((
-    $:annotation shift . 114) (annotation shift . 443) (#{$:;}# shift . 444)) 
-    (($:function reduce . 91) ($:pure reduce . 91) ($:impure reduce . 91) (
-    $:package reduce . 91) ($:type reduce . 91) ($:connector reduce . 91) (
-    $:expandable reduce . 91) ($:block reduce . 91) ($:record reduce . 91) (
-    $:operator reduce . 91) ($:model reduce . 91) ($:class reduce . 91) (
-    $:partial reduce . 91) ($:encapsulated reduce . 91) ($:stream reduce . 91)
-    ($:flow reduce . 91) ($:constant reduce . 91) ($:parameter reduce . 91) (
-    $:discrete reduce . 91) ($:output reduce . 91) ($:input reduce . 91) (
-    $ident reduce . 91) ($:. reduce . 91) ($:replaceable reduce . 91)) ((
-    $ident shift . 26) ($:. shift . 27) (ident shift . 28) ($:output shift . 
-    70) ($:input shift . 71) ($:constant shift . 72) ($:parameter shift . 73) 
-    ($:discrete shift . 74) ($:stream shift . 75) ($:flow shift . 76) (
-    $:function shift . 1) ($:pure shift . 2) ($:impure shift . 3) ($:package 
-    shift . 4) ($:type shift . 5) ($:connector shift . 6) ($:expandable shift 
-    . 7) ($:block shift . 8) ($:record shift . 9) ($:operator shift . 10) (
-    $:model shift . 11) ($:class shift . 12) (name shift . 82) (type-prefix-3 
-    shift . 77) (type-prefix-2 shift . 78) (type-prefix-1 shift . 79) (
-    class-prefixes-1 shift . 13) ($:partial shift . 14) (type-specifier shift 
-    . 83) (type-prefix shift . 84) (class-prefixes shift . 15) ($:encapsulated
-    shift . 16) ($:replaceable shift . 87) (component-clause shift . 88) (
-    class-definition shift . 89) (element-1 shift . 442)) ((#{$:;}# reduce . 
-    82)) ((#{$:;}# reduce . 100)) (($:. shift . 59) (#{$:\x28;}# shift . 66) (
-    class-modification shift . 441) ($string reduce . 118) ($:annotation 
-    reduce . 118) (#{$:;}# reduce . 118) (#{$:\x29;}# reduce . 118) ($:, 
-    reduce . 118)) ((#{$:\x7d;}# shift . 438) ($ident shift . 26) (ident shift
-    . 439) (import-list shift . 440)) (($string reduce . 108) ($:annotation 
-    reduce . 108) (#{$:;}# reduce . 108)) (($string reduce . 106) (
-    $:annotation reduce . 106) (#{$:;}# reduce . 106)) (($:. shift . 59) (
-    $string reduce . 105) ($:annotation reduce . 105) (#{$:;}# reduce . 105)) 
-    ((#{$:;}# reduce . 113)) (($:, shift . 188) (#{$:;}# reduce . 119) (
-    $:constrainedby reduce . 119)) (($ident reduce . 333) ($:= reduce . 333) (
-    $::= reduce . 333) (#{$:\x28;}# reduce . 333) ($string reduce . 333) (
-    $:annotation reduce . 333) ($:if reduce . 333) ($:, reduce . 333) (#{$:;}#
-    reduce . 333) ($:constrainedby reduce . 333) (#{$:\x5d;}# reduce . 333) (
-    $:: reduce . 333) ($:^ reduce . 333) ($:.^ reduce . 333) ($:./ reduce . 
-    333) ($:.* reduce . 333) ($:/ reduce . 333) ($:* reduce . 333) ($:+ reduce
-    . 333) ($:- reduce . 333) ($:.+ reduce . 333) ($:.- reduce . 333) ($:<> 
-    reduce . 333) ($:== reduce . 333) ($:>= reduce . 333) ($:> reduce . 333) (
-    $:<= reduce . 333) ($:< reduce . 333) ($:and reduce . 333) ($:or reduce . 
-    333) ($:for reduce . 333) (#{$:\x29;}# reduce . 333) ($:then reduce . 333)
-    ($:loop reduce . 333) ($:else reduce . 333) ($:elseif reduce . 333) ($:. 
-    reduce . 333) ($:stream reduce . 333) ($:flow reduce . 333) ($:constant 
-    reduce . 333) ($:parameter reduce . 333) ($:discrete reduce . 333) (
-    $:output reduce . 333) ($:input reduce . 333) (#{$:\x7d;}# reduce . 333) (
-    $:end reduce . 333) ($:elsewhen reduce . 333)) (($ident shift . 26) (
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (
+    simple-expression shift . 216) (expression shift . 470)) (($string shift 
+    . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (
+    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
+    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
+    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
+    shift . 206) (factor shift . 207) (term shift . 208) (
+    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
+    211) (logical-factor shift . 212) (logical-term shift . 213) ($ident shift
+    . 26) (logical-expression shift . 214) (ident shift . 368) ($:if shift . 
+    215) (simple-expression shift . 216) (expression shift . 369) ($:function 
+    shift . 370) (named-argument shift . 371) (named-arguments shift . 372) (
+    function-argument shift . 373) (function-arguments shift . 468) (
+    #{$:\x29;}# shift . 469)) ((#{$:;}# reduce . 200) ($string reduce . 200) (
+    $:annotation reduce . 200)) ((#{$:\x29;}# reduce . 329) ($:, reduce . 329)
+    ) ((#{$:\x29;}# reduce . 328) ($:, reduce . 328)) ((#{$:\x29;}# shift . 
+    467) ($:, shift . 427)) (($:then shift . 461) (then-st-part shift . 466)) 
+    (($:in shift . 465) ($:loop reduce . 239) ($:, reduce . 239) (#{$:\x7d;}# 
+    reduce . 239) (#{$:\x29;}# reduce . 239)) (($:loop reduce . 236) ($:, 
+    reduce . 236) (#{$:\x7d;}# reduce . 236) (#{$:\x29;}# reduce . 236)) (($:,
+    shift . 456) ($:loop shift . 464)) (($:loop shift . 463)) (($:then shift 
+    . 461) (then-st-part shift . 462)) (($:. reduce . 313) ($:= reduce . 313) 
+    ($::= reduce . 313) (#{$:\x28;}# reduce . 313) ($:, reduce . 313) (
+    #{$:\x29;}# reduce . 313)) (($:. reduce . 310) ($:= reduce . 310) ($::= 
+    reduce . 310) (#{$:\x28;}# reduce . 310) ($:, reduce . 310) (#{$:\x29;}# 
+    reduce . 310)) ((#{$:;}# shift . 460)) (($float reduce . 187) ($fixed 
+    reduce . 187) ($string reduce . 187) (#{$:\x7b;}# reduce . 187) (
+    #{$:\x5b;}# reduce . 187) (#{$:\x28;}# reduce . 187) ($:der reduce . 187) 
+    ($:true reduce . 187) ($:false reduce . 187) ($:not reduce . 187) ($:if 
+    reduce . 187) ($:for reduce . 187) ($:connect reduce . 187) ($:when reduce
+    . 187) ($ident reduce . 187) ($:. reduce . 187) ($:end reduce . 187) (
+    $:annotation reduce . 187) ($:equation reduce . 187) ($:algorithm reduce 
+    . 187) ($:initial reduce . 187) ($:protected reduce . 187) ($:public 
+    reduce . 187) ($:external reduce . 187) ($:elseif reduce . 187) ($:else 
+    reduce . 187) ($:elsewhen reduce . 187)) ((#{$:;}# reduce . 189)) (($ident
+    shift . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196
+    ) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
+    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
+    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
+    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
+    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
+    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
+    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 459)) (($:= reduce . 
+    294) ($:: reduce . 294) ($:^ reduce . 294) ($:.^ reduce . 294) ($:./ 
+    reduce . 294) ($:.* reduce . 294) ($:/ reduce . 294) ($:* reduce . 294) (
+    $:+ reduce . 294) ($:- reduce . 294) ($:.+ reduce . 294) ($:.- reduce . 
+    294) ($:<> reduce . 294) ($:== reduce . 294) ($:>= reduce . 294) ($:> 
+    reduce . 294) ($:<= reduce . 294) ($:< reduce . 294) ($:and reduce . 294) 
+    ($:or reduce . 294) (#{$:;}# reduce . 195) ($string reduce . 195) (
+    $:annotation reduce . 195)) ((#{$:\x5d;}# reduce . 297) ($:: reduce . 297)
+    ($:^ reduce . 297) ($:.^ reduce . 297) ($:./ reduce . 297) ($:.* reduce 
+    . 297) ($:/ reduce . 297) ($:* reduce . 297) ($:+ reduce . 297) ($:- 
+    reduce . 297) ($:.+ reduce . 297) ($:.- reduce . 297) ($:<> reduce . 297) 
+    ($:== reduce . 297) ($:>= reduce . 297) ($:> reduce . 297) ($:<= reduce . 
+    297) ($:< reduce . 297) ($:and reduce . 297) ($:or reduce . 297) ($:, 
+    reduce . 297) ($:for reduce . 297) (#{$:;}# reduce . 297) (#{$:\x29;}# 
+    reduce . 297) ($:then reduce . 297) ($:loop reduce . 297) ($:else reduce 
+    . 297) ($:elseif reduce . 297) ($string reduce . 297) ($:annotation reduce
+    . 297) ($:constrainedby reduce . 297) ($:= reduce . 297) (#{$:\x7d;}# 
+    reduce . 297) ($:end reduce . 297) ($:elsewhen reduce . 297) ($:if reduce 
+    . 297)) (($:then shift . 454) (then-eq-part shift . 458)) (($:, shift . 
+    456) ($:loop shift . 457)) (($:then shift . 454) (then-eq-part shift . 455
+    )) (($ident shift . 26) ($:. shift . 241) (ident shift . 268) (
+    component-reference-1 shift . 242) (component-reference shift . 453)) ((
+    $ident shift . 26) ($:. shift . 241) (ident shift . 268) (
+    component-reference-1 shift . 242) ($:when shift . 269) ($:while shift . 
+    270) ($:for shift . 271) ($:if shift . 272) (when-statement shift . 273) (
+    while-statement shift . 274) (for-statement shift . 275) (if-statement 
+    shift . 276) ($:return shift . 277) ($:break shift . 278) (#{$:\x28;}# 
+    shift . 279) (component-reference shift . 280) (statement-1 shift . 281) (
+    statement shift . 285) ($:annotation reduce . 183) ($:equation reduce . 
+    183) ($:algorithm reduce . 183) ($:initial reduce . 183) ($:protected 
+    reduce . 183) ($:public reduce . 183) ($:external reduce . 183) ($:end 
+    reduce . 183)) (($string shift . 50) ($float shift . 195) ($fixed shift . 
+    196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# 
+    shift . 199) ($:der shift . 200) ($:true shift . 202) ($:false shift . 203
+    ) (string shift . 204) (unsigned-number shift . 205) (primary shift . 206)
+    (factor shift . 207) (term shift . 208) (arithmetic-expression shift . 
+    209) ($:not shift . 210) (relation shift . 211) (logical-factor shift . 
+    212) ($ident shift . 26) (logical-term shift . 213) ($:. shift . 27) (
+    ident shift . 28) (logical-expression shift . 214) ($:connect shift . 255)
+    ($:when shift . 256) ($:for shift . 257) ($:if shift . 258) (name shift 
+    . 259) (when-equation shift . 260) (connect-clause shift . 261) (
+    for-equation shift . 262) (if-equation shift . 263) (simple-expression 
+    shift . 264) (equation-1 shift . 265) (equation shift . 302) ($:annotation
+    reduce . 179) ($:equation reduce . 179) ($:algorithm reduce . 179) (
+    $:initial reduce . 179) ($:protected reduce . 179) ($:public reduce . 179)
+    ($:external reduce . 179) ($:end reduce . 179)) (($:end reduce . 52)) ((
+    $:annotation reduce . 70) ($:end reduce . 70)) (($:annotation reduce . 69)
+    ($:end reduce . 69)) ((#{$:;}# shift . 452)) (($ident shift . 26) (ident 
+    shift . 451)) ((#{$:\x29;}# shift . 449) ($ident shift . 26) ($string 
+    shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (
     ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
     #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
     shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
@@ -1416,157 +1360,218 @@
     (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
     . 211) (logical-factor shift . 212) (logical-term shift . 213) (
     logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 217) ($:: shift . 218) (subscript shift 
-    . 437)) (($:then shift . 436)) (($ident shift . 26) ($string shift . 50) (
-    $fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 435)) (($ident shift . 26) ($string shift . 50)
-    ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 434)) (($ident 
-    shift . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. 
-    shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
-    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 
-    201) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
-    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
-    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
-    (relation shift . 211) (logical-factor shift . 433)) (($fl reduce . 274) (
-    $fx reduce . 274) ($string reduce . 274) ($ident reduce . 274) ($:. reduce
-    . 274) (#{$:\x7b;}# reduce . 274) (#{$:\x5b;}# reduce . 274) (#{$:\x28;}#
-    reduce . 274) ($:der reduce . 274) ($:true reduce . 274) ($:false reduce 
-    . 274)) (($fl reduce . 273) ($fx reduce . 273) ($string reduce . 273) (
-    $ident reduce . 273) ($:. reduce . 273) (#{$:\x7b;}# reduce . 273) (
-    #{$:\x5b;}# reduce . 273) (#{$:\x28;}# reduce . 273) ($:der reduce . 273) 
-    ($:true reduce . 273) ($:false reduce . 273)) (($fl reduce . 272) ($fx 
-    reduce . 272) ($string reduce . 272) ($ident reduce . 272) ($:. reduce . 
-    272) (#{$:\x7b;}# reduce . 272) (#{$:\x5b;}# reduce . 272) (#{$:\x28;}# 
-    reduce . 272) ($:der reduce . 272) ($:true reduce . 272) ($:false reduce 
-    . 272)) (($fl reduce . 271) ($fx reduce . 271) ($string reduce . 271) (
-    $ident reduce . 271) ($:. reduce . 271) (#{$:\x7b;}# reduce . 271) (
-    #{$:\x5b;}# reduce . 271) (#{$:\x28;}# reduce . 271) ($:der reduce . 271) 
-    ($:true reduce . 271) ($:false reduce . 271)) (($fl reduce . 270) ($fx 
-    reduce . 270) ($string reduce . 270) ($ident reduce . 270) ($:. reduce . 
-    270) (#{$:\x7b;}# reduce . 270) (#{$:\x5b;}# reduce . 270) (#{$:\x28;}# 
-    reduce . 270) ($:der reduce . 270) ($:true reduce . 270) ($:false reduce 
-    . 270)) (($fl reduce . 269) ($fx reduce . 269) ($string reduce . 269) (
-    $ident reduce . 269) ($:. reduce . 269) (#{$:\x7b;}# reduce . 269) (
-    #{$:\x5b;}# reduce . 269) (#{$:\x28;}# reduce . 269) ($:der reduce . 269) 
-    ($:true reduce . 269) ($:false reduce . 269)) (($ident shift . 26) (
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (
-    ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
-    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
-    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
-    (arithmetic-expression shift . 432)) (($:<> shift . 342) ($:== shift . 
-    343) ($:>= shift . 344) ($:> shift . 345) ($:<= shift . 346) ($:< shift . 
-    347) (rel-op shift . 348) ($:: reduce . 266) ($:= reduce . 266) ($:or 
-    reduce . 266) ($:and reduce . 266) (#{$:\x5d;}# reduce . 266) ($:, reduce 
-    . 266) ($:for reduce . 266) (#{$:;}# reduce . 266) (#{$:\x29;}# reduce . 
-    266) ($:then reduce . 266) ($:loop reduce . 266) ($:else reduce . 266) (
-    $:elseif reduce . 266) ($string reduce . 266) ($:annotation reduce . 266) 
-    ($:constrainedby reduce . 266) (#{$:\x7d;}# reduce . 266) ($:end reduce . 
-    266) ($:elsewhen reduce . 266) ($:if reduce . 266)) (($fl reduce . 280) (
-    $fx reduce . 280) ($string reduce . 280) ($ident reduce . 280) ($:. reduce
-    . 280) (#{$:\x7b;}# reduce . 280) (#{$:\x5b;}# reduce . 280) (#{$:\x28;}#
-    reduce . 280) ($:der reduce . 280) ($:true reduce . 280) ($:false reduce 
-    . 280)) (($fl reduce . 279) ($fx reduce . 279) ($string reduce . 279) (
-    $ident reduce . 279) ($:. reduce . 279) (#{$:\x7b;}# reduce . 279) (
-    #{$:\x5b;}# reduce . 279) (#{$:\x28;}# reduce . 279) ($:der reduce . 279) 
-    ($:true reduce . 279) ($:false reduce . 279)) (($fl reduce . 278) ($fx 
-    reduce . 278) ($string reduce . 278) ($ident reduce . 278) ($:. reduce . 
-    278) (#{$:\x7b;}# reduce . 278) (#{$:\x5b;}# reduce . 278) (#{$:\x28;}# 
-    reduce . 278) ($:der reduce . 278) ($:true reduce . 278) ($:false reduce 
-    . 278)) (($fl reduce . 277) ($fx reduce . 277) ($string reduce . 277) (
-    $ident reduce . 277) ($:. reduce . 277) (#{$:\x7b;}# reduce . 277) (
-    #{$:\x5b;}# reduce . 277) (#{$:\x28;}# reduce . 277) ($:der reduce . 277) 
-    ($:true reduce . 277) ($:false reduce . 277)) (($ident shift . 26) (
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (
-    ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
-    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
-    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 431)
-    ) (($fl reduce . 286) ($fx reduce . 286) ($string reduce . 286) ($ident 
-    reduce . 286) ($:. reduce . 286) (#{$:\x7b;}# reduce . 286) (#{$:\x5b;}# 
-    reduce . 286) (#{$:\x28;}# reduce . 286) ($:der reduce . 286) ($:true 
-    reduce . 286) ($:false reduce . 286)) (($fl reduce . 285) ($fx reduce . 
-    285) ($string reduce . 285) ($ident reduce . 285) ($:. reduce . 285) (
-    #{$:\x7b;}# reduce . 285) (#{$:\x5b;}# reduce . 285) (#{$:\x28;}# reduce 
-    . 285) ($:der reduce . 285) ($:true reduce . 285) ($:false reduce . 285)) 
-    (($fl reduce . 284) ($fx reduce . 284) ($string reduce . 284) ($ident 
-    reduce . 284) ($:. reduce . 284) (#{$:\x7b;}# reduce . 284) (#{$:\x5b;}# 
-    reduce . 284) (#{$:\x28;}# reduce . 284) ($:der reduce . 284) ($:true 
-    reduce . 284) ($:false reduce . 284)) (($fl reduce . 283) ($fx reduce . 
-    283) ($string reduce . 283) ($ident reduce . 283) ($:. reduce . 283) (
-    #{$:\x7b;}# reduce . 283) (#{$:\x5b;}# reduce . 283) (#{$:\x28;}# reduce 
-    . 283) ($:der reduce . 283) ($:true reduce . 283) ($:false reduce . 283)) 
-    (($ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 
-    196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
-    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
-    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
-    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
-    . 430)) (($ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx 
+    shift . 216) (expression shift . 365) (expression-list shift . 450)) ((
+    $ident shift . 26) (ident shift . 448)) ((#{$:\x5b;}# shift . 134) (
+    array-subscripts shift . 446) ($P14 shift . 447) (#{$:\x29;}# reduce . 314
+    ) ($:, reduce . 314) ($:= reduce . 314) (#{$:\x28;}# reduce . 314) ($::= 
+    reduce . 314) ($:. reduce . 314)) (($:annotation reduce . 68) ($:end 
+    reduce . 68)) ((#{$:;}# shift . 445)) (($:annotation shift . 114) (
+    annotation shift . 443) (#{$:;}# shift . 444)) (($:function reduce . 91) (
+    $:pure reduce . 91) ($:impure reduce . 91) ($:package reduce . 91) ($:type
+    reduce . 91) ($:connector reduce . 91) ($:expandable reduce . 91) (
+    $:block reduce . 91) ($:record reduce . 91) ($:operator reduce . 91) (
+    $:model reduce . 91) ($:class reduce . 91) ($:partial reduce . 91) (
+    $:encapsulated reduce . 91) ($:stream reduce . 91) ($:flow reduce . 91) (
+    $:constant reduce . 91) ($:parameter reduce . 91) ($:discrete reduce . 91)
+    ($:output reduce . 91) ($:input reduce . 91) ($ident reduce . 91) ($:. 
+    reduce . 91) ($:replaceable reduce . 91)) (($ident shift . 26) ($:. shift 
+    . 27) (ident shift . 28) ($:output shift . 70) ($:input shift . 71) (
+    $:constant shift . 72) ($:parameter shift . 73) ($:discrete shift . 74) (
+    $:stream shift . 75) ($:flow shift . 76) ($:function shift . 1) ($:pure 
+    shift . 2) ($:impure shift . 3) ($:package shift . 4) ($:type shift . 5) (
+    $:connector shift . 6) ($:expandable shift . 7) ($:block shift . 8) (
+    $:record shift . 9) ($:operator shift . 10) ($:model shift . 11) ($:class 
+    shift . 12) (name shift . 82) (type-prefix-3 shift . 77) (type-prefix-2 
+    shift . 78) (type-prefix-1 shift . 79) (class-prefixes-1 shift . 13) (
+    $:partial shift . 14) (type-specifier shift . 83) (type-prefix shift . 84)
+    (class-prefixes shift . 15) ($:encapsulated shift . 16) ($:replaceable 
+    shift . 87) (component-clause shift . 88) (class-definition shift . 89) (
+    element-1 shift . 442)) ((#{$:;}# reduce . 82)) ((#{$:;}# reduce . 100)) (
+    ($:. shift . 59) (#{$:\x28;}# shift . 66) (class-modification shift . 441)
+    ($string reduce . 118) ($:annotation reduce . 118) (#{$:;}# reduce . 118)
+    (#{$:\x29;}# reduce . 118) ($:, reduce . 118)) ((#{$:\x7d;}# shift . 438)
+    ($ident shift . 26) (ident shift . 439) (import-list shift . 440)) ((
+    $string reduce . 108) ($:annotation reduce . 108) (#{$:;}# reduce . 108)) 
+    (($string reduce . 106) ($:annotation reduce . 106) (#{$:;}# reduce . 106)
+    ) (($:. shift . 59) ($string reduce . 105) ($:annotation reduce . 105) (
+    #{$:;}# reduce . 105)) ((#{$:;}# reduce . 113)) (($:, shift . 188) (
+    #{$:;}# reduce . 119) ($:constrainedby reduce . 119)) (($ident reduce . 
+    333) ($:= reduce . 333) ($::= reduce . 333) (#{$:\x28;}# reduce . 333) (
+    $string reduce . 333) ($:annotation reduce . 333) ($:if reduce . 333) ($:,
+    reduce . 333) (#{$:;}# reduce . 333) ($:constrainedby reduce . 333) (
+    #{$:\x5d;}# reduce . 333) ($:: reduce . 333) ($:^ reduce . 333) ($:.^ 
+    reduce . 333) ($:./ reduce . 333) ($:.* reduce . 333) ($:/ reduce . 333) (
+    $:* reduce . 333) ($:+ reduce . 333) ($:- reduce . 333) ($:.+ reduce . 333
+    ) ($:.- reduce . 333) ($:<> reduce . 333) ($:== reduce . 333) ($:>= reduce
+    . 333) ($:> reduce . 333) ($:<= reduce . 333) ($:< reduce . 333) ($:and 
+    reduce . 333) ($:or reduce . 333) ($:for reduce . 333) (#{$:\x29;}# reduce
+    . 333) ($:then reduce . 333) ($:loop reduce . 333) ($:else reduce . 333) 
+    ($:elseif reduce . 333) ($:. reduce . 333) ($:stream reduce . 333) ($:flow
+    reduce . 333) ($:constant reduce . 333) ($:parameter reduce . 333) (
+    $:discrete reduce . 333) ($:output reduce . 333) ($:input reduce . 333) (
+    #{$:\x7d;}# reduce . 333) ($:end reduce . 333) ($:elsewhen reduce . 333)) 
+    (($ident shift . 26) ($string shift . 50) ($float shift . 195) ($fixed 
     shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197)
     (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
     name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
-    . 204) (unsigned-number shift . 205) (primary shift . 429)) (($ident 
-    shift . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. 
-    shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
-    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 
-    201) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
-    unsigned-number shift . 205) (primary shift . 428)) ((#{$:\x5d;}# reduce 
-    . 294) ($:: reduce . 294) ($:^ reduce . 294) ($:.^ reduce . 294) ($:./ 
-    reduce . 294) ($:.* reduce . 294) ($:/ reduce . 294) ($:* reduce . 294) (
-    $:+ reduce . 294) ($:- reduce . 294) ($:.+ reduce . 294) ($:.- reduce . 
-    294) ($:<> reduce . 294) ($:== reduce . 294) ($:>= reduce . 294) ($:> 
-    reduce . 294) ($:<= reduce . 294) ($:< reduce . 294) ($:and reduce . 294) 
-    ($:or reduce . 294) ($:, reduce . 294) ($:for reduce . 294) (#{$:;}# 
-    reduce . 294) (#{$:\x29;}# reduce . 294) ($:then reduce . 294) ($:loop 
-    reduce . 294) ($:else reduce . 294) ($:elseif reduce . 294) ($string 
-    reduce . 294) ($:annotation reduce . 294) ($:constrainedby reduce . 294) (
-    $:= reduce . 294) (#{$:\x7d;}# reduce . 294) ($:end reduce . 294) (
-    $:elsewhen reduce . 294) ($:if reduce . 294)) (($:= reduce . 295) ($:: 
-    reduce . 295) ($:^ reduce . 295) ($:.^ reduce . 295) ($:./ reduce . 295) (
-    $:.* reduce . 295) ($:/ reduce . 295) ($:* reduce . 295) ($:+ reduce . 295
-    ) ($:- reduce . 295) ($:.+ reduce . 295) ($:.- reduce . 295) ($:<> reduce 
-    . 295) ($:== reduce . 295) ($:>= reduce . 295) ($:> reduce . 295) ($:<= 
-    reduce . 295) ($:< reduce . 295) ($:and reduce . 295) ($:or reduce . 295) 
-    (#{$:\x5d;}# reduce . 295) ($:, reduce . 295) ($:for reduce . 295) (
-    #{$:;}# reduce . 295) (#{$:\x29;}# reduce . 295) ($:then reduce . 295) (
-    $:loop reduce . 295) ($:else reduce . 295) ($:elseif reduce . 295) (
-    $string reduce . 295) ($:annotation reduce . 295) ($:constrainedby reduce 
-    . 295) (#{$:\x7d;}# reduce . 295) ($:end reduce . 295) ($:elsewhen reduce 
-    . 295) ($:if reduce . 295)) ((#{$:\x29;}# shift . 426) ($:, shift . 427)) 
-    ((#{$:\x5d;}# reduce . 331) ($:, reduce . 331) (#{$:;}# reduce . 331) (
-    #{$:\x29;}# reduce . 331) ($:end reduce . 331) ($:elsewhen reduce . 331)) 
-    (($:, shift . 425) (#{$:\x5d;}# reduce . 301) (#{$:;}# reduce . 301)) ((
-    #{$:\x5d;}# shift . 423) (#{$:;}# shift . 424)) (($:= shift . 422) (
-    #{$:\x5b;}# reduce . 303) ($:: reduce . 303) ($:, reduce . 303) ($:for 
-    reduce . 303) (#{$:\x28;}# reduce . 303) ($:or reduce . 303) ($:and reduce
-    . 303) ($:< reduce . 303) ($:<= reduce . 303) ($:> reduce . 303) ($:>= 
-    reduce . 303) ($:== reduce . 303) ($:<> reduce . 303) ($:.- reduce . 303) 
-    ($:.+ reduce . 303) ($:- reduce . 303) ($:+ reduce . 303) ($:* reduce . 
-    303) ($:/ reduce . 303) ($:.* reduce . 303) ($:./ reduce . 303) ($:.^ 
-    reduce . 303) ($:^ reduce . 303) ($:. reduce . 303)) (($:for reduce . 327)
-    ($:, reduce . 327) (#{$:\x7d;}# reduce . 327) (#{$:\x29;}# reduce . 327))
-    (($ident shift . 26) ($:. shift . 27) (ident shift . 28) (name shift . 
-    421)) ((#{$:\x7d;}# reduce . 322) ($:, reduce . 322) (#{$:\x29;}# reduce 
-    . 322)) (($:, shift . 420) (#{$:\x7d;}# reduce . 319) (#{$:\x29;}# reduce 
-    . 319)) (($:for shift . 417) ($:, shift . 418) (function-argument-1 shift 
-    . 419)) ((#{$:\x7d;}# shift . 416)) (($string reduce . 147) ($:annotation 
-    reduce . 147) ($:if reduce . 147) ($:, reduce . 147) (#{$:;}# reduce . 147
-    ) ($:constrainedby reduce . 147) (#{$:\x29;}# reduce . 147)) (($string 
-    reduce . 143) ($:annotation reduce . 143) ($:if reduce . 143) ($:, reduce 
-    . 143) (#{$:;}# reduce . 143) ($:constrainedby reduce . 143) (#{$:\x29;}# 
-    reduce . 143)) (($:, reduce . 140) (#{$:;}# reduce . 140) ($:constrainedby
+    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
+    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
+    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
+    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 217) ($:: shift . 218) 
+    (subscript shift . 437)) (($:then shift . 436)) (($ident shift . 26) (
+    $string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift 
+    . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 
+    198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
+    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 435)) (($ident shift . 26) ($string shift
+    . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident 
+    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
+    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
+    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
+    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
+    . 211) (logical-factor shift . 212) (logical-term shift . 434)) (($ident 
+    shift . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196)
+    ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
+    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
+    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
+    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
+    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
+    . 210) (relation shift . 211) (logical-factor shift . 433)) (($float 
+    reduce . 274) ($fixed reduce . 274) ($string reduce . 274) ($ident reduce 
+    . 274) ($:. reduce . 274) (#{$:\x7b;}# reduce . 274) (#{$:\x5b;}# reduce 
+    . 274) (#{$:\x28;}# reduce . 274) ($:der reduce . 274) ($:true reduce . 
+    274) ($:false reduce . 274)) (($float reduce . 273) ($fixed reduce . 273) 
+    ($string reduce . 273) ($ident reduce . 273) ($:. reduce . 273) (
+    #{$:\x7b;}# reduce . 273) (#{$:\x5b;}# reduce . 273) (#{$:\x28;}# reduce 
+    . 273) ($:der reduce . 273) ($:true reduce . 273) ($:false reduce . 273)) 
+    (($float reduce . 272) ($fixed reduce . 272) ($string reduce . 272) (
+    $ident reduce . 272) ($:. reduce . 272) (#{$:\x7b;}# reduce . 272) (
+    #{$:\x5b;}# reduce . 272) (#{$:\x28;}# reduce . 272) ($:der reduce . 272) 
+    ($:true reduce . 272) ($:false reduce . 272)) (($float reduce . 271) (
+    $fixed reduce . 271) ($string reduce . 271) ($ident reduce . 271) ($:. 
+    reduce . 271) (#{$:\x7b;}# reduce . 271) (#{$:\x5b;}# reduce . 271) (
+    #{$:\x28;}# reduce . 271) ($:der reduce . 271) ($:true reduce . 271) (
+    $:false reduce . 271)) (($float reduce . 270) ($fixed reduce . 270) (
+    $string reduce . 270) ($ident reduce . 270) ($:. reduce . 270) (
+    #{$:\x7b;}# reduce . 270) (#{$:\x5b;}# reduce . 270) (#{$:\x28;}# reduce 
+    . 270) ($:der reduce . 270) ($:true reduce . 270) ($:false reduce . 270)) 
+    (($float reduce . 269) ($fixed reduce . 269) ($string reduce . 269) (
+    $ident reduce . 269) ($:. reduce . 269) (#{$:\x7b;}# reduce . 269) (
+    #{$:\x5b;}# reduce . 269) (#{$:\x28;}# reduce . 269) ($:der reduce . 269) 
+    ($:true reduce . 269) ($:false reduce . 269)) (($ident shift . 26) (
+    $string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift 
+    . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 
+    198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
+    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 432)) (($:<> shift . 342)
+    ($:== shift . 343) ($:>= shift . 344) ($:> shift . 345) ($:<= shift . 346
+    ) ($:< shift . 347) (rel-op shift . 348) ($:: reduce . 266) ($:= reduce . 
+    266) ($:or reduce . 266) ($:and reduce . 266) (#{$:\x5d;}# reduce . 266) (
+    $:, reduce . 266) ($:for reduce . 266) (#{$:;}# reduce . 266) (#{$:\x29;}#
+    reduce . 266) ($:then reduce . 266) ($:loop reduce . 266) ($:else reduce 
+    . 266) ($:elseif reduce . 266) ($string reduce . 266) ($:annotation reduce
+    . 266) ($:constrainedby reduce . 266) (#{$:\x7d;}# reduce . 266) ($:end 
+    reduce . 266) ($:elsewhen reduce . 266) ($:if reduce . 266)) (($float 
+    reduce . 280) ($fixed reduce . 280) ($string reduce . 280) ($ident reduce 
+    . 280) ($:. reduce . 280) (#{$:\x7b;}# reduce . 280) (#{$:\x5b;}# reduce 
+    . 280) (#{$:\x28;}# reduce . 280) ($:der reduce . 280) ($:true reduce . 
+    280) ($:false reduce . 280)) (($float reduce . 279) ($fixed reduce . 279) 
+    ($string reduce . 279) ($ident reduce . 279) ($:. reduce . 279) (
+    #{$:\x7b;}# reduce . 279) (#{$:\x5b;}# reduce . 279) (#{$:\x28;}# reduce 
+    . 279) ($:der reduce . 279) ($:true reduce . 279) ($:false reduce . 279)) 
+    (($float reduce . 278) ($fixed reduce . 278) ($string reduce . 278) (
+    $ident reduce . 278) ($:. reduce . 278) (#{$:\x7b;}# reduce . 278) (
+    #{$:\x5b;}# reduce . 278) (#{$:\x28;}# reduce . 278) ($:der reduce . 278) 
+    ($:true reduce . 278) ($:false reduce . 278)) (($float reduce . 277) (
+    $fixed reduce . 277) ($string reduce . 277) ($ident reduce . 277) ($:. 
+    reduce . 277) (#{$:\x7b;}# reduce . 277) (#{$:\x5b;}# reduce . 277) (
+    #{$:\x28;}# reduce . 277) ($:der reduce . 277) ($:true reduce . 277) (
+    $:false reduce . 277)) (($ident shift . 26) ($string shift . 50) ($float 
+    shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 28) (
+    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
+    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
+    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
+    shift . 206) (factor shift . 207) (term shift . 431)) (($float reduce . 
+    286) ($fixed reduce . 286) ($string reduce . 286) ($ident reduce . 286) (
+    $:. reduce . 286) (#{$:\x7b;}# reduce . 286) (#{$:\x5b;}# reduce . 286) (
+    #{$:\x28;}# reduce . 286) ($:der reduce . 286) ($:true reduce . 286) (
+    $:false reduce . 286)) (($float reduce . 285) ($fixed reduce . 285) (
+    $string reduce . 285) ($ident reduce . 285) ($:. reduce . 285) (
+    #{$:\x7b;}# reduce . 285) (#{$:\x5b;}# reduce . 285) (#{$:\x28;}# reduce 
+    . 285) ($:der reduce . 285) ($:true reduce . 285) ($:false reduce . 285)) 
+    (($float reduce . 284) ($fixed reduce . 284) ($string reduce . 284) (
+    $ident reduce . 284) ($:. reduce . 284) (#{$:\x7b;}# reduce . 284) (
+    #{$:\x5b;}# reduce . 284) (#{$:\x28;}# reduce . 284) ($:der reduce . 284) 
+    ($:true reduce . 284) ($:false reduce . 284)) (($float reduce . 283) (
+    $fixed reduce . 283) ($string reduce . 283) ($ident reduce . 283) ($:. 
+    reduce . 283) (#{$:\x7b;}# reduce . 283) (#{$:\x5b;}# reduce . 283) (
+    #{$:\x28;}# reduce . 283) ($:der reduce . 283) ($:true reduce . 283) (
+    $:false reduce . 283)) (($ident shift . 26) ($string shift . 50) ($float 
+    shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 28) (
+    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
+    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
+    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
+    shift . 206) (factor shift . 430)) (($ident shift . 26) ($string shift . 
+    50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident 
+    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
+    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
+    shift . 205) (primary shift . 429)) (($ident shift . 26) ($string shift . 
+    50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident 
+    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
+    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
+    shift . 205) (primary shift . 428)) ((#{$:\x5d;}# reduce . 294) ($:: 
+    reduce . 294) ($:^ reduce . 294) ($:.^ reduce . 294) ($:./ reduce . 294) (
+    $:.* reduce . 294) ($:/ reduce . 294) ($:* reduce . 294) ($:+ reduce . 294
+    ) ($:- reduce . 294) ($:.+ reduce . 294) ($:.- reduce . 294) ($:<> reduce 
+    . 294) ($:== reduce . 294) ($:>= reduce . 294) ($:> reduce . 294) ($:<= 
+    reduce . 294) ($:< reduce . 294) ($:and reduce . 294) ($:or reduce . 294) 
+    ($:, reduce . 294) ($:for reduce . 294) (#{$:;}# reduce . 294) (
+    #{$:\x29;}# reduce . 294) ($:then reduce . 294) ($:loop reduce . 294) (
+    $:else reduce . 294) ($:elseif reduce . 294) ($string reduce . 294) (
+    $:annotation reduce . 294) ($:constrainedby reduce . 294) ($:= reduce . 
+    294) (#{$:\x7d;}# reduce . 294) ($:end reduce . 294) ($:elsewhen reduce . 
+    294) ($:if reduce . 294)) (($:= reduce . 295) ($:: reduce . 295) ($:^ 
+    reduce . 295) ($:.^ reduce . 295) ($:./ reduce . 295) ($:.* reduce . 295) 
+    ($:/ reduce . 295) ($:* reduce . 295) ($:+ reduce . 295) ($:- reduce . 295
+    ) ($:.+ reduce . 295) ($:.- reduce . 295) ($:<> reduce . 295) ($:== reduce
+    . 295) ($:>= reduce . 295) ($:> reduce . 295) ($:<= reduce . 295) ($:< 
+    reduce . 295) ($:and reduce . 295) ($:or reduce . 295) (#{$:\x5d;}# reduce
+    . 295) ($:, reduce . 295) ($:for reduce . 295) (#{$:;}# reduce . 295) (
+    #{$:\x29;}# reduce . 295) ($:then reduce . 295) ($:loop reduce . 295) (
+    $:else reduce . 295) ($:elseif reduce . 295) ($string reduce . 295) (
+    $:annotation reduce . 295) ($:constrainedby reduce . 295) (#{$:\x7d;}# 
+    reduce . 295) ($:end reduce . 295) ($:elsewhen reduce . 295) ($:if reduce 
+    . 295)) ((#{$:\x29;}# shift . 426) ($:, shift . 427)) ((#{$:\x5d;}# reduce
+    . 331) ($:, reduce . 331) (#{$:;}# reduce . 331) (#{$:\x29;}# reduce . 
+    331) ($:end reduce . 331) ($:elsewhen reduce . 331)) (($:, shift . 425) (
+    #{$:\x5d;}# reduce . 301) (#{$:;}# reduce . 301)) ((#{$:\x5d;}# shift . 
+    423) (#{$:;}# shift . 424)) (($:= shift . 422) (#{$:\x5b;}# reduce . 303) 
+    ($:: reduce . 303) ($:, reduce . 303) ($:for reduce . 303) (#{$:\x28;}# 
+    reduce . 303) ($:or reduce . 303) ($:and reduce . 303) ($:< reduce . 303) 
+    ($:<= reduce . 303) ($:> reduce . 303) ($:>= reduce . 303) ($:== reduce . 
+    303) ($:<> reduce . 303) ($:.- reduce . 303) ($:.+ reduce . 303) ($:- 
+    reduce . 303) ($:+ reduce . 303) ($:* reduce . 303) ($:/ reduce . 303) (
+    $:.* reduce . 303) ($:./ reduce . 303) ($:.^ reduce . 303) ($:^ reduce . 
+    303) ($:. reduce . 303)) (($:for reduce . 327) ($:, reduce . 327) (
+    #{$:\x7d;}# reduce . 327) (#{$:\x29;}# reduce . 327)) (($ident shift . 26)
+    ($:. shift . 27) (ident shift . 28) (name shift . 421)) ((#{$:\x7d;}# 
+    reduce . 322) ($:, reduce . 322) (#{$:\x29;}# reduce . 322)) (($:, shift 
+    . 420) (#{$:\x7d;}# reduce . 319) (#{$:\x29;}# reduce . 319)) (($:for 
+    shift . 417) ($:, shift . 418) (function-argument-1 shift . 419)) ((
+    #{$:\x7d;}# shift . 416)) (($string reduce . 147) ($:annotation reduce . 
+    147) ($:if reduce . 147) ($:, reduce . 147) (#{$:;}# reduce . 147) (
+    $:constrainedby reduce . 147) (#{$:\x29;}# reduce . 147)) (($string reduce
+    . 143) ($:annotation reduce . 143) ($:if reduce . 143) ($:, reduce . 143)
+    (#{$:;}# reduce . 143) ($:constrainedby reduce . 143) (#{$:\x29;}# reduce
+    . 143)) (($:, reduce . 140) (#{$:;}# reduce . 140) ($:constrainedby 
     reduce . 140)) (($string reduce . 142) ($:annotation reduce . 142) ($:, 
     reduce . 142) (#{$:;}# reduce . 142) ($:constrainedby reduce . 142)) (($:,
     reduce . 139) (#{$:;}# reduce . 139) ($:constrainedby reduce . 139)) ((
@@ -1603,29 +1608,29 @@
     $:parameter reduce . 178) ($:discrete reduce . 178) ($:output reduce . 178
     ) ($:input reduce . 178) (#{$:\x29;}# reduce . 178) ($:, reduce . 178)) ((
     #{$:\x29;}# reduce . 164) ($:, reduce . 164)) (($ident shift . 26) (
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (
-    ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
-    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
-    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
-    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
-    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 406)) (($string reduce . 150) (
-    #{$:\x29;}# reduce . 150) ($:, reduce . 150) ($:annotation reduce . 150) (
-    $:if reduce . 150) (#{$:;}# reduce . 150) ($:constrainedby reduce . 150)) 
-    (($string reduce . 151) (#{$:\x29;}# reduce . 151) ($:, reduce . 151) (
-    $:annotation reduce . 151) ($:if reduce . 151) (#{$:;}# reduce . 151) (
-    $:constrainedby reduce . 151)) (($:function reduce . 171) ($:pure reduce 
-    . 171) ($:impure reduce . 171) ($:package reduce . 171) ($:type reduce . 
-    171) ($:connector reduce . 171) ($:expandable reduce . 171) ($:block 
-    reduce . 171) ($:record reduce . 171) ($:operator reduce . 171) ($:model 
-    reduce . 171) ($:class reduce . 171) ($:partial reduce . 171) ($:stream 
-    reduce . 171) ($:flow reduce . 171) ($:constant reduce . 171) ($:parameter
-    reduce . 171) ($:discrete reduce . 171) ($:output reduce . 171) ($:input 
-    reduce . 171) ($:replaceable reduce . 171)) (($:output shift . 70) (
-    $:input shift . 71) ($:constant shift . 72) ($:parameter shift . 73) (
-    $:discrete shift . 74) ($:stream shift . 75) ($:flow shift . 76) (
+    $string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift 
+    . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 
+    198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
+    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 406)) (($string reduce 
+    . 150) (#{$:\x29;}# reduce . 150) ($:, reduce . 150) ($:annotation reduce 
+    . 150) ($:if reduce . 150) (#{$:;}# reduce . 150) ($:constrainedby reduce 
+    . 150)) (($string reduce . 151) (#{$:\x29;}# reduce . 151) ($:, reduce . 
+    151) ($:annotation reduce . 151) ($:if reduce . 151) (#{$:;}# reduce . 151
+    ) ($:constrainedby reduce . 151)) (($:function reduce . 171) ($:pure 
+    reduce . 171) ($:impure reduce . 171) ($:package reduce . 171) ($:type 
+    reduce . 171) ($:connector reduce . 171) ($:expandable reduce . 171) (
+    $:block reduce . 171) ($:record reduce . 171) ($:operator reduce . 171) (
+    $:model reduce . 171) ($:class reduce . 171) ($:partial reduce . 171) (
+    $:stream reduce . 171) ($:flow reduce . 171) ($:constant reduce . 171) (
+    $:parameter reduce . 171) ($:discrete reduce . 171) ($:output reduce . 171
+    ) ($:input reduce . 171) ($:replaceable reduce . 171)) (($:output shift . 
+    70) ($:input shift . 71) ($:constant shift . 72) ($:parameter shift . 73) 
+    ($:discrete shift . 74) ($:stream shift . 75) ($:flow shift . 76) (
     $:function shift . 1) ($:pure shift . 2) ($:impure shift . 3) ($:package 
     shift . 4) ($:type shift . 5) ($:connector shift . 6) ($:expandable shift 
     . 7) ($:block shift . 8) ($:record shift . 9) ($:operator shift . 10) (
@@ -1670,8 +1675,8 @@
     . 300) ($:constrainedby reduce . 300) (#{$:\x7d;}# reduce . 300) ($:end 
     reduce . 300) ($:elsewhen reduce . 300) ($:if reduce . 300)) (($ident 
     shift . 26) (ident shift . 295) (for-index shift . 296) (for-indices shift
-    . 520)) (($string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. 
-    shift . 27) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    . 520)) (($string shift . 50) ($float shift . 195) ($fixed shift . 196) (
+    $:. shift . 27) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
     #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
     shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
     shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
@@ -1684,11 +1689,11 @@
     519)) ((#{$:\x7d;}# reduce . 318) (#{$:\x29;}# reduce . 318)) (($ident 
     shift . 26) (ident shift . 517) (named-argument shift . 518)) (($:. shift 
     . 59) (#{$:\x28;}# shift . 516)) (($ident shift . 26) ($string shift . 50)
-    ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
+    ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift 
+    . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# 
+    shift . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
+    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
+    primary shift . 206) (factor shift . 207) (term shift . 208) (
     arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
     211) (logical-factor shift . 212) (logical-term shift . 213) (
     logical-expression shift . 214) ($:if shift . 215) (simple-expression 
@@ -1704,42 +1709,43 @@
     ) ($:else reduce . 299) ($:elseif reduce . 299) ($string reduce . 299) (
     $:annotation reduce . 299) ($:constrainedby reduce . 299) (#{$:\x7d;}# 
     reduce . 299) ($:end reduce . 299) ($:elsewhen reduce . 299) ($:if reduce 
-    . 299)) (($ident shift . 26) ($string shift . 50) ($fl shift . 195) ($fx 
-    shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197)
-    (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
-    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
-    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
-    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
-    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
-    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
-    simple-expression shift . 216) (expression shift . 365) (expression-list 
-    shift . 514)) (($ident shift . 26) ($string shift . 50) ($fl shift . 195) 
-    ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift 
-    . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 
-    200) (name shift . 201) ($:true shift . 202) ($:false shift . 203) (string
-    shift . 204) (unsigned-number shift . 205) (primary shift . 206) (factor 
-    shift . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not
-    shift . 210) (relation shift . 211) (logical-factor shift . 212) (
+    . 299)) (($ident shift . 26) ($string shift . 50) ($float shift . 195) (
+    $fixed shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift
+    . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift 
+    . 200) (name shift . 201) ($:true shift . 202) ($:false shift . 203) (
+    string shift . 204) (unsigned-number shift . 205) (primary shift . 206) (
+    factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209)
+    ($:not shift . 210) (relation shift . 211) (logical-factor shift . 212) (
     logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
-    215) (simple-expression shift . 216) (expression shift . 513)) (($:= 
-    reduce . 298) ($:: reduce . 298) ($:^ reduce . 298) ($:.^ reduce . 298) (
-    $:./ reduce . 298) ($:.* reduce . 298) ($:/ reduce . 298) ($:* reduce . 
-    298) ($:+ reduce . 298) ($:- reduce . 298) ($:.+ reduce . 298) ($:.- 
-    reduce . 298) ($:<> reduce . 298) ($:== reduce . 298) ($:>= reduce . 298) 
-    ($:> reduce . 298) ($:<= reduce . 298) ($:< reduce . 298) ($:and reduce . 
-    298) ($:or reduce . 298) (#{$:\x5d;}# reduce . 298) ($:, reduce . 298) (
-    $:for reduce . 298) (#{$:;}# reduce . 298) (#{$:\x29;}# reduce . 298) (
-    $:then reduce . 298) ($:loop reduce . 298) ($:else reduce . 298) ($:elseif
-    reduce . 298) ($string reduce . 298) ($:annotation reduce . 298) (
-    $:constrainedby reduce . 298) (#{$:\x7d;}# reduce . 298) ($:end reduce . 
-    298) ($:elsewhen reduce . 298) ($:if reduce . 298)) (($ident shift . 26) (
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (
-    ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
-    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
-    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
-    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
-    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
+    215) (simple-expression shift . 216) (expression shift . 365) (
+    expression-list shift . 514)) (($ident shift . 26) ($string shift . 50) (
+    $float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 
+    28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift
+    . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
+    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
+    primary shift . 206) (factor shift . 207) (term shift . 208) (
+    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
+    211) (logical-factor shift . 212) (logical-term shift . 213) (
+    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
+    shift . 216) (expression shift . 513)) (($:= reduce . 298) ($:: reduce . 
+    298) ($:^ reduce . 298) ($:.^ reduce . 298) ($:./ reduce . 298) ($:.* 
+    reduce . 298) ($:/ reduce . 298) ($:* reduce . 298) ($:+ reduce . 298) (
+    $:- reduce . 298) ($:.+ reduce . 298) ($:.- reduce . 298) ($:<> reduce . 
+    298) ($:== reduce . 298) ($:>= reduce . 298) ($:> reduce . 298) ($:<= 
+    reduce . 298) ($:< reduce . 298) ($:and reduce . 298) ($:or reduce . 298) 
+    (#{$:\x5d;}# reduce . 298) ($:, reduce . 298) ($:for reduce . 298) (
+    #{$:;}# reduce . 298) (#{$:\x29;}# reduce . 298) ($:then reduce . 298) (
+    $:loop reduce . 298) ($:else reduce . 298) ($:elseif reduce . 298) (
+    $string reduce . 298) ($:annotation reduce . 298) ($:constrainedby reduce 
+    . 298) (#{$:\x7d;}# reduce . 298) ($:end reduce . 298) ($:elsewhen reduce 
+    . 298) ($:if reduce . 298)) (($ident shift . 26) ($string shift . 50) (
+    $float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 
+    28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift
+    . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
+    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
+    primary shift . 206) (factor shift . 207) (term shift . 208) (
+    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
+    211) (logical-factor shift . 212) (logical-term shift . 213) (
     logical-expression shift . 214) ($:if shift . 215) (simple-expression 
     shift . 216) (expression shift . 512)) (($:: reduce . 289) ($:= reduce . 
     289) ($:or reduce . 289) ($:and reduce . 289) ($:< reduce . 289) ($:<= 
@@ -1812,32 +1818,33 @@
     reduce . 260) ($:else reduce . 260) ($:elseif reduce . 260) ($string 
     reduce . 260) ($:annotation reduce . 260) ($:constrainedby reduce . 260) (
     #{$:\x7d;}# reduce . 260) ($:end reduce . 260) ($:elsewhen reduce . 260) (
-    $:if reduce . 260)) (($ident shift . 26) ($string shift . 50) ($fl shift 
-    . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# 
-    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
-    shift . 200) (name shift . 201) ($:true shift . 202) ($:false shift . 203)
-    (string shift . 204) (unsigned-number shift . 205) (primary shift . 206) 
-    (factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209
-    ) ($:not shift . 210) (relation shift . 211) (logical-factor shift . 212) 
-    (logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
-    215) (simple-expression shift . 216) (expression shift . 510)) ((
-    #{$:\x5d;}# reduce . 335) ($:, reduce . 335)) (($string reduce . 109) (
-    $:annotation reduce . 109) (#{$:;}# reduce . 109)) ((#{$:\x7d;}# reduce . 
-    111) ($:, reduce . 111)) ((#{$:\x7d;}# shift . 508) ($:, shift . 509)) ((
-    $string reduce . 117) ($:annotation reduce . 117) (#{$:;}# reduce . 117) (
-    #{$:\x29;}# reduce . 117) ($:, reduce . 117)) ((#{$:;}# reduce . 81)) ((
-    #{$:;}# shift . 507)) (($:annotation reduce . 65) ($:end reduce . 65)) ((
-    $:annotation reduce . 66) ($:end reduce . 66)) (($:. reduce . 315) ($::= 
-    reduce . 315) (#{$:\x28;}# reduce . 315) ($:= reduce . 315) ($:, reduce . 
-    315) (#{$:\x29;}# reduce . 315)) (($:. reduce . 311) ($::= reduce . 311) (
+    $:if reduce . 260)) (($ident shift . 26) ($string shift . 50) ($float 
+    shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 28) (
+    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
+    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
+    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
+    shift . 206) (factor shift . 207) (term shift . 208) (
+    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
+    211) (logical-factor shift . 212) (logical-term shift . 213) (
+    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
+    shift . 216) (expression shift . 510)) ((#{$:\x5d;}# reduce . 335) ($:, 
+    reduce . 335)) (($string reduce . 109) ($:annotation reduce . 109) (
+    #{$:;}# reduce . 109)) ((#{$:\x7d;}# reduce . 111) ($:, reduce . 111)) ((
+    #{$:\x7d;}# shift . 508) ($:, shift . 509)) (($string reduce . 117) (
+    $:annotation reduce . 117) (#{$:;}# reduce . 117) (#{$:\x29;}# reduce . 
+    117) ($:, reduce . 117)) ((#{$:;}# reduce . 81)) ((#{$:;}# shift . 507)) (
+    ($:annotation reduce . 65) ($:end reduce . 65)) (($:annotation reduce . 66
+    ) ($:end reduce . 66)) (($:. reduce . 315) ($::= reduce . 315) (
+    #{$:\x28;}# reduce . 315) ($:= reduce . 315) ($:, reduce . 315) (
+    #{$:\x29;}# reduce . 315)) (($:. reduce . 311) ($::= reduce . 311) (
     #{$:\x28;}# reduce . 311) ($:= reduce . 311) ($:, reduce . 311) (
     #{$:\x29;}# reduce . 311)) ((#{$:\x5b;}# shift . 134) (array-subscripts 
     shift . 505) ($P12 shift . 506) (#{$:\x29;}# reduce . 308) ($:, reduce . 
     308) ($:= reduce . 308) ($::= reduce . 308) (#{$:\x28;}# reduce . 308)) ((
     #{$:;}# reduce . 76) ($:annotation reduce . 76)) ((#{$:\x29;}# shift . 504
     ) ($:, shift . 425)) ((#{$:\x28;}# shift . 503)) (($:annotation reduce . 
-    67) ($:end reduce . 67)) (($:, shift . 502)) (($string shift . 50) ($fl 
-    shift . 195) ($fx shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
+    67) ($:end reduce . 67)) (($:, shift . 502)) (($string shift . 50) ($float
+    shift . 195) ($fixed shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
     shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) ($:true shift 
     . 202) ($:false shift . 203) (string shift . 204) (unsigned-number shift 
     . 205) (primary shift . 206) (factor shift . 207) (term shift . 208) (
@@ -1852,13 +1859,13 @@
     reduce . 213) ($:end reduce . 213) ($:elsewhen reduce . 213)) (($:elsewhen
     shift . 498) (elsewhen-eq-part shift . 499) (elsewhen-eq-list shift . 500
     )) (($ident shift . 26) (ident shift . 295) (for-index shift . 497)) ((
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) (#{$:\x7b;}# shift
-    . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift 
-    . 200) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
-    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
-    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
-    (relation shift . 211) (logical-factor shift . 212) ($ident shift . 26) (
-    logical-term shift . 213) ($:. shift . 27) (ident shift . 28) (
+    $string shift . 50) ($float shift . 195) ($fixed shift . 196) (#{$:\x7b;}#
+    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
+    shift . 200) ($:true shift . 202) ($:false shift . 203) (string shift . 
+    204) (unsigned-number shift . 205) (primary shift . 206) (factor shift . 
+    207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift 
+    . 210) (relation shift . 211) (logical-factor shift . 212) ($ident shift 
+    . 26) (logical-term shift . 213) ($:. shift . 27) (ident shift . 28) (
     logical-expression shift . 214) ($:connect shift . 255) ($:when shift . 
     256) ($:for shift . 257) ($:if shift . 258) (name shift . 259) (
     when-equation shift . 260) (connect-clause shift . 261) (for-equation 
@@ -1867,7 +1874,7 @@
     ($:end shift . 496)) (($:elseif shift . 489) (elseif-eq-part shift . 490)
     (elseif-eq-list shift . 491) ($:else shift . 492) (else-eq-part shift . 
     493) ($:end shift . 494)) ((#{$:;}# reduce . 190) ($string reduce . 190) (
-    $:annotation reduce . 190)) (($fl reduce . 188) ($fx reduce . 188) (
+    $:annotation reduce . 190)) (($float reduce . 188) ($fixed reduce . 188) (
     $string reduce . 188) (#{$:\x7b;}# reduce . 188) (#{$:\x5b;}# reduce . 188
     ) (#{$:\x28;}# reduce . 188) ($:der reduce . 188) ($:true reduce . 188) (
     $:false reduce . 188) ($:not reduce . 188) ($:if reduce . 188) ($:for 
@@ -1900,46 +1907,46 @@
     277) ($:break shift . 278) (#{$:\x28;}# shift . 279) (component-reference 
     shift . 280) (statement-1 shift . 281) (statement shift . 282) (
     statement-list shift . 481) ($:end shift . 482)) (($ident shift . 26) (
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (
-    ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
-    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
-    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
-    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
-    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 480)) (($:elseif shift . 474) (
-    elseif-st-part shift . 475) (elseif-st-list shift . 476) ($:else shift . 
-    477) (else-st-part shift . 478) ($:end shift . 479)) (($::= shift . 473)) 
-    ((#{$:\x29;}# shift . 472)) (($:= reduce . 317) ($:: reduce . 317) ($:^ 
-    reduce . 317) ($:.^ reduce . 317) ($:./ reduce . 317) ($:.* reduce . 317) 
-    ($:/ reduce . 317) ($:* reduce . 317) ($:+ reduce . 317) ($:- reduce . 317
-    ) ($:.+ reduce . 317) ($:.- reduce . 317) ($:<> reduce . 317) ($:== reduce
-    . 317) ($:>= reduce . 317) ($:> reduce . 317) ($:<= reduce . 317) ($:< 
-    reduce . 317) ($:and reduce . 317) ($:or reduce . 317) (#{$:\x5d;}# reduce
-    . 317) ($:, reduce . 317) ($:for reduce . 317) (#{$:;}# reduce . 317) (
-    #{$:\x29;}# reduce . 317) ($:then reduce . 317) ($:loop reduce . 317) (
-    $:else reduce . 317) ($:elseif reduce . 317) ($string reduce . 317) (
-    $:annotation reduce . 317) ($:constrainedby reduce . 317) (#{$:\x7d;}# 
-    reduce . 317) ($:end reduce . 317) ($:elsewhen reduce . 317) ($:if reduce 
-    . 317)) ((#{$:;}# reduce . 199) ($string reduce . 199) ($:annotation 
-    reduce . 199)) (($ident reduce . 197) ($:. reduce . 197) ($:if reduce . 
-    197) ($:for reduce . 197) ($:while reduce . 197) ($:when reduce . 197) (
-    $:return reduce . 197) ($:break reduce . 197) (#{$:\x28;}# reduce . 197) (
-    $:annotation reduce . 197) ($:equation reduce . 197) ($:algorithm reduce 
-    . 197) ($:initial reduce . 197) ($:protected reduce . 197) ($:public 
-    reduce . 197) ($:external reduce . 197) ($:end reduce . 197) ($:elseif 
-    reduce . 197) ($:else reduce . 197) ($:elsewhen reduce . 197)) (($:= 
-    reduce . 316) ($:: reduce . 316) ($:^ reduce . 316) ($:.^ reduce . 316) (
-    $:./ reduce . 316) ($:.* reduce . 316) ($:/ reduce . 316) ($:* reduce . 
-    316) ($:+ reduce . 316) ($:- reduce . 316) ($:.+ reduce . 316) ($:.- 
-    reduce . 316) ($:<> reduce . 316) ($:== reduce . 316) ($:>= reduce . 316) 
-    ($:> reduce . 316) ($:<= reduce . 316) ($:< reduce . 316) ($:and reduce . 
-    316) ($:or reduce . 316) (#{$:\x5d;}# reduce . 316) ($:, reduce . 316) (
-    $:for reduce . 316) (#{$:;}# reduce . 316) (#{$:\x29;}# reduce . 316) (
-    $:then reduce . 316) ($:loop reduce . 316) ($:else reduce . 316) ($:elseif
-    reduce . 316) ($string reduce . 316) ($:annotation reduce . 316) (
-    $:constrainedby reduce . 316) (#{$:\x7d;}# reduce . 316) ($:end reduce . 
+    $string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift 
+    . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 
+    198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
+    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 480)) (($:elseif shift 
+    . 474) (elseif-st-part shift . 475) (elseif-st-list shift . 476) ($:else 
+    shift . 477) (else-st-part shift . 478) ($:end shift . 479)) (($::= shift 
+    . 473)) ((#{$:\x29;}# shift . 472)) (($:= reduce . 317) ($:: reduce . 317)
+    ($:^ reduce . 317) ($:.^ reduce . 317) ($:./ reduce . 317) ($:.* reduce 
+    . 317) ($:/ reduce . 317) ($:* reduce . 317) ($:+ reduce . 317) ($:- 
+    reduce . 317) ($:.+ reduce . 317) ($:.- reduce . 317) ($:<> reduce . 317) 
+    ($:== reduce . 317) ($:>= reduce . 317) ($:> reduce . 317) ($:<= reduce . 
+    317) ($:< reduce . 317) ($:and reduce . 317) ($:or reduce . 317) (
+    #{$:\x5d;}# reduce . 317) ($:, reduce . 317) ($:for reduce . 317) (#{$:;}#
+    reduce . 317) (#{$:\x29;}# reduce . 317) ($:then reduce . 317) ($:loop 
+    reduce . 317) ($:else reduce . 317) ($:elseif reduce . 317) ($string 
+    reduce . 317) ($:annotation reduce . 317) ($:constrainedby reduce . 317) (
+    #{$:\x7d;}# reduce . 317) ($:end reduce . 317) ($:elsewhen reduce . 317) (
+    $:if reduce . 317)) ((#{$:;}# reduce . 199) ($string reduce . 199) (
+    $:annotation reduce . 199)) (($ident reduce . 197) ($:. reduce . 197) (
+    $:if reduce . 197) ($:for reduce . 197) ($:while reduce . 197) ($:when 
+    reduce . 197) ($:return reduce . 197) ($:break reduce . 197) (#{$:\x28;}# 
+    reduce . 197) ($:annotation reduce . 197) ($:equation reduce . 197) (
+    $:algorithm reduce . 197) ($:initial reduce . 197) ($:protected reduce . 
+    197) ($:public reduce . 197) ($:external reduce . 197) ($:end reduce . 197
+    ) ($:elseif reduce . 197) ($:else reduce . 197) ($:elsewhen reduce . 197))
+    (($:= reduce . 316) ($:: reduce . 316) ($:^ reduce . 316) ($:.^ reduce . 
+    316) ($:./ reduce . 316) ($:.* reduce . 316) ($:/ reduce . 316) ($:* 
+    reduce . 316) ($:+ reduce . 316) ($:- reduce . 316) ($:.+ reduce . 316) (
+    $:.- reduce . 316) ($:<> reduce . 316) ($:== reduce . 316) ($:>= reduce . 
+    316) ($:> reduce . 316) ($:<= reduce . 316) ($:< reduce . 316) ($:and 
+    reduce . 316) ($:or reduce . 316) (#{$:\x5d;}# reduce . 316) ($:, reduce 
+    . 316) ($:for reduce . 316) (#{$:;}# reduce . 316) (#{$:\x29;}# reduce . 
+    316) ($:then reduce . 316) ($:loop reduce . 316) ($:else reduce . 316) (
+    $:elseif reduce . 316) ($string reduce . 316) ($:annotation reduce . 316) 
+    ($:constrainedby reduce . 316) (#{$:\x7d;}# reduce . 316) ($:end reduce . 
     316) ($:elsewhen reduce . 316) ($:if reduce . 316)) (($ident shift . 26) (
     $:. shift . 241) (ident shift . 268) (component-reference-1 shift . 242) (
     component-reference shift . 563)) (($ident shift . 26) ($:. shift . 241) (
@@ -1975,14 +1982,14 @@
     for-statement shift . 275) (if-statement shift . 276) ($:return shift . 
     277) ($:break shift . 278) (#{$:\x28;}# shift . 279) (component-reference 
     shift . 280) (statement-1 shift . 281) (statement shift . 285)) (($:while 
-    shift . 552)) (($ident shift . 26) ($string shift . 50) ($fl shift . 195) 
-    ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift 
-    . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 
-    200) (name shift . 201) ($:true shift . 202) ($:false shift . 203) (string
-    shift . 204) (unsigned-number shift . 205) (primary shift . 206) (factor 
-    shift . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not
-    shift . 210) (relation shift . 211) (logical-factor shift . 212) (
-    logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
+    shift . 552)) (($ident shift . 26) ($string shift . 50) ($float shift . 
+    195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}#
+    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
+    shift . 200) (name shift . 201) ($:true shift . 202) ($:false shift . 203)
+    (string shift . 204) (unsigned-number shift . 205) (primary shift . 206) 
+    (factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209
+    ) ($:not shift . 210) (relation shift . 211) (logical-factor shift . 212) 
+    (logical-term shift . 213) (logical-expression shift . 214) ($:if shift . 
     215) (simple-expression shift . 216) (expression shift . 551)) (($:end 
     reduce . 248) ($:elsewhen reduce . 248)) (($:end shift . 549) ($:elsewhen 
     shift . 485) (elsewhen-st-part shift . 550)) (($ident shift . 26) ($:. 
@@ -1993,7 +2000,23 @@
     277) ($:break shift . 278) (#{$:\x28;}# shift . 279) (component-reference 
     shift . 280) (statement-1 shift . 281) (statement shift . 285) ($:elseif 
     reduce . 224) ($:else reduce . 224) ($:end reduce . 224) ($:elsewhen 
-    reduce . 224)) (($string shift . 50) ($fl shift . 195) ($fx shift . 196) (
+    reduce . 224)) (($string shift . 50) ($float shift . 195) ($fixed shift . 
+    196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# 
+    shift . 199) ($:der shift . 200) ($:true shift . 202) ($:false shift . 203
+    ) (string shift . 204) (unsigned-number shift . 205) (primary shift . 206)
+    (factor shift . 207) (term shift . 208) (arithmetic-expression shift . 
+    209) ($:not shift . 210) (relation shift . 211) (logical-factor shift . 
+    212) ($ident shift . 26) (logical-term shift . 213) ($:. shift . 27) (
+    ident shift . 28) (logical-expression shift . 214) ($:connect shift . 255)
+    ($:when shift . 256) ($:for shift . 257) ($:if shift . 258) (name shift 
+    . 259) (when-equation shift . 260) (connect-clause shift . 261) (
+    for-equation shift . 262) (if-equation shift . 263) (simple-expression 
+    shift . 264) (equation-1 shift . 265) (equation shift . 266) (
+    equation-list shift . 548) ($:end reduce . 217) ($:elseif reduce . 217) (
+    $:else reduce . 217)) (($:end reduce . 214) ($:elseif reduce . 214) (
+    $:else reduce . 214)) (($:end shift . 545) ($:elseif shift . 489) (
+    elseif-eq-part shift . 546) ($:else shift . 492) (else-eq-part shift . 547
+    )) (($string shift . 50) ($float shift . 195) ($fixed shift . 196) (
     #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
     199) ($:der shift . 200) ($:true shift . 202) ($:false shift . 203) (
     string shift . 204) (unsigned-number shift . 205) (primary shift . 206) (
@@ -2005,52 +2028,36 @@
     259) (when-equation shift . 260) (connect-clause shift . 261) (
     for-equation shift . 262) (if-equation shift . 263) (simple-expression 
     shift . 264) (equation-1 shift . 265) (equation shift . 266) (
-    equation-list shift . 548) ($:end reduce . 217) ($:elseif reduce . 217) (
-    $:else reduce . 217)) (($:end reduce . 214) ($:elseif reduce . 214) (
-    $:else reduce . 214)) (($:end shift . 545) ($:elseif shift . 489) (
-    elseif-eq-part shift . 546) ($:else shift . 492) (else-eq-part shift . 547
-    )) (($string shift . 50) ($fl shift . 195) ($fx shift . 196) (#{$:\x7b;}# 
-    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
-    shift . 200) ($:true shift . 202) ($:false shift . 203) (string shift . 
-    204) (unsigned-number shift . 205) (primary shift . 206) (factor shift . 
-    207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift 
-    . 210) (relation shift . 211) (logical-factor shift . 212) ($ident shift 
-    . 26) (logical-term shift . 213) ($:. shift . 27) (ident shift . 28) (
-    logical-expression shift . 214) ($:connect shift . 255) ($:when shift . 
-    256) ($:for shift . 257) ($:if shift . 258) (name shift . 259) (
-    when-equation shift . 260) (connect-clause shift . 261) (for-equation 
-    shift . 262) (if-equation shift . 263) (simple-expression shift . 264) (
-    equation-1 shift . 265) (equation shift . 266) (equation-list shift . 544)
-    ($:end reduce . 219)) (($:end shift . 543)) (($:if shift . 542)) (($:end 
-    shift . 541) ($string shift . 50) ($fl shift . 195) ($fx shift . 196) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) ($:true shift . 202) ($:false shift . 203) (
-    string shift . 204) (unsigned-number shift . 205) (primary shift . 206) (
-    factor shift . 207) (term shift . 208) (arithmetic-expression shift . 209)
-    ($:not shift . 210) (relation shift . 211) (logical-factor shift . 212) (
-    $ident shift . 26) (logical-term shift . 213) ($:. shift . 27) (ident 
-    shift . 28) (logical-expression shift . 214) ($:connect shift . 255) (
-    $:when shift . 256) ($:for shift . 257) ($:if shift . 258) (name shift . 
-    259) (when-equation shift . 260) (connect-clause shift . 261) (
-    for-equation shift . 262) (if-equation shift . 263) (simple-expression 
-    shift . 264) (equation-1 shift . 265) (equation shift . 302)) (($:for 
-    shift . 540)) (($:loop reduce . 237) ($:, reduce . 237) (#{$:\x7d;}# 
-    reduce . 237) (#{$:\x29;}# reduce . 237)) (($ident shift . 26) ($string 
-    shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident 
-    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
-    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
-    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
-    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
-    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 539)) (($:end reduce . 243) ($:elsewhen 
-    reduce . 243)) (($:end shift . 537) ($:elsewhen shift . 498) (
-    elsewhen-eq-part shift . 538)) (($string shift . 50) ($fl shift . 195) (
-    $fx shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) ($:true shift . 202) ($:false
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
+    equation-list shift . 544) ($:end reduce . 219)) (($:end shift . 543)) ((
+    $:if shift . 542)) (($:end shift . 541) ($string shift . 50) ($float shift
+    . 195) ($fixed shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift 
+    . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) ($:true shift . 202) 
+    ($:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
+    primary shift . 206) (factor shift . 207) (term shift . 208) (
+    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
+    211) (logical-factor shift . 212) ($ident shift . 26) (logical-term shift 
+    . 213) ($:. shift . 27) (ident shift . 28) (logical-expression shift . 214
+    ) ($:connect shift . 255) ($:when shift . 256) ($:for shift . 257) ($:if 
+    shift . 258) (name shift . 259) (when-equation shift . 260) (
+    connect-clause shift . 261) (for-equation shift . 262) (if-equation shift 
+    . 263) (simple-expression shift . 264) (equation-1 shift . 265) (equation 
+    shift . 302)) (($:for shift . 540)) (($:loop reduce . 237) ($:, reduce . 
+    237) (#{$:\x7d;}# reduce . 237) (#{$:\x29;}# reduce . 237)) (($ident shift
+    . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:.
+    shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
+    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 
+    201) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 539)) (($:end reduce . 
+    243) ($:elsewhen reduce . 243)) (($:end shift . 537) ($:elsewhen shift . 
+    498) (elsewhen-eq-part shift . 538)) (($string shift . 50) ($float shift 
+    . 195) ($fixed shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift 
+    . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) ($:true shift . 202) 
+    ($:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
+    primary shift . 206) (factor shift . 207) (term shift . 208) (
     arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
     211) (logical-factor shift . 212) ($ident shift . 26) (logical-term shift 
     . 213) ($:. shift . 27) (ident shift . 28) (logical-expression shift . 214
@@ -2062,10 +2069,10 @@
     . 212) ($:elsewhen reduce . 212)) (($ident shift . 26) ($:. shift . 241) (
     ident shift . 268) (component-reference-1 shift . 242) (
     component-reference shift . 536)) ((#{$:\x29;}# shift . 534) ($ident shift
-    . 26) ($string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift
-    . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 
-    198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
-    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:.
+    shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
+    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 
+    201) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
     unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
     term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
     (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
@@ -2079,13 +2086,13 @@
     reduce . 110) ($:annotation reduce . 110) (#{$:;}# reduce . 110)) (($ident
     shift . 26) (ident shift . 533)) (($:else shift . 530) ($:elseif shift . 
     531) (elseif-ex-list shift . 532)) (($ident shift . 26) ($string shift . 
-    50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28
-    ) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift 
-    . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
-    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
-    primary shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
+    50) ($float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident 
+    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
+    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
+    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
+    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
+    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
+    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
     logical-expression shift . 529)) ((#{$:\x29;}# reduce . 330) ($:, reduce 
     . 330)) ((#{$:\x5d;}# reduce . 332) ($:, reduce . 332) (#{$:;}# reduce . 
     332) (#{$:\x29;}# reduce . 332) ($:end reduce . 332) ($:elsewhen reduce . 
@@ -2113,35 +2120,49 @@
     . 259) ($string reduce . 259) ($:annotation reduce . 259) (
     $:constrainedby reduce . 259) (#{$:\x7d;}# reduce . 259) ($:end reduce . 
     259) ($:elsewhen reduce . 259) ($:if reduce . 259)) (($ident shift . 26) (
-    $string shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (
-    ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
-    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
-    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
-    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
-    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 583)) (($ident shift . 26) ($string shift
-    . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift 
-    . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# 
-    shift . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
-    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
+    $string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift 
+    . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 
+    198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
+    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 583)) (($ident shift . 
+    26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. 
+    shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
+    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 
+    201) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 582)) (($:else shift . 
+    580) ($:elseif shift . 581)) ((#{$:\x7d;}# reduce . 112) ($:, reduce . 112
+    )) ((#{$:;}# reduce . 74) ($:annotation reduce . 74)) ((#{$:\x29;}# shift 
+    . 579) ($:, shift . 425)) ((#{$:\x29;}# shift . 578)) (($:when shift . 577
+    )) (($:end reduce . 244) ($:elsewhen reduce . 244)) (($:then shift . 576))
+    (($:annotation reduce . 233) ($string reduce . 233) (#{$:;}# reduce . 233
+    )) (($:for shift . 575)) (($:annotation reduce . 211) ($string reduce . 
+    211) (#{$:;}# reduce . 211)) (($:if shift . 574)) (($string shift . 50) (
+    $float shift . 195) ($fixed shift . 196) (#{$:\x7b;}# shift . 197) (
+    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
+    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) ($ident shift . 26) (
+    logical-term shift . 213) ($:. shift . 27) (ident shift . 28) (
+    logical-expression shift . 214) ($:connect shift . 255) ($:when shift . 
+    256) ($:for shift . 257) ($:if shift . 258) (name shift . 259) (
+    when-equation shift . 260) (connect-clause shift . 261) (for-equation 
+    shift . 262) (if-equation shift . 263) (simple-expression shift . 264) (
+    equation-1 shift . 265) (equation shift . 302) ($:end reduce . 218)) ((
+    $:if shift . 573)) (($:end reduce . 215) ($:elseif reduce . 215) ($:else 
+    reduce . 215)) (($:end shift . 572)) (($string shift . 50) ($float shift 
+    . 195) ($fixed shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift 
+    . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) ($:true shift . 202) 
+    ($:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
     primary shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 582)) (($:else shift . 580) ($:elseif 
-    shift . 581)) ((#{$:\x7d;}# reduce . 112) ($:, reduce . 112)) ((#{$:;}# 
-    reduce . 74) ($:annotation reduce . 74)) ((#{$:\x29;}# shift . 579) ($:, 
-    shift . 425)) ((#{$:\x29;}# shift . 578)) (($:when shift . 577)) (($:end 
-    reduce . 244) ($:elsewhen reduce . 244)) (($:then shift . 576)) ((
-    $:annotation reduce . 233) ($string reduce . 233) (#{$:;}# reduce . 233)) 
-    (($:for shift . 575)) (($:annotation reduce . 211) ($string reduce . 211) 
-    (#{$:;}# reduce . 211)) (($:if shift . 574)) (($string shift . 50) ($fl 
-    shift . 195) ($fx shift . 196) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
-    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) ($:true shift 
-    . 202) ($:false shift . 203) (string shift . 204) (unsigned-number shift 
-    . 205) (primary shift . 206) (factor shift . 207) (term shift . 208) (
     arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
     211) (logical-factor shift . 212) ($ident shift . 26) (logical-term shift 
     . 213) ($:. shift . 27) (ident shift . 28) (logical-expression shift . 214
@@ -2149,128 +2170,114 @@
     shift . 258) (name shift . 259) (when-equation shift . 260) (
     connect-clause shift . 261) (for-equation shift . 262) (if-equation shift 
     . 263) (simple-expression shift . 264) (equation-1 shift . 265) (equation 
-    shift . 302) ($:end reduce . 218)) (($:if shift . 573)) (($:end reduce . 
-    215) ($:elseif reduce . 215) ($:else reduce . 215)) (($:end shift . 572)) 
-    (($string shift . 50) ($fl shift . 195) ($fx shift . 196) (#{$:\x7b;}# 
-    shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der 
-    shift . 200) ($:true shift . 202) ($:false shift . 203) (string shift . 
-    204) (unsigned-number shift . 205) (primary shift . 206) (factor shift . 
-    207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift 
-    . 210) (relation shift . 211) (logical-factor shift . 212) ($ident shift 
-    . 26) (logical-term shift . 213) ($:. shift . 27) (ident shift . 28) (
-    logical-expression shift . 214) ($:connect shift . 255) ($:when shift . 
-    256) ($:for shift . 257) ($:if shift . 258) (name shift . 259) (
-    when-equation shift . 260) (connect-clause shift . 261) (for-equation 
-    shift . 262) (if-equation shift . 263) (simple-expression shift . 264) (
-    equation-1 shift . 265) (equation shift . 302) ($:end reduce . 216) (
-    $:elseif reduce . 216) ($:else reduce . 216)) (($:when shift . 571)) ((
-    $:end reduce . 249) ($:elsewhen reduce . 249)) (($:then shift . 570)) ((
-    $:annotation reduce . 241) ($string reduce . 241) (#{$:;}# reduce . 241)) 
-    (($:while shift . 569)) (($:annotation reduce . 235) ($string reduce . 235
-    ) (#{$:;}# reduce . 235)) (($:for shift . 568)) (($:annotation reduce . 
-    223) ($string reduce . 223) (#{$:;}# reduce . 223)) (($:if shift . 567)) (
-    ($ident shift . 26) ($:. shift . 241) (ident shift . 268) (
+    shift . 302) ($:end reduce . 216) ($:elseif reduce . 216) ($:else reduce 
+    . 216)) (($:when shift . 571)) (($:end reduce . 249) ($:elsewhen reduce . 
+    249)) (($:then shift . 570)) (($:annotation reduce . 241) ($string reduce 
+    . 241) (#{$:;}# reduce . 241)) (($:while shift . 569)) (($:annotation 
+    reduce . 235) ($string reduce . 235) (#{$:;}# reduce . 235)) (($:for shift
+    . 568)) (($:annotation reduce . 223) ($string reduce . 223) (#{$:;}# 
+    reduce . 223)) (($:if shift . 567)) (($ident shift . 26) ($:. shift . 241)
+    (ident shift . 268) (component-reference-1 shift . 242) ($:when shift . 
+    269) ($:while shift . 270) ($:for shift . 271) ($:if shift . 272) (
+    when-statement shift . 273) (while-statement shift . 274) (for-statement 
+    shift . 275) (if-statement shift . 276) ($:return shift . 277) ($:break 
+    shift . 278) (#{$:\x28;}# shift . 279) (component-reference shift . 280) (
+    statement-1 shift . 281) (statement shift . 285) ($:end reduce . 230)) ((
+    $:if shift . 566)) (($:end reduce . 227) ($:elseif reduce . 227) ($:else 
+    reduce . 227)) (($:end shift . 565)) (($ident shift . 26) ($:. shift . 241
+    ) (ident shift . 268) (component-reference-1 shift . 242) ($:when shift . 
+    269) ($:while shift . 270) ($:for shift . 271) ($:if shift . 272) (
+    when-statement shift . 273) (while-statement shift . 274) (for-statement 
+    shift . 275) (if-statement shift . 276) ($:return shift . 277) ($:break 
+    shift . 278) (#{$:\x28;}# shift . 279) (component-reference shift . 280) (
+    statement-1 shift . 281) (statement shift . 285) ($:end reduce . 228) (
+    $:elseif reduce . 228) ($:else reduce . 228)) ((#{$:\x28;}# shift . 289) (
+    function-call-args shift . 564)) ((#{$:;}# reduce . 201) ($string reduce 
+    . 201) ($:annotation reduce . 201)) (($:if shift . 591)) (($:annotation 
+    reduce . 221) ($string reduce . 221) (#{$:;}# reduce . 221)) ((
+    $:annotation reduce . 222) ($string reduce . 222) (#{$:;}# reduce . 222)) 
+    (($:annotation reduce . 234) ($string reduce . 234) (#{$:;}# reduce . 234)
+    ) (($:annotation reduce . 240) ($string reduce . 240) (#{$:;}# reduce . 
+    240)) (($ident shift . 26) ($:. shift . 241) (ident shift . 268) (
     component-reference-1 shift . 242) ($:when shift . 269) ($:while shift . 
     270) ($:for shift . 271) ($:if shift . 272) (when-statement shift . 273) (
     while-statement shift . 274) (for-statement shift . 275) (if-statement 
     shift . 276) ($:return shift . 277) ($:break shift . 278) (#{$:\x28;}# 
     shift . 279) (component-reference shift . 280) (statement-1 shift . 281) (
-    statement shift . 285) ($:end reduce . 230)) (($:if shift . 566)) (($:end 
-    reduce . 227) ($:elseif reduce . 227) ($:else reduce . 227)) (($:end shift
-    . 565)) (($ident shift . 26) ($:. shift . 241) (ident shift . 268) (
-    component-reference-1 shift . 242) ($:when shift . 269) ($:while shift . 
-    270) ($:for shift . 271) ($:if shift . 272) (when-statement shift . 273) (
-    while-statement shift . 274) (for-statement shift . 275) (if-statement 
-    shift . 276) ($:return shift . 277) ($:break shift . 278) (#{$:\x28;}# 
-    shift . 279) (component-reference shift . 280) (statement-1 shift . 281) (
-    statement shift . 285) ($:end reduce . 228) ($:elseif reduce . 228) (
-    $:else reduce . 228)) ((#{$:\x28;}# shift . 289) (function-call-args shift
-    . 564)) ((#{$:;}# reduce . 201) ($string reduce . 201) ($:annotation 
-    reduce . 201)) (($:if shift . 591)) (($:annotation reduce . 221) ($string 
-    reduce . 221) (#{$:;}# reduce . 221)) (($:annotation reduce . 222) (
-    $string reduce . 222) (#{$:;}# reduce . 222)) (($:annotation reduce . 234)
-    ($string reduce . 234) (#{$:;}# reduce . 234)) (($:annotation reduce . 
-    240) ($string reduce . 240) (#{$:;}# reduce . 240)) (($ident shift . 26) (
-    $:. shift . 241) (ident shift . 268) (component-reference-1 shift . 242) (
-    $:when shift . 269) ($:while shift . 270) ($:for shift . 271) ($:if shift 
-    . 272) (when-statement shift . 273) (while-statement shift . 274) (
-    for-statement shift . 275) (if-statement shift . 276) ($:return shift . 
-    277) ($:break shift . 278) (#{$:\x28;}# shift . 279) (component-reference 
-    shift . 280) (statement-1 shift . 281) (statement shift . 282) (
-    statement-list shift . 590) ($:end reduce . 250) ($:elsewhen reduce . 250)
-    ) (($:annotation reduce . 247) ($string reduce . 247) (#{$:;}# reduce . 
-    247)) (($:if shift . 589)) (($:annotation reduce . 209) ($string reduce . 
-    209) (#{$:;}# reduce . 209)) (($:annotation reduce . 210) ($string reduce 
-    . 210) (#{$:;}# reduce . 210)) (($:annotation reduce . 232) ($string 
-    reduce . 232) (#{$:;}# reduce . 232)) (($ident shift . 26) ($string shift 
-    . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 
+    statement shift . 282) (statement-list shift . 590) ($:end reduce . 250) (
+    $:elsewhen reduce . 250)) (($:annotation reduce . 247) ($string reduce . 
+    247) (#{$:;}# reduce . 247)) (($:if shift . 589)) (($:annotation reduce . 
+    209) ($string reduce . 209) (#{$:;}# reduce . 209)) (($:annotation reduce 
+    . 210) ($string reduce . 210) (#{$:;}# reduce . 210)) (($:annotation 
+    reduce . 232) ($string reduce . 232) (#{$:;}# reduce . 232)) (($ident 
+    shift . 26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196)
+    ($:. shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (
+    #{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (
+    name shift . 201) ($:true shift . 202) ($:false shift . 203) (string shift
+    . 204) (unsigned-number shift . 205) (primary shift . 206) (factor shift 
+    . 207) (term shift . 208) (arithmetic-expression shift . 209) ($:not shift
+    . 210) (relation shift . 211) (logical-factor shift . 212) (logical-term 
+    shift . 213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 365) (expression-list 
+    shift . 588) ($:end reduce . 245) ($:elsewhen reduce . 245)) ((
+    $:annotation reduce . 242) ($string reduce . 242) (#{$:;}# reduce . 242)) 
+    (($:annotation reduce . 252) ($string reduce . 252) (#{$:;}# reduce . 252)
+    ) ((#{$:;}# reduce . 73) ($:annotation reduce . 73)) (($ident shift . 26) 
+    ($string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift 
+    . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 
+    198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
+    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 587)) (($ident shift . 
+    26) ($string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. 
+    shift . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# 
+    shift . 198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 
+    201) ($:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 586)) (($:then shift . 
+    585)) ((#{$:\x5d;}# reduce . 255) ($:, reduce . 255) ($:for reduce . 255) 
+    (#{$:;}# reduce . 255) (#{$:\x29;}# reduce . 255) ($:then reduce . 255) (
+    $:loop reduce . 255) ($:else reduce . 255) ($:elseif reduce . 255) (
+    $string reduce . 255) ($:annotation reduce . 255) ($:constrainedby reduce 
+    . 255) (#{$:\x7d;}# reduce . 255) ($:end reduce . 255) ($:elsewhen reduce 
+    . 255) ($:if reduce . 255)) (($:for reduce . 325) ($:, reduce . 325) (
+    #{$:\x7d;}# reduce . 325) (#{$:\x29;}# reduce . 325)) (($ident shift . 26)
+    ($string shift . 50) ($float shift . 195) ($fixed shift . 196) ($:. shift
+    . 27) (ident shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 
+    198) (#{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) (
+    $:true shift . 202) ($:false shift . 203) (string shift . 204) (
+    unsigned-number shift . 205) (primary shift . 206) (factor shift . 207) (
+    term shift . 208) (arithmetic-expression shift . 209) ($:not shift . 210) 
+    (relation shift . 211) (logical-factor shift . 212) (logical-term shift . 
+    213) (logical-expression shift . 214) ($:if shift . 215) (
+    simple-expression shift . 216) (expression shift . 593)) (($:then shift . 
+    592)) ((#{$:\x5d;}# reduce . 254) ($:, reduce . 254) ($:for reduce . 254) 
+    (#{$:;}# reduce . 254) (#{$:\x29;}# reduce . 254) ($:then reduce . 254) (
+    $:loop reduce . 254) ($:else reduce . 254) ($:elseif reduce . 254) (
+    $string reduce . 254) ($:annotation reduce . 254) ($:constrainedby reduce 
+    . 254) (#{$:\x7d;}# reduce . 254) ($:end reduce . 254) ($:elsewhen reduce 
+    . 254) ($:if reduce . 254)) (($:, shift . 425) ($:end reduce . 246) (
+    $:elsewhen reduce . 246)) (($:annotation reduce . 208) ($string reduce . 
+    208) (#{$:;}# reduce . 208)) (($ident shift . 26) ($:. shift . 241) (ident
+    shift . 268) (component-reference-1 shift . 242) ($:when shift . 269) (
+    $:while shift . 270) ($:for shift . 271) ($:if shift . 272) (
+    when-statement shift . 273) (while-statement shift . 274) (for-statement 
+    shift . 275) (if-statement shift . 276) ($:return shift . 277) ($:break 
+    shift . 278) (#{$:\x28;}# shift . 279) (component-reference shift . 280) (
+    statement-1 shift . 281) (statement shift . 285) ($:end reduce . 251) (
+    $:elsewhen reduce . 251)) (($:annotation reduce . 220) ($string reduce . 
+    220) (#{$:;}# reduce . 220)) (($ident shift . 26) ($string shift . 50) (
+    $float shift . 195) ($fixed shift . 196) ($:. shift . 27) (ident shift . 
     28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift
     . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
     $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
     primary shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 365) (expression-list shift . 588) ($:end
-    reduce . 245) ($:elsewhen reduce . 245)) (($:annotation reduce . 242) (
-    $string reduce . 242) (#{$:;}# reduce . 242)) (($:annotation reduce . 252)
-    ($string reduce . 252) (#{$:;}# reduce . 252)) ((#{$:;}# reduce . 73) (
-    $:annotation reduce . 73)) (($ident shift . 26) ($string shift . 50) ($fl 
-    shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 587)) (($ident shift . 26) ($string shift
-    . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift 
-    . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# 
-    shift . 199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) (
-    $:false shift . 203) (string shift . 204) (unsigned-number shift . 205) (
-    primary shift . 206) (factor shift . 207) (term shift . 208) (
-    arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
-    211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 586)) (($:then shift . 585)) ((
-    #{$:\x5d;}# reduce . 255) ($:, reduce . 255) ($:for reduce . 255) (#{$:;}#
-    reduce . 255) (#{$:\x29;}# reduce . 255) ($:then reduce . 255) ($:loop 
-    reduce . 255) ($:else reduce . 255) ($:elseif reduce . 255) ($string 
-    reduce . 255) ($:annotation reduce . 255) ($:constrainedby reduce . 255) (
-    #{$:\x7d;}# reduce . 255) ($:end reduce . 255) ($:elsewhen reduce . 255) (
-    $:if reduce . 255)) (($:for reduce . 325) ($:, reduce . 325) (#{$:\x7d;}# 
-    reduce . 325) (#{$:\x29;}# reduce . 325)) (($ident shift . 26) ($string 
-    shift . 50) ($fl shift . 195) ($fx shift . 196) ($:. shift . 27) (ident 
-    shift . 28) (#{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (
-    #{$:\x28;}# shift . 199) ($:der shift . 200) (name shift . 201) ($:true 
-    shift . 202) ($:false shift . 203) (string shift . 204) (unsigned-number 
-    shift . 205) (primary shift . 206) (factor shift . 207) (term shift . 208)
-    (arithmetic-expression shift . 209) ($:not shift . 210) (relation shift 
-    . 211) (logical-factor shift . 212) (logical-term shift . 213) (
-    logical-expression shift . 214) ($:if shift . 215) (simple-expression 
-    shift . 216) (expression shift . 593)) (($:then shift . 592)) ((
-    #{$:\x5d;}# reduce . 254) ($:, reduce . 254) ($:for reduce . 254) (#{$:;}#
-    reduce . 254) (#{$:\x29;}# reduce . 254) ($:then reduce . 254) ($:loop 
-    reduce . 254) ($:else reduce . 254) ($:elseif reduce . 254) ($string 
-    reduce . 254) ($:annotation reduce . 254) ($:constrainedby reduce . 254) (
-    #{$:\x7d;}# reduce . 254) ($:end reduce . 254) ($:elsewhen reduce . 254) (
-    $:if reduce . 254)) (($:, shift . 425) ($:end reduce . 246) ($:elsewhen 
-    reduce . 246)) (($:annotation reduce . 208) ($string reduce . 208) (
-    #{$:;}# reduce . 208)) (($ident shift . 26) ($:. shift . 241) (ident shift
-    . 268) (component-reference-1 shift . 242) ($:when shift . 269) ($:while 
-    shift . 270) ($:for shift . 271) ($:if shift . 272) (when-statement shift 
-    . 273) (while-statement shift . 274) (for-statement shift . 275) (
-    if-statement shift . 276) ($:return shift . 277) ($:break shift . 278) (
-    #{$:\x28;}# shift . 279) (component-reference shift . 280) (statement-1 
-    shift . 281) (statement shift . 285) ($:end reduce . 251) ($:elsewhen 
-    reduce . 251)) (($:annotation reduce . 220) ($string reduce . 220) (
-    #{$:;}# reduce . 220)) (($ident shift . 26) ($string shift . 50) ($fl 
-    shift . 195) ($fx shift . 196) ($:. shift . 27) (ident shift . 28) (
-    #{$:\x7b;}# shift . 197) (#{$:\x5b;}# shift . 198) (#{$:\x28;}# shift . 
-    199) ($:der shift . 200) (name shift . 201) ($:true shift . 202) ($:false 
-    shift . 203) (string shift . 204) (unsigned-number shift . 205) (primary 
-    shift . 206) (factor shift . 207) (term shift . 208) (
     arithmetic-expression shift . 209) ($:not shift . 210) (relation shift . 
     211) (logical-factor shift . 212) (logical-term shift . 213) (
     logical-expression shift . 214) ($:if shift . 215) (simple-expression 
@@ -2352,8 +2359,8 @@
     annotation unsigned-number unsigned-number ident string))
 
 (define mtab
-  '(($string . $string) ($ident . $ident) ($fl . $fl) ($fx . $fx) (
-    "annotation" . $:annotation) ("]" . #{$:\x5d;}#) ("[" . #{$:\x5b;}#) (
+  '(($string . $string) ($ident . $ident) ($float . $float) ($fixed . $fixed
+    ) ("annotation" . $:annotation) ("]" . #{$:\x5d;}#) ("[" . #{$:\x5b;}#) (
     "true" . $:true) ("false" . $:false) (".^" . $:.^) ("^" . $:^) ("./" . 
     $:./) (".*" . $:.*) ("/" . $:/) (".-" . $:.-) (".+" . $:.+) ("-" . $:-) (
     "+" . $:+) ("<>" . $:<>) ("==" . $:==) (">=" . $:>=) (">" . $:>) ("<=" . 
@@ -2378,780 +2385,5 @@
     $:model) ("class" . $:class) ("partial" . $:partial) ("encapsulated" . 
     $:encapsulated) ("final" . $:final) (";" . #{$:;}#) ("within" . $:within) 
     ($end . $end)))
-
-(define act-v
-  (vector
-   ;; $start => stored-definition
-   (lambda ($1 . $rest) $1)
-   ;; stored-definition => 
-   (lambda $rest `(stored-defn))
-   ;; stored-definition => stored-definition-1 stored-definition-2
-   (lambda ($2 $1 . $rest) `(stored-defn FIX))
-   ;; stored-definition => stored-definition-2
-   (lambda ($1 . $rest) (tl->list $1))
-   ;; stored-definition-1 => "within" name ";"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; stored-definition-1 => "within" ";"
-   (lambda ($2 $1 . $rest) $1)
-   ;; stored-definition-2 => "final" class-definition ";"
-   (lambda ($3 $2 $1 . $rest) `(FIX01))
-   ;; stored-definition-2 => class-definition ";"
-   (lambda ($2 $1 . $rest) (make-tl 'defn-list $1))
-   ;; stored-definition-2 => stored-definition-2 "final" class-definition ";"
-   (lambda ($4 $3 $2 $1 . $rest) `(FIX01))
-   ;; stored-definition-2 => stored-definition-2 class-definition ";"
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; class-definition => "encapsulated" class-prefixes class-specifier
-   (lambda ($3 $2 $1 . $rest)
-     `(class-def
-        ,(tl->list (tl+attr $2 'encapsulated "yes"))
-        $3))
-   ;; class-definition => class-prefixes class-specifier
-   (lambda ($2 $1 . $rest)
-     (simple-format #t "$2=~S\n" $2)
-     (simple-format #t "  >~S\n" (tl->list $2))
-     `(class-def ,(tl->list $2)))
-   ;; class-prefixes => "partial" class-prefixes-1
-   (lambda ($2 $1 . $rest)
-     (tl+attr $2 'partial "yes"))
-   ;; class-prefixes => class-prefixes-1
-   (lambda ($1 . $rest) $1)
-   ;; class-prefixes-1 => "class"
-   (lambda ($1 . $rest) (make-tl 'class))
-   ;; class-prefixes-1 => "model"
-   (lambda ($1 . $rest) (make-tl 'model))
-   ;; class-prefixes-1 => "operator" "record"
-   (lambda ($2 $1 . $rest)
-     (tl+attr (make-tl 'record) 'type "operator"))
-   ;; class-prefixes-1 => "record"
-   (lambda ($1 . $rest) (make-tl 'record))
-   ;; class-prefixes-1 => "block"
-   (lambda ($1 . $rest) (make-tl 'block))
-   ;; class-prefixes-1 => "expandable" "connector"
-   (lambda ($2 $1 . $rest)
-     (tl+attr (make-tl 'connector) 'expandable "yes"))
-   ;; class-prefixes-1 => "connector"
-   (lambda ($1 . $rest) (make-tl 'connector))
-   ;; class-prefixes-1 => "type"
-   (lambda ($1 . $rest) (make-tl 'type))
-   ;; class-prefixes-1 => "package"
-   (lambda ($1 . $rest) (make-tl 'package))
-   ;; class-prefixes-1 => "impure" "operator" "function"
-   (lambda ($3 $2 $1 . $rest)
-     (tl+attr
-       (make-tl 'operator-function)
-       'impure
-       "yes"))
-   ;; class-prefixes-1 => "pure" "operator" "function"
-   (lambda ($3 $2 $1 . $rest)
-     (tl+attr
-       (make-tl 'operator-function)
-       'pure
-       "yes"))
-   ;; class-prefixes-1 => "impure" "function"
-   (lambda ($2 $1 . $rest)
-     (make-tl 'impure-function))
-   ;; class-prefixes-1 => "pure" "function"
-   (lambda ($2 $1 . $rest) (make-tl 'pure-function))
-   ;; class-prefixes-1 => "operator" "function"
-   (lambda ($2 $1 . $rest)
-     (make-tl 'operator-function))
-   ;; class-prefixes-1 => "function"
-   (lambda ($1 . $rest) (make-tl 'function))
-   ;; class-prefixes-1 => "operator"
-   (lambda ($1 . $rest) (make-tl 'operator))
-   ;; class-specifier => long-class-specifier
-   (lambda ($1 . $rest) $1)
-   ;; class-specifier => short-class-specifier
-   (lambda ($1 . $rest) $1)
-   ;; class-specifier => der-class-specifier
-   (lambda ($1 . $rest) $1)
-   ;; long-class-specifier => ident string-comment composition "end" ident
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     (if (not (string=? (cadr $1) (cadr $5)))
-       (error "ident's don't match"))
-     (list $1 $2 $3))
-   ;; long-class-specifier => "extends" ident class-modification string-com...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     (if (not (string=? (cadr $2) (cadr $7)))
-       (error "ident's don't match"))
-     (list '(@ extends . "yes") $2 $3 $4 $5))
-   ;; long-class-specifier => "extends" ident string-comment composition "e...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (if (not (string=? (cadr $2) (cadr $6)))
-       (error "ident's don't match"))
-     (list '(@ extends . "yes") $2 $3 $4))
-   ;; short-class-specifier => ident "=" base-prefix name array-subscripts ...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     (list $1 `(is ,$3 ,$4 ,$5 ,$6 ,$7)))
-   ;; short-class-specifier => ident "=" base-prefix name array-subscripts ...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; short-class-specifier => ident "=" base-prefix name class-modificatio...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; short-class-specifier => ident "=" base-prefix name comment
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; short-class-specifier => ident "=" "enumeration" "(" filler-1 ")" com...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; filler-1 => 
-   (lambda $rest (list))
-   ;; filler-1 => enum-list
-   (lambda ($1 . $rest) $1)
-   ;; filler-1 => ":"
-   (lambda ($1 . $rest) $1)
-   ;; der-class-specifier => ident "=" "der" "(" name "," der-class-specifi...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; der-class-specifier-1 => ident
-   (lambda ($1 . $rest) $1)
-   ;; der-class-specifier-1 => der-class-specifier-1 ";" ident
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; base-prefix => 
-   (lambda $rest (list))
-   ;; base-prefix => type-prefix
-   (lambda ($1 . $rest) $1)
-   ;; enum-list => enumeration-literal
-   (lambda ($1 . $rest) $1)
-   ;; enum-list => enum-list "," enumeration-literal
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; enumeration-literal => ident comment
-   (lambda ($2 $1 . $rest) $1)
-   ;; composition => element-list composition-1-list external-part opt-anno...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; composition => element-list composition-1-list opt-annotation
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; composition => element-list external-part opt-annotation
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; composition => element-list opt-annotation
-   (lambda ($2 $1 . $rest) $1)
-   ;; composition-1-list => composition-1
-   (lambda ($1 . $rest) $1)
-   ;; composition-1-list => composition-1-list composition-1
-   (lambda ($2 $1 . $rest) $1)
-   ;; composition-1 => "public"
-   (lambda ($1 . $rest) $1)
-   ;; composition-1 => "public" element-list
-   (lambda ($2 $1 . $rest) $1)
-   ;; composition-1 => "protected"
-   (lambda ($1 . $rest) $1)
-   ;; composition-1 => "protected" element-list
-   (lambda ($2 $1 . $rest) $1)
-   ;; composition-1 => equation-section
-   (lambda ($1 . $rest) $1)
-   ;; composition-1 => algorithm-section
-   (lambda ($1 . $rest) $1)
-   ;; external-part => "external" language-specification external-function-...
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; external-part => "external" language-specification external-function-...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; external-part => "external" language-specification annotation ";"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; external-part => "external" external-function-call annotation ";"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; external-part => "external" language-specification ";"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; external-part => "external" external-function-call ";"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; external-part => "external" annotation ";"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; external-part => "external" ";"
-   (lambda ($2 $1 . $rest) $1)
-   ;; language-specification => string
-   (lambda ($1 . $rest) $1)
-   ;; external-function-call => component-reference "=" ident "(" expressio...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; external-function-call => component-reference "=" ident "(" ")"
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; external-function-call => ident "(" expression-list ")"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; external-function-call => ident "(" ")"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; element-list => element ";"
-   (lambda ($2 $1 . $rest) $1)
-   ;; element-list => element-list element ";"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; element => import-clause
-   (lambda ($1 . $rest) $1)
-   ;; element => extends-clause
-   (lambda ($1 . $rest) $1)
-   ;; element => "redeclare" $P1 $P2 $P3 element-1
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; element => "final" $P4 $P5 element-1
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; element => "inner" $P6 element-1
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; element => "outer" element-1
-   (lambda ($2 $1 . $rest) $1)
-   ;; element => element-1
-   (lambda ($1 . $rest) $1)
-   ;; $P1 => 
-   (lambda $rest (list))
-   ;; $P1 => "final"
-   (lambda ($1 . $rest) $1)
-   ;; $P2 => 
-   (lambda $rest (list))
-   ;; $P2 => "inner"
-   (lambda ($1 . $rest) $1)
-   ;; $P3 => 
-   (lambda $rest (list))
-   ;; $P3 => "outer"
-   (lambda ($1 . $rest) $1)
-   ;; $P4 => 
-   (lambda $rest (list))
-   ;; $P4 => "inner"
-   (lambda ($1 . $rest) $1)
-   ;; $P5 => 
-   (lambda $rest (list))
-   ;; $P5 => "outer"
-   (lambda ($1 . $rest) $1)
-   ;; $P6 => 
-   (lambda $rest (list))
-   ;; $P6 => "outer"
-   (lambda ($1 . $rest) $1)
-   ;; element-1 => class-definition
-   (lambda ($1 . $rest) $1)
-   ;; element-1 => component-clause
-   (lambda ($1 . $rest) $1)
-   ;; element-1 => "replaceable" element-2 constraining-clause comment
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; element-1 => "replaceable" element-2
-   (lambda ($2 $1 . $rest) $1)
-   ;; element-2 => class-definition
-   (lambda ($1 . $rest) $1)
-   ;; element-2 => component-clause
-   (lambda ($1 . $rest) $1)
-   ;; import-clause => "import" import-clause-1 comment
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; import-clause-1 => ident "=" name
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; import-clause-1 => name "." import-clause-2
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; import-clause-1 => name
-   (lambda ($1 . $rest) $1)
-   ;; import-clause-2 => "*"
-   (lambda ($1 . $rest) $1)
-   ;; import-clause-2 => "{" "}"
-   (lambda ($2 $1 . $rest) $1)
-   ;; import-clause-2 => "{" import-list "}"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; import-list => ident
-   (lambda ($1 . $rest) $1)
-   ;; import-list => import-list "," ident
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; extends-clause => "extends" name class-modification annotation
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; extends-clause => "extends" name class-modification
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; extends-clause => "extends" name annotation
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; extends-clause => "extends" name
-   (lambda ($2 $1 . $rest) $1)
-   ;; constraining-clause => "constrainedby" name class-modification
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; constraining-clause => "constrainedby" name
-   (lambda ($2 $1 . $rest) $1)
-   ;; component-clause => type-prefix type-specifier array-subscripts compo...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; component-clause => type-prefix type-specifier component-list
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; component-clause => type-specifier array-subscripts component-list
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; component-clause => type-specifier component-list
-   (lambda ($2 $1 . $rest) $1)
-   ;; type-prefix => type-prefix-1 type-prefix-2 type-prefix-3
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; type-prefix => type-prefix-1 type-prefix-2
-   (lambda ($2 $1 . $rest) $1)
-   ;; type-prefix => type-prefix-1 type-prefix-3
-   (lambda ($2 $1 . $rest) $1)
-   ;; type-prefix => type-prefix-2 type-prefix-3
-   (lambda ($2 $1 . $rest) $1)
-   ;; type-prefix => type-prefix-1
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix => type-prefix-2
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix => type-prefix-3
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix-1 => "flow"
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix-1 => "stream"
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix-2 => "discrete"
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix-2 => "parameter"
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix-2 => "constant"
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix-3 => "input"
-   (lambda ($1 . $rest) $1)
-   ;; type-prefix-3 => "output"
-   (lambda ($1 . $rest) $1)
-   ;; type-specifier => name
-   (lambda ($1 . $rest) $1)
-   ;; component-list => component-declaration
-   (lambda ($1 . $rest) $1)
-   ;; component-list => component-list "," component-declaration
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; component-declaration => declaration condition-attribute comment
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; component-declaration => declaration comment
-   (lambda ($2 $1 . $rest) $1)
-   ;; condition-attribute => "if" expression
-   (lambda ($2 $1 . $rest) $1)
-   ;; declaration => ident $P7 $P8
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; $P7 => 
-   (lambda $rest (list))
-   ;; $P7 => array-subscripts
-   (lambda ($1 . $rest) $1)
-   ;; $P8 => 
-   (lambda $rest (list))
-   ;; $P8 => modification
-   (lambda ($1 . $rest) $1)
-   ;; modification => class-modification "=" expression
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; modification => class-modification
-   (lambda ($1 . $rest) $1)
-   ;; modification => "=" expression
-   (lambda ($2 $1 . $rest) $1)
-   ;; modification => ":=" expression
-   (lambda ($2 $1 . $rest) $1)
-   ;; class-modification => "(" argument-list ")"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; class-modification => "(" ")"
-   (lambda ($2 $1 . $rest) $1)
-   ;; argument-list => argument
-   (lambda ($1 . $rest) $1)
-   ;; argument-list => argument-list "," argument
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; argument => element-modification-or-replaceable
-   (lambda ($1 . $rest) $1)
-   ;; argument => element-redeclaration
-   (lambda ($1 . $rest) $1)
-   ;; element-modification-or-replaceable => "each" "final" elt-mod-or-repl-1
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; element-modification-or-replaceable => "each" elt-mod-or-repl-1
-   (lambda ($2 $1 . $rest) $1)
-   ;; element-modification-or-replaceable => "final" elt-mod-or-repl-1
-   (lambda ($2 $1 . $rest) $1)
-   ;; element-modification-or-replaceable => elt-mod-or-repl-1
-   (lambda ($1 . $rest) $1)
-   ;; elt-mod-or-repl-1 => element-modification
-   (lambda ($1 . $rest) $1)
-   ;; elt-mod-or-repl-1 => element-replaceable
-   (lambda ($1 . $rest) $1)
-   ;; element-modification => name $P9 string-comment
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; $P9 => 
-   (lambda $rest (list))
-   ;; $P9 => modification
-   (lambda ($1 . $rest) $1)
-   ;; element-redeclaration => "redeclare" $P10 $P11 elt-redecl-1
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; $P10 => 
-   (lambda $rest (list))
-   ;; $P10 => "each"
-   (lambda ($1 . $rest) $1)
-   ;; $P11 => 
-   (lambda $rest (list))
-   ;; $P11 => "final"
-   (lambda ($1 . $rest) $1)
-   ;; elt-redecl-1 => short-class-definition
-   (lambda ($1 . $rest) $1)
-   ;; elt-redecl-1 => component-clause1
-   (lambda ($1 . $rest) $1)
-   ;; elt-redecl-1 => element-replaceable
-   (lambda ($1 . $rest) $1)
-   ;; element-replaceable => "replaceable" short-class-definition component...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; element-replaceable => "replaceable" short-class-definition component...
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; component-clause1 => type-prefix type-specifier declaration comment
-   (lambda ($4 $3 $2 $1 . $rest)
-     (list $1 $2 (append $3 (list $4))))
-   ;; short-class-definition => class-prefixes short-class-specifier
-   (lambda ($2 $1 . $rest)
-     `(short-class-def ,(append $1 (list $2))))
-   ;; equation-section => "initial" "equation" equation-list
-   (lambda ($3 $2 $1 . $rest)
-     `(init-eqn-section ,$3))
-   ;; equation-section => "equation" equation-list
-   (lambda ($2 $1 . $rest) `(eqn-section ,$2))
-   ;; equation-section => "initial" "equation"
-   (lambda ($2 $1 . $rest)
-     `(init-eqn-section (eqn-list)))
-   ;; equation-section => "equation"
-   (lambda ($1 . $rest) `(eqn-section (eqn-list)))
-   ;; algorithm-section => "initial" "algorithm" statement-list
-   (lambda ($3 $2 $1 . $rest)
-     `(init-alg-section ,$3))
-   ;; algorithm-section => "algorithm" statement-list
-   (lambda ($2 $1 . $rest) `(alg-section ,$2))
-   ;; algorithm-section => "initial" "algorithm"
-   (lambda ($2 $1 . $rest)
-     `(init-alg-section (stmt-list)))
-   ;; algorithm-section => "algorithm"
-   (lambda ($1 . $rest) `(alg-section (stmt-list)))
-   ;; equation-list => equation ";"
-   (lambda ($2 $1 . $rest) (make-tl 'eqn-list $1))
-   ;; equation-list => equation-list equation ";"
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; equation => equation-1 comment
-   (lambda ($2 $1 . $rest) (append $1 (list $2)))
-   ;; equation-1 => simple-expression "=" expression
-   (lambda ($3 $2 $1 . $rest) `(equate ,$1 ,$3))
-   ;; equation-1 => if-equation
-   (lambda ($1 . $rest) $1)
-   ;; equation-1 => for-equation
-   (lambda ($1 . $rest) $1)
-   ;; equation-1 => connect-clause
-   (lambda ($1 . $rest) $1)
-   ;; equation-1 => when-equation
-   (lambda ($1 . $rest) $1)
-   ;; equation-1 => name function-call-args
-   (lambda ($2 $1 . $rest) `(fctn ,$1 ,$2))
-   ;; statement-list => statement ";"
-   (lambda ($2 $1 . $rest) (make-tl 'stmt-list $1))
-   ;; statement-list => statement-list statement ";"
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; statement => statement-1 comment
-   (lambda ($2 $1 . $rest) (append $1 (list $2)))
-   ;; statement-1 => component-reference ":=" expression
-   (lambda ($3 $2 $1 . $rest) `(assign ,$1 ,$3))
-   ;; statement-1 => component-reference function-call-args
-   (lambda ($2 $1 . $rest) `(call ,$1 ,$2))
-   ;; statement-1 => "(" output-expression-list ")" ":=" component-referenc...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(multi-assign ,$2 ,$5 ,$6))
-   ;; statement-1 => "break"
-   (lambda ($1 . $rest) '(break-stmt))
-   ;; statement-1 => "return"
-   (lambda ($1 . $rest) '(return-stmt))
-   ;; statement-1 => if-statement
-   (lambda ($1 . $rest) $1)
-   ;; statement-1 => for-statement
-   (lambda ($1 . $rest) $1)
-   ;; statement-1 => while-statement
-   (lambda ($1 . $rest) $1)
-   ;; statement-1 => when-statement
-   (lambda ($1 . $rest) $1)
-   ;; if-equation => "if" expression then-eq-part elseif-eq-list else-eq-pa...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if-eq ,$2 ,$3 ,@(cdr (tl->list $4)) ,$5))
-   ;; if-equation => "if" expression then-eq-part elseif-eq-list "end" "if"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(if-eq ,$2 ,$3 ,@(cdr (tl->list $4))))
-   ;; if-equation => "if" expression then-eq-part else-eq-part "end" "if"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(if-eq ,$2 ,$3 ,$4))
-   ;; if-equation => "if" expression then-eq-part "end" "if"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(if-eq ,$2 ,$3))
-   ;; then-eq-part => "then" equation-list
-   (lambda ($2 $1 . $rest) $2)
-   ;; then-eq-part => "then"
-   (lambda ($1 . $rest) '(eqn-list))
-   ;; elseif-eq-list => elseif-eq-part
-   (lambda ($1 . $rest) (make-tl 'l $1))
-   ;; elseif-eq-list => elseif-eq-list elseif-eq-part
-   (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; elseif-eq-part => "elseif" equation-list
-   (lambda ($2 $1 . $rest) `(elseif-eq ,$2))
-   ;; elseif-eq-part => "elseif"
-   (lambda ($1 . $rest) `(else-eq (eqn-list)))
-   ;; else-eq-part => "else" equation-list
-   (lambda ($2 $1 . $rest) `(else-eq ,$2))
-   ;; else-eq-part => "else"
-   (lambda ($1 . $rest) `(else-st (eqn-list)))
-   ;; if-statement => "if" expression then-st-part elseif-st-list else-st-p...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if-st ,$2 ,$3 ,@(cdr (tl->list $4)) ,$5))
-   ;; if-statement => "if" expression then-st-part elseif-st-list "end" "if"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(if-st ,$2 ,$3 ,@(cdr (tl->list $4))))
-   ;; if-statement => "if" expression then-st-part else-st-part "end" "if"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(if-st ,$2 ,$3 ,$4))
-   ;; if-statement => "if" expression then-st-part "end" "if"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(if-st ,$2 ,$3))
-   ;; then-st-part => "then" statement-list
-   (lambda ($2 $1 . $rest) $2)
-   ;; then-st-part => "then"
-   (lambda ($1 . $rest) '(stmt-list))
-   ;; elseif-st-list => elseif-st-part
-   (lambda ($1 . $rest) (make-tl 'l $1))
-   ;; elseif-st-list => elseif-st-list elseif-st-part
-   (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; elseif-st-part => "elseif" statement-list
-   (lambda ($2 $1 . $rest) `(elseif-st ,$2))
-   ;; elseif-st-part => "elseif"
-   (lambda ($1 . $rest) `(else-st (stmt-list)))
-   ;; else-st-part => "else" statement-list
-   (lambda ($2 $1 . $rest) `(else-st ,$2))
-   ;; else-st-part => "else"
-   (lambda ($1 . $rest) `(else-st (stmt-list)))
-   ;; for-equation => "for" for-indices "loop" equation-list "end" "for"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(for-eq ,$2 ,$4))
-   ;; for-equation => "for" for-indices "loop" "end" "for"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(for-eq ,$2 (eqn-list)))
-   ;; for-statement => "for" for-indices "loop" statement-list "end" "for"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(for-st ,$2 ,$4))
-   ;; for-statement => "for" for-indices "loop" "end" "for"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(for-st ,$2 (stmt-list)))
-   ;; for-indices => for-index
-   (lambda ($1 . $rest) (make-tl 'for-indices $1))
-   ;; for-indices => for-indices "," for-index
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; for-index => ident "in" expression
-   (lambda ($3 $2 $1 . $rest) `(for-index ,$1 ,$3))
-   ;; for-index => ident
-   (lambda ($1 . $rest) `(for-index ,$1))
-   ;; while-statement => "while" expression "loop" statement-list "end" "wh...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(while-st ,$2 ,(tl->list $4)))
-   ;; while-statement => "while" expression "loop" "end" "while"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(while-st ,$2 (stmt-list)))
-   ;; when-equation => "when" expression then-eq-part elsewhen-eq-list "end...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(when-eq ,$2 ,$3 ,@(cdr (tl->list $4))))
-   ;; elsewhen-eq-list => elsewhen-eq-part
-   (lambda ($1 . $rest) (make-tl 'l $1))
-   ;; elsewhen-eq-list => elsewhen-eq-list elsewhen-eq-part
-   (lambda ($2 $1 . $rest) (tl->append $1 $2))
-   ;; elsewhen-eq-part => "elsewhen" expression "then"
-   (lambda ($3 $2 $1 . $rest)
-     `(elsewhen ,$2 (expr-list)))
-   ;; elsewhen-eq-part => "elsewhen" expression "then" expression-list
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(elsewhen ,$2 ,$4))
-   ;; when-statement => "when" expression then-st-part elsewhen-st-list "en...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(when-st ,$2 ,$3 ,@(cdr (tl->list $4))))
-   ;; elsewhen-st-list => elsewhen-st-part
-   (lambda ($1 . $rest) (make-tl 'l $1))
-   ;; elsewhen-st-list => elsewhen-st-list elsewhen-st-part
-   (lambda ($2 $1 . $rest) (tl->append $1 $2))
-   ;; elsewhen-st-part => "elsewhen" expression "then"
-   (lambda ($3 $2 $1 . $rest)
-     `(elsewhen ,$2 (stmt-list)))
-   ;; elsewhen-st-part => "elsewhen" expression "then" statement-list
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(elsewhen ,$2 ,$4))
-   ;; connect-clause => "connect" "(" component-reference "," component-ref...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(connect ,$3 ,$5))
-   ;; expression => simple-expression
-   (lambda ($1 . $rest) $1)
-   ;; expression => "if" expression "then" expression elseif-ex-list "else"...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$2 ,$4 ,@(cdr (tl->list $5)) (else ,$7)))
-   ;; expression => "if" expression "then" expression "else" expression
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$2 ,$4 (else ,$6)))
-   ;; elseif-ex-list => "elseif" expression "then" expression
-   (lambda ($4 $3 $2 $1 . $rest)
-     (make-tl 'l `(elseif ,$2 ,$4)))
-   ;; elseif-ex-list => elseif-ex-list "elseif" expression "then" expression
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     (tl-append $1 `(elseif ,$2 ,$4)))
-   ;; simple-expression => logical-expression
-   (lambda ($1 . $rest) $1)
-   ;; simple-expression => logical-expression ":" logical-expression ":" lo...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(colon ,$1 ,$5 ,$3))
-   ;; simple-expression => logical-expression ":" logical-expression
-   (lambda ($3 $2 $1 . $rest) `(colon ,$1 ,$3))
-   ;; logical-expression => logical-term
-   (lambda ($1 . $rest) $1)
-   ;; logical-expression => logical-expression "or" logical-term
-   (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
-   ;; logical-term => logical-factor
-   (lambda ($1 . $rest) $1)
-   ;; logical-term => logical-term "and" logical-factor
-   (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
-   ;; logical-factor => relation
-   (lambda ($1 . $rest) $1)
-   ;; logical-factor => "not" relation
-   (lambda ($2 $1 . $rest) `(not ,$2))
-   ;; relation => arithmetic-expression
-   (lambda ($1 . $rest) $1)
-   ;; relation => relation rel-op arithmetic-expression
-   (lambda ($3 $2 $1 . $rest) (list $2 $1 $3))
-   ;; rel-op => "<"
-   (lambda ($1 . $rest) 'lt)
-   ;; rel-op => "<="
-   (lambda ($1 . $rest) 'le)
-   ;; rel-op => ">"
-   (lambda ($1 . $rest) 'gt)
-   ;; rel-op => ">="
-   (lambda ($1 . $rest) 'ge)
-   ;; rel-op => "=="
-   (lambda ($1 . $rest) 'eq)
-   ;; rel-op => "<>"
-   (lambda ($1 . $rest) 'ne)
-   ;; arithmetic-expression => term
-   (lambda ($1 . $rest) $1)
-   ;; arithmetic-expression => arithmetic-expression add-op term
-   (lambda ($3 $2 $1 . $rest) (list $2 $1 $3))
-   ;; add-op => "+"
-   (lambda ($1 . $rest) 'add)
-   ;; add-op => "-"
-   (lambda ($1 . $rest) 'sub)
-   ;; add-op => ".+"
-   (lambda ($1 . $rest) 'dot-add)
-   ;; add-op => ".-"
-   (lambda ($1 . $rest) 'dot-sub)
-   ;; term => factor
-   (lambda ($1 . $rest) $1)
-   ;; term => term mul-op factor
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; mul-op => "*"
-   (lambda ($1 . $rest) 'mul)
-   ;; mul-op => "/"
-   (lambda ($1 . $rest) 'div)
-   ;; mul-op => ".*"
-   (lambda ($1 . $rest) 'dot-mul)
-   ;; mul-op => "./"
-   (lambda ($1 . $rest) 'dot-div)
-   ;; factor => primary
-   (lambda ($1 . $rest) $1)
-   ;; factor => factor "^" primary
-   (lambda ($3 $2 $1 . $rest) `(pow ,$1 ,$2))
-   ;; factor => factor ".^" primary
-   (lambda ($3 $2 $1 . $rest) `(dot-pow ,$1 ,$2))
-   ;; primary => unsigned-number
-   (lambda ($1 . $rest) `(p-expr ,$1))
-   ;; primary => string
-   (lambda ($1 . $rest) `(p-expr ,$1))
-   ;; primary => "false"
-   (lambda ($1 . $rest) `(p-expr '(false)))
-   ;; primary => "true"
-   (lambda ($1 . $rest) `(p-expr '(true)))
-   ;; primary => name function-call-args
-   (lambda ($2 $1 . $rest)
-     `(fctn-call ,$1 ,(tl->list $2)))
-   ;; primary => "der" function-call-args
-   (lambda ($2 $1 . $rest) `(der ,$2))
-   ;; primary => name
-   (lambda ($1 . $rest) $1)
-   ;; primary => name array-subscripts
-   (lambda ($2 $1 . $rest) `(array-elt ,$1 ,$2))
-   ;; primary => "(" output-expression-list ")"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; primary => "[" expression-list-list "]"
-   (lambda ($3 $2 $1 . $rest)
-     `(matrix
-        ,(map (lambda (row) (cons 'row (cdr row)))
-              (cdr (tl->list $2)))))
-   ;; primary => "{" function-arguments "}"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; expression-list-list => expression-list
-   (lambda ($1 . $rest) (make-tl 'rows $1))
-   ;; expression-list-list => expression-list-list ";" expression-list
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; name => ident
-   (lambda ($1 . $rest) `(name ,$1))
-   ;; name => "." ident
-   (lambda ($2 $1 . $rest) `(sel ,$2))
-   ;; name => name "." ident
-   (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
-   ;; component-reference => component-reference-1
-   (lambda ($1 . $rest) $1)
-   ;; component-reference => component-reference-1 "." ident $P12
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; $P12 => 
-   (lambda $rest (list))
-   ;; $P12 => array-subscripts
-   (lambda ($1 . $rest) $1)
-   ;; component-reference-1 => ident $P13
-   (lambda ($2 $1 . $rest) $1)
-   ;; component-reference-1 => "." ident $P14
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; $P13 => 
-   (lambda $rest (list))
-   ;; $P13 => array-subscripts
-   (lambda ($1 . $rest) $1)
-   ;; $P14 => 
-   (lambda $rest (list))
-   ;; $P14 => array-subscripts
-   (lambda ($1 . $rest) $1)
-   ;; function-call-args => "(" function-arguments ")"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; function-call-args => "(" ")"
-   (lambda ($2 $1 . $rest) $1)
-   ;; function-arguments => function-argument function-argument-1
-   (lambda ($2 $1 . $rest) $1)
-   ;; function-arguments => named-arguments
-   (lambda ($1 . $rest) $1)
-   ;; function-argument-1 => "," function-arguments
-   (lambda ($2 $1 . $rest) $1)
-   ;; function-argument-1 => "for" for-indices
-   (lambda ($2 $1 . $rest) $1)
-   ;; named-arguments => named-argument
-   (lambda ($1 . $rest) $1)
-   ;; named-arguments => named-arguments "," named-argument
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; named-argument => ident "=" function-argument
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; function-argument => "function" name "(" named-arguments ")"
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; function-argument => "function" name "(" ")"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; function-argument => expression
-   (lambda ($1 . $rest) $1)
-   ;; output-expression-list => ","
-   (lambda ($1 . $rest) $1)
-   ;; output-expression-list => expression
-   (lambda ($1 . $rest) $1)
-   ;; output-expression-list => output-expression-list "," expression
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; expression-list => expression
-   (lambda ($1 . $rest) $1)
-   ;; expression-list => expression-list "," expression
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; array-subscripts => "[" array-subscript-list "]"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; array-subscript-list => subscript
-   (lambda ($1 . $rest) $1)
-   ;; array-subscript-list => array-subscript-list "," subscript
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; subscript => ":"
-   (lambda ($1 . $rest) $1)
-   ;; subscript => expression
-   (lambda ($1 . $rest) $1)
-   ;; comment => string-comment annotation
-   (lambda ($2 $1 . $rest)
-     (if $1 `(comment ,$1 ,$2) `(comment ,$2)))
-   ;; comment => string-comment
-   (lambda ($1 . $rest)
-     (if $1 `(comment ,$1) '(comment)))
-   ;; string-comment => 
-   (lambda $rest #f)
-   ;; string-comment => string-cat
-   (lambda ($1 . $rest) $1)
-   ;; string-cat => string
-   (lambda ($1 . $rest)
-     (make-tl 'string-comment $1))
-   ;; string-cat => string-cat "+" string
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; opt-annotation => 
-   (lambda $rest (list))
-   ;; opt-annotation => annotation ";"
-   (lambda ($2 $1 . $rest) $1)
-   ;; annotation => "annotation" class-modification
-   (lambda ($2 $1 . $rest) $1)
-   ;; unsigned-number => '$fx
-   (lambda ($1 . $rest) `(unsigned-number ,$1))
-   ;; unsigned-number => '$fl
-   (lambda ($1 . $rest) `(unsigned-number ,$1))
-   ;; ident => '$ident
-   (lambda ($1 . $rest) `(ident ,$1))
-   ;; string => '$string
-   (lambda ($1 . $rest) `(string ,$1))
-   ))
 
 ;;; end tables

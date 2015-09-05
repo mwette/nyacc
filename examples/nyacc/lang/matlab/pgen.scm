@@ -33,7 +33,7 @@
 
 (define matlab-spec
   (lalr-spec
-   (notice lang-crn)
+   (notice lang-crn-lic)
    (start mfile)
    (grammar
     
@@ -247,7 +247,7 @@
 
     (term (#\newline) (";") (","))
     (ident ('$ident ($$ `(ident ,$1))))
-    (number ('$fx ($$ `(fixed ,$1))) ('$fl ($$ `(float ,$1))))
+    (number ('$fixed ($$ `(fixed ,$1))) ('$float ($$ `(float ,$1))))
     (string ('$string ($$ `(string ,$1))))
     (lone-comment ('$lone-comm ($$ `(comm ,$1))))
     ;;(code-comment ('$code-comm ($$ `(comm ,$1))))

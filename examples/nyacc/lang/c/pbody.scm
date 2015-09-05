@@ -222,6 +222,7 @@
 			   (else (cons (assq-ref symtab '$ident) str))))))
 		((read-c-num ch) => assc-$)
 		((read-c-string ch) => assc-$)
+		((read-c-chlit ch) => assc-$)
 		((read-comm ch) =>
 		 (lambda (c) (assc-$ (cons '$code-comm (cdr c)))))
 		;;((and (simple-format #t "chs=>~S\n" (read-chseq ch)) #f))

@@ -5,8 +5,8 @@
 // file COPYING included with the this distribution.
 %token _lone_comm
 %token _string
-%token _fl
-%token _fx
+%token _float
+%token _fixed
 %token _ident
 %token ';'
 %token ChSeq_39_46
@@ -163,8 +163,8 @@ term: '\n' ;
 term: ';' ;
 term: ',' ;
 ident: _ident ;
-number: _fx ;
-number: _fl ;
+number: _fixed ;
+number: _float ;
 string: _string ;
 lone_comment: _lone_comm ;
 

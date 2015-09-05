@@ -7,6 +7,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
+;; needs work -- probably does not work anymore
 
 (use-modules (nyacc lex))
 

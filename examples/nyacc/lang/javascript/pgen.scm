@@ -35,7 +35,7 @@
 
 (define js-spec
   (lalr-spec
-   (notice lang-crn)
+   (notice lang-crn-lic)
    ;;(expect 1)
    (start Program)
    (grammar
@@ -49,7 +49,7 @@
 
     (NullLiteral ("null"))
     (BooleanLiteral ("true") ("false"))
-    (NumericLiteral ('$fx) ('$fl))
+    (NumericLiteral ('$fixed) ('$float))
     (StringLiteral ('$string))
     ;;(DoubleStringCharacters ('$string))
     ;;(SingleStringCharacters ('$string))

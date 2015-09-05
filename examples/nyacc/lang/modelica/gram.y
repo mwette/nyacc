@@ -5,8 +5,8 @@
 // file COPYING included with the this distribution.
 %token _string
 %token _ident
-%token _fl
-%token _fx
+%token _float
+%token _fixed
 %token ANNOTATION
 %token ']'
 %token '['
@@ -443,8 +443,8 @@ string_cat: string_cat '+' string ;
 opt_annotation: %empty ;
 opt_annotation: annotation ';' ;
 annotation: ANNOTATION class_modification ;
-unsigned_number: _fx ;
-unsigned_number: _fl ;
+unsigned_number: _fixed ;
+unsigned_number: _float ;
 ident: _ident ;
 string: _string ;
 

@@ -663,11 +663,15 @@ This is used in specification to indicate the real start
 This is emitted by the lexical analysis to indicate end of input.
 @item $ident
 This is emitted by the lexical analyzer to indicate an identifier.
-@item $fx
+@item $fixed
 This is emitted by the lexical analyzer to indicate an unsigned integer.
-@item $fl
+@item $float
 This is emitted by the lexical analyzer to indicate an unsigned
 floating point number.
+@item $string
+This is emitted by the lexical analyzer to indicate a string.
+@item $ch-lit
+This is emitted by the lexical analyzer to indicate a character constant.
 @item $P1, ...
 Symbols of the form @code{$P1}, @code{$P2},... are as symbols for
 proxy productions (e.g., for mid-rule actions).

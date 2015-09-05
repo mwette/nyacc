@@ -22,7 +22,7 @@
      (expr "-" expr ($$ (- $1 $3)))
      (expr "*" expr ($$ (* $1 $3)))
      (expr "/" expr ($$ (/ $1 $3)))
-     ('$fx ($$ (string->number $1))))
+     ('$fixed ($$ (string->number $1))))
     )))
 
 (define calc-mach (make-lalr-machine calc-spec))

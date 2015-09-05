@@ -1766,8 +1766,8 @@
 ;; @enumerate
 ;; @item the @code{$end} marker
 ;; @item identifiers (using the symbolic token @code{$ident}
-;; @item non-negative integers (using the symbolic token @code{$fx})
-;; @item non-negative floats (using the symbolic token @code{$fl})
+;; @item non-negative integers (using the symbolic token @code{$fixed})
+;; @item non-negative floats (using the symbolic token @code{$float})
 ;; @item @code{$default} => 0
 ;; @end enumerate
 ;; And action

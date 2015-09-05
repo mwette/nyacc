@@ -22,6 +22,7 @@
     (pp-lalr-grammar modelica-spec)
     (pp-lalr-machine modelica-mach)))
 (write-lalr-tables modelica-mach "lang/modelica/tables.scm.new")
+(write-lalr-actions modelica-mach "lang/modelica/actions.scm.new")
 		
 (define res
   (with-input-from-file "lang/modelica/ex1.mo"
