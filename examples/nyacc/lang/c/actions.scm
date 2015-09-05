@@ -1,4 +1,4 @@
-;; lang/c/actions.scm
+;; actions.scm
 
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 

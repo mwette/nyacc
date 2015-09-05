@@ -17,6 +17,7 @@ cpp.scm		C preprocessor
 cppact.scm	cpp expression parser actions
 cpptab.scm	cpp expression parser tables
 
+Tcpp.scm	Run pgen.scm; generates actions.scm.new tables.scm.new
 actions.scm	C parser actions
 tables.scm	C parser tables
 pbody.scm	body of parser
