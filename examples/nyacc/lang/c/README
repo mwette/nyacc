@@ -12,8 +12,14 @@ The following files are also covered by the above copyright and license:
   inc.h
 
 manifest:
+Tcpp.scm	Run cppgen.scm; generates cppact.scm.new cpptab.scm.new
 cpp.scm		C preprocessor
-parser.scm	parser (includes pbody and tables, imports cpp)
+cppact.scm	cpp expression parser actions
+cpptab.scm	cpp expression parser tables
+
+actions.scm	C parser actions
+tables.scm	C parser tables
 pbody.scm	body of parser
-pgen.scm	parser generator (grammar)
-tables.scm	parse tables
+parser.scm	C parser; includes pbody, tables and actions
+pgen.scm	C parser generator; used to generate tables and actions.scm
+

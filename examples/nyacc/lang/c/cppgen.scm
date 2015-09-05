@@ -15,11 +15,10 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; C parser generator: based on ISO-C99; with comments and CPP statements
+;; C preprocessor expression parser generator
 
 (define-module (lang c cppgen)
   #:export (cpp-spec cpp-mach parse-cpp-expr eval-cpp-expr)
-  #:use-module (lang c cpp)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (lang util)
@@ -98,6 +97,7 @@
      (expression-list "," conditional-expression ($$ $3)))
     )))
 
+;;; This is copied to cpp.scm
 (define (eval-cpp-expr tree dict)
   (letrec
       ((tx (lambda (tr ix) (list-ref tr ix)))
@@ -153,23 +153,9 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine cpp-spec))))
-
-(define len-v (assq-ref cpp-mach 'len-v))
-(define pat-v (assq-ref cpp-mach 'pat-v))
-(define rto-v (assq-ref cpp-mach 'rto-v))
 (define mtab (assq-ref cpp-mach 'mtab))
-(define sya-v (vector-map
-               (lambda (ix nrg guts) (wrap-action nrg guts))
-               (assq-ref cpp-mach 'nrg-v) (assq-ref cpp-mach 'act-v)))
-(define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
-
 (define raw-parser (make-lalr-parser cpp-mach))
-
-(define gen-cpp-lexer
-  (make-lexer-generator mtab))
-
-(define (run-parse) (raw-parser (gen-cpp-lexer)))
-
+(define gen-cpp-lexer (make-lexer-generator mtab))
 (define (parse-cpp-expr) (raw-parser (gen-cpp-lexer)))
 
 ;; --- last line

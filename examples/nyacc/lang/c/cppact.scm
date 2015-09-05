@@ -1,4 +1,4 @@
-;; lang/c/cppact.scm
+;; cppact.scm
 
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 

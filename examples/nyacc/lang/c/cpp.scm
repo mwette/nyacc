@@ -15,7 +15,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; C preprocessor (a bit of a hack for now)
+;; C preprocessor.  This is not complete.
 
 (define-module (lang c cpp)
   #:export (parse-cpp-line
@@ -23,126 +23,33 @@
 	    ;;
 	    n-parse-cpp-expr
 	    )
+  #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (lang util)
+  #:use-module (lang util)
+  #:use-module (rnrs arithmetic bitwise)
   )
-
-(define (fmterr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
 
 #|
   #define  #undef  #include  #if  #ifdef  #ifndef  #else  #endif  #elif
   #line  defined  #-operator  ##-operator  #pragma  #error
+
 strategy:
   don't expand macro calls -- treat like function calls, but provide dict
-  if ifdef args not defined hmmm -- for now make sure they are
-     ... need script to get #defines from cc
+todo:
+  pragma
+  #-op ##-op
   provide dict of #defines
-provide util to exapnd
+  provide util to expand defines
 |#
 
+;;.@item skip-ws ch
+;; Helper for 
 (define (skip-ws ch)
   (if (eof-object? ch) ch
       (if (char-set-contains? c:ws ch)
 	  (skip-ws (read-char))
 	  ch)))
-
-;; grammar:
-;;   expr   => equal | expr == equal
-;;   equal  => term | equal "||" term
-;;   term   => factor | term "&&" factor
-;;   factor => "defined" "(" ident ")" | const
-;; TO
-;;   expr => equal expr'
-;;   expr' => == equal | $eps
-;;   equal => term equal'
-;;   equal' => || term | $eps
-;;   term => factor term'
-;;   term' => && factor | $eps
-;;   factor => defined | const
-;; TODO:
-;;   factor => ident "(" ident-list ")"
-(define (parse-cpp-expr)
-  ;; defined(X) && defined(Y) ...
-  (letrec
-      ((next-ch
-	(lambda () (skip-ws (read-char))))
-       (p-expr
-	(lambda (la)
-	  ;;(simple-format #t "p-expr ~S\n" la)
-	  (let* ((equal (p-eqexp la)) (la1 (next-ch))
-		 (expr1 (if (eof-object? la1) #f (p-expr1 la1))))
-	    ;;(simple-format #t "p-expr la=~S\n" la)
-	    (if expr1 (cons equal expr1) equal))))
-       (p-expr1
-	(lambda (la)
-	  ;;(simple-format #t "p-expr1 ~S\n" la)
-	  #f))
-       (p-eqexp
-	(lambda (la)
-	  (let* ((term (p-term la)) (la1 (if term (next-ch) la))
-		 (equal1 (if (eof-object? la1) #f (p-eqexp1 la1))))
-	    ;;(simple-format #t "p-equal la=~S\n" la)
-	    (if equal1 (cons term equal1) term))))
-       (p-eqexp1
-	(lambda (la)
-	  #f))
-       (p-term
-	(lambda (la)
-	  (let* ((factor (p-factor la)) (la1 (if factor (next-ch) la))
-		 (term1 (if (eof-object? la1) #f (p-term1 la1))))
-	    ;;(simple-format #t "p-term la=~S factor=~S\n" la factor)
-	    (if term1 (cons factor term1) factor))))
-       (p-term1
-	(lambda (la)
-	  #f))
-       (p-factor
-	(lambda (la)
-	  ;;(simple-format #t "p-factor ~S\n" la)
-	  (cond
-	   ((p-cnst la))
-	   ((p-defd la))
-	   ((read-c-ident la) => (lambda (id) `(ident ,id)))
-	   (else #f))))
-       (p-defd		    ; "defined(IDENT)" => '(defined_p "IDENT")
- 	(let ((rd-defd (make-chseq-reader '(("defined" . defined_p)))))
-	  (lambda (la)
-	    (and
-	     (rd-defd la)
-	     (eq? (read-char) #\()
-	     (let ((ident (read-c-ident (read-char))))
-	       (and (eq? (read-char) #\))
-		    `(defined_p ,ident)))))))
-       (p-cnst
-	(lambda (la)
-	  ;;(simple-format #t "p-cnst ~S\n" la)
-	  (let ((num (read-c-num la)))
-	    (if num `(num ,(cdr (read-c-num la))) #f))))
-       )
-    (p-expr (read-char))))
-
-;; @item eval-cpp-expr tree dict => value
-;; evaluate a CPP expression
-(define (eval-cpp-expr tree dict)
-  (let* ()
-    (case (car tree)
-      ((num)
-       (string->number (cadr tree)))
-      ((ident) ;; ref
-       (let* ((repl (assoc-ref dict (cadr tree))) ; replacement
-	      (tree1 (and repl (with-input-from-string repl parse-cpp-expr)))
-	      (value (and tree1 (eval-cpp-expr tree1 dict))))
-	 ;; returns value of #f if not ident not defined
-	 value))
-      ((not)
-       (let ((arg (eval-cpp-expr (cadr tree) dict)))
-	 (if (eq? arg #f) #f
-	     (if (zero? arg) 1 0))))
-      ((defined_p)
-       (let ((ident (cadr tree)))
-	 (if (assoc-ref dict ident) 1 0)))
-      (else #f))))
-
 ;; @item cpp-define => #f|???
 (define (cpp-define)
   ;; The (broken) parse architecture is "unread la argument if no match"
@@ -173,6 +80,8 @@ provide util to exapnd
 		(else #f)))))
     (p-cppd)))
 
+;; @item cpp-include
+;; Parse CPP include statement.
 (define (cpp-include)
   (let* ((beg-ch (skip-ws (read-char)))
 	 (end-ch (if (eq? beg-ch #\<) #\> #\"))
@@ -181,21 +90,99 @@ provide util to exapnd
 		     (iter (cons ch cl) (read-char))))))
     `(include ,path)))
 
+;; @item parse-cpp-line line => tree
+;; Parse a line from a CPP statement and return a parse tree.
+;; @example
+;; (parse-cpp-line "define X 123") => (define "X" "123")
+;; @end example
 (define (parse-cpp-line line)
   (with-input-from-string line
     (lambda ()
       (let ((cmd (string->symbol (read-c-ident (skip-ws (read-char)))))
-	    (rd-ident (lambda () (read-c-ident (skip-ws (read-char))))))
-	(cons
-	 'cpp-stmt
+	    (rd-ident (lambda () (read-c-ident (skip-ws (read-char)))))
+	    (rd-num (lambda () (read-c-num (skip-ws (read-char)))))
+	    (rd-str (lambda () (read-c-string (skip-ws (read-char))))))
 	 (case cmd
 	   ((include) (cpp-include))
-	   ((ifdef) `(if (defined_p ,(rd-ident))))
-	   ((ifndef) `(if (not (defined_p ,(rd-ident)))))
+	   ((ifdef) `(if (defined ,(rd-ident))))
+	   ((ifndef) `(if (not (defined ,(rd-ident)))))
 	   ((define) (cpp-define))
-	   ((if elseif) (list cmd (parse-cpp-expr)))
+	   ((if elif) (list cmd (parse-cpp-expr)))
 	   ((else endif) (list cmd))
-	   (else '())))))))
+	   ((undef) `(undef ,(rd-ident)))
+	   ((line) `(line ,(rd-num)))
+	   ((error) `(error ,(rd-str)))
+	   ;;((pragma) (cpp-define)) ; ???
+	   (else '()))))))
     
+(include "cpptab.scm")
+(include "cppact.scm")
+(define raw-parser
+  (make-lalr-parser
+   (list
+    (cons 'len-v len-v)
+    (cons 'pat-v pat-v)
+    (cons 'rto-v rto-v)
+    (cons 'mtab mtab)
+    (cons 'act-v act-v))))
+(define gen-cpp-lexer (make-lexer-generator mtab))
+
+;; @item parse-cpp-expr => 
+;; A thunk that reads from default input and returns a parse tree.
+(define (parse-cpp-expr) (raw-parser (gen-cpp-lexer)))
+
+;; @item eval-cpp-expr tree dict => value
+;; Evaluate a CPP expression tree returned from @code{parse-cpp-expr}.
+(define (eval-cpp-expr tree dict)
+  (letrec
+      ((tx (lambda (tr ix) (list-ref tr ix)))
+       (tx1 (lambda (tr) (tx tr 1)))
+       (ev (lambda (ex ix) (eval-expr (list-ref ex ix))))
+       (ev1 (lambda (ex) (ev ex 1)))
+       (ev2 (lambda (ex) (ev ex 2)))
+       (ev3 (lambda (ex) (ev ex 3)))
+       (parse-and-eval
+	(lambda (str)
+	  (if (not (string? str)) (throw 'error))
+	  (let ((idtr (with-input-from-string str parse-cpp-expr)))
+	    (eval-cpp-expr idtr dict))))
+       (eval-expr
+	(lambda (tree)
+	  (case (car tree)
+	    ((ident) (parse-and-eval (assoc-ref dict (tx1 tree))))
+	    ((fixed) (string->number (tx1 tree)))
+	    ((char) (char->integer (tx1 tree)))
+	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
+	    ;;
+	    ((pre-inc post-inc) (1+ (ev1 tree)))
+	    ((pre-dec post-dec) (1- (ev1 tree)))
+	    ((pos) (ev1 tree))
+	    ((neg) (- (ev1 tree)))
+	    ((bw-not) (bitwise-not (ev1 tree)))
+	    ((not) (if (zero? (ev1 tree)) 1 0))
+	    ((mul) (* (ev1 tree) (ev2 tree)))
+	    ((div) (/ (ev1 tree) (ev2 tree)))
+	    ((mod) (modulo (ev1 tree) (ev2 tree)))
+	    ((add) (+ (ev1 tree) (ev2 tree)))
+	    ((sub) (- (ev1 tree) (ev2 tree)))
+	    ((lshift) (bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
+	    ((rshift) (bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
+	    ((lt) (if (< (ev1 tree) (ev2 tree)) 1 0))
+	    ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
+	    ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
+	    ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
+	    ((equal) (if (= (ev1 tree) (ev2 tree)) 1 0))
+	    ((noteq) (if (= (ev1 tree) (ev2 tree)) 0 1))
+	    ((bw-or) (bitwise-ior (ev1 tree) (ev2 tree)))
+	    ((bw-xor) (bitwise-xor (ev1 tree) (ev2 tree)))
+	    ((bw-and) (bitwise-and (ev1 tree) (ev2 tree)))
+	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
+	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
+	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
+	    (else (error "incomplete implementation"))))))
+    (catch 'error
+	   (lambda () (eval-expr tree))
+	   (lambda () #f))))
+
 ;; mode: scheme ***
-;; --- last line
+;; --- last line ---

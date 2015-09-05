@@ -1,4 +1,4 @@
-;; lang/c/cpptab.scm
+;; cpptab.scm
 
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 
