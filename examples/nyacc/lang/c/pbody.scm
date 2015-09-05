@@ -167,7 +167,7 @@
       
 	  (define (add-define tree)
 	    (let* ((tail (cdr tree))
-		   (name (string->symbol (car (assq-ref tail 'name))))
+		   (name (car (assq-ref tail 'name)))
 		   (args (assq-ref tail 'args))
 		   (repl (car (assq-ref tail 'repl)))
 		   (cell (cons name (if args (cons args repl) repl))))

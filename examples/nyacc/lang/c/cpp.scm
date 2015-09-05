@@ -139,8 +139,8 @@ provide util to exapnd
 	 (if (eq? arg #f) #f
 	     (if (zero? arg) 1 0))))
       ((defined_p)
-       (let ((ident (string->symbol (cadr tree))))
-	 (if (assq-ref dict ident) 1 0)))
+       (let ((ident (cadr tree)))
+	 (if (assoc-ref dict ident) 1 0)))
       (else #f))))
 
 ;; @item cpp-define => #f|???

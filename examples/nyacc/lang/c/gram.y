@@ -7,9 +7,9 @@
 %token _lone_comm
 %token _code_comm
 %token _string
-%token _ch
-%token _fl
-%token _fx
+%token _ch_lit
+%token _float
+%token _fixed
 %token cpp_ident
 %token _ident
 %token GOTO
@@ -437,9 +437,9 @@ opt_code_comment: %empty ;
 opt_code_comment: code_comment ;
 identifier: _ident ;
 identifier: cpp_ident ;
-constant: _fx ;
-constant: _fl ;
-constant: _ch ;
+constant: _fixed ;
+constant: _float ;
+constant: _ch_lit ;
 constant: _string ;
 code_comment: _code_comm ;
 lone_comment: _lone_comm ;

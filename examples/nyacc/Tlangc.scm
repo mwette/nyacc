@@ -24,7 +24,7 @@
 (write-lalr-tables clang-mach "lang/c/tables.scm.new")
 (write-lalr-actions clang-mach "lang/c/actions.scm.new")
 
-(define defs '((arch . "x86_64")))
+(define defs '(("arch" . "x86_64")))
 (define incs '("." "lang/c"))
 
 (let ((sx (with-input-from-file "lang/c/ex1.c"
