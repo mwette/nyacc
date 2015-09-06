@@ -51,10 +51,17 @@
 
 ;; @item parse-c [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:debug bool] \
 ;;               [#:mode ('code|'file)]
-(define* (parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'code) debug)
-  (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
-    (with-fluid*
-	*info* info
-	(lambda () (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
+(define* (parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'file) debug)
+  (catch
+   'parse-failed
+   (lambda ()
+     (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
+       (with-fluid*
+	   *info* info
+	   (lambda ()
+	     (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
+   (lambda ()
+     (fmterr "parse failed")
+     #f)))
 
 ;; --- last line

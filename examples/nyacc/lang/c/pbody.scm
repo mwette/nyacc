@@ -160,7 +160,7 @@
 	 (xp2 (sxpath '(decl))))
     (lambda* (#:key (mode 'code))      ; modes are 'code or 'file
       (let ((bol #t)		       ; begin-of-line condition
-	    (skip (list #f))	       ; CPP skip-input stack
+	    (skip (list 'keep))	       ; CPP skip-input stack
 	    (info (fluid-ref *info*))) ; assume make and run in same thread
 	;; Return the first (tval lval) pair not excluded by the CPP.
 	(lambda ()
@@ -190,18 +190,27 @@
 		 (add-define stmt))
 		((if)
 		 (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
+		   (simple-format #t "val=~S\n" val)
 		   (cond ((not val)
 			  (fmterr "*** unresolved: ~S" (cadr stmt)))
-			 ((zero? val) (set! skip (cons #t skip)))
-			 (else (set! skip (cons #f skip))))))
+			 ((zero? val) (set! skip (cons 'skip skip)))
+			 (else (set! skip (cons 'keep skip))))))
 		((elif)
-		 ;; This may be tough.
-		 (error "unhandled cpp stmt"))
+		 (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
+		   (cond ((not val)
+			  (fmterr "*** unresolved: ~S" (cadr stmt)))
+			 ((zero? val) (set! skip (cons 'skip skip)))
+			 (else (set! skip (cons 'keep skip)))))
+		 (error "not finished"))
 		((else)
 		 ;; invert
-		 (set! skip (cons (not (car skip)) (cdr skip))))
+		 (set! skip (cons (case (car skip)
+				    ((keep) 'skip)
+				    ((skip) 'keep)
+				    (else (error "BAD CODE")))
+				  (cdr skip))))
 		((endif)
-		 (set! skip (cons 'd skip)))
+		 (set! skip (cons 'delay skip)))
 		(else
 		 (error "unhandled cpp stmt"))
 		)
@@ -242,12 +251,21 @@
 
 	  ;; Loop between reading tokens and skipping tokens.
 	  ;; The use of "delayed pop" is not clean IMO.  Cleaner way?
-	  (let loop ((pair (read-token)))
-	    (case (car skip)
-	      ((#f) pair)
-	      ((#t) (loop (read-token)))
-	      ((d) (let ((fl (cadr skip))) ;; d for endif: delayed pop
-		     (set! skip (cddr skip))
-		     (if fl (loop (read-token)) pair))))))))))
+	  (case mode
+	    ((code file)
+	     (let loop ((pair (read-token)))
+	       (case (car skip)
+		 ((keep) pair)
+		 ((skip skip-all)
+		  (simple-format #t "skip ~S\n" pair)
+		  (loop (read-token)))
+		 ((delay)
+		  (let ((fl (cadr skip)))
+		    (set! skip (cddr skip))
+		    (if (eq? fl 'skip) (loop (read-token)) pair))))))
+	    ((x-file)
+	     (read-token))
+	    (else (error "CODING ERROR")))
+	  )))))
 
 ;; --- last line
