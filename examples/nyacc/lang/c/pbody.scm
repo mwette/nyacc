@@ -158,7 +158,7 @@
 	 (t-typename (assq-ref symtab 'typename))
 	 (xp1 (sxpath '(cpp-stmt define)))
 	 (xp2 (sxpath '(decl))))
-    (lambda ()
+    (lambda* (#:key (mode 'code))      ; modes are 'code or 'file
       (let ((bol #t)		       ; begin-of-line condition
 	    (skip (list #f))	       ; CPP skip-input stack
 	    (info (fluid-ref *info*))) ; assume make and run in same thread
@@ -194,8 +194,17 @@
 			  (fmterr "*** unresolved: ~S" (cadr stmt)))
 			 ((zero? val) (set! skip (cons #t skip)))
 			 (else (set! skip (cons #f skip))))))
+		((elif)
+		 ;; This may be tough.
+		 (error "unhandled cpp stmt"))
+		((else)
+		 ;; invert
+		 (set! skip (cons (not (car skip)) (cdr skip))))
 		((endif)
-		 (set! skip (cons 'd skip))))
+		 (set! skip (cons 'd skip)))
+		(else
+		 (error "unhandled cpp stmt"))
+		)
 	      (cons 'cpp-stmt stmt)))
 	  
 	  (define (read-token)

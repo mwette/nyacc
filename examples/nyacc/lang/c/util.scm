@@ -19,7 +19,9 @@
 
 (define-module (lang c util)
   #:export (remove-inc-trees merge-inc-trees)
-  #:use-module (lang util))
+  #:use-module (lang util)
+  #:use-module ((srfi srfi-1) #:select (append-reverse))
+)
 
 ;; @item remove-inc-trees tree
 ;; Remove the trees included with cpp-include statements.
@@ -48,7 +50,7 @@
 ;; @end example
 (define (Xmerge-inc-trees tree)
   (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
-  (let iter ((rslt (make-tl trans-unit))
+  (let iter ((rslt (make-tl 'trans-unit))
 	     (tree (cdr tree)))
     (cond
      ((null? tree) (tl->list rslt))
@@ -56,7 +58,7 @@
       (iter (tl-extend rslt (cdr (merge-inc-trees (cdddar tree)))) (cdr tree)))
      (else (iter (tl-append rslt (car tree)) (cdr tree))))))
 
-(define (merge-inc-trees tree)
+#;(define (merge-inc-trees tree)
   (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
   (let iter ((head '(trans-unit))
 	     (prev '())

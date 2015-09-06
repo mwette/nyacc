@@ -19,8 +19,11 @@
 
 ;; usage: cxp -Ilang/c lang/c/ex1.c
 
+(add-to-load-path (getcwd))
+(add-to-load-path (string-append (getcwd) "/../../module"))
+
 (use-modules (ice-9 pretty-print))
-(use-modules (lang c pgen))
+(use-modules (lang c parser))
 
 (define (scan-for-flagged flag argl)
   (let iter ((res '()) (argl argl))
@@ -48,7 +51,7 @@
   (for-each
    (lambda (file)
      (let ((tree (with-input-from-file file
-		   (lambda () (parse-c #:incs incs #:defs defs)))))
+		   (lambda () (parse-c #:cpp-defs defs #:inc-dirs incs)))))
        (simple-format #t "~A:\n" file)
        (pretty-print tree)))
    files)

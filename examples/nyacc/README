@@ -12,7 +12,7 @@ lang
   See lang/README.
 
 usage
-  $ guile Tlangc.scm
+  $ ./cxp -Ilang/c lang/c/ex1.c
   $ guile Tlangm.scm
   $ guile Tlangmo.scm
 
