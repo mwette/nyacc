@@ -44,59 +44,59 @@
    (start translation-unit-proxy)
    (grammar
 
-    (translation-unit-proxy (translation-unit ($$ (tl->list $1))))
+    (translation-unit-proxy (translation-unit ($$/ref 's0-1 (tl->list $1))))
 
     ;; 4.1, p 74
     (declaration
      (declaration-specifiers
       initialized-declarator-list
-      ($$ (save-typenames `(decl ,(tl->list $1) ,(tl->list $2))))
+      ($$/ref 's4.1-01 (save-typenames `(decl ,(tl->list $1) ,(tl->list $2))))
       ";" opt-code-comment
-      ($$ (if (pair? $5) (append $3 (list $5)) $3)))
+      ($$/ref 's4.1-02 (if (pair? $5) (append $3 (list $5)) $3)))
      )
 
     ;; At most one storage class specifier and one type specifier may appear.
     (declaration-specifiers
      ;; storage-class-specifier declaration-specifiers_opt
      (storage-class-specifier
-      ($$ (make-tl 'decl-spec-list $1)))
+      ($$/ref 's4.1-03 (make-tl 'decl-spec-list $1)))
      (storage-class-specifier declaration-specifiers
-			      ($$ (tl-insert $2 $1)))
+			      ($$/ref 's4.1-04 (tl-insert $2 $1)))
      ;; type-specifier declaration-specifiers_opt
      (type-specifier
-      ($$ (make-tl 'decl-spec-list $1)))
+      ($$/ref 's4.1-04 (make-tl 'decl-spec-list $1)))
      (type-specifier declaration-specifiers
-		     ($$ (tl-insert $2 $1)))
+		     ($$/ref 's4.1-05 (tl-insert $2 $1)))
      ;; type-qualifier declaration-specifiers_opt
      (type-qualifier
-      ($$ (make-tl 'decl-spec-list $1)))
+      ($$/ref 's4.1-06 (make-tl 'decl-spec-list $1)))
      (type-qualifier declaration-specifiers
-		     ($$ (tl-insert $2 $1)))
+		     ($$/ref 's4.1-07 (tl-insert $2 $1)))
      ;; function-specifier declaration-specifiers_opt
      (function-specifier
-      ($$ (make-tl 'decl-spec-list `(fctn-spec ,$1))))
+      ($$/ref 's4.1-08 (make-tl 'decl-spec-list `(fctn-spec ,$1))))
      (function-specifier declaration-specifiers
-			 ($$ (tl-insert $2 `(fctn-spec ,$1))))
+			 ($$/ref 's4.1-09 (tl-insert $2 `(fctn-spec ,$1))))
      )
     
     (initialized-declarator-list
-     (initialized-declarator ($$ (make-tl 'init-declr-list $1)))
+     (initialized-declarator ($$/ref 's4.1-09 (make-tl 'init-declr-list $1)))
      (initialized-declarator-list "," initialized-declarator
-				  ($$ (tl-append $1 $3)))
+				  ($$/ref 's4.1-10 (tl-append $1 $3)))
      )
 
     (initialized-declarator
-     (declarator ($$ `(init-declr ,$1)))
-     (declarator "=" initializer ($$ `(init-declr ,$1 ,$3)))
+     (declarator ($$/ref 's4.1-11 `(init-declr ,$1)))
+     (declarator "=" initializer ($$/ref 's4.1-12 `(init-declr ,$1 ,$3)))
      )
 
     ;; 4.3, p 83
     (storage-class-specifier
-     ("auto" ($$ '(stor-spec (auto))))
-     ("extern" ($$ '(stor-spec (extern))))
-     ("register" ($$ '(stor-spec (register))))
-     ("static" ($$ '(stor-spec (static))))
-     ("typedef" ($$ '(stor-spec (typedef))))
+     ("auto" ($$/ref 's4.3-01 '(stor-spec (auto))))
+     ("extern" ($$/ref 's4.3-02 '(stor-spec (extern))))
+     ("register" ($$/ref 's4.3-03 '(stor-spec (register))))
+     ("static" ($$/ref 's4.3-04 '(stor-spec (static))))
+     ("typedef" ($$/ref 's4.3-05 '(stor-spec (typedef))))
      )
 
     ;; 4.3.3, p 86
@@ -940,8 +940,14 @@
 (define (run-parse) (raw-parser (gen-c-lexer)))
 
 (define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()) debug)
-  (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
-    (with-fluid* *info* info
-		 (lambda () (raw-parser (gen-c-lexer) #:debug debug)))))
+  (catch
+   'parse-error
+   (lambda ()
+     (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
+       (with-fluid* *info* info
+		    (lambda () (raw-parser (gen-c-lexer) #:debug debug)))))
+   (lambda (key fmt . rest)
+     (apply simple-format (current-error-port) fmt rest)
+     #f)))
 
 ;; --- last line

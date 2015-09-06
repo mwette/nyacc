@@ -181,7 +181,10 @@
 		 (let* ((parg (cadr stmt)) (leng (string-length parg))
 			(file (substring parg 1 (1- leng)))
 			(path (find-file-in-dirl file (cpi-incs info)))
-			(tree (with-input-from-file path run-parse)))
+			(tree
+			 (if path
+			     (with-input-from-file path run-parse)
+			     (throw 'parse-error "file not found: ~S" file))))
 		   (for-each add-define (xp1 tree)) ; add def's 
 		   ;; Attach tree onto "include" statement: -- clean this up
 		   (set! stmt (append stmt (list tree)))
@@ -257,7 +260,7 @@
 	       (case (car skip)
 		 ((keep) pair)
 		 ((skip skip-all)
-		  (simple-format #t "skip ~S\n" pair)
+		  ;;(simple-format #t "skip ~S\n" pair)
 		  (loop (read-token)))
 		 ((delay)
 		  (let ((fl (cadr skip)))

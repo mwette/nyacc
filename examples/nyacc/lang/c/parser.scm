@@ -53,15 +53,15 @@
 ;;               [#:mode ('code|'file)]
 (define* (parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'file) debug)
   (catch
-   'parse-failed
+   'parse-error
    (lambda ()
      (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
        (with-fluid*
 	   *info* info
 	   (lambda ()
 	     (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
-   (lambda ()
-     (fmterr "parse failed")
+   (lambda (key fmt . rest)
+     (apply simple-format (current-error-port) fmt rest)
      #f)))
 
 ;; --- last line
