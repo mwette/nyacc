@@ -30,7 +30,7 @@
   (let* ((cpi (make-cpi-1)))
     (set-cpi-defs! cpi (if defines defines '()))
     (set-cpi-incs! cpi (if incdirs incdirs '()))
-    (set-cpi-tyns! cpi '())
+    (set-cpi-tyns! cpi (cons '() '()))
     (set-cpi-tdls! cpi '())
     cpi))
 
@@ -40,14 +40,21 @@
 ;; Called by lexer to determine if symbol is a typename.
 (define (typename? name)
   (let ((info (fluid-ref *info*)))
-    (memq name (cpi-tyns info))))
+    (let iter ((tyns (cpi-tyns info)))
+      (if (null? tyns) #f
+	  (if (member name (car tyns))
+	      #t
+	      (iter (cdr tyns)))))))
 
 ;; @item add-typename name
 ;; Helper for @code{save-typenames}.
 (define (add-typename name)
   ;;(simple-format #t "add-typename: ~S\n" name)
-  (let ((info (fluid-ref *info*)))
-    (set-cpi-tyns! info (cons (string->symbol name) (cpi-tyns info)))))
+  (let* ((info (fluid-ref *info*))
+	 (tyns (cpi-tyns info)))
+    (if (not (typename? name))
+	(set-cpi-tyns! info
+		       (cons (cons name (car tyns)) (cdr tyns))))))
 
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
