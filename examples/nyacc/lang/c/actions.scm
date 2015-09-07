@@ -130,17 +130,17 @@
      `(array-of ,$1 "*???"))
    ;; array-qualifier-list => array-qualifier
    (lambda ($1 . $rest)
-     (make-tl 'array-qual-list (list $1)))
+     (make-tl 'array-qual-list $1))
    ;; array-qualifier-list => array-qualifier-list array-qualifier
-   (lambda ($2 $1 . $rest) (tl-append $1 (list $2)))
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; array-qualifier => "static"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) '(static))
    ;; array-qualifier => "restrict"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) '(restrict))
    ;; array-qualifier => "const"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) '(const))
    ;; array-qualifier => "volatile"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) '(volatile))
    ;; array-size-expression => assignment-expression
    (lambda ($1 . $rest) $1)
    ;; function-declarator => direct-declarator "(" parameter-type-list ")"
@@ -191,7 +191,7 @@
    (lambda ($4 $3 $2 $1 . $rest)
      (tl-append $1 $3 $4))
    ;; designation => designator-list "="
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(desig ,$1))
    ;; designator-list => designator
    (lambda ($1 . $rest) (make-tl 'desgr-list $1))
    ;; designator-list => designator-list designator
@@ -245,52 +245,57 @@
      '(fixed "signed long long int"))
    ;; unsigned-type-specifier => "unsigned" "short" "int"
    (lambda ($3 $2 $1 . $rest)
-     '(fixed "unsigned short int"))
+     '(fixed-type "unsigned short int"))
    ;; unsigned-type-specifier => "unsigned" "short"
    (lambda ($2 $1 . $rest)
-     '(fixed "unsigned short"))
+     '(fixed-type "unsigned short"))
    ;; unsigned-type-specifier => "unsigned" "int"
-   (lambda ($2 $1 . $rest) '(fixed "unsigned int"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "unsigned int"))
    ;; unsigned-type-specifier => "unsigned"
-   (lambda ($1 . $rest) '(fixed "unsigned"))
+   (lambda ($1 . $rest) '(fixed-type "unsigned"))
    ;; unsigned-type-specifier => "unsigned" "long" "int"
    (lambda ($3 $2 $1 . $rest)
-     '(fixed "unsigned long"))
+     '(fixed-type "unsigned long"))
    ;; unsigned-type-specifier => "unsigned" "long"
-   (lambda ($2 $1 . $rest) '(fixed "unsigned long"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "unsigned long"))
    ;; unsigned-type-specifier => "unsigned" "long" "long" "int"
    (lambda ($4 $3 $2 $1 . $rest)
-     '(fixed "unsigned long long int"))
+     '(fixed-type "unsigned long long int"))
    ;; unsigned-type-specifier => "unsigned" "long" "long"
    (lambda ($3 $2 $1 . $rest)
-     '(fixed "unsigned long long"))
+     '(fixed-type "unsigned long long"))
    ;; character-type-specifier => "char"
-   (lambda ($1 . $rest) '(fixed "char"))
+   (lambda ($1 . $rest) '(fixed-type "char"))
    ;; character-type-specifier => "signed" "char"
-   (lambda ($2 $1 . $rest) '(fixed "signed char"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed char"))
    ;; character-type-specifier => "unsigned" "char"
-   (lambda ($2 $1 . $rest) '(fixed "unsigned char"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "unsigned char"))
    ;; bool-type-specifier => "_Bool"
-   (lambda ($1 . $rest) '(fixed "_Bool"))
+   (lambda ($1 . $rest) '(fixed-type "_Bool"))
    ;; floating-point-type-specifier => "float"
-   (lambda ($1 . $rest) '(float "float"))
+   (lambda ($1 . $rest) '(float-type "float"))
    ;; floating-point-type-specifier => "double"
-   (lambda ($1 . $rest) '(float "double"))
+   (lambda ($1 . $rest) '(float-type "double"))
    ;; floating-point-type-specifier => "long" "double"
-   (lambda ($2 $1 . $rest) '(float "long double"))
+   (lambda ($2 $1 . $rest)
+     '(float-type "long double"))
    ;; floating-point-type-specifier => complex-type-specifier
    (lambda ($1 . $rest) $1)
    ;; complex-type-specifier => "_Complex"
-   (lambda ($1 . $rest) '(complex "_Complex"))
+   (lambda ($1 . $rest) '(complex-type "_Complex"))
    ;; complex-type-specifier => "float" "_Complex"
    (lambda ($2 $1 . $rest)
-     '(complex "float _Complex"))
+     '(complex-type "float _Complex"))
    ;; complex-type-specifier => "double" "_Complex"
    (lambda ($2 $1 . $rest)
-     '(complex "double _Complex"))
+     '(complex-type "double _Complex"))
    ;; complex-type-specifier => "long" "double" "_Complex"
    (lambda ($3 $2 $1 . $rest)
-     '(complex "long double _Complex"))
+     '(complex-type "long double _Complex"))
    ;; enumeration-type-specifier => enumeration-type-definition
    (lambda ($1 . $rest) $1)
    ;; enumeration-type-specifier => enumeration-type-reference

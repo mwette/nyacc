@@ -120,9 +120,10 @@
 		 ((_ ($$ <guts> ...) <e2> ...)
 		  #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
 		 ((_ ($$-ref <ref>) <e2> ...)
-		  #'(cons '(action #f '<ref> #f) (parse-rhs <e2> ...)))
+		  ;;#'(cons '(action #f <ref> #f) (parse-rhs <e2> ...)))
+		  #'(cons `(action #f ,<ref> . #f) (parse-rhs <e2> ...)))
 		 ((_ ($$/ref <ref> <guts> ...) <e2> ...)
-		  #'(cons '(action #f <ref> <guts> ...) (parse-rhs <e2> ...)))
+		  #'(cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...)))
 
 		 ;; other internal $-syntax
 		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
@@ -232,7 +233,7 @@
 (define (process-spec tree)
 
   ;; Make a new symbol. This is a helper for proxies and mid-rule-actions.
-  ;; The counter here is the one item in @code{process-spec} that is redefined.
+  ;; The counter here is the only @code{set!} in @code{process-spec}.
   ;; Otherwise, I believe @code{process-spec} is referentially transparent.
   (define maksy
     (let ((cntr 1))
@@ -269,14 +270,16 @@
   (define (make-mra-proxy sy pel act)
     (list sy (list (cons* 'action (length pel) (cdr act)))))
 
-  ;; fatal: symbol used as terminal and non-terminal
+  ;; @item gram-check-2 tl nl err-l
+  ;; Check for fatal: symbol used as terminal and non-terminal.
   (define (gram-check-2 tl nl err-l)
     (let ((cf (lset-intersection eqv? (map atomize tl) nl)))
       (if (pair? cf)
 	  (cons (fmtstr "*** symbol is terminal and non-terminal: ~S" cf)
 		err-l) err-l)))
 	       
-  ;; fatal: non-terminal's w/o production rule		  
+  ;; @item gram-check-3 ll nl err-l
+  ;; Check for fatal: non-terminal's w/o production rule.
   (define (gram-check-3 ll nl err-l)
     (fold
      (lambda (n l)
@@ -285,7 +288,8 @@
 	   l))
      err-l nl))
 
-  ;; warning: unused LHS
+  ;; @item gram-check-4 ll nl err-l
+  ;; Check for warning: unused LHS.
   ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
   (define (gram-check-4 ll nl err-l)
     (fold
@@ -299,7 +303,7 @@
 		     ull (cons (car all) ull))
 		 (cdr all))))))
 	       
-  ;; warning: duplicate terminals under atomize (e.g., 'foo "foo")
+  ;; Check for warning: duplicate terminals under atomize (e.g., 'foo "foo").
   (define (gram-check-5 terminals prev-errs)
     (let ((f "warning: similar terminals: ~A ~A"))
       (let iter ((errs prev-errs) (head '()) (tail terminals))
@@ -315,7 +319,7 @@
 	 (start-rule (lambda () (list start-symbol)))
 	 (add-el (lambda (e l) (if (memq e l) l (cons e l))))
 	 (pna (prec-n-assc tree)))
-    ;; Sweep through the grammar to generate a canonical specification.
+    ;; We sweep through the grammar to generate a canonical specification.
     ;; Note: the local rhs is used to hold RHS terms, but a
     ;; value of @code{'()} is used to signal "add rule", and a value of
     ;; @code{#f} is used to signal ``done, proceed to next rule.''
@@ -348,7 +352,7 @@
 	   (iter ll rl al xl tl (add-el (cdar rhs) nl) zl head prox lhs tail
 		 rhs-l act (cons (cdar rhs) pel) (cdr rhs)))
 	  ((action)
-	   (if (pair? (cdr rhs)) ;; not last elemnt in RHS
+	   (if (pair? (cdr rhs))
 	       ;; mid-rule action: generate a proxy (car act is # args)
 	       (let* ((sy (maksy))
 		      (pr (make-mra-proxy sy pel (cdar rhs))))
@@ -378,12 +382,16 @@
 
        ((null? rhs)
 	;; End of RHS items for current rule.
+	;;   mid-rule-action: (narg ref code)
+	;;   end-rule-action: (#f ref code)
+	;;(simple-format #t "lhs=~S  ln=~A\n  act=~S\n" lhs (length pel) act)
 	(let* ((ln (length pel))
 	       (r1 (reverse pel))
-	       (a1 (cond ((and act (car act)) act) ; mid rule action
-			 (act (cons ln (cdr act))) ; standard act
-			 ((null? pel) (list 0 #f '(list))) ; def act w/ 0 RHS
-			 (else (list ln #f '$1))))) ; def act w/ 1+ RHS
+	       (nrg (if act (or (car act) ln) ln))  ; number of args
+	       (ref (if act (cadr act) #f))
+	       (a1 (if (and act (cddr act)) (cons* nrg ref (cddr act))
+		       (list nrg ref (if (zero? nrg) '(list) '$1)))))
+	  ;;(simple-format #t "    =>~S\n" a1)
 	  (iter (cons lhs ll) (cons r1 rl) (cons a1 al)
 		(cons ln xl) tl nl zl head prox lhs tail rhs-l act pel #f)))
 

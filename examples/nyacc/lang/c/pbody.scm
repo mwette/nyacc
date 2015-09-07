@@ -23,6 +23,11 @@
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
   (typnams cpi-tyns set-cpi-tyns!)	; typedef names
+  ;;
+  (ptns cpi-ptns set-cpi-ptns!)		; parent typenames
+  (ctns cpi-stns set-cpi-stns!)		; sibling typenames
+  (ptns cpi-ctns set-cpi-ctns!)		; current typenames
+  ;;
   (typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
   )
 
@@ -30,31 +35,58 @@
   (let* ((cpi (make-cpi-1)))
     (set-cpi-defs! cpi (if defines defines '()))
     (set-cpi-incs! cpi (if incdirs incdirs '()))
-    (set-cpi-tyns! cpi (cons '() '()))
+    (set-cpi-tyns! cpi '())
+    ;;
+    (set-cpi-ptns! cpi '())
+    (set-cpi-ctns! cpi '())
+    (set-cpi-ctns! cpi '())
+    ;;
     (set-cpi-tdls! cpi '())
     cpi))
 
 (define *info* (make-fluid #f))
 
+;; given tyns
+;; cadr is next level
+;; caar is list of sibs
+;; search (caar car tyns), then (caar cadr tyns), then ...
+
+;; @item add-tyn-gen
+;; Add generation with one sib.  This called on #if
+(define (add-tyn-gen)
+  (let* ((info (fluid-ref *info*)) (tyns (cpi-tyns info)))
+    (set-cpi-tyns! info (cons (cons '() '()) tyns))))
+
+;; @item add-tyn-sib
+;; Add sibling to current generation.  This called on #elif of #else.
+(define (add-tyn-sib)
+  (let* ((info (fluid-ref *info*)) (tyns (cpi-tyns info))
+	 (sib-l (car tyns)) (par-l (cdr tyns)))
+    (set-cpi-tyns! info (cons (cons '() sib-l) par-l))))
+
+;; @item merge-tyn-gen 
+;; Merge generation.  This called on #endif
+(define (merge-tyn-gen) ;; todo
+  (let* ((info (fluid-ref *info*)) (tyns (cpi-tyns info))
+	 (sib-l (car tyns)) (par-l (cdr tyns))
+	 ;;(new-l (cons (union sib-l) '()))
+	 )
+    ;;(set-cpi-tyns! info (cons new-l par-l))))
+    (set-cpi-tyns! info (cons sib-l par-l))))
+
 ;; @item typename? name
 ;; Called by lexer to determine if symbol is a typename.
+;; Check current sibling for each generation.
 (define (typename? name)
   (let ((info (fluid-ref *info*)))
-    (let iter ((tyns (cpi-tyns info)))
-      (if (null? tyns) #f
-	  (if (member name (car tyns))
-	      #t
-	      (iter (cdr tyns)))))))
+    (member name (cpi-ctns info))))
 
 ;; @item add-typename name
 ;; Helper for @code{save-typenames}.
 (define (add-typename name)
-  ;;(simple-format #t "add-typename: ~S\n" name)
-  (let* ((info (fluid-ref *info*))
-	 (tyns (cpi-tyns info)))
-    (if (not (typename? name))
-	(set-cpi-tyns! info
-		       (cons (cons name (car tyns)) (cdr tyns))))))
+  (if (not (typename? name))
+      (let ((info (fluid-ref *info*)))
+	(set-cpi-ctns! info (cons name (cpi-ctns info))))))
 
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
@@ -245,7 +277,7 @@
 		 (lambda (str)
 		   (let ((sym (string->symbol str)))
 		     (cond ((assq-ref keytab sym) => (lambda (t) (cons t str)))
-			   ((typename? sym)
+			   ((typename? str)
 			    (cons (assq-ref symtab 'typename) str))
 			   (else (cons (assq-ref symtab '$ident) str))))))
 		((read-c-num ch) => assc-$)

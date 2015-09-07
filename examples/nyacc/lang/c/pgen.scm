@@ -43,7 +43,7 @@
    (expect 25)				; else plus tons from type-spec
    (start translation-unit-proxy)
    (grammar
-
+ 
     (translation-unit-proxy (translation-unit ($$/ref 's0-1 (tl->list $1))))
 
     ;; 4.1, p 74
@@ -100,58 +100,59 @@
      )
 
     ;; 4.3.3, p 86
-    (function-specifier ("inline"))
+    (function-specifier ("inline" ($$-ref 's4.3.3-01)))
 
     ;; 4.4, p 86
     (type-specifier
-     (enumeration-type-specifier ($$ `(type-spec ,$1)))
-     (floating-point-type-specifier ($$ `(type-spec ,$1)))
-     (integer-type-specifier ($$ `(type-spec ,$1)))
-     (structure-type-specifier ($$ `(type-spec ,$1)))
-     (typedef-name ($$ `(type-spec ,$1)))
-     (union-type-specifier ($$ `(type-spec ,$1)))
-     (void-type-specifier ($$ `(type-spec ,$1)))
+     (enumeration-type-specifier ($$/ref 's4.4-01 `(type-spec ,$1)))
+     (floating-point-type-specifier ($$/ref 's4.4-02 `(type-spec ,$1)))
+     (integer-type-specifier ($$/ref 's4.4-03 `(type-spec ,$1)))
+     (structure-type-specifier ($$/ref 's4.4-04 `(type-spec ,$1)))
+     (typedef-name ($$/ref 's4.4-05 `(type-spec ,$1)))
+     (union-type-specifier ($$/ref 's4.4-06 `(type-spec ,$1)))
+     (void-type-specifier ($$/ref 's4.4-07 `(type-spec ,$1)))
      )
 
     (type-qualifier
-     ("const" ($$ '(type-qual (const))))
-     ("volatile" ($$ '(type-qual (volatile))))
-     ("restrict" ($$ '(type-qual (restrict))))
+     ("const" ($$/ref 's4.4-08 '(type-qual (const))))
+     ("volatile" ($$/ref 's4.4-09 '(type-qual (volatile))))
+     ("restrict" ($$/ref 's4.4-10 '(type-qual (restrict))))
      )
 
     ;; 4.5, p 95
     (declarator
-     (pointer-declarator)
-     (direct-declarator)
+     (pointer-declarator ($$/ref 's4.5-01 $1))
+     (direct-declarator ($$/ref 's4.5-02 $1))
      )
 
     (direct-declarator
-     (simple-declarator)
-     ("(" declarator ")" ($$ `(scope ,$2)))
-     (function-declarator)
-     (array-declarator)
+     (simple-declarator ($$/ref 's4.5-03 $1))
+     ("(" declarator ")" ($$/ref 's4.5-04 `(scope ,$2)))
+     (function-declarator ($$/ref 's4.5-05 $1))
+     (array-declarator ($$/ref 's4.5-06 $1))
      )
 
     ;; 4.5.1, p 96
     (simple-declarator
-     (identifier)
+     (identifier ($$/ref 's4.5.1-01 $1))
      )
 
     ;; 4.5.2, p 96
     (pointer-declarator
-     (pointer direct-declarator ($$ `(ptr-declr ,$1 ,$2)))
+     (pointer direct-declarator ($$/ref 's4.5.2-01 `(ptr-declr ,$1 ,$2)))
      )
 
     (pointer
-     ("*" type-qualifier-list ($$ `(pointer ,$2)))
-     ("*" ($$ '(pointer)))
-     ("*" type-qualifier-list pointer ($$ `(pointer ,(tl->list $2) ,$3)))
-     ("*" pointer ($$ `(pointer ,$2)))
+     ("*" type-qualifier-list ($$/ref 's4.5.2-02 `(pointer ,$2)))
+     ("*" ($$/ref 's4.5.2-03 '(pointer)))
+     ("*" type-qualifier-list pointer
+      ($$/ref 's4.5.2-04 `(pointer ,(tl->list $2) ,$3)))
+     ("*" pointer ($$/ref 's4.5.2-05 `(pointer ,$2)))
      )
 
     (type-qualifier-list ; (C89)
-     (type-qualifier ($$ (make-tl 'type-qual-list $1)))
-     (type-qualifier-list type-qualifier ($$ (tl-append $1 $2)))
+     (type-qualifier ($$/ref 's4.5.2-06 (make-tl 'type-qual-list $1)))
+     (type-qualifier-list type-qualifier ($$/ref 's4.5.2-07 (tl-append $1 $2)))
      )
 
     ;; 4.5.3, p 97
@@ -160,37 +161,43 @@
      ;; direct-declarator "[" constant-expression_opt "]" <= pre-C99
      (direct-declarator
       "[" array-qualifier-list array-size-expression "]"
-      ($$ `(array-of ,$1 ,$2 ,$3)))
+      ($$/ref 's4.5.3-01 `(array-of ,$1 ,$2 ,$3)))
      (direct-declarator
       "[" array-qualifier-list "]"
-      ($$ `(array-of ,$1 ,$3)))
+      ($$/ref 's4.5.3-02 `(array-of ,$1 ,$3)))
      (direct-declarator
       "[" array-size-expression "]"
-      ($$ `(array-of ,$1 ,$3)))
+      ($$/ref 's4.5.3-03 `(array-of ,$1 ,$3)))
      (direct-declarator
       "[" "]"
-      ($$ `(array-of ,$1)))
+      ($$/ref 's4.5.3-04 `(array-of ,$1)))
      (direct-declarator
       "[" array-qualifier-list "*" "]"
-      ($$ `(array-of ,$1 ,$3 "*???")))
+      ($$/ref 's4.5.3-05 `(array-of ,$1 ,$3 "*???")))
      (direct-declarator
       "[" "*" "]"
-      ($$ `(array-of ,$1 "*???")))
+      ($$/ref 's4.5.3-06 `(array-of ,$1 "*???")))
      )
 
     (array-qualifier-list
-     (array-qualifier ($$ (make-tl 'array-qual-list (list $1))))
-     (array-qualifier-list array-qualifier ($$ (tl-append $1 (list $2))))
+     (array-qualifier
+      ($$/ref 's4.5.3-07 (make-tl 'array-qual-list $1)))
+     (array-qualifier-list array-qualifier
+			   ($$/ref 's4.5.3-08 (tl-append $1 $2)))
      )
 
     (array-qualifier
-     ("static") ("restrict") ("const") ("volatile"))
+     ("static" ($$/ref 's4.5.3-09 '(static)))
+     ("restrict" ($$/ref 's4.5.3-10 '(restrict)))
+     ("const" ($$/ref 's4.5.3-11 '(const)))
+     ("volatile" ($$/ref 's4.5.3-12 '(volatile)))
+     )
 
     (array-size-expression
      ;; I don't know how to handle 'constant-expression here.  It generates
      ;; a conflict with (to be documented).
      ;;(constant-expression) =>
-     (assignment-expression)
+     (assignment-expression ($$/ref 's2.5.3-13 $1))
      ;; I don't know how to deal with "*" here.  It seems to be handled
      ;; by 'array-declarator.
      ;;("*")
@@ -200,68 +207,70 @@
     (function-declarator
      (direct-declarator
       "(" parameter-type-list ")"
-      ($$ `(ftn-declr ,$1 ,(tl->list $3))))
+      ($$/ref 's4.5.4-01 `(ftn-declr ,$1 ,(tl->list $3))))
      (direct-declarator
       "(" identifier-list ")"
-      ($$ `(ftn-declr ,$1 ,(tl->list $3))))
+      ($$/ref 's4.5.4-02 `(ftn-declr ,$1 ,(tl->list $3))))
      (direct-declarator
       "(" ")"
-      ($$ `(ftn-declr ,$1)))
+      ($$/ref 's4.5.4-03 `(ftn-declr ,$1)))
      )
 
     (parameter-type-list
-     (parameter-list)
-     (parameter-list "," "...")
+     (parameter-list ($$/ref 's4.5.4-04 $1))
+     (parameter-list "," "..." ($$/ref 's4.5.4-05 $1))
      )
 
     (parameter-list
-     (parameter-declaration ($$ (make-tl 'param-list $1)))
-     (parameter-list "," parameter-declaration ($$ (tl-append $1 $3)))
+     (parameter-declaration ($$/ref 's4.5.4-06 (make-tl 'param-list $1)))
+     (parameter-list "," parameter-declaration
+		     ($$/ref 's4.5.4-07 (tl-append $1 $3)))
      )
 
     (parameter-declaration
      (declaration-specifiers
       declarator
-      ($$ `(param-decln ,(tl->list $1) ,$2)))
+      ($$/ref 's4.5.4-08 `(param-decln ,(tl->list $1) ,$2)))
      (declaration-specifiers
       abstract-declarator
-      ($$ `(param-decln ,(tl->list $1) ,$2)))
+      ($$/ref 's4.5.4-09 `(param-decln ,(tl->list $1) ,$2)))
      (declaration-specifiers
-      ($$ `(param-decln ,(tl->list $1))))
+      ($$/ref 's4.5.4-10 `(param-decln ,(tl->list $1))))
      )
 
     (identifier-list
-     (identifier ($$ (make-tl 'ident-list $1)))
-     (identifier-list "," identifier ($$ (tl-append $1 $3)))
+     (identifier ($$/ref 's4.5.4-11 (make-tl 'ident-list $1)))
+     (identifier-list "," identifier ($$/ref 's4.5.4-12 (tl-append $1 $3)))
      )
 
     ;; 4.6, p 103
     (initializer
-     (assignment-expression ($$ `(initzer ,$1)))
-     ("{" initializer-list "," "}" ($$ `(initzer ,(tl->list $2))))
-     ("{" initializer-list "}" ($$ `(initzer ,(tl->list $2))))
+     (assignment-expression ($$/ref 's4.6-01 `(initzer ,$1)))
+     ("{" initializer-list "," "}" ($$/ref 's4.6-02 `(initzer ,(tl->list $2))))
+     ("{" initializer-list "}" ($$/ref 's4.6-03 `(initzer ,(tl->list $2))))
      )
 
     ;; The designation productions are from C99.
     (initializer-list
-     (initializer ($$ (make-tl 'initzer-list $1)))
-     (initializer-list "," initializer ($$ (tl-append $1 $3)))
-     (designation initializer ($$ (make-tl 'initzer-list $1 $2)))
-     (initializer-list "," designation initializer ($$ (tl-append $1 $3 $4)))
+     (initializer ($$/ref 's4.6-04 (make-tl 'initzer-list $1)))
+     (initializer-list "," initializer ($$/ref 's4.6-05 (tl-append $1 $3)))
+     (designation initializer ($$/ref 's4.6-06 (make-tl 'initzer-list $1 $2)))
+     (initializer-list "," designation initializer
+		       ($$/ref 's4.6-07 (tl-append $1 $3 $4)))
      )
 
     (designation
-     (designator-list "=")
+     (designator-list "=" ($$/ref 's4.6-08 `(desig ,$1)))
      )
 
     (designator-list
-     (designator ($$ (make-tl 'desgr-list $1)))
-     (designator-list designator ($$ (tl-append $1 $2)))
+     (designator ($$/ref 's4.6-09 (make-tl 'desgr-list $1)))
+     (designator-list designator ($$/ref 's4.6-10 (tl-append $1 $2)))
      )
 
     (designator
-     ("[" constant-expression "]" ($$ (list 'array-dsgr $2)))
-     ("." identifier ($$ (list 'sel-dsgr $2)))
+     ("[" constant-expression "]" ($$/ref 's4.6-11 (list 'array-dsgr $2)))
+     ("." identifier ($$/ref 's4.6-12 (list 'sel-dsgr $2)))
      )
 
     ;; 5.1, p 125
@@ -295,42 +304,44 @@
 
     ;; 5.1.2, p 128
     (unsigned-type-specifier
-     ("unsigned" "short" "int" ($$ '(fixed "unsigned short int")))
-     ("unsigned" "short" ($$ '(fixed "unsigned short")))
-     ("unsigned" "int" ($$ '(fixed "unsigned int")))
-     ("unsigned" ($$ '(fixed "unsigned")))
-     ("unsigned" "long" "int" ($$ '(fixed "unsigned long")))
-     ("unsigned" "long" ($$ '(fixed "unsigned long")))
-     ("unsigned" "long" "long" "int" ($$ '(fixed "unsigned long long int")))
-     ("unsigned" "long" "long" ($$ '(fixed "unsigned long long")))
+     ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short int")))
+     ("unsigned" "short" ($$ '(fixed-type "unsigned short")))
+     ("unsigned" "int" ($$ '(fixed-type "unsigned int")))
+     ("unsigned" ($$ '(fixed-type "unsigned")))
+     ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
+     ("unsigned" "long" ($$ '(fixed-type "unsigned long")))
+     ("unsigned" "long" "long" "int"
+      ($$ '(fixed-type "unsigned long long int")))
+     ("unsigned" "long" "long" ($$ '(fixed-type "unsigned long long")))
      )
 
     ;; 5.1.3, p 129
     (character-type-specifier ;; Enforce with static semantics.
-     ("char" ($$ '(fixed "char")))
-     ("signed" "char" ($$ '(fixed "signed char")))
-     ("unsigned" "char" ($$ '(fixed "unsigned char")))
+     ("char" ($$/ref 's5.1.3-01 '(fixed-type "char")))
+     ("signed" "char" ($$/ref 's5.1.3-02 '(fixed-type "signed char")))
+     ("unsigned" "char" ($$/ref 's5.1.3-03 '(fixed-type "unsigned char")))
      )
 
     ;; 5.1.5, p 132, discussed but not defined
     (bool-type-specifier
-     ("_Bool" ($$ '(fixed "_Bool")))
+     ("_Bool" ($$/ref 's5.1.5-01 '(fixed-type "_Bool")))
      )
 
     ;; 5.2, p 132
     (floating-point-type-specifier
-     ("float" ($$ '(float "float")))
-     ("double" ($$ '(float "double")))
-     ("long" "double" ($$ '(float "long double")))
+     ("float" ($$/ref 's5.2-01 '(float-type "float")))
+     ("double" ($$/ref 's5.2-02 '(float-type "double")))
+     ("long" "double" ($$/ref 's5.2-03 '(float-type "long double")))
      (complex-type-specifier)
      )
 
     ;; 5.2.1, p 136
     (complex-type-specifier
-     ("_Complex" ($$ '(complex "_Complex")))
-     ("float" "_Complex" ($$ '(complex "float _Complex")))
-     ("double" "_Complex" ($$ '(complex "double _Complex")))
-     ("long" "double" "_Complex" ($$ '(complex "long double _Complex")))
+     ("_Complex" ($$/ref 's5.2.1-01 '(complex-type "_Complex")))
+     ("float" "_Complex" ($$/ref 's5.2.1-02 '(complex-type "float _Complex")))
+     ("double" "_Complex" ($$/ref 's5.2.1-03 '(complex-type "double _Complex")))
+     ("long" "double" "_Complex"
+      ($$/ref 's5.2.1-04 '(complex-type "long double _Complex")))
      )
 
     ;; 5.5, p 145
