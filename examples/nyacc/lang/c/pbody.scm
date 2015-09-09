@@ -24,9 +24,8 @@
   (incdirs cpi-incs set-cpi-incs!)	; #includes
   (typnams cpi-tyns set-cpi-tyns!)	; typedef names
   ;;
-  (ptns cpi-ptns set-cpi-ptns!)		; parent typenames
-  (ctns cpi-stns set-cpi-stns!)		; sibling typenames
-  (ptns cpi-ctns set-cpi-ctns!)		; current typenames
+  (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
+  (ctl cpi-ctl set-cpi-ctl!)		; current typename list
   ;;
   (typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
   )
@@ -37,9 +36,8 @@
     (set-cpi-incs! cpi (if incdirs incdirs '()))
     (set-cpi-tyns! cpi '())
     ;;
-    (set-cpi-ptns! cpi '())
-    (set-cpi-ctns! cpi '())
-    (set-cpi-ctns! cpi '())
+    (set-cpi-ptl! cpi '())
+    (set-cpi-ctl! cpi '())
     ;;
     (set-cpi-tdls! cpi '())
     cpi))
@@ -51,42 +49,36 @@
 ;; caar is list of sibs
 ;; search (caar car tyns), then (caar cadr tyns), then ...
 
-;; @item add-tyn-gen
-;; Add generation with one sib.  This called on #if
-(define (add-tyn-gen)
-  (let* ((info (fluid-ref *info*)) (tyns (cpi-tyns info)))
-    (set-cpi-tyns! info (cons (cons '() '()) tyns))))
-
-;; @item add-tyn-sib
-;; Add sibling to current generation.  This called on #elif of #else.
-(define (add-tyn-sib)
-  (let* ((info (fluid-ref *info*)) (tyns (cpi-tyns info))
-	 (sib-l (car tyns)) (par-l (cdr tyns)))
-    (set-cpi-tyns! info (cons (cons '() sib-l) par-l))))
-
-;; @item merge-tyn-gen 
-;; Merge generation.  This called on #endif
-(define (merge-tyn-gen) ;; todo
-  (let* ((info (fluid-ref *info*)) (tyns (cpi-tyns info))
-	 (sib-l (car tyns)) (par-l (cdr tyns))
-	 ;;(new-l (cons (union sib-l) '()))
-	 )
-    ;;(set-cpi-tyns! info (cons new-l par-l))))
-    (set-cpi-tyns! info (cons sib-l par-l))))
-
 ;; @item typename? name
 ;; Called by lexer to determine if symbol is a typename.
 ;; Check current sibling for each generation.
 (define (typename? name)
-  (let ((info (fluid-ref *info*)))
-    (member name (cpi-ctns info))))
+  (let ((cpi (fluid-ref *info*)))
+    (if (member name (cpi-ctl cpi)) #t
+        (let iter ((ptl (cpi-ptl cpi)))
+	  (if (null? ptl) #f
+	      (if (member name (car ptl)) #t
+		  (iter (cdr ptl))))))))
 
 ;; @item add-typename name
 ;; Helper for @code{save-typenames}.
 (define (add-typename name)
-  (if (not (typename? name))
-      (let ((info (fluid-ref *info*)))
-	(set-cpi-ctns! info (cons name (cpi-ctns info))))))
+  (let ((cpi (fluid-ref *info*)))
+    (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
+
+(define (cpi-push)	;; on #if
+  (let ((cpi (fluid-ref *info*)))
+    (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
+    (set-cpi-ctl! cpi '())))
+
+(define (cpi-shift)	;; on #elif #else
+  (set-cpi-ctl! (fluid-ref *info*) '()))
+
+(define (cpi-pop)	;; on #endif
+  (let ((cpi (fluid-ref *info*)))
+    (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
+    (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
+
 
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
@@ -231,6 +223,7 @@
 		((define)
 		 (add-define stmt))
 		((if)
+		 (cpi-push)
 		 (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
 		   (simple-format #t "val=~S\n" val)
 		   (cond ((not val)
@@ -238,6 +231,7 @@
 			 ((zero? val) (set! skip (cons 'skip skip)))
 			 (else (set! skip (cons 'keep skip))))))
 		((elif)
+		 (cpi-shift)
 		 (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
 		   (cond ((not val)
 			  (fmterr "*** unresolved: ~S" (cadr stmt)))
@@ -245,6 +239,7 @@
 			 (else (set! skip (cons 'keep skip)))))
 		 (error "not finished"))
 		((else)
+		 (cpi-shift)
 		 ;; invert
 		 (set! skip (cons (case (car skip)
 				    ((keep) 'skip)
@@ -252,6 +247,7 @@
 				    (else (error "BAD CODE")))
 				  (cdr skip))))
 		((endif)
+		 (cpi-pop)
 		 (set! skip (cons 'delay skip)))
 		(else
 		 (error "unhandled cpp stmt"))
