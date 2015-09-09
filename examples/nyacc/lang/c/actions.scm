@@ -209,40 +209,45 @@
    ;; integer-type-specifier => bool-type-specifier
    (lambda ($1 . $rest) $1)
    ;; signed-type-specifier => "short"
-   (lambda ($1 . $rest) '(fixed "short"))
+   (lambda ($1 . $rest) '(fixed-type "short"))
    ;; signed-type-specifier => "short" "int"
-   (lambda ($2 $1 . $rest) '(fixed "short int"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "short int"))
    ;; signed-type-specifier => "signed" "short"
-   (lambda ($2 $1 . $rest) '(fixed "signed short"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed short"))
    ;; signed-type-specifier => "signed" "short" "int"
    (lambda ($3 $2 $1 . $rest)
-     '(fixed "signed short int"))
+     '(fixed-type "signed short int"))
    ;; signed-type-specifier => "int"
-   (lambda ($1 . $rest) '(fixed "int"))
+   (lambda ($1 . $rest) '(fixed-type "int"))
    ;; signed-type-specifier => "signed"
-   (lambda ($1 . $rest) '(fixed "signed"))
+   (lambda ($1 . $rest) '(fixed-type "signed"))
    ;; signed-type-specifier => "signed" "int"
-   (lambda ($2 $1 . $rest) '(fixed "signed int"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed int"))
    ;; signed-type-specifier => "long"
-   (lambda ($1 . $rest) '(fixed "long"))
+   (lambda ($1 . $rest) '(fixed-type "long"))
    ;; signed-type-specifier => "long" "int"
-   (lambda ($2 $1 . $rest) '(fixed "long int"))
+   (lambda ($2 $1 . $rest) '(fixed-type "long int"))
    ;; signed-type-specifier => "signed" "long"
-   (lambda ($2 $1 . $rest) '(fixed "signed long"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed long"))
    ;; signed-type-specifier => "signed" "long" "int"
    (lambda ($3 $2 $1 . $rest)
-     '(fixed "signed long int"))
+     '(fixed-type "signed long int"))
    ;; signed-type-specifier => "long" "long"
-   (lambda ($2 $1 . $rest) '(fixed "long long"))
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "long long"))
    ;; signed-type-specifier => "long" "long" "int"
    (lambda ($3 $2 $1 . $rest)
-     '(fixed "long long int"))
+     '(fixed-type "long long int"))
    ;; signed-type-specifier => "signed" "long" "long"
    (lambda ($3 $2 $1 . $rest)
-     '(fixed "signed long long"))
+     '(fixed-type "signed long long"))
    ;; signed-type-specifier => "signed" "long" "long" "int"
    (lambda ($4 $3 $2 $1 . $rest)
-     '(fixed "signed long long int"))
+     '(fixed-type "signed long long int"))
    ;; unsigned-type-specifier => "unsigned" "short" "int"
    (lambda ($3 $2 $1 . $rest)
      '(fixed-type "unsigned short int"))

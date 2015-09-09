@@ -19,13 +19,12 @@
 
 (define-module (lang c parser)
   #:export (parse-c)
-  #:use-module ((srfi srfi-9) #:select (define-record-type))
-  #:use-module ((sxml fold) #:select (foldts*-values foldts))
-  #:use-module ((sxml xpath) #:select (sxpath))
   #:use-module (nyacc lex)
   #:use-module (nyacc lalr)
   #:use-module (lang util)
   #:use-module (lang c cpp)
+  #:use-module ((srfi srfi-9) #:select (define-record-type))
+  #:use-module ((sxml xpath) #:select (sxpath))
   )
 
 ;; utility routines
@@ -51,6 +50,7 @@
 
 ;; @item parse-c [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:debug bool] \
 ;;               [#:mode ('code|'file)]
+;; This needs to be explained in some detail.
 (define* (parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'file) debug)
   (catch
    'parse-error
