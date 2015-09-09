@@ -160,6 +160,22 @@
 	(let ((p (string-append (car dirl) "/" file)))
 	  (if (access? p R_OK) p (iter (cdr dirl)))))))
 
+
+;; @subsubsection CPP If-Else Processing
+;; States are
+;; @table code
+;; @item skip
+;; skip code
+;; @item skip-look
+;; skipping code, but still looking for true at this level
+;; @item keep
+;; keep code
+;; @item keep1
+;; keep one token and pop skip-stack
+;; @item skip1
+;; skip one token and pop skip-stack
+;; @end table
+
 ;; @item gen-c-lexer => thunk
 ;; Generate a context-sensitive lexer for the C language.
 (define gen-c-lexer
@@ -224,31 +240,41 @@
 		 (add-define stmt))
 		((if)
 		 (cpi-push)
-		 (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
-		   (simple-format #t "val=~S\n" val)
-		   (cond ((not val)
-			  (fmterr "*** unresolved: ~S" (cadr stmt)))
-			 ((zero? val) (set! skip (cons 'skip skip)))
-			 (else (set! skip (cons 'keep skip))))))
+		 (if (eq? mode 'code)
+		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
+		       (cond ((not val)
+			      (throw 'parse-error "unresolved: ~S" (cadr stmt)))
+			     ((zero? val)
+			      (set! skip (cons* 'skip-1 'skip-look skip)))
+			     (else
+			      (set! skip (cons* 'skip-1 (car skip) skip)))))))
 		((elif)
 		 (cpi-shift)
-		 (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
-		   (cond ((not val)
-			  (fmterr "*** unresolved: ~S" (cadr stmt)))
-			 ((zero? val) (set! skip (cons 'skip skip)))
-			 (else (set! skip (cons 'keep skip)))))
-		 (error "not finished"))
+		 (if (eq? mode 'code)
+		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
+		       (cond ((not val)
+			      (throw 'parse-error "unresolved: ~S" (cadr stmt)))
+			     ((eq? 'keep (car skip))
+			      (set! skip (cons* 'skip-1 'skip (cdr skip))))
+			     ((zero? val)
+			      (set! skip (cons* 'skip-1 skip)))
+			     ((eq? 'skip-look (car skip))
+			      (set! skip (cons* 'skip-1 'keep (cdr skip))))
+			     (else
+			      (set! skip (cons* 'skip-1 'skip (cdr skip))))
+			     ))))
 		((else)
 		 (cpi-shift)
-		 ;; invert
-		 (set! skip (cons (case (car skip)
-				    ((keep) 'skip)
-				    ((skip) 'keep)
-				    (else (error "BAD CODE")))
-				  (cdr skip))))
+		 (if (eq? mode 'code)
+		     (cond
+		      ((eq? 'skip-look (car skip))
+		       (set! skip (cons* 'skip-1 'keep (cdr skip))))
+		      (else
+		       (set! skip (cons* 'skip-1 'skip (cdr skip)))))))
 		((endif)
 		 (cpi-pop)
-		 (set! skip (cons 'delay skip)))
+		 (if (eq? mode 'code)
+		     (set! skip (cons 'skip-1 (cdr skip)))))
 		(else
 		 (error "unhandled cpp stmt"))
 		)
@@ -289,21 +315,14 @@
 
 	  ;; Loop between reading tokens and skipping tokens.
 	  ;; The use of "delayed pop" is not clean IMO.  Cleaner way?
-	  (case mode
-	    ((code file)
-	     (let loop ((pair (read-token)))
-	       (case (car skip)
-		 ((keep) pair)
-		 ((skip skip-all)
-		  ;;(simple-format #t "skip ~S\n" pair)
-		  (loop (read-token)))
-		 ((delay)
-		  (let ((fl (cadr skip)))
-		    (set! skip (cddr skip))
-		    (if (eq? fl 'skip) (loop (read-token)) pair))))))
-	    ((x-file)
-	     (read-token))
-	    (else (error "CODING ERROR")))
+	  (let loop ((pair (read-token)))
+	    (simple-format #t "skip=~S token=~S\n" skip pair)
+	    (case (car skip)
+	      ((keep) pair)
+	      ((skip skip-look) (loop (read-token)))
+	      ((skip-1)
+	       (set! skip (cdr skip))
+	       (loop (read-token)))))
 	  )))))
 
 ;; --- last line

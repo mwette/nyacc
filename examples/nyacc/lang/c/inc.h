@@ -2,7 +2,13 @@
 #ifndef __inc_h__
 #define __inc_h__
 
-typedef enum { EV_ZERO = 0, EV_ONE, EV_TWO = 2 } eval_t;
+#ifdef A
+typedef enum { EA_ZERO = 0, EA_ONE, EA_TWO = 2 } eval_t;
+#elif defined(B)
+typedef enum { EB_ZERO = 0, EB_ONE, EB_TWO = 2 } eval_t;
+#else
+typedef enum { EC_ZERO = 0, EC_ONE, EC_TWO = 2 } eval_t;
+#endif
 
 typedef struct {
   int ix;           /* comment for ix */
@@ -13,3 +19,4 @@ typedef struct {
 int ex1_init(void*);
 
 #endif
+// --- last line ---

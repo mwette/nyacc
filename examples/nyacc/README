@@ -15,4 +15,4 @@ usage
   $ ./cxp -Ilang/c lang/c/ex1.c
   $ guile Tlangm.scm
   $ guile Tlangmo.scm
-
+  $ cd lang/c; guile Tlangc.scm

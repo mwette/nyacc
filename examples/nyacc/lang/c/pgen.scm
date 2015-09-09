@@ -950,13 +950,14 @@
 
 (define (run-parse) (raw-parser (gen-c-lexer)))
 
-(define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()) debug)
+(define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'file) debug)
   (catch
    'parse-error
    (lambda ()
      (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
        (with-fluid* *info* info
-		    (lambda () (raw-parser (gen-c-lexer) #:debug debug)))))
+		    (lambda ()
+		      (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) fmt rest)
      #f)))
