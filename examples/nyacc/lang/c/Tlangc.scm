@@ -29,7 +29,7 @@
 
 (let ((sx (with-input-from-file "inc.h"
 	    (lambda () (dev-parse-c #:cpp-defs defs #:inc-dirs incs)))))
-  (pretty-print sx)
-  #f)
+  ;;(pretty-print sx)
+  #t)
 
 ;; --- last line

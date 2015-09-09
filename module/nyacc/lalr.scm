@@ -115,7 +115,7 @@
 	    (parse-rhs
 	     (lambda (x)
 	       ;; The following is syntax-case because we use a fender.
-	       (syntax-case x (quote $$ $$/ref $$-ref $with $? $* $+)
+	       (syntax-case x (quote $$ $$/ref $$-ref $prec $with $? $* $+)
 		 ;; action specifications
 		 ((_ ($$ <guts> ...) <e2> ...)
 		  #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
@@ -126,6 +126,8 @@
 		  #'(cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...)))
 
 		 ;; other internal $-syntax
+		 ((_ ($prec <tok>) <e2> ...)
+		  #'(cons '(prec <tok>) (parse-rhs <e2> ...)))
 		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
 		  #'(cons `(with <lhs-ref> ,@(with-attr-list <ex> ...))
 			  (parse-rhs <e2> ...)))
@@ -250,7 +252,7 @@
     (let iter ((p-l '()) (a-l '()) (tree tree) (node '()) (pspec '()))
       (cond
        ((pair? pspec)
-	;; psp looks like ('left "+" "-"); pel ("+" "-"); psy (#\+ #\-)
+	;; psp ~ ('left "+" "-"); pel ~ ("+" "-"); psy ~ (#\+ #\-)
 	(let* ((psp (car pspec)) (pel (cdr psp)) (psy (map atomize pel)))
 	  (iter (append (x-comb psy node)
 			;; append (+ -) => ((+ -) (- +))
@@ -329,52 +331,59 @@
 	       (rl (list (start-rule))) ; RHS list
 	       (al (list (list 1 'all '$1))) ; narg-ref-action list
 	       (xl (list 1))		     ; reduction size
+	       (@l (list '()))		     ; per-p-rule attr list
+	       ;;
 	       (tl (list '$end))	; set of terminals (add $end?)
 	       (nl (list start-symbol))	; set of non-terminals
 	       (zl (list))		; wierd stuff
 	       ;;
-	       (head gram)	       ; head of grammar productions
+	       (head gram)	       ; head of unprocessed productions
 	       (prox '())	       ; proxy productions for MRA
 	       (lhs #f)		       ; current LHS (symbol)
 	       (tail '())	       ; tail of grammar productions
 	       (rhs-l '())	       ; list of RHSs being processed
 	       (act #f)		       ; action if seen in RHS
-	       (pel '())	       ; processed (RHS) terms list
-	       (rhs #f))	       ; list of el'ts being processed
+	       (pel '())	       ; processed RHS terms: '$:if ...
+	       (rhs #f))	       ; elts to process: (terminal . '$:if) ...
       (cond
        ((pair? rhs)
 	;; Capture info on RHS term.
 	(case (caar rhs)
 	  ((terminal)
-	   (iter ll rl al xl (add-el (cdar rhs) tl) nl zl head prox lhs tail
+	   (iter ll rl al xl @l (add-el (cdar rhs) tl) nl zl head prox lhs tail
 		 rhs-l act (cons (atomize (cdar rhs)) pel) (cdr rhs)))
 	  ((non-terminal)
-	   (iter ll rl al xl tl (add-el (cdar rhs) nl) zl head prox lhs tail
+	   (iter ll rl al xl @l tl (add-el (cdar rhs) nl) zl head prox lhs tail
 		 rhs-l act (cons (cdar rhs) pel) (cdr rhs)))
 	  ((action)
 	   (if (pair? (cdr rhs))
 	       ;; mid-rule action: generate a proxy (car act is # args)
 	       (let* ((sy (maksy))
 		      (pr (make-mra-proxy sy pel (cdar rhs))))
-		 (iter ll rl al xl tl (cons sy nl) zl head (cons pr prox)
+		 (iter ll rl al xl @l tl (cons sy nl) zl head (cons pr prox)
 		       lhs tail rhs-l act (cons sy pel) (cdr rhs)))
 	       ;; end-rule action
-	       (iter ll rl al xl tl nl zl head prox lhs tail
-		     rhs-l (cdar rhs) pel (cdr rhs))))
+	       (iter ll rl al xl @l tl nl zl head prox lhs tail
+		     rhs-l (cdar rhs) pel (cdr rhs)))) ; ACT
 	  ((proxy)
 	   (let* ((sy (maksy))
 		  (pf (cadar rhs))	; proxy function
 		  (p1 (pf sy (cddar rhs))))
-	     (iter ll rl al xl tl (cons sy nl) zl head (cons p1 prox) lhs tail
-		   rhs-l act (cons sy pel) (cdr rhs))))
+	     (iter ll rl al xl @l tl (cons sy nl) zl head (cons p1 prox) lhs
+		   tail rhs-l act (cons sy pel) (cdr rhs))))
 
+	  ((prec)
+	   ;; not handled yet, just skip
+	   (iter ll rl al xl @l tl nl zl head prox lhs tail
+		 rhs-l act pel (cdr rhs)))
+	   
 	  ((with)
 	   (let* ((psy (maksy))		; proxy symbol
 		  (rhsx (cadar rhs))	; symbol to expand
 		  (p-l (map cdr (cddar rhs))) ; prune list
 		  (p1 (list psy `((non-terminal . ,rhsx)
 				  (action #f #f $1)))))
-	     (iter ll rl al xl tl (cons psy nl) (acons psy p-l zl) head
+	     (iter ll rl al xl @l tl (cons psy nl) (acons psy p-l zl) head
 		   (cons p1 prox) lhs tail rhs-l act (cons psy pel) (cdr rhs))))
 
 	  (else
@@ -382,8 +391,12 @@
 
        ((null? rhs)
 	;; End of RHS items for current rule.
-	;;   mid-rule-action: (narg ref code)
-	;;   end-rule-action: (#f ref code)
+	;; Add the p-rules items to the lists ll, rl, al, xl, and @l.
+	;; @code{act} is now:
+	;; @itemize
+	;; @item for mid-rule-action: (narg ref code)
+	;; @item for end-rule-action: (#f ref code)
+	;; @end itemize
 	;;(simple-format #t "lhs=~S  ln=~A\n  act=~S\n" lhs (length pel) act)
 	(let* ((ln (length pel))
 	       (r1 (reverse pel))
@@ -393,23 +406,23 @@
 		       (list nrg ref (if (zero? nrg) '(list) '$1)))))
 	  ;;(simple-format #t "    =>~S\n" a1)
 	  (iter (cons lhs ll) (cons r1 rl) (cons a1 al)
-		(cons ln xl) tl nl zl head prox lhs tail rhs-l act pel #f)))
+		(cons ln xl) @l tl nl zl head prox lhs tail rhs-l act pel #f)))
 
        ((pair? rhs-l)
 	;; Work through next RHS.
-	(iter ll rl al xl tl nl zl head prox lhs tail
+	(iter ll rl al xl @l tl nl zl head prox lhs tail
 	      (cdr rhs-l) #f '() (car rhs-l)))
 
        ((pair? tail)
 	;; Check the next CAR of the tail.  If it matches
 	;; the current LHS process it, else skip it.
-	(iter ll rl al xl tl nl zl head prox lhs (cdr tail) 
+	(iter ll rl al xl @l tl nl zl head prox lhs (cdr tail) 
 	      (if (eqv? (caar tail) lhs) (cdar tail) '())
 	      act pel #f))
 
        ((pair? prox)
 	;; If a proxy then we have ((lhs RHS) (lhs RHS))
-	(iter ll rl al xl tl nl zl (cons (car prox) head) (cdr prox)
+	(iter ll rl al xl @l tl nl zl (cons (car prox) head) (cdr prox)
 		lhs tail rhs-l act pel rhs))
 
        ((pair? head)
@@ -419,9 +432,9 @@
 	(let ((lhs (caar head)) (rhs-l (cdar head))
 	      (rest (cdr head)))
 	  (if (memq lhs ll)
-	      (iter ll rl al xl tl nl zl rest prox
+	      (iter ll rl al xl @l tl nl zl rest prox
 		    #f '() '() act pel #f)
-	      (iter ll rl al xl tl nl zl rest prox
+	      (iter ll rl al xl @l tl nl zl rest prox
 		    lhs rest rhs-l act pel rhs))))
 
        (else
@@ -829,7 +842,7 @@
      (else
       rslt))))
 
-;; @item step1 [input-a-list] => output-a-list
+;; @item step1 [input-a-list] => p-mach-1
 ;; Compute the sets of LR(0) kernel items and the transitions associated with
 ;; spec.  These are returned as vectors in the alist with keys @code{'kis-v}
 ;; and @code{'kix-v}, repspectively.   Each entry in @code{kis-v} is a list of
@@ -1083,7 +1096,7 @@
      (else
       (set-cdr! ar (acons sx1 it1 (cdr ar))) #t))))
 
-;; @item step2 subm1 => subm2
+;; @item step2 p-mach-1 => p-mach-2
 ;; This implements steps 2 and 3 of Algorithm 4.13 on p. 242 of the DB.
 ;; The a-list @code{subm1} includes the kernel itemsets and transitions
 ;; from @code{step1}.   This routine adds two entries to the alist:
@@ -1098,9 +1111,9 @@
 ;;       otherwise add T to spontaneously-generated list
 ;; @end example
 ;;   
-(define (step2 subm)
-  (let* ((kis-v (assq-ref subm 'kis-v))
-	 (kix-v (assq-ref subm 'kix-v)) ; transitions?
+(define (step2 p-mach)
+  (let* ((kis-v (assq-ref p-mach 'kis-v))
+	 (kix-v (assq-ref p-mach 'kix-v)) ; transitions?
 	 (nkset (vector-length kis-v))	; number of k-item-sets
 	 ;; kernel-itemset tokens
 	 (kit-v (make-vector nkset '())) ; sx => alist: (item latoks)
@@ -1131,7 +1144,7 @@
 	      ;; End-items don't shift, so don't propagate.
 	      (remove last-item? (vector-ref kis-v (1+ kx)))))))
     (when #f (pp-kip-v kip-v) (pp-kit-v kit-v)) ; for debugging
-    (cons* (cons 'kit-v kit-v) (cons 'kip-v kip-v) subm)))
+    (cons* (cons 'kit-v kit-v) (cons 'kip-v kip-v) p-mach)))
 
 ;; debug for step2
 (define (pp-kit ix kset)
@@ -1154,11 +1167,12 @@
   (fmtout "propagate:\n")
   (vector-for-each pp-kip kip-v))
 
-;; @item step3 subm2 => subm3
+;; @item step3 p-mach-2 => p-mach-3
+;; Execute nyacc step 3, where p-mach means ``partial machine''.
 ;; This implements step 4 of Algorithm 4.13 from the DB.
-(define (step3 subm)
-  (let* ((kit-v (assq-ref subm 'kit-v))
-	 (kip-v (assq-ref subm 'kip-v))
+(define (step3 p-mach)
+  (let* ((kit-v (assq-ref p-mach 'kit-v))
+	 (kip-v (assq-ref p-mach 'kip-v))
 	 (nkset (vector-length kit-v)))
     (let iter ((upd #t)			; token propagated?
 	       (kx -1)			; current index
@@ -1185,7 +1199,7 @@
        (upd
 	;; Have updates, rerun.
 	(iter #f 0 '() '() '() '()))))
-    subm))
+    p-mach))
 
 ;; @item reductions kit-v sx => ((tokA gxA1 ...) (tokB gxB1 ...) ...)
 ;; This is a helper for @code{step4}.
@@ -1331,7 +1345,6 @@
      (else res))))
 
 
-
 ;; This is a helper for step4.
 (define (prev-symb act its)
   (let* ((a act)
@@ -1342,7 +1355,7 @@
 	 (psy (looking-at pit)))
     psy))
 
-;; @item step4 subm => more-subm
+;; @item step4 p-mach-0 => p-mach-1
 ;; This generates the parse action table from the itemsets and then applies
 ;; precedence and associativity rules to eliminate shift-reduce conflicts
 ;; where possible.  The output includes the parse action table (entry
@@ -1354,12 +1367,12 @@
 ;; if reduce by zero we are done. so never hit state zero accept on ACCEPT?
 ;; For each state, the element of pat-v looks like
 ;; ((tokenA . (reduce . 79)) (tokenB . (reduce . 91)) ... )
-(define (step4 subm)
-  (let* ((kis-v (assq-ref subm 'kis-v)) ; states
-	 (kit-v (assq-ref subm 'kit-v)) ; la-toks
-	 (kix-v (assq-ref subm 'kix-v)) ; transitions
-	 (assc (assq-ref subm 'assc))	 ; associativity rules
-	 (prec (assq-ref subm 'prec))	 ; precedence rules
+(define (step4 p-mach)
+  (let* ((kis-v (assq-ref p-mach 'kis-v)) ; states
+	 (kit-v (assq-ref p-mach 'kit-v)) ; la-toks
+	 (kix-v (assq-ref p-mach 'kix-v)) ; transitions
+	 (assc (assq-ref p-mach 'assc))	 ; associativity rules
+	 (prec (assq-ref p-mach 'prec))	 ; precedence rules
 	 (nst (vector-length kis-v))	 ; number of states
 	 (pat-v (make-vector nst '()))	 ; parse-action table per state
 	 (rat-v (make-vector nst '()))	 ; removed-action table per state
@@ -1395,6 +1408,8 @@
 	     (call-with-values
 		 (lambda ()
 		   ;; If precedence applies use that else use associativity.
+		   (simple-format #t "psy=~S tok=~S prec=~S\n" psy tok prec)
+		   (simple-format #t "pre=~S\n" pre)
 		   (case pre ;; precedence
 		     ((#\=) ;; use associativity
 		      (case (assq-ref assc tok)
@@ -1433,7 +1448,7 @@
        ((< (1+ ix) nst)
 	(iter (1+ ix) '() '() wrn ftl (gen-pat-ix (1+ ix))))
        (else
-	(let* ((attr (assq-ref subm 'attr))
+	(let* ((attr (assq-ref p-mach 'attr))
 	       (expect (assq-ref attr 'expect))) ; expected # srconf
 	  (if (not (= (length wrn) expect))
 	      (for-each (lambda (m) (fmterr "+++ warning: ~A\n" (conf->str m)))
@@ -1442,7 +1457,7 @@
 		    (reverse ftl))
 	))))
     ;; Return mach with parse-action and removed-action tables.
-    (cons* (cons 'pat-v pat-v) (cons 'rat-v rat-v) subm)))
+    (cons* (cons 'pat-v pat-v) (cons 'rat-v rat-v) p-mach)))
 
 ;; @item conf->str cfl => string
 ;; map conflict (e.g., @code{('rrconf 1 . 2}) to string.

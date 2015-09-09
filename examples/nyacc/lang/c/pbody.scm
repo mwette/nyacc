@@ -316,7 +316,6 @@
 	  ;; Loop between reading tokens and skipping tokens.
 	  ;; The use of "delayed pop" is not clean IMO.  Cleaner way?
 	  (let loop ((pair (read-token)))
-	    (simple-format #t "skip=~S token=~S\n" skip pair)
 	    (case (car skip)
 	      ((keep) pair)
 	      ((skip skip-look) (loop (read-token)))
