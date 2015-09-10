@@ -39,6 +39,7 @@
 (define clang-spec
   (lalr-spec
    (notice lang-crn-lic)
+   (prec< (nonassoc "then") (nonassoc "else"))
    ;;(expect 25)				; else plus tons from type-spec
    (start translation-unit-proxy)
    (grammar
@@ -791,11 +792,13 @@
      )
 
     (if-statement
-     ("if" "(" expression ")" statement ($$ `(if ,$3 ,$5)))
+     ("if" "(" expression ")" statement ($prec "then")
+      ($$ `(if ,$3 ,$5)))
      )
 
     (if-else-statement
-     ("if" "(" expression ")" statement "else" statement ($$ `(if ,$3 ,$5 ,7)))
+     ("if" "(" expression ")" statement "else" statement ($prec "else")
+      ($$ `(if ,$3 ,$5 ,7)))
      )
 
     ;; 8.6, p 266

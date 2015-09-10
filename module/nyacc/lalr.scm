@@ -127,7 +127,7 @@
 
 		 ;; other internal $-syntax
 		 ((_ ($prec <tok>) <e2> ...)
-		  #'(cons '(prec <tok>) (parse-rhs <e2> ...)))
+		  #'(cons '(prec . <tok>) (parse-rhs <e2> ...)))
 		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
 		  #'(cons `(with <lhs-ref> ,@(with-attr-list <ex> ...))
 			  (parse-rhs <e2> ...)))
@@ -339,7 +339,6 @@
 	       (lhs #f)		       ; current LHS (symbol)
 	       (tail '())	       ; tail of grammar productions
 	       (rhs-l '())	       ; list of RHSs being processed
-	       ;;(act #f)	       ; action if seen in RHS
 	       (attr '())	       ; per-rule attributes (action, prec)
 	       (pel '())	       ; processed RHS terms: '$:if ...
 	       (rhs #f))	       ; elts to process: (terminal . '$:if) ...
@@ -369,12 +368,10 @@
 		  (p1 (pf sy (cddar rhs))))
 	     (iter ll @l tl (cons sy nl) head (cons p1 prox) lhs
 		   tail rhs-l attr (cons sy pel) (cdr rhs))))
-
 	  ((prec)
 	   ;; not handled yet, just skip
-	   (iter ll @l tl nl head prox lhs tail
-		 rhs-l attr pel (cdr rhs)))
-	   
+	   (iter ll @l tl nl head prox lhs tail rhs-l
+		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
 	  #;((with)
 	   (let* ((psy (maksy))		; proxy symbol
 		  (rhsx (cadar rhs))	; symbol to expand
@@ -385,7 +382,6 @@
 		   (cons p1 prox) lhs tail rhs-l
 		   (acons 'with (cons psy p-l) attr)
 		   (cons psy pel) (cdr rhs))))
-
 	  (else
 	   (error (fmtstr "bug=~S" (caar rhs))))))
 
@@ -468,6 +464,7 @@
 				 ))
 	       (cons 'prec (assq-ref pna 'prec))
 	       (cons 'assc (assq-ref pna 'assc))
+	       (cons 'prp-v (map-attr->vector al 'prec)) ; per-rule precedence
 	       (cons 'act-v (map-attr->vector al 'act))
 	       (cons 'ref-v (map-attr->vector al 'ref))
 	       (cons 'err-l err-l)))))))))
@@ -1344,7 +1341,7 @@
 
 
 ;; This is a helper for step4.
-(define (prev-symb act its)
+(define (prev-sym act its)
   (let* ((a act)
 	 (tok (car a)) (sft (caddr a)) (red (cdddr a))
 	 ;; @code{pit} is the end-item in the p-rule to be reduced.
@@ -1376,6 +1373,8 @@
 	 (rat-v (make-vector nst '()))	 ; removed-action table per state
 	 (gen-pat-ix (lambda (ix)	 ; pat from shifts and reduc's
 		       (gen-pat (vector-ref kix-v ix) (reductions kit-v ix))))
+	 (prp-v (assq-ref p-mach 'prp-v))  ; per-rule precedence
+	 (tl (assq-ref p-mach 'terminals)) ; TEMPORARY for debugging
 	 )
     ;; We run through each itemset.
     ;; @enumerate
@@ -1399,17 +1398,21 @@
 	  ((srconf)
 	   (let* ((act (car actl))
 		  (tok (car act)) (sft (caddr act)) (red (cdddr act))
-		  (psy (prev-symb act (vector-ref kis-v ix)))
-		  (pre (prece psy tok prec))
+		  (prp (vector-ref prp-v red))
+		  (psy (prev-sym act (vector-ref kis-v ix)))
+		  (preced (or (and prp (prece tok prp prec)) ; rule-based
+			      (prece psy tok prec))) ; oper-based
 		  (sft-a (cons* tok 'shift sft))
 		  (red-a (cons* tok 'reduce red)))
 	     (call-with-values
 		 (lambda ()
-		   ;; If precedence applies use that else use associativity.
-		   ;;(simple-format #t "psy=~S tok=~S prec=~S\n" psy tok prec)
-		   ;;(simple-format #t "pre=~S\n" pre)
-		   (case pre ;; precedence
-		     ((#\=) ;; use associativity
+		   ;; Use precedence or, if =, associativity.
+		   (case preced
+		     ((#\>)
+		      (values red-a (cons sft-a 'pre) #f #f))
+		     ((#\<)
+		      (values sft-a (cons red-a 'pre) #f #f))
+		     ((#\=) ;; Now use associativity
 		      (case (assq-ref assc tok)
 			((left)
 			 (values red-a (cons sft-a 'ass) #f #f))
@@ -1419,12 +1422,8 @@
 			 (values (cons* tok 'error red) #f #f (cons ix act)))
 			(else
 			 (values sft-a (cons red-a 'def) (cons ix act) #f))))
-		     ((#\>)
-		      (values red-a (cons sft-a 'pre) #f #f))
-		     ((#\<)
-		      (values sft-a (cons red-a 'pre) #f #f))
-		     (else
-		      (values sft-a (cons red-a 'pre) (cons ix act) #f))))
+		     (else ;; Or default, which is shift.
+		      (values sft-a (cons red-a 'def) (cons ix act) #f))))
 	       (lambda (a r w f)
 		 (iter ix
 		       (if a (cons a pat) pat)
