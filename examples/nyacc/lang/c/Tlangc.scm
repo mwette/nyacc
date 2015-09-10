@@ -18,7 +18,8 @@
 (with-output-to-file "lang.txt.new"
   (lambda ()
     (pp-lalr-grammar clang-spec)
-    (pp-lalr-machine clang-mach)))
+    (pp-lalr-machine clang-mach)
+    ))
 (with-output-to-file "gram.y.new"
   (lambda () (lalr->bison clang-spec)))
 (write-lalr-tables clang-mach "tables.scm.new")
@@ -29,7 +30,7 @@
 
 (let ((sx (with-input-from-file "inc.h"
 	    (lambda () (dev-parse-c #:cpp-defs defs #:inc-dirs incs)))))
-  (pretty-print sx)
+  ;;(pretty-print sx)
   #t)
 
 ;; --- last line

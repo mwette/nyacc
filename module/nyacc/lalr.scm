@@ -317,7 +317,7 @@
 		    (cons pair head) (cdr tail)))))))
 
   (let* ((gram (assq-ref tree 'grammar))
-	 (start-symbol (assq-ref tree 'start))
+	 (start-symbol (and=> (assq-ref tree 'start) atomize))
 	 (start-rule (lambda () (list start-symbol)))
 	 (add-el (lambda (e l) (if (memq e l) l (cons e l))))
 	 (pna (prec-n-assc tree)))
@@ -329,7 +329,9 @@
     ;; like LHS get absorbed before proceeding: This keeps LHS in sequence.
     (let iter ((ll '($start))		; LHS list
 	       (rl (list (start-rule))) ; RHS list
-	       (@l (list '((nrg . 1) (ref . all) (act $1)))) ; attr lists
+	       (@l (list		; attributes per prod' rule
+		    `((lhs . $start) (rhs . ,(vector start-symbol))
+		      (nrg . 1) (ref . all) (act $1))))
 	       ;;
 	       (tl (list '$end))	; set of terminals (add $end?)
 	       (nl (list start-symbol))	; set of non-terminals
@@ -407,7 +409,7 @@
 			(if (zero? nrg) '((list)) '($1)))))
 	  (iter (cons lhs ll) (cons r1 rl)
 		(cons
-		 (cons* (cons 'lhs lhs) (cons 'rhs (reverse r1))
+		 (cons* (cons 'lhs lhs) (cons 'rhs (list->vector (reverse pel)))
 			(cons 'act act) (cons 'ref ref) (cons 'nrg nrg) attr)
 		 @l)
 		tl nl head prox lhs tail rhs-l attr pel #f)))
@@ -462,11 +464,9 @@
 	      (list
 	       ;; most referenced
 	       (cons 'non-terms nl)
-	       (cons 'lhs-v (list->vector (reverse ll)))
-	       ;;(cons 'rhs-v rv)
-	       (cons 'rhs-v rv)
+	       (cons 'lhs-v (map-attr->vector al 'lhs))
+	       (cons 'rhs-v (map-attr->vector al 'rhs))
 	       ;;(cons 'prune-al filter 'with)	; new prunage al
-	       ;; not as much
 	       (cons 'terminals tl)
 	       (cons 'start start-symbol)
 	       (cons 'attr (list (cons 'expect (or (assq-ref tree 'expect) 0))
@@ -1413,8 +1413,8 @@
 	     (call-with-values
 		 (lambda ()
 		   ;; If precedence applies use that else use associativity.
-		   (simple-format #t "psy=~S tok=~S prec=~S\n" psy tok prec)
-		   (simple-format #t "pre=~S\n" pre)
+		   ;;(simple-format #t "psy=~S tok=~S prec=~S\n" psy tok prec)
+		   ;;(simple-format #t "pre=~S\n" pre)
 		   (case pre ;; precedence
 		     ((#\=) ;; use associativity
 		      (case (assq-ref assc tok)
