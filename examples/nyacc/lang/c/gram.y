@@ -66,12 +66,10 @@
 %token ENUM
 %token _COMPLEX
 %token DOUBLE
-%token FLOAT
 %token _BOOL
 %token CHAR
 %token UNSIGNED
 %token LONG
-%token SIGNED
 %token INT
 %token SHORT
 %token '.'
@@ -185,40 +183,14 @@ integer_type_specifier: unsigned_type_specifier ;
 integer_type_specifier: character_type_specifier ;
 integer_type_specifier: bool_type_specifier ;
 signed_type_specifier: SHORT ;
-signed_type_specifier: SHORT INT ;
-signed_type_specifier: SIGNED SHORT ;
-signed_type_specifier: SIGNED SHORT INT ;
 signed_type_specifier: INT ;
-signed_type_specifier: SIGNED ;
-signed_type_specifier: SIGNED INT ;
 signed_type_specifier: LONG ;
-signed_type_specifier: LONG INT ;
-signed_type_specifier: SIGNED LONG ;
-signed_type_specifier: SIGNED LONG INT ;
-signed_type_specifier: LONG LONG ;
-signed_type_specifier: LONG LONG INT ;
-signed_type_specifier: SIGNED LONG LONG ;
-signed_type_specifier: SIGNED LONG LONG INT ;
-unsigned_type_specifier: UNSIGNED SHORT INT ;
-unsigned_type_specifier: UNSIGNED SHORT ;
-unsigned_type_specifier: UNSIGNED INT ;
 unsigned_type_specifier: UNSIGNED ;
-unsigned_type_specifier: UNSIGNED LONG INT ;
-unsigned_type_specifier: UNSIGNED LONG ;
-unsigned_type_specifier: UNSIGNED LONG LONG INT ;
-unsigned_type_specifier: UNSIGNED LONG LONG ;
 character_type_specifier: CHAR ;
-character_type_specifier: SIGNED CHAR ;
-character_type_specifier: UNSIGNED CHAR ;
 bool_type_specifier: _BOOL ;
-floating_point_type_specifier: FLOAT ;
 floating_point_type_specifier: DOUBLE ;
-floating_point_type_specifier: LONG DOUBLE ;
 floating_point_type_specifier: complex_type_specifier ;
 complex_type_specifier: _COMPLEX ;
-complex_type_specifier: FLOAT _COMPLEX ;
-complex_type_specifier: DOUBLE _COMPLEX ;
-complex_type_specifier: LONG DOUBLE _COMPLEX ;
 enumeration_type_specifier: enumeration_type_definition ;
 enumeration_type_specifier: enumeration_type_reference ;
 enumeration_type_definition: ENUM enumeration_tag '{' enumeration_definition_list '}' ;

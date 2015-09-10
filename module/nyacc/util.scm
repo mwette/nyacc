@@ -21,6 +21,7 @@
 	    obj->str
 	    fmtstr fmtout fmterr fmt
 	    fixed-point prune-assoc
+	    map-attr->vector
 	    x-flip x-comb
 	    write-vec
 	    ugly-print
@@ -94,6 +95,14 @@
 (define (vector-fixed-point proc vec)
   (let iter ((chg #t))
     (if chg (proc vec) vec)))
+
+;; @item map-attr->vector list-of-alists key => vector
+;; map list of attribute lists to vector of attr
+;; @example
+;; (map-attr->vector '(((a . 1) ...) ((a . 2) ...) ...) => #(1 2 ...)
+;; @end example
+(define (map-attr->vector al-l key)
+  (list->vector (map (lambda (al) (assq-ref al key)) al-l)))
 
 ;; @item flip al => a-list
 ;; change (a 1 2 3) to ((1 . a) (2 . a) (3 . a))
