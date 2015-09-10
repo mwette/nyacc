@@ -329,20 +329,20 @@
     ;; like LHS get absorbed before proceeding: This keeps LHS in sequence.
     (let iter ((ll '($start))		; LHS list
 	       (rl (list (start-rule))) ; RHS list
-	       (al (list (list 1 'all '$1))) ; narg-ref-action list
+	       ;;(al (list (list 1 'all '$1))) ; narg-ref-action list
 	       (xl (list 1))		     ; reduction size
-	       (@l (list '()))		     ; per-p-rule attr list
+	       (@l (list '((nrg . 1) (ref . all) (act $1)))) ; attr lists
 	       ;;
 	       (tl (list '$end))	; set of terminals (add $end?)
 	       (nl (list start-symbol))	; set of non-terminals
-	       (zl (list))		; wierd stuff
 	       ;;
 	       (head gram)	       ; head of unprocessed productions
 	       (prox '())	       ; proxy productions for MRA
 	       (lhs #f)		       ; current LHS (symbol)
 	       (tail '())	       ; tail of grammar productions
 	       (rhs-l '())	       ; list of RHSs being processed
-	       (act #f)		       ; action if seen in RHS
+	       ;;(act #f)	       ; action if seen in RHS
+	       (attr '())	       ; per-rule attributes (action, prec)
 	       (pel '())	       ; processed RHS terms: '$:if ...
 	       (rhs #f))	       ; elts to process: (terminal . '$:if) ...
       (cond
@@ -350,48 +350,50 @@
 	;; Capture info on RHS term.
 	(case (caar rhs)
 	  ((terminal)
-	   (iter ll rl al xl @l (add-el (cdar rhs) tl) nl zl head prox lhs tail
-		 rhs-l act (cons (atomize (cdar rhs)) pel) (cdr rhs)))
+	   (iter ll rl xl @l (add-el (cdar rhs) tl) nl head prox lhs tail
+		 rhs-l attr (cons (atomize (cdar rhs)) pel) (cdr rhs)))
 	  ((non-terminal)
-	   (iter ll rl al xl @l tl (add-el (cdar rhs) nl) zl head prox lhs tail
-		 rhs-l act (cons (cdar rhs) pel) (cdr rhs)))
+	   (iter ll rl xl @l tl (add-el (cdar rhs) nl) head prox lhs tail
+		 rhs-l attr (cons (cdar rhs) pel) (cdr rhs)))
 	  ((action)
 	   (if (pair? (cdr rhs))
 	       ;; mid-rule action: generate a proxy (car act is # args)
 	       (let* ((sy (maksy))
 		      (pr (make-mra-proxy sy pel (cdar rhs))))
-		 (iter ll rl al xl @l tl (cons sy nl) zl head (cons pr prox)
-		       lhs tail rhs-l act (cons sy pel) (cdr rhs)))
+		 (iter ll rl xl @l tl (cons sy nl) head (cons pr prox)
+		       lhs tail rhs-l attr (cons sy pel) (cdr rhs)))
 	       ;; end-rule action
-	       (iter ll rl al xl @l tl nl zl head prox lhs tail
-		     rhs-l (cdar rhs) pel (cdr rhs)))) ; ACT
+	       (iter ll rl xl @l tl nl head prox lhs tail
+		     rhs-l (acons 'action (cdar rhs) attr) pel (cdr rhs))))
 	  ((proxy)
 	   (let* ((sy (maksy))
 		  (pf (cadar rhs))	; proxy function
 		  (p1 (pf sy (cddar rhs))))
-	     (iter ll rl al xl @l tl (cons sy nl) zl head (cons p1 prox) lhs
-		   tail rhs-l act (cons sy pel) (cdr rhs))))
+	     (iter ll rl xl @l tl (cons sy nl) head (cons p1 prox) lhs
+		   tail rhs-l attr (cons sy pel) (cdr rhs))))
 
 	  ((prec)
 	   ;; not handled yet, just skip
-	   (iter ll rl al xl @l tl nl zl head prox lhs tail
-		 rhs-l act pel (cdr rhs)))
+	   (iter ll rl xl @l tl nl head prox lhs tail
+		 rhs-l attr pel (cdr rhs)))
 	   
-	  ((with)
+	  #;((with)
 	   (let* ((psy (maksy))		; proxy symbol
 		  (rhsx (cadar rhs))	; symbol to expand
 		  (p-l (map cdr (cddar rhs))) ; prune list
 		  (p1 (list psy `((non-terminal . ,rhsx)
 				  (action #f #f $1)))))
-	     (iter ll rl al xl @l tl (cons psy nl) (acons psy p-l zl) head
-		   (cons p1 prox) lhs tail rhs-l act (cons psy pel) (cdr rhs))))
+	     (iter ll rl xl @l tl head
+		   (cons p1 prox) lhs tail rhs-l
+		   (acons 'with (cons psy p-l) attr)
+		   (cons psy pel) (cdr rhs))))
 
 	  (else
 	   (error (fmtstr "bug=~S" (caar rhs))))))
 
        ((null? rhs)
 	;; End of RHS items for current rule.
-	;; Add the p-rules items to the lists ll, rl, al, xl, and @l.
+	;; Add the p-rules items to the lists ll, rl, xl, and @l.
 	;; @code{act} is now:
 	;; @itemize
 	;; @item for mid-rule-action: (narg ref code)
@@ -400,30 +402,33 @@
 	;;(simple-format #t "lhs=~S  ln=~A\n  act=~S\n" lhs (length pel) act)
 	(let* ((ln (length pel))
 	       (r1 (reverse pel))
-	       (nrg (if act (or (car act) ln) ln))  ; number of args
-	       (ref (if act (cadr act) #f))
-	       (a1 (if (and act (cddr act)) (cons* nrg ref (cddr act))
-		       (list nrg ref (if (zero? nrg) '(list) '$1)))))
-	  ;;(simple-format #t "    =>~S\n" a1)
-	  (iter (cons lhs ll) (cons r1 rl) (cons a1 al)
-		(cons ln xl) @l tl nl zl head prox lhs tail rhs-l act pel #f)))
+	       (action (assq-ref attr 'action))
+	       (nrg (if action (or (car action) ln) ln))  ; number of args
+	       (ref (if action (cadr action) #f))
+	       (act (if (and action (cddr action)) (cddr action)
+			(if (zero? nrg) '((list)) '($1)))))
+	  (iter (cons lhs ll) (cons r1 rl) (cons ln xl)
+		(cons
+		 (cons* (cons 'act act) (cons 'ref ref) (cons 'nrg nrg) attr)
+		 @l)
+		tl nl head prox lhs tail rhs-l attr pel #f)))
 
        ((pair? rhs-l)
 	;; Work through next RHS.
-	(iter ll rl al xl @l tl nl zl head prox lhs tail
-	      (cdr rhs-l) #f '() (car rhs-l)))
+	(iter ll rl xl @l tl nl head prox lhs tail
+	      (cdr rhs-l) '() '() (car rhs-l)))
 
        ((pair? tail)
 	;; Check the next CAR of the tail.  If it matches
 	;; the current LHS process it, else skip it.
-	(iter ll rl al xl @l tl nl zl head prox lhs (cdr tail) 
+	(iter ll rl xl @l tl nl head prox lhs (cdr tail) 
 	      (if (eqv? (caar tail) lhs) (cdar tail) '())
-	      act pel #f))
+	      attr pel #f))
 
        ((pair? prox)
 	;; If a proxy then we have ((lhs RHS) (lhs RHS))
-	(iter ll rl al xl @l tl nl zl (cons (car prox) head) (cdr prox)
-		lhs tail rhs-l act pel rhs))
+	(iter ll rl xl @l tl nl (cons (car prox) head) (cdr prox)
+		lhs tail rhs-l attr pel rhs))
 
        ((pair? head)
 	;; Check the next rule-set.  If the lhs has aready
@@ -432,15 +437,15 @@
 	(let ((lhs (caar head)) (rhs-l (cdar head))
 	      (rest (cdr head)))
 	  (if (memq lhs ll)
-	      (iter ll rl al xl @l tl nl zl rest prox
-		    #f '() '() act pel #f)
-	      (iter ll rl al xl @l tl nl zl rest prox
-		    lhs rest rhs-l act pel rhs))))
+	      (iter ll rl xl @l tl nl rest prox
+		    #f '() '() attr pel #f)
+	      (iter ll rl xl @l tl nl rest prox
+		    lhs rest rhs-l attr pel rhs))))
 
        (else
 	;;(simple-format #t "rl=~S\n" rl)
-	(let* ((rv (list->vector (map list->vector (reverse rl))))
-	       (ral (reverse al))
+	(let* ((al (reverse @l))	; attribute list
+	       (rv (list->vector (map list->vector (reverse rl))))
 	       (err-1 '()) ;; not used
 	       ;; symbol used as terminal and non-terminal
 	       (err-2 (gram-check-2 tl nl err-1))
@@ -460,7 +465,7 @@
 	       (cons 'non-terms nl)
 	       (cons 'lhs-v (list->vector (reverse ll)))
 	       (cons 'rhs-v rv)
-	       (cons 'prune-al zl)	; new prunage al
+	       ;;(cons 'prune-al filter 'with)	; new prunage al
 	       ;; not as much
 	       (cons 'terminals tl)
 	       (cons 'start start-symbol)
@@ -469,9 +474,12 @@
 				 ))
 	       (cons 'prec (assq-ref pna 'prec))
 	       (cons 'assc (assq-ref pna 'assc))
-	       (cons 'act-v (list->vector (map cddr ral)))
-	       (cons 'ref-v (list->vector (map cadr ral)))
-	       (cons 'nrg-v (list->vector (map car ral)))
+	       (cons 'act-v
+		     (list->vector (map (lambda (@) (assq-ref @ 'act)) al)))
+	       (cons 'ref-v
+		     (list->vector (map (lambda (@) (assq-ref @ 'ref)) al)))
+	       (cons 'nrg-v
+		     (list->vector (map (lambda (@) (assq-ref @ 'nrg)) al)))
 	       (cons 'err-l err-l)))))))))
   
 ;;; === Code for processing the specification. ================================
