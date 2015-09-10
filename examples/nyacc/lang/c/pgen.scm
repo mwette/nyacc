@@ -938,9 +938,8 @@
 (define pat-v (assq-ref clang-mach 'pat-v))
 (define rto-v (assq-ref clang-mach 'rto-v))
 (define mtab (assq-ref clang-mach 'mtab))
-(define sya-v (vector-map
-               (lambda (ix nrg guts) (wrap-action nrg guts))
-               (assq-ref clang-mach 'nrg-v) (assq-ref clang-mach 'act-v)))
+(define sya-v (vector-map (lambda (ix actn) (wrap-action actn))
+			  (assq-ref clang-mach 'act-v)))
 (define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
 
 (include "pbody.scm")

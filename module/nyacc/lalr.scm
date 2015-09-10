@@ -330,7 +330,7 @@
     (let iter ((ll '($start))		; LHS list
 	       (@l (list		; attributes per prod' rule
 		    `((rhs . ,(vector start-symbol))
-		      (nrg . 1) (ref . all) (act $1))))
+		      (ref . all) (act 1 $1))))
 	       (tl (list '$end))	; set of terminals (add $end?)
 	       (nl (list start-symbol))	; set of non-terminals
 	       ;;
@@ -407,7 +407,7 @@
 	  (iter (cons lhs ll)
 		(cons
 		 (cons* (cons 'rhs (list->vector (reverse pel)))
-			(cons 'act act) (cons 'ref ref) (cons 'nrg nrg) attr)
+			(cons* 'act nrg act) (cons 'ref ref) attr)
 		 @l)
 		tl nl head prox lhs tail rhs-l attr pel #f)))
 
@@ -470,7 +470,6 @@
 	       (cons 'assc (assq-ref pna 'assc))
 	       (cons 'act-v (map-attr->vector al 'act))
 	       (cons 'ref-v (map-attr->vector al 'ref))
-	       (cons 'nrg-v (map-attr->vector al 'nrg))
 	       (cons 'err-l err-l)))))))))
   
 ;;; === Code for processing the specification. ================================
@@ -1607,7 +1606,6 @@
 ;; to build parser, need:
 ;;   pat-v - parse action table
 ;;   ref-v - references
-;;   nrg-v - number of args
 ;;   len-v - rule lengths
 ;;   rto-v - rule lengths
 ;; to print itemsets need:
@@ -1710,7 +1708,7 @@
 	 (lhs-v (assq-ref mach 'lhs-v))
 	 (rhs-v (assq-ref mach 'rhs-v))
 	 (nrule (vector-length lhs-v))
-	 (act-v (assq-ref mach 'act-v))
+	 ;;(act-v (assq-ref mach 'act-v))
 	 (pat-v (assq-ref mach 'pat-v))
 	 (rat-v (assq-ref mach 'rat-v))
 	 (kis-v (assq-ref mach 'kis-v))
@@ -1882,12 +1880,12 @@
     (let iter ((r '(. $rest)) (i 1))
       (if (> i n) r (iter (cons (mkarg i) r) (1+ i))))))
 
-;; @item wrap-action n act => `(lambda ($n ... $2 $1 . $rest) ,@act)
+;; @item wrap-action (n . guts) => `(lambda ($n ... $2 $1 . $rest) ,@guts)
 ;; Wrap user-specified action (body, as list) of n arguments in a lambda.
 ;; The rationale for the arglist format is that we can @code{apply} this
 ;; lambda to the the semantic stack.
-(define (wrap-action n act)
-  (cons* 'lambda (make-arg-list n) act))
+(define (wrap-action actn)
+  (cons* 'lambda (make-arg-list (car actn)) (cdr actn)))
 
 ;; @item make-lalr-parser mach => parser
 ;; This generates a procedure that takes one argument, a lexical analyzer:
@@ -1904,18 +1902,14 @@
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))	; reduce to
 	 (pat-v (assq-ref mach 'pat-v))
-	 (act-v (cond
-		 ((assq-ref mach 'nrg-v) =>
-		  (lambda (v)
-		    (vector-map
-		     ;; Turn symbolic action into executable procedures:
-		     (lambda (ix f) (eval f (current-module)))
+	 (actn-v (assq-ref mach 'act-v)) ; unknown action vector
+	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
 		     (vector-map
-		      ;; symbolic action
-		      (lambda (ix nrg guts) (wrap-action nrg guts))
-		      (assq-ref mach 'nrg-v) (assq-ref mach 'act-v)))))
-		 (else ;; have tables: no conversion needed
-		  (assq-ref mach 'act-v))))
+		      ;; Turn symbolic action into executable procedures:
+		      (lambda (ix f) (eval f (current-module)))
+		      (vector-map
+		       (lambda (ix actn) (wrap-action actn))
+		       actn-v))))
 	 ;;
 	 (dmsg (lambda (s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a)))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
@@ -1970,41 +1964,13 @@
 		  #f (if nval lval (lexr))))
 	   ((reduce? stx)
 	    (let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
-		   ($$ (apply (vector-ref act-v gx) stack)))
+		   ($$ (apply (vector-ref xact-v gx) stack)))
 	      (iter (list-tail state gl) 
 		    (list-tail stack gl)
 		    (cons (vector-ref rto-v gx) $$)
 		    lval)))
 	   (else ;; accept
 	    (car stack))))))))
-
-#;(define hashed-parser-code
-  '(define* (lexr #:key debug)
-     (define (dmsg s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a))
-     (let iter ((state (list 0)) (stack (list '$@)) (nval #f) (lval (lexr)))
-       (let* ((tval (car (if nval nval lval)))
-	      (sval (cdr (if nval nval lval)))
-	      (stxl (vector-ref pat-v (car state)))
-	      (stx (or (assq-ref stxl tval) (assq-ref stxl -1) #f)))
-	 (when debug (dmsg (car state) (if nval tval sval) stx))
-	 (cond
-	  ((eq? #f stx)
-	   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		 (ln (1+ (port-line (current-input-port)))))
-	     (fmterr "~A: ~A: parse failed at state ~A, on input ~S\n"
-		     fn ln (car state) sval))
-	   #f)
-	  ((positive? stx)
-	   (iter (cons (shift-to stx) state) (cons sval stack)
-		 #f (if nval lval (lexr))))
-	  ((negative? stx)
-	   (let* ((gx (abs stx)) (gl (vector-ref len-v gx))
-		  ($$ (apply (vector-ref act-v gx) stack)))
-	     (iter (list-tail state gl) 
-		   (list-tail stack gl)
-		   (cons (vector-ref rto-v gx) $$)
-		   lval)))
-	  (else (car stack)))))))
 
 
 (use-modules (ice-9 pretty-print))
@@ -2059,10 +2025,10 @@
      (lambda ()
        (fmt port "(define act-v\n  (vector\n")
        (vector-for-each
-	(lambda (ix nrg act)
+	(lambda (ix actn)
 	  (fmt port "   ;; ~A\n" (pp-rule/ts ix))
-	  (pretty-print (wrap-action nrg act) port #:per-line-prefix "   "))
-	(assq-ref mach 'nrg-v) (assq-ref mach 'act-v))
+	  (pretty-print (wrap-action actn) port #:per-line-prefix "   "))
+	(assq-ref mach 'act-v))
        (fmt port "   ))\n\n"))))
 
   (call-with-output-file filename
@@ -2100,10 +2066,10 @@
      (lambda ()
        (fmt port "(define act-v\n  (vector\n")
        (vector-for-each
-	(lambda (ix nrg act)
+	(lambda (ix actn)
 	  (fmt port "   ;; ~A\n" (pp-rule/ts ix))
-	  (pretty-print (wrap-action nrg act) port #:per-line-prefix "   "))
-	(assq-ref mach 'nrg-v) (assq-ref mach 'act-v))
+	  (pretty-print (wrap-action actn) port #:per-line-prefix "   "))
+	(assq-ref mach 'act-v))
        (fmt port "   ))\n\n"))))
 
   (call-with-output-file filename
