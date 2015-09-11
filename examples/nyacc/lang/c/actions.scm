@@ -210,22 +210,97 @@
    (lambda ($1 . $rest) $1)
    ;; signed-type-specifier => "short"
    (lambda ($1 . $rest) '(fixed-type "short"))
+   ;; signed-type-specifier => "short" "int"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "short int"))
+   ;; signed-type-specifier => "signed" "short"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed short"))
+   ;; signed-type-specifier => "signed" "short" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "signed short int"))
    ;; signed-type-specifier => "int"
    (lambda ($1 . $rest) '(fixed-type "int"))
+   ;; signed-type-specifier => "signed"
+   (lambda ($1 . $rest) '(fixed-type "signed"))
+   ;; signed-type-specifier => "signed" "int"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed int"))
    ;; signed-type-specifier => "long"
    (lambda ($1 . $rest) '(fixed-type "long"))
+   ;; signed-type-specifier => "long" "int"
+   (lambda ($2 $1 . $rest) '(fixed-type "long int"))
+   ;; signed-type-specifier => "signed" "long"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed long"))
+   ;; signed-type-specifier => "signed" "long" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "signed long int"))
+   ;; signed-type-specifier => "long" "long"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "long long"))
+   ;; signed-type-specifier => "long" "long" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "long long int"))
+   ;; signed-type-specifier => "signed" "long" "long"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "signed long long"))
+   ;; signed-type-specifier => "signed" "long" "long" "int"
+   (lambda ($4 $3 $2 $1 . $rest)
+     '(fixed-type "signed long long int"))
+   ;; unsigned-type-specifier => "unsigned" "short" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "unsigned short int"))
+   ;; unsigned-type-specifier => "unsigned" "short"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "unsigned short"))
+   ;; unsigned-type-specifier => "unsigned" "int"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "unsigned int"))
    ;; unsigned-type-specifier => "unsigned"
    (lambda ($1 . $rest) '(fixed-type "unsigned"))
+   ;; unsigned-type-specifier => "unsigned" "long" "int"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "unsigned long"))
+   ;; unsigned-type-specifier => "unsigned" "long"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "unsigned long"))
+   ;; unsigned-type-specifier => "unsigned" "long" "long" "int"
+   (lambda ($4 $3 $2 $1 . $rest)
+     '(fixed-type "unsigned long long int"))
+   ;; unsigned-type-specifier => "unsigned" "long" "long"
+   (lambda ($3 $2 $1 . $rest)
+     '(fixed-type "unsigned long long"))
    ;; character-type-specifier => "char"
    (lambda ($1 . $rest) '(fixed-type "char"))
+   ;; character-type-specifier => "signed" "char"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "signed char"))
+   ;; character-type-specifier => "unsigned" "char"
+   (lambda ($2 $1 . $rest)
+     '(fixed-type "unsigned char"))
    ;; bool-type-specifier => "_Bool"
    (lambda ($1 . $rest) '(fixed-type "_Bool"))
+   ;; floating-point-type-specifier => "float"
+   (lambda ($1 . $rest) '(float-type "float"))
    ;; floating-point-type-specifier => "double"
    (lambda ($1 . $rest) '(float-type "double"))
+   ;; floating-point-type-specifier => "long" "double"
+   (lambda ($2 $1 . $rest)
+     '(float-type "long double"))
    ;; floating-point-type-specifier => complex-type-specifier
    (lambda ($1 . $rest) $1)
    ;; complex-type-specifier => "_Complex"
    (lambda ($1 . $rest) '(complex-type "_Complex"))
+   ;; complex-type-specifier => "float" "_Complex"
+   (lambda ($2 $1 . $rest)
+     '(complex-type "float _Complex"))
+   ;; complex-type-specifier => "double" "_Complex"
+   (lambda ($2 $1 . $rest)
+     '(complex-type "double _Complex"))
+   ;; complex-type-specifier => "long" "double" "_Complex"
+   (lambda ($3 $2 $1 . $rest)
+     '(complex-type "long double _Complex"))
    ;; enumeration-type-specifier => enumeration-type-definition
    (lambda ($1 . $rest) $1)
    ;; enumeration-type-specifier => enumeration-type-reference
