@@ -174,6 +174,8 @@
 		(cons '(right <tk> ...) (parse-precedence <ex> ...)))
 	       ((_ (nonassoc <tk> ...) <ex> ...)
 		(cons '(nonassoc <tk> ...) (parse-precedence <ex> ...)))
+	       ((_ <tk> <ex> ...)
+		(cons '(undecl <tk>) (parse-precedence <ex> ...)))
 	       ((_) '())))
 	    (lalr-spec-1
 	     (syntax-rules (start expect notice prec< prec> grammar)

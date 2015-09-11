@@ -39,8 +39,10 @@
 (define clang-spec
   (lalr-spec
    (notice lang-crn-lic)
-   (prec< (nonassoc "then") (nonassoc "else"))
-   ;;(expect 25)				; else plus tons from type-spec
+   (prec< "then" "else")	       ; else/then SR-shift resolution
+   (prec< "imp" "char" "short" "int"   ; implied type SR-shift resolution
+	  "long" "float" "double" "_Complex")
+   ;;(expect 25)			; 25 SR-conf fixed with prec
    (start translation-unit-proxy)
    (grammar
  
@@ -285,41 +287,43 @@
     ;; The productions shown in the book are not LALR1 so we will need to use
     ;; static semantics.
     (signed-type-specifier ;; Enforce with static semantics.
-     ("short" ($prec "t1") ($$ '(fixed-type "short")))
-     ;;("short" "int" ($$ '(fixed-type "short int")))
-     ;;("signed" "short" ($$ '(fixed-type "signed short")))
-     ;;("signed" "short" "int" ($$ '(fixed-type "signed short int")))
+     ("short" ($prec "imp") ($$ '(fixed-type "short")))
+     ("short" "int" ($$ '(fixed-type "short int")))
+     ("signed" "short" ($prec "imp") ($$ '(fixed-type "signed short")))
+     ("signed" "short" "int" ($$ '(fixed-type "signed short int")))
      ("int" ($$ '(fixed-type "int")))
-     ;;("signed" ($$ '(fixed-type "signed")))
-     ;;("signed" "int" ($$ '(fixed-type "signed int")))
-     ("long" ($$ '(fixed-type "long")))
-     ;;("long" "int" ($$ '(fixed-type "long int")))
-     ;;("signed" "long" ($$ '(fixed-type "signed long")))
-     ;;("signed" "long" "int" ($$ '(fixed-type "signed long int")))
-     ;;("long" "long" ($$ '(fixed-type "long long")))
-     ;;("long" "long" "int" ($$ '(fixed-type "long long int")))
-     ;;("signed" "long" "long" ($$ '(fixed-type "signed long long")))
-     ;;("signed" "long" "long" "int" ($$ '(fixed-type "signed long long int")))
+     ("signed" ($prec "imp") ($$ '(fixed-type "signed")))
+     ("signed" "int" ($$ '(fixed-type "signed int")))
+     ("long" ($prec "imp") ($$ '(fixed-type "long")))
+     ("long" "int" ($$ '(fixed-type "long int")))
+     ("signed" "long" ($prec "imp") ($$ '(fixed-type "signed long")))
+     ("signed" "long" "int" ($$ '(fixed-type "signed long int")))
+     ("long" "long" ($prec "imp") ($$ '(fixed-type "long long")))
+     ("long" "long" "int" ($$ '(fixed-type "long long int")))
+     ("signed" "long" "long" ($prec "imp")
+      ($$ '(fixed-type "signed long long")))
+     ("signed" "long" "long" "int" ($$ '(fixed-type "signed long long int")))
      )
 
     ;; 5.1.2, p 128
     (unsigned-type-specifier
-     #;("unsigned" "short" "int" ($$ '(fixed-type "unsigned short int")))
-     #;("unsigned" "short" ($$ '(fixed-type "unsigned short")))
-     #;("unsigned" "int" ($$ '(fixed-type "unsigned int")))
-     ("unsigned" ($$ '(fixed-type "unsigned")))
-     #;("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
-     #;("unsigned" "long" ($$ '(fixed-type "unsigned long")))
-     #;("unsigned" "long" "long" "int"
-     ($$ '(fixed-type "unsigned long long int")))
-     #;("unsigned" "long" "long" ($$ '(fixed-type "unsigned long long")))
+     ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short int")))
+     ("unsigned" "short" ($prec "imp") ($$ '(fixed-type "unsigned short")))
+     ("unsigned" "int" ($$ '(fixed-type "unsigned int")))
+     ("unsigned" ($prec "imp") ($$ '(fixed-type "unsigned")))
+     ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
+     ("unsigned" "long" ($prec "imp") ($$ '(fixed-type "unsigned long")))
+     ("unsigned" "long" "long" "int"
+      ($$ '(fixed-type "unsigned long long int")))
+     ("unsigned" "long" "long" ($prec "imp")
+      ($$ '(fixed-type "unsigned long long")))
      )
 
     ;; 5.1.3, p 129
     (character-type-specifier ;; Enforce with static semantics.
      ("char" ($$/ref 's5.1.3-01 '(fixed-type "char")))
-     #;("signed" "char" ($$/ref 's5.1.3-02 '(fixed-type "signed char")))
-     #;("unsigned" "char" ($$/ref 's5.1.3-03 '(fixed-type "unsigned char")))
+     ("signed" "char" ($$/ref 's5.1.3-02 '(fixed-type "signed char")))
+     ("unsigned" "char" ($$/ref 's5.1.3-03 '(fixed-type "unsigned char")))
      )
 
     ;; 5.1.5, p 132, discussed but not defined
@@ -329,18 +333,18 @@
 
     ;; 5.2, p 132
     (floating-point-type-specifier
-     #;("float" ($$/ref 's5.2-01 '(float-type "float")))
-     ("double" ($$/ref 's5.2-02 '(float-type "double")))
-     #;("long" "double" ($$/ref 's5.2-03 '(float-type "long double")))
+     ("float" ($prec "imp") ($$/ref 's5.2-01 '(float-type "float")))
+     ("double" ($prec "imp") ($$/ref 's5.2-02 '(float-type "double")))
+     ("long" "double" ($$/ref 's5.2-03 '(float-type "long double")))
      (complex-type-specifier)
      )
 
     ;; 5.2.1, p 136
     (complex-type-specifier
      ("_Complex" ($$/ref 's5.2.1-01 '(complex-type "_Complex")))
-     #;("float" "_Complex" ($$/ref 's5.2.1-02 '(complex-type "float _Complex")))
-     #;("double" "_Complex" ($$/ref 's5.2.1-03 '(complex-type "double _Complex")))
-     #;("long" "double" "_Complex"
+     ("float" "_Complex" ($$/ref 's5.2.1-02 '(complex-type "float _Complex")))
+     ("double" "_Complex" ($$/ref 's5.2.1-03 '(complex-type "double _Complex")))
+     ("long" "double" "_Complex"
       ($$/ref 's5.2.1-04 '(complex-type "long double _Complex")))
      )
 
