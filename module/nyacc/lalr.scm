@@ -1402,7 +1402,7 @@
 		  (tok (car act)) (sft (caddr act)) (red (cdddr act))
 		  (prp (vector-ref prp-v red))
 		  (psy (prev-sym act (vector-ref kis-v ix)))
-		  (preced (or (and prp (prece tok prp prec)) ; rule-based
+		  (preced (or (and prp (prece prp tok prec)) ; rule-based
 			      (prece psy tok prec))) ; oper-based
 		  (sft-a (cons* tok 'shift sft))
 		  (red-a (cons* tok 'reduce red)))
@@ -1410,6 +1410,7 @@
 		 (lambda ()
 		   ;; Use precedence or, if =, associativity.
 		   (case preced
+		     ;; I THINK > and < ARE BACKWARDS HERE !!!
 		     ((#\>)
 		      (values red-a (cons sft-a 'pre) #f #f))
 		     ((#\<)

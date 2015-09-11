@@ -17,13 +17,13 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; usage: cxp -Ilang/c lang/c/ex1.c
+;; usage: cxp -Ilang/c99 lang/c99/ex1.c
 
 (add-to-load-path (getcwd))
 (add-to-load-path (string-append (getcwd) "/../../module"))
 
 (use-modules (ice-9 pretty-print))
-(use-modules (lang c parser))
+(use-modules (lang c99 parser))
 
 (define (scan-for-flagged flag argl)
   (let iter ((res '()) (argl argl))

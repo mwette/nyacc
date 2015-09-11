@@ -28,7 +28,7 @@
 (define defs '(("arch" . "x86_64")))
 (define incs '("." "lang/c"))
 
-(let ((sx (with-input-from-file "inc.h"
+(let ((sx (with-input-from-file "ex1.c"
 	    (lambda () (dev-parse-c #:cpp-defs defs #:inc-dirs incs)))))
   ;;(pretty-print sx)
   #t)

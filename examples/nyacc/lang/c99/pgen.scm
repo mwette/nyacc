@@ -39,10 +39,10 @@
 (define clang-spec
   (lalr-spec
    (notice lang-crn-lic)
-   (prec< "then" "else")	       ; else/then SR-shift resolution
+   (prec< "then" "else")	       ; then/else SR-shift resolution
    (prec< "imp" "char" "short" "int"   ; implied type SR-shift resolution
 	  "long" "float" "double" "_Complex")
-   ;;(expect 25)			; 25 SR-conf fixed with prec
+   ;;(expect 25)			; 25 SR-conf fixed with above prec
    (start translation-unit-proxy)
    (grammar
  
@@ -801,7 +801,7 @@
      )
 
     (if-else-statement
-     ("if" "(" expression ")" statement "else" statement ($prec "else")
+     ("if" "(" expression ")" statement "else" statement ;;($prec "else")
       ($$ `(if ,$3 ,$5 ,7)))
      )
 
