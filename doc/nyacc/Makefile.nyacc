@@ -9,8 +9,6 @@
 #
 # build the documentation
 
-
-
 SCM_FILES_W_TEXI: \
 	../../module/nyacc/lalr.scm \
 	../../module/nyacc/lex.scm 
@@ -19,9 +17,6 @@ SCM_FILES_W_TEXI: \
 	./pull-texi.scm $< >$@
 
 %.pdf: %.texi
-	texi2dvi --pdf --batch $<
-
-nyacc.pdf: nyacc.texi
 	texi2dvi --pdf --batch $<
 
 COPYING.DOC: fdl.texi

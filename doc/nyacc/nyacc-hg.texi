@@ -1,6 +1,6 @@
 \input texinfo.tex
-@setfilename other.info
-@settitle My Programming Habits
+@setfilename nyacc-hg.info
+@settitle NYACC Hacker's Guide
 
 @copying
 Copyright (C) 2015 -- Matthew R. Wette.
@@ -15,7 +15,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 @clear skip
 
 @titlepage
-@title My Programming Habits
+@title NYACC Hacker's Guide
 @author Matt Wette
 @end titlepage
 

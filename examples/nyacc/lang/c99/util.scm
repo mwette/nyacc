@@ -17,7 +17,7 @@
 
 ;; C parser utilities
 
-(define-module (lang c util)
+(define-module (lang c99 util)
   #:export (remove-inc-trees merge-inc-trees)
   #:use-module (lang util)
   #:use-module ((srfi srfi-1) #:select (append-reverse))

@@ -1,5 +1,5 @@
 \input texinfo.tex
-@setfilename nyacc.info
+@setfilename nyacc-ug.info
 @settitle Not Yet Another Compiler Compiler!
 
 @copying
