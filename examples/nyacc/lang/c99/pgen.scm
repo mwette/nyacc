@@ -801,7 +801,7 @@
      )
 
     (if-else-statement
-     ("if" "(" expression ")" statement "else" statement ;;($prec "else")
+     ("if" "(" expression ")" statement "else" statement
       ($$ `(if ,$3 ,$5 ,7)))
      )
 

@@ -20,9 +20,10 @@
 (with-output-to-file "lang/javascript/lang.txt.new"
   (lambda () (pp-lalr-grammar js-spec)
              (pp-lalr-machine js-mach)))
+(write-lalr-actions js-mach "lang/javascript/actions.scm.new")
 (write-lalr-tables js-mach "lang/javascript/tables.scm.new")
 
-;;(define res (with-input-from-file "lang/javascript/ex1.js" parse-js))
-;;(pretty-print res)
+(define res (with-input-from-file "lang/javascript/ex1.js" parse-js))
+(pretty-print res)
 
 ;; --- last line
