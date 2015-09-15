@@ -1,4 +1,4 @@
-;;; lang/ecmascript/pgen.scm
+;;; lang/javascript/pgen.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -18,7 +18,7 @@
 (define-module (lang javascript pgen)
   #:export (js-spec
 	    js-mach
-	    parse-js)
+	    dev-parse-js)
   #:use-module (lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
@@ -252,7 +252,7 @@
     (ConditionalExpression
      (LogicalORExpression)
      (LogicalORExpression "?" AssignmentExpression ":" AssignmentExpression
-			  ($$ `(ConditionalExpressoin ,$1 ,$3 ,$5)))
+			  ($$ `(ConditionalExpression ,$1 ,$3 ,$5)))
      )
     
     (AssignmentExpression
@@ -358,26 +358,21 @@
 
     (IfStatement
      ("if" "(" Expression ")" Statement "else" Statement
-      ($$ `(IfStatement ,$3 ,$5 ,$7))
-      )
+      ($$ `(IfStatement ,$3 ,$5 ,$7)))
      ("if" "(" Expression ")" Statement ($prec "then")
-      ($$ `(IfStatement ,$3 ,$5))
-      )
+      ($$ `(IfStatement ,$3 ,$5)))
      )
 
     (IterationStatement
      ("do" Statement "while" "(" Expression ")" ";"
-      ($$ `(do ,$2 ,$5))
-      )
+      ($$ `(do ,$2 ,$5)))
      ("while" "(" Expression ")" Statement
-      ($$ `(while ,$3 ,$5))
-      )
+      ($$ `(while ,$3 ,$5)))
      ("for" "(" OptExprStmtNoIn OptExprStmt OptExprClose Statement
       ;;($$ `(for ,$3 ,$
       )
-     ("for" "(" "var" VariableDeclarationListNoIn ";"
-      OptExprStmt OptExprClose Statement
-      )
+     ("for" "(" "var" VariableDeclarationListNoIn ";" OptExprStmt
+      OptExprClose Statement)
      ("for" "(" LeftHandSideExpression "in" Expression ")" Statement)
      ("for" "(" "var" VariableDeclarationNoIn "in" Expression ")" Statement)
      )
@@ -540,25 +535,16 @@
 
 (include "pbody.scm")
 
-#|
 (define raw-parser (make-lalr-parser js-mach))
-(define (dev-parse-js #:key debug)
+(define* (dev-parse-js #:key debug)
   (catch
    'parse-error
    (lambda ()
-     (raw-parser (gen-c-lexer) #:debug debug))
+     (with-fluid*
+	 *insert-semi* #t
+	 (lambda () (raw-parser (gen-js-lexer) #:debug #f))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) fmt rest)
      #f)))
-|#
 
-#|
-    (InputElementDiv
-     (WhiteSpace) (LineTerminator) (Comment) (Token) (DivPunctuator))
-    (InputElementRegExp
-     (WhiteSpace) (LineTerminator) (Comment) (Token) (RegularExpressionLiteral))
-    (WhiteSpace ("\t") ("\vt") ("\ff") (" ") ("&nbsp;") ("&usp;"))
-    (LineTerminator ("\n") ("\r") (LS) (PS))
-    (MultiLineComment ('multiline-comment))
-|#
 ;;; --- last line    

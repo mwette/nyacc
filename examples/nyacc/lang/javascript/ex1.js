@@ -9,6 +9,7 @@
  */
 
 var x = 5;
-var y = 6.3;
-var z = x + y;
-y += z;
+x += 10;
+//var y = 6.3;
+//var z = x + y;
+//y += z;

@@ -174,12 +174,12 @@ B => c@i{r}
 Then the initial la-itemset as follows:
 @example
 @i{0}: $start => .S, @{$end@}
-   S => .A@i{p}, @{$end,...@}
-   S => .B@i{p}, @{$end,...@}
+   S => .a@i{p}, @{$end,...@}
+   S => .B@i{q}, @{$end,...@}
    B => .c@i{r}, @{$end,...@}
 @end example
 @noindent
-where the @code{...} represents unknown other lookaheads. 
+where the @code{...} represents unknown other lookaheads.
 At this point we don't know the entire set of possible lookaheads
 because @code{S} may appear in right-hand sides of other production rules.
 

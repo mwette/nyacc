@@ -20,10 +20,10 @@
 (define (es-Boolean? v) (or (eq? #t v) (eq? #f v)))
 (define (es-Null? v) (eq? 'Null v))
 
-(define *insert-semicolon* (make-fluid))
+(define *insert-semi* (make-fluid))
   
 (define (NLT)
-  (fluid-set! *insert-semicolon* #f))
+  (fluid-set! *insert-semi* #f))
 
 (define read-js-ident
   ;; This is incomplete.
@@ -65,7 +65,7 @@
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
 	     ((char-set-contains? space-cs ch) (iter (read-char)))
 	     ((eqv? ch #\newline)
-	      (if (fluid-ref *insert-semicolon*)
+	      (if (fluid-ref *insert-semi*)
 		  (cons semicolon ";")
 		  (iter (read-char))))
 	     ((and (eqv? ch #\newline) (set! bol #t) #f))
@@ -80,8 +80,18 @@
 	     ((read-chseq ch) => identity)
 	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	     (else (cons ch (string ch)))))))))) ; should be error
- 
-(define parser
+
+#|
+    (InputElementDiv
+     (WhiteSpace) (LineTerminator) (Comment) (Token) (DivPunctuator))
+    (InputElementRegExp
+     (WhiteSpace) (LineTerminator) (Comment) (Token) (RegularExpressionLiteral))
+    (WhiteSpace ("\t") ("\vt") ("\ff") (" ") ("&nbsp;") ("&usp;"))
+    (LineTerminator ("\n") ("\r") (LS) (PS))
+    (MultiLineComment ('multiline-comment))
+|#
+
+#;(define parser
   (let* ((dmsg (lambda (s t a)
 		 (simple-format #t "state ~S, token ~S\t=> ~S\n" s t a)))
 	 ;; predicate to test for shift action:
@@ -124,9 +134,5 @@
 		    lval)))
 	   (else ;; accept
 	    (car stack))))))))
-
-(define (parse-js)
-  (with-fluid* *insert-semicolon* #t
-	       (lambda () (parser (gen-js-lexer) #:debug #f))))
 
 ;;; --- last line

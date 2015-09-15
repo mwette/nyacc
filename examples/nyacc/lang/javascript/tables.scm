@@ -1,4 +1,4 @@
-;; lang/javascript/tables.scm
+;; tables.scm
 
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 
