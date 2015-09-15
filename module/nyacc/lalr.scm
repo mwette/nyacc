@@ -371,19 +371,16 @@
 	     (iter ll @l tl (cons sy nl) head (cons p1 prox) lhs
 		   tail rhs-l attr (cons sy pel) (cdr rhs))))
 	  ((prec)
-	   ;; not handled yet, just skip
 	   (iter ll @l tl nl head prox lhs tail rhs-l
 		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
-	  #;((with)
-	   (let* ((psy (maksy))		; proxy symbol
-		  (rhsx (cadar rhs))	; symbol to expand
+	  ((with)
+	   (let* ((psy (maksy))		      ; proxy symbol
+		  (rhsx (cadar rhs))	      ; symbol to expand
 		  (p-l (map cdr (cddar rhs))) ; prune list
 		  (p1 (list psy `((non-terminal . ,rhsx)
 				  (action #f #f $1)))))
-	     (iter ll @l tl head
-		   (cons p1 prox) lhs tail rhs-l
-		   (acons 'with (cons psy p-l) attr)
-		   (cons psy pel) (cdr rhs))))
+	     (iter ll @l tl (cons psy nl) head (cons p1 prox) lhs tail rhs-l
+		   (acons 'with (cons psy p-l) attr) (cons psy pel) (cdr rhs))))
 	  (else
 	   (error (fmtstr "bug=~S" (caar rhs))))))
 
@@ -458,7 +455,7 @@
 	       (cons 'non-terms nl)
 	       (cons 'lhs-v (list->vector (reverse ll)))
 	       (cons 'rhs-v (map-attr->vector al 'rhs))
-	       ;;(cons 'prune-al filter 'with)	; new prunage al
+	       ;;(cons 'prune-al TODO: filter 'with from '@l)
 	       (cons 'terminals tl)
 	       (cons 'start start-symbol)
 	       (cons 'attr (list (cons 'expect (or (assq-ref tree 'expect) 0))
@@ -1376,7 +1373,7 @@
 	 (gen-pat-ix (lambda (ix)	 ; pat from shifts and reduc's
 		       (gen-pat (vector-ref kix-v ix) (reductions kit-v ix))))
 	 (prp-v (assq-ref p-mach 'prp-v))  ; per-rule precedence
-	 (tl (assq-ref p-mach 'terminals)) ; TEMPORARY for debugging
+	 (tl (assq-ref p-mach 'terminals)) ; for error msgs
 	 )
     ;; We run through each itemset.
     ;; @enumerate
@@ -1410,7 +1407,6 @@
 		 (lambda ()
 		   ;; Use precedence or, if =, associativity.
 		   (case preced
-		     ;; I THINK > and < ARE BACKWARDS HERE !!!
 		     ((#\>)
 		      (values red-a (cons sft-a 'pre) #f #f))
 		     ((#\<)
@@ -1435,8 +1431,8 @@
 		       (if f (cons f ftl) ftl)
 		       (cdr actl))))))
 	  ((rrconf)
-	   (fmterr "*** reduce-reduce conflict: in state ~A on ~A: ~A\n"
-		   ix (caar actl) (cddar actl))
+	   #;(fmterr "*** reduce-reduce conflict: in state ~A on ~A: ~A\n"
+		   ix (obj->str (find-terminal (caar actl) tl)) (cddar actl))
 	   (iter ix (cons (car actl) pat) rat wrn
 		 (cons (cons ix (car actl)) ftl) (cdr actl)))
 	  (else
@@ -1453,9 +1449,10 @@
 	  (if (not (= (length wrn) expect))
 	      (for-each (lambda (m) (fmterr "+++ warning: ~A\n" (conf->str m)))
 			(reverse wrn)))
-	  (for-each (lambda (m) (fmterr "*** fatal  : ~S\n" m))
-		    (reverse ftl))
-	))))
+	  (for-each
+	   (lambda (m) (fmterr "*** fatal: ~A\n" (conf->str m)))
+	   (reverse ftl))
+	  ))))
     ;; Return mach with parse-action and removed-action tables.
     (cons* (cons 'pat-v pat-v) (cons 'rat-v rat-v) p-mach)))
 
@@ -1473,65 +1470,32 @@
 	    (obj->str (find-terminal tok terms)))))
 		     
 ;; @item gen-match-table mach => mach
-;; Generate the match-table for a machine.  The match-table may be passed to
+;; Generate the match-table for a machine.  The match table is a list of
+;; pairs: the car is the token used in the grammar specification, the cdr
+;; is the symbol that should be returned by the lexical analyzer.
+;;
+;; The match-table may be passed to
 ;; the lexical analyzer builder to identify strings or string-types as tokens.
-;; Key is @code{mtab}.  The format is as follows
+;; The associated key in the machine is @code{mtab}. 
 ;; @enumerate
 ;; @item
 ;; @sc{nyacc}-reserved symbols are provided as symbols
 ;; @example
-;; $symbol -> ($symbol . $symbol)
+;; $ident -> ($ident . $ident)
 ;; @end example
 ;; @item
 ;; Terminals used as symbols (@code{'comment} versus @code{"comment"}) are
-;; provided as symbols.  The spec parser should warn if symbols are used in
-;; both ways.  (This is a conflict.)
+;; provided as symbols.  The spec parser will provide a warning if symbols
+;; are used in both ways.
 ;; @item
 ;; Others are provided as strings.
 ;; @end enumerate
 ;; The procedure @code{hashify-machine} will convert the cdrs to integers.
 ;; Test: "$abc" => ("$abc" '$abc) '$abc => ('$abc . '$abc)
-;; FIX: need to return to old-gen-match-table and make lexer sync up with that.
-(define (old1-gen-match-table mach)
-  (let ((terminals (assq-ref mach 'terminals)))
-    (cons*
-     (cons 'mtab
-	   (let iter ((mt '(($default . $default) ($error . $error)))
-		      (tl terminals))
-	     (if (null? tl) (reverse mt)
-		 (let* ((tok (car tl))
-			(str (if (symbol? tok) (symbol->string tok) #f))
-			(rez (and str (eqv? #\$ (string-ref str 0)))))
-		   (iter (acons (cond (rez tok) (str str) (else tok))
-				(atomize tok)
-				mt)
-			 (cdr tl))))))
-     mach)))
-(define (old2-gen-match-table mach)
-  (let ((terminals (assq-ref mach 'terminals)))
-    (cons*
-     (cons 'mtab
-	   (let iter ((mt '(($default . $default) ($error . $error)))
-		      (tl terminals))
-	     (if (null? tl) (reverse mt)
-		 (let* ((tok (car tl))
-			(str (cond
-			      ((symbol? tok) (symbol->string tok))
-			      ((char? tok) (list->string (list tok)))
-			      (else tok)))
-			(rez (and (symbol? tok) (eqv? #\$ (string-ref str 0)))))
-		   (iter (acons (if rez tok str) (atomize tok) mt)(cdr tl))))))
-     mach)))
 (define (gen-match-table mach)
   (cons
    (cons 'mtab (map (lambda (term) (cons term (atomize term)))
 		    (assq-ref mach 'terminals)))
-   mach))
-(define (old4-gen-match-table mach)
-  (acons
-   'mtab (fold (lambda (term seed) (cons (cons term (atomize term)) seed))
-	       '(($default . $default))
-	       (assq-ref mach 'terminals))
    mach))
 
 ;; @item lalr-match-table mach => match-table
@@ -1679,6 +1643,7 @@
 
 ;; @item pp-lalr-grammar spec [port]
 ;; Pretty-print the grammar to the specified port, or current output.
+;; TODO: Add @code{$prec} and @code{$prune} expressions.
 (define (pp-lalr-grammar spec . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref spec 'lhs-v))
@@ -1744,10 +1709,11 @@
 	       (let ((sy (car act)) (pa (cadr act)) (gt (cddr act)))
 		 (case pa
 		   ((srconf)
-		    (fmt port "\t\t~S => CONFLICT: shift ~A, reduce ~A\n" sy
-			 (car gt) (cdr gt)))
+		    (fmt port "\t\t~A => CONFLICT: shift ~A, reduce ~A\n"
+			 (elt->str sy terms) (car gt) (cdr gt)))
 		   ((rrconf)
-		    (fmt port "\t\t~S => CONFLICT: reduce ~A\n" sy
+		    (fmt port "\t\t~A => CONFLICT: reduce ~A\n"
+			 (elt->str sy terms)
 			 (string-join (map number->string gt) ", reduce ")))
 		   (else
 		    (fmt port "\t\t~A => ~A ~A\n" (elt->str sy terms) pa gt))))
@@ -1948,7 +1914,7 @@
 	       (stx (or (assq-ref stxl tval) ; trans action (e.g. shift 32)
 			(assq-ref stxl def)  ; default action
 			parse-error)))
-	  (when debug (dmsg (car state) (if nval tval sval) stx))
+	  (if debug (dmsg (car state) (if nval tval sval) stx))
 	  (cond
 	   ((error? stx)
 	    ;; Ugly to have to check this first every time, but

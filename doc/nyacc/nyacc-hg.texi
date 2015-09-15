@@ -32,15 +32,24 @@ copy of the license is included with the distribution as COPYING.DOC.
 @end titlepage
 
 @ifnottex
-@node Top, Habits, (dir), (dir)
-@top Habits
+@node Top, Introduction, (dir), (dir)
+@top Introduction
 @end ifnottex
 
 @menu
-* The Algorithms ::
-* The @sc{NYACC} Module ::
-* Habits::
+* Introduction ::
+* Algorithms ::
+* Lexical Analyzers ::
+* nyacc routines ::
+* Translating SXML ::
+* lex routines ::
+* Programming Style ::
 @end menu
+
+@node Introduction
+@chapter The Introduction
+
+This is a manual for ...
 
 @node Algorithms
 @chapter The Algorithms
@@ -321,8 +330,34 @@ handle: If S => aAw => abw, then A => b is a handle of abw where
 w only contains terminals.
 @end itemize
 
-@ifset skip
+@node Translating SXML
+@chapter Translating SXML
 
+Many of the example parsers generate SXML.  Here we describe the process
+of translating to something else.
+
+@section Using @code{foldts*-values}
+
+In the modules @code{(sxml fold)} is the routine @code{foldts*-values}. 
+This has been used to convert the SXML output of the example javascript
+parser into Tree-IL.  The signature to this is
+@example
+foldts*-values fdown fup fhere tree seed1 ... => tree seed1 ...
+@end example
+@noindent
+where any number of seeds can be passed.  We choose to use two: @code{seed} 
+and @code{dict}.
+The arguments we pass to @code{foldts*-values} are
+@table @code
+@item fdown tree seed dict => tree seed dict
+The down processor.
+@item fup tree seed dict kseed kdict => seed dict
+The up processor.
+@item fhere tree seed dict => seed dict
+The here processor.
+@end table
+
+@ifset skip
 @node Module
 @chapter The @sc{NYACC} Module ::
 
