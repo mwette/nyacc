@@ -58,7 +58,8 @@
 
     ((VariableDeclaration (Identifier ,name) ,rest ...)
      (values
-      node '()
+      node
+      '()
       (if (= 1 (assoc-ref dict '@l))
 	  (acons name `(toplevel ,(string->symbol name)) dict)
 	  (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict))))
@@ -82,11 +83,19 @@
    (null? node) (values seed dict)
    (case (car node)
      ((SourceElements)
-      (values `(begin ,@(x-defs kdict) ,@(reverse kseed)) dict))
+      (values
+       `(begin
+	  ,@(filter (lambda (e) (eq? 'define (car e))) (reverse kseed))
+	  ,@(remove (lambda (e) (eq? 'define (car e))) (reverse kseed)))
+       dict))
 
      ((VariableDeclaration)
       (values
-       seed
+       (cons
+	(if (= 2 (length kseed))
+	    `(define ,(list-ref kseed 1) ,(list-ref kseed 0))
+	    `(define ,(list-ref kseed 0) undefined))
+	seed)
        kdict))
 
      ((Initializer)
@@ -133,6 +142,10 @@
      (PrimaryExpression (Identifier "x"))
      (add-assign)
      (PrimaryExpression (NumericLiteral "10")))
+    (VariableDeclaration
+     (Identifier "y")
+     (Initializer
+      (PrimaryExpression (NumericLiteral "7"))))
     ))
 
 (define (init-dict) (list (cons '@l 0) (cons '@P '())))
