@@ -18,10 +18,13 @@
 (define res (with-input-from-file "lang/javascript/ex1.js" parse-js))
 ;;(pretty-print res)
 
+;; document.print("hello\n")
+;; (hashq-set! htab 'print (lambda () ...))
+
 (define (x-assn lhs op rhs)
   (case op
     ((add-assign)
-     `(set! ,lhs (+ ,lhs ,rhs)))
+     `(set! ,lhs (apply (toplevel +) ,lhs ,rhs)))
     (else
      '(unknown))))
 
@@ -32,7 +35,7 @@
      ((null? defs) (reverse res))
      ((symbol? (caar defs)) (iter res (cdr defs)))
      ((pair? (cdar defs))
-      (iter (cons `(define ,(cadar defs) ,(cddar defs)) res) (cdr defs)))
+      (iter (cons `(define ,(cdar defs) 99) res) (cdr defs)))
      (else
       (iter (cons `(define ,(cdar defs)) res) (cdr defs))))))
 
@@ -40,7 +43,8 @@
   (cond
    ((not dict) #f)
    ((null? dict) #f)
-   ((assoc-ref dict name) => (lambda (val) (if (pair? val) (car val) val)))
+   ((assoc-ref dict name) =>
+    (lambda (val) (cons (if (pair? val) (car val) val) (assoc-ref dict '@l))))
    (else (lookup (assq-ref dict '@P) name))))
 
 (define (fd1 node seed dict) ;; => node seed dict
@@ -49,45 +53,41 @@
     ((SourceElements ,elts ...)
      (values
       node '()
-      (list (cons '@l (1+ (assq-ref dict '@l)))
+      (list (cons '@l (1+ (assoc-ref dict '@l))) ; push level
 	    (cons '@P dict))))
 
     ((VariableDeclaration (Identifier ,name) ,rest ...)
-     (let ((symb (gensym "JS~")))
-       (values node '() (acons name symb dict))))
+     (values
+      node '()
+      (if (= 1 (assoc-ref dict '@l))
+	  (acons name `(toplevel ,(string->symbol name)) dict)
+	  (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict))))
 
     ((PrimaryExpression (Identifier ,name))
-     ;; Convert here.
-     (let ((gsym (lookup dict name)))
-       (values '(PrimaryExpression) `(lexical ,name ,gsym) dict)))
+     (values '(PrimaryExpression) (assoc-ref dict name) dict))
     ((PrimaryExpression (NumericLiteral ,val))
      (values '(PrimaryExpression) `(const ,(string->number val)) dict))
 
     ((Identifier ,name)
-     (let ((gsym (lookup dict name)))
-       (values '(Identifier) `((lexical ,name ,gsym)) dict)))
-
+     (values '(Identifier) (assoc-ref dict name) dict))
+    
     (,otherwise
      (values node '() dict))
     ))
 
 (define (fu1 node seed dict kseed kdict) ;; => seed dict
-  #;(fmtout "U node =~S\n  seed =~S\n  dict =~S\n  kseed=~S\n  kdict=~S\n"
-  node seed dict kseed kdict)
+  (fmtout "U node =~S\n  seed =~S\n  dict =~S\n  kseed=~S\n  kdict=~S\n"
+	  node seed dict kseed kdict)
   (if
    (null? node) (values seed dict)
    (case (car node)
-     ((SourceElements) ;;(fmtout "  SOURCE\n")
+     ((SourceElements)
       (values `(begin ,@(x-defs kdict) ,@(reverse kseed)) dict))
 
      ((VariableDeclaration)
       (values
        seed
-       (if (eqv? 2 (length kseed))
-	   (let* ((ini (car kseed)) (ref (cadr kseed))
-		  (name (cadr ref)) (gsym (caddr ref)))
-	     (acons name (cons gsym ini) dict))
-	   dict)))
+       kdict))
 
      ((Initializer)
       (values (cons (car kseed) seed) dict))
@@ -99,6 +99,9 @@
       (values (cons (apply x-assn (reverse kseed)) seed) dict))
 
      ((PrimaryExpression)
+      (values (cons kseed seed) dict))
+
+     ((Identifier)
       (values (cons kseed seed) dict))
 
      ;; (else (values seed dict))
@@ -131,12 +134,18 @@
      (add-assign)
      (PrimaryExpression (NumericLiteral "10")))
     ))
-(let ((seed '()) (dict (list (cons '@l 1) (cons '@P '()))))
-  (pretty-print rez)
-  (when #t
-    (fmtout "===> \n")
-    (pretty-print (doit rez seed dict))
-    )
-  (newline))
-	      
+
+(define (init-dict) (list (cons '@l 0) (cons '@P '())))
+
+(define x0 rez)
+(pretty-print x0)
+
+(fmtout "===> \n")
+(define x1 (doit rez '() (init-dict)))
+(pretty-print x1)
+
+;;(use-modules (language tree-il))
+;;(define x2 (parse-tree-il x1))
+
+
 ;; --- last line ---

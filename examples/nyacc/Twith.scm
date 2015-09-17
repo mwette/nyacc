@@ -42,7 +42,7 @@
 
 (define js-mach (make-lalr-machine js-spec))
 
-(with-output-to-file "with.txt"
+(with-output-to-file ",with.txt"
   (lambda ()
     (pp-lalr-grammar js-spec)
     (pp-lalr-machine js-mach)))
