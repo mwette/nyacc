@@ -26,10 +26,9 @@
   (fluid-set! *insert-semi* #f))
 
 (define read-js-ident
-  ;; This is incomplete.
-  (let* ((if (char-set-union char-set:letter (string->char-set "_$")))
-	 (ir (char-set-union if char-set:digit (string->char-set ".+-"))))
-    (make-ident-reader if ir)))
+  (let* ((idf (char-set-union char-set:letter (string->char-set "_$")))
+	 (idr (char-set-union idf char-set:digit)))
+    (make-ident-reader idf idr)))
 
 (define (read-js-string delim)
   (if (not (or (eq? delim #\') (eq? delim #\"))) #f
@@ -90,49 +89,5 @@
     (LineTerminator ("\n") ("\r") (LS) (PS))
     (MultiLineComment ('multiline-comment))
 |#
-
-#;(define parser
-  (let* ((dmsg (lambda (s t a)
-		 (simple-format #t "state ~S, token ~S\t=> ~S\n" s t a)))
-	 ;; predicate to test for shift action:
-	 (shift? (lambda (a) (positive? a)))
-	 (shift-to (lambda (x) x))
-	 (reduce? (lambda (a) (negative? a)))
-	 (reduce-pr abs)
-	 (error? (lambda (a) (eq? #f a)))
-	 )
-    (lambda* (lexr #:key debug)
-      (let iter ((state (list 0))	; state stack
-		 (stack (list '$@))	; sval stack
-		 (nval #f)		; prev reduce to non-term val
-		 (lval (lexr)))		; lexical value (from lex'er)
-	(let* ((tval (car (if nval nval lval))) ; token (syntax value)
-	       (sval (cdr (if nval nval lval))) ; semantic value
-	       (stxl (vector-ref pat-v (car state))) ; state transition list
-	       (stx (or (assq-ref stxl tval) ; trans action (e.g. shift 32)
-			(assq-ref stxl -1)  ; default action
-			#f)))
-	  (when debug (dmsg (car state) (if nval tval sval) stx))
-	  (cond
-	   ((error? stx)
-	    ;; Ugly to have to check this first every time, but
-	    ;; @code{positive?} and @code{negative?} fail otherwise.
-	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		  (ln (1+ (port-line (current-input-port)))))
-	      (fmterr "~A: ~A: parse failed at state ~A, on input ~S\n"
-		      fn ln (car state) sval))
-	    #f)
-	   ((shift? stx)
-	    (iter (cons (shift-to stx) state) (cons sval stack)
-		  #f (if nval lval (lexr))))
-	   ((reduce? stx)
-	    (let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
-		   ($$ (apply (vector-ref act-v gx) stack)))
-	      (iter (list-tail state gl) 
-		    (list-tail stack gl)
-		    (cons (vector-ref rto-v gx) $$)
-		    lval)))
-	   (else ;; accept
-	    (car stack))))))))
 
 ;;; --- last line

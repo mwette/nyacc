@@ -76,7 +76,7 @@
      (make-tl `PropertyNameAndValueList $1 $3))
    ;; PropertyNameAndValueList => PropertyNameAndValueList "," PropertyName...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (tl->append $1 $3 $5))
+     (tl-append $1 $3 $5))
    ;; PropertyName => Identifier
    (lambda ($1 . $rest) $1)
    ;; PropertyName => StringLiteral
@@ -87,9 +87,9 @@
    (lambda ($1 . $rest) $1)
    ;; MemberExpression => MemberExpression "[" Expression "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(array-ref ,$3 ,$1))
+     `(array-ref ,$1 ,$3))
    ;; MemberExpression => MemberExpression "." Identifier
-   (lambda ($3 $2 $1 . $rest) `(elt-ref ,$3 ,$1))
+   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; MemberExpression => "new" MemberExpression Arguments
    (lambda ($3 $2 $1 . $rest) `(new ,$2 ,$3))
    ;; NewExpression => MemberExpression
@@ -104,13 +104,13 @@
      `(CallExpression ,$1 ,$2))
    ;; CallExpression => CallExpression "[" Expression "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(array-ref ,$3 ,$1))
+     `(array-ref ,$1 ,$3))
    ;; CallExpression => CallExpression "." Identifier
-   (lambda ($3 $2 $1 . $rest) `(elt-ref ,$3 ,$1))
+   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; Arguments => "(" ")"
    (lambda ($2 $1 . $rest) '(Arguments))
    ;; Arguments => "(" ArgumentList ")"
-   (lambda ($3 $2 $1 . $rest) $2)
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
    ;; ArgumentList => AssignmentExpression
    (lambda ($1 . $rest) (make-tl 'ArgumentList $1))
    ;; ArgumentList => ArgumentList "," AssignmentExpression
@@ -218,7 +218,7 @@
    (lambda ($1 . $rest) $1)
    ;; ConditionalExpression => LogicalORExpression "?" AssignmentExpression...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(ConditionalExpressoin ,$1 ,$3 ,$5))
+     `(ConditionalExpression ,$1 ,$3 ,$5))
    ;; AssignmentExpression => ConditionalExpression
    (lambda ($1 . $rest) $1)
    ;; AssignmentExpression => LeftHandSideExpression AssignmentOperator Ass...

@@ -1,3 +1,4 @@
-var x = 5, y = 7;
-x += y + 10;
-x;
+var x;
+x = Math.sqrt(26.01);
+x += 1;
+x

@@ -31,7 +31,6 @@
 
 
 ;; Not in the grammar yet: FunctionExpression
-;; check on Elision
 
 (define js-spec
   (lalr-spec
@@ -68,22 +67,25 @@
      )
 
     (ArrayLiteral
-     ("[" Elision "]" ($$ `(ArrayLiteral)))
+     ("[" Elision "]" ($$ `(ArrayLiteral (Elision ,(number->string $2)))))
      ("[" "]" ($$ `(ArrayLiteral)))
-     ("[" ElementList "," Elision "]" ($$ `(ArrayLiteral ,$2)))
+     ("[" ElementList "," Elision "]"
+      ($$ `(ArrayLiteral (Elision ,(number->string $2)))))
      ("[" ElementList "," "]" ($$ `(ArrayLiteral ,$2)))
      )
 
     (ElementList
-     (Elision AssignmentExpression ($$ (make-tl 'ElementList $2)))
+     (Elision AssignmentExpression
+	      ($$ (make-tl 'ElementList `(Elision ,(number->string $2)))))
      (AssignmentExpression ($$ (make-tl 'ElementList $1)))
-     (ElementList "," Elision AssignmentExpression ($$ (tl-append $1 $4)))
+     (ElementList "," Elision AssignmentExpression
+		  ($$ (tl-append $1 `(Elision ,(number->string $3)) $4)))
      (ElementList "," AssignmentExpression ($$ (tl-append $1 $3)))
      )
 
     (Elision
-     ("," ($$ '(Elision)))
-     (Elision ",")
+     ("," ($$ 1))
+     (Elision "," ($$ (1+ ,$1)))
      )
 
     (ObjectLiteral
@@ -95,7 +97,7 @@
      (PropertyName ":" AssignmentExpression
 		   ($$ (make-tl `PropertyNameAndValueList $1 $3)))
      (PropertyNameAndValueList "," PropertyName ":" AssignmentExpression
-		   ($$ (tl->append $1 $3 $5)))
+		   ($$ (tl-append $1 $3 $5)))
      )
 
     (PropertyName
@@ -108,8 +110,8 @@
      (PrimaryExpression)
      ;; Until we get $with-prune working:
      #;(FunctionExpression)
-     (MemberExpression "[" Expression "]" ($$ `(array-ref ,$3 ,$1)))
-     (MemberExpression "." Identifier ($$ `(elt-ref ,$3 ,$1)))
+     (MemberExpression "[" Expression "]" ($$ `(ary-ref ,$1 ,$3)))
+     (MemberExpression "." Identifier ($$ `(obj-ref ,$1 ,$3)))
      ("new" MemberExpression Arguments ($$ `(new ,$2 ,$3)))
      )
 
@@ -121,13 +123,13 @@
     (CallExpression
      (MemberExpression Arguments ($$ `(CallExpression ,$1 ,$2)))
      (CallExpression Arguments ($$ `(CallExpression ,$1 ,$2)))
-     (CallExpression "[" Expression "]" ($$ `(array-ref ,$3 ,$1))) ; ??
-     (CallExpression "." Identifier ($$ `(elt-ref ,$3 ,$1))) ; ??
+     (CallExpression "[" Expression "]" ($$ `(ary-ref ,$1 ,$3)))
+     (CallExpression "." Identifier ($$ `(obj-ref ,$1 ,$3))) ;; see member expr
      )
 
     (Arguments
      ("(" ")" ($$ '(Arguments)))
-     ("(" ArgumentList ")" ($$ $2))
+     ("(" ArgumentList ")" ($$ (tl->list $2)))
      )
 
     (ArgumentList
