@@ -2,12 +2,8 @@
 
 (add-to-load-path (getcwd))
 (add-to-load-path (string-append (getcwd) "/../../module"))
-(add-to-load-path (string-append (getcwd) "/../../../nyacc.dev"))
 
 (use-modules (lang javascript parser))
-
-(use-modules ((sxml xpath) #:select (sxpath)
-              #:renamer (lambda (s) (if eq? s 'filter) 'xp-filter s)))
 (use-modules (sxml match))
 (use-modules (sxml fold))
 (use-modules (srfi srfi-1))
@@ -15,29 +11,12 @@
 
 (define (fmtout fmt . args) (apply simple-format #t fmt args))
 
-(define res (with-input-from-file "lang/javascript/ex1.js" parse-js))
-;;(pretty-print res)
-
-;; document.print("hello\n")
-;; (hashq-set! htab 'print (lambda () ...))
+(define JS+ +)
 
 (define (x-assn lhs op rhs)
   (case op
-    ((add-assign)
-     `(set! ,lhs (apply (toplevel +) ,lhs ,rhs)))
-    (else
-     '(unknown))))
-
-(define (x-defs dict)
-  ;;(fmtout "DEFS: dict=~S\n" dict)
-  (let iter ((res '()) (defs dict))
-    (cond
-     ((null? defs) (reverse res))
-     ((symbol? (caar defs)) (iter res (cdr defs)))
-     ((pair? (cdar defs))
-      (iter (cons `(define ,(cdar defs) 99) res) (cdr defs)))
-     (else
-      (iter (cons `(define ,(cdar defs)) res) (cdr defs))))))
+    ((add-assign) `(set! ,lhs (apply (toplevel JS+) ,lhs ,rhs)))
+    (else '(unknown))))
 
 (define (lookup dict name)
   (cond
@@ -58,8 +37,7 @@
 
     ((VariableDeclaration (Identifier ,name) ,rest ...)
      (values
-      node
-      '()
+      node '()
       (if (= 1 (assoc-ref dict '@l))
 	  (acons name `(toplevel ,(string->symbol name)) dict)
 	  (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict))))
@@ -77,7 +55,7 @@
     ))
 
 (define (fu1 node seed dict kseed kdict) ;; => seed dict
-  (fmtout "U node =~S\n  seed =~S\n  dict =~S\n  kseed=~S\n  kdict=~S\n"
+  #;(fmtout "U node =~S\n  seed =~S\n  dict =~S\n  kseed=~S\n  kdict=~S\n"
 	  node seed dict kseed kdict)
   (if
    (null? node) (values seed dict)
@@ -85,18 +63,22 @@
      ((SourceElements)
       (values
        `(begin
-	  ,@(filter (lambda (e) (eq? 'define (car e))) (reverse kseed))
-	  ,@(remove (lambda (e) (eq? 'define (car e))) (reverse kseed)))
+	  ;;,@(filter (lambda (e) (eq? 'define (car e))) (reverse kseed))
+	  ;;,@(remove (lambda (e) (eq? 'define (car e))) (reverse kseed))
+	  ,@(reverse kseed)
+       )
        dict))
 
      ((VariableDeclaration)
       (values
        (cons
 	(if (= 2 (length kseed))
-	    `(define ,(list-ref kseed 1) ,(list-ref kseed 0))
-	    `(define ,(list-ref kseed 0) undefined))
+	    `(define ,(cadr (list-ref kseed 1)) ,(list-ref kseed 0))
+	    `(define ,(cadr (list-ref kseed 0)) 'undefined))
 	seed)
        kdict))
+     ((VariableStatement VariableDeclarationList)
+      (values (append (reverse kseed) seed) kdict))
 
      ((Initializer)
       (values (cons (car kseed) seed) dict))
@@ -125,40 +107,56 @@
   #;(fmtout "H atom =~S\n  seed =~S\n  dict =~S\n" atom seed dict)
   (if (string? atom) (values (cons atom seed) dict)
       (case atom
+	((add) (values (cons* '(toplevel JS+) 'apply seed) dict))
 	(else (values seed dict)))))
 
 (define (doit tree seed dict)
   (let ((fd fd1) (fu fu1) (fh fh1))
     (foldts*-values fd fu fh tree seed dict)))
 
+(define (init-dict) (list (cons '@l 0) (cons '@P '())))
+
+;; ===================================
+
+(define res (with-input-from-file "lang/javascript/ex1.js" parse-js))
+
 (define rez
   '(SourceElements
     (EmptyStatement)
-    (VariableDeclaration
-     (Identifier "x")
-     (Initializer
-      (PrimaryExpression (NumericLiteral "5"))))
+    (VariableStatement
+     (VariableDeclarationList
+      (VariableDeclaration
+       (Identifier "x")
+       (Initializer
+	(PrimaryExpression (NumericLiteral "5"))))
+      (VariableDeclaration
+       (Identifier "y")
+       (Initializer
+	(PrimaryExpression (NumericLiteral "7"))))
+      ))
     (AssignmentExpression
      (PrimaryExpression (Identifier "x"))
      (add-assign)
      (PrimaryExpression (NumericLiteral "10")))
-    (VariableDeclaration
-     (Identifier "y")
-     (Initializer
-      (PrimaryExpression (NumericLiteral "7"))))
     ))
 
-(define (init-dict) (list (cons '@l 0) (cons '@P '())))
-
-(define x0 rez)
-(pretty-print x0)
-
+(system "cat lang/javascript/ex1.js")
 (fmtout "===> \n")
-(define x1 (doit rez '() (init-dict)))
+(define x0 res)
+(pretty-print x0)
+(fmtout "===> \n")
+(define x1 (doit x0 '() (init-dict)))
 (pretty-print x1)
 
-;;(use-modules (language tree-il))
-;;(define x2 (parse-tree-il x1))
+(use-modules (language tree-il))
+(define x2 (parse-tree-il x1))
+;;(simple-format #t "~S\n" x2)
+(fmtout "===> \n")
+(define x3 (compile x2 #:from 'tree-il #:env (current-module)))
+(simple-format #t "~S\n" x3)
 
+
+;; document.print("hello\n")
+;; (hashq-set! htab 'print (lambda () ...))
 
 ;; --- last line ---
