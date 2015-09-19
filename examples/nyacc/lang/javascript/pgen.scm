@@ -85,7 +85,7 @@
 
     (Elision
      ("," ($$ 1))
-     (Elision "," ($$ (1+ ,$1)))
+     (Elision "," ($$ (1+ $1)))
      )
 
     (ObjectLiteral
@@ -484,7 +484,7 @@
      ("function" Identifier "(" FormalParameterList ")" "{" FunctionBody "}"
       ($$ `(FunctionDeclaration ,$2 ,(tl->list $4) ,$7)))
      ("function" Identifier "(" ")" "{" FunctionBody "}"
-      ($$ `(FunctionDeclaration ,$2 ,$6)))
+      ($$ `(FunctionDeclaration ,$2 (FormalParameterList) ,$6)))
      )
 
     (FunctionExpression
@@ -504,7 +504,7 @@
      )
 
     (FunctionBody
-     (SourceElements)
+     (SourceElements ($$ (tl->list $1)))
      )
 
     (Program

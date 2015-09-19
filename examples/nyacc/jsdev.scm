@@ -1,4 +1,10 @@
 ;; jsdev.scm -- javascript dev
+;;
+;; Copyright (C) 2015 Matthew R. Wette
+;; 
+;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+;; or any later version published by the Free Software Foundation.  See the
+;; file COPYING included with the this distribution.
 
 (add-to-load-path (getcwd))
 (add-to-load-path (string-append (getcwd) "/../../module"))
@@ -59,6 +65,19 @@
       (if (> 1 (lookup dict '@l))
 	  (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict)
 	  (acons name `(toplevel ,(string->symbol name)) dict))))
+
+    ((FunctionDeclaration (Identifier ,name) ,rest ...)
+     (values
+      node '()
+      (let ((lev (lookup dict '@l)))
+	(list
+	 (cons '@l (1+ lev))
+	 (cons '@P
+	       (if (> lev 1)
+		   (acons name `(lexical ,(string->symbol name) ,(gensym "JS~"))
+			  dict)
+		   (acons name `(toplevel ,(string->symbol name))
+			  dict)))))))
     
     ((SourceElements ,elts ...)
      (values
@@ -117,7 +136,23 @@
      ((EmptyStatement)
       (values seed dict))
 
-     ((SourceElements)
+     ((ReturnStatement)
+      (values (cons `(return ,kseed) seed) dict))
+
+    ((FunctionDeclaration)
+     (values
+      (let (;;(name (caddr kseed))
+	    ;;(args (cadr kseed))
+	    ;;(body (cadr kseed))
+	    )
+	;;(fmtout "name=~S\nargs=~S\nbody=~S\n" name args body)
+	(cons `(lambda () ,kseed) seed))
+      dict))
+
+    ((FunctionParamaeterList)
+     (values (reverse kseed) dict))
+
+    ((SourceElements)
       (values `(begin ,@(reverse kseed)) dict))
 
      (else
@@ -152,7 +187,7 @@
      (ArgumentList
       (PrimaryExpression (NumericLiteral "26.01"))))))
 
-(set! db #f)
+(set! db #t)
 
 (system "cat lang/javascript/ex1.js")
 (fmtout "==(parser)==> \n")
@@ -161,12 +196,12 @@
 (fmtout "==(foldts*-values)==> \n")
 (define x1 (doit x0 '() (init-dict)))
 (pretty-print x1)
+#|
 (use-modules (language tree-il))
 (define x2 (parse-tree-il x1))
 (fmtout "==(compile)==> \n")
 (define x3 (compile x2 #:from 'tree-il #:env (current-module)))
 (simple-format #t "~S\n" x3)
-#|
 |#
 
 ;; document.print("hello\n")

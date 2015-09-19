@@ -1,4 +1,4 @@
-;; lalrT.scm - modelica dev
+;; Tlangmo.scm - modelica dev
 ;;
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 
@@ -7,8 +7,8 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (getcwd))
-(add-to-load-path (string-append (getcwd) "/../../module"))
+(add-to-load-path (string-append (getcwd) "/../.."))
+(add-to-load-path (string-append (getcwd) "/../../../../module"))
 
 (use-modules (lang modelica pgen))
 (use-modules (nyacc lalr))

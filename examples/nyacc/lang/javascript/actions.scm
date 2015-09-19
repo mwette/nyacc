@@ -44,28 +44,32 @@
    (lambda ($3 $2 $1 . $rest)
      `(PrimaryExpression ,$2))
    ;; ArrayLiteral => "[" Elision "]"
-   (lambda ($3 $2 $1 . $rest) `(ArrayLiteral))
+   (lambda ($3 $2 $1 . $rest)
+     `(ArrayLiteral (Elision ,(number->string $2))))
    ;; ArrayLiteral => "[" "]"
    (lambda ($2 $1 . $rest) `(ArrayLiteral))
    ;; ArrayLiteral => "[" ElementList "," Elision "]"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(ArrayLiteral ,$2))
+     `(ArrayLiteral (Elision ,(number->string $2))))
    ;; ArrayLiteral => "[" ElementList "," "]"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ArrayLiteral ,$2))
    ;; ElementList => Elision AssignmentExpression
    (lambda ($2 $1 . $rest)
-     (make-tl 'ElementList $2))
+     (make-tl
+       'ElementList
+       `(Elision ,(number->string $2))))
    ;; ElementList => AssignmentExpression
    (lambda ($1 . $rest) (make-tl 'ElementList $1))
    ;; ElementList => ElementList "," Elision AssignmentExpression
-   (lambda ($4 $3 $2 $1 . $rest) (tl-append $1 $4))
+   (lambda ($4 $3 $2 $1 . $rest)
+     (tl-append $1 `(Elision ,(number->string $3)) $4))
    ;; ElementList => ElementList "," AssignmentExpression
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; Elision => ","
-   (lambda ($1 . $rest) '(Elision))
+   (lambda ($1 . $rest) 1)
    ;; Elision => Elision ","
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) (#{1+}# $1))
    ;; ObjectLiteral => "{" "}"
    (lambda ($2 $1 . $rest) `(ObjectLiteral))
    ;; ObjectLiteral => "{" PropertyNameAndValueList "}"
@@ -86,8 +90,7 @@
    ;; MemberExpression => PrimaryExpression
    (lambda ($1 . $rest) $1)
    ;; MemberExpression => MemberExpression "[" Expression "]"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(array-ref ,$1 ,$3))
+   (lambda ($4 $3 $2 $1 . $rest) `(ary-ref ,$1 ,$3))
    ;; MemberExpression => MemberExpression "." Identifier
    (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; MemberExpression => "new" MemberExpression Arguments
@@ -103,8 +106,7 @@
    (lambda ($2 $1 . $rest)
      `(CallExpression ,$1 ,$2))
    ;; CallExpression => CallExpression "[" Expression "]"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(array-ref ,$1 ,$3))
+   (lambda ($4 $3 $2 $1 . $rest) `(ary-ref ,$1 ,$3))
    ;; CallExpression => CallExpression "." Identifier
    (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; Arguments => "(" ")"
@@ -450,7 +452,7 @@
    ;; FormalParameterList => FormalParameterList "," Identifier
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; FunctionBody => SourceElements
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (tl->list $1))
    ;; Program => SourceElements
    (lambda ($1 . $rest) (tl->list $1))
    ;; SourceElements => SourceElement

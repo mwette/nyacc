@@ -12,7 +12,13 @@ lang
   See lang/README.
 
 usage
-  $ ./cxp -Ilang/c99 lang/c99/ex1.c
-  $ guile Tlangm.scm
-  $ guile Tlangmo.scm
-  $ cd lang/c99; guile Tlangc.scm
+    $ ./cxp -Ilang/c99 lang/c99/ex1.c
+  or
+    $ cd lang/c99; guile Tlangc.scm
+  or
+    $ cd lang/javascript; guile Tlangjs.scm
+  or
+    $ cd lang/matlab; guile Tlangm.scm
+  or
+    $ cd lang/modelica; guile Tlangmo.scm
+

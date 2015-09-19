@@ -1,5 +1,10 @@
 ;; lang/javascript/jslib.scm
 ;;
+;; Copyright (C) 2015 Matthew R. Wette
+;; 
+;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+;; or any later version published by the Free Software Foundation.  See
+;; the file COPYING included with the this distribution.
 
 ;; needs: null, undefined, undeclared?,
 
@@ -9,10 +14,10 @@
 
 (define JSdict
   `((@l . 0) (@P . ())
-    ("Object" . (@@ (jslib) Object))
-    ("Math" . (@@ (jslib) Math))
-    ("Number" . (@@ (jslib) Number))
-    ("JS+" . (@@ (jslib) JS+))
+    ;;("Object" . (@@ (jslib) Object))
+    ;;("Math" . (@@ (jslib) Math))
+    ;;("Number" . (@@ (jslib) Number))
+    ;;("JS+" . (@@ (jslib) JS+))
     ))
 
 (define undefined (if #f #f))
@@ -52,8 +57,5 @@
 	       ((and (string? a) (string? b)) (string-append a b))
 	       ((and (number? a) (number? b)) (+ a b))
 	       (else 'undefined))))
-
-
-
 
 ;; --- last line ---
