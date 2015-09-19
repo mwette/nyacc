@@ -12,7 +12,6 @@
 (use-modules (lang javascript parser))
 (use-modules (sxml match))
 (use-modules (sxml fold))
-(use-modules (srfi srfi-1))
 (use-modules (ice-9 pretty-print))
 
 (use-modules (jslib))
@@ -35,26 +34,45 @@
    ((assoc-ref dict name))
    (else (lookup (assoc-ref dict '@P) name))))
 
+(define (add-lexical name dict)
+  (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict))
+(define (add-toplevel name dict)
+  (acons name `(toplevel ,(string->symbol name)) dict))
+(define (push-level dict)
+  (list (cons '@l (1+ (assq-ref dict '@l))) (cons '@P dict)))
+(define (pop-level dict)
+  (assq-ref dict '@P))
+
+;; In the case where we pick off ``low hanging fruit'' we need to coordinate
+;; the actions of the up and down handlers.   The down handler will provide
+;; a kid-seed in order and generate a null list.  The up handler, upon seeing
+;; a null list, will just incorporate the kids w/o the normal reverse.
+
 (define (fD node seed dict) ;; => node seed dict
+  ;; This handles branches as we go down the tree.  We do two things here:
+  ;; @enumerate
+  ;; @item Pick off low hanging fruit: items we can quickly convert in entirety.
+  ;; @item Add symbols to the dictionary.  This keeps track of lexical scope.
+  ;; @end enumerate
   (if db (fmtout "D node =~S\n  seed =~S\n  dict =~S\n" node seed dict))
   (sxml-match node
     ((NullLiteral)
      (values '() `JS-null dict))
 	     
     ((Identifier ,name)
-     (values '(Identifier) (lookup dict name) dict))
+     (values '() (lookup dict name) dict))
     
     ((PrimaryExpression (Identifier ,name))
-     (values '(PrimaryExpression) (lookup dict name) dict))
+     (values '() (lookup dict name) dict))
 
     ((PrimaryExpression (StringLiteral ,str))
-     (values '(PrimaryExpression) `(const ,str) dict))
+     (values '() `(const ,str) dict))
 
     ((PrimaryExpression (NumericLiteral ,val))
-     (values '(PrimaryExpression) `(const ,(string->number val)) dict))
+     (values '() `(const ,(string->number val)) dict))
 
     ((obj-ref ,object ,ident)
-     ;; Convert: obj.ref ==> obj["ref"]
+     ;; Convert the tree: obj.ref ==> obj["ref"]
      (values
       `(ary-ref ,object (PrimaryExpression (StringLiteral ,(cadr ident))))
       '() dict))
@@ -63,8 +81,10 @@
      (values
       node '()
       (if (> 1 (lookup dict '@l))
-	  (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict)
-	  (acons name `(toplevel ,(string->symbol name)) dict))))
+	  ;;(acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict)
+	  ;;(acons name `(toplevel ,(string->symbol name)) dict))))
+	  (add-lexical name dict)
+	  (add-toplevel name dict))))
 
     ((FunctionDeclaration (Identifier ,name) ,rest ...)
      (values
@@ -79,6 +99,15 @@
 		   (acons name `(toplevel ,(string->symbol name))
 			  dict)))))))
     
+    ((FunctionParameterList ,idlist ...)
+     (values
+      node '()
+      (append
+       (map
+	(lambda (name) name `(lexical ,(string->symbol name) ,(gensym "JS~")))
+	(map cdr idlist))
+       dict)))
+
     ((SourceElements ,elts ...)
      (values
       node '()
@@ -90,15 +119,16 @@
     ))
 
 (define (fU node seed dict kseed kdict) ;; => seed dict
+  ;; This routine rolls up processes leaves into the current branch.
   (if db (fmtout "U node =~S\n  seed =~S\n  dict =~S\n  kseed=~S\n  kdict=~S\n"
 		 node seed dict kseed kdict))
   (if
-   (null? node) (values seed dict)
+   (null? node) (values (cons kseed seed) dict)
    (case (car node)
-     ((Identifier)
+     #;((Identifier)
       (values (cons kseed seed) dict))
 
-     ((PrimaryExpression)
+     #;((PrimaryExpression)
       (values (cons kseed seed) dict))
 
      ((CallExpression)
@@ -114,7 +144,7 @@
      ((obj-ref) ;; ???
       (values (cons `(apply (@@ (jslib) lkup) ,(cadr kseed) ,(car kseed)) seed)
 	      dict))
-
+     
      ((AssignmentExpression)
       (values (cons (apply x-assn (reverse kseed)) seed) dict))
 
@@ -136,25 +166,25 @@
      ((EmptyStatement)
       (values seed dict))
 
-     ((ReturnStatement)
+     ((ReturnStatement) ;; will need a prompt for return, until optimized
       (values (cons `(return ,kseed) seed) dict))
 
-    ((FunctionDeclaration)
-     (values
-      (let (;;(name (caddr kseed))
-	    ;;(args (cadr kseed))
-	    ;;(body (cadr kseed))
-	    )
-	;;(fmtout "name=~S\nargs=~S\nbody=~S\n" name args body)
-	(cons `(lambda () ,kseed) seed))
-      dict))
+     ((FunctionDeclaration)
+      (values
+       (let (;;(name (caddr kseed))
+	     ;;(args (cadr kseed))
+	     ;;(body (cadr kseed))
+	     )
+	 ;;(fmtout "name=~S\nargs=~S\nbody=~S\n" name args body)
+	 (cons `(lambda () ,kseed) seed))
+       dict))
 
-    ((FunctionParamaeterList)
-     (values (reverse kseed) dict))
+     ((FunctionParameterList)
+      (values (reverse kseed) dict))
 
-    ((SourceElements)
+     ((SourceElements)
       (values `(begin ,@(reverse kseed)) dict))
-
+     
      (else
       ;;(fmtout "  ^=== no handler\n")
       (cond
@@ -162,6 +192,7 @@
        ((null? kseed) (values (cons (car node) seed) dict)) ;; ???
        (else (values (cons (reverse kseed) seed) dict))
        )))))
+
 
 (define (fH atom seed dict)
   (if db (fmtout "H atom =~S\n  seed =~S\n  dict =~S\n" atom seed dict))
@@ -173,12 +204,13 @@
 (define (doit tree seed dict)
   (foldts*-values fD fU fH tree seed dict))
 
-(define (init-dict) JSdict)
-
 ;; ===================================
 
 (define res (with-input-from-file "lang/javascript/ex1.js" parse-js))
-(define rez
+(define rez1
+  '(SourceElements
+    (PrimaryExpression (NumericLiteral "26.01"))))
+(define rez2
   '(SourceElements
     (CallExpression
      (obj-ref
@@ -186,15 +218,25 @@
       (Identifier "sqrt"))
      (ArgumentList
       (PrimaryExpression (NumericLiteral "26.01"))))))
-
+(define rez3
+  '(SourceElements
+    (FunctionDeclaration
+     (Identifier "foo")
+     (FormalParameterList
+      (Identifier "a")
+      (Identifier "b"))
+     (SourceElements
+      (EmptyStatement)
+      (ReturnStatement
+       (PrimaryExpression (NumericLiteral "1")))))))
 (set! db #t)
 
 (system "cat lang/javascript/ex1.js")
 (fmtout "==(parser)==> \n")
-(define x0 res)
+(define x0 rez3)
 (pretty-print x0)
 (fmtout "==(foldts*-values)==> \n")
-(define x1 (doit x0 '() (init-dict)))
+(define x1 (doit x0 '() JSdict))
 (pretty-print x1)
 #|
 (use-modules (language tree-il))
@@ -203,8 +245,5 @@
 (define x3 (compile x2 #:from 'tree-il #:env (current-module)))
 (simple-format #t "~S\n" x3)
 |#
-
-;; document.print("hello\n")
-;; (hashq-set! htab 'print (lambda () ...))
 
 ;; --- last line ---
