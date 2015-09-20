@@ -508,7 +508,7 @@
      )
 
     (Program
-     (SourceElements ($$ (tl->list $1)))
+     (SourceElements ($$ (cons 'Program (tl->list $1))))
      )
 
     (SourceElements

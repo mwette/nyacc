@@ -30,6 +30,12 @@
        ((hashq-ref obj key))
        (else #f))))
 
+;; @item make-args args gsym
+;; This should generate a arguments object for every function.
+;; The input is a list of argument names bound to the array '@args w/ gsym.
+(define (make-args args gsym)
+  #f)
+
 (define Object (make-hash-table 31))
 (hashq-set! Object 'constructor
 	    (case-lambda

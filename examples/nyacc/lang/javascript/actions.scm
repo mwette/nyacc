@@ -433,7 +433,10 @@
      `(FunctionDeclaration ,$2 ,(tl->list $4) ,$7))
    ;; FunctionDeclaration => "function" Identifier "(" ")" "{" FunctionBody...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(FunctionDeclaration ,$2 ,$6))
+     `(FunctionDeclaration
+        ,$2
+        (FormalParameterList)
+        ,$6))
    ;; FunctionExpression => "function" Identifier "(" FormalParameterList "...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(FunctionExpression ,$2 ,(tl->list $4) ,$7))
@@ -454,7 +457,8 @@
    ;; FunctionBody => SourceElements
    (lambda ($1 . $rest) (tl->list $1))
    ;; Program => SourceElements
-   (lambda ($1 . $rest) (tl->list $1))
+   (lambda ($1 . $rest)
+     (cons 'Program (tl->list $1)))
    ;; SourceElements => SourceElement
    (lambda ($1 . $rest)
      (make-tl 'SourceElements $1))
