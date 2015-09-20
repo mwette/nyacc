@@ -17,6 +17,15 @@
 (use-modules (ice-9 pretty-print))
 
 (define js-spec
+  #;(lalr-spec
+   (start S)
+   (grammar
+    (S (A) (P1) (G))
+    (P1 (E))
+    (A ("d" E))
+    (E ("f") (G))
+    (G ("h"))
+    ))
   (lalr-spec
    (start Statement)
    (grammar
