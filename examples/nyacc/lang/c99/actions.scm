@@ -451,7 +451,7 @@
    ;; postfix-expression => compound-literal
    (lambda ($1 . $rest) $1)
    ;; subscript-expression => postfix-expression "[" expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest) '(FIX))
    ;; component-selection-expression => direct-component-selection
    (lambda ($1 . $rest) $1)
    ;; component-selection-expression => indirect-component-selection

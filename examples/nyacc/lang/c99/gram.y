@@ -7,7 +7,7 @@
 %token _lone_comm
 %token _code_comm
 %token _string
-%token _ch_lit
+%token _chlit
 %token _float
 %token _fixed
 %token cpp_ident
@@ -439,7 +439,7 @@ identifier: _ident ;
 identifier: cpp_ident ;
 constant: _fixed ;
 constant: _float ;
-constant: _ch_lit ;
+constant: _chlit ;
 constant: _string ;
 code_comment: _code_comm ;
 lone_comment: _lone_comm ;

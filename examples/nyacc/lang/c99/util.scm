@@ -18,7 +18,7 @@
 ;; C parser utilities
 
 (define-module (lang c99 util)
-  #:export (remove-inc-trees merge-inc-trees)
+  #:export (remove-inc-trees merge-inc-trees!)
   #:use-module (lang util)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
 )
@@ -48,7 +48,7 @@
 ;; '(... (cpp-stmt (include "<foo.h>" (trans-unit (stmt ...))) ...)
 ;; => '(... (stmt...) ...)
 ;; @end example
-(define (Xmerge-inc-trees tree)
+#;(define (Xmerge-inc-trees tree)
   (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
   (let iter ((rslt (make-tl 'trans-unit))
 	     (tree (cdr tree)))
@@ -58,19 +58,43 @@
       (iter (tl-extend rslt (cdr (merge-inc-trees (cdddar tree)))) (cdr tree)))
      (else (iter (tl-append rslt (car tree)) (cdr tree))))))
 
-#;(define (merge-inc-trees tree)
-  (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
-  (let iter ((head '(trans-unit))
-	     (prev '())
-	     (next (cdr tree))
-	     (curr (cdr tree)))
-    (cond
-     ((null? curr) (append-reverse head tail))
-     ((and (eqv? 'cpp-stmt (car (car tree)))
-	   (eqv? 'include (caadr (car tree))))
-      (iter (cons `(cpp-stmt (include ,(cadadr (car tree)))))
-	    (cdr tree)))
-     (else (iter head tail (cdr curr))))))
+
+;; @item merge-inc-trees! tree => tree
+;; This will (recursively) merge code from cpp-includes into the tree.
+;; @example
+;; (trans-unit
+;;  (decl (a))
+;;  (cpp-stmt (include "<hello.h>" (trans-unit (decl (b)))))
+;;  (decl (c)))
+;; =>
+;; (trans-unit (decl (a)) (decl (b)) (decl (c)))
+;; @end example
+(define (merge-inc-trees! tree)
+
+  (define (find-span tree)
+    ;; (trans-unit a b c) -> ((a . +->) . (c . '())
+    (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
+    (if (null? (cdr tree)) (error "null c99-tree"))
+    (let ((fp tree))			; first pair
+      (let iter ((lp tree)		; last pair
+		 (np (cdr tree)))	; next pair
+	(cond
+	 ((null? np) (cons (cdr fp) lp))
+	 ((and (eqv? 'cpp-stmt (car (car np)))
+	       (eqv? 'include (caadr (car np))))
+	  (let* ((t-u (list-ref (cadar np) 2))
+		 (span (find-span t-u)))
+	    (set-cdr! lp (car span))
+	    (iter (cdr span) (cdr np))))
+	 (else
+	  (set-cdr! lp np)
+	  (iter np (cdr np)))))))
+
+  ;; Use cons to generate a new reference:
+  ;; (cons (car tree) (car (find-span tree)))
+  ;; or not:
+  (find-span tree)
+  tree)
 
        
-;; --- last line
+;; --- last line ---
