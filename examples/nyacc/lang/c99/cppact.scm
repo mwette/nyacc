@@ -95,7 +95,7 @@
    (lambda ($1 . $rest) `(ident ,$1))
    ;; primary-expression => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
-   ;; primary-expression => '$ch-lit
+   ;; primary-expression => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
    ;; primary-expression => "defined" "(" '$ident ")"
    (lambda ($4 $3 $2 $1 . $rest) `(defined ,$3))

@@ -939,7 +939,7 @@
     179 97))
 
 (define mtab
-  '((cpp-stmt . 1) ($lone-comm . 2) ($code-comm . 3) ($string . 4) ($ch-lit 
+  '((cpp-stmt . 1) ($lone-comm . 2) ($code-comm . 3) ($string . 4) ($chlit 
     . 5) ($float . 6) ($fixed . 7) (cpp-ident . 8) ($ident . 9) ("goto" . 10) 
     ("return" . 11) ("continue" . 12) ("break" . 13) ("default" . 14) ("case" 
     . 15) ("switch" . 16) ("for" . 17) ("do" . 18) ("while" . 19) ("else" . 20

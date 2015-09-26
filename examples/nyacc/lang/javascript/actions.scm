@@ -128,9 +128,9 @@
    ;; PostfixExpression => LeftHandSideExpression $P2 "--"
    (lambda ($3 $2 $1 . $rest) `(post-dec $1))
    ;; $P1 => 
-   (lambda ($1 . $rest) (NLT))
+   (lambda ($1 . $rest) (NLTH))
    ;; $P2 => 
-   (lambda ($1 . $rest) (NLT))
+   (lambda ($1 . $rest) (NLTH))
    ;; UnaryExpression => PostfixExpression
    (lambda ($1 . $rest) $1)
    ;; UnaryExpression => "delete" UnaryExpression
@@ -357,21 +357,21 @@
    ;; ContinueStatement => "continue" ";"
    (lambda ($2 $1 . $rest) '(ContinueStatement))
    ;; $P3 => 
-   (lambda ($1 . $rest) (NLT))
+   (lambda ($1 . $rest) (NLTH))
    ;; BreakStatement => "break" $P4 Identifier ";"
    (lambda ($4 $3 $2 $1 . $rest)
      `(BreakStatement ,$3))
    ;; BreakStatement => "break" ";"
    (lambda ($2 $1 . $rest) '(ContinueStatement))
    ;; $P4 => 
-   (lambda ($1 . $rest) (NLT))
+   (lambda ($1 . $rest) (NLTH))
    ;; ReturnStatement => "return" $P5 Expression ";"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ReturnStatement ,$3))
    ;; ReturnStatement => "return" ";"
    (lambda ($2 $1 . $rest) '(ReturnStatement))
    ;; $P5 => 
-   (lambda ($1 . $rest) (NLT))
+   (lambda ($1 . $rest) (NLTH))
    ;; WithStatement => "with" "(" Expression ")" Statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(WithStatement ,$3 ,$5))
@@ -414,7 +414,7 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(ThrowStatement ,$3))
    ;; $P6 => 
-   (lambda ($1 . $rest) (NLT))
+   (lambda ($1 . $rest) (NLTH))
    ;; TryStatement => "try" Block Catch
    (lambda ($3 $2 $1 . $rest)
      `(TryStatement ,$2 ,$3))

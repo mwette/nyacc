@@ -926,7 +926,7 @@
     (constant
      ('$fixed ($$ `(fixed ,$1)))	; integer-constant
      ('$float ($$ `(float ,$1)))	; floating-constant
-     ('$ch-lit ($$ `(char ,$1)))	; char-constant
+     ('$chlit ($$ `(char ,$1)))		; char-constant
      ('$string ($$ `(string ,$1)))	; string-constant
      )
     (code-comment ('$code-comm ($$ `(comment ,$1))))

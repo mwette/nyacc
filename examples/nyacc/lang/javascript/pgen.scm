@@ -29,6 +29,8 @@
 ;; The 'NoIn' variants are needed to avoid confusing the in operator 
 ;; in a relational expression with the in operator in a for statement.
 
+;; NSI = "no semi-colon insertion"
+
 
 ;; Not in the grammar yet: FunctionExpression
 
@@ -144,8 +146,8 @@
 
     (PostfixExpression
      (LeftHandSideExpression)
-     (LeftHandSideExpression ($$ (NLT)) "++" ($$ `(post-inc $1)))
-     (LeftHandSideExpression ($$ (NLT)) "--" ($$ `(post-dec $1)))
+     (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc $1)))
+     (LeftHandSideExpression ($$ (NSI)) "--" ($$ `(post-dec $1)))
      )
 
     (UnaryExpression
@@ -393,19 +395,19 @@
      )
 
     (ContinueStatement
-     ("continue" ($$ (NLT)) Identifier ";"
+     ("continue" ($$ (NSI)) Identifier ";"
       ($$ `(ContinueStatement ,$3)))
      ("continue" ";" ($$ '(ContinueStatement)))
      )
 
     (BreakStatement
-     ("break" ($$ (NLT)) Identifier ";"
+     ("break" ($$ (NSI)) Identifier ";"
       ($$ `(BreakStatement ,$3)))
      ("break" ";" ($$ '(ContinueStatement)))
      )
 
     (ReturnStatement
-     ("return" ($$ (NLT)) Expression ";"
+     ("return" ($$ (NSI)) Expression ";"
       ($$ `(ReturnStatement ,$3)))
      ("return" ";" ($$ '(ReturnStatement)))
      )
@@ -456,7 +458,7 @@
      )
 
     (ThrowStatement
-     ("throw" ($$ (NLT)) Expression ";"
+     ("throw" ($$ (NSI)) Expression ";"
       ($$ `(ThrowStatement ,$3)))
      )
 

@@ -89,7 +89,7 @@
     (primary-expression
      ('$ident ($$ `(ident ,$1)))
      ('$fixed ($$ `(fixed ,$1)))	; integer-constant
-     ('$ch-lit ($$ `(char ,$1)))	; char-constant
+     ('$chlit ($$ `(char ,$1)))		; char-constant
      ("defined" "(" '$ident ")" ($$ `(defined ,$3)))
      ("(" expression-list ")" ($$ $2)))
     (expression-list

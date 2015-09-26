@@ -22,7 +22,7 @@
 
 (define *insert-semi* (make-fluid))
   
-(define (NLT)
+(define (NSI) ;; no semicolon insertion
   (fluid-set! *insert-semi* #f))
 
 (define read-js-ident
@@ -59,6 +59,8 @@
     (lambda ()
       (let ((bol #t))
 	(lambda ()
+          (define (cont rez) (fluid-set! *insert-semi* #t) rez)
+          (cont
 	  (let iter ((ch (read-char)))
 	    (cond
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
@@ -78,7 +80,7 @@
 	     ((read-c-num ch) => assc-$)
 	     ((read-chseq ch) => identity)
 	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-	     (else (cons ch (string ch)))))))))) ; should be error
+	     (else (cons ch (string ch))))))))))) ; should be error
 
 #|
     (InputElementDiv

@@ -18,6 +18,8 @@
 
 ;; A module providing procedures for constructing lexical analyzers.
 
+;; '$fixed '$float '$string '$chlit '$ident
+
 (define-module (nyacc lex)
   #:export (make-lexer-generator
 	    make-ident-reader
@@ -115,7 +117,7 @@
 		 (list->string (reverse chl)))))
 	#f)))
 
-;; @item read-c-ident ch => ident|#f
+;; @item read-c-ident ch => #f|string
 ;; If ident pointer at following char, else (if #f) ch still last-read.
 (define read-c-ident (make-ident-reader c:if c:ir))
 
@@ -141,7 +143,7 @@
 		   (if (eq? c1 #\newline)
 		       (iter cl (read-char))
 		       (iter (cons* c1 cl) (read-char)))))
-		((eq? ch delim) (list->string (reverse cl)))
+		((eq? ch delim) (cons '$string (list->string (reverse cl))))
 		(else (iter (cons ch cl) (read-char)))))
 	#f)))
 
@@ -156,7 +158,7 @@
 		 (if (eq? c1 #\newline)
 		     (iter cl (read-char))
 		     (iter (cons* c1 cl) (read-char)))))
-	      ((eq? ch #\") (list->string (reverse cl)))
+	      ((eq? ch #\") (cons '$string (list->string (reverse cl))))
 	      (else (iter (cons ch cl) (read-char)))))))
 
 
@@ -171,8 +173,19 @@
 ;; @end example
 (define (read-c-chlit ch)
   (if (not (eqv? ch #\')) #f
-      (error "NOT IMPLEMENTED")
-      ))
+      (let ((c1 (read-char)) (c2 (read-char)))
+	(if (eqv? c1 #\\)
+	    (let ((c3 (read-char)))
+	      (case c2
+		;;((#\a) (cons '$chlit alert)) ; alert
+		;;((#\b) (cons '$chlit alert)) ; backspace
+		;;((#\f) ; formfeed
+		((#\n) (cons '$chlit #\newline)) ; newline
+		((#\t) (cons '$chlit #\tab)) ; horizontal tab
+		;;((v) (cons '$chlit  ; verticle tab
+		((#\\ #\' #\" #\?) (cons '$chlit c2))
+		(else (error "bad escape sequence"))))
+	    (cons '$chlit c1)))))
 
 ;; @item make-num-reader
 ;; integer decimal(#t/#f) fraction exponent looking-at
