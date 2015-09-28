@@ -1921,7 +1921,7 @@
 	    ;; @code{positive?} and @code{negative?} fail otherwise.
 	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 		  (ln (1+ (port-line (current-input-port)))))
-	      (fmterr "~A: ~A: parse failed at state ~A, on input ~S\n"
+	      (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
 		      fn ln (car state) sval))
 	    #f)
 	   ((shift? stx)
