@@ -23,6 +23,7 @@
 %token DO
 %token WHILE
 %token ELSE
+%token THEN
 %token IF
 %token ChSeq_61_124
 %token ChSeq_61_94
@@ -73,6 +74,7 @@
 %token LONG
 %token SIGNED
 %token INT
+%token IMP
 %token SHORT
 %token '.'
 %token '}'
@@ -184,35 +186,35 @@ integer_type_specifier: signed_type_specifier ;
 integer_type_specifier: unsigned_type_specifier ;
 integer_type_specifier: character_type_specifier ;
 integer_type_specifier: bool_type_specifier ;
-signed_type_specifier: SHORT ;
+signed_type_specifier: SHORT %prec IMP ;
 signed_type_specifier: SHORT INT ;
-signed_type_specifier: SIGNED SHORT ;
+signed_type_specifier: SIGNED SHORT %prec IMP ;
 signed_type_specifier: SIGNED SHORT INT ;
 signed_type_specifier: INT ;
-signed_type_specifier: SIGNED ;
+signed_type_specifier: SIGNED %prec IMP ;
 signed_type_specifier: SIGNED INT ;
-signed_type_specifier: LONG ;
+signed_type_specifier: LONG %prec IMP ;
 signed_type_specifier: LONG INT ;
-signed_type_specifier: SIGNED LONG ;
+signed_type_specifier: SIGNED LONG %prec IMP ;
 signed_type_specifier: SIGNED LONG INT ;
-signed_type_specifier: LONG LONG ;
+signed_type_specifier: LONG LONG %prec IMP ;
 signed_type_specifier: LONG LONG INT ;
-signed_type_specifier: SIGNED LONG LONG ;
+signed_type_specifier: SIGNED LONG LONG %prec IMP ;
 signed_type_specifier: SIGNED LONG LONG INT ;
 unsigned_type_specifier: UNSIGNED SHORT INT ;
-unsigned_type_specifier: UNSIGNED SHORT ;
+unsigned_type_specifier: UNSIGNED SHORT %prec IMP ;
 unsigned_type_specifier: UNSIGNED INT ;
-unsigned_type_specifier: UNSIGNED ;
+unsigned_type_specifier: UNSIGNED %prec IMP ;
 unsigned_type_specifier: UNSIGNED LONG INT ;
-unsigned_type_specifier: UNSIGNED LONG ;
+unsigned_type_specifier: UNSIGNED LONG %prec IMP ;
 unsigned_type_specifier: UNSIGNED LONG LONG INT ;
-unsigned_type_specifier: UNSIGNED LONG LONG ;
+unsigned_type_specifier: UNSIGNED LONG LONG %prec IMP ;
 character_type_specifier: CHAR ;
 character_type_specifier: SIGNED CHAR ;
 character_type_specifier: UNSIGNED CHAR ;
 bool_type_specifier: _BOOL ;
-floating_point_type_specifier: FLOAT ;
-floating_point_type_specifier: DOUBLE ;
+floating_point_type_specifier: FLOAT %prec IMP ;
+floating_point_type_specifier: DOUBLE %prec IMP ;
 floating_point_type_specifier: LONG DOUBLE ;
 floating_point_type_specifier: complex_type_specifier ;
 complex_type_specifier: _COMPLEX ;
@@ -396,7 +398,7 @@ declaration_or_statement: declaration ;
 declaration_or_statement: statement ;
 conditional_statement: if_statement ;
 conditional_statement: if_else_statement ;
-if_statement: IF '(' expression ')' statement ;
+if_statement: IF '(' expression ')' statement %prec THEN ;
 if_else_statement: IF '(' expression ')' statement ELSE statement ;
 iterative_statement: while_statement ;
 iterative_statement: do_statement ;

@@ -95,6 +95,7 @@
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref spec 'lhs-v))
 	 (rhs-v (assq-ref spec 'rhs-v))
+	 (prp-v (assq-ref spec 'prp-v))
 	 (nrule (vector-length lhs-v))
 	 (terms (assq-ref spec 'terminals)))
     ;; copyright notice
@@ -116,6 +117,8 @@
 	 (lambda (ix e) (fmt port " ~A" (elt->bison e terms)))
 	 rhs)
 	(if (zero? (vector-length rhs)) (fmt port " %empty"))
+	(and=> (vector-ref prp-v i)
+	       (lambda (tok) (fmt port " %prec ~A" (elt->bison tok terms))))
 	(fmt port " ;\n")))
     (newline port)
     (values)))

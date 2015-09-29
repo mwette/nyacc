@@ -371,7 +371,8 @@
 	     (iter ll @l tl (cons sy nl) head (cons p1 prox) lhs
 		   tail rhs-l attr (cons sy pel) (cdr rhs))))
 	  ((prec)
-	   (iter ll @l tl nl head prox lhs tail rhs-l
+	   ;;(iter ll @l tl nl head prox lhs tail rhs-l
+	   (iter ll @l (add-el (cdar rhs) tl) nl head prox lhs tail rhs-l
 		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
 	  ((with)
 	   (let* ((psy (maksy))		      ; proxy symbol
@@ -1650,6 +1651,7 @@
 	 (rhs-v (assq-ref spec 'rhs-v))
 	 (nrule (vector-length lhs-v))
 	 (act-v (assq-ref spec 'act-v))
+	 ;;(prp-v (assq-ref mach 'prp-v)) ; per-rule precedence
 	 (terms (assq-ref spec 'terminals))
 	 (prev-core (fluid-ref *lalr-core*)))
     (fluid-set! *lalr-core* (make-core spec)) ; OR dynamic-wind ???
