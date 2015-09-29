@@ -127,7 +127,7 @@
 
 		 ;; other internal $-syntax
 		 ((_ ($prec <tok>) <e2> ...)
-		  #'(cons '(prec . <tok>) (parse-rhs <e2> ...)))
+		  #'(cons (cons 'prec <tok>) (parse-rhs <e2> ...)))
 		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
 		  #'(cons `(with <lhs-ref> ,@(with-attr-list <ex> ...))
 			  (parse-rhs <e2> ...)))
@@ -169,13 +169,13 @@
 	    (parse-precedence
 	     (syntax-rules (left right nonassoc)
 	       ((_ (left <tk> ...) <ex> ...)
-		(cons '(left <tk> ...) (parse-precedence <ex> ...)))
+		(cons (list 'left <tk> ...) (parse-precedence <ex> ...)))
 	       ((_ (right <tk> ...) <ex> ...)
-		(cons '(right <tk> ...) (parse-precedence <ex> ...)))
+		(cons (list 'right <tk> ...) (parse-precedence <ex> ...)))
 	       ((_ (nonassoc <tk> ...) <ex> ...)
-		(cons '(nonassoc <tk> ...) (parse-precedence <ex> ...)))
+		(cons (list 'nonassoc <tk> ...) (parse-precedence <ex> ...)))
 	       ((_ <tk> <ex> ...)
-		(cons '(undecl <tk>) (parse-precedence <ex> ...)))
+		(cons (list 'undecl <tk>) (parse-precedence <ex> ...)))
 	       ((_) '())))
 	    (lalr-spec-1
 	     (syntax-rules (start expect notice prec< prec> grammar)
@@ -371,7 +371,6 @@
 	     (iter ll @l tl (cons sy nl) head (cons p1 prox) lhs
 		   tail rhs-l attr (cons sy pel) (cdr rhs))))
 	  ((prec)
-	   ;;(iter ll @l tl nl head prox lhs tail rhs-l
 	   (iter ll @l (add-el (cdar rhs) tl) nl head prox lhs tail rhs-l
 		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
 	  ((with)
