@@ -19,6 +19,7 @@
 %token FOR
 %token WHILE
 %token DO
+%token THEN
 %token ELSE
 %token IF
 %token ';'
@@ -230,7 +231,7 @@ Initializer: '=' AssignmentExpression ;
 EmptyStatement: ';' ;
 ExpressionStatement: Expression ';' ;
 IfStatement: IF '(' Expression ')' Statement ELSE Statement ;
-IfStatement: IF '(' Expression ')' Statement ;
+IfStatement: IF '(' Expression ')' Statement %prec THEN ;
 IterationStatement: DO Statement WHILE '(' Expression ')' ';' ;
 IterationStatement: WHILE '(' Expression ')' Statement ;
 IterationStatement: FOR '(' OptExprStmtNoIn OptExprStmt OptExprClose Statement ;

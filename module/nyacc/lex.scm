@@ -177,15 +177,15 @@
 	(if (eqv? c1 #\\)
 	    (let ((c3 (read-char)))
 	      (case c2
-		;;((#\a) (cons '$chlit alert)) ; alert
-		;;((#\b) (cons '$chlit alert)) ; backspace
+		;;((#\a) (cons '$chlit "\a")) ; alert
+		;;((#\b) (cons '$chlit "\b")) ; backspace
 		;;((#\f) ; formfeed
-		((#\n) (cons '$chlit #\newline)) ; newline
-		((#\t) (cons '$chlit #\tab)) ; horizontal tab
-		;;((v) (cons '$chlit  ; verticle tab
-		((#\\ #\' #\" #\?) (cons '$chlit c2))
+		((#\n) (cons '$chlit "\n")) ; newline
+		((#\t) (cons '$chlit "\t")) ; horizontal tab
+		((#\v) (cons '$chlit  "\v")) ; verticle tab
+		((#\\ #\' #\" #\?) (cons '$chlit (string c2)))
 		(else (error "bad escape sequence"))))
-	    (cons '$chlit c1)))))
+	    (cons '$chlit (string c1))))))
 
 ;; @item make-num-reader
 ;; integer decimal(#t/#f) fraction exponent looking-at

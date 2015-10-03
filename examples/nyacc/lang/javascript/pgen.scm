@@ -130,7 +130,7 @@
      )
 
     (Arguments
-     ("(" ")" ($$ '(Arguments)))
+     ("(" ")" ($$ '(ArgumentList)))
      ("(" ArgumentList ")" ($$ (tl->list $2)))
      )
 
