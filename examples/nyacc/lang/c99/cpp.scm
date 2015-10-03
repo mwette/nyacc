@@ -25,8 +25,7 @@
 	    )
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
-  #:use-module (lang util)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   #:use-module (rnrs arithmetic bitwise)
   )
 

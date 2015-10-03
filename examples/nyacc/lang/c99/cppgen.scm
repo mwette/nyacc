@@ -21,7 +21,7 @@
   #:export (cpp-spec cpp-mach parse-cpp-expr eval-cpp-expr)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-43) #:select (vector-map))
   #:use-module (rnrs arithmetic bitwise)
   )

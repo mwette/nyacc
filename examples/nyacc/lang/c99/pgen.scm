@@ -22,7 +22,7 @@
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map))
   #:use-module ((sxml xpath) #:select (sxpath))
