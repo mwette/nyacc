@@ -17,11 +17,11 @@
 
 ;; JavaScript parser
 
-(define-module (lang javascript parser)
+(define-module (nyacc lang javascript parser)
   #:export (parse-js)
   #:use-module (nyacc lex)
   #:use-module (nyacc lalr)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   )
 
 (include "tables.scm")

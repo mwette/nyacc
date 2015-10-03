@@ -19,7 +19,7 @@
 
 ;; usage: cxp -Ilang/c99 lang/c99/ex1.c
 
-(add-to-load-path (getcwd))
+(add-to-load-path (string-append (getcwd) "/.."))
 (add-to-load-path (string-append (getcwd) "/../../module"))
 
 (use-modules (ice-9 pretty-print))

@@ -1,8 +1,8 @@
 
-(add-to-load-path (string-append (getcwd) "/../../"))
+(add-to-load-path (string-append (getcwd) "/../../../"))
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
 
-(use-modules (lang c99 cppgen))
+(use-modules (nyacc lang c99 cppgen))
 (use-modules (nyacc lalr))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))

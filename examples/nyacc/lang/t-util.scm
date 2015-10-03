@@ -12,7 +12,7 @@
 
 (add-to-load-path (getcwd))
 
-(use-modules (lang util))
+(use-modules (nyacc lang util))
 
 (let* ((tl0 (make-tl 'abc 1))
        (tl1 (tl-append tl0 2))

@@ -7,10 +7,10 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (string-append (getcwd) "/../../"))
+(add-to-load-path (string-append (getcwd) "/../../.."))
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
 
-(use-modules (lang c99 pgen))
+(use-modules (nyacc lang c99 pgen))
 (use-modules (nyacc lalr))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))

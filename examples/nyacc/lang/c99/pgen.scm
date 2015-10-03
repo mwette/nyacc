@@ -17,9 +17,9 @@
 
 ;; C parser generator: based on ISO-C99; with comments and CPP statements
 
-(define-module (lang c99 pgen)
+(define-module (nyacc lang c99 pgen)
   #:export (clang-spec clang-mach dev-parse-c)
-  #:use-module (lang c99 cpp)
+  #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (lang util)

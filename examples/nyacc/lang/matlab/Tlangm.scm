@@ -7,25 +7,25 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (string-append (getcwd) "/../../"))
+(add-to-load-path (string-append (getcwd) "/../../.."))
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
 
-(use-modules (lang matlab pgen))
+(use-modules (nyacc lang matlab pgen))
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-(with-output-to-file "lang/matlab/lang.txt.new"
+(with-output-to-file "lang.txt.new"
   (lambda ()
     (pp-lalr-grammar matlab-spec)
     (pp-lalr-machine matlab-mach)))
-(with-output-to-file "lang/matlab/gram.y.new"
+(with-output-to-file "gram.y.new"
   (lambda () (lalr->bison matlab-spec)))
 (write-lalr-tables matlab-mach "lang/matlab/tables.scm.new")
 (write-lalr-actions matlab-mach "lang/matlab/actions.scm.new")
 
-(define res (with-input-from-file "lang/matlab/ex1.m"
+(define res (with-input-from-file "ex1.m"
 	      (lambda () (matlab-parser (gen-matlab-lexer) #:debug #f))))
 (if res (pretty-print res))
 

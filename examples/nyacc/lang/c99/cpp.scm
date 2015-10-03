@@ -17,7 +17,7 @@
 
 ;; C preprocessor.  This is not complete.
 
-(define-module (lang c99 cpp)
+(define-module (nyacc lang c99 cpp)
   #:export (parse-cpp-line
 	    eval-cpp-expr
 	    ;;

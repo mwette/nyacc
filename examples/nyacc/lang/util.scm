@@ -8,7 +8,7 @@
 
 ;; runtime utilities for the parsers -- needs work
 
-(define-module (lang util)
+(define-module (nyacc lang util)
   #:export (lang-crn-lic
 	    make-tl tl->list
 	    tl-append tl-insert tl-extend tl+attr

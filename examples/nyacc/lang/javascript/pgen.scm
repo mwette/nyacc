@@ -15,11 +15,11 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (lang javascript pgen)
+(define-module (nyacc lang javascript pgen)
   #:export (js-spec
 	    js-mach
 	    dev-parse-js)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module ((srfi srfi-43) #:select (vector-map))

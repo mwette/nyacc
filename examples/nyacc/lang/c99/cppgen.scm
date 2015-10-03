@@ -17,7 +17,7 @@
 
 ;; C preprocessor expression parser generator
 
-(define-module (lang c99 cppgen)
+(define-module (nyacc lang c99 cppgen)
   #:export (cpp-spec cpp-mach parse-cpp-expr eval-cpp-expr)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
