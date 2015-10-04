@@ -229,9 +229,11 @@
 			(file (substring parg 1 (1- leng)))
 			(path (find-file-in-dirl file (cpi-incs info)))
 			(tree
-			 (if path
-			     (with-input-from-file path run-parse)
-			     (throw 'parse-error "file not found: ~S" file))))
+			 (cond
+			  ((eq? #\< (string-ref parg 0)) '())
+			  (path (with-input-from-file path run-parse))
+			  (else
+			   (throw 'parse-error "file not found: ~S" file)))))
 		   (for-each add-define (xp1 tree)) ; add def's 
 		   ;; Attach tree onto "include" statement: -- clean this up
 		   (set! stmt (append stmt (list tree)))

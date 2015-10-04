@@ -20,7 +20,7 @@
 (define-module (nyacc lang c99 parser)
   #:export (parse-c)
   #:use-module (nyacc lex)
-  #:use-module (nyacc parser)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
@@ -61,7 +61,7 @@
 	   (lambda ()
 	     (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
    (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) fmt rest)
+     (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
 
 ;; --- last line
