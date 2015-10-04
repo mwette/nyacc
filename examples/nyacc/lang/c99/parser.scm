@@ -1,4 +1,4 @@
-;;; lang/c/parser.scm
+;;; lang/c99/parser.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -20,7 +20,7 @@
 (define-module (nyacc lang c99 parser)
   #:export (parse-c)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lalr)
+  #:use-module (nyacc parser)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
   #:use-module ((srfi srfi-9) #:select (define-record-type))

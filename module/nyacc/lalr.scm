@@ -22,7 +22,7 @@
 	    make-lalr-machine
 	    compact-machine hashify-machine
 	    lalr-match-table
-	    make-lalr-parser
+	    ;;make-lalr-parser
 	    pp-lalr-grammar pp-lalr-machine
 	    write-lalr-tables
 	    write-lalr-actions
@@ -1940,7 +1940,6 @@
 		    lval)))
 	   (else ;; accept
 	    (car stack))))))))
-
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 regex))

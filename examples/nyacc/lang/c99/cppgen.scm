@@ -20,6 +20,7 @@
 (define-module (nyacc lang c99 cppgen)
   #:export (cpp-spec cpp-mach parse-cpp-expr eval-cpp-expr)
   #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-43) #:select (vector-map))

@@ -21,6 +21,7 @@
   #:export (clang-spec clang-mach dev-parse-c)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
