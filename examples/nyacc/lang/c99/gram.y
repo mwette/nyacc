@@ -102,6 +102,8 @@
 %%
 translation_unit_proxy: translation_unit ;
 declaration: declaration_specifiers initialized_declarator_list _P1 ';' opt_code_comment ;
+declaration: structure_type_reference ';' ;
+declaration: union_type_reference ';' ;
 _P1: %empty ;
 declaration_specifiers: storage_class_specifier ;
 declaration_specifiers: storage_class_specifier declaration_specifiers ;

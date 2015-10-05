@@ -17,7 +17,7 @@
 ;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 (define-module (nyacc parse)
-  #:export (make-lalr-parser)
+  #:export (make-lalr-parser wrap-action)
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   )

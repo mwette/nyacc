@@ -15,6 +15,10 @@
    ;; declaration => declaration-specifiers initialized-declarator-list $P1...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (if (pair? $5) (append $3 (list $5)) $3))
+   ;; declaration => structure-type-reference ";"
+   (lambda ($2 $1 . $rest) $1)
+   ;; declaration => union-type-reference ";"
+   (lambda ($2 $1 . $rest) $1)
    ;; $P1 => 
    (lambda ($2 $1 . $rest)
      (save-typenames

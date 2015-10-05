@@ -12,14 +12,17 @@
 
 (use-modules (nyacc lang c99 pgen))
 (use-modules (nyacc lalr))
+(use-modules (nyacc util))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
+(use-modules (srfi srfi-43))
 
 (with-output-to-file "lang.txt.new"
   (lambda ()
     (pp-lalr-grammar clang-spec)
     (pp-lalr-machine clang-mach)
     ))
+
 (with-output-to-file "gram.y.new"
   (lambda () (lalr->bison clang-spec)))
 (write-lalr-tables clang-mach "tables.scm.new")

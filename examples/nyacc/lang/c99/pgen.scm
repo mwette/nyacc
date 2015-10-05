@@ -57,6 +57,10 @@
       ($$/ref 's4.1-01 (save-typenames `(decl ,(tl->list $1) ,(tl->list $2))))
       ";" opt-code-comment
       ($$/ref 's4.1-02 (if (pair? $5) (append $3 (list $5)) $3)))
+     ;; The grammar productions listed in the book do not seem to allow 
+     ;; forward declarations, so we add these: -- M.Wette 04Oct15
+     (structure-type-reference ";")
+     (union-type-reference ";") 
      )
 
     ;; At most one storage class specifier and one type specifier may appear.

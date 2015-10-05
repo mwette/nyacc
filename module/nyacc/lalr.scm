@@ -16,18 +16,18 @@
 ;;; License along with this library; if not, write to the Free Software
 ;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+;; I need to find way to preserve srconf, rrconf after hashify.
+;; compact needs to deal with it ...
+
 (define-module (nyacc lalr)
   #:export-syntax (lalr-spec)
   #:export (*nyacc-version*
 	    make-lalr-machine
 	    compact-machine hashify-machine
 	    lalr-match-table
-	    ;;make-lalr-parser
 	    pp-lalr-grammar pp-lalr-machine
 	    write-lalr-tables
 	    write-lalr-actions
-	    ;;write-lalr-parser
-	    wrap-action
 	    pp-rule find-terminal	; used by (nyacc export)
 	    with-gram new-non-kernels
 	    )
@@ -37,6 +37,7 @@
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (nyacc util)
+  #:use-module ((nyacc parse) #:select (wrap-action))
   )
 
 (define *nyacc-version* "0.63.0+")
@@ -1510,7 +1511,8 @@
 	 (nst (vector-length pat-v))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
 	 (reduce? (if hashed
-		      (lambda (a) (negative? a))
+		      (lambda (a) (and (number? a) ; check number: #f for xrconf
+				       (negative? a)))
 		      (lambda (a) (eq? 'reduce (car a)))))
 	 (reduce-pr (if hashed abs cdr))
 	 (reduce-to? (if hashed
@@ -1676,7 +1678,6 @@
 	 (lhs-v (assq-ref mach 'lhs-v))
 	 (rhs-v (assq-ref mach 'rhs-v))
 	 (nrule (vector-length lhs-v))
-	 ;;(act-v (assq-ref mach 'act-v))
 	 (pat-v (assq-ref mach 'pat-v))
 	 (rat-v (assq-ref mach 'rat-v))
 	 (kis-v (assq-ref mach 'kis-v))
@@ -1783,9 +1784,14 @@
 ;; this should be done as part of @code{make-lexer}, by filtering the token
 ;; list through the ident-reader.
 ;; NOTE: The parser is hardcoded to assume that the phony token for the
-;; default action is @code{'$default} for unhashed machine or @code{-1} for
-;; a hashed machine.
+;; default (reduce) action is @code{'$default} for unhashed machine or
+;; @code{-1} for a hashed machine.
+
+;; NEW: need to add reduction of ERROR
+
 ;; @item hashify-machine mach => mach
+;; There is a bug in here: if pat contains rrconf then the output is
+;; #unspedified.
 (define (hashify-machine mach)
   (let* ((terminals (assq-ref mach 'terminals))
 	 (non-terms (assq-ref mach 'non-terms))
@@ -1817,7 +1823,8 @@
 		     (tk (car a0)) (ac (cadr a0)) (ds (cddr a0))
 		     ;; t: encoded token; d: encoded destination
 		     (t (sym->int tk))
-		     (d (case ac ((shift) ds) ((reduce) (- ds)) ((accept) 0))))
+		     (d (case ac ((shift) ds) ((reduce) (- ds)) ((accept) 0)
+			      (else #f))))
 		(unless t
 		  (fmterr "~S ~S ~S\n" tk ac ds) 
 		  (error "expect something"))
@@ -1841,105 +1848,8 @@
 (define (machine-hashed? mach)
   (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
 
-;; @item make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
-;; This is a helper for @code{mkact}.
-(define (make-arg-list n)
-  (let ((mkarg
-	 (lambda (i) (string->symbol (string-append "$" (number->string i))))))
-    (let iter ((r '(. $rest)) (i 1))
-      (if (> i n) r (iter (cons (mkarg i) r) (1+ i))))))
 
-;; @item wrap-action (n . guts) => `(lambda ($n ... $2 $1 . $rest) ,@guts)
-;; Wrap user-specified action (body, as list) of n arguments in a lambda.
-;; The rationale for the arglist format is that we can @code{apply} this
-;; lambda to the the semantic stack.
-(define (wrap-action actn)
-  (cons* 'lambda (make-arg-list (car actn)) (cdr actn)))
-
-;; @item make-lalr-parser mach => parser
-;; This generates a procedure that takes one argument, a lexical analyzer:
-;; @example
-;; (parser lexical-analyzer [#:debug #t])
-;; @end example
-;; and is used as
-;; @example
-;; (define xyz-parse (make-lalr-parser xyz-mach))
-;; (with-input-from-file "sourcefile.xyz" (lambda () (xyz-parse (gen-lexer))))
-;; @end example
-;; The generated parser is reentrant.
-(define* (make-lalr-parser mach)
-  (let* ((len-v (assq-ref mach 'len-v))
-	 (rto-v (assq-ref mach 'rto-v))	; reduce to
-	 (pat-v (assq-ref mach 'pat-v))
-	 (actn-v (assq-ref mach 'act-v)) ; unknown action vector
-	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
-		     (vector-map
-		      ;; Turn symbolic action into executable procedures:
-		      (lambda (ix f) (eval f (current-module)))
-		      (vector-map
-		       (lambda (ix actn) (wrap-action actn))
-		       actn-v))))
-	 ;;
-	 (dmsg (lambda (s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a)))
-	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
-	 ;;(def (assq-ref (assq-ref mach 'mtab) '$default))
-	 (def (if hashed -1 '$default))
-	 ;; predicate to test for shift action:
-	 (shift? (if hashed
-		     (lambda (a) (positive? a))
-		     (lambda (a) (eq? 'shift (car a)))))
-	 ;; On shift, transition to this state:
-	 (shift-to (if hashed (lambda (x) x) (lambda (x) (cdr x))))
-	 ;; predicate to test for reduce action:
-	 (reduce? (if hashed
-		      (lambda (a) (negative? a))
-		      (lambda (a) (eq? 'reduce (car a)))))
-	 ;; On reduce, reduce this production-rule:
-	 ;;(reduce-pr (if hashed (lambda (a) (abs a)) (lambda (a) (cdr a))))
-	 (reduce-pr (if hashed abs cdr))
-	 ;; If no action found in transition list, then this:
-	 (parse-error (if hashed #f (cons 'error 0)))
-	 ;; predicate to test for error
-	 (error? (if hashed
-		     (lambda (a) (eq? #f a))
-		     (lambda (a) (eq? 'error (car a)))))
-	 )
-    (lambda* (lexr #:key debug)
-      (let iter ((state (list 0))	; state stack
-		 (stack (list '$@))	; sval stack
-		 (nval #f)		; prev reduce to non-term val
-		 (lval (lexr)))		; lexical value (from lex'er)
-	(let* ((tval (car (if nval nval lval))) ; token (syntax value)
-	       (sval (cdr (if nval nval lval))) ; semantic value
-	       (stxl (vector-ref pat-v (car state))) ; state transition list
-	       (stx (or (assq-ref stxl tval) ; trans action (e.g. shift 32)
-			(assq-ref stxl def)  ; default action
-			parse-error)))
-	  (if debug (dmsg (car state) (if nval tval sval) stx))
-	  (cond
-	   ((error? stx)
-	    ;; Ugly to have to check this first every time, but
-	    ;; @code{positive?} and @code{negative?} fail otherwise.
-	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		  (ln (1+ (port-line (current-input-port)))))
-	      (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
-		      fn ln (car state) sval))
-	    #f)
-	   ((shift? stx)
-	    ;; We could check here to determine if next transition only has a
-	    ;; default reduction and, if so, go ahead and process the reduction
-	    ;; without reading another input token.  Needed for interactive.
-	    (iter (cons (shift-to stx) state) (cons sval stack)
-		  #f (if nval lval (lexr))))
-	   ((reduce? stx)
-	    (let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
-		   ($$ (apply (vector-ref xact-v gx) stack)))
-	      (iter (list-tail state gl) 
-		    (list-tail stack gl)
-		    (cons (vector-ref rto-v gx) $$)
-		    lval)))
-	   (else ;; accept
-	    (car stack))))))))
+;; === output routines ===============
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 regex))
