@@ -458,7 +458,7 @@
    (lambda ($1 . $rest) (tl->list $1))
    ;; Program => SourceElements
    (lambda ($1 . $rest)
-     (cons 'Program (tl->list $1)))
+     (list 'Program (tl->list $1)))
    ;; SourceElements => SourceElement
    (lambda ($1 . $rest)
      (make-tl 'SourceElements $1))

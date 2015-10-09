@@ -1,4 +1,6 @@
-var a, b = 1
-function foo(a, b) {
-  return 1;
+var a = 7, b = 5
+function foo(x, y) {
+  return x + y;
 }
+a = foo(a,b)
+a

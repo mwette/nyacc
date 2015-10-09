@@ -22,6 +22,8 @@
   cpi?
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
+  (tn-dict cpi-tynd set-cpi-tynd!)	; typename dict (("<x>" foo_t ..
+  ;;
   (typnams cpi-tyns set-cpi-tyns!)	; typedef names
   ;;
   (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
@@ -30,10 +32,20 @@
   (typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
   )
 
-(define (make-cpi defines incdirs)
+(define std-dict
+  '(("<time.h>" "time_t")
+    ("<stdio.h>" "FILE")
+    ("<string.h>" "size_t")
+    ("<inttypes.h>" "int16_t" "uint16_t" "int32_t" "uint32_t" "uintptr_t"
+     "intptr_t")
+    ("<unistd.h>" "div_t" "ldiv_t")
+    ))
+
+(define (make-cpi defines incdirs tn-dict)
   (let* ((cpi (make-cpi-1)))
-    (set-cpi-defs! cpi (if defines defines '()))
-    (set-cpi-incs! cpi (if incdirs incdirs '()))
+    (set-cpi-defs! cpi defines)
+    (set-cpi-incs! cpi incdirs)
+    (set-cpi-tynd! cpi (append tn-dict std-dict))
     (set-cpi-tyns! cpi '())
     ;;
     (set-cpi-ptl! cpi '())
@@ -63,6 +75,7 @@
 ;; @item add-typename name
 ;; Helper for @code{save-typenames}.
 (define (add-typename name)
+  ;;(simple-format #t "add-typename ~S\n" name)
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
 
@@ -85,8 +98,9 @@
 ;; Given declaration return a list of new typenames (via @code{typedef}).
 (define find-new-typenames
   (let ((sxtd (sxpath '(stor-spec typedef)))
-	(sxid (sxpath '(init-declr ident *text*))))
+	(sxid (sxpath '(init-declr // ident *text*))))
     (lambda (decl)
+      ;;(simple-format #t "\n~S\n\n" decl)
       (cond
        ((not (eq? 'decl (car decl))) '())
        ((< (length decl) 3) '())
@@ -222,22 +236,24 @@
 	  
 	  (define (exec-cpp line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
-	    (let* ((stmt (parse-cpp-line line)))
+	    (let* ((stmt (parse-cpp-line line))
+		   (perr (lambda (file)
+			   (throw 'parse-error "file not found: ~S" file))))
 	      (case (car stmt)
 		((include)
 		 (let* ((parg (cadr stmt)) (leng (string-length parg))
 			(file (substring parg 1 (1- leng)))
-			(path (find-file-in-dirl file (cpi-incs info)))
-			(tree
-			 (cond
-			  ((eq? #\< (string-ref parg 0)) '())
-			  (path (with-input-from-file path run-parse))
-			  (else
-			   (throw 'parse-error "file not found: ~S" file)))))
-		   (for-each add-define (xp1 tree)) ; add def's 
-		   ;; Attach tree onto "include" statement: -- clean this up
-		   (set! stmt (append stmt (list tree)))
-		   ))
+			(tynd (assoc-ref (cpi-tynd info) parg)))
+		   (if tynd
+		       (for-each add-typename tynd)
+		       (let* ((pth (find-file-in-dirl file (cpi-incs info)))
+			      (tree (cond
+				     ((eq? #\< (string-ref parg 0)) '())
+				     (pth (with-input-from-file pth run-parse))
+				     (else (perr file)))))
+			 (for-each add-define (xp1 tree)) ; add def's 
+			 ;; Attach tree onto "include" statement (hack?)
+			 (set! stmt (append stmt (list tree)))))))
 		((define)
 		 (add-define stmt))
 		((if)

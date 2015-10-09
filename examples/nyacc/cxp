@@ -23,7 +23,7 @@
 (add-to-load-path (string-append (getcwd) "/../../module"))
 
 (use-modules (ice-9 pretty-print))
-(use-modules (lang c99 parser))
+(use-modules (nyacc lang c99 parser))
 
 (define (scan-for-flagged flag argl)
   (let iter ((res '()) (argl argl))

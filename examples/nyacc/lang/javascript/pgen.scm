@@ -21,6 +21,7 @@
 	    dev-parse-js)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module ((srfi srfi-43) #:select (vector-map))
   )
@@ -510,7 +511,7 @@
      )
 
     (Program
-     (SourceElements ($$ (cons 'Program (tl->list $1))))
+     (SourceElements ($$ (list 'Program (tl->list $1))))
      )
 
     (SourceElements

@@ -51,11 +51,13 @@
 ;; @item parse-c [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:debug bool] \
 ;;               [#:mode ('code|'file)]
 ;; This needs to be explained in some detail.
-(define* (parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'file) debug)
+;; tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
+(define* (parse-c
+	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
   (catch
    'parse-error
    (lambda ()
-     (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
+     (let ((info (make-cpi cpp-defs (cons "." inc-dirs) td-dict)))
        (with-fluid*
 	   *info* info
 	   (lambda ()

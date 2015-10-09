@@ -424,14 +424,14 @@
      )
 
     (structure-type-definition
-     ("struct" structure-tag "{" field-list "}"
-      ($$/ref 's5.6-01 `(struct-def ,$1 ,(tl->list $4))))
-     ("struct" "{" field-list "}"
-      ($$/ref 's5.6-02 `(struct-def ,(tl->list $3))))
+     ("struct" structure-tag "{" opt-lone-comment field-list "}"
+      ($$/ref 's5.6-01 `(struct-def ,$1 ,(tl->list (tl-insert $5 $4)))))
+     ("struct" "{" opt-lone-comment field-list "}"
+      ($$/ref 's5.6-02 `(struct-def ,(tl->list (tl-insert $4 $3)))))
      )
 
     (structure-type-reference
-     ("struct" structure-tag ($$/ref 's5.6-03 `(struct-ref ,$1)))
+     ("struct" structure-tag ($$/ref 's5.6-03 `(struct-ref ,$2)))
      )
 
     (structure-tag (identifier))
@@ -941,6 +941,7 @@
      (function-definition)
      (lone-comment)
      (cpp-statement)
+     ("extern" '$string "{" translation-unit "}" ($$ $4)) ;; hack
      )
 
     (function-definition
@@ -973,6 +974,7 @@
     ;; identifier-list =>
 
     (opt-code-comment () (code-comment))
+    (opt-lone-comment () (lone-comment))
 
     ;; non-terminal leaves
     (identifier
@@ -1011,16 +1013,17 @@
 
 (define (run-parse) (raw-parser (gen-c-lexer)))
 
-(define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'file) debug)
+(define* (dev-parse-c
+	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
   (catch
    'parse-error
    (lambda ()
-     (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
+     (let ((info (make-cpi cpp-defs (cons "." inc-dirs) td-dict)))
        (with-fluid* *info* info
 		    (lambda ()
 		      (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
    (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) fmt rest)
+     (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
 
 ;; --- last line

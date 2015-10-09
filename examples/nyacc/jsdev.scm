@@ -6,10 +6,10 @@
 ;; or any later version published by the Free Software Foundation.  See the
 ;; file COPYING included with the this distribution.
 
-(add-to-load-path (getcwd))
+(add-to-load-path (string-append (getcwd) "/.."))
 (add-to-load-path (string-append (getcwd) "/../../module"))
 
-(use-modules (lang javascript parser))
+(use-modules (nyacc lang javascript parser))
 (use-modules (sxml match))
 (use-modules (sxml fold))
 (use-modules ((srfi srfi-1) #:select (fold)))
@@ -37,8 +37,10 @@
 
 (define (add-lexical name dict)
   (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict))
+;; Add toplevel to dict.
 (define (add-toplevel name dict)
   (acons name `(toplevel ,(string->symbol name)) dict))
+;; Add lexcial or toplevel based on level.
 (define (add-reference name dict)
   (if (> (assq-ref dict '@l) 1)
       (add-lexical name dict)
@@ -49,14 +51,16 @@
   (assq-ref dict '@P))
 
 ;; body needs a line to build "var arguments" from Array(@args)
+;; Right now args is the gensym of the rest argument named @code{@@args}.
 (define (make-function name args body)
   (let ((tagsym (gensym "JS~")) (valsym (gensym "JS~")))
     `(define ,(cadr name)
        (lambda ((name . ,(cadr name)))
-	 (lambda-case ((() #f @args #f () ,(cddadr args))
+	 (lambda-case ((() #f @args #f () (,args))
 		       (prompt
-			(const return) ,body
-			(lambda-case
+			(const return)	; tag
+			,body		; body
+			(lambda-case	; handler
 			 (((tag val) #f #f #f () (,tagsym ,valsym))
 			  (lexical val ,valsym))))))))))
 
@@ -71,7 +75,7 @@
   ;; @item Pick off low hanging fruit: items we can quickly convert in entirety.
   ;; @item Add symbols to the dictionary.  This keeps track of lexical scope.
   ;; @end enumerate
-  (if db (fmtout "D node =~S\n  seed =~S\n  dict =~S\n" node seed dict))
+  (if db (fmtout "\nD node =~S\n  seed =~S\n  dict =~S\n" node seed dict))
   (sxml-match node
     ((NullLiteral)
      (values '() `JS-null dict))
@@ -80,6 +84,8 @@
      (values '() (lookup dict name) dict))
     
     ((PrimaryExpression (Identifier ,name))
+     #;(fmtout "D node =~S\n  seed =~S\n  dict =~S\n" node seed dict)
+     #;(fmtout "  => ~S\n" (lookup dict name))
      (values '() (lookup dict name) dict))
 
     ((PrimaryExpression (StringLiteral ,str))
@@ -102,15 +108,21 @@
     
     ((FormalParameterList ,idlist ...)
      (let* ((args (add-lexical "@args" dict))
+	    ;;(args (add-lexical "@args" '()))
+	    (gsym (list-ref (car args) 3)) ; need gensym ref
 	    (dikt (fold
-		   (lambda (name seed)
-		     (acons name
-			    ;;`(apply (@@ (jslib) lkup) ,args (const ,name))
-			    `(lkup @args ,name)
+		   (lambda (name indx seed)
+		     (acons name `(apply (toplevel list-ref)
+					 (lexical @args ,gsym)
+					 (const ,indx))
 			    seed))
 		   args
-		   (map cadr idlist)))
+		   (map cadr idlist)
+		   (let iter ((r '()) (n (length idlist))) ;; n-1 ... 0
+		     (if (zero? n) r (iter (cons (1- n) r) (1- n))))
+		   ))
 	    )
+       #;(simple-format #t "\nDIKT=~S\n\n" dikt)
        (values node '() dikt)))
     
     ((SourceElements ,elts ...)
@@ -129,7 +141,9 @@
    (case (car node)
      
      ((CallExpression)
-      (values (cons `(apply ,(cadr kseed) ,(car kseed)) seed) dict))
+      #;(fmtout "U node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
+	      node seed kseed dict kdict)
+      (values (cons `(apply ,@(reverse kseed)) seed) dict))
 
      ((ArgumentList)
       (values (append kseed seed) dict))
@@ -141,9 +155,20 @@
      ((obj-ref) ;; ???
       (values (cons `(apply (@@ (jslib) lkup) ,(cadr kseed) ,(car kseed)) seed)
 	      dict))
-     
+
+     ((add)
+      #;(fmtout "U node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
+	      node seed kseed dict kdict)
+      (values (append (reverse kseed) seed) dict))
+      
      ((AssignmentExpression)
       (values (cons (apply x-assn (reverse kseed)) seed) dict))
+
+     ((FormalParameterList)
+      #;(fmtout "U node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
+	      node seed kseed dict kdict)
+      ;; BUT need to build function with ". @args")
+      (values seed kdict))
 
      ((VariableStatement VariableDeclarationList)
       (values (append (reverse kseed) seed) kdict))
@@ -164,19 +189,21 @@
       (values seed dict))
 
      ((ReturnStatement) ;; will need a prompt for return, until optimized
-      (values (cons `(abort (const return) (,(car kseed)) (const ())) seed)
+      #;(fmtout "\nU node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
+	      node seed kseed dict kdict)
+      (values (cons `(abort (const return) (,kseed) (const ())) seed)
 	      dict))
 
      ((FunctionDeclaration)
+      #;(fmtout "\nU node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
+	      node seed kseed dict kdict)
+      ;;(pretty-print kseed)
       (values
-       (let ((name (caddr kseed)) (args (cadr kseed)) (body (car kseed)))
+       (let ((name (cadr kseed))
+	     (args (list-ref (lookup kdict "@args") 2))
+	     (body (car kseed)))
 	 (cons (make-function name args body) seed))
-       dict))
-
-     ((FormalParameterList)
-      (values
-       (cons `(params ,(lookup kdict "@args") ,@(reverse kseed)) seed)
-       dict))
+       kdict))
 
      ((SourceElements)
       (values (cons `(begin ,@(reverse kseed)) seed) dict))
@@ -202,6 +229,7 @@
   (foldts*-values fD fU fH tree seed dict))
 
 ;; ===================================
+(set! db #f)
 
 (define res (with-input-from-file "lang/javascript/ex1.js" parse-js))
 (define rez1
@@ -231,13 +259,11 @@
        (ReturnStatement
 	(PrimaryExpression (NumericLiteral "1"))))))))
 
-(set! db #f)
 (define x0 res)
 
 (system "cat lang/javascript/ex1.js")
 (fmtout "==(parser)==> \n")
 (pretty-print x0)
-#|
 (fmtout "==(foldts*-values)==> \n")
 (define x1 (doit x0 '() JSdict))
 (pretty-print x1)
@@ -246,6 +272,7 @@
 (fmtout "==(compile)==> \n")
 (define x3 (compile x2 #:from 'tree-il #:env (current-module)))
 (simple-format #t "~S\n" x3)
+#|
 |#
 
 ;; --- last line ---

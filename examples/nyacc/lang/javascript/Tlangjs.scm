@@ -12,6 +12,7 @@
 
 (use-modules (nyacc lang javascript pgen))
 (use-modules (nyacc lalr))
+(use-modules (nyacc parse))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 

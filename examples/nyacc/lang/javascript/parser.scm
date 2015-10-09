@@ -20,7 +20,7 @@
 (define-module (nyacc lang javascript parser)
   #:export (parse-js)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   )
 
