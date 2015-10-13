@@ -339,17 +339,19 @@
    (lambda ($1 . $rest) $1)
    ;; structure-type-specifier => structure-type-reference
    (lambda ($1 . $rest) $1)
-   ;; structure-type-definition => "struct" structure-tag "{" opt-lone-comm...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(struct-def ,$1 ,(tl->list (tl-insert $5 $4))))
-   ;; structure-type-definition => "struct" "{" opt-lone-comment field-list...
+   ;; structure-type-definition => "struct" structure-tag "{" field-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(struct-def ,(tl->list (tl-insert $4 $3))))
+     `(struct-def ,$1 ,(tl->list $4)))
+   ;; structure-type-definition => "struct" "{" field-list "}"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(struct-def ,(tl->list $3)))
    ;; structure-type-reference => "struct" structure-tag
    (lambda ($2 $1 . $rest) `(struct-ref ,$2))
    ;; structure-tag => identifier
    (lambda ($1 . $rest) $1)
    ;; field-list => component-declaration
+   (lambda ($1 . $rest) (make-tl 'field-list $1))
+   ;; field-list => lone-comment
    (lambda ($1 . $rest) (make-tl 'field-list $1))
    ;; field-list => field-list component-declaration
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
@@ -742,7 +744,13 @@
    ;; translation-unit => top-level-declaration
    (lambda ($1 . $rest) (make-tl 'trans-unit $1))
    ;; translation-unit => translation-unit top-level-declaration
-   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   (lambda ($2 $1 . $rest)
+     (cond ((eqv? 'trans-unit (car $2))
+            (let* ((t1 (tl-append $1 '(extern-C-begin)))
+                   (t2 (tl-extend t1 (cdr $2)))
+                   (t3 (tl-append t2 '(extern-C-end))))
+              t3))
+           (else (tl-append $1 $2))))
    ;; top-level-declaration => declaration
    (lambda ($1 . $rest) $1)
    ;; top-level-declaration => function-definition
@@ -752,7 +760,7 @@
    ;; top-level-declaration => cpp-statement
    (lambda ($1 . $rest) $1)
    ;; top-level-declaration => "extern" '$string "{" translation-unit "}"
-   (lambda ($5 $4 $3 $2 $1 . $rest) $4)
+   (lambda ($5 $4 $3 $2 $1 . $rest) (tl->list $4))
    ;; function-definition => function-def-specifier compound-statement
    (lambda ($2 $1 . $rest) $1)
    ;; function-def-specifier => declaration-specifiers declarator declarati...
@@ -770,10 +778,6 @@
    ;; opt-code-comment => 
    (lambda $rest (list))
    ;; opt-code-comment => code-comment
-   (lambda ($1 . $rest) $1)
-   ;; opt-lone-comment => 
-   (lambda $rest (list))
-   ;; opt-lone-comment => lone-comment
    (lambda ($1 . $rest) $1)
    ;; identifier => '$ident
    (lambda ($1 . $rest) `(ident ,$1))

@@ -24,7 +24,8 @@
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
-  #:use-module ((sxml xpath) #:select (sxpath))
+  #:use-module ((sxml xpath)
+		#:renamer (lambda (s) (if (eq? s 'filter) 'xp-filter s)))
   )
 
 ;; utility routines

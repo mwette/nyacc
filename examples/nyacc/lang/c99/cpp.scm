@@ -23,7 +23,7 @@
 	    ;;
 	    n-parse-cpp-expr
 	    )
-  #:use-module (nyacc lalr)
+  ;;#:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)

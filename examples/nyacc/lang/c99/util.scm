@@ -21,6 +21,7 @@
   #:export (remove-inc-trees merge-inc-trees!)
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
+  #:use-module (srfi srfi-2) ;; and-let*
 )
 
 ;; @item remove-inc-trees tree
@@ -71,8 +72,8 @@
 ;; @end example
 (define (merge-inc-trees! tree)
 
+  ;; @item find-span (trans-unit a b c) => ((a . +->) . (c . '())
   (define (find-span tree)
-    ;; (trans-unit a b c) -> ((a . +->) . (c . '())
     (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
     (if (null? (cdr tree)) (error "null c99-tree"))
     (let ((fp tree))			; first pair
@@ -80,12 +81,16 @@
 		 (np (cdr tree)))	; next pair
 	(cond
 	 ((null? np) (cons (cdr fp) lp))
-	 ((and (eqv? 'cpp-stmt (car (car np)))
-	       (eqv? 'include (caadr (car np))))
-	  (let* ((t-u (list-ref (cadar np) 2))
-		 (span (find-span t-u)))
-	    (set-cdr! lp (car span))
-	    (iter (cdr span) (cdr np))))
+	 ;; The following is an ugly hack to find cpp-include with trans-unit
+	 ;; attached.
+	 ((and-let* ((expr (car np))
+		     ((eqv? 'cpp-stmt (car expr)))
+		     ((eqv? 'include (caadr expr)))
+		     (rest (cddadr expr))
+		     ((pair? rest))
+		     (span (find-span (car rest))))
+		    (set-cdr! lp (car span))
+		    (iter (cdr span) (cdr np))))
 	 (else
 	  (set-cdr! lp np)
 	  (iter np (cdr np)))))))

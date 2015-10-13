@@ -65,7 +65,10 @@
 ;; Called by lexer to determine if symbol is a typename.
 ;; Check current sibling for each generation.
 (define (typename? name)
+  ;;(simple-format #t "typename? ~S\n" name)
   (let ((cpi (fluid-ref *info*)))
+    ;;(simple-format #t "  cpi-ctl=~S\n" (cpi-ctl cpi))
+    ;;(simple-format #t "  cpi-ptl=~S\n" (cpi-ptl cpi))
     (if (member name (cpi-ctl cpi)) #t
         (let iter ((ptl (cpi-ptl cpi)))
 	  (if (null? ptl) #f
@@ -90,23 +93,59 @@
 (define (cpi-pop)	;; on #endif
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
-    (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
+    (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))
+    ;;(simple-format #t "~S\n" (cpi-ctl cpi))
+    ))
 
+(use-modules (ice-9 pretty-print))
 
+#|
+        (init-declr
+          (ftn-declr
+            (scope (ptr-declr (pointer) (ident "c2_intalg_t")))
+            (param-list
+              (param-decln
+                (decl-spec-list (type-spec (void)))
+                (ftn-declr
+                  (scope (ptr-declr (pointer) (ident "f")))))
+              (param-decln
+                (decl-spec-list (type-spec (void)))
+                (ptr-declr (pointer) (ident "comp")))
+|#
+ 
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
 (define find-new-typenames
   (let ((sxtd (sxpath '(stor-spec typedef)))
-	(sxid (sxpath '(init-declr // ident *text*))))
+	(sxid (node-reduce
+	       (select-kids (node-typeof? 'init-declr))
+	       (node-or
+		;; simple identifier declarator:
+		(select-kids (node-typeof? 'ident))
+		;; function declarator:
+		(node-reduce
+		 (select-kids (node-typeof? 'ftn-declr))
+		 (select-kids (node-typeof? 'scope))
+		 (node-or (node-self (node-typeof? '*any*))
+			  (node-closure (node-typeof? '*any*)))
+		 (select-kids (node-typeof? 'ident))
+		 ))
+	       (select-kids (node-typeof? '*text*)))))
     (lambda (decl)
-      ;;(simple-format #t "\n~S\n\n" decl)
       (cond
        ((not (eq? 'decl (car decl))) '())
        ((< (length decl) 3) '())
-       (else (let* ((spec-list (list-ref decl 1))
-		    (init-list (list-ref decl 2)))
-	       (if (pair? (sxtd spec-list)) (sxid init-list) '())))))))
+       (else (let ((spec-list (list-ref decl 1))
+		   (init-list (list-ref decl 2)))
+	       (when #f ;;(pair? (sxtd spec-list))
+		 (simple-format #t "\nspec=~S\n" (sxtd spec-list))
+		 (simple-format #t "init =~S\n" (sxid init-list))
+		 ;;(pretty-print decl)
+		 )
+	       (if (pair? (sxtd spec-list))
+		   (sxid init-list)
+		   '())))))))
 
 ;; @item add-typdecl name decl
 ;; Helper for @code{save-typenames}.
@@ -253,7 +292,8 @@
 				     (else (perr file)))))
 			 (for-each add-define (xp1 tree)) ; add def's 
 			 ;; Attach tree onto "include" statement (hack?)
-			 (set! stmt (append stmt (list tree)))))))
+			 (if (pair? tree) (set! stmt (append stmt (list tree))))
+			 ))))
 		((define)
 		 (add-define stmt))
 		((if)

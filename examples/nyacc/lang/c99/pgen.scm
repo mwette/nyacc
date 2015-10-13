@@ -26,7 +26,8 @@
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map))
-  #:use-module ((sxml xpath) #:select (sxpath))
+  #:use-module ((sxml xpath)
+		#:renamer (lambda (s) (if (eq? s 'filter) 'xp-filter s)))
   )
 
 ;; Objective is to generate a sxml tree.
@@ -424,10 +425,10 @@
      )
 
     (structure-type-definition
-     ("struct" structure-tag "{" opt-lone-comment field-list "}"
-      ($$/ref 's5.6-01 `(struct-def ,$1 ,(tl->list (tl-insert $5 $4)))))
-     ("struct" "{" opt-lone-comment field-list "}"
-      ($$/ref 's5.6-02 `(struct-def ,(tl->list (tl-insert $4 $3)))))
+     ("struct" structure-tag "{" field-list "}"
+      ($$/ref 's5.6-01 `(struct-def ,$1 ,(tl->list $4))))
+     ("struct" "{" field-list "}"
+      ($$/ref 's5.6-02 `(struct-def ,(tl->list $3))))
      )
 
     (structure-type-reference
@@ -438,6 +439,7 @@
 
     (field-list
      (component-declaration ($$/ref 's5.6-04 (make-tl 'field-list $1)))
+     (lone-comment ($$/ref 's5.6-04 (make-tl 'field-list $1)))
      (field-list component-declaration ($$/ref 's5.6-05 (tl-append $1 $2)))
      (field-list lone-comment ($$/ref 's5.6-06 (tl-append $1 $2)))
      )
@@ -933,7 +935,16 @@
     ;; 9.1, p 286
     (translation-unit
      (top-level-declaration ($$ (make-tl 'trans-unit $1)))
-     (translation-unit top-level-declaration ($$ (tl-append $1 $2)))
+     (translation-unit
+      top-level-declaration
+      ($$ (cond
+	   ((eqv? 'trans-unit (car $2))
+	    (let* ((t1 (tl-append $1 '(extern-C-begin)))
+		   (t2 (tl-extend t1 (cdr $2)))
+		   (t3 (tl-append t2 '(extern-C-end))))
+	      t3))
+	   (else
+	    (tl-append $1 $2)))))
      )
 
     (top-level-declaration
@@ -941,7 +952,8 @@
      (function-definition)
      (lone-comment)
      (cpp-statement)
-     ("extern" '$string "{" translation-unit "}" ($$ $4)) ;; hack
+     ;; The following is a kludge to deal with @code{extern "C" @{}.
+     ("extern" '$string "{" translation-unit "}" ($$ (tl->list $4)))
      )
 
     (function-definition
@@ -974,7 +986,7 @@
     ;; identifier-list =>
 
     (opt-code-comment () (code-comment))
-    (opt-lone-comment () (lone-comment))
+    ;;(opt-lone-comment () (lone-comment))
 
     ;; non-terminal leaves
     (identifier

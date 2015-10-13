@@ -6,12 +6,12 @@
 %token cpp_stmt
 %token _lone_comm
 %token _code_comm
-%token _string
 %token _chlit
 %token _float
 %token _fixed
 %token cpp_ident
 %token _ident
+%token _string
 %token GOTO
 %token RETURN
 %token CONTINUE
@@ -243,6 +243,7 @@ structure_type_definition: STRUCT '{' field_list '}' ;
 structure_type_reference: STRUCT structure_tag ;
 structure_tag: identifier ;
 field_list: component_declaration ;
+field_list: lone_comment ;
 field_list: field_list component_declaration ;
 field_list: field_list lone_comment ;
 component_declaration: type_specifier component_declarator_list ';' opt_code_comment ;
@@ -431,6 +432,7 @@ top_level_declaration: declaration ;
 top_level_declaration: function_definition ;
 top_level_declaration: lone_comment ;
 top_level_declaration: cpp_statement ;
+top_level_declaration: EXTERN _string '{' translation_unit '}' ;
 function_definition: function_def_specifier compound_statement ;
 function_def_specifier: declaration_specifiers declarator declaration_list ;
 function_def_specifier: declaration_specifiers declarator ;
