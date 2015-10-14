@@ -24,9 +24,12 @@
   #:use-module (nyacc lang util)
   )
 
-(include "tables.scm")
-(include "pbody.scm")
-(include "actions.scm")
+;;(include "tables.scm")
+(include-from-path "nyacc/lang/javascript/tables.scm")
+;;(include "pbody.scm")
+(include-from-path "nyacc/lang/javascript/pbody.scm")
+;;(include "actions.scm")
+(include-from-path "nyacc/lang/javascript/actions.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser

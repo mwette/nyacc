@@ -6,8 +6,8 @@
 ;; or any later version published by the Free Software Foundation.  See the
 ;; file COPYING included with the this distribution.
 
-(add-to-load-path (string-append (getcwd) "/.."))
-(add-to-load-path (string-append (getcwd) "/../../module"))
+;;(add-to-load-path (string-append (getcwd) "/.."))
+;;(add-to-load-path (string-append (getcwd) "/../../module"))
 
 (use-modules (nyacc lang javascript parser))
 (use-modules (sxml match))
@@ -15,7 +15,7 @@
 (use-modules ((srfi srfi-1) #:select (fold)))
 (use-modules (ice-9 pretty-print))
 
-(use-modules (jslib))
+(use-modules (nyacc jslib))
 
 (define (fmtout fmt . args) (apply simple-format #t fmt args))
 (define db #f)
@@ -107,8 +107,10 @@
      (values node '() (push-level (add-reference name dict))))
     
     ((FormalParameterList ,idlist ...)
+     ;; For all functions we just use rest arg and then express each
+     ;; var reference as (list-ref @args index)
+     ;; Another option is to use case-lambda ...
      (let* ((args (add-lexical "@args" dict))
-	    ;;(args (add-lexical "@args" '()))
 	    (gsym (list-ref (car args) 3)) ; need gensym ref
 	    (dikt (fold
 		   (lambda (name indx seed)
@@ -122,7 +124,6 @@
 		     (if (zero? n) r (iter (cons (1- n) r) (1- n))))
 		   ))
 	    )
-       #;(simple-format #t "\nDIKT=~S\n\n" dikt)
        (values node '() dikt)))
     
     ((SourceElements ,elts ...)
@@ -141,33 +142,27 @@
    (case (car node)
      
      ((CallExpression)
-      #;(fmtout "U node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
-	      node seed kseed dict kdict)
       (values (cons `(apply ,@(reverse kseed)) seed) dict))
 
      ((ArgumentList)
       (values (append kseed seed) dict))
 
      ((ary-ref)
-      (values (cons `(apply (@@ (jslib) lkup) ,(cadr kseed) ,(car kseed)) seed)
+      (values (cons `(apply (@@ (nyacc jslib) lkup) ,(cadr kseed) ,(car kseed)) seed)
 	      dict))
 
      ((obj-ref) ;; ???
-      (values (cons `(apply (@@ (jslib) lkup) ,(cadr kseed) ,(car kseed)) seed)
+      (values (cons `(apply (@@ (nyacc jslib) lkup) ,(cadr kseed) ,(car kseed)) seed)
 	      dict))
 
      ((add)
-      #;(fmtout "U node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
-	      node seed kseed dict kdict)
       (values (append (reverse kseed) seed) dict))
       
      ((AssignmentExpression)
       (values (cons (apply x-assn (reverse kseed)) seed) dict))
 
      ((FormalParameterList)
-      #;(fmtout "U node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
-	      node seed kseed dict kdict)
-      ;; BUT need to build function with ". @args")
+      ;; We build the function with the rest argument @code{@@args}.
       (values seed kdict))
 
      ((VariableStatement VariableDeclarationList)
@@ -178,7 +173,7 @@
        (cons
 	(if (= 2 (length kseed))
 	    `(define ,(cadr (list-ref kseed 1)) ,(list-ref kseed 0))
-	    `(define ,(cadr (list-ref kseed 0)) (@@ (jslib) undefined)))
+	    `(define ,(cadr (list-ref kseed 0)) (@@ (nyacc jslib) undefined)))
 	seed)
        kdict))
      
@@ -188,16 +183,11 @@
      ((EmptyStatement)
       (values seed dict))
 
-     ((ReturnStatement) ;; will need a prompt for return, until optimized
-      #;(fmtout "\nU node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
-	      node seed kseed dict kdict)
+     ((ReturnStatement) ;; will need a prompt for return, until optimized?
       (values (cons `(abort (const return) (,kseed) (const ())) seed)
 	      dict))
 
      ((FunctionDeclaration)
-      #;(fmtout "\nU node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
-	      node seed kseed dict kdict)
-      ;;(pretty-print kseed)
       (values
        (let ((name (cadr kseed))
 	     (args (list-ref (lookup kdict "@args") 2))
@@ -222,7 +212,7 @@
   (if db (fmtout "H atom =~S\n  seed =~S\n  dict =~S\n" atom seed dict))
   (if (string? atom) (values (cons atom seed) dict)
       (case atom
-	((add) (values (cons* '(@@ (jslib) JS+) 'apply seed) dict))
+	((add) (values (cons* '(@@ (nyacc jslib) JS+) 'apply seed) dict))
 	(else (values seed dict)))))
 
 (define (doit tree seed dict)

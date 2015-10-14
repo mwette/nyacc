@@ -57,7 +57,9 @@ todo:
       ((p-cppd ;; parse all
 	(lambda ()
 	  (let* ((iden (read-c-ident (skip-ws (read-char))))
-		 (args (or (p-args (skip-ws (read-char))) '()))
+		 ;;(args (or (p-args (skip-ws (read-char))) '()))
+		 ;; "define ABC(ARG)" not the same as "define ABC (ARG)"
+		 (args (or (p-args (read-char)) '()))
 		 (amap (lambda (as) (map (lambda (a) (list 'arg a)) as)))
 		 (rest (or (p-rest (skip-ws (read-char))) " ")))
 	    (if (pair? args)
@@ -115,8 +117,10 @@ todo:
 	   ;;((pragma) (cpp-define)) ; ???
 	   (else '()))))))
     
-(include "cpptab.scm")
-(include "cppact.scm")
+;;(include "cpptab.scm")
+(include-from-path "nyacc/lang/c99/cpptab.scm")
+;;(include "cppact.scm")
+(include-from-path "nyacc/lang/c99/cppact.scm")
 (define raw-parser
   (make-lalr-parser
    (list

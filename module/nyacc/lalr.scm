@@ -309,6 +309,8 @@
 		 (cdr all))))))
 	       
   ;; Check for warning: duplicate terminals under atomize (e.g., 'foo "foo").
+  ;; BUG: Get all of these warnings on other random errors.  This needs to be
+  ;; more robust.
   (define (gram-check-5 terminals prev-errs)
     (let ((f "warning: similar terminals: ~A ~A"))
       (let iter ((errs prev-errs) (head '()) (tail terminals))

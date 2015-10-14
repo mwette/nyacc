@@ -29,7 +29,7 @@
   (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
   (ctl cpi-ctl set-cpi-ctl!)		; current typename list
   ;;
-  (typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
+  ;;(typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
   )
 
 (define std-dict
@@ -51,7 +51,7 @@
     (set-cpi-ptl! cpi '())
     (set-cpi-ctl! cpi '())
     ;;
-    (set-cpi-tdls! cpi '())
+    ;;(set-cpi-tdls! cpi '())
     cpi))
 
 (define *info* (make-fluid #f))
@@ -67,8 +67,9 @@
 (define (typename? name)
   ;;(simple-format #t "typename? ~S\n" name)
   (let ((cpi (fluid-ref *info*)))
-    ;;(simple-format #t "  cpi-ctl=~S\n" (cpi-ctl cpi))
-    ;;(simple-format #t "  cpi-ptl=~S\n" (cpi-ptl cpi))
+    (when #f ;;(string=? name "int16_t")
+      (simple-format #t "  cpi-ctl=~S\n" (cpi-ctl cpi))
+      (simple-format #t "  cpi-ptl=~S\n" (cpi-ptl cpi)))
     (if (member name (cpi-ctl cpi)) #t
         (let iter ((ptl (cpi-ptl cpi)))
 	  (if (null? ptl) #f
@@ -150,14 +151,14 @@
 ;; @item add-typdecl name decl
 ;; Helper for @code{save-typenames}.
 ;; Adds type declaration.
-(define (add-typedecl name decl)
+#;(define (add-typedecl name decl)
   (let ((info (fluid-ref *info*)))
     (set-cpi-tdls! info (cons (cons name decl) (cpi-tdls info)))))
 
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
-(define find-new-typedecls
+#;(define find-new-typedecls
   (let ((sxtd (sxpath '(stor-spec typedef)))
 	(sxid (sxpath '(init-declr ident *text*))))
     (lambda (decl)
@@ -178,7 +179,7 @@
   (for-each add-typename (find-new-typenames decl))
   decl)
 
-(define (save-typenames/decls decl)
+#;(define (save-typenames/decls decl)
   ;; This finds typenames using @code{find-new-typenames} and adds via
   ;; @code{add-typename}.  Then return the decl.
   (for-each

@@ -1,6 +1,6 @@
 
-(add-to-load-path (string-append (getcwd) "/../../../"))
-(add-to-load-path (string-append (getcwd) "/../../../../module"))
+;;(add-to-load-path (string-append (getcwd) "/../../../"))
+;;(add-to-load-path (string-append (getcwd) "/../../../../module"))
 
 (use-modules (nyacc lang c99 cppgen))
 (use-modules (nyacc lalr))

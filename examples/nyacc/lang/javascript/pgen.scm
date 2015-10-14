@@ -538,7 +538,8 @@
 			  (assq-ref js-mach 'act-v)))
 (define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
 
-(include "pbody.scm")
+;;(include "pbody.scm")
+(include-from-path "nyacc/lang/javascript/pbody.scm")
 
 (define raw-parser (make-lalr-parser js-mach))
 (define* (dev-parse-js #:key debug)

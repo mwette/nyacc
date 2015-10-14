@@ -104,7 +104,8 @@
 	       (stx (or (assq-ref stxl tval) ; trans action (e.g. shift 32)
 			(assq-ref stxl def)  ; default action
 			parse-error)))
-	  (if debug (dmsg (car state) (if nval tval sval) stx))
+	  ;;(if debug (dmsg (car state) (if nval tval sval) stx))
+	  (if debug (dmsg (car state) (if nval tval lval) stx))
 	  (cond
 	   ((error? stx)
 	    ;; Ugly to have to check this first every time, but

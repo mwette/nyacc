@@ -8,7 +8,7 @@
 
 ;; needs: null, undefined, undeclared?,
 
-(define-module (jslib)
+(define-module (nyacc jslib)
   #:export (JSdict)
   )
 

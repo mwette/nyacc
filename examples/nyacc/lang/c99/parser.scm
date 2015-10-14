@@ -33,9 +33,12 @@
 ;; lexical analyzer
 ;; actions
 
-(include "tables.scm")
-(include "pbody.scm")
-(include "actions.scm")
+;;(include "tables.scm")
+(include-from-path "nyacc/lang/c99/tables.scm")
+;;(include "pbody.scm")
+(include-from-path "nyacc/lang/c99/pbody.scm")
+;;(include "actions.scm")
+(include-from-path "nyacc/lang/c99/actions.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
