@@ -1,31 +1,22 @@
-;; jsdev.scm -- javascript dev
-;;
-;; Copyright (C) 2015 Matthew R. Wette
-;; 
-;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See the
-;; file COPYING included with the this distribution.
+;;; javascript specification for Guile
 
-;;(add-to-load-path (string-append (getcwd) "/.."))
-;;(add-to-load-path (string-append (getcwd) "/../../module"))
+;; copy to language/javascript/spec.scm
 
-(use-modules (nyacc lang javascript parser))
-(use-modules (sxml match))
-(use-modules (sxml fold))
-(use-modules ((srfi srfi-1) #:select (fold)))
-(use-modules (ice-9 pretty-print))
-
-(use-modules (nyacc jslib))
-
-(define (fmtout fmt . args) (apply simple-format #t fmt args))
-(define db #f)
+(define-module (language javascript spec)
+  #:export (javascript)
+  #:use-module (system base language)
+  #:use-module (nyacc lang javascript eparser)
+  #:use-module (nyacc jslib)
+  #:use-module (sxml match)
+  #:use-module (sxml fold)
+  #:use-module ((srfi srfi-1) #:select (fold))
+  )
 
 (define (x-assn lhs op rhs)
   (case op
     ((assign) `(set! ,lhs ,rhs))
     ((add-assign) `(set! ,lhs (apply (@@ (jslib) JS+) ,lhs ,rhs)))
     (else
-     (fmtout "x-assn unhandled: ~S\n" op)
      '(unknown))))
 
 (define (lookup dict name)
@@ -75,7 +66,6 @@
   ;; @item Pick off low hanging fruit: items we can quickly convert in entirety.
   ;; @item Add symbols to the dictionary.  This keeps track of lexical scope.
   ;; @end enumerate
-  (if db (fmtout "\nD node =~S\n  seed =~S\n  dict =~S\n" node seed dict))
   (sxml-match node
     ((NullLiteral)
      (values '() `JS-null dict))
@@ -84,8 +74,6 @@
      (values '() (lookup dict name) dict))
     
     ((PrimaryExpression (Identifier ,name))
-     #;(fmtout "D node =~S\n  seed =~S\n  dict =~S\n" node seed dict)
-     #;(fmtout "  => ~S\n" (lookup dict name))
      (values '() (lookup dict name) dict))
 
     ((PrimaryExpression (StringLiteral ,str))
@@ -135,8 +123,6 @@
 
 (define (fU node seed dict kseed kdict) ;; => seed dict
   ;; This routine rolls up processes leaves into the current branch.
-  (if db (fmtout "U node =~S\n  seed =~S\n  kseed=~S\n  dict =~S\n  kdict=~S\n"
-		 node seed kseed dict kdict))
   (if
    (null? node) (values (cons kseed seed) dict)
    (case (car node)
@@ -148,11 +134,13 @@
       (values (append kseed seed) dict))
 
      ((ary-ref)
-      (values (cons `(apply (@@ (nyacc jslib) lkup) ,(cadr kseed) ,(car kseed)) seed)
+      (values (cons `(apply (@@ (nyacc jslib) lkup) ,(cadr kseed) ,(car kseed))
+		    seed)
 	      dict))
 
      ((obj-ref) ;; ???
-      (values (cons `(apply (@@ (nyacc jslib) lkup) ,(cadr kseed) ,(car kseed)) seed)
+      (values (cons `(apply (@@ (nyacc jslib) lkup) ,(cadr kseed) ,(car kseed))
+		    seed)
 	      dict))
 
      ((add)
@@ -202,67 +190,34 @@
       (values (car kseed) dict))
      
      (else
-      ;;(fmtout "  ^=== no handler\n")
       (cond
        ((null? seed) (values (reverse kseed) dict))
        ((null? kseed) (values (cons (car node) seed) dict)) ;; ???
        (else (values (cons (reverse kseed) seed) dict)))))))
 
 (define (fH atom seed dict)
-  (if db (fmtout "H atom =~S\n  seed =~S\n  dict =~S\n" atom seed dict))
   (if (string? atom) (values (cons atom seed) dict)
       (case atom
 	((add) (values (cons* '(@@ (nyacc jslib) JS+) 'apply seed) dict))
 	(else (values seed dict)))))
 
-(define (doit tree seed dict)
-  (foldts*-values fD fU fH tree seed dict))
+(define (js-reader port env)
+  ;; probly a bit ugly...
+  (let ((iport (current-input-port)))
+    (dynamic-wind
+	(lambda () (set-current-input-port port))
+	(lambda () (parse-js-elt #:debug #t))
+	(lambda () (set-current-input-port iport)))))
 
-;; ===================================
-(set! db #f)
+(define (js-sxml->tree-il exp env opts)
+  (values (foldts*-values fD fU fH exp '() JSdict) env env))
 
-(define res (with-input-from-file "lang/javascript/ex1.js" parse-js))
-(define rez1
-  '(Program
-    (SourceElements
-     (PrimaryExpression (NumericLiteral "26.01")))))
-(define rez2
-  '(Program
-    (SourceElements
-     (CallExpression
-      (obj-ref
-       (PrimaryExpression (Identifier "Math"))
-       (Identifier "sqrt"))
-      (ArgumentList
-       (PrimaryExpression (NumericLiteral "26.01")))))))
-(define rez3
-  '(Program
-    (SourceElements
-     (FunctionDeclaration
-      (Identifier "foo")
-      (FormalParameterList
-       (Identifier "a")
-       (Identifier "b")
-       )
-      (SourceElements
-       (EmptyStatement)
-       (ReturnStatement
-	(PrimaryExpression (NumericLiteral "1"))))))))
-
-(define x0 res)
-#|
-(system "cat lang/javascript/ex1.js")
-(fmtout "==(parser)==> \n")
-(pretty-print x0)
-(fmtout "==(foldts*-values)==> \n")
-(define x1 (doit x0 '() JSdict))
-(pretty-print x1)
-(use-modules (language tree-il))
-(define x2 (parse-tree-il x1))
-(fmtout "==(compile)==> \n")
-(define x3 (compile x2 #:from 'tree-il #:env (current-module)))
-(simple-format #t "~S\n" x3)
-|#
-
+(define-language javascript
+  #:title	"javascript"
+  #:reader	js-reader
+  #:compilers   `((tree-il . ,js-sxml->tree-il))
+  ;; a pretty-printer would be interesting.
+  #:printer	write
+  )
 
 ;; --- last line ---

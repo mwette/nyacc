@@ -528,7 +528,8 @@
 
 (define js-mach
   (hashify-machine
-   (make-lalr-machine js-spec)))
+   (compact-machine
+    (make-lalr-machine js-spec))))
 
 (define len-v (assq-ref js-mach 'len-v))
 (define pat-v (assq-ref js-mach 'pat-v))
