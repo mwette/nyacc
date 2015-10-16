@@ -182,7 +182,8 @@
 		     (gx (reduce-pr stx))
 		     (gl (vector-ref len-v gx))
 		     ($$ (apply (vector-ref xact-v gx) stack)))
-		(simple-format #t "auto reduce to ~S\n" (list-ref state gl))
+		(simple-format #t "auto reduce ~S to ~S\n"
+                               gx (list-ref state gl))
 		(iter (list-tail state gl) (list-tail stack gl)
 		      (cons (vector-ref rto-v gx) $$) lval))
 	      (let* ((laval (or nval (or lval (lexr))))
@@ -215,106 +216,5 @@
 		 (else ;; accept
 		  (car stack))))))))))
   
-#;(define* (make-lalr-y-parser mach)
-  (let* ((len-v (assq-ref mach 'len-v))
-	 (rto-v (assq-ref mach 'rto-v))	; reduce to
-	 (pat-v (assq-ref mach 'pat-v))
-	 (actn-v (assq-ref mach 'act-v)) ; unknown action vector
-	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
-		     (vector-map
-		      ;; Turn symbolic action into executable procedures:
-		      (lambda (ix f) (eval f (current-module)))
-		      (vector-map
-		       (lambda (ix actn) (wrap-action actn))
-		       actn-v))))
-	 ;;
-	 (dmsg (lambda (s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a)))
-	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
-	 ;;(def (assq-ref (assq-ref mach 'mtab) '$default))
-	 (def (if hashed -1 '$default))
-	 ;; predicate to test for shift action:
-	 (shift? (if hashed
-		     (lambda (a) (positive? a))
-		     (lambda (a) (eq? 'shift (car a)))))
-	 ;; On shift, transition to this state:
-	 (shift-to (if hashed (lambda (x) x) (lambda (x) (cdr x))))
-	 ;; predicate to test for reduce action:
-	 (reduce? (if hashed
-		      (lambda (a) (negative? a))
-		      (lambda (a) (eq? 'reduce (car a)))))
-	 ;; On reduce, reduce this production-rule:
-	 ;;(reduce-pr (if hashed (lambda (a) (abs a)) (lambda (a) (cdr a))))
-	 (reduce-pr (if hashed abs cdr))
-	 ;; If no action found in transition list, then this:
-	 (parse-error (if hashed #f (cons 'error 0)))
-	 ;; predicate to test for error
-	 (error? (if hashed
-		     (lambda (a) (eq? #f a))
-		     (lambda (a) (eq? 'error (car a)))))
-	 )
-    
-    (lambda* (lexr #:key debug)
-      ;; state: state stack
-      ;; stack: sem-val stack
-      ;; nval: previously reduced rule, or #f
-      ;; lval: lexical pair (from lex'er) or #f
-      
-      (define (process state stack nval lval stx)
-	(let ((xval (or nval lval))
-	      (tval (car lval))
-	      (sval (cdr lval)))
-	  (cond
-	   ((error? stx)
-	    (let ((fn (or (port-filename (current-input-port))
-			  "(unknown)"))
-		  (ln (1+ (port-line (current-input-port)))))
-	      (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
-		      fn ln (car state) sval))
-	    #f)
-	   ((shift? stx)
-	    (iter (cons (shift-to stx) state) (cons sval stack) #f lval))
-	   ((reduce? stx)
-	    (let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
-		   ($$ (apply (vector-ref xact-v gx) stack)))
-	      (iter (list-tail state gl) 
-		    (list-tail stack gl)
-		    (cons (vector-ref rto-v gx) $$)
-		    lval)))
-	   (else ;; accept
-	    (car stack)))))
-
-      (define (iter state stack nval lval)
-	(let ((stxl (vector-ref pat-v (car state))))
-	  (cond
-	   ((eqv? def (caar stxl))
-	    ;; default reduction; take it
-	    (let* ((stx (cdar stxl))
-		   (gx (reduce-pr stx))
-		   (gl (vector-ref len-v gx))
-		   ($$ (apply (vector-ref xact-v gx) stack)))
-	      (simple-format #t "auto reduce to ~S\n" (list-ref state gl))
-	      (iter (list-tail state gl) (list-tail stack gl)
-		    (cons (vector-ref rto-v gx) $$) lval)))
-	   (nval
-	    (let* ((tval (car nval))
-		   (sval (cdr nval))
-		   (stx (or (assq-ref stxl tval)
-			    (assq-ref stxl def)
-			    parse-error)))
-	    ;; act on non-terminal
-	    (process state stack sval stx)))
-	   (else
-	    ;; act on terminal
-	    (let* ((lval (or lval (lexr)))
-		   (tval (car lval))
-		   (sval (cdr lval))
-		   (stx (or (assq-ref stxl tval)
-			    (assq-ref stxl def)
-			    parse-error)))
-	      (if debug (dmsg (car state) (if nval tval sval) stx))
-	      (process state stack sval stx))))))
-
-      (iter (list 0) (list '$@) #f #f))))
-
 ;; @end itemize
 ;;; --- last line ---
