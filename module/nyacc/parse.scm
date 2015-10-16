@@ -65,6 +65,7 @@
 	 (rto-v (assq-ref mach 'rto-v))	; reduce to
 	 (pat-v (assq-ref mach 'pat-v))
 	 (actn-v (assq-ref mach 'act-v)) ; unknown action vector
+	 (mtab (assq-ref mach 'mtab))
 	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
 		     (vector-map
 		      ;; Turn symbolic action into executable procedures:
@@ -75,8 +76,9 @@
 	 ;;
 	 (dmsg (lambda (s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a)))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
-	 ;;(def (assq-ref (assq-ref mach 'mtab) '$default))
+	 ;;(def (assq-ref mtab '$default))
 	 (def (if hashed -1 '$default))
+	 (end (assq-ref mtab '$end))
 	 ;; predicate to test for shift action:
 	 (shift? (if hashed
 		     (lambda (a) (positive? a))
@@ -139,6 +141,7 @@
 	 (rto-v (assq-ref mach 'rto-v))	; reduce to
 	 (pat-v (assq-ref mach 'pat-v))
 	 (actn-v (assq-ref mach 'act-v)) ; unknown action vector
+	 (mtab (assq-ref mach 'mtab))
 	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
 		     (vector-map
 		      ;; Turn symbolic action into executable procedures:
@@ -151,6 +154,7 @@
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
 	 ;;(def (assq-ref (assq-ref mach 'mtab) '$default))
 	 (def (if hashed -1 '$default))
+	 (end (assq-ref mtab '$end))
 	 ;; predicate to test for shift action:
 	 (shift? (if hashed
 		     (lambda (a) (positive? a))
@@ -177,44 +181,46 @@
 		 (nval #f)		; prev reduce to non-term val
 		 (lval #f))		; lexical value (from lex'er)
 	(let ((stxl (vector-ref pat-v (car state))))
-	  (if (eqv? def (caar stxl))
-	      (let* ((stx (cdar stxl))
-		     (gx (reduce-pr stx))
-		     (gl (vector-ref len-v gx))
-		     ($$ (apply (vector-ref xact-v gx) stack)))
-		(simple-format #t "auto reduce ~S to ~S\n"
-                               gx (list-ref state gl))
-		(iter (list-tail state gl) (list-tail stack gl)
-		      (cons (vector-ref rto-v gx) $$) lval))
-	      (let* ((laval (or nval (or lval (lexr))))
-		     (tval (car laval)) (sval (cdr laval))
-		     (stx (or (assq-ref stxl tval)
-			      (assq-ref stxl def)
-			      parse-error)))
-		(if debug (dmsg (car state) (if nval tval sval) stx))
-		(cond
-		 ((error? stx)
-		  (let ((fn (or (port-filename (current-input-port)) "(???)"))
-			(ln (1+ (port-line (current-input-port)))))
-		    (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
-			    fn ln (car state) sval))
-		  #f)
-		 ((shift? stx)
-		  (iter (cons (shift-to stx) state) (cons sval stack) #f
-			;;(if nval lval laval)
-			lval
-			))
-		 ((reduce? stx)
-		  (let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
-			 ($$ (apply (vector-ref xact-v gx) stack)))
-		    (iter (list-tail state gl) 
-			  (list-tail stack gl)
-			  (cons (vector-ref rto-v gx) $$)
-			  ;;(if nval lval laval)
-			  lval
-			  )))
-		 (else ;; accept
-		  (car stack))))))))))
+	  (cond
+	   ((eqv? def (caar stxl))
+	    (let* ((stx (cdar stxl))
+		   (gx (reduce-pr stx))
+		   (gl (vector-ref len-v gx))
+		   ($$ (apply (vector-ref xact-v gx) stack)))
+	      #;(simple-format #t "auto reduce ~S to ~S\n"
+			     gx (list-ref state gl))
+	      (iter (list-tail state gl) (list-tail stack gl)
+		    (cons (vector-ref rto-v gx) $$) lval)))
+	   ((eqv? end (caar stxl))	; only '$end remains, return for i/a
+	    (car stack))
+	   (else
+	    (let* ((laval (or nval (or lval (lexr))))
+		   (tval (car laval)) (sval (cdr laval))
+		   (stx (or (assq-ref stxl tval)
+			    (assq-ref stxl def)
+			    parse-error)))
+	      #;(if debug (fmtout "  lval=~S  laval=~S\n" lval laval))
+	      (if debug (dmsg (car state) (if nval tval sval) stx))
+	      (cond
+	       ((error? stx)
+		(let ((fn (or (port-filename (current-input-port)) "(???)"))
+		      (ln (1+ (port-line (current-input-port)))))
+		  (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
+			  fn ln (car state) sval))
+		#f)
+	       ((shift? stx)
+		(iter (cons (shift-to stx) state) (cons sval stack)
+		      #f (if nval lval #f)))
+	       ((reduce? stx)
+		(let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
+		       ($$ (apply (vector-ref xact-v gx) stack)))
+		  (iter (list-tail state gl) 
+			(list-tail stack gl)
+			(cons (vector-ref rto-v gx) $$)
+			(if nval lval laval)
+			)))
+	       (else ;; accept
+		(car stack)))))))))))
   
 ;; @end itemize
 ;;; --- last line ---

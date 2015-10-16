@@ -206,7 +206,7 @@
   (let ((iport (current-input-port)))
     (dynamic-wind
 	(lambda () (set-current-input-port port))
-	(lambda () (parse-js-elt #:debug #t))
+	(lambda () (parse-js-elt #:debug #f))
 	(lambda () (set-current-input-port iport)))))
 
 (define (js-sxml->tree-il exp env opts)
