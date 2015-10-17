@@ -151,6 +151,7 @@
 ;; @item ugly-print sexp [#:indent 4] [#:extent 78] [#:port port]
 ;; This will print in compact form which shows no structure.
 (define* (ugly-print sexp #:optional port #:key (indent 4) (extent 78))
+
   (define (obj->str obj)
     (simple-format #f "~S" obj))
 
@@ -203,4 +204,4 @@
     ;;(newline out-p)
     ))
 
-;;; --- last line
+;;; --- last line ---

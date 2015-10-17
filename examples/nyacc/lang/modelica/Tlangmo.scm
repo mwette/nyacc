@@ -1,4 +1,4 @@
-;; lalrT.scm - modelica dev
+;; Tlangmo.scm - modelica dev
 ;;
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 
@@ -7,25 +7,25 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (getcwd))
-(add-to-load-path (string-append (getcwd) "/../../module"))
+(add-to-load-path (string-append (getcwd) "/../.."))
+(add-to-load-path (string-append (getcwd) "/../../../../module"))
 
-(use-modules (lang modelica pgen))
+(use-modules (nyacc lang modelica pgen))
 (use-modules (nyacc lalr))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-(with-output-to-file "lang/modelica/gram.y.new"
+(with-output-to-file "gram.y.new"
   (lambda () (lalr->bison modelica-spec)))
-(with-output-to-file "lang/modelica/lang.txt.new"
+(with-output-to-file "lang.txt.new"
   (lambda ()
     (pp-lalr-grammar modelica-spec)
     (pp-lalr-machine modelica-mach)))
-(write-lalr-tables modelica-mach "lang/modelica/tables.scm.new")
-(write-lalr-actions modelica-mach "lang/modelica/actions.scm.new")
+(write-lalr-tables modelica-mach "tables.scm.new")
+(write-lalr-actions modelica-mach "actions.scm.new")
 		
 (define res
-  (with-input-from-file "lang/modelica/ex1.mo"
+  (with-input-from-file "ex1.mo"
     (lambda ()
       (modelica-parser (gen-mod-lexer) #:debug #f))))
 (pretty-print res)

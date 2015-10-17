@@ -17,15 +17,17 @@
 
 ;; C parser generator: based on ISO-C99; with comments and CPP statements
 
-(define-module (lang c pgen)
+(define-module (nyacc lang c99 pgen)
   #:export (clang-spec clang-mach dev-parse-c)
-  #:use-module (lang c cpp)
+  #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map))
-  #:use-module ((sxml xpath) #:select (sxpath))
+  #:use-module ((sxml xpath)
+		#:renamer (lambda (s) (if (eq? s 'filter) 'xp-filter s)))
   )
 
 ;; Objective is to generate a sxml tree.
@@ -39,10 +41,11 @@
 (define clang-spec
   (lalr-spec
    (notice lang-crn-lic)
-   (prec< "then" "else")	       ; else/then SR-shift resolution
-   (prec< "imp" "char" "short" "int"   ; implied type SR-shift resolution
-	  "long" "float" "double" "_Complex")
-   ;;(expect 25)			; 25 SR-conf fixed with prec
+   (prec< "then" "else")	    ; then/else SR-shift resolution
+   (prec< "imp"			    ; implied type SR-shift resolution
+	  "char" "short" "int" "long"
+	  "float" "double" "_Complex")
+   ;;(expect 25)			; 25 SR-conf fixed with above prec
    (start translation-unit-proxy)
    (grammar
  
@@ -55,6 +58,10 @@
       ($$/ref 's4.1-01 (save-typenames `(decl ,(tl->list $1) ,(tl->list $2))))
       ";" opt-code-comment
       ($$/ref 's4.1-02 (if (pair? $5) (append $3 (list $5)) $3)))
+     ;; The grammar productions listed in the book do not seem to allow 
+     ;; forward declarations, so we add these: -- M.Wette 04Oct15
+     (structure-type-reference ";")
+     (union-type-reference ";") 
      )
 
     ;; At most one storage class specifier and one type specifier may appear.
@@ -287,36 +294,55 @@
     ;; The productions shown in the book are not LALR1 so we will need to use
     ;; static semantics.
     (signed-type-specifier ;; Enforce with static semantics.
-     ("short" ($prec "imp") ($$ '(fixed-type "short")))
-     ("short" "int" ($$ '(fixed-type "short int")))
-     ("signed" "short" ($prec "imp") ($$ '(fixed-type "signed short")))
-     ("signed" "short" "int" ($$ '(fixed-type "signed short int")))
-     ("int" ($$ '(fixed-type "int")))
-     ("signed" ($prec "imp") ($$ '(fixed-type "signed")))
-     ("signed" "int" ($$ '(fixed-type "signed int")))
-     ("long" ($prec "imp") ($$ '(fixed-type "long")))
-     ("long" "int" ($$ '(fixed-type "long int")))
-     ("signed" "long" ($prec "imp") ($$ '(fixed-type "signed long")))
-     ("signed" "long" "int" ($$ '(fixed-type "signed long int")))
-     ("long" "long" ($prec "imp") ($$ '(fixed-type "long long")))
-     ("long" "long" "int" ($$ '(fixed-type "long long int")))
+     ("short" ($prec "imp")
+      ($$/ref 's5.1.1-01 '(fixed-type "short")))
+     ("short" "int"
+      ($$/ref 's5.1.1-02 '(fixed-type "short int")))
+     ("signed" "short" ($prec "imp")
+      ($$/ref 's5.1.1-03 '(fixed-type "signed short")))
+     ("signed" "short" "int"
+      ($$/ref 's5.1.1-04 '(fixed-type "signed short int")))
+     ("int" ($$/ref 's5.1.1-01 '(fixed-type "int")))
+     ("signed" ($prec "imp")
+      ($$/ref 's5.1.1-05 '(fixed-type "signed")))
+     ("signed" "int"
+      ($$/ref 's5.1.1-06 '(fixed-type "signed int")))
+     ("long" ($prec "imp")
+      ($$/ref 's5.1.1-07 '(fixed-type "long")))
+     ("long" "int"
+      ($$/ref 's5.1.1-08 '(fixed-type "long int")))
+     ("signed" "long" ($prec "imp")
+      ($$/ref 's5.1.1-09 '(fixed-type "signed long")))
+     ("signed" "long" "int"
+      ($$/ref 's5.1.1-10 '(fixed-type "signed long int")))
+     ("long" "long" ($prec "imp")
+      ($$/ref 's5.1.1-11 '(fixed-type "long long")))
+     ("long" "long" "int"
+      ($$/ref 's5.1.1-12 '(fixed-type "long long int")))
      ("signed" "long" "long" ($prec "imp")
-      ($$ '(fixed-type "signed long long")))
-     ("signed" "long" "long" "int" ($$ '(fixed-type "signed long long int")))
+      ($$/ref 's5.1.1-13 '(fixed-type "signed long long")))
+     ("signed" "long" "long" "int"
+      ($$/ref 's5.1.1-14 '(fixed-type "signed long long int")))
      )
 
     ;; 5.1.2, p 128
     (unsigned-type-specifier
-     ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short int")))
-     ("unsigned" "short" ($prec "imp") ($$ '(fixed-type "unsigned short")))
-     ("unsigned" "int" ($$ '(fixed-type "unsigned int")))
-     ("unsigned" ($prec "imp") ($$ '(fixed-type "unsigned")))
-     ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
-     ("unsigned" "long" ($prec "imp") ($$ '(fixed-type "unsigned long")))
+     ("unsigned" "short" "int"
+      ($$/ref 's5.1.2-01 '(fixed-type "unsigned short int")))
+     ("unsigned" "short" ($prec "imp")
+      ($$/ref 's5.1.2-02 '(fixed-type "unsigned short")))
+     ("unsigned" "int"
+      ($$/ref 's5.1.2-03 '(fixed-type "unsigned int")))
+     ("unsigned" ($prec "imp")
+      ($$/ref 's5.1.2-04 '(fixed-type "unsigned")))
+     ("unsigned" "long" "int"
+      ($$/ref 's5.1.2-05 '(fixed-type "unsigned long")))
+     ("unsigned" "long" ($prec "imp")
+      ($$/ref 's5.1.2-06 '(fixed-type "unsigned long")))
      ("unsigned" "long" "long" "int"
-      ($$ '(fixed-type "unsigned long long int")))
+      ($$/ref 's5.1.2-07 '(fixed-type "unsigned long long int")))
      ("unsigned" "long" "long" ($prec "imp")
-      ($$ '(fixed-type "unsigned long long")))
+      ($$/ref 's5.1.2-08 '(fixed-type "unsigned long long")))
      )
 
     ;; 5.1.3, p 129
@@ -341,9 +367,12 @@
 
     ;; 5.2.1, p 136
     (complex-type-specifier
-     ("_Complex" ($$/ref 's5.2.1-01 '(complex-type "_Complex")))
-     ("float" "_Complex" ($$/ref 's5.2.1-02 '(complex-type "float _Complex")))
-     ("double" "_Complex" ($$/ref 's5.2.1-03 '(complex-type "double _Complex")))
+     ("_Complex"
+      ($$/ref 's5.2.1-01 '(complex-type "_Complex")))
+     ("float" "_Complex"
+      ($$/ref 's5.2.1-02 '(complex-type "float _Complex")))
+     ("double" "_Complex"
+      ($$/ref 's5.2.1-03 '(complex-type "double _Complex")))
      ("long" "double" "_Complex"
       ($$/ref 's5.2.1-04 '(complex-type "long double _Complex")))
      )
@@ -356,35 +385,36 @@
 
     (enumeration-type-definition
      ("enum" enumeration-tag "{" enumeration-definition-list "}"
-      ($$ `(enum-def ,$1 ,(tl->list $4))))
+      ($$/ref 's5.5-01 `(enum-def ,$1 ,(tl->list $4))))
      ("enum" "{" enumeration-definition-list "}"
-      ($$ `(enum-def ,(tl->list $3))))
+      ($$/ref 's5.5-02 `(enum-def ,(tl->list $3))))
      ("enum" enumeration-tag "{" enumeration-definition-list "," "}"
-      ($$ `(enum-def ,$1 ,(tl->list $4))))
+      ($$/ref 's5.5-03 `(enum-def ,$1 ,(tl->list $4))))
      ("enum" "{" enumeration-definition-list "," "}"
-      ($$ `(enum-def ,(tl->list $3))))
+      ($$/ref 's5.5-04 `(enum-def ,(tl->list $3))))
      )
     
     (enumeration-type-reference
-     ("enum" enumeration-tag ($$ `(enum-ref ,$2)))
+     ("enum" enumeration-tag ($$/ref 's5.5-05 `(enum-ref ,$2)))
      )
 
     (enumeration-tag (identifier))
 
     (enumeration-definition-list
-     (enumeration-constant-definition ($$ (make-tl 'enum-def-list $1)))
+     (enumeration-constant-definition
+      ($$/ref 's5.5-06 (make-tl 'enum-def-list $1)))
      (enumeration-definition-list "," enumeration-constant-definition
-				  ($$ (tl-append $1 $3)))
+				  ($$/ref 's5.5-07 (tl-append $1 $3)))
      )
 
     (enumeration-constant-definition
-     (enumeration-constant ($$ `(enum-defn ,$1)))
+     (enumeration-constant ($$/ref 's5.5-08 `(enum-defn ,$1)))
      ;; I'm not not sure how to get this working. With 'expression, then
      ;; comma-expressions are allowed but enum uses commas in list of
      ;; enumerations.  So I'm using 'constant-expression instead for now.
      ;; (enumeration-constant "=" expression)  ;;  --[change to]--> 
      (enumeration-constant "=" constant-expression
-			   ($$ `(enum-defn ,$1 ,$3)))
+			   ($$/ref 's5.5-08 `(enum-defn ,$1 ,$3)))
      )
     (enumeration-constant (identifier))
 
@@ -396,34 +426,36 @@
 
     (structure-type-definition
      ("struct" structure-tag "{" field-list "}"
-      ($$ `(struct-def ,$1 ,(tl->list $4))))
+      ($$/ref 's5.6-01 `(struct-def ,$1 ,(tl->list $4))))
      ("struct" "{" field-list "}"
-      ($$ `(struct-def ,(tl->list $3))))
+      ($$/ref 's5.6-02 `(struct-def ,(tl->list $3))))
      )
 
     (structure-type-reference
-     ("struct" structure-tag ($$ `(struct-ref ,$1)))
+     ("struct" structure-tag ($$/ref 's5.6-03 `(struct-ref ,$2)))
      )
 
     (structure-tag (identifier))
 
     (field-list
-     (component-declaration ($$ (make-tl 'field-list $1)))
-     (field-list component-declaration ($$ (tl-append $1 $2)))
-     (field-list lone-comment ($$ (tl-append $1 $2)))
+     (component-declaration ($$/ref 's5.6-04 (make-tl 'field-list $1)))
+     (lone-comment ($$/ref 's5.6-04 (make-tl 'field-list $1)))
+     (field-list component-declaration ($$/ref 's5.6-05 (tl-append $1 $2)))
+     (field-list lone-comment ($$/ref 's5.6-06 (tl-append $1 $2)))
      )
 
     (component-declaration
      (type-specifier
       component-declarator-list ";" opt-code-comment
-      ($$ (if (pair? $4)
+      ($$/ref 's5.6-07 (if (pair? $4)
 	      `(comp-decln ,$1 ,(tl->list $2) ,$4)
 	      `(comp-decln ,$1 ,(tl->list $2)))))
      )
 
     (component-declarator-list
-     (component-declarator ($$ (make-tl 'comp-declr-list $1)))
-     (component-declarator-list "," component-declarator ($$ (tl-append $1 $3)))
+     (component-declarator ($$/ref 's5.6-08 (make-tl 'comp-declr-list $1)))
+     (component-declarator-list "," component-declarator
+				($$/ref 's5.6-09 (tl-append $1 $3)))
      )
 
     (component-declarator
@@ -435,8 +467,8 @@
 
     ;; TEST
     (bit-field
-     (declarator ":" width ($$ `(bit-field ,$1 ,$3)))
-     (":" width ($$ `(bit-field ,$2)))
+     (declarator ":" width ($$/ref 's5.6-10 `(bit-field ,$1 ,$3)))
+     (":" width ($$/ref 's5.6-11 `(bit-field ,$2)))
      )
 
     (width (constant-expression))
@@ -448,35 +480,38 @@
      )
 
     (union-type-definition
-     ("union" union-tag "{" field-list "}" ($$ `(union-def ,$1 ,(tl->list $4))))
-     ("union" "{" field-list "}" ($$ `(union-def ,(tl->list $3))))
+     ("union" union-tag "{" field-list "}"
+      ($$/ref 's5.8-01 `(union-def ,$1 ,(tl->list $4))))
+     ("union" "{" field-list "}"
+      ($$/ref 's5.8-02 `(union-def ,(tl->list $3))))
      )
 
     (union-type-reference
-     ("union" union-tag ($$ `(union-ref ,$1)))
+     ("union" union-tag ($$/ref 's5.8-03 `(union-ref ,$1)))
      )
     (union-tag (identifier))
 
     ;; 5.9, p 168
-    (void-type-specifier ("void" ($$ '(void))))
+    (void-type-specifier ("void" ($$/ref 's5.9-01 '(void))))
 
     ;; 5.10, p 168
     ;;(typedef-name (identifier)) must be hacked w/ the lexical analyzer
-    (typedef-name ('typename ($$ `(typename ,$1))))
+    (typedef-name ('typename ($$/ref 's5.10-01 `(typename ,$1))))
 
     ;; 5.12, p 176
     (type-name
      (declaration-specifiers
       abstract-declarator
-      ($$ `(type-name ,(tl->list $1) ,$2))) ;; ???
+      ($$/ref 's5.12-01 `(type-name ,(tl->list $1) ,$2))) ;; ???
      (declaration-specifiers
-      ($$ `(type-name ,(tl->list $1)))) ;; ???
+      ($$/ref 's5.12-02 `(type-name ,(tl->list $1)))) ;; ???
      )
 
     (abstract-declarator
-     (pointer ($$ `(abs-declr ,$1)))
-     (pointer direct-abstract-declarator ($$ `(abs-declr ,$1 ,$2)))
-     (direct-abstract-declarator ($$ `(abs-declr ,$1)))
+     (pointer ($$/ref 's5.12-01 `(abs-declr ,$1)))
+     (pointer direct-abstract-declarator
+	      ($$/ref 's5.12-02 `(abs-declr ,$1 ,$2)))
+     (direct-abstract-declarator ($$/ref 's5.12-03 `(abs-declr ,$1)))
      )
 
     ;; The following in 4.5.2
@@ -486,35 +521,41 @@
     ;; I have removed 'constant-expression productions below because
     ;; these conflict with expression which expands to constant-expression.
     (direct-abstract-declarator
-     ("(" abstract-declarator ")" ($$ `(declr-scope ,$2)))
+     ("(" abstract-declarator ")" ($$/ref 's5.12-01 `(declr-scope ,$2)))
      ;;(direct-abstract-declarator "[" constant-expression "]") 
-     (direct-abstract-declarator "[" "]" ($$ `(declr-array ,$1)))
+     (direct-abstract-declarator "[" "]" ($$/ref 's5.12-03 `(declr-array ,$1)))
      ;;("[" constant-expression "]")
      ("[" "]")
      ;;
-     (direct-abstract-declarator "[" expression "]" ($$ `(declr-arry ,$1 ,$3)))
-     ("[" expression "]" ($$ `(declr-anon-arry ,$2))) ;; ?????
+     (direct-abstract-declarator
+      "[" expression "]"
+      ($$/ref 's5.12-05 `(declr-arry ,$1 ,$3)))
+     ("[" expression "]" ($$/ref 's5.12-06 `(declr-anon-arry ,$2))) ;; ?????
      ;;
-     (direct-abstract-declarator "[" "*" "]" ($$ `(declr-STAR ,$1)))
-     ("[" "*" "]" ($$ '(declr-STAR)))
+     (direct-abstract-declarator
+      "[" "*" "]"
+      ($$/ref 's5.12-07 `(declr-STAR ,$1)))
+     ("[" "*" "]" ($$/ref 's5.12-08 '(declr-STAR)))
      ;;
-     (direct-abstract-declarator "(" parameter-type-list ")"
-				 ($$ `(declr-fctn ,$1 ,(tl->list $3))))
-     (direct-abstract-declarator "(" ")" ($$ `(declr-fctn ,$1)))
-     ("(" parameter-type-list ")" ($$ `(declr-anon-fctn ,(tl->list $2))))
-     ("(" ")" ($$ '(declr-anon-fctn)))
+     (direct-abstract-declarator
+      "(" parameter-type-list ")"
+      ($$/ref 's5.12-09 `(declr-fctn ,$1 ,(tl->list $3))))
+     (direct-abstract-declarator "(" ")" ($$/ref 's5.12-01 `(declr-fctn ,$1)))
+     ("(" parameter-type-list ")"
+      ($$/ref 's5.12-10 `(declr-anon-fctn ,(tl->list $2))))
+     ("(" ")" ($$/ref 's5.12-11 '(declr-anon-fctn)))
      )
 
     ;; 7.3, p 207
     (primary-expression
-     (identifier ($$ `(p-expr ,$1)))
-     (constant ($$ `(p-expr ,$1)))
+     (identifier ($$/ref 's7.3-01 `(p-expr ,$1)))
+     (constant ($$/ref 's7.3-02 `(p-expr ,$1)))
      (parenthesized-expression)
      )
 
     ;; 7.3.3, p 209
     (parenthesized-expression
-     ("(" expression ")" ($$ `(p-expr ,$2))))
+     ("(" expression ")" ($$/ref 's7.3.3-01 `(p-expr ,$2))))
 
     ;; 7.4, p 210
     (postfix-expression
@@ -529,7 +570,7 @@
 
     ;; 7.4.1, p 210
     (subscript-expression
-     (postfix-expression "[" expression "]")
+     (postfix-expression "[" expression "]" ($$/ref 's7.4.1-01 '(FIX)))
      )
 
     ;; 7.4.2, p 212
@@ -539,45 +580,47 @@
      )
 
     (direct-component-selection
-     (postfix-expression "." identifier ($$ `(d-sel ,$3 ,$1)))
+     (postfix-expression "." identifier ($$/ref 's7.4.2-01 `(d-sel ,$3 ,$1)))
      )
     
     (indirect-component-selection
-     (postfix-expression "->" identifier ($$ `(i-sel ,$3 ,$1)))
+     (postfix-expression "->" identifier ($$/ref 's7.4.2-02 `(i-sel ,$3 ,$1)))
      )
 
     ;; 7.4.3, p 214
     (function-call
-     (postfix-expression "(" expression-list ")" ($$ `(fctn-call ,$1 ,$2)))
-     (postfix-expression "(" ")" ($$ `(fctn-call ,$1)))
+     (postfix-expression "(" expression-list ")"
+			 ($$/ref 's7.4.3-01 `(fctn-call ,$1 ,$2)))
+     (postfix-expression "(" ")" ($$/ref 's7.4.3-02 `(fctn-call ,$1)))
      )
 
     (expression-list
-     (assignment-expression ($$ (make-tl 'expr-list $1)))
-     (expression-list "," assignment-expression ($$ (tl-append $1 $3)))
+     (assignment-expression ($$/ref 's7.4.3-03 (make-tl 'expr-list $1)))
+     (expression-list "," assignment-expression
+		      ($$/ref 's7.4.3-04 (tl-append $1 $3)))
      )
 
     ;; 7.4.4, p 216
     (postincrement-expression
-     (postfix-expression "++" ($$ `(post-inc ,$1)))
+     (postfix-expression "++" ($$/ref 's7.4.4-01 `(post-inc ,$1)))
      )
     
     (postdecrement-expression
-     (postfix-expression "--" ($$ `(post-dec ,$1)))
+     (postfix-expression "--" ($$/ref 's7.4.4-02 `(post-dec ,$1)))
      )
 
     ;; 7.4.5, p 217
     (compound-literal
      ("(" type-name ")" "{" initializer-list "}"
-      ($$ `(comp-literal ,$2 ,(tl->list $5))))
+      ($$/ref 's7.4.5-01 `(comp-literal ,$2 ,(tl->list $5))))
      ("(" type-name ")" "{" initializer-list "," "}"
-      ($$ `(comp-literal ,$2 ,(tl->list $5))))
+      ($$/ref 's7.4.5-02 `(comp-literal ,$2 ,(tl->list $5))))
      )
 
     ;; 7.5, p 219
     (cast-expression
      (unary-expression)
-     ("(" type-name ")" cast-expression ($$ `(cast ,$2 ,$4)))
+     ("(" type-name ")" cast-expression ($$/ref 's7.5-01 `(cast ,$2 ,$4)))
      )
 
     (unary-expression
@@ -595,18 +638,18 @@
     
     ;; 7.5.2, p 220
     (sizeof-expression
-     ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3)))
-     ("sizeof" unary-expression ($$ `(sizeof-expr ,$2)))
+     ("sizeof" "(" type-name ")" ($$/ref 's7.5.2-01 `(sizeof-type ,$3)))
+     ("sizeof" unary-expression ($$/ref 's7.5.2-02 `(sizeof-expr ,$2)))
      )
 
     ;; 7.5.3, p 222
     (unary-minus-expression
-     ("-" cast-expression ($$ `(neg ,$2)))
+     ("-" cast-expression ($$/ref 's7.5.3-01 `(neg ,$2)))
      )
 
     ;; (C89)
     (unary-plus-expression
-     ("+" cast-expression ($$ `(pos ,$2)))
+     ("+" cast-expression ($$/ref 's7.5.3-02 `(pos ,$2)))
      )
 
     ;; 7.5.4, p 223
@@ -631,102 +674,117 @@
 
     ;; 7.5.8, p 226
     (preincrement-expression
-     ("++" unary-expression ($$ `(pre-inc ,$2)))
+     ("++" unary-expression ($$/ref 's7.5.8-01 `(pre-inc ,$2)))
      )
 
     (predecrement-expression
-     ("--" unary-expression ($$ `(pre-dec ,$2)))
+     ("--" unary-expression ($$/ref 's7.5.8-02 `(pre-dec ,$2)))
      )
 
     ;; 7.6.1, p 227
     (multiplicative-expression
      (cast-expression)
-     (multiplicative-expression mult-op cast-expression ($$ (list $2 $1 $3)))
+     (multiplicative-expression mult-op cast-expression
+				($$/ref 's7.6.1-01 (list $2 $1 $3)))
      )
-    (mult-op ("*" ($$ 'mul)) ("/" ($$ 'div)) ("%" ($$ 'mod)))
+    (mult-op ("*" ($$/ref 's7.6.1-02 'mul))
+	     ("/" ($$/ref 's7.6.1-03 'div))
+	     ("%" ($$/ref 's7.6.1-04 'mod)))
 
     ;; 7.6.2, p 229
     (additive-expression
      (multiplicative-expression)
      (additive-expression add-op multiplicative-expression
-			  ($$ (list $2 $1 $3)))
+			  ($$/ref 's7.6.2-01 (list $2 $1 $3)))
      )
-    (add-op ("+" ($$ 'add)) ("-" ($$ 'sub)))
+    (add-op ("+" ($$/ref 's7.6.2-02 'add))
+	    ("-" ($$/ref 's7.6.2-03 'sub)))
 
     ;; 7.6.3, p 231
     (shift-expression
      (additive-expression)
-     (shift-expression shift-op additive-expression ($$ (list $2 $1 $3)))
+     (shift-expression shift-op additive-expression
+		       ($$/ref 's7.6.3-01 (list $2 $1 $3)))
      )
-    (shift-op ("<<" ($$ 'lshift)) (">>" ($$ 'rshift)))
+    (shift-op ("<<" ($$/ref 's7.6.3-02 'lshift))
+	      (">>" ($$/ref 's7.6.3-03 'rshift)))
 
     ;; 7.6.4, p 233
     (relational-expression
      (shift-expression)
      (relational-expression relational-op shift-expression
-			    ($$ (list $2 $1 $3)))
+			    ($$/ref 's7.6.4-01 (list $2 $1 $3)))
      )
-    (relational-op
-     ("<" ($$ 'lt)) ("<=" ($$ 'le)) (">" ($$ 'gt)) (">=" ($$ 'ge)))
+    (relational-op ("<" ($$/ref 's7.6.4-02 'lt))
+		   ("<=" ($$/ref 's7.6.4-03 'le))
+		   (">" ($$/ref 's7.6.4-04 'gt))
+		   (">=" ($$/ref 's7.6.4-05 'ge)))
 
     ;; 7.6.5, p 234
     (equality-expression
      (relational-expression)
      (equality-expression equality-op relational-expression
-			  ($$ (list $2 $1 $3)))
+			  ($$/ref 's7.6.5-01 (list $2 $1 $3)))
      )
-    (equality-op ("==" ($$ 'eq)) ("!=" ($$ 'ne)))
+    (equality-op ("==" ($$/ref 's7.6.5-02 'eq))
+		 ("!=" ($$/ref 's7.6.5-03 'ne)))
 
     ;; 7.6.6, p 236
     (bitwise-or-expression
      (bitwise-xor-expression)
      (bitwise-or-expression "|" bitwise-xor-expression
-			    ($$ `(bitwise-or ,$1 ,$3)))
+			    ($$/ref 's7.6.6-01 `(bitwise-or ,$1 ,$3)))
      )
     
     (bitwise-xor-expression
      (bitwise-and-expression)
      (bitwise-xor-expression "^" bitwise-and-expression
-			     ($$ `(bitwise-xor ,$1 ,$3)))
+			     ($$/ref 's7.6.6-02 `(bitwise-xor ,$1 ,$3)))
      )
     
     (bitwise-and-expression
      (equality-expression)
      (bitwise-and-expression "&" equality-expression
-			     ($$ `(bitwise-and ,$1 ,$3)))
+			     ($$/ref 's7.6.6-03 `(bitwise-and ,$1 ,$3)))
      )
 
     ;; 7.7, p 242
     (logical-or-expression
      (logical-and-expression)
      (logical-or-expression "||" logical-and-expression
-			    ($$ `(or ,$1 ,$3)))
+			    ($$/ref 's7.7-01 `(or ,$1 ,$3)))
      )
     
     (logical-and-expression
      (bitwise-or-expression)
      (logical-and-expression "&&" bitwise-or-expression
-			     ($$ `(and ,$1 ,$3)))
+			     ($$/ref 's7.7-02 `(and ,$1 ,$3)))
      )
 
     ;; 7.8, p 244
     (conditional-expression
      (logical-or-expression)
      (logical-or-expression "?" expression ":" conditional-expression
-			    ($$ `(cond-expr $1 $2 $3)))
+			    ($$/ref 's7.8-01 `(cond-expr $1 $2 $3)))
      )
 
     ;; 7.9, p 246
     (assignment-expression
      (conditional-expression)
      (unary-expression assignment-op assignment-expression
-		       ($$ (list $2 $1 $3)))
+		       ($$/ref 's7.9-01 (list $2 $1 $3)))
      )
-    (assignment-op
-     ("=" ($$ 'assign)) ("+=" ($$ 'add-assign)) ("-=" ($$ 'sub-assign))
-     ("*=" ($$ 'mul-assign)) ("/=" ($$ 'div-assign)) ("%=" ($$ 'mod-assign))
-     ("<<=" ($$ 'lshift-assign)) (">>=" ($$ 'rshift-assign))
-     ("&=" ($$ 'and-assign)) ("^=" ($$ 'xor-assign)) ("|=" ($$ 'or-assign)))
+    (assignment-op ("=" ($$ 'assign))
+		   ("+=" ($$ 'add-assign))
+		   ("-=" ($$ 'sub-assign))
+		   ("*=" ($$ 'mul-assign))
+		   ("/=" ($$ 'div-assign))
+		   ("%=" ($$ 'mod-assign))
+		   ("<<=" ($$ 'lshift-assign))
+		   (">>=" ($$ 'rshift-assign))
+		   ("&=" ($$ 'and-assign))
+		   ("^=" ($$ 'xor-assign))
+		   ("|=" ($$ 'or-assign)))
 
     ;; 7.10, p 249
     (comma-expression
@@ -801,7 +859,7 @@
      )
 
     (if-else-statement
-     ("if" "(" expression ")" statement "else" statement ($prec "else")
+     ("if" "(" expression ")" statement "else" statement
       ($$ `(if ,$3 ,$5 ,7)))
      )
 
@@ -877,7 +935,16 @@
     ;; 9.1, p 286
     (translation-unit
      (top-level-declaration ($$ (make-tl 'trans-unit $1)))
-     (translation-unit top-level-declaration ($$ (tl-append $1 $2)))
+     (translation-unit
+      top-level-declaration
+      ($$ (cond
+	   ((eqv? 'trans-unit (car $2))
+	    (let* ((t1 (tl-append $1 '(extern-C-begin)))
+		   (t2 (tl-extend t1 (cdr $2)))
+		   (t3 (tl-append t2 '(extern-C-end))))
+	      t3))
+	   (else
+	    (tl-append $1 $2)))))
      )
 
     (top-level-declaration
@@ -885,6 +952,8 @@
      (function-definition)
      (lone-comment)
      (cpp-statement)
+     ;; The following is a kludge to deal with @code{extern "C" @{}.
+     ("extern" '$string "{" translation-unit "}" ($$ (tl->list $4)))
      )
 
     (function-definition
@@ -917,6 +986,7 @@
     ;; identifier-list =>
 
     (opt-code-comment () (code-comment))
+    ;;(opt-lone-comment () (lone-comment))
 
     ;; non-terminal leaves
     (identifier
@@ -926,7 +996,7 @@
     (constant
      ('$fixed ($$ `(fixed ,$1)))	; integer-constant
      ('$float ($$ `(float ,$1)))	; floating-constant
-     ('$ch-lit ($$ `(char ,$1)))	; char-constant
+     ('$chlit ($$ `(char ,$1)))		; char-constant
      ('$string ($$ `(string ,$1)))	; string-constant
      )
     (code-comment ('$code-comm ($$ `(comment ,$1))))
@@ -949,22 +1019,24 @@
 			  (assq-ref clang-mach 'act-v)))
 (define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
 
-(include "pbody.scm")
+;;(include "pbody.scm")
+(include-from-path "nyacc/lang/c99/pbody.scm")
 
 (define raw-parser (make-lalr-parser clang-mach))
 
 (define (run-parse) (raw-parser (gen-c-lexer)))
 
-(define* (dev-parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'file) debug)
+(define* (dev-parse-c
+	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
   (catch
    'parse-error
    (lambda ()
-     (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
+     (let ((info (make-cpi cpp-defs (cons "." inc-dirs) td-dict)))
        (with-fluid* *info* info
 		    (lambda ()
 		      (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
    (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) fmt rest)
+     (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
 
 ;; --- last line

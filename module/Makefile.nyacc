@@ -11,6 +11,8 @@
 
 # in nyacc/
 NYACC_LANG_SOURCES =				\
+  nyacc/export.scm				\
+  nyacc/import.scm				\
   nyacc/lalr.scm				\
   nyacc/lex.scm					\
   nyacc/util.scm

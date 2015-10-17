@@ -1,4 +1,4 @@
-;;; lang/c/parser.scm
+;;; nyacc/lang/c99/parser.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -17,14 +17,15 @@
 
 ;; C parser
 
-(define-module (lang c parser)
+(define-module (nyacc lang c99 parser)
   #:export (parse-c)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lalr)
-  #:use-module (lang util)
-  #:use-module (lang c cpp)
+  #:use-module (nyacc parse)
+  #:use-module (nyacc lang util)
+  #:use-module (nyacc lang c99 cpp)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
-  #:use-module ((sxml xpath) #:select (sxpath))
+  #:use-module ((sxml xpath)
+		#:renamer (lambda (s) (if (eq? s 'filter) 'xp-filter s)))
   )
 
 ;; utility routines
@@ -32,9 +33,12 @@
 ;; lexical analyzer
 ;; actions
 
-(include "tables.scm")
-(include "pbody.scm")
-(include "actions.scm")
+;;(include "tables.scm")
+(include-from-path "nyacc/lang/c99/tables.scm")
+;;(include "pbody.scm")
+(include-from-path "nyacc/lang/c99/pbody.scm")
+;;(include "actions.scm")
+(include-from-path "nyacc/lang/c99/actions.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
@@ -51,17 +55,19 @@
 ;; @item parse-c [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:debug bool] \
 ;;               [#:mode ('code|'file)]
 ;; This needs to be explained in some detail.
-(define* (parse-c #:key (cpp-defs '()) (inc-dirs '()) (mode 'file) debug)
+;; tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
+(define* (parse-c
+	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
   (catch
    'parse-error
    (lambda ()
-     (let ((info (make-cpi cpp-defs (cons "." inc-dirs))))
+     (let ((info (make-cpi cpp-defs (cons "." inc-dirs) td-dict)))
        (with-fluid*
 	   *info* info
 	   (lambda ()
 	     (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
    (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) fmt rest)
+     (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
 
 ;; --- last line

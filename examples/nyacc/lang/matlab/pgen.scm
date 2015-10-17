@@ -19,13 +19,13 @@
 ;; 1) does NOT parse lone expressions of the form [ 1, 2] => syntax error
 ;; 2) does NOT support non-comma rows [ 1 2 ] => syntax error
 
-(define-module (lang matlab pgen)
+(define-module (nyacc lang matlab pgen)
   #:export (matlab-spec
 	    matlab-mach
 	    gen-matlab-lexer
 	    matlab-parser
 	    parse-m)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (ice-9 pretty-print)

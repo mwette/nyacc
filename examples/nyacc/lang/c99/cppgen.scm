@@ -17,11 +17,12 @@
 
 ;; C preprocessor expression parser generator
 
-(define-module (lang c cppgen)
+(define-module (nyacc lang c99 cppgen)
   #:export (cpp-spec cpp-mach parse-cpp-expr eval-cpp-expr)
   #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-43) #:select (vector-map))
   #:use-module (rnrs arithmetic bitwise)
   )
@@ -89,7 +90,7 @@
     (primary-expression
      ('$ident ($$ `(ident ,$1)))
      ('$fixed ($$ `(fixed ,$1)))	; integer-constant
-     ('$ch-lit ($$ `(char ,$1)))	; char-constant
+     ('$chlit ($$ `(char ,$1)))		; char-constant
      ("defined" "(" '$ident ")" ($$ `(defined ,$3)))
      ("(" expression-list ")" ($$ $2)))
     (expression-list

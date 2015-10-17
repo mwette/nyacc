@@ -1,0 +1,555 @@
+\input texinfo.tex
+@setfilename nyacc-hg.info
+@settitle NYACC Hacker's Guide
+
+@copying
+Copyright (C) 2015 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+@end copying
+
+@clear skip
+
+@titlepage
+@title NYACC Hacker's Guide
+@subtitle rough and incomplete
+
+@vskip 0pt plus 1filll
+@quotation
+Copyright @copyright{} 2015 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+@end quotation
+@author Matt Wette
+@end titlepage
+
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top Introduction
+@end ifnottex
+
+@menu
+* Introduction ::
+* Algorithms ::
+* Lexical Analyzers ::
+* nyacc routines ::
+* Translating SXML ::
+* lex routines ::
+* Programming Style ::
+@end menu
+
+@node Introduction
+@chapter The Introduction
+
+This is a manual for ...
+
+@node Algorithms
+@chapter The Algorithms
+The implementation is based on algorithms laid out in the Dragon Book.
+@xref{References}.  In the application of @sc{nyacc} one writes out a
+(context-free) grammer using Backus-Naur form.  See the example in
+the user's manual.  In addition to the grammar the start symbol must be
+provided.  Optional inputs include specifiers for precedence and
+associativity.  See the user's manual for further details.
+
+@section Preliminaries
+
+Consider a set of symbols @emph{T}.  A @dfn{string} is a sequence of symbols
+from @emph{T}.  A @dfn{language} is a set of strings.   Now we can
+introduce the following.  A @dfn{context free grammar} is defined by
+the four-tuple
+@table @dfn
+@item terminals
+A set of symbols @emph{T} which are used to compose a language.
+@item non-terminals
+A set of symbols @emph{N}, disjoint from @emph{T}, used in production rules.
+@item production rules
+A set of production rules, to be defined below.
+@item start symbol
+This is a symbol which represents an entire string from the language. (CHECK)
+@end table
+A @dfn{production} consists of a left-hand side (LHS) symbol from
+@emph{N} and a right-hand side (RHS) which is a sequence of symbols
+from the union of @emph{T} and @emph{N}.
+
+In the following we use capital letters for non-terminals, the lower case
+letters a-h for terminals and the lower case letters p-z (sometimes in
+italics) for strings, where a string is defined as a sequence of
+non-terminals and terminals.  We occasionally use italic capital T
+(i.e., @i{T}) to represent a set of terminals.
+
+An @emph{item} is a production rule along with a position within the RHS.
+It is represented by the notation
+@example
+A => @i{p}.@i{q}
+@end example
+@noindent
+where the dot @code{.} represents the position in the RHS.  One may
+see that the item can be viewed as a state of parsing the production
+rule left to right.  In fact, each state in the parser can be
+represented by a set of items.  In @sc{nyacc} we use a pair (a cons
+cell) of integers to represent an item: the car is the index of the
+p-rule in the grammar and the cdr is the index into the RHS of the
+symbol to the right of the dot, or -1 if the position is at the end
+(past the last symbol in the RHS).
+
+Given a production rule, a @dfn{lookahead} is a terminal that can
+appear after the production in the language.  We will associate an item
+with the set of possible lookaheads in the context of parsing an input 
+string from left to right.  A @dfn{la-item} (sometimes called
+a LR(1) item) is the explicit association of the item with the
+lookahead set.   We denote this with the following notation
+@example
+A => @i{p}.@i{q}, @{a,b,c@}
+@end example
+@noindent
+
+One can imagine that during process of parsing an input left to right the
+parser may be at a state where several productions may be candidates
+for matching the input.  Each (partial) production is represented by an
+item and the set of these partial productions is called an
+@dfn{itemset}.  If the items are associated with a set of lookaheads
+(i.e., the items are actually la-items) then we may call this a
+@dfn{la-itemset}.  These itemsets correspond to the states of the
+automaton which is the parser.
+
+At the start of of the parse, the start state, which includes the
+item @code{$start => .S}, will have all items with dots at
+position zero.  For the remainder of parsing (after we have acted on
+the first input token, or terminal) at least one effective item will
+have the dot at position greater than zero.  For those itemsets the
+subset of items with non-zero dot positions and at least one RHS
+symbol will be called the @dfn{kernel itemsets}.  For the initial
+state of the parser the kernel itemset is @code{@{$start => .S@}}.
+
+Before we continue we introduce the function @code{first}.
+It is an important function used by @sc{nyacc} in generating a parser.
+It has the following signature:
+@example
+first @i{string} @i{t-set} => @i{la-t-set}
+@end example
+@noindent
+where @i{string} is a sequence of grammar symbols and the argument
+@i{t-set} and result @i{la-t-set} are sets of terminals.  The routine
+@code{first} computes the set of terminals that apear the front of
+@i{string} followed by any terminals in the argument @i{t-set}.  If
+@i{string} is empty, then the result will be just the argument
+@i{t-set}.  If @i{string} starts with a terminal, then the result
+will be a singleton consisting of that terminal.
+
+@section Building the Automaton
+
+In @sc{nyacc} the canonical grammer will always include the following
+internally generated production for specified start symbol @samp{S}:
+@example
+$start => S
+@end example
+@noindent
+This production represents the acceptance of the input.  The symbol
+@code{$start} has only this single production, and this production
+always has index zero.  (Note that Bison includes the endmarker,
+which we call @code{$end}, in this production.  This results in Bison
+parsers having one additional state with respect to @sc{nyacc} parsers.)
+
+Now consider parsing an input left to right.  The initial
+state, or itemset, will include the la-item consisting of the
+cananical 0-indexed production, at position zero, with the
+lookahead set consisting of @code{@{$end@}}:
+@example
+$start => .S, @{$end@}
+@end example
+@noindent
+Note that @code{$end} is the only lookahead for the 0-indexed
+production.  Now @code{S} may have have several associated production
+rules.  Assume they are the following:
+@example
+S => a@i{p}
+S => B@i{q}
+@end example
+@noindent
+and assume the non-terminal @code{B} has the single production
+@example
+B => c@i{r}
+@end example
+@noindent
+Then the initial la-itemset as follows:
+@example
+@i{0}: $start => .S, @{$end@}
+   S => .a@i{p}, @{$end,...@}
+   S => .B@i{q}, @{$end,...@}
+   B => .c@i{r}, @{$end,...@}
+@end example
+@noindent
+where the @code{...} represents unknown other lookaheads.
+At this point we don't know the entire set of possible lookaheads
+because @code{S} may appear in right-hand sides of other production rules.
+
+Now consider, in state @i{i}, an item as follows
+@example
+@i{i}: A => B.@i{q}
+@end example
+@noindent
+We can associate this with a phony lookahead @code{$@@},
+which we call the @dfn{anchor}, to make an la-item:
+@example
+@i{i}: A => B.@i{q}, @{@@@} 
+@end example
+@noindent
+Let @code{@i{T} = first(@i{q},@{@@@})} and notice then if @code{@@} is
+in @i{T} then any lookaheads for this production must also be
+lookaheads for XXX 
+@vskip 1cm
+Here is the algorithm from @code{lalr.scm}
+
+
+@vskip 1cm
+
+working toward explaining closure:
+Compute the fixed point of I, aka @code{la-item-l}, with procedure
+@example
+for each item [A => x.By, a] in I
+  each production B => z in G
+  and each terminal b in FIRST(ya)
+  such that [B => .z, b] is not in I do
+    add [B => .z, b] to I
+@end example
+
+@vskip 1cm
+
+@c [ADD EXAMPLE TO ILLUSTRATE KIS, then define kernel itemsets.]
+It turns out that each state in the parsing automaton is an itemset.
+We can associate an integer with each state of the automaton.
+Now consdier, some state @i{i} with la-item as follows:
+@example
+@i{i}: A => @i{p}.B@i{q}, @{c@}
+@end example
+@noindent
+There will be a transition from state @i{i} to state @i{j} on symbol B
+after a reduction of a production for B.  Then that the tokens in
+@example
+first(@i{q},@{c@})
+@end example
+@noindent
+are lookaheads the associated item in state @i{j}:
+@example
+@i{j}: B => @i{r}. 
+@end example
+@noindent
+and thus when we build this automaton the set of terminals given by
+@code{first(@i{q},@{c@})} should be added to the lookaheads for @i{j}.
+If there is a production
+@example
+@i{i}: B => .C@i{s} 
+@end example
+@noindent
+then the tokens in
+@example
+first(@i{s}@i{q},@{c@})
+@end example
+@noindent
+are lookaheads for the associated item in some state @i{k}:
+@example
+@i{k}: B => C.@i{s}
+@end example
+@noindent
+
+Now let us assume the set
+of lookaheads for the first item above is the singleton @{@@@}
+consisting of the dummy, or anchor, token @code{$@@}.  We compute the set
+@example
+@i{J} = first(B@i{q},$@@)
+@end example
+@noindent
+If @code{$@@} is in @i{J} then we say the lookaheads for XXX propagate
+
+@ifset skip
+The generation of the automaton (aka the @dfn{machine}) in @sc{nyacc}
+is processed in four steps:
+@table @asis
+@item Step 1
+Generate the set of automaton states and transitions.  This is much
+(maybe exactly?) like the process of converting a nondeterministic finite
+automaton into a deterministic finite automaton.  This is called the
+LR(0) atomaton.
+@item Step 2
+For each production, generate the set of spontaneously generated
+lookaheads and the set of lookahead propagations.
+@item Step 3
+Iterate through the productions to propagate lookaheads to items
+in the itemsets until no more lookaheads propagate.  That is, compute
+the fixed-point of the lookahead propgation.
+@item Step 4
+Determine, for each state, the parse actions: shift, reduce and
+accept.  If there are conflicts, use associativity and precedence
+rules to resolve them, or report the conflicts as fatal.
+@end table
+@end ifset
+
+@example
+for-each item I in some itemset
+  for-each la-item J in closure(I,#)
+    for-each token T in lookaheads(J)
+      if LA is #, then add to J propagate-to list
+      otherwise add T to spontaneously-generated list
+@end example
+
+Now condider the la-item
+@example
+$start => .S, @{ $end @}
+@end example
+@noindent
+where @code{$end} represents the end of input.  Now @code{$end} will also
+be the lookahead for any productions of @code{S}.  Say we have read token
+@code{x} and our state includes an item of the form
+@example
+S => x.By, @{ $end @}
+@end example
+@noindent
+The lookahead @code{$end} is there because it was propagated from the
+accept production.
+@example
+B => .z, first(zy, @{$end@})
+@end example
+@noindent
+This says if @code{z} and @code{y} have epsilon productions then
+@code{$end} will be included in the lookaheads for this la-item in it's
+associated state.
+
+We define terms
+@itemize
+@item
+handle: If S => aAw => abw, then A => b is a handle of abw where
+w only contains terminals.
+@end itemize
+
+@node Translating SXML
+@chapter Translating SXML
+
+Many of the example parsers generate SXML.  Here we describe the process
+of translating to something else.
+
+@section Using @code{foldts*-values}
+
+In the modules @code{(sxml fold)} is the routine @code{foldts*-values}. 
+This has been used to convert the SXML output of the example javascript
+parser into Tree-IL.  The signature to this is
+@example
+foldts*-values fdown fup fhere tree seed1 ... => tree seed1 ...
+@end example
+@noindent
+where any number of seeds can be passed.  We choose to use two: @code{seed} 
+and @code{dict}.
+The arguments we pass to @code{foldts*-values} are
+@table @code
+@item fdown tree seed dict => tree seed dict
+The down processor.
+@item fup tree seed dict kseed kdict => seed dict
+The up processor.
+@item fhere tree seed dict => seed dict
+The here processor.
+@end table
+
+@ifset skip
+@node Module
+@chapter The @sc{NYACC} Module ::
+
+@section Parsing the Gammar
+
+The macro @code{lalr-spec}, with the aid of the procedure
+@code{process-spec} reads the user-specified grammar and generates an
+a-list of the specification in canonical form.   The fields of the
+a-list include
+@table @code
+@item non-terms
+The list of non-terminals.
+@item start
+The start symbol representing the starting rule for the grammar.
+@item lhs-v
+The vector of left-hand side symbols for each production rule.
+@item rhs-v
+The vector of vectors of right-hand side symbols for each production
+rule.
+@item act-v
+The vector of actions corresponding to each associated production
+rule.
+@item ref-v
+The vector of action references corresponding to each associated
+production rule.  This will be explained later.
+@item nrg-v
+The number of arguments to each action.  This is necessary for
+handling mid-rule-actions.
+@item expect
+The expected number of undirected shift-reduce conflicts.
+@item err-l
+Not used yet.
+@end table
+The canonical form has no mid-rule-actions: they are reposed using
+proxy symbols (e.g., @code{$P1}).
+
+The machine adds the following items:
+@table @code
+@item pat-v
+This is the parse action table, that provide per-state transition map.
+@item kit-v
+xxx
+@item kip-v
+xxx
+@end table
+
+@c @include lalr_scm.texi
+
+@section Random Notes
+Notes on mid-rule actions:
+To support mid-rule actions we track:
+@enumerate
+@item length of rule (len or l)
+@item size of stack reduction (red or x)
+@item number of args to action (narg or n)
+@end enumerate
+@example
+X: A B C ()                      l=3, x=3, n=3
+@end example            
+Mid-rule actions are expanded via proxy as illustrated in the
+following:
+@example
+Z   => A ($$ foo) B C ($$ bar) D ($$ baz)
+@end example
+@noindent
+is converted to
+@example
+Z   => A $P1 B C $P2 D ($$ baz)  l=6, x=6, n=6
+$P1 => ($$ foo)                  l=0, x=0, n=1
+$P2 => ($$ bar)                  l=0, x=0, n=4
+@end example            
+
+All symbols starting with @code{$} are reserved.  Unused reserved symbols
+will likely not signal an error.  The following reserved symbols are in use:
+@table @code
+@item $start
+This is used in specification to indicate the real start
+@item $end
+This is emitted by the lexical analysis to indicate end of input.
+@item $ident
+This is emitted by the lexical analyzer to indicate an identifier.
+@item $fixed
+This is emitted by the lexical analyzer to indicate an unsigned integer.
+@item $float
+This is emitted by the lexical analyzer to indicate an unsigned
+floating point number.
+@item $string
+This is emitted by the lexical analyzer to indicate a string.
+@item $ch-lit
+This is emitted by the lexical analyzer to indicate a character constant.
+@item $P1, ...
+Symbols of the form @code{$P1}, @code{$P2},... are as symbols for
+proxy productions (e.g., for mid-rule actions).
+@item $with
+This is used to add side effects to the expansion of a non-terminal on
+the right-hand side of a production.
+@item $prune
+This is used in conjunction alongside @code{$with} for tree pruning.
+@item $?, $*, $+
+These are (experimental) macros used for grammar specification.
+@item $$, $$-ref, $$/ref
+These define an action in the right-hand side of a production.
+@item $action, $action-ref, $action/ref
+These symbols, to be deprecated, are long names for @code{$$},
+@code{$$-ref} and @code{$$/ref}. 
+@item $1, $2, ...
+These appear as arguments to user-supplied actions.
+@item $default
+This is used in the generated parser to indicate a default action.
+@item $@
+This is used as a dummy, or anchor, token in the machine generation stage to
+track epsilon productions.
+@item $epsilon
+This is used in the machine generation stage to indicate an empty production.
+@item $cpp-ident (C parser)
+This is used in the C parser to indicate a C preprocessor symbol.  It
+should be changed to @code{$-cpp-ident}.
+@item $-
+Symbols starting with @code{$-} should be used for user-defined macros
+(when, and if, that every materializes).  For example @code{$-?} might
+be a good name for an optional symbol.
+@end table
+@c $error
+
+@end ifset
+
+@node Habits
+@chapter Habits
+
+This chapter explains some of my programming habits.  I hope it helps
+to relieve the head-scratching.
+
+@section Modifying Compound Data Types
+
+In general I do not use @code{set-car!} or @code{set-cdr!}.  I do use
+@code{vector-set!} and @code{hashq-set!}
+
+@section A-Lists Versus Hash Tables
+
+In general I prefer a-lists over hash tables in Scheme because a-lists
+are Scheme-like.  To update an entry in an alist I will just paste
+the new entry on the front.  For example,
+@example
+(let ((al '((foo . 1) (bar . 2) (baz . 3))))
+  ...
+  (acons 'bar 99 al))
+@end example
+@noindent
+If the values of the a-list are lists and I want to add something to the
+list I just use cons, as in the following:
+@example
+(let ((al '((foo 1) (bar 2) (baz 3))))
+  ...
+  (acons 'bar (cons 99 (assq-ref al 'bar)) al)
+@end example
+@noindent
+This modification costs just two cons cells.
+
+@section Iteration
+For iteration I usually use @emph{named-let} and often in concert with
+ @emph{cond}.  The order of variable declarations in my named-let are
+the result variable, followed
+by iteration variables in order of slowest to fastest modification.  
+In the cond I usually evaluate in the order fastest to slowest modification.
+Consider the following C code fragment:
+@example
+res = 0;
+for (i = 0; i < ni, i++) @{
+  res += 100*i;
+  for (j = 0; j < nj, j++) @{
+    res += 10*j;
+    for (k = 0; k < nk, k++) @{
+      res += k;
+    @}
+  @}
+@}
+@end example
+@noindent
+In Scheme, I would express this as
+@example
+(let iter ((res 0) (i 0) (j 0) (k 0))
+  (cond
+   ((< k nk) (iter (+ res k) i j (1+ k)))
+   ((< j nj) (iter (+ res (* 10 j)) i (1+ j) 0))
+   ((< i ni) (iter (+ res (* 100 i)) (1+ i) 0 0))
+   (else res)))
+@end example
+@c @noindent
+
+@section The Free Documentation License
+The Free Documentation License is included in the Guile Reference
+Manual.  It is included with the @sc{nyacc} source as COPYING.DOC.
+
+@bye
+@c --- last line

@@ -17,7 +17,7 @@
 
 ;; idea: make changes and call it Modzillica
 
-(define-module (lang modelica pgen)
+(define-module (nyacc lang modelica pgen)
   #:export (modelica-spec
 	    modelica-mach
 	    modelica-parser
@@ -25,7 +25,7 @@
 	    parse-mo)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
-  #:use-module (lang util)
+  #:use-module (nyacc lang util)
   #:use-module (ice-9 pretty-print)
   )
 

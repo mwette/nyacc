@@ -1,4 +1,4 @@
-;;; lang/ecmascript/pgen.scm
+;;; lang/javascript/pgen.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -15,12 +15,13 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (lang javascript pgen)
+(define-module (nyacc lang javascript pgen)
   #:export (js-spec
 	    js-mach
-	    parse-js)
-  #:use-module (lang util)
+	    dev-parse-js)
+  #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module ((srfi srfi-43) #:select (vector-map))
   )
@@ -29,14 +30,15 @@
 ;; The 'NoIn' variants are needed to avoid confusing the in operator 
 ;; in a relational expression with the in operator in a for statement.
 
+;; NSI = "no semi-colon insertion"
+
 
 ;; Not in the grammar yet: FunctionExpression
-;; check on Elision
 
 (define js-spec
   (lalr-spec
    (notice lang-crn-lic)
-   ;;(expect 1)
+   (prec< "then" "else")
    (start Program)
    (grammar
 
@@ -62,27 +64,31 @@
      (Identifier ($$ `(PrimaryExpression ,$1)))
      (Literal ($$ `(PrimaryExpression ,$1)))
      (ArrayLiteral ($$ `(PrimaryExpression ,$1)))
-     (ObjectLiteral ($$ `(PrimaryExpression ,$1)))
+     ;; until we get $with-prune working:
+     #;(ObjectLiteral ($$ `(PrimaryExpression ,$1)))
      ("(" Expression ")" ($$ `(PrimaryExpression ,$2)))
      )
 
     (ArrayLiteral
-     ("[" Elision "]" ($$ `(ArrayLiteral)))
+     ("[" Elision "]" ($$ `(ArrayLiteral (Elision ,(number->string $2)))))
      ("[" "]" ($$ `(ArrayLiteral)))
-     ("[" ElementList "," Elision "]" ($$ `(ArrayLiteral ,$2)))
+     ("[" ElementList "," Elision "]"
+      ($$ `(ArrayLiteral (Elision ,(number->string $2)))))
      ("[" ElementList "," "]" ($$ `(ArrayLiteral ,$2)))
      )
 
     (ElementList
-     (Elision AssignmentExpression ($$ (make-tl 'ElementList $2)))
+     (Elision AssignmentExpression
+	      ($$ (make-tl 'ElementList `(Elision ,(number->string $2)))))
      (AssignmentExpression ($$ (make-tl 'ElementList $1)))
-     (ElementList "," Elision AssignmentExpression ($$ (tl-append $1 $4)))
+     (ElementList "," Elision AssignmentExpression
+		  ($$ (tl-append $1 `(Elision ,(number->string $3)) $4)))
      (ElementList "," AssignmentExpression ($$ (tl-append $1 $3)))
      )
 
     (Elision
-     ("," ($$ '(Elision)))
-     (Elision ",")
+     ("," ($$ 1))
+     (Elision "," ($$ (1+ $1)))
      )
 
     (ObjectLiteral
@@ -94,7 +100,7 @@
      (PropertyName ":" AssignmentExpression
 		   ($$ (make-tl `PropertyNameAndValueList $1 $3)))
      (PropertyNameAndValueList "," PropertyName ":" AssignmentExpression
-		   ($$ (tl->append $1 $3 $5)))
+		   ($$ (tl-append $1 $3 $5)))
      )
 
     (PropertyName
@@ -105,9 +111,10 @@
 
     (MemberExpression
      (PrimaryExpression)
-     ;;(FunctionExpression)
-     (MemberExpression "[" Expression "]" ($$ `(array-ref ,$3 ,$1)))
-     (MemberExpression "." Identifier ($$ `(elt-ref ,$3 ,$1)))
+     ;; Until we get $with-prune working:
+     #;(FunctionExpression)
+     (MemberExpression "[" Expression "]" ($$ `(ary-ref ,$1 ,$3)))
+     (MemberExpression "." Identifier ($$ `(obj-ref ,$1 ,$3)))
      ("new" MemberExpression Arguments ($$ `(new ,$2 ,$3)))
      )
 
@@ -119,13 +126,13 @@
     (CallExpression
      (MemberExpression Arguments ($$ `(CallExpression ,$1 ,$2)))
      (CallExpression Arguments ($$ `(CallExpression ,$1 ,$2)))
-     (CallExpression "[" Expression "]" ($$ `(array-ref ,$3 ,$1))) ; ??
-     (CallExpression "." Identifier ($$ `(elt-ref ,$3 ,$1))) ; ??
+     (CallExpression "[" Expression "]" ($$ `(ary-ref ,$1 ,$3)))
+     (CallExpression "." Identifier ($$ `(obj-ref ,$1 ,$3))) ;; see member expr
      )
 
     (Arguments
-     ("(" ")" ($$ '(Arguments)))
-     ("(" ArgumentList ")" ($$ $2))
+     ("(" ")" ($$ '(ArgumentList)))
+     ("(" ArgumentList ")" ($$ (tl->list $2)))
      )
 
     (ArgumentList
@@ -140,8 +147,8 @@
 
     (PostfixExpression
      (LeftHandSideExpression)
-     (LeftHandSideExpression ($$ (NLT)) "++" ($$ `(post-inc $1)))
-     (LeftHandSideExpression ($$ (NLT)) "--" ($$ `(post-dec $1)))
+     (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc $1)))
+     (LeftHandSideExpression ($$ (NSI)) "--" ($$ `(post-dec $1)))
      )
 
     (UnaryExpression
@@ -197,24 +204,14 @@
 			   ($$ `(ge ,$1 ,$3)))
      (RelationalExpression "instanceof" ShiftExpression
 			   ($$ `(instanceof ,$1 ,$3)))
+     ;; until we get $with-prune working:
+     #;(RelationalInExpression)
+     )
+    #;(RelationalInExpression
      (RelationalExpression "in" ShiftExpression
 			   ($$ `(in ,$1 ,$3)))
      )
-
-    (RelationalExpressionNoIn
-     (ShiftExpression)
-     (RelationalExpressionNoIn "<" ShiftExpression
-			       ($$ `(lt ,$1 ,$3)))
-     (RelationalExpressionNoIn ">" ShiftExpression
-			       ($$ `(gt ,$1 ,$3)))
-     (RelationalExpressionNoIn "<=" ShiftExpression
-			       ($$ `(le ,$1 ,$3)))
-     (RelationalExpressionNoIn ">=" ShiftExpression
-			       ($$ `(ge ,$1 ,$3)))
-     (RelationalExpressionNoIn "instanceof" ShiftExpression
-			       ($$ `(instanceof ,$1 ,$3)))
-     )
-
+    
     (EqualityExpression
      (RelationalExpression)
      (EqualityExpression "==" RelationalExpression
@@ -227,27 +224,9 @@
 			 ($$ `(not-equal-eq ,$1 ,$3)))
      )
 
-    (EqualityExpressionNoIn
-     (RelationalExpressionNoIn)
-     (EqualityExpressionNoIn "==" RelationalExpressionNoIn
-			 ($$ `(equal ,$1 ,$3)))
-     (EqualityExpressionNoIn "!=" RelationalExpressionNoIn
-			 ($$ `(not-equal ,$1 ,$3)))
-     (EqualityExpressionNoIn "===" RelationalExpressionNoIn
-			 ($$ `(equal-eq ,$1 ,$3)))
-     (EqualityExpressionNoIn "!==" RelationalExpressionNoIn
-			 ($$ `(not-equal-eq ,$1 ,$3)))
-     )
-
     (BitwiseANDExpression
      (EqualityExpression)
      (BitwiseANDExpression "&" EqualityExpression
-			   ($$ `(bit-and ,$1 ,$3)))
-     )
-
-    (BitwiseANDExpressionNoIn
-     (EqualityExpressionNoIn)
-     (BitwiseANDExpressionNoIn "&" EqualityExpressionNoIn
 			   ($$ `(bit-and ,$1 ,$3)))
      )
 
@@ -257,22 +236,10 @@
 			   ($$ `(bit-xor ,$1 ,$3)))
      )
 
-    (BitwiseXORExpressionNoIn
-     (BitwiseANDExpressionNoIn)
-     (BitwiseXORExpressionNoIn "^" BitwiseANDExpressionNoIn
-			       ($$ `(bit-xor ,$1 ,$3)))
-     )
-
     (BitwiseORExpression
      (BitwiseXORExpression)
      (BitwiseORExpression "|" BitwiseXORExpression
 			  ($$ `(bit-or ,$1 ,$3)))
-     )
-
-    (BitwiseORExpressionNoIn
-     (BitwiseXORExpressionNoIn)
-     (BitwiseORExpressionNoIn "|" BitwiseXORExpressionNoIn
-			      ($$ `(bit-or ,$1 ,$3)))
      )
 
     (LogicalANDExpression
@@ -281,46 +248,21 @@
 			   ($$ `(and ,$1 ,$3)))
      )
 
-    (LogicalANDExpressionNoIn
-     (BitwiseORExpressionNoIn)
-     (LogicalANDExpressionNoIn "&&" BitwiseORExpressionNoIn
-			       ($$ `(and ,$1 ,$3)))
-     )
-
     (LogicalORExpression
      (LogicalANDExpression)
      (LogicalORExpression "||" LogicalANDExpression
 			  ($$ `(or ,$1 ,$3)))
      )
 
-    (LogicalORExpressionNoIn
-     (LogicalANDExpressionNoIn)
-     (LogicalORExpressionNoIn "||" LogicalANDExpressionNoIn
-			      ($$ `(or ,$1 ,$3)))
-     )
-
     (ConditionalExpression
      (LogicalORExpression)
      (LogicalORExpression "?" AssignmentExpression ":" AssignmentExpression
-			  ($$ `(ConditionalExpressoin ,$1 ,$3 ,$5)))
+			  ($$ `(ConditionalExpression ,$1 ,$3 ,$5)))
      )
     
-    (ConditionalExpressionNoIn
-     (LogicalORExpressionNoIn)
-     (LogicalORExpressionNoIn "?" AssignmentExpressionNoIn
-			      ":" AssignmentExpressionNoIn
-			      ($$ `(ConditionalExpressoin ,$1 ,$3 ,$5)))
-     )
-
     (AssignmentExpression
      (ConditionalExpression)
      (LeftHandSideExpression AssignmentOperator AssignmentExpression
-			     ($$ `(AssignmentExpression ,$1 ,$2 ,$3)))
-     )
-
-    (AssignmentExpressionNoIn
-     (ConditionalExpressionNoIn)
-     (LeftHandSideExpression AssignmentOperator AssignmentExpressionNoIn
 			     ($$ `(AssignmentExpression ,$1 ,$2 ,$3)))
      )
 
@@ -343,16 +285,11 @@
 	      (tl-append $1 $3)
 	      (make-tl 'expr-list $1 $3))))
      )
-
     (ExpressionNoIn
-     (AssignmentExpressionNoIn)
-     (ExpressionNoIn
-      "," AssignmentExpressionNoIn
-      ($$ (if (and (pair? (car $1)) (eqv? 'expr-list (caar $1)))
-	      (tl-append $1 $3)
-	      (make-tl 'expr-list $1 $3))))
+     #;($with Expression ($prune RelationalInExpression))
+     (Expression)
      )
-
+	    
     ;; A.4
     (Statement
      (Block)
@@ -390,29 +327,24 @@
      (VariableDeclaration ($$ (make-tl 'VariableDeclarationList $1)))
      (VariableDeclarationList "," VariableDeclaration ($$ (tl-append $1 $3)))
      )
-
     (VariableDeclarationListNoIn
-     (VariableDeclarationNoIn ($$ (make-tl 'VariableDeclarationList $1)))
-     (VariableDeclarationListNoIn "," VariableDeclarationNoIn
-				  ($$ (tl-append $1 $3)))
+     #;($with VariableDeclarationList ($prune RelationalInExpression))
+     ;; ==[Until we get $with-prune working]==>
+     (VariableDeclarationList)
      )
 
     (VariableDeclaration
      (Identifier Initializer ($$ `(VariableDeclaration ,$1 ,$2)))
      (Identifier ($$ `(VariableDeclaration ,$1)))
      )
-
     (VariableDeclarationNoIn
-     (Identifier InitializerNoIn ($$ `(VariableDeclaration ,$1 ,$2)))
-     (Identifier ($$ `(VariableDeclaration ,$1)))
+     #;($with VariableDeclaration ($prune RelationalInExpression))
+     ;; ==[Until we get $with-prune working]==>
+     (VariableDeclaration)
      )
 
     (Initializer
      ("=" AssignmentExpression ($$ `(Initializer ,$2)))
-     )
-
-    (InitializerNoIn
-     ("=" AssignmentExpressionNoIn ($$ `(Initializer ,$2)))
      )
 
     (EmptyStatement
@@ -421,34 +353,31 @@
 
     (ExpressionStatement
      ;; spec says: Reject if lookahead "{" "," "function".
-     ;; => prune FunctionExpression, ObjectLiteral
-     (($with Expression
+     #;(($with Expression
 	     ($prune FunctionExpression)
 	     ($prune ObjectLiteral))
-      ";"))
+     ";")
+     ;; ==[until we get $with-prune working]==>
+     (Expression ";")
+     )
 
     (IfStatement
      ("if" "(" Expression ")" Statement "else" Statement
-      ($$ `(IfStatement ,$3 ,$5 ,$7))
-      )
-     ("if" "(" Expression ")" Statement
-      ($$ `(IfStatement ,$3 ,$5))
-      )
+      ($$ `(IfStatement ,$3 ,$5 ,$7)))
+     ("if" "(" Expression ")" Statement ($prec "then")
+      ($$ `(IfStatement ,$3 ,$5)))
      )
 
     (IterationStatement
      ("do" Statement "while" "(" Expression ")" ";"
-      ($$ `(do ,$2 ,$5))
-      )
+      ($$ `(do ,$2 ,$5)))
      ("while" "(" Expression ")" Statement
-      ($$ `(while ,$3 ,$5))
-      )
+      ($$ `(while ,$3 ,$5)))
      ("for" "(" OptExprStmtNoIn OptExprStmt OptExprClose Statement
       ;;($$ `(for ,$3 ,$
       )
-     ("for" "(" "var" VariableDeclarationListNoIn ";"
-      OptExprStmt OptExprClose Statement
-      )
+     ("for" "(" "var" VariableDeclarationListNoIn ";" OptExprStmt
+      OptExprClose Statement)
      ("for" "(" LeftHandSideExpression "in" Expression ")" Statement)
      ("for" "(" "var" VariableDeclarationNoIn "in" Expression ")" Statement)
      )
@@ -456,6 +385,7 @@
      (":" ($$ `(Expression)))
      (ExpressionNoIn ";")
      )
+			
     (OptExprStmt
      (";" ($$ '(ExprStmt)))
      (Expression ";")
@@ -466,19 +396,19 @@
      )
 
     (ContinueStatement
-     ("continue" ($$ (NLT)) Identifier ";"
+     ("continue" ($$ (NSI)) Identifier ";"
       ($$ `(ContinueStatement ,$3)))
      ("continue" ";" ($$ '(ContinueStatement)))
      )
 
     (BreakStatement
-     ("break" ($$ (NLT)) Identifier ";"
+     ("break" ($$ (NSI)) Identifier ";"
       ($$ `(BreakStatement ,$3)))
      ("break" ";" ($$ '(ContinueStatement)))
      )
 
     (ReturnStatement
-     ("return" ($$ (NLT)) Expression ";"
+     ("return" ($$ (NSI)) Expression ";"
       ($$ `(ReturnStatement ,$3)))
      ("return" ";" ($$ '(ReturnStatement)))
      )
@@ -529,7 +459,7 @@
      )
 
     (ThrowStatement
-     ("throw" ($$ (NLT)) Expression ";"
+     ("throw" ($$ (NSI)) Expression ";"
       ($$ `(ThrowStatement ,$3)))
      )
 
@@ -557,7 +487,7 @@
      ("function" Identifier "(" FormalParameterList ")" "{" FunctionBody "}"
       ($$ `(FunctionDeclaration ,$2 ,(tl->list $4) ,$7)))
      ("function" Identifier "(" ")" "{" FunctionBody "}"
-      ($$ `(FunctionDeclaration ,$2 ,$6)))
+      ($$ `(FunctionDeclaration ,$2 (FormalParameterList) ,$6)))
      )
 
     (FunctionExpression
@@ -577,11 +507,11 @@
      )
 
     (FunctionBody
-     (SourceElements)
+     (SourceElements ($$ (tl->list $1)))
      )
 
     (Program
-     (SourceElements ($$ (tl->list $1)))
+     (SourceElements ($$ (list 'Program (tl->list $1))))
      )
 
     (SourceElements
@@ -597,30 +527,31 @@
     )))
 
 (define js-mach
-  (identity ;;hashify-machine
-   (make-lalr-machine js-spec)))
-
-#|
+  (hashify-machine
+   (compact-machine
+    (make-lalr-machine js-spec))))
 
 (define len-v (assq-ref js-mach 'len-v))
 (define pat-v (assq-ref js-mach 'pat-v))
 (define rto-v (assq-ref js-mach 'rto-v))
 (define mtab (assq-ref js-mach 'mtab))
-(define sya-v (vector-map
-	       (lambda (ix nrg guts) (wrap-action nrg guts))
-	       (assq-ref js-mach 'nrg-v) (assq-ref js-mach 'act-v)))
+(define sya-v (vector-map (lambda (ix actn) (wrap-action actn))
+			  (assq-ref js-mach 'act-v)))
 (define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
 
-(include "pbody.scm")
-|#
+;;(include "pbody.scm")
+(include-from-path "nyacc/lang/javascript/pbody.scm")
 
-#|
-    (InputElementDiv
-     (WhiteSpace) (LineTerminator) (Comment) (Token) (DivPunctuator))
-    (InputElementRegExp
-     (WhiteSpace) (LineTerminator) (Comment) (Token) (RegularExpressionLiteral))
-    (WhiteSpace ("\t") ("\vt") ("\ff") (" ") ("&nbsp;") ("&usp;"))
-    (LineTerminator ("\n") ("\r") (LS) (PS))
-    (MultiLineComment ('multiline-comment))
-|#
+(define raw-parser (make-lalr-parser js-mach))
+(define* (dev-parse-js #:key debug)
+  (catch
+   'parse-error
+   (lambda ()
+     (with-fluid*
+	 *insert-semi* #t
+	 (lambda () (raw-parser (gen-js-lexer) #:debug #f))))
+   (lambda (key fmt . rest)
+     (apply simple-format (current-error-port) fmt rest)
+     #f)))
+
 ;;; --- last line    

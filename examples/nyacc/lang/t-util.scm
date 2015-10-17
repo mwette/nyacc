@@ -10,9 +10,9 @@
 ;; Test the runtime parsing utilities.
 ;; examples/nyacc$ guile lang/t-util.scm
 
-(add-to-load-path (getcwd))
+(add-to-load-path (string-append (getcwd) "/../.."))
 
-(use-modules (lang util))
+(use-modules (nyacc lang util))
 
 (let* ((tl0 (make-tl 'abc 1))
        (tl1 (tl-append tl0 2))
@@ -34,7 +34,9 @@
   (set! tl (tl-append tl 30))
   (set! tl (tl+attr tl 'z "true"))
   (set! tl (tl-append tl 40))
-  (set! tl (tl-insert tl 'z))
+  (set! tl (tl-extend tl '(a b c)))
+  (set! tl (tl-insert tl 'YYY))
+  (set! tl (tl-append tl 'ZZZ))
   (simple-format #t "~S\n" (tl->list tl))
   )
 

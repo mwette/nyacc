@@ -2,7 +2,7 @@
 // 
 // This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 // or any later version published by the Free Software Foundation.  See the
-// file COPYING included with the nyacc distribution.
+// file COPYING included with the this distribution.
 %token FUNCTION
 %token FINALLY
 %token CATCH
@@ -15,9 +15,11 @@
 %token RETURN
 %token BREAK
 %token CONTINUE
+%token IN
 %token FOR
 %token WHILE
 %token DO
+%token THEN
 %token ELSE
 %token IF
 %token ';'
@@ -44,7 +46,6 @@
 %token ChSeq_61_61_61
 %token ChSeq_61_33
 %token ChSeq_61_61
-%token IN
 %token INSTANCEOF
 %token ChSeq_61_62
 %token ChSeq_61_60
@@ -78,8 +79,8 @@
 %token THIS
 %token _ident
 %token _string
-%token _fl
-%token _fx
+%token _float
+%token _fixed
 %token FALSE
 %token TRUE
 %token NULL
@@ -93,15 +94,14 @@ Literal: StringLiteral ;
 NullLiteral: NULL ;
 BooleanLiteral: TRUE ;
 BooleanLiteral: FALSE ;
-NumericLiteral: _fx ;
-NumericLiteral: _fl ;
+NumericLiteral: _fixed ;
+NumericLiteral: _float ;
 StringLiteral: _string ;
 Identifier: _ident ;
 PrimaryExpression: THIS ;
 PrimaryExpression: Identifier ;
 PrimaryExpression: Literal ;
 PrimaryExpression: ArrayLiteral ;
-PrimaryExpression: ObjectLiteral ;
 PrimaryExpression: '(' Expression ')' ;
 ArrayLiteral: '[' Elision ']' ;
 ArrayLiteral: '[' ']' ;
@@ -168,51 +168,25 @@ RelationalExpression: RelationalExpression '>' ShiftExpression ;
 RelationalExpression: RelationalExpression ChSeq_61_60 ShiftExpression ;
 RelationalExpression: RelationalExpression ChSeq_61_62 ShiftExpression ;
 RelationalExpression: RelationalExpression INSTANCEOF ShiftExpression ;
-RelationalExpression: RelationalExpression IN ShiftExpression ;
-RelationalExpressionNoIn: ShiftExpression ;
-RelationalExpressionNoIn: RelationalExpressionNoIn '<' ShiftExpression ;
-RelationalExpressionNoIn: RelationalExpressionNoIn '>' ShiftExpression ;
-RelationalExpressionNoIn: RelationalExpressionNoIn ChSeq_61_60 ShiftExpression ;
-RelationalExpressionNoIn: RelationalExpressionNoIn ChSeq_61_62 ShiftExpression ;
-RelationalExpressionNoIn: RelationalExpressionNoIn INSTANCEOF ShiftExpression ;
 EqualityExpression: RelationalExpression ;
 EqualityExpression: EqualityExpression ChSeq_61_61 RelationalExpression ;
 EqualityExpression: EqualityExpression ChSeq_61_33 RelationalExpression ;
 EqualityExpression: EqualityExpression ChSeq_61_61_61 RelationalExpression ;
 EqualityExpression: EqualityExpression ChSeq_61_61_33 RelationalExpression ;
-EqualityExpressionNoIn: RelationalExpressionNoIn ;
-EqualityExpressionNoIn: EqualityExpressionNoIn ChSeq_61_61 RelationalExpressionNoIn ;
-EqualityExpressionNoIn: EqualityExpressionNoIn ChSeq_61_33 RelationalExpressionNoIn ;
-EqualityExpressionNoIn: EqualityExpressionNoIn ChSeq_61_61_61 RelationalExpressionNoIn ;
-EqualityExpressionNoIn: EqualityExpressionNoIn ChSeq_61_61_33 RelationalExpressionNoIn ;
 BitwiseANDExpression: EqualityExpression ;
 BitwiseANDExpression: BitwiseANDExpression '&' EqualityExpression ;
-BitwiseANDExpressionNoIn: EqualityExpressionNoIn ;
-BitwiseANDExpressionNoIn: BitwiseANDExpressionNoIn '&' EqualityExpressionNoIn ;
 BitwiseXORExpression: BitwiseANDExpression ;
 BitwiseXORExpression: BitwiseXORExpression '^' BitwiseANDExpression ;
-BitwiseXORExpressionNoIn: BitwiseANDExpressionNoIn ;
-BitwiseXORExpressionNoIn: BitwiseXORExpressionNoIn '^' BitwiseANDExpressionNoIn ;
 BitwiseORExpression: BitwiseXORExpression ;
 BitwiseORExpression: BitwiseORExpression '|' BitwiseXORExpression ;
-BitwiseORExpressionNoIn: BitwiseXORExpressionNoIn ;
-BitwiseORExpressionNoIn: BitwiseORExpressionNoIn '|' BitwiseXORExpressionNoIn ;
 LogicalANDExpression: BitwiseORExpression ;
 LogicalANDExpression: LogicalANDExpression ChSeq_38_38 BitwiseORExpression ;
-LogicalANDExpressionNoIn: BitwiseORExpressionNoIn ;
-LogicalANDExpressionNoIn: LogicalANDExpressionNoIn ChSeq_38_38 BitwiseORExpressionNoIn ;
 LogicalORExpression: LogicalANDExpression ;
 LogicalORExpression: LogicalORExpression ChSeq_124_124 LogicalANDExpression ;
-LogicalORExpressionNoIn: LogicalANDExpressionNoIn ;
-LogicalORExpressionNoIn: LogicalORExpressionNoIn ChSeq_124_124 LogicalANDExpressionNoIn ;
 ConditionalExpression: LogicalORExpression ;
 ConditionalExpression: LogicalORExpression '?' AssignmentExpression ':' AssignmentExpression ;
-ConditionalExpressionNoIn: LogicalORExpressionNoIn ;
-ConditionalExpressionNoIn: LogicalORExpressionNoIn '?' AssignmentExpressionNoIn ':' AssignmentExpressionNoIn ;
 AssignmentExpression: ConditionalExpression ;
 AssignmentExpression: LeftHandSideExpression AssignmentOperator AssignmentExpression ;
-AssignmentExpressionNoIn: ConditionalExpressionNoIn ;
-AssignmentExpressionNoIn: LeftHandSideExpression AssignmentOperator AssignmentExpressionNoIn ;
 AssignmentOperator: '=' ;
 AssignmentOperator: ChSeq_61_42 ;
 AssignmentOperator: ChSeq_61_47 ;
@@ -227,8 +201,7 @@ AssignmentOperator: ChSeq_61_94 ;
 AssignmentOperator: ChSeq_61_124 ;
 Expression: AssignmentExpression ;
 Expression: Expression ',' AssignmentExpression ;
-ExpressionNoIn: AssignmentExpressionNoIn ;
-ExpressionNoIn: ExpressionNoIn ',' AssignmentExpressionNoIn ;
+ExpressionNoIn: Expression ;
 Statement: Block ;
 Statement: VariableStatement ;
 Statement: EmptyStatement ;
@@ -250,19 +223,15 @@ StatementList: StatementList Statement ;
 VariableStatement: VAR VariableDeclarationList ';' ;
 VariableDeclarationList: VariableDeclaration ;
 VariableDeclarationList: VariableDeclarationList ',' VariableDeclaration ;
-VariableDeclarationListNoIn: VariableDeclarationNoIn ;
-VariableDeclarationListNoIn: VariableDeclarationListNoIn ',' VariableDeclarationNoIn ;
+VariableDeclarationListNoIn: VariableDeclarationList ;
 VariableDeclaration: Identifier Initializer ;
 VariableDeclaration: Identifier ;
-VariableDeclarationNoIn: Identifier InitializerNoIn ;
-VariableDeclarationNoIn: Identifier ;
+VariableDeclarationNoIn: VariableDeclaration ;
 Initializer: '=' AssignmentExpression ;
-InitializerNoIn: '=' AssignmentExpressionNoIn ;
 EmptyStatement: ';' ;
-ExpressionStatement: _P3 ';' ;
-_P3: Expression ;
+ExpressionStatement: Expression ';' ;
 IfStatement: IF '(' Expression ')' Statement ELSE Statement ;
-IfStatement: IF '(' Expression ')' Statement ;
+IfStatement: IF '(' Expression ')' Statement %prec THEN ;
 IterationStatement: DO Statement WHILE '(' Expression ')' ';' ;
 IterationStatement: WHILE '(' Expression ')' Statement ;
 IterationStatement: FOR '(' OptExprStmtNoIn OptExprStmt OptExprClose Statement ;
@@ -275,15 +244,15 @@ OptExprStmt: ';' ;
 OptExprStmt: Expression ';' ;
 OptExprClose: ';' ;
 OptExprClose: Expression ')' ;
-ContinueStatement: CONTINUE _P4 Identifier ';' ;
+ContinueStatement: CONTINUE _P3 Identifier ';' ;
 ContinueStatement: CONTINUE ';' ;
-_P4: %empty ;
-BreakStatement: BREAK _P5 Identifier ';' ;
+_P3: %empty ;
+BreakStatement: BREAK _P4 Identifier ';' ;
 BreakStatement: BREAK ';' ;
-_P5: %empty ;
-ReturnStatement: RETURN _P6 Expression ';' ;
+_P4: %empty ;
+ReturnStatement: RETURN _P5 Expression ';' ;
 ReturnStatement: RETURN ';' ;
-_P6: %empty ;
+_P5: %empty ;
 WithStatement: WITH '(' Expression ')' Statement ;
 SwitchStatement: SWITCH '(' Expression ')' CaseBlock ;
 CaseBlock: '{' CaseClauses '}' ;
@@ -299,8 +268,8 @@ CaseClause: CASE Expression ':' ;
 DefaultClause: DEFAULT ':' StatementList ;
 DefaultClause: DEFAULT ':' ;
 LabelledStatement: Identifier ':' Statement ;
-ThrowStatement: THROW _P7 Expression ';' ;
-_P7: %empty ;
+ThrowStatement: THROW _P6 Expression ';' ;
+_P6: %empty ;
 TryStatement: TRY Block Catch ;
 TryStatement: TRY Block Finally ;
 TryStatement: TRY Block Catch Finally ;

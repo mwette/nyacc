@@ -1,4 +1,4 @@
-;;; lang/c/pbody.scm
+;;; lang/c99/pbody.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -22,24 +22,55 @@
   cpi?
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
+  (tn-dict cpi-tynd set-cpi-tynd!)	; typename dict (("<x>" foo_t ..
+  ;;
   (typnams cpi-tyns set-cpi-tyns!)	; typedef names
   ;;
   (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
   (ctl cpi-ctl set-cpi-ctl!)		; current typename list
   ;;
-  (typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
+  ;;(typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
   )
 
-(define (make-cpi defines incdirs)
+(define std-dict
+  '(("<time.h>" "time_t" "clock_t" "size_t")
+    ("<stdio.h>" "FILE" "size_t")
+    ("<string.h>" "size_t")
+    ("<stddef.h>" "ptrdiff_t" "size_t" "wchar_t")
+    ("<inttypes.h>"
+     "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
+     "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
+     "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
+     "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t"
+     "imaxdiv_t")
+    ("<stdint.h>"
+     "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
+     "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
+     "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
+     "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t")
+    ("<stdlib.h>" "div_t" "ldiv_t" "lldiv_t" "wchar_t")
+    ("<stdarg.h>" "va_list")
+    ;;("<unistd.h>" "div_t" "ldiv_t")
+    ("<signal.h>" "sig_atomic_t")
+    ("<setjmp.h>" "jmp_buf")
+    ("<float.h>" "float_t")
+    ("<fenv.h>" "fenv_t" "fexcept_t")
+    ("<complex.h>" "complex" "imaginary")
+    ("<wchar.h>" "wchar_t" "wint_t" "mbstate_t" "size_t")
+    ("<wctype.h>" "wctrans_t" "wctype_t" "wint_t")
+    ))
+
+(define (make-cpi defines incdirs tn-dict)
   (let* ((cpi (make-cpi-1)))
-    (set-cpi-defs! cpi (if defines defines '()))
-    (set-cpi-incs! cpi (if incdirs incdirs '()))
+    (set-cpi-defs! cpi defines)
+    (set-cpi-incs! cpi incdirs)
+    (set-cpi-tynd! cpi (append tn-dict std-dict))
     (set-cpi-tyns! cpi '())
     ;;
     (set-cpi-ptl! cpi '())
     (set-cpi-ctl! cpi '())
     ;;
-    (set-cpi-tdls! cpi '())
+    ;;(set-cpi-tdls! cpi '())
     cpi))
 
 (define *info* (make-fluid #f))
@@ -53,7 +84,11 @@
 ;; Called by lexer to determine if symbol is a typename.
 ;; Check current sibling for each generation.
 (define (typename? name)
+  ;;(simple-format #t "typename? ~S\n" name)
   (let ((cpi (fluid-ref *info*)))
+    (when #f ;;(string=? name "int16_t")
+      (simple-format #t "  cpi-ctl=~S\n" (cpi-ctl cpi))
+      (simple-format #t "  cpi-ptl=~S\n" (cpi-ptl cpi)))
     (if (member name (cpi-ctl cpi)) #t
         (let iter ((ptl (cpi-ptl cpi)))
 	  (if (null? ptl) #f
@@ -63,6 +98,7 @@
 ;; @item add-typename name
 ;; Helper for @code{save-typenames}.
 (define (add-typename name)
+  ;;(simple-format #t "add-typename ~S\n" name)
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
 
@@ -77,34 +113,71 @@
 (define (cpi-pop)	;; on #endif
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
-    (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
+    (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))
+    ;;(simple-format #t "~S\n" (cpi-ctl cpi))
+    ))
 
+(use-modules (ice-9 pretty-print))
 
+#|
+        (init-declr
+          (ftn-declr
+            (scope (ptr-declr (pointer) (ident "c2_intalg_t")))
+            (param-list
+              (param-decln
+                (decl-spec-list (type-spec (void)))
+                (ftn-declr
+                  (scope (ptr-declr (pointer) (ident "f")))))
+              (param-decln
+                (decl-spec-list (type-spec (void)))
+                (ptr-declr (pointer) (ident "comp")))
+|#
+ 
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
 (define find-new-typenames
   (let ((sxtd (sxpath '(stor-spec typedef)))
-	(sxid (sxpath '(init-declr ident *text*))))
+	(sxid (node-reduce
+	       (select-kids (node-typeof? 'init-declr))
+	       (node-or
+		;; simple identifier declarator:
+		(select-kids (node-typeof? 'ident))
+		;; function declarator:
+		(node-reduce
+		 (select-kids (node-typeof? 'ftn-declr))
+		 (select-kids (node-typeof? 'scope))
+		 (node-or (node-self (node-typeof? '*any*))
+			  (node-closure (node-typeof? '*any*)))
+		 (select-kids (node-typeof? 'ident))
+		 ))
+	       (select-kids (node-typeof? '*text*)))))
     (lambda (decl)
       (cond
        ((not (eq? 'decl (car decl))) '())
        ((< (length decl) 3) '())
-       (else (let* ((spec-list (list-ref decl 1))
-		    (init-list (list-ref decl 2)))
-	       (if (pair? (sxtd spec-list)) (sxid init-list) '())))))))
+       (else (let ((spec-list (list-ref decl 1))
+		   (init-list (list-ref decl 2)))
+	       (when #f ;;(pair? (sxtd spec-list))
+		 (simple-format #t "\nspec=~S\n" (sxtd spec-list))
+		 (simple-format #t "init =~S\n" (sxid init-list))
+		 ;;(pretty-print decl)
+		 )
+	       (if (pair? (sxtd spec-list))
+		   (sxid init-list)
+		   '())))))))
 
 ;; @item add-typdecl name decl
 ;; Helper for @code{save-typenames}.
 ;; Adds type declaration.
-(define (add-typedecl name decl)
+#;(define (add-typedecl name decl)
   (let ((info (fluid-ref *info*)))
     (set-cpi-tdls! info (cons (cons name decl) (cpi-tdls info)))))
 
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
-(define find-new-typedecls
+#;(define find-new-typedecls
   (let ((sxtd (sxpath '(stor-spec typedef)))
 	(sxid (sxpath '(init-declr ident *text*))))
     (lambda (decl)
@@ -125,7 +198,7 @@
   (for-each add-typename (find-new-typenames decl))
   decl)
 
-(define (save-typenames/decls decl)
+#;(define (save-typenames/decls decl)
   ;; This finds typenames using @code{find-new-typenames} and adds via
   ;; @code{add-typename}.  Then return the decl.
   (for-each
@@ -222,20 +295,25 @@
 	  
 	  (define (exec-cpp line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
-	    (let* ((stmt (parse-cpp-line line)))
+	    (let* ((stmt (parse-cpp-line line))
+		   (perr (lambda (file)
+			   (throw 'parse-error "file not found: ~S" file))))
 	      (case (car stmt)
 		((include)
 		 (let* ((parg (cadr stmt)) (leng (string-length parg))
 			(file (substring parg 1 (1- leng)))
-			(path (find-file-in-dirl file (cpi-incs info)))
-			(tree
-			 (if path
-			     (with-input-from-file path run-parse)
-			     (throw 'parse-error "file not found: ~S" file))))
-		   (for-each add-define (xp1 tree)) ; add def's 
-		   ;; Attach tree onto "include" statement: -- clean this up
-		   (set! stmt (append stmt (list tree)))
-		   ))
+			(tynd (assoc-ref (cpi-tynd info) parg)))
+		   (if tynd
+		       (for-each add-typename tynd)
+		       (let* ((pth (find-file-in-dirl file (cpi-incs info)))
+			      (tree (cond
+				     ((eq? #\< (string-ref parg 0)) '())
+				     (pth (with-input-from-file pth run-parse))
+				     (else (perr file)))))
+			 (for-each add-define (xp1 tree)) ; add def's 
+			 ;; Attach tree onto "include" statement (hack?)
+			 (if (pair? tree) (set! stmt (append stmt (list tree))))
+			 ))))
 		((define)
 		 (add-define stmt))
 		((if)

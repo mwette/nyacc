@@ -8,7 +8,7 @@
 
 ;; runtime utilities for the parsers -- needs work
 
-(define-module (lang util)
+(define-module (nyacc lang util)
   #:export (lang-crn-lic
 	    make-tl tl->list
 	    tl-append tl-insert tl-extend tl+attr
@@ -81,7 +81,7 @@ file COPYING included with the this distribution.")
 	      (iter (cons (car items) tail) (cdr items))))))
 
 ;; @item tl-extend tl item-l
-;; Extend with a list of items.  Like xxx
+;; Extend with a list of items.
 (define (tl-extend tl item-l)
   (apply tl-append tl item-l))
 

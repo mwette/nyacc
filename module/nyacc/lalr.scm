@@ -16,18 +16,18 @@
 ;;; License along with this library; if not, write to the Free Software
 ;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+;; I need to find way to preserve srconf, rrconf after hashify.
+;; compact needs to deal with it ...
+
 (define-module (nyacc lalr)
   #:export-syntax (lalr-spec)
   #:export (*nyacc-version*
 	    make-lalr-machine
 	    compact-machine hashify-machine
 	    lalr-match-table
-	    make-lalr-parser
 	    pp-lalr-grammar pp-lalr-machine
 	    write-lalr-tables
 	    write-lalr-actions
-	    ;;write-lalr-parser
-	    wrap-action
 	    pp-rule find-terminal	; used by (nyacc export)
 	    with-gram new-non-kernels
 	    )
@@ -37,9 +37,10 @@
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (nyacc util)
+  #:use-module ((nyacc parse) #:select (wrap-action))
   )
 
-(define *nyacc-version* "0.64.0")
+(define *nyacc-version* "0.63.0+")
 
 ;; @item proxy-? sym rhs
 ;; @example
@@ -127,7 +128,7 @@
 
 		 ;; other internal $-syntax
 		 ((_ ($prec <tok>) <e2> ...)
-		  #'(cons '(prec . <tok>) (parse-rhs <e2> ...)))
+		  #'(cons (cons 'prec <tok>) (parse-rhs <e2> ...)))
 		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
 		  #'(cons `(with <lhs-ref> ,@(with-attr-list <ex> ...))
 			  (parse-rhs <e2> ...)))
@@ -169,13 +170,13 @@
 	    (parse-precedence
 	     (syntax-rules (left right nonassoc)
 	       ((_ (left <tk> ...) <ex> ...)
-		(cons '(left <tk> ...) (parse-precedence <ex> ...)))
+		(cons (list 'left <tk> ...) (parse-precedence <ex> ...)))
 	       ((_ (right <tk> ...) <ex> ...)
-		(cons '(right <tk> ...) (parse-precedence <ex> ...)))
+		(cons (list 'right <tk> ...) (parse-precedence <ex> ...)))
 	       ((_ (nonassoc <tk> ...) <ex> ...)
-		(cons '(nonassoc <tk> ...) (parse-precedence <ex> ...)))
+		(cons (list 'nonassoc <tk> ...) (parse-precedence <ex> ...)))
 	       ((_ <tk> <ex> ...)
-		(cons '(undecl <tk>) (parse-precedence <ex> ...)))
+		(cons (list 'undecl <tk>) (parse-precedence <ex> ...)))
 	       ((_) '())))
 	    (lalr-spec-1
 	     (syntax-rules (start expect notice prec< prec> grammar)
@@ -308,6 +309,8 @@
 		 (cdr all))))))
 	       
   ;; Check for warning: duplicate terminals under atomize (e.g., 'foo "foo").
+  ;; BUG: Get all of these warnings on other random errors.  This needs to be
+  ;; more robust.
   (define (gram-check-5 terminals prev-errs)
     (let ((f "warning: similar terminals: ~A ~A"))
       (let iter ((errs prev-errs) (head '()) (tail terminals))
@@ -371,19 +374,16 @@
 	     (iter ll @l tl (cons sy nl) head (cons p1 prox) lhs
 		   tail rhs-l attr (cons sy pel) (cdr rhs))))
 	  ((prec)
-	   ;; not handled yet, just skip
-	   (iter ll @l tl nl head prox lhs tail rhs-l
+	   (iter ll @l (add-el (cdar rhs) tl) nl head prox lhs tail rhs-l
 		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
-	  #;((with)
-	   (let* ((psy (maksy))		; proxy symbol
-		  (rhsx (cadar rhs))	; symbol to expand
+	  ((with)
+	   (let* ((psy (maksy))		      ; proxy symbol
+		  (rhsx (cadar rhs))	      ; symbol to expand
 		  (p-l (map cdr (cddar rhs))) ; prune list
 		  (p1 (list psy `((non-terminal . ,rhsx)
 				  (action #f #f $1)))))
-	     (iter ll @l tl head
-		   (cons p1 prox) lhs tail rhs-l
-		   (acons 'with (cons psy p-l) attr)
-		   (cons psy pel) (cdr rhs))))
+	     (iter ll @l tl (cons psy nl) head (cons p1 prox) lhs tail rhs-l
+		   (acons 'with (cons psy p-l) attr) (cons psy pel) (cdr rhs))))
 	  (else
 	   (error (fmtstr "bug=~S" (caar rhs))))))
 
@@ -458,7 +458,7 @@
 	       (cons 'non-terms nl)
 	       (cons 'lhs-v (list->vector (reverse ll)))
 	       (cons 'rhs-v (map-attr->vector al 'rhs))
-	       ;;(cons 'prune-al filter 'with)	; new prunage al
+	       ;;(cons 'prune-al TODO: filter 'with from '@l)
 	       (cons 'terminals tl)
 	       (cons 'start start-symbol)
 	       (cons 'attr (list (cons 'expect (or (assq-ref tree 'expect) 0))
@@ -1376,7 +1376,7 @@
 	 (gen-pat-ix (lambda (ix)	 ; pat from shifts and reduc's
 		       (gen-pat (vector-ref kix-v ix) (reductions kit-v ix))))
 	 (prp-v (assq-ref p-mach 'prp-v))  ; per-rule precedence
-	 (tl (assq-ref p-mach 'terminals)) ; TEMPORARY for debugging
+	 (tl (assq-ref p-mach 'terminals)) ; for error msgs
 	 )
     ;; We run through each itemset.
     ;; @enumerate
@@ -1402,7 +1402,7 @@
 		  (tok (car act)) (sft (caddr act)) (red (cdddr act))
 		  (prp (vector-ref prp-v red))
 		  (psy (prev-sym act (vector-ref kis-v ix)))
-		  (preced (or (and prp (prece tok prp prec)) ; rule-based
+		  (preced (or (and prp (prece prp tok prec)) ; rule-based
 			      (prece psy tok prec))) ; oper-based
 		  (sft-a (cons* tok 'shift sft))
 		  (red-a (cons* tok 'reduce red)))
@@ -1434,8 +1434,8 @@
 		       (if f (cons f ftl) ftl)
 		       (cdr actl))))))
 	  ((rrconf)
-	   (fmterr "*** reduce-reduce conflict: in state ~A on ~A: ~A\n"
-		   ix (caar actl) (cddar actl))
+	   #;(fmterr "*** reduce-reduce conflict: in state ~A on ~A: ~A\n"
+		   ix (obj->str (find-terminal (caar actl) tl)) (cddar actl))
 	   (iter ix (cons (car actl) pat) rat wrn
 		 (cons (cons ix (car actl)) ftl) (cdr actl)))
 	  (else
@@ -1452,9 +1452,10 @@
 	  (if (not (= (length wrn) expect))
 	      (for-each (lambda (m) (fmterr "+++ warning: ~A\n" (conf->str m)))
 			(reverse wrn)))
-	  (for-each (lambda (m) (fmterr "*** fatal  : ~S\n" m))
-		    (reverse ftl))
-	))))
+	  (for-each
+	   (lambda (m) (fmterr "*** fatal: ~A\n" (conf->str m)))
+	   (reverse ftl))
+	  ))))
     ;; Return mach with parse-action and removed-action tables.
     (cons* (cons 'pat-v pat-v) (cons 'rat-v rat-v) p-mach)))
 
@@ -1472,65 +1473,32 @@
 	    (obj->str (find-terminal tok terms)))))
 		     
 ;; @item gen-match-table mach => mach
-;; Generate the match-table for a machine.  The match-table may be passed to
+;; Generate the match-table for a machine.  The match table is a list of
+;; pairs: the car is the token used in the grammar specification, the cdr
+;; is the symbol that should be returned by the lexical analyzer.
+;;
+;; The match-table may be passed to
 ;; the lexical analyzer builder to identify strings or string-types as tokens.
-;; Key is @code{mtab}.  The format is as follows
+;; The associated key in the machine is @code{mtab}. 
 ;; @enumerate
 ;; @item
 ;; @sc{nyacc}-reserved symbols are provided as symbols
 ;; @example
-;; $symbol -> ($symbol . $symbol)
+;; $ident -> ($ident . $ident)
 ;; @end example
 ;; @item
 ;; Terminals used as symbols (@code{'comment} versus @code{"comment"}) are
-;; provided as symbols.  The spec parser should warn if symbols are used in
-;; both ways.  (This is a conflict.)
+;; provided as symbols.  The spec parser will provide a warning if symbols
+;; are used in both ways.
 ;; @item
 ;; Others are provided as strings.
 ;; @end enumerate
 ;; The procedure @code{hashify-machine} will convert the cdrs to integers.
 ;; Test: "$abc" => ("$abc" '$abc) '$abc => ('$abc . '$abc)
-;; FIX: need to return to old-gen-match-table and make lexer sync up with that.
-(define (old1-gen-match-table mach)
-  (let ((terminals (assq-ref mach 'terminals)))
-    (cons*
-     (cons 'mtab
-	   (let iter ((mt '(($default . $default) ($error . $error)))
-		      (tl terminals))
-	     (if (null? tl) (reverse mt)
-		 (let* ((tok (car tl))
-			(str (if (symbol? tok) (symbol->string tok) #f))
-			(rez (and str (eqv? #\$ (string-ref str 0)))))
-		   (iter (acons (cond (rez tok) (str str) (else tok))
-				(atomize tok)
-				mt)
-			 (cdr tl))))))
-     mach)))
-(define (old2-gen-match-table mach)
-  (let ((terminals (assq-ref mach 'terminals)))
-    (cons*
-     (cons 'mtab
-	   (let iter ((mt '(($default . $default) ($error . $error)))
-		      (tl terminals))
-	     (if (null? tl) (reverse mt)
-		 (let* ((tok (car tl))
-			(str (cond
-			      ((symbol? tok) (symbol->string tok))
-			      ((char? tok) (list->string (list tok)))
-			      (else tok)))
-			(rez (and (symbol? tok) (eqv? #\$ (string-ref str 0)))))
-		   (iter (acons (if rez tok str) (atomize tok) mt)(cdr tl))))))
-     mach)))
 (define (gen-match-table mach)
   (cons
    (cons 'mtab (map (lambda (term) (cons term (atomize term)))
 		    (assq-ref mach 'terminals)))
-   mach))
-(define (old4-gen-match-table mach)
-  (acons
-   'mtab (fold (lambda (term seed) (cons (cons term (atomize term)) seed))
-	       '(($default . $default))
-	       (assq-ref mach 'terminals))
    mach))
 
 ;; @item lalr-match-table mach => match-table
@@ -1545,7 +1513,8 @@
 	 (nst (vector-length pat-v))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
 	 (reduce? (if hashed
-		      (lambda (a) (negative? a))
+		      (lambda (a) (and (number? a) ; check number: #f for xrconf
+				       (negative? a)))
 		      (lambda (a) (eq? 'reduce (car a)))))
 	 (reduce-pr (if hashed abs cdr))
 	 (reduce-to? (if hashed
@@ -1678,12 +1647,14 @@
 
 ;; @item pp-lalr-grammar spec [port]
 ;; Pretty-print the grammar to the specified port, or current output.
+;; TODO: Add @code{$prec} and @code{$prune} expressions.
 (define (pp-lalr-grammar spec . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref spec 'lhs-v))
 	 (rhs-v (assq-ref spec 'rhs-v))
 	 (nrule (vector-length lhs-v))
 	 (act-v (assq-ref spec 'act-v))
+	 ;;(prp-v (assq-ref mach 'prp-v)) ; per-rule precedence
 	 (terms (assq-ref spec 'terminals))
 	 (prev-core (fluid-ref *lalr-core*)))
     (fluid-set! *lalr-core* (make-core spec)) ; OR dynamic-wind ???
@@ -1709,7 +1680,6 @@
 	 (lhs-v (assq-ref mach 'lhs-v))
 	 (rhs-v (assq-ref mach 'rhs-v))
 	 (nrule (vector-length lhs-v))
-	 ;;(act-v (assq-ref mach 'act-v))
 	 (pat-v (assq-ref mach 'pat-v))
 	 (rat-v (assq-ref mach 'rat-v))
 	 (kis-v (assq-ref mach 'kis-v))
@@ -1743,10 +1713,11 @@
 	       (let ((sy (car act)) (pa (cadr act)) (gt (cddr act)))
 		 (case pa
 		   ((srconf)
-		    (fmt port "\t\t~S => CONFLICT: shift ~A, reduce ~A\n" sy
-			 (car gt) (cdr gt)))
+		    (fmt port "\t\t~A => CONFLICT: shift ~A, reduce ~A\n"
+			 (elt->str sy terms) (car gt) (cdr gt)))
 		   ((rrconf)
-		    (fmt port "\t\t~S => CONFLICT: reduce ~A\n" sy
+		    (fmt port "\t\t~A => CONFLICT: reduce ~A\n"
+			 (elt->str sy terms)
 			 (string-join (map number->string gt) ", reduce ")))
 		   (else
 		    (fmt port "\t\t~A => ~A ~A\n" (elt->str sy terms) pa gt))))
@@ -1815,9 +1786,14 @@
 ;; this should be done as part of @code{make-lexer}, by filtering the token
 ;; list through the ident-reader.
 ;; NOTE: The parser is hardcoded to assume that the phony token for the
-;; default action is @code{'$default} for unhashed machine or @code{-1} for
-;; a hashed machine.
+;; default (reduce) action is @code{'$default} for unhashed machine or
+;; @code{-1} for a hashed machine.
+
+;; NEW: need to add reduction of ERROR
+
 ;; @item hashify-machine mach => mach
+;; There is a bug in here: if pat contains rrconf then the output is
+;; #unspedified.
 (define (hashify-machine mach)
   (let* ((terminals (assq-ref mach 'terminals))
 	 (non-terms (assq-ref mach 'non-terms))
@@ -1849,7 +1825,8 @@
 		     (tk (car a0)) (ac (cadr a0)) (ds (cddr a0))
 		     ;; t: encoded token; d: encoded destination
 		     (t (sym->int tk))
-		     (d (case ac ((shift) ds) ((reduce) (- ds)) ((accept) 0))))
+		     (d (case ac ((shift) ds) ((reduce) (- ds)) ((accept) 0)
+			      (else #f))))
 		(unless t
 		  (fmterr "~S ~S ~S\n" tk ac ds) 
 		  (error "expect something"))
@@ -1873,106 +1850,8 @@
 (define (machine-hashed? mach)
   (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
 
-;; @item make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
-;; This is a helper for @code{mkact}.
-(define (make-arg-list n)
-  (let ((mkarg
-	 (lambda (i) (string->symbol (string-append "$" (number->string i))))))
-    (let iter ((r '(. $rest)) (i 1))
-      (if (> i n) r (iter (cons (mkarg i) r) (1+ i))))))
 
-;; @item wrap-action (n . guts) => `(lambda ($n ... $2 $1 . $rest) ,@guts)
-;; Wrap user-specified action (body, as list) of n arguments in a lambda.
-;; The rationale for the arglist format is that we can @code{apply} this
-;; lambda to the the semantic stack.
-(define (wrap-action actn)
-  (cons* 'lambda (make-arg-list (car actn)) (cdr actn)))
-
-;; @item make-lalr-parser mach => parser
-;; This generates a procedure that takes one argument, a lexical analyzer:
-;; @example
-;; (parser lexical-analyzer [#:debug #t])
-;; @end example
-;; and is used as
-;; @example
-;; (define xyz-parse (make-lalr-parser xyz-mach))
-;; (with-input-from-file "sourcefile.xyz" (lambda () (xyz-parse (gen-lexer))))
-;; @end example
-;; The generated parser is reentrant.
-(define* (make-lalr-parser mach)
-  (let* ((len-v (assq-ref mach 'len-v))
-	 (rto-v (assq-ref mach 'rto-v))	; reduce to
-	 (pat-v (assq-ref mach 'pat-v))
-	 (actn-v (assq-ref mach 'act-v)) ; unknown action vector
-	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
-		     (vector-map
-		      ;; Turn symbolic action into executable procedures:
-		      (lambda (ix f) (eval f (current-module)))
-		      (vector-map
-		       (lambda (ix actn) (wrap-action actn))
-		       actn-v))))
-	 ;;
-	 (dmsg (lambda (s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a)))
-	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
-	 ;;(def (assq-ref (assq-ref mach 'mtab) '$default))
-	 (def (if hashed -1 '$default))
-	 ;; predicate to test for shift action:
-	 (shift? (if hashed
-		     (lambda (a) (positive? a))
-		     (lambda (a) (eq? 'shift (car a)))))
-	 ;; On shift, transition to this state:
-	 (shift-to (if hashed (lambda (x) x) (lambda (x) (cdr x))))
-	 ;; predicate to test for reduce action:
-	 (reduce? (if hashed
-		      (lambda (a) (negative? a))
-		      (lambda (a) (eq? 'reduce (car a)))))
-	 ;; On reduce, reduce this production-rule:
-	 ;;(reduce-pr (if hashed (lambda (a) (abs a)) (lambda (a) (cdr a))))
-	 (reduce-pr (if hashed abs cdr))
-	 ;; If no action found in transition list, then this:
-	 (parse-error (if hashed #f (cons 'error 0)))
-	 ;; predicate to test for error
-	 (error? (if hashed
-		     (lambda (a) (eq? #f a))
-		     (lambda (a) (eq? 'error (car a)))))
-	 )
-    (lambda* (lexr #:key debug)
-      (let iter ((state (list 0))	; state stack
-		 (stack (list '$@))	; sval stack
-		 (nval #f)		; prev reduce to non-term val
-		 (lval (lexr)))		; lexical value (from lex'er)
-	(let* ((tval (car (if nval nval lval))) ; token (syntax value)
-	       (sval (cdr (if nval nval lval))) ; semantic value
-	       (stxl (vector-ref pat-v (car state))) ; state transition list
-	       (stx (or (assq-ref stxl tval) ; trans action (e.g. shift 32)
-			(assq-ref stxl def)  ; default action
-			parse-error)))
-	  (when debug (dmsg (car state) (if nval tval sval) stx))
-	  (cond
-	   ((error? stx)
-	    ;; Ugly to have to check this first every time, but
-	    ;; @code{positive?} and @code{negative?} fail otherwise.
-	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		  (ln (1+ (port-line (current-input-port)))))
-	      (fmterr "~A: ~A: parse failed at state ~A, on input ~S\n"
-		      fn ln (car state) sval))
-	    #f)
-	   ((shift? stx)
-	    ;; We could check here to determine if next transition only has a
-	    ;; default reduction and, if so, go ahead and process the reduction
-	    ;; without reading another input token.  Needed for interactive.
-	    (iter (cons (shift-to stx) state) (cons sval stack)
-		  #f (if nval lval (lexr))))
-	   ((reduce? stx)
-	    (let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
-		   ($$ (apply (vector-ref xact-v gx) stack)))
-	      (iter (list-tail state gl) 
-		    (list-tail stack gl)
-		    (cons (vector-ref rto-v gx) $$)
-		    lval)))
-	   (else ;; accept
-	    (car stack))))))))
-
+;; === output routines ===============
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 regex))
@@ -2091,4 +1970,4 @@
 
 ;; @end itemize
 
-;;; --- last line
+;;; --- last line ---

@@ -15,6 +15,10 @@
    ;; declaration => declaration-specifiers initialized-declarator-list $P1...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (if (pair? $5) (append $3 (list $5)) $3))
+   ;; declaration => structure-type-reference ";"
+   (lambda ($2 $1 . $rest) $1)
+   ;; declaration => union-type-reference ";"
+   (lambda ($2 $1 . $rest) $1)
    ;; $P1 => 
    (lambda ($2 $1 . $rest)
      (save-typenames
@@ -342,10 +346,12 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(struct-def ,(tl->list $3)))
    ;; structure-type-reference => "struct" structure-tag
-   (lambda ($2 $1 . $rest) `(struct-ref ,$1))
+   (lambda ($2 $1 . $rest) `(struct-ref ,$2))
    ;; structure-tag => identifier
    (lambda ($1 . $rest) $1)
    ;; field-list => component-declaration
+   (lambda ($1 . $rest) (make-tl 'field-list $1))
+   ;; field-list => lone-comment
    (lambda ($1 . $rest) (make-tl 'field-list $1))
    ;; field-list => field-list component-declaration
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
@@ -451,7 +457,7 @@
    ;; postfix-expression => compound-literal
    (lambda ($1 . $rest) $1)
    ;; subscript-expression => postfix-expression "[" expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest) '(FIX))
    ;; component-selection-expression => direct-component-selection
    (lambda ($1 . $rest) $1)
    ;; component-selection-expression => indirect-component-selection
@@ -738,7 +744,13 @@
    ;; translation-unit => top-level-declaration
    (lambda ($1 . $rest) (make-tl 'trans-unit $1))
    ;; translation-unit => translation-unit top-level-declaration
-   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   (lambda ($2 $1 . $rest)
+     (cond ((eqv? 'trans-unit (car $2))
+            (let* ((t1 (tl-append $1 '(extern-C-begin)))
+                   (t2 (tl-extend t1 (cdr $2)))
+                   (t3 (tl-append t2 '(extern-C-end))))
+              t3))
+           (else (tl-append $1 $2))))
    ;; top-level-declaration => declaration
    (lambda ($1 . $rest) $1)
    ;; top-level-declaration => function-definition
@@ -747,6 +759,8 @@
    (lambda ($1 . $rest) $1)
    ;; top-level-declaration => cpp-statement
    (lambda ($1 . $rest) $1)
+   ;; top-level-declaration => "extern" '$string "{" translation-unit "}"
+   (lambda ($5 $4 $3 $2 $1 . $rest) (tl->list $4))
    ;; function-definition => function-def-specifier compound-statement
    (lambda ($2 $1 . $rest) $1)
    ;; function-def-specifier => declaration-specifiers declarator declarati...
@@ -773,7 +787,7 @@
    (lambda ($1 . $rest) `(fixed ,$1))
    ;; constant => '$float
    (lambda ($1 . $rest) `(float ,$1))
-   ;; constant => '$ch-lit
+   ;; constant => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
    ;; constant => '$string
    (lambda ($1 . $rest) `(string ,$1))

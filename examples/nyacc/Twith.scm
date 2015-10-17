@@ -17,6 +17,15 @@
 (use-modules (ice-9 pretty-print))
 
 (define js-spec
+  #;(lalr-spec
+   (start S)
+   (grammar
+    (S (A) (P1) (G))
+    (P1 (E))
+    (A ("d" E))
+    (E ("f") (G))
+    (G ("h"))
+    ))
   (lalr-spec
    (start Statement)
    (grammar
@@ -42,7 +51,7 @@
 
 (define js-mach (make-lalr-machine js-spec))
 
-(with-output-to-file "with.txt"
+(with-output-to-file ",with.txt"
   (lambda ()
     (pp-lalr-grammar js-spec)
     (pp-lalr-machine js-mach)))
