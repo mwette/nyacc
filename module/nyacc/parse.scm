@@ -192,6 +192,7 @@
 	      (iter (list-tail state gl) (list-tail stack gl)
 		    (cons (vector-ref rto-v gx) $$) lval)))
 	   ((eqv? end (caar stxl))	; only '$end remains, return for i/a
+	    (fmtout "return: ~S\n" (car stack))
 	    (car stack))
 	   (else
 	    (let* ((laval (or nval (or lval (lexr))))
