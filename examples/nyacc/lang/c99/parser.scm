@@ -1,4 +1,4 @@
-;;; lang/c99/parser.scm
+;;; nyacc/lang/c99/parser.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;

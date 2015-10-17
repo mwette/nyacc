@@ -1,10 +1,19 @@
-;; lang/javascript/jslib.scm
-;;
-;; Copyright (C) 2015 Matthew R. Wette
-;; 
-;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See
-;; the file COPYING included with the this distribution.
+;;; nyacc/lang/javascript/jslib.scm
+;;;
+;;; Copyright (C) 2015 Matthew R. Wette
+;;;
+;;; This program is free software: you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation, either version 3 of the License, or
+;;; (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; needs: null, undefined, undeclared?,
 
