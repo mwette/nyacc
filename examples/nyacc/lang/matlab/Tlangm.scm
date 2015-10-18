@@ -29,4 +29,4 @@
 	      (lambda () (matlab-parser (gen-matlab-lexer) #:debug #f))))
 (if res (pretty-print res))
 
-;; --- last line
+;; --- last line ---

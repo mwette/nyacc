@@ -682,4 +682,4 @@
 
 (define (parse-mo) (modelica-parser (gen-mod-lexer)))
 
-;; --- last line
+;; --- last line ---

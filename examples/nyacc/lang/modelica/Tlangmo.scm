@@ -30,4 +30,4 @@
       (modelica-parser (gen-mod-lexer) #:debug #f))))
 (pretty-print res)
 
-;; --- last line
+;; --- last line ---

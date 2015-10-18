@@ -359,4 +359,4 @@
 
 (define (parse-m) (matlab-parser (gen-matlab-lexer)))
 
-;;; --- last line
+;;; --- last line ---

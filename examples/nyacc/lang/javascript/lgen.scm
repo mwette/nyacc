@@ -55,5 +55,4 @@
 ;; Lo = other letter
 ;; Nl = letter number
 
-;;; --- last line
-
+;;; --- last line ---

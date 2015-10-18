@@ -54,4 +54,4 @@
      (apply simple-format (current-error-port) fmt rest)
      #f)))
 
-;; --- last line
+;; --- last line ---
