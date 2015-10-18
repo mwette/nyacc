@@ -232,8 +232,8 @@
 	 ;;(code (parse-tree-il tree))
 	 (code (parse-tree-il (car tree))) ; why car ? foldts-values issue
 	 )
-    (pretty-print exp)
-    (pretty-print tree)
+    ;;(pretty-print exp)
+    ;;(pretty-print tree)
     (values code env env)
     ))
 

@@ -30,7 +30,7 @@
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
-  (make-lalr-x-parser 
+  (make-lalr-ia-parser 
    (list
     (cons 'len-v len-v)
     (cons 'pat-v pat-v)

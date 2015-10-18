@@ -41,7 +41,7 @@
 ;; Convert terminal (symbol, string, character) to string.
 ;; This is like @code{write} but will prefix symbols with @code{'}.
 (define (obj->str obj)
-  (cond ((string? obj) (string-append "\"" obj "\""))
+  (cond ((string? obj) (simple-format #f "~S" obj))
 	((symbol? obj) (string-append "'" (symbol->string obj)))
 	((char? obj) (simple-format #f "~S" obj))))
 

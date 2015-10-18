@@ -22,7 +22,7 @@
 (define-module (nyacc parse)
   #:export (make-lalr-parser
 	    wrap-action
-	    make-lalr-x-parser
+	    make-lalr-ia-parser
 	    make-lalr-y-parser
 	    )
   #:use-module (nyacc util)
@@ -136,7 +136,12 @@
 	   (else ;; accept
 	    (car stack))))))))
 
-(define* (make-lalr-x-parser mach)
+;; @item make-lalr-ia-parser mach
+;; Make an interactive parser.   This will automatically process default
+;; redunctions if that is the only choice, and does not wait for '$end to
+;; return.  This needs algorithm verification.  Makes some assumptions that
+;; need to be verified.
+(define* (make-lalr-ia-parser mach)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))	; reduce to
 	 (pat-v (assq-ref mach 'pat-v))
@@ -187,13 +192,18 @@
 		   (gx (reduce-pr stx))
 		   (gl (vector-ref len-v gx))
 		   ($$ (apply (vector-ref xact-v gx) stack)))
-	      #;(simple-format #t "auto reduce ~S to ~S\n"
-			     gx (list-ref state gl))
+              (if debug (fmtout "auto reduce ~S to ~S\n"
+                                gx (list-ref state gl)))
 	      (iter (list-tail state gl) (list-tail stack gl)
 		    (cons (vector-ref rto-v gx) $$) lval)))
 	   ((eqv? end (caar stxl))	; only '$end remains, return for i/a
-	    (fmtout "return: ~S\n" (car stack))
-	    (car stack))
+            (if debug (fmtout "in state ~S, looking at '$end => accept\n"
+			      (car state)))
+	    (if (reduce? (cdar stxl))
+		;; Assuming this is the final reduction ...
+		(apply (vector-ref xact-v (reduce-pr (cdar stxl))) stack)
+		;; Or already done ...
+		(car stack)))
 	   (else
 	    (let* ((laval (or nval (or lval (lexr))))
 		   (tval (car laval)) (sval (cdr laval))
