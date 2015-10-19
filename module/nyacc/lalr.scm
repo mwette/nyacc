@@ -695,87 +695,6 @@
        (else
 	;; Done, so return.
 	(reverse rslt))))))
-;; To support pruning:
-;; Maybe replace each symbol in next, done with a list, reflecting derivations.
-;; That is,
-;; 1: A  -> B | C
-;; 2: B  -> P1
-;; 3: P1 -> E, prune F
-;; 4: B  -> P2
-;; 5: P2 -> E, prune G
-;; 6: E  -> F
-;; 7: E  -> G
-;; 8: C  -> ";"
-;;
-;; curr=A next=((B A) (C A)) done=(A) rslt=(1)
-;; OR
-;; use alist of LHS to add, but prune xxx
-;; curr=((A)) next=(B C) done=(A) rslt=(1)
-;; curr=((B) (C)) next=(P1 P2) done=(A B C) rslt=(1 2 4)
-;; curr=((P1 F) (P2 G)) next=((E F) (E G))
-;;     done=(A B C P1 P2) rslt=(1 2 4 3 5)
-;; curr=((P1 F) (P2 G)) next=((E F) (E G) => (E (intersection F G))
-;; curr=((E)) next=((E F) (E G) => (E (intersection F G))
-
-;; @item p-todo symbol prunage spl
-;; updates to be handled
-;; if want stuff in spl not in E
-;; @example
-;; p-memb 'E '(F) '((E G)) => 
-;; @end example
-(define (p-todo symbol prunage spl)
-  (let* ((pnag (assq-ref symbol spl))
-	 (pset (and=> pnag (lambda (p) (lset-intersection p prunage))))
-	 )
-    (if (and pnag pset)
-	#f
-	#t)))
-(define (p-cons symbol prunage spl)
-  #f)
-(define (with-gram gram thunk)
-  (fluid-set! *lalr-core* (make-core/extras gram))
-  (thunk))
-(define (non-kernels/prunage symb)
-  (let* ((core (fluid-ref *lalr-core*))
-	 (lhs-v (core-lhs-v core))
-	 (prune (core-prune-al core))
-	 (glen (vector-length lhs-v))
-	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx)))
-	 (inters lset-intersection)
-	 )
-    (let iter ((rslt '())		; result is set of p-rule indices
-	       (done '())		; symbols completed or queued
-	       (next '())		; next round of symbols to process
-	       (curr (list (list symb))) ; this round of symbols to process
-	       (gx 0))			; p-rule index
-      (cond
-       ((< gx glen)
-	(if (assq (lhs-symb gx) curr)
-	    (let* ((pair (assq (lhs-symb gx) curr))
-		   (rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym | $eps
-		   (pnge (assq-ref prune rhs1))	      ; prunage, AA null
-		   (rhsx (assq rhs1 prune))
-		   ;;
-		   (rslt1 (if (memq gx rslt) rslt (cons gc rslt)))
-		   (done1 (if (assq rhs1 done)
-			      (cons 
-			       (cons rhs1 (inters (assq-ref done rhs1) rhsx))
-			       done)
-			      done))
-		   (next1 (cond ((memq rhs1 done) next)
-				((terminal? rhs1) next)
-				(else (cons rhs1 next))))
-		   
-		   )
-	      (iter rslt1 done1 next1 curr (1+ gx)))
-	    ;; Nothing to check; process next rule.
-	    (iter rslt done next curr (1+ gx))))
-       ((pair? next)
-	;; Start another sweep throught the grammar.
-	(iter rslt done '() next 0))
-       (else
-	;; Done, so return.
-	(reverse rslt))))))
 
 ;; @item expand-k-item => item-set
 ;; Expand a kernel-item into a list with the non-kernels.
@@ -934,9 +853,7 @@
 ;; result will include @code{end-token-list}.
 (define (first symbol-list end-token-list)
   (let* ((core (fluid-ref *lalr-core*))
-	 (eps-l (core-eps-l core))
-	 (prune-al (core-prune-al core)) ; alist: lhs -> prune-l
-	 )
+	 (eps-l (core-eps-l core)))
     ;; This loop strips off the leading symbol from stng and then adds to
     ;; todo list, which results in range of p-rules getting checked for
     ;; terminals.
@@ -968,41 +885,29 @@
 	(iter rslt pngl stng hzeps done todo
 	      (range-next p-range) (first-item (car p-range))))
 
-      ((pair? todo)
-       ;; Process the next non-terminal for grammar rules, unless it
-       ;; is in the prungage list.  And if it has prunage, add that.
-       (cond
-	((memq (car todo) pngl)		; on prunage-list, skip
-	 ;;(fmtout "skipping ~S\n" (car todo))
-	 (iter rslt pngl stng hzeps done (cdr todo) '() '()))
-	((assq-ref prune-al (car todo)) => ; has prunage, add, and go
-	 (lambda (l)
-	   (iter rslt (append l pngl) stng hzeps done
-	       (cdr todo) (prule-range (car todo)) '())))
-	(else				; just go
-	 (iter rslt pngl stng hzeps done
-	       (cdr todo) (prule-range (car todo)) '())))
-       )
+       ((pair? todo)
+	(iter rslt pngl stng hzeps done
+	      (cdr todo) (prule-range (car todo)) '()))
 
-      ((and hzeps (pair? stng))
-       ;; Last pass saw an $epsilon so check the next input symbol,
-       ;; with saweps reset to #f.
-       (let* ((symb (car stng)) (stng1 (cdr stng)) (symbl (list symb)))
-	 (if (terminal? symb)
-	     (iter (cons symb rslt) pngl stng1
-		   (and hzeps (memq symb eps-l))
-		   done todo p-range '())
-	     (iter rslt pngl stng1
-		   (or (eq? symb '$epsilon) (memq symb eps-l))
-		   symbl symbl '() '()))))
-      (hzeps
-       ;; $epsilon passes all the way through.
-       ;; If end-token-list provided use that.
-       (if (pair? end-token-list)
-	   (lset-union eqv? rslt end-token-list)
-	   (cons '$epsilon rslt)))
-      (else
-       rslt)))))
+       ((and hzeps (pair? stng))
+	;; Last pass saw an $epsilon so check the next input symbol,
+	;; with saweps reset to #f.
+	(let* ((symb (car stng)) (stng1 (cdr stng)) (symbl (list symb)))
+	  (if (terminal? symb)
+	      (iter (cons symb rslt) pngl stng1
+		    (and hzeps (memq symb eps-l))
+		    done todo p-range '())
+	      (iter rslt pngl stng1
+		    (or (eq? symb '$epsilon) (memq symb eps-l))
+		    symbl symbl '() '()))))
+       (hzeps
+	;; $epsilon passes all the way through.
+	;; If end-token-list provided use that.
+	(if (pair? end-token-list)
+	    (lset-union eqv? rslt end-token-list)
+	    (cons '$epsilon rslt)))
+       (else
+	rslt)))))
 
 ;; @item item->stng item => list-of-symbols
 ;; Convert item (e.g., @code{(1 . 2)}) to list of symbols to the end of the
@@ -1647,7 +1552,6 @@
 
 ;; @item pp-lalr-grammar spec [port]
 ;; Pretty-print the grammar to the specified port, or current output.
-;; TODO: Add @code{$prec} and @code{$prune} expressions.
 (define (pp-lalr-grammar spec . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref spec 'lhs-v))
