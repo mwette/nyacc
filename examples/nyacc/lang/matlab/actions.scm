@@ -1,4 +1,4 @@
-;; lang/matlab/actions.scm
+;; actions.scm
 
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 
@@ -205,7 +205,7 @@
    (lambda ($3 $2 $1 . $rest) `(mul ,$1 ,$3))
    ;; mul-expr => mul-expr "/" unary-expr
    (lambda ($3 $2 $1 . $rest) `(div ,$1 ,$3))
-   ;; mul-expr => mul-expr "\" unary-expr
+   ;; mul-expr => mul-expr "\\" unary-expr
    (lambda ($3 $2 $1 . $rest) `(ldiv ,$1 ,$3))
    ;; mul-expr => mul-expr "^" unary-expr
    (lambda ($3 $2 $1 . $rest) `(pow ,$1 ,$3))
@@ -213,7 +213,7 @@
    (lambda ($3 $2 $1 . $rest) `(dot-mul ,$1 ,$3))
    ;; mul-expr => mul-expr "./" unary-expr
    (lambda ($3 $2 $1 . $rest) `(dot-div ,$1 ,$3))
-   ;; mul-expr => mul-expr ".\" unary-expr
+   ;; mul-expr => mul-expr ".\\" unary-expr
    (lambda ($3 $2 $1 . $rest) `(dot-ldiv ,$1 ,$3))
    ;; mul-expr => mul-expr ".^" unary-expr
    (lambda ($3 $2 $1 . $rest) `(dot-pow ,$1 ,$3))

@@ -10,6 +10,12 @@ typedef enum { EB_ZERO = 0, EB_ONE, EB_TWO = 2 } eval_t;
 typedef enum { EC_ZERO = 0, EC_ONE, EC_TWO = 2 } eval_t;
 #endif
 
+typedef enum {
+ EC_ZERO = 0,  /* comment */
+ EC_ONE, 
+ EC_TWO = 2 
+} zzz_t;
+
 typedef struct {
   int ix;           /* comment for ix */
   double c[4];      /* comment for c */

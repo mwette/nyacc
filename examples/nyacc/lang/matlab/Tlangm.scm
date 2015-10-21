@@ -7,9 +7,6 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (string-append (getcwd) "/../../.."))
-(add-to-load-path (string-append (getcwd) "/../../../../module"))
-
 (use-modules (nyacc lang matlab pgen))
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
@@ -22,8 +19,8 @@
     (pp-lalr-machine matlab-mach)))
 (with-output-to-file "gram.y.new"
   (lambda () (lalr->bison matlab-spec)))
-(write-lalr-tables matlab-mach "lang/matlab/tables.scm.new")
-(write-lalr-actions matlab-mach "lang/matlab/actions.scm.new")
+(write-lalr-tables matlab-mach "tables.scm.new")
+(write-lalr-actions matlab-mach "actions.scm.new")
 
 (define res (with-input-from-file "ex1.m"
 	      (lambda () (matlab-parser (gen-matlab-lexer) #:debug #f))))

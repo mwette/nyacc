@@ -79,6 +79,7 @@
 	 ;;(def (assq-ref mtab '$default))
 	 (def (if hashed -1 '$default))
 	 (end (assq-ref mtab '$end))
+	 (com (list (assq-ref mtab '$lone-comm) (assq-ref mtab '$code-comm)))
 	 ;; predicate to test for shift action:
 	 (shift? (if hashed
 		     (lambda (a) (positive? a))
@@ -115,11 +116,13 @@
 	   ((error? stx)
 	    ;; Ugly to have to check this first every time, but
 	    ;; @code{positive?} and @code{negative?} fail otherwise.
-	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		  (ln (1+ (port-line (current-input-port)))))
-	      (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
-		      fn ln (car state) sval))
-	    #f)
+	    (if (memq tval com)		; if due to comment, try again
+		(iter state stack nval (lexr))
+		(let ((fn (or (port-filename (current-input-port)) "(unknown)"))
+		      (ln (1+ (port-line (current-input-port)))))
+		  (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
+			  fn ln (car state) sval)
+		  #f)))
 	   ((shift? stx)
 	    ;; We could check here to determine if next transition only has a
 	    ;; default reduction and, if so, go ahead and process the reduction
@@ -192,8 +195,8 @@
 		   (gx (reduce-pr stx))
 		   (gl (vector-ref len-v gx))
 		   ($$ (apply (vector-ref xact-v gx) stack)))
-              (if debug (fmtout "auto reduce ~S to ~S\n"
-                                gx (list-ref state gl)))
+              (if debug (fmtout "state ~S, default => reduce ~S, goto ~S\n"
+                                (car state) gx (list-ref state gl)))
 	      (iter (list-tail state gl) (list-tail stack gl)
 		    (cons (vector-ref rto-v gx) $$) lval)))
 	   ((eqv? end (caar stxl))	; only '$end remains, return for i/a

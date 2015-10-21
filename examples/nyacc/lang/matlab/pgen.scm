@@ -28,6 +28,7 @@
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
+  #:use-module (nyacc parse)
   #:use-module (ice-9 pretty-print)
   )
 
