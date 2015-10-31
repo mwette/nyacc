@@ -131,8 +131,8 @@
      )
 
     (Arguments
-     ("(" ")" ($$ '(ArgumentList)))
-     ("(" ArgumentList ")" ($$ (tl->list $2)))
+     ("(" ")" ($$ '(Arguments)))
+     ("(" ArgumentList ")" ($$ `(Arguments ,(tl->list $2))))
      )
 
     (ArgumentList
@@ -358,7 +358,7 @@
 	     ($prune ObjectLiteral))
      ";")
      ;; ==[until we get $with-prune working]==>
-     (Expression ";")
+     (Expression ";" ($$ `(ExpressionStatement ,$1)))
      )
 
     (IfStatement

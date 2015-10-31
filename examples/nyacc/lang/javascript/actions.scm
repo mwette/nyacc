@@ -110,9 +110,10 @@
    ;; CallExpression => CallExpression "." Identifier
    (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; Arguments => "(" ")"
-   (lambda ($2 $1 . $rest) '(ArgumentList))
+   (lambda ($2 $1 . $rest) '(Arguments))
    ;; Arguments => "(" ArgumentList ")"
-   (lambda ($3 $2 $1 . $rest) (tl->list $2))
+   (lambda ($3 $2 $1 . $rest)
+     `(Arguments ,(tl->list $2)))
    ;; ArgumentList => AssignmentExpression
    (lambda ($1 . $rest) (make-tl 'ArgumentList $1))
    ;; ArgumentList => ArgumentList "," AssignmentExpression
@@ -318,7 +319,8 @@
    ;; EmptyStatement => ";"
    (lambda ($1 . $rest) '(EmptyStatement))
    ;; ExpressionStatement => Expression ";"
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest)
+     `(ExpressionStatement ,$1))
    ;; IfStatement => "if" "(" Expression ")" Statement "else" Statement
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(IfStatement ,$3 ,$5 ,$7))

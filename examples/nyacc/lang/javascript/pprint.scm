@@ -28,7 +28,13 @@
 	     (ppx il (cadr tree)))	; should be start
 
 	    ((SourceElements)
-	     (for-each (lambda (el) (ppx il el)) (cdr tree)))
+	     (for-each
+	      (lambda (el)
+		(unless (eqv? 'EmptyStatement (car el))
+		  (sf "~A" (is il))
+		  (ppx il el)
+		  (sf "\n")))
+	      (cdr tree)))
 
 	    ((FunctionDeclaration)
 	     (let ((name (list-ref tree 1))
@@ -38,7 +44,7 @@
 	       (ppx il parl)
 	       (sf ") {\n")
 	       (ppx (1+ il) body)
-	       (sf "}\n")
+	       (sf "}")
 	       ))
 
 	    ((FormalParameterList)
@@ -48,16 +54,18 @@
 		(if (pair? (cdr pair)) (sf ", ")))
 	      (cdr tree)))
 
+	    ((ExpressionStatement)
+	     (ppx il (list-ref tree 1))
+	     (sf ";"))
+	     
 	    ((ReturnStatement)
-	     (sf "~Areturn" (is il))
+	     (sf "return")
 	     (when (< 1 (length tree)) (sf " ") (ppx il (cadr tree)))
-	     (sf ";\n"))
+	     (sf ";"))
 
 	    ((VariableStatement)
 	     (sf "var ")
-	     (for-each (lambda (el) (ppx il el)) (cdr tree))
-	     (sf "\n")
-	     )
+	     (for-each (lambda (el) (ppx il el)) (cdr tree)))
 
 	    ((VariableDeclarationList)
 	     (pair-for-each
@@ -76,6 +84,40 @@
 
 	    ((Initializer) (sf " = ") (ppx il (cadr tree)))
 
+	    ((AssignmentExpression)
+	     (ppx il (list-ref tree 1))
+	     (ppx il (list-ref tree 2))
+	     (ppx il (list-ref tree 3)))
+
+	    ((assign) (sf " = "))
+	    ((mul-assign) (sf " *= "))
+	    ((div-assign) (sf " /= "))
+	    ((mod-assign) (sf " %= "))
+	    ((add-assign) (sf " += "))
+	    ((sub-assign) (sf " -= "))
+	    ((lshift-assign) (sf " <<= "))
+	    ((rshift-assign) (sf " >>= "))
+	    ((rrshift-assign) (sf " >>>= "))
+	    ((and-assign) (sf " &= "))
+	    ((xor-assign) (sf " ^= "))
+	    ((or-assign) (sf " |= "))
+
+	    ((CallExpression)
+	     (ppx il (list-ref tree 1))
+	     (ppx il (list-ref tree 2)))
+
+	    ((Arguments)
+	     (sf "(")
+	     (if (< 1 (length tree)) (ppx il (list-ref tree 1)))
+	     (sf ")"))
+
+	    ((ArgumentList)
+	     (pair-for-each
+	      (lambda (pair)
+		(ppx il (car pair))
+		(if (pair? (cdr pair)) (sf ", ")))
+	      (cdr tree)))
+	    
 	    ((add)
 	     ;; NEED TO FIX So that "scope" added for printing parens
 	     (sf "(")
