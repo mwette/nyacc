@@ -27,4 +27,7 @@
 (define res (with-input-from-file "ex1.js" dev-parse-js))
 (pretty-print res)
 
+(use-modules (nyacc lang javascript pprint))
+(pretty-print-js res)
+
 ;; --- last line ---
