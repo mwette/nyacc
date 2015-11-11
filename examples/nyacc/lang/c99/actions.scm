@@ -102,7 +102,8 @@
    ;; pointer-declarator => pointer direct-declarator
    (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
    ;; pointer => "*" type-qualifier-list
-   (lambda ($2 $1 . $rest) `(pointer ,$2))
+   (lambda ($2 $1 . $rest)
+     `(pointer ,(tl->list $2)))
    ;; pointer => "*"
    (lambda ($1 . $rest) '(pointer))
    ;; pointer => "*" type-qualifier-list pointer
@@ -117,7 +118,7 @@
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; array-declarator => direct-declarator "[" array-qualifier-list array-...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(array-of ,$1 ,$2 ,$3))
+     `(array-of ,$1 ,$3 ,$4))
    ;; array-declarator => direct-declarator "[" array-qualifier-list "]"
    (lambda ($4 $3 $2 $1 . $rest)
      `(array-of ,$1 ,$3))
@@ -128,10 +129,10 @@
    (lambda ($3 $2 $1 . $rest) `(array-of ,$1))
    ;; array-declarator => direct-declarator "[" array-qualifier-list "*" "]"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(array-of ,$1 ,$3 "*???"))
+     `(array-of ,$1 ,$3 (var-len)))
    ;; array-declarator => direct-declarator "[" "*" "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(array-of ,$1 "*???"))
+     `(array-of ,$1 (var-len)))
    ;; array-qualifier-list => array-qualifier
    (lambda ($1 . $rest)
      (make-tl 'array-qual-list $1))
@@ -341,7 +342,7 @@
    (lambda ($1 . $rest) $1)
    ;; structure-type-definition => "struct" structure-tag "{" field-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(struct-def ,$1 ,(tl->list $4)))
+     `(struct-def ,$2 ,(tl->list $4)))
    ;; structure-type-definition => "struct" "{" field-list "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(struct-def ,(tl->list $3)))
@@ -385,12 +386,12 @@
    (lambda ($1 . $rest) $1)
    ;; union-type-definition => "union" union-tag "{" field-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(union-def ,$1 ,(tl->list $4)))
+     `(union-def ,$2 ,(tl->list $4)))
    ;; union-type-definition => "union" "{" field-list "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(union-def ,(tl->list $3)))
    ;; union-type-reference => "union" union-tag
-   (lambda ($2 $1 . $rest) `(union-ref ,$1))
+   (lambda ($2 $1 . $rest) `(union-ref ,$2))
    ;; union-tag => identifier
    (lambda ($1 . $rest) $1)
    ;; void-type-specifier => "void"

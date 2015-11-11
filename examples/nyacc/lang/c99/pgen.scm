@@ -152,7 +152,7 @@
      )
 
     (pointer
-     ("*" type-qualifier-list ($$/ref 's4.5.2-02 `(pointer ,$2)))
+     ("*" type-qualifier-list ($$/ref 's4.5.2-02 `(pointer ,(tl->list $2))))
      ("*" ($$/ref 's4.5.2-03 '(pointer)))
      ("*" type-qualifier-list pointer
       ($$/ref 's4.5.2-04 `(pointer ,(tl->list $2) ,$3)))
@@ -170,7 +170,7 @@
      ;; direct-declarator "[" constant-expression_opt "]" <= pre-C99
      (direct-declarator
       "[" array-qualifier-list array-size-expression "]"
-      ($$/ref 's4.5.3-01 `(array-of ,$1 ,$2 ,$3)))
+      ($$/ref 's4.5.3-01 `(array-of ,$1 ,$3 ,$4)))
      (direct-declarator
       "[" array-qualifier-list "]"
       ($$/ref 's4.5.3-02 `(array-of ,$1 ,$3)))
@@ -178,14 +178,14 @@
       "[" array-size-expression "]"
       ($$/ref 's4.5.3-03 `(array-of ,$1 ,$3)))
      (direct-declarator
-      "[" "]"
+      "[" "]"				; incomplete array
       ($$/ref 's4.5.3-04 `(array-of ,$1)))
      (direct-declarator
-      "[" array-qualifier-list "*" "]"
-      ($$/ref 's4.5.3-05 `(array-of ,$1 ,$3 "*???")))
+      "[" array-qualifier-list "*" "]"	; variable length array
+      ($$/ref 's4.5.3-05 `(array-of ,$1 ,$3 (var-len))))
      (direct-declarator
-      "[" "*" "]"
-      ($$/ref 's4.5.3-06 `(array-of ,$1 "*???")))
+      "[" "*" "]"			; variable length array
+      ($$/ref 's4.5.3-06 `(array-of ,$1 (var-len))))
      )
 
     (array-qualifier-list
@@ -426,7 +426,7 @@
 
     (structure-type-definition
      ("struct" structure-tag "{" field-list "}"
-      ($$/ref 's5.6-01 `(struct-def ,$1 ,(tl->list $4))))
+      ($$/ref 's5.6-01 `(struct-def ,$2 ,(tl->list $4))))
      ("struct" "{" field-list "}"
       ($$/ref 's5.6-02 `(struct-def ,(tl->list $3))))
      )
@@ -481,13 +481,13 @@
 
     (union-type-definition
      ("union" union-tag "{" field-list "}"
-      ($$/ref 's5.8-01 `(union-def ,$1 ,(tl->list $4))))
+      ($$/ref 's5.8-01 `(union-def ,$2 ,(tl->list $4))))
      ("union" "{" field-list "}"
       ($$/ref 's5.8-02 `(union-def ,(tl->list $3))))
      )
 
     (union-type-reference
-     ("union" union-tag ($$/ref 's5.8-03 `(union-ref ,$1)))
+     ("union" union-tag ($$/ref 's5.8-03 `(union-ref ,$2)))
      )
     (union-tag (identifier))
 
