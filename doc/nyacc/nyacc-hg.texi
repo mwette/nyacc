@@ -180,7 +180,7 @@ and assume the non-terminal @code{B} has the single production
 B => c@i{r}
 @end example
 @noindent
-Then the initial la-itemset as follows:
+Then the initial la-itemset, or initial state of the automaton, is as follows:
 @example
 @i{0}: $start => .S, @{$end@}
    S => .a@i{p}, @{$end,...@}
@@ -197,13 +197,13 @@ Now consider, in state @i{i}, an item as follows
 @i{i}: A => B.@i{q}
 @end example
 @noindent
-We can associate this with a phony lookahead @code{$@@},
+Say we associate this with the ``phony'' lookahead @code{$@@},
 which we call the @dfn{anchor}, to make an la-item:
 @example
-@i{i}: A => B.@i{q}, @{@@@} 
+@i{i}: A => B.@i{q}, @{$@@@} 
 @end example
 @noindent
-Let @code{@i{T} = first(@i{q},@{@@@})} and notice then if @code{@@} is
+Let @code{@i{T} = first(@i{q},@{$@@@})} and notice then if @code{$@@} is
 in @i{T} then any lookaheads for this production must also be
 lookaheads for XXX 
 @vskip 1cm

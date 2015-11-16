@@ -448,8 +448,8 @@
      (type-specifier
       component-declarator-list ";" opt-code-comment
       ($$/ref 's5.6-07 (if (pair? $4)
-	      `(comp-decln ,$1 ,(tl->list $2) ,$4)
-	      `(comp-decln ,$1 ,(tl->list $2)))))
+	      `(comp-decl ,$1 ,(tl->list $2) ,$4)
+	      `(comp-decl ,$1 ,(tl->list $2)))))
      )
 
     (component-declarator-list

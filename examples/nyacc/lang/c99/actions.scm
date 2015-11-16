@@ -361,8 +361,8 @@
    ;; component-declaration => type-specifier component-declarator-list ";"...
    (lambda ($4 $3 $2 $1 . $rest)
      (if (pair? $4)
-       `(comp-decln ,$1 ,(tl->list $2) ,$4)
-       `(comp-decln ,$1 ,(tl->list $2))))
+       `(comp-decl ,$1 ,(tl->list $2) ,$4)
+       `(comp-decl ,$1 ,(tl->list $2))))
    ;; component-declarator-list => component-declarator
    (lambda ($1 . $rest)
      (make-tl 'comp-declr-list $1))

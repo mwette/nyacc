@@ -74,26 +74,29 @@
 
   ;; @item find-span (trans-unit a b c) => ((a . +->) . (c . '())
   (define (find-span tree)
-    (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
-    (if (null? (cdr tree)) (error "null c99-tree"))
-    (let ((fp tree))			; first pair
-      (let iter ((lp tree)		; last pair
-		 (np (cdr tree)))	; next pair
-	(cond
-	 ((null? np) (cons (cdr fp) lp))
-	 ;; The following is an ugly hack to find cpp-include with trans-unit
-	 ;; attached.
-	 ((and-let* ((expr (car np))
-		     ((eqv? 'cpp-stmt (car expr)))
-		     ((eqv? 'include (caadr expr)))
-		     (rest (cddadr expr))
-		     ((pair? rest))
-		     (span (find-span (car rest))))
-		    (set-cdr! lp (car span))
-		    (iter (cdr span) (cdr np))))
-	 (else
-	  (set-cdr! lp np)
-	  (iter np (cdr np)))))))
+    (cond
+     ((not (pair? tree)) '())		; maybe parse failed
+     ((not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
+     ((null? (cdr tree)) (error "null c99-tree"))
+     (else
+      (let ((fp tree))			; first pair
+	(let iter ((lp tree)		; last pair
+		   (np (cdr tree)))	; next pair
+	  (cond
+	   ((null? np) (cons (cdr fp) lp))
+	   ;; The following is an ugly hack to find cpp-include
+	   ;; with trans-unit attached.
+	   ((and-let* ((expr (car np))
+		       ((eqv? 'cpp-stmt (car expr)))
+		       ((eqv? 'include (caadr expr)))
+		       (rest (cddadr expr))
+		       ((pair? rest))
+		       (span (find-span (car rest))))
+		      (set-cdr! lp (car span))
+		      (iter (cdr span) (cdr np))))
+	   (else
+	    (set-cdr! lp np)
+	    (iter np (cdr np)))))))))
 
   ;; Use cons to generate a new reference:
   ;; (cons (car tree) (car (find-span tree)))
