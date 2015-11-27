@@ -474,9 +474,9 @@
    ;; component-selection-expression => indirect-component-selection
    (lambda ($1 . $rest) $1)
    ;; direct-component-selection => postfix-expression "." identifier
-   (lambda ($3 $2 $1 . $rest) `(d-sel ,$3 ,$1))
+   (lambda ($3 $2 $1 . $rest) `(d-sel ,$1 ,$3))
    ;; indirect-component-selection => postfix-expression "->" identifier
-   (lambda ($3 $2 $1 . $rest) `(i-sel ,$3 ,$1))
+   (lambda ($3 $2 $1 . $rest) `(i-sel ,$1 ,$3))
    ;; function-call => postfix-expression "(" expression-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-call ,$1 ,$2))

@@ -50,7 +50,9 @@
     (cons 'mtab mtab)
     (cons 'act-v act-v))))
 
-(define (run-parse) (raw-parser (gen-c-lexer)))
+(define (run-parse)
+  (let ((info (fluid-ref *info*)))
+    (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
 ;; @item parse-c [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:debug bool] \
 ;;               [#:mode ('code|'file)]
@@ -61,7 +63,7 @@
   (catch
    'parse-error
    (lambda ()
-     (let ((info (make-cpi cpp-defs (cons "." inc-dirs) td-dict)))
+     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
        (with-fluid*
 	   *info* info
 	   (lambda ()

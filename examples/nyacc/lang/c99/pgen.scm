@@ -1036,14 +1036,16 @@
 
 (define raw-parser (make-lalr-parser clang-mach))
 
-(define (run-parse) (raw-parser (gen-c-lexer)))
+(define (run-parse)
+  (let ((info (fluid-ref *info*)))
+    (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
 (define* (dev-parse-c
 	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
   (catch
    'parse-error
    (lambda ()
-     (let ((info (make-cpi cpp-defs (cons "." inc-dirs) td-dict)))
+     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
        (with-fluid* *info* info
 		    (lambda ()
 		      (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))

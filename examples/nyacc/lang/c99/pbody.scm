@@ -20,6 +20,7 @@
 (define-record-type cpi
   (make-cpi-1)
   cpi?
+  (debug cpi-debug set-cpi-debug!)	; debug #t #f
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
   (tn-dict cpi-tynd set-cpi-tynd!)	; typename dict (("<x>" foo_t ..
@@ -60,8 +61,9 @@
     ("<wctype.h>" "wctrans_t" "wctype_t" "wint_t")
     ))
 
-(define (make-cpi defines incdirs tn-dict)
+(define (make-cpi debug defines incdirs tn-dict)
   (let* ((cpi (make-cpi-1)))
+    (set-cpi-debug! cpi debug)
     (set-cpi-defs! cpi defines)
     (set-cpi-incs! cpi incdirs)
     (set-cpi-tynd! cpi (append tn-dict std-dict))
@@ -119,53 +121,32 @@
 
 (use-modules (ice-9 pretty-print))
 
-#|
-        (init-declr
-          (ftn-declr
-            (scope (ptr-declr (pointer) (ident "c2_intalg_t")))
-            (param-list
-              (param-decln
-                (decl-spec-list (type-spec (void)))
-                (ftn-declr
-                  (scope (ptr-declr (pointer) (ident "f")))))
-              (param-decln
-                (decl-spec-list (type-spec (void)))
-                (ptr-declr (pointer) (ident "comp")))
-|#
- 
 ;; @item find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
-(define find-new-typenames
-  (let ((sxtd (sxpath '(stor-spec typedef)))
-	(sxid (node-reduce
-	       (select-kids (node-typeof? 'init-declr))
-	       (node-or
-		;; simple identifier declarator:
-		(select-kids (node-typeof? 'ident))
-		;; function declarator:
-		(node-reduce
-		 (select-kids (node-typeof? 'ftn-declr))
-		 (select-kids (node-typeof? 'scope))
-		 (node-or (node-self (node-typeof? '*any*))
-			  (node-closure (node-typeof? '*any*)))
-		 (select-kids (node-typeof? 'ident))
-		 ))
-	       (select-kids (node-typeof? '*text*)))))
-    (lambda (decl)
-      (cond
-       ((not (eq? 'decl (car decl))) '())
-       ((< (length decl) 3) '())
-       (else (let ((spec-list (list-ref decl 1))
-		   (init-list (list-ref decl 2)))
-	       (when #f ;;(pair? (sxtd spec-list))
-		 (simple-format #t "\nspec=~S\n" (sxtd spec-list))
-		 (simple-format #t "init =~S\n" (sxid init-list))
-		 ;;(pretty-print decl)
-		 )
-	       (if (pair? (sxtd spec-list))
-		   (sxid init-list)
-		   '())))))))
+(define (find-new-typenames decl)
+
+  ;; like declr->ident in util2.scm
+  (define (declr->id-name declr)
+    (case (car declr)
+      ((ident) (sx-ref declr 1))
+      ((init-declr) (declr->id-name (sx-ref declr 1)))
+      ((comp-declr) (declr->id-name (sx-ref declr 1)))
+      ((array-of) (declr->id-name (sx-ref declr 1)))
+      ((ptr-declr) (declr->id-name (sx-ref declr 2)))
+      ((ftn-declr) (declr->id-name (sx-ref declr 1)))
+      ((scope) (declr->id-name (sx-ref declr 1)))
+      (else (error "coding bug: " declr))))
+       
+  (let* ((spec (sx-ref decl 1))
+	 (stor (sx-find 'stor-spec spec))
+	 (id-l (sx-ref decl 2)))
+    (if (and stor (eqv? 'typedef (caadr stor)))
+	(let iter ((res '()) (idl (cdr id-l)))
+	  (if (null? idl) res
+	      (iter (cons (declr->id-name (sx-ref (car idl) 1)) res)
+		    (cdr idl))))
+	'())))
 
 ;; @item add-typdecl name decl
 ;; Helper for @code{save-typenames}.
@@ -308,7 +289,9 @@
 		       (let* ((pth (find-file-in-dirl file (cpi-incs info)))
 			      (tree (cond
 				     ((eq? #\< (string-ref parg 0)) '())
-				     (pth (with-input-from-file pth run-parse))
+				     (pth (or
+					   (with-input-from-file pth run-parse)
+					   (throw 'parse-error "~A" pth)))
 				     (else (perr file)))))
 			 (for-each add-define (xp1 tree)) ; add def's 
 			 ;; Attach tree onto "include" statement (hack?)
