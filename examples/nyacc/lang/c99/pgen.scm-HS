@@ -39,7 +39,7 @@
 ;; http://slps.github.io/zoo/c/iso-9899-tc3.html
 ;; but modified to handle comments and CPP statements.
 ;; Actually, the spec below was re-written based on Harbison and Steele 5th
-;; but that text is broken.  I need to fix (i.e., rework) this.
+;; but that text is broken.  I will fix.
 (define clang-spec
   (lalr-spec
    (notice lang-crn-lic)
@@ -387,11 +387,11 @@
 
     (enumeration-type-definition
      ("enum" enumeration-tag "{" enumeration-definition-list "}"
-      ($$/ref 's5.5-01 `(enum-def ,$2 ,(tl->list $4))))
-     ("enum" enumeration-tag "{" enumeration-definition-list "," "}"
-      ($$/ref 's5.5-02 `(enum-def ,$2 ,(tl->list $4))))
+      ($$/ref 's5.5-01 `(enum-def ,$1 ,(tl->list $4))))
      ("enum" "{" enumeration-definition-list "}"
-      ($$/ref 's5.5-03 `(enum-def ,(tl->list $3))))
+      ($$/ref 's5.5-02 `(enum-def ,(tl->list $3))))
+     ("enum" enumeration-tag "{" enumeration-definition-list "," "}"
+      ($$/ref 's5.5-03 `(enum-def ,$1 ,(tl->list $4))))
      ("enum" "{" enumeration-definition-list "," "}"
       ($$/ref 's5.5-04 `(enum-def ,(tl->list $3))))
      )
@@ -447,21 +447,11 @@
      )
 
     (component-declaration
-     (specifier-qualifier-list ;; <= changed, was type-specifier from HB
+     (type-specifier
       component-declarator-list ";" opt-code-comment
       ($$/ref 's5.6-07 (if (pair? $4)
-	      `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$4)
-	      `(comp-decl ,(tl->list $1) ,(tl->list $2)))))
-     )
-
-    ;; Added: not in HB
-    (specifier-qualifier-list
-     (type-specifier specifier-qualifier-list
-		     ($$/ref 's-tbd-1 (tl-insert $2 $1)))
-     (type-specifier ($$/ref 's-tbd-1 (make-tl 'decl-spec-list $1)))
-     (type-qualifier specifier-qualifier-list
-		     ($$/ref 's-tbd-1 (tl-insert $2 $1)))
-     (type-qualifier ($$/ref 's-tbd-1 (make-tl 'decl-spec-list $1)))
+	      `(comp-decl ,$1 ,(tl->list $2) ,$4)
+	      `(comp-decl ,$1 ,(tl->list $2)))))
      )
 
     (component-declarator-list
@@ -471,8 +461,8 @@
      )
 
     (component-declarator
-     (simple-component ($$ `(comp-declr ,$1)))
-     (bit-field ($$ `(comp-declr ,$1)))
+     (simple-component)
+     (bit-field)
      )
 
     (simple-component (declarator))
@@ -592,11 +582,11 @@
      )
 
     (direct-component-selection
-     (postfix-expression "." identifier ($$/ref 's7.4.2-01 `(d-sel ,$1 ,$3)))
+     (postfix-expression "." identifier ($$/ref 's7.4.2-01 `(d-sel ,$3 ,$1)))
      )
     
     (indirect-component-selection
-     (postfix-expression "->" identifier ($$/ref 's7.4.2-02 `(i-sel ,$1 ,$3)))
+     (postfix-expression "->" identifier ($$/ref 's7.4.2-02 `(i-sel ,$3 ,$1)))
      )
 
     ;; 7.4.3, p 214
@@ -784,7 +774,7 @@
     (assignment-expression
      (conditional-expression)
      (unary-expression assignment-op assignment-expression
-		       ($$/ref 's7.9-01 `(assn-expr ,$1 ,$2 ,$3)))
+		       ($$/ref 's7.9-01 (list $2 $1 $3)))
      )
     (assignment-op ("=" ($$ 'assign))
 		   ("+=" ($$ 'add-assign))

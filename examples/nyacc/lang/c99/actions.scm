@@ -312,13 +312,13 @@
    (lambda ($1 . $rest) $1)
    ;; enumeration-type-definition => "enum" enumeration-tag "{" enumeration...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(enum-def ,$1 ,(tl->list $4)))
+     `(enum-def ,$2 ,(tl->list $4)))
+   ;; enumeration-type-definition => "enum" enumeration-tag "{" enumeration...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(enum-def ,$2 ,(tl->list $4)))
    ;; enumeration-type-definition => "enum" "{" enumeration-definition-list...
    (lambda ($4 $3 $2 $1 . $rest)
      `(enum-def ,(tl->list $3)))
-   ;; enumeration-type-definition => "enum" enumeration-tag "{" enumeration...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(enum-def ,$1 ,(tl->list $4)))
    ;; enumeration-type-definition => "enum" "{" enumeration-definition-list...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(enum-def ,(tl->list $3)))
@@ -358,20 +358,30 @@
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; field-list => field-list lone-comment
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; component-declaration => type-specifier component-declarator-list ";"...
+   ;; component-declaration => specifier-qualifier-list component-declarato...
    (lambda ($4 $3 $2 $1 . $rest)
      (if (pair? $4)
-       `(comp-decl ,$1 ,(tl->list $2) ,$4)
-       `(comp-decl ,$1 ,(tl->list $2))))
+       `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$4)
+       `(comp-decl ,(tl->list $1) ,(tl->list $2))))
+   ;; specifier-qualifier-list => type-specifier specifier-qualifier-list
+   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
+   ;; specifier-qualifier-list => type-specifier
+   (lambda ($1 . $rest)
+     (make-tl 'decl-spec-list $1))
+   ;; specifier-qualifier-list => type-qualifier specifier-qualifier-list
+   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
+   ;; specifier-qualifier-list => type-qualifier
+   (lambda ($1 . $rest)
+     (make-tl 'decl-spec-list $1))
    ;; component-declarator-list => component-declarator
    (lambda ($1 . $rest)
      (make-tl 'comp-declr-list $1))
    ;; component-declarator-list => component-declarator-list "," component-...
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; component-declarator => simple-component
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(comp-declr ,$1))
    ;; component-declarator => bit-field
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(comp-declr ,$1))
    ;; simple-component => declarator
    (lambda ($1 . $rest) $1)
    ;; bit-field => declarator ":" width
@@ -606,7 +616,8 @@
    ;; assignment-expression => conditional-expression
    (lambda ($1 . $rest) $1)
    ;; assignment-expression => unary-expression assignment-op assignment-ex...
-   (lambda ($3 $2 $1 . $rest) (list $2 $1 $3))
+   (lambda ($3 $2 $1 . $rest)
+     `(assn-expr ,$1 ,$2 ,$3))
    ;; assignment-op => "="
    (lambda ($1 . $rest) 'assign)
    ;; assignment-op => "+="

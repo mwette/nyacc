@@ -10,9 +10,11 @@
 
 (define-module (nyacc lang util)
   #:export (lang-crn-lic
-	    make-tl tl->list
+	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
+	    sx-tag sx-attr sx-ref sx-tail sx-find
             fmterr)
+  #:use-module ((srfi srfi-1) #:select(find))
   )
 
 ;; This is a generic copyright/licence that will be printed in the output
@@ -99,7 +101,57 @@ file COPYING included with the this distribution.")
   (error "not implemented (yet)")
   )
 
-;; @table code
+;; =====================================
 
+;; @item sx-ref sx ix => item
+;; Reference the @code{ix}-th element of the list, not counting the optional
+;; attributes item.
+;; @example
+;; (sx-ref '(abc def) 1) => 'def
+;; (sx-ref '(abc (@ (foo "1")) def) 1) => 'def
+;; @end example
+(define (sx-ref sx ix)
+  (cond
+   ((zero? ix) (car sx))
+   ((eqv? '@ (cadr sx))
+    (list-ref sx (1+ ix)))
+   (else
+    (list-ref sx ix))))
 
-;;; --- last line
+;; @item sx-tag sx => tag
+;; Return the tag for a tree
+(define (sx-tag sx)
+  (if (pair? sx) (car sx) #f))
+
+;; @item sx-tail sx ix => (list)
+;; Return the tail starting at the ix-th cdr.
+;; For example, if sx has 3 items then (sx-tail sx 2) returns '().
+(define (sx-tail sx ix)
+  (cond
+   ((zero? ix) sx)
+   ((eqv? '@ (cadr sx))
+    (list-tail sx (1+ ix)))
+   (else
+    (list-tail sx ix))))
+
+;; @item sx-attr sx => '(@ ...)|#f
+;; @example
+;; (sx-attr '(abc (@ (foo "1")) def) 1) => '(@ (foo "1"))
+;; @end example
+(define (sx-attr sx)
+  (if (and (pair? (car sx)) (pair? (cadr sx)))
+      (if (eqv? '@ (caadr sx))
+	  (cadr sx)
+	  #f)
+      #f))
+
+;; @item sx-find tag sx => ((tag ...) (tag ...))
+;; Find the first matching element (in the first level).
+(define (sx-find tag sx)
+  (find (lambda (node)
+	    (and (pair? node) (eqv? tag (car node))))
+	sx))
+
+;; @end table
+
+;;; --- last line ---

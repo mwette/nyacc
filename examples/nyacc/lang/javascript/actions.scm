@@ -33,7 +33,7 @@
    ;; Identifier => '$ident
    (lambda ($1 . $rest) `(Identifier ,$1))
    ;; PrimaryExpression => "this"
-   (lambda ($1 . $rest) `(PrimaryExpression ,$1))
+   (lambda ($1 . $rest) `(PrimaryExpression (this)))
    ;; PrimaryExpression => Identifier
    (lambda ($1 . $rest) `(PrimaryExpression ,$1))
    ;; PrimaryExpression => Literal
@@ -41,8 +41,7 @@
    ;; PrimaryExpression => ArrayLiteral
    (lambda ($1 . $rest) `(PrimaryExpression ,$1))
    ;; PrimaryExpression => "(" Expression ")"
-   (lambda ($3 $2 $1 . $rest)
-     `(PrimaryExpression ,$2))
+   (lambda ($3 $2 $1 . $rest) $2)
    ;; ArrayLiteral => "[" Elision "]"
    (lambda ($3 $2 $1 . $rest)
      `(ArrayLiteral (Elision ,(number->string $2))))
@@ -143,7 +142,7 @@
    ;; UnaryExpression => "++" UnaryExpression
    (lambda ($2 $1 . $rest) `(pre-inc ,$2))
    ;; UnaryExpression => "--" UnaryExpression
-   (lambda ($2 $1 . $rest) `(pre-inc ,$2))
+   (lambda ($2 $1 . $rest) `(pre-dec ,$2))
    ;; UnaryExpression => "+" UnaryExpression
    (lambda ($2 $1 . $rest) `(pos ,$2))
    ;; UnaryExpression => "-" UnaryExpression
@@ -189,14 +188,13 @@
    ;; EqualityExpression => RelationalExpression
    (lambda ($1 . $rest) $1)
    ;; EqualityExpression => EqualityExpression "==" RelationalExpression
-   (lambda ($3 $2 $1 . $rest) `(equal ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
    ;; EqualityExpression => EqualityExpression "!=" RelationalExpression
-   (lambda ($3 $2 $1 . $rest) `(not-equal ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(neq ,$1 ,$3))
    ;; EqualityExpression => EqualityExpression "===" RelationalExpression
-   (lambda ($3 $2 $1 . $rest) `(equal-eq ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(eq-eq ,$1 ,$3))
    ;; EqualityExpression => EqualityExpression "!==" RelationalExpression
-   (lambda ($3 $2 $1 . $rest)
-     `(not-equal-eq ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(neq-eq ,$1 ,$3))
    ;; BitwiseANDExpression => EqualityExpression
    (lambda ($1 . $rest) $1)
    ;; BitwiseANDExpression => BitwiseANDExpression "&" EqualityExpression
@@ -290,9 +288,9 @@
    ;; Statement => TryStatement
    (lambda ($1 . $rest) $1)
    ;; Block => "{" StatementList "}"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(Block ,$2))
    ;; Block => "{" "}"
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) '(Block))
    ;; StatementList => Statement
    (lambda ($1 . $rest) (make-tl 'StatementList $1))
    ;; StatementList => StatementList Statement

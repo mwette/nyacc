@@ -60,13 +60,20 @@
 
     ;; A.3
     (PrimaryExpression
-     ("this" ($$ `(PrimaryExpression ,$1)))
+     ("this" ($$ `(PrimaryExpression (this))))
      (Identifier ($$ `(PrimaryExpression ,$1)))
      (Literal ($$ `(PrimaryExpression ,$1)))
      (ArrayLiteral ($$ `(PrimaryExpression ,$1)))
      ;; until we get $with-prune working:
      #;(ObjectLiteral ($$ `(PrimaryExpression ,$1)))
-     ("(" Expression ")" ($$ `(PrimaryExpression ,$2)))
+     ("(" Expression ")" ($$ $2))
+     )
+    #;(PrimaryExpression
+     ("this" ($$ '(this)))
+     (Identifier ($$ $1))
+     (Literal ($$ $1))
+     (ArrayLiteral ($$ $1))
+     ("(" Expression ")" ($$ $2))
      )
 
     (ArrayLiteral
@@ -157,7 +164,7 @@
      ("void" UnaryExpression ($$ `(void ,$2)))
      ("typeof" UnaryExpression ($$ `(typeof ,$2)))
      ("++" UnaryExpression ($$ `(pre-inc ,$2)))
-     ("--" UnaryExpression ($$ `(pre-inc ,$2)))
+     ("--" UnaryExpression ($$ `(pre-dec ,$2)))
      ("+" UnaryExpression ($$ `(pos ,$2)))
      ("-" UnaryExpression ($$ `(neg ,$2)))
      ("~" UnaryExpression ($$ `(??? ,$2)))
@@ -215,13 +222,13 @@
     (EqualityExpression
      (RelationalExpression)
      (EqualityExpression "==" RelationalExpression
-			 ($$ `(equal ,$1 ,$3)))
+			 ($$ `(eq ,$1 ,$3)))
      (EqualityExpression "!=" RelationalExpression
-			 ($$ `(not-equal ,$1 ,$3)))
+			 ($$ `(neq ,$1 ,$3)))
      (EqualityExpression "===" RelationalExpression
-			 ($$ `(equal-eq ,$1 ,$3)))
+			 ($$ `(eq-eq ,$1 ,$3)))
      (EqualityExpression "!==" RelationalExpression
-			 ($$ `(not-equal-eq ,$1 ,$3)))
+			 ($$ `(neq-eq ,$1 ,$3)))
      )
 
     (BitwiseANDExpression
@@ -309,8 +316,8 @@
      )
 
     (Block
-     ("{" StatementList "}")
-     ("{" "}")
+     ("{" StatementList "}" ($$ `(Block ,$2)))
+     ("{" "}" ($$ '(Block)))
      )
 
     (StatementList
