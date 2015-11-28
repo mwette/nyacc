@@ -1,0 +1,511 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Copyright (C) 2015 - Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC. -->
+<!-- Created by GNU Texinfo 6.0, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>Not Yet Another Compiler Compiler!</title>
+
+<meta name="description" content="Not Yet Another Compiler Compiler!">
+<meta name="keywords" content="Not Yet Another Compiler Compiler!">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="texi2any">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="#Top" rel="start" title="Top">
+<link href="dir.html#Top" rel="up" title="(dir)">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.indentedblock {margin-right: 0em}
+blockquote.smallindentedblock {margin-right: 0em; font-size: smaller}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style: oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space: nowrap}
+span.nolinebreak {white-space: nowrap}
+span.roman {font-family: serif; font-weight: normal}
+span.sansserif {font-family: sans-serif; font-weight: normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en">
+<h1 class="settitle" align="center">Not Yet Another Compiler Compiler!</h1>
+
+
+
+
+<a name="Top"></a>
+<div class="header">
+<p>
+Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
+</div>
+<a name="NYACC-Manual"></a>
+<h1 class="top">NYACC Manual</h1>
+
+<table class="menu" border="0" cellspacing="0">
+<tr><td align="left" valign="top">&bull; <a href="#Introduction" accesskey="1">Introduction</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Parsing" accesskey="2">Parsing</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Translation" accesskey="3">Translation</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Administrative" accesskey="4">Administrative</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#Todos" accesskey="5">Todos</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+<tr><td align="left" valign="top">&bull; <a href="#References" accesskey="6">References</a>:</td><td>&nbsp;&nbsp;</td><td align="left" valign="top">
+</td></tr>
+</table>
+
+
+<hr>
+<a name="Introduction"></a>
+<div class="header">
+<p>
+Next: <a href="#Parsing" accesskey="n" rel="next">Parsing</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; </p>
+</div>
+<a name="Introduction-1"></a>
+<h2 class="chapter">1 Introduction</h2>
+
+<p>WARNING: This manual is currently in a very immature state.
+</p>
+<p>A LALR(1) parser is a pushdown automata for parsing computer languages.
+In this tool the automata, along with its auxiliary parameters
+(e.g., actions), is called a <em>machine</em>.  The grammar is called 
+the <em>specification</em>.  The program that processes, driven by the 
+machine, input token to generate a final output, or error, is 
+the <em>parser</em>.
+</p>
+<a name="Example"></a>
+<h3 class="section">1.1 Example</h3>
+
+<p>A simplest way to introduce working with <code>nyacc</code> is to work through
+an example.  Consider the following contents of the file <samp>calc.scm</samp>.
+</p><div class="example">
+<pre class="example">(use-modules (nyacc lalr))
+(use-modules (nyacc lex))
+
+(define calc-spec
+  (lalr-spec
+   (prec&lt; (left &quot;+&quot; &quot;-&quot;) (left &quot;*&quot; &quot;/&quot;))
+   (start expr)
+   (grammar
+    (expr
+     (expr &quot;+&quot; expr ($$ (+ $1 $3)))
+     (expr &quot;-&quot; expr ($$ (- $1 $3)))
+     (expr &quot;*&quot; expr ($$ (* $1 $3)))
+     (expr &quot;/&quot; expr ($$ (/ $1 $3)))
+     ('$fx ($$ (string-&gt;number $1)))))))
+
+(define calc-mach (make-lalr-machine calc-spec))
+
+(define parse-expr
+  (let ((gen-lexer (make-lexer-generator (assq-ref calc-mach 'mtab)))
+	(calc-parser (make-lalr-parser calc-mach)))
+    (lambda () (calc-parser (gen-lexer)))))
+
+(define res (with-input-from-string &quot;1 + 4 / 2 * 3 - 5&quot; parse-expr))
+(simple-format #t &quot;expect 2; get ~S\n&quot; res) ;; expect: 2
+</pre></div>
+<p>Here is an explanation of the code:
+</p><ol>
+<li> The relevent modules are imported using guile&rsquo;s <code>use-modules</code> syntax.
+</li><li> The <code>lalr-spec</code> syntax is used to generate a (canonical)
+specification from the grammar and options.  The syntax is imported
+from the module <code>(nyacc lalr)</code>.
+</li><li> The <code>prec&lt;</code> directive indicates that 
+the tokens appearing in the sequence of associativity directives
+should be interpreted in increasing order of precedence.  The
+associativity statements <code>left</code> indicate that the tokens have left
+associativity.  So, in this grammar <code>+</code>, <code>-</code>, <code>*</code>, and
+<code>/</code> are left associative, <code>*</code> and <code>/</code> have equal
+precedence, <code>+</code> and <code>-</code> have equal precedence, but <code>*</code>
+and <code>/</code> have higher precedence than <code>+</code> and <code>-</code>.
+(Note: this syntax may change in the future.)
+</li><li> The <code>start</code> directive indicates which left-hand symbol in the
+grammar is the starting symbol for the grammar.
+</li><li> The <code>grammar</code> directive is used to specify the production rules.
+In the example above one left-hand side is associated with multiple
+right hand sides.  But this is not required.
+<ul>
+<li> Multiple right-hand sides can be written for a single left-hand side.  
+</li><li> Non-terminals are indicated as normal identifiers.
+</li><li> Terminals are indicated as non-identifiers using double-quotes
+(e.g., <code>&quot;+&quot;</code>), scheme character syntax (e.g., <code>#\+</code>), or
+quoted identifiers (e.g., <code>'+</code>).  There is no syntax to declare
+tokens.
+</li><li> The reserved symbol <code>'$fx</code> indicates an unsigned integer.  The
+lexical analyzer tools will emit this token when an integer is
+detected in the input.
+</li><li> A quoted identifier cannot match a normal identifier.  For
+example, one could not use <code>function</code> to indicate a non-terminal
+and <code>&quot;function&quot;</code> to indicate a terminal.  The reader will signal
+an error when this condition is detected.
+</li><li> Within the right-hand side specification a <code>$$</code> form is used to
+specify an action associated with the rule.  Ordinarily, the action
+appears as the last element of a right-hand side, but mid-rule
+actions are possible (see Section TBD).
+</li><li> The output of <code>lalr-spec</code> is an associative array so you can
+peek at the internals using standard Scheme procedures.
+</li></ul>
+</li><li> The machine is generated using the procedure <code>make-lalr-machine</code>.
+This routine does the bulk of the processing to produce an LALR(1)
+automata.
+</li><li> Generating a parser function requires a few steps.  The first step we
+use is to create a lexical analyzer (generator).
+<div class="example">
+<pre class="example">(gen-lexer (make-lexer-generator (assq-ref calc-mach 'mtab)))
+</pre></div>
+<p>We build a generator because a lexical analyzer may require state
+(e.g., line number, mode).  The generator is constructed from the
+<em>match table</em> provided by the machine.  The procedure
+<code>make-lexer-generator</code> is imported from the module <code>(nyacc
+lex)</code>.  Optional arguments to <code>make-lexer-generator</code> allow the
+user to specify how identifiers, comments, numbers, etc are read in.
+</p></li><li> The next item in the program is
+<div class="example">
+<pre class="example">  (calc-parser (make-lalr-parser calc-mach)))
+</pre></div>
+<p>This code generates a parser (procedure) from the machine and the
+match table.  The match table is the handshake between the lexical
+analyzer and the parser for encoding tokens.  In this example the
+match table is symbol based, but there is an option to hash these
+symbols into integers.  See Section TBD.
+</p></li><li> The actual parser that we use calls the generated parser with a
+lexical analyser created from the generator.
+<div class="example">
+<pre class="example">    (lambda () (calc-parser (gen-lexer)))))
+</pre></div>
+<p>Note that <code>parse-expr</code> is a thunk: a procedure of no arguments.
+</p></li><li> Now we run the parser on an input string.  The lexical analyzer reads
+code from <code>(current-input-port)</code> so we set up the environment
+using <code>with-input-from-string</code>.   See the Input/Ouput section of
+the Guile Reference Manual for more information.
+<div class="example">
+<pre class="example">(define res (with-input-from-string &quot;1 + 4 / 2 * 3 - 5&quot; parse-expr))
+</pre></div>
+</li><li> Lastly, we print the result out along with the expected result.
+</li></ol>
+
+<p>If we execute the example file above we should get the following:
+</p><div class="example">
+<pre class="example">$ guile calc.scm
+expect 2; get 2
+$
+</pre></div>
+
+<a name="The-Match-Table"></a>
+<h3 class="section">1.2 The Match Table</h3>
+<p>In some parser generators one declares terminals in the grammar file
+and the generator will provide an include file providing the list of
+terminals along with the associated &ldquo;hash codes&rdquo;.  In <small>NYACC</small> the
+terminals are detected in the grammar as non-identifiers: strings
+(e.g., <code>&quot;for&quot;</code>), symbols (e.g., <code>'$ident</code>) or characters
+(e.g., <code>#\+</code>).   The machine generation phase of the parser 
+generates a match table which is an a-list of these objects along with
+the token code.  These codes are what the lexical analyzer should return.
+BLA Bla bla.  So in the end we have
+</p><ul>
+<li> The user specifies the grammar with terminals in natural form
+(e.g., <code>&quot;for&quot;</code>).
+</li><li> The parser generator internalizes these to symbols or integers, and generates
+an a-list, the match table,  of (natural form, internal form).
+</li><li> The programmer provides the match table to the procedure that builds 
+a lexical analyzer generator (e.g., <code>make-lexer-generator</code>).
+</li><li> The lexical analyzer uses this table to associate strings in the input
+with entries in the match table.   In the case of keywords the keys will
+appear as strings (e.g., <code>for</code>), whereas in the case of special items,
+processed in the lexical analyzer by readers (e.g., <code>read-num</code>), the
+keys will be symbols (e.g., <code>'$fl</code>).
+</li><li> The lexical analyzer returns pairs in the form (internal form, natural form)
+to the parser.  Note the reflexive behavior of the lexical analyzer.  It
+was built with pairs of the form (natural form, internal form) and returns
+pairs of the form (internal form, natural form).
+</li></ul>
+
+<p>Now one item need to be dealt with and that is the token value for the 
+default.  It should be <code>-1</code> or <code>'$default</code>. WORK ON THIS.
+</p>
+<hr>
+<a name="Parsing"></a>
+<div class="header">
+<p>
+Next: <a href="#Translation" accesskey="n" rel="next">Translation</a>, Previous: <a href="#Introduction" accesskey="p" rel="prev">Introduction</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; </p>
+</div>
+<a name="Modules-for-Constructing-Parsers-and-Lexical-Analyzers"></a>
+<h2 class="chapter">2 Modules for Constructing Parsers and Lexical Analyzers</h2>
+
+<p><em>nyacc</em> provides several modules:
+</p><dl compact="compact">
+<dt>lalr</dt>
+<dd><p>This is a module providing macros for generating specifications, 
+machines and parsers.
+</p></dd>
+<dt>lex</dt>
+<dd><p>This is a module providing procedures for generating lexical analyzers.
+</p></dd>
+<dt>util</dt>
+<dd><p>This is a module providing utilities used by the other modules.
+</p></dd>
+</dl>
+
+<a name="The-lalr-Module"></a>
+<h3 class="section">2.1 The <code>lalr</code> Module</h3>
+<p>WARNING: This section is quite crufty.
+</p>
+<p>The <code>lalr1</code> module provides syntax and procedures for building LALR
+parsers.  The following syntax and procedures are exported:
+</p><ul>
+<li> <code>lalr-spec</code> syntax
+</li><li> <code>make-lalr-machine</code> procedure
+</li></ul>
+
+<p>We have (experimental) convenience macros:
+</p><div class="example">
+<pre class="example">($? foo bar baz) =&gt; ``foo bar baz'' occurs never or once
+($* foo bar baz) =&gt; ``foo bar baz'' occurs zero or more times
+($+ foo bar baz) =&gt; ``foo bar baz'' occurs one or more times
+</pre></div>
+<p>However, these have hardcoded actions and are considered to be,
+in current form, unattractive for practical use.
+</p>
+<p>Todo: discuss
+</p><ul>
+<li> reserved symbols (e.g., <code>'$fx</code>, <code>'$ident</code>)
+</li><li> Strings of length one are equivalent to the corresponding character.
+</li><li> <code>(pp-lalr-grammar calc-spec)</code>
+</li><li> <code>(pp-lalr-machine calc-mach)</code>
+</li><li> <code>(define calc-mach (compact-mach calc-mach))</code>
+</li><li> <code>(define calc-mach (hashify-machine calc-mach))</code>
+</li><li> The specification for <code>expr</code> could have been expressed using
+<div class="example">
+<pre class="example">  (expr (expr &quot;+&quot; expr ($$ (+ $1 $3))))
+  (expr (expr &quot;-&quot; expr ($$ (- $1 $3))))
+  (expr (expr &quot;*&quot; expr ($$ (* $1 $3))))
+  (expr (expr #\/ expr ($$ (/ $1 $3))))
+  (expr ('$fx ($$ (string-&gt;number $1))))
+</pre></div>
+</li><li> rule-base precedence
+</li><li> multiple precedence statements so that some items can be unordered
+<div class="example">
+<pre class="example">(prec&lt; &quot;then&quot; &quot;else&quot;)
+(prec&lt; &quot;t1&quot; &quot;t2&quot; &quot;t3&quot; &quot;t4&quot; &quot;t5&quot;)
+=&gt; ((t1 . t2) (t2 . t3) (t3 . t4) (t4 . t5) (then . else))
+</pre></div>
+</li></ul>
+
+
+<a name="The-lex-Module"></a>
+<h3 class="section">2.2 The <code>lex</code> Module</h3>
+
+<p>The <small>NYACC</small> <code>lex</code> module provide routines for constructing
+lexical analyzers.  The intension is to provide routines to make
+construction easy, not necessarily the most efficient.
+</p>
+<a name="The-export-Module"></a>
+<h3 class="section">2.3 The <code>export</code> Module</h3>
+<p><small>NYACC</small> provides routines for exporting <small>NYACC</small> grammar
+specifications to other LALR parser generators.
+</p>
+<p>The Bison exporter uses the following rules:
+</p><ul>
+<li> Terminals expressed as strings which look like C identifiers are
+converted to symbols of all capitals.  For example <code>&quot;for&quot;</code> is
+converted to <code>FOR</code>.
+</li><li> Strings which are not like C identifiers and are of length 1 are
+converted to characters.  For example, <code>&quot;+&quot;</code> is converted to <code>'+'</code>.
+</li><li> Characters are converted to C characters.
+For example, <code>#\!</code> is converted to <code>'!'</code>.
+</li><li> Multi-character strings that do not look like identifiers are
+converted to symbols of the form <code>ChSeq_<i>i</i>_<i>j</i>_<i>k</i></code> where
+<i>i</i>, <i>j</i> and <i>k</i> are decimal representations of the character
+code.  For example <code>&quot;+=&quot;</code> is converted to <code>ChSeq_43_61</code>.
+</li><li> Terminals expressed as symbols are converted as-is but <code>$</code> and <code>-</code>
+are replaced with <code>_</code>.
+</li></ul>
+
+<p>TODO: Export to Bison xml format.
+</p>
+<p>The Guile exporter uses the following rules: TBD.
+</p>
+<hr>
+<a name="Translation"></a>
+<div class="header">
+<p>
+Next: <a href="#Administrative" accesskey="n" rel="next">Administrative</a>, Previous: <a href="#Parsing" accesskey="p" rel="prev">Parsing</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; </p>
+</div>
+<a name="Language-Translation"></a>
+<h2 class="chapter">3 Language Translation</h2>
+
+<p>Under &lsquo;<samp>examples/nyacc</samp>&rsquo; are utilities for translating languages
+along with some samples.  The approach that is used here is to parse
+languages into a SXML based parse tree and use the SXML modules in
+Guile to translate.  We have built a javascript to tree-il translater
+which means that one can execute javascript at the Guile command line:
+</p><div class="example">
+<pre class="example">scheme@(guile-user)&gt; ,L javascript
+need to complete
+</pre></div>
+
+<a name="Tagged_002dLists"></a>
+<h3 class="section">3.1 Tagged-Lists</h3>
+<p>In actions in nyacc can use our tagged-lists to build the trees.
+For example, building a statement list for a program might go like this:
+</p><div class="example">
+<pre class="example">  (program
+   (stmt-list ($$ `(program ,(tl-&gt;list $1))))
+   (...))
+  (stmt-list
+   (stmt ($$ (make-tl 'stmt-list $1)))
+   (stmt-list stmt ($$ (tl-append $1 $2))))
+</pre></div>
+
+<a name="Working-with-SXML-Based-Parse-Trees"></a>
+<h3 class="section">3.2 Working with SXML Based Parse Trees</h3>
+<p>To work with the trees described in the last section use
+</p><div class="example">
+<pre class="example">(sx-ref tree 1)
+(sx-attr tree)
+(sx-attr-ref tree 'item)
+(sx-tail tree 2)
+</pre></div>
+
+<a name="Example_003a-Converting-Javascript-to-Tree_002dIL"></a>
+<h3 class="section">3.3 Example: Converting Javascript to Tree-IL</h3>
+
+<p>This illustrates translation with <code>foldts*-values</code> and
+<code>sxml-match</code>. 
+</p>
+
+<hr>
+<a name="Administrative"></a>
+<div class="header">
+<p>
+Next: <a href="#Todos" accesskey="n" rel="next">Todos</a>, Previous: <a href="#Translation" accesskey="p" rel="prev">Translation</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; </p>
+</div>
+<a name="Administrative-Notes"></a>
+<h2 class="chapter">4 Administrative Notes</h2>
+
+<a name="Installation"></a>
+<h3 class="section">4.1 Installation</h3>
+<p>Installation instructions are included in the top-level file
+<samp>README.nyacc</samp> of the source distribution.
+</p>
+<a name="Reporting-Bugs"></a>
+<h3 class="section">4.2 Reporting Bugs</h3>
+<p>Bug reporting will be dealt with once the package is place on a 
+publically accessible source repository.
+</p>
+<a name="The-Free-Documentation-License"></a>
+<h3 class="section">4.3 The Free Documentation License</h3>
+<p>The Free Documentation License is included in the Guile Reference
+Manual.  It is included with the <small>NYACC</small> source as the file 
+COPYING.DOC.
+</p>
+<hr>
+<a name="Todos"></a>
+<div class="header">
+<p>
+Next: <a href="#References" accesskey="n" rel="next">References</a>, Previous: <a href="#Administrative" accesskey="p" rel="prev">Administrative</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; </p>
+</div>
+<a name="Todos_002c-Notes_002c-Ideas"></a>
+<h2 class="chapter">5 Todos, Notes, Ideas</h2>
+<p>Todo/Notes/Ideas:
+</p><dl compact="compact">
+<dt>16</dt>
+<dd><p>add error handling (lalr-spec will now return #f for fatal error)
+</p></dd>
+<dt>3</dt>
+<dd><p>support other target languages:
+(write-lalr-parser pgen &quot;foo.py&quot; #:lang &rsquo;python)
+</p></dd>
+<dt>6</dt>
+<dd><p>export functions to allow user to control the flow
+i.e., something like: (parse-1 state) =&gt; state
+</p></dd>
+<dt>9</dt>
+<dd><p>macros - gotta be scheme macros but how to deal with other stuff
+(macro ($? val ...) () (val ...))
+(macro ($* val ...) () (_ val ...))
+(macro ($+ val ...) (val ...) (_ val ...))
+idea: use $0 for LHS
+</p></dd>
+<dt>10</dt>
+<dd><p>support semantic forms: (1) attribute grammars, (2) translational
+semantics, (3) operational semantics, (4) denotational semantics
+</p></dd>
+<dt>13</dt>
+<dd><p>add ($abort) and ($accept)
+</p></dd>
+<dt>18</dt>
+<dd><p>keep resolved shift/reduce conflicts for pp-lalr-machine
+(now have rat-v &ndash; removed action table &ndash; in mach, need to add to pp)
+</p></dd>
+<dt>19</dt>
+<dd><p>add a location stack to the parser/lexer
+</p></dd>
+<dt>22</dt>
+<dd><p>write parser file generator (working prototype)
+</p></dd>
+<dt>25</dt>
+<dd><p>think
+</p></dd>
+</dl>
+
+
+<hr>
+<a name="References"></a>
+<div class="header">
+<p>
+Previous: <a href="#Todos" accesskey="p" rel="prev">Todos</a>, Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; </p>
+</div>
+<a name="References-1"></a>
+<h2 class="chapter">6 References</h2>
+
+<dl compact="compact">
+<dt>[DB]</dt>
+<dd><p>Aho, A.V., Sethi, R., and Ullman, J. D., &ldquo;Compilers: Principles,
+Techniques and Tools,&rdquo; Addison-Wesley, 1985 (aka the Dragon Book)
+</p></dd>
+<dt>[DP]</dt>
+<dd><p>DeRemer, F., and Pennello, T., &ldquo;Efficient Computation of LALR(1)
+Look-Ahead Sets.&rdquo; ACM Trans. Prog. Lang. and Systems, Vol. 4, No. 4.,
+Oct. 1982, pp. 615-649.
+</p></dd>
+<dt>[RPC]</dt>
+<dd><p>R. P. Corbett, &ldquo;Static Semantics and Compiler Error Recovery,&rdquo;
+Ph.D. Thesis, UC Berkeley, 1985.
+</p></dd>
+</dl>
+
+
+
+<hr>
+
+
+
+</body>
+</html>

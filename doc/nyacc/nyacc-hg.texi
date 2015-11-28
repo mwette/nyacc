@@ -188,32 +188,66 @@ Then the initial la-itemset, or initial state of the automaton, is as follows:
    B => .c@i{r}, @{$end,...@}
 @end example
 @noindent
-where the @code{...} represents unknown other lookaheads.
-At this point we don't know the entire set of possible lookaheads
-because @code{S} may appear in right-hand sides of other production rules.
+where the @code{...} represents possible additional unknown
+lookaheads.  The additional lookaheads may be derived from other
+production rules in which @code{S} appears as a right hand side
+symbol.
 
 Now consider, in state @i{i}, an item as follows
 @example
 @i{i}: A => B.@i{q}
 @end example
 @noindent
-Say we associate this with the ``phony'' lookahead @code{$@@},
-which we call the @dfn{anchor}, to make an la-item:
+Say we associate this with a phony lookahead @code{$@@}, the
+@dfn{anchor}, to make an la-item:
 @example
 @i{i}: A => B.@i{q}, @{$@@@} 
 @end example
 @noindent
-Let @code{@i{T} = first(@i{q},@{$@@@})} and notice then if @code{$@@} is
-in @i{T} then any lookaheads for this production must also be
-lookaheads for XXX 
+Let @code{@i{T} = first(@i{q},@{$@@@})}.  Any terminals (besides @code{@$@@})
+which are in @i{T} will be lookaheads for items of the form
+@code{B => .@i{r}}.  In addition, if @code{$@@} is @i{T} then any
+lookaheads for the above is production must also be
+lookaheads for XXX
+
+Bottom of p. 241:
+@example
+consider for LR(0)
+I: B => p.Cq,b
+   C => .As
+   A => .Xr
+then goto(I,X) includes
+J: A -> X.r
+
+so if a is in FIRST(sq,b), then
+I: B => p.Cq,b
+--[goto(I,X)]-->
+J: A -> X.r,a
+
+and if $@@ is in FIRST(sq,b), then
+I: B => p.Cq,b
+--[goto(I,X)]-->
+J: A -> X.r,b
+@end example
+@page
+@vskip 1cm
+@example
+now for LR(1) say
+I: B -> p.Cq, b
+for what a does goto(I,X) look like
+J A-> X.r, a
+certainly for
+a in FIRST(sq)
+@end example
+@vskip 1cm
+
 @vskip 1cm
 Here is the algorithm from @code{lalr.scm}
 
 
 @vskip 1cm
 
-working toward explaining closure:
-Compute the fixed point of I, aka @code{la-item-l}, with procedure
+def CLOSURE:
 @example
 for each item [A => x.By, a] in I
   each production B => z in G
@@ -221,8 +255,21 @@ for each item [A => x.By, a] in I
   such that [B => .z, b] is not in I do
     add [B => .z, b] to I
 @end example
+or
+@example
+for each item [A => x.By, a] in I
+  add all la-items [B => .z, b] to I where
+  b is in FIRST(ya)
+@end example
 
-@vskip 1cm
+def PROPAGATE:
+@example
+for each item [B => g.d] in K
+  J' := closure([B => g.d, @{$@@@}]
+  for each A=>a.Xb in J':
+    1) real la-tokens are
+    XXX
+@end example
 
 @c [ADD EXAMPLE TO ILLUSTRATE KIS, then define kernel itemsets.]
 It turns out that each state in the parsing automaton is an itemset.

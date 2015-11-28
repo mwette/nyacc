@@ -27,7 +27,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 @menu
 * Introduction::
-* Modules::
+* Parsing::
+* Translation::
 * Administrative::
 * Todos::
 * References::
@@ -46,7 +47,6 @@ the @emph{specification}.  The program that processes, driven by the
 machine, input token to generate a final output, or error, is 
 the @emph{parser}.
 
-@node Example
 @section Example
 
 A simplest way to introduce working with @code{nyacc} is to work through
@@ -182,7 +182,6 @@ expect 2; get 2
 $
 @end example
 
-@node Match Table
 @section The Match Table
 In some parser generators one declares terminals in the grammar file
 and the generator will provide an include file providing the list of
@@ -219,8 +218,8 @@ pairs of the form (internal form, natural form).
 Now one item need to be dealt with and that is the token value for the 
 default.  It should be @code{-1} or @code{'$default}. WORK ON THIS.
 
-@node Modules
-@chapter Modules
+@node Parsing
+@chapter Modules for Constructing Parsers and Lexical Analyzers
 
 @emph{nyacc} provides several modules:
 @table @asis
@@ -327,6 +326,45 @@ are replaced with @code{_}.
 TODO: Export to Bison xml format.
 
 The Guile exporter uses the following rules: TBD.
+
+@node Translation
+@chapter Language Translation
+
+Under @samp{examples/nyacc} are utilities for translating languages
+along with some samples.  The approach that is used here is to parse
+languages into a SXML based parse tree and use the SXML modules in
+Guile to translate.  We have built a javascript to tree-il translater
+which means that one can execute javascript at the Guile command line:
+@example
+scheme@@(guile-user)> ,L javascript
+need to complete
+@end example
+
+@section Tagged-Lists
+In actions in nyacc can use our tagged-lists to build the trees.
+For example, building a statement list for a program might go like this:
+@example
+  (program
+   (stmt-list ($$ `(program ,(tl->list $1))))
+   (...))
+  (stmt-list
+   (stmt ($$ (make-tl 'stmt-list $1)))
+   (stmt-list stmt ($$ (tl-append $1 $2))))
+@end example
+
+@section Working with SXML Based Parse Trees
+To work with the trees described in the last section use
+@example
+(sx-ref tree 1)
+(sx-attr tree)
+(sx-attr-ref tree 'item)
+(sx-tail tree 2)
+@end example
+
+@section Example: Converting Javascript to Tree-IL
+
+This illustrates translation with @code{foldts*-values} and
+@code{sxml-match}. 
 
 
 @node Administrative

@@ -438,6 +438,7 @@
   (define (cnvt-array-size size-spec)
     (sxml-match size-spec
       ((p-expr (fixed ,size)) size)
+      ;;((p-expr (ident ,size)) size)
       (,otherwise size-spec)))
 
   (define (unwrap-specl specl)

@@ -19,6 +19,9 @@ SCM_FILES_W_TEXI: \
 %.pdf: %.texi
 	texi2dvi --pdf --batch $<
 
+%.html: %.texi
+	texi2any --html --no-split $<
+
 COPYING.DOC: fdl.texi
 	makeinfo --plaintext fdl.texi >$@
 
