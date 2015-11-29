@@ -86,7 +86,7 @@
     ((scope ,declr)
      (declr->ident declr))
     (,otherwise
-     (error "chack1: unknown declarator: " declr))
+     (error "c99/util2: unknown declarator: " declr))
     ))
 
 ;; @item tree->udict tree => udict
@@ -119,24 +119,27 @@
 ;;	  (name-dict (fold match-decl-1 '() (cdr sx1))))
 ;; @end example
 (define (match-decl decl seed)
-  (if (not (eqv? 'decl (car decl))) seed
-      (let* ((tag (sx-ref decl 0))
-	     (attr (sx-attr decl))
-	     (spec (sx-ref decl 1))	; (decl-spec-list ...)
-	     (id-l (sx-ref decl 2))	; (init-declr-list ...)
-	     (tail (sx-tail decl 3)))	; comment
-	(let iter ((res seed) (idl (cdr id-l)))
-	  (if (null? idl) res
-	      (let* ((declr (sx-ref (car idl) 1))
-		     (ident (declr->ident declr))
-		     (name (cadr ident)))
-		(iter
-		 (acons name
-			(if attr
-			    (cons* tag attr spec (car idl) tail)
-			    (cons* tag spec (car idl) tail))
-			res)
-		 (cdr idl))))))))
+  (cond
+   ((not (eqv? 'decl (car decl))) seed)
+   ((< (length decl) 3) seed)		; this should catch struct-ref etc.
+   (else
+    (let* ((tag (sx-ref decl 0))
+	   (attr (sx-attr decl))
+	   (spec (sx-ref decl 1))	; (decl-spec-list ...)
+	   (id-l (sx-ref decl 2))	; (init-declr-list ...)
+	   (tail (sx-tail decl 3)))	; comment
+      (let iter ((res seed) (idl (cdr id-l)))
+	(if (null? idl) res
+	    (let* ((declr (sx-ref (car idl) 1))
+		   (ident (declr->ident declr))
+		   (name (cadr ident)))
+	      (iter
+	       (acons name
+		      (if attr
+			  (cons* tag attr spec (car idl) tail)
+			  (cons* tag spec (car idl) tail))
+		      res)
+	       (cdr idl)))))))))
 
 ;; @item match-comp-decl decl seed
 ;; This will turn
@@ -195,18 +198,6 @@
 	 )
     #f))
 
-(define coerce-dict
-  '(
-    ("int8_t" . (fixed "char"))
-    ("uint8_t" . (fixed "unsigned char"))
-    ("int16_t" . (fixed "short"))
-    ("uint16_t" . (fixed "unsigned short"))
-    ("int32_t" . (fixed "int"))
-    ("uint32_t" . (fixed "unsigned int"))
-    ("int64_t" . (fixed "long long"))
-    ("uint64_t" . (fixed "unsigned long long"))
-    ))
-
 (define tmap-fmt
   '(("char" "%hhd")
     ("unsigned char" "%hhu")
@@ -218,15 +209,6 @@
     ("unsigned long int" "%lu")
     ("long long int" "%lld")
     ("unsigned long long int" "%llu")
-    ))
-
-(define tmap-xdr
-  '(("int8_t" "int8") ("uint8_t" "uint8")
-    ("int16_t" "int8") ("uint16_t" "uint8")
-    ("int32_t" "int8") ("uint32_t" "uint8")
-    ("int64_t" "int8") ("uint64_t" "uint8")
-    ("int" "int") ("unsigned int" "unsigned")
-    ("float" "float") ("double" "double")
     ))
 
 (define fixed-typename-save-l
@@ -436,9 +418,11 @@
 (define (udecl->mspec decl . rest)
 
   (define (cnvt-array-size size-spec)
+    ;; This needs to be completed in order to be able to pretty-print
+    ;; constant expressions.
     (sxml-match size-spec
       ((p-expr (fixed ,size)) size)
-      ;;((p-expr (ident ,size)) size)
+      ((p-expr (ident ,size)) size)
       (,otherwise size-spec)))
 
   (define (unwrap-specl specl)

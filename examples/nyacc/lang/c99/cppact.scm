@@ -26,15 +26,17 @@
    ;; bitwise-or-expression => bitwise-xor-expression
    (lambda ($1 . $rest) $1)
    ;; bitwise-or-expression => bitwise-or-expression "|" bitwise-xor-expres...
-   (lambda ($3 $2 $1 . $rest) `(bw-or ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(bitwise-or ,$1 ,$3))
    ;; bitwise-xor-expression => bitwise-and-expression
    (lambda ($1 . $rest) $1)
    ;; bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expr...
-   (lambda ($3 $2 $1 . $rest) `(bw-xor ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest)
+     `(bitwise-xor ,$1 ,$3))
    ;; bitwise-and-expression => equality-expression
    (lambda ($1 . $rest) $1)
    ;; bitwise-and-expression => bitwise-and-expression "&" equality-expression
-   (lambda ($3 $2 $1 . $rest) `(bw-and ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest)
+     `(bitwise-and ,$1 ,$3))
    ;; equality-expression => relational-expression
    (lambda ($1 . $rest) $1)
    ;; equality-expression => equality-expression "==" relational-expression
@@ -80,7 +82,7 @@
    ;; unary-expression => "!" unary-expression
    (lambda ($2 $1 . $rest) `(not ,$2))
    ;; unary-expression => "~" unary-expression
-   (lambda ($2 $1 . $rest) `(bw-not ,$2))
+   (lambda ($2 $1 . $rest) `(bitwise-not ,$2))
    ;; unary-expression => "++" unary-expression
    (lambda ($2 $1 . $rest) `(pre-inc ,$2))
    ;; unary-expression => "--" unary-expression

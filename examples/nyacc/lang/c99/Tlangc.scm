@@ -19,6 +19,10 @@
 
 (with-output-to-file "lang.txt.new"
   (lambda ()
+    (let* ((notice (assq-ref (assq-ref clang-spec 'attr) 'notice))
+           (lines (if notice (string-split notice #\newline) '())))
+      (for-each (lambda (l) (simple-format #t "  ~A\n" l)) lines)
+      (newline))
     (pp-lalr-grammar clang-spec)
     (pp-lalr-machine clang-mach)
     ))
@@ -36,4 +40,4 @@
   (pretty-print sx)
   #t)
 
-;; --- last line
+;; --- last line ---

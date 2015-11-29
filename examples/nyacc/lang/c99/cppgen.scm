@@ -45,13 +45,16 @@
      (logical-and-expression "&&" bitwise-or-expression ($$ `(and ,$1 ,$3))))
     (bitwise-or-expression
      (bitwise-xor-expression)
-     (bitwise-or-expression "|" bitwise-xor-expression ($$ `(bw-or ,$1 ,$3))))
+     (bitwise-or-expression "|" bitwise-xor-expression
+			    ($$ `(bitwise-or ,$1 ,$3))))
     (bitwise-xor-expression
      (bitwise-and-expression)
-     (bitwise-xor-expression "^" bitwise-and-expression ($$ `(bw-xor ,$1 ,$3))))
+     (bitwise-xor-expression "^" bitwise-and-expression
+			     ($$ `(bitwise-xor ,$1 ,$3))))
     (bitwise-and-expression
      (equality-expression)
-     (bitwise-and-expression "&" equality-expression ($$ `(bw-and ,$1 ,$3))))
+     (bitwise-and-expression "&" equality-expression
+			     ($$ `(bitwise-and ,$1 ,$3))))
     (equality-expression
      (relational-expression)
      (equality-expression "==" relational-expression ($$ `(equal ,$1 ,$3)))
@@ -80,7 +83,7 @@
      ("-" unary-expression ($$ `(neg ,$2)))
      ("+" unary-expression ($$ `(pos ,$2)))
      ("!" unary-expression ($$ `(not ,$2)))
-     ("~" unary-expression ($$ `(bw-not ,$2)))
+     ("~" unary-expression ($$ `(bitwise-not ,$2)))
      ("++" unary-expression ($$ `(pre-inc ,$2)))
      ("--" unary-expression ($$ `(pre-dec ,$2))))
     (postfix-expression
