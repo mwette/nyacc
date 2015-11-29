@@ -26,8 +26,7 @@
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map))
-  #:use-module ((sxml xpath)
-		#:renamer (lambda (s) (if (eq? s 'filter) 'xp-filter s)))
+  #:use-module ((sxml xpath) #:select (sxpath))
   )
 
 ;; Objective is to generate a sxml tree.
@@ -92,7 +91,7 @@
      )
     (unary-operator ("&" ($$ 'ref-to)) ("*" ($$ 'de-ref))
 		    ("+" ($$ 'pos)) ("-" ($$ 'neg))
-		    ("~" ($$ 'bitwise-not)) ("!" ($$ 'log-not)))
+		    ("~" ($$ 'bitwise-not)) ("!" ($$ 'not)))
 
     (cast-expression			; S 6.5.4
      (unary-expression)

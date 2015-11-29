@@ -8,17 +8,19 @@
   )
 
 (define op-prec
-  '((pre-inc pre-dec pos neg not)
+  '((d-sel i-sel post-inc post-dec)
+    (pre-inc pre-dec sizeof pos neg not bitwise-not ref-to de-ref)
     (mul div mod)
     (add sub)
     (lshift rshift rrshift)
-    (lt gt le ge instanceof in)
-    (equal not-equal not-equal-eq)
+    (lt gt le ge)
+    (eq ne)
+    (bitwise-and)
     (bitwise-xor)
     (bitwise-or)
     (and)
     (or)
-    ;; ...
+    (assn-expr)
     ))
 
 (define op-assc

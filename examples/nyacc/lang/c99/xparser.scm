@@ -1,4 +1,4 @@
-;;; nyacc/lang/c99/parser.scm
+;;; nyacc/lang/c99/xparser.scm - copied from parser.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -17,8 +17,8 @@
 
 ;; C parser
 
-(define-module (nyacc lang c99 parser)
-  #:export (parse-c)
+(define-module (nyacc lang c99 xparser)
+  #:export (parse-cx)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
@@ -27,9 +27,9 @@
   #:use-module ((sxml xpath) #:select (sxpath))
   )
 
-(include-from-path "nyacc/lang/c99/tables.scm")
+(include-from-path "nyacc/lang/c99/exprtab.scm")
 (include-from-path "nyacc/lang/c99/pbody.scm")
-(include-from-path "nyacc/lang/c99/actions.scm")
+(include-from-path "nyacc/lang/c99/expract.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
@@ -45,20 +45,19 @@
   (let ((info (fluid-ref *info*)))
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
-;; @item parse-c [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:debug bool] \
-;;               [#:mode ('code|'file)]
+;; @item parse-cx [#:cpp-defs def-a-list] [#:debug bool]
 ;; This needs to be explained in some detail.
-;; tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
-(define* (parse-c
-	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
+(define* (parse-cx xstr #:key (cpp-defs '()) (td-dict '()) debug)
   (catch
    'parse-error
    (lambda ()
-     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
+     (let ((info (make-cpi debug cpp-defs '(".") td-dict)))
        (with-fluid*
 	   *info* info
 	   (lambda ()
-	     (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
+	     (with-input-from-string xstr
+	       (lambda ()
+		 (raw-parser (gen-c-lexer #:mode 'code) #:debug debug)))))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))

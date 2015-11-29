@@ -39,4 +39,10 @@
   (pretty-print sx)
   #t)
 
+(let* ((cexpr-spec (restart-spec clang-mach 'expression))
+       (cexpr-mach (make-lalr-machine cexpr-spec)))
+  (write-lalr-tables cexpr-mach "exprtab.scm.new")
+  (write-lalr-actions cexpr-mach "expract.scm.new")
+  )
+
 ;; --- last line ---

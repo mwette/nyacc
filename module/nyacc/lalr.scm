@@ -25,6 +25,7 @@
 	    make-lalr-machine
 	    compact-machine hashify-machine
 	    lalr-match-table
+	    restart-spec
 	    pp-lalr-grammar pp-lalr-machine
 	    write-lalr-tables
 	    write-lalr-actions
@@ -1489,6 +1490,18 @@
 ;;   rhs-v - right hand sides
 ;;   pat-v - action table
 
+;; @item restart-spec spec start => spec
+;; This generates a new spec with a different start.
+;; @example
+;; (restart-spec clang-spec 'expression) => cexpr-spec
+;; @end example
+(define (restart-spec spec start)
+  (let* ((rhs-v (vector-copy (assq-ref spec 'rhs-v))))
+    (vector-set! rhs-v 0 (vector start))
+    (cons* (cons 'start start)
+	   (cons 'rhs-v rhs-v)
+	   spec)))
+
 ;; @item make-lalr-machine spec => pgen
 ;; Generate a-list of items used for building/debugging parsers.
 ;; It might be useful to add hashify and compact with keyword arguments.
@@ -1788,33 +1801,6 @@
     (ugly-print (assq-ref mach name) port)
     (fmt port ")\n\n"))
 
-  (define (pp-rule/ts gx)
-    (let* ((core (fluid-ref *lalr-core*))
-	   (lhs (vector-ref (core-lhs-v core) gx))
-	   (rhs (vector-ref (core-rhs-v core) gx))
-	   (tl (core-terminals core))
-	   (line (string-append
-		  (symbol->string lhs) " => "
-		  (string-join 
-		   (map (lambda (elt) (elt->str elt tl))
-			(vector->list rhs))
-		   " "))))
-      (if (> (string-length line) 72)
-	  (string-append (substring/shared line 0 69) "...")
-	  line)))
-    
-  (define (write-actions mach port)
-    (with-fluid*
-     *lalr-core* (make-core mach)
-     (lambda ()
-       (fmt port "(define act-v\n  (vector\n")
-       (vector-for-each
-	(lambda (ix actn)
-	  (fmt port "   ;; ~A\n" (pp-rule/ts ix))
-	  (pretty-print (wrap-action actn) port #:per-line-prefix "   "))
-	(assq-ref mach 'act-v))
-       (fmt port "   ))\n\n"))))
-
   (call-with-output-file filename
     (lambda (port)
       (fmt port ";; ~A\n\n"
@@ -1824,11 +1810,18 @@
       (write-table mach 'pat-v port)
       (write-table mach 'rto-v port)
       (write-table mach 'mtab port)
-      ;;(write-actions mach port)
       (display ";;; end tables" port)
       (newline port))))
 
+
+;; @item write-lalr-actions mach filename [#:lang output-lang]
+;; For example,
+;; @example
+;; write-lalr-actions mach "actions.scm"
+;; write-lalr-actions mach "actions.tcl" #:lang 'tcl
+;; @end example
 (define* (write-lalr-actions mach filename #:key (lang 'scheme))
+
   (define (pp-rule/ts gx)
     (let* ((core (fluid-ref *lalr-core*))
 	   (lhs (vector-ref (core-lhs-v core) gx))
@@ -1850,8 +1843,8 @@
      (lambda ()
        (fmt port "(define act-v\n  (vector\n")
        (vector-for-each
-	(lambda (ix actn)
-	  (fmt port "   ;; ~A\n" (pp-rule/ts ix))
+	(lambda (gx actn)
+	  (fmt port "   ;; ~A\n" (pp-rule/ts gx))
 	  (pretty-print (wrap-action actn) port #:per-line-prefix "   "))
 	(assq-ref mach 'act-v))
        (fmt port "   ))\n\n"))))

@@ -1,4 +1,4 @@
-;; actions.scm
+;; expract.scm
 
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 
@@ -8,7 +8,7 @@
 
 (define act-v
   (vector
-   ;; $start => translation-unit-proxy
+   ;; $start => expression
    (lambda ($1 . $rest) $1)
    ;; translation-unit-proxy => translation-unit
    (lambda ($1 . $rest) (tl->list $1))

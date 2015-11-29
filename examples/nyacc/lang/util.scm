@@ -13,7 +13,9 @@
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
 	    sx-tag sx-attr sx-ref sx-tail sx-find
-	    protect-expr-maker
+	    ;; for pretty-printing
+	    protect-expr-maker make-pp-formatter
+	    ;; for ???
             fmterr)
   #:use-module ((srfi srfi-1) #:select(find))
   )
@@ -189,13 +191,65 @@ file COPYING included with the this distribution.")
 	(iter ag bg (cdr opg))))))
 
   (lambda (side op expr)
-    (let ((assc? (case side ((left) assc-rt?) ((right) assc-lt?)))
+    (let ((assc? (case side
+		   ((lt left) assc-rt?)
+		   ((rt right) assc-lt?)))
 	  (vtag (car expr)))
     (case (prec op vtag)
       ((>) #t)
       ((<) #f)
       ((=) (assc? op))
       (else #f)))))
+
+;; @make-pp-formatter => fmtr
+;; @example
+;; (fmtr 'push) ;; push indent level
+;; (fmtr 'pop)  ;; pop indent level
+;; (fmtr "fmt" arg1 arg2 ...)
+;; @end example
+(define* (make-pp-formatter)
+  (letrec
+      ((maxcol 78)
+       (column 0)
+       (ind-lev 0)
+       (ind-len 0)
+       (blanks "                                            ")
+       (ind-str (lambda () (substring blanks 0 ind-len)))
+       (cnt-str (lambda () (substring blanks 0 (+ 4 ind-len))))
+       (sf-nl (lambda () (newline) (set! column 0)))
+
+       (push-il
+	(lambda ()
+	  (set! ind-lev (1+ ind-lev))
+	  (set! ind-len (* 2 ind-lev))))
+
+       (pop-il
+	(lambda ()
+	  (set! ind-lev (1- ind-lev))
+	  (set! ind-len (* 2 ind-lev))))
+       
+       (sf
+	(lambda (fmt . args)
+	  (let* ((str (apply simple-format #f fmt args))
+		 (len (string-length str)))
+	    (when (zero? column)
+	      (display (ind-str))
+	      (set! column (+ column ind-len)))
+	    (when (> (+ column len) maxcol)
+	      (newline)
+	      (display (cnt-str))
+	      (set! column (+ column ind-len 4)))
+	    (display str)
+	    (when (eqv? #\newline (string-ref str (1- len)))
+	      (set! column 0))))))
+
+    (lambda (arg0 . rest)
+      (cond
+       ((string? arg0) (apply sf arg0 rest))
+       ((eqv? 'push arg0) (push-il))
+       ((eqv? 'pop arg0) (pop-il))
+       (else (error "pp-formatter: bad args"))
+       ))))
 
 ;; @end table
 

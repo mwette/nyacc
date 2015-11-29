@@ -35,7 +35,6 @@
   #:use-module (ice-9 pretty-print)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-11)		; let*-values
-  #:use-module ((sxml xpath) #:select (sxpath))
   #:use-module ((sxml fold) #:select (foldts foldts*))
   #:use-module (sxml match)
   #:use-module (nyacc lang util)

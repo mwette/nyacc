@@ -10,12 +10,7 @@
 (use-modules (nyacc lang javascript pgen))
 (use-modules (nyacc lalr))
 
-(define js-elt-spec
-  (let* ((spec js-spec)
-	 (rhs-v (assq-ref spec 'rhs-v))
-	 (rhs-0 (vector-ref rhs-v 0)))
-    (vector-set! rhs-0 0 'SourceElement)
-    spec))
+(define js-elt-spec (restart-spec js-spec 'SourceElement))
 	  
 (define js-elt-mach
   ;;(hashify-machine
