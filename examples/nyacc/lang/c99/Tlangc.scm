@@ -27,8 +27,7 @@
     (pp-lalr-machine clang-mach)
     ))
 
-(with-output-to-file "gram.y.new"
-  (lambda () (lalr->bison clang-spec)))
+(with-output-to-file "gram.y.new" (lambda () (lalr->bison clang-spec)))
 (write-lalr-tables clang-mach "tables.scm.new")
 (write-lalr-actions clang-mach "actions.scm.new")
 

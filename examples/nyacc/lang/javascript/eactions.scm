@@ -188,14 +188,13 @@
    ;; EqualityExpression => RelationalExpression
    (lambda ($1 . $rest) $1)
    ;; EqualityExpression => EqualityExpression "==" RelationalExpression
-   (lambda ($3 $2 $1 . $rest) `(equal ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
    ;; EqualityExpression => EqualityExpression "!=" RelationalExpression
-   (lambda ($3 $2 $1 . $rest) `(not-equal ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(neq ,$1 ,$3))
    ;; EqualityExpression => EqualityExpression "===" RelationalExpression
-   (lambda ($3 $2 $1 . $rest) `(equal-eq ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(eq-eq ,$1 ,$3))
    ;; EqualityExpression => EqualityExpression "!==" RelationalExpression
-   (lambda ($3 $2 $1 . $rest)
-     `(not-equal-eq ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(neq-eq ,$1 ,$3))
    ;; BitwiseANDExpression => EqualityExpression
    (lambda ($1 . $rest) $1)
    ;; BitwiseANDExpression => BitwiseANDExpression "&" EqualityExpression
@@ -289,9 +288,9 @@
    ;; Statement => TryStatement
    (lambda ($1 . $rest) $1)
    ;; Block => "{" StatementList "}"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(Block ,$2))
    ;; Block => "{" "}"
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) '(Block))
    ;; StatementList => Statement
    (lambda ($1 . $rest) (make-tl 'StatementList $1))
    ;; StatementList => StatementList Statement

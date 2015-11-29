@@ -27,52 +27,11 @@
     (right)
     (nonassoc)))
 
-;; @item prec a b => '>|'<|'=|#f
-;; Returns the prececence relation of @code{a}, @code{b} as
-;; @code{<}, @code{>}, @code{=} or @code{#f} (no relation).
-(define (jprec a b)
-  ;;(simple-format #t "in jprec: a=~S b=~S\n" a b)
-  (let iter ((ag #f) (bg #f) (opg op-prec)) ;; a-group, b-group
-    (cond
-     ((null? opg) #f)			; indeterminate
-     ;;((and (simple-format #t "~S ~S ~S\n" ag bg (car opg)) #f) #f)
-     ((memq a (car opg))
-      ;;(simple-format #t "1\n")
-      (if bg '<
-	  (if (memq b (car opg)) '=
-	      (iter #t bg (cdr opg)))))
-     ((memq b (car opg))
-      ;;(simple-format #t "2\n")
-      (if ag '>
-	  (if (memq a (car opg)) '=
-	      (iter ag #t (cdr opg)))))
-     (else
-      ;;(simple-format #t "3\n")
-      (iter ag bg (cdr opg))))))
-
-(define (jassc-lt? op)
-  (memq op (assq-ref op-assc 'left)))
-(define (jassc-rt? op)
-  (memq op (assq-ref op-assc 'right)))
-
-;; @item protect-lval? op lval
-;; This predicate indicate whether @code{lval} needs to be protected
-;; from @code{op}.  If so, a 
-(define (protect-lval? op lval)
-  (let ((vtag (car lval)))
-    (case (jprec op vtag)
-      ((>) #t)
-      ((<) #f)
-      ((=) (jassc-rt? op))
-      (else #f))))
-
-(define (protect-rval? op lval)
-  (let ((vtag (car lval)))
-    (case (jprec op vtag)
-      ((>) #t)
-      ((<) #f)
-      ((=) (jassc-lt? op))
-      (else #f))))
+(define protect-lval? #f)
+(define protect-rval? #f)
+(let ((protect-expr? (protect-expr-maker op-prec op-assc)))
+  (set! protect-lval? (lambda (op lval) (protect-expr? 'left op lval)))
+  (set! protect-rval? (lambda (op rval) (protect-expr? 'right op rval))))
 	  
 (define (pretty-print-js tree)
 

@@ -13,6 +13,7 @@
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
 	    sx-tag sx-attr sx-ref sx-tail sx-find
+	    protect-expr-maker
             fmterr)
   #:use-module ((srfi srfi-1) #:select(find))
   )
@@ -151,6 +152,50 @@ file COPYING included with the this distribution.")
   (find (lambda (node)
 	    (and (pair? node) (eqv? tag (car node))))
 	sx))
+
+
+;; @item protect-expr-maker op-prec op-assc => protect-expr?
+;; Generate @code{protect-expr} for pretty-printers.
+;; @code{(protect-expr? side op expr)}
+;; where @code{side} is @code{'lval} or @code{'rval}, @code{op} is the
+;; operator and @code{expr} is the expression.
+;; @example
+;; (protect-expr? 'left '+ '(mul ...)) => TBD
+;; @end example
+(define (protect-expr-maker op-prec op-assc)
+
+  (define (assc-lt? op)
+    (memq op (assq-ref op-assc 'left)))
+
+  (define (assc-rt? op)
+    (memq op (assq-ref op-assc 'right)))
+
+  ;; @item prec a b => '>|'<|'=|#f
+  ;; Returns the prececence relation of @code{a}, @code{b} as
+  ;; @code{<}, @code{>}, @code{=} or @code{#f} (no relation).
+  (define (prec a b)
+    (let iter ((ag #f) (bg #f) (opg op-prec)) ;; a-group, b-group
+      (cond
+       ((null? opg) #f)			; indeterminate
+       ((memq a (car opg))
+	(if bg '<
+	    (if (memq b (car opg)) '=
+		(iter #t bg (cdr opg)))))
+       ((memq b (car opg))
+	(if ag '>
+	    (if (memq a (car opg)) '=
+		(iter ag #t (cdr opg)))))
+       (else
+	(iter ag bg (cdr opg))))))
+
+  (lambda (side op expr)
+    (let ((assc? (case side ((left) assc-rt?) ((right) assc-lt?)))
+	  (vtag (car expr)))
+    (case (prec op vtag)
+      ((>) #t)
+      ((<) #f)
+      ((=) (assc? op))
+      (else #f)))))
 
 ;; @end table
 

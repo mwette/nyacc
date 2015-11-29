@@ -19,8 +19,13 @@
 (with-output-to-file "gram.y.new"
   (lambda () (lalr->bison js-spec)))
 (with-output-to-file "lang.txt.new"
-  (lambda () (pp-lalr-grammar js-spec)
-             (pp-lalr-machine js-mach)))
+  (lambda ()
+    (let* ((notice (assq-ref (assq-ref js-spec 'attr) 'notice))
+           (lines (if notice (string-split notice #\newline) '())))
+      (for-each (lambda (l) (simple-format #t "  ~A\n" l)) lines)
+      (newline))
+    (pp-lalr-grammar js-spec)
+    (pp-lalr-machine js-mach)))
 (write-lalr-actions js-mach "actions.scm.new")
 (write-lalr-tables js-mach "tables.scm.new")
 
