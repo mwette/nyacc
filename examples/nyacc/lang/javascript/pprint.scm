@@ -2,8 +2,7 @@
 ;;
 
 (define-module (nyacc lang javascript pprint)
-  #:export (pretty-print-js
-	    prec protect-lval? protect-rval? jprec)
+  #:export (pretty-print-js)
   #:use-module ((srfi srfi-1) #:select (pair-for-each))
   #:use-module (nyacc lang util)
   )
@@ -29,7 +28,7 @@
 
 (define protect-lval? #f)
 (define protect-rval? #f)
-(let ((protect-expr? (protect-expr-maker op-prec op-assc)))
+(let ((protect-expr? (make-protect-expr op-prec op-assc)))
   (set! protect-lval? (lambda (op lval) (protect-expr? 'left op lval)))
   (set! protect-rval? (lambda (op rval) (protect-expr? 'right op rval))))
 	  

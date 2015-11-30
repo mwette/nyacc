@@ -14,7 +14,7 @@
 	    tl-append tl-insert tl-extend tl+attr
 	    sx-tag sx-attr sx-ref sx-tail sx-find
 	    ;; for pretty-printing
-	    protect-expr-maker make-pp-formatter
+	    make-protect-expr make-pp-formatter
 	    ;; for ???
             fmterr)
   #:use-module ((srfi srfi-1) #:select(find))
@@ -156,7 +156,7 @@ file COPYING included with the this distribution.")
 	sx))
 
 
-;; @item protect-expr-maker op-prec op-assc => protect-expr?
+;; @item make-protect-expr op-prec op-assc => protect-expr?
 ;; Generate @code{protect-expr} for pretty-printers.
 ;; @code{(protect-expr? side op expr)}
 ;; where @code{side} is @code{'lval} or @code{'rval}, @code{op} is the
@@ -164,7 +164,7 @@ file COPYING included with the this distribution.")
 ;; @example
 ;; (protect-expr? 'left '+ '(mul ...)) => TBD
 ;; @end example
-(define (protect-expr-maker op-prec op-assc)
+(define (make-protect-expr op-prec op-assc)
 
   (define (assc-lt? op)
     (memq op (assq-ref op-assc 'left)))

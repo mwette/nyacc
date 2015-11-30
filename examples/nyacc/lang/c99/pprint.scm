@@ -8,7 +8,8 @@
   )
 
 (define op-prec
-  '((d-sel i-sel post-inc post-dec)
+  '((p-expr ident fixed float string)
+    (d-sel i-sel post-inc post-dec)
     (pre-inc pre-dec sizeof pos neg not bitwise-not ref-to de-ref)
     (mul div mod)
     (add sub)
@@ -43,9 +44,6 @@
       (lambda (tree)
 	(case (car tree)
 
-	  (expression
-	   
-
 	  ((ary-ref)
 	   (ppx (sx-ref tree 1)) (sf "[") (ppx (sx-ref tree 2)) (sf "]"))
 
@@ -53,14 +51,14 @@
 	   (let ((op (sx-ref tree 0))
 		 (lval (sx-ref tree 1))
 		 (rval (sx-ref tree 2)))
-	     (if (protect-lval? op lval)
+	     (if (protect-expr? 'lt op lval)
 		 (ppx/p lval)
 		 (ppx lval))
 	     (case op
 	       ((lt) (sf " < ")) ((gt) (sf " <= "))
 	       ((le) (sf " > ")) ((ge) (sf " >= "))
 	       ((eq) (sf " == ")) ((neq) (sf " != ")))
-	     (if (protect-rval? op rval)
+	     (if (protect-expr? 'rt op rval)
 		 (ppx/p rval)
 		 (ppx rval))
 	     ))
@@ -88,11 +86,24 @@
 		 (ppx/p ex)
 		 (ppx ex))))
 
-	  ((char) (sf "'~A'" (sx-ref tree 1))
-	  ((fixed) (sf "~A" (sx-ref tree 1))
-	  ((float) (sf "~A" (sx-ref tree 1))
+	  ((d-sel i-sel)
+	   (let ((op (sx-ref tree 0))
+		 (ex (sx-ref tree 1))
+		 (id (sx-ref tree 2)))
+	     (if (protect-expr? 'lt op ex)
+		 (ppx/p ex)
+		 (ppx ex))
+	     (sf (case op ((d-sel) ".") ((i-sel) "->")))
+	     (ppx id)))
+
+	  ((p-expr)
+	   (ppx (sx-ref tree 1)))
+
+	  ((char) (sf "'~A'" (sx-ref tree 1)))
+	  ((fixed) (sf "~A" (sx-ref tree 1)))
+	  ((float) (sf "~A" (sx-ref tree 1)))
 	  ((string) (sf "~S" (sx-ref tree 1)))
-	  ((identifier) (sf "~A" (sx-ref tree 1)))
+	  ((ident) (sf "~A" (sx-ref tree 1)))
 
 	  (else
 	   (simple-format #t "\nnot handled: ~S\n" (car tree))

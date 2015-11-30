@@ -57,7 +57,7 @@
 	   (lambda ()
 	     (with-input-from-string xstr
 	       (lambda ()
-		 (raw-parser (gen-c-lexer #:mode 'code) #:debug debug)))))))
+		   (raw-parser (gen-c-lexer #:mode 'code) #:debug debug)))))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
