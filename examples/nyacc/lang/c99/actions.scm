@@ -17,7 +17,7 @@
    ;; primary-expression => constant
    (lambda ($1 . $rest) `(p-expr ,$1))
    ;; primary-expression => string-literal
-   (lambda ($1 . $rest) `(p-expr ,$1))
+   (lambda ($1 . $rest) `(p-expr ,(tl->list $1)))
    ;; primary-expression => "(" expression ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; postfix-expression => primary-expression
@@ -613,6 +613,8 @@
    (lambda ($1 . $rest) $1)
    ;; statement => jump-statement
    (lambda ($1 . $rest) $1)
+   ;; statement => cpp-statement
+   (lambda ($1 . $rest) $1)
    ;; labeled-statement => identifier ":" statement
    (lambda ($3 $2 $1 . $rest) $1)
    ;; labeled-statement => "case" constant-expression ":" statement
@@ -728,7 +730,9 @@
    ;; constant => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
    ;; string-literal => '$string
-   (lambda ($1 . $rest) `(string ,$1))
+   (lambda ($1 . $rest) (make-tl 'string $1))
+   ;; string-literal => string-literal '$string
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; code-comment => '$code-comm
    (lambda ($1 . $rest) `(comment ,$1))
    ;; lone-comment => '$lone-comm

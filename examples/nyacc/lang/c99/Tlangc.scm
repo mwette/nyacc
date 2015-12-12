@@ -32,10 +32,11 @@
 (write-lalr-actions clang-mach "actions.scm.new")
 
 (define defs '(("arch" . "x86_64")))
-(define incs '("." "lang/c"))
+(define incs '("."))
 
 (let ((sx (with-input-from-file "ex1.c"
-	    (lambda () (dev-parse-c #:cpp-defs defs #:inc-dirs incs)))))
+	    (lambda ()
+	      (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #f)))))
   (pretty-print sx)
   #t)
 
@@ -43,6 +44,6 @@
        (cexpr-mach (make-lalr-machine cexpr-spec)))
   (write-lalr-tables cexpr-mach "exprtab.scm.new")
   (write-lalr-actions cexpr-mach "expract.scm.new")
-  )
+  #t)
 
 ;; --- last line ---

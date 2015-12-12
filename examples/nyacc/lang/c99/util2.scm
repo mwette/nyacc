@@ -78,6 +78,8 @@
      declr)
     ((array-of ,dir-declr ,array-spec)
      (declr->ident dir-declr))
+    ((array-of ,dir-declr)
+     (declr->ident dir-declr))
     ((ptr-declr ,pointer ,dir-declr)
      (declr->ident dir-declr))
     ((ftn-declr ,dir-declr ,rest ...)
@@ -318,17 +320,23 @@
 	   (expand-decl-typerefs fixed-udecl udecl-dict)))))
 
       ((struct-ref union-ref)
-       (simple-format (current-error-port) "chack: struct/union-ref NOT DONE\n")
+       (simple-format (current-error-port)
+		      "+++ c99/util2: struct/union-ref: more to do?\n")
+       ;;(simple-format #t "\nstruct-ref:\n") (pretty-print udecl)
        udecl)
 
       ((struct-def union-def)
-       (let* ((field-list (sx-ref tspec 1))
+       (let* ((ident (sx-find 'ident tspec))
+	      (field-list (sx-find 'field-list tspec))
 	      (orig-flds (cdr field-list))
 	      (unit-flds (map cdr (fold-right match-comp-decl '() orig-flds)))
 	      (fixd-flds (map
 			  (lambda (fld) (expand-decl-typerefs fld udecl-dict))
 			  unit-flds))
-	      (fixd-tspec `(type-spec (struct-def (field-list ,@fixd-flds))))
+	      (fixd-tspec
+	       (if #f ;;ident
+		   `(type-spec (struct-def ,ident (field-list ,@fixd-flds)))
+		   `(type-spec (struct-def (field-list ,@fixd-flds)))))
 	      (fixd-specl (repl-typespec specl fixd-tspec))
 	      (fixed-decl (cons* tag fixd-specl declr tail)))
 	 fixed-decl))
@@ -453,7 +461,8 @@
     (let iter ((tsl (cdr decl-spec-list)))
       (if (eqv? 'type-spec (caar tsl)) (car tsl)
 	  (iter (cdr tsl))))) 
-
+  
+  ;;(simple-format #t "\ndecl:\n") (pretty-print decl)
   (let* ((decl-dict (if (pair? rest) (car rest) '()))
 	 (specl (sx-ref decl 1))
  	 (declr (sx-ref decl 2))

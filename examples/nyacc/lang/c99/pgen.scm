@@ -56,7 +56,7 @@
     (primary-expression			; S 6.5.1
      (identifier ($$ `(p-expr ,$1)))
      (constant ($$ `(p-expr ,$1)))
-     (string-literal ($$ `(p-expr ,$1)))
+     (string-literal ($$ `(p-expr ,(tl->list $1))))
      ("(" expression ")" ($$ $2))
      )
 
@@ -532,6 +532,7 @@
      (selection-statement)
      (iteration-statement)
      (jump-statement)
+     (cpp-statement)			; added 30Nov2015
      )
 
     (labeled-statement
@@ -641,7 +642,8 @@
      ('$float ($$ `(float ,$1)))	; floating-constant
      ('$chlit ($$ `(char ,$1))))	; char-constant
     (string-literal
-     ('$string ($$ `(string ,$1))))	; string-constant
+     ('$string ($$ (make-tl 'string $1))) ; string-constant
+     (string-literal '$string ($$ (tl-append $1 $2))))
     (code-comment ('$code-comm ($$ `(comment ,$1))))
     (lone-comment ('$lone-comm ($$ `(comment ,$1))))
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))

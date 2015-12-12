@@ -34,31 +34,31 @@
   )
 
 (define std-dict
-  '(("<time.h>" "time_t" "clock_t" "size_t")
-    ("<stdio.h>" "FILE" "size_t")
-    ("<string.h>" "size_t")
-    ("<stddef.h>" "ptrdiff_t" "size_t" "wchar_t")
-    ("<inttypes.h>"
+  '(("time.h" "time_t" "clock_t" "size_t")
+    ("stdio.h" "FILE" "size_t")
+    ("string.h" "size_t")
+    ("stddef.h" "ptrdiff_t" "size_t" "wchar_t")
+    ("inttypes.h"
      "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
      "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
      "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
      "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t"
      "imaxdiv_t")
-    ("<stdint.h>"
+    ("stdint.h"
      "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
      "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
      "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
      "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t")
-    ("<stdlib.h>" "div_t" "ldiv_t" "lldiv_t" "wchar_t")
-    ("<stdarg.h>" "va_list")
-    ;;("<unistd.h>" "div_t" "ldiv_t")
-    ("<signal.h>" "sig_atomic_t")
-    ("<setjmp.h>" "jmp_buf")
-    ("<float.h>" "float_t")
-    ("<fenv.h>" "fenv_t" "fexcept_t")
-    ("<complex.h>" "complex" "imaginary")
-    ("<wchar.h>" "wchar_t" "wint_t" "mbstate_t" "size_t")
-    ("<wctype.h>" "wctrans_t" "wctype_t" "wint_t")
+    ("stdlib.h" "div_t" "ldiv_t" "lldiv_t" "wchar_t")
+    ("stdarg.h" "va_list")
+    ;;("unistd.h" "div_t" "ldiv_t")
+    ("signal.h" "sig_atomic_t")
+    ("setjmp.h" "jmp_buf")
+    ("float.h" "float_t")
+    ("fenv.h" "fenv_t" "fexcept_t")
+    ("complex.h" "complex" "imaginary")
+    ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
+    ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
     ))
 
 (define (make-cpi debug defines incdirs tn-dict)
@@ -75,6 +75,10 @@
     ;;(set-cpi-tdls! cpi '())
     cpi))
 
+;; Need to have a "CPI" stack to deal with types (re)defined in multiple
+;; branches of a #if...#endif statement.  If we are in "code" mode then we
+;; may be skipping code so need to track when to shift and when not to.
+
 (define *info* (make-fluid #f))
 
 ;; given tyns
@@ -88,9 +92,8 @@
 (define (typename? name)
   ;;(simple-format #t "typename? ~S\n" name)
   (let ((cpi (fluid-ref *info*)))
-    (when #f ;;(string=? name "int16_t")
-      (simple-format #t "  cpi-ctl=~S\n" (cpi-ctl cpi))
-      (simple-format #t "  cpi-ptl=~S\n" (cpi-ptl cpi)))
+    (when #f ;;(string=? name "SpiceInt")
+      (simple-format #t "tn? ~S  ~S\n" (cpi-ctl cpi) (cpi-ptl cpi)))
     (if (member name (cpi-ctl cpi)) #t
         (let iter ((ptl (cpi-ptl cpi)))
 	  (if (null? ptl) #f
@@ -102,21 +105,27 @@
 (define (add-typename name)
   ;;(simple-format #t "add-typename ~S\n" name)
   (let ((cpi (fluid-ref *info*)))
-    (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
+    (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))
+    ;;(simple-format #t "at: ~S  ~S\n" (cpi-ctl cpi) (cpi-ptl cpi))
+    ))
+
 
 (define (cpi-push)	;; on #if
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
-    (set-cpi-ctl! cpi '())))
+    (set-cpi-ctl! cpi '())
+    ;;(simple-format #t "pu: ~S\n" (cpi-ctl cpi))
+    ))
 
 (define (cpi-shift)	;; on #elif #else
   (set-cpi-ctl! (fluid-ref *info*) '()))
 
 (define (cpi-pop)	;; on #endif
   (let ((cpi (fluid-ref *info*)))
+    ;;(simple-format #t "po<: ~S ~S\n" (cpi-ctl cpi) (cpi-ptl cpi))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))
-    ;;(simple-format #t "~S\n" (cpi-ctl cpi))
+    ;;(simple-format #t "po>: ~S ~S\n" (cpi-ctl cpi) (cpi-ptl cpi))
     ))
 
 (use-modules (ice-9 pretty-print))
@@ -275,6 +284,7 @@
 	      (set-cpi-defs! info (cons cell (cpi-defs info)))))
 	  
 	  (define (exec-cpp line)
+	    ;;(simple-format #t "exec-cpp: ~S\n" line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
 	    (let* ((stmt (parse-cpp-line line))
 		   (perr (lambda (file)
@@ -283,7 +293,8 @@
 		((include)
 		 (let* ((parg (cadr stmt)) (leng (string-length parg))
 			(file (substring parg 1 (1- leng)))
-			(tynd (assoc-ref (cpi-tynd info) parg)))
+			(tynd (assoc-ref (cpi-tynd info) file)))
+		   ;;(simple-format #t "file: ~S\n" file) ;;(pretty-print tynd)
 		   (if tynd
 		       (for-each add-typename tynd)
 		       (let* ((pth (find-file-in-dirl file (cpi-incs info)))
@@ -293,6 +304,8 @@
 					   (with-input-from-file pth run-parse)
 					   (throw 'parse-error "~A" pth)))
 				     (else (perr file)))))
+			 ;;(simple-format #t "tree:\n") (pretty-print tree)
+			 ;;(simple-format #t "=xp1=>:\n") (pretty-print (xp1 tree))
 			 (for-each add-define (xp1 tree)) ; add def's 
 			 ;; Attach tree onto "include" statement (hack?)
 			 (if (pair? tree) (set! stmt (append stmt (list tree))))
@@ -310,7 +323,6 @@
 			     (else
 			      (set! skip (cons* 'skip-1 (car skip) skip)))))))
 		((elif)
-		 (cpi-shift)
 		 (if (eq? mode 'code)
 		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
 		       (cond ((not val)
@@ -320,25 +332,27 @@
 			     ((zero? val)
 			      (set! skip (cons* 'skip-1 skip)))
 			     ((eq? 'skip-look (car skip))
+			      (cpi-shift)
 			      (set! skip (cons* 'skip-1 'keep (cdr skip))))
 			     (else
-			      (set! skip (cons* 'skip-1 'skip (cdr skip))))
-			     ))))
+			      (cpi-shift)
+			      (set! skip (cons* 'skip-1 'skip (cdr skip))))))
+		     (cpi-shift)))
 		((else)
-		 (cpi-shift)
 		 (if (eq? mode 'code)
 		     (cond
 		      ((eq? 'skip-look (car skip))
+		       (cpi-shift)
 		       (set! skip (cons* 'skip-1 'keep (cdr skip))))
 		      (else
-		       (set! skip (cons* 'skip-1 'skip (cdr skip)))))))
+		       (set! skip (cons* 'skip-1 'skip (cdr skip)))))
+		     (cpi-shift)))
 		((endif)
 		 (cpi-pop)
 		 (if (eq? mode 'code)
 		     (set! skip (cons 'skip-1 (cdr skip)))))
 		(else
-		 (error "unhandled cpp stmt"))
-		)
+		 (error "unhandled cpp stmt")))
 	      (cons 'cpp-stmt stmt)))
 	  
 	  (define (read-token)

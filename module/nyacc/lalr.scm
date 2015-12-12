@@ -459,7 +459,6 @@
 	       (cons 'non-terms nl)
 	       (cons 'lhs-v (list->vector (reverse ll)))
 	       (cons 'rhs-v (map-attr->vector al 'rhs))
-	       ;;(cons 'prune-al TODO: filter 'with from '@l)
 	       (cons 'terminals tl)
 	       (cons 'start start-symbol)
 	       (cons 'attr (list (cons 'expect (or (assq-ref tree 'expect) 0))
@@ -484,32 +483,33 @@
 ;; This record holds the minimum data from the grammar needed to build the
 ;; machine from the grammar specification.
 (define-record-type lalr-core-type
-  (make-lalr-core non-terms terminals lhs-v rhs-v prune-al eps-l)
+  (make-lalr-core non-terms terminals start lhs-v rhs-v eps-l)
   lalr-core-type?
   (non-terms core-non-terms)	      ; list of non-terminals
   (terminals core-terminals)	      ; list of non-terminals
+  (start core-start)		      ; start non-terminal
   (lhs-v core-lhs-v)		      ; vec of left hand sides
   (rhs-v core-rhs-v)		      ; vec of right hand sides
-  (prune-al core-prune-al)	      ; a-list of prunage
   (eps-l core-eps-l))		      ; non-terms w/ eps prod's
 
 ;; @item make-core spec => lalr-core-type
 (define (make-core spec)
   (make-lalr-core (assq-ref spec 'non-terms)
 		  (assq-ref spec 'terminals)
+		  (assq-ref spec 'start)
 		  (assq-ref spec 'lhs-v)
 		  (assq-ref spec 'rhs-v)
-		  '() '()))
+		  '()))
 
 ;; @item make-core/extras spec => lalr-core-type
 ;; Add list of symbols with epsilon productions.
 (define (make-core/extras spec)
   (let ((non-terms (assq-ref spec 'non-terms))
 	(terminals (assq-ref spec 'terminals))
+	(start (assq-ref spec 'start))
 	(lhs-v (assq-ref spec 'lhs-v))
 	(rhs-v (assq-ref spec 'rhs-v)))
-    (make-lalr-core non-terms terminals lhs-v rhs-v
-		    (assq-ref spec 'prune-al)
+    (make-lalr-core non-terms terminals start lhs-v rhs-v
 		    (find-eps non-terms lhs-v rhs-v))))
 
 
@@ -610,6 +610,14 @@
     (if (last-item? item)
 	'$epsilon
 	(vector-ref rule (cdr item)))))
+(define (NEW-looking-at item)
+  ;; If (0 . 0) use start symbol.
+  (let* ((core (fluid-ref *lalr-core*)) (gx (car item)))
+    (if (last-item? item)
+	'$epsilon
+	(if (zero? gx)
+	    (core-start core)
+	    (vector-ref (vector-ref (core-rhs-v core) gx) (cdr item))))))
 
 ;; @item first-item gx
 ;; Given grammar rule index return the first item.
@@ -1541,6 +1549,21 @@
     (fmt port "~A =>" lhs)
     (vector-for-each (lambda (ix e) (fmt port " ~A" (elt->str e tl))) rhs)
     (newline port)))
+(define (NEW-pp-rule il gx . rest)
+  ;; This uses start for rule 0.
+  (let* ((port (if (pair? rest) (car rest) (current-output-port)))
+	 (core (fluid-ref *lalr-core*))
+	 (lhs (vector-ref (core-lhs-v core) gx))
+	 (rhs (vector-ref (core-rhs-v core) gx))
+	 (tl (core-terminals core)))
+    (cond
+     ((zero? gx)
+      (fmt port "$start => ~A\n" (core-start core)))
+     (else
+      (display (substring "                     " 0 (min il 20)) port)
+      (fmt port "~A =>" lhs)
+      (vector-for-each (lambda (ix e) (fmt port " ~A" (elt->str e tl))) rhs)
+      (newline port)))))
 	 
 ;; @item pp-item item => string
 ;; This could be called item->string.
@@ -1562,6 +1585,29 @@
 		  sl (if (= rx (cdr item)) '(" .") '())
 		  (let ((e (vector-ref rhs rx)))
 		    (list (string-append " " (elt->str e tl)))))))))))
+(define (NEW-pp-item item)
+  (let* ((core (fluid-ref *lalr-core*))
+	 (tl (core-terminals core))
+	 (gx (car item))
+	 (lhs (vector-ref (core-lhs-v core) gx))
+	 (rhs (vector-ref (core-rhs-v core) gx))
+	 (rhs-len (vector-length rhs)))
+    (cond
+     ((zero? gx)
+      (if (zero? (cdr item))
+	  (fmt #f "$start => . ~A" (core-start core))
+	  (fmt #f "$start => ~A ." (core-start core))))
+     (else
+      (apply
+       string-append
+       (let iter ((rx 0) (sl (list (fmtstr "~S =>" lhs))))
+	 (if (= rx rhs-len)
+	     (append sl (if (= -1 (cdr item)) '(" .") '()))
+	     (iter (1+ rx)
+		   (append
+		    sl (if (= rx (cdr item)) '(" .") '())
+		    (let ((e (vector-ref rhs rx)))
+		      (list (string-append " " (elt->str e tl)))))))))))))
 
 ;; @item pp-lalr-grammar spec [port]
 ;; Pretty-print the grammar to the specified port, or current output.
@@ -1823,6 +1869,21 @@
 (define* (write-lalr-actions mach filename #:key (lang 'scheme))
 
   (define (pp-rule/ts gx)
+    (let* ((core (fluid-ref *lalr-core*))
+	   (lhs (vector-ref (core-lhs-v core) gx))
+	   (rhs (vector-ref (core-rhs-v core) gx))
+	   (tl (core-terminals core))
+	   (line (string-append
+		  (symbol->string lhs) " => "
+		  (string-join 
+		   (map (lambda (elt) (elt->str elt tl))
+			(vector->list rhs))
+		   " "))))
+      (if (> (string-length line) 72)
+	  (string-append (substring/shared line 0 69) "...")
+	  line)))
+  (define (NEW-pp-rule/ts gx)
+    ;; TBD: use start for zeroth rule
     (let* ((core (fluid-ref *lalr-core*))
 	   (lhs (vector-ref (core-lhs-v core) gx))
 	   (rhs (vector-ref (core-rhs-v core) gx))

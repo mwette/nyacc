@@ -117,10 +117,9 @@ todo:
 	   ;;((pragma) (cpp-define)) ; ???
 	   (else '()))))))
     
-;;(include "cpptab.scm")
 (include-from-path "nyacc/lang/c99/cpptab.scm")
-;;(include "cppact.scm")
 (include-from-path "nyacc/lang/c99/cppact.scm")
+
 (define raw-parser
   (make-lalr-parser
    (list
