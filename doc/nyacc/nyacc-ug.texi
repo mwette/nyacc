@@ -415,6 +415,9 @@ add a location stack to the parser/lexer
 write parser file generator (working prototype)
 @item 25
 think
+@item 26
+Fix lexical analyzer to return tval, sval pairs using @code{cons-source} 
+instead of @code{cons}.  This will then allow support of location info.
 @end table
 
 

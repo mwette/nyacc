@@ -228,9 +228,8 @@
 	(lambda () (set-current-input-port iport)))))
 
 (define (js-sxml->tree-il exp env opts)
-  (let* ((tree (foldts*-values fD fU fH exp '() JSdict))
-	 ;;(code (parse-tree-il tree))
-	 (code (parse-tree-il (car tree))) ; why car ? foldts-values issue
+  (let* ((vals (foldts*-values fD fU fH exp '() JSdict))
+	 (code (parse-tree-il (car vals))) ; vals = (tree dict) ??
 	 )
     ;;(pretty-print exp)
     ;;(pretty-print tree)

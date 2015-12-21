@@ -64,10 +64,10 @@
      (primary-expression)
      (postfix-expression "[" expression "]" ($$ '(FIX)))
      (postfix-expression "(" argument-expression-list ")"
-			 ($$ `(fctn-call ,$1 ,$2)))
+			 ($$ `(fctn-call ,$1 ,(tl->list $3))))
      (postfix-expression "(" ")" ($$ `(fctn-call ,$1)))
-     (postfix-expression "." identifier ($$ `(d-sel ,$1 ,$3)))
-     (postfix-expression "->" identifier ($$ `(i-sel ,$1 ,$3)))
+     (postfix-expression "." identifier ($$ `(d-sel ,$3 ,$1)))
+     (postfix-expression "->" identifier ($$ `(i-sel ,$3 ,$1)))
      (postfix-expression "++" ($$ `(post-inc ,$1)))
      (postfix-expression "--" ($$ `(post-dec ,$1)))
      ("(" type-name ")" "{" initializer-list "}"
@@ -542,8 +542,8 @@
      )
 
     (compound-statement
-     ("{" block-item-list "}" ($$ `(comp-stmt ,(tl->list $2))))
-     ("{" "}" ($$ `(comp-stmt (block-item-list))))
+     ("{" block-item-list "}" ($$ `(compd-stmt ,(tl->list $2))))
+     ("{" "}" ($$ `(compd-stmt (block-item-list))))
      )
 
     (block-item-list
@@ -619,10 +619,10 @@
     (function-definition
      (declaration-specifiers
       declarator declaration-list compound-statement
-      ($$ `(fctn-defn1a ,(tl->list $1) ,$2 ,(tl->list $3) ,$4)))
+      ($$ `(knr-fctn-defn ,(tl->list $1) ,$2 ,(tl->list $3) ,$4)))
      (declaration-specifiers
       declarator compound-statement
-      ($$ `(fctn-defn1b ,(tl->list $1) ,$2 ,$3)))
+      ($$ `(fctn-defn ,(tl->list $1) ,$2 ,$3)))
      )
     
     (declaration-list

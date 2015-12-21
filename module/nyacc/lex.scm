@@ -20,6 +20,8 @@
 
 ;; '$fixed '$float '$string '$chlit '$ident
 
+;; todo: change lexer to return @code{cons-source} instead of @code{cons}
+
 (define-module (nyacc lex)
   #:export (make-lexer-generator
 	    make-ident-reader

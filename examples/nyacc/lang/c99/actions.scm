@@ -26,13 +26,13 @@
    (lambda ($4 $3 $2 $1 . $rest) '(FIX))
    ;; postfix-expression => postfix-expression "(" argument-expression-list...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(fctn-call ,$1 ,$2))
+     `(fctn-call ,$1 ,(tl->list $3)))
    ;; postfix-expression => postfix-expression "(" ")"
    (lambda ($3 $2 $1 . $rest) `(fctn-call ,$1))
    ;; postfix-expression => postfix-expression "." identifier
-   (lambda ($3 $2 $1 . $rest) `(d-sel ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(d-sel ,$3 ,$1))
    ;; postfix-expression => postfix-expression "->" identifier
-   (lambda ($3 $2 $1 . $rest) `(i-sel ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(i-sel ,$3 ,$1))
    ;; postfix-expression => postfix-expression "++"
    (lambda ($2 $1 . $rest) `(post-inc ,$1))
    ;; postfix-expression => postfix-expression "--"
@@ -623,10 +623,10 @@
    (lambda ($3 $2 $1 . $rest) $1)
    ;; compound-statement => "{" block-item-list "}"
    (lambda ($3 $2 $1 . $rest)
-     `(comp-stmt ,(tl->list $2)))
+     `(compd-stmt ,(tl->list $2)))
    ;; compound-statement => "{" "}"
    (lambda ($2 $1 . $rest)
-     `(comp-stmt (block-item-list)))
+     `(compd-stmt (block-item-list)))
    ;; block-item-list => block-item
    (lambda ($1 . $rest)
      (make-tl 'block-item-list $1))
@@ -703,14 +703,14 @@
    (lambda ($5 $4 $3 $2 $1 . $rest) (tl->list $4))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(fctn-defn1a
+     `(knr-fctn-defn
         ,(tl->list $1)
         ,$2
         ,(tl->list $3)
         ,$4))
    ;; function-definition => declaration-specifiers declarator compound-sta...
    (lambda ($3 $2 $1 . $rest)
-     `(fctn-defn1b ,(tl->list $1) ,$2 ,$3))
+     `(fctn-defn ,(tl->list $1) ,$2 ,$3))
    ;; declaration-list => declaration
    (lambda ($1 . $rest) (make-tl $1))
    ;; declaration-list => declaration-list declaration
