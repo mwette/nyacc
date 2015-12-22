@@ -454,7 +454,8 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(ftn-declr ,$1 ,(tl->list $3)))
    ;; direct-declarator => direct-declarator "(" ")"
-   (lambda ($3 $2 $1 . $rest) `(ftn-declr ,$1))
+   (lambda ($3 $2 $1 . $rest)
+     `(ftn-declr ,$1 (param-list)))
    ;; pointer => "*" type-qualifier-list
    (lambda ($2 $1 . $rest)
      `(pointer ,(tl->list $2)))

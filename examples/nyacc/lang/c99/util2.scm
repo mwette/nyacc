@@ -16,7 +16,7 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; utilities for processing output trees
-;; v151112a - 
+;; v151222a - 
 
 (define-module (nyacc lang c99 util2)
   #:export (tree->udict
@@ -453,8 +453,12 @@
        (cons '(pointer-to) (unwrap-declr dir-declr)))
       ((array-of ,dir-declr ,size)
        (cons `(array-of ,(cnvt-array-size size)) (unwrap-declr dir-declr)))
+      ((ftn-declr ,dir-declr ,params)
+       (cons '(function-returning) (unwrap-declr dir-declr)))
+      ((scope ,expr)
+       (unwrap-declr expr))
       (,otherwise
-       (simple-format #t "otherwise ~S\n" otherwise)
+       (simple-format #t "unwrap-declr: OTHERWISE\n") (pretty-print otherwise)
        #f)))
 
   (define (find-type-spec decl-spec-list)
@@ -523,7 +527,7 @@
        ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2)
 	;;(simple-format #t "FTk: ~S\n" (cdr pair))
 	(cons pair seed))
-       (,othersize
+       (,otherwise
 	;;(simple-format #t "FTr: ~S\n" (cdr pair))
 	seed)))
    '()

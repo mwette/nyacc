@@ -396,7 +396,7 @@
 			($$ `(ftn-declr ,$1 ,(tl->list $3))))
      (direct-declarator "(" identifier-list ")"
 			($$ `(ftn-declr ,$1 ,(tl->list $3))))
-     (direct-declarator "(" ")" ($$ `(ftn-declr ,$1)))
+     (direct-declarator "(" ")" ($$ `(ftn-declr ,$1 (param-list))))
      )
 
     (pointer
