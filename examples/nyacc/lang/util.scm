@@ -110,13 +110,13 @@ file COPYING included with the this distribution.")
 ;; Reference the @code{ix}-th element of the list, not counting the optional
 ;; attributes item.
 ;; @example
-;; (sx-ref '(abc def) 1) => 'def
-;; (sx-ref '(abc (@ (foo "1")) def) 1) => 'def
+;; (sx-ref '(abc "def") 1) => "def"
+;; (sx-ref '(abc (@ (foo "1")) "def") 1) => "def"
 ;; @end example
 (define (sx-ref sx ix)
   (cond
    ((zero? ix) (car sx))
-   ((eqv? '@ (cadr sx))
+   ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
     (list-ref sx (1+ ix)))
    (else
     (list-ref sx ix))))
@@ -132,7 +132,7 @@ file COPYING included with the this distribution.")
 (define (sx-tail sx ix)
   (cond
    ((zero? ix) sx)
-   ((eqv? '@ (cadr sx))
+   ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
     (list-tail sx (1+ ix)))
    (else
     (list-tail sx ix))))

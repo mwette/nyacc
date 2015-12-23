@@ -283,9 +283,8 @@
 ;; @end example
 ;; @noindent
 ;; Cool. Eh?
-(define (expand-decl-typerefs udecl udecl-dict)
-  (let* ((keep-list '())		; keep list
-	 (tag (sx-tag udecl))		; decl or comp-decl
+(define* (expand-decl-typerefs udecl udecl-dict #:key (keep '()))
+  (let* ((tag (sx-tag udecl))		; decl or comp-decl
 	 (attr (sx-attr udecl))		; (@ ...)
 	 (specl (sx-ref udecl 1))	; decl-spec-list
 	 (declr (sx-ref udecl 2))	; init-declr or comp-declr
@@ -299,14 +298,18 @@
     (case (car tspec)
       ((typename)
        (cond
+	((member (cadr tspec) keep)
+	 udecl)
 	((member (cadr tspec) fixed-typename-save-l)
-	 ;; convert to fixed-type
+	 ;; The @code{typename} is one of the stdint names so we
+	 ;; convert it to @code{fixed-type}.
 	 (let* ((name (cadr tspec))
 		(fixd-tspec `(type-spec (fixed-type ,name)))
 		(fixd-specl (repl-typespec specl fixd-tspec))
 		;; TODO add attr
 		(fixed-udecl (cons* tag fixd-specl declr tail)))
-	   (expand-decl-typerefs fixed-udecl udecl-dict)))
+	   ;;(expand-decl-typerefs fixed-udecl udecl-dict))) ; not needed ?
+	   fixed-udecl))
 	(else
 	 ;; splice in the typedef
 	 (let* ((name (sx-ref tspec 1))
@@ -317,7 +320,7 @@
 		(fixd-specl (repl-typespec specl (sx-tail tdef-specl 2)))
 		(fixd-declr (splice-declarators declr tdef-declr))
 		(fixed-udecl (cons* tag fixd-specl fixd-declr tail)))
-	   (expand-decl-typerefs fixed-udecl udecl-dict)))))
+	   (expand-decl-typerefs fixed-udecl udecl-dict #:keep keep)))))
 
       ((struct-ref union-ref)
        (simple-format (current-error-port)
@@ -331,7 +334,8 @@
 	      (orig-flds (cdr field-list))
 	      (unit-flds (map cdr (fold-right match-comp-decl '() orig-flds)))
 	      (fixd-flds (map
-			  (lambda (fld) (expand-decl-typerefs fld udecl-dict))
+			  (lambda (fld)
+			    (expand-decl-typerefs fld udecl-dict #:keep keep))
 			  unit-flds))
 	      (fixd-tspec
 	       (if #f ;;ident
@@ -391,7 +395,7 @@
 ;; =>
 ;; [TO BE DOCUMENTED]
 ;; @end example
-(define (stripdown udecl decl-dict)
+(define* (stripdown udecl decl-dict #:key (keep '()))
 
   (define strip-list '(stor-spec type-qual comment))
 
@@ -408,7 +412,7 @@
   (define (fsH seed tree)
     (cons tree seed))
 
-  (let* ((xdecl (expand-decl-typerefs udecl decl-dict))
+  (let* ((xdecl (expand-decl-typerefs udecl decl-dict #:keep keep))
 	 (tag (sx-tag xdecl))
 	 (attr (sx-attr xdecl))
 	 (specl (sx-ref xdecl 1))
