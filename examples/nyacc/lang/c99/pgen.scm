@@ -62,7 +62,7 @@
 
     (postfix-expression			; S 6.5.2
      (primary-expression)
-     (postfix-expression "[" expression "]" ($$ '(FIX)))
+     (postfix-expression "[" expression "]" ($$ `(array-ref ,$3 ,$1)))
      (postfix-expression "(" argument-expression-list ")"
 			 ($$ `(fctn-call ,$1 ,(tl->list $3))))
      (postfix-expression "(" ")" ($$ `(fctn-call ,$1)))
@@ -71,14 +71,18 @@
      (postfix-expression "++" ($$ `(post-inc ,$1)))
      (postfix-expression "--" ($$ `(post-dec ,$1)))
      ("(" type-name ")" "{" initializer-list "}"
-      ($$ `(comp-literal ,$2 ,(tl->list $5))))
+      ($$ `(comp-lit ,$2 ,(tl->list $5))))
      ("(" type-name ")" "{" initializer-list "," "}"
-      ($$ `(comp-literal ,$2 ,(tl->list $5))))
+      ($$ `(comp-lit ,$2 ,(tl->list $5))))
      )
 
     (argument-expression-list
      (assignment-expression ($$ (make-tl 'expr-list $1)))
      (argument-expression-list "," assignment-expression ($$ (tl-append $1 $3)))
+     ;; The following is a kludge to deal with using typenames in CPP defines
+     ;; when we don't expand the defines.  e.g., GEN_OFFSET(foo_t, x.y.z)
+     (typedef-name ($$ (make-tl 'expr-list $1)))
+     (argument-expression-list "," typedef-name ($$ (tl-append $1 $3)))
      )
 
     (unary-expression
@@ -358,9 +362,9 @@
      )
 
     (type-qualifier
-     ("const" ($$ '(type-qual (const))))
-     ("volatile" ($$ '(type-qual (volatile))))
-     ("restrict" ($$ '(type-qual (restrict))))
+     ("const" ($$ '(type-qual ,$1)))
+     ("volatile" ($$ '(type-qual ,$1)))
+     ("restrict" ($$ '(type-qual ,$1)))
      )
 
     (function-specifier ("inline" ($$ `(fctn-spec ,$1))))
@@ -435,8 +439,10 @@
      )
 
     (type-name				; S 6.7.6
+     ;; e.g., (foo_t *)
      (specifier-qualifier-list abstract-declarator
 			       ($$ `(type-name ,(tl->list $1) ,$2)))
+     ;; e.g., (int)
      (declaration-specifiers ($$ `(type-name ,(tl->list $1)))) 
      )
 

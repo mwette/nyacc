@@ -23,7 +23,8 @@
    ;; postfix-expression => primary-expression
    (lambda ($1 . $rest) $1)
    ;; postfix-expression => postfix-expression "[" expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) '(FIX))
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(array-ref ,$3 ,$1))
    ;; postfix-expression => postfix-expression "(" argument-expression-list...
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-call ,$1 ,(tl->list $3)))
@@ -39,13 +40,17 @@
    (lambda ($2 $1 . $rest) `(post-dec ,$1))
    ;; postfix-expression => "(" type-name ")" "{" initializer-list "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(comp-literal ,$2 ,(tl->list $5)))
+     `(comp-lit ,$2 ,(tl->list $5)))
    ;; postfix-expression => "(" type-name ")" "{" initializer-list "," "}"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(comp-literal ,$2 ,(tl->list $5)))
+     `(comp-lit ,$2 ,(tl->list $5)))
    ;; argument-expression-list => assignment-expression
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
    ;; argument-expression-list => argument-expression-list "," assignment-e...
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; argument-expression-list => typedef-name
+   (lambda ($1 . $rest) (make-tl 'expr-list $1))
+   ;; argument-expression-list => argument-expression-list "," typedef-name
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; unary-expression => postfix-expression
    (lambda ($1 . $rest) $1)
@@ -403,11 +408,11 @@
    ;; enumerator => identifier "=" constant-expression
    (lambda ($3 $2 $1 . $rest) `(enum-defn ,$1 ,$3))
    ;; type-qualifier => "const"
-   (lambda ($1 . $rest) '(type-qual (const)))
+   (lambda ($1 . $rest) '(type-qual ,$1))
    ;; type-qualifier => "volatile"
-   (lambda ($1 . $rest) '(type-qual (volatile)))
+   (lambda ($1 . $rest) '(type-qual ,$1))
    ;; type-qualifier => "restrict"
-   (lambda ($1 . $rest) '(type-qual (restrict)))
+   (lambda ($1 . $rest) '(type-qual ,$1))
    ;; function-specifier => "inline"
    (lambda ($1 . $rest) `(fctn-spec ,$1))
    ;; declarator => pointer direct-declarator

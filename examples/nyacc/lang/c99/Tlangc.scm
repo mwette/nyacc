@@ -11,6 +11,7 @@
 ;;(add-to-load-path (string-append (getcwd) "/../../../../module"))
 
 (use-modules (nyacc lang c99 pgen))
+(use-modules (nyacc lang c99 pprint))
 (use-modules (nyacc lalr))
 (use-modules (nyacc util))
 (use-modules (nyacc export))
@@ -38,12 +39,28 @@
 	    (lambda ()
 	      (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #f)))))
   (pretty-print sx)
+  (pretty-print-c99 sx)
   #t)
 
+;; expression parser
 (let* ((cexpr-spec (restart-spec clang-mach 'expression))
        (cexpr-mach (make-lalr-machine cexpr-spec)))
   (write-lalr-tables cexpr-mach "exprtab.scm.new")
   (write-lalr-actions cexpr-mach "expract.scm.new")
   #t)
+
+(use-modules (nyacc lang c99 xparser))
+#;(let* ((st0 "(int)(((foo_t*)0)->x)")
+       (st0 "(int)(((((foo_t*)0)->x)->y)->z)")
+       (st0 "(int*)(&(((foo_t*)0)->x.y.z))")
+       (sx0 (parse-cx st0 #:tyns '("foo_t")))
+       (st1 (with-output-to-string (lambda () (pretty-print-c99 sx0))))
+       (sx1 (parse-cx st1 #:tyns '("foo_t")))
+       )
+  (simple-format #t "~S => \n" st0)
+  (pretty-print sx0)
+  (simple-format #t "=> ~S =>\n" st1)
+  (pretty-print sx1)
+  #f)
 
 ;; --- last line ---

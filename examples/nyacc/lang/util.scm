@@ -12,7 +12,7 @@
   #:export (lang-crn-lic
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
-	    sx-tag sx-attr sx-ref sx-tail sx-find
+	    sx-tag sx-attr sx-ref sx-fref sx-tail sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter
 	    ;; for ???
@@ -120,6 +120,18 @@ file COPYING included with the this distribution.")
     (list-ref sx (1+ ix)))
    (else
     (list-ref sx ix))))
+
+;; @item sx-fref sx ix
+;; Like @code{sx-ref} but return #f if @code{ix} is off the end.
+(define (sx-fref sx ix)
+  (define (my-list-ref l i)
+    (if (< i (length l)) (list-ref l i) #f))
+  (cond
+   ((zero? ix) (car sx))
+   ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
+    (my-list-ref sx (1+ ix)))
+   (else
+    (my-list-ref sx ix))))
 
 ;; @item sx-tag sx => tag
 ;; Return the tag for a tree

@@ -5,8 +5,9 @@ extern "C" {
 #include "inc.h"
 
 eval_t x;
-
 struct foo;
+
+#define OFFSET(T,V) (((T*)0)->V)
 
 typedef struct {
   /* hello */
@@ -15,15 +16,9 @@ typedef struct {
   /* world */
 } xyz_t;
 
-int ex1_foo(ex1_t *mod, double t, double *x, int *y) {
-   int i = mod->xyz.i;
-   ++i;
-   return i+2;
-}
-
-int x; // this is x 
+int y = (int)(((xyz_t*)0)->x);
+int x;
 /* this is lone comment */
-
 #ifdef __cplusplus__
 }
 #endif

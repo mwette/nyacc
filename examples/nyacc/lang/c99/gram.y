@@ -117,6 +117,8 @@ postfix_expression: '(' type_name ')' '{' initializer_list '}' ;
 postfix_expression: '(' type_name ')' '{' initializer_list ',' '}' ;
 argument_expression_list: assignment_expression ;
 argument_expression_list: argument_expression_list ',' assignment_expression ;
+argument_expression_list: typedef_name ;
+argument_expression_list: argument_expression_list ',' typedef_name ;
 unary_expression: postfix_expression ;
 unary_expression: ChSeq_43_43 unary_expression ;
 unary_expression: ChSeq_45_45 unary_expression ;

@@ -25,7 +25,7 @@
   (incdirs cpi-incs set-cpi-incs!)	; #includes
   (tn-dict cpi-tynd set-cpi-tynd!)	; typename dict (("<x>" foo_t ..
   ;;
-  (typnams cpi-tyns set-cpi-tyns!)	; typedef names
+  ;;(typnams cpi-tyns set-cpi-tyns!)	; typedef names
   ;;
   (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
   (ctl cpi-ctl set-cpi-ctl!)		; current typename list
@@ -67,12 +67,8 @@
     (set-cpi-defs! cpi defines)
     (set-cpi-incs! cpi incdirs)
     (set-cpi-tynd! cpi (append tn-dict std-dict))
-    (set-cpi-tyns! cpi '())
-    ;;
-    (set-cpi-ptl! cpi '())
-    (set-cpi-ctl! cpi '())
-    ;;
-    ;;(set-cpi-tdls! cpi '())
+    (set-cpi-ptl! cpi '())		; list of lists of strings
+    (set-cpi-ctl! cpi '())		; list of strings ?
     cpi))
 
 ;; Need to have a "CPI" stack to deal with types (re)defined in multiple
@@ -108,7 +104,6 @@
     (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))
     ;;(simple-format #t "at: ~S  ~S\n" (cpi-ctl cpi) (cpi-ptl cpi))
     ))
-
 
 (define (cpi-push)	;; on #if
   (let ((cpi (fluid-ref *info*)))
@@ -157,48 +152,14 @@
 		    (cdr idl))))
 	'())))
 
-;; @item add-typdecl name decl
-;; Helper for @code{save-typenames}.
-;; Adds type declaration.
-#;(define (add-typedecl name decl)
-  (let ((info (fluid-ref *info*)))
-    (set-cpi-tdls! info (cons (cons name decl) (cpi-tdls info)))))
-
-;; @item find-new-typenames decl
-;; Helper for @code{save-typenames}.
-;; Given declaration return a list of new typenames (via @code{typedef}).
-#;(define find-new-typedecls
-  (let ((sxtd (sxpath '(stor-spec typedef)))
-	(sxid (sxpath '(init-declr ident *text*))))
-    (lambda (decl)
-      (cond
-       ((not (eq? 'decl (car decl))) '())
-       ((< (length decl) 3) '())
-       (else (let* ((spec-list (list-ref decl 1))
-		    (init-list (list-ref decl 2)))
-	       (if (pair? (sxtd spec-list))
-		   (map (lambda (tid) (cons tid spec-list)) (sxid init-list))
-		   '())))))))
-
 ;; @item save-typenames decl
 ;; Save the typenames for the lexical analyzer and return the decl.
-(define (save-typenames-only decl)
+(define (save-typenames decl)
   ;; This finds typenames using @code{find-new-typenames} and adds via
   ;; @code{add-typename}.  Then return the decl.
   (for-each add-typename (find-new-typenames decl))
   decl)
 
-#;(define (save-typenames/decls decl)
-  ;; This finds typenames using @code{find-new-typenames} and adds via
-  ;; @code{add-typename}.  Then return the decl.
-  (for-each
-   (lambda (d-pair)
-     (add-typename (car d-pair))
-     (add-typedecl (car d-pair) (cdr d-pair)))
-   (find-new-typedecls decl))
-  decl)
-
-(define save-typenames save-typenames-only)
 
 ;; ------------------------------------------------------------------------
 

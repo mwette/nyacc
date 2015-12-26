@@ -47,11 +47,14 @@
 
 ;; @item parse-cx [#:cpp-defs def-a-list] [#:debug bool]
 ;; This needs to be explained in some detail.
-(define* (parse-cx xstr #:key (cpp-defs '()) (td-dict '()) debug)
+;; [#:tyns '("foo_t")]
+(define* (parse-cx xstr
+		   #:key (cpp-defs '()) (tn-dict '()) (debug #f) (tyns '()))
   (catch
    'parse-error
    (lambda ()
-     (let ((info (make-cpi debug cpp-defs '(".") td-dict)))
+     (let ((info (make-cpi debug cpp-defs '(".") tn-dict)))
+       (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
        (with-fluid*
 	   *info* info
 	   (lambda ()
