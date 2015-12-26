@@ -50,9 +50,10 @@
   #t)
 
 (use-modules (nyacc lang c99 xparser))
-#;(let* ((st0 "(int)(((foo_t*)0)->x)")
+(let* ((st0 "(int)(((foo_t*)0)->x)")
        (st0 "(int)(((((foo_t*)0)->x)->y)->z)")
        (st0 "(int*)(&(((foo_t*)0)->x.y.z))")
+       (st0 "(a.b)[ix]")
        (sx0 (parse-cx st0 #:tyns '("foo_t")))
        (st1 (with-output-to-string (lambda () (pretty-print-c99 sx0))))
        (sx1 (parse-cx st1 #:tyns '("foo_t")))

@@ -226,6 +226,7 @@
 	   (cond
 	    ((eof-object? ch) (iter chl ty 5 ch))
 	    ((char=? #\x ch) (iter (cons ch chl) ty 1 (read-char)))
+	    ((char=? #\. ch) (iter chl ty 1 ch))
 	    ((char-numeric? ch) (iter chl ty 1 ch))
 	    (else (iter chl ty 5 ch))))
 	  ((1)

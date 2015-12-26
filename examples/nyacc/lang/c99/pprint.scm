@@ -104,7 +104,7 @@
 	  ((comment) (sf "/*~A*/\n" (sx-ref tree 1)))
 
 	  ((array-ref)
-	   (ppx (sx-ref tree 1)) (sf "[") (ppx (sx-ref tree 2)) (sf "]"))
+	   (ppx (sx-ref tree 2)) (sf "[") (ppx (sx-ref tree 1)) (sf "]"))
 
 	  ((de-ref ref-to)
 	   (let ((op (sx-ref tree 0))

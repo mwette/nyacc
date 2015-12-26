@@ -8,6 +8,7 @@ eval_t x;
 struct foo;
 
 int d = 0x123;
+float f = 0.0; 
 
 #define OFFSET(T,V) (((T*)0)->V)
 
@@ -15,11 +16,14 @@ typedef struct {
   /* hello */
   eval_t x; /* comment */
   int x;
-  /* world */
 } xyz_t;
 
-int y = (int)(((xyz_t*)0)->x);
-int x;
+int foo(int y) {
+  double d;
+
+  d = 0.0;
+}
+
 /* this is lone comment */
 #ifdef __cplusplus__
 }
