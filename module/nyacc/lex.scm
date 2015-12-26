@@ -202,33 +202,38 @@
 		(else (error "bad escape sequence"))))
 	    (cons '$chlit (string c1))))))
 
-;; @item make-num-reader
+;; @item make-num-reader => (proc ch) => #f|'($fixed "1")|'($float "1.0")
+;; This routine will clean by adding "0" before or after dot.
+;; TODO: add arg to specify alternate syntaxes (e.g. "0x123")
+;; may want to replace "eEdD" w/ "e"
 ;; integer decimal(#t/#f) fraction exponent looking-at
 ;; i, f and e are lists of characters
-;; returns pair ('$fixed . "123") or ('$float . "1.3e0")
-;;           or ERROR? (dot by itself)
-;; will add "0" before or after dot but otherwise same
-;; may want to replace "eEdD" w/ "e"
-;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
-;; Removed support for leading '.' to be a number.
-;; TODO: add 0x reader
 (define (make-num-reader)
+  ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
+  ;; Removed support for leading '.' to be a number.
   (let ((fix-dot (lambda (l) (if (char=? #\. (car l)) (cons #\0 l) l))))
     (lambda (ch1)
+      ;; chl: char list; ty: '$fixed or '$float; st: state; ch: input char
       (let iter ((chl '()) (ty #f) (st 0) (ch ch1))
 	(case st
 	  ((0)
 	   (cond
 	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ;;((char=? #\. ch) (iter (list #\. #\0) '$fixed 2 (read-char)))
+	    ((char=? #\0 ch) (iter (cons ch chl) '$fixed 10 (read-char))) 
 	    ((char-numeric? ch) (iter chl '$fixed 1 ch))
 	    (else #f)))
+	  ((10) ;; looking for hex, but need to deal with "0,"
+	   (cond
+	    ((eof-object? ch) (iter chl ty 5 ch))
+	    ((char=? #\x ch) (iter (cons ch chl) ty 1 (read-char)))
+	    ((char-numeric? ch) (iter chl ty 1 ch))
+	    (else (iter chl ty 5 ch))))
 	  ((1)
 	   (cond
 	    ((eof-object? ch) (iter chl ty 5 ch))
 	    ((char-numeric? ch) (iter (cons ch chl) ty 1 (read-char)))
 	    ((char=? #\. ch) (iter (cons #\. chl) '$float 2 (read-char)))
-	    ((char-set-contains? c:if ch) (error "syntax1"))
+	    ((char-set-contains? c:if ch) (error "reading number st=1"))
 	    (else (iter chl '$fixed 5 ch))))
 	  ((2)
 	   (cond
@@ -236,7 +241,7 @@
 	    ((char-numeric? ch) (iter (cons ch chl) ty 2 (read-char)))
 	    ((char-set-contains? c:nx ch)
 	     (iter (cons ch (fix-dot chl)) ty 3 (read-char)))
-	    ((char-set-contains? c:if ch) (error "syntax2"))
+	    ((char-set-contains? c:if ch) (error "reading number st=2"))
 	    (else (iter (fix-dot chl) ty 5 ch))))
 	  ((3)
 	   (cond
@@ -249,7 +254,7 @@
 	   (cond
 	    ((eof-object? ch) (iter chl ty 5 ch))
 	    ((char-numeric? ch) (iter (cons ch chl) ty 4 (read-char)))
-	    ((char-set-contains? c:if ch) (error "syntax4"))
+	    ((char-set-contains? c:if ch) (error "reading number st=4"))
 	    (else (iter chl ty 5 ch))))
 	  ((5)
 	   (unless (eof-object? ch) (unread-char ch))

@@ -7,6 +7,8 @@ extern "C" {
 eval_t x;
 struct foo;
 
+int d = 0x123;
+
 #define OFFSET(T,V) (((T*)0)->V)
 
 typedef struct {
