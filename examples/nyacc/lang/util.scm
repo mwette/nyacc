@@ -16,6 +16,7 @@
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter
 	    ;; for ???
+	    move-if-changed
             fmterr)
   #:use-module ((srfi srfi-1) #:select(find))
   )
@@ -262,6 +263,21 @@ file COPYING included with the this distribution.")
        ((eqv? 'pop arg0) (pop-il))
        (else (error "pp-formatter: bad args"))
        ))))
+
+;; @item move-if-changed new-file old-file [sav-file]
+;; Return @code{#t} if changed.
+(define (move-if-changed new-file old-file . rest)
+  (let ((sav-file (if (pair? rest) (car rest) #f))
+        (status (system (simple-format #f "cmp ~A ~A >/dev/null" 
+				       new-file old-file))))
+    (cond 
+     ((zero? status)
+      (system (simple-format #f "rm ~A" new-file))
+      #f)
+     (else
+      (if sav-file (system (simple-format #f "mv ~A ~A" old-file sav-file)))
+      (system (simple-format #f "mv ~A ~A" new-file old-file))
+      #t))))
 
 ;; @end table
 

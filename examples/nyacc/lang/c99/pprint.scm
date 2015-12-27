@@ -247,6 +247,7 @@
 		 (comm (assq 'comment (cdr tree))))
 	     (ppx specs)
 	     (if initl (ppx initl))
+	     (sf "; ")
 	     (if comm (ppx comm) (sf "\n"))))
 
 	  ;; (enum-def enum-ref)
