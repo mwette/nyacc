@@ -23,6 +23,14 @@
   #:use-module (ice-9 pretty-print)
   )
 
+(define op-sym
+  (let ((ot '(("=" . eq) ("+=" . pl-eq) ("-=" . mi-eq) ("*=" . ti-eq)
+	      ("/=" . di-eq) ("%=" . mo-eq) ("<<=" . ls-eq) (">>=" . rs-eq)
+	      ("&=" . ba-eq) ("^=" . bx-eq) ("|=" bo-eq))))
+    (lambda (name)
+      (assoc-ref ot name))))
+
+
 (define op-prec
   '((p-expr ident fixed float string)
     (comp-lit post-inc post-dec i-sel d-sel fctn-call array-ref)
@@ -103,6 +111,8 @@
 
 	  ((comment) (sf "/*~A*/\n" (sx-ref tree 1)))
 
+	  ((scope) (sf "(") (ppx (sx-ref tree 1)) (sf ")"))
+	  
 	  ((array-ref)
 	   (ppx (sx-ref tree 2)) (sf "[") (ppx (sx-ref tree 1)) (sf "]"))
 
@@ -131,16 +141,16 @@
 		 (ppx/p ex)
 		 (ppx ex))))
 
-	  ((add sub mul div)
+	  ((add sub mul div mod)
 	   (let ((op (sx-ref tree 0))
 		 (lval (sx-ref tree 1))
 		 (rval (sx-ref tree 2)))
 	     (if (protect-expr? 'lt op lval)
 		 (ppx/p lval)
 		 (ppx lval))
-	     (case op ;;(car tree)
+	     (case op
 	       ((add) (sf " + ")) ((sub) (sf " - "))
-	       ((mul) (sf "*")) ((div) (sf "/")))
+	       ((mul) (sf "*")) ((div) (sf "/")) ((mod) (sf "%")))
 	     (if (protect-expr? 'rt op rval)
 		 (ppx/p rval)
 		 (ppx rval))))
@@ -159,6 +169,18 @@
 	     (if (protect-expr? 'rt op rval)
 		 (ppx/p rval)
 		 (ppx rval))))
+
+	  ((assn-expr)
+	   (let ((lhs (sx-ref tree 1))
+		 (op (sx-ref tree 2))
+		 (rhs (sx-ref tree 3)))
+	     (if (protect-expr? 'lt 'assn-expr lhs)
+		 (ppx/p lhs)
+		 (ppx lhs))
+	     (sf " ~A " (sx-ref op 1))
+	     (if (protect-expr? 'rt 'assn-expr rhs)
+		 (ppx/p rhs)
+		 (ppx rhs))))
 
 	  ((decl)
 	   (let ((specs (sx-ref tree 1))
@@ -189,12 +211,10 @@
 	      (if (pair? (cdr pair)) (sf ",")))
 	    (sx-tail tree 1)))
 
-	  ((init-declr comp-declr)
+	  ((init-declr comp-declr param-declr)
 	   (let* ((declr (sx-ref tree 1))
 		  (initr (sx-fref tree 2))
-		  (iexpr (and initr (sx-ref initr 1)))
-		  (comm #f)		; fix this
-		  )
+		  (iexpr (and initr (sx-ref initr 1))))
 	     (ppx declr)
 	     (when initr
 	       (sf " = ")
@@ -204,9 +224,7 @@
 		  (sf "initzer-list")
 		  (sf " }"))
 		 (else
-		  (ppx iexpr)))
-	       (sf "; ")
-	       (if comm (ppx comm) (sf "\n")))))
+		  (ppx iexpr))))))
 
 	  ((type-spec)
 	   (let ((arg (sx-ref tree 1))) ;; did I mess this up?
@@ -257,8 +275,6 @@
 	  ;; array-of (THIS IS COMPLEX)
 	  ;; ftn-declr
 	  ;; pointer
-	  ;; param-list
-	  ;; param-decln
 	  
 	  ((type-name)
 	   (let ((spec (sx-ref tree 1))
@@ -279,15 +295,76 @@
 		  (error "need to finish abs-declr")))
 	       (iter (cdr decls)))))
 
+	  ;; labeled-statement
+
+	  ((compd-stmt)
+	   (sf "{\n")
+	   (push-il)
+	   (for-each ppx (sx-tail (sx-ref tree 1) 1))
+	   (pop-il)
+	   (sf "}\n"))
+
+	  ;; expression-statement
+	  ((expr-stmt)
+	   (ppx (sx-ref tree 1))
+	   (sf "; ")
+	   ;; comment ?
+	   (sf "\n"))
+	  
+	  ((expr) (sf ""))		; for lone expr-stmt and return-stmt
+
+	  ;; selection-statement
+
+	  ;; iteration-statement
+
+	  ;; jump-statement
+	  ((goto)
+	   ;; unindent
+	   (pop-il)
+	   (sf "goto ~A;" (sx-ref (sx-ref tree 1) 1))
+	   ;; comment ???
+	   (sf "\n")
+	   (push-il))
+
 	  ((trans-unit)
 	   (pair-for-each
 	    (lambda (pair)
 	      (ppx (car pair))
-	      ;; Need some heuristics on when to insert blank lines.
-	      ;;(if (pair? (cdr pair)) (sf "\n"))
-	      )
+	      (if (eqv? (sx-tag (car pair)) 'fctn-defn)
+		  (sf "\n")))
 	    (sx-tail tree 1)))
 
+	  ((fctn-defn) ;; but not yet (knr-fctn-defn)
+	   (let* ((decl-spec-list (sx-ref tree 1))
+		  (declr (sx-ref tree 2))
+		  (compd-stmt (sx-ref tree 3)))
+	     (ppx decl-spec-list)
+	     (sf " ")
+	     (ppx declr)
+	     (sf " ")
+	     (ppx compd-stmt)))
+
+	  ((ptr-declr)
+	   (ppx (sx-ref tree 1)) (ppx (sx-ref tree 2)))
+	  
+	  ((ftn-declr)
+	   (ppx (sx-ref tree 1))	; direct-declarator
+	   (sf "(") (ppx (sx-ref tree 2)) (sf ")"))
+
+	  ((param-list)
+	   (pair-for-each
+	    (lambda (pair)
+	      (ppx (car pair))
+	      (if (pair? (cdr pair)) (sf ", ")))
+	    (sx-tail tree 1)))
+
+	  ((param-decln)
+	   (let ((specs (sx-ref tree 1))
+		 (declr (assq 'param-declr (cdr tree))))
+	     (ppx specs)
+	     (sf " ")
+	     (ppx declr)))
+	  
 	  ((cpp-stmt)
 	   (cpp-ppx (sx-ref tree 1)))
 

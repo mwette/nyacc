@@ -223,6 +223,7 @@ file COPYING included with the this distribution.")
 (define* (make-pp-formatter)
   (letrec
       ((maxcol 78)
+       (maxind 36)
        (column 0)
        (ind-lev 0)
        (ind-len 0)
@@ -233,12 +234,12 @@ file COPYING included with the this distribution.")
 
        (push-il
 	(lambda ()
-	  (set! ind-lev (1+ ind-lev))
+	  (set! ind-lev (min maxind (1+ ind-lev)))
 	  (set! ind-len (* 2 ind-lev))))
 
        (pop-il
 	(lambda ()
-	  (set! ind-lev (1- ind-lev))
+	  (set! ind-lev (max 0 (1- ind-lev)))
 	  (set! ind-len (* 2 ind-lev))))
        
        (sf
@@ -267,17 +268,30 @@ file COPYING included with the this distribution.")
 ;; @item move-if-changed new-file old-file [sav-file]
 ;; Return @code{#t} if changed.
 (define (move-if-changed new-file old-file . rest)
-  (let ((sav-file (if (pair? rest) (car rest) #f))
-        (status (system (simple-format #f "cmp ~A ~A >/dev/null" 
-				       new-file old-file))))
-    (cond 
-     ((zero? status)
-      (system (simple-format #f "rm ~A" new-file))
-      #f)
-     (else
-      (if sav-file (system (simple-format #f "mv ~A ~A" old-file sav-file)))
+
+  (define (doit)
+    (let ((sav-file (if (pair? rest) (car rest) #f)))
+      (if (and sav-file (access? sav-file W_OK))
+	  (system (simple-format #f "mv ~A ~A" old-file sav-file)))
       (system (simple-format #f "mv ~A ~A" new-file old-file))
-      #t))))
+      #t))
+    
+  (cond
+   ;; new-file does not exist
+   ((not (access? new-file R_OK)) #f)
+
+   ;; old-file does not exit, update anyhow
+   ((and (not (access? old-file F_OK) (access? old-file W_OK)))
+    (system (simple-format #f "mv ~A ~A" new-file old-file)))
+
+   ;; both exist, but no changes
+   ((zero? (system
+	    (simple-format #f "cmp ~A ~A >/dev/null" new-file old-file)))
+    (system (simple-format #f "rm ~A" new-file))
+    #f)
+
+   ;; both exist, update
+   (else (doit))))
 
 ;; @end table
 

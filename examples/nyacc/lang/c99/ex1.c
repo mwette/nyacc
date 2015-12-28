@@ -7,7 +7,7 @@ extern "C" {
 eval_t x;
 struct foo;
 
-int d = 0x123;
+int d = 0x123; /* d comment */
 float f = 0.0; 
 
 #define OFFSET(T,V) (((T*)0)->V)

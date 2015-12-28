@@ -418,7 +418,7 @@
 
     (parameter-type-list
      (parameter-list ($$ $1))
-     (parameter-list "," "..." ($$ $1))
+     (parameter-list "," "..." ($$ (tl-append $1 '(ellipis))))
      )
 
     (parameter-list
@@ -427,9 +427,12 @@
      )
 
     (parameter-declaration
-     (declaration-specifiers declarator ($$ `(param-decln ,(tl->list $1) ,$2)))
+     (declaration-specifiers declarator
+			     ($$ `(param-decln ,(tl->list $1)
+					       (param-declr ,$2))))
      (declaration-specifiers abstract-declarator
-			     ($$ `(param-decln ,(tl->list $1) ,$2)))
+			     ($$ `(param-decln ,(tl->list $1)
+					       (param-declr ,$2))))
      (declaration-specifiers ($$ `(param-decln ,(tl->list $1))))
      )
 

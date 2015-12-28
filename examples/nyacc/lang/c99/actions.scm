@@ -479,17 +479,18 @@
    ;; parameter-type-list => parameter-list
    (lambda ($1 . $rest) $1)
    ;; parameter-type-list => parameter-list "," "..."
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     (tl-append $1 '(ellipis)))
    ;; parameter-list => parameter-declaration
    (lambda ($1 . $rest) (make-tl 'param-list $1))
    ;; parameter-list => parameter-list "," parameter-declaration
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; parameter-declaration => declaration-specifiers declarator
    (lambda ($2 $1 . $rest)
-     `(param-decln ,(tl->list $1) ,$2))
+     `(param-decln ,(tl->list $1) (param-declr ,$2)))
    ;; parameter-declaration => declaration-specifiers abstract-declarator
    (lambda ($2 $1 . $rest)
-     `(param-decln ,(tl->list $1) ,$2))
+     `(param-decln ,(tl->list $1) (param-declr ,$2)))
    ;; parameter-declaration => declaration-specifiers
    (lambda ($1 . $rest)
      `(param-decln ,(tl->list $1)))
