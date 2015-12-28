@@ -281,7 +281,7 @@ file COPYING included with the this distribution.")
    ((not (access? new-file R_OK)) #f)
 
    ;; old-file does not exit, update anyhow
-   ((and (not (access? old-file F_OK) (access? old-file W_OK)))
+   ((and (not (access? old-file F_OK)) (access? old-file W_OK))
     (system (simple-format #f "mv ~A ~A" new-file old-file)))
 
    ;; both exist, but no changes
