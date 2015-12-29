@@ -628,8 +628,8 @@
    (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; labeled-statement => "default" ":" statement
    (lambda ($3 $2 $1 . $rest) $1)
-   ;; compound-statement => "{" block-item-list "}"
-   (lambda ($3 $2 $1 . $rest)
+   ;; compound-statement => "{" block-item-list "}" opt-code-comment
+   (lambda ($4 $3 $2 $1 . $rest)
      `(compd-stmt ,(tl->list $2)))
    ;; compound-statement => "{" "}"
    (lambda ($2 $1 . $rest)

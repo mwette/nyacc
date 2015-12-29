@@ -352,7 +352,7 @@ statement: cpp_statement ;
 labeled_statement: identifier ':' statement ;
 labeled_statement: CASE constant_expression ':' statement ;
 labeled_statement: DEFAULT ':' statement ;
-compound_statement: '{' block_item_list '}' ;
+compound_statement: '{' block_item_list '}' opt_code_comment ;
 compound_statement: '{' '}' ;
 block_item_list: block_item ;
 block_item_list: block_item_list block_item ;

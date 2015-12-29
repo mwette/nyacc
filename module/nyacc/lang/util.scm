@@ -282,7 +282,8 @@ file COPYING included with the this distribution.")
 
    ;; old-file does not exit, update anyhow
    ((and (not (access? old-file F_OK)) (access? old-file W_OK))
-    (system (simple-format #f "mv ~A ~A" new-file old-file)))
+    (system (simple-format #f "mv ~A ~A" new-file old-file))
+    #t)
 
    ;; both exist, but no changes
    ((zero? (system
@@ -291,7 +292,11 @@ file COPYING included with the this distribution.")
     #f)
 
    ;; both exist, update
-   (else (doit))))
+   ((access? old-file W_OK)
+    (doit))
+   
+   (else
+    (simple-format (current-error-port) "move-if-changed: no write access\n"))))
 
 ;; @end table
 

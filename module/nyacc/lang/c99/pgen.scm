@@ -1,4 +1,4 @@
-;;; lang/c/pgen.scm
+;;; lang/c99/pgen.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -34,11 +34,9 @@
 ;; @itemize
 ;; @item add decoration for RHS items, not LHS items
 ;; @example
-;; Written to the grammar specified for ISO-C99 in the following URL:
-;; http://slps.github.io/zoo/c/iso-9899-tc3.html
+;; Written to the grammar specified for ISO-C99, 
+;;   http://slps.github.io/zoo/c/iso-9899-tc3.html
 ;; but modified to handle comments and CPP statements.
-;; Actually, the spec below was re-written based on Harbison and Steele 5th
-;; but that text is broken.  I need to fix (i.e., rework) this.
 (define clang-spec
   (lalr-spec
    (notice lang-crn-lic)
@@ -551,8 +549,10 @@
      )
 
     (compound-statement
-     ("{" block-item-list "}" ($$ `(compd-stmt ,(tl->list $2))))
-     ("{" "}" ($$ `(compd-stmt (block-item-list))))
+     ("{" block-item-list "}" opt-code-comment
+      ($$ `(compd-stmt ,(tl->list $2))))
+     ("{" "}"
+      ($$ `(compd-stmt (block-item-list))))
      )
 
     (block-item-list
@@ -697,4 +697,4 @@
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
 
-;; --- last line
+;; --- last line ---

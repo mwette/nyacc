@@ -25,6 +25,7 @@ NYACC_LANG_SOURCES =				\
   nyacc/lang/c99/cpptab.scm			\
   nyacc/lang/c99/expract.scm			\
   nyacc/lang/c99/exprtab.scm			\
+  nyacc/lang/c99/lang.txt			\
   nyacc/lang/c99/parser.scm			\
   nyacc/lang/c99/pbody.scm			\
   nyacc/lang/c99/pgen.scm			\

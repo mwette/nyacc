@@ -17,10 +17,13 @@ cpp.scm		C preprocessor
 cppact.scm	cpp expression parser actions
 cpptab.scm	cpp expression parser tables
 
-Tcpp.scm	Run pgen.scm; generates actions.scm.new tables.scm.new
+Tclang.scm	Run pgen.scm; generates actions.scm.new tables.scm.new
+Tcexpr.scm	Run pgen.scm; generates expract.scm.new expract.scm.new
 actions.scm	C parser actions
 tables.scm	C parser tables
 pbody.scm	body of parser
 parser.scm	C parser; includes pbody, tables and actions
 pgen.scm	C parser generator; used to generate tables and actions.scm
 
+gram.y		this is a bison grammar file, missing precedence/associativity
+lang.txt	this is like gram.output, showing productions and mach states

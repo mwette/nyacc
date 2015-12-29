@@ -27,6 +27,9 @@
   (pretty-print-c99 sx)
   #t)
 
+(define (module-path filename)
+  (string-append "../../../../module/nyacc/lang/c99/" filename))
+
 (with-output-to-file "lang.txt.new"
   (lambda ()
     (let* ((notice (assq-ref (assq-ref clang-spec 'attr) 'notice))
@@ -35,30 +38,29 @@
       (newline))
     (pp-lalr-grammar clang-spec)
     (pp-lalr-machine clang-mach)
-    (move-if-changed "lang.txt.new" "lang.txt")))
+    (move-if-changed "lang.txt.new" (module-path "lang.txt"))))
 
 (with-output-to-file "gram.y.new"
   (lambda ()
     (lalr->bison clang-spec)
-    (move-if-changed "gram.y.new" "gram.y")))
+    (move-if-changed "gram.y.new" (module-path "gram.y"))))
 
 (begin
-  (write-lalr-tables clang-mach "tables.scm.new")
   (write-lalr-actions clang-mach "actions.scm.new")
-  (when (or (move-if-changed "actions.scm.new" "actions.scm")
-	    (move-if-changed "tables.scm.new" "tables.scm"))
-    (system "touch parser.scm")
-    (compile-file "parser.scm")))
+  (write-lalr-tables clang-mach "tables.scm.new")
+  (when (or (move-if-changed "actions.scm.new" (module-path "actions.scm"))
+	    (move-if-changed "tables.scm.new" (module-path "tables.scm")))
+    (system (string-append "touch " (module-path "parser.scm")))
+    (compile-file (module-path "parser.scm"))))
 
 ;; expression parser
 (let* ((cexpr-spec (restart-spec clang-mach 'expression))
        (cexpr-mach (make-lalr-machine cexpr-spec)))
-  (write-lalr-tables cexpr-mach "exprtab.scm.new")
   (write-lalr-actions cexpr-mach "expract.scm.new")
-  (when (or (move-if-changed "expract.scm.new" "expract.scm")
-	    (move-if-changed "exprtab.scm.new" "exprtab.scm"))
-    (system "touch xparser.scm")
-    (compile-file "xparser.scm")))
-
+  (write-lalr-tables cexpr-mach "exprtab.scm.new")
+  (when (or (move-if-changed "expract.scm.new" (module-path "expract.scm"))
+	    (move-if-changed "exprtab.scm.new" (module-path "exprtab.scm")))
+    (system (string-append "touch " (module-path "xparser.scm")))
+    (compile-file (module-path "xparser.scm"))))
 
 ;; --- last line ---
