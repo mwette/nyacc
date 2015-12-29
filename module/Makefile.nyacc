@@ -7,7 +7,6 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 #
-# v160704a
 
 # in nyacc/
 NYACC_LANG_SOURCES =				\
@@ -57,4 +56,4 @@ install:
 	done
 
 
-# --- last line
+# --- last line ---
