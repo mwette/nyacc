@@ -89,9 +89,9 @@
    ;; MemberExpression => PrimaryExpression
    (lambda ($1 . $rest) $1)
    ;; MemberExpression => MemberExpression "[" Expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) `(ary-ref ,$1 ,$3))
+   (lambda ($4 $3 $2 $1 . $rest) `(ary-ref ,$3 ,$1))
    ;; MemberExpression => MemberExpression "." Identifier
-   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$3 ,$1))
    ;; MemberExpression => "new" MemberExpression Arguments
    (lambda ($3 $2 $1 . $rest) `(new ,$2 ,$3))
    ;; NewExpression => MemberExpression
@@ -105,9 +105,9 @@
    (lambda ($2 $1 . $rest)
      `(CallExpression ,$1 ,$2))
    ;; CallExpression => CallExpression "[" Expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) `(ary-ref ,$1 ,$3))
+   (lambda ($4 $3 $2 $1 . $rest) `(ary-ref ,$3 ,$1))
    ;; CallExpression => CallExpression "." Identifier
-   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$3 ,$1))
    ;; Arguments => "(" ")"
    (lambda ($2 $1 . $rest) '(Arguments))
    ;; Arguments => "(" ArgumentList ")"

@@ -33,6 +33,6 @@
 (pretty-print res)
 
 (use-modules (nyacc lang javascript pprint))
-;;(pretty-print-js res)
+(pretty-print-js res)
 
 ;; --- last line ---

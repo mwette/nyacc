@@ -275,14 +275,14 @@
 
     (AssignmentOperator
      ;; todo
-     ("=" ($$ '(assign)))
-     ("*=" ($$ '(mul-assign))) ("/=" ($$ '(div-assign)))
-     ("%=" ($$ '(mod-assign)))
-     ("+=" ($$ '(add-assign))) ("-=" ($$ '(sub-assign)))
-     ("<<=" ($$ '(lshift-assign))) (">>=" ($$ '(rshift-assign)))
-     (">>>=" ($$ '(rrshift-assign)))
-     ("&=" ($$ '(and-assign))) ("^=" ($$ '(xor-assign)))
-     ("|=" ($$ '(or-assign))))
+     ("=" ($$ `(assign ,$1)))
+     ("*=" ($$ `(mul-assign ,$1))) ("/=" ($$ `(div-assign ,$1)))
+     ("%=" ($$ `(mod-assign ,$1)))
+     ("+=" ($$ `(add-assign ,$1))) ("-=" ($$ `(sub-assign ,$1)))
+     ("<<=" ($$ `(lshift-assign ,$1))) (">>=" ($$ `(rshift-assign ,$1)))
+     (">>>=" ($$ `(rrshift-assign ,$1)))
+     ("&=" ($$ `(and-assign ,$1))) ("^=" ($$ `(xor-assign ,$1)))
+     ("|=" ($$ `(or-assign ,$1))))
 
     (Expression
      (AssignmentExpression)
