@@ -1,0 +1,7 @@
+C99-002	<= next bug id
+
+C99-001	cpp breaks on the following, I think:
+	#define ABC 123 /* this is a var */
+	#if ABC > 100
+	# error "bla"
+	#endif

@@ -108,6 +108,8 @@ todo:
 	   ((include) (cpp-include))
 	   ((ifdef) `(if (defined ,(rd-ident))))
 	   ((ifndef) `(if (not (defined ,(rd-ident)))))
+	   ;;((ifdef) `(ifdef ,(rd-ident)))
+	   ;;((ifndef) `(ifndef ,(rd-ident)))
 	   ((define) (cpp-define))
 	   ((if elif) (list cmd (parse-cpp-expr)))
 	   ((else endif) (list cmd))

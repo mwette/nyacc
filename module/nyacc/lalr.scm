@@ -89,9 +89,9 @@
 			  $1)))))
   
 ;; @item lalr-spec grammar => spec
-;; This routine reads a grammar in a scheme-like syntax and returns a SRFI-9
-;; record of type @code{lalr-record-type}.   This spec' can be an input for
-;; @item{make-parser-generator} or @item{pp-spec}.
+;; This routine reads a grammar in a scheme-like syntax and returns an a-list.
+;; This spec' can be an input for @item{make-parser-generator} or 
+;; @item{pp-spec}.
 ;;.This will return the specification.  Notably the grammar will have rhs
 ;; arguments decorated with type (e.g., @code{(terminal . #\,)}).
 ;; Each production rule in the grammar will be of the form

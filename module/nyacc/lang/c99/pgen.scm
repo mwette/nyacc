@@ -30,10 +30,6 @@
   )
 
 ;; Objective is to generate a sxml tree.
-;; Strategy for building the tree:
-;; @itemize
-;; @item add decoration for RHS items, not LHS items
-;; @example
 ;; Written to the grammar specified for ISO-C99, 
 ;;   http://slps.github.io/zoo/c/iso-9899-tc3.html
 ;; but modified to handle comments and CPP statements.

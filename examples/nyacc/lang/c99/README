@@ -1,0 +1,17 @@
+lang/c99/
+
+Copyright (C) 2015 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+The following files are also covered by the above copyright and license:
+  ex1.c
+  inc.h
+
+manifest:
+Tcpp.scm	Run cppgen.scm; generates cppact.scm.new cpptab.scm.new
+Tclang.scm	Run pgen.scm; generates actions.scm.new tables.scm.new
+Tcexpr.scm	Run pgen.scm; generates expract.scm.new expract.scm.new

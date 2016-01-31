@@ -273,6 +273,12 @@
 			 ))))
 		((define)
 		 (add-define stmt))
+		#;((ifdef)
+		 (cpi-push)
+		 )
+		#;((ifndef)
+		 (cpi-push)
+		 )
 		((if)
 		 (cpi-push)
 		 (if (eq? mode 'code)
@@ -360,4 +366,4 @@
 	       (loop (read-token)))))
 	  )))))
 
-;; --- last line
+;; --- last line ---
