@@ -140,15 +140,16 @@ file COPYING included with the this distribution.")
   (if (pair? sx) (car sx) #f))
 
 ;; @item sx-tail sx ix => (list)
-;; Return the tail starting at the ix-th cdr.
+;; Return the tail starting at the ix-th cdr, starting from 0.
 ;; For example, if sx has 3 items then (sx-tail sx 2) returns '().
+;; BUG: not working for (sx '(foo) 1)
 (define (sx-tail sx ix)
-  (cond
-   ((zero? ix) sx)
-   ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
-    (list-tail sx (1+ ix)))
-   (else
-    (list-tail sx ix))))
+  (if (zero? ix) (error "zero index not supported"))
+  (let ((sx (cdr sx)) (ix (1- ix)))
+    (cond
+     ((and (null? sx) (zero? ix)) sx)
+     ((and (pair? (car sx)) (eqv? '@ (caar sx))) (list-tail sx (1+ ix)))
+     (else (list-tail sx ix)))))
 
 ;; @item sx-attr sx => '(@ ...)|#f
 ;; @example
