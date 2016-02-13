@@ -671,7 +671,6 @@
 			  (assq-ref clang-mach 'act-v)))
 (define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
 
-;;(include "pbody.scm")
 (include-from-path "nyacc/lang/c99/pbody.scm")
 
 (define raw-parser (make-lalr-parser clang-mach))

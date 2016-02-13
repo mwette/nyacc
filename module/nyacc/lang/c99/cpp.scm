@@ -20,10 +20,8 @@
 (define-module (nyacc lang c99 cpp)
   #:export (parse-cpp-line
 	    eval-cpp-expr
-	    ;;
-	    n-parse-cpp-expr
+	    parse-cpp-expr
 	    )
-  ;;#:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)

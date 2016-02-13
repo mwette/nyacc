@@ -165,6 +165,7 @@
 
 ;; @item read-cpp-line ch => #f | (cpp-xxxx)??
 ;; Given if ch is #\# read a cpp-statement
+;; includes BUG: #define ABC 123 /* \n
 (define (read-cpp-line ch)
   (if (not (eq? ch #\#)) #f
       (let iter ((cl '()) (ch (read-char)))
@@ -174,6 +175,14 @@
 	  (let ((c2 (read-char)))
 	    (if (eq? c2 #\newline)
 		(iter cl (read-char))
+		(iter (cons* c2 ch cl) (read-char)))))
+	 ((eq? ch #\/)
+	  (let ((c2 (read-char)))
+	    (if (eq? c2 #\*)
+		(begin
+		  (unread-char c2)
+		  (unread-char #\/)
+		  (list->string (reverse cl)))
 		(iter (cons* c2 ch cl) (read-char)))))
 	 (else (iter (cons ch cl) (read-char)))))))
 
@@ -265,20 +274,14 @@
 					   (with-input-from-file pth run-parse)
 					   (throw 'parse-error "~A" pth)))
 				     (else (perr file)))))
-			 ;;(simple-format #t "tree:\n") (pretty-print tree)
-			 ;;(simple-format #t "=xp1=>:\n") (pretty-print (xp1 tree))
 			 (for-each add-define (xp1 tree)) ; add def's 
 			 ;; Attach tree onto "include" statement (hack?)
 			 (if (pair? tree) (set! stmt (append stmt (list tree))))
 			 ))))
 		((define)
 		 (add-define stmt))
-		#;((ifdef)
-		 (cpi-push)
-		 )
-		#;((ifndef)
-		 (cpi-push)
-		 )
+		#;((ifdef) (cpi-push)) ;; ???
+		#;((ifndef) (cpi-push))
 		((if)
 		 (cpi-push)
 		 (if (eq? mode 'code)
