@@ -253,6 +253,9 @@
 		   (cell (cons name (if args (cons args repl) repl))))
 	      (set-cpi-defs! info (cons cell (cpi-defs info)))))
 	  
+	  (define (rem-define name)
+	      (set-cpi-defs! info (delete name (cpi-defs info))))
+	  
 	  (define (exec-cpp line)
 	    ;;(simple-format #t "exec-cpp: ~S\n" line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
@@ -280,6 +283,8 @@
 			 ))))
 		((define)
 		 (add-define stmt))
+		((undef)
+		 (rem-define (cadr stmt)))
 		#;((ifdef) (cpi-push)) ;; ???
 		#;((ifndef) (cpi-push))
 		((if)

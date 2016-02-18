@@ -12,6 +12,7 @@
 
 (use-modules (nyacc lang c99 cppgen))
 (use-modules (nyacc lalr))
+(use-modules (nyacc lang util))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
