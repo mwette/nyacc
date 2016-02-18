@@ -192,9 +192,10 @@
 	(if (eqv? c1 #\\)
 	    (let ((c3 (read-char)))
 	      (case c2
-		;;((#\a) (cons '$chlit "\a")) ; alert
-		;;((#\b) (cons '$chlit "\b")) ; backspace
-		;;((#\f) ; formfeed
+		((#\a) (cons '$chlit "\a")) ; alert
+		((#\b) (cons '$chlit "\b")) ; backspace
+		((#\f) (cons '$chlit "\f")) ; formfeed
+		((#\0) (cons '$chlit "\0")) ; nul
 		((#\n) (cons '$chlit "\n")) ; newline
 		((#\t) (cons '$chlit "\t")) ; horizontal tab
 		((#\v) (cons '$chlit  "\v")) ; verticle tab
