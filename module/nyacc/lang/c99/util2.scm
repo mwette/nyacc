@@ -22,6 +22,7 @@
   #:export (tree->udict
 	    stripdown
 	    udecl->mspec
+	    unwrap-decl
 
 	    canize-enum-def-list
 	    fix-fields
@@ -90,6 +91,34 @@
      (error "c99/util2: unknown declarator: " declr))
     ))
 
+;; @example
+;; (decl (decl-spec-list ...) (init-declr-list (init-declr ...) ...))
+;; =>
+;; (decl (decl-spec-list ...) (init-declr ...))
+;; ...
+;; @end example
+(define (unwrap-decl decl seed)
+  (cond
+   ((not (eqv? 'decl (car decl))) seed)
+   ((< (length decl) 3) seed)		; this should catch struct-ref etc.
+   (else
+    (let* ((tag (sx-ref decl 0))
+	   (attr (sx-attr decl))
+	   (spec (sx-ref decl 1))	; (decl-spec-list ...)
+	   (id-l (sx-ref decl 2))	; (init-declr-list ...)
+	   (tail (sx-tail decl 3)))	; comment
+      (let iter ((res seed) (idl (cdr id-l)))
+	(if (null? idl) res
+	    (let* ((declr (sx-ref (car idl) 1))
+		   (ident (declr->ident declr))
+		   (name (cadr ident)))
+	      (iter (cons (if attr
+			      (cons* tag attr spec (car idl) tail)
+			      (cons* tag spec (car idl) tail))
+			  res)
+		    (cdr idl)))))))))
+
+
 ;; @item tree->udict tree => udict
 ;; Turn a C parse tree into a assoc-list of names and definitions.
 ;; This will unwrap @code{init-declr-list} into list of decls w/
@@ -105,8 +134,8 @@
 ;; with the identifier being declared.  So this is a fold iterator to
 ;; provide a dictionary of declared names.
 ;; @example
-;; @end example
 ;; (decl (decl-spec-list ...) (init-declr-list (init-declr ...) ...))
+;; @end example
 ;; @noindent
 ;; has been replaced by
 ;; (decl (decl-spec-list ...) (init-declr ...))

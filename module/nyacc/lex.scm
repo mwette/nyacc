@@ -36,6 +36,7 @@
 	    read-c-string
 	    read-c-chlit
 	    read-c-num
+	    read-oct read-hex
 	    like-c-ident?
 	    filter-mt remove-mt map-mt make-ident-like-p 
 	    c:ws c:if c:ir)
@@ -68,6 +69,7 @@
 	       (string->char-set! lcase cs)))
 (define c:ir (string->char-set digit c:if)) ; ident, rest chars
 (define c:nx (string->char-set "eEdD"))	; number exponent
+(define c:hx (string->char-set "abcdefABCDEF"))
 
 ;; @item eval-reader reader string => result
 ;; For test and debug, this procedure will evaluate a reader on a string.
@@ -149,6 +151,37 @@
 		(else (iter (cons ch cl) (read-char)))))
 	#f)))
 
+(define read-oct
+  (let ((cs:oct (string->char-set "01234567")))
+    (lambda (ch)
+      (let iter ((cv 0) (ch ch) (n 1))
+	(cond
+	 ((eof-object? ch) cv)
+	 ((> n 3) (unread-char ch) cv)
+	 ((char-set-contains? cs:oct ch)
+	  (iter (+ (* 8 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
+	 (else
+	  (unread-char ch)
+	  cv))))))
+
+(define read-hex
+  (let ((cs:dig (string->char-set "0123456789"))
+	(cs:uhx (string->char-set "ABCDEF"))
+	(cs:lhx (string->char-set "abcdef")))
+    (lambda (ch) ;; ch == #\x always
+      (let iter ((cv 0) (ch (read-char)) (n 0))
+	(simple-format #t "ch=~S\n" ch)
+	(cond
+	 ((eof-object? ch) cv)
+	 ((> n 2) (unread-char ch) cv)
+	 ((char-set-contains? cs:dig ch)
+	  (iter (+ (* 16 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
+	 ((char-set-contains? cs:uhx ch)
+	  (iter (+ (* 16 cv) (- (char->integer ch) 55)) (read-char) (1+ n)))
+	 ((char-set-contains? cs:lhx ch)
+	  (iter (+ (* 16 cv) (- (char->integer ch) 87)) (read-char) (1+ n)))
+	 (else (unread-char ch) cv))))))
+	
 ;; @item read-c-string dquote-char => c-string
 ;; Read a C-code string.  Output to code is @code{write} not @code{display}.
 ;; Return #f if char is not @code{"}.
@@ -157,25 +190,27 @@
       (let iter ((cl '()) (ch (read-char)))
 	(cond ((eq? ch #\\)
 	       (let ((c1 (read-char)))
-		 (iter 
+		 (iter
 		  (case c1
 		    ((#\newline) cl)
-		    ((#\n) (cons #\newline cl))
-		    ((#\t) (cons #\tab cl))
-		    ((#\b) (cons #\backspace cl))
-		    ((#\r) (cons #\return cl))
-		    ((#\f) (cons #\page cl))
-		    ((#\v) (cons #\vtab cl))
 		    ((#\\) (cons #\\ cl))
-		    ((#\') (cons #\' cl))
 		    ((#\") (cons #\" cl))
+		    ((#\') (cons #\' cl))
+		    ((#\n) (cons #\newline cl))
+		    ((#\r) (cons #\return cl))
+		    ((#\b) (cons #\backspace cl))
+		    ((#\t) (cons #\tab cl))
+		    ((#\f) (cons #\page cl))
 		    ((#\a) (cons #\alarm cl))
-		    ((#\?) (cons #\esc cl))
-		    (else (iter (cons c1 cl) (read-char))))
+		    ((#\v) (cons #\vtab cl))
+		    ((#\x) (cons (integer->char (read-hex ch)) cl))
+		    (else
+		     (if (char-numeric? ch)
+			 (cons (integer->char (read-oct ch)) cl)
+			 (cons c1 cl))))
 		  (read-char))))
 	      ((eq? ch #\") (cons '$string (list->string (reverse cl))))
 	      (else (iter (cons ch cl) (read-char)))))))
-
 
 ;; @item make-chlit-reader
 ;; Generate a reader for character literals. NOT DONE.
@@ -191,16 +226,18 @@
       (let ((c1 (read-char)) (c2 (read-char)))
 	(if (eqv? c1 #\\)
 	    (let ((c3 (read-char)))
-	      (case c2
-		((#\a) (cons '$chlit "\a")) ; alert
-		((#\b) (cons '$chlit "\b")) ; backspace
-		((#\f) (cons '$chlit "\f")) ; formfeed
-		((#\0) (cons '$chlit "\0")) ; nul
-		((#\n) (cons '$chlit "\n")) ; newline
-		((#\t) (cons '$chlit "\t")) ; horizontal tab
-		((#\v) (cons '$chlit  "\v")) ; verticle tab
-		((#\\ #\' #\" #\?) (cons '$chlit (string c2)))
-		(else (error "bad escape sequence"))))
+	      (cons '$chlit
+		    (case c2
+		      ((#\0) "\0;")	   ; nul U+0000 (#\U+...)
+		      ((#\a) "\a")	   ; alert U+0007
+		      ((#\b) "\b")	   ; backspace U+0008
+		      ((#\t) "\t")	   ; horizontal tab U+0009
+		      ((#\n) "\n")	   ; newline U+000A
+		      ((#\v) "\v")	   ; verticle tab U+000B
+		      ((#\f) "\f")	   ; formfeed U+000C
+		      ((#\\) "\\")	   ; backslash
+		      ((#\' #\" #\?) (string c2))
+		      (else (error "bad escape sequence")))))
 	    (cons '$chlit (string c1))))))
 
 ;; @item make-num-reader => (proc ch) => #f|'($fixed "1")|'($float "1.0")
@@ -223,18 +260,18 @@
 	    ((char=? #\0 ch) (iter (cons ch chl) '$fixed 10 (read-char))) 
 	    ((char-numeric? ch) (iter chl '$fixed 1 ch))
 	    (else #f)))
-	  ((10) ;; looking for hex, but need to deal with "0,"
+	  ((10) ;; allow x after 0
 	   (cond
 	    ((eof-object? ch) (iter chl ty 5 ch))
 	    ((char=? #\x ch) (iter (cons ch chl) ty 1 (read-char)))
-	    ((char=? #\. ch) (iter chl ty 1 ch))
-	    ((char-numeric? ch) (iter chl ty 1 ch))
-	    (else (iter chl ty 5 ch))))
+	    (else (iter chl ty 1 ch))))
 	  ((1)
 	   (cond
 	    ((eof-object? ch) (iter chl ty 5 ch))
 	    ((char-numeric? ch) (iter (cons ch chl) ty 1 (read-char)))
 	    ((char=? #\. ch) (iter (cons #\. chl) '$float 2 (read-char)))
+	    ((char-set-contains? c:hx ch)
+	     (iter (cons ch chl) ty 1 (read-char)))
 	    ((char-set-contains? c:if ch) (error "reading number st=1"))
 	    (else (iter chl '$fixed 5 ch))))
 	  ((2)
