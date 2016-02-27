@@ -1,0 +1,11 @@
+strategy for generating parsers and other stuff
+
+dist:
+	mach.scm
+
+dev-parser.scm: mach.scm pbody.scm mk-parser.scm
+parser.scm: mach.scm pbody.scm mk-parser.scm
+expr-parser.scm: mach.scm pbody.scm mk-parser.scm
+
+#guile -s mk-parser.scm -c '(make-parser)
+

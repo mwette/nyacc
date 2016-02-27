@@ -1,6 +1,6 @@
 # module/Makefile.nyacc
 #
-# Copyright (C) 2015 -  Matthew R. Wette
+# Copyright (C) 2015,2016 -  Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -9,30 +9,23 @@
 #
 
 # in nyacc/
-NYACC_LANG_SOURCES =				\
-  nyacc/export.scm				\
-  nyacc/import.scm				\
-  nyacc/lalr.scm				\
-  nyacc/lex.scm					\
-  nyacc/parse.scm				\
-  nyacc/util.scm				\
-  nyacc/lang/util.scm				\
-  nyacc/lang/c99/actions.scm			\
-  nyacc/lang/c99/cpp.scm			\
-  nyacc/lang/c99/cppact.scm			\
-  nyacc/lang/c99/cppgen.scm			\
-  nyacc/lang/c99/cpptab.scm			\
-  nyacc/lang/c99/expract.scm			\
-  nyacc/lang/c99/exprtab.scm			\
-  nyacc/lang/c99/lang.txt			\
-  nyacc/lang/c99/parser.scm			\
-  nyacc/lang/c99/pbody.scm			\
-  nyacc/lang/c99/pgen.scm			\
-  nyacc/lang/c99/pprint.scm			\
-  nyacc/lang/c99/tables.scm			\
-  nyacc/lang/c99/util.scm			\
-  nyacc/lang/c99/util2.scm			\
-  nyacc/lang/c99/xparser.scm			
+NYACC_INST_BINARIES =				\
+  nyacc/export.po				\
+  nyacc/import.po				\
+  nyacc/lalr.po					\
+  nyacc/lex.po					\
+  nyacc/parse.po				\
+  nyacc/util.po					\
+  nyacc/lang/util.po				\
+  nyacc/lang/c99/cpp.po				\
+  nyacc/lang/c99/parser.po			\
+  nyacc/lang/c99/pgen.po			\
+  nyacc/lang/c99/pprint.po			\
+  nyacc/lang/c99/util.po			\
+  nyacc/lang/c99/util2.po			\
+  nyacc/lang/c99/xparser.po			
+
+#nyacc/lang/c99/{a.scm,tables.scm}: nyacc/lang/c99/pgen.scm
 
 SITE_SCM_DIR=$(shell guile -c '(display (%site-dir))')
 SITE_SCM_GO_DIR=$(shell guile -c '(display (%site-ccache-dir))')
@@ -42,14 +35,14 @@ show:
 	@echo SITE_SCM_GO_DIR = $(SITE_SCM_GO_DIR)
 
 .PHONY: install
-install:
+install: $(NYACC_SOURCES)
 	mkdir -p $(SITE_SCM_DIR)
 	mkdir -p $(SITE_SCM_GO_DIR)
-	for file in $(NYACC_LANG_SOURCES); do \
+	for file in $(NYACC_SOURCES); do \
 	  mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
 	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
 	done
-	for file in $(NYACC_LANG_SOURCES); do \
+	for file in $(NYACC_SOURCES); do \
 	  mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${file}`; \
 	  dest=`echo $${file} | sed -e 's/.scm/.go/'`; \
 	  guild compile -o $(SITE_SCM_GO_DIR)/$${dest} $${file}; \

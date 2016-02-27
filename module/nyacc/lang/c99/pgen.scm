@@ -75,8 +75,15 @@
      (argument-expression-list "," assignment-expression ($$ (tl-append $1 $3)))
      ;; The following is a kludge to deal with using typenames in CPP defines
      ;; when we don't expand the defines.  e.g., GEN_OFFSET(foo_t, x.y.z)
-     (typedef-name ($$ (make-tl 'expr-list $1)))
-     (argument-expression-list "," typedef-name ($$ (tl-append $1 $3)))
+     ;;   (typedef-name ($$ (make-tl 'expr-list $1)))
+     ;;   (argument-expression-list "," typedef-name ($$ (tl-append $1 $3)))
+     ;; Changed after V0.67.0 to:
+     (declaration-specifiers
+      abstract-declarator
+      ($$ (make-tl 'expr-list `(decl ,(tl->list $1) ,$2))))
+     (argument-expression-list
+      "," declaration-specifiers abstract-declarator
+      ($$ (tl-append $1 `(decl ,(tl->list $1) ,$2))))
      )
 
     (unary-expression
