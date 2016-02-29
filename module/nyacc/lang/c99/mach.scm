@@ -1,4 +1,4 @@
-;;; lang/c99/pgen.scm
+;;; lang/c99/mach.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -17,7 +17,7 @@
 
 ;; C parser generator: based on ISO-C99; with comments and CPP statements
 
-(define-module (nyacc lang c99 pgen)
+(define-module (nyacc lang c99 mach)
   #:export (clang-spec clang-mach dev-parse-c)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lalr)
@@ -552,7 +552,7 @@
      )
 
     (compound-statement
-     ("{" block-item-list "}" opt-code-comment
+     ("{" block-item-list "}" 
       ($$ `(compd-stmt ,(tl->list $2))))
      ("{" "}"
       ($$ `(compd-stmt (block-item-list))))
@@ -644,6 +644,7 @@
 
     (opt-code-comment () (code-comment))
     ;;(opt-lone-comment () (lone-comment))
+    ;;(opt-comment () (code-comment) (lone-comment))
 
     ;; non-terminal leaves
     (identifier

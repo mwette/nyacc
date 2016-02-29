@@ -1,4 +1,4 @@
-;;; lang/c/cppgen.scm
+;;; lang/c/mach.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -17,7 +17,7 @@
 
 ;; C preprocessor expression parser generator
 
-(define-module (nyacc lang c99 cppgen)
+(define-module (nyacc lang c99 cppmach)
   #:export (cpp-spec cpp-mach parse-cpp-expr eval-cpp-expr)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)

@@ -1,13 +1,13 @@
-;; Tlangc.scm - clang dev
+;; Tmach.scm - clang automaton and dev parser
 ;;
-;; Copyright (C) 2015 Matthew R. Wette
+;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (nyacc lang c99 pgen))
+(use-modules (nyacc lang c99 mach))
 (use-modules (nyacc lang c99 pprint))
 (use-modules (nyacc lang util))		; move-if-changed
 (use-modules (nyacc lalr))
@@ -39,14 +39,14 @@
       (newline))
     (pp-lalr-grammar clang-spec)
     (pp-lalr-machine clang-mach)
-    (move-if-changed "lang.txt.new" (module-path "lang.txt"))))
+    (move-if-changed "lang.txt.new" "lang.txt")))
 
-(with-output-to-file "gram.y.new"
+#;(with-output-to-file "gram.y.new"
   (lambda ()
     (lalr->bison clang-spec)
     (move-if-changed "gram.y.new" (module-path "gram.y"))))
 
-(begin
+#;(begin
   (write-lalr-actions clang-mach "actions.scm.new")
   (write-lalr-tables clang-mach "tables.scm.new")
   (when (or (move-if-changed "actions.scm.new" (module-path "actions.scm"))
@@ -55,7 +55,7 @@
     (compile-file (module-path "parser.scm"))))
 
 ;; expression parser
-(let* ((cexpr-spec (restart-spec clang-mach 'expression))
+#;(let* ((cexpr-spec (restart-spec clang-mach 'expression))
        (cexpr-mach (make-lalr-machine cexpr-spec)))
   (write-lalr-actions cexpr-mach "expract.scm.new")
   (write-lalr-tables cexpr-mach "exprtab.scm.new")

@@ -7,7 +7,7 @@
 ;; file COPYING included with the this distribution.
 
 (define len-v
-  #(1 1 1 1 1 3 1 4 4 3 3 3 2 2 6 7 1 3 1 3 1 2 2 2 2 4 1 1 1 1 1 1 1 4 1 3 
+  #(1 1 1 1 1 3 1 4 4 3 3 3 2 2 6 7 1 3 2 4 1 2 2 2 2 4 1 1 1 1 1 1 1 4 1 3 
     3 3 1 3 3 1 3 3 1 3 3 3 3 1 3 3 1 3 1 3 1 3 1 3 1 3 1 5 1 3 1 1 1 1 1 1 1 
     1 1 1 1 1 3 1 5 3 0 1 2 1 2 1 2 1 2 1 3 1 3 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 
     2 3 1 1 2 1 2 2 3 2 3 3 4 3 2 2 1 3 2 4 3 1 2 2 1 1 2 1 2 2 3 5 4 2 5 4 2 
@@ -425,13 +425,25 @@
     $float shift . 10) ($fixed shift . 11) (cpp-ident shift . 12) ($ident 
     shift . 13) (bitwise-xor-expression shift . 14) (bitwise-or-expression 
     shift . 15) (string-literal shift . 16) (constant shift . 17) (identifier 
-    shift . 18) (logical-and-expression shift . 19) ($:! shift . 20) ($:~ 
-    shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* shift . 24) ($:& shift 
-    . 25) (#{$:\x28;}# shift . 26) (primary-expression shift . 27) (
-    logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
-    shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
-    . 33) (typename shift . 67) (unary-expression shift . 34) (
-    conditional-expression shift . 35) (typedef-name shift . 182) (
+    shift . 18) (typename shift . 67) ($:enum shift . 68) ($:union shift . 69)
+    ($:struct shift . 70) ($:_Complex shift . 71) ($:double shift . 72) (
+    $:float shift . 73) ($:char shift . 74) ($:unsigned shift . 75) ($:long 
+    shift . 76) ($:int shift . 77) ($:signed shift . 78) ($:short shift . 79) 
+    (logical-and-expression shift . 19) ($:! shift . 20) ($:~ shift . 21) ($:-
+    shift . 22) ($:+ shift . 23) ($:* shift . 24) ($:& shift . 25) (
+    #{$:\x28;}# shift . 26) (primary-expression shift . 27) ($:inline shift . 
+    80) ($:restrict shift . 81) ($:volatile shift . 82) ($:const shift . 83) (
+    typedef-name shift . 84) (enum-specifier shift . 85) (
+    struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87) 
+    ($:_Bool shift . 88) (float-type-specifier shift . 89) (
+    fixed-type-specifier shift . 90) ($:void shift . 91) ($:typedef shift . 92
+    ) ($:static shift . 93) ($:register shift . 94) ($:extern shift . 95) (
+    $:auto shift . 96) (logical-or-expression shift . 28) ($:sizeof shift . 29
+    ) (unary-operator shift . 30) ($:-- shift . 31) ($:++ shift . 32) (
+    postfix-expression shift . 33) (function-specifier shift . 97) (
+    type-qualifier shift . 146) (type-specifier shift . 147) (
+    storage-class-specifier shift . 100) (unary-expression shift . 34) (
+    conditional-expression shift . 35) (declaration-specifiers shift . 182) (
     assignment-expression shift . 183) (argument-expression-list shift . 184))
     ((cpp-ident shift . 12) ($ident shift . 13) (identifier shift . 180)) ((
     cpp-ident shift . 12) ($ident shift . 13) (identifier shift . 179)) (($:= 
@@ -705,9 +717,9 @@
     $:union reduce . 173) ($:struct reduce . 173) ($:enum reduce . 173) (
     typename reduce . 173) ($:_Bool reduce . 173) ($:void reduce . 173) (
     $:restrict reduce . 173) ($:volatile reduce . 173) ($:const reduce . 173) 
-    ($:inline reduce . 173) (#{$:\x29;}# reduce . 173) ($ident reduce . 173) (
-    cpp-ident reduce . 173) (#{$:\x28;}# reduce . 173) (#{$:\x5b;}# reduce . 
-    173) ($:* reduce . 173) ($:, reduce . 173)) ((#{$:\x28;}# reduce . 172) (
+    ($:inline reduce . 173) (#{$:\x29;}# reduce . 173) (#{$:\x28;}# reduce . 
+    173) (#{$:\x5b;}# reduce . 173) ($:* reduce . 173) ($ident reduce . 173) (
+    cpp-ident reduce . 173) ($:, reduce . 173)) ((#{$:\x28;}# reduce . 172) (
     #{$:\x5b;}# reduce . 172) ($:* reduce . 172) ($:char reduce . 172) (
     $:unsigned reduce . 172) ($:int reduce . 172) ($:signed reduce . 172) (
     $:short reduce . 172) ($:long reduce . 172) ($:double reduce . 172) (
@@ -843,89 +855,88 @@
     $:_Complex reduce . 99) ($:union reduce . 99) ($:struct reduce . 99) (
     $:enum reduce . 99) (typename reduce . 99) ($:_Bool reduce . 99) ($:void 
     reduce . 99) ($:restrict reduce . 99) ($:volatile reduce . 99) ($:const 
-    reduce . 99) ($:inline reduce . 99) (#{$:\x29;}# reduce . 99) ($ident 
-    reduce . 99) (cpp-ident reduce . 99) (#{$:\x28;}# reduce . 99) (
-    #{$:\x5b;}# reduce . 99) ($:* reduce . 99) ($:, reduce . 99)) (($:typedef 
-    reduce . 98) ($:static reduce . 98) ($:register reduce . 98) ($:extern 
-    reduce . 98) ($:auto reduce . 98) ($:char reduce . 98) ($:unsigned reduce 
-    . 98) ($:int reduce . 98) ($:signed reduce . 98) ($:short reduce . 98) (
-    $:long reduce . 98) ($:double reduce . 98) ($:float reduce . 98) (
-    $:_Complex reduce . 98) ($:union reduce . 98) ($:struct reduce . 98) (
-    $:enum reduce . 98) (typename reduce . 98) ($:_Bool reduce . 98) ($:void 
-    reduce . 98) ($:restrict reduce . 98) ($:volatile reduce . 98) ($:const 
-    reduce . 98) ($:inline reduce . 98) (#{$:\x29;}# reduce . 98) ($ident 
-    reduce . 98) (cpp-ident reduce . 98) (#{$:\x28;}# reduce . 98) (
-    #{$:\x5b;}# reduce . 98) ($:* reduce . 98) ($:, reduce . 98)) (($:typedef 
-    reduce . 97) ($:static reduce . 97) ($:register reduce . 97) ($:extern 
-    reduce . 97) ($:auto reduce . 97) ($:char reduce . 97) ($:unsigned reduce 
-    . 97) ($:int reduce . 97) ($:signed reduce . 97) ($:short reduce . 97) (
-    $:long reduce . 97) ($:double reduce . 97) ($:float reduce . 97) (
-    $:_Complex reduce . 97) ($:union reduce . 97) ($:struct reduce . 97) (
-    $:enum reduce . 97) (typename reduce . 97) ($:_Bool reduce . 97) ($:void 
-    reduce . 97) ($:restrict reduce . 97) ($:volatile reduce . 97) ($:const 
-    reduce . 97) ($:inline reduce . 97) (#{$:\x29;}# reduce . 97) ($ident 
-    reduce . 97) (cpp-ident reduce . 97) (#{$:\x28;}# reduce . 97) (
-    #{$:\x5b;}# reduce . 97) ($:* reduce . 97) ($:, reduce . 97)) (($:typedef 
-    reduce . 96) ($:static reduce . 96) ($:register reduce . 96) ($:extern 
-    reduce . 96) ($:auto reduce . 96) ($:char reduce . 96) ($:unsigned reduce 
-    . 96) ($:int reduce . 96) ($:signed reduce . 96) ($:short reduce . 96) (
-    $:long reduce . 96) ($:double reduce . 96) ($:float reduce . 96) (
-    $:_Complex reduce . 96) ($:union reduce . 96) ($:struct reduce . 96) (
-    $:enum reduce . 96) (typename reduce . 96) ($:_Bool reduce . 96) ($:void 
-    reduce . 96) ($:restrict reduce . 96) ($:volatile reduce . 96) ($:const 
-    reduce . 96) ($:inline reduce . 96) (#{$:\x29;}# reduce . 96) ($ident 
-    reduce . 96) (cpp-ident reduce . 96) (#{$:\x28;}# reduce . 96) (
-    #{$:\x5b;}# reduce . 96) ($:* reduce . 96) ($:, reduce . 96)) (($:typedef 
-    reduce . 95) ($:static reduce . 95) ($:register reduce . 95) ($:extern 
-    reduce . 95) ($:auto reduce . 95) ($:char reduce . 95) ($:unsigned reduce 
-    . 95) ($:int reduce . 95) ($:signed reduce . 95) ($:short reduce . 95) (
-    $:long reduce . 95) ($:double reduce . 95) ($:float reduce . 95) (
-    $:_Complex reduce . 95) ($:union reduce . 95) ($:struct reduce . 95) (
-    $:enum reduce . 95) (typename reduce . 95) ($:_Bool reduce . 95) ($:void 
-    reduce . 95) ($:restrict reduce . 95) ($:volatile reduce . 95) ($:const 
-    reduce . 95) ($:inline reduce . 95) (#{$:\x29;}# reduce . 95) ($ident 
-    reduce . 95) (cpp-ident reduce . 95) (#{$:\x28;}# reduce . 95) (
-    #{$:\x5b;}# reduce . 95) ($:* reduce . 95) ($:, reduce . 95)) ((typename 
-    shift . 67) ($:enum shift . 68) ($:union shift . 69) ($:struct shift . 70)
-    ($:_Complex shift . 71) ($:double shift . 72) ($:float shift . 73) (
-    $:char shift . 74) ($:unsigned shift . 75) ($:long shift . 76) ($:int 
-    shift . 77) ($:signed shift . 78) ($:short shift . 79) ($:inline shift . 
-    80) ($:restrict shift . 81) ($:volatile shift . 82) ($:const shift . 83) (
-    typedef-name shift . 84) (enum-specifier shift . 85) (
-    struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87) 
-    ($:_Bool shift . 88) (float-type-specifier shift . 89) (
-    fixed-type-specifier shift . 90) ($:void shift . 91) ($:typedef shift . 92
-    ) ($:static shift . 93) ($:register shift . 94) ($:extern shift . 95) (
-    $:auto shift . 96) (function-specifier shift . 97) (type-qualifier shift 
-    . 146) (type-specifier shift . 147) (storage-class-specifier shift . 100) 
-    (declaration-specifiers shift . 153) (#{$:\x29;}# reduce . 89) ($:, reduce
-    . 89) ($:* reduce . 89) (#{$:\x5b;}# reduce . 89) (#{$:\x28;}# reduce . 
-    89) (cpp-ident reduce . 89) ($ident reduce . 89)) (($:inline shift . 80) (
-    $:typedef shift . 92) ($:static shift . 93) ($:register shift . 94) (
-    $:extern shift . 95) ($:auto shift . 96) (function-specifier shift . 97) (
-    storage-class-specifier shift . 100) (declaration-specifiers shift . 151) 
-    (typename shift . 67) ($:enum shift . 68) ($:union shift . 69) ($:struct 
-    shift . 70) ($:_Complex shift . 71) ($:double shift . 72) ($:float shift 
-    . 73) ($:char shift . 74) ($:unsigned shift . 75) ($:long shift . 76) (
-    $:int shift . 77) ($:signed shift . 78) ($:short shift . 79) ($:restrict 
-    shift . 81) ($:volatile shift . 82) ($:const shift . 83) (typedef-name 
-    shift . 84) (enum-specifier shift . 85) (struct-or-union-specifier shift 
-    . 86) (complex-type-specifier shift . 87) ($:_Bool shift . 88) (
+    reduce . 99) ($:inline reduce . 99) (#{$:\x29;}# reduce . 99) (#{$:\x28;}#
+    reduce . 99) (#{$:\x5b;}# reduce . 99) ($:* reduce . 99) ($ident reduce 
+    . 99) (cpp-ident reduce . 99) ($:, reduce . 99)) (($:typedef reduce . 98) 
+    ($:static reduce . 98) ($:register reduce . 98) ($:extern reduce . 98) (
+    $:auto reduce . 98) ($:char reduce . 98) ($:unsigned reduce . 98) ($:int 
+    reduce . 98) ($:signed reduce . 98) ($:short reduce . 98) ($:long reduce 
+    . 98) ($:double reduce . 98) ($:float reduce . 98) ($:_Complex reduce . 98
+    ) ($:union reduce . 98) ($:struct reduce . 98) ($:enum reduce . 98) (
+    typename reduce . 98) ($:_Bool reduce . 98) ($:void reduce . 98) (
+    $:restrict reduce . 98) ($:volatile reduce . 98) ($:const reduce . 98) (
+    $:inline reduce . 98) (#{$:\x29;}# reduce . 98) (#{$:\x28;}# reduce . 98) 
+    (#{$:\x5b;}# reduce . 98) ($:* reduce . 98) ($ident reduce . 98) (
+    cpp-ident reduce . 98) ($:, reduce . 98)) (($:typedef reduce . 97) (
+    $:static reduce . 97) ($:register reduce . 97) ($:extern reduce . 97) (
+    $:auto reduce . 97) ($:char reduce . 97) ($:unsigned reduce . 97) ($:int 
+    reduce . 97) ($:signed reduce . 97) ($:short reduce . 97) ($:long reduce 
+    . 97) ($:double reduce . 97) ($:float reduce . 97) ($:_Complex reduce . 97
+    ) ($:union reduce . 97) ($:struct reduce . 97) ($:enum reduce . 97) (
+    typename reduce . 97) ($:_Bool reduce . 97) ($:void reduce . 97) (
+    $:restrict reduce . 97) ($:volatile reduce . 97) ($:const reduce . 97) (
+    $:inline reduce . 97) (#{$:\x29;}# reduce . 97) (#{$:\x28;}# reduce . 97) 
+    (#{$:\x5b;}# reduce . 97) ($:* reduce . 97) ($ident reduce . 97) (
+    cpp-ident reduce . 97) ($:, reduce . 97)) (($:typedef reduce . 96) (
+    $:static reduce . 96) ($:register reduce . 96) ($:extern reduce . 96) (
+    $:auto reduce . 96) ($:char reduce . 96) ($:unsigned reduce . 96) ($:int 
+    reduce . 96) ($:signed reduce . 96) ($:short reduce . 96) ($:long reduce 
+    . 96) ($:double reduce . 96) ($:float reduce . 96) ($:_Complex reduce . 96
+    ) ($:union reduce . 96) ($:struct reduce . 96) ($:enum reduce . 96) (
+    typename reduce . 96) ($:_Bool reduce . 96) ($:void reduce . 96) (
+    $:restrict reduce . 96) ($:volatile reduce . 96) ($:const reduce . 96) (
+    $:inline reduce . 96) (#{$:\x29;}# reduce . 96) (#{$:\x28;}# reduce . 96) 
+    (#{$:\x5b;}# reduce . 96) ($:* reduce . 96) ($ident reduce . 96) (
+    cpp-ident reduce . 96) ($:, reduce . 96)) (($:typedef reduce . 95) (
+    $:static reduce . 95) ($:register reduce . 95) ($:extern reduce . 95) (
+    $:auto reduce . 95) ($:char reduce . 95) ($:unsigned reduce . 95) ($:int 
+    reduce . 95) ($:signed reduce . 95) ($:short reduce . 95) ($:long reduce 
+    . 95) ($:double reduce . 95) ($:float reduce . 95) ($:_Complex reduce . 95
+    ) ($:union reduce . 95) ($:struct reduce . 95) ($:enum reduce . 95) (
+    typename reduce . 95) ($:_Bool reduce . 95) ($:void reduce . 95) (
+    $:restrict reduce . 95) ($:volatile reduce . 95) ($:const reduce . 95) (
+    $:inline reduce . 95) (#{$:\x29;}# reduce . 95) (#{$:\x28;}# reduce . 95) 
+    (#{$:\x5b;}# reduce . 95) ($:* reduce . 95) ($ident reduce . 95) (
+    cpp-ident reduce . 95) ($:, reduce . 95)) ((typename shift . 67) ($:enum 
+    shift . 68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex shift 
+    . 71) ($:double shift . 72) ($:float shift . 73) ($:char shift . 74) (
+    $:unsigned shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed 
+    shift . 78) ($:short shift . 79) ($:inline shift . 80) ($:restrict shift 
+    . 81) ($:volatile shift . 82) ($:const shift . 83) (typedef-name shift . 
+    84) (enum-specifier shift . 85) (struct-or-union-specifier shift . 86) (
+    complex-type-specifier shift . 87) ($:_Bool shift . 88) (
     float-type-specifier shift . 89) (fixed-type-specifier shift . 90) ($:void
-    shift . 91) (type-qualifier shift . 98) (type-specifier shift . 99) (
-    specifier-qualifier-list shift . 152) (#{$:\x29;}# reduce . 87) ($:* 
-    reduce . 155) (#{$:\x5b;}# reduce . 155) (#{$:\x28;}# reduce . 155)) ((
-    $:inline shift . 80) ($:typedef shift . 92) ($:static shift . 93) (
-    $:register shift . 94) ($:extern shift . 95) ($:auto shift . 96) (
-    function-specifier shift . 97) (storage-class-specifier shift . 100) (
-    declaration-specifiers shift . 149) (typename shift . 67) ($:enum shift . 
-    68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex shift . 71) (
+    shift . 91) ($:typedef shift . 92) ($:static shift . 93) ($:register 
+    shift . 94) ($:extern shift . 95) ($:auto shift . 96) (function-specifier 
+    shift . 97) (type-qualifier shift . 146) (type-specifier shift . 147) (
+    storage-class-specifier shift . 100) (declaration-specifiers shift . 153) 
+    (#{$:\x29;}# reduce . 89) ($:* reduce . 89) (#{$:\x5b;}# reduce . 89) (
+    #{$:\x28;}# reduce . 89) ($:, reduce . 89) (cpp-ident reduce . 89) ($ident
+    reduce . 89)) (($:inline shift . 80) ($:typedef shift . 92) ($:static 
+    shift . 93) ($:register shift . 94) ($:extern shift . 95) ($:auto shift . 
+    96) (function-specifier shift . 97) (storage-class-specifier shift . 100) 
+    (declaration-specifiers shift . 151) (typename shift . 67) ($:enum shift 
+    . 68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex shift . 71) (
     $:double shift . 72) ($:float shift . 73) ($:char shift . 74) ($:unsigned 
     shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed shift . 78) (
     $:short shift . 79) ($:restrict shift . 81) ($:volatile shift . 82) (
     $:const shift . 83) (typedef-name shift . 84) (enum-specifier shift . 85) 
     (struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87)
     ($:_Bool shift . 88) (float-type-specifier shift . 89) (
+    fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
+    . 98) (type-specifier shift . 99) (specifier-qualifier-list shift . 152) 
+    (#{$:\x29;}# reduce . 87) ($:* reduce . 155) (#{$:\x5b;}# reduce . 155) (
+    #{$:\x28;}# reduce . 155)) (($:inline shift . 80) ($:typedef shift . 92) (
+    $:static shift . 93) ($:register shift . 94) ($:extern shift . 95) ($:auto
+    shift . 96) (function-specifier shift . 97) (storage-class-specifier 
+    shift . 100) (declaration-specifiers shift . 149) (typename shift . 67) (
+    $:enum shift . 68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex 
+    shift . 71) ($:double shift . 72) ($:float shift . 73) ($:char shift . 74)
+    ($:unsigned shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed 
+    shift . 78) ($:short shift . 79) ($:restrict shift . 81) ($:volatile shift
+    . 82) ($:const shift . 83) (typedef-name shift . 84) (enum-specifier 
+    shift . 85) (struct-or-union-specifier shift . 86) (complex-type-specifier
+    shift . 87) ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
     . 98) (type-specifier shift . 99) (specifier-qualifier-list shift . 150) 
     (#{$:\x29;}# reduce . 85) ($:* reduce . 153) (#{$:\x5b;}# reduce . 153) (
@@ -942,8 +953,8 @@
     shift . 94) ($:extern shift . 95) ($:auto shift . 96) (function-specifier 
     shift . 97) (type-qualifier shift . 146) (type-specifier shift . 147) (
     storage-class-specifier shift . 100) (declaration-specifiers shift . 148) 
-    (#{$:\x29;}# reduce . 83) ($:, reduce . 83) ($:* reduce . 83) (#{$:\x5b;}#
-    reduce . 83) (#{$:\x28;}# reduce . 83) (cpp-ident reduce . 83) ($ident 
+    (#{$:\x29;}# reduce . 83) ($:* reduce . 83) (#{$:\x5b;}# reduce . 83) (
+    #{$:\x28;}# reduce . 83) ($:, reduce . 83) (cpp-ident reduce . 83) ($ident
     reduce . 83)) ((#{$:\x29;}# reduce . 205)) ((#{$:\x5b;}# shift . 140) (
     #{$:\x28;}# shift . 141) ($:* shift . 142) (direct-abstract-declarator 
     shift . 143) (pointer shift . 144) (abstract-declarator shift . 145)) ((
@@ -1208,14 +1219,14 @@
     shift . 106) ($:? reduce . 59) ($:, reduce . 59) ($:|| reduce . 59) ($:&& 
     reduce . 59) (#{$:\x29;}# reduce . 59) (#{$:\x5d;}# reduce . 59) ($:: 
     reduce . 59) (#{$:\x7d;}# reduce . 59) ($end reduce . 59) (#{$:;}# reduce 
-    . 59)) ((#{$:\x7b;}# shift . 233) ($string shift . 8) ($chlit shift . 9) (
+    . 59)) ((#{$:\x7b;}# shift . 234) ($string shift . 8) ($chlit shift . 9) (
     $float shift . 10) ($fixed shift . 11) (cpp-ident shift . 12) ($ident 
     shift . 13) (string-literal shift . 16) (constant shift . 17) (identifier 
     shift . 18) ($:! shift . 20) ($:~ shift . 21) ($:- shift . 22) ($:+ shift 
     . 23) ($:* shift . 24) ($:& shift . 25) (primary-expression shift . 27) (
     $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
     shift . 32) (postfix-expression shift . 33) (#{$:\x28;}# shift . 26) (
-    unary-expression shift . 60) (cast-expression shift . 234)) ((
+    unary-expression shift . 60) (cast-expression shift . 235)) ((
     cast-expression shift . 1) (multiplicative-expression shift . 2) (
     additive-expression shift . 3) (shift-expression shift . 4) (
     relational-expression shift . 5) (equality-expression shift . 6) (
@@ -1229,12 +1240,12 @@
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 228) (#{$:\x5d;}# shift . 229) ($:static 
-    shift . 230) ($:restrict shift . 81) ($:volatile shift . 82) ($:const 
-    shift . 83) (type-qualifier shift . 219) (type-qualifier-list shift . 231)
-    ($:* shift . 232)) ((#{$:\x5b;}# shift . 140) (#{$:\x28;}# shift . 141) (
+    assignment-expression shift . 229) (#{$:\x5d;}# shift . 230) ($:static 
+    shift . 231) ($:restrict shift . 81) ($:volatile shift . 82) ($:const 
+    shift . 83) (type-qualifier shift . 220) (type-qualifier-list shift . 232)
+    ($:* shift . 233)) ((#{$:\x5b;}# shift . 140) (#{$:\x28;}# shift . 141) (
     $:* shift . 142) (direct-abstract-declarator shift . 143) (pointer shift 
-    . 144) (abstract-declarator shift . 222) (typename shift . 67) ($:enum 
+    . 144) (abstract-declarator shift . 223) (typename shift . 67) ($:enum 
     shift . 68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex shift 
     . 71) ($:double shift . 72) ($:float shift . 73) ($:char shift . 74) (
     $:unsigned shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed 
@@ -1246,31 +1257,31 @@
     shift . 91) ($:typedef shift . 92) ($:static shift . 93) ($:register 
     shift . 94) ($:extern shift . 95) ($:auto shift . 96) (function-specifier 
     shift . 97) (type-qualifier shift . 146) (type-specifier shift . 147) (
-    storage-class-specifier shift . 100) (declaration-specifiers shift . 223) 
-    (parameter-declaration shift . 224) (parameter-list shift . 225) (
-    parameter-type-list shift . 226) (#{$:\x29;}# shift . 227)) (($:restrict 
+    storage-class-specifier shift . 100) (declaration-specifiers shift . 224) 
+    (parameter-declaration shift . 225) (parameter-list shift . 226) (
+    parameter-type-list shift . 227) (#{$:\x29;}# shift . 228)) (($:restrict 
     shift . 81) ($:volatile shift . 82) ($:const shift . 83) (type-qualifier 
-    shift . 219) (type-qualifier-list shift . 220) ($:* shift . 142) (pointer 
-    shift . 221) (#{$:\x5b;}# reduce . 190) (#{$:\x28;}# reduce . 190) (
+    shift . 220) (type-qualifier-list shift . 221) ($:* shift . 142) (pointer 
+    shift . 222) (#{$:\x5b;}# reduce . 190) (#{$:\x28;}# reduce . 190) (
     #{$:\x29;}# reduce . 190) (cpp-ident reduce . 190) ($ident reduce . 190) (
-    $:, reduce . 190)) ((#{$:\x5b;}# shift . 217) (#{$:\x28;}# shift . 218) (
+    $:, reduce . 190)) ((#{$:\x5b;}# shift . 218) (#{$:\x28;}# shift . 219) (
     #{$:\x29;}# reduce . 208) ($:, reduce . 208)) ((#{$:\x5b;}# shift . 140) (
-    #{$:\x28;}# shift . 141) (direct-abstract-declarator shift . 216) (
-    #{$:\x29;}# reduce . 206)) ((#{$:\x29;}# reduce . 204)) ((typename shift 
-    . 67) ($:enum shift . 68) ($:union shift . 69) ($:struct shift . 70) (
-    $:_Complex shift . 71) ($:double shift . 72) ($:float shift . 73) ($:char 
-    shift . 74) ($:unsigned shift . 75) ($:long shift . 76) ($:int shift . 77)
-    ($:signed shift . 78) ($:short shift . 79) ($:inline shift . 80) (
-    $:restrict shift . 81) ($:volatile shift . 82) ($:const shift . 83) (
-    typedef-name shift . 84) (enum-specifier shift . 85) (
+    #{$:\x28;}# shift . 141) (direct-abstract-declarator shift . 217) (
+    #{$:\x29;}# reduce . 206) ($:, reduce . 206)) ((#{$:\x29;}# reduce . 204))
+    ((typename shift . 67) ($:enum shift . 68) ($:union shift . 69) ($:struct
+    shift . 70) ($:_Complex shift . 71) ($:double shift . 72) ($:float shift 
+    . 73) ($:char shift . 74) ($:unsigned shift . 75) ($:long shift . 76) (
+    $:int shift . 77) ($:signed shift . 78) ($:short shift . 79) ($:inline 
+    shift . 80) ($:restrict shift . 81) ($:volatile shift . 82) ($:const shift
+    . 83) (typedef-name shift . 84) (enum-specifier shift . 85) (
     struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87) 
     ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) ($:typedef shift . 92
     ) ($:static shift . 93) ($:register shift . 94) ($:extern shift . 95) (
     $:auto shift . 96) (function-specifier shift . 97) (type-qualifier shift 
     . 146) (type-specifier shift . 147) (storage-class-specifier shift . 100) 
-    (declaration-specifiers shift . 151) ($:, reduce . 87) (#{$:\x29;}# reduce
-    . 87) ($:* reduce . 87) (#{$:\x5b;}# reduce . 87) (#{$:\x28;}# reduce . 
+    (declaration-specifiers shift . 151) ($:* reduce . 87) (#{$:\x5b;}# reduce
+    . 87) (#{$:\x28;}# reduce . 87) ($:, reduce . 87) (#{$:\x29;}# reduce . 
     87) (cpp-ident reduce . 87) ($ident reduce . 87)) ((typename shift . 67) (
     $:enum shift . 68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex 
     shift . 71) ($:double shift . 72) ($:float shift . 73) ($:char shift . 74)
@@ -1284,32 +1295,32 @@
     shift . 94) ($:extern shift . 95) ($:auto shift . 96) (function-specifier 
     shift . 97) (type-qualifier shift . 146) (type-specifier shift . 147) (
     storage-class-specifier shift . 100) (declaration-specifiers shift . 149) 
-    ($:, reduce . 85) (#{$:\x29;}# reduce . 85) ($:* reduce . 85) (#{$:\x5b;}#
-    reduce . 85) (#{$:\x28;}# reduce . 85) (cpp-ident reduce . 85) ($ident 
-    reduce . 85)) ((#{$:\x29;}# reduce . 84) ($:, reduce . 84) ($:* reduce . 
-    84) (#{$:\x5b;}# reduce . 84) (#{$:\x28;}# reduce . 84) (cpp-ident reduce 
-    . 84) ($ident reduce . 84)) ((#{$:\x29;}# reduce . 86) ($:, reduce . 86) (
-    $:* reduce . 86) (#{$:\x5b;}# reduce . 86) (#{$:\x28;}# reduce . 86) (
+    ($:* reduce . 85) (#{$:\x5b;}# reduce . 85) (#{$:\x28;}# reduce . 85) ($:,
+    reduce . 85) (#{$:\x29;}# reduce . 85) (cpp-ident reduce . 85) ($ident 
+    reduce . 85)) ((#{$:\x29;}# reduce . 84) ($:* reduce . 84) (#{$:\x5b;}# 
+    reduce . 84) (#{$:\x28;}# reduce . 84) ($:, reduce . 84) (cpp-ident reduce
+    . 84) ($ident reduce . 84)) ((#{$:\x29;}# reduce . 86) ($:* reduce . 86) 
+    (#{$:\x5b;}# reduce . 86) (#{$:\x28;}# reduce . 86) ($:, reduce . 86) (
     cpp-ident reduce . 86) ($ident reduce . 86)) (($:* reduce . 152) (
     #{$:\x5b;}# reduce . 152) (#{$:\x28;}# reduce . 152) (cpp-ident reduce . 
     152) ($ident reduce . 152) ($:: reduce . 152)) ((#{$:\x29;}# reduce . 88) 
-    ($:, reduce . 88) ($:* reduce . 88) (#{$:\x5b;}# reduce . 88) (#{$:\x28;}#
+    ($:* reduce . 88) (#{$:\x5b;}# reduce . 88) (#{$:\x28;}# reduce . 88) ($:,
     reduce . 88) (cpp-ident reduce . 88) ($ident reduce . 88)) (($:* reduce 
     . 154) (#{$:\x5b;}# reduce . 154) (#{$:\x28;}# reduce . 154) (cpp-ident 
     reduce . 154) ($ident reduce . 154) ($:: reduce . 154)) ((#{$:\x29;}# 
-    reduce . 90) ($:, reduce . 90) ($:* reduce . 90) (#{$:\x5b;}# reduce . 90)
-    (#{$:\x28;}# reduce . 90) (cpp-ident reduce . 90) ($ident reduce . 90)) (
-    (#{$:\x29;}# reduce . 109) ($:inline reduce . 109) ($:auto reduce . 109) (
-    $:extern reduce . 109) ($:register reduce . 109) ($:static reduce . 109) (
-    $:typedef reduce . 109) ($:const reduce . 109) ($:volatile reduce . 109) (
-    $:restrict reduce . 109) ($:void reduce . 109) ($:_Bool reduce . 109) (
-    typename reduce . 109) ($:enum reduce . 109) ($:struct reduce . 109) (
+    reduce . 90) ($:* reduce . 90) (#{$:\x5b;}# reduce . 90) (#{$:\x28;}# 
+    reduce . 90) ($:, reduce . 90) (cpp-ident reduce . 90) ($ident reduce . 90
+    )) ((#{$:\x29;}# reduce . 109) ($:inline reduce . 109) ($:auto reduce . 
+    109) ($:extern reduce . 109) ($:register reduce . 109) ($:static reduce . 
+    109) ($:typedef reduce . 109) ($:const reduce . 109) ($:volatile reduce . 
+    109) ($:restrict reduce . 109) ($:void reduce . 109) ($:_Bool reduce . 109
+    ) (typename reduce . 109) ($:enum reduce . 109) ($:struct reduce . 109) (
     $:union reduce . 109) ($:_Complex reduce . 109) ($:float reduce . 109) (
     $:double reduce . 109) ($:long reduce . 109) ($:short reduce . 109) (
     $:signed reduce . 109) ($:int reduce . 109) ($:unsigned reduce . 109) (
     $:char reduce . 109) ($:* reduce . 109) (#{$:\x5b;}# reduce . 109) (
     #{$:\x28;}# reduce . 109) ($:, reduce . 109) (cpp-ident reduce . 109) (
-    $ident reduce . 109) ($:: reduce . 109)) (($:int shift . 215) (#{$:\x29;}#
+    $ident reduce . 109) ($:: reduce . 109)) (($:int shift . 216) (#{$:\x29;}#
     reduce . 110) ($:inline reduce . 110) ($:auto reduce . 110) ($:extern 
     reduce . 110) ($:register reduce . 110) ($:static reduce . 110) ($:typedef
     reduce . 110) ($:const reduce . 110) ($:volatile reduce . 110) (
@@ -1330,8 +1341,8 @@
     reduce . 114) ($:signed reduce . 114) ($:int reduce . 114) ($:unsigned 
     reduce . 114) ($:char reduce . 114) ($:* reduce . 114) (#{$:\x5b;}# reduce
     . 114) (#{$:\x28;}# reduce . 114) ($:, reduce . 114) (cpp-ident reduce . 
-    114) ($ident reduce . 114) ($:: reduce . 114)) (($:long shift . 213) (
-    $:int shift . 214) (#{$:\x29;}# reduce . 117) ($:inline reduce . 117) (
+    114) ($ident reduce . 114) ($:: reduce . 114)) (($:long shift . 214) (
+    $:int shift . 215) (#{$:\x29;}# reduce . 117) ($:inline reduce . 117) (
     $:auto reduce . 117) ($:extern reduce . 117) ($:register reduce . 117) (
     $:static reduce . 117) ($:typedef reduce . 117) ($:const reduce . 117) (
     $:volatile reduce . 117) ($:restrict reduce . 117) ($:void reduce . 117) (
@@ -1362,7 +1373,7 @@
     reduce . 116) ($:unsigned reduce . 116) ($:char reduce . 116) ($:* reduce
     . 116) (#{$:\x5b;}# reduce . 116) (#{$:\x28;}# reduce . 116) ($:, reduce 
     . 116) (cpp-ident reduce . 116) ($ident reduce . 116) ($:: reduce . 116)) 
-    (($:int shift . 212) (#{$:\x29;}# reduce . 119) ($:inline reduce . 119) (
+    (($:int shift . 213) (#{$:\x29;}# reduce . 119) ($:inline reduce . 119) (
     $:auto reduce . 119) ($:extern reduce . 119) ($:register reduce . 119) (
     $:static reduce . 119) ($:typedef reduce . 119) ($:const reduce . 119) (
     $:volatile reduce . 119) ($:restrict reduce . 119) ($:void reduce . 119) (
@@ -1372,7 +1383,7 @@
     $:short reduce . 119) ($:signed reduce . 119) ($:unsigned reduce . 119) (
     $:char reduce . 119) ($:* reduce . 119) (#{$:\x5b;}# reduce . 119) (
     #{$:\x28;}# reduce . 119) ($:, reduce . 119) (cpp-ident reduce . 119) (
-    $ident reduce . 119) ($:: reduce . 119)) (($:_Complex shift . 211) (
+    $ident reduce . 119) ($:: reduce . 119)) (($:_Complex shift . 212) (
     #{$:\x29;}# reduce . 136) ($:inline reduce . 136) ($:auto reduce . 136) (
     $:extern reduce . 136) ($:register reduce . 136) ($:static reduce . 136) (
     $:typedef reduce . 136) ($:const reduce . 136) ($:volatile reduce . 136) (
@@ -1383,7 +1394,7 @@
     reduce . 136) ($:unsigned reduce . 136) ($:char reduce . 136) ($:* reduce
     . 136) (#{$:\x5b;}# reduce . 136) (#{$:\x28;}# reduce . 136) ($:, reduce 
     . 136) (cpp-ident reduce . 136) ($ident reduce . 136) ($:: reduce . 136)) 
-    (($:int shift . 210) (#{$:\x29;}# reduce . 124) ($:inline reduce . 124) (
+    (($:int shift . 211) (#{$:\x29;}# reduce . 124) ($:inline reduce . 124) (
     $:auto reduce . 124) ($:extern reduce . 124) ($:register reduce . 124) (
     $:static reduce . 124) ($:typedef reduce . 124) ($:const reduce . 124) (
     $:volatile reduce . 124) ($:restrict reduce . 124) ($:void reduce . 124) (
@@ -1404,7 +1415,7 @@
     reduce . 125) ($:unsigned reduce . 125) ($:char reduce . 125) ($:* reduce
     . 125) (#{$:\x5b;}# reduce . 125) (#{$:\x28;}# reduce . 125) ($:, reduce 
     . 125) (cpp-ident reduce . 125) ($ident reduce . 125) ($:: reduce . 125)) 
-    (($:long shift . 208) ($:int shift . 209) (#{$:\x29;}# reduce . 128) (
+    (($:long shift . 209) ($:int shift . 210) (#{$:\x29;}# reduce . 128) (
     $:inline reduce . 128) ($:auto reduce . 128) ($:extern reduce . 128) (
     $:register reduce . 128) ($:static reduce . 128) ($:typedef reduce . 128) 
     ($:const reduce . 128) ($:volatile reduce . 128) ($:restrict reduce . 128)
@@ -1454,10 +1465,10 @@
     shift . 84) (enum-specifier shift . 85) (struct-or-union-specifier shift 
     . 86) (complex-type-specifier shift . 87) ($:_Bool shift . 88) (
     float-type-specifier shift . 89) (fixed-type-specifier shift . 90) ($:void
-    shift . 91) (type-qualifier shift . 199) (type-specifier shift . 200) (
-    $lone-comm shift . 201) (specifier-qualifier-list shift . 202) (
-    lone-comment shift . 203) (struct-declaration shift . 204) (
-    struct-declaration-list shift . 207)) ((#{$:\x7b;}# shift . 206) (
+    shift . 91) (type-qualifier shift . 200) (type-specifier shift . 201) (
+    $lone-comm shift . 202) (specifier-qualifier-list shift . 203) (
+    lone-comment shift . 204) (struct-declaration shift . 205) (
+    struct-declaration-list shift . 208)) ((#{$:\x7b;}# shift . 207) (
     #{$:\x29;}# reduce . 143) ($:inline reduce . 143) ($:auto reduce . 143) (
     $:extern reduce . 143) ($:register reduce . 143) ($:static reduce . 143) (
     $:typedef reduce . 143) ($:const reduce . 143) ($:volatile reduce . 143) (
@@ -1477,10 +1488,10 @@
     shift . 85) (struct-or-union-specifier shift . 86) (complex-type-specifier
     shift . 87) ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
-    . 199) (type-specifier shift . 200) ($lone-comm shift . 201) (
-    specifier-qualifier-list shift . 202) (lone-comment shift . 203) (
-    struct-declaration shift . 204) (struct-declaration-list shift . 205)) ((
-    #{$:\x7b;}# shift . 198) (#{$:\x29;}# reduce . 146) ($:inline reduce . 146
+    . 200) (type-specifier shift . 201) ($lone-comm shift . 202) (
+    specifier-qualifier-list shift . 203) (lone-comment shift . 204) (
+    struct-declaration shift . 205) (struct-declaration-list shift . 206)) ((
+    #{$:\x7b;}# shift . 199) (#{$:\x29;}# reduce . 146) ($:inline reduce . 146
     ) ($:auto reduce . 146) ($:extern reduce . 146) ($:register reduce . 146) 
     ($:static reduce . 146) ($:typedef reduce . 146) ($:const reduce . 146) (
     $:volatile reduce . 146) ($:restrict reduce . 146) ($:void reduce . 146) (
@@ -1491,9 +1502,9 @@
     $:unsigned reduce . 146) ($:char reduce . 146) ($:* reduce . 146) (
     #{$:\x5b;}# reduce . 146) (#{$:\x28;}# reduce . 146) ($:, reduce . 146) (
     cpp-ident reduce . 146) ($ident reduce . 146) ($:: reduce . 146)) ((
-    cpp-ident shift . 12) ($ident shift . 13) (identifier shift . 195) (
-    enumerator shift . 196) (enumerator-list shift . 197)) ((#{$:\x7b;}# shift
-    . 194) (#{$:\x29;}# reduce . 165) ($:inline reduce . 165) ($:auto reduce 
+    cpp-ident shift . 12) ($ident shift . 13) (identifier shift . 196) (
+    enumerator shift . 197) (enumerator-list shift . 198)) ((#{$:\x7b;}# shift
+    . 195) (#{$:\x29;}# reduce . 165) ($:inline reduce . 165) ($:auto reduce 
     . 165) ($:extern reduce . 165) ($:register reduce . 165) ($:static reduce 
     . 165) ($:typedef reduce . 165) ($:const reduce . 165) ($:volatile reduce 
     . 165) ($:restrict reduce . 165) ($:void reduce . 165) ($:_Bool reduce . 
@@ -1518,8 +1529,8 @@
     shift . 104) ($:? reduce . 61) ($:|| reduce . 61) ($:, reduce . 61) (
     #{$:\x29;}# reduce . 61) (#{$:\x5d;}# reduce . 61) ($:: reduce . 61) (
     #{$:\x7d;}# reduce . 61) ($end reduce . 61) (#{$:;}# reduce . 61)) (($:: 
-    shift . 193) ($:, shift . 38)) ((#{$:\x29;}# shift . 192)) ((#{$:\x29;}# 
-    shift . 191)) (($:= reduce . 11) ($:+= reduce . 11) ($:-= reduce . 11) (
+    shift . 194) ($:, shift . 38)) ((#{$:\x29;}# shift . 193)) ((#{$:\x29;}# 
+    shift . 192)) (($:= reduce . 11) ($:+= reduce . 11) ($:-= reduce . 11) (
     $:*= reduce . 11) ($:/= reduce . 11) ($:%= reduce . 11) ($:<<= reduce . 11
     ) ($:>>= reduce . 11) ($:&= reduce . 11) ($:^= reduce . 11) ($:|= reduce 
     . 11) ($:-- reduce . 11) ($:++ reduce . 11) ($:-> reduce . 11) ($:. reduce
@@ -1553,50 +1564,64 @@
     ($:& reduce . 9) ($:^ reduce . 9) ($:| reduce . 9) ($:&& reduce . 9) (
     $:|| reduce . 9) ($:, reduce . 9) (#{$:\x29;}# reduce . 9) (#{$:\x5d;}# 
     reduce . 9) ($:: reduce . 9) (#{$:\x7d;}# reduce . 9) ($end reduce . 9) (
-    #{$:;}# reduce . 9)) ((#{$:\x29;}# reduce . 18) ($:, reduce . 18)) ((
-    #{$:\x29;}# reduce . 16) ($:, reduce . 16)) ((#{$:\x29;}# shift . 189) (
-    $:, shift . 190)) ((#{$:\x5d;}# shift . 188) ($:, shift . 38)) (($:, 
-    reduce . 65) (#{$:\x29;}# reduce . 65) (#{$:\x5d;}# reduce . 65) ($:: 
-    reduce . 65) (#{$:\x7d;}# reduce . 65) ($end reduce . 65)) (($:, reduce . 
-    78) ($end reduce . 78) (#{$:\x29;}# reduce . 78) ($:: reduce . 78) (
-    #{$:\x5d;}# reduce . 78)) (($:= reduce . 7) ($:+= reduce . 7) ($:-= reduce
-    . 7) ($:*= reduce . 7) ($:/= reduce . 7) ($:%= reduce . 7) ($:<<= reduce 
-    . 7) ($:>>= reduce . 7) ($:&= reduce . 7) ($:^= reduce . 7) ($:|= reduce 
-    . 7) ($:-- reduce . 7) ($:++ reduce . 7) ($:-> reduce . 7) ($:. reduce . 7
-    ) (#{$:\x28;}# reduce . 7) (#{$:\x5b;}# reduce . 7) ($:? reduce . 7) ($:* 
-    reduce . 7) ($:/ reduce . 7) ($:% reduce . 7) ($:- reduce . 7) ($:+ reduce
-    . 7) ($:<< reduce . 7) ($:>> reduce . 7) ($:>= reduce . 7) ($:<= reduce 
-    . 7) ($:> reduce . 7) ($:< reduce . 7) ($:== reduce . 7) ($:!= reduce . 7)
-    ($:& reduce . 7) ($:^ reduce . 7) ($:| reduce . 7) ($:&& reduce . 7) (
-    $:|| reduce . 7) ($:, reduce . 7) (#{$:\x29;}# reduce . 7) (#{$:\x5d;}# 
-    reduce . 7) ($:: reduce . 7) (#{$:\x7d;}# reduce . 7) ($end reduce . 7) (
-    #{$:;}# reduce . 7)) (($:= reduce . 8) ($:+= reduce . 8) ($:-= reduce . 8)
-    ($:*= reduce . 8) ($:/= reduce . 8) ($:%= reduce . 8) ($:<<= reduce . 8) 
-    ($:>>= reduce . 8) ($:&= reduce . 8) ($:^= reduce . 8) ($:|= reduce . 8) (
-    $:-- reduce . 8) ($:++ reduce . 8) ($:-> reduce . 8) ($:. reduce . 8) (
-    #{$:\x28;}# reduce . 8) (#{$:\x5b;}# reduce . 8) ($:? reduce . 8) ($:* 
-    reduce . 8) ($:/ reduce . 8) ($:% reduce . 8) ($:- reduce . 8) ($:+ reduce
-    . 8) ($:<< reduce . 8) ($:>> reduce . 8) ($:>= reduce . 8) ($:<= reduce 
-    . 8) ($:> reduce . 8) ($:< reduce . 8) ($:== reduce . 8) ($:!= reduce . 8)
-    ($:& reduce . 8) ($:^ reduce . 8) ($:| reduce . 8) ($:&& reduce . 8) (
-    $:|| reduce . 8) ($:, reduce . 8) (#{$:\x29;}# reduce . 8) (#{$:\x5d;}# 
-    reduce . 8) ($:: reduce . 8) (#{$:\x7d;}# reduce . 8) ($end reduce . 8) (
-    #{$:;}# reduce . 8)) ((typename shift . 67) (typedef-name shift . 287) (
-    cast-expression shift . 1) (multiplicative-expression shift . 2) (
-    additive-expression shift . 3) (shift-expression shift . 4) (
-    relational-expression shift . 5) (equality-expression shift . 6) (
-    bitwise-and-expression shift . 7) ($string shift . 8) ($chlit shift . 9) (
-    $float shift . 10) ($fixed shift . 11) (cpp-ident shift . 12) ($ident 
-    shift . 13) (bitwise-xor-expression shift . 14) (bitwise-or-expression 
-    shift . 15) (string-literal shift . 16) (constant shift . 17) (identifier 
-    shift . 18) (logical-and-expression shift . 19) ($:! shift . 20) ($:~ 
-    shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* shift . 24) ($:& shift 
-    . 25) (#{$:\x28;}# shift . 26) (primary-expression shift . 27) (
-    logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
-    shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
-    . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 288)) ((#{$:\x7b;}# shift . 233)) ((
-    #{$:\x7b;}# shift . 233) ($:|= reduce . 25) ($:^= reduce . 25) ($:&= 
+    #{$:;}# reduce . 9)) ((#{$:\x5b;}# shift . 140) (#{$:\x28;}# shift . 141) 
+    ($:* shift . 142) (direct-abstract-declarator shift . 143) (pointer shift 
+    . 144) (abstract-declarator shift . 191)) ((#{$:\x29;}# reduce . 16) ($:, 
+    reduce . 16)) ((#{$:\x29;}# shift . 189) ($:, shift . 190)) ((#{$:\x5d;}# 
+    shift . 188) ($:, shift . 38)) (($:, reduce . 65) (#{$:\x29;}# reduce . 65
+    ) (#{$:\x5d;}# reduce . 65) ($:: reduce . 65) (#{$:\x7d;}# reduce . 65) (
+    $end reduce . 65)) (($:, reduce . 78) ($end reduce . 78) (#{$:\x29;}# 
+    reduce . 78) ($:: reduce . 78) (#{$:\x5d;}# reduce . 78)) (($:= reduce . 7
+    ) ($:+= reduce . 7) ($:-= reduce . 7) ($:*= reduce . 7) ($:/= reduce . 7) 
+    ($:%= reduce . 7) ($:<<= reduce . 7) ($:>>= reduce . 7) ($:&= reduce . 7) 
+    ($:^= reduce . 7) ($:|= reduce . 7) ($:-- reduce . 7) ($:++ reduce . 7) (
+    $:-> reduce . 7) ($:. reduce . 7) (#{$:\x28;}# reduce . 7) (#{$:\x5b;}# 
+    reduce . 7) ($:? reduce . 7) ($:* reduce . 7) ($:/ reduce . 7) ($:% reduce
+    . 7) ($:- reduce . 7) ($:+ reduce . 7) ($:<< reduce . 7) ($:>> reduce . 7
+    ) ($:>= reduce . 7) ($:<= reduce . 7) ($:> reduce . 7) ($:< reduce . 7) (
+    $:== reduce . 7) ($:!= reduce . 7) ($:& reduce . 7) ($:^ reduce . 7) ($:| 
+    reduce . 7) ($:&& reduce . 7) ($:|| reduce . 7) ($:, reduce . 7) (
+    #{$:\x29;}# reduce . 7) (#{$:\x5d;}# reduce . 7) ($:: reduce . 7) (
+    #{$:\x7d;}# reduce . 7) ($end reduce . 7) (#{$:;}# reduce . 7)) (($:= 
+    reduce . 8) ($:+= reduce . 8) ($:-= reduce . 8) ($:*= reduce . 8) ($:/= 
+    reduce . 8) ($:%= reduce . 8) ($:<<= reduce . 8) ($:>>= reduce . 8) ($:&= 
+    reduce . 8) ($:^= reduce . 8) ($:|= reduce . 8) ($:-- reduce . 8) ($:++ 
+    reduce . 8) ($:-> reduce . 8) ($:. reduce . 8) (#{$:\x28;}# reduce . 8) (
+    #{$:\x5b;}# reduce . 8) ($:? reduce . 8) ($:* reduce . 8) ($:/ reduce . 8)
+    ($:% reduce . 8) ($:- reduce . 8) ($:+ reduce . 8) ($:<< reduce . 8) (
+    $:>> reduce . 8) ($:>= reduce . 8) ($:<= reduce . 8) ($:> reduce . 8) ($:<
+    reduce . 8) ($:== reduce . 8) ($:!= reduce . 8) ($:& reduce . 8) ($:^ 
+    reduce . 8) ($:| reduce . 8) ($:&& reduce . 8) ($:|| reduce . 8) ($:, 
+    reduce . 8) (#{$:\x29;}# reduce . 8) (#{$:\x5d;}# reduce . 8) ($:: reduce 
+    . 8) (#{$:\x7d;}# reduce . 8) ($end reduce . 8) (#{$:;}# reduce . 8)) ((
+    typename shift . 67) ($:enum shift . 68) ($:union shift . 69) ($:struct 
+    shift . 70) ($:_Complex shift . 71) ($:double shift . 72) ($:float shift 
+    . 73) ($:char shift . 74) ($:unsigned shift . 75) ($:long shift . 76) (
+    $:int shift . 77) ($:signed shift . 78) ($:short shift . 79) ($:inline 
+    shift . 80) ($:restrict shift . 81) ($:volatile shift . 82) ($:const shift
+    . 83) (typedef-name shift . 84) (enum-specifier shift . 85) (
+    struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87) 
+    ($:_Bool shift . 88) (float-type-specifier shift . 89) (
+    fixed-type-specifier shift . 90) ($:void shift . 91) ($:typedef shift . 92
+    ) ($:static shift . 93) ($:register shift . 94) ($:extern shift . 95) (
+    $:auto shift . 96) (function-specifier shift . 97) (type-qualifier shift 
+    . 146) (type-specifier shift . 147) (storage-class-specifier shift . 100) 
+    (declaration-specifiers shift . 288) (cast-expression shift . 1) (
+    multiplicative-expression shift . 2) (additive-expression shift . 3) (
+    shift-expression shift . 4) (relational-expression shift . 5) (
+    equality-expression shift . 6) (bitwise-and-expression shift . 7) ($string
+    shift . 8) ($chlit shift . 9) ($float shift . 10) ($fixed shift . 11) (
+    cpp-ident shift . 12) ($ident shift . 13) (bitwise-xor-expression shift . 
+    14) (bitwise-or-expression shift . 15) (string-literal shift . 16) (
+    constant shift . 17) (identifier shift . 18) (logical-and-expression shift
+    . 19) ($:! shift . 20) ($:~ shift . 21) ($:- shift . 22) ($:+ shift . 23)
+    ($:* shift . 24) ($:& shift . 25) (#{$:\x28;}# shift . 26) (
+    primary-expression shift . 27) (logical-or-expression shift . 28) (
+    $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
+    shift . 32) (postfix-expression shift . 33) (unary-expression shift . 34) 
+    (conditional-expression shift . 35) (assignment-expression shift . 289)) (
+    (#{$:\x29;}# reduce . 18) ($:, reduce . 18)) ((#{$:\x7b;}# shift . 234)) (
+    (#{$:\x7b;}# shift . 234) ($:|= reduce . 25) ($:^= reduce . 25) ($:&= 
     reduce . 25) ($:>>= reduce . 25) ($:<<= reduce . 25) ($:%= reduce . 25) (
     $:/= reduce . 25) ($:*= reduce . 25) ($:-= reduce . 25) ($:+= reduce . 25)
     ($:= reduce . 25) ($:? reduce . 25) ($:, reduce . 25) ($:|| reduce . 25) 
@@ -1618,11 +1643,11 @@
     relational-expression shift . 5) (equality-expression shift . 6) (
     bitwise-and-expression shift . 7) (bitwise-xor-expression shift . 14) (
     bitwise-or-expression shift . 15) (logical-and-expression shift . 19) (
-    logical-or-expression shift . 28) (conditional-expression shift . 286)) ((
-    cpp-ident shift . 12) ($ident shift . 13) (identifier shift . 195) (
-    enumerator shift . 196) (enumerator-list shift . 285)) (($:= shift . 284) 
+    logical-or-expression shift . 28) (conditional-expression shift . 287)) ((
+    cpp-ident shift . 12) ($ident shift . 13) (identifier shift . 196) (
+    enumerator shift . 197) (enumerator-list shift . 286)) (($:= shift . 285) 
     (#{$:\x7d;}# reduce . 168) ($:, reduce . 168)) ((#{$:\x7d;}# reduce . 166)
-    ($:, reduce . 166)) ((#{$:\x7d;}# shift . 282) ($:, shift . 283)) ((
+    ($:, reduce . 166)) ((#{$:\x7d;}# shift . 283) ($:, shift . 284)) ((
     typename shift . 67) ($:enum shift . 68) ($:union shift . 69) ($:struct 
     shift . 70) ($:_Complex shift . 71) ($:double shift . 72) ($:float shift 
     . 73) ($:char shift . 74) ($:unsigned shift . 75) ($:long shift . 76) (
@@ -1631,10 +1656,10 @@
     shift . 84) (enum-specifier shift . 85) (struct-or-union-specifier shift 
     . 86) (complex-type-specifier shift . 87) ($:_Bool shift . 88) (
     float-type-specifier shift . 89) (fixed-type-specifier shift . 90) ($:void
-    shift . 91) (type-qualifier shift . 199) (type-specifier shift . 200) (
-    $lone-comm shift . 201) (specifier-qualifier-list shift . 202) (
-    lone-comment shift . 203) (struct-declaration shift . 204) (
-    struct-declaration-list shift . 281)) ((typename shift . 67) ($:enum shift
+    shift . 91) (type-qualifier shift . 200) (type-specifier shift . 201) (
+    $lone-comm shift . 202) (specifier-qualifier-list shift . 203) (
+    lone-comment shift . 204) (struct-declaration shift . 205) (
+    struct-declaration-list shift . 282)) ((typename shift . 67) ($:enum shift
     . 68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex shift . 71) 
     ($:double shift . 72) ($:float shift . 73) ($:char shift . 74) ($:unsigned
     shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed shift . 78) 
@@ -1643,7 +1668,7 @@
     (struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87)
     ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
-    . 199) (type-specifier shift . 200) (specifier-qualifier-list shift . 152
+    . 200) (type-specifier shift . 201) (specifier-qualifier-list shift . 152
     ) ($:* reduce . 155) (cpp-ident reduce . 155) ($ident reduce . 155) (
     #{$:\x28;}# reduce . 155) ($:: reduce . 155)) ((typename shift . 67) (
     $:enum shift . 68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex 
@@ -1654,7 +1679,7 @@
     shift . 85) (struct-or-union-specifier shift . 86) (complex-type-specifier
     shift . 87) ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
-    . 199) (type-specifier shift . 200) (specifier-qualifier-list shift . 150
+    . 200) (type-specifier shift . 201) (specifier-qualifier-list shift . 150
     ) ($:* reduce . 153) (cpp-ident reduce . 153) ($ident reduce . 153) (
     #{$:\x28;}# reduce . 153) ($:: reduce . 153)) ((#{$:\x7d;}# reduce . 299) 
     ($:const reduce . 299) ($:volatile reduce . 299) ($:restrict reduce . 299)
@@ -1664,9 +1689,9 @@
     $:long reduce . 299) ($:short reduce . 299) ($:signed reduce . 299) ($:int
     reduce . 299) ($:unsigned reduce . 299) ($:char reduce . 299) ($lone-comm
     reduce . 299)) ((cpp-ident shift . 12) ($ident shift . 13) ($:* shift . 
-    142) (#{$:\x28;}# shift . 275) (identifier shift . 253) (direct-declarator
-    shift . 254) (pointer shift . 276) ($:: shift . 277) (declarator shift . 
-    278) (struct-declarator shift . 279) (struct-declarator-list shift . 280))
+    142) (#{$:\x28;}# shift . 276) (identifier shift . 254) (direct-declarator
+    shift . 255) (pointer shift . 277) ($:: shift . 278) (declarator shift . 
+    279) (struct-declarator shift . 280) (struct-declarator-list shift . 281))
     ((#{$:\x7d;}# reduce . 148) ($lone-comm reduce . 148) ($:char reduce . 
     148) ($:unsigned reduce . 148) ($:int reduce . 148) ($:signed reduce . 148
     ) ($:short reduce . 148) ($:long reduce . 148) ($:double reduce . 148) (
@@ -1680,7 +1705,7 @@
     $:_Complex reduce . 147) ($:union reduce . 147) ($:struct reduce . 147) (
     $:enum reduce . 147) (typename reduce . 147) ($:_Bool reduce . 147) (
     $:void reduce . 147) ($:restrict reduce . 147) ($:volatile reduce . 147) (
-    $:const reduce . 147)) ((#{$:\x7d;}# shift . 274) (typename shift . 67) (
+    $:const reduce . 147)) ((#{$:\x7d;}# shift . 275) (typename shift . 67) (
     $:enum shift . 68) ($:union shift . 69) ($:struct shift . 70) ($:_Complex 
     shift . 71) ($:double shift . 72) ($:float shift . 73) ($:char shift . 74)
     ($:unsigned shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed 
@@ -1689,9 +1714,9 @@
     shift . 85) (struct-or-union-specifier shift . 86) (complex-type-specifier
     shift . 87) ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
-    . 199) (type-specifier shift . 200) (specifier-qualifier-list shift . 202
-    ) (struct-declaration shift . 271) ($lone-comm shift . 201) (lone-comment 
-    shift . 272)) ((typename shift . 67) ($:enum shift . 68) ($:union shift . 
+    . 200) (type-specifier shift . 201) (specifier-qualifier-list shift . 203
+    ) (struct-declaration shift . 272) ($lone-comm shift . 202) (lone-comment 
+    shift . 273)) ((typename shift . 67) ($:enum shift . 68) ($:union shift . 
     69) ($:struct shift . 70) ($:_Complex shift . 71) ($:double shift . 72) (
     $:float shift . 73) ($:char shift . 74) ($:unsigned shift . 75) ($:long 
     shift . 76) ($:int shift . 77) ($:signed shift . 78) ($:short shift . 79) 
@@ -1700,10 +1725,10 @@
     struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87) 
     ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
-    . 199) (type-specifier shift . 200) ($lone-comm shift . 201) (
-    specifier-qualifier-list shift . 202) (lone-comment shift . 203) (
-    struct-declaration shift . 204) (struct-declaration-list shift . 273)) ((
-    #{$:\x7d;}# shift . 270) (typename shift . 67) ($:enum shift . 68) (
+    . 200) (type-specifier shift . 201) ($lone-comm shift . 202) (
+    specifier-qualifier-list shift . 203) (lone-comment shift . 204) (
+    struct-declaration shift . 205) (struct-declaration-list shift . 274)) ((
+    #{$:\x7d;}# shift . 271) (typename shift . 67) ($:enum shift . 68) (
     $:union shift . 69) ($:struct shift . 70) ($:_Complex shift . 71) (
     $:double shift . 72) ($:float shift . 73) ($:char shift . 74) ($:unsigned 
     shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed shift . 78) (
@@ -1712,9 +1737,9 @@
     (struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87)
     ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
-    . 199) (type-specifier shift . 200) (specifier-qualifier-list shift . 202
-    ) (struct-declaration shift . 271) ($lone-comm shift . 201) (lone-comment 
-    shift . 272)) (($:int shift . 269) (#{$:\x29;}# reduce . 130) ($:inline 
+    . 200) (type-specifier shift . 201) (specifier-qualifier-list shift . 203
+    ) (struct-declaration shift . 272) ($lone-comm shift . 202) (lone-comment 
+    shift . 273)) (($:int shift . 270) (#{$:\x29;}# reduce . 130) ($:inline 
     reduce . 130) ($:auto reduce . 130) ($:extern reduce . 130) ($:register 
     reduce . 130) ($:static reduce . 130) ($:typedef reduce . 130) ($:const 
     reduce . 130) ($:volatile reduce . 130) ($:restrict reduce . 130) ($:void 
@@ -1766,7 +1791,7 @@
     $:signed reduce . 120) ($:int reduce . 120) ($:unsigned reduce . 120) (
     $:char reduce . 120) ($:* reduce . 120) (#{$:\x5b;}# reduce . 120) (
     #{$:\x28;}# reduce . 120) ($:, reduce . 120) (cpp-ident reduce . 120) (
-    $ident reduce . 120) ($:: reduce . 120)) (($:int shift . 268) (#{$:\x29;}#
+    $ident reduce . 120) ($:: reduce . 120)) (($:int shift . 269) (#{$:\x29;}#
     reduce . 121) ($:inline reduce . 121) ($:auto reduce . 121) ($:extern 
     reduce . 121) ($:register reduce . 121) ($:static reduce . 121) ($:typedef
     reduce . 121) ($:const reduce . 121) ($:volatile reduce . 121) (
@@ -1798,9 +1823,9 @@
     reduce . 111) ($:unsigned reduce . 111) ($:char reduce . 111) ($:* reduce
     . 111) (#{$:\x5b;}# reduce . 111) (#{$:\x28;}# reduce . 111) ($:, reduce 
     . 111) (cpp-ident reduce . 111) ($ident reduce . 111) ($:: reduce . 111)) 
-    ((#{$:\x5b;}# shift . 217) (#{$:\x28;}# shift . 218) (#{$:\x29;}# reduce 
-    . 207) ($:, reduce . 207)) (($:static shift . 263) (#{$:\x5d;}# shift . 
-    264) (cast-expression shift . 1) (multiplicative-expression shift . 2) (
+    ((#{$:\x5b;}# shift . 218) (#{$:\x28;}# shift . 219) (#{$:\x29;}# reduce 
+    . 207) ($:, reduce . 207)) (($:static shift . 264) (#{$:\x5d;}# shift . 
+    265) (cast-expression shift . 1) (multiplicative-expression shift . 2) (
     additive-expression shift . 3) (shift-expression shift . 4) (
     relational-expression shift . 5) (equality-expression shift . 6) (
     bitwise-and-expression shift . 7) ($string shift . 8) ($chlit shift . 9) (
@@ -1808,14 +1833,14 @@
     shift . 13) (bitwise-xor-expression shift . 14) (bitwise-or-expression 
     shift . 15) (string-literal shift . 16) (constant shift . 17) (identifier 
     shift . 18) (logical-and-expression shift . 19) ($:! shift . 20) ($:~ 
-    shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* shift . 265) ($:& shift
+    shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* shift . 266) ($:& shift
     . 25) (#{$:\x28;}# shift . 26) (primary-expression shift . 27) (
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 266) ($:restrict shift . 81) ($:volatile 
-    shift . 82) ($:const shift . 83) (type-qualifier shift . 219) (
-    type-qualifier-list shift . 267)) ((#{$:\x29;}# shift . 261) (typename 
+    assignment-expression shift . 267) ($:restrict shift . 81) ($:volatile 
+    shift . 82) ($:const shift . 83) (type-qualifier shift . 220) (
+    type-qualifier-list shift . 268)) ((#{$:\x29;}# shift . 262) (typename 
     shift . 67) ($:enum shift . 68) ($:union shift . 69) ($:struct shift . 70)
     ($:_Complex shift . 71) ($:double shift . 72) ($:float shift . 73) (
     $:char shift . 74) ($:unsigned shift . 75) ($:long shift . 76) ($:int 
@@ -1828,8 +1853,8 @@
     ) ($:static shift . 93) ($:register shift . 94) ($:extern shift . 95) (
     $:auto shift . 96) (function-specifier shift . 97) (type-qualifier shift 
     . 146) (type-specifier shift . 147) (storage-class-specifier shift . 100) 
-    (declaration-specifiers shift . 223) (parameter-declaration shift . 224) (
-    parameter-list shift . 225) (parameter-type-list shift . 262)) (($:static 
+    (declaration-specifiers shift . 224) (parameter-declaration shift . 225) (
+    parameter-list shift . 226) (parameter-type-list shift . 263)) (($:static 
     reduce . 193) ($:restrict reduce . 193) ($:volatile reduce . 193) ($:const
     reduce . 193) (#{$:\x5d;}# reduce . 193) (cpp-ident reduce . 193) ($ident
     reduce . 193) ($chlit reduce . 193) ($float reduce . 193) ($fixed reduce 
@@ -1837,26 +1862,26 @@
     ) ($:~ reduce . 193) ($:- reduce . 193) ($:+ reduce . 193) ($:* reduce . 
     193) ($:& reduce . 193) ($:sizeof reduce . 193) ($:-- reduce . 193) ($:++ 
     reduce . 193) (#{$:\x5b;}# reduce . 193) (#{$:\x29;}# reduce . 193) ($:, 
-    reduce . 193)) (($:* shift . 142) (pointer shift . 260) ($:restrict shift 
+    reduce . 193)) (($:* shift . 142) (pointer shift . 261) ($:restrict shift 
     . 81) ($:volatile shift . 82) ($:const shift . 83) (type-qualifier shift 
-    . 246) (#{$:\x5b;}# reduce . 189) (#{$:\x28;}# reduce . 189) (#{$:\x29;}# 
+    . 247) (#{$:\x5b;}# reduce . 189) (#{$:\x28;}# reduce . 189) (#{$:\x29;}# 
     reduce . 189) (cpp-ident reduce . 189) ($ident reduce . 189) ($:, reduce 
     . 189)) ((#{$:\x5b;}# reduce . 192) (#{$:\x28;}# reduce . 192) (
     #{$:\x29;}# reduce . 192) (cpp-ident reduce . 192) ($ident reduce . 192) (
-    $:, reduce . 192)) ((#{$:\x29;}# shift . 259)) ((cpp-ident shift . 12) (
-    $ident shift . 13) (identifier shift . 253) (direct-declarator shift . 254
-    ) (declarator shift . 255) (#{$:\x5b;}# shift . 140) (#{$:\x28;}# shift . 
-    256) ($:* shift . 142) (direct-abstract-declarator shift . 143) (pointer 
-    shift . 257) (abstract-declarator shift . 258) (#{$:\x29;}# reduce . 201) 
+    $:, reduce . 192)) ((#{$:\x29;}# shift . 260)) ((cpp-ident shift . 12) (
+    $ident shift . 13) (identifier shift . 254) (direct-declarator shift . 255
+    ) (declarator shift . 256) (#{$:\x5b;}# shift . 140) (#{$:\x28;}# shift . 
+    257) ($:* shift . 142) (direct-abstract-declarator shift . 143) (pointer 
+    shift . 258) (abstract-declarator shift . 259) (#{$:\x29;}# reduce . 201) 
     ($:, reduce . 201)) (($:, reduce . 197) (#{$:\x29;}# reduce . 197)) (($:, 
-    shift . 252) (#{$:\x29;}# reduce . 195)) ((#{$:\x29;}# shift . 251)) ((
+    shift . 253) (#{$:\x29;}# reduce . 195)) ((#{$:\x29;}# shift . 252)) ((
     #{$:\x28;}# reduce . 229) (#{$:\x5b;}# reduce . 229) (#{$:\x29;}# reduce 
-    . 229) ($:, reduce . 229)) ((#{$:\x5d;}# shift . 250)) ((#{$:\x28;}# 
+    . 229) ($:, reduce . 229)) ((#{$:\x5d;}# shift . 251)) ((#{$:\x28;}# 
     reduce . 220) (#{$:\x5b;}# reduce . 220) (#{$:\x29;}# reduce . 220) ($:, 
     reduce . 220)) (($:restrict shift . 81) ($:volatile shift . 82) ($:const 
-    shift . 83) (type-qualifier shift . 219) (type-qualifier-list shift . 249)
-    ) (($:static shift . 245) ($:restrict shift . 81) ($:volatile shift . 82) 
-    ($:const shift . 83) (type-qualifier shift . 246) (#{$:\x5d;}# shift . 247
+    shift . 83) (type-qualifier shift . 220) (type-qualifier-list shift . 250)
+    ) (($:static shift . 246) ($:restrict shift . 81) ($:volatile shift . 82) 
+    ($:const shift . 83) (type-qualifier shift . 247) (#{$:\x5d;}# shift . 248
     ) (cast-expression shift . 1) (multiplicative-expression shift . 2) (
     additive-expression shift . 3) (shift-expression shift . 4) (
     relational-expression shift . 5) (equality-expression shift . 6) (
@@ -1870,7 +1895,7 @@
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 248)) ((#{$:\x5d;}# shift . 244) (cpp-ident 
+    assignment-expression shift . 249)) ((#{$:\x5d;}# shift . 245) (cpp-ident 
     reduce . 27) ($ident reduce . 27) ($chlit reduce . 27) ($float reduce . 27
     ) ($fixed reduce . 27) ($string reduce . 27) ($:! reduce . 27) ($:~ reduce
     . 27) ($:- reduce . 27) ($:+ reduce . 27) ($:* reduce . 27) ($:& reduce 
@@ -1885,13 +1910,13 @@
     constant shift . 17) (identifier shift . 18) (logical-and-expression shift
     . 19) ($:! shift . 20) ($:~ shift . 21) ($:- shift . 22) ($:+ shift . 23)
     ($:* shift . 24) ($:& shift . 25) (#{$:\x28;}# shift . 26) (
-    primary-expression shift . 27) ($:. shift . 235) (#{$:\x5b;}# shift . 236)
+    primary-expression shift . 27) ($:. shift . 236) (#{$:\x5b;}# shift . 237)
     (logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
-    . 33) (designator shift . 237) (unary-expression shift . 34) (
-    conditional-expression shift . 35) (designator-list shift . 238) (
-    #{$:\x7b;}# shift . 239) (assignment-expression shift . 240) (initializer 
-    shift . 241) (designation shift . 242) (initializer-list shift . 243)) ((
+    . 33) (designator shift . 238) (unary-expression shift . 34) (
+    conditional-expression shift . 35) (designator-list shift . 239) (
+    #{$:\x7b;}# shift . 240) (assignment-expression shift . 241) (initializer 
+    shift . 242) (designation shift . 243) (initializer-list shift . 244)) ((
     $:? reduce . 33) ($:* reduce . 33) ($:/ reduce . 33) ($:% reduce . 33) (
     $:- reduce . 33) ($:+ reduce . 33) ($:<< reduce . 33) ($:>> reduce . 33) (
     $:>= reduce . 33) ($:<= reduce . 33) ($:> reduce . 33) ($:< reduce . 33) (
@@ -1902,7 +1927,7 @@
     reduce . 33) ($:&= reduce . 33) ($:>>= reduce . 33) ($:<<= reduce . 33) (
     $:%= reduce . 33) ($:/= reduce . 33) ($:*= reduce . 33) ($:-= reduce . 33)
     ($:+= reduce . 33) ($:= reduce . 33) (#{$:;}# reduce . 33)) ((cpp-ident 
-    shift . 12) ($ident shift . 13) (identifier shift . 325)) (($string shift 
+    shift . 12) ($ident shift . 13) (identifier shift . 327)) (($string shift 
     . 8) ($chlit shift . 9) ($float shift . 10) ($fixed shift . 11) (cpp-ident
     shift . 12) ($ident shift . 13) (string-literal shift . 16) (constant 
     shift . 17) (identifier shift . 18) ($:! shift . 20) ($:~ shift . 21) ($:-
@@ -1915,10 +1940,10 @@
     (equality-expression shift . 6) (bitwise-and-expression shift . 7) (
     bitwise-xor-expression shift . 14) (bitwise-or-expression shift . 15) (
     logical-and-expression shift . 19) (logical-or-expression shift . 28) (
-    conditional-expression shift . 291) (constant-expression shift . 324)) ((
+    conditional-expression shift . 293) (constant-expression shift . 326)) ((
     $:= reduce . 239) ($:. reduce . 239) (#{$:\x5b;}# reduce . 239)) (($:= 
-    shift . 322) ($:. shift . 235) (#{$:\x5b;}# shift . 236) (designator shift
-    . 323)) ((cast-expression shift . 1) (multiplicative-expression shift . 2
+    shift . 324) ($:. shift . 236) (#{$:\x5b;}# shift . 237) (designator shift
+    . 325)) ((cast-expression shift . 1) (multiplicative-expression shift . 2
     ) (additive-expression shift . 3) (shift-expression shift . 4) (
     relational-expression shift . 5) (equality-expression shift . 6) (
     bitwise-and-expression shift . 7) ($string shift . 8) ($chlit shift . 9) (
@@ -1928,13 +1953,13 @@
     shift . 18) (logical-and-expression shift . 19) ($:! shift . 20) ($:~ 
     shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* shift . 24) ($:& shift 
     . 25) (#{$:\x28;}# shift . 26) (primary-expression shift . 27) ($:. shift 
-    . 235) (#{$:\x5b;}# shift . 236) (logical-or-expression shift . 28) (
+    . 236) (#{$:\x5b;}# shift . 237) (logical-or-expression shift . 28) (
     $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
-    shift . 32) (postfix-expression shift . 33) (designator shift . 237) (
+    shift . 32) (postfix-expression shift . 33) (designator shift . 238) (
     unary-expression shift . 34) (conditional-expression shift . 35) (
-    designator-list shift . 238) (#{$:\x7b;}# shift . 239) (
-    assignment-expression shift . 240) (initializer shift . 241) (designation 
-    shift . 242) (initializer-list shift . 321)) ((#{$:\x7d;}# reduce . 231) (
+    designator-list shift . 239) (#{$:\x7b;}# shift . 240) (
+    assignment-expression shift . 241) (initializer shift . 242) (designation 
+    shift . 243) (initializer-list shift . 323)) ((#{$:\x7d;}# reduce . 231) (
     $:, reduce . 231)) ((#{$:\x7d;}# reduce . 235) ($:, reduce . 235)) ((
     cast-expression shift . 1) (multiplicative-expression shift . 2) (
     additive-expression shift . 3) (shift-expression shift . 4) (
@@ -1949,8 +1974,8 @@
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    #{$:\x7b;}# shift . 239) (assignment-expression shift . 240) (initializer 
-    shift . 320)) ((#{$:\x7d;}# shift . 318) ($:, shift . 319)) ((#{$:\x28;}# 
+    #{$:\x7b;}# shift . 240) (assignment-expression shift . 241) (initializer 
+    shift . 322)) ((#{$:\x7d;}# shift . 320) ($:, shift . 321)) ((#{$:\x28;}# 
     reduce . 225) (#{$:\x5b;}# reduce . 225) (#{$:\x29;}# reduce . 225) ($:, 
     reduce . 225)) ((cast-expression shift . 1) (multiplicative-expression 
     shift . 2) (additive-expression shift . 3) (shift-expression shift . 4) (
@@ -1965,7 +1990,7 @@
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 317)) (($:* reduce . 194) ($:restrict reduce
+    assignment-expression shift . 319)) (($:* reduce . 194) ($:restrict reduce
     . 194) ($:volatile reduce . 194) ($:const reduce . 194) (#{$:\x5b;}# 
     reduce . 194) (#{$:\x28;}# reduce . 194) (#{$:\x29;}# reduce . 194) (
     cpp-ident reduce . 194) ($ident reduce . 194) ($:static reduce . 194) (
@@ -1974,7 +1999,7 @@
     . 194) ($:- reduce . 194) ($:+ reduce . 194) ($:& reduce . 194) ($:sizeof
     reduce . 194) ($:-- reduce . 194) ($:++ reduce . 194) ($:, reduce . 194))
     ((#{$:\x28;}# reduce . 218) (#{$:\x5b;}# reduce . 218) (#{$:\x29;}# 
-    reduce . 218) ($:, reduce . 218)) ((#{$:\x5d;}# shift . 316)) ((
+    reduce . 218) ($:, reduce . 218)) ((#{$:\x5d;}# shift . 318)) ((
     cast-expression shift . 1) (multiplicative-expression shift . 2) (
     additive-expression shift . 3) (shift-expression shift . 4) (
     relational-expression shift . 5) (equality-expression shift . 6) (
@@ -1988,9 +2013,9 @@
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 314) ($:restrict shift . 81) ($:volatile 
-    shift . 82) ($:const shift . 83) (type-qualifier shift . 246) (#{$:\x5d;}#
-    shift . 315)) ((#{$:\x28;}# reduce . 219) (#{$:\x5b;}# reduce . 219) (
+    assignment-expression shift . 316) ($:restrict shift . 81) ($:volatile 
+    shift . 82) ($:const shift . 83) (type-qualifier shift . 247) (#{$:\x5d;}#
+    shift . 317)) ((#{$:\x28;}# reduce . 219) (#{$:\x5b;}# reduce . 219) (
     #{$:\x29;}# reduce . 219) ($:, reduce . 219)) ((#{$:\x28;}# reduce . 228) 
     (#{$:\x5b;}# reduce . 228) (#{$:\x29;}# reduce . 228) ($:, reduce . 228)) 
     ((typename shift . 67) ($:enum shift . 68) ($:union shift . 69) ($:struct 
@@ -2005,14 +2030,14 @@
     ) ($:static shift . 93) ($:register shift . 94) ($:extern shift . 95) (
     $:auto shift . 96) (function-specifier shift . 97) (type-qualifier shift 
     . 146) (type-specifier shift . 147) (storage-class-specifier shift . 100) 
-    (declaration-specifiers shift . 223) (parameter-declaration shift . 312) (
-    $:... shift . 313)) ((#{$:;}# reduce . 176) ($:: reduce . 176) (
+    (declaration-specifiers shift . 224) (parameter-declaration shift . 314) (
+    $:... shift . 315)) ((#{$:;}# reduce . 176) ($:: reduce . 176) (
     #{$:\x28;}# reduce . 176) (#{$:\x5b;}# reduce . 176) ($:, reduce . 176) (
-    #{$:\x29;}# reduce . 176)) ((#{$:\x5b;}# shift . 310) (#{$:\x28;}# shift 
-    . 311) ($:: reduce . 175) (#{$:;}# reduce . 175) ($:, reduce . 175) (
+    #{$:\x29;}# reduce . 176)) ((#{$:\x5b;}# shift . 312) (#{$:\x28;}# shift 
+    . 313) ($:: reduce . 175) (#{$:;}# reduce . 175) ($:, reduce . 175) (
     #{$:\x29;}# reduce . 175)) ((#{$:\x29;}# reduce . 199) ($:, reduce . 199))
     ((#{$:\x5b;}# shift . 140) (direct-abstract-declarator shift . 143) (
-    abstract-declarator shift . 222) (typename shift . 67) ($:enum shift . 68)
+    abstract-declarator shift . 223) (typename shift . 67) ($:enum shift . 68)
     ($:union shift . 69) ($:struct shift . 70) ($:_Complex shift . 71) (
     $:double shift . 72) ($:float shift . 73) ($:char shift . 74) ($:unsigned 
     shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed shift . 78) (
@@ -2024,30 +2049,30 @@
     shift . 91) ($:typedef shift . 92) ($:static shift . 93) ($:register 
     shift . 94) ($:extern shift . 95) ($:auto shift . 96) (function-specifier 
     shift . 97) (type-qualifier shift . 146) (type-specifier shift . 147) (
-    storage-class-specifier shift . 100) (declaration-specifiers shift . 223) 
-    (parameter-declaration shift . 224) (parameter-list shift . 225) (
-    parameter-type-list shift . 226) (#{$:\x29;}# shift . 227) (cpp-ident 
-    shift . 12) ($ident shift . 13) ($:* shift . 142) (#{$:\x28;}# shift . 256
-    ) (identifier shift . 253) (direct-declarator shift . 254) (pointer shift 
-    . 257) (declarator shift . 301)) ((#{$:\x5b;}# shift . 140) (
-    direct-abstract-declarator shift . 216) (cpp-ident shift . 12) ($ident 
-    shift . 13) (#{$:\x28;}# shift . 256) (identifier shift . 253) (
-    direct-declarator shift . 300) (#{$:\x29;}# reduce . 206) ($:, reduce . 
+    storage-class-specifier shift . 100) (declaration-specifiers shift . 224) 
+    (parameter-declaration shift . 225) (parameter-list shift . 226) (
+    parameter-type-list shift . 227) (#{$:\x29;}# shift . 228) (cpp-ident 
+    shift . 12) ($ident shift . 13) ($:* shift . 142) (#{$:\x28;}# shift . 257
+    ) (identifier shift . 254) (direct-declarator shift . 255) (pointer shift 
+    . 258) (declarator shift . 303)) ((#{$:\x5b;}# shift . 140) (
+    direct-abstract-declarator shift . 217) (cpp-ident shift . 12) ($ident 
+    shift . 13) (#{$:\x28;}# shift . 257) (identifier shift . 254) (
+    direct-declarator shift . 302) (#{$:\x29;}# reduce . 206) ($:, reduce . 
     206)) ((#{$:\x29;}# reduce . 200) ($:, reduce . 200)) ((#{$:\x28;}# reduce
     . 209) (#{$:\x5b;}# reduce . 209) (#{$:\x29;}# reduce . 209) ($:, reduce 
     . 209)) ((#{$:\x5b;}# reduce . 191) (#{$:\x28;}# reduce . 191) (
     #{$:\x29;}# reduce . 191) (cpp-ident reduce . 191) ($ident reduce . 191) (
     $:, reduce . 191)) ((#{$:\x28;}# reduce . 227) (#{$:\x5b;}# reduce . 227) 
-    (#{$:\x29;}# reduce . 227) ($:, reduce . 227)) ((#{$:\x29;}# shift . 309))
+    (#{$:\x29;}# reduce . 227) ($:, reduce . 227)) ((#{$:\x29;}# shift . 311))
     (($:restrict shift . 81) ($:volatile shift . 82) ($:const shift . 83) (
-    type-qualifier shift . 219) (type-qualifier-list shift . 308)) ((
+    type-qualifier shift . 220) (type-qualifier-list shift . 310)) ((
     #{$:\x28;}# reduce . 213) (#{$:\x5b;}# reduce . 213) (#{$:\x29;}# reduce 
-    . 213) ($:, reduce . 213)) ((#{$:\x5d;}# shift . 307) (cpp-ident reduce . 
+    . 213) ($:, reduce . 213)) ((#{$:\x5d;}# shift . 309) (cpp-ident reduce . 
     27) ($ident reduce . 27) ($chlit reduce . 27) ($float reduce . 27) ($fixed
     reduce . 27) ($string reduce . 27) ($:! reduce . 27) ($:~ reduce . 27) (
     $:- reduce . 27) ($:+ reduce . 27) ($:* reduce . 27) ($:& reduce . 27) (
     $:sizeof reduce . 27) ($:-- reduce . 27) ($:++ reduce . 27) (#{$:\x28;}# 
-    reduce . 27)) ((#{$:\x5d;}# shift . 306)) ((cast-expression shift . 1) (
+    reduce . 27)) ((#{$:\x5d;}# shift . 308)) ((cast-expression shift . 1) (
     multiplicative-expression shift . 2) (additive-expression shift . 3) (
     shift-expression shift . 4) (relational-expression shift . 5) (
     equality-expression shift . 6) (bitwise-and-expression shift . 7) ($string
@@ -2060,10 +2085,10 @@
     primary-expression shift . 27) (logical-or-expression shift . 28) (
     $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
     shift . 32) (postfix-expression shift . 33) (unary-expression shift . 34) 
-    (conditional-expression shift . 35) (assignment-expression shift . 303) (
+    (conditional-expression shift . 35) (assignment-expression shift . 305) (
     $:restrict shift . 81) ($:volatile shift . 82) ($:const shift . 83) (
-    type-qualifier shift . 246) (#{$:\x5d;}# shift . 304) ($:static shift . 
-    305)) ((#{$:\x29;}# reduce . 122) ($:inline reduce . 122) ($:auto reduce 
+    type-qualifier shift . 247) (#{$:\x5d;}# shift . 306) ($:static shift . 
+    307)) ((#{$:\x29;}# reduce . 122) ($:inline reduce . 122) ($:auto reduce 
     . 122) ($:extern reduce . 122) ($:register reduce . 122) ($:static reduce 
     . 122) ($:typedef reduce . 122) ($:const reduce . 122) ($:volatile reduce 
     . 122) ($:restrict reduce . 122) ($:void reduce . 122) ($:_Bool reduce . 
@@ -2108,7 +2133,7 @@
     $:union reduce . 150) ($:struct reduce . 150) ($:enum reduce . 150) (
     typename reduce . 150) ($:_Bool reduce . 150) ($:void reduce . 150) (
     $:restrict reduce . 150) ($:volatile reduce . 150) ($:const reduce . 150))
-    ((#{$:\x7d;}# shift . 302) (typename shift . 67) ($:enum shift . 68) (
+    ((#{$:\x7d;}# shift . 304) (typename shift . 67) ($:enum shift . 68) (
     $:union shift . 69) ($:struct shift . 70) ($:_Complex shift . 71) (
     $:double shift . 72) ($:float shift . 73) ($:char shift . 74) ($:unsigned 
     shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed shift . 78) (
@@ -2117,9 +2142,9 @@
     (struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87)
     ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
-    . 199) (type-specifier shift . 200) (specifier-qualifier-list shift . 202
-    ) (struct-declaration shift . 271) ($lone-comm shift . 201) (lone-comment 
-    shift . 272)) ((#{$:\x29;}# reduce . 145) ($:inline reduce . 145) ($:auto 
+    . 200) (type-specifier shift . 201) (specifier-qualifier-list shift . 203
+    ) (struct-declaration shift . 272) ($lone-comm shift . 202) (lone-comment 
+    shift . 273)) ((#{$:\x29;}# reduce . 145) ($:inline reduce . 145) ($:auto 
     reduce . 145) ($:extern reduce . 145) ($:register reduce . 145) ($:static 
     reduce . 145) ($:typedef reduce . 145) ($:const reduce . 145) ($:volatile 
     reduce . 145) ($:restrict reduce . 145) ($:void reduce . 145) ($:_Bool 
@@ -2130,11 +2155,11 @@
     reduce . 145) ($:char reduce . 145) ($:* reduce . 145) (#{$:\x5b;}# reduce
     . 145) (#{$:\x28;}# reduce . 145) ($:, reduce . 145) (cpp-ident reduce . 
     145) ($ident reduce . 145) ($:: reduce . 145)) ((cpp-ident shift . 12) (
-    $ident shift . 13) ($:* shift . 142) (#{$:\x28;}# shift . 275) (identifier
-    shift . 253) (direct-declarator shift . 254) (pointer shift . 276) (
-    declarator shift . 301)) ((cpp-ident shift . 12) ($ident shift . 13) (
-    #{$:\x28;}# shift . 275) (identifier shift . 253) (direct-declarator shift
-    . 300)) (($string shift . 8) ($chlit shift . 9) ($float shift . 10) (
+    $ident shift . 13) ($:* shift . 142) (#{$:\x28;}# shift . 276) (identifier
+    shift . 254) (direct-declarator shift . 255) (pointer shift . 277) (
+    declarator shift . 303)) ((cpp-ident shift . 12) ($ident shift . 13) (
+    #{$:\x28;}# shift . 276) (identifier shift . 254) (direct-declarator shift
+    . 302)) (($string shift . 8) ($chlit shift . 9) ($float shift . 10) (
     $fixed shift . 11) (cpp-ident shift . 12) ($ident shift . 13) (
     string-literal shift . 16) (constant shift . 17) (identifier shift . 18) (
     $:! shift . 20) ($:~ shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* 
@@ -2147,10 +2172,10 @@
     equality-expression shift . 6) (bitwise-and-expression shift . 7) (
     bitwise-xor-expression shift . 14) (bitwise-or-expression shift . 15) (
     logical-and-expression shift . 19) (logical-or-expression shift . 28) (
-    conditional-expression shift . 291) (constant-expression shift . 299)) ((
-    $:: shift . 298) (#{$:;}# reduce . 158) ($:, reduce . 158)) ((#{$:;}# 
-    reduce . 156) ($:, reduce . 156)) ((#{$:;}# shift . 296) ($:, shift . 297)
-    ) ((#{$:\x7d;}# shift . 295) (typename shift . 67) ($:enum shift . 68) (
+    conditional-expression shift . 293) (constant-expression shift . 301)) ((
+    $:: shift . 300) (#{$:;}# reduce . 158) ($:, reduce . 158)) ((#{$:;}# 
+    reduce . 156) ($:, reduce . 156)) ((#{$:;}# shift . 298) ($:, shift . 299)
+    ) ((#{$:\x7d;}# shift . 297) (typename shift . 67) ($:enum shift . 68) (
     $:union shift . 69) ($:struct shift . 70) ($:_Complex shift . 71) (
     $:double shift . 72) ($:float shift . 73) ($:char shift . 74) ($:unsigned 
     shift . 75) ($:long shift . 76) ($:int shift . 77) ($:signed shift . 78) (
@@ -2159,9 +2184,9 @@
     (struct-or-union-specifier shift . 86) (complex-type-specifier shift . 87)
     ($:_Bool shift . 88) (float-type-specifier shift . 89) (
     fixed-type-specifier shift . 90) ($:void shift . 91) (type-qualifier shift
-    . 199) (type-specifier shift . 200) (specifier-qualifier-list shift . 202
-    ) (struct-declaration shift . 271) ($lone-comm shift . 201) (lone-comment 
-    shift . 272)) ((#{$:\x29;}# reduce . 163) ($:inline reduce . 163) ($:auto 
+    . 200) (type-specifier shift . 201) (specifier-qualifier-list shift . 203
+    ) (struct-declaration shift . 272) ($lone-comm shift . 202) (lone-comment 
+    shift . 273)) ((#{$:\x29;}# reduce . 163) ($:inline reduce . 163) ($:auto 
     reduce . 163) ($:extern reduce . 163) ($:register reduce . 163) ($:static 
     reduce . 163) ($:typedef reduce . 163) ($:const reduce . 163) ($:volatile 
     reduce . 163) ($:restrict reduce . 163) ($:void reduce . 163) ($:_Bool 
@@ -2171,9 +2196,9 @@
     reduce . 163) ($:signed reduce . 163) ($:int reduce . 163) ($:unsigned 
     reduce . 163) ($:char reduce . 163) ($:* reduce . 163) (#{$:\x5b;}# reduce
     . 163) (#{$:\x28;}# reduce . 163) ($:, reduce . 163) (cpp-ident reduce . 
-    163) ($ident reduce . 163) ($:: reduce . 163)) ((#{$:\x7d;}# shift . 293) 
-    (cpp-ident shift . 12) ($ident shift . 13) (identifier shift . 195) (
-    enumerator shift . 294)) (($string shift . 8) ($chlit shift . 9) ($float 
+    163) ($ident reduce . 163) ($:: reduce . 163)) ((#{$:\x7d;}# shift . 295) 
+    (cpp-ident shift . 12) ($ident shift . 13) (identifier shift . 196) (
+    enumerator shift . 296)) (($string shift . 8) ($chlit shift . 9) ($float 
     shift . 10) ($fixed shift . 11) (cpp-ident shift . 12) ($ident shift . 13)
     (string-literal shift . 16) (constant shift . 17) (identifier shift . 18)
     ($:! shift . 20) ($:~ shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* 
@@ -2186,106 +2211,108 @@
     equality-expression shift . 6) (bitwise-and-expression shift . 7) (
     bitwise-xor-expression shift . 14) (bitwise-or-expression shift . 15) (
     logical-and-expression shift . 19) (logical-or-expression shift . 28) (
-    conditional-expression shift . 291) (constant-expression shift . 292)) ((
-    $:, shift . 289) (#{$:\x7d;}# shift . 290)) (($:, reduce . 63) (
+    conditional-expression shift . 293) (constant-expression shift . 294)) ((
+    $:, shift . 291) (#{$:\x7d;}# shift . 292)) (($:, reduce . 63) (
     #{$:\x29;}# reduce . 63) (#{$:\x5d;}# reduce . 63) ($:: reduce . 63) (
     #{$:\x7d;}# reduce . 63) ($end reduce . 63) (#{$:;}# reduce . 63)) ((
-    #{$:\x29;}# reduce . 19) ($:, reduce . 19)) ((#{$:\x29;}# reduce . 17) (
-    $:, reduce . 17)) ((cpp-ident shift . 12) ($ident shift . 13) (identifier 
-    shift . 195) (enumerator shift . 294) (#{$:\x7d;}# shift . 353)) ((
-    #{$:\x29;}# reduce . 161) ($:inline reduce . 161) ($:auto reduce . 161) (
-    $:extern reduce . 161) ($:register reduce . 161) ($:static reduce . 161) (
-    $:typedef reduce . 161) ($:const reduce . 161) ($:volatile reduce . 161) (
-    $:restrict reduce . 161) ($:void reduce . 161) ($:_Bool reduce . 161) (
-    typename reduce . 161) ($:enum reduce . 161) ($:struct reduce . 161) (
-    $:union reduce . 161) ($:_Complex reduce . 161) ($:float reduce . 161) (
-    $:double reduce . 161) ($:long reduce . 161) ($:short reduce . 161) (
-    $:signed reduce . 161) ($:int reduce . 161) ($:unsigned reduce . 161) (
-    $:char reduce . 161) ($:* reduce . 161) (#{$:\x5b;}# reduce . 161) (
-    #{$:\x28;}# reduce . 161) ($:, reduce . 161) (cpp-ident reduce . 161) (
-    $ident reduce . 161) ($:: reduce . 161)) ((#{$:\x5d;}# reduce . 79) (
-    #{$:;}# reduce . 79) ($:, reduce . 79) (#{$:\x7d;}# reduce . 79)) ((
-    #{$:\x7d;}# reduce . 169) ($:, reduce . 169)) ((#{$:\x29;}# reduce . 164) 
-    ($:inline reduce . 164) ($:auto reduce . 164) ($:extern reduce . 164) (
-    $:register reduce . 164) ($:static reduce . 164) ($:typedef reduce . 164) 
-    ($:const reduce . 164) ($:volatile reduce . 164) ($:restrict reduce . 164)
-    ($:void reduce . 164) ($:_Bool reduce . 164) (typename reduce . 164) (
-    $:enum reduce . 164) ($:struct reduce . 164) ($:union reduce . 164) (
-    $:_Complex reduce . 164) ($:float reduce . 164) ($:double reduce . 164) (
-    $:long reduce . 164) ($:short reduce . 164) ($:signed reduce . 164) ($:int
-    reduce . 164) ($:unsigned reduce . 164) ($:char reduce . 164) ($:* reduce
-    . 164) (#{$:\x5b;}# reduce . 164) (#{$:\x28;}# reduce . 164) ($:, reduce 
-    . 164) (cpp-ident reduce . 164) ($ident reduce . 164) ($:: reduce . 164)) 
-    ((#{$:\x7d;}# reduce . 167) ($:, reduce . 167)) ((#{$:\x29;}# reduce . 144
-    ) ($:inline reduce . 144) ($:auto reduce . 144) ($:extern reduce . 144) (
-    $:register reduce . 144) ($:static reduce . 144) ($:typedef reduce . 144) 
-    ($:const reduce . 144) ($:volatile reduce . 144) ($:restrict reduce . 144)
-    ($:void reduce . 144) ($:_Bool reduce . 144) (typename reduce . 144) (
-    $:enum reduce . 144) ($:struct reduce . 144) ($:union reduce . 144) (
-    $:_Complex reduce . 144) ($:float reduce . 144) ($:double reduce . 144) (
-    $:long reduce . 144) ($:short reduce . 144) ($:signed reduce . 144) ($:int
-    reduce . 144) ($:unsigned reduce . 144) ($:char reduce . 144) ($:* reduce
-    . 144) (#{$:\x5b;}# reduce . 144) (#{$:\x28;}# reduce . 144) ($:, reduce 
-    . 144) (cpp-ident reduce . 144) ($ident reduce . 144) ($:: reduce . 144)) 
-    (($code-comm shift . 350) (code-comment shift . 351) (opt-code-comment 
-    shift . 352) ($lone-comm reduce . 289) ($:char reduce . 289) ($:unsigned 
-    reduce . 289) ($:int reduce . 289) ($:signed reduce . 289) ($:short reduce
-    . 289) ($:long reduce . 289) ($:double reduce . 289) ($:float reduce . 
-    289) ($:_Complex reduce . 289) ($:union reduce . 289) ($:struct reduce . 
-    289) ($:enum reduce . 289) (typename reduce . 289) ($:_Bool reduce . 289) 
-    ($:void reduce . 289) ($:restrict reduce . 289) ($:volatile reduce . 289) 
-    ($:const reduce . 289) (#{$:\x7d;}# reduce . 289)) ((cpp-ident shift . 12)
-    ($ident shift . 13) ($:* shift . 142) (#{$:\x28;}# shift . 275) (
-    identifier shift . 253) (direct-declarator shift . 254) (pointer shift . 
-    276) ($:: shift . 277) (declarator shift . 278) (struct-declarator shift 
-    . 349)) (($string shift . 8) ($chlit shift . 9) ($float shift . 10) (
-    $fixed shift . 11) (cpp-ident shift . 12) ($ident shift . 13) (
-    string-literal shift . 16) (constant shift . 17) (identifier shift . 18) (
-    $:! shift . 20) ($:~ shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* 
-    shift . 24) ($:& shift . 25) (primary-expression shift . 27) ($:sizeof 
-    shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ shift . 32
-    ) (postfix-expression shift . 33) (#{$:\x28;}# shift . 26) (
-    unary-expression shift . 60) (cast-expression shift . 1) (
-    multiplicative-expression shift . 2) (additive-expression shift . 3) (
-    shift-expression shift . 4) (relational-expression shift . 5) (
-    equality-expression shift . 6) (bitwise-and-expression shift . 7) (
-    bitwise-xor-expression shift . 14) (bitwise-or-expression shift . 15) (
-    logical-and-expression shift . 19) (logical-or-expression shift . 28) (
-    conditional-expression shift . 291) (constant-expression shift . 348)) ((
-    #{$:;}# reduce . 160) ($:, reduce . 160)) ((#{$:\x5b;}# shift . 310) (
-    #{$:\x28;}# shift . 311) (#{$:\x29;}# reduce . 174) ($:, reduce . 174) (
-    $:: reduce . 174) (#{$:;}# reduce . 174)) ((#{$:\x29;}# shift . 347)) ((
-    #{$:\x29;}# reduce . 141) ($:inline reduce . 141) ($:auto reduce . 141) (
-    $:extern reduce . 141) ($:register reduce . 141) ($:static reduce . 141) (
-    $:typedef reduce . 141) ($:const reduce . 141) ($:volatile reduce . 141) (
-    $:restrict reduce . 141) ($:void reduce . 141) ($:_Bool reduce . 141) (
-    typename reduce . 141) ($:enum reduce . 141) ($:struct reduce . 141) (
-    $:union reduce . 141) ($:_Complex reduce . 141) ($:float reduce . 141) (
-    $:double reduce . 141) ($:long reduce . 141) ($:short reduce . 141) (
-    $:signed reduce . 141) ($:int reduce . 141) ($:unsigned reduce . 141) (
-    $:char reduce . 141) ($:* reduce . 141) (#{$:\x5b;}# reduce . 141) (
-    #{$:\x28;}# reduce . 141) ($:, reduce . 141) (cpp-ident reduce . 141) (
-    $ident reduce . 141) ($:: reduce . 141)) ((#{$:\x5d;}# shift . 346)) ((
-    #{$:\x28;}# reduce . 211) (#{$:\x5b;}# reduce . 211) (#{$:\x29;}# reduce 
-    . 211) ($:, reduce . 211)) ((cast-expression shift . 1) (
-    multiplicative-expression shift . 2) (additive-expression shift . 3) (
-    shift-expression shift . 4) (relational-expression shift . 5) (
-    equality-expression shift . 6) (bitwise-and-expression shift . 7) ($string
+    #{$:\x5b;}# shift . 140) (#{$:\x28;}# shift . 141) ($:* shift . 142) (
+    direct-abstract-declarator shift . 143) (pointer shift . 144) (
+    abstract-declarator shift . 290)) ((#{$:\x29;}# reduce . 17) ($:, reduce 
+    . 17)) ((#{$:\x29;}# reduce . 19) ($:, reduce . 19)) ((cpp-ident shift . 
+    12) ($ident shift . 13) (identifier shift . 196) (enumerator shift . 296) 
+    (#{$:\x7d;}# shift . 355)) ((#{$:\x29;}# reduce . 161) ($:inline reduce . 
+    161) ($:auto reduce . 161) ($:extern reduce . 161) ($:register reduce . 
+    161) ($:static reduce . 161) ($:typedef reduce . 161) ($:const reduce . 
+    161) ($:volatile reduce . 161) ($:restrict reduce . 161) ($:void reduce . 
+    161) ($:_Bool reduce . 161) (typename reduce . 161) ($:enum reduce . 161) 
+    ($:struct reduce . 161) ($:union reduce . 161) ($:_Complex reduce . 161) (
+    $:float reduce . 161) ($:double reduce . 161) ($:long reduce . 161) (
+    $:short reduce . 161) ($:signed reduce . 161) ($:int reduce . 161) (
+    $:unsigned reduce . 161) ($:char reduce . 161) ($:* reduce . 161) (
+    #{$:\x5b;}# reduce . 161) (#{$:\x28;}# reduce . 161) ($:, reduce . 161) (
+    cpp-ident reduce . 161) ($ident reduce . 161) ($:: reduce . 161)) ((
+    #{$:\x5d;}# reduce . 79) (#{$:;}# reduce . 79) ($:, reduce . 79) (
+    #{$:\x7d;}# reduce . 79)) ((#{$:\x7d;}# reduce . 169) ($:, reduce . 169)) 
+    ((#{$:\x29;}# reduce . 164) ($:inline reduce . 164) ($:auto reduce . 164) 
+    ($:extern reduce . 164) ($:register reduce . 164) ($:static reduce . 164) 
+    ($:typedef reduce . 164) ($:const reduce . 164) ($:volatile reduce . 164) 
+    ($:restrict reduce . 164) ($:void reduce . 164) ($:_Bool reduce . 164) (
+    typename reduce . 164) ($:enum reduce . 164) ($:struct reduce . 164) (
+    $:union reduce . 164) ($:_Complex reduce . 164) ($:float reduce . 164) (
+    $:double reduce . 164) ($:long reduce . 164) ($:short reduce . 164) (
+    $:signed reduce . 164) ($:int reduce . 164) ($:unsigned reduce . 164) (
+    $:char reduce . 164) ($:* reduce . 164) (#{$:\x5b;}# reduce . 164) (
+    #{$:\x28;}# reduce . 164) ($:, reduce . 164) (cpp-ident reduce . 164) (
+    $ident reduce . 164) ($:: reduce . 164)) ((#{$:\x7d;}# reduce . 167) ($:, 
+    reduce . 167)) ((#{$:\x29;}# reduce . 144) ($:inline reduce . 144) ($:auto
+    reduce . 144) ($:extern reduce . 144) ($:register reduce . 144) ($:static
+    reduce . 144) ($:typedef reduce . 144) ($:const reduce . 144) ($:volatile
+    reduce . 144) ($:restrict reduce . 144) ($:void reduce . 144) ($:_Bool 
+    reduce . 144) (typename reduce . 144) ($:enum reduce . 144) ($:struct 
+    reduce . 144) ($:union reduce . 144) ($:_Complex reduce . 144) ($:float 
+    reduce . 144) ($:double reduce . 144) ($:long reduce . 144) ($:short 
+    reduce . 144) ($:signed reduce . 144) ($:int reduce . 144) ($:unsigned 
+    reduce . 144) ($:char reduce . 144) ($:* reduce . 144) (#{$:\x5b;}# reduce
+    . 144) (#{$:\x28;}# reduce . 144) ($:, reduce . 144) (cpp-ident reduce . 
+    144) ($ident reduce . 144) ($:: reduce . 144)) (($code-comm shift . 352) (
+    code-comment shift . 353) (opt-code-comment shift . 354) ($lone-comm 
+    reduce . 289) ($:char reduce . 289) ($:unsigned reduce . 289) ($:int 
+    reduce . 289) ($:signed reduce . 289) ($:short reduce . 289) ($:long 
+    reduce . 289) ($:double reduce . 289) ($:float reduce . 289) ($:_Complex 
+    reduce . 289) ($:union reduce . 289) ($:struct reduce . 289) ($:enum 
+    reduce . 289) (typename reduce . 289) ($:_Bool reduce . 289) ($:void 
+    reduce . 289) ($:restrict reduce . 289) ($:volatile reduce . 289) ($:const
+    reduce . 289) (#{$:\x7d;}# reduce . 289)) ((cpp-ident shift . 12) ($ident
+    shift . 13) ($:* shift . 142) (#{$:\x28;}# shift . 276) (identifier shift
+    . 254) (direct-declarator shift . 255) (pointer shift . 277) ($:: shift 
+    . 278) (declarator shift . 279) (struct-declarator shift . 351)) (($string
     shift . 8) ($chlit shift . 9) ($float shift . 10) ($fixed shift . 11) (
-    cpp-ident shift . 12) ($ident shift . 13) (bitwise-xor-expression shift . 
-    14) (bitwise-or-expression shift . 15) (string-literal shift . 16) (
-    constant shift . 17) (identifier shift . 18) (logical-and-expression shift
-    . 19) ($:! shift . 20) ($:~ shift . 21) ($:- shift . 22) ($:+ shift . 23)
-    ($:* shift . 24) ($:& shift . 25) (#{$:\x28;}# shift . 26) (
+    cpp-ident shift . 12) ($ident shift . 13) (string-literal shift . 16) (
+    constant shift . 17) (identifier shift . 18) ($:! shift . 20) ($:~ shift 
+    . 21) ($:- shift . 22) ($:+ shift . 23) ($:* shift . 24) ($:& shift . 25) 
+    (primary-expression shift . 27) ($:sizeof shift . 29) (unary-operator 
+    shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
+    . 33) (#{$:\x28;}# shift . 26) (unary-expression shift . 60) (
+    cast-expression shift . 1) (multiplicative-expression shift . 2) (
+    additive-expression shift . 3) (shift-expression shift . 4) (
+    relational-expression shift . 5) (equality-expression shift . 6) (
+    bitwise-and-expression shift . 7) (bitwise-xor-expression shift . 14) (
+    bitwise-or-expression shift . 15) (logical-and-expression shift . 19) (
+    logical-or-expression shift . 28) (conditional-expression shift . 293) (
+    constant-expression shift . 350)) ((#{$:;}# reduce . 160) ($:, reduce . 
+    160)) ((#{$:\x5b;}# shift . 312) (#{$:\x28;}# shift . 313) (#{$:\x29;}# 
+    reduce . 174) ($:, reduce . 174) ($:: reduce . 174) (#{$:;}# reduce . 174)
+    ) ((#{$:\x29;}# shift . 349)) ((#{$:\x29;}# reduce . 141) ($:inline reduce
+    . 141) ($:auto reduce . 141) ($:extern reduce . 141) ($:register reduce 
+    . 141) ($:static reduce . 141) ($:typedef reduce . 141) ($:const reduce . 
+    141) ($:volatile reduce . 141) ($:restrict reduce . 141) ($:void reduce . 
+    141) ($:_Bool reduce . 141) (typename reduce . 141) ($:enum reduce . 141) 
+    ($:struct reduce . 141) ($:union reduce . 141) ($:_Complex reduce . 141) (
+    $:float reduce . 141) ($:double reduce . 141) ($:long reduce . 141) (
+    $:short reduce . 141) ($:signed reduce . 141) ($:int reduce . 141) (
+    $:unsigned reduce . 141) ($:char reduce . 141) ($:* reduce . 141) (
+    #{$:\x5b;}# reduce . 141) (#{$:\x28;}# reduce . 141) ($:, reduce . 141) (
+    cpp-ident reduce . 141) ($ident reduce . 141) ($:: reduce . 141)) ((
+    #{$:\x5d;}# shift . 348)) ((#{$:\x28;}# reduce . 211) (#{$:\x5b;}# reduce 
+    . 211) (#{$:\x29;}# reduce . 211) ($:, reduce . 211)) ((cast-expression 
+    shift . 1) (multiplicative-expression shift . 2) (additive-expression 
+    shift . 3) (shift-expression shift . 4) (relational-expression shift . 5) 
+    (equality-expression shift . 6) (bitwise-and-expression shift . 7) (
+    $string shift . 8) ($chlit shift . 9) ($float shift . 10) ($fixed shift . 
+    11) (cpp-ident shift . 12) ($ident shift . 13) (bitwise-xor-expression 
+    shift . 14) (bitwise-or-expression shift . 15) (string-literal shift . 16)
+    (constant shift . 17) (identifier shift . 18) (logical-and-expression 
+    shift . 19) ($:! shift . 20) ($:~ shift . 21) ($:- shift . 22) ($:+ shift 
+    . 23) ($:* shift . 24) ($:& shift . 25) (#{$:\x28;}# shift . 26) (
     primary-expression shift . 27) (logical-or-expression shift . 28) (
     $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
     shift . 32) (postfix-expression shift . 33) (unary-expression shift . 34) 
-    (conditional-expression shift . 35) (assignment-expression shift . 345)) (
+    (conditional-expression shift . 35) (assignment-expression shift . 347)) (
     (#{$:\x28;}# reduce . 212) (#{$:\x5b;}# reduce . 212) (#{$:\x29;}# reduce 
     . 212) ($:, reduce . 212)) ((#{$:\x28;}# reduce . 224) (#{$:\x5b;}# reduce
     . 224) (#{$:\x29;}# reduce . 224) ($:, reduce . 224)) ((#{$:\x5d;}# shift
-    . 343) ($:restrict shift . 81) ($:volatile shift . 82) ($:const shift . 
-    83) (type-qualifier shift . 246) (cast-expression shift . 1) (
+    . 345) ($:restrict shift . 81) ($:volatile shift . 82) ($:const shift . 
+    83) (type-qualifier shift . 247) (cast-expression shift . 1) (
     multiplicative-expression shift . 2) (additive-expression shift . 3) (
     shift-expression shift . 4) (relational-expression shift . 5) (
     equality-expression shift . 6) (bitwise-and-expression shift . 7) ($string
@@ -2298,10 +2325,10 @@
     primary-expression shift . 27) (logical-or-expression shift . 28) (
     $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
     shift . 32) (postfix-expression shift . 33) (unary-expression shift . 34) 
-    (conditional-expression shift . 35) (assignment-expression shift . 344)) (
+    (conditional-expression shift . 35) (assignment-expression shift . 346)) (
     (#{$:\x28;}# reduce . 226) (#{$:\x5b;}# reduce . 226) (#{$:\x29;}# reduce 
-    . 226) ($:, reduce . 226)) (($:static shift . 338) (#{$:\x5d;}# shift . 
-    339) (cast-expression shift . 1) (multiplicative-expression shift . 2) (
+    . 226) ($:, reduce . 226)) (($:static shift . 340) (#{$:\x5d;}# shift . 
+    341) (cast-expression shift . 1) (multiplicative-expression shift . 2) (
     additive-expression shift . 3) (shift-expression shift . 4) (
     relational-expression shift . 5) (equality-expression shift . 6) (
     bitwise-and-expression shift . 7) ($string shift . 8) ($chlit shift . 9) (
@@ -2309,16 +2336,16 @@
     shift . 13) (bitwise-xor-expression shift . 14) (bitwise-or-expression 
     shift . 15) (string-literal shift . 16) (constant shift . 17) (identifier 
     shift . 18) (logical-and-expression shift . 19) ($:! shift . 20) ($:~ 
-    shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* shift . 340) ($:& shift
+    shift . 21) ($:- shift . 22) ($:+ shift . 23) ($:* shift . 342) ($:& shift
     . 25) (#{$:\x28;}# shift . 26) (primary-expression shift . 27) (
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 341) ($:restrict shift . 81) ($:volatile 
-    shift . 82) ($:const shift . 83) (type-qualifier shift . 219) (
-    type-qualifier-list shift . 342)) ((#{$:\x29;}# shift . 334) (cpp-ident 
-    shift . 12) ($ident shift . 13) (identifier shift . 335) (identifier-list 
-    shift . 336) (typename shift . 67) ($:enum shift . 68) ($:union shift . 69
+    assignment-expression shift . 343) ($:restrict shift . 81) ($:volatile 
+    shift . 82) ($:const shift . 83) (type-qualifier shift . 220) (
+    type-qualifier-list shift . 344)) ((#{$:\x29;}# shift . 336) (cpp-ident 
+    shift . 12) ($ident shift . 13) (identifier shift . 337) (identifier-list 
+    shift . 338) (typename shift . 67) ($:enum shift . 68) ($:union shift . 69
     ) ($:struct shift . 70) ($:_Complex shift . 71) ($:double shift . 72) (
     $:float shift . 73) ($:char shift . 74) ($:unsigned shift . 75) ($:long 
     shift . 76) ($:int shift . 77) ($:signed shift . 78) ($:short shift . 79) 
@@ -2330,13 +2357,13 @@
     ) ($:static shift . 93) ($:register shift . 94) ($:extern shift . 95) (
     $:auto shift . 96) (function-specifier shift . 97) (type-qualifier shift 
     . 146) (type-specifier shift . 147) (storage-class-specifier shift . 100) 
-    (declaration-specifiers shift . 223) (parameter-declaration shift . 224) (
-    parameter-list shift . 225) (parameter-type-list shift . 337)) (($:, 
+    (declaration-specifiers shift . 224) (parameter-declaration shift . 225) (
+    parameter-list shift . 226) (parameter-type-list shift . 339)) (($:, 
     reduce . 198) (#{$:\x29;}# reduce . 198)) ((#{$:\x29;}# reduce . 196)) ((
-    #{$:\x5d;}# shift . 333)) ((#{$:\x28;}# reduce . 222) (#{$:\x5b;}# reduce 
+    #{$:\x5d;}# shift . 335)) ((#{$:\x28;}# reduce . 222) (#{$:\x5b;}# reduce 
     . 222) (#{$:\x29;}# reduce . 222) ($:, reduce . 222)) ((#{$:\x28;}# reduce
     . 217) (#{$:\x5b;}# reduce . 217) (#{$:\x29;}# reduce . 217) ($:, reduce 
-    . 217)) ((#{$:\x5d;}# shift . 332)) (($:= reduce . 14) ($:+= reduce . 14) 
+    . 217)) ((#{$:\x5d;}# shift . 334)) (($:= reduce . 14) ($:+= reduce . 14) 
     ($:-= reduce . 14) ($:*= reduce . 14) ($:/= reduce . 14) ($:%= reduce . 14
     ) ($:<<= reduce . 14) ($:>>= reduce . 14) ($:&= reduce . 14) ($:^= reduce 
     . 14) ($:|= reduce . 14) ($:-- reduce . 14) ($:++ reduce . 14) ($:-> 
@@ -2348,7 +2375,7 @@
     reduce . 14) ($:| reduce . 14) ($:&& reduce . 14) ($:|| reduce . 14) ($:, 
     reduce . 14) (#{$:\x29;}# reduce . 14) (#{$:\x5d;}# reduce . 14) ($:: 
     reduce . 14) (#{$:\x7d;}# reduce . 14) ($end reduce . 14) (#{$:;}# reduce 
-    . 14)) ((#{$:\x7d;}# shift . 329) (cast-expression shift . 1) (
+    . 14)) ((#{$:\x7d;}# shift . 331) (cast-expression shift . 1) (
     multiplicative-expression shift . 2) (additive-expression shift . 3) (
     shift-expression shift . 4) (relational-expression shift . 5) (
     equality-expression shift . 6) (bitwise-and-expression shift . 7) ($string
@@ -2361,18 +2388,18 @@
     primary-expression shift . 27) (logical-or-expression shift . 28) (
     $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
     shift . 32) (postfix-expression shift . 33) (unary-expression shift . 34) 
-    (conditional-expression shift . 35) (#{$:\x7b;}# shift . 239) (
-    assignment-expression shift . 240) (initializer shift . 330) ($:. shift . 
-    235) (#{$:\x5b;}# shift . 236) (designator shift . 237) (designator-list 
-    shift . 238) (designation shift . 331)) ((#{$:\x7d;}# reduce . 234) ($:, 
-    reduce . 234)) (($:, shift . 327) (#{$:\x7d;}# shift . 328)) ((cpp-ident 
+    (conditional-expression shift . 35) (#{$:\x7b;}# shift . 240) (
+    assignment-expression shift . 241) (initializer shift . 332) ($:. shift . 
+    236) (#{$:\x5b;}# shift . 237) (designator shift . 238) (designator-list 
+    shift . 239) (designation shift . 333)) ((#{$:\x7d;}# reduce . 234) ($:, 
+    reduce . 234)) (($:, shift . 329) (#{$:\x7d;}# shift . 330)) ((cpp-ident 
     reduce . 238) ($ident reduce . 238) ($chlit reduce . 238) ($float reduce 
     . 238) ($fixed reduce . 238) ($string reduce . 238) (#{$:\x28;}# reduce . 
     238) ($:! reduce . 238) ($:~ reduce . 238) ($:- reduce . 238) ($:+ reduce 
     . 238) ($:* reduce . 238) ($:& reduce . 238) ($:sizeof reduce . 238) ($:--
     reduce . 238) ($:++ reduce . 238) (#{$:\x7b;}# reduce . 238)) (($:= 
     reduce . 240) ($:. reduce . 240) (#{$:\x5b;}# reduce . 240)) ((#{$:\x5d;}#
-    shift . 326)) (($:= reduce . 242) (#{$:\x5b;}# reduce . 242) ($:. reduce 
+    shift . 328)) (($:= reduce . 242) (#{$:\x5b;}# reduce . 242) ($:. reduce 
     . 242)) (($:= reduce . 241) (#{$:\x5b;}# reduce . 241) ($:. reduce . 241))
     ((cast-expression shift . 1) (multiplicative-expression shift . 2) (
     additive-expression shift . 3) (shift-expression shift . 4) (
@@ -2387,10 +2414,10 @@
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    #{$:\x7b;}# shift . 239) (assignment-expression shift . 240) (initializer 
-    shift . 330) ($:. shift . 235) (#{$:\x5b;}# shift . 236) (designator shift
-    . 237) (designator-list shift . 238) (designation shift . 331) (
-    #{$:\x7d;}# shift . 367)) ((#{$:\x7d;}# reduce . 232) ($:, reduce . 232)) 
+    #{$:\x7b;}# shift . 240) (assignment-expression shift . 241) (initializer 
+    shift . 332) ($:. shift . 236) (#{$:\x5b;}# shift . 237) (designator shift
+    . 238) (designator-list shift . 239) (designation shift . 333) (
+    #{$:\x7d;}# shift . 369)) ((#{$:\x7d;}# reduce . 232) ($:, reduce . 232)) 
     (($:= reduce . 15) ($:+= reduce . 15) ($:-= reduce . 15) ($:*= reduce . 15
     ) ($:/= reduce . 15) ($:%= reduce . 15) ($:<<= reduce . 15) ($:>>= reduce 
     . 15) ($:&= reduce . 15) ($:^= reduce . 15) ($:|= reduce . 15) ($:-- 
@@ -2416,24 +2443,24 @@
     primary-expression shift . 27) (logical-or-expression shift . 28) (
     $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
     shift . 32) (postfix-expression shift . 33) (unary-expression shift . 34) 
-    (conditional-expression shift . 35) (#{$:\x7b;}# shift . 239) (
-    assignment-expression shift . 240) (initializer shift . 366)) ((
+    (conditional-expression shift . 35) (#{$:\x7b;}# shift . 240) (
+    assignment-expression shift . 241) (initializer shift . 368)) ((
     #{$:\x28;}# reduce . 223) (#{$:\x5b;}# reduce . 223) (#{$:\x29;}# reduce 
     . 223) ($:, reduce . 223)) ((#{$:\x28;}# reduce . 221) (#{$:\x5b;}# reduce
     . 221) (#{$:\x29;}# reduce . 221) ($:, reduce . 221)) ((#{$:;}# reduce . 
     188) ($:: reduce . 188) (#{$:\x28;}# reduce . 188) (#{$:\x5b;}# reduce . 
     188) ($:, reduce . 188) (#{$:\x29;}# reduce . 188)) ((#{$:\x29;}# reduce 
-    . 202) ($:, reduce . 202)) ((#{$:\x29;}# shift . 364) ($:, shift . 365)) (
-    (#{$:\x29;}# shift . 363)) (($:restrict shift . 81) ($:volatile shift . 82
-    ) ($:const shift . 83) (type-qualifier shift . 219) (type-qualifier-list 
-    shift . 362)) ((#{$:;}# reduce . 181) ($:: reduce . 181) (#{$:\x28;}# 
+    . 202) ($:, reduce . 202)) ((#{$:\x29;}# shift . 366) ($:, shift . 367)) (
+    (#{$:\x29;}# shift . 365)) (($:restrict shift . 81) ($:volatile shift . 82
+    ) ($:const shift . 83) (type-qualifier shift . 220) (type-qualifier-list 
+    shift . 364)) ((#{$:;}# reduce . 181) ($:: reduce . 181) (#{$:\x28;}# 
     reduce . 181) (#{$:\x5b;}# reduce . 181) ($:, reduce . 181) (#{$:\x29;}# 
-    reduce . 181)) ((#{$:\x5d;}# shift . 361) (cpp-ident reduce . 27) ($ident 
+    reduce . 181)) ((#{$:\x5d;}# shift . 363) (cpp-ident reduce . 27) ($ident 
     reduce . 27) ($chlit reduce . 27) ($float reduce . 27) ($fixed reduce . 27
     ) ($string reduce . 27) ($:! reduce . 27) ($:~ reduce . 27) ($:- reduce . 
     27) ($:+ reduce . 27) ($:* reduce . 27) ($:& reduce . 27) ($:sizeof reduce
     . 27) ($:-- reduce . 27) ($:++ reduce . 27) (#{$:\x28;}# reduce . 27)) ((
-    #{$:\x5d;}# shift . 360)) ((cast-expression shift . 1) (
+    #{$:\x5d;}# shift . 362)) ((cast-expression shift . 1) (
     multiplicative-expression shift . 2) (additive-expression shift . 3) (
     shift-expression shift . 4) (relational-expression shift . 5) (
     equality-expression shift . 6) (bitwise-and-expression shift . 7) ($string
@@ -2446,11 +2473,11 @@
     (logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 356) ($:restrict shift . 81) ($:volatile 
-    shift . 82) ($:const shift . 83) (type-qualifier shift . 246) (#{$:\x5d;}#
-    shift . 357) ($:static shift . 358) ($:* shift . 359)) ((#{$:\x28;}# 
+    assignment-expression shift . 358) ($:restrict shift . 81) ($:volatile 
+    shift . 82) ($:const shift . 83) (type-qualifier shift . 247) (#{$:\x5d;}#
+    shift . 359) ($:static shift . 360) ($:* shift . 361)) ((#{$:\x28;}# 
     reduce . 215) (#{$:\x5b;}# reduce . 215) (#{$:\x29;}# reduce . 215) ($:, 
-    reduce . 215)) ((#{$:\x5d;}# shift . 355)) ((#{$:\x5d;}# shift . 354)) ((
+    reduce . 215)) ((#{$:\x5d;}# shift . 357)) ((#{$:\x5d;}# shift . 356)) ((
     #{$:\x28;}# reduce . 210) (#{$:\x5b;}# reduce . 210) (#{$:\x29;}# reduce 
     . 210) ($:, reduce . 210)) ((#{$:\x28;}# reduce . 177) (#{$:\x5b;}# reduce
     . 177) (#{$:\x29;}# reduce . 177) ($:, reduce . 177) (#{$:;}# reduce . 
@@ -2489,7 +2516,7 @@
     ((#{$:\x28;}# reduce . 216) (#{$:\x5b;}# reduce . 216) (#{$:\x29;}# reduce
     . 216) ($:, reduce . 216)) ((#{$:\x28;}# reduce . 214) (#{$:\x5b;}# 
     reduce . 214) (#{$:\x29;}# reduce . 214) ($:, reduce . 214)) ((#{$:\x5d;}#
-    shift . 372)) ((#{$:;}# reduce . 179) ($:: reduce . 179) (#{$:\x28;}# 
+    shift . 374)) ((#{$:;}# reduce . 179) ($:: reduce . 179) (#{$:\x28;}# 
     reduce . 179) (#{$:\x5b;}# reduce . 179) ($:, reduce . 179) (#{$:\x29;}# 
     reduce . 179)) ((cast-expression shift . 1) (multiplicative-expression 
     shift . 2) (additive-expression shift . 3) (shift-expression shift . 4) (
@@ -2504,7 +2531,7 @@
     logical-or-expression shift . 28) ($:sizeof shift . 29) (unary-operator 
     shift . 30) ($:-- shift . 31) ($:++ shift . 32) (postfix-expression shift 
     . 33) (unary-expression shift . 34) (conditional-expression shift . 35) (
-    assignment-expression shift . 371)) ((#{$:\x5d;}# shift . 370) (cpp-ident 
+    assignment-expression shift . 373)) ((#{$:\x5d;}# shift . 372) (cpp-ident 
     reduce . 27) ($ident reduce . 27) ($chlit reduce . 27) ($float reduce . 27
     ) ($fixed reduce . 27) ($string reduce . 27) ($:! reduce . 27) ($:~ reduce
     . 27) ($:- reduce . 27) ($:+ reduce . 27) ($:* reduce . 27) ($:& reduce 
@@ -2526,18 +2553,18 @@
     primary-expression shift . 27) (logical-or-expression shift . 28) (
     $:sizeof shift . 29) (unary-operator shift . 30) ($:-- shift . 31) ($:++ 
     shift . 32) (postfix-expression shift . 33) (unary-expression shift . 34) 
-    (conditional-expression shift . 35) (assignment-expression shift . 369) (
+    (conditional-expression shift . 35) (assignment-expression shift . 371) (
     $:restrict shift . 81) ($:volatile shift . 82) ($:const shift . 83) (
-    type-qualifier shift . 246)) ((#{$:;}# reduce . 186) ($:: reduce . 186) (
+    type-qualifier shift . 247)) ((#{$:;}# reduce . 186) ($:: reduce . 186) (
     #{$:\x28;}# reduce . 186) (#{$:\x5b;}# reduce . 186) ($:, reduce . 186) (
     #{$:\x29;}# reduce . 186)) ((#{$:;}# reduce . 187) ($:: reduce . 187) (
     #{$:\x28;}# reduce . 187) (#{$:\x5b;}# reduce . 187) ($:, reduce . 187) (
     #{$:\x29;}# reduce . 187)) ((cpp-ident shift . 12) ($ident shift . 13) (
-    identifier shift . 368)) ((#{$:\x7d;}# reduce . 236) ($:, reduce . 236)) (
+    identifier shift . 370)) ((#{$:\x7d;}# reduce . 236) ($:, reduce . 236)) (
     (#{$:\x7d;}# reduce . 233) ($:, reduce . 233)) ((#{$:\x29;}# reduce . 203)
-    ($:, reduce . 203)) ((#{$:\x5d;}# shift . 374)) ((#{$:;}# reduce . 184) (
+    ($:, reduce . 203)) ((#{$:\x5d;}# shift . 376)) ((#{$:;}# reduce . 184) (
     $:: reduce . 184) (#{$:\x28;}# reduce . 184) (#{$:\x5b;}# reduce . 184) (
-    $:, reduce . 184) (#{$:\x29;}# reduce . 184)) ((#{$:\x5d;}# shift . 373)) 
+    $:, reduce . 184) (#{$:\x29;}# reduce . 184)) ((#{$:\x5d;}# shift . 375)) 
     ((#{$:;}# reduce . 178) ($:: reduce . 178) (#{$:\x28;}# reduce . 178) (
     #{$:\x5b;}# reduce . 178) ($:, reduce . 178) (#{$:\x29;}# reduce . 178)) (
     (#{$:;}# reduce . 183) ($:: reduce . 183) (#{$:\x28;}# reduce . 183) (

@@ -79,7 +79,7 @@
 	 ;;(def (assq-ref mtab '$default))
 	 (def (if hashed -1 '$default))
 	 (end (assq-ref mtab '$end))
-	 (com (list (assq-ref mtab '$lone-comm) (assq-ref mtab '$code-comm)))
+	 (comm (list (assq-ref mtab '$lone-comm) (assq-ref mtab '$code-comm)))
 	 ;; predicate to test for shift action:
 	 (shift? (if hashed
 		     (lambda (a) (positive? a))
@@ -91,38 +91,27 @@
 		      (lambda (a) (negative? a))
 		      (lambda (a) (eq? 'reduce (car a)))))
 	 ;; On reduce, reduce this production-rule:
-	 ;;(reduce-pr (if hashed (lambda (a) (abs a)) (lambda (a) (cdr a))))
 	 (reduce-pr (if hashed abs cdr))
-	 ;; If no action found in transition list, then this:
-	 (parse-error (if hashed #f (cons 'error 0)))
-	 ;; predicate to test for error
-	 (error? (if hashed
-		     (lambda (a) (eq? #f a))
-		     (lambda (a) (eq? 'error (car a)))))
 	 )
+
     (lambda* (lexr #:key debug)
       (let iter ((state (list 0))	; state stack
 		 (stack (list '$@))	; sval stack
 		 (nval #f)		; prev reduce to non-term val
 		 (lval (lexr)))		; lexical value (from lex'er)
+
 	(let* ((tval (car (if nval nval lval))) ; token (syntax value)
 	       (sval (cdr (if nval nval lval))) ; semantic value
 	       (stxl (vector-ref pat-v (car state))) ; state transition list
-	       (stx (or (assq-ref stxl tval) ; trans action (e.g. shift 32)
-			(assq-ref stxl def)  ; default action
-			parse-error)))
+	       (xtra #t) ;; in case of 0 => accept, error or skip
+	       (stx (cond ;; state transition
+		     ((assq-ref stxl tval)) ; in table
+		     ((memq tval comm) (set! xtra 'skip) 0)
+		     ((assq-ref stxl def))  ; default action
+		     (else (set! xtra 'error) 0))))
+
 	  (if debug (dmsg (car state) (if nval tval sval) stx))
 	  (cond
-	   ((error? stx)
-	    ;; Ugly to have to check this first every time, but
-	    ;; @code{positive?} and @code{negative?} fail otherwise.
-	    (if (memq tval com)		; if due to comment, try again
-		(iter state stack nval (lexr))
-		(let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		      (ln (1+ (port-line (current-input-port)))))
-		  (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
-			  fn ln (car state) sval)
-		  #f)))
 	   ((shift? stx)
 	    ;; We could check here to determine if next transition only has a
 	    ;; default reduction and, if so, go ahead and process the reduction
@@ -136,8 +125,17 @@
 		    (list-tail stack gl)
 		    (cons (vector-ref rto-v gx) $$)
 		    lval)))
-	   (else ;; accept
-	    (car stack))))))))
+	   (else ;; accept, error or skip
+	    (case xtra
+	      ((skip) (iter state stack nval (lexr)))
+	      ((error)
+	       (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
+		     (ln (1+ (port-line (current-input-port)))))
+		 (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
+			 fn ln (car state) sval)
+		 #f))
+	      (else ;; accept
+	       (car stack))))))))))
 
 ;; @item make-lalr-ia-parser mach
 ;; Make an interactive parser.   This will automatically process default

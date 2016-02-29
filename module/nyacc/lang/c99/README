@@ -21,7 +21,7 @@ xparser.scm	C expression parser
 
 pprint.scm	C pretty printer, from SXML output of above parsers
 
-util.scm	utilities merge, remove trees from included files
+util1.scm	utilities merge, remove trees from included files
 util2.scm	utilities to process information in trees
 
 cppgen.scm	CPP expression grammer defined

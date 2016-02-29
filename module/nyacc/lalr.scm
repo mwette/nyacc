@@ -1,6 +1,6 @@
 ;;; nyacc/lalr.scm
 ;;;
-;;; Copyright (C) 2014, 2015 Matthew R. Wette
+;;; Copyright (C) 2014,2015,2016 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -1422,13 +1422,13 @@
 
 ;; @item compact-machine mach [#:keep 3] => mach
 ;; A "filter" to compact the parse table.
+;; TODO: Never let a comment be a source of a default reduction.
 (define* (compact-machine mach #:key (keep 3))
   (let* ((pat-v (assq-ref mach 'pat-v))
 	 (nst (vector-length pat-v))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
 	 (reduce? (if hashed
-		      (lambda (a) (and (number? a) ; check number: #f for xrconf
-				       (negative? a)))
+		      (lambda (a) (and (number? a) (negative? a)))
 		      (lambda (a) (eq? 'reduce (car a)))))
 	 (reduce-pr (if hashed abs cdr))
 	 (reduce-to? (if hashed
@@ -1438,31 +1438,42 @@
 	 (mk-default (if hashed
 			 (lambda (r) (cons -1 (- r)))
 			 (lambda (r) `($default reduce . ,r))))
-	 )
+	 (mtab (assq-ref mach 'mtab))
+	 (comm (list (assq-ref mtab '$lone-comm) (assq-ref mtab '$code-comm))))
+
+    ;; Keep an alist mapping reduction prod-rule => count.
     (let iter ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))
       (cond
        ((pair? trn-l)
-	;;(if (not (eq? 'reduce (cadar trn-l)))
-	(if (not (reduce? (cdar trn-l)))
-	    (iter sx (cdr trn-l) cnt-al p-max)
-	    (let* ((ix (reduce-pr (cdar trn-l)))
-		   ;;(ix (cddar trn-l))
-		   (cnt (1+ (or (assq-ref cnt-al ix) 0)))
-		   (cnt-p (cons ix cnt)))
-	      (iter sx (cdr trn-l) (cons cnt-p cnt-al)
-		    (if (> cnt (cdr p-max)) cnt-p p-max)))))
+	(cond
+	((not (reduce? (cdar trn-l)))
+	 ;; A shift, so not a candidate for default reduction.
+	 (iter sx (cdr trn-l) cnt-al p-max))
+	((memq (caar trn-l) comm)
+	 ;; Don't consider comments because these will not be included.
+	 (iter sx (cdr trn-l) cnt-al p-max))
+	(else
+	 ;; A reduction, so update the count for reducing this prod-rule.
+	 (let* ((ix (reduce-pr (cdar trn-l)))
+		(cnt (1+ (or (assq-ref cnt-al ix) 0)))
+		(cnt-p (cons ix cnt)))
+	   (iter sx (cdr trn-l) (cons cnt-p cnt-al)
+		 (if (> cnt (cdr p-max)) cnt-p p-max))))))
 	      
        ((null? trn-l)
-	;; If more than @code{keep} common reductions then generate default
-	;; rule to replace those.
+	;; We have processed all transitions. If more than @code{keep} common
+	;; reductions then generate default rule to replace those.
 	(if (> (cdr p-max) keep)
 	    (vector-set!
 	     pat-v sx
 	     (fold-right
-	      (lambda (trn pat)
-		;;(if (equal? (cdr trn) `(reduce . ,(car p-max))) pat
-		(if (reduce-to? (cdr trn) (car p-max)) pat (cons trn pat)))
-	      ;;(list `($default reduce . ,(car p-max))) ;; default is last
+	      (lambda (trn pat) ;; transition action
+		;; If not a comment and reduces to the most-popular prod-rule
+		;; then transfer to the default transition.
+		(if (and (not (memq (car trn) comm))
+			 (reduce-to? (cdr trn) (car p-max)))
+		    pat
+		    (cons trn pat)))
 	      (list (mk-default (car p-max))) ;; default is last
 	      (vector-ref pat-v sx))))
 	(iter sx #f #f #f))

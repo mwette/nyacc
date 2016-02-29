@@ -1,5 +1,13 @@
 strategy for generating parsers and other stuff
 
+guile -s mach.scm -c '(@ (nyacc lang c99 mach) gen-mach-files)'
+=> .scm/{actions.scm,tables.scm}
+#guild compile 
+
+eval-when?
+
+use-case: dist mach-files and parser
+
 dist:
 	mach.scm
 
@@ -7,5 +15,19 @@ dev-parser.scm: mach.scm pbody.scm mk-parser.scm
 parser.scm: mach.scm pbody.scm mk-parser.scm
 expr-parser.scm: mach.scm pbody.scm mk-parser.scm
 
-#guile -s mk-parser.scm -c '(make-parser)
+#guile -s mach-parser.scm -c '(@ (nyacc lang c99 mach) gen-mach-files)'
+
+cppgen.scm => cppmach.scm
+
+install:
+	cpp.go
+	parser.go
+	expr-parser.go
+	pprint.go
+	util.go
+	util1.go
+
+cpp.scm: cppmach.scm
+
+#cppmach.scm (export-files
 
