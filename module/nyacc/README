@@ -1,0 +1,55 @@
+nyacc/README
+
+   Copyright (C) 2016 Matthew R. Wette
+
+   Copying and distribution of this file, with or without modification,
+   are permitted in any medium without royalty provided the copyright
+   notice and this notice are preserved.  This file is offered as-is,
+   without any warranty.
+
+
+strategy for generating parsers and other stuff
+
+guile -s mach.scm -c '(@ (nyacc lang c99 mach) gen-mach-files)'
+=> .scm/{actions.scm,tables.scm}
+#guild compile 
+
+eval-when?
+
+use-case: dist mach-files and parser
+
+dist:
+	mach.scm
+
+
+===============================================================================
+
+dev-parser.scm: mach.scm pbody.scm mk-parser.scm
+parser.scm: mach.scm pbody.scm mk-parser.scm
+expr-parser.scm: mach.scm pbody.scm mk-parser.scm
+
+$ guile -l cppmach.scm -c '(@ (nyacc lang c99 cppmach) gen-cpp-files)'
+> cppact.scm cpptab.scm
+
+$ guile -l mach.scm -c '(@ (nyacc lang c99 mach) gen-c99-files)'
+> c99act.scm c99tab.scm
+
+$ guile -l mach.scm -c '(@ (nyacc lang c99 mach) gen-c99x-files)'
+> c99xact.scm c99xtab.scm 
+
+===============================================================================
+
+cppgen.scm => cppmach.scm
+
+install:
+	cpp.go
+	parser.go
+	expr-parser.go
+	pprint.go
+	util.go
+	util1.go
+
+cpp.scm: cppmach.scm
+
+#cppmach.scm (export-files
+

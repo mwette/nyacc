@@ -31,7 +31,7 @@
 (define (module-path filename)
   (string-append "../../../../module/nyacc/lang/c99/" filename))
 
-(with-output-to-file "lang.txt.new"
+#;(with-output-to-file "lang.txt.new"
   (lambda ()
     (let* ((notice (assq-ref (assq-ref clang-spec 'attr) 'notice))
            (lines (if notice (string-split notice #\newline) '())))
@@ -46,7 +46,7 @@
     (lalr->bison clang-spec)
     (move-if-changed "gram.y.new" (module-path "gram.y"))))
 
-#;(begin
+(begin
   (write-lalr-actions clang-mach "actions.scm.new")
   (write-lalr-tables clang-mach "tables.scm.new")
   (when (or (move-if-changed "actions.scm.new" (module-path "actions.scm"))

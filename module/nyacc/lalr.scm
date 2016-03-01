@@ -1421,8 +1421,11 @@
   (assq-ref mach 'mtab))
 
 ;; @item compact-machine mach [#:keep 3] => mach
-;; A "filter" to compact the parse table.
-;; TODO: Never let a comment be a source of a default reduction.
+;; A "filter" to compact the parse table.  For each state this will replace
+;; the most populus set of reductions of the same production rule with a
+;; default production.  However, reductions triggered by @code{'$lone-comm}
+;; or @code{'$lone-comm} are not counted.  The parser will want to treat those
+;; separately so that they can be skipped if the parser is not expecting them.
 (define* (compact-machine mach #:key (keep 3))
   (let* ((pat-v (assq-ref mach 'pat-v))
 	 (nst (vector-length pat-v))

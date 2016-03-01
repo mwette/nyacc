@@ -671,13 +671,17 @@
     ;;(identity
     (make-lalr-machine clang-spec))))
 
+;;; =====================================
+
+;; The following are needed by the code in pbody.scm.
 (define len-v (assq-ref clang-mach 'len-v))
 (define pat-v (assq-ref clang-mach 'pat-v))
 (define rto-v (assq-ref clang-mach 'rto-v))
 (define mtab (assq-ref clang-mach 'mtab))
-(define sya-v (vector-map (lambda (ix actn) (wrap-action actn))
-			  (assq-ref clang-mach 'act-v)))
-(define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
+(define act-v (vector-map
+	       (lambda (ix f) (eval f (current-module)))
+	       (vector-map (lambda (ix actn) (wrap-action actn))
+			   (assq-ref clang-mach 'act-v))))
 
 (include-from-path "nyacc/lang/c99/pbody.scm")
 
@@ -699,5 +703,16 @@
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
+
+;;; =====================================
+
+(define (gen-c99-files . rest)
+  (define (module-path path) path)
+  (write-lalr-actions clang-mach "c99act.scm.new")
+  (write-lalr-tables clang-mach "c99tab.scm.new")
+  (when (or (move-if-changed "c99act.scm.new" (module-path "c99act.scm"))
+	    (move-if-changed "c99tab.scm.new" (module-path "c99tab.scm")))
+    (system (string-append "touch " (module-path "parser.scm")))
+    (compile-file (module-path "parser.scm"))))
 
 ;; --- last line ---
