@@ -48,12 +48,15 @@
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
    ;; argument-expression-list => argument-expression-list "," assignment-e...
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; argument-expression-list => declaration-specifiers abstract-declarator
+   ;; argument-expression-list => arg-expr-hack
+   (lambda ($1 . $rest) (make-tl 'expr-list $1))
+   ;; argument-expression-list => argument-expression-list "," arg-expr-hack
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; arg-expr-hack => declaration-specifiers abstract-declarator
    (lambda ($2 $1 . $rest)
-     (make-tl 'expr-list `(decl ,(tl->list $1) ,$2)))
-   ;; argument-expression-list => argument-expression-list "," declaration-...
-   (lambda ($4 $3 $2 $1 . $rest)
-     (tl-append $1 `(decl ,(tl->list $1) ,$2)))
+     `(decl ,(tl->list $1 $2)))
+   ;; arg-expr-hack => declaration-specifiers
+   (lambda ($1 . $rest) `(decl ,(tl->list $1)))
    ;; unary-expression => postfix-expression
    (lambda ($1 . $rest) $1)
    ;; unary-expression => "++" unary-expression
@@ -489,13 +492,13 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; parameter-declaration => declaration-specifiers declarator
    (lambda ($2 $1 . $rest)
-     `(param-decln ,(tl->list $1) (param-declr ,$2)))
+     `(param-decl ,(tl->list $1) (param-declr ,$2)))
    ;; parameter-declaration => declaration-specifiers abstract-declarator
    (lambda ($2 $1 . $rest)
-     `(param-decln ,(tl->list $1) (param-declr ,$2)))
+     `(param-decl ,(tl->list $1) (param-declr ,$2)))
    ;; parameter-declaration => declaration-specifiers
    (lambda ($1 . $rest)
-     `(param-decln ,(tl->list $1)))
+     `(param-decl ,(tl->list $1)))
    ;; identifier-list => identifier
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
    ;; identifier-list => identifier-list "," identifier
@@ -630,8 +633,8 @@
    (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; labeled-statement => "default" ":" statement
    (lambda ($3 $2 $1 . $rest) $1)
-   ;; compound-statement => "{" block-item-list "}" opt-code-comment
-   (lambda ($4 $3 $2 $1 . $rest)
+   ;; compound-statement => "{" block-item-list "}"
+   (lambda ($3 $2 $1 . $rest)
      `(compd-stmt ,(tl->list $2)))
    ;; compound-statement => "{" "}"
    (lambda ($2 $1 . $rest)

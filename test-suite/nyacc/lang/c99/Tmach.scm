@@ -49,19 +49,23 @@
 (begin
   (write-lalr-actions clang-mach "actions.scm.new")
   (write-lalr-tables clang-mach "tables.scm.new")
-  (when (or (move-if-changed "actions.scm.new" (module-path "actions.scm"))
-	    (move-if-changed "tables.scm.new" (module-path "tables.scm")))
-    (system (string-append "touch " (module-path "parser.scm")))
-    (compile-file (module-path "parser.scm"))))
+  (let ((ua (move-if-changed "actions.scm.new" (module-path "actions.scm")))
+        (ut (move-if-changed "tables.scm.new" (module-path "tables.scm"))))
+    (when (or ua ut)
+      (system (string-append "touch " (module-path "parser.scm")))
+      (compile-file (module-path "parser.scm")))))
 
 ;; expression parser
-#;(let* ((cexpr-spec (restart-spec clang-mach 'expression))
-       (cexpr-mach (make-lalr-machine cexpr-spec)))
+(let* ((cexpr-spec (restart-spec clang-mach 'expression))
+       (cexpr-mach (compact-machine
+		    (hashify-machine
+		     (make-lalr-machine cexpr-spec)))))
   (write-lalr-actions cexpr-mach "expract.scm.new")
   (write-lalr-tables cexpr-mach "exprtab.scm.new")
-  (when (or (move-if-changed "expract.scm.new" (module-path "expract.scm"))
-	    (move-if-changed "exprtab.scm.new" (module-path "exprtab.scm")))
+  (let ((ua (move-if-changed "expract.scm.new" (module-path "expract.scm")))
+	(ut (move-if-changed "exprtab.scm.new" (module-path "exprtab.scm"))))
+  (when (or ua ut)
     (system (string-append "touch " (module-path "xparser.scm")))
-    (compile-file (module-path "xparser.scm"))))
+    (compile-file (module-path "xparser.scm")))))
 
 ;; --- last line ---

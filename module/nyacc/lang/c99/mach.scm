@@ -78,12 +78,12 @@
      ;;   (typedef-name ($$ (make-tl 'expr-list $1)))
      ;;   (argument-expression-list "," typedef-name ($$ (tl-append $1 $3)))
      ;; Changed after V0.67.0 to:
-     (declaration-specifiers
-      abstract-declarator
-      ($$ (make-tl 'expr-list `(decl ,(tl->list $1) ,$2))))
-     (argument-expression-list
-      "," declaration-specifiers abstract-declarator
-      ($$ (tl-append $1 `(decl ,(tl->list $1) ,$2))))
+     (arg-expr-hack ($$ (make-tl 'expr-list $1)))
+     (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3)))
+     )
+    (arg-expr-hack
+     (declaration-specifiers abstract-declarator ($$ `(decl ,(tl->list $1 $2))))
+     (declaration-specifiers ($$ `(decl ,(tl->list $1))))
      )
 
     (unary-expression
@@ -429,12 +429,12 @@
 
     (parameter-declaration
      (declaration-specifiers declarator
-			     ($$ `(param-decln ,(tl->list $1)
+			     ($$ `(param-decl ,(tl->list $1)
 					       (param-declr ,$2))))
      (declaration-specifiers abstract-declarator
-			     ($$ `(param-decln ,(tl->list $1)
+			     ($$ `(param-decl ,(tl->list $1)
 					       (param-declr ,$2))))
-     (declaration-specifiers ($$ `(param-decln ,(tl->list $1))))
+     (declaration-specifiers ($$ `(param-decl ,(tl->list $1))))
      )
 
     (identifier-list
