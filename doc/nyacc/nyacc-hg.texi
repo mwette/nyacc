@@ -495,6 +495,12 @@ floating point number.
 This is emitted by the lexical analyzer to indicate a string.
 @item $ch-lit
 This is emitted by the lexical analyzer to indicate a character constant.
+@item $code-comm
+This is emitted by the lexical analyzer to indicate a comment starting
+after code appearing on a line.
+@item $lone-comm
+This is emitted by the lexical analyzer to indicate a comment starting
+on a line without preceeding code.
 @item $P1, ...
 Symbols of the form @code{$P1}, @code{$P2},... are as symbols for
 proxy productions (e.g., for mid-rule actions).

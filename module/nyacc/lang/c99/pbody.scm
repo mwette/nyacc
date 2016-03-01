@@ -272,7 +272,8 @@
 		       (for-each add-typename tynd)
 		       (let* ((pth (find-file-in-dirl file (cpi-incs info)))
 			      (tree (cond
-				     ((eq? #\< (string-ref parg 0)) '())
+				     ;;was: ignore <file.h>
+				     ;;((eq? #\< (string-ref parg 0)) '())
 				     (pth (or
 					   (with-input-from-file pth run-parse)
 					   (throw 'parse-error "~A" pth)))

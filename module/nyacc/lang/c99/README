@@ -1,29 +1,39 @@
-lang/c99/
+nyacc/lang/c99/
 
-Copyright (C) 2015 Matthew R. Wette
+Copyright (C) 2015,2016 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-The following files are also covered by the above copyright and license:
-  ex1.c
-  inc.h
-
 manifest:
-Tcpp.scm	Run cppgen.scm; generates cppact.scm.new cpptab.scm.new
-cpp.scm		C preprocessor
-cppact.scm	cpp expression parser actions
-cpptab.scm	cpp expression parser tables
 
-Tclang.scm	Run pgen.scm; generates actions.scm.new tables.scm.new
-Tcexpr.scm	Run pgen.scm; generates expract.scm.new expract.scm.new
-actions.scm	C parser actions
-tables.scm	C parser tables
-pbody.scm	body of parser
-parser.scm	C parser; includes pbody, tables and actions
-pgen.scm	C parser generator; used to generate tables and actions.scm
+pgen.scm	C grammer defined, and C file dev-parser
+		include: pbody.scm
+		depends: cpp.scm
+parser.scm	C file parser, using tables 
+		includes: actions.scm, pbody.scm, table.scm
+		depends: cpp.scm
+xparser.scm	C expression parser
+		includes: expract.scm, pbody.scm, exprtab.scm
+		depends: cpp.scm
 
+pprint.scm	C pretty printer, from SXML output of above parsers
+
+util1.scm	utilities merge, remove trees from included files
+util2.scm	utilities to process information in trees
+
+cppgen.scm	CPP expression grammer defined
+cpp.scm		C preprocessor using tables
+		include: cppact.scm,cpptab.scm
+cppact.scm	cpp expression parser actions, generated via cppgen.scm
+cpptab.scm	cpp expression parser tables, generated via cppgen.scm
+
+actions.scm	parser actions, generated via pgen.scm
+tables.scm	C parser tables, generated via pgen.scm
+
+auxiliary files (for debugging, verification)
 gram.y		this is a bison grammar file, missing precedence/associativity
 lang.txt	this is like gram.output, showing productions and mach states
+

@@ -1,6 +1,6 @@
-;;; lang/c/util.scm
+;;; lang/c/util1.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2016 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -17,7 +17,7 @@
 
 ;; C parser utilities
 
-(define-module (nyacc lang c99 util)
+(define-module (nyacc lang c99 util1)
   #:export (remove-inc-trees merge-inc-trees!)
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-1) #:select (append-reverse))

@@ -1,4 +1,4 @@
-;;; lang/c99/pgen.scm
+;;; lang/c99/mach.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -17,7 +17,7 @@
 
 ;; C parser generator: based on ISO-C99; with comments and CPP statements
 
-(define-module (nyacc lang c99 pgen)
+(define-module (nyacc lang c99 mach)
   #:export (clang-spec clang-mach dev-parse-c)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lalr)
@@ -75,8 +75,15 @@
      (argument-expression-list "," assignment-expression ($$ (tl-append $1 $3)))
      ;; The following is a kludge to deal with using typenames in CPP defines
      ;; when we don't expand the defines.  e.g., GEN_OFFSET(foo_t, x.y.z)
-     (typedef-name ($$ (make-tl 'expr-list $1)))
-     (argument-expression-list "," typedef-name ($$ (tl-append $1 $3)))
+     ;;   (typedef-name ($$ (make-tl 'expr-list $1)))
+     ;;   (argument-expression-list "," typedef-name ($$ (tl-append $1 $3)))
+     ;; Changed after V0.67.0 to:
+     (declaration-specifiers
+      abstract-declarator
+      ($$ (make-tl 'expr-list `(decl ,(tl->list $1) ,$2))))
+     (argument-expression-list
+      "," declaration-specifiers abstract-declarator
+      ($$ (tl-append $1 `(decl ,(tl->list $1) ,$2))))
      )
 
     (unary-expression
@@ -545,7 +552,7 @@
      )
 
     (compound-statement
-     ("{" block-item-list "}" opt-code-comment
+     ("{" block-item-list "}" 
       ($$ `(compd-stmt ,(tl->list $2))))
      ("{" "}"
       ($$ `(compd-stmt (block-item-list))))
@@ -637,6 +644,7 @@
 
     (opt-code-comment () (code-comment))
     ;;(opt-lone-comment () (lone-comment))
+    ;;(opt-comment () (code-comment) (lone-comment))
 
     ;; non-terminal leaves
     (identifier
@@ -663,13 +671,17 @@
     ;;(identity
     (make-lalr-machine clang-spec))))
 
+;;; =====================================
+
+;; The following are needed by the code in pbody.scm.
 (define len-v (assq-ref clang-mach 'len-v))
 (define pat-v (assq-ref clang-mach 'pat-v))
 (define rto-v (assq-ref clang-mach 'rto-v))
 (define mtab (assq-ref clang-mach 'mtab))
-(define sya-v (vector-map (lambda (ix actn) (wrap-action actn))
-			  (assq-ref clang-mach 'act-v)))
-(define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
+(define act-v (vector-map
+	       (lambda (ix f) (eval f (current-module)))
+	       (vector-map (lambda (ix actn) (wrap-action actn))
+			   (assq-ref clang-mach 'act-v))))
 
 (include-from-path "nyacc/lang/c99/pbody.scm")
 
@@ -691,5 +703,16 @@
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
+
+;;; =====================================
+
+(define (gen-c99-files . rest)
+  (define (module-path path) path)
+  (write-lalr-actions clang-mach "c99act.scm.new")
+  (write-lalr-tables clang-mach "c99tab.scm.new")
+  (when (or (move-if-changed "c99act.scm.new" (module-path "c99act.scm"))
+	    (move-if-changed "c99tab.scm.new" (module-path "c99tab.scm")))
+    (system (string-append "touch " (module-path "parser.scm")))
+    (compile-file (module-path "parser.scm"))))
 
 ;; --- last line ---

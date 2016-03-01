@@ -22,8 +22,8 @@
 15 postfix-expression => "(" type-name ")" "{" initializer-list "," "}"
 16 argument-expression-list => assignment-expression
 17 argument-expression-list => argument-expression-list "," assignment-expression
-18 argument-expression-list => typedef-name
-19 argument-expression-list => argument-expression-list "," typedef-name
+18 argument-expression-list => declaration-specifiers abstract-declarator
+19 argument-expression-list => argument-expression-list "," declaration-specifiers abstract-declarator
 20 unary-expression => postfix-expression
 21 unary-expression => "++" unary-expression
 22 unary-expression => "--" unary-expression
@@ -8450,11 +8450,18 @@
 280:	postfix-expression => postfix-expression "(" . argument-expression-list ")" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 	argument-expression-list => . assignment-expression
 	argument-expression-list => . argument-expression-list "," assignment-expression
-	argument-expression-list => . typedef-name
-	argument-expression-list => . argument-expression-list "," typedef-name
+	argument-expression-list => . declaration-specifiers abstract-declarator
+	argument-expression-list => . argument-expression-list "," declaration-specifiers abstract-declarator
 	assignment-expression => . conditional-expression
 	assignment-expression => . unary-expression assignment-operator assignment-expression
-	typedef-name => . 'typename
+	declaration-specifiers => . storage-class-specifier
+	declaration-specifiers => . storage-class-specifier declaration-specifiers
+	declaration-specifiers => . type-specifier
+	declaration-specifiers => . type-specifier declaration-specifiers
+	declaration-specifiers => . type-qualifier
+	declaration-specifiers => . type-qualifier declaration-specifiers
+	declaration-specifiers => . function-specifier
+	declaration-specifiers => . function-specifier declaration-specifiers
 	unary-expression => . postfix-expression
 	unary-expression => . "++" unary-expression
 	unary-expression => . "--" unary-expression
@@ -8463,6 +8470,23 @@
 	unary-expression => . "sizeof" "(" type-name ")"
 	conditional-expression => . logical-or-expression
 	conditional-expression => . logical-or-expression "?" expression ":" conditional-expression
+	storage-class-specifier => . "auto"
+	storage-class-specifier => . "extern"
+	storage-class-specifier => . "register"
+	storage-class-specifier => . "static"
+	storage-class-specifier => . "typedef"
+	type-specifier => . "void"
+	type-specifier => . fixed-type-specifier
+	type-specifier => . float-type-specifier
+	type-specifier => . "_Bool"
+	type-specifier => . complex-type-specifier
+	type-specifier => . struct-or-union-specifier
+	type-specifier => . enum-specifier
+	type-specifier => . typedef-name
+	type-qualifier => . "const"
+	type-qualifier => . "volatile"
+	type-qualifier => . "restrict"
+	function-specifier => . "inline"
 	postfix-expression => . primary-expression
 	postfix-expression => . postfix-expression "[" expression "]"
 	postfix-expression => . postfix-expression "(" argument-expression-list ")"
@@ -8481,6 +8505,51 @@
 	unary-operator => . "!"
 	logical-or-expression => . logical-and-expression
 	logical-or-expression => . logical-or-expression "||" logical-and-expression
+	fixed-type-specifier => . "short"
+	fixed-type-specifier => . "short" "int"
+	fixed-type-specifier => . "signed" "short"
+	fixed-type-specifier => . "signed" "short" "int"
+	fixed-type-specifier => . "int"
+	fixed-type-specifier => . "signed"
+	fixed-type-specifier => . "signed" "int"
+	fixed-type-specifier => . "long"
+	fixed-type-specifier => . "long" "int"
+	fixed-type-specifier => . "signed" "long"
+	fixed-type-specifier => . "signed" "long" "int"
+	fixed-type-specifier => . "long" "long"
+	fixed-type-specifier => . "long" "long" "int"
+	fixed-type-specifier => . "signed" "long" "long"
+	fixed-type-specifier => . "signed" "long" "long" "int"
+	fixed-type-specifier => . "unsigned" "short" "int"
+	fixed-type-specifier => . "unsigned" "short"
+	fixed-type-specifier => . "unsigned" "int"
+	fixed-type-specifier => . "unsigned"
+	fixed-type-specifier => . "unsigned" "long" "int"
+	fixed-type-specifier => . "unsigned" "long"
+	fixed-type-specifier => . "unsigned" "long" "long" "int"
+	fixed-type-specifier => . "unsigned" "long" "long"
+	fixed-type-specifier => . "char"
+	fixed-type-specifier => . "signed" "char"
+	fixed-type-specifier => . "unsigned" "char"
+	float-type-specifier => . "float"
+	float-type-specifier => . "double"
+	float-type-specifier => . "long" "double"
+	complex-type-specifier => . "_Complex"
+	complex-type-specifier => . "float" "_Complex"
+	complex-type-specifier => . "double" "_Complex"
+	complex-type-specifier => . "long" "double" "_Complex"
+	struct-or-union-specifier => . "struct" identifier "{" struct-declaration-list "}"
+	struct-or-union-specifier => . "struct" "{" struct-declaration-list "}"
+	struct-or-union-specifier => . "struct" identifier
+	struct-or-union-specifier => . "union" identifier "{" struct-declaration-list "}"
+	struct-or-union-specifier => . "union" "{" struct-declaration-list "}"
+	struct-or-union-specifier => . "union" identifier
+	enum-specifier => . "enum" identifier "{" enumerator-list "}"
+	enum-specifier => . "enum" identifier "{" enumerator-list "," "}"
+	enum-specifier => . "enum" "{" enumerator-list "}"
+	enum-specifier => . "enum" "{" enumerator-list "," "}"
+	enum-specifier => . "enum" identifier
+	typedef-name => . 'typename
 	primary-expression => . identifier
 	primary-expression => . constant
 	primary-expression => . string-literal
@@ -8540,6 +8609,19 @@
 		string-literal => shift 152
 		constant => shift 153
 		identifier => shift 154
+		'typename => shift 1
+		"enum" => shift 2
+		"union" => shift 3
+		"struct" => shift 4
+		"_Complex" => shift 5
+		"double" => shift 6
+		"float" => shift 7
+		"char" => shift 8
+		"unsigned" => shift 9
+		"long" => shift 10
+		"int" => shift 11
+		"signed" => shift 12
+		"short" => shift 13
 		logical-and-expression => shift 155
 		"!" => shift 156
 		"~" => shift 157
@@ -8549,16 +8631,36 @@
 		"&" => shift 161
 		"(" => shift 162
 		primary-expression => shift 163
+		"inline" => shift 14
+		"restrict" => shift 15
+		"volatile" => shift 16
+		"const" => shift 17
+		typedef-name => shift 18
+		enum-specifier => shift 19
+		struct-or-union-specifier => shift 20
+		complex-type-specifier => shift 21
+		"_Bool" => shift 22
+		float-type-specifier => shift 23
+		fixed-type-specifier => shift 24
+		"void" => shift 25
+		"typedef" => shift 26
+		"static" => shift 27
+		"register" => shift 28
+		"extern" => shift 58
+		"auto" => shift 29
 		logical-or-expression => shift 164
 		"sizeof" => shift 165
 		unary-operator => shift 166
 		"--" => shift 167
 		"++" => shift 168
 		postfix-expression => shift 169
-		'typename => shift 1
+		function-specifier => shift 30
+		type-qualifier => shift 31
+		type-specifier => shift 32
+		storage-class-specifier => shift 33
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		typedef-name => shift 375
+		declaration-specifiers => shift 375
 		assignment-expression => shift 376
 		argument-expression-list => shift 377
 
@@ -11886,8 +11988,8 @@
 	type-qualifier => . "volatile"
 	type-qualifier => . "restrict"
 	direct-abstract-declarator => direct-abstract-declarator "[" . "*" "]" ("," ")" "[" "(")
-		"static" => shift 441
-		"]" => shift 442
+		"static" => shift 442
+		"]" => shift 443
 		cast-expression => shift 139
 		multiplicative-expression => shift 140
 		additive-expression => shift 141
@@ -11911,7 +12013,7 @@
 		"~" => shift 157
 		"-" => shift 158
 		"+" => shift 159
-		"*" => shift 443
+		"*" => shift 444
 		"&" => shift 161
 		"(" => shift 162
 		primary-expression => shift 163
@@ -11923,12 +12025,12 @@
 		postfix-expression => shift 169
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		assignment-expression => shift 444
+		assignment-expression => shift 445
 		"restrict" => shift 15
 		"volatile" => shift 16
 		"const" => shift 17
 		type-qualifier => shift 114
-		type-qualifier-list => shift 445
+		type-qualifier-list => shift 446
 
 334:	direct-abstract-declarator => direct-abstract-declarator "(" . parameter-type-list ")" ("," ")" "[" "(")
 	parameter-type-list => . parameter-list
@@ -12009,7 +12111,7 @@
 	enum-specifier => . "enum" identifier
 	typedef-name => . 'typename
 	direct-abstract-declarator => direct-abstract-declarator "(" . ")" ("," ")" "[" "(")
-		")" => shift 439
+		")" => shift 440
 		'typename => shift 1
 		"enum" => shift 2
 		"union" => shift 3
@@ -12047,19 +12149,19 @@
 		declaration-specifiers => shift 133
 		parameter-declaration => shift 134
 		parameter-list => shift 135
-		parameter-type-list => shift 440
+		parameter-type-list => shift 441
 
 335:	direct-abstract-declarator => "(" abstract-declarator . ")" ("," ")" "[" "(")
-		")" => shift 438
+		")" => shift 439
 
 336:	direct-abstract-declarator => "(" parameter-type-list . ")" ("," ")" "[" "(")
-		")" => shift 437
+		")" => shift 438
 
 337:	direct-abstract-declarator => "(" ")" . ("," ")" "[" "(")
 		$default => reduce 229
 
 338:	direct-abstract-declarator => "[" assignment-expression . "]" ("," ")" "[" "(")
-		"]" => shift 436
+		"]" => shift 437
 
 339:	direct-abstract-declarator => "[" "]" . ("," ")" "[" "(")
 		$default => reduce 220
@@ -12080,7 +12182,7 @@
 		"volatile" => shift 16
 		"const" => shift 17
 		type-qualifier => shift 114
-		type-qualifier-list => shift 435
+		type-qualifier-list => shift 436
 
 341:	direct-abstract-declarator => "[" type-qualifier-list . assignment-expression "]" ("," ")" "[" "(")
 	assignment-expression => . conditional-expression
@@ -12156,12 +12258,12 @@
 	type-qualifier => . "volatile"
 	type-qualifier => . "restrict"
 	direct-abstract-declarator => "[" type-qualifier-list . "static" assignment-expression "]" ("," ")" "[" "(")
-		"static" => shift 432
+		"static" => shift 433
 		"restrict" => shift 15
 		"volatile" => shift 16
 		"const" => shift 17
 		type-qualifier => shift 128
-		"]" => shift 433
+		"]" => shift 434
 		cast-expression => shift 139
 		multiplicative-expression => shift 140
 		additive-expression => shift 141
@@ -12197,11 +12299,11 @@
 		postfix-expression => shift 169
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		assignment-expression => shift 434
+		assignment-expression => shift 435
 
 342:	unary-operator => "*" . ("(" "++" "--" "sizeof" "&" "*" "+" "-" "~" "!" '$string '$fixed '$float '$chlit '$ident 'cpp-ident)
 	direct-abstract-declarator => "[" "*" . "]" ("," ")" "[" "(")
-		"]" => shift 431
+		"]" => shift 432
 		$default => reduce 27
 
 343:	parameter-list => parameter-list "," parameter-declaration . (")" ",")
@@ -12212,7 +12314,7 @@
 		")" => reduce 196
 
 345:	direct-declarator => direct-declarator "[" "static" type-qualifier-list assignment-expression . "]" (":" ")" "," "=" ";" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "[" "(" "{")
-		"]" => shift 430
+		"]" => shift 431
 
 346:	multiplicative-expression => multiplicative-expression "%" cast-expression . (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";")
 		$default => reduce 37
@@ -12365,7 +12467,7 @@
 	string-literal => . string-literal '$string
 	postfix-expression => "(" type-name ")" . "{" initializer-list "," "}" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 	postfix-expression => "(" type-name ")" . "{" initializer-list "}" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
-		"{" => shift 428
+		"{" => shift 429
 		'$string => shift 146
 		'$chlit => shift 147
 		'$float => shift 148
@@ -12389,10 +12491,10 @@
 		postfix-expression => shift 169
 		"(" => shift 162
 		unary-expression => shift 227
-		cast-expression => shift 429
+		cast-expression => shift 430
 
-364:	direct-abstract-declarator => "(" . ")" (")" "[" "(")
-	direct-abstract-declarator => "(" . parameter-type-list ")" (")" "[" "(")
+364:	direct-abstract-declarator => "(" . ")" ("," ")" "[" "(")
+	direct-abstract-declarator => "(" . parameter-type-list ")" ("," ")" "[" "(")
 	parameter-type-list => . parameter-list
 	parameter-type-list => . parameter-list "," "..."
 	parameter-list => . parameter-declaration
@@ -12470,7 +12572,7 @@
 	enum-specifier => . "enum" "{" enumerator-list "," "}"
 	enum-specifier => . "enum" identifier
 	typedef-name => . 'typename
-	direct-abstract-declarator => "(" . abstract-declarator ")" (")" "[" "(")
+	direct-abstract-declarator => "(" . abstract-declarator ")" ("," ")" "[" "(")
 	abstract-declarator => . pointer
 	abstract-declarator => . pointer direct-abstract-declarator
 	abstract-declarator => . direct-abstract-declarator
@@ -12545,7 +12647,7 @@
 		parameter-type-list => shift 336
 		")" => shift 337
 
-365:	abstract-declarator => pointer . direct-abstract-declarator (")")
+365:	abstract-declarator => pointer . direct-abstract-declarator ("," ")")
 	direct-abstract-declarator => . "(" abstract-declarator ")"
 	direct-abstract-declarator => . direct-abstract-declarator "[" type-qualifier-list assignment-expression "]"
 	direct-abstract-declarator => . direct-abstract-declarator "[" type-qualifier-list "]"
@@ -12567,11 +12669,12 @@
 	direct-abstract-declarator => . direct-abstract-declarator "(" ")"
 	direct-abstract-declarator => . "(" parameter-type-list ")"
 	direct-abstract-declarator => . "(" ")"
-	abstract-declarator => pointer . (")")
+	abstract-declarator => pointer . ("," ")")
 		"[" => shift 322
 		"(" => shift 364
 		direct-abstract-declarator => shift 332
 		")" => reduce 206
+		"," => reduce 206
 
 366:	type-name => specifier-qualifier-list abstract-declarator . (")")
 		")" => reduce 204
@@ -12586,17 +12689,17 @@
 
 369:	expression => expression . "," assignment-expression ("," ":")
 	conditional-expression => logical-or-expression "?" expression . ":" conditional-expression (":" "}" ")" "]" "," ";")
-		":" => shift 427
+		":" => shift 428
 		"," => shift 244
 
 370:	unary-expression => "sizeof" "(" type-name . ")" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=")
 	postfix-expression => "(" type-name . ")" "{" initializer-list "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
 	postfix-expression => "(" type-name . ")" "{" initializer-list "," "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
-		")" => shift 426
+		")" => shift 427
 
 371:	postfix-expression => "(" type-name . ")" "{" initializer-list "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
 	postfix-expression => "(" type-name . ")" "{" initializer-list "," "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
-		")" => shift 425
+		")" => shift 426
 
 372:	postfix-expression => postfix-expression "->" identifier . (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 		$default => reduce 11
@@ -12607,15 +12710,47 @@
 374:	postfix-expression => postfix-expression "(" ")" . (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 		$default => reduce 9
 
-375:	argument-expression-list => typedef-name . ("," ")")
-		")" => reduce 18
-		"," => reduce 18
+375:	argument-expression-list => declaration-specifiers . abstract-declarator ("," ")")
+	abstract-declarator => . pointer
+	abstract-declarator => . pointer direct-abstract-declarator
+	abstract-declarator => . direct-abstract-declarator
+	pointer => . "*" type-qualifier-list
+	pointer => . "*"
+	pointer => . "*" type-qualifier-list pointer
+	pointer => . "*" pointer
+	direct-abstract-declarator => . "(" abstract-declarator ")"
+	direct-abstract-declarator => . direct-abstract-declarator "[" type-qualifier-list assignment-expression "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" type-qualifier-list "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" assignment-expression "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" "static" type-qualifier-list assignment-expression "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" "static" type-qualifier-list "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" type-qualifier-list "static" assignment-expression "]"
+	direct-abstract-declarator => . "[" type-qualifier-list assignment-expression "]"
+	direct-abstract-declarator => . "[" type-qualifier-list "]"
+	direct-abstract-declarator => . "[" assignment-expression "]"
+	direct-abstract-declarator => . "[" "]"
+	direct-abstract-declarator => . "[" "static" type-qualifier-list assignment-expression "]"
+	direct-abstract-declarator => . "[" "static" type-qualifier-list "]"
+	direct-abstract-declarator => . "[" type-qualifier-list "static" assignment-expression "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" "*" "]"
+	direct-abstract-declarator => . "[" "*" "]"
+	direct-abstract-declarator => . direct-abstract-declarator "(" parameter-type-list ")"
+	direct-abstract-declarator => . direct-abstract-declarator "(" ")"
+	direct-abstract-declarator => . "(" parameter-type-list ")"
+	direct-abstract-declarator => . "(" ")"
+		"[" => shift 322
+		"(" => shift 364
+		"*" => shift 52
+		direct-abstract-declarator => shift 324
+		pointer => shift 365
+		abstract-declarator => shift 425
 
 376:	argument-expression-list => assignment-expression . ("," ")")
 		")" => reduce 16
 		"," => reduce 16
 
-377:	argument-expression-list => argument-expression-list . "," typedef-name ("," ")")
+377:	argument-expression-list => argument-expression-list . "," declaration-specifiers abstract-declarator ("," ")")
 	argument-expression-list => argument-expression-list . "," assignment-expression ("," ")")
 	postfix-expression => postfix-expression "(" argument-expression-list . ")" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 		")" => shift 423
@@ -13447,7 +13582,7 @@
 		expression-statement => shift 199
 		compound-statement => shift 200
 		labeled-statement => shift 201
-		statement => shift 468
+		statement => shift 469
 
 411:	selection-statement => "switch" "(" expression ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	statement => . labeled-statement
@@ -13606,7 +13741,7 @@
 		expression-statement => shift 199
 		compound-statement => shift 200
 		labeled-statement => shift 201
-		statement => shift 467
+		statement => shift 468
 
 412:	iteration-statement => "while" "(" expression ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	statement => . labeled-statement
@@ -13765,7 +13900,7 @@
 		expression-statement => shift 199
 		compound-statement => shift 200
 		labeled-statement => shift 201
-		statement => shift 466
+		statement => shift 467
 
 413:	iteration-statement => "do" statement "while" "(" . expression ")" ";" ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	expression => . assignment-expression
@@ -13873,13 +14008,13 @@
 		unary-expression => shift 170
 		conditional-expression => shift 171
 		assignment-expression => shift 180
-		expression => shift 465
+		expression => shift 466
 
 414:	iteration-statement => "for" "(" initial-clause expression . ";" expression ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	expression => expression . "," assignment-expression ("," ";")
 	iteration-statement => "for" "(" initial-clause expression . ";" ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		"," => shift 244
-		";" => shift 464
+		";" => shift 465
 
 415:	iteration-statement => "for" "(" initial-clause ";" . expression ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	expression => . assignment-expression
@@ -13952,7 +14087,7 @@
 	cast-expression => . unary-expression
 	cast-expression => . "(" type-name ")" cast-expression
 	iteration-statement => "for" "(" initial-clause ";" . ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
-		")" => shift 462
+		")" => shift 463
 		cast-expression => shift 139
 		multiplicative-expression => shift 140
 		additive-expression => shift 141
@@ -13989,7 +14124,7 @@
 		unary-expression => shift 170
 		conditional-expression => shift 171
 		assignment-expression => shift 180
-		expression => shift 463
+		expression => shift 464
 
 416:	initial-clause => expression ";" . (";" "++" "--" "sizeof" "&" "*" "+" "-" "~" "!" "(" '$string '$fixed '$float '$chlit '$ident 'cpp-ident)
 		$default => reduce 270
@@ -14111,7 +14246,7 @@
 		conditional-expression => shift 171
 		"{" => shift 175
 		assignment-expression => shift 176
-		initializer => shift 461
+		initializer => shift 462
 
 420:	initializer => "{" initializer-list "," "}" . (";" "}" ",")
 		"," => reduce 233
@@ -14195,10 +14330,112 @@
 	multiplicative-expression => . multiplicative-expression "%" cast-expression
 	cast-expression => . unary-expression
 	cast-expression => . "(" type-name ")" cast-expression
-	argument-expression-list => argument-expression-list "," . typedef-name ("," ")")
+	argument-expression-list => argument-expression-list "," . declaration-specifiers abstract-declarator ("," ")")
+	declaration-specifiers => . storage-class-specifier
+	declaration-specifiers => . storage-class-specifier declaration-specifiers
+	declaration-specifiers => . type-specifier
+	declaration-specifiers => . type-specifier declaration-specifiers
+	declaration-specifiers => . type-qualifier
+	declaration-specifiers => . type-qualifier declaration-specifiers
+	declaration-specifiers => . function-specifier
+	declaration-specifiers => . function-specifier declaration-specifiers
+	storage-class-specifier => . "auto"
+	storage-class-specifier => . "extern"
+	storage-class-specifier => . "register"
+	storage-class-specifier => . "static"
+	storage-class-specifier => . "typedef"
+	type-specifier => . "void"
+	type-specifier => . fixed-type-specifier
+	type-specifier => . float-type-specifier
+	type-specifier => . "_Bool"
+	type-specifier => . complex-type-specifier
+	type-specifier => . struct-or-union-specifier
+	type-specifier => . enum-specifier
+	type-specifier => . typedef-name
+	type-qualifier => . "const"
+	type-qualifier => . "volatile"
+	type-qualifier => . "restrict"
+	function-specifier => . "inline"
+	fixed-type-specifier => . "short"
+	fixed-type-specifier => . "short" "int"
+	fixed-type-specifier => . "signed" "short"
+	fixed-type-specifier => . "signed" "short" "int"
+	fixed-type-specifier => . "int"
+	fixed-type-specifier => . "signed"
+	fixed-type-specifier => . "signed" "int"
+	fixed-type-specifier => . "long"
+	fixed-type-specifier => . "long" "int"
+	fixed-type-specifier => . "signed" "long"
+	fixed-type-specifier => . "signed" "long" "int"
+	fixed-type-specifier => . "long" "long"
+	fixed-type-specifier => . "long" "long" "int"
+	fixed-type-specifier => . "signed" "long" "long"
+	fixed-type-specifier => . "signed" "long" "long" "int"
+	fixed-type-specifier => . "unsigned" "short" "int"
+	fixed-type-specifier => . "unsigned" "short"
+	fixed-type-specifier => . "unsigned" "int"
+	fixed-type-specifier => . "unsigned"
+	fixed-type-specifier => . "unsigned" "long" "int"
+	fixed-type-specifier => . "unsigned" "long"
+	fixed-type-specifier => . "unsigned" "long" "long" "int"
+	fixed-type-specifier => . "unsigned" "long" "long"
+	fixed-type-specifier => . "char"
+	fixed-type-specifier => . "signed" "char"
+	fixed-type-specifier => . "unsigned" "char"
+	float-type-specifier => . "float"
+	float-type-specifier => . "double"
+	float-type-specifier => . "long" "double"
+	complex-type-specifier => . "_Complex"
+	complex-type-specifier => . "float" "_Complex"
+	complex-type-specifier => . "double" "_Complex"
+	complex-type-specifier => . "long" "double" "_Complex"
+	struct-or-union-specifier => . "struct" identifier "{" struct-declaration-list "}"
+	struct-or-union-specifier => . "struct" "{" struct-declaration-list "}"
+	struct-or-union-specifier => . "struct" identifier
+	struct-or-union-specifier => . "union" identifier "{" struct-declaration-list "}"
+	struct-or-union-specifier => . "union" "{" struct-declaration-list "}"
+	struct-or-union-specifier => . "union" identifier
+	enum-specifier => . "enum" identifier "{" enumerator-list "}"
+	enum-specifier => . "enum" identifier "{" enumerator-list "," "}"
+	enum-specifier => . "enum" "{" enumerator-list "}"
+	enum-specifier => . "enum" "{" enumerator-list "," "}"
+	enum-specifier => . "enum" identifier
 	typedef-name => . 'typename
 		'typename => shift 1
-		typedef-name => shift 459
+		"enum" => shift 2
+		"union" => shift 3
+		"struct" => shift 4
+		"_Complex" => shift 5
+		"double" => shift 6
+		"float" => shift 7
+		"char" => shift 8
+		"unsigned" => shift 9
+		"long" => shift 10
+		"int" => shift 11
+		"signed" => shift 12
+		"short" => shift 13
+		"inline" => shift 14
+		"restrict" => shift 15
+		"volatile" => shift 16
+		"const" => shift 17
+		typedef-name => shift 18
+		enum-specifier => shift 19
+		struct-or-union-specifier => shift 20
+		complex-type-specifier => shift 21
+		"_Bool" => shift 22
+		float-type-specifier => shift 23
+		fixed-type-specifier => shift 24
+		"void" => shift 25
+		"typedef" => shift 26
+		"static" => shift 27
+		"register" => shift 28
+		"extern" => shift 58
+		"auto" => shift 29
+		function-specifier => shift 30
+		type-qualifier => shift 31
+		type-specifier => shift 32
+		storage-class-specifier => shift 33
+		declaration-specifiers => shift 460
 		cast-expression => shift 139
 		multiplicative-expression => shift 140
 		additive-expression => shift 141
@@ -14234,19 +14471,23 @@
 		postfix-expression => shift 169
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		assignment-expression => shift 460
+		assignment-expression => shift 461
 
-425:	postfix-expression => "(" type-name ")" . "{" initializer-list "," "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
-	postfix-expression => "(" type-name ")" . "{" initializer-list "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
-		"{" => shift 428
+425:	argument-expression-list => declaration-specifiers abstract-declarator . ("," ")")
+		")" => reduce 18
+		"," => reduce 18
 
 426:	postfix-expression => "(" type-name ")" . "{" initializer-list "," "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
 	postfix-expression => "(" type-name ")" . "{" initializer-list "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
+		"{" => shift 429
+
+427:	postfix-expression => "(" type-name ")" . "{" initializer-list "," "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
+	postfix-expression => "(" type-name ")" . "{" initializer-list "}" (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" "[" "(" "." "->" "++" "--")
 	unary-expression => "sizeof" "(" type-name ")" . (":" "}" ")" "]" "*" "/" "%" "-" "+" "<<" ">>" ">=" "<=" ">" "<" "==" "!=" "&" "^" "|" "&&" "||" "," "?" ";" "=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=")
-		"{" => shift 428
+		"{" => shift 429
 		$default => reduce 25
 
-427:	conditional-expression => logical-or-expression "?" expression ":" . conditional-expression (":" "}" ")" "]" "," ";")
+428:	conditional-expression => logical-or-expression "?" expression ":" . conditional-expression (":" "}" ")" "]" "," ";")
 	conditional-expression => . logical-or-expression
 	conditional-expression => . logical-or-expression "?" expression ":" conditional-expression
 	logical-or-expression => . logical-and-expression
@@ -14346,9 +14587,9 @@
 		bitwise-or-expression => shift 151
 		logical-and-expression => shift 155
 		logical-or-expression => shift 164
-		conditional-expression => shift 458
+		conditional-expression => shift 459
 
-428:	postfix-expression => "(" type-name ")" "{" . initializer-list "}" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
+429:	postfix-expression => "(" type-name ")" "{" . initializer-list "}" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 	initializer-list => . designation initializer
 	initializer-list => . initializer
 	initializer-list => . initializer-list "," designation initializer
@@ -14551,18 +14792,18 @@
 		assignment-expression => shift 176
 		initializer => shift 259
 		designation => shift 260
-		initializer-list => shift 457
+		initializer-list => shift 458
 
-429:	cast-expression => "(" type-name ")" cast-expression . ("=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" ":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?")
+430:	cast-expression => "(" type-name ")" cast-expression . ("=" "+=" "-=" "*=" "/=" "%=" "<<=" ">>=" "&=" "^=" "|=" ":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?")
 		$default => reduce 33
 
-430:	direct-declarator => direct-declarator "[" "static" type-qualifier-list assignment-expression "]" . (":" ")" "," "=" ";" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "[" "(" "{")
+431:	direct-declarator => direct-declarator "[" "static" type-qualifier-list assignment-expression "]" . (":" ")" "," "=" ";" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "[" "(" "{")
 		$default => reduce 182
 
-431:	direct-abstract-declarator => "[" "*" "]" . ("," ")" "[" "(")
+432:	direct-abstract-declarator => "[" "*" "]" . ("," ")" "[" "(")
 		$default => reduce 225
 
-432:	direct-abstract-declarator => "[" type-qualifier-list "static" . assignment-expression "]" ("," ")" "[" "(")
+433:	direct-abstract-declarator => "[" type-qualifier-list "static" . assignment-expression "]" ("," ")" "[" "(")
 	assignment-expression => . conditional-expression
 	assignment-expression => . unary-expression assignment-operator assignment-expression
 	unary-expression => . postfix-expression
@@ -14665,15 +14906,15 @@
 		postfix-expression => shift 169
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		assignment-expression => shift 456
+		assignment-expression => shift 457
 
-433:	direct-abstract-declarator => "[" type-qualifier-list "]" . ("," ")" "[" "(")
+434:	direct-abstract-declarator => "[" type-qualifier-list "]" . ("," ")" "[" "(")
 		$default => reduce 218
 
-434:	direct-abstract-declarator => "[" type-qualifier-list assignment-expression . "]" ("," ")" "[" "(")
-		"]" => shift 455
+435:	direct-abstract-declarator => "[" type-qualifier-list assignment-expression . "]" ("," ")" "[" "(")
+		"]" => shift 456
 
-435:	direct-abstract-declarator => "[" "static" type-qualifier-list . "]" ("," ")" "[" "(")
+436:	direct-abstract-declarator => "[" "static" type-qualifier-list . "]" ("," ")" "[" "(")
 	type-qualifier-list => type-qualifier-list . type-qualifier ("]" "const" "volatile" "restrict" "++" "--" "sizeof" "&" "*" "+" "-" "~" "!" "(" '$string '$fixed '$float '$chlit '$ident 'cpp-ident)
 	type-qualifier => . "const"
 	type-qualifier => . "volatile"
@@ -14781,29 +15022,29 @@
 		postfix-expression => shift 169
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		assignment-expression => shift 453
+		assignment-expression => shift 454
 		"restrict" => shift 15
 		"volatile" => shift 16
 		"const" => shift 17
 		type-qualifier => shift 128
-		"]" => shift 454
+		"]" => shift 455
 
-436:	direct-abstract-declarator => "[" assignment-expression "]" . ("," ")" "[" "(")
+437:	direct-abstract-declarator => "[" assignment-expression "]" . ("," ")" "[" "(")
 		$default => reduce 219
 
-437:	direct-abstract-declarator => "(" parameter-type-list ")" . ("," ")" "[" "(")
+438:	direct-abstract-declarator => "(" parameter-type-list ")" . ("," ")" "[" "(")
 		$default => reduce 228
 
-438:	direct-abstract-declarator => "(" abstract-declarator ")" . ("," ")" "[" "(")
+439:	direct-abstract-declarator => "(" abstract-declarator ")" . ("," ")" "[" "(")
 		$default => reduce 209
 
-439:	direct-abstract-declarator => direct-abstract-declarator "(" ")" . ("," ")" "[" "(")
+440:	direct-abstract-declarator => direct-abstract-declarator "(" ")" . ("," ")" "[" "(")
 		$default => reduce 227
 
-440:	direct-abstract-declarator => direct-abstract-declarator "(" parameter-type-list . ")" ("," ")" "[" "(")
-		")" => shift 452
+441:	direct-abstract-declarator => direct-abstract-declarator "(" parameter-type-list . ")" ("," ")" "[" "(")
+		")" => shift 453
 
-441:	direct-abstract-declarator => direct-abstract-declarator "[" "static" . type-qualifier-list "]" ("," ")" "[" "(")
+442:	direct-abstract-declarator => direct-abstract-declarator "[" "static" . type-qualifier-list "]" ("," ")" "[" "(")
 	type-qualifier-list => . type-qualifier
 	type-qualifier-list => . type-qualifier-list type-qualifier
 	type-qualifier => . "const"
@@ -14819,20 +15060,20 @@
 		"volatile" => shift 16
 		"const" => shift 17
 		type-qualifier => shift 114
-		type-qualifier-list => shift 451
+		type-qualifier-list => shift 452
 
-442:	direct-abstract-declarator => direct-abstract-declarator "[" "]" . ("," ")" "[" "(")
+443:	direct-abstract-declarator => direct-abstract-declarator "[" "]" . ("," ")" "[" "(")
 		$default => reduce 213
 
-443:	direct-abstract-declarator => direct-abstract-declarator "[" "*" . "]" ("," ")" "[" "(")
+444:	direct-abstract-declarator => direct-abstract-declarator "[" "*" . "]" ("," ")" "[" "(")
 	unary-operator => "*" . ("(" "++" "--" "sizeof" "&" "*" "+" "-" "~" "!" '$string '$fixed '$float '$chlit '$ident 'cpp-ident)
-		"]" => shift 450
+		"]" => shift 451
 		$default => reduce 27
 
-444:	direct-abstract-declarator => direct-abstract-declarator "[" assignment-expression . "]" ("," ")" "[" "(")
-		"]" => shift 449
+445:	direct-abstract-declarator => direct-abstract-declarator "[" assignment-expression . "]" ("," ")" "[" "(")
+		"]" => shift 450
 
-445:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list . "static" assignment-expression "]" ("," ")" "[" "(")
+446:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list . "static" assignment-expression "]" ("," ")" "[" "(")
 	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list . "]" ("," ")" "[" "(")
 	type-qualifier-list => type-qualifier-list . type-qualifier ("static" "]" "const" "volatile" "restrict" "++" "--" "sizeof" "&" "*" "+" "-" "~" "!" "(" '$string '$fixed '$float '$chlit '$ident 'cpp-ident)
 	type-qualifier => . "const"
@@ -14941,21 +15182,21 @@
 		postfix-expression => shift 169
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		assignment-expression => shift 446
+		assignment-expression => shift 447
 		"restrict" => shift 15
 		"volatile" => shift 16
 		"const" => shift 17
 		type-qualifier => shift 128
-		"]" => shift 447
-		"static" => shift 448
+		"]" => shift 448
+		"static" => shift 449
 
-446:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list assignment-expression . "]" ("," ")" "[" "(")
-		"]" => shift 482
+447:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list assignment-expression . "]" ("," ")" "[" "(")
+		"]" => shift 484
 
-447:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list "]" . ("," ")" "[" "(")
+448:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list "]" . ("," ")" "[" "(")
 		$default => reduce 211
 
-448:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list "static" . assignment-expression "]" ("," ")" "[" "(")
+449:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list "static" . assignment-expression "]" ("," ")" "[" "(")
 	assignment-expression => . conditional-expression
 	assignment-expression => . unary-expression assignment-operator assignment-expression
 	unary-expression => . postfix-expression
@@ -15058,15 +15299,15 @@
 		postfix-expression => shift 169
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		assignment-expression => shift 481
+		assignment-expression => shift 483
 
-449:	direct-abstract-declarator => direct-abstract-declarator "[" assignment-expression "]" . ("," ")" "[" "(")
+450:	direct-abstract-declarator => direct-abstract-declarator "[" assignment-expression "]" . ("," ")" "[" "(")
 		$default => reduce 212
 
-450:	direct-abstract-declarator => direct-abstract-declarator "[" "*" "]" . ("," ")" "[" "(")
+451:	direct-abstract-declarator => direct-abstract-declarator "[" "*" "]" . ("," ")" "[" "(")
 		$default => reduce 224
 
-451:	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list . assignment-expression "]" ("," ")" "[" "(")
+452:	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list . assignment-expression "]" ("," ")" "[" "(")
 	assignment-expression => . conditional-expression
 	assignment-expression => . unary-expression assignment-operator assignment-expression
 	unary-expression => . postfix-expression
@@ -15139,7 +15380,7 @@
 	type-qualifier => . "volatile"
 	type-qualifier => . "restrict"
 	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list . "]" ("," ")" "[" "(")
-		"]" => shift 479
+		"]" => shift 481
 		"restrict" => shift 15
 		"volatile" => shift 16
 		"const" => shift 17
@@ -15179,46 +15420,78 @@
 		postfix-expression => shift 169
 		unary-expression => shift 170
 		conditional-expression => shift 171
-		assignment-expression => shift 480
+		assignment-expression => shift 482
 
-452:	direct-abstract-declarator => direct-abstract-declarator "(" parameter-type-list ")" . ("," ")" "[" "(")
+453:	direct-abstract-declarator => direct-abstract-declarator "(" parameter-type-list ")" . ("," ")" "[" "(")
 		$default => reduce 226
 
-453:	direct-abstract-declarator => "[" "static" type-qualifier-list assignment-expression . "]" ("," ")" "[" "(")
-		"]" => shift 478
+454:	direct-abstract-declarator => "[" "static" type-qualifier-list assignment-expression . "]" ("," ")" "[" "(")
+		"]" => shift 480
 
-454:	direct-abstract-declarator => "[" "static" type-qualifier-list "]" . ("," ")" "[" "(")
+455:	direct-abstract-declarator => "[" "static" type-qualifier-list "]" . ("," ")" "[" "(")
 		$default => reduce 222
 
-455:	direct-abstract-declarator => "[" type-qualifier-list assignment-expression "]" . ("," ")" "[" "(")
+456:	direct-abstract-declarator => "[" type-qualifier-list assignment-expression "]" . ("," ")" "[" "(")
 		$default => reduce 217
 
-456:	direct-abstract-declarator => "[" type-qualifier-list "static" assignment-expression . "]" ("," ")" "[" "(")
-		"]" => shift 477
+457:	direct-abstract-declarator => "[" type-qualifier-list "static" assignment-expression . "]" ("," ")" "[" "(")
+		"]" => shift 479
 
-457:	postfix-expression => "(" type-name ")" "{" initializer-list . "," "}" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
+458:	postfix-expression => "(" type-name ")" "{" initializer-list . "," "}" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 	initializer-list => initializer-list . "," initializer ("," "}")
 	initializer-list => initializer-list . "," designation initializer ("," "}")
 	postfix-expression => "(" type-name ")" "{" initializer-list . "}" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
-		"}" => shift 475
-		"," => shift 476
+		"}" => shift 477
+		"," => shift 478
 
-458:	conditional-expression => logical-or-expression "?" expression ":" conditional-expression . (":" "}" ")" "]" "," ";")
+459:	conditional-expression => logical-or-expression "?" expression ":" conditional-expression . (":" "}" ")" "]" "," ";")
 		$default => reduce 63
 
-459:	argument-expression-list => argument-expression-list "," typedef-name . ("," ")")
-		")" => reduce 19
-		"," => reduce 19
+460:	argument-expression-list => argument-expression-list "," declaration-specifiers . abstract-declarator ("," ")")
+	abstract-declarator => . pointer
+	abstract-declarator => . pointer direct-abstract-declarator
+	abstract-declarator => . direct-abstract-declarator
+	pointer => . "*" type-qualifier-list
+	pointer => . "*"
+	pointer => . "*" type-qualifier-list pointer
+	pointer => . "*" pointer
+	direct-abstract-declarator => . "(" abstract-declarator ")"
+	direct-abstract-declarator => . direct-abstract-declarator "[" type-qualifier-list assignment-expression "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" type-qualifier-list "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" assignment-expression "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" "static" type-qualifier-list assignment-expression "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" "static" type-qualifier-list "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" type-qualifier-list "static" assignment-expression "]"
+	direct-abstract-declarator => . "[" type-qualifier-list assignment-expression "]"
+	direct-abstract-declarator => . "[" type-qualifier-list "]"
+	direct-abstract-declarator => . "[" assignment-expression "]"
+	direct-abstract-declarator => . "[" "]"
+	direct-abstract-declarator => . "[" "static" type-qualifier-list assignment-expression "]"
+	direct-abstract-declarator => . "[" "static" type-qualifier-list "]"
+	direct-abstract-declarator => . "[" type-qualifier-list "static" assignment-expression "]"
+	direct-abstract-declarator => . direct-abstract-declarator "[" "*" "]"
+	direct-abstract-declarator => . "[" "*" "]"
+	direct-abstract-declarator => . direct-abstract-declarator "(" parameter-type-list ")"
+	direct-abstract-declarator => . direct-abstract-declarator "(" ")"
+	direct-abstract-declarator => . "(" parameter-type-list ")"
+	direct-abstract-declarator => . "(" ")"
+		"[" => shift 322
+		"(" => shift 364
+		"*" => shift 52
+		direct-abstract-declarator => shift 324
+		pointer => shift 365
+		abstract-declarator => shift 476
 
-460:	argument-expression-list => argument-expression-list "," assignment-expression . ("," ")")
+461:	argument-expression-list => argument-expression-list "," assignment-expression . ("," ")")
 		")" => reduce 17
 		"," => reduce 17
 
-461:	initializer-list => initializer-list "," designation initializer . ("}" ",")
+462:	initializer-list => initializer-list "," designation initializer . ("}" ",")
 		"," => reduce 236
 		"}" => reduce 236
 
-462:	iteration-statement => "for" "(" initial-clause ";" ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+463:	iteration-statement => "for" "(" initial-clause ";" ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	statement => . labeled-statement
 	statement => . compound-statement
 	statement => . expression-statement
@@ -15375,14 +15648,14 @@
 		expression-statement => shift 199
 		compound-statement => shift 200
 		labeled-statement => shift 201
-		statement => shift 474
+		statement => shift 475
 
-463:	expression => expression . "," assignment-expression ("," ")")
+464:	expression => expression . "," assignment-expression ("," ")")
 	iteration-statement => "for" "(" initial-clause ";" expression . ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
-		")" => shift 473
+		")" => shift 474
 		"," => shift 244
 
-464:	iteration-statement => "for" "(" initial-clause expression ";" . ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+465:	iteration-statement => "for" "(" initial-clause expression ";" . ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	iteration-statement => "for" "(" initial-clause expression ";" . expression ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	expression => . assignment-expression
 	expression => . expression "," assignment-expression
@@ -15489,27 +15762,27 @@
 		unary-expression => shift 170
 		conditional-expression => shift 171
 		assignment-expression => shift 180
-		expression => shift 471
-		")" => shift 472
+		expression => shift 472
+		")" => shift 473
 
-465:	expression => expression . "," assignment-expression ("," ")")
+466:	expression => expression . "," assignment-expression ("," ")")
 	iteration-statement => "do" statement "while" "(" expression . ")" ";" ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
-		")" => shift 470
+		")" => shift 471
 		"," => shift 244
 
-466:	iteration-statement => "while" "(" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+467:	iteration-statement => "while" "(" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		$default => reduce 264
 
-467:	selection-statement => "switch" "(" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+468:	selection-statement => "switch" "(" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		$default => reduce 263
 
-468:	selection-statement => "if" "(" expression ")" statement . "else" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+469:	selection-statement => "if" "(" expression ")" statement . "else" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	selection-statement => "if" "(" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
-		"else" => shift 469
+		"else" => shift 470
 		$default => reduce 261
 		["else" => reduce 261] REMOVED by precedence
 
-469:	selection-statement => "if" "(" expression ")" statement "else" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+470:	selection-statement => "if" "(" expression ")" statement "else" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	statement => . labeled-statement
 	statement => . compound-statement
 	statement => . expression-statement
@@ -15666,17 +15939,17 @@
 		expression-statement => shift 199
 		compound-statement => shift 200
 		labeled-statement => shift 201
-		statement => shift 490
+		statement => shift 492
 
-470:	iteration-statement => "do" statement "while" "(" expression ")" . ";" ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
-		";" => shift 489
+471:	iteration-statement => "do" statement "while" "(" expression ")" . ";" ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+		";" => shift 491
 
-471:	expression => expression . "," assignment-expression ("," ")")
+472:	expression => expression . "," assignment-expression ("," ")")
 	iteration-statement => "for" "(" initial-clause expression ";" expression . ")" statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
-		")" => shift 488
+		")" => shift 490
 		"," => shift 244
 
-472:	iteration-statement => "for" "(" initial-clause expression ";" ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+473:	iteration-statement => "for" "(" initial-clause expression ";" ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	statement => . labeled-statement
 	statement => . compound-statement
 	statement => . expression-statement
@@ -15833,9 +16106,9 @@
 		expression-statement => shift 199
 		compound-statement => shift 200
 		labeled-statement => shift 201
-		statement => shift 487
+		statement => shift 489
 
-473:	iteration-statement => "for" "(" initial-clause ";" expression ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+474:	iteration-statement => "for" "(" initial-clause ";" expression ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	statement => . labeled-statement
 	statement => . compound-statement
 	statement => . expression-statement
@@ -15992,15 +16265,19 @@
 		expression-statement => shift 199
 		compound-statement => shift 200
 		labeled-statement => shift 201
-		statement => shift 486
+		statement => shift 488
 
-474:	iteration-statement => "for" "(" initial-clause ";" ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+475:	iteration-statement => "for" "(" initial-clause ";" ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		$default => reduce 269
 
-475:	postfix-expression => "(" type-name ")" "{" initializer-list "}" . (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
+476:	argument-expression-list => argument-expression-list "," declaration-specifiers abstract-declarator . ("," ")")
+		")" => reduce 19
+		"," => reduce 19
+
+477:	postfix-expression => "(" type-name ")" "{" initializer-list "}" . (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 		$default => reduce 14
 
-476:	initializer-list => initializer-list "," . designation initializer ("," "}")
+478:	initializer-list => initializer-list "," . designation initializer ("," "}")
 	designation => . designator-list "="
 	designator-list => . designator
 	designator-list => . designator-list designator
@@ -16078,7 +16355,7 @@
 	cast-expression => . unary-expression
 	cast-expression => . "(" type-name ")" cast-expression
 	postfix-expression => "(" type-name ")" "{" initializer-list "," . "}" (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
-		"}" => shift 485
+		"}" => shift 487
 		cast-expression => shift 139
 		multiplicative-expression => shift 140
 		additive-expression => shift 141
@@ -16123,40 +16400,40 @@
 		designator-list => shift 258
 		designation => shift 419
 
-477:	direct-abstract-declarator => "[" type-qualifier-list "static" assignment-expression "]" . ("," ")" "[" "(")
+479:	direct-abstract-declarator => "[" type-qualifier-list "static" assignment-expression "]" . ("," ")" "[" "(")
 		$default => reduce 223
 
-478:	direct-abstract-declarator => "[" "static" type-qualifier-list assignment-expression "]" . ("," ")" "[" "(")
+480:	direct-abstract-declarator => "[" "static" type-qualifier-list assignment-expression "]" . ("," ")" "[" "(")
 		$default => reduce 221
 
-479:	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list "]" . ("," ")" "[" "(")
+481:	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list "]" . ("," ")" "[" "(")
 		$default => reduce 215
 
-480:	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list assignment-expression . "]" ("," ")" "[" "(")
-		"]" => shift 484
+482:	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list assignment-expression . "]" ("," ")" "[" "(")
+		"]" => shift 486
 
-481:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list "static" assignment-expression . "]" ("," ")" "[" "(")
-		"]" => shift 483
+483:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list "static" assignment-expression . "]" ("," ")" "[" "(")
+		"]" => shift 485
 
-482:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list assignment-expression "]" . ("," ")" "[" "(")
+484:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list assignment-expression "]" . ("," ")" "[" "(")
 		$default => reduce 210
 
-483:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list "static" assignment-expression "]" . ("," ")" "[" "(")
+485:	direct-abstract-declarator => direct-abstract-declarator "[" type-qualifier-list "static" assignment-expression "]" . ("," ")" "[" "(")
 		$default => reduce 216
 
-484:	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list assignment-expression "]" . ("," ")" "[" "(")
+486:	direct-abstract-declarator => direct-abstract-declarator "[" "static" type-qualifier-list assignment-expression "]" . ("," ")" "[" "(")
 		$default => reduce 214
 
-485:	postfix-expression => "(" type-name ")" "{" initializer-list "," "}" . (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
+487:	postfix-expression => "(" type-name ")" "{" initializer-list "," "}" . (":" "}" ")" "]" "," "||" "&&" "|" "^" "&" "!=" "==" "<" ">" "<=" ">=" ">>" "<<" "+" "-" "%" "/" "*" ";" "?" "[" "(" "." "->" "++" "--" "|=" "^=" "&=" ">>=" "<<=" "%=" "/=" "*=" "-=" "+=" "=")
 		$default => reduce 15
 
-486:	iteration-statement => "for" "(" initial-clause ";" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+488:	iteration-statement => "for" "(" initial-clause ";" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		$default => reduce 268
 
-487:	iteration-statement => "for" "(" initial-clause expression ";" ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+489:	iteration-statement => "for" "(" initial-clause expression ";" ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		$default => reduce 267
 
-488:	iteration-statement => "for" "(" initial-clause expression ";" expression ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+490:	iteration-statement => "for" "(" initial-clause expression ";" expression ")" . statement ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 	statement => . labeled-statement
 	statement => . compound-statement
 	statement => . expression-statement
@@ -16313,14 +16590,14 @@
 		expression-statement => shift 199
 		compound-statement => shift 200
 		labeled-statement => shift 201
-		statement => shift 491
+		statement => shift 493
 
-489:	iteration-statement => "do" statement "while" "(" expression ")" ";" . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+491:	iteration-statement => "do" statement "while" "(" expression ")" ";" . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		$default => reduce 265
 
-490:	selection-statement => "if" "(" expression ")" statement "else" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+492:	selection-statement => "if" "(" expression ")" statement "else" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		$default => reduce 262
 
-491:	iteration-statement => "for" "(" initial-clause expression ";" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
+493:	iteration-statement => "for" "(" initial-clause expression ";" expression ")" statement . ("else" "typedef" "static" "register" "extern" "auto" "char" "unsigned" "int" "signed" "short" "long" "double" "float" "_Complex" "union" "struct" "enum" 'typename "_Bool" "void" "restrict" "volatile" "const" "inline" "default" "case" "{" 'cpp-ident '$ident '$chlit '$float '$fixed '$string "(" "!" "~" "-" "+" "*" "&" "sizeof" "--" "++" ";" "switch" "if" "for" "do" "while" "return" "break" "continue" "goto" 'cpp-stmt "}")
 		$default => reduce 266
 
