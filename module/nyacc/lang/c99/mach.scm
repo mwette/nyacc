@@ -706,7 +706,7 @@
 
 ;;; =====================================
 
-(define (gen-c99-files . rest)
+#;(define (gen-c99-files . rest)
   (define (module-path path) path)
   (write-lalr-actions clang-mach "c99act.scm.new")
   (write-lalr-tables clang-mach "c99tab.scm.new")
