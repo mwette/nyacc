@@ -87,6 +87,18 @@
 	   (list '(action #f #f
 			  (set-cdr! (last-pair $1) (list $2))
 			  $1)))))
+
+;; @item reserved? grammar-symbol
+;; Determine whether the syntax argument is a reserved symbol, that is.
+;; So instead of writing @code{'$fixed} for syntax one can write
+;; @code{$fixed}.  We may want to change this to
+;; @example
+;; (reserved-terminal? grammar-symbol)
+;; (reserved-non-term? grammar-symbol)
+;; @end example
+(define (reserved? grammar-symbol)
+  ;; If the first character `$' then it's reserved.
+  (eqv? #\$ (string-ref (symbol->string (syntax->datum grammar-symbol)) 0)))
   
 ;; @item lalr-spec grammar => spec
 ;; This routine reads a grammar in a scheme-like syntax and returns an a-list.
@@ -152,7 +164,9 @@
 		  #'(cons (<f> ...) (parse-rhs <e2> ...)))
 		 ((_ <e1> <e2> ...)
 		  (identifier? (syntax <e1>)) ; fender to trap non-term's
-		  #'(cons '(non-terminal . <e1>) (parse-rhs <e2> ...)))
+		  (if (reserved? (syntax <e1>))
+		      #'(cons '(terminal . <e1>) (parse-rhs <e2> ...))
+		      #'(cons '(non-terminal . <e1>) (parse-rhs <e2> ...))))
 		 ((_ <e1> <e2> ...)
 		  #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
 		 ((_) #'(list)))))
@@ -1528,6 +1542,7 @@
 ;; Generate a-list of items used for building/debugging parsers.
 ;; It might be useful to add hashify and compact with keyword arguments.
 (define (make-lalr-machine spec)
+  (if (not spec) (error "make-lalr-machine: expecting valid specification"))
   (let ((prev-core (fluid-ref *lalr-core*)))
     (dynamic-wind
 	(lambda () (fluid-set! *lalr-core* (make-core/extras spec)))

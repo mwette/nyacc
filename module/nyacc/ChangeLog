@@ -1,4 +1,9 @@
-Copyright (C) 2015 Matthew R. Wette
+2016-03-04  Matt Wette  <mwette@nautilus>
+
+	* lalr.scm: changed grammar parser to interpret $string as
+	terminal.  This saves typing a quote in front.
+
+Copyright (C) 2015,2016 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

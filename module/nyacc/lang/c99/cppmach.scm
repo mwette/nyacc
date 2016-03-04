@@ -18,8 +18,10 @@
 ;; C preprocessor expression parser generator
 
 (define-module (nyacc lang c99 cppmach)
-  #:export (cpp-spec cpp-mach dev-parse-cpp-expr eval-cpp-expr
-		     gen-cpp-files)
+  #:export (cpp-spec
+	    cpp-mach
+	    dev-parse-cpp-expr dev-eval-cpp-expr
+	    gen-cpp-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -102,8 +104,6 @@
      (expression-list "," conditional-expression ($$ $3)))
     )))
 
-(include-from-path "nyacc/lang/c99/cppbody.scm")
-
 (define cpp-mach
   (compact-machine
    (hashify-machine
@@ -111,11 +111,17 @@
 
 (define mtab (assq-ref cpp-mach 'mtab))
 (define raw-parser (make-lalr-parser cpp-mach))
-(define gen-cpp-lexer (make-lexer-generator mtab))
-(define (dev-parse-cpp-expr) (raw-parser (gen-cpp-lexer)))
+
+(include-from-path "nyacc/lang/c99/cppbody.scm")
+
+(define dev-parse-cpp-expr parse-cpp-expr)
+(define dev-eval-cpp-expr eval-cpp-expr)
 
 ;;; =====================================
 
+;; @item gen-cpp-files [dir] => #t
+;; Update or generate the files @quot{cppact.scm} and @quot{cpptab.scm}.
+;; If there are no changes to existing files, no update occurs.
 (define (gen-cpp-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))

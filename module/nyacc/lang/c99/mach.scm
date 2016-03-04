@@ -29,18 +29,18 @@
   #:use-module ((sxml xpath) #:select (sxpath))
   )
 
-;; Objective is to generate a sxml tree.
-;; Written to the grammar specified for ISO-C99, 
-;;   http://slps.github.io/zoo/c/iso-9899-tc3.html
-;; but modified to handle comments and CPP statements.
+;; @item c99-spec
+;; This variable is the specification a-list for the hacked ISO C99 language.
+;; Run this through @code{make-lalr-machine} to get an a-list for the
+;; automaton.  The grammar is modified to parse CPP statements and comments.
+;; The output of the end parser will be a SXML tree (w/o the @code{*TOP*} node.
 (define c99-spec
   (lalr-spec
    (notice lang-crn-lic)
-   (prec< "then" "else")	    ; then/else SR-shift resolution
-   (prec< "imp"			    ; implied type SR-shift resolution
+   (prec< "then" "else")	    ; "then/else" SR-conflict resolution
+   (prec< "imp"			    ; "implied type" SR-conflict resolution
 	  "char" "short" "int" "long"
 	  "float" "double" "_Complex")
-   ;;(expect 25)			; 25 SR-conf fixed with above prec
    (start translation-unit-proxy)
    (grammar
 
@@ -73,18 +73,14 @@
     (argument-expression-list
      (assignment-expression ($$ (make-tl 'expr-list $1)))
      (argument-expression-list "," assignment-expression ($$ (tl-append $1 $3)))
-     ;; The following is a kludge to deal with using typenames in CPP defines
-     ;; when we don't expand the defines.  e.g., GEN_OFFSET(foo_t, x.y.z)
-     ;;   (typedef-name ($$ (make-tl 'expr-list $1)))
-     ;;   (argument-expression-list "," typedef-name ($$ (tl-append $1 $3)))
-     ;; Changed after V0.67.0 to:
+     ;; The following is a modification to deal with using abstract declarations
+     ;; as arguments to CPP macros (e.g., see offsetof in <stddef.h>).
      (arg-expr-hack ($$ (make-tl 'expr-list $1)))
      (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3)))
      )
     (arg-expr-hack
-     (declaration-specifiers abstract-declarator ($$ `(decl ,(tl->list $1 $2))))
-     (declaration-specifiers ($$ `(decl ,(tl->list $1))))
-     )
+     (declaration-specifiers abstract-declarator ($$ `(decl ,(tl->list $1) $2)))
+     (declaration-specifiers ($$ `(decl ,(tl->list $1)))))
 
     (unary-expression
      (postfix-expression)		; S 6.5.3
@@ -625,7 +621,7 @@
      (lone-comment)
      (cpp-statement)
      ;; The following is a kludge to deal with @code{extern "C" @{}.
-     ("extern" '$string "{" translation-unit "}" ($$ (tl->list $4)))
+     ("extern" $string "{" translation-unit "}" ($$ (tl->list $4)))
      )
     
     (function-definition
@@ -648,17 +644,17 @@
 
     ;; non-terminal leaves
     (identifier
-     ('$ident ($$ `(ident ,$1)))
+     ($ident ($$ `(ident ,$1)))
      ('cpp-ident ($$ `(ident ,$1))))
     (constant
-     ('$fixed ($$ `(fixed ,$1)))	; integer-constant
-     ('$float ($$ `(float ,$1)))	; floating-constant
-     ('$chlit ($$ `(char ,$1))))	; char-constant
+     ($fixed ($$ `(fixed ,$1)))		; integer-constant
+     ($float ($$ `(float ,$1)))		; floating-constant
+     ($chlit ($$ `(char ,$1))))		; char-constant
     (string-literal
-     ('$string ($$ (make-tl 'string $1))) ; string-constant
-     (string-literal '$string ($$ (tl-append $1 $2))))
-    (code-comment ('$code-comm ($$ `(comment ,$1))))
-    (lone-comment ('$lone-comm ($$ `(comment ,$1))))
+     ($string ($$ (make-tl 'string $1))) ; string-constant
+     (string-literal $string ($$ (tl-append $1 $2))))
+    (code-comment ($code-comm ($$ `(comment ,$1))))
+    (lone-comment ($lone-comm ($$ `(comment ,$1))))
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
 
     )))
@@ -704,6 +700,10 @@
 
 ;;; =====================================
 
+;; @item gen-c99x-files [dir] => #t
+;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.
+;; These are the tables and actions for the C99 parser.
+;; If there are no changes to existing files, no update occurs.
 (define (gen-c99-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
@@ -721,6 +721,10 @@
       #;(compile-file (lang-dir "parser.scm"))
       )))
 
+;; @item gen-c99x-files [dir] => #t
+;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.
+;; These are the tables and actions for the C99 expression parser.
+;; If there are no changes to existing files, no update occurs.
 (define (gen-c99x-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))

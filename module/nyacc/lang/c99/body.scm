@@ -259,7 +259,7 @@
 	  (define (exec-cpp line)
 	    ;;(simple-format #t "exec-cpp: ~S\n" line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
-	    (let* ((stmt (parse-cpp-line line))
+	    (let* ((stmt (parse-cpp-stmt line))
 		   (perr (lambda (file)
 			   (throw 'parse-error "file not found: ~S" file))))
 	      (case (car stmt)

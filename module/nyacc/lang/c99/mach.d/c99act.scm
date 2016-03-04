@@ -1,4 +1,4 @@
-;; nyacc/lang/c99/mach.d/c99act.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99act.scm
 
 ;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
@@ -54,7 +54,7 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; arg-expr-hack => declaration-specifiers abstract-declarator
    (lambda ($2 $1 . $rest)
-     `(decl ,(tl->list $1 $2)))
+     `(decl ,(tl->list $1) $2))
    ;; arg-expr-hack => declaration-specifiers
    (lambda ($1 . $rest) `(decl ,(tl->list $1)))
    ;; unary-expression => postfix-expression

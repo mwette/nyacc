@@ -1,4 +1,4 @@
-;; nyacc/lang/c99/mach.d/cppact.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/cppact.scm
 
 ;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 

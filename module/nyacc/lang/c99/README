@@ -9,14 +9,19 @@ without any warranty.
 
 manifest:
 
-pgen.scm	C grammer defined, and C file dev-parser
+cpp.scm		C preprocessor using tables
+		includes: cppbody.scm cppact.scm,cpptab.scm
+cppbody.scm	eval-cpp-expr procedure
+cppmach.scm	CPP expression grammer, machine and act/tab file generation
+
+mach.scm	C grammer, machine and act/tab file generation
 		include: pbody.scm
 		depends: cpp.scm
 parser.scm	C file parser, using tables 
-		includes: actions.scm, pbody.scm, table.scm
+		includes: body.scm, c99act.scm, c99tab.scm
 		depends: cpp.scm
 xparser.scm	C expression parser
-		includes: expract.scm, pbody.scm, exprtab.scm
+		includes: body.scm, c99xact.scm, c99xtab.scm
 		depends: cpp.scm
 
 pprint.scm	C pretty printer, from SXML output of above parsers
@@ -24,16 +29,17 @@ pprint.scm	C pretty printer, from SXML output of above parsers
 util1.scm	utilities merge, remove trees from included files
 util2.scm	utilities to process information in trees
 
-cppgen.scm	CPP expression grammer defined
-cpp.scm		C preprocessor using tables
-		include: cppact.scm,cpptab.scm
-cppact.scm	cpp expression parser actions, generated via cppgen.scm
-cpptab.scm	cpp expression parser tables, generated via cppgen.scm
+mach.d/
+  cppact.scm	cpp expression parser actions, generated from cppmach.scm
+  cpptab.scm	cpp expression parser tables, generated from cppmach.scm
 
-actions.scm	parser actions, generated via pgen.scm
-tables.scm	C parser tables, generated via pgen.scm
+  c99act.scm	parser actions, generated from mach.scm
+  c99tab.scm	C99 parser tables, generated from mach.scm
 
-auxiliary files (for debugging, verification)
-gram.y		this is a bison grammar file, missing precedence/associativity
-lang.txt	this is like gram.output, showing productions and mach states
+  c99xact.scm	expression parser actions, generated from mach.scm
+  c99xtab.scm	C99 expression parser tables, generated from mach.scm
 
+
+==== cpp ================================
+
+parse-cpp-line line => tree

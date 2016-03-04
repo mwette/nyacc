@@ -15,8 +15,20 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;; @item gen-cpp-lexer => thunk
+;; Generates a thunk that returns the next token from the current-input.
+(define gen-cpp-lexer (make-lexer-generator mtab))
 
-;;; This is copied to cpp.scm
+;; @item parse-cpp-expr => 
+;; A thunk that reads from default input and returns a parse tree.
+;; Called by @code{parse-cpp-stmt} and @code{eval-cpp-expr}.  The latter
+;; because the parsed expression may include terms which are cpp-defined
+;; and should be evaluated lazy mode.
+(define (parse-cpp-expr)
+  (raw-parser (gen-cpp-lexer)))
+
+;; @item eval-cpp-expr tree dict => datum
+;; Evaluate a tree produced from 
 (define (eval-cpp-expr tree dict)
   (letrec
       ((tx (lambda (tr ix) (list-ref tr ix)))

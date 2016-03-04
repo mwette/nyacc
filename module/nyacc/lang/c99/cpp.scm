@@ -18,9 +18,9 @@
 ;; C preprocessor.  This is not complete.
 
 (define-module (nyacc lang c99 cpp)
-  #:export (parse-cpp-line
-	    eval-cpp-expr
+  #:export (parse-cpp-stmt
 	    parse-cpp-expr
+	    eval-cpp-expr
 	    )
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -90,12 +90,15 @@ todo:
 		     (iter (cons ch cl) (read-char))))))
     `(include ,path)))
 
-;; @item parse-cpp-line line => tree
+;; @item parse-cpp-stmt line => tree
 ;; Parse a line from a CPP statement and return a parse tree.
 ;; @example
-;; (parse-cpp-line "define X 123") => (define "X" "123")
+;; (parse-cpp-stmt "define X 123") => (define "X" "123")
+;; (parse-cpp-stmt "if defined(A) && defined(B) && defined(C)"
+;; => (if (and (and (defined "A") (defined "B"))
+;;             (not (defined "C")))
 ;; @end example
-(define (parse-cpp-line line)
+(define (parse-cpp-stmt line)
   (with-input-from-string line
     (lambda ()
       (let ((cmd (string->symbol (read-c-ident (skip-ws (read-char)))))
@@ -122,70 +125,11 @@ todo:
 
 (define raw-parser
   (make-lalr-parser
-   (list
-    (cons 'len-v len-v)
-    (cons 'pat-v pat-v)
-    (cons 'rto-v rto-v)
-    (cons 'mtab mtab)
-    (cons 'act-v act-v))))
-(define gen-cpp-lexer (make-lexer-generator mtab))
+   (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
+	 (cons 'mtab mtab) (cons 'act-v act-v))))
 
-;; @item parse-cpp-expr => 
-;; A thunk that reads from default input and returns a parse tree.
-(define (parse-cpp-expr) (raw-parser (gen-cpp-lexer)))
-
-;; @item eval-cpp-expr tree dict => value
-;; Evaluate a CPP expression tree returned from @code{parse-cpp-expr}.
-(define (eval-cpp-expr tree dict)
-  (letrec
-      ((tx (lambda (tr ix) (list-ref tr ix)))
-       (tx1 (lambda (tr) (tx tr 1)))
-       (ev (lambda (ex ix) (eval-expr (list-ref ex ix))))
-       (ev1 (lambda (ex) (ev ex 1)))
-       (ev2 (lambda (ex) (ev ex 2)))
-       (ev3 (lambda (ex) (ev ex 3)))
-       (parse-and-eval
-	(lambda (str)
-	  (if (not (string? str)) (throw 'error))
-	  (let ((idtr (with-input-from-string str parse-cpp-expr)))
-	    (eval-cpp-expr idtr dict))))
-       (eval-expr
-	(lambda (tree)
-	  (case (car tree)
-	    ((ident) (parse-and-eval (assoc-ref dict (tx1 tree))))
-	    ((fixed) (string->number (tx1 tree)))
-	    ((char) (char->integer (tx1 tree)))
-	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
-	    ;;
-	    ((pre-inc post-inc) (1+ (ev1 tree)))
-	    ((pre-dec post-dec) (1- (ev1 tree)))
-	    ((pos) (ev1 tree))
-	    ((neg) (- (ev1 tree)))
-	    ((bitwise-not) (bitwise-not (ev1 tree)))
-	    ((not) (if (zero? (ev1 tree)) 1 0))
-	    ((mul) (* (ev1 tree) (ev2 tree)))
-	    ((div) (/ (ev1 tree) (ev2 tree)))
-	    ((mod) (modulo (ev1 tree) (ev2 tree)))
-	    ((add) (+ (ev1 tree) (ev2 tree)))
-	    ((sub) (- (ev1 tree) (ev2 tree)))
-	    ((lshift) (bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
-	    ((rshift) (bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
-	    ((lt) (if (< (ev1 tree) (ev2 tree)) 1 0))
-	    ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
-	    ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
-	    ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
-	    ((equal) (if (= (ev1 tree) (ev2 tree)) 1 0))
-	    ((noteq) (if (= (ev1 tree) (ev2 tree)) 0 1))
-	    ((bitwise-or) (bitwise-ior (ev1 tree) (ev2 tree)))
-	    ((bitwise-xor) (bitwise-xor (ev1 tree) (ev2 tree)))
-	    ((bitwise-and) (bitwise-and (ev1 tree) (ev2 tree)))
-	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    (else (error "incomplete implementation"))))))
-    (catch 'error
-	   (lambda () (eval-expr tree))
-	   (lambda () #f))))
-
+;; cppbody provides: gen-cpp-lexer parse-cpp-expr eval-cpp-expr
+(include-from-path "nyacc/lang/c99/cppbody.scm")
+ 
 ;; mode: scheme ***
 ;; --- last line ---

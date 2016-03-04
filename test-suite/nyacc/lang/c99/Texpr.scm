@@ -1,21 +1,21 @@
-;; Tc99expr.scm - clang expression parser
+;; Texpr.scm - test the C99 expression parser
 ;;
-;; Copyright (C) 2015 Matthew R. Wette
+;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-;;(use-modules (nyacc lang c99 pgen))
-(use-modules (nyacc lang c99 pprint))
-;;(use-modules (nyacc lalr))
-;;(use-modules (nyacc util))
-(use-modules (nyacc export))
+(use-modules (nyacc lang c99 mach))
 (use-modules (nyacc lang c99 xparser))
+(use-modules (nyacc lang c99 pprint))
+(use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
-(use-modules (srfi srfi-43))
 
+(when #t
+  (gen-c99x-files "../../../../module/nyacc/lang/c99")
+  (system "touch ../../../../module/nyacc/lang/c99/xparser.scm"))
 
 (let* ((st0 "(int)(((foo_t*)0)->x)")
        (st0 "(int)(((((foo_t*)0)->x)->y)->z)")
