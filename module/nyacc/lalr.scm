@@ -41,7 +41,7 @@
   #:use-module ((nyacc parse) #:select (wrap-action))
   )
 
-(define *nyacc-version* "0.68.1+")
+(define *nyacc-version* "0.69.0+")
 
 ;; @item proxy-? sym rhs
 ;; @example
