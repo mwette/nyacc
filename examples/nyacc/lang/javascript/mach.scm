@@ -1,4 +1,4 @@
-;;; lang/javascript/pgen.scm
+;;; lang/javascript/mach.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -15,10 +15,11 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (nyacc lang javascript pgen)
+(define-module (nyacc lang javascript mach)
   #:export (js-spec
 	    js-mach
-	    dev-parse-js)
+	    dev-parse-js
+	    gen-js-files gen-se-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
@@ -51,12 +52,12 @@
 
     (NullLiteral ("null"))
     (BooleanLiteral ("true") ("false"))
-    (NumericLiteral ('$fixed) ('$float))
-    (StringLiteral ('$string))
-    ;;(DoubleStringCharacters ('$string))
-    ;;(SingleStringCharacters ('$string))
+    (NumericLiteral ($fixed) ($float))
+    (StringLiteral ($string))
+    ;;(DoubleStringCharacters ($string))
+    ;;(SingleStringCharacters ($string))
 
-    (Identifier ('$ident ($$ `(Identifier ,$1))))
+    (Identifier ($ident ($$ `(Identifier ,$1))))
 
     ;; A.3
     (PrimaryExpression
@@ -546,8 +547,7 @@
 			  (assq-ref js-mach 'act-v)))
 (define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
 
-;;(include "pbody.scm")
-(include-from-path "nyacc/lang/javascript/pbody.scm")
+(include-from-path "nyacc/lang/javascript/body.scm")
 
 (define raw-parser (make-lalr-parser js-mach))
 (define* (dev-parse-js #:key debug)
@@ -560,5 +560,43 @@
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) fmt rest)
      #f)))
+
+;; ======= gen files
+
+(define (gen-js-files . rest)
+  (define (lang-dir path)
+    (if (pair? rest) (string-append (car rest) "/" path) path))
+  (define (xtra-dir path)
+    (lang-dir (string-append "mach.d/" path)))
+
+  (write-lalr-actions js-mach (xtra-dir "jsact.scm.new"))
+  (write-lalr-tables js-mach (xtra-dir "jstab.scm.new"))
+  (let ((a (move-if-changed (xtra-dir "jsact.scm.new")
+			    (xtra-dir "jsact.scm")))
+	(b (move-if-changed (xtra-dir "jstab.scm.new")
+			    (xtra-dir "jstab.scm"))))
+    (when (or a b) 
+      (system (string-append "touch " (lang-dir "parser.scm"))))))
+
+(define (gen-se-files . rest)
+  (define (lang-dir path)
+    (if (pair? rest) (string-append (car rest) "/" path) path))
+  (define (xtra-dir path)
+    (lang-dir (string-append "mach.d/" path)))
+
+  (let* ((se-spec (restart-spec js-mach 'SourceElement))
+	 (se-mach (compact-machine
+		   (hashify-machine
+		    (make-lalr-machine se-spec)))))
+    (write-lalr-actions js-mach (xtra-dir "seact.scm.new"))
+    (write-lalr-tables js-mach (xtra-dir "setab.scm.new")))
+  
+  (let ((a (move-if-changed (xtra-dir "seact.scm.new")
+			    (xtra-dir "seact.scm")))
+	(b (move-if-changed (xtra-dir "setab.scm.new")
+			    (xtra-dir "setab.scm"))))
+    (when (or a b) 
+      (system (string-append "touch " (lang-dir "separser.scm"))))))
+
 
 ;;; --- last line ---

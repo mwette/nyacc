@@ -1,4 +1,4 @@
-;;; lang/matlab/pgen.scm
+;;; lang/matlab/mach.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;
@@ -19,12 +19,12 @@
 ;; 1) does NOT parse lone expressions of the form [ 1, 2] => syntax error
 ;; 2) does NOT support non-comma rows [ 1 2 ] => syntax error
 
-(define-module (nyacc lang matlab pgen)
+(define-module (nyacc lang matlab mach)
   #:export (matlab-spec
 	    matlab-mach
+	    dev-parse-ml
 	    gen-matlab-lexer
-	    matlab-parser
-	    parse-m)
+	    gen-matlab-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
@@ -247,11 +247,11 @@
      (lone-comment-list lone-comment #\newline ($$ (tl-append $1 $2))))
 
     (term (#\newline) (";") (","))
-    (ident ('$ident ($$ `(ident ,$1))))
-    (number ('$fixed ($$ `(fixed ,$1))) ('$float ($$ `(float ,$1))))
-    (string ('$string ($$ `(string ,$1))))
-    (lone-comment ('$lone-comm ($$ `(comm ,$1))))
-    ;;(code-comment ('$code-comm ($$ `(comm ,$1))))
+    (ident ($ident ($$ `(ident ,$1))))
+    (number ($fixed ($$ `(fixed ,$1))) ($float ($$ `(float ,$1))))
+    (string ($string ($$ `(string ,$1))))
+    (lone-comment ($lone-comm ($$ `(comm ,$1))))
+    ;;(code-comment ($code-comm ($$ `(comm ,$1))))
     )))
 
 ;;; === lexical analyzer
@@ -344,20 +344,43 @@
 	     (else (cons ch (string ch)))))))))) ; else should be error
 
 
-;;; === now build the parser
+;; === parser 
 
 (define matlab-mach
   (hashify-machine
-   ;;(identity
-   ;;(compact-machine
-   (identity
+   (compact-machine
     (make-lalr-machine matlab-spec))))
+
+(define raw-parser (make-lalr-parser matlab-mach))
 
 (define gen-matlab-lexer
   (make-matlab-lexer-generator (lalr-match-table matlab-mach)))
 
-(define matlab-parser (make-lalr-parser matlab-mach))
+(define* (dev-parse-ml #:key debug)
+  (catch
+   'parse-error
+   (lambda ()
+     (raw-parser (gen-matlab-lexer) #:debug debug))
+   (lambda (key fmt . rest)
+     (apply simple-format (current-error-port) (string-append fmt "\n") rest)
+     #f)))
 
-(define (parse-m) (matlab-parser (gen-matlab-lexer)))
+;; === table file generator
+
+(define (gen-matlab-files . rest)
+  (define (lang-dir path)
+    (if (pair? rest) (string-append (car rest) "/" path) path))
+  (define (xtra-dir path)
+    (lang-dir (string-append "mach.d/" path)))
+
+  (write-lalr-actions matlab-mach (xtra-dir "mlact.scm.new"))
+  (write-lalr-tables matlab-mach (xtra-dir "mltab.scm.new"))
+  (let ((a (move-if-changed (xtra-dir "mlact.scm.new")
+			    (xtra-dir "mlact.scm")))
+	(b (move-if-changed (xtra-dir "mltab.scm.new")
+			    (xtra-dir "mltab.scm"))))
+    (when (or a b) 
+      (system (string-append "touch " (lang-dir "parser.scm"))))))
+
 
 ;;; --- last line ---

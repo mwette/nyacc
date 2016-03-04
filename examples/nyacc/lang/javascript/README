@@ -1,6 +1,6 @@
 lang/javascript/
 
-Copyright (C) 2015 Matthew R. Wette
+Copyright (C) 2015,2016 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -11,8 +11,25 @@ The following files are also covered by the above copyright and license:
   ex1.js
 
 manifest:
-actions.scm	C parser actions
-tables.scm	C parser tables
-pbody.scm	body of parser
-parser.scm	C parser; includes pbody, tables and actions
-pgen.scm	C parser generator; used to generate tables and actions.scm
+
+parser.scm	top level full file parser
+body.scm	body of parser, included by mach.scm, parser.scm, esparser.scm
+mach.scm	grammar for javascript, not done, waiting on lalr pruning
+
+spec.scm	spec file for interactive use in guile
+separser.scm	SourceElement parser for interactive use
+jslib.scm	library for interactive use
+
+Tmach.scm	Test script for the parser
+ex1.js		demo
+
+pprint.scm	pretty printer
+
+mach.d/
+  jsact.scm	parser action table
+  jstab.scm	parser automaton tables
+  seact.scm	SE parser action table
+  setab.scm	SE parser automaton tables
+
+lgen.scm	not much, working toward full JS lexer
+

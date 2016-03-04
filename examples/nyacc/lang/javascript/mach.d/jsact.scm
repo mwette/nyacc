@@ -1,6 +1,6 @@
-;; actions.scm
+;; mach.d/jsact.scm
 
-;; Copyright (C) 2015 Matthew R. Wette
+;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 ;; or any later version published by the Free Software Foundation.  See the

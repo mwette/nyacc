@@ -1,4 +1,4 @@
-;;; lang/ecmascript/pbody.scm
+;;; lang/ecmascript/body.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;

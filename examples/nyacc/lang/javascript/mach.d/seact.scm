@@ -1,6 +1,6 @@
-;; eactions.scm
+;; mach.d/seact.scm
 
-;; Copyright (C) 2015 Matthew R. Wette
+;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 ;; or any later version published by the Free Software Foundation.  See the
@@ -8,7 +8,7 @@
 
 (define act-v
   (vector
-   ;; $start => SourceElement
+   ;; $start => Program
    (lambda ($1 . $rest) $1)
    ;; Literal => NullLiteral
    (lambda ($1 . $rest) `(NullLiteral))
@@ -226,29 +226,29 @@
    (lambda ($3 $2 $1 . $rest)
      `(AssignmentExpression ,$1 ,$2 ,$3))
    ;; AssignmentOperator => "="
-   (lambda ($1 . $rest) '(assign))
+   (lambda ($1 . $rest) `(assign ,$1))
    ;; AssignmentOperator => "*="
-   (lambda ($1 . $rest) '(mul-assign))
+   (lambda ($1 . $rest) `(mul-assign ,$1))
    ;; AssignmentOperator => "/="
-   (lambda ($1 . $rest) '(div-assign))
+   (lambda ($1 . $rest) `(div-assign ,$1))
    ;; AssignmentOperator => "%="
-   (lambda ($1 . $rest) '(mod-assign))
+   (lambda ($1 . $rest) `(mod-assign ,$1))
    ;; AssignmentOperator => "+="
-   (lambda ($1 . $rest) '(add-assign))
+   (lambda ($1 . $rest) `(add-assign ,$1))
    ;; AssignmentOperator => "-="
-   (lambda ($1 . $rest) '(sub-assign))
+   (lambda ($1 . $rest) `(sub-assign ,$1))
    ;; AssignmentOperator => "<<="
-   (lambda ($1 . $rest) '(lshift-assign))
+   (lambda ($1 . $rest) `(lshift-assign ,$1))
    ;; AssignmentOperator => ">>="
-   (lambda ($1 . $rest) '(rshift-assign))
+   (lambda ($1 . $rest) `(rshift-assign ,$1))
    ;; AssignmentOperator => ">>>="
-   (lambda ($1 . $rest) '(rrshift-assign))
+   (lambda ($1 . $rest) `(rrshift-assign ,$1))
    ;; AssignmentOperator => "&="
-   (lambda ($1 . $rest) '(and-assign))
+   (lambda ($1 . $rest) `(and-assign ,$1))
    ;; AssignmentOperator => "^="
-   (lambda ($1 . $rest) '(xor-assign))
+   (lambda ($1 . $rest) `(xor-assign ,$1))
    ;; AssignmentOperator => "|="
-   (lambda ($1 . $rest) '(or-assign))
+   (lambda ($1 . $rest) `(or-assign ,$1))
    ;; Expression => AssignmentExpression
    (lambda ($1 . $rest) $1)
    ;; Expression => Expression "," AssignmentExpression

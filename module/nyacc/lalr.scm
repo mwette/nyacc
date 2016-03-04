@@ -26,7 +26,7 @@
 	    compact-machine hashify-machine
 	    lalr-match-table
 	    restart-spec
-	    pp-lalr-grammar pp-lalr-machine
+	    pp-lalr-grammar pp-lalr-machine pp-lalr-notice
 	    write-lalr-tables
 	    write-lalr-actions
 	    pp-rule find-terminal	; used by (nyacc export)
@@ -1637,6 +1637,14 @@
 		    sl (if (= rx (cdr item)) '(" .") '())
 		    (let ((e (vector-ref rhs rx)))
 		      (list (string-append " " (elt->str e tl)))))))))))))
+
+;; @item pp-lalr-notice spec [port]
+(define (pp-lalr-notice spec . rest)
+  (let* ((port (if (pair? rest) (car rest) (current-output-port)))
+	 (notice (assq-ref (assq-ref spec 'attr) 'notice))
+	 (lines (if notice (string-split notice #\newline) '())))
+    (for-each (lambda (l) (simple-format port "  ~A\n" l)) lines)
+    (newline)))
 
 ;; @item pp-lalr-grammar spec [port]
 ;; Pretty-print the grammar to the specified port, or current output.

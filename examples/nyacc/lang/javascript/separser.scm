@@ -1,6 +1,6 @@
-;;; nyacc/lang/javascript/eparser.scm
+;;; nyacc/lang/javascript/separser.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2016 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -17,16 +17,16 @@
 
 ;; JavaScript SourceElement parser - for interactive use
 
-(define-module (nyacc lang javascript eparser)
-  #:export (parse-js-elt)
+(define-module (nyacc lang javascript separser)
+  #:export (parse-js-selt)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   )
 
-(include-from-path "nyacc/lang/javascript/etables.scm")
-(include-from-path "nyacc/lang/javascript/pbody.scm")
-(include-from-path "nyacc/lang/javascript/eactions.scm")
+(include-from-path "nyacc/lang/javascript/mach.d/setab.scm")
+(include-from-path "nyacc/lang/javascript/body.scm")
+(include-from-path "nyacc/lang/javascript/mach.d/seact.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
@@ -40,7 +40,7 @@
 
 ;; @item parse-js [#:debug bool] 
 ;; to be documented
-(define* (parse-js-elt #:key debug)
+(define* (parse-js-selt #:key debug)
   (catch
    'parse-error
    (lambda ()
@@ -51,4 +51,4 @@
      (apply simple-format (current-error-port) fmt rest)
      #f)))
 
-;; --- last line
+;; --- last line ---
