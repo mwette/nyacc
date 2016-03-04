@@ -14,11 +14,12 @@
 (use-modules (ice-9 pretty-print))
 
 ;; Generates a file with grammar and automaton, like bison's gram.output.
-(with-output-to-file "lang.txt.new"
-  (lambda ()
-    (pp-lalr-grammar calc-spec)
-    (pp-lalr-machine calc-mach)
-    ))
+(when #f
+  (with-output-to-file "lang.txt.new"
+    (lambda ()
+      (pp-lalr-grammar calc-spec)
+      (pp-lalr-machine calc-mach)
+      )))
 
 #;(with-output-to-file "gram.y.new"
   (lambda () (lalr->bison calc-spec)))

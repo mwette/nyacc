@@ -1,6 +1,6 @@
 ;;; nyacc/lang/calc/parser
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2016 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -45,11 +45,11 @@
      (expr "-" expr ($$ `(sub ,$1 ,$3)))
      (expr "*" expr ($$ `(mul ,$1 ,$3)))
      (expr "/" expr ($$ `(div ,$1 ,$3)))
-     ('$fixed ($$ `(fixed ,$1)))
-     ('$float ($$ `(float ,$1)))
+     ($fixed ($$ `(fixed ,$1)))
+     ($float ($$ `(float ,$1)))
      ("(" expr ")" ($$ $2)))
 
-    (ident ('$ident ($$ `(ident ,$1))))
+    (ident ($ident ($$ `(ident ,$1))))
     )))
 
 (define calc-mach

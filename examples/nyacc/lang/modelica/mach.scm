@@ -1,6 +1,6 @@
-;;; lang/modelica/pgen.scm
+;;; nyacc/lang/modelica/mach.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2016 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -17,7 +17,7 @@
 
 ;; idea: make changes and call it Modzillica
 
-(define-module (nyacc lang modelica pgen)
+(define-module (nyacc lang modelica mach)
   #:export (modelica-spec
 	    modelica-mach
 	    modelica-parser
@@ -661,10 +661,10 @@
 
     ;; end of grammar
     (unsigned-number
-     ('$fixed ($$ `(unsigned-number ,$1)))
-     ('$float ($$ `(unsigned-number ,$1))))
-    (ident ('$ident ($$ `(ident ,$1))))
-    (string ('$string ($$ `(string ,$1))))
+     ($fixed ($$ `(unsigned-number ,$1)))
+     ($float ($$ `(unsigned-number ,$1))))
+    (ident ($ident ($$ `(ident ,$1))))
+    (string ($string ($$ `(string ,$1))))
     )))
 
 (define modelica-mach

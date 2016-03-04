@@ -1,4 +1,4 @@
-;; Tlangmo.scm - modelica dev
+;; Tmach.scm - modelica dev
 ;;
 ;; Copyright (C) 2015 Matthew R. Wette
 ;; 
@@ -10,7 +10,7 @@
 (add-to-load-path (string-append (getcwd) "/../.."))
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
 
-(use-modules (nyacc lang modelica pgen))
+(use-modules (nyacc lang modelica mach))
 (use-modules (nyacc lalr))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
