@@ -11,6 +11,11 @@
 SITE_SCM_DIR=$(shell guile -c '(display (%site-dir))')
 SITE_SCM_GO_DIR=$(shell guile -c '(display (%site-ccache-dir))')
 
+default:
+	@echo SITE_SCM_DIR = $(SITE_SCM_DIR)
+	@echo SITE_SCM_GO_DIR = $(SITE_SCM_GO_DIR)
+	@echo NYACC_SRCS = $(NYACC_SRCS)
+
 # in nyacc/
 NYACC_BASE_BINS =				\
 	nyacc/export.go				\
@@ -46,7 +51,7 @@ NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
 
 nyacc/lang/c99/mach.d/c99act.scm \
 nyacc/lang/c99/mach.d/c99tab.scm : nyacc/lang/c99/mach.scm
-	 guile -l $< -c \
+	guile -l $< -c \
 		'((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
 
 nyacc/lang/c99/mach.d/c99xact.scm \
@@ -62,15 +67,10 @@ nyacc/lang/c99/mach.d/cpptab.scm : nyacc/lang/c99/cppmach.scm
 .scm.go:
 	guild compile $< -o $@
 
-show:
-	@echo SITE_SCM_DIR = $(SITE_SCM_DIR)
-	@echo SITE_SCM_GO_DIR = $(SITE_SCM_GO_DIR)
-	@#echo NYACC_BASE_SRCS = $(NYACC_BASE_SRCS)
-	@echo NYACC_SRCS = $(NYACC_SRCS)
-
 .PHONY: install
 install: install-srcs
 	@mkdir -p $(SITE_SCM_GO_DIR)
+	@echo "installing NYACC binaries in $(SITE_SCM_GO_DIR)"
 	@for binfile in $(NYACC_BINS); do \
 	  if test ! -d $(SITE_SCM_DIR)/`dirname $${binfile}`; then \
 	    mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
