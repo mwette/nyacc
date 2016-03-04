@@ -1926,19 +1926,11 @@
 
   (call-with-output-file filename
     (lambda (port)
-      #;(fmt port ";; ~A\n\n"
-      (regexp-substitute #f (string-match ".new$" filename) 'pre))
       (fmt port ";; ~A\n\n" (string-sub filename ".new$" ""))
       (write-notice mach port)
       (write-actions mach port)
       (display ";;; end tables" port)
       (newline port))))
-
-#;(define* (write-lalr-parser mach filename #:key (lang 'scheme))
-  (call-with-output-file filename
-    (lambda (port)
-      (pretty-print hashed-parser-code port)
-)))
 
 ;; @end itemize
 

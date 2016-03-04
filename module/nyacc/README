@@ -39,14 +39,13 @@ $ guile -l mach.scm -c '(@ (nyacc lang c99 mach) gen-c99x-files)'
 
 ===============================================================================
 
-cppgen.scm => cppmach.scm
-
 install:
 	cpp.go
+	mach.go
 	parser.go
-	expr-parser.go
+	xparser.go
 	pprint.go
-	util.go
+	util1.go
 	util1.go
 
 cpp.scm: cppmach.scm

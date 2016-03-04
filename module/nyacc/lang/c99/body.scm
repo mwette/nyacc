@@ -1,4 +1,4 @@
-;;; lang/c99/pbody.scm
+;;; lang/c99/body.scm
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;

@@ -1,4 +1,4 @@
-# module/Makefile.nyacc
+# module/Makefile.nyacc			-*- Makefile -*-
 #
 # Copyright (C) 2015,2016 -  Matthew R. Wette
 #
@@ -8,44 +8,89 @@
 # without any warranty.
 #
 
-# in nyacc/
-NYACC_INST_BINARIES =				\
-  nyacc/export.po				\
-  nyacc/import.po				\
-  nyacc/lalr.po					\
-  nyacc/lex.po					\
-  nyacc/parse.po				\
-  nyacc/util.po					\
-  nyacc/lang/util.po				\
-  nyacc/lang/c99/cpp.po				\
-  nyacc/lang/c99/parser.po			\
-  nyacc/lang/c99/pgen.po			\
-  nyacc/lang/c99/pprint.po			\
-  nyacc/lang/c99/util.po			\
-  nyacc/lang/c99/util2.po			\
-  nyacc/lang/c99/xparser.po			
-
-#nyacc/lang/c99/{a.scm,tables.scm}: nyacc/lang/c99/pgen.scm
-
 SITE_SCM_DIR=$(shell guile -c '(display (%site-dir))')
 SITE_SCM_GO_DIR=$(shell guile -c '(display (%site-ccache-dir))')
+
+# in nyacc/
+NYACC_BASE_BINS =				\
+	nyacc/export.go				\
+	nyacc/import.go				\
+	nyacc/lalr.go				\
+	nyacc/lex.go				\
+	nyacc/parse.go				\
+	nyacc/util.go				\
+	nyacc/lang/util.go
+NYACC_BASE_SRCS = $(patsubst %.go,%.scm,$(NYACC_BASE_BINS))
+
+NYACC_C99_BINS =				\
+	nyacc/lang/c99/cpp.go			\
+	nyacc/lang/c99/cppmach.go		\
+	nyacc/lang/c99/parser.go		\
+	nyacc/lang/c99/xparser.go               \
+	nyacc/lang/c99/mach.go			\
+	nyacc/lang/c99/pprint.go		\
+	nyacc/lang/c99/util1.go			\
+	nyacc/lang/c99/util2.go			
+NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
+	nyacc/lang/c99/body.scm			\
+	nyacc/lang/c99/cppbody.scm		\
+	nyacc/lang/c99/mach.d/c99act.scm	\
+	nyacc/lang/c99/mach.d/c99tab.scm	\
+	nyacc/lang/c99/mach.d/c99xact.scm	\
+	nyacc/lang/c99/mach.d/c99xtab.scm	\
+	nyacc/lang/c99/mach.d/cppact.scm	\
+	nyacc/lang/c99/mach.d/cpptab.scm	
+
+NYACC_BINS = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
+NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
+
+nyacc/lang/c99/mach.d/c99act.scm \
+nyacc/lang/c99/mach.d/c99tab.scm : nyacc/lang/c99/mach.scm
+	 guile -l $< -c \
+		'((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
+
+nyacc/lang/c99/mach.d/c99xact.scm \
+nyacc/lang/c99/mach.d/c99xtab.scm : nyacc/lang/c99/mach.scm
+	guile -l $< -c \
+		'((@ (nyacc lang c99 mach) gen-c99x-files) "nyacc/lang/c99")'
+
+nyacc/lang/c99/mach.d/cppact.scm \
+nyacc/lang/c99/mach.d/cpptab.scm : nyacc/lang/c99/cppmach.scm
+	guile -l $< -c \
+		'((@ (nyacc lang c99 cppmach) gen-cpp-files) "nyacc/lang/c99")'
+
+.scm.go:
+	guild compile $< -o $@
 
 show:
 	@echo SITE_SCM_DIR = $(SITE_SCM_DIR)
 	@echo SITE_SCM_GO_DIR = $(SITE_SCM_GO_DIR)
+	@#echo NYACC_BASE_SRCS = $(NYACC_BASE_SRCS)
+	@echo NYACC_SRCS = $(NYACC_SRCS)
 
 .PHONY: install
-install: $(NYACC_SOURCES)
-	mkdir -p $(SITE_SCM_DIR)
-	mkdir -p $(SITE_SCM_GO_DIR)
-	for file in $(NYACC_SOURCES); do \
-	  mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
-	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
+install: install-srcs
+	@mkdir -p $(SITE_SCM_GO_DIR)
+	@for binfile in $(NYACC_BINS); do \
+	  if test ! -d $(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	    mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	  fi; \
+	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	  GUILE_LOAD_PATH=$(SITE_SCM_DIR) guild compile \
+		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
+	  sleep 1; \
 	done
-	for file in $(NYACC_SOURCES); do \
-	  mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${file}`; \
-	  dest=`echo $${file} | sed -e 's/.scm/.go/'`; \
-	  guild compile -o $(SITE_SCM_GO_DIR)/$${dest} $${file}; \
+
+#	  echo "$${file} => $${dest}"; \
+#
+install-srcs: $(NYACC_SRCS)
+	@mkdir -p $(SITE_SCM_DIR)
+	@echo "installing NYACC sources in $(SITE_SCM_DIR)"
+	@for file in $(NYACC_SRCS); do \
+	  if test ! -d $(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
+	  fi; \
+	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
 	done
 
 

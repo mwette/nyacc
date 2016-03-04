@@ -2,3 +2,4 @@
 ,*
 *.new
 .DS_Store
+*/*.d

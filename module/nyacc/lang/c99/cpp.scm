@@ -50,7 +50,7 @@ todo:
 	  ch)))
 ;; @item cpp-define => #f|???
 (define (cpp-define)
-  ;; The (broken) parse architecture is "unread la argument if no match"
+  ;; The (weak?) parse architecture is "unread la argument if no match"
   (letrec
       ((p-cppd ;; parse all
 	(lambda ()
@@ -117,8 +117,8 @@ todo:
 	   ;;((pragma) (cpp-define)) ; ???
 	   (else '()))))))
     
-(include-from-path "nyacc/lang/c99/cpptab.scm")
-(include-from-path "nyacc/lang/c99/cppact.scm")
+(include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
+(include-from-path "nyacc/lang/c99/mach.d/cppact.scm")
 
 (define raw-parser
   (make-lalr-parser

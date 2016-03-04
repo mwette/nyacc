@@ -63,7 +63,8 @@
 (define lcase "abcdefghijklmnopqrstuvwxyz")
 
 ;; C lexemes are popular so include those.
-(define c:ws (list->char-set '(#\space #\tab #\newline #\return)))
+;;(define c:ws (list->char-set '(#\space #\tab #\newline #\return )))
+(define c:ws char-set:whitespace)
 (define c:if (let ((cs (char-set #\_)))	; ident, first char
 	       (string->char-set! ucase cs)
 	       (string->char-set! lcase cs)))

@@ -1,6 +1,6 @@
-;;; lang/c/mach.scm
+;;; lang/c99/cppmach.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2016 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -18,7 +18,8 @@
 ;; C preprocessor expression parser generator
 
 (define-module (nyacc lang c99 cppmach)
-  #:export (cpp-spec cpp-mach parse-cpp-expr eval-cpp-expr)
+  #:export (cpp-spec cpp-mach dev-parse-cpp-expr eval-cpp-expr
+		     gen-cpp-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -101,65 +102,35 @@
      (expression-list "," conditional-expression ($$ $3)))
     )))
 
-;;; This is copied to cpp.scm
-(define (eval-cpp-expr tree dict)
-  (letrec
-      ((tx (lambda (tr ix) (list-ref tr ix)))
-       (tx1 (lambda (tr) (tx tr 1)))
-       (ev (lambda (ex ix) (eval-expr (list-ref ex ix))))
-       (ev1 (lambda (ex) (ev ex 1)))
-       (ev2 (lambda (ex) (ev ex 2)))
-       (ev3 (lambda (ex) (ev ex 3)))
-       (parse-and-eval
-	(lambda (str)
-	  (if (not (string? str)) (throw 'error))
-	  (let ((idtr (with-input-from-string str parse-cpp-expr)))
-	    (eval-cpp-expr idtr dict))))
-       (eval-expr
-	(lambda (tree)
-	  (case (car tree)
-	    ((ident) (parse-and-eval (assoc-ref dict (tx1 tree))))
-	    ((fixed) (string->number (tx1 tree)))
-	    ((char) (char->integer (tx1 tree)))
-	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
-	    ;;
-	    ((pre-inc post-inc) (1+ (ev1 tree)))
-	    ((pre-dec post-dec) (1- (ev1 tree)))
-	    ((pos) (ev1 tree))
-	    ((neg) (- (ev1 tree)))
-	    ((bw-not) (bitwise-not (ev1 tree)))
-	    ((not) (if (zero? (ev1 tree)) 1 0))
-	    ((mul) (* (ev1 tree) (ev2 tree)))
-	    ((div) (/ (ev1 tree) (ev2 tree)))
-	    ((mod) (modulo (ev1 tree) (ev2 tree)))
-	    ((add) (+ (ev1 tree) (ev2 tree)))
-	    ((sub) (- (ev1 tree) (ev2 tree)))
-	    ((lshift) (bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
-	    ((rshift) (bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
-	    ((lt) (if (< (ev1 tree) (ev2 tree)) 1 0))
-	    ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
-	    ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
-	    ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
-	    ((equal) (if (= (ev1 tree) (ev2 tree)) 1 0))
-	    ((noteq) (if (= (ev1 tree) (ev2 tree)) 0 1))
-	    ((bw-or) (bitwise-ior (ev1 tree) (ev2 tree)))
-	    ((bw-xor) (bitwise-xor (ev1 tree) (ev2 tree)))
-	    ((bw-and) (bitwise-and (ev1 tree) (ev2 tree)))
-	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    (else (error "incomplete implementation"))))))
-    (catch 'error
-	   (lambda () (eval-expr tree))
-	   (lambda () #f))))
+(include-from-path "nyacc/lang/c99/cppbody.scm")
 
 (define cpp-mach
   (compact-machine
    (hashify-machine
     (make-lalr-machine cpp-spec))))
+
 (define mtab (assq-ref cpp-mach 'mtab))
 (define raw-parser (make-lalr-parser cpp-mach))
 (define gen-cpp-lexer (make-lexer-generator mtab))
-(define (parse-cpp-expr) (raw-parser (gen-cpp-lexer)))
+(define (dev-parse-cpp-expr) (raw-parser (gen-cpp-lexer)))
+
+;;; =====================================
+
+(define (gen-cpp-files . rest)
+  (define (lang-dir path)
+    (if (pair? rest) (string-append (car rest) "/" path) path))
+  (define (xtra-dir path)
+    (lang-dir (string-append "mach.d/" path)))
+
+  (write-lalr-actions cpp-mach (xtra-dir "cppact.scm.new"))
+  (write-lalr-tables cpp-mach (xtra-dir "cpptab.scm.new"))
+  (let ((a (move-if-changed (xtra-dir "cppact.scm.new")
+			    (xtra-dir "cppact.scm")))
+	(b (move-if-changed (xtra-dir "cpptab.scm.new")
+			    (xtra-dir "cpptab.scm"))))
+    (when (or a b) 
+      (system (string-append "touch " (lang-dir "cpp.scm")))
+      #;(compile-file (lang-dir "cpp.scm"))
+      )))
 
 ;; --- last line ---

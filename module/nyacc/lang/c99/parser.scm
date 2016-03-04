@@ -27,9 +27,9 @@
   #:use-module ((sxml xpath) #:select (sxpath))
   )
 
-(include-from-path "nyacc/lang/c99/tables.scm")
-(include-from-path "nyacc/lang/c99/pbody.scm")
-(include-from-path "nyacc/lang/c99/actions.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
+(include-from-path "nyacc/lang/c99/body.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99act.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser

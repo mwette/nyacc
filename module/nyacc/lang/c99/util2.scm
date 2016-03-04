@@ -68,7 +68,7 @@
 ;; @item declr->ident declr => (ident "name")
 ;; just match the declarator
 ;; (init-declr <declr> [<initzer>])
-;; See also: declr->id-name in pbody.scm.
+;; See also: declr->id-name in body.scm.
 (define (declr->ident declr)
   (sxml-match declr
     ((init-declr ,declr . ,rest)

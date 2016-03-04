@@ -23,7 +23,7 @@
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
-(define lang-crn-lic "Copyright (C) 2015 Matthew R. Wette
+(define lang-crn-lic "Copyright (C) 2015,2016 Matthew R. Wette
 
 This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 or any later version published by the Free Software Foundation.  See the
@@ -266,38 +266,37 @@ file COPYING included with the this distribution.")
        (else (error "pp-formatter: bad args"))
        ))))
 
-;; @item move-if-changed new-file old-file [sav-file]
+;; @item move-if-changed src-file dst-file [sav-file]
 ;; Return @code{#t} if changed.
-(define (move-if-changed new-file old-file . rest)
+(define (move-if-changed src-file dst-file . rest)
 
   (define (doit)
     (let ((sav-file (if (pair? rest) (car rest) #f)))
       (if (and sav-file (access? sav-file W_OK))
-	  (system (simple-format #f "mv ~A ~A" old-file sav-file)))
-      (system (simple-format #f "mv ~A ~A" new-file old-file))
+	  (system (simple-format #f "mv ~A ~A" dst-file sav-file)))
+      (system (simple-format #f "mv ~A ~A" src-file dst-file))
       #t))
     
   (cond
-   ;; new-file does not exist
-   ((not (access? new-file R_OK)) #f)
+   ;; src-file does not exist
+   ((not (access? src-file R_OK)) #f)
 
-   ;; old-file does not exit, update anyhow
-   ((and (not (access? old-file F_OK)) (access? old-file W_OK))
-    (system (simple-format #f "mv ~A ~A" new-file old-file))
-    #t)
+   ;; dst-file does not exist, update anyhow
+   ((not (access? dst-file F_OK))
+    (system (simple-format #f "mv ~A ~A" src-file dst-file)) #t)
 
    ;; both exist, but no changes
    ((zero? (system
-	    (simple-format #f "cmp ~A ~A >/dev/null" new-file old-file)))
-    (system (simple-format #f "rm ~A" new-file))
-    #f)
+	    (simple-format #f "cmp ~A ~A >/dev/null" src-file dst-file)))
+    (system (simple-format #f "rm ~A" src-file)) #f)
 
    ;; both exist, update
-   ((access? old-file W_OK)
+   ((access? dst-file W_OK)
     (doit))
    
    (else
-    (simple-format (current-error-port) "move-if-changed: no write access\n"))))
+    (simple-format (current-error-port) "move-if-changed: no write access\n")
+    #f)))
 
 ;; @end table
 
