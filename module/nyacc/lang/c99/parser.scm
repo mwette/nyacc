@@ -18,7 +18,7 @@
 ;; C parser
 
 (define-module (nyacc lang c99 parser)
-  #:export (parse-c)
+  #:export (parse-c parse-c99)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
@@ -62,5 +62,7 @@
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
+
+(define parse-c99 parse-c)
 
 ;; --- last line ---

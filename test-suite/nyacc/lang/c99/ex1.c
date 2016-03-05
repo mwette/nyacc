@@ -4,6 +4,16 @@ extern "C" {
 #endif
 #include "inc.h"
 
+#define A 1
+
+#ifdef A
+int y;
+#elif defined(B)
+double y;
+#else
+#error "foo"
+#endif
+
 eval_t x;
 struct foo;
 
@@ -15,13 +25,20 @@ float f = 0.0;
 typedef struct {
   /* hello */
   eval_t x; /* comment */
-  int x;
+  int y;
 } xyz_t;
 
 int foo(int y) {
   double d;
 
-  d = 0.0;
+  if (y > 0) {
+    d = +1.0;
+  } else if (y == 0) {
+    d = 0.0;
+  } else {
+    d = -1.0;
+  }
+  return 1;
 }
 
 /* this is lone comment */

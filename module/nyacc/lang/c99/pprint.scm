@@ -66,13 +66,8 @@
     (let* ((fmtr (make-pp-formatter)) ;; formatter needs to use \\
 	   (sf (lambda args (apply fmtr args))))
       (lambda (tree)
-	(case (car tree)
-	  ;; statements
-	  ((if) (sf "#if ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
-	  ((else) (sf "#else\n"))
-	  ((endif) (sf "#endif\n"))
-	  ((include) (sf "#include ~A\n" (sx-ref tree 1)))
-	  ((define)
+	(sxml-match tree
+	  ((define . ,rest)
 	   (sf "#define ~A" (sx-ref (sx-ref tree 1) 1))
 	   (and=> (assq-ref tree 'args)
 		  (lambda (args)
@@ -84,10 +79,25 @@
 		     args)
 		    (sf ")")))
 	   (sf " ~A\n" (sx-ref (assq 'repl (cdr tree)) 1)))
-		     
+	  ;; Output #ifdef and #ifndef when possible.
+	  ((if (defined ,text)) (guard (string? text))
+	   (sf "#ifdef ~A\n" text))
+	  ((if (not (defined ,text))) (guard (string? text))
+	   (sf "#ifndef ~A\n" text))
+	  ;; #if with expression:
+	  ((if . ,rest) (sf "#if ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
+	  ;; easy statements
+	  ((elif . ,rest) (sf "#elif ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
+	  ((else . ,rest) (sf "#else\n"))
+	  ((endif . ,rest) (sf "#endif\n"))
+	  ((include . ,rest) (sf "#include ~A\n" (sx-ref tree 1)))
+	  ((error . ,rest) (sf "#error ~A\n" (sx-ref tree 1)))
+
 	  ;; expressions ..
-	  ((defined)
+	  ((defined . ,rest)
 	   (sf "defined(~A)" (sx-ref tree 1)))
+	  (,otherwise
+	   (simple-format (current-error-port) "NO MATCH: ~S\n" tree))
 	  ))
       ))
 	   
@@ -257,7 +267,7 @@
 		  (else (error "pprint: fixup struct-def"))))
 	      flds)
 	     (pop-il)
-	     (sf "} ")))
+	     (sf "}")))
 
 	  ((comp-decl)
 	   (let ((specs (sx-ref tree 1))
@@ -314,6 +324,10 @@
 	  ((expr) (sf ""))		; for lone expr-stmt and return-stmt
 
 	  ;; selection-statement
+	  ((if)
+	   (sf "if (") (ppx (sx-ref tree 1)) (sf ") ") (ppx (sx-ref tree 2))
+	   (sf "\nNOT DONE: if\n")
+	   #t)
 
 	  ;; iteration-statement
 
@@ -326,12 +340,25 @@
 	   (sf "\n")
 	   (push-il))
 
+	  ((continue) (sf "continue;\n"))
+	  ((break) (sf "break;\n"))
+
+	  ;; (return (expr)) or (return ...)
+	  ((return)
+	   (cond
+	    ((null? (cdr (sx-ref tree 1))) (sf "return;\n")) ; fix cdr
+	    (else (sf "return ") (ppx (sx-ref tree 1)) (sf ";\n"))))
+
 	  ((trans-unit)
 	   (pair-for-each
 	    (lambda (pair)
 	      (ppx (car pair))
-	      (if (eqv? (sx-tag (car pair)) 'fctn-defn)
-		  (sf "\n")))
+	      (cond
+	       ;; If followed by a function definition output a line.
+	       ((null? (cdr pair)) #t)
+	       ((eqv? (sx-tag (cadr pair)) 'fctn-defn) (sf "\n"))
+	       )
+	      )
 	    (sx-tail tree 1)))
 
 	  ((fctn-defn) ;; but not yet (knr-fctn-defn)
@@ -358,7 +385,7 @@
 	      (if (pair? (cdr pair)) (sf ", ")))
 	    (sx-tail tree 1)))
 
-	  ((param-decln)
+	  ((param-decl)
 	   (let ((specs (sx-ref tree 1))
 		 (declr (assq 'param-declr (cdr tree))))
 	     (ppx specs)
@@ -372,7 +399,7 @@
 	  ((extern-C-end) (sf "}\n"))
 
 	  (else
-	   (simple-format #t "\nnot handled: ~S\n" (car tree))
+	   (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree))
 	   #f)))))
 
   (ppx tree))

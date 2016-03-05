@@ -573,7 +573,7 @@
      ("if" "(" expression ")" statement ($prec "then")
       ($$ `(if ,$3 ,$5)))
      ("if" "(" expression ")" statement "else" statement
-      ($$ `(if ,$3 ,$5 ,7)))
+      ($$ `(if ,$3 ,$5 ,$7)))
      ("switch" "(" expression ")" statement ($$ `(switch (TBD))))
      )
 

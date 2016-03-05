@@ -9,46 +9,51 @@
 
 (use-modules (nyacc lang c99 mach))
 (use-modules (nyacc lang c99 pprint))	; pretty-print-c99
+(use-modules (nyacc lang c99 util1))	; remove-inc-trees
 (use-modules (nyacc lang util))		; move-if-changed
 (use-modules (nyacc lalr))
 (use-modules (nyacc util))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-(define defs '(("arch" . "x86_64")))
-(define incs '("."))
-
-(when #t
-  (gen-c99-files "../../../../module/nyacc/lang/c99")
-  (system "touch ../../../../module/nyacc/lang/c99/parser.scm"))
+(when #f
+  (with-output-to-file "lang.txt"
+    (lambda ()
+      (pp-lalr-notice c99-spec)
+      (pp-lalr-grammar c99-spec)
+      (pp-lalr-machine c99-mach))))
 
 ;; test parser
-(when #t
-  (let ((sx (with-input-from-file "ex1.c"
-	      (lambda ()
-		(dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #f)))))
+(when #f
+  (let* ((defs '(("arch" . "x86_64"))) 
+	 (incs  '("."))
+	 (sx (with-input-from-file "ex1.c"
+	       (lambda ()
+	 	 (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #f))))
+	 (sx (remove-inc-trees sx))
+         )
     (pretty-print sx)
     (simple-format #t "===>")
     (pretty-print-c99 sx)
     #t))
 
-#;(define (module-path filename)
-  (string-append "../../../../module/nyacc/lang/c99/" filename))
-
-(when #t
-  (with-output-to-file "lang.txt.new"
-    (lambda ()
-      (let* ((notice (assq-ref (assq-ref c99-spec 'attr) 'notice))
-	     (lines (if notice (string-split notice #\newline) '())))
-	(for-each (lambda (l) (simple-format #t "  ~A\n" l)) lines)
-	(newline))
-      (pp-lalr-grammar c99-spec)
-      (pp-lalr-machine c99-mach)))
-  (move-if-changed "lang.txt.new" "lang.txt"))
-
-(when #t
+(when #f
   (with-output-to-file "gram.y.new"
     (lambda () (lalr->bison c99-spec)))
   (move-if-changed "gram.y.new" "gram.y"))
+
+(when #t
+  (gen-c99-files "../../../../module/nyacc/lang/c99")
+  (system "touch ../../../../module/nyacc/lang/c99/parser.scm"))
+
+;; test pp
+(when #t
+  (use-modules (nyacc lang c99 parser))
+  (let* ((sx (with-input-from-file "ex1.c" parse-c99))
+	 (sx (remove-inc-trees sx)))
+    (pretty-print sx)
+    (simple-format #t "===>")
+    (pretty-print-c99 sx)
+    #t))
 
 ;; --- last line ---

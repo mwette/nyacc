@@ -102,21 +102,25 @@ todo:
   (with-input-from-string line
     (lambda ()
       (let ((cmd (string->symbol (read-c-ident (skip-ws (read-char)))))
-	    (rd-ident (lambda () (read-c-ident (skip-ws (read-char)))))
-	    (rd-num (lambda () (read-c-num (skip-ws (read-char)))))
-	    (rd-str (lambda () (read-c-string (skip-ws (read-char))))))
+	    (rd-ident
+	     #;(lambda () (or (and=> (read-c-ident (skip-ws (read-char))) cdr)
+	     (throw 'parse-error)))
+	     (lambda () (read-c-ident (skip-ws (read-char))))
+	     )
+	    (rd-num
+	     (lambda () (or (and=> (read-c-num (skip-ws (read-char))) cdr)
+			    (throw 'parse-error))))
+	    )
 	 (case cmd
 	   ((include) (cpp-include))
 	   ((ifdef) `(if (defined ,(rd-ident))))
 	   ((ifndef) `(if (not (defined ,(rd-ident)))))
-	   ;;((ifdef) `(ifdef ,(rd-ident)))
-	   ;;((ifndef) `(ifndef ,(rd-ident)))
 	   ((define) (cpp-define))
 	   ((if elif) (list cmd (parse-cpp-expr)))
 	   ((else endif) (list cmd))
 	   ((undef) `(undef ,(rd-ident)))
 	   ((line) `(line ,(rd-num)))
-	   ((error) `(error ,(rd-str)))
+	   ((error) (read-char) `(error ,(drain-input (current-input-port))))
 	   ;;((pragma) (cpp-define)) ; ???
 	   (else '()))))))
     

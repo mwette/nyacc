@@ -327,6 +327,8 @@
 		 (cpi-pop)
 		 (if (eq? mode 'code)
 		     (set! skip (cons 'skip-1 (cdr skip)))))
+		((error)
+		 stmt)
 		(else
 		 (error "unhandled cpp stmt")))
 	      (cons 'cpp-stmt stmt)))

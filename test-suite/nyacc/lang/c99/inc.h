@@ -11,10 +11,10 @@ typedef enum { EC_ZERO = 0, EC_ONE, EC_TWO = 2 } eval_t;
 #endif
 
 typedef enum {
- EC_ZERO = 0,  /* comment */
- EC_ONE, 
- EC_TWO = 2 
-} zzz_t;
+ ZZ_ZERO = 0,  /* comment */
+ ZZ_ONE, 
+ ZZ_TWO = 2 
+} zz_t;
 
 typedef struct {
   int ix;           /* comment for ix */

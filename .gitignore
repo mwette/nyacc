@@ -2,3 +2,5 @@
 ,*
 *.new
 .DS_Store
+lang.txt
+gram.y
