@@ -1,0 +1,75 @@
+for lnk in obj -> "*" do {
+
+=========
+    notes:  see the dxl manual, Introduction -> Language Fundamentals
+
+    lexical
+       ::* => ('$ident "*")
+       "\n" is terminator, except when following binary operator
+       comment w/ no text, or ending in dash (e.g., "//foo-") is ignored "\n"
+       "\n" followed by ws then "else" is ignored
+
+    type string | string type => string 
+    e.g.: "this is" true => "this is true"
+
+    The following script declares a function max, which takes two type int 
+    arguments:
+      int max(int a, b) {
+        if a < b then return b else return a
+      }     
+      print max(2, 3)
+    The call of max is parsed as print(max(2,3)), which is valid. The statement:
+      print max 2,3
+    would generate errors. Because the comma has a lower precedence than
+    concatenation, it is parsed as: ((print max(2)),3)
+    
+    todo: figure out comma operator
+
+    I removed sizeof, but it is in the language
+
+    in function definition param lists, types carry
+    function foo(int a, b) { ... }
+
+    builtins:
+    print e.g., print("hello"),  print 'a', print "hello"
+    <type> null() => null-type
+      int null() => 0
+      bool null() => false
+      ...
+    null(val) => true|false
+    isalpha(), ...
+
+    charOf(ascii_code)
+    intOf(char)
+
+    bool can be true, false, off, on
+    dev_off = const bool off
+
+    boolean operators: && || !
+    
+    char operators: < <= != > >= ==
+
+    string text = abc
+    print text[2] => 'c'
+
+    Stream &cin 
+
+    file >> c (char, string, int , ...)
+    file -> b (a Buffer)  or, equivalently, file >= b (a Buffer)
+
+    Dates
+
+    instead of typename, lexer will need to track function names to
+    distinguish from string names.  probably track both!
+    x = foo "hello"  (big diff if foo is string or function)
+
+    for x in confDir(..) do { ... }
+    if expression  opt-term
+       statement
+    if expression {
+       statement
+    }
+
+    range operator: 1:20  | 1:20 by 2
+
+    Rexexp rx = regexp2 ".*"

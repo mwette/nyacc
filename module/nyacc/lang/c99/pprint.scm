@@ -126,14 +126,6 @@
 	  ((array-ref)
 	   (ppx (sx-ref tree 2)) (sf "[") (ppx (sx-ref tree 1)) (sf "]"))
 
-	  ((de-ref ref-to)
-	   (let ((op (sx-ref tree 0))
-		 (ex (sx-ref tree 1)))
-	     (sf (case op ((de-ref) "*") ((ref-to) "&")))
-	     (if (protect-expr? 'lt op ex)
-		 (ppx/p ex)
-		 (ppx ex))))
-
 	  ((d-sel i-sel)
 	   (let ((op (sx-ref tree 0))
 		 (id (sx-ref tree 1))
@@ -143,6 +135,55 @@
 		 (ppx ex))
 	     (sf (case op ((d-sel) ".") ((i-sel) "->")))
 	     (ppx id)))
+
+	  #;((de-ref ref-to)
+	   (let ((op (sx-ref tree 0))
+		 (ex (sx-ref tree 1)))
+	     (sf (case op ((de-ref) "*") ((ref-to) "&")))
+	     (if (protect-expr? 'lt op ex)
+		 (ppx/p ex)
+		 (ppx ex))))
+
+	  ((pre-inc)
+	   (sf "++")
+	   (if (protect-expr? 'rt 'pre-inc (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))))
+	  ((pre-dec)
+	   (sf "--")
+	   (if (protect-expr? 'rt 'pre-dec (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))))
+	  ((ref-to)
+	   (sf "&")
+	   (if (protect-expr? 'rt 'ref-to (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))))
+	  ((de-ref)
+	   (sf "*")
+	   (if (protect-expr? 'rt 'de-ref (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))))
+	  ((pos) 
+	   (sf "+")
+	   (if (protect-expr? 'rt 'pos (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))))
+	  ((neg)
+	   (sf "-")
+	   (if (protect-expr? 'rt 'neg (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))))
+	  ((bitwise-not)
+	   (sf "~")
+	   (if (protect-expr? 'rt 'bitwise-not (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))))
+	  ((not)
+	   (sf "!")
+	   (if (protect-expr? 'rt 'not (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))
+	       (ppx/p (sx-ref tree 1))))
 
 	  ((cast)
 	   (let ((tn (sx-ref tree 1)) (ex (sx-ref tree 2)))
@@ -223,7 +264,7 @@
 
 	  ((init-declr comp-declr param-declr)
 	   (let* ((declr (sx-ref tree 1))
-		  (initr (sx-fref tree 2))
+		  (initr (sx-ref tree 2))
 		  (iexpr (and initr (sx-ref initr 1))))
 	     (ppx declr)
 	     (when initr
@@ -325,11 +366,27 @@
 
 	  ;; selection-statement
 	  ((if)
-	   (sf "if (") (ppx (sx-ref tree 1)) (sf ") ") (ppx (sx-ref tree 2))
-	   (sf "\nNOT DONE: if\n")
-	   #t)
+	   (let ((cond-part (sx-ref tree 1))
+		 (then-part (sx-ref tree 2)))
+	     (sf "if (") (ppx cond-part) (sf ") ")
+	     (ppx then-part)
+	     (let iter ((else-l (sx-tail tree 3)))
+	       (cond
+		((null? else-l) #t)
+		((eqv? 'else-if (caar else-l))
+		 (sf "else if (") (ppx (sx-ref (car else-l) 1)) (sf ") ")
+		 (ppx (sx-ref (car else-l) 2))
+		 (iter (cdr else-l)))
+		(else
+		 (sf "else ")
+		 (ppx (car else-l)))))))
+
+	  ;;((switch (expr) (stmt))
 
 	  ;; iteration-statement
+	  ;; while
+	  ;; do
+	  ;; for
 
 	  ;; jump-statement
 	  ((goto)

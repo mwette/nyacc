@@ -1,0 +1,6 @@
+// from the manual
+Link l
+for l in (current Object) -> "*" do {
+  string user = l."Created by"
+  print user "\n"
+}

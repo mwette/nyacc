@@ -22,6 +22,7 @@
 (when #t
   (with-output-to-file "lang.txt"
     (lambda ()
+      (pp-lalr-notice matlab-spec)
       (pp-lalr-grammar matlab-spec)
       (pp-lalr-machine matlab-mach))))
 
@@ -30,7 +31,7 @@
     (lambda () (lalr->bison matlab-spec))))
 
 (when #t
-  (let ((res (with-input-from-file "ex1.m"
+  (let ((res (with-input-from-file "ex.d/ex1.m"
 	       (lambda () (dev-parse-ml #:debug #f)))))
     (pretty-print res)
     #t))

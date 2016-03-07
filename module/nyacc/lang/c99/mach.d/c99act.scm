@@ -658,7 +658,8 @@
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$3 ,$5 ,$7))
    ;; selection-statement => "switch" "(" expression ")" statement
-   (lambda ($5 $4 $3 $2 $1 . $rest) `(switch (TBD)))
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(switch ,$3 ,$5))
    ;; iteration-statement => "while" "(" expression ")" statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$3 ,$5))

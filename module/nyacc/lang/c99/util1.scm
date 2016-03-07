@@ -18,10 +18,12 @@
 ;; C parser utilities
 
 (define-module (nyacc lang c99 util1)
-  #:export (remove-inc-trees merge-inc-trees!)
+  #:export (remove-inc-trees merge-inc-trees! elifify)
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
   #:use-module (srfi srfi-2) ;; and-let*
+  #:use-module (sxml fold)
+  #:use-module (sxml match)
 )
 
 ;; @item remove-inc-trees tree
@@ -104,5 +106,30 @@
   (find-span tree)
   tree)
 
+
+;; @deffn elifify tree => tree
+;; This procedure will find patterns of
+;; @example
+;; (if cond-1 then-part-1
+;;            (if cond-2 then-part-2
+;;                       else-part-2
+;; @end example
+;; @noindent
+;; and convert to
+;; @example
+;; (if cond-1 then-part-1
+;;            (elif cond-2 then-part-2)
+;;            else-part-2
+;; @end example
+(define (elifify tree)
+  (define (fU tree)
+    (sxml-match tree
+      ((if ,x1 ,t1 (if ,x2 ,t2 (else-if ,x3 ,t3) . ,rest))
+       `(if ,x1 ,t1 (else-if ,x2 ,t2) (else-if ,x3 ,t3) . ,rest))
+      ((if ,x1 ,t1 (if ,x2 ,t2 . ,rest))
+       `(if ,x1 ,t1 (else-if ,x2 ,t2) . ,rest))
+      (,otherwise
+       tree)))
+  (foldt fU identity tree))
        
 ;; --- last line ---

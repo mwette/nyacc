@@ -42,7 +42,7 @@
     (lambda () (lalr->bison c99-spec)))
   (move-if-changed "gram.y.new" "gram.y"))
 
-(when #t
+(when #f
   (gen-c99-files "../../../../module/nyacc/lang/c99")
   (system "touch ../../../../module/nyacc/lang/c99/parser.scm"))
 
@@ -50,9 +50,12 @@
 (when #t
   (use-modules (nyacc lang c99 parser))
   (let* ((sx (with-input-from-file "ex1.c" parse-c99))
-	 (sx (remove-inc-trees sx)))
+	 (sx (remove-inc-trees sx))
+	 (sx1 (elifify sx))
+	 )
     (pretty-print sx)
     (simple-format #t "===>")
+    ;;(pretty-print sx1)
     (pretty-print-c99 sx)
     #t))
 

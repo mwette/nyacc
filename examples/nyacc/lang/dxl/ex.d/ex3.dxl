@@ -1,0 +1,22 @@
+Regexp a = regexp(" shall ")
+/*
+Regexp a = regexp " shall " 
+int foo(int x, int y) {
+  if (x > y) {
+    return 5*x + 2*(y + 1);
+  } else if (y == 2) {
+    return x/(y*2);
+  } else {
+    return 0;
+  }
+}
+*/
+string bar(Object obj) {
+    for lnk in obj -> "*" do {
+      str = target lnk
+      if (str == "VAM") { str = "VnV/VAM" }
+      //if (!open module str) read(str, false)
+      //obj1 = target lnk
+      //sout << " " identifier(obj1) "\n"
+    }
+}

@@ -12,7 +12,7 @@
   #:export (lang-crn-lic
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
-	    sx-tag sx-attr sx-ref sx-fref sx-tail sx-find
+	    sx-tag sx-attr sx-ref sx-tail sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter
 	    ;; for ???
@@ -109,30 +109,19 @@ file COPYING included with the this distribution.")
 
 ;; @item sx-ref sx ix => item
 ;; Reference the @code{ix}-th element of the list, not counting the optional
-;; attributes item.
+;; attributes item.  If the list is shorter than the index, return @code{#f}.
 ;; @example
 ;; (sx-ref '(abc "def") 1) => "def"
 ;; (sx-ref '(abc (@ (foo "1")) "def") 1) => "def"
 ;; @end example
 (define (sx-ref sx ix)
+  (define (list-xref l x) (if (> (length l) x) (list-ref l x) #f))
   (cond
    ((zero? ix) (car sx))
    ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
-    (list-ref sx (1+ ix)))
+    (list-xref sx (1+ ix)))
    (else
-    (list-ref sx ix))))
-
-;; @item sx-fref sx ix
-;; Like @code{sx-ref} but return #f if @code{ix} is off the end.
-(define (sx-fref sx ix)
-  (define (my-list-ref l i)
-    (if (< i (length l)) (list-ref l i) #f))
-  (cond
-   ((zero? ix) (car sx))
-   ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
-    (my-list-ref sx (1+ ix)))
-   (else
-    (my-list-ref sx ix))))
+    (list-xref sx ix))))
 
 ;; @item sx-tag sx => tag
 ;; Return the tag for a tree

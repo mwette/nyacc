@@ -22,6 +22,10 @@
 
 ;; todo: change lexer to return @code{cons-source} instead of @code{cons}
 
+;; todo: figure out what readers return atoms and which pairs
+;; tokens: read-c-ident (methinks)
+;; pairs: num-reader read-c-num read-c-string
+
 (define-module (nyacc lex)
   #:export (make-lexer-generator
 	    make-ident-reader
@@ -183,9 +187,9 @@
 	  (iter (+ (* 16 cv) (- (char->integer ch) 87)) (read-char) (1+ n)))
 	 (else (unread-char ch) cv))))))
 	
-;; @item read-c-string dquote-char => c-string
+;; @deffn read-c-string ch => ($string . "foo")
 ;; Read a C-code string.  Output to code is @code{write} not @code{display}.
-;; Return #f if char is not @code{"}.
+;; Return #f if @var{ch} is not @code{"}.
 (define (read-c-string ch)
   (if (not (eq? ch #\")) #f
       (let iter ((cl '()) (ch (read-char)))
@@ -241,7 +245,7 @@
 		      (else (error "bad escape sequence")))))
 	    (cons '$chlit (string c1))))))
 
-;; @item make-num-reader => (proc ch) => #f|'($fixed "1")|'($float "1.0")
+;; @item make-num-reader => (proc ch) => #f|($fixed . "1")|($float . "1.0")
 ;; This routine will clean by adding "0" before or after dot.
 ;; TODO: add arg to specify alternate syntaxes (e.g. "0x123")
 ;; may want to replace "eEdD" w/ "e"

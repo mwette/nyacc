@@ -574,7 +574,7 @@
       ($$ `(if ,$3 ,$5)))
      ("if" "(" expression ")" statement "else" statement
       ($$ `(if ,$3 ,$5 ,$7)))
-     ("switch" "(" expression ")" statement ($$ `(switch (TBD))))
+     ("switch" "(" expression ")" statement ($$ `(switch ,$3 ,$5)))
      )
 
     (iteration-statement

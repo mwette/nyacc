@@ -365,7 +365,7 @@
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
 
-;; === table file generator
+;; === automaton file generator
 
 (define (gen-matlab-files . rest)
   (define (lang-dir path)
