@@ -18,7 +18,8 @@
 ;; C parser generator: based on ISO-C99; with comments and CPP statements
 
 (define-module (nyacc lang c99 mach)
-  #:export (c99-spec c99-mach dev-parse-c gen-c99-files gen-c99x-files)
+  #:export (c99-spec c99-mach dev-parse-c dev-parse-c99
+	    gen-c99-files gen-c99x-files)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
@@ -685,7 +686,7 @@
   (let ((info (fluid-ref *info*)))
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
-(define* (dev-parse-c
+(define* (dev-parse-c99
 	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
   (catch
    'parse-error
@@ -697,6 +698,8 @@
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
+
+(define dev-parse-c dev-parse-c99)
 
 ;;; =====================================
 

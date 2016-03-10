@@ -159,13 +159,16 @@ file COPYING included with the this distribution.")
 	sx))
 
 
-;; @item make-protect-expr op-prec op-assc => protect-expr?
-;; Generate @code{protect-expr} for pretty-printers.
-;; @code{(protect-expr? side op expr)}
-;; where @code{side} is @code{'lval} or @code{'rval}, @code{op} is the
-;; operator and @code{expr} is the expression.
+;; @deffn make-protect-expr op-prec op-assc => side op expr => #t|#f
+;; Generate procedure @code{protect-expr} for pretty-printers, which takes
+;; the form @code{(protect-expr? side op expr)} and where @code{side}
+;; is @code{'lval} or @code{'rval}, @code{op} is the operator and @code{expr}
+;; is the expression.  The argument @arg{op-prec} is a list of equivalent
+;; operators in order of decreasing precedence and @arg{op-assc} is an
+;; a-list of precedence with keys @code{'left}, @code{'right} and
+;; @code{nonassoc}.
 ;; @example
-;; (protect-expr? 'left '+ '(mul ...)) => TBD
+;; (protect-expr? 'lval '+ '(mul ...)) => TBD
 ;; @end example
 (define (make-protect-expr op-prec op-assc)
 
@@ -198,11 +201,11 @@ file COPYING included with the this distribution.")
 		   ((lt left) assc-rt?)
 		   ((rt right) assc-lt?)))
 	  (vtag (car expr)))
-    (case (prec op vtag)
-      ((>) #t)
-      ((<) #f)
-      ((=) (assc? op))
-      (else #f)))))
+      (case (prec op vtag)
+	((>) #t)
+	((<) #f)
+	((=) (assc? op))
+	(else #f)))))
 
 ;; @make-pp-formatter => fmtr
 ;; @example

@@ -25,6 +25,11 @@
 ;; todo: figure out what readers return atoms and which pairs
 ;; tokens: read-c-ident (methinks)
 ;; pairs: num-reader read-c-num read-c-string
+;; issue: if returning pairs we need this for hashed parsers:
+;;    (define (assc-$ pair) (cons (assq-ref symbols (car pair)) (cdr pair)))
+;; change read-comm to read-lone-comm and read-code-comm ???
+;; or (read-comm ch 'lone) (read-comm ch 'code)
+
 
 (define-module (nyacc lex)
   #:export (make-lexer-generator
@@ -156,6 +161,8 @@
 		(else (iter (cons ch cl) (read-char)))))
 	#f)))
 
+;; @deffn read-oct ch => "0123"|#f
+;; Read octal number.
 (define read-oct
   (let ((cs:oct (string->char-set "01234567")))
     (lambda (ch)
@@ -169,6 +176,8 @@
 	  (unread-char ch)
 	  cv))))))
 
+;; @deffn read-hex ch => "0x7f"|#f
+;; Read octal number.
 (define read-hex
   (let ((cs:dig (string->char-set "0123456789"))
 	(cs:uhx (string->char-set "ABCDEF"))
@@ -366,7 +375,8 @@
 	      (pushback (cdr cl))))
 	  #f))))))
 
-;; @item make-comm-reader comm-table [#:eat-newline #t] => lambda
+;; @item make-comm-reader comm-table [#:eat-newline #t] => \
+;;   ch bol -> ('$code-comm "..")|('$lone-comm "..")|#f
 ;; comm-table is list of cons for (start . end) comment
 ;; e.g. ("--" "\n") ("/*" "*/")
 ;; test with "/* hello **/"
@@ -374,9 +384,10 @@
 ;; ending with a newline a newline swallowed with the comment.
 (define* (make-comm-reader comm-table #:key eat-newline)
   (let ((tree (make-tree comm-table)))
-    (lambda (ch)
+    (lambda (ch bol)
       (letrec
-	  ((match-beg ;; match start of comment, return end-string
+	  ((tval (if bol '$lone-comm '$code-comm))
+	   (match-beg ;; match start of comment, return end-string
 	    (lambda (cl node)
 	      (cond
 	       ((assq-ref node (car cl)) => ;; shift next character
@@ -397,10 +408,9 @@
 	       ((eq? px (string-length ps))
 		(if (and (not eat-newline) (eq? #\newline (car sl)))
 		    (unread-char #\newline))
-		;;(cons '$comment (list->string (reverse cl))))
 		(if (eqv? (car cl) #\cr) ;; remove trailing \r 
-		    (cons '$comment (list->string (reverse (cdr cl))))
-		    (cons '$comment (list->string (reverse cl)))))
+		    (cons tval (list->string (reverse (cdr cl))))
+		    (cons tval (list->string (reverse cl)))))
 	       ((null? il) (find-end cl sl (cons (read-char) il) ps px))
 	       ((eof-object? (car il)) (error "open comment"))
 	       ((eq? (car il) (string-ref ps px))
@@ -454,7 +464,7 @@
 	 (read-num (or num-reader (make-num-reader)))
 	 (read-string (or string-reader (make-string-reader #\")))
 	 (read-chlit (or chlit-reader (lambda (ch) #f)))
-	 (read-comm (or comm-reader (lambda (ch) #f)))
+	 (read-comm (or comm-reader (lambda (ch bol) #f)))
 	 (skip-comm (or comm-skipper (lambda (ch) #f)))
 	 (spaces (or space-chars " \t\r\n"))
 	 (space-cs (cond ((string? spaces) (string->char-set spaces))
@@ -483,11 +493,8 @@
 	     ;;((eq? ch #\newline) (set! bol #t) (iter (read-char)))
 	     ((char-set-contains? space-cs ch) (iter (read-char)))
 	     ((and (eqv? ch #\newline) (set! bol #t) #f))
-	     ((read-comm ch) =>
-	      (lambda (p)
-		(let ((was-bol bol))
-		  (set! bol #f)
-		  (cons (if was-bol '$lone-comm '$code-comm) (cdr p)))))
+	     ((read-comm ch bol) =>
+	      (lambda (p) (set! bol #f) (assc-$ p)))
 	     ((skip-comm ch) (iter (read-char)))
 	     ((read-ident ch) =>
 	      (lambda (s) (or (and=> (assq-ref keytab (string->symbol s))

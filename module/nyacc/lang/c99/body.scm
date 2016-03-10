@@ -271,15 +271,12 @@
 		   (if tynd
 		       (for-each add-typename tynd)
 		       (let* ((pth (find-file-in-dirl file (cpi-incs info)))
-			      (tree (cond
-				     ;;was: ignore <file.h>
-				     ;;((eq? #\< (string-ref parg 0)) '())
-				     (pth (or
-					   (with-input-from-file pth run-parse)
-					   (throw 'parse-error "~A" pth)))
-				     (else (perr file)))))
+			      (tree (if pth ; path exists
+					(or (with-input-from-file pth run-parse)
+					    (throw 'parse-error "~A" pth))
+					(perr file))))
 			 (for-each add-define (xp1 tree)) ; add def's 
-			 ;; Attach tree onto "include" statement (hack?)
+			 ;; Attach tree onto "include" statement.  Hack?
 			 (if (pair? tree) (set! stmt (append stmt (list tree))))
 			 ))))
 		((define)
@@ -292,27 +289,29 @@
 		 (cpi-push)
 		 (if (eq? mode 'code)
 		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
-		       (cond ((not val)
-			      (throw 'parse-error "unresolved: ~S" (cadr stmt)))
-			     ((zero? val)
-			      (set! skip (cons* 'skip-1 'skip-look skip)))
-			     (else
-			      (set! skip (cons* 'skip-1 (car skip) skip)))))))
+		       (cond
+			((not val)
+			 (throw 'parse-error "unresolved: ~S" (cadr stmt)))
+			((zero? val)
+			 (set! skip (cons* 'skip-1 'skip-look skip)))
+			(else
+			 (set! skip (cons* 'skip-1 (car skip) skip)))))))
 		((elif)
 		 (if (eq? mode 'code)
 		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
-		       (cond ((not val)
-			      (throw 'parse-error "unresolved: ~S" (cadr stmt)))
-			     ((eq? 'keep (car skip))
-			      (set! skip (cons* 'skip-1 'skip (cdr skip))))
-			     ((zero? val)
-			      (set! skip (cons* 'skip-1 skip)))
-			     ((eq? 'skip-look (car skip))
-			      (cpi-shift)
-			      (set! skip (cons* 'skip-1 'keep (cdr skip))))
-			     (else
-			      (cpi-shift)
-			      (set! skip (cons* 'skip-1 'skip (cdr skip))))))
+		       (cond
+			((not val)
+			 (throw 'parse-error "unresolved: ~S" (cadr stmt)))
+			((eq? 'keep (car skip))
+			 (set! skip (cons* 'skip-1 'skip (cdr skip))))
+			((zero? val)
+			 (set! skip (cons* 'skip-1 skip)))
+			((eq? 'skip-look (car skip))
+			 (cpi-shift)
+			 (set! skip (cons* 'skip-1 'keep (cdr skip))))
+			(else
+			 (cpi-shift)
+			 (set! skip (cons* 'skip-1 'skip (cdr skip))))))
 		     (cpi-shift)))
 		((else)
 		 (if (eq? mode 'code)
@@ -333,6 +332,10 @@
 		 (error "unhandled cpp stmt")))
 	      (cons 'cpp-stmt stmt)))
 	  
+	  ;; Composition of @code{read-cpp-line} and @code{exec-cpp}.
+	  (define (read-cpp ch)
+	    (and=> (read-cpp-line ch) exec-cpp))
+
 	  (define (read-token)
 	    ;;(define (echo lp) (simple-format #t "tok=~S\n" lp) lp)
 	    (define (echo lp) lp)
@@ -344,9 +347,8 @@
 		((char-set-contains? c:ws ch) (iter (read-char)))
 		(bol
 		 (cond
-		  ((read-comm ch) =>
-		   (lambda (c) (assc-$ (cons '$lone-comm (cdr c)))))
-		  ((read-cpp-line ch) => (lambda (s) (assc-$ (exec-cpp s))))
+		  ((read-comm ch bol) => assc-$)
+		  ((read-cpp ch) => assc-$)
 		  (else (set! bol #f) (iter ch))))
 		((read-ident ch) =>
 		 (lambda (str)
@@ -358,9 +360,7 @@
 		((read-c-num ch) => assc-$)
 		((read-c-string ch) => assc-$)
 		((read-c-chlit ch) => assc-$)
-		((read-comm ch) =>
-		 (lambda (c) (assc-$ (cons '$code-comm (cdr c)))))
-		;;((and (simple-format #t "chs=>~S\n" (read-chseq ch)) #f))
+		((read-comm ch bol) => assc-$)
 		((read-chseq ch) => identity)
 		((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 		(else (cons ch (string ch))))))

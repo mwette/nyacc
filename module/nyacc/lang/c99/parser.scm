@@ -49,7 +49,7 @@
 ;;               [#:mode ('code|'file)]
 ;; This needs to be explained in some detail.
 ;; tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
-(define* (parse-c
+(define* (parse-c99
 	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
   (catch
    'parse-error
@@ -63,6 +63,6 @@
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
 
-(define parse-c99 parse-c)
+(define parse-c parse-c99)
 
 ;; --- last line ---

@@ -33,6 +33,7 @@
 
 	    filter-typedefs
 	    )
+  #:use-module (nyacc lang c99 pprint)
   #:use-module (ice-9 pretty-print)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-11)		; let*-values
@@ -458,12 +459,7 @@
 (define (udecl->mspec decl . rest)
 
   (define (cnvt-array-size size-spec)
-    ;; This needs to be completed in order to be able to pretty-print
-    ;; constant expressions.
-    (sxml-match size-spec
-      ((p-expr (fixed ,size)) size)
-      ((p-expr (ident ,size)) size)
-      (,otherwise size-spec)))
+    (with-output-to-string (lambda () (pretty-print-c99 size-spec))))
 
   (define (unwrap-specl specl)
     (let ((tspec (cadadr specl)))

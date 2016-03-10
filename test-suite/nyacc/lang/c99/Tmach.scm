@@ -48,15 +48,27 @@
 
 ;; test pp
 (when #t
-  (use-modules (nyacc lang c99 parser))
-  (let* ((sx (with-input-from-file "ex1.c" parse-c99))
+  (let* ((sx (with-input-from-file "ex1.c" dev-parse-c99))
 	 (sx (remove-inc-trees sx))
-	 (sx1 (elifify sx))
-	 )
+	 (sx (elifify sx)))
     (pretty-print sx)
-    (simple-format #t "===>")
-    ;;(pretty-print sx1)
+    (simple-format #t "===>\n")
     (pretty-print-c99 sx)
+    #t))
+
+;; test pp
+(use-modules (nyacc lang c99 parser))
+(use-modules (nyacc lang c99 util2))
+(use-modules (sxml match))
+(when #f
+  (let* ((sx (with-input-from-file "ex1.c" parse-c99))
+	 (sx (merge-inc-trees! sx))
+	 (udict (and sx (tree->udict sx)))
+	 (xx (assoc-ref udict "f1"))
+	 (xx (stripdown xx udict))
+	 (xx (udecl->mspec xx))
+	 )
+    (pretty-print xx)
     #t))
 
 ;; --- last line ---
