@@ -7,9 +7,10 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (test-suite lib))
-(use-modules (nyacc lang c99 parser))
-(use-modules (nyacc lang c99 xparser))
+(define-module (c99-01)
+  #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 xparser)
+  #:use-module (test-suite lib))
 
 ;; parser test
 (with-test-prefix "nyacc/c99-01"

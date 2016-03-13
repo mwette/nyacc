@@ -1,0 +1,46 @@
+;; nyacc/lex-01.test			-*- scheme -*-
+;;
+;; Copyright (C) 2015 Matthew R. Wette
+;;
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-module (lex-01)
+  #:use-module (nyacc lex)
+  #:use-module (test-suite lib))
+
+;; not used
+(define mt
+  (list
+   '("<=" . lteq)
+   '(">=" . gteq)
+   '("==" . eqeq)
+   '("<>" . ltgt)
+   '(".+" . dot-plus)
+   '(".-" . dot-minus)
+   '(".*" . dot-times)
+   '("./" . dot-divide)
+   '(".^" . dot-carat)
+   '(":=" . colon-eq)
+   '(class . class)
+   ))
+
+(define read-comm-1 (make-comm-reader '(("/*" . "*/") ("//" . "\n"))))
+
+(with-test-prefix "nyacc/lex-01"
+
+  ;; Check that comment ending in newline does not eat the newline.
+  (pass-if "comm-reader-01"
+    (with-input-from-string "//abc\ndef"
+      (lambda ()
+	(let* ((tp (read-comm-1 (read-char) #f))
+	       (ch (read-char)))
+	  (and (equal? tp '($code-comm . "abc"))
+	       (equal? ch #\newline))))))
+
+  )
+
+
+;; --- last line ---

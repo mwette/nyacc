@@ -1,0 +1,45 @@
+;; nyacc/lalr-01.test			-*- scheme -*-
+;;
+;; Copyright (C) 2015,2016 Matthew R. Wette
+;;
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-module (lalr-01)
+  #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
+  #:use-module (nyacc lex)
+  #:use-module (test-suite lib))
+
+(define calc-spec
+  (lalr-spec
+   (prec< (left "+" "-") (left "*" "/"))
+   (start expr)
+   (grammar
+    (expr
+     (expr "+" expr ($$ (+ $1 $3)))
+     (expr "-" expr ($$ (- $1 $3)))
+     (expr "*" expr ($$ (* $1 $3)))
+     (expr "/" expr ($$ (/ $1 $3)))
+     ($fixed ($$ (string->number $1))))
+    )))
+
+(define calc-mach (make-lalr-machine calc-spec))
+
+(with-test-prefix "nyacc/lalr-01"
+
+  (pass-if "calc-plain"
+    (let* ((mach calc-mach)
+	   (raw-parser (make-lalr-parser mach))
+	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+	   (parse (lambda () (raw-parser (gen-lxr))))
+	   (res (with-input-from-string "1 + 4 / 2 * 3 - 5" parse))
+	   )
+      (equal? res 2)))
+
+  )
+
+
+;; --- last line ---
