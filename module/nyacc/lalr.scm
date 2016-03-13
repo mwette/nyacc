@@ -129,7 +129,8 @@
 	    (parse-rhs
 	     (lambda (x)
 	       ;; The following is syntax-case because we use a fender.
-	       (syntax-case x (quote $$ $$/ref $$-ref $prec $with $? $* $+)
+	       (syntax-case x (quote $$ $$/ref $$-ref $prec $with $empty
+				     $? $* $+)
 		 ;; action specifications
 		 ((_ ($$ <guts> ...) <e2> ...)
 		  #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
@@ -145,6 +146,8 @@
 		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
 		  #'(cons `(with <lhs-ref> ,@(with-attr-list <ex> ...))
 			  (parse-rhs <e2> ...)))
+		 ((_ $empty <e2> ...)	; TODO: propagate to processor
+		  #'(parse-rhs <e2> ...))
 		 
 		 ;; (experimental) proxies
 		 ((_ ($? <s1> <s2> ...) <e2> ...)

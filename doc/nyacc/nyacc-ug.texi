@@ -257,7 +257,7 @@ in current form, unattractive for practical use.
 Todo: discuss
 @itemize
 @item
-reserved symbols (e.g., @code{'$fx}, @code{'$ident})
+reserved symbols (e.g., @code{$fixed}, @code{$ident}, @code{$empty})
 @item
 Strings of length one are equivalent to the corresponding character.
 @item

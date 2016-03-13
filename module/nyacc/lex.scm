@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 ;;;
-;;; Copyright (C) 2015 - Matthew R.Wette
+;;; Copyright (C) 2015,2016 - Matthew R.Wette
 ;;; 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -27,9 +27,7 @@
 ;; pairs: num-reader read-c-num read-c-string
 ;; issue: if returning pairs we need this for hashed parsers:
 ;;    (define (assc-$ pair) (cons (assq-ref symbols (car pair)) (cdr pair)))
-;; change read-comm to read-lone-comm and read-code-comm ???
-;; or (read-comm ch 'lone) (read-comm ch 'code)
-
+;; read-comm changed to (read-comm ch bol) where bol is begin-of-line cond
 
 (define-module (nyacc lex)
   #:export (make-lexer-generator
