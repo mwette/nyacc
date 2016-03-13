@@ -63,9 +63,12 @@
 
 (define* (pretty-print-c99 tree #:key (indent-level 2))
 
+  (define fmtr (make-pp-formatter)) ;; formatter needs to use \\
+  (define sf (lambda args (apply fmtr args)))
+  
   (define cpp-ppx
-    (let* ((fmtr (make-pp-formatter)) ;; formatter needs to use \\
-	   (sf (lambda args (apply fmtr args))))
+    (let* ((x-fmtr (make-pp-formatter)) ;; formatter needs to use \\
+	   (x-sf (lambda args (apply fmtr args))))
       (lambda (tree)
 	(sxml-match tree
 	  ((define . ,rest)
@@ -101,132 +104,93 @@
 	   (simple-format (current-error-port) "NO MATCH: ~S\n" tree))
 	  ))
       ))
+
+  (define (unary/l op rep rval)
+    (sf rep)
+    (if (protect-expr? 'rt op rval)
+	(ppx/p rval)
+	(ppx rval)))
+  
+  (define (unary/r op rep lval)
+    (sf rep)
+    (if (protect-expr? 'lt op lval)
+	(ppx/p lval)
+	(ppx lval)))
+  
+  (define (binary op rep lval rval)
+    (if (protect-expr? 'lt op lval)
+	(ppx/p lval)
+	(ppx lval))
+    (sf rep)
+    (if (protect-expr? 'rt op rval)
+	(ppx/p rval)
+	(ppx rval)))
 	   
+  (define ppx/p (lambda (tree) (sf "(") (ppx tree) (sf ")")))
+  
   (define ppx
-    (let* ((fmtr (make-pp-formatter))
+    (let* ((x-fmtr (make-pp-formatter))
 	   (push-il (lambda () (fmtr 'push)))
 	   (pop-il (lambda () (fmtr 'pop)))
-	   (sf (lambda args (apply fmtr args)))
+	   (x-sf (lambda args (apply fmtr args)))
 	   (sf-nl (lambda () (sf "\n")))
-	   (ppx/p (lambda (tree) (sf "(") (ppx tree) (sf ")"))))
+	   ;;(ppx/p (lambda (tree) (sf "(") (ppx tree) (sf ")")))
+	   )
 
       (lambda (tree)
-	(case (car tree)
+	(sxml-match tree
 
-	  ((p-expr) (ppx (sx-ref tree 1)))
-	  ((ident) (sf "~A" (sx-ref tree 1)))
-	  ((char) (sf "'~A'" (sx-ref tree 1)))
-	  ((fixed) (sf "~A" (sx-ref tree 1)))
-	  ((float) (sf "~A" (sx-ref tree 1)))
-	  ((string) (sf "~S" (sx-ref tree 1)))
+	  ((p-expr ,expr) (ppx expr))
+	  ((ident ,name) (sf "~A" name))
+	  ((char ,value) (sf "'~A'" (sx-ref tree 1)))
+	  ((fixed ,value) (sf "~A" value))
+	  ((float ,value) (sf "~A" value))
+	  ((string ,value) (sf "~S" value))
 
-	  ((comment) (sf "/*~A*/\n" (sx-ref tree 1)))
+	  ((comment ,text) (sf "/*~A*/\n" text))
 
-	  ((scope) (sf "(") (ppx (sx-ref tree 1)) (sf ")"))
+	  ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
 	  
-	  ((array-ref)
-	   (ppx (sx-ref tree 2)) (sf "[") (ppx (sx-ref tree 1)) (sf "]"))
+	  ((array-ref ,dim ,expr)
+	   (ppx expr) (sf "[") (ppx dim) (sf "]"))
 
-	  ((d-sel i-sel)
-	   (let ((op (sx-ref tree 0))
-		 (id (sx-ref tree 1))
-		 (ex (sx-ref tree 2)))
-	     (if (protect-expr? 'lt op ex)
-		 (ppx/p ex)
-		 (ppx ex))
-	     (sf (case op ((d-sel) ".") ((i-sel) "->")))
-	     (ppx id)))
+	  ((d-sel ,id ,ex) (binary 'd-del "." ex id))
+	  ((i-sel ,id ,ex) (binary 'i-del "->" ex id))
 
-	  ((pre-inc)
-	   (sf "++")
-	   (if (protect-expr? 'rt 'pre-inc (sx-ref tree 1))
-	       (ppx/p (sx-ref tree 1))
-	       (ppx (sx-ref tree 1))))
-	  ((pre-dec)
-	   (sf "--")
-	   (if (protect-expr? 'rt 'pre-dec (sx-ref tree 1))
-	       (ppx/p (sx-ref tree 1))
-	       (ppx (sx-ref tree 1))))
-	  ((ref-to)
-	   (sf "&")
-	   (if (protect-expr? 'rt 'ref-to (sx-ref tree 1))
-	       (ppx/p (sx-ref tree 1))
-	       (ppx (sx-ref tree 1))))
-	  ((de-ref)
-	   (sf "*")
-	   (if (protect-expr? 'rt 'de-ref (sx-ref tree 1))
-	       (ppx/p (sx-ref tree 1))
-	       (ppx (sx-ref tree 1))))
-	  ((pos) 
-	   (sf "+")
-	   (if (protect-expr? 'rt 'pos (sx-ref tree 1))
-	       (ppx/p (sx-ref tree 1))
-	       (ppx (sx-ref tree 1))))
-	  ((neg)
-	   (sf "-")
-	   (if (protect-expr? 'rt 'neg (sx-ref tree 1))
-	       (ppx/p (sx-ref tree 1))
-	       (ppx (sx-ref tree 1))))
-	  ((bitwise-not)
-	   (sf "~")
-	   (if (protect-expr? 'rt 'bitwise-not (sx-ref tree 1))
-	       (ppx/p (sx-ref tree 1))
-	       (ppx (sx-ref tree 1))))
-	  ((not)
-	   (sf "!")
-	   (if (protect-expr? 'rt 'not (sx-ref tree 1))
-	       (ppx/p (sx-ref tree 1))
-	       (ppx (sx-ref tree 1))))
+	  ((pre-inc ,expr) (unary/l 'pre-inc "++" expr))
+	  ((pre-dec ,expr) (unary/l 'pre-dec "--" expr))
+	  ((ref-to ,expr) (unary/l 'ref-to "&" expr))
+	  ((de-ref ,expr) (unary/l 'de-ref "*" expr))
+	  ((pos ,expr) (unary/l 'pos "+" expr))
+	  ((neg ,expr) (unary/l 'neg "-" expr))
+	  ((bitwise-not ,expr) (unary/l 'bitwise-not "~" expr))
+	  ((not ,expr) (unary/l 'not "!" expr))
 
-	  ((cast)
-	   (let ((tn (sx-ref tree 1)) (ex (sx-ref tree 2)))
-	     (sf "(") (ppx tn) (sf ")")
-	     (if (protect-expr? 'rt 'cast ex)
-		 (ppx/p ex)
-		 (ppx ex))))
+	  ((cast ,tn ,ex)
+	   (sf "(") (ppx tn) (sf ")")
+	   (if (protect-expr? 'rt 'cast ex)
+	       (ppx/p ex)
+	       (ppx ex)))
 
-	  ((add sub mul div mod)
-	   (let ((op (sx-ref tree 0))
-		 (lval (sx-ref tree 1))
-		 (rval (sx-ref tree 2)))
-	     (if (protect-expr? 'lt op lval)
-		 (ppx/p lval)
-		 (ppx lval))
-	     (case op
-	       ((add) (sf " + ")) ((sub) (sf " - "))
-	       ((mul) (sf "*")) ((div) (sf "/")) ((mod) (sf "%")))
-	     (if (protect-expr? 'rt op rval)
-		 (ppx/p rval)
-		 (ppx rval))))
+	  ((add ,lval ,rval) (binary 'add " + " lval rval))
+	  ((sub ,lval ,rval) (binary 'sub " - " lval rval))
+	  ((mul ,lval ,rval) (binary 'mul "*" lval rval))
+	  ((div ,lval ,rval) (binary 'div "/" lval rval))
+	  ((mod ,lval ,rval) (binary 'mod "%" lval rval))
 
-	  ((lt gt le ge eq neq)
-	   (let ((op (sx-ref tree 0))
-		 (lval (sx-ref tree 1))
-		 (rval (sx-ref tree 2)))
-	     (if (protect-expr? 'lt op lval)
-		 (ppx/p lval)
-		 (ppx lval))
-	     (case op
-	       ((lt) (sf " < ")) ((gt) (sf " <= "))
-	       ((le) (sf " > ")) ((ge) (sf " >= "))
-	       ((eq) (sf " == ")) ((neq) (sf " != ")))
-	     (if (protect-expr? 'rt op rval)
-		 (ppx/p rval)
-		 (ppx rval))))
+	  ((lt ,lval ,rval) (binary 'lt " < " lval rval))
+	  ((gt ,lval ,rval) (binary 'gt " > " lval rval))
 
-	  ((assn-expr)
-	   (let ((lhs (sx-ref tree 1))
-		 (op (sx-ref tree 2))
-		 (rhs (sx-ref tree 3)))
-	     (if (protect-expr? 'lt 'assn-expr lhs)
-		 (ppx/p lhs)
-		 (ppx lhs))
-	     (sf " ~A " (sx-ref op 1))
-	     (if (protect-expr? 'rt 'assn-expr rhs)
-		 (ppx/p rhs)
-		 (ppx rhs))))
+	  ((le ,lval ,rval) (binary 'le " <= " lval rval))
+	  ((ge ,lval ,rval) (binary 'ge " >= " lval rval))
+	  ((eq ,lval ,rval) (binary 'eq " == " lval rval))
+	  ((neq ,lval ,rval) (binary 'neq " != " lval rval))
+	  
+	  ((assn-expr ,lval ,op ,rval)
+	   (binary (car op) (simple-format #f " ~A " (cadr op)) lval rval))
 
-	  ((decl)
+	  ;; TODO: udpate
+	  ((decl . ,rest)
 	   (let ((specs (sx-ref tree 1))
 		 (initl (assq 'init-declr-list (cdr tree)))
 		 (comm (assq 'comment (cdr tree))))
@@ -235,7 +199,8 @@
 	     (sf "; ")			; leave space for comment
 	     (if comm (ppx comm) (sf "\n"))))
 
-	  ((decl-spec-list)
+	  ;; TODO: udpate
+	  ((decl-spec-list . ,rest)
 	   (let iter ((dsl (sx-tail tree 1)))
 	     (when (pair? dsl)
 	       (case (sx-tag (car dsl))
@@ -247,7 +212,15 @@
 	       (if (pair? (cdr dsl)) (sf " "))
 	       (iter (cdr dsl)))))
 
-	  ((init-declr-list comp-declr-list)
+	  ;; TODO: udpate
+	  ((init-declr-list . ,rest)
+	   (pair-for-each
+	    (lambda (pair)
+	      (sf " ")
+	      (ppx (car pair))
+	      (if (pair? (cdr pair)) (sf ",")))
+	    (sx-tail tree 1)))
+	  ((comp-declr-list . ,rest)
 	   (pair-for-each
 	    (lambda (pair)
 	      (sf " ")
@@ -255,7 +228,38 @@
 	      (if (pair? (cdr pair)) (sf ",")))
 	    (sx-tail tree 1)))
 
-	  ((init-declr comp-declr param-declr)
+	  ;; TODO: udpate
+	  ((init-declr . ,rest)
+	   (let* ((declr (sx-ref tree 1))
+		  (initr (sx-ref tree 2))
+		  (iexpr (and initr (sx-ref initr 1))))
+	     (ppx declr)
+	     (when initr
+	       (sf " = ")
+	       (case (sx-tag iexpr)
+		 ((initzer-list)
+		  (sf "{")
+		  (sf "initzer-list")
+		  (sf " }"))
+		 (else
+		  (ppx iexpr))))))
+	  ;; TODO: udpate
+	  ((comp-declr . ,rest)
+	   (let* ((declr (sx-ref tree 1))
+		  (initr (sx-ref tree 2))
+		  (iexpr (and initr (sx-ref initr 1))))
+	     (ppx declr)
+	     (when initr
+	       (sf " = ")
+	       (case (sx-tag iexpr)
+		 ((initzer-list)
+		  (sf "{")
+		  (sf "initzer-list")
+		  (sf " }"))
+		 (else
+		  (ppx iexpr))))))
+	  ;; TODO: udpate
+	  ((param-declr . ,rest)
 	   (let* ((declr (sx-ref tree 1))
 		  (initr (sx-ref tree 2))
 		  (iexpr (and initr (sx-ref initr 1))))
@@ -270,7 +274,8 @@
 		 (else
 		  (ppx iexpr))))))
 
-	  ((type-spec)
+	  ;; TODO: udpate
+	  ((type-spec . ,rest)
 	   (let ((arg (sx-ref tree 1))) ;; did I mess this up?
 	     (case (sx-tag arg)
 	       ((fixed-type) (sf "~A" (sx-ref arg 1)))
@@ -283,10 +288,29 @@
 	       ((typename) (sf "~A" (sx-ref arg 1)))
 	       (else (error "missing " arg)))))
 
-	  ((struct-ref) (sf "struct ~A" (sx-ref (sx-ref tree 1) 1)))
-	  ((union-ref) (sf "union ~A" (sx-ref (sx-ref tree 1) 1)))
+	  ;; TODO: udpate
+	  ((struct-ref . ,rest) (sf "struct ~A" (sx-ref (sx-ref tree 1) 1)))
+	  ;; TODO: udpate
+	  ((union-ref . ,rest) (sf "union ~A" (sx-ref (sx-ref tree 1) 1)))
 	  
-	  ((struct-def union-def)
+	  ;; TODO: udpate
+	  ((struct-def . ,rest)
+	   (let ((name (assq-ref tree 'ident))
+		 (flds (assq-ref tree 'field-list)))
+	     (if name
+		 (sf "struct ~S {\n" name)
+		 (sf "struct {\n"))
+	     (push-il)
+	     (pair-for-each
+	      (lambda (pair)
+		(case (caar pair)
+		  ((comment) (ppx (car pair)))
+		  ((comp-decl) (ppx (car pair)))
+		  (else (error "pprint: fixup struct-def"))))
+	      flds)
+	     (pop-il)
+	     (sf "}")))
+	  ((union-def . ,rest)
 	   (let ((name (assq-ref tree 'ident))
 		 (flds (assq-ref tree 'field-list)))
 	     (if name
@@ -303,7 +327,8 @@
 	     (pop-il)
 	     (sf "}")))
 
-	  ((comp-decl)
+	  ;; TODO: udpate
+	  ((comp-decl . ,rest)
 	   (let ((specs (sx-ref tree 1))
 		 (initl (assq 'comp-declr-list (cdr tree)))
 		 (comm (assq 'comment (cdr tree))))
@@ -320,7 +345,8 @@
 	  ;; ftn-declr
 	  ;; pointer
 	  
-	  ((type-name)
+	  ;; TODO: udpate
+	  ((type-name . ,rest)
 	   (let ((spec (sx-ref tree 1))
 		 (abdr (and (<  2 (length tree)) (sx-ref tree 2))))
 	     (if (not (eqv? (sx-tag spec) 'decl-spec-list))
@@ -328,8 +354,9 @@
 	     (ppx spec)
 	     (if abdr (ppx abdr))))
 
+	  ;; TODO: udpate
 	  ;; abs-declr
-	  ((abs-declr)
+	  ((abs-declr . ,rest)
 	   (let iter ((decls (sx-tail tree 1)))
 	     (when (pair? decls)
 	       (case (sx-tag (car decls))
@@ -341,7 +368,8 @@
 
 	  ;; labeled-statement
 
-	  ((compd-stmt)
+	  ;; TODO: udpate
+	  ((compd-stmt . ,rest)
 	   (sf "{\n")
 	   (push-il)
 	   (for-each ppx (sx-tail (sx-ref tree 1) 1))
@@ -349,7 +377,7 @@
 	   (sf "}\n"))
 
 	  ;; expression-statement
-	  ((expr-stmt)
+	  ((expr-stmt . ,rest)
 	   (ppx (sx-ref tree 1))
 	   (sf "; ")
 	   ;; comment ?
@@ -358,7 +386,7 @@
 	  ((expr) (sf ""))		; for lone expr-stmt and return-stmt
 
 	  ;; selection-statement
-	  ((if)
+	  ((if . ,rest)
 	   (let ((cond-part (sx-ref tree 1))
 		 (then-part (sx-ref tree 2)))
 	     (sf "if (") (ppx cond-part) (sf ") ")
@@ -374,7 +402,27 @@
 		 (sf "else ")
 		 (ppx (car else-l)))))))
 
-	  ;;((switch (expr) (stmt))
+	  ;; UGH: this can be tricky wrt indenting because
+	  ((switch ,expr (compd-stmt (block-item-list . ,items)))
+	   (sf "switch (") (ppx expr) (sf ") {\n")
+	   (for-each
+	    (lambda (item)
+	      (unless (memq (car item) '(case default)) (push-il))
+	      (ppx item)
+	      (unless (memq (car item) '(case default)) (pop-il))
+	      )
+	    items)
+	   (sf "}\n")
+	   )
+
+	  ;: NOT WORKING
+	  ((case ,expr ,stmt)
+	   (sf "case ") (ppx expr) (sf ":\n")
+	   (push-il) (ppx stmt) (pop-il))
+
+	  ((default ,stmt)
+	   (sf "default:\n")
+	   (push-il) (ppx stmt) (pop-il))
 
 	  ;; iteration-statement
 	  ;; while
@@ -382,24 +430,20 @@
 	  ;; for
 
 	  ;; jump-statement
-	  ((goto)
+	  ((goto ,where)
 	   ;; unindent
 	   (pop-il)
-	   (sf "goto ~A;" (sx-ref (sx-ref tree 1) 1))
+	   (sf "goto ~A;" (sx-ref where 1))
 	   ;; comment ???
 	   (sf "\n")
 	   (push-il))
 
 	  ((continue) (sf "continue;\n"))
 	  ((break) (sf "break;\n"))
+	  ((return ,expr) (sf "return ") (ppx expr) (sf ";\n"))
+	  ((return) (sf "return;\n"))
 
-	  ;; (return (expr)) or (return ...)
-	  ((return)
-	   (cond
-	    ((null? (cdr (sx-ref tree 1))) (sf "return;\n")) ; fix cdr
-	    (else (sf "return ") (ppx (sx-ref tree 1)) (sf ";\n"))))
-
-	  ((trans-unit)
+	  ((trans-unit . ,items)
 	   (pair-for-each
 	    (lambda (pair)
 	      (ppx (car pair))
@@ -409,9 +453,9 @@
 	       ((eqv? (sx-tag (cadr pair)) 'fctn-defn) (sf "\n"))
 	       )
 	      )
-	    (sx-tail tree 1)))
+	    items))
 
-	  ((fctn-defn) ;; but not yet (knr-fctn-defn)
+	  ((fctn-defn . ,rest) ;; but not yet (knr-fctn-defn)
 	   (let* ((decl-spec-list (sx-ref tree 1))
 		  (declr (sx-ref tree 2))
 		  (compd-stmt (sx-ref tree 3)))
@@ -421,34 +465,34 @@
 	     (sf " ")
 	     (ppx compd-stmt)))
 
-	  ((ptr-declr)
+	  ((ptr-declr . ,rest)
 	   (ppx (sx-ref tree 1)) (ppx (sx-ref tree 2)))
 	  
-	  ((ftn-declr)
+	  ((ftn-declr . ,rest)
 	   (ppx (sx-ref tree 1))	; direct-declarator
 	   (sf "(") (ppx (sx-ref tree 2)) (sf ")"))
 
-	  ((param-list)
+	  ((param-list . ,rest)
 	   (pair-for-each
 	    (lambda (pair)
 	      (ppx (car pair))
 	      (if (pair? (cdr pair)) (sf ", ")))
 	    (sx-tail tree 1)))
 
-	  ((param-decl)
+	  ((param-decl . ,rest)
 	   (let ((specs (sx-ref tree 1))
 		 (declr (assq 'param-declr (cdr tree))))
 	     (ppx specs)
 	     (sf " ")
 	     (ppx declr)))
 	  
-	  ((cpp-stmt)
+	  ((cpp-stmt . ,rest)
 	   (cpp-ppx (sx-ref tree 1)))
 
 	  ((extern-C-begin) (sf "extern \"C\" {\n"))
 	  ((extern-C-end) (sf "}\n"))
 
-	  (else
+	  (,otherwise
 	   (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree))
 	   #f)))))
 

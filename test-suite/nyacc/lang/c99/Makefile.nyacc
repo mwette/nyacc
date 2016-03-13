@@ -20,11 +20,10 @@ TESTS = \
 check: check-TESTS
 
 check-TESTS: $(TESTS)
-	@echo "testing in `pwd`"
-	@for test in "$(TESTS)"; do \
+	@for test in $(TESTS); do \
 		$(TESTS_ENVIRONMENT) $$test; \
 	done
-	@#for dir in "$(SUBDIRS)"; do \
+	@#for dir in $(SUBDIRS); do \
 		(cd $$dir; make -f Makefile.nyacc check-TESTS); \
 	done
 

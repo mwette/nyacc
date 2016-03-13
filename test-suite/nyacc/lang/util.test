@@ -11,8 +11,8 @@
 ;; examples/nyacc$ guile lang/t-util.scm
 
 (define-module (util)
-  #:use-modules (nyacc lang util)
-  #:use-modules (test-suite lib))
+  #:use-module (nyacc lang util)
+  #:use-module (test-suite lib))
 
 (with-test-prefix "nyacc/util"
 

@@ -539,13 +539,13 @@
      (selection-statement)
      (iteration-statement)
      (jump-statement)
-     (cpp-statement)			; added 30Nov2015
+     (cpp-statement)
      )
 
     (labeled-statement
-     (identifier ":" statement)
-     ("case" constant-expression ":" statement)
-     ("default" ":" statement)
+     (identifier ":" statement ($$ `(labeled-stmt ,$1 ,$3)))
+     ("case" constant-expression ":" statement ($$ `(case ,$2 ,$4)))
+     ("default" ":" statement ($$ `(default ,$3)))
      )
 
     (compound-statement

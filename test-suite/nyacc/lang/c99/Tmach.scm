@@ -27,7 +27,7 @@
 (when #f
   (let* ((defs '(("arch" . "x86_64"))) 
 	 (incs  '("."))
-	 (sx (with-input-from-file "ex1.c"
+	 (sx (with-input-from-file "exam.d/ex1.c"
 	       (lambda ()
 	 	 (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #f))))
 	 (sx (remove-inc-trees sx))
@@ -42,26 +42,29 @@
     (lambda () (lalr->bison c99-spec)))
   (move-if-changed "gram.y.new" "gram.y"))
 
-(when #f
+(when #t
   (gen-c99-files "../../../../module/nyacc/lang/c99")
-  (system "touch ../../../../module/nyacc/lang/c99/parser.scm"))
+  (system "touch ../../../../module/nyacc/lang/c99/parser.scm")
+  (gen-c99x-files "../../../../module/nyacc/lang/c99")
+  (system "touch ../../../../module/nyacc/lang/c99/xparser.scm")
+  )
 
 ;; test pp
-(when #t
-  (let* ((sx (with-input-from-file "ex1.c" dev-parse-c99))
+(use-modules (nyacc lang c99 parser))
+(when #f
+  (let* ((sx (with-input-from-file "exam.d/ex1.c" parse-c99))
 	 (sx (remove-inc-trees sx))
-	 (sx (elifify sx)))
+	 #;(sx (elifify sx)))
     (pretty-print sx)
     (simple-format #t "===>\n")
     (pretty-print-c99 sx)
     #t))
 
-;; test pp
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 util2))
 (use-modules (sxml match))
 (when #f
-  (let* ((sx (with-input-from-file "ex1.c" parse-c99))
+  (let* ((sx (with-input-from-file "exam.d/ex1.c" parse-c99))
 	 (sx (merge-inc-trees! sx))
 	 (udict (and sx (tree->udict sx)))
 	 (xx (assoc-ref udict "f1"))

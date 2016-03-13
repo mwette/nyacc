@@ -628,11 +628,12 @@
    ;; statement => cpp-statement
    (lambda ($1 . $rest) $1)
    ;; labeled-statement => identifier ":" statement
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(labeled-stmt ,$1 ,$3))
    ;; labeled-statement => "case" constant-expression ":" statement
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest) `(case ,$2 ,$4))
    ;; labeled-statement => "default" ":" statement
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(default ,$3))
    ;; compound-statement => "{" block-item-list "}"
    (lambda ($3 $2 $1 . $rest)
      `(compd-stmt ,(tl->list $2)))
@@ -656,9 +657,10 @@
    (lambda ($5 $4 $3 $2 $1 . $rest) `(if ,$3 ,$5))
    ;; selection-statement => "if" "(" expression ")" statement "else" state...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$3 ,$5 ,7))
+     `(if ,$3 ,$5 ,$7))
    ;; selection-statement => "switch" "(" expression ")" statement
-   (lambda ($5 $4 $3 $2 $1 . $rest) `(switch (TBD)))
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(switch ,$3 ,$5))
    ;; iteration-statement => "while" "(" expression ")" statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$3 ,$5))
