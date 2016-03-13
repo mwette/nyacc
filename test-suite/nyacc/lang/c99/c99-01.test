@@ -1,6 +1,6 @@
-;; nyacc/lang/c99/t-c99.scm
+;; nyacc/lang/c99/c99-01.test		-*- scheme -*-
 ;;
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; Copyright (C) 2016 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -11,7 +11,8 @@
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 xparser))
 
-(with-test-prefix "c99-1"
+;; parser test
+(with-test-prefix "nyacc/c99-01"
 
   ;; Get a simple statement to parse.
   (pass-if "simple"
@@ -21,13 +22,13 @@
 		(decl (decl-spec-list (type-spec (fixed-type "int")))
 		      (init-declr-list (init-declr (ident "x"))))))))
 
+  ;; parse with include file
   (pass-if "include"
     (let* ((incs '("exam.d"))
 	   (sx (with-input-from-file "exam.d/ex1.c"
 		 (lambda () (parse-c99 #:inc-dirs incs)))))
       (pair? sx)))
 
-  
   )
 
 
