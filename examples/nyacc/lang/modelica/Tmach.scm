@@ -25,7 +25,7 @@
 (write-lalr-actions modelica-mach "actions.scm.new")
 		
 (define res
-  (with-input-from-file "ex1.mo"
+  (with-input-from-file "exam.d/ex1.mo"
     (lambda ()
       (modelica-parser (gen-mod-lexer) #:debug #f))))
 (pretty-print res)

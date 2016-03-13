@@ -176,7 +176,7 @@
     ))
 
 (define infile "getmodxml.dxl")
-;;(define infile "ex.dxl")
+;;(define infile "exam.d/ex.dxl")
 (set! db #f)
 
 (define x0

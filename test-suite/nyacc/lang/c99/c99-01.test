@@ -1,0 +1,34 @@
+;; nyacc/lang/c99/t-c99.scm
+;;
+;; Copyright (C) 2015,2016 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(use-modules (test-suite lib))
+(use-modules (nyacc lang c99 parser))
+(use-modules (nyacc lang c99 xparser))
+
+(with-test-prefix "c99-1"
+
+  ;; Get a simple statement to parse.
+  (pass-if "simple"
+    (let ((sx (with-input-from-string "int x;" parse-c99)))
+      (equal? sx
+	      '(trans-unit
+		(decl (decl-spec-list (type-spec (fixed-type "int")))
+		      (init-declr-list (init-declr (ident "x"))))))))
+
+  (pass-if "include"
+    (let* ((incs '("exam.d"))
+	   (sx (with-input-from-file "exam.d/ex1.c"
+		 (lambda () (parse-c99 #:inc-dirs incs)))))
+      (pair? sx)))
+
+  
+  )
+
+
+;; --- last line ---

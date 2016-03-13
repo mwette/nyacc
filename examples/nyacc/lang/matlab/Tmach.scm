@@ -31,7 +31,7 @@
     (lambda () (lalr->bison matlab-spec))))
 
 (when #t
-  (let ((res (with-input-from-file "ex.d/ex1.m"
+  (let ((res (with-input-from-file "exam.d/ex1.m"
 	       (lambda () (dev-parse-ml #:debug #f)))))
     (pretty-print res)
     #t))
