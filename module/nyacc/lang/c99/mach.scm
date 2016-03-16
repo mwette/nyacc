@@ -581,19 +581,16 @@
     (iteration-statement
      ("while" "(" expression ")" statement ($$ `(while ,$3 ,$5)))
      ("do" statement "while" "(" expression ")" ";" ($$ `(do-while ,$2 ,$5)))
-     ("for" "(" initial-clause expression ";" expression ")" statement
+     ("for" "(" initial-clause opt-expression ";" opt-expression ")" statement
       ($$ `(for ,$3 ,$4 ,$6 ,$8)))
-     ("for" "(" initial-clause expression ";" ")" statement
-      ($$ `(for ,$3 ,$6)))
-     ("for" "(" initial-clause ";" expression ")" statement
-      ($$ `(for ,$3 ,5 ,$7)))
-     ("for" "(" initial-clause ";" ")" statement
-      ($$ `(for ,$3 ,$6))))
+     )
     (initial-clause			; <= added for convenience
      (expression ";")
      (";" ($$ '(expr)))
-     (declaration)
-     )
+     (declaration))
+    (opt-expression			; <= added for convenience
+     ($empty ($$ '(expr)))
+     (expression))
 
     (jump-statement			; S 6.8.6
      ("goto" identifier ";" ($$ `(goto $2)))

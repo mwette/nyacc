@@ -30,7 +30,6 @@
     (lambda (name)
       (assoc-ref ot name))))
 
-
 (define op-prec
   ;; in order of decreasing precedence
   '((p-expr ident fixed float string)
@@ -49,8 +48,7 @@
     (or)
     (cond-expr)
     (assn-expr)
-    (comma)
-    ))
+    (comma)))
 
 (define op-assc
   '((left array-ref d-sel i-sel post-inc post-dec comp-lit mul div mod add sub
@@ -63,47 +61,45 @@
 
 (define* (pretty-print-c99 tree #:key (indent-level 2))
 
-  (define fmtr (make-pp-formatter)) ;; formatter needs to use \\
+  (define fmtr (make-pp-formatter))
+
   (define sf (lambda args (apply fmtr args)))
   
   (define cpp-ppx
-    (let* ((x-fmtr (make-pp-formatter)) ;; formatter needs to use \\
-	   (x-sf (lambda args (apply fmtr args))))
-      (lambda (tree)
-	(sxml-match tree
-	  ((define . ,rest)
-	   (sf "#define ~A" (sx-ref (sx-ref tree 1) 1))
-	   (and=> (assq-ref tree 'args)
-		  (lambda (args)
-		    (sf "(")
-		    (pair-for-each
-		     (lambda (pair)
-		       (sf "~A" (cadar pair))
-		       (if (pair? (cdr pair)) (sf ",")))
-		     args)
-		    (sf ")")))
-	   (sf " ~A\n" (sx-ref (assq 'repl (cdr tree)) 1)))
-	  ;; Output #ifdef and #ifndef when possible.
-	  ((if (defined ,text)) (guard (string? text))
-	   (sf "#ifdef ~A\n" text))
-	  ((if (not (defined ,text))) (guard (string? text))
-	   (sf "#ifndef ~A\n" text))
-	  ;; #if with expression:
-	  ((if . ,rest) (sf "#if ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
-	  ;; easy statements
-	  ((elif . ,rest) (sf "#elif ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
-	  ((else . ,rest) (sf "#else\n"))
-	  ((endif . ,rest) (sf "#endif\n"))
-	  ((include . ,rest) (sf "#include ~A\n" (sx-ref tree 1)))
-	  ((error . ,rest) (sf "#error ~A\n" (sx-ref tree 1)))
+    (lambda (tree)
+      (sxml-match tree
+	((define . ,rest)
+	 (sf "#define ~A" (sx-ref (sx-ref tree 1) 1))
+	 (and=> (assq-ref tree 'args)
+		(lambda (args)
+		  (sf "(")
+		  (pair-for-each
+		   (lambda (pair)
+		     (sf "~A" (cadar pair))
+		     (if (pair? (cdr pair)) (sf ",")))
+		   args)
+		  (sf ")")))
+	 (sf " ~A\n" (sx-ref (assq 'repl (cdr tree)) 1)))
+	;; Output #ifdef and #ifndef when possible.
+	((if (defined ,text)) (guard (string? text))
+	 (sf "#ifdef ~A\n" text))
+	((if (not (defined ,text))) (guard (string? text))
+	 (sf "#ifndef ~A\n" text))
+	;; #if with expression:
+	((if . ,rest) (sf "#if ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
+	;; easy statements
+	((elif . ,rest) (sf "#elif ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
+	((else . ,rest) (sf "#else\n"))
+	((endif . ,rest) (sf "#endif\n"))
+	((include . ,rest) (sf "#include ~A\n" (sx-ref tree 1)))
+	((error . ,rest) (sf "#error ~A\n" (sx-ref tree 1)))
 
-	  ;; expressions ..
-	  ((defined . ,rest)
-	   (sf "defined(~A)" (sx-ref tree 1)))
-	  (,otherwise
-	   (simple-format (current-error-port) "NO MATCH: ~S\n" tree))
-	  ))
-      ))
+	;; expressions ..
+	((defined . ,rest)
+	 (sf "defined(~A)" (sx-ref tree 1)))
+	(,otherwise
+	 (simple-format (current-error-port) "NO MATCH: ~S\n" tree))
+	)))
 
   (define (unary/l op rep rval)
     (sf rep)
@@ -186,18 +182,28 @@
 	  ((eq ,lval ,rval) (binary 'eq " == " lval rval))
 	  ((neq ,lval ,rval) (binary 'neq " != " lval rval))
 	  
+	  ((post-inc ,expr) (unary/r 'post-inc "++" expr))
+	  ((post-dec ,expr) (unary/r 'post-dec "--" expr))
+	  
 	  ((assn-expr ,lval ,op ,rval)
 	   (binary (car op) (simple-format #f " ~A " (cadr op)) lval rval))
 
-	  ;; TODO: udpate
 	  ((decl . ,rest)
 	   (let ((specs (sx-ref tree 1))
 		 (initl (assq 'init-declr-list (cdr tree)))
 		 (comm (assq 'comment (cdr tree))))
 	     (ppx specs)
 	     (if initl (ppx initl))
-	     (sf "; ")			; leave space for comment
+	     (sf "; ")
 	     (if comm (ppx comm) (sf "\n"))))
+	  ;; hack for: for (int i = 0; i < 10; i++) { ... }
+	  ((decl-no-newline . ,rest)
+	   (let ((specs (sx-ref tree 1))
+		 (initl (assq 'init-declr-list (cdr tree)))
+		 (comm (assq 'comment (cdr tree))))
+	     (ppx specs)
+	     (if initl (ppx initl))
+	     (sf "; ")))
 
 	  ;; TODO: udpate
 	  ((decl-spec-list . ,rest)
@@ -284,7 +290,7 @@
 	       ((struct-def) (ppx arg))
 	       ((union-ref) (ppx arg))
 	       ((union-def) (ppx arg))
-	       ((enum-def) (sf "TODO/3: ~S" (sx-ref arg 1)))
+	       ((enum-def) (ppx arg))
 	       ((typename) (sf "~A" (sx-ref arg 1)))
 	       (else (error "missing " arg)))))
 
@@ -337,14 +343,45 @@
 	     (sf "; ")
 	     (if comm (ppx comm) (sf "\n"))))
 
-	  ;; (enum-def enum-ref)
-	  ;; enum-def-list enum-defn
-	  ;; fctn-spec
-	  ;; ptr-declr
-	  ;; array-of (THIS IS COMPLEX)
-	  ;; ftn-declr
-	  ;; pointer
-	  
+	  ((enum-def (ident ,name) (enum-def-list . ,edl))
+	   (sf "enum ~A " name) (ppx `(enum-def-list . ,edl)))
+
+	  ((enum-def-list . ,defns)
+	   (sf "{\n") (push-il)
+	   (for-each ppx defns)
+	   (pop-il) (sf "}"))
+
+	  ((enum-defn (ident ,name) (p-expr (fixed ,value)))
+	   (sf "~A = ~A,\n" name value))
+	  ((enum-defn (ident ,name))
+	   (sf "~A,\n" name))
+
+	  ((fctn-spec "inline")
+	   (sf "inline "))
+
+	  ((ptr-declr ,ptr ,dir-declr)
+	   (ppx ptr) (ppx dir-declr))
+
+	  ((pointer (decl-spec-list . ,items))
+	   (sf "*") (ppx `(decl-spec-list . ,items)))
+	  ((pointer)
+	   (sf "*"))
+	  ((pointer (decl-spec-list . ,items) (pointer . ,rest))
+	   (sf "*") (ppx `(decl-spec-list . ,items)) (ppx `(pointer . ,rest)))
+	  ((pointer (pointer . ,rest))
+	   (sf "*") (ppx `(pointer . ,rest)))
+
+	  ((array-of ,dir-declr ,arg)
+	   (ppx dir-declr) (sf "[") (ppx arg) (sf "]"))
+	  ((array-of ,dir-declr)
+	   (ppx dir-declr) (sf "[]"))
+	  ;; MORE TO GO
+	    
+	  ((ftn-declr ,dir-declr ,param-type-l)
+	   (ppx dir-declr) (sf "(") (ppx param-type-l) (sf ")"))
+	  ((ftn-declr ,dir-declr)
+	   (ppx dir-declr) (sf "()"))
+
 	  ;; TODO: udpate
 	  ((type-name . ,rest)
 	   (let ((spec (sx-ref tree 1))
@@ -366,7 +403,6 @@
 		  (error "need to finish abs-declr")))
 	       (iter (cdr decls)))))
 
-	  ;; labeled-statement
 
 	  ;; TODO: udpate
 	  ((compd-stmt . ,rest)
@@ -375,6 +411,12 @@
 	   (for-each ppx (sx-tail (sx-ref tree 1) 1))
 	   (pop-il)
 	   (sf "}\n"))
+	  ((compd-stmt-no-newline . ,rest)
+	   (sf "{\n")
+	   (push-il)
+	   (for-each ppx (sx-tail (sx-ref tree 1) 1))
+	   (pop-il)
+	   (sf "} "))
 
 	  ;; expression-statement
 	  ((expr-stmt . ,rest)
@@ -402,20 +444,17 @@
 		 (sf "else ")
 		 (ppx (car else-l)))))))
 
-	  ;; UGH: this can be tricky wrt indenting because
 	  ((switch ,expr (compd-stmt (block-item-list . ,items)))
 	   (sf "switch (") (ppx expr) (sf ") {\n")
 	   (for-each
 	    (lambda (item)
 	      (unless (memq (car item) '(case default)) (push-il))
 	      (ppx item)
-	      (unless (memq (car item) '(case default)) (pop-il))
-	      )
+	      (unless (memq (car item) '(case default)) (pop-il)))
 	    items)
-	   (sf "}\n")
-	   )
+	   (sf "}\n"))
 
-	  ;: NOT WORKING
+	  ;; labeled-statement
 	  ((case ,expr ,stmt)
 	   (sf "case ") (ppx expr) (sf ":\n")
 	   (push-il) (ppx stmt) (pop-il))
@@ -424,19 +463,36 @@
 	   (sf "default:\n")
 	   (push-il) (ppx stmt) (pop-il))
 
-	  ;; iteration-statement
-	  ;; while
-	  ;; do
+	  ;; This does not meet the convention of "} while" on same line. 
+	  ((do-while ,stmt ,expr)
+	   (sf "do ")
+	   (if (eqv? 'compd-stmt (sx-tag stmt)) 
+	       (ppx (cons 'compd-stmt-no-newline (cdr stmt)))
+	       (ppx stmt))
+	   (sf "while (") (ppx expr) (sf ");\n"))
+	    
 	  ;; for
+	  ((for (decl . ,rest) ,test ,iter ,stmt)
+	   (sf "for (") (ppx `(decl-no-newline . ,rest))
+	   (sf " ") (ppx test) (sf "; ") (ppx iter) (sf ") ")
+	   (ppx stmt))
+
+	  ((for (decl . ,rest) ,expr2 ,expr3 ,stmt)
+	   (sf "for (")
+	   (ppx `(decl . ,rest)) (sf " ") (ppx expr2) (sf "; ") (ppx expr3)
+	   (sf ") ") (ppx stmt))
+	  ((for ,expr1 ,expr2 ,expr3 ,stmt)
+	   (sf "for (")
+	   (ppx expr1) (sf "; ") (ppx expr2) (sf "; ") (ppx expr3)
+	   (sf ") ") (ppx stmt))
 
 	  ;; jump-statement
 	  ((goto ,where)
-	   ;; unindent
-	   (pop-il)
+	   (pop-il)			; unindent
 	   (sf "goto ~A;" (sx-ref where 1))
-	   ;; comment ???
+	   ;; comment?
 	   (sf "\n")
-	   (push-il))
+	   (push-il))			; re-indent
 
 	  ((continue) (sf "continue;\n"))
 	  ((break) (sf "break;\n"))
@@ -447,12 +503,10 @@
 	   (pair-for-each
 	    (lambda (pair)
 	      (ppx (car pair))
-	      (cond
-	       ;; If followed by a function definition output a line.
-	       ((null? (cdr pair)) #t)
-	       ((eqv? (sx-tag (cadr pair)) 'fctn-defn) (sf "\n"))
-	       )
-	      )
+	      ;; Generatwe a blank line if followed by a fctn-defn.
+	      (if (and (pair? (cdr pair))
+		       (eqv? (sx-tag (cadr pair)) 'fctn-defn))
+		  (sf "\n")))
 	    items))
 
 	  ((fctn-defn . ,rest) ;; but not yet (knr-fctn-defn)
@@ -493,9 +547,9 @@
 	  ((extern-C-end) (sf "}\n"))
 
 	  (,otherwise
-	   (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree))
-	   #f)))))
-
+	   (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))
+	  ))))
+  
   (ppx tree))
 
 ;; --- last line ---

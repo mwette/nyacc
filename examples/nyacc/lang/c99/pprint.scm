@@ -21,10 +21,11 @@
 
 ;; test pp
 (when #t
-  (let* ((sx (my-parser "exam.d/ex3.c"))
+  (let* ((sx (my-parser "exam.d/ex01.c"))
 	 (sx (remove-inc-trees sx))
 	 #;(sx (elifify sx))
 	 )
+    (pretty-print sx)
     (pretty-print-c99 sx)
     #t))
 

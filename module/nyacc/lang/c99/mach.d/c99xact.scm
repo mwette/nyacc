@@ -667,23 +667,18 @@
    ;; iteration-statement => "do" statement "while" "(" expression ")" ";"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(do-while ,$2 ,$5))
-   ;; iteration-statement => "for" "(" initial-clause expression ";" expres...
+   ;; iteration-statement => "for" "(" initial-clause opt-expression ";" op...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$3 ,$4 ,$6 ,$8))
-   ;; iteration-statement => "for" "(" initial-clause expression ";" ")" st...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(for ,$3 ,$6))
-   ;; iteration-statement => "for" "(" initial-clause ";" expression ")" st...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(for ,$3 ,5 ,$7))
-   ;; iteration-statement => "for" "(" initial-clause ";" ")" statement
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(for ,$3 ,$6))
    ;; initial-clause => expression ";"
    (lambda ($2 $1 . $rest) $1)
    ;; initial-clause => ";"
    (lambda ($1 . $rest) '(expr))
    ;; initial-clause => declaration
+   (lambda ($1 . $rest) $1)
+   ;; opt-expression => 
+   (lambda $rest '(expr))
+   ;; opt-expression => expression
    (lambda ($1 . $rest) $1)
    ;; jump-statement => "goto" identifier ";"
    (lambda ($3 $2 $1 . $rest) `(goto $2))

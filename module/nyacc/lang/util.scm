@@ -223,7 +223,7 @@ file COPYING included with the this distribution.")
        (blanks "                                            ")
        (ind-str (lambda () (substring blanks 0 ind-len)))
        (cnt-str (lambda () (substring blanks 0 (+ 4 ind-len))))
-       (sf-nl (lambda () (newline) (set! column 0)))
+       ;;(sf-nl (lambda () (newline) (set! column 0)))
 
        (push-il
 	(lambda ()
@@ -247,7 +247,8 @@ file COPYING included with the this distribution.")
 	      (display (cnt-str))
 	      (set! column (+ column ind-len 4)))
 	    (display str)
-	    (when (eqv? #\newline (string-ref str (1- len)))
+	    (when (and (positive? len)
+		       (eqv? #\newline (string-ref str (1- len))))
 	      (set! column 0))))))
 
     (lambda (arg0 . rest)
