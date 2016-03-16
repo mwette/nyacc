@@ -26,7 +26,7 @@
   ;; parse with include file
   (pass-if "include"
     (let* ((incs '("exam.d"))
-	   (sx (with-input-from-file "exam.d/ex1.c"
+	   (sx (with-input-from-file "exam.d/ex01.c"
 		 (lambda () (parse-c99 #:inc-dirs incs)))))
       (pair? sx)))
 
