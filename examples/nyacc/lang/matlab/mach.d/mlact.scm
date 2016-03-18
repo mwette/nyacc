@@ -121,7 +121,7 @@
      `(switch ,$2 ,@(tl->list $4)))
    ;; non-comment-statement => "return" term
    (lambda ($2 $1 . $rest) '(return))
-   ;; non-comment-statement => command ident-nc-list term
+   ;; non-comment-statement => command arg-list term
    (lambda ($3 $2 $1 . $rest)
      `(command ,$1 ,(tl->list $2)))
    ;; lval-expr-list => lval-expr
@@ -138,10 +138,12 @@
    (lambda ($1 . $rest) '(ident "global"))
    ;; command => "clear"
    (lambda ($1 . $rest) '(ident "clear"))
-   ;; ident-nc-list => ident
-   (lambda ($1 . $rest) (make-tl 'ident-list $1))
-   ;; ident-nc-list => ident-nc-list ident
-   (lambda ($2 $1 . $rest) (tl-append $1 $3))
+   ;; arg-list => ident
+   (lambda ($1 . $rest)
+     (make-tl 'arg-list (cons 'arg (cdr $1))))
+   ;; arg-list => arg-list ident
+   (lambda ($2 $1 . $rest)
+     (tl-append $1 (cons 'arg $3)))
    ;; elseif-list => "elseif" expr term statement-list
    (lambda ($4 $3 $2 $1 . $rest)
      (make-tl
@@ -151,7 +153,7 @@
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(elseif ,$3 ,(tl->list $5))))
    ;; case-list => 
-   (lambda $rest (make-tl))
+   (lambda $rest (make-tl 'case-list))
    ;; case-list => case-list "case" expr term statement-list
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (tl->append $1 `(case ,$3 ,(tl->list $5))))

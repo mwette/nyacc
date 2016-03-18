@@ -21,7 +21,7 @@
 
 ;; test pp
 (when #t
-  (let* ((sx (my-parser "exam.d/ex01.c"))
+  (let* ((sx (my-parser "exam.d/ex09.c"))
 	 (sx (remove-inc-trees sx))
 	 #;(sx (elifify sx))
 	 )

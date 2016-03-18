@@ -8,10 +8,10 @@
 ;; without any warranty.
 
 (use-modules (nyacc lang matlab mach))
+(use-modules (nyacc lang matlab parser))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lalr))
 (use-modules (nyacc util))
-;;(use-modules (nyacc lex))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
@@ -19,20 +19,26 @@
   (gen-matlab-files)
   (system "touch parser.scm"))
 
-(when #t
+(when #f
   (with-output-to-file "lang.txt"
     (lambda ()
       (pp-lalr-notice matlab-spec)
       (pp-lalr-grammar matlab-spec)
       (pp-lalr-machine matlab-mach))))
 
-(when #t
+(when #f
   (with-output-to-file "gram.y"
     (lambda () (lalr->bison matlab-spec))))
 
-(when #t
+(when #f
   (let ((res (with-input-from-file "exam.d/ex1.m"
 	       (lambda () (dev-parse-ml #:debug #f)))))
+    (pretty-print res)
+    #t))
+
+(when #t
+  (let ((res (with-input-from-file "exam.d/ex1.m"
+	       (lambda () (parse-ml #:debug #f)))))
     (pretty-print res)
     #t))
 

@@ -45,7 +45,7 @@
   (foldt fU identity tree))
 
 (when #t
-  (let* ((sx (with-input-from-file "getmodxml.dxl" ;;"demo.d/ex1.dxl"
+  (let* ((sx (with-input-from-file "exam.d/ex1.dxl"
 	       (lambda () (dev-parse-dxl #:debug #f))))
 	 (sx (elifify sx))
 	 )
@@ -53,7 +53,7 @@
     #t))
 
 #;(let ((lx (gen-dxl-lexer)))
-  (with-input-from-file "getmodxml.dxl"
+  (with-input-from-file "exam.d/ex1.dxl"
     (lambda ()
       (let iter ((tp (lx)))
 	(unless (eqv? (cdr tp) 'EOF)

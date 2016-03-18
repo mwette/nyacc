@@ -337,34 +337,30 @@
 	    (and=> (read-cpp-line ch) exec-cpp))
 
 	  (define (read-token)
-	    ;;(define (echo lp) (simple-format #t "tok=~S\n" lp) lp)
-	    (define (echo lp) lp)
-	    (echo
-	     (let iter ((ch (read-char)))
-	       (cond
-		((eof-object? ch) (assc-$ '($end . "")))
-		((eq? ch #\newline) (set! bol #t) (iter (read-char)))
-		((char-set-contains? c:ws ch) (iter (read-char)))
-		(bol
-		 (cond
-		  ((read-comm ch bol) => assc-$)
-		  ((read-cpp ch) => assc-$)
-		  (else (set! bol #f) (iter ch))))
-		((read-ident ch) =>
-		 (lambda (str)
-		   (let ((sym (string->symbol str)))
-		     (cond ((assq-ref keytab sym) => (lambda (t) (cons t str)))
-			   ((typename? str)
-			    (cons (assq-ref symtab 'typename) str))
-			   (else (cons (assq-ref symtab '$ident) str))))))
-		((read-c-num ch) => assc-$)
-		((read-c-string ch) => assc-$)
-		((read-c-chlit ch) => assc-$)
-		((read-comm ch bol) => assc-$)
-		((read-chseq ch) => identity)
-		((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-		(else (cons ch (string ch))))))
-	    )
+	    (let iter ((ch (read-char)))
+	      (cond
+	       ((eof-object? ch) (assc-$ '($end . "")))
+	       ((eq? ch #\newline) (set! bol #t) (iter (read-char)))
+	       ((char-set-contains? c:ws ch) (iter (read-char)))
+	       (bol
+		(cond
+		 ((read-comm ch bol) => assc-$)
+		 ((read-cpp ch) => assc-$)
+		 (else (set! bol #f) (iter ch))))
+	       ((read-ident ch) =>
+		(lambda (str)
+		  (let ((sym (string->symbol str)))
+		    (cond ((assq-ref keytab sym) => (lambda (t) (cons t str)))
+			  ((typename? str)
+			   (cons (assq-ref symtab 'typename) str))
+			  (else (cons (assq-ref symtab '$ident) str))))))
+	       ((read-c-num ch) => assc-$)
+	       ((read-c-string ch) => assc-$)
+	       ((read-c-chlit ch) => assc-$)
+	       ((read-comm ch bol) => assc-$)
+	       ((read-chseq ch) => identity)
+	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+	       (else (cons ch (string ch))))))
 
 	  ;; Loop between reading tokens and skipping tokens.
 	  ;; The use of "delayed pop" is not clean IMO.  Cleaner way?

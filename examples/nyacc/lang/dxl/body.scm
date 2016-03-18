@@ -105,7 +105,7 @@
 		(cond
 		 #;((read-comm ch) =>
 		 (lambda (c) (assc-$ (cons '$lone-comm (cdr c)))))
-		 ((read-comm ch) (iter (read-char)))
+		 ((read-comm ch bol) (iter (read-char)))
 		 ;;((read-cpp-line ch) => (lambda (s) (assc-$ (exec-cpp s))))
 		 (else (set! bol #f) (iter ch))))
 	       ((read-ident ch) =>
@@ -119,7 +119,7 @@
 	       ((read-c-chlit ch) => assc-$)
 	       #;((read-comm ch) =>
 	       (lambda (c) (assc-$ (cons '$code-comm (cdr c)))))
-	       ((read-comm ch) (iter (read-char)))
+	       ((read-comm ch bol) (iter (read-char)))
 	       ;;((and (simple-format #t "chs=>~S\n" (read-chseq ch)) #f))
 	       ((read-chseq ch) => identity)
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
