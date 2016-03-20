@@ -16,6 +16,18 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+;; @deffn add-file-attr tl => tl
+;; Given a tagged-list this routine adds an attribute @code{(file basename)}
+;; which is the basename (with @code{.m} removed) of the current input.
+;; This is used for the top-level node of the matlab parse tree to indicate
+;; from which file the script or function file originated.  For example,
+;; @example
+;; (function-file (@ (file "myftn")) (fctn-defn (ident "myftn") ...
+;; @end example
+(define (add-file-attr tl)
+  (let ((fn (port-filename (current-input-port))))
+    (if fn (tl+attr tl 'file (basename fn ".m")) tl)))
+
 ;;; === lexical analyzer
 
 (define (matlab-read-string ch)

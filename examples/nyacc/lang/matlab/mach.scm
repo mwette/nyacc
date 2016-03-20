@@ -35,7 +35,8 @@
 ;; TODO:
 ;; 1) function handles: {foo = @bar;} where bar is a function
 ;; 2) anonymous functions: {foo = @(arg1,arg2) arg1 + arg2;}
-;; 
+;; 3) structs
+;; 4) cell arrays (hoping not needed)
 
 (define matlab-spec
   (lalr-spec
@@ -44,9 +45,13 @@
    (grammar
     
     (mfile
-     (statement-list ($$ `(script-file ,(tl->list $1))))
-     (function-file ($$ (tl->list $1)))
+     (script-file ($$ (tl->list (add-file-attr $1))))
+     (function-file ($$ (tl->list (add-file-attr $1))))
      )
+
+    (script-file
+     (statement ($$ (if $1 (make-tl 'script-file $1) (make-tl 'script-file))))
+     (statement-list statement ($$ (if $2 (tl-append $1 $2) $1))))
 
     (function-file
      (function-defn ($$ (make-tl 'function-file $1)))
@@ -99,7 +104,7 @@
      (non-comment-statement))
     (non-comment-statement
      (term ($$ #f))
-     (ident "(" expr-list ")" term ($$ `(call ,$1 ,(tl->list $3))))
+     (lval-expr "(" expr-list ")" term ($$ `(call ,$1 ,(tl->list $3))))
      (lval-expr "=" expr term ($$ `(assn ,$1 ,$3)))
      ("[" lval-expr-list "]" "=" ident "(" ")" term
       ($$ `(multi-assign ,(tl->list $2) ,$5 (expr-list))))
@@ -129,20 +134,15 @@
      (lval-expr-list "," lval-expr ($$ (tl-append $1 $3)))
      )
 
-    (lval-expr
-     (ident)
-     (ident "(" expr-list ")" ($$ `(array-ref ,$1 ,(tl->list $3)))))
-
     (command
      ("global" ($$ '(ident "global")))
      ("clear" ($$ '(ident "clear")))
      )
     
+    ;; Only ident list type commands are allowed
     (arg-list
-     ;; TODO: fix parser-lexer i/f to handle accepted arg text
-     ;;       ident is a HACK
      (ident ($$ (make-tl 'arg-list (cons 'arg (cdr $1)))))
-     (arg-list ident ($$ (tl-append $1 (cons 'arg $3)))))
+     (arg-list ident ($$ (tl-append $1 (cons 'arg $2)))))
 
     (elseif-list
      ("elseif" expr term statement-list
@@ -154,7 +154,7 @@
     (case-list
      ($empty ($$ (make-tl 'case-list)))
      (case-list "case" expr term statement-list
-		($$ (tl->append $1 `(case ,$3 ,(tl->list $5)))))
+		($$ (tl-append $1 `(case ,$3 ,(tl->list $5)))))
      )
 
     ;; Lone colon-expr's can only exist in expr-list for array ref.
@@ -164,7 +164,12 @@
      (expr-list "," expr ($$ (tl-append $1 $3)))
      (expr-list "," ":" ($$ (tl-append $1 '(colon-expr))))
      )
-    
+
+    #;(assn-expr
+     (expr)
+     (lval-expr "=" expr ($$ `(assn ,$1 ,$3)))
+     )
+     
     (expr
      (or-expr)
      (expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
@@ -220,15 +225,19 @@
      )
 
     (postfix-expr
+     (lval-expr)
      (primary-expr)
-     (ident "(" expr-list ")" ($$ `(aref-or-call ,$1 ,(tl->list $3))))
      (postfix-expr "'" ($$ `(xpose ,$1)))
      (postfix-expr ".'" ($$ `(conj-xpose ,$1)))
-     ;;(postfix-expr "." ident ($$ `(sel ,$3 ,$1))) ;; struct
      )
 
-    (primary-expr
+    (lval-expr
      (ident)
+     (lval-expr "(" expr-list ")" ($$ `(array-ref ,$1 ,(tl->list $3))))
+     (lval-expr "." ident ($$ `(sel ,$3 ,$1)))
+     )
+    
+    (primary-expr
      (number)
      (string)
      ("(" expr ")" ($$ $2))
@@ -264,8 +273,8 @@
 ;; === parser ==========================
 
 (define matlab-mach
-  (hashify-machine
-   (compact-machine
+  (identity ;;(hashify-machine
+   (identity ;;(compact-machine
     (make-lalr-machine matlab-spec))))
 
 (define mtab (assq-ref matlab-mach 'mtab))

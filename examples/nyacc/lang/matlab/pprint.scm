@@ -35,7 +35,7 @@
 (define op-prec
   ;; in order of decreasing precedence
   '((p-expr ident fixed float string)
-    (comp-lit post-inc post-dec i-sel d-sel fctn-call array-ref)
+    (comp-lit post-inc post-dec sel fctn-call array-ref)
     (de-ref ref-to neg pos not bitwise-not sizeof pre-inc pre-dec)
     (cast)
     (mul div mod)
@@ -54,7 +54,7 @@
 
 ;; TODO
 (define op-assc ;; this is C
-  '((left array-ref d-sel i-sel post-inc post-dec comp-lit mul div mod add sub
+  '((left array-ref sel post-inc post-dec comp-lit mul div mod add sub
 	  lshift rshift lt gt le ge bitwise-and bitwise-xor bitwise-or and or)
     (right pre-inc pre-dec sizeof bitwise-not not pos neg ref-to de-ref cast
 	   cond assn-expr)
@@ -198,6 +198,8 @@
       ((mul ,lval ,rval) (binary 'mul "*" lval rval))
       ((div ,lval ,rval) (binary 'div "/" lval rval))
 
+      ((sel ,id ,ex) (binary 'sel "." ex id))
+
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
       ((string ,value) (sf "'~A'" (string->matlab value)))
@@ -303,8 +305,8 @@
   (ppx tree))
 
 
-(use-modules (nyacc lang matlab parser))
-(let ((sx (with-input-from-file "exam.d/ex02.m" parse-ml))
+#;(use-modules (nyacc lang matlab parser))
+#;(let ((sx (with-input-from-file "exam.d/ex02.m" parse-ml))
       )
   (pretty-print sx)
   ;;(simple-format #t "==>\n")

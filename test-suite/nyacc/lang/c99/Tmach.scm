@@ -21,7 +21,8 @@
     (lambda ()
       (pp-lalr-notice c99-spec)
       (pp-lalr-grammar c99-spec)
-      (pp-lalr-machine c99-mach))))
+      (pp-lalr-machine c99-mach)
+      (system "zip lang.txt"))))
 
 ;; test parser
 (when #f

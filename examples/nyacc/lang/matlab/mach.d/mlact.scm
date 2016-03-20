@@ -10,11 +10,20 @@
   (vector
    ;; $start => mfile
    (lambda ($1 . $rest) $1)
-   ;; mfile => statement-list
+   ;; mfile => script-file
    (lambda ($1 . $rest)
-     `(script-file ,(tl->list $1)))
+     (tl->list (add-file-attr $1)))
    ;; mfile => function-file
-   (lambda ($1 . $rest) (tl->list $1))
+   (lambda ($1 . $rest)
+     (tl->list (add-file-attr $1)))
+   ;; script-file => statement
+   (lambda ($1 . $rest)
+     (if $1
+       (make-tl 'script-file $1)
+       (make-tl 'script-file)))
+   ;; script-file => statement-list statement
+   (lambda ($2 $1 . $rest)
+     (if $2 (tl-append $1 $2) $1))
    ;; function-file => function-defn
    (lambda ($1 . $rest) (make-tl 'function-file $1))
    ;; function-file => function-file function-defn
@@ -81,7 +90,7 @@
    (lambda ($1 . $rest) $1)
    ;; non-comment-statement => term
    (lambda ($1 . $rest) #f)
-   ;; non-comment-statement => ident "(" expr-list ")" term
+   ;; non-comment-statement => lval-expr "(" expr-list ")" term
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(call ,$1 ,(tl->list $3)))
    ;; non-comment-statement => lval-expr "=" expr term
@@ -129,11 +138,6 @@
      (make-tl 'lval-expr-list $1))
    ;; lval-expr-list => lval-expr-list "," lval-expr
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; lval-expr => ident
-   (lambda ($1 . $rest) $1)
-   ;; lval-expr => ident "(" expr-list ")"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(array-ref ,$1 ,(tl->list $3)))
    ;; command => "global"
    (lambda ($1 . $rest) '(ident "global"))
    ;; command => "clear"
@@ -143,7 +147,7 @@
      (make-tl 'arg-list (cons 'arg (cdr $1))))
    ;; arg-list => arg-list ident
    (lambda ($2 $1 . $rest)
-     (tl-append $1 (cons 'arg $3)))
+     (tl-append $1 (cons 'arg $2)))
    ;; elseif-list => "elseif" expr term statement-list
    (lambda ($4 $3 $2 $1 . $rest)
      (make-tl
@@ -156,7 +160,7 @@
    (lambda $rest (make-tl 'case-list))
    ;; case-list => case-list "case" expr term statement-list
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (tl->append $1 `(case ,$3 ,(tl->list $5))))
+     (tl-append $1 `(case ,$3 ,(tl->list $5))))
    ;; expr-list => expr
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
    ;; expr-list => ":"
@@ -227,17 +231,21 @@
    (lambda ($2 $1 . $rest) $2)
    ;; unary-expr => "~" postfix-expr
    (lambda ($2 $1 . $rest) `(not ,$2))
+   ;; postfix-expr => lval-expr
+   (lambda ($1 . $rest) $1)
    ;; postfix-expr => primary-expr
    (lambda ($1 . $rest) $1)
-   ;; postfix-expr => ident "(" expr-list ")"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(aref-or-call ,$1 ,(tl->list $3)))
    ;; postfix-expr => postfix-expr "'"
    (lambda ($2 $1 . $rest) `(xpose ,$1))
    ;; postfix-expr => postfix-expr ".'"
    (lambda ($2 $1 . $rest) `(conj-xpose ,$1))
-   ;; primary-expr => ident
+   ;; lval-expr => ident
    (lambda ($1 . $rest) $1)
+   ;; lval-expr => lval-expr "(" expr-list ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(array-ref ,$1 ,(tl->list $3)))
+   ;; lval-expr => lval-expr "." ident
+   (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
    ;; primary-expr => number
    (lambda ($1 . $rest) $1)
    ;; primary-expr => string

@@ -1725,10 +1725,11 @@
 		   (else
 		    (fmt port "\t\t~A => ~A ~A\n" (elt->str sy terms) pa gt))))
 	       (let* ((sy (car act)) (p (cdr act))
-		      (pa (cond ((positive? p) 'shift)
+		      (pa (cond ((eq? #f p) 'CONFLICT)
+				((positive? p) 'shift)
 				((negative? p) 'reduce)
 				(else 'accept)))
-		      (gt (abs p)))
+		      (gt (and=> p abs)))
 		 (fmt port "\t\t~A => ~A ~A\n"
 		      (elt->str (assq-ref i->s sy) terms)
 		      pa gt))))
@@ -1794,64 +1795,65 @@
 
 ;; NEW: need to add reduction of ERROR
 
+;; @item (machine-hashed? mach) => #t|#f
+;; Indicate if the machine has been hashed.
+(define (machine-hashed? mach)
+  ;; If hashed, the parse action for rule 0 will always be a number.
+  (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
+
 ;; @item hashify-machine mach => mach
 ;; There is a bug in here: if pat contains rrconf then the output is
 ;; #unspedified.
 (define (hashify-machine mach)
-  (let* ((terminals (assq-ref mach 'terminals))
-	 (non-terms (assq-ref mach 'non-terms))
-	 (lhs-v (assq-ref mach 'lhs-v))
-	 (sm ;; symbol-to-int int-to-symbol maps
-	  (let iter ((si (list (cons '$default -1)))
-		     (is (list (cons -1 '$default)))
-		     (ix 1) (tl terminals) (nl non-terms))
-	    (if (null? nl) (cons (reverse si) (reverse is))
-		(let* ((s (atomize (if (pair? tl) (car tl) (car nl))))
-		       (tl1 (if (pair? tl) (cdr tl) tl))
-		       (nl1 (if (pair? tl) nl (cdr nl))))
-		  (iter (acons s ix si) (acons ix s is) (1+ ix) tl1 nl1)))))
-	 (sym->int (lambda (s) (assq-ref (car sm) s)))
-	 ;;
-	 (old-pat-v (assq-ref mach 'pat-v))
-	 (npat (vector-length old-pat-v))
-	 (new-pat-v (make-vector npat)))
-    ;; wtf is this for?
-    ;;(let iter1 ((ix 0)) (unless (= ix npat) (iter1 (1+ ix))))
-    ;; replace symbol/chars with integers
-    (let iter1 ((ix 0))
-      (unless (= ix npat)
-	;;(if (zero? ix) (fmtout "~S\n" (vector-ref old-pat-v ix)))
-	(let iter2 ((al1 '()) (al0 (vector-ref old-pat-v ix)))
-	  (if (null? al0) (vector-set! new-pat-v ix (reverse al1))
-	      (let* ((a0 (car al0))
-		     ;; tk: token; ac: action; ds: destination
-		     (tk (car a0)) (ac (cadr a0)) (ds (cddr a0))
-		     ;; t: encoded token; d: encoded destination
-		     (t (sym->int tk))
-		     (d (case ac ((shift) ds) ((reduce) (- ds)) ((accept) 0)
-			      (else #f))))
-		(unless t
-		  (fmterr "~S ~S ~S\n" tk ac ds) 
-		  (error "expect something"))
-		(iter2 (acons t d al1) (cdr al0)))))
-	(iter1 (1+ ix))))
-    ;;
-    (cons*
-     (cons 'pat-v new-pat-v)
-     (cons 'siis sm)			; (cons al:sym->int al:int->sym)
-     (cons 'mtab
-	   (let iter ((mt1 '()) (mt0 (assq-ref mach 'mtab)))
-	     (if (null? mt0) (reverse mt1)
-		 (iter (cons (cons (caar mt0) (sym->int (cdar mt0))) mt1)
-		       (cdr mt0)))))
-     ;; reduction symbols = lhs:
-     (cons 'rto-v (vector-map (lambda (i v) (sym->int v)) lhs-v))
-     mach)))
-
-;; @item (machine-hashed? mach) => #t|#f
-;; Indicate if the machine has been hashed.
-(define (machine-hashed? mach)
-  (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
+  (if (machine-hashed? mach) mach
+      (let* ((terminals (assq-ref mach 'terminals))
+	     (non-terms (assq-ref mach 'non-terms))
+	     (lhs-v (assq-ref mach 'lhs-v))
+	     (sm ;; symbol-to-int int-to-symbol maps
+	      (let iter ((si (list (cons '$default -1)))
+			 (is (list (cons -1 '$default)))
+			 (ix 1) (tl terminals) (nl non-terms))
+		(if (null? nl) (cons (reverse si) (reverse is))
+		    (let* ((s (atomize (if (pair? tl) (car tl) (car nl))))
+			   (tl1 (if (pair? tl) (cdr tl) tl))
+			   (nl1 (if (pair? tl) nl (cdr nl))))
+		      (iter (acons s ix si) (acons ix s is) (1+ ix) tl1 nl1)))))
+	     (sym->int (lambda (s) (assq-ref (car sm) s)))
+	     ;;
+	     (old-pat-v (assq-ref mach 'pat-v))
+	     (npat (vector-length old-pat-v))
+	     (new-pat-v (make-vector npat '())))
+	;; replace symbol/chars with integers
+	(let iter1 ((ix 0))
+	  (unless (= ix npat)
+	    ;;(if (zero? ix) (fmtout "~S\n" (vector-ref old-pat-v ix)))
+	    (let iter2 ((al1 '()) (al0 (vector-ref old-pat-v ix)))
+	      (if (null? al0) (vector-set! new-pat-v ix (reverse al1))
+		  (let* ((a0 (car al0))
+			 ;; tk: token; ac: action; ds: destination
+			 (tk (car a0)) (ac (cadr a0)) (ds (cddr a0))
+			 ;; t: encoded token; d: encoded destination
+			 (t (sym->int tk))
+			 (d (case ac
+			      ((shift) ds) ((reduce) (- ds))
+			      ((accept) 0) (else #f))))
+		    (unless t
+		      (fmterr "~S ~S ~S\n" tk ac ds)
+		      (error "expect something"))
+		    (iter2 (acons t d al1) (cdr al0)))))
+	    (iter1 (1+ ix))))
+	;;
+	(cons*
+	 (cons 'pat-v new-pat-v)
+	 (cons 'siis sm) ;; `(siis ,(cons sym->int int->sym))
+	 (cons 'mtab
+	       (let iter ((mt1 '()) (mt0 (assq-ref mach 'mtab)))
+		 (if (null? mt0) (reverse mt1)
+		     (iter (cons (cons (caar mt0) (sym->int (cdar mt0))) mt1)
+			   (cdr mt0)))))
+	 ;; reduction symbols = lhs:
+	 (cons 'rto-v (vector-map (lambda (i v) (sym->int v)) lhs-v))
+	 mach))))
 
 
 ;; === output routines ===============
