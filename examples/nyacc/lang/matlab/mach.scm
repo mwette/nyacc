@@ -50,8 +50,12 @@
      )
 
     (script-file
-     (statement ($$ (if $1 (make-tl 'script-file $1) (make-tl 'script-file))))
-     (statement-list statement ($$ (if $2 (tl-append $1 $2) $1))))
+     (lone-comment-list
+      non-comment-statement
+      ($$ (make-tl 'script-file (tl->list $1))))
+     (non-comment-statement
+      ($$ (if $1 (make-tl 'script-file $1) (make-tl 'script-file))))
+     (script-file statement ($$ (if $2 (tl-append $1 $2) $1))))
 
     (function-file
      (function-defn ($$ (make-tl 'function-file $1)))
@@ -126,6 +130,8 @@
       ($$ `(switch ,$2 ,@(tl->list $4))))
      ("return" term
       ($$ '(return)))
+     #;("return" term code-comment
+      ($$ '(return)))
      (command arg-list term ($$ `(command ,$1 ,(tl->list $2))))
      )
 
@@ -138,7 +144,6 @@
      ("global" ($$ '(ident "global")))
      ("clear" ($$ '(ident "clear")))
      )
-    
     ;; Only ident list type commands are allowed
     (arg-list
      (ident ($$ (make-tl 'arg-list (cons 'arg (cdr $1)))))
@@ -165,11 +170,6 @@
      (expr-list "," ":" ($$ (tl-append $1 '(colon-expr))))
      )
 
-    #;(assn-expr
-     (expr)
-     (lval-expr "=" expr ($$ `(assn ,$1 ,$3)))
-     )
-     
     (expr
      (or-expr)
      (expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
@@ -233,7 +233,7 @@
 
     (lval-expr
      (ident)
-     (lval-expr "(" expr-list ")" ($$ `(array-ref ,$1 ,(tl->list $3))))
+     (lval-expr "(" expr-list ")" ($$ `(aref-or-call ,$1 ,(tl->list $3))))
      (lval-expr "." ident ($$ `(sel ,$3 ,$1)))
      )
     
@@ -259,7 +259,7 @@
     (term-list (term) (term-list term))
 
     (lone-comment-list
-     (lone-comment #\newline ($$ (make-tl 'comment-list $1)))
+     (lone-comment #\newline ($$ (make-tl 'comm-list $1)))
      (lone-comment-list lone-comment #\newline ($$ (tl-append $1 $2))))
 
     (term (#\newline) (";") (","))
@@ -267,7 +267,7 @@
     (number ($fixed ($$ `(fixed ,$1))) ($float ($$ `(float ,$1))))
     (string ($string ($$ `(string ,$1))))
     (lone-comment ($lone-comm ($$ `(comm ,$1))))
-    ;;(code-comment ($code-comm ($$ `(comm ,$1))))
+    (code-comment ($code-comm ($$ `(comm ,$1))))
     )))
 
 ;; === parser ==========================

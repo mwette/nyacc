@@ -33,21 +33,30 @@
   (with-output-to-file "gram.y"
     (lambda () (lalr->bison matlab-spec))))
 
-(when #t ;; dev parser from mach.scm
-  (let* ((sx0 (with-input-from-file "exam.d/ex03b.m"
-		(lambda () (dev-parse-ml #:debug #f))))
-	 (sx1 (typeify-tree sx0))
-	 )
-    ;;(pretty-print sx0)
-    ;;(simple-format # "==>\n")
-    (pretty-print sx1)
-    #t))
+(when #f ;; dev parser from mach.scm
+  (let* ((sx0 (with-input-from-file "exam.d/ex03a.m"
+		(lambda () (dev-parse-ml #:debug #f)))))
+    (pretty-print sx0)))
 
 (when #f ;; reg parser from parser.scm
-  (let ((sx0 (with-input-from-file "exam.d/ex03.m"
-	       (lambda () (parse-ml #:debug #f))))
-	)
-    (pretty-print sx0)
+  (let ((sx0 (with-input-from-file "exam.d/ex03b.m"
+	       (lambda () (parse-ml #:debug #f)))))
+    (pretty-print sx0)))
+
+(define (deb-parse-ml)
+  (dev-parse-ml #:debug #t))
+
+(when #t ;; processing
+  (let* ((a-file "exam.d/ex03a.m")
+	 (b-file "exam.d/ex03b.m")
+	 (sx0a (with-input-from-file a-file dev-parse-ml))
+	 ;;(sx1a (and sx0a (declify-script sx0a)))
+	 ;;(sx0b (with-input-from-file b-file dev-parse-ml))
+	 ;;(sx1b (and sx0b (declify-ffile sx0b)))
+	 )
+    (pretty-print sx0a)
+    ;;(simple-format #t "==>\n")
+    ;;(pretty-print sx1a)
     #t))
 
 ;; --- last line ---

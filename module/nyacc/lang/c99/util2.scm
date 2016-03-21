@@ -89,6 +89,7 @@
     ((scope ,declr)
      (declr->ident declr))
     (,otherwise
+     ;;(throw 'util-error "c99/util2: unknown declarator: " declr))
      (error "c99/util2: unknown declarator: " declr))
     ))
 

@@ -1,7 +1,10 @@
 % ex03a.m - cover file
 
-typedef struct {
-  double x[2];
-} con_state_t;
+%param = struct('Kp',1.0, 'Ki',2.0, 'Kd',0.1, 'dt',0.1); 
+state = struct('x', zeros(2,1)); % comment
+%con = struct('param',param, 'state',state);
+
+%isig = 1.0;
+%osig = ex03b(con, isig);
 
 % --- last line ---

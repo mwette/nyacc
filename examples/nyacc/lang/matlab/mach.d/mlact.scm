@@ -16,12 +16,15 @@
    ;; mfile => function-file
    (lambda ($1 . $rest)
      (tl->list (add-file-attr $1)))
-   ;; script-file => statement
+   ;; script-file => lone-comment-list non-comment-statement
+   (lambda ($2 $1 . $rest)
+     (make-tl 'script-file (tl->list $1)))
+   ;; script-file => non-comment-statement
    (lambda ($1 . $rest)
      (if $1
        (make-tl 'script-file $1)
        (make-tl 'script-file)))
-   ;; script-file => statement-list statement
+   ;; script-file => script-file statement
    (lambda ($2 $1 . $rest)
      (if $2 (tl-append $1 $2) $1))
    ;; function-file => function-defn
@@ -243,7 +246,7 @@
    (lambda ($1 . $rest) $1)
    ;; lval-expr => lval-expr "(" expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(array-ref ,$1 ,(tl->list $3)))
+     `(aref-or-call ,$1 ,(tl->list $3)))
    ;; lval-expr => lval-expr "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
    ;; primary-expr => number
@@ -275,8 +278,7 @@
    ;; term-list => term-list term
    (lambda ($2 $1 . $rest) $1)
    ;; lone-comment-list => lone-comment #\newline
-   (lambda ($2 $1 . $rest)
-     (make-tl 'comment-list $1))
+   (lambda ($2 $1 . $rest) (make-tl 'comm-list $1))
    ;; lone-comment-list => lone-comment-list lone-comment #\newline
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; term => #\newline
@@ -294,6 +296,8 @@
    ;; string => '$string
    (lambda ($1 . $rest) `(string ,$1))
    ;; lone-comment => '$lone-comm
+   (lambda ($1 . $rest) `(comm ,$1))
+   ;; code-comment => '$code-comm
    (lambda ($1 . $rest) `(comm ,$1))
    ))
 

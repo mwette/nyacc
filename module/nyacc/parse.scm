@@ -92,6 +92,8 @@
 		      (lambda (a) (eq? 'reduce (car a)))))
 	 ;; On reduce, reduce this production-rule:
 	 (reduce-pr (if hashed abs cdr))
+	 ;; If error, make the right packet.
+	 (other (if hashed 0 '(other . 0)))
 	 )
 
     (lambda* (lexr #:key debug)
@@ -106,9 +108,9 @@
 	       (xtra #t) ;; in case of 0 => accept, error or skip
 	       (stx (cond ;; state transition
 		     ((assq-ref stxl tval)) ; in table
-		     ((memq tval comm) (set! xtra 'skip) 0)
+		     ((memq tval comm) (set! xtra 'skip) other)
 		     ((assq-ref stxl def))  ; default action
-		     (else (set! xtra 'error) 0))))
+		     (else (set! xtra 'error) other))))
 
 	  (if debug (dmsg (car state) (if nval tval sval) stx))
 	  (cond

@@ -12,7 +12,7 @@
   #:export (lang-crn-lic
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
-	    sx-tag sx-attr sx-has-attr? sx-ref sx-tail sx-find
+	    sx-tag sx-attr sx-has-attr? sx-set-attr! sx-ref sx-tail sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter
 	    ;; for ???
@@ -165,7 +165,8 @@ file COPYING included with the this distribution.")
   (if (sx-has-attr? sx)
       (let ((attr (cadr sx)))
 	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
-      (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx)))))
+      (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
+  sx)
 
 ;; @deffn sx-find tag sx => ((tag ...) (tag ...))
 ;; Find the first matching element (in the first level).

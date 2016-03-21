@@ -96,10 +96,8 @@
 	     ((eqv? ch #\newline)
 	      (set! bol #t) (cons (assq-ref chrtab #\newline) "\n"))
 	     ((char-set-contains? space-cs ch) (iter (read-char)))
-	     (bol
-	      (cond
-	       ((read-comm ch bol) => assc-$)
-	       (else (set! bol #f) (iter ch))))
+	     ((read-comm ch bol) => assc-$)
+	     (bol (set! bol #f) (iter ch))
 	     ((read-ident ch) =>	; returns string
 	      (lambda (s)
 		(set! qms #f)
