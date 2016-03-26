@@ -10,7 +10,7 @@
   #(1 1 1 2 1 2 1 2 4 3 2 0 2 2 1 1 2 10 9 8 7 6 5 1 3 1 2 1 1 1 5 4 8 9 8 6
     9 8 6 9 6 2 3 1 3 1 1 1 2 4 5 0 5 1 1 3 3 1 3 1 3 1 3 1 3 3 1 3 3 3 3 1 3
     3 1 3 3 3 3 3 3 3 3 1 2 2 2 1 1 2 2 1 4 3 1 1 3 2 3 1 3 1 1 1 3 1 2 2 3 1
-    1 1 1 1 1 1 1 1))
+    1 1 1 1 1 1 1))
 
 (define pat-v
   #((($ident shift . 1) ($:function shift . 2) ($lone-comm shift . 3) ($:, 
@@ -983,20 +983,20 @@
     primary-expr primary-expr primary-expr matrix-row-list matrix-row-list 
     row-term row-term matrix-row matrix-row term-list term-list 
     lone-comment-list lone-comment-list term term term ident number number 
-    string lone-comment code-comment))
+    string lone-comment))
 
 (define mtab
-  '(($code-comm . $code-comm) ($lone-comm . $lone-comm) ($string . $string) 
-    ($float . $float) ($fixed . $fixed) ($ident . $ident) (";" . #{$:;}#) ("."
-    . $:.) (".'" . $:.') ("'" . $:') ("~" . $:~) (".^" . $:.^) (".\\" . $:.\)
-    ("./" . $:./) (".*" . $:.*) ("^" . $:^) ("\\" . $:\) ("/" . $:/) ("*" . 
-    $:*) ("-" . $:-) ("+" . $:+) (">=" . $:>=) ("<=" . $:<=) (">" . $:>) ("<" 
-    . $:<) ("~=" . $:~=) ("==" . $:==) ("&" . $:&) ("|" . $:|) (":" . $::) (
-    "case" . $:case) ("elseif" . $:elseif) ("clear" . $:clear) ("global" . 
-    $:global) ("return" . $:return) ("otherwise" . $:otherwise) ("switch" . 
-    $:switch) ("else" . $:else) ("if" . $:if) ("while" . $:while) ("for" . 
-    $:for) ("," . $:,) (")" . #{$:\x29;}#) ("(" . #{$:\x28;}#) ("=" . $:=) (
-    "]" . #{$:\x5d;}#) ("[" . #{$:\x5b;}#) ("function" . $:function) (
-    #\newline . #\newline) ("end" . $:end) ($end . $end)))
+  '(($string . $string) ($float . $float) ($fixed . $fixed) ($ident . $ident
+    ) (";" . #{$:;}#) ("." . $:.) (".'" . $:.') ("'" . $:') ("~" . $:~) (".^" 
+    . $:.^) (".\\" . $:.\) ("./" . $:./) (".*" . $:.*) ("^" . $:^) ("\\" . $:\
+    ) ("/" . $:/) ("*" . $:*) ("-" . $:-) ("+" . $:+) (">=" . $:>=) ("<=" . 
+    $:<=) (">" . $:>) ("<" . $:<) ("~=" . $:~=) ("==" . $:==) ("&" . $:&) ("|"
+    . $:|) (":" . $::) ("case" . $:case) ("elseif" . $:elseif) ("clear" . 
+    $:clear) ("global" . $:global) ("return" . $:return) ("otherwise" . 
+    $:otherwise) ("switch" . $:switch) ("else" . $:else) ("if" . $:if) (
+    "while" . $:while) ("for" . $:for) ("," . $:,) (")" . #{$:\x29;}#) ("(" . 
+    #{$:\x28;}#) ("=" . $:=) ("]" . #{$:\x5d;}#) ("[" . #{$:\x5b;}#) (
+    "function" . $:function) (#\newline . #\newline) ("end" . $:end) (
+    $code-comm . $code-comm) ($lone-comm . $lone-comm) ($end . $end)))
 
 ;;; end tables

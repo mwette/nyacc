@@ -130,8 +130,6 @@
       ($$ `(switch ,$2 ,@(tl->list $4))))
      ("return" term
       ($$ '(return)))
-     #;("return" term code-comment
-      ($$ '(return)))
      (command arg-list term ($$ `(command ,$1 ,(tl->list $2))))
      )
 
@@ -267,7 +265,7 @@
     (number ($fixed ($$ `(fixed ,$1))) ($float ($$ `(float ,$1))))
     (string ($string ($$ `(string ,$1))))
     (lone-comment ($lone-comm ($$ `(comm ,$1))))
-    (code-comment ($code-comm ($$ `(comm ,$1))))
+    ;;(code-comment ($code-comm ($$ `(comm ,$1))))
     )))
 
 ;; === parser ==========================

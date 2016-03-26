@@ -161,6 +161,7 @@
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
     ;;(fout "tree-tag=~S kseed=~S\n" (car tree) kseed)
     (case (car tree)
+      ((function-file) (values (reverse kseed) dict))
       ((float fixed)
        (values
 	(cons (sx-set-attr! (reverse kseed) 'rank "0") seed)
@@ -172,10 +173,7 @@
 	(d-pop kdict)))
       
       (else
-       (values
-	(if (null? seed) (reverse kseed) ; w/o this top node is list
-	    (cons (reverse kseed) seed))
-	dict))))
+       (values (cons (reverse kseed) seed) dict))))
 
   (define (fH tree seed dict) ;; => (values seed dict)
     (values (cons tree seed) dict))
@@ -207,11 +205,11 @@
       ((assn (ident ,name) (aref-or-call (ident "struct") ,ex-l))
        (let ((kvl (let iter ((kvl '()) (al (sx-tail ex-l 1)))
 		    (if (null? al) (reverse kvl)
-			(iter (cons (list (car al) (cadr al))
+			(iter (cons (list (cadar al) (cadr al))
 				    kvl) (cddr al)))))
 	     )
-	 (fout "struct ~S\n" name) 
-	 (pretty-print kvl)
+	 (fout "struct ~S: ~S\n" name (map car kvl))
+	 ;;(pretty-print kvl)
 	 (values tree '() dict)))
        
       ((assn ,lval ,rval)
@@ -221,20 +219,35 @@
 
       (,otherwise
        (values tree '() dict))))
-
+  
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
     ;;(fout "tree-tag=~S kseed=~S\n" (car tree) kseed)
     (case (car tree)
-      ((float fixed)
+      ((script-file) (values (reverse kseed) dict))
+      ((assn)
+       (let* ((assn (reverse kseed))
+	      (lval (sx-ref assn 1)) (rval (sx-ref assn 2))
+	      (ltyp (sx-attr-ref lval 'type))
+	      (rtype (sx-attr-ref rval 'type))
+	      (rrank (and=> (sx-attr-ref rval 'rank) string->number))
+	      )
+	 ;;(fout "rval=~S type=~S rank=~S\n" rval rtype rrank)
+	 (values (cons (reverse kseed) seed) dict)))
+      ((add sub mul div ldiv mod)
+       (let ()
+	 (values
+	  (cons (reverse kseed) seed)
+	  dict)))
+      ((fixed)
        (values
-	(cons (sx-set-attr! (reverse kseed) 'rank "0") seed)
+	(cons (sx-set-attr* (reverse kseed) 'type "fixed" 'rank "0") seed)
 	dict))
-      
-      (else
+      ((float)
        (values
-	(if (null? seed) (reverse kseed) ; w/o this top node is list
-	    (cons (reverse kseed) seed))
-	dict))))
+	(cons (sx-set-attr* (reverse kseed) 'type "float" 'rank "0") seed)
+	dict))
+      (else
+       (values (cons (reverse kseed) seed) dict))))
 
   (define (fH tree seed dict) ;; => (values seed dict)
     (values (cons tree seed) dict))

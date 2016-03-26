@@ -297,8 +297,6 @@
    (lambda ($1 . $rest) `(string ,$1))
    ;; lone-comment => '$lone-comm
    (lambda ($1 . $rest) `(comm ,$1))
-   ;; code-comment => '$code-comm
-   (lambda ($1 . $rest) `(comm ,$1))
    ))
 
 ;;; end tables

@@ -38,7 +38,7 @@
     (comp-lit post-inc post-dec sel fctn-call array-ref)
     (de-ref ref-to neg pos not bitwise-not sizeof pre-inc pre-dec)
     (cast)
-    (mul div mod)
+    (mul div ldiv mod)
     (add sub)
     (lshift rshift)
     (lt gt le ge)
@@ -54,7 +54,7 @@
 
 ;; TODO
 (define op-assc ;; this is C
-  '((left array-ref sel post-inc post-dec comp-lit mul div mod add sub
+  '((left array-ref sel post-inc post-dec comp-lit mul div ldiv mod add sub
 	  lshift rshift lt gt le ge bitwise-and bitwise-xor bitwise-or and or)
     (right pre-inc pre-dec sizeof bitwise-not not pos neg ref-to de-ref cast
 	   cond assn-expr)
@@ -197,6 +197,7 @@
       ((sub ,lval ,rval) (binary 'sub " - " lval rval))
       ((mul ,lval ,rval) (binary 'mul "*" lval rval))
       ((div ,lval ,rval) (binary 'div "/" lval rval))
+      ((ldiv ,lval ,rval) (binary 'ldiv "\\" lval rval))
 
       ((sel ,id ,ex) (binary 'sel "." ex id))
 

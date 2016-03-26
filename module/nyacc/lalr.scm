@@ -354,7 +354,7 @@
 	       (@l (list		; attributes per prod' rule
 		    `((rhs . ,(vector start-symbol))
 		      (ref . all) (act 1 $1))))
-	       (tl (list '$end))	; set of terminals (add $end?)
+	       (tl '($code-comm $lone-comm $end)) ; set of terminals
 	       (nl (list start-symbol))	; set of non-terminals
 	       ;;
 	       (head gram)	       ; head of unprocessed productions

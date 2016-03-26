@@ -50,13 +50,13 @@
   (let* ((a-file "exam.d/ex03a.m")
 	 (b-file "exam.d/ex03b.m")
 	 (sx0a (with-input-from-file a-file dev-parse-ml))
-	 ;;(sx1a (and sx0a (declify-script sx0a)))
+	 (sx1a (and sx0a (declify-script sx0a)))
 	 ;;(sx0b (with-input-from-file b-file dev-parse-ml))
 	 ;;(sx1b (and sx0b (declify-ffile sx0b)))
 	 )
-    (pretty-print sx0a)
+    ;;(pretty-print sx0a)
     ;;(simple-format #t "==>\n")
-    ;;(pretty-print sx1a)
+    (pretty-print sx1a)
     #t))
 
 ;; --- last line ---
