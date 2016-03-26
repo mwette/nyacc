@@ -16,7 +16,31 @@
 
 (with-test-prefix "nyacc/util"
 
-  (pass-if "test1"
+  ;; The input-stack used to pull in input from include files.
+  (pass-if "input-stack/1"
+    (equal?
+     "hello world!"
+     (with-output-to-string
+       (lambda ()
+	 (with-input-from-string "hello X!"
+	   (lambda ()
+	     (let iter ((ch (read-char)))
+	       (unless (eq? ch #\X) (write-char ch) (iter (read-char))))
+	     (push-input (open-input-string "world"))
+	     (let iter ((ch (read-char)))
+	       (unless (eof-object? ch) (write-char ch) (iter (read-char))))
+	     (pop-input)
+	     (let iter ((ch (read-char)))
+	       (unless (eof-object? ch) (write-char ch) (iter (read-char))))
+	     ))))))
+
+  ;; Should return #t if something there and #f if done.
+  (pass-if "input-stack/2"
+    (let ((sp (open-input-string "abc")))
+      (push-input sp)
+      (and (pop-input) (not (pop-input)))))
+
+  #;(pass-if "test1"
     (let* ((tl0 (make-tl 'abc 1))
 	   (tl1 (tl-append tl0 2))
 	   (tl2 (tl-insert tl1 'a))
@@ -26,7 +50,7 @@
 	   (tlx tl5))
       (equal? (tl->list tlx) '(abc (@ (x "true")) z a 1 2 20 25))))
 
-  (pass-if "test2"
+  #;(pass-if "test2"
     (let* ((tl (make-tl 'abc 1)))
       (set! tl (tl-append tl 2))
       (set! tl (tl-insert tl 'a))

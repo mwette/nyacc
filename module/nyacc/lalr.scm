@@ -350,6 +350,10 @@
     ;; @code{#f} is used to signal ``done, proceed to next rule.''
     ;; We use @code{tail} below to go through all remaining rules so that any
     ;; like LHS get absorbed before proceeding: This keeps LHS in sequence.
+    ;; Note: code-comm and lone-comm are added to terminals so that they end
+    ;; up in the match-table.  The parser will skip these if the automoton has
+    ;; no associated transitions for these.  This allows users to parse for
+    ;; comments in some rules but skip the rest.
     (let iter ((ll '($start))		; LHS list
 	       (@l (list		; attributes per prod' rule
 		    `((rhs . ,(vector start-symbol))

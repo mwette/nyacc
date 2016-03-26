@@ -10,9 +10,12 @@
 
 (define-module (nyacc lang util)
   #:export (lang-crn-lic
+	    push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
-	    sx-tag sx-attr sx-has-attr? sx-set-attr! sx-ref sx-tail sx-find
+	    sx-tag
+	    sx-attr sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr*
+	    sx-ref sx-tail sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter
 	    ;; for ???
@@ -30,8 +33,30 @@ or any later version published by the Free Software Foundation.  See the
 file COPYING included with the this distribution.")
 
 
+;; === input stack =====================
+
+(define *input-stack* (make-fluid '()))
+
+(define (reset-input-stack)
+  (fluid-set! *input-stack* '()))
+
+(define (push-input port)
+  (let ((curr (current-input-port))
+	(ipstk (fluid-ref *input-stack*)))
+    (fluid-set! *input-stack* (cons curr ipstk))
+    (set-current-input-port port)))
+
+;; Return #f if empty
+(define (pop-input)
+  (let ((ipstk (fluid-ref *input-stack*)))
+    (if (null? ipstk) #f
+	(begin
+	  (set-current-input-port (car ipstk))
+	  (fluid-set! *input-stack* (cdr ipstk))))))
+
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))
+
 
 ;; === tl ==============================
 
@@ -142,32 +167,48 @@ file COPYING included with the this distribution.")
      ((and (pair? (car sx)) (eqv? '@ (caar sx))) (list-tail sx (1+ ix)))
      (else (list-tail sx ix)))))
 
-;; @deffn sx-attr sx => '(@ ...)|#f
-;; @example
-;; (sx-attr '(abc (@ (foo "1")) def) 1) => '(@ (foo "1"))
-;; @end example
-(define (sx-attr sx)
-  (if (and (pair? (car sx)) (pair? (cadr sx)))
-      (if (eqv? '@ (caadr sx))
-	  (cadr sx)
-	  #f)
-      #f))
-
 ;; @deffn sx-has-attr? sx
 ;; p to determine if @arg{sx} has attributes.
 (define (sx-has-attr? sx)
   (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx))))
 
+;; @deffn sx-attr sx => '(@ ...)|#f
+;; @example
+;; (sx-attr '(abc (@ (foo "1")) def) 1) => '(@ (foo "1"))
+;; @end example
+(define (sx-attr sx)
+  (if (and (pair? (cdr sx)) (pair? (cadr sx)))
+      (if (eqv? '@ (caadr sx))
+	  (cadr sx)
+	  #f)
+      #f))
+
+;; @deffn sx-attr-ref sx key => val
+;; Return an attribute value given the key, or @code{#f}.
+(define (sx-attr-ref sx key)
+  (and=> (sx-attr sx)
+	 (lambda (attr)
+	   (and=> (assq-ref (cdr attr) key) car))))
+
 ;; @deffn sx-set-attr! sx key val
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,
 ;; add it, if it does exist, replace it.
-(define (sx-set-attr! sx key val)
+(define (sx-set-attr! sx key val . rest)
   (if (sx-has-attr? sx)
       (let ((attr (cadr sx)))
 	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
       (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
   sx)
 
+;; @deffn sx-set-attr* sx key val [key val [key ... ]]
+;; Set attribute for sx.  If no attributes exist, if key does not exist,
+;; add it, if it does exist, replace it.
+(define (sx-set-attr* sx . rest)
+  (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
+    (cond
+     ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
+     (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
+      
 ;; @deffn sx-find tag sx => ((tag ...) (tag ...))
 ;; Find the first matching element (in the first level).
 (define (sx-find tag sx)

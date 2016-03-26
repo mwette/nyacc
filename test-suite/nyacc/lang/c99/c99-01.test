@@ -30,6 +30,13 @@
 		 (lambda () (parse-c99 #:inc-dirs incs)))))
       (pair? sx)))
 
+  ;; parse massive comments file
+  (pass-if "comments"
+    (let* ((incs '("exam.d"))
+	   (sx (with-input-from-file "exam.d/ex02.c"
+		 (lambda () (parse-c99 #:inc-dirs incs)))))
+      (pair? sx)))
+
   )
 
 

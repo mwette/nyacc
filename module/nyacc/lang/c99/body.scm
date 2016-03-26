@@ -238,10 +238,12 @@
 	 (t-typename (assq-ref symtab 'typename))
 	 (xp1 (sxpath '(cpp-stmt define)))
 	 (xp2 (sxpath '(decl))))
-    (lambda* (#:key (mode 'code))      ; modes are 'code or 'file
-      (let ((bol #t)		       ; begin-of-line condition
-	    (skip (list 'keep))	       ; CPP skip-input stack
-	    (info (fluid-ref *info*))) ; assume make and run in same thread
+    (lambda* (#:key (mode 'code))     ; modes are 'code or 'file
+      (let ((bol #t)		      ; begin-of-line condition
+	    (skip (list 'keep))	      ; CPP skip-input stack
+	    (info (fluid-ref *info*)) ; assume make and run in same thread
+	    (pstk '())		      ; port stack
+	    )
 	;; Return the first (tval lval) pair not excluded by the CPP.
 	(lambda ()
       
@@ -276,7 +278,7 @@
 					    (throw 'parse-error "~A" pth))
 					(perr file))))
 			 (for-each add-define (xp1 tree)) ; add def's 
-			 ;; Attach tree onto "include" statement.  Hack?
+			 ;; Attach tree onto "include" statement.
 			 (if (pair? tree) (set! stmt (append stmt (list tree))))
 			 ))))
 		((define)
@@ -339,7 +341,8 @@
 	  (define (read-token)
 	    (let iter ((ch (read-char)))
 	      (cond
-	       ((eof-object? ch) (assc-$ '($end . "")))
+	       ((eof-object? ch)
+		(if (pop-input) (iter (read-char)) (assc-$ '($end . ""))))
 	       ((eq? ch #\newline) (set! bol #t) (iter (read-char)))
 	       ((char-set-contains? c:ws ch) (iter (read-char)))
 	       (bol
@@ -349,8 +352,14 @@
 		 (else (set! bol #f) (iter ch))))
 	       ((read-ident ch) =>
 		(lambda (str)
-		  (let ((sym (string->symbol str)))
-		    (cond ((assq-ref keytab sym) => (lambda (t) (cons t str)))
+		  (let ((sym (string->symbol str))
+			;;(repl (assoc-ref (cpi-defs info) str))
+			(repl #f)
+			)
+		    (cond ((string? repl) ; expand cpp-defined argless macro
+			   (push-input (open-input-string repl))
+			   (iter (read-char)))
+			  ((assq-ref keytab sym) => (lambda (t) (cons t str)))
 			  ((typename? str)
 			   (cons (assq-ref symtab 'typename) str))
 			  (else (cons (assq-ref symtab '$ident) str))))))
@@ -360,6 +369,10 @@
 	       ((read-comm ch bol) => assc-$)
 	       ((read-chseq ch) => identity)
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+	       ((eqv? ch #\\) ;; el\\\nse => else
+		(let ((ch (read-char)))
+		  (cond ((eqv? #\newline ch) (iter (read-char))) ;; extend line
+			(else (unread-char ch) (cons #\\ "\\"))))) ;; parse err
 	       (else (cons ch (string ch))))))
 
 	  ;; Loop between reading tokens and skipping tokens.

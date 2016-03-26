@@ -25,17 +25,17 @@
       (system "zip lang.txt"))))
 
 ;; test parser
-(when #f
+(when #t
   (let* ((defs '(("arch" . "x86_64"))) 
 	 (incs  '("."))
-	 (sx (with-input-from-file "exam.d/ex1.c"
+	 (sx (with-input-from-file "exam.d/,ex.c"
 	       (lambda ()
-	 	 (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #f))))
-	 (sx (remove-inc-trees sx))
+	 	 (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #t))))
+	 ;;(sx (remove-inc-trees sx))
          )
     (pretty-print sx)
-    (simple-format #t "===>")
-    (pretty-print-c99 sx)
+    ;;(simple-format #t "===>")
+    ;;(pretty-print-c99 sx)
     #t))
 
 (when #f
@@ -43,7 +43,7 @@
     (lambda () (lalr->bison c99-spec)))
   (move-if-changed "gram.y.new" "gram.y"))
 
-(when #t
+(when #f
   (gen-c99-files "../../../../module/nyacc/lang/c99")
   (system "touch ../../../../module/nyacc/lang/c99/parser.scm")
   (gen-c99x-files "../../../../module/nyacc/lang/c99")
