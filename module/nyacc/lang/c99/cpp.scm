@@ -21,6 +21,7 @@
   #:export (parse-cpp-stmt
 	    parse-cpp-expr
 	    eval-cpp-expr
+	    replace-cpp-def
 	    )
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -58,10 +59,9 @@ todo:
 		 ;;(args (or (p-args (skip-ws (read-char))) '()))
 		 ;; "define ABC(ARG)" not the same as "define ABC (ARG)"
 		 (args (or (p-args (read-char)) '()))
-		 (amap (lambda (as) (map (lambda (a) (list 'arg a)) as)))
 		 (rest (or (p-rest (skip-ws (read-char))) " ")))
 	    (if (pair? args)
-		`(define (name ,iden) ,(cons 'args (amap args)) (repl ,rest))
+		`(define (name ,iden) ,(cons 'args args) (repl ,rest))
 		`(define (name ,iden) (repl ,rest))))))
        (p-args ;; parse args
 	(lambda (la) ;; unread la if no match :(

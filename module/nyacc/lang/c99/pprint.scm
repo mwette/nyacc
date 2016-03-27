@@ -75,7 +75,7 @@
 		  (sf "(")
 		  (pair-for-each
 		   (lambda (pair)
-		     (sf "~A" (cadar pair))
+		     (sf "~A" (car pair))
 		     (if (pair? (cdr pair)) (sf ",")))
 		   args)
 		  (sf ")")))
