@@ -40,6 +40,7 @@
   #:use-module ((sxml fold) #:select (foldts foldts*))
   #:use-module (sxml match)
   #:use-module (nyacc lang util)
+  #:use-module (nyacc lang c99 pprint)
   )
 
 ;; Use the term @dfn{udecl}, or unit-declaration, for a declaration which has

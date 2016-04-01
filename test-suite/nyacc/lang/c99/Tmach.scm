@@ -30,10 +30,10 @@
 	 (incs  '("."))
 	 (sx (with-input-from-file "exam.d/,ex.c"
 	       (lambda ()
-	 	 (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #t))))
+	 	 (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #f))))
 	 ;;(sx (remove-inc-trees sx))
          )
-    (pretty-print sx)
+    ;;(pretty-print sx)
     ;;(simple-format #t "===>")
     ;;(pretty-print-c99 sx)
     #t))

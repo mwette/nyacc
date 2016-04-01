@@ -209,8 +209,15 @@
 ;; skip one token and pop skip-stack
 ;; @end table
 
-;; @item gen-c-lexer => thunk
+;; @deffn gen-c-lexer [#:mode mode] => thunk
 ;; Generate a context-sensitive lexer for the C language.
+;; The key-arg @var{mode} can be @code{'code} or @code{'file}.  If @code{'code}
+;; @enumerate
+;; @item
+;; CPP defines are expanded (future work)
+;; @item
+;; CPP if/def is executed
+;; @end enumerate
 (define gen-c-lexer
   ;; This gets ugly in order to handle cpp.
   ;;.need to add support for num's w/ letters like @code{14L} and @code{1.3f}.
@@ -353,23 +360,28 @@
 	       ((read-ident ch) =>
 		(lambda (str)
 		  (let ((sym (string->symbol str))
-			;;(repl (assoc-ref (cpi-defs info) str))
-			(repl #f)
-			)
-		    (cond ((string? repl) ; expand cpp-defined argless macro
-			   (push-input (open-input-string repl))
-			   (iter (read-char)))
-			  ((assq-ref keytab sym) => (lambda (t) (cons t str)))
-			  ((typename? str)
-			   (cons (assq-ref symtab 'typename) str))
-			  (else (cons (assq-ref symtab '$ident) str))))))
+			(repl (and ;;(eq? mode 'code)
+			       (assoc-ref (cpi-defs info) str))))
+		    (cond
+		     ((string? repl) ;; expand cpp-defined argless macro
+		      (simple-format #t "repl=~S\n" repl)
+		      (push-input (open-input-string repl))
+		      (iter (read-char)))
+		     ((and repl (replace-cpp-def str (cpi-defs info))) =>
+		      (lambda (st)
+			(push-input (open-input-string st))
+			(iter (read-char))))
+		     ((assq-ref keytab sym) => (lambda (t) (cons t str)))
+		     ((typename? str)
+		      (cons (assq-ref symtab 'typename) str))
+		     (else (cons (assq-ref symtab '$ident) str))))))
 	       ((read-c-num ch) => assc-$)
 	       ((read-c-string ch) => assc-$)
 	       ((read-c-chlit ch) => assc-$)
 	       ((read-comm ch bol) => assc-$)
 	       ((read-chseq ch) => identity)
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-	       ((eqv? ch #\\) ;; el\\\nse => else
+	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
 		(let ((ch (read-char)))
 		  (cond ((eqv? #\newline ch) (iter (read-char))) ;; extend line
 			(else (unread-char ch) (cons #\\ "\\"))))) ;; parse err
