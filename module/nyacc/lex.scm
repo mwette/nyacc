@@ -49,7 +49,7 @@
 	    like-c-ident?
 	    filter-mt remove-mt map-mt make-ident-like-p 
 	    c:ws c:if c:ir)
-  #:use-module ((srfi srfi-1) #:select (fold remove))
+  #:use-module ((srfi srfi-1) #:select (remove append-reverse))
   #:use-module (ice-9 pretty-print)
   )
 
@@ -81,7 +81,7 @@
 (define c:nx (string->char-set "eEdD"))	; number exponent
 (define c:hx (string->char-set "abcdefABCDEF"))
 
-;; @item eval-reader reader string => result
+;; @deffn eval-reader reader string => result
 ;; For test and debug, this procedure will evaluate a reader on a string.
 ;; A reader is a procedure that accepts a single character argument intended
 ;; to match a specific character sequence.  A reader will read more characters
@@ -93,7 +93,7 @@
   (with-input-from-string string
     (lambda () (reader (read-char)))))
 
-;; @item make-space-skipper chset => proc
+;; @deffn make-space-skipper chset => proc
 ;; This routine will generate a reader to skip whitespace.
 (define (make-space-skipper chset)
   (lambda (ch)
@@ -107,13 +107,13 @@
 	    #t)))
 	#f)))
 	 
-;; @item skip-c-space ch => #f|#t
+;; @deffn skip-c-space ch => #f|#t
 ;; If @code{ch} is space, skip all spaces, then return @code{#t}, else
 ;; return @code{#f}.
 (define skip-c-space (make-space-skipper c:ws))
 
 
-;; @item make-ident-reader cs-first cs-rest => ch -> #f|string
+;; @deffn make-ident-reader cs-first cs-rest => ch -> #f|string
 ;; For identifiers, given the char-set for first character and the char-set
 ;; for following characters, return a return a reader for identifiers.
 ;; The reader takes a character as input and returns @code{#f} or @code{string}.
@@ -131,11 +131,11 @@
 		 (list->string (reverse chl)))))
 	#f)))
 
-;; @item read-c-ident ch => #f|string
+;; @deffn read-c-ident ch => #f|string
 ;; If ident pointer at following char, else (if #f) ch still last-read.
 (define read-c-ident (make-ident-reader c:if c:ir))
 
-;; @item make-ident-like-p ident-reader
+;; @deffn make-ident-like-p ident-reader
 ;; Generate a predicate, from a reader, that determines if a string qualifies
 ;; as an identifier.
 (define (make-like-ident-p reader)
@@ -144,7 +144,7 @@
 (define like-c-ident? (make-like-ident-p read-c-ident))
 
 
-;; @item make-string-reader delim
+;; @deffn make-string-reader delim
 ;; Generate a reader that uses @code{delim} as delimiter for strings.
 ;; TODO: need to handle matlab-type strings.
 ;; TODO: need to handle multiple delim's (like python)
@@ -226,12 +226,12 @@
 	      ((eq? ch #\") (cons '$string (list->string (reverse cl))))
 	      (else (iter (cons ch cl) (read-char)))))))
 
-;; @item make-chlit-reader
+;; @deffn make-chlit-reader
 ;; Generate a reader for character literals. NOT DONE.
 ;; For C, this reads @code{'c'} or @code{'\n'}.
 (define (make-chlit-reader . rest) (error "NOT IMPLEMENTED"))
 
-;; @item read-c-chlit ch
+;; @deffn read-c-chlit ch
 ;; @example
 ;; ... 'c' ... => (read-c-chlit #\') => '($ch-lit . #\c)
 ;; @end example
@@ -254,7 +254,7 @@
 		      (else (error "bad escape sequence")))))
 	    (cons '$chlit (string c1))))))
 
-;; @item make-num-reader => (proc ch) => #f|($fixed . "1")|($float . "1.0")
+;; @deffn make-num-reader => (proc ch) => #f|($fixed . "1")|($float . "1.0")
 ;; This routine will clean by adding "0" before or after dot.
 ;; TODO: add arg to specify alternate syntaxes (e.g. "0x123")
 ;; may want to replace "eEdD" w/ "e"
@@ -313,11 +313,11 @@
 	   (unless (eof-object? ch) (unread-char ch))
 	   (cons ty (list->string (reverse chl)))))))))
 
-;; @item read-c-num ch => #f|string
+;; @deffn read-c-num ch => #f|string
 ;; Reader for unsigned numbers as used in C (or close to it).
 (define read-c-num (make-num-reader))
 
-;;.@item si-map string-list ix => a-list
+;;.@deffn si-map string-list ix => a-list
 ;; Convert list of strings to alist of char at ix and strings.
 ;; This is a helper for make-tree.
 (define (si-map string-list ix)
@@ -334,7 +334,7 @@
       (iter (cons (cons (string-ref (car sl) ix) (list (car sl))) sal)
             (cdr sl))))))
 
-;;.@item make-tree strtab -> tree
+;;.@deffn make-tree strtab -> tree
 ;; This routine takes an alist of strings and symbols and makes a tree
 ;; that parses one char at a time and provide @code{'else} entry for
 ;; signaling sequence found.  That is, if @code{("ab" . 1)} is an entry
@@ -349,7 +349,7 @@
 	 (si-map string-list ix)))
   (si-cnvt (map car strtab) 0))
 
-;; @item make-chseq-reader strtab
+;; @deffn make-chseq-reader strtab
 ;; Given alist of pairs (string, token) return a function that eats chars
 ;; until (token . string) is returned or @code{#f} if no match is found.
 (define (make-chseq-reader strtab)
@@ -375,14 +375,25 @@
 	      (pushback (cdr cl))))
 	  #f))))))
 
-;; @item make-comm-reader comm-table [#:eat-newline #t] => \
+;; @deffn make-comm-reader comm-table [#:eat-newline #t] => \
 ;;   ch bol -> ('$code-comm "..")|('$lone-comm "..")|#f
-;; comm-table is list of cons for (start . end) comment
+;; comm-table is list of cons for (start . end) comment.
 ;; e.g. ("--" "\n") ("/*" "*/")
 ;; test with "/* hello **/"
 ;; If @code{eat-newline} is specified as true then for read comments 
 ;; ending with a newline a newline swallowed with the comment.
-(define* (make-comm-reader comm-table #:key eat-newline)
+;; Note: assumes backslash is never part of the end
+(define* (make-comm-reader comm-table #:key (eat-newline #f))
+
+  (define (mc-read-char)
+    (let ((ch (read-char)))
+      (if (eqv? ch #\\)
+	  (let ((ch (read-char)))
+	    (if (eqv? ch #\newline)
+		(read-char)
+		(begin (unread-char ch) #\\)))
+	  ch)))
+    
   (let ((tree (make-tree comm-table)))
     (lambda (ch bol)
       (letrec
@@ -391,7 +402,7 @@
 	    (lambda (cl node)
 	      (cond
 	       ((assq-ref node (car cl)) => ;; shift next character
-		(lambda (n) (match-beg (cons (read-char) cl) n)))
+		(lambda (n) (match-beg (cons (mc-read-char) cl) n)))
 	       ((assq-ref node 'else) =>
 		(lambda (res) (unread-char (car cl)) res)) ; yuck?
 	       (else
@@ -411,31 +422,31 @@
 		(if (and (pair? cl) (eqv? (car cl) #\cr)) ;; rem trailing \r 
 		    (cons tval (list->string (reverse (cdr cl))))
 		    (cons tval (list->string (reverse cl)))))
-	       ((null? il) (find-end cl sl (cons (read-char) il) ps px))
+	       ((null? il) (find-end cl sl (cons (mc-read-char) il) ps px))
 	       ((eof-object? (car il)) (error "open comment"))
-	       ((eq? (car il) (string-ref ps px))
+	       ((eqv? (car il) (string-ref ps px))
 		(find-end cl (cons (car il) sl) (cdr il) ps (1+ px)))
 	       (else
-		(let ((il1 (fold cons il sl)))
+		(let ((il1 (append-reverse sl il)))
 		  (find-end (cons (car il1) cl) '() (cdr il1) ps 0)))))))
 	(let ((ep (match-beg (list ch) tree)))
-	  (if ep (find-end '() '() (list (read-char)) ep 0) #f))))))
+	  (if ep (find-end '() '() (list (mc-read-char)) ep 0) #f))))))
 
 (define read-c-comm (make-comm-reader '(("/*" . "*/") ("//" . "\n"))))
 
-;; @item filter-mt p? al => al
+;; @deffn filter-mt p? al => al
 ;; Filter match-table based on cars of al.
 (define (filter-mt p? al) (filter (lambda (x) (p? (car x))) al))
 
-;; @item remove-mt p? al => al
+;; @deffn remove-mt p? al => al
 ;; Remove match-table based on cars of al.
 (define (remove-mt p? al) (remove (lambda (x) (p? (car x))) al))
 
-;; @item map-mt f al => al
+;; @deffn map-mt f al => al
 ;; Map cars of al.
 (define (map-mt f al) (map (lambda (x) (cons (f (car x)) (cdr x))) al))
 
-;; @item make-lexer-generator match-table => lexer-generator
+;; @deffn make-lexer-generator match-table => lexer-generator
 ;; @example
 ;; (define gen-lexer (make-lexer-generator #:ident-reader my-id-rdr))
 ;; (with-input-from-file "foo" (parse (gen-lexer)))

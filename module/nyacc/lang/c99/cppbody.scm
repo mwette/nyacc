@@ -81,9 +81,9 @@
 	   (lambda () #f))))
 
 
-;; @deffn replace-cpp-def ident dict => repl|#f
+;; @deffn expand-cpp-def ident dict => repl|#f
 ;; This may pull from the input.
-(define (replace-cpp-def ident dict . rest)
+(define (expand-cpp-def ident dict . rest)
 
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
@@ -91,7 +91,7 @@
   ;; process the replacement text => (reversed) token-list
   ;; if for-argl, stop on , or ) and next char will be , or )
   (define (scan-input argd used for-argl)
-    (simple-format #t "  scan-input argd=~S used=~S ~S\n" argd used for-argl)
+    ;;(simple-format #t "  scan-input argd=~S used=~S ~S\n" argd used for-argl)
     (let iter ((stl '())		; string list
 	       (chl '())		; char-list
 	       (nxt #f)			; next string 
@@ -117,7 +117,7 @@
 	(lambda (st) (iter stl chl st lvl (read-char))))
        ((read-c-ident ch) =>
 	(lambda (iden)
-	  (simple-format #t "    iden=~S\n" iden)
+	  ;;(simple-format #t "    iden=~S\n" iden)
 	  (let* ((aval (assoc-ref argd iden))  ; lookup argument
 		 (rval (assoc-ref dict iden))) ; lookup macro def
 	    (cond
@@ -156,12 +156,17 @@
     (cond
      ((not rval) #f)
      ((member ident used) ident)
+     ((string? rval)
+      (simple-format #t "    rval=>~S\n" rval)
+      (let ((expd (expand-repl rval '() (cons ident used))))
+	(simple-format #t "expand ~S => ~S\n" ident expd)
+	expd))
      ((pair? rval)
       (let* ((args (car rval)) (repl (cdr rval))
 	     (argv (collect-args '() '()))
 	     (argd (map cons args argv))
 	     (expd (expand-repl repl argd (cons ident used))))
-	;;(simple-format #t "repl=~S expd=~S\n" repl expd)
+	(simple-format #t "expand ~S => ~S\n" ident expd)
 	expd)))))
 
 ;;; --- last line ---

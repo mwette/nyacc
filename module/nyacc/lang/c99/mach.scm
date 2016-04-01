@@ -683,8 +683,12 @@
   (let ((info (fluid-ref *info*)))
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
-(define* (dev-parse-c99
-	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
+(define* (dev-parse-c99 #:key
+			(cpp-defs '())
+			(inc-dirs '())
+			(td-dict '())
+			(mode 'file)
+			(debug #f))
   (catch
    'parse-error
    (lambda ()

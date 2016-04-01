@@ -21,7 +21,7 @@
   #:export (parse-cpp-stmt
 	    parse-cpp-expr
 	    eval-cpp-expr
-	    replace-cpp-def
+	    expand-cpp-def
 	    )
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)

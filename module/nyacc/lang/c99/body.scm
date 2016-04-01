@@ -82,7 +82,7 @@
 ;; caar is list of sibs
 ;; search (caar car tyns), then (caar cadr tyns), then ...
 
-;; @item typename? name
+;; @deffn typename? name
 ;; Called by lexer to determine if symbol is a typename.
 ;; Check current sibling for each generation.
 (define (typename? name)
@@ -96,7 +96,7 @@
 	      (if (member name (car ptl)) #t
 		  (iter (cdr ptl))))))))
 
-;; @item add-typename name
+;; @deffn add-typename name
 ;; Helper for @code{save-typenames}.
 (define (add-typename name)
   ;;(simple-format #t "add-typename ~S\n" name)
@@ -125,7 +125,7 @@
 
 (use-modules (ice-9 pretty-print))
 
-;; @item find-new-typenames decl
+;; @deffn find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
 (define (find-new-typenames decl)
@@ -152,7 +152,7 @@
 		    (cdr idl))))
 	'())))
 
-;; @item save-typenames decl
+;; @deffn save-typenames decl
 ;; Save the typenames for the lexical analyzer and return the decl.
 (define (save-typenames decl)
   ;; This finds typenames using @code{find-new-typenames} and adds via
@@ -163,7 +163,7 @@
 
 ;; ------------------------------------------------------------------------
 
-;; @item read-cpp-line ch => #f | (cpp-xxxx)??
+;; @deffn read-cpp-line ch => #f | (cpp-xxxx)??
 ;; Given if ch is #\# read a cpp-statement
 ;; includes BUG: #define ABC 123 /* \n
 (define (read-cpp-line ch)
@@ -176,17 +176,22 @@
 	    (if (eq? c2 #\newline)
 		(iter cl (read-char))
 		(iter (cons* c2 ch cl) (read-char)))))
-	 ((eq? ch #\/)
+	 ((eq? ch #\/) ;; swallow comments, event w/ newlines
 	  (let ((c2 (read-char)))
 	    (if (eq? c2 #\*)
-		(begin
-		  (unread-char c2)
-		  (unread-char #\/)
-		  (list->string (reverse cl)))
-		(iter (cons* c2 ch cl) (read-char)))))
+		(let iter2 ((cl2 (cons* #\* #\/ cl)) (ch (read-char)))
+		  (cond
+		   ((eq? ch #\*)
+		    (let ((c2 (read-char)))
+		      (if (eqv? c2 #\/)
+			  (iter (cons* #\/ #\* cl2) (read-char))
+			  (iter2 (cons #\* cl2) c2))))
+		   (else
+		    (iter2 (cons ch cl2) (read-char)))))
+		(iter (cons #\/ cl) c2))))
 	 (else (iter (cons ch cl) (read-char)))))))
 
-;; @item find-file-in-dirl file dirl => path
+;; @deffn find-file-in-dirl file dirl => path
 (define (find-file-in-dirl file dirl)
   (let iter ((dirl dirl))
     (if (null? dirl) #f
@@ -204,10 +209,13 @@
 ;; @item keep
 ;; keep code
 ;; @item keep1
-;; keep one token and pop skip-stack
-;; @item skip1
+;; NOT USED keep one token and pop skip-stack
+;; @item skip-one
 ;; skip one token and pop skip-stack
 ;; @end table
+
+;; NOTE: if file mode we usually keep #ifdefs.  The lone exception is
+;; @code{#if 0}
 
 ;; @deffn gen-c-lexer [#:mode mode] => thunk
 ;; Generate a context-sensitive lexer for the C language.
@@ -218,6 +226,9 @@
 ;; @item
 ;; CPP if/def is executed
 ;; @end enumerate
+(define (def-xdef? name mode)
+  (eqv? mode 'code))
+
 (define gen-c-lexer
   ;; This gets ugly in order to handle cpp.
   ;;.need to add support for num's w/ letters like @code{14L} and @code{1.3f}.
@@ -245,7 +256,10 @@
 	 (t-typename (assq-ref symtab 'typename))
 	 (xp1 (sxpath '(cpp-stmt define)))
 	 (xp2 (sxpath '(decl))))
-    (lambda* (#:key (mode 'code))     ; modes are 'code or 'file
+    ;; mode: 'code|'file
+    ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
+    ;; ppev?: (proc ???) => #t|#f : do we eval-and-honor #if/#else ?
+    (lambda* (#:key (mode 'code) (xdef? def-xdef?))
       (let ((bol #t)		      ; begin-of-line condition
 	    (skip (list 'keep))	      ; CPP skip-input stack
 	    (info (fluid-ref *info*)) ; assume make and run in same thread
@@ -253,6 +267,9 @@
 	    )
 	;; Return the first (tval lval) pair not excluded by the CPP.
 	(lambda ()
+
+	  (define (eval-flow?)
+	    (eqv? mode 'code))
       
 	  (define (add-define tree)
 	    (let* ((tail (cdr tree))
@@ -266,7 +283,6 @@
 	      (set-cpi-defs! info (delete name (cpi-defs info))))
 	  
 	  (define (exec-cpp line)
-	    ;;(simple-format #t "exec-cpp: ~S\n" line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
 	    (let* ((stmt (parse-cpp-stmt line))
 		   (perr (lambda (file)
@@ -276,7 +292,6 @@
 		 (let* ((parg (cadr stmt)) (leng (string-length parg))
 			(file (substring parg 1 (1- leng)))
 			(tynd (assoc-ref (cpi-tynd info) file)))
-		   ;;(simple-format #t "file: ~S\n" file) ;;(pretty-print tynd)
 		   (if tynd
 		       (for-each add-typename tynd)
 		       (let* ((pth (find-file-in-dirl file (cpi-incs info)))
@@ -292,49 +307,47 @@
 		 (add-define stmt))
 		((undef)
 		 (rem-define (cadr stmt)))
-		#;((ifdef) (cpi-push)) ;; ???
-		#;((ifndef) (cpi-push))
-		((if)
+		((if) ;; and ifdef, ifndef
 		 (cpi-push)
-		 (if (eq? mode 'code)
+		 (if (eval-flow?)
 		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
 		       (cond
 			((not val)
 			 (throw 'parse-error "unresolved: ~S" (cadr stmt)))
 			((zero? val)
-			 (set! skip (cons* 'skip-1 'skip-look skip)))
+			 (set! skip (cons* 'skip-one 'skip-look skip)))
 			(else
-			 (set! skip (cons* 'skip-1 (car skip) skip)))))))
+			 (set! skip (cons* 'skip-one (car skip) skip)))))))
 		((elif)
-		 (if (eq? mode 'code)
+		 (if (eval-flow?)
 		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
 		       (cond
 			((not val)
 			 (throw 'parse-error "unresolved: ~S" (cadr stmt)))
 			((eq? 'keep (car skip))
-			 (set! skip (cons* 'skip-1 'skip (cdr skip))))
+			 (set! skip (cons* 'skip-one 'skip (cdr skip))))
 			((zero? val)
-			 (set! skip (cons* 'skip-1 skip)))
+			 (set! skip (cons* 'skip-one skip)))
 			((eq? 'skip-look (car skip))
 			 (cpi-shift)
-			 (set! skip (cons* 'skip-1 'keep (cdr skip))))
+			 (set! skip (cons* 'skip-one 'keep (cdr skip))))
 			(else
 			 (cpi-shift)
-			 (set! skip (cons* 'skip-1 'skip (cdr skip))))))
+			 (set! skip (cons* 'skip-one 'skip (cdr skip))))))
 		     (cpi-shift)))
 		((else)
-		 (if (eq? mode 'code)
+		 (if (eval-flow?)
 		     (cond
 		      ((eq? 'skip-look (car skip))
 		       (cpi-shift)
-		       (set! skip (cons* 'skip-1 'keep (cdr skip))))
+		       (set! skip (cons* 'skip-one 'keep (cdr skip))))
 		      (else
-		       (set! skip (cons* 'skip-1 'skip (cdr skip)))))
+		       (set! skip (cons* 'skip-one 'skip (cdr skip)))))
 		     (cpi-shift)))
 		((endif)
 		 (cpi-pop)
-		 (if (eq? mode 'code)
-		     (set! skip (cons 'skip-1 (cdr skip)))))
+		 (if (eval-flow?)
+		     (set! skip (cons 'skip-one (cdr skip)))))
 		((error)
 		 stmt)
 		(else
@@ -358,23 +371,27 @@
 		 ((read-cpp ch) => assc-$)
 		 (else (set! bol #f) (iter ch))))
 	       ((read-ident ch) =>
-		(lambda (str)
-		  (let ((sym (string->symbol str))
-			(repl (and ;;(eq? mode 'code)
-			       (assoc-ref (cpi-defs info) str))))
+		(lambda (name)
+		  (let ((symb (string->symbol name))
+			#;(repl (and (xdef? mode)
+				   (assoc-ref (cpi-defs info) name))))
 		    (cond
-		     ((string? repl) ;; expand cpp-defined argless macro
-		      (simple-format #t "repl=~S\n" repl)
+		     #;((string? repl) ;; expand cpp-defined argless macro
 		      (push-input (open-input-string repl))
 		      (iter (read-char)))
-		     ((and repl (replace-cpp-def str (cpi-defs info))) =>
-		      (lambda (st)
-			(push-input (open-input-string st))
-			(iter (read-char))))
-		     ((assq-ref keytab sym) => (lambda (t) (cons t str)))
-		     ((typename? str)
-		      (cons (assq-ref symtab 'typename) str))
-		     (else (cons (assq-ref symtab '$ident) str))))))
+		     ((and (xdef? name mode)
+			   (expand-cpp-def name (cpi-defs info)))
+		      => (lambda (st)
+			   (simple-format #t "na=~S st=~S\n" name st)
+			   (cons (assq-ref symtab '$ident) name)
+			   #;(push-input (open-input-string st))
+			   #;(iter (read-char))))
+		     ((assq-ref keytab symb)
+		      => (lambda (t) (cons t name)))
+		     ((typename? name)
+		      (cons (assq-ref symtab 'typename) name))
+		     (else
+		      (cons (assq-ref symtab '$ident) name))))))
 	       ((read-c-num ch) => assc-$)
 	       ((read-c-string ch) => assc-$)
 	       ((read-c-chlit ch) => assc-$)
@@ -393,7 +410,7 @@
 	    (case (car skip)
 	      ((keep) pair)
 	      ((skip skip-look) (loop (read-token)))
-	      ((skip-1)
+	      ((skip-one)
 	       (set! skip (cdr skip))
 	       (loop (read-token)))))
 	  )))))

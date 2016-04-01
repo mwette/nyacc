@@ -43,7 +43,7 @@
 
 (define *nyacc-version* "0.70.0")
 
-;; @item proxy-? sym rhs
+;; @deffn proxy-? sym rhs
 ;; @example
 ;; (LHS (($? RHS))
 ;; ($P (($$ #f))
@@ -54,7 +54,7 @@
 	(list '(action #f #f (list)))
 	rhs))
 
-;; @item proxy-+ sym rhs
+;; @deffn proxy-+ sym rhs
 ;; @example
 ;; (LHS (($* RHS))
 ;; ($P (($$ '()))
@@ -71,7 +71,7 @@
 			  (set-cdr! (last-pair $1) (list $2))
 			  $1)))))
 
-;; @item proxy-+ sym rhs
+;; @deffn proxy-+ sym rhs
 ;; @example
 ;; (LHS (($+ RHS))
 ;; ($P (RHS ($$ (list $1)))
@@ -88,7 +88,7 @@
 			  (set-cdr! (last-pair $1) (list $2))
 			  $1)))))
 
-;; @item reserved? grammar-symbol
+;; @deffn reserved? grammar-symbol
 ;; Determine whether the syntax argument is a reserved symbol, that is.
 ;; So instead of writing @code{'$fixed} for syntax one can write
 ;; @code{$fixed}.  We may want to change this to
@@ -100,7 +100,7 @@
   ;; If the first character `$' then it's reserved.
   (eqv? #\$ (string-ref (symbol->string (syntax->datum grammar-symbol)) 0)))
   
-;; @item lalr-spec grammar => spec
+;; @deffn lalr-spec grammar => spec
 ;; This routine reads a grammar in a scheme-like syntax and returns an a-list.
 ;; This spec' can be an input for @item{make-parser-generator} or 
 ;; @item{pp-spec}.
@@ -216,7 +216,7 @@
 	       ((_) '()))))
 	 (process-spec (lalr-spec-1 <expr> +++)))))))
 
-;; @item atomize terminal => object
+;; @deffn atomize terminal => object
 ;; Generate an atomic object for a terminal.   Expected terminals are strings,
 ;; characters and symbols.  This will convert the strings @code{s} to symbols
 ;; of the form @code{'$:s}.
@@ -225,7 +225,7 @@
       (string->symbol (string-append "$:" terminal))
       terminal))
 
-;; @item normize terminal => char|symbol
+;; @deffn normize terminal => char|symbol
 ;; Normalize a token. This routine will normalize tokens in order to check
 ;; for similarities. For example, @code{"+"} and @code{#\+} are similar,
 ;; @code{'foo} and @code{"foo"} are similar.
@@ -235,13 +235,13 @@
 	  (string-ref terminal 0)
 	  (string->symbol terminal))))
 
-;; @item eqv-terminal? a b
+;; @deffn eqv-terminal? a b
 ;; This is a predicate to determine if the terminals @code{a} and @code{b}
 ;; are equivalent.
 (define (eqv-terminal? a b)
   (eqv? (atomize a) (atomize b)))
 
-;; @item find-terminal symb term-l => term-symb
+;; @deffn find-terminal symb term-l => term-symb
 ;; Find the terminal in @code{term-l} that is equivalent to @code{symb}.
 (define (find-terminal symb term-l)
   (let iter ((tl term-l))
@@ -249,7 +249,7 @@
 	(if (eqv-terminal? symb (car tl)) (car tl)
 	    (iter (cdr tl))))))
   
-;; @item process-spec tree => specification (as a-list)
+;; @deffn process-spec tree => specification (as a-list)
 ;; Here we sweep through the production rules. We flatten and order the rules
 ;; and place all p-rules with like LHSs together.  There is a non-trivial
 ;; amount of extra code to deal with mid-rule actions (MRAs).
@@ -288,12 +288,12 @@
        (else
 	(list (cons 'prec p-l) (cons 'assc a-l))))))
 
-  ;;.@item make-mra-proxy sy pel act => ???
+  ;;.@deffn make-mra-proxy sy pel act => ???
   ;; Generate a mid-rule-action proxy.
   (define (make-mra-proxy sy pel act)
     (list sy (list (cons* 'action (length pel) (cdr act)))))
 
-  ;; @item gram-check-2 tl nl err-l
+  ;; @deffn gram-check-2 tl nl err-l
   ;; Check for fatal: symbol used as terminal and non-terminal.
   (define (gram-check-2 tl nl err-l)
     (let ((cf (lset-intersection eqv? (map atomize tl) nl)))
@@ -301,7 +301,7 @@
 	  (cons (fmtstr "*** symbol is terminal and non-terminal: ~S" cf)
 		err-l) err-l)))
 	       
-  ;; @item gram-check-3 ll nl err-l
+  ;; @deffn gram-check-3 ll nl err-l
   ;; Check for fatal: non-terminal's w/o production rule.
   (define (gram-check-3 ll nl err-l)
     (fold
@@ -311,7 +311,7 @@
 	   l))
      err-l nl))
 
-  ;; @item gram-check-4 ll nl err-l
+  ;; @deffn gram-check-4 ll nl err-l
   ;; Check for warning: unused LHS.
   ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
   (define (gram-check-4 ll nl err-l)
@@ -498,7 +498,7 @@
   (rhs-v core-rhs-v)		      ; vec of right hand sides
   (eps-l core-eps-l))		      ; non-terms w/ eps prod's
 
-;; @item make-core spec => lalr-core-type
+;; @deffn make-core spec => lalr-core-type
 (define (make-core spec)
   (make-lalr-core (assq-ref spec 'non-terms)
 		  (assq-ref spec 'terminals)
@@ -507,7 +507,7 @@
 		  (assq-ref spec 'rhs-v)
 		  '()))
 
-;; @item make-core/extras spec => lalr-core-type
+;; @deffn make-core/extras spec => lalr-core-type
 ;; Add list of symbols with epsilon productions.
 (define (make-core/extras spec)
   (let ((non-terms (assq-ref spec 'non-terms))
@@ -521,7 +521,7 @@
 
 ;; @section Routines
 
-;; @item <? a b po => #t | #f
+;; @deffn <? a b po => #t | #f
 ;; Given tokens @code{a} and @code{b} and partial ordering @code{po} report
 ;; if precedence of @code{b} is greater than @code{a}?
 (define (<? a b po)
@@ -533,7 +533,7 @@
 		#t
 		(iter (cdr po)))))))
 
-;; @item prece a b po
+;; @deffn prece a b po
 ;; Return precedence for @code{a,b} given the partial order @code{po} as
 ;; @code{#\<}, @code{#\>}, @code{#\=} or @code{#f}.
 ;; This is not a true partial order as we can have a<b and b<a => a=b.
@@ -547,7 +547,7 @@
 	  (if (<? b a po) #\= #\<)
 	  (if (<? b a po) #\> #f))))
   
-;; @item non-terminal? symb
+;; @deffn non-terminal? symb
 (define (non-terminal? symb)
   (cond
    ((eqv? symb '$epsilon) #t)
@@ -557,11 +557,11 @@
    (else
     (memq symb (core-non-terms (fluid-ref *lalr-core*))))))
 
-;; @item terminal? symb
+;; @deffn terminal? symb
 (define (terminal? symb)
   (not (non-terminal? symb)))
 
-;; @item prule-range lhs => (start-ix . (1+ end-ix))
+;; @deffn prule-range lhs => (start-ix . (1+ end-ix))
 ;; Find the range of productiion rules for the lhs.
 ;; If not found raise error.
 (define (prule-range lhs)
@@ -586,7 +586,7 @@
 			  (iter-nd (1+ nd)))))
 		(iter-st (1+ st)))))))))
 
-;; @item range-next rng -> rng
+;; @deffn range-next rng -> rng
 ;; Given a range in the form of @code{(cons start (1+ end))} return the next
 ;; value or '() if at end.  That is @code{(3 . 4)} => @code{'()}.
 (define (range-next rng)
@@ -594,18 +594,18 @@
       (let ((nxt (cons (1+ (car rng)) (cdr rng))))
 	(if (= (car nxt) (cdr nxt)) '() nxt))))
 
-;; @item range-last? rng
+;; @deffn range-last? rng
 ;; Predicate to indicate last p-rule in range.
 ;; If off end (i.e., null rng) then #f.
 (define (range-last? rng)
   (and (pair? rng) (= (1+ (car rng)) (cdr rng))))
 
-;; @item lhs-symb prod-ix
+;; @deffn lhs-symb prod-ix
 ;; Return the LHS symbol for the production at index @code{prod-id}.
 (define (lhs-symb gx)
   (vector-ref (core-lhs-v (fluid-ref *lalr-core*)) gx))
 
-;; @item looking-at (p-rule-ix . rhs-ix)
+;; @deffn looking-at (p-rule-ix . rhs-ix)
 ;; Return symbol we are looking at for this item state.
 ;; If at the end (position = -1) (or rule is zero-length) then return
 ;; @code{'$epsilon}.
@@ -625,7 +625,7 @@
 	    (core-start core)
 	    (vector-ref (vector-ref (core-rhs-v core) gx) (cdr item))))))
 
-;; @item first-item gx
+;; @deffn first-item gx
 ;; Given grammar rule index return the first item.
 ;; This will return @code{(gx . 0)}, or @code{(gx . -1)} if the rule has
 ;; no RHS elements.
@@ -634,12 +634,12 @@
 	 (rlen (vector-length (vector-ref (core-rhs-v core) gx))))
     (cons gx (if (zero? rlen) -1 0))))
 
-;; @item last-item? item
+;; @deffn last-item? item
 ;; Predictate to indicate last item in (or end of) production rule.
 (define (last-item? item)
   (negative? (cdr item)))
 
-;; @item next-item item
+;; @deffn next-item item
 ;; Return the next item in the production rule.
 ;; A position of @code{-1} means the end.  If at end, then @code{'()}
 (define (next-item item)
@@ -651,7 +651,7 @@
      ((eqv? rxp1 rlen) (cons gx -1))
      (else (cons gx rxp1)))))
 
-;; @item prev-item item
+;; @deffn prev-item item
 ;; Return the previous item in the grammar.
 ;; prev (0 . 0) is currently (0 . 0)
 (define (prev-item item)
@@ -668,7 +668,7 @@
 	    (cons p-ixm1 -1))		; prev p-rule
 	(cons p-ix r-ixm1))))
 
-;; @item non-kernels symb => list of prule indices
+;; @deffn non-kernels symb => list of prule indices
 ;; Compute the set of non-kernel rules for symbol @code{symb}.  If grammar
 ;; looks like
 ;; @example
@@ -711,7 +711,7 @@
 	;; Done, so return.
 	(reverse rslt))))))
 
-;; @item expand-k-item => item-set
+;; @deffn expand-k-item => item-set
 ;; Expand a kernel-item into a list with the non-kernels.
 (define (expand-k-item k-item)
   (reverse
@@ -719,7 +719,7 @@
 	      (list k-item)
 	      (non-kernels (looking-at k-item)))))
 
-;; @item its-equal?
+;; @deffn its-equal?
 ;; Helper for step1
 (define (its-equal? its-1 its-2)
   (let iter ((its1 its-1) (its2 its-2)) ; cdr to strip off the ind
@@ -728,7 +728,7 @@
 	    (if (not (member (car its1) its-2)) #f ; mismatch => #f
 		(iter (cdr its1) (cdr its2)))))))
 
-;; @item its-member its its-l
+;; @deffn its-member its its-l
 ;; Helper for step1
 ;; If itemset @code{its} is a member of itemset list @code{its-l} return the
 ;; index, else return #f.
@@ -738,7 +738,7 @@
 	(if (its-equal? its (cdar itsl)) (caar itsl)
 	    (iter (cdr itsl))))))
   
-;; @item its-trans itemset => alist of (symb . itemset)
+;; @deffn its-trans itemset => alist of (symb . itemset)
 ;; Compute transitions from an itemset.   Thatis, map a list of kernel
 ;; items to a list of (symbol post-shift items).
 ;; @example
@@ -773,7 +773,7 @@
      (else
       rslt))))
 
-;; @item step1 [input-a-list] => p-mach-1
+;; @deffn step1 [input-a-list] => p-mach-1
 ;; Compute the sets of LR(0) kernel items and the transitions associated with
 ;; spec.  These are returned as vectors in the alist with keys @code{'kis-v}
 ;; and @code{'kix-v}, repspectively.   Each entry in @code{kis-v} is a list of
@@ -830,7 +830,7 @@
 	  ;; Return kis-v, kernel itemsets, and kix-v transitions.
 	  (cons* (cons 'kis-v kisv) (cons 'kix-v kitv) al-in)))))))
 
-;; @item find-eps non-terms lhs-v rhs-v => eps-l
+;; @deffn find-eps non-terms lhs-v rhs-v => eps-l
 ;; Generate a list of non-terminals which have epsilon productions.
 (define (find-eps nterms lhs-v rhs-v)
   (let* ((nprod (vector-length lhs-v))
@@ -852,17 +852,17 @@
 	       (else ll))))))
     (fixed-point find-new (find-new #f '()))))
 
-;; @item merge1 v l
+;; @deffn merge1 v l
 ;; add v to l if not in l
 (define	(merge1 v l)
   (if (memq v l) l (cons v l)))
 
-;; @item merge2 v l al
+;; @deffn merge2 v l al
 ;; add v to l if not in l or al
 (define (merge2 v l al)	
   (if (memq v l) l (if (memq v al) l (cons v l))))
 
-;; @item first symbol-list end-token-list
+;; @deffn first symbol-list end-token-list
 ;; Return list of terminals starting the string @code{symbol-list}
 ;; (see DB, p. 188).  If the symbol-list can generate epsilon then the
 ;; result will include @code{end-token-list}.
@@ -924,7 +924,7 @@
        (else
 	rslt)))))
 
-;; @item item->stng item => list-of-symbols
+;; @deffn item->stng item => list-of-symbols
 ;; Convert item (e.g., @code{(1 . 2)}) to list of symbols to the end of the
 ;; production(?). If item is at the end of the rule then return
 ;; @code{'$epsilon}.  The term "stng" is used to avoid confusion about the
@@ -953,13 +953,13 @@
 	(if (eqv? tokl allt) la-item-l
 	    (acons item allt la-item-l)))))
 
-;; @item first-following item toks => token-list
+;; @deffn first-following item toks => token-list
 ;; For la-item A => x.By,z (as @code{item}, @code{toks}), this procedure
 ;; computes @code{FIRST(yz)}.
 (define (first-following item toks)
   (first (item->stng (next-item item)) toks))
 
-;; @item closure la-item-l => la-item-l
+;; @deffn closure la-item-l => la-item-l
 ;; Compute the closure of a list of la-items.
 ;; Ref: DB, Fig 4.38, Sec. 4.7, p. 232
 (define (closure la-item-l)
@@ -985,7 +985,7 @@
 		      (range-next pr))))))))
     la-item-l)))
 
-;; @item kit-add kit-v tokens sx item
+;; @deffn kit-add kit-v tokens sx item
 ;; Add @code{tokens} to the list of lookaheads for the (kernel) @code{item}
 ;; in state @code{sx}.   This is a helper for @code{step2}.
 (define (kit-add kit-v tokens kx item)
@@ -1000,7 +1000,7 @@
      ((pair? sd) (set-cdr! ar (append sd (cdr ar))) #t)
      (else #f))))
 
-;; @item kip-add kip-v sx0 it0 sx1 it1
+;; @deffn kip-add kip-v sx0 it0 sx1 it1
 ;; This is a helper for step2.  It updates kip-v with a propagation from
 ;; state @code{sx0}, item @code{it0} to state @code{sx1}, item @code{it1}.
 ;; [kip-v sx0] -> (it0 . ((sx1 . it1)
@@ -1013,7 +1013,7 @@
      (else
       (set-cdr! ar (acons sx1 it1 (cdr ar))) #t))))
 
-;; @item step2 p-mach-1 => p-mach-2
+;; @deffn step2 p-mach-1 => p-mach-2
 ;; This implements steps 2 and 3 of Algorithm 4.13 on p. 242 of the DB.
 ;; The a-list @code{subm1} includes the kernel itemsets and transitions
 ;; from @code{step1}.   This routine adds two entries to the alist:
@@ -1084,7 +1084,7 @@
   (fmtout "propagate:\n")
   (vector-for-each pp-kip kip-v))
 
-;; @item step3 p-mach-2 => p-mach-3
+;; @deffn step3 p-mach-2 => p-mach-3
 ;; Execute nyacc step 3, where p-mach means ``partial machine''.
 ;; This implements step 4 of Algorithm 4.13 from the DB.
 (define (step3 p-mach)
@@ -1118,7 +1118,7 @@
 	(iter #f 0 '() '() '() '()))))
     p-mach))
 
-;; @item reductions kit-v sx => ((tokA gxA1 ...) (tokB gxB1 ...) ...)
+;; @deffn reductions kit-v sx => ((tokA gxA1 ...) (tokB gxB1 ...) ...)
 ;; This is a helper for @code{step4}.
 ;; Return an a-list of reductions for state @code{sx}.
 ;; The a-list pairs are make of a token and a list of prule indicies.
@@ -1272,7 +1272,7 @@
 	 (psy (looking-at pit)))
     psy))
 
-;; @item step4 p-mach-0 => p-mach-1
+;; @deffn step4 p-mach-0 => p-mach-1
 ;; This generates the parse action table from the itemsets and then applies
 ;; precedence and associativity rules to eliminate shift-reduce conflicts
 ;; where possible.  The output includes the parse action table (entry
@@ -1379,7 +1379,7 @@
     ;; Return mach with parse-action and removed-action tables.
     (cons* (cons 'pat-v pat-v) (cons 'rat-v rat-v) p-mach)))
 
-;; @item conf->str cfl => string
+;; @deffn conf->str cfl => string
 ;; map conflict (e.g., @code{('rrconf 1 . 2}) to string.
 (define (conf->str cfl)
   (let* ((st (list-ref cfl 0)) (tok (list-ref cfl 1)) (typ (list-ref cfl 2))
@@ -1392,7 +1392,7 @@
 	      (else "unknown"))
 	    (obj->str (find-terminal tok terms)))))
 		     
-;; @item gen-match-table mach => mach
+;; @deffn gen-match-table mach => mach
 ;; Generate the match-table for a machine.  The match table is a list of
 ;; pairs: the car is the token used in the grammar specification, the cdr
 ;; is the symbol that should be returned by the lexical analyzer.
@@ -1421,12 +1421,12 @@
 		    (assq-ref mach 'terminals)))
    mach))
 
-;; @item lalr-match-table mach => match-table
+;; @deffn lalr-match-table mach => match-table
 ;; Get the match-table
 (define (lalr-match-table mach)
   (assq-ref mach 'mtab))
 
-;; @item compact-machine mach [#:keep 3] => mach
+;; @deffn compact-machine mach [#:keep 3] => mach
 ;; A "filter" to compact the parse table.  For each state this will replace
 ;; the most populus set of reductions of the same production rule with a
 ;; default production.  However, reductions triggered by @code{'$lone-comm}
@@ -1490,7 +1490,7 @@
 	(iter (1- sx) (vector-ref pat-v (1- sx)) '() '(0 . 0)))))
     mach))
 
-;; @item machine-compacted? mach => #t|#f
+;; @deffn machine-compacted? mach => #t|#f
 ;; Indicate if the machine has been compacted.
 (define (machine-compacted? mach)
   ;; Works by searching for $default phony-token.
@@ -1518,7 +1518,7 @@
 ;;   rhs-v - right hand sides
 ;;   pat-v - action table
 
-;; @item restart-spec spec start => spec
+;; @deffn restart-spec spec start => spec
 ;; This generates a new spec with a different start.
 ;; @example
 ;; (restart-spec clang-spec 'expression) => cexpr-spec
@@ -1530,7 +1530,7 @@
 	   (cons 'rhs-v rhs-v)
 	   spec)))
 
-;; @item make-lalr-machine spec => pgen
+;; @deffn make-lalr-machine spec => pgen
 ;; Generate a-list of items used for building/debugging parsers.
 ;; It might be useful to add hashify and compact with keyword arguments.
 (define (make-lalr-machine spec)
@@ -1553,12 +1553,12 @@
 	     sm9)))
 	(lambda () (fluid-set! *lalr-core* prev-core)))))
 
-;; @item elt->str elt terms => string
+;; @deffn elt->str elt terms => string
 (define (elt->str elt terms)
   (or (and=> (find-terminal elt terms) obj->str)
       (symbol->string elt)))
 
-;; @item pp-rule indent gx [port]
+;; @deffn pp-rule indent gx [port]
 ;; Pretty-print a production rule.
 (define (pp-rule il gx . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
@@ -1586,7 +1586,7 @@
       (vector-for-each (lambda (ix e) (fmt port " ~A" (elt->str e tl))) rhs)
       (newline port)))))
 	 
-;; @item pp-item item => string
+;; @deffn pp-item item => string
 ;; This could be called item->string.
 ;; This needs terminals to work correctly, like pp-lalr-grammar.
 (define (pp-item item) 
@@ -1630,7 +1630,7 @@
 		    (let ((e (vector-ref rhs rx)))
 		      (list (string-append " " (elt->str e tl)))))))))))))
 
-;; @item pp-lalr-notice spec [port]
+;; @deffn pp-lalr-notice spec [port]
 (define (pp-lalr-notice spec . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (notice (assq-ref (assq-ref spec 'attr) 'notice))
@@ -1638,7 +1638,7 @@
     (for-each (lambda (l) (simple-format port "  ~A\n" l)) lines)
     (newline)))
 
-;; @item pp-lalr-grammar spec [port]
+;; @deffn pp-lalr-grammar spec [port]
 ;; Pretty-print the grammar to the specified port, or current output.
 (define (pp-lalr-grammar spec . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
@@ -1665,7 +1665,7 @@
     (newline port)
     (fluid-set! *lalr-core* prev-core)))
 
-;; @item pp-lalr-machine mach [port]
+;; @deffn pp-lalr-machine mach [port]
 ;; Print the states of the parser with items and shift/reduce actions.
 (define (pp-lalr-machine mach . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
@@ -1784,13 +1784,13 @@
 
 ;; NEW: need to add reduction of ERROR
 
-;; @item (machine-hashed? mach) => #t|#f
+;; @deffn machine-hashed? mach => #t|#f
 ;; Indicate if the machine has been hashed.
 (define (machine-hashed? mach)
   ;; If hashed, the parse action for rule 0 will always be a number.
   (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
 
-;; @item hashify-machine mach => mach
+;; @deffn hashify-machine mach => mach
 ;; There is a bug in here: if pat contains rrconf then the output is
 ;; #unspedified.
 (define (hashify-machine mach)
@@ -1865,7 +1865,7 @@
 	(regexp-substitute #f m 'pre repl 'post)
 	str)))
 
-;; @item write-lalr-tables mach filename [#:lang output-lang]
+;; @deffn write-lalr-tables mach filename [#:lang output-lang]
 ;; For example,
 ;; @example
 ;; write-lalr-tables mach "tables.scm"
@@ -1891,7 +1891,7 @@
       (newline port))))
 
 
-;; @item write-lalr-actions mach filename [#:lang output-lang]
+;; @deffn write-lalr-actions mach filename [#:lang output-lang]
 ;; For example,
 ;; @example
 ;; write-lalr-actions mach "actions.scm"
