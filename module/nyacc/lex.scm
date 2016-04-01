@@ -20,6 +20,7 @@
 ;; '$fixed '$float '$string '$chlit '$ident
 
 ;; todo: change lexer to return @code{cons-source} instead of @code{cons}
+;; todo: to be fully compliant, C readers need to deal with \ at end of line
 
 ;; todo: figure out what readers return atoms and which pairs
 ;; tokens: read-c-ident 

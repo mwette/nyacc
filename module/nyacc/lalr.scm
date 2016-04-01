@@ -326,19 +326,6 @@
 		     ull (cons (car all) ull))
 		 (cdr all))))))
 	       
-  ;; Check for warning: duplicate terminals under atomize (e.g., 'foo "foo").
-  ;; BUG: Get all of these warnings on other random errors.  This needs to be
-  ;; more robust.
-  (define (gram-check-5 terminals prev-errs)
-    (let ((f "warning: similar terminals: ~A ~A"))
-      (let iter ((errs prev-errs) (head '()) (tail terminals))
-	(if (null? tail) errs
-	    (let* ((tok (car tail)) (nzt (normize tok))
-		   (pair (cons nzt tok)) (dup (assq-ref head nzt)))
-	      (iter (if dup (cons (fmtstr f (obj->str tok) (obj->str dup)) errs)
-			errs)
-		    (cons pair head) (cdr tail)))))))
-
   (let* ((gram (assq-ref tree 'grammar))
 	 (start-symbol (and=> (assq-ref tree 'start) atomize))
 	 (start-rule (lambda () (list start-symbol)))
@@ -468,10 +455,8 @@
 	       (err-3 (gram-check-3 ll nl err-2))
 	       ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
 	       (err-4 (gram-check-4 ll nl err-3))
-	       ;; Get duplicate terminals under atomize (e.g., 'foo "foo"):
-	       (err-5 (gram-check-5 tl err-4))
 	       ;; todo: Check that with withs are not mixed
-	       (err-l err-5))
+	       (err-l err-4))
 	  (for-each (lambda (e) (fmterr "~A\n" e)) err-l)
 	  (if (pair? (filter (lambda (s) (char=? #\* (string-ref s 0))) err-l))
 	      #f
