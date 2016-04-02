@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/cppact.scm
+;; ./mach.d/cppact.scm
 
 ;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
@@ -93,8 +93,6 @@
    (lambda ($2 $1 . $rest) `(post-inc ,$1))
    ;; postfix-expression => postfix-expression "--"
    (lambda ($2 $1 . $rest) `(post-dec ,$1))
-   ;; primary-expression => '$ident
-   (lambda ($1 . $rest) `(ident ,$1))
    ;; primary-expression => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
    ;; primary-expression => '$chlit

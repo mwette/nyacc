@@ -19,9 +19,11 @@
 
 (define-module (nyacc lang c99 cpp)
   #:export (parse-cpp-stmt
+	    read-cpp-stmt
 	    parse-cpp-expr
 	    eval-cpp-expr
-	    expand-cpp-def
+	    cpp-expand-text
+	    expand-cpp-mref
 	    )
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -42,14 +44,14 @@ todo:
   provide util to expand defines
 |#
 
-;;.@item skip-ws ch
+;;.@deffn skip-ws ch
 ;; Helper for 
 (define (skip-ws ch)
   (if (eof-object? ch) ch
       (if (char-set-contains? c:ws ch)
 	  (skip-ws (read-char))
 	  ch)))
-;; @item cpp-define => #f|???
+;; @deffn cpp-define => #f|???
 (define (cpp-define)
   ;; The (weak?) parse architecture is "unread la argument if no match"
   (letrec
@@ -80,7 +82,7 @@ todo:
 		(else #f)))))
     (p-cppd)))
 
-;; @item cpp-include
+;; @deffn cpp-include
 ;; Parse CPP include statement.
 (define (cpp-include)
   (let* ((beg-ch (skip-ws (read-char)))
@@ -90,7 +92,7 @@ todo:
 		     (iter (cons ch cl) (read-char))))))
     `(include ,path)))
 
-;; @item parse-cpp-stmt line => tree
+;; @deffn parse-cpp-stmt line => tree
 ;; Parse a line from a CPP statement and return a parse tree.
 ;; @example
 ;; (parse-cpp-stmt "define X 123") => (define "X" "123")
@@ -98,6 +100,7 @@ todo:
 ;; => (if (and (and (defined "A") (defined "B"))
 ;;             (not (defined "C")))
 ;; @end example
+;; NOTE: replace use of this with @code{read-cpp-stmt}
 (define (parse-cpp-stmt line)
   (with-input-from-string line
     (lambda ()
@@ -116,12 +119,40 @@ todo:
 	   ((ifdef) `(if (defined ,(rd-ident))))
 	   ((ifndef) `(if (not (defined ,(rd-ident)))))
 	   ((define) (cpp-define))
-	   ((if elif) (list cmd (parse-cpp-expr)))
+	   ;;((if elif) (list cmd (parse-cpp-expr)))
 	   ((else endif) (list cmd))
 	   ((undef) `(undef ,(rd-ident)))
 	   ((line) `(line ,(rd-num)))
 	   ((error) (read-char) `(error ,(drain-input (current-input-port))))
 	   ;;((pragma) (cpp-define)) ; ???
+	   (else '()))))))
+    
+;; @deffn read-cpp-stmt line defs => (stmt-type text)
+;; Parse a line from a CPP statement and return a parse tree.
+;; @example
+;; (parse-cpp-stmt "define X 123") => (define "X" "123")
+;; (parse-cpp-stmt "if defined(A) && defined(B) && defined(C)"
+;; => (if "defined(A) && defined(B) && defined(C)")
+;; @end example
+;; To evaluate the @code{if} statements use @code{parse-cpp-expr} and
+;; @code{eval-cpp-expr}.
+(define (read-cpp-stmt line)
+  (with-input-from-string line
+    (lambda ()
+      (let ((cmd (string->symbol (read-c-ident (skip-ws (read-char)))))
+	    (rd-ident (lambda () (read-c-ident (skip-ws (read-char)))))
+	    (rd-num (lambda () (and=> (read-c-num (skip-ws (read-char))) cdr))))
+	 (case cmd
+	   ((include) (cpp-include))
+	   ((ifdef) `(if (defined ,(rd-ident))))
+	   ((ifndef) `(if (not (defined ,(rd-ident)))))
+	   ((define) (cpp-define))
+	   ((if elif) (list cmd (drain-input (current-input-port))))
+	   ((else endif) (list cmd))
+	   ((undef) `(undef ,(rd-ident)))
+	   ((line) `(line ,(rd-num)))
+	   ((error) (read-char) `(error ,(drain-input (current-input-port))))
+	   ((pragma) (list cmd (drain-input (current-input-port))))
 	   (else '()))))))
     
 (include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
@@ -132,8 +163,10 @@ todo:
    (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
 	 (cons 'mtab mtab) (cons 'act-v act-v))))
 
-;; cppbody provides: gen-cpp-lexer parse-cpp-expr eval-cpp-expr
+;; The included file "cppbody.scm" provides:
+;; gen-cpp-lexer
+;; parse-cpp-expr
+;; eval-cpp-expr
 (include-from-path "nyacc/lang/c99/cppbody.scm")
  
-;; mode: scheme ***
 ;; --- last line ---

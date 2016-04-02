@@ -178,17 +178,20 @@
 		(iter (cons* c2 ch cl) (read-char)))))
 	 ((eq? ch #\/) ;; swallow comments, event w/ newlines
 	  (let ((c2 (read-char)))
-	    (if (eq? c2 #\*)
-		(let iter2 ((cl2 (cons* #\* #\/ cl)) (ch (read-char)))
-		  (cond
-		   ((eq? ch #\*)
-		    (let ((c2 (read-char)))
-		      (if (eqv? c2 #\/)
-			  (iter (cons* #\/ #\* cl2) (read-char))
-			  (iter2 (cons #\* cl2) c2))))
-		   (else
-		    (iter2 (cons ch cl2) (read-char)))))
-		(iter (cons #\/ cl) c2))))
+	    (cond
+	     ((eqv? c2 #\*)
+	      (let iter2 ((cl2 (cons* #\* #\/ cl)) (ch (read-char)))
+		(cond
+		 ((eq? ch #\*)
+		  (let ((c2 (read-char)))
+		    (if (eqv? c2 #\/)
+			(iter (cons* #\/ #\* cl2) (read-char)) ;; keep comment
+			;;(iter cl (read-char)) ;; toss comment
+			(iter2 (cons #\* cl2) c2))))
+		 (else
+		  (iter2 (cons ch cl2) (read-char))))))
+	     (else
+	      (iter (cons #\/ cl) c2)))))
 	 (else (iter (cons ch cl) (read-char)))))))
 
 ;; @deffn find-file-in-dirl file dirl => path
@@ -229,6 +232,7 @@
 (define (def-xdef? name mode)
   (eqv? mode 'code))
 
+;; @deffn gen-c-lexer [#:mode mode] [#:xdef? proc] => thunk
 (define gen-c-lexer
   ;; This gets ugly in order to handle cpp.
   ;;.need to add support for num's w/ letters like @code{14L} and @code{1.3f}.
@@ -284,7 +288,7 @@
 	  
 	  (define (exec-cpp line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
-	    (let* ((stmt (parse-cpp-stmt line))
+	    (let* ((stmt (read-cpp-stmt line))
 		   (perr (lambda (file)
 			   (throw 'parse-error "file not found: ~S" file))))
 	      (case (car stmt)
@@ -310,7 +314,10 @@
 		((if) ;; and ifdef, ifndef
 		 (cpi-push)
 		 (if (eval-flow?)
-		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
+		     (let* ((defs (cpi-defs info))
+			    (rhs (cpp-expand-text (cadr stmt) defs))
+			    (exp (parse-cpp-expr rhs))
+			    (val (eval-cpp-expr exp defs)))
 		       (cond
 			((not val)
 			 (throw 'parse-error "unresolved: ~S" (cadr stmt)))
@@ -320,7 +327,10 @@
 			 (set! skip (cons* 'skip-one (car skip) skip)))))))
 		((elif)
 		 (if (eval-flow?)
-		     (let ((val (eval-cpp-expr (cadr stmt) (cpi-defs info))))
+		     (let* ((defs (cpi-defs info))
+			    (rhs (cpp-expand-text (cadr stmt) defs))
+			    (exp (parse-cpp-expr rhs))
+			    (val (eval-cpp-expr exp defs)))
 		       (cond
 			((not val)
 			 (throw 'parse-error "unresolved: ~S" (cadr stmt)))
@@ -372,20 +382,13 @@
 		 (else (set! bol #f) (iter ch))))
 	       ((read-ident ch) =>
 		(lambda (name)
-		  (let ((symb (string->symbol name))
-			#;(repl (and (xdef? mode)
-				   (assoc-ref (cpi-defs info) name))))
+		  (let ((symb (string->symbol name)))
 		    (cond
-		     #;((string? repl) ;; expand cpp-defined argless macro
-		      (push-input (open-input-string repl))
-		      (iter (read-char)))
 		     ((and (xdef? name mode)
-			   (expand-cpp-def name (cpi-defs info)))
+			   (expand-cpp-mref name (cpi-defs info)))
 		      => (lambda (st)
-			   (simple-format #t "na=~S st=~S\n" name st)
-			   (cons (assq-ref symtab '$ident) name)
-			   #;(push-input (open-input-string st))
-			   #;(iter (read-char))))
+			   (push-input (open-input-string st))
+			   (iter (read-char))))
 		     ((assq-ref keytab symb)
 		      => (lambda (t) (cons t name)))
 		     ((typename? name)

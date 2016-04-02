@@ -15,20 +15,20 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; @item gen-cpp-lexer => thunk
-;; Generates a thunk that returns the next token from the current-input.
 (define gen-cpp-lexer (make-lexer-generator mtab))
 
-;; @item parse-cpp-expr => 
+;; @deffn parse-cpp-expr text => tree
 ;; A thunk that reads from default input and returns a parse tree.
 ;; Called by @code{parse-cpp-stmt} and @code{eval-cpp-expr}.  The latter
 ;; because the parsed expression may include terms which are cpp-defined
 ;; and should be evaluated lazy mode.
-(define (parse-cpp-expr)
-  (raw-parser (gen-cpp-lexer)))
+(define (parse-cpp-expr text)
+  (with-input-from-string text
+    (lambda () (raw-parser (gen-cpp-lexer)))))
 
-;; @item eval-cpp-expr tree dict => datum
-;; Evaluate a tree produced from 
+;; @deffn eval-cpp-expr tree dict => datum
+;; Evaluate a tree produced from
+;; This should be updated to use @code{expand-cpp-def}.  See below.
 (define (eval-cpp-expr tree dict)
   (letrec
       ((tx (lambda (tr ix) (list-ref tr ix)))
@@ -37,15 +37,15 @@
        (ev1 (lambda (ex) (ev ex 1)))
        (ev2 (lambda (ex) (ev ex 2)))
        (ev3 (lambda (ex) (ev ex 3)))
-       (parse-and-eval
+       #;(parse-and-eval
 	(lambda (str)
 	  (if (not (string? str)) (throw 'parse-error "cpp-eval"))
-	  (let ((idtr (with-input-from-string str parse-cpp-expr)))
+	  (let ((idtr (parse-cpp-expr str)))
 	    (eval-cpp-expr idtr dict))))
        (eval-expr
 	(lambda (tree)
 	  (case (car tree)
-	    ((ident) (parse-and-eval (assoc-ref dict (tx1 tree))))
+	    ;;((ident) (parse-and-eval (assoc-ref dict (tx1 tree))))
 	    ((fixed) (string->number (tx1 tree)))
 	    ((char) (char->integer (tx1 tree)))
 	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
@@ -76,97 +76,110 @@
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
 	    (else (error "incomplete implementation"))))))
-    (catch 'error
+    (catch 'parse-error
 	   (lambda () (eval-expr tree))
 	   (lambda () #f))))
 
 
-;; @deffn expand-cpp-def ident dict => repl|#f
-;; This may pull from the input.
-(define (expand-cpp-def ident dict . rest)
+;; @deffn scan-cpp-input argd used dict for-argl => string
+;; process the replacement text => (reversed) token-list
+;; if for-argl, stop on , or ) and next char will be , or )
+(define (scan-cpp-input argd dict used for-argl)
 
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
-
-  ;; process the replacement text => (reversed) token-list
-  ;; if for-argl, stop on , or ) and next char will be , or )
-  (define (scan-input argd used for-argl)
-    ;;(simple-format #t "  scan-input argd=~S used=~S ~S\n" argd used for-argl)
-    (let iter ((stl '())		; string list
-	       (chl '())		; char-list
-	       (nxt #f)			; next string 
-	       (lvl 0)			; level
-	       (ch (read-char)))	; next character
-      ;;(simple-format #t "iter stl=~S chl=~S nxt=~S ch=~S\n" stl chl nxt ch)
-      (cond
-       ;; have item to add, but first add in char's
-       (nxt (iter (cons nxt (add-chl chl stl)) '() #f lvl ch))
-       ;; If end of string or see end-ch at level 0, then return.
-       ((eof-object? ch)  ;; CHECK (ab++)
-	(apply string-append (reverse (add-chl chl stl))))
-       ((and for-argl (memq ch '(#\) #\,)) (zero? lvl))
-	(unread-char ch) (apply string-append (reverse (add-chl chl stl))))
-       ((char=? #\( ch) (iter stl (cons ch chl) nxt (1+ lvl) (read-char)))
-       ((char=? #\) ch) (iter stl (cons ch chl) nxt (1- lvl) (read-char)))
-       ((char=? #\# ch)
-	(let ((ch (read-char)))
-	  (if (eqv? ch #\#)
-	      (iter (cons "##" stl) chl #f lvl (read-char))
-	      (iter (cons "#" stl) chl #f lvl ch))))
-       ((read-c-string ch) =>
-	(lambda (st) (iter stl chl st lvl (read-char))))
-       ((read-c-ident ch) =>
-	(lambda (iden)
-	  ;;(simple-format #t "    iden=~S\n" iden)
-	  (let* ((aval (assoc-ref argd iden))  ; lookup argument
-		 (rval (assoc-ref dict iden))) ; lookup macro def
-	    (cond
-	     ((member iden used)	; name used
-	      (iter stl chl iden lvl (read-char)))
-	     (aval			; arg ref
-	      (iter stl chl aval lvl (read-char)))
-	     ((string? rval)		; cpp repl
-	      (iter stl chl rval lvl (read-char)))
-	     ((pair? rval)		; cpp macro
-	      (let* ((argl (car rval)) (text (cdr rval))
-		     (argv (collect-args argd used))
-		     (argd (map cons argl argv))
-		     (newl (expand-repl text argd (cons iden used))))
-		(iter stl chl newl lvl (read-char))))
-	     (else			; normal identifier
-	      (iter stl chl iden lvl (read-char)))))))
-       (else
-	(iter stl (cons ch chl) #f lvl (read-char))))))
   
-  (define (expand-repl repl argd used)
-    ;;(simple-format #t "expand-repl repl=~S argd=~S\n" repl argd)
-    (with-input-from-string repl
-      (lambda () (scan-input argd used #f))))
-
-  (define (collect-args argd used)
-    ;;(simple-format #t "collect-args\n")
-    (if (not (eqv? (read-char) #\()) (throw 'parse-error "collect-args"))
-    (let iter ((argl (list (scan-input argd used #t))))
+  ;;(simple-format #t "  scan-input argd=~S used=~S ~S\n" argd used for-argl)
+  (let iter ((stl '())		; string list
+	     (chl '())		; char-list
+	     (nxt #f)			; next string 
+	     (lvl 0)			; level
+	     (ch (read-char)))	; next character
+    ;;(simple-format #t "iter stl=~S chl=~S nxt=~S ch=~S\n" stl chl nxt ch)
+    (cond
+     ;; have item to add, but first add in char's
+     (nxt (iter (cons nxt (add-chl chl stl)) '() #f lvl ch))
+     ;; If end of string or see end-ch at level 0, then return.
+     ((eof-object? ch)  ;; CHECK (ab++)
+      (apply string-append (reverse (add-chl chl stl))))
+     ((and for-argl (memq ch '(#\) #\,)) (zero? lvl))
+      (unread-char ch) (apply string-append (reverse (add-chl chl stl))))
+     ((read-c-comm ch #f) =>
+      (lambda (cp) (iter stl chl (string-append "/*" (cdr cp) "*/")
+			 lvl (read-char))))
+     ((char=? #\( ch) (iter stl (cons ch chl) nxt (1+ lvl) (read-char)))
+     ((char=? #\) ch) (iter stl (cons ch chl) nxt (1- lvl) (read-char)))
+     ((char=? #\# ch)
       (let ((ch (read-char)))
-	(if (eqv? ch #\)) (reverse argl)
-	    (iter (cons (scan-input argd used #t) argl))))))
+	(if (eqv? ch #\#)
+	    (iter (cons "##" stl) chl #f lvl (read-char))
+	    (iter (cons "#" stl) chl #f lvl ch))))
+     ((read-c-string ch) =>
+      (lambda (st) (iter stl chl st lvl (read-char))))
+     ((read-c-ident ch) =>
+      (lambda (iden)
+	;;(simple-format #t "    iden=~S\n" iden)
+	(let* ((aval (assoc-ref argd iden))  ; lookup argument
+	       (rval (assoc-ref dict iden))) ; lookup macro def
+	  (cond
+	   ((member iden used)	; name used
+	    (iter stl chl iden lvl (read-char)))
+	   (aval			; arg ref
+	    (iter stl chl aval lvl (read-char)))
+	   ((string? rval)		; cpp repl
+	    (iter stl chl rval lvl (read-char)))
+	   ((pair? rval)		; cpp macro
+	    (let* ((argl (car rval)) (text (cdr rval))
+		   (argv (collect-args argd dict used))
+		   (argd (map cons argl argv))
+		   (newl (expand-cpp-repl text argd dict (cons iden used))))
+	      (iter stl chl newl lvl (read-char))))
+	   (else			; normal identifier
+	    (iter stl chl iden lvl (read-char)))))))
+     (else
+      (iter stl (cons ch chl) #f lvl (read-char))))))
+  
+(define (collect-args argd dict used)
+  ;;(simple-format #t "collect-args\n")
+  (if (not (eqv? (read-char) #\()) (throw 'parse-error "collect-args"))
+  (let iter ((argl (list (scan-cpp-input argd dict used #t))))
+    (let ((ch (read-char)))
+      (if (eqv? ch #\)) (reverse argl)
+	  (iter (cons (scan-cpp-input argd dict used #t) argl))))))
     
+(define (expand-cpp-repl repl argd dict used)
+  ;;(simple-format #t "expand-cpp-repl repl=~S argd=~S\n" repl argd)
+  (with-input-from-string repl
+    (lambda () (scan-cpp-input argd dict used #f))))
+
+;; @deffn cpp-expand-text text dict => string
+(define (cpp-expand-text text dict)
+  (with-input-from-string text
+    (lambda () (scan-cpp-input '() dict '() #f))))
+
+;; @deffn expand-cpp-mref ident dict => repl|#f
+;; Given an identifier seen in C99 input, this checks for associated
+;; definition in @var{dict} (generated from CPP defines).  If found,
+;; the expansion is returned as a string.  If @var{ident} refers
+;; to a macro with arguments, then the arguments will be read from the
+;; current input.
+(define (expand-cpp-mref ident dict . rest)
+
   (let ((used (if (pair? rest) (car rest) '()))
 	(rval (assoc-ref dict ident)))
     (cond
      ((not rval) #f)
      ((member ident used) ident)
      ((string? rval)
-      (simple-format #t "    rval=>~S\n" rval)
-      (let ((expd (expand-repl rval '() (cons ident used))))
-	(simple-format #t "expand ~S => ~S\n" ident expd)
+      (let ((expd (expand-cpp-repl rval '() dict (cons ident used))))
+	;;(simple-format #t "expand ~S => ~S\n" ident expd)
 	expd))
      ((pair? rval)
       (let* ((args (car rval)) (repl (cdr rval))
-	     (argv (collect-args '() '()))
+	     (argv (collect-args '() dict '()))
 	     (argd (map cons args argv))
-	     (expd (expand-repl repl argd (cons ident used))))
-	(simple-format #t "expand ~S => ~S\n" ident expd)
+	     (expd (expand-cpp-repl repl argd dict (cons ident used))))
+	;;(simple-format #t "expand ~S => ~S\n" ident expd)
 	expd)))))
 
 ;;; --- last line ---

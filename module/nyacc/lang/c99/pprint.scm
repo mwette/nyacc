@@ -86,7 +86,9 @@
 	((if (not (defined ,text))) (guard (string? text))
 	 (sf "#ifndef ~A\n" text))
 	;; #if with expression:
-	((if . ,rest) (sf "#if ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
+	;;((if . ,rest) (sf "#if ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
+	;; now with text
+	((if ,text) (sf "#if ~S\n" text))
 	;; easy statements
 	((elif . ,rest) (sf "#elif ") (cpp-ppx (sx-ref tree 1)) (sf "\n"))
 	((else . ,rest) (sf "#else\n"))

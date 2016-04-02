@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99act.scm
+;; ./mach.d/c99act.scm
 
 ;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
@@ -187,7 +187,7 @@
    ;; declaration => declaration-specifiers ";" opt-code-comment
    (lambda ($3 $2 $1 . $rest)
      (if (pair? $3)
-       `(decl ,(tl->list $1) (list $3))
+       `(decl ,(tl->list $1) ,(list $3))
        `(decl ,(tl->list $1))))
    ;; $P1 => 
    (lambda ($2 $1 . $rest)

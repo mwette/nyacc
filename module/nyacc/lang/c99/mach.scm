@@ -200,7 +200,7 @@
      (declaration-specifiers
       ";" opt-code-comment
       ($$ (if (pair? $3)
-	      `(decl ,(tl->list $1) (list $3))
+	      `(decl ,(tl->list $1) ,(list $3))
 	      `(decl ,(tl->list $1)))))
      )
 
