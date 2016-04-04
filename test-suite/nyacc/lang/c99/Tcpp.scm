@@ -18,7 +18,7 @@
   (gen-cpp-files "../../../../module/nyacc/lang/c99")
   (system "touch ../../../../module/nyacc/lang/c99/cpp.scm"))
 
-(when #t
+(when #f
   (with-output-to-file "cpplang.txt.new"
     (lambda ()
       (let* ((notice (assq-ref (assq-ref cpp-spec 'attr) 'notice))
@@ -30,7 +30,7 @@
   (move-if-changed "cpplang.txt.new" "cpplang.txt")
   #t)
 
-(when #t
+(when #f
   (let ((dt '(("A" . "1") ("B" . "2")))
 	(sx (with-input-from-string
 		"defined(A) && defined(B) && !defined(C)"

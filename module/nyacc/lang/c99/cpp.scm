@@ -92,41 +92,6 @@ todo:
 		     (iter (cons ch cl) (read-char))))))
     `(include ,path)))
 
-;; @deffn parse-cpp-stmt line => tree
-;; Parse a line from a CPP statement and return a parse tree.
-;; @example
-;; (parse-cpp-stmt "define X 123") => (define "X" "123")
-;; (parse-cpp-stmt "if defined(A) && defined(B) && defined(C)"
-;; => (if (and (and (defined "A") (defined "B"))
-;;             (not (defined "C")))
-;; @end example
-;; NOTE: replace use of this with @code{read-cpp-stmt}
-(define (parse-cpp-stmt line)
-  (with-input-from-string line
-    (lambda ()
-      (let ((cmd (string->symbol (read-c-ident (skip-ws (read-char)))))
-	    (rd-ident
-	     #;(lambda () (or (and=> (read-c-ident (skip-ws (read-char))) cdr)
-	     (throw 'parse-error)))
-	     (lambda () (read-c-ident (skip-ws (read-char))))
-	     )
-	    (rd-num
-	     (lambda () (or (and=> (read-c-num (skip-ws (read-char))) cdr)
-			    (throw 'parse-error))))
-	    )
-	 (case cmd
-	   ((include) (cpp-include))
-	   ((ifdef) `(if (defined ,(rd-ident))))
-	   ((ifndef) `(if (not (defined ,(rd-ident)))))
-	   ((define) (cpp-define))
-	   ;;((if elif) (list cmd (parse-cpp-expr)))
-	   ((else endif) (list cmd))
-	   ((undef) `(undef ,(rd-ident)))
-	   ((line) `(line ,(rd-num)))
-	   ((error) (read-char) `(error ,(drain-input (current-input-port))))
-	   ;;((pragma) (cpp-define)) ; ???
-	   (else '()))))))
-    
 ;; @deffn read-cpp-stmt line defs => (stmt-type text)
 ;; Parse a line from a CPP statement and return a parse tree.
 ;; @example
@@ -137,23 +102,24 @@ todo:
 ;; To evaluate the @code{if} statements use @code{parse-cpp-expr} and
 ;; @code{eval-cpp-expr}.
 (define (read-cpp-stmt line)
+  (define (rd-ident) (read-c-ident (skip-ws (read-char))))
+  (define (rd-num) (and=> (read-c-num (skip-ws (read-char))) cdr))
+  (define (rd-rest) (let ((ch (skip-ws (read-char))))
+		      (if (not (eof-object? ch)) (unread-char ch))
+		      (drain-input (current-input-port))))
   (with-input-from-string line
     (lambda ()
-      (let ((cmd (string->symbol (read-c-ident (skip-ws (read-char)))))
-	    (rd-ident (lambda () (read-c-ident (skip-ws (read-char)))))
-	    (rd-num (lambda () (and=> (read-c-num (skip-ws (read-char))) cdr))))
+      (let ((cmd (string->symbol (read-c-ident (skip-ws (read-char))))))
 	 (case cmd
 	   ((include) (cpp-include))
-	   ((ifdef) `(if (defined ,(rd-ident))))
-	   ((ifndef) `(if (not (defined ,(rd-ident)))))
 	   ((define) (cpp-define))
-	   ((if elif) (list cmd (drain-input (current-input-port))))
-	   ((else endif) (list cmd))
 	   ((undef) `(undef ,(rd-ident)))
-	   ((line) `(line ,(rd-num)))
-	   ((error) (read-char) `(error ,(drain-input (current-input-port))))
-	   ((pragma) (list cmd (drain-input (current-input-port))))
-	   (else '()))))))
+	   ((ifdef)
+	    `(if ,(string-append "defined(" (rd-ident) ")" (rd-rest))))
+	   ((ifndef)
+	    `(if ,(string-append "!defined(" (rd-ident) ")" (rd-rest))))
+	   ((if elif else endif line error pragma) (list cmd (rd-rest)))
+	   (else '(unknown "")))))))
     
 (include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/cppact.scm")

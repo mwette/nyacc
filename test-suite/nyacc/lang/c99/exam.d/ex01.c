@@ -5,20 +5,22 @@ extern "C" {
 #include "inc.h"
 
 #define A 1
+#define B(X) ((X)+1)
 
 #ifdef A
 int y;
-#elif defined(B)
+#elif defined(B) /* check */
 double y;
-#else
+#else /* else */
 #error "foo"
-#endif
+#endif /* def A */
 
 eval_t x;
 struct foo;
 
 int d = 0x123; /* d comment */
 float f = 0.0; 
+const volatile int * const * foo = 0;
 
 #define OFFSET(T,V) (((T*)0)->V)
 
@@ -27,6 +29,10 @@ typedef struct {
   eval_t x; /* comment */
   int y;
 } xyz_t;
+
+typedef struct zippy {
+  double z[2];
+} zip_t;
 
 int foo(int y) {
   double d;
