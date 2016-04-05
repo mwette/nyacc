@@ -1,0 +1,15 @@
+ 
+  Copyright (C) 2016 Matthew R. Wette
+  
+  Copying and distribution of the files in this directory, with or without 
+  modification, are permitted in any medium without royalty provided the 
+  copyright notice and this notice are preserved.  This file is offered 
+  as-is, without any warranty.
+
+ex01.c	random file
+ex02.c	comments
+ex03.c	lexical analyzer
+ex04.c	C preprocessor
+ex05.c	declarations
+ex06.c	pretty-print-c99 cases
+inc.h	included by ex01.c

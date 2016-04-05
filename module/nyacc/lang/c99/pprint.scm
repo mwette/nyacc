@@ -140,6 +140,7 @@
 
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
 
+  ;; TODO: comp-lit
   (define (ppx-1 tree)
     (sxml-match tree
 
@@ -150,7 +151,7 @@
       ((float ,value) (sf "~A" value))
       ((string ,value) (sf "~S" value))
 
-      ((comment ,text) (sf "/*~A*/\n" text))
+      ((comment ,text) (sf "/*~A */\n" text))
 
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
       
@@ -295,6 +296,7 @@
       ((ptr-declr ,ptr ,dir-declr)
        (ppx ptr) (ppx dir-declr))
 
+      #|
       ((pointer (decl-spec-list . ,items))
        (sf "*") (ppx `(decl-spec-list . ,items)))
       ((pointer)
@@ -303,6 +305,9 @@
        (sf "*") (ppx `(decl-spec-list . ,items)) (ppx `(pointer . ,rest)))
       ((pointer (pointer . ,rest))
        (sf "*") (ppx `(pointer . ,rest)))
+      |#
+      ((pointer ,one) (sf "*") (ppx one))
+      ((pointer ,one ,two) (sf "*") (ppx one) (ppx two))
 
       ((array-of ,dir-declr ,arg)
        (ppx dir-declr) (sf "[") (ppx arg) (sf "]"))

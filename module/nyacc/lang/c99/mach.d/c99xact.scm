@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99xact.scm
+;; ./mach.d/c99xact.scm
 
 ;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
@@ -19,7 +19,7 @@
    ;; primary-expression => string-literal
    (lambda ($1 . $rest) `(p-expr ,(tl->list $1)))
    ;; primary-expression => "(" expression ")"
-   (lambda ($3 $2 $1 . $rest) $2)
+   (lambda ($3 $2 $1 . $rest) `(scope ,$2))
    ;; postfix-expression => primary-expression
    (lambda ($1 . $rest) $1)
    ;; postfix-expression => postfix-expression "[" expression "]"

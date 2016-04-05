@@ -25,4 +25,3 @@ typedef struct {
 int ex1_init(void*);
 
 #endif
-// --- last line ---
