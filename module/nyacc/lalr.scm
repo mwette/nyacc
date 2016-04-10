@@ -325,6 +325,8 @@
 			 (eq? (car all) '$start))
 		     ull (cons (car all) ull))
 		 (cdr all))))))
+
+  ;; TODO: check for repeated tokens in precedence spec's: prec<, prec>
 	       
   (let* ((gram (assq-ref tree 'grammar))
 	 (start-symbol (and=> (assq-ref tree 'start) atomize))
@@ -345,7 +347,7 @@
 	       (@l (list		; attributes per prod' rule
 		    `((rhs . ,(vector start-symbol))
 		      (ref . all) (act 1 $1))))
-	       (tl '($code-comm $lone-comm $end)) ; set of terminals
+	       (tl '($code-comm $lone-comm $error $end)) ; set of terminals
 	       (nl (list start-symbol))	; set of non-terminals
 	       ;;
 	       (head gram)	       ; head of unprocessed productions
@@ -1429,9 +1431,10 @@
 ;; @deffn compact-machine mach [#:keep 3] => mach
 ;; A "filter" to compact the parse table.  For each state this will replace
 ;; the most populus set of reductions of the same production rule with a
-;; default production.  However, reductions triggered by @code{'$lone-comm}
-;; or @code{'$lone-comm} are not counted.  The parser will want to treat those
-;; separately so that they can be skipped if the parser is not expecting them.
+;; default production.  However, reductions triggered by keepers like
+;; @code{'$error}, @code{'$lone-comm} or @code{'$lone-comm} are not counted.
+;; The parser will want to treat errors and comments separately so that they
+;; can be trapped (e.g., unaccounted comments are skipped).
 (define* (compact-machine mach #:key (keep 3))
   (let* ((pat-v (assq-ref mach 'pat-v))
 	 (nst (vector-length pat-v))
@@ -1448,7 +1451,9 @@
 			 (lambda (r) (cons -1 (- r)))
 			 (lambda (r) `($default reduce . ,r))))
 	 (mtab (assq-ref mach 'mtab))
-	 (comm (list (assq-ref mtab '$lone-comm) (assq-ref mtab '$code-comm))))
+	 (keepers (list (assq-ref mtab '$lone-comm)
+			(assq-ref mtab '$code-comm)
+			(assq-ref mtab '$error))))
 
     ;; Keep an alist mapping reduction prod-rule => count.
     (let iter ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))
@@ -1458,8 +1463,8 @@
 	((not (reduce? (cdar trn-l)))
 	 ;; A shift, so not a candidate for default reduction.
 	 (iter sx (cdr trn-l) cnt-al p-max))
-	((memq (caar trn-l) comm)
-	 ;; Don't consider comments because these will not be included.
+	((memq (caar trn-l) keepers)
+	 ;; Don't consider keepers because these will not be included.
 	 (iter sx (cdr trn-l) cnt-al p-max))
 	(else
 	 ;; A reduction, so update the count for reducing this prod-rule.
@@ -1479,7 +1484,7 @@
 	      (lambda (trn pat) ;; transition action
 		;; If not a comment and reduces to the most-popular prod-rule
 		;; then transfer to the default transition.
-		(if (and (not (memq (car trn) comm))
+		(if (and (not (memq (car trn) keepers))
 			 (reduce-to? (cdr trn) (car p-max)))
 		    pat
 		    (cons trn pat)))
@@ -1685,14 +1690,14 @@
     (do ((i 0 (1+ i))) ((= i nst))
       (let* ((state (vector-ref kis-v i))
 	     (pat (vector-ref pat-v i))
-	     (rat (vector-ref rat-v i)))
-	(fmt port "~A:" i)	; itemset index (aka state index)
+	     (rat (if rat-v (vector-ref rat-v i) '())))
+	(fmt port "~A:" i)	     ; itemset index (aka state index)
 	(for-each
 	 (lambda (k-item)
 	   (for-each			; item, print it
 	    (lambda (item)
 	      (fmt port "\t~A" (pp-item item))
-	      (if (equal? item k-item)
+	      (if (and kit-v (equal? item k-item))
 		  (fmt port " ~A"
 		       (map (lambda (tok) (elt->str tok terms))
 			    (assoc-ref (vector-ref kit-v i) k-item))))

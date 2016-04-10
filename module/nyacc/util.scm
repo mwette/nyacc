@@ -25,6 +25,7 @@
 	    x-flip x-comb
 	    write-vec
 	    ugly-print
+	    tzort
 	    )
   #:use-module ((srfi srfi-43) #:select (vector-fold))
   )
@@ -203,5 +204,95 @@
     ;;(iter1 indent sexp)
     ;;(newline out-p)
     ))
+
+;; stuff
+
+;; @deffn depth-first-search graph => (values ht gv tv xl)
+;; The argument @var{gfraph} is a list of verticies and adjacency nodes:
+;; @example
+;; graph => ((1 2 3 4) (2 6 7) ...)
+;; @end example
+;; @noindent
+;; @table @var
+;; @item ht
+;; hash of vertex to index
+;; @item gv
+;; vector of index to vertex
+;; @item tv
+;; vector of (d . f)
+;; @end table
+;; ref: Algorithms, p 478
+(define (depth-first-search graph)
+  (let* ((n (length graph))
+	   (ht (make-hash-table n))	; vertex -> index
+	   (gv (make-vector n))		; index -> vertex
+	   (tv (make-vector n #f))	; index -> times
+	   (pv (make-vector n #f))	; index -> predecessor :unused
+	   (xl '()))
+    (letrec
+	((next-t (let ((t 0)) (lambda () (set! t (+ 1 t)) t)))
+	 (visit (lambda (k)
+		  (vector-set! tv k (cons (next-t) #f))
+		  (let iter ((l (cdr (vector-ref gv k))))
+		    (if (not (null? l))
+			(let ((ix (hashq-ref ht (car l))))
+			  (unless (vector-ref tv ix)
+				  (pp 0 "set-pv! ~a ~a" ix k)
+				  (vector-set! pv ix k)
+				  (visit ix))
+			  (iter (cdr l)))))
+		  (set! xl (cons k xl))
+		  (set-cdr! (vector-ref tv k) (next-t))
+		  ))
+	   )
+      ;; Set up hash of vertex to index.
+      (do ((i 0 (+ i 1)) (l graph (cdr l))) ((= i n))
+	(vector-set! gv i (car l)) ; (vector-ref gv i) = (list-ref graph i)
+	(hashq-set! ht (caar l) i)) ; (hash-ref ht (list-ref graph i)) = i
+      ;; Run through vertices.
+      (do ((i 0 (+ 1 i))) ((= i n))
+	(unless (vector-ref tv i) (visit i)))
+      (values ht gv tv xl))))
+
+;; @deffn tzort dag
+;; Given DAG return order of nodes.  The DAG is provided as list of:
+;; (<node> <priors>)
+;; ref: D.E.Knuth - The Art of C.P., Vol I, Sec 2.2.3
+(define (tzort dag)
+  (let* ((n (length dag))
+	 (ht (make-hash-table n))	; node -> ix
+	 (nv (make-vector n #f))	; ix -> (node . adj-list)
+	 (cv (make-vector n 0))		; ix -> count
+	 (incr (lambda (ix) (vector-set! cv ix (+ (vector-ref cv ix) 1))))
+	 (decr (lambda (ix) (vector-set! cv ix (- (vector-ref cv ix) 1)))))
+    ;; Set up ht and nv.
+    (do ((i 0 (+ i 1)) (l dag (cdr l))) ((= n i))
+      (vector-set! nv i (car l))
+      (hashq-set! ht (caar l) i))
+    ;; set up cv
+    (do ((i 0 (+ i 1))) ((= n i))
+      (for-each (lambda (n) (incr (hashq-ref ht n)))
+		(cdr (vector-ref nv i))))
+    ;; Iterate through nodes until cv all zero.
+    (let iter1 ((ol '()) (uh '())	; ordered list, unordered head 
+		(ut (let r ((l '()) (x 0)) ; unordered tail
+		      (if (= x n) l (r (cons x l) (+ x 1))))))
+      (cond
+       ((null? ut)
+	(if (null? uh) 
+	    (reverse (map (lambda (e) (car (vector-ref nv e))) ol))
+	    (iter1 ol '() uh)))
+       (else
+	(let* ((ix (car ut)))
+	  (if (zero? (vector-ref cv ix))
+	      (iter1
+	       (let iter2 ((l (cdr (vector-ref nv ix))))
+		     (if (null? l) (cons ix ol)
+			 (begin
+			   (decr (hashq-ref ht (car l)))
+			   (iter2 (cdr l)))))
+	       uh
+	       (cdr ut))
+	      (iter1 ol (cons ix uh) (cdr ut)))))))))
 
 ;;; --- last line ---

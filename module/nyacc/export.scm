@@ -12,9 +12,8 @@
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; Lesser General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU Lesser General Public
-;;; License along with this library; if not, write to the Free Software
-;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc export)
   #:export (lalr->bison
@@ -88,9 +87,8 @@
 	(token->bison term)
 	(symbol->bison symb))))
 
-;; @item pp-bison-input spec => to current output port
+;; @deffn lalr->bison spec => to current output port
 ;; needs cleanup: tokens working better but p-rules need fix.
-;; todo: add '%empty' to empty rules
 (define (lalr->bison spec . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref spec 'lhs-v))
@@ -98,16 +96,20 @@
 	 (prp-v (assq-ref spec 'prp-v))
 	 (nrule (vector-length lhs-v))
 	 (terms (assq-ref spec 'terminals)))
-    ;; copyright notice
+    ;; Generate copyright notice.
     (let* ((notice (assq-ref (assq-ref spec 'attr) 'notice))
 	   (lines (if notice (string-split notice #\newline) '())))
       (for-each (lambda (l) (fmt port "// ~A\n" l))
 		lines))
-    ;;
+    ;; Write out the tokens.
     (for-each 
      (lambda (term) (fmt port "%token ~A\n" (token->bison term)))
      terms)
+    ;; TODO: prececenses : need tsort
     ;;
+    ;; Don't compact tables.
+    (fmt port "%define lr.default-reduction accepting\n")
+    ;; Provide start symbol.
     (fmt port "%start ~A\n%%\n" (elt->bison (assq-ref spec 'start) terms))
     ;;
     (do ((i 1 (1+ i))) ((= i nrule))

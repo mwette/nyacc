@@ -52,7 +52,7 @@
      (identifier ($$ `(p-expr ,$1)))
      (constant ($$ `(p-expr ,$1)))
      (string-literal ($$ `(p-expr ,(tl->list $1))))
-     ("(" expression ")" ($$ `(scope ,$2)))
+     ("(" expression ")" ($$ $2))
      )
 
     (postfix-expression			; S 6.5.2
