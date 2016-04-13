@@ -23,6 +23,7 @@
   #:use-module ((nyacc lalr) #:select (find-terminal pp-rule))
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
+  #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module ((srfi srfi-43) #:select (vector-for-each))
   #:use-module (ice-9 regex)
   )
@@ -90,10 +91,16 @@
 ;; @deffn lalr->bison spec => to current output port
 ;; needs cleanup: tokens working better but p-rules need fix.
 (define (lalr->bison spec . rest)
+
+  (define (setup-assc assc)
+    (fold (lambda (al seed)
+	    (append (x-flip al) seed)) '() assc))
+
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref spec 'lhs-v))
 	 (rhs-v (assq-ref spec 'rhs-v))
 	 (prp-v (assq-ref spec 'prp-v))
+	 (assc (setup-assc (assq-ref spec 'assc)))
 	 (nrule (vector-length lhs-v))
 	 (terms (assq-ref spec 'terminals)))
     ;; Generate copyright notice.
@@ -105,8 +112,18 @@
     (for-each 
      (lambda (term) (fmt port "%token ~A\n" (token->bison term)))
      terms)
-    ;; TODO: prececenses : need tsort
-    ;;
+    ;; Write the associativity and prececences.
+    (let iter ((pl '()) (ppl (assq-ref spec 'prec)))
+      (cond
+       ((pair? pl)
+	(fmt port "%~A" (or (assq-ref assc (caar pl)) "precedence"))
+	(let iter2 ((pl (car pl)))
+	  (unless (null? pl)
+	    (fmt port " ~A" (elt->bison (car pl) terms))
+	    (iter2 (cdr pl))))
+	(fmt port "\n")
+	(iter (cdr pl) ppl))
+       ((pair? ppl) (iter (car ppl) (cdr ppl)))))
     ;; Don't compact tables.
     (fmt port "%define lr.default-reduction accepting\n")
     ;; Provide start symbol.

@@ -21,8 +21,7 @@
       (pp-lalr-machine calc-mach)
       )))
 
-#;(with-output-to-file "gram.y.new"
-  (lambda () (lalr->bison calc-spec)))
+(with-output-to-file "gram.y" (lambda () (lalr->bison calc-spec)))
 
 ;; Generate tables for a standalone parser.
 ;;(write-lalr-actions js-mach "actions.scm.new")
@@ -31,7 +30,7 @@
 (use-modules (nyacc lang calc compiler))
 
 (define exp (with-input-from-string "a = 1 + 2 * 3\n"
-	      (lambda () (calc-parse #:debug #t))))
+	      (lambda () (calc-parse #:debug #f))))
 (pretty-print exp)
 
 ;; --- last line

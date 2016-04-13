@@ -1,6 +1,6 @@
 ;;; nyacc/lalr.scm
 ;;;
-;;; Copyright (C) 2014,2015,2016 Matthew R. Wette
+;;; Copyright (C) 2014-2016 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -23,13 +23,14 @@
   #:export-syntax (lalr-spec)
   #:export (*nyacc-version*
 	    make-lalr-machine
-	    compact-machine hashify-machine
+	    compact-machine hashify-machine 
 	    lalr-match-table
 	    restart-spec
 	    pp-lalr-grammar pp-lalr-machine pp-lalr-notice
 	    write-lalr-tables
 	    write-lalr-actions
 	    pp-rule find-terminal	; used by (nyacc export)
+	    gen-match-table		; used by (nyacc bison)
 	    with-gram new-non-kernels
 	    )
   #:use-module ((srfi srfi-1)
@@ -205,10 +206,10 @@
 	       ((_ (notice <str>) <e> ...)
 		(cons (cons 'notice <str>) (lalr-spec-1 <e> ...)))
 	       ((_ (prec< <ex> ...) <e> ...)
-		(cons (cons 'prece (reverse (parse-precedence <ex> ...)))
+		(cons (cons 'precedence (parse-precedence <ex> ...))
 		      (lalr-spec-1 <e> ...)))
 	       ((_ (prec> <ex> ...) <e> ...)
-		(cons (cons 'prece (parse-precedence <ex> ...))
+		(cons (cons 'precedence (reverse (parse-precedence <ex> ...)))
 		      (lalr-spec-1 <e> ...)))
 	       ((_ (grammar <prod> ...) <e> ...)
 		(cons (cons 'grammar (parse-grammar <prod> ...))
@@ -268,8 +269,8 @@
   ;; Compute precedence and associativity rules.
   ;; The goal here is to have a predicate which provides
   ;; @code{(prec>? a b)} and associativity @code{(left? a)}.
-  ;; The tree will have 'left <list> and prece
-  (define (prec-n-assc tree)
+  ;; The tree will have 'left <list> and precedence.
+  (define (Oprec-n-assc tree)
     (let iter ((p-l '()) (a-l '()) (tree tree) (node '()) (pspec '()))
       (cond
        ((pair? pspec)
@@ -284,9 +285,48 @@
 		tree psy (cdr pspec))))
        ((pair? tree)
 	(iter p-l a-l (cdr tree) '()
-	      (if (eq? 'prece (caar tree)) (cdar tree) '())))
+	      (if (eq? 'precedence (caar tree)) (cdar tree) '())))
        (else
 	(list (cons 'prec p-l) (cons 'assc a-l))))))
+
+  ;; Canonicalize precedence and associativity. Precedence will appear
+  ;; as sets of equivalent items in increasing order of precedence
+  ;; (e.g., @code{((+ -) (* /)}).  The input tree has nodes that look like
+  ;; @example
+  ;; '(precedence (left "+" "-") (left "*" "/"))
+  ;; '(precedence ("then" "else")
+  ;; @end example
+  ;; @noindent
+  ;; =>
+  ;; @example
+  ;; (prec ((+ -) (* /)) ((then) (else)))
+  ;; @end example
+  (define (prec-n-assc tree)
+    ;; prec-l; lt-assc-l rt-assc-l non-assc-l pspec
+    (let iter ((pll '()) (pl '()) (la '()) (ra '()) (na '())
+	       (spec '()) (tree tree))
+      (cond
+       ((pair? spec)
+	;; item ~ ('left "+" "-") => a ~ 'left, tl ~ (#\+ #\-)
+	(let* ((item (car spec)) (as (car item)) (tl (map atomize (cdr item))))
+	  (case as
+	    ((left)
+	     (iter pll (cons tl pl) (append tl la) ra na (cdr spec) tree))
+	    ((right)
+	     (iter pll (cons tl pl) la (append tl ra) na (cdr spec) tree))
+	    ((nonassoc)
+	     (iter pll (cons tl pl) la ra (append tl na) (cdr spec) tree))
+	    ((undecl)
+	     (iter pll (cons tl pl) la ra na (cdr spec) tree)))))
+       ((pair? pl)
+	(iter (cons (reverse pl) pll) '() la ra na spec tree))
+       ((pair? tree)
+	(iter pll pl la ra na
+	      (if (eqv? 'precedence (caar tree)) (cdar tree) '()) (cdr tree)))
+       (else
+	(list
+	 `(prec . ,(reverse pll))
+	 `(assc (left ,@la) (right ,@ra) (nonassoc ,@na)))))))
 
   ;;.@deffn make-mra-proxy sy pel act => ???
   ;; Generate a mid-rule-action proxy.
@@ -472,7 +512,7 @@
 	       (cons 'attr (list (cons 'expect (or (assq-ref tree 'expect) 0))
 				 (cons 'notice (assq-ref tree 'notice))
 				 ))
-	       (cons 'prec (assq-ref pna 'prec))
+	       (cons 'prec (assq-ref pna 'prec)) ; lowest-to-highest
 	       (cons 'assc (assq-ref pna 'assc))
 	       (cons 'prp-v (map-attr->vector al 'prec)) ; per-rule precedence
 	       (cons 'act-v (map-attr->vector al 'act))
@@ -1287,15 +1327,33 @@
 ;; For each state, the element of pat-v looks like
 ;; ((tokenA . (reduce . 79)) (tokenB . (reduce . 91)) ... )
 (define (step4 p-mach)
+
+  (define (setup-assc assc)
+    (fold (lambda (al seed)
+	    (append (x-flip al) seed)) '() assc))
+
+  (define (setup-prec prec)
+    (let iter ((res '()) (rl '()) (hd '()) (pl '()) (pll prec))
+      (cond
+       ((pair? pl)
+	(let* ((p (car pl)) (hdp (x-comb hd p))
+	       (pp (remove (lambda (p) (eqv? (car p) (cdr p))) (x-comb p p))))
+	  (iter res (append rl hdp pp) (car pl) (cdr pl) pll)))
+       ((pair? rl) (iter (append res rl) '() hd pl pll))
+       ((pair? pll) (iter res rl '() (car pll) (cdr pll)))
+       (else res))))
+
   (let* ((kis-v (assq-ref p-mach 'kis-v)) ; states
 	 (kit-v (assq-ref p-mach 'kit-v)) ; la-toks
 	 (kix-v (assq-ref p-mach 'kix-v)) ; transitions
-	 (assc (assq-ref p-mach 'assc))	 ; associativity rules
-	 (prec (assq-ref p-mach 'prec))	 ; precedence rules
-	 (nst (vector-length kis-v))	 ; number of states
-	 (pat-v (make-vector nst '()))	 ; parse-action table per state
-	 (rat-v (make-vector nst '()))	 ; removed-action table per state
-	 (gen-pat-ix (lambda (ix)	 ; pat from shifts and reduc's
+	 (assc (assq-ref p-mach 'assc))	  ; associativity rules
+	 (assc (setup-assc assc))	  ; trying it
+	 (prec (assq-ref p-mach 'prec))	  ; precedence rules
+	 (prec (setup-prec prec))	  ; trying it
+	 (nst (vector-length kis-v))	  ; number of states
+	 (pat-v (make-vector nst '()))	  ; parse-act tab /state
+	 (rat-v (make-vector nst '()))	  ; removed-act tab /state
+	 (gen-pat-ix (lambda (ix)	  ; pat from shifts & reduc's
 		       (gen-pat (vector-ref kix-v ix) (reductions kit-v ix))))
 	 (prp-v (assq-ref p-mach 'prp-v))  ; per-rule precedence
 	 (tl (assq-ref p-mach 'terminals)) ; for error msgs
@@ -1516,7 +1574,7 @@
 ;;   pat-v - parse action table
 ;;   ref-v - references
 ;;   len-v - rule lengths
-;;   rto-v - rule lengths
+;;   rto-v - hashed lhs symbols
 ;; to print itemsets need:
 ;;   kis-v - itemsets
 ;;   lhs-v - left hand sides
@@ -1885,8 +1943,7 @@
 
   (call-with-output-file filename
     (lambda (port)
-      (fmt port ";; ~A\n\n"
-	   (regexp-substitute #f (string-match ".new$" filename) 'pre))
+      (fmt port ";; ~A\n\n" (string-sub filename ".new$" ""))
       (write-notice mach port)
       (write-table mach 'len-v port)
       (write-table mach 'pat-v port)

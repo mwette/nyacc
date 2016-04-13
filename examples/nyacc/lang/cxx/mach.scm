@@ -15,7 +15,6 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 #| based on cxx-gram.y:
  * This is a yacc-able parser for the entire ANSI C++ grammar with no
  * unresolved conflicts. The parse is SYNTACTICALLY consistent and requires 
@@ -34,28 +33,40 @@
  *  Date:           19-Nov-1999
 |#
 
+(define-module (nyacc lang cxx mach)
+  #:export (cxx-spec)
+  #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
+  #:use-module (nyacc lex)
+  #:use-module (nyacc lang c99 cpp)
+  #:use-module (nyacc lang util)
+  #:use-module ((srfi srfi-9) #:select (define-record-type))
+  #:use-module ((srfi srfi-43) #:select (vector-map))
+  #:use-module ((sxml xpath) #:select (sxpath))
+  )
+  
+
 (define cxx-notice "
-This is derived from cxx-gram.y by E.D.Willink, which was provided without
-copyright or license.  Adaptation to guile/nyacc is
+This work is derived from CxxGrammar.y by E.D.Willink, which was
+provided without copyright or license.  Adaptation to nyacc is
 
 Copyright (C) 2016 Matthew R. Wette
 
-This software is covered by the GNU ">=""!="RAL "public" LICENCE, Version 3,
-or any later version published by the Free Software Foundation.  See
-the file COPYING included with the this distribution.")
+This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+or any later version published by the Free Software Foundation.
+See the file COPYING included with the this distribution.")
 
-(define cxx-gram
+(define cxx-spec
   (lalr-spec
    (notice cxx-notice)
    (start translation-unit)
-   (prec< (nonassoc "SHIFT_THERE") (nonassoc ""::"") (nonassoc "else"))
+   (prec<
+    (nonassoc 'shift-there)
+    (nonassoc "::" "else" "++" "--" "+" "-" "*" "&" "[" "{" "<" ":" '$string)
+    (nonassoc 'reduce-here-mostly)
+    (nonassoc "(")
+    )
    (grammar
-    ;;%nonassoc SHIFT_THERE
-    ;;%nonassoc "::" "else" "++" "--" '+' '-' '*' '&' '[' '{' '<' ':'
-    ;; StringLiteral
-    ;;%nonassoc REDUCE_HERE_MOSTLY
-    ;;%nonassoc '('
-
     #|
     * The %prec resolves the 14.2-3 ambiguity:
     * Identifier '<' is forced to go through the is-it-a-template-name test
@@ -73,16 +84,16 @@ the file COPYING included with the this distribution.")
     * definition are not allowed.
     |#
 
-    (identifier (Identifier))
+    (identifier ($ident))
 
     (id
-     (identifier ($prec "SHIFT_THERE"))
+     (identifier ($prec 'shift-there))
      (identifier template-test "+" template-argument-list ">")
      (identifier template-test "-" ) ;;/* requeued < follows |#
      (template-id)
      )
 
-    (template_test
+    (template-test
      ;; Queue '+' or '-' < as follow on 
      ("<" ($$ (template-test)))
      )
@@ -101,7 +112,7 @@ the file COPYING included with the this distribution.")
     |#
 
     (nested-id
-     (id ($prec "SHIFT_THERE")) ;; /* Maximise length
+     (id ($prec 'shift-there)) ;; /* Maximise length
      (id-scope nested-id)
      )
 
@@ -118,7 +129,7 @@ the file COPYING included with the this distribution.")
     * complement.
     |#
     (destructor-id
-     ('~' id)
+     ("~" id)
      ("template" destructor-id)
      )
     
@@ -160,8 +171,8 @@ the file COPYING included with the this distribution.")
      )
     
     (pseudo-destructor-id
-     (built-in-type-id "::" '~' built-in-type-id)
-     ('~' built-in-type-id)
+     (built-in-type-id "::" "~" built-in-type-id)
+     ("~" built-in-type-id)
      ("template" pseudo-destructor-id)
      )
     
@@ -185,12 +196,12 @@ the file COPYING included with the this distribution.")
     * token source should do anyway.
     |#
 
+    ;; Perverse order avoids conflicts 
     (string
-     (StringLiteral)
+     (StringLiteral ($prec 'shift-there) ($$ (make-tl 'string $1)))
+     ;; TODO: the following generates massive reduce-reduce conflicts
+     ;;(StringLiteral string ($$ (tl-insert $2 $1)))
      )
-
-    ;;string:   StringLiteral   %prec SHIFT_THERE |#
-    ;;  | StringLiteral string  -- Perverse order avoids conflicts -- |#
 
     (literal
      (IntegerLiteral)
@@ -199,11 +210,16 @@ the file COPYING included with the this distribution.")
      (string)
      (boolean-literal)
      )
-    
+
+    (IntegerLiteral ($fixed))
+    (CharacterLiteral ($chlit))
+    (FloatingLiteral ($float))
+    (StringLiteral 
+     ($string ($$ (make-tl 'string $1)))
+     (StringLiteral $string ($$ (tl-append $1 $2))))
     (boolean-literal
-     ("false")
-     ("true")
-     )
+     ("false" ($$ `(boolean ,$1)))
+     ("true" ($$ `(boolean ,$1))))
 
     ;; A.3 Basic concepts
     (translation-unit
@@ -249,12 +265,12 @@ the file COPYING included with the this distribution.")
      (literal)
      ("this")
      (suffix-decl-specified-ids)
-     ;;| "::" identifier -- covered by suffix-decl-specified-ids |#
-     ;;| "::" operator-function-id -- covered by suffix-decl-specified-ids |#
-     ;;| "::" qualified-id -- covered by suffix-decl-specified-ids |#
+     ;;| "::" identifier covered by suffix-decl-specified-ids |#
+     ;;| "::" operator-function-id covered by suffix-decl-specified-ids |#
+     ;;| "::" qualified-id covered by suffix-decl-specified-ids |#
      ;; Prefer binary to unary ops, cast to call: |#
-     (abstract-expression ($prec "REDUCE_HERE_MOSTLY"))
-     ;;  |  id-expression -- covered by suffix-decl-specified-ids |#
+     (abstract-expression ($prec 'reduce-here-mostly))
+     ;;  |  id-expression covered by suffix-decl-specified-ids |#
      )
     
     ;; Abstract-expression covers the () and [] of abstract-declarators.
@@ -279,7 +295,7 @@ the file COPYING included with the this distribution.")
      )
     
     (mark-type1
-     () ;; /* empty |#{ mark-type1(); yyclearin; }
+     ($empty ($$ (mark-type1) (yyclearin)))
      )
     
     (postfix-expression
@@ -288,12 +304,14 @@ the file COPYING included with the this distribution.")
      (postfix-expression parenthesis-clause mark-type1 "-") ;; /*----|#    
      ;;/*----|#
      (postfix-expression
-      parenthesis-clause mark-type1 "+" type1-parameters mark "{" error)
-     (postfix-expression parenthesis-clause mark-type1 "+" type1-parameters
-			 mark error )
-     ;; ^ /*----- /{ yyerrok; yyclearin; remark-type1(); unmark(); unmark(); }
-     (postfix-expression parenthesis-clause mark-type1 "+" error)
-     ;; /*-----|#  { yyerrok; yyclearin; remark-type1(); unmark(); }
+      parenthesis-clause mark-type1 "+" type1-parameters mark "{" $error
+      ($$ (yyerrok) (remark-type1) (unmark) (unmark)))
+     (postfix-expression
+      parenthesis-clause mark-type1 "+" type1-parameters mark $error
+      ($$ (yyerrok) (remark-type1) (unmark) (unmark)))
+     (postfix-expression
+      parenthesis-clause mark-type1 "+" $error
+      ($$ (yyerrok) (yyclearin) (remark-type1) (unmark)))
      (postfix-expression "[" expression.opt "]")
      ;;| destructor-id "[" expression.opt "]"
      ;;  ^^ -- not semantically valid |#
@@ -317,9 +335,9 @@ the file COPYING included with the this distribution.")
      ("const_cast" "<" type-id ">" "(" expression ")")
      ("typeid" parameters-clause)
      ;;("typeid" "(" expression ")")
-     ;;^^ -- covered by parameters-clause |#
+     ;;^^ covered by parameters-clause |#
      ;;("typeid" "(" type-id ")" )
-     ;; ^^ -- covered by parameters-clause |#
+     ;; ^^ covered by parameters-clause |#
      )
     
     (expression-list.opt
@@ -337,14 +355,14 @@ the file COPYING included with the this distribution.")
      ("++" cast-expression)
      ("--" cast-expression)
      (ptr-operator cast-expression)
-     ("*" cast-expression)
-     ;; ^^ -- covered by ptr-operator |#
+     ;;("*" cast-expression)
+     ;; ^^ covered by ptr-operator |#
      ;;("&" cast-expression)
-     ;; ^^ -- covered by ptr-operator |#
+     ;; ^^ covered by ptr-operator |#
      ;;(decl-specifier-seq "*" cast-expression)
-     ;; ^^ -- covered by binary operator |#
+     ;; ^^ covered by binary operator |#
      ;;(decl-specifier-seq "&" cast-expression)
-     ;; ^^ -- covered by binary operator |#
+     ;; ^^ covered by binary operator |#
      (suffix-decl-specified-scope star-ptr-operator cast-expression)
      ;; ^^ /* covers e.g int ::type::* const t = 4 |#
      ("+" cast-expression)
@@ -353,13 +371,13 @@ the file COPYING included with the this distribution.")
      ("~" cast-expression)
      ("sizeof" unary-expression)
      ;;("sizeof" "(" type-id ")")
-     ;;^^ -- covered by unary-expression |#
+     ;;^^ covered by unary-expression |#
      (new-expression)
      (global-scope new-expression)
      (delete-expression)
      (global-scope delete-expression)
      ;;("delete" "[" "]" cast-expression)
-     ;; ^-- covered by "delete" cast-expression since cast-expression covers ...
+     ;; ^covered by "delete" cast-expression since cast-expression covers ...
      ;;("::" "delete" "[" "]" cast-expression)
      ;; ^^ ... abstract-expression cast-expression and so [] cast-expression
      )
@@ -372,12 +390,12 @@ the file COPYING included with the this distribution.")
      ("new" new-type-id new-initializer.opt)
      ("new" parameters-clause new-type-id new-initializer.opt)
      ("new" parameters-clause)
-     ;;("new" "(" type-id ")")  -- covered by parameters-clause
+     ;;("new" "(" type-id ")")  covered by parameters-clause
      ("new" parameters-clause parameters-clause new-initializer.opt)
      ;;("new" "(" type-id ")" new-initializer)
-     ;; ^^ -- covered by parameters-clause parameters-clause
+     ;; ^^ covered by parameters-clause parameters-clause
      ;;("new" parameters-clause "(" type-id ")")
-     ;; ^^ -- covered by parameters-clause parameters-clause
+     ;; ^^ covered by parameters-clause parameters-clause
      )
 
     ;; ptr-operator-seq.opt production reused to save a %prec
@@ -411,13 +429,13 @@ the file COPYING included with the this distribution.")
     (cast-expression
      (unary-expression)
      (abstract-expression cast-expression)
-     ;;/*("(" type-id ")" cast-expression) -- covered by abstract-expression
+     ;;/*("(" type-id ")" cast-expression) covered by abstract-expression
      )
     
     (pm-expression
      (cast-expression)
-     (pm-expression "do"T-STAR cast-expression)
-     (pm-expression "->"-STAR cast-expression)
+     (pm-expression ".*" cast-expression)
+     (pm-expression "->*" cast-expression)
      )
     
     (multiplicative-expression
@@ -587,7 +605,7 @@ the file COPYING included with the this distribution.")
     ;; Parsing statements is easy once simple-declaration has been
     ;; generalised to cover expression-statement.
     (looping-statement
-     (start-search looped-statement) ;; { end-search(); }
+     (start-search looped-statement ($$ (end-search)))
      )
     
     (looped-statement
@@ -598,7 +616,7 @@ the file COPYING included with the this distribution.")
     
     (statement
      (control-statement)
-     ;;(expression-statement) -- covered by declaration-statement
+     ;;(expression-statement) covered by declaration-statement
      (compound-statement)
      (declaration-statement)
      (try-block)
@@ -613,30 +631,30 @@ the file COPYING included with the this distribution.")
     
     (labeled-statement
      (identifier ":" looping-statement)
-     (CASE constant-expression ":" looping-statement)
+     ("case" constant-expression ":" looping-statement)
      ("default" ":" looping-statement)
      )
 
     ;; (expression-statement (expression.opt ";")) 
-    ;; ^^ -- covered by declaration-statement
+    ;; ^^ covered by declaration-statement
     
     (compound-statement
      ("{" statement-seq.opt "}")
-     ("{" statement-seq.opt looping-statement "#" bang error "}")
-     ;; ^^ { UNBANG("Bad statement-seq."); }
+     ("{" statement-seq.opt looping-statement "#" bang $error "}"
+      ($$ (UNBANG "Bad statement-seq.")))
      )
     
     (statement-seq.opt
      ($empty) 
      (statement-seq.opt looping-statement)
-     (statement-seq.opt looping-statement "#" bang error ";")
-     ;; ^^ { UNBANG("Bad statement."); }
+     (statement-seq.opt looping-statement "#" bang $error ";"
+			($$ (UNBANG "Bad statement.")))
      )
     
 
     ;;  The dangling else conflict is resolved to the innermost if.
     (selection-statement
-     ("if" "(" condition ")" looping-statement ($prec "SHIFT_THERE"))
+     ("if" "(" condition ")" looping-statement ($prec 'shift-there))
      ("if" "(" condition ")" looping-statement "else" looping-statement)
      ("switch" "(" condition ")" looping-statement)
      )
@@ -648,9 +666,9 @@ the file COPYING included with the this distribution.")
   
     (condition
      (parameter-declaration-list)
-     ;;(expression -- covered by parameter-declaration-list
+     ;;(expression covered by parameter-declaration-list
      ;;(type-specifier-seq declarator "=" assignment-expression)
-     ;;^^ -- covered by parameter-declaration-list
+     ;;^^ covered by parameter-declaration-list
      )
 
     (iteration-statement
@@ -662,7 +680,7 @@ the file COPYING included with the this distribution.")
 
     (for-init-statement
      (simple-declaration)
-     ;;(expression-statement) -- covered by simple-declaration
+     ;;(expression-statement) covered by simple-declaration
      )
     
     (jump-statement
@@ -678,20 +696,20 @@ the file COPYING included with the this distribution.")
 
     ;; A.6 Declarations
     (compound-declaration
-     ("{" nest declaration-seq.opt "}") ;; { unnest(); }
-     ("{" nest declaration-seq.opt util looping-declaration "#" bang error "}")
-     ;; ^^ { unnest(); UNBANG("Bad declaration-seq."); }
+     ("{" nest declaration-seq.opt "}" ($$ (unnest)))
+     ("{" nest declaration-seq.opt util looping-declaration "#" bang $error "}"
+      ($$ (unnest) (UNBANG "Bad declaration-seq.")))
      )
     
     (declaration-seq.opt
      ($empty)
      (declaration-seq.opt util looping-declaration)
-     (declaration-seq.opt util looping-declaration "#" bang error ";")
-     ;; ^^ { UNBANG("Bad declaration."); }
+     (declaration-seq.opt util looping-declaration "#" bang $error ";"
+			  ($$ (UNBANG "Bad declaration.")))
      )
     
     (looping-declaration
-     (start-search1 looped-declaration) ;; { end-search(); }
+     (start-search1 looped-declaration ($$ (end-search)))
      )
     
     (looped-declaration
@@ -704,7 +722,7 @@ the file COPYING included with the this distribution.")
      (block-declaration)
      (function-definition)
      (template-declaration)
-     ;;(explicit-instantiation) -- covered by relevant declarations |#
+     ;;(explicit-instantiation) covered by relevant declarations |#
      (explicit-specialization)
      (specialised-declaration)
      )
@@ -814,7 +832,7 @@ the file COPYING included with the this distribution.")
 
     (storage-class-specifier
      ("register") ("static") ("mutable")
-     ("extern" ($prec "SHIFT_THERE")) ;; /* Prefer linkage specification
+     ("extern" ($prec 'shift-there)) ;; /* Prefer linkage specification
      ("auto")
      )
 
@@ -864,7 +882,7 @@ the file COPYING included with the this distribution.")
      )
 
     (elaborated-enum-specifier
-     ("enum" scoped-id ($prec "SHIFT_THERE"))
+     ("enum" scoped-id ($prec 'shift-there))
      )
     
     (enum-specifier
@@ -880,17 +898,17 @@ the file COPYING included with the this distribution.")
     
     (enumerator-list-ecarb
      ("}")
-     (bang error "}") ;; { UNBANG("Bad enumerator-list."); }
+     (bang $error "}" ($$ (UNBANG "Bad enumerator-list.")))
      )
     
     (enumerator-definition-ecarb
      ("}")
-     (bang error "}") ;; { UNBANG("Bad enumerator-definition."); }
+     (bang $error "}" ($$ (UNBANG "Bad enumerator-definition.")))
      )
     
     (enumerator-definition-filler
      ($empty)
-     (bang error ",") ;; { UNBANG("Bad enumerator-definition."); }
+     (bang $error "," ($$ (UNBANG "Bad enumerator-definition.")))
      )
     
     (enumerator-list-head
@@ -938,13 +956,14 @@ the file COPYING included with the this distribution.")
      )
     (init-declaration
      (assignment-expression)
+     ;; covered by assignment-expression:
      ;;(assignment-expression "=" initializer-clause)
-     ;; ^^-- covered by assignment-expression
-     ;; (assignment-expression "(" expression-list ")")
-     ;; ^^-- covered by another set of call arguments
-
-     ;; (declarator: -- covered by assignment-expression
-     ;; (direct-declarator: -- covered by postfix-expression
+     ;; covered by another set of call arguments:
+     ;;(assignment-expression "(" expression-list ")")
+     ;; covered by assignment-expression:
+     ;;(declarator ...
+     ;; covered by postfix-expression:
+     ;;(direct-declarator ... 
      )
 
     (star-ptr-operator
@@ -968,7 +987,7 @@ the file COPYING included with the this distribution.")
     ;; Independently coded to localise the shift-reduce conflict:
     ;;    sharing just needs another %prec |#
     (ptr-operator-seq.opt
-     ($empty ($prec "SHIFT_THERE")) ;; /* Maximise type length
+     ($empty ($prec 'shift-there)) ;; /* Maximise type length
      (ptr-operator ptr-operator-seq.opt)
      )
 
@@ -1102,17 +1121,17 @@ the file COPYING included with the this distribution.")
      ("{" initializer-list "}")
      ("{" initializer-list "," "}")
      ("{" "}")
-     ("{" looping-initializer-clause "#" bang error "}")
-     ;; ^^ { UNBANG("Bad initializer-clause."); }
-     ("{" initializer-list "," looping-initializer-clause "#" bang error "}")
-     ;; ^^ { UNBANG("Bad initializer-clause."); }
+     ("{" looping-initializer-clause "#" bang $error "}"
+      ($$ (UNBANG "Bad initializer-clause.")))
+     ("{" initializer-list "," looping-initializer-clause "#" bang $error "}"
+      ($$ (UNBANG "Bad initializer-clause.")))
      )
     (initializer-list
      (looping-initializer-clause)
      (initializer-list "," looping-initializer-clause)
      )
     (looping-initializer-clause
-     (start-search looped-initializer-clause) ;; { end-search(); }
+     (start-search looped-initializer-clause ($$ (end-search)))
      )
     (looped-initializer-clause
      (initializer-clause)
@@ -1133,34 +1152,34 @@ the file COPYING included with the this distribution.")
     ;; back-tracking to the alternative parse in elaborated-type-specifier
     ;; which regenerates the : and declares unconditional success.
     (colon-mark
-     (":") ;; { mark(); }
+     (":" ($$ (mark)))
      )
     (elaborated-class-specifier
-     (class-key scoped-id ($prec "SHIFT_THERE"))
-     (class-key scoped-id colon-mark error) ;; { rewind-colon(); }
+     (class-key scoped-id ($prec 'shift-there))
+     (class-key scoped-id colon-mark $error ($$ (rewind-colon)))
      )
     (class-specifier-head
-     (class-key scoped-id colon-mark base-specifier-list "{") ;; { unmark(); }
+     (class-key scoped-id colon-mark base-specifier-list "{" ($$ (unmark)))
      (class-key ":" base-specifier-list "{")
      (class-key scoped-id "{")
      (class-key "{")
      )
-    (class-key: ("class") ("struct") ("union"))
+    (class-key ("class") ("struct") ("union"))
     (class-specifier
      (class-specifier-head member-specification.opt "}")
      (class-specifier-head member-specification.opt util
-			   looping-member-declaration "#" bang error "}")
-     ;; ^^ { UNBANG("Bad member-specification.opt."); }
+			   looping-member-declaration "#" bang $error "}"
+			   ($$ (UNBANG "Bad member-specification.opt.")))
      )
     (member-specification.opt
      ($empty)
      (member-specification.opt util looping-member-declaration)
      (member-specification.opt util looping-member-declaration
-			       "#" bang error ";")
-     ;; ^^ { UNBANG("Bad member-declaration."); }
+			       "#" bang $error ";"
+			       ($$ (UNBANG "Bad member-declaration.")))
      )
     (looping-member-declaration
-     (start-search looped-member-declaration) ;;  { end-search(); }
+     (start-search looped-member-declaration ($$ (end-search)))
      )
     (looped-member-declaration
      (member-declaration)
@@ -1254,8 +1273,8 @@ the file COPYING included with the this distribution.")
      )
     (ctor-initializer
      (":" mem-initializer-list)
-     (":" mem-initializer-list bang error)
-     ;;^^ { UNBANG("Bad ctor-initializer."); }
+     (":" mem-initializer-list bang $error
+      ($$ (UNBANG "Bad ctor-initializer.")))
      )
     (mem-initializer-list
      (mem-initializer)
@@ -1263,8 +1282,8 @@ the file COPYING included with the this distribution.")
      )
     (mem-initializer-list-head
      (mem-initializer-list ",")
-     (mem-initializer-list bang error ",")
-     ;; ^^ { UNBANG("Bad mem-initializer."); }
+     (mem-initializer-list bang $error ","
+			   ($$ (UNBANG "Bad mem-initializer.")))
      )
     (mem-initializer
      (mem-initializer-id "(" expression-list.opt ")")
@@ -1294,44 +1313,44 @@ the file COPYING included with the this distribution.")
      ;;(#|----|# "new" "[" "]") ;; -- Covered by array of "operator" "new"
      ;;(#|----|# "delete" "[" "]") ;; 
      ;;-- Covered by array of "operator" "delete"
-     ("+")
-     ("-")
-     ("*")
-     ("/")
-     ("%")
-     ("^")
-     ("&")
-     ("|")
-     ("~")
-     ("!")
-     ("=")
-     ("<")
-     (">")
-     ("+=")
-     ("-=")
-     ("*=")
-     ("/=")
-     ("%=")
-     ("^=")
-     ("&=")
-     ("|=")
-     ("<<")
-     (">>")
-     (">>=")
-     ("<<=")
-     ("==")
-     ("!=")
-     ("<=")
-     (">=")
-     ("&&")
-     ("||")
-     ("++")
-     ("--")
-     (",")
-     ("->*")
-     ("->")
-     ("(" ")")
-     ("[" "]")
+     ("+" ($$ `(add ,$1)))
+     ("-" ($$ `(sub ,$1)))
+     ("*" ($$ `(mul ,$1)))
+     ("/" ($$ `(div ,$1)))
+     ("%" ($$ `(mod ,$1)))
+     ("^" ($$ `(bw-xor ,$1)))
+     ("&" ($$ `(bw-and ,$1)))
+     ("|" ($$ `(bw-or ,$1)))
+     ("~" ($$ `(bw-not ,$1)))
+     ("!" ($$ `(not ,$1)))
+     ("=" ($$ `(assn ,$1)))
+     ("<" ($$ `(lt ,$1)))
+     (">" ($$ `(gt ,$1)))
+     ("+=" ($$ `(add-assn ,$1)))
+     ("-=" ($$ `(sub-assn ,$1)))
+     ("*=" ($$ `(mul-assn ,$1)))
+     ("/=" ($$ `(div-assn ,$1)))
+     ("%=" ($$ `(mod-assn ,$1)))
+     ("^=" ($$ `(xor-assn ,$1)))
+     ("&=" ($$ `(and-assn ,$1)))
+     ("|=" ($$ `(or-assn ,$1)))
+     ("<<" ($$ `(shl ,$1)))
+     (">>" ($$ `(shr ,$1)))
+     (">>=" ($$ `(rshift-assn ,$1)))
+     ("<<=" ($$ `(lshift-assn ,$1)))
+     ("==" ($$ `(eq ,$1)))
+     ("!=" ($$ `(ne ,$1)))
+     ("<=" ($$ `(le ,$1)))
+     (">=" ($$ `(ge ,$1)))
+     ("&&" ($$ `(and ,$1)))
+     ("||" ($$ `(or ,$1)))
+     ("++" ($$ `(inc ,$1)))
+     ("--" ($$ `(dec ,$1)))
+     ("," ($$ `(comma ,$1)))
+     ("->*" ($$ `(arrow-star ,$1)))
+     ("->" ($$ `(i-sel ,$1)))
+     ("(" ")" ($$ `(todo1 ,$1)))
+     ("[" "]" ($$ `(todo2 ,$1)))
      )
 
     ;; A.12 Templates
@@ -1352,13 +1371,13 @@ the file COPYING included with the this distribution.")
      (templated-type-parameter)
      (templated-type-parameter "=" identifier)
      (templated-parameter-declaration)
-     (bang error) ;; { UNBANG("Bad template-parameter."); }
+     (bang $error ($$ (UNBANG "Bad template-parameter.")))
      )
     (simple-type-parameter
      ("class")
-     ;;("class" identifier) ;; -- covered by parameter-declaration
+     ;;("class" identifier) ;; covered by parameter-declaration
      ("typename")
-     ;;("typename" identifier) ;;-- covered by parameter-declaration
+     ;;("typename" identifier) ;; covered by parameter-declaration
      )
     (templated-type-parameter
      (template-parameter-clause "class")
@@ -1376,7 +1395,7 @@ the file COPYING included with the this distribution.")
      )
     (template-argument
      (templated-parameter-declaration)
-     ;;(type-id) ;; -- covered by templated-parameter-declaration
+     ;;(type-id) ;; covered by templated-parameter-declaration
      ;;(template-name) ;; -- covered by templated-parameter-declaration
      ;;(error) ;; -- must allow template failure to re-search
      )
@@ -1419,6 +1438,14 @@ the file COPYING included with the this distribution.")
      (type-id)
      (type-id-list "," type-id)
      )
+    (advance-search
+     ($error ($$ (yyerrok) (yyclearin) (error) (advance-search))))
+    (bang ($empty ($$ (BANG))))
+    (mark ($empty ($$ (mark))))
+    (nest ($empty ($$ (nest))))
+    (start-search ($empty ($$ (start-search #f))))
+    (start-search1 ($empty ($$ (start-search #t))))
+    (util ($empty))
     )
    #|
    %term <character-literal> CharacterLiteral
@@ -1587,7 +1614,32 @@ the file COPYING included with the this distribution.")
    *  sizeof and typeid don't distinguish type/value syntaxes
    *      probably makes life polymorphically easier
    |#
-  ))
+   ))
+
+(when #t
+  (with-output-to-file "lang.txt"
+    (lambda ()
+      (pp-lalr-grammar cxx-spec)
+      )))
+
+(define cxx-mach
+  (compact-machine
+   (hashify-machine
+    (make-lalr-machine cxx-spec))))
+#|
+;; The following are needed by the code in pbody.scm.
+(define len-v (assq-ref cxx-mach 'len-v))
+(define pat-v (assq-ref cxx-mach 'pat-v))
+(define rto-v (assq-ref cxx-mach 'rto-v))
+(define mtab (assq-ref cxx-mach 'mtab))
+(define act-v (vector-map
+               (lambda (ix f) (eval f (current-module)))
+               (vector-map (lambda (ix actn) (wrap-action actn))
+                           (assq-ref cxx-mach 'act-v))))
+|#
+;; (include-from-path "nyacc/lang/cxx/body.scm")
+
+;; (define raw-parser (make-lalr-parser cxx-mach))
 
 
 ;; --- last line --- 

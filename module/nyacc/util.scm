@@ -1,6 +1,6 @@
 ;;; nyacc/util.scm
 ;;;
-;;; Copyright (C) 2014, 2015 Matthew R. Wette
+;;; Copyright (C) 2014-2016 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@
   (apply simple-format (current-error-port) fmt args))
 (define fmt simple-format)
 
-;; @item obj->str object => string
+;; @deffn obj->str object => string
 ;; Convert terminal (symbol, string, character) to string.
 ;; This is like @code{write} but will prefix symbols with @code{'}.
 (define (obj->str obj)
@@ -46,14 +46,14 @@
 	((symbol? obj) (string-append "'" (symbol->string obj)))
 	((char? obj) (simple-format #f "~S" obj))))
 
-;; @item prune-assoc al
+;; @deffn prune-assoc al
 ;; Prune obsolete entries from an a-list.  This is order n^2.
 (define (prune-assoc al)
   (let iter ((al1 '()) (al0 al))
     (if (null? al0) al1
 	(iter (if (assoc (caar al0) al1) al1 (cons (car al0) al1)) (cdr al0)))))
 
-;; @item fixed-point proc seed
+;; @deffn fixed-point proc seed
 ;; .item fixed-point-by-elt proc seed
 ;; @example
 ;; proc: element list -> list
@@ -90,14 +90,14 @@
      (else
       curr))))
 
-;; @item vector-fixed-point proc vec => vec
+;; @deffn vector-fixed-point proc vec => vec
 ;; (proc vec) => chg (boolean)
 ;; Not used yet (in step3).
 (define (vector-fixed-point proc vec)
   (let iter ((chg #t))
     (if chg (proc vec) vec)))
 
-;; @item map-attr->vector list-of-alists key => vector
+;; @deffn map-attr->vector list-of-alists key => vector
 ;; map list of attribute lists to vector of attr
 ;; @example
 ;; (map-attr->vector '(((a . 1) ...) ((a . 2) ...) ...) => #(1 2 ...)
@@ -105,14 +105,14 @@
 (define (map-attr->vector al-l key)
   (list->vector (map (lambda (al) (assq-ref al key)) al-l)))
 
-;; @item flip al => a-list
+;; @deffn flip al => a-list
 ;; change (a 1 2 3) to ((1 . a) (2 . a) (3 . a))
 (define (x-flip al)
   (let iter ((result '()) (tail (cdr al)))
     (if (null? tail) result
 	(iter (acons (car tail) (car al) result) (cdr tail)))))
 
-;; @item x-comb (a1 a2 a3) (b1 b2 b3) => (a1 b1) (a1 b2) ...
+;; @deffn x-comb (a1 a2 a3) (b1 b2 b3) => (a1 b1) (a1 b2) ...
 ;; The implementation needs work.
 (define (x-comb a b)
   (let iter ((res '()) (al a) (bl b))
@@ -120,15 +120,6 @@
      ((null? al) res)
      ((pair? bl) (iter (acons (car al) (car bl) res) al (cdr bl)))
      ((pair? al) (iter res (cdr al) b)))))
-
-(define-syntax vector-for-each/x
-  (syntax-rules ()
-    ((_ proc vec)
-     (let iter ((ix 0) (nx (vector-length vec)))
-       (cond
-	((< ix nx)
-	 (proc ix (vector-ref vec ix))
-	 (iter (1+ ix) nx)))))))
 
 (define (write-vec port vec)
   (let* ((nv (vector-length vec)))
@@ -148,15 +139,14 @@
     (fmt port ")")))
 
 
-
-;; @item ugly-print sexp [#:indent 4] [#:extent 78] [#:port port]
+;; @deffn ugly-print sexp [#:indent 4] [#:extent 78] [#:port port]
 ;; This will print in compact form which shows no structure.
 (define* (ugly-print sexp #:optional port #:key (indent 4) (extent 78))
 
   (define (obj->str obj)
     (simple-format #f "~S" obj))
 
-  ;; @item make-strout indent extent port
+  ;; @deffn make-strout indent extent port
   ;; This will generate a procedure of signature @code{(proc col str)} which
   ;; takes a column and string, prints the string and returns updated column.
   (define (make-strout ind ext port)

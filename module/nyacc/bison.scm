@@ -23,7 +23,9 @@
   #:use-module (ice-9 pretty-print)
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module ((srfi srfi-43) #:select (vector-for-each vector-map))
-  #:use-module (nyacc export))
+  #:use-module (nyacc export)
+  #:use-module (nyacc lalr)		; gen-match-table
+  )
 
 ;; @deffn chew-on-grammar tree lhs-v rhs-v terms => a-list
 ;; Generate a-list that maps bison rule index to NYACC rule index.
@@ -176,18 +178,19 @@
 	 (lhs-v (assq-ref spec 'lhs-v))
 	 (rhs-v (assq-ref spec 'rhs-v))
 	 (s0 (spec->mach-sxml spec))
-	 (sG ((sxpath '(// grammar)) s0))
+	 (sG ((sxpath '(bison-xml-report grammar)) s0))
 	 (sG (if (pair? sG) (car sG) sG))
-	 (sA ((sxpath '(// automaton)) s0))
+	 (sA ((sxpath '(bison-xml-report automaton)) s0))
 	 (sA (if (pair? sA) (car sA) sA))
 	 (pG (chew-on-grammar sG lhs-v rhs-v terminals))
 	 (bsym->nsym (make-bison->nyacc-symbol-mapper terminals non-terms))
 	 (pA (chew-on-automaton sA pG bsym->nsym))
 	 (xs (car pA))
 	 (ns (caadr pA))
-	 (pat-v (make-vector ns '()))
-	 (kis-v (make-vector ns '()))
+	 (pat-v (make-vector ns #f))
+	 (kis-v (make-vector ns #f))
 	 )
+    ;;(pretty-print sA)
     (for-each
      (lambda (state)
        (let* ((sx (car state))
@@ -199,10 +202,14 @@
 	 (vector-set! pat-v sx pat)
 	 (vector-set! kis-v sx kis)))
      (cdr pA))
-    (cons*
-     (cons 'pat-v pat-v)
-     (cons 'kis-v kis-v)
-     spec)))
+    (gen-match-table
+     (cons*
+      (cons 'pat-v pat-v)
+      (cons 'kis-v kis-v)
+      (cons 'len-v (vector-map (lambda (i v) (vector-length v)) rhs-v))
+      (cons 'rto-v (vector-copy lhs-v))
+      spec))))
+
 
 ;; --- last line ---
  

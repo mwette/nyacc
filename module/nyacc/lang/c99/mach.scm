@@ -705,8 +705,8 @@
 
 ;;; =====================================
 
-;; @item gen-c99x-files [dir] => #t
-;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.
+;; @item gen-c99-files [dir] => #t
+;; Update or generate the files @quot{c99act.scm} and @quot{c99tab.scm}.
 ;; These are the tables and actions for the C99 parser.
 ;; If there are no changes to existing files, no update occurs.
 (define (gen-c99-files . rest)
