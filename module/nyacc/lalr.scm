@@ -42,7 +42,7 @@
   #:use-module ((nyacc parse) #:select (wrap-action))
   )
 
-(define *nyacc-version* "0.71.0-")
+(define *nyacc-version* "0.71.0+")
 
 ;; @deffn proxy-? sym rhs
 ;; @example
