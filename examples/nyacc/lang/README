@@ -1,6 +1,6 @@
-module/nyacc/lang/README
+nyacc/lang/README
 
-Copyright (C) 2015 Matthew R. Wette
+Copyright (C) 2015,2016 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -12,6 +12,19 @@ The parsers will be built with attributed grammar semantics.  The
 parse tree will be in sxml format.
 
 This directory hosts parsers, typically with attributed grammar semantics.
+
+The typical contents are:
+mach.scm	the grammar specification, dev parser and table generator
+mach.d		a directory containing files of actions and tables 
+body.scm	code needed for the development and fast parsers
+		this is included by mach.scm and parser.scm
+parser.scm	the "fast parser" using tables in mach.d/
+pprint.scm	pretty-printer
+Tmach.scm	test code for the parser
+
+The development parsers will generate a machine every time the code is run.
+(I don't totally understand why this happens.  Maybe eval-when could help.)
+The fast parsers use tables that are generated separately, a 'la yacc or bison.
 
 The output is typically a tree with sxml syntax.  This has the grammar
 @example

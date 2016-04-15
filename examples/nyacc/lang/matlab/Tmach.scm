@@ -16,36 +16,22 @@
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-(when #t
-  (gen-matlab-files)
-  (system "touch parser.scm"))
-
-(when #t
-  (with-output-to-file "lang.txt"
-    (lambda ()
-      (pp-lalr-notice matlab-spec)
-      (pp-lalr-grammar matlab-spec)
-      (pp-lalr-machine matlab-mach)
-      ;;(system "zip lang.txt")
-      )))
-
-(when #f
-  (with-output-to-file "gram.y"
-    (lambda () (lalr->bison matlab-spec))))
-
-(when #f ;; dev parser from mach.scm
+(when #f ;; using the "development" parser
   (let* ((sx0 (with-input-from-file "exam.d/ex03a.m"
 		(lambda () (dev-parse-ml #:debug #f)))))
     (pretty-print sx0)))
+
+;; To generate the tables which will be included in the "fast" parser.
+(when #t
+  (gen-matlab-files)
+  (system "touch parser.scm"))
 
 (when #f ;; reg parser from parser.scm
   (let ((sx0 (with-input-from-file "exam.d/ex03b.m"
 	       (lambda () (parse-ml #:debug #f)))))
     (pretty-print sx0)))
 
-(define (deb-parse-ml)
-  (dev-parse-ml #:debug #t))
-
+;; Experimental matlab->c converter.
 (when #t ;; processing
   (let* ((a-file "exam.d/ex03a.m")
 	 (b-file "exam.d/ex03b.m")
@@ -58,5 +44,18 @@
     ;;(simple-format #t "==>\n")
     (pretty-print sx1a)
     #t))
+
+;; Geneates a text file showing the grammar and state machine.
+(when #t
+  (with-output-to-file "lang.txt"
+    (lambda ()
+      (pp-lalr-notice matlab-spec)
+      (pp-lalr-grammar matlab-spec)
+      (pp-lalr-machine matlab-mach)
+      (system "zip lang.txt"))))
+
+;; The following illustrates the generation of bison input file:
+(when #f
+  (with-output-to-file "gram.y" (lambda () (lalr->bison matlab-spec))))
 
 ;; --- last line ---

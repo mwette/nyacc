@@ -14,9 +14,10 @@ This software package is covered by the following licenses:
 
 There is an incomplete manual in doc/nyacc/.
 
-There is a demo program calc.scm in test-squite/nyacc/.
-
-There are more examples in examples/nyacc/.
+There is a demo program calc.scm in examples/nyacc/lang/calc.  Easy starter:
+  $ cd examples/nyacc/lang/calc
+  $ ./calc
+  2 + 2 => 4
 
 The module code is in module/nyacc.  Modules are imported as follows:
   (use-modules (nyacc lalr))
@@ -28,11 +29,6 @@ to that directory.  To install in the global guile distribution:
   root# cd module
   root# make -f Makefile.nyacc install
   root# exit
-  user$ cd test-suite/nyacc
-  user$ guile calc.scm
-  ;; compiling ... calc.scm
-  ;; compiled ... calc.scm.go
-  expect 2; get 2
   user$
 
 The syntax and nomenclature should be considered not stable.

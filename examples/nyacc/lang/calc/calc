@@ -1,0 +1,8 @@
+#!/bin/sh
+
+GUILE_LOAD_PATH=../../../../module:../../..
+export GUILE_LOAD_PATH
+
+guile Tcalc.scm
+
+# --- last line ---
