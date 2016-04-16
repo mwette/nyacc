@@ -60,7 +60,7 @@
      (postfix-expression "[" expression "]" ($$ `(array-ref ,$3 ,$1)))
      (postfix-expression "(" argument-expression-list ")"
 			 ($$ `(fctn-call ,$1 ,(tl->list $3))))
-     (postfix-expression "(" ")" ($$ `(fctn-call ,$1)))
+     (postfix-expression "(" ")" ($$ `(fctn-call ,$1 (expr-list))))
      (postfix-expression "." identifier ($$ `(d-sel ,$3 ,$1)))
      (postfix-expression "->" identifier ($$ `(i-sel ,$3 ,$1)))
      (postfix-expression "++" ($$ `(post-inc ,$1)))
@@ -184,7 +184,10 @@
 
     (expression				; S 6.5.17
      (assignment-expression)
-     (expression "," assignment-expression ($$ `(comma-expr ,$1 ,$3)))
+     (expression "," assignment-expression
+		 ($$ (if (eqv? 'comma-expr (sx-tag $1))
+			 (append $1 (list $3))
+			 `(comma-expr ,$1 ,$3))))
      )
 
     (constant-expression		; S 6.6
@@ -685,18 +688,20 @@
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
 (define* (dev-parse-c99 #:key
-			(cpp-defs '())
-			(inc-dirs '())
-			(td-dict '())
-			(mode 'file)
-			(debug #f))
+			(cpp-defs '())	; CPP defines
+			(inc-dirs '())	; include directories
+			(td-dict '())	; typedef dictionary
+			(mode 'file)	; mode: 'file or 'code
+			(xdef? #f)	; expand def function: proc name mode
+			(debug #f))	; debug
   (catch
    'parse-error
    (lambda ()
      (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
        (with-fluid* *info* info
 		    (lambda ()
-		      (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
+		      (raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
+				  #:debug debug)))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))

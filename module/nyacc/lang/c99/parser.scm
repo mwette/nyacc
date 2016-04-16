@@ -49,8 +49,13 @@
 ;;               [#:mode ('code|'file)]
 ;; This needs to be explained in some detail.
 ;; tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
-(define* (parse-c99
-	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
+(define* (parse-c99 #:key
+		    (cpp-defs '())	; CPP defines
+		    (inc-dirs '())	; include dirs
+		    (td-dict '())	; typedef dictionary
+		    (mode 'file)	; mdoe: 'file or 'code
+		    (xdef? #f)		; pred to determine expand
+		    (debug #f))		; debug
   (catch
    'parse-error
    (lambda ()
@@ -58,7 +63,8 @@
        (with-fluid*
 	   *info* info
 	   (lambda ()
-	     (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
+	     (raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
+			 #:debug debug)))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))

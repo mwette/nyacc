@@ -29,16 +29,19 @@ typedef struct {
 } xyz_t;
 
 int foo(int y) {
-  double d;
+  int i, j, k;
 
-  if (y > 0) {
-    d = +1.0;
-  } else if (y == 0) {
-    d = 0.0;
-  } else {
-    d = -1.0;
+  for (j = 1, k = 2, i = 0; i < 10; i++) {
+    j = j + 1;
   }
-  return 1;
+  if (y > 0) {
+    k = +1;
+  } else if (y == 0) {
+    k = OFFSET(xyz_t,y);
+  } else {
+    k = -1;
+  }
+  return 1 + x->foo(k + y);
 }
 
 /* this is lone comment */

@@ -263,12 +263,12 @@
     ;; mode: 'code|'file
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
     ;; ppev?: (proc ???) => #t|#f : do we eval-and-honor #if/#else ?
-    (lambda* (#:key (mode 'code) (xdef? def-xdef?))
+    (lambda* (#:key (mode 'code) (xdef? #f))
       (let ((bol #t)		      ; begin-of-line condition
 	    (skip (list 'keep))	      ; CPP skip-input stack
 	    (info (fluid-ref *info*)) ; assume make and run in same thread
 	    (pstk '())		      ; port stack
-	    )
+	    (x-def? (or xdef? (lambda (name mode) (eqv? mode 'code)))))
 	;; Return the first (tval lval) pair not excluded by the CPP.
 	(lambda ()
 
@@ -384,7 +384,7 @@
 		(lambda (name)
 		  (let ((symb (string->symbol name)))
 		    (cond
-		     ((and (xdef? name mode)
+		     ((and (x-def? name mode)
 			   (expand-cpp-mref name (cpi-defs info)))
 		      => (lambda (st)
 			   (push-input (open-input-string st))

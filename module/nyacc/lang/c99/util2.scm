@@ -16,27 +16,40 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; utilities for processing output trees
-;; v151222a - 
+
+;; The idea is to convert declarations into something like
+;; @example
+;; const char *args[21];  /* command arguments */
+;; @end example
+;; @noindent
+;; into
+;; @example
+;; ("args" (comment " command arguments ")
+;;  (array-of 21) (pointer-to) (fixed "char"))
+;; @end example
+;; @noindent
+;; or without the comment.  It is a question whether we need the fixed part.
+;; In addition, we want to reduce to a set of canonical types.  So something
+;; like @code{foo_t} should be expanded.
 
 (define-module (nyacc lang c99 util2)
   #:export (tree->udict
 	    stripdown
 	    udecl->mspec
-	    unwrap-decl
+	    udecl->mspec/comm
 
+	    unwrap-decl
 	    canize-enum-def-list
 	    fix-fields
 
 	    match-decl match-comp-decl
 	    declr->ident
 	    expand-decl-typerefs
-
-	    filter-typedefs
 	    )
   #:use-module (nyacc lang c99 pprint)
   #:use-module (ice-9 pretty-print)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-11)		; let*-values
+  ;;#:use-module (srfi srfi-11)		; let*-values
   #:use-module ((sxml fold) #:select (foldts foldts*))
   #:use-module (sxml match)
   #:use-module (nyacc lang util)
@@ -67,7 +80,7 @@
 ;; may need to replace (typename "int32_t") with (fixed-type "int32_t")
 
 
-;; @item declr->ident declr => (ident "name")
+;; @deffn declr->ident declr => (ident "name")
 ;; just match the declarator
 ;; (init-declr <declr> [<initzer>])
 ;; See also: declr->id-name in body.scm.
@@ -94,11 +107,14 @@
      (error "c99/util2: unknown declarator: " declr))
     ))
 
+;; @deffn unwrap-decl decl seed => seed
+;; This is a fold to break up multiple declarators.
 ;; @example
 ;; (decl (decl-spec-list ...) (init-declr-list (init-declr ...) ...))
 ;; =>
-;; (decl (decl-spec-list ...) (init-declr ...))
-;; ...
+;; ((decl (decl-spec-list ...) (init-declr ...))
+;;  (decl (decl-spec-list ...) (init-declr ...))
+;;  ...)
 ;; @end example
 (define (unwrap-decl decl seed)
   (cond
@@ -122,7 +138,7 @@
 		    (cdr idl)))))))))
 
 
-;; @item tree->udict tree => udict
+;; @deffn tree->udict tree => udict
 ;; Turn a C parse tree into a assoc-list of names and definitions.
 ;; This will unwrap @code{init-declr-list} into list of decls w/
 ;; @code{init-declr}.
@@ -131,7 +147,7 @@
       (fold match-decl '() (cdr tree))
       '()))
 
-;; @item match-decl decl seed
+;; @deffn match-decl decl seed
 ;; This procedure is intended to be used with @code{fold}.  It breaks up
 ;; up the init-declr-list into individual init-declr items and associates
 ;; with the identifier being declared.  So this is a fold iterator to
@@ -174,7 +190,7 @@
 		      res)
 	       (cdr idl)))))))))
 
-;; @item match-comp-decl decl seed
+;; @deffn match-comp-decl decl seed
 ;; This will turn
 ;; @example
 ;; (comp-decl (decl-spec-list (type-spec "int"))
@@ -209,7 +225,7 @@
 			   (cons* tag spec (car idl) tail))
 		       (iter res (cdr idl)))))))))
 
-;; @item find-special udecl-alist seed => ..
+;; @deffn find-special udecl-alist seed => ..
 ;; NOT DONE
 ;; @example
 ;; '((struct . ("foo" ...) ...)
@@ -248,13 +264,13 @@
   '("int8_t" "uint8_t" "int16_t" "uint16_t"
     "int32_t" "uint32_t" "int64_t" "uint64_t"))
 
-;; @item typedef-decl? decl)
+;; @deffn typedef-decl? decl)
 (define (typedef-decl? decl)
   (sxml-match decl
     ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
     (,otherwise #f)))
  
-;; @item splice-declarators orig-declr tdef-declr => 
+;; @deffn splice-declarators orig-declr tdef-declr => 
 ;; Splice the original declarator into the typedef declarator.
 ;; This is a helper for @code{expand-*-typename-ref} procecures.
 (define (splice-declarators orig-declr tdef-declr)
@@ -289,7 +305,7 @@
 ;;  (make-proxy comp-udecl) => udecl
 ;;  (revert-proxy udecl) => comp-udecl
 
-;; @item repl-typespec decl-spec-list replacement
+;; @deffn repl-typespec decl-spec-list replacement
 ;; This is a helper for expand-decl-typerefs
 (define (repl-typespec decl-spec-list replacement)
   (fold-right
@@ -302,7 +318,7 @@
 	   (else (cons item seed))))
    '() decl-spec-list))
 
-;; @item expand-decl-typerefs udecl udecl-dict => udecl
+;; @deffn expand-decl-typerefs udecl udecl-dict => udecl
 ;; Given a declaration or component-declaration, expand all typename,
 ;; struct, union and enum refs.
 ;; @example
@@ -391,7 +407,7 @@
 
       (else udecl))))
 
-;; @item canize-enum-def-list
+;; @deffn canize-enum-def-list
 ;; Fill in constants for all entries of an enum list.
 (define (canize-enum-def-list enum-def-list)
   (define (get-used edl)
@@ -416,7 +432,7 @@
 	  (iter (cons (append (car edl) `((p-expr (fixed ,is1)))) rez)
 		ix1 (cdr edl))))))))
 
-;; @item stripdown udecl decl-dict => decl
+;; @deffn stripdown udecl decl-dict => decl
 ;; 1) remove stor-spec
 ;; 2) expand typenames
 ;; @example
@@ -429,7 +445,8 @@
 ;; @end example
 (define* (stripdown udecl decl-dict #:key (keep '()))
 
-  (define strip-list '(stor-spec type-qual comment))
+  ;;(define strip-list '(stor-spec type-qual comment))
+  (define strip-list '(stor-spec type-qual))
 
   (define (fsD seed tree)
     '())
@@ -449,13 +466,11 @@
 	 (attr (sx-attr xdecl))
 	 (specl (sx-ref xdecl 1))
 	 (declr (sx-ref xdecl 2))
-	 (tail (sx-tail xdecl 3))	; maybe (comment ...)
 	 (specl1 (foldts fsD fsU fsH '() specl)))
-    ;;(simple-format #t "specl1:\n") (pretty-print specl1)
     (list tag specl1 declr)))
 
 
-;; @item udecl->mspec sudecl
+;; @deffn udecl->mspec sudecl
 ;; Turn a stripped-down unit-declaration into an m-spec.
 ;; This assumes decls have been run through @code{stripdown}.
 (define (udecl->mspec decl . rest)
@@ -497,25 +512,20 @@
       (if (eqv? 'type-spec (caar tsl)) (car tsl)
 	  (iter (cdr tsl))))) 
   
-  ;;(simple-format #t "\ndecl:\n") (pretty-print decl)
   (let* ((decl-dict (if (pair? rest) (car rest) '()))
 	 (specl (sx-ref decl 1))
  	 (declr (sx-ref decl 2))
+	 (comm (sx-ref decl 3))
 	 (m-specl (unwrap-specl specl))
 	 (m-declr (unwrap-declr declr))
-	 (m-decl (reverse (cons m-specl m-declr)))
-	 )
-    ;;m-decl
-    ;;(simple-format #t "decl:\n") (pretty-print decl)
-    ;;(simple-format #t "specl:\n") (pretty-print specl)
-    ;;(simple-format #t "declr:\n") (pretty-print declr)
-    ;;(simple-format #t "m-spec:\n") (pretty-print m-spec)
-    ;;(simple-format #t "m-decl:\n") (pretty-print m-decl)
+	 (m-decl (reverse (cons m-specl m-declr))))
     m-decl))
 
+(define* (udecl->mspec/comm decl #:optional (dict '()) #:key (def-comm ""))
+  (let* ((comm (sx-ref decl 3)) (spec (udecl->mspec decl dict)))
+    (cons* (car spec) (or comm `(comment ,def-comm)) (cdr spec))))
 
-
-;; @item fix-fields flds => flds
+;; @deffn fix-fields flds => flds
 ;; This will take a list of fields from a struct and remove lone comments.
 ;; If a field following a lone comment has no code-comment, the lone comment
 ;; will be used.  That is,
@@ -538,30 +548,11 @@
       (iter rz (cons (cadar fl) cl) (cdr fl)))
      ((eqv? 'comp-decl (caar fl))
       (if (eq? 4 (length (car fl)))
-	  (iter (cons (car fl) rz) '() (cdr fl)) ; has comment
+	  (iter (cons (car fl) rz) '() (cdr fl))	 ; has comment
 	  (let* ((cs (apply string-append (reverse cl))) ; add comment
 		 (fd (append (car fl) (list (list 'comment cs)))))
 	    (iter (cons fd rz) '() (cdr fl)))))
      (else
       (error "bad field")))))
-
-;; ===== not used ===================
-
-;; @item filter-typedefs udecl-dict => udecl-dict
-;; NOT DONE
-;; From output of @code{tree->udict} generate list of typedefs.
-;; (but ADD struct union and enum).
-(define (filter-typedefs dict)
-  (fold
-   (lambda (pair seed)
-     (sxml-match (cdr pair)
-       ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2)
-	;;(simple-format #t "FTk: ~S\n" (cdr pair))
-	(cons pair seed))
-       (,otherwise
-	;;(simple-format #t "FTr: ~S\n" (cdr pair))
-	seed)))
-   '()
-   dict))
 
 ;; --- last line ---

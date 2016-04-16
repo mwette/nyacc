@@ -9,7 +9,7 @@
 
 ;;(with-output-to-file "gram.y" (lambda () (lalr->bison c99-spec)))
 ;;(simple-format #t "~S\n" (assq-ref c99-spec 'assc))
-#;(define c99-mach/b
+(define c99-mach/b
   (hashify-machine
    (compact-machine
     (make-lalr-machine/bison c99-spec))))

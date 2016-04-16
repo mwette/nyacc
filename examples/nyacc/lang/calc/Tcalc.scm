@@ -26,6 +26,9 @@
      ("(" expr ")" ($$ $2))))))
 
 (define simple-mach (make-lalr-machine simple-spec))
+;; OR
+;; (use-modules (nyacc bison))
+;; (define simple-mach (make-lalr-machine/bison simple-spec))
 
 (define match-table (assq-ref simple-mach 'mtab))
 

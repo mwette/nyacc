@@ -192,9 +192,38 @@
       
       ((post-inc ,expr) (unary/r 'post-inc "++" expr))
       ((post-dec ,expr) (unary/r 'post-dec "--" expr))
+
+      ;; TODO: check protection 
+      ((fctn-call ,expr ,arg-list)
+       (if (protect-expr? 'rt 'fctn-call expr)
+	   (ppx/p expr)
+	   (ppx expr))
+       (sf "(")
+       (ppx arg-list)
+       (sf ")"))
+
+      ((expr-list . ,expr-l)
+       (pair-for-each
+	(lambda (pair)
+	  (ppx (car pair))
+	  (if (pair? (cdr pair)) (sf ", ")))
+	expr-l))
       
       ((assn-expr ,lval ,op ,rval)
        (binary (car op) (simple-format #f " ~A " (cadr op)) lval rval))
+
+      ;; TODO: check protection
+      ((comma-expr . ,expr-list)
+       (pair-for-each
+	(lambda (pair)
+	  (cond
+	   ((pair? (cdr pair))
+	    (if (protect-expr? 'rt 'comma-expr (car pair))
+		(ppx/p (car pair))
+		(ppx (car pair)))
+	    (sf ", "))
+	   (else (ppx (car pair)))))
+	expr-list))
 
       ;; #|
       ;; gotta break up ppx because sxml-match seems to eat stack space:
@@ -203,7 +232,7 @@
        (ppx-2 tree))))
   
   (define (ppx-2 tree)
-
+    
     (sxml-match tree
       ;; sxml-match continues here to avoid stack overflow
       ;; |#
@@ -296,16 +325,7 @@
       ((ptr-declr ,ptr ,dir-declr)
        (ppx ptr) (ppx dir-declr))
 
-      #|
-      ((pointer (decl-spec-list . ,items))
-       (sf "*") (ppx `(decl-spec-list . ,items)))
-      ((pointer)
-       (sf "*"))
-      ((pointer (decl-spec-list . ,items) (pointer . ,rest))
-       (sf "*") (ppx `(decl-spec-list . ,items)) (ppx `(pointer . ,rest)))
-      ((pointer (pointer . ,rest))
-       (sf "*") (ppx `(pointer . ,rest)))
-      |#
+      ((pointer) (sf "*"))
       ((pointer ,one) (sf "*") (ppx one))
       ((pointer ,one ,two) (sf "*") (ppx one) (ppx two))
 

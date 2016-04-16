@@ -29,7 +29,8 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-call ,$1 ,(tl->list $3)))
    ;; postfix-expression => postfix-expression "(" ")"
-   (lambda ($3 $2 $1 . $rest) `(fctn-call ,$1))
+   (lambda ($3 $2 $1 . $rest)
+     `(fctn-call ,$1 (expr-list)))
    ;; postfix-expression => postfix-expression "." identifier
    (lambda ($3 $2 $1 . $rest) `(d-sel ,$3 ,$1))
    ;; postfix-expression => postfix-expression "->" identifier
@@ -179,7 +180,11 @@
    ;; expression => assignment-expression
    (lambda ($1 . $rest) $1)
    ;; expression => expression "," assignment-expression
-   (lambda ($3 $2 $1 . $rest) `(comma-expr ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest)
+     (simple-format #t "\n$1=~S\n" $1)
+     (if (eqv? 'comma-expr (sx-tag $1))
+       (append $1 (list $3))
+       `(comma-expr ,$1 ,$3)))
    ;; constant-expression => conditional-expression
    (lambda ($1 . $rest) $1)
    ;; declaration => declaration-specifiers init-declarator-list $P1 ";" op...

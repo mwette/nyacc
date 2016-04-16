@@ -11,3 +11,5 @@ ex06.c	enum def
 ex07.c	pointer
 ex08.c	fctn-decl
 ex09.c	array defn
+ex10.c	bug C99-001 solved
+ex11.c	struct's
