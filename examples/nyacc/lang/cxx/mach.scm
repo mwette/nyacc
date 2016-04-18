@@ -15,7 +15,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#| based on cxx-gram.y:
+#| based on CxxGrammar.y, distributed w/o copyright or license:
  * This is a yacc-able parser for the entire ANSI C++ grammar with no
  * unresolved conflicts. The parse is SYNTACTICALLY consistent and requires 
  * no template or type name assistance.  The grammar in the C++ standard notes
@@ -34,7 +34,7 @@
 |#
 
 (define-module (nyacc lang cxx mach)
-  #:export (cxx-spec)
+  #:export (cxx-spec gen-cxx-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -62,7 +62,7 @@ See the file COPYING included with the this distribution.")
    (start translation-unit)
    (prec<
     (nonassoc 'shift-there)
-    (nonassoc "::" "else" "++" "--" "+" "-" "*" "&" "[" "{" "<" ":" '$string)
+    (nonassoc "::" "else" "++" "--" "+" "-" "*" "&" "[" "{" "<" ":" $string)
     (nonassoc 'reduce-here-mostly)
     (nonassoc "(")
     )
@@ -89,7 +89,7 @@ See the file COPYING included with the this distribution.")
     (id
      (identifier ($prec 'shift-there))
      (identifier template-test "+" template-argument-list ">")
-     (identifier template-test "-" ) ;;/* requeued < follows |#
+     (identifier template-test "-" ) ;; requeued < follows
      (template-id)
      )
 
@@ -112,7 +112,7 @@ See the file COPYING included with the this distribution.")
     |#
 
     (nested-id
-     (id ($prec 'shift-there)) ;; /* Maximise length
+     (id ($prec 'shift-there)) ;; Maximise length
      (id-scope nested-id)
      )
 
@@ -150,7 +150,7 @@ See the file COPYING included with the this distribution.")
      (global-scope nested-special-function-id)
      )
 
-    ;; declarator-id is all names in all scopes, except reserved words |#
+    ;; declarator-id is all names in all scopes, except reserved words
     (declarator-id
      (scoped-id)
      (scoped-special-function-id)
@@ -265,12 +265,12 @@ See the file COPYING included with the this distribution.")
      (literal)
      ("this")
      (suffix-decl-specified-ids)
-     ;;| "::" identifier covered by suffix-decl-specified-ids |#
-     ;;| "::" operator-function-id covered by suffix-decl-specified-ids |#
-     ;;| "::" qualified-id covered by suffix-decl-specified-ids |#
-     ;; Prefer binary to unary ops, cast to call: |#
+     ;;("::" identifier) covered by suffix-decl-specified-ids
+     ;;("::" operator-function-id) covered by suffix-decl-specified-ids
+     ;;("::" qualified-id) covered by suffix-decl-specified-ids
+     ;; Prefer binary to unary ops, cast to call:
      (abstract-expression ($prec 'reduce-here-mostly))
-     ;;  |  id-expression covered by suffix-decl-specified-ids |#
+     ;;(id-expression) covered by suffix-decl-specified-ids
      )
     
     ;; Abstract-expression covers the () and [] of abstract-declarators.
@@ -290,7 +290,7 @@ See the file COPYING included with the this distribution.")
     * traversed since they are valid generalised type I parameters!
     |#
     (type1-parameters 
-     (parameter-declaration-list ";")  ;;/*----|# 
+     (parameter-declaration-list ";")  ;; ----
      (type1-parameters parameter-declaration-list ";")
      )
     
@@ -300,9 +300,9 @@ See the file COPYING included with the this distribution.")
     
     (postfix-expression
      (primary-expression)
-     ;;/*  | /++++++/    postfix-expression parenthesis-clause |#
-     (postfix-expression parenthesis-clause mark-type1 "-") ;; /*----|#    
-     ;;/*----|#
+     ;; (postfix-expression parenthesis-clause)
+     (postfix-expression parenthesis-clause mark-type1 "-") ;; ----
+     ;;----
      (postfix-expression
       parenthesis-clause mark-type1 "+" type1-parameters mark "{" $error
       ($$ (yyerrok) (remark-type1) (unmark) (unmark)))
@@ -313,19 +313,19 @@ See the file COPYING included with the this distribution.")
       parenthesis-clause mark-type1 "+" $error
       ($$ (yyerrok) (yyclearin) (remark-type1) (unmark)))
      (postfix-expression "[" expression.opt "]")
-     ;;| destructor-id "[" expression.opt "]"
-     ;;  ^^ -- not semantically valid |#
-     ;;| destructor-id parenthesis-clause
-     ;; ^^ -- omitted to resolve known ambiguity |#
-     ;;| simple-type-specifier "(" expression-list.opt ")"
-     ;; ^^ -- simple-type-specifier is a primary-expression |#
+     ;;(destructor-id "[" expression.opt "]")
+     ;; ^-- not semantically valid
+     ;;(destructor-id parenthesis-clause)
+     ;; ^-- omitted to resolve known ambiguity
+     ;;(simple-type-specifier "(" expression-list.opt ")")
+     ;; ^-- simple-type-specifier is a primary-expression
      (postfix-expression "." declarator-id)
      ;;(postfix-expression "." "template" declarator-id)
-     ;; ^^  -- "template" absorbed into declarator-id. |#
+     ;; ^-- "template" absorbed into declarator-id.
      (postfix-expression "." scoped-pseudo-destructor-id)
      (postfix-expression "->" declarator-id)
      ;;(postfix-expression "->" "template" declarator-id)
-     ;; ^^ -- "template" absorbed into declarator-id. |#
+     ;; ^-- "template" absorbed into declarator-id.
      (postfix-expression "->" scoped-pseudo-destructor-id)
      (postfix-expression "++")
      (postfix-expression "--")
@@ -335,9 +335,9 @@ See the file COPYING included with the this distribution.")
      ("const_cast" "<" type-id ">" "(" expression ")")
      ("typeid" parameters-clause)
      ;;("typeid" "(" expression ")")
-     ;;^^ covered by parameters-clause |#
+     ;;^-- covered by parameters-clause
      ;;("typeid" "(" type-id ")" )
-     ;; ^^ covered by parameters-clause |#
+     ;;^-- covered by parameters-clause
      )
     
     (expression-list.opt
@@ -356,34 +356,34 @@ See the file COPYING included with the this distribution.")
      ("--" cast-expression)
      (ptr-operator cast-expression)
      ;;("*" cast-expression)
-     ;; ^^ covered by ptr-operator |#
+     ;; ^-- covered by ptr-operator
      ;;("&" cast-expression)
-     ;; ^^ covered by ptr-operator |#
+     ;; ^-- covered by ptr-operator
      ;;(decl-specifier-seq "*" cast-expression)
-     ;; ^^ covered by binary operator |#
+     ;; ^-- covered by binary operator
      ;;(decl-specifier-seq "&" cast-expression)
-     ;; ^^ covered by binary operator |#
+     ;; ^-- covered by binary operator
      (suffix-decl-specified-scope star-ptr-operator cast-expression)
-     ;; ^^ /* covers e.g int ::type::* const t = 4 |#
+     ;; ^-- covers e.g int ::type::* const t = 4
      ("+" cast-expression)
      ("-" cast-expression)
      ("!" cast-expression)
      ("~" cast-expression)
      ("sizeof" unary-expression)
      ;;("sizeof" "(" type-id ")")
-     ;;^^ covered by unary-expression |#
+     ;;^-- covered by unary-expression
      (new-expression)
      (global-scope new-expression)
      (delete-expression)
      (global-scope delete-expression)
      ;;("delete" "[" "]" cast-expression)
-     ;; ^covered by "delete" cast-expression since cast-expression covers ...
+     ;;^-- covered by "delete" cast-expression since cast-expression covers ...
      ;;("::" "delete" "[" "]" cast-expression)
-     ;; ^^ ... abstract-expression cast-expression and so [] cast-expression
+     ;;^-- ... abstract-expression cast-expression and so [] cast-expression
      )
     
     (delete-expression
-     ("delete" cast-expression) ;;/* also covers "delete"[] cast-expression
+     ("delete" cast-expression) ;; also covers delete[] cast-expression
      )
     
     (new-expression
@@ -429,7 +429,7 @@ See the file COPYING included with the this distribution.")
     (cast-expression
      (unary-expression)
      (abstract-expression cast-expression)
-     ;;/*("(" type-id ")" cast-expression) covered by abstract-expression
+     ;;("(" type-id ")" cast-expression) covered by abstract-expression
      )
     
     (pm-expression
@@ -722,7 +722,7 @@ See the file COPYING included with the this distribution.")
      (block-declaration)
      (function-definition)
      (template-declaration)
-     ;;(explicit-instantiation) covered by relevant declarations |#
+     ;;(explicit-instantiation) covered by relevant declarations
      (explicit-specialization)
      (specialised-declaration)
      )
@@ -796,7 +796,7 @@ See the file COPYING included with the this distribution.")
      )
     
     (suffix-named-decl-specifiers.sf
-     (scoped-special-function-id) ;; /* operators etc
+     (scoped-special-function-id) ;; operators etc
      (suffix-named-decl-specifiers)
      (suffix-named-decl-specifiers scoped-special-function-id)
      )
@@ -832,7 +832,7 @@ See the file COPYING included with the this distribution.")
 
     (storage-class-specifier
      ("register") ("static") ("mutable")
-     ("extern" ($prec 'shift-there)) ;; /* Prefer linkage specification
+     ("extern" ($prec 'shift-there)) ;; Prefer linkage specification
      ("auto")
      )
 
@@ -956,14 +956,14 @@ See the file COPYING included with the this distribution.")
      )
     (init-declaration
      (assignment-expression)
-     ;; covered by assignment-expression:
      ;;(assignment-expression "=" initializer-clause)
-     ;; covered by another set of call arguments:
+     ;;^-- covered by assignment-expression:
      ;;(assignment-expression "(" expression-list ")")
-     ;; covered by assignment-expression:
+     ;;^-- covered by another set of call arguments:
      ;;(declarator ...
-     ;; covered by postfix-expression:
+     ;;^-- covered by assignment-expression:
      ;;(direct-declarator ... 
+     ;;^-- covered by postfix-expression:
      )
 
     (star-ptr-operator
@@ -985,9 +985,9 @@ See the file COPYING included with the this distribution.")
      )
 
     ;; Independently coded to localise the shift-reduce conflict:
-    ;;    sharing just needs another %prec |#
+    ;;    sharing just needs another %prec
     (ptr-operator-seq.opt
-     ($empty ($prec 'shift-there)) ;; /* Maximise type length
+     ($empty ($prec 'shift-there)) ;; Maximise type length
      (ptr-operator ptr-operator-seq.opt)
      )
 
@@ -998,13 +998,13 @@ See the file COPYING included with the this distribution.")
     
     (cv-qualifier ("const") ("volatile"))
 
-    ;;type-id -- also covered by parameter declaration |#
+    ;;type-id -- also covered by parameter declaration
     (type-id
      (type-specifier abstract-declarator.opt)
      (type-specifier type-id)
      )
 
-    ;; abstract-declarator: -- also covered by parameter declaration |#
+    ;; abstract-declarator: -- also covered by parameter declaration
     (abstract-declarator.opt
      ($empty)
      (ptr-operator abstract-declarator.opt)
@@ -1190,8 +1190,8 @@ See the file COPYING included with the this distribution.")
      (accessibility-specifier)
      (simple-member-declaration)
      (function-definition)
-     ;;(function-definition ";") ;; -- trailing ; covered by null declaration
-     ;;(qualified-id ";") ;; -- covered by simple-member-declaration
+     ;;(function-definition ";") <- covered by null declaration
+     ;;(qualified-id ";") <- covered by simple-member-declaration
      (using-declaration)
      (template-declaration)
      )
@@ -1217,9 +1217,9 @@ See the file COPYING included with the this distribution.")
     (member-init-declaration
      (assignment-expression)
      ;;(assignment-expression "=" initializer-clause)
-     ;; ^^ - covered by assignment-expression 
+     ;; ^-- covered by assignment-expression 
      ;;(assignment-expression "(" expression-list ")")
-     ;; ^^-- covered by another set of call arguments 
+     ;; ^-- covered by another set of call arguments 
      (bit-field-init-declaration)
      )
     (accessibility-specifier
@@ -1312,7 +1312,7 @@ See the file COPYING included with the this distribution.")
      ;;(#|----|# "delete" %prec "SHIFT_THERE")
      ;;(#|----|# "new" "[" "]") ;; -- Covered by array of "operator" "new"
      ;;(#|----|# "delete" "[" "]") ;; 
-     ;;-- Covered by array of "operator" "delete"
+     ;;^-- Covered by array of "operator" "delete"
      ("+" ($$ `(add ,$1)))
      ("-" ($$ `(sub ,$1)))
      ("*" ($$ `(mul ,$1)))
@@ -1375,9 +1375,9 @@ See the file COPYING included with the this distribution.")
      )
     (simple-type-parameter
      ("class")
-     ;;("class" identifier) ;; covered by parameter-declaration
+     ;;("class" identifier) <- covered by parameter-declaration
      ("typename")
-     ;;("typename" identifier) ;; covered by parameter-declaration
+     ;;("typename" identifier) <- covered by parameter-declaration
      )
     (templated-type-parameter
      (template-parameter-clause "class")
@@ -1395,9 +1395,9 @@ See the file COPYING included with the this distribution.")
      )
     (template-argument
      (templated-parameter-declaration)
-     ;;(type-id) ;; covered by templated-parameter-declaration
-     ;;(template-name) ;; -- covered by templated-parameter-declaration
-     ;;(error) ;; -- must allow template failure to re-search
+     ;;(type-id) <- covered by templated-parameter-declaration
+     ;;(template-name) <- covered by templated-parameter-declaration
+     ;;(error) <- must allow template failure to re-search
      )
     
     ;; Generalised naming makes identifier a valid declaration, so "template"
@@ -1622,11 +1622,15 @@ See the file COPYING included with the this distribution.")
       (pp-lalr-grammar cxx-spec)
       )))
 
+;;(simple-format #t "prec=~S\n" (assq-ref cxx-spec 'prec))
+;;(simple-format #t "terminals=~S\n" (assq-ref cxx-spec 'terminals))
+;;(simple-format #t "non-terms=~S\n" (assq-ref cxx-spec 'non-terms))
+
 (define cxx-mach
   (compact-machine
    (hashify-machine
     (make-lalr-machine cxx-spec))))
-#|
+
 ;; The following are needed by the code in pbody.scm.
 (define len-v (assq-ref cxx-mach 'len-v))
 (define pat-v (assq-ref cxx-mach 'pat-v))
@@ -1636,10 +1640,27 @@ See the file COPYING included with the this distribution.")
                (lambda (ix f) (eval f (current-module)))
                (vector-map (lambda (ix actn) (wrap-action actn))
                            (assq-ref cxx-mach 'act-v))))
-|#
 ;; (include-from-path "nyacc/lang/cxx/body.scm")
 
 ;; (define raw-parser (make-lalr-parser cxx-mach))
 
+
+(define (gen-cxx-files . rest)
+  (define (lang-dir path)
+    (if (pair? rest) (string-append (car rest) "/" path) path))
+  (define (xtra-dir path)
+    (lang-dir (string-append "mach.d/" path)))
+
+  (write-lalr-actions cxx-mach (xtra-dir "cxxact.scm.new"))
+  (write-lalr-tables cxx-mach (xtra-dir "cxxtab.scm.new"))
+  (let ((a (move-if-changed (xtra-dir "cxxact.scm.new")
+			    (xtra-dir "cxxact.scm")))
+	(b (move-if-changed (xtra-dir "cxxtab.scm.new")
+			    (xtra-dir "cxxtab.scm"))))
+    #f
+    #;(when (or a b) 
+      (system (string-append "touch " (lang-dir "parser.scm"))))))
+
+(gen-cxx-files)
 
 ;; --- last line --- 

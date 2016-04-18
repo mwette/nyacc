@@ -22,20 +22,15 @@
 (define-module (nyacc lalr)
   #:export-syntax (lalr-spec)
   #:export (*nyacc-version*
-	    make-lalr-machine
-	    compact-machine hashify-machine 
+	    make-lalr-machine compact-machine hashify-machine 
 	    lalr-match-table
 	    restart-spec
-	    pp-lalr-grammar pp-lalr-machine pp-lalr-notice
-	    write-lalr-tables
-	    write-lalr-actions
-	    pp-rule find-terminal	; used by (nyacc export)
-	    gen-match-table		; used by (nyacc bison)
-	    with-gram new-non-kernels
+	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
+	    write-lalr-actions write-lalr-tables
+	    pp-rule find-terminal gen-match-table ; used by (nyacc bison)
 	    )
-  #:use-module ((srfi srfi-1)
-		#:select (fold fold-right remove
-			       lset-intersection lset-union lset-difference))
+  #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
+					     lset-intersection lset-difference))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (nyacc util)
@@ -43,6 +38,7 @@
   )
 
 (define *nyacc-version* "0.71.0+")
+
 
 ;; @deffn proxy-? sym rhs
 ;; @example
@@ -143,7 +139,7 @@
 
 		 ;; other internal $-syntax
 		 ((_ ($prec <tok>) <e2> ...)
-		  #'(cons (cons 'prec <tok>) (parse-rhs <e2> ...)))
+		  #'(cons (cons 'prec (tokenize <tok>)) (parse-rhs <e2> ...)))
 		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
 		  #'(cons `(with <lhs-ref> ,@(with-attr-list <ex> ...))
 			  (parse-rhs <e2> ...)))
@@ -186,16 +182,30 @@
 		(cons (cons '<lhs> (parse-rhs-list <rhs> ...))
 		      (parse-grammar <prod> ...)))
 	       ((_) '())))
+	    (tokenize
+	     (lambda (x)
+	       (syntax-case x ()
+		 ((_ <tk>) (identifier? (syntax <tk>)) #'(quote <tk>))
+		 ((_ <tk>) #'<tk>))))
+	    (tokenize-list
+	     (syntax-rules ()
+	       ((_ <tk1> <tk2> ...)
+		(cons (tokenize <tk1>) (tokenize-list <tk2> ...)))
+	       ((_) '())))
 	    (parse-precedence
 	     (syntax-rules (left right nonassoc)
 	       ((_ (left <tk> ...) <ex> ...)
-		(cons (list 'left <tk> ...) (parse-precedence <ex> ...)))
+		(cons (cons 'left (tokenize-list <tk> ...))
+		      (parse-precedence <ex> ...)))
 	       ((_ (right <tk> ...) <ex> ...)
-		(cons (list 'right <tk> ...) (parse-precedence <ex> ...)))
+		(cons (cons 'right (tokenize-list <tk> ...))
+		      (parse-precedence <ex> ...)))
 	       ((_ (nonassoc <tk> ...) <ex> ...)
-		(cons (list 'nonassoc <tk> ...) (parse-precedence <ex> ...)))
+		(cons (cons 'nonassoc (tokenize-list <tk> ...))
+		      (parse-precedence <ex> ...)))
 	       ((_ <tk> <ex> ...)
-		(cons (list 'undecl <tk>) (parse-precedence <ex> ...)))
+		(cons (list 'undecl (tokenize <tk>))
+		      (parse-precedence <ex> ...)))
 	       ((_) '())))
 	    (lalr-spec-1
 	     (syntax-rules (start expect notice prec< prec> grammar)
@@ -266,35 +276,12 @@
 	  (set! cntr (1+ cntr))
 	  (string->symbol (string-append "$P" (number->string c)))))))
 
-  ;; Compute precedence and associativity rules.
-  ;; The goal here is to have a predicate which provides
-  ;; @code{(prec>? a b)} and associativity @code{(left? a)}.
-  ;; The tree will have 'left <list> and precedence.
-  (define (Oprec-n-assc tree)
-    (let iter ((p-l '()) (a-l '()) (tree tree) (node '()) (pspec '()))
-      (cond
-       ((pair? pspec)
-	;; psp ~ ('left "+" "-"); pel ~ ("+" "-"); psy ~ (#\+ #\-)
-	(let* ((psp (car pspec)) (pel (cdr psp)) (psy (map atomize pel)))
-	  (iter (append (x-comb psy node)
-			;; append (+ -) => ((+ -) (- +))
-			(filter (lambda (p) (not (eqv? (car p) (cdr p))))
-				(x-comb psy psy))
-			p-l)
-		(append (x-flip (cons (car psp) psy)) a-l)
-		tree psy (cdr pspec))))
-       ((pair? tree)
-	(iter p-l a-l (cdr tree) '()
-	      (if (eq? 'precedence (caar tree)) (cdar tree) '())))
-       (else
-	(list (cons 'prec p-l) (cons 'assc a-l))))))
-
   ;; Canonicalize precedence and associativity. Precedence will appear
   ;; as sets of equivalent items in increasing order of precedence
   ;; (e.g., @code{((+ -) (* /)}).  The input tree has nodes that look like
   ;; @example
   ;; '(precedence (left "+" "-") (left "*" "/"))
-  ;; '(precedence ("then" "else")
+  ;; '(precedence ('then "else")
   ;; @end example
   ;; @noindent
   ;; =>
@@ -440,13 +427,12 @@
 
        ((null? rhs)
 	;; End of RHS items for current rule.
-	;; Add the p-rules items to the lists ll, rl, xl, and @l.
+	;; Add the p-rules items to the lists ll, rl, xl, and @@l.
 	;; @code{act} is now:
 	;; @itemize
 	;; @item for mid-rule-action: (narg ref code)
 	;; @item for end-rule-action: (#f ref code)
 	;; @end itemize
-	;;(simple-format #t "lhs=~S  ln=~A\n  act=~S\n" lhs (length pel) act)
 	(let* ((ln (length pel))
 	       (action (assq-ref attr 'action))
 	       (nrg (if action (or (car action) ln) ln))  ; number of args
@@ -488,12 +474,11 @@
 	      (iter ll @l tl nl rest prox lhs rest rhs-l attr pel rhs))))
 
        (else
-	;;(simple-format #t "rl=~S\n" rl)
 	(let* ((al (reverse @l))	; attribute list
 	       (err-1 '()) ;; not used
-	       ;; symbol used as terminal and non-terminal
+	       ;; symbol used as terminal and non-terminal:
 	       (err-2 (gram-check-2 tl nl err-1))
-	       ;; non-terminal's w/o production rule		  
+	       ;; non-terminal's w/o production rule:
 	       (err-3 (gram-check-3 ll nl err-2))
 	       ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
 	       (err-4 (gram-check-4 ll nl err-3))
@@ -658,14 +643,6 @@
     (if (last-item? item)
 	'$epsilon
 	(vector-ref rule (cdr item)))))
-(define (NEW-looking-at item)
-  ;; If (0 . 0) use start symbol.
-  (let* ((core (fluid-ref *lalr-core*)) (gx (car item)))
-    (if (last-item? item)
-	'$epsilon
-	(if (zero? gx)
-	    (core-start core)
-	    (vector-ref (vector-ref (core-rhs-v core) gx) (cdr item))))))
 
 ;; @deffn first-item gx
 ;; Given grammar rule index return the first item.
@@ -1213,7 +1190,7 @@
      (else ral))))
 ;; I think the above is broken because I'm not including the proper tail
 ;; string.  The following just uses closure to do the job.  It works but
-;; may not be very efficient: seems a little brute force.
+;; may not be very efficient: seems a bit brute force.
 (define (new-reductions kit-v sx)
   (let iter ((ral '())			  ; result: reduction a-list
 	     (klais (vector-ref kit-v sx)) ; kernel la-item list
@@ -1633,21 +1610,6 @@
     (fmt port "~A =>" lhs)
     (vector-for-each (lambda (ix e) (fmt port " ~A" (elt->str e tl))) rhs)
     (newline port)))
-(define (NEW-pp-rule il gx . rest)
-  ;; This uses start for rule 0.
-  (let* ((port (if (pair? rest) (car rest) (current-output-port)))
-	 (core (fluid-ref *lalr-core*))
-	 (lhs (vector-ref (core-lhs-v core) gx))
-	 (rhs (vector-ref (core-rhs-v core) gx))
-	 (tl (core-terminals core)))
-    (cond
-     ((zero? gx)
-      (fmt port "$start => ~A\n" (core-start core)))
-     (else
-      (display (substring "                     " 0 (min il 20)) port)
-      (fmt port "~A =>" lhs)
-      (vector-for-each (lambda (ix e) (fmt port " ~A" (elt->str e tl))) rhs)
-      (newline port)))))
 	 
 ;; @deffn pp-item item => string
 ;; This could be called item->string.
@@ -1669,29 +1631,6 @@
 		  sl (if (= rx (cdr item)) '(" .") '())
 		  (let ((e (vector-ref rhs rx)))
 		    (list (string-append " " (elt->str e tl)))))))))))
-(define (NEW-pp-item item)
-  (let* ((core (fluid-ref *lalr-core*))
-	 (tl (core-terminals core))
-	 (gx (car item))
-	 (lhs (vector-ref (core-lhs-v core) gx))
-	 (rhs (vector-ref (core-rhs-v core) gx))
-	 (rhs-len (vector-length rhs)))
-    (cond
-     ((zero? gx)
-      (if (zero? (cdr item))
-	  (fmt #f "$start => . ~A" (core-start core))
-	  (fmt #f "$start => ~A ." (core-start core))))
-     (else
-      (apply
-       string-append
-       (let iter ((rx 0) (sl (list (fmtstr "~S =>" lhs))))
-	 (if (= rx rhs-len)
-	     (append sl (if (= -1 (cdr item)) '(" .") '()))
-	     (iter (1+ rx)
-		   (append
-		    sl (if (= rx (cdr item)) '(" .") '())
-		    (let ((e (vector-ref rhs rx)))
-		      (list (string-append " " (elt->str e tl)))))))))))))
 
 ;; @deffn pp-lalr-notice spec [port]
 (define (pp-lalr-notice spec . rest)
@@ -1854,14 +1793,12 @@
   (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
 
 ;; @deffn hashify-machine mach => mach
-;; There is a bug in here: if pat contains rrconf then the output is
-;; #unspedified.
 (define (hashify-machine mach)
   (if (machine-hashed? mach) mach
       (let* ((terminals (assq-ref mach 'terminals))
 	     (non-terms (assq-ref mach 'non-terms))
 	     (lhs-v (assq-ref mach 'lhs-v))
-	     (sm ;; symbol-to-int int-to-symbol maps
+	     (sm ;; = (cons sym->int int->sym)
 	      (let iter ((si (list (cons '$default -1)))
 			 (is (list (cons -1 '$default)))
 			 (ix 1) (tl terminals) (nl non-terms))
@@ -1872,15 +1809,14 @@
 		      (iter (acons s ix si) (acons ix s is) (1+ ix) tl1 nl1)))))
 	     (sym->int (lambda (s) (assq-ref (car sm) s)))
 	     ;;
-	     (old-pat-v (assq-ref mach 'pat-v))
-	     (npat (vector-length old-pat-v))
-	     (new-pat-v (make-vector npat '())))
+	     (pat-v0 (assq-ref mach 'pat-v))
+	     (npat (vector-length pat-v0))
+	     (pat-v1 (make-vector npat '())))
 	;; replace symbol/chars with integers
 	(let iter1 ((ix 0))
 	  (unless (= ix npat)
-	    ;;(if (zero? ix) (fmtout "~S\n" (vector-ref old-pat-v ix)))
-	    (let iter2 ((al1 '()) (al0 (vector-ref old-pat-v ix)))
-	      (if (null? al0) (vector-set! new-pat-v ix (reverse al1))
+	    (let iter2 ((al1 '()) (al0 (vector-ref pat-v0 ix)))
+	      (if (null? al0) (vector-set! pat-v1 ix (reverse al1))
 		  (let* ((a0 (car al0))
 			 ;; tk: token; ac: action; ds: destination
 			 (tk (car a0)) (ac (cadr a0)) (ds (cddr a0))
@@ -1896,8 +1832,8 @@
 	    (iter1 (1+ ix))))
 	;;
 	(cons*
-	 (cons 'pat-v new-pat-v)
-	 (cons 'siis sm) ;; `(siis ,(cons sym->int int->sym))
+	 (cons 'pat-v pat-v1)
+	 (cons 'siis sm) ;; sm = (cons sym->int int->sym)
 	 (cons 'mtab
 	       (let iter ((mt1 '()) (mt0 (assq-ref mach 'mtab)))
 		 (if (null? mt0) (reverse mt1)

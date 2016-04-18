@@ -46,16 +46,12 @@
     #t))
 
 ;; Geneates a text file showing the grammar and state machine.
-(when #t
+(when #f
   (with-output-to-file "lang.txt"
     (lambda ()
       (pp-lalr-notice matlab-spec)
       (pp-lalr-grammar matlab-spec)
       (pp-lalr-machine matlab-mach)
-      (system "zip lang.txt"))))
-
-;; The following illustrates the generation of bison input file:
-(when #f
-  (with-output-to-file "gram.y" (lambda () (lalr->bison matlab-spec))))
+      (system "zip lang lang.txt"))))
 
 ;; --- last line ---

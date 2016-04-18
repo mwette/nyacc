@@ -38,8 +38,8 @@
 (define c99-spec
   (lalr-spec
    (notice lang-crn-lic)
-   (prec< "then" "else")	    ; "then/else" SR-conflict resolution
-   (prec< "imp"			    ; "implied type" SR-conflict resolution
+   (prec< 'then "else")	       ; "then/else" SR-conflict resolution
+   (prec< 'imp		       ; "implied type" SR-conflict resolution
 	  "char" "short" "int" "long"
 	  "float" "double" "_Complex")
    (start translation-unit-proxy)
@@ -253,38 +253,38 @@
      )
 
     (fixed-type-specifier
-     ("short" ($prec "imp") ($$ '(fixed-type "short")))
+     ("short" ($prec 'imp) ($$ '(fixed-type "short")))
      ("short" "int" ($$ '(fixed-type "short int")))
-     ("signed" "short" ($prec "imp") ($$ '(fixed-type "signed short")))
+     ("signed" "short" ($prec 'imp) ($$ '(fixed-type "signed short")))
      ("signed" "short" "int" ($$ '(fixed-type "signed short int")))
      ("int" ($$ '(fixed-type "int")))
-     ("signed" ($prec "imp") ($$ '(fixed-type "signed")))
+     ("signed" ($prec 'imp) ($$ '(fixed-type "signed")))
      ("signed" "int" ($$ '(fixed-type "signed int")))
-     ("long" ($prec "imp") ($$ '(fixed-type "long")))
+     ("long" ($prec 'imp) ($$ '(fixed-type "long")))
      ("long" "int" ($$ '(fixed-type "long int")))
-     ("signed" "long" ($prec "imp") ($$ '(fixed-type "signed long")))
+     ("signed" "long" ($prec 'imp) ($$ '(fixed-type "signed long")))
      ("signed" "long" "int" ($$ '(fixed-type "signed long int")))
-     ("long" "long" ($prec "imp") ($$ '(fixed-type "long long")))
+     ("long" "long" ($prec 'imp) ($$ '(fixed-type "long long")))
      ("long" "long" "int" ($$ '(fixed-type "long long int")))
-     ("signed" "long" "long" ($prec "imp")
+     ("signed" "long" "long" ($prec 'imp)
       ($$ '(fixed-type "signed long long")))
      ("signed" "long" "long" "int" ($$ '(fixed-type "signed long long int")))
      ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short int")))
-     ("unsigned" "short" ($prec "imp") ($$ '(fixed-type "unsigned short")))
+     ("unsigned" "short" ($prec 'imp) ($$ '(fixed-type "unsigned short")))
      ("unsigned" "int" ($$ '(fixed-type "unsigned int")))
-     ("unsigned" ($prec "imp") ($$ '(fixed-type "unsigned")))
+     ("unsigned" ($prec 'imp) ($$ '(fixed-type "unsigned")))
      ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
-     ("unsigned" "long" ($prec "imp") ($$ '(fixed-type "unsigned long")))
+     ("unsigned" "long" ($prec 'imp) ($$ '(fixed-type "unsigned long")))
      ("unsigned" "long" "long" "int"
       ($$ '(fixed-type "unsigned long long int")))
-     ("unsigned" "long" "long" ($prec "imp")
+     ("unsigned" "long" "long" ($prec 'imp)
       ($$ '(fixed-type "unsigned long long")))
      ("char" ($$ '(fixed-type "char")))
      ("signed" "char" ($$ '(fixed-type "signed char")))
      ("unsigned" "char" ($$ '(fixed-type "unsigned char"))))
     (float-type-specifier
-     ("float" ($prec "imp") ($$ '(float-type "float")))
-     ("double" ($prec "imp") ($$ '(float-type "double")))
+     ("float" ($prec 'imp) ($$ '(float-type "float")))
+     ("double" ($prec 'imp) ($$ '(float-type "double")))
      ("long" "double" ($$ '(float-type "long double"))))
     (complex-type-specifier
      ("_Complex" ($$ '(complex-type "_Complex")))
@@ -575,7 +575,7 @@
      )
 
     (selection-statement
-     ("if" "(" expression ")" statement ($prec "then")
+     ("if" "(" expression ")" statement ($prec 'then)
       ($$ `(if ,$3 ,$5)))
      ("if" "(" expression ")" statement "else" statement
       ($$ `(if ,$3 ,$5 ,$7)))

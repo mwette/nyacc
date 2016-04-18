@@ -997,6 +997,7 @@
     "while" . $:while) ("for" . $:for) ("," . $:,) (")" . #{$:\x29;}#) ("(" . 
     #{$:\x28;}#) ("=" . $:=) ("]" . #{$:\x5d;}#) ("[" . #{$:\x5b;}#) (
     "function" . $:function) (#\newline . #\newline) ("end" . $:end) (
-    $code-comm . $code-comm) ($lone-comm . $lone-comm) ($end . $end)))
+    $code-comm . $code-comm) ($lone-comm . $lone-comm) ($error . $error) ($end
+    . $end)))
 
 ;;; end tables

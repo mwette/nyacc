@@ -181,7 +181,6 @@
    (lambda ($1 . $rest) $1)
    ;; expression => expression "," assignment-expression
    (lambda ($3 $2 $1 . $rest)
-     (simple-format #t "\n$1=~S\n" $1)
      (if (eqv? 'comma-expr (sx-tag $1))
        (append $1 (list $3))
        `(comma-expr ,$1 ,$3)))

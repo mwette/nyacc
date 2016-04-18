@@ -3,4 +3,5 @@
 *.new
 .DS_Store
 lang.txt
+lang.zip
 gram.y
