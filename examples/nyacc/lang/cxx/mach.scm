@@ -31,6 +31,9 @@
  *
  *  Author:         E.D.Willink             Ed.Willink@rrl.co.uk
  *  Date:           19-Nov-1999
+ *
+ * see also: http://www.edwillink.plus.com/projects/fog/
+ *
 |#
 
 (define-module (nyacc lang cxx mach)

@@ -32,7 +32,7 @@
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
 					     lset-intersection lset-difference))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
-  #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
+  #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each vector-any))
   #:use-module (nyacc util)
   #:use-module ((nyacc parse) #:select (wrap-action))
   )
@@ -703,6 +703,7 @@
 (define (non-kernels symb)
   (let* ((core (fluid-ref *lalr-core*))
 	 (lhs-v (core-lhs-v core))
+	 (rhs-v (core-rhs-v core))
 	 (glen (vector-length lhs-v))
 	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx))))
     (let iter ((rslt '())		; result is set of p-rule indices
@@ -712,17 +713,22 @@
 	       (gx 0))			; p-rule index
       (cond
        ((< gx glen)
-	(if (memq (lhs-symb gx) curr)
-	    ;; Add rhs to next and rslt if not already done.
-	    (let* ((rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym|$eps
-		   (rslt1 (if (memq gx rslt) rslt (cons gx rslt)))
-		   (done1 (if (memq rhs1 done) done (cons rhs1 done)))
-		   (next1 (cond ((memq rhs1 done) next)
-				((terminal? rhs1) next)
-				(else (cons rhs1 next)))))
-	      (iter rslt1 done1 next1 curr (1+ gx)))
-	    ;; Nothing to check; process next rule.
-	    (iter rslt done next curr (1+ gx))))
+	(cond
+	 ((vector-any (lambda (e) (eqv? e '$error)) (vector-ref rhs-v gx))
+	  ;; skip error productions
+	  (iter rslt done next curr (1+ gx)))
+	 ((memq (lhs-symb gx) curr)
+	  ;; Add rhs to next and rslt if not already done.
+	  (let* ((rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym|$eps
+		 (rslt1 (if (memq gx rslt) rslt (cons gx rslt)))
+		 (done1 (if (memq rhs1 done) done (cons rhs1 done)))
+		 (next1 (cond ((memq rhs1 done) next)
+			      ((terminal? rhs1) next)
+			      (else (cons rhs1 next)))))
+	    (iter rslt1 done1 next1 curr (1+ gx))))
+	 (else
+	  ;; Nothing to check; process next rule.
+	  (iter rslt done next curr (1+ gx)))))
        ((pair? next)
 	;; Start another sweep throught the grammar.
 	(iter rslt done '() next 0))

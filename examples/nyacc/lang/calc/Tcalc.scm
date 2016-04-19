@@ -43,4 +43,14 @@
 	       (with-input-from-string demo-string
 		 (lambda () (parse (gen-lexer)))))
 
+#|
+(with-output-to-file "lang.txt"
+  (lambda ()
+    (pp-lalr-grammar simple-mach)
+    (pp-lalr-machine simple-mach)))
+(with-output-to-file "gram.y"
+  (lambda ()
+    (lalr->bison simple-mach)))
+|#
+
 ;; --- last line ---

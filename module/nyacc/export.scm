@@ -67,6 +67,7 @@
 
 (define (token->bison tok)
   (cond
+   ((eqv? tok '$error) "error")
    ((symbol? tok) (symbol->bison tok))
    ((char? tok) (c-char tok))
    ((string? tok)
@@ -110,7 +111,9 @@
 		lines))
     ;; Write out the tokens.
     (for-each 
-     (lambda (term) (fmt port "%token ~A\n" (token->bison term)))
+     (lambda (term)
+       (unless (eqv? term '$error)
+	 (fmt port "%token ~A\n" (token->bison term))))
      terms)
     ;; Write the associativity and prececences.
     (let iter ((pl '()) (ppl (assq-ref spec 'prec)))
