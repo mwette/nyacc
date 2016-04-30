@@ -34,7 +34,6 @@
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each vector-any))
   #:use-module (nyacc util)
-  #:use-module ((nyacc parse) #:select (wrap-action))
   )
 
 (define *nyacc-version* "0.71.0+")
@@ -568,11 +567,12 @@
 ;; @code{(prece a a po)} => @code{#\=}.
 ;; @end example
 (define (prece a b po)
-  (if (eqv? a b)
-      #\=
-      (if (<? a b po)
-	  (if (<? b a po) #\= #\<)
-	  (if (<? b a po) #\> #f))))
+  (cond
+   ((eqv? a b) #\=)
+   ((eqv? a '$error) #\<)
+   ((eqv? b '$error) #\>)
+   ((<? a b po)  (if (<? b a po) #\= #\<))
+   (else (if (<? b a po) #\> #f))))
   
 ;; @deffn non-terminal? symb
 (define (non-terminal? symb)
@@ -721,7 +721,7 @@
       (cond
        ((< gx glen)
 	(cond
-	 ((error-rule? gx)
+	 #;((error-rule? gx)
 	  ;; skip error productions
 	  (iter rslt done next curr (1+ gx)))
 	 ((memq (lhs-symb gx) curr)
@@ -1013,7 +1013,7 @@
 	  (let iter ((seed seed) (pr (prule-range symb)))
 	    (cond
 	     ((null? pr) seed)
-	     ((error-rule? (car pr)) (iter seed (range-next pr)))
+	     ;;((error-rule? (car pr)) (iter seed (range-next pr)))
 	     (else
 	      (iter (merge-la-item seed (first-item (car pr))
 				   (first-following item toks))
@@ -1708,7 +1708,8 @@
 	   (for-each			; item, print it
 	    (lambda (item)
 	      (fmt port "\t~A" (pp-item item))
-	      (if (and kit-v (equal? item k-item))
+	      ;; show lookaheads:
+	      (if (and #f (negative? (cdr item)) kit-v (equal? item k-item))
 		  (fmt port " ~A"
 		       (map (lambda (tok) (elt->str tok terms))
 			    (assoc-ref (vector-ref kit-v i) k-item))))

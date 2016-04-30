@@ -18,8 +18,9 @@
 
 (define-module (nyacc util)
   #:export (
-	    obj->str
 	    fmtstr fmtout fmterr fmt
+	    wrap-action
+	    obj->str
 	    fixed-point prune-assoc
 	    map-attr->vector
 	    x-flip x-comb
@@ -37,6 +38,21 @@
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (define fmt simple-format)
+
+;; @item make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
+;; This is a helper for @code{mkact}.
+(define (make-arg-list n)
+  (let ((mkarg
+	 (lambda (i) (string->symbol (string-append "$" (number->string i))))))
+    (let iter ((r '(. $rest)) (i 1))
+      (if (> i n) r (iter (cons (mkarg i) r) (1+ i))))))
+
+;; @item wrap-action (n . guts) => `(lambda ($n ... $2 $1 . $rest) ,@guts)
+;; Wrap user-specified action (body, as list) of n arguments in a lambda.
+;; The rationale for the arglist format is that we can @code{apply} this
+;; lambda to the the semantic stack.
+(define (wrap-action actn)
+  (cons* 'lambda (make-arg-list (car actn)) (cdr actn)))
 
 ;; @deffn obj->str object => string
 ;; Convert terminal (symbol, string, character) to string.

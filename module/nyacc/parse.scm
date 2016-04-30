@@ -1,6 +1,6 @@
 ;;; nyacc/parse.scm
 ;;;
-;;; Copyright (C) 2014, 2015 Matthew R. Wette
+;;; Copyright (C) 2014-2016 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -21,9 +21,7 @@
 
 (define-module (nyacc parse)
   #:export (make-lalr-parser
-	    wrap-action
 	    make-lalr-ia-parser
-	    make-lalr-y-parser
 	    )
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
@@ -33,21 +31,6 @@
 ;; Indicate if the machine has been hashed.
 (define (machine-hashed? mach)
   (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
-
-;; @item make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
-;; This is a helper for @code{mkact}.
-(define (make-arg-list n)
-  (let ((mkarg
-	 (lambda (i) (string->symbol (string-append "$" (number->string i))))))
-    (let iter ((r '(. $rest)) (i 1))
-      (if (> i n) r (iter (cons (mkarg i) r) (1+ i))))))
-
-;; @item wrap-action (n . guts) => `(lambda ($n ... $2 $1 . $rest) ,@guts)
-;; Wrap user-specified action (body, as list) of n arguments in a lambda.
-;; The rationale for the arglist format is that we can @code{apply} this
-;; lambda to the the semantic stack.
-(define (wrap-action actn)
-  (cons* 'lambda (make-arg-list (car actn)) (cdr actn)))
 
 ;; @item make-lalr-parser mach => parser
 ;; This generates a procedure that takes one argument, a lexical analyzer:
@@ -79,6 +62,7 @@
 	 ;;(def (assq-ref mtab '$default))
 	 (def (if hashed -1 '$default))
 	 (end (assq-ref mtab '$end))
+	 (err (assq-ref mtab '$error))
 	 (comm (list (assq-ref mtab '$lone-comm) (assq-ref mtab '$code-comm)))
 	 ;; predicate to test for shift action:
 	 (shift? (if hashed
@@ -86,7 +70,7 @@
 		     (lambda (a) (eq? 'shift (car a)))))
 	 ;; On shift, transition to this state:
 	 (shift-to (if hashed (lambda (x) x) (lambda (x) (cdr x))))
-	 ;; predicate to test for reduce action:
+	 ;; Predicate to test for reduce action:
 	 (reduce? (if hashed
 		      (lambda (a) (negative? a))
 		      (lambda (a) (eq? 'reduce (car a)))))
@@ -105,10 +89,11 @@
 	(let* ((tval (car (if nval nval lval))) ; token (syntax value)
 	       (sval (cdr (if nval nval lval))) ; semantic value
 	       (stxl (vector-ref pat-v (car state))) ; state transition list
-	       (xtra #t) ;; in case of 0 => accept, error or skip
+	       (xtra #f) ;; in case of 0 => accept, error or skip
 	       (stx (cond ;; state transition
-		     ((assq-ref stxl tval)) ; in table
+		     ((assq-ref stxl tval)) ; shift/reduce in table
 		     ((memq tval comm) (set! xtra 'skip) other)
+		     ((assq-ref stxl err) (set! xtra 'recover) other)
 		     ((assq-ref stxl def))  ; default action
 		     (else (set! xtra 'error) other))))
 
@@ -127,9 +112,10 @@
 		    (list-tail stack gl)
 		    (cons (vector-ref rto-v gx) $$)
 		    lval)))
-	   (else ;; accept, error or skip
+	   (else ;; other: skip, error, or accept
 	    (case xtra
 	      ((skip) (iter state stack nval (lexr)))
+	      ((recover) (throw 'parse-error "recovery not yet implemented"))
 	      ((error)
 	       (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 		     (ln (1+ (port-line (current-input-port)))))
