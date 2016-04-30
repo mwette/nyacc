@@ -687,6 +687,13 @@
 	    (cons p-ixm1 -1))		; prev p-rule
 	(cons p-ix r-ixm1))))
 
+;; @deffn error-rule? gx => #t|#f
+;; Predicate to indicate if gx rule has @code{$error} as rhs member.
+(define (error-rule? gx)
+  (let* ((core (fluid-ref *lalr-core*))
+	 (rhs-v (core-rhs-v core)))
+    (vector-any (lambda (e) (eqv? e '$error)) (vector-ref rhs-v gx))))
+     
 ;; @deffn non-kernels symb => list of prule indices
 ;; Compute the set of non-kernel rules for symbol @code{symb}.  If grammar
 ;; looks like
@@ -714,7 +721,7 @@
       (cond
        ((< gx glen)
 	(cond
-	 ((vector-any (lambda (e) (eqv? e '$error)) (vector-ref rhs-v gx))
+	 ((error-rule? gx)
 	  ;; skip error productions
 	  (iter rslt done next curr (1+ gx)))
 	 ((memq (lhs-symb gx) curr)
@@ -979,8 +986,8 @@
 	    (acons item allt la-item-l)))))
 
 ;; @deffn first-following item toks => token-list
-;; For la-item A => x.By,z (as @code{item}, @code{toks}), this procedure
-;; computes @code{FIRST(yz)}.
+;; For la-item A => x.By,@{toks@} (as @code{item}, @code{toks}), this
+;; procedure computes @code{FIRST(yz)}.
 (define (first-following item toks)
   (first (item->stng (next-item item)) toks))
 
@@ -1004,10 +1011,13 @@
 	 ((terminal? (looking-at (car la-item))) seed)
 	 (else
 	  (let iter ((seed seed) (pr (prule-range symb)))
-	    (if (null? pr) seed
-		(iter (merge-la-item seed (first-item (car pr))
-				     (first-following item toks))
-		      (range-next pr))))))))
+	    (cond
+	     ((null? pr) seed)
+	     ((error-rule? (car pr)) (iter seed (range-next pr)))
+	     (else
+	      (iter (merge-la-item seed (first-item (car pr))
+				   (first-following item toks))
+		    (range-next pr)))))))))
     la-item-l)))
 
 ;; @deffn kit-add kit-v tokens sx item
@@ -1085,7 +1095,7 @@
 	(iter (1+ kx)
 	      ;; End-items don't shift, so don't propagate.
 	      (remove last-item? (vector-ref kis-v (1+ kx)))))))
-    (when #f (pp-kip-v kip-v) (pp-kit-v kit-v)) ; for debugging
+    ;;(when #f (pp-kip-v kip-v) (pp-kit-v kit-v)) ; for debugging
     (cons* (cons 'kit-v kit-v) (cons 'kip-v kip-v) p-mach)))
 
 ;; debug for step2
@@ -1585,18 +1595,16 @@
     (dynamic-wind
 	(lambda () (fluid-set! *lalr-core* (make-core/extras spec)))
 	(lambda ()
-	  ;; build up "sub-machines"
 	  (let* ((sm1 (step1 spec))
 		 (sm2 (step2 sm1))
 		 (sm3 (step3 sm2))
 		 (sm4 (step4 sm3))
-		 (sm5 (gen-match-table sm4))
-		 (sm9 sm5))
+		 (sm5 (gen-match-table sm4)))
 	    (cons*
 	     (cons 'len-v (vector-map (lambda (i v) (vector-length v))
-				      (assq-ref sm9 'rhs-v)))
-	     (cons 'rto-v (vector-copy (assq-ref sm9 'lhs-v)))
-	     sm9)))
+				      (assq-ref sm5 'rhs-v)))
+	     (cons 'rto-v (vector-copy (assq-ref sm5 'lhs-v)))
+	     sm5)))
 	(lambda () (fluid-set! *lalr-core* prev-core)))))
 
 ;; @deffn elt->str elt terms => string

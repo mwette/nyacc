@@ -39,6 +39,7 @@
 (define-module (nyacc lang cxx mach)
   #:export (cxx-spec gen-cxx-files)
   #:use-module (nyacc lalr)
+  #:use-module (nyacc bison)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang c99 cpp)
@@ -226,7 +227,7 @@ See the file COPYING included with the this distribution.")
 
     ;; A.3 Basic concepts
     (translation-unit
-     (declaration-seq.opt)
+     (opt-declaration-seq)
      )
 
     ;;A.4 Expressions
@@ -279,7 +280,7 @@ See the file COPYING included with the this distribution.")
     ;; Abstract-expression covers the () and [] of abstract-declarators.
     (abstract-expression
      (parenthesis-clause)
-     ("[" expression.opt "]")
+     ("[" opt-expression "]")
      ("template" abstract-expression)
      )
 
@@ -315,12 +316,12 @@ See the file COPYING included with the this distribution.")
      (postfix-expression
       parenthesis-clause mark-type1 "+" $error
       ($$ (yyerrok) (yyclearin) (remark-type1) (unmark)))
-     (postfix-expression "[" expression.opt "]")
-     ;;(destructor-id "[" expression.opt "]")
+     (postfix-expression "[" opt-expression "]")
+     ;;(destructor-id "[" opt-expression "]")
      ;; ^-- not semantically valid
      ;;(destructor-id parenthesis-clause)
      ;; ^-- omitted to resolve known ambiguity
-     ;;(simple-type-specifier "(" expression-list.opt ")")
+     ;;(simple-type-specifier "(" opt-expression-list ")")
      ;; ^-- simple-type-specifier is a primary-expression
      (postfix-expression "." declarator-id)
      ;;(postfix-expression "." "template" declarator-id)
@@ -343,7 +344,7 @@ See the file COPYING included with the this distribution.")
      ;;^-- covered by parameters-clause
      )
     
-    (expression-list.opt
+    (opt-expression-list
      ()
      (expression-list)
      )
@@ -390,20 +391,20 @@ See the file COPYING included with the this distribution.")
      )
     
     (new-expression
-     ("new" new-type-id new-initializer.opt)
-     ("new" parameters-clause new-type-id new-initializer.opt)
+     ("new" new-type-id opt-new-initializer)
+     ("new" parameters-clause new-type-id opt-new-initializer)
      ("new" parameters-clause)
      ;;("new" "(" type-id ")")  covered by parameters-clause
-     ("new" parameters-clause parameters-clause new-initializer.opt)
+     ("new" parameters-clause parameters-clause opt-new-initializer)
      ;;("new" "(" type-id ")" new-initializer)
      ;; ^^ covered by parameters-clause parameters-clause
      ;;("new" parameters-clause "(" type-id ")")
      ;; ^^ covered by parameters-clause parameters-clause
      )
 
-    ;; ptr-operator-seq.opt production reused to save a %prec
+    ;; opt-ptr-operator-seq production reused to save a %prec
     (new-type-id
-     (type-specifier ptr-operator-seq.opt)
+     (type-specifier opt-ptr-operator-seq)
      (type-specifier new-declarator)
      (type-specifier new-type-id)
      )
@@ -418,9 +419,9 @@ See the file COPYING included with the this distribution.")
      (direct-new-declarator "[" constant-expression "]")
      )
     
-    (new-initializer.opt
+    (opt-new-initializer
      ()
-     ("(" expression-list.opt ")")
+     ("(" opt-expression-list ")")
      )
 
     #|
@@ -527,7 +528,7 @@ See the file COPYING included with the this distribution.")
     * Multi-element expressions are parsed as a list that may then behave 
     * polymorphically as an element or be compacted to an element.
     |#
-    (expression.opt
+    (opt-expression
      ()
      (expression)
      )
@@ -638,19 +639,19 @@ See the file COPYING included with the this distribution.")
      ("default" ":" looping-statement)
      )
 
-    ;; (expression-statement (expression.opt ";")) 
+    ;; (expression-statement (opt-expression ";")) 
     ;; ^^ covered by declaration-statement
     
     (compound-statement
-     ("{" statement-seq.opt "}")
-     ("{" statement-seq.opt looping-statement "#" bang $error "}"
+     ("{" opt-statement-seq "}")
+     ("{" opt-statement-seq looping-statement "#" bang $error "}"
       ($$ (UNBANG "Bad statement-seq.")))
      )
     
-    (statement-seq.opt
+    (opt-statement-seq
      ($empty) 
-     (statement-seq.opt looping-statement)
-     (statement-seq.opt looping-statement "#" bang $error ";"
+     (opt-statement-seq looping-statement)
+     (opt-statement-seq looping-statement "#" bang $error ";"
 			($$ (UNBANG "Bad statement.")))
      )
     
@@ -662,7 +663,7 @@ See the file COPYING included with the this distribution.")
      ("switch" "(" condition ")" looping-statement)
      )
     
-    (condition.opt
+    (opt-condition
      ($empty)
      (condition)
      )
@@ -677,7 +678,7 @@ See the file COPYING included with the this distribution.")
     (iteration-statement
      ("while" "(" condition ")" looping-statement)
      ("do" looping-statement "while" "(" expression ")" ";")
-     ("for" "(" for-init-statement condition.opt ";" expression.opt ")"
+     ("for" "(" for-init-statement opt-condition ";" opt-expression ")"
       looping-statement)
      )
 
@@ -689,7 +690,7 @@ See the file COPYING included with the this distribution.")
     (jump-statement
      ("break" ";")
      ("continue" ";")
-     ("return" expression.opt ";")
+     ("return" opt-expression ";")
      ("goto" identifier ";")
      )
     
@@ -699,15 +700,15 @@ See the file COPYING included with the this distribution.")
 
     ;; A.6 Declarations
     (compound-declaration
-     ("{" nest declaration-seq.opt "}" ($$ (unnest)))
-     ("{" nest declaration-seq.opt util looping-declaration "#" bang $error "}"
+     ("{" nest opt-declaration-seq "}" ($$ (unnest)))
+     ("{" nest opt-declaration-seq util looping-declaration "#" bang $error "}"
       ($$ (unnest) (UNBANG "Bad declaration-seq.")))
      )
     
-    (declaration-seq.opt
+    (opt-declaration-seq
      ($empty)
-     (declaration-seq.opt util looping-declaration)
-     (declaration-seq.opt util looping-declaration "#" bang $error ";"
+     (opt-declaration-seq util looping-declaration)
+     (opt-declaration-seq util looping-declaration "#" bang $error ";"
 			  ($$ (UNBANG "Bad declaration.")))
      )
     
@@ -870,7 +871,7 @@ See the file COPYING included with the this distribution.")
 
     #|
     The over-general use of declaration-expression to cover 
-    decl-specifier-seq.opt declarator in a function-definition means that
+    opt-decl-specifier-seq declarator in a function-definition means that
     class X { };
     could be a function-definition or a class-specifier.
     enum X { };
@@ -952,7 +953,7 @@ See the file COPYING included with the this distribution.")
 
     ;; A.7 Declarators
     ;; init-declarator is named init-declaration to reflect the embedded
-    ;; decl-specifier-seq.opt
+    ;; opt-decl-specifier-seq
     (init-declarations
      (assignment-expression "," init-declaration)
      (init-declarations "," init-declaration)
@@ -989,44 +990,44 @@ See the file COPYING included with the this distribution.")
 
     ;; Independently coded to localise the shift-reduce conflict:
     ;;    sharing just needs another %prec
-    (ptr-operator-seq.opt
+    (opt-ptr-operator-seq
      ($empty ($prec 'shift-there)) ;; Maximise type length
-     (ptr-operator ptr-operator-seq.opt)
+     (ptr-operator opt-ptr-operator-seq)
      )
 
-    (cv-qualifier-seq.opt
+    (opt-cv-qualifier-seq
      ($empty)
-     (cv-qualifier-seq.opt cv-qualifier)
+     (opt-cv-qualifier-seq cv-qualifier)
      )
     
     (cv-qualifier ("const") ("volatile"))
 
     ;;type-id -- also covered by parameter declaration
     (type-id
-     (type-specifier abstract-declarator.opt)
+     (type-specifier opt-abstract-declarator)
      (type-specifier type-id)
      )
 
     ;; abstract-declarator: -- also covered by parameter declaration
-    (abstract-declarator.opt
+    (opt-abstract-declarator
      ($empty)
-     (ptr-operator abstract-declarator.opt)
+     (ptr-operator opt-abstract-declarator)
      (direct-abstract-declarator)
      )
-    (direct-abstract-declarator.opt
+    (opt-direct-abstract-declarator
      ($empty)
      (direct-abstract-declarator)
      )
     (direct-abstract-declarator
-     (direct-abstract-declarator.opt parenthesis-clause)
-     (direct-abstract-declarator.opt "[" "]")
-     (direct-abstract-declarator.opt "[" constant-expression "]")
+     (opt-direct-abstract-declarator parenthesis-clause)
+     (opt-direct-abstract-declarator "[" "]")
+     (opt-direct-abstract-declarator "[" constant-expression "]")
      ;; ("(" abstract-declarator ")") -- covered by parenthesis-clause
      )
 
     (parenthesis-clause
-     (parameters-clause cv-qualifier-seq.opt)
-     (parameters-clause cv-qualifier-seq.opt exception-specification)
+     (parameters-clause opt-cv-qualifier-seq)
+     (parameters-clause opt-cv-qualifier-seq exception-specification)
      )
 
     (parameters-clause
@@ -1053,7 +1054,7 @@ See the file COPYING included with the this distribution.")
     ;; right hand term.
     (abstract-pointer-declaration
      (ptr-operator-seq)
-     (multiplicative-expression star-ptr-operator ptr-operator-seq.opt)
+     (multiplicative-expression star-ptr-operator opt-ptr-operator-seq)
      )
     (abstract-parameter-declaration
      (abstract-pointer-declaration)
@@ -1108,7 +1109,7 @@ See the file COPYING included with the this distribution.")
      (constructor-head "," assignment-expression)
      )
     (function-try-block ("try" function-block handler-seq))
-    (function-block (ctor-initializer.opt function-body))
+    (function-block (opt-ctor-initializer function-body))
     (function-body (compound-statement))
 
     ;; An = initializer looks like an extended assignment-expression.
@@ -1169,15 +1170,15 @@ See the file COPYING included with the this distribution.")
      )
     (class-key ("class") ("struct") ("union"))
     (class-specifier
-     (class-specifier-head member-specification.opt "}")
-     (class-specifier-head member-specification.opt util
+     (class-specifier-head opt-member-specification "}")
+     (class-specifier-head opt-member-specification util
 			   looping-member-declaration "#" bang $error "}"
-			   ($$ (UNBANG "Bad member-specification.opt.")))
+			   ($$ (UNBANG "Bad opt-member-specification.")))
      )
-    (member-specification.opt
+    (opt-member-specification
      ($empty)
-     (member-specification.opt util looping-member-declaration)
-     (member-specification.opt util looping-member-declaration
+     (opt-member-specification util looping-member-declaration)
+     (opt-member-specification util looping-member-declaration
 			       "#" bang $error ";"
 			       ($$ (UNBANG "Bad member-declaration.")))
      )
@@ -1259,7 +1260,7 @@ See the file COPYING included with the this distribution.")
     ;; A.10 Special member functions
     (conversion-function-id ("operator" conversion-type-id))
     (conversion-type-id
-     (type-specifier ptr-operator-seq.opt)
+     (type-specifier opt-ptr-operator-seq)
      (type-specifier conversion-type-id)
      )
 
@@ -1270,7 +1271,7 @@ See the file COPYING included with the this distribution.")
     ;; The grammar below is used within a function-try-block or
     ;; function-definition. See simple-member-declaration for use in
     ;; normal member function-definition.
-    (ctor-initializer.opt
+    (opt-ctor-initializer
      ($empty)
      (ctor-initializer)
      )
@@ -1289,7 +1290,7 @@ See the file COPYING included with the this distribution.")
 			   ($$ (UNBANG "Bad mem-initializer.")))
      )
     (mem-initializer
-     (mem-initializer-id "(" expression-list.opt ")")
+     (mem-initializer-id "(" opt-expression-list ")")
      )
     (mem-initializer-id
      (scoped-id)
@@ -1632,7 +1633,7 @@ See the file COPYING included with the this distribution.")
 (define cxx-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine cxx-spec))))
+    (make-lalr-machine/bison cxx-spec))))
 
 ;; The following are needed by the code in pbody.scm.
 (define len-v (assq-ref cxx-mach 'len-v))
