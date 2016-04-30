@@ -21,6 +21,7 @@
      (expr "-" expr ($$ (- $1 $3)))
      (expr "*" expr ($$ (* $1 $3)))
      (expr "/" expr ($$ (/ $1 $3)))
+     ("*" $error)
      ($fixed ($$ (string->number $1)))
      ($float ($$ (string->number $1)))
      ("(" expr ")" ($$ $2))))))
@@ -48,6 +49,7 @@
   (lambda ()
     (pp-lalr-grammar simple-mach)
     (pp-lalr-machine simple-mach)))
+(use-modules (nyacc export))
 (with-output-to-file "gram.y"
   (lambda ()
     (lalr->bison simple-mach)))
