@@ -24,7 +24,7 @@
   #:export (*nyacc-version*
 	    make-lalr-machine compact-machine hashify-machine 
 	    lalr-match-table
-	    restart-spec
+	    restart-spec add-recovery-logic!
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
 	    write-lalr-actions write-lalr-tables
 	    pp-rule find-terminal gen-match-table ; used by (nyacc bison)
@@ -436,8 +436,12 @@
 	       (action (assq-ref attr 'action))
 	       (nrg (if action (or (car action) ln) ln))  ; number of args
 	       (ref (if action (cadr action) #f))
-	       (act (if (and action (cddr action)) (cddr action)
-			(if (zero? nrg) '((list)) '($1)))))
+	       (act (cond
+		     ((and action (cddr action)) (cddr action))
+		     ;; if error rule then default action is print err msg:
+		     ((memq '$error pel) '((error "syntax error")))
+		     ((zero? nrg) '((list)))
+		     (else '($1)))))
 	  (iter (cons lhs ll)
 		(cons
 		 (cons* (cons 'rhs (list->vector (reverse pel)))
@@ -1050,8 +1054,8 @@
 
 ;; @deffn step2 p-mach-1 => p-mach-2
 ;; This implements steps 2 and 3 of Algorithm 4.13 on p. 242 of the DB.
-;; The a-list @code{subm1} includes the kernel itemsets and transitions
-;; from @code{step1}.   This routine adds two entries to the alist:
+;; The a-list @code{p-mach-1} includes the kernel itemsets and transitions
+;; from @code{step1}.   This routine adds two entries to the a-list:
 ;; the initial set of lookahead tokens in a vector associated with key
 ;; @code{'kit-v} and a vector of spontaneous propagations associated with
 ;; key @code{'kip-v}.
@@ -1062,7 +1066,6 @@
 ;;       if LA is #, then add to J propagate-to list
 ;;       otherwise add T to spontaneously-generated list
 ;; @end example
-;;   
 (define (step2 p-mach)
   (let* ((kis-v (assq-ref p-mach 'kis-v))
 	 (kix-v (assq-ref p-mach 'kix-v)) ; transitions?
@@ -1217,8 +1220,8 @@
      ((pair? tl) ;; add (token . p-rule) to reduction list
       (let* ((tk (car tl)) (rp (assq tk ral)))
 	(cond
-	 ;; already have this, skip to next token
 	 ((and rp (memq gx (cdr rp)))
+	  ;; already have this, skip to next token
 	  (iter ral klais laits gx (cdr tl)))
 	 (rp
 	  ;; have token, add prule
@@ -1228,11 +1231,11 @@
 	  ;; add token w/ prule
 	  (iter (cons (list tk gx) ral) klais laits gx (cdr tl))))))
 
-     ((pair? laits) ;; process an
+     ((pair? laits) ;; process a la-itemset
       (if (last-item? (caar laits))
 	  ;; last item, add it 
 	  (iter ral klais (cdr laits) (caaar laits) (cdar laits))
-	  ;; skip to next
+	  ;; else skip to next
 	  (iter ral klais (cdr laits) 0 '())))
 
      ((pair? klais) ;; expand next kernel la-item
@@ -1297,16 +1300,6 @@
      (else res))))
 
 
-;; This is a helper for step4.
-(define (prev-sym act its)
-  (let* ((a act)
-	 (tok (car a)) (sft (caddr a)) (red (cdddr a))
-	 ;; @code{pit} is the end-item in the p-rule to be reduced.
-	 (pit (prev-item (prev-item (cons red -1))))
-	 ;; @code{psy} is the last symbol in the p-rule to be reduced.
-	 (psy (looking-at pit)))
-    psy))
-
 ;; @deffn step4 p-mach-0 => p-mach-1
 ;; This generates the parse action table from the itemsets and then applies
 ;; precedence and associativity rules to eliminate shift-reduce conflicts
@@ -1335,6 +1328,15 @@
        ((pair? rl) (iter (append res rl) '() hd pl pll))
        ((pair? pll) (iter res rl '() (car pll) (cdr pll)))
        (else res))))
+
+  (define (prev-sym act its)
+    (let* ((a act)
+	   (tok (car a)) (sft (caddr a)) (red (cdddr a))
+	   ;; @code{pit} is the end-item in the p-rule to be reduced.
+	   (pit (prev-item (prev-item (cons red -1))))
+	   ;; @code{psy} is the last symbol in the p-rule to be reduced.
+	   (psy (looking-at pit)))
+      psy))
 
   (let* ((kis-v (assq-ref p-mach 'kis-v)) ; states
 	 (kit-v (assq-ref p-mach 'kit-v)) ; la-toks
@@ -1474,94 +1476,42 @@
 		    (assq-ref mach 'terminals)))
    mach))
 
-;; @deffn lalr-match-table mach => match-table
-;; Get the match-table
-(define (lalr-match-table mach)
-  (assq-ref mach 'mtab))
 
-;; @deffn compact-machine mach [#:keep 3] => mach
-;; A "filter" to compact the parse table.  For each state this will replace
-;; the most populus set of reductions of the same production rule with a
-;; default production.  However, reductions triggered by keepers like
-;; @code{'$error}, @code{'$lone-comm} or @code{'$lone-comm} are not counted.
-;; The parser will want to treat errors and comments separately so that they
-;; can be trapped (e.g., unaccounted comments are skipped).
-(define* (compact-machine mach #:key (keep 3))
-  (let* ((pat-v (assq-ref mach 'pat-v))
-	 (nst (vector-length pat-v))
-	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
-	 (reduce? (if hashed
-		      (lambda (a) (and (number? a) (negative? a)))
-		      (lambda (a) (eq? 'reduce (car a)))))
-	 (reduce-pr (if hashed abs cdr))
-	 (reduce-to? (if hashed
-			 (lambda (a r) (eqv? (- r) a))
-			 (lambda (a r) (and (eq? 'reduce (car a))
-					    (eqv? r (cdr a))))))
-	 (mk-default (if hashed
-			 (lambda (r) (cons -1 (- r)))
-			 (lambda (r) `($default reduce . ,r))))
-	 (mtab (assq-ref mach 'mtab))
-	 (keepers (list (assq-ref mtab '$lone-comm)
-			(assq-ref mtab '$code-comm)
-			(assq-ref mtab '$error))))
-
-    ;; Keep an alist mapping reduction prod-rule => count.
-    (let iter ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))
-      (cond
-       ((pair? trn-l)
-	(cond
-	((not (reduce? (cdar trn-l)))
-	 ;; A shift, so not a candidate for default reduction.
-	 (iter sx (cdr trn-l) cnt-al p-max))
-	((memq (caar trn-l) keepers)
-	 ;; Don't consider keepers because these will not be included.
-	 (iter sx (cdr trn-l) cnt-al p-max))
-	(else
-	 ;; A reduction, so update the count for reducing this prod-rule.
-	 (let* ((ix (reduce-pr (cdar trn-l)))
-		(cnt (1+ (or (assq-ref cnt-al ix) 0)))
-		(cnt-p (cons ix cnt)))
-	   (iter sx (cdr trn-l) (cons cnt-p cnt-al)
-		 (if (> cnt (cdr p-max)) cnt-p p-max))))))
-	      
-       ((null? trn-l)
-	;; We have processed all transitions. If more than @code{keep} common
-	;; reductions then generate default rule to replace those.
-	(if (> (cdr p-max) keep)
-	    (vector-set!
-	     pat-v sx
-	     (fold-right
-	      (lambda (trn pat) ;; transition action
-		;; If not a comment and reduces to the most-popular prod-rule
-		;; then transfer to the default transition.
-		(if (and (not (memq (car trn) keepers))
-			 (reduce-to? (cdr trn) (car p-max)))
-		    pat
-		    (cons trn pat)))
-	      (list (mk-default (car p-max))) ;; default is last
-	      (vector-ref pat-v sx))))
-	(iter sx #f #f #f))
-       ((positive? sx) ;; next state
-	(iter (1- sx) (vector-ref pat-v (1- sx)) '() '(0 . 0)))))
+;; @deffn add-recovery-logic! mach => mach
+;; Target of transition from @code{'$error} should have a default rule that
+;; loops back.
+(define (add-recovery-logic-1 mach)
+  (let* ((kis-v (assq-ref mach 'kis-v))
+	 (rhs-v (assq-ref mach 'rhs-v))
+	 (pat-v (assq-ref mach 'pat-v))
+	 (n (vector-length pat-v))
+	 )
+    (vector-for-each
+     (lambda (kx kis)
+       ;;(fmtout "kis=~S\n " kis)
+       (for-each
+	(lambda (ki)
+	  (let* ((pi (prev-item ki))
+		 (rhs (vector-ref rhs-v (car pi))))
+	    (when (and (not (negative? (cdr pi)))
+		       (eqv? '$error (looking-at pi)))
+	      (vector-set! pat-v kx
+			   (append
+			    (vector-ref pat-v kx)
+			    `(($default shift . ,kx))))
+	      #;(fmtout " => ~S\n" (vector-ref pat-v kx)))))
+	kis)
+       ;;(fmtout "\n")
+       #f)
+     kis-v)
     mach))
 
-;; @deffn machine-compacted? mach => #t|#f
-;; Indicate if the machine has been compacted.
-(define (machine-compacted? mach)
-  ;; Works by searching for $default phony-token.
-  (call-with-prompt
-   'got-it
-   (lambda ()
-     (vector-for-each
-      (lambda (ix pat)
-	(for-each
-	 (lambda (a) (if (or (eqv? (car a) '$default) (eqv? (car a) -1))
-			 (abort-to-prompt 'got-it)))
-	 pat))
-      (assq-ref mach 'pat-v))
-     #f) ;; default not found
-   (lambda () #t))) ;; default found
+(define (add-recovery-logic! mach)
+  (let ((prev-core (fluid-ref *lalr-core*)))
+    (dynamic-wind
+	(lambda () (fluid-set! *lalr-core* (make-core/extras mach)))
+	(lambda () (add-recovery-logic-1 mach))
+	(lambda () (fluid-set! *lalr-core* prev-core)))))
 
 ;; to build parser, need:
 ;;   pat-v - parse action table
@@ -1606,6 +1556,202 @@
 	     (cons 'rto-v (vector-copy (assq-ref sm5 'lhs-v)))
 	     sm5)))
 	(lambda () (fluid-set! *lalr-core* prev-core)))))
+
+;; @deffn lalr-match-table mach => match-table
+;; Get the match-table
+(define (lalr-match-table mach)
+  (assq-ref mach 'mtab))
+
+;; @deffn machine-compacted? mach => #t|#f
+;; Indicate if the machine has been compacted.
+;; TODO: needs update to deal with error recovery hooks.
+(define (machine-compacted? mach)
+  ;; Works by searching for $default phony-token.
+  (call-with-prompt 'got-it
+    ;; Search for '$default.  If not found return #f.
+    (lambda ()
+      (vector-for-each
+       (lambda (ix pat)
+	 (for-each
+	  (lambda (a) (if (or (eqv? (car a) '$default) (eqv? (car a) -1))
+			  (abort-to-prompt 'got-it)))
+	  pat))
+       (assq-ref mach 'pat-v))
+      #f)
+    ;; otherwise, return #t.
+    (lambda () #t)))
+
+;; @deffn compact-machine mach [#:keep 3] => mach
+;; A "filter" to compact the parse table.  For each state this will replace
+;; the most populus set of reductions of the same production rule with a
+;; default production.  However, reductions triggered by keepers like
+;; @code{'$error}, @code{'$lone-comm} or @code{'$lone-comm} are not counted.
+;; The parser will want to treat errors and comments separately so that they
+;; can be trapped (e.g., unaccounted comments are skipped).
+(define* (compact-machine mach #:key (keep 3))
+  (let* ((pat-v (assq-ref mach 'pat-v))
+	 (nst (vector-length pat-v))
+	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
+	 (reduce? (if hashed
+		      (lambda (a) (and (number? a) (negative? a)))
+		      (lambda (a) (eq? 'reduce (car a)))))
+	 (reduce-pr (if hashed abs cdr))
+	 (reduce-to? (if hashed
+			 (lambda (a r) (eqv? (- r) a))
+			 (lambda (a r) (and (eq? 'reduce (car a))
+					    (eqv? r (cdr a))))))
+	 (mk-default (if hashed
+			 (lambda (r) (cons -1 (- r)))
+			 (lambda (r) `($default reduce . ,r))))
+	 (mtab (assq-ref mach 'mtab))
+	 (keepers (list (assq-ref mtab '$lone-comm)
+			(assq-ref mtab '$code-comm)
+			(assq-ref mtab '$error))))
+
+    ;; Keep an a-list mapping reduction prod-rule => count.
+    (let iter ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))
+      (cond
+       ((pair? trn-l)
+	(cond
+	((not (reduce? (cdar trn-l)))
+	 ;; A shift, so not a candidate for default reduction.
+	 (iter sx (cdr trn-l) cnt-al p-max))
+	((memq (caar trn-l) keepers)
+	 ;; Don't consider keepers because these will not be included.
+	 (iter sx (cdr trn-l) cnt-al p-max))
+	(else
+	 ;; A reduction, so update the count for reducing this prod-rule.
+	 (let* ((ix (reduce-pr (cdar trn-l)))
+		(cnt (1+ (or (assq-ref cnt-al ix) 0)))
+		(cnt-p (cons ix cnt)))
+	   (iter sx (cdr trn-l) (cons cnt-p cnt-al)
+		 (if (> cnt (cdr p-max)) cnt-p p-max))))))
+	      
+       ((null? trn-l)
+	;; We have processed all transitions. If more than @code{keep} common
+	;; reductions then generate default rule to replace those.
+	(if (> (cdr p-max) keep)
+	    (vector-set!
+	     pat-v sx
+	     (fold-right
+	      (lambda (trn pat) ;; transition action
+		;; If not a comment and reduces to the most-popular prod-rule
+		;; then transfer to the default transition.
+		(if (and (not (memq (car trn) keepers))
+			 (reduce-to? (cdr trn) (car p-max)))
+		    pat
+		    (cons trn pat)))
+	      (list (mk-default (car p-max))) ;; default is last
+	      (vector-ref pat-v sx))))
+	(iter sx #f #f #f))
+       ((positive? sx) ;; next state
+	(iter (1- sx) (vector-ref pat-v (1- sx)) '() '(0 . 0)))))
+    mach))
+
+;;.@section Using hash tables
+;; The lexical analyzer will generate tokens.  The parser generates state
+;; transitions based on these tokens.  When we build a lexical analyzer
+;; (via @code{make-lexer}) we provide a list of strings to detect along with
+;; associated tokens to return to the parser.  By default the tokens returned
+;; are symbols or characters.  But these could as well be integers.  Also,
+;; the parser uses symbols to represent non-terminals, which are also used
+;; to trigger state transitions.  We could use integers instead of symbols
+;; and characters by mapping via a hash table.   We will bla bla bla.
+;; There are also standard tokens we need to worry about.  These are
+;; @enumerate
+;; @item the @code{$end} marker
+;; @item identifiers (using the symbolic token @code{$ident}
+;; @item non-negative integers (using the symbolic token @code{$fixed})
+;; @item non-negative floats (using the symbolic token @code{$float})
+;; @item @code{$default} => 0
+;; @end enumerate
+;; And action
+;; @enumerate
+;; @item positive => shift
+;; @item negative => reduce
+;; @item zero => accept
+;; @end enumerate
+;; However, if these are used they should appear in the spec's terminal list.
+;; For the hash table we use positive integers for terminals and negative
+;; integers for non-terminals.  To apply such a hash table we need to:
+;; @enumerate
+;; @item from the spec's list of terminals (aka tokens), generate a list of
+;; terminal to integer pairs (and vice versa)
+;; @item from the spec's list of non-terminals generate a list of symbols
+;; to integers and vice versa.
+;; @item Go through the parser-action table and convert symbols and characters
+;; to integers
+;; @item Go through the XXX list passed to the lexical analyizer and replace
+;; symbols and characters with integers.
+;; @end enumerate
+;; One issue we need to deal with is separating out the identifier-like
+;; terminals (aka keywords) from those that are not identifier-like.  I guess
+;; this should be done as part of @code{make-lexer}, by filtering the token
+;; list through the ident-reader.
+;; NOTE: The parser is hardcoded to assume that the phony token for the
+;; default (reduce) action is @code{'$default} for unhashed machine or
+;; @code{-1} for a hashed machine.
+
+;; NEW: need to add reduction of ERROR
+
+;; @deffn machine-hashed? mach => #t|#f
+;; Indicate if the machine has been hashed.
+(define (machine-hashed? mach)
+  ;; If hashed, the parse action for rule 0 will always be a number.
+  (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
+
+;; @deffn hashify-machine mach => mach
+(define (hashify-machine mach)
+  (if (machine-hashed? mach) mach
+      (let* ((terminals (assq-ref mach 'terminals))
+	     (non-terms (assq-ref mach 'non-terms))
+	     (lhs-v (assq-ref mach 'lhs-v))
+	     (sm ;; = (cons sym->int int->sym)
+	      (let iter ((si (list (cons '$default -1)))
+			 (is (list (cons -1 '$default)))
+			 (ix 1) (tl terminals) (nl non-terms))
+		(if (null? nl) (cons (reverse si) (reverse is))
+		    (let* ((s (atomize (if (pair? tl) (car tl) (car nl))))
+			   (tl1 (if (pair? tl) (cdr tl) tl))
+			   (nl1 (if (pair? tl) nl (cdr nl))))
+		      (iter (acons s ix si) (acons ix s is) (1+ ix) tl1 nl1)))))
+	     (sym->int (lambda (s) (assq-ref (car sm) s)))
+	     ;;
+	     (pat-v0 (assq-ref mach 'pat-v))
+	     (npat (vector-length pat-v0))
+	     (pat-v1 (make-vector npat '())))
+	;; replace symbol/chars with integers
+	(let iter1 ((ix 0))
+	  (unless (= ix npat)
+	    (let iter2 ((al1 '()) (al0 (vector-ref pat-v0 ix)))
+	      (if (null? al0) (vector-set! pat-v1 ix (reverse al1))
+		  (let* ((a0 (car al0))
+			 ;; tk: token; ac: action; ds: destination
+			 (tk (car a0)) (ac (cadr a0)) (ds (cddr a0))
+			 ;; t: encoded token; d: encoded destination
+			 (t (sym->int tk))
+			 (d (case ac
+			      ((shift) ds) ((reduce) (- ds))
+			      ((accept) 0) (else #f))))
+		    (unless t
+		      (fmterr "~S ~S ~S\n" tk ac ds)
+		      (error "expect something"))
+		    (iter2 (acons t d al1) (cdr al0)))))
+	    (iter1 (1+ ix))))
+	;;
+	(cons*
+	 (cons 'pat-v pat-v1)
+	 (cons 'siis sm) ;; sm = (cons sym->int int->sym)
+	 (cons 'mtab
+	       (let iter ((mt1 '()) (mt0 (assq-ref mach 'mtab)))
+		 (if (null? mt0) (reverse mt1)
+		     (iter (cons (cons (caar mt0) (sym->int (cdar mt0))) mt1)
+			   (cdr mt0)))))
+	 ;; reduction symbols = lhs:
+	 (cons 'rto-v (vector-map (lambda (i v) (sym->int v)) lhs-v))
+	 mach))))
+
+;; === grammar/machine printing ======
 
 ;; @deffn elt->str elt terms => string
 (define (elt->str elt terms)
@@ -1754,110 +1900,6 @@
 	(newline)))
     (fluid-set! *lalr-core* prev-core)
     (values)))
-
-;;.@section Using hash tables
-;; The lexical analyzer will generate tokens.  The parser generates state
-;; transitions based on these tokens.  When we build a lexical analyzer
-;; (via @code{make-lexer}) we provide a list of strings to detect along with
-;; associated tokens to return to the parser.  By default the tokens returned
-;; are symbols or characters.  But these could as well be integers.  Also,
-;; the parser uses symbols to represent non-terminals, which are also used
-;; to trigger state transitions.  We could use integers instead of symbols
-;; and characters by mapping via a hash table.   We will bla bla bla.
-;; There are also standard tokens we need to worry about.  These are
-;; @enumerate
-;; @item the @code{$end} marker
-;; @item identifiers (using the symbolic token @code{$ident}
-;; @item non-negative integers (using the symbolic token @code{$fixed})
-;; @item non-negative floats (using the symbolic token @code{$float})
-;; @item @code{$default} => 0
-;; @end enumerate
-;; And action
-;; @enumerate
-;; @item positive => shift
-;; @item negative => reduce
-;; @item zero => accept
-;; @end enumerate
-;; However, if these are used they should appear in the spec's terminal list.
-;; For the hash table we use positive integers for terminals and negative
-;; integers for non-terminals.  To apply such a hash table we need to:
-;; @enumerate
-;; @item from the spec's list of terminals (aka tokens), generate a list of
-;; terminal to integer pairs (and vice versa)
-;; @item from the spec's list of non-terminals generate a list of symbols
-;; to integers and vice versa.
-;; @item Go through the parser-action table and convert symbols and characters
-;; to integers
-;; @item Go through the XXX list passed to the lexical analyizer and replace
-;; symbols and characters with integers.
-;; @end enumerate
-;; One issue we need to deal with is separating out the identifier-like
-;; terminals (aka keywords) from those that are not identifier-like.  I guess
-;; this should be done as part of @code{make-lexer}, by filtering the token
-;; list through the ident-reader.
-;; NOTE: The parser is hardcoded to assume that the phony token for the
-;; default (reduce) action is @code{'$default} for unhashed machine or
-;; @code{-1} for a hashed machine.
-
-;; NEW: need to add reduction of ERROR
-
-;; @deffn machine-hashed? mach => #t|#f
-;; Indicate if the machine has been hashed.
-(define (machine-hashed? mach)
-  ;; If hashed, the parse action for rule 0 will always be a number.
-  (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
-
-;; @deffn hashify-machine mach => mach
-(define (hashify-machine mach)
-  (if (machine-hashed? mach) mach
-      (let* ((terminals (assq-ref mach 'terminals))
-	     (non-terms (assq-ref mach 'non-terms))
-	     (lhs-v (assq-ref mach 'lhs-v))
-	     (sm ;; = (cons sym->int int->sym)
-	      (let iter ((si (list (cons '$default -1)))
-			 (is (list (cons -1 '$default)))
-			 (ix 1) (tl terminals) (nl non-terms))
-		(if (null? nl) (cons (reverse si) (reverse is))
-		    (let* ((s (atomize (if (pair? tl) (car tl) (car nl))))
-			   (tl1 (if (pair? tl) (cdr tl) tl))
-			   (nl1 (if (pair? tl) nl (cdr nl))))
-		      (iter (acons s ix si) (acons ix s is) (1+ ix) tl1 nl1)))))
-	     (sym->int (lambda (s) (assq-ref (car sm) s)))
-	     ;;
-	     (pat-v0 (assq-ref mach 'pat-v))
-	     (npat (vector-length pat-v0))
-	     (pat-v1 (make-vector npat '())))
-	;; replace symbol/chars with integers
-	(let iter1 ((ix 0))
-	  (unless (= ix npat)
-	    (let iter2 ((al1 '()) (al0 (vector-ref pat-v0 ix)))
-	      (if (null? al0) (vector-set! pat-v1 ix (reverse al1))
-		  (let* ((a0 (car al0))
-			 ;; tk: token; ac: action; ds: destination
-			 (tk (car a0)) (ac (cadr a0)) (ds (cddr a0))
-			 ;; t: encoded token; d: encoded destination
-			 (t (sym->int tk))
-			 (d (case ac
-			      ((shift) ds) ((reduce) (- ds))
-			      ((accept) 0) (else #f))))
-		    (unless t
-		      (fmterr "~S ~S ~S\n" tk ac ds)
-		      (error "expect something"))
-		    (iter2 (acons t d al1) (cdr al0)))))
-	    (iter1 (1+ ix))))
-	;;
-	(cons*
-	 (cons 'pat-v pat-v1)
-	 (cons 'siis sm) ;; sm = (cons sym->int int->sym)
-	 (cons 'mtab
-	       (let iter ((mt1 '()) (mt0 (assq-ref mach 'mtab)))
-		 (if (null? mt0) (reverse mt1)
-		     (iter (cons (cons (caar mt0) (sym->int (cdar mt0))) mt1)
-			   (cdr mt0)))))
-	 ;; reduction symbols = lhs:
-	 (cons 'rto-v (vector-map (lambda (i v) (sym->int v)) lhs-v))
-	 mach))))
-
 
 ;; === output routines ===============
 

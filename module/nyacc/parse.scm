@@ -88,14 +88,14 @@
 
 	(let* ((tval (car (if nval nval lval))) ; token (syntax value)
 	       (sval (cdr (if nval nval lval))) ; semantic value
-	       (stxl (vector-ref pat-v (car state))) ; state transition list
-	       (xtra #f) ;; in case of 0 => accept, error or skip
+	       (stxl (vector-ref pat-v (car state))) ; state transition xtra
+	       (oact #f) ;; if not shift/reduce, then accept, error or skip
 	       (stx (cond ;; state transition
 		     ((assq-ref stxl tval)) ; shift/reduce in table
-		     ((memq tval comm) (set! xtra 'skip) other)
-		     ((assq-ref stxl err) (set! xtra 'recover) other)
+		     ((memq tval comm) (set! oact 'skip) other)
+		     ((assq-ref stxl err)) ; error recovery
 		     ((assq-ref stxl def))  ; default action
-		     (else (set! xtra 'error) other))))
+		     (else (set! oact 'error) other))))
 
 	  (if debug (dmsg (car state) (if nval tval sval) stx))
 	  (cond
@@ -112,10 +112,9 @@
 		    (list-tail stack gl)
 		    (cons (vector-ref rto-v gx) $$)
 		    lval)))
-	   (else ;; other: skip, error, or accept
-	    (case xtra
+	   (else ;; other action: skip, error, or accept
+	    (case oact
 	      ((skip) (iter state stack nval (lexr)))
-	      ((recover) (throw 'parse-error "recovery not yet implemented"))
 	      ((error)
 	       (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 		     (ln (1+ (port-line (current-input-port)))))

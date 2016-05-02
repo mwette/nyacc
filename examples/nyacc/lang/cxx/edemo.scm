@@ -20,7 +20,7 @@
 ;;
 ;; 2:	stmts => stmts '$error . ";"
 ;;		";" => shift 5
-;;		'$default => shift 2 <= added
+;;		'$default => shift 2       <= ADDED
 ;;
 ;; I need to prove that this always works.
 
@@ -39,13 +39,16 @@
      (stmts $error ";")))))
 
 (use-modules (nyacc bison))
-(define edemo-mach (make-lalr-machine/bison edemo-spec))
+;;(define edemo-mach (make-lalr-machine/bison edemo-spec))
+(define edemo-mach (make-lalr-machine edemo-spec))
+(add-recovery-logic! edemo-mach)
 
 (with-output-to-file "lang.txt"
   (lambda ()
     (pp-lalr-grammar edemo-mach)
     (pp-lalr-machine edemo-mach)))
 (write-lalr-tables edemo-mach "edemotab.scm")
+(write-lalr-actions edemo-mach "edemoact.scm")
 
 (define p
   (let ((rp (make-lalr-parser edemo-mach))
@@ -54,5 +57,7 @@
       (rp (lx) #:debug #t))))
 
 (with-input-from-string "2;" p)
+#|
+|#
 
 ;; --- last line ---
