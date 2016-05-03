@@ -3,7 +3,7 @@
 @settitle Not Yet Another Compiler Compiler!
 
 @copying
-Copyright (C) 2015 -- Matthew R. Wette.
+Copyright (C) 2015,2016 -- Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -181,6 +181,37 @@ $ guile calc.scm
 expect 2; get 2
 $
 @end example
+
+@section The Grammar Specification
+
+Explain it all
+
+@subsection Recovery from Syntax Errors
+
+The grammar specification allows the user to handle some syntax
+errors.  This allows parsing to continue.  The behavior is similar
+to parser generators like @emph{yacc} or @emph{bison}.  The following
+production rule-list allows the user to trap an error.
+@example
+(line
+  ("\n")
+  (exp "\n")
+  ($error "\n"))
+@end example
+@noindent
+If the current input token does not match the grammar, then the parser
+will skip input tokens until a @code{"\n"} is read.  The default
+behavior is to generate an error message: @emph{"syntax error"}.
+To provide a user-defined handler just add an action for the rule:
+@example
+(line
+  ("\n")
+  (exp "\n")
+  ($error "\n" ($$ (format #t "line error\n"))))
+@end example
+@noindent
+Note that if the action is not at the end of the rule then the default
+recovery action (@emph{"syntax error"}) will be executed.
 
 @section The Match Table
 In some parser generators one declares terminals in the grammar file

@@ -439,7 +439,7 @@
 	       (act (cond
 		     ((and action (cddr action)) (cddr action))
 		     ;; if error rule then default action is print err msg:
-		     ((memq '$error pel) '((error "syntax error")))
+		     ((memq '$error pel) '((display "syntax error\n")))
 		     ((zero? nrg) '((list)))
 		     (else '($1)))))
 	  (iter (cons lhs ll)
