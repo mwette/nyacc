@@ -36,7 +36,36 @@
      ($empty)
      (stmts ";")
      (stmts "1" ";")
-     (stmts $error ";")))))
+     (stmts $error ";" ($$ (display "error: bad statement\n")))))))
+
+(define retry-spec
+  (lalr-spec
+   (start stmts)
+   (grammar
+    (stmts
+     ($empty)
+     (stmts ";")
+     (stmts "+" addend ";"))
+    (addend
+     $search ;; if foo fails back-track and retry
+     (foo)
+     (bar))
+    )))
+
+;; what to do:
+;;  (save) (restore) (remove)
+;; (lexr 'save) => (set! stk (cons '() stk))
+;; (lexr 'restore) =>  ???
+;; (lexr 'remove) => (set! stk (cdr stk))
+;; (lexr) => ???
+(define (wrap-lexer lexer)
+  (lambda* (#:optional (flag 'lex))
+    (case flag
+      ((lex) lexer)
+      ((save) (error "not done"))
+      ((restore) (error "not done"))
+      ((remove) (error "not done"))
+      (else  (error "bad flag")))))
 
 (use-modules (nyacc bison))
 ;;(define edemo-mach (make-lalr-machine/bison edemo-spec))
@@ -54,7 +83,7 @@
   (let ((rp (make-lalr-parser edemo-mach))
 	(lx (make-lexer-generator (lalr-match-table edemo-mach))))
     (lambda ()
-      (rp (lx) #:debug #t))))
+      (rp (lx) #:debug #f))))
 
 (with-input-from-string "2;" p)
 #|

@@ -12,7 +12,7 @@
    (lambda ($3 $2 $1 . $rest) $1)
    ;; stmts => stmts '$error ";"
    (lambda ($3 $2 $1 . $rest)
-     (error "syntax error"))
+     (display "error: bad statement\n"))
    ))
 
 ;;; end tables
