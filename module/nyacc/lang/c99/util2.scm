@@ -90,6 +90,8 @@
      (declr->ident declr))
     ((comp-declr ,declr)
      (declr->ident declr))
+    ((param-declr ,declr)
+     (declr->ident declr))
     ((ident ,name)
      declr)
     ((array-of ,dir-declr ,array-spec)

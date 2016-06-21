@@ -28,6 +28,13 @@
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
 	    write-lalr-actions write-lalr-tables
 	    pp-rule find-terminal gen-match-table ; used by (nyacc bison)
+
+	    ;; for debugging:
+	    with-spec make-LR0-machine
+	    its-member its-trans
+	    looking-at first-item
+	    terminal? non-terminal?
+	    range-next
 	    )
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
 					     lset-intersection lset-difference))
@@ -434,6 +441,7 @@
 	;; @end itemize
 	(let* ((ln (length pel))
 	       (action (assq-ref attr 'action))
+	       (with (assq-ref attr 'with))
 	       (nrg (if action (or (car action) ln) ln))  ; number of args
 	       (ref (if action (cadr action) #f))
 	       (act (cond
@@ -442,6 +450,7 @@
 		     ((memq '$error pel) '((display "syntax error\n")))
 		     ((zero? nrg) '((list)))
 		     (else '($1)))))
+	  (if with (simple-format #t "WITH WHAT?\n"))
 	  (iter (cons lhs ll)
 		(cons
 		 (cons* (cons 'rhs (list->vector (reverse pel)))
@@ -497,9 +506,9 @@
 	       (cons 'rhs-v (map-attr->vector al 'rhs))
 	       (cons 'terminals tl)
 	       (cons 'start start-symbol)
-	       (cons 'attr (list (cons 'expect (or (assq-ref tree 'expect) 0))
-				 (cons 'notice (assq-ref tree 'notice))
-				 ))
+	       (cons 'attr (list
+			    (cons 'expect (or (assq-ref tree 'expect) 0))
+			    (cons 'notice (assq-ref tree 'notice))))
 	       (cons 'prec (assq-ref pna 'prec)) ; lowest-to-highest
 	       (cons 'assc (assq-ref pna 'assc))
 	       (cons 'prp-v (map-attr->vector al 'prec)) ; per-rule precedence
@@ -725,9 +734,6 @@
       (cond
        ((< gx glen)
 	(cond
-	 #;((error-rule? gx)
-	  ;; skip error productions
-	  (iter rslt done next curr (1+ gx)))
 	 ((memq (lhs-symb gx) curr)
 	  ;; Add rhs to next and rslt if not already done.
 	  (let* ((rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym|$eps
@@ -909,7 +915,6 @@
     ;; todo list, which results in range of p-rules getting checked for
     ;; terminals.
     (let iter ((rslt '())		; terminals collected
-	       (pngl '())		; prunage-list: may need stack
 	       (stng symbol-list)	; what's left of input string
 	       (hzeps #t)		; if eps-prod so far
 	       (done '())		; non-terminals checked
@@ -921,34 +926,33 @@
 	(let ((sym (looking-at item)))
 	  (cond
 	   ((eq? sym '$epsilon)		; at end of rule, go next
-	    (iter rslt pngl stng hzeps done todo p-range '()))
+	    (iter rslt stng hzeps done todo p-range '()))
 	   ((terminal? sym)		; terminal, log it
-	    (iter (merge1 sym rslt) pngl stng hzeps done todo p-range '()))
+	    (iter (merge1 sym rslt) stng hzeps done todo p-range '()))
 	   ((memq sym eps-l)		; symbol has eps prod
-	    (iter rslt pngl stng hzeps (merge1 sym done) (merge2 sym todo done)
+	    (iter rslt stng hzeps (merge1 sym done) (merge2 sym todo done)
 		  p-range (next-item item)))
 	   (else ;; non-terminal, add to todo/done, goto next
-	    (iter rslt pngl stng hzeps
+	    (iter rslt stng hzeps
 		  (merge1 sym done) (merge2 sym todo done) p-range '())))))
        
        ((pair? p-range)			; next one to do
 	;; run through next rule
-	(iter rslt pngl stng hzeps done todo
+	(iter rslt stng hzeps done todo
 	      (range-next p-range) (first-item (car p-range))))
 
        ((pair? todo)
-	(iter rslt pngl stng hzeps done
-	      (cdr todo) (prule-range (car todo)) '()))
+	(iter rslt stng hzeps done (cdr todo) (prule-range (car todo)) '()))
 
        ((and hzeps (pair? stng))
 	;; Last pass saw an $epsilon so check the next input symbol,
 	;; with saweps reset to #f.
 	(let* ((symb (car stng)) (stng1 (cdr stng)) (symbl (list symb)))
 	  (if (terminal? symb)
-	      (iter (cons symb rslt) pngl stng1
+	      (iter (cons symb rslt) stng1
 		    (and hzeps (memq symb eps-l))
 		    done todo p-range '())
-	      (iter rslt pngl stng1
+	      (iter rslt stng1
 		    (or (eq? symb '$epsilon) (memq symb eps-l))
 		    symbl symbl '() '()))))
        (hzeps
@@ -990,7 +994,7 @@
 	    (acons item allt la-item-l)))))
 
 ;; @deffn first-following item toks => token-list
-;; For la-item A => x.By,@{toks@} (as @code{item}, @code{toks}), this
+;; For la-item A => x.By,z (where  @code{item}, @code{toks}), this
 ;; procedure computes @code{FIRST(yz)}.
 (define (first-following item toks)
   (first (item->stng (next-item item)) toks))
@@ -1017,7 +1021,6 @@
 	  (let iter ((seed seed) (pr (prule-range symb)))
 	    (cond
 	     ((null? pr) seed)
-	     ;;((error-rule? (car pr)) (iter seed (range-next pr)))
 	     (else
 	      (iter (merge-la-item seed (first-item (car pr))
 				   (first-following item toks))
@@ -1557,6 +1560,25 @@
 	     sm5)))
 	(lambda () (fluid-set! *lalr-core* prev-core)))))
 
+;; for debugging
+(define (make-LR0-machine spec)
+  (if (not spec) (error "make-LR0-machine: expecting valid specification"))
+  (let ((prev-core (fluid-ref *lalr-core*)))
+    (dynamic-wind
+	(lambda () (fluid-set! *lalr-core* (make-core/extras spec)))
+	(lambda () (step1 spec))
+	(lambda () (fluid-set! *lalr-core* prev-core)))))
+
+;; @deffn with-spec spec proc arg ...
+;; Execute with spec or mach.
+(define (with-spec spec proc . args)
+  (if (not spec) (error "with-spec: expecting valid specification"))
+  (let ((prev-core (fluid-ref *lalr-core*)))
+    (dynamic-wind
+	(lambda () (fluid-set! *lalr-core* (make-core/extras spec)))
+	(lambda () (apply proc args))
+	(lambda () (fluid-set! *lalr-core* prev-core)))))
+
 ;; @deffn lalr-match-table mach => match-table
 ;; Get the match-table
 (define (lalr-match-table mach)
@@ -2005,5 +2027,4 @@
       (newline port))))
 
 ;; @end itemize
-
 ;;; --- last line ---

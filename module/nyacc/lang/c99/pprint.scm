@@ -64,9 +64,10 @@
 ;; Convert and print a C99 sxml tree to the current output port.
 ;; The optional keyword argument @code{#:indent-level} provides the
 ;; indent level, with default of 2.
-(define* (pretty-print-c99 tree #:key (indent-level 2))
+(define* (pretty-print-c99 tree #:key (indent-level 2) (ugly #f))
 
-  (define fmtr (make-pp-formatter))
+  ;;(define fmtr (make-pp-formatter))
+  (define fmtr (if ugly (make-pp-formatter/ugly) (make-pp-formatter)))
   (define (push-il)(fmtr 'push))
   (define (pop-il) (fmtr 'pop))
 
@@ -169,6 +170,8 @@
       ((neg ,expr) (unary/l 'neg "-" expr))
       ((bitwise-not ,expr) (unary/l 'bitwise-not "~" expr))
       ((not ,expr) (unary/l 'not "!" expr))
+      ((sizeof-expr ,expr) (sf "sizeof(") (ppx expr) (sf ")"))
+      ((sizeof-type ,type) (sf "sizeof(") (ppx type) (sf ")"))
 
       ((cast ,tn ,ex)
        (sf "(") (ppx tn) (sf ")")
@@ -292,6 +295,7 @@
 	 ((union-def) (ppx arg))
 	 ((enum-def) (ppx arg))
 	 ((typename) (sf "~A" (sx-ref arg 1)))
+	 ((void) (sf "void"))
 	 (else (error "missing " arg))))
 
       ((struct-ref (ident ,name)) (sf "struct ~A" name))
@@ -490,6 +494,7 @@
 
   (define ppx ppx-1)
   
-  (ppx tree))
+  (ppx tree)
+  (if ugly (newline)))
 
 ;; --- last line ---

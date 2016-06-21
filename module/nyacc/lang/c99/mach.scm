@@ -21,10 +21,11 @@
   #:export (c99-spec c99-mach dev-parse-c dev-parse-c99
 	    gen-c99-files gen-c99x-files)
   #:use-module (nyacc lang c99 cpp)
+  #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lang util)
+  #:use-module (nyacc util)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map))
   #:use-module ((sxml xpath) #:select (sxpath))

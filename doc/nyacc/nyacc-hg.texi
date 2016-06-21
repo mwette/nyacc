@@ -78,7 +78,7 @@ This is a symbol which represents an entire string from the language. (CHECK)
 @end table
 A @dfn{production} consists of a left-hand side (LHS) symbol from
 @emph{N} and a right-hand side (RHS) which is a sequence of symbols
-from the union of @emph{T} and @emph{N}.
+from @emph{V}, the union of @emph{T} and @emph{N}.
 
 In the following we use capital letters for non-terminals, the lower case
 letters a-h for terminals and the lower case letters p-z (sometimes in
@@ -247,19 +247,13 @@ Here is the algorithm from @code{lalr.scm}
 
 @vskip 1cm
 
-def CLOSURE:
+Define the closure of a set of la-items I to be the fixed-point of
+the following iteration
 @example
-for each item [A => x.By, a] in I
-  each production B => z in G
-  and each terminal b in FIRST(ya)
-  such that [B => .z, b] is not in I do
-    add [B => .z, b] to I
-@end example
-or
-@example
-for each item [A => x.By, a] in I
-  add all la-items [B => .z, b] to I where
-  b is in FIRST(ya)
+for each la-item [A => x.By,@emph{T}] in I
+    compute T, the set of terminals in FIRST(ya)
+    for each p-rule [B => z]
+        add [B => .z, T] to I
 @end example
 
 def PROPAGATE:

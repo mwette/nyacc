@@ -17,7 +17,7 @@
 	    sx-attr sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr*
 	    sx-ref sx-tail sx-find
 	    ;; for pretty-printing
-	    make-protect-expr make-pp-formatter
+	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
 	    ;; for ???
 	    move-if-changed
             fmterr)
@@ -32,6 +32,8 @@ This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 or any later version published by the Free Software Foundation.  See the
 file COPYING included with the this distribution.")
 
+(define (fmterr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
 
 ;; === input stack =====================
 
@@ -54,9 +56,16 @@ file COPYING included with the this distribution.")
 	  (set-current-input-port (car ipstk))
 	  (fluid-set! *input-stack* (cdr ipstk))))))
 
-(define (fmterr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
+;; It may be possible to reimplement with closures, using soft-ports.
+;; (push-string-input ...
 
+#|
+(define (push-string-input str)
+  (let* ((prev (current-input-port))
+	 (port (make-soft-port ...))
+	 )
+    #f))
+|#
 
 ;; === tl ==============================
 
@@ -267,7 +276,7 @@ file COPYING included with the this distribution.")
 	((=) (assc? op))
 	(else #f)))))
 
-;; @make-pp-formatter => fmtr
+;; @deffn make-pp-formatter => fmtr
 ;; @example
 ;; (fmtr 'push) ;; push indent level
 ;; (fmtr 'pop)  ;; pop indent level
@@ -319,6 +328,35 @@ file COPYING included with the this distribution.")
        (else (error "pp-formatter: bad args"))
        ))))
 
+;; @deffn make-pp-formatter/ugly => fmtr
+;; Makes a @code{fmtr} like @code{make-pp-formatter} but no indentation
+;; and just adds strings on ...
+(define* (make-pp-formatter/ugly)
+  (let*
+      ((maxcol 78)
+       (column 0)
+       (sf (lambda (fmt . args)
+	     (let* ((str (apply simple-format #f fmt args))
+		    (len (string-length str)))
+	       (cond
+		((char=? #\# (string-ref str 0))
+		 (display str))
+		(else
+		 (when (> (+ column len) maxcol)
+		   (newline)
+		   (set! column 0))
+		 (if (char=? #\newline (string-ref str (1- len)))
+		     (string-set! str (1- len) #\space))
+		 (display str)
+		 (set! column (+ column len))))))))
+
+    (lambda (arg0 . rest)
+      (cond
+       ((string? arg0) (apply sf arg0 rest))
+       ((eqv? 'push arg0) #f)
+       ((eqv? 'pop arg0) #f)
+       (else (error "pp-formatter/ugly: bad args"))))))
+  
 ;; @deffn move-if-changed src-file dst-file [sav-file]
 ;; Return @code{#t} if changed.
 (define (move-if-changed src-file dst-file . rest)
