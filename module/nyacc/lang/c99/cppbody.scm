@@ -18,9 +18,9 @@
 (define gen-cpp-lexer (make-lexer-generator mtab))
 
 ;; @deffn parse-cpp-expr text => tree
-;; A thunk that reads from default input and returns a parse tree.
-;; Called by @code{parse-cpp-stmt} and @code{eval-cpp-expr}.  The latter
-;; because the parsed expression may include terms which are cpp-defined
+;; Given a string returns a cpp parse tree.  This is called by
+;; @code{parse-cpp-stmt} and @code{eval-cpp-expr}.  The latter because the
+;; parsed expression may include terms which are cpp-defined
 ;; and should be evaluated lazy mode.
 (define (parse-cpp-expr text)
   (with-input-from-string text
@@ -29,7 +29,9 @@
 ;; @deffn eval-cpp-expr tree dict => datum
 ;; Evaluate a tree produced from
 ;; This should be updated to use @code{expand-cpp-def}.  See below.
+(use-modules (ice-9 pretty-print))
 (define (eval-cpp-expr tree dict)
+  ;;(display "eval-cpp-expr:\n") (pretty-print tree)
   (letrec
       ((tx (lambda (tr ix) (list-ref tr ix)))
        (tx1 (lambda (tr) (tx tr 1)))
@@ -82,18 +84,34 @@
 
 
 ;; @deffn scan-cpp-input argd used dict for-argl => string
-;; process the replacement text => (reversed) token-list
-;; if for-argl, stop on , or ) and next char will be , or )
+;; Process the replacement text and generate a (reversed) token-list.
+;; If for-argl, stop at, and push back, @code{,} or @code{)}.
 (define (scan-cpp-input argd dict used for-argl)
+  ;; Works like this: scan tokens (comments, parens, strings, char's, etc).
+  ;; Tokens (i.e., strings) are collected in a (reverse ordered) list (stl)
+  ;; and merged together on return.  Lone characters are collected in the
+  ;; list @code{chl}.  Once a non-char token is found the character list is
+  ;; converted to a string and added to the string list first, followed by
+  ;; the new token.
 
+  ;; Turn reverse chl into a string and insert it into the string list stl.
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
+
+  ;; We just scanned "defined", not need to scan the arg to inhibit expansion.
+  ;; E.g., scanned "defined", now scan "(FOO)", and return "defined(FOO)".
+  (define (scan-defined)
+    (let iter ((chl '()) (ch (read-char)))
+      (cond ((eof-object? ch) (throw 'parse-error "bad CPP defined"))
+	    ((char=? #\) ch)
+	     (string-append "defined" (list->string (reverse (cons ch chl)))))
+	    (else (iter (cons ch chl) (read-char))))))
   
-  ;;(simple-format #t "  scan-input argd=~S used=~S ~S\n" argd used for-argl)
-  (let iter ((stl '())		; string list
-	     (chl '())		; char-list
-	     (nxt #f)			; next string 
-	     (lvl 0)			; level
+  ;; 
+  (let iter ((stl '())		; string list (i.e., tokens)
+	     (chl '())		; char-list (current list of input chars)
+	     (nxt #f)		; next string 
+	     (lvl 0)		; level
 	     (ch (read-char)))	; next character
     ;;(simple-format #t "iter stl=~S chl=~S nxt=~S ch=~S\n" stl chl nxt ch)
     (cond
@@ -119,23 +137,27 @@
      ((read-c-ident ch) =>
       (lambda (iden)
 	;;(simple-format #t "    iden=~S\n" iden)
-	(let* ((aval (assoc-ref argd iden))  ; lookup argument
-	       (rval (assoc-ref dict iden))) ; lookup macro def
-	  (cond
-	   ((member iden used)	; name used
-	    (iter stl chl iden lvl (read-char)))
-	   (aval			; arg ref
-	    (iter stl chl aval lvl (read-char)))
-	   ((string? rval)		; cpp repl
-	    (iter stl chl rval lvl (read-char)))
-	   ((pair? rval)		; cpp macro
-	    (let* ((argl (car rval)) (text (cdr rval))
-		   (argv (collect-args argd dict used))
-		   (argd (map cons argl argv))
-		   (newl (expand-cpp-repl text argd dict (cons iden used))))
-	      (iter stl chl newl lvl (read-char))))
-	   (else			; normal identifier
-	    (iter stl chl iden lvl (read-char)))))))
+	(if (equal? iden "defined")
+	    ;; "defined" is a special case
+	    (iter stl chl (scan-defined) lvl (read-char))
+	    ;; otherwise ...
+	    (let* ((aval (assoc-ref argd iden))  ; lookup argument
+		   (rval (assoc-ref dict iden))) ; lookup macro def
+	      (cond
+	       ((member iden used)	; name used
+		(iter stl chl iden lvl (read-char)))
+	       (aval			; arg ref
+		(iter stl chl aval lvl (read-char)))
+	       ((string? rval)		; cpp repl
+		(iter stl chl rval lvl (read-char)))
+	       ((pair? rval)		; cpp macro
+		(let* ((argl (car rval)) (text (cdr rval))
+		       (argv (collect-args argd dict used))
+		       (argd (map cons argl argv))
+		       (newl (expand-cpp-repl text argd dict (cons iden used))))
+		  (iter stl chl newl lvl (read-char))))
+	       (else			; normal identifier
+		(iter stl chl iden lvl (read-char))))))))
      (else
       (iter stl (cons ch chl) #f lvl (read-char))))))
   
@@ -143,6 +165,7 @@
   ;;(simple-format #t "collect-args\n")
   (if (not (eqv? (read-char) #\()) (throw 'parse-error "collect-args"))
   (let iter ((argl (list (scan-cpp-input argd dict used #t))))
+    (simple-format #t "args: ~S\n" argl)
     (let ((ch (read-char)))
       (if (eqv? ch #\)) (reverse argl)
 	  (iter (cons (scan-cpp-input argd dict used #t) argl))))))
@@ -154,6 +177,7 @@
 
 ;; @deffn cpp-expand-text text dict => string
 (define (cpp-expand-text text dict)
+  ;;(simple-format #t "cpp-expand-text: ~S\n" text)
   (with-input-from-string text
     (lambda () (scan-cpp-input '() dict '() #f))))
 

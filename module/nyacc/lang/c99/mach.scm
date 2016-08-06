@@ -296,17 +296,19 @@
 
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier		; S 6.7.2.1
-     ("struct" identifier "{" struct-declaration-list "}"
+     ("struct" ident-like "{" struct-declaration-list "}"
       ($$ `(struct-def ,$2 ,(tl->list $4))))
      ("struct" "{" struct-declaration-list "}"
       ($$ `(struct-def ,(tl->list $3))))
-     ("struct" identifier ($$ `(struct-ref ,$2)))
-     ("union" identifier "{" struct-declaration-list "}"
+     ("struct" ident-like ($$ `(struct-ref ,$2)))
+     ("union" ident-like "{" struct-declaration-list "}"
       ($$ `(union-def ,$2 ,(tl->list $4))))
      ("union" "{" struct-declaration-list "}"
       ($$ `(union-def ,(tl->list $3))))
-     ("union" identifier ($$ `(union-ref ,$2)))
+     ("union" ident-like ($$ `(union-ref ,$2)))
      )
+    ;; because name following struct/union can be indentifier or typeref
+    (ident-like (identifier) (typedef-name ($$ `(ident ,(cdr $1)))))
 
     ;; Calling this field-list in the parse tree.
     (struct-declaration-list		; S 6.7.2.1
@@ -365,9 +367,9 @@
      )
 
     (type-qualifier
-     ("const" ($$ '(type-qual ,$1)))
-     ("volatile" ($$ '(type-qual ,$1)))
-     ("restrict" ($$ '(type-qual ,$1)))
+     ("const" ($$ `(type-qual ,$1)))
+     ("volatile" ($$ `(type-qual ,$1)))
+     ("restrict" ($$ `(type-qual ,$1)))
      )
 
     (function-specifier ("inline" ($$ `(fctn-spec ,$1))))

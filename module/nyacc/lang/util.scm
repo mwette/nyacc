@@ -325,6 +325,8 @@ file COPYING included with the this distribution.")
        ((string? arg0) (apply sf arg0 rest))
        ((eqv? 'push arg0) (push-il))
        ((eqv? 'pop arg0) (pop-il))
+       ((eqv? 'nlin arg0) ;; newline if needed
+        (cond ((positive? column) (newline) (set! column 0))))
        (else (error "pp-formatter: bad args"))
        ))))
 
@@ -353,6 +355,8 @@ file COPYING included with the this distribution.")
     (lambda (arg0 . rest)
       (cond
        ((string? arg0) (apply sf arg0 rest))
+       ((eqv? 'nlin arg0) ;; newline if needed
+        (cond ((positive? column) (newline) (set! column 0))))
        ((eqv? 'push arg0) #f)
        ((eqv? 'pop arg0) #f)
        (else (error "pp-formatter/ugly: bad args"))))))

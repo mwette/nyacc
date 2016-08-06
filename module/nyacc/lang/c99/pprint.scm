@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/pprint.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2016 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -15,7 +15,6 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; need (debug-set! stack 7777777)
 (define-module (nyacc lang c99 pprint)
   #:export (pretty-print-c99)
   #:use-module ((srfi srfi-1) #:select (pair-for-each))
@@ -74,6 +73,7 @@
   (define (sf . args) (apply fmtr args))
 
   (define (cpp-ppx tree)
+    (fmtr 'nlin)
     (sxml-match tree
       ((define (name ,name) (args . ,args) (repl ,repl))
        (sf "#define ~A(" name)
@@ -150,7 +150,13 @@
       ((char ,value) (sf "'~A'" (sx-ref tree 1)))
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
-      ((string ,value) (sf "~S" value))
+
+      ((string . ,value-l)
+       (pair-for-each
+	(lambda (pair)
+	  (sf "~S" (car pair))
+	  (if (pair? (cdr pair)) (sf " ")))
+	value-l))
 
       ((comment ,text) (sf "/*~A */\n" text))
 
@@ -191,8 +197,12 @@
       ((le ,lval ,rval) (binary 'le " <= " lval rval))
       ((ge ,lval ,rval) (binary 'ge " >= " lval rval))
       ((eq ,lval ,rval) (binary 'eq " == " lval rval))
-      ((neq ,lval ,rval) (binary 'neq " != " lval rval))
+      ((ne ,lval ,rval) (binary 'ne " != " lval rval))
       
+      ((bitwise-and ,lval ,rval) (binary 'bitwise-and " & " lval rval))
+      ((bitwise-or ,lval ,rval) (binary 'bitwise-and " | " lval rval))
+      ((bitwise-xor ,lval ,rval) (binary 'bitwise-xor " ^ " lval rval))
+
       ((post-inc ,expr) (unary/r 'post-inc "++" expr))
       ((post-dec ,expr) (unary/r 'post-dec "--" expr))
 
@@ -448,11 +458,13 @@
       ((trans-unit . ,items)
        (pair-for-each
 	(lambda (pair)
-	  (ppx (car pair))
-	  ;; Generatwe a blank line if followed by a fctn-defn.
-	  (if (and (pair? (cdr pair))
-		   (eqv? (sx-tag (cadr pair)) 'fctn-defn))
-	      (sf "\n")))
+	  (let ((this (car pair))
+		(next (and (pair? (cdr pair)) (cadr pair))))
+	    (ppx this)
+	    (cond ;; add blank line if next is different or fctn defn
+	     ((not next))
+	     ((not (eqv? (sx-tag this) (sx-tag next))) (sf "\n"))
+	     ((eqv? (sx-tag next) 'fctn-defn) (sf "\n")))))
 	items))
 
       ((fctn-defn . ,rest) ;; but not yet (knr-fctn-defn)

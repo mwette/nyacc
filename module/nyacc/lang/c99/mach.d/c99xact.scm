@@ -343,22 +343,26 @@
    ;; complex-type-specifier => "long" "double" "_Complex"
    (lambda ($3 $2 $1 . $rest)
      '(complex-type "long double _Complex"))
-   ;; struct-or-union-specifier => "struct" identifier "{" struct-declarati...
+   ;; struct-or-union-specifier => "struct" ident-like "{" struct-declarati...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(struct-def ,$2 ,(tl->list $4)))
    ;; struct-or-union-specifier => "struct" "{" struct-declaration-list "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(struct-def ,(tl->list $3)))
-   ;; struct-or-union-specifier => "struct" identifier
+   ;; struct-or-union-specifier => "struct" ident-like
    (lambda ($2 $1 . $rest) `(struct-ref ,$2))
-   ;; struct-or-union-specifier => "union" identifier "{" struct-declaratio...
+   ;; struct-or-union-specifier => "union" ident-like "{" struct-declaratio...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(union-def ,$2 ,(tl->list $4)))
    ;; struct-or-union-specifier => "union" "{" struct-declaration-list "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(union-def ,(tl->list $3)))
-   ;; struct-or-union-specifier => "union" identifier
+   ;; struct-or-union-specifier => "union" ident-like
    (lambda ($2 $1 . $rest) `(union-ref ,$2))
+   ;; ident-like => identifier
+   (lambda ($1 . $rest) $1)
+   ;; ident-like => typedef-name
+   (lambda ($1 . $rest) `(ident ,(cdr $1)))
    ;; struct-declaration-list => struct-declaration
    (lambda ($1 . $rest) (make-tl 'field-list $1))
    ;; struct-declaration-list => lone-comment
@@ -418,11 +422,11 @@
    ;; enumerator => identifier "=" constant-expression
    (lambda ($3 $2 $1 . $rest) `(enum-defn ,$1 ,$3))
    ;; type-qualifier => "const"
-   (lambda ($1 . $rest) '(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual ,$1))
    ;; type-qualifier => "volatile"
-   (lambda ($1 . $rest) '(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual ,$1))
    ;; type-qualifier => "restrict"
-   (lambda ($1 . $rest) '(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual ,$1))
    ;; function-specifier => "inline"
    (lambda ($1 . $rest) `(fctn-spec ,$1))
    ;; declarator => pointer direct-declarator

@@ -59,6 +59,7 @@
     ("complex.h" "complex" "imaginary")
     ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
     ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
+    ("math.h")
     ))
 
 (define (make-cpi debug defines incdirs tn-dict)
@@ -316,6 +317,7 @@
 		 (if (eval-flow?)
 		     (let* ((defs (cpi-defs info))
 			    (rhs (cpp-expand-text (cadr stmt) defs))
+			    ;; rhs = "defined(1)" :(
 			    (exp (parse-cpp-expr rhs))
 			    (val (eval-cpp-expr exp defs)))
 		       (cond

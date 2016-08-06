@@ -1,5 +1,20 @@
-C99-002	<= next bug id
+C99-007	<= next id
 
+C99-006	06 Aug 2016, M.Wette
+        code "val = '\0';" gets pprinted to "val = '^@;';"
+
+C99-005	26 Jun 2016, M.Wette
+	in util2.scm, tree->udecl needs to return "struct" and "union"
+	entries for stuff like
+		struct foo { int x; };
+
+C99-004	xdef arg to gen-c-lexer may be too simple
+	it is currently a predicate.  Maybe it should return three values
+	#f => don't expand
+	#t => expand
+	string => use string
+
+C99-003 util2.scm/tree->udict should return declarations in order
 
 === RESOLVED ===================
 
@@ -9,3 +24,16 @@ C99-001	cpp breaks on the following, I think:
 	# error "bla"
 	#endif
 13Apr16	works
+
+C99-002 CPP redesign is not working for ifdef and defined:
+	#define A 1
+	#ifdef A
+	...
+	breaks because it gets expanded as (if "defined(1)")
+	see cppbody.scm, near line 133:
+	     ((read-c-ident ch) =>
+	      (lambda (iden)
+25Jun16 fixed
+
+
+--- last line ---
