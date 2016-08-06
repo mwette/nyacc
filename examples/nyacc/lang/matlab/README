@@ -7,8 +7,5 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-The following files are also covered by the above copyright and license:
-  dotm.d/null.m
-  dotm.d/one.m
-  ex1.m
+The example dot-m in mach.d also covered by the above copyright and license.
 

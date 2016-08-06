@@ -1,0 +1,94 @@
+;; nyacc/lalr-01.test			-*- scheme -*-
+;;
+;; Copyright (C) 2015,2016 Matthew R. Wette
+;;
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-module (lalr-01)
+  #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
+  #:use-module (nyacc lex)
+  #:use-module (test-suite lib))
+
+(define calc-spec
+  (lalr-spec
+   (prec< (left "+" "-") (left "*" "/"))
+   (start expr)
+   (grammar
+    (expr
+     (expr "+" expr ($$ (+ $1 $3)))
+     (expr "-" expr ($$ (- $1 $3)))
+     (expr "*" expr ($$ (* $1 $3)))
+     (expr "/" expr ($$ (/ $1 $3)))
+     ($fixed ($$ (string->number $1))))
+    )))
+
+(define calc-mach (make-lalr-machine calc-spec))
+
+(define input-1 "1 + 4 / 2 * 3 - 5")
+(define output-1 2)
+
+(with-test-prefix "nyacc/lalr-01"
+
+  (pass-if "calc-plain"
+    (let* ((mach calc-mach)
+	   (raw-parser (make-lalr-parser mach))
+	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+	   (parse (lambda () (raw-parser (gen-lxr))))
+	   (res (with-input-from-string input-1 parse)))
+      (equal? res output-1)))
+
+  (pass-if "calc-hashify"
+    (let* ((mach (hashify-machine calc-mach))
+	   (raw-parser (make-lalr-parser mach))
+	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+	   (parse (lambda () (raw-parser (gen-lxr))))
+	   (res (with-input-from-string input-1 parse)))
+      (equal? res output-1)))
+
+  (pass-if "calc-compact"
+    (let* ((mach (compact-machine calc-mach))
+	   (raw-parser (make-lalr-parser mach))
+	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+	   (parse (lambda () (raw-parser (gen-lxr))))
+	   (res (with-input-from-string input-1 parse)))
+      (equal? res output-1)))
+
+  (pass-if "calc-compact-hashify"
+    (let* ((mach (compact-machine (hashify-machine calc-mach)))
+	   (raw-parser (make-lalr-parser mach))
+	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+	   (parse (lambda () (raw-parser (gen-lxr))))
+	   (res (with-input-from-string input-1 parse)))
+      (equal? res output-1)))
+
+  (pass-if "calc-hashify-compact"
+    (let* ((mach (hashify-machine (compact-machine calc-mach)))
+	   (raw-parser (make-lalr-parser mach))
+	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+	   (parse (lambda () (raw-parser (gen-lxr))))
+	   (res (with-input-from-string input-1 parse)))
+      (equal? res output-1)))
+
+  ;; not working:
+  ;; ERROR: nyacc/lalr-01: parse-error - arguments:
+  ;;  ((wrong-type-arg "car" "Wrong type argument in position ~A (expecting ~A):
+  ;;           ~S" (1 "pair" 0) (0)))
+  #;(expect-fail "parse-error"
+    (let* ((mach calc-mach)
+	   (raw-parser (make-lalr-parser mach))
+	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+	   (parse (lambda ()
+		    (catch
+		     'parse-error
+		     (lambda () (raw-parser (gen-lxr)))
+		     (lambda () #f)))))
+      (with-input-from-string "a = 1" parse)))
+
+  )
+
+
+;; --- last line ---

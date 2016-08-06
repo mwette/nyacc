@@ -1,4 +1,4 @@
-;; Tmach.scm - test C99 automaton and dev parser
+;; Tmach.scm - test C99: CPP and parser
 ;;
 ;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
@@ -16,47 +16,67 @@
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
+;; test def parser: show parse tree
+(when #t
+  (let* ((file "exam.d/,ex.c")
+	 (defs '(("arch" . "x86_64"))) 
+	 (incs  '("."))
+	 (parse (lambda () (dev-parse-c
+			     #:cpp-defs defs #:inc-dirs incs
+			     #:debug #f #:mode 'file)))
+	 (sx (with-input-from-file file parse))
+	 ;;(sx (remove-inc-trees sx))
+         )
+    (pretty-print sx)
+    #t))
+
+
+(when #f
+  (gen-c99-files "../../../../module/nyacc/lang/c99")
+  (system "touch ../../../../module/nyacc/lang/c99/parser.scm")
+  (gen-c99x-files "../../../../module/nyacc/lang/c99")
+  (system "touch ../../../../module/nyacc/lang/c99/xparser.scm")
+  )
+
+;; test pp
+(when #f
+  (use-modules (nyacc lang c99 parser))
+  (let* ((sx0 (with-input-from-file "exam.d/ex06.c"
+		(lambda () (parse-c99 #:inc-dirs '("exam.d")))))
+	 (sx1 (and sx0 (remove-inc-trees sx0)))
+	 #;(sx2 (elifify sx1)))
+    (pretty-print sx1)
+    (simple-format #t "===>\n")
+    (pretty-print-c99 sx1)
+    #t))
+
+;; test utilities
+(when #f
+  (use-modules (nyacc lang c99 parser))
+  (use-modules (nyacc lang c99 util2))
+  (use-modules (sxml match))
+  (let* ((sx (with-input-from-file "exam.d/ex1.c" parse-c99))
+	 (sx (merge-inc-trees! sx))
+	 (udict (and sx (tree->udict sx)))
+	 (xx (assoc-ref udict "f1"))
+	 (xx (stripdown xx udict))
+	 (xx (udecl->mspec xx))
+	 )
+    (pretty-print xx)
+    #t))
+
+;; grammar and automaton in zipped text file 
 (when #f
   (with-output-to-file "lang.txt"
     (lambda ()
       (pp-lalr-notice c99-spec)
       (pp-lalr-grammar c99-spec)
-      (pp-lalr-machine c99-mach))))
+      (pp-lalr-machine c99-mach)
+      (system "zip lang.txt"))))
 
-;; test parser
+;; equivalent bison input file
 (when #f
-  (let* ((defs '(("arch" . "x86_64"))) 
-	 (incs  '("."))
-	 (sx (with-input-from-file "ex1.c"
-	       (lambda ()
-	 	 (dev-parse-c #:cpp-defs defs #:inc-dirs incs #:debug #f))))
-	 (sx (remove-inc-trees sx))
-         )
-    (pretty-print sx)
-    (simple-format #t "===>")
-    (pretty-print-c99 sx)
-    #t))
-
-(when #f
-  (with-output-to-file "gram.y.new"
-    (lambda () (lalr->bison c99-spec)))
-  (move-if-changed "gram.y.new" "gram.y"))
-
-(when #f
-  (gen-c99-files "../../../../module/nyacc/lang/c99")
-  (system "touch ../../../../module/nyacc/lang/c99/parser.scm"))
-
-;; test pp
-(when #t
-  (use-modules (nyacc lang c99 parser))
-  (let* ((sx (with-input-from-file "ex1.c" parse-c99))
-	 (sx (remove-inc-trees sx))
-	 (sx1 (elifify sx))
-	 )
-    (pretty-print sx)
-    (simple-format #t "===>")
-    ;;(pretty-print sx1)
-    (pretty-print-c99 sx)
-    #t))
+  (with-output-to-file "gram.y"
+    (lambda () (lalr->bison c99-spec))))
 
 ;; --- last line ---

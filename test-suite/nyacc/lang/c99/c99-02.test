@@ -1,0 +1,34 @@
+;; nyacc/lang/c99/c99-02.test		-*- scheme -*-
+;;
+;; Copyright (C) 2016 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-module (c99-02)
+  #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 xparser)
+  #:use-module (nyacc lang c99 pprint)
+  #:use-module (test-suite lib))
+
+;; pretty-printer, parser test
+;; We generate a tree, send it to the pretty-printer, then through the parser.
+;; This should be a unit function, methinks.
+(with-test-prefix "nyacc/c99-02"
+
+  ;; loop simple through pretty-printer
+  (pass-if "simple"
+      (let* ((sx0 '(trans-unit
+		    (decl (decl-spec-list (type-spec (fixed-type "int")))
+			  (init-declr-list (init-declr (ident "x"))))))
+	     (cc1 (with-output-to-string
+		    (lambda () (pretty-print-c99 sx0))))
+	     (sx2 (with-input-from-string cc1 parse-c99)))
+	(equal? sx0 sx2)))
+	      
+  )
+
+
+;; --- last line ---

@@ -94,10 +94,10 @@
      (postfix-expression "++" ($$ `(post-inc ,$1)))
      (postfix-expression "--" ($$ `(post-dec ,$1))))
     (primary-expression
-     ('$ident ($$ `(ident ,$1)))
-     ('$fixed ($$ `(fixed ,$1)))	; integer-constant
-     ('$chlit ($$ `(char ,$1)))		; char-constant
-     ("defined" "(" '$ident ")" ($$ `(defined ,$3)))
+     ;;($ident ($$ `(ident ,$1)))
+     ($fixed ($$ `(fixed ,$1)))	; integer-constant
+     ($chlit ($$ `(char ,$1)))		; char-constant
+     ("defined" "(" $ident ")" ($$ `(defined ,$3)))
      ("(" expression-list ")" ($$ $2)))
     (expression-list
      (conditional-expression)

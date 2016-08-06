@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99xact.scm
+;; ./mach.d/c99xact.scm
 
 ;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
@@ -29,7 +29,8 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-call ,$1 ,(tl->list $3)))
    ;; postfix-expression => postfix-expression "(" ")"
-   (lambda ($3 $2 $1 . $rest) `(fctn-call ,$1))
+   (lambda ($3 $2 $1 . $rest)
+     `(fctn-call ,$1 (expr-list)))
    ;; postfix-expression => postfix-expression "." identifier
    (lambda ($3 $2 $1 . $rest) `(d-sel ,$3 ,$1))
    ;; postfix-expression => postfix-expression "->" identifier
@@ -54,9 +55,10 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; arg-expr-hack => declaration-specifiers abstract-declarator
    (lambda ($2 $1 . $rest)
-     `(decl ,(tl->list $1) $2))
+     `(param-decl ,(tl->list $1) $2))
    ;; arg-expr-hack => declaration-specifiers
-   (lambda ($1 . $rest) `(decl ,(tl->list $1)))
+   (lambda ($1 . $rest)
+     `(param-decl ,(tl->list $1)))
    ;; unary-expression => postfix-expression
    (lambda ($1 . $rest) $1)
    ;; unary-expression => "++" unary-expression
@@ -178,7 +180,10 @@
    ;; expression => assignment-expression
    (lambda ($1 . $rest) $1)
    ;; expression => expression "," assignment-expression
-   (lambda ($3 $2 $1 . $rest) `(comma-expr ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest)
+     (if (eqv? 'comma-expr (sx-tag $1))
+       (append $1 (list $3))
+       `(comma-expr ,$1 ,$3)))
    ;; constant-expression => conditional-expression
    (lambda ($1 . $rest) $1)
    ;; declaration => declaration-specifiers init-declarator-list $P1 ";" op...
@@ -187,7 +192,7 @@
    ;; declaration => declaration-specifiers ";" opt-code-comment
    (lambda ($3 $2 $1 . $rest)
      (if (pair? $3)
-       `(decl ,(tl->list $1) (list $3))
+       `(decl ,(tl->list $1) ,(list $3))
        `(decl ,(tl->list $1))))
    ;; $P1 => 
    (lambda ($2 $1 . $rest)
@@ -338,22 +343,26 @@
    ;; complex-type-specifier => "long" "double" "_Complex"
    (lambda ($3 $2 $1 . $rest)
      '(complex-type "long double _Complex"))
-   ;; struct-or-union-specifier => "struct" identifier "{" struct-declarati...
+   ;; struct-or-union-specifier => "struct" ident-like "{" struct-declarati...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(struct-def ,$2 ,(tl->list $4)))
    ;; struct-or-union-specifier => "struct" "{" struct-declaration-list "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(struct-def ,(tl->list $3)))
-   ;; struct-or-union-specifier => "struct" identifier
+   ;; struct-or-union-specifier => "struct" ident-like
    (lambda ($2 $1 . $rest) `(struct-ref ,$2))
-   ;; struct-or-union-specifier => "union" identifier "{" struct-declaratio...
+   ;; struct-or-union-specifier => "union" ident-like "{" struct-declaratio...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(union-def ,$2 ,(tl->list $4)))
    ;; struct-or-union-specifier => "union" "{" struct-declaration-list "}"
    (lambda ($4 $3 $2 $1 . $rest)
      `(union-def ,(tl->list $3)))
-   ;; struct-or-union-specifier => "union" identifier
+   ;; struct-or-union-specifier => "union" ident-like
    (lambda ($2 $1 . $rest) `(union-ref ,$2))
+   ;; ident-like => identifier
+   (lambda ($1 . $rest) $1)
+   ;; ident-like => typedef-name
+   (lambda ($1 . $rest) `(ident ,(cdr $1)))
    ;; struct-declaration-list => struct-declaration
    (lambda ($1 . $rest) (make-tl 'field-list $1))
    ;; struct-declaration-list => lone-comment
@@ -413,11 +422,11 @@
    ;; enumerator => identifier "=" constant-expression
    (lambda ($3 $2 $1 . $rest) `(enum-defn ,$1 ,$3))
    ;; type-qualifier => "const"
-   (lambda ($1 . $rest) '(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual ,$1))
    ;; type-qualifier => "volatile"
-   (lambda ($1 . $rest) '(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual ,$1))
    ;; type-qualifier => "restrict"
-   (lambda ($1 . $rest) '(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual ,$1))
    ;; function-specifier => "inline"
    (lambda ($1 . $rest) `(fctn-spec ,$1))
    ;; declarator => pointer direct-declarator
@@ -628,11 +637,12 @@
    ;; statement => cpp-statement
    (lambda ($1 . $rest) $1)
    ;; labeled-statement => identifier ":" statement
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(labeled-stmt ,$1 ,$3))
    ;; labeled-statement => "case" constant-expression ":" statement
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest) `(case ,$2 ,$4))
    ;; labeled-statement => "default" ":" statement
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(default ,$3))
    ;; compound-statement => "{" block-item-list "}"
    (lambda ($3 $2 $1 . $rest)
      `(compd-stmt ,(tl->list $2)))
@@ -656,32 +666,28 @@
    (lambda ($5 $4 $3 $2 $1 . $rest) `(if ,$3 ,$5))
    ;; selection-statement => "if" "(" expression ")" statement "else" state...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$3 ,$5 ,7))
+     `(if ,$3 ,$5 ,$7))
    ;; selection-statement => "switch" "(" expression ")" statement
-   (lambda ($5 $4 $3 $2 $1 . $rest) `(switch (TBD)))
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(switch ,$3 ,$5))
    ;; iteration-statement => "while" "(" expression ")" statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$3 ,$5))
    ;; iteration-statement => "do" statement "while" "(" expression ")" ";"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(do-while ,$2 ,$5))
-   ;; iteration-statement => "for" "(" initial-clause expression ";" expres...
+   ;; iteration-statement => "for" "(" initial-clause opt-expression ";" op...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$3 ,$4 ,$6 ,$8))
-   ;; iteration-statement => "for" "(" initial-clause expression ";" ")" st...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(for ,$3 ,$6))
-   ;; iteration-statement => "for" "(" initial-clause ";" expression ")" st...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(for ,$3 ,5 ,$7))
-   ;; iteration-statement => "for" "(" initial-clause ";" ")" statement
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(for ,$3 ,$6))
    ;; initial-clause => expression ";"
    (lambda ($2 $1 . $rest) $1)
    ;; initial-clause => ";"
    (lambda ($1 . $rest) '(expr))
    ;; initial-clause => declaration
+   (lambda ($1 . $rest) $1)
+   ;; opt-expression => 
+   (lambda $rest '(expr))
+   ;; opt-expression => expression
    (lambda ($1 . $rest) $1)
    ;; jump-statement => "goto" identifier ";"
    (lambda ($3 $2 $1 . $rest) `(goto $2))

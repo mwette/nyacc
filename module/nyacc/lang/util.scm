@@ -10,11 +10,14 @@
 
 (define-module (nyacc lang util)
   #:export (lang-crn-lic
+	    push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
-	    sx-tag sx-attr sx-ref sx-tail sx-find
+	    sx-tag
+	    sx-attr sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr*
+	    sx-ref sx-tail sx-find
 	    ;; for pretty-printing
-	    make-protect-expr make-pp-formatter
+	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
 	    ;; for ???
 	    move-if-changed
             fmterr)
@@ -29,10 +32,42 @@ This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 or any later version published by the Free Software Foundation.  See the
 file COPYING included with the this distribution.")
 
-
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
+;; === input stack =====================
+
+(define *input-stack* (make-fluid '()))
+
+(define (reset-input-stack)
+  (fluid-set! *input-stack* '()))
+
+(define (push-input port)
+  (let ((curr (current-input-port))
+	(ipstk (fluid-ref *input-stack*)))
+    (fluid-set! *input-stack* (cons curr ipstk))
+    (set-current-input-port port)))
+
+;; Return #f if empty
+(define (pop-input)
+  (let ((ipstk (fluid-ref *input-stack*)))
+    (if (null? ipstk) #f
+	(begin
+	  (set-current-input-port (car ipstk))
+	  (fluid-set! *input-stack* (cdr ipstk))))))
+
+;; It may be possible to reimplement with closures, using soft-ports.
+;; (push-string-input ...
+
+#|
+(define (push-string-input str)
+  (let* ((prev (current-input-port))
+	 (port (make-soft-port ...))
+	 )
+    #f))
+|#
+
+;; === tl ==============================
 
 ;; @section Tagged Lists
 ;; Tagged lists are
@@ -45,14 +80,14 @@ file COPYING included with the this distribution.")
 
 ;; @table code
 
-;; @item make-tl tag [item item ...]
+;; @deffn make-tl tag [item item ...]
 ;; Create a tagged-list structure.
 (define (make-tl tag . rest)
   (let iter ((tail tag) (l rest))
     (if (null? l) (cons '() tail)
 	(iter (cons (car l) tail) (cdr l)))))
 
-;; @item tl->list tl
+;; @deffn tl->list tl
 ;; Convert a tagged list structure to a list.  This collects added attributes
 ;; and puts them right after the (leading) tag, resulting in something like
 ;; @example
@@ -73,12 +108,12 @@ file COPYING included with the this distribution.")
 	  (iter (cons (car tl-tail) tail) (cdr tl-tail))
 	  (cons tl-tail (append head tail))))))
 
-;; @item tl-insert tl item
+;; @deffn tl-insert tl item
 ;; Insert item at front of tagged list (but after tag).
 (define (tl-insert tl item)
   (cons (cons item (car tl)) (cdr tl)))
 
-;; @item tl-append tl item ...
+;; @deffn tl-append tl item ...
 ;; Append item at end of tagged list.
 (define (tl-append tl . rest)
   (cons (car tl)
@@ -86,12 +121,12 @@ file COPYING included with the this distribution.")
 	  (if (null? items) tail
 	      (iter (cons (car items) tail) (cdr items))))))
 
-;; @item tl-extend tl item-l
+;; @deffn tl-extend tl item-l
 ;; Extend with a list of items.
 (define (tl-extend tl item-l)
   (apply tl-append tl item-l))
 
-;; @item tl+attr tl key val)
+;; @deffn tl+attr tl key val)
 ;; Add an attribute to a tagged list.  Return the tl.
 ;; @example
 ;; (tl+attr tl 'type "int")
@@ -99,15 +134,16 @@ file COPYING included with the this distribution.")
 (define (tl+attr tl key val)
   (tl-insert tl (cons '@ (list key val))))
 
-;; @item tl-merge tl tl1
+;; @deffn tl-merge tl tl1
 ;; Merge guts of phony-tl @code{tl1} into @code{tl}.
 (define (tl-merge tl tl1)
   (error "not implemented (yet)")
   )
 
-;; =====================================
+;; === sx ==============================
+;; @section SXML Utility Procedures
 
-;; @item sx-ref sx ix => item
+;; @deffn sx-ref sx ix => item
 ;; Reference the @code{ix}-th element of the list, not counting the optional
 ;; attributes item.  If the list is shorter than the index, return @code{#f}.
 ;; @example
@@ -123,12 +159,12 @@ file COPYING included with the this distribution.")
    (else
     (list-xref sx ix))))
 
-;; @item sx-tag sx => tag
+;; @deffn sx-tag sx => tag
 ;; Return the tag for a tree
 (define (sx-tag sx)
   (if (pair? sx) (car sx) #f))
 
-;; @item sx-tail sx ix => (list)
+;; @deffn sx-tail sx ix => (list)
 ;; Return the tail starting at the ix-th cdr, starting from 0.
 ;; For example, if sx has 3 items then (sx-tail sx 2) returns '().
 ;; BUG: not working for (sx '(foo) 1)
@@ -140,32 +176,68 @@ file COPYING included with the this distribution.")
      ((and (pair? (car sx)) (eqv? '@ (caar sx))) (list-tail sx (1+ ix)))
      (else (list-tail sx ix)))))
 
-;; @item sx-attr sx => '(@ ...)|#f
+;; @deffn sx-has-attr? sx
+;; p to determine if @arg{sx} has attributes.
+(define (sx-has-attr? sx)
+  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx))))
+
+;; @deffn sx-attr sx => '(@ ...)|#f
 ;; @example
 ;; (sx-attr '(abc (@ (foo "1")) def) 1) => '(@ (foo "1"))
 ;; @end example
 (define (sx-attr sx)
-  (if (and (pair? (car sx)) (pair? (cadr sx)))
+  (if (and (pair? (cdr sx)) (pair? (cadr sx)))
       (if (eqv? '@ (caadr sx))
 	  (cadr sx)
 	  #f)
       #f))
 
-;; @item sx-find tag sx => ((tag ...) (tag ...))
+;; @deffn sx-attr-ref sx key => val
+;; Return an attribute value given the key, or @code{#f}.
+(define (sx-attr-ref sx key)
+  (and=> (sx-attr sx)
+	 (lambda (attr)
+	   (and=> (assq-ref (cdr attr) key) car))))
+
+;; @deffn sx-set-attr! sx key val
+;; Set attribute for sx.  If no attributes exist, if key does not exist,
+;; add it, if it does exist, replace it.
+(define (sx-set-attr! sx key val . rest)
+  (if (sx-has-attr? sx)
+      (let ((attr (cadr sx)))
+	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
+      (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
+  sx)
+
+;; @deffn sx-set-attr* sx key val [key val [key ... ]]
+;; Set attribute for sx.  If no attributes exist, if key does not exist,
+;; add it, if it does exist, replace it.
+(define (sx-set-attr* sx . rest)
+  (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
+    (cond
+     ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
+     (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
+      
+;; @deffn sx-find tag sx => ((tag ...) (tag ...))
 ;; Find the first matching element (in the first level).
 (define (sx-find tag sx)
   (find (lambda (node)
 	    (and (pair? node) (eqv? tag (car node))))
 	sx))
 
+;;; === pp ==========================
+;; @section Pretty-Print and Other Utility Procedures
 
-;; @item make-protect-expr op-prec op-assc => protect-expr?
-;; Generate @code{protect-expr} for pretty-printers.
-;; @code{(protect-expr? side op expr)}
-;; where @code{side} is @code{'lval} or @code{'rval}, @code{op} is the
-;; operator and @code{expr} is the expression.
+;; @deffn make-protect-expr op-prec op-assc => side op expr => #t|#f
+;; Generate procedure @code{protect-expr} for pretty-printers, which takes
+;; the form @code{(protect-expr? side op expr)} and where @code{side}
+;; is @code{'lval} or @code{'rval}, @code{op} is the operator and @code{expr}
+;; is the expression.  The argument @arg{op-prec} is a list of equivalent
+;; operators in order of decreasing precedence and @arg{op-assc} is an
+;; a-list of precedence with keys @code{'left}, @code{'right} and
+;; @code{nonassoc}.
 ;; @example
-;; (protect-expr? 'left '+ '(mul ...)) => TBD
+;; (protect-expr? 'lval '+ '(mul ...)) => TBD
 ;; @end example
 (define (make-protect-expr op-prec op-assc)
 
@@ -175,7 +247,7 @@ file COPYING included with the this distribution.")
   (define (assc-rt? op)
     (memq op (assq-ref op-assc 'right)))
 
-  ;; @item prec a b => '>|'<|'=|#f
+  ;; @deffn prec a b => '>|'<|'=|#f
   ;; Returns the prececence relation of @code{a}, @code{b} as
   ;; @code{<}, @code{>}, @code{=} or @code{#f} (no relation).
   (define (prec a b)
@@ -198,13 +270,13 @@ file COPYING included with the this distribution.")
 		   ((lt left) assc-rt?)
 		   ((rt right) assc-lt?)))
 	  (vtag (car expr)))
-    (case (prec op vtag)
-      ((>) #t)
-      ((<) #f)
-      ((=) (assc? op))
-      (else #f)))))
+      (case (prec op vtag)
+	((>) #t)
+	((<) #f)
+	((=) (assc? op))
+	(else #f)))))
 
-;; @make-pp-formatter => fmtr
+;; @deffn make-pp-formatter => fmtr
 ;; @example
 ;; (fmtr 'push) ;; push indent level
 ;; (fmtr 'pop)  ;; pop indent level
@@ -220,7 +292,7 @@ file COPYING included with the this distribution.")
        (blanks "                                            ")
        (ind-str (lambda () (substring blanks 0 ind-len)))
        (cnt-str (lambda () (substring blanks 0 (+ 4 ind-len))))
-       (sf-nl (lambda () (newline) (set! column 0)))
+       ;;(sf-nl (lambda () (newline) (set! column 0)))
 
        (push-il
 	(lambda ()
@@ -244,7 +316,8 @@ file COPYING included with the this distribution.")
 	      (display (cnt-str))
 	      (set! column (+ column ind-len 4)))
 	    (display str)
-	    (when (eqv? #\newline (string-ref str (1- len)))
+	    (when (and (positive? len)
+		       (eqv? #\newline (string-ref str (1- len))))
 	      (set! column 0))))))
 
     (lambda (arg0 . rest)
@@ -252,10 +325,43 @@ file COPYING included with the this distribution.")
        ((string? arg0) (apply sf arg0 rest))
        ((eqv? 'push arg0) (push-il))
        ((eqv? 'pop arg0) (pop-il))
+       ((eqv? 'nlin arg0) ;; newline if needed
+        (cond ((positive? column) (newline) (set! column 0))))
        (else (error "pp-formatter: bad args"))
        ))))
 
-;; @item move-if-changed src-file dst-file [sav-file]
+;; @deffn make-pp-formatter/ugly => fmtr
+;; Makes a @code{fmtr} like @code{make-pp-formatter} but no indentation
+;; and just adds strings on ...
+(define* (make-pp-formatter/ugly)
+  (let*
+      ((maxcol 78)
+       (column 0)
+       (sf (lambda (fmt . args)
+	     (let* ((str (apply simple-format #f fmt args))
+		    (len (string-length str)))
+	       (cond
+		((char=? #\# (string-ref str 0))
+		 (display str))
+		(else
+		 (when (> (+ column len) maxcol)
+		   (newline)
+		   (set! column 0))
+		 (if (char=? #\newline (string-ref str (1- len)))
+		     (string-set! str (1- len) #\space))
+		 (display str)
+		 (set! column (+ column len))))))))
+
+    (lambda (arg0 . rest)
+      (cond
+       ((string? arg0) (apply sf arg0 rest))
+       ((eqv? 'nlin arg0) ;; newline if needed
+        (cond ((positive? column) (newline) (set! column 0))))
+       ((eqv? 'push arg0) #f)
+       ((eqv? 'pop arg0) #f)
+       (else (error "pp-formatter/ugly: bad args"))))))
+  
+;; @deffn move-if-changed src-file dst-file [sav-file]
 ;; Return @code{#t} if changed.
 (define (move-if-changed src-file dst-file . rest)
 

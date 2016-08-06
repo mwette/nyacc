@@ -17,6 +17,7 @@ default:
 	@echo NYACC_SRCS = $(NYACC_SRCS)
 
 NYACC_BASE_BINS =				\
+	nyacc/bison.go				\
 	nyacc/export.go				\
 	nyacc/import.go				\
 	nyacc/lalr.go				\

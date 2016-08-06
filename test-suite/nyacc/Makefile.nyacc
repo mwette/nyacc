@@ -1,0 +1,30 @@
+# nyacc/Makefile.nyacc
+#
+# Copyright (C) 2016 Matthew R. Wette
+# 
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+
+SUBDIRS = lang
+
+TESTS_ENVIRONMENT = \
+	guile 
+
+TESTS = \
+	lex-01.test				\
+	lalr-01.test				\
+	#
+
+check: check-TESTS
+
+check-TESTS: $(TESTS)
+	@for test in $(TESTS); do \
+		$(TESTS_ENVIRONMENT) $${test}; \
+	done
+	@for dir in $(SUBDIRS); do \
+		(cd $$dir; make -f Makefile.nyacc check-TESTS); \
+	done
+
+# --- last line ---

@@ -18,12 +18,14 @@
 ;; C parser generator: based on ISO-C99; with comments and CPP statements
 
 (define-module (nyacc lang c99 mach)
-  #:export (c99-spec c99-mach dev-parse-c gen-c99-files gen-c99x-files)
+  #:export (c99-spec c99-mach dev-parse-c dev-parse-c99
+	    gen-c99-files gen-c99x-files)
   #:use-module (nyacc lang c99 cpp)
+  #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lang util)
+  #:use-module (nyacc util)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map))
   #:use-module ((sxml xpath) #:select (sxpath))
@@ -37,8 +39,8 @@
 (define c99-spec
   (lalr-spec
    (notice lang-crn-lic)
-   (prec< "then" "else")	    ; "then/else" SR-conflict resolution
-   (prec< "imp"			    ; "implied type" SR-conflict resolution
+   (prec< 'then "else")	       ; "then/else" SR-conflict resolution
+   (prec< 'imp		       ; "implied type" SR-conflict resolution
 	  "char" "short" "int" "long"
 	  "float" "double" "_Complex")
    (start translation-unit-proxy)
@@ -59,7 +61,7 @@
      (postfix-expression "[" expression "]" ($$ `(array-ref ,$3 ,$1)))
      (postfix-expression "(" argument-expression-list ")"
 			 ($$ `(fctn-call ,$1 ,(tl->list $3))))
-     (postfix-expression "(" ")" ($$ `(fctn-call ,$1)))
+     (postfix-expression "(" ")" ($$ `(fctn-call ,$1 (expr-list))))
      (postfix-expression "." identifier ($$ `(d-sel ,$3 ,$1)))
      (postfix-expression "->" identifier ($$ `(i-sel ,$3 ,$1)))
      (postfix-expression "++" ($$ `(post-inc ,$1)))
@@ -79,8 +81,9 @@
      (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3)))
      )
     (arg-expr-hack
-     (declaration-specifiers abstract-declarator ($$ `(decl ,(tl->list $1) $2)))
-     (declaration-specifiers ($$ `(decl ,(tl->list $1)))))
+     (declaration-specifiers
+      abstract-declarator ($$ `(param-decl ,(tl->list $1) $2)))
+     (declaration-specifiers ($$ `(param-decl ,(tl->list $1)))))
 
     (unary-expression
      (postfix-expression)		; S 6.5.3
@@ -182,7 +185,10 @@
 
     (expression				; S 6.5.17
      (assignment-expression)
-     (expression "," assignment-expression ($$ `(comma-expr ,$1 ,$3)))
+     (expression "," assignment-expression
+		 ($$ (if (eqv? 'comma-expr (sx-tag $1))
+			 (append $1 (list $3))
+			 `(comma-expr ,$1 ,$3))))
      )
 
     (constant-expression		; S 6.6
@@ -199,7 +205,7 @@
      (declaration-specifiers
       ";" opt-code-comment
       ($$ (if (pair? $3)
-	      `(decl ,(tl->list $1) (list $3))
+	      `(decl ,(tl->list $1) ,(list $3))
 	      `(decl ,(tl->list $1)))))
      )
 
@@ -248,38 +254,38 @@
      )
 
     (fixed-type-specifier
-     ("short" ($prec "imp") ($$ '(fixed-type "short")))
+     ("short" ($prec 'imp) ($$ '(fixed-type "short")))
      ("short" "int" ($$ '(fixed-type "short int")))
-     ("signed" "short" ($prec "imp") ($$ '(fixed-type "signed short")))
+     ("signed" "short" ($prec 'imp) ($$ '(fixed-type "signed short")))
      ("signed" "short" "int" ($$ '(fixed-type "signed short int")))
      ("int" ($$ '(fixed-type "int")))
-     ("signed" ($prec "imp") ($$ '(fixed-type "signed")))
+     ("signed" ($prec 'imp) ($$ '(fixed-type "signed")))
      ("signed" "int" ($$ '(fixed-type "signed int")))
-     ("long" ($prec "imp") ($$ '(fixed-type "long")))
+     ("long" ($prec 'imp) ($$ '(fixed-type "long")))
      ("long" "int" ($$ '(fixed-type "long int")))
-     ("signed" "long" ($prec "imp") ($$ '(fixed-type "signed long")))
+     ("signed" "long" ($prec 'imp) ($$ '(fixed-type "signed long")))
      ("signed" "long" "int" ($$ '(fixed-type "signed long int")))
-     ("long" "long" ($prec "imp") ($$ '(fixed-type "long long")))
+     ("long" "long" ($prec 'imp) ($$ '(fixed-type "long long")))
      ("long" "long" "int" ($$ '(fixed-type "long long int")))
-     ("signed" "long" "long" ($prec "imp")
+     ("signed" "long" "long" ($prec 'imp)
       ($$ '(fixed-type "signed long long")))
      ("signed" "long" "long" "int" ($$ '(fixed-type "signed long long int")))
      ("unsigned" "short" "int" ($$ '(fixed-type "unsigned short int")))
-     ("unsigned" "short" ($prec "imp") ($$ '(fixed-type "unsigned short")))
+     ("unsigned" "short" ($prec 'imp) ($$ '(fixed-type "unsigned short")))
      ("unsigned" "int" ($$ '(fixed-type "unsigned int")))
-     ("unsigned" ($prec "imp") ($$ '(fixed-type "unsigned")))
+     ("unsigned" ($prec 'imp) ($$ '(fixed-type "unsigned")))
      ("unsigned" "long" "int" ($$ '(fixed-type "unsigned long")))
-     ("unsigned" "long" ($prec "imp") ($$ '(fixed-type "unsigned long")))
+     ("unsigned" "long" ($prec 'imp) ($$ '(fixed-type "unsigned long")))
      ("unsigned" "long" "long" "int"
       ($$ '(fixed-type "unsigned long long int")))
-     ("unsigned" "long" "long" ($prec "imp")
+     ("unsigned" "long" "long" ($prec 'imp)
       ($$ '(fixed-type "unsigned long long")))
      ("char" ($$ '(fixed-type "char")))
      ("signed" "char" ($$ '(fixed-type "signed char")))
      ("unsigned" "char" ($$ '(fixed-type "unsigned char"))))
     (float-type-specifier
-     ("float" ($prec "imp") ($$ '(float-type "float")))
-     ("double" ($prec "imp") ($$ '(float-type "double")))
+     ("float" ($prec 'imp) ($$ '(float-type "float")))
+     ("double" ($prec 'imp) ($$ '(float-type "double")))
      ("long" "double" ($$ '(float-type "long double"))))
     (complex-type-specifier
      ("_Complex" ($$ '(complex-type "_Complex")))
@@ -290,17 +296,19 @@
 
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier		; S 6.7.2.1
-     ("struct" identifier "{" struct-declaration-list "}"
+     ("struct" ident-like "{" struct-declaration-list "}"
       ($$ `(struct-def ,$2 ,(tl->list $4))))
      ("struct" "{" struct-declaration-list "}"
       ($$ `(struct-def ,(tl->list $3))))
-     ("struct" identifier ($$ `(struct-ref ,$2)))
-     ("union" identifier "{" struct-declaration-list "}"
+     ("struct" ident-like ($$ `(struct-ref ,$2)))
+     ("union" ident-like "{" struct-declaration-list "}"
       ($$ `(union-def ,$2 ,(tl->list $4))))
      ("union" "{" struct-declaration-list "}"
       ($$ `(union-def ,(tl->list $3))))
-     ("union" identifier ($$ `(union-ref ,$2)))
+     ("union" ident-like ($$ `(union-ref ,$2)))
      )
+    ;; because name following struct/union can be indentifier or typeref
+    (ident-like (identifier) (typedef-name ($$ `(ident ,(cdr $1)))))
 
     ;; Calling this field-list in the parse tree.
     (struct-declaration-list		; S 6.7.2.1
@@ -359,9 +367,9 @@
      )
 
     (type-qualifier
-     ("const" ($$ '(type-qual ,$1)))
-     ("volatile" ($$ '(type-qual ,$1)))
-     ("restrict" ($$ '(type-qual ,$1)))
+     ("const" ($$ `(type-qual ,$1)))
+     ("volatile" ($$ `(type-qual ,$1)))
+     ("restrict" ($$ `(type-qual ,$1)))
      )
 
     (function-specifier ("inline" ($$ `(fctn-spec ,$1))))
@@ -538,13 +546,13 @@
      (selection-statement)
      (iteration-statement)
      (jump-statement)
-     (cpp-statement)			; added 30Nov2015
+     (cpp-statement)
      )
 
     (labeled-statement
-     (identifier ":" statement)
-     ("case" constant-expression ":" statement)
-     ("default" ":" statement)
+     (identifier ":" statement ($$ `(labeled-stmt ,$1 ,$3)))
+     ("case" constant-expression ":" statement ($$ `(case ,$2 ,$4)))
+     ("default" ":" statement ($$ `(default ,$3)))
      )
 
     (compound-statement
@@ -570,7 +578,7 @@
      )
 
     (selection-statement
-     ("if" "(" expression ")" statement ($prec "then")
+     ("if" "(" expression ")" statement ($prec 'then)
       ($$ `(if ,$3 ,$5)))
      ("if" "(" expression ")" statement "else" statement
       ($$ `(if ,$3 ,$5 ,$7)))
@@ -580,19 +588,16 @@
     (iteration-statement
      ("while" "(" expression ")" statement ($$ `(while ,$3 ,$5)))
      ("do" statement "while" "(" expression ")" ";" ($$ `(do-while ,$2 ,$5)))
-     ("for" "(" initial-clause expression ";" expression ")" statement
+     ("for" "(" initial-clause opt-expression ";" opt-expression ")" statement
       ($$ `(for ,$3 ,$4 ,$6 ,$8)))
-     ("for" "(" initial-clause expression ";" ")" statement
-      ($$ `(for ,$3 ,$6)))
-     ("for" "(" initial-clause ";" expression ")" statement
-      ($$ `(for ,$3 ,5 ,$7)))
-     ("for" "(" initial-clause ";" ")" statement
-      ($$ `(for ,$3 ,$6))))
+     )
     (initial-clause			; <= added for convenience
      (expression ";")
      (";" ($$ '(expr)))
-     (declaration)
-     )
+     (declaration))
+    (opt-expression			; <= added for convenience
+     ($empty ($$ '(expr)))
+     (expression))
 
     (jump-statement			; S 6.8.6
      ("goto" identifier ";" ($$ `(goto $2)))
@@ -685,23 +690,31 @@
   (let ((info (fluid-ref *info*)))
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
-(define* (dev-parse-c
-	  #:key (cpp-defs '()) (inc-dirs '()) (td-dict '()) (mode 'file) debug)
+(define* (dev-parse-c99 #:key
+			(cpp-defs '())	; CPP defines
+			(inc-dirs '())	; include directories
+			(td-dict '())	; typedef dictionary
+			(mode 'file)	; mode: 'file or 'code
+			(xdef? #f)	; expand def function: proc name mode
+			(debug #f))	; debug
   (catch
    'parse-error
    (lambda ()
      (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
        (with-fluid* *info* info
 		    (lambda ()
-		      (raw-parser (gen-c-lexer #:mode mode) #:debug debug)))))
+		      (raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
+				  #:debug debug)))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
 
+(define dev-parse-c dev-parse-c99)
+
 ;;; =====================================
 
-;; @item gen-c99x-files [dir] => #t
-;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.
+;; @item gen-c99-files [dir] => #t
+;; Update or generate the files @quot{c99act.scm} and @quot{c99tab.scm}.
 ;; These are the tables and actions for the C99 parser.
 ;; If there are no changes to existing files, no update occurs.
 (define (gen-c99-files . rest)

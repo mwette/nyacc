@@ -18,7 +18,7 @@
 ;; C parser
 
 (define-module (nyacc lang c99 xparser)
-  #:export (parse-cx)
+  #:export (parse-cx parse-c99x)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
@@ -48,7 +48,7 @@
 ;; @item parse-cx [#:cpp-defs def-a-list] [#:debug bool]
 ;; This needs to be explained in some detail.
 ;; [#:tyns '("foo_t")]
-(define* (parse-cx xstr
+(define* (parse-c99x xstr
 		   #:key (cpp-defs '()) (tn-dict '()) (debug #f) (tyns '()))
   (catch
    'parse-error
@@ -64,5 +64,7 @@
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)
      #f)))
+
+(define parse-cx parse-c99x)
 
 ;; --- last line ---

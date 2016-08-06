@@ -12,9 +12,8 @@
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; Lesser General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU Lesser General Public
-;;; License along with this library; if not, write to the Free Software
-;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc export)
   #:export (lalr->bison
@@ -24,6 +23,7 @@
   #:use-module ((nyacc lalr) #:select (find-terminal pp-rule))
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
+  #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module ((srfi srfi-43) #:select (vector-for-each))
   #:use-module (ice-9 regex)
   )
@@ -67,6 +67,7 @@
 
 (define (token->bison tok)
   (cond
+   ((eqv? tok '$error) "error")
    ((symbol? tok) (symbol->bison tok))
    ((char? tok) (c-char tok))
    ((string? tok)
@@ -88,26 +89,47 @@
 	(token->bison term)
 	(symbol->bison symb))))
 
-;; @item pp-bison-input spec => to current output port
+;; @deffn lalr->bison spec => to current output port
 ;; needs cleanup: tokens working better but p-rules need fix.
-;; todo: add '%empty' to empty rules
 (define (lalr->bison spec . rest)
+
+  (define (setup-assc assc)
+    (fold (lambda (al seed)
+	    (append (x-flip al) seed)) '() assc))
+
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref spec 'lhs-v))
 	 (rhs-v (assq-ref spec 'rhs-v))
 	 (prp-v (assq-ref spec 'prp-v))
+	 (assc (setup-assc (assq-ref spec 'assc)))
 	 (nrule (vector-length lhs-v))
 	 (terms (assq-ref spec 'terminals)))
-    ;; copyright notice
+    ;; Generate copyright notice.
     (let* ((notice (assq-ref (assq-ref spec 'attr) 'notice))
 	   (lines (if notice (string-split notice #\newline) '())))
       (for-each (lambda (l) (fmt port "// ~A\n" l))
 		lines))
-    ;;
+    ;; Write out the tokens.
     (for-each 
-     (lambda (term) (fmt port "%token ~A\n" (token->bison term)))
+     (lambda (term)
+       (unless (eqv? term '$error)
+	 (fmt port "%token ~A\n" (token->bison term))))
      terms)
-    ;;
+    ;; Write the associativity and prececences.
+    (let iter ((pl '()) (ppl (assq-ref spec 'prec)))
+      (cond
+       ((pair? pl)
+	(fmt port "%~A" (or (assq-ref assc (caar pl)) "precedence"))
+	(let iter2 ((pl (car pl)))
+	  (unless (null? pl)
+	    (fmt port " ~A" (elt->bison (car pl) terms))
+	    (iter2 (cdr pl))))
+	(fmt port "\n")
+	(iter (cdr pl) ppl))
+       ((pair? ppl) (iter (car ppl) (cdr ppl)))))
+    ;; Don't compact tables.
+    (fmt port "%define lr.default-reduction accepting\n")
+    ;; Provide start symbol.
     (fmt port "%start ~A\n%%\n" (elt->bison (assq-ref spec 'start) terms))
     ;;
     (do ((i 1 (1+ i))) ((= i nrule))

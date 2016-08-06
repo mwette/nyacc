@@ -1,0 +1,15 @@
+ex01.c	complex file
+ex02.c	for-loop
+ex03.c	switch
+ex04.c	do-while 
+ex05a.c	for loop w/ decl
+ex05b.c	for loop w/ no decl
+ex05c.c	for-loop w/ missing first arg
+ex05d.c	for-loop w/missing second arg
+ex05e.c	for-loop w/missing third arg
+ex06.c	enum def
+ex07.c	pointer
+ex08.c	fctn-decl
+ex09.c	array defn
+ex10.c	bug C99-001 solved
+ex11.c	struct's

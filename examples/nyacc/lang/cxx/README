@@ -1,0 +1,51 @@
+
+Copyright (C) 2015,2016 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+thoughts on backtracking ...
+
+(lalr-spec
+ (search
+  (save (lexr 'save))
+  (reset (lexr 'reset))
+  (remove (lexr 'remove)))
+ (grammar
+  (foo
+   $search
+   (a b c)
+   (d e f)
+   (g h i))
+ )
+=>
+(spec
+ (prec> '$S1a '$S1b '$S1c)
+
+ (foo
+  ($P1a      a b c $P1c ($prec '$S1a))
+  ($P1a $P1b d e f $P1c ($prec '$S1b))
+  ($P1a $P1b d e f $P1c ($prec '$S1c)))
+ 
+ ($P1a ($empty ($$ (lexr 'save))))
+ ($P1b ($empty ($$ (lexr 'reset))))
+ ($P1c ($empty ($$ (lexr 'remove))))
+ )
+
+parser:
+
+tables
+body
+	lexer
+	(define gen-lexer ...)
+actions
+	(ref 
+
+(raw-parser actions) (make-parser actions)) => (lambda (lexr) ...)
+	uses vector of actions
+	and calls lexical anal?
+
+parser 
+	(raw-parser (gen-lexer))

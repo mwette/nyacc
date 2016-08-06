@@ -7,31 +7,52 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (nyacc lang calc parser))
 (use-modules (nyacc lalr))
+(use-modules (nyacc lex))
 (use-modules (nyacc parse))
+
+(define simple-spec
+  (lalr-spec
+   (prec< (left "+" "-") (left "*" "/"))
+   (start expr)
+   (grammar
+    (expr
+     (expr "+" expr ($$ (+ $1 $3)))
+     (expr "-" expr ($$ (- $1 $3)))
+     (expr "*" expr ($$ (* $1 $3)))
+     (expr "/" expr ($$ (/ $1 $3)))
+     ("*" $error)
+     ($fixed ($$ (string->number $1)))
+     ($float ($$ (string->number $1)))
+     ("(" expr ")" ($$ $2))))))
+
+(define simple-mach (make-lalr-machine simple-spec))
+;; OR
+;; (use-modules (nyacc bison))
+;; (define simple-mach (make-lalr-machine/bison simple-spec))
+
+(define match-table (assq-ref simple-mach 'mtab))
+
+(define gen-lexer (make-lexer-generator match-table))
+
+(define parse (make-lalr-parser simple-mach))
+
+(define demo-string "2 + 2")
+
+(simple-format #t "~A => ~A\n"
+	       demo-string
+	       (with-input-from-string demo-string
+		 (lambda () (parse (gen-lexer)))))
+
+#|
+(with-output-to-file "lang.txt"
+  (lambda ()
+    (pp-lalr-grammar simple-mach)
+    (pp-lalr-machine simple-mach)))
 (use-modules (nyacc export))
-(use-modules (ice-9 pretty-print))
+(with-output-to-file "gram.y"
+  (lambda ()
+    (lalr->bison simple-mach)))
+|#
 
-;; Generates a file with grammar and automaton, like bison's gram.output.
-(when #f
-  (with-output-to-file "lang.txt.new"
-    (lambda ()
-      (pp-lalr-grammar calc-spec)
-      (pp-lalr-machine calc-mach)
-      )))
-
-#;(with-output-to-file "gram.y.new"
-  (lambda () (lalr->bison calc-spec)))
-
-;; Generate tables for a standalone parser.
-;;(write-lalr-actions js-mach "actions.scm.new")
-;;(write-lalr-tables js-mach "tables.scm.new")
-
-(use-modules (nyacc lang calc compiler))
-
-(define exp (with-input-from-string "a = 1 + 2 * 3\n"
-	      (lambda () (calc-parse #:debug #t))))
-(pretty-print exp)
-
-;; --- last line
+;; --- last line ---

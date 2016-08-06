@@ -51,7 +51,7 @@
      )
 
     (program-element
-     ( ($$ #f))
+     ($empty ($$ #f))
      (pragma ($$-ref 'a021))
      (statement ($$-ref 'a022))
      (function-definition ($$-ref 'a023))
@@ -62,7 +62,7 @@
       ($$ `(pragma ,$2 ,(tl->list $3))))
      )
     (const-expr-list
-     ( ($$/ref 'a031 (make-tl 'const-expr-list)))
+     ($empty ($$/ref 'a031 (make-tl 'const-expr-list)))
      (const-expr-list "," constant ($$/ref 'a032 (tl-append $1 $3)))
      )
 
