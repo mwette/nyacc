@@ -9,20 +9,20 @@
 ;; runtime utilities for the parsers -- needs work
 
 (define-module (nyacc lang util)
-  #:export (lang-crn-lic
-	    push-input pop-input reset-input-stack
-	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
-	    tl-append tl-insert tl-extend tl+attr
-	    sx-tag
-	    sx-attr sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr*
-	    sx-ref sx-tail sx-find
-	    ;; for pretty-printing
-	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
-	    ;; for ???
-	    move-if-changed
-            fmterr)
-  #:use-module ((srfi srfi-1) #:select(find))
-  )
+#:export (lang-crn-lic
+    push-input pop-input reset-input-stack
+    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
+    tl-append tl-insert tl-extend tl+attr
+    sx-tag
+    sx-attr sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr*
+    sx-ref sx-tail sx-find
+    ;; for pretty-printing
+    make-protect-expr make-pp-formatter make-pp-formatter/ugly
+    ;; for ???
+    move-if-changed
+    fmterr)
+#:use-module ((srfi srfi-1) #:select(find))
+)
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
@@ -33,38 +33,38 @@ or any later version published by the Free Software Foundation.  See the
 file COPYING included with the this distribution.")
 
 (define (fmterr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
+(apply simple-format (current-error-port) fmt args))
 
 ;; === input stack =====================
 
 (define *input-stack* (make-fluid '()))
 
 (define (reset-input-stack)
-  (fluid-set! *input-stack* '()))
+(fluid-set! *input-stack* '()))
 
 (define (push-input port)
-  (let ((curr (current-input-port))
-	(ipstk (fluid-ref *input-stack*)))
-    (fluid-set! *input-stack* (cons curr ipstk))
-    (set-current-input-port port)))
+(let ((curr (current-input-port))
+(ipstk (fluid-ref *input-stack*)))
+(fluid-set! *input-stack* (cons curr ipstk))
+(set-current-input-port port)))
 
 ;; Return #f if empty
 (define (pop-input)
-  (let ((ipstk (fluid-ref *input-stack*)))
-    (if (null? ipstk) #f
-	(begin
-	  (set-current-input-port (car ipstk))
-	  (fluid-set! *input-stack* (cdr ipstk))))))
+(let ((ipstk (fluid-ref *input-stack*)))
+(if (null? ipstk) #f
+(begin
+  (set-current-input-port (car ipstk))
+  (fluid-set! *input-stack* (cdr ipstk))))))
 
 ;; It may be possible to reimplement with closures, using soft-ports.
 ;; (push-string-input ...
 
 #|
 (define (push-string-input str)
-  (let* ((prev (current-input-port))
-	 (port (make-soft-port ...))
-	 )
-    #f))
+(let* ((prev (current-input-port))
+ (port (make-soft-port ...))
+ )
+#f))
 |#
 
 ;; === tl ==============================
@@ -83,9 +83,9 @@ file COPYING included with the this distribution.")
 ;; @deffn make-tl tag [item item ...]
 ;; Create a tagged-list structure.
 (define (make-tl tag . rest)
-  (let iter ((tail tag) (l rest))
-    (if (null? l) (cons '() tail)
-	(iter (cons (car l) tail) (cdr l)))))
+(let iter ((tail tag) (l rest))
+(if (null? l) (cons '() tail)
+(iter (cons (car l) tail) (cdr l)))))
 
 ;; @deffn tl->list tl
 ;; Convert a tagged list structure to a list.  This collects added attributes
@@ -94,37 +94,37 @@ file COPYING included with the this distribution.")
 ;; (<tag> (@ <attr>) <rest>)
 ;; @end example
 (define (tl->list tl)
-  (let ((heda (car tl))
-	(head (let iter ((head '()) (attr '()) (tl-head (car tl)))
-		(if (null? tl-head)
-		    (if (pair? attr)
-			(cons (cons '@ attr) (reverse head))
-			(reverse head))
-		    (if (and (pair? (car tl-head)) (eq? '@ (caar tl-head)))
-			(iter head (cons (cdar tl-head) attr) (cdr tl-head))
-			(iter (cons (car tl-head) head) attr (cdr tl-head)))))))
-    (let iter ((tail '()) (tl-tail (cdr tl)))
-      (if (pair? tl-tail)
-	  (iter (cons (car tl-tail) tail) (cdr tl-tail))
-	  (cons tl-tail (append head tail))))))
+(let ((heda (car tl))
+(head (let iter ((head '()) (attr '()) (tl-head (car tl)))
+	(if (null? tl-head)
+	    (if (pair? attr)
+		(cons (cons '@ attr) (reverse head))
+		(reverse head))
+	    (if (and (pair? (car tl-head)) (eq? '@ (caar tl-head)))
+		(iter head (cons (cdar tl-head) attr) (cdr tl-head))
+		(iter (cons (car tl-head) head) attr (cdr tl-head)))))))
+(let iter ((tail '()) (tl-tail (cdr tl)))
+(if (pair? tl-tail)
+  (iter (cons (car tl-tail) tail) (cdr tl-tail))
+  (cons tl-tail (append head tail))))))
 
 ;; @deffn tl-insert tl item
 ;; Insert item at front of tagged list (but after tag).
 (define (tl-insert tl item)
-  (cons (cons item (car tl)) (cdr tl)))
+(cons (cons item (car tl)) (cdr tl)))
 
 ;; @deffn tl-append tl item ...
 ;; Append item at end of tagged list.
 (define (tl-append tl . rest)
-  (cons (car tl)
-	(let iter ((tail (cdr tl)) (items rest))
-	  (if (null? items) tail
-	      (iter (cons (car items) tail) (cdr items))))))
+(cons (car tl)
+(let iter ((tail (cdr tl)) (items rest))
+  (if (null? items) tail
+      (iter (cons (car items) tail) (cdr items))))))
 
 ;; @deffn tl-extend tl item-l
 ;; Extend with a list of items.
 (define (tl-extend tl item-l)
-  (apply tl-append tl item-l))
+(apply tl-append tl item-l))
 
 ;; @deffn tl+attr tl key val)
 ;; Add an attribute to a tagged list.  Return the tl.
@@ -132,13 +132,13 @@ file COPYING included with the this distribution.")
 ;; (tl+attr tl 'type "int")
 ;; @end example
 (define (tl+attr tl key val)
-  (tl-insert tl (cons '@ (list key val))))
+(tl-insert tl (cons '@ (list key val))))
 
 ;; @deffn tl-merge tl tl1
 ;; Merge guts of phony-tl @code{tl1} into @code{tl}.
 (define (tl-merge tl tl1)
-  (error "not implemented (yet)")
-  )
+(error "not implemented (yet)")
+)
 
 ;; === sx ==============================
 ;; @section SXML Utility Procedures
@@ -151,73 +151,73 @@ file COPYING included with the this distribution.")
 ;; (sx-ref '(abc (@ (foo "1")) "def") 1) => "def"
 ;; @end example
 (define (sx-ref sx ix)
-  (define (list-xref l x) (if (> (length l) x) (list-ref l x) #f))
-  (cond
-   ((zero? ix) (car sx))
-   ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
-    (list-xref sx (1+ ix)))
-   (else
-    (list-xref sx ix))))
+(define (list-xref l x) (if (> (length l) x) (list-ref l x) #f))
+(cond
+((zero? ix) (car sx))
+((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
+(list-xref sx (1+ ix)))
+(else
+(list-xref sx ix))))
 
 ;; @deffn sx-tag sx => tag
 ;; Return the tag for a tree
 (define (sx-tag sx)
-  (if (pair? sx) (car sx) #f))
+(if (pair? sx) (car sx) #f))
 
 ;; @deffn sx-tail sx ix => (list)
 ;; Return the tail starting at the ix-th cdr, starting from 0.
 ;; For example, if sx has 3 items then (sx-tail sx 2) returns '().
 ;; BUG: not working for (sx '(foo) 1)
 (define (sx-tail sx ix)
-  (if (zero? ix) (error "zero index not supported"))
-  (let ((sx (cdr sx)) (ix (1- ix)))
-    (cond
-     ((and (null? sx) (zero? ix)) sx)
-     ((and (pair? (car sx)) (eqv? '@ (caar sx))) (list-tail sx (1+ ix)))
-     (else (list-tail sx ix)))))
+(if (zero? ix) (error "zero index not supported"))
+(let ((sx (cdr sx)) (ix (1- ix)))
+(cond
+((and (null? sx) (zero? ix)) sx)
+((and (pair? (car sx)) (eqv? '@ (caar sx))) (list-tail sx (1+ ix)))
+(else (list-tail sx ix)))))
 
 ;; @deffn sx-has-attr? sx
 ;; p to determine if @arg{sx} has attributes.
 (define (sx-has-attr? sx)
-  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx))))
+(and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx))))
 
 ;; @deffn sx-attr sx => '(@ ...)|#f
 ;; @example
 ;; (sx-attr '(abc (@ (foo "1")) def) 1) => '(@ (foo "1"))
 ;; @end example
 (define (sx-attr sx)
-  (if (and (pair? (cdr sx)) (pair? (cadr sx)))
-      (if (eqv? '@ (caadr sx))
-	  (cadr sx)
-	  #f)
-      #f))
+(if (and (pair? (cdr sx)) (pair? (cadr sx)))
+(if (eqv? '@ (caadr sx))
+  (cadr sx)
+  #f)
+#f))
 
 ;; @deffn sx-attr-ref sx key => val
 ;; Return an attribute value given the key, or @code{#f}.
 (define (sx-attr-ref sx key)
-  (and=> (sx-attr sx)
-	 (lambda (attr)
-	   (and=> (assq-ref (cdr attr) key) car))))
+(and=> (sx-attr sx)
+ (lambda (attr)
+   (and=> (assq-ref (cdr attr) key) car))))
 
 ;; @deffn sx-set-attr! sx key val
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,
 ;; add it, if it does exist, replace it.
 (define (sx-set-attr! sx key val . rest)
-  (if (sx-has-attr? sx)
-      (let ((attr (cadr sx)))
-	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
-      (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
-  sx)
+(if (sx-has-attr? sx)
+(let ((attr (cadr sx)))
+(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
+(set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
+sx)
 
 ;; @deffn sx-set-attr* sx key val [key val [key ... ]]
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,
 ;; add it, if it does exist, replace it.
 (define (sx-set-attr* sx . rest)
-  (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
-    (cond
-     ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
-     (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
-      
+(let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
+(cond
+((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
+(else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
+
 ;; @deffn sx-find tag sx => ((tag ...) (tag ...))
 ;; Find the first matching element (in the first level).
 (define (sx-find tag sx)
@@ -308,13 +308,14 @@ file COPYING included with the this distribution.")
 	(lambda (fmt . args)
 	  (let* ((str (apply simple-format #f fmt args))
 		 (len (string-length str)))
-	    (when (zero? column)
+	    (cond
+	     ((zero? column)
 	      (display (ind-str))
 	      (set! column (+ column ind-len)))
-	    (when (> (+ column len) maxcol)
+	     ((> (+ column len) maxcol)
 	      (newline)
 	      (display (cnt-str))
-	      (set! column (+ column ind-len 4)))
+	      (set! column (+ column ind-len 4))))
 	    (display str)
 	    (when (and (positive? len)
 		       (eqv? #\newline (string-ref str (1- len))))
@@ -322,6 +323,7 @@ file COPYING included with the this distribution.")
 
     (lambda (arg0 . rest)
       (cond
+       ;;((string? arg0) (if (> (string-length arg0) 0) (apply sf arg0 rest)))
        ((string? arg0) (apply sf arg0 rest))
        ((eqv? 'push arg0) (push-il))
        ((eqv? 'pop arg0) (pop-il))
@@ -341,6 +343,7 @@ file COPYING included with the this distribution.")
 	     (let* ((str (apply simple-format #f fmt args))
 		    (len (string-length str)))
 	       (cond
+		((zero? len) #t)
 		((char=? #\# (string-ref str 0))
 		 (display str))
 		(else
