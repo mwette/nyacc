@@ -171,7 +171,7 @@
     (conditional-expression
      (logical-or-expression)
      (logical-or-expression "?" expression ":" conditional-expression
-			    ($$ `(cond-expr ,$1 ,$2 ,$3)))
+			    ($$ `(cond-expr ,$1 ,$3 ,$5)))
      )
 
     (assignment-expression		; S 6.5.16
@@ -423,7 +423,7 @@
 
     (parameter-type-list
      (parameter-list ($$ $1))
-     (parameter-list "," "..." ($$ (tl-append $1 '(ellipis))))
+     (parameter-list "," "..." ($$ (tl-append $1 '(ellipsis))))
      )
 
     (parameter-list

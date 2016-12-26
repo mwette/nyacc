@@ -94,7 +94,8 @@
       ((pragma ,text) (sf "#pragma ~A\n" text))
       (,otherwise
        (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree))
-      ))
+      )
+    (fmtr 'nlin))
 
   (define (unary/l op rep rval)
     (sf rep)
@@ -103,10 +104,10 @@
 	(ppx rval)))
   
   (define (unary/r op rep lval)
-    (sf rep)
     (if (protect-expr? 'lt op lval)
 	(ppx/p lval)
-	(ppx lval)))
+	(ppx lval))
+    (sf rep))
   
   (define (binary op rep lval rval)
     (if (protect-expr? 'lt op lval)
@@ -125,8 +126,10 @@
 	(case (sx-tag iexpr)
 	  ((initzer-list)
 	   (sf "{")
-	   (sf "initzer-list")	; TODO
-	   (sf " }"))
+	   (for-each
+	    (lambda (expr) (ppx (sx-ref expr 1)) (sf ", "))
+	    (sx-tail iexpr 1))
+	   (sf "}"))
 	  (else
 	   (ppx iexpr))))))
 
@@ -158,7 +161,7 @@
 	  (if (pair? (cdr pair)) (sf " ")))
 	value-l))
 
-      ((comment ,text) (sf "/*~A */\n" text))
+      ((comment ,text) (sf "/*~A*/\n" text))
 
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
       
@@ -191,6 +194,9 @@
       ((div ,lval ,rval) (binary 'div "/" lval rval))
       ((mod ,lval ,rval) (binary 'mod "%" lval rval))
 
+      ((lshift ,lval ,rval) (binary 'lshift "<<" lval rval))
+      ((rshift ,lval ,rval) (binary 'lshift "<<" lval rval))
+
       ((lt ,lval ,rval) (binary 'lt " < " lval rval))
       ((gt ,lval ,rval) (binary 'gt " > " lval rval))
 
@@ -202,6 +208,13 @@
       ((bitwise-and ,lval ,rval) (binary 'bitwise-and " & " lval rval))
       ((bitwise-or ,lval ,rval) (binary 'bitwise-and " | " lval rval))
       ((bitwise-xor ,lval ,rval) (binary 'bitwise-xor " ^ " lval rval))
+
+      ((and ,lval ,rval) (binary 'and " && " lval rval))
+      ((or ,lval ,rval) (binary 'and " || " lval rval))
+
+      ;; CHECK THIS
+      ((cond-expr ,cond ,tval ,fval)
+       (ppx cond) (sf "? ") (ppx tval) (sf ": ") (ppx fval))
 
       ((post-inc ,expr) (unary/r 'post-inc "++" expr))
       ((post-dec ,expr) (unary/r 'post-dec "--" expr))
@@ -268,11 +281,11 @@
        (let iter ((dsl dsl))
 	 (when (pair? dsl)
 	   (case (sx-tag (car dsl))
-	     ((stor-spec) (sf "~A" (car (sx-ref (car dsl) 1))))
-	     ((type-qual) (sf "qual=~A" (sx-ref (car dsl) 1)))
+	     ((stor-spec) (sf "~A " (car (sx-ref (car dsl) 1))))
+	     ((type-qual) (sf "~A " (sx-ref (car dsl) 1)))
 	     ((type-spec) (ppx (car dsl)))
 	     (else (sf "[?:~S] " (car dsl))))
-	   (if (pair? (cdr dsl)) (sf " "))
+	   ;;(if (pair? (cdr dsl)) (sf " "))
 	   (iter (cdr dsl)))))
 
       ((init-declr-list . ,rest)
@@ -419,6 +432,11 @@
        (sf "default:\n")
        (push-il) (ppx stmt) (pop-il))
 
+      ;; CHECK THIS
+      ((while ,expr ,stmt)
+       (sf "while (") (ppx expr) (sf ") ") (ppx stmt)
+       )
+
       ;; This does not meet the convention of "} while" on same line. 
       ((do-while ,stmt ,expr)
        (sf "do ")
@@ -488,6 +506,9 @@
        (pair-for-each
 	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
 	params))
+
+      ((ellipsis)	;; should work
+       (sf "..."))
 
       ((param-decl ,decl-spec-list ,param-declr)
        (ppx decl-spec-list) (sf " ") (ppx param-declr))

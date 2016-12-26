@@ -1,3 +1,11 @@
+2016-11-25  Matt Wette  <mwette@nautilus>
+
+	* added support for ellipsis to lang/c99/cpp.scm
+
+2016-11-24  Matt Wette  <mwette@nautilus>
+
+	* added (ellipsis) to lang/c99/pprint.scm
+
 2016-04-09  Matt Wette  <mwette@nautilus>
 
 	* bison.scm: new file providing make-lalr-machin/bison.  It is

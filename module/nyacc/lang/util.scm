@@ -335,6 +335,7 @@ sx)
 ;; @deffn make-pp-formatter/ugly => fmtr
 ;; Makes a @code{fmtr} like @code{make-pp-formatter} but no indentation
 ;; and just adds strings on ...
+;; This is specific to C/C++ because it will newline if #\# seen first.
 (define* (make-pp-formatter/ugly)
   (let*
       ((maxcol 78)
@@ -342,16 +343,25 @@ sx)
        (sf (lambda (fmt . args)
 	     (let* ((str (apply simple-format #f fmt args))
 		    (len (string-length str)))
+	       (if (and (positive? len)
+			(char=? #\newline (string-ref str (1- len))))
+		   (string-set! str (1- len) #\space))
 	       (cond
-		((zero? len) #t)
-		((char=? #\# (string-ref str 0))
-		 (display str))
+		((zero? len) #t)	; we reference str[0] next
+		((and (equal? len 1) (char=? #\newline (string-ref str 0))) #t)
+		((char=? #\# (string-ref str 0)) ; CPP-stmt: force newline
+		 (when (positive? column) (newline))
+		 (display str)		; str always ends in \n
+		 (set! column		; if ends \n then col= 0 else len
+		       (if (char=? #\newline (string-ref str (1- len)))
+			   0 len)))
+		((zero? column)
+		 (display str)
+		 (set! column len))
 		(else
 		 (when (> (+ column len) maxcol)
 		   (newline)
 		   (set! column 0))
-		 (if (char=? #\newline (string-ref str (1- len)))
-		     (string-set! str (1- len) #\space))
 		 (display str)
 		 (set! column (+ column len))))))))
 

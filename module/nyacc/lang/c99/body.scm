@@ -34,32 +34,37 @@
   )
 
 (define std-dict
-  '(("time.h" "time_t" "clock_t" "size_t")
-    ("stdio.h" "FILE" "size_t")
-    ("string.h" "size_t")
-    ("stddef.h" "ptrdiff_t" "size_t" "wchar_t")
+  '(
+    ("alloca.h")
+    ("complex.h" "complex" "imaginary")
+    ("ctype.h")
+    ("fenv.h" "fenv_t" "fexcept_t")
+    ("float.h" "float_t")
     ("inttypes.h"
      "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
      "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
      "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
      "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t"
      "imaxdiv_t")
+    ("limits.h")
+    ("math.h")
+    ("regex.h" "regex_t" "regmatch_t")
+    ("setjmp.h" "jmp_buf")
+    ("signal.h" "sig_atomic_t")
+    ("string.h" "size_t")
+    ("stdarg.h" "va_list")
+    ("stddef.h" "ptrdiff_t" "size_t" "wchar_t")
     ("stdint.h"
      "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
      "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
      "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
      "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t")
+    ("stdio.h" "FILE" "size_t")
     ("stdlib.h" "div_t" "ldiv_t" "lldiv_t" "wchar_t")
-    ("stdarg.h" "va_list")
-    ;;("unistd.h" "div_t" "ldiv_t")
-    ("signal.h" "sig_atomic_t")
-    ("setjmp.h" "jmp_buf")
-    ("float.h" "float_t")
-    ("fenv.h" "fenv_t" "fexcept_t")
-    ("complex.h" "complex" "imaginary")
+    ("time.h" "time_t" "clock_t" "size_t")
+    ("unistd.h" "size_t" "ssize_t" "div_t" "ldiv_t")
     ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
     ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
-    ("math.h")
     ))
 
 (define (make-cpi debug defines incdirs tn-dict)

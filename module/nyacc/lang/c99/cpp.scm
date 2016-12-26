@@ -51,6 +51,15 @@ todo:
       (if (char-set-contains? c:ws ch)
 	  (skip-ws (read-char))
 	  ch)))
+
+;; @deffn read-ellipsis ch
+;; read ellipsis
+(define (read-ellipsis ch)
+  (cond
+   ((eof-object? ch) #f)
+   ((char=? ch #\.) (read-char) (read-char) "...")
+   (else #f)))
+
 ;; @deffn cpp-define => #f|???
 (define (cpp-define)
   ;; The (weak?) parse architecture is "unread la argument if no match"
@@ -72,6 +81,8 @@ todo:
 		(cond
 		 ((eq? la #\)) (reverse args))
 		 ((read-c-ident la) =>
+		  (lambda (arg) (iter (cons arg args) (skip-ws (read-char)))))
+		 ((read-ellipsis la) =>
 		  (lambda (arg) (iter (cons arg args) (skip-ws (read-char)))))
 		 ((eq? la #\,)
 		  (iter args (skip-ws (read-char))))))

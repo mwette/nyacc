@@ -149,7 +149,7 @@
    (lambda ($1 . $rest) $1)
    ;; conditional-expression => logical-or-expression "?" expression ":" co...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(cond-expr ,$1 ,$2 ,$3))
+     `(cond-expr ,$1 ,$3 ,$5))
    ;; assignment-expression => conditional-expression
    (lambda ($1 . $rest) $1)
    ;; assignment-expression => unary-expression assignment-operator assignm...
@@ -494,7 +494,7 @@
    (lambda ($1 . $rest) $1)
    ;; parameter-type-list => parameter-list "," "..."
    (lambda ($3 $2 $1 . $rest)
-     (tl-append $1 '(ellipis)))
+     (tl-append $1 '(ellipsis)))
    ;; parameter-list => parameter-declaration
    (lambda ($1 . $rest) (make-tl 'param-list $1))
    ;; parameter-list => parameter-list "," parameter-declaration

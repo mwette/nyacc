@@ -53,7 +53,7 @@
 	    fix-fields
 	    fixed-width-int-names
 
-	    match-decl match-comp-decl
+	    match-decl match-comp-decl match-param-decl
 	    declr->ident
 	    expand-decl-typerefs
 	    )
@@ -184,7 +184,7 @@
 	 (cond
 	  ((or (not tbd) (eqv? 'comment (sx-tag tbd)))
 	   (display "ISSUE: some decls have no init-declr-list\n")
-	   ;; no init-declr-list => struct or union def
+	   ;; no init-declr-list => struct or union def or param-decl
 	   ;;(display "spec:\n") (pretty-print spec)
 	   (sxml-match spec
 	     ((decl-spec-list
@@ -218,13 +218,14 @@
 ;; This will turn
 ;; @example
 ;; (comp-decl (decl-spec-list (type-spec "int"))
-;;            (comp-decl-list (comp-decl (ident "a")) (comp-decl (ident "b"))))
+;;            (comp-decl-list
+;;             (comp-declr (ident "a")) (comp-declr (ident "b"))))
 ;; @end example
 ;; @noindent
 ;; into
 ;; @example
-;; ("a" . (comp-decl (decl-spec-list ...) (comp-decl (ident "a"))))
-;; ("b" . (comp-decl (decl-spec-list ...) (comp-decl (ident "b"))))
+;; ("a" . (comp-decl (decl-spec-list ...) (comp-declr (ident "a"))))
+;; ("b" . (comp-decl (decl-spec-list ...) (comp-declr (ident "b"))))
 ;; @end example
 ;; @noindent
 ;; This is coded to be used with fold-right in order to preserve order
@@ -249,6 +250,29 @@
 			   (cons* tag spec (car idl) tail))
 		       (iter res (cdr idl)))))))))
 
+;; @deffn match-param-decl param-decl seed
+;; This will turn
+;; @example
+;; (param-decl (decl-spec-list (type-spec "int")) (param-declr (ident "a")))
+;; @end example
+;; @noindent
+;; into
+;; @example
+;; ("a" . (comp-decl (decl-spec-list ...) (comp-declr (ident "a"))))
+;; @end example
+;; @noindent
+;; This is coded to be used with fold-right in order to preserve order
+;; in @code{struct} and @code{union} field lists.
+(define (match-param-decl decl seed)
+  (if (not (eqv? 'param-decl (car decl))) seed
+      (let* ((tag (sx-ref decl 0))
+	     (attr (sx-attr decl))
+	     (spec (sx-ref decl 1))	; (type-spec ...)
+	     (declr (sx-ref decl 2))	; (param-declr ...)
+	     (ident (declr->ident declr))
+	     (name (cadr ident)))
+	(acons name decl seed))))
+	
 ;; @deffn find-special udecl-alist seed => ..
 ;; NOT DONE
 ;; @example
