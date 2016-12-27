@@ -12,9 +12,8 @@
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; Lesser General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU Lesser General Public
-;;; License along with this library; if not, write to the Free Software
-;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+;;; You should have received a copy of the GNU Lesser General Public License
+;;; along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; I need to find way to preserve srconf, rrconf after hashify.
 ;; compact needs to deal with it ...
@@ -719,7 +718,6 @@
 ;; @end example
 ;; @noindent
 ;; then @code{non-kernels 'A} results in @code{(1 5 7)}.
-;; Note: To support pruning this routine will need to be rewritten.
 (define (non-kernels symb)
   (let* ((core (fluid-ref *lalr-core*))
 	 (lhs-v (core-lhs-v core))
