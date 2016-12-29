@@ -281,6 +281,11 @@
 	  (set! cntr (1+ cntr))
 	  (string->symbol (string-append "$P" (number->string c)))))))
 
+  ;; NEW
+  (define (maksy/tag tag)
+    (string->symbol (string-append (symbol->string (maksy))
+				   ":" (symbol->string tag))))
+
   ;; Canonicalize precedence and associativity. Precedence will appear
   ;; as sets of equivalent items in increasing order of precedence
   ;; (e.g., @code{((+ -) (* /)}).  The input tree has nodes that look like
@@ -376,9 +381,11 @@
     ;; no associated transitions for these.  This allows users to parse for
     ;; comments in some rules but skip the rest.
     (let iter ((ll '($start))		; LHS list
-	       (@l (list		; attributes per prod' rule
-		    `((rhs . ,(vector start-symbol))
-		      (ref . all) (act 1 $1))))
+	       (@l (list		; list p-rule properties
+		    `((rhs . ,(vector start-symbol)) ; vector or rhs sym's
+		      (ref . all)		     ; p-rule ref-ID
+		      (act 1 $1)		     ; p-rule action
+		      )))
 	       (tl '($code-comm $lone-comm $error $end)) ; set of terminals
 	       (nl (list start-symbol))	; set of non-terminals
 	       ;;
@@ -420,13 +427,14 @@
 	   (iter ll @l (add-el (cdar rhs) tl) nl head prox lhs tail rhs-l
 		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
 	  ((with)
-	   (let* ((psy (maksy))		      ; proxy symbol
-		  (rhsx (cadar rhs))	      ; symbol to expand
+	   (let* ((rhsx (cadar rhs))	      ; symbol to expand
+		  (psy (maksy/tag rhsx))      ; proxy symbol
 		  (p-l (map cdr (cddar rhs))) ; prune list
 		  (p1 (list psy `((non-terminal . ,rhsx)
 				  (action #f #f $1)))))
 	     (iter ll @l tl (cons psy nl) head (cons p1 prox) lhs tail rhs-l
-		   (acons 'with (cons psy p-l) attr) (cons psy pel) (cdr rhs))))
+		   (acons 'with (cons* psy rhsx p-l) attr)
+		   (cons psy pel) (cdr rhs))))
 	  (else
 	   (error (fmtstr "bug=~S" (caar rhs))))))
 
@@ -449,7 +457,6 @@
 		     ((memq '$error pel) '((display "syntax error\n")))
 		     ((zero? nrg) '((list)))
 		     (else '($1)))))
-	  (if with (simple-format #t "WITH WHAT?\n"))
 	  (iter (cons lhs ll)
 		(cons
 		 (cons* (cons 'rhs (list->vector (reverse pel)))
@@ -493,7 +500,7 @@
 	       (err-3 (gram-check-3 ll nl err-2))
 	       ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
 	       (err-4 (gram-check-4 ll nl err-3))
-	       ;; todo: Check that with withs are not mixed
+	       ;; todo: Check that withs are not mixed
 	       (err-l err-4))
 	  (for-each (lambda (e) (fmterr "~A\n" e)) err-l)
 	  (if (pair? (filter (lambda (s) (char=? #\* (string-ref s 0))) err-l))
