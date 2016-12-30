@@ -28,7 +28,7 @@
 	    write-lalr-actions write-lalr-tables
 	    pp-rule find-terminal gen-match-table ; used by (nyacc bison)
 
-	    ;; for debugging:
+	    ;; for debugging ONLY: fluid sensitive
 	    with-spec make-LR0-machine
 	    its-member its-trans
 	    looking-at first-item
@@ -115,9 +115,13 @@
 ;; @item @code{('non-terminal . symbol)}
 ;; @item @code{('action . (ref narg guts)}
 ;; @item @code{('proxy . production-rule)}
+;; @item @code{('prune . list-of-nonterms)}
 ;; @end itemize
 ;; Currently, the number of arguments for items is computed in the routine
 ;; @code{process-grammar}.
+;; A @code(prune) expression can only appear in a with or as the left-most
+;; element of the right-hand-side.  The meaning is to filter out those symbols
+;; (terminal or non-terminal) which may appear there (in non-kernel expansion).
 (define-syntax lalr-spec
   (syntax-rules +++ () 
     ((_ <expr> +++)
@@ -125,13 +129,13 @@
        (letrec-syntax
 	   ((with-attr-list
 	     (syntax-rules ($prune)
-	       ((_ ($prune <symb>) <ex> ...)
-		(cons '(prune . <symb>) (with-attr-list <ex> ...)))
+	       ((_ ($prune <sy1> <sy2> ...) <ex> ...)
+		(cons '(prune <sy1> <sy2> ...) (with-attr-list <ex> ...)))
 	       ((_) '())))
 	    (parse-rhs
 	     (lambda (x)
 	       ;; The following is syntax-case because we use a fender.
-	       (syntax-case x (quote $$ $$/ref $$-ref $prec $with $empty
+	       (syntax-case x (quote $$ $$/ref $$-ref $empty $prec $with $prune
 				     $? $* $+)
 		 ;; action specifications
 		 ((_ ($$ <guts> ...) <e2> ...)
@@ -148,6 +152,8 @@
 		 ((_ ($with <lhs-ref> <ex> ...) <e2> ...)
 		  #'(cons `(with <lhs-ref> ,@(with-attr-list <ex> ...))
 			  (parse-rhs <e2> ...)))
+		 ((_ ($prune <sy1> <sy2> ...) <e2> ...)
+		  #'(cons '(prune <sy1> <sy2> ...) (parse-rhs <e2> ...)))
 		 ((_ $empty <e2> ...)	; TODO: propagate to processor
 		  #'(parse-rhs <e2> ...))
 		 
@@ -373,18 +379,19 @@
     ;; We sweep through the grammar to generate a canonical specification.
     ;; Note: the local rhs is used to hold RHS terms, but a
     ;; value of @code{'()} is used to signal "add rule", and a value of
-    ;; @code{#f} is used to signal ``done, proceed to next rule.''
-    ;; We use @code{tail} below to go through all remaining rules so that any
+    ;; @code{#f} is used to signal ``done, proceed to next rule.''  We
+    ;; use @code{tail} below to go through all remaining rules so that any
     ;; like LHS get absorbed before proceeding: This keeps LHS in sequence.
-    ;; Note: code-comm and lone-comm are added to terminals so that they end
-    ;; up in the match-table.  The parser will skip these if the automoton has
-    ;; no associated transitions for these.  This allows users to parse for
-    ;; comments in some rules but skip the rest.
+    ;; NOTE: code-comm and lone-comm are added to terminals so that they end
+    ;; up in the match-table.  The parser will skip these if the automoton 
+    ;; has no associated transitions for these.  This allows users to parse
+    ;; for comments in some rules but skip the rest.
     (let iter ((ll '($start))		; LHS list
-	       (@l (list		; list p-rule properties
-		    `((rhs . ,(vector start-symbol)) ; vector or rhs sym's
-		      (ref . all)		     ; p-rule ref-ID
-		      (act 1 $1)		     ; p-rule action
+	       (@l (list		; list of p-rule properties
+		    `((rhs . ,(vector start-symbol)) ; vec. of rhs sym's
+		      (ref . all)		     ; ref-ID
+		      (act 1 $1)		     ; action
+		      (pru)			     ; prunes
 		      )))
 	       (tl '($code-comm $lone-comm $error $end)) ; set of terminals
 	       (nl (list start-symbol))	; set of non-terminals
@@ -394,7 +401,7 @@
 	       (lhs #f)		       ; current LHS (symbol)
 	       (tail '())	       ; tail of grammar productions
 	       (rhs-l '())	       ; list of RHSs being processed
-	       (attr '())	       ; per-rule attributes (action, prec)
+	       (attr '())	       ; per-rule attributes (e.g, prec)
 	       (pel '())	       ; processed RHS terms: '$:if ...
 	       (rhs #f))	       ; elts to process: (terminal . '$:if) ...
       (cond
@@ -426,13 +433,21 @@
 	  ((prec)
 	   (iter ll @l (add-el (cdar rhs) tl) nl head prox lhs tail rhs-l
 		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
-	  ((with)
+	  ((prune)
+	   (if (pair? pel) (error "prune only as first item in RHS"))
+	   (if (assq-ref attr 'prune) (error "multiple prunes not supported"))
+	   (iter ll @l tl nl head prox lhs tail rhs-l
+		 (acons 'prune (cdar rhs) attr)
+		 pel (cdr rhs)))
+	  ((with) ;; BROKEN: fix to use prune (above)
 	   (let* ((rhsx (cadar rhs))	      ; symbol to expand
 		  (psy (maksy/tag rhsx))      ; proxy symbol
 		  (p-l (map cdr (cddar rhs))) ; prune list
 		  (p1 (list psy `((non-terminal . ,rhsx)
 				  (action #f #f $1)))))
-	     (iter ll @l tl (cons psy nl) head (cons p1 prox) lhs tail rhs-l
+	     (iter ll @l tl (cons psy nl) head
+		   (cons p1 prox)
+		   lhs tail rhs-l
 		   (acons 'with (cons* psy rhsx p-l) attr)
 		   (cons psy pel) (cdr rhs))))
 	  (else
@@ -449,6 +464,7 @@
 	(let* ((ln (length pel))
 	       (action (assq-ref attr 'action))
 	       (with (assq-ref attr 'with))
+	       (prune (or (assq-ref attr 'prune) '()))
 	       (nrg (if action (or (car action) ln) ln))  ; number of args
 	       (ref (if action (cadr action) #f))
 	       (act (cond
@@ -458,10 +474,11 @@
 		     ((zero? nrg) '((list)))
 		     (else '($1)))))
 	  (iter (cons lhs ll)
-		(cons
-		 (cons* (cons 'rhs (list->vector (reverse pel)))
-			(cons* 'act nrg act) (cons 'ref ref) attr)
-		 @l)
+		(cons (cons* (cons 'rhs (list->vector (reverse pel)))
+			     (cons* 'act nrg act)
+			     (cons 'ref ref)
+			     (cons 'pru prune)
+			     attr) @l)
 		tl nl head prox lhs tail rhs-l attr pel #f)))
 
        ((pair? rhs-l)
@@ -520,6 +537,7 @@
 	       (cons 'prp-v (map-attr->vector al 'prec)) ; per-rule precedence
 	       (cons 'act-v (map-attr->vector al 'act))
 	       (cons 'ref-v (map-attr->vector al 'ref))
+	       (cons 'pru-v (map-attr->vector al 'pru))
 	       (cons 'err-l err-l)))))))))
   
 ;;; === Code for processing the specification. ================================
@@ -531,16 +549,18 @@
 ;; vector of vector of right-hand side symbols.
 (define *lalr-core* (make-fluid #f))
 
-;; This record holds the minimum data from the grammar needed to build the
-;; machine from the grammar specification.
+;; This record holds the minimum data from the grammar specfication needed
+;; to build the automaton.  A record of this type will be used as global data
+;; (i.e., a fluid) for many of the following procedures.
 (define-record-type lalr-core-type
-  (make-lalr-core non-terms terminals start lhs-v rhs-v eps-l)
+  (make-lalr-core non-terms terminals start lhs-v rhs-v pru-v eps-l)
   lalr-core-type?
   (non-terms core-non-terms)	      ; list of non-terminals
   (terminals core-terminals)	      ; list of non-terminals
   (start core-start)		      ; start non-terminal
   (lhs-v core-lhs-v)		      ; vec of left hand sides
   (rhs-v core-rhs-v)		      ; vec of right hand sides
+  (pru-v core-pru-v)		      ; vec of p-rule prunage
   (eps-l core-eps-l))		      ; non-terms w/ eps prod's
 
 ;; @deffn make-core spec => lalr-core-type
@@ -550,6 +570,7 @@
 		  (assq-ref spec 'start)
 		  (assq-ref spec 'lhs-v)
 		  (assq-ref spec 'rhs-v)
+		  (assq-ref spec 'pru-v)
 		  '()))
 
 ;; @deffn make-core/extras spec => lalr-core-type
@@ -559,8 +580,9 @@
 	(terminals (assq-ref spec 'terminals))
 	(start (assq-ref spec 'start))
 	(lhs-v (assq-ref spec 'lhs-v))
-	(rhs-v (assq-ref spec 'rhs-v)))
-    (make-lalr-core non-terms terminals start lhs-v rhs-v
+	(rhs-v (assq-ref spec 'rhs-v))
+	(pru-v (assq-ref spec 'pru-v)))
+    (make-lalr-core non-terms terminals start lhs-v rhs-v pru-v
 		    (find-eps non-terms lhs-v rhs-v))))
 
 
@@ -677,6 +699,11 @@
 (define (last-item? item)
   (negative? (cdr item)))
 
+(define (first-item? item)
+  (let* ((core (fluid-ref *lalr-core*))
+	 (rlen (vector-length (vector-ref (core-rhs-v core) (car item)))))
+    (or (zero? (cdr item)) (zero? rlen))))
+
 ;; @deffn next-item item
 ;; Return the next item in the production rule.
 ;; A position of @code{-1} means the end.  If at end, then @code{'()}
@@ -713,9 +740,10 @@
 	 (rhs-v (core-rhs-v core)))
     (vector-any (lambda (e) (eqv? e '$error)) (vector-ref rhs-v gx))))
      
-;; @deffn non-kernels symb => list of prule indices
-;; Compute the set of non-kernel rules for symbol @code{symb}.  If grammar
-;; looks like
+;; @deffn non-kernels symb [pru-l] => list of prule indices
+;; Compute the set of non-kernel rules for symbol @code{symb}.
+;; The argument @code{pru-l} is an optional list of p-rules to prune based
+;; on the @code{$prune} attribute.  If grammar looks like
 ;; @example
 ;; 1: A => Bcd
 ;; ...
@@ -725,14 +753,16 @@
 ;; @end example
 ;; @noindent
 ;; then @code{non-kernels 'A} results in @code{(1 5 7)}.
-(define (non-kernels symb)
+(define (non-kernels-1 symb pru-l)
   (let* ((core (fluid-ref *lalr-core*))
 	 (lhs-v (core-lhs-v core))
 	 (rhs-v (core-rhs-v core))
+	 (pru-v (core-pru-v core))
 	 (glen (vector-length lhs-v))
 	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx))))
     (let iter ((rslt '())		; result is set of p-rule indices
 	       (done '())		; symbols completed or queued
+	       (prul pru-l)		; prunage list
 	       (next '())		; next round of symbols to process
 	       (curr (list symb))	; this round of symbols to process
 	       (gx 0))			; p-rule index
@@ -742,29 +772,43 @@
 	 ((memq (lhs-symb gx) curr)
 	  ;; Add rhs to next and rslt if not already done.
 	  (let* ((rhs1 (looking-at (first-item gx))) ; 1st-RHS-sym|$eps
-		 (rslt1 (if (memq gx rslt) rslt (cons gx rslt)))
-		 (done1 (if (memq rhs1 done) done (cons rhs1 done)))
+		 (prul1 (append (vector-ref pru-v gx) prul))
+		 (rslt1 (cond ((memq rhs1 prul1) rslt)
+			      ((memq gx rslt) rslt)
+			      (else (cons gx rslt))))
+		 (done1 (cond
+			 ((memq rhs1 done) done)
+			 (else (cons rhs1 done))))
 		 (next1 (cond ((memq rhs1 done) next)
+			      ((memq rhs1 prul) next)
 			      ((terminal? rhs1) next)
 			      (else (cons rhs1 next)))))
-	    (iter rslt1 done1 next1 curr (1+ gx))))
+	    (iter rslt1 done1 prul1 next1 curr (1+ gx))))
 	 (else
 	  ;; Nothing to check; process next rule.
-	  (iter rslt done next curr (1+ gx)))))
+	  (iter rslt done prul next curr (1+ gx)))))
        ((pair? next)
 	;; Start another sweep throught the grammar.
-	(iter rslt done '() next 0))
+	(iter rslt done prul '() next 0))
        (else
 	;; Done, so return.
 	(reverse rslt))))))
+(define non-kernels
+  (case-lambda
+   ((symb) (non-kernels-1 symb '()))
+   ((symb pru-l) (non-kernels-1 symb  pru-l))))
 
 ;; @deffn expand-k-item => item-set
 ;; Expand a kernel-item into a list with the non-kernels.
 (define (expand-k-item k-item)
-  (reverse
-   (fold (lambda (gx items) (cons (first-item gx) items))
-	      (list k-item)
-	      (non-kernels (looking-at k-item)))))
+  (let* ((core (fluid-ref *lalr-core*)) (pru-v (core-pru-v core)))
+    (reverse
+     (fold (lambda (gx items) (cons (first-item gx) items))
+	   (list k-item)
+	   (non-kernels (looking-at k-item)
+			(if (first-item? k-item)
+			    (vector-ref pru-v (car k-item))
+			    '()))))))
 
 ;; @deffn its-equal?
 ;; Helper for step1
@@ -786,7 +830,7 @@
 	    (iter (cdr itsl))))))
   
 ;; @deffn its-trans itemset => alist of (symb . itemset)
-;; Compute transitions from an itemset.   Thatis, map a list of kernel
+;; Compute transitions from an itemset.   That is, map a list of kernel
 ;; items to a list of (symbol post-shift items).
 ;; @example
 ;; ((0 . 1) (2 . 3) => ((A (0 . 2) (2 . 4)) (B (2 . 4) ...))
@@ -828,8 +872,8 @@
 ;; index and @code{rx} is the index of the RHS symbol.  Each entry in the
 ;; vector @code{kix-v} is an a-list with entries @code{(sy . kx)} where
 ;; @code{sy} is a (terminal or non-terminal) symbol and @code{kx} is the
-;; index of the kernel itemset.  The basic algorithm is discussed on
-;; pp. 228-229 of the DB except that we compute non-kernel items on the fly
+;; index of the kernel itemset.  The basic algorithm is discussed on pages
+;; 228-229 of the DB except that we compute non-kernel items on the fly
 ;; using @code{expand-k-item}.  See Example 4.46 on p. 241 of the DB.
 (define (step1 . rest)
   (let* ((al-in (if (pair? rest) (car rest) '()))
@@ -1075,8 +1119,8 @@
 ;;       otherwise add T to spontaneously-generated list
 ;; @end example
 (define (step2 p-mach)
-  (let* ((kis-v (assq-ref p-mach 'kis-v))
-	 (kix-v (assq-ref p-mach 'kix-v)) ; transitions?
+  (let* ((kis-v (assq-ref p-mach 'kis-v)) ; LR(0) item sets, by kx
+	 (kix-v (assq-ref p-mach 'kix-v)) ; LR(0) transitions, by kx
 	 (nkset (vector-length kis-v))	; number of k-item-sets
 	 ;; kernel-itemset tokens
 	 (kit-v (make-vector nkset '())) ; sx => alist: (item latoks)
@@ -1553,16 +1597,16 @@
     (dynamic-wind
 	(lambda () (fluid-set! *lalr-core* (make-core/extras spec)))
 	(lambda ()
-	  (let* ((sm1 (step1 spec))
-		 (sm2 (step2 sm1))
-		 (sm3 (step3 sm2))
-		 (sm4 (step4 sm3))
-		 (sm5 (gen-match-table sm4)))
+	  (let* ((sm (step1 spec))
+		 (sm (step2 sm))
+		 (sm (step3 sm))
+		 (sm (step4 sm))
+		 (sm (gen-match-table sm)))
 	    (cons*
 	     (cons 'len-v (vector-map (lambda (i v) (vector-length v))
-				      (assq-ref sm5 'rhs-v)))
-	     (cons 'rto-v (vector-copy (assq-ref sm5 'lhs-v)))
-	     sm5)))
+				      (assq-ref sm 'rhs-v)))
+	     (cons 'rto-v (vector-copy (assq-ref sm 'lhs-v)))
+	     sm)))
 	(lambda () (fluid-set! *lalr-core* prev-core)))))
 
 ;; for debugging
@@ -1872,59 +1916,56 @@
     (fluid-set! *lalr-core* (make-core mach))
     ;; Print out the itemsets and shift reduce actions.
     (do ((i 0 (1+ i))) ((= i nst))
-      (let* ((state (vector-ref kis-v i))
-	     (pat (vector-ref pat-v i))
-	     (rat (if rat-v (vector-ref rat-v i) '())))
-	(fmt port "~A:" i)	     ; itemset index (aka state index)
-	(for-each
-	 (lambda (k-item)
-	   (for-each			; item, print it
-	    (lambda (item)
-	      (fmt port "\t~A" (pp-item item))
-	      ;; show lookaheads:
-	      (if (and #f (negative? (cdr item)) kit-v (equal? item k-item))
-		  (fmt port " ~A"
-		       (map (lambda (tok) (elt->str tok terms))
-			    (assoc-ref (vector-ref kit-v i) k-item))))
-	      (fmt port "\n"))
-	    (expand-k-item k-item)))
-	 state)
-	(for-each			; action, print it
-	 (lambda (act)
-	   (if (pair? (cdr act))
-	       (let ((sy (car act)) (pa (cadr act)) (gt (cddr act)))
-		 (case pa
-		   ((srconf)
-		    (fmt port "\t\t~A => CONFLICT: shift ~A, reduce ~A\n"
-			 (elt->str sy terms) (car gt) (cdr gt)))
-		   ((rrconf)
-		    (fmt port "\t\t~A => CONFLICT: reduce ~A\n"
-			 (elt->str sy terms)
-			 (string-join (map number->string gt) ", reduce ")))
-		   (else
-		    (fmt port "\t\t~A => ~A ~A\n" (elt->str sy terms) pa gt))))
-	       (let* ((sy (car act)) (p (cdr act))
-		      (pa (cond ((eq? #f p) 'CONFLICT)
-				((positive? p) 'shift)
-				((negative? p) 'reduce)
-				(else 'accept)))
-		      (gt (and=> p abs)))
-		 (fmt port "\t\t~A => ~A ~A\n"
-		      (elt->str (assq-ref i->s sy) terms)
-		      pa gt))))
-	 pat)
-	(for-each			; action, print it
-	 (lambda (ra)
-	   ;; FIX: should indicate if precedence removed user rule or default
-	   (fmt port "\t\t[~A => ~A ~A] REMOVED by ~A\n"
-		(elt->str (caar ra) terms) (cadar ra) (cddar ra)
-		(case (cdr ra)
-		  ((pre) "precedence")
-		  ((ass) "associativity")
-		  ((def) "default shift")
-		  (else (cdr ra)))))
-	 rat)
-	(newline)))
+      (fmt port "~A:" i)	     ; itemset index (aka state index)
+      (for-each
+       (lambda (k-item)
+	 (for-each			; item, print it
+	  (lambda (item)
+	    (fmt port "\t~A" (pp-item item))
+	    ;; show lookaheads:
+	    (if (and #f (negative? (cdr item)) kit-v (equal? item k-item))
+		(fmt port " ~A"
+		     (map (lambda (tok) (elt->str tok terms))
+			  (assoc-ref (vector-ref kit-v i) k-item))))
+	    (fmt port "\n"))
+	  (expand-k-item k-item)))
+       (vector-ref kis-v i))
+      (for-each			; action, print it
+       (lambda (act)
+	 (if (pair? (cdr act))
+	     (let ((sy (car act)) (pa (cadr act)) (gt (cddr act)))
+	       (case pa
+		 ((srconf)
+		  (fmt port "\t\t~A => CONFLICT: shift ~A, reduce ~A\n"
+		       (elt->str sy terms) (car gt) (cdr gt)))
+		 ((rrconf)
+		  (fmt port "\t\t~A => CONFLICT: reduce ~A\n"
+		       (elt->str sy terms)
+		       (string-join (map number->string gt) ", reduce ")))
+		 (else
+		  (fmt port "\t\t~A => ~A ~A\n" (elt->str sy terms) pa gt))))
+	     (let* ((sy (car act)) (p (cdr act))
+		    (pa (cond ((eq? #f p) 'CONFLICT)
+			      ((positive? p) 'shift)
+			      ((negative? p) 'reduce)
+			      (else 'accept)))
+		    (gt (and=> p abs)))
+	       (fmt port "\t\t~A => ~A ~A\n"
+		    (elt->str (assq-ref i->s sy) terms)
+		    pa gt))))
+       (if pat-v (vector-ref pat-v i) '()))
+      (for-each			; action, print it
+       (lambda (ra)
+	 ;; FIX: should indicate if precedence removed user rule or default
+	 (fmt port "\t\t[~A => ~A ~A] REMOVED by ~A\n"
+	      (elt->str (caar ra) terms) (cadar ra) (cddar ra)
+	      (case (cdr ra)
+		((pre) "precedence")
+		((ass) "associativity")
+		((def) "default shift")
+		(else (cdr ra)))))
+       (if rat-v (vector-ref rat-v i) '()))
+      (newline))
     (fluid-set! *lalr-core* prev-core)
     (values)))
 
