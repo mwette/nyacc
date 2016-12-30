@@ -1028,6 +1028,12 @@
 	  (if (< ix (cdr item)) res
 	      (iter (cons (vector-ref rhs ix) res) (1- ix)))))))
 
+;; @deffn first-following item toks => token-list
+;; For la-item A => x.By,z (where  @code{item}, @code{toks}), this
+;; procedure computes @code{FIRST(yz)}.
+(define (first-following item toks)
+  (first (item->stng (next-item item)) toks))
+
 ;; add (item . toks) to (front of) la-item-l
 ;; i.e., la-item-l is unmodified
 (define (merge-la-item la-item-l item toks)
@@ -1042,19 +1048,13 @@
 	(if (eqv? tokl allt) la-item-l
 	    (acons item allt la-item-l)))))
 
-;; @deffn first-following item toks => token-list
-;; For la-item A => x.By,z (where  @code{item}, @code{toks}), this
-;; procedure computes @code{FIRST(yz)}.
-(define (first-following item toks)
-  (first (item->stng (next-item item)) toks))
-
 ;; @deffn closure la-item-l => la-item-l
 ;; Compute the closure of a list of la-items.
 ;; Ref: DB, Fig 4.38, Sec. 4.7, p. 232
 (define (closure la-item-l)
   ;; Compute the fixed point of I, aka @code{la-item-l}, with procedure
   ;;    for each item [A => x.By, a] in I
-  ;;      each production B => z in G
+  ;;      for each production B => z in G
   ;;      and each terminal b in FIRST(ya)
   ;;      such that [B => .z, b] is not in I do
   ;;        add [B => .z, b] to I
@@ -1064,8 +1064,8 @@
     (lambda (la-item seed)
       (let* ((item (car la-item)) (toks (cdr la-item)) (symb (looking-at item)))
 	(cond
-	 ((last-item? (car la-item)) seed)
-	 ((terminal? (looking-at (car la-item))) seed)
+	 ((last-item? item) seed)
+	 ((terminal? (looking-at item)) seed)
 	 (else
 	  (let iter ((seed seed) (pr (prule-range symb)))
 	    (cond
