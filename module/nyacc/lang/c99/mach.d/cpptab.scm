@@ -1,10 +1,10 @@
 ;; ./mach.d/cpptab.scm
 
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; 
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See the
-;; file COPYING included with the this distribution.
+;; or any later version published by the Free Software Foundation.  See
+;; the file COPYING included with the this distribution.
 
 (define len-v
   #(1 1 5 1 3 1 3 1 3 1 3 1 3 1 3 3 1 3 3 3 3 1 3 3 1 3 3 1 3 3 3 1 2 2 2 2 

@@ -1,10 +1,10 @@
 ;; ./mach.d/c99xact.scm
 
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; Copyright 2016,2017 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See the
-;; file COPYING included with the this distribution.
+;; or any later version published by the Free Software Foundation.  See
+;; the file COPYING included with the this distribution.
 
 (define act-v
   (vector
@@ -399,10 +399,10 @@
    ;; struct-declarator => ":" constant-expression
    (lambda ($2 $1 . $rest)
      `(comp-declr (bit-field ,$2)))
-   ;; enum-specifier => "enum" identifier "{" enumerator-list "}"
+   ;; enum-specifier => "enum" ident-like "{" enumerator-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(enum-def ,$2 ,(tl->list $4)))
-   ;; enum-specifier => "enum" identifier "{" enumerator-list "," "}"
+   ;; enum-specifier => "enum" ident-like "{" enumerator-list "," "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(enum-def ,$2 ,(tl->list $4)))
    ;; enum-specifier => "enum" "{" enumerator-list "}"
@@ -411,7 +411,7 @@
    ;; enum-specifier => "enum" "{" enumerator-list "," "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(enum-def ,(tl->list $3)))
-   ;; enum-specifier => "enum" identifier
+   ;; enum-specifier => "enum" ident-like
    (lambda ($2 $1 . $rest) `(enum-ref ,$2))
    ;; enumerator-list => enumerator
    (lambda ($1 . $rest) (make-tl 'enum-def-list $1))
@@ -699,9 +699,9 @@
    (lambda ($3 $2 $1 . $rest) `(return ,$2))
    ;; jump-statement => "return" ";"
    (lambda ($2 $1 . $rest) `(return (expr)))
-   ;; translation-unit => external-declaration
+   ;; translation-unit => external-declaration-proxy
    (lambda ($1 . $rest) (make-tl 'trans-unit $1))
-   ;; translation-unit => translation-unit external-declaration
+   ;; translation-unit => translation-unit external-declaration-proxy
    (lambda ($2 $1 . $rest)
      (cond ((eqv? 'trans-unit (car $2))
             (let* ((t1 (tl-append $1 '(extern-C-begin)))
@@ -709,6 +709,10 @@
                    (t3 (tl-append t2 '(extern-C-end))))
               t3))
            (else (tl-append $1 $2))))
+   ;; external-declaration-proxy => $P2 external-declaration
+   (lambda ($2 $1 . $rest) $2)
+   ;; $P2 => 
+   (lambda $rest (at-top!))
    ;; external-declaration => function-definition
    (lambda ($1 . $rest) $1)
    ;; external-declaration => declaration

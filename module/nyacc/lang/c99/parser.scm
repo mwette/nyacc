@@ -41,9 +41,17 @@
     (cons 'mtab mtab)
     (cons 'act-v act-v))))
 
+(define* (my-c-lexer #:key (mode 'file) (xdef? #f))
+  (let ((def-lxr (gen-c-lexer #:mode mode #:xdef? xdef?)))
+    (lambda ()
+      (let ((tok (def-lxr)))
+	;;(simple-format #t "~S\n" tok)
+	tok))))
+
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
+    ;;(raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
+    (raw-parser (my-c-lexer) #:debug (cpi-debug info))))
 
 ;; @item parse-c [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:debug bool] \
 ;;               [#:mode ('code|'file)]
@@ -63,7 +71,7 @@
        (with-fluid*
 	   *info* info
 	   (lambda ()
-	     (raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
+	     (raw-parser (my-c-lexer #:mode mode #:xdef? xdef?)
 			 #:debug debug)))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) (string-append fmt "\n") rest)

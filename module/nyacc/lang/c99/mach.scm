@@ -38,7 +38,7 @@
 ;; The output of the end parser will be a SXML tree (w/o the @code{*TOP*} node.
 (define c99-spec
   (lalr-spec
-   (notice lang-crn-lic)
+   (notice (string-append "Copyright 2016,2017 Matthew R. Wette" lang-crn-lic))
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< 'imp		       ; "implied type" SR-conflict resolution
 	  "char" "short" "int" "long"
@@ -345,13 +345,13 @@
      )
 
     (enum-specifier			; S 6.7.2.2
-     ("enum" identifier "{" enumerator-list "}"
+     ("enum" ident-like "{" enumerator-list "}"
       ($$ `(enum-def ,$2 ,(tl->list $4))))
-     ("enum" identifier "{" enumerator-list "," "}"
+     ("enum" ident-like "{" enumerator-list "," "}"
       ($$ `(enum-def ,$2 ,(tl->list $4))))
      ("enum" "{" enumerator-list "}" ($$ `(enum-def ,(tl->list $3))))
      ("enum" "{" enumerator-list "," "}" ($$ `(enum-def ,(tl->list $3))))
-     ("enum" identifier ($$ `(enum-ref ,$2)))
+     ("enum" ident-like ($$ `(enum-ref ,$2)))
      )
 
     ;; keeping old enum-def-list in parse tree
@@ -609,9 +609,9 @@
 
     ;; external definitions
     (translation-unit
-     (external-declaration ($$ (make-tl 'trans-unit $1)))
+     (external-declaration-proxy ($$ (make-tl 'trans-unit $1)))
      (translation-unit
-      external-declaration
+      external-declaration-proxy
       ($$ (cond ((eqv? 'trans-unit (car $2))
 		 (let* ((t1 (tl-append $1 '(extern-C-begin)))
 			(t2 (tl-extend t1 (cdr $2)))
@@ -620,12 +620,14 @@
 		(else (tl-append $1 $2)))))
      )
 
+    (external-declaration-proxy (($$ (at-top!)) external-declaration ($$ $2)))
+    
     (external-declaration
      (function-definition)
      (declaration)
      (lone-comment)
      (cpp-statement)
-     ;; The following is a kludge to deal with @code{extern "C" @{}.
+     ;; The following is a kludge to deal with @code{extern "C" @{ ...}.
      ("extern" $string "{" translation-unit "}" ($$ (tl->list $4)))
      )
     
@@ -644,8 +646,6 @@
      )
 
     (opt-code-comment () (code-comment))
-    ;;(opt-lone-comment () (lone-comment))
-    ;;(opt-comment () (code-comment) (lone-comment))
 
     ;; non-terminal leaves
     (identifier

@@ -24,13 +24,9 @@
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
   (tn-dict cpi-tynd set-cpi-tynd!)	; typename dict (("<x>" foo_t ..
-  ;;
-  ;;(typnams cpi-tyns set-cpi-tyns!)	; typedef names
-  ;;
   (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
   (ctl cpi-ctl set-cpi-ctl!)		; current typename list
-  ;;
-  ;;(typdcls cpi-tdls set-cpi-tdls!)	; typedef decls
+  (top cpi-top set-cpi-top!)		; top level?
   )
 
 (define std-dict
@@ -75,6 +71,7 @@
     (set-cpi-tynd! cpi (append tn-dict std-dict))
     (set-cpi-ptl! cpi '())		; list of lists of strings
     (set-cpi-ctl! cpi '())		; list of strings ?
+    (set-cpi-top! cpi #f)		; at top level
     cpi))
 
 ;; Need to have a "CPI" stack to deal with types (re)defined in multiple
@@ -130,6 +127,22 @@
     ))
 
 (use-modules (ice-9 pretty-print))
+
+;; The following three routines are used in an attempt to track the state
+;; of the parse with respect to top-level declarations, in order to know
+;; when includes can be parsed recursively.  See how include is handled in
+;; the lexer.
+
+(define (at-top!) ;; declare parse at top-level; called by the parser
+  (let ((info (fluid-ref *info*)))
+    (set-cpi-top! info #t)))
+
+(define (at-top?) ;; predicate to determine if at top level; called by lexer
+  (cpi-top (fluid-ref *info*)))
+
+(define (not-top!) ;; declare parser not at top-level; called by the lexer
+  (let ((info (fluid-ref *info*)))
+    (set-cpi-top! info #f)))
 
 ;; @deffn find-new-typenames decl
 ;; Helper for @code{save-typenames}.
@@ -274,8 +287,8 @@
 	    (skip (list 'keep))	      ; CPP skip-input stack
 	    (info (fluid-ref *info*)) ; assume make and run in same thread
 	    (pstk '())		      ; port stack
-	    (x-def? (or xdef? (lambda (name mode) (eqv? mode 'code)))))
-	;; Return the first (tval lval) pair not excluded by the CPP.
+	    (x-def? (or xdef? def-xdef?)))
+	;; Return the first (tval . lval) pair not excluded by the CPP.
 	(lambda ()
 
 	  (define (eval-flow?)
@@ -309,6 +322,7 @@
 					(or (with-input-from-file pth run-parse)
 					    (throw 'parse-error "~A" pth))
 					(perr file))))
+			 (simple-format #t "INCLUDE top?=~S\n" (at-top?))
 			 (for-each add-define (xp1 tree)) ; add def's 
 			 ;; Attach tree onto "include" statement.
 			 (if (pair? tree) (set! stmt (append stmt (list tree))))
