@@ -56,17 +56,6 @@ the file COPYING included with the this distribution.")
 	  (set-current-input-port (car ipstk))
 	  (fluid-set! *input-stack* (cdr ipstk))))))
 
-;; It may be possible to reimplement with closures, using soft-ports.
-;; (push-string-input ...
-
-#|
-(define (push-string-input str)
-(let* ((prev (current-input-port))
- (port (make-soft-port ...))
- )
-#f))
-|#
-
 ;; === tl ==============================
 
 ;; @section Tagged Lists

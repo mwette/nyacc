@@ -307,26 +307,29 @@
 	  
 	  (define (exec-cpp line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
-	    (let* ((stmt (read-cpp-stmt line))
-		   (perr (lambda (file)
-			   (throw 'parse-error "file not found: ~S" file))))
+	    (let* ((stmt (read-cpp-stmt line)))
 	      (case (car stmt)
 		((include)
 		 (let* ((parg (cadr stmt)) (leng (string-length parg))
 			(file (substring parg 1 (1- leng)))
+			(path (find-file-in-dirl file (cpi-incs info)))
 			(tynd (assoc-ref (cpi-tynd info) file)))
-		   (if tynd
-		       (for-each add-typename tynd)
-		       (let* ((pth (find-file-in-dirl file (cpi-incs info)))
-			      (tree (if pth ; path exists
-					(or (with-input-from-file pth run-parse)
-					    (throw 'parse-error "~A" pth))
-					(perr file))))
-			 (simple-format #t "INCLUDE top?=~S\n" (at-top?))
-			 (for-each add-define (xp1 tree)) ; add def's 
-			 ;; Attach tree onto "include" statement.
-			 (if (pair? tree) (set! stmt (append stmt (list tree))))
-			 ))))
+		   (cond
+		    (tynd (for-each add-typename tynd)) ; in dot-h dict
+		    ((and #t (eqv? mode 'code))		; include flat
+		     (if (not path) (throw 'parse-error "not found: ~S" file))
+		     (push-input (open-input-file path))
+		     (set! stmt #f))
+		    (else		; include as tree
+		     (if (not path) (throw 'parse-error "not found: ~A" path))
+		     (let* ((tree (with-input-from-file path run-parse)))
+		       (if (not tree) (throw 'parse-error "~A" path))
+		       ;;(simple-format #t "INCLUDE top?=~S\n" (at-top?))
+		       (for-each add-define (xp1 tree)) ; add def's 
+		       ;; Attach tree onto "include" statement.
+		       (if (pair? tree)
+			   (set! stmt (append stmt (list tree)))
+			   stmt))))))
 		((define)
 		 (add-define stmt))
 		((undef)
@@ -383,7 +386,7 @@
 		 stmt)
 		(else
 		 (error "unhandled cpp stmt")))
-	      (cons 'cpp-stmt stmt)))
+	      (if stmt (cons 'cpp-stmt stmt) '())))
 	  
 	  ;; Composition of @code{read-cpp-line} and @code{exec-cpp}.
 	  (define (read-cpp ch)
@@ -399,7 +402,10 @@
 	       (bol
 		(cond
 		 ((read-comm ch bol) => assc-$)
-		 ((read-cpp ch) => assc-$)
+		 ((read-cpp ch) =>
+		  (lambda (res)
+		    ;; not pair means expand include file, so loop again
+		    (if (pair? res) (assc-$ res) (iter (read-char)))))
 		 (else (set! bol #f) (iter ch))))
 	       ((read-ident ch) =>
 		(lambda (name)

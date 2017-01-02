@@ -1,23 +1,29 @@
-2016-11-25  Matt Wette  <mwette@nautilus>
+2017-01-01  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/body.scm (gen-c-lexer): in code mode now expands includes
+
+	* lang/c99/pprint.scm (pretty-print-c99): added enum-dev w/o name
+
+2016-11-25  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* added support for ellipsis to lang/c99/cpp.scm
 
-2016-11-24  Matt Wette  <mwette@nautilus>
+2016-11-24  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* added (ellipsis) to lang/c99/pprint.scm
 
-2016-04-09  Matt Wette  <mwette@nautilus>
+2016-04-09  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* bison.scm: new file providing make-lalr-machin/bison.  It is
 	similar to make-lalr-machine but uses external bison program
 	instead of the default from-scratch lalr code.
 
-2016-03-04  Matt Wette  <mwette@nautilus>
+2016-03-04  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm: changed grammar parser to interpret $string as
 	terminal.  This saves typing a quote in front.
 
-Copyright (C) 2015,2016 Matthew R. Wette
+Copyright (C) 2015-2017 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
