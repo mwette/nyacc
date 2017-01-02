@@ -43,6 +43,28 @@
 	    (add (p-expr (ident "r")) (p-expr (fixed "1")))))
 	  (return (p-expr (ident "r")))))))))
   
+  (pass-if "CPP skip space"
+    (equal?
+     (with-input-from-file "exam.d/ex08.c"
+       (lambda () (parse-c99 #:inc-dirs incs #:mode 'code)))
+     '(trans-unit
+       (cpp-stmt
+	(define (name "assert")
+	  (args "X")
+	  (repl "if (!(X)) abort()")))
+       (fctn-defn
+	(decl-spec-list (type-spec (fixed-type "int")))
+	(ftn-declr
+	 (ident "foo")
+	 (param-list
+	  (param-decl
+	   (decl-spec-list (type-spec (fixed-type "int")))
+	   (param-declr (ident "x")))))
+	(compd-stmt
+	 (block-item-list
+	  (if (not (eq (p-expr (ident "x")) (p-expr (fixed "1"))))
+	      (expr-stmt
+	       (fctn-call (p-expr (ident "abort")) (expr-list))))))))))
   )
 
 

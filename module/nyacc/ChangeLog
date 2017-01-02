@@ -1,3 +1,8 @@
+2017-01-02  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/cppbody.scm (expand-cpp-mref): skip ws between ident
+	and left paren
+
 2017-01-01  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/body.scm (gen-c-lexer): in code mode now expands includes
