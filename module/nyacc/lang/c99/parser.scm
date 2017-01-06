@@ -25,6 +25,7 @@
   #:use-module (nyacc lang c99 cpp)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((sxml xpath) #:select (sxpath))
+  ;;#:use-module (nyacc lang c99 my-parse)
   )
 
 (include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
@@ -33,6 +34,7 @@
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
+  ;;(make-c99-ia-parser 
   (make-lalr-parser 
    (list
     (cons 'len-v len-v)
@@ -50,8 +52,8 @@
 
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    ;;(raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
-    (raw-parser (my-c-lexer) #:debug (cpi-debug info))))
+    ;;(raw-parser (my-c-lexer) #:debug (cpi-debug info))))
+    (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
 ;; @item parse-c [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:debug bool] \
 ;;               [#:mode ('code|'file)]
@@ -71,6 +73,7 @@
        (with-fluid*
 	   *info* info
 	   (lambda ()
+	     (if (eqv? mode 'file) (cpp-ok!) (no-cpp!))
 	     (raw-parser (my-c-lexer #:mode mode #:xdef? xdef?)
 			 #:debug debug)))))
    (lambda (key fmt . rest)

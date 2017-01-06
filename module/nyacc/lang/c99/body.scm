@@ -17,17 +17,7 @@
 
 ;; C parser body, with cpp and tables makes a parser
 
-(define-record-type cpi
-  (make-cpi-1)
-  cpi?
-  (debug cpi-debug set-cpi-debug!)	; debug #t #f
-  (defines cpi-defs set-cpi-defs!)	; #defines
-  (incdirs cpi-incs set-cpi-incs!)	; #includes
-  (tn-dict cpi-tynd set-cpi-tynd!)	; typename dict (("<x>" foo_t ..
-  (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
-  (ctl cpi-ctl set-cpi-ctl!)		; current typename list
-  (top cpi-top set-cpi-top!)		; top level?
-  )
+;;(use-modules (ice-9 pretty-print))
 
 (define std-dict
   '(
@@ -63,15 +53,27 @@
     ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
     ))
 
+(define-record-type cpi
+  (make-cpi-1)
+  cpi?
+  (debug cpi-debug set-cpi-debug!)	; debug #t #f
+  (defines cpi-defs set-cpi-defs!)	; #defines
+  (incdirs cpi-incs set-cpi-incs!)	; #includes
+  (tn-dict cpi-tynd set-cpi-tynd!)	; typename dict (("<x>" foo_t ..
+  (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
+  (ctl cpi-ctl set-cpi-ctl!)		; current typename list
+  (cppok cpi-cppok set-cpi-cppok!)	; OK to pass CPP stmts to parser
+  )
+
 (define (make-cpi debug defines incdirs tn-dict)
   (let* ((cpi (make-cpi-1)))
     (set-cpi-debug! cpi debug)
     (set-cpi-defs! cpi defines)
     (set-cpi-incs! cpi incdirs)
     (set-cpi-tynd! cpi (append tn-dict std-dict))
-    (set-cpi-ptl! cpi '())		; list of lists of strings
-    (set-cpi-ctl! cpi '())		; list of strings ?
-    (set-cpi-top! cpi #f)		; at top level
+    (set-cpi-ptl! cpi '())		; list of lists of typedef strings
+    (set-cpi-ctl! cpi '())		; list of typedef strings
+    (set-cpi-cppok! cpi #f)		; don't assume OK to pass CPP stmts
     cpi))
 
 ;; Need to have a "CPI" stack to deal with types (re)defined in multiple
@@ -112,38 +114,42 @@
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
     (set-cpi-ctl! cpi '())
-    ;;(simple-format #t "pu: ~S\n" (cpi-ctl cpi))
+    (simple-format #t "pu: ~S\n" (cpi-ctl cpi))
     ))
 
 (define (cpi-shift)	;; on #elif #else
+  (simple-format #t "sh\n")
   (set-cpi-ctl! (fluid-ref *info*) '()))
 
 (define (cpi-pop)	;; on #endif
   (let ((cpi (fluid-ref *info*)))
-    ;;(simple-format #t "po<: ~S ~S\n" (cpi-ctl cpi) (cpi-ptl cpi))
+    (simple-format #t "po<: ~S ~S\n" (cpi-ctl cpi) (cpi-ptl cpi))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))
-    ;;(simple-format #t "po>: ~S ~S\n" (cpi-ctl cpi) (cpi-ptl cpi))
+    (simple-format #t "po>: ~S ~S\n" (cpi-ctl cpi) (cpi-ptl cpi))
     ))
 
-(use-modules (ice-9 pretty-print))
+;; The following three routines are used to allow pass cpp-statements to the
+;; parser.  See how include is handled in the lexer.
 
-;; The following three routines are used in an attempt to track the state
-;; of the parse with respect to top-level declarations, in order to know
-;; when includes can be parsed recursively.  See how include is handled in
-;; the lexer.
-
-(define (at-top!) ;; declare parse at top-level; called by the parser
+(define (cpp-ok!) ;; declare OK to pass cpp-stmt to parser
+  (simple-format #t "cpp-ok! ~S\n" (port-line (current-input-port)))
   (let ((info (fluid-ref *info*)))
-    (set-cpi-top! info #t)))
+    (set-cpi-cppok! info #t)))
 
-(define (at-top?) ;; predicate to determine if at top level; called by lexer
-  (cpi-top (fluid-ref *info*)))
-
-(define (not-top!) ;; declare parser not at top-level; called by the lexer
+(define (no-cpp!) ;; declare not OK to pass cpp-stmt to parser
+  (simple-format #t "no-cpp! ~S\n" (port-line (current-input-port)))
   (let ((info (fluid-ref *info*)))
-    (set-cpi-top! info #f)))
+    (set-cpi-cppok! info #f)))
 
+(define (cpp-ok?) ;; predicate called by lexer
+  ;;(simple-format #t "cpp-ok? ~S\n" (port-line (current-input-port)))
+  (cpi-cppok (fluid-ref *info*)))
+
+(define (no-cpp?) ;; predicate called by lexer
+  ;;(simple-format #t "no-cpp? ~S\n" (port-line (current-input-port)))
+  (not (cpi-cppok (fluid-ref *info*))))
+  
 ;; @deffn find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
@@ -178,7 +184,6 @@
   ;; @code{add-typename}.  Then return the decl.
   (for-each add-typename (find-new-typenames decl))
   decl)
-
 
 ;; ------------------------------------------------------------------------
 
@@ -221,20 +226,46 @@
 	  (if (access? p R_OK) p (iter (cdr dirl)))))))
 
 
-;; @subsubsection CPP If-Else Processing
+;; @subsubsection CPP if-then-else Logic Block (ITLB) Processing
+;; The state is contained in a stack @code{ppxs}
 ;; States are
 ;; @table code
-;; @item skip
+;; @item skip-done
 ;; skip code
 ;; @item skip-look
 ;; skipping code, but still looking for true at this level
 ;; @item keep
 ;; keep code
-;; @item keep1
-;; NOT USED keep one token and pop skip-stack
-;; @item skip-one
+;; @item skip1-pop
 ;; skip one token and pop skip-stack
 ;; @end table
+;; Also, if we want to pass on all the sections of an ITLB to the parser
+;; we need to remove typedef names because a typedef may appear multiple
+;; times, as in
+;; @example
+;; #ifdef SIXTYFOURBIT
+;; typedef short int32_t;
+;; #else
+;; typedef long int32_t;
+;; #endif
+;; @end example
+;; @noindent
+;; To achieve this we keep a stack of valid typedefs.  On @code{#if} we push,
+;; on @code{#elif} we shift (i.e., pop, then push) and on @code{#endif} we pop.
+
+;; @example
+;; (code
+;;  ("if" cond code "endif")
+;;  ("if" cond code "else" code "endif")
+;;  ("if" cond code elif-list "endif")
+;;  ("if" cond code elif-list "else" code "endif")
+;;  (other))
+;; (elif-list
+;;  ("elif" cond code)
+;;  (elif-list "elif" cond code))
+;; @end example
+;; @noindent
+;; For each level of "if" we track the state.  
 
 ;; NOTE: if file mode we usually keep #ifdefs.  The lone exception is
 ;; @code{#if 0}
@@ -252,6 +283,7 @@
   (eqv? mode 'code))
 
 ;; @deffn gen-c-lexer [#:mode mode] [#:xdef? proc] => thunk
+
 (define gen-c-lexer
   ;; This gets ugly in order to handle cpp.
   ;;.need to add support for num's w/ letters like @code{14L} and @code{1.3f}.
@@ -284,7 +316,7 @@
     ;; ppev?: (proc ???) => #t|#f : do we eval-and-honor #if/#else ?
     (lambda* (#:key (mode 'code) (xdef? #f))
       (let ((bol #t)		      ; begin-of-line condition
-	    (skip (list 'keep))	      ; CPP skip-input stack
+	    (ppxs (list 'keep))	      ; CPP execution state stack
 	    (info (fluid-ref *info*)) ; assume make and run in same thread
 	    (pstk '())		      ; port stack
 	    (x-def? (or xdef? def-xdef?)))
@@ -292,7 +324,7 @@
 	(lambda ()
 
 	  (define (eval-flow?)
-	    (eqv? mode 'code))
+	    (or (no-cpp?) (eqv? mode 'code)))
       
 	  (define (add-define tree)
 	    (let* ((tail (cdr tree))
@@ -306,6 +338,7 @@
 	      (set-cpi-defs! info (delete name (cpi-defs info))))
 	  
 	  (define (exec-cpp line)
+	    (simple-format #t "exec-cpp: (cpp-ok=~S) ~S\n" (cpp-ok?) line)
 	    ;; Parse the line into a CPP stmt, execute it, and return it.
 	    (let* ((stmt (read-cpp-stmt line)))
 	      (case (car stmt)
@@ -316,7 +349,7 @@
 			(tynd (assoc-ref (cpi-tynd info) file)))
 		   (cond
 		    (tynd (for-each add-typename tynd)) ; in dot-h dict
-		    ((and #t (eqv? mode 'code))		; include flat
+		    ((or (no-cpp?) (eqv? mode 'code))	; include flat
 		     (if (not path) (throw 'parse-error "not found: ~S" file))
 		     (push-input (open-input-file path))
 		     (set! stmt #f))
@@ -324,7 +357,6 @@
 		     (if (not path) (throw 'parse-error "not found: ~A" path))
 		     (let* ((tree (with-input-from-file path run-parse)))
 		       (if (not tree) (throw 'parse-error "~A" path))
-		       ;;(simple-format #t "INCLUDE top?=~S\n" (at-top?))
 		       (for-each add-define (xp1 tree)) ; add def's 
 		       ;; Attach tree onto "include" statement.
 		       (if (pair? tree)
@@ -339,16 +371,15 @@
 		 (if (eval-flow?)
 		     (let* ((defs (cpi-defs info))
 			    (rhs (cpp-expand-text (cadr stmt) defs))
-			    ;; rhs = "defined(1)" :(
 			    (exp (parse-cpp-expr rhs))
 			    (val (eval-cpp-expr exp defs)))
 		       (cond
 			((not val)
 			 (throw 'parse-error "unresolved: ~S" (cadr stmt)))
 			((zero? val)
-			 (set! skip (cons* 'skip-one 'skip-look skip)))
+			 (set! ppxs (cons* 'skip1-pop 'skip-look ppxs)))
 			(else
-			 (set! skip (cons* 'skip-one (car skip) skip)))))))
+			 (set! ppxs (cons* 'skip1-pop (car ppxs) ppxs)))))))
 		((elif)
 		 (if (eval-flow?)
 		     (let* ((defs (cpi-defs info))
@@ -358,30 +389,30 @@
 		       (cond
 			((not val)
 			 (throw 'parse-error "unresolved: ~S" (cadr stmt)))
-			((eq? 'keep (car skip))
-			 (set! skip (cons* 'skip-one 'skip (cdr skip))))
+			((eq? 'keep (car ppxs))
+			 (set! ppxs (cons* 'skip1-pop 'skip-done (cdr ppxs))))
 			((zero? val)
-			 (set! skip (cons* 'skip-one skip)))
-			((eq? 'skip-look (car skip))
+			 (set! ppxs (cons* 'skip1-pop ppxs)))
+			((eq? 'skip-look (car ppxs))
 			 (cpi-shift)
-			 (set! skip (cons* 'skip-one 'keep (cdr skip))))
+			 (set! ppxs (cons* 'skip1-pop 'keep (cdr ppxs))))
 			(else
 			 (cpi-shift)
-			 (set! skip (cons* 'skip-one 'skip (cdr skip))))))
+			 (set! ppxs (cons* 'skip1-pop 'skip-done (cdr ppxs))))))
 		     (cpi-shift)))
 		((else)
 		 (if (eval-flow?)
 		     (cond
-		      ((eq? 'skip-look (car skip))
+		      ((eq? 'skip-look (car ppxs))
 		       (cpi-shift)
-		       (set! skip (cons* 'skip-one 'keep (cdr skip))))
+		       (set! ppxs (cons* 'skip1-pop 'keep (cdr ppxs))))
 		      (else
-		       (set! skip (cons* 'skip-one 'skip (cdr skip)))))
+		       (set! ppxs (cons* 'skip1-pop 'skip-done (cdr ppxs)))))
 		     (cpi-shift)))
 		((endif)
 		 (cpi-pop)
 		 (if (eval-flow?)
-		     (set! skip (cons 'skip-one (cdr skip)))))
+		     (set! ppxs (cons 'skip1-pop (cdr ppxs)))))
 		((error)
 		 stmt)
 		(else
@@ -434,14 +465,19 @@
 			(else (unread-char ch) (cons #\\ "\\"))))) ;; parse err
 	       (else (cons ch (string ch))))))
 
-	  ;; Loop between reading tokens and skipping tokens.
-	  ;; The use of "delayed pop" is not clean IMO.  Cleaner way?
+	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let loop ((pair (read-token)))
-	    (case (car skip)
-	      ((keep) pair)
-	      ((skip skip-look) (loop (read-token)))
-	      ((skip-one)
-	       (set! skip (cdr skip))
+	    (simple-format #t "ppxs=~S ~S\n" ppxs
+			   (port-line (current-input-port)))
+	    (case (car ppxs)
+	      ((keep)
+	       (no-cpp!)
+	       (simple-format #t "token=~S\n" pair)
+	       pair)
+	      ((skip-done skip-look)
+	       (loop (read-token)))
+	      ((skip1-pop)
+	       (set! ppxs (cdr ppxs))
 	       (loop (read-token)))))
 	  )))))
 

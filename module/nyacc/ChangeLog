@@ -1,5 +1,9 @@
 2017-01-02  Matt Wette  <mwette@alumni.caltech.edu>
 
+	* lang/c99/mach.scm (c99-spec): added hooks (cpp-ok!, no-cpp!) to
+	provide handshaking between parser and lexer wrt when the lexer
+	can pass CPP statements to the parser
+
 	* lang/c99/cppbody.scm (expand-cpp-mref): skip ws between ident
 	and left paren
 

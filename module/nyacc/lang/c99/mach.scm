@@ -540,6 +540,8 @@
 
     ;; statements
     (statement
+     (($$ (cpp-ok!)) statement-1 ($$ $2)))
+    (statement-1
      (labeled-statement)
      (compound-statement)
      (expression-statement)
@@ -609,26 +611,23 @@
 
     ;; external definitions
     (translation-unit
-     (external-declaration-proxy ($$ (make-tl 'trans-unit $1)))
+     (external-declaration ($$ (make-tl 'trans-unit $1)))
      (translation-unit
-      external-declaration-proxy
-      ($$ (cond ((eqv? 'trans-unit (car $2))
-		 (let* ((t1 (tl-append $1 '(extern-C-begin)))
-			(t2 (tl-extend t1 (cdr $2)))
-			(t3 (tl-append t2 '(extern-C-end))))
-		   t3))
-		(else (tl-append $1 $2)))))
+      external-declaration
+      ($$ (if (eqv? (sx-tag $2) 'extern-block) (tl-extend $1 (sx-tail $2))
+	      (tl-append $1 $2))))
      )
 
-    (external-declaration-proxy (($$ (at-top!)) external-declaration ($$ $2)))
-    
     (external-declaration
+     (($$ (cpp-ok!)) external-declaration-1 ($$ $2)))
+    (external-declaration-1
      (function-definition)
      (declaration)
      (lone-comment)
      (cpp-statement)
      ;; The following is a kludge to deal with @code{extern "C" @{ ...}.
-     ("extern" $string "{" translation-unit "}" ($$ (tl->list $4)))
+     ("extern" $string "{" translation-unit "}"
+      ($$ `(extern-block $2 (extern-C-begin) $4 (extern-C-end))))
      )
     
     (function-definition

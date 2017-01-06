@@ -7,6 +7,8 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
+(add-to-load-path (string-append (getcwd) "/../../../../module/"))
+
 (use-modules (nyacc lang c99 mach))
 (use-modules (nyacc lang c99 pprint))	; pretty-print-c99
 (use-modules (nyacc lang c99 util1))	; remove-inc-trees
@@ -17,7 +19,7 @@
 (use-modules (ice-9 pretty-print))
 
 ;; test def parser: show parse tree
-(when #t
+(when #f
   (let* ((file "exam.d/,ex.c")
 	 (defs '(("arch" . "x86_64"))) 
 	 (incs  '("."))
@@ -66,13 +68,13 @@
     #t))
 
 ;; grammar and automaton in zipped text file 
-(when #f
+(when #t
   (with-output-to-file "lang.txt"
     (lambda ()
       (pp-lalr-notice c99-spec)
       (pp-lalr-grammar c99-spec)
       (pp-lalr-machine c99-mach)
-      (system "zip lang.txt"))))
+      #;(system "zip lang.txt"))))
 
 ;; equivalent bison input file
 (when #f
