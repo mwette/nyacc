@@ -2,7 +2,7 @@
 
 int x;
 int x,y; 
-int x=1, y, z = 3;;
+int x=1, y, z = 3;
 
 struct struct1 {
   int x;

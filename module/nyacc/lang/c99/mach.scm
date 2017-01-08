@@ -193,7 +193,7 @@
      )
 
     ;; declarations
-    (declaration
+    (declaration			; S 6.7
      (declaration-specifiers
       init-declarator-list
       ($$ (save-typenames `(decl ,(tl->list $1) ,(tl->list $2))))
@@ -376,7 +376,7 @@
      (direct-declarator)
      )
 
-    (direct-declarator
+    (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
      ("(" declarator ")" ($$ `(scope ,$2)))
 
@@ -405,7 +405,7 @@
      (direct-declarator "(" ")" ($$ `(ftn-declr ,$1 (param-list))))
      )
 
-    (pointer
+    (pointer				; S 6.7.6
      ("*" type-qualifier-list ($$ `(pointer ,(tl->list $2))))
      ("*" ($$ '(pointer)))
      ("*" type-qualifier-list pointer ($$ `(pointer ,(tl->list $2) ,$3)))
@@ -507,7 +507,7 @@
     ;;typedef-name must be hacked w/ the lexical analyzer
     (typedef-name ('typename ($$ `(typename ,$1))))
 
-    (initializer			; S 6.7.8
+    (initializer			; S 6.7.9
      (assignment-expression ($$ `(initzer ,$1)))
      ("{" initializer-list "}" ($$ `(initzer ,(tl->list $2))))
      ("{" initializer-list "," "}" ($$ `(initzer ,(tl->list $2))))
@@ -605,8 +605,9 @@
      )
 
     ;; external definitions
-    (translation-unit (external-declaration-list ($$ (tl->list $1))))
-
+    (translation-unit			; S 6.9
+     (external-declaration-list ($$ (tl->list $1))))
+     )
     (external-declaration-list
      (external-declaration ($$ (make-tl 'trans-unit $1)))
      (external-declaration-list
@@ -616,7 +617,7 @@
 	      (tl-append $1 $2))))
      )
 
-    (external-declaration
+    (external-declaration		; S 6.9
      (function-definition)
      (declaration)
      (lone-comment)

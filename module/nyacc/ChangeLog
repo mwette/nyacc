@@ -1,3 +1,8 @@
+2017-01-08  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* ../../test-suite/nyacc/lang/c99/exam.d/ex05.c: C99 does not
+	allow lone `;' outside of functions.  Removed.
+
 2017-01-07  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/body.scm (read-cpp-line): cpp statement should not
