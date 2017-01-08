@@ -3,7 +3,7 @@
 @settitle NYACC Hacker's Guide
 
 @copying
-Copyright (C) 2015 -- Matthew R. Wette.
+Copyright (C) 2015,2016 -- Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -101,16 +101,19 @@ p-rule in the grammar and the cdr is the index into the RHS of the
 symbol to the right of the dot, or -1 if the position is at the end
 (past the last symbol in the RHS).
 
-Given a production rule, a @dfn{lookahead} is a terminal that can
-appear after the production in the language.  We will associate an item
-with the set of possible lookaheads in the context of parsing an input 
-string from left to right.  A @dfn{la-item} (sometimes called
-a LR(1) item) is the explicit association of the item with the
-lookahead set.   We denote this with the following notation
+A @dfn{la-item} (sometimes called a LR(1) item) is the explicit 
+association of an item with a lookahead set. Given a production 
+rule, a @dfn{lookahead} is a terminal that can appear after the 
+production in the language.  We will associate an item with the 
+set of possible lookaheads in the context of parsing an input 
+string from left to right.  We denote a la-item with the 
+following notation
 @example
 A => @i{p}.@i{q}, @{a,b,c@}
 @end example
 @noindent
+In @sc{nyacc} we denote a la-item with a cons cell where the car is
+the item and the cdr is a list of symbols (i.e., terminals).
 
 One can imagine that during process of parsing an input left to right the
 parser may be at a state where several productions may be candidates

@@ -740,7 +740,7 @@
 	 (rhs-v (core-rhs-v core)))
     (vector-any (lambda (e) (eqv? e '$error)) (vector-ref rhs-v gx))))
      
-;; @deffn non-kernels symb [pru-l] => list of prule indices
+;; @deffn non-kernels symb [item] => list of prule indices
 ;; Compute the set of non-kernel rules for symbol @code{symb}.
 ;; The argument @code{pru-l} is an optional list of p-rules to prune based
 ;; on the @code{$prune} attribute.  If grammar looks like
@@ -753,11 +753,14 @@
 ;; @end example
 ;; @noindent
 ;; then @code{non-kernels 'A} results in @code{(1 5 7)}.
-(define (non-kernels-1 symb pru-l)
+(define (non-kernels-1 symb item)
   (let* ((core (fluid-ref *lalr-core*))
 	 (lhs-v (core-lhs-v core))
 	 (rhs-v (core-rhs-v core))
 	 (pru-v (core-pru-v core))
+	 (pru-l (if (and item (first-item? item))
+		    (vector-ref pru-v (car item))
+		    '()))
 	 (glen (vector-length lhs-v))
 	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx))))
     (let iter ((rslt '())		; result is set of p-rule indices
@@ -795,20 +798,16 @@
 	(reverse rslt))))))
 (define non-kernels
   (case-lambda
-   ((symb) (non-kernels-1 symb '()))
-   ((symb pru-l) (non-kernels-1 symb  pru-l))))
+   ((symb) (non-kernels-1 symb #f))
+   ((symb item) (non-kernels-1 symb item))))
 
 ;; @deffn expand-k-item => item-set
 ;; Expand a kernel-item into a list with the non-kernels.
 (define (expand-k-item k-item)
-  (let* ((core (fluid-ref *lalr-core*)) (pru-v (core-pru-v core)))
-    (reverse
-     (fold (lambda (gx items) (cons (first-item gx) items))
-	   (list k-item)
-	   (non-kernels (looking-at k-item)
-			(if (first-item? k-item)
-			    (vector-ref pru-v (car k-item))
-			    '()))))))
+  (reverse
+   (fold (lambda (gx items) (cons (first-item gx) items))
+	 (list k-item)
+	 (non-kernels (looking-at k-item) k-item))))
 
 ;; @deffn its-equal?
 ;; Helper for step1
