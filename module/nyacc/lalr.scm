@@ -364,7 +364,7 @@
   (let* ((gram (assq-ref tree 'grammar))
 	 (start-symbol (and=> (assq-ref tree 'start) atomize))
 	 (start-rule (lambda () (list start-symbol)))
-	 (add-el (lambda (e l) (if (memq e l) l (cons e l))))
+	 (add-el (lambda (e l) (if (member e l) l (cons e l))))
 	 (pna (prec-n-assc tree)))
     ;; We sweep through the grammar to generate a canonical specification.
     ;; Note: the local rhs is used to hold RHS terms, but a
@@ -452,10 +452,8 @@
 		     (else '($1)))))
 	  (if with (simple-format #t "WITH WHAT?\n"))
 	  (iter (cons lhs ll)
-		(cons
-		 (cons* (cons 'rhs (list->vector (reverse pel)))
-			(cons* 'act nrg act) (cons 'ref ref) attr)
-		 @l)
+		(cons (cons* (cons 'rhs (list->vector (reverse pel)))
+			     (cons* 'act nrg act) (cons 'ref ref) attr) @l)
 		tl nl head prox lhs tail rhs-l attr pel #f)))
 
        ((pair? rhs-l)

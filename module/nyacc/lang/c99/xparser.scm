@@ -49,20 +49,25 @@
 ;; This needs to be explained in some detail.
 ;; [#:tyns '("foo_t")]
 (define* (parse-c99x xstr
-		   #:key (cpp-defs '()) (tn-dict '()) (debug #f) (tyns '()))
-  (catch
-   'parse-error
-   (lambda ()
-     (let ((info (make-cpi debug cpp-defs '(".") tn-dict)))
-       (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
-       (with-fluid*
-	   *info* info
-	   (lambda ()
-	     (with-input-from-string xstr
-	       (lambda ()
-		   (raw-parser (gen-c-lexer #:mode 'code) #:debug debug)))))))
+		     #:key
+		     (cpp-defs '())	; CPP defines
+		     (tn-dict '())	; typedef dictionary
+		     (xdef? #f)		; pred to determine expand
+		     (debug #f)		; debug?
+		     (tyns '()))	; defined typenames
+  (with-input-from-string xstr
+    (catch
+     #t
+     (lambda ()
+       (let ((info (make-cpi debug cpp-defs '(".") tn-dict)))
+	 (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
+	 (with-fluid*
+	     *info* info
+	     (lambda ()
+	       (raw-parser (gen-c-lexer #:mode 'code #:xdef? xdef?)
+			   #:debug debug))))))
    (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) (string-append fmt "\n") rest)
+     (report-error fmt rest)
      #f)))
 
 (define parse-cx parse-c99x)

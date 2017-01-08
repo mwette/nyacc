@@ -32,7 +32,8 @@
 
 (define cpp-spec
   (lalr-spec
-   (notice lang-crn-lic)
+   (notice (string-append "Copyright (C) 2016,2017 Matthew R. Wette"
+			  lang-crn-lic))
    (expect 0)
    (start conditional-expression)
    (grammar
@@ -135,8 +136,6 @@
 	(b (move-if-changed (xtra-dir "cpptab.scm.new")
 			    (xtra-dir "cpptab.scm"))))
     (when (or a b) 
-      (system (string-append "touch " (lang-dir "cpp.scm")))
-      #;(compile-file (lang-dir "cpp.scm"))
-      )))
+      (system (string-append "touch " (lang-dir "cpp.scm"))))))
 
 ;; --- last line ---

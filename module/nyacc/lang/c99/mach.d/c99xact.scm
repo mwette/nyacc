@@ -1,10 +1,10 @@
-;; ./mach.d/c99xact.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99xact.scm
 
-;; Copyright 2016,2017 Matthew R. Wette
+;; Copyright (C) 2015,2016 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See
-;; the file COPYING included with the this distribution.
+;; or any later version published by the Free Software Foundation.  See the
+;; file COPYING included with the this distribution.
 
 (define act-v
   (vector
@@ -399,10 +399,10 @@
    ;; struct-declarator => ":" constant-expression
    (lambda ($2 $1 . $rest)
      `(comp-declr (bit-field ,$2)))
-   ;; enum-specifier => "enum" ident-like "{" enumerator-list "}"
+   ;; enum-specifier => "enum" identifier "{" enumerator-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(enum-def ,$2 ,(tl->list $4)))
-   ;; enum-specifier => "enum" ident-like "{" enumerator-list "," "}"
+   ;; enum-specifier => "enum" identifier "{" enumerator-list "," "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(enum-def ,$2 ,(tl->list $4)))
    ;; enum-specifier => "enum" "{" enumerator-list "}"
@@ -411,7 +411,7 @@
    ;; enum-specifier => "enum" "{" enumerator-list "," "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(enum-def ,(tl->list $3)))
-   ;; enum-specifier => "enum" ident-like
+   ;; enum-specifier => "enum" identifier
    (lambda ($2 $1 . $rest) `(enum-ref ,$2))
    ;; enumerator-list => enumerator
    (lambda ($1 . $rest) (make-tl 'enum-def-list $1))
@@ -622,23 +622,19 @@
    (lambda ($3 $2 $1 . $rest) (list 'array-dsgr $2))
    ;; designator => "." identifier
    (lambda ($2 $1 . $rest) (list 'sel-dsgr $2))
-   ;; statement => $P2 statement-1
-   (lambda ($2 $1 . $rest) $2)
-   ;; $P2 => 
-   (lambda $rest (cpp-ok!))
-   ;; statement-1 => labeled-statement
+   ;; statement => labeled-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => compound-statement
+   ;; statement => compound-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => expression-statement
+   ;; statement => expression-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => selection-statement
+   ;; statement => selection-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => iteration-statement
+   ;; statement => iteration-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => jump-statement
+   ;; statement => jump-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => cpp-statement
+   ;; statement => cpp-statement
    (lambda ($1 . $rest) $1)
    ;; labeled-statement => identifier ":" statement
    (lambda ($3 $2 $1 . $rest)
@@ -707,28 +703,22 @@
    (lambda ($1 . $rest) (make-tl 'trans-unit $1))
    ;; translation-unit => translation-unit external-declaration
    (lambda ($2 $1 . $rest)
-     (if (eqv? (sx-tag $2) 'extern-block)
-       (tl-extend $1 (sx-tail $2))
-       (tl-append $1 $2)))
-   ;; external-declaration => $P3 external-declaration-1
-   (lambda ($2 $1 . $rest) $2)
-   ;; $P3 => 
-   (lambda $rest (cpp-ok!))
-   ;; external-declaration-1 => function-definition
+     (cond ((eqv? 'trans-unit (car $2))
+            (let* ((t1 (tl-append $1 '(extern-C-begin)))
+                   (t2 (tl-extend t1 (cdr $2)))
+                   (t3 (tl-append t2 '(extern-C-end))))
+              t3))
+           (else (tl-append $1 $2))))
+   ;; external-declaration => function-definition
    (lambda ($1 . $rest) $1)
-   ;; external-declaration-1 => declaration
+   ;; external-declaration => declaration
    (lambda ($1 . $rest) $1)
-   ;; external-declaration-1 => lone-comment
+   ;; external-declaration => lone-comment
    (lambda ($1 . $rest) $1)
-   ;; external-declaration-1 => cpp-statement
+   ;; external-declaration => cpp-statement
    (lambda ($1 . $rest) $1)
-   ;; external-declaration-1 => "extern" '$string "{" translation-unit "}"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(extern-block
-        $2
-        (extern-C-begin)
-        $4
-        (extern-C-end)))
+   ;; external-declaration => "extern" '$string "{" translation-unit "}"
+   (lambda ($5 $4 $3 $2 $1 . $rest) (tl->list $4))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)
      `(knr-fctn-defn

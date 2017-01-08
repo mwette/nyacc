@@ -1,3 +1,26 @@
+2017-01-07  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/body.scm (read-cpp-line): cpp statement should not
+	include newline?  Changed to unread final newline.
+
+	* lang/util.scm: add report-error: prints msg w/ file, line 
+
+	* parse.scm (make-lalr-parser): changed printout of parse error to
+	(throw 'parse-error . args) and expect the full parser to catch
+	the error
+
+	* lang/c99/mach.scm (c99-spec): from
+        2017-01-07 Jan Nieuwenhuizen  <janneke@gnu.org>
+	mising unquote in output sx for goto: `(goto $2) => `(goto ,$2)
+
+2017-01-06  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/parser.scm: default parser #:mode is now 'code; done
+	since the CPP should now be working (??)
+
+	* lalr.scm (process-spec): in add-el changed memq to member since
+	we are using strings for terminals
+
 2017-01-02  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/mach.scm (c99-spec): added hooks (cpp-ok!, no-cpp!) to

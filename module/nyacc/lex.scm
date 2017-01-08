@@ -378,7 +378,7 @@
 ;; @deffn make-comm-reader comm-table [#:eat-newline #t] => \
 ;;   ch bol -> ('$code-comm "..")|('$lone-comm "..")|#f
 ;; comm-table is list of cons for (start . end) comment.
-;; e.g. ("--" "\n") ("/*" "*/")
+;; e.g. ("--" . "\n") ("/*" . "*/")
 ;; test with "/* hello **/"
 ;; If @code{eat-newline} is specified as true then for read comments 
 ;; ending with a newline a newline swallowed with the comment.

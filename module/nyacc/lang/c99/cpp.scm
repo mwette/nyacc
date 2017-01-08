@@ -1,6 +1,6 @@
 ;;; lang/c/cpp.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -34,9 +34,6 @@
 #|
   #define  #undef  #include  #if  #ifdef  #ifndef  #else  #endif  #elif
   #line  defined  #-operator  ##-operator  #pragma  #error
-
-strategy:
-  don't expand macro calls -- treat like function calls, but provide dict
 todo:
   pragma
   #-op ##-op

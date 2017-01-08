@@ -1,6 +1,6 @@
 ;; ./mach.d/c99act.scm
 
-;; Copyright 2016,2017 Matthew R. Wette
+;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 ;; or any later version published by the Free Software Foundation.  See
@@ -8,10 +8,8 @@
 
 (define act-v
   (vector
-   ;; $start => translation-unit-proxy
+   ;; $start => translation-unit
    (lambda ($1 . $rest) $1)
-   ;; translation-unit-proxy => translation-unit
-   (lambda ($1 . $rest) (tl->list $1))
    ;; primary-expression => identifier
    (lambda ($1 . $rest) `(p-expr ,$1))
    ;; primary-expression => constant
@@ -622,23 +620,19 @@
    (lambda ($3 $2 $1 . $rest) (list 'array-dsgr $2))
    ;; designator => "." identifier
    (lambda ($2 $1 . $rest) (list 'sel-dsgr $2))
-   ;; statement => $P2 statement-1
-   (lambda ($2 $1 . $rest) $2)
-   ;; $P2 => 
-   (lambda $rest (cpp-ok!))
-   ;; statement-1 => labeled-statement
+   ;; statement => labeled-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => compound-statement
+   ;; statement => compound-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => expression-statement
+   ;; statement => expression-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => selection-statement
+   ;; statement => selection-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => iteration-statement
+   ;; statement => iteration-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => jump-statement
+   ;; statement => jump-statement
    (lambda ($1 . $rest) $1)
-   ;; statement-1 => cpp-statement
+   ;; statement => cpp-statement
    (lambda ($1 . $rest) $1)
    ;; labeled-statement => identifier ":" statement
    (lambda ($3 $2 $1 . $rest)
@@ -694,7 +688,7 @@
    ;; opt-expression => expression
    (lambda ($1 . $rest) $1)
    ;; jump-statement => "goto" identifier ";"
-   (lambda ($3 $2 $1 . $rest) `(goto $2))
+   (lambda ($3 $2 $1 . $rest) `(goto ,$2))
    ;; jump-statement => "continue" ";"
    (lambda ($2 $1 . $rest) '(continue))
    ;; jump-statement => "break" ";"
@@ -703,32 +697,30 @@
    (lambda ($3 $2 $1 . $rest) `(return ,$2))
    ;; jump-statement => "return" ";"
    (lambda ($2 $1 . $rest) `(return (expr)))
-   ;; translation-unit => external-declaration
+   ;; translation-unit => external-declaration-list
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; external-declaration-list => external-declaration
    (lambda ($1 . $rest) (make-tl 'trans-unit $1))
-   ;; translation-unit => translation-unit external-declaration
+   ;; external-declaration-list => external-declaration-list external-decla...
    (lambda ($2 $1 . $rest)
      (if (eqv? (sx-tag $2) 'extern-block)
-       (tl-extend $1 (sx-tail $2))
+       (tl-extend $1 (sx-tail $2 2))
        (tl-append $1 $2)))
-   ;; external-declaration => $P3 external-declaration-1
-   (lambda ($2 $1 . $rest) $2)
-   ;; $P3 => 
-   (lambda $rest (cpp-ok!))
-   ;; external-declaration-1 => function-definition
+   ;; external-declaration => function-definition
    (lambda ($1 . $rest) $1)
-   ;; external-declaration-1 => declaration
+   ;; external-declaration => declaration
    (lambda ($1 . $rest) $1)
-   ;; external-declaration-1 => lone-comment
+   ;; external-declaration => lone-comment
    (lambda ($1 . $rest) $1)
-   ;; external-declaration-1 => cpp-statement
+   ;; external-declaration => cpp-statement
    (lambda ($1 . $rest) $1)
-   ;; external-declaration-1 => "extern" '$string "{" translation-unit "}"
+   ;; external-declaration => "extern" '$string "{" external-declaration-li...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(extern-block
-        $2
-        (extern-C-begin)
-        $4
-        (extern-C-end)))
+        ,$2
+        (extern-begin ,$2)
+        ,@(sx-tail (tl->list $4) 1)
+        (extern-end)))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)
      `(knr-fctn-defn

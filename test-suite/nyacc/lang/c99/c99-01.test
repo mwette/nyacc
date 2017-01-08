@@ -1,6 +1,6 @@
 ;; nyacc/lang/c99/c99-01.test		-*- scheme -*-
 ;;
-;; Copyright (C) 2016 Matthew R. Wette
+;; Copyright (C) 2016-2017 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -25,20 +25,25 @@
     (let ((sx (with-input-from-string "int x;" parse-c99)))
       (equal? sx
 	      '(trans-unit
-
 		(decl (decl-spec-list (type-spec (fixed-type "int")))
 		      (init-declr-list (init-declr (ident "x"))))))))
 
   ;; parse with include file
-  (pass-if "include"
+  (pass-if "include, file mode"
     (let* ((sx (with-input-from-file "exam.d/ex01.c"
-		 (lambda () (parse-c99 #:inc-dirs incs)))))
+		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
+      (pair? sx)))
+
+  ;; parse with include file
+  (pass-if "include, code mode"
+    (let* ((sx (with-input-from-file "exam.d/ex01.c"
+		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'code)))))
       (pair? sx)))
 
   ;; parse massive comments file
-  (pass-if "comments"
+  (pass-if "comments, wanted and unwanted"
     (let* ((sx (with-input-from-file "exam.d/ex02.c"
-		 (lambda () (parse-c99 #:inc-dirs incs)))))
+		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
       (pair? sx)))
 
   )

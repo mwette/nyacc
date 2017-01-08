@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm
 ;;;
-;;; Copyright (C) 2015,2016 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -26,9 +26,7 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
-  #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map))
-  #:use-module ((sxml xpath) #:select (sxpath))
   )
 
 ;; @item c99-spec
@@ -38,15 +36,14 @@
 ;; The output of the end parser will be a SXML tree (w/o the @code{*TOP*} node.
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright 2016,2017 Matthew R. Wette" lang-crn-lic))
+   (notice (string-append "Copyright (C) 2016,2017 Matthew R. Wette"
+			  lang-crn-lic))
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< 'imp		       ; "implied type" SR-conflict resolution
 	  "char" "short" "int" "long"
 	  "float" "double" "_Complex")
-   (start translation-unit-proxy)
+   (start translation-unit)
    (grammar
-
-    (translation-unit-proxy (translation-unit ($$ (tl->list $1))))
 
     ;; expressions
     (primary-expression			; S 6.5.1
@@ -540,8 +537,6 @@
 
     ;; statements
     (statement
-     (($$ (cpp-ok!)) statement-1 ($$ $2)))
-    (statement-1
      (labeled-statement)
      (compound-statement)
      (expression-statement)
@@ -602,7 +597,7 @@
      (expression))
 
     (jump-statement			; S 6.8.6
-     ("goto" identifier ";" ($$ `(goto $2)))
+     ("goto" identifier ";" ($$ `(goto ,$2)))
      ("continue" ";" ($$ '(continue)))
      ("break" ";" ($$ '(break)))
      ("return" expression ";" ($$ `(return ,$2)))
@@ -610,24 +605,25 @@
      )
 
     ;; external definitions
-    (translation-unit
+    (translation-unit (external-declaration-list ($$ (tl->list $1))))
+
+    (external-declaration-list
      (external-declaration ($$ (make-tl 'trans-unit $1)))
-     (translation-unit
+     (external-declaration-list
       external-declaration
-      ($$ (if (eqv? (sx-tag $2) 'extern-block) (tl-extend $1 (sx-tail $2))
+      ;; A ``kludge'' to deal with @code{extern "C" ...}:
+      ($$ (if (eqv? (sx-tag $2) 'extern-block) (tl-extend $1 (sx-tail $2 2))
 	      (tl-append $1 $2))))
      )
 
     (external-declaration
-     (($$ (cpp-ok!)) external-declaration-1 ($$ $2)))
-    (external-declaration-1
      (function-definition)
      (declaration)
      (lone-comment)
      (cpp-statement)
-     ;; The following is a kludge to deal with @code{extern "C" @{ ...}.
-     ("extern" $string "{" translation-unit "}"
-      ($$ `(extern-block $2 (extern-C-begin) $4 (extern-C-end))))
+     ("extern" $string "{" external-declaration-list "}"
+      ($$ `(extern-block ,$2 (extern-begin ,$2)
+			 ,@(sx-tail (tl->list $4) 1) (extern-end))))
      )
     
     (function-definition
@@ -697,15 +693,16 @@
 			(xdef? #f)	; expand def function: proc name mode
 			(debug #f))	; debug
   (catch
-   'parse-error
+   #t ;; 'c99-error 'cpp-error 'nyacc-error
    (lambda ()
      (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
-       (with-fluid* *info* info
-		    (lambda ()
-		      (raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
-				  #:debug debug)))))
+       (with-fluid*
+	   *info* info
+	   (lambda ()
+	     (raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
+			 #:debug debug)))))
    (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) (string-append fmt "\n") rest)
+     (report-error fmt rest)
      #f)))
 
 (define dev-parse-c dev-parse-c99)
@@ -729,9 +726,7 @@
 	(b (move-if-changed (xtra-dir "c99tab.scm.new")
 			    (xtra-dir "c99tab.scm"))))
     (when (or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm")))
-      #;(compile-file (lang-dir "parser.scm"))
-      )))
+      (system (string-append "touch " (lang-dir "parser.scm"))))))
 
 ;; @item gen-c99x-files [dir] => #t
 ;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.

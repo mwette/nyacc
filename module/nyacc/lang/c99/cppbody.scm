@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/cppbody.scm
 ;;;
-;;; Copyright (C) 2016 Matthew R. Wette
+;;; Copyright (C) 2016-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by
@@ -15,39 +15,50 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define gen-cpp-lexer (make-lexer-generator mtab))
+(define (cpp-err fmt . args)
+  (apply throw 'cpp-error fmt args))
+
+;; Since we want to be able to get CPP statements with comment in tact
+;; (e.g., for passing to @code{pretty-print-c99}) we need to remove
+;; comments when parsing CPP expressions.  We convert a comm-reader
+;; into a comm-skipper here.  And from that generate a lexer generator.
+(define cpp-comm-skipper
+  (let ((reader (make-comm-reader '(("/*" . "*/")))))
+    (lambda (ch)
+      (reader ch #f))))
+
+(define gen-cpp-lexer
+  (make-lexer-generator mtab #:comm-skipper cpp-comm-skipper))
 
 ;; @deffn parse-cpp-expr text => tree
 ;; Given a string returns a cpp parse tree.  This is called by
-;; @code{parse-cpp-stmt} and @code{eval-cpp-expr}.  The latter because the
-;; parsed expression may include terms which are cpp-defined
-;; and should be evaluated lazy mode.
+;; @code{eval-cpp-expr}.  The text will have had all CPP defined symbols
+;; expanded already so no identifiers should appear in the text.
+;; A @code{cpp-error} will be thrown if a parse error occurs.
 (define (parse-cpp-expr text)
-  (with-input-from-string text
-    (lambda () (raw-parser (gen-cpp-lexer)))))
+  (catch
+   'nyacc-error
+   (lambda ()
+     (with-input-from-string text
+       (lambda () (raw-parser (gen-cpp-lexer)))))
+   (lambda (key fmt . args)
+     (apply throw 'cpp-error fmt args))))
 
 ;; @deffn eval-cpp-expr tree dict => datum
-;; Evaluate a tree produced from
-;; This should be updated to use @code{expand-cpp-def}.  See below.
-(use-modules (ice-9 pretty-print))
+;; Evaluate a tree produced from @code{parse-cpp-expr}.
+;; The tree passed to this routine is 
 (define (eval-cpp-expr tree dict)
   ;;(display "eval-cpp-expr:\n") (pretty-print tree)
   (letrec
       ((tx (lambda (tr ix) (list-ref tr ix)))
        (tx1 (lambda (tr) (tx tr 1)))
        (ev (lambda (ex ix) (eval-expr (list-ref ex ix))))
-       (ev1 (lambda (ex) (ev ex 1)))
-       (ev2 (lambda (ex) (ev ex 2)))
-       (ev3 (lambda (ex) (ev ex 3)))
-       #;(parse-and-eval
-	(lambda (str)
-	  (if (not (string? str)) (throw 'parse-error "cpp-eval"))
-	  (let ((idtr (parse-cpp-expr str)))
-	    (eval-cpp-expr idtr dict))))
+       (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
+       (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2
+       (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
        (eval-expr
 	(lambda (tree)
 	  (case (car tree)
-	    ;;((ident) (parse-and-eval (assoc-ref dict (tx1 tree))))
 	    ((fixed) (string->number (tx1 tree)))
 	    ((char) (char->integer (tx1 tree)))
 	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
@@ -77,8 +88,9 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
+	    ((ident) (error "text should not have identifiers"))
 	    (else (error "incomplete implementation"))))))
-    (catch 'parse-error
+    (catch 'cpp-error
 	   (lambda () (eval-expr tree))
 	   (lambda () #f))))
 
@@ -102,7 +114,7 @@
   ;; E.g., scanned "defined", now scan "(FOO)", and return "defined(FOO)".
   (define (scan-defined)
     (let iter ((chl '()) (ch (read-char)))
-      (cond ((eof-object? ch) (throw 'parse-error "bad CPP defined"))
+      (cond ((eof-object? ch) (cpp-err "bad CPP defined"))
 	    ((char=? #\) ch)
 	     (string-append "defined" (list->string (reverse (cons ch chl)))))
 	    (else (iter (cons ch chl) (read-char))))))
@@ -113,7 +125,6 @@
 	     (nxt #f)		; next string 
 	     (lvl 0)		; level
 	     (ch (read-char)))	; next character
-    ;;(simple-format #t "iter stl=~S chl=~S nxt=~S ch=~S\n" stl chl nxt ch)
     (cond
      ;; have item to add, but first add in char's
      (nxt (iter (cons nxt (add-chl chl stl)) '() #f lvl ch))
@@ -136,7 +147,6 @@
       (lambda (st) (iter stl chl st lvl (read-char))))
      ((read-c-ident ch) =>
       (lambda (iden)
-	;;(simple-format #t "    iden=~S\n" iden)
 	(if (equal? iden "defined")
 	    ;; "defined" is a special case
 	    (iter stl chl (scan-defined) lvl (read-char))
@@ -162,25 +172,18 @@
       (iter stl (cons ch chl) #f lvl (read-char))))))
   
 (define (collect-args argd dict used)
-  ;;(simple-format #t "collect-args\n")
-  (if (not (eqv? (skip-ws (read-char)) #\())
-      (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-	    (ln (1+ (port-line (current-input-port)))))
-	(throw 'parse-error "~A:~A: CPP expecting `('" fn ln)))
+  (if (not (eqv? (skip-ws (read-char)) #\()) (cpp-err "CPP expecting `('"))
   (let iter ((argl (list (scan-cpp-input argd dict used #t))))
-    ;;(simple-format #t "args: ~S\n" argl)
     (let ((ch (read-char)))
       (if (eqv? ch #\)) (reverse argl)
 	  (iter (cons (scan-cpp-input argd dict used #t) argl))))))
     
 (define (expand-cpp-repl repl argd dict used)
-  ;;(simple-format #t "expand-cpp-repl repl=~S argd=~S\n" repl argd)
   (with-input-from-string repl
     (lambda () (scan-cpp-input argd dict used #f))))
 
 ;; @deffn cpp-expand-text text dict => string
 (define (cpp-expand-text text dict)
-  ;;(simple-format #t "cpp-expand-text: ~S\n" text)
   (with-input-from-string text
     (lambda () (scan-cpp-input '() dict '() #f))))
 
@@ -191,7 +194,6 @@
 ;; to a macro with arguments, then the arguments will be read from the
 ;; current input.
 (define (expand-cpp-mref ident dict . rest)
-
   (let ((used (if (pair? rest) (car rest) '()))
 	(rval (assoc-ref dict ident)))
     (cond
@@ -199,14 +201,12 @@
      ((member ident used) ident)
      ((string? rval)
       (let ((expd (expand-cpp-repl rval '() dict (cons ident used))))
-	;;(simple-format #t "expand ~S => ~S\n" ident expd)
 	expd))
      ((pair? rval)
       (let* ((args (car rval)) (repl (cdr rval))
 	     (argv (collect-args '() dict '()))
 	     (argd (map cons args argv))
 	     (expd (expand-cpp-repl repl argd dict (cons ident used))))
-	;;(simple-format #t "expand ~S => ~S\n" ident expd)
 	expd)))))
 
 ;;; --- last line ---

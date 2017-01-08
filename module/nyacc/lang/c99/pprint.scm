@@ -521,15 +521,16 @@
       ((cpp-stmt . ,rest)
        (cpp-ppx (sx-ref tree 1)))
 
-      ((extern-C-begin) (sf "extern \"C\" {\n"))
-      ((extern-C-end) (sf "}\n"))
+      ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
+      ((extern-end) (sf "}\n"))
 
       (,otherwise
        (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))
       ))
 
   (define ppx ppx-1)
-  
+
+  (if (not (pair? tree)) (error "expecing sxml tree"))
   (ppx tree)
   (if ugly (newline)))
 
