@@ -17,36 +17,42 @@
 
 (define incs '("exam.d"))
 
+(define (parse-string str)
+  (with-input-from-string str
+    (lambda ()
+      (parse-c99 #:inc-dirs incs #:mode 'code))))
+
+(define (parse-file file)
+  (with-input-from-file file
+    (lambda ()
+      (parse-c99 #:inc-dirs incs #:mode 'code))))
+
 ;; parser test
-(with-test-prefix "nyacc/c99-01"
+(with-test-prefix "nyacc/c99-01, code mode"
 
   ;; Get a simple statement to parse.
   (pass-if "simple"
-    (let ((sx (with-input-from-string "int x;" parse-c99)))
+    (let ((sx (parse-string "int x;")))
       (equal? sx
 	      '(trans-unit
 		(decl (decl-spec-list (type-spec (fixed-type "int")))
 		      (init-declr-list (init-declr (ident "x"))))))))
 
   ;; parse with include file
-  (pass-if "include, file mode"
-    (let* ((sx (with-input-from-file "exam.d/ex01.c"
-		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
-      (pair? sx)))
-
-  ;; parse with include file
   (pass-if "include, code mode"
-    (let* ((sx (with-input-from-file "exam.d/ex01.c"
-		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'code)))))
+    (let* ((sx (parse-file "exam.d/ex01.c")))
       (pair? sx)))
 
   ;; parse massive comments file
   (pass-if "comments, wanted and unwanted"
-    (let* ((sx (with-input-from-file "exam.d/ex02.c"
-		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
+    (let* ((sx (parse-file "exam.d/ex02.c")))
+      (pair? sx)))
+
+  ;; try to get all C99 in one file
+  (pass-if "most of C99 in one file"
+    (let* ((sx (parse-file "exam.d/ex05.c")))
       (pair? sx)))
 
   )
-
 
 ;; --- last line ---

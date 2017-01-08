@@ -466,6 +466,7 @@
 ;; char -> (char . char)
 ;; @end enumerate
 ;; todo: add bol status
+;; todo: maybe separate reading of keywords from identifiers: (keywd ch) =>
 (define* (make-lexer-generator match-table
 			       #:key ident-reader num-reader
 			       string-reader chlit-reader

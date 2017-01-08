@@ -137,10 +137,7 @@ todo:
    (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
 	 (cons 'mtab mtab) (cons 'act-v act-v))))
 
-;; The included file "cppbody.scm" provides:
-;; gen-cpp-lexer
-;; parse-cpp-expr
-;; eval-cpp-expr
 (include-from-path "nyacc/lang/c99/cppbody.scm")
+;; cppbody.scm provides: gen-cpp-lexer parse-cpp-expr eval-cpp-expr
  
 ;; --- last line ---

@@ -1,17 +1,15 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99xact.scm
+;; ./mach.d/c99xact.scm
 
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See the
-;; file COPYING included with the this distribution.
+;; or any later version published by the Free Software Foundation.  See
+;; the file COPYING included with the this distribution.
 
 (define act-v
   (vector
    ;; $start => expression
    (lambda ($1 . $rest) $1)
-   ;; translation-unit-proxy => translation-unit
-   (lambda ($1 . $rest) (tl->list $1))
    ;; primary-expression => identifier
    (lambda ($1 . $rest) `(p-expr ,$1))
    ;; primary-expression => constant
@@ -399,10 +397,10 @@
    ;; struct-declarator => ":" constant-expression
    (lambda ($2 $1 . $rest)
      `(comp-declr (bit-field ,$2)))
-   ;; enum-specifier => "enum" identifier "{" enumerator-list "}"
+   ;; enum-specifier => "enum" ident-like "{" enumerator-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(enum-def ,$2 ,(tl->list $4)))
-   ;; enum-specifier => "enum" identifier "{" enumerator-list "," "}"
+   ;; enum-specifier => "enum" ident-like "{" enumerator-list "," "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(enum-def ,$2 ,(tl->list $4)))
    ;; enum-specifier => "enum" "{" enumerator-list "}"
@@ -411,7 +409,7 @@
    ;; enum-specifier => "enum" "{" enumerator-list "," "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(enum-def ,(tl->list $3)))
-   ;; enum-specifier => "enum" identifier
+   ;; enum-specifier => "enum" ident-like
    (lambda ($2 $1 . $rest) `(enum-ref ,$2))
    ;; enumerator-list => enumerator
    (lambda ($1 . $rest) (make-tl 'enum-def-list $1))
@@ -690,7 +688,7 @@
    ;; opt-expression => expression
    (lambda ($1 . $rest) $1)
    ;; jump-statement => "goto" identifier ";"
-   (lambda ($3 $2 $1 . $rest) `(goto $2))
+   (lambda ($3 $2 $1 . $rest) `(goto ,$2))
    ;; jump-statement => "continue" ";"
    (lambda ($2 $1 . $rest) '(continue))
    ;; jump-statement => "break" ";"
@@ -699,16 +697,15 @@
    (lambda ($3 $2 $1 . $rest) `(return ,$2))
    ;; jump-statement => "return" ";"
    (lambda ($2 $1 . $rest) `(return (expr)))
-   ;; translation-unit => external-declaration
+   ;; translation-unit => external-declaration-list
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; external-declaration-list => external-declaration
    (lambda ($1 . $rest) (make-tl 'trans-unit $1))
-   ;; translation-unit => translation-unit external-declaration
+   ;; external-declaration-list => external-declaration-list external-decla...
    (lambda ($2 $1 . $rest)
-     (cond ((eqv? 'trans-unit (car $2))
-            (let* ((t1 (tl-append $1 '(extern-C-begin)))
-                   (t2 (tl-extend t1 (cdr $2)))
-                   (t3 (tl-append t2 '(extern-C-end))))
-              t3))
-           (else (tl-append $1 $2))))
+     (if (eqv? (sx-tag $2) 'extern-block)
+       (tl-extend $1 (sx-tail $2 2))
+       (tl-append $1 $2)))
    ;; external-declaration => function-definition
    (lambda ($1 . $rest) $1)
    ;; external-declaration => declaration
@@ -717,8 +714,13 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => cpp-statement
    (lambda ($1 . $rest) $1)
-   ;; external-declaration => "extern" '$string "{" translation-unit "}"
-   (lambda ($5 $4 $3 $2 $1 . $rest) (tl->list $4))
+   ;; external-declaration => "extern" '$string "{" external-declaration-li...
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(extern-block
+        ,$2
+        (extern-begin ,$2)
+        ,@(sx-tail (tl->list $4) 1)
+        (extern-end)))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)
      `(knr-fctn-defn

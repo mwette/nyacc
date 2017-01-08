@@ -27,6 +27,7 @@
     (lambda (ch)
       (reader ch #f))))
 
+;; generate a lexical analyzer per string
 (define gen-cpp-lexer
   (make-lexer-generator mtab #:comm-skipper cpp-comm-skipper))
 
@@ -36,7 +37,7 @@
 ;; expanded already so no identifiers should appear in the text.
 ;; A @code{cpp-error} will be thrown if a parse error occurs.
 (define (parse-cpp-expr text)
-  (catch
+  (with-throw-handler
    'nyacc-error
    (lambda ()
      (with-input-from-string text
@@ -48,7 +49,6 @@
 ;; Evaluate a tree produced from @code{parse-cpp-expr}.
 ;; The tree passed to this routine is 
 (define (eval-cpp-expr tree dict)
-  ;;(display "eval-cpp-expr:\n") (pretty-print tree)
   (letrec
       ((tx (lambda (tr ix) (list-ref tr ix)))
        (tx1 (lambda (tr) (tx tr 1)))
@@ -62,7 +62,6 @@
 	    ((fixed) (string->number (tx1 tree)))
 	    ((char) (char->integer (tx1 tree)))
 	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
-	    ;;
 	    ((pre-inc post-inc) (1+ (ev1 tree)))
 	    ((pre-dec post-dec) (1- (ev1 tree)))
 	    ((pos) (ev1 tree))
@@ -88,12 +87,9 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ((ident) (error "text should not have identifiers"))
+	    ((ident) (cpp-err "undefined identifier: ~S" (cadr tree)))
 	    (else (error "incomplete implementation"))))))
-    (catch 'cpp-error
-	   (lambda () (eval-expr tree))
-	   (lambda () #f))))
-
+    (eval-expr tree)))
 
 ;; @deffn scan-cpp-input argd used dict for-argl => string
 ;; Process the replacement text and generate a (reversed) token-list.

@@ -42,7 +42,7 @@ the file COPYING included with the this distribution.")
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 	(ln (1+ (port-line (current-input-port)))))
     (apply simple-format (current-error-port)
-	   (string-append "~S:~S: " fmt "\n") fn ln args)))
+	   (string-append "~A:~A: " fmt "\n") fn ln args)))
 
 ;; === input stack =====================
 

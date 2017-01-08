@@ -45,30 +45,31 @@
   (let ((info (fluid-ref *info*)))
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
-;; @item parse-cx [#:cpp-defs def-a-list] [#:debug bool]
+;; @item parse-c99x [#:cpp-defs def-a-list] [#:debug bool]
 ;; This needs to be explained in some detail.
 ;; [#:tyns '("foo_t")]
-(define* (parse-c99x xstr
+(define* (parse-c99x expr-string
 		     #:key
 		     (cpp-defs '())	; CPP defines
 		     (tn-dict '())	; typedef dictionary
 		     (xdef? #f)		; pred to determine expand
 		     (debug #f)		; debug?
 		     (tyns '()))	; defined typenames
-  (with-input-from-string xstr
-    (catch
-     #t
-     (lambda ()
-       (let ((info (make-cpi debug cpp-defs '(".") tn-dict)))
-	 (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
-	 (with-fluid*
-	     *info* info
-	     (lambda ()
-	       (raw-parser (gen-c-lexer #:mode 'code #:xdef? xdef?)
-			   #:debug debug))))))
-   (lambda (key fmt . rest)
-     (report-error fmt rest)
-     #f)))
+  (with-input-from-string expr-string
+    (lambda ()
+      (catch
+       'c99-error
+       (lambda ()
+	 (let ((info (make-cpi debug cpp-defs '(".") tn-dict)))
+	   (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
+	   (with-fluid*
+	       *info* info
+	       (lambda ()
+		 (raw-parser (gen-c-lexer #:mode 'code #:xdef? xdef?)
+			     #:debug debug)))))
+       (lambda (key fmt . rest)
+	 (report-error fmt rest)
+	 #f)))))
 
 (define parse-cx parse-c99x)
 

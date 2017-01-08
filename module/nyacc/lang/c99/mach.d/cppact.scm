@@ -93,6 +93,8 @@
    (lambda ($2 $1 . $rest) `(post-inc ,$1))
    ;; postfix-expression => postfix-expression "--"
    (lambda ($2 $1 . $rest) `(post-dec ,$1))
+   ;; primary-expression => '$ident
+   (lambda ($1 . $rest) `(ident ,$1))
    ;; primary-expression => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
    ;; primary-expression => '$chlit
