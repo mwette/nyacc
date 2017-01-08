@@ -35,7 +35,7 @@
 
 (define modelica-spec
   (lalr-spec
-   (notice lang-crn-lic)
+   (notice (string-append "Copyright 2016 Matthew R. Wette" lang-crn-lic))
    (start stored-definition)
    (grammar
     

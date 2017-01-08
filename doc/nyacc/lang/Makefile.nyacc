@@ -1,0 +1,32 @@
+# doc/nyacc/lang/Makefile.nyacc
+#
+# Copyright (C) 2017 Matthew R. Wette
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+#
+# build the documentation
+
+SCM_FILES_W_TEXI: \
+	../../../module/nyacc/lalr.scm \
+	../../../module/nyacc/lex.scm 
+
+%_scm.texi: ../../../module/nyacc/%.scm
+	../pull-texi.scm $< >$@
+
+%.pdf: %.texi
+	texi2dvi --pdf --batch $<
+
+%.html: %.texi
+	texi2any --html --no-split $<
+
+COPYING.DOC: fdl.texi
+	makeinfo --plaintext fdl.texi >$@
+
+.PHONY: clean
+clean:
+	rm -f *.aux *.cp *.fn *.ky *.log *.pg *.toc *.tp *.vr
+
+# --- last line ---

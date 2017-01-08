@@ -1,10 +1,10 @@
 ;;; module/nyacc/util.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;;; or any later version published by the Free Software Foundation.  See the
-;;; file COPYING included with the nyacc distribution.
+;;; or any later version published by the Free Software Foundation.  See
+;;; the file COPYING included with the nyacc distribution.
 
 ;; runtime utilities for the parsers -- needs work
 
@@ -26,11 +26,11 @@
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
-(define lang-crn-lic "Copyright (C) 2015,2016 Matthew R. Wette
+(define lang-crn-lic "
 
 This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-or any later version published by the Free Software Foundation.  See the
-file COPYING included with the this distribution.")
+or any later version published by the Free Software Foundation.  See
+the file COPYING included with the this distribution.")
 
 (define (fmterr fmt . args)
 (apply simple-format (current-error-port) fmt args))
@@ -40,32 +40,21 @@ file COPYING included with the this distribution.")
 (define *input-stack* (make-fluid '()))
 
 (define (reset-input-stack)
-(fluid-set! *input-stack* '()))
+  (fluid-set! *input-stack* '()))
 
 (define (push-input port)
-(let ((curr (current-input-port))
-(ipstk (fluid-ref *input-stack*)))
-(fluid-set! *input-stack* (cons curr ipstk))
-(set-current-input-port port)))
+  (let ((curr (current-input-port))
+	(ipstk (fluid-ref *input-stack*)))
+    (fluid-set! *input-stack* (cons curr ipstk))
+    (set-current-input-port port)))
 
 ;; Return #f if empty
 (define (pop-input)
-(let ((ipstk (fluid-ref *input-stack*)))
-(if (null? ipstk) #f
-(begin
-  (set-current-input-port (car ipstk))
-  (fluid-set! *input-stack* (cdr ipstk))))))
-
-;; It may be possible to reimplement with closures, using soft-ports.
-;; (push-string-input ...
-
-#|
-(define (push-string-input str)
-(let* ((prev (current-input-port))
- (port (make-soft-port ...))
- )
-#f))
-|#
+  (let ((ipstk (fluid-ref *input-stack*)))
+    (if (null? ipstk) #f
+	(begin
+	  (set-current-input-port (car ipstk))
+	  (fluid-set! *input-stack* (cdr ipstk))))))
 
 ;; === tl ==============================
 

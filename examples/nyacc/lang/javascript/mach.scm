@@ -38,7 +38,7 @@
 
 (define js-spec
   (lalr-spec
-   (notice lang-crn-lic)
+   (notice (string-append "Copyright 2016 Matthew R. Wette" lang-crn-lic))
    (prec< "then" "else")
    (start Program)
    (grammar

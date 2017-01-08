@@ -336,6 +336,9 @@
       ((enum-def (ident ,name) (enum-def-list . ,edl))
        (sf "enum ~A " name) (ppx `(enum-def-list . ,edl)))
 
+      ((enum-def (enum-def-list . ,edl))
+       (sf "enum ") (ppx `(enum-def-list . ,edl)))
+
       ((enum-def-list . ,defns)
        (sf "{\n") (push-il)
        (for-each ppx defns)
