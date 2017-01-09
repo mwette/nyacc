@@ -22,7 +22,7 @@
 (define (parse-string str)
   (with-input-from-string str
     (lambda ()
-      (parse-c99 #:inc-dirs incs #:mode 'file))))
+      (parse-c99 #:inc-dirs incs #:mode 'file #:td-dict c99-std-dict))))
 
 (define (parse-file file)
   (with-input-from-file file
@@ -33,7 +33,7 @@
 (with-test-prefix "nyacc/c99-02, file mode"
 
   ;; parse with include file
-  (pass-if "include, file mode"
+  (pass-if "included files"
     (let* ((sx (with-input-from-file "exam.d/ex01.c"
 		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
       (pair? sx)))
