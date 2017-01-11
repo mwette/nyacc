@@ -18,6 +18,13 @@
 (define (cpp-err fmt . args)
   (apply throw 'cpp-error fmt args))
 
+;;.@deffn skip-ws ch
+(define (skip-ws ch)
+  (if (eof-object? ch) ch
+      (if (char-set-contains? c:ws ch)
+	  (skip-ws (read-char))
+	  ch)))
+
 ;; Since we want to be able to get CPP statements with comment in tact
 ;; (e.g., for passing to @code{pretty-print-c99}) we need to remove
 ;; comments when parsing CPP expressions.  We convert a comm-reader
@@ -106,16 +113,23 @@
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
 
-  ;; We just scanned "defined", not need to scan the arg to inhibit expansion.
-  ;; E.g., scanned "defined", now scan "(FOO)", and return "defined(FOO)".
+  ;; We just scanned "defined", now need to scan the arg to inhibit expansion.
+  ;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
+  ;; return "defined(FOO)".  We use ec (end-char) as state indicator: nul at
+  ;; start, #\) on seeing #\( or #\space if other.
   (define (scan-defined)
-    (let iter ((chl '()) (ch (read-char)))
-      (cond ((eof-object? ch) (cpp-err "bad CPP defined"))
-	    ((char=? #\) ch)
-	     (string-append "defined" (list->string (reverse (cons ch chl)))))
-	    (else (iter (cons ch chl) (read-char))))))
-  
-  ;; 
+    (let* ((ch (skip-ws (read-char))) (ec (if (char=? ch #\() #\) #\space)))
+      (let iter ((chl '(#\()) (ec ec) (ch ch))
+	(cond
+	 ((and (eof-object? ch) (char=? #\space ec))
+	  (string-append "defined" (list->string (reverse (cons #\) chl)))))
+	 ((eof-object? ch) (cpp-err "illegal argument to `defined'"))
+	 ((and (char=? ch #\)) (char=? ec #\)))
+	  (string-append "defined" (list->string (reverse (cons ch chl)))))
+	 ((char-set-contains? c:ir ch)
+	  (iter (cons ch chl) ec (read-char)))
+	 (else (cpp-err "illegal identifier"))))))
+
   (let iter ((stl '())		; string list (i.e., tokens)
 	     (chl '())		; char-list (current list of input chars)
 	     (nxt #f)		; next string 

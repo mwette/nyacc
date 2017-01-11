@@ -606,7 +606,7 @@
 
     ;; external definitions
     (translation-unit			; S 6.9
-     (external-declaration-list ($$ (tl->list $1))))
+     (external-declaration-list ($$ (tl->list $1)))
      )
     (external-declaration-list
      (external-declaration ($$ (make-tl 'trans-unit $1)))
