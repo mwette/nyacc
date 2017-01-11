@@ -206,8 +206,9 @@
   (apply throw 'c99-error args))
 
 ;; @deffn read-cpp-line ch => #f | (cpp-xxxx)??
-;; Given if ch is #\# read a cpp-statement
-;; includes BUG: #define ABC 123 /* \n
+;; Given if ch is #\# read a cpp-statement.
+;; The standard implies that comments are tossed here but we keep them
+;; so that they can end up in the pretty-print output.
 (define (read-cpp-line ch)
   (if (not (eq? ch #\#)) #f
       (let iter ((cl '()) (ch (read-char)))
@@ -228,7 +229,6 @@
 		  (let ((c2 (read-char)))
 		    (if (eqv? c2 #\/)
 			(iter (cons* #\/ #\* cl2) (read-char)) ;; keep comment
-			;;(iter cl (read-char)) ;; toss comment
 			(iter2 (cons #\* cl2) c2))))
 		 (else
 		  (iter2 (cons ch cl2) (read-char))))))
@@ -320,6 +320,7 @@
 		      (exp (parse-cpp-expr rhs)))
 		 (eval-cpp-expr exp defs)))
 	     (lambda (key fmt . args)
+	       (display "body.323\n")
 	       (report-error fmt args)
 	       (throw 'c99-error "CPP error"))))
 	    
@@ -385,16 +386,22 @@
 		 (set! ppxs (cons 'skip1-pop (cdr ppxs))))
 		(else (cpi-pop))))
 	      ((error)
-	       stmt)
+	       (if (exec-cpp-stmts?) (report-error "CPP error: ~S" (cdr stmt))))
+	      ((pragma)
+	       ;; standard says implementation-defined if line is expanded
+	       #t)
 	      (else
 	       (error "unhandled cpp stmt")))
-	    (cons 'cpp-stmt stmt))
+	    (case (car stmt)
+	      ((pragma) (cons 'cpp-pragma (cdr stmt)))
+	      (else (cons 'cpp-stmt stmt))))
 	  
 	  (define (eval-cpp-line line)
 	    (with-throw-handler
 	     'cpp-error
 	     (lambda () (eval-cpp-stmt (read-cpp-stmt line)))
 	     (lambda (key fmt . rest)
+	       (display "body.399\n")
 	       (report-error fmt rest)
 	       (throw 'c99-error "CPP error"))))
 

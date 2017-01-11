@@ -622,9 +622,11 @@
      (declaration)
      (lone-comment)
      (cpp-statement)
+     (pragma)
      ("extern" $string "{" external-declaration-list "}"
       ($$ `(extern-block ,$2 (extern-begin ,$2)
 			 ,@(sx-tail (tl->list $4) 1) (extern-end))))
+     (";" ($$ `(decl (@ (not-C99 . "GNU C")))))
      )
     
     (function-definition
@@ -656,8 +658,8 @@
      (string-literal $string ($$ (tl-append $1 $2))))
     (code-comment ($code-comm ($$ `(comment ,$1))))
     (lone-comment ($lone-comm ($$ `(comment ,$1))))
-    (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
-
+    (cpp-statement ('cpp-stmt))
+    (pragma ('cpp-pragma))
     )))
 
 

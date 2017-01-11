@@ -714,6 +714,8 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => cpp-statement
    (lambda ($1 . $rest) $1)
+   ;; external-declaration => pragma
+   (lambda ($1 . $rest) $1)
    ;; external-declaration => "extern" '$string "{" external-declaration-li...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(extern-block
@@ -721,6 +723,9 @@
         (extern-begin ,$2)
         ,@(sx-tail (tl->list $4) 1)
         (extern-end)))
+   ;; external-declaration => ";"
+   (lambda ($1 . $rest)
+     `(decl (@ (not-C99 . "GNU C"))))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)
      `(knr-fctn-defn
@@ -758,7 +763,9 @@
    ;; lone-comment => '$lone-comm
    (lambda ($1 . $rest) `(comment ,$1))
    ;; cpp-statement => 'cpp-stmt
-   (lambda ($1 . $rest) `(cpp-stmt ,$1))
+   (lambda ($1 . $rest) $1)
+   ;; pragma => 'cpp-pragma
+   (lambda ($1 . $rest) $1)
    ))
 
 ;;; end tables
