@@ -54,6 +54,7 @@
     ("stdio.h" "FILE" "size_t")
     ("stdlib.h" "div_t" "ldiv_t" "lldiv_t" "wchar_t")
     ("string.h" "size_t")
+    ("strings.h" "size_t")
     ("time.h" "time_t" "clock_t" "size_t")
     ("unistd.h" "size_t" "ssize_t" "div_t" "ldiv_t")
     ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
