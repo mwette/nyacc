@@ -99,19 +99,30 @@
     (eval-expr tree)))
 
 ;; @deffn scan-cpp-input argd used dict for-argl => string
-;; Process the replacement text and generate a (reversed) token-list.
-;; If for-argl, stop at, and push back, @code{,} or @code{)}.
+;; Process replacement text from the input port and generate a (reversed)
+;; token-list.  If for-argl, stop at, and push back, @code{,} or @code{)}.
+;; This is called by: collect-args, expand-cpp-repl, cpp-expand-text
 (define (scan-cpp-input argd dict used for-argl)
+  (let ((result (x-scan-cpp-input argd dict used for-argl)))
+    (simple-format #t "scan=> ~S\n" result)
+    result))
+(define (x-scan-cpp-input argd dict used for-argl)
   ;; Works like this: scan tokens (comments, parens, strings, char's, etc).
   ;; Tokens (i.e., strings) are collected in a (reverse ordered) list (stl)
   ;; and merged together on return.  Lone characters are collected in the
-  ;; list @code{chl}.  Once a non-char token is found the character list is
+  ;; list @code{chl}.  Once a token border is seen the character list is
   ;; converted to a string and added to the string list first, followed by
   ;; the new token.
 
   ;; Turn reverse chl into a string and insert it into the string list stl.
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
+
+  ;; used when we see `#foo'; converts foo to "foo"
+  (define (stringify str)
+    (string-append "\"" str "\""))
+
+  (define conjoin string-append)
 
   ;; We just scanned "defined", now need to scan the arg to inhibit expansion.
   ;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
@@ -135,6 +146,8 @@
 	     (nxt #f)		; next string 
 	     (lvl 0)		; level
 	     (ch (read-char)))	; next character
+    (simple-format #t "  iter stl=~S chl=~S nxt=~S lvl=~S ch=~S\n"
+		   stl chl nxt lvl ch)
     (cond
      ;; have item to add, but first add in char's
      (nxt (iter (cons nxt (add-chl chl stl)) '() #f lvl ch))
@@ -146,24 +159,34 @@
      ((read-c-comm ch #f) =>
       (lambda (cp) (iter stl chl (string-append "/*" (cdr cp) "*/")
 			 lvl (read-char))))
+     ;; not sure about this:
+     ((char-set-contains? c:ws ch) (iter stl chl nxt lvl (read-char)))
      ((char=? #\( ch) (iter stl (cons ch chl) nxt (1+ lvl) (read-char)))
      ((char=? #\) ch) (iter stl (cons ch chl) nxt (1- lvl) (read-char)))
      ((char=? #\# ch)
       (let ((ch (read-char)))
 	(if (eqv? ch #\#)
-	    (iter (cons "##" stl) chl #f lvl (read-char))
-	    (iter (cons "#" stl) chl #f lvl ch))))
+	    (iter stl chl "##" lvl (read-char))
+	    (iter stl chl "#" lvl ch))))
      ((read-c-string ch) =>
       (lambda (st) (iter stl chl st lvl (read-char))))
      ((read-c-ident ch) =>
       (lambda (iden)
+	(simple-format #t "  read-c-ident => ~S\n" iden)
 	(if (equal? iden "defined")
 	    ;; "defined" is a special case
 	    (iter stl chl (scan-defined) lvl (read-char))
 	    ;; otherwise ...
 	    (let* ((aval (assoc-ref argd iden))  ; lookup argument
 		   (rval (assoc-ref dict iden))) ; lookup macro def
+	      (simple-format #t "    aval=~S rval=~S\n" aval rval)
 	      (cond
+	       ((and (pair? stl) (string=? "#" (car stl)))
+		;;(simple-format #t "TEST iden=~S aval=~S\n" iden aval)
+		(iter (cdr stl) chl (stringify aval) lvl (read-char)))
+	       ((and (pair? stl) (string=? "##" (car stl)))
+		(simple-format #t "TEST iden=~S aval=~S\n" iden aval)
+		(iter (cddr stl) chl (conjoin (cadr stl) aval) lvl (read-char)))
 	       ((member iden used)	; name used
 		(iter stl chl iden lvl (read-char)))
 	       (aval			; arg ref
@@ -177,17 +200,22 @@
 		       (newl (expand-cpp-repl text argd dict (cons iden used))))
 		  (iter stl chl newl lvl (read-char))))
 	       (else			; normal identifier
+		(simple-format #t "normal id stl=~S\n" stl)
 		(iter stl chl iden lvl (read-char))))))))
      (else
       (iter stl (cons ch chl) #f lvl (read-char))))))
-  
+
+;; @deffn collect-args argd dict used
+;; to be documented
 (define (collect-args argd dict used)
   (if (not (eqv? (skip-ws (read-char)) #\()) (cpp-err "CPP expecting `('"))
   (let iter ((argl (list (scan-cpp-input argd dict used #t))))
     (let ((ch (read-char)))
       (if (eqv? ch #\)) (reverse argl)
 	  (iter (cons (scan-cpp-input argd dict used #t) argl))))))
-    
+
+;; @deffn expand-cpp-repl
+;; to be documented
 (define (expand-cpp-repl repl argd dict used)
   (with-input-from-string repl
     (lambda () (scan-cpp-input argd dict used #f))))
@@ -216,6 +244,8 @@
       (let* ((args (car rval)) (repl (cdr rval))
 	     (argv (collect-args '() dict '()))
 	     (argd (map cons args argv))
+	     (xx (simple-format #t "args=~S argv=~S argd=~S repl=~S\n"
+				args argv argd repl))
 	     (expd (expand-cpp-repl repl argd dict (cons ident used))))
 	expd)))))
 
