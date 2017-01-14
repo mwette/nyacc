@@ -46,7 +46,7 @@ todo:
 (define (read-ellipsis ch)
   (cond
    ((eof-object? ch) #f)
-   ((char=? ch #\.) (read-char) (read-char) "...")
+   ((char=? ch #\.) (read-char) (read-char) "...") ; assumes correct syntax
    (else #f)))
 
 ;; @deffn cpp-define => #f|???
@@ -120,7 +120,7 @@ todo:
 	    `(if ,(string-append "!defined(" (rd-ident) ")" (rd-rest))))
 	   ((if elif else endif line error pragma) (list cmd (rd-rest)))
 	   (else '(unknown "")))))))
-    
+
 (include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/cppact.scm")
 
@@ -129,7 +129,7 @@ todo:
    (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
 	 (cons 'mtab mtab) (cons 'act-v act-v))))
 
+;; Provide gen-cpp-lexer parse-cpp-expr eval-cpp-expr:
 (include-from-path "nyacc/lang/c99/cppbody.scm")
-;; cppbody.scm provides: gen-cpp-lexer parse-cpp-expr eval-cpp-expr
  
 ;; --- last line ---

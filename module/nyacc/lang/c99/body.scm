@@ -397,6 +397,7 @@
 	      (else (cons 'cpp-stmt stmt))))
 	  
 	  (define (eval-cpp-line line)
+	    (simple-format #t "line=~S\n" line)
 	    (with-throw-handler
 	     'cpp-error
 	     (lambda () (eval-cpp-stmt (read-cpp-stmt line)))
@@ -430,6 +431,7 @@
 		     ((and (x-def? name mode)
 			   (expand-cpp-mref name (cpi-defs info)))
 		      => (lambda (st)
+			   (simple-format #t "st=~S\n" st)
 			   (push-input (open-input-string st))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
@@ -454,6 +456,7 @@
 	  (let iter ((pair (read-token)))
 	    (case (car ppxs)
 	      ((keep)
+	       ;;(simple-format #t "lx=>~S\n" pair)
 	       pair)
 	      ((skip-done skip-look)
 	       (iter (read-token)))

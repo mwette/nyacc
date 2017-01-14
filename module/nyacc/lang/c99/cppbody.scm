@@ -98,15 +98,27 @@
 	    (else (error "incomplete implementation"))))))
     (eval-expr tree)))
 
-;; @deffn scan-cpp-input argd used dict for-argl => string
+;; Note: scan-cpp-input scans replacement text.  When identifiers are found
+;; they are tested for expansion as follows:
+;; @enumerate
+;; @item If already expanded, then ignore.
+;; @item If followed by @code{(}, then use @code{collect-args} to get the
+;; arguments and ...
+;; @item Otherwise insert the replacement text and continue scanning (at
+;; first character of new replacement text.
+;; @end enumerate
+
+;; @deffn scan-cpp-input ch argd used dict end-tok => string
 ;; Process replacement text from the input port and generate a (reversed)
-;; token-list.  If for-argl, stop at, and push back, @code{,} or @code{)}.
-;; This is called by: collect-args, expand-cpp-repl, cpp-expand-text
-(define (scan-cpp-input argd dict used for-argl)
-  (let ((result (x-scan-cpp-input argd dict used for-argl)))
-    (simple-format #t "scan=> ~S\n" result)
-    result))
-(define (x-scan-cpp-input argd dict used for-argl)
+;; token-list.  If end-tok, stop at, and push back, @code{,} or @code{)}.
+;; The argument @var{argd} is a dictionary (argument name, argument
+;; value) pairs which will be expanded as needed.  This routine is called
+;; by collect-args, expand-cpp-repl and cpp-expand-text.
+(define (scan-cpp-input ch argd dict used end-tok)
+  (let ((res (x-scan-cpp-input ch argd dict used end-tok)))
+    (simple-format #t "scan=>~S\n" res)
+    res))
+(define (x-scan-cpp-input ch argd dict used end-tok)
   ;; Works like this: scan tokens (comments, parens, strings, char's, etc).
   ;; Tokens (i.e., strings) are collected in a (reverse ordered) list (stl)
   ;; and merged together on return.  Lone characters are collected in the
@@ -128,8 +140,8 @@
   ;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
   ;; return "defined(FOO)".  We use ec (end-char) as state indicator: nul at
   ;; start, #\) on seeing #\( or #\space if other.
-  (define (scan-defined)
-    (let* ((ch (skip-ws (read-char))) (ec (if (char=? ch #\() #\) #\space)))
+  (define (scan-defined-arg)
+    (let* ((ch (skip-ws ch)) (ec (if (char=? ch #\() #\) #\space)))
       (let iter ((chl '(#\()) (ec ec) (ch ch))
 	(cond
 	 ((and (eof-object? ch) (char=? #\space ec))
@@ -145,17 +157,23 @@
 	     (chl '())		; char-list (current list of input chars)
 	     (nxt #f)		; next string 
 	     (lvl 0)		; level
-	     (ch (read-char)))	; next character
-    (simple-format #t "  iter stl=~S chl=~S nxt=~S lvl=~S ch=~S\n"
-		   stl chl nxt lvl ch)
+	     (ch ch))	; next character
+    (simple-format #t "iter ch=~S stl=~S chl=~S nxt=~S lvl=~S ch=~S\n"
+		   ch stl chl nxt lvl ch)
     (cond
      ;; have item to add, but first add in char's
      (nxt (iter (cons nxt (add-chl chl stl)) '() #f lvl ch))
      ;; If end of string or see end-ch at level 0, then return.
      ((eof-object? ch)  ;; CHECK (ab++)
       (apply string-append (reverse (add-chl chl stl))))
-     ((and for-argl (memq ch '(#\) #\,)) (zero? lvl))
-      (unread-char ch) (apply string-append (reverse (add-chl chl stl))))
+     
+     ((and (eqv? end-tok ch) (zero? lvl))
+      (unread-char ch)
+      (apply string-append (reverse (add-chl chl stl))))
+     ((and end-tok (char=? #\) ch) (zero? lvl))
+      (unread-char ch)
+      (apply string-append (reverse (add-chl chl stl))))
+     
      ((read-c-comm ch #f) =>
       (lambda (cp) (iter stl chl (string-append "/*" (cdr cp) "*/")
 			 lvl (read-char))))
@@ -172,20 +190,20 @@
       (lambda (st) (iter stl chl st lvl (read-char))))
      ((read-c-ident ch) =>
       (lambda (iden)
-	(simple-format #t "  read-c-ident => ~S\n" iden)
+	;;(simple-format #t "  read-c-ident => ~S\n" iden)
 	(if (equal? iden "defined")
 	    ;; "defined" is a special case
-	    (iter stl chl (scan-defined) lvl (read-char))
+	    (iter stl chl (scan-defined-arg) lvl (read-char))
 	    ;; otherwise ...
 	    (let* ((aval (assoc-ref argd iden))  ; lookup argument
 		   (rval (assoc-ref dict iden))) ; lookup macro def
-	      (simple-format #t "    aval=~S rval=~S\n" aval rval)
+	      ;;(simple-format #t "    aval=~S rval=~S\n" aval rval)
 	      (cond
 	       ((and (pair? stl) (string=? "#" (car stl)))
 		;;(simple-format #t "TEST iden=~S aval=~S\n" iden aval)
 		(iter (cdr stl) chl (stringify aval) lvl (read-char)))
 	       ((and (pair? stl) (string=? "##" (car stl)))
-		(simple-format #t "TEST iden=~S aval=~S\n" iden aval)
+		;;(simple-format #t "TEST iden=~S aval=~S\n" iden aval)
 		(iter (cddr stl) chl (conjoin (cadr stl) aval) lvl (read-char)))
 	       ((member iden used)	; name used
 		(iter stl chl iden lvl (read-char)))
@@ -195,35 +213,52 @@
 		(iter stl chl rval lvl (read-char)))
 	       ((pair? rval)		; cpp macro
 		(let* ((argl (car rval)) (text (cdr rval))
-		       (argv (collect-args argd dict used))
-		       (argd (map cons argl argv))
+		       (argd (collect-args (read-char) argl argd dict used))
 		       (newl (expand-cpp-repl text argd dict (cons iden used))))
 		  (iter stl chl newl lvl (read-char))))
 	       (else			; normal identifier
-		(simple-format #t "normal id stl=~S\n" stl)
+		;;(simple-format #t "normal id stl=~S\n" stl)
 		(iter stl chl iden lvl (read-char))))))))
      (else
       (iter stl (cons ch chl) #f lvl (read-char))))))
 
-;; @deffn collect-args argd dict used
+;; @deffn collect-args ch argl argd dict used => argd
 ;; to be documented
-(define (collect-args argd dict used)
-  (if (not (eqv? (skip-ws (read-char)) #\()) (cpp-err "CPP expecting `('"))
-  (let iter ((argl (list (scan-cpp-input argd dict used #t))))
-    (let ((ch (read-char)))
-      (if (eqv? ch #\)) (reverse argl)
-	  (iter (cons (scan-cpp-input argd dict used #t) argl))))))
+;; I think argd is a passthrough for scan-cpp-input
+;; argl: list of formal arguments in #define
+;; argd: used? (maybe just a pass-through for scan-cpp-input
+;; dict: dict of macro defs
+;; used: list of already expanded macros
+;; TODO clean this up
+;; should be looking at #\( and eat up to matching #\)
+(define (collect-args ch argl argd dict used)
+  (simple-format #t "collect-args: argl=~S argd=~S dict=~S\n" argl argd dict)
+  (if (not (eqv? (skip-ws ch) #\()) (cpp-err "CPP expecting `('"))
+  (let iter ((argl argl) (argv '()) (ch (read-char)))
+    (simple-format #t "  ch=~S\n" ch)
+    (cond
+     ((eqv? ch #\)) (reverse argv))
+     ((null? argl)
+      (if (eqv? ch #\space) (iter argl argv ch) (cpp-err "arg count")))
+     ((and (null? (cdr argl)) (string=? (car argl) "..."))
+      (iter (cdr argl)
+	    (acons "__VA_ARGS__" (scan-cpp-input ch argd dict used #\)) argv)
+	    (read-char)))
+     (else
+      (iter (cdr argl)
+	    (acons (car argl) (scan-cpp-input ch argd dict used #\,) argv)
+	    (read-char))))))
 
 ;; @deffn expand-cpp-repl
 ;; to be documented
 (define (expand-cpp-repl repl argd dict used)
   (with-input-from-string repl
-    (lambda () (scan-cpp-input argd dict used #f))))
+    (lambda () (scan-cpp-input (read-char) argd dict used #f))))
 
 ;; @deffn cpp-expand-text text dict => string
 (define (cpp-expand-text text dict)
   (with-input-from-string text
-    (lambda () (scan-cpp-input '() dict '() #f))))
+    (lambda () (scan-cpp-input (read-char) '() dict '() #f))))
 
 ;; @deffn expand-cpp-mref ident dict => repl|#f
 ;; Given an identifier seen in C99 input, this checks for associated
@@ -241,11 +276,11 @@
       (let ((expd (expand-cpp-repl rval '() dict (cons ident used))))
 	expd))
      ((pair? rval)
-      (let* ((args (car rval)) (repl (cdr rval))
-	     (argv (collect-args '() dict '()))
-	     (argd (map cons args argv))
-	     (xx (simple-format #t "args=~S argv=~S argd=~S repl=~S\n"
-				args argv argd repl))
+      (let ((ch (read-char)))
+	(simple-format #t "expand-cpp-mref: ch=~S\n" ch)
+	(unread-char ch))
+      (let* ((argl (car rval)) (repl (cdr rval))
+	     (argd (collect-args (read-char) argl '() dict '()))
 	     (expd (expand-cpp-repl repl argd dict (cons ident used))))
 	expd)))))
 
