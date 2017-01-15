@@ -12,7 +12,7 @@
 (add-to-load-path (string-append (getcwd) "/../../../../module/"))
 (add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
 
-(define-module (c99-02)
+(define-module (c99-03)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 xparser)
   #:use-module (nyacc lang c99 pprint)
@@ -21,7 +21,7 @@
 ;; pretty-printer, parser test
 ;; We generate a tree, send it to the pretty-printer, then through the parser.
 ;; This should be a unit function, methinks.
-(with-test-prefix "nyacc/c99-02, pretty-printer"
+(with-test-prefix "nyacc/c99-03, pretty-print C99"
 
   ;; loop simple through pretty-printer
   (pass-if "simple"

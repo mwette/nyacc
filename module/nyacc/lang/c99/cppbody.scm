@@ -18,12 +18,15 @@
 (define (cpp-err fmt . args)
   (apply throw 'cpp-error fmt args))
 
-;;.@deffn skip-ws ch
-(define (skip-ws ch)
-  (if (eof-object? ch) ch
-      (if (char-set-contains? c:ws ch)
-	  (skip-ws (read-char))
-	  ch)))
+;;.@deffn skip-il-ws ch
+;; Skip in-line whitespace
+(define skip-il-ws
+  (let ((il-ws (list->char-set '(#\space #\tab))))
+    (lambda (ch)
+      (cond
+       ((eof-object? ch) ch)
+       ((char-set-contains? il-ws ch) (skip-il-ws (read-char)))
+       (else ch)))))
 
 ;; Since we want to be able to get CPP statements with comment in tact
 ;; (e.g., for passing to @code{pretty-print-c99}) we need to remove
@@ -116,10 +119,6 @@
 ;; value) pairs which will be expanded as needed.  This routine is called
 ;; by collect-args, expand-cpp-repl and cpp-expand-text.
 (define (scan-cpp-input argd dict used end-tok)
-  (let ((res (x-scan-cpp-input argd dict used end-tok)))
-    (simple-format #t "scan=>~S\n" res)
-    res))
-(define (x-scan-cpp-input argd dict used end-tok)
   ;; Works like this: scan tokens (comments, parens, strings, char's, etc).
   ;; Tokens (i.e., strings) are collected in a (reverse ordered) list (stl)
   ;; and merged together on return.  Lone characters are collected in the
@@ -139,28 +138,33 @@
 
   ;; We just scanned "defined", now need to scan the arg to inhibit expansion.
   ;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
-  ;; return "defined(FOO)".  We use ec (end-char) as state indicator: nul at
-  ;; start, #\) on seeing #\( or #\nul if other.
+  ;; return "defined(FOO)".  We use ec (end-char) as terminal char:
+  ;; #\) if starts with #( or #\nul if other.
   (define (scan-defined-arg)
-    (let* ((ch (skip-ws ch)) (ec (if (char=? ch #\() #\) #\nul)))
-      (let iter ((chl '(#\()) (ec ec) (ch ch))
+    (let* ((ch (skip-il-ws (read-char)))
+	   (ec (if (char=? ch #\() #\) #\null)))
+      (let iter ((chl '(#\()) (ec ec) (ch (if (char=? ec #\)) (read-char) ch)))
 	(cond
-	 ((and (eof-object? ch) (char=? #\nul ec))
-	  (string-append "defined" (list->string (reverse (cons #\) chl)))))
-	 ((eof-object? ch) (cpp-err "illegal argument to `defined'"))
-	 ((and (char=? ch #\)) (char=? ec #\)))
-	  (string-append "defined" (list->string (reverse (cons ch chl)))))
+	 ((eof-object? ch)
+	  (if (char=? ec #\null)
+	      (string-append "defined" (list->string (reverse (cons #\) chl))))
+	      (cpp-err "illegal argument to `defined'")))
 	 ((char-set-contains? c:ir ch)
 	  (iter (cons ch chl) ec (read-char)))
-	 (else (cpp-err "illegal identifier"))))))
+	 ((char=? ec #\))
+	  (if (char=? #\) (skip-il-ws ch))
+	      (string-append "defined" (list->string (reverse (cons #\) chl))))
+	      (cpp-err "garbage in argument to `defined'")))
+	 ((char=? ec #\null) ;; past identifier
+	  (string-append "defined" (list->string (reverse (cons #\) chl)))))
+	 (else
+	  (cpp-err "illegal argument to  `defined'"))))))
 
   (let iter ((stl '())		; string list (i.e., tokens)
 	     (chl '())		; char-list (current list of input chars)
 	     (nxt #f)		; next string 
 	     (lvl 0)		; level
 	     (ch (read-char)))	; next character
-    (simple-format #t "iter ch=~S stl=~S chl=~S nxt=~S lvl=~S ch=~S\n"
-		   ch stl chl nxt lvl ch)
     (cond
      ;; have item to add, but first add in char's
      (nxt (iter (cons nxt (add-chl chl stl)) '() #f lvl ch))
@@ -189,20 +193,17 @@
       (lambda (st) (iter stl chl st lvl (read-char))))
      ((read-c-ident ch) =>
       (lambda (iden)
-	;;(simple-format #t "  read-c-ident => ~S\n" iden)
 	(if (equal? iden "defined")
 	    ;; "defined" is a special case
-	    (iter stl chl (scan-defined-arg) lvl (read-char))
+	    (let ((arg (scan-defined-arg)))
+	      (iter stl chl arg lvl (read-char)))
 	    ;; otherwise ...
 	    (let* ((aval (assoc-ref argd iden))  ; lookup argument
 		   (rval (assoc-ref dict iden))) ; lookup macro def
-	      ;;(simple-format #t "    aval=~S rval=~S\n" aval rval)
 	      (cond
 	       ((and (pair? stl) (string=? "#" (car stl)))
-		;;(simple-format #t "TEST iden=~S aval=~S\n" iden aval)
 		(iter (cdr stl) chl (stringify aval) lvl (read-char)))
 	       ((and (pair? stl) (string=? "##" (car stl)))
-		;;(simple-format #t "TEST iden=~S aval=~S\n" iden aval)
 		(iter (cddr stl) chl (conjoin (cadr stl) aval) lvl (read-char)))
 	       ((member iden used)	; name used
 		(iter stl chl iden lvl (read-char)))
@@ -216,7 +217,6 @@
 		       (newl (expand-cpp-repl text argd dict (cons iden used))))
 		  (iter stl chl newl lvl (read-char))))
 	       (else			; normal identifier
-		;;(simple-format #t "normal id stl=~S\n" stl)
 		(iter stl chl iden lvl (read-char))))))))
      (else
       (iter stl (cons ch chl) #f lvl (read-char))))))
@@ -231,23 +231,17 @@
 ;; TODO clean this up
 ;; should be looking at #\( and eat up to matching #\)
 (define (collect-args argl argd dict used)
-  (simple-format #t "collect-args: argl=~S argd=~S dict=~S\n" argl argd dict)
-  (let iter ((argl argl) (argv '()) (ch (skip-ws (read-char))))
+  (let iter ((argl argl) (argv '()) (ch (skip-il-ws (read-char))))
     ;; ch should always be #\(, #\, or #\)
-    (simple-format #t "  ch=~S\n" ch)
     (cond
      ((eqv? ch #\)) (reverse argv))
      ((null? argl) (cpp-err "arg count"))
      ((and (null? (cdr argl)) (string=? (car argl) "..."))
-      ;; depending on scan-cpp-input being called before read-char
-      (iter (cdr argl)
-	    (acons "__VA_ARGS__" (scan-cpp-input argd dict used #\)) argv)
-	    (read-char)))
+      (let ((val (scan-cpp-input argd dict used #\))))
+	(iter (cdr argl) (acons "__VA_ARGS__" val argv) (read-char))))
      ((or (eqv? ch #\() (eqv? ch #\,))
-      ;; depending on scan-cpp-input being called before read-char
-      (iter (cdr argl)
-	    (acons (car argl) (scan-cpp-input argd dict used #\,) argv)
-	    (read-char)))
+      (let ((val (scan-cpp-input argd dict used #\,)))
+	(iter (cdr argl) (acons (car argl) val argv) (read-char))))
      (else (error "coding error, ch=" ch)))))
 
 ;; @deffn expand-cpp-repl
@@ -277,9 +271,6 @@
       (let ((expd (expand-cpp-repl rval '() dict (cons ident used))))
 	expd))
      ((pair? rval)
-      (let ((ch (read-char)))
-	(simple-format #t "expand-cpp-mref: ch=~S\n" ch)
-	(unread-char ch))
       (let* ((argl (car rval)) (repl (cdr rval))
 	     (argd (collect-args argl '() dict '()))
 	     (expd (expand-cpp-repl repl argd dict (cons ident used))))

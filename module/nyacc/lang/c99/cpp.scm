@@ -55,26 +55,27 @@ todo:
   (letrec
       ((p-cppd ;; parse all
 	(lambda ()
-	  (let* ((iden (read-c-ident (skip-ws (read-char))))
-		 ;;(args (or (p-args (skip-ws (read-char))) '()))
+	  (let* ((iden (read-c-ident (skip-il-ws (read-char))))
 		 ;; "define ABC(ARG)" not the same as "define ABC (ARG)"
 		 (args (or (p-args (read-char)) '()))
-		 (rest (or (p-rest (skip-ws (read-char))) " ")))
+		 (rest (or (p-rest (skip-il-ws (read-char))) " ")))
 	    (if (pair? args)
 		`(define (name ,iden) ,(cons 'args args) (repl ,rest))
 		`(define (name ,iden) (repl ,rest))))))
        (p-args ;; parse args
 	(lambda (la) ;; unread la if no match :(
 	  (if (eq? la #\()
-	      (let iter ((args '()) (la (skip-ws (read-char))))
+	      (let iter ((args '()) (la (skip-il-ws (read-char))))
 		(cond
 		 ((eq? la #\)) (reverse args))
 		 ((read-c-ident la) =>
-		  (lambda (arg) (iter (cons arg args) (skip-ws (read-char)))))
+		  (lambda (arg)
+		    (iter (cons arg args) (skip-il-ws (read-char)))))
 		 ((read-ellipsis la) =>
-		  (lambda (arg) (iter (cons arg args) (skip-ws (read-char)))))
+		  (lambda (arg)
+		    (iter (cons arg args) (skip-il-ws (read-char)))))
 		 ((eq? la #\,)
-		  (iter args (skip-ws (read-char))))))
+		  (iter args (skip-il-ws (read-char))))))
 	      (begin (if (char? la) (unread-char la)) #f)))) ;; CLEANUP
        (p-rest ;; parse rest
 	(lambda (la)
@@ -85,7 +86,7 @@ todo:
 ;; @deffn cpp-include
 ;; Parse CPP include statement.
 (define (cpp-include)
-  (let* ((beg-ch (skip-ws (read-char)))
+  (let* ((beg-ch (skip-il-ws (read-char)))
 	 (end-ch (if (eq? beg-ch #\<) #\> #\"))
 	 (path (let iter ((cl (list beg-ch)) (ch (read-char)))
 		 (if (eq? ch end-ch) (list->string (reverse (cons ch cl)))
@@ -102,14 +103,14 @@ todo:
 ;; To evaluate the @code{if} statements use @code{parse-cpp-expr} and
 ;; @code{eval-cpp-expr}.
 (define (read-cpp-stmt line)
-  (define (rd-ident) (read-c-ident (skip-ws (read-char))))
-  (define (rd-num) (and=> (read-c-num (skip-ws (read-char))) cdr))
-  (define (rd-rest) (let ((ch (skip-ws (read-char))))
+  (define (rd-ident) (read-c-ident (skip-il-ws (read-char))))
+  (define (rd-num) (and=> (read-c-num (skip-il-ws (read-char))) cdr))
+  (define (rd-rest) (let ((ch (skip-il-ws (read-char))))
 		      (if (not (eof-object? ch)) (unread-char ch))
 		      (drain-input (current-input-port))))
   (with-input-from-string line
     (lambda ()
-      (let ((cmd (string->symbol (read-c-ident (skip-ws (read-char))))))
+      (let ((cmd (string->symbol (read-c-ident (skip-il-ws (read-char))))))
 	 (case cmd
 	   ((include) (cpp-include))
 	   ((define) (cpp-define))

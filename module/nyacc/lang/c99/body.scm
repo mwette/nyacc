@@ -320,7 +320,6 @@
 		      (exp (parse-cpp-expr rhs)))
 		 (eval-cpp-expr exp defs)))
 	     (lambda (key fmt . args)
-	       (display "body.323\n")
 	       (report-error fmt args)
 	       (throw 'c99-error "CPP error"))))
 	    
@@ -386,7 +385,8 @@
 		 (set! ppxs (cons 'skip1-pop (cdr ppxs))))
 		(else (cpi-pop))))
 	      ((error)
-	       (if (exec-cpp-stmts?) (report-error "CPP error: ~S" (cdr stmt))))
+	       (if (exec-cpp-stmts?)
+		   (report-error "error: #error ~A" (cdr stmt))))
 	      ((pragma)
 	       ;; standard says implementation-defined if line is expanded
 	       #t)
@@ -397,7 +397,6 @@
 	      (else (cons 'cpp-stmt stmt))))
 	  
 	  (define (eval-cpp-line line)
-	    (simple-format #t "line=~S\n" line)
 	    (with-throw-handler
 	     'cpp-error
 	     (lambda () (eval-cpp-stmt (read-cpp-stmt line)))
@@ -431,7 +430,6 @@
 		     ((and (x-def? name mode)
 			   (expand-cpp-mref name (cpi-defs info)))
 		      => (lambda (st)
-			   (simple-format #t "st=~S\n" st)
 			   (push-input (open-input-string st))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
@@ -455,9 +453,7 @@
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
 	    (case (car ppxs)
-	      ((keep)
-	       ;;(simple-format #t "lx=>~S\n" pair)
-	       pair)
+	      ((keep) pair)
 	      ((skip-done skip-look)
 	       (iter (read-token)))
 	      ((skip1-pop)
