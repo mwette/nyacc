@@ -111,16 +111,16 @@ todo:
   (with-input-from-string line
     (lambda ()
       (let ((cmd (string->symbol (read-c-ident (skip-il-ws (read-char))))))
-	 (case cmd
-	   ((include) (cpp-include))
-	   ((define) (cpp-define))
-	   ((undef) `(undef ,(rd-ident)))
-	   ((ifdef)
-	    `(if ,(string-append "defined(" (rd-ident) ")" (rd-rest))))
-	   ((ifndef)
-	    `(if ,(string-append "!defined(" (rd-ident) ")" (rd-rest))))
-	   ((if elif else endif line error pragma) (list cmd (rd-rest)))
-	   (else '(unknown "")))))))
+	(case cmd
+	  ((include) (cpp-include))
+	  ((define) (cpp-define))
+	  ((undef) `(undef ,(rd-ident)))
+	  ((ifdef)
+ 	   `(if ,(string-append "defined(" (rd-ident) ")" (rd-rest))))
+	  ((ifndef)
+	   `(if ,(string-append "!defined(" (rd-ident) ")" (rd-rest))))
+	  ((if elif else endif line error pragma) (list cmd (rd-rest)))
+	  (else '(unknown "")))))))
 
 (include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/cppact.scm")

@@ -15,6 +15,30 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+(use-modules (ice-9 match))
+
+(define c99-std-defs
+  '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
+    "__STDC_VERSION__" "__TIME__"))
+
+(define (c99-std-def? str)
+  (let iter ((defs c99-std-defs))
+    (cond
+     ((null? defs) #f)
+     ((string=? (car defs) str) #t)
+     (else (iter (cdr defs))))))
+
+(define (c99-std-val str)
+  (cond
+   ((string=? str "__DATE__") "M01 01 2001")
+   ((string=? str "__FILE__") "(unknown)")
+   ((string=? str "__LINE__") 0)
+   ((string=? str "__STDC__") 1)
+   ((string=? str "__STDC_HOSTED__") 0)
+   ((string=? "__STDC_VERSION__") 201701)
+   ((string=? "__TIME__") "00:00:00")
+   (else #f)))
+
 (define (cpp-err fmt . args)
   (apply throw 'cpp-error fmt args))
 
@@ -111,6 +135,40 @@
 ;; first character of new replacement text.
 ;; @end enumerate
 
+;; @deffn rtokl->string tokl => string
+;; Convert reverse token-list to string.
+(define (rtokl->string tokl)
+  ;; need to cover: comm ident string arg
+  ;;(let iter ((stl '()) (chl '()) (nxt #f) (tkl tokl)) ;; more efficient
+  (let iter ((stl '()) (tkl tokl))
+    (match tkl
+      ('()
+       (apply string-append stl))
+
+      ((('arg . arg) 'dhash (key . val) . rest)
+       (iter (cons (string-append val arg) stl) (list-tail tkl 3)))
+
+      (((key . val) 'dhash ('arg . arg) . rest)
+       (iter (cons (string-append arg val) stl) (list-tail tkl 3)))
+
+      ((('arg . arg) 'hash . rest)
+       (iter (cons (string-append "\"" arg "\"") stl) (list-tail tkl 2)))
+
+      ((('comm . val) . rest)
+       (iter (cons (string-append "/*" val " */") stl) (cdr tkl)))
+
+      ((('ident . rval) ('ident . lval) . rest)
+       (iter (cons* " " rval stl) (cdr tkl)))
+
+      (((key . val) . rest)
+       (iter (cons val stl) (cdr tkl)))
+
+      (((? char? ch) . rest)
+       (iter (cons (string ch) stl) rest))
+
+      (otherwise
+       (error "no match" tkl)))))
+
 ;; @deffn scan-cpp-input argd used dict end-tok => string
 ;; Process replacement text from the input port and generate a (reversed)
 ;; token-list.  If end-tok, stop at, and push back, @code{,} or @code{)}.
@@ -119,20 +177,13 @@
 ;; value) pairs which will be expanded as needed.  This routine is called
 ;; by collect-args, expand-cpp-repl and cpp-expand-text.
 (define (scan-cpp-input argd dict used end-tok)
-  ;; Works like this: scan tokens (comments, parens, strings, char's, etc).
-  ;; Tokens (i.e., strings) are collected in a (reverse ordered) list (stl)
-  ;; and merged together on return.  Lone characters are collected in the
-  ;; list @code{chl}.  Once a token border is seen the character list is
-  ;; converted to a string and added to the string list first, followed by
-  ;; the new token.
+  ;; Works like this: scan for tokens (comments, parens, strings, char's, etc).
+  ;; Tokens are collected in a (reverse ordered) list (tkl) and merged together
+  ;; to a string on return using @code{rtokl->string}.
 
   ;; Turn reverse chl into a string and insert it into the string list stl.
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
-
-  ;; used when we see `#foo'; converts foo to "foo"
-  (define (stringify str)
-    (string-append "\"" str "\""))
 
   (define conjoin string-append)
 
@@ -160,66 +211,58 @@
 	 (else
 	  (cpp-err "illegal argument to  `defined'"))))))
 
-  (let iter ((stl '())		; string list (i.e., tokens)
-	     (chl '())		; char-list (current list of input chars)
-	     (nxt #f)		; next string 
+  (let iter ((tkl '())		; token list (as list of strings)
 	     (lvl 0)		; level
 	     (ch (read-char)))	; next character
     (cond
      ;; have item to add, but first add in char's
-     (nxt (iter (cons nxt (add-chl chl stl)) '() #f lvl ch))
+     ;;(nxt (iter (cons nxt (add-chl chl tkl)) '() #f lvl ch))
      ;; If end of string or see end-ch at level 0, then return.
-     ((eof-object? ch)  ;; CHECK (ab++)
-      (apply string-append (reverse (add-chl chl stl))))
+     ((eof-object? ch) (rtokl->string tkl))
      
      ((and (eqv? end-tok ch) (zero? lvl))
-      (unread-char ch) (apply string-append (reverse (add-chl chl stl))))
+      (unread-char ch) (rtokl->string tkl))
      ((and end-tok (char=? #\) ch) (zero? lvl))
-      (unread-char ch) (apply string-append (reverse (add-chl chl stl))))
+      (unread-char ch) (rtokl->string tkl))
      
      ((read-c-comm ch #f) =>
-      (lambda (cp) (iter stl chl (string-append "/*" (cdr cp) "*/")
-			 lvl (read-char))))
-     ;; not sure about this:
-     ((char-set-contains? c:ws ch) (iter stl chl nxt lvl (read-char)))
-     ((char=? #\( ch) (iter stl (cons ch chl) nxt (1+ lvl) (read-char)))
-     ((char=? #\) ch) (iter stl (cons ch chl) nxt (1- lvl) (read-char)))
+      (lambda (cp) (iter (acons `comm cp tkl) lvl (read-char))))
+     
+     ((char-set-contains? c:ws ch) (iter tkl lvl (read-char)))
+     ((char=? #\( ch) (iter (cons ch tkl) (1+ lvl) (read-char)))
+     ((char=? #\) ch) (iter (cons ch tkl) (1- lvl) (read-char)))
      ((char=? #\# ch)
       (let ((ch (read-char)))
 	(if (eqv? ch #\#)
-	    (iter stl chl "##" lvl (read-char))
-	    (iter stl chl "#" lvl ch))))
+	    (iter (cons 'dhash tkl) lvl (read-char))
+	    (iter (cons 'hash tkl) lvl ch))))
      ((read-c-string ch) =>
-      (lambda (st) (iter stl chl st lvl (read-char))))
+      (lambda (st) (iter (acons 'string st tkl) lvl (read-char))))
      ((read-c-ident ch) =>
       (lambda (iden)
 	(if (equal? iden "defined")
 	    ;; "defined" is a special case
 	    (let ((arg (scan-defined-arg)))
-	      (iter stl chl arg lvl (read-char)))
+	      (iter (acons 'defined arg tkl) lvl (read-char)))
 	    ;; otherwise ...
 	    (let* ((aval (assoc-ref argd iden))  ; lookup argument
 		   (rval (assoc-ref dict iden))) ; lookup macro def
 	      (cond
-	       ((and (pair? stl) (string=? "#" (car stl)))
-		(iter (cdr stl) chl (stringify aval) lvl (read-char)))
-	       ((and (pair? stl) (string=? "##" (car stl)))
-		(iter (cddr stl) chl (conjoin (cadr stl) aval) lvl (read-char)))
 	       ((member iden used)	; name used
-		(iter stl chl iden lvl (read-char)))
+		(iter (cons iden tkl) lvl (read-char)))
 	       (aval			; arg ref
-		(iter stl chl aval lvl (read-char)))
+		(iter (acons 'arg aval tkl) lvl (read-char)))
 	       ((string? rval)		; cpp repl
-		(iter stl chl rval lvl (read-char)))
+		(iter (acons 'string rval tkl) lvl (read-char)))
 	       ((pair? rval)		; cpp macro
 		(let* ((argl (car rval)) (text (cdr rval))
 		       (argd (collect-args argl argd dict used))
 		       (newl (expand-cpp-repl text argd dict (cons iden used))))
-		  (iter stl chl newl lvl (read-char))))
+		  (iter (acons 'string newl tkl) lvl (read-char))))
 	       (else			; normal identifier
-		(iter stl chl iden lvl (read-char))))))))
+		(iter (acons 'ident iden tkl) lvl (read-char))))))))
      (else
-      (iter stl (cons ch chl) #f lvl (read-char))))))
+      (iter (cons ch tkl) lvl (read-char))))))
 
 ;; @deffn collect-args argl argd dict used => argd
 ;; to be documented
