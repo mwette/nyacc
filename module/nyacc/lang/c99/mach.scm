@@ -609,7 +609,8 @@
      (external-declaration-list ($$ (tl->list $1)))
      )
     (external-declaration-list
-     (external-declaration ($$ (make-tl 'trans-unit $1)))
+     ;;(external-declaration ($$ (make-tl 'trans-unit $1)))
+     ($empty ($$ (make-tl 'trans-unit)))
      (external-declaration-list
       external-declaration
       ;; A ``kludge'' to deal with @code{extern "C" ...}:

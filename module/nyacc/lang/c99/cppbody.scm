@@ -163,6 +163,9 @@
       (((key . val) . rest)
        (iter (cons val stl) (cdr tkl)))
 
+      (('space . rest)
+       (iter (cons " " stl) rest))
+
       (((? char? ch) . rest)
        (iter (cons (string ch) stl) rest))
 
@@ -226,9 +229,13 @@
       (unread-char ch) (rtokl->string tkl))
      
      ((read-c-comm ch #f) =>
-      (lambda (cp) (iter (acons `comm cp tkl) lvl (read-char))))
+      (lambda (cp) (iter (acons `comm (cdr cp) tkl) lvl (read-char))))
      
-     ((char-set-contains? c:ws ch) (iter tkl lvl (read-char)))
+     ((char-set-contains? c:ws ch)
+      (if (and (pair? tkl) (char? (car tkl)))
+	  (iter (cons 'space tkl) lvl (read-char))
+	  (iter tkl lvl (read-char))))
+     
      ((char=? #\( ch) (iter (cons ch tkl) (1+ lvl) (read-char)))
      ((char=? #\) ch) (iter (cons ch tkl) (1- lvl) (read-char)))
      ((char=? #\# ch)

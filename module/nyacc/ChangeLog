@@ -1,3 +1,10 @@
+2017-01-18  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/parser.scm: check for EOF in end of CPP line
+
+	* lang/c99/mach.scm (c99-spec): decl for translation unit was
+	updated to allow programs with no declarations or statements
+
 2017-01-08  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* ../../test-suite/nyacc/lang/c99/exam.d/ex05.c: C99 does not
@@ -8,7 +15,7 @@
 	* lang/c99/body.scm (read-cpp-line): cpp statement should not
 	include newline?  Changed to unread final newline.
 
-	* lang/util.scm: add report-error: prints msg w/ file, line 
+	* lang/util.scm: add report-error: prints msg w/ file, line
 
 	* parse.scm (make-lalr-parser): changed printout of parse error to
 	(throw 'parse-error . args) and expect the full parser to catch
