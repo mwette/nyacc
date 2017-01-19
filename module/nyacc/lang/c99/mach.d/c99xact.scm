@@ -699,8 +699,8 @@
    (lambda ($2 $1 . $rest) `(return (expr)))
    ;; translation-unit => external-declaration-list
    (lambda ($1 . $rest) (tl->list $1))
-   ;; external-declaration-list => external-declaration
-   (lambda ($1 . $rest) (make-tl 'trans-unit $1))
+   ;; external-declaration-list => 
+   (lambda $rest (make-tl 'trans-unit))
    ;; external-declaration-list => external-declaration-list external-decla...
    (lambda ($2 $1 . $rest)
      (if (eqv? (sx-tag $2) 'extern-block)

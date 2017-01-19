@@ -213,6 +213,7 @@
   (if (not (eq? ch #\#)) #f
       (let iter ((cl '()) (ch (read-char)))
 	(cond
+	 ((eof-object? ch) (throw 'cpp-error "CPP lines must end in newline"))
 	 ((eq? ch #\newline) (unread-char ch) (list->string (reverse cl)))
 	 ((eq? ch #\\)
 	  (let ((c2 (read-char)))
@@ -350,6 +351,7 @@
 	       (cond
 		((exec-cpp-stmts?)
 		 (let ((val (eval-cpp-cond-text (cadr stmt))))
+		   ;;(simple-format #t "if val=~S\n" val)
 		   (cond
 		    ((not val) (p-err "unresolved: ~S" (cadr stmt)))
 		    ((zero? val) (set! ppxs (cons* 'skip1-pop 'skip-look ppxs)))
@@ -397,6 +399,7 @@
 	      (else (cons 'cpp-stmt stmt))))
 	  
 	  (define (eval-cpp-line line)
+	    ;;(simple-format #t "eval-cpp-line: ~S\n" line)
 	    (with-throw-handler
 	     'cpp-error
 	     (lambda () (eval-cpp-stmt (read-cpp-stmt line)))
@@ -421,15 +424,18 @@
 		 ((read-comm ch bol) => assc-$)
 		 ((read-cpp ch) =>
 		  (lambda (res) ;; if '() stmt expanded so re-read
+		    ;;(simple-format #t "res=~S\n" res)
 		    (if (pair? res) (assc-$ res) (iter (read-char)))))
 		 (else (set! bol #f) (iter ch))))
 	       ((read-ident ch) =>
 		(lambda (name)
+		  ;;(simple-format #t "read-ident=>~S\n" name)
 		  (let ((symb (string->symbol name)))
 		    (cond
 		     ((and (x-def? name mode)
 			   (expand-cpp-mref name (cpi-defs info)))
 		      => (lambda (st)
+			   ;;(simple-format #t "body: st=~S\n" st)
 			   (push-input (open-input-string st))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
@@ -453,7 +459,9 @@
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
 	    (case (car ppxs)
-	      ((keep) pair)
+	      ((keep)
+	       ;;(simple-format #t "lx=>~S\n" pair)
+	       pair)
 	      ((skip-done skip-look)
 	       (iter (read-token)))
 	      ((skip1-pop)
