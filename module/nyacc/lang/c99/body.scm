@@ -297,7 +297,7 @@
 	;; Return the first (tval . lval) pair not excluded by the CPP.
 	(lambda ()
 
-	  (define (exec-cpp-stmts?)	; exec (vs pass to parser) CPP stmts?
+	  (define (exec-cpp-stmts?) ; exec (vs pass to parser) CPP stmts?
 	    (eqv? mode 'code))
       
 	  (define (add-define tree)
@@ -326,6 +326,7 @@
 	    
 	  (define (eval-cpp-stmt stmt)
 	    (case (car stmt)
+	      ;; includes
 	      ((include)
 	       (let* ((parg (cadr stmt)) (leng (string-length parg))
 		      (file (substring parg 1 (1- leng)))
@@ -347,11 +348,18 @@
 	      ((undef)
 	       (rem-define (cadr stmt))
 	       (if (exec-cpp-stmts?) (set! ppxs (cons 'skip1-pop ppxs))))
+	      ((error)
+	       (if (exec-cpp-stmts?)
+		   (report-error "error: #error ~A" (cdr stmt))))
+	      ((pragma)	;; std: implementation-defined if expanded
+	       #t)
+
+	      ;; control flow
 	      ((if) ;; covers (if ifdef ifndef)
 	       (cond
 		((exec-cpp-stmts?)
 		 (let ((val (eval-cpp-cond-text (cadr stmt))))
-		   ;;(simple-format #t "if val=~S\n" val)
+		   (simple-format #t "if ~S=> ~S\n" (cadr stmt) val)
 		   (cond
 		    ((not val) (p-err "unresolved: ~S" (cadr stmt)))
 		    ((zero? val) (set! ppxs (cons* 'skip1-pop 'skip-look ppxs)))
@@ -386,12 +394,7 @@
 		((exec-cpp-stmts?)
 		 (set! ppxs (cons 'skip1-pop (cdr ppxs))))
 		(else (cpi-pop))))
-	      ((error)
-	       (if (exec-cpp-stmts?)
-		   (report-error "error: #error ~A" (cdr stmt))))
-	      ((pragma)
-	       ;; standard says implementation-defined if line is expanded
-	       #t)
+
 	      (else
 	       (error "unhandled cpp stmt")))
 	    (case (car stmt)
@@ -409,6 +412,7 @@
 	       (throw 'c99-error "CPP error"))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
+	  ;; We should not be doing this!
 	  (define (read-cpp ch)
 	    (and=> (read-cpp-line ch) eval-cpp-line))
 
@@ -424,7 +428,7 @@
 		 ((read-comm ch bol) => assc-$)
 		 ((read-cpp ch) =>
 		  (lambda (res) ;; if '() stmt expanded so re-read
-		    ;;(simple-format #t "res=~S\n" res)
+		    ;;(simple-format #t "read-cpp => ~S\n" res)
 		    (if (pair? res) (assc-$ res) (iter (read-char)))))
 		 (else (set! bol #f) (iter ch))))
 	       ((read-ident ch) =>

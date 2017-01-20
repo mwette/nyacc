@@ -55,6 +55,43 @@ Note on CPP replacement text: IIRC, C99 will remove comments from CPP
 statements before processing.  I preserve this and remove inside the
 CPP parser.
 
+@section Thoughts
+
+@verbatim
+;; Alternatives:
+;; * include: in-place as-tree ignore
+;; * defdict: keep ignore
+;; * parsdef: yes no
+;; * error: eval parse ignore
+;; * execflo: yes no
+;; * pragma:
+;; * expand-id: yes no
+;; * mode: file (parse cpp lines) ; code (eval cpp lines)
+;; * eval-but-nodef: fail 
+;; 
+;; Options:
+;; * Option 1 (intended file mode):
+;;   + include: parse-tree (but switch exec-cflow?
+;;   + defines: ignore
+;;   + error: 
+;; * code mode:
+;;
+;; Controls:    
+;;   + tddict: enable includes to be skipped, w/ added typedefs
+;;     alt: use ftn to return typenames and defs
+;;          name => (cons list-of-typenames  (list of "ABC=123"))
+;;          defined but not well-defined (i.e., limits.h )
+;;   + xdef?: enable how idents are expanded
+;;
+;; need 64bit typical, 32bit typical
+;; execflo implies need parsdef
+
+;; stuff to watch out for:
+;; 1) typename aliases
+;;    in incl file: #define SFLOAT static float
+;;    in code file: SFLOAT x;
+;;    => in file mode, check #defines for typenames
+@end verbatim
 
 @section The Free Documentation License
 The Free Documentation License is included in the Guile Reference
