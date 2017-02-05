@@ -521,6 +521,7 @@
       ((cpp-stmt . ,rest)
        (cpp-ppx (sx-ref tree 1)))
 
+      ((extern-block ,begin ,guts ,end) (ppx begin) (ppx guts) (ppx end))
       ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
       ((extern-end) (sf "}\n"))
 

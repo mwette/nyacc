@@ -18,13 +18,69 @@
 ;; C parser utilities
 
 (define-module (nyacc lang c99 util1)
-  #:export (remove-inc-trees merge-inc-trees! elifify)
+  #:export (c99-std-help
+	    gen-gcc-defs
+	    remove-inc-trees
+	    merge-inc-trees!
+	    elifify)
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
   #:use-module (srfi srfi-2) ;; and-let*
   #:use-module (sxml fold)
   #:use-module (sxml match)
 )
+
+;; include-helper for C99 std
+(define c99-std-help
+  '(("alloca.h")
+    ("complex.h" "complex" "imaginary" "_Imaginary_I=C99_ANY" "I=C99_ANY")
+    ("ctype.h")
+    ("fenv.h" "fenv_t" "fexcept_t")
+    ("float.h" "float_t" "FLT_MAX=C99_ANY" "DBL_MAX=C99_ANY")
+    ("inttypes.h"
+     "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
+     "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
+     "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
+     "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t"
+     "imaxdiv_t")
+    ("limits.h"
+     "INT_MIN=C99_ANY" "INT_MAX=C99_ANY" "LONG_MIN=C99_ANY" "LONG_MAX=C99_ANY")
+    ("math.h")
+    ("regex.h" "regex_t" "regmatch_t")
+    ("setjmp.h" "jmp_buf")
+    ("signal.h" "sig_atomic_t")
+    ("stdarg.h" "va_list")
+    ("stddef.h" "ptrdiff_t" "size_t" "wchar_t")
+    ("stdint.h"
+     "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
+     "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
+     "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
+     "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t")
+    ("stdio.h" "FILE" "size_t")
+    ("stdlib.h" "div_t" "ldiv_t" "lldiv_t" "wchar_t")
+    ("string.h" "size_t")
+    ("strings.h" "size_t")
+    ("time.h" "time_t" "clock_t" "size_t")
+    ("unistd.h" "size_t" "ssize_t" "div_t" "ldiv_t")
+    ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
+    ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
+    ))
+
+;; @deffn gen-gcc-defs args  [#:CC "clang"] => '(("ABC" . "123") ...)
+;; Generate a list of default defines produced by gcc (or clang).
+(define gen-gcc-defs
+  ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
+  ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
+  (let ((rx (make-regexp "#define\\s+(\\S+)\\s+(.*)")))
+    (lambda* (args #:key (CC "gcc"))
+      (map
+       (lambda (l)
+	 (let ((m (regexp-exec rx l)))
+	   (cons (match:substring m 1) (match:substring m 2))))
+       (let ((ip (open-input-pipe (string-append CC " -dM -E - </dev/null"))))
+	 (let iter ((lines '()) (line (read-line ip 'trim)))
+	   (if (eof-object? line) lines
+	       (iter (cons line lines) (read-line ip 'trim)))))))))
 
 ;; @item remove-inc-trees tree
 ;; Remove the trees included with cpp-include statements.

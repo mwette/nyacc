@@ -594,6 +594,8 @@ In Scheme, I would express this as
 @end example
 @c @noindent
 
+@chapter References
+
 @section The Free Documentation License
 The Free Documentation License is included in the Guile Reference
 Manual.  It is included with the @sc{nyacc} source as COPYING.DOC.

@@ -719,13 +719,12 @@
    ;; external-declaration => "extern" '$string "{" external-declaration-li...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(extern-block
-        ,$2
         (extern-begin ,$2)
         ,@(sx-tail (tl->list $4) 1)
         (extern-end)))
    ;; external-declaration => ";"
    (lambda ($1 . $rest)
-     `(decl (@ (not-C99 . "GNU C"))))
+     `(decl (@ (extension . "GNU C"))))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)
      `(knr-fctn-defn

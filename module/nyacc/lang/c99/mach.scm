@@ -625,9 +625,10 @@
      (cpp-statement)
      (pragma)
      ("extern" $string "{" external-declaration-list "}"
-      ($$ `(extern-block ,$2 (extern-begin ,$2)
-			 ,@(sx-tail (tl->list $4) 1) (extern-end))))
-     (";" ($$ `(decl (@ (not-C99 . "GNU C")))))
+      ($$ `(extern-block (extern-begin ,$2)
+			 ,@(sx-tail (tl->list $4) 1)
+			 (extern-end))))
+     (";" ($$ `(decl (@ (extension . "GNU C")))))
      )
     
     (function-definition

@@ -18,11 +18,7 @@
 ;; C parser
 
 (define-module (nyacc lang c99 parser)
-  #:export (parse-c99
-	    def-xdef? c99-std-dict
-	    gen-c-lexer
-	    gen-gcc-defs
-	    )
+  #:export (parse-c99)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
@@ -62,22 +58,24 @@
 ;; Default mode is @code{'code}.
 ;; @example
 ;; (with-input-from-file "abc.c"
-;;   (parse-c #:cpp-defs '(("ABC" . "123"))
+;;   (parse-c #:cpp-defs '("ABC=123"))
 ;;            #:inc-dirs (append '("." "./incs" "/usr/include") c99-std-dict)
-;;            #:td-dict '(("myinc.h" "foo_t" "bar_t"))
+;;            #:inc-help '(("myinc.h" "foo_t" "bar_t"))
 ;;            #:mode 'file))
 ;; @end example
 (define* (parse-c99 #:key
 		    (cpp-defs '())	; CPP defines
 		    (inc-dirs '())	; include dirs
-		    (td-dict '())	; typedef dictionary
+		    (inc-help '())	; include helpers
 		    (mode 'code)	; mode: 'file or 'code
 		    (xdef? #f)		; pred to determine expand
 		    (debug #f))		; debug
   (catch
    'c99-error
    (lambda ()
-     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
+     (if (and (pair? cpp-defs) (pair? (car cpp-defs)))
+	 (error "usage deprecated: use #:cpp-defs '(\"ABC=123\")"))
+     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) inc-help)))
        (with-fluid*
 	   *info* info
 	   (lambda ()
@@ -87,26 +85,8 @@
      (report-error fmt rest)
      #f)))
 
-(define parse-c parse-c99)
-
-(use-modules (ice-9 rdelim))
-(use-modules (ice-9 popen))
-(use-modules (ice-9 regex))
-
-;; @deffn gen-gcc-defs args  => '(("ABC" . "123") ...)
-;; Generate a list of default defines produced by gcc.
-(define gen-gcc-defs
-  ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
-  ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
-  (let ((rx (make-regexp "#define\\s+(\\S+)\\s+(.*)")))
-    (lambda (args)
-      (map
-       (lambda (l)
-	 (let ((m (regexp-exec rx l)))
-	   (cons (match:substring m 1) (match:substring m 2))))
-       (let ((ip (open-input-pipe "gcc -dM -E - </dev/null")))
-	 (let iter ((lines '()) (line (read-line ip 'trim)))
-	   (if (eof-object? line) lines
-	       (iter (cons line lines) (read-line ip 'trim)))))))))
+;;(use-modules (ice-9 rdelim))
+;;(use-modules (ice-9 popen))
+;;(use-modules (ice-9 regex))
 
 ;; --- last line ---

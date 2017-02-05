@@ -1,6 +1,6 @@
 \input texinfo.tex
-@setfilename nyacc-hg.info
-@settitle NYACC Hacker's Guide
+@setfilename c99-hg.info
+@settitle C99 User's Guide
 
 @copying
 Copyright (C) 2017 -- Matthew R. Wette.
@@ -45,53 +45,25 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 This is a manual for ...
 
-To get CPP pre-defined macros w/ gcc:
-@example
-$ touch /tmp/z.c
-$ gcc -dM -E /tmp/z.c > /tmp/z.e
-@end example
-
 Note on CPP replacement text: IIRC, C99 will remove comments from CPP
 statements before processing.  I preserve this and remove inside the
 CPP parser.
 
-@section Thoughts
+@subsubsection Include Helpers
 
-@verbatim
-;; Alternatives:
-;; * include: in-place as-tree ignore
-;; * defdict: keep ignore
-;; * parsdef: yes no
-;; * error: eval parse ignore
-;; * execflo: yes no
-;; * pragma:
-;; * expand-id: yes no
-;; * mode: file (parse cpp lines) ; code (eval cpp lines)
-;; * eval-but-nodef: fail 
-;; 
-;; Options:
-;; * Option 1 (intended file mode):
-;;   + include: parse-tree (but switch exec-cflow?
-;;   + defines: ignore
-;;   + error: 
-;; * code mode:
-;;
-;; Controls:    
-;;   + tddict: enable includes to be skipped, w/ added typedefs
-;;     alt: use ftn to return typenames and defs
-;;          name => (cons list-of-typenames  (list of "ABC=123"))
-;;          defined but not well-defined (i.e., limits.h )
-;;   + xdef?: enable how idents are expanded
-;;
-;; need 64bit typical, 32bit typical
-;; execflo implies need parsdef
+The C99 parsers can use ``include helpers''.  This allows files to be
+parsed without reading full include files.  The user provides
+typenames (types defined using @code{typedef}) and defines.  The
+syntax for the include-helper optional argument to the parsers is
+@example
+(define my-inc-helper
+ '(("foo.h" "foo_t" "ABC=123" "SUM(X,Y)=((X)+(Y))")
+   ("bar.h" "bar_t" "DEF=456" "MAX(X,Y)=((X)>(Y)?(X):(Y))"))
+@end example
 
-;; stuff to watch out for:
-;; 1) typename aliases
-;;    in incl file: #define SFLOAT static float
-;;    in code file: SFLOAT x;
-;;    => in file mode, check #defines for typenames
-@end verbatim
+The C99 @code{parser} and @code{xparser} modules export @code{c99-std-help}.
+
+@chapter Administrative Notes
 
 @section The Free Documentation License
 The Free Documentation License is included in the Guile Reference
