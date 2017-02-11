@@ -29,7 +29,30 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)
   #:use-module (rnrs arithmetic bitwise)
+  #:use-module (ice-9 match)
   )
+
+(define c99-std-defs
+  '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
+    "__STDC_VERSION__" "__TIME__"))
+
+(define (c99-std-def? str)
+  (let iter ((defs c99-std-defs))
+    (cond
+     ((null? defs) #f)
+     ((string=? (car defs) str) #t)
+     (else (iter (cdr defs))))))
+
+(define (c99-std-val str)
+  (cond
+   ((string=? str "__DATE__") "M01 01 2001")
+   ((string=? str "__FILE__") "(unknown)")
+   ((string=? str "__LINE__") 0)
+   ((string=? str "__STDC__") 1)
+   ((string=? str "__STDC_HOSTED__") 0)
+   ((string=? "__STDC_VERSION__") 201701)
+   ((string=? "__TIME__") "00:00:00")
+   (else #f)))
 
 ;; @deffn read-ellipsis ch
 ;; read ellipsis
@@ -40,6 +63,9 @@
    (else #f)))
 
 ;; @deffn cpp-define => (define (name "ADD") (args "X" "Y") (repl "X+Y"))
+;; output is like
+;; @code{(name "ABC") (repl "123")} or
+;; @code{(name "ABC") (args "X" "Y") (repl "X+Y")}
 (define (cpp-define)
 
   (define (p-args la) ;; parse args
@@ -60,7 +86,7 @@
   (define (p-rest la) ;; parse rest
     (cond ((eof-object? la) "")
 	  (else
-	   (if (not (char=? #\=)) (unread-char ch)) ; handle ABC=DEF
+	   (if (not (char=? #\=)) (unread-char la)) ; handle ABC=DEF
 	   (drain-input (current-input-port)))))
 
   (let* ((name (read-c-ident (skip-il-ws (read-char))))
@@ -70,44 +96,6 @@
 	`(define (name ,name) (args ,args) (repl ,repl))
 	`(define (name ,name) (repl ,repl)))))
 	
-
-;; where @code{...} is
-;; @code{(name "ABC") (repl "123")} or
-;; @code{(name "ABC") (args "X" "Y") (repl "X+Y")}
-(define (x-cpp-define)
-  ;; The (weak?) parse architecture is "unread la argument if no match"
-  (letrec
-      ((p-cppd ;; parse all
-	(lambda ()
-	  (let* ((iden (read-c-ident (skip-il-ws (read-char))))
-		 ;; "define ABC(ARG)" not the same as "define ABC (ARG)"
-		 (args (or (p-args (read-char)) '()))
-		 (rest (p-rest (skip-il-ws (read-char)))))
-	    (if (pair? args)
-		`(define (name ,iden) ,(cons 'args args) (repl ,rest))
-		`(define (name ,iden) (repl ,rest))))))
-       (p-args ;; parse args
-	(lambda (la) ;; unread la if no match :(
-	  (if (eq? la #\()
-	      (let iter ((args '()) (la (skip-il-ws (read-char))))
-		(cond
-		 ((eq? la #\)) (reverse args))
-		 ((read-c-ident la) =>
-		  (lambda (arg)
-		    (iter (cons arg args) (skip-il-ws (read-char)))))
-		 ((read-ellipsis la) =>
-		  (lambda (arg)
-		    (iter (cons arg args) (skip-il-ws (read-char)))))
-		 ((eq? la #\,)
-		  (iter args (skip-il-ws (read-char))))))
-	      (begin (if (char? la) (unread-char la)) #f)))) ;; CLEANUP
-       (p-rest ;; parse rest
-	(lambda (la)
-	  (cond ((eof-object? la) "")
-		(else
-		 (if (not (char=? #\=)) (unread-char ch)) ; handle ABC=DEF
-		 (drain-input (current-input-port)))))))
-    (p-cppd)))
 
 ;; @deffn cpp-include
 ;; Parse CPP include statement.
@@ -155,51 +143,6 @@
   (make-lalr-parser
    (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
 	 (cons 'mtab mtab) (cons 'act-v act-v))))
-
-;; Provide gen-cpp-lexer parse-cpp-expr eval-cpp-expr:
-;;(include-from-path "nyacc/lang/c99/cppbody.scm")
- 
-;; --- last line ---
-;;; nyacc/lang/c99/cppbody.scm
-;;;
-;;; Copyright (C) 2016-2017 Matthew R. Wette
-;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation, either version 3 of the License, or
-;;; (at your option) any later version.
-;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-(use-modules (ice-9 match))
-
-(define c99-std-defs
-  '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
-    "__STDC_VERSION__" "__TIME__"))
-
-(define (c99-std-def? str)
-  (let iter ((defs c99-std-defs))
-    (cond
-     ((null? defs) #f)
-     ((string=? (car defs) str) #t)
-     (else (iter (cdr defs))))))
-
-(define (c99-std-val str)
-  (cond
-   ((string=? str "__DATE__") "M01 01 2001")
-   ((string=? str "__FILE__") "(unknown)")
-   ((string=? str "__LINE__") 0)
-   ((string=? str "__STDC__") 1)
-   ((string=? str "__STDC_HOSTED__") 0)
-   ((string=? "__STDC_VERSION__") 201701)
-   ((string=? "__TIME__") "00:00:00")
-   (else #f)))
 
 (define (cpp-err fmt . args)
   (apply throw 'cpp-error fmt args))
@@ -483,6 +426,12 @@
     (cond
      ((not rval) #f)
      ((string=? rval "C99_ANY") #f)	; don't expand: could be anything
+     ;; move FILE LINE to expand-cpp-repl?
+     ((string=? rval "__FILE__")
+      (string-append "\"" (or (port-filename (current-input-port))
+			      "(unknown)") "\""))
+     ((string=? rval "__LINE__") (1+ (port-line (current-input-port))))
+     ;;
      ((member ident used) ident)
      ((string? rval)
       (let ((expd (expand-cpp-repl rval '() dict (cons ident used))))

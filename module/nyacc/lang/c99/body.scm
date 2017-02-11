@@ -291,6 +291,7 @@
 	       (let* ((defs (cpi-defs info))
 		      (rhs (cpp-expand-text text defs))
 		      (exp (parse-cpp-expr rhs)))
+		 (simple-format #t "defs: ~S\n" defs)
 		 (eval-cpp-expr exp defs)))
 	     (lambda (key fmt . args)
 	       (report-error fmt args)
@@ -397,8 +398,39 @@
 	    (case (car stmt)
 	      ((pragma) (cons 'cpp-pragma (cdr stmt)))
 	      (else (cons 'cpp-stmt stmt))))
-	  
+
 	  (define (eval-cpp-stmt-1/code stmt)
+	    ;; eval control flow: states are {skip-look, keep, skip-done}
+	    (case (car stmt)
+	      ((if)
+	       (let ((val (eval-cpp-cond-text (cadr stmt))))
+		 (simple-format #t "if ~S=> ~S\n" (cadr stmt) val)
+		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
+		 (if (eq? 'keep (car ppxs))
+		     (if (zero? val)
+			 (set! ppxs (cons 'skip-look ppxs))
+			 (set! ppxs (cons 'keep ppxs)))
+		     (set! ppxs (cons 'skip-done ppxs)))))
+	      ((elif)
+	       (let ((val (eval-cpp-cond-text (cadr stmt))))
+		 (simple-format #t "elif ~S=> ~S\n" (cadr stmt) val)
+		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
+		 (case (car ppxs)
+		   ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))
+		   ((keep) (set-car! ppxs 'skip-done)))))
+	      ((else)
+	       (simple-format #t "else (was ~S)\n" (car ppxs))
+	       (case (car ppxs)
+		 ((skip-look) (set-car! ppxs 'keep))
+		 ((keep) (set-car! ppxs 'skip-done))))
+	      ((endif)
+	       (set! ppxs (cdr ppxs)))
+	      (else
+	       (if (eqv? 'keep (car ppxs))
+		   (eval-cpp-stmt-2/code stmt)))))
+	  
+	  (define (eval-cpp-stmt-2/code stmt)
+	    ;; eval non-control flow
 	    (case (car stmt)
 	      ;; actions
 	      ((include)
@@ -408,38 +440,11 @@
 		 (push-input (open-input-file path))))
 	      ((define) (add-define stmt))
 	      ((undef) (rem-define (cadr stmt)))
-	      ((error) (report-error "error: #error ~A" (cdr stmt)))
+	      ((error) (p-err "error: #error ~A" (cadr stmt)))
 	      ((pragma) #t) ;; ignore for now
-	      ;; control flow: states are {skip-look, keep, skip-done}
-	      ((if) ;; and ifdef ifndef
-	       (let ((val (eval-cpp-cond-text (cadr stmt))))
-		 ;;(simple-format #t "if ~S=> ~S\n" (cadr stmt) val)
-		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
-		 (if (eq? 'keep (car ppxs))
-		     (if (zero? val)
-			 (set! ppxs (cons 'skip-look ppxs))
-			 ;; keep if keeping, skip if skipping, ??? if skip-look
-			 (set! ppxs (cons (car ppxs) ppxs)))
-		     (set! ppxs (cons 'skip-done ppxs)))))
-	      ((elif)
-	       (let ((val (eval-cpp-cond-text (cadr stmt))))
-		 ;;(simple-format #t "elif ~S=> ~S\n" (cadr stmt) val)
-		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
-		 (if (eq? 'keep (car ppxs))
-		     (if (zero? val)
-			 (set! ppxs (cons 'skip-look ppxs))
-			 ;; keep if keeping, skip if skipping, ??? if skip-look
-			 (set! ppxs (cons* (car ppxs) ppxs)))
-		     (set! ppxs (cons 'skip-done ppxs)))))
-	      ((else)
-	       ;;(simple-format #t "else\n")
-	       (if (eqv? 'skip-look (car ppxs))
-		   (set! ppxs (cons 'keep (cdr ppxs)))))
-	      ((endif)
-	       (set! ppxs (cdr ppxs)))
 	      (else
 	       (error "bad cpp flow stmt"))))
-	  
+
 	  (define (eval-cpp-stmt/code stmt)
 	    ;;(simple-format #t "eval-cpp-stmt: ~S\n" stmt)
 	    (with-throw-handler
@@ -511,10 +516,10 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
-	    ;;(simple-format #t "iter ~S\n" (car ppxs)) (sleep 1)
+	    (simple-format #t "iter ~S\n" (car ppxs)) (sleep 1)
 	    (case (car ppxs)
 	      ((keep)
-	       ;;(simple-format #t "lx=>~S\n" pair)
+	       (simple-format #t "lx=>~S\n" pair)
 	       pair)
 	      ((skip-done skip-look)
 	       (iter (read-token)))
