@@ -85,11 +85,11 @@
 	 (else (iter (cons (car ents) tyns) defs (cdr ents)))))))
 
   (let* ((cpi (make-cpi-1)))
-    (set-cpi-debug! cpi debug)	  ; print states debug 
-    (set-cpi-defs! cpi defines)	  ; list of define strings??
-    (set-cpi-incs! cpi incdirs)	  ; list of include dir's
-    (set-cpi-ptl! cpi '())	  ; list of lists of typenames
-    (set-cpi-ctl! cpi '())	  ; list of typenames
+    (set-cpi-debug! cpi debug)		; print states debug 
+    (set-cpi-defs! cpi (map split-cppdef defines)) ; list of define strings
+    (set-cpi-incs! cpi incdirs)		; list of include dir's
+    (set-cpi-ptl! cpi '())		; list of lists of typenames
+    (set-cpi-ctl! cpi '())		; list of typenames
     ;; itynd idefd:
     (let iter ((itynd '()) (idefd '()) (helpers inchelp))
       (cond ((null? helpers)
@@ -291,7 +291,7 @@
 	       (let* ((defs (cpi-defs info))
 		      (rhs (cpp-expand-text text defs))
 		      (exp (parse-cpp-expr rhs)))
-		 (simple-format #t "defs: ~S\n" defs)
+		 ;;(simple-format #t "defs: ~S\n" defs)
 		 (eval-cpp-expr exp defs)))
 	     (lambda (key fmt . args)
 	       (report-error fmt args)
@@ -304,107 +304,12 @@
 	  (define (inc-file->path file)
 	    (find-file-in-dirl file (cpi-incs info)))
 
-	  (define (eval-cpp-stmt-1 stmt)
-	    (case (car stmt)
-	      ;; includes
-	      ((include)
-	       (let* ((parg (cadr stmt)) (leng (string-length parg))
-		      (file (substring parg 1 (1- leng)))
-		      (path (find-file-in-dirl file (cpi-incs info)))
-		      (tyns (assoc-ref (cpi-itynd info) file))
-		      (defs (assoc-ref (cpi-idefd info) file))
-		      )
-		 (cond
-		  (tyns			; use include helper
-		   (for-each add-typename tyns)
-		   (set-cpi-defs! info (append defs (cpi-defs info))))
-		  ((not path)		; file not found
-		   (p-err "not found: ~S" file))
-		  ((exec-cpp?)		; include in-place
-		   (push-input (open-input-file path)))
-		  (else			; include as tree
-		   (let* ((tree (with-input-from-file path run-parse)))
-		     (if (not tree) (p-err "included from ~S" path))
-		     (for-each add-define (xp1 tree)) ; add def's 
-		     (set! stmt (append stmt (list tree)))))))
-	       (if (exec-cpp?) (set! ppxs (cons 'skip1-pop ppxs))))
-	      ((define)
-	       (add-define stmt)
-	       (if (exec-cpp?) (set! ppxs (cons 'skip1-pop ppxs))))
-	      ((undef)
-	       (rem-define (cadr stmt))
-	       (if (exec-cpp?) (set! ppxs (cons 'skip1-pop ppxs))))
-	      ((error)
-	       (if (exec-cpp?)
-		   (report-error "error: #error ~A" (cdr stmt))))
-	      ;;((pragma) #t) need to work
-	      (else
-	       (error "bad cpp flow stmt")))
-	    (case (car stmt)
-	      ((pragma) (cons 'cpp-pragma (cdr stmt)))
-	      (else (cons 'cpp-stmt stmt))))
-	    
-	  (define (eval-cpp-flow-1 stmt)
-	    (case mode
-	      ((file)
-	       (case (car ppxs)
-		 ((keep) #t)
-		 (else #t)))
-	      ((code)
-	       #t))
-	    (case (car stmt)
-	      ;; control flow
-	      ((if) ;; covers (if ifdef ifndef)
-	       (cond
-		((exec-cpp?)
-		 (let ((val (eval-cpp-cond-text (cadr stmt))))
-		   ;;(simple-format #t "if ~S=> ~S\n" (cadr stmt) val)
-		   (cond
-		    ((not val) (p-err "unresolved: ~S" (cadr stmt)))
-		    ((zero? val) (set! ppxs (cons* 'skip1-pop 'skip-look ppxs)))
-		    (else (set! ppxs (cons* 'skip1-pop (car ppxs) ppxs))))))
-		(else (cpi-push))))
-	      ((elif)
-	       (cond
-		((exec-cpp?)
-		 (let ((val (eval-cpp-cond-text (cadr stmt))))
-		   (cond
-		    ((not val)
-		     (p-err "unresolved: ~S" (cadr stmt)))
-		    ((eq? 'keep (car ppxs))
-		     (set! ppxs (cons* 'skip1-pop 'skip-done (cdr ppxs))))
-		    ((zero? val) (set! ppxs (cons* 'skip1-pop ppxs)))
-		    ((eq? 'skip-look (car ppxs))
-		     (set! ppxs (cons* 'skip1-pop 'keep (cdr ppxs))))
-		    (else
-		     (set! ppxs (cons* 'skip1-pop 'skip-done (cdr ppxs)))))))
-		(else (cpi-shift))))
-	      ((else)
-	       (cond
-		((exec-cpp?)
-		 (cond
-		  ((eq? 'skip-look (car ppxs))
-		   (set! ppxs (cons* 'skip1-pop 'keep (cdr ppxs))))
-		  (else
-		   (set! ppxs (cons* 'skip1-pop 'skip-done (cdr ppxs))))))
-		(else (cpi-shift))))
-	      ((endif)
-	       (cond
-		((exec-cpp?)
-		 (set! ppxs (cons 'skip1-pop (cdr ppxs))))
-		(else (cpi-pop))))
-	      (else
-	       (error "bad cpp flow stmt")))
-	    (case (car stmt)
-	      ((pragma) (cons 'cpp-pragma (cdr stmt)))
-	      (else (cons 'cpp-stmt stmt))))
-
 	  (define (eval-cpp-stmt-1/code stmt)
 	    ;; eval control flow: states are {skip-look, keep, skip-done}
 	    (case (car stmt)
 	      ((if)
 	       (let ((val (eval-cpp-cond-text (cadr stmt))))
-		 (simple-format #t "if ~S=> ~S\n" (cadr stmt) val)
+		 ;;(simple-format #t "if ~S=> ~S\n" (cadr stmt) val)
 		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
 		 (if (eq? 'keep (car ppxs))
 		     (if (zero? val)
@@ -413,13 +318,13 @@
 		     (set! ppxs (cons 'skip-done ppxs)))))
 	      ((elif)
 	       (let ((val (eval-cpp-cond-text (cadr stmt))))
-		 (simple-format #t "elif ~S=> ~S\n" (cadr stmt) val)
+		 ;;(simple-format #t "elif ~S=> ~S\n" (cadr stmt) val)
 		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
 		 (case (car ppxs)
 		   ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))
 		   ((keep) (set-car! ppxs 'skip-done)))))
 	      ((else)
-	       (simple-format #t "else (was ~S)\n" (car ppxs))
+	       ;;(simple-format #t "else (was ~S)\n" (car ppxs))
 	       (case (car ppxs)
 		 ((skip-look) (set-car! ppxs 'keep))
 		 ((keep) (set-car! ppxs 'skip-done))))
@@ -428,6 +333,14 @@
 	      (else
 	       (if (eqv? 'keep (car ppxs))
 		   (eval-cpp-stmt-2/code stmt)))))
+
+	  (define (apply-helper file)
+	    (let* ((tyns (assoc-ref (cpi-itynd info) file))
+		   (defs (assoc-ref (cpi-idefd info) file)))
+	      (when tyns
+		(for-each add-typename tyns)
+		(set-cpi-defs! info (append defs (cpi-defs info))))
+	      (pair? tyns)))
 	  
 	  (define (eval-cpp-stmt-2/code stmt)
 	    ;; eval non-control flow
@@ -436,8 +349,10 @@
 	      ((include)
 	       (let* ((file (inc-stmt->file stmt))
 		      (path (inc-file->path file)))
-		 (if (not path) (p-err "not found: ~S" file))
-		 (push-input (open-input-file path))))
+		 (cond
+		  ((apply-helper file)) ; use helper
+		  ((not path) (p-err "not found: ~S" file)) ; file not found
+		  (else (push-input (open-input-file path))))))
 	      ((define) (add-define stmt))
 	      ((undef) (rem-define (cadr stmt)))
 	      ((error) (p-err "error: #error ~A" (cadr stmt)))
@@ -446,15 +361,40 @@
 	       (error "bad cpp flow stmt"))))
 
 	  (define (eval-cpp-stmt/code stmt)
-	    ;;(simple-format #t "eval-cpp-stmt: ~S\n" stmt)
 	    (with-throw-handler
 	     'cpp-error
 	     (lambda () (eval-cpp-stmt-1/code stmt))
 	     (lambda (key fmt . rest)
-	       (display "body.399\n")
 	       (report-error fmt rest)
 	       (throw 'c99-error "CPP error"))))
 
+	  (define (eval-cpp-stmt-1/file stmt)
+	    (case (car stmt)
+	      ((if) (cpi-push))
+	      ((elif else) (cpi-shift))
+	      ((endif) (cpi-pop))
+	      (else (eval-cpp-stmt-2/file stmt))))
+	    
+	  (define (eval-cpp-stmt-2/file stmt)
+	    ;; eval non-control flow
+	    (case (car stmt)
+	      ;; includes
+	      ((include)
+	       (let* ((file (inc-stmt->file stmt))
+		      (path (inc-file->path file)))
+		 (cond
+		  ((apply-helper file)) ; use helper
+		  ((not path) (p-err "not found: ~S" file)) ; file not found
+		  ((with-input-from-file path run-parse) => ; include tree
+		   (lambda (tree) (for-each add-define (xp1 tree))))
+		  (else (p-err "included from ~S" path)))))
+	      ((define) (add-define stmt))
+	      ((undef) (rem-define (cadr stmt)))
+	      ((error) #f)
+	      ;;((pragma) #t) need to work
+	      (else
+	       (error "bad cpp flow stmt"))))
+	    
 	  (define (eval-cpp-stmt/file stmt)
 	    (throw 'c99-error "not implemented"))
 
@@ -516,10 +456,10 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
-	    (simple-format #t "iter ~S\n" (car ppxs)) (sleep 1)
+	    ;;(simple-format #t "iter ~S\n" (car ppxs)) (sleep 1)
 	    (case (car ppxs)
 	      ((keep)
-	       (simple-format #t "lx=>~S\n" pair)
+	       ;;(simple-format #t "lx=>~S\n" pair)
 	       pair)
 	      ((skip-done skip-look)
 	       (iter (read-token)))

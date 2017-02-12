@@ -74,20 +74,15 @@
 	  (cond
 	   ((eq? la #\)) (reverse args))
 	   ((read-c-ident la) =>
-	    (lambda (arg)
-	      (iter (cons arg args) (skip-il-ws (read-char)))))
+	    (lambda (arg) (iter (cons arg args) (skip-il-ws (read-char)))))
 	   ((read-ellipsis la) =>
-	    (lambda (arg)
-	      (iter (cons arg args) (skip-il-ws (read-char)))))
-	   ((eq? la #\,)
-	    (iter args (skip-il-ws (read-char))))))
-	(begin (if (char? la) (unread-char la)) #f))) ;; CLEANUP
+	    (lambda (arg) (iter (cons arg args) (skip-il-ws (read-char)))))
+	   ((eq? la #\,) (iter args (skip-il-ws (read-char))))))
+	(begin (if (char? la) (unread-char la)) #f)))
 
   (define (p-rest la) ;; parse rest
     (cond ((eof-object? la) "")
-	  (else
-	   (if (not (char=? #\=)) (unread-char la)) ; handle ABC=DEF
-	   (drain-input (current-input-port)))))
+	  (else (unread-char la) (drain-input (current-input-port)))))
 
   (let* ((name (read-c-ident (skip-il-ws (read-char))))
 	 (args (or (p-args (read-char)) '()))

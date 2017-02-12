@@ -85,8 +85,4 @@
      (report-error fmt rest)
      #f)))
 
-;;(use-modules (ice-9 rdelim))
-;;(use-modules (ice-9 popen))
-;;(use-modules (ice-9 regex))
-
 ;; --- last line ---

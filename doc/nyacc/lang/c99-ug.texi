@@ -61,7 +61,55 @@ syntax for the include-helper optional argument to the parsers is
    ("bar.h" "bar_t" "DEF=456" "MAX(X,Y)=((X)>(Y)?(X):(Y))"))
 @end example
 
-The C99 @code{parser} and @code{xparser} modules export @code{c99-std-help}.
+The C99 @code{parser} and @code{xparser} modules export
+@code{c99-std-help}.
+
+@subsection Misc Items
+
+The special symbol @code{C99_ANY} can be used for symbols which you
+don't want to define.  In the parser will handle this as XXX
+
+@chapter Running the Parser
+
+@section Unit Parser
+
+@deffn parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] 
+       [#:mode ('code|'file)] [#:debug bool]
+This needs to be explained in some detail.
+Default mode is @code{'code}.
+@example
+(with-input-from-file "abc.c"
+  (parse-c #:cpp-defs '("ABC=123"))
+           #:inc-dirs (append '("." "./incs" "/usr/include") c99-std-dict)
+           #:inc-help '(("myinc.h" "foo_t" "bar_t"))
+           #:mode 'file))
+@end example
+@noindent
+Options are as follows
+@table @code
+@item #:cpp-defs
+This is a list of define strings (e.g., @code{'("ABC=123")}.
+@item #:inc-dirs
+This is an ordered list of directories to search for include files.
+@item #:inc-help
+This is an a-list of include helpers, where keys are the include file
+or path (e.g., @code{sys/types.h}).
+@item #:mode
+This is the mode: @code{'code} or @code{'file}.  The default is
+@code{'code}.
+@item #:xdef?
+This is a predicate function to determine whether to expand a
+definition (used in file mode).  See below.
+@end table
+
+@deffn xdef? name mode => #t|#f
+Given string @var{name} and @var{mode} indicate whether the parser
+should expand using CPP defines.  The default is
+@code{(lambda(name mode) (eqv? mode 'code))}.
+
+
+@section Expression Parser
+
 
 @chapter Administrative Notes
 
