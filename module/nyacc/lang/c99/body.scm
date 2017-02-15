@@ -291,7 +291,6 @@
 	       (let* ((defs (cpi-defs info))
 		      (rhs (cpp-expand-text text defs))
 		      (exp (parse-cpp-expr rhs)))
-		 ;;(simple-format #t "defs: ~S\n" defs)
 		 (eval-cpp-expr exp defs)))
 	     (lambda (key fmt . args)
 	       (report-error fmt args)
@@ -309,7 +308,6 @@
 	    (case (car stmt)
 	      ((if)
 	       (let ((val (eval-cpp-cond-text (cadr stmt))))
-		 ;;(simple-format #t "if ~S=> ~S\n" (cadr stmt) val)
 		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
 		 (if (eq? 'keep (car ppxs))
 		     (if (zero? val)
@@ -318,13 +316,11 @@
 		     (set! ppxs (cons 'skip-done ppxs)))))
 	      ((elif)
 	       (let ((val (eval-cpp-cond-text (cadr stmt))))
-		 ;;(simple-format #t "elif ~S=> ~S\n" (cadr stmt) val)
 		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
 		 (case (car ppxs)
 		   ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))
 		   ((keep) (set-car! ppxs 'skip-done)))))
 	      ((else)
-	       ;;(simple-format #t "else (was ~S)\n" (car ppxs))
 	       (case (car ppxs)
 		 ((skip-look) (set-car! ppxs 'keep))
 		 ((keep) (set-car! ppxs 'skip-done))))
@@ -357,8 +353,7 @@
 	      ((undef) (rem-define (cadr stmt)))
 	      ((error) (p-err "error: #error ~A" (cadr stmt)))
 	      ((pragma) #t) ;; ignore for now
-	      (else
-	       (error "bad cpp flow stmt"))))
+	      (else (error "bad cpp flow stmt"))))
 
 	  (define (eval-cpp-stmt/code stmt)
 	    (with-throw-handler
@@ -391,12 +386,17 @@
 	      ((define) (add-define stmt))
 	      ((undef) (rem-define (cadr stmt)))
 	      ((error) #f)
-	      ;;((pragma) #t) need to work
-	      (else
-	       (error "bad cpp flow stmt"))))
+	      ((pragma) #t) ;; need to work this
+	      (else (error "bad cpp flow stmt"))))
 	    
 	  (define (eval-cpp-stmt/file stmt)
-	    (throw 'c99-error "not implemented"))
+	    (with-throw-handler
+	     'cpp-error
+	     (lambda () (eval-cpp-stmt-1/file stmt))
+	     (lambda (key fmt . rest)
+	       (report-error fmt rest)
+	       (throw 'c99-error "CPP error"))))
+
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
 	  ;; We should not be doing this!
@@ -416,24 +416,21 @@
  		 ((read-comm ch #t) => assc-$)
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
-		    ;;(simple-format #t "read-cpp-stmt => ~S\n" stmt)
 		    (case mode
-		      ((code) ;; but what about #pragma - ignore for now
+		      ((code)
 		       (eval-cpp-stmt/code stmt)
 		       (iter (read-char)))
 		      ((file)
 		       (eval-cpp-stmt/file stmt)
-		       (assc-$ stmt)))))
+		       (assc-$ `(cpp-stmt ,stmt))))))
 		 (else (iter ch))))
 	       ((read-ident ch) =>
 		(lambda (name)
-		  ;;(simple-format #t "read-ident=>~S\n" name)
 		  (let ((symb (string->symbol name)))
 		    (cond
 		     ((and (x-def? name mode)
 			   (expand-cpp-macro-ref name (cpi-defs info)))
 		      => (lambda (st)
-			   ;;(simple-format #t "body: st=~S\n" st)
 			   (push-input (open-input-string st))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)

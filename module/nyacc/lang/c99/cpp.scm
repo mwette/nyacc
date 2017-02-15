@@ -88,7 +88,7 @@
 	 (args (or (p-args (read-char)) '()))
 	 (repl (p-rest (skip-il-ws (read-char)))))
     (if (pair? args)
-	`(define (name ,name) (args ,args) (repl ,repl))
+	`(define (name ,name) (args . ,args) (repl ,repl))
 	`(define (name ,name) (repl ,repl)))))
 	
 
@@ -288,8 +288,6 @@
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
 
-  (define conjoin string-append)
-
   ;; We just scanned "defined", now need to scan the arg to inhibit expansion.
   ;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
   ;; return "defined(FOO)".  We use ec (end-char) as terminal char:
@@ -314,7 +312,12 @@
 	 (else
 	  (cpp-err "illegal argument to  `defined'"))))))
 
-  (let iter ((tkl '())		; token list (as list of strings)
+  ;; token list is list of
+  ;; 1) characters as char
+  ;; 2) identifiers as string
+  ;; 3) strings as '(string . <string>)
+  ;; 4) 'hash 'dhash
+  (let iter ((tkl '())		; token list of 
 	     (lvl 0)		; level
 	     (ch (read-char)))	; next character
     (cond
@@ -344,7 +347,7 @@
 	    (iter (cons 'dhash tkl) lvl (read-char))
 	    (iter (cons 'hash tkl) lvl ch))))
      ((read-c-string ch) =>
-      (lambda (st) (iter (acons 'string st tkl) lvl (read-char))))
+      (lambda (st) (iter (acons 'string (cdr st) tkl) lvl (read-char))))
      ((read-c-ident ch) =>
       (lambda (iden)
 	(if (equal? iden "defined")
@@ -419,14 +422,13 @@
   (let ((used (if (pair? rest) (car rest) '()))
 	(rval (assoc-ref dict ident)))
     (cond
-     ((not rval) #f)
-     ((string=? rval "C99_ANY") #f)	; don't expand: could be anything
-     ;; move FILE LINE to expand-cpp-repl?
-     ((string=? rval "__FILE__")
+     #;((string=? ident "C99_ANY") #f)	; don't expand: could be anything
+     #;((string=? ident "__FILE__")
       (string-append "\"" (or (port-filename (current-input-port))
 			      "(unknown)") "\""))
-     ((string=? rval "__LINE__") (1+ (port-line (current-input-port))))
+     #;((string=? ident "__LINE__") (1+ (port-line (current-input-port))))
      ;;
+     ((not rval) #f)
      ((member ident used) ident)
      ((string? rval)
       (let ((expd (expand-cpp-repl rval '() dict (cons ident used))))
