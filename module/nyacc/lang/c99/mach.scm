@@ -429,13 +429,12 @@
      )
 
     (parameter-declaration
-     (declaration-specifiers declarator
-			     ($$ `(param-decl ,(tl->list $1)
-					       (param-declr ,$2))))
-     (declaration-specifiers abstract-declarator
-			     ($$ `(param-decl ,(tl->list $1)
-					       (param-declr ,$2))))
-     (declaration-specifiers ($$ `(param-decl ,(tl->list $1))))
+     (declaration-specifiers
+      declarator ($$ `(param-decl ,(tl->list $1) (param-declr ,$2))))
+     (declaration-specifiers
+      abstract-declarator ($$ `(param-decl ,(tl->list $1) (param-declr ,$2))))
+     (declaration-specifiers
+      ($$ `(param-decl ,(tl->list $1))))
      )
 
     (identifier-list
@@ -614,7 +613,7 @@
      (external-declaration-list
       external-declaration
       ;; A ``kludge'' to deal with @code{extern "C" ...}:
-      ($$ (if (eqv? (sx-tag $2) 'extern-block) (tl-extend $1 (sx-tail $2 2))
+      ($$ (if (eqv? (sx-tag $2) 'extern-block) (tl-extend $1 (sx-tail $2 1))
 	      (tl-append $1 $2))))
      )
 
@@ -645,7 +644,7 @@
      (declaration-list declaration ($$ (tl-append $1 $2)))
      )
 
-    (opt-code-comment () (code-comment))
+    (opt-code-comment ($empty) (code-comment))
 
     ;; non-terminal leaves
     (identifier
@@ -660,7 +659,7 @@
      (string-literal $string ($$ (tl-append $1 $2))))
     (code-comment ($code-comm ($$ `(comment ,$1))))
     (lone-comment ($lone-comm ($$ `(comment ,$1))))
-    (cpp-statement ('cpp-stmt))
+    (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
     (pragma ('cpp-pragma))
     )))
 

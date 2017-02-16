@@ -704,7 +704,7 @@
    ;; external-declaration-list => external-declaration-list external-decla...
    (lambda ($2 $1 . $rest)
      (if (eqv? (sx-tag $2) 'extern-block)
-       (tl-extend $1 (sx-tail $2 2))
+       (tl-extend $1 (sx-tail $2 1))
        (tl-append $1 $2)))
    ;; external-declaration => function-definition
    (lambda ($1 . $rest) $1)
@@ -762,7 +762,7 @@
    ;; lone-comment => '$lone-comm
    (lambda ($1 . $rest) `(comment ,$1))
    ;; cpp-statement => 'cpp-stmt
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(cpp-stmt ,$1))
    ;; pragma => 'cpp-pragma
    (lambda ($1 . $rest) $1)
    ))

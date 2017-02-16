@@ -355,14 +355,6 @@
 	      ((pragma) #t) ;; ignore for now
 	      (else (error "bad cpp flow stmt"))))
 
-	  (define (eval-cpp-stmt/code stmt)
-	    (with-throw-handler
-	     'cpp-error
-	     (lambda () (eval-cpp-stmt-1/code stmt))
-	     (lambda (key fmt . rest)
-	       (report-error fmt rest)
-	       (throw 'c99-error "CPP error"))))
-
 	  (define (eval-cpp-stmt-1/file stmt)
 	    (case (car stmt)
 	      ((if) (cpi-push))
@@ -389,14 +381,16 @@
 	      ((pragma) #t) ;; need to work this
 	      (else (error "bad cpp flow stmt"))))
 	    
-	  (define (eval-cpp-stmt/file stmt)
+	  (define (eval-cpp-stmt stmt)
 	    (with-throw-handler
 	     'cpp-error
-	     (lambda () (eval-cpp-stmt-1/file stmt))
+	     (lambda ()
+	       (case mode
+		 ((code) (eval-cpp-stmt-1/code stmt))
+		 ((file) (eval-cpp-stmt-1/file stmt))))
 	     (lambda (key fmt . rest)
 	       (report-error fmt rest)
 	       (throw 'c99-error "CPP error"))))
-
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
 	  ;; We should not be doing this!
@@ -416,13 +410,10 @@
  		 ((read-comm ch #t) => assc-$)
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
+		    (eval-cpp-stmt stmt)
 		    (case mode
-		      ((code)
-		       (eval-cpp-stmt/code stmt)
-		       (iter (read-char)))
-		      ((file)
-		       (eval-cpp-stmt/file stmt)
-		       (assc-$ `(cpp-stmt ,stmt))))))
+		      ((code) (iter (read-char)))
+		      ((file) (assc-$ `(cpp-stmt . ,stmt))))))
 		 (else (iter ch))))
 	       ((read-ident ch) =>
 		(lambda (name)
@@ -453,10 +444,8 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
-	    ;;(simple-format #t "iter ~S\n" (car ppxs)) (sleep 1)
 	    (case (car ppxs)
 	      ((keep)
-	       ;;(simple-format #t "lx=>~S\n" pair)
 	       pair)
 	      ((skip-done skip-look)
 	       (iter (read-token)))
