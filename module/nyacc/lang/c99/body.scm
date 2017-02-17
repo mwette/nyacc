@@ -393,7 +393,6 @@
 	       (throw 'c99-error "CPP error"))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
-	  ;; We should not be doing this!
 	  (define (read-cpp-stmt ch)
 	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
@@ -446,6 +445,7 @@
 	  (let iter ((pair (read-token)))
 	    (case (car ppxs)
 	      ((keep)
+	       ;;(simple-format #t "lx=>~S\n" pair)
 	       pair)
 	      ((skip-done skip-look)
 	       (iter (read-token)))

@@ -28,6 +28,9 @@
   #:use-module (srfi srfi-2) ;; and-let*
   #:use-module (sxml fold)
   #:use-module (sxml match)
+  #:use-module (ice-9 popen)		; gen-cc-defs
+  #:use-module (ice-9 rdelim)		; gen-cc-defs
+  #:use-module (ice-9 regex)		; gen-cc-defs
 )
 
 ;; include-helper for C99 std

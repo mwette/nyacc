@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/util2.scm - C processing code
 ;;; 
-;;; Copyright (C) 2015,2016 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -175,6 +175,8 @@
 ;;	  (sx1 (merge-inc-trees! sx0))
 ;;	  (name-dict (fold match-decl-1 '() (cdr sx1))))
 ;; @end example
+;; TODO: add enums because they are global!!
+;; turn enum { ABC = 123 }; into '(ABC . (enum .. "ABC" "123" .. )
 (define (match-decl decl seed)
   (let* ((tag (sx-ref decl 0)) (attr (sx-attr decl)))
     (case tag
@@ -183,9 +185,8 @@
 	      (tbd (sx-ref decl 2)))	; (init-declr-list ...) OR ...
 	 (cond
 	  ((or (not tbd) (eqv? 'comment (sx-tag tbd)))
-	   (display "ISSUE: some decls have no init-declr-list\n")
-	   ;; no init-declr-list => struct or union def or param-decl
-	   ;;(display "spec:\n") (pretty-print spec)
+	   ;; no init-declr-list => struct or union def or param-decl enum
+	   ;;(display "spec:\n") (pretty-print decl)
 	   (sxml-match spec
 	     ((decl-spec-list
 	       (type-spec
@@ -195,8 +196,18 @@
 	       (type-spec
 		(union-def (ident ,name) . ,rest2) . ,rest1))
 	      (acons `(union . ,name) decl seed))
+	     ((decl-spec-list
+	       (type-spec
+		(enum-def
+		 (enum-def-list
+		  (enum-defn
+		   (ident "ABC")
+		   (p-expr (fixed "123")))))))
+	      ;; TODO
+	      seed)
 	     (,otherwise
-	      (display "otherwise:\n") (pretty-print (cdr spec))
+	      ;; e.g., enum { VAL = 1 };
+	      ;;(simple-format #t "+++ otherwise: ~S\n" tbd) (pretty-print decl)
 	      seed)))
 	  (else ;; decl with init-declr-list
 	   (let* ((id-l tbd) (tail (sx-tail decl 3)))
