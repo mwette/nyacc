@@ -237,8 +237,7 @@
 
 ;; @deffn rtokl->string tokl => string
 ;; Convert reverse token-list to string.
-(define (rtokl->string tokl)
-  ;; need to cover: comm ident string arg
+(define (x-rtokl->string tokl)
   ;;(let iter ((stl '()) (chl '()) (nxt #f) (tkl tokl)) ;; more efficient
   (let iter ((stl '()) (tkl tokl))
     (match tkl
@@ -246,10 +245,10 @@
        (apply string-append stl))
 
       ((('arg . arg) 'dhash (key . val) . rest)
-       (iter (cons (string-append val arg) stl) (list-tail tkl 3)))
+       (iter stl (acons key (string-append val arg) (list-tail tkl 3))))
 
       (((key . val) 'dhash ('arg . arg) . rest)
-       (iter (cons (string-append arg val) stl) (list-tail tkl 3)))
+       (iter stl (acons 'arg (string-append arg val) (list-tail tkl 3))))
 
       ((('arg . arg) 'hash . rest)
        (iter (cons (string-append "\"" arg "\"") stl) (list-tail tkl 2)))
@@ -272,6 +271,51 @@
       (otherwise
        (error "no match" tkl)))))
 
+(define (y-rtokl->string tokl)
+
+  ;; Turn reverse chl into a string and insert it into the string list stl.
+  (define (add-chl chl stl)
+    (if (null? chl) stl (cons (list->string chl) stl)))
+
+  ;; Works like this: Scan through the list of tokens (key-val pairs or lone
+  ;; characters).  Lone characters are collected in a list (@code{chl}); pairs
+  ;; are converted into strings and combined with list of characters into a
+  ;; list of strings.  When done the list of strings is combined to one string.
+  (let iter ((stl '()) (chl '()) (nxt #f) (tkl tokl))
+    (cond
+     (nxt (iter (cons nxt (add-chl chl stl)) '() #f tkl))
+     ((null? tkl) (apply string-append (add-chl chl stl)))
+     ((char? (car tkl)) (iter stl (cons (car tkl) chl) nxt (cdr tkl)))
+     (else
+      (match tkl
+	((('arg . arg) 'dhash (key . val) . rest)
+	 (iter stl chl nxt
+	       (acons key (string-append val arg) (list-tail tkl 3))))
+
+	(((key . val) 'dhash ('arg . arg) . rest)
+	 (iter stl chl nxt
+	       (acons 'arg (string-append arg val) (list-tail tkl 3))))
+
+	((('arg . arg) 'hash . rest)
+	 (iter stl chl (string-append "\"" arg "\"") (list-tail tkl 2)))
+
+	((('comm . val) . rest)
+	 (iter stl chl (string-append "/*" val " */") (cdr tkl)))
+
+	((('ident . rval) ('ident . lval) . rest)
+	 (iter stl chl (string-append " " rval) (cdr tkl)))
+
+	(((key . val) . rest)
+	 (iter stl chl val rest))
+
+	(('space . rest)
+	 (iter stl (cons #\space chl) nxt rest))
+
+	(otherwise
+	 (error "no match" tkl)))))))
+
+(define rtokl->string y-rtokl->string)
+  
 ;; @deffn scan-cpp-input argd used dict end-tok => string
 ;; Process replacement text from the input port and generate a (reversed)
 ;; token-list.  If end-tok, stop at, and push back, @code{,} or @code{)}.
@@ -284,10 +328,6 @@
   ;; Tokens are collected in a (reverse ordered) list (tkl) and merged together
   ;; to a string on return using @code{rtokl->string}.
 
-  ;; Turn reverse chl into a string and insert it into the string list stl.
-  (define (add-chl chl stl)
-    (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
-
   ;; We just scanned "defined", now need to scan the arg to inhibit expansion.
   ;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
   ;; return "defined(FOO)".  We use ec (end-char) as terminal char:
@@ -295,7 +335,9 @@
   (define (scan-defined-arg)
     (let* ((ch (skip-il-ws (read-char)))
 	   (ec (if (char=? ch #\() #\) #\null)))
-      (let iter ((chl '(#\()) (ec ec) (ch (if (char=? ec #\)) (read-char) ch)))
+      (let iter ((chl '(#\())
+		 (ec ec)
+		 (ch (if (char=? ec #\)) (skip-il-ws (read-char)) ch)))
 	(cond
 	 ((eof-object? ch)
 	  (if (char=? ec #\null)
@@ -422,12 +464,6 @@
   (let ((used (if (pair? rest) (car rest) '()))
 	(rval (assoc-ref dict ident)))
     (cond
-     #;((string=? ident "C99_ANY") #f)	; don't expand: could be anything
-     #;((string=? ident "__FILE__")
-      (string-append "\"" (or (port-filename (current-input-port))
-			      "(unknown)") "\""))
-     #;((string=? ident "__LINE__") (1+ (port-line (current-input-port))))
-     ;;
      ((not rval) #f)
      ((member ident used) ident)
      ((string? rval)
@@ -437,6 +473,8 @@
       (let* ((argl (car rval)) (repl (cdr rval))
 	     (argd (collect-args argl '() dict '()))
 	     (expd (expand-cpp-repl repl argd dict (cons ident used))))
-	expd)))))
+	expd))
+     ((c99-std-val ident))
+     (else #f))))
 
 ;;; --- last line ---

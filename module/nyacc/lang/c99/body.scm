@@ -283,6 +283,14 @@
 	  (define (rem-define name)
 	      (set-cpi-defs! info (delete name (cpi-defs info))))
 	  
+	  (define (apply-helper file)
+	    (let* ((tyns (assoc-ref (cpi-itynd info) file))
+		   (defs (assoc-ref (cpi-idefd info) file)))
+	      (when tyns
+		(for-each add-typename tyns)
+		(set-cpi-defs! info (append defs (cpi-defs info))))
+	      tyns))
+	  
 	  ;; Evaluate expression text in #if of #elif statement.
 	  (define (eval-cpp-cond-text text)
 	    (with-throw-handler
@@ -330,14 +338,6 @@
 	       (if (eqv? 'keep (car ppxs))
 		   (eval-cpp-stmt-2/code stmt)))))
 
-	  (define (apply-helper file)
-	    (let* ((tyns (assoc-ref (cpi-itynd info) file))
-		   (defs (assoc-ref (cpi-idefd info) file)))
-	      (when tyns
-		(for-each add-typename tyns)
-		(set-cpi-defs! info (append defs (cpi-defs info))))
-	      (pair? tyns)))
-	  
 	  (define (eval-cpp-stmt-2/code stmt)
 	    ;; eval non-control flow
 	    (case (car stmt)
@@ -348,7 +348,7 @@
 		 (cond
 		  ((apply-helper file)) ; use helper
 		  ((not path) (p-err "not found: ~S" file)) ; file not found
-		  (else (push-input (open-input-file path))))))
+		  (else (set! bol #t) (push-input (open-input-file path))))))
 	      ((define) (add-define stmt))
 	      ((undef) (rem-define (cadr stmt)))
 	      ((error) (p-err "error: #error ~A" (cadr stmt)))

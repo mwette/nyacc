@@ -1,4 +1,7 @@
-C99-007	<= next id
+C99-008	<= next id
+
+C99-007	16 Feb 2017, M.Wette
+	cpp.scm: does __LINE__ get expanded?
 
 C99-006	06 Aug 2016, M.Wette
         code "val = '\0';" gets pprinted to "val = '^@;';"

@@ -1,3 +1,8 @@
+2017-02-16  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/cpp.scm (rtokl->string): now handled symb ## arg ## symb
+	(scan-cpp-input): skip-il-ws after #\(
+
 2017-01-18  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/parser.scm: check for EOF in end of CPP line

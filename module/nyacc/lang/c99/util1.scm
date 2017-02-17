@@ -45,7 +45,7 @@
      "imaxdiv_t")
     ("limits.h"
      "INT_MIN=C99_ANY" "INT_MAX=C99_ANY" "LONG_MIN=C99_ANY" "LONG_MAX=C99_ANY")
-    ("math.h")
+    ("math.h" "float_t" "double_t")
     ("regex.h" "regex_t" "regmatch_t")
     ("setjmp.h" "jmp_buf")
     ("signal.h" "sig_atomic_t")
