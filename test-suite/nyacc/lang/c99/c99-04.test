@@ -24,6 +24,11 @@
     (lambda ()
       (parse-c99 #:inc-dirs incs #:mode 'code))))
 
+(define (parse-string str)
+  (with-input-from-string str
+    (lambda ()
+      (parse-c99 #:inc-dirs incs #:mode 'code))))
+
 ;; parser test
 (with-test-prefix "nyacc/c99-04, CPP"
 
@@ -100,6 +105,12 @@
 	      (init-declr
 	       (ident "z")
 	       (initzer (p-expr (ident "ex12_abc2")))))))))
+
+  (pass-if "spacing in tokenization"
+    (let ((sx1 (parse-string "#define foo(X) # X\nchar *s = foo(abc def);\n"))
+	  (sx2 (parse-string "#define foo(X) # X\nchar *s = foo(abc  def);\n")))
+      (equal? sx1 sx2)))
+
   )
 
 ;; --- last line ---

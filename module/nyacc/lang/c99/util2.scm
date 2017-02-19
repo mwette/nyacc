@@ -587,10 +587,17 @@
 	 (m-decl (reverse (cons m-specl m-declr))))
     m-decl))
 
+;; @deffn udecl->mspec/comm decl [dict] [#:def-comm ""]
+;; Convert declaration tree to an mspec
+;; @example
+;; (decl ... (comment "state vector")
+;; =>
+;; ("x" "state vector" (array-of 10) (float "double")
+;; @end example
 (define* (udecl->mspec/comm decl #:optional (dict '()) #:key (def-comm ""))
-  (let* ((comm (sx-ref decl 3))
+  (let* ((comm (or (and=> (sx-ref decl 3) cadr) def-comm))
 	 (spec (udecl->mspec decl dict)))
-    (cons* (car spec) (or comm `(comment ,def-comm)) (cdr spec))))
+    (cons* (car spec) comm (cdr spec))))
 
 ;; @deffn fix-fields flds => flds
 ;; This will take a list of fields from a struct and remove lone comments.
