@@ -151,7 +151,6 @@
 ;; ("union" ("bar" . decl) ..)
 (define (tree->udict tree)
   (if (pair? tree)
-      ;;(reverse (fold match-decl '() (cdr tree)))
       (fold match-decl '() (cdr tree))
       '()))
 
@@ -367,15 +366,13 @@
 ;; @example
 ;; typedef const int  (*foo_t)(int a, double b);
 ;; extern    foo_t    fctns[2];
-;; @noindent
-;; This routine should create an init-declarator associated with
-;; @end example
-;; extern {const int}  (*{fctns[2]})(int a, double b);
+;; =>
+;; extern const int  (*fctns[2])(int a, double b);
 ;; @end example
 ;; @noindent
 ;; Cool. Eh? (but is it done?)
 (define* (expand-decl-typerefs udecl udecl-dict #:key (keep '()))
-  (display "FIXME: some decls have no init-declr-list\n")
+  ;;(display "FIXME: some decls have no init-declr-list\n")
   ;; between adding (init-declr-list) to those or having predicate
   ;; (has-init-declr? decl)
   (let* ((tag (sx-tag udecl))		; decl or comp-decl
@@ -390,19 +387,8 @@
     (case (car tspec)
       ((typename)
        (cond
-	((member (cadr tspec) keep)
-	 udecl)
-	#;((member (cadr tspec) fixed-width-int-names)
-	 ;; Convert it to @code{fixed-type}.
-	 (let* ((name (cadr tspec))
-		(fixd-tspec `(type-spec (fixed-type ,name)))
-		(fixd-specl (repl-typespec specl fixd-tspec))
-		;; TODO add attr
-		(fixed-udecl (cons* tag fixd-specl declr tail)))
-	   ;;(expand-decl-typerefs fixed-udecl udecl-dict))) ; not needed ?
-	   fixed-udecl))
-	(else
-	 ;; splice in the typedef
+	((member (cadr tspec) keep) udecl)
+	(else ;; splice in the typedef
 	 (let* ((name (sx-ref tspec 1))
 		(decl (assoc-ref udecl-dict name)) ; decl for typename
 		(tdef-specl (sx-ref decl 1)) ; decl-spec-list for typename
@@ -555,7 +541,6 @@
 (define (udecl->mspec decl . rest)
 
   (define (cnvt-array-size size-spec)
-    (simple-format #t "cnvt-array-size\n")
     (with-output-to-string (lambda () (pretty-print-c99 size-spec))))
 
   (define (unwrap-specl specl)

@@ -237,41 +237,7 @@
 
 ;; @deffn rtokl->string tokl => string
 ;; Convert reverse token-list to string.
-(define (x-rtokl->string tokl)
-  ;;(let iter ((stl '()) (chl '()) (nxt #f) (tkl tokl)) ;; more efficient
-  (let iter ((stl '()) (tkl tokl))
-    (match tkl
-      ('()
-       (apply string-append stl))
-
-      ((('arg . arg) 'dhash (key . val) . rest)
-       (iter stl (acons key (string-append val arg) (list-tail tkl 3))))
-
-      (((key . val) 'dhash ('arg . arg) . rest)
-       (iter stl (acons 'arg (string-append arg val) (list-tail tkl 3))))
-
-      ((('arg . arg) 'hash . rest)
-       (iter (cons (string-append "\"" arg "\"") stl) (list-tail tkl 2)))
-
-      ((('comm . val) . rest)
-       (iter (cons (string-append "/*" val " */") stl) (cdr tkl)))
-
-      ((('ident . rval) ('ident . lval) . rest)
-       (iter (cons* " " rval stl) (cdr tkl)))
-
-      (((key . val) . rest)
-       (iter (cons val stl) (cdr tkl)))
-
-      (('space . rest)
-       (iter (cons " " stl) rest))
-
-      (((? char? ch) . rest)
-       (iter (cons (string ch) stl) rest))
-
-      (otherwise
-       (error "no match" tkl)))))
-
-(define (y-rtokl->string tokl)
+(define (rtokl->string tokl)
 
   ;; Turn reverse chl into a string and insert it into the string list stl.
   (define (add-chl chl stl)
@@ -314,8 +280,6 @@
 	(otherwise
 	 (error "no match" tkl)))))))
 
-(define rtokl->string y-rtokl->string)
-  
 ;; @deffn scan-cpp-input argd used dict end-tok => string
 ;; Process replacement text from the input port and generate a (reversed)
 ;; token-list.  If end-tok, stop at, and push back, @code{,} or @code{)}.
