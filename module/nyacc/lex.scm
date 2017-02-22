@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 ;;;
-;;; Copyright (C) 2015,2016 - Matthew R.Wette
+;;; Copyright (C) 2015-2017 - Matthew R.Wette
 ;;; 
 ;;; This library is free software; you can redistribute it and/or modify it
 ;;; under the terms of the GNU Lesser General Public License as published by
@@ -47,6 +47,7 @@
 	    read-c-num
 	    read-oct read-hex
 	    like-c-ident?
+	    cnumstr->scm
 	    filter-mt remove-mt map-mt make-ident-like-p 
 	    c:ws c:if c:ir)
   #:use-module ((srfi srfi-1) #:select (remove append-reverse))
@@ -80,6 +81,9 @@
 (define c:ir (string->char-set digit c:if)) ; ident, rest chars
 (define c:nx (string->char-set "eEdD"))	; number exponent
 (define c:hx (string->char-set "abcdefABCDEF"))
+(define c:sx (string->char-set "lLuU")) ; suffix
+
+(define (lsr chl) (list->string (reverse chl))) ; used often
 
 ;; @deffn eval-reader reader string => result
 ;; For test and debug, this procedure will evaluate a reader on a string.
@@ -124,11 +128,11 @@
 	  (cond
 	   ((eof-object? ch)
 	    (if (null? chl) #f
-		(list->string (reverse chl))))
+		(lsr chl)))
 	   ((char-set-contains? cs-rest ch)
 	    (iter (cons ch chl) (read-char)))
 	   (else (unread-char ch)
-		 (list->string (reverse chl)))))
+		 (lsr chl))))
 	#f)))
 
 ;; @deffn read-c-ident ch => #f|string
@@ -157,7 +161,7 @@
 		   (if (eq? c1 #\newline)
 		       (iter cl (read-char))
 		       (iter (cons* c1 cl) (read-char)))))
-		((eq? ch delim) (cons '$string (list->string (reverse cl))))
+		((eq? ch delim) (cons '$string (lsr cl)))
 		(else (iter (cons ch cl) (read-char)))))
 	#f)))
 
@@ -223,7 +227,7 @@
 			 (cons (integer->char (read-oct ch)) cl)
 			 (cons c1 cl))))
 		  (read-char))))
-	      ((eq? ch #\") (cons '$string (list->string (reverse cl))))
+	      ((eq? ch #\") (cons '$string (lsr cl)))
 	      (else (iter (cons ch cl) (read-char)))))))
 
 ;; @deffn make-chlit-reader
@@ -254,65 +258,95 @@
 		      (else (error "bad escape sequence")))))
 	    (cons '$chlit (string c1))))))
 
+(define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
+
 ;; @deffn make-num-reader => (proc ch) => #f|($fixed . "1")|($float . "1.0")
+;; Reads C numbers.
 ;; This routine will clean by adding "0" before or after dot.
-;; TODO: add arg to specify alternate syntaxes (e.g. "0x123")
 ;; may want to replace "eEdD" w/ "e"
 ;; integer decimal(#t/#f) fraction exponent looking-at
 ;; i, f and e are lists of characters
 (define (make-num-reader)
   ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
   ;; Removed support for leading '.' to be a number.
-  (let ((fix-dot (lambda (l) (if (char=? #\. (car l)) (cons #\0 l) l))))
-    (lambda (ch1)
-      ;; chl: char list; ty: '$fixed or '$float; st: state; ch: input char
-      (let iter ((chl '()) (ty #f) (st 0) (ch ch1))
-	(case st
-	  ((0)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((char=? #\0 ch) (iter (cons ch chl) '$fixed 10 (read-char))) 
-	    ((char-numeric? ch) (iter chl '$fixed 1 ch))
-	    (else #f)))
-	  ((10) ;; allow x after 0
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((char=? #\x ch) (iter (cons ch chl) ty 1 (read-char)))
-	    (else (iter chl ty 1 ch))))
-	  ((1)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((char-numeric? ch) (iter (cons ch chl) ty 1 (read-char)))
-	    ((char=? #\. ch) (iter (cons #\. chl) '$float 2 (read-char)))
-	    ((char-set-contains? c:hx ch)
-	     (iter (cons ch chl) ty 1 (read-char)))
-	    ((char-set-contains? c:if ch) (error "reading number st=1"))
-	    (else (iter chl '$fixed 5 ch))))
-	  ((2)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((char-numeric? ch) (iter (cons ch chl) ty 2 (read-char)))
-	    ((char-set-contains? c:nx ch)
-	     (iter (cons ch (fix-dot chl)) ty 3 (read-char)))
-	    ((char-set-contains? c:if ch) (error "reading number st=2"))
-	    (else (iter (fix-dot chl) ty 5 ch))))
-	  ((3)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((or (char=? #\+ ch) (char=? #\- ch))
-	     (iter (cons ch chl) ty 4 (read-char)))
-	    ((char-numeric? ch) (iter chl ty 4 ch))
-	    (else (error "syntax3"))))
-	  ((4)
-	   (cond
-	    ((eof-object? ch) (iter chl ty 5 ch))
-	    ((char-numeric? ch) (iter (cons ch chl) ty 4 (read-char)))
-	    ((char-set-contains? c:if ch) (error "reading number st=4"))
-	    (else (iter chl ty 5 ch))))
-	  ((5)
-	   (unless (eof-object? ch) (unread-char ch))
-	   (cons ty (list->string (reverse chl)))))))))
+  (lambda (ch1)
+    ;; chl: char list; ty: '$fixed or '$float; st: state; ch: input char
+    (let iter ((chl '()) (ty #f) (st 0) (ch ch1))
+      (case st
+	((0)
+	 (cond
+	  ((eof-object? ch) (iter chl ty 5 ch))
+	  ((char=? #\0 ch) (iter (cons ch chl) '$fixed 10 (read-char))) 
+	  ((char-numeric? ch) (iter chl '$fixed 1 ch))
+	  (else #f)))
+	((10) ;; allow x after 0
+	 (cond
+	  ((eof-object? ch) (iter chl ty 5 ch))
+	  ((char=? #\x ch) (iter (cons ch chl) ty 1 (read-char)))
+	  (else (iter chl ty 1 ch))))
+	((1)
+	 (cond
+	  ((eof-object? ch) (iter chl ty 5 ch))
+	  ((char-numeric? ch) (iter (cons ch chl) ty 1 (read-char)))
+	  ((char=? #\. ch) (iter (cons #\. chl) '$float 2 (read-char)))
+	  ((char-set-contains? c:hx ch)
+	   (iter (cons ch chl) ty 1 (read-char)))
+	  ((char-set-contains? c:sx ch)
+	   (iter (cons ch chl) ty 11 (read-char)))
+	  ((char-set-contains? c:if ch) (error "lex/num-reader st=1"))
+	  (else (iter chl '$fixed 5 ch))))
+	((11) ;; got l L u or U, look for l or L
+	 (cond
+	  ((eof-object? ch) (cons '$fixed (lsr chl)))
+	  ((char=? #\L ch) (cons '$fixed (lsr (cons ch chl))))
+	  ((char=? #\l ch) (cons '$fixed (lsr (cons ch chl))))
+	  (else (iter chl '$fixed 5 ch))))
+	((2)
+	 (cond
+	  ((eof-object? ch) (iter chl ty 5 ch))
+	  ((char-numeric? ch) (iter (cons ch chl) ty 2 (read-char)))
+	  ((char-set-contains? c:nx ch)
+	   (iter (cons ch (fix-dot chl)) ty 3 (read-char)))
+	  ((char-set-contains? c:if ch) (error "lex/num-reader st=2"))
+	  (else (iter (fix-dot chl) ty 5 ch))))
+	((3)
+	 (cond
+	  ((eof-object? ch) (iter chl ty 5 ch))
+	  ((or (char=? #\+ ch) (char=? #\- ch))
+	   (iter (cons ch chl) ty 4 (read-char)))
+	  ((char-numeric? ch) (iter chl ty 4 ch))
+	  (else (error "syntax3"))))
+	((4)
+	 (cond
+	  ((eof-object? ch) (iter chl ty 5 ch))
+	  ((char-numeric? ch) (iter (cons ch chl) ty 4 (read-char)))
+	  ((char-set-contains? c:if ch) (error "lex/num-reader st=4"))
+	  (else (iter chl ty 5 ch))))
+	((5)
+	 (unless (eof-object? ch) (unread-char ch))
+	 (cons ty (lsr chl)))))))
 
+;; @deffn cnumstr->scm C99-str => scm-str
+;; Convert C number-string (e.g, @code{0x123LL}) to Scheme numbers-string
+;; (e.g., @code{#x123}).
+(define (cnumstr->scm str)
+  (define (2- n) (1- (1- n)))
+  (let* ((nd (string-length str)))
+    (define (trim-rt st) ;; trim LlUu from right
+      (if (char-set-contains? c:sx (string-ref str (1- nd)))
+	  (if (char-set-contains? c:sx (string-ref str (2- nd)))
+	      (substring str st (2- nd))
+	      (substring str st (1- nd)))
+	  (substring str st nd)))
+    (if (< nd 2) str
+	(if (char=? #\0 (string-ref str 0))
+	    (if (char=? #\x (string-ref str 1))
+		(string-append "#x" (trim-rt 2))
+		(if (char-numeric? (string-ref str 1))
+		    (string-append "#o" (trim-rt 1))
+		    (trim-rt 0)))
+	    (trim-rt 0)))))
+  
 ;; @deffn read-c-num ch => #f|string
 ;; Reader for unsigned numbers as used in C (or close to it).
 (define read-c-num (make-num-reader))
@@ -362,12 +396,12 @@
 	 ((assq-ref node (car cl)) => ;; accept or shift next character
 	  (lambda (n)
 	    (if (eq? (caar n) 'else) ; if only else, accept, else read on
-		(cons (cdar n) (list->string (reverse cl)))
+		(cons (cdar n) (lsr cl))
 		(iter (cons (read-char) cl) n))))
 	 ((assq-ref node 'else) => ; else exists, accept
 	  (lambda (tok)
 	    (unread-char (car cl))
-	    (cons tok (list->string (reverse (cdr cl))))))
+	    (cons tok (lsr (cdr cl)))))
 	 (else ;; reject
 	  (let pushback ((cl cl))
 	    (unless (null? (cdr cl))
@@ -420,8 +454,8 @@
 		(if (and (not eat-newline) (eq? #\newline (car sl)))
 		    (unread-char #\newline))
 		(if (and (pair? cl) (eqv? (car cl) #\cr)) ;; rem trailing \r 
-		    (cons tval (list->string (reverse (cdr cl))))
-		    (cons tval (list->string (reverse cl)))))
+		    (cons tval (lsr (cdr cl)))
+		    (cons tval (lsr cl))))
 	       ((null? il) (find-end cl sl (cons (mc-read-char) il) ps px))
 	       ((eof-object? (car il)) (error "open comment"))
 	       ((eqv? (car il) (string-ref ps px))

@@ -1,6 +1,6 @@
 ;; nyacc/lex-01.test			-*- scheme -*-
 ;;
-;; Copyright (C) 2015 Matthew R. Wette
+;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -40,8 +40,15 @@
 	  (and (equal? tp '($code-comm . "abc"))
 	       (equal? ch #\newline))))))
 
+  ;; C99 number string to Scheme number string (which works w/ string->number)
+  (pass-if "cnumstr->scm"
+    (fold
+     (lambda (pair pass)
+       (and pass (string-equal? (cnumstr->scm (car pair)) (cdr pair))))
+     #t
+     '(("0L" . "0") ("01l" . "0o1") ("0LL" . "0") ("0xa" . "#xa")
+       ("0123" . "#o123") ("1234" . "1234") ("0.1e10" . "0.1e10"))))
 
   )
-
 
 ;; --- last line ---

@@ -1,3 +1,12 @@
+2017-02-22  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/body.scm: added 'skip state so that if skipping #if
+	then no CPP if or elif arguments are evaluated
+
+	* lang/c99/cpp.scm: parse 0L numbers, convert c numbers (e.g.,
+	123L) to scheme so that string->number works.  I need to update
+	cnumstr->snumstr in nyacc/lex.scm.
+
 2017-02-16  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/cpp.scm (rtokl->string): now handled symb ## arg ## symb

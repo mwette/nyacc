@@ -312,22 +312,29 @@
 	    (find-file-in-dirl file (cpi-incs info)))
 
 	  (define (eval-cpp-stmt-1/code stmt)
-	    ;; eval control flow: states are {skip-look, keep, skip-done}
+	    ;; eval control flow states: {skip-look, keep, skip-done, skip}
 	    (case (car stmt)
 	      ((if)
-	       (let ((val (eval-cpp-cond-text (cadr stmt))))
-		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
-		 (if (eq? 'keep (car ppxs))
-		     (if (zero? val)
-			 (set! ppxs (cons 'skip-look ppxs))
-			 (set! ppxs (cons 'keep ppxs)))
-		     (set! ppxs (cons 'skip-done ppxs)))))
+	       (case (car ppxs)
+		 ((skip-look skip-done skip) ;; don't eval if excluded
+		  (set! ppxs (cons 'skip ppxs)))
+		 (else
+		  (let ((val (eval-cpp-cond-text (cadr stmt))))
+		    (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
+		    (if (eq? 'keep (car ppxs))
+			(if (zero? val)
+			    (set! ppxs (cons 'skip-look ppxs))
+			    (set! ppxs (cons 'keep ppxs)))
+			(set! ppxs (cons 'skip-done ppxs)))))))
 	      ((elif)
-	       (let ((val (eval-cpp-cond-text (cadr stmt))))
-		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
-		 (case (car ppxs)
-		   ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))
-		   ((keep) (set-car! ppxs 'skip-done)))))
+	       (case (car ppxs)
+		 ((skip) #t) ;; don't eval if excluded
+		 (else
+		  (let ((val (eval-cpp-cond-text (cadr stmt))))
+		    (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
+		    (case (car ppxs)
+		      ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))
+		      ((keep) (set-car! ppxs 'skip-done)))))))
 	      ((else)
 	       (case (car ppxs)
 		 ((skip-look) (set-car! ppxs 'keep))
@@ -444,14 +451,10 @@
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
 	    (case (car ppxs)
-	      ((keep)
-	       ;;(simple-format #t "lx=>~S\n" pair)
-	       pair)
-	      ((skip-done skip-look)
+	      ((keep) pair)
+	      ((skip-done skip-look skip)
 	       (iter (read-token)))
-	      ((skip1-pop)
-	       (set! ppxs (cdr ppxs))
-	       (iter (read-token)))))
+	      (else (error "coding error"))))
 	  )))))
 
 ;; --- last line ---

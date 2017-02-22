@@ -96,6 +96,7 @@
      ($fixed ($$ `(fixed ,$1)))	; integer-constant
      ($chlit ($$ `(char ,$1)))	; char-constant
      ("defined" "(" $ident ")" ($$ `(defined ,$3)))
+     ("defined" $ident ($$ `(defined ,$2)))
      ("(" expression-list ")" ($$ $2)))
     (expression-list
      (conditional-expression)

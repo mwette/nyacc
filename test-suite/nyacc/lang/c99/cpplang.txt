@@ -43,9 +43,10 @@
 42 primary-expression => '$fixed
 43 primary-expression => '$chlit
 44 primary-expression => "defined" "(" '$ident ")"
-45 primary-expression => "(" expression-list ")"
-46 expression-list => conditional-expression
-47 expression-list => expression-list "," conditional-expression
+45 primary-expression => "defined" '$ident
+46 primary-expression => "(" expression-list ")"
+47 expression-list => conditional-expression
+48 expression-list => expression-list "," conditional-expression
 
 0:	$start => . conditional-expression
 	conditional-expression => . logical-or-expression
@@ -92,6 +93,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -166,6 +168,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -191,11 +194,13 @@
 		bitwise-or-expression => shift 22
 		logical-and-expression => shift 23
 		logical-or-expression => shift 24
-		conditional-expression => shift 54
-		expression-list => shift 55
+		conditional-expression => shift 55
+		expression-list => shift 56
 
-2:	primary-expression => "defined" . "(" '$ident ")"
+2:	primary-expression => "defined" . '$ident
+	primary-expression => "defined" . "(" '$ident ")"
 		"(" => shift 53
+		'$ident => shift 54
 
 3:	primary-expression => '$chlit .
 		$default => reduce 43
@@ -224,6 +229,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -255,6 +261,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -286,6 +293,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -317,6 +325,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -348,6 +357,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -379,6 +389,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -521,6 +532,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -545,7 +557,7 @@
 		bitwise-xor-expression => shift 21
 		bitwise-or-expression => shift 22
 		logical-and-expression => shift 23
-		logical-or-expression => shift 77
+		logical-or-expression => shift 78
 
 27:	logical-or-expression => logical-or-expression "||" . logical-and-expression
 	logical-and-expression => . bitwise-or-expression
@@ -588,6 +600,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -611,7 +624,7 @@
 		bitwise-and-expression => shift 20
 		bitwise-xor-expression => shift 21
 		bitwise-or-expression => shift 22
-		logical-and-expression => shift 76
+		logical-and-expression => shift 77
 
 28:	logical-and-expression => logical-and-expression "&&" . bitwise-or-expression
 	bitwise-or-expression => . bitwise-xor-expression
@@ -652,6 +665,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -674,7 +688,7 @@
 		equality-expression => shift 19
 		bitwise-and-expression => shift 20
 		bitwise-xor-expression => shift 21
-		bitwise-or-expression => shift 75
+		bitwise-or-expression => shift 76
 
 29:	bitwise-or-expression => bitwise-or-expression "|" . bitwise-xor-expression
 	bitwise-xor-expression => . bitwise-and-expression
@@ -713,6 +727,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -734,7 +749,7 @@
 		relational-expression => shift 18
 		equality-expression => shift 19
 		bitwise-and-expression => shift 20
-		bitwise-xor-expression => shift 74
+		bitwise-xor-expression => shift 75
 
 30:	bitwise-xor-expression => bitwise-xor-expression "^" . bitwise-and-expression
 	bitwise-and-expression => . equality-expression
@@ -771,6 +786,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -791,7 +807,7 @@
 		shift-expression => shift 17
 		relational-expression => shift 18
 		equality-expression => shift 19
-		bitwise-and-expression => shift 73
+		bitwise-and-expression => shift 74
 
 31:	bitwise-and-expression => bitwise-and-expression "&" . equality-expression
 	equality-expression => . relational-expression
@@ -826,6 +842,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -845,7 +862,7 @@
 		additive-expression => shift 16
 		shift-expression => shift 17
 		relational-expression => shift 18
-		equality-expression => shift 72
+		equality-expression => shift 73
 
 32:	equality-expression => equality-expression "==" . relational-expression
 	relational-expression => . shift-expression
@@ -877,6 +894,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -895,7 +913,7 @@
 		multiplicative-expression => shift 15
 		additive-expression => shift 16
 		shift-expression => shift 17
-		relational-expression => shift 71
+		relational-expression => shift 72
 
 33:	equality-expression => equality-expression "!=" . relational-expression
 	relational-expression => . shift-expression
@@ -927,6 +945,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -945,7 +964,7 @@
 		multiplicative-expression => shift 15
 		additive-expression => shift 16
 		shift-expression => shift 17
-		relational-expression => shift 70
+		relational-expression => shift 71
 
 34:	relational-expression => relational-expression "<" . shift-expression
 	shift-expression => . additive-expression
@@ -972,6 +991,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -989,7 +1009,7 @@
 		unary-expression => shift 14
 		multiplicative-expression => shift 15
 		additive-expression => shift 16
-		shift-expression => shift 69
+		shift-expression => shift 70
 
 35:	relational-expression => relational-expression "<=" . shift-expression
 	shift-expression => . additive-expression
@@ -1016,6 +1036,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1033,7 +1054,7 @@
 		unary-expression => shift 14
 		multiplicative-expression => shift 15
 		additive-expression => shift 16
-		shift-expression => shift 68
+		shift-expression => shift 69
 
 36:	relational-expression => relational-expression ">" . shift-expression
 	shift-expression => . additive-expression
@@ -1060,6 +1081,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1077,7 +1099,7 @@
 		unary-expression => shift 14
 		multiplicative-expression => shift 15
 		additive-expression => shift 16
-		shift-expression => shift 67
+		shift-expression => shift 68
 
 37:	relational-expression => relational-expression ">=" . shift-expression
 	shift-expression => . additive-expression
@@ -1104,6 +1126,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1121,7 +1144,7 @@
 		unary-expression => shift 14
 		multiplicative-expression => shift 15
 		additive-expression => shift 16
-		shift-expression => shift 66
+		shift-expression => shift 67
 
 38:	shift-expression => shift-expression "<<" . additive-expression
 	additive-expression => . multiplicative-expression
@@ -1145,6 +1168,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1161,7 +1185,7 @@
 		postfix-expression => shift 13
 		unary-expression => shift 14
 		multiplicative-expression => shift 15
-		additive-expression => shift 65
+		additive-expression => shift 66
 
 39:	shift-expression => shift-expression ">>" . additive-expression
 	additive-expression => . multiplicative-expression
@@ -1185,6 +1209,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1201,7 +1226,7 @@
 		postfix-expression => shift 13
 		unary-expression => shift 14
 		multiplicative-expression => shift 15
-		additive-expression => shift 64
+		additive-expression => shift 65
 
 40:	additive-expression => additive-expression "+" . multiplicative-expression
 	multiplicative-expression => . unary-expression
@@ -1222,6 +1247,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1237,7 +1263,7 @@
 		"-" => shift 12
 		postfix-expression => shift 13
 		unary-expression => shift 14
-		multiplicative-expression => shift 63
+		multiplicative-expression => shift 64
 
 41:	additive-expression => additive-expression "-" . multiplicative-expression
 	multiplicative-expression => . unary-expression
@@ -1258,6 +1284,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1273,7 +1300,7 @@
 		"-" => shift 12
 		postfix-expression => shift 13
 		unary-expression => shift 14
-		multiplicative-expression => shift 62
+		multiplicative-expression => shift 63
 
 42:	multiplicative-expression => multiplicative-expression "*" . unary-expression
 	unary-expression => . postfix-expression
@@ -1290,6 +1317,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1304,7 +1332,7 @@
 		"+" => shift 11
 		"-" => shift 12
 		postfix-expression => shift 13
-		unary-expression => shift 61
+		unary-expression => shift 62
 
 43:	multiplicative-expression => multiplicative-expression "/" . unary-expression
 	unary-expression => . postfix-expression
@@ -1321,6 +1349,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1335,7 +1364,7 @@
 		"+" => shift 11
 		"-" => shift 12
 		postfix-expression => shift 13
-		unary-expression => shift 60
+		unary-expression => shift 61
 
 44:	multiplicative-expression => multiplicative-expression "%" . unary-expression
 	unary-expression => . postfix-expression
@@ -1352,6 +1381,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1366,7 +1396,7 @@
 		"+" => shift 11
 		"-" => shift 12
 		postfix-expression => shift 13
-		unary-expression => shift 59
+		unary-expression => shift 60
 
 45:	postfix-expression => postfix-expression "++" .
 		$default => reduce 39
@@ -1393,21 +1423,24 @@
 		$default => reduce 37
 
 53:	primary-expression => "defined" "(" . '$ident ")"
-		'$ident => shift 58
+		'$ident => shift 59
 
-54:	expression-list => conditional-expression .
-		")" => reduce 46
-		"," => reduce 46
-
-55:	expression-list => expression-list . "," conditional-expression
-	primary-expression => "(" expression-list . ")"
-		")" => shift 56
-		"," => shift 57
-
-56:	primary-expression => "(" expression-list ")" .
+54:	primary-expression => "defined" '$ident .
 		$default => reduce 45
 
-57:	expression-list => expression-list "," . conditional-expression
+55:	expression-list => conditional-expression .
+		")" => reduce 47
+		"," => reduce 47
+
+56:	expression-list => expression-list . "," conditional-expression
+	primary-expression => "(" expression-list . ")"
+		")" => shift 57
+		"," => shift 58
+
+57:	primary-expression => "(" expression-list ")" .
+		$default => reduce 46
+
+58:	expression-list => expression-list "," . conditional-expression
 	conditional-expression => . logical-or-expression
 	conditional-expression => . logical-or-expression "?" logical-or-expression ":" conditional-expression
 	logical-or-expression => . logical-and-expression
@@ -1452,204 +1485,7 @@
 	primary-expression => . '$fixed
 	primary-expression => . '$chlit
 	primary-expression => . "defined" "(" '$ident ")"
-	primary-expression => . "(" expression-list ")"
-		"(" => shift 1
-		"defined" => shift 2
-		'$chlit => shift 3
-		'$fixed => shift 4
-		'$ident => shift 5
-		primary-expression => shift 6
-		"--" => shift 7
-		"++" => shift 8
-		"~" => shift 9
-		"!" => shift 10
-		"+" => shift 11
-		"-" => shift 12
-		postfix-expression => shift 13
-		unary-expression => shift 14
-		multiplicative-expression => shift 15
-		additive-expression => shift 16
-		shift-expression => shift 17
-		relational-expression => shift 18
-		equality-expression => shift 19
-		bitwise-and-expression => shift 20
-		bitwise-xor-expression => shift 21
-		bitwise-or-expression => shift 22
-		logical-and-expression => shift 23
-		logical-or-expression => shift 24
-		conditional-expression => shift 80
-
-58:	primary-expression => "defined" "(" '$ident . ")"
-		")" => shift 79
-
-59:	multiplicative-expression => multiplicative-expression "%" unary-expression .
-		$default => reduce 30
-
-60:	multiplicative-expression => multiplicative-expression "/" unary-expression .
-		$default => reduce 29
-
-61:	multiplicative-expression => multiplicative-expression "*" unary-expression .
-		$default => reduce 28
-
-62:	multiplicative-expression => multiplicative-expression . "%" unary-expression
-	multiplicative-expression => multiplicative-expression . "/" unary-expression
-	multiplicative-expression => multiplicative-expression . "*" unary-expression
-	additive-expression => additive-expression "-" multiplicative-expression .
-		"*" => shift 42
-		"/" => shift 43
-		"%" => shift 44
-		$default => reduce 26
-
-63:	multiplicative-expression => multiplicative-expression . "%" unary-expression
-	multiplicative-expression => multiplicative-expression . "/" unary-expression
-	multiplicative-expression => multiplicative-expression . "*" unary-expression
-	additive-expression => additive-expression "+" multiplicative-expression .
-		"*" => shift 42
-		"/" => shift 43
-		"%" => shift 44
-		$default => reduce 25
-
-64:	additive-expression => additive-expression . "-" multiplicative-expression
-	additive-expression => additive-expression . "+" multiplicative-expression
-	shift-expression => shift-expression ">>" additive-expression .
-		"+" => shift 40
-		"-" => shift 41
-		$default => reduce 23
-
-65:	additive-expression => additive-expression . "-" multiplicative-expression
-	additive-expression => additive-expression . "+" multiplicative-expression
-	shift-expression => shift-expression "<<" additive-expression .
-		"+" => shift 40
-		"-" => shift 41
-		$default => reduce 22
-
-66:	shift-expression => shift-expression . ">>" additive-expression
-	shift-expression => shift-expression . "<<" additive-expression
-	relational-expression => relational-expression ">=" shift-expression .
-		"<<" => shift 38
-		">>" => shift 39
-		$default => reduce 20
-
-67:	shift-expression => shift-expression . ">>" additive-expression
-	shift-expression => shift-expression . "<<" additive-expression
-	relational-expression => relational-expression ">" shift-expression .
-		"<<" => shift 38
-		">>" => shift 39
-		$default => reduce 19
-
-68:	shift-expression => shift-expression . ">>" additive-expression
-	shift-expression => shift-expression . "<<" additive-expression
-	relational-expression => relational-expression "<=" shift-expression .
-		"<<" => shift 38
-		">>" => shift 39
-		$default => reduce 18
-
-69:	shift-expression => shift-expression . ">>" additive-expression
-	shift-expression => shift-expression . "<<" additive-expression
-	relational-expression => relational-expression "<" shift-expression .
-		"<<" => shift 38
-		">>" => shift 39
-		$default => reduce 17
-
-70:	relational-expression => relational-expression . ">=" shift-expression
-	relational-expression => relational-expression . ">" shift-expression
-	relational-expression => relational-expression . "<=" shift-expression
-	relational-expression => relational-expression . "<" shift-expression
-	equality-expression => equality-expression "!=" relational-expression .
-		"<" => shift 34
-		"<=" => shift 35
-		">" => shift 36
-		">=" => shift 37
-		$default => reduce 15
-
-71:	relational-expression => relational-expression . ">=" shift-expression
-	relational-expression => relational-expression . ">" shift-expression
-	relational-expression => relational-expression . "<=" shift-expression
-	relational-expression => relational-expression . "<" shift-expression
-	equality-expression => equality-expression "==" relational-expression .
-		"<" => shift 34
-		"<=" => shift 35
-		">" => shift 36
-		">=" => shift 37
-		$default => reduce 14
-
-72:	equality-expression => equality-expression . "!=" relational-expression
-	equality-expression => equality-expression . "==" relational-expression
-	bitwise-and-expression => bitwise-and-expression "&" equality-expression .
-		"==" => shift 32
-		"!=" => shift 33
-		$default => reduce 12
-
-73:	bitwise-and-expression => bitwise-and-expression . "&" equality-expression
-	bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expression .
-		"&" => shift 31
-		$default => reduce 10
-
-74:	bitwise-xor-expression => bitwise-xor-expression . "^" bitwise-and-expression
-	bitwise-or-expression => bitwise-or-expression "|" bitwise-xor-expression .
-		"^" => shift 30
-		$default => reduce 8
-
-75:	bitwise-or-expression => bitwise-or-expression . "|" bitwise-xor-expression
-	logical-and-expression => logical-and-expression "&&" bitwise-or-expression .
-		"|" => shift 29
-		$default => reduce 6
-
-76:	logical-and-expression => logical-and-expression . "&&" bitwise-or-expression
-	logical-or-expression => logical-or-expression "||" logical-and-expression .
-		"&&" => shift 28
-		$default => reduce 4
-
-77:	logical-or-expression => logical-or-expression . "||" logical-and-expression
-	conditional-expression => logical-or-expression "?" logical-or-expression . ":" conditional-expression
-		":" => shift 78
-		"||" => shift 27
-
-78:	conditional-expression => logical-or-expression "?" logical-or-expression ":" . conditional-expression
-	conditional-expression => . logical-or-expression
-	conditional-expression => . logical-or-expression "?" logical-or-expression ":" conditional-expression
-	logical-or-expression => . logical-and-expression
-	logical-or-expression => . logical-or-expression "||" logical-and-expression
-	logical-and-expression => . bitwise-or-expression
-	logical-and-expression => . logical-and-expression "&&" bitwise-or-expression
-	bitwise-or-expression => . bitwise-xor-expression
-	bitwise-or-expression => . bitwise-or-expression "|" bitwise-xor-expression
-	bitwise-xor-expression => . bitwise-and-expression
-	bitwise-xor-expression => . bitwise-xor-expression "^" bitwise-and-expression
-	bitwise-and-expression => . equality-expression
-	bitwise-and-expression => . bitwise-and-expression "&" equality-expression
-	equality-expression => . relational-expression
-	equality-expression => . equality-expression "==" relational-expression
-	equality-expression => . equality-expression "!=" relational-expression
-	relational-expression => . shift-expression
-	relational-expression => . relational-expression "<" shift-expression
-	relational-expression => . relational-expression "<=" shift-expression
-	relational-expression => . relational-expression ">" shift-expression
-	relational-expression => . relational-expression ">=" shift-expression
-	shift-expression => . additive-expression
-	shift-expression => . shift-expression "<<" additive-expression
-	shift-expression => . shift-expression ">>" additive-expression
-	additive-expression => . multiplicative-expression
-	additive-expression => . additive-expression "+" multiplicative-expression
-	additive-expression => . additive-expression "-" multiplicative-expression
-	multiplicative-expression => . unary-expression
-	multiplicative-expression => . multiplicative-expression "*" unary-expression
-	multiplicative-expression => . multiplicative-expression "/" unary-expression
-	multiplicative-expression => . multiplicative-expression "%" unary-expression
-	unary-expression => . postfix-expression
-	unary-expression => . "-" unary-expression
-	unary-expression => . "+" unary-expression
-	unary-expression => . "!" unary-expression
-	unary-expression => . "~" unary-expression
-	unary-expression => . "++" unary-expression
-	unary-expression => . "--" unary-expression
-	postfix-expression => . primary-expression
-	postfix-expression => . postfix-expression "++"
-	postfix-expression => . postfix-expression "--"
-	primary-expression => . '$ident
-	primary-expression => . '$fixed
-	primary-expression => . '$chlit
-	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
 	primary-expression => . "(" expression-list ")"
 		"(" => shift 1
 		"defined" => shift 2
@@ -1677,14 +1513,213 @@
 		logical-or-expression => shift 24
 		conditional-expression => shift 81
 
-79:	primary-expression => "defined" "(" '$ident ")" .
+59:	primary-expression => "defined" "(" '$ident . ")"
+		")" => shift 80
+
+60:	multiplicative-expression => multiplicative-expression "%" unary-expression .
+		$default => reduce 30
+
+61:	multiplicative-expression => multiplicative-expression "/" unary-expression .
+		$default => reduce 29
+
+62:	multiplicative-expression => multiplicative-expression "*" unary-expression .
+		$default => reduce 28
+
+63:	multiplicative-expression => multiplicative-expression . "%" unary-expression
+	multiplicative-expression => multiplicative-expression . "/" unary-expression
+	multiplicative-expression => multiplicative-expression . "*" unary-expression
+	additive-expression => additive-expression "-" multiplicative-expression .
+		"*" => shift 42
+		"/" => shift 43
+		"%" => shift 44
+		$default => reduce 26
+
+64:	multiplicative-expression => multiplicative-expression . "%" unary-expression
+	multiplicative-expression => multiplicative-expression . "/" unary-expression
+	multiplicative-expression => multiplicative-expression . "*" unary-expression
+	additive-expression => additive-expression "+" multiplicative-expression .
+		"*" => shift 42
+		"/" => shift 43
+		"%" => shift 44
+		$default => reduce 25
+
+65:	additive-expression => additive-expression . "-" multiplicative-expression
+	additive-expression => additive-expression . "+" multiplicative-expression
+	shift-expression => shift-expression ">>" additive-expression .
+		"+" => shift 40
+		"-" => shift 41
+		$default => reduce 23
+
+66:	additive-expression => additive-expression . "-" multiplicative-expression
+	additive-expression => additive-expression . "+" multiplicative-expression
+	shift-expression => shift-expression "<<" additive-expression .
+		"+" => shift 40
+		"-" => shift 41
+		$default => reduce 22
+
+67:	shift-expression => shift-expression . ">>" additive-expression
+	shift-expression => shift-expression . "<<" additive-expression
+	relational-expression => relational-expression ">=" shift-expression .
+		"<<" => shift 38
+		">>" => shift 39
+		$default => reduce 20
+
+68:	shift-expression => shift-expression . ">>" additive-expression
+	shift-expression => shift-expression . "<<" additive-expression
+	relational-expression => relational-expression ">" shift-expression .
+		"<<" => shift 38
+		">>" => shift 39
+		$default => reduce 19
+
+69:	shift-expression => shift-expression . ">>" additive-expression
+	shift-expression => shift-expression . "<<" additive-expression
+	relational-expression => relational-expression "<=" shift-expression .
+		"<<" => shift 38
+		">>" => shift 39
+		$default => reduce 18
+
+70:	shift-expression => shift-expression . ">>" additive-expression
+	shift-expression => shift-expression . "<<" additive-expression
+	relational-expression => relational-expression "<" shift-expression .
+		"<<" => shift 38
+		">>" => shift 39
+		$default => reduce 17
+
+71:	relational-expression => relational-expression . ">=" shift-expression
+	relational-expression => relational-expression . ">" shift-expression
+	relational-expression => relational-expression . "<=" shift-expression
+	relational-expression => relational-expression . "<" shift-expression
+	equality-expression => equality-expression "!=" relational-expression .
+		"<" => shift 34
+		"<=" => shift 35
+		">" => shift 36
+		">=" => shift 37
+		$default => reduce 15
+
+72:	relational-expression => relational-expression . ">=" shift-expression
+	relational-expression => relational-expression . ">" shift-expression
+	relational-expression => relational-expression . "<=" shift-expression
+	relational-expression => relational-expression . "<" shift-expression
+	equality-expression => equality-expression "==" relational-expression .
+		"<" => shift 34
+		"<=" => shift 35
+		">" => shift 36
+		">=" => shift 37
+		$default => reduce 14
+
+73:	equality-expression => equality-expression . "!=" relational-expression
+	equality-expression => equality-expression . "==" relational-expression
+	bitwise-and-expression => bitwise-and-expression "&" equality-expression .
+		"==" => shift 32
+		"!=" => shift 33
+		$default => reduce 12
+
+74:	bitwise-and-expression => bitwise-and-expression . "&" equality-expression
+	bitwise-xor-expression => bitwise-xor-expression "^" bitwise-and-expression .
+		"&" => shift 31
+		$default => reduce 10
+
+75:	bitwise-xor-expression => bitwise-xor-expression . "^" bitwise-and-expression
+	bitwise-or-expression => bitwise-or-expression "|" bitwise-xor-expression .
+		"^" => shift 30
+		$default => reduce 8
+
+76:	bitwise-or-expression => bitwise-or-expression . "|" bitwise-xor-expression
+	logical-and-expression => logical-and-expression "&&" bitwise-or-expression .
+		"|" => shift 29
+		$default => reduce 6
+
+77:	logical-and-expression => logical-and-expression . "&&" bitwise-or-expression
+	logical-or-expression => logical-or-expression "||" logical-and-expression .
+		"&&" => shift 28
+		$default => reduce 4
+
+78:	logical-or-expression => logical-or-expression . "||" logical-and-expression
+	conditional-expression => logical-or-expression "?" logical-or-expression . ":" conditional-expression
+		":" => shift 79
+		"||" => shift 27
+
+79:	conditional-expression => logical-or-expression "?" logical-or-expression ":" . conditional-expression
+	conditional-expression => . logical-or-expression
+	conditional-expression => . logical-or-expression "?" logical-or-expression ":" conditional-expression
+	logical-or-expression => . logical-and-expression
+	logical-or-expression => . logical-or-expression "||" logical-and-expression
+	logical-and-expression => . bitwise-or-expression
+	logical-and-expression => . logical-and-expression "&&" bitwise-or-expression
+	bitwise-or-expression => . bitwise-xor-expression
+	bitwise-or-expression => . bitwise-or-expression "|" bitwise-xor-expression
+	bitwise-xor-expression => . bitwise-and-expression
+	bitwise-xor-expression => . bitwise-xor-expression "^" bitwise-and-expression
+	bitwise-and-expression => . equality-expression
+	bitwise-and-expression => . bitwise-and-expression "&" equality-expression
+	equality-expression => . relational-expression
+	equality-expression => . equality-expression "==" relational-expression
+	equality-expression => . equality-expression "!=" relational-expression
+	relational-expression => . shift-expression
+	relational-expression => . relational-expression "<" shift-expression
+	relational-expression => . relational-expression "<=" shift-expression
+	relational-expression => . relational-expression ">" shift-expression
+	relational-expression => . relational-expression ">=" shift-expression
+	shift-expression => . additive-expression
+	shift-expression => . shift-expression "<<" additive-expression
+	shift-expression => . shift-expression ">>" additive-expression
+	additive-expression => . multiplicative-expression
+	additive-expression => . additive-expression "+" multiplicative-expression
+	additive-expression => . additive-expression "-" multiplicative-expression
+	multiplicative-expression => . unary-expression
+	multiplicative-expression => . multiplicative-expression "*" unary-expression
+	multiplicative-expression => . multiplicative-expression "/" unary-expression
+	multiplicative-expression => . multiplicative-expression "%" unary-expression
+	unary-expression => . postfix-expression
+	unary-expression => . "-" unary-expression
+	unary-expression => . "+" unary-expression
+	unary-expression => . "!" unary-expression
+	unary-expression => . "~" unary-expression
+	unary-expression => . "++" unary-expression
+	unary-expression => . "--" unary-expression
+	postfix-expression => . primary-expression
+	postfix-expression => . postfix-expression "++"
+	postfix-expression => . postfix-expression "--"
+	primary-expression => . '$ident
+	primary-expression => . '$fixed
+	primary-expression => . '$chlit
+	primary-expression => . "defined" "(" '$ident ")"
+	primary-expression => . "defined" '$ident
+	primary-expression => . "(" expression-list ")"
+		"(" => shift 1
+		"defined" => shift 2
+		'$chlit => shift 3
+		'$fixed => shift 4
+		'$ident => shift 5
+		primary-expression => shift 6
+		"--" => shift 7
+		"++" => shift 8
+		"~" => shift 9
+		"!" => shift 10
+		"+" => shift 11
+		"-" => shift 12
+		postfix-expression => shift 13
+		unary-expression => shift 14
+		multiplicative-expression => shift 15
+		additive-expression => shift 16
+		shift-expression => shift 17
+		relational-expression => shift 18
+		equality-expression => shift 19
+		bitwise-and-expression => shift 20
+		bitwise-xor-expression => shift 21
+		bitwise-or-expression => shift 22
+		logical-and-expression => shift 23
+		logical-or-expression => shift 24
+		conditional-expression => shift 82
+
+80:	primary-expression => "defined" "(" '$ident ")" .
 		$default => reduce 44
 
-80:	expression-list => expression-list "," conditional-expression .
-		")" => reduce 47
-		"," => reduce 47
+81:	expression-list => expression-list "," conditional-expression .
+		")" => reduce 48
+		"," => reduce 48
 
-81:	conditional-expression => logical-or-expression "?" logical-or-expression ":" conditional-expression .
+82:	conditional-expression => logical-or-expression "?" logical-or-expression ":" conditional-expression .
 		")" => reduce 2
 		"," => reduce 2
 		'$end => reduce 2

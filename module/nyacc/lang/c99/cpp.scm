@@ -193,7 +193,7 @@
        (eval-expr
 	(lambda (tree)
 	  (case (car tree)
-	    ((fixed) (string->number (tx1 tree)))
+	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
 	    ((char) (char->integer (tx1 tree)))
 	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
 	    ((pre-inc post-inc) (1+ (ev1 tree)))
@@ -294,26 +294,21 @@
 
   ;; We just scanned "defined", now need to scan the arg to inhibit expansion.
   ;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
-  ;; return "defined(FOO)".  We use ec (end-char) as terminal char:
-  ;; #\) if starts with #( or #\nul if other.
+  ;; return "defined(FOO)" or "defined FOO".
   (define (scan-defined-arg)
-    (let* ((ch (skip-il-ws (read-char)))
-	   (ec (if (char=? ch #\() #\) #\null)))
-      (let iter ((chl '(#\())
-		 (ec ec)
-		 (ch (if (char=? ec #\)) (skip-il-ws (read-char)) ch)))
+    (let* ((ch (skip-il-ws (read-char))) (no-ec (not (char=? ch #\())))
+      (let iter ((chl (list ch)) (ch (read-char)))
 	(cond
 	 ((eof-object? ch)
-	  (if (char=? ec #\null)
-	      (string-append "defined" (list->string (reverse (cons #\) chl))))
+	  (if no-ec
+	      (string-append "defined " (list->string (reverse chl)))
 	      (cpp-err "illegal argument to `defined'")))
 	 ((char-set-contains? c:ir ch)
-	  (iter (cons ch chl) ec (read-char)))
-	 ((char=? ec #\))
-	  (if (char=? #\) (skip-il-ws ch))
-	      (string-append "defined" (list->string (reverse (cons #\) chl))))
-	      (cpp-err "garbage in argument to `defined'")))
-	 ((char=? ec #\null) ;; past identifier
+	  (iter (cons ch chl) (read-char)))
+	 (no-ec
+	  (unread-char ch)
+	  (string-append "defined " (list->string (reverse chl))))
+	 ((char=? #\) (skip-il-ws ch))
 	  (string-append "defined" (list->string (reverse (cons #\) chl)))))
 	 (else
 	  (cpp-err "illegal argument to  `defined'"))))))
