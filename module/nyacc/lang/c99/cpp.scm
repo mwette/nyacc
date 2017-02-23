@@ -271,14 +271,23 @@
 	((('ident . rval) ('ident . lval) . rest)
 	 (iter stl chl (string-append " " rval) (cdr tkl)))
 
-	(('space . rest)
-	 (iter stl (cons #\space chl) nxt rest))
-
 	((('string . val) . rest)
 	 (iter stl (cons #\" chl) val (cons #\" rest)))
 
-	(((key . val) . rest)
+	((('ident . val) . rest)
 	 (iter stl chl val rest))
+
+	((('arg . val) . rest)
+	 (iter stl chl val rest))
+
+	((('defined . val) . rest)
+	 (iter stl chl val rest))
+
+	(('space . rest)
+	 (iter stl (cons #\space chl) nxt rest))
+
+	((asis . rest)
+	 (iter stl chl asis rest))
 
 	(otherwise
 	 (error "no match" tkl)))))))
@@ -367,12 +376,12 @@
 	       (aval			; arg ref
 		(iter (acons 'arg aval tkl) lvl (read-char)))
 	       ((string? rval)		; cpp repl
-		(iter (acons 'string rval tkl) lvl (read-char)))
+		(iter (cons rval tkl) lvl (read-char)))
 	       ((pair? rval)		; cpp macro
 		(let* ((argl (car rval)) (text (cdr rval))
 		       (argd (collect-args argl argd dict used))
 		       (newl (expand-cpp-repl text argd dict (cons iden used))))
-		  (iter (acons 'string newl tkl) lvl (read-char))))
+		  (iter (cons newl tkl) lvl (read-char))))
 	       (else			; normal identifier
 		(iter (acons 'ident iden tkl) lvl (read-char))))))))
      (else

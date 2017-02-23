@@ -38,7 +38,7 @@
 		(decl (decl-spec-list (type-spec (fixed-type "int")))
 		      (init-declr-list (init-declr (ident "x"))))))))
 
-  ;; parse with include file
+  ;; parse with include file ;; needs work ?
   (pass-if "include, code mode"
     (let* ((sx (parse-file "exam.d/ex01.c")))
       (pair? sx)))
