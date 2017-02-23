@@ -271,11 +271,14 @@
 	((('ident . rval) ('ident . lval) . rest)
 	 (iter stl chl (string-append " " rval) (cdr tkl)))
 
-	(((key . val) . rest)
-	 (iter stl chl val rest))
-
 	(('space . rest)
 	 (iter stl (cons #\space chl) nxt rest))
+
+	((('string . val) . rest)
+	 (iter stl (cons #\" chl) val (cons #\" rest)))
+
+	(((key . val) . rest)
+	 (iter stl chl val rest))
 
 	(otherwise
 	 (error "no match" tkl)))))))

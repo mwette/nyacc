@@ -59,8 +59,8 @@
 ;; @example
 ;; (with-input-from-file "abc.c"
 ;;   (parse-c #:cpp-defs '("ABC=123"))
-;;            #:inc-dirs (append '("." "./incs" "/usr/include") c99-std-dict)
-;;            #:inc-help '(("myinc.h" "foo_t" "bar_t"))
+;;            #:inc-dirs '(("." "./incs" "/usr/include"))
+;;            #:inc-help (append '("myinc.h" "foo_t" "bar_t") c99-std-help)
 ;;            #:mode 'file))
 ;; @end example
 (define* (parse-c99 #:key

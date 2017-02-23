@@ -692,14 +692,14 @@
 (define* (dev-parse-c99 #:key
 			(cpp-defs '())	; CPP defines
 			(inc-dirs '())	; include directories
-			(td-dict '())	; typedef dictionary
+			(inc-help '())	; typedef dictionary
 			(mode 'file)	; mode: 'file or 'code
 			(xdef? #f)	; expand def function: proc name mode
 			(debug #f))	; debug
   (catch
    #t ;; 'c99-error 'cpp-error 'nyacc-error
    (lambda ()
-     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
+     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) inc-help)))
        (with-fluid*
 	   *info* info
 	   (lambda ()

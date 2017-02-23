@@ -394,6 +394,7 @@
       ;; |#
       
       ;; expression-statement
+      ((expr-stmt) (sf ";\n"))
       ((expr-stmt ,expr) (ppx expr) (sf ";\n"))
       ((expr-stmt ,expr ,comm) (ppx expr) (sf "; ") (ppx comm))
       

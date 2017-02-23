@@ -1,5 +1,7 @@
 2017-02-22  Matt Wette  <mwette@alumni.caltech.edu>
 
+	* lang/c99/cpp.scm (rtokl->string): added handler for 'string
+
 	* lang/c99/body.scm: added 'skip state so that if skipping #if
 	then no CPP if or elif arguments are evaluated
 

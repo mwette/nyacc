@@ -451,7 +451,8 @@
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
 	    (case (car ppxs)
-	      ((keep) pair)
+	      ((keep) ;;(simple-format #t "lx=>~S\n" pair)
+	       pair)
 	      ((skip-done skip-look skip)
 	       (iter (read-token)))
 	      (else (error "coding error"))))
