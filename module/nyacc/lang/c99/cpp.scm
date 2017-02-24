@@ -309,7 +309,7 @@
   ;; return "defined(FOO)" or "defined FOO".
   (define (scan-defined-arg)
     (let* ((ch (skip-il-ws (read-char))) (no-ec (not (char=? ch #\())))
-      (let iter ((chl (list ch)) (ch (read-char)))
+      (let iter ((chl (list ch)) (ch (skip-il-ws (read-char))))
 	(cond
 	 ((eof-object? ch)
 	  (if no-ec
