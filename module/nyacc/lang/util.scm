@@ -178,7 +178,7 @@ the file COPYING included with the this distribution.")
 (define (sx-tail sx ix)
   (cond
    ((zero? ix) (error "sx-tail: expecting index greater than 0"))
-   ((and (pair? (cdr sx)) (eqv? '@ (cadr sx))) (list-tail sx (1+ ix)))
+   ((and (pair? (cadr sx)) (eqv? '@ (caadr sx))) (list-tail sx (1+ ix)))
    (else (list-tail sx ix))))
 
 ;; @deffn sx-has-attr? sx
@@ -246,7 +246,7 @@ the file COPYING included with the this distribution.")
 ;; a-list of precedence with keys @code{'left}, @code{'right} and
 ;; @code{nonassoc}.
 ;; @example
-;; (protect-expr? 'lval '+ '(mul ...)) => TBD
+;; (protect-expr? 'left '+ '(mul ...)) => TBD
 ;; @end example
 (define (make-protect-expr op-prec op-assc)
 
@@ -276,8 +276,8 @@ the file COPYING included with the this distribution.")
 
   (lambda (side op expr)
     (let ((assc? (case side
-		   ((lt left) assc-rt?)
-		   ((rt right) assc-lt?)))
+		   ((lt lval left) assc-rt?)
+		   ((rt rval right) assc-lt?)))
 	  (vtag (car expr)))
       (case (prec op vtag)
 	((>) #t)

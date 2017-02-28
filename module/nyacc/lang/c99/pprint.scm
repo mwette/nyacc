@@ -168,8 +168,8 @@
       ((array-ref ,dim ,expr)
        (ppx expr) (sf "[") (ppx dim) (sf "]"))
 
-      ((d-sel ,id ,ex) (binary 'd-del "." ex id))
-      ((i-sel ,id ,ex) (binary 'i-del "->" ex id))
+      ((d-sel ,id ,ex) (binary 'd-sel "." ex id))
+      ((i-sel ,id ,ex) (binary 'i-sel "->" ex id))
 
       ((pre-inc ,expr) (unary/l 'pre-inc "++" expr))
       ((pre-dec ,expr) (unary/l 'pre-dec "--" expr))

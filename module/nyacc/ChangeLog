@@ -1,3 +1,7 @@
+2017-02-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/pprint.scm: (binary 'd-del .. => (binary 'd-sel
+
 2017-02-22  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/cpp.scm (rtokl->string): added handler for 'string

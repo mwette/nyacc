@@ -7,15 +7,12 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-;; C99 parser in file mode
-
 (add-to-load-path (string-append (getcwd) "/../../../../module/"))
 (add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
 
-(define-module (c99-01)
+(define-module (c99-02)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 xparser)
-  #:use-module (nyacc lang c99 util1)
   #:use-module (test-suite lib))
 
 (define incs '("exam.d"))
@@ -23,26 +20,37 @@
 (define (parse-string str)
   (with-input-from-string str
     (lambda ()
-      (parse-c99 #:inc-dirs incs #:mode 'file #:inc-help c99-std-help))))
+      (parse-c99 #:inc-dirs incs #:mode 'code))))
 
 (define (parse-file file)
   (with-input-from-file file
     (lambda ()
-      (parse-c99 #:inc-dirs incs #:mode 'file))))
+      (parse-c99 #:inc-dirs incs #:mode 'code))))
 
 ;; parser test
-(with-test-prefix "nyacc/c99-02, file mode"
+(with-test-prefix "nyacc/c99-02, code mode"
 
-  ;; parse with include file
-  (pass-if "included files"
-    (let* ((sx (with-input-from-file "exam.d/ex01.c"
-		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
+  ;; Get a simple statement to parse.
+  (pass-if "simple"
+    (let ((sx (parse-string "int x;")))
+      (equal? sx
+	      '(trans-unit
+		(decl (decl-spec-list (type-spec (fixed-type "int")))
+		      (init-declr-list (init-declr (ident "x"))))))))
+
+  ;; parse with include file ;; needs work ?
+  (pass-if "include, code mode"
+    (let* ((sx (parse-file "exam.d/ex01.c")))
       (pair? sx)))
 
   ;; parse massive comments file
   (pass-if "comments, wanted and unwanted"
-    (let* ((sx (with-input-from-file "exam.d/ex02.c"
-		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
+    (let* ((sx (parse-file "exam.d/ex02.c")))
+      (pair? sx)))
+
+  ;; try to get all C99 in one file
+  (pass-if "most of C99 in one file"
+    (let* ((sx (parse-file "exam.d/ex05.c")))
       (pair? sx)))
 
   )

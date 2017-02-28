@@ -1,116 +1,52 @@
 ;; nyacc/lang/c99/c99-04.test		-*- scheme -*-
 ;;
-;; Copyright (C) 2017 Matthew R. Wette
+;; Copyright (C) 2016-2017 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-;; CPP tests
+;; pretty-print-c99 tests
 
 (add-to-load-path (string-append (getcwd) "/../../../../module/"))
 (add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
 
-(define-module (c99-03)
+(define-module (c99-04)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 xparser)
+  #:use-module (nyacc lang c99 pprint)
+  #:use-module (srfi srfi-1)		; fold
   #:use-module (test-suite lib))
 
-(define incs '("exam.d"))
+;; pretty-printer, parser test
+;; We generate a tree, send it to the pretty-printer, then through the parser.
+;; This should be a unit function, methinks.
+(with-test-prefix "nyacc/c99-04, pretty-print C99"
 
-(define (parse-file file)
-  (with-input-from-file file
-    (lambda ()
-      (parse-c99 #:inc-dirs incs #:mode 'code))))
+  ;; loop simple through pretty-printer
+  (pass-if "simple"
+      (let* ((sx0 '(trans-unit
+		    (decl (decl-spec-list (type-spec (fixed-type "int")))
+			  (init-declr-list (init-declr (ident "x"))))))
+	     (cc1 (with-output-to-string
+		    (lambda () (pretty-print-c99 sx0))))
+	     (sx2 (with-input-from-string cc1 parse-c99)))
+	(equal? sx0 sx2)))
 
-(define (parse-string str)
-  (with-input-from-string str
-    (lambda ()
-      (parse-c99 #:inc-dirs incs #:mode 'code))))
-
-;; parser test
-(with-test-prefix "nyacc/c99-04, CPP"
-
-  ;; add ex04.c
-
-  ;; Get a simple statement to parse.
-  (pass-if "include in place"
-    (equal?
-     (parse-file "exam.d/ex07.c")
-     '(trans-unit
-       (fctn-defn
-	(decl-spec-list (type-spec (fixed-type "int")))
-	(ftn-declr (ident "foo") (param-list))
-	(compd-stmt
-	 (block-item-list
-	  (decl (decl-spec-list (type-spec (fixed-type "int")))
-		(init-declr-list
-		 (init-declr
-                  (ident "r")
-                  (initzer (p-expr (fixed "1"))))))
-	  (expr-stmt
-	   (assn-expr
-            (p-expr (ident "r"))
-            (op "=")
-            (add (p-expr (ident "r")) (p-expr (fixed "1")))))
-	  (return (p-expr (ident "r")))))))))
-  
-  (pass-if "skip space and #"
-    (equal?
-     (parse-file "exam.d/ex08.c")
-     '(trans-unit
-       (fctn-defn
-	(decl-spec-list (type-spec (fixed-type "int")))
-	(ftn-declr (ident "foo") (param-list))
-	(compd-stmt
-	 (block-item-list
-	  (expr-stmt
-	   (cond-expr
-            (p-expr (ident "boo"))
-            (cast (type-name (decl-spec-list (type-spec (void))))
-                  (p-expr (fixed "0")))
-            (fctn-call
-	     (p-expr (ident "assert_fail"))
-	     (expr-list (p-expr (string "boo"))))))))))))
-
-  (pass-if "#, ##, __VA_ARGS__"
-    (equal?
-     (parse-file "exam.d/ex12.c")
-     '(trans-unit
-       (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list
-	      (init-declr
-	       (ident "x")
-	       (initzer
-		(add (mul (p-expr (fixed "1")) (p-expr (fixed "2")))
-		     (fctn-call
-		      (p-expr (ident "bar"))
-		      (expr-list
-                       (p-expr (ident "__FILE__"))
-                       (p-expr (fixed "1"))
-                       (p-expr (fixed "2"))
-                       (p-expr (fixed "3"))
-                       (p-expr (fixed "4"))
-                       (mul (p-expr (fixed "2")) (p-expr (fixed "3"))))))))))
-       (decl (decl-spec-list
-	      (stor-spec (static))
-	      (type-spec (fixed-type "char")))
-	     (init-declr-list
-	      (init-declr
-	       (ptr-declr (pointer) (ident "y"))
-	       (initzer (p-expr (string "bar"))))))
-       (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list
-	      (init-declr
-	       (ident "z")
-	       (initzer (p-expr (ident "ex12_abc2")))))))))
-
-  (pass-if "spacing in tokenization"
-    (let ((sx1 (parse-string "#define foo(X) # X\nchar *s = foo(abc def);\n"))
-	  (sx2 (parse-string "#define foo(X) # X\nchar *s = foo(abc  def);\n")))
-      (equal? sx1 sx2)))
-
+  (pass-if "protect-expr"
+    (fold
+     (lambda (pair all-working?)
+       (let* ((src-str (car pair))		 ; source string
+	      (exp-str (cdr pair))		 ; expected output
+	      (expr (parse-c99x src-str))	 ; parse tree
+	      (res-str (with-output-to-string ; resulting output
+			 (lambda () (pretty-print-c99 expr)))))
+	 (and all-working? (string=? res-str exp-str))))
+     #t
+     '(("((*(expr))->id)" . "(*expr)->id")
+       )))
+	      
   )
 
 ;; --- last line ---

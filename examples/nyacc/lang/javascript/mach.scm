@@ -24,6 +24,7 @@
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
+  #:use-module (nyacc util)
   #:use-module ((srfi srfi-43) #:select (vector-map))
   )
 

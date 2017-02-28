@@ -390,7 +390,8 @@
 	((member (cadr tspec) keep) udecl)
 	(else ;; splice in the typedef
 	 (let* ((name (sx-ref tspec 1))
-		(decl (assoc-ref udecl-dict name)) ; decl for typename
+		(decl (or (assoc-ref udecl-dict name) ; decl for typename
+			  (throw 'c99-error "util2 decl error")))
 		(tdef-specl (sx-ref decl 1)) ; decl-spec-list for typename
 		(tdef-declr (sx-ref decl 2)) ; init-declr for typename
 		;; splice the typedef specifiers into target:
