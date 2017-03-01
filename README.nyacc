@@ -1,4 +1,4 @@
-This is a version 0.76.5 of NYACC (Not Yet Another Compiler Compiler!).
+This is a version 0.76.5+c99dev of NYACC (Not Yet Another Compiler Compiler!).
 
 Copyright (C) 2015-2017 Matthew R. Wette
 
@@ -8,7 +8,7 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 Full source distribution for NYACC is available at 
-  https://download.savannah.gnu.org/projects/nyacc
+  https://download.savannah.gnu.org/project/nyacc
 
 This software package is covered by the following licenses:
 * GNU PUBLIC GENERAL LICENCE, version 3 (See COPYING.)
