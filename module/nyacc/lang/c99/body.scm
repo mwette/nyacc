@@ -43,12 +43,14 @@
   (ctl cpi-ctl set-cpi-ctl!)		; current typename list
   )
 
-;;.@deffn split-cppdef defstr => (<name> . <repl>)|((<name>  <args> . <repl>)|#f
+;;.@deffn Procedure split-cppdef defstr => (<name> . <repl>)| \
+;;     ((<name>  <args> . <repl>)|#f
 ;; Convert define string to a dict item.  Examples:
 ;; @example
 ;; "ABC=123" => '("ABC" . "123")
 ;; "MAX(X,Y)=((X)>(Y)?(X):(Y))" => ("MAX" ("X" "Y") . "((X)>(Y)?(X):(Y))")
 ;; @end example
+;; @end deffn
 (define split-cppdef
   (let ((rx1 (make-regexp "^([A-Za-z0-9_]+)\\([^)]*\\)=(.*)$"))
 	(rx2 (make-regexp "^([A-Za-z0-9_]+)=(.*)$")))
@@ -69,7 +71,8 @@
 	      (cons s1 s2))))
 	 (else #f))))))
 
-;; @deffn make-cpi debug defines incdirs inchelp
+;; @deffn Procedure make-cpi debug defines incdirs inchelp
+;; @end deffn
 (define (make-cpi debug defines incdirs inchelp)
   ;; convert inchelp into inc-file->typenames and inc-file->defines
   ;; Any entry for an include file which contains `=' is considered
@@ -104,9 +107,10 @@
 
 (define *info* (make-fluid #f))
 	  
-;; @deffn typename? name
+;; @deffn {Procedure} typename? name
 ;; Called by lexer to determine if symbol is a typename.
 ;; Check current sibling for each generation.
+;; @end deffn
 (define (typename? name)
   (let ((cpi (fluid-ref *info*)))
     (if (member name (cpi-ctl cpi)) #t
@@ -115,8 +119,9 @@
 	      (if (member name (car ptl)) #t
 		  (iter (cdr ptl))))))))
 
-;; @deffn add-typename name
+;; @deffn {Procedure} add-typename name
 ;; Helper for @code{save-typenames}.
+;; @end deffn
 (define (add-typename name)
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
@@ -134,9 +139,10 @@
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
 
-;; @deffn find-new-typenames decl
+;; @deffn {Procedure} find-new-typenames decl
 ;; Helper for @code{save-typenames}.
 ;; Given declaration return a list of new typenames (via @code{typedef}).
+;; @end deffn
 (define (find-new-typenames decl)
 
   ;; like declr->ident in util2.scm
@@ -161,8 +167,9 @@
 		    (cdr idl))))
 	'())))
 
-;; @deffn save-typenames decl
+;; @deffn {Procedure} save-typenames decl
 ;; Save the typenames for the lexical analyzer and return the decl.
+;; @end deffn
 (define (save-typenames decl)
   ;; This finds typenames using @code{find-new-typenames} and adds via
   ;; @code{add-typename}.  Then return the decl.
@@ -174,10 +181,11 @@
 (define (p-err . args)
   (apply throw 'c99-error args))
 
-;; @deffn read-cpp-line ch => #f | (cpp-xxxx)??
+;; @deffn {Procedure} read-cpp-line ch => #f | (cpp-xxxx)??
 ;; Given if ch is #\# read a cpp-statement.
 ;; The standard implies that comments are tossed here but we keep them
 ;; so that they can end up in the pretty-print output.
+;; @end deffn
 (define (read-cpp-line ch)
   (if (not (eq? ch #\#)) #f
       (let iter ((cl '()) (ch (read-char)))
@@ -206,7 +214,8 @@
 	      (iter (cons #\/ cl) c2)))))
 	 (else (iter (cons ch cl) (read-char)))))))
 
-;; @deffn find-file-in-dirl file dirl => path
+;; @deffn {Procedure} find-file-in-dirl file dirl => path
+;; @end deffn
 (define (find-file-in-dirl file dirl)
   (let iter ((dirl dirl))
     (if (null? dirl) #f
@@ -216,7 +225,7 @@
 (define (def-xdef? name mode)
   (eqv? mode 'code))
 
-;; @deffn gen-c-lexer [#:mode mode] [#:xdef? proc] => procedure
+;; @deffn {Procedure} gen-c-lexer [#:mode mode] [#:xdef? proc] => procedure
 ;; Generate a context-sensitive lexer for the C99 language.  The generated
 ;; lexical analyzer reads and passes comments and optionally CPP statements
 ;; to the parser.  The keyword argument @var{mode} will determine if CPP
@@ -229,6 +238,7 @@
 ;; @example
 ;; (define (def-xdef? mode name) (eqv? mode 'code))
 ;; @end example
+;; @end deffn
 (define gen-c-lexer
   ;; This gets ugly in order to handle cpp.
   ;;.need to add support for num's w/ letters like @code{14L} and @code{1.3f}.

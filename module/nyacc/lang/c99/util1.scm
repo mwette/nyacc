@@ -69,8 +69,9 @@
     ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
     ))
 
-;; @deffn gen-gcc-defs args  [#:CC "clang"] => '(("ABC" . "123") ...)
+;; @deffn {Procedure} gen-gcc-defs args  [#:CC "clang"] => '(("ABC" . "123") ...)
 ;; Generate a list of default defines produced by gcc (or clang).
+;; @end deffn
 (define gen-gcc-defs
   ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
   ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
@@ -85,12 +86,13 @@
 	   (if (eof-object? line) lines
 	       (iter (cons line lines) (read-line ip 'trim)))))))))
 
-;; @item remove-inc-trees tree
+;; @deffn {Procedure} remove-inc-trees tree
 ;; Remove the trees included with cpp-include statements.
 ;; @example
 ;; '(... (cpp-stmt (include "<foo.h>" (trans-unit ...))) ...)
 ;; => '(... (cpp-stmt (include "<foo.h>")) ...)
 ;; @end example
+;; @end deffn
 (define (remove-inc-trees tree)
   (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
   (let iter ((rslt (make-tl 'trans-unit))
@@ -104,12 +106,13 @@
 	    (cdr tree)))
      (else (iter (tl-append rslt (car tree)) (cdr tree))))))
 
-;; @item merge-inc-trees tree
+;; @deffn {Procedure} merge-inc-trees tree
 ;; Remove the trees included with cpp-include statements.
 ;; @example
 ;; '(... (cpp-stmt (include "<foo.h>" (trans-unit (stmt ...))) ...)
 ;; => '(... (stmt...) ...)
 ;; @end example
+;; @end deffn
 #;(define (Xmerge-inc-trees tree)
   (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
   (let iter ((rslt (make-tl 'trans-unit))
@@ -121,7 +124,7 @@
      (else (iter (tl-append rslt (car tree)) (cdr tree))))))
 
 
-;; @item merge-inc-trees! tree => tree
+;; @deffn {Procedure} merge-inc-trees! tree => tree
 ;; This will (recursively) merge code from cpp-includes into the tree.
 ;; @example
 ;; (trans-unit
@@ -131,6 +134,7 @@
 ;; =>
 ;; (trans-unit (decl (a)) (decl (b)) (decl (c)))
 ;; @end example
+;; @end deffn
 (define (merge-inc-trees! tree)
 
   ;; @item find-span (trans-unit a b c) => ((a . +->) . (c . '())
@@ -166,7 +170,7 @@
   tree)
 
 
-;; @deffn elifify tree => tree
+;; @deffn {Procedure} elifify tree => tree
 ;; This procedure will find patterns of
 ;; @example
 ;; (if cond-1 then-part-1
@@ -180,6 +184,7 @@
 ;;            (elif cond-2 then-part-2)
 ;;            else-part-2
 ;; @end example
+;; @end deffn
 (define (elifify tree)
   (define (fU tree)
     (sxml-match tree

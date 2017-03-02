@@ -45,7 +45,7 @@
   (let ((info (fluid-ref *info*)))
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
-;; @item parse-c99x [#:cpp-defs defs] [#:debug bool]
+;; @item {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool]
 ;; This needs to be explained in some detail.
 ;; [#:tyns '("foo_t")]
 (define* (parse-c99x expr-string

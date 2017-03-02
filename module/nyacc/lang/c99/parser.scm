@@ -51,7 +51,7 @@
   (let ((info (fluid-ref *info*)))
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
-;; @deffn parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
+;; @deffn {Procedure} parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
 ;;               [#:mode ('code|'file)] [#:debug bool]
 ;; This needs to be explained in some detail.
 ;; tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
@@ -63,6 +63,7 @@
 ;;            #:inc-help (append '("myinc.h" "foo_t" "bar_t") c99-std-help)
 ;;            #:mode 'file))
 ;; @end example
+;; @end deffn
 (define* (parse-c99 #:key
 		    (cpp-defs '())	; CPP defines
 		    (inc-dirs '())	; include dirs

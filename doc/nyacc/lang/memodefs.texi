@@ -15,15 +15,7 @@
 @c
 @c v170228a - M.Wette
 @tex
-\globaldefs = 1
-
-\def\letterpaper{{
-  \parskip = 3pt plus 2pt minus 1pt
-  \textleading = 13.2pt
-  \internalpagesizes{607.2pt}{6in}% that's 46 lines
-                    {\voffset}{.25in}{\bindingoffset}{24pt}%
-                    {11in}{8.5in}}}
-
+{\globaldefs = 1
 \def\seczzz#1{%
   \global\subsecno=0 \global\subsubsecno=0  \global\advance\secno by 1
   \sectionheading{#1}{sec}{Ynumbered}{\the\secno}}
@@ -37,6 +29,7 @@
            
 \parseargdef\title{{\titlefonts\rmisbold \centerline{#1}}\vskip4pt}
 \parseargdef\subtitle{{\chapfonts\rmisbold \centerline{#1}}\vskip4pt}
-\parseargdef\author{{\secfonts\rmisbold \centerline{#1}}}
+\parseargdef\author{{\secfonts\rmisbold \centerline{#1}}\vskip4pt}
+}
 @end tex
 @c --- last line ---

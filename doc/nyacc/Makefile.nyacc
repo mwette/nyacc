@@ -27,6 +27,6 @@ COPYING.DOC: fdl.texi
 
 .PHONY: clean
 clean:
-	rm -f *.aux *.cp *.fn *.ky *.log *.pg *.toc *.tp *.vr
+	rm -f *.aux *.cp *.fn *.fns *.ky *.log *.pg *.toc *.tp *.vr
 
 # --- last line

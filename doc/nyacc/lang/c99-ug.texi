@@ -19,18 +19,27 @@ Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC.
 @end copying
 
+@headings off
+@everyfooting @| @thispage @|
+
 @title C99 Parser User's Guide
 @subtitle rough and incomplete
 @author Matt Wette
-@vskip 10pt
+@vskip 5pt
 @quotation
 Copyright @copyright{} 2017 -- Matthew R. Wette.
 Permissions regarding this document are provided in the ``Copying'' section.
 @end quotation
+@vskip 5pt
 
 @menu
 * Introduction ::
 @end menu
+
+The C99 parsers can use ``include helpers''.  This allows files to be
+parsed without reading full include files.  The user provides
+typenames (types defined using @code{typedef}) and defines.  The
+syntax for the include-helper optional argument to the parsers is
 
 @node Introduction
 @section Introduction
@@ -41,7 +50,7 @@ Note on CPP replacement text: IIRC, C99 will remove comments from CPP
 statements before processing.  I preserve this and remove inside the
 CPP parser.
 
-@subsubsection Include Helpers
+@subsection Include Helpers
 
 The C99 parsers can use ``include helpers''.  This allows files to be
 parsed without reading full include files.  The user provides
