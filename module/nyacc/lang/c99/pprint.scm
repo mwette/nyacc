@@ -57,6 +57,26 @@
 	   cond assn-expr)
     (nonassoc)))
 
+;; @deffn {Procedure} scmchs->c scm-chr-str => c-chr-str
+;; Convert 1-char scheme string into 1-char C string constant as typed by user.
+;; That is, exscaped.
+;; @example
+;; (scmchstr->c "#x00") => "\\0"
+;; @end example
+;; @end deffn
+(define (scmchs->c scm-chr-str)
+  (let ((ch (string-ref scm-chr-str 0)))
+    (case ch
+      ((#\nul) "\\0")
+      ((#\alarm) "\\a")
+      ((#\backspace) "\\b")
+      ((#\tab) "\\t")
+      ((#\newline) "\\n")
+      ((#\vtab) "\\v")
+      ((#\page) "\\f")
+      ((#\\) "\\")
+      (else scm-chr-str))))
+
 (define protect-expr? (make-protect-expr op-prec op-assc))
 
 ;; @deffn pretty-print-c99 tree [#:indent-level 2]
@@ -150,7 +170,7 @@
 
       ((p-expr ,expr) (ppx expr))
       ((ident ,name) (sf "~A" name))
-      ((char ,value) (sf "'~A'" (sx-ref tree 1)))
+      ((char ,value) (sf "'~A'" (scmchs->c (sx-ref tree 1))))
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
 

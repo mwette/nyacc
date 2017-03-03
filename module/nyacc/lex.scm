@@ -230,15 +230,17 @@
 	      ((eq? ch #\") (cons '$string (lsr cl)))
 	      (else (iter (cons ch cl) (read-char)))))))
 
-;; @deffn make-chlit-reader
+;; @deffn {Procedure} make-chlit-reader
 ;; Generate a reader for character literals. NOT DONE.
 ;; For C, this reads @code{'c'} or @code{'\n'}.
+;; @end deffn
 (define (make-chlit-reader . rest) (error "NOT IMPLEMENTED"))
 
-;; @deffn read-c-chlit ch
+;; @deffn {Procedure} read-c-chlit ch
 ;; @example
 ;; ... 'c' ... => (read-c-chlit #\') => '($ch-lit . #\c)
 ;; @end example
+;; @end deffn
 (define (read-c-chlit ch)
   (if (not (eqv? ch #\')) #f
       (let ((c1 (read-char)) (c2 (read-char)))
@@ -246,7 +248,7 @@
 	    (let ((c3 (read-char)))
 	      (cons '$chlit
 		    (case c2
-		      ((#\0) "\0;")	   ; nul U+0000 (#\U+...)
+		      ((#\0) "\0")	   ; nul U+0000 (#\U+...)
 		      ((#\a) "\a")	   ; alert U+0007
 		      ((#\b) "\b")	   ; backspace U+0008
 		      ((#\t) "\t")	   ; horizontal tab U+0009

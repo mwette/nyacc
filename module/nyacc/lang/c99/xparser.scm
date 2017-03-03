@@ -33,13 +33,18 @@
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
-  (make-lalr-parser 
-   (list
-    (cons 'len-v len-v)
-    (cons 'pat-v pat-v)
-    (cons 'rto-v rto-v)
-    (cons 'mtab mtab)
-    (cons 'act-v act-v))))
+  (let ((parser (make-lalr-parser 
+		 (list (cons 'len-v len-v) (cons 'pat-v pat-v)
+		       (cons 'rto-v rto-v) (cons 'mtab mtab)
+		       (cons 'act-v act-v)))))
+    (lambda* (lexer #:key (debug #f))
+      (catch
+       'nyacc-error
+       (lambda () (parser lexer #:debug debug))
+       (lambda (key fmt . args)
+	 (report-error fmt args)
+	 (pop-input)			; not sure this is right
+	 (throw 'c99-error "C99 parse error"))))))
 
 (define (run-parse)
   (let ((info (fluid-ref *info*)))

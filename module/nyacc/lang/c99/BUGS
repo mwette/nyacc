@@ -1,10 +1,12 @@
-C99-008	<= next id
+BUGs and TODOs
+
+C99-009	<= next id
+
+C99-008	02 Mar 2017, M.Wette
+	clean up error traps among raw-parser run-parse and parse-c99[x]
 
 C99-007	16 Feb 2017, M.Wette
 	cpp.scm: does __LINE__ get expanded?
-
-C99-006	06 Aug 2016, M.Wette
-        code "val = '\0';" gets pprinted to "val = '^@;';"
 
 C99-005	26 Jun 2016, M.Wette
 	in util2.scm, tree->udecl needs to return "struct" and "union"
@@ -38,5 +40,8 @@ C99-002 CPP redesign is not working for ifdef and defined:
 	      (lambda (iden)
 25Jun16 fixed
 
+C99-006	06 Aug 2016, M.Wette
+        code "val = '\0';" gets pprinted to "val = '^@;';"
+02Mar17	fixed, V0.76.5+c99dev
 
 --- last line ---

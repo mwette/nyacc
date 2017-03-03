@@ -19,10 +19,24 @@
   #:use-module (srfi srfi-1)		; fold
   #:use-module (test-suite lib))
 
+;; io-list is list of input/output pairs where we expect
+;; (pp-c99 (parsex input)) == output
+(define (pp-as-expected? io-list)
+  (fold
+   (lambda (pair all-working?)
+     (let* ((src-str (car pair))		 ; source string
+	    (exp-str (cdr pair))		 ; expected output
+	    (expr (parse-c99x src-str))	 ; parse tree
+	    (res-str (with-output-to-string ; resulting output
+		       (lambda () (pretty-print-c99 expr)))))
+       (and all-working? (string=? res-str exp-str))))
+   #t
+   io-list))
+
 ;; pretty-printer, parser test
 ;; We generate a tree, send it to the pretty-printer, then through the parser.
 ;; This should be a unit function, methinks.
-(with-test-prefix "nyacc/c99-04, pretty-print C99"
+(with-test-prefix "nyacc/c99-04, pretty-print-c99"
 
   ;; loop simple through pretty-printer
   (pass-if "simple"
@@ -35,18 +49,16 @@
 	(equal? sx0 sx2)))
 
   (pass-if "protect-expr"
-    (fold
-     (lambda (pair all-working?)
-       (let* ((src-str (car pair))		 ; source string
-	      (exp-str (cdr pair))		 ; expected output
-	      (expr (parse-c99x src-str))	 ; parse tree
-	      (res-str (with-output-to-string ; resulting output
-			 (lambda () (pretty-print-c99 expr)))))
-	 (and all-working? (string=? res-str exp-str))))
-     #t
+    (pp-as-expected?
      '(("((*(expr))->id)" . "(*expr)->id")
        )))
-	      
+  
+  (pass-if "char-lit"
+    (pp-as-expected?
+     `(("'\\0'" . "'\\0'") ("'\\a'" . "'\\a'") ("'\\b'" . "'\\b'")
+       ("'\\t'" . "'\\t'") ("'\\n'" . "'\\n'") ("'\\v'" . "'\\v'")
+       ("'\\f'" . "'\\f'"))))
+  
   )
 
 ;; --- last line ---

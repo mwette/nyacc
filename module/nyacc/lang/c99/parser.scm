@@ -32,19 +32,18 @@
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 ;; A little ugly wrt re-throw but
 (define raw-parser
-  (let ((c99-parser (make-lalr-parser
+  (let ((parser (make-lalr-parser
 		     (list (cons 'len-v len-v) (cons 'pat-v pat-v)
 			   (cons 'rto-v rto-v) (cons 'mtab mtab)
 			   (cons 'act-v act-v)))))
     (lambda* (lexer #:key (debug #f))
       (catch
        'nyacc-error
-       (lambda () (c99-parser lexer #:debug debug))
+       (lambda () (parser lexer #:debug debug))
        (lambda (key fmt . args)
 	 (report-error fmt args)
 	 (pop-input)			; not sure this is the right way
-	 (throw 'c99-error "C99 parse error")))
-      )))
+	 (throw 'c99-error "C99 parse error"))))))
 
 ;; This is used to parse included files at top level.
 (define (run-parse)
