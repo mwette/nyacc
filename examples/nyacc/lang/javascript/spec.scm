@@ -200,8 +200,11 @@
      ((VariableStatement VariableDeclarationList)
       (values (append (reverse kseed) seed) kdict))
 
+     #;((VariableDeclarationList)
+      (values (append (reverse kseed) seed) kdict))
+
      ((VariableDeclaration)
-      (simple-format (current-error-port) "  VarDecl: seed=~S\n\n" seed)
+      (simple-format (current-error-port) "  VarDecl: seed=~S kseed=~S\n\n" seed kseed)
       (values
        (cons
 	(if (= 3 (length kseed))
