@@ -1,6 +1,6 @@
 ;;; lang/javascript/mach.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -34,6 +34,10 @@
 
 ;; NSI = "no semi-colon insertion"
 
+;; need to deal with reserved keywords:
+;; abstract boolean byte char class const debugger double enum export extends
+;; final float goto implements import int interface long native package private
+;; protected public short static super synchronized throws transient volatile
 
 ;; Not in the grammar yet: FunctionExpression
 
@@ -278,12 +282,16 @@
     (AssignmentOperator
      ;; todo
      ("=" ($$ `(assign ,$1)))
-     ("*=" ($$ `(mul-assign ,$1))) ("/=" ($$ `(div-assign ,$1)))
+     ("*=" ($$ `(mul-assign ,$1)))
+     ("/=" ($$ `(div-assign ,$1)))
      ("%=" ($$ `(mod-assign ,$1)))
-     ("+=" ($$ `(add-assign ,$1))) ("-=" ($$ `(sub-assign ,$1)))
-     ("<<=" ($$ `(lshift-assign ,$1))) (">>=" ($$ `(rshift-assign ,$1)))
+     ("+=" ($$ `(add-assign ,$1)))
+     ("-=" ($$ `(sub-assign ,$1)))
+     ("<<=" ($$ `(lshift-assign ,$1)))
+     (">>=" ($$ `(rshift-assign ,$1)))
      (">>>=" ($$ `(rrshift-assign ,$1)))
-     ("&=" ($$ `(and-assign ,$1))) ("^=" ($$ `(xor-assign ,$1)))
+     ("&=" ($$ `(and-assign ,$1)))
+     ("^=" ($$ `(xor-assign ,$1)))
      ("|=" ($$ `(or-assign ,$1))))
 
     (Expression

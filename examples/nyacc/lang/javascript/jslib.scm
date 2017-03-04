@@ -26,7 +26,7 @@
     ;;("Object" . (@@ (jslib) Object))
     ;;("Math" . (@@ (jslib) Math))
     ;;("Number" . (@@ (jslib) Number))
-    ;;("JS+" . (@@ (jslib) JS+))
+    ;;("JS:+" . (@@ (jslib) JS:+))
     ))
 
 (define undefined (if #f #f))
@@ -67,7 +67,7 @@
 (hash-set! Number 'NaN (nan))
 (hash-set! Number 'toString (lambda (n) (number->string n)))
 
-(define JS+ (lambda (a b)
+(define JS:+ (lambda (a b)
 	      (cond
 	       ((and (string? a) (string? b)) (string-append a b))
 	       ((and (number? a) (number? b)) (+ a b))

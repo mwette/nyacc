@@ -42,7 +42,7 @@
 ;; to be documented
 (define* (parse-js-selt #:key debug)
   (catch
-   'parse-error
+   'nyacc-error
    (lambda ()
      (with-fluid*
 	 *insert-semi* #t

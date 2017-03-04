@@ -7,6 +7,9 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
+(add-to-load-path (string-append (getcwd) "/../../../../examples/"))
+(add-to-load-path (string-append (getcwd) "/../../../../module/"))
+
 (use-modules (nyacc lang dxl mach))
 (use-modules (nyacc lalr))
 (use-modules (nyacc export))
@@ -18,7 +21,7 @@
   (gen-dxl-files)
   (system "touch parser.scm"))
 
-(when #f
+(when #t
   (with-output-to-file ",lang.txt"
     (lambda ()
       (pp-lalr-notice dxl-spec)
@@ -44,7 +47,7 @@
        tree)))
   (foldt fU identity tree))
 
-(when #t
+(when #f
   (let* ((sx (with-input-from-file "exam.d/ex1.dxl"
 	       (lambda () (dev-parse-dxl #:debug #f))))
 	 (sx (elifify sx))

@@ -2,7 +2,7 @@
 !#
 ;;; examples/nyacc/cxp
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -17,7 +17,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; usage: cxp -Ilang/c99 lang/c99/ex1.c
+;; usage: cxp -Ilang/c99/exam.d lang/c99/exam.d/ex1.c
 
 (add-to-load-path (string-append (getcwd) "/.."))
 (add-to-load-path (string-append (getcwd) "/../../module"))
@@ -51,7 +51,7 @@
   (for-each
    (lambda (file)
      (let ((tree (with-input-from-file file
-		   (lambda () (parse-c #:cpp-defs defs #:inc-dirs incs)))))
+		   (lambda () (parse-c99 #:cpp-defs defs #:inc-dirs incs)))))
        (simple-format #t "~A:\n" file)
        (pretty-print tree)))
    files)
