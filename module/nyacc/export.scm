@@ -1,6 +1,6 @@
 ;;; nyacc/export.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -20,7 +20,7 @@
 	    lalr->guile
 	    c-char token->bison elt->bison
 	    )
-  #:use-module ((nyacc lalr) #:select (find-terminal pp-rule))
+  #:use-module ((nyacc lalr) #:select (find-terminal pp-rule lalr-start))
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-1) #:select (fold))
@@ -130,7 +130,7 @@
     ;; Don't compact tables.
     (fmt port "%define lr.default-reduction accepting\n")
     ;; Provide start symbol.
-    (fmt port "%start ~A\n%%\n" (elt->bison (assq-ref spec 'start) terms))
+    (fmt port "%start ~A\n%%\n" (elt->bison (lalr-start spec) terms))
     ;;
     (do ((i 1 (1+ i))) ((= i nrule))
       (let* ((lhs (vector-ref lhs-v i)) (rhs (vector-ref rhs-v i)))
