@@ -17,7 +17,7 @@
 
 ;; needs: null, undefined, undeclared?,
 
-(define-module (language javascript jslib)
+(define-module (nyacc lang javascript jslib)
   #:export (JSdict)
   )
 
