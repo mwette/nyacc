@@ -29,7 +29,9 @@
     ;;("JS:+" . (@@ (jslib) JS:+))
     ))
 
-(define undefined (if #f #f))
+;; null is 'JS:null
+
+(define JS:undefined (if #f #f))
 
 ;; @item lkup obj name
 ;; Find property in object, or prototype, or ???

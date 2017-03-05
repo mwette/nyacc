@@ -130,7 +130,7 @@
     ;; Don't compact tables.
     (fmt port "%define lr.default-reduction accepting\n")
     ;; Provide start symbol.
-    (fmt port "%start ~A\n%%\n" (elt->bison (assq-ref spec 'start) terms))
+    (fmt port "%start ~A\n%%\n" (elt->bison (lalr-start spec) terms))
     ;;
     (do ((i 1 (1+ i))) ((= i nrule))
       (let* ((lhs (vector-ref lhs-v i)) (rhs (vector-ref rhs-v i)))

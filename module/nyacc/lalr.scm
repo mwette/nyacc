@@ -22,7 +22,7 @@
   #:export-syntax (lalr-spec)
   #:export (*nyacc-version*
 	    make-lalr-machine compact-machine hashify-machine 
-	    lalr-match-table
+	    lalr-start lalr-match-table
 	    restart-spec add-recovery-logic!
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
 	    write-lalr-actions write-lalr-tables
@@ -500,7 +500,7 @@
 	       ;; Put most referenced items first, but keep start and rhs-v at
 	       ;; top so that if we want to restart (see restart-spec) we can
 	       ;; reuse the tail here.
-	       (cons 'start start-symbol)
+	       ;;(cons 'start start-symbol) ; use lalr-start, aka rhs-v[0][0]
 	       (cons 'rhs-v (map-attr->vector al 'rhs))
 	       ;;
 	       (cons 'restart-tail #t)	; see @code{restart-spec} below
@@ -514,7 +514,7 @@
 	       (cons 'assc (assq-ref pna 'assc))
 	       (cons 'prp-v (map-attr->vector al 'prec)) ; per-rule precedence
 	       (cons 'act-v (map-attr->vector al 'act))
-	       (cons 'ref-v (map-attr->vector al 'ref))
+	       ;;(cons 'ref-v (map-attr->vector al 'ref)) ; action references
 	       (cons 'err-l err-l)
 	       ))))))))
   
@@ -527,6 +527,12 @@
 ;; vector of vector of right-hand side symbols.
 (define *lalr-core* (make-fluid #f))
 
+;; @deffn {Procedure} lalr-start spec => symbol
+;; Return the start symbol for the grammar.
+;; @end deffn
+(define (lalr-start spec)
+  (vector-ref (vector-ref (assq-ref spec 'rhs-v) 0) 0))
+
 ;; This record holds the minimum data from the grammar needed to build the
 ;; machine from the grammar specification.
 (define-record-type lalr-core-type
@@ -534,7 +540,7 @@
   lalr-core-type?
   (non-terms core-non-terms)	      ; list of non-terminals
   (terminals core-terminals)	      ; list of non-terminals
-  (start core-start)		      ; start non-terminal
+  ;;(start core-start)		      ; start non-terminal
   (lhs-v core-lhs-v)		      ; vec of left hand sides
   (rhs-v core-rhs-v)		      ; vec of right hand sides
   (eps-l core-eps-l))		      ; non-terms w/ eps prod's
@@ -543,7 +549,7 @@
 (define (make-core spec)
   (make-lalr-core (assq-ref spec 'non-terms)
 		  (assq-ref spec 'terminals)
-		  (assq-ref spec 'start)
+		  ;;(assq-ref spec 'start)
 		  (assq-ref spec 'lhs-v)
 		  (assq-ref spec 'rhs-v)
 		  '()))
@@ -553,7 +559,7 @@
 (define (make-core/extras spec)
   (let ((non-terms (assq-ref spec 'non-terms))
 	(terminals (assq-ref spec 'terminals))
-	(start (assq-ref spec 'start))
+	;;(start (assq-ref spec 'start))
 	(lhs-v (assq-ref spec 'lhs-v))
 	(rhs-v (assq-ref spec 'rhs-v)))
     (make-lalr-core non-terms terminals start lhs-v rhs-v
@@ -1537,7 +1543,7 @@
 (define (restart-spec spec start)
   (let* ((rhs-v (vector-copy (assq-ref spec 'rhs-v))))
     (vector-set! rhs-v 0 (vector start))
-    (cons* (cons 'start start)
+    (cons* ;;(cons 'start start)
 	   (cons 'rhs-v rhs-v)
 	   (member '(restart-tail . #t) spec))))
 

@@ -587,13 +587,20 @@
     (when (or a b) 
       (system (string-append "touch " (lang-dir "parser.scm"))))))
 
+(use-modules (ice-9 pretty-print))
+(newline)
+(pretty-print js-spec)
+(newline)
+(pretty-print (restart-spec js-spec 'SourceElement))
+(newline)
+
 (define (gen-se-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (let* ((se-spec (restart-spec js-mach 'SourceElement))
+  (let* ((se-spec (restart-spec js-spec 'SourceElement))
 	 (se-mach (compact-machine
 		   (hashify-machine
 		    (make-lalr-machine se-spec)))))
