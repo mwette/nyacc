@@ -74,13 +74,6 @@
      #;(ObjectLiteral ($$ `(PrimaryExpression ,$1)))
      ("(" Expression ")" ($$ $2))
      )
-    #;(PrimaryExpression
-     ("this" ($$ '(this)))
-     (Identifier ($$ $1))
-     (Literal ($$ $1))
-     (ArrayLiteral ($$ $1))
-     ("(" Expression ")" ($$ $2))
-     )
 
     (ArrayLiteral
      ("[" Elision "]" ($$ `(ArrayLiteral (Elision ,(number->string $2)))))
@@ -559,6 +552,7 @@
 (include-from-path "nyacc/lang/javascript/body.scm")
 
 (define raw-parser (make-lalr-parser js-mach))
+
 (define* (dev-parse-js #:key debug)
   (catch
    'parse-error
@@ -585,14 +579,8 @@
 	(b (move-if-changed (xtra-dir "jstab.scm.new")
 			    (xtra-dir "jstab.scm"))))
     (when (or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm"))))))
-
-(use-modules (ice-9 pretty-print))
-(newline)
-(pretty-print js-spec)
-(newline)
-(pretty-print (restart-spec js-spec 'SourceElement))
-(newline)
+      (system (string-append "touch " (lang-dir "parser.scm"))))
+    (or a b)))
 
 (define (gen-se-files . rest)
   (define (lang-dir path)
@@ -601,18 +589,22 @@
     (lang-dir (string-append "mach.d/" path)))
 
   (let* ((se-spec (restart-spec js-spec 'SourceElement))
-	 (se-mach (compact-machine
+	 #;(se-mach (compact-machine
 		   (hashify-machine
-		    (make-lalr-machine se-spec)))))
-    (write-lalr-actions js-mach (xtra-dir "seact.scm.new"))
-    (write-lalr-tables js-mach (xtra-dir "setab.scm.new")))
+	             (make-lalr-machine se-spec))))
+	 (se-mach (hashify-machine
+		   (make-lalr-machine se-spec)))
+    )
+    (write-lalr-actions se-mach (xtra-dir "seact.scm.new"))
+    (write-lalr-tables se-mach (xtra-dir "setab.scm.new")))
   
   (let ((a (move-if-changed (xtra-dir "seact.scm.new")
 			    (xtra-dir "seact.scm")))
 	(b (move-if-changed (xtra-dir "setab.scm.new")
 			    (xtra-dir "setab.scm"))))
-    (when (or a b) 
-      (system (string-append "touch " (lang-dir "separser.scm"))))))
+    #;(when (or a b)
+    (system (string-append "touch " (lang-dir "separser.scm"))))
+    (or a b)))
 
 
 ;;; --- last line ---

@@ -18,12 +18,12 @@
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-(when #f
+(when #t
   (gen-js-files)
   ;;(system "touch parser.scm")
   )
 
-(when #f
+(when #t
   (gen-se-files)
   ;;(system "touch separser.scm")
   )
@@ -35,7 +35,7 @@
       (pp-lalr-grammar js-spec)
       (pp-lalr-machine js-mach))))
 
-(when #f
+(when #t
   (with-output-to-file ",selang.txt"
     (lambda ()
       (let* ((spec (restart-spec js-spec 'SourceElement))

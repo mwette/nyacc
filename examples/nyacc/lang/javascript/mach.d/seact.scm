@@ -8,7 +8,7 @@
 
 (define act-v
   (vector
-   ;; $start => Program
+   ;; $start => SourceElement
    (lambda ($1 . $rest) $1)
    ;; Literal => NullLiteral
    (lambda ($1 . $rest) `(NullLiteral))

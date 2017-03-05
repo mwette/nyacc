@@ -1,6 +1,6 @@
 ;;; nyacc/export.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -20,7 +20,7 @@
 	    lalr->guile
 	    c-char token->bison elt->bison
 	    )
-  #:use-module ((nyacc lalr) #:select (find-terminal pp-rule))
+  #:use-module ((nyacc lalr) #:select (find-terminal pp-rule lalr-start))
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-1) #:select (fold))
