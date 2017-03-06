@@ -16,7 +16,7 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang calc compiler)
-  #:export (calc-sxml->tree-il)
+  #:export (compile-tree-il)
   #:use-module (sxml match)
   #:use-module (sxml fold)
   #:use-module (language tree-il))
@@ -35,7 +35,7 @@
     ((stmt-list ,items ...) `(begin ,items ...))
     (,otherwise tree)))
 
-(define (calc-sxml->tree-il exp env opts)
+(define (copmile-tree-il exp env opts)
   (let* ((tree (foldt fup identity exp))
 	 (code (parse-tree-il tree)))
     (values code env env)))
