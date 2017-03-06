@@ -35,7 +35,7 @@
       (pp-lalr-grammar js-spec)
       (pp-lalr-machine js-mach))))
 
-(when #t
+(when #f
   (with-output-to-file ",selang.txt"
     (lambda ()
       (let* ((spec (restart-spec js-spec 'SourceElement))

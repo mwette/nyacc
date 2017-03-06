@@ -1,6 +1,6 @@
-;;; javascript specification for Guile
+;;; compile javascript sxml from parser to tree-il
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -18,8 +18,6 @@
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
   #:use-module (nyacc lang javascript jslib)
-  ;;#:use-module (system base language)
-  ;;#:use-module (nyacc lang javascript separser)
   #:use-module ((sxml match) #:select (sxml-match))
   #:use-module ((sxml fold) #:select (foldts*-values))
   #:use-module ((srfi srfi-1) #:select (fold))
@@ -90,15 +88,12 @@
 
 ;; Add toplevel to dict.
 (define (add-toplevel name dict)
-  ;;(acons name `(toplevel ,(string->symbol name)) dict)
-  (let ((mod (let iter ((dict dict))
-	       (or (assq-ref dict '@M) (iter (assq-ref dict '@P))))))
-          (acons name `(@@ ,(module-name mod) ,(string->symbol name)) dict)))
+  (acons name `(toplevel ,(string->symbol name)) dict))
 
 ;; Add lexcial or toplevel based on level.
 (define (add-symboldef name dict)
-  (sferr "add-symboldef at @l=~S\n" (assq-ref dict '@l))
-  (if (> (assq-ref dict '@l) 1)
+  ;;(sferr "add-symboldef at @l=~S\n" (assq-ref dict '@l))
+  (if (positive? (assq-ref dict '@l))
       (add-lexical name dict)
       (add-toplevel name dict)))
 
@@ -122,9 +117,11 @@
 ;; body needs a line to build "var arguments" from Array(@args)
 ;; Right now args is the gensym of the rest argument named @code{@@args}.
 (define (make-function name args body)
-  (let ((tagsym (gensym "JS~")) (valsym (gensym "JS~")))
-    `(define ,(cadr name)
-       (lambda ((name . ,(cadr name)))
+  (let ((fname (case (car name) ((@ @@) (caddr name)) (else (cadr name))))
+	(tagsym (gensym "JS~"))	(valsym (gensym "JS~")))
+    ;;(sferr "make-function ~S ~S ~S\n" fname name args)
+    `(define ,fname
+       (lambda ((name . ,fname))
 	 (lambda-case ((() #f @args #f () (,args))
 		       (prompt
 			(const return)	; tag
@@ -137,10 +134,17 @@
 ;; @example
 ;; (rev/repl 'a '(4 3 2 1)) => '(a 2 3 4)
 ;; @end example
-(define (rev/repl head revl)
-  (let iter ((res '()) (inp revl))
-    (if (null? (cdr inp)) (cons head res)
-	(iter (cons (car inp) res) (cdr inp)))))
+(define rev/repl
+  (case-lambda
+   ((arg0 revl)
+    (let iter ((res '()) (inp revl))
+      (if (null? (cdr inp)) (cons arg0 res)
+	  (iter (cons (car inp) res) (cdr inp)))))
+   ((arg0 arg1 revl)
+    (let iter ((res '()) (inp revl))
+      (if (null? (cdr inp)) (cons* arg0 arg1 res)
+	  (iter (cons (car inp) res) (cdr inp)))))
+   ))
 	 
 ;; @deffn {Procedure} js-xml->tree-il-ext exp env opts
 ;; Compile javascript SXML tree to external tree-il representation.
@@ -200,7 +204,7 @@
       ((VariableDeclaration (Identifier ,name) ,rest ...)
        (let* ((dict1 (add-symboldef name dict))
 	      (tree1 (lookup name dict1)))
-	 (values `(VariableDeclaration ,tree1) dict1)))
+	 (values `(VariableDeclaration ,tree1) '() dict1)))
 
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
        (values tree '() (push-scope (add-symboldef name dict))))
@@ -263,7 +267,12 @@
 			      ,(car kseed)) seed) dict))
 
        ((add)
-	(values (cons `(@@ ,jslib-mod JS:+) seed) dict))
+	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
+	;;(pretty-print tree cep)
+	;;(values (cons `(@@ ,jslib-mod JS:+) seed) dict))
+	(values (cons (rev/repl 'apply
+				`(@@ ,jslib-mod JS:+)
+				kseed) seed) dict))
        
        ((AssignmentExpression)
 	(values (cons (apply x-assn kseed) seed) dict))
@@ -286,6 +295,9 @@
 	(values
 	 (cons
 	  (if (= 3 (length kseed))
+	      `(define ,(cadr (list-ref kseed 1)) ,(list-ref kseed 0))
+	      `(define ,(cadr (list-ref kseed 0)) (@@ ,jslib-mod JS:undefined)))
+	  #;(if (= 3 (length kseed))
 	      `(define ,(list-ref kseed 1) ,(list-ref kseed 0))
 	      `(define ,(list-ref kseed 0) #:undefined))
 	  seed)
@@ -301,10 +313,16 @@
 	(values seed dict))
 
        ((ReturnStatement) ;; will need a prompt for return, until optimized?
-	(values (cons `(abort (const return) (,kseed) (const ())) seed)
-		dict))
+	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
+	;;(pretty-print tree cep)
+	(values (cons `(abort (const return)
+			      ,(cdr (reverse kseed))
+			      (const ()))
+		      seed) dict))
 
        ((FunctionDeclaration)
+	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
+	;;(pretty-print tree cep)
 	(values
 	 (let ((name (cadr kseed))
 	       (args (list-ref (lookup "@args" kdict) 2))
@@ -313,12 +331,14 @@
 	 kdict))
 
        ((SourceElements)
-	(values (cons `(begin ,@(reverse kseed)) seed) dict))
+	(values (cons (rev/repl 'begin kseed) seed) dict))
 
        ((Program)
 	(values (car kseed) dict))
        
        (else
+	;;(sferr "fU: kseed=~S  [else]\n    seed=~S\n" kseed seed)
+	;;(pretty-print tree cep)
 	(cond
 	 ((null? seed) (values (reverse kseed) dict))
 	 ;;((null? kseed) (values (cons (car tree) seed) dict)) ;; ???
@@ -338,7 +358,7 @@
   ;;(pretty-print exp (current-error-port))
   (let* ((xrep (js-sxml->tree-il-ext exp env opts))
 	 (code (parse-tree-il xrep)))
-    (pretty-print xrep (current-error-port))
+    ;;(pretty-print xrep (current-error-port))
     (values code env env)))
 
 ;; --- last line ---
