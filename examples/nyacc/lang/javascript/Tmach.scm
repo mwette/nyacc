@@ -35,7 +35,7 @@
       (pp-lalr-grammar js-spec)
       (pp-lalr-machine js-mach))))
 
-(when #t
+(when #f
   (with-output-to-file ",selang.txt"
     (lambda ()
       (let* ((spec (restart-spec js-spec 'SourceElement))
@@ -50,7 +50,7 @@
   (with-output-to-file "gram.y.new"
     (lambda () (lalr->bison js-spec))))
 
-(when #t
+(when #f
   (let ((res (with-input-from-file "ex1.js" dev-parse-js)))
     (pretty-print res)
     (pretty-print-js res)
