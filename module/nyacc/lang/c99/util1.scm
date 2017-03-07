@@ -69,18 +69,20 @@
     ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
     ))
 
-;; @deffn {Procedure} gen-gcc-defs args  [#:CC "clang"] => '(("ABC" . "123") ...)
+;; @deffn {Procedure} gen-gcc-defs args  [#:CC "clang"] => '("ABC=123" ...)
 ;; Generate a list of default defines produced by gcc (or clang).
 ;; @end deffn
 (define gen-gcc-defs
   ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
   ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
-  (let ((rx (make-regexp "#define\\s+(\\S+)\\s+(.*)")))
+  (let ((rx1 (make-regexp "#define\\s+([A-Za-z0-9_]+\\([^)]*\\))\\s+(.*)"))
+	(rx2 (make-regexp "#define\\s+([A-Za-z0-9_]+)\\s+(.*)")))
     (lambda* (args #:key (CC "gcc"))
       (map
        (lambda (l)
-	 (let ((m (regexp-exec rx l)))
-	   (cons (match:substring m 1) (match:substring m 2))))
+	 ;; could use (string-delete #\space (match:substring m 1))
+	 (let ((m (or (regexp-exec rx1 l) (regexp-exec rx2 l))))
+	   (string-append (match:substring m 1) "=" (match:substring m 2))))
        (let ((ip (open-input-pipe (string-append CC " -dM -E - </dev/null"))))
 	 (let iter ((lines '()) (line (read-line ip 'trim)))
 	   (if (eof-object? line) lines
