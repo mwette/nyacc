@@ -16,7 +16,7 @@ oops
   GUILE_LOAD_PATH.
 
 usage
-    $ ./cxp -Ilang/c99 lang/c99/ex1.c
+    $ ./cxp -Ilang/c99/exam.d lang/c99/exam.d/ex1.c
   or
     $ cd lang/c99; guile Tlangc.scm
   or

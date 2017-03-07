@@ -18,7 +18,7 @@
 ;; JavaScript SourceElement parser - for interactive use
 
 (define-module (nyacc lang javascript separser)
-  #:export (parse-js-selt)
+  #:export (parse-js-selt js-reader)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
@@ -42,7 +42,7 @@
 ;; to be documented
 (define* (parse-js-selt #:key debug)
   (catch
-   'parse-error
+   'nyacc-error
    (lambda ()
      (with-fluid*
 	 *insert-semi* #t
@@ -50,5 +50,14 @@
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) fmt rest)
      #f)))
+
+;; This is used for language support in guile REPL.  See Compiling to the
+;; Virtual Machine in the Guile Reference Manual.
+(define (js-reader port env)
+  (let ((iport (current-input-port)))
+    (dynamic-wind
+	(lambda () (set-current-input-port port))
+	(lambda () (parse-js-selt #:debug #f))
+	(lambda () (set-current-input-port iport)))))
 
 ;; --- last line ---

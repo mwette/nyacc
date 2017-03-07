@@ -33,7 +33,7 @@
 (define-language calc
   #:title	"calc"
   #:reader	calc-reader
-  #:compilers   `((tree-il . ,calc-sxml->tree-il))
+  #:compilers   `((tree-il . ,compile-tree-il))
   #:printer	write)
 
 ;; --- last line ---

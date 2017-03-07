@@ -1,3 +1,8 @@
+2017-03-03  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lalr.scm: added "keepers" keyword argument to compact-machine
+	and also added $end as default
+
 2017-02-28  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/pprint.scm: (binary 'd-del .. => (binary 'd-sel

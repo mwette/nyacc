@@ -22,6 +22,7 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
+  #:use-module (nyacc util)
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   ;;#:use-module ((sxml xpath) #:select (sxpath))

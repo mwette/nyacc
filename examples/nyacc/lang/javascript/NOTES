@@ -1,0 +1,5 @@
+something is broken wrt se parser:
+
+(parse-se "function foo() { return 1; }") => (return (const 1))
+
+regular parser works fine.  Is lalr restart not working ???

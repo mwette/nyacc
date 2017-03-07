@@ -1,6 +1,6 @@
-;;; lang/ecmascript/body.scm
+;;; lang/javascript/body.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by
@@ -17,9 +17,17 @@
 
 ;;; This is the javascript runtime.
 
-(define (es-Boolean? v) (or (eq? #t v) (eq? #f v)))
-(define (es-Null? v) (eq? 'Null v))
+(define (js-Boolean? v) (or (eq? #t v) (eq? #f v)))
+(define (js-Null? v) (eq? 'Null v))
 
+;; This is the state to determine if #\newline gets converted to semicolon.
+;; The ECMA-262 specification (3rd ed., Sec 7.9.1) says that conversion is done
+;; if the parser would otherwise generate an error on the following token.  For
+;; now, there is handshaking between the lexer and parser to state when
+;; conversion is not allowed (e.g., between "return" and expression) and the
+;; lexer does the conversion.  The real solution is to modify the parser to
+;; check on error and see if last token was newline.  Right now user needs to
+;; be careful about linebreaks in his/her code.
 (define *insert-semi* (make-fluid))
   
 (define (NSI) ;; no semicolon insertion
@@ -71,7 +79,7 @@
 		  (iter (read-char))))
 	     ((and (eqv? ch #\newline) (set! bol #t) #f))
 	     ((read-js-string ch) assc-$)
-	     ((read-c-comm ch) (iter (read-char)))
+	     ((read-c-comm ch bol) (iter (read-char)))
 	     ((read-js-ident ch) =>
 	      (lambda (s)
 		(or (and=> (assq-ref keytab (string->symbol s))
