@@ -29,7 +29,6 @@
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
 (define jslib-mod '(nyacc lang javascript jslib))
-;;(define undefined-ref (module-ref (@@ ,jslib-mod JS:undefined)))))
 
 (define (x-assn rhs op lhs junk)
   (case (car op)
@@ -296,10 +295,7 @@
 	 (cons
 	  (if (= 3 (length kseed))
 	      `(define ,(cadr (list-ref kseed 1)) ,(list-ref kseed 0))
-	      `(define ,(cadr (list-ref kseed 0)) (@@ ,jslib-mod JS:undefined)))
-	  #;(if (= 3 (length kseed))
-	      `(define ,(list-ref kseed 1) ,(list-ref kseed 0))
-	      `(define ,(list-ref kseed 0) #:undefined))
+	      `(define ,(cadr (list-ref kseed 0)) (void)))
 	  seed)
 	 kdict))
 
