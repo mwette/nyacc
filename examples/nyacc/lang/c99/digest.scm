@@ -1,6 +1,10 @@
 #!/opt/local/bin/guile -e main -s
 !#
 
+(add-to-load-path (string-append (getcwd) "/../../../../examples/"))
+(add-to-load-path (string-append (getcwd) "/../../../../module/"))
+
+(use-modules (srfi srfi-37))
 (use-modules (srfi srfi-37))
 
 (define (arg:inc-dir opt name arg incs defs files)
