@@ -7,7 +7,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-;; C99 parser in file mode
+;; test C99 parser in file mode
 
 (add-to-load-path (string-append (getcwd) "/../../../../module/"))
 (add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))

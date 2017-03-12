@@ -51,7 +51,7 @@
     (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
 ;; @deffn {Procedure} parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
-;;               [#:mode ('code|'file)] [#:debug bool]
+;;               [#:mode ('code|'file|'decl)] [#:debug bool]
 ;; This needs to be explained in some detail.
 ;; tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
 ;; Default mode is @code{'code}.
@@ -67,7 +67,7 @@
 		    (cpp-defs '())	; CPP defines
 		    (inc-dirs '())	; include dirs
 		    (inc-help '())	; include helpers
-		    (mode 'code)	; mode: 'file or 'code
+		    (mode 'code)	; mode: 'file, 'code or 'decl
 		    (xdef? #f)		; pred to determine expand
 		    (debug #f))		; debug
   (catch

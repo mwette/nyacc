@@ -282,7 +282,9 @@
     (sxml-match tree
       ;; sxml-match continues here to avoid stack overflow
       ;; |#
-      
+
+      ((udecl . ,rest)
+       (ppx `(decl . ,rest)))
       ((decl ,decl-spec-list)
        (ppx decl-spec-list) (sf ";\n"))
       ((decl ,decl-spec-list ,init-declr-list)
@@ -303,9 +305,8 @@
 	   (case (sx-tag (car dsl))
 	     ((stor-spec) (sf "~A " (car (sx-ref (car dsl) 1))))
 	     ((type-qual) (sf "~A " (sx-ref (car dsl) 1)))
-	     ((type-spec) (ppx (car dsl)))
+	     ((type-spec) (ppx (car dsl)) (sf " "))
 	     (else (sf "[?:~S] " (car dsl))))
-	   ;;(if (pair? (cdr dsl)) (sf " "))
 	   (iter (cdr dsl)))))
 
       ((init-declr-list . ,rest)
@@ -338,7 +339,7 @@
 	 ((union-def) (ppx arg))
 	 ((enum-def) (ppx arg))
 	 ((typename) (sf "~A" (sx-ref arg 1)))
-	 ((void) (sf "void"))
+	 ((void) (sf "void "))
 	 (else (error "missing " arg))))
 
       ((struct-ref (ident ,name)) (sf "struct ~A" name))

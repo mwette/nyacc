@@ -76,6 +76,8 @@ TALK ABOUT @code{fixed-width-int-names}
 
 TALK ABOUT @code{c99-std-help}
 
+TALK ABOUT @code{stripdown}
+
 @deffn Procedure parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:mode ('code|'file)] [#:debug bool]
 This needs to be explained in some detail.
 Default mode is @code{'code}.
