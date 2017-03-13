@@ -18,73 +18,6 @@
 
 ;; utilities for processing output trees
 
-;; \input texinfo.tex
-;; @settitle NYACC C99 Munge Module
-;;
-;; @headings off
-;; @everyfooting @| @thispage @|
-;;
-;; @node Top
-;; @top NYACC C99 Munge Module
-;; @format
-;; Matt Wette
-;; March 11, 2017
-;; @end format
-;;
-;; @heading Introduction
-;;
-;; The sxml parse tree can be used to provide autocoding via the
-;; @code{(nyacc lang c99 munge)} module. For example, start with the
-;; following C code
-;; @example
-;; typedef const char *string_t;
-;; extern string_t cmds[10];
-;; @end example
-;; The nyacc output (call it @code{the-tree}) for this will be
-;; @noindent
-;; (trans-unit
-;;   (decl (decl-spec-list
-;;           (stor-spec (typedef))
-;;           (type-qual "const")
-;;           (type-spec (fixed-type "char")))
-;;         (init-declr-list
-;;           (init-declr
-;;             (ptr-declr (pointer) (ident "string_t")))))
-;;   (decl (decl-spec-list
-;;           (stor-spec (extern))
-;;           (type-spec (typename "string_t")))
-;;         (init-declr-list
-;;           (init-declr
-;;            (array-of (ident "cmds") (p-expr (fixed "10")))))))
-;; @end example
-;; If we feed @code{the-tree} into @code{tree->udict} and use @code{assoc-ref}
-;; to lookup @code{"cmds"} we get
-;; @noindent
-;; (udecl (decl-spec-list
-;;          (stor-spec (extern))
-;;          (type-spec (typename "string_t")))
-;;        (init-declr
-;;          (array-of (ident "cmds") (p-expr (fixed "10")))))
-;; @end example
-;; Now take this and feed into @code{expand-decl-typerefs} to get
-;; @example
-;; (udecl (decl-spec-list
-;;          (stor-spec (extern))
-;;          (type-qual "const")
-;;          (type-spec (fixed-type "char")))
-;;        (init-declr
-;;          (ptr-declr
-;;            (pointer)
-;;            (array-of (ident "cmds") (p-expr (fixed "10"))))))
-;; @end example
-;; @noindent
-;; which, when fed through the C99 pretty-printer, generates
-;; @example
-;; extern const char *cmds[10];
-;; @end example
-;; @noindent
-;; Since the NYACC C99 parser captures some comments, these can be preserved
-;; in the above procedure.
 
 ;; KEEPING STRUCTS ENUMS etc
 ;; if have typename and want to keep it, then change
@@ -97,8 +30,8 @@
 ;;  (revert-proxy udecl) => comp-udecl
 
 (define-module (nyacc lang c99 util2)
-  #:export (c99-trans-unit->udecl
-	    c99-trans-unit->udecl/full
+  #:export (c99-trans-unit->udict
+	    c99-trans-unit->udict/deep
 
 	    stripdown stripdown-2
 	    udecl->mspec udecl->mspec/comm
@@ -107,22 +40,37 @@
 	    canize-enum-def-list
 	    fixed-width-int-names
 
-	    munge-decl match-comp-decl match-param-decl
+	    munge-decl munge-comp-decl munge-param-decl
 	    declr->ident
 	    expand-decl-typerefs
 
 	    ;; deprecated
 	    tree->udict tree->udict/deep
+	    match-decl match-comp-decl match-param-decl
 	    fix-fields
 	    )
   #:use-module (nyacc lang c99 pprint)
-  #:use-module (ice-9 pretty-print)
-  #:use-module (srfi srfi-1)
+  #:use-module (nyacc lang util)
   #:use-module ((sxml fold) #:select (foldts foldts*))
   #:use-module (sxml match)
-  #:use-module (nyacc lang util)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-2)
+  ;;#:use-module (system base pmatch)
   #:use-module (nyacc lang c99 pprint)
+  #:use-module (ice-9 pretty-print)
   )
+
+(define tmap-fmt
+  '(("char" "%hhd")
+    ("unsigned char" "%hhu")
+    ("short int" "%hd")
+    ("unsigned short int" "%hu")
+    ("int" "%d")
+    ("unsigned int" "%u")
+    ("long int" "%ld")
+    ("unsigned long int" "%lu")
+    ("long long int" "%lld")
+    ("unsigned long long int" "%llu")))
 
 ;; Use the term @dfn{udecl}, or unit-declaration, for a declaration which has
 ;; only one decl-item.  That is where,
@@ -153,10 +101,10 @@
 ;; @end deffn
 (define (declr->ident declr)
   (sxml-match declr
+    ((ident ,name) declr)
     ((init-declr ,declr . ,rest) (declr->ident declr))
     ((comp-declr ,declr) (declr->ident declr))
     ((param-declr ,declr) (declr->ident declr))
-    ((ident ,name) declr)
     ((array-of ,dir-declr ,array-spec) (declr->ident dir-declr))
     ((array-of ,dir-declr) (declr->ident dir-declr))
     ((ptr-declr ,pointer ,dir-declr) (declr->ident dir-declr))
@@ -233,51 +181,57 @@
 ;; @code{(struct . "name")} and @code{(union . "name)}, respectively.
 ;; @end deffn
 (define* (munge-decl decl seed #:key (expand-enums #f))
-  (if (not (and (pair? decl) (eqv? 'decl (sx-tag decl)))) seed
-      (let* ((tag (sx-tag decl)) (tag 'udecl)
-	     (attr (sx-attr decl))
-	     (spec (sx-ref decl 1))	; (decl-spec-list ...)
-	     (tbd (sx-ref decl 2)))	; (init-declr-list ...) OR ...
-	(cond
-	 ((or (not tbd) (eqv? 'comment (sx-tag tbd)))
-	  ;; no init-declr-list => struct or union def or param-decl enum
-	  ;;(display "spec:\n") (pretty-print decl)
-	  (sxml-match spec
-	    ((decl-spec-list
-	      (type-spec
-	       (struct-def (ident ,name) . ,rest2) . ,rest1))
-	     (acons `(struct . ,name) decl seed))
-	    ((decl-spec-list
-	      (type-spec
-	       (union-def (ident ,name) . ,rest2) . ,rest1))
-	     (acons `(union . ,name) decl seed))
-	    ((decl-spec-list
-	      (type-spec
-	       (enum-def
-		(enum-def-list
-		 (enum-defn
-		  (ident "ABC")
-		  (p-expr (fixed "123")))))))
-	     ;; TODO
-	     seed)
-	    (,otherwise
-	     ;; e.g., enum { VAL = 1 };
-	     ;;(simple-format #t "+++ otherwise: ~S\n" tbd) (pretty-print decl)
-	     seed)))
-	 (else ;; decl with init-declr-list
-	  (let* ((id-l tbd) (tail (sx-tail decl 3)))
-	    (let iter ((res seed) (idl (cdr id-l)))
-	      (if (null? idl) res
-		  (let* ((declr (sx-ref (car idl) 1))
-			 (ident (declr->ident declr))
-			 (name (cadr ident)))
-		    (iter
-		     (acons name
-			    (if attr
-				(cons* tag attr spec (car idl) tail)
-				(cons* tag spec (car idl) tail))
-			    res)
-		     (cdr idl)))))))))))
+
+  (define (iter-declrs init-declr-l tail seed)
+    (if (not init-declr-l) seed
+	(let iter ((seed seed) (idl (cdr init-declr-l)))
+	  (simple-format #t "iter ~S \n" idl)
+	  (if (null? idl) seed
+	      (let* ((tag (sx-tag decl)) (attr (sx-attr decl))
+		     (specl (sx-ref decl 1)) (declr (sx-ref (car idl) 1))
+		     (ident (declr->ident declr)) (name (cadr ident)))
+		(iter
+		 (acons name (sx-cons* tag attr specl (car idl) tail) seed)
+		 (cdr idl)))))))
+  
+  (cond
+   ((not (pair? decl)) seed)
+   ((eqv? (sx-tag decl) 'decl)
+    (let* ((tag (sx-tag decl)) (tag 'udecl)
+	   (attr (sx-attr decl))
+	   (spec (sx-ref decl 1))	; (decl-spec-list ...)
+	   (sx2 (sx-ref decl 2)) ; (init-declr-list ...) OR ...
+	   (init-d-l (if (and sx2 (eqv? (sx-tag sx2) 'init-declr-list)) sx2 #f))
+	   (tail (sx-tail decl (if init-d-l 3 2))))
+      ;;(simple-format #t "? => ~S\n" (sx-tag sx2))
+      (sxml-match spec
+	((decl-spec-list
+	  (display "match1\n")
+	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
+	 (acons `(struct . ,name) decl (iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (type-spec (struct-def . ,rest2) . ,rest1))
+	 (acons `(struct . "*anon*") decl (iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	 (acons `(union . ,name) decl (iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	 (acons `(union . "*anon*") decl (iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
+	 (acons `(enum . ,name) decl (iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
+	 (acons `(enum . "*anon*") decl (iter-declrs init-d-l tail seed)))
+	(,otherwise
+	 (display "match9\n")
+	 (iter-declrs init-d-l tail seed)))))
+   ((eqv? (sx-tag decl) 'comp-decl)
+    (munge-comp-decl decl seed #:expand-enums expand-enums))
+   ((eqv? (sx-tag decl) 'param-decl)
+    (munge-param-decl decl seed #:expand-enums expand-enums))
+   (else seed)))
 
 ;;.@deffn gen-enum-udecl nstr vstr => (udecl ...)
 ;; @example
@@ -297,7 +251,7 @@
              (enum-def-list
 	      (enum-defn (ident ,nstr) (p-expr (fixed ,vstr)))))))))
 
-;; @deffn {Procedure} match-comp-decl decl seed
+;; @deffn {Procedure} munge-comp-decl decl seed [#:expand-enums #f]
 ;; This will turn
 ;; @example
 ;; (comp-decl (decl-spec-list (type-spec "int"))
@@ -314,7 +268,7 @@
 ;; This is coded to be used with fold-right in order to preserve order
 ;; in @code{struct} and @code{union} field lists.
 ;; @end deffn
-(define (match-comp-decl decl seed)
+(define* (munge-comp-decl decl seed #:key (expand-enums #f))
   (if (not (eqv? 'comp-decl (car decl))) seed
       (let* ((tag (sx-ref decl 0))
 	     (attr (sx-attr decl))
@@ -333,8 +287,9 @@
 			   (cons* tag attr spec (car idl) tail)
 			   (cons* tag spec (car idl) tail))
 		       (iter res (cdr idl)))))))))
+(define match-comp-decl munge-comp-decl)
 
-;; @deffn {Procedure} match-param-decl param-decl seed
+;; @deffn {Procedure} match-param-decl param-decl seed [#:expand-enums #f]
 ;; This will turn
 ;; @example
 ;; (param-decl (decl-spec-list (type-spec "int"))
@@ -349,7 +304,7 @@
 ;; This is coded to be used with fold-right in order to preserve order
 ;; in @code{struct} and @code{union} field lists.
 ;; @end deffn
-(define (match-param-decl decl seed)
+(define* (munge-param-decl decl seed #:key (expand-enums #f))
   (if (not (eqv? 'param-decl (car decl))) seed
       (let* ((tag (sx-ref decl 0))
 	     (attr (sx-attr decl))
@@ -358,6 +313,7 @@
 	     (ident (declr->ident declr))
 	     (name (cadr ident)))
 	(acons name decl seed))))
+(define match-param-decl munge-param-decl)
 	
 ;; @deffn {Procedure} find-special udecl-alist seed => ..
 ;; NOT DONE
@@ -375,18 +331,6 @@
 			  (cons 'enum enum)
 			  seed)
 	'())))
-
-(define tmap-fmt
-  '(("char" "%hhd")
-    ("unsigned char" "%hhu")
-    ("short int" "%hd")
-    ("unsigned short int" "%hu")
-    ("int" "%d")
-    ("unsigned int" "%u")
-    ("long int" "%ld")
-    ("unsigned long int" "%lu")
-    ("long long int" "%lld")
-    ("unsigned long long int" "%llu")))
 
 ;; @deffn {Variable} fixed-width-int-names
 ;; This is a list of standard integer names (e.g., @code{"uint8_t"}).
@@ -443,9 +387,9 @@
 	   (else (cons item seed))))
    '() decl-spec-list))
 
-;; @deffn {Procedure} expand-decl-typerefs udecl udecl-dict [#:keep '()] => udecl
-;; Given a declaration or component-declaration, expand all typename,
-;; struct, union and enum refs.
+;; @deffn {Procedure} expand-decl-typerefs udecl udecl-dict [#:keep '()]
+;; Given a declaration or component-declaration, return a udecl with all
+;; typenames (not in @var{keep}), struct, union and enum refs expanded.
 ;; @example
 ;; typedef const int  (*foo_t)(int a, double b);
 ;; extern    foo_t    fctns[2];
@@ -455,6 +399,8 @@
 ;; @noindent
 ;; Cool. Eh? (but is it done?)
 ;; @end deffn
+;; What about those w/ no init-declr?
+;; @example
 (define* (expand-decl-typerefs udecl udecl-dict #:key (keep '()))
   (display "FIXME: some decls have no init-declr-list\n")
   ;; between adding (init-declr-list) to those or having predicate
@@ -569,11 +515,11 @@
     '())
 
   (define (fsU seed kseed tree)
-    (if (memq (car tree) strip-list)
-	seed
-	(if (null? seed)
-	    (reverse kseed)
-	    (cons (reverse kseed) seed))))
+    (cond
+     ((eqv? (sx-tag tree) 'stor-spec) seed)
+     ((eqv? (sx-tag tree) 'type-qual) seed)
+     ((null? seed) (reverse kseed))
+     (else (cons (reverse kseed) seed))))
 	
   (define (fsH seed tree)
     (cons tree seed))
@@ -588,47 +534,52 @@
 
 ;; @deffn {Procecure} stripdown-2
 ;; apparently for ffi but don't see difference
+;;
+;; need to allow (const) as last decl-spec-list if declr is pointer
 ;; @end deffn
+;; (udecl (decl-spec-list (type-spec ...) ... (type-qual "const"))
+;;        (init-declr (ptr-declr (pointer ...)
 (define* (stripdown-2 udecl decl-dict #:key (keep '()))
+  (let* (;;(speclt (sx-tail udecl))	; decl-spec-list tail
+	 (xdecl (expand-decl-typerefs udecl decl-dict #:keep keep))
+	 (tag (sx-tag xdecl))
+	 (attr (sx-attr xdecl))
+	 (specl (sx-ref xdecl 1))
+	 (declr (sx-ref xdecl 2))
+	 (is-ptr? (declr-is-ptr? declr))
+	 ;;
+	 (s-tag (sx-tag specl))
+	 (s-attr (sx-attr specl))
+	 (s-tail (strip-decl-spec-tail (sx-tail specl) #:keep-const? is-ptr?))
+	 (specl (sx-cons* s-tag s-attr s-tail)))
+    (sx-list tag attr specl declr)))
 
-  ;;(define strip-list '(stor-spec type-qual comment))
-  (define strip-list '(stor-spec type-qual))
+(define (declr-is-ptr? declr)
+  (and
+   (pair? (cdr declr))
+   (eqv? 'ptr-declr (caadr declr))))
+    
+(define* (strip-decl-spec-tail dsl-tail #:key keep-const?)
+  (let iter ((dsl1 '()) (const-seen? #f) (tail dsl-tail))
+    (if (null? tail)
+	(reverse (if (and const-seen? keep-const?)
+		     (cons '(type-qual "const") dsl1)
+		     dsl1))
+	(case (caar tail)
+	  ((type-qual)
+	   (if (string=? (cadar tail) "const")
+	       (iter dsl1 #t (cdr tail))
+	       (iter dsl1 const-seen? (cdr tail))))
+	  ((stor-spec)
+	   (iter dsl1 const-seen? (cdr tail)))
+	  (else
+	   (iter (cons (car tail) dsl1) const-seen? (cdr tail)))))))
 
-  (define (fsD seed tree)
-    '())
-
-  (define (fsU seed kseed tree)
-    (if (memq (car tree) strip-list)
-	seed
-	(if (null? seed)
-	    (reverse kseed)
-	    (cons (reverse kseed) seed))))
-	
-  (define (fsH seed tree)
-    (cons tree seed))
-
-  (let* ((speclt (sx-tail udecl 1)))	; decl-spec-list tail
-    ;; don't expand typedefs, structure specs etc,
-    (cond
-     ((and (eqv? 'stor-spec (caar speclt))
-	   (eqv? 'typedef (cadar speclt)))
-      udecl)
-     ;; lone struct ref
-     (else
-      (let* ((xdecl (expand-decl-typerefs udecl decl-dict #:keep keep))
-	     (tag (sx-tag xdecl))
-	     (attr (sx-attr xdecl))
-	     (specl (sx-ref xdecl 1))
-	     (declr (sx-ref xdecl 2))
-	     (specl1 (foldts fsD fsU fsH '() specl)))
-	(list tag specl1 declr))))
-      ))
-
-
-;; @deffn {Procedure} udecl->mspec sudecl
+;; @deffn {Procedure} udecl->mspec sudecl [dict]
 ;; @deffnx {Procedure} udecl->mspec/comm decl [dict] [#:def-comm ""]
-;; Turn a stripped-down unit-declaration into an m-spec.
-;; This assumes decls have been run through @code{stripdown}.
+;; Turn a stripped-down unit-declaration into an m-spec.  The second version
+;; include a comment. This assumes decls have been run through
+;; @code{stripdown}.
 ;; @example
 ;; (decl (decl-spec-list (type-spec "double"))
 ;;       (init-declr-list (
@@ -724,9 +675,6 @@
 
 (define (fix-fields flds)
   (cdr (clean-field-list `(field-list ,flds))))
-
-;; @bye
-
 
 ;; ===== not used? ====================
 

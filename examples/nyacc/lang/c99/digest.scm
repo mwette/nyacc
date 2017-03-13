@@ -9,13 +9,16 @@
 (use-modules (nyacc lang c99 util1))
 (use-modules (nyacc lang c99 util2))
 (use-modules (nyacc lang c99 pprint))
+(use-modules (nyacc lang util))
 (use-modules (sxml fold))
 (use-modules (sxml match))
 (use-modules ((sxml xpath) #:select (sxpath)))
 (use-modules (srfi srfi-1))
+(use-modules (srfi srfi-11))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 regex))
 (use-modules (ice-9 pretty-print))
+(use-modules (system base pmatch))
 
 (define my-defs (gen-gcc-defs '()))
 (define my-help '())
@@ -185,13 +188,24 @@
 (define (parse-string str)
   (with-input-from-string str parse-c99))
 
+;;(define (do-param-decl pdecl)
 
-#|
 (define (do-fctn-udecl udecl)
-  (let ((ret-dsl (sx-ref udecl 1))
-	)
-    ))
-|#
+  (let*-values
+   (((ret-dsl)
+     (values (sx-ref udecl 1)))
+    ((name params)
+     (pmatch (sx-ref udecl 2)
+	     ((init-declr
+	       (ftn-declr (ident ,name)
+			  (param-list . ,params)))
+	      (values name params))))
+    )
+   (simple-format #t "name=~S\n" name)
+   (pretty-print
+    (fold munge-param-decl '() params))
+    ;;(declr->ident (caddar params)))
+   ))
 
 ;; (eval-when ...)
 ;; %guile-build-info
@@ -202,11 +216,11 @@
 ;; cairo_region_intersect (cairo_region_t *dst, const cairo_region_t *other);
 
 (let* ((file "/opt/local/include/cairo/cairo.h")
-       (defs '()) ;;'("CAIRO_BEGIN_DECLS="))
+       (defs '())
        (incs '("/opt/local/include" "/opt/local/include/cairo" "/usr/include"))
        (tree (my-parse defs incs file))
-       (file-decls (tree->udict tree))
-       (udecl-dict (tree->udict/deep tree))
+       (file-decls (c99-trans-unit->udict tree))
+       (udecl-dict (c99-trans-unit->udict/deep tree))
        ;;(keepers (fold-enum-typenames decl-dict '()))
        )
 
@@ -221,21 +235,28 @@
 
   ;; keep const?
   
-  #|
+  ;;#|
   (let* ((name "cairo_region_intersect")
-	 ;;(name "cairo_status_t")
 	 (udecl (assoc-ref udecl-dict name))
 	 ;;(decl (stripdown decl udecl-dict #:keep keepers))
 	 ;;(decl (stripdown-2 decl udecl-dict))
+	 (p1 '(param-decl
+	       (decl-spec-list
+		(type-qual "const")
+		(type-spec (typename "cairo_region_t")))
+	       (param-declr
+		(ptr-declr (pointer) (ident "other")))))
 	 )
-    (pretty-print tree)
-    ;;(poo decl '())
+
+    ;;(do-fctn-udecl udecl)
+    (pretty-print p1)
+    ;;(pretty-print (udecl->mspec p1))
     0)
-  |#
+  ;;|#
 
   ;; code to detect opaque
 
-  ;;#|
+  #|
   (let* ((code "double x[10]; /* state vector */")
 	 ;;(code "enum { ABC = 123 };")
 	 ;;(code "typedef const char *string_t; extern string_t cmds[10];")
@@ -252,7 +273,7 @@
     (pretty-print-c99 xdecl)
     (pretty-print mspec)
     )
-  ;;|#
+  |#
 
   #f)
 
