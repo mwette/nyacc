@@ -202,8 +202,13 @@
 	      (values name params))))
     )
    (simple-format #t "name=~S\n" name)
-   (pretty-print
-    (fold munge-param-decl '() params))
+   (fold
+    (lambda (param-decl seed)
+      (pretty-print param-decl)
+      seed)
+    '()
+    params)
+    ;;(fold munge-param-decl '() params))
     ;;(declr->ident (caddar params)))
    ))
 
@@ -215,11 +220,14 @@
 ;; cairo_public cairo_status_t
 ;; cairo_region_intersect (cairo_region_t *dst, const cairo_region_t *other);
 
+(define (cairo-filter path)
+  (string=? "cairo" (substring path 0 5)))
+
 (let* ((file "/opt/local/include/cairo/cairo.h")
        (defs '())
        (incs '("/opt/local/include" "/opt/local/include/cairo" "/usr/include"))
        (tree (my-parse defs incs file))
-       (file-decls (c99-trans-unit->udict tree))
+       (file-decls (c99-trans-unit->udict tree #:filter cairo-filter))
        (udecl-dict (c99-trans-unit->udict/deep tree))
        ;;(keepers (fold-enum-typenames decl-dict '()))
        )
@@ -233,28 +241,31 @@
   ;; 3) need to detect pointer-only types (e.g.,
   ;;    typedef struct _cairo_region cairo_region_t;
 
-  ;; keep const?
+  ;; keeping const
+  ;; code to detect opaque
   
   ;;#|
   (let* ((name "cairo_region_intersect")
+	 ;;(name "cairo_svg_surface_create")
 	 (udecl (assoc-ref udecl-dict name))
-	 ;;(decl (stripdown decl udecl-dict #:keep keepers))
-	 ;;(decl (stripdown-2 decl udecl-dict))
-	 (p1 '(param-decl
+	 ;;(xdecl (expand-typerefs udecl decl-dict #:keep keepers))
+	 (xdecl udecl)
+	 ;;(sdecl (stripdown udecl udecl-dict #:const-ptr #t))
+	 (sdecl (stripdown udecl udecl-dict #:const-ptr #f))
+	 #;(p1 '(param-decl
 	       (decl-spec-list
 		(type-qual "const")
 		(type-spec (typename "cairo_region_t")))
 	       (param-declr
-		(ptr-declr (pointer) (ident "other")))))
+	 (ptr-declr (pointer) (ident "other")))))
+	 (p1 (open-output-file ",cairo.scm"))
 	 )
 
-    ;;(do-fctn-udecl udecl)
-    (pretty-print p1)
+    ;;(do-fctn-udecl sdecl)
+    (pretty-print tree)
     ;;(pretty-print (udecl->mspec p1))
     0)
   ;;|#
-
-  ;; code to detect opaque
 
   #|
   (let* ((code "double x[10]; /* state vector */")

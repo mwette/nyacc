@@ -90,6 +90,16 @@ Default mode is @code{'code}.
 @end example
 @end deffn
 
+@subsubsection Modes
+There are several modes for parsing
+@itemize
+@item 
+@emph{file} mode will keep the CPP structure at the top level but only
+chase down one tree.  This is a change from version prior to 0.77.0.  It
+implies that all defines required for evaluating CPP expressions in
+if-then have to be resolved
+@end itemize
+
 Options are as follows
 @iffalse
 @table @code
@@ -101,7 +111,7 @@ This is an ordered list of directories to search for include files.
 This is an a-list of include helpers, where keys are the include file
 or path (e.g., @code{sys/types.h}).
 @item #:mode
-This is the mode: @code{'code} or @code{'file}.  The default is
+This is the mode: @code{'code}, @code{'decl} or @code{'file}.  The default is
 @code{'code}.
 @item #:xdef?
 This is a predicate function to determine whether to expand a

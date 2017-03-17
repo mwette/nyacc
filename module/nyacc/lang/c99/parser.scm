@@ -48,7 +48,7 @@
 ;; This is used to parse included files at top level.
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
+    (raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
 
 ;; @deffn {Procedure} parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
 ;;               [#:mode ('code|'file|'decl)] [#:debug bool]
@@ -62,6 +62,9 @@
 ;;            #:inc-help (append '("myinc.h" "foo_t" "bar_t") c99-std-help)
 ;;            #:mode 'file))
 ;; @end example
+;; Note: for @code{file} mode user still needs to make sure CPP conditional
+;; expressions can be fully evaluated, which may mean adding compiler generated
+;; defines (e.g., using @code{gen-cpp-defs}).
 ;; @end deffn
 (define* (parse-c99 #:key
 		    (cpp-defs '())	; CPP defines

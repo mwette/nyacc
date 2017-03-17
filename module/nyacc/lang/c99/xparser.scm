@@ -48,7 +48,7 @@
 
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
+    (raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
 
 ;; @item {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool]
 ;; This needs to be explained in some detail.

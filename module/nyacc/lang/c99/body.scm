@@ -326,7 +326,8 @@
 		     (if (zero? val)
 			 (set! ppxs (cons 'skip-look ppxs))
 			 (set! ppxs (cons 'keep ppxs)))
-		     (set! ppxs (cons 'skip-done ppxs)))))))
+		     (set! ppxs (cons 'skip-done ppxs))))))
+	    stmt)
 
 	  (define (code-elif stmt)
 	    (case (car ppxs)
@@ -336,50 +337,43 @@
 		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
 		 (case (car ppxs)
 		   ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))
-		   ((keep) (set-car! ppxs 'skip-done)))))))
+		   ((keep) (set-car! ppxs 'skip-done))))))
+	    stmt)
 
 	  (define (code-else stmt)
 	    (case (car ppxs)
 	      ((skip-look) (set-car! ppxs 'keep))
-	      ((keep) (set-car! ppxs 'skip-done))))
+	      ((keep) (set-car! ppxs 'skip-done)))
+	    stmt)
 
 	  (define (code-endif stmt)
-	    (set! ppxs (cdr ppxs)))
+	    (set! ppxs (cdr ppxs))
+	    stmt)
 	  
-	  (define (eval-cpp-incl/code stmt)
+	  (define (eval-cpp-incl/here stmt) ;; => stmt
+	    ;; include file inplace
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
 	      (cond
 	       ((apply-helper file)) ; use helper
 	       ((not path) (p-err "not found: ~S" file)) ; file not found
-	       (else (set! bol #t) (push-input (open-input-file path))))))
+	       (else (set! bol #t) (push-input (open-input-file path))))
+	      stmt))
 
-	  (define (eval-cpp-incl/file stmt)
+	  (define (eval-cpp-incl/tree stmt) ;; => stmt
+	    ;; include file as a new tree
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
 	      (cond
-	       ((apply-helper file)) ; use helper
+	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (p-err "not found: ~S" file)) ; file not found
-	       ((with-input-from-file path run-parse) => ; include tree
-		(lambda (tree) (for-each add-define (xp1 tree)))))))
+	       ((with-input-from-file path run-parse) => ; add tree to stmt
+		(lambda (tree)
+		  ;;(pretty-print tree (current-error-port))
+		  (for-each add-define (xp1 tree))
+		  (append stmt tree))))))
 
-	  (define (eval-cpp-stmt/code stmt)
-	    (case (car stmt) ;; was case : optimizer will clean this up
-	      ((if) (code-if stmt))
-	      ((elif) (code-elif stmt))
-	      ((else) (code-else stmt))
-	      ((endif) (code-endif stmt))
-	      (else
-	       (if (eqv? 'keep (car ppxs))
-		   (case (car stmt)
-		     ((include) (eval-cpp-incl/code stmt))
-		     ((define) (add-define stmt))
-		     ((undef) (rem-define (cadr stmt)))
-		     ((error) (p-err "error: #error ~A" (cadr stmt)))
-		     ((pragma) #t) ;; ignore for now
-		     (else (error "bad cpp flow stmt")))))))
-	       
-	  (define (eval-cpp-stmt/decl stmt)
+	  (define (eval-cpp-stmt/code stmt) ;; => stmt
 	    (case (car stmt)
 	      ((if) (code-if stmt))
 	      ((elif) (code-elif stmt))
@@ -388,25 +382,43 @@
 	      (else
 	       (if (eqv? 'keep (car ppxs))
 		   (case (car stmt)
-		     ((include) (eval-cpp-incl/file stmt))
-		     ((define) (add-define stmt))
-		     ((undef) (rem-define (cadr stmt)))
+		     ((include) (eval-cpp-incl/here stmt))
+		     ((define) (add-define stmt) stmt)
+		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (p-err "error: #error ~A" (cadr stmt)))
-		     ((pragma) #t) ;; ignore for now
+		     ((pragma) stmt) ;; ignore for now
 		     (else (error "bad cpp flow stmt")))))))
 	       
-	  (define (eval-cpp-stmt/file stmt)
+	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
 	    (case (car stmt)
-	      ((if) (cpi-push))
-	      ((elif else) (cpi-shift))
-	      ((endif) (cpi-pop))
-	      ((include) (eval-cpp-incl/file stmt))
-	      ((define) (add-define stmt))
-	      ((undef) (rem-define (cadr stmt)))
-	      ((error) #t)
-	      ((pragma) #t) ;; need to work this
+	      ((if) (code-if stmt))
+	      ((elif) (code-elif stmt))
+	      ((else) (code-else stmt))
+	      ((endif) (code-endif stmt))
+	      (else
+	       (if (eqv? 'keep (car ppxs))
+		   (case (car stmt)
+		     ((include) (eval-cpp-incl/tree stmt))
+		     ((define) (add-define stmt) stmt)
+		     ((undef) (rem-define (cadr stmt)) stmt)
+		     ((error) (p-err "error: #error ~A" (cadr stmt)))
+		     ((pragma) stmt) ;; ignore for now
+		     (else (error "bad cpp flow stmt")))
+		   stmt))))
+	       
+	  (define (eval-cpp-stmt/file stmt) ;; => stmt
+	    (case (car stmt)
+	      ((if) (cpi-push) stmt)
+	      ((elif else) (cpi-shift) stmt)
+	      ((endif) (cpi-pop) stmt)
+	      ((include) (eval-cpp-incl/tree stmt))
+	      ((define) (add-define stmt) stmt)
+	      ((undef) (rem-define (cadr stmt)) stmt)
+	      ((error) stmt)
+	      ((pragma) stmt) ;; need to work this
 	      (else (error "bad cpp flow stmt"))))
-	    
+
+	  ;; This must return the stmt.
 	  (define (eval-cpp-stmt stmt)
 	    (with-throw-handler
 	     'cpp-error
@@ -447,10 +459,10 @@
  		 ((read-comm ch #t) => assc-$)
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
-		    (eval-cpp-stmt stmt)
-		    (if (pass-cpp-stmt? stmt)
-			(assc-$ `(cpp-stmt . ,stmt))
-			(iter (read-char)))))
+		    (let ((stmt (eval-cpp-stmt stmt))) ; eval can add tree
+		      (if (pass-cpp-stmt? stmt)
+			  (assc-$ `(cpp-stmt . ,stmt))
+			  (iter (read-char))))))
 		 (else (iter ch))))
 	       ((read-ident ch) =>
 		(lambda (name)
