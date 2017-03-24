@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/pprint.scm
 ;;;
-;;; Copyright (C) 2015,2016 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -367,6 +367,8 @@
 
       ((enum-defn (ident ,name) (p-expr (fixed ,value)))
        (sf "~A = ~A,\n" name value))
+      ((enum-defn (ident ,name) (neg (p-expr (fixed ,value))))
+       (sf "~A = -~A,\n" name value))
       ((enum-defn (ident ,name))
        (sf "~A,\n" name))
 

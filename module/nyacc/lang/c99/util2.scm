@@ -44,6 +44,8 @@
 	    declr->ident
 	    expand-typerefs
 
+	    clean-field-list
+
 	    ;; deprecated
 	    tree->udict tree->udict/deep
 	    match-decl match-comp-decl match-param-decl
@@ -115,8 +117,8 @@
     ((scope ,declr) (declr->ident declr))
     (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
 
-;; @deffn {Procedure} c99-trans-unit->udict tree [seed] => udict
-;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed] [#:filter]=> udict
+;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:filter f] => udict
+;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]=> udict
 ;; Turn a C parse tree into a assoc-list of names and definitions.
 ;; This will unwrap @code{init-declr-list} into list of decls w/
 ;; @code{init-declr}.
@@ -130,8 +132,9 @@
 ;; @end deffn
 ;; @noindent
 ;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
-;; If @var{filter} is provided it is a predicate procedure taking the
-;; include path to indicate whether it should be parsed
+;; The filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
+;; of one argument, the include path, to indicate whether it should be included
+;; in the dictionary.
 (define* (OLDc99-trans-unit->udict tree #:optional (seed '()))
   (if (pair? tree)
       (fold munge-decl seed (cdr tree))
@@ -641,8 +644,6 @@
        (list name))
       ((init-declr ,item)
        (unwrap-declr item #:const const))
-      ((comp-declr ,item)
-       (unwrap-declr item))
       ((ptr-declr (pointer . ,r) ,dir-declr)
        (if const
 	   (cons* '(const) '(pointer-to) (unwrap-declr dir-declr))
@@ -653,9 +654,12 @@
        (cons '(function-returning) (unwrap-declr dir-declr)))
       ((scope ,expr)
        (unwrap-declr expr))
+      ((comp-declr ,item) (unwrap-declr item))
+      ((param-declr ,item) (unwrap-declr item))
       (,otherwise
        (simple-format #t "unwrap-declr: OTHERWISE\n") (pretty-print otherwise)
        ;; failed got: (array-of (ident "foo")) FROM const char foo[];
+       (error "udecl->mspec failed")
        #f)))
 
   (define (find-type-spec decl-spec-list)
@@ -668,7 +672,8 @@
 	 (tspec (cadr specl))		; type-spec
 	 (const (and=> (sx-ref specl 2)	; const pointer ???
 		       (lambda (sx) (equal? (sx-ref sx 1) "const"))))
- 	 (declr (sx-ref decl 2))
+ 	 (declr (or (sx-ref decl 2) ;; param-decl -- e.g., f(void)
+		    '(ident "@arg")))
 	 (comm (sx-ref decl 3))
 	 (m-specl (unwrap-specl specl))
 	 (m-declr (unwrap-declr declr #:const const))
@@ -680,8 +685,8 @@
 	 (spec (udecl->mspec decl dict)))
     (cons* (car spec) comm (cdr spec))))
 
-;; @deffn {Procedure} clean-field-list flds => flds
-;; This will take a list of fields from a struct and remove lone comments.
+;; @deffn {Procedure} clean-field-list field-list => flds
+;; Process the tagged field-list element of a struct and remove lone comments.
 ;; If a field following a lone comment has no code-comment, the lone comment
 ;; will be used.  For example,
 ;; @example
@@ -699,7 +704,7 @@
   (let iter ((rz '()) (cl '()) (fl (cdr fld-list)))
     ;;(pretty-print fl)
     (cond
-     ((null? fl) `(field-list ,(reverse rz)))
+     ((null? fl) (cons 'field-list (reverse rz)))
      ((eqv? 'comment (caar fl))
       (iter rz (cons (cadar fl) cl) (cdr fl)))
      ((eqv? 'comp-decl (caar fl))
@@ -712,7 +717,7 @@
       (error "bad field")))))
 
 (define (fix-fields flds)
-  (cdr (clean-field-list `(field-list ,flds))))
+  (cdr (clean-field-list `(field-list . ,flds))))
 
 ;; ===== not used? ====================
 

@@ -29,11 +29,12 @@
   #:use-module ((srfi srfi-43) #:select (vector-map))
   )
 
-;; @item c99-spec
+;; @deffn {Variable} c99-spec
 ;; This variable is the specification a-list for the hacked ISO C99 language.
 ;; Run this through @code{make-lalr-machine} to get an a-list for the
 ;; automaton.  The grammar is modified to parse CPP statements and comments.
 ;; The output of the end parser will be a SXML tree (w/o the @code{*TOP*} node.
+;; @end deffn
 (define c99-spec
   (lalr-spec
    (notice (string-append "Copyright (C) 2016,2017 Matthew R. Wette"
@@ -713,10 +714,11 @@
 
 ;;; =====================================
 
-;; @item gen-c99-files [dir] => #t
+;; @deffn {Procedure} gen-c99-files [dir] => #t
 ;; Update or generate the files @quot{c99act.scm} and @quot{c99tab.scm}.
 ;; These are the tables and actions for the C99 parser.
 ;; If there are no changes to existing files, no update occurs.
+;; @end deffn
 (define (gen-c99-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
@@ -732,10 +734,11 @@
     (when (or a b) 
       (system (string-append "touch " (lang-dir "parser.scm"))))))
 
-;; @item gen-c99x-files [dir] => #t
+;; @deffn {Procedure} gen-c99x-files [dir] => #t
 ;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.
 ;; These are the tables and actions for the C99 expression parser.
 ;; If there are no changes to existing files, no update occurs.
+;; @end deffn
 (define (gen-c99x-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))

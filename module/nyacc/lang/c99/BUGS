@@ -1,6 +1,10 @@
 BUGs and TODOs
 
-C99-009	<= next id
+C99-010	<= next id
+
+C99-009	18 Mar 2017, M.Wette
+	pprint generates two spaces in declarations e.g.,
+	int foo(int  x);
 
 C99-008	02 Mar 2017, M.Wette
 	clean up error traps among raw-parser run-parse and parse-c99[x]

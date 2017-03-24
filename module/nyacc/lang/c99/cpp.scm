@@ -54,18 +54,20 @@
    ((string=? "__TIME__") "00:00:00")
    (else #f)))
 
-;; @deffn read-ellipsis ch
+;; @deffn {Procedure} read-ellipsis ch
 ;; read ellipsis
+;; @end deffn
 (define (read-ellipsis ch)
   (cond
    ((eof-object? ch) #f)
    ((char=? ch #\.) (read-char) (read-char) "...") ; assumes correct syntax
    (else #f)))
 
-;; @deffn cpp-define => (define (name "ADD") (args "X" "Y") (repl "X+Y"))
+;; @deffn {Procedure} cpp-define => (define (name "ADD") (args "X" "Y") (repl "X+Y"))
 ;; output is like
 ;; @code{(name "ABC") (repl "123")} or
 ;; @code{(name "ABC") (args "X" "Y") (repl "X+Y")}
+;; @end deffn
 (define (cpp-define)
 
   (define (p-args la) ;; parse args
@@ -92,7 +94,7 @@
 	`(define (name ,name) (repl ,repl)))))
 	
 
-;; @deffn cpp-include
+;; @deffn {Procedure} cpp-include
 ;; Parse CPP include statement.
 (define (cpp-include)
   (let* ((beg-ch (skip-il-ws (read-char)))
@@ -102,7 +104,7 @@
 		     (iter (cons ch cl) (read-char))))))
     `(include ,path)))
 
-;; @deffn cpp-line->stmt line defs => (stmt-type text)
+;; @deffn {Procedure} cpp-line->stmt line defs => (stmt-type text)
 ;; Parse a line from a CPP statement and return a parse tree.
 ;; @example
 ;; (parse-cpp-stmt "define X 123") => (define "X" "123")
@@ -111,6 +113,7 @@
 ;; @end example
 ;; To evaluate the @code{if} statements use @code{parse-cpp-expr} and
 ;; @code{eval-cpp-expr}.
+;; @end deffn
 (define (cpp-line->stmt line)
   (define (rd-ident) (read-c-ident (skip-il-ws (read-char))))
   (define (rd-num) (and=> (read-c-num (skip-il-ws (read-char))) cdr))
@@ -142,8 +145,9 @@
 (define (cpp-err fmt . args)
   (apply throw 'cpp-error fmt args))
 
-;;.@deffn skip-il-ws ch
+;;.@deffn {Procedure} skip-il-ws ch
 ;; Skip in-line whitespace
+;; @end deffn
 (define skip-il-ws
   (let ((il-ws (list->char-set '(#\space #\tab))))
     (lambda (ch)
@@ -165,11 +169,12 @@
 (define gen-cpp-lexer
   (make-lexer-generator mtab #:comm-skipper cpp-comm-skipper))
 
-;; @deffn parse-cpp-expr text => tree
+;; @deffn {Procedure} parse-cpp-expr text => tree
 ;; Given a string returns a cpp parse tree.  This is called by
 ;; @code{eval-cpp-expr}.  The text will have had all CPP defined symbols
 ;; expanded already so no identifiers should appear in the text.
 ;; A @code{cpp-error} will be thrown if a parse error occurs.
+;; @end deffn
 (define (parse-cpp-expr text)
   (with-throw-handler
    'nyacc-error
@@ -179,9 +184,10 @@
    (lambda (key fmt . args)
      (apply throw 'cpp-error fmt args))))
 
-;; @deffn eval-cpp-expr tree dict => datum
+;; @deffn {Procedure} eval-cpp-expr tree dict => datum
 ;; Evaluate a tree produced from @code{parse-cpp-expr}.
 ;; The tree passed to this routine is 
+;; @end deffn
 (define (eval-cpp-expr tree dict)
   (letrec
       ((tx (lambda (tr ix) (list-ref tr ix)))
@@ -235,8 +241,9 @@
 ;; first character of new replacement text.
 ;; @end enumerate
 
-;; @deffn rtokl->string tokl => string
+;; @deffn {Procedure} rtokl->string tokl => string
 ;; Convert reverse token-list to string.
+;; @end deffn
 (define (rtokl->string tokl)
 
   ;; Turn reverse chl into a string and insert it into the string list stl.
@@ -292,13 +299,14 @@
 	(otherwise
 	 (error "no match" tkl)))))))
 
-;; @deffn scan-cpp-input argd used dict end-tok => string
+;; @deffn {Procedure} scan-cpp-input argd used dict end-tok => string
 ;; Process replacement text from the input port and generate a (reversed)
 ;; token-list.  If end-tok, stop at, and push back, @code{,} or @code{)}.
 ;; If end-tok is @code{,} then read until @code{,} or @code{(}.
 ;; The argument @var{argd} is a dictionary (argument name, argument
 ;; value) pairs which will be expanded as needed.  This routine is called
 ;; by collect-args, expand-cpp-repl and cpp-expand-text.
+;; @end deffn
 (define (scan-cpp-input argd dict used end-tok)
   ;; Works like this: scan for tokens (comments, parens, strings, char's, etc).
   ;; Tokens are collected in a (reverse ordered) list (tkl) and merged together
@@ -387,7 +395,7 @@
      (else
       (iter (cons ch tkl) lvl (read-char))))))
 
-;; @deffn collect-args argl argd dict used => argd
+;; @deffn {Procedure} collect-args argl argd dict used => argd
 ;; to be documented
 ;; I think argd is a passthrough for scan-cpp-input
 ;; argl: list of formal arguments in #define
@@ -396,6 +404,7 @@
 ;; used: list of already expanded macros
 ;; TODO clean this up
 ;; should be looking at #\( and eat up to matching #\)
+;; @end deffn
 (define (collect-args argl argd dict used)
   (let iter ((argl argl) (argv '()) (ch (skip-il-ws (read-char))))
     ;; ch should always be #\(, #\, or #\)
@@ -410,18 +419,20 @@
 	(iter (cdr argl) (acons (car argl) val argv) (read-char))))
      (else (error "coding error, ch=" ch)))))
 
-;; @deffn expand-cpp-repl
+;; @deffn {Procedure} expand-cpp-repl
 ;; to be documented
+;; @end deffn
 (define (expand-cpp-repl repl argd dict used)
   (with-input-from-string repl
     (lambda () (scan-cpp-input argd dict used #f))))
 
-;; @deffn cpp-expand-text text dict => string
+;; @deffn {Procedure} cpp-expand-text text dict => string
+;; @end deffn
 (define (cpp-expand-text text dict)
   (with-input-from-string text
     (lambda () (scan-cpp-input '() dict '() #f))))
 
-;; @deffn expand-cpp-macro-ref ident dict => repl|#f
+;; @deffn {Procedure} expand-cpp-macro-ref ident dict => repl|#f
 ;; Given an identifier seen in C99 input, this checks for associated
 ;; definition in @var{dict} (generated from CPP defines).  If found,
 ;; the expansion is returned as a string.  If @var{ident} refers
@@ -431,6 +442,7 @@
 ;; ("ABC" . "123")
 ;; ("MAX" ("X" "Y") . "((X)>(Y)?(X):(Y))")
 ;; @end example
+;; @end deffn
 (define (expand-cpp-macro-ref ident dict . rest)
   (let ((used (if (pair? rest) (car rest) '()))
 	(rval (assoc-ref dict ident)))

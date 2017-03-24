@@ -77,7 +77,8 @@
   ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
   (let ((rx1 (make-regexp "#define\\s+([A-Za-z0-9_]+\\([^)]*\\))\\s+(.*)"))
 	(rx2 (make-regexp "#define\\s+([A-Za-z0-9_]+)\\s+(.*)")))
-    (lambda* (args #:key (CC "gcc"))
+    (case-lambda*
+     ((args #:key (CC "gcc"))
       (map
        (lambda (l)
 	 ;; could use (string-delete #\space (match:substring m 1))
@@ -86,7 +87,8 @@
        (let ((ip (open-input-pipe (string-append CC " -dM -E - </dev/null"))))
 	 (let iter ((lines '()) (line (read-line ip 'trim)))
 	   (if (eof-object? line) lines
-	       (iter (cons line lines) (read-line ip 'trim)))))))))
+	       (iter (cons line lines) (read-line ip 'trim)))))))
+     ((#:key (CC "gcc")) (gen-gcc-defs '() #:CC CC)))))
 
 ;; @deffn {Procedure} remove-inc-trees tree
 ;; Remove the trees included with cpp-include statements.
