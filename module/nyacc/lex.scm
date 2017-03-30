@@ -85,7 +85,7 @@
 
 (define (lsr chl) (list->string (reverse chl))) ; used often
 
-;; @deffn eval-reader reader string => result
+;; @deffn {Procedure} eval-reader reader string => result
 ;; For test and debug, this procedure will evaluate a reader on a string.
 ;; A reader is a procedure that accepts a single character argument intended
 ;; to match a specific character sequence.  A reader will read more characters
@@ -93,12 +93,14 @@
 ;; will pushback all characters read via @code{read-char} and return @code{#f}.
 ;; If it succeeds the input pointer will be at the position following the
 ;; last matched character.
+;; @end deffn
 (define (eval-reader reader string)
   (with-input-from-string string
     (lambda () (reader (read-char)))))
 
-;; @deffn make-space-skipper chset => proc
+;; @deffn {Procedure} make-space-skipper chset => proc
 ;; This routine will generate a reader to skip whitespace.
+;; @end deffn
 (define (make-space-skipper chset)
   (lambda (ch)
     (if (char-set-contains? chset ch)
@@ -111,16 +113,18 @@
 	    #t)))
 	#f)))
 	 
-;; @deffn skip-c-space ch => #f|#t
+;; @deffn {Procedure} skip-c-space ch => #f|#t
 ;; If @code{ch} is space, skip all spaces, then return @code{#t}, else
 ;; return @code{#f}.
+;; @end deffn
 (define skip-c-space (make-space-skipper c:ws))
 
 
-;; @deffn make-ident-reader cs-first cs-rest => ch -> #f|string
+;; @deffn {Procedure} make-ident-reader cs-first cs-rest => ch -> #f|string
 ;; For identifiers, given the char-set for first character and the char-set
 ;; for following characters, return a return a reader for identifiers.
 ;; The reader takes a character as input and returns @code{#f} or @code{string}.
+;; @end deffn
 (define (make-ident-reader cs-first cs-rest)
   (lambda (ch)
     (if (char-set-contains? cs-first ch)
@@ -135,23 +139,26 @@
 		 (lsr chl))))
 	#f)))
 
-;; @deffn read-c-ident ch => #f|string
+;; @deffn {Procedure} read-c-ident ch => #f|string
 ;; If ident pointer at following char, else (if #f) ch still last-read.
+;; @end deffn
 (define read-c-ident (make-ident-reader c:if c:ir))
 
-;; @deffn make-ident-like-p ident-reader
+;; @deffn {Procedure} make-ident-like-p ident-reader
 ;; Generate a predicate, from a reader, that determines if a string qualifies
 ;; as an identifier.
+;; @end deffn
 (define (make-like-ident-p reader)
   (lambda (s) (and (string? s) (eval-reader reader s))))
 (define make-ident-like-p make-like-ident-p)
 (define like-c-ident? (make-like-ident-p read-c-ident))
 
 
-;; @deffn make-string-reader delim
+;; @deffn {Procedure} make-string-reader delim
 ;; Generate a reader that uses @code{delim} as delimiter for strings.
 ;; TODO: need to handle matlab-type strings.
 ;; TODO: need to handle multiple delim's (like python)
+;; @end deffn
 (define (make-string-reader delim) ;; #:xxx
   (lambda (ch)
     (if (eq? ch delim)
@@ -165,8 +172,9 @@
 		(else (iter (cons ch cl) (read-char)))))
 	#f)))
 
-;; @deffn read-oct ch => "0123"|#f
+;; @deffn {Procedure} read-oct ch => "0123"|#f
 ;; Read octal number.
+;; @end deffn
 (define read-oct
   (let ((cs:oct (string->char-set "01234567")))
     (lambda (ch)
@@ -180,8 +188,9 @@
 	  (unread-char ch)
 	  cv))))))
 
-;; @deffn read-hex ch => "0x7f"|#f
+;; @deffn {Procedure} read-hex ch => "0x7f"|#f
 ;; Read octal number.
+;; @end deffn
 (define read-hex
   (let ((cs:dig (string->char-set "0123456789"))
 	(cs:uhx (string->char-set "ABCDEF"))
@@ -200,9 +209,13 @@
 	  (iter (+ (* 16 cv) (- (char->integer ch) 87)) (read-char) (1+ n)))
 	 (else (unread-char ch) cv))))))
 	
-;; @deffn read-c-string ch => ($string . "foo")
+;; @deffn {Procedure} read-c-string ch => ($string . "foo")
 ;; Read a C-code string.  Output to code is @code{write} not @code{display}.
-;; Return #f if @var{ch} is not @code{"}.
+;; Return #f if @var{ch} is not @code{"}. @*
+;; TODO: parse trigraphs
+;; ??=->#, ??/->\, ??'->^, ??(->[, ??)->], ??~->|, ??<->{, ??>->}, ??-->~
+;; and digraphs <:->[, :>->], <%->{ %>->} %:->#
+;; @end deffn
 (define (read-c-string ch)
   (if (not (eq? ch #\")) #f
       (let iter ((cl '()) (ch (read-char)))
@@ -262,12 +275,13 @@
 
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
 
-;; @deffn make-num-reader => (proc ch) => #f|($fixed . "1")|($float . "1.0")
+;; @deffn {Procedure} make-num-reader => (proc ch) => #f|($fixed . "1")|($float . "1.0")
 ;; Reads C numbers.
 ;; This routine will clean by adding "0" before or after dot.
 ;; may want to replace "eEdD" w/ "e"
 ;; integer decimal(#t/#f) fraction exponent looking-at
 ;; i, f and e are lists of characters
+;; @end deffn
 (define (make-num-reader)
   ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
   ;; Removed support for leading '.' to be a number.
@@ -328,9 +342,10 @@
 	 (unless (eof-object? ch) (unread-char ch))
 	 (cons ty (lsr chl)))))))
 
-;; @deffn cnumstr->scm C99-str => scm-str
+;; @deffn {Procedure} cnumstr->scm C99-str => scm-str
 ;; Convert C number-string (e.g, @code{0x123LL}) to Scheme numbers-string
 ;; (e.g., @code{#x123}).
+;; @end deffn
 (define (cnumstr->scm str)
   (define (2- n) (1- (1- n)))
   (let* ((nd (string-length str)))
@@ -349,13 +364,15 @@
 		    (trim-rt 0)))
 	    (trim-rt 0)))))
   
-;; @deffn read-c-num ch => #f|string
+;; @deffn {Procedure} read-c-num ch => #f|string
 ;; Reader for unsigned numbers as used in C (or close to it).
+;; @end deffn
 (define read-c-num (make-num-reader))
 
-;;.@deffn si-map string-list ix => a-list
+;;.@deffn {Procedure} si-map string-list ix => a-list
 ;; Convert list of strings to alist of char at ix and strings.
 ;; This is a helper for make-tree.
+;; @end deffn
 (define (si-map string-list ix)
   (let iter ((sal '()) (sl string-list))
     (cond
@@ -370,12 +387,13 @@
       (iter (cons (cons (string-ref (car sl) ix) (list (car sl))) sal)
             (cdr sl))))))
 
-;;.@deffn make-tree strtab -> tree
+;;.@deffn {Procedure} make-tree strtab -> tree
 ;; This routine takes an alist of strings and symbols and makes a tree
 ;; that parses one char at a time and provide @code{'else} entry for
 ;; signaling sequence found.  That is, if @code{("ab" . 1)} is an entry
 ;; then a chseq-reader (see below) would stop at @code{"ab"} and
 ;; return @code{1}.
+;; @end deffn
 (define (make-tree strtab)
   (define (si-cnvt string-list ix)
     (map (lambda (pair)
@@ -385,9 +403,10 @@
 	 (si-map string-list ix)))
   (si-cnvt (map car strtab) 0))
 
-;; @deffn make-chseq-reader strtab
+;; @deffn {Procedure} make-chseq-reader strtab
 ;; Given alist of pairs (string, token) return a function that eats chars
 ;; until (token . string) is returned or @code{#f} if no match is found.
+;; @end deffn
 (define (make-chseq-reader strtab)
   ;; This code works on the assumption that the else-part is always last
   ;; in the list of transitions.
@@ -411,7 +430,7 @@
 	      (pushback (cdr cl))))
 	  #f))))))
 
-;; @deffn make-comm-reader comm-table [#:eat-newline #t] => \
+;; @deffn {Procedure} make-comm-reader comm-table [#:eat-newline #t] => \
 ;;   ch bol -> ('$code-comm "..")|('$lone-comm "..")|#f
 ;; comm-table is list of cons for (start . end) comment.
 ;; e.g. ("--" . "\n") ("/*" . "*/")
@@ -419,6 +438,7 @@
 ;; If @code{eat-newline} is specified as true then for read comments 
 ;; ending with a newline a newline swallowed with the comment.
 ;; Note: assumes backslash is never part of the end
+;; @end deffn
 (define* (make-comm-reader comm-table #:key (eat-newline #f))
 
   (define (mc-read-char)
@@ -470,19 +490,22 @@
 
 (define read-c-comm (make-comm-reader '(("/*" . "*/") ("//" . "\n"))))
 
-;; @deffn filter-mt p? al => al
+;; @deffn {Procedure} filter-mt p? al => al
 ;; Filter match-table based on cars of al.
+;; @end deffn
 (define (filter-mt p? al) (filter (lambda (x) (p? (car x))) al))
 
-;; @deffn remove-mt p? al => al
+;; @deffn {Procedure} remove-mt p? al => al
 ;; Remove match-table based on cars of al.
+;; @end deffn
 (define (remove-mt p? al) (remove (lambda (x) (p? (car x))) al))
 
-;; @deffn map-mt f al => al
+;; @deffn {Procedure} map-mt f al => al
 ;; Map cars of al.
+;; @end deffn
 (define (map-mt f al) (map (lambda (x) (cons (f (car x)) (cdr x))) al))
 
-;; @deffn make-lexer-generator match-table => lexer-generator
+;; @deffn {Procedure} make-lexer-generator match-table => lexer-generator
 ;; @example
 ;; (define gen-lexer (make-lexer-generator #:ident-reader my-id-rdr))
 ;; (with-input-from-file "foo" (parse (gen-lexer)))
@@ -503,6 +526,7 @@
 ;; @end enumerate
 ;; todo: add bol status
 ;; todo: maybe separate reading of keywords from identifiers: (keywd ch) =>
+;; @end deffn
 (define* (make-lexer-generator match-table
 			       #:key ident-reader num-reader
 			       string-reader chlit-reader

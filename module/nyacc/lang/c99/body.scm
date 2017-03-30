@@ -45,7 +45,7 @@
   )
 
 ;;.@deffn Procedure split-cppdef defstr => (<name> . <repl>)| \
-;;     ((<name>  <args> . <repl>)|#f
+;;     (<name>  <args> . <repl>)|#f
 ;; Convert define string to a dict item.  Examples:
 ;; @example
 ;; "ABC=123" => '("ABC" . "123")
@@ -295,19 +295,6 @@
 		(set-cpi-defs! info (append defs (cpi-defs info))))
 	      tyns))
 	  
-	  ;; Evaluate expression text in #if of #elif statement.
-	  (define (eval-cpp-cond-text text)
-	    (with-throw-handler
-	     'cpp-error
-	     (lambda ()
-	       (let* ((defs (cpi-defs info))
-		      (rhs (cpp-expand-text text defs))
-		      (exp (parse-cpp-expr rhs)))
-		 (eval-cpp-expr exp defs)))
-	     (lambda (key fmt . args)
-	       (report-error fmt args)
-	       (throw 'c99-error "CPP error"))))
-
 	  (define (inc-stmt->file stmt)
 	    (let* ((arg (cadr stmt)) (len (string-length arg)))
 	      (substring arg 1 (1- len))))
@@ -316,11 +303,17 @@
 	    (find-file-in-dirl file (cpi-incs info)))
 
 	  (define (code-if stmt)
+	    ;;(simple-format #t "code-if: ppxs=~S\n" ppxs)
 	    (case (car ppxs)
 	      ((skip-look skip-done skip) ;; don't eval if excluded
+	       ;;(simple-format #t "code-if: SKIP\n")
 	       (set! ppxs (cons 'skip ppxs)))
 	      (else
-	       (let ((val (eval-cpp-cond-text (cadr stmt))))
+	       ;;(simple-format #t "code-if: KEEP\n")
+	       ;;(simple-format #t "  text=~S\n" (cadr stmt))
+	       ;;(simple-format #t "  defs=~S\n" (cpi-defs info))
+	       (let* ((defs (cpi-defs info))
+		      (val (eval-cpp-cond-text (cadr stmt) defs)))
 		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
 		 (if (eq? 'keep (car ppxs))
 		     (if (zero? val)
@@ -333,7 +326,8 @@
 	    (case (car ppxs)
 	      ((skip) #t) ;; don't eval if excluded
 	      (else
-	       (let ((val (eval-cpp-cond-text (cadr stmt))))
+	       (let* ((defs (cpi-defs info))
+		      (val (eval-cpp-cond-text (cadr stmt) defs)))
 		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
 		 (case (car ppxs)
 		   ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))

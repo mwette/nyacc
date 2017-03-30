@@ -45,7 +45,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 This is a manual for ...
 
-@subsubsection CPP if-then-else Logic Block (ITLB) Processing
+@subsubsection CPP If-Then-Else Logic Block (ITLB) Processing
 The parser needs to have a "CPI" (CPP processing info) stack to deal with
 types (re)defined in multiple branches of a #if...#endif statement chain.
 If we are in "code" mode then we may be skipping code so need to track
@@ -89,6 +89,12 @@ on @code{#elif} we shift (i.e., pop, then push) and on @code{#endif} we pop.
  (elif-list "elif" cond code))
 @end example
 @noindent
+
+@subsubsection CPP Macro Expansion
+
+Within C code the lexer will call @code{expand-cpp-macro-ref}.
+
+And the if/then processing will call @code{expand-cpp-cond-text}.
 
 @section Thoughts
 
