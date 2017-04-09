@@ -53,6 +53,17 @@
    ((string=? str "__TIME__") "00:00:00")
    (else #f)))
 
+(define inline-whitespace (list->char-set '(#\space #\tab)))
+  
+;;.@deffn {Procedure} skip-il-ws ch
+;; Skip in-line whitespace
+;; @end deffn
+(define (skip-il-ws ch)
+  (cond
+   ((eof-object? ch) ch)
+   ((char-set-contains? inline-whitespace ch) (skip-il-ws (read-char)))
+   (else ch)))
+
 ;; @deffn {Procedure} read-ellipsis ch
 ;; read ellipsis
 ;; @end deffn
@@ -147,17 +158,6 @@
 
 (define (cpp-err fmt . args)
   (apply throw 'cpp-error fmt args))
-
-;;.@deffn {Procedure} skip-il-ws ch
-;; Skip in-line whitespace
-;; @end deffn
-(define skip-il-ws
-  (let ((il-ws (list->char-set '(#\space #\tab))))
-    (lambda (ch)
-      (cond
-       ((eof-object? ch) ch)
-       ((char-set-contains? il-ws ch) (skip-il-ws (read-char)))
-       (else ch)))))
 
 ;; Since we want to be able to get CPP statements with comment in tact
 ;; (e.g., for passing to @code{pretty-print-c99}) we need to remove
@@ -257,8 +257,6 @@
      (nxt
       (iter (cons nxt (add-chl chl stl)) '() #f tkl))
      ((null? tkl)
-      (simple-format #t "rtokl->string ~S => ~S\n" tokl
-		     (apply string-append (add-chl chl stl)))
       (apply string-append (add-chl chl stl)))
      ((char? (car tkl))
       (iter stl (cons (car tkl) chl) nxt (cdr tkl)))
@@ -323,16 +321,17 @@
   (define (finish rr tkl)
     (let* ((tkl (if end-tok (trim-spaces tkl) tkl))
 	   (repl (rtokl->string tkl)))
+      ;;(if (null? rr) (simple-format #t "finish ~S\n" tkl))
       (if (pair? rr)
 	  (expand-cpp-repl repl defs (append rr used)) ;; re-run
 	  repl)))
      
-  ;;(simple-format #t "\nscan-cpp-input defs=~S\n" defs)
+  ;;(simple-format #t "scan-cpp-input end-tok=~S\n" end-tok)
   (let iter ((rr '())			; list symbols resolved
 	     (tkl '())			; token list of
 	     (lv 0)			; level
 	     (ch (skip-il-ws (read-char)))) ; next character
-    ;;(simple-format #t "tkl=~S ch=~S\n" tkl ch)
+    ;;(unless end-tok (simple-format #t "tkl=~S ch=~S\n" tkl ch))
     (cond
      ((eof-object? ch) (finish rr tkl))
      ((and (eqv? end-tok ch) (zero? lv))
@@ -358,27 +357,33 @@
       (iter rr (cons ch tkl) lv (read-char))))))
 
 ;; @deffn {Procedure} collect-args arglargd defs used => argd
-;; Collect arguments to a macro which appears in C code. If not looking at
+;; Collect arguments to a macro which appears in C code.  If not looking at
 ;; @code{(} return @code{#f}, else scan and eat up to closing @code{)}.
+;; If multiple whitespace characters are skipped at the front then only
+;; one @code{#\space} is re-inserted.
 ;; @end deffn
 (define (collect-args argl defs used)
-  (let ((ch (read-char)))
+  (let iter1 ((sp #f) (ch (read-char)))
     (cond
-     ((eof-object? ch) #f)
-     ((char=? #\()
-      (let iter ((argl argl) (argv '()) (ch ch))
+     ((eof-object? ch) (if sp (unread-char #\space)) #f)
+     ((char-set-contains? inline-whitespace ch) (iter1 #t (read-char)))
+     ((char=? #\( ch)
+      (simple-format #t "COLLECT\n")
+      (let iter2 ((argl argl) (argv '()) (ch ch))
+	(simple-format #t "collect-args ch=~S\n" ch)
 	(cond
 	 ((eqv? ch #\)) (reverse argv))
 	 ((null? argl) (cpp-err "arg count"))
 	 ((and (null? (cdr argl)) (string=? (car argl) "..."))
 	  (let ((val (scan-cpp-input defs used #\))))
-	    (iter (cdr argl) (acons "__VA_ARGS__" val argv) (read-char))))
+	    (iter2 (cdr argl) (acons "__VA_ARGS__" val argv) (read-char))))
 	 ((or (char=? ch #\() (char=? ch #\,))
-	  (simple-format #t "collect-args ch=~S\n" ch)
+	  ;;(simple-format #t "collect-args ch=~S\n" ch)
 	  (let* ((val (scan-cpp-input defs used #\,)))
-	    (iter (cdr argl) (acons (car argl) val argv) (read-char))))
-	 (else (error "cpp.scm, collect-args: coding error")))))
-     (else (unread-char ch) #f))))
+	    (iter2 (cdr argl) (acons (car argl) val argv) (read-char))))
+	 (else
+	  (error "cpp.scm, collect-args: coding error")))))
+     (else (if sp (unread-char #\space)) #f))))
 
 ;; @deffn {Procedure} px-cpp-ftn-repl argd repl => string
 ;; pre-expand CPP function where @var{argd} is an a-list of arg name
@@ -389,17 +394,18 @@
 ;; ident space fixed float chseq hash dhash arg
 ;; need to decide if we should use `(space ,tkl) or `((space) ,tkl)
 ;; This should replace args and execute hash and double-hash ??
-;; NOT USED
 ;; @end deffn
 (define (px-cpp-ftn argd repl)
   (with-input-from-string repl
-    (lambda () (px-cpp-ftn-1 argd))))
+    (lambda ()
+      ;;(simple-format #t "px-cpp-ftn argd=~S repl=~S\n" argd repl)
+      (px-cpp-ftn-1 argd))))
 
 (define (px-cpp-ftn-1 argd)
 
   ;; Turn reverse chl into a string and insert it into the token stream.
   (define (ins-chl chl stl)
-    (if (null? chl) stl (acons 'chseq (list->string (reverse chl)) stl)))
+    (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
 
   (define (rem-space chl)
     (let iter ((chl chl))
@@ -408,14 +414,14 @@
        ((char-set-contains? c:ws (car chl)) (iter (cdr chl)))
        (else chl))))
 
-  (simple-format #t "px-cpp-ftn argd=~S repl=~S\n" argd repl)
   (let iter ((stl '())			; string list
 	     (chl '())			; character list
 	     (nxt #f)			; next string after char list
 	     (ch (read-char)))		; next character
     (cond
      (nxt (iter (cons nxt (ins-chl chl stl)) '() #f ch))
-     ((eof-object? ch) (apply string-append (reverse stl)))
+     ((eof-object? ch)
+      (apply string-append (reverse (ins-chl chl stl))))
      ((char-set-contains? c:ws ch)
       (iter stl (cons #\space chl) nxt (skip-il-ws (read-char))))
      ((read-c-comm ch #f) (iter stl (cons #\space chl) nxt (read-char)))
@@ -431,9 +437,9 @@
 	(if (eqv? ch #\#)
 	    (iter stl (rem-space chl) nxt (skip-il-ws (read-char)))
 	    (let* ((aref (read-c-ident (skip-il-ws (read-char))))
-		   (phony (if (not aref) (cpp-err "expecting arg-ref")))
 		   (aval (assoc-ref argd aref)))
-	      (if (not aref) (cpp-err "expecting arg-val"))
+	      (if (not aref) (cpp-err "expecting arg-ref"))
+	      (if (not aval) (cpp-err "expecting arg-val"))
 	      (iter stl chl (string-append "\"" aval "\"") (read-char))))))
      (else (iter stl (cons ch chl) nxt (read-char))))))
   
@@ -442,7 +448,7 @@
 ;; Identifiers in the list of strings @var{used} will not be expanded.
 ;; @end deffn
 (define* (cpp-expand-text text defs #:optional (used '()))
-  (simple-format #t "cpp-expand-text ~S\n" text)
+  ;;(simple-format #t "cpp-expand-text ~S\n" text)
   (with-input-from-string text
     (lambda () (scan-cpp-input defs used #f))))
 
@@ -450,7 +456,7 @@
 ;; to be documented
 ;; @end deffn
 (define (expand-cpp-repl text defs used)
-  (simple-format #t "expand-cpp-repl ~S\n" text)
+  ;;(simple-format #t "expand-cpp-repl ~S\n" text)
   (with-input-from-string text
     (lambda () (scan-cpp-input defs used #f))))
 
@@ -488,12 +494,10 @@
      ((member ident used) #f)
      ((string? rval) (expand-cpp-repl rval defs (cons ident used)))
      ((pair? rval)
-      (let* ((argd (collect-args (car rval) defs used)))
-	(if argd
-	    (let ((repl (px-cpp-ftn argd (cdr rval))))
-	      (simple-format #t "ex-mac-ref repl=~S\n" repl)
-	      (expand-cpp-repl repl defs (cons ident used)))
-	    ident)))
+      (and=> (collect-args (car rval) defs used)
+	     (lambda (argd)
+	       (expand-cpp-repl (px-cpp-ftn argd (cdr rval))
+				defs (cons ident used)))))
      ((c99-std-val ident) => identity)
      (else #f))))
 
