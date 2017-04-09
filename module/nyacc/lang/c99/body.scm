@@ -465,6 +465,7 @@
 		     ((and (x-def? name mode)
 			   (expand-cpp-macro-ref name (cpi-defs info)))
 		      => (lambda (st)
+			   (simple-format #t "repl=~S\n" st)
 			   (push-input (open-input-string st))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)

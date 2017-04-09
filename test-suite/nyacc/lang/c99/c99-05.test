@@ -58,7 +58,21 @@
      `(("'\\0'" . "'\\0'") ("'\\a'" . "'\\a'") ("'\\b'" . "'\\b'")
        ("'\\t'" . "'\\t'") ("'\\n'" . "'\\n'") ("'\\v'" . "'\\v'")
        ("'\\f'" . "'\\f'"))))
-  
+
+  ;; expected tranformations
+  (pass-if "expression protection"
+    (let ((red (lambda (in)
+		 (let* ((tree (xparse-string in))
+			(out (pretty-print-c99 tree)))
+		   (string-delete #\space out)))))
+      (fold
+       (lambda (pair status)
+	 (and status (string=? (red (car pair)) (cdr pair))))
+       #t
+       '(("(a*b)+c" . "a*b+c")
+	 ("a+=(b|=c)" . "a+=b|=c")
+	 ("(a-b)+c" . "a-b+c")
+	 ("*(p->q)" . "*p->q")))))
   )
 
 ;; --- last line ---

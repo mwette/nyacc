@@ -142,6 +142,13 @@
       #f))
 
 
+  ;;#define X 1
+  ;;#define Y 2
+  ;;#define Z 3
+  ;;#define XYZ 123
+  ;;#define JOIN(A,B) A ## B
+  ;;int x = JOIN(X,JOIN(Y,Z));
+  ;; => int x = XJOIN(2,3);
 
   )
 
