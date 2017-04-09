@@ -368,9 +368,7 @@
      ((eof-object? ch) (if sp (unread-char #\space)) #f)
      ((char-set-contains? inline-whitespace ch) (iter1 #t (read-char)))
      ((char=? #\( ch)
-      (simple-format #t "COLLECT\n")
       (let iter2 ((argl argl) (argv '()) (ch ch))
-	(simple-format #t "collect-args ch=~S\n" ch)
 	(cond
 	 ((eqv? ch #\)) (reverse argv))
 	 ((null? argl) (cpp-err "arg count"))
@@ -378,7 +376,6 @@
 	  (let ((val (scan-cpp-input defs used #\))))
 	    (iter2 (cdr argl) (acons "__VA_ARGS__" val argv) (read-char))))
 	 ((or (char=? ch #\() (char=? ch #\,))
-	  ;;(simple-format #t "collect-args ch=~S\n" ch)
 	  (let* ((val (scan-cpp-input defs used #\,)))
 	    (iter2 (cdr argl) (acons (car argl) val argv) (read-char))))
 	 (else
@@ -436,7 +433,7 @@
       (let ((ch (read-char)))
 	(if (eqv? ch #\#)
 	    (iter stl (rem-space chl) nxt (skip-il-ws (read-char)))
-	    (let* ((aref (read-c-ident (skip-il-ws (read-char))))
+	    (let* ((aref (read-c-ident (skip-il-ws ch)))
 		   (aval (assoc-ref argd aref)))
 	      (if (not aref) (cpp-err "expecting arg-ref"))
 	      (if (not aval) (cpp-err "expecting arg-val"))
@@ -456,11 +453,11 @@
 ;; to be documented
 ;; @end deffn
 (define (expand-cpp-repl text defs used)
-  ;;(simple-format #t "expand-cpp-repl ~S\n" text)
+  ;;(simple-format #t "expand-cpp-repl text=~S used=~S\n" text used)
   (with-input-from-string text
     (lambda () (scan-cpp-input defs used #f))))
 
-;; --- exports 
+;; === exports =======================
 
 ;; @deffn {Procedure} eval-cpp-cond-text text defs => string
 ;; Evaluate CPP condition expression (text).

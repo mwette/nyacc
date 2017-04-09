@@ -29,6 +29,9 @@
     (lambda ()
       (parse-c99 #:inc-dirs incs #:mode 'code))))
 
+(define (parse-string-list . str-l)
+  (parse-string (apply string-append str-l)))
+   
 ;; parser test
 (with-test-prefix "nyacc/c99-01, CPP"
 
@@ -87,7 +90,7 @@
 		     (fctn-call
 		      (p-expr (ident "bar"))
 		      (expr-list
-                       (p-expr (ident "__FILE__"))
+                       (p-expr (fixed "0"))
                        (p-expr (fixed "1"))
                        (p-expr (fixed "2"))
                        (p-expr (fixed "3"))
@@ -112,44 +115,71 @@
       (equal? sx1 sx2)))
 
   (pass-if "def-def-ref"
-    (let ((s (string-append "#define A 123\n"
-			    "#define B A\n"
-			    "#if B > 0\n"
-			    "int x;\n"
-			    "#else\n"
-			    "char x;\n"
-			    "#endif\n")))
-      (and (parse-string s) #t)))
+    (equal?
+     (parse-string-list
+      "#define A 123\n"
+      "#define B A\n"
+      "#if B > 0\n"
+      "int x;\n"
+      "#else\n"
+      "char x;\n"
+      "#endif\n")
+     '(trans-unit
+       (decl (decl-spec-list (type-spec (fixed-type "int")))
+	     (init-declr-list (init-declr (ident "x")))))))
 
-  #;(pass-if "comments and white space"
-    (let* ((s (string-append
-	      "#define JOIN(X,Y) X /* junk */ ## /* junk */ Y\n"
-	      "int JOIN(foo,bar);\n"))
-	   (sx (parse-string s))
-	   )
-      #f))
+  (pass-if "repeat in arg"
+    (equal?
+     (parse-string-list
+      "#define bar(x,y) foo(x,y)\n"
+      "#define foo(x,y) bar(x,y)\n"
+      "#define FOO(x,y) foo(x,y)\n"
+      "int x = FOO(FOO(1,2),3);\n")
+     '(trans-unit
+       (decl (decl-spec-list (type-spec (fixed-type "int")))
+	     (init-declr-list
+	      (init-declr
+	       (ident "x")
+	       (initzer
+		(fctn-call
+		 (p-expr (ident "foo"))
+		 (expr-list
+                  (fctn-call
+		   (p-expr (ident "foo"))
+		   (expr-list
+		    (p-expr (fixed "1"))
+		    (p-expr (fixed "2"))))
+                  (p-expr (fixed "3")))))))))))
 
+  (pass-if "multiple"
+    (and
+     
+     (equal?
+      (parse-string "#define inc(X) X++ + 1\nint x = inc(a);")
+      '(trans-unit
+       (decl (decl-spec-list (type-spec (fixed-type "int")))
+	     (init-declr-list
+	      (init-declr
+	       (ident "x")
+	       (initzer
+		(add (post-inc (p-expr (ident "a")))
+		     (p-expr (fixed "1")))))))))
 
-  #;(pass-if "comments and white space"
-    (let* ((s (string-append
-	      "#define X 1\n"
-	      "#define Y 2\n"
-	      "#define XY 3\n"
-	      "#define JOIN(X,Y) X ## Y\n"
-	      "int x = JOIN(X,Y);\n"))
-	   (sx (parse-string s))
-	   )
-      #f))
+     (equal?
+      (parse-string "#define sqrt(X) sqrt(X)\ndouble x = sqrt(2.0);\n")
+      '(trans-unit
+	(decl (decl-spec-list
+	       (type-spec (float-type "double")))
+	      (init-declr-list
+	       (init-declr
+		(ident "x")
+		(initzer
+		 (fctn-call
+		  (p-expr (ident "sqrt"))
+		  (expr-list (p-expr (float "2.0"))))))))))
 
+     #t))
 
-  ;;#define X 1
-  ;;#define Y 2
-  ;;#define Z 3
-  ;;#define XYZ 123
-  ;;#define JOIN(A,B) A ## B
-  ;;int x = JOIN(X,JOIN(Y,Z));
-  ;; => int x = XJOIN(2,3);
-
-  )
+)
 
 ;; --- last line ---

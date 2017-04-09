@@ -1,5 +1,5 @@
 #define foo1( X , Y ) ((X)*(Y))
-#define foo(A,B,...)  foo1(A,B)+bar(__FILE__, A, B, __VA_ARGS__)
+#define foo(A,B,...)  foo1(A,B)+bar(0, A, B, __VA_ARGS__)
 int x = foo(1, 2, 3, 4, foo1(2,3));
 
 #define fix1(x) #x

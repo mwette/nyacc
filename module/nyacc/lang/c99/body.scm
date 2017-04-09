@@ -270,6 +270,7 @@
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
     (lambda* (#:key (mode 'code) (xdef? #f))
       (let ((bol #t)		      ; begin-of-line condition
+	    (xtxt #f)		      ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	      ; CPP execution state stack
 	    (info (fluid-ref *info*)) ; assume make and run in same thread
 	    (x-def? (or xdef? def-xdef?)))
@@ -444,6 +445,7 @@
 	    (let iter ((ch (read-char)))
 	      (cond
 	       ((eof-object? ch)
+		(set! xtxt #f)
 		(if (pop-input) (iter (read-char)) (assc-$ '($end . ""))))
 	       ((eq? ch #\newline) (set! bol #t) (iter (read-char)))
 	       ((char-set-contains? c:ws ch) (iter (read-char)))
@@ -462,10 +464,12 @@
 		(lambda (name)
 		  (let ((symb (string->symbol name)))
 		    (cond
-		     ((and (x-def? name mode)
+		     ((and (not xtxt)
+			   (x-def? name mode)
 			   (expand-cpp-macro-ref name (cpi-defs info)))
 		      => (lambda (st)
-			   (simple-format #t "repl=~S\n" st)
+			   ;;(simple-format #t "repl=~S\n" st)
+			   (set! xtxt #t) ; so we don't re-expand
 			   (push-input (open-input-string st))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
