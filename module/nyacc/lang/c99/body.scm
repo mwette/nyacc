@@ -30,6 +30,7 @@
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules ((sxml xpath) #:select (sxpath)))
 (use-modules (ice-9 regex))
+(use-modules (ice-9 pretty-print)) ;; for debugging
 
 (define-record-type cpi
   (make-cpi-1)
@@ -63,7 +64,7 @@
 	    (let* ((s1 (match:substring m1 1))
 		   (s2 (match:substring m1 2))
 		   (s3 (match:substring m1 3)))
-	      (cons* s1 s2 s3))))
+	      (cons* s1 (string-split s2 #\,) s3))))
 	 ((regexp-exec rx2 defstr) =>
 	  (lambda (m2)
 	    (let* ((s1 (match:substring m2 1))
@@ -93,7 +94,7 @@
     (set-cpi-incs! cpi incdirs)		; list of include dir's
     (set-cpi-ptl! cpi '())		; list of lists of typenames
     (set-cpi-ctl! cpi '())		; list of typenames
-    ;; itynd idefd:
+    ;; Break up the helpers into typenames and defines.
     (let iter ((itynd '()) (idefd '()) (helpers inchelp))
       (cond ((null? helpers)
 	     (set-cpi-itynd! cpi itynd)
@@ -103,6 +104,12 @@
 		 (lambda () (split-helper (car helpers)))
 	       (lambda (ityns idefs)
 		 (iter (cons ityns itynd) (cons idefs idefd) (cdr helpers)))))))
+    ;; Assign builtins.
+    (and=> (assoc-ref (cpi-itynd cpi) "__builtin")
+	   (lambda (tl) (set-cpi-ctl! cpi (append tl (cpi-ctl cpi)))))
+    (and=> (assoc-ref (cpi-idefd cpi) "__builtin")
+	   (lambda (tl) (set-cpi-defs! cpi (append tl (cpi-defs cpi)))))
+    ;; Return the populated info.
     cpi))
 
 (define *info* (make-fluid #f))
@@ -291,6 +298,8 @@
 	  (define (apply-helper file)
 	    (let* ((tyns (assoc-ref (cpi-itynd info) file))
 		   (defs (assoc-ref (cpi-idefd info) file)))
+	      ;;(simple-format #t "apply-helper ~S => ~S\n" file tyns)	 
+	      ;;(simple-format #t "  itynd= ~S\n" (cpi-itynd info))
 	      (when tyns
 		(for-each add-typename tyns)
 		(set-cpi-defs! info (append defs (cpi-defs info))))
@@ -350,9 +359,11 @@
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
 	      (cond
-	       ((apply-helper file)) ; use helper
+	       ((apply-helper file))
 	       ((not path) (p-err "not found: ~S" file)) ; file not found
-	       (else (set! bol #t) (push-input (open-input-file path))))
+	       (else
+		(simple-format #t "\ninclude ~S\n\n" path)
+		(set! bol #t) (push-input (open-input-file path))))
 	      stmt))
 
 	  (define (eval-cpp-incl/tree stmt) ;; => stmt
@@ -364,7 +375,12 @@
 	       ((not path) (p-err "not found: ~S" file)) ; file not found
 	       ((with-input-from-file path run-parse) => ; add tree to stmt
 		(lambda (tree)
+		  (simple-format #t "run-parse on ~S\n" path)
+		  (if (string=? path "/usr/include/sys/_types.h")
+		      (set-cpi-debug! info #t)
+		      (set-cpi-debug! info #f))
 		  ;;(pretty-print tree (current-error-port))
+		  ;;(pretty-print (xp1 tree))
 		  (for-each add-define (xp1 tree))
 		  (append stmt tree))))))
 
@@ -438,7 +454,9 @@
 	      ((file) #t)
 	      (else ;; decl
 	       (case (car stmt)
-		 ((include define) #t)
+		 ;;((include define) #t)
+		 ;; why did I add define?
+		 ((include) #t)
 		 (else #f)))))
 
 	  (define (read-token)
@@ -456,6 +474,12 @@
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
 		    (let ((stmt (eval-cpp-stmt stmt))) ; eval can add tree
+		      (if (and #f
+			   (pair? (cadr stmt))
+			   (pair? (cdadr stmt))
+			   (string=? (cadadr stmt) "CLOCK_REALTIME"))
+			  (simple-format #t "~S\npass? ~S\nmode ~S\n"
+					 stmt (pass-cpp-stmt? stmt) mode))
 		      (if (pass-cpp-stmt? stmt)
 			  (assc-$ `(cpp-stmt . ,stmt))
 			  (iter (read-char))))))
@@ -463,6 +487,7 @@
 	       ((read-ident ch) =>
 		(lambda (name)
 		  (let ((symb (string->symbol name)))
+		    ;;(simple-format #t "id: name=~S xtxt=~S\n" name xtxt)
 		    (cond
 		     ((and (not xtxt)
 			   (x-def? name mode)

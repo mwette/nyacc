@@ -650,7 +650,8 @@
     ;; non-terminal leaves
     (identifier
      ($ident ($$ `(ident ,$1)))
-     ('cpp-ident ($$ `(ident ,$1))))
+     ('cpp-ident ($$ `(ident ,$1)))
+     )
     (constant
      ($fixed ($$ `(fixed ,$1)))		; integer-constant
      ($float ($$ `(float ,$1)))		; floating-constant
@@ -731,8 +732,9 @@
 			    (xtra-dir "c99act.scm")))
 	(b (move-if-changed (xtra-dir "c99tab.scm.new")
 			    (xtra-dir "c99tab.scm"))))
-    (when (or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm"))))))
+    #;(when (or a b) 
+    (system (string-append "touch " (lang-dir "parser.scm"))))
+    (or a b)))
 
 ;; @deffn {Procedure} gen-c99x-files [dir] => #t
 ;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.
@@ -759,6 +761,7 @@
     (when (or a b) 
       (system (string-append "touch " (lang-dir "parser.scm")))
       #;(compile-file (lang-dir "xparser.scm"))
-      )))
+      )
+    (or a b)))
 
 ;; --- last line ---

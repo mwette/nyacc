@@ -124,6 +124,7 @@
 ;; For identifiers, given the char-set for first character and the char-set
 ;; for following characters, return a return a reader for identifiers.
 ;; The reader takes a character as input and returns @code{#f} or @code{string}.
+;; This will generate exception on @code{#<eof>}.
 ;; @end deffn
 (define (make-ident-reader cs-first cs-rest)
   (lambda (ch)
@@ -441,7 +442,7 @@
 ;; @end deffn
 (define* (make-comm-reader comm-table #:key (eat-newline #f))
 
-  (define (mc-read-char)
+  (define (mc-read-char) ;; CHECK THIS
     (let ((ch (read-char)))
       (if (eqv? ch #\\)
 	  (let ((ch (read-char)))
@@ -471,6 +472,8 @@
 	    ;; cl: comm char list; sl: shift list; il: input list;
 	    ;; ps: pattern string; px: pattern index
 	    (lambda (cl sl il ps px)
+	      (simple-format #t "find-end: cl=~S sl=~S il=~S ps=~S px=~S\n"
+			     cl sl il ps px)
 	      (cond
 	       ((eq? px (string-length ps))
 		(if (and (not eat-newline) (eq? #\newline (car sl)))
@@ -479,13 +482,16 @@
 		    (cons tval (lsr (cdr cl)))
 		    (cons tval (lsr cl))))
 	       ((null? il) (find-end cl sl (cons (mc-read-char) il) ps px))
-	       ((eof-object? (car il)) (error "open comment"))
+	       ;;((eof-object? (car il)) (error "open comment" cl))
+	       ((eof-object? (car il))
+		(if (char=? (string-ref ps px) #\newline) (lsr cl)
+		    (throw 'nyacc-error "open comment")))
 	       ((eqv? (car il) (string-ref ps px))
 		(find-end cl (cons (car il) sl) (cdr il) ps (1+ px)))
 	       (else
 		(let ((il1 (append-reverse sl il)))
 		  (find-end (cons (car il1) cl) '() (cdr il1) ps 0)))))))
-	(let ((ep (match-beg (list ch) tree)))
+	(let ((ep (match-beg (list ch) tree))) ;; ep == end pattern?
 	  (if ep (find-end '() '() (list (mc-read-char)) ep 0) #f))))))
 
 (define read-c-comm (make-comm-reader '(("/*" . "*/") ("//" . "\n"))))

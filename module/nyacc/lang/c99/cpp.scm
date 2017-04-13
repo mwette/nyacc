@@ -411,10 +411,13 @@
        ((char-set-contains? c:ws (car chl)) (iter (cdr chl)))
        (else chl))))
 
+  (define (mk-string str) (string-append "\"" str "\""))
+
   (let iter ((stl '())			; string list
 	     (chl '())			; character list
 	     (nxt #f)			; next string after char list
 	     (ch (read-char)))		; next character
+    ;;(simple-format #t "px-1: stl=~S chl=~S nxt=~S ch=~S\n" stl chl nxt ch)
     (cond
      (nxt (iter (cons nxt (ins-chl chl stl)) '() #f ch))
      ((eof-object? ch)
@@ -423,7 +426,7 @@
       (iter stl (cons #\space chl) nxt (skip-il-ws (read-char))))
      ((read-c-comm ch #f) (iter stl (cons #\space chl) nxt (read-char)))
      ((read-c-string ch) =>
-      (lambda (st) (iter stl (cons #\" chl) (cdr st) #\")))
+      (lambda (st) (iter stl chl (mk-string (cdr st)) (read-char))))
      ((char=? #\( ch) (iter stl (cons ch chl) nxt (read-char)))
      ((char=? #\) ch) (iter stl (cons ch chl) nxt (read-char)))
      ((read-c-ident ch) =>		; replace if aval
@@ -437,7 +440,7 @@
 		   (aval (assoc-ref argd aref)))
 	      (if (not aref) (cpp-err "expecting arg-ref"))
 	      (if (not aval) (cpp-err "expecting arg-val"))
-	      (iter stl chl (string-append "\"" aval "\"") (read-char))))))
+	      (iter stl chl (mk-string aval) (read-char))))))
      (else (iter stl (cons ch chl) nxt (read-char))))))
   
 ;; @deffn {Procedure} cpp-expand-text text defs [used] => string
@@ -491,6 +494,7 @@
      ((member ident used) #f)
      ((string? rval) (expand-cpp-repl rval defs (cons ident used)))
      ((pair? rval)
+      ;;(simple-format #t "rval = ~S\n" rval)
       (and=> (collect-args (car rval) defs used)
 	     (lambda (argd)
 	       (expand-cpp-repl (px-cpp-ftn argd (cdr rval))

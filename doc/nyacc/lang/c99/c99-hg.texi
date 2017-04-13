@@ -125,6 +125,14 @@ Options:
 Use a special token for ``could be anything'' in the inc-helpers:
 @code{C99_ANY}.
 
+Note: @code{xtxt} in the lexer is used to denote if text has already been
+macro expanded.  This is a bit of a kludge.  Alternatives, are
+@enumerate
+@item keep as is
+@item macro expander returns token list (yuck)
+@end enumerate
+
+
 Controls:
 @itemize
 @item tddict: enable includes to be skipped, w/ added typedefs
