@@ -1,6 +1,6 @@
 ;; ./mach.d/cppact.scm
 
-;; 
+;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 ;; or any later version published by the Free Software Foundation.  See
@@ -93,6 +93,8 @@
    (lambda ($2 $1 . $rest) `(post-inc ,$1))
    ;; postfix-expression => postfix-expression "--"
    (lambda ($2 $1 . $rest) `(post-dec ,$1))
+   ;; primary-expression => '$ident
+   (lambda ($1 . $rest) `(ident ,$1))
    ;; primary-expression => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
    ;; primary-expression => '$chlit

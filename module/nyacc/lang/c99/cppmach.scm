@@ -32,7 +32,8 @@
 
 (define cpp-spec
   (lalr-spec
-   (notice lang-crn-lic)
+   (notice (string-append "Copyright (C) 2016,2017 Matthew R. Wette"
+			  lang-crn-lic))
    (expect 0)
    (start conditional-expression)
    (grammar
@@ -94,9 +95,9 @@
      (postfix-expression "++" ($$ `(post-inc ,$1)))
      (postfix-expression "--" ($$ `(post-dec ,$1))))
     (primary-expression
-     ;;($ident ($$ `(ident ,$1)))
+     ($ident ($$ `(ident ,$1)))
      ($fixed ($$ `(fixed ,$1)))	; integer-constant
-     ($chlit ($$ `(char ,$1)))		; char-constant
+     ($chlit ($$ `(char ,$1)))	; char-constant
      ("defined" "(" $ident ")" ($$ `(defined ,$3)))
      ("(" expression-list ")" ($$ $2)))
     (expression-list
@@ -135,8 +136,6 @@
 	(b (move-if-changed (xtra-dir "cpptab.scm.new")
 			    (xtra-dir "cpptab.scm"))))
     (when (or a b) 
-      (system (string-append "touch " (lang-dir "cpp.scm")))
-      #;(compile-file (lang-dir "cpp.scm"))
-      )))
+      (system (string-append "touch " (lang-dir "cpp.scm"))))))
 
 ;; --- last line ---

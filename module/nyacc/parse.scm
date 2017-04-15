@@ -20,9 +20,7 @@
 ;; e.g., if comment not in latok, just throw away
 
 (define-module (nyacc parse)
-  #:export (make-lalr-parser
-	    make-lalr-ia-parser
-	    )
+  #:export (make-lalr-parser make-lalr-ia-parser)
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   )
@@ -115,12 +113,9 @@
 	   (else ;; other action: skip, error, or accept
 	    (case oact
 	      ((skip) (iter state stack nval (lexr)))
-	      ((error)
-	       (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		     (ln (1+ (port-line (current-input-port)))))
-		 (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
-			 fn ln (car state) sval)
-		 #f))
+	      ((error) (throw 'nyacc-error
+			      "parse failed at state ~A, on input ~S"
+			      (car state) sval))
 	      (else ;; accept
 	       (car stack))))))))))
 

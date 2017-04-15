@@ -243,7 +243,7 @@
 		    (if (not (null? l))
 			(let ((ix (hashq-ref ht (car l))))
 			  (unless (vector-ref tv ix)
-				  (pp 0 "set-pv! ~a ~a" ix k)
+				  (fmtout "set-pv! ~a ~a" ix k)
 				  (vector-set! pv ix k)
 				  (visit ix))
 			  (iter (cdr l)))))

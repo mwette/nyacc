@@ -1,6 +1,6 @@
 ;;; lang/c/cpp.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -34,9 +34,6 @@
 #|
   #define  #undef  #include  #if  #ifdef  #ifndef  #else  #endif  #elif
   #line  defined  #-operator  ##-operator  #pragma  #error
-
-strategy:
-  don't expand macro calls -- treat like function calls, but provide dict
 todo:
   pragma
   #-op ##-op
@@ -140,10 +137,7 @@ todo:
    (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
 	 (cons 'mtab mtab) (cons 'act-v act-v))))
 
-;; The included file "cppbody.scm" provides:
-;; gen-cpp-lexer
-;; parse-cpp-expr
-;; eval-cpp-expr
 (include-from-path "nyacc/lang/c99/cppbody.scm")
+;; cppbody.scm provides: gen-cpp-lexer parse-cpp-expr eval-cpp-expr
  
 ;; --- last line ---

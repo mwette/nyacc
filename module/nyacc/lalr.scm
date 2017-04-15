@@ -42,8 +42,7 @@
   #:use-module (nyacc util)
   )
 
-(define *nyacc-version* "0.74.0+devel")
-
+(define *nyacc-version* "0.74.1+devel")
 
 ;; @deffn proxy-? sym rhs
 ;; @example
@@ -374,7 +373,7 @@
   (let* ((gram (assq-ref tree 'grammar))
 	 (start-symbol (and=> (assq-ref tree 'start) atomize))
 	 (start-rule (lambda () (list start-symbol)))
-	 (add-el (lambda (e l) (if (memq e l) l (cons e l))))
+	 (add-el (lambda (e l) (if (member e l) l (cons e l))))
 	 (pna (prec-n-assc tree)))
     ;; We sweep through the grammar to generate a canonical specification.
     ;; Note: the local rhs is used to hold RHS terms, but a
@@ -475,10 +474,14 @@
 		     (else '($1)))))
 	  (iter (cons lhs ll)
 		(cons (cons* (cons 'rhs (list->vector (reverse pel)))
+<<<<<<< HEAD
 			     (cons* 'act nrg act)
 			     (cons 'ref ref)
 			     (cons 'pru prune)
 			     attr) @l)
+=======
+			     (cons* 'act nrg act) (cons 'ref ref) attr) @l)
+>>>>>>> master
 		tl nl head prox lhs tail rhs-l attr pel #f)))
 
        ((pair? rhs-l)

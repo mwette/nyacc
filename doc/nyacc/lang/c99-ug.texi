@@ -51,6 +51,10 @@ $ touch /tmp/z.c
 $ gcc -dM -E /tmp/z.c > /tmp/z.e
 @end example
 
+Note on CPP replacement text: IIRC, C99 will remove comments from CPP
+statements before processing.  I preserve this and remove inside the
+CPP parser.
+
 
 @section The Free Documentation License
 The Free Documentation License is included in the Guile Reference
