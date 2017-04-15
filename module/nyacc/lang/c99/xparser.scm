@@ -18,7 +18,7 @@
 ;; C parser
 
 (define-module (nyacc lang c99 xparser)
-  #:export (parse-cx parse-c99x)
+  #:export (parse-c99x)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
@@ -33,25 +33,30 @@
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
-  (make-lalr-parser 
-   (list
-    (cons 'len-v len-v)
-    (cons 'pat-v pat-v)
-    (cons 'rto-v rto-v)
-    (cons 'mtab mtab)
-    (cons 'act-v act-v))))
+  (let ((parser (make-lalr-parser 
+		 (list (cons 'len-v len-v) (cons 'pat-v pat-v)
+		       (cons 'rto-v rto-v) (cons 'mtab mtab)
+		       (cons 'act-v act-v)))))
+    (lambda* (lexer #:key (debug #f))
+      (catch
+       'nyacc-error
+       (lambda () (parser lexer #:debug debug))
+       (lambda (key fmt . args)
+	 (report-error fmt args)
+	 (pop-input)			; not sure this is right
+	 (throw 'c99-error "C99 parse error"))))))
 
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
+    (raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
 
-;; @item parse-c99x [#:cpp-defs def-a-list] [#:debug bool]
+;; @item {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool]
 ;; This needs to be explained in some detail.
 ;; [#:tyns '("foo_t")]
 (define* (parse-c99x expr-string
 		     #:key
 		     (cpp-defs '())	; CPP defines
-		     (tn-dict '())	; typedef dictionary
+		     (inc-help '())	; include helper
 		     (xdef? #f)		; pred to determine expand
 		     (debug #f)		; debug?
 		     (tyns '()))	; defined typenames
@@ -60,7 +65,7 @@
       (catch
        'c99-error
        (lambda ()
-	 (let ((info (make-cpi debug cpp-defs '(".") tn-dict)))
+	 (let ((info (make-cpi debug cpp-defs '(".") inc-help)))
 	   (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
 	   (with-fluid*
 	       *info* info
@@ -70,7 +75,5 @@
        (lambda (key fmt . rest)
 	 (report-error fmt rest)
 	 #f)))))
-
-(define parse-cx parse-c99x)
 
 ;; --- last line ---

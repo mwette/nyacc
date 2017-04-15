@@ -1,0 +1,189 @@
+\input texinfo.tex
+@setfilename c99-hg.info
+@settitle C99 Hacker's Guide
+
+@copying
+Copyright (C) 2017 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+@end copying
+
+@clear skip
+
+@titlepage
+@title C99 Parser Hacker's Guide
+@subtitle rough and incomplete
+
+@vskip 0pt plus 1filll
+@quotation
+Copyright @copyright{} 2017 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+@end quotation
+@author Matt Wette
+@end titlepage
+
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top Introduction
+@end ifnottex
+
+@menu
+* Introduction ::
+@end menu
+
+@node Introduction
+@chapter The Introduction
+
+This is a manual for ...
+
+@subsubsection CPP If-Then-Else Logic Block (ITLB) Processing
+The parser needs to have a "CPI" (CPP processing info) stack to deal with
+types (re)defined in multiple branches of a #if...#endif statement chain.
+If we are in "code" mode then we may be skipping code so need to track
+when to shift and when not to.
+
+The state is contained in a stack @code{ppxs}
+States are
+@table code
+@item skip-done
+skip code until @code{#endif}, passed true
+@item skip-look
+skipping code, but still looking for true at this level
+@item keep
+keep code
+@item skip1-pop
+skip one token and pop skip-stack
+@end table
+Also, if we want to pass on all the sections of an ITLB to the parser
+we need to remove typedef names because a typedef may appear multiple
+times, as in
+@example
+#ifdef SIXTYFOURBIT
+typedef short int32_t;
+#else
+typedef long int32_t;
+#endif
+@end example
+@noindent
+To achieve this we keep a stack of valid typedefs.  On @code{#if} we push,
+on @code{#elif} we shift (i.e., pop, then push) and on @code{#endif} we pop.
+;; The grammar looks like
+@example
+(code
+ ("if" cond code "endif")
+ ("if" cond code "else" code "endif")
+ ("if" cond code elif-list "endif")
+ ("if" cond code elif-list "else" code "endif")
+ (other))
+(elif-list
+ ("elif" cond code)
+ (elif-list "elif" cond code))
+@end example
+@noindent
+
+@subsubsection CPP Macro Expansion
+
+Within C code the lexer will call @code{expand-cpp-macro-ref}.
+
+And the if/then processing will call @code{expand-cpp-cond-text}.
+
+@section Thoughts
+
+@verbatim
+
+Alternatives:
+@itemize
+@item include: in-place as-tree ignore
+@item defdict: keep ignore
+@item parsdef: yes no
+@item error: eval parse ignore
+@item execflo: yes no
+@item pragma:
+@item expand-id: yes no
+@item mode: file (parse cpp lines) ; code (eval cpp lines)
+@item eval-but-nodef: fail
+@end itemize
+
+Options:
+@itemize
+@item Option 1 (intended file mode):
+@itemize
+@item include: parse-tree (but switch exec-cflow?
+@item defines: ignore
+@item error:
+@end itemize
+
+Use a special token for ``could be anything'' in the inc-helpers:
+@code{C99_ANY}.
+
+Note: @code{xtxt} in the lexer is used to denote if text has already been
+macro expanded.  This is a bit of a kludge.  Alternatives, are
+@enumerate
+@item keep as is
+@item macro expander returns token list (yuck)
+@end enumerate
+
+
+Controls:
+@itemize
+@item tddict: enable includes to be skipped, w/ added typedefs
+@end itemize
+@verbatim
+alt: use ftn to return typenames and defs
+      '("limits.h" "ayx_t" "ABC=123")
+ need include-entry->typenames and include-entry->defs
+ defined but not well-defined (i.e., limits.h )
+xdef?: enable how idents are expanded
+need 64bit typical, 32bit typical
+execflo implies need parsdef
+@end verbatim
+
+Notes on file mode:
+@itemize
+@item
+We need to avoid repeated includes.  So need to add @code{#define}d
+symbols to the def's list.
+@item
+Idea: If file mode and PP-exec-stack (aka @code{ppxs}) level is
+non-zero, then add to the define's dict with value @code{C99_ANY}.
+@end itemize
+
+stuff to watch out for:
+@itemize
+@item typename aliases
+@verbatim
+in incl file: #define SFLOAT static float
+in code file: SFLOAT x;
+=> in file mode, check #defines for typenames
+@end verbatime
+@end itemize
+
+@section Todos
+
+I think I have these
+@verbatim
+#define  #undef  #include  #if  #ifdef  #ifndef  #else  #endif  #elif
+defined  #-operator  ##-operator  #pragma  #error
+@end verbatim
+
+I still have these to go
+@verbatim
+#line
+_Pragma()
+@end verbatim
+
+@section The Free Documentation License
+The Free Documentation License is included in the Guile Reference
+Manual.  It is included with the @sc{nyacc} source as COPYING.DOC.
+
+@bye
+@c --- last line

@@ -1,0 +1,72 @@
+\input texinfo.tex
+@settitle NYACC C99 Munge Module
+
+@headings off
+@everyfooting @| @thispage @|
+
+@node Top
+@top NYACC C99 Munge Module
+@format
+Matt Wette
+March 2017
+@end format
+
+@heading Introduction
+
+The sxml parse tree can be used to provide autocoding via the
+@code{(nyacc lang c99 munge)} module. For example, start with the
+following C code
+@example
+typedef const char *string_t;
+extern string_t cmds[10];
+@end example
+The nyacc output (call it @code{the-tree}) for this will be
+@noindent
+@example
+(trans-unit
+  (decl (decl-spec-list
+          (stor-spec (typedef))
+          (type-qual "const")
+          (type-spec (fixed-type "char")))
+        (init-declr-list
+          (init-declr
+            (ptr-declr (pointer) (ident "string_t")))))
+  (decl (decl-spec-list
+          (stor-spec (extern))
+          (type-spec (typename "string_t")))
+        (init-declr-list
+          (init-declr
+           (array-of (ident "cmds") (p-expr (fixed "10")))))))
+@end example
+@noindent
+If we feed @code{the-tree} into @code{tree->udict} and use @code{assoc-ref}
+to lookup @code{"cmds"} we get
+@example
+(udecl (decl-spec-list
+         (stor-spec (extern))
+         (type-spec (typename "string_t")))
+       (init-declr
+         (array-of (ident "cmds") (p-expr (fixed "10")))))
+@end example
+@noindent
+Now take this and feed into @code{expand-decl-typerefs} to get
+@example
+(udecl (decl-spec-list
+         (stor-spec (extern))
+         (type-qual "const")
+         (type-spec (fixed-type "char")))
+       (init-declr
+         (ptr-declr
+           (pointer)
+           (array-of (ident "cmds") (p-expr (fixed "10"))))))
+@end example
+@noindent
+which, when fed through the C99 pretty-printer, generates
+@example
+extern const char *cmds[10];
+@end example
+@noindent
+Since the NYACC C99 parser captures some comments, these can be preserved
+in the above procedure.
+
+@bye

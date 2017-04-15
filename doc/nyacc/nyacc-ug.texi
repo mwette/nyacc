@@ -47,7 +47,7 @@ the @emph{specification}.  The program that processes, driven by the
 machine, input token to generate a final output, or error, is 
 the @emph{parser}.
 
-@section Example
+@section Example for Simple or Development Parser
 
 A simplest way to introduce working with @code{nyacc} is to work through
 an example.  Consider the following contents of the file @file{calc.scm}.
@@ -180,6 +180,19 @@ If we execute the example file above we should get the following:
 $ guile calc.scm
 expect 2; get 2
 $
+@end example
+
+@section Example for Production Parser
+
+@subsection Generating the Tables
+
+@subsection Running the Compiler
+
+@example
+(use-modules (nyacc parser)
+(use-modules (nyacc lex)
+(use-modules (nyacc lang util)
+
 @end example
 
 @section The Grammar Specification

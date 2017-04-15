@@ -9,6 +9,7 @@
 
 (add-to-load-path (string-append (getcwd) "/../../../../module/"))
 
+(use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 mach))
 (use-modules (nyacc lang c99 pprint))	; pretty-print-c99
 (use-modules (nyacc lang c99 util1))	; remove-inc-trees
@@ -50,21 +51,6 @@
     (pretty-print sx1)
     (simple-format #t "===>\n")
     (pretty-print-c99 sx1)
-    #t))
-
-;; test utilities
-(when #f
-  (use-modules (nyacc lang c99 parser))
-  (use-modules (nyacc lang c99 util2))
-  (use-modules (sxml match))
-  (let* ((sx (with-input-from-file "exam.d/ex1.c" parse-c99))
-	 (sx (merge-inc-trees! sx))
-	 (udict (and sx (tree->udict sx)))
-	 (xx (assoc-ref udict "f1"))
-	 (xx (stripdown xx udict))
-	 (xx (udecl->mspec xx))
-	 )
-    (pretty-print xx)
     #t))
 
 ;; grammar and automaton in zipped text file 

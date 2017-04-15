@@ -1,0 +1,79 @@
+;; nyacc/lang/c99/c99-05.test		-*- scheme -*-
+;;
+;; Copyright (C) 2016-2017 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+;; test pretty-print-c99
+
+(add-to-load-path (string-append (getcwd) "/../../../../module/"))
+(add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
+
+(define-module (c99-05)
+  #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 xparser)
+  #:use-module (nyacc lang c99 pprint)
+  #:use-module (srfi srfi-1)		; fold
+  #:use-module (test-suite lib))
+
+;; io-list is list of input/output pairs where we expect
+;; (pp-c99 (parsex input)) == output
+(define (pp-as-expected? io-list)
+  (fold
+   (lambda (pair all-working?)
+     (let* ((src-str (car pair))		 ; source string
+	    (exp-str (cdr pair))		 ; expected output
+	    (expr (parse-c99x src-str))	 ; parse tree
+	    (res-str (with-output-to-string ; resulting output
+		       (lambda () (pretty-print-c99 expr)))))
+       (and all-working? (string=? res-str exp-str))))
+   #t
+   io-list))
+
+;; pretty-printer, parser test
+;; We generate a tree, send it to the pretty-printer, then through the parser.
+;; This should be a unit function, methinks.
+(with-test-prefix "nyacc/c99-05, pretty-print-c99"
+
+  ;; loop simple through pretty-printer
+  (pass-if "simple"
+      (let* ((sx0 '(trans-unit
+		    (decl (decl-spec-list (type-spec (fixed-type "int")))
+			  (init-declr-list (init-declr (ident "x"))))))
+	     (cc1 (with-output-to-string
+		    (lambda () (pretty-print-c99 sx0))))
+	     (sx2 (with-input-from-string cc1 parse-c99)))
+	(equal? sx0 sx2)))
+
+  (pass-if "protect-expr"
+    (pp-as-expected?
+     '(("((*(expr))->id)" . "(*expr)->id")
+       )))
+  
+  (pass-if "char-lit"
+    (pp-as-expected?
+     `(("'\\0'" . "'\\0'") ("'\\a'" . "'\\a'") ("'\\b'" . "'\\b'")
+       ("'\\t'" . "'\\t'") ("'\\n'" . "'\\n'") ("'\\v'" . "'\\v'")
+       ("'\\f'" . "'\\f'"))))
+
+  ;; expected tranformations
+  (pass-if "expression protection"
+    (let ((red (lambda (in)
+		 (let* ((tree (parse-c99x in))
+			(out (with-output-to-string
+			       (lambda () (pretty-print-c99 tree)))))
+		   (string-delete #\space out)))))
+      (fold
+       (lambda (pair status)
+	 (and status (string=? (red (car pair)) (cdr pair))))
+       #t
+       '(("(a*b)+c" . "a*b+c")
+	 ("a+=(b|=c)" . "a+=b|=c")
+	 ("(a-b)+c" . "a-b+c")
+	 ("*(p->q)" . "*p->q")))))
+  )
+
+;; --- last line ---

@@ -14,9 +14,9 @@
 	    push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr
-	    sx-tag
-	    sx-attr sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr*
-	    sx-ref sx-tail sx-find
+	    sx-tag sx-attr sx-tail sx-ref sx-cons* sx-list
+	    sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr*
+	    sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
 	    ;; for ???
@@ -78,19 +78,21 @@ the file COPYING included with the this distribution.")
 
 ;; @table code
 
-;; @deffn make-tl tag [item item ...]
+;; @deffn {Procedure} make-tl tag [item item ...]
 ;; Create a tagged-list structure.
+;; @end deffn
 (define (make-tl tag . rest)
   (let iter ((tail tag) (l rest))
     (if (null? l) (cons '() tail)
 	(iter (cons (car l) tail) (cdr l)))))
 
-;; @deffn tl->list tl
+;; @deffn {Procedure} tl->list tl
 ;; Convert a tagged list structure to a list.  This collects added attributes
 ;; and puts them right after the (leading) tag, resulting in something like
 ;; @example
 ;; (<tag> (@ <attr>) <rest>)
 ;; @end example
+;; @end deffn
 (define (tl->list tl)
   (let ((heda (car tl))
 	(head (let iter ((head '()) (attr '()) (tl-head (car tl)))
@@ -106,40 +108,46 @@ the file COPYING included with the this distribution.")
 	  (iter (cons (car tl-tail) tail) (cdr tl-tail))
 	  (cons tl-tail (append head tail))))))
 
-;; @deffn tl-insert tl item
+;; @deffn {Procedure} tl-insert tl item
 ;; Insert item at front of tagged list (but after tag).
+;; @end deffn
 (define (tl-insert tl item)
   (cons (cons item (car tl)) (cdr tl)))
 
-;; @deffn tl-append tl item ...
+;; @deffn {Procedure} tl-append tl item ...
 ;; Append items at end of tagged list.
+;; @end deffn
 (define (tl-append tl . rest)
   (cons (car tl)
 	(let iter ((tail (cdr tl)) (items rest))
 	  (if (null? items) tail
 	      (iter (cons (car items) tail) (cdr items))))))
 
-;; @deffn tl-extend tl item-l
+;; @deffn {Procedure} tl-extend tl item-l
 ;; Extend with a list of items.
+;; @end deffn
 (define (tl-extend tl item-l)
   (apply tl-append tl item-l))
 
-;; @deffn tl-extend! tl item-l
+;; @deffn {Procedure} tl-extend! tl item-l
 ;; Extend with a list of items.  Uses @code{set-cdr!}.
+;; @end deffn
 (define (tl-extend! tl item-l)
   (set-cdr! (last-pair tl) item-l)
   tl)
 
-;; @deffn tl+attr tl key val)
+;; @deffn {Procedure} tl+attr tl key val)
 ;; Add an attribute to a tagged list.  Return the tl.
 ;; @example
 ;; (tl+attr tl 'type "int")
 ;; @end example
+;; @end deffn
 (define (tl+attr tl key val)
   (tl-insert tl (cons '@ (list key val))))
 
-;; @deffn tl-merge tl tl1
+;; @deffn {Procedure} tl-merge tl tl1
 ;; Merge guts of phony-tl @code{tl1} into @code{tl}.
+;; @end deffn
 (define (tl-merge tl tl1)
   (error "not implemented (yet)")
   )
@@ -151,13 +159,14 @@ the file COPYING included with the this distribution.")
 ;; attributea are `invisible'. For example, @code{'(elt (@abc) "d")}
 ;; is an sx of length two: the tag @code{elt} and the payload @code{"d"}.
 
-;; @deffn sx-ref sx ix => item
+;; @deffn {Procedure} sx-ref sx ix => item
 ;; Reference the @code{ix}-th element of the list, not counting the optional
 ;; attributes item.  If the list is shorter than the index, return @code{#f}.
 ;; @example
 ;; (sx-ref '(abc "def") 1) => "def"
 ;; (sx-ref '(abc (@ (foo "1")) "def") 1) => "def"
 ;; @end example
+;; @end deffn
 (define (sx-ref sx ix)
   (define (list-xref l x) (if (> (length l) x) (list-ref l x) #f))
   (cond
@@ -167,26 +176,52 @@ the file COPYING included with the this distribution.")
    (else
     (list-xref sx ix))))
 
-;; @deffn sx-tag sx => tag
+;; @deffn {Procedure} sx-tag sx => tag
 ;; Return the tag for a tree
+;; @end deffn
 (define (sx-tag sx)
   (if (pair? sx) (car sx) #f))
 
-;; @deffn sx-tail sx ix => (list)
-;; Return the tail starting at the ix-th cdr, starting from 0.
-;; For example, if sx has 3 items then (sx-tail sx 2) returns '().
-(define (sx-tail sx ix)
+;; @deffn {Procedure} sx-cons* tag (attr|#f)? ... => sx
+;; @deffnx {Procedure} sx-list tag (attr|#f)? ... => sx
+;; Generate the tag and the attr list if it exists.  Note that
+;; @end deffn
+(define (sx-cons* tag . rest)
   (cond
-   ((zero? ix) (error "sx-tail: expecting index greater than 0"))
-   ((and (pair? (cdr sx)) (eqv? '@ (cadr sx))) (list-tail sx (1+ ix)))
-   (else (list-tail sx ix))))
+   ((null? rest) (list tag))
+   ((not (car rest)) (apply cons* tag (cdr rest)))
+   (else (apply cons* tag rest))))
+(define (sx-list tag . rest)
+  (cond
+   ((null? rest) (list tag))
+   ((not (car rest)) (apply list tag (cdr rest)))
+   (else (apply list tag rest))))
 
-;; @deffn sx-has-attr? sx
+;; @deffn {Procedure} sx-tail sx [ix] => (list)
+;; Return the ix-th tail starting after the tag and attribut list, where
+;; @var{ix} must be positive.  For example,
+;; @example
+;; (sx-tail '(tag (@ (abc . "123")) (foo) (bar)) 1) => ((foo) (bar))
+;; @end example
+;; Without second argument @var{ix} is 1.
+;; @end deffn
+(define sx-tail
+  (case-lambda
+   ((sx ix)
+    (cond
+     ((zero? ix) (error "sx-tail: expecting index greater than 0"))
+     ((and (pair? (cadr sx)) (eqv? '@ (caadr sx))) (list-tail sx (1+ ix)))
+     (else (list-tail sx ix))))
+   ((sx)
+    (sx-tail sx 1))))
+
+;; @deffn {Procedure} sx-has-attr? sx
 ;; p to determine if @arg{sx} has attributes.
+;; @end deffn
 (define (sx-has-attr? sx)
   (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx))))
 
-;; @deffn sx-attr sx => '(@ ...)|#f
+;; @deffn {Procedure} sx-attr sx => '(@ ...)|#f
 ;; @example
 ;; (sx-attr '(abc (@ (foo "1")) def) 1) => '(@ (foo "1"))
 ;; @end example
@@ -194,6 +229,7 @@ the file COPYING included with the this distribution.")
 ;; @example
 ;; (sx-attr sx) => '((a . 1) (b . 2) ...)
 ;; @end example
+;; @end deffn
 (define (sx-attr sx)
   (if (and (pair? (cdr sx)) (pair? (cadr sx)))
       (if (eqv? '@ (caadr sx))
@@ -201,16 +237,18 @@ the file COPYING included with the this distribution.")
 	  #f)
       #f))
 
-;; @deffn sx-attr-ref sx key => val
+;; @deffn {Procedure} sx-attr-ref sx key => val
 ;; Return an attribute value given the key, or @code{#f}.
+;; @end deffn
 (define (sx-attr-ref sx key)
   (and=> (sx-attr sx)
 	 (lambda (attr)
 	   (and=> (assq-ref (cdr attr) key) car))))
 
-;; @deffn sx-set-attr! sx key val
+;; @deffn {Procedure} sx-set-attr! sx key val
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,
 ;; add it, if it does exist, replace it.
+;; @end deffn
 (define (sx-set-attr! sx key val . rest)
   (if (sx-has-attr? sx)
       (let ((attr (cadr sx)))
@@ -219,8 +257,8 @@ the file COPYING included with the this distribution.")
   sx)
 
 ;; @deffn sx-set-attr* sx key val [key val [key ... ]]
-;; Set attribute for sx.  If no attributes exist, if key does not exist,
-;; add it, if it does exist, replace it.
+;; Generate sx with added or changed attributes.
+;; @end deffn
 (define (sx-set-attr* sx . rest)
   (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
     (cond
@@ -229,6 +267,7 @@ the file COPYING included with the this distribution.")
 
 ;; @deffn sx-find tag sx => ((tag ...) (tag ...))
 ;; Find the first matching element (in the first level).
+;; @end deffn
 (define (sx-find tag sx)
   (find (lambda (node)
 	  (and (pair? node) (eqv? tag (car node))))
@@ -237,7 +276,7 @@ the file COPYING included with the this distribution.")
 ;;; === pp ==========================
 ;; @section Pretty-Print and Other Utility Procedures
 
-;; @deffn make-protect-expr op-prec op-assc => side op expr => #t|#f
+;; @deffn {Procedure} make-protect-expr op-prec op-assc => side op expr => #t|#f
 ;; Generate procedure @code{protect-expr} for pretty-printers, which takes
 ;; the form @code{(protect-expr? side op expr)} and where @code{side}
 ;; is @code{'lval} or @code{'rval}, @code{op} is the operator and @code{expr}
@@ -246,8 +285,9 @@ the file COPYING included with the this distribution.")
 ;; a-list of precedence with keys @code{'left}, @code{'right} and
 ;; @code{nonassoc}.
 ;; @example
-;; (protect-expr? 'lval '+ '(mul ...)) => TBD
+;; (protect-expr? 'left '+ '(mul ...)) => TBD
 ;; @end example
+;; @end deffn
 (define (make-protect-expr op-prec op-assc)
 
   (define (assc-lt? op)
@@ -256,9 +296,10 @@ the file COPYING included with the this distribution.")
   (define (assc-rt? op)
     (memq op (assq-ref op-assc 'right)))
 
-  ;; @deffn prec a b => '>|'<|'=|#f
+  ;; @deffn {Procedure} prec a b => '>|'<|'=|#f
   ;; Returns the prececence relation of @code{a}, @code{b} as
   ;; @code{<}, @code{>}, @code{=} or @code{#f} (no relation).
+  ;; @end deffn
   (define (prec a b)
     (let iter ((ag #f) (bg #f) (opg op-prec)) ;; a-group, b-group
       (cond
@@ -276,8 +317,8 @@ the file COPYING included with the this distribution.")
 
   (lambda (side op expr)
     (let ((assc? (case side
-		   ((lt left) assc-rt?)
-		   ((rt right) assc-lt?)))
+		   ((lt lval left) assc-rt?)
+		   ((rt rval right) assc-lt?)))
 	  (vtag (car expr)))
       (case (prec op vtag)
 	((>) #t)
@@ -285,12 +326,13 @@ the file COPYING included with the this distribution.")
 	((=) (assc? op))
 	(else #f)))))
 
-;; @deffn make-pp-formatter => fmtr
+;; @deffn {Procedure} make-pp-formatter => fmtr
 ;; @example
 ;; (fmtr 'push) ;; push indent level
 ;; (fmtr 'pop)  ;; pop indent level
 ;; (fmtr "fmt" arg1 arg2 ...)
 ;; @end example
+;; @end deffn
 (define* (make-pp-formatter)
   (letrec
       ((maxcol 78)
@@ -341,10 +383,11 @@ the file COPYING included with the this distribution.")
        (else (error "pp-formatter: bad args"))
        ))))
 
-;; @deffn make-pp-formatter/ugly => fmtr
+;; @deffn {Procedure} make-pp-formatter/ugly => fmtr
 ;; Makes a @code{fmtr} like @code{make-pp-formatter} but no indentation
 ;; and just adds strings on ...
 ;; This is specific to C/C++ because it will newline if #\# seen first.
+;; @end deffn
 (define* (make-pp-formatter/ugly)
   (let*
       ((maxcol 78)
@@ -383,8 +426,9 @@ the file COPYING included with the this distribution.")
        ((eqv? 'pop arg0) #f)
        (else (error "pp-formatter/ugly: bad args"))))))
   
-;; @deffn move-if-changed src-file dst-file [sav-file]
+;; @deffn {Procedure} move-if-changed src-file dst-file [sav-file]
 ;; Return @code{#t} if changed.
+;; @end deffn
 (define (move-if-changed src-file dst-file . rest)
 
   (define (doit)

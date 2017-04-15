@@ -15,3 +15,8 @@ manifest:
 Tcpp.scm	Run cppgen.scm; generates cppact.scm.new cpptab.scm.new
 Tclang.scm	Run pgen.scm; generates actions.scm.new tables.scm.new
 Tcexpr.scm	Run pgen.scm; generates expract.scm.new expract.scm.new
+
+NOTES:
+
+https://github.com/TaylanUB/scheme-bytestructures
+

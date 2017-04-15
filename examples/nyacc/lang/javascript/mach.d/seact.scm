@@ -1,14 +1,14 @@
 ;; mach.d/seact.scm
 
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; Copyright 2016 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See the
-;; file COPYING included with the this distribution.
+;; or any later version published by the Free Software Foundation.  See
+;; the file COPYING included with the this distribution.
 
 (define act-v
   (vector
-   ;; $start => Program
+   ;; $start => SourceElement
    (lambda ($1 . $rest) $1)
    ;; Literal => NullLiteral
    (lambda ($1 . $rest) `(NullLiteral))

@@ -1,2 +1,4 @@
-#define assert(X) if (!(X)) abort()
-int foo (int x) { assert (x == 1); }
+#define assert(x) ((x) ? (void)0 : assert_fail (#x))
+int foo() {
+  assert(boo);
+}

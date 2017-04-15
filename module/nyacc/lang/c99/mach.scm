@@ -29,11 +29,12 @@
   #:use-module ((srfi srfi-43) #:select (vector-map))
   )
 
-;; @item c99-spec
+;; @deffn {Variable} c99-spec
 ;; This variable is the specification a-list for the hacked ISO C99 language.
 ;; Run this through @code{make-lalr-machine} to get an a-list for the
 ;; automaton.  The grammar is modified to parse CPP statements and comments.
 ;; The output of the end parser will be a SXML tree (w/o the @code{*TOP*} node.
+;; @end deffn
 (define c99-spec
   (lalr-spec
    (notice (string-append "Copyright (C) 2016,2017 Matthew R. Wette"
@@ -429,13 +430,12 @@
      )
 
     (parameter-declaration
-     (declaration-specifiers declarator
-			     ($$ `(param-decl ,(tl->list $1)
-					       (param-declr ,$2))))
-     (declaration-specifiers abstract-declarator
-			     ($$ `(param-decl ,(tl->list $1)
-					       (param-declr ,$2))))
-     (declaration-specifiers ($$ `(param-decl ,(tl->list $1))))
+     (declaration-specifiers
+      declarator ($$ `(param-decl ,(tl->list $1) (param-declr ,$2))))
+     (declaration-specifiers
+      abstract-declarator ($$ `(param-decl ,(tl->list $1) (param-declr ,$2))))
+     (declaration-specifiers
+      ($$ `(param-decl ,(tl->list $1))))
      )
 
     (identifier-list
@@ -606,14 +606,15 @@
 
     ;; external definitions
     (translation-unit			; S 6.9
-     (external-declaration-list ($$ (tl->list $1))))
+     (external-declaration-list ($$ (tl->list $1)))
      )
     (external-declaration-list
-     (external-declaration ($$ (make-tl 'trans-unit $1)))
+     ;;(external-declaration ($$ (make-tl 'trans-unit $1)))
+     ($empty ($$ (make-tl 'trans-unit)))
      (external-declaration-list
       external-declaration
       ;; A ``kludge'' to deal with @code{extern "C" ...}:
-      ($$ (if (eqv? (sx-tag $2) 'extern-block) (tl-extend $1 (sx-tail $2 2))
+      ($$ (if (eqv? (sx-tag $2) 'extern-block) (tl-extend $1 (sx-tail $2 1))
 	      (tl-append $1 $2))))
      )
 
@@ -622,9 +623,12 @@
      (declaration)
      (lone-comment)
      (cpp-statement)
+     (pragma)
      ("extern" $string "{" external-declaration-list "}"
-      ($$ `(extern-block ,$2 (extern-begin ,$2)
-			 ,@(sx-tail (tl->list $4) 1) (extern-end))))
+      ($$ `(extern-block (extern-begin ,$2)
+			 ,@(sx-tail (tl->list $4) 1)
+			 (extern-end))))
+     (";" ($$ `(decl (@ (extension . "GNU C")))))
      )
     
     (function-definition
@@ -641,12 +645,13 @@
      (declaration-list declaration ($$ (tl-append $1 $2)))
      )
 
-    (opt-code-comment () (code-comment))
+    (opt-code-comment ($empty) (code-comment))
 
     ;; non-terminal leaves
     (identifier
      ($ident ($$ `(ident ,$1)))
-     ('cpp-ident ($$ `(ident ,$1))))
+     ('cpp-ident ($$ `(ident ,$1)))
+     )
     (constant
      ($fixed ($$ `(fixed ,$1)))		; integer-constant
      ($float ($$ `(float ,$1)))		; floating-constant
@@ -657,7 +662,7 @@
     (code-comment ($code-comm ($$ `(comment ,$1))))
     (lone-comment ($lone-comm ($$ `(comment ,$1))))
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
-
+    (pragma ('cpp-pragma))
     )))
 
 
@@ -689,14 +694,14 @@
 (define* (dev-parse-c99 #:key
 			(cpp-defs '())	; CPP defines
 			(inc-dirs '())	; include directories
-			(td-dict '())	; typedef dictionary
+			(inc-help '())	; typedef dictionary
 			(mode 'file)	; mode: 'file or 'code
 			(xdef? #f)	; expand def function: proc name mode
 			(debug #f))	; debug
   (catch
    #t ;; 'c99-error 'cpp-error 'nyacc-error
    (lambda ()
-     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) td-dict)))
+     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) inc-help)))
        (with-fluid*
 	   *info* info
 	   (lambda ()
@@ -710,10 +715,11 @@
 
 ;;; =====================================
 
-;; @item gen-c99-files [dir] => #t
+;; @deffn {Procedure} gen-c99-files [dir] => #t
 ;; Update or generate the files @quot{c99act.scm} and @quot{c99tab.scm}.
 ;; These are the tables and actions for the C99 parser.
 ;; If there are no changes to existing files, no update occurs.
+;; @end deffn
 (define (gen-c99-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
@@ -726,13 +732,15 @@
 			    (xtra-dir "c99act.scm")))
 	(b (move-if-changed (xtra-dir "c99tab.scm.new")
 			    (xtra-dir "c99tab.scm"))))
-    (when (or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm"))))))
+    #;(when (or a b) 
+    (system (string-append "touch " (lang-dir "parser.scm"))))
+    (or a b)))
 
-;; @item gen-c99x-files [dir] => #t
+;; @deffn {Procedure} gen-c99x-files [dir] => #t
 ;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.
 ;; These are the tables and actions for the C99 expression parser.
 ;; If there are no changes to existing files, no update occurs.
+;; @end deffn
 (define (gen-c99x-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
@@ -753,6 +761,7 @@
     (when (or a b) 
       (system (string-append "touch " (lang-dir "parser.scm")))
       #;(compile-file (lang-dir "xparser.scm"))
-      )))
+      )
+    (or a b)))
 
 ;; --- last line ---

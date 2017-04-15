@@ -101,6 +101,8 @@
    (lambda ($1 . $rest) `(char ,$1))
    ;; primary-expression => "defined" "(" '$ident ")"
    (lambda ($4 $3 $2 $1 . $rest) `(defined ,$3))
+   ;; primary-expression => "defined" '$ident
+   (lambda ($2 $1 . $rest) `(defined ,$2))
    ;; primary-expression => "(" expression-list ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; expression-list => conditional-expression

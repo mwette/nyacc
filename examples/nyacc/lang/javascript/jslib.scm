@@ -17,7 +17,7 @@
 
 ;; needs: null, undefined, undeclared?,
 
-(define-module (language javascript jslib)
+(define-module (nyacc lang javascript jslib)
   #:export (JSdict)
   )
 
@@ -26,10 +26,12 @@
     ;;("Object" . (@@ (jslib) Object))
     ;;("Math" . (@@ (jslib) Math))
     ;;("Number" . (@@ (jslib) Number))
-    ;;("JS+" . (@@ (jslib) JS+))
+    ;;("JS:+" . (@@ (jslib) JS:+))
     ))
 
-(define undefined (if #f #f))
+;; null is 'JS:null
+
+(define JS:undefined (if #f #f))
 
 ;; @item lkup obj name
 ;; Find property in object, or prototype, or ???
@@ -67,7 +69,7 @@
 (hash-set! Number 'NaN (nan))
 (hash-set! Number 'toString (lambda (n) (number->string n)))
 
-(define JS+ (lambda (a b)
+(define JS:+ (lambda (a b)
 	      (cond
 	       ((and (string? a) (string? b)) (string-append a b))
 	       ((and (number? a) (number? b)) (+ a b))

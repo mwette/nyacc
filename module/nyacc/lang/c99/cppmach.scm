@@ -18,10 +18,7 @@
 ;; C preprocessor expression parser generator
 
 (define-module (nyacc lang c99 cppmach)
-  #:export (cpp-spec
-	    cpp-mach
-	    dev-parse-cpp-expr dev-eval-cpp-expr
-	    gen-cpp-files)
+  #:export (cpp-spec cpp-mach gen-cpp-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -99,6 +96,7 @@
      ($fixed ($$ `(fixed ,$1)))	; integer-constant
      ($chlit ($$ `(char ,$1)))	; char-constant
      ("defined" "(" $ident ")" ($$ `(defined ,$3)))
+     ("defined" $ident ($$ `(defined ,$2)))
      ("(" expression-list ")" ($$ $2)))
     (expression-list
      (conditional-expression)
@@ -109,14 +107,6 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine cpp-spec))))
-
-(define mtab (assq-ref cpp-mach 'mtab))
-(define raw-parser (make-lalr-parser cpp-mach))
-
-(include-from-path "nyacc/lang/c99/cppbody.scm")
-
-(define dev-parse-cpp-expr parse-cpp-expr)
-(define dev-eval-cpp-expr eval-cpp-expr)
 
 ;;; =====================================
 

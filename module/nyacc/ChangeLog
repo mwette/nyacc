@@ -1,3 +1,45 @@
+2017-04-12  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (make-comm-reader): comments which end in newline can
+	now also end in #<eof>
+
+2017-03-11  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/parser.scm (parse-c99): added mode keyword argument to
+	gen-c-lexer, file mode would not have been working ...
+
+2017-03-03  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lalr.scm: added "keepers" keyword argument to compact-machine
+	and also added $end as default
+
+2017-02-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/pprint.scm: (binary 'd-del .. => (binary 'd-sel
+
+2017-02-22  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/cpp.scm (rtokl->string): added handler for 'string
+
+	* lang/c99/body.scm: added 'skip state so that if skipping #if
+	then no CPP if or elif arguments are evaluated
+
+	* lang/c99/cpp.scm: parse 0L numbers, convert c numbers (e.g.,
+	123L) to scheme so that string->number works.  I need to update
+	cnumstr->snumstr in nyacc/lex.scm.
+
+2017-02-16  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/cpp.scm (rtokl->string): now handled symb ## arg ## symb
+	(scan-cpp-input): skip-il-ws after #\(
+
+2017-01-18  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/parser.scm: check for EOF in end of CPP line
+
+	* lang/c99/mach.scm (c99-spec): decl for translation unit was
+	updated to allow programs with no declarations or statements
+
 2017-01-08  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* ../../test-suite/nyacc/lang/c99/exam.d/ex05.c: C99 does not
@@ -8,7 +50,7 @@
 	* lang/c99/body.scm (read-cpp-line): cpp statement should not
 	include newline?  Changed to unread final newline.
 
-	* lang/util.scm: add report-error: prints msg w/ file, line 
+	* lang/util.scm: add report-error: prints msg w/ file, line
 
 	* parse.scm (make-lalr-parser): changed printout of parse error to
 	(throw 'parse-error . args) and expect the full parser to catch

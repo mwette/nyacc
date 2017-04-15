@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/pprint.scm
 ;;;
-;;; Copyright (C) 2015,2016 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -56,6 +56,26 @@
     (right pre-inc pre-dec sizeof bitwise-not not pos neg ref-to de-ref cast
 	   cond assn-expr)
     (nonassoc)))
+
+;; @deffn {Procedure} scmchs->c scm-chr-str => c-chr-str
+;; Convert 1-char scheme string into 1-char C string constant as typed by user.
+;; That is, exscaped.
+;; @example
+;; (scmchstr->c "#x00") => "\\0"
+;; @end example
+;; @end deffn
+(define (scmchs->c scm-chr-str)
+  (let ((ch (string-ref scm-chr-str 0)))
+    (case ch
+      ((#\nul) "\\0")
+      ((#\alarm) "\\a")
+      ((#\backspace) "\\b")
+      ((#\tab) "\\t")
+      ((#\newline) "\\n")
+      ((#\vtab) "\\v")
+      ((#\page) "\\f")
+      ((#\\) "\\")
+      (else scm-chr-str))))
 
 (define protect-expr? (make-protect-expr op-prec op-assc))
 
@@ -150,7 +170,7 @@
 
       ((p-expr ,expr) (ppx expr))
       ((ident ,name) (sf "~A" name))
-      ((char ,value) (sf "'~A'" (sx-ref tree 1)))
+      ((char ,value) (sf "'~A'" (scmchs->c (sx-ref tree 1))))
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
 
@@ -168,8 +188,8 @@
       ((array-ref ,dim ,expr)
        (ppx expr) (sf "[") (ppx dim) (sf "]"))
 
-      ((d-sel ,id ,ex) (binary 'd-del "." ex id))
-      ((i-sel ,id ,ex) (binary 'i-del "->" ex id))
+      ((d-sel ,id ,ex) (binary 'd-sel "." ex id))
+      ((i-sel ,id ,ex) (binary 'i-sel "->" ex id))
 
       ((pre-inc ,expr) (unary/l 'pre-inc "++" expr))
       ((pre-dec ,expr) (unary/l 'pre-dec "--" expr))
@@ -262,7 +282,9 @@
     (sxml-match tree
       ;; sxml-match continues here to avoid stack overflow
       ;; |#
-      
+
+      ((udecl . ,rest)
+       (ppx `(decl . ,rest)))
       ((decl ,decl-spec-list)
        (ppx decl-spec-list) (sf ";\n"))
       ((decl ,decl-spec-list ,init-declr-list)
@@ -283,9 +305,8 @@
 	   (case (sx-tag (car dsl))
 	     ((stor-spec) (sf "~A " (car (sx-ref (car dsl) 1))))
 	     ((type-qual) (sf "~A " (sx-ref (car dsl) 1)))
-	     ((type-spec) (ppx (car dsl)))
+	     ((type-spec) (ppx (car dsl)) (sf " "))
 	     (else (sf "[?:~S] " (car dsl))))
-	   ;;(if (pair? (cdr dsl)) (sf " "))
 	   (iter (cdr dsl)))))
 
       ((init-declr-list . ,rest)
@@ -318,7 +339,7 @@
 	 ((union-def) (ppx arg))
 	 ((enum-def) (ppx arg))
 	 ((typename) (sf "~A" (sx-ref arg 1)))
-	 ((void) (sf "void"))
+	 ((void) (sf "void "))
 	 (else (error "missing " arg))))
 
       ((struct-ref (ident ,name)) (sf "struct ~A" name))
@@ -346,6 +367,8 @@
 
       ((enum-defn (ident ,name) (p-expr (fixed ,value)))
        (sf "~A = ~A,\n" name value))
+      ((enum-defn (ident ,name) (neg (p-expr (fixed ,value))))
+       (sf "~A = -~A,\n" name value))
       ((enum-defn (ident ,name))
        (sf "~A,\n" name))
 
@@ -394,6 +417,7 @@
       ;; |#
       
       ;; expression-statement
+      ((expr-stmt) (sf ";\n"))
       ((expr-stmt ,expr) (ppx expr) (sf ";\n"))
       ((expr-stmt ,expr ,comm) (ppx expr) (sf "; ") (ppx comm))
       
@@ -521,6 +545,7 @@
       ((cpp-stmt . ,rest)
        (cpp-ppx (sx-ref tree 1)))
 
+      ((extern-block ,begin ,guts ,end) (ppx begin) (ppx guts) (ppx end))
       ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
       ((extern-end) (sf "}\n"))
 

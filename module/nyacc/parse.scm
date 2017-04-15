@@ -1,6 +1,6 @@
 ;;; nyacc/parse.scm
 ;;;
-;;; Copyright (C) 2014-2016 Matthew R. Wette
+;;; Copyright (C) 2014-2017 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -12,9 +12,8 @@
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; Lesser General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU Lesser General Public
-;;; License along with this library; if not, write to the Free Software
-;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+;;; You should have received a copy of the GNU Lesser General Public License
+;;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 ;; make parser that provide list of la-toks to lexer:
 ;; e.g., if comment not in latok, just throw away
@@ -42,10 +41,10 @@
 ;; @end example
 ;; The generated parser is reentrant.
 (define* (make-lalr-parser mach)
-  (let* ((len-v (assq-ref mach 'len-v))
-	 (rto-v (assq-ref mach 'rto-v))	; reduce to
-	 (pat-v (assq-ref mach 'pat-v))
-	 (actn-v (assq-ref mach 'act-v)) ; unknown action vector
+  (let* ((len-v (assq-ref mach 'len-v))	 ; production RHS length
+	 (rto-v (assq-ref mach 'rto-v))	 ; reduce to
+	 (pat-v (assq-ref mach 'pat-v))	 ; parse action (shift, reduce) table
+	 (actn-v (assq-ref mach 'act-v)) ; symbolic actions
 	 (mtab (assq-ref mach 'mtab))
 	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
 		     (vector-map
@@ -124,6 +123,7 @@
 ;; redunctions if that is the only choice, and does not wait for '$end to
 ;; return.  This needs algorithm verification.  Makes some assumptions that
 ;; need to be verified.
+(use-modules (ice-9 pretty-print))
 (define* (make-lalr-ia-parser mach)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))	; reduce to
@@ -193,7 +193,7 @@
 		   (stx (or (assq-ref stxl tval)
 			    (assq-ref stxl def)
 			    parse-error)))
-	      #;(if debug (fmtout "  lval=~S  laval=~S\n" lval laval))
+	      ;;(if debug (fmtout "  lval=~S  laval=~S\n" lval laval))
 	      (if debug (dmsg (car state) (if nval tval sval) stx))
 	      (cond
 	       ((error? stx)

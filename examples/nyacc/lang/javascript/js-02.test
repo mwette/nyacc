@@ -1,0 +1,39 @@
+;; nyacc/examples/javascript/js-02.test		-*- scheme -*-
+;;
+;; Copyright (C) 2017 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+;; random
+
+(add-to-load-path (string-append (getcwd) "/../../../../module/"))
+(add-to-load-path (string-append (getcwd) "/../../../../examples/"))
+(add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
+
+(define-module (js-02)
+  #:use-module (nyacc lang javascript parser)
+  #:use-module (nyacc lang javascript separser)
+  #:use-module (language javascript spec)
+  #:use-module (test-suite lib))
+
+(define abc 123)
+
+(with-test-prefix "javascript/js-02, tree-il code generation"
+
+  ;; Get a simple statement to parse.
+  (pass-if "use javascript to set scheme variable"
+    (let* ((js-tree
+	    '(ExpressionStatement
+	      (AssignmentExpression
+	       (PrimaryExpression (Identifier "abc"))
+	       (assign "=")
+	       (PrimaryExpression (NumericLiteral "2")))))
+	   (ex-tree (js-xml->tree-il-ext (cons js-tree '*TOP*) #f #f)))
+      (equal? ex-tree (set! (toplevel a) (const 2)))))
+
+  )
+
+;; --- last line ---

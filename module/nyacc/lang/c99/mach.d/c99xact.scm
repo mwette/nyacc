@@ -699,12 +699,12 @@
    (lambda ($2 $1 . $rest) `(return (expr)))
    ;; translation-unit => external-declaration-list
    (lambda ($1 . $rest) (tl->list $1))
-   ;; external-declaration-list => external-declaration
-   (lambda ($1 . $rest) (make-tl 'trans-unit $1))
+   ;; external-declaration-list => 
+   (lambda $rest (make-tl 'trans-unit))
    ;; external-declaration-list => external-declaration-list external-decla...
    (lambda ($2 $1 . $rest)
      (if (eqv? (sx-tag $2) 'extern-block)
-       (tl-extend $1 (sx-tail $2 2))
+       (tl-extend $1 (sx-tail $2 1))
        (tl-append $1 $2)))
    ;; external-declaration => function-definition
    (lambda ($1 . $rest) $1)
@@ -714,13 +714,17 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => cpp-statement
    (lambda ($1 . $rest) $1)
+   ;; external-declaration => pragma
+   (lambda ($1 . $rest) $1)
    ;; external-declaration => "extern" '$string "{" external-declaration-li...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(extern-block
-        ,$2
         (extern-begin ,$2)
         ,@(sx-tail (tl->list $4) 1)
         (extern-end)))
+   ;; external-declaration => ";"
+   (lambda ($1 . $rest)
+     `(decl (@ (extension . "GNU C"))))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)
      `(knr-fctn-defn
@@ -759,6 +763,8 @@
    (lambda ($1 . $rest) `(comment ,$1))
    ;; cpp-statement => 'cpp-stmt
    (lambda ($1 . $rest) `(cpp-stmt ,$1))
+   ;; pragma => 'cpp-pragma
+   (lambda ($1 . $rest) $1)
    ))
 
 ;;; end tables

@@ -5,7 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-BUG-004	<= next bug id
+BUG-005	<= next bug id
+
+BUG-004	Idea: use guile prompts to implement rollback parser
 
 BUG-003	If using phony prec token then it ends up in match table.
 	For example, "then" appears in the match table for lang/c99.

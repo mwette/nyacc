@@ -1,6 +1,6 @@
 ;;; lang/javascript/mach.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -24,6 +24,7 @@
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
+  #:use-module (nyacc util)
   #:use-module ((srfi srfi-43) #:select (vector-map))
   )
 
@@ -33,6 +34,10 @@
 
 ;; NSI = "no semi-colon insertion"
 
+;; need to deal with reserved keywords:
+;; abstract boolean byte char class const debugger double enum export extends
+;; final float goto implements import int interface long native package private
+;; protected public short static super synchronized throws transient volatile
 
 ;; Not in the grammar yet: FunctionExpression
 
@@ -67,13 +72,6 @@
      (ArrayLiteral ($$ `(PrimaryExpression ,$1)))
      ;; until we get $with-prune working:
      #;(ObjectLiteral ($$ `(PrimaryExpression ,$1)))
-     ("(" Expression ")" ($$ $2))
-     )
-    #;(PrimaryExpression
-     ("this" ($$ '(this)))
-     (Identifier ($$ $1))
-     (Literal ($$ $1))
-     (ArrayLiteral ($$ $1))
      ("(" Expression ")" ($$ $2))
      )
 
@@ -277,12 +275,16 @@
     (AssignmentOperator
      ;; todo
      ("=" ($$ `(assign ,$1)))
-     ("*=" ($$ `(mul-assign ,$1))) ("/=" ($$ `(div-assign ,$1)))
+     ("*=" ($$ `(mul-assign ,$1)))
+     ("/=" ($$ `(div-assign ,$1)))
      ("%=" ($$ `(mod-assign ,$1)))
-     ("+=" ($$ `(add-assign ,$1))) ("-=" ($$ `(sub-assign ,$1)))
-     ("<<=" ($$ `(lshift-assign ,$1))) (">>=" ($$ `(rshift-assign ,$1)))
+     ("+=" ($$ `(add-assign ,$1)))
+     ("-=" ($$ `(sub-assign ,$1)))
+     ("<<=" ($$ `(lshift-assign ,$1)))
+     (">>=" ($$ `(rshift-assign ,$1)))
      (">>>=" ($$ `(rrshift-assign ,$1)))
-     ("&=" ($$ `(and-assign ,$1))) ("^=" ($$ `(xor-assign ,$1)))
+     ("&=" ($$ `(and-assign ,$1)))
+     ("^=" ($$ `(xor-assign ,$1)))
      ("|=" ($$ `(or-assign ,$1))))
 
     (Expression
@@ -550,6 +552,7 @@
 (include-from-path "nyacc/lang/javascript/body.scm")
 
 (define raw-parser (make-lalr-parser js-mach))
+
 (define* (dev-parse-js #:key debug)
   (catch
    'parse-error
@@ -576,7 +579,8 @@
 	(b (move-if-changed (xtra-dir "jstab.scm.new")
 			    (xtra-dir "jstab.scm"))))
     (when (or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm"))))))
+      (system (string-append "touch " (lang-dir "parser.scm"))))
+    (or a b)))
 
 (define (gen-se-files . rest)
   (define (lang-dir path)
@@ -584,19 +588,23 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (let* ((se-spec (restart-spec js-mach 'SourceElement))
-	 (se-mach (compact-machine
+  (let* ((se-spec (restart-spec js-spec 'SourceElement))
+	 #;(se-mach (compact-machine
 		   (hashify-machine
-		    (make-lalr-machine se-spec)))))
-    (write-lalr-actions js-mach (xtra-dir "seact.scm.new"))
-    (write-lalr-tables js-mach (xtra-dir "setab.scm.new")))
+	             (make-lalr-machine se-spec))))
+	 (se-mach (hashify-machine
+		   (make-lalr-machine se-spec)))
+    )
+    (write-lalr-actions se-mach (xtra-dir "seact.scm.new"))
+    (write-lalr-tables se-mach (xtra-dir "setab.scm.new")))
   
   (let ((a (move-if-changed (xtra-dir "seact.scm.new")
 			    (xtra-dir "seact.scm")))
 	(b (move-if-changed (xtra-dir "setab.scm.new")
 			    (xtra-dir "setab.scm"))))
-    (when (or a b) 
-      (system (string-append "touch " (lang-dir "separser.scm"))))))
+    #;(when (or a b)
+    (system (string-append "touch " (lang-dir "separser.scm"))))
+    (or a b)))
 
 
 ;;; --- last line ---

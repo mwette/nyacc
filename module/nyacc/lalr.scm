@@ -1,6 +1,6 @@
 ;;; nyacc/lalr.scm
 ;;;
-;;; Copyright (C) 2014-2016 Matthew R. Wette
+;;; Copyright (C) 2014-2017 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,7 @@
   #:export-syntax (lalr-spec)
   #:export (*nyacc-version*
 	    make-lalr-machine compact-machine hashify-machine 
-	    lalr-match-table
+	    lalr-start lalr-match-table
 	    restart-spec add-recovery-logic!
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
 	    write-lalr-actions write-lalr-tables
@@ -42,7 +42,7 @@
   #:use-module (nyacc util)
   )
 
-(define *nyacc-version* "0.74.1+devel")
+(define *nyacc-version* "0.77.0")
 
 ;; @deffn proxy-? sym rhs
 ;; @example
@@ -101,7 +101,7 @@
   ;; If the first character `$' then it's reserved.
   (eqv? #\$ (string-ref (symbol->string (syntax->datum grammar-symbol)) 0)))
   
-;; @deffn lalr-spec grammar => spec
+;; @deffn {Syntax} lalr-spec grammar => spec
 ;; This routine reads a grammar in a scheme-like syntax and returns an a-list.
 ;; This spec' can be an input for @item{make-parser-generator} or 
 ;; @item{pp-spec}.
@@ -121,6 +121,7 @@
 ;; A @code(prune) expression can only appear in a with or as the left-most
 ;; element of the right-hand-side.  The meaning is to filter out those symbols
 ;; (terminal or non-terminal) which may appear there (in non-kernel expansion).
+;; @end deffn
 (define-syntax lalr-spec
   (syntax-rules +++ () 
     ((_ <expr> +++)
@@ -474,14 +475,10 @@
 		     (else '($1)))))
 	  (iter (cons lhs ll)
 		(cons (cons* (cons 'rhs (list->vector (reverse pel)))
-<<<<<<< HEAD
 			     (cons* 'act nrg act)
 			     (cons 'ref ref)
 			     (cons 'pru prune)
 			     attr) @l)
-=======
-			     (cons* 'act nrg act) (cons 'ref ref) attr) @l)
->>>>>>> master
 		tl nl head prox lhs tail rhs-l attr pel #f)))
 
        ((pair? rhs-l)
@@ -526,12 +523,16 @@
 	  (if (pair? (filter (lambda (s) (char=? #\* (string-ref s 0))) err-l))
 	      #f
 	      (list
-	       ;; most referenced
-	       (cons 'non-terms nl)
-	       (cons 'lhs-v (list->vector (reverse ll)))
+	       ;; Put most referenced items first, but keep start and rhs-v at
+	       ;; top so that if we want to restart (see restart-spec) we can
+	       ;; reuse the tail here.
+	       ;;(cons 'start start-symbol) ; use lalr-start, aka rhs-v[0][0]
 	       (cons 'rhs-v (map-attr->vector al 'rhs))
+	       ;;
+	       (cons 'restart-tail #t)	; see @code{restart-spec} below
+	       (cons 'lhs-v (list->vector (reverse ll)))
+	       (cons 'non-terms nl)
 	       (cons 'terminals tl)
-	       (cons 'start start-symbol)
 	       (cons 'attr (list
 			    (cons 'expect (or (assq-ref tree 'expect) 0))
 			    (cons 'notice (assq-ref tree 'notice))))
@@ -560,7 +561,6 @@
   lalr-core-type?
   (non-terms core-non-terms)	      ; list of non-terminals
   (terminals core-terminals)	      ; list of non-terminals
-  (start core-start)		      ; start non-terminal
   (lhs-v core-lhs-v)		      ; vec of left hand sides
   (rhs-v core-rhs-v)		      ; vec of right hand sides
   (pru-v core-pru-v)		      ; vec of p-rule prunage
@@ -570,7 +570,6 @@
 (define (make-core spec)
   (make-lalr-core (assq-ref spec 'non-terms)
 		  (assq-ref spec 'terminals)
-		  (assq-ref spec 'start)
 		  (assq-ref spec 'lhs-v)
 		  (assq-ref spec 'rhs-v)
 		  (assq-ref spec 'pru-v)
@@ -581,7 +580,6 @@
 (define (make-core/extras spec)
   (let ((non-terms (assq-ref spec 'non-terms))
 	(terminals (assq-ref spec 'terminals))
-	(start (assq-ref spec 'start))
 	(lhs-v (assq-ref spec 'lhs-v))
 	(rhs-v (assq-ref spec 'rhs-v))
 	(pru-v (assq-ref spec 'pru-v)))
@@ -1571,14 +1569,14 @@
 ;;   pat-v - parse action table
 ;;   ref-v - references
 ;;   len-v - rule lengths
-;;   rto-v - hashed lhs symbols
+;;   rto-v - hashed lhs symbols (rto = reduce to)
 ;; to print itemsets need:
-;;   kis-v - itemsets
 ;;   lhs-v - left hand sides
 ;;   rhs-v - right hand sides
+;;   kis-v - itemsets
 ;;   pat-v - action table
 
-;; @deffn restart-spec spec start => spec
+;; @deffn restart-spec [spec|mach] start => spec
 ;; This generates a new spec with a different start.
 ;; @example
 ;; (restart-spec clang-spec 'expression) => cexpr-spec
@@ -1586,9 +1584,8 @@
 (define (restart-spec spec start)
   (let* ((rhs-v (vector-copy (assq-ref spec 'rhs-v))))
     (vector-set! rhs-v 0 (vector start))
-    (cons* (cons 'start start)
-	   (cons 'rhs-v rhs-v)
-	   spec)))
+    (cons* (cons 'rhs-v rhs-v)
+	   (member '(restart-tail . #t) spec))))
 
 ;; @deffn make-lalr-machine spec => pgen
 ;; Generate a-list of items used for building/debugging parsers.
@@ -1654,14 +1651,20 @@
     ;; otherwise, return #t.
     (lambda () #t)))
 
-;; @deffn compact-machine mach [#:keep 3] => mach
+;; The list of tokens that do not get absorbed into default reductions.
+;; See @code{compact-machine} below.
+(define default-keepers '($error $lone-comm $code-comm $end))
+
+;; @deffn compact-machine mach [#:keep 3] [#:keepers '()] => mach
 ;; A "filter" to compact the parse table.  For each state this will replace
 ;; the most populus set of reductions of the same production rule with a
-;; default production.  However, reductions triggered by keepers like
-;; @code{'$error}, @code{'$lone-comm} or @code{'$lone-comm} are not counted.
-;; The parser will want to treat errors and comments separately so that they
-;; can be trapped (e.g., unaccounted comments are skipped).
-(define* (compact-machine mach #:key (keep 3))
+;; default production.  However, reductions triggered by user-specified keepers
+;; and the default keepers -- @code{'$error}, @code{'$end}, @code{'$lone-comm}
+;; and @code{'$lone-comm} are not counted.  The parser will want to treat
+;; errors and comments separately so that they can be trapped (e.g.,
+;; unaccounted comments are skipped).
+;; @end deffn
+(define* (compact-machine mach #:key (keep 3) (keepers '()))
   (let* ((pat-v (assq-ref mach 'pat-v))
 	 (nst (vector-length pat-v))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
@@ -1677,9 +1680,8 @@
 			 (lambda (r) (cons -1 (- r)))
 			 (lambda (r) `($default reduce . ,r))))
 	 (mtab (assq-ref mach 'mtab))
-	 (keepers (list (assq-ref mtab '$lone-comm)
-			(assq-ref mtab '$code-comm)
-			(assq-ref mtab '$error))))
+	 (keepers (map (lambda (k) (assq-ref mtab k))
+		       (append keepers default-keepers))))
 
     ;; Keep an a-list mapping reduction prod-rule => count.
     (let iter ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))
@@ -1991,12 +1993,13 @@
 	(regexp-substitute #f m 'pre repl 'post)
 	str)))
 
-;; @deffn write-lalr-tables mach filename [#:lang output-lang]
+;; @deffn {Procedure} write-lalr-tables mach filename [#:lang output-lang]
 ;; For example,
 ;; @example
 ;; write-lalr-tables mach "tables.scm"
 ;; write-lalr-tables mach "tables.tcl" #:lang 'tcl
 ;; @end example
+;; @end deffn
 (define* (write-lalr-tables mach filename #:key (lang 'scheme))
 
   (define (write-table mach name port)
@@ -2016,12 +2019,13 @@
       (newline port))))
 
 
-;; @deffn write-lalr-actions mach filename [#:lang output-lang]
+;; @deffn {Procedure} write-lalr-actions mach filename [#:lang output-lang]
 ;; For example,
 ;; @example
 ;; write-lalr-actions mach "actions.scm"
 ;; write-lalr-actions mach "actions.tcl" #:lang 'tcl
 ;; @end example
+;; @end deffn
 (define* (write-lalr-actions mach filename #:key (lang 'scheme))
 
   (define (pp-rule/ts gx)

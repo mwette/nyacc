@@ -1,0 +1,50 @@
+@c memodefs.texi
+@c
+@c This file is free software: you can redistribute it and/or modify 
+@c it under the terms of the GNU General Public License as published
+@c by the Free Software Foundation, either version 3 of the License,
+@c or (at your option) any later version. 
+@c
+@c This file is distributed in the hope that it will be useful, but
+@c WITHOUT ANY WARRANTY; without even the implied warranty of
+@c MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
+@c General Public License for more details.
+@c
+@c You should have received a copy of the GNU General Public License
+@c along with this program.  If not, see <http://www.gnu.org/licenses/>.
+@c
+@c v170228a - M.Wette
+@iftex
+\globaldefs = 1
+\def\seczzz#1{%
+  \global\subsecno=0 \global\subsubsecno=0  \global\advance\secno by 1
+  \sectionheading{#1}{sec}{Ynumbered}{\the\secno}}
+\def\numberedsubseczzz#1{%
+  \global\subsubsecno=0  \global\advance\subsecno by 1
+  \sectionheading{#1}{subsec}{Ynumbered}{\the\secno.\the\subsecno}}
+\def\numberedsubsubseczzz#1{%
+  \global\advance\subsubsecno by 1
+  \sectionheading{#1}{subsubsec}{Ynumbered}%
+           {\the\secno.\the\subsecno.\the\subsubsecno}}
+\parseargdef\title{{\titlefonts\rmisbold \centerline{#1}}\vskip4pt}
+\parseargdef\subtitle{{\chapfonts\rmisbold \centerline{#1}}\vskip4pt}
+\parseargdef\author{{\secfonts\rmisbold \centerline{#1}}}
+@end tex
+@ifnottex
+@c @macro title
+@c @macro subtitle xxx
+@c @macro author xxx
+@macro chapter
+@chapheading
+@end macro
+@macro section
+@heading
+@end macro
+@macro subsection
+@subheading
+@end macro
+@macro subsubsection
+@subsubheading
+@end macro
+@end nottex
+@c --- last line ---

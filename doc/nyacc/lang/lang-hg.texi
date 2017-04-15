@@ -1,6 +1,6 @@
 \input texinfo.tex
-@setfilename nyacc-hg.info
-@settitle NYACC Hacker's Guide
+@setfilename lang-hg.info
+@settitle Language Hacker's Guide
 
 @copying
 Copyright (C) 2017 -- Matthew R. Wette.
@@ -15,8 +15,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 @clear skip
 
 @titlepage
-@title C99 Parser User's Guide
-@subtitle rough and incomplete
+@title NYACC Language Hacker's Guide
+@subtitle for generating compilers and guile languages
 
 @vskip 0pt plus 1filll
 @quotation
@@ -43,18 +43,9 @@ copy of the license is included with the distribution as COPYING.DOC.
 @node Introduction
 @chapter The Introduction
 
-This is a manual for ...
+sxml is used for intermediate language
 
-To get CPP pre-defined macros w/ gcc:
-@example
-$ touch /tmp/z.c
-$ gcc -dM -E /tmp/z.c > /tmp/z.e
-@end example
-
-Note on CPP replacement text: IIRC, C99 will remove comments from CPP
-statements before processing.  I preserve this and remove inside the
-CPP parser.
-
+discuss guile how NYACC works with the compiler tower
 
 @section The Free Documentation License
 The Free Documentation License is included in the Guile Reference
