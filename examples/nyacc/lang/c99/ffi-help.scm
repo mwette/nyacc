@@ -7,6 +7,7 @@
   #:export (*ffi-help-version*
 	    char*? wrap-char* unwrap-char*
 	    bs-renamer
+	    pkg-config-incs
 	    )
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 util1)
@@ -26,7 +27,7 @@
 
 (define std-inc-dirs
   `("/usr/include"
-    ,(assq-ref %guile-build-info 'includedir)
+    ;;,(assq-ref %guile-build-info 'includedir)
     ))
 
 (define (sfout fmt . args)
@@ -35,6 +36,7 @@
 (define *tree* #f)
 
 (define (parse-includes cpp-defs inc-dirs inc-files)
+  ;;(simple-format #t "inc-dirs=~S\n" inc-dirs)
   (let* ((all-defs (append cpp-defs (gen-gcc-defs)))
 	 (prog (string-join
 		(map (lambda (inc-file)
@@ -49,6 +51,20 @@
 
 ;; (sizeof '*) works
 
+(use-modules (ice-9 popen))
+(use-modules (ice-9 rdelim))
+
+;; use pkg-config to get a list of include dirs
+;; (pkg-config-incs "cairo") => ("/opt/local/include/cairo" ...)
+(define (pkg-config-incs name)
+  (let* ((port (open-input-pipe (string-append "pkg-config --cflags " name)))
+	 (ostr (read-line port))
+	 (incl (string-split ostr #\space))
+	 )
+    (close-port port)
+    ;;(simple-format #t "~S\n" (map (lambda (s) (substring/shared s 2)) incl))
+    (map (lambda (s) (substring/shared s 2)) incl)))
+
 (define (intro-ffi path . opts)
   ;; pkg-config --cflags <pkg>
   ;; pkg-config --libs <pkg>
@@ -58,11 +74,31 @@
       (if (null? opts) (reverse attrs)
 	  (iter (acons (car opts) (cadr opts) attrs) (cddr opts)))))
     
+  (define (get-tree attrs)
+    (let iter ((defines '()) (inc-dirs std-inc-dirs) (inc-files '())
+	       (attrs attrs))
+      (cond
+       ((null? attrs) (parse-includes defines inc-dirs inc-files))
+       ((eqv? #:pkg-config (caar attrs))
+	(iter defines (append (pkg-config-incs (cdar attrs)) inc-dirs)
+	      inc-files (cdr attrs)))
+       ((eqv? #:include (caar attrs))
+	(iter defines inc-dirs (cons (cdar attrs) inc-files) (cdr attrs)))
+       ((eqv? #:define (caar attrs))
+	(iter (cons (cdar attrs) defines) inc-dirs inc-files (cdr attrs)))
+       (else
+	(simple-format #t "skipping ~S\n" (car attrs))
+	(iter defines inc-dirs inc-files (cdr attrs)))))
+    
   (let* ((attrs (opts->attrs opts))
 	 (dpath (string-join (map symbol->string path) "/"))
 	 (dport (open-output-file (string-append dpath ".scm")))
 	 (sf (lambda (fmt . args) (apply simple-format dport fmt args)))
+	 (tree (get-tree attrs))
+	 ;;(file-decls (reverse (c99-trans-unit->udict tree #:filter cairo-filter)))
+	 ;;(udecl-dict (c99-trans-unit->udict/deep tree)))
 	 )
+
     (sf "(define-module (path-list)\n")
     (sf "  #:(use-module (ffi-help)\n")
     (sf "  #:(use-module (system foreign)\n")
@@ -71,15 +107,6 @@
     (sf "(define lib-link (dynamic-link ~S))\n" (assq-ref attrs #:library))
     (sf "(define (lib-func name) (dynamic-func name lib-link))\n\n")
 
-    ;; collect includes
-    (let iter ((defs '()) (incs '()) (attrs attrs))
-      (cond
-       ((null? attrs) (parse-includes defs std-inc-dirs incs))
-       ((eqv? #:include (caar attrs))
-	(iter defs (cons (cdar attrs) incs) (cdr attrs)))
-       ((eqv? #:define (caar attrs))
-	(iter (cons (cdar attrs) defs) incs (cdr attrs)))
-       (else (iter defs incs (cdr attrs)))))
     
     (close dport)
     ))

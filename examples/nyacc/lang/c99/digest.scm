@@ -22,7 +22,10 @@
 ;;(use-modules (system base pmatch))
 
 (define my-defs (gen-gcc-defs '()))
-(define my-help '())
+(define my-help
+  '(
+    ("__builtin" "__builtin_va_list" "__asm(X)=/* */")
+    ))
 (define (my-xdef? name mode)
   (cond
    ((< (string-length name) 6) #f)
@@ -84,7 +87,7 @@
   (with-input-from-file file
     (lambda () (parse-c99 #:cpp-defs (append my-defs defs) #:inc-dirs incs
                           #:inc-help my-help #:xdef? my-xdef?
-			  #:mode 'decl #:debug #f))))
+ 			  #:mode 'decl #:debug #f))))
 
 #;(define (parse defs incs)
   (parse-c99 #:cpp-defs defs #:inc-dirs incs
@@ -402,7 +405,7 @@
     (map string->symbol 
 	 (string-split (substring path 0 dx) #\/))))
 
-#;(let* ((file "/opt/local/include/cairo/cairo-svg.h")
+(let* ((file "/opt/local/include/cairo/cairo-svg.h")
        (path "/opt/local/lib/libcairo")
        (defs '())
        (incs '("/opt/local/include" "/opt/local/include/cairo" "/usr/include"))
@@ -447,18 +450,21 @@
 ;; pkg-config --cflags git2
 ;; pkg-config --libs git2
 
-(let* ((file "/opt/local/include/git2.h")
+#;(let* ((file "/opt/local/include/git2.h")
        (defs (gen-gcc-defs))
-       (incs '("/opt/local/include" "/opt/local/include/git2" "/usr/include"))
+       ;;(xx (pretty-print defs))
+       (incs '("/opt/local/include" "/usr/include"))
        (tree (my-parse defs incs file))
        (file-decls (reverse (c99-trans-unit->udict tree #:filter git-filter)))
-       ;;(udecl-dict (c99-trans-unit->udict/deep tree))
+       (udecl-dict (c99-trans-unit->udict/deep tree))
        (udecl (assoc-ref file-decls "git_repository"))
        )
   (sfout "got it\n")
-  (pretty-print udecl)
+  ;;(pretty-print udecl)
   )
 
+;; crashes in /usr/include/sys/time.h, line 102?
+;; extern long timezone __DARWIN_ALIAS(timezone);
 
-  ;; --- last line ---
+;; --- last line ---
 

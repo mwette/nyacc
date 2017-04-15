@@ -472,8 +472,6 @@
 	    ;; cl: comm char list; sl: shift list; il: input list;
 	    ;; ps: pattern string; px: pattern index
 	    (lambda (cl sl il ps px)
-	      (simple-format #t "find-end: cl=~S sl=~S il=~S ps=~S px=~S\n"
-			     cl sl il ps px)
 	      (cond
 	       ((eq? px (string-length ps))
 		(if (and (not eat-newline) (eq? #\newline (car sl)))

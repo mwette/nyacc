@@ -2,7 +2,7 @@
 @setfilename c99-hg.info
 @settitle C99 User's Guide
 
-@include memodefs.texi
+@include ../../memodefs.texi
 
 @ifnottex
 @node Top, Introduction, (dir), (dir)
@@ -22,6 +22,12 @@ copy of the license is included with the distribution as COPYING.DOC.
 @headings off
 @everyfooting @| @thispage @|
 
+@c @node Top
+@c @top C99 Parser User's Guide
+@c @format
+@c Matt Wette
+@c April 14, 2017
+@c @end format
 @title C99 Parser User's Guide
 @subtitle rough and incomplete
 @author Matt Wette
@@ -91,13 +97,29 @@ Default mode is @code{'code}.
 @end deffn
 
 @subsubsection Modes
-There are several modes for parsing
+There are several modes for parsing which affect the way the C
+preprocessor statements are handled, and how the parse tree is
+generated.  The following list explains the intent behind these
+parsing modes.  Later we mention some fine points.
 @itemize
 @item 
-@emph{file} mode will keep the CPP structure at the top level but only
-chase down one tree.  This is a change from version prior to 0.77.0.  It
-implies that all defines required for evaluating CPP expressions in
-if-then have to be resolved
+@emph{code} mode is the default.  In this mode, the proprocess works
+like a normal C compiler.  The preprocessor statements are evaluated
+as they are read and macros in the code are expanded as they are read.
+@item
+@emph{decl} mode is intended to be used for tools which want to
+extract the declarations and definitions which are explicit in a file,
+but allow access to declarations and definitions in included files.
+@item 
+@emph{file} mode is intended to be used for tools which want to
+transform C files somehow.  For example, one could parse a file and
+remove all comments.  This will keep the CPP structure at the top
+level.  Preprocessor statements at the top level are not evaluted.
+@*
+Note:
+There is a change in versions starting with 0.77.0.
+In these all defines required for evaluating CPP expressions in
+if-then have to be resolved.
 @end itemize
 
 Options are as follows

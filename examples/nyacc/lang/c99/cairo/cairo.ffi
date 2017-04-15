@@ -2,7 +2,8 @@
 (use-modules (ffi-help))
 
 (define-ffi-helper (cairo cairo)
-  #:include "cairo/cairo-svg.h"
+  #:pkg-config "cairo"
+  #:include "cairo-svg.h"
   #:library "libcairo"
   #:filter (lambda (path) (string=? "cairo" (substring path 0 5)))
   ;;#:cpp-defs ()

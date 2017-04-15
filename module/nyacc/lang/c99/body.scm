@@ -279,8 +279,10 @@
       (let ((bol #t)		      ; begin-of-line condition
 	    (xtxt #f)		      ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	      ; CPP execution state stack
-	    (info (fluid-ref *info*)) ; assume make and run in same thread
-	    (x-def? (or xdef? def-xdef?)))
+	    (info (fluid-ref *info*)) ; info shared w/ parser
+	    (brlev 0)		      ; brace level
+	    (x-def? (or xdef? def-xdef?))
+	    )
 	;; Return the first (tval . lval) pair not excluded by the CPP.
 	(lambda ()
 
@@ -361,9 +363,7 @@
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (p-err "not found: ~S" file)) ; file not found
-	       (else
-		(simple-format #t "\ninclude ~S\n\n" path)
-		(set! bol #t) (push-input (open-input-file path))))
+	       (else (set! bol #t) (push-input (open-input-file path))))
 	      stmt))
 
 	  (define (eval-cpp-incl/tree stmt) ;; => stmt
@@ -375,10 +375,6 @@
 	       ((not path) (p-err "not found: ~S" file)) ; file not found
 	       ((with-input-from-file path run-parse) => ; add tree to stmt
 		(lambda (tree)
-		  (simple-format #t "run-parse on ~S\n" path)
-		  (if (string=? path "/usr/include/sys/_types.h")
-		      (set-cpi-debug! info #t)
-		      (set-cpi-debug! info #f))
 		  ;;(pretty-print tree (current-error-port))
 		  ;;(pretty-print (xp1 tree))
 		  (for-each add-define (xp1 tree))
@@ -429,35 +425,36 @@
 	      ((pragma) stmt) ;; need to work this
 	      (else (error "bad cpp flow stmt"))))
 
-	  ;; This must return the stmt.
+	  ;; Maybe evaluate the CPP statement.
 	  (define (eval-cpp-stmt stmt)
 	    (with-throw-handler
 	     'cpp-error
 	     (lambda ()
 	       (case mode
 		 ((code) (eval-cpp-stmt/code stmt))
-		 ((decl) (eval-cpp-stmt/decl stmt))
 		 ((file) (eval-cpp-stmt/file stmt))
-		 (else (throw 'c99-error "bad parse code"))))
+		 ((decl) (eval-cpp-stmt/decl stmt))
+		 (else (error "lang/c99 coding error"))))
 	     (lambda (key fmt . rest)
 	       (report-error fmt rest)
 	       (throw 'c99-error "CPP error"))))
 
-	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
-	  (define (read-cpp-stmt ch)
-	    (and=> (read-cpp-line ch) cpp-line->stmt))
-
-	  ;; Pass the cpp-stmt to the parser
+	  ;; Predicate to determine if we pass the cpp-stmt to the parser.
+	  ;; @itemize
+	  ;; If code mode, never
+	  ;; If file mode, all except includes between { }
+	  ;; If decl mode, only defines and includes outside {}
+	  ;; @end itemize
 	  (define (pass-cpp-stmt? stmt)
 	    (case mode
 	      ((code) #f)
-	      ((file) #t)
-	      (else ;; decl
-	       (case (car stmt)
-		 ;;((include define) #t)
-		 ;; why did I add define?
-		 ((include) #t)
-		 (else #f)))))
+	      ((file) (or (zero? brlev) (not (eqv? (car stmt) include))))
+	      ((decl) (and (zero? brlev) (memq (car stmt) '(include define))))
+	      (else (error "lang/c99 coding error"))))
+
+	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
+	  (define (read-cpp-stmt ch)
+	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
 	  (define (read-token)
 	    (let iter ((ch (read-char)))
@@ -474,12 +471,6 @@
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
 		    (let ((stmt (eval-cpp-stmt stmt))) ; eval can add tree
-		      (if (and #f
-			   (pair? (cadr stmt))
-			   (pair? (cdadr stmt))
-			   (string=? (cadadr stmt) "CLOCK_REALTIME"))
-			  (simple-format #t "~S\npass? ~S\nmode ~S\n"
-					 stmt (pass-cpp-stmt? stmt) mode))
 		      (if (pass-cpp-stmt? stmt)
 			  (assc-$ `(cpp-stmt . ,stmt))
 			  (iter (read-char))))))
@@ -490,7 +481,7 @@
 		    ;;(simple-format #t "id: name=~S xtxt=~S\n" name xtxt)
 		    (cond
 		     ((and (not xtxt)
-			   (x-def? name mode)
+			   (if (procedure? x-def?) (x-def? name mode) x-def?)
 			   (expand-cpp-macro-ref name (cpi-defs info)))
 		      => (lambda (st)
 			   ;;(simple-format #t "repl=~S\n" st)
@@ -507,8 +498,8 @@
 	       ((read-c-string ch) => assc-$)
 	       ((read-c-chlit ch) => assc-$)
 	       ((read-comm ch #f) => assc-$)
-	       ;;((char=? ch #\{)
-	       ;;((char=? ch #\})
+	       ((and (char=? ch #\{) (set! brlev (1+ brlev)) #f) #f)
+	       ((and (char=? ch #\}) (set! brlev (1- brlev)) #f) #f)
 	       ((read-chseq ch) => identity)
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
