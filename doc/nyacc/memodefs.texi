@@ -14,9 +14,8 @@
 @c along with this program.  If not, see <http://www.gnu.org/licenses/>.
 @c
 @c v170228a - M.Wette
-@tex
+@iftex
 \globaldefs = 1
-
 \def\seczzz#1{%
   \global\subsecno=0 \global\subsubsecno=0  \global\advance\secno by 1
   \sectionheading{#1}{sec}{Ynumbered}{\the\secno}}
@@ -27,12 +26,25 @@
   \global\advance\subsubsecno by 1
   \sectionheading{#1}{subsubsec}{Ynumbered}%
            {\the\secno.\the\subsecno.\the\subsubsecno}}
-           
 \parseargdef\title{{\titlefonts\rmisbold \centerline{#1}}\vskip4pt}
 \parseargdef\subtitle{{\chapfonts\rmisbold \centerline{#1}}\vskip4pt}
 \parseargdef\author{{\secfonts\rmisbold \centerline{#1}}}
-
-%line 3800: \parseargdef\title
-%line 527: \def\parseargdef
 @end tex
+@ifnottex
+@c @macro title
+@c @macro subtitle xxx
+@c @macro author xxx
+@macro chapter
+@chapheading
+@end macro
+@macro section
+@heading
+@end macro
+@macro subsection
+@subheading
+@end macro
+@macro subsubsection
+@subsubheading
+@end macro
+@end nottex
 @c --- last line ---

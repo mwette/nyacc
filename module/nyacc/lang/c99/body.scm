@@ -405,7 +405,10 @@
 	      (else
 	       (if (eqv? 'keep (car ppxs))
 		   (case (car stmt)
-		     ((include) (eval-cpp-incl/tree stmt))
+		     ((include)		; use tree unless inside braces
+		      (if (zero? brlev)
+			  (eval-cpp-incl/tree stmt)
+			  (eval-cpp-incl/here stmt)))
 		     ((define) (add-define stmt) stmt)
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (p-err "error: #error ~A" (cadr stmt)))
@@ -432,8 +435,8 @@
 	     (lambda ()
 	       (case mode
 		 ((code) (eval-cpp-stmt/code stmt))
-		 ((file) (eval-cpp-stmt/file stmt))
 		 ((decl) (eval-cpp-stmt/decl stmt))
+		 ((file) (eval-cpp-stmt/file stmt))
 		 (else (error "lang/c99 coding error"))))
 	     (lambda (key fmt . rest)
 	       (report-error fmt rest)
@@ -448,8 +451,8 @@
 	  (define (pass-cpp-stmt? stmt)
 	    (case mode
 	      ((code) #f)
-	      ((file) (or (zero? brlev) (not (eqv? (car stmt) include))))
 	      ((decl) (and (zero? brlev) (memq (car stmt) '(include define))))
+	      ((file) (or (zero? brlev) (not (eqv? (car stmt) 'include))))
 	      (else (error "lang/c99 coding error"))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.

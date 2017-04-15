@@ -1,5 +1,5 @@
 #ifndef ABC
-#include "inc.h"
+#include "ex14.h"
 #define ABC
 #endif
 

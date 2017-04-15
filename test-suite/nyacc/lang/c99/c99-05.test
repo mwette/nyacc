@@ -62,8 +62,9 @@
   ;; expected tranformations
   (pass-if "expression protection"
     (let ((red (lambda (in)
-		 (let* ((tree (xparse-string in))
-			(out (pretty-print-c99 tree)))
+		 (let* ((tree (parse-c99x in))
+			(out (with-output-to-string
+			       (lambda () (pretty-print-c99 tree)))))
 		   (string-delete #\space out)))))
       (fold
        (lambda (pair status)
