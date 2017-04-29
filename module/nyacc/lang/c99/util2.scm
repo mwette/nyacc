@@ -18,7 +18,6 @@
 
 ;; utilities for processing output trees
 
-
 ;; KEEPING STRUCTS ENUMS etc
 ;; if have typename and want to keep it, then change
 ;;   (typename "foo_t")
@@ -29,10 +28,16 @@
 ;;  (make-proxy comp-udecl) => udecl
 ;;  (revert-proxy udecl) => comp-udecl
 
+;; NOTE
+;;  stripdown no longer deals with typeref expansion
+;; use
+;;  expand-typerefs, then stripdown, then udecl->mspec
+
 (define-module (nyacc lang c99 util2)
   #:export (c99-trans-unit->udict
 	    c99-trans-unit->udict/deep
 
+	    expand-typerefs
 	    stripdown
 	    udecl->mspec udecl->mspec/comm
 
@@ -42,7 +47,6 @@
 
 	    munge-decl munge-comp-decl munge-param-decl
 	    declr->ident
-	    expand-typerefs
 
 	    clean-field-list
 
@@ -614,8 +618,8 @@
 	  (else
 	   (iter (cons (car tail) dsl1) const-seen? (cdr tail)))))))
 
-;; @deffn {Procedure} udecl->mspec sudecl [dict]
-;; @deffnx {Procedure} udecl->mspec/comm decl [dict] [#:def-comm ""]
+;; @deffn {Procedure} udecl->mspec udecl
+;; @deffnx {Procedure} udecl->mspec/comm udecl [#:def-comm ""]
 ;; Turn a stripped-down unit-declaration into an m-spec.  The second version
 ;; include a comment. This assumes decls have been run through
 ;; @code{stripdown}.
@@ -627,7 +631,7 @@
 ;; ("x" "state vector" (array-of 10) (float "double")
 ;; @end example
 ;; @end deffn
-(define (udecl->mspec decl . rest)
+(define (udecl->mspec decl)
 
   (define (cnvt-array-size size-spec)
     (with-output-to-string (lambda () (pretty-print-c99 size-spec))))
@@ -667,7 +671,7 @@
       (if (eqv? 'type-spec (caar tsl)) (car tsl)
 	  (iter (cdr tsl))))) 
   
-  (let* ((decl-dict (if (pair? rest) (car rest) '()))
+  (let* (;;(decl-dict (if (pair? rest) (car rest) '()))
 	 (specl (sx-ref decl 1))
 	 (tspec (cadr specl))		; type-spec
 	 (const (and=> (sx-ref specl 2)	; const pointer ???
@@ -680,9 +684,9 @@
 	 (m-decl (reverse (cons m-specl m-declr))))
     m-decl))
 
-(define* (udecl->mspec/comm decl #:optional (dict '()) #:key (def-comm ""))
+(define* (udecl->mspec/comm decl #:key (def-comm ""))
   (let* ((comm (or (and=> (sx-ref decl 3) cadr) def-comm))
-	 (spec (udecl->mspec decl dict)))
+	 (spec (udecl->mspec decl)))
     (cons* (car spec) comm (cdr spec))))
 
 ;; @deffn {Procedure} clean-field-list field-list => flds
