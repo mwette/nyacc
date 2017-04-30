@@ -152,6 +152,7 @@ should expand using CPP defines.  The default is
 
 stuff
 
+
 @section Copying
 
 Permission is granted to copy, distribute and/or modify this document

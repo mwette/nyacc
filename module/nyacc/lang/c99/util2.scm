@@ -18,7 +18,6 @@
 
 ;; utilities for processing output trees
 
-
 ;; KEEPING STRUCTS ENUMS etc
 ;; if have typename and want to keep it, then change
 ;;   (typename "foo_t")
@@ -29,10 +28,16 @@
 ;;  (make-proxy comp-udecl) => udecl
 ;;  (revert-proxy udecl) => comp-udecl
 
+;; NOTE
+;;  stripdown no longer deals with typeref expansion
+;; use
+;;  expand-typerefs, then stripdown, then udecl->mspec
+
 (define-module (nyacc lang c99 util2)
   #:export (c99-trans-unit->udict
 	    c99-trans-unit->udict/deep
 
+	    expand-typerefs
 	    stripdown
 	    udecl->mspec udecl->mspec/comm
 
@@ -42,7 +47,6 @@
 
 	    munge-decl munge-comp-decl munge-param-decl
 	    declr->ident
-	    expand-typerefs
 
 	    clean-field-list
 
@@ -102,7 +106,8 @@
 
 ;; @deffn {Procedure} declr->ident declr => (ident "name")
 ;; Given a declarator, aka @code{init-declr}, return the identifier.
-;; This is used by @code{tree->udict}.  See also: declr->id-name in body.scm.
+;; This is used by @code{trans-unit->udict}.
+;; See also: declr->id-name in body.scm.
 ;; @end deffn
 (define (declr->ident declr)
   (sxml-match declr
@@ -119,28 +124,30 @@
 
 ;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:filter f] => udict
 ;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]=> udict
-;; Turn a C parse tree into a assoc-list of names and definitions.
+;; Turn a C parse tree into a assoc-list of global names and definitions.
 ;; This will unwrap @code{init-declr-list} into list of decls w/
 ;; @code{init-declr}.
+;; @example
 ;; BUG: need to add struct and union defn's: struct foo { int x; };
 ;; how to deal with this
 ;; lookup '(struct . "foo"), "struct foo", ???
 ;; wanted "struct" -> dict but that is not great
 ;; solution: munge-decl => '(struct . "foo") then filter to generate
-;; ("struct" ("foo" . decl) ..)
-;; ("union" ("bar" . decl) ..)
+;; ("struct" ("foo" . decl) ("bar" . decl) ...)
+;; ("union" ("bar" . decl) ("bar" . decl) ...)
+;; ("enum" ("" . decl) ("foo" . decl) ("bar" . decl) ...)
+;; @end example
+;; So globals could be in udict, udefs or anon-enum.
+;; @example
+;; What about anonymous enums?  And enums in general?
+;; Anonmous enum should be expaneded into 
+;; @end example
 ;; @end deffn
 ;; @noindent
 ;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
 ;; The filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
 ;; of one argument, the include path, to indicate whether it should be included
 ;; in the dictionary.
-(define* (OLDc99-trans-unit->udict tree #:optional (seed '()))
-  (if (pair? tree)
-      (fold munge-decl seed (cdr tree))
-      seed))
-;; /deep should cover all cases
-;;(define* (c99-trans-unit->udict/deep tree #:optional (seed '()))
 (define* (c99-trans-unit->udict tree #:optional (seed '()) #:key filter)
   (define (inc-keeper? tree)
     (if (and (eqv? (sx-tag tree) 'cpp-stmt)
@@ -153,13 +160,12 @@
   (if (pair? tree)
       (fold
        (lambda (tree seed)
-	 (let ();;(tag (sx-tag tree)))
-	   (cond
-	    ((eqv? (sx-tag tree) 'decl)
-	     (munge-decl tree seed))
-	    ((inc-keeper? tree)
-	     (c99-trans-unit->udict (sx-ref tree 1) seed #:filter filter))
-	    (else seed))))
+	 (cond
+	  ((eqv? (sx-tag tree) 'decl)
+	   (munge-decl tree seed))
+	  ((inc-keeper? tree)
+	   (c99-trans-unit->udict (sx-ref tree 1) seed #:filter filter))
+	  (else seed)))
        seed
        (cdr tree))
       seed))
@@ -167,7 +173,6 @@
   (c99-trans-unit->udict tree #:filter #t))
 (define tree->udict c99-trans-unit->udict)
 (define tree->udict/deep c99-trans-unit->udict/deep)
-       
 
 ;; @deffn {Procedure} munge-decl decl seed [#:expand-enums #f] => seed
 ;; This is a fold iterator to used by @code{tree->udict}.  It converts the
@@ -200,6 +205,11 @@
 ;; Enum, struct and union def's have keys @code{(enum . "name")},
 ;; @code{(struct . "name")} and @code{(union . "name)}, respectively.
 ;; @end deffn
+
+;; TODO:
+;; enum tag => "enum" (tag . udecl)
+;; enum { NAME } => "enum" ("" . udecl) ???? WHAT TO DO ????
+;; need (ud-lookup name) (ud-lookup-struct name) (ud-lookup-union name)
 (define* (munge-decl decl seed #:key (expand-enums #f))
 
   (define (iter-declrs init-declr-l tail seed)
@@ -212,7 +222,8 @@
 		(iter
 		 (acons name (sx-cons* tag attr specl (car idl) tail) seed)
 		 (cdr idl)))))))
-  
+
+  ;;(simple-format #t "munge-decl ~S\n" decl)
   (cond
    ((not (pair? decl)) seed)
    ((eqv? (sx-tag decl) 'decl)
@@ -233,13 +244,13 @@
 	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
 	 (acons `(union . ,name) decl (iter-declrs init-d-l tail seed)))
 	((decl-spec-list
-	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (union-def . ,rest2) . ,rest1))
 	 (acons `(union . "*anon*") decl (iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (acons `(enum . ,name) decl (iter-declrs init-d-l tail seed)))
 	((decl-spec-list
-	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (enum-def . ,rest2) . ,rest1))
 	 (acons `(enum . "*anon*") decl (iter-declrs init-d-l tail seed)))
 	(,otherwise
 	 (iter-declrs init-d-l tail seed)))))
@@ -248,24 +259,6 @@
    ((eqv? (sx-tag decl) 'param-decl)
     (munge-param-decl decl seed #:expand-enums expand-enums))
    (else seed)))
-
-;;.@deffn gen-enum-udecl nstr vstr => (udecl ...)
-;; @example
-;; (gen-enum-udecl "ABC" "123")
-;; =>
-;; (udecl (decl-spec-list
-;;         (type-spec
-;;          (enum-def
-;;           (enum-def-list ;; remove?
-;;            (enum-defn (ident "ABC") (p-expr (fixed "123")))))))))
-;; @end example
-;; @end deffn
-(define (gen-enum-udecl nstr vstr)
-  `(udecl (decl-spec-list
-	   (type-spec
-	    (enum-def
-             (enum-def-list
-	      (enum-defn (ident ,nstr) (p-expr (fixed ,vstr)))))))))
 
 ;; @deffn {Procedure} munge-comp-decl decl seed [#:expand-enums #f]
 ;; This will turn
@@ -329,6 +322,36 @@
 	(acons name decl seed))))
 (define match-param-decl munge-param-decl)
 	
+;; @deffn {Procedure} gen-enum-udecl nstr vstr => (udecl ...)
+;; @example
+;; (gen-enum-udecl "ABC" "123")
+;; =>
+;; (udecl (decl-spec-list
+;;         (type-spec
+;;          (enum-def
+;;           (enum-def-list
+;;            (enum-defn (ident "ABC") (p-expr (fixed "123")))))))))
+;; @end example
+;; @end deffn
+(define (gen-enum-udecl nstr vstr)
+  `(udecl (decl-spec-list
+	   (type-spec
+	    (enum-def
+             (enum-def-list
+	      (enum-defn (ident ,nstr) (p-expr (fixed ,vstr)))))))))
+
+;; @deffn {Procedure} udict-ref name
+;; @deffnx {Procedure} udict-ref-struct name
+;; @deffnx {Procedure} udict-ref-union name
+;; @end deffn
+(define (udict-ref udict name)
+  #f)
+(define (udict-ref-struct udict name)
+  #f)
+(define (udict-ref-struct udict name)
+  #f)
+
+
 ;; @deffn {Procedure} find-special udecl-alist seed => ..
 ;; NOT DONE
 ;; @example
@@ -404,6 +427,7 @@
 ;; @deffn {Procedure} expand-typerefs udecl udecl-dict [#:keep '()]
 ;; Given a declaration or component-declaration, return a udecl with all
 ;; typenames (not in @var{keep}), struct, union and enum refs expanded.
+;; (but enums to int?)
 ;; @example
 ;; typedef const int  (*foo_t)(int a, double b);
 ;; extern    foo_t    fctns[2];
@@ -412,9 +436,12 @@
 ;; @end example
 ;; @noindent
 ;; Cool. Eh? (but is it done?)
-;; @end deffn
-;; What about those w/ no init-declr?
+;; What about those w/ no init-declr?  Like
 ;; @example
+;; struct foo;
+;; struct foo { ... };
+;; @end example
+;; @end deffn
 (define* (expand-typerefs udecl udecl-dict #:key (keep '()))
   (display "FIXME: some decls have no init-declr-list\n")
   ;; between adding (init-declr-list) to those or having predicate
@@ -422,12 +449,13 @@
   (let* ((tag (sx-tag udecl))		; decl or comp-decl
 	 (attr (sx-attr udecl))		; (@ ...)
 	 (specl (sx-ref udecl 1))	; decl-spec-list
-	 (declr (or (sx-find 'init-declr udecl)
-		    (sx-find 'comp-declr udecl)))
+	 (declr (or (sx-find 'init-declr udecl) ; declarator
+		    (sx-find 'comp-declr udecl)
+		    (sx-find 'param-declr udecl)))
 	 (tail (if declr (sx-tail udecl 3) (sx-tail udecl 2))) ; opt comment
 	 (tspec (cadr (sx-find 'type-spec specl))))
-    ;;(simple-format #t "=D> ~S\n" decl-spec-list)
-    ;;(simple-format #t "init-declr: ~S\n" init-declr)
+    (simple-format #t "=D> ~S\n" specl)
+    (simple-format #t "init-declr: ~S\n" declr)
     (case (car tspec)
       ((typename)
        (cond
@@ -614,8 +642,8 @@
 	  (else
 	   (iter (cons (car tail) dsl1) const-seen? (cdr tail)))))))
 
-;; @deffn {Procedure} udecl->mspec sudecl [dict]
-;; @deffnx {Procedure} udecl->mspec/comm decl [dict] [#:def-comm ""]
+;; @deffn {Procedure} udecl->mspec udecl
+;; @deffnx {Procedure} udecl->mspec/comm udecl [#:def-comm ""]
 ;; Turn a stripped-down unit-declaration into an m-spec.  The second version
 ;; include a comment. This assumes decls have been run through
 ;; @code{stripdown}.
@@ -627,7 +655,7 @@
 ;; ("x" "state vector" (array-of 10) (float "double")
 ;; @end example
 ;; @end deffn
-(define (udecl->mspec decl . rest)
+(define (udecl->mspec decl)
 
   (define (cnvt-array-size size-spec)
     (with-output-to-string (lambda () (pretty-print-c99 size-spec))))
@@ -667,7 +695,7 @@
       (if (eqv? 'type-spec (caar tsl)) (car tsl)
 	  (iter (cdr tsl))))) 
   
-  (let* ((decl-dict (if (pair? rest) (car rest) '()))
+  (let* (;;(decl-dict (if (pair? rest) (car rest) '()))
 	 (specl (sx-ref decl 1))
 	 (tspec (cadr specl))		; type-spec
 	 (const (and=> (sx-ref specl 2)	; const pointer ???
@@ -680,9 +708,9 @@
 	 (m-decl (reverse (cons m-specl m-declr))))
     m-decl))
 
-(define* (udecl->mspec/comm decl #:optional (dict '()) #:key (def-comm ""))
+(define* (udecl->mspec/comm decl #:key (def-comm ""))
   (let* ((comm (or (and=> (sx-ref decl 3) cadr) def-comm))
-	 (spec (udecl->mspec decl dict)))
+	 (spec (udecl->mspec decl)))
     (cons* (car spec) comm (cdr spec))))
 
 ;; @deffn {Procedure} clean-field-list field-list => flds
