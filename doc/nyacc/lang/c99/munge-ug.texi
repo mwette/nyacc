@@ -69,4 +69,30 @@ extern const char *cmds[10];
 Since the NYACC C99 parser captures some comments, these can be preserved
 in the above procedure.
 
+@section The Util2 (or Munge) Module
+
+Declarations must have one of
+@itemize
+@item
+declarators
+@example
+int foo;
+@end example
+@item
+struct or union reference
+@example
+struct foo;
+@end example
+@item
+enum value
+@example
+enum { FOO = 1 };
+@end example
+@end itemize
+
+@section From Util2
+
+@include util2_scm.texi
+
+
 @bye
