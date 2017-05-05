@@ -1,3 +1,11 @@
+2017-05-04  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/pprint.scm (pretty-print-c99): removed double spacing
+	in printed declarations
+
+	* lang/util.scm (make-pp-formatter): fixed bug in column counting
+	that prevented line-wrap to occur.
+
 2017-04-12  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (make-comm-reader): comments which end in newline can

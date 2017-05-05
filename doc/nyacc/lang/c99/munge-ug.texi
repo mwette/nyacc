@@ -90,6 +90,19 @@ enum { FOO = 1 };
 @end example
 @end itemize
 
+We provide the following:
+@table code
+@item udict-ref udict name
+Lookup name in udict.  This is like assoc-ref but will check through
+enums also.
+@item udict-struct-ref udict name
+Lookup @code{struct name}.
+@item udict-union-ref udict name
+Lookup @code{union name}.
+@item udict-enum-ref udict name
+Lookup @code{enum name}.
+@end table
+
 @section From Util2
 
 @include util2_scm.texi

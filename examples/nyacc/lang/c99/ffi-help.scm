@@ -14,6 +14,7 @@
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 util1)
   #:use-module (nyacc lang c99 util2)
+  #:use-module (nyacc lang c99 pprint)
   #:use-module (system foreign)
   ;;#:use-module (bytestructures guile)
   #:use-module (ice-9 format)
@@ -347,7 +348,6 @@
 	 (wrap-return (gen-exec-return-wrapper rdecl))
 	 (exec-params (gen-exec-params params)))
     ;;(sfout "make-fctn\n  ~S\n  ~S\n" params decl-params)
-    (sfscm "\n;; ~A\n" name)
     (ppscm
      `(define ,(string->symbol name)
 	(let ((f (ffi:pointer->procedure ,decl-return (lib-func ,name)
@@ -445,6 +445,8 @@
 	    (init-declr
 	     (ptr-declr
 	      (pointer) (ftn-declr (ident ,name) (param-list . ,params)))))
+     (sfscm "\n;; ~A\n" name)
+     ;;(pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
      (make-fctn name (ptr-decl specl) (fix-params params))
      type-list)
 
@@ -453,6 +455,9 @@
 	    (init-declr
 	     (ftn-declr (ident ,name) (param-list . ,params))))
      ;;(sfout "fctn:\n") (ppout params) (ppout (fix-params params))
+     ;;(sfscm "\n;; ~A\n" name)
+     (sfscm "\n")
+     (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
      (make-fctn name (non-ptr-decl specl) (fix-params params))
      type-list)
 
@@ -534,6 +539,7 @@
 	 (sfout "~S\n" (car pair))
 	 (sfscm "\n;; ~S\n" (car pair))
 	 (udecl->ffi-decl (cdr pair) type-list))
+
 	((member (car pair) '(
 			      ;;"cairo_get_reference_count"
 			      ;;"cairo_set_user_data"
@@ -546,6 +552,7 @@
 			      ))
 	 ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
 	 (udecl->ffi-decl (cdr pair) type-list))
+
 	(else
 	 type-list)))
      fixed-width-int-names

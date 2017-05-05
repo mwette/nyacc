@@ -261,27 +261,27 @@
      ((char? (car tkl))
       (iter stl (cons (car tkl) chl) nxt (cdr tkl)))
      (else
-      (match tkl
-	((('ident . rval) 'dhash ('ident . lval) . rest)
+      (pmatch tkl
+	(((ident . ,rval) dhash (ident . ,lval) . ,rest)
 	 (iter stl chl nxt
 	       (acons 'ident (string-append lval rval) (list-tail tkl 3))))
-	((('ident . arg) 'hash . rest)
+	(((ident . ,arg) hash . ,rest)
 	 (iter stl chl (string-append "\"" arg "\"") (list-tail tkl 2)))
-	((('ident . iden) ('ident . lval) . rest)
+	(((ident . ,iden) (ident . ,lval) . ,rest)
 	 (iter stl chl iden rest))
-	((('ident . iden) . rest)
+	(((ident . ,iden) . ,rest)
 	 (iter stl chl iden rest))
-	((('string . val) . rest)
+	(((string . ,val) . ,rest)
 	 (iter stl (cons #\" chl) val (cons #\" rest)))
-	((('defined . val) . rest)
+	(((defined . ,val) . ,rest)
 	 (iter stl chl val rest))
-	(('space 'space . rest)
+	((space space . ,rest)
 	 (iter stl chl nxt rest))
-	(('space . rest)
+	((space . ,rest)
 	 (iter stl (cons #\space chl) nxt rest))
-	((asis . rest)
+	((,asis . ,rest)
 	 (iter stl chl asis rest))
-	(otherwise
+	(,otherwise
 	 (error "no match" tkl)))))))
 
 ;; We just scanned "defined", now need to scan the arg to inhibit expansion.

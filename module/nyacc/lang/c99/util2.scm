@@ -322,52 +322,32 @@
 	(acons name decl seed))))
 (define match-param-decl munge-param-decl)
 	
-;; @deffn {Procedure} gen-enum-udecl nstr vstr => (udecl ...)
-;; @example
-;; (gen-enum-udecl "ABC" "123")
-;; =>
-;; (udecl (decl-spec-list
-;;         (type-spec
-;;          (enum-def
-;;           (enum-def-list
-;;            (enum-defn (ident "ABC") (p-expr (fixed "123")))))))))
-;; @end example
-;; @end deffn
-(define (gen-enum-udecl nstr vstr)
-  `(udecl (decl-spec-list
-	   (type-spec
-	    (enum-def
-             (enum-def-list
-	      (enum-defn (ident ,nstr) (p-expr (fixed ,vstr)))))))))
-
+;; like member but returns first non-declr of type in dict
+(define (non-declr type udict)
+  (let iter ((dict udict))
+    (cond
+     ((null? dict) #f)
+     ((and (pair? (car dict)) (eqv? type (caar dict))) dict)
+     (else (iter (cdr dict))))))
+     
 ;; @deffn {Procedure} udict-ref name
-;; @deffnx {Procedure} udict-ref-struct name
-;; @deffnx {Procedure} udict-ref-union name
+;; @deffnx {Procedure} udict-struct-ref name
+;; @deffnx {Procedure} udict-union-ref name
+;; @deffnx {Procedure} udict-enum-ref name
 ;; @end deffn
 (define (udict-ref udict name)
+  (or (assoc-ref udict name)
+      (let iter ((dict (non-declr 'enum udict)))
+	(cond
+	 ((not dict) #f)
+	 ((assoc-ref (cdar dict) name))
+	 (else (iter (non-declr 'enum dict)))))))
+(define (udict-struct-ref udict name)
   #f)
-(define (udict-ref-struct udict name)
+(define (udict-union-ref udict name)
   #f)
-(define (udict-ref-struct udict name)
+(define (udict-enum-ref udict name)
   #f)
-
-
-;; @deffn {Procedure} find-special udecl-alist seed => ..
-;; NOT DONE
-;; @example
-;; '((struct . ("foo" ...) ...)
-;;   (union . ("bar" ...) ...)
-;;   (enum . ("bar" ...) ...)
-;;   seed)
-;; @end example
-;; @end deffn
-(define (find-special udecl-alist seed)
-  (let iter ((struct '()) (union '()) (enum '()) (udal udecl-alist))
-    (if (null? udal) (cons* (cons 'struct struct)
-			  (cons 'union union)
-			  (cons 'enum enum)
-			  seed)
-	'())))
 
 ;; @deffn {Variable} fixed-width-int-names
 ;; This is a list of standard integer names (e.g., @code{"uint8_t"}).
@@ -434,18 +414,9 @@
 ;; =>
 ;; extern const int  (*fctns[2])(int a, double b);
 ;; @end example
-;; @noindent
-;; Cool. Eh? (but is it done?)
-;; What about those w/ no init-declr?  Like
-;; @example
-;; struct foo;
-;; struct foo { ... };
-;; @end example
 ;; @end deffn
 (define* (expand-typerefs udecl udecl-dict #:key (keep '()))
-  (display "FIXME: some decls have no init-declr-list\n")
-  ;; between adding (init-declr-list) to those or having predicate
-  ;; (has-init-declr? decl)
+  ;; ??? add (init-declr-list) OR having predicate (has-init-declr? decl)
   (let* ((tag (sx-tag udecl))		; decl or comp-decl
 	 (attr (sx-attr udecl))		; (@ ...)
 	 (specl (sx-ref udecl 1))	; decl-spec-list
@@ -454,8 +425,6 @@
 		    (sx-find 'param-declr udecl)))
 	 (tail (if declr (sx-tail udecl 3) (sx-tail udecl 2))) ; opt comment
 	 (tspec (cadr (sx-find 'type-spec specl))))
-    (simple-format #t "=D> ~S\n" specl)
-    (simple-format #t "init-declr: ~S\n" declr)
     (case (car tspec)
       ((typename)
        (cond
@@ -510,6 +479,8 @@
       (else
        udecl))))
 (define expand-decl-typerefs expand-typerefs)
+
+;; === enum handling ...
   
 ;; @deffn {Procedure} canize-enum-def-list
 ;; Fill in constants for all entries of an enum list.
@@ -537,7 +508,44 @@
 	  (iter (cons (append (car edl) `((p-expr (fixed ,is1)))) rez)
 		ix1 (cdr edl))))))))
 
-;;. @deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
+;; @deffn {Procecure} enum-ref enum-def-list name => string
+;; Gets value of enum where @var{enum-def-list} looks like
+;; @example
+;; (enum-def-list (enum-defn (ident "ABC") (p-expr (fixed "123")) ...))
+;; @end example
+;; so that
+;; @example
+;; (enum-def-list edl "ABC") => "123"
+;; @end example
+(define (enum-ref enum-def-list name)
+  (let iter ((el (cdr (canize-enum-def-list enum-def-list))))
+    (cond
+     ((null? el) #f)
+     ((not (eqv? 'enum-defn (caar el))) (iter (cdr el)))
+     ((string=? name (cadr (cadar el))) (cadadr (caddar el)))
+     (else (iter (cdr el))))))
+
+;; @deffn {Procedure} gen-enum-udecl nstr vstr => (udecl ...)
+;; @example
+;; (gen-enum-udecl "ABC" "123")
+;; =>
+;; (udecl (decl-spec-list
+;;         (type-spec
+;;          (enum-def
+;;           (enum-def-list
+;;            (enum-defn (ident "ABC") (p-expr (fixed "123")))))))))
+;; @end example
+;; @end deffn
+(define (gen-enum-udecl nstr vstr)
+  `(udecl (decl-spec-list
+	   (type-spec
+	    (enum-def
+             (enum-def-list
+	      (enum-defn (ident ,nstr) (p-expr (fixed ,vstr)))))))))
+
+;; === enum handling ...
+
+;;@deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
 ;; This is deprecated.
 ;; 1) remove stor-spec
 ;; 2) expand typenames
