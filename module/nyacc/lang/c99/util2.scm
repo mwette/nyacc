@@ -204,12 +204,15 @@
 ;; Unexpanded, unnamed enums have keys @code{"enum"}.
 ;; Enum, struct and union def's have keys @code{(enum . "name")},
 ;; @code{(struct . "name")} and @code{(union . "name)}, respectively.
+;; See @code{udict-struct-ref}, @code{udict-union-ref}, @code{udict-enum-ref}
+;; and @code{udict-ref}.
 ;; @end deffn
 
 ;; TODO:
 ;; enum tag => "enum" (tag . udecl)
 ;; enum { NAME } => "enum" ("" . udecl) ???? WHAT TO DO ????
 ;; need (ud-lookup name) (ud-lookup-struct name) (ud-lookup-union name)
+;; USING ud-udict-struct-ref 
 (define* (munge-decl decl seed #:key (expand-enums #f))
 
   (define (iter-declrs init-declr-l tail seed)
@@ -444,7 +447,15 @@
       ((struct-ref union-ref)
        (simple-format (current-error-port)
 		      "+++ c99/util2: struct/union-ref: more to do?\n")
-       ;;(simple-format #t "\nstruct-ref:\n") (pretty-print udecl)
+       (simple-format #t "\nstruct-ref:\n") (pretty-print udecl)
+       (let* ((is-struct (eqv? 'struct-ref (car tspec)))
+	      (ident (cadr tspec))
+	      (name (cadr ident))
+	      (ref (if is-struct
+		       (udict-struct-ref udecl-dict name)
+		       (udict-union-ref udecl-dict name)))
+	      )
+	 #f)
        udecl)
 
       ((struct-def union-def)

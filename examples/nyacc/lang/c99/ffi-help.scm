@@ -454,10 +454,13 @@
     ((udecl ,specl
 	    (init-declr
 	     (ftn-declr (ident ,name) (param-list . ,params))))
-     ;;(sfout "fctn:\n") (ppout params) (ppout (fix-params params))
-     ;;(sfscm "\n;; ~A\n" name)
      (sfscm "\n")
      (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
+     (when #f ;; specifier and declarator on separate lines
+       (pretty-print-c99 specl *port* #:per-line-prefix ";; ")
+       (sfscm "\n")
+       (pretty-print-c99 (caddr udecl) *port* #:per-line-prefix ";; ")
+       (sfscm "\n"))
      (make-fctn name (non-ptr-decl specl) (fix-params params))
      type-list)
 
@@ -545,9 +548,9 @@
 			      ;;"cairo_set_user_data"
 			      ;;"cairo_matrix_t"
 			      ;;"cairo_set_dash"
-			      ;;"cairo_bool_t"
+			      "cairo_bool_t"
 			      "cairo_region_t"
-			      ;;"cairo_create"
+			      "cairo_create"
 			      "cairo_region_contains_point"
 			      ))
 	 ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
