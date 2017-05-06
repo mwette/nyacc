@@ -29,7 +29,6 @@
 
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules ((sxml xpath) #:select (sxpath)))
-(use-modules (ice-9 regex))
 (use-modules (ice-9 pretty-print)) ;; for debugging
 
 (define-record-type cpi
@@ -53,6 +52,23 @@
 ;; "MAX(X,Y)=((X)>(Y)?(X):(Y))" => ("MAX" ("X" "Y") . "((X)>(Y)?(X):(Y))")
 ;; @end example
 ;; @end deffn
+(define (split-cppdef defstr)
+  (let ((x2st (string-index defstr #\()) ; start of args
+	(x2nd (string-index defstr #\))) ; end of args
+	(x3 (string-index defstr #\=)))  ; start of replacement
+    (cond
+     ((not x3) #f)
+     ((and x2st x3)
+      ;;(if (not (eq? (1+ x2nd) x3)) (c99-err "bad CPP def: ~S" defstr))
+      (cons* (substring defstr 0 x2st)
+	     (string-split
+	      (string-delete #\space (substring defstr (1+ x2st) x2nd))
+	      #\,)
+	     (substring defstr (1+ x3))))
+     (else
+      (cons (substring defstr 0 x3) (substring defstr (1+ x3)))))))
+#|
+(use-modules (ice-9 regex))
 (define split-cppdef
   (let ((rx1 (make-regexp "^([A-Za-z0-9_]+)\\(([^)]*)\\)=(.*)$"))
 	(rx2 (make-regexp "^([A-Za-z0-9_]+)=(.*)$")))
@@ -70,7 +86,8 @@
 	    (let* ((s1 (match:substring m2 1))
 		   (s2 (match:substring m2 2)))
 	      (cons s1 s2))))
-	 (else #f))))))
+	 (else #f)))))))
+|#
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; @end deffn
@@ -185,7 +202,7 @@
 
 ;; ------------------------------------------------------------------------
 
-(define (p-err . args)
+(define (c99-err . args)
   (apply throw 'c99-error args))
 
 ;; @deffn {Procedure} read-cpp-line ch => #f | (cpp-xxxx)??
@@ -253,7 +270,7 @@
   ;; will end up in same mode...  so after
   ;; int x; // comment
   ;; the lexer will think we are not at BOL.
-  (let* ((match-table mtab)
+  (let* ((match-table c99-mtab)
 	 (read-ident read-c-ident)
 	 (read-comm read-c-comm)
 	 ;;
@@ -326,7 +343,7 @@
 	       ;;(simple-format #t "  defs=~S\n" (cpi-defs info))
 	       (let* ((defs (cpi-defs info))
 		      (val (eval-cpp-cond-text (cadr stmt) defs)))
-		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
+		 (if (not val) (c99-err "unresolved: ~S" (cadr stmt)))
 		 (if (eq? 'keep (car ppxs))
 		     (if (zero? val)
 			 (set! ppxs (cons 'skip-look ppxs))
@@ -340,7 +357,7 @@
 	      (else
 	       (let* ((defs (cpi-defs info))
 		      (val (eval-cpp-cond-text (cadr stmt) defs)))
-		 (if (not val) (p-err "unresolved: ~S" (cadr stmt)))
+		 (if (not val) (c99-err "unresolved: ~S" (cadr stmt)))
 		 (case (car ppxs)
 		   ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))
 		   ((keep) (set-car! ppxs 'skip-done))))))
@@ -362,7 +379,7 @@
 		   (path (inc-file->path file)))
 	      (cond
 	       ((apply-helper file))
-	       ((not path) (p-err "not found: ~S" file)) ; file not found
+	       ((not path) (c99-err "not found: ~S" file)) ; file not found
 	       (else (set! bol #t) (push-input (open-input-file path))))
 	      stmt))
 
@@ -372,7 +389,7 @@
 		   (path (inc-file->path file)))
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
-	       ((not path) (p-err "not found: ~S" file)) ; file not found
+	       ((not path) (c99-err "not found: ~S" file)) ; file not found
 	       ((with-input-from-file path run-parse) => ; add tree to stmt
 		(lambda (tree)
 		  ;;(pretty-print tree (current-error-port))
@@ -392,7 +409,7 @@
 		     ((include) (eval-cpp-incl/here stmt))
 		     ((define) (add-define stmt) stmt)
 		     ((undef) (rem-define (cadr stmt)) stmt)
-		     ((error) (p-err "error: #error ~A" (cadr stmt)))
+		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((pragma) stmt) ;; ignore for now
 		     (else (error "bad cpp flow stmt")))))))
 	       
@@ -411,7 +428,7 @@
 			  (eval-cpp-incl/here stmt)))
 		     ((define) (add-define stmt) stmt)
 		     ((undef) (rem-define (cadr stmt)) stmt)
-		     ((error) (p-err "error: #error ~A" (cadr stmt)))
+		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((pragma) stmt) ;; ignore for now
 		     (else (error "bad cpp flow stmt")))
 		   stmt))))

@@ -6,7 +6,7 @@
 ;; or any later version published by the Free Software Foundation.  See
 ;; the file COPYING included with the this distribution.
 
-(define act-v
+(define c99-act-v
   (vector
    ;; $start => translation-unit
    (lambda ($1 . $rest) $1)

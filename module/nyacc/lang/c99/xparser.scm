@@ -28,15 +28,16 @@
   )
 
 (include-from-path "nyacc/lang/c99/mach.d/c99xtab.scm")
+(define c99-mtab c99x-mtab)
 (include-from-path "nyacc/lang/c99/body.scm")
 (include-from-path "nyacc/lang/c99/mach.d/c99xact.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
   (let ((parser (make-lalr-parser 
-		 (list (cons 'len-v len-v) (cons 'pat-v pat-v)
-		       (cons 'rto-v rto-v) (cons 'mtab mtab)
-		       (cons 'act-v act-v)))))
+		 (list (cons 'len-v c99x-len-v) (cons 'pat-v c99x-pat-v)
+		       (cons 'rto-v c99x-rto-v) (cons 'mtab c99x-mtab)
+		       (cons 'act-v c99x-act-v)))))
     (lambda* (lexer #:key (debug #f))
       (catch
        'nyacc-error

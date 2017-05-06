@@ -33,9 +33,9 @@
 ;; A little ugly wrt re-throw but
 (define raw-parser
   (let ((parser (make-lalr-parser
-		     (list (cons 'len-v len-v) (cons 'pat-v pat-v)
-			   (cons 'rto-v rto-v) (cons 'mtab mtab)
-			   (cons 'act-v act-v)))))
+		     (list (cons 'len-v c99-len-v) (cons 'pat-v c99-pat-v)
+			   (cons 'rto-v c99-rto-v) (cons 'mtab c99-mtab)
+			   (cons 'act-v c99-act-v)))))
     (lambda* (lexer #:key (debug #f))
       (catch
        'nyacc-error

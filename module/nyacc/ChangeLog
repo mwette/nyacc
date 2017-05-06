@@ -1,3 +1,8 @@
+2017-05-06  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lalr.scm: updated write-lalr-tables and write-lalr-actions to
+	accept a prefix string
+
 2017-05-04  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/pprint.scm (pretty-print-c99): removed double spacing

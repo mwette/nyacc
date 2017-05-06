@@ -674,14 +674,14 @@
 ;;; =====================================
 
 ;; The following are needed by the code in pbody.scm.
-(define len-v (assq-ref c99-mach 'len-v))
-(define pat-v (assq-ref c99-mach 'pat-v))
-(define rto-v (assq-ref c99-mach 'rto-v))
-(define mtab (assq-ref c99-mach 'mtab))
-(define act-v (vector-map
-	       (lambda (ix f) (eval f (current-module)))
-	       (vector-map (lambda (ix actn) (wrap-action actn))
-			   (assq-ref c99-mach 'act-v))))
+(define c99-len-v (assq-ref c99-mach 'len-v))
+(define c99-pat-v (assq-ref c99-mach 'pat-v))
+(define c99-rto-v (assq-ref c99-mach 'rto-v))
+(define c99-mtab (assq-ref c99-mach 'mtab))
+(define c99-act-v (vector-map
+		   (lambda (ix f) (eval f (current-module)))
+		   (vector-map (lambda (ix actn) (wrap-action actn))
+			       (assq-ref c99-mach 'act-v))))
 
 (include-from-path "nyacc/lang/c99/body.scm")
 
@@ -726,8 +726,8 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (write-lalr-actions c99-mach (xtra-dir "c99act.scm.new"))
-  (write-lalr-tables c99-mach (xtra-dir "c99tab.scm.new"))
+  (write-lalr-actions c99-mach (xtra-dir "c99act.scm.new") #:prefix "c99-")
+  (write-lalr-tables c99-mach (xtra-dir "c99tab.scm.new") #:prefix "c99-")
   (let ((a (move-if-changed (xtra-dir "c99act.scm.new")
 			    (xtra-dir "c99act.scm")))
 	(b (move-if-changed (xtra-dir "c99tab.scm.new")
@@ -751,8 +751,10 @@
 	 (cexpr-mach (compact-machine
 		      (hashify-machine
 		       (make-lalr-machine cexpr-spec)))))
-    (write-lalr-actions cexpr-mach (xtra-dir "c99xact.scm.new"))
-    (write-lalr-tables cexpr-mach (xtra-dir "c99xtab.scm.new")))
+    (write-lalr-actions cexpr-mach (xtra-dir "c99xact.scm.new")
+			#:prefix "c99x-")
+    (write-lalr-tables cexpr-mach (xtra-dir "c99xtab.scm.new")
+		       #:prefix "c99x-"))
     
   (let ((a (move-if-changed (xtra-dir "c99xact.scm.new")
 			    (xtra-dir "c99xact.scm")))

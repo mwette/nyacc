@@ -1953,17 +1953,26 @@
 	(regexp-substitute #f m 'pre repl 'post)
 	str)))
 
-;; @deffn {Procedure} write-lalr-tables mach filename [#:lang output-lang]
+;; @deffn {Procedure} write-lalr-tables mach filename [optons]
+;; Options are
+;; @table code
+;; @item #:prefix prefix-string
+;; The prefix for generating table names.  The default is @code{""}.
+;; @item #:lang output-lang-symbol
+;; This specifies the output language.  Currently only the default
+;; @code{'scheme} is supported.
+;; @end table
+;; @noindent 
 ;; For example,
 ;; @example
 ;; write-lalr-tables mach "tables.scm"
 ;; write-lalr-tables mach "tables.tcl" #:lang 'tcl
 ;; @end example
 ;; @end deffn
-(define* (write-lalr-tables mach filename #:key (lang 'scheme))
+(define* (write-lalr-tables mach filename #:key (lang 'scheme) (prefix ""))
 
   (define (write-table mach name port)
-    (fmt port "(define ~A\n  " name)
+    (fmt port "(define ~A~A\n  " prefix name)
     (ugly-print (assq-ref mach name) port)
     (fmt port ")\n\n"))
 
@@ -1986,7 +1995,7 @@
 ;; write-lalr-actions mach "actions.tcl" #:lang 'tcl
 ;; @end example
 ;; @end deffn
-(define* (write-lalr-actions mach filename #:key (lang 'scheme))
+(define* (write-lalr-actions mach filename #:key (lang 'scheme) (prefix ""))
 
   (define (pp-rule/ts gx)
     (let* ((core (fluid-ref *lalr-core*))
@@ -2022,7 +2031,7 @@
     (with-fluid*
      *lalr-core* (make-core mach)
      (lambda ()
-       (fmt port "(define act-v\n  (vector\n")
+       (fmt port "(define ~Aact-v\n  (vector\n" prefix)
        (vector-for-each
 	(lambda (gx actn)
 	  (fmt port "   ;; ~A\n" (pp-rule/ts gx))
