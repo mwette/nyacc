@@ -271,10 +271,10 @@
 			    (string-join sflds " ") "))"))
 	 (yy (simple-format #t "xx=[~S]\n" xx))
 	 (spec
-	  ;;`(define ,(string->symbol typename) (bs:struct ,@sflds)))
-	  (eval-string
-	   (string-append "(quote (define " typename " (bs:struct `("
-			  (string-join sflds " ") "))))")))
+	  `(define ,(string->symbol typename) (bs:struct ,@sflds)))
+	 ;;(eval-string
+	 ;; (string-append "(quote (define " typename " (bs:struct `("
+	;;		 (string-join sflds " ") "))))")))
 	 )
     (ppscm spec)
     (sfscm "(export ~A)\n" typename)
@@ -546,7 +546,7 @@
 	((member (car pair) '(
 			      ;;"cairo_get_reference_count"
 			      ;;"cairo_set_user_data"
-			      ;;"cairo_matrix_t"
+			      "cairo_matrix_t"
 			      ;;"cairo_set_dash"
 			      "cairo_bool_t"
 			      "cairo_region_t"

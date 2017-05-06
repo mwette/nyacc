@@ -447,7 +447,7 @@
       ((struct-ref union-ref)
        (simple-format (current-error-port)
 		      "+++ c99/util2: struct/union-ref: more to do?\n")
-       (simple-format #t "\nstruct-ref:\n") (pretty-print udecl)
+       ;;(simple-format #t "\nstruct-ref:\n") (pretty-print udecl)
        (let* ((is-struct (eqv? 'struct-ref (car tspec)))
 	      (ident (cadr tspec))
 	      (name (cadr ident))
