@@ -1,15 +1,12 @@
 # module/Makefile.nyacc			-*- Makefile -*-
 #
-# Copyright (C) 2015,2016 -  Matthew R. Wette
+# Copyright (C) 2015-2017 -  Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 #
-
-SITE_SCM_DIR=$(shell guile -c '(display (%site-dir))')
-SITE_SCM_GO_DIR=$(shell guile -c '(display (%site-ccache-dir))')
 
 default:
 	@echo SITE_SCM_DIR = $(SITE_SCM_DIR)
@@ -66,9 +63,6 @@ nyacc/lang/c99/mach.d/cpptab.scm : nyacc/lang/c99/cppmach.scm
 	guile -l $< -c \
 		'((@ (nyacc lang c99 cppmach) gen-cpp-files) "nyacc/lang/c99")'
 
-#.scm.go:
-#	guild compile $< -o $@
-
 .PHONY: install
 install: install-srcs
 	@mkdir -p $(SITE_SCM_GO_DIR)
@@ -83,8 +77,6 @@ install: install-srcs
 	  sleep 1; \
 	done
 
-#	  echo "$${file} => $${dest}"; \
-#
 install-srcs: $(NYACC_SRCS)
 	@mkdir -p $(SITE_SCM_DIR)
 	@echo "installing NYACC sources in $(SITE_SCM_DIR)"
@@ -94,6 +86,5 @@ install-srcs: $(NYACC_SRCS)
 	  fi; \
 	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
 	done
-
 
 # --- last line ---
