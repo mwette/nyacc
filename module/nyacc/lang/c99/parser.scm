@@ -31,7 +31,7 @@
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 ;; A little ugly wrt re-throw but
-(define raw-parser
+(define c99-raw-parser
   (let ((parser (make-lalr-parser
 		     (list (cons 'len-v c99-len-v) (cons 'pat-v c99-pat-v)
 			   (cons 'rto-v c99-rto-v) (cons 'mtab c99-mtab)
@@ -48,7 +48,7 @@
 ;; This is used to parse included files at top level.
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    (raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
+    (c99-raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
 
 ;; @deffn {Procedure} parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
 ;;               [#:mode ('code|'file|'decl)] [#:debug bool]
@@ -82,7 +82,7 @@
        (with-fluid*
 	   *info* info
 	   (lambda ()
-	     (raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
+	     (c99-raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
 			 #:debug debug)))))
    (lambda (key fmt . rest)
      (report-error fmt rest)

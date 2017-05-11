@@ -685,11 +685,11 @@
 
 (include-from-path "nyacc/lang/c99/body.scm")
 
-(define raw-parser (make-lalr-parser c99-mach))
+(define c99-raw-parser (make-lalr-parser c99-mach))
 
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    (raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
+    (c99-raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
 
 (define* (dev-parse-c99 #:key
 			(cpp-defs '())	; CPP defines
@@ -705,7 +705,7 @@
        (with-fluid*
 	   *info* info
 	   (lambda ()
-	     (raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
+	     (c99-raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
 			 #:debug debug)))))
    (lambda (key fmt . rest)
      (report-error fmt rest)

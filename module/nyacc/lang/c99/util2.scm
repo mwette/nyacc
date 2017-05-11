@@ -36,6 +36,7 @@
 (define-module (nyacc lang c99 util2)
   #:export (c99-trans-unit->udict
 	    c99-trans-unit->udict/deep
+	    udict-ref udict-struct-ref udict-union-ref udict-enum-ref
 
 	    expand-typerefs
 	    stripdown
@@ -104,24 +105,6 @@
 
 ;; may need to replace (typename "int32_t") with (fixed-type "int32_t")
 
-;; @deffn {Procedure} declr->ident declr => (ident "name")
-;; Given a declarator, aka @code{init-declr}, return the identifier.
-;; This is used by @code{trans-unit->udict}.
-;; See also: declr->id-name in body.scm.
-;; @end deffn
-(define (declr->ident declr)
-  (sxml-match declr
-    ((ident ,name) declr)
-    ((init-declr ,declr . ,rest) (declr->ident declr))
-    ((comp-declr ,declr) (declr->ident declr))
-    ((param-declr ,declr) (declr->ident declr))
-    ((array-of ,dir-declr ,array-spec) (declr->ident dir-declr))
-    ((array-of ,dir-declr) (declr->ident dir-declr))
-    ((ptr-declr ,pointer ,dir-declr) (declr->ident dir-declr))
-    ((ftn-declr ,dir-declr ,rest ...) (declr->ident dir-declr))
-    ((scope ,declr) (declr->ident declr))
-    (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
-
 ;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:filter f] => udict
 ;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]=> udict
 ;; Turn a C parse tree into a assoc-list of global names and definitions.
@@ -175,9 +158,9 @@
 (define tree->udict/deep c99-trans-unit->udict/deep)
 
 ;; @deffn {Procedure} munge-decl decl seed [#:expand-enums #f] => seed
-;; This is a fold iterator to used by @code{tree->udict}.  It converts the
-;; multiple @code{init-declr} items in an @code{init-declr-list} of a
-;; @code{decl} into an a-list of multiple pairs of name and @code{udecl}
+;; This is a fold iterator to used by @code{c99-trans-unit->udict}.  It
+;; converts the multiple @code{init-declr} items in an @code{init-declr-list}
+;; of a @code{decl} into an a-list of multiple pairs of name and @code{udecl}
 ;; trees with a single @code{init-declr} and no @code{init-declr-list}.
 ;; That is, a @code{decl} of the form
 ;; @example
@@ -207,16 +190,17 @@
 ;; See @code{udict-struct-ref}, @code{udict-union-ref}, @code{udict-enum-ref}
 ;; and @code{udict-ref}.
 ;; @end deffn
-
-;; TODO:
-;; enum tag => "enum" (tag . udecl)
-;; enum { NAME } => "enum" ("" . udecl) ???? WHAT TO DO ????
-;; need (ud-lookup name) (ud-lookup-struct name) (ud-lookup-union name)
-;; USING ud-udict-struct-ref 
 (define* (munge-decl decl seed #:key (expand-enums #f))
+  (define a-struct '(struct . "*anon*"))
+  (define a-union '(union . "*anon*"))
+  (define a-enum '(enum . "*anon*"))
+
+  (define (make-decl type guts)
+    `(decl (decl-spec-list (type-spec (,type . ,guts)))))
 
   (define (iter-declrs init-declr-l tail seed)
     (if (not init-declr-l) seed
+	;; else ...
 	(let iter ((seed seed) (idl (cdr init-declr-l)))
 	  (if (null? idl) seed
 	      (let* ((tag 'udecl) (attr (sx-attr decl))
@@ -233,28 +217,76 @@
     (let* ((tag (sx-tag decl)) (tag 'udecl)
 	   (attr (sx-attr decl))
 	   (spec (sx-ref decl 1))	; (decl-spec-list ...)
-	   (sx2 (sx-ref decl 2)) ; (init-declr-list ...) OR ...
+	   (sx2 (sx-ref decl 2))	; (init-declr-list ...) OR ...
 	   (init-d-l (if (and sx2 (eqv? (sx-tag sx2) 'init-declr-list)) sx2 #f))
 	   (tail (sx-tail decl (if init-d-l 3 2))))
       (sxml-match spec
+	;; Caution: We are not parsing or saving all spec-items here.
 	((decl-spec-list
 	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(struct . ,name) decl (iter-declrs init-d-l tail seed)))
+	 ;;(simple-format #t "struct\n")
+	 (acons `(struct . ,name) (make-decl 'struct-def rest2)
+		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 (acons `(struct . "*anon*") decl (iter-declrs init-d-l tail seed)))
+	 ;;(simple-format #t "struct\n")
+	 (acons '(struct . "*anon*") (make-decl 'struct-def rest2)
+		(iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
+	 ;;(simple-format #t "struct\n")
+	 (acons `(struct . ,name) (make-decl 'struct-def rest2)
+		(iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (struct-def . ,rest2) . ,rest1))
+	 ;;(simple-format #t "struct\n")
+	 (acons '(struct . "*anon*") (make-decl 'struct-def rest2)
+		(iter-declrs init-d-l tail seed)))
+
 	((decl-spec-list
 	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(union . ,name) decl (iter-declrs init-d-l tail seed)))
+	 (acons `(union . ,name) (make-decl 'union-def rest2)
+		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (acons `(union . "*anon*") decl (iter-declrs init-d-l tail seed)))
+	 (acons `(union . "*anon*") (make-decl 'union-def rest2)
+		(iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	 (acons `(union . ,name) (make-decl 'union-def rest2)
+		(iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (union-def . ,rest2) . ,rest1))
+	 (acons `(union . "*anon*") (make-decl 'union-def rest2)
+		(iter-declrs init-d-l tail seed)))
+
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(enum . ,name) decl (iter-declrs init-d-l tail seed)))
+	 ;;(simple-format #t "enum\n")
+	 (acons `(enum . ,name) (make-decl 'enum-def rest2)
+		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 (acons `(enum . "*anon*") decl (iter-declrs init-d-l tail seed)))
+	 ;;(simple-format #t "enum\n")
+	 (acons `(enum . "*anon*") (make-decl 'enum-def rest2)
+		(iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
+	 ;;(simple-format #t "enum\n")
+	 (acons `(enum . ,name) (make-decl 'enum-def rest2)
+		(iter-declrs init-d-l tail seed)))
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (enum-def . ,rest2) . ,rest1))
+	 ;;(simple-format #t "enum\n")
+	 (acons `(enum . "*anon*") (make-decl 'enum-def rest2)
+		(iter-declrs init-d-l tail seed)))
+
 	(,otherwise
 	 (iter-declrs init-d-l tail seed)))))
    ((eqv? (sx-tag decl) 'comp-decl)
@@ -325,32 +357,62 @@
 	(acons name decl seed))))
 (define match-param-decl munge-param-decl)
 	
+;; @deffn {Procedure} declr->ident declr => (ident "name")
+;; Given a declarator, aka @code{init-declr}, return the identifier.
+;; This is used by @code{trans-unit->udict}.
+;; See also: declr->id-name in body.scm.
+;; @end deffn
+(define (declr->ident declr)
+  (sxml-match declr
+    ((ident ,name) declr)
+    ((init-declr ,declr . ,rest) (declr->ident declr))
+    ((comp-declr ,declr) (declr->ident declr))
+    ((param-declr ,declr) (declr->ident declr))
+    ((array-of ,dir-declr ,array-spec) (declr->ident dir-declr))
+    ((array-of ,dir-declr) (declr->ident dir-declr))
+    ((ptr-declr ,pointer ,dir-declr) (declr->ident dir-declr))
+    ((ftn-declr ,dir-declr ,rest ...) (declr->ident dir-declr))
+    ((scope ,declr) (declr->ident declr))
+    (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
+
 ;; like member but returns first non-declr of type in dict
 (define (non-declr type udict)
   (let iter ((dict udict))
-    (cond
-     ((null? dict) #f)
-     ((and (pair? (car dict)) (eqv? type (caar dict))) dict)
-     (else (iter (cdr dict))))))
-     
+    (cond ((null? dict) '())
+	  ((and (pair? (caar dict)) (eqv? type (caaar dict))) dict)
+	  (else (iter (cdr dict))))))
+
+(define (enum-decl-val enum-udecl name)
+  ;; (decl (decl-spec-list (type-sped (enum-def (enum-def-list ...) => "123"
+  (enum-ref (cadadr (cadadr enum-udecl)) name))
+
 ;; @deffn {Procedure} udict-ref name
 ;; @deffnx {Procedure} udict-struct-ref name
 ;; @deffnx {Procedure} udict-union-ref name
 ;; @deffnx {Procedure} udict-enum-ref name
+;; @deffnx {Procedure} udict-enum-val name
+;; Look up refernce in a u-dict.  If the reference is found return the
+;; u-decl.  In the case of @code{udict-enum-val} the string value is returned.
 ;; @end deffn
 (define (udict-ref udict name)
   (or (assoc-ref udict name)
       (let iter ((dict (non-declr 'enum udict)))
 	(cond
-	 ((not dict) #f)
-	 ((assoc-ref (cdar dict) name))
-	 (else (iter (non-declr 'enum dict)))))))
+	 ((null? dict) #f)
+	 ((enum-decl-val (cdar dict) name) =>
+	  (lambda (val) (gen-enum-udecl name val)))
+	 (else (iter (non-declr 'enum (cdr dict))))))))
 (define (udict-struct-ref udict name)
-  #f)
+  (assoc-ref udict `(struct . ,name)))
 (define (udict-union-ref udict name)
-  #f)
-(define (udict-enum-ref udict name)
-  #f)
+  (assoc-ref udict `(union . ,name)))
+(define* (udict-enum-ref udict name)
+  (assoc-ref udict `(enum . ,name)))
+(define* (udict-enum-val udict name)
+  (let iter ((dict (non-declr 'enum udict)))
+    (cond ((null? dict) #f)
+	  ((enum-decl-val (cdar dict) name))
+	  (else (iter (non-declr 'enum (cdr dict)))))))
 
 ;; @deffn {Variable} fixed-width-int-names
 ;; This is a list of standard integer names (e.g., @code{"uint8_t"}).
@@ -530,6 +592,7 @@
 ;; @end example
 (define (enum-ref enum-def-list name)
   (let iter ((el (cdr (canize-enum-def-list enum-def-list))))
+    ;;(simple-format #t "~S\n" el)
     (cond
      ((null? el) #f)
      ((not (eqv? 'enum-defn (caar el))) (iter (cdr el)))

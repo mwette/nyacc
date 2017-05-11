@@ -151,7 +151,7 @@
 (include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/cppact.scm")
 
-(define raw-parser
+(define cpp-raw-parser
   (make-lalr-parser
    (list (cons 'len-v cpp-len-v) (cons 'pat-v cpp-pat-v) (cons 'rto-v cpp-rto-v)
 	 (cons 'mtab cpp-mtab) (cons 'act-v cpp-act-v))))
@@ -183,7 +183,7 @@
    'nyacc-error
    (lambda ()
      (with-input-from-string text
-       (lambda () (raw-parser (gen-cpp-lexer)))))
+       (lambda () (cpp-raw-parser (gen-cpp-lexer)))))
    (lambda (key fmt . args)
      (apply throw 'cpp-error fmt args))))
 

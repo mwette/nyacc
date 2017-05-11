@@ -70,7 +70,7 @@ fi
 
 if [ "X$site_scm_go_dir" == "X" ]; then
     if [ "X$prefix" == "X" ]; then
-	SITE_SCM_GO_DIR=`$GUILE -c '(display (%site-cache-dir))'`
+	SITE_SCM_GO_DIR=`$GUILE -c '(display (%site-ccache-dir))'`
     else
 	EFF_VER=`$GUILE -c "(display (effective-version))"`
 	SITE_SCM_GO_DIR=$prefix/lib/guile/$EFF_VER/site-ccache

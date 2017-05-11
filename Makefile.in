@@ -18,7 +18,7 @@ install:
 	(cd module; \
 	 make -f Makefile.nyacc GUILE=$(GUILE) \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
-		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR)
+		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
 		 install)
 
 install-srcs:
