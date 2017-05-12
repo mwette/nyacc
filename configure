@@ -79,6 +79,7 @@ else
     SITE_SCM_GO_DIR=$site_scm_go_dir
 fi
 
+echo "creating Makefile"
 sed -e "s|@guile@|$GUILE|" \
     -e "s|@site_scm_dir@|$SITE_SCM_DIR|" \
     -e "s|@site_scm_go_dir@|$SITE_SCM_GO_DIR|" \
