@@ -10,7 +10,7 @@
 SUBDIRS = c99
 
 TESTS_ENVIRONMENT = \
-	guile 
+	guile -L `pwd`/../../../module
 
 TESTS = \
 	util.test				\

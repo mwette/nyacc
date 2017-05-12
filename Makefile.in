@@ -28,7 +28,6 @@ install-srcs:
 		 install-srcs)
 
 check:
-	@echo "+++ no 'make checks' just yet"
-	@true
+	(cd test-suite/nyacc; make -f Makefile.nyacc check)
 
 # --- last line ---

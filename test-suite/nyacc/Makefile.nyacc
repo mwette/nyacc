@@ -10,7 +10,7 @@
 SUBDIRS = lang
 
 TESTS_ENVIRONMENT = \
-	guile 
+	guile -L `pwd`/../../module
 
 TESTS = \
 	lex-01.test				\

@@ -10,11 +10,14 @@
 SUBDIRS = 
 
 TESTS_ENVIRONMENT = \
-	guile 
+	guile -L `pwd`/../../../../module
 
 TESTS = \
 	c99-01.test				\
 	c99-02.test				\
+	c99-03.test				\
+	c99-04.test				\
+	c99-05.test				\
 	#
 
 check: check-TESTS
