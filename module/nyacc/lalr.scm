@@ -42,7 +42,7 @@
   #:use-module (nyacc util)
   )
 
-(define *nyacc-version* "0.78.2+c99dev")
+(define *nyacc-version* "0.78.3")
 
 ;; @deffn proxy-? sym rhs
 ;; @example
