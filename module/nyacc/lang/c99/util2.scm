@@ -677,13 +677,13 @@
    
   (foldts fD fU fH '() declr))
 
-;; @deffn {Procedure} stripdown udecl decl-dict [options]=> decl
-;; 1) remove stor-spec
+;; @deffn {Procedure} stripdown udecl => udecl
+;; Remove remove @emph{stor-spec} elements from a u-decl.
 ;; @example
 ;; =>
 ;; @end example
 ;; @end deffn
-(define* (stripdown udecl decl-dict #:key const-ptr)
+(define* (stripdown udecl #:key keep-const-ptr)
   (let* (;;(speclt (sx-tail udecl))	; decl-spec-list tail
 	 (xdecl udecl)
 	 (tag (sx-tag xdecl))
@@ -696,7 +696,8 @@
 	 (s-tag (sx-tag specl))
 	 (s-attr (sx-attr specl))
 	 (s-tail (strip-decl-spec-tail
-		  (sx-tail specl) #:keep-const? (and #:const-ptr is-ptr?)))
+		  (sx-tail specl)
+		  #:keep-const? (and keep-const-ptr is-ptr?)))
 	 (specl (sx-cons* s-tag s-attr s-tail)))
     ;;(pretty-print declr)
     ;;(pretty-print s-declr)

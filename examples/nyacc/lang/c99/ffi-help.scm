@@ -1,6 +1,10 @@
-;;
+;; nyacc/../ffi-help.scm
 ;;
 ;; User is responsible for calling string->pointer and pointer->string.
+
+;; TODO
+;; 1) enum-wrap
+;;     'CAIRO_STATUS_SUCCESS <=> 0
 
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
 
@@ -45,7 +49,8 @@
 (use-modules (srfi srfi-11))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 regex))
-(use-modules (ice-9 match))
+;;(use-modules (ice-9 match))
+(use-modules (system base pmatch))
 (use-modules (ice-9 pretty-print))
 
 (define *ffi-help-version* "0.01.0")
@@ -77,10 +82,25 @@
 (define (newln)
   (newline *port*))
 
+
+(define (stx->str x)
+  (symbol->string (syntax->datum x)))
+
+(define (gen-id tmpl-id . args)
+  (datum->syntax
+   tmpl-id (string->symbol
+	    (apply string-append
+		   (map (lambda (x) (if (string? x) x (stx->str x)))
+			args)))))
+
+;;(define-syntax define-enum-wrapper
+;;  (lambda (x)
+;;    (
+
 (define-syntax define-std-type-wrapper
   (lambda (x)
-    (define (stx->str x) (symbol->string (syntax->datum x)))
-    (define (gen-id tmpl-id . args)
+    #'(define (stx->str x) (symbol->string (syntax->datum x)))
+    #'(define (gen-id tmpl-id . args)
       (datum->syntax
        tmpl-id (string->symbol
 		(apply string-append
@@ -159,32 +179,32 @@
 ;; missing char short etc
 
 (define (mtype->bs mspec-tail)
-  (match mspec-tail
-    (`((fixed-type ,name)) (string-append "bs:" name))
-    (`((float-type ,name)) (string-append "bs:" name))
-    (`((void)) "bs:void")
-    (`((pointer-to) (fixed-type ,name)) (string-append "bs:" name "*"))
-    (`((pointer-to) (float-type ,name)) (string-append "bs:" name "*"))
-    (`((pointer-to) (void)) "bs:void*")
+  (pmatch mspec-tail
+    (((fixed-type ,name)) (string-append "bs:" name))
+    (((float-type ,name)) (string-append "bs:" name))
+    (((void)) "bs:void")
+    (((pointer-to) (fixed-type ,name)) (string-append "bs:" name "*"))
+    (((pointer-to) (float-type ,name)) (string-append "bs:" name "*"))
+    (((pointer-to) (void)) "bs:void*")
     ;;
-    (`((typename ,name)) name)
-    (`((pointer-to) (typename ,name)) (string-append name "*"))
+    (((typename ,name)) name)
+    (((pointer-to) (typename ,name)) (string-append name "*"))
     ;;
-    (otherwise (error "1: missed" mspec-tail))))
+    (,otherwise (error "1: missed" mspec-tail))))
 
 (define (mtype->ffi mspec-tail)
-  (match mspec-tail
-    (`((fixed-type ,name)) (string-append "ffi:" name))
-    (`((float-type ,name)) (string-append "ffi:" name))
-    (`((void)) "ffi:void")
-    (`((pointer-to) (fixed-type ,name)) (string-append "ffi:" name "*"))
-    (`((pointer-to) (float-type ,name)) (string-append "ffi:" name "*"))
-    (`((pointer-to) (void)) "ffi:void*")
+  (pmatch mspec-tail
+    (((fixed-type ,name)) (string-append "ffi:" name))
+    (((float-type ,name)) (string-append "ffi:" name))
+    (((void)) "ffi:void")
+    (((pointer-to) (fixed-type ,name)) (string-append "ffi:" name "*"))
+    (((pointer-to) (float-type ,name)) (string-append "ffi:" name "*"))
+    (((pointer-to) (void)) "ffi:void*")
     ;;
-    (`((typename ,name)) name)
-    (`((pointer-to) (typename ,name)) (string-append name "*"))
+    (((typename ,name)) name)
+    (((pointer-to) (typename ,name)) (string-append name "*"))
     ;;
-    (otherwise (error "2: missed" mspec-tail))))
+    (,otherwise (error "2: missed" mspec-tail))))
 
 (define ffi-typemap
   '(("void" . ffi:void)
@@ -200,56 +220,73 @@
     ("unsigned long int" . ffi:unsigned-long)))
 
 (define (mspec->ffi-sym mspec)
-  (match (cdr mspec)
-    (`((fixed-type ,name))
+  (pmatch (cdr mspec)
+    (((fixed-type ,name))
      (or (assoc-ref ffi-typemap name) (error ":( " name)))
-    (`((float-type ,name))
+    (((float-type ,name))
      (or (assoc-ref ffi-typemap name) (error ":( " name)))
-    (`((void)) 'ffi:void)
-    ;;(`((pointer-to) ,type) 'ffi:pointer)
-    (`((pointer-to) ,type) ''*)
-    (`((enum-def . ,rest2) . ,rest1) "ffi:int")
-    (`((typename ,name) . ,rest)
-     (let* ((udecl `(decl (decl-spec-list (typename ,name))
+    (((void)) 'ffi:void)
+    (((pointer-to) . ,rest) ''*)
+    (((enum-def . ,rest2) . ,rest1) "ffi:int")
+    (((typename ,name) . ,rest)
+     (let* ((udecl `(decl (decl-spec-list (type-spec (typename ,name)))
 			  (init-declr (ident "_"))))
 	    (udecl (expand-typerefs udecl *uddict* #:keep *ffi-keepers*))
-	    (mspec (udecl->mspec udecl))
-	    )
-       (simple-format #t "mspec: ~S\n" mspec)
-       (error "mspec->ffi-sym missed")))
-    (otherwise (error "mspec->ffi-sym missed" mspec))))
+	    (mspec (udecl->mspec udecl)))
+       (mspec->ffi-sym mspec)))
+    (,otherwise (error "mspec->ffi-sym missed it" mspec))))
 
 (define (mspec->ffi-wrapper mspec)
-  (match (cdr mspec)
-    (`((fixed-type ,name))
+  (pmatch (cdr mspec)
+    (((fixed-type ,name))
      (if (assoc-ref ffi-typemap name) #f (error ":( " name)))
-    (`((float-type ,name))
+    (((float-type ,name))
      (if (assoc-ref ffi-typemap name) #f (error ":( " name)))
-    (`((void)) #f)
-    (`((pointer-to) (typename ,typename))
+    (((void)) #f)
+    (((pointer-to) (typename ,typename))
      (if (member typename *wrapped*)
 	 (string->symbol (string-append "wrap-" typename "*"))
 	 #f))
-    (`((pointer-to) . ,rest)		; HACK
-     'identity)
-    (otherwise (error "mspec->ffi-wrapper missed" mspec))))
+    (((pointer-to) . ,rest) 'identity)		  ; HACK
+    (((enum-def . ,rest)) (string->symbol (string-append "wrap-" "xxx")))
+    (,otherwise (error "mspec->ffi-wrapper missed" mspec
+		      ))))
 
 (define (mspec->ffi-unwrapper mspec)
   ;;(sfout "cdr mspec = ~S\n" (cdr mspec))
-  (match (cdr mspec)
-    (`((fixed-type ,name))
+  (pmatch (cdr mspec)
+    (((fixed-type ,name))
      (if (assoc-ref ffi-typemap name) #f (error ":( " name)))
-    (`((float-type ,name))
+    (((float-type ,name))
      (if (assoc-ref ffi-typemap name) #f (error ":( " name)))
-    (`((void))
-     #f)
-    (`((pointer-to) (typename ,typename))
+    (((pointer-to) (typename ,typename))
      (if #t ;;(member type *wrapped*)
 	 (string->symbol (string-append "unwrap-" typename "*"))
 	 #f))
-    (`((pointer-to) . ,rest)		; HACK
-     'identity)
-    (otherwise (error "mspec->ffi-unwrapper missed" mspec))))
+    (((void)) #f)
+    (((pointer-to) (typename ,typename))
+     (if (member typename *wrapped*)
+	 (string->symbol (string-append "unwrap-" typename "*"))
+	 #f))
+    (((pointer-to) . ,rest) 'identity)	; HACK
+    (,otherwise (error "mspec->ffi-unwrapper missed" mspec))))
+
+#|
+(define qsort!
+  (let ((qsort (pointer->procedure
+		void
+		(dynamic-func "qsort" (dynamic-link))
+		(list ’* size_t size_t ’*))))
+    (lambda (bv compare)
+      (let ((ptr (procedure->pointer
+		  int
+		  (lambda (x y)
+		    (compare (dereference-uint8* x) (dereference-uint8* y)))
+		  (list ’* ’*))))
+	(qsort (bytevector->pointer bv)
+	       (bytevector-length bv) 1 ;; we’re sorting bytes
+	       ptr)))))
+|#
 
 ;; --- structures 
 
@@ -278,7 +315,7 @@
 		  (iter (acons-defn name type sflds) (cdr decls))))))
 	 (xx (string-append "(quote `(define " typename " (bs:struct "
 			    (string-join sflds " ") "))"))
-	 (yy (simple-format #t "xx=[~S]\n" xx))
+	 ;;(yy (simple-format #t "xx=[~S]\n" xx))
 	 (spec
 	  `(define ,(string->symbol typename) (bs:struct ,@sflds)))
 	 ;;(eval-string
@@ -373,15 +410,15 @@
 ;; for eval (vs decl)
 (define (xxx-param-arg-type typel)
   ;;(simple-format #t "do-param-arg-type ~S\n" typel)
-  (match typel
-    (`((fixed-type ,name)) name)
-    (`((float-type ,name)) name)
-    (`((typename ,name)) name)
-    (`((pointer-to) (fixed-type ,name)) (string-append name "*"))
-    (`((pointer-to) (float-type ,name)) (string-append name "*"))
-    (`((pointer-to) (typename ,name)) (string-append name "*"))
-    (`((pointer-to) (void)) "void*")
-    (otherwise (sferr "OTHERWISE=~S\n" typel))
+  (pmatch typel
+    (((fixed-type ,name)) name)
+    (((float-type ,name)) name)
+    (((typename ,name)) name)
+    (((pointer-to) (fixed-type ,name)) (string-append name "*"))
+    (((pointer-to) (float-type ,name)) (string-append name "*"))
+    (((pointer-to) (typename ,name)) (string-append name "*"))
+    (((pointer-to) (void)) "void*")
+    (,otherwise (sferr "OTHERWISE=~S\n" typel))
     ))
 
 (define (fix-param param-decl ix)
@@ -438,7 +475,7 @@
        ;;(sfscm "(define-std-pointer-wrapper ~A)\n" ptname)
        (cons typename type-list)))
 
-    ;; typedef int
+    ;; fixed typedef 
     ((udecl
       (decl-spec-list
        (stor-spec (typedef))
@@ -448,6 +485,18 @@
        ;; don't use this
        ;;(sfscm "(define-std-type-wrapper ~A ~A)\n\n" typename name)
        (cons typename type-list)))
+
+    ;; float typedef
+
+    ;; function typedef
+    ((udecl
+      (decl-spec-list (stor-spec (typedef)) (type-spec ,rtype))
+      (init-declr
+       (ftn-declr (scope (ptr-declr (pointer) (ident ,typename)))
+		  (param-list ,params))))
+     (sfscm ";; (define-ftn-pointer-wrapper ~S ...)\n" typename)
+     (set! *wrapped* (cons typename *wrapped*))
+     )
     
     ;; function returning pointer value
     ((udecl ,specl
@@ -475,7 +524,7 @@
 
     (,otherwise
      (sfscm ";; MISSED IT\n")
-     ;;(pretty-print udecl *port*)
+     (pretty-print udecl *port*)
      type-list)))
 
 ;; (sizeof '*) works
@@ -552,15 +601,16 @@
 	 (udecl->ffi-decl (cdr pair) type-list))
 
 	((member (car pair) '(
-			      "cairo_get_reference_count"
-			      "cairo_set_user_data"
-			      "cairo_status_t"
-			      "cairo_matrix_t"
-			      "cairo_set_dash"
-			      "cairo_bool_t"
-			      "cairo_region_t"
-			      "cairo_create"
-			      "cairo_region_contains_point"
+			      ;;"cairo_get_reference_count"
+			      ;;"cairo_set_user_data"
+			      ;;"cairo_status_t"
+			      ;;"cairo_matrix_t"
+			      ;;"cairo_set_dash"
+			      ;;"cairo_bool_t"
+			      ;;"cairo_region_t"
+			      ;;"cairo_create"
+			      ;;"cairo_region_contains_point"
+			      "cairo_destroy_func_t"
 			      ))
 	 ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
 	 (udecl->ffi-decl (cdr pair) type-list))

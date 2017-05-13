@@ -10,7 +10,8 @@
 SUBDIRS = c99
 
 TESTS_ENVIRONMENT = \
-	guile -L `pwd`/../../../module
+        GUILE_LOAD_PATH= GUILE_AUTO_COMPILE=0 \
+	guile -L `pwd`/../../../module -L `pwd`/../..
 
 TESTS = \
 	util.test				\
