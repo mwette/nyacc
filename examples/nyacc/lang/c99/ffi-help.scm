@@ -1,10 +1,12 @@
 ;; nyacc/../ffi-help.scm
 ;;
 ;; User is responsible for calling string->pointer and pointer->string.
+;;
+;; By definition: wrap is c->scm; unwrap is scm->c
 
 ;; TODO
-;; 1) enum-wrap
-;;     'CAIRO_STATUS_SUCCESS <=> 0
+;; 1) enum-wrap 0 => 'CAIRO_STATUS_SUCCESS
+;;    enum-unwrap 'CAIRO_STATUS_SUCCESS => 0
 
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
 
@@ -75,8 +77,8 @@
   (apply simple-format *port* fmt args))
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
-(define (ppscm tree)
-  (pretty-print tree *port*))
+(define* (ppscm tree #:key (per-line-prefix ""))
+  (pretty-print tree *port* #:per-line-prefix per-line-prefix))
 (define (ppout tree)
   (pretty-print tree #:per-line-prefix "    "))
 (define (newln)
@@ -295,12 +297,10 @@
     #f))
 
 (define (acons-defn name type seed)
-  ;;(cons ``(,(string->symbol ,name) ,,(string->symbol type)) seed))
-  ;;(cons (eval-string (string-append "`(" name " ," type ")")) seed))
-  (cons (string-append "(" name " ," type ")") seed))
+  (cons (eval-string (string-append "(quote `(" name " ," type "))")) seed))
 
 ;; cairo_matrix_t
-(define (cnvt-struct typename field-list struct-name)
+(define (cnvt-struct-def typename struct-name field-list)
   (let* ((fldl (clean-field-list field-list)) ; remove lone comments
 	 (flds (cdr fldl))
 	 (uflds (fold munge-comp-decl '() flds)) ; reverse order
@@ -312,20 +312,44 @@
 		       (udecl (expand-typerefs udecl *uddict* #:keep *keepers*))
 		       (spec (udecl->mspec/comm udecl))
 		       (type (mtype->bs (cddr spec))))
-		  (iter (acons-defn name type sflds) (cdr decls))))))
-	 (xx (string-append "(quote `(define " typename " (bs:struct "
-			    (string-join sflds " ") "))"))
-	 ;;(yy (simple-format #t "xx=[~S]\n" xx))
-	 (spec
-	  `(define ,(string->symbol typename) (bs:struct ,@sflds)))
-	 ;;(eval-string
-	 ;; (string-append "(quote (define " typename " (bs:struct `("
-	;;		 (string-join sflds " ") "))))")))
-	 )
-    (ppscm spec)
+		  (iter (acons-defn name type sflds) (cdr decls)))))))
+    (sfscm "\n;; ~A\n" typename)
+    (ppscm `(define ,(string->symbol typename) (bs:struct (list ,@sflds))))
     (sfscm "(export ~A)\n" typename)
     (newln)
     #t))
+
+;; --- enums
+
+(define (cnvt-enum-def typename enum-name enum-def-list)
+  (let* ((pname (if typename typename enum-name))
+	 (sname (if typename enum-name #f))
+	 (name-val-l (map
+		      (lambda (def)
+			(pmatch def
+			  ((enum-defn (ident ,n) (p-expr (fixed ,v)))
+			   (cons (string->symbol n) (string->number v)))
+			  (,otherwise (error "cnvt-enum-def coding" def))))
+		      (canize-enum-def-list (cdr enum-def-list))))
+	 (val-name-l (map (lambda (p) (cons (cdr p) (car p))) name-val-l))
+	 (w-pname (string->symbol (string-append "wrap-" pname)))
+	 (u-pname (string->symbol (string-append "unwrap-" pname)))
+	 )
+    (sfscm "\n")
+    (if typename
+	(if enum-name
+	    (sfscm ";; typedef enum ~A ~A;\n" enum-name typename)
+	    (sfscm ";; typedef enum ~A;\n" typename))
+	(sfscm ";; enum ~A;\n" enum-name))
+    (ppscm `(define ,w-pname
+	      (let ((vnl '(,@val-name-l)))
+		(lambda (name) (assq-ref vnl name)))))
+    (ppscm `(define ,u-pname
+	      (let ((nvl '(,@name-val-l)))
+		(lambda (name) (assq-ref nvl name)))))
+    (if #f ;; sname
+	(sfscm "(define wrap-~A wrap-~A)\n(export ~A)\n" sname pname sname))
+    #f))
 
 ;; --- function
 
@@ -363,7 +387,7 @@
 	   (unwrap (cdr name-unwrap)))
        (if unwrap
 	   (cons `(,(string->symbol (string-append "~" name))
-		   ((,unwrap ,(string->symbol name))))
+		   (,unwrap ,(string->symbol name)))
 		 seed)
 	   seed)))
    '()
@@ -453,28 +477,43 @@
   
   (sxml-match udecl
 
-    ;; anonymous struct typedef
+    ;; anonymous struct typedef: "typedef struct foo foo_t;" => foo_t*
     ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef))
 	 (type-spec (struct-ref (ident ,name))))
 	(init-declr (ident ,typename)))
-     (let ((ptname (string-append typename "*")))
-       (sfscm "\n(define-std-pointer-wrapper ~A)\n" ptname)
-       (set! *wrapped* (cons typename *wrapped*))
+     (let ((p-typename (string-append typename "*")))
+       (sfscm "\n")
+       (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
+       (sfscm "(define-std-pointer-wrapper ~A)\n" p-typename)
+       (set! *wrapped* (cons p-typename *wrapped*))
        (cons typename type-list)))
 
-    ;; populated struct typedef s/ name
+    ;; named struct-def typedef
     ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef))
-	 (type-spec (struct-def (ident ,name) ,field-list)))
+	 (type-spec (struct-def (ident ,struct-name) ,field-list)))
 	(init-declr (ident ,typename)))
-     (let ()
-       (cnvt-struct typename field-list name)
-       ;;(sfscm "(define-std-pointer-wrapper ~A)\n" ptname)
+     (let ((p-typename (string-append typename "*")))
+       (cnvt-struct-def typename struct-name field-list)
+       (sfscm "(define-std-pointer-wrapper ~A)\n" p-typename)
+       (set! *wrapped* (cons p-typename *wrapped*))
        (cons typename type-list)))
 
+    ;; enum-def typedef
+    ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest)))
+	(init-declr (ident ,typename)))
+     (let ()
+       (cnvt-enum-def typename enum-name enum-def-list)
+       (set! *wrapped* (cons typename *wrapped*))
+       (cons typename type-list)
+       ))
+       
     ;; fixed typedef 
     ((udecl
       (decl-spec-list
@@ -490,11 +529,21 @@
 
     ;; function typedef
     ((udecl
-      (decl-spec-list (stor-spec (typedef)) (type-spec ,rtype))
+      (decl-spec-list (stor-spec (typedef)) . ,rst)
       (init-declr
        (ftn-declr (scope (ptr-declr (pointer) (ident ,typename)))
-		  (param-list ,params))))
-     (sfscm ";; (define-ftn-pointer-wrapper ~S ...)\n" typename)
+		  (param-list . ,params))))
+     (let* ((ret-decl `(udecl (decl-spec-list . ,rst) (init-declr (ident "_"))))
+	    (decl-return (gen-decl-return ret-decl))
+	    (decl-params (gen-decl-params params)))
+       (sfscm "\n")
+       (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
+       (sfscm "(define (wrap-~A proc) ;; => pointer\n" typename)
+       (ppscm
+	`(ffi:procedure->pointer ,decl-return proc (list ,@decl-params))
+	#:per-line-prefix " ")
+       (sfscm " )\n")
+       (sfscm "(export wrap-~A)\n" typename))
      (set! *wrapped* (cons typename *wrapped*))
      )
     
@@ -503,8 +552,9 @@
 	    (init-declr
 	     (ptr-declr
 	      (pointer) (ftn-declr (ident ,name) (param-list . ,params)))))
-     (sfscm "\n;; ~A\n" name)
-     ;;(pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
+     ;;(sfscm "\n;; ~A\n" name)
+     (sfscm "\n")
+     (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
      (make-fctn name (ptr-decl specl) (fix-params params))
      type-list)
 
@@ -601,16 +651,28 @@
 	 (udecl->ffi-decl (cdr pair) type-list))
 
 	((member (car pair) '(
-			      ;;"cairo_get_reference_count"
-			      ;;"cairo_set_user_data"
-			      ;;"cairo_status_t"
-			      ;;"cairo_matrix_t"
-			      ;;"cairo_set_dash"
-			      ;;"cairo_bool_t"
-			      ;;"cairo_region_t"
-			      ;;"cairo_create"
-			      ;;"cairo_region_contains_point"
+			      #|
+			      "cairo_get_reference_count"
+			      "cairo_status_t"
+			      "cairo_set_dash"
+			      "cairo_surface_t"
+			      "cairo_t"
+			      "cairo_bool_t"
+			      "cairo_matrix_t"
+			      "cairo_region_t"
 			      "cairo_destroy_func_t"
+			      "cairo_destroy"
+			      "cairo_region_contains_point"
+			      "cairo_create"
+			      "cairo_surface_destroy"
+			      "cairo_svg_surface_create"
+			      "cairo_move_to"
+			      "cairo_line_to"
+			      "cairo_stroke"
+			      "cairo_destroy"
+			      |#
+			      "cairo_status_t"
+			      "cairo_set_user_data"
 			      ))
 	 ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
 	 (udecl->ffi-decl (cdr pair) type-list))

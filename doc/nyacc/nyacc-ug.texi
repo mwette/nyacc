@@ -50,7 +50,8 @@ the @emph{parser}.
 @section Example for Simple or Development Parser
 
 A simplest way to introduce working with @code{nyacc} is to work through
-an example.  Consider the following contents of the file @file{calc.scm}.
+an example.  Consider the following contents of the file @code{Tcalc}
+in the distributed directory @code{examples/nyacc/lang/calc/}:
 @example
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
@@ -65,19 +66,23 @@ an example.  Consider the following contents of the file @file{calc.scm}.
      (expr "-" expr ($$ (- $1 $3)))
      (expr "*" expr ($$ (* $1 $3)))
      (expr "/" expr ($$ (/ $1 $3)))
-     ('$fx ($$ (string->number $1)))))))
+     ('$fixed ($$ (string->number $1)))))))
 
 (define calc-mach (make-lalr-machine calc-spec))
 
-(define parse-expr
-  (let ((gen-lexer (make-lexer-generator (assq-ref calc-mach 'mtab)))
-	(calc-parser (make-lalr-parser calc-mach)))
-    (lambda () (calc-parser (gen-lexer)))))
+(define calc-mach (make-lalr-machine simple-spec))
+(define gen-lexer (make-lexer-generator (assq-ref calc-mach 'mtab)))
+(define parse (make-lalr-parser calc-mach))
 
-(define res (with-input-from-string "1 + 4 / 2 * 3 - 5" parse-expr))
-(simple-format #t "expect 2; get ~S\n" res) ;; expect: 2
+(define demo-string "2 + 2")
+
+(simple-format #t "~A => ~A\n"
+               demo-string
+               (with-input-from-string demo-string
+                 (lambda () (parse (gen-lexer)))))
+
 @end example
-Here is an explanation of the code:
+Here is an explanation of the above code:
 @enumerate
 @item
 The relevent modules are imported using guile's @code{use-modules} syntax.
@@ -106,28 +111,29 @@ right hand sides.  But this is not required.
 @item
 Multiple right-hand sides can be written for a single left-hand side.  
 @item
-Non-terminals are indicated as normal identifiers.
+Non-terminals are indicated using symbols (e.g., @code{expr}).
 @item
-Terminals are indicated as non-identifiers using double-quotes
-(e.g., @code{"+"}), scheme character syntax (e.g., @code{#\+}), or
-quoted identifiers (e.g., @code{'+}).  There is no syntax to declare
-tokens.
+Terminals are indicated using constants: string literals (e.g.,
+@code{"+"}), character literals (e.g., @code{#\+}), or quoted symbols
+(e.g., @code{'+}).  There is (currently) no syntax to declare other
+tokens.  (Future versions may provide a @code{reserved} declaration.)
 @item
-The reserved symbol @code{'$fx} indicates an unsigned integer.  The
-lexical analyzer tools will emit this token when an integer is
-detected in the input.
+The reserved symbols @code{'$fixed} indicates an unsigned integer.  The
+NYACC procedures for generating lexical analyzers will emit this token
+when an integer is detected in the input.  In general, symbols
+starting with @code{$} are reserved by NYACC.
 @item
-A quoted identifier cannot match a normal identifier.  For
+An identifier cannot be used for both a non-terminal an terminal.  For
 example, one could not use @code{function} to indicate a non-terminal
-and @code{"function"} to indicate a terminal.  The reader will signal
+and @code{"function"} to indicate a terminal.  The lalr reader will signal
 an error when this condition is detected.
 @item
 Within the right-hand side specification a @code{$$} form is used to
 specify an action associated with the rule.  Ordinarily, the action
 appears as the last element of a right-hand side, but mid-rule
-actions are possible (see Section TBD).
+actions are possible.
 @item
-The output of @code{lalr-spec} is an associative array so you can
+The output of @code{lalr-spec} is an associative array; you can
 peek at the internals using standard Scheme procedures.
 @end itemize
 @item
@@ -178,15 +184,24 @@ Lastly, we print the result out along with the expected result.
 If we execute the example file above we should get the following:
 @example
 $ guile calc.scm
-expect 2; get 2
+2 + 2 => 4
 $
 @end example
 
-@section Example for Production Parser
+@subsection Interactive Use
 
-@subsection Generating the Tables
+If one uses the above code to make an interactive parser it will get
+stuck, requiring multiple return keystrokes to get output.  If you
+replace @code{make-lalr-parser} with @code{make-lalr-ia-parser} then
+you get an interactive parser.  See the example @code{calc.scm} in the
+same directory.  (Note: the ia-parser is not as clean as the nominal
+parser and hence the added option.)
 
-@subsection Running the Compiler
+@subsection Generating the Tables for a Production Parser
+
+
+@c ======================
+@section Running the Compiler
 
 @example
 (use-modules (nyacc parser)

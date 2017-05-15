@@ -456,7 +456,7 @@
 
 
 ;; @deffn {Procedure} repl-typespec decl-spec-list replacement
-;; This is a helper for expand-decl-typerefs
+;; This is a helper for expand-typerefs
 ;; @end deffn
 (define (repl-typespec decl-spec-list replacement)
   (fold-right
@@ -504,21 +504,22 @@
 		(fixd-specl (repl-typespec specl (sx-tail tdef-specl 2)))
 		(fixd-declr (splice-declarators declr tdef-declr))
 		(fixed-udecl (cons* tag fixd-specl fixd-declr tail)))
-	   (expand-decl-typerefs fixed-udecl udecl-dict #:keep keep)))))
+	   (expand-typerefs fixed-udecl udecl-dict #:keep keep)))))
 
       ((struct-ref union-ref)
-       (simple-format (current-error-port)
-		      "+++ c99/util2: struct/union-ref: more to do?\n")
-       ;;(simple-format #t "\nstruct-ref:\n") (pretty-print udecl)
+       ;; Still more to think about here.
+       ;; If the ref has an associated def, then replace with that.
+       ;; Currently other decl-spec-list items are not included.
        (let* ((is-struct (eqv? 'struct-ref (car tspec)))
 	      (ident (cadr tspec))
 	      (name (cadr ident))
-	      (ref (if is-struct
+	      (def (if is-struct
 		       (udict-struct-ref udecl-dict name)
-		       (udict-union-ref udecl-dict name)))
-	      )
-	 #f)
-       udecl)
+		       (udict-union-ref udecl-dict name))))
+	 (if def
+	     (expand-typerefs `(udecl ,(cadr def) ,declr . ,tail)
+			      udecl-dict #:keep keep)
+	     udecl)))
 
       ((struct-def union-def)
        (let* ((ident (sx-find 'ident tspec))
@@ -527,7 +528,7 @@
 	      (unit-flds (map cdr (fold-right match-comp-decl '() orig-flds)))
 	      (fixd-flds (map
 			  (lambda (fld)
-			    (expand-decl-typerefs fld udecl-dict #:keep keep))
+			    (expand-typerefs fld udecl-dict #:keep keep))
 			  unit-flds))
 	      (fixd-tspec
 	       (if #f ;;ident
@@ -551,7 +552,7 @@
 
       (else
        udecl))))
-(define expand-decl-typerefs expand-typerefs)
+(define expand-decl-typerefs expand-typerefs) ;; deprecated
 
 ;; === enum handling ...
   

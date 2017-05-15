@@ -1,4 +1,4 @@
-#!/usr/bin/env guile
+#!/usr/bin/env guile -L ../../../../module
 !#
 ;; calc.scm - calculator
 ;;
@@ -10,7 +10,6 @@
 ;; without any warranty.
 
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
-(add-to-load-path (string-append (getcwd) "/../../../../examples"))
 
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
@@ -36,7 +35,6 @@
 (define gen-lexer (make-lexer-generator match-table))
 (define parse (make-lalr-ia-parser simple-mach))
 
-(let iter ((cmd ""))
-  (if 
+(parse (gen-lexer))
 
 ;; --- last line ---

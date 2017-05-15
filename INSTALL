@@ -21,6 +21,3 @@ To install only sources in /path/to/dest:
 
 You must specify site_scm_go_dir to avoid use of `guile'.
 
-
-
-

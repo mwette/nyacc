@@ -70,8 +70,7 @@
      (Identifier ($$ `(PrimaryExpression ,$1)))
      (Literal ($$ `(PrimaryExpression ,$1)))
      (ArrayLiteral ($$ `(PrimaryExpression ,$1)))
-     ;; until we get $with-prune working:
-     #;(ObjectLiteral ($$ `(PrimaryExpression ,$1)))
+     ;;(ObjectLiteral ($$ `(PrimaryExpression ,$1)))
      ("(" Expression ")" ($$ $2))
      )
 
@@ -117,8 +116,7 @@
 
     (MemberExpression
      (PrimaryExpression)
-     ;; Until we get $with-prune working:
-     #;(FunctionExpression)
+     ;;(FunctionExpression)
      (MemberExpression "[" Expression "]" ($$ `(ary-ref ,$3 ,$1)))
      (MemberExpression "." Identifier ($$ `(obj-ref ,$3 ,$1)))
      ("new" MemberExpression Arguments ($$ `(new ,$2 ,$3)))
@@ -210,12 +208,21 @@
 			   ($$ `(ge ,$1 ,$3)))
      (RelationalExpression "instanceof" ShiftExpression
 			   ($$ `(instanceof ,$1 ,$3)))
-     ;; until we get $with-prune working:
-     #;(RelationalInExpression)
-     )
-    #;(RelationalInExpression
      (RelationalExpression "in" ShiftExpression
 			   ($$ `(in ,$1 ,$3)))
+     )
+    (RelationalExpressionNoIn
+     (ShiftExpression)
+     (RelationalExpressionNoIn "<" ShiftExpression
+			       ($$ `(lt ,$1 ,$3)))
+     (RelationalExpressionNoIn ">" ShiftExpression
+			       ($$ `(gt ,$1 ,$3)))
+     (RelationalExpressionNoIn "<=" ShiftExpression
+			       ($$ `(le ,$1 ,$3)))
+     (RelationalExpressionNoIn ">=" ShiftExpression
+			       ($$ `(ge ,$1 ,$3)))
+     (RelationalExpressionNoIn "instanceof" ShiftExpression
+			       ($$ `(instanceof ,$1 ,$3)))
      )
     
     (EqualityExpression
@@ -229,10 +236,26 @@
      (EqualityExpression "!==" RelationalExpression
 			 ($$ `(neq-eq ,$1 ,$3)))
      )
+    (EqualityExpressionNoIn
+     (RelationalExpressionNoIn)
+     (EqualityExpressionNoIn "==" RelationalExpressionNoIn
+			     ($$ `(eq ,$1 ,$3)))
+     (EqualityExpressionNoIn "!=" RelationalExpressionNoIn
+			     ($$ `(neq ,$1 ,$3)))
+     (EqualityExpressionNoIn "===" RelationalExpressionNoIn
+			     ($$ `(eq-eq ,$1 ,$3)))
+     (EqualityExpressionNoIn "!==" RelationalExpressionNoIn
+			     ($$ `(neq-eq ,$1 ,$3)))
+     )
 
     (BitwiseANDExpression
      (EqualityExpression)
      (BitwiseANDExpression "&" EqualityExpression
+			   ($$ `(bit-and ,$1 ,$3)))
+     )
+    (BitwiseANDExpressionNoIn
+     (EqualityExpressionNoIn)
+     (BitwiseANDExpressionNoIn "&" EqualityExpressionNoIn
 			   ($$ `(bit-and ,$1 ,$3)))
      )
 
@@ -241,11 +264,21 @@
      (BitwiseXORExpression "^" BitwiseANDExpression
 			   ($$ `(bit-xor ,$1 ,$3)))
      )
+    (BitwiseXORExpressionNoIn
+     (BitwiseANDExpressionNoIn)
+     (BitwiseXORExpressionNoIn "^" BitwiseANDExpressionNoIn
+			       ($$ `(bit-xor ,$1 ,$3)))
+     )
 
     (BitwiseORExpression
      (BitwiseXORExpression)
      (BitwiseORExpression "|" BitwiseXORExpression
 			  ($$ `(bit-or ,$1 ,$3)))
+     )
+    (BitwiseORExpressionNoIn
+     (BitwiseXORExpressionNoIn)
+     (BitwiseORExpressionNoIn "|" BitwiseXORExpressionNoIn
+			      ($$ `(bit-or ,$1 ,$3)))
      )
 
     (LogicalANDExpression
@@ -253,10 +286,20 @@
      (LogicalANDExpression "&&" BitwiseORExpression
 			   ($$ `(and ,$1 ,$3)))
      )
+    (LogicalANDExpressionNoIn
+     (BitwiseORExpressionNoIn)
+     (LogicalANDExpressionNoIn "&&" BitwiseORExpressionNoIn
+			       ($$ `(and ,$1 ,$3)))
+     )
 
     (LogicalORExpression
      (LogicalANDExpression)
      (LogicalORExpression "||" LogicalANDExpression
+			  ($$ `(or ,$1 ,$3)))
+     )
+    (LogicalORExpressionNoIn
+     (LogicalANDExpressionNoIn)
+     (LogicalORExpressionNoIn "||" LogicalANDExpressionNoIn
 			  ($$ `(or ,$1 ,$3)))
      )
 
@@ -265,10 +308,21 @@
      (LogicalORExpression "?" AssignmentExpression ":" AssignmentExpression
 			  ($$ `(ConditionalExpression ,$1 ,$3 ,$5)))
      )
+    (ConditionalExpressionNoIn
+     (LogicalORExpressionNoIn)
+     (LogicalORExpressionNoIn "?" AssignmentExpression
+			      ":" AssignmentExpressionNoIn
+			  ($$ `(ConditionalExpression ,$1 ,$3 ,$5)))
+     )
     
     (AssignmentExpression
      (ConditionalExpression)
      (LeftHandSideExpression AssignmentOperator AssignmentExpression
+			     ($$ `(AssignmentExpression ,$1 ,$2 ,$3)))
+     )
+    (AssignmentExpressionNoIn
+     (ConditionalExpressionNoIn)
+     (LeftHandSideExpression AssignmentOperator AssignmentExpressionNoIn
 			     ($$ `(AssignmentExpression ,$1 ,$2 ,$3)))
      )
 
@@ -296,8 +350,12 @@
 	      (make-tl 'expr-list $1 $3))))
      )
     (ExpressionNoIn
-     #;($with Expression ($prune RelationalInExpression))
-     (Expression)
+     (AssignmentExpressionNoIn)
+     (ExpressionNoIn
+      "," AssignmentExpressionNoIn
+      ($$ (if (and (pair? (car $1)) (eqv? 'expr-list (caar $1)))
+	      (tl-append $1 $3)
+	      (make-tl 'expr-list $1 $3))))
      )
 	    
     ;; A.4
@@ -338,9 +396,9 @@
      (VariableDeclarationList "," VariableDeclaration ($$ (tl-append $1 $3)))
      )
     (VariableDeclarationListNoIn
-     #;($with VariableDeclarationList ($prune RelationalInExpression))
-     ;; ==[Until we get $with-prune working]==>
-     (VariableDeclarationList)
+     (VariableDeclarationNoIn ($$ (make-tl 'VariableDeclarationList $1)))
+     (VariableDeclarationListNoIn "," VariableDeclarationNoIn
+				  ($$ (tl-append $1 $3)))
      )
 
     (VariableDeclaration
@@ -348,13 +406,15 @@
      (Identifier ($$ `(VariableDeclaration ,$1)))
      )
     (VariableDeclarationNoIn
-     #;($with VariableDeclaration ($prune RelationalInExpression))
-     ;; ==[Until we get $with-prune working]==>
-     (VariableDeclaration)
+     (Identifier InitializerNoIn ($$ `(VariableDeclaration ,$1 ,$2)))
+     (Identifier ($$ `(VariableDeclaration ,$1)))
      )
 
     (Initializer
      ("=" AssignmentExpression ($$ `(Initializer ,$2)))
+     )
+    (InitializerNoIn
+     ("=" AssignmentExpressionNoIn ($$ `(Initializer ,$2)))
      )
 
     (EmptyStatement
@@ -362,12 +422,7 @@
      )
 
     (ExpressionStatement
-     ;; spec says: Reject if lookahead "{" "," "function".
-     #;(($with Expression
-	     ($prune FunctionExpression)
-	     ($prune ObjectLiteral))
-     ";")
-     ;; ==[until we get $with-prune working]==>
+     ;; spec says: Reject if lookahead "{" | "function".
      (Expression ";" ($$ `(ExpressionStatement ,$1)))
      )
 
@@ -384,12 +439,18 @@
      ("while" "(" Expression ")" Statement
       ($$ `(while ,$3 ,$5)))
      ("for" "(" OptExprStmtNoIn OptExprStmt OptExprClose Statement
-      ;;($$ `(for ,$3 ,$
+      ($$ `(for $3 $4 $5 $6))
       )
      ("for" "(" "var" VariableDeclarationListNoIn ";" OptExprStmt
-      OptExprClose Statement)
-     ("for" "(" LeftHandSideExpression "in" Expression ")" Statement)
-     ("for" "(" "var" VariableDeclarationNoIn "in" Expression ")" Statement)
+      OptExprClose Statement
+      ($$ `(for $4 $6 $7 $8))		; ???
+      )
+     ("for" "(" LeftHandSideExpression "in" Expression ")" Statement
+      ($$ `(for-in $3 $5 $7))		; ???
+      )
+     ("for" "(" "var" VariableDeclarationNoIn "in" Expression ")" Statement
+      ($$ `(for-in $4 $6 $8))		; ???
+      )
      )
     (OptExprStmtNoIn
      (":" ($$ `(Expression)))

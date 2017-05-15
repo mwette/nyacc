@@ -7,6 +7,8 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
+(add-to-load-path "../../../../module")
+
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
 (use-modules (nyacc parse))
@@ -26,16 +28,9 @@
      ($float ($$ (string->number $1)))
      ("(" expr ")" ($$ $2))))))
 
-(define simple-mach (make-lalr-machine simple-spec))
-;; OR
-;; (use-modules (nyacc bison))
-;; (define simple-mach (make-lalr-machine/bison simple-spec))
-
-(define match-table (assq-ref simple-mach 'mtab))
-
-(define gen-lexer (make-lexer-generator match-table))
-
-(define parse (make-lalr-parser simple-mach))
+(define calc-mach (make-lalr-machine simple-spec))
+(define gen-lexer (make-lexer-generator (assq-ref calc-mach 'mtab)))
+(define parse (make-lalr-parser calc-mach))
 
 (define demo-string "2 + 2")
 

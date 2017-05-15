@@ -125,8 +125,7 @@
       ((error ,text) (sf "#error ~A\n" text))
       ((pragma ,text) (sf "#pragma ~A\n" text))
       (,otherwise
-       (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree))
-      )
+       (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
     (fmtr 'nlin))
 
   (define (unary/l op rep rval)
@@ -351,7 +350,7 @@
 	 ((union-def) (ppx arg))
 	 ((enum-def) (ppx arg))
 	 ((typename) (sf "~A" (sx-ref arg 1)))
-	 ((void) (sf "void "))
+	 ((void) (sf "void"))
 	 (else (error "missing " arg))))
 
       ((struct-ref (ident ,name)) (sf "struct ~A" name))
@@ -367,10 +366,10 @@
        (struct-union-def 'union #f fields))
 
       ((enum-def (ident ,name) (enum-def-list . ,edl))
-       (sf "enum ~A " name) (ppx `(enum-def-list . ,edl)))
+       (sf "enum ~A " name) (ppx `(enum-def-list . ,edl))) ; SPACE ???
 
       ((enum-def (enum-def-list . ,edl))
-       (sf "enum ") (ppx `(enum-def-list . ,edl)))
+       (sf "enum ") (ppx `(enum-def-list . ,edl))) ; SPACE ???
 
       ((enum-def-list . ,defns)
        (sf "{\n") (push-il)
@@ -385,7 +384,7 @@
        (sf "~A,\n" name))
 
       ((fctn-spec "inline")
-       (sf "inline "))
+       (sf "inline "))			; SPACE ???
 
       ((ptr-declr ,ptr ,dir-declr)
        (ppx ptr) (ppx dir-declr))
