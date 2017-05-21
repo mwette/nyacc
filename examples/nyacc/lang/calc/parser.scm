@@ -25,11 +25,11 @@
 (define calc-spec
   (lalr-spec
    (prec< (left "+" "-") (left "*" "/"))
-   (start stmt-list-proxy)
+   (start program)
    (grammar
 
-    (stmt-list-proxy
-     (stmt-list "\n" ($$ `(stmt-list ,@(reverse $1)))))
+    (program
+     (stmt-list "\n" ($$ (cons 'program (reverse $1)))))
 
     (stmt-list
      (stmt ($$ (list $1)))
@@ -38,7 +38,7 @@
     (stmt
      (ident "=" expr ($$ `(assn-stmt ,$1 ,$3)))
      (expr ($$ `(expr-stmt ,$1)))
-     ( ($$ '(empty-stmt))))
+     ($empty ($$ '(empty-stmt))))
 
     (expr
      (expr "+" expr ($$ `(add ,$1 ,$3)))
@@ -50,6 +50,7 @@
      ("(" expr ")" ($$ $2)))
 
     (ident ($ident ($$ `(ident ,$1))))
+
     )))
 
 (define calc-mach

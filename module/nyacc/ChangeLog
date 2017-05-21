@@ -1,3 +1,8 @@
+2017-05-20  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lalr.scm (lalr-spec): removed more with/prune syntax; added
+	reserve directive for reserved terminals (e.g., "volatile")
+
 2017-05-06  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm: updated write-lalr-tables and write-lalr-actions to

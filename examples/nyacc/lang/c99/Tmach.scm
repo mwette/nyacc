@@ -21,9 +21,9 @@
 ;; test def parser: show parse tree
 (when #t
   (let* ((file "exam.d/ex01.c")
-	 (defs '(("arch" . "x86_64"))) 
+	 (defs '("arch=x86_64"))
 	 (incs  '("exam.d"))
-	 (parse (lambda () (parse-c
+	 (parse (lambda () (parse-c99
 			    #:cpp-defs defs #:inc-dirs incs
 			    #:debug #f #:mode 'file #:xdef? #f)))
 	 (sx (with-input-from-file file parse))

@@ -1,4 +1,5 @@
 \input texinfo.tex
+@setfilename nyacc-c99-munge.info
 @settitle NYACC C99 Munge Module
 
 @headings off

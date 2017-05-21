@@ -1,5 +1,5 @@
 \input texinfo.tex
-@setfilename c99-hg.info
+@setfilename nyacc-c99-hg.info
 @settitle C99 User's Guide
 
 @include ../../memodefs.texi
