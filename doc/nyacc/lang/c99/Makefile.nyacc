@@ -21,11 +21,9 @@ install: install-info
 
 .PHONY: install-info
 install-info:
-	@true
 
 .PHONY: dist-files
 dist-files:
-	(cd c99; make -f Makefile.nyacc dist-files)
 
 %_scm.texi: ../../module/nyacc/%.scm
 	./pull-texi.scm $< >$@

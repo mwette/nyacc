@@ -1,0 +1,23 @@
+Install instructions for NYACC
+
+Copyright (C) 2015-2017 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+To configure:
+  $ ./configure
+or
+  $ ./configure --prefix=/path/to/root
+or
+  $ ./configure --site_scm_dir=/path/to/dest --site_scm_go_dir=/dummy
+
+
+To install only sources in /path/to/dest:
+  $ ./configure --site_scm_dir=/path/to/dest --site_scm_go_dir=/dummy
+  $ make install-srcs
+
+You must specify site_scm_go_dir to avoid use of `guile'.
+

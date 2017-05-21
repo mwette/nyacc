@@ -9,6 +9,7 @@
 
 (define-module (lex-01)
   #:use-module (nyacc lex)
+  #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (test-suite lib))
 
 ;; not used
@@ -44,9 +45,9 @@
   (pass-if "cnumstr->scm"
     (fold
      (lambda (pair pass)
-       (and pass (string-equal? (cnumstr->scm (car pair)) (cdr pair))))
+       (and pass (string=? (cnumstr->scm (car pair)) (cdr pair))))
      #t
-     '(("0L" . "0") ("01l" . "0o1") ("0LL" . "0") ("0xa" . "#xa")
+     '(("0L" . "0") ("01l" . "#o1") ("0LL" . "0") ("0xa" . "#xa")
        ("0123" . "#o123") ("1234" . "1234") ("0.1e10" . "0.1e10"))))
 
   )

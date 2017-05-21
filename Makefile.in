@@ -1,0 +1,33 @@
+# Makefile.in for nyacc
+#
+# Copyright (C) 2017 Matthew R. Wette
+#
+# Copying and distribution of this file, with or without modification
+# is granted.  This file is offered as-is, without any warranty.
+
+GUILE=@guile@
+SITE_SCM_DIR=@site_scm_dir@
+SITE_SCM_GO_DIR=@site_scm_go_dir@
+
+default: all
+
+all:
+	@echo "nothing to make"
+
+install:
+	(cd module; \
+	 make -f Makefile.nyacc GUILE=$(GUILE) \
+		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
+		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
+		 install)
+
+install-srcs:
+	(cd module; \
+	 make -f Makefile.nyacc \
+		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
+		 install-srcs)
+
+check:
+	(cd test-suite/nyacc; make -f Makefile.nyacc check)
+
+# --- last line ---

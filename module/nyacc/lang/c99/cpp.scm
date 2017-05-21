@@ -151,10 +151,10 @@
 (include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/cppact.scm")
 
-(define raw-parser
+(define cpp-raw-parser
   (make-lalr-parser
-   (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
-	 (cons 'mtab mtab) (cons 'act-v act-v))))
+   (list (cons 'len-v cpp-len-v) (cons 'pat-v cpp-pat-v) (cons 'rto-v cpp-rto-v)
+	 (cons 'mtab cpp-mtab) (cons 'act-v cpp-act-v))))
 
 (define (cpp-err fmt . args)
   (apply throw 'cpp-error fmt args))
@@ -170,7 +170,7 @@
 
 ;; generate a lexical analyzer per string
 (define gen-cpp-lexer
-  (make-lexer-generator mtab #:comm-skipper cpp-comm-skipper))
+  (make-lexer-generator cpp-mtab #:comm-skipper cpp-comm-skipper))
 
 ;; @deffn {Procedure} parse-cpp-expr text => tree
 ;; Given a string returns a cpp parse tree.  This is called by
@@ -183,7 +183,7 @@
    'nyacc-error
    (lambda ()
      (with-input-from-string text
-       (lambda () (raw-parser (gen-cpp-lexer)))))
+       (lambda () (cpp-raw-parser (gen-cpp-lexer)))))
    (lambda (key fmt . args)
      (apply throw 'cpp-error fmt args))))
 
@@ -261,27 +261,27 @@
      ((char? (car tkl))
       (iter stl (cons (car tkl) chl) nxt (cdr tkl)))
      (else
-      (match tkl
-	((('ident . rval) 'dhash ('ident . lval) . rest)
+      (pmatch tkl
+	(((ident . ,rval) dhash (ident . ,lval) . ,rest)
 	 (iter stl chl nxt
 	       (acons 'ident (string-append lval rval) (list-tail tkl 3))))
-	((('ident . arg) 'hash . rest)
+	(((ident . ,arg) hash . ,rest)
 	 (iter stl chl (string-append "\"" arg "\"") (list-tail tkl 2)))
-	((('ident . iden) ('ident . lval) . rest)
+	(((ident . ,iden) (ident . ,lval) . ,rest)
 	 (iter stl chl iden rest))
-	((('ident . iden) . rest)
+	(((ident . ,iden) . ,rest)
 	 (iter stl chl iden rest))
-	((('string . val) . rest)
+	(((string . ,val) . ,rest)
 	 (iter stl (cons #\" chl) val (cons #\" rest)))
-	((('defined . val) . rest)
+	(((defined . ,val) . ,rest)
 	 (iter stl chl val rest))
-	(('space 'space . rest)
+	((space space . ,rest)
 	 (iter stl chl nxt rest))
-	(('space . rest)
+	((space . ,rest)
 	 (iter stl (cons #\space chl) nxt rest))
-	((asis . rest)
+	((,asis . ,rest)
 	 (iter stl chl asis rest))
-	(otherwise
+	(,otherwise
 	 (error "no match" tkl)))))))
 
 ;; We just scanned "defined", now need to scan the arg to inhibit expansion.

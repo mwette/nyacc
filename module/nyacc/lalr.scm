@@ -42,7 +42,7 @@
   #:use-module (nyacc util)
   )
 
-(define *nyacc-version* "0.77.0+devel")
+(define *nyacc-version* "0.78.3+devel")
 
 ;; @deffn proxy-? sym rhs
 ;; @example
@@ -125,6 +125,7 @@
 (define-syntax lalr-spec
   (syntax-rules +++ () 
     ((_ <expr> +++)
+<<<<<<< HEAD
      (let* ()
        (letrec-syntax
 	   ((with-attr-list
@@ -237,6 +238,111 @@
 		      (lalr-spec-1 <e> ...))) 
 	       ((_) '()))))
 	 (process-spec (lalr-spec-1 <expr> +++)))))))
+=======
+     (letrec-syntax
+	 ((parse-rhs
+	  (lambda (x)
+	    ;; The following is syntax-case because we use a fender.
+	    (syntax-case x (quote $$ $$/ref $$-ref $prec $with $empty
+				  $? $* $+)
+	      ;; action specifications
+	      ((_ ($$ <guts> ...) <e2> ...)
+	       #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
+	      ((_ ($$-ref <ref>) <e2> ...)
+	       ;;#'(cons '(action #f <ref> #f) (parse-rhs <e2> ...)))
+	       #'(cons `(action #f ,<ref> . #f) (parse-rhs <e2> ...)))
+	      ((_ ($$/ref <ref> <guts> ...) <e2> ...)
+	       #'(cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...)))
+
+	      ;; other internal $-syntax
+	      ((_ ($prec <tok>) <e2> ...)
+	       #'(cons (cons 'prec (tokenize <tok>)) (parse-rhs <e2> ...)))
+	      ((_ $empty <e2> ...)	; TODO: propagate to processor
+	       #'(parse-rhs <e2> ...))
+	      
+	      ;; (experimental) proxies
+	      ((_ ($? <s1> <s2> ...) <e2> ...)
+	       #'(cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
+		       (parse-rhs <e2> ...)))
+	      ((_ ($+ <s1> <s2> ...) <e2> ...)
+	       #'(cons (cons* 'proxy proxy-+ (parse-rhs <s1> <s2> ...))
+		       (parse-rhs <e2> ...)))
+	      ((_ ($* <s1> <s2> ...) <e2> ...)
+	       #'(cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
+		       (parse-rhs <e2> ...)))
+	      
+	      ;; terminals and non-terminals
+	      ((_ (quote <e1>) <e2> ...)
+	       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+	      ((_ (<f> ...) <e2> ...)
+	       #'(cons (<f> ...) (parse-rhs <e2> ...)))
+	      ((_ <e1> <e2> ...)
+	       (identifier? (syntax <e1>)) ; fender to trap non-term's
+	       (if (reserved? (syntax <e1>))
+		   #'(cons '(terminal . <e1>) (parse-rhs <e2> ...))
+		   #'(cons '(non-terminal . <e1>) (parse-rhs <e2> ...))))
+	      ((_ <e1> <e2> ...)
+	       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+	      ((_) #'(list)))))
+       (parse-rhs-list
+	(syntax-rules ()
+	  ((_ (<ex> ...) <rhs> ...)
+	   (cons (parse-rhs <ex> ...)
+		 (parse-rhs-list <rhs> ...)))
+	  ((_) '())))
+       (parse-grammar
+	(syntax-rules ()
+	  ((_ (<lhs> <rhs> ...) <prod> ...)
+	   (cons (cons '<lhs> (parse-rhs-list <rhs> ...))
+		 (parse-grammar <prod> ...)))
+	  ((_) '())))
+       (tokenize
+	(lambda (x)
+	  (syntax-case x ()
+	    ((_ <tk>) (identifier? (syntax <tk>)) #'(quote <tk>))
+	    ((_ <tk>) #'<tk>))))
+       (tokenize-list
+	(syntax-rules ()
+	  ((_ <tk1> <tk2> ...)
+	   (cons (tokenize <tk1>) (tokenize-list <tk2> ...)))
+	  ((_) '())))
+       (parse-precedence
+	(syntax-rules (left right nonassoc)
+	  ((_ (left <tk> ...) <ex> ...)
+	   (cons (cons 'left (tokenize-list <tk> ...))
+		 (parse-precedence <ex> ...)))
+	  ((_ (right <tk> ...) <ex> ...)
+	   (cons (cons 'right (tokenize-list <tk> ...))
+		 (parse-precedence <ex> ...)))
+	  ((_ (nonassoc <tk> ...) <ex> ...)
+	   (cons (cons 'nonassoc (tokenize-list <tk> ...))
+		 (parse-precedence <ex> ...)))
+	  ((_ <tk> <ex> ...)
+	   (cons (list 'undecl (tokenize <tk>))
+		 (parse-precedence <ex> ...)))
+	  ((_) '())))
+       (lalr-spec-1
+	(syntax-rules (start expect notice reserve prec< prec> grammar)
+	  ((_ (start <symb>) <e> ...)
+	   (cons (cons 'start '<symb>) (lalr-spec-1 <e> ...)))
+	  ((_ (expect <n>) <e> ...)
+	   (cons (cons 'expect <n>) (lalr-spec-1 <e> ...)))
+	  ((_ (notice <str>) <e> ...)
+	   (cons (cons 'notice <str>) (lalr-spec-1 <e> ...)))
+	  ((_ (reserve <t1> ...) <e> ...)
+	   (cons (cons 'reserve <t1> ...) (lalr-spec-1 <e> ...)))
+	  ((_ (prec< <ex> ...) <e> ...)
+	   (cons (cons 'precedence (parse-precedence <ex> ...))
+		 (lalr-spec-1 <e> ...)))
+	  ((_ (prec> <ex> ...) <e> ...)
+	   (cons (cons 'precedence (reverse (parse-precedence <ex> ...)))
+		 (lalr-spec-1 <e> ...)))
+	  ((_ (grammar <prod> ...) <e> ...)
+	   (cons (cons 'grammar (parse-grammar <prod> ...))
+		 (lalr-spec-1 <e> ...))) 
+	  ((_) '()))))
+       (process-spec (lalr-spec-1 <expr> +++))))))
+>>>>>>> origin/c99dev
 
 ;; @deffn atomize terminal => object
 ;; Generate an atomic object for a terminal.   Expected terminals are strings,
@@ -433,6 +539,7 @@
 	  ((prec)
 	   (iter ll @l (add-el (cdar rhs) tl) nl head prox lhs tail rhs-l
 		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
+<<<<<<< HEAD
 	  ((prune)
 	   (if (pair? pel) (error "prune only as first item in RHS"))
 	   (if (assq-ref attr 'prune) (error "multiple prunes not supported"))
@@ -450,6 +557,8 @@
 		   lhs tail rhs-l
 		   (acons 'with (cons* psy rhsx p-l) attr)
 		   (cons psy pel) (cdr rhs))))
+=======
+>>>>>>> origin/c99dev
 	  (else
 	   (error (fmtstr "bug=~S" (caar rhs))))))
 
@@ -463,8 +572,11 @@
 	;; @end itemize
 	(let* ((ln (length pel))
 	       (action (assq-ref attr 'action))
+<<<<<<< HEAD
 	       (with (assq-ref attr 'with))
 	       (prune (or (assq-ref attr 'prune) '()))
+=======
+>>>>>>> origin/c99dev
 	       (nrg (if action (or (car action) ln) ln))  ; number of args
 	       (ref (if action (cadr action) #f))
 	       (act (cond
@@ -510,15 +622,20 @@
 
        (else
 	(let* ((al (reverse @l))	; attribute list
-	       (err-1 '()) ;; not used
+	       (err-l '())
 	       ;; symbol used as terminal and non-terminal:
-	       (err-2 (gram-check-2 tl nl err-1))
+	       (err-l (gram-check-2 tl nl err-l))
 	       ;; non-terminal's w/o production rule:
-	       (err-3 (gram-check-3 ll nl err-2))
+	       (err-l (gram-check-3 ll nl err-l))
 	       ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
+<<<<<<< HEAD
 	       (err-4 (gram-check-4 ll nl err-3))
 	       ;; todo: Check that withs are not mixed
 	       (err-l err-4))
+=======
+	       (err-l (gram-check-4 ll nl err-l))
+	       )
+>>>>>>> origin/c99dev
 	  (for-each (lambda (e) (fmterr "~A\n" e)) err-l)
 	  (if (pair? (filter (lambda (s) (char=? #\* (string-ref s 0))) err-l))
 	      #f
@@ -1993,17 +2110,26 @@
 	(regexp-substitute #f m 'pre repl 'post)
 	str)))
 
-;; @deffn {Procedure} write-lalr-tables mach filename [#:lang output-lang]
+;; @deffn {Procedure} write-lalr-tables mach filename [optons]
+;; Options are
+;; @table code
+;; @item #:prefix prefix-string
+;; The prefix for generating table names.  The default is @code{""}.
+;; @item #:lang output-lang-symbol
+;; This specifies the output language.  Currently only the default
+;; @code{'scheme} is supported.
+;; @end table
+;; @noindent 
 ;; For example,
 ;; @example
 ;; write-lalr-tables mach "tables.scm"
 ;; write-lalr-tables mach "tables.tcl" #:lang 'tcl
 ;; @end example
 ;; @end deffn
-(define* (write-lalr-tables mach filename #:key (lang 'scheme))
+(define* (write-lalr-tables mach filename #:key (lang 'scheme) (prefix ""))
 
   (define (write-table mach name port)
-    (fmt port "(define ~A\n  " name)
+    (fmt port "(define ~A~A\n  " prefix name)
     (ugly-print (assq-ref mach name) port)
     (fmt port ")\n\n"))
 
@@ -2026,7 +2152,7 @@
 ;; write-lalr-actions mach "actions.tcl" #:lang 'tcl
 ;; @end example
 ;; @end deffn
-(define* (write-lalr-actions mach filename #:key (lang 'scheme))
+(define* (write-lalr-actions mach filename #:key (lang 'scheme) (prefix ""))
 
   (define (pp-rule/ts gx)
     (let* ((core (fluid-ref *lalr-core*))
@@ -2062,7 +2188,7 @@
     (with-fluid*
      *lalr-core* (make-core mach)
      (lambda ()
-       (fmt port "(define act-v\n  (vector\n")
+       (fmt port "(define ~Aact-v\n  (vector\n" prefix)
        (vector-for-each
 	(lambda (gx actn)
 	  (fmt port "   ;; ~A\n" (pp-rule/ts gx))

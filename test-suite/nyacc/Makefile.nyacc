@@ -10,7 +10,8 @@
 SUBDIRS = lang
 
 TESTS_ENVIRONMENT = \
-	guile 
+        GUILE_LOAD_PATH= GUILE_AUTO_COMPILE=0 \
+	guile -L `pwd`/../../module -L `pwd`/..
 
 TESTS = \
 	lex-01.test				\

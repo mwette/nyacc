@@ -1,0 +1,22 @@
+nyacc/lang/README
+
+Copyright (C) 2017 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+calc1.scm			batch parser
+calc2.scm			interactive parser
+cacl3				script to run the calc language
+../../../language/spec.scm	spec guile calc langauge
+  compiler.scm			  compiler for ",L calc"
+  parser.scm			  parser for ",L calc"
+
+calc1.out			output of pp-lalr-grammar, -machine
+
+calc1-act.scm			output of write-lalr-actions
+calc1-tab.scm			output of write-lalr-tables (w/ hash, comp)
+
+calc1.y				output of 

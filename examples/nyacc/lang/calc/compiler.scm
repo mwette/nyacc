@@ -20,6 +20,10 @@
   #:use-module (sxml match)
   #:use-module (sxml fold)
   #:use-module (language tree-il))
+(use-modules (ice-9 pretty-print))
+
+(define (show val)
+  `(begin (apply (toplevel display) ,val) (apply (toplevel newline))))
 
 (define (fup tree)
   (sxml-match tree
@@ -30,14 +34,15 @@
     ((sub ,lt ,rt) `(apply (toplevel -) ,lt ,rt))
     ((mul ,lt ,rt) `(apply (toplevel *) ,lt ,rt))
     ((div ,lt ,rt) `(apply (toplevel /) ,lt ,rt))
-    ((assn-stmt (toplevel ,lhs) ,rhs) `(define ,lhs ,rhs))
+    ((assn-stmt ,lhs ,rhs) `(begin (define ,lhs ,rhs) ,(show lhs)))
+    ((expr-stmt ,expr) (show expr))
     ((empty-stmt) '(begin))
-    ((stmt-list ,items ...) `(begin ,items ...))
+    ((program . ,stmt-list) `(begin . ,stmt-list))
     (,otherwise tree)))
 
-(define (copmile-tree-il exp env opts)
+(define (compile-tree-il exp env opts)
   (let* ((tree (foldt fup identity exp))
-	 (code (parse-tree-il tree)))
-    (values code env env)))
+ 	 (code (parse-tree-il tree)))
+      (values code env env)))
 
 ;; --- last line ---

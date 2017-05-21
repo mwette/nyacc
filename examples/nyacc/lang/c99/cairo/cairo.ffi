@@ -6,27 +6,6 @@
   #:include "cairo-svg.h"
   #:library "libcairo"
   #:filter (lambda (path) (string=? "cairo" (substring path 0 5)))
-  ;;#:cpp-defs ()
-  ;;#:inc-dirs ("cairo")
-  ;;#:helpers '()
   )
 
-#|
-(ffi-omit *ALL*)
-
-(ffi-provide cairo_surface_t)
-(ffi-provide cairo_surface_destroy)
-(ffi-provide cairo_svg_surface_create)
-(ffi-provide cairo_t)
-(ffi-provide cairo_create)
-(ffi-provide cairo_move_to)
-(ffi-provide cairo_line_to)
-(ffi-provide cairo_stroke)
-
-;; (docstring "")
-;; (name-as cairo-move-to)
-;; (code-as (
-
-(ffi-emit "cairo/cairo.scm")
-|#
 ;; --- last line ---

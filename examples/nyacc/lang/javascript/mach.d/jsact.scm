@@ -185,6 +185,20 @@
    (lambda ($3 $2 $1 . $rest) `(ge ,$1 ,$3))
    ;; RelationalExpression => RelationalExpression "instanceof" ShiftExpres...
    (lambda ($3 $2 $1 . $rest) `(instanceof ,$1 ,$3))
+   ;; RelationalExpression => RelationalExpression "in" ShiftExpression
+   (lambda ($3 $2 $1 . $rest) `(in ,$1 ,$3))
+   ;; RelationalExpressionNoIn => ShiftExpression
+   (lambda ($1 . $rest) $1)
+   ;; RelationalExpressionNoIn => RelationalExpressionNoIn "<" ShiftExpression
+   (lambda ($3 $2 $1 . $rest) `(lt ,$1 ,$3))
+   ;; RelationalExpressionNoIn => RelationalExpressionNoIn ">" ShiftExpression
+   (lambda ($3 $2 $1 . $rest) `(gt ,$1 ,$3))
+   ;; RelationalExpressionNoIn => RelationalExpressionNoIn "<=" ShiftExpres...
+   (lambda ($3 $2 $1 . $rest) `(le ,$1 ,$3))
+   ;; RelationalExpressionNoIn => RelationalExpressionNoIn ">=" ShiftExpres...
+   (lambda ($3 $2 $1 . $rest) `(ge ,$1 ,$3))
+   ;; RelationalExpressionNoIn => RelationalExpressionNoIn "instanceof" Shi...
+   (lambda ($3 $2 $1 . $rest) `(instanceof ,$1 ,$3))
    ;; EqualityExpression => RelationalExpression
    (lambda ($1 . $rest) $1)
    ;; EqualityExpression => EqualityExpression "==" RelationalExpression
@@ -195,34 +209,74 @@
    (lambda ($3 $2 $1 . $rest) `(eq-eq ,$1 ,$3))
    ;; EqualityExpression => EqualityExpression "!==" RelationalExpression
    (lambda ($3 $2 $1 . $rest) `(neq-eq ,$1 ,$3))
+   ;; EqualityExpressionNoIn => RelationalExpressionNoIn
+   (lambda ($1 . $rest) $1)
+   ;; EqualityExpressionNoIn => EqualityExpressionNoIn "==" RelationalExpre...
+   (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
+   ;; EqualityExpressionNoIn => EqualityExpressionNoIn "!=" RelationalExpre...
+   (lambda ($3 $2 $1 . $rest) `(neq ,$1 ,$3))
+   ;; EqualityExpressionNoIn => EqualityExpressionNoIn "===" RelationalExpr...
+   (lambda ($3 $2 $1 . $rest) `(eq-eq ,$1 ,$3))
+   ;; EqualityExpressionNoIn => EqualityExpressionNoIn "!==" RelationalExpr...
+   (lambda ($3 $2 $1 . $rest) `(neq-eq ,$1 ,$3))
    ;; BitwiseANDExpression => EqualityExpression
    (lambda ($1 . $rest) $1)
    ;; BitwiseANDExpression => BitwiseANDExpression "&" EqualityExpression
+   (lambda ($3 $2 $1 . $rest) `(bit-and ,$1 ,$3))
+   ;; BitwiseANDExpressionNoIn => EqualityExpressionNoIn
+   (lambda ($1 . $rest) $1)
+   ;; BitwiseANDExpressionNoIn => BitwiseANDExpressionNoIn "&" EqualityExpr...
    (lambda ($3 $2 $1 . $rest) `(bit-and ,$1 ,$3))
    ;; BitwiseXORExpression => BitwiseANDExpression
    (lambda ($1 . $rest) $1)
    ;; BitwiseXORExpression => BitwiseXORExpression "^" BitwiseANDExpression
    (lambda ($3 $2 $1 . $rest) `(bit-xor ,$1 ,$3))
+   ;; BitwiseXORExpressionNoIn => BitwiseANDExpressionNoIn
+   (lambda ($1 . $rest) $1)
+   ;; BitwiseXORExpressionNoIn => BitwiseXORExpressionNoIn "^" BitwiseANDEx...
+   (lambda ($3 $2 $1 . $rest) `(bit-xor ,$1 ,$3))
    ;; BitwiseORExpression => BitwiseXORExpression
    (lambda ($1 . $rest) $1)
    ;; BitwiseORExpression => BitwiseORExpression "|" BitwiseXORExpression
+   (lambda ($3 $2 $1 . $rest) `(bit-or ,$1 ,$3))
+   ;; BitwiseORExpressionNoIn => BitwiseXORExpressionNoIn
+   (lambda ($1 . $rest) $1)
+   ;; BitwiseORExpressionNoIn => BitwiseORExpressionNoIn "|" BitwiseXORExpr...
    (lambda ($3 $2 $1 . $rest) `(bit-or ,$1 ,$3))
    ;; LogicalANDExpression => BitwiseORExpression
    (lambda ($1 . $rest) $1)
    ;; LogicalANDExpression => LogicalANDExpression "&&" BitwiseORExpression
    (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
+   ;; LogicalANDExpressionNoIn => BitwiseORExpressionNoIn
+   (lambda ($1 . $rest) $1)
+   ;; LogicalANDExpressionNoIn => LogicalANDExpressionNoIn "&&" BitwiseOREx...
+   (lambda ($3 $2 $1 . $rest) `(and ,$1 ,$3))
    ;; LogicalORExpression => LogicalANDExpression
    (lambda ($1 . $rest) $1)
    ;; LogicalORExpression => LogicalORExpression "||" LogicalANDExpression
+   (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
+   ;; LogicalORExpressionNoIn => LogicalANDExpressionNoIn
+   (lambda ($1 . $rest) $1)
+   ;; LogicalORExpressionNoIn => LogicalORExpressionNoIn "||" LogicalANDExp...
    (lambda ($3 $2 $1 . $rest) `(or ,$1 ,$3))
    ;; ConditionalExpression => LogicalORExpression
    (lambda ($1 . $rest) $1)
    ;; ConditionalExpression => LogicalORExpression "?" AssignmentExpression...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ConditionalExpression ,$1 ,$3 ,$5))
+   ;; ConditionalExpressionNoIn => LogicalORExpressionNoIn
+   (lambda ($1 . $rest) $1)
+   ;; ConditionalExpressionNoIn => LogicalORExpressionNoIn "?" AssignmentEx...
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(ConditionalExpression ,$1 ,$3 ,$5))
    ;; AssignmentExpression => ConditionalExpression
    (lambda ($1 . $rest) $1)
    ;; AssignmentExpression => LeftHandSideExpression AssignmentOperator Ass...
+   (lambda ($3 $2 $1 . $rest)
+     `(AssignmentExpression ,$1 ,$2 ,$3))
+   ;; AssignmentExpressionNoIn => ConditionalExpressionNoIn
+   (lambda ($1 . $rest) $1)
+   ;; AssignmentExpressionNoIn => LeftHandSideExpression AssignmentOperator...
    (lambda ($3 $2 $1 . $rest)
      `(AssignmentExpression ,$1 ,$2 ,$3))
    ;; AssignmentOperator => "="
@@ -257,8 +311,14 @@
               (eqv? 'expr-list (caar $1)))
        (tl-append $1 $3)
        (make-tl 'expr-list $1 $3)))
-   ;; ExpressionNoIn => Expression
+   ;; ExpressionNoIn => AssignmentExpressionNoIn
    (lambda ($1 . $rest) $1)
+   ;; ExpressionNoIn => ExpressionNoIn "," AssignmentExpressionNoIn
+   (lambda ($3 $2 $1 . $rest)
+     (if (and (pair? (car $1))
+              (eqv? 'expr-list (caar $1)))
+       (tl-append $1 $3)
+       (make-tl 'expr-list $1 $3)))
    ;; Statement => Block
    (lambda ($1 . $rest) $1)
    ;; Statement => VariableStatement
@@ -303,16 +363,24 @@
      (make-tl 'VariableDeclarationList $1))
    ;; VariableDeclarationList => VariableDeclarationList "," VariableDeclar...
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; VariableDeclarationListNoIn => VariableDeclarationList
-   (lambda ($1 . $rest) $1)
+   ;; VariableDeclarationListNoIn => VariableDeclarationNoIn
+   (lambda ($1 . $rest)
+     (make-tl 'VariableDeclarationList $1))
+   ;; VariableDeclarationListNoIn => VariableDeclarationListNoIn "," Variab...
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; VariableDeclaration => Identifier Initializer
    (lambda ($2 $1 . $rest)
      `(VariableDeclaration ,$1 ,$2))
    ;; VariableDeclaration => Identifier
    (lambda ($1 . $rest) `(VariableDeclaration ,$1))
-   ;; VariableDeclarationNoIn => VariableDeclaration
-   (lambda ($1 . $rest) $1)
+   ;; VariableDeclarationNoIn => Identifier InitializerNoIn
+   (lambda ($2 $1 . $rest)
+     `(VariableDeclaration ,$1 ,$2))
+   ;; VariableDeclarationNoIn => Identifier
+   (lambda ($1 . $rest) `(VariableDeclaration ,$1))
    ;; Initializer => "=" AssignmentExpression
+   (lambda ($2 $1 . $rest) `(Initializer ,$2))
+   ;; InitializerNoIn => "=" AssignmentExpressionNoIn
    (lambda ($2 $1 . $rest) `(Initializer ,$2))
    ;; EmptyStatement => ";"
    (lambda ($1 . $rest) '(EmptyStatement))

@@ -326,16 +326,18 @@ the file COPYING included with the this distribution.")
 	((=) (assc? op))
 	(else #f)))))
 
-;; @deffn {Procedure} make-pp-formatter => fmtr
+;; @deffn {Procedure} make-pp-formatter [port] [#:per-line-prefix ""] => fmtr
 ;; @example
 ;; (fmtr 'push) ;; push indent level
 ;; (fmtr 'pop)  ;; pop indent level
 ;; (fmtr "fmt" arg1 arg2 ...)
 ;; @end example
 ;; @end deffn
-(define* (make-pp-formatter)
+(define* (make-pp-formatter #:optional (port (current-output-port))
+			    #:key per-line-prefix)
   (letrec
-      ((maxcol 78)
+      ((maxcol (- 78 (if per-line-prefix (string-length per-line-prefix) 0)))
+       ;;(maxcol 78)
        (maxind 36)
        (column 0)
        (ind-lev 0)
@@ -354,6 +356,14 @@ the file COPYING included with the this distribution.")
 	(lambda ()
 	  (set! ind-lev (max 0 (1- ind-lev)))
 	  (set! ind-len (* 2 ind-lev))))
+
+       (inc-column!
+	(lambda (inc)
+	  (set! column (+ column inc))))
+
+       (set-column!
+	(lambda (val)
+	  (set! column val)))
        
        (sf
 	(lambda (fmt . args)
@@ -361,13 +371,16 @@ the file COPYING included with the this distribution.")
 		 (len (string-length str)))
 	    (cond
 	     ((zero? column)
-	      (display (ind-str))
-	      (set! column (+ column ind-len)))
+	      (if per-line-prefix (display per-line-prefix port))
+	      (display (ind-str) port)
+	      (inc-column! ind-len))
 	     ((> (+ column len) maxcol)
-	      (newline)
-	      (display (cnt-str))
-	      (set! column (+ column ind-len 4))))
-	    (display str)
+	      (newline port)
+	      (if per-line-prefix (display per-line-prefix port))
+	      (display (cnt-str) port)
+	      (set-column! (+ ind-len 4))))
+	    (display str port)
+	    (inc-column! len)
 	    (when (and (positive? len)
 		       (eqv? #\newline (string-ref str (1- len))))
 	      (set! column 0))))))

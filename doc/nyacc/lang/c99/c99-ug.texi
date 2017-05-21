@@ -1,5 +1,5 @@
 \input texinfo.tex
-@setfilename c99-hg.info
+@setfilename nyacc-c99-hg.info
 @settitle C99 User's Guide
 
 @include ../../memodefs.texi
@@ -151,6 +151,7 @@ should expand using CPP defines.  The default is
 @section Expression Parser
 
 stuff
+
 
 @section Copying
 

@@ -28,15 +28,16 @@
   )
 
 (include-from-path "nyacc/lang/c99/mach.d/c99xtab.scm")
+(define c99-mtab c99x-mtab)
 (include-from-path "nyacc/lang/c99/body.scm")
 (include-from-path "nyacc/lang/c99/mach.d/c99xact.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
-(define raw-parser
+(define c99x-raw-parser
   (let ((parser (make-lalr-parser 
-		 (list (cons 'len-v len-v) (cons 'pat-v pat-v)
-		       (cons 'rto-v rto-v) (cons 'mtab mtab)
-		       (cons 'act-v act-v)))))
+		 (list (cons 'len-v c99x-len-v) (cons 'pat-v c99x-pat-v)
+		       (cons 'rto-v c99x-rto-v) (cons 'mtab c99x-mtab)
+		       (cons 'act-v c99x-act-v)))))
     (lambda* (lexer #:key (debug #f))
       (catch
        'nyacc-error
@@ -48,7 +49,7 @@
 
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    (raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
+    (c99x-raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
 
 ;; @item {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool]
 ;; This needs to be explained in some detail.
@@ -70,8 +71,8 @@
 	   (with-fluid*
 	       *info* info
 	       (lambda ()
-		 (raw-parser (gen-c-lexer #:mode 'code #:xdef? xdef?)
-			     #:debug debug)))))
+		 (c99x-raw-parser (gen-c-lexer #:mode 'code #:xdef? xdef?)
+			          #:debug debug)))))
        (lambda (key fmt . rest)
 	 (report-error fmt rest)
 	 #f)))))

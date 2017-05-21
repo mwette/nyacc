@@ -1,6 +1,4 @@
-#!/usr/bin/env guile
-!#
-;; calc.scm - calculator
+;; calc2.scm - calculator
 ;;
 ;; Copyright (C) 2015,2017 Matthew R. Wette
 ;; 
@@ -10,33 +8,39 @@
 ;; without any warranty.
 
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
-(add-to-load-path (string-append (getcwd) "/../../../../examples"))
 
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
 (use-modules (nyacc parse))
 
-(define simple-spec
+(define (next) (newline) (display "> ") (force-output))
+
+(define calc2-spec
   (lalr-spec
    (prec< (left "+" "-") (left "*" "/"))
-   (start expr)
+   (start stmt-list)
    (grammar
+    (stmt-list
+     (stmt)
+     (stmt-list stmt))
+    (stmt
+     (expr ($$ (display $1) (next)) "\n"))
     (expr
+     ($empty)
      (expr "+" expr ($$ (+ $1 $3)))
      (expr "-" expr ($$ (- $1 $3)))
      (expr "*" expr ($$ (* $1 $3)))
      (expr "/" expr ($$ (/ $1 $3)))
-     ("*" $error)
      ($fixed ($$ (string->number $1)))
      ($float ($$ (string->number $1)))
      ("(" expr ")" ($$ $2))))))
 
-(define simple-mach (make-lalr-machine simple-spec))
-(define match-table (assq-ref simple-mach 'mtab))
-(define gen-lexer (make-lexer-generator match-table))
-(define parse (make-lalr-ia-parser simple-mach))
+(define calc2-mach (make-lalr-machine calc2-spec))
+(define match-table (lalr-match-table calc2-mach))
+(define parse (make-lalr-ia-parser calc2-mach))
+(define gen-lexer (make-lexer-generator match-table #:space-chars " \t"))
 
-(let iter ((cmd ""))
-  (if 
+(next)
+(parse (gen-lexer))
 
 ;; --- last line ---

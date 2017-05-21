@@ -1,6 +1,6 @@
 # doc/nyacc/Makefile.nyacc
 #
-# Copyright (C) 2015 Matthew R. Wette
+# Copyright (C) 2015,2017 Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -9,15 +9,38 @@
 #
 # build the documentation
 
-SCM_FILES_W_TEXI: \
+DESTDIR=
+infodir=$(sh guile -c "(display (assq-ref %guile-build-info 'infodir))")
+
+SCM_FILES_W_TEXI = \
 	../../module/nyacc/lalr.scm \
 	../../module/nyacc/lex.scm 
+
+.PHONY: all
+all:
+	@true
+
+.PHONY: install
+install: install-info
+
+.PHONY: install-info
+install-info:
+	$(INSTALL) nyacc-ug.info $(DESTDIR)$(infodir)
+
+.PHONY: dist-files
+dist-files: nyacc-ug.info nyacc-ug.pdf
 
 %_scm.texi: ../../module/nyacc/%.scm
 	./pull-texi.scm $< >$@
 
+%.info: %.texi
+	makeinfo $<
+	rm -f $*.fn $*.fns
+
 %.pdf: %.texi
 	texi2dvi --pdf --batch $<
+	texi2dvi --pdf --batch $<
+	rm -f $*.aux $*.log $*.toc $*.fn $*.fns
 
 %.html: %.texi
 	texi2any --html --no-split $<
@@ -28,5 +51,9 @@ COPYING.DOC: fdl.texi
 .PHONY: clean
 clean:
 	rm -f *.aux *.cp *.fn *.fns *.ky *.log *.pg *.toc *.tp *.vr
+
+.PHONY: really-clean
+really-clean:
+	rm -f *.pdf *.info
 
 # --- last line

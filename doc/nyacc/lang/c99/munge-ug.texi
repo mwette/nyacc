@@ -1,4 +1,5 @@
 \input texinfo.tex
+@setfilename nyacc-c99-munge.info
 @settitle NYACC C99 Munge Module
 
 @headings off
@@ -68,5 +69,44 @@ extern const char *cmds[10];
 @noindent
 Since the NYACC C99 parser captures some comments, these can be preserved
 in the above procedure.
+
+@section The Util2 (or Munge) Module
+
+Declarations must have one of
+@itemize
+@item
+declarators
+@example
+int foo;
+@end example
+@item
+struct or union reference
+@example
+struct foo;
+@end example
+@item
+enum value
+@example
+enum { FOO = 1 };
+@end example
+@end itemize
+
+We provide the following:
+@table code
+@item udict-ref udict name
+Lookup name in udict.  This is like assoc-ref but will check through
+enums also.
+@item udict-struct-ref udict name
+Lookup @code{struct name}.
+@item udict-union-ref udict name
+Lookup @code{union name}.
+@item udict-enum-ref udict name
+Lookup @code{enum name}.
+@end table
+
+@section From Util2
+
+@include util2_scm.texi
+
 
 @bye
