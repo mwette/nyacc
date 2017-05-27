@@ -28,7 +28,7 @@ install-info:
 	$(INSTALL) nyacc-ug.info $(DESTDIR)$(infodir)
 
 .PHONY: dist-files
-dist-files: nyacc-ug.info nyacc-ug.pdf
+dist-files: nyacc-ug.info nyacc-ug.pdf nyacc-ug.html
 
 %_scm.texi: ../../module/nyacc/%.scm
 	./pull-texi.scm $< >$@

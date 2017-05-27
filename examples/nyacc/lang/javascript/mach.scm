@@ -1,6 +1,6 @@
 ;;; lang/javascript/mach.scm
 ;;;
-;;; Copyright (C) 2015,2017 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -43,7 +43,12 @@
 
 (define js-spec
   (lalr-spec
-   (notice (string-append "Copyright 2016 Matthew R. Wette" lang-crn-lic))
+   (notice (string-append "Copyright 2015-2017 Matthew R. Wette" lang-crn-lic))
+   (reserve "abstract" "boolean" "byte" "char" "class" "const" "debugger"
+	    "double" "enum" "export" "extends" "final" "float" "goto"
+	    "implemements" "import" "int" "interface" "long" "native" 
+	    "package" "private" "protected" "public" "short" "static"
+	    "super" "synchronized" "throws" "transient" "volatile")
    (prec< "then" "else")
    (start Program)
    (grammar

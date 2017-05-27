@@ -1,6 +1,6 @@
 ;; mach.d/jsact.scm
 
-;; Copyright 2016 Matthew R. Wette
+;; Copyright 2015-2017 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 ;; or any later version published by the Free Software Foundation.  See
@@ -400,13 +400,17 @@
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$3 ,$5))
    ;; IterationStatement => "for" "(" OptExprStmtNoIn OptExprStmt OptExprCl...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(for $3 $4 $5 $6))
    ;; IterationStatement => "for" "(" "var" VariableDeclarationListNoIn ";"...
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(for $4 $6 $7 $8))
    ;; IterationStatement => "for" "(" LeftHandSideExpression "in" Expressio...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(for-in $3 $5 $7))
    ;; IterationStatement => "for" "(" "var" VariableDeclarationNoIn "in" Ex...
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(for-in $4 $6 $8))
    ;; OptExprStmtNoIn => ":"
    (lambda ($1 . $rest) `(Expression))
    ;; OptExprStmtNoIn => ExpressionNoIn ";"

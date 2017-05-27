@@ -16,8 +16,8 @@ help() {
     echo "Configuration options are:"
     echo "  -h --help            show options and quit"
     echo "  --prefix             guile-relative prefix as usual"
-    echo "  --site_scm_dir       where to install site-local scm files"
-    echo "  --site_scm_go_dir    where to install site-local go files"
+    echo "  --site-scm-dir       where to install site-local scm files"
+    echo "  --site-scm-go-dir    where to install site-local go files"
     echo " "
     echo "The guile-relative paths are:"
     echo "  site_scm_dir=\$prefix/share/guile/site/\$EV"
@@ -48,6 +48,12 @@ while [ "$*" ]; do
 	    ;;
 	--site_scm_go_dir=*)
 	    site_scm_go_dir=`echo $1 | sed -e 's/^--site_scm_go_dir=//'`
+	    ;;
+	--site-scm-dir=*)
+	    site_scm_dir=`echo $1 | sed -e 's/^--site-scm-dir=//'`
+	    ;;
+	--site-scm-go-dir=*)
+	    site_scm_go_dir=`echo $1 | sed -e 's/^--site-scm-go-dir=//'`
 	    ;;
     esac
     shift
