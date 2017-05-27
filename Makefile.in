@@ -33,8 +33,9 @@ install-srcs:
 		 install-srcs)
 
 dist-files:
-	(cd doc/nyacc; make -f Makefile.nyacc dist-files)
 	(cd module; make -f Makefile.nyacc dist-files)
+	(cd doc/nyacc; make -f Makefile.nyacc dist-files)
+
 check:
 	(cd test-suite/nyacc; make -f Makefile.nyacc check)
 

@@ -10,7 +10,8 @@
 # build the documentation
 
 DESTDIR=
-infodir=$(sh guile -c "(display (assq-ref %guile-build-info 'infodir))")
+INSTALL=cp
+infodir=$(shell guile -c "(display (assq-ref %guile-build-info 'infodir))")
 
 SCM_FILES_W_TEXI = \
 	../../module/nyacc/lalr.scm \
