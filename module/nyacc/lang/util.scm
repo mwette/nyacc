@@ -76,8 +76,6 @@ the file COPYING included with the this distribution.")
 ;; tl => '(H . T), H => (c a b 'tag); T =>
 ;; @end example
 
-;; @table code
-
 ;; @deffn {Procedure} make-tl tag [item item ...]
 ;; Create a tagged-list structure.
 ;; @end deffn
@@ -471,7 +469,5 @@ the file COPYING included with the this distribution.")
    (else
     (simple-format (current-error-port) "move-if-changed: no write access\n")
     #f)))
-
-;; @end table
 
 ;;; --- last line ---

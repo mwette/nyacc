@@ -26,7 +26,7 @@
     (stmt
      (expr ($$ (display $1) (next)) "\n"))
     (expr
-     ($empty)
+     ($empty ($$ ""))
      (expr "+" expr ($$ (+ $1 $3)))
      (expr "-" expr ($$ (- $1 $3)))
      (expr "*" expr ($$ (* $1 $3)))

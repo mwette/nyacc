@@ -249,7 +249,8 @@
        ((*TOP*)
 	;;(sferr "TOP: kseed=~S seed=~S\n" kseed seed)
 	;;(pretty-print tree (current-error-port))
-	(values (car kseed) dict))
+	;;(values (car kseed) dict))
+	(values kseed dict))
        
        ((CallExpression)
 	(values (cons `(apply ,@(reverse kseed)) seed) dict))

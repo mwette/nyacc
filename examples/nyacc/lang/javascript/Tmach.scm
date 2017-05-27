@@ -13,17 +13,18 @@
 (use-modules (nyacc lang javascript mach))
 (use-modules (nyacc lang javascript parser))
 (use-modules (nyacc lang javascript pprint))
+(use-modules (nyacc lang javascript compile-tree-il))
 (use-modules (nyacc lalr))
 (use-modules (nyacc parse))
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-(when #t
+(when #f
   (gen-js-files)
   ;;(system "touch parser.scm")
   )
 
-(when #t
+(when #f
   (gen-se-files)
   ;;(system "touch separser.scm")
   )
@@ -50,10 +51,11 @@
   (with-output-to-file "gram.y.new"
     (lambda () (lalr->bison js-spec))))
 
-(when #f
+(when #t
   (let ((res (with-input-from-file "ex1.js" dev-parse-js)))
     (pretty-print res)
-    (pretty-print-js res)
+    (compile-tree-il res '() '())
+    ;;(pretty-print-js res)
     ))
 
 ;; --- last line ---
