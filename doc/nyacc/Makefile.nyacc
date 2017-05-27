@@ -26,7 +26,8 @@ install: install-info
 
 .PHONY: install-info
 install-info:
-	$(INSTALL) nyacc-ug.info $(DESTDIR)$(INFODIR)
+	mkdir -p $(INFODIR)
+	$(INSTALL) nyacc-ug.info $(DESTDIR)$(INFODIR)/nyacc-ug.info
 
 .PHONY: dist-files
 dist-files: nyacc-ug.info nyacc-ug.pdf nyacc-ug.html
