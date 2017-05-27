@@ -87,4 +87,14 @@ install-srcs: $(NYACC_SRCS)
 	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
 	done
 
+.PHONY: dist-files
+dist-files:
+	(cd nyacc/lang/c99; \
+	 guile -L ../../.. \
+           -c '(use-modules (nyacc lang c99 cppmach)) (gen-cpp-files ".")'; \
+	 guile -L ../../.. \
+           -c '(use-modules (nyacc lang c99 mach)) (gen-c99-files ".")'; \
+	 guile -L ../../.. \
+           -c '(use-modules (nyacc lang c99 mach)) (gen-c99x-files ".")')
+
 # --- last line ---
