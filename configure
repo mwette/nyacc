@@ -18,10 +18,12 @@ help() {
     echo "  --prefix             guile-relative prefix as usual"
     echo "  --site-scm-dir       where to install site-local scm files"
     echo "  --site-scm-go-dir    where to install site-local go files"
+    echo "  --infodir            where to install info files"
     echo " "
     echo "The guile-relative paths are:"
     echo "  site_scm_dir=\$prefix/share/guile/site/\$EV"
     echo "  site_scm_go_dir=\$prefix/share/lib/guile/\$EV/site-ccache"
+    echo "  infodir=\$prefix/share/info"
     echo "where \$EV is the effective version (e.g., 2.2)"
     echo " "
 }
@@ -33,6 +35,7 @@ fi
 prefix=
 site_scm_dir=
 site_scm_go_dir=
+infodir=
 
 while [ "$*" ]; do
     case $1 in
@@ -54,6 +57,9 @@ while [ "$*" ]; do
 	    ;;
 	--site-scm-go-dir=*)
 	    site_scm_go_dir=`echo $1 | sed -e 's/^--site-scm-go-dir=//'`
+	    ;;
+	--infodir=*)
+	    infodir=`echo $1 | sed -e 's/^--infodir=//'`
 	    ;;
     esac
     shift
@@ -85,10 +91,21 @@ else
     SITE_SCM_GO_DIR=$site_scm_go_dir
 fi
 
+if [ "X$infodir" == "X" ]; then
+    if [ "X$prefix" == "X" ]; then
+	INFODIR=`$GUILE -c "(display (assq-ref %guile-build-info 'infodir))"`
+    else
+	INFODIR=$prefix/share/info
+    fi
+else
+    INFODIR=$infodir
+fi
+
 echo "creating Makefile"
 sed -e "s|@guile@|$GUILE|" \
     -e "s|@site_scm_dir@|$SITE_SCM_DIR|" \
     -e "s|@site_scm_go_dir@|$SITE_SCM_GO_DIR|" \
+    -e "s|@infodir@|$INFODIR|" \
     < Makefile.in > Makefile
 
 # --- last line ---

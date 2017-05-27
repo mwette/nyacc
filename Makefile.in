@@ -8,12 +8,14 @@
 GUILE=@guile@
 SITE_SCM_DIR=@site_scm_dir@
 SITE_SCM_GO_DIR=@site_scm_go_dir@
+INFODIR=@infodir@
 
 default: all
 
 all:
 	@echo "nothing to make"
 
+.PHONY: install
 install:
 	(cd module; \
 	 make -f Makefile.nyacc GUILE=$(GUILE) \
@@ -22,20 +24,22 @@ install:
 		 install)
 	(cd doc/nyacc; \
 	 make -f Makefile.nyacc GUILE=$(GUILE) \
-		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
-		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
+		 INFODIR=$(INFODIR) \
 		 install)
 
+.PHONY: install-srcs
 install-srcs:
 	(cd module; \
 	 make -f Makefile.nyacc \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 install-srcs)
 
+.PHONY: dist-files
 dist-files:
 	(cd module; make -f Makefile.nyacc dist-files)
 	(cd doc/nyacc; make -f Makefile.nyacc dist-files)
 
+.PHONY: check
 check:
 	(cd test-suite/nyacc; make -f Makefile.nyacc check)
 

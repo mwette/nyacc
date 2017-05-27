@@ -11,7 +11,7 @@
 
 DESTDIR=
 INSTALL=cp
-infodir=$(shell guile -c "(display (assq-ref %guile-build-info 'infodir))")
+INFODIR=$(shell guile -c "(display (assq-ref %guile-build-info 'infodir))")
 
 SCM_FILES_W_TEXI = \
 	../../module/nyacc/lalr.scm \
@@ -26,7 +26,7 @@ install: install-info
 
 .PHONY: install-info
 install-info:
-	$(INSTALL) nyacc-ug.info $(DESTDIR)$(infodir)
+	$(INSTALL) nyacc-ug.info $(DESTDIR)$(INFODIR)
 
 .PHONY: dist-files
 dist-files: nyacc-ug.info nyacc-ug.pdf nyacc-ug.html
