@@ -33,16 +33,16 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/mach.go			\
 	nyacc/lang/c99/pprint.go		\
 	nyacc/lang/c99/util1.go			\
-	nyacc/lang/c99/util2.go			\
-	nyacc/lang/c99/mach.d/c99act.go		\
-	nyacc/lang/c99/mach.d/c99tab.go		\
-	nyacc/lang/c99/mach.d/c99xact.go	\
-	nyacc/lang/c99/mach.d/c99xtab.go	\
-	nyacc/lang/c99/mach.d/cppact.go		\
-	nyacc/lang/c99/mach.d/cpptab.go	
+	nyacc/lang/c99/util2.go			
 
 NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
-	nyacc/lang/c99/body.scm			
+	nyacc/lang/c99/body.scm			\
+	nyacc/lang/c99/mach.d/c99act.scm	\
+	nyacc/lang/c99/mach.d/c99tab.scm	\
+	nyacc/lang/c99/mach.d/c99xact.scm	\
+	nyacc/lang/c99/mach.d/c99xtab.scm	\
+	nyacc/lang/c99/mach.d/cppact.scm	\
+	nyacc/lang/c99/mach.d/cpptab.scm
 
 NYACC_BINS = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
 NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
