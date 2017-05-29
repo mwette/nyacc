@@ -1,3 +1,7 @@
+2017-05-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lalr.scm (step4): added precedence for resolving RR conflicts!
+
 2017-05-20  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm (lalr-spec): removed more with/prune syntax; added

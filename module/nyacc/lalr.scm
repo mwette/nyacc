@@ -42,7 +42,7 @@
   #:use-module (nyacc util)
   )
 
-(define *nyacc-version* "0.79.4")
+(define *nyacc-version* "0.79.4+devel")
 
 ;; @deffn proxy-? sym rhs
 ;; @example
@@ -561,18 +561,18 @@
 
 ;; @deffn prece a b po
 ;; Return precedence for @code{a,b} given the partial order @code{po} as
-;; @code{#\<}, @code{#\>}, @code{#\=} or @code{#f}.
+;; @code{'lt}, @code{'gt}, @code{'eq} or @code{#f}.
 ;; This is not a true partial order as we can have a<b and b<a => a=b.
 ;; @example
-;; @code{(prece a a po)} => @code{#\=}.
+;; @code{(prece a a po)} => @code{'eq}.
 ;; @end example
 (define (prece a b po)
   (cond
-   ((eqv? a b) #\=)
-   ((eqv? a '$error) #\<)
-   ((eqv? b '$error) #\>)
-   ((<? a b po)  (if (<? b a po) #\= #\<))
-   (else (if (<? b a po) #\> #f))))
+   ((eqv? a b) 'eq)
+   ((eqv? a '$error) 'lt)
+   ((eqv? b '$error) 'gt)
+   ((<? a b po) (if (<? b a po) 'eq 'lt))
+   (else (if (<? b a po) 'gt #f))))
   
 ;; @deffn non-terminal? symb
 (define (non-terminal? symb)
@@ -1328,6 +1328,18 @@
 	   (psy (looking-at pit)))
       psy))
 
+  (define (uniqmax-prec prl rpl prec)
+    (let iter ((tie #f)
+	       (gx (car prl)) (mx (car rpl))
+	       (prl (cdr prl)) (rpl (cdr rpl)))
+      (if (null? prl) (and (not tie) gx)
+	  (let ((cmp (prece mx (car rpl) prec)))
+	    (case cmp
+	      ((lt) (iter #f (car prl) (car rpl) (cdr prl) (cdr rpl)))
+	      ((gt) (iter tie gx mx (cdr prl) (cdr rpl)))
+	      ((eq) (iter #t gx mx (cdr prl) (cdr rpl)))
+	      ((#f) #f))))))
+
   (let* ((kis-v (assq-ref p-mach 'kis-v)) ; states
 	 (kit-v (assq-ref p-mach 'kit-v)) ; la-toks
 	 (kix-v (assq-ref p-mach 'kix-v)) ; transitions
@@ -1375,11 +1387,11 @@
 		 (lambda ()
 		   ;; Use precedence or, if =, associativity.
 		   (case preced
-		     ((#\>)
+		     ((gt)
 		      (values red-a (cons sft-a 'pre) #f #f))
-		     ((#\<)
+		     ((lt)
 		      (values sft-a (cons red-a 'pre) #f #f))
-		     ((#\=) ;; Now use associativity
+		     ((eq) ;; Now use associativity
 		      (case (assq-ref assc tok)
 			((left)
 			 (values red-a (cons sft-a 'ass) #f #f))
@@ -1399,6 +1411,23 @@
 		       (if f (cons f ftl) ftl)
 		       (cdr actl))))))
 	  ((rrconf)
+	   (let* ((act (car actl))
+		  (tok (car act)) ;;(sft (caddr act)) (red (cdddr act))
+		  (prl (cddr act))	; p-rule rrconf list
+		  (rpl (map (lambda (pr) (vector-ref prp-v pr)) prl)) ; prec's
+		  (uniq (uniqmax-prec prl rpl prec)) ; unique rule to use
+		  )
+	     ;;(simple-format #t "was=~S\n" (car actl))
+	     ;;(simple-format #t " is=~S\n" (cons* (caar actl) 'reduce uniq))
+	     ;;(simple-format #t "uniql=~S\n" uniq)
+	     (if uniq
+		 (iter ix (cons (cons* (caar actl) 'reduce uniq) pat)
+		       rat ;; need to update by filtering out uniq
+		       wrn ftl (cdr actl))
+		 (iter ix (cons (car actl) pat) rat wrn
+		       (cons (cons ix (car actl)) ftl) (cdr actl)))
+	     ))
+	  ((old-rrconf)
 	   #;(fmterr "*** reduce-reduce conflict: in state ~A on ~A: ~A\n"
 		   ix (obj->str (find-terminal (caar actl) tl)) (cddar actl))
 	   (iter ix (cons (car actl) pat) rat wrn

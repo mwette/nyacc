@@ -174,7 +174,9 @@
       
       ((Identifier ,name)
        ;;(sferr "fD: ret null\n")
-       (values '() (lookup name dict) dict))
+       (let ((ref (lookup name dict)))
+	 (if (not ref) (error "lookup 2 failed"))
+	 (values '() ref dict)))
       
       ((PrimaryExpression (Identifier ,name))
        ;;(sferr "fD: ret null\n")
@@ -200,10 +202,11 @@
 
       ;; if toplevel we generate (toplevel "name")
       ;; if lexical we generate (lexical "name" "gensym")
-      ((VariableDeclaration (Identifier ,name) ,rest ...)
+      ((VariableDeclaration (Identifier ,name) . ,rest)
        (let* ((dict1 (add-symboldef name dict))
 	      (tree1 (lookup name dict1)))
-	 (values `(VariableDeclaration ,tree1) '() dict1)))
+	 (if (not tree1) (error "lookup failed"))
+	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
        (values tree '() (push-scope (add-symboldef name dict))))
@@ -251,21 +254,48 @@
 	;;(pretty-print tree (current-error-port))
 	;;(values (car kseed) dict))
 	(values kseed dict))
-       
-       ((CallExpression)
-	(values (cons `(apply ,@(reverse kseed)) seed) dict))
 
-       ((ArgumentList)
-	(values (append kseed seed) dict))
+       ;;??: PrimaryExpression
+       ;;??: ArrayLiteral
+       ;;??: ElementList
+       ;;??: Elision
+       ;;??: ObjectLiteral
+       ;;fD: PropertyNameAndValueList 
 
+       ;;??: ary-ref
        ((ary-ref)
 	(values (cons `(apply (@@ ,jslib-mod lkup) ,(cadr kseed)
 			      ,(car kseed)) seed) dict))
 
+       ;;??: obj-ref
        ((obj-ref) ;; ???
 	(values (cons `(apply (@@ ,jslib-mod lkup) ,(cadr kseed)
 			      ,(car kseed)) seed) dict))
 
+       ;;??: new
+
+       ;;??: CallExpression
+       ((CallExpression)
+	(values (cons (rev/repl `apply kseed) seed) dict))
+
+       ;;fU: ArgumentList
+       ((ArgumentList) ;; append-reverse-car ??? 
+	(values (append (cdr (reverse kseed)) seed) dict))
+
+       ;;??: delete
+       ;;??: void
+       ;;??: typeof
+       ;;??: pre-inc
+       ;;??: pre-dec
+       ;;??: pos
+       ;;??: neg
+       ;;??: ~
+       ;;??: not
+       ;;??: mul
+       ;;??: div
+       ;;??: mod
+       
+       ;;??: add
        ((add)
 	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
 	;;(pretty-print tree cep)
@@ -273,42 +303,91 @@
 	(values (cons (rev/repl 'apply
 				`(@@ ,jslib-mod JS:+)
 				kseed) seed) dict))
-       
+
+       ;;??: sub
+       ;;??: lshift
+       ;;??: rshift
+       ;;??: rrshift
+       ;;??: lt
+       ;;??: gt
+       ;;??: le
+       ;;??: ge
+       ;;??: instanceof
+       ;;??: in
+       ;;??: eq
+       ;;??: neq
+       ;;??: eq-eq
+       ;;??: neq-eq
+       ;;fU: bit-and
+       ;;fU: bit-xor
+       ;;fU: bit-or
+       ;;fU: and
+       ;;fU: or
+       ;;fU: ConditionalExpression
+
+       ;;fU: AssignmentExpression
        ((AssignmentExpression)
 	(values (cons (apply x-assn kseed) seed) dict))
 
-       ((FormalParameterList)
-	;; We build the function with the rest argument @code{@@args}.
-	(values seed kdict))
+       ;;fU: assign
+       ;;fU: mul-assign
+       ;;fU: div-assign
+       ;;fU: mod-assign
+       ;;fU: add-assign
+       ;;fU: sub-assign
+       ;;fU: lshift-assign
+       ;;fU: rshift-assign
+       ;;fU: rrshift-assign
+       ;;fU: and-assign
+       ;;fU: xor-assign
+       ;;fU: or-assign
+       ;;fU: expr-list
+       ;;fU: Block
+       ;;fU: StatementList
 
+       ;;fU: VariableStatement
        ((VariableStatement)
 	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
 	;;(pretty-print tree cep)
 	(values (cons (car kseed) seed) kdict))
 
+       ;;fU: VariableDeclarationList
        ((VariableDeclarationList)
-	(values (cons (rev/repl 'begin kseed) seed) kdict))
-
+	(let ((expr (rev/repl 'begin kseed)))
+	  ;;(simple-format #t "VDL: ~S\n" expr)
+	  (values (cons expr seed) kdict)))
+       
+       ;;fU: VariableDeclaration
        ((VariableDeclaration)
 	;; NEEDS TO BE let OR (define (toplevel NAME) VALUE)
 	;;(sferr "  VarDecl: seed=~S kseed=~S\n\n" seed kseed)
-	(values
-	 (cons
-	  (if (= 3 (length kseed))
-	      `(define ,(cadr (list-ref kseed 1)) ,(list-ref kseed 0))
-	      `(define ,(cadr (list-ref kseed 0)) (void)))
-	  seed)
-	 kdict))
-
-       ((Initializer)
+	(let ((expr (if (= 3 (length kseed))
+			`(define ,(cadr (list-ref kseed 1)) ,(list-ref kseed 0))
+			`(define ,(cadr (list-ref kseed 0)) (void)))))
+	  ;;(simple-format #t "VD: ~S\n" kseed)
+	  (values (cons expr seed) kdict)))
+       
+       ;;fU: Initializer
+       ((Initializer)		       ; just grab the single argument
 	(values (cons (car kseed) seed) dict))
 
-       ((ExpressionStatement)
-	(values (cons (car kseed) seed) dict))
-
-       ((EmptyStatement)
+       ;; EmptyStatement
+       ((EmptyStatement)		; ignore
 	(values seed dict))
 
+       ;; ExpressionStatement
+       ((ExpressionStatement)	       ; just grab the single argument
+	(values (cons (car kseed) seed) dict))
+
+       ;;fU: IfStatement
+       ;;fU: do
+       ;;fU: while
+       ;;fU: for
+       ;;fU: Expression
+       ;;fU: ExprStmt
+       ;;??: ContinueStatement
+
+       ;;fU: ReturnStatement
        ((ReturnStatement) ;; will need a prompt for return, until optimized?
 	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
 	;;(pretty-print tree cep)
@@ -317,6 +396,19 @@
 			      (const ()))
 		      seed) dict))
 
+       ;;??: WithStatement
+       ;;??: SwitchStatement
+       ;;??: CaseBlock
+       ;;??: CaseClauses
+       ;;??: CaseClause
+       ;;??: DefaultClause
+       ;;??: LabelledStatement
+       ;;??: ThrowStatement
+       ;;??: TryStatement
+       ;;??: Catch
+       ;;??: Finally
+
+       ;;??: FunctionDeclaration
        ((FunctionDeclaration)
 	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
 	;;(pretty-print tree cep)
@@ -324,15 +416,25 @@
 	 (let ((name (cadr kseed))
 	       (args (list-ref (lookup "@args" kdict) 2))
 	       (body (car kseed)))
+	   (if (not args) (error "args lookup error"))
 	   (cons (make-function name args body) seed))
 	 kdict))
 
-       ((SourceElements)
-	(values (cons (rev/repl 'begin kseed) seed) dict))
+       ;;??: FunctionExpression
 
+       ;;??: FormalParameterList
+       ((FormalParameterList)
+	;; We build the function with the rest argument @code{@@args}.
+	(values seed kdict))
+
+       ;;??: Program
        ((Program)
 	(values (car kseed) dict))
        
+       ;;??: SourceElements
+       ((SourceElements)
+	(values (cons (rev/repl 'begin kseed) seed) dict))
+
        (else
 	;;(sferr "fU: kseed=~S  [else]\n    seed=~S\n" kseed seed)
 	;;(pretty-print tree cep)
@@ -349,13 +451,16 @@
 	(sexp `(*TOP* ,exp)))
     (foldts*-values fD fU fH sexp '() dict)))
 
+;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
   ;;(sferr "exp=~S\n" exp)
   ;;(display "exp:\n" (current-error-port))
   ;;(pretty-print exp (current-error-port))
   (let* ((xrep (js-sxml->tree-il-ext exp env opts))
-	 (code (parse-tree-il xrep)))
-    ;;(pretty-print xrep (current-error-port))
+	 (code (parse-tree-il '(const 1)))
+	 ;;(code (parse-tree-il xrep))
+	 )
+    (pretty-print xrep (current-error-port))
     (values code env env)))
 
 ;; --- last line ---

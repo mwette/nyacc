@@ -40,6 +40,8 @@
    (lambda ($1 . $rest) `(PrimaryExpression ,$1))
    ;; PrimaryExpression => ArrayLiteral
    (lambda ($1 . $rest) `(PrimaryExpression ,$1))
+   ;; PrimaryExpression => ObjectLiteral
+   (lambda ($1 . $rest) `(PrimaryExpression ,$1))
    ;; PrimaryExpression => "(" Expression ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; ArrayLiteral => "[" Elision "]"

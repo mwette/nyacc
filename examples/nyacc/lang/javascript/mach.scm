@@ -28,18 +28,10 @@
   #:use-module ((srfi srfi-43) #:select (vector-map))
   )
 
-;; NOTE
 ;; The 'NoIn' variants are needed to avoid confusing the in operator 
 ;; in a relational expression with the in operator in a for statement.
 
 ;; NSI = "no semi-colon insertion"
-
-;; need to deal with reserved keywords:
-;; abstract boolean byte char class const debugger double enum export extends
-;; final float goto implements import int interface long native package private
-;; protected public short static super synchronized throws transient volatile
-
-;; Not in the grammar yet: FunctionExpression
 
 (define js-spec
   (lalr-spec
@@ -49,21 +41,28 @@
 	    "implemements" "import" "int" "interface" "long" "native" 
 	    "package" "private" "protected" "public" "short" "static"
 	    "super" "synchronized" "throws" "transient" "volatile")
-   (prec< "then" "else")
+   (prec< 'then "else")
+   (prec< 'expr 'stmt)
+   (expect 1)				; shift-reduce on ":"
    (start Program)
    (grammar
 
     (Literal
-     (NullLiteral ($$ `(NullLiteral)))
-     (BooleanLiteral ($$ `(BooleanLiteral ,$1)))
-     (NumericLiteral ($$ `(NumericLiteral ,$1)))
-     (StringLiteral ($$ `(StringLiteral ,$1)))
-     )
+     (NullLiteral)
+     (BooleanLiteral)
+     (NumericLiteral)
+     (StringLiteral))
 
-    (NullLiteral ("null"))
-    (BooleanLiteral ("true") ("false"))
-    (NumericLiteral ($fixed) ($float))
-    (StringLiteral ($string))
+    (NullLiteral ("null" ($$ '(NullLiteral))))
+    (BooleanLiteral
+     ("true" ($$ `(BooleanLiteral ,$1)))
+     ("false" ($$ `(BooleanLiteral ,$1))))
+    (NumericLiteral
+     ($fixed ($$ `(NumericLiteral ,$1)))
+     ($float ($$ `(NumericLiteral ,$1))))
+    (StringLiteral
+     ($string ($$ `(StringLiteral ,$1))))
+    
     ;;(DoubleStringCharacters ($string))
     ;;(SingleStringCharacters ($string))
 
@@ -75,7 +74,7 @@
      (Identifier ($$ `(PrimaryExpression ,$1)))
      (Literal ($$ `(PrimaryExpression ,$1)))
      (ArrayLiteral ($$ `(PrimaryExpression ,$1)))
-     ;;(ObjectLiteral ($$ `(PrimaryExpression ,$1)))
+     (ObjectLiteral ($$ `(PrimaryExpression ,$1)))
      ("(" Expression ")" ($$ $2))
      )
 
@@ -102,8 +101,9 @@
      )
 
     (ObjectLiteral
-     ("{" "}" ($$ `(ObjectLiteral)))
-     ("{" PropertyNameAndValueList "}" ($$ `(ObjectLiteral ,(tl->list $2))))
+     ("{" "}" ($prec 'expr) ($$ `(ObjectLiteral)))
+     ("{" PropertyNameAndValueList "}" ($prec 'expr)
+      ($$ `(ObjectLiteral ,(tl->list $2))))
      )
 
     (PropertyNameAndValueList
@@ -121,7 +121,7 @@
 
     (MemberExpression
      (PrimaryExpression)
-     ;;(FunctionExpression)
+     (FunctionExpression)
      (MemberExpression "[" Expression "]" ($$ `(ary-ref ,$3 ,$1)))
      (MemberExpression "." Identifier ($$ `(obj-ref ,$3 ,$1)))
      ("new" MemberExpression Arguments ($$ `(new ,$2 ,$3)))
@@ -140,10 +140,9 @@
      )
 
     (Arguments
-     ("(" ")" ($$ '(Arguments)))
-     ("(" ArgumentList ")" ($$ `(Arguments ,(tl->list $2))))
+     ("(" ")" ($$ '(ArgumentList)))
+     ("(" ArgumentList ")" ($$ (tl->list $2)))
      )
-
     (ArgumentList
      (AssignmentExpression ($$ (make-tl 'ArgumentList $1)))
      (ArgumentList "," AssignmentExpression ($$ (tl-append $1 $3)))
@@ -169,7 +168,7 @@
      ("--" UnaryExpression ($$ `(pre-dec ,$2)))
      ("+" UnaryExpression ($$ `(pos ,$2)))
      ("-" UnaryExpression ($$ `(neg ,$2)))
-     ("~" UnaryExpression ($$ `(??? ,$2)))
+     ("~" UnaryExpression ($$ `(bitwise-not?? ,$2)))
      ("!" UnaryExpression ($$ `(not ,$2)))
      )
 
@@ -382,8 +381,8 @@
      )
 
     (Block
-     ("{" StatementList "}" ($$ `(Block ,$2)))
-     ("{" "}" ($$ '(Block)))
+     ("{" StatementList "}" ($prec 'stmt) ($$ `(Block ,$2)))
+     ("{" "}" ($prec 'stmt) ($$ '(Block)))
      )
 
     (StatementList
@@ -427,14 +426,13 @@
      )
 
     (ExpressionStatement
-     ;; spec says: Reject if lookahead "{" | "function".
      (Expression ";" ($$ `(ExpressionStatement ,$1)))
      )
 
     (IfStatement
      ("if" "(" Expression ")" Statement "else" Statement
       ($$ `(IfStatement ,$3 ,$5 ,$7)))
-     ("if" "(" Expression ")" Statement ($prec "then")
+     ("if" "(" Expression ")" Statement ($prec 'then)
       ($$ `(IfStatement ,$3 ,$5)))
      )
 
@@ -561,19 +559,25 @@
     ;; A.5
     (FunctionDeclaration
      ("function" Identifier "(" FormalParameterList ")" "{" FunctionBody "}"
+      ($prec 'stmt)
       ($$ `(FunctionDeclaration ,$2 ,(tl->list $4) ,$7)))
      ("function" Identifier "(" ")" "{" FunctionBody "}"
+      ($prec 'stmt)
       ($$ `(FunctionDeclaration ,$2 (FormalParameterList) ,$6)))
      )
 
     (FunctionExpression
      ("function" Identifier "(" FormalParameterList ")" "{" FunctionBody "}"
+      ($prec 'expr)
       ($$ `(FunctionExpression ,$2 ,(tl->list $4) ,$7)))
      ("function" "(" FormalParameterList ")" "{" FunctionBody "}"
+      ($prec 'expr)
       ($$ `(FunctionExpression ,(tl->list $4) ,$6)))
      ("function" Identifier "(" ")" "{" FunctionBody "}"
+      ($prec 'expr)
       ($$ `(FunctionExpression ,$2 ,$6)))
      ("function" "(" ")" "{" FunctionBody "}"
+      ($prec 'expr)
       ($$ `(FunctionExpression ,$5)))
      )
 
@@ -625,7 +629,7 @@
    (lambda ()
      (with-fluid*
 	 *insert-semi* #t
-	 (lambda () (raw-parser (gen-js-lexer) #:debug #f))))
+	 (lambda () (raw-parser (gen-js-lexer) #:debug debug))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) fmt rest)
      #f)))
@@ -655,12 +659,9 @@
     (lang-dir (string-append "mach.d/" path)))
 
   (let* ((se-spec (restart-spec js-spec 'SourceElement))
-	 #;(se-mach (compact-machine
-		   (hashify-machine
-	             (make-lalr-machine se-spec))))
-	 (se-mach (hashify-machine
-		   (make-lalr-machine se-spec)))
-    )
+	 (se-mach (make-lalr-machine se-spec))
+	 (se-mach (compact-machine se-mach))
+	 (se-mach (hashify-machine se-mach)))
     (write-lalr-actions se-mach (xtra-dir "seact.scm.new"))
     (write-lalr-tables se-mach (xtra-dir "setab.scm.new")))
   

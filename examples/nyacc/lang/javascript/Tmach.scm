@@ -21,12 +21,9 @@
 
 (when #f
   (gen-js-files)
-  ;;(system "touch parser.scm")
-  )
-
-(when #f
+  (system "touch parser.scm")
   (gen-se-files)
-  ;;(system "touch separser.scm")
+  (system "touch separser.scm")
   )
 
 (when #f
@@ -51,11 +48,18 @@
   (with-output-to-file "gram.y.new"
     (lambda () (lalr->bison js-spec))))
 
+(define watt #f)
 (when #t
   (let ((res (with-input-from-file "ex1.js" dev-parse-js)))
     (pretty-print res)
-    (compile-tree-il res '() '())
-    ;;(pretty-print-js res)
-    ))
+    (let ((wat (compile-tree-il res (current-module) '())))
+      (simple-format #t "~S\n" wat)
+      (set! watt wat)
+      (let ((val (compile wat
+			  #:env (current-module)
+			  #:from 'tree-il
+			  #:to 'value)))
+	(simple-format #t "~S\n" val)
+	#t))))
 
 ;; --- last line ---

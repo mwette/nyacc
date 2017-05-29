@@ -38,6 +38,7 @@
 	 (idr (char-set-union idf char-set:digit)))
     (make-ident-reader idf idr)))
 
+;; @deffn {Procecure} read-js-string ch => ($string "abc") | #f
 (define (read-js-string delim)
   (if (not (or (eq? delim #\') (eq? delim #\"))) #f
       (let iter ((cl '()) (ch (read-char)))
@@ -46,7 +47,7 @@
 		 (if (eq? c1 #\newline)
 		     (iter cl (read-char))
 		     (iter (cons* c1 cl) (read-char)))))
-	      ((eq? ch delim) (list->string (reverse cl)))
+	      ((eq? ch delim) (cons '$string (list->string (reverse cl))))
 	      (else (iter (cons ch cl) (read-char)))))))
 
 (define gen-js-lexer
@@ -78,7 +79,7 @@
 		  (cons semicolon ";")
 		  (iter (read-char))))
 	     ((and (eqv? ch #\newline) (set! bol #t) #f))
-	     ((read-js-string ch) assc-$)
+	     ((read-js-string ch) => assc-$)
 	     ((read-c-comm ch bol) (iter (read-char)))
 	     ((read-js-ident ch) =>
 	      (lambda (s)
