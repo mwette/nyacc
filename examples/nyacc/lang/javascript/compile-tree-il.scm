@@ -15,6 +15,8 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;; NOTE: in guile22 apply => call
+
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
   #:use-module (nyacc lang javascript jslib)
@@ -23,6 +25,13 @@
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (language tree-il)
   )
+
+;; guile 2.0 or 2.2
+(define il-call 'apply)
+(define (make-call proc . args) `(apply ,proc ,@args))
+;;(define il-call 'call)
+;;(define (make-call proc . args) `(call ,proc ,@args))
+
 
 (use-modules (ice-9 pretty-print))
 
@@ -33,7 +42,7 @@
 (define (x-assn rhs op lhs junk)
   (case (car op)
     ((assign) `(set! ,lhs ,rhs))
-    ((add-assign) `(set! ,lhs (apply (@@ ,jslib-mod JS+) ,lhs ,rhs)))
+    ((add-assign) `(set! ,lhs ,(make-call `(@@ ,jslib-mod JS+) lhs rhs)))
     (else
      (sferr "\nUNKNOWN OP: ~S\n\n" op)
      '(unknown))))
@@ -178,19 +187,26 @@
 	 (if (not ref) (error "lookup 2 failed"))
 	 (values '() ref dict)))
       
+      ((PrimaryExpression (this))
+       (error "not implemented: PrimaryExpression (this)"))
+	      
       ((PrimaryExpression (Identifier ,name))
-       ;;(sferr "fD: ret null\n")
+       ;;(sferr "id dict\n") (pretty-print dict (current-error-port))
        (let ((ident (lookup name dict)))
 	 (if (not ident) (error "JS: identifier not found:" name))
 	 (values '() ident dict)))
 
-      ((PrimaryExpression (StringLiteral ,str))
-       ;;(sferr "fD: ret null\n")
-       (values '() `(const ,str) dict))
+      ((PrimaryExpression (NullLiteral ,null))
+       (values '() '(const null) dict))
+
+      ((BooleanLiteral ,true-or-false)
+       (values '() `(const ,(char=? (string-ref true-or-false 0) #\t)) dict))
 
       ((PrimaryExpression (NumericLiteral ,val))
-       ;;(sferr "fD: ret null\n")
        (values '() `(const ,(string->number val)) dict))
+
+      ((PrimaryExpression (StringLiteral ,str))
+       (values '() `(const ,str) dict))
 
       ((obj-ref ,object ,ident)
        ;; Convert the tree: obj.ref ==> obj["ref"]
@@ -219,9 +235,9 @@
 	      (gsym (list-ref (car args) 3)) ; need gensym ref
 	      (dikt (fold
 		     (lambda (name indx seed)
-		       (acons name `(apply (toplevel list-ref)
-					   (lexical @args ,gsym)
-					   (const ,indx))
+		       (acons name (make-call `(toplevel list-ref)
+					      `(lexical @args ,gsym)
+					      `(const ,indx))
 			      seed))
 		     args
 		     (map cadr idlist)
@@ -231,8 +247,8 @@
 	      )
 	 (values tree '() dikt)))
       
-      ((SourceElements ,elts ...)
-       (values tree '() (push-scope dict)))
+      ((SourceElements ,elts ...) ;; like 'begin so no new scope
+       (values tree '() dict))
 
       (,otherwise
        ;;(display "fD otherwise\n" cep) (pretty-print tree cep)
@@ -255,69 +271,72 @@
 	;;(values (car kseed) dict))
 	(values kseed dict))
 
-       ;;??: PrimaryExpression
-       ;;??: ArrayLiteral
-       ;;??: ElementList
-       ;;??: Elision
-       ;;??: ObjectLiteral
-       ;;fD: PropertyNameAndValueList 
+       ;; PrimaryExpression (w/ ArrayLiteral or ObjectLiteral only)
+       ((PrimaryExpression)
+	(values (cons (car kseed) seed) dict))
+      
+       ;; ArrayLiteral
+       ;; ElementList
+       ;; Elision
+       ;; ObjectLiteral
+       ;; PropertyNameAndValueList 
 
-       ;;??: ary-ref
+       ;; ary-ref
        ((ary-ref)
-	(values (cons `(apply (@@ ,jslib-mod lkup) ,(cadr kseed)
-			      ,(car kseed)) seed) dict))
+	(values (cons (make-call `(@@ ,jslib-mod lkup) (cadr kseed) (car kseed))
+		      seed) dict))
 
-       ;;??: obj-ref
+       ;; obj-ref
        ((obj-ref) ;; ???
-	(values (cons `(apply (@@ ,jslib-mod lkup) ,(cadr kseed)
-			      ,(car kseed)) seed) dict))
+	(values (cons (make-call `(@@ ,jslib-mod lkup) (cadr kseed) (car kseed))
+		      seed) dict))
 
-       ;;??: new
+       ;; new
 
-       ;;??: CallExpression
+       ;; CallExpression
        ((CallExpression)
-	(values (cons (rev/repl `apply kseed) seed) dict))
+	(values (cons (rev/repl il-call kseed) seed) dict))
 
        ;;fU: ArgumentList
        ((ArgumentList) ;; append-reverse-car ??? 
 	(values (append (cdr (reverse kseed)) seed) dict))
 
-       ;;??: delete
-       ;;??: void
-       ;;??: typeof
-       ;;??: pre-inc
-       ;;??: pre-dec
-       ;;??: pos
-       ;;??: neg
-       ;;??: ~
-       ;;??: not
-       ;;??: mul
-       ;;??: div
-       ;;??: mod
+       ;; delete
+       ;; void
+       ;; typeof
+       ;; pre-inc
+       ;; pre-dec
+       ;; pos
+       ;; neg
+       ;; ~
+       ;; not
+       ;; mul
+       ;; div
+       ;; mod
        
-       ;;??: add
+       ;; add
        ((add)
 	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
 	;;(pretty-print tree cep)
 	;;(values (cons `(@@ ,jslib-mod JS:+) seed) dict))
-	(values (cons (rev/repl 'apply
+	(values (cons (rev/repl il-call
 				`(@@ ,jslib-mod JS:+)
 				kseed) seed) dict))
 
-       ;;??: sub
-       ;;??: lshift
-       ;;??: rshift
-       ;;??: rrshift
-       ;;??: lt
-       ;;??: gt
-       ;;??: le
-       ;;??: ge
-       ;;??: instanceof
-       ;;??: in
-       ;;??: eq
-       ;;??: neq
-       ;;??: eq-eq
-       ;;??: neq-eq
+       ;; sub
+       ;; lshift
+       ;; rshift
+       ;; rrshift
+       ;; lt
+       ;; gt
+       ;; le
+       ;; ge
+       ;; instanceof
+       ;; in
+       ;; eq
+       ;; neq
+       ;; eq-eq
+       ;; neq-eq
        ;;fU: bit-and
        ;;fU: bit-xor
        ;;fU: bit-or
@@ -385,7 +404,7 @@
        ;;fU: for
        ;;fU: Expression
        ;;fU: ExprStmt
-       ;;??: ContinueStatement
+       ;; ContinueStatement
 
        ;;fU: ReturnStatement
        ((ReturnStatement) ;; will need a prompt for return, until optimized?
@@ -396,19 +415,19 @@
 			      (const ()))
 		      seed) dict))
 
-       ;;??: WithStatement
-       ;;??: SwitchStatement
-       ;;??: CaseBlock
-       ;;??: CaseClauses
-       ;;??: CaseClause
-       ;;??: DefaultClause
-       ;;??: LabelledStatement
-       ;;??: ThrowStatement
-       ;;??: TryStatement
-       ;;??: Catch
-       ;;??: Finally
+       ;; WithStatement
+       ;; SwitchStatement
+       ;; CaseBlock
+       ;; CaseClauses
+       ;; CaseClause
+       ;; DefaultClause
+       ;; LabelledStatement
+       ;; ThrowStatement
+       ;; TryStatement
+       ;; Catch
+       ;; Finally
 
-       ;;??: FunctionDeclaration
+       ;; FunctionDeclaration
        ((FunctionDeclaration)
 	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
 	;;(pretty-print tree cep)
@@ -420,18 +439,18 @@
 	   (cons (make-function name args body) seed))
 	 kdict))
 
-       ;;??: FunctionExpression
+       ;; FunctionExpression
 
-       ;;??: FormalParameterList
+       ;; FormalParameterList
        ((FormalParameterList)
 	;; We build the function with the rest argument @code{@@args}.
 	(values seed kdict))
 
-       ;;??: Program
+       ;; Program
        ((Program)
 	(values (car kseed) dict))
        
-       ;;??: SourceElements
+       ;; SourceElements
        ((SourceElements)
 	(values (cons (rev/repl 'begin kseed) seed) dict))
 
@@ -453,14 +472,14 @@
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
-  ;;(sferr "exp=~S\n" exp)
-  ;;(display "exp:\n" (current-error-port))
-  ;;(pretty-print exp (current-error-port))
+  (when #f
+    (display "exp:\n" (current-error-port))
+    (pretty-print exp (current-error-port)))
   (let* ((xrep (js-sxml->tree-il-ext exp env opts))
 	 (code (parse-tree-il '(const 1)))
-	 ;;(code (parse-tree-il xrep))
+	 (code (parse-tree-il xrep))
 	 )
-    (pretty-print xrep (current-error-port))
+    ;;(pretty-print xrep (current-error-port))
     (values code env env)))
 
 ;; --- last line ---
