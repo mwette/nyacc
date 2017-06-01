@@ -32,6 +32,12 @@
 ;; guile 2.0 or 2.2
 (define il-call (if-guile-20 'apply 'call))
 (define (make-call proc . args) (cons* il-call proc args))
+(define (make-pcall name . args)
+  (if-guile-20 (cons* 'apply `(primitive ,name) args)
+	       (cons* 'primcall name args)))
+
+(define (binop-call op kseed)
+  (rev/repl il-call `(@@ ,jslib-mod ,op) kseed))
 
 (use-modules (ice-9 pretty-print))
 
@@ -264,14 +270,8 @@
       ((PropertyNameAndValue (Identifier ,name) ,expr)
        (values `(PropertyNameAndValue (PropertyName ,name) ,expr) '() dict))
 
-      ((PropertyName ,name)
-       (values '() name dict))
-
-      ((obj-ref ,object ,ident)
-       ;; Convert the tree: obj.ref ==> obj["ref"]
-       (values
-	`(ary-ref ,object (PrimaryExpression (StringLiteral ,(cadr ident))))
-	'() dict))
+      ((obj-ref ,expr (Identifier ,name))
+       (values `(aoo-ref ,expr (PropertyName ,name)) '() dict))
 
       ;; if toplevel we generate (toplevel "name")
       ;; if lexical we generate (lexical "name" "gensym")
@@ -359,17 +359,18 @@
 
        ;; PropertyNameAndValue
        ((PropertyNameAndValue)
-	(values (cons* (car kseed) `(const ,(cadr kseed)) seed) kdict))
+	;;(values (cons* (car kseed) `(const ,(cadr kseed)) seed) kdict))
+	(values (cons* (car kseed) (cadr kseed) seed) kdict))
 
-       ;; ary-ref
-       ((ary-ref)
-	(values (cons (make-call `(@@ ,jslib-mod lkup) (cadr kseed) (car kseed))
-		      seed) kdict))
+       ;; PropertyName
+       ((PropertyName)
+	(values (cons `(const ,(car kseed)) seed) kdict))
 
-       ;; obj-ref
-       ((obj-ref) ;; ???
-	(values (cons (make-call `(@@ ,jslib-mod lkup) (cadr kseed) (car kseed))
-		      seed) kdict))
+       ;; aoo-ref (array-or-object ref), a cons cell: (dict name)
+       ((aoo-ref)
+	(values (cons (make-pcall 'cons (cadr kseed) (car kseed)) seed) kdict))
+
+       ;; obj-ref (converted to aoo-ref in fD)
 
        ;; new
 
@@ -390,17 +391,14 @@
        ;; neg
        ;; ~
        ;; not
-       ;; mul
-       ;; div
-       ;; mod
-       
-       ;; add
-       ((add)
-	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
-	(values (cons (rev/repl il-call `(@@ ,jslib-mod js:+) kseed) seed)
-		kdict))
 
-       ;; sub
+       ;; mul div mod add sub
+       ((mul) (values (cons (binop-call 'js:* kseed) seed) kdict))
+       ((div) (values (cons (binop-call 'js:/ kseed) seed) kdict))
+       ((mod) (values (cons (binop-call 'js:% kseed) seed) kdict))
+       ((add) (values (cons (binop-call 'js:+ kseed) seed) kdict))
+       ((sub) (values (cons (binop-call 'js:- kseed) seed) kdict))
+       
        ;; lshift
        ;; rshift
        ;; rrshift
@@ -575,8 +573,8 @@
 (define (compile-tree-il exp env opts)
   ;;(sferr "exp:\n") (pperr exp))
   (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
-    (sferr "tree-il:\n") (pperr xrep)
-    (values (parse-tree-il '(const 1)) env env)
+    ;;(sferr "tree-il:\n") (pperr xrep)
+    ;;(values (parse-tree-il '(const 1)) env env)
     (values (parse-tree-il xrep) env env)
     ))
 

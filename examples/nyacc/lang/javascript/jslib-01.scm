@@ -18,27 +18,40 @@
 ;; jslib-01.scm: operators
 ;; included into jslib.scm
 
-(define js:+
-  (lambda (a b)
+(define (js:+ lt rt)
+  (let ((lt (if (pair? lt) (js-ooa-get lt) lt))
+	(rt (if (pair? rt) (js-ooa-get rt) rt)))
     (cond
-     ((and (number? a) (number? b)) (+ a b))
-     ((string? a)
-      (cond ((string? b) (string-append a b))
-	    ((number? b) (string-append a (g-str b)))
-	    (else (string-append a (g-str b)))))
-     ((string? b)
-      (cond ((number? a) (string-append (g-str a) b))
-	    (else (string-append (g-str a) b))))
+     ((and (number? lt) (number? rt)) (+ lt rt))
+     ((string? lt)
+      (cond ((string? rt) (string-append lt rt))
+	    ((number? rt) (string-append lt (g-str rt)))
+	    (else (string-append lt (g-str rt)))))
+     ((string? rt)
+      (cond ((number? lt) (string-append (g-str lt) rt))
+	    (else (string-append (g-str lt) rt))))
      (else
-      (string-append (g-str a) (g-str b))))))
-(define js:- -)				; hack, convert to numbers
-(define js:* *)
+      (string-append (g-str lt) (g-str rt))))))
+(define (js:- lt rt)
+  ;; should convert to numbers if string
+  (let ((lt (if (pair? lt) (js-ooa-get lt) lt))
+	(rt (if (pair? rt) (js-ooa-get rt) rt)))
+    (- lt rt)))
+(define (js:* lt rt)
+  (let ((lt (if (pair? lt) (js-ooa-get lt) lt))
+	(rt (if (pair? rt) (js-ooa-get rt) rt)))
+    (* lt rt)))
 (define js:/ /)
 (define js:% modulo)
 (export js:+ js:- js:* js:/ js:%)
 
-(define js:== equal?)
+(define (js:== lt rt)
+  (cond
+   ((eqv? 'null lt) (eqv? js:undefined rt) #t)
+   ((eqv? 'null rt) (eqv? js:undefined lt) #t)
+   (else (equal? lt rt))))
 (define js:=== eqv?)
 (export js:== js:===)
+
 
 ;; --- last line ---

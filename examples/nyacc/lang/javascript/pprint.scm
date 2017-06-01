@@ -78,8 +78,8 @@
 	  ;; ObjectLiteral
 	  ;; PropertyNameAndValueList 
 
-	  ;; ary-ref
-	  ((ary-ref)
+	  ;; aoo-ref
+	  ((aoo-ref)
 	   (ppx (sx-ref tree 1)) (sf "[") (ppx (sx-ref tree 2)) (sf "]"))
 
 	  ;; obj-ref

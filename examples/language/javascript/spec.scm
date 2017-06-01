@@ -19,6 +19,7 @@
   #:export (javascript)
   #:use-module (nyacc lang javascript separser)
   #:use-module (nyacc lang javascript compile-tree-il)
+  #:use-module (nyacc lang javascript jslib)
   #:use-module (nyacc lang javascript pprint)
   #:use-module (system base language))
 
@@ -26,6 +27,7 @@
   #:title	"javascript"
   #:reader	js-reader
   #:compilers   `((tree-il . ,compile-tree-il))
+  #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-js)
 
 ;; --- last line ---

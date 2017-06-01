@@ -32,6 +32,11 @@
 
 ;; null is 'js:null
 
+;; this should throw an Error object
+(define (js-error text)
+  (throw 'js-error text))
+(export js-error)
+
 (define js:undefined (if #f #f))
 
 ;; like python str(obj)
@@ -42,11 +47,30 @@
 
 ;; === Objects and Arrays ============
 
+(define Object (make-hash-table 31))
+(hashq-set! Object 'constructor
+	    (case-lambda
+	     (() (make-hash-table 31))
+	     ((value) (make-hash-table 31))))
+(hashq-set! Object 'prototype Object)
+;; hasOwnProperty (lambda () ...)
+;; isPrototypeOf (lambda () ...)
+;; propertyIsEnumerable (lambda () ...)
+;; toLocaleString (lambda () ...)
+;; toString (lambda () ...)
+;; valueOf (lambda () ...)
+
 ;; @subheading Objects and Arrays
 ;; ooa     : object or array
 ;; ooa-elt : (cons <ooa> <expr>)
-;; (define (js-ooa-ref ooa-elt) =>
+;; (define (js-ooa-get ooa-elt) =>
 ;;     (if (number? expr) (vector-ref js-ooa elt) (assq-ref ooa elt)
+;; (define (js-ooa-put ooa-elt val) =>
+;;     (if (number? expr) (vector-ref js-ooa elt) (assq-ref ooa elt)
+
+;; @subsubheading References
+;; References (to properties of objects or elements of arrays) are implemented
+;; as cons cells where car is the object expr and cdr is the name
 
 ;; @deffn {Procedure} js-make-object @dots{} => js-obj
 ;; Make an object given name, value, name, value, ...
@@ -61,18 +85,20 @@
 (export js-make-object)
 (define mkobj js-make-object)
 
-(define Object (make-hash-table 31))
-(hashq-set! Object 'constructor
-	    (case-lambda
-	     (() (make-hash-table 31))
-	     ((value) (make-hash-table 31))))
-(hashq-set! Object 'prototype Object)
-;; hasOwnProperty (lambda () ...)
-;; isPrototypeOf (lambda () ...)
-;; propertyIsEnumerable (lambda () ...)
-;; toLocaleString (lambda () ...)
-;; toString (lambda () ...)
-;; valueOf (lambda () ...)
+(define (js-ooa-get ooa-elt)
+  (cond
+   ((not (pair? ooa-elt)) (js-error "js-ooa-get"))
+   ((hash-table? (car ooa-elt)) (hash-ref (car ooa-elt) (cdr ooa-elt)))
+   ((vector? (car ooa-elt)) (vector-ref (car ooa-elt) (cdr ooa-elt)))
+   (else (js-error "js-ooa-get"))))
+(export js-ooa-get)
+(define (js-ooa-put ooa-elt val)
+  (cond
+   ((not (pair? ooa-elt)) (js-error "js-ooa-put"))
+   ((hash-table? (car ooa-elt)) (hash-set! (car ooa-elt) (cdr ooa-elt) val))
+   ((vector? (car ooa-elt)) (vector-set! (car ooa-elt) (cdr ooa-elt) val))
+   (else (js-error "js-ooa-put"))))
+(export js-ooa-put)
 
 ;; @item lkup obj name
 ;; Find property in object, or prototype, or ???
