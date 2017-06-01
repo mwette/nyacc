@@ -26,12 +26,12 @@
   #:use-module (language tree-il)
   )
 
-;; guile 2.0 or 2.2
-(define il-call 'apply)
-(define (make-call proc . args) `(apply ,proc ,@args))
-;;(define il-call 'call)
-;;(define (make-call proc . args) `(call ,proc ,@args))
+(define-syntax-rule (if-guile-20 then else)
+  (if (string=? "2.0" (effective-version)) then else))
 
+;; guile 2.0 or 2.2
+(define il-call (if-guile-20 'apply 'call))
+(define (make-call proc . args) (cons* il-call proc args))
 
 (use-modules (ice-9 pretty-print))
 
@@ -250,7 +250,7 @@
 	 (values '() ident dict)))
 
       ((PrimaryExpression (NullLiteral ,null))
-       (values '() '(const JS:null) dict))
+       (values '() '(const js:null) dict))
 
       ((BooleanLiteral ,true-or-false)
        (values '() `(const ,(char=? (string-ref true-or-false 0) #\t)) dict))
@@ -260,6 +260,12 @@
 
       ((PrimaryExpression (StringLiteral ,str))
        (values '() `(const ,str) dict))
+
+      ((PropertyNameAndValue (Identifier ,name) ,expr)
+       (values `(PropertyNameAndValue (PropertyName ,name) ,expr) '() dict))
+
+      ((PropertyName ,name)
+       (values '() name dict))
 
       ((obj-ref ,object ,ident)
        ;; Convert the tree: obj.ref ==> obj["ref"]
@@ -340,8 +346,20 @@
        ;; ArrayLiteral
        ;; ElementList
        ;; Elision
+
        ;; ObjectLiteral
-       ;; PropertyNameAndValueList 
+       ((ObjectLiteral)
+	(values (cons (car kseed) seed) kdict))
+       
+       ;; PropertyNameAndValueList
+       ((PropertyNameAndValueList)
+	(values
+	 (cons `(apply (@@ ,jslib-mod mkobj) ,@(cdr (reverse kseed))) kseed)
+	 kdict))
+
+       ;; PropertyNameAndValue
+       ((PropertyNameAndValue)
+	(values (cons* (car kseed) `(const ,(cadr kseed)) seed) kdict))
 
        ;; ary-ref
        ((ary-ref)
@@ -379,7 +397,7 @@
        ;; add
        ((add)
 	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
-	(values (cons (rev/repl il-call `(@@ ,jslib-mod JS:+) kseed) seed)
+	(values (cons (rev/repl il-call `(@@ ,jslib-mod js:+) kseed) seed)
 		kdict))
 
        ;; sub
@@ -483,6 +501,7 @@
        ;; do
        ;; while
        ;; for
+       ;; for-in
        ;; Expression
        ;; ExprStmt
        ;; ContinueStatement

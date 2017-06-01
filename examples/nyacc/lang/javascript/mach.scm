@@ -108,9 +108,11 @@
 
     (PropertyNameAndValueList
      (PropertyName ":" AssignmentExpression
-		   ($$ (make-tl `PropertyNameAndValueList $1 $3)))
-     (PropertyNameAndValueList "," PropertyName ":" AssignmentExpression
-		   ($$ (tl-append $1 $3 $5)))
+		   ($$ (make-tl `PropertyNameAndValueList
+				`(PropertyNameAndValue ,$1 ,$3))))
+     (PropertyNameAndValueList
+      "," PropertyName ":" AssignmentExpression
+      ($$ (tl-append $1 `(PropertyNameAndValue ,$3 ,$5))))
      )
 
     (PropertyName
