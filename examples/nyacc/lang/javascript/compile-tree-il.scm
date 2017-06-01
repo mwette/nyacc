@@ -35,7 +35,10 @@
 
 (use-modules (ice-9 pretty-print))
 
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
+(define (pperr tree)
+  (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
 (define jslib-mod '(nyacc lang javascript jslib))
 
@@ -70,6 +73,9 @@
 ;; (let/ec return ((var1 val1) (var2 val2)) ... (return x) ...)
 ;; @end example
 
+;; SourceElements occurs in a Program (top-level) or as Function Body
+;; We translate Program to begin
+;; We translate FunctionBody to let
 
 ;; the dictionary will maintain entries with
 ;; '(lexical var JS~123)
@@ -90,6 +96,8 @@
   (list (cons '@l (1+ (assq-ref dict '@l))) (cons '@P dict)))
 (define (pop-scope dict)
   (or (assq-ref dict '@P) (error "coding error: too many pops")))
+(define (top-scope? dict)
+  (eqv? 0 (assoc-ref dict '@l)))
 
 (define (add-lexical name dict)
   (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict))
@@ -100,31 +108,32 @@
 
 ;; Add lexcial or toplevel based on level.
 (define (add-symboldef name dict)
-  ;;(sferr "add-symboldef at @l=~S\n" (assq-ref dict '@l))
+  ;;(sferr "add-symboldef for ~S at @l=~S\n" name (assq-ref dict '@l))
   (if (positive? (assq-ref dict '@l))
       (add-lexical name dict)
       (add-toplevel name dict)))
 
 (define (lookup name dict)
-  ;;(sferr "lookup ~S ~S\n" name dict)
+  ;;(when (string=? name "foo") (sferr "lookup ~S\n" name) (pperr dict))
   (cond
    ((not dict) #f)
    ((null? dict) #f)
    ((assoc-ref dict name))		; => value
-   ((assoc-ref dict '@M) =>		; only at top level
-    (lambda (env)
-      (let* ((sym (string->symbol name))
-	     (var (module-variable env sym)))
-	(if (not var) (error "not found:" sym))
-	;;`(toplevel ,sym))))
-	`(@@ ,(module-name env) ,sym))))
-   (else (lookup name (assoc-ref dict '@P)))))
+   ((assoc-ref dict '@P) =>		; parent level
+    (lambda (dict) (lookup name dict)))
+   (else
+    (let* ((env (assoc-ref dict '@M))	; host module, aka top level
+	   (sym (string->symbol name))
+	   (var (module-variable env sym)))
+      (if (not var) #f
+	  `(@@ ,(module-name env) ,sym))))))
 
 ;; ice-9 r5rs
 
 ;; body needs a line to build "var arguments" from Array(@args)
 ;; Right now args is the gensym of the rest argument named @code{@@args}.
 (define (make-function name args body)
+  (if (not args) (error "no args"))
   (let ((fname (case (car name) ((@ @@) (caddr name)) (else (cadr name))))
 	(tagsym (gensym "JS~"))	(valsym (gensym "JS~")))
     ;;(sferr "make-function ~S ~S ~S\n" fname name args)
@@ -136,7 +145,29 @@
 			,body		; body
 			(lambda-case	; handler
 			 (((tag val) #f #f #f () (,tagsym ,valsym))
-			  (lexical val ,valsym))))))))))
+			  (lexical val ,valsym))))))))
+    ))
+
+;; @deffn {Procedure} make-let bindings exprs
+;; Generates a Tree-IL let form from arguments, where @var{bindings} looks like
+;; @example
+;; (((lexical v JS~5897) #<unspecified>)
+;;  ((lexical w JS~5898) (const 3)))
+;; @end example
+;; @noindent
+;; and @var{exprs} is a list of expressions, to something like
+;; @example
+;; (let (v w) (JS~5897 JS~5898) (#<unspecified> (const 3)) . exprs)
+;; @end example
+;; @end deffn
+(define (make-let bindings exprs)
+  (let iter ((names '()) (gsyms '()) (vals '()) (binds bindings))
+    (if (null? binds)
+	`(let ,(reverse names) ,(reverse gsyms) ,(reverse vals) (begin ,@exprs))
+	(iter (cons (car (cdaar binds)) names)
+	      (cons (cadr (cdaar binds)) gsyms)
+	      (cons (cadar binds) vals)
+	      (cdr binds)))))
 
 ;; reverse list but replace new head with @code{head}
 ;; @example
@@ -167,6 +198,29 @@
   ;; a kid-seed in order and generate a null list.  The up handler, upon seeing
   ;; a null list, will just incorporate the kids w/o the normal reverse.
 
+  ;; @deffn {Procedure} fold-in-blocks src-elts-tail => src-elts-tail
+  ;; Look through source elements.  Change every var xxx to a
+  ;; @example
+  ;; (@dots{} (VariableStatement (VariableDeclrationList ...)) @dots{})
+  ;; @end example
+  ;; @noindent
+  ;; (@dots{} (VariableDeclarationList ...) (Block @dots{}))
+  ;; @example
+  ;; @dots{} @{ var a = 1; @dots{} @}
+  ;; @end example
+  ;; @noindent
+  ;; We assume no elements of @code{SourceElements} is text.
+  ;; @end deffn
+  (define (fold-in-blocks src-elts-tail)
+    (let iter ((src  src-elts-tail))
+      (if (null? src) '()
+	  (let ((elt (car src)) (rest (cdr src)))
+	    ;;(simple-format #t "=> ~S\n" (car elt))
+	    (if (eq? (car elt) 'VariableStatement)
+		;;(list elt (cons 'Block (iter rest))) ;; .. (Vs ) (Block )
+		(list (cons* 'Block elt (iter rest))) ;; .. (Block (Vs ))
+		(cons elt (iter rest)))))))
+		     
   (define (fD tree seed dict) ;; => tree seed dict
     ;; This handles branches as we go down the tree.  We do two things here:
     ;; @enumerate
@@ -174,13 +228,12 @@
     ;; @item trap places where variables are declared and maybe bump scope
     ;; Add symbols to the dictionary, keeping track of lexical scope.
     ;; @end enumerate
+    ;; declarations: we need to trap ident references and replace them
     
     ;;(sferr "fD: tree=~S ...\n" (car tree))
-    ;;(display "fD\n" cep) (pretty-print tree cep)
+    ;;(display "fD\n" cep) (pperr tree)
     (sxml-match tree
-      ((NullLiteral)
-       (values '() 'JS:null dict))
-      
+
       ((Identifier ,name)
        ;;(sferr "fD: ret null\n")
        (let ((ref (lookup name dict)))
@@ -191,13 +244,13 @@
        (error "not implemented: PrimaryExpression (this)"))
 	      
       ((PrimaryExpression (Identifier ,name))
-       ;;(sferr "id dict\n") (pretty-print dict (current-error-port))
+       ;;(when (string=? name "foo") (sferr "======\n"))
        (let ((ident (lookup name dict)))
 	 (if (not ident) (error "JS: identifier not found:" name))
 	 (values '() ident dict)))
 
       ((PrimaryExpression (NullLiteral ,null))
-       (values '() '(const null) dict))
+       (values '() '(const JS:null) dict))
 
       ((BooleanLiteral ,true-or-false)
        (values '() `(const ,(char=? (string-ref true-or-false 0) #\t)) dict))
@@ -214,17 +267,17 @@
 	`(ary-ref ,object (PrimaryExpression (StringLiteral ,(cadr ident))))
 	'() dict))
 
-      ;; declarations: we need to trap ident references and replace them
-
       ;; if toplevel we generate (toplevel "name")
       ;; if lexical we generate (lexical "name" "gensym")
       ((VariableDeclaration (Identifier ,name) . ,rest)
+       ;;(sferr "fU: VD\n") (pperr dict)
        (let* ((dict1 (add-symboldef name dict))
 	      (tree1 (lookup name dict1)))
 	 (if (not tree1) (error "lookup failed"))
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
+       ;;(sferr "push ~S\n" name)
        (values tree '() (push-scope (add-symboldef name dict))))
       
       ((FormalParameterList ,idlist ...)
@@ -247,33 +300,42 @@
 	      )
 	 (values tree '() dikt)))
       
-      ((SourceElements ,elts ...) ;; like 'begin so no new scope
-       (values tree '() dict))
+      ((SourceElements . ,elts)
+       ;; make to VDL always followed by a Block to end of
+       (let* (
+	      ;;(lvl (assq-ref dict '@l))
+	      ;;(selt (if (zero? lvl) tree
+		;;	(cons 'SourceElements (fold-in-blocks elts))))
+	      (selt (if (top-scope? dict) tree
+			(cons 'SourceElements (fold-in-blocks elts))))
+	      )
+	 ;;(sferr "lvl=~S\n" lvl)
+	 (unless (or #t (top-scope? dict))
+	   (sferr "was:\n") (pperr tree)
+	   (sferr " is:\n") (pperr selt))
+	 (values selt '() dict)))
 
       (,otherwise
-       ;;(display "fD otherwise\n" cep) (pretty-print tree cep)
-       ;;(sferr "fD: otherwise\n")
-       ;;(pretty-print tree (current-error-port))
+       ;;(sferr "fD: otherwise\n") (pperr tree)
        (values tree '() dict))
       ))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
-    ;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
-    ;;(pretty-print tree cep)
+    ;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
     ;; This routine rolls up processes leaves into the current branch.
+    ;; We have to be careful about returning kdict vs dict.
+    ;; Approach: always return kdict or (pop-scope kdict)
     (if
      (null? tree) (values (cons kseed seed) dict)
      (case (car tree)
-
        ((*TOP*)
-	;;(sferr "TOP: kseed=~S seed=~S\n" kseed seed)
-	;;(pretty-print tree (current-error-port))
-	;;(values (car kseed) dict))
-	(values kseed dict))
+	(values kseed kdict))
+
+       ;; Identifier => fU
 
        ;; PrimaryExpression (w/ ArrayLiteral or ObjectLiteral only)
        ((PrimaryExpression)
-	(values (cons (car kseed) seed) dict))
+	(values (cons (car kseed) seed) kdict))
       
        ;; ArrayLiteral
        ;; ElementList
@@ -284,22 +346,22 @@
        ;; ary-ref
        ((ary-ref)
 	(values (cons (make-call `(@@ ,jslib-mod lkup) (cadr kseed) (car kseed))
-		      seed) dict))
+		      seed) kdict))
 
        ;; obj-ref
        ((obj-ref) ;; ???
 	(values (cons (make-call `(@@ ,jslib-mod lkup) (cadr kseed) (car kseed))
-		      seed) dict))
+		      seed) kdict))
 
        ;; new
 
        ;; CallExpression
        ((CallExpression)
-	(values (cons (rev/repl il-call kseed) seed) dict))
+	(values (cons (rev/repl il-call kseed) seed) kdict))
 
-       ;;fU: ArgumentList
+       ;; ArgumentList
        ((ArgumentList) ;; append-reverse-car ??? 
-	(values (append (cdr (reverse kseed)) seed) dict))
+	(values (append (cdr (reverse kseed)) seed) kdict))
 
        ;; delete
        ;; void
@@ -316,12 +378,9 @@
        
        ;; add
        ((add)
-	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
-	;;(pretty-print tree cep)
-	;;(values (cons `(@@ ,jslib-mod JS:+) seed) dict))
-	(values (cons (rev/repl il-call
-				`(@@ ,jslib-mod JS:+)
-				kseed) seed) dict))
+	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
+	(values (cons (rev/repl il-call `(@@ ,jslib-mod JS:+) kseed) seed)
+		kdict))
 
        ;; sub
        ;; lshift
@@ -337,58 +396,80 @@
        ;; neq
        ;; eq-eq
        ;; neq-eq
-       ;;fU: bit-and
-       ;;fU: bit-xor
-       ;;fU: bit-or
-       ;;fU: and
-       ;;fU: or
-       ;;fU: ConditionalExpression
+       ;; bit-and
+       ;; bit-xor
+       ;; bit-or
+       ;; and
+       ;; or
+       ;; ConditionalExpression
 
-       ;;fU: AssignmentExpression
+       ;; AssignmentExpression
        ((AssignmentExpression)
-	(values (cons (apply x-assn kseed) seed) dict))
+	(values (cons (apply x-assn kseed) seed) kdict))
 
-       ;;fU: assign
-       ;;fU: mul-assign
-       ;;fU: div-assign
-       ;;fU: mod-assign
-       ;;fU: add-assign
-       ;;fU: sub-assign
-       ;;fU: lshift-assign
-       ;;fU: rshift-assign
-       ;;fU: rrshift-assign
-       ;;fU: and-assign
-       ;;fU: xor-assign
-       ;;fU: or-assign
-       ;;fU: expr-list
-       ;;fU: Block
-       ;;fU: StatementList
+       ;; assign
+       ;; mul-assign
+       ;; div-assign
+       ;; mod-assign
+       ;; add-assign
+       ;; sub-assign
+       ;; lshift-assign
+       ;; rshift-assign
+       ;; rrshift-assign
+       ;; and-assign
+       ;; xor-assign
+       ;; or-assign
+       ;; expr-list
 
-       ;;fU: VariableStatement
+       ;; Block
+       ((Block)
+	;;(sferr "Bl tree 1st:\n") (pperr (cadr tree))
+	;;(sferr "Bl kids:\n") (pperr (cadr (reverse kseed)))
+	(let* ((tail (cdr (reverse kseed)))
+	       (exp1 (if (pair? tail) (car tail) #f))
+	       (blck (if (and exp1 (eqv? 'bindings (car exp1)))
+			 (make-let (cdar tail) (cdr tail))
+			 (cons 'begin tail)))
+	       )
+	  ;;(pperr blck)
+	  (values (cons blck seed) kdict)))
+
+       ;; VariableStatement
        ((VariableStatement)
-	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
-	;;(pretty-print tree cep)
 	(values (cons (car kseed) seed) kdict))
 
-       ;;fU: VariableDeclarationList
+       ;; VariableDeclarationList
        ((VariableDeclarationList)
-	(let ((expr (rev/repl 'begin kseed)))
-	  ;;(simple-format #t "VDL: ~S\n" expr)
-	  (values (cons expr seed) kdict)))
+	(let* ((top (= 0 (assq-ref dict '@l))) ; at top ?
+	       (top (top-scope? dict))
+	       (tag (if top 'begin 'bindings)) ; begin or bindings for let
+	       (tail (cdr (reverse kseed))))
+	  ;;(sferr "VDL:\n") (pperr expr)
+	  ;; kdict here because that brings in new xxx
+	  (values (cons (cons tag tail) seed) kdict)))
        
-       ;;fU: VariableDeclaration
+       ;; VariableDeclaration
        ((VariableDeclaration)
-	;; NEEDS TO BE let OR (define (toplevel NAME) VALUE)
-	;;(sferr "  VarDecl: seed=~S kseed=~S\n\n" seed kseed)
-	(let ((expr (if (= 3 (length kseed))
-			`(define ,(cadr (list-ref kseed 1)) ,(list-ref kseed 0))
-			`(define ,(cadr (list-ref kseed 0)) (void)))))
-	  ;;(simple-format #t "VD: ~S\n" kseed)
-	  (values (cons expr seed) kdict)))
+	;;(sferr "VD: seed=~S kseed=~S\n\n" #f kseed)
+	(let* ((top (= 0 (assq-ref dict '@l))) ; at top ?
+	       (w/i (= 3 (length kseed))) ; w/ initializer
+	       (elt0 (list-ref kseed 0))
+	       (elt1 (list-ref kseed 1)))
+	  (values
+	   (cons
+	    (if top
+		(if w/i ;; toplevel defines
+		    `(define ,(cadr elt1) ,elt0)
+		    `(define ,(cadr elt0) (void)))
+		(if w/i ;; bindings for let
+		    (list elt1 elt0)
+		    (list elt0 '(void))))
+	    seed)
+	   kdict)))
        
-       ;;fU: Initializer
+       ;; Initializer
        ((Initializer)		       ; just grab the single argument
-	(values (cons (car kseed) seed) dict))
+	(values (cons (car kseed) seed) kdict))
 
        ;; EmptyStatement
        ((EmptyStatement)		; ignore
@@ -396,24 +477,23 @@
 
        ;; ExpressionStatement
        ((ExpressionStatement)	       ; just grab the single argument
-	(values (cons (car kseed) seed) dict))
+	(values (cons (car kseed) seed) kdict))
 
-       ;;fU: IfStatement
-       ;;fU: do
-       ;;fU: while
-       ;;fU: for
-       ;;fU: Expression
-       ;;fU: ExprStmt
+       ;; IfStatement
+       ;; do
+       ;; while
+       ;; for
+       ;; Expression
+       ;; ExprStmt
        ;; ContinueStatement
 
-       ;;fU: ReturnStatement
+       ;; ReturnStatement
        ((ReturnStatement) ;; will need a prompt for return, until optimized?
-	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
-	;;(pretty-print tree cep)
+	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
 	(values (cons `(abort (const return)
 			      ,(cdr (reverse kseed))
 			      (const ()))
-		      seed) dict))
+		      seed) kdict))
 
        ;; WithStatement
        ;; SwitchStatement
@@ -427,40 +507,42 @@
        ;; Catch
        ;; Finally
 
-       ;; FunctionDeclaration
+       ;; FunctionDeclaration (see also fU)
+       ;; This is going to be a bit complicated.
+       ;; We will need to pop scope (in dict) until we find the parent.
+       ;; And in the FunctionBody, appearing as SourceElements, we will
+       ;; need to track statements into 'begin expressions somehow ...
        ((FunctionDeclaration)
-	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed)
-	;;(pretty-print tree cep)
-	(values
-	 (let ((name (cadr kseed))
+	;;(sferr "fUP.FDecl kdict=\n") (pperr kdict)
+	;;(sferr "fUP.FDecl  dict=\n") (pperr dict)
+	(let* ((name (cadr kseed))
 	       (args (list-ref (lookup "@args" kdict) 2))
-	       (body (car kseed)))
-	   (if (not args) (error "args lookup error"))
-	   (cons (make-function name args body) seed))
-	 kdict))
+	       (body `(begin ,@(car kseed)))
+	       (fctn (make-function name args body))
+	       )
+	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FunctionExpression
 
        ;; FormalParameterList
-       ((FormalParameterList)
-	;; We build the function with the rest argument @code{@@args}.
+       ((FormalParameterList) ;; all in @code{@@args}.
 	(values seed kdict))
 
        ;; Program
        ((Program)
-	(values (car kseed) dict))
+	(values (cons 'begin (car kseed)) kdict))
        
        ;; SourceElements
        ((SourceElements)
-	(values (cons (rev/repl 'begin kseed) seed) dict))
+	;; return kdict here because we may need to peel off decls'
+	(values (cons (cdr (reverse kseed)) seed) kdict))
 
        (else
-	;;(sferr "fU: kseed=~S  [else]\n    seed=~S\n" kseed seed)
-	;;(pretty-print tree cep)
+	;;(sferr "fU: kseed=~S  [else]\n    seed=~S\n" kseed seed) (pperr tree)
 	(cond
-	 ((null? seed) (values (reverse kseed) dict))
+	 ((null? seed) (values (reverse kseed) kdict))
 	 ;;((null? kseed) (values (cons (car tree) seed) dict)) ;; ???
-	 (else (values (cons (reverse kseed) seed) dict)))))))
+	 (else (values (cons (reverse kseed) seed) kdict)))))))
 
   (define (fH leaf seed dict)
     (values (cons leaf seed) dict))
@@ -472,14 +554,11 @@
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
-  (when #f
-    (display "exp:\n" (current-error-port))
-    (pretty-print exp (current-error-port)))
-  (let* ((xrep (js-sxml->tree-il-ext exp env opts))
-	 (code (parse-tree-il '(const 1)))
-	 (code (parse-tree-il xrep))
-	 )
-    ;;(pretty-print xrep (current-error-port))
-    (values code env env)))
+  ;;(sferr "exp:\n") (pperr exp))
+  (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
+    (sferr "tree-il:\n") (pperr xrep)
+    (values (parse-tree-il '(const 1)) env env)
+    (values (parse-tree-il xrep) env env)
+    ))
 
 ;; --- last line ---

@@ -257,7 +257,7 @@ mid-rule actions and other features not discussed above.
 
 @section Generating a Language to Run in Guile
 
-One of the many cool feature of Guile is that it provides a backend
+One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.   
 The files @file{parser.scm}, @file{compiler.scm} in the
 @file{examples/nyacc/lang/calc} directory and @file{spec.scm} in the
@@ -419,9 +419,9 @@ increasing order.  An equivalent specification would be as follows:
 @end example
 
 The precedence specification can be used along with @code{$prec} in
-the grammer to resolve shift-reduce conflicts in a grammar.  The
-classical case is the if-then-else construct in C, where a conflict
-occurs on the input
+the grammer to resolve shift-reduce or reduce-reduce conflicts in a 
+grammar.  The classical case is the if-then-else construct in C, where 
+a conflict occurs on the input
 @example
 if (expr1) if (expr2) bar(); else baz();
 @end example
@@ -625,7 +625,7 @@ recovery action (@emph{"syntax error"}) will be executed.
 
 Say you have a @nyacc{} specification @code{cspec} for the C language
 and you want to generate a machine for parsing C expressions.  You can
-go this via 
+do this using @code{restart-spec}:
 @example
 (define cxspec (restart-spec cspec 'expression))
 (define cxmach (make-lalr-machine cxspec))

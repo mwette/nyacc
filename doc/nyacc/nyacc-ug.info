@@ -213,7 +213,7 @@ features not discussed above.
 1.3 Generating a Language to Run in Guile
 =========================================
 
-One of the many cool feature of Guile is that it provides a backend
+One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.  The files
 'parser.scm', 'compiler.scm' in the 'examples/nyacc/lang/calc' directory
 and 'spec.scm' in the 'examples/language/calc' directory implement our
@@ -351,9 +351,9 @@ equivalent specification would be as follows:
         (prec> (left "*" "/") (left "+" "-"))
 
    The precedence specification can be used along with '$prec' in the
-grammer to resolve shift-reduce conflicts in a grammar.  The classical
-case is the if-then-else construct in C, where a conflict occurs on the
-input
+grammer to resolve shift-reduce or reduce-reduce conflicts in a grammar.
+The classical case is the if-then-else construct in C, where a conflict
+occurs on the input
      if (expr1) if (expr2) bar(); else baz();
 The above could be interpreted as
      if (expr1) { if (expr2) bar(); } else baz();
@@ -514,8 +514,8 @@ recovery action (_"syntax error"_) will be executed.
 ============================================
 
 Say you have a NYACC specification 'cspec' for the C language and you
-want to generate a machine for parsing C expressions.  You can go this
-via
+want to generate a machine for parsing C expressions.  You can do this
+using 'restart-spec':
      (define cxspec (restart-spec cspec 'expression))
      (define cxmach (make-lalr-machine cxspec))
 
@@ -1274,25 +1274,25 @@ File: nyacc-ug.info,  Node: References,  Prev: TODOs,  Up: Top
 Tag Table:
 Node: Top622
 Node: Demonstration877
-Node: Parsing10918
-Ref: Specification11366
-Ref: Recovery from Syntax Errors19789
-Ref: sublanguage20671
-Ref: Parser20974
-Ref: match table24718
-Ref: lex26521
-Ref: parser-lexer33540
-Ref: Parser Tables34353
-Ref: Hashing and Compacting35336
-Ref: Debugging36986
-Ref: Human Readable Output37097
-Node: Translation39262
-Ref: Tagged Lists41712
-Ref: SXML Parse Trees43658
-Node: Coding to the Compiler Tower45420
-Ref: Pretty Print46648
-Node: Administrative46844
-Node: TODOs47863
-Node: References48884
+Node: Parsing10919
+Ref: Specification11367
+Ref: Recovery from Syntax Errors19806
+Ref: sublanguage20688
+Ref: Parser21009
+Ref: match table24753
+Ref: lex26556
+Ref: parser-lexer33575
+Ref: Parser Tables34388
+Ref: Hashing and Compacting35371
+Ref: Debugging37021
+Ref: Human Readable Output37132
+Node: Translation39297
+Ref: Tagged Lists41747
+Ref: SXML Parse Trees43693
+Node: Coding to the Compiler Tower45455
+Ref: Pretty Print46683
+Node: Administrative46879
+Node: TODOs47898
+Node: References48919
 
 End Tag Table

@@ -1,6 +1,11 @@
-var a = 7, b = 5
+var a = 1, b
 function foo(x, y) {
-  return sqrt(x + y);
+  var v, w = 3;
+  v = x + w;
+  var t;
+  t = y + 5;
+  return sqrt(t + v);
 }
-a = foo(a,b)
+var c = 2
+a = foo(a,c)
 a

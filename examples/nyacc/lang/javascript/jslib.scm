@@ -18,11 +18,12 @@
 ;; needs: null, undefined, undeclared?,
 
 (define-module (nyacc lang javascript jslib)
-  #:export (JSdict)
+  #:export (JSdict
+	    JS:undefined)
   )
 
 (define JSdict
-  `((@l . 0) (@P . ())
+  `((@l . 0) ;; (@P . '())
     ;;("Object" . (@@ (jslib) Object))
     ;;("Math" . (@@ (jslib) Math))
     ;;("Number" . (@@ (jslib) Number))
