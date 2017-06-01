@@ -36,6 +36,9 @@
   (if-guile-20 (cons* 'apply `(primitive ,name) args)
 	       (cons* 'primcall name args)))
 
+(define (rtail kseed)
+  (cdr (reverse kseed)))
+
 (define (binop-call op kseed)
   (rev/repl il-call `(@@ ,jslib-mod ,op) kseed))
 
@@ -344,8 +347,21 @@
 	(values (cons (car kseed) seed) kdict))
       
        ;; ArrayLiteral
+       ;; mkary is just primitive vector
+       ((ArrayLiteral)
+	(let ((exp (apply make-call `(@@ ,jslib-mod mkary) (car kseed))))
+	  (values (cons exp seed) kdict)))
+       
        ;; ElementList
-       ;; Elision
+       ((ElementList)
+	(values (cons (rtail kseed) seed) kdict))
+
+       ;; Elision: e.g., (Elision "3")
+       ;; Convert to js:undefined: a bit of a hack for now, but wtf.
+       ((Elision)
+	(let* ((len (string->number (car kseed)))
+	       (avals (make-list len '(void))))
+	  (values (append avals seed) kdict)))
 
        ;; ObjectLiteral
        ((ObjectLiteral)
@@ -354,7 +370,7 @@
        ;; PropertyNameAndValueList
        ((PropertyNameAndValueList)
 	(values
-	 (cons `(apply (@@ ,jslib-mod mkobj) ,@(cdr (reverse kseed))) kseed)
+	 (cons `(apply (@@ ,jslib-mod mkobj) ,@(rtail kseed)) seed)
 	 kdict))
 
        ;; PropertyNameAndValue
@@ -367,8 +383,9 @@
 	(values (cons `(const ,(car kseed)) seed) kdict))
 
        ;; aoo-ref (array-or-object ref), a cons cell: (dict name)
+       ;; => (cons <expr> <name>)
        ((aoo-ref)
-	(values (cons (make-pcall 'cons (cadr kseed) (car kseed)) seed) kdict))
+	(values (cons (make-pcall 'cons (car kseed) (cadr kseed)) seed) kdict))
 
        ;; obj-ref (converted to aoo-ref in fD)
 
@@ -380,7 +397,7 @@
 
        ;; ArgumentList
        ((ArgumentList) ;; append-reverse-car ??? 
-	(values (append (cdr (reverse kseed)) seed) kdict))
+	(values (append (rtail kseed) seed) kdict))
 
        ;; delete
        ;; void
@@ -441,7 +458,7 @@
        ((Block)
 	;;(sferr "Bl tree 1st:\n") (pperr (cadr tree))
 	;;(sferr "Bl kids:\n") (pperr (cadr (reverse kseed)))
-	(let* ((tail (cdr (reverse kseed)))
+	(let* ((tail (rtail kseed))
 	       (exp1 (if (pair? tail) (car tail) #f))
 	       (blck (if (and exp1 (eqv? 'bindings (car exp1)))
 			 (make-let (cdar tail) (cdr tail))
@@ -459,7 +476,7 @@
 	(let* ((top (= 0 (assq-ref dict '@l))) ; at top ?
 	       (top (top-scope? dict))
 	       (tag (if top 'begin 'bindings)) ; begin or bindings for let
-	       (tail (cdr (reverse kseed))))
+	       (tail (rtail kseed)))
 	  ;;(sferr "VDL:\n") (pperr expr)
 	  ;; kdict here because that brings in new xxx
 	  (values (cons (cons tag tail) seed) kdict)))
@@ -507,9 +524,7 @@
        ;; ReturnStatement
        ((ReturnStatement) ;; will need a prompt for return, until optimized?
 	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
-	(values (cons `(abort (const return)
-			      ,(cdr (reverse kseed))
-			      (const ()))
+	(values (cons `(abort (const return) ,(rtail kseed) (const '()))
 		      seed) kdict))
 
        ;; WithStatement
@@ -552,7 +567,7 @@
        ;; SourceElements
        ((SourceElements)
 	;; return kdict here because we may need to peel off decls'
-	(values (cons (cdr (reverse kseed)) seed) kdict))
+	(values (cons (rtail kseed) seed) kdict))
 
        (else
 	;;(sferr "fU: kseed=~S  [else]\n    seed=~S\n" kseed seed) (pperr tree)
@@ -571,10 +586,10 @@
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
-  ;;(sferr "exp:\n") (pperr exp))
+  (sferr "exp:\n") (pperr exp)
   (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
-    ;;(sferr "tree-il:\n") (pperr xrep)
-    ;;(values (parse-tree-il '(const 1)) env env)
+    (sferr "tree-il:\n") (pperr xrep)
+    (values (parse-tree-il '(const "stub")) env env)
     (values (parse-tree-il xrep) env env)
     ))
 

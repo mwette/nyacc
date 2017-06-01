@@ -85,6 +85,11 @@
 (export js-make-object)
 (define mkobj js-make-object)
 
+(define (js-make-array . rest)
+  (apply vector rest))
+(export js-make-array)
+(define mkary js-make-array)
+
 (define (js-ooa-get ooa-elt)
   (cond
    ((not (pair? ooa-elt)) (js-error "js-ooa-get"))

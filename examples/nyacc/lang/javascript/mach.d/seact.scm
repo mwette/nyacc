@@ -49,12 +49,15 @@
      `(ArrayLiteral (Elision ,(number->string $2))))
    ;; ArrayLiteral => "[" "]"
    (lambda ($2 $1 . $rest) `(ArrayLiteral))
+   ;; ArrayLiteral => "[" ElementList "]"
+   (lambda ($3 $2 $1 . $rest)
+     `(ArrayLiteral ,(tl->list $2)))
    ;; ArrayLiteral => "[" ElementList "," Elision "]"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ArrayLiteral (Elision ,(number->string $2))))
    ;; ArrayLiteral => "[" ElementList "," "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(ArrayLiteral ,$2))
+     `(ArrayLiteral ,(tl->list $2)))
    ;; ElementList => Elision AssignmentExpression
    (lambda ($2 $1 . $rest)
      (make-tl

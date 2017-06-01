@@ -81,9 +81,10 @@
     (ArrayLiteral
      ("[" Elision "]" ($$ `(ArrayLiteral (Elision ,(number->string $2)))))
      ("[" "]" ($$ `(ArrayLiteral)))
+     ("[" ElementList "]" ($$ `(ArrayLiteral ,(tl->list $2))))
      ("[" ElementList "," Elision "]"
       ($$ `(ArrayLiteral (Elision ,(number->string $2)))))
-     ("[" ElementList "," "]" ($$ `(ArrayLiteral ,$2)))
+     ("[" ElementList "," "]" ($$ `(ArrayLiteral ,(tl->list $2))))
      )
 
     (ElementList
