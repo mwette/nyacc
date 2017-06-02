@@ -583,7 +583,7 @@
       ($$ `(FunctionExpression ,$2 (FormalParameterList) ,$6)))
      ("function" "(" ")" "{" FunctionBody "}"
       ($prec 'expr)
-      ($$ `(FunctionExpression (FormatlParameterList) ,$5)))
+      ($$ `(FunctionExpression (FormalParameterList) ,$5)))
      )
 
     (FormalParameterList

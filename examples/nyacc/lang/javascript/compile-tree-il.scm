@@ -603,7 +603,7 @@
 
        ;; FunctionExpression
        ((FunctionExpression)
-	;;(pperr "FE:\n") (pperr kseed)
+	(sferr "FE:\n") (pperr tree) (pperr kseed)
 	(let* ((args (list-ref (lookup "@args" kdict) 2))
 	       (body `(begin ,@(car kseed)))
 	       (fctn (make-function args body)))

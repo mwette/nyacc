@@ -531,7 +531,7 @@
         ,$6))
    ;; FunctionExpression => "function" "(" ")" "{" FunctionBody "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(FunctionExpression (FormatlParameterList) ,$5))
+     `(FunctionExpression (FormalParameterList) ,$5))
    ;; FormalParameterList => Identifier
    (lambda ($1 . $rest)
      (make-tl 'FormalParameterList $1))

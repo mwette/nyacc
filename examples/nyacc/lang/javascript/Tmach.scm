@@ -1,3 +1,4 @@
+(define redo #f)
 ;; Tmach.scm - javascript
 ;;
 ;; Copyright (C) 2015,2016 Matthew R. Wette
@@ -19,14 +20,14 @@
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-(when #f
+(when redo ;; #f
   (gen-js-files)
   (system "touch parser.scm")
   (gen-se-files)
   (system "touch separser.scm")
   )
 
-(when #f
+(when redo ;;#f
   (with-output-to-file ",lang.txt"
     (lambda ()
       (pp-lalr-notice js-spec)
