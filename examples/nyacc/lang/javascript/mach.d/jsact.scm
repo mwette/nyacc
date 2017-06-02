@@ -522,13 +522,16 @@
      `(FunctionExpression ,$2 ,(tl->list $4) ,$7))
    ;; FunctionExpression => "function" "(" FormalParameterList ")" "{" Func...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(FunctionExpression ,(tl->list $4) ,$6))
+     `(FunctionExpression ,(tl->list $3) ,$6))
    ;; FunctionExpression => "function" Identifier "(" ")" "{" FunctionBody "}"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(FunctionExpression ,$2 ,$6))
+     `(FunctionExpression
+        ,$2
+        (FormalParameterList)
+        ,$6))
    ;; FunctionExpression => "function" "(" ")" "{" FunctionBody "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(FunctionExpression ,$5))
+     `(FunctionExpression (FormatlParameterList) ,$5))
    ;; FormalParameterList => Identifier
    (lambda ($1 . $rest)
      (make-tl 'FormalParameterList $1))

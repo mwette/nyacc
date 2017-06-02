@@ -577,13 +577,13 @@
       ($$ `(FunctionExpression ,$2 ,(tl->list $4) ,$7)))
      ("function" "(" FormalParameterList ")" "{" FunctionBody "}"
       ($prec 'expr)
-      ($$ `(FunctionExpression ,(tl->list $4) ,$6)))
+      ($$ `(FunctionExpression ,(tl->list $3) ,$6)))
      ("function" Identifier "(" ")" "{" FunctionBody "}"
       ($prec 'expr)
-      ($$ `(FunctionExpression ,$2 ,$6)))
+      ($$ `(FunctionExpression ,$2 (FormalParameterList) ,$6)))
      ("function" "(" ")" "{" FunctionBody "}"
       ($prec 'expr)
-      ($$ `(FunctionExpression ,$5)))
+      ($$ `(FunctionExpression (FormatlParameterList) ,$5)))
      )
 
     (FormalParameterList

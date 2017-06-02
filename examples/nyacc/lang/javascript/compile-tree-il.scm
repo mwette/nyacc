@@ -142,21 +142,18 @@
 
 ;; body needs a line to build "var arguments" from Array(@args)
 ;; Right now args is the gensym of the rest argument named @code{@@args}.
-(define (make-function name args body)
+(define* (make-function args body #:key name)
   (if (not args) (error "no args"))
-  (let ((fname (case (car name) ((@ @@) (caddr name)) (else (cadr name))))
-	(tagsym (gensym "JS~"))	(valsym (gensym "JS~")))
-    ;;(sferr "make-function ~S ~S ~S\n" fname name args)
-    `(define ,fname
-       (lambda ((name . ,fname))
-	 (lambda-case ((() #f @args #f () (,args))
-		       (prompt
-			(const return)	; tag
-			,body		; body
-			(lambda-case	; handler
-			 (((tag val) #f #f #f () (,tagsym ,valsym))
-			  (lexical val ,valsym))))))))
-    ))
+  (let ((tagsym (gensym "JS~"))	(valsym (gensym "JS~"))
+	(meta (if name `((namme ,name)) '())))
+    `(lambda ,meta
+       (lambda-case ((() #f @args #f () (,args))
+		     (prompt
+		      (const return)	; tag
+		      ,body		; body
+		      (lambda-case	; handler
+		       (((tag val) #f #f #f () (,tagsym ,valsym))
+			(lexical val ,valsym)))))))))
 
 ;; @deffn {Procedure} make-let bindings exprs
 ;; Generates a Tree-IL let form from arguments, where @var{bindings} looks like
@@ -318,8 +315,14 @@
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
-       ;;(sferr "push ~S\n" name)
        (values tree '() (push-scope (add-symboldef name dict))))
+      
+      ((FunctionExpression (Identifier ,name) ,rest ...)
+       (values tree '() (add-symboldef name (push-scope dict))))
+      
+      ((FunctionExpression ,rest ...)
+       ;; symbol is a hack
+       (values tree '() (add-symboldef "*anon*" (push-scope dict))))
       
       ((FormalParameterList ,idlist ...)
        ;; For all functions we just use rest arg and then express each
@@ -589,21 +592,22 @@
        ;; Finally
 
        ;; FunctionDeclaration (see also fU)
-       ;; This is going to be a bit complicated.
-       ;; We will need to pop scope (in dict) until we find the parent.
-       ;; And in the FunctionBody, appearing as SourceElements, we will
-       ;; need to track statements into 'begin expressions somehow ...
        ((FunctionDeclaration)
-	;;(sferr "fUP.FDecl kdict=\n") (pperr kdict)
-	;;(sferr "fUP.FDecl  dict=\n") (pperr dict)
-	(let* ((name (cadr kseed))
+	(let* ((il-name (cadr kseed))
+	       (name (case (car il-name)
+			((@ @@) (caddr il-name)) (else (cadr il-name))))
 	       (args (list-ref (lookup "@args" kdict) 2))
 	       (body `(begin ,@(car kseed)))
-	       (fctn (make-function name args body))
-	       )
+	       (fctn `(define ,name ,(make-function args body #:name name))))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FunctionExpression
+       ((FunctionExpression)
+	;;(pperr "FE:\n") (pperr kseed)
+	(let* ((args (list-ref (lookup "@args" kdict) 2))
+	       (body `(begin ,@(car kseed)))
+	       (fctn (make-function args body)))
+	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FormalParameterList
        ((FormalParameterList) ;; all in @code{@@args}.
