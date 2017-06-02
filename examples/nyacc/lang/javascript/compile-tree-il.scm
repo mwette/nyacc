@@ -51,6 +51,7 @@
 
 (define jslib-mod '(nyacc lang javascript jslib))
 
+;; recheck:
 (define (x-assn rhs op lhs junk)
   (case (car op)
     ((assign) `(set! ,lhs ,rhs))
@@ -178,6 +179,17 @@
 	      (cons (cadar binds) vals)
 	      (cdr binds)))))
 
+;; @deffn {Procedure} resolve-ref ref => exp
+;; Resolve a possible reference (lval) to an expression (rval).
+;; Right now this will convert an object-or-array ref to its value
+;; via @code{js-ooa-get}.  If @code{toplevel} or @code{lexical} just
+;; return it.
+;; @end deffn
+(define (resolve-ref ref)
+  (case (car ref)
+    ((toplevel lexical) ref)
+    (else `(,il-call (@@ ,jslib-mod js-ooa-get) ,ref))))
+
 ;; @deffn {Procedure} op-on-ref ref op ord => `(let ...)
 ;; This routine generates code for @code{ref++}, etc where @var{ref} is
 ;; a @code{toplevel}, @code{lexical} or @emph{ooa-ref} (object or array
@@ -294,7 +306,7 @@
        (values `(PropertyNameAndValue (PropertyName ,name) ,expr) '() dict))
 
       ((obj-ref ,expr (Identifier ,name))
-       (values `(aoo-ref ,expr (PropertyName ,name)) '() dict))
+       (values `(ooa-ref ,expr (PropertyName ,name)) '() dict))
 
       ;; if toplevel we generate (toplevel "name")
       ;; if lexical we generate (lexical "name" "gensym")
@@ -402,10 +414,12 @@
        ((PropertyName)
 	(values (cons `(const ,(car kseed)) seed) kdict))
 
-       ;; aoo-ref (array-or-object ref), a cons cell: (dict name)
+       ;; ooa-ref (object-or-array ref), a cons cell: (dict name)
        ;; => (cons <expr> <name>)
-       ((aoo-ref)
-	(values (cons (make-pcall 'cons (cadr kseed) (car kseed)) seed) kdict))
+       ((ooa-ref)
+	(values
+	 (cons (make-pcall 'cons (resolve-ref (cadr kseed)) (car kseed)) seed)
+	 kdict))
 
        ;; obj-ref (converted to aoo-ref in fD)
 
