@@ -641,7 +641,7 @@
 (define (compile-tree-il exp env opts)
   ;;(sferr "exp:\n") (pperr exp)
   (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
-    (sferr "tree-il:\n") (pperr xrep)
+    ;;(sferr "tree-il:\n") (pperr xrep)
     (values (parse-tree-il '(const "stub")) env env)
     (values (parse-tree-il xrep) env env)
     ))
