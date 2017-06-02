@@ -30,6 +30,8 @@
 
 ;; The 'NoIn' variants are needed to avoid confusing the in operator 
 ;; in a relational expression with the in operator in a for statement.
+;; Exclusion of ObjectLiteral and FunctionExpression at statement scope
+;; is implemented using precedence for reduction.
 
 ;; NSI = "no semi-colon insertion"
 
@@ -38,7 +40,7 @@
    (notice (string-append "Copyright 2015-2017 Matthew R. Wette" lang-crn-lic))
    (reserve "abstract" "boolean" "byte" "char" "class" "const" "debugger"
 	    "double" "enum" "export" "extends" "final" "float" "goto"
-	    "implemements" "import" "int" "interface" "long" "native" 
+	    "implements" "import" "int" "interface" "long" "native" 
 	    "package" "private" "protected" "public" "short" "static"
 	    "super" "synchronized" "throws" "transient" "volatile")
    (prec< 'then "else")
@@ -158,8 +160,8 @@
 
     (PostfixExpression
      (LeftHandSideExpression)
-     (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc $1)))
-     (LeftHandSideExpression ($$ (NSI)) "--" ($$ `(post-dec $1)))
+     (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc ,$1)))
+     (LeftHandSideExpression ($$ (NSI)) "--" ($$ `(post-dec ,$1)))
      )
 
     (UnaryExpression

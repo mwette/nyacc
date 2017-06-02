@@ -1009,6 +1009,32 @@ tokens that look like identifers are parsed they are checked against
 the list of typenames and if a match is found, @code{'typename} is
 returned, otherwise @code{$ident} is returned.
 
+Another example of this handshaking is used in the JavaScript parser.
+The language allows newline as a statement terminator, but it must
+be prevented in certain places, for example between @code{++} and
+an expression in the post-increment operator.  We handle this using
+a mid-rule action to tell the lexer to skip newline if that is the
+next token.
+@example
+  (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc $1)))
+@end example
+@noindent
+The procedure @code{NSI} in the lex'er is as follows:
+@example
+(define (NSI) ;; no semicolon insertion
+  (fluid-set! *insert-semi* #f))
+@end example
+@noindent
+and the newline reader in the lex'er acts as follows:
+@example
+  @dots{}
+  ((eqv? ch #\newline)
+   (if (fluid-ref *insert-semi*)
+       (cons semicolon ";")
+       (iter (read-char))))
+  @dots{}
+@end example
+
 @section Parser Tables
 @anchor{Parser Tables}
 

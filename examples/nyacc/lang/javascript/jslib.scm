@@ -72,6 +72,8 @@
 ;; References (to properties of objects or elements of arrays) are implemented
 ;; as cons cells where car is the object expr and cdr is the name
 
+;; but what about _++ and ++_
+
 ;; @deffn {Procedure} js-make-object @dots{} => js-obj
 ;; Make an object given name, value, name, value, ...
 ;; @end deffn
@@ -99,10 +101,10 @@
 (export js-ooa-get)
 (define (js-ooa-put ooa-elt val)
   (cond
-   ((not (pair? ooa-elt)) (js-error "js-ooa-put"))
+   ((not (pair? ooa-elt)) (js-error "js-ooa-put 1"))
    ((hash-table? (car ooa-elt)) (hash-set! (car ooa-elt) (cdr ooa-elt) val))
    ((vector? (car ooa-elt)) (vector-set! (car ooa-elt) (cdr ooa-elt) val))
-   (else (js-error "js-ooa-put"))))
+   (else (js-error "js-ooa-put 2"))))
 (export js-ooa-put)
 
 ;; @item lkup obj name

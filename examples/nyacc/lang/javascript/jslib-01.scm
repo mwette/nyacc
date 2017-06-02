@@ -53,5 +53,8 @@
 (define js:=== eqv?)
 (export js:== js:===)
 
+(define (js:_++ ooa)
+  (js-ooa-set ooa (js:+ 1 (js-ooa-ref ooa)))
+  (js-ooa-ref ooa))
 
 ;; --- last line ---

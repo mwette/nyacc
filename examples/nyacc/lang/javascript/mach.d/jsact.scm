@@ -132,9 +132,9 @@
    ;; PostfixExpression => LeftHandSideExpression
    (lambda ($1 . $rest) $1)
    ;; PostfixExpression => LeftHandSideExpression $P1 "++"
-   (lambda ($3 $2 $1 . $rest) `(post-inc $1))
+   (lambda ($3 $2 $1 . $rest) `(post-inc ,$1))
    ;; PostfixExpression => LeftHandSideExpression $P2 "--"
-   (lambda ($3 $2 $1 . $rest) `(post-dec $1))
+   (lambda ($3 $2 $1 . $rest) `(post-dec ,$1))
    ;; $P1 => 
    (lambda ($1 . $rest) (NSI))
    ;; $P2 => 

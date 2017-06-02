@@ -1012,8 +1012,8 @@
     86) ($end . 87) ("abstract" . 88) ("boolean" . 89) ("byte" . 90) ("char" 
     . 91) ("class" . 92) ("const" . 93) ("debugger" . 94) ("double" . 95) (
     "enum" . 96) ("export" . 97) ("extends" . 98) ("final" . 99) ("float" . 
-    100) ("goto" . 101) ("implemements" . 102) ("import" . 103) ("int" . 104) 
-    ("interface" . 105) ("long" . 106) ("native" . 107) ("package" . 108) (
+    100) ("goto" . 101) ("implements" . 102) ("import" . 103) ("int" . 104) (
+    "interface" . 105) ("long" . 106) ("native" . 107) ("package" . 108) (
     "private" . 109) ("protected" . 110) ("public" . 111) ("short" . 112) (
     "static" . 113) ("super" . 114) ("synchronized" . 115) ("throws" . 116) (
     "transient" . 117) ("volatile" . 118)))

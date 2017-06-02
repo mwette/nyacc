@@ -178,6 +178,26 @@
 	      (cons (cadar binds) vals)
 	      (cdr binds)))))
 
+;; @deffn {Procedure} op-on-ref ref op ord => `(let ...)
+;; This routine generates code for @code{ref++}, etc where @var{ref} is
+;; a @code{toplevel}, @code{lexical} or @emph{ooa-ref} (object or array
+;; reference).  The argument @var{op} is @code{'js:+} or @code{'js:-} and
+;; @var{ord} is @code{'pre} or @code{'post}.
+;; @end deffn
+(define (op-on-ref ref op ord)
+  (let* ((sym (gensym "JS~"))
+	 (val (case (car ref)
+		((toplevel) ref)
+		((lexical) ref)
+		(else `(,il-call (@@ ,jslib-mod js-ooa-get) ,ref))))
+	 (loc `(lexical ~ref ,sym))
+	 (sum `(,il-call (@@ ,jslib-mod ,op) (const 1) ,loc))
+	 (set (case (car ref)
+		((toplevel lexical) `(set! ,ref ,sum))
+		(else `(,il-call (@@ ,jslib-mod js-ooa-put) ,ref ,sum))))
+	 (rval (case ord ((pre) loc) ((post) val))))
+    `(let (~ref) (,sym) (,val) (begin ,set ,rval))))
+
 ;; reverse list but replace new head with @code{head}
 ;; @example
 ;; (rev/repl 'a '(4 3 2 1)) => '(a 2 3 4)
@@ -385,7 +405,7 @@
        ;; aoo-ref (array-or-object ref), a cons cell: (dict name)
        ;; => (cons <expr> <name>)
        ((aoo-ref)
-	(values (cons (make-pcall 'cons (car kseed) (cadr kseed)) seed) kdict))
+	(values (cons (make-pcall 'cons (cadr kseed) (car kseed)) seed) kdict))
 
        ;; obj-ref (converted to aoo-ref in fD)
 
@@ -399,11 +419,27 @@
        ((ArgumentList) ;; append-reverse-car ??? 
 	(values (append (rtail kseed) seed) kdict))
 
+       ;; post-inc
+       ((post-inc)
+	(values (cons (op-on-ref (car kseed) 'js:+ 'post) seed) kdict))
+	
+       ;; post-dec
+       ((post-dec)
+	(values (cons (op-on-ref (car kseed) 'js:- 'post) seed) kdict))
+
        ;; delete
        ;; void
        ;; typeof
+
        ;; pre-inc
+       ((pre-inc)
+	(values (cons (op-on-ref (car kseed) 'js:+ 'pre) seed) kdict))
+
        ;; pre-dec
+       ((pre-dec)
+	(values (cons (op-on-ref (car kseed) 'js:- 'pre) seed) kdict))
+
+
        ;; pos
        ;; neg
        ;; ~
@@ -521,11 +557,10 @@
        ;; ExprStmt
        ;; ContinueStatement
 
-       ;; ReturnStatement
-       ((ReturnStatement) ;; will need a prompt for return, until optimized?
-	;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
-	(values (cons `(abort (const return) ,(rtail kseed) (const '()))
-		      seed) kdict))
+       ;; ReturnStatement: uses a prompt, if no value return #undefined
+       ((ReturnStatement)
+	(let ((retval (if (> (length kseed) 1) (car kseed) '(void))))
+	  (values (cons retval seed) kdict)))
 
        ;; WithStatement
        ;; SwitchStatement
@@ -586,7 +621,7 @@
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
-  (sferr "exp:\n") (pperr exp)
+  ;;(sferr "exp:\n") (pperr exp)
   (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
     (sferr "tree-il:\n") (pperr xrep)
     (values (parse-tree-il '(const "stub")) env env)
