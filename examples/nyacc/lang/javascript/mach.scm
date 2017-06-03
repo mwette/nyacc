@@ -336,7 +336,6 @@
      )
 
     (AssignmentOperator
-     ;; todo
      ("=" ($$ `(assign ,$1)))
      ("*=" ($$ `(mul-assign ,$1)))
      ("/=" ($$ `(div-assign ,$1)))
@@ -386,7 +385,7 @@
      )
 
     (Block
-     ("{" StatementList "}" ($prec 'stmt) ($$ `(Block ,$2)))
+     ("{" StatementList "}" ($prec 'stmt) ($$ `(Block . ,(cdr (tl->list $2)))))
      ("{" "}" ($prec 'stmt) ($$ '(Block)))
      )
 
@@ -442,35 +441,30 @@
      )
 
     (IterationStatement
-     ("do" Statement "while" "(" Expression ")" ";"
+     ("do" Statement "while" "(" Expression ")" ";" ;; <= spec has ';' here
       ($$ `(do ,$2 ,$5)))
      ("while" "(" Expression ")" Statement
       ($$ `(while ,$3 ,$5)))
      ("for" "(" OptExprStmtNoIn OptExprStmt OptExprClose Statement
-      ($$ `(for $3 $4 $5 $6))
-      )
+      ($$ `(for $3 $4 $5 $6)))
      ("for" "(" "var" VariableDeclarationListNoIn ";" OptExprStmt
       OptExprClose Statement
-      ($$ `(for $4 $6 $7 $8))		; ???
-      )
+      ($$ `(for $4 $6 $7 $8)))		; ???
      ("for" "(" LeftHandSideExpression "in" Expression ")" Statement
-      ($$ `(for-in $3 $5 $7))		; ???
-      )
+      ($$ `(for-in $3 $5 $7)))		; ???
      ("for" "(" "var" VariableDeclarationNoIn "in" Expression ")" Statement
-      ($$ `(for-in $4 $6 $8))		; ???
-      )
+      ($$ `(for-in $4 $6 $8)))		; ???
      )
     (OptExprStmtNoIn
-     (":" ($$ `(Expression)))
+     (":" ($$ '(NoExpression)))
      (ExpressionNoIn ";")
      )
-			
     (OptExprStmt
-     (";" ($$ '(ExprStmt)))
+     (";" ($$ '(NoExpression)))
      (Expression ";")
      )
     (OptExprClose
-     (";" ($$ '(Expression)))
+     (";" ($$ '(NoExpression)))
      (Expression ")")
      )
 

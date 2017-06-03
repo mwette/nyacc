@@ -18,6 +18,12 @@
 ;; jslib-01.scm: operators
 ;; included into jslib.scm
 
+(define (js:neg val)
+  (- (if (string? val) (string->number val) val)))
+  
+(define (js:pos lt rt)
+  (if (string? val) (string->number val) val))
+  
 (define (js:+ lt rt)
   (let ((lt (if (pair? lt) (js-ooa-get lt) lt))
 	(rt (if (pair? rt) (js-ooa-get rt) rt)))
@@ -44,6 +50,25 @@
 (define js:/ /)
 (define js:% modulo)
 (export js:+ js:- js:* js:/ js:%)
+
+(define (js:lshift lt rt)
+  (asl lt rt))
+(define (js:rshift lt rt)
+  (asr lt (- rt)))
+(define (js:rrshift lt rt)		; FIX
+  (asr lt (- rt)))
+;;(define (js:and
+;; (and-assign . js:and) (xor-assign . js:xor) (or-assign . js:or)
+
+(define (js:lt lt rt)
+  (< lt rt))
+(define (js:gt lt rt)
+  (> lt rt))
+(define (js:le lt rt)
+  (<= lt rt))
+(define (js:ge lt rt)
+  (>= lt rt))
+(export js:lt js:gt js:le js:ge)
 
 (define (js:== lt rt)
   (cond

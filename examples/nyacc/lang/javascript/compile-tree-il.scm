@@ -39,9 +39,6 @@
 (define (rtail kseed)
   (cdr (reverse kseed)))
 
-(define (binop-call op kseed)
-  (rev/repl il-call `(@@ ,jslib-mod ,op) kseed))
-
 (use-modules (ice-9 pretty-print))
 
 (define (sferr fmt . args)
@@ -50,15 +47,6 @@
   (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
 (define jslib-mod '(nyacc lang javascript jslib))
-
-;; recheck:
-(define (x-assn rhs op lhs junk)
-  (case (car op)
-    ((assign) `(set! ,lhs ,rhs))
-    ((add-assign) `(set! ,lhs ,(make-call `(@@ ,jslib-mod JS+) lhs rhs)))
-    (else
-     (sferr "\nUNKNOWN OP: ~S\n\n" op)
-     '(unknown))))
 
 ;; @heading variable scope
 ;; Variables in the compiler are kept in a scope-stack with the highest
@@ -176,6 +164,12 @@
 	      (cons (cadar binds) vals)
 	      (cdr binds)))))
 
+;; @deffn {Procedure} make-thunk expr => `(lambda ...)
+;; Generate a thunk.
+;; @end deffn
+(define* (make-thunk expr #:key (name '~thunk))
+  `(lambda ((name . ,name)) (lambda-case ((() #f #f #f () ()) ,expr))))
+
 ;; @deffn {Procedure} resolve-ref ref => exp
 ;; Resolve a possible reference (lval) to an expression (rval).
 ;; Right now this will convert an object-or-array ref to its value
@@ -204,8 +198,32 @@
 	 (set (case (car ref)
 		((toplevel lexical) `(set! ,ref ,sum))
 		(else `(,il-call (@@ ,jslib-mod js-ooa-put) ,ref ,sum))))
-	 (rval (case ord ((pre) loc) ((post) val))))
+	 (rval (case ord ((pre) val) ((post) loc))))
     `(let (~ref) (,sym) (,val) (begin ,set ,rval))))
+
+;; for lt + rt, etc
+(define (op-call op kseed)
+  (rev/repl il-call `(@@ ,jslib-mod ,op) kseed))
+(define (op-call/prim op kseed)
+  (rev/repl il-call `(primitive ,op) kseed))
+
+;; deffn {Procedure} op-assn kseed => `(set! lhs rhs)
+;; op-assn: for lhs += rhs etc
+;; end deffn
+(define op-assn
+  (let ((opmap
+	 '((mul-assign . js:*) (div-assign . js:/) (mod-assign . js:%)
+	   (add-assign . js:+) (sub-assign . js:-) (lshift-assign . js:lshift)
+	   (rshift-assign . js:rshift) (rrshift-assign . js:rrshift)
+	   (and-assign . js:and) (xor-assign . js:xor) (or-assign . js:or)
+	   (assign . #f))))
+    (lambda (kseed)
+      (let ((lhs (caddr kseed))
+	    (op (assq-ref opmap (caadr kseed)))
+	    (rhs (car kseed)))
+	(if op
+	    `(set! ,lhs ,(make-call `(@@ ,jslib-mod ,op) lhs rhs))
+	    `(set! ,lhs ,rhs))))))
 
 ;; reverse list but replace new head with @code{head}
 ;; @example
@@ -314,6 +332,15 @@
 	 (if (not tree1) (error "lookup failed"))
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
+      ((do ,rest ...)
+       (values tree '() (add-symboldef "~loop" (push-scope dict))))
+
+      ((while ,rest ...)
+       (values tree '() (add-symboldef "~loop" (push-scope dict))))
+
+      ((for ,rest ...)
+       (values tree '() (add-symboldef "~loop" (push-scope dict))))
+
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
        (values tree '() (push-scope (add-symboldef name dict))))
       
@@ -375,7 +402,7 @@
        ((*TOP*)
 	(values kseed kdict))
 
-       ;; Identifier => fU
+       ;; Identifier: handled in fD above
 
        ;; PrimaryExpression (w/ ArrayLiteral or ObjectLiteral only)
        ((PrimaryExpression)
@@ -424,10 +451,11 @@
 	 (cons (make-pcall 'cons (resolve-ref (cadr kseed)) (car kseed)) seed)
 	 kdict))
 
-       ;; obj-ref (converted to aoo-ref in fD)
+       ;; obj-ref: converted to aoo-ref in fD
 
-       ;; new
-
+       ;; new: for now just call object
+       ((new) (values (cons (car kseed) seed) kdict))
+       
        ;; CallExpression
        ((CallExpression)
 	(values (cons (rev/repl il-call kseed) seed) kdict))
@@ -457,25 +485,30 @@
 	(values (cons (op-on-ref (car kseed) 'js:- 'pre) seed) kdict))
 
 
-       ;; pos
-       ;; neg
+       ;; pos neg
+       ((pos) (values (cons (op-call 'js:pos kseed) seed) kdict))
+       ((neg) (values (cons (op-call 'js:neg kseed) seed) kdict))
        ;; ~
        ;; not
 
        ;; mul div mod add sub
-       ((mul) (values (cons (binop-call 'js:* kseed) seed) kdict))
-       ((div) (values (cons (binop-call 'js:/ kseed) seed) kdict))
-       ((mod) (values (cons (binop-call 'js:% kseed) seed) kdict))
-       ((add) (values (cons (binop-call 'js:+ kseed) seed) kdict))
-       ((sub) (values (cons (binop-call 'js:- kseed) seed) kdict))
+       ((mul) (values (cons (op-call 'js:* kseed) seed) kdict))
+       ((div) (values (cons (op-call 'js:/ kseed) seed) kdict))
+       ((mod) (values (cons (op-call 'js:% kseed) seed) kdict))
+       ((add) (values (cons (op-call 'js:+ kseed) seed) kdict))
+       ((sub) (values (cons (op-call 'js:- kseed) seed) kdict))
        
-       ;; lshift
-       ;; rshift
-       ;; rrshift
-       ;; lt
-       ;; gt
-       ;; le
-       ;; ge
+       ;; lshift rshift rrshift
+       ((lshift) (values (cons (op-call 'js:lshift kseed) seed) kdict))
+       ((rshift) (values (cons (op-call 'js:rshift kseed) seed) kdict))
+       ((rrshift) (values (cons (op-call 'js:rrshift kseed) seed) kdict))
+
+       ;; lt gt le ge
+       ((lt) (values (cons (op-call 'js:lt kseed) seed) kdict))
+       ((gt) (values (cons (op-call 'js:gt kseed) seed) kdict))
+       ((le) (values (cons (op-call 'js:le kseed) seed) kdict))
+       ((ge) (values (cons (op-call 'js:ge kseed) seed) kdict))
+       
        ;; instanceof
        ;; in
        ;; eq
@@ -487,24 +520,19 @@
        ;; bit-or
        ;; and
        ;; or
-       ;; ConditionalExpression
+
+       ;; ConditionalExpression => (if expr a b)
+       ((ConditionalExpression)
+	(values
+	 (cons `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)) seed) kdict))
 
        ;; AssignmentExpression
+       ;; assign mul-assign div-assign od-assign add-assign sub-assign
+       ;; lshift-assign rshift-assign rrshift-assign and-assign
+       ;; xor-assign or-assign
        ((AssignmentExpression)
-	(values (cons (apply x-assn kseed) seed) kdict))
+	(values (cons (op-assn kseed) seed) kdict))
 
-       ;; assign
-       ;; mul-assign
-       ;; div-assign
-       ;; mod-assign
-       ;; add-assign
-       ;; sub-assign
-       ;; lshift-assign
-       ;; rshift-assign
-       ;; rrshift-assign
-       ;; and-assign
-       ;; xor-assign
-       ;; or-assign
        ;; expr-list
 
        ;; Block
@@ -566,13 +594,62 @@
 	(values (cons (car kseed) seed) kdict))
 
        ;; IfStatement
-       ;; do
+       ((IfStatement)
+	(values (cons (if (= 3 (length kseed))
+			  `(if ,(cadr kseed) ,(car seed) (void))
+			  `(if ,(caddr kseed) ,(cadr seed) ,(car seed)))
+		      seed) kdict))
+
+       ;; NOTE: TODO
+       ;; The forms "do", "while" and "for", to support "continue" and "break",
+       ;; will need either two prompts or one prompt and tail calls ???
+       ;; * break:
+       ;;   (prompt (const break)
+       ;;     (let (~loop (lambda () ...)
+       ;; * continue:
+       ;;   + do: NOT just a tail call, need to eval expr again
+       ;;         so continue => if (expr) (~loop) (abort break)
+       ;;   + while: just a tail call
+       ;; strategy: for every "do", "while" and "for" we push scope w/ the
+       ;; ~loop variable
+       
+       ;; do: "do" stmt "while" expr ;
+       ((do)
+	(let* ((expr (car kseed))
+	       (stmt (cadr kseed))
+	       (var (lookup "~loop" kdict)) ; (lexical ~loop JS~1234)
+	       (sym (caddr var))	    ; JS~1234
+	       (body `(begin ,stmt (if ,expr ,(make-call var) (void))))
+	       (doit `(letrec (~loop) (,sym) (,(make-thunk body))
+			      ,(make-call var))))
+	  (values (cons doit seed) (pop-scope kdict))))
+	
        ;; while
-       ;; for
-       ;; for-in
-       ;; Expression
-       ;; ExprStmt
+       ((while)
+	(let* ((expr (cadr kseed)) (stmt (car kseed))
+	       (var (lookup "~loop" kdict)) (sym (caddr var))
+	       (body `(if ,expr (begin ,stmt ,(make-call var)) (void)))
+	       (doit `(letrec (~loop) (,sym) (,(make-thunk body))
+			      ,(make-call var))))
+	  (values (cons doit seed) (pop-scope kdict))))
+	
+       ;; for    : need to (pop-scope kdict)
+       ;; for-in : need to (pop-scope kdict)
+
+       ;; NoExpression (used by for and for-in)
+       ((NoExpression)
+	(values (cons '(void) seed) kdict))
+       
        ;; ContinueStatement
+       ((ContinueStatement)
+	(values
+	 (cons
+	  (if (> (length kseed) 2)
+	      (error "continue w/ id arg not supported (yet)")
+	      ;;(make-call (lookup "~loop" kdict))
+	      (error "continue not implemented correctly yet")
+	      )
+	  kseed) kdict))
 
        ;; ReturnStatement: uses a prompt, if no value return #undefined
        ((ReturnStatement)
@@ -603,7 +680,6 @@
 
        ;; FunctionExpression
        ((FunctionExpression)
-	(sferr "FE:\n") (pperr tree) (pperr kseed)
 	(let* ((args (list-ref (lookup "@args" kdict) 2))
 	       (body `(begin ,@(car kseed)))
 	       (fctn (make-function args body)))
@@ -641,8 +717,8 @@
 (define (compile-tree-il exp env opts)
   ;;(sferr "exp:\n") (pperr exp)
   (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
-    ;;(sferr "tree-il:\n") (pperr xrep)
-    (values (parse-tree-il '(const "stub")) env env)
+    (sferr "tree-il:\n") (pperr xrep)
+    (values (parse-tree-il '(const "[skip compile & execute]")) env env)
     (values (parse-tree-il xrep) env env)
     ))
 

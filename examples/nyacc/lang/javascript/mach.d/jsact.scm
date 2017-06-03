@@ -356,7 +356,8 @@
    ;; Statement => TryStatement
    (lambda ($1 . $rest) $1)
    ;; Block => "{" StatementList "}"
-   (lambda ($3 $2 $1 . $rest) `(Block ,$2))
+   (lambda ($3 $2 $1 . $rest)
+     `(Block unquote (cdr (tl->list $2))))
    ;; Block => "{" "}"
    (lambda ($2 $1 . $rest) '(Block))
    ;; StatementList => Statement
