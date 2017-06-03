@@ -293,11 +293,11 @@
     ;; mode: 'code|'file|'decl
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
     (lambda* (#:key (mode 'code) (xdef? #f))
-      (let ((bol #t)		      ; begin-of-line condition
-	    (xtxt #f)		      ; parsing cpp expanded text (kludge?)
-	    (ppxs (list 'keep))	      ; CPP execution state stack
-	    (info (fluid-ref *info*)) ; info shared w/ parser
-	    (brlev 0)		      ; brace level
+      (let ((bol #t)		 ; begin-of-line condition
+	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
+	    (ppxs (list 'keep))	 ; CPP execution state stack
+	    (info (fluid-ref *info*))	; info shared w/ parser
+	    (brlev 0)			; brace level
 	    (x-def? (or xdef? def-xdef?))
 	    )
 	;; Return the first (tval . lval) pair not excluded by the CPP.
@@ -476,11 +476,22 @@
 	  (define (read-cpp-stmt ch)
 	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
+	  ;; Recheck for expansions that turn from plain text to macro call:
+	  ;; @example
+	  ;; #define ABC(X,Y) ((X)+(Y))
+	  ;; #define DEF ABC
+	  ;; int x = DEF(1,2);
+	  ;; @end example
+	  (define (recheck-repl repl defs name)
+	    (if (ident-like? repl)
+		(or (expand-cpp-macro-ref repl defs (list name)) repl)
+		repl))
+
 	  (define (read-token)
 	    (let iter ((ch (read-char)))
 	      (cond
 	       ((eof-object? ch)
-		(set! xtxt #f)
+		(set! suppress #f)
 		(if (pop-input) (iter (read-char)) (assc-$ '($end . ""))))
 	       ((eq? ch #\newline) (set! bol #t) (iter (read-char)))
 	       ((char-set-contains? c:ws ch) (iter (read-char)))
@@ -497,16 +508,17 @@
 		 (else (iter ch))))
 	       ((read-ident ch) =>
 		(lambda (name)
-		  (let ((symb (string->symbol name)))
-		    ;;(simple-format #t "id: name=~S xtxt=~S\n" name xtxt)
+		  (let ((symb (string->symbol name))
+			(defs (cpi-defs info)))
 		    (cond
-		     ((and (not xtxt)
+		     ((and (not suppress)
 			   (if (procedure? x-def?) (x-def? name mode) x-def?)
-			   (expand-cpp-macro-ref name (cpi-defs info)))
-		      => (lambda (st)
-			   ;;(simple-format #t "repl=~S\n" st)
-			   (set! xtxt #t) ; so we don't re-expand
-			   (push-input (open-input-string st))
+			   (expand-cpp-macro-ref name defs))
+		      => (lambda (repl)
+			   (set! suppress #t) ; don't rescan
+			   (push-input
+			    (open-input-string
+			     (recheck-repl repl defs name)))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
 		      => (lambda (t) (cons t name)))

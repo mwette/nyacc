@@ -306,10 +306,15 @@
       ((decl-no-newline ,decl-spec-list ,init-declr-list) ; for (int i = 0;
        (ppx decl-spec-list) (sf " ") (ppx init-declr-list) (sf ";"))
 
-      ((comp-decl ,spec-qual-list ,declr-list)
-       (ppx spec-qual-list) (ppx declr-list) (sf ";\n"))
-      ((comp-decl ,spec-qual-list ,declr-list ,comment)
-       (ppx spec-qual-list) (ppx declr-list) (sf "; ") (ppx comment))
+      ((comp-decl ,spec-qual-list (comp-declr-list . ,rest2))
+       (ppx spec-qual-list) (sf " ") (ppx (sx-ref tree 2)) (sf ";\n"))
+      ((comp-decl ,spec-qual-list ,declr-list (comment ,comment))
+       (ppx spec-qual-list) (sf " ") (ppx declr-list) (sf "; ")
+       (ppx (sx-ref tree 3)))
+      ;; anon struct or union
+      ((comp-decl ,spec-qual-list) (ppx spec-qual-list) (sf ";\n"))
+      ((comp-decl ,spec-qual-list (comment ,comment))
+       (ppx spec-qual-list) (sf "; ") (ppx (sx-ref tree 2)))
 
       ((decl-spec-list . ,dsl)
        (pair-for-each
@@ -317,6 +322,7 @@
 	  (case (sx-tag (car dsl))
 	    ((stor-spec) (sf "~A" (car (sx-ref (car dsl) 1))))
 	    ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
+	    ((fctn-spec) (sf "~A" (sx-ref (car dsl) 1)))
 	    ((type-spec) (ppx (car dsl)))
 	    (else (sf "[?:~S]" (car dsl))))
 	  (if (pair? (cdr dsl)) (sf " ")))
@@ -528,6 +534,7 @@
 	      (declr (sx-ref tree 2))
 	      (compd-stmt (sx-ref tree 3)))
 	 (ppx decl-spec-list)
+	 (sf " ")
 	 (ppx declr)
 	 (sf " ")
 	 (ppx compd-stmt)))

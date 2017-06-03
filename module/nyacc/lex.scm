@@ -269,8 +269,8 @@
 		      ((#\n) "\n")	   ; newline U+000A
 		      ((#\v) "\v")	   ; verticle tab U+000B
 		      ((#\f) "\f")	   ; formfeed U+000C
-		      ((#\\) "\\")	   ; backslash
-		      ((#\' #\" #\?) (string c2))
+		      ((#\r) "\r")	   ; return U+000D
+		      ((#\\ #\' #\" #\? #\|) (string c2))
 		      (else (error "bad escape sequence")))))
 	    (cons '$chlit (string c1))))))
 

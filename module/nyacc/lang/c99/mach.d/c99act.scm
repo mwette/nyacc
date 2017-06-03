@@ -374,6 +374,11 @@
      (if (pair? $4)
        `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$4)
        `(comp-decl ,(tl->list $1) ,(tl->list $2))))
+   ;; struct-declaration => specifier-qualifier-list ";" opt-code-comment
+   (lambda ($3 $2 $1 . $rest)
+     (if (pair? $3)
+       `(comp-decl ,(tl->list $1) ,$3)
+       `(comp-decl ,(tl->list $1))))
    ;; specifier-qualifier-list => type-specifier specifier-qualifier-list
    (lambda ($2 $1 . $rest) (tl-insert $2 $1))
    ;; specifier-qualifier-list => type-specifier

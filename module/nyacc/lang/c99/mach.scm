@@ -322,6 +322,11 @@
       ($$ (if (pair? $4)
 	      `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$4)
 	      `(comp-decl ,(tl->list $1) ,(tl->list $2)))))
+     (specifier-qualifier-list		; anon' struct or union
+      ";" opt-code-comment
+      ($$ (if (pair? $3)
+	      `(comp-decl ,(tl->list $1) ,$3)
+	      `(comp-decl ,(tl->list $1)))))
      )
      
     (specifier-qualifier-list		; S 6.7.2.1

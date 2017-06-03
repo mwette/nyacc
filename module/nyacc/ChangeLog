@@ -1,3 +1,14 @@
+2017-06-03  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (read-c-chlit): added '\r' and '\|' moved '\\' to case
+
+	* lang/c99/body.scm (gen-c-lexer): fixed cpp expansion to allow
+	re-expansion when replacement is ident-like.  This allows
+	  #define ABC(X,Y) ((X)+(Y))
+	  #define DEF ABC
+	  int main { int x = DEF(1,2); }
+	reference: janneke bug report on def-bwl.c
+
 2017-05-20  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm (lalr-spec): removed more with/prune syntax; added
