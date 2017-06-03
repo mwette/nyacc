@@ -1,6 +1,6 @@
 ;;; nyacc/lang/javascript/jslib.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by
@@ -18,34 +18,34 @@
 ;; needs: null, undefined, undeclared?,
 
 (define-module (nyacc lang javascript jslib)
-  #:export (JSdict)
+  #:export (JSdict
+	    js:undefined)
   )
 
 (define JSdict
-  `((@l . 0) (@P . ())
+  `((@l . 0) ;; (@P . '())
     ;;("Object" . (@@ (jslib) Object))
     ;;("Math" . (@@ (jslib) Math))
     ;;("Number" . (@@ (jslib) Number))
-    ;;("JS:+" . (@@ (jslib) JS:+))
+    ;;("js:+" . (@@ (jslib) js:+))
     ))
 
-;; null is 'JS:null
+;; null is 'js:null
 
-(define JS:undefined (if #f #f))
+;; this should throw an Error object
+(define (js-error text)
+  (throw 'js-error text))
+(export js-error)
 
-;; @item lkup obj name
-;; Find property in object, or prototype, or ???
-(define (lkup obj key)
-  (if (string? key) (lkup obj (string->symbol key))
-      (cond
-       ((hashq-ref obj key))
-       (else #f))))
+(define js:undefined (if #f #f))
 
-;; @item make-args args gsym
-;; This should generate a arguments object for every function.
-;; The input is a list of argument names bound to the array '@args w/ gsym.
-(define (make-args args gsym)
-  #f)
+;; like python str(obj)
+(define (g-str obj)
+  (call-with-output-string
+   (lambda (port)
+     (display obj port))))
+
+;; === Objects and Arrays ============
 
 (define Object (make-hash-table 31))
 (hashq-set! Object 'constructor
@@ -60,6 +60,63 @@
 ;; toString (lambda () ...)
 ;; valueOf (lambda () ...)
 
+;; @subheading Objects and Arrays
+;; ooa     : object or array
+;; ooa-elt : (cons <ooa> <expr>)
+;; (define (js-ooa-get ooa-elt) =>
+;;     (if (number? expr) (vector-ref js-ooa elt) (assq-ref ooa elt)
+;; (define (js-ooa-put ooa-elt val) =>
+;;     (if (number? expr) (vector-ref js-ooa elt) (assq-ref ooa elt)
+
+;; @subsubheading References
+;; References (to properties of objects or elements of arrays) are implemented
+;; as cons cells where car is the object expr and cdr is the name
+
+;; but what about _++ and ++_
+
+;; @deffn {Procedure} js-make-object @dots{} => js-obj
+;; Make an object given name, value, name, value, ...
+;; @end deffn
+(define (js-make-object . rest)
+  (let ((obj (make-hash-table 31)))
+    (let iter ((pairs rest))
+      (when (pair? pairs)
+	(hash-set! obj (car pairs) (cadr pairs))
+	(iter (cddr pairs))))
+    obj))
+(export js-make-object)
+(define mkobj js-make-object)
+
+(define (js-make-array . rest)
+  (apply vector rest))
+(export js-make-array)
+(define mkary js-make-array)
+
+(define (js-ooa-get ooa-elt)
+  (cond
+   ((not (pair? ooa-elt)) (js-error "js-ooa-get"))
+   ((hash-table? (car ooa-elt)) (hash-ref (car ooa-elt) (cdr ooa-elt)))
+   ((vector? (car ooa-elt)) (vector-ref (car ooa-elt) (cdr ooa-elt)))
+   (else (js-error "js-ooa-get"))))
+(export js-ooa-get)
+(define (js-ooa-put ooa-elt val)
+  (cond
+   ((not (pair? ooa-elt)) (js-error "js-ooa-put 1"))
+   ((hash-table? (car ooa-elt)) (hash-set! (car ooa-elt) (cdr ooa-elt) val))
+   ((vector? (car ooa-elt)) (vector-set! (car ooa-elt) (cdr ooa-elt) val))
+   (else (js-error "js-ooa-put 2"))))
+(export js-ooa-put)
+
+;; @item lkup obj name
+;; Find property in object, or prototype, or ???
+(define (lkup obj key)
+  (if (string? key) (lkup obj (string->symbol key))
+      (cond
+       ((hashq-ref obj key))
+       (else #f))))
+
+;; ==============================
+
 (define Math (make-hash-table 31))
 (hashq-set! Math 'sqrt (lambda (n) (sqrt n)))
 
@@ -69,10 +126,7 @@
 (hash-set! Number 'NaN (nan))
 (hash-set! Number 'toString (lambda (n) (number->string n)))
 
-(define JS:+ (lambda (a b)
-	      (cond
-	       ((and (string? a) (string? b)) (string-append a b))
-	       ((and (number? a) (number? b)) (+ a b))
-	       (else 'undefined))))
+
+(include-from-path "nyacc/lang/javascript/jslib-01.scm")
 
 ;; --- last line ---

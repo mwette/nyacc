@@ -257,7 +257,7 @@ mid-rule actions and other features not discussed above.
 
 @section Generating a Language to Run in Guile
 
-One of the many cool feature of Guile is that it provides a backend
+One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.   
 The files @file{parser.scm}, @file{compiler.scm} in the
 @file{examples/nyacc/lang/calc} directory and @file{spec.scm} in the
@@ -419,9 +419,9 @@ increasing order.  An equivalent specification would be as follows:
 @end example
 
 The precedence specification can be used along with @code{$prec} in
-the grammer to resolve shift-reduce conflicts in a grammar.  The
-classical case is the if-then-else construct in C, where a conflict
-occurs on the input
+the grammer to resolve shift-reduce or reduce-reduce conflicts in a 
+grammar.  The classical case is the if-then-else construct in C, where 
+a conflict occurs on the input
 @example
 if (expr1) if (expr2) bar(); else baz();
 @end example
@@ -625,7 +625,7 @@ recovery action (@emph{"syntax error"}) will be executed.
 
 Say you have a @nyacc{} specification @code{cspec} for the C language
 and you want to generate a machine for parsing C expressions.  You can
-go this via 
+do this using @code{restart-spec}:
 @example
 (define cxspec (restart-spec cspec 'expression))
 (define cxmach (make-lalr-machine cxspec))
@@ -1008,6 +1008,32 @@ parser, when the first statement is parsed, an action could declare
 tokens that look like identifers are parsed they are checked against
 the list of typenames and if a match is found, @code{'typename} is
 returned, otherwise @code{$ident} is returned.
+
+Another example of this handshaking is used in the JavaScript parser.
+The language allows newline as a statement terminator, but it must
+be prevented in certain places, for example between @code{++} and
+an expression in the post-increment operator.  We handle this using
+a mid-rule action to tell the lexer to skip newline if that is the
+next token.
+@example
+  (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc $1)))
+@end example
+@noindent
+The procedure @code{NSI} in the lex'er is as follows:
+@example
+(define (NSI) ;; no semicolon insertion
+  (fluid-set! *insert-semi* #f))
+@end example
+@noindent
+and the newline reader in the lex'er acts as follows:
+@example
+  @dots{}
+  ((eqv? ch #\newline)
+   (if (fluid-ref *insert-semi*)
+       (cons semicolon ";")
+       (iter (read-char))))
+  @dots{}
+@end example
 
 @section Parser Tables
 @anchor{Parser Tables}

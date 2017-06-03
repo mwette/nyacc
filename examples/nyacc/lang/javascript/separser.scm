@@ -1,6 +1,6 @@
 ;;; nyacc/lang/javascript/separser.scm
 ;;;
-;;; Copyright (C) 2015,2016 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -38,8 +38,12 @@
     (cons 'mtab mtab)
     (cons 'act-v act-v))))
 
-;; @item parse-js [#:debug bool] 
-;; to be documented
+;; @deffn {Procedure} parse-js-selt [#:debug bool] 
+;; Parse a source element.  We need to wrap as follows to use w/ compiler:
+;; @example
+;; `(Program (SourceElements ,(parse-js-selt)))
+;; @end example
+;; @end deffn
 (define* (parse-js-selt #:key debug)
   (catch
    'nyacc-error
@@ -53,11 +57,12 @@
 
 ;; This is used for language support in guile REPL.  See Compiling to the
 ;; Virtual Machine in the Guile Reference Manual.
+(use-modules (ice-9 pretty-print))
 (define (js-reader port env)
   (let ((iport (current-input-port)))
     (dynamic-wind
 	(lambda () (set-current-input-port port))
-	(lambda () (parse-js-selt #:debug #f))
+	(lambda () `(Program (SourceElements ,(parse-js-selt #:debug #f))))
 	(lambda () (set-current-input-port iport)))))
 
 ;; --- last line ---

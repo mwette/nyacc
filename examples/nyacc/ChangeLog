@@ -1,3 +1,7 @@
+2017-05-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/javascript/mach.scm (js-spec): finally got full javascript
+	grammar by adding precedence to lalr rr-conflict!
 
 Copyright (C) 2017 Matthew R. Wette
 

@@ -11,25 +11,25 @@
    ;; $start => Program
    (lambda ($1 . $rest) $1)
    ;; Literal => NullLiteral
-   (lambda ($1 . $rest) `(NullLiteral))
+   (lambda ($1 . $rest) $1)
    ;; Literal => BooleanLiteral
-   (lambda ($1 . $rest) `(BooleanLiteral ,$1))
+   (lambda ($1 . $rest) $1)
    ;; Literal => NumericLiteral
-   (lambda ($1 . $rest) `(NumericLiteral ,$1))
+   (lambda ($1 . $rest) $1)
    ;; Literal => StringLiteral
-   (lambda ($1 . $rest) `(StringLiteral ,$1))
+   (lambda ($1 . $rest) $1)
    ;; NullLiteral => "null"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) '(NullLiteral))
    ;; BooleanLiteral => "true"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(BooleanLiteral ,$1))
    ;; BooleanLiteral => "false"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(BooleanLiteral ,$1))
    ;; NumericLiteral => '$fixed
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(NumericLiteral ,$1))
    ;; NumericLiteral => '$float
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(NumericLiteral ,$1))
    ;; StringLiteral => '$string
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(StringLiteral ,$1))
    ;; Identifier => '$ident
    (lambda ($1 . $rest) `(Identifier ,$1))
    ;; PrimaryExpression => "this"
@@ -40,6 +40,8 @@
    (lambda ($1 . $rest) `(PrimaryExpression ,$1))
    ;; PrimaryExpression => ArrayLiteral
    (lambda ($1 . $rest) `(PrimaryExpression ,$1))
+   ;; PrimaryExpression => ObjectLiteral
+   (lambda ($1 . $rest) `(PrimaryExpression ,$1))
    ;; PrimaryExpression => "(" Expression ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; ArrayLiteral => "[" Elision "]"
@@ -47,12 +49,15 @@
      `(ArrayLiteral (Elision ,(number->string $2))))
    ;; ArrayLiteral => "[" "]"
    (lambda ($2 $1 . $rest) `(ArrayLiteral))
+   ;; ArrayLiteral => "[" ElementList "]"
+   (lambda ($3 $2 $1 . $rest)
+     `(ArrayLiteral ,(tl->list $2)))
    ;; ArrayLiteral => "[" ElementList "," Elision "]"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ArrayLiteral (Elision ,(number->string $2))))
    ;; ArrayLiteral => "[" ElementList "," "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(ArrayLiteral ,$2))
+     `(ArrayLiteral ,(tl->list $2)))
    ;; ElementList => Elision AssignmentExpression
    (lambda ($2 $1 . $rest)
      (make-tl
@@ -76,10 +81,12 @@
      `(ObjectLiteral ,(tl->list $2)))
    ;; PropertyNameAndValueList => PropertyName ":" AssignmentExpression
    (lambda ($3 $2 $1 . $rest)
-     (make-tl `PropertyNameAndValueList $1 $3))
+     (make-tl
+       `PropertyNameAndValueList
+       `(PropertyNameAndValue ,$1 ,$3)))
    ;; PropertyNameAndValueList => PropertyNameAndValueList "," PropertyName...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (tl-append $1 $3 $5))
+     (tl-append $1 `(PropertyNameAndValue ,$3 ,$5)))
    ;; PropertyName => Identifier
    (lambda ($1 . $rest) $1)
    ;; PropertyName => StringLiteral
@@ -88,10 +95,12 @@
    (lambda ($1 . $rest) $1)
    ;; MemberExpression => PrimaryExpression
    (lambda ($1 . $rest) $1)
+   ;; MemberExpression => FunctionExpression
+   (lambda ($1 . $rest) $1)
    ;; MemberExpression => MemberExpression "[" Expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) `(ary-ref ,$3 ,$1))
+   (lambda ($4 $3 $2 $1 . $rest) `(aoo-ref ,$1 ,$3))
    ;; MemberExpression => MemberExpression "." Identifier
-   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$3 ,$1))
+   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; MemberExpression => "new" MemberExpression Arguments
    (lambda ($3 $2 $1 . $rest) `(new ,$2 ,$3))
    ;; NewExpression => MemberExpression
@@ -105,14 +114,13 @@
    (lambda ($2 $1 . $rest)
      `(CallExpression ,$1 ,$2))
    ;; CallExpression => CallExpression "[" Expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) `(ary-ref ,$3 ,$1))
+   (lambda ($4 $3 $2 $1 . $rest) `(aoo-ref ,$1 ,$3))
    ;; CallExpression => CallExpression "." Identifier
-   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$3 ,$1))
+   (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; Arguments => "(" ")"
-   (lambda ($2 $1 . $rest) '(Arguments))
+   (lambda ($2 $1 . $rest) '(ArgumentList))
    ;; Arguments => "(" ArgumentList ")"
-   (lambda ($3 $2 $1 . $rest)
-     `(Arguments ,(tl->list $2)))
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
    ;; ArgumentList => AssignmentExpression
    (lambda ($1 . $rest) (make-tl 'ArgumentList $1))
    ;; ArgumentList => ArgumentList "," AssignmentExpression
@@ -124,9 +132,9 @@
    ;; PostfixExpression => LeftHandSideExpression
    (lambda ($1 . $rest) $1)
    ;; PostfixExpression => LeftHandSideExpression $P1 "++"
-   (lambda ($3 $2 $1 . $rest) `(post-inc $1))
+   (lambda ($3 $2 $1 . $rest) `(post-inc ,$1))
    ;; PostfixExpression => LeftHandSideExpression $P2 "--"
-   (lambda ($3 $2 $1 . $rest) `(post-dec $1))
+   (lambda ($3 $2 $1 . $rest) `(post-dec ,$1))
    ;; $P1 => 
    (lambda ($1 . $rest) (NSI))
    ;; $P2 => 
@@ -148,7 +156,7 @@
    ;; UnaryExpression => "-" UnaryExpression
    (lambda ($2 $1 . $rest) `(neg ,$2))
    ;; UnaryExpression => "~" UnaryExpression
-   (lambda ($2 $1 . $rest) `(??? ,$2))
+   (lambda ($2 $1 . $rest) `(bitwise-not?? ,$2))
    ;; UnaryExpression => "!" UnaryExpression
    (lambda ($2 $1 . $rest) `(not ,$2))
    ;; MultiplicativeExpression => UnaryExpression
@@ -348,7 +356,8 @@
    ;; Statement => TryStatement
    (lambda ($1 . $rest) $1)
    ;; Block => "{" StatementList "}"
-   (lambda ($3 $2 $1 . $rest) `(Block ,$2))
+   (lambda ($3 $2 $1 . $rest)
+     `(Block unquote (cdr (tl->list $2))))
    ;; Block => "{" "}"
    (lambda ($2 $1 . $rest) '(Block))
    ;; StatementList => Statement
@@ -514,13 +523,16 @@
      `(FunctionExpression ,$2 ,(tl->list $4) ,$7))
    ;; FunctionExpression => "function" "(" FormalParameterList ")" "{" Func...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(FunctionExpression ,(tl->list $4) ,$6))
+     `(FunctionExpression ,(tl->list $3) ,$6))
    ;; FunctionExpression => "function" Identifier "(" ")" "{" FunctionBody "}"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(FunctionExpression ,$2 ,$6))
+     `(FunctionExpression
+        ,$2
+        (FormalParameterList)
+        ,$6))
    ;; FunctionExpression => "function" "(" ")" "{" FunctionBody "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(FunctionExpression ,$5))
+     `(FunctionExpression (FormalParameterList) ,$5))
    ;; FormalParameterList => Identifier
    (lambda ($1 . $rest)
      (make-tl 'FormalParameterList $1))

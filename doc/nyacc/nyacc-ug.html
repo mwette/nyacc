@@ -333,7 +333,7 @@ mid-rule actions and other features not discussed above.
 <a name="Generating-a-Language-to-Run-in-Guile"></a>
 <h3 class="section">1.3 Generating a Language to Run in Guile</h3>
 
-<p>One of the many cool feature of Guile is that it provides a backend
+<p>One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.   
 The files <samp>parser.scm</samp>, <samp>compiler.scm</samp> in the
 <samp>examples/nyacc/lang/calc</samp> directory and <samp>spec.scm</samp> in the
@@ -510,9 +510,9 @@ increasing order.  An equivalent specification would be as follows:
 </pre></div>
 
 <p>The precedence specification can be used along with <code>$prec</code> in
-the grammer to resolve shift-reduce conflicts in a grammar.  The
-classical case is the if-then-else construct in C, where a conflict
-occurs on the input
+the grammer to resolve shift-reduce or reduce-reduce conflicts in a 
+grammar.  The classical case is the if-then-else construct in C, where 
+a conflict occurs on the input
 </p><div class="example">
 <pre class="example">if (expr1) if (expr2) bar(); else baz();
 </pre></div>
@@ -722,7 +722,7 @@ recovery action (<em>&quot;syntax error&quot;</em>) will be executed.
 <a name="sublanguage"></a>
 <p>Say you have a <small>NYACC</small> specification <code>cspec</code> for the C language
 and you want to generate a machine for parsing C expressions.  You can
-go this via 
+do this using <code>restart-spec</code>:
 </p><div class="example">
 <pre class="example">(define cxspec (restart-spec cspec 'expression))
 (define cxmach (make-lalr-machine cxspec))
