@@ -477,7 +477,7 @@
     (BreakStatement
      ("break" ($$ (NSI)) Identifier ";"
       ($$ `(BreakStatement ,$3)))
-     ("break" ";" ($$ '(ContinueStatement)))
+     ("break" ";" ($$ '(BreakStatement)))
      )
 
     (ReturnStatement

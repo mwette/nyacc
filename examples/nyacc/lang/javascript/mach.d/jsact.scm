@@ -421,15 +421,15 @@
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for-in $4 $6 $8))
    ;; OptExprStmtNoIn => ":"
-   (lambda ($1 . $rest) `(Expression))
+   (lambda ($1 . $rest) '(NoExpression))
    ;; OptExprStmtNoIn => ExpressionNoIn ";"
    (lambda ($2 $1 . $rest) $1)
    ;; OptExprStmt => ";"
-   (lambda ($1 . $rest) '(ExprStmt))
+   (lambda ($1 . $rest) '(NoExpression))
    ;; OptExprStmt => Expression ";"
    (lambda ($2 $1 . $rest) $1)
    ;; OptExprClose => ";"
-   (lambda ($1 . $rest) '(Expression))
+   (lambda ($1 . $rest) '(NoExpression))
    ;; OptExprClose => Expression ")"
    (lambda ($2 $1 . $rest) $1)
    ;; ContinueStatement => "continue" $P3 Identifier ";"
@@ -443,7 +443,7 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(BreakStatement ,$3))
    ;; BreakStatement => "break" ";"
-   (lambda ($2 $1 . $rest) '(ContinueStatement))
+   (lambda ($2 $1 . $rest) '(BreakStatement))
    ;; $P4 => 
    (lambda ($1 . $rest) (NSI))
    ;; ReturnStatement => "return" $P5 Expression ";"

@@ -1,6 +1,6 @@
 ;;; compile javascript sxml from parser to tree-il
 ;;;
-;;; Copyright (C) 2015,2017 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -16,6 +16,10 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; NOTE: in guile22 apply => call
+;; guile 2.0 => 2.0 changes:
+;; 1) (apply ... => (call ...
+;; 2) (apply (primitive cons) ... => (primcall cons ...
+;; 3) (begin ex1 ex2 ... => (seq ex1 (seq ex2 (seq ex3 ...
 
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
@@ -25,6 +29,9 @@
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (language tree-il)
   )
+(use-modules (ice-9 pretty-print))
+
+;; === portability ===================
 
 (define-syntax-rule (if-guile-20 then else)
   (if (string=? "2.0" (effective-version)) then else))
@@ -35,18 +42,18 @@
 (define (make-pcall name . args)
   (if-guile-20 (cons* 'apply `(primitive ,name) args)
 	       (cons* 'primcall name args)))
+(define (il-begin . expr-list)
+  (if-guile-20
+   (cons 'begin expr-list)
+   (let iter ((xl expr-list))
+     (cons* 'seq (car xl) (if (null? xl) '(void) (iter (cdr xl)))))))
 
-(define (rtail kseed)
-  (cdr (reverse kseed)))
-
-(use-modules (ice-9 pretty-print))
+;; === debugging =====================
 
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (define (pperr tree)
   (pretty-print tree (current-error-port) #:per-line-prefix "  "))
-
-(define jslib-mod '(nyacc lang javascript jslib))
 
 ;; @heading variable scope
 ;; Variables in the compiler are kept in a scope-stack with the highest
@@ -89,6 +96,8 @@
 ;; lexical scoped variable
 ;; @end table
 
+;; === symbol table ================
+
 ;; push/pop scope level
 (define (push-scope dict)
   (list (cons '@l (1+ (assq-ref dict '@l))) (cons '@P dict)))
@@ -97,10 +106,17 @@
 (define (top-scope? dict)
   (eqv? 0 (assoc-ref dict '@l)))
 
+;; Add lexical to dict, return dict
 (define (add-lexical name dict)
   (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict))
 
-;; Add toplevel to dict.
+;; (add-lexicals name1 name2 ... dict) 
+(define (add-lexicals . args)
+  (let iter ((args args))
+    (if (null? (cddr args)) (add-lexical (car args) (cadr args))
+	(add-lexical (car args) (iter (cdr args))))))
+
+;; Add toplevel to dict, return dict
 (define (add-toplevel name dict)
   (acons name `(toplevel ,(string->symbol name)) dict))
 
@@ -126,22 +142,12 @@
       (if (not var) #f
 	  `(@@ ,(module-name env) ,sym))))))
 
-;; ice-9 r5rs
+;; === code-gen utilities ==============
 
-;; body needs a line to build "var arguments" from Array(@args)
-;; Right now args is the gensym of the rest argument named @code{@@args}.
-(define* (make-function args body #:key name)
-  (if (not args) (error "no args"))
-  (let ((tagsym (gensym "JS~"))	(valsym (gensym "JS~"))
-	(meta (if name `((namme ,name)) '())))
-    `(lambda ,meta
-       (lambda-case ((() #f @args #f () (,args))
-		     (prompt
-		      (const return)	; tag
-		      ,body		; body
-		      (lambda-case	; handler
-		       (((tag val) #f #f #f () (,tagsym ,valsym))
-			(lexical val ,valsym)))))))))
+(define jslib-mod '(nyacc lang javascript jslib))
+
+(define (rtail kseed)
+  (cdr (reverse kseed)))
 
 ;; @deffn {Procedure} make-let bindings exprs
 ;; Generates a Tree-IL let form from arguments, where @var{bindings} looks like
@@ -164,11 +170,28 @@
 	      (cons (cadar binds) vals)
 	      (cdr binds)))))
 
+;; @deffn {Procedure} with-exit name body
+;; use for return and break where break is passed '(void)
+(define (with-exit name body)
+  (let ((arg-sym (gensym "JS~")))
+    `(prompt
+      (const ,name)
+      ,body
+      (lambda-case (((cont arg) #f #f #f () (,(gensym "JS~") ,arg-sym))
+		    (lexical arg ,arg-sym))))))
+
 ;; @deffn {Procedure} make-thunk expr => `(lambda ...)
 ;; Generate a thunk.
 ;; @end deffn
 (define* (make-thunk expr #:key (name '~thunk))
   `(lambda ((name . ,name)) (lambda-case ((() #f #f #f () ()) ,expr))))
+
+;; body needs a line to build "var arguments" from Array(@args)
+;; Right now args is the gensym of the rest argument named @code{@@args}.
+(define* (make-function args body #:key name)
+  (if (not args) (error "no args"))
+  `(lambda ,(if name `((name ,name)) '())
+     (lambda-case ((() #f @args #f () (,args)) ,body))))
 
 ;; @deffn {Procedure} resolve-ref ref => exp
 ;; Resolve a possible reference (lval) to an expression (rval).
@@ -240,6 +263,8 @@
       (if (null? (cdr inp)) (cons* arg0 arg1 res)
 	  (iter (cons (car inp) res) (cdr inp)))))
    ))
+
+;; ====================================
 	 
 ;; @deffn {Procedure} js-xml->tree-il-ext exp env opts
 ;; Compile javascript SXML tree to external tree-il representation.
@@ -247,8 +272,6 @@
 ;; @end deffn
 (define (js-sxml->tree-il-ext exp env opts)
 
-  (define cep (current-error-port))
-  
   ;; In the case where we pick off ``low hanging fruit'' we need to coordinate
   ;; the actions of the up and down handlers.   The down handler will provide
   ;; a kid-seed in order and generate a null list.  The up handler, upon seeing
@@ -287,7 +310,6 @@
     ;; declarations: we need to trap ident references and replace them
     
     ;;(sferr "fD: tree=~S ...\n" (car tree))
-    ;;(display "fD\n" cep) (pperr tree)
     (sxml-match tree
 
       ((Identifier ,name)
@@ -333,13 +355,13 @@
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((do ,rest ...)
-       (values tree '() (add-symboldef "~loop" (push-scope dict))))
+       (values tree '() (add-lexical "~loop" (push-scope dict))))
 
       ((while ,rest ...)
-       (values tree '() (add-symboldef "~loop" (push-scope dict))))
+       (values tree '() (add-lexical "~loop" (push-scope dict))))
 
       ((for ,rest ...)
-       (values tree '() (add-symboldef "~loop" (push-scope dict))))
+       (values tree '() (add-lexical "~loop" (push-scope dict))))
 
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
        (values tree '() (push-scope (add-symboldef name dict))))
@@ -595,43 +617,49 @@
 
        ;; IfStatement
        ((IfStatement)
+	(sferr "IfStatement:\n") (pperr kseed)
 	(values (cons (if (= 3 (length kseed))
-			  `(if ,(cadr kseed) ,(car seed) (void))
-			  `(if ,(caddr kseed) ,(cadr seed) ,(car seed)))
+			  `(if ,(cadr kseed) ,(car kseed) (void))
+			  `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)))
 		      seed) kdict))
 
-       ;; NOTE: TODO
-       ;; The forms "do", "while" and "for", to support "continue" and "break",
-       ;; will need either two prompts or one prompt and tail calls ???
+       ;; iter-stmts: "do", "while" and "for"
+       ;;
+       ;; @item During fD we push scope w/ a ~loop variable.
+       ;; @item During fU we use that loop to generate a closure to loop
+       ;;
+       ;; "continue" and "break"
+       ;; These will need either two prompts or one prompt and tail calls ???
        ;; * break:
        ;;   (prompt (const break)
        ;;     (let (~loop (lambda () ...)
-       ;; * continue:
-       ;;   + do: NOT just a tail call, need to eval expr again
-       ;;         so continue => if (expr) (~loop) (abort break)
-       ;;   + while: just a tail call
-       ;; strategy: for every "do", "while" and "for" we push scope w/ the
-       ;; ~loop variable
+       ;; * continue: hmmm ...
+       ;; Maybe we should add reference, ~cont, to evaluate and set that
+       ;; to (const #t) for "while" and to the expr for "do"
+       ;; if labelled Continue then make sure it's before an iter-stmt
+
        
        ;; do: "do" stmt "while" expr ;
        ((do)
 	(let* ((expr (car kseed))
 	       (stmt (cadr kseed))
-	       (var (lookup "~loop" kdict)) ; (lexical ~loop JS~1234)
-	       (sym (caddr var))	    ; JS~1234
-	       (body `(begin ,stmt (if ,expr ,(make-call var) (void))))
-	       (doit `(letrec (~loop) (,sym) (,(make-thunk body))
-			      ,(make-call var))))
-	  (values (cons doit seed) (pop-scope kdict))))
+	       (lvar (lookup "~loop" kdict)) ; (lexical ~loop JS~1235)
+	       (lsym (caddr lvar))	     ; JS~1235
+	       (body `(begin ,stmt (if ,expr ,(make-call lvar) (void))))
+	       (body `(letrec (~loop) (,lsym) (,(make-thunk body))
+			      ,(make-call lvar)))
+	       (body (with-exit 'break body)))
+	  (values (cons body seed) (pop-scope kdict))))
 	
        ;; while
        ((while)
 	(let* ((expr (cadr kseed)) (stmt (car kseed))
 	       (var (lookup "~loop" kdict)) (sym (caddr var))
 	       (body `(if ,expr (begin ,stmt ,(make-call var)) (void)))
-	       (doit `(letrec (~loop) (,sym) (,(make-thunk body))
-			      ,(make-call var))))
-	  (values (cons doit seed) (pop-scope kdict))))
+	       (body `(letrec (~loop) (,sym) (,(make-thunk body))
+			      ,(make-call var)))
+	       (body (with-exit 'break body)))
+	  (values (cons body seed) (pop-scope kdict))))
 	
        ;; for    : need to (pop-scope kdict)
        ;; for-in : need to (pop-scope kdict)
@@ -641,20 +669,36 @@
 	(values (cons '(void) seed) kdict))
        
        ;; ContinueStatement
-       ((ContinueStatement)
+       #;((ContinueStatement)
 	(values
 	 (cons
-	  (if (> (length kseed) 2)
+	  (if (> (length kseed) 1)
 	      (error "continue w/ id arg not supported (yet)")
-	      ;;(make-call (lookup "~loop" kdict))
-	      (error "continue not implemented correctly yet")
-	      )
-	  kseed) kdict))
+	      `(if ,(make-call (lookup "~cont" kdict))
+		   ,(make-call (lookup "~loop" kdict))
+		   (void)))
+	  seed) kdict))
+
+       ;; BreakStatement
+       ((BreakStatement)
+	(values
+	 (cons
+	  (if (> (length kseed) 1)
+	      (error "break w/ id arg not supported (yet)")
+	      `(abort (const break) ((void)) (const '())))
+	  seed)
+	 kdict))
 
        ;; ReturnStatement: uses a prompt, if no value return #undefined
-       ((ReturnStatement)
+       #;((ReturnStatement)
 	(let ((retval (if (> (length kseed) 1) (car kseed) '(void))))
 	  (values (cons retval seed) kdict)))
+       ((ReturnStatement)
+	(values
+	 (cons `(abort (const return) 
+		       (,(if (> (length kseed) 1) (car kseed) '(void)))
+		       (const '()))
+	  seed) kdict))
 
        ;; WithStatement
        ;; SwitchStatement
@@ -674,7 +718,7 @@
 	       (name (case (car il-name)
 			((@ @@) (caddr il-name)) (else (cadr il-name))))
 	       (args (list-ref (lookup "@args" kdict) 2))
-	       (body `(begin ,@(car kseed)))
+	       (body (with-exit 'return `(begin ,@(car kseed))))
 	       (fctn `(define ,name ,(make-function args body #:name name))))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
@@ -715,7 +759,7 @@
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
-  ;;(sferr "exp:\n") (pperr exp)
+  (sferr "sxml:\n") (pperr exp)
   (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
     (sferr "tree-il:\n") (pperr xrep)
     (values (parse-tree-il '(const "[skip compile & execute]")) env env)

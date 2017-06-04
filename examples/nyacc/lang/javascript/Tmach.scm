@@ -51,7 +51,7 @@
 
 (when #t
   (let ((res (with-input-from-file ",ex1.js" dev-parse-js)))
-    (pretty-print res)
+    ;;(pretty-print res)
     (let ((wat (compile-tree-il res (current-module) '())))
       ;;(simple-format #t "~S\n" wat)
       (let ((val (compile wat
