@@ -752,10 +752,17 @@
 	       ;; make the body of the loop
 	       (body `(begin ,stmt (if ,expr ,(make-call lvar) (void))))
 	       ;; add prompt for "continue"; "break" if condition fails
-	       (hdlr `(if ,expr (void) (abort (const ,btag) () (const '()))))
+       	       ;; NEEDS CLEANUP
+	       ;;(hdlr `(if ,expr (void) (abort (const ,btag) () (const '()))))
+	       (hdlr `(if ,expr
+			  ,(make-call lvar)
+			  (abort (const ,btag) () (const '()))))
+	       (ctag-lexical (assoc-ref "~continue" kdict))
 	       (body (with-exit-handler ctag body hdlr))
 	       ;; add letrec for loop
-	       (body `(letrec (~loop) (,lsym) (,(make-thunk body))
+	       (body `(letrec (~loop ~cont) (,lsym ,ctag)
+			      (,(make-thunk body)
+			       (apply (primitive make-prompt-tag)))
 			      ,(make-call lvar)))
 	       ;; add prompt for "break"
 	       (body (with-exit-handler btag body '(void))))
