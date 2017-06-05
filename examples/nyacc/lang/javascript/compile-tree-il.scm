@@ -15,12 +15,6 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; NOTE: in guile22 apply => call
-;; guile 2.0 => 2.0 changes:
-;; 1) (apply ... => (call ...
-;; 2) (apply (primitive cons) ... => (primcall cons ...
-;; 3) (begin ex1 ex2 ... => (seq ex1 (seq ex2 (seq ex3 ...
-
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
   #:use-module (nyacc lang javascript jslib)
@@ -32,6 +26,10 @@
 (use-modules (ice-9 pretty-print))
 
 ;; === portability ===================
+;; guile 2.0 => 2.0 changes:
+;; 1) (apply ... => (call ...
+;; 2) (apply (primitive cons) ... => (primcall cons ...
+;; 3) (begin ex1 ex2 ... => (seq ex1 (seq ex2 (seq ex3 ...
 
 (define-syntax-rule (if-guile-20 then else)
   (if (string=? "2.0" (effective-version)) then else))
@@ -103,8 +101,12 @@
   (list (cons '@l (1+ (assq-ref dict '@l))) (cons '@P dict)))
 (define (pop-scope dict)
   (or (assq-ref dict '@P) (error "coding error: too many pops")))
-(define (top-scope? dict)
+(define (top-level? dict)
   (eqv? 0 (assoc-ref dict '@l)))
+
+;; Add toplevel to dict, return dict
+(define (add-toplevel name dict)
+  (acons name `(toplevel ,(string->symbol name)) dict))
 
 ;; Add lexical to dict, return dict
 (define (add-lexical name dict)
@@ -116,16 +118,17 @@
     (if (null? (cddr args)) (add-lexical (car args) (cadr args))
 	(add-lexical (car args) (iter (cdr args))))))
 
-;; Add toplevel to dict, return dict
-(define (add-toplevel name dict)
-  (acons name `(toplevel ,(string->symbol name)) dict))
-
 ;; Add lexcial or toplevel based on level.
 (define (add-symboldef name dict)
   ;;(sferr "add-symboldef for ~S at @l=~S\n" name (assq-ref dict '@l))
   (if (positive? (assq-ref dict '@l))
       (add-lexical name dict)
       (add-toplevel name dict)))
+
+;; add label for continue break.  The value will be a pair
+;; with car the continue ref and cdr the break ref
+(define (add-label name dict)
+  (acons name (cons #f #f) dict))
 
 (define (lookup name dict)
   ;;(when (string=? name "foo") (sferr "lookup ~S\n" name) (pperr dict))
@@ -142,6 +145,18 @@
       (if (not var) #f
 	  `(@@ ,(module-name env) ,sym))))))
 
+;; @deffn {Procedure} find-exit type dict => gensym
+;; used along with @code{with-exit} (see below)
+;; (find-exit 'break dict) => JS~1234
+;; @end deffn
+(define find-exit
+  (let ((tmap '((break . "~break") (continue . "~continue")
+		(loop . "~loop") (return . "~return"))))
+    (lambda* (type dict #:key label)
+      (let* ((sym (lookup (assq-ref tmap type) dict)))
+	(if (not sym) (error "JS: exit not found:" type))
+	(caddr sym)))))
+    
 ;; === code-gen utilities ==============
 
 (define jslib-mod '(nyacc lang javascript jslib))
@@ -172,7 +187,8 @@
 
 ;; @deffn {Procedure} with-exit name body
 ;; use for return and break where break is passed '(void)
-(define (with-exit name body)
+;; @end deffn
+(define (with-exit-arg name body)
   (let ((arg-sym (gensym "JS~")))
     `(prompt
       (const ,name)
@@ -180,11 +196,18 @@
       (lambda-case (((cont arg) #f #f #f () (,(gensym "JS~") ,arg-sym))
 		    (lexical arg ,arg-sym))))))
 
+(define (with-exit-handler name body handler)
+  `(prompt
+    (const ,name)
+    ,body
+    (lambda-case (((cont) #f #f #f () (,(gensym "JS~")))
+		  ,handler))))
+
 ;; @deffn {Procedure} make-thunk expr => `(lambda ...)
 ;; Generate a thunk.
 ;; @end deffn
-(define* (make-thunk expr #:key (name '~thunk))
-  `(lambda ((name . ,name)) (lambda-case ((() #f #f #f () ()) ,expr))))
+(define* (make-thunk expr #:key name)
+  `(lambda ,(if name '((name)) '()) (lambda-case ((() #f #f #f () ()) ,expr))))
 
 ;; body needs a line to build "var arguments" from Array(@args)
 ;; Right now args is the gensym of the rest argument named @code{@@args}.
@@ -202,7 +225,7 @@
 (define (resolve-ref ref)
   (case (car ref)
     ((toplevel lexical) ref)
-    (else `(,il-call (@@ ,jslib-mod js-ooa-get) ,ref))))
+    (else `(apply (@@ ,jslib-mod js-ooa-get) ,ref))))
 
 ;; @deffn {Procedure} op-on-ref ref op ord => `(let ...)
 ;; This routine generates code for @code{ref++}, etc where @var{ref} is
@@ -215,20 +238,20 @@
 	 (val (case (car ref)
 		((toplevel) ref)
 		((lexical) ref)
-		(else `(,il-call (@@ ,jslib-mod js-ooa-get) ,ref))))
+		(else `(apply (@@ ,jslib-mod js-ooa-get) ,ref))))
 	 (loc `(lexical ~ref ,sym))
-	 (sum `(,il-call (@@ ,jslib-mod ,op) (const 1) ,loc))
+	 (sum `(apply (@@ ,jslib-mod ,op) (const 1) ,loc))
 	 (set (case (car ref)
 		((toplevel lexical) `(set! ,ref ,sum))
-		(else `(,il-call (@@ ,jslib-mod js-ooa-put) ,ref ,sum))))
+		(else `(apply (@@ ,jslib-mod js-ooa-put) ,ref ,sum))))
 	 (rval (case ord ((pre) val) ((post) loc))))
     `(let (~ref) (,sym) (,val) (begin ,set ,rval))))
 
 ;; for lt + rt, etc
 (define (op-call op kseed)
-  (rev/repl il-call `(@@ ,jslib-mod ,op) kseed))
+  (rev/repl 'apply `(@@ ,jslib-mod ,op) kseed))
 (define (op-call/prim op kseed)
-  (rev/repl il-call `(primitive ,op) kseed))
+  (rev/repl 'apply `(primitive ,op) kseed))
 
 ;; deffn {Procedure} op-assn kseed => `(set! lhs rhs)
 ;; op-assn: for lhs += rhs etc
@@ -277,6 +300,59 @@
   ;; a kid-seed in order and generate a null list.  The up handler, upon seeing
   ;; a null list, will just incorporate the kids w/o the normal reverse.
 
+  ;; @deffn {Procedure} remove-empties src-elts-tail => src-elts-tail
+  ;; @end deffn
+  (define (remove-empties src-elts-tail)
+    (let iter ((src src-elts-tail))
+      (if (null? src) '()
+	  (let ((elt (car src)) (rest (cdr src)))
+	    (if (eq? (car elt) 'EmptyStatement)
+		(iter rest)
+		(cons elt (iter rest)))))))
+
+  ;; @deffn {Procedure} labelable-stmt? stmt => #f|stmt
+  ;; This predicate determines if the statement can have a preceeding label.
+  ;; @end deffn
+  (define (labelable-stmt? stmt)
+    (memq (car stmt) '(do while for for-in BreakStatement LabelledStatement)))
+  
+  ;; @deffn {Procedure} cleanup-labels src-elts-tail => src-elts-tail
+  ;; Assumes all top-level EmptyStatements have been removed.
+  ;; This reduces @code{LabelledStatement}s to the form
+  ;; @example
+  ;; @dots{} (LabelledStatement id iter-stmt) @dots{}
+  ;; @dots{} (LabelledStatement id (LabelledStatement id iter-stmt)) @dots{}
+  ;; @end example
+  ;; @noindent
+  ;; where @code{iter-stmt} is @code{do}, @code{while}, @code{for} or
+  ;; @code{switch}, or removes them if not preceeding iteration statement.
+  ;; @end deffn
+  (define (cleanup-labels src-elts-tail)
+    (let iter ((src src-elts-tail))
+      (if (null? src) '()
+	  (if (eq? (caar src) 'LabelledStatement)
+	      (call-with-values
+		  (lambda ()
+		    (let* ((elt (car src)) (rest (cdr src))
+			   (id (cadr elt)) (stmt (caddr elt)))
+		      (if (eqv? 'EmptyStatement (car stmt))
+			  (if (and (pair? rest) (labelable-stmt? (car rest)))
+			      (values id (car rest) (cdr rest))
+			      (values id stmt rest))
+			  (if (labelable-stmt? stmt)
+			      (values id stmt rest)
+			      (values id '(EmptyStatement) (cons stmt rest))))))
+		(lambda (id stmt rest)
+		  (if (eqv? 'EmptyStatement (car stmt))
+		      (begin
+			(simple-format (current-error-port)
+				       "removing misplaced label: ~A\n"
+				       (cadr id))
+			(iter rest))
+		      (cons `(LabelledStatement ,id ,stmt) (iter rest)))))
+	      (cons (car src) (iter (cdr src)))))))
+
+  
   ;; @deffn {Procedure} fold-in-blocks src-elts-tail => src-elts-tail
   ;; Look through source elements.  Change every var xxx to a
   ;; @example
@@ -296,8 +372,7 @@
 	  (let ((elt (car src)) (rest (cdr src)))
 	    ;;(simple-format #t "=> ~S\n" (car elt))
 	    (if (eq? (car elt) 'VariableStatement)
-		;;(list elt (cons 'Block (iter rest))) ;; .. (Vs ) (Block )
-		(list (cons* 'Block elt (iter rest))) ;; .. (Block (Vs ))
+		(list (cons* 'Block (cadr elt) (iter rest)))
 		(cons elt (iter rest)))))))
 		     
   (define (fD tree seed dict) ;; => tree seed dict
@@ -345,8 +420,18 @@
       ((obj-ref ,expr (Identifier ,name))
        (values `(ooa-ref ,expr (PropertyName ,name)) '() dict))
 
-      ;; if toplevel we generate (toplevel "name")
-      ;; if lexical we generate (lexical "name" "gensym")
+      ((Block ,elts ...)
+       ;; see comments on SourceElements below
+       (let* ((elts (remove-empties elts))
+	      (elts (cleanup-labels elts))
+	      (elts (fold-in-blocks elts))
+	      )
+	 (unless #t
+	   (sferr "Bl was:\n") (pperr tree)
+	   (sferr "Bl is:\n") (pperr (cons 'Block elts)))
+	 ;;(values (cons 'Block elts) '() dict)))
+	 (values tree '() dict)))
+      
       ((VariableDeclaration (Identifier ,name) . ,rest)
        ;;(sferr "fU: VD\n") (pperr dict)
        (let* ((dict1 (add-symboldef name dict))
@@ -355,19 +440,36 @@
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((do ,rest ...)
-       (values tree '() (add-lexical "~loop" (push-scope dict))))
+       (values tree '() (add-lexicals "~loop" "~break" "~continue" 
+				      (push-scope dict))))
 
       ((while ,rest ...)
-       (values tree '() (add-lexical "~loop" (push-scope dict))))
+       (values tree '() (add-lexicals "~loop" "~break" "~continue"
+				      (push-scope dict))))
 
       ((for ,rest ...)
-       (values tree '() (add-lexical "~loop" (push-scope dict))))
+       (values tree '() (add-lexicals "~loop" "~break" "~continue"
+				      (push-scope dict))))
+
+      ((for-in ,rest ...)
+       (values tree '() (add-lexicals "~loop" "~break" "~continue"
+				      (push-scope dict))))
+
+      ((switch ,rest ...)
+       (values tree '() (add-lexical "~break" (push-scope dict))))
+
+      ((LabelledStatement (Identifier ,name) ,stmt)
+       ;; TODO: how to push down in scope
+       ;; idea: go down to the "do"; push scope as above and add labels
+       (values tree '() (add-label name dict)))
 
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
-       (values tree '() (push-scope (add-symboldef name dict))))
+       (values tree '()
+	       (add-lexical "~return" (push-scope (add-symboldef name dict)))))
       
       ((FunctionExpression (Identifier ,name) ,rest ...)
-       (values tree '() (add-symboldef name (push-scope dict))))
+       (values tree '()
+	       (add-lexical "~return" (add-lexical name (push-scope dict)))))
       
       ((FunctionExpression ,rest ...)
        ;; symbol is a hack
@@ -393,20 +495,19 @@
 	      )
 	 (values tree '() dikt)))
       
-      ((SourceElements . ,elts)
-       ;; make to VDL always followed by a Block to end of
-       (let* (
-	      ;;(lvl (assq-ref dict '@l))
-	      ;;(selt (if (zero? lvl) tree
-		;;	(cons 'SourceElements (fold-in-blocks elts))))
-	      (selt (if (top-scope? dict) tree
-			(cons 'SourceElements (fold-in-blocks elts))))
-	      )
-	 ;;(sferr "lvl=~S\n" lvl)
-	 (unless (or #t (top-scope? dict))
-	   (sferr "was:\n") (pperr tree)
-	   (sferr " is:\n") (pperr selt))
-	 (values selt '() dict)))
+      ((SourceElements . ,elts) ;; a list of statements and fctn-decls
+       ;; Fix up list of source elements.
+       ;; 1) Remove EmptyStatements.
+       ;; 2) If LabelledStatement has EmptyStatement, merge with following
+       ;;    do, while, for or switch.  Otherwise remove.
+       ;; 3) Make to VDL always followed by a Block to end of SourceElements.
+       (let* ((elts (remove-empties elts))
+	      (elts (cleanup-labels elts))
+	      (elts (if (top-level? dict) elts (fold-in-blocks elts))))
+	 (unless #t
+	   (sferr "SE was:\n") (pperr tree)
+	   (sferr "SE is:\n") (pperr (cons 'SourceElements elts)))
+	 (values (cons 'SourceElements elts) '() dict)))
 
       (,otherwise
        ;;(sferr "fD: otherwise\n") (pperr tree)
@@ -420,6 +521,7 @@
     ;; Approach: always return kdict or (pop-scope kdict)
     (if
      (null? tree) (values (cons kseed seed) dict)
+     
      (case (car tree)
        ((*TOP*)
 	(values kseed kdict))
@@ -480,7 +582,7 @@
        
        ;; CallExpression
        ((CallExpression)
-	(values (cons (rev/repl il-call kseed) seed) kdict))
+	(values (cons (rev/repl 'apply kseed) seed) kdict))
 
        ;; ArgumentList
        ((ArgumentList) ;; append-reverse-car ??? 
@@ -577,7 +679,7 @@
        ;; VariableDeclarationList
        ((VariableDeclarationList)
 	(let* ((top (= 0 (assq-ref dict '@l))) ; at top ?
-	       (top (top-scope? dict))
+	       (top (top-level? dict))
 	       (tag (if top 'begin 'bindings)) ; begin or bindings for let
 	       (tail (rtail kseed)))
 	  ;;(sferr "VDL:\n") (pperr expr)
@@ -617,7 +719,6 @@
 
        ;; IfStatement
        ((IfStatement)
-	(sferr "IfStatement:\n") (pperr kseed)
 	(values (cons (if (= 3 (length kseed))
 			  `(if ,(cadr kseed) ,(car kseed) (void))
 			  `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)))
@@ -641,72 +742,83 @@
        
        ;; do: "do" stmt "while" expr ;
        ((do)
-	(let* ((expr (car kseed))
-	       (stmt (cadr kseed))
+	(let* ((expr (car kseed))	; the condition
+	       (stmt (cadr kseed))	; the statement to execute
+	       ;; get lexicals for ~loop ~break ~continue
 	       (lvar (lookup "~loop" kdict)) ; (lexical ~loop JS~1235)
 	       (lsym (caddr lvar))	     ; JS~1235
+	       (btag (find-exit 'break kdict))
+	       (ctag (find-exit 'continue kdict))
+	       ;; make the body of the loop
 	       (body `(begin ,stmt (if ,expr ,(make-call lvar) (void))))
+	       ;; add prompt for "continue"; "break" if condition fails
+	       (hdlr `(if ,expr (void) (abort (const ,btag) () (const '()))))
+	       (body (with-exit-handler ctag body hdlr))
+	       ;; add letrec for loop
 	       (body `(letrec (~loop) (,lsym) (,(make-thunk body))
 			      ,(make-call lvar)))
-	       (body (with-exit 'break body)))
+	       ;; add prompt for "break"
+	       (body (with-exit-handler btag body '(void))))
 	  (values (cons body seed) (pop-scope kdict))))
 	
-       ;; while
+       ;; while:
        ((while)
 	(let* ((expr (cadr kseed)) (stmt (car kseed))
-	       (var (lookup "~loop" kdict)) (sym (caddr var))
-	       (body `(if ,expr (begin ,stmt ,(make-call var)) (void)))
-	       (body `(letrec (~loop) (,sym) (,(make-thunk body))
-			      ,(make-call var)))
-	       (body (with-exit 'break body)))
+	       (lvar (lookup "~loop" kdict)) (lsym (caddr lvar))
+	       (btag (find-exit 'break kdict))
+	       (ctag (find-exit 'continue kdict))
+	       (body `(if ,expr (begin ,stmt ,(make-call lvar)) (void)))
+	       (body (with-exit-handler ctag body '(void)))
+	       (body `(letrec (~loop) (,lsym) (,(make-thunk body))
+			      ,(make-call lvar)))
+	       (body (with-exit-handler btag body '(void))))
 	  (values (cons body seed) (pop-scope kdict))))
 	
-       ;; for    : need to (pop-scope kdict)
-       ;; for-in : need to (pop-scope kdict)
+       ;; for    : pop-scope needed
+       ;; for-in : pop-scope needed
 
        ;; NoExpression (used by for and for-in)
        ((NoExpression)
 	(values (cons '(void) seed) kdict))
        
-       ;; ContinueStatement
-       #;((ContinueStatement)
+       ;; ContinueStatement: abort w/ zero args
+       ((ContinueStatement)
 	(values
 	 (cons
 	  (if (> (length kseed) 1)
 	      (error "continue w/ id arg not supported (yet)")
-	      `(if ,(make-call (lookup "~cont" kdict))
-		   ,(make-call (lookup "~loop" kdict))
-		   (void)))
+	      `(abort (const ,(find-exit 'continue kdict)) () (const '())))
 	  seed) kdict))
 
-       ;; BreakStatement
+       ;; BreakStatement: abort w/ zero args
        ((BreakStatement)
 	(values
 	 (cons
 	  (if (> (length kseed) 1)
 	      (error "break w/ id arg not supported (yet)")
-	      `(abort (const break) ((void)) (const '())))
-	  seed)
-	 kdict))
-
-       ;; ReturnStatement: uses a prompt, if no value return #undefined
-       #;((ReturnStatement)
-	(let ((retval (if (> (length kseed) 1) (car kseed) '(void))))
-	  (values (cons retval seed) kdict)))
-       ((ReturnStatement)
-	(values
-	 (cons `(abort (const return) 
-		       (,(if (> (length kseed) 1) (car kseed) '(void)))
-		       (const '()))
+	      `(abort (const ,(find-exit 'break kdict)) () (const '())))
 	  seed) kdict))
 
+       ;; ReturnStatement: abort w/ one arg
+       ((ReturnStatement)
+	(values
+	 (cons `(abort (const ,(find-exit 'return kdict))
+		       (,(if (> (length kseed) 1) (car kseed) '(void)))
+		       (const '()))
+	       seed) kdict))
+
        ;; WithStatement
-       ;; SwitchStatement
+       ;; SwitchStatement: pop-scope needed
        ;; CaseBlock
        ;; CaseClauses
        ;; CaseClause
        ;; DefaultClause
+       
        ;; LabelledStatement
+       ((LabelledStatement)
+	(sferr "skipping labelled statement\n")
+	(values (cons (car kseed) seed) kdict))
+
        ;; ThrowStatement
        ;; TryStatement
        ;; Catch
@@ -718,14 +830,16 @@
 	       (name (case (car il-name)
 			((@ @@) (caddr il-name)) (else (cadr il-name))))
 	       (args (list-ref (lookup "@args" kdict) 2))
-	       (body (with-exit 'return `(begin ,@(car kseed))))
+	       (ptag (find-exit 'return kdict))
+	       (body (with-exit-arg ptag `(begin ,@(car kseed))))
 	       (fctn `(define ,name ,(make-function args body #:name name))))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FunctionExpression
        ((FunctionExpression)
 	(let* ((args (list-ref (lookup "@args" kdict) 2))
-	       (body `(begin ,@(car kseed)))
+	       (ptag (find-exit 'return kdict))
+	       (body (with-exit-arg ptag `(begin ,@(car kseed))))
 	       (fctn (make-function args body)))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
@@ -759,7 +873,7 @@
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
-  (sferr "sxml:\n") (pperr exp)
+  ;;(sferr "sxml:\n") (pperr exp)
   (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
     (sferr "tree-il:\n") (pperr xrep)
     (values (parse-tree-il '(const "[skip compile & execute]")) env env)
