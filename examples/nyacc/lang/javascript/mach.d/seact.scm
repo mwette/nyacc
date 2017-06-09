@@ -520,9 +520,10 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(TryStatement ,$2 ,$3 ,$4))
    ;; Catch => "catch" "(" Identifier ")" Block
-   (lambda ($5 $4 $3 $2 $1 . $rest) `(Catch ,3 ,$5))
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(Catch ,$3 ,$5))
    ;; Finally => "finally" Block
-   (lambda ($2 $1 . $rest) `(Finally ,2))
+   (lambda ($2 $1 . $rest) `(Finally ,$2))
    ;; FunctionDeclaration => "function" Identifier "(" FormalParameterList ...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(FunctionDeclaration ,$2 ,(tl->list $4) ,$7))

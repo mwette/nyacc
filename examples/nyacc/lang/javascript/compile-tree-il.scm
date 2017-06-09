@@ -52,6 +52,8 @@
    (let iter ((xl expr-list))
      (cons* 'seq (car xl) (if (null? xl) '(void) (iter (cdr xl)))))))
 
+(define (jsym) (gensym "JS~"))
+
 ;; === debugging =====================
 
 (define (sferr fmt . args)
@@ -121,7 +123,7 @@
 
 ;; Add lexical to dict, return dict
 (define (add-lexical name dict)
-  (acons name `(lexical ,(string->symbol name) ,(gensym "JS~")) dict))
+  (acons name `(lexical ,(string->symbol name) ,(jsym)) dict))
 
 ;; (add-lexicals name1 name2 ... dict) 
 (define (add-lexicals . args)
@@ -155,28 +157,51 @@
       (if (not var) #f
 	  `(@@ ,(module-name env) ,sym))))))
 
-(define (add-exit dict)
-  (acons "~exit" (make-prompt-tag "JS~") dict))
+;; === using prompts ====================
 
-;; @deffn {Procedure} find-exit dict => gensym
+(define (add-exit name dict)
+  (acons name (make-prompt-tag "JS~") dict))
+
+;; @deffn {Procedure} find-exit-tag name dict => prompt-tag
 ;; used along with @code{with-exit} (see below)
 ;; (find-exit dict) => JS~1234
 ;; (find-exit dict #:label "oloop") => JS~1234
 ;; @end deffn
 ;; if label then lookup label and get exit from child
-(define* (find-exit dict #:key label)
+(define* (find-exit-tag name dict #:key label)
   (if label
       (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
 	(if (not pdict) #f
 	    (if (and (assoc-ref pdict label)
 		     (assoc-ref "~exit" cdict))
-		(assoc-ref "~exit" cdict)
+		(assoc-ref name cdict)
 		(iter pdict (assoc-ref pdict '@P)))))
-      (let* ((sym (lookup "~exit" dict)))
-	(if (not sym) (error "JS: exit not found"))
+      (let* ((sym (lookup name dict)))
+	(if (not sym) (error "JS: exit not found for " name))
 	sym)))
     
-;; === code-gen utilities ==============
+;; @deffn {Procedure} with-exit tag body
+;; use for return and break where break is passed '(void)
+;; tag is from (make-prompt-tag)
+;; @end deffn
+(define (with-exit-arg tag body)
+  (let ((arg-sym (jsym)))
+    `(prompt
+      (const ,tag)
+      ,body
+      (lambda-case (((cont arg) #f #f #f () (,(jsym) ,arg-sym))
+		    (lexical arg ,arg-sym))))))
+
+;; now handler has one arg: called-by-continue?
+;; tagvar is (
+(define (with-exit-handler tag body handler arg)
+  `(prompt
+    (const ,tag)
+    ,body
+    (lambda-case (((k ,(cadr arg)) #f #f #f () (,(jsym) ,(caddr arg)))
+		  ,handler))))
+
+;; === codegen procedures =============
 
 (define (rtail kseed)
   (cdr (reverse kseed)))
@@ -214,26 +239,6 @@
 	      (cons (cadar binds) vals)
 	      (cdr binds)))))
 
-;; @deffn {Procedure} with-exit name body
-;; use for return and break where break is passed '(void)
-;; @end deffn
-(define (with-exit-arg name body)
-  (let ((arg-sym (gensym "JS~")))
-    `(prompt
-      (const ,name)
-      ,body
-      (lambda-case (((cont arg) #f #f #f () (,(gensym "JS~") ,arg-sym))
-		    (lexical arg ,arg-sym))))))
-
-;; now handler has one arg: called-by-continue?
-;; tagvar is (
-(define (with-exit-handler tag body handler arg)
-  `(prompt
-    (const ,tag)
-    ,body
-    (lambda-case (((k ,(cadr arg)) #f #f #f () (,(gensym "JS~") ,(caddr arg)))
-		  ,handler))))
-
 ;; @deffn {Procedure} make-thunk expr => `(lambda ...)
 ;; Generate a thunk.
 ;; @end deffn
@@ -245,7 +250,12 @@
 (define* (make-function this args body #:key name)
   (if (not args) (error "no args"))
   `(lambda ,(if name `((name ,name)) '())
-     (lambda-case (((this) #f @args #f () (,this ,args)) ,body))))
+     ;; If I add this as first argument, then calls to guile procedures
+     ;; don't work.  Either dynamic binding to this or check if js call
+     ;; (e.g., add meta of (js . #t)
+     ;; -
+     ;;(lambda-case (((this) #f @args #f () (,this ,args)) ,body))))
+     (lambda-case ((() #f @args #f () (,args)) ,body))))
 
 ;; used in fU for switch cases
 ;; (let ((key (if key #t (equal? case-key val))))
@@ -283,7 +293,7 @@
 ;; @var{ord} is @code{'pre} or @code{'post}.
 ;; @end deffn
 (define (op-on-ref ref op ord)
-  (let* ((sym (gensym "JS~"))
+  (let* ((sym (jsym))
 	 (val (case (car ref)
 		((toplevel) ref)
 		((lexical) ref)
@@ -419,7 +429,6 @@
     (let iter ((src  src-elts-tail))
       (if (null? src) '()
 	  (let ((elt (car src)) (rest (cdr src)))
-	    ;;(simple-format #t "=> ~S\n" (car elt))
 	    (if (eq? (car elt) 'VariableStatement)
 		(list (cons* 'Block (cadr elt) (iter rest)))
 		(cons elt (iter rest)))))))
@@ -486,37 +495,47 @@
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((do ,rest ...)
-       (values tree '() (add-exit (push-scope dict))))
+       (values tree '() (add-exit "~exit" (push-scope dict))))
 
       ((while ,rest ...)
-       (values tree '() (add-exit (push-scope dict))))
+       (values tree '() (add-exit "~exit" (push-scope dict))))
 
       ((for ,rest ...)
-       (values tree '() (add-exit (push-scope dict))))
+       (values tree '() (add-exit "~exit" (push-scope dict))))
 
       ((for-in ,rest ...)
-       (values tree '() (add-exit (push-scope dict))))
+       (values tree '() (add-exit "~exit" (push-scope dict))))
 
       ((SwitchStatement ,rest ...)
-       (values tree '() (add-lexical "~val" (add-exit (push-scope dict)))))
+       (values tree '() (add-lexical "~val"
+				     (add-exit "~exit" (push-scope dict)))))
 
       ((LabelledStatement (Identifier ,name) ,stmt)
        (values tree '() (add-label name dict)))
 
+      ((TryStatement ,expr ...)
+       (values tree '() (add-exit "~catch" (push-scope dict))))
+       
+      ((Catch (Identifier ,name) ,block)
+       (values tree '() (add-lexical name dict)))
+       
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
        (values tree '()
-	       (add-lexicals "~return" "this"
-			     (push-scope (add-symboldef name dict)))))
+	       (add-exit "~return"
+			 (add-lexical "this"
+				      (push-scope (add-symboldef name dict))))))
       
       ((FunctionExpression (Identifier ,name) ,rest ...)
        (values tree '()
-	       (add-lexicals "~return" "this"
-			    (add-lexical name (push-scope dict)))))
+	       (add-exit "~return"
+			 (add-lexical "this"
+				      (add-lexical name (push-scope dict))))))
       
       ((FunctionExpression ,rest ...)
        (values tree '()
-	       (add-lexicals "~return" "this"
-			    (add-symboldef "*anon*" (push-scope dict)))))
+	       (add-exit "~return"
+			 (add-lexical "this"
+			    (add-symboldef "*anon*" (push-scope dict))))))
       
       ((FormalParameterList ,idlist ...)
        ;; For all functions we just use rest arg and then express each
@@ -547,9 +566,6 @@
        (let* ((elts (remove-empties elts))
 	      (elts (cleanup-labels elts))
 	      (elts (if (top-level? dict) elts (fold-in-blocks elts))))
-	 (unless #t
-	   (sferr "SE was:\n") (pperr tree)
-	   (sferr "SE is:\n") (pperr (cons 'SourceElements elts)))
 	 (values (cons 'SourceElements elts) '() dict)))
 
       (,otherwise
@@ -622,12 +638,9 @@
        ((new) (values (cons (car kseed) seed) kdict))
        
        ;; CallExpression
-       ((CallExpression)
-	(let* ((proc (cadr kseed))
-	       (this '(void)) ;; make "this" undefined for now
-	       (args (car kseed))
-	       (call (cons* 'apply proc this args)))
-	  (values (cons call seed) kdict)))
+       ((CallExpression) ;; need to deal with "this"
+	;;(pperr (cons* 'apply (cadr kseed) (car kseed)))
+	(values (cons (cons* 'apply (cadr kseed) (car kseed)) seed) kdict))
 
        ;; ArgumentList
        ((ArgumentList) ;; append-reverse-car ??? 
@@ -795,10 +808,10 @@
        ;; do: "do" stmt "while" expr ;
        ((do)
 	(let* ((kond (car kseed)) (stmt (cadr kseed))
-	       (xtag (find-exit kdict))
-	       (isym (gensym "JS~")) (iloop-ref `(lexical ~iloop ,isym))
-	       (osym (gensym "JS~")) (oloop-ref `(lexical ~oloop ,osym))
-	       (csym (gensym "JS~")) (cont?-ref `(lexical ~cont? ,csym))
+	       (xtag (find-exit-tag "~exit" kdict))
+	       (isym (jsym)) (iloop-ref `(lexical ~iloop ,isym))
+	       (osym (jsym)) (oloop-ref `(lexical ~oloop ,osym))
+	       (csym (jsym)) (cont?-ref `(lexical ~cont? ,csym))
 	       (ibody `(begin ,stmt (if ,kond ,(make-call iloop-ref) (void))))
 	       (hdlr `(if ,cont?-ref ,kond (const #f)))
 	       (obody `(if ,(with-exit-handler
@@ -811,10 +824,10 @@
 
        ((while)
 	(let* ((kond (car kseed)) (stmt (cadr kseed))
-	       (xtag (find-exit kdict))
-	       (isym (gensym "JS~")) (iloop-ref `(lexical ~iloop ,isym))
-	       (osym (gensym "JS~")) (oloop-ref `(lexical ~oloop ,osym))
-	       (csym (gensym "JS~")) (cont?-ref `(lexical ~cont? ,csym))
+	       (xtag (find-exit-tag "~exit" kdict))
+	       (isym (jsym)) (iloop-ref `(lexical ~iloop ,isym))
+	       (osym (jsym)) (oloop-ref `(lexical ~oloop ,osym))
+	       (csym (jsym)) (cont?-ref `(lexical ~cont? ,csym))
 	       (ibody `(if ,kond (begin ,stmt ,(make-call iloop-ref)) (void)))
 	       (hdlr cont?-ref)
 	       (obody `(if ,(with-exit-handler
@@ -838,7 +851,8 @@
 	 (cons
 	  (if (> (length kseed) 1)
 	      (error "unsupported JS: continue <label>")
-	      `(abort (const ,(lookup "~exit" kdict)) ((const #t)) (const '())))
+	      `(abort (const ,(find-exit-tag "~exit" kdict))
+		      ((const #t)) (const '())))
 	  seed) kdict))
 
        ;; BreakStatement: abort w/ zero args
@@ -847,13 +861,14 @@
 	 (cons
 	  (if (> (length kseed) 1)
 	      (error "unsupported JS: break <label>")
-	      `(abort (const ,(lookup "~exit" kdict)) ((const #f)) (const '())))
+	      `(abort (const ,(find-exit-tag "~exit" kdict)) ((const #f))
+		      (const '())))
 	  seed) kdict))
 
        ;; ReturnStatement: abort w/ one arg
        ((ReturnStatement)
 	(values
-	 (cons `(abort (const ,(lookup "~return" kdict))
+	 (cons `(abort (const ,(caddr (lookup "~return" kdict)))
 		       (,(if (> (length kseed) 1)
 			     (car kseed)	       ; argument
 			     (lookup "this" kdict)))   ; default
@@ -908,12 +923,12 @@
 		       (((begin . ,def) (let . ,B-clz))
 			`(begin (let . ,B-clz) . ,def))
 		       (((let . ,A-clz)) `(let . ,A-clz))))
-	       (csym (gensym "JS~")) (cont?-ref `(lexical ~cont? ,csym))
+	       (csym (jsym)) (cont?-ref `(lexical ~cont? ,csym))
 	       (px (lookup "~exit" dict)) ; parent exit
 	       (hdlr `(if ,cont?-ref
 			  (abort (const ,px) ((const #t)) (const '())) (void)))
 	       (body `(let (,(cadr v-ref)) (,(caddr v-ref)) (,v-val) ,body))
-	       (body (with-exit-handler (find-exit kdict) body
+	       (body (with-exit-handler (find-exit-tag "~exit" kdict) body
 					hdlr cont?-ref))
 	       )
 	  (values (cons body seed) (pop-scope kdict))))
@@ -925,10 +940,10 @@
 	(values
 	 (cons 
 	  (let ((val (lookup "~val" kdict)))
-	    (let iter ((next '(void)) (sym (gensym "JS~")) (ks kseed))
+	    (let iter ((next '(void)) (sym (jsym)) (ks kseed))
 	      (if (eq? (car ks) 'CaseClauses)
 		  `(let (~key) (,sym) ((const #f)) ,next)
-		  (let ((psym (gensym "JS~")))
+		  (let ((psym (jsym)))
 		    (iter (make-case val sym psym (car ks) next)
 			  psym (cdr ks))))))
 	  seed)
@@ -946,10 +961,54 @@
        ((LabelledStatement)
 	(values (cons (car kseed) seed) kdict))
 
-       ;; ThrowStatement
-       ;; TryStatement
-       ;; Catch
-       ;; Finally
+       ;; @subheading Exceptions
+       ;; @example
+       ;; try { stmts } catch (var) { stmts }
+       ;; try { stmts } finally { stmts }
+       ;; try { stmts } catch (var) { stmts } finally { stmts }
+       ;; @end example
+       ;; @example
+       ;; (begin (prompt (const ~catch) try-stmts
+       ;;           (lambda-case (((k var) #f #f #f (,k-sym ,var-sym))
+       ;;                         catch-stmts)))
+       ;;        finally-stmts)
+       ;; @end example
+       ;; @no indent
+       ;; so the catch needs to return the lambda-case I think.
+       
+       ;; ThrowStatement throw expression
+       ((ThrowStatement)
+	(values (cons `(abort (const ,(find-exit-tag "~catch" kdict))
+			      (,(car kseed)) (const '())) seed) kdict))
+       
+       ;; TryStatement Catch Finally
+       ((TryStatement)
+	(let* ((rseed (rtail kseed))
+	       (ctag (find-exit-tag "~catch" kdict))
+	       (dummy `(lexical ~arg ,(jsym)))
+	       (body (pmatch rseed
+		       ((,try-stmts (lambda-case . ,rest))
+			`(prompt (const ,ctag) ,try-stmts ,(cadr rseed)))
+		       ((,try-stmts ,finally)
+			`(begin
+			   ,(with-exit-handler ctag try-stmts '(void) dummy)
+			   ,finally))
+		       (,otherwise
+			`(begin 
+			   (prompt (const ,ctag) ,(car rseed) ,(cadr rseed))
+			   ,(caddr rseed))))))
+	  (values (cons body seed) (pop-scope kdict))))
+
+       ((Catch) ;; identifier block
+	(let* ((var-n (cadr (cadr tree))) ; name from tree
+	       (var-r (caddr (lookup var-n kdict)))
+	       (body `(lambda-case (((k ,(string->symbol var-n))
+				     #f #f #f () (,(jsym) ,var-r))
+				    ,(car kseed)))))
+	  (values (cons body seed) kdict)))
+
+       ((Finally)
+	(values (cons (car kseed) seed) kdict))
 
        ;; FunctionDeclaration (see also fU)
        ((FunctionDeclaration)

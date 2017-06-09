@@ -556,12 +556,12 @@
 
     (Catch
      ("catch" "(" Identifier ")" Block
-      ($$ `(Catch ,3 ,$5)))
+      ($$ `(Catch ,$3 ,$5)))
      )
 
     (Finally
      ("finally" Block
-      ($$ `(Finally ,2)))
+      ($$ `(Finally ,$2)))
      )
 
     ;;(DebuggerStatement ("debugger" ";"))
