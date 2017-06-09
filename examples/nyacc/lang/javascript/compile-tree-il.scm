@@ -15,6 +15,11 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;; My goal in this development was to get experience with comping SXML trees
+;; to tree-il: putting together patterns and utility procedures for converting
+;; common structures (e.g, return <expr>, break).  It might be fun to also try
+;; converting to CPS. (But need to read more on this.) -- Matt
+
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
   #:use-module (nyacc lang javascript jslib)
@@ -150,17 +155,26 @@
       (if (not var) #f
 	  `(@@ ,(module-name env) ,sym))))))
 
-(define (add-exit name dict)
-  (acons name (make-prompt-tag "JS~") dict))
+(define (add-exit dict)
+  (acons "~exit" (make-prompt-tag "JS~") dict))
 
-;; @deffn {Procedure} find-exit type dict => gensym
+;; @deffn {Procedure} find-exit dict => gensym
 ;; used along with @code{with-exit} (see below)
-;; (find-exit 'break dict) => JS~1234
+;; (find-exit dict) => JS~1234
+;; (find-exit dict #:label "oloop") => JS~1234
 ;; @end deffn
-(define* (find-exit name dict #:key label)
-  (let* ((sym (lookup name dict)))
-    (if (not sym) (error "JS: exit not found:" name))
-    sym))
+;; if label then lookup label and get exit from child
+(define* (find-exit dict #:key label)
+  (if label
+      (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
+	(if (not pdict) #f
+	    (if (and (assoc-ref pdict label)
+		     (assoc-ref "~exit" cdict))
+		(assoc-ref "~exit" cdict)
+		(iter pdict (assoc-ref pdict '@P)))))
+      (let* ((sym (lookup "~exit" dict)))
+	(if (not sym) (error "JS: exit not found"))
+	sym)))
     
 ;; === code-gen utilities ==============
 
@@ -228,10 +242,10 @@
 
 ;; body needs a line to build "var arguments" from Array(@args)
 ;; Right now args is the gensym of the rest argument named @code{@@args}.
-(define* (make-function args body #:key name)
+(define* (make-function this args body #:key name)
   (if (not args) (error "no args"))
   `(lambda ,(if name `((name ,name)) '())
-     (lambda-case ((() #f @args #f () (,args)) ,body))))
+     (lambda-case (((this) #f @args #f () (,this ,args)) ,body))))
 
 ;; used in fU for switch cases
 ;; (let ((key (if key #t (equal? case-key val))))
@@ -432,7 +446,6 @@
        (error "not implemented: PrimaryExpression (this)"))
 	      
       ((PrimaryExpression (Identifier ,name))
-       ;;(when (string=? name "foo") (sferr "======\n"))
        (let ((ident (lookup name dict)))
 	 (if (not ident) (error "JS: identifier not found:" name))
 	 (values '() ident dict)))
@@ -473,37 +486,37 @@
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((do ,rest ...)
-       (values tree '() (add-exit "~exit" (push-scope dict))))
+       (values tree '() (add-exit (push-scope dict))))
 
       ((while ,rest ...)
-       (values tree '() (add-exit "~exit" (push-scope dict))))
+       (values tree '() (add-exit (push-scope dict))))
 
       ((for ,rest ...)
-       (values tree '() (add-exit "~exit" (push-scope dict))))
+       (values tree '() (add-exit (push-scope dict))))
 
       ((for-in ,rest ...)
-       (values tree '() (add-exit "~exit" (push-scope dict))))
+       (values tree '() (add-exit (push-scope dict))))
 
       ((SwitchStatement ,rest ...)
-       (values tree '() (add-lexical "~val"
-				     (add-exit "~exit" (push-scope dict)))))
+       (values tree '() (add-lexical "~val" (add-exit (push-scope dict)))))
 
       ((LabelledStatement (Identifier ,name) ,stmt)
-       ;; TODO: how to push down in scope
-       ;; idea: go down to the "do"; push scope as above and add labels
        (values tree '() (add-label name dict)))
 
       ((FunctionDeclaration (Identifier ,name) ,rest ...)
        (values tree '()
-	       (add-lexical "~return" (push-scope (add-symboldef name dict)))))
+	       (add-lexicals "~return" "this"
+			     (push-scope (add-symboldef name dict)))))
       
       ((FunctionExpression (Identifier ,name) ,rest ...)
        (values tree '()
-	       (add-lexical "~return" (add-lexical name (push-scope dict)))))
+	       (add-lexicals "~return" "this"
+			    (add-lexical name (push-scope dict)))))
       
       ((FunctionExpression ,rest ...)
-       ;; symbol is a hack
-       (values tree '() (add-symboldef "*anon*" (push-scope dict))))
+       (values tree '()
+	       (add-lexicals "~return" "this"
+			    (add-symboldef "*anon*" (push-scope dict)))))
       
       ((FormalParameterList ,idlist ...)
        ;; For all functions we just use rest arg and then express each
@@ -572,8 +585,7 @@
        ((ElementList)
 	(values (cons (rtail kseed) seed) kdict))
 
-       ;; Elision: e.g., (Elision "3")
-       ;; Convert to js:undefined: a bit of a hack for now, but wtf.
+       ;; Elision: convert to list of js:undefined
        ((Elision)
 	(let* ((len (string->number (car kseed)))
 	       (avals (make-list len '(void))))
@@ -591,7 +603,6 @@
 
        ;; PropertyNameAndValue
        ((PropertyNameAndValue)
-	;;(values (cons* (car kseed) `(const ,(cadr kseed)) seed) kdict))
 	(values (cons* (car kseed) (cadr kseed) seed) kdict))
 
        ;; PropertyName
@@ -612,11 +623,15 @@
        
        ;; CallExpression
        ((CallExpression)
-	(values (cons (rev/repl 'apply kseed) seed) kdict))
+	(let* ((proc (cadr kseed))
+	       (this '(void)) ;; make "this" undefined for now
+	       (args (car kseed))
+	       (call (cons* 'apply proc this args)))
+	  (values (cons call seed) kdict)))
 
        ;; ArgumentList
        ((ArgumentList) ;; append-reverse-car ??? 
-	(values (append (rtail kseed) seed) kdict))
+	(values (cons (rtail kseed) seed) kdict))
 
        ;; post-inc
        ((post-inc)
@@ -719,7 +734,6 @@
        
        ;; VariableDeclaration
        ((VariableDeclaration)
-	;;(sferr "VD: seed=~S kseed=~S\n\n" #f kseed)
 	(let* ((top (top-level? dict))
 	       (w/i (= 3 (length kseed))) ; w/ initializer
 	       (elt0 (list-ref kseed 0))
@@ -781,7 +795,7 @@
        ;; do: "do" stmt "while" expr ;
        ((do)
 	(let* ((kond (car kseed)) (stmt (cadr kseed))
-	       (xtag (find-exit "~exit" kdict))
+	       (xtag (find-exit kdict))
 	       (isym (gensym "JS~")) (iloop-ref `(lexical ~iloop ,isym))
 	       (osym (gensym "JS~")) (oloop-ref `(lexical ~oloop ,osym))
 	       (csym (gensym "JS~")) (cont?-ref `(lexical ~cont? ,csym))
@@ -797,7 +811,7 @@
 
        ((while)
 	(let* ((kond (car kseed)) (stmt (cadr kseed))
-	       (xtag (find-exit "~exit" kdict))
+	       (xtag (find-exit kdict))
 	       (isym (gensym "JS~")) (iloop-ref `(lexical ~iloop ,isym))
 	       (osym (gensym "JS~")) (oloop-ref `(lexical ~oloop ,osym))
 	       (csym (gensym "JS~")) (cont?-ref `(lexical ~cont? ,csym))
@@ -839,16 +853,19 @@
        ;; ReturnStatement: abort w/ one arg
        ((ReturnStatement)
 	(values
-	 (cons `(abort (const ,(find-exit 'return kdict))
-		       (,(if (> (length kseed) 1) (car kseed) '(void)))
+	 (cons `(abort (const ,(lookup "~return" kdict))
+		       (,(if (> (length kseed) 1)
+			     (car kseed)	       ; argument
+			     (lookup "this" kdict)))   ; default
 		       (const '()))
 	       seed) kdict))
 
        ;; WithStatement
 
-       
-       ;; pattern for SwitchStatment:
-       ;; Given
+       ;; @subheading Switch Statement
+       ;; The pattern for SwitchStatment is as follows:
+       ;; given
+       ;; @example
        ;;   switch (v) {
        ;;   case A: A-stmts ... ; 
        ;;   case B: B-stmts ... ; 
@@ -857,7 +874,10 @@
        ;;   case E: E-stmts ... ; 
        ;;   case F: F-stmts ... ; 
        ;;   case G: G-stmts ... ; 
+       ;; @end example
+       ;; @noindent
        ;; generate
+       ;; @example
        ;;  (let ((key #f))
        ;;    (let ((key (if key #t (equal? val A))))
        ;;       (if key A-stmts)
@@ -872,7 +892,8 @@
        ;;          (if key F-stmts)
        ;;          (let ((key (if key #t (equal? val G))))
        ;;             (if key G-stmts))))
-       ;;  default
+       ;;  D-stmts
+       ;; @end example
        
        ;; SwitchStatement: pop-scope needed, also continue => break
        ;; CaseBlock CaseClauses CaseClause DefaultClause
@@ -886,14 +907,13 @@
 			`(begin (let . ,A-clz) . ,def))
 		       (((begin . ,def) (let . ,B-clz))
 			`(begin (let . ,B-clz) . ,def))
-		       (((let . ,A-clz)) `(let . ,A-clz))
-		       (,otherwise '(YUCK))))
+		       (((let . ,A-clz)) `(let . ,A-clz))))
 	       (csym (gensym "JS~")) (cont?-ref `(lexical ~cont? ,csym))
 	       (px (lookup "~exit" dict)) ; parent exit
 	       (hdlr `(if ,cont?-ref
 			  (abort (const ,px) ((const #t)) (const '())) (void)))
 	       (body `(let (,(cadr v-ref)) (,(caddr v-ref)) (,v-val) ,body))
-	       (body (with-exit-handler (find-exit "~exit" kdict) body
+	       (body (with-exit-handler (find-exit kdict) body
 					hdlr cont?-ref))
 	       )
 	  (values (cons body seed) (pop-scope kdict))))
@@ -906,18 +926,17 @@
 	 (cons 
 	  (let ((val (lookup "~val" kdict)))
 	    (let iter ((next '(void)) (sym (gensym "JS~")) (ks kseed))
-	      ;;(pperr (car ks))
 	      (if (eq? (car ks) 'CaseClauses)
-		  `(let (~key) (,sym) ((const #t)) ,next)
+		  `(let (~key) (,sym) ((const #f)) ,next)
 		  (let ((psym (gensym "JS~")))
 		    (iter (make-case val sym psym (car ks) next)
-			  psym
-			  (cdr ks))))))
+			  psym (cdr ks))))))
 	  seed)
 	 kdict))
-
+       
        ((CaseClause)
 	(values (cons kseed seed) kdict))
+
        ((DefaultClause)
 	(values
 	 (if (eqv? 1 (length kseed)) seed (cons (car kseed) seed))
@@ -925,7 +944,6 @@
        
        ;; LabelledStatement
        ((LabelledStatement)
-	;;(sferr "skipping labelled statement\n")
 	(values (cons (car kseed) seed) kdict))
 
        ;; ThrowStatement
@@ -937,19 +955,22 @@
        ((FunctionDeclaration)
 	(let* ((il-name (cadr kseed))
 	       (name (case (car il-name)
-			((@ @@) (caddr il-name)) (else (cadr il-name))))
+		       ((@ @@) (caddr il-name)) (else (cadr il-name))))
+	       (this (caddr (lookup "this" kdict)))
 	       (args (list-ref (lookup "@args" kdict) 2))
-	       (ptag (find-exit 'return kdict))
+	       (ptag (lookup "~return" kdict))
 	       (body (with-exit-arg ptag `(begin ,@(car kseed))))
-	       (fctn `(define ,name ,(make-function args body #:name name))))
+	       (fctn `(define ,name
+			,(make-function this args body #:name name))))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FunctionExpression
        ((FunctionExpression)
-	(let* ((args (list-ref (lookup "@args" kdict) 2))
-	       (ptag (find-exit 'return kdict))
+	(let* ((this (lookup "this" kdict))
+	       (args (list-ref (lookup "@args" kdict) 2))
+	       (ptag (lookup "~return" kdict))
 	       (body (with-exit-arg ptag `(begin ,@(car kseed))))
-	       (fctn (make-function args body)))
+	       (fctn (make-function this args body)))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FormalParameterList

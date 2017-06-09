@@ -21,7 +21,7 @@
 (define (js:neg val)
   (- (if (string? val) (string->number val) val)))
   
-(define (js:pos lt rt)
+(define (js:pos val)
   (if (string? val) (string->number val) val))
   
 (define (js:+ lt rt)
@@ -52,11 +52,11 @@
 (export js:+ js:- js:* js:/ js:%)
 
 (define (js:lshift lt rt)
-  (asl lt rt))
+  (ash lt rt))
 (define (js:rshift lt rt)
-  (asr lt (- rt)))
+  (ash lt (- rt)))
 (define (js:rrshift lt rt)		; FIX
-  (asr lt (- rt)))
+  (ash lt (- rt)))
 ;;(define (js:and
 ;; (and-assign . js:and) (xor-assign . js:xor) (or-assign . js:or)
 
@@ -79,7 +79,7 @@
 (export js:== js:===)
 
 (define (js:_++ ooa)
-  (js-ooa-set ooa (js:+ 1 (js-ooa-ref ooa)))
-  (js-ooa-ref ooa))
+  (js-ooa-put ooa (js:+ 1 (js-ooa-get ooa)))
+  (js-ooa-get ooa))
 
 ;; --- last line ---

@@ -79,6 +79,9 @@
    ;; ObjectLiteral => "{" PropertyNameAndValueList "}"
    (lambda ($3 $2 $1 . $rest)
      `(ObjectLiteral ,(tl->list $2)))
+   ;; ObjectLiteral => "{" PropertyNameAndValueList "," "}"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(ObjectLiteral ,(tl->list $2)))
    ;; PropertyNameAndValueList => PropertyName ":" AssignmentExpression
    (lambda ($3 $2 $1 . $rest)
      (make-tl

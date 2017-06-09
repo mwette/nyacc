@@ -28,6 +28,8 @@
   #:use-module ((srfi srfi-43) #:select (vector-map))
   )
 
+;; This parses EcmaScript v3 1999.  Some v5 2011 items are added as comments.
+
 ;; The 'NoIn' variants are needed to avoid confusing the in operator 
 ;; in a relational expression with the in operator in a for statement.
 ;; Exclusion of ObjectLiteral and FunctionExpression at statement scope
@@ -107,6 +109,8 @@
      ("{" "}" ($prec 'expr) ($$ `(ObjectLiteral)))
      ("{" PropertyNameAndValueList "}" ($prec 'expr)
       ($$ `(ObjectLiteral ,(tl->list $2))))
+     ("{" PropertyNameAndValueList "," "}" ($prec 'expr)
+      ($$ `(ObjectLiteral ,(tl->list $2))))
      )
 
     (PropertyNameAndValueList
@@ -116,6 +120,13 @@
      (PropertyNameAndValueList
       "," PropertyName ":" AssignmentExpression
       ($$ (tl-append $1 `(PropertyNameAndValue ,$3 ,$5))))
+     )
+
+    ;; from v5.1
+    #;(PropertyAssignment
+     (PropertyName ":" AssignmentExpression)
+     ("get" PropertyName "(" ")" "{" FunctionBody "}")
+     ("set" PropertyName "(" PropertySetParametersList ")" "{" FunctionBody "}")
      )
 
     (PropertyName
@@ -382,6 +393,7 @@
      (SwitchStatement)
      (ThrowStatement)
      (TryStatement)
+     ;;(DebuggerStatement) v5.1
      )
 
     (Block
@@ -551,6 +563,8 @@
      ("finally" Block
       ($$ `(Finally ,2)))
      )
+
+    ;;(DebuggerStatement ("debugger" ";"))
 
     ;; A.5
     (FunctionDeclaration
