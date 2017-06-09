@@ -456,45 +456,56 @@
    ;; WithStatement => "with" "(" Expression ")" Statement
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(WithStatement ,$3 ,$5))
-   ;; SwitchStatement => "switch" "(" Expression ")" CaseBlock
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(SwitchStatement ,$3 ,$5))
-   ;; CaseBlock => "{" CaseClauses "}"
-   (lambda ($3 $2 $1 . $rest) `(CaseBlock ,$2))
-   ;; CaseBlock => "{" "}"
-   (lambda ($2 $1 . $rest) '(CaseBlock))
-   ;; CaseBlock => "{" CaseClauses DefaultClause CaseClauses "}"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(CaseBlock ,(tl->list $2) ,$3 ,(tl->list $4)))
-   ;; CaseBlock => "{" CaseClauses DefaultClause "}"
+   ;; SwitchStatement => "switch" "(" Expression ")" $P6 CaseBlock
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(SwitchStatement ,$3 ,$6))
+   ;; $P6 => 
+   (lambda ($4 $3 $2 $1 . $rest) (NSI))
+   ;; CaseBlock => "{" CaseBlockTail
+   (lambda ($2 $1 . $rest) $2)
+   ;; CaseBlock => "{" seq-of-semis CaseBlockTail
+   (lambda ($3 $2 $1 . $rest) $3)
+   ;; seq-of-semis => ";"
+   (lambda ($1 . $rest) $1)
+   ;; seq-of-semis => seq-of-semis ";"
+   (lambda ($2 $1 . $rest) $1)
+   ;; CaseBlockTail => "}"
+   (lambda ($1 . $rest) '(CaseBlock))
+   ;; CaseBlockTail => CaseClauses "}"
+   (lambda ($2 $1 . $rest)
+     `(CaseBlock ,(tl->list $1)))
+   ;; CaseBlockTail => CaseClauses DefaultClause "}"
+   (lambda ($3 $2 $1 . $rest)
+     `(CaseBlock ,(tl->list $1) ,$2))
+   ;; CaseBlockTail => CaseClauses DefaultClause CaseClauses "}"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(CaseBlock ,(tl->list $2) ,$3))
-   ;; CaseBlock => "{" DefaultClause CaseClauses "}"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(CaseBlock ,$2 ,(tl->list $3)))
-   ;; CaseBlock => "{" DefaultClause "}"
-   (lambda ($3 $2 $1 . $rest) `(CaseBlock ,$2))
+     `(CaseBlock ,(tl->list $1) ,$2 ,(tl->list $3)))
+   ;; CaseBlockTail => DefaultClause CaseClauses "}"
+   (lambda ($3 $2 $1 . $rest)
+     `(CaseBlock ,$1 ,(tl->list $2)))
+   ;; CaseBlockTail => DefaultClause "}"
+   (lambda ($2 $1 . $rest) `(CaseBlock ,$1))
    ;; CaseClauses => CaseClause
    (lambda ($1 . $rest) (make-tl 'CaseClauses $1))
    ;; CaseClauses => CaseClauses CaseClause
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; CaseClause => "case" Expression ":" StatementList
    (lambda ($4 $3 $2 $1 . $rest)
-     `(CaseClause ,$2 ,$4))
+     `(CaseClause ,$2 ,(tl->list $4)))
    ;; CaseClause => "case" Expression ":"
    (lambda ($3 $2 $1 . $rest) `(CaseClause ,$2))
    ;; DefaultClause => "default" ":" StatementList
    (lambda ($3 $2 $1 . $rest)
-     `(DefaultClause ,(tl->list $2)))
+     `(DefaultClause ,(tl->list $3)))
    ;; DefaultClause => "default" ":"
    (lambda ($2 $1 . $rest) `(DefaultClause))
    ;; LabelledStatement => Identifier ":" Statement
    (lambda ($3 $2 $1 . $rest)
      `(LabelledStatement ,$1 ,$3))
-   ;; ThrowStatement => "throw" $P6 Expression ";"
+   ;; ThrowStatement => "throw" $P7 Expression ";"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ThrowStatement ,$3))
-   ;; $P6 => 
+   ;; $P7 => 
    (lambda ($1 . $rest) (NSI))
    ;; TryStatement => "try" Block Catch
    (lambda ($3 $2 $1 . $rest)

@@ -22,12 +22,13 @@
 	    js:undefined)
   )
 
+(define (mkref name) `(@@ (nyacc lang javascript jslib) ,name))
+
 (define JSdict
-  `((@l . 0) ;; (@P . '())
-    ;;("Object" . (@@ (jslib) Object))
-    ;;("Math" . (@@ (jslib) Math))
-    ;;("Number" . (@@ (jslib) Number))
-    ;;("js:+" . (@@ (jslib) js:+))
+  `(
+    (js:+ ,(mkref 'js:+))
+    (js-ooa-get ,(mkref 'js-ooa-get))
+    (js-ooa-put ,(mkref 'js-ooa-put))
     ))
 
 ;; null is 'js:null

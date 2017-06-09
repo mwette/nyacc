@@ -491,37 +491,34 @@
       ($$ `(WithStatement ,$3 ,$5))))
 
     (SwitchStatement
-     ("switch" "(" Expression ")" CaseBlock
-      ($$ `(SwitchStatement ,$3 ,$5))))
-
+     ("switch" "(" Expression ")" ($$ (NSI)) CaseBlock
+      ($$ `(SwitchStatement ,$3 ,$6))))
     (CaseBlock
-     ("{" CaseClauses "}" ($$ `(CaseBlock ,$2)))
-     ("{" "}" ($$ '(CaseBlock)))
-     ("{" CaseClauses DefaultClause CaseClauses "}"
-      ($$ `(CaseBlock ,(tl->list $2) ,$3 ,(tl->list $4))))
-     ("{" CaseClauses DefaultClause "}"
-      ($$ `(CaseBlock ,(tl->list $2) ,$3)))
-     ("{" DefaultClause CaseClauses "}"
-      ($$ `(CaseBlock ,$2 ,(tl->list $3))))
-     ("{" DefaultClause "}"
-      ($$ `(CaseBlock ,$2)))
+     ("{" CaseBlockTail ($$ $2))
+     ("{" seq-of-semis CaseBlockTail ($$ $3)))
+    (seq-of-semis (";") (seq-of-semis ";"))
+    (CaseBlockTail
+     ("}" ($$ '(CaseBlock)))
+     (CaseClauses "}" ($$ `(CaseBlock ,(tl->list $1))))
+     (CaseClauses DefaultClause "}" ($$ `(CaseBlock ,(tl->list $1) ,$2)))
+     (CaseClauses DefaultClause CaseClauses "}"
+      ($$ `(CaseBlock ,(tl->list $1) ,$2 ,(tl->list $3))))
+     (DefaultClause CaseClauses "}" ($$ `(CaseBlock ,$1 ,(tl->list $2))))
+     (DefaultClause "}" ($$ `(CaseBlock ,$1)))
      )
-
     (CaseClauses
      (CaseClause ($$ (make-tl 'CaseClauses $1)))
      (CaseClauses CaseClause ($$ (tl-append $1 $2)))
      )
-
     (CaseClause
      ("case" Expression ":" StatementList
-      ($$ `(CaseClause ,$2 ,$4)))
+      ($$ `(CaseClause ,$2 ,(tl->list $4))))
      ("case" Expression ":"
       ($$ `(CaseClause ,$2)))
      )
-
     (DefaultClause
       ("default" ":" StatementList
-       ($$ `(DefaultClause ,(tl->list $2))))
+       ($$ `(DefaultClause ,(tl->list $3))))
       ("default" ":"
        ($$ `(DefaultClause)))
       )
@@ -624,13 +621,13 @@
 
 (define* (dev-parse-js #:key debug)
   (catch
-   'parse-error
+   'nyacc-error
    (lambda ()
      (with-fluid*
 	 *insert-semi* #t
 	 (lambda () (raw-parser (gen-js-lexer) #:debug debug))))
-   (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) fmt rest)
+   (lambda (key fmt . args)
+     (report-error fmt args)
      #f)))
 
 ;; ======= gen files
