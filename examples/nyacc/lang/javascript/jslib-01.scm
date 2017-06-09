@@ -57,7 +57,24 @@
   (ash lt (- rt)))
 (define (js:rrshift lt rt)		; FIX
   (ash lt (- rt)))
-;;(define (js:and
+(define (js:bit-and lt rt)		; FIX
+  (logand lt rt))
+(define (js:bit-or lt rt)		; FIX
+  (logor lt rt))
+(define (js:bit-xor lt rt)		; FIX
+  (logxor lt rt))
+(define (js:or lt rt)			; FIX
+  (or lt rt))
+(define (js:and lt rt)			; FIX
+  (and	 lt rt))
+(define (js:or lt rt)			; FIX
+  (or lt rt))
+(define (js:eq lt rt)			; FIX
+  (equal? lt rt))
+(define (js:neq lt rt)			; FIX
+  (not (js:eq lt rt)))
+(export js:lshift js:rshift js:rrshift js:and js:or)
+
 ;; (and-assign . js:and) (xor-assign . js:xor) (or-assign . js:or)
 
 (define (js:lt lt rt)

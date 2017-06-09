@@ -666,12 +666,11 @@
        ((pre-dec)
 	(values (cons (op-on-ref (car kseed) 'js:- 'pre) seed) kdict))
 
-
-       ;; pos neg
+       ;; pos neg ~ not
        ((pos) (values (cons (op-call 'js:pos kseed) seed) kdict))
        ((neg) (values (cons (op-call 'js:neg kseed) seed) kdict))
-       ;; ~
-       ;; not
+       ((lognot) (values (cons (op-call 'js:lognot kseed) seed) kdict))
+       ((not) (values (cons (op-call 'js:not kseed) seed) kdict))
 
        ;; mul div mod add sub
        ((mul) (values (cons (op-call 'js:* kseed) seed) kdict))
@@ -693,15 +692,21 @@
        
        ;; instanceof
        ;; in
-       ;; eq
-       ;; neq
-       ;; eq-eq
-       ;; neq-eq
-       ;; bit-and
-       ;; bit-xor
-       ;; bit-or
-       ;; and
-       ;; or
+       
+       ;; eq neq eq-eq neq-eq
+       ((eq) (values (cons (op-call 'js:eq kseed) seed) kdict))
+       ((neq) (values (cons (op-call 'js:neq kseed) seed) kdict))
+       ((eq-eq) (values (cons (op-call 'js:neq-eq kseed) seed) kdict))
+       ((neq-eq) (values (cons (op-call 'js:neq-eq kseed) seed) kdict))
+
+       ;; bit-and bit-xor bit-or
+       ((bit-and) (values (cons (op-call 'js:bit-and kseed) seed) kdict))
+       ((bit-xor) (values (cons (op-call 'js:bit-xor kseed) seed) kdict))
+       ((bit-or) (values (cons (op-call 'js:bit-or kseed) seed) kdict))
+
+       ;; and or
+       ((and) (values (cons (op-call 'js:and kseed) seed) kdict))
+       ((or) (values (cons (op-call 'js:or kseed) seed) kdict))
 
        ;; ConditionalExpression => (if expr a b)
        ((ConditionalExpression)
@@ -999,7 +1004,7 @@
 			   ,(caddr rseed))))))
 	  (values (cons body seed) (pop-scope kdict))))
 
-       ((Catch) ;; identifier block
+       ((Catch)
 	(let* ((var-n (cadr (cadr tree))) ; name from tree
 	       (var-r (caddr (lookup var-n kdict)))
 	       (body `(lambda-case (((k ,(string->symbol var-n))
