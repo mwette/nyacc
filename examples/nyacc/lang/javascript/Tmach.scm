@@ -12,6 +12,10 @@
 (add-to-load-path (string-append (getcwd) "/../../../../examples/"))
 
 (use-modules (nyacc lang javascript mach))
+(when redo
+  (gen-js-files) (system "touch parser.scm")
+  (gen-se-files) (system "touch separser.scm"))
+
 (use-modules (nyacc lang javascript parser))
 (use-modules (nyacc lang javascript pprint))
 (use-modules (nyacc lang javascript compile-tree-il))
@@ -20,14 +24,7 @@
 (use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-(when redo ;; #f
-  (gen-js-files)
-  (system "touch parser.scm")
-  (gen-se-files)
-  (system "touch separser.scm")
-  )
-
-(when redo ;;#f
+(when redo
   (with-output-to-file ",lang.txt"
     (lambda ()
       (pp-lalr-notice js-spec)
@@ -50,11 +47,11 @@
     (lambda () (lalr->bison js-spec))))
 
 (when #t
-  (let ((res (with-input-from-file ",ex1.js" dev-parse-js)))
-    ;;(pretty-print res)
-    (let ((wat (compile-tree-il res (current-module) '())))
-      ;;(simple-format #t "~S\n" wat)
-      (let ((val (compile wat
+  (let* ((xargs (cdr (program-arguments)))
+	 (file (if (pair? xargs) (car xargs) ",ex1.js"))
+	 (res (with-input-from-file file dev-parse-js)))
+    (let ((til (compile-tree-il res (current-module) '())))
+      (let ((val (compile til
 			  #:env (current-module)
 			  #:from 'tree-il
 			  #:to 'value)))

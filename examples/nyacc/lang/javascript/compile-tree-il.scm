@@ -20,6 +20,23 @@
 ;; common structures (e.g, return <expr>, break).  It might be fun to also try
 ;; converting to CPS. (But need to read more on this.) -- Matt
 
+;; TODO:
+;; @itemize
+;; @item convert to guile-2.2 (atomic-box, apply->call, begin->seq)
+;; @item Implement @code{this}.
+;; @item Imeplement @code{for}.
+;; @item Imeplement @code{for-in}.
+;; @item Update to es5.
+;; @item Implement objects and prototypes correctly.
+;; @item Implement unary and binary operators (in jslib-01.scm) correctly.
+;; @end itemize
+;;
+;; NOTES
+;; @itemize
+;; @item JS functions will need to be re-implemented as objects, with the
+;;       `[[Call]]' property used to make calls.  
+;; @end itemize
+
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
   #:use-module (nyacc lang javascript jslib)
@@ -142,6 +159,16 @@
 (define (add-label name dict)
   (acons name (cons #f #f) dict))
 
+(define (c-name->guile name)
+  ;; | scm_  | _ - | ! _x | _to_ -> | _less < | _gr > | _leq <= | _geq >= |
+  (string-map (lambda (ch) (if (char=? ch #\_) #\- ch)) name))
+
+(define (find-in-env name env)
+  (let ((sym (string->symbol name)))
+    (if (module-variable env sym)
+	`(@@ ,(module-name env) ,sym)
+	#f)))
+
 (define (lookup name dict)
   ;;(when (string=? name "foo") (sferr "lookup ~S\n" name) (pperr dict))
   (cond
@@ -150,12 +177,9 @@
    ((assoc-ref dict name))		; => value
    ((assoc-ref dict '@P) =>		; parent level
     (lambda (dict) (lookup name dict)))
-   (else
-    (let* ((env (assoc-ref dict '@M))	; host module, aka top level
-	   (sym (string->symbol name))
-	   (var (module-variable env sym)))
-      (if (not var) #f
-	  `(@@ ,(module-name env) ,sym))))))
+   ((find-in-env name (assoc-ref dict '@M)))
+   ((find-in-env (c-name->guile name) (assoc-ref dict '@M)))
+   (else #f)))
 
 ;; === using prompts ====================
 
@@ -299,7 +323,7 @@
 		((lexical) ref)
 		(else `(apply ,(jslib-ref 'js-ooa-get) ,ref))))
 	 (loc `(lexical ~ref ,sym))
-	 (sum `(apply (jslib-ref ,op) (const 1) ,loc))
+	 (sum `(apply ,(jslib-ref op) (const 1) ,loc))
 	 (set (case (car ref)
 		((toplevel lexical) `(set! ,ref ,sum))
 		(else `(apply ,(jslib-ref 'js-ooa-put) ,ref ,sum))))
@@ -626,18 +650,21 @@
 	(values (cons `(const ,(car kseed)) seed) kdict))
 
        ;; ooa-ref (object-or-array ref), a cons cell: (dict name)
+       ;; obj-ref: converted to ooa-ref in fD
        ;; => (cons <expr> <name>)
+       ;; a bit ugly now ???
        ((ooa-ref)
 	(values
-	 (cons (make-pcall 'cons (resolve-ref (cadr kseed)) (car kseed)) seed)
-	 kdict))
-
-       ;; obj-ref: converted to aoo-ref in fD
+	 (cons `(apply (primitive cons)
+		       (apply ,(jslib-ref 'js-resolve) ,(cadr kseed))
+		       ,(car kseed))
+	       seed) kdict))
 
        ;; new: for now just call object
        ((new) (values (cons (car kseed) seed) kdict))
        
-       ;; CallExpression
+       ;; CallExpression ;; this should probably insert a (de-ref fct)(args)
+       ;; Should defined be boxed?
        ((CallExpression) ;; need to deal with "this"
 	;;(pperr (cons* 'apply (cadr kseed) (car kseed)))
 	(values (cons (cons* 'apply (cadr kseed) (car kseed)) seed) kdict))
@@ -873,7 +900,7 @@
        ;; ReturnStatement: abort w/ one arg
        ((ReturnStatement)
 	(values
-	 (cons `(abort (const ,(caddr (lookup "~return" kdict)))
+	 (cons `(abort (const ,(find-exit-tag "~return" kdict))
 		       (,(if (> (length kseed) 1)
 			     (car kseed)	       ; argument
 			     (lookup "this" kdict)))   ; default
@@ -1064,7 +1091,7 @@
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
-  ;;(sferr "sxml:\n") (pperr exp)
+  (sferr "sxml:\n") (pperr exp)
   (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
     (sferr "tree-il:\n") (pperr xrep)
     (values (parse-tree-il '(const "[skip compile & execute]")) env env)

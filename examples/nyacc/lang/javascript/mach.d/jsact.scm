@@ -101,7 +101,7 @@
    ;; MemberExpression => FunctionExpression
    (lambda ($1 . $rest) $1)
    ;; MemberExpression => MemberExpression "[" Expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) `(aoo-ref ,$1 ,$3))
+   (lambda ($4 $3 $2 $1 . $rest) `(ooa-ref ,$1 ,$3))
    ;; MemberExpression => MemberExpression "." Identifier
    (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; MemberExpression => "new" MemberExpression Arguments
@@ -117,7 +117,7 @@
    (lambda ($2 $1 . $rest)
      `(CallExpression ,$1 ,$2))
    ;; CallExpression => CallExpression "[" Expression "]"
-   (lambda ($4 $3 $2 $1 . $rest) `(aoo-ref ,$1 ,$3))
+   (lambda ($4 $3 $2 $1 . $rest) `(ooa-ref ,$1 ,$3))
    ;; CallExpression => CallExpression "." Identifier
    (lambda ($3 $2 $1 . $rest) `(obj-ref ,$1 ,$3))
    ;; Arguments => "(" ")"

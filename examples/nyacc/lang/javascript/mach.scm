@@ -138,7 +138,7 @@
     (MemberExpression
      (PrimaryExpression)
      (FunctionExpression)
-     (MemberExpression "[" Expression "]" ($$ `(aoo-ref ,$1 ,$3)))
+     (MemberExpression "[" Expression "]" ($$ `(ooa-ref ,$1 ,$3)))
      (MemberExpression "." Identifier ($$ `(obj-ref ,$1 ,$3)))
      ("new" MemberExpression Arguments ($$ `(new ,$2 ,$3)))
      )
@@ -151,7 +151,7 @@
     (CallExpression
      (MemberExpression Arguments ($$ `(CallExpression ,$1 ,$2)))
      (CallExpression Arguments ($$ `(CallExpression ,$1 ,$2)))
-     (CallExpression "[" Expression "]" ($$ `(aoo-ref ,$1 ,$3)))
+     (CallExpression "[" Expression "]" ($$ `(ooa-ref ,$1 ,$3)))
      (CallExpression "." Identifier ($$ `(obj-ref ,$1 ,$3)))
      )
 

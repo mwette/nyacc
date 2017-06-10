@@ -77,6 +77,18 @@
 ;; (define (js-ooa-put ooa-elt val) =>
 ;;     (if (number? expr) (vector-ref js-ooa elt) (assq-ref ooa elt)
 
+;; default atttributes
+;; [[Value]]
+;; [[Get]]
+;; [[Set]]
+;; [[Writable]]
+;; [[Enumerable]]
+;; [[Configurable]]
+;; Internal Properties:
+;; [[Prototype]]
+;; [[Class]]
+;; [[Extensible]]
+
 ;; @subsubheading References
 ;; References (to properties of objects or elements of arrays) are implemented
 ;; as cons cells where car is the object expr and cdr is the name
@@ -100,6 +112,13 @@
   (apply vector rest))
 (export js-make-array)
 (define mkary js-make-array)
+
+(define (js-resolve exp)
+  (cond
+   ((not (pair? exp)) exp)
+   ((vector? (car exp)) (vector-ref (car exp) (js-resolve (cdr exp))))
+   ((hash-table? (car exp)) (hash-ref (car exp) (js-resolve (cdr exp))))
+   (else exp)))
 
 (define (js-ooa-get ooa-elt)
   (cond

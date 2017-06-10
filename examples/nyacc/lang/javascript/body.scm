@@ -44,9 +44,18 @@
       (let iter ((cl '()) (ch (read-char)))
 	(cond ((eq? ch #\\)
 	       (let ((c1 (read-char)))
-		 (if (eq? c1 #\newline)
-		     (iter cl (read-char))
-		     (iter (cons* c1 cl) (read-char)))))
+		 (iter
+		  (case c1 		; see sec 7.8.4 in es5.1 spec
+		    ((#\newline) (throw 'js-err "newline in string literal"))
+		    ((#\' #\" #\\) (cons c1 cl))
+		    ((#\b) (cons #\backspace cl))
+		    ((#\f) (cons #\page cl))
+		    ((#\n) (cons #\newline cl))
+		    ((#\r) (cons #\return cl))
+		    ((#\t) (cons #\tab cl))
+		    ((#\v) (cons #\vtab cl))
+		    (else (cons c1 cl)))
+		  (read-char))))
 	      ((eq? ch delim) (cons '$string (list->string (reverse cl))))
 	      (else (iter (cons ch cl) (read-char)))))))
 
