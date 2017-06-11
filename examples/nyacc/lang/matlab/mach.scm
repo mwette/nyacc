@@ -1,6 +1,6 @@
 ;;; lang/matlab/mach.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by
@@ -241,6 +241,8 @@
      ("(" expr ")" ($$ $2))
      ("[" "]" ($$ '(matrix)))
      ("[" matrix-row-list "]" ($$ (tl->list $2)))
+     ("{" "}" ($$ '(cell-array)))
+     ("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2)))))
      )
 
     (matrix-row-list

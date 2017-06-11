@@ -1,6 +1,6 @@
 ;;; nyacc/lang/modelica/mach.scm
 ;;;
-;;; Copyright (C) 2015,2016 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -25,17 +25,14 @@
 	    parse-mo)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
+  #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   #:use-module (ice-9 pretty-print)
   )
 
-(fmterr "modelica/pgen.scm grammar conflicts:\n")
-(fmterr "  SR: primary => \"initial\"\n")
-(fmterr "  SR: primary => \"end\"\n")
-
 (define modelica-spec
   (lalr-spec
-   (notice (string-append "Copyright 2016 Matthew R. Wette" lang-crn-lic))
+   (notice (string-append "Copyright 2016-2017 Matthew R. Wette" lang-crn-lic))
    (start stored-definition)
    (grammar
     
@@ -681,5 +678,23 @@
 (define modelica-parser (make-lalr-parser modelica-mach))
 
 (define (parse-mo) (modelica-parser (gen-mod-lexer)))
+
+;; === automaton file generator =========
+
+(define (gen-modelica-files . rest)
+  (define (lang-dir path)
+    (if (pair? rest) (string-append (car rest) "/" path) path))
+  (define (xtra-dir path)
+    (lang-dir (string-append "mach.d/" path)))
+
+  (write-lalr-actions matlab-mach (xtra-dir "moact.scm.new"))
+  (write-lalr-tables matlab-mach (xtra-dir "motab.scm.new"))
+  (let ((a (move-if-changed (xtra-dir "moact.scm.new")
+			    (xtra-dir "moact.scm")))
+	(b (move-if-changed (xtra-dir "motab.scm.new")
+			    (xtra-dir "motab.scm"))))
+    (when #f ;;(or a b) 
+      (system (string-append "touch " (lang-dir "parser.scm"))))
+    (or a b)))
 
 ;; --- last line ---

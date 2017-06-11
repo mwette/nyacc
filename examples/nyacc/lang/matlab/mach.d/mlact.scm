@@ -1,10 +1,10 @@
 ;; mach.d/mlact.scm
 
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; Copyright 2016 Matthew R. Wette
 ;; 
 ;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See the
-;; file COPYING included with the this distribution.
+;; or any later version published by the Free Software Foundation.  See
+;; the file COPYING included with the this distribution.
 
 (define act-v
   (vector
@@ -259,6 +259,11 @@
    (lambda ($2 $1 . $rest) '(matrix))
    ;; primary-expr => "[" matrix-row-list "]"
    (lambda ($3 $2 $1 . $rest) (tl->list $2))
+   ;; primary-expr => "{" "}"
+   (lambda ($2 $1 . $rest) '(cell-array))
+   ;; primary-expr => "{" matrix-row-list "}"
+   (lambda ($3 $2 $1 . $rest)
+     (cons 'cell-array (cdr (tl->list $2))))
    ;; matrix-row-list => matrix-row
    (lambda ($1 . $rest)
      (make-tl 'matrix (tl->list $1)))

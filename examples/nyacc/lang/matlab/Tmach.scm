@@ -1,11 +1,14 @@
 ;; nyacc/lang/matlab/Tmach.scm - matlab
 ;;
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; Copyright (C) 2015-2017 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
+
+(add-to-load-path (string-append (getcwd) "/../../../../module"))
+(add-to-load-path (string-append (getcwd) "/../../../../examples"))
 
 (use-modules (nyacc lang matlab mach))
 (use-modules (nyacc lang matlab parser))
@@ -32,18 +35,13 @@
     (pretty-print sx0)))
 
 ;; Experimental matlab->c converter.
-(when #t ;; processing
-  (let* ((a-file "exam.d/ex03a.m")
-	 (b-file "exam.d/ex03b.m")
-	 (sx0a (with-input-from-file a-file dev-parse-ml))
-	 (sx1a (and sx0a (declify-script sx0a)))
-	 ;;(sx0b (with-input-from-file b-file dev-parse-ml))
-	 ;;(sx1b (and sx0b (declify-ffile sx0b)))
-	 )
-    ;;(pretty-print sx0a)
-    ;;(simple-format #t "==>\n")
-    (pretty-print sx1a)
-    #t))
+(when #t
+  (let* ((file ",ex1.m")
+	 (sx0 (with-input-from-file file dev-parse-ml)))
+    (pretty-print sx0)
+    (let ((sx1 (and sx0 (declify-ffile sx0))))
+      (pretty-print sx1)
+      #t)))
 
 ;; Geneates a text file showing the grammar and state machine.
 (when #f

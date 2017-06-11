@@ -34,15 +34,13 @@
 
 ;; need to remove aref-or-call
 ;; only way is to know if ident is variable or function
-;; local variables
-;; @item
-;; global variables
-;; @item
-;; function arguments
-;; @item
-;; look for str2func
-;; @item
-;; look in dict for function
+;; only way ident is a variable is if ...
+;; @item exists as lhs assn
+;; @item exists in "global"
+;; @item function arguments
+;; For function
+;; @item look for str2func
+;; @item look in dict for function
 ;; @item
 ;; if function argument is function then use will always be w/ ftn ref (@@).
 ;; @item
@@ -159,21 +157,25 @@
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
-    ;;(fout "tree-tag=~S kseed=~S\n" (car tree) kseed)
-    (case (car tree)
-      ((function-file) (values (reverse kseed) dict))
-      ((float fixed)
+    ;;(when (pair? tree) (simple-format #t "cartree=~S\n" (car tree)))
+    (if
+     (null? tree) (values (cons kseed seed) dict)
+     
+     (case (car tree)
+       ((function-file) (values (reverse kseed) dict))
+
+       ((float fixed)
+	(values
+	 (cons (sx-set-attr! (reverse kseed) 'rank "0") seed)
+	 dict))
+       
+       #;((fctn-decl)
        (values
-	(cons (sx-set-attr! (reverse kseed) 'rank "0") seed)
-	dict))
-      
-      #;((fctn-decl)
-       (values
-	(cons (reverse kseed) seed)
-	(d-pop kdict)))
-      
-      (else
-       (values (cons (reverse kseed) seed) dict))))
+       (cons (reverse kseed) seed)
+       (d-pop kdict)))
+       
+       (else
+	(values (cons (reverse kseed) seed) dict)))))
 
   (define (fH tree seed dict) ;; => (values seed dict)
     (values (cons tree seed) dict))
@@ -184,6 +186,7 @@
        (sx (foldts*-values fD fU fH tree '() ty-dict))
        )
     sx))
+
 
 ;; @deffn declify-script tree [dict] => tree
 ;; This needs work.
