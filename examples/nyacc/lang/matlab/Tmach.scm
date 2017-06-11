@@ -36,7 +36,7 @@
 
 ;; Experimental matlab->c converter.
 (when #t
-  (let* ((file ",ex1.m")
+  (let* ((file "exam.d/ex03b.m")
 	 (sx0 (with-input-from-file file dev-parse-ml)))
     (pretty-print sx0)
     (let ((sx1 (and sx0 (declify-ffile sx0))))

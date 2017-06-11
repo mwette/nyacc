@@ -1,6 +1,12 @@
 function osig = ex03b(con, isig)
 % PID controller
 
+%~ con : struct
+%~ isig: double 
+%~ osig: double 
+
+%% %#include "ex03b.h" 
+
   param = con.param;
   state = con.state;
   Kp = param.Kp;

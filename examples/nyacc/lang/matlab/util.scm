@@ -124,12 +124,45 @@
 ;; (name . (var rank)) if type == float fixed
 ;; (name . (fctn pub?))
 
+(define sx+attr sx-set-attr!)
+
+;; given a list of stmts, look in leading statements for
+;; (comm "%: <name> : <type> ")
+;; so osig = function doit(con, isig)
+;;   %~ osig : double
+;;   %~ con : struct
+;;   %~ isig : double
+;; should be (for now) struct double vector matrix
+
+(define fold-in-decl
+  (let ((rx1 (make-regexp "^~\s*([0-9A-Za-z]+)\s*:\s*([0-9A-Za-z]+)")))
+    (lambda (str seed)
+      (let ((m (regexp-exec str)))
+	(if m
+	    (acons (match:string m 1) (match:string m 2) seed)
+	    seeed)))))
+
+;; matrix: oset rstr cstr flag double *
+;; vector: double *
+	     
+(define (parse-type-decls stmts)
+  (let iter ((out '()) (stmts stmts))
+    (cond
+     ((null? stmts) out)
+     ((not (eqv? 'comm (caar stmts))) out)
+     (else
+      (iter (fold-in-decl (cadar stmts) out) (cdr stmts))))))
+
 ;; @deffn declify-ffile tree [dict] => tree
 ;; This needs work.
 ;; The idea is to end up with declarations for a matlab function-file.
 ;; The filename function should be public, all others private.
 (define (declify-ffile tree . rest)
-  
+
+  ;; TODO: get c decl from file comment
+  ;; %#include "ex03b.h"
+  ;; Then pass through c99 parser OR Maybe not
+
   (define (fD tree seed dict) ;; => (values tree seed dict)
     (sxml-match tree
       ((function-file (@ (file ,name)) . ,rest)
@@ -139,11 +172,15 @@
 		(cons "file" name)
 		dict)))
 
+      ((fctn-defn (fctn-decl . ,decl) (stmt-list . ,stmts))
+       (let ((tdecls (parse-type-decls stmts))
+	     )
+	 (values tree '() dict)))
+
       ((fctn-decl (ident ,name) . ,rest)
-       (values
-	(sx-set-attr!
-	 tree 'scope (if (equal? name (assoc-ref dict "file")) "pub" "prv"))
-	'() dict))
+       (let ((scope (if (equal? name (assoc-ref dict "file")) "pub" "prv"))
+	     )
+	 (values (sx+attr tree 'scope scope) '() dict)))
 
       ((assn (aref-or-call ,expr ,ex-l) . ,rval)
        (values `(assn (array-ref ,expr ,ex-l)) '() dict))

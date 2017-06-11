@@ -39,17 +39,19 @@
     ;; B.2.1
     (stored-definition
      ( ($$ `(stored-defn)))
-     (stored-definition-1 stored-definition-2 ($$ `(stored-defn FIX)))
+     (stored-definition-1 stored-definition-2 ($$ `(stored-defn ,$1 ,$2)))
      (stored-definition-2 ($$ (tl->list $1)))
      )
     (stored-definition-1
-     ("within" name ";")
-     ("within" ";")
+     ("within" name ";" ($$ `(within ,$2)))
+     ("within" ";" ($$ '(within)))
      )
     (stored-definition-2
-     ("final" class-definition ";" ($$ `(FIX01)))
-     (class-definition ";" ($$ (make-tl 'defn-list $1)))
-     (stored-definition-2 "final" class-definition ";" ($$ `(FIX01)))
+     ("final" class-definition ";"
+      ($$ (make-tl 'class-defn-list (sx+attr $2 'final "yes"))))
+     (class-definition ";" ($$ (make-tl 'class-defn-list $1)))
+     (stored-definition-2 "final" class-definition ";"
+			  ($$ (tl-append $3 (sx+attr $3 'final "yes"))))
      (stored-definition-2 class-definition ";" ($$ (tl-append $1 $2)))
      )
 
@@ -103,42 +105,46 @@
 		(list $1 $2 $3)))
      ("extends" ident class-modification string-comment composition "end" ident
       ($$ (if (not (string=? (cadr $2) (cadr $7)))
-	      (error "ident's don't match"))
+	      (throw 'mo-error "ident's don't match"))
 	  (list '(@ extends . "yes") $2 $3 $4 $5)))
      ("extends" ident string-comment composition "end" ident
       ($$ (if (not (string=? (cadr $2) (cadr $6)))
-	      (error "ident's don't match"))
+	      (throw 'mo-error "ident's don't match"))
 	  (list '(@ extends . "yes") $2 $3 $4)))
      )
 
     (short-class-specifier
-     (ident "=" base-prefix name array-subscripts class-modification comment
+     (ident "=" base-prefix type-specificer array-subscripts
+	    class-modification comment
 	    ($$ (list $1 `(is ,$3 ,$4 ,$5 ,$6 ,$7))))
-     (ident "=" base-prefix name array-subscripts comment)
-     (ident "=" base-prefix name class-modification comment)
-     (ident "=" base-prefix name comment)
-     (ident "=" "enumeration" "(" filler-1 ")" comment)
+     (ident "=" base-prefix type-specifier array-subscripts comment)
+     
+     (ident "=" base-prefix type-specifier class-modification comment)
+     (ident "=" base-prefix type-specifier comment)
+     (ident "=" "enumeration" "(" enum-list ")" comment)
+     (ident "=" "enumeration" "(" ":" ")" comment)
      )
-    (filler-1 () (enum-list) (":"))
 
     (der-class-specifier
-     (ident "=" "der" "(" name "," der-class-specifier-1 ")" comment)
+     (ident "=" "der" "(" type-specifier "," der-class-specifier-1 ")" comment
+	    ($$ `(der-class-specifier ... (tl->list $7))))
      )
     (der-class-specifier-1 ;; or ident-colon-list
-     (ident)
-     (der-class-specifier-1 ";" ident)
+     (ident ($$ (make-tl 'ident-list $1)))
+     (der-class-specifier-1 ";" ident ($$ (tl-append $1 $3)))
      )
 
-    (base-prefix () (type-prefix))
-    ;;(base-prefix (type-prefix)) ;; type-prefix has no empty now
+    (base-prefix ("input") ("output"))
 
     (enum-list
-     (enumeration-literal)
-     (enum-list "," enumeration-literal))
+     (enumeration-literal ($$ (make-tl 'enum-list $1)))
+     (enum-list "," enumeration-literal ($$ (tl-append $1 $3))))
 
     (enumeration-literal
      (ident comment)
      )
+
+    ;; ===================== update to v3.4 stopped here ======================
 
     (composition
      (element-list composition-1-list external-part opt-annotation)
