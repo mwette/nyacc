@@ -1,8 +1,23 @@
-;; nyacc/../ffi-help.scm
-;;
+;;; example/nyacc/lang/c99/ffi-help.scm
+;;;
+;;; Copyright (C) 2016-2017 Matthew R. Wette
+;;;
+;;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
+;;; or any later version published by the Free Software Foundation.  See
+;;; the file COPYING included with the nyacc distribution.
+
+;; WARNING: this is a prototype in development: anything goes right now
+
 ;; User is responsible for calling string->pointer and pointer->string.
 ;;
 ;; By definition: wrap is c->scm; unwrap is scm->c
+
+;; @table code
+;; @item mspec->ffi-wrapper
+;; generates code to apply wrapper to objects returned from foreign call
+;; @item mspec->ffi-unwrapper
+;; generated code to apply un-wrapper to arguments for foreign call
+;; @end table
 
 ;; TODO
 ;; 1) enum-wrap 0 => 'CAIRO_STATUS_SUCCESS
@@ -13,6 +28,7 @@
 (define-module (ffi-help)
   #:export-syntax (define-std-pointer-wrapper define-ffi-helper)
   #:export (*ffi-help-version*
+	    intro-ffi
 	    unwrap-char*
 	    bs-renamer ffi-renamer
 	    pkg-config-incs
@@ -84,6 +100,8 @@
 (define (newln)
   (newline *port*))
 
+(define (fherr fmt . args)
+  (throw 'ffi-help-error fmt args))
 
 (define (stx->str x)
   (symbol->string (syntax->datum x)))
@@ -209,24 +227,28 @@
     (,otherwise (error "2: missed" mspec-tail))))
 
 (define ffi-typemap
+  ;; see system/foreign.scm
   '(("void" . ffi:void)
+    ("float" . ffi:float) ("double" . ffi:double)
+    ("short" . ffi:short) ("short int" . ffi:short)
+    ("unsigned short" . ffi:unsigned-short)
+    ("unsigned short int" . ffi:unsigned-short)
+    ("int" . ffi:int) ("unsigned" . ffi:unsigned-int)
+    ("unsigned int" . ffi:unsigned-int) ("long" . ffi:long)
+    ("long int" . ffi:long) ("unsigned long" . ffi:unsigned-long)
+    ("unsigned long int" . ffi:unsigned-long) ("size_t" . ffi:size_t)
+    ("ssize_t" . ffi:ssize_t) ("ptrdiff_t" . ffi:ptrdiff_t)
     ("int8_t" . int8) ("uint8_t" . ffi:uint8) 
     ("int16_t" . int16) ("uint16_t" . ffi:uint16) 
     ("int32_t" . int32) ("uint64_t" . ffi:uint64) 
-    ("double" . ffi:double) ("float" . ffi:float)
-    ;;
-    ("int" . ffi:int) ("unsigned" . ffi:unsigned-int)
-    ("unsigned int" . ffi:unsigned-int)
-    ("long" . ffi:long) ("long int" . ffi:long)
-    ("unsigned long" . ffi:unsigned-long)
-    ("unsigned long int" . ffi:unsigned-long)))
+    ))
 
 (define (mspec->ffi-sym mspec)
   (pmatch (cdr mspec)
     (((fixed-type ,name))
-     (or (assoc-ref ffi-typemap name) (error ":( " name)))
+     (or (assoc-ref ffi-typemap name) (fherr "mspec->ffi-sym: ~A" name)))
     (((float-type ,name))
-     (or (assoc-ref ffi-typemap name) (error ":( " name)))
+     (or (assoc-ref ffi-typemap name) (fherr "mspec->ffi-sym: ~A" name)))
     (((void)) 'ffi:void)
     (((pointer-to) . ,rest) ''*)
     (((enum-def . ,rest2) . ,rest1) "ffi:int")
@@ -236,23 +258,26 @@
 	    (udecl (expand-typerefs udecl *uddict* #:keep *ffi-keepers*))
 	    (mspec (udecl->mspec udecl)))
        (mspec->ffi-sym mspec)))
-    (,otherwise (error "mspec->ffi-sym missed it" mspec))))
+    (,otherwise (fherr "mspec->ffi-sym missed: ~S" mspec))))
 
 (define (mspec->ffi-wrapper mspec)
+  ;;(sfout "wrap \n") (ppout mspec)
   (pmatch (cdr mspec)
-    (((fixed-type ,name))
-     (if (assoc-ref ffi-typemap name) #f (error ":( " name)))
-    (((float-type ,name))
-     (if (assoc-ref ffi-typemap name) #f (error ":( " name)))
+    (((fixed-type ,name)) (if (assoc-ref ffi-typemap name) #f
+			      (fherr "todo: ffi-wrap fixed")))
+     (((float-type ,name)) (if (assoc-ref ffi-typemap name) #f
+			       (fherr "todo: ffi-wrap float")))
     (((void)) #f)
+    (((enum-def . ,rest)) (string->symbol (string-append "wrap-" "xxx")))
+    (((typename ,name)) (string->symbol (string-append "wrap-" name)))
+    ;;
     (((pointer-to) (typename ,typename))
      (if (member typename *wrapped*)
 	 (string->symbol (string-append "wrap-" typename "*"))
 	 #f))
-    (((pointer-to) . ,rest) 'identity)		  ; HACK
-    (((enum-def . ,rest)) (string->symbol (string-append "wrap-" "xxx")))
-    (,otherwise (error "mspec->ffi-wrapper missed" mspec
-		      ))))
+    (((pointer-to) . ,rest) 'identity)
+    ;;
+    (,otherwise (fherr "mspec->ffi-wrapper missed: ~S" mspec))))
 
 (define (mspec->ffi-unwrapper mspec)
   ;;(sfout "cdr mspec = ~S\n" (cdr mspec))
@@ -271,7 +296,8 @@
 	 (string->symbol (string-append "unwrap-" typename "*"))
 	 #f))
     (((pointer-to) . ,rest) 'identity)	; HACK
-    (,otherwise (error "mspec->ffi-unwrapper missed" mspec))))
+    (((typename ,name)) (string->symbol (string-append "unwrap-" name)))
+    (,otherwise (fherr "mspec->ffi-unwrapper missed: ~S" mspec))))
 
 #|
 (define qsort!
@@ -343,10 +369,11 @@
 	(sfscm ";; enum ~A;\n" enum-name))
     (ppscm `(define ,w-pname
 	      (let ((vnl '(,@val-name-l)))
-		(lambda (name) (assq-ref vnl name)))))
+		(lambda (code) (assq-ref vnl code)))))
     (ppscm `(define ,u-pname
 	      (let ((nvl '(,@name-val-l)))
 		(lambda (name) (assq-ref nvl name)))))
+    (sfscm "(export ~A ~A)\n" w-pname u-pname)
     (if #f ;; sname
 	(sfscm "(define wrap-~A wrap-~A)\n(export ~A)\n" sname pname sname))
     #f))
@@ -573,8 +600,7 @@
      type-list)
 
     (,otherwise
-     (sfscm ";; MISSED IT\n")
-     (pretty-print udecl *port*)
+     (fherr "udecl->ffi-decl missed: ~S" udecl)
      type-list)))
 
 ;; (sizeof '*) works
@@ -592,6 +618,33 @@
     (close-port port)
     ;;(simple-format #t "~S\n" (map (lambda (s) (substring/shared s 2)) incl))
     (map (lambda (s) (substring/shared s 2)) incl)))
+
+;; --- defs
+(define rx1 (make-regexp "(.*[^ \t])[ \t]*/\\*.*\\*/ *$"))
+
+(define (scrub-repl repl)
+  (cond
+   ((regexp-exec rx1 repl) =>
+    (lambda (m) (match:substring m 1)))
+   (else
+    repl)))
+
+(define (tree->defs tree)
+  (fold
+   (lambda (def dict)
+     (sxml-match def
+       ((define (name ,name) (repl ,repl))
+	(acons name (scrub-repl repl) dict))
+       (,otherwise dict)))
+   '()
+   ((sxpath '(cpp-stmt define (repl))) tree)))
+
+(define trans-unit->defs
+  (let ()
+    (lambda (tree)
+      '())))
+  
+;; ---
 
 (define (intro-ffi path . opts)
   ;; pkg-config --cflags <pkg>
@@ -627,6 +680,7 @@
 	 (udecls (reverse (c99-trans-unit->udict tree #:filter filt)))
 	 (uddict (c99-trans-unit->udict/deep tree))
 	 )
+    (ppout (tree->defs tree))
     (set! *uddict* uddict)
     (set! *port* dport) ;; HACK
     (sf ";;\n")
@@ -642,45 +696,54 @@
     (sf "\n")
     (sf "(define lib-link (dynamic-link ~S))\n" (assq-ref attrs #:library))
     (sf "(define (lib-func name) (dynamic-func name lib-link))\n")
+    (ppout
     (fold
+
      (lambda (pair type-list)
-       (cond
-	(#f
-	 (sfout "~S\n" (car pair))
-	 (sfscm "\n;; ~S\n" (car pair))
-	 (udecl->ffi-decl (cdr pair) type-list))
+       (catch 'ffi-help-error
+	 (lambda ()
+	   (cond
+	    (#f
+	     (sfout "~S\n" (car pair))
+	     (sfscm "\n;; ~S\n" (car pair))
+	     (udecl->ffi-decl (cdr pair) type-list))
 
-	((member (car pair) '(
-			      #|
-			      "cairo_get_reference_count"
-			      "cairo_status_t"
-			      "cairo_set_dash"
-			      "cairo_surface_t"
-			      "cairo_t"
-			      "cairo_bool_t"
-			      "cairo_matrix_t"
-			      "cairo_region_t"
-			      "cairo_destroy_func_t"
-			      "cairo_destroy"
-			      "cairo_region_contains_point"
-			      "cairo_create"
-			      "cairo_surface_destroy"
-			      "cairo_svg_surface_create"
-			      "cairo_move_to"
-			      "cairo_line_to"
-			      "cairo_stroke"
-			      "cairo_destroy"
-			      |#
-			      "cairo_status_t"
-			      "cairo_set_user_data"
-			      ))
-	 ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
-	 (udecl->ffi-decl (cdr pair) type-list))
+	    ((member (car pair) '(
+				  ;;"cairo_get_reference_count"
+				  ;;"cairo_set_dash"
+				  #|
+				  "cairo_t"
+				  "cairo_bool_t"
+				  "cairo_matrix_t"
+				  "cairo_region_t"
+				  "cairo_destroy_func_t"
+				  "cairo_destroy"
+				  "cairo_region_contains_point"
+				  "cairo_create"
+				  "cairo_surface_destroy"
+				  |#
+				  "cairo_status_t"
+				  "cairo_surface_t"
+				  "cairo_svg_surface_create"
+				  ;;"cairo_move_to" "cairo_line_to"
+				  ;;"cairo_stroke"
+				  ;;"cairo_set_user_data"
+				  ))
+	     ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
+	     (udecl->ffi-decl (cdr pair) type-list))
 
-	(else
-	 type-list)))
+	    (else
+	     type-list)))
+	 
+	 (lambda (key fmt . args)
+	   (apply simple-format (current-error-port)
+		  (string-append "ffi-help: " fmt "\n") args)
+	   (sfscm ";; ... failed.\n")
+	   type-list)))
+     
      fixed-width-int-names
      udecls)
+    )
     (sf "\n;; --- last line ---\n")
     (close dport)
     ))

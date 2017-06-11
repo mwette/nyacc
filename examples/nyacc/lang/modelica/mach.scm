@@ -48,10 +48,10 @@
      )
     (stored-definition-2
      ("final" class-definition ";"
-      ($$ (make-tl 'class-defn-list (sx+attr $2 'final "yes"))))
+      ($$ (make-tl 'class-defn-list (sx+attr* $2 'final "yes"))))
      (class-definition ";" ($$ (make-tl 'class-defn-list $1)))
      (stored-definition-2 "final" class-definition ";"
-			  ($$ (tl-append $3 (sx+attr $3 'final "yes"))))
+			  ($$ (tl-append $3 (sx+attr* $3 'final "yes"))))
      (stored-definition-2 class-definition ";" ($$ (tl-append $1 $2)))
      )
 

@@ -1,3 +1,8 @@
+2017-06-11  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (nyacc): make-ident-like-p tested for string but not for
+	empty string: added `not eof-object?'
+
 2017-06-03  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (read-c-chlit): added '\r' and '\|' moved '\\' to case
