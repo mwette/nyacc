@@ -1,0 +1,12 @@
+#!/opt/local/bin/guile -e doit -s
+!#
+
+(add-to-load-path (string-append (getcwd) "../../../../module/"))
+(add-to-load-path (getcwd))
+(use-modules (ffi-help))
+(define (doit . args)
+  (let* ((args (program-arguments))
+         (file (cadr args)))
+     (load file)))
+
+;; --- last line ---

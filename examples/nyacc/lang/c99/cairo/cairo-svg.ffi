@@ -1,5 +1,4 @@
-;; cairo.ffi				-*- Scheme -*-
-(use-modules (ffi-help))
+;; cairo-svg.ffi			-*- Scheme -*-
 
 (define-ffi-helper (cairo cairo-svg)
   #:pkg-config "cairo"

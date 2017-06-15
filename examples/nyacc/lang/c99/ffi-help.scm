@@ -26,8 +26,10 @@
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
 
 (define-module (ffi-help)
-  #:export-syntax (define-std-pointer-wrapper define-ffi-helper)
+  #:export-syntax (define-std-pointer-wrapper define-ffi-helper
+		    debug-std-pointer-wrapper)
   #:export (*ffi-help-version*
+	    compile-ffi-file
 	    intro-ffi
 	    unwrap-char*
 	    bs-renamer ffi-renamer
@@ -155,7 +157,9 @@
 	 #`(begin
 	     (define-wrapped-pointer-type name #,pred #,wrap #,unwr
 	       (lambda (v p)
-		 (format p #,(string-append "<" (stx->str #'name) " ~x>") v)))
+		 ((@@ (ice-9 format) format) p
+		  #,(string-append "<" (stx->str #'name) " ~x>")
+		  (pointer-address (#,unwr v)))))
 	     (export #,pred) (export #,wrap) (export #,unwr)))))))
 
 (define-std-pointer-wrapper double)
@@ -165,6 +169,9 @@
       (string->pointer value)
       value))
 
+;; This routine generates a top-level source string-file with all the includes,
+;; parses it, and then merges one level down of includes into the top level,
+;; as if the bodies of the incudes had been combined into one file.
 (define parse-includes
   (let* ((p (node-join
 	     (select-kids (node-typeof? 'cpp-stmt))
@@ -179,30 +186,14 @@
 		     (lambda (inc-file)
 		       (string-append "#include \"" inc-file "\"\n"))
 		     inc-files) "\n")))
-	;;(sferr "prog=~A\n" prog)
 	(with-input-from-string prog
 	  (lambda ()
 	    (and=> 
 	     (parse-c99 #:cpp-defs all-defs
 			#:inc-dirs inc-dirs
 			#:mode 'decl #:debug #f)
-	     merge-inc-bodies)))
-	;;'(trans-unit)
-	))))
+	     merge-inc-bodies)))))))
 
-;; just one level down
-#|
-	    (select-kids (node-typeof? 'cpp-stmt))
-	    (select-kids (node-typeof? 'define))
-	    ;; could node filter on (select-kids *TEXT* xxx
-	    (node-filter
-	     (lambda (n)
-	       (if (pair? ((select-kids (node-typeof? 'args)) n)) #f n))))))
-    (p tree))
-|#
-
-(define (parse-string str)
-  (with-input-from-string str parse-c99))
 
 (define (fold-enum-typenames dict seed)
   (fold
@@ -286,7 +277,7 @@
     (,otherwise (fherr "mspec->ffi-sym missed: ~S" mspec))))
 
 (define (mspec->ffi-wrapper mspec)
-  ;;(sfout "wrap \n") (ppout mspec)
+  (sfout "wrap this:\n") (ppout mspec)
   (pmatch (cdr mspec)
     (((fixed-type ,name)) (if (assoc-ref ffi-typemap name) #f
 			      (fherr "todo: ffi-wrap fixed")))
@@ -438,6 +429,7 @@
    params))
 
 (define (gen-exec-return-wrapper udecl)
+  (sfout "wrapped=~S\n" *wrapped*)
   (let* ((udecl (expand-typerefs udecl *uddict* #:keep *wrapped*))
 	 (mspec (udecl->mspec udecl)))
     (mspec->ffi-wrapper mspec)))
@@ -522,7 +514,7 @@
        (sfscm "\n")
        (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
        (sfscm "(define-std-pointer-wrapper ~A)\n" p-typename)
-       (set! *wrapped* (cons p-typename *wrapped*))
+       (set! *wrapped* (cons typename *wrapped*))
        (cons typename type-list)))
 
     ;; named struct-def typedef
@@ -702,6 +694,8 @@
 ;; given keeper-defs (k-defs) and all defs (a-defs) expand the keeper
 ;; replacemnts down to constants (strings, integers, etc)
 (define (process-defs k-defs a-defs)
+  (sfout "(define xxx-def-val\n")
+  (sfout "  (let ((deftab\n   '(\n")
   (let iter ((keep '()) (kdl k-defs))
     (if (null? kdl) keep
 	(let* ((name (caar kdl))
@@ -709,15 +703,21 @@
 	  (iter
 	   (cond
 	    ((string->number repl) =>
-	     (lambda (val) (acons name val keep)))
+	     (lambda (val)
+	       (sfout "   (~S . ~S)\n" name val)
+	       (acons name val keep)))
 	    ((zero? (string-length repl))
 	     keep)
 	    ((eqv? #\" (string-ref repl 0))
+	     (sfout "   (~S . ~S)\n" name 
+		    (substring repl 1 (- (string-length repl) 1)))
 	     (acons name
 		    (substring repl 1 (- (string-length repl) 1))
 		    keep))
 	    (else keep))
-	   (cdr kdl))))))
+	   (cdr kdl)))))
+  (sfout "  )\n")
+  )
 
 ;; ---
 
@@ -759,25 +759,9 @@
 	 ;;
 	 (ffi-defs (next-down-plain-defs tree))
 	 (all-defs (trans-unit-defs/deep tree))
+	 ;;(def-dict (process-defs ffi-defs all-defs))
 	 )
-    (ppout tree)
-    ;;(ppout ffi-defs)
-    ;;(sfout "====\n")
-    ;;(ppout (process-defs ffi-defs all-defs))
-    #;(ppout
-     (let ((p (node-join
-	       (select-kids (node-typeof? 'cpp-stmt))
-	       (select-kids (node-typeof? 'include))
-	       (select-kids (node-typeof? 'trans-unit))
-	       (select-kids (node-typeof? 'cpp-stmt))
-	       (select-kids (node-typeof? 'define))
-	       ;; could node filter on (select-kids *TEXT* xxx
-	       (node-filter
-		(lambda (n)
-		  (if (pair? ((select-kids (node-typeof? 'args)) n)) #f n)))
-	       )))
-       (p tree)))
-    (quit)
+    ;;(ppout tree)
     
     (set! *uddict* uddict)
     (set! *port* dport) ;; HACK
@@ -794,7 +778,6 @@
     (sf "\n")
     (sf "(define lib-link (dynamic-link ~S))\n" (assq-ref attrs #:library))
     (sf "(define (lib-func name) (dynamic-func name lib-link))\n")
-    (ppout
     (fold
 
      (lambda (pair type-list)
@@ -807,25 +790,25 @@
 	     (udecl->ffi-decl (cdr pair) type-list))
 
 	    ((member (car pair) '(
+				  #|
 				  ;;"cairo_get_reference_count"
 				  ;;"cairo_set_dash"
-				  #|
-				  "cairo_t"
 				  "cairo_bool_t"
 				  "cairo_matrix_t"
 				  "cairo_region_t"
 				  "cairo_destroy_func_t"
-				  "cairo_destroy"
 				  "cairo_region_contains_point"
-				  "cairo_create"
-				  "cairo_surface_destroy"
+				  "cairo_set_user_data"
 				  |#
-				  "cairo_status_t"
+				  "cairo_t"
+				  "cairo_create"
+				  "cairo_destroy"
+				  ;;"cairo_status_t"
 				  "cairo_surface_t"
+				  "cairo_surface_destroy"
+				  "cairo_move_to" "cairo_line_to"
+				  "cairo_stroke"
 				  "cairo_svg_surface_create"
-				  ;;"cairo_move_to" "cairo_line_to"
-				  ;;"cairo_stroke"
-				  ;;"cairo_set_user_data"
 				  ))
 	     ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
 	     (udecl->ffi-decl (cdr pair) type-list))
@@ -841,12 +824,13 @@
      
      fixed-width-int-names
      udecls)
-    )
     (sf "\n;; --- last line ---\n")
     (close dport)
     ))
 
 (define-syntax-rule (define-ffi-helper path-list attr ...)
   (intro-ffi (quote path-list) attr ...))
+
+;;(define (compile-ffi-file . args) (sfout "args=~S\n" args) )
 
 ;; --- last line ---
