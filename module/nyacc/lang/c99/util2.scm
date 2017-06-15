@@ -132,7 +132,7 @@
 ;; of one argument, the include path, to indicate whether it should be included
 ;; in the dictionary.
 (define* (c99-trans-unit->udict tree #:optional (seed '()) #:key filter)
-  (define (inc-keeper? tree)
+  (define (inc-keeper? tree) ;; pull in this (cpp-stmt (include ...)) ?
     (if (and (eqv? (sx-tag tree) 'cpp-stmt)
 	     (eqv? (sx-tag (sx-ref tree 1)) 'include))
 	(if (procedure? filter)
@@ -147,7 +147,8 @@
 	  ((eqv? (sx-tag tree) 'decl)
 	   (munge-decl tree seed))
 	  ((inc-keeper? tree)
-	   (c99-trans-unit->udict (sx-ref tree 1) seed #:filter filter))
+	   (c99-trans-unit->udict (sx-ref (sx-ref tree 1) 2) seed
+				  #:filter filter))
 	  (else seed)))
        seed
        (cdr tree))

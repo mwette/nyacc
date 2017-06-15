@@ -629,9 +629,10 @@
      (lone-comment)
      (cpp-statement)
      (pragma)
-     ("extern" $string "{" external-declaration-list "}"
+     ("extern" $string "{"
+      ($$ (cpi-dec-blev!)) external-declaration-list ($$ (cpi-inc-blev!)) "}"
       ($$ `(extern-block (extern-begin ,$2)
-			 ,@(sx-tail (tl->list $4) 1)
+			 ,@(sx-tail (tl->list $5) 1)
 			 (extern-end))))
      (";" ($$ `(decl (@ (extension . "GNU C")))))
      )

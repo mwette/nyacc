@@ -1,0 +1,13 @@
+;; cairo.ffi				-*- Scheme -*-
+(use-modules (ffi-help))
+
+(define-ffi-helper (cairo cairo-svg)
+  #:pkg-config "cairo"
+  #:include "cairo.h"
+  #:include "cairo-svg.h"
+  #:library "libcairo"
+  ;;#:select (lambda (path) (string=? "cairo" (substring path 0 5)))
+  ;;#:renamer (lambda (name) name)
+  )
+
+;; --- last line ---

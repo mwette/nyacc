@@ -1,5 +1,8 @@
 2017-06-11  Matt Wette  <mwette@alumni.caltech.edu>
 
+	* lang/c99/util2.scm (c99-trans-unit->udict): if include was not
+	getting the include's trans-unit
+
 	* lex.scm (nyacc): make-ident-like-p tested for string but not for
 	empty string: added `not eof-object?'
 

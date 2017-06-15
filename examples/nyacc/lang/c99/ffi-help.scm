@@ -36,6 +36,7 @@
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 util1)
   #:use-module (nyacc lang c99 util2)
+  #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (system foreign)
   ;;#:use-module (bytestructures guile)
@@ -62,7 +63,8 @@
 (use-modules (nyacc lang util))
 (use-modules (sxml fold))
 (use-modules (sxml match))
-(use-modules ((sxml xpath) #:select (sxpath)))
+(use-modules ((sxml xpath)
+	      #:renamer (lambda (s) (if (eq? s 'filter) 'node-filter s))))
 (use-modules (srfi srfi-1))
 (use-modules (srfi srfi-11))
 (use-modules (srfi srfi-37))
@@ -163,18 +165,41 @@
       (string->pointer value)
       value))
 
-(define (parse-includes cpp-defs inc-dirs inc-files)
-  ;;(simple-format #t "inc-dirs=~S\n" inc-dirs)
-  (let* ((all-defs (append cpp-defs (gen-gcc-defs)))
-	 (prog (string-join
-		(map (lambda (inc-file)
+(define parse-includes
+  (let* ((p (node-join
+	     (select-kids (node-typeof? 'cpp-stmt))
+	     (select-kids (node-typeof? 'include))
+	     (select-kids (node-typeof? 'trans-unit))))
+	 (merge-inc-bodies
+	  (lambda (t) (cons 'trans-unit (apply append (map cdr (p t)))))))
+    (lambda (cpp-defs inc-dirs inc-files)
+      (let* ((all-defs (append cpp-defs (gen-gcc-defs)))
+	     (prog (string-join
+		    (map
+		     (lambda (inc-file)
 		       (string-append "#include \"" inc-file "\"\n"))
-		     inc-files)
-		"\n"))
-	 )
-    (with-input-from-string prog
-      (lambda () (parse-c99 #:cpp-defs all-defs #:inc-dirs inc-dirs
-			    #:mode 'decl)))))
+		     inc-files) "\n")))
+	;;(sferr "prog=~A\n" prog)
+	(with-input-from-string prog
+	  (lambda ()
+	    (and=> 
+	     (parse-c99 #:cpp-defs all-defs
+			#:inc-dirs inc-dirs
+			#:mode 'decl #:debug #f)
+	     merge-inc-bodies)))
+	;;'(trans-unit)
+	))))
+
+;; just one level down
+#|
+	    (select-kids (node-typeof? 'cpp-stmt))
+	    (select-kids (node-typeof? 'define))
+	    ;; could node filter on (select-kids *TEXT* xxx
+	    (node-filter
+	     (lambda (n)
+	       (if (pair? ((select-kids (node-typeof? 'args)) n)) #f n))))))
+    (p tree))
+|#
 
 (define (parse-string str)
   (with-input-from-string str parse-c99))
@@ -298,23 +323,6 @@
     (((pointer-to) . ,rest) 'identity)	; HACK
     (((typename ,name)) (string->symbol (string-append "unwrap-" name)))
     (,otherwise (fherr "mspec->ffi-unwrapper missed: ~S" mspec))))
-
-#|
-(define qsort!
-  (let ((qsort (pointer->procedure
-		void
-		(dynamic-func "qsort" (dynamic-link))
-		(list ’* size_t size_t ’*))))
-    (lambda (bv compare)
-      (let ((ptr (procedure->pointer
-		  int
-		  (lambda (x y)
-		    (compare (dereference-uint8* x) (dereference-uint8* y)))
-		  (list ’* ’*))))
-	(qsort (bytevector->pointer bv)
-	       (bytevector-length bv) 1 ;; we’re sorting bytes
-	       ptr)))))
-|#
 
 ;; --- structures 
 
@@ -632,18 +640,85 @@
 (define (tree->defs tree)
   (fold
    (lambda (def dict)
+     (sfout "def=~S\n" def)
      (sxml-match def
        ((define (name ,name) (repl ,repl))
 	(acons name (scrub-repl repl) dict))
        (,otherwise dict)))
    '()
-   ((sxpath '(cpp-stmt define (repl))) tree)))
+   ;;((sxpath '(cpp-stmt define (repl))) tree)))
+   ((sxpath '(cpp-stmt define)) tree)))
 
 (define trans-unit->defs
   (let ()
     (lambda (tree)
       '())))
-  
+
+;; sxml tree to xxx
+;; (define (name "MAX") (args "X" "Y") (repl "stuff")) =>
+;;     ("MAX" ("X" "Y") . "stuff")
+(define (sxml-define->tree defn)
+  (let* ((name (car (assq-ref defn 'name)))
+	 (args (assq-ref defn 'args))
+	 (repl (car (assq-ref defn 'repl))))
+    (cons name (if args (cons args repl) repl))))
+
+;; tree => (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
+;; deep search
+(define (trans-unit-defs/deep tree)
+  (define (def? tree)
+    (if (and (eq? 'cpp-stmt (sx-tag tree))
+	     (eq? 'define (sx-tag (sx-ref tree 1))))
+	(sxml-define->tree (sx-ref tree 1))
+	#f))
+  (define (inc? tree)
+    (if (and (eq? 'cpp-stmt (sx-tag tree))
+	     (eq? 'include (sx-tag (sx-ref tree 1)))
+	     (pair? (sx-ref (sx-ref tree 1) 2)))
+	(sx-ref (sx-ref tree 1) 2)
+	#f))
+  (let iter ((defs '()) (elts (cdr tree)))
+    (cond
+     ((null? elts) defs)
+     ((def? (car elts)) => (lambda (d) (iter (cons d defs) (cdr elts))))
+     ((inc? (car elts)) => (lambda (t) (iter (iter defs (cdr t)) (cdr elts))))
+     (else (iter defs (cdr elts))))))
+
+;; just one level down
+(define next-down-plain-defs
+  (let ((p (node-join
+	    (select-kids (node-typeof? 'cpp-stmt))
+	    (select-kids (node-typeof? 'include))
+	    (select-kids (node-typeof? 'trans-unit))
+	    (select-kids (node-typeof? 'cpp-stmt))
+	    (select-kids (node-typeof? 'define))
+	    ;; could node filter on (select-kids *TEXT* xxx
+	    (node-filter
+	     (lambda (n)
+	       (if (pair? ((select-kids (node-typeof? 'args)) n)) #f n))))))
+    (lambda (tree)
+      (map sxml-define->tree (p tree)))))
+
+;; given keeper-defs (k-defs) and all defs (a-defs) expand the keeper
+;; replacemnts down to constants (strings, integers, etc)
+(define (process-defs k-defs a-defs)
+  (let iter ((keep '()) (kdl k-defs))
+    (if (null? kdl) keep
+	(let* ((name (caar kdl))
+	       (repl (expand-cpp-macro-ref name a-defs)))
+	  (iter
+	   (cond
+	    ((string->number repl) =>
+	     (lambda (val) (acons name val keep)))
+	    ((zero? (string-length repl))
+	     keep)
+	    ((eqv? #\" (string-ref repl 0))
+	     (acons name
+		    (substring repl 1 (- (string-length repl) 1))
+		    keep))
+	    (else keep))
+	   (cdr kdl))))))
+
 ;; ---
 
 (define (intro-ffi path . opts)
@@ -659,7 +734,9 @@
     (let iter ((defines '()) (inc-dirs std-inc-dirs) (inc-files '())
 	       (attrs attrs))
       (cond
-       ((null? attrs) (parse-includes defines inc-dirs inc-files))
+       ((null? attrs) (parse-includes (reverse defines)
+				      (reverse inc-dirs)
+				      (reverse inc-files)))
        ((eqv? #:pkg-config (caar attrs))
 	(iter defines (append (pkg-config-incs (cdar attrs)) inc-dirs)
 	      inc-files (cdr attrs)))
@@ -668,7 +745,7 @@
        ((eqv? #:define (caar attrs))
 	(iter (cons (cdar attrs) defines) inc-dirs inc-files (cdr attrs)))
        (else
-	(simple-format #t "skipping ~S\n" (car attrs))
+	(simple-format #t "skipping ~S\n" (caar attrs))
 	(iter defines inc-dirs inc-files (cdr attrs))))))
     
   (let* ((attrs (opts->attrs opts))
@@ -676,11 +753,32 @@
 	 (dport (open-output-file (string-append dpath ".scm")))
 	 (sf (lambda (fmt . args) (apply simple-format dport fmt args)))
 	 (tree (get-tree attrs))
-	 (filt (or (assq-ref attrs #:filter) identity))
+	 (filt (or (assq-ref attrs #:filter) #t))
 	 (udecls (reverse (c99-trans-unit->udict tree #:filter filt)))
 	 (uddict (c99-trans-unit->udict/deep tree))
+	 ;;
+	 (ffi-defs (next-down-plain-defs tree))
+	 (all-defs (trans-unit-defs/deep tree))
 	 )
-    (ppout (tree->defs tree))
+    (ppout tree)
+    ;;(ppout ffi-defs)
+    ;;(sfout "====\n")
+    ;;(ppout (process-defs ffi-defs all-defs))
+    #;(ppout
+     (let ((p (node-join
+	       (select-kids (node-typeof? 'cpp-stmt))
+	       (select-kids (node-typeof? 'include))
+	       (select-kids (node-typeof? 'trans-unit))
+	       (select-kids (node-typeof? 'cpp-stmt))
+	       (select-kids (node-typeof? 'define))
+	       ;; could node filter on (select-kids *TEXT* xxx
+	       (node-filter
+		(lambda (n)
+		  (if (pair? ((select-kids (node-typeof? 'args)) n)) #f n)))
+	       )))
+       (p tree)))
+    (quit)
+    
     (set! *uddict* uddict)
     (set! *port* dport) ;; HACK
     (sf ";;\n")

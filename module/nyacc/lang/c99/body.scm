@@ -27,6 +27,8 @@
 ;; include file names to typenames (e.g., @code{stdio.h} to @code{FILE}) and
 ;; CPP defines (e.g., "INT_MAX=12344").
 
+;; issue w/ brlev: not intended to beused with `extern "C" {'
+
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules ((sxml xpath) #:select (sxpath)))
 (use-modules (ice-9 pretty-print)) ;; for debugging
@@ -41,7 +43,7 @@
   (inc-defd cpi-idefd set-cpi-idefd!)	; a-l of incfile => defines
   (ptl cpi-ptl set-cpi-ptl!)		; parent typename list
   (ctl cpi-ctl set-cpi-ctl!)		; current typename list
-  ;;(brlev cpi-brlev set-cpi-brlev!	; curr brace level (#includes)
+  (blev cpi-blev set-cpi-blev!)		; curr brace/block level
   )
 
 ;;.@deffn Procedure split-cppdef defstr => (<name> . <repl>)| \
@@ -67,27 +69,6 @@
 	     (substring defstr (1+ x3))))
      (else
       (cons (substring defstr 0 x3) (substring defstr (1+ x3)))))))
-#|
-(use-modules (ice-9 regex))
-(define split-cppdef
-  (let ((rx1 (make-regexp "^([A-Za-z0-9_]+)\\(([^)]*)\\)=(.*)$"))
-	(rx2 (make-regexp "^([A-Za-z0-9_]+)=(.*)$")))
-    (lambda (defstr)
-      (let* ()
-	(cond
-	 ((regexp-exec rx1 defstr) =>
-	  (lambda (m1)
-	    (let* ((s1 (match:substring m1 1))
-		   (s2 (match:substring m1 2))
-		   (s3 (match:substring m1 3)))
-	      (cons* s1 (string-split s2 #\,) s3))))
-	 ((regexp-exec rx2 defstr) =>
-	  (lambda (m2)
-	    (let* ((s1 (match:substring m2 1))
-		   (s2 (match:substring m2 2)))
-	      (cons s1 s2))))
-	 (else #f)))))))
-|#
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; @end deffn
@@ -111,6 +92,7 @@
     (set-cpi-incs! cpi incdirs)		; list of include dir's
     (set-cpi-ptl! cpi '())		; list of lists of typenames
     (set-cpi-ctl! cpi '())		; list of typenames
+    (set-cpi-blev! cpi 0)		; brace/block level
     ;; Break up the helpers into typenames and defines.
     (let iter ((itynd '()) (idefd '()) (helpers inchelp))
       (cond ((null? helpers)
@@ -142,6 +124,19 @@
 	  (if (null? ptl) #f
 	      (if (member name (car ptl)) #t
 		  (iter (cdr ptl))))))))
+
+(define cpi-inc-blev!
+  (case-lambda
+   ((info) (set-cpi-blev! info (1+ (cpi-blev info))))
+   (() (cpi-inc-blev! (fluid-ref *info*)))))
+(define cpi-dec-blev!
+  (case-lambda
+   ((info) (set-cpi-blev! info (1- (cpi-blev info))))
+   (() (cpi-dec-blev! (fluid-ref *info*)))))
+(define cpi-top-blev?
+  (case-lambda
+   ((info) (zero? (cpi-blev info)))
+   (() (cpi-top-blev? (fluid-ref *info*)))))
 
 ;; @deffn {Procedure} add-typename name
 ;; Helper for @code{save-typenames}.
@@ -297,7 +292,7 @@
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
 	    (info (fluid-ref *info*))	; info shared w/ parser
-	    (brlev 0)			; brace level
+	    ;;(brlev 0)			; brace level
 	    (x-def? (or xdef? def-xdef?))
 	    )
 	;; Return the first (tval . lval) pair not excluded by the CPP.
@@ -374,7 +369,6 @@
 	    stmt)
 	  
 	  (define (eval-cpp-incl/here stmt) ;; => stmt
-	    ;; include file inplace
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
 	      (cond
@@ -392,10 +386,8 @@
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
 	       ((with-input-from-file path run-parse) => ; add tree to stmt
 		(lambda (tree)
-		  ;;(pretty-print tree (current-error-port))
-		  ;;(pretty-print (xp1 tree))
 		  (for-each add-define (xp1 tree))
-		  (append stmt tree))))))
+		  (append stmt (list tree)))))))
 
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
 	    (case (car stmt)
@@ -423,7 +415,7 @@
 	       (if (eqv? 'keep (car ppxs))
 		   (case (car stmt)
 		     ((include)		; use tree unless inside braces
-		      (if (zero? brlev)
+		      (if (cpi-top-blev? info)
 			  (eval-cpp-incl/tree stmt)
 			  (eval-cpp-incl/here stmt)))
 		     ((define) (add-define stmt) stmt)
@@ -468,8 +460,10 @@
 	  (define (pass-cpp-stmt? stmt)
 	    (case mode
 	      ((code) #f)
-	      ((decl) (and (zero? brlev) (memq (car stmt) '(include define))))
-	      ((file) (or (zero? brlev) (not (eqv? (car stmt) 'include))))
+	      ((decl) (and (cpi-top-blev? info)
+			   (memq (car stmt) '(include define))))
+	      ((file) (or (cpi-top-blev? info)
+			  (not (eqv? (car stmt) 'include))))
 	      (else (error "lang/c99 coding error"))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
@@ -530,8 +524,10 @@
 	       ((read-c-string ch) => assc-$)
 	       ((read-c-chlit ch) => assc-$)
 	       ((read-comm ch #f) => assc-$)
-	       ((and (char=? ch #\{) (set! brlev (1+ brlev)) #f) #f)
-	       ((and (char=? ch #\}) (set! brlev (1- brlev)) #f) #f)
+	       ((and (char=? ch #\{)	; ugly tracking of block-lev in lexer
+		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info) #f) #f)
+	       ((and (char=? ch #\})	; ugly tracking of block-lev in lexer
+		     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info) #f) #f)
 	       ((read-chseq ch) => identity)
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
