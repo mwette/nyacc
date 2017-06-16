@@ -1,3 +1,12 @@
+2017-06-16  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/util2.scm (munge-decl): changed (decl to (udecl
+
+2017-06-15  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/c99/util2.scm (c99-trans-unit->udict): changed to fold-right
+	(canize-enum-def-list): now working for negative enum vals
+
 2017-06-11  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/c99/util2.scm (c99-trans-unit->udict): if include was not

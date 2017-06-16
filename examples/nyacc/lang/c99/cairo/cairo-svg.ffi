@@ -5,7 +5,7 @@
   #:include "cairo.h"
   #:include "cairo-svg.h"
   #:library "libcairo"
-  ;;#:select (lambda (path) (string=? "cairo" (substring path 0 5)))
+  #:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
   ;;#:renamer (lambda (name) name)
   )
 

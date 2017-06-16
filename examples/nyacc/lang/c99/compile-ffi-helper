@@ -4,9 +4,14 @@
 (add-to-load-path (string-append (getcwd) "../../../../module/"))
 (add-to-load-path (getcwd))
 (use-modules (ffi-help))
-(define (doit . args)
-  (let* ((args (program-arguments))
-         (file (cadr args)))
-     (load file)))
+(define (doit args)
+  (if (null? (cdr args)) (error "expecting argument"))
+  (let* ((file (cadr args))
+         )
+     ;;(simple-format #t "args=~S\n" args)
+     ;;(simple-format #t "file=~S\n" file)
+     (load file)
+     ))
 
+(doit '("prog" "cairo/cairo-svg.ffi"))
 ;; --- last line ---
