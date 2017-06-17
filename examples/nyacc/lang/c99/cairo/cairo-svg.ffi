@@ -1,12 +1,18 @@
 ;; cairo-svg.ffi			-*- Scheme -*-
 
-(define-ffi-helper (cairo cairo-svg)
+(define-ffi-module (cairo cairo-svg)
+  #:export (my-cairo-ftn)
   #:pkg-config "cairo"
   #:include "cairo.h"
   #:include "cairo-svg.h"
   #:library "libcairo"
   #:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
   ;;#:forward ("union _cairo_path_data_t")
-  ;;#:renamer (lambda (name) name)
+  ;;;#:renamer (lambda (name) name)
+  #:use-module ((srfi srfi-1) #:select (remove))
   )
+
+(define my-cairo-ftn ()
+  "hello")
+
 ;; --- last line ---

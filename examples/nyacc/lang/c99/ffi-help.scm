@@ -30,7 +30,8 @@
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
 
 (define-module (ffi-help)
-  #:export-syntax (define-std-pointer-wrapper define-ffi-helper
+  #:export-syntax (define-ffi-module
+		    define-std-pointer-wrapper
 		    debug-std-pointer-wrapper)
   #:export (*ffi-help-version*
 	    compile-ffi-file
@@ -712,22 +713,36 @@
 ;; Given a udict this generates a list that looke like the internal
 ;; CPP define structure.  That is,
 ;; @example
+;; (enum-def-list (enum-def (ident "ABC")) ...)
 ;; @end example
 ;; @noindent
+;; to
 ;; @example
-;; (("ABC" . "1")
+;; (("ABC" . "0") ...)
 ;; @end example
-
-(define (anon-enums->defs udict seed)
-  (fold-right
-   (lambda (udecl seed)
-     (if (and (pair? (car udecl))
-	      (eqv? 'enum (caar udecl))
-	      (equal? "*anon*" (cdar udecl)))
-	 (ppout udecl))
-     seed)
+(define (udict-enums->defs udict seed)
+  (define (gen-nvl enum-def-list)
+    (map
+     (lambda (def)
+       (pmatch def
+	 ((enum-defn (ident ,n) (p-expr (fixed ,v)))
+	  (cons n v))
+	 ((enum-defn (ident ,n) (neg (p-expr (fixed ,v))))
+	  (cons n (string-append "-" v)))
+	 (,otherwise (error "gen-name-val-l" def))))
+     (cdr (canize-enum-def-list enum-def-list))))
+  (append
    seed
-   udict))
+   (fold-right
+    (lambda (pair seed)
+      (if (and (pair? (car pair)) (eq? 'enum (caar pair)))
+	  (let* ((specl (caddr pair)) (tspec (car (assq-ref specl 'type-spec))))
+	    (if (eq? 'enum-def (car tspec))
+		(append (gen-nvl (assq 'enum-def-list (cdr tspec))) seed)
+		seed))
+	  seed))
+    '()
+    udict)))
   
 ;; deep search
 (define (XXX-trans-unit-defs/deep tree)
@@ -795,14 +810,15 @@
 
 ;; ---
 
-(define (intro-ffi path . opts)
+(define (intro-ffi path opts)
   ;; pkg-config --cflags <pkg>
   ;; pkg-config --libs <pkg>
 
   (define (opts->attrs opts)
-    (let iter ((attrs '()) (opts opts))
-      (if (null? opts) (reverse attrs)
-	  (iter (acons (car opts) (cadr opts) attrs) (cddr opts)))))
+    (filter (lambda (pair) (symbol? (car pair))) opts))
+    
+  (define (opts->mopts opts) ;; module options to pass
+    (filter (lambda (pair) (keyword? (car pair))) opts))
     
   (define (get-tree attrs)
     (let iter ((defines '()) (inc-dirs std-inc-dirs) (inc-files '())
@@ -832,11 +848,11 @@
 	 (uddict (c99-trans-unit->udict/deep tree))
 	 (prefix (or (assq-ref attrs #:prefix) (symbol->string (last path))))
 	 ;;
-	 (ffi-defs (c99-trans-unit->ddict tree #:inc-filter incf))
-	 ;;(ffi-defs (anon-enums->defs uddict ffi-defs)) ;; fold in enums
-	 (all-defs (c99-trans-unit->ddict/deep tree))
+	 (enu-defs (udict-enums->defs uddict '()))
+	 (ffi-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter incf))
+	 (all-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter #t))
 	 )
-    ;;(ppout uddict)
+    ;;(ppout ffi-defs)
     ;;(quit)
     
     (set! *uddict* uddict)
@@ -846,11 +862,18 @@
     (sf ";;\n")
     (sf "\n")
     (sf "(define-module ~S\n" path)
+    (for-each
+     (lambda (pair)
+       (sfscm "  ~S " (car pair))
+       (ppscm (cdr pair)))
+     (opts->mopts opts))
     (sf "  #:use-module (ffi-help)\n")
     (sf "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sf "  #:use-module ((bytestructures guile) #:prefix bs:)\n")
     (sf "  )\n")
     (sf "(define bs:struct bs:bs:struct)\n")
+    (sf "(define bs:union bs:bs:union)\n")
+    (quit)
     (sf "\n")
     (sf "(define lib-link (dynamic-link ~S))\n" (assq-ref attrs #:library))
     (sf "(define (lib-func name) (dynamic-func name lib-link))\n")
@@ -874,18 +897,20 @@
 				  "cairo_destroy_func_t"
 				  "cairo_region_contains_point"
 				  "cairo_set_user_data"
-				  "cairo_status_t"
-				  "cairo_t"
-				  "cairo_create"
-				  "cairo_destroy"
 				  "cairo_surface_t"
 				  "cairo_surface_destroy"
 				  "cairo_move_to" "cairo_line_to"
 				  "cairo_stroke"
 				  "cairo_svg_surface_create"
 				  "cairo_operator_t"
+				  "cairo_t"
+				  "cairo_create"
+				  "cairo_destroy"
 				  |#
-				  "cairo_path_t"
+				  "cairo_status_t"
+				  "cairo_font_options_t"
+				  "cairo_font_options_status"
+				  ;;"cairo_path_t"
 				  ))
 	     ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
 	     (udecl->ffi-decl (cdr pair) type-list))
@@ -901,13 +926,68 @@
      
      fixed-width-int-names
      udecls)
-    (sf "\n;; --- last line ---\n")
-    (close dport)
-    ))
+    ;;(sf "\n;; --- last line ---\n")
+    ;;(close dport)
+    ;; return port so compiler can copy out more code
+    dport))
 
-(define-syntax-rule (define-ffi-helper path-list attr ...)
-  (intro-ffi (quote path-list) attr ...))
+(define-syntax fix-option
+  (lambda (x)
+    (define (sym->key stx)
+      (datum->syntax stx (symbol->keyword (syntax->datum stx))))
+    (syntax-case x (pkg-config include library inc-filter)
+      ((_ pkg-config name) #'(cons 'pkg-config name))
+      ((_ include name) #'(cons 'include name))
+      ((_ library name) #'(cons 'library name))
+      ((_ inc-filter proc) #'(cons 'inc-filter proc))
+      ((_ key arg) #`(cons #,(sym->key #'key) (quote arg)))
+      )))
 
-;;(define (compile-ffi-file . args) (sfout "args=~S\n" args) )
+(define-syntax module-options
+  (lambda (x)
+    (define (key->sym stx)
+      (datum->syntax x (keyword->symbol (syntax->datum stx))))
+
+    (syntax-case x ()
+      ((_ key val option ...)
+       (keyword? (syntax->datum #'key))
+       #`(cons
+	  (fix-option #,(key->sym #'key) val)
+	  (module-options option ...)))
+      
+      ;; ??? uncommenting generates syntax error but above fendor is passing
+      ;;((_ key val option ...) (syntax-error "ffi: illegal keyword"))
+      
+      ((_) #''()))))
+
+(define-syntax-rule (define-ffi-module path-list attr ...)
+  (intro-ffi (quote path-list) (module-options attr ...)))
+
+
+(use-modules (system base language))
+(use-modules (ice-9 pretty-print))
+
+(define scm-reader (language-reader (lookup-language 'scheme)))
+
+(define (compile-ffi-file file)
+  (call-with-input-file file
+    (lambda (iport)
+      (let iter ((oport #f))
+	(let ((exp (scm-reader iport (current-module))))
+	  ;;(display "exp:\n") (pretty-print exp)
+	  (cond
+	   ((eof-object? exp)
+	    (when oport
+	      (display "\n;; --- last line ---\n" oport)
+	      (close oport)))
+	   ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
+	    (iter (eval exp (current-module))))
+	   (else
+	    (when oport
+	      (newline oport)
+	      (pretty-print exp oport)
+	      (iter oport)))))))))
 
 ;; --- last line ---
+
+

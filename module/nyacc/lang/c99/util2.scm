@@ -579,6 +579,7 @@
   
 ;; @deffn {Procedure} canize-enum-def-list
 ;; Fill in constants for all entries of an enum list.
+;; Expects @code{(enum-def-list (...))} ???
 ;; @end deffn
 (define (canize-enum-def-list enum-def-list)
   (define (get-used edl)
