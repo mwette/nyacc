@@ -6,7 +6,7 @@
   #:include "cairo-svg.h"
   #:library "libcairo"
   #:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
+  ;;#:forward ("union _cairo_path_data_t")
   ;;#:renamer (lambda (name) name)
   )
-
 ;; --- last line ---

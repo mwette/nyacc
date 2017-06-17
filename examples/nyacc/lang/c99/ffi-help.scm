@@ -332,9 +332,15 @@
 
 ;; cairo_matrix_t
 (define (cnvt-struct-def typename struct-name field-list)
+  ;;(ppout field-list)
+  ;;(ppout (fold munge-comp-decl '() (cdr (clean-field-list field-list))))
+  (quit)
+  (sfout "\n\n")
+  ;;(ppout (assoc-ref *uddict* "cairo_path_data_t"))
+  (sfout "\n\n")
   (let* ((fldl (clean-field-list field-list)) ; remove lone comments
 	 (flds (cdr fldl))
-	 (uflds (fold munge-comp-decl '() flds)) ; reverse order
+	 (uflds (fold munge-comp-decl '() flds)) ; in reverse order
 	 (sflds					 ; bs fields in order
 	  (let iter ((sflds '()) (decls uflds))
 	    (if (null? decls) sflds
@@ -343,6 +349,7 @@
 		       (udecl (expand-typerefs udecl *uddict* #:keep *keepers*))
 		       (spec (udecl->mspec/comm udecl))
 		       (type (mtype->bs (cddr spec))))
+		  (ppout udecl)
 		  (iter (acons-defn name type sflds) (cdr decls)))))))
     (sfscm "\n;; ~A\n" typename)
     (ppscm `(define ,(string->symbol typename) (bs:struct (list ,@sflds))))
@@ -352,11 +359,8 @@
 
 ;; --- enums
 
-;; MAY WANT TO define all enums!!
 (define (cnvt-enum-def typename enum-name enum-def-list)
-  (let* ((pname (if typename typename enum-name))
-	 (sname (if typename enum-name #f))
-	 (name-val-l (map
+  (let* ((name-val-l (map
 		      (lambda (def)
 			(pmatch def
 			  ((enum-defn (ident ,n) (p-expr (fixed ,v)))
@@ -366,36 +370,34 @@
 			  (,otherwise (error "cnvt-enum-def coding" def))))
 		      (cdr (canize-enum-def-list enum-def-list))))
 	 (val-name-l (map (lambda (p) (cons (cdr p) (car p))) name-val-l))
-	 (w-pname (string->symbol (string-append "wrap-" pname)))
-	 (u-pname (string->symbol (string-append "unwrap-" pname))))
+	 (makeum (lambda (n)
+		   (let ((w-name (string->symbol (string-append "wrap-" n)))
+			 (u-name (string->symbol (string-append "unwrap-" n))))
+		     (ppscm `(define ,w-name
+			       (let ((vnl '(,@val-name-l)))
+				 (lambda (code) (assq-ref vnl code)))))
+		     (ppscm `(define ,u-name
+			       (let ((nvl '(,@name-val-l)))
+				 (lambda (name) (assq-ref nvl name)))))
+		     ;; no export: internal to procedure wrappers
+		     ;;(sfscm "(export ~A ~A)\n" w-name u-name))
+		     ))))
     (sfscm "\n")
     (cond
-     (typename
-      (if enum-name
-	  (sfscm ";; typedef enum ~A ~A;\n" enum-name typename)
-	  (sfscm ";; typedef enum ~A;\n" typename)))
-     (enum-name
-      (sfscm ";; enum ~A;\n" enum-name))
-     (else
-      (sfscm ";; anon enum;\n")))
-    (cond
-     ((or typename enum-name)
-      (ppscm `(define ,w-pname
-		(let ((vnl '(,@val-name-l)))
-		  (lambda (code) (assq-ref vnl code)))))
-      (ppscm `(define ,u-pname
-		(let ((nvl '(,@name-val-l)))
-		  (lambda (name) (assq-ref nvl name)))))
-      (sfscm "(export ~A ~A)\n" w-pname u-pname)))
-    (if #f ;; sname
-	(sfscm "(define wrap-~A wrap-~A)\n(export ~A)\n" sname pname sname))
-    ;; define all enums
-    (for-each
-     (lambda (pair)
-       (sfscm "(define ~A ~A)\n" (car pair) (cdr pair)))
-     name-val-l)
-    (ppscm `(export ,@(map car name-val-l)))
-    #f))
+     ((and typename enum-name)
+      (sfscm ";; typedef enum ~A ~A;\n" enum-name typename))
+     (typename (sfscm ";; typedef enum ~A;\n" typename))
+     (enum-name (sfscm ";; enum ~A;\n" enum-name))
+     (else (sfscm ";; anon enum\n")))
+    (if typename (makeum typename))
+    (if enum-name (makeum (string-append "enum-" enum-name)))
+    (unless (or #t typename enum-name) ;; anon enums in defines
+      (for-each
+       (lambda (pair) (sfscm "(define ~A ~A)\n" (car pair) (cdr pair)))
+       name-val-l)
+      (ppscm `(export ,@(map car name-val-l))))
+    ))
+
 
 ;; --- function
 
@@ -544,6 +546,7 @@
 	 (type-spec (struct-def (ident ,struct-name) ,field-list)))
 	(init-declr (ident ,typename)))
      (let ((p-typename (string-append typename "*")))
+       (ppout udecl) (quit)
        (cnvt-struct-def typename struct-name field-list)
        (sfscm "(define-std-pointer-wrapper ~A)\n" p-typename)
        (set! *wrapped* (cons p-typename *wrapped*))
@@ -556,7 +559,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest)))
 	(init-declr (ident ,typename)))
-     (cnvt-enum-def typename enum-name enum-def-list)
+     (cnvt-enum-def typename enum-name enum-def-list) 
      (set! *wrapped* (cons typename *wrapped*))
      (cons typename type-list))
     ((udecl
@@ -670,23 +673,6 @@
    (else
     repl)))
 
-(define (tree->defs tree)
-  (fold
-   (lambda (def dict)
-     (sfout "def=~S\n" def)
-     (sxml-match def
-       ((define (name ,name) (repl ,repl))
-	(acons name (scrub-repl repl) dict))
-       (,otherwise dict)))
-   '()
-   ;;((sxpath '(cpp-stmt define (repl))) tree)))
-   ((sxpath '(cpp-stmt define)) tree)))
-
-(define trans-unit->defs
-  (let ()
-    (lambda (tree)
-      '())))
-
 ;; sxml tree to xxx
 ;; (define (name "MAX") (args "X" "Y") (repl "stuff")) =>
 ;;     ("MAX" ("X" "Y") . "stuff")
@@ -697,27 +683,6 @@
     (cons name (if args (cons args repl) repl))))
 
 ;; tree => (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
-;; deep search
-(define (trans-unit-defs/deep tree)
-  (define (def? tree)
-    (if (and (eq? 'cpp-stmt (sx-tag tree))
-	     (eq? 'define (sx-tag (sx-ref tree 1))))
-	(can-def-stmt (sx-ref tree 1))
-	#f))
-  (define (inc? tree)
-    (if (and (eq? 'cpp-stmt (sx-tag tree))
-	     (eq? 'include (sx-tag (sx-ref tree 1)))
-	     (pair? (sx-ref (sx-ref tree 1) 2)))
-	(sx-ref (sx-ref tree 1) 2)
-	#f))
-  (let iter ((defs '()) (elts (cdr tree)))
-    (cond
-     ((null? elts) defs)
-     ((def? (car elts)) => (lambda (d) (iter (cons d defs) (cdr elts))))
-     ((inc? (car elts)) => (lambda (t) (iter (iter defs (cdr t)) (cdr elts))))
-     (else (iter defs (cdr elts))))))
-
-;; just one level down
 
 (define* (c99-trans-unit->ddict tree #:optional (seed '()) #:key inc-filter)
   (define (def? tree)
@@ -740,8 +705,52 @@
        seed
        (cdr tree))
       seed))
+
+(define (c99-trans-unit->ddict/deep tree)
+  (c99-trans-unit->ddict tree #:inc-filter #t))
+
+;; Given a udict this generates a list that looke like the internal
+;; CPP define structure.  That is,
+;; @example
+;; @end example
+;; @noindent
+;; @example
+;; (("ABC" . "1")
+;; @end example
+
+(define (anon-enums->defs udict seed)
+  (fold-right
+   (lambda (udecl seed)
+     (if (and (pair? (car udecl))
+	      (eqv? 'enum (caar udecl))
+	      (equal? "*anon*" (cdar udecl)))
+	 (ppout udecl))
+     seed)
+   seed
+   udict))
   
-(define next-down-plain-defs
+;; deep search
+(define (XXX-trans-unit-defs/deep tree)
+  (define (def? tree)
+    (if (and (eq? 'cpp-stmt (sx-tag tree))
+	     (eq? 'define (sx-tag (sx-ref tree 1))))
+	(can-def-stmt (sx-ref tree 1))
+	#f))
+  (define (inc? tree)
+    (if (and (eq? 'cpp-stmt (sx-tag tree))
+	     (eq? 'include (sx-tag (sx-ref tree 1)))
+	     (pair? (sx-ref (sx-ref tree 1) 2)))
+	(sx-ref (sx-ref tree 1) 2)
+	#f))
+  (let iter ((defs '()) (elts (cdr tree)))
+    (cond
+     ((null? elts) defs)
+     ((def? (car elts)) => (lambda (d) (iter (cons d defs) (cdr elts))))
+     ((inc? (car elts)) => (lambda (t) (iter (iter defs (cdr t)) (cdr elts))))
+     (else (iter defs (cdr elts))))))
+
+;; just one level down
+(define XXX-next-down-plain-defs
   (let ((p (node-join
 	    ;;(select-kids (node-typeof? 'cpp-stmt))
 	    ;;(select-kids (node-typeof? 'include))
@@ -824,11 +833,10 @@
 	 (prefix (or (assq-ref attrs #:prefix) (symbol->string (last path))))
 	 ;;
 	 (ffi-defs (c99-trans-unit->ddict tree #:inc-filter incf))
-	 ;;(ffi-defs (next-down-plain-defs tree))
-	 (all-defs (trans-unit-defs/deep tree))
+	 ;;(ffi-defs (anon-enums->defs uddict ffi-defs)) ;; fold in enums
+	 (all-defs (c99-trans-unit->ddict/deep tree))
 	 )
-    ;;(ppout incf)
-    ;;(ppout ffi-defs)
+    ;;(ppout uddict)
     ;;(quit)
     
     (set! *uddict* uddict)
@@ -853,11 +861,9 @@
        (catch 'ffi-help-error
 	 (lambda ()
 	   (cond
-	    (#t
-	     ;;(sfout "~S\n" (car pair))
-	     (sfscm "\n;; ~S\n" (car pair))
+	    (#f
 	     (udecl->ffi-decl (cdr pair) type-list))
-
+	    
 	    ((member (car pair) '(
 				  #|
 				  ;;"cairo_get_reference_count"
@@ -869,7 +875,6 @@
 				  "cairo_region_contains_point"
 				  "cairo_set_user_data"
 				  "cairo_status_t"
-				  |#
 				  "cairo_t"
 				  "cairo_create"
 				  "cairo_destroy"
@@ -879,6 +884,8 @@
 				  "cairo_stroke"
 				  "cairo_svg_surface_create"
 				  "cairo_operator_t"
+				  |#
+				  "cairo_path_t"
 				  ))
 	     ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
 	     (udecl->ffi-decl (cdr pair) type-list))

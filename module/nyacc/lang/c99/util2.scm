@@ -530,7 +530,7 @@
       ((struct-ref union-ref)
        ;; Still more to think about here.
        ;; If the ref has an associated def, then replace with that.
-       ;; Currently other decl-spec-list items are not included.
+       ;; Currently other decl-spec-list items are not included. But they are.
        (let* ((is-struct (eqv? 'struct-ref (car tspec)))
 	      (ident (cadr tspec))
 	      (name (cadr ident))
@@ -841,11 +841,11 @@
   (let iter ((rz '()) (cl '()) (fl (cdr fld-list)))
     ;;(pretty-print fl)
     (cond
-     ((null? fl) (cons 'field-list (reverse rz)))
+     ((null? fl) (cons 'field-list (reverse rz))) ;; => fold-right ?
      ((eqv? 'comment (caar fl))
       (iter rz (cons (cadar fl) cl) (cdr fl)))
      ((eqv? 'comp-decl (caar fl))
-      (if (eq? 4 (length (car fl)))
+      (if (or (eq? 4 (length (car fl))) (null? cl))
 	  (iter (cons (car fl) rz) '() (cdr fl))	 ; has comment
 	  (let* ((cs (apply string-append (reverse cl))) ; add comment
 		 (fd (append (car fl) (list (list 'comment cs)))))
@@ -853,6 +853,9 @@
      (else
       (error "bad field")))))
 
+;; @deffn {Procedure} fix-fields flds => flds
+;; This is just @code{(cdr (clean-field-list `(field-list . ,flds)))}
+;; @end deffn
 (define (fix-fields flds)
   (cdr (clean-field-list `(field-list . ,flds))))
 
