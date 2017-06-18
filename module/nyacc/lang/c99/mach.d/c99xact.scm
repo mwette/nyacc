@@ -721,15 +721,19 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => pragma
    (lambda ($1 . $rest) $1)
-   ;; external-declaration => "extern" '$string "{" external-declaration-li...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
+   ;; external-declaration => "extern" '$string "{" $P2 external-declaratio...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(extern-block
         (extern-begin ,$2)
-        ,@(sx-tail (tl->list $4) 1)
+        ,@(sx-tail (tl->list $5) 1)
         (extern-end)))
    ;; external-declaration => ";"
    (lambda ($1 . $rest)
      `(decl (@ (extension . "GNU C"))))
+   ;; $P2 => 
+   (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
+   ;; $P3 => 
+   (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-inc-blev!))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)
      `(knr-fctn-defn

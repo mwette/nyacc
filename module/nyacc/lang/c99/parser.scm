@@ -84,8 +84,8 @@
 	   (lambda ()
 	     (c99-raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
 			 #:debug debug)))))
-   (lambda (key fmt . rest)
-     (report-error fmt rest)
+   (lambda (key fmt . args)
+     (report-error fmt args)
      #f)))
 
 ;; --- last line ---

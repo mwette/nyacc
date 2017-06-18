@@ -1,0 +1,102 @@
+2017-06-17  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util2.scm (clean-field-list): fixed bug that would add comments
+1	when there were none at all
+
+2017-06-16  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util2.scm (munge-decl): changed (decl to (udecl
+
+2017-06-15  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util2.scm (c99-trans-unit->udict): changed to fold-right
+	(canize-enum-def-list): now working for negative enum vals
+
+2017-06-11  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util2.scm (c99-trans-unit->udict): if include was not
+	getting the include's trans-unit
+
+2017-06-03  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* body.scm (gen-c-lexer): fixed cpp expansion to allow
+	re-expansion when replacement is ident-like.  This allows
+	  #define ABC(X,Y) ((X)+(Y))
+	  #define DEF ABC
+	  int main { int x = DEF(1,2); }
+	reference: janneke bug report on def-bwl.c
+
+2017-05-04  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* pprint.scm (pretty-print-c99): removed double spacing
+	in printed declarations
+
+2017-03-11  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* parser.scm (parse-c99): added mode keyword argument to
+	gen-c-lexer, file mode would not have been working ...
+
+2017-02-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* pprint.scm: (binary 'd-del .. => (binary 'd-sel
+
+2017-02-22  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cpp.scm (rtokl->string): added handler for 'string
+
+	* body.scm: added 'skip state so that if skipping #if
+	then no CPP if or elif arguments are evaluated
+
+	* cpp.scm: parse 0L numbers, convert c numbers (e.g.,
+	123L) to scheme so that string->number works.  I need to update
+	cnumstr->snumstr in nyacc/lex.scm.
+
+2017-02-16  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cpp.scm (rtokl->string): now handled symb ## arg ## symb
+	(scan-cpp-input): skip-il-ws after #\(
+
+2017-01-18  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* parser.scm: check for EOF in end of CPP line
+
+	* mach.scm (c99-spec): decl for translation unit was
+	updated to allow programs with no declarations or statements
+
+2017-01-07  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* body.scm (read-cpp-line): cpp statement should not
+	include newline?  Changed to unread final newline.
+
+	* mach.scm (c99-spec): from
+        2017-01-07 Jan Nieuwenhuizen  <janneke@gnu.org>
+	mising unquote in output sx for goto: `(goto $2) => `(goto ,$2)
+
+2017-01-06  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* parser.scm: default parser #:mode is now 'code; done
+	since the CPP should now be working (??)
+
+2017-01-02  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): added hooks (cpp-ok!, no-cpp!) to
+	provide handshaking between parser and lexer wrt when the lexer
+	can pass CPP statements to the parser
+
+	* cppbody.scm (expand-cpp-mref): skip ws between ident
+	and left paren
+
+2017-01-01  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* body.scm (gen-c-lexer): in code mode now expands includes
+
+	* pprint.scm (pretty-print-c99): added enum-dev w/o name
+
+
+Copyright (C) 2017 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+

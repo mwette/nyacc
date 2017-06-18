@@ -50,6 +50,7 @@
 	    declr->ident
 
 	    clean-field-list
+	    inc-keeper?
 
 	    ;; deprecated
 	    tree->udict tree->udict/deep
@@ -105,7 +106,23 @@
 
 ;; may need to replace (typename "int32_t") with (fixed-type "int32_t")
 
-;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:filter f] => udict
+;; @deffn {Procedure} ink-keeper? tree inc-filter => #f| tree
+;; This is a helper.  @var{inc-filter} is @code{#t}, @code{#f} or a
+;; precicate procedure, which given the name of the file, determines if
+;; it should be processed.
+;; @end deffn
+(define (inc-keeper? tree filter)
+  (if (and (eqv? (sx-tag tree) 'cpp-stmt)
+	   (eqv? (sx-tag (sx-ref tree 1)) 'include)
+	   (pair? (sx-ref (sx-ref tree 1) 2))
+	   (if (procedure? filter)
+	       (filter (let ((arg (sx-ref (sx-ref tree 1) 1)))
+			 (substring arg 1 (1- (string-length arg)))))
+	       filter))
+      (sx-ref (sx-ref tree 1) 2)
+      #f))
+
+;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:inc-filter f] => udict
 ;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]=> udict
 ;; Turn a C parse tree into a assoc-list of global names and definitions.
 ;; This will unwrap @code{init-declr-list} into list of decls w/
@@ -128,11 +145,11 @@
 ;; @end deffn
 ;; @noindent
 ;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
-;; The filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
+;; The inc-filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
 ;; of one argument, the include path, to indicate whether it should be included
 ;; in the dictionary.
-(define* (c99-trans-unit->udict tree #:optional (seed '()) #:key filter)
-  (define (inc-keeper? tree)
+(define* (c99-trans-unit->udict tree #:optional (seed '()) #:key inc-filter)
+  #;(define (inc-keeper? tree) ;; pull in this (cpp-stmt (include ...)) ?
     (if (and (eqv? (sx-tag tree) 'cpp-stmt)
 	     (eqv? (sx-tag (sx-ref tree 1)) 'include))
 	(if (procedure? filter)
@@ -141,19 +158,23 @@
 	    filter)
 	#f))
   (if (pair? tree)
-      (fold
+      (fold-right
        (lambda (tree seed)
 	 (cond
 	  ((eqv? (sx-tag tree) 'decl)
 	   (munge-decl tree seed))
-	  ((inc-keeper? tree)
-	   (c99-trans-unit->udict (sx-ref tree 1) seed #:filter filter))
+	  #;((inc-keeper? tree inc-filter)
+	   (c99-trans-unit->udict (sx-ref (sx-ref tree 1) 2) seed
+				  #:inc-filter inc-filter))
+	  ((inc-keeper? tree inc-filter) =>
+	   (lambda (tree)
+	     (c99-trans-unit->udict tree seed #:inc-filter inc-filter)))
 	  (else seed)))
        seed
        (cdr tree))
       seed))
 (define (c99-trans-unit->udict/deep tree)
-  (c99-trans-unit->udict tree #:filter #t))
+  (c99-trans-unit->udict tree #:inc-filter #t))
 (define tree->udict c99-trans-unit->udict)
 (define tree->udict/deep c99-trans-unit->udict/deep)
 
@@ -196,7 +217,7 @@
   (define a-enum '(enum . "*anon*"))
 
   (define (make-decl type guts)
-    `(decl (decl-spec-list (type-spec (,type . ,guts)))))
+    `(udecl (decl-spec-list (type-spec (,type . ,guts)))))
 
   (define (iter-declrs init-declr-l tail seed)
     (if (not init-declr-l) seed
@@ -509,7 +530,7 @@
       ((struct-ref union-ref)
        ;; Still more to think about here.
        ;; If the ref has an associated def, then replace with that.
-       ;; Currently other decl-spec-list items are not included.
+       ;; Currently other decl-spec-list items are not included. But they are.
        (let* ((is-struct (eqv? 'struct-ref (car tspec)))
 	      (ident (cadr tspec))
 	      (name (cadr ident))
@@ -558,22 +579,27 @@
   
 ;; @deffn {Procedure} canize-enum-def-list
 ;; Fill in constants for all entries of an enum list.
+;; Expects @code{(enum-def-list (...))} ???
 ;; @end deffn
 (define (canize-enum-def-list enum-def-list)
   (define (get-used edl)
-    (let iter ((uzd '()) (edl edl))
-	 (cond
-	  ((null? edl) uzd)
-	  ((assq-ref (cdar edl) 'p-expr) =>
-	   (lambda (x)
-	     (iter (cons (string->number (cadar x)) uzd) (cdr edl))))
-	  (else
-	   (iter uzd (cdr edl))))))
+    (fold
+     (lambda (def seed)
+       (sxml-match def
+	 ((enum-defn (ident ,name) (p-expr ,num) . ,rest)
+	  (cons (string->number (cadr num)) seed))
+	 ((enum-defn (ident ,name) (neg (p-expr ,num)) . ,rest)
+	  (cons (- (string->number (cadr num))) seed))
+	 (,otherwise seed)))
+     '() edl))
   (let ((used (get-used (cdr enum-def-list))))
     (let iter ((rez '()) (ix 0) (edl (cdr enum-def-list)))
       (cond
        ((null? edl) (cons (car enum-def-list) (reverse rez)))
-       ((assq-ref (cdar edl) 'p-expr)
+       ((sxml-match (car edl)
+	  ((enum-defn (ident ,name) (p-expr ,num) . ,rest) #t)
+	 ((enum-defn (ident ,name) (neg (p-expr ,num)) . ,rest) #t)
+	 (,otherwise #f))
 	(iter (cons (car edl) rez) ix (cdr edl)))
        (else
 	(let* ((ix1 (let iter ((ix (1+ ix)))
@@ -816,11 +842,11 @@
   (let iter ((rz '()) (cl '()) (fl (cdr fld-list)))
     ;;(pretty-print fl)
     (cond
-     ((null? fl) (cons 'field-list (reverse rz)))
+     ((null? fl) (cons 'field-list (reverse rz))) ;; => fold-right ?
      ((eqv? 'comment (caar fl))
       (iter rz (cons (cadar fl) cl) (cdr fl)))
      ((eqv? 'comp-decl (caar fl))
-      (if (eq? 4 (length (car fl)))
+      (if (or (eq? 4 (length (car fl))) (null? cl))
 	  (iter (cons (car fl) rz) '() (cdr fl))	 ; has comment
 	  (let* ((cs (apply string-append (reverse cl))) ; add comment
 		 (fd (append (car fl) (list (list 'comment cs)))))
@@ -828,6 +854,9 @@
      (else
       (error "bad field")))))
 
+;; @deffn {Procedure} fix-fields flds => flds
+;; This is just @code{(cdr (clean-field-list `(field-list . ,flds)))}
+;; @end deffn
 (define (fix-fields flds)
   (cdr (clean-field-list `(field-list . ,flds))))
 

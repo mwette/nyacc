@@ -124,8 +124,6 @@
 ;; (name . (var rank)) if type == float fixed
 ;; (name . (fctn pub?))
 
-(define sx+attr sx-set-attr!)
-
 ;; given a list of stmts, look in leading statements for
 ;; (comm "%: <name> : <type> ")
 ;; so osig = function doit(con, isig)
@@ -180,7 +178,7 @@
       ((fctn-decl (ident ,name) . ,rest)
        (let ((scope (if (equal? name (assoc-ref dict "file")) "pub" "prv"))
 	     )
-	 (values (sx+attr tree 'scope scope) '() dict)))
+	 (values (sx+attr* tree 'scope scope) '() dict)))
 
       ((assn (aref-or-call ,expr ,ex-l) . ,rval)
        (values `(assn (array-ref ,expr ,ex-l)) '() dict))
@@ -267,7 +265,7 @@
       ((assn)
        (let* ((assn (reverse kseed))
 	      (lval (sx-ref assn 1)) (rval (sx-ref assn 2))
-	      (ltyp (sx-attr-ref lval 'type))
+	      (ltyp (sx-atr-ref lval 'type))
 	      (rtype (sx-attr-ref rval 'type))
 	      (rrank (and=> (sx-attr-ref rval 'rank) string->number))
 	      )

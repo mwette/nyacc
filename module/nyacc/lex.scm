@@ -147,11 +147,19 @@
 
 ;; @deffn {Procedure} make-ident-like-p ident-reader
 ;; Generate a predicate, from a reader, that determines if a string qualifies
-;; as an identifier.
+;; as an identifier. 
 ;; @end deffn
-(define (make-like-ident-p reader)
-  (lambda (s) (and (string? s) (eval-reader reader s))))
-(define make-ident-like-p make-like-ident-p)
+;; Implementation may not be very efficient.
+(define (make-ident-like-p reader)
+  (lambda (s) (and (string? s)
+		   (positive? (string-length s))
+		   (eval-reader reader s))))
+(define make-like-ident-p make-ident-like-p)
+
+
+;; @deffn {Procedure} like-c-ident? ch 
+;; Determine if a string qualifies as a C identifier.
+;; @end deffn
 (define like-c-ident? (make-like-ident-p read-c-ident))
 
 

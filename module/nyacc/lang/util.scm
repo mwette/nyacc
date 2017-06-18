@@ -13,9 +13,9 @@
 	    report-error
 	    push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
-	    tl-append tl-insert tl-extend tl+attr
+	    tl-append tl-insert tl-extend tl+attr tl+attr*
 	    sx-tag sx-attr sx-tail sx-ref sx-cons* sx-list
-	    sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr*
+	    sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr* sx+attr*
 	    sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
@@ -36,7 +36,7 @@ the file COPYING included with the this distribution.")
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
-;; @deffn report-error fmt args
+;; @deffn {Procedure} report-error fmt args
 ;; Report an error: to stderr, providing file and line num info, and add nl.
 (define (report-error fmt args)
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
@@ -135,13 +135,23 @@ the file COPYING included with the this distribution.")
   tl)
 
 ;; @deffn {Procedure} tl+attr tl key val)
-;; Add an attribute to a tagged list.  Return the tl.
+;; Add an attribute to a tagged list.  Return a new tl.
 ;; @example
 ;; (tl+attr tl 'type "int")
 ;; @end example
 ;; @end deffn
 (define (tl+attr tl key val)
   (tl-insert tl (cons '@ (list key val))))
+
+;; @deffn {Procedure} tl+attr tl key val [key val [@dots{} ...]]) => tl
+;; Add multiple attributes to a tagged list.  Return a new tl.
+;; @example
+;; (tl+attr tl 'type "int")
+;; @end example
+;; @end deffn
+(define (tl+attr* tl . rest)
+  (if (null? rest) tl
+      (tl+attr* (tl+attr tl (car rest) (cadr rest)) (cddr rest))))
 
 ;; @deffn {Procedure} tl-merge tl tl1
 ;; Merge guts of phony-tl @code{tl1} into @code{tl}.
@@ -247,14 +257,14 @@ the file COPYING included with the this distribution.")
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,
 ;; add it, if it does exist, replace it.
 ;; @end deffn
-(define (sx-set-attr! sx key val . rest)
+(define (sx-set-attr! sx key val)
   (if (sx-has-attr? sx)
       (let ((attr (cadr sx)))
 	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
       (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
   sx)
 
-;; @deffn sx-set-attr* sx key val [key val [key ... ]]
+;; @deffn {Procedure} sx-set-attr* sx key val [key val [key ... ]]
 ;; Generate sx with added or changed attributes.
 ;; @end deffn
 (define (sx-set-attr* sx . rest)
@@ -263,7 +273,19 @@ the file COPYING included with the this distribution.")
      ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
      (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
 
-;; @deffn sx-find tag sx => ((tag ...) (tag ...))
+;; @deffn {Procedure} sx+attr* sx key val [key val [@dots{} ]] => sx
+;; Add key-val pairs. @var{key} must be a symbol and @var{val} must be
+;; a string.  Return a new @emph{sx}.
+;; @end deffn
+(define (sx+attr* sx . rest)
+  (let* ((attrs (if (sx-has-attr? sx) (cdr (sx-attr sx)) '()))
+	 (attrs (let iter ((kvl rest))
+		  (if (null? kvl) attrs
+		      (cons (list (car kvl) (cadr kvl)) (iter (cddr kvl)))))))
+    (cons* (sx-tag sx) (cons '@ attrs)
+	   (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
+
+;; @deffn {Procedure} sx-find tag sx => ((tag ...) (tag ...))
 ;; Find the first matching element (in the first level).
 ;; @end deffn
 (define (sx-find tag sx)
