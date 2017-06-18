@@ -230,7 +230,7 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ((ident) (cpp-err "undefined identifier: ~S" (cadr tree)))
+	    ((ident) 0)
 	    (else (error "incomplete implementation"))))))
     (eval-expr tree)))
 
@@ -464,6 +464,7 @@
 
 ;; @deffn {Procedure} eval-cpp-cond-text text defs => string
 ;; Evaluate CPP condition expression (text).
+;; Undefined identifiers are replaced with @code{0}.
 ;; @end deffn
 (define (eval-cpp-cond-text text defs)
   (with-throw-handler

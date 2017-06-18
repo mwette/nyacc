@@ -180,6 +180,14 @@
 
      #t))
 
-)
+  (pass-if "cond expr w/ undefined idents"
+    (equal?
+     (parse-string "#if X539101Z\nint x;\n#else\ndouble x;\n#endif\n")
+     '(trans-unit
+      (decl (decl-spec-list
+	     (type-spec (float-type "double")))
+	    (init-declr-list (init-declr (ident "x")))))))
+    
+  )
 
 ;; --- last line ---
