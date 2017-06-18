@@ -16,10 +16,8 @@
 (define (compile-ffi . args)
   (use-modules (ffi-help))		; needed here!
   (if (null? args) (error "expecting argument"))
-  (let* ((file (car args))
-         )
-     (compile-ffi-file file)
-     ))
+  (let* ((file (car args)))
+     (compile-ffi-file file)))
 
 (define main compile-ffi)
 

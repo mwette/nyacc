@@ -12,6 +12,17 @@
 ;;
 ;; By definition: wrap is c->scm; unwrap is scm->c
 
+;; define-ffi-module options:
+;; @table @code
+;; @item #:decl-filter proc
+;; @item #:inc-filter proc
+;; @item #:include string
+;; @item #:library string
+;; @item #:pkg-config string
+;; @item #:renamer proc
+;; procdure
+;; @end table
+  
 ;; @table code
 ;; @item mspec->ffi-wrapper
 ;; generates code to apply wrapper to objects returned from foreign call
@@ -37,7 +48,7 @@
 	    compile-ffi-file
 	    intro-ffi
 	    unwrap-char*
-	    bs-renamer ffi-renamer
+	    string-member-proc string-renamer
 	    pkg-config-incs
 	    )
   #:use-module (nyacc lang c99 parser)
@@ -49,18 +60,6 @@
   ;;#:use-module (bytestructures guile)
   #:use-module (ice-9 format)
   #:version (0 1 0))
-
-#|
-(define (ffi-renamer s)
-  (let ((n (symbol->string s)))
-    (if (string=? "ffi" (substring n 0 3)) s
-	(string->symbol (string-append "ffi:" n)))))
-
-(define (bs-renamer s)
-  (let ((n (symbol->string s)))
-    (if (string=? "bs:" (substring n 0 3)) s
-	(string->symbol (string-append "bs:" n)))))
-|#
 
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 xparser))
@@ -80,15 +79,18 @@
 (use-modules (system base pmatch))
 (use-modules (ice-9 pretty-print))
 
-(define *ffi-help-version* "0.01.0")
+(define *ffi-help-version* "0.02.0")
 
 (define std-inc-dirs
   `("/usr/include"
     ;;,(assq-ref %guile-build-info 'includedir)
     ))
 
+
 (define *port* #t)
 (define *uddict* '())
+(define *renamer* identity)
+
 (define *ffi-keepers*
   (append fixed-width-int-names
 	  '("float" "double" "int" "unsigned int" "long" "unsigned long"
@@ -96,18 +98,25 @@
 (define *keepers* *ffi-keepers*)
 (define *wrapped* '()) ;; list of strings, with appended "*" are wrapped
 
-(define (sfout fmt . args)
-  (apply simple-format #t fmt args))
+
 (define (sfscm fmt . args)
   (apply simple-format *port* fmt args))
-(define (sferr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
 (define* (ppscm tree #:key (per-line-prefix ""))
   (pretty-print tree *port* #:per-line-prefix per-line-prefix))
+(define (c99scm tree)
+  (pretty-print-c99 tree *port* #:per-line-prefix ";; "))
+(define (nlscm) (newline *port*))
+
+(define (sfout fmt . args)
+  (apply simple-format #t fmt args))
 (define (ppout tree)
   (pretty-print tree #:per-line-prefix "    "))
-(define (newln)
-  (newline *port*))
+(define (nlout) (newline)
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
+(define (pperr tree)
+  (pretty-print tree (current-error-port) #:per-line-prefix "    "))
+
 
 (define (fherr fmt . args)
   (apply throw 'ffi-help-error fmt args))
@@ -225,12 +234,14 @@
     (((fixed-type ,name)) (string-append "bs:" name))
     (((float-type ,name)) (string-append "bs:" name))
     (((void)) "bs:void")
+    ;;
     (((pointer-to) (fixed-type ,name)) (string-append "bs:" name "*"))
     (((pointer-to) (float-type ,name)) (string-append "bs:" name "*"))
     (((pointer-to) (void)) "bs:void*")
     ;;
     (((typename ,name)) name)
-    (((pointer-to) (typename ,name)) (string-append name "*"))
+    ;;(((pointer-to) (typename ,name)) (string-append name "*"))
+    (((pointer-to) (typename ,name)) "bs:void*")
     ;;
     (,otherwise (error "1: missed" mspec-tail))))
 
@@ -273,7 +284,7 @@
      (or (assoc-ref ffi-typemap name) (fherr "mspec->ffi-sym: ~A" name)))
     (((void)) 'ffi:void)
     (((pointer-to) . ,rest) ''*)
-    (((enum-def . ,rest2) . ,rest1) "ffi:int")
+    (((enum-def . ,rest2) . ,rest1) 'ffi:int)
     (((typename ,name) . ,rest)
      (let* ((udecl `(decl (decl-spec-list (type-spec (typename ,name)))
 			  (init-declr (ident "_"))))
@@ -322,21 +333,54 @@
     (,otherwise
      (fherr "mspec->ffi-unwrapper missed: ~S" mspec))))
 
-;; --- structures 
+;; --- structs and unions
 
 (define (cnvt-field field)
   (let ((mspec (udecl->mspec field)))
     #f))
 
+(define (copy-of:mtype->bs mspec-tail)
+  (pmatch mspec-tail
+    (((fixed-type ,name)) (string-append "bs:" name))
+    (((float-type ,name)) (string-append "bs:" name))
+    (((void)) "bs:void")
+    ;;
+    (((pointer-to) (fixed-type ,name)) (string-append "bs:" name "*"))
+    (((pointer-to) (float-type ,name)) (string-append "bs:" name "*"))
+    (((pointer-to) (void)) "bs:void*")
+    ;;
+    (((typename ,name)) name)
+    (((pointer-to) (typename ,name)) (string-append name "*"))
+    ;;
+    (,otherwise (error "1: missed" mspec-tail))))
+
+
 (define (acons-defn name type seed)
   (cons (eval-string (string-append "(quote `(" name " ," type "))")) seed))
 
-;; cairo_matrix_t
+(define (cnvt-field-list field-list)
+  (let* ((fldl (clean-field-list field-list)) ; remove lone comments
+	 (flds (cdr fldl))
+	 (uflds (fold munge-comp-decl '() flds)) ; in reverse order
+	 )
+    (let iter ((sflds '()) (decls uflds))
+      (if (null? decls) sflds
+	  (let* ((name (caar decls))
+		 (udecl (cdar decls))
+		 ;;(udecl (expand-typerefs udecl *uddict* #:keep *keepers*))
+		 (spec (udecl->mspec/comm udecl))
+		 (type (mtype->bs (cddr spec))))
+	    ;;(nlout) (ppout udecl) (ppout (cons name type))
+	    (iter (acons-defn name type sflds) (cdr decls)))))))
+
+
 (define (cnvt-struct-def typename struct-name field-list)
+  (sfout "\n")
   ;;(ppout field-list)
+  ;;(sfout "\n")
+  (cnvt-field-list field-list)
   ;;(ppout (fold munge-comp-decl '() (cdr (clean-field-list field-list))))
   (quit)
-  (sfout "\n\n")
   ;;(ppout (assoc-ref *uddict* "cairo_path_data_t"))
   (sfout "\n\n")
   (let* ((fldl (clean-field-list field-list)) ; remove lone comments
@@ -355,7 +399,7 @@
     (sfscm "\n;; ~A\n" typename)
     (ppscm `(define ,(string->symbol typename) (bs:struct (list ,@sflds))))
     (sfscm "(export ~A)\n" typename)
-    (newln)
+    (nlscm)
     #t))
 
 ;; --- enums
@@ -391,14 +435,18 @@
      (enum-name (sfscm ";; enum ~A;\n" enum-name))
      (else (sfscm ";; anon enum\n")))
     (if typename (makeum typename))
-    (if enum-name (makeum (string-append "enum-" enum-name)))
+    (if enum-name
+	(if typename
+	    (begin
+	      (sfscm "(define wrap-enum-~A wrap-~A)\n" enum-name typename)
+	      (sfscm "(define unwrap-enum-~A unwrap-~A)\n" enum-name typename))
+	    (makeum (string-append "enum-" enum-name))))
     (unless (or #t typename enum-name) ;; anon enums in defines
       (for-each
        (lambda (pair) (sfscm "(define ~A ~A)\n" (car pair) (cdr pair)))
        name-val-l)
       (ppscm `(export ,@(map car name-val-l))))
     ))
-
 
 ;; --- function
 
@@ -534,8 +582,6 @@
 	 (type-spec (struct-ref (ident ,name))))
 	(init-declr (ident ,typename)))
      (let ((p-typename (string-append typename "*")))
-       (sfscm "\n")
-       (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
        (sfscm "(define-std-pointer-wrapper ~A)\n" p-typename)
        (set! *wrapped* (cons typename *wrapped*))
        (cons typename type-list)))
@@ -547,7 +593,7 @@
 	 (type-spec (struct-def (ident ,struct-name) ,field-list)))
 	(init-declr (ident ,typename)))
      (let ((p-typename (string-append typename "*")))
-       (ppout udecl) (quit)
+       ;;(ppout udecl) (quit)
        (cnvt-struct-def typename struct-name field-list)
        (sfscm "(define-std-pointer-wrapper ~A)\n" p-typename)
        (set! *wrapped* (cons p-typename *wrapped*))
@@ -608,7 +654,7 @@
 	    (decl-return (gen-decl-return ret-decl))
 	    (decl-params (gen-decl-params params)))
        (sfscm "\n")
-       (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
+       (c99scm udecl)
        (sfscm "(define (wrap-~A proc) ;; => pointer\n" typename)
        (ppscm
 	`(ffi:procedure->pointer ,decl-return proc (list ,@decl-params))
@@ -625,7 +671,7 @@
 	      (pointer) (ftn-declr (ident ,name) (param-list . ,params)))))
      ;;(sfscm "\n;; ~A\n" name)
      (sfscm "\n")
-     (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
+     (c99scm udecl)
      (make-fctn name (ptr-decl specl) (fix-params params))
      type-list)
 
@@ -634,11 +680,11 @@
 	    (init-declr
 	     (ftn-declr (ident ,name) (param-list . ,params))))
      (sfscm "\n")
-     (pretty-print-c99 udecl *port* #:per-line-prefix ";; ")
+     (c99scm udecl)
      (when #f ;; specifier and declarator on separate lines
-       (pretty-print-c99 specl *port* #:per-line-prefix ";; ")
+       (c99scm specl)
        (sfscm "\n")
-       (pretty-print-c99 (caddr udecl) *port* #:per-line-prefix ";; ")
+       (c99scm (caddr udecl))
        (sfscm "\n"))
      (make-fctn name (non-ptr-decl specl) (fix-params params))
      type-list)
@@ -781,9 +827,9 @@
 
 ;; given keeper-defs (k-defs) and all defs (a-defs) expand the keeper
 ;; replacemnts down to constants (strings, integers, etc)
-(define (process-defs mod-name k-defs a-defs)
-  (sfscm "\n;; access to #define constants:\n")
-  (let ((name (string->symbol (string-append mod-name "-def-val")))
+(define (gen-lookup-proc prefix k-defs a-defs)
+  (sfscm "\n;; access to enum symbols and #define'd constants:\n")
+  (let ((name (string->symbol (string-append prefix "lookup")))
 	(defs (fold-right
 	       (lambda (def seed)
 		 (let* ((name (car def))
@@ -804,12 +850,13 @@
 	       '()
 	       k-defs)))
     (ppscm `(define ,name
-	      (let ((deftab '(,@defs)))
-		(lambda (k) (assq-ref deftab k)))))
+	      (let ((symtab '(,@defs)))
+		(lambda (k) (assq-ref symtab k)))))
   (sfscm "(export ~A)\n" name)))
 
-;; ---
+;; === main converter ================
 
+;; process define-ffi-module expression
 (define (intro-ffi path opts)
   ;; pkg-config --cflags <pkg>
   ;; pkg-config --libs <pkg>
@@ -827,12 +874,12 @@
        ((null? attrs) (parse-includes (reverse defines)
 				      (reverse inc-dirs)
 				      (reverse inc-files)))
-       ((eqv? #:pkg-config (caar attrs))
+       ((eqv? 'include (caar attrs))
+	(iter defines inc-dirs (cons (cdar attrs) inc-files) (cdr attrs)))
+       ((eqv? 'pkg-config (caar attrs))
 	(iter defines (append (pkg-config-incs (cdar attrs)) inc-dirs)
 	      inc-files (cdr attrs)))
-       ((eqv? #:include (caar attrs))
-	(iter defines inc-dirs (cons (cdar attrs) inc-files) (cdr attrs)))
-       ((eqv? #:define (caar attrs))
+       ((eqv? 'define (caar attrs))
 	(iter (cons (cdar attrs) defines) inc-dirs inc-files (cdr attrs)))
        (else
 	;;(simple-format #t "skipping ~S\n" (caar attrs))
@@ -841,105 +888,83 @@
   (let* ((attrs (opts->attrs opts))
 	 (dpath (string-join (map symbol->string path) "/"))
 	 (dport (open-output-file (string-append dpath ".scm")))
-	 (sf (lambda (fmt . args) (apply simple-format dport fmt args)))
-	 (tree (get-tree attrs))
-	 (incf (or (assq-ref attrs #:inc-filter) #f))
-	 (udecls (reverse (c99-trans-unit->udict tree #:inc-filter incf)))
+	 (incf (or (assq-ref attrs 'inc-filter) #f))
+	 (prefix (or (assq-ref attrs 'prefix) 
+		     (string-append (symbol->string (last path)) "-")))
+	 (declf (or (assq-ref attrs 'decl-filter) identity))
+	 (renamer (or (assq-ref attrs 'renamer) identity))
+	 ;;
+	 (tree (get-tree attrs))	; run parser
+	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (uddict (c99-trans-unit->udict/deep tree))
-	 (prefix (or (assq-ref attrs #:prefix) (symbol->string (last path))))
 	 ;;
 	 (enu-defs (udict-enums->defs uddict '()))
 	 (ffi-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter incf))
 	 (all-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter #t))
 	 )
-    ;;(ppout ffi-defs)
-    ;;(quit)
-    
+    ;;(ppout incf) (quit)
+    ;; set globals
     (set! *uddict* uddict)
-    (set! *port* dport) ;; HACK
-    (sf ";;\n")
-    (sf ";; auto-generated by ffi-help.scm\n")
-    (sf ";;\n")
-    (sf "\n")
-    (sf "(define-module ~S\n" path)
-    (for-each
-     (lambda (pair)
-       (sfscm "  ~S " (car pair))
-       (ppscm (cdr pair)))
-     (opts->mopts opts))
-    (sf "  #:use-module (ffi-help)\n")
-    (sf "  #:use-module ((system foreign) #:prefix ffi:)\n")
-    (sf "  #:use-module ((bytestructures guile) #:prefix bs:)\n")
-    (sf "  )\n")
-    (sf "(define bs:struct bs:bs:struct)\n")
-    (sf "(define bs:union bs:bs:union)\n")
-    (quit)
-    (sf "\n")
-    (sf "(define lib-link (dynamic-link ~S))\n" (assq-ref attrs #:library))
-    (sf "(define (lib-func name) (dynamic-func name lib-link))\n")
-    (process-defs prefix ffi-defs all-defs)
-    (fold
+    (set! *port* dport)
+    ;; renamer?
 
+    ;; file and module header
+    (sfscm ";; auto-generated by ffi-help.scm\n")
+    (sfscm ";;\n")
+    (nlscm)
+    (sfscm "(define-module ~S\n" path)
+    (for-each ;; output pass-through options
+     (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
+     (opts->mopts opts))
+    (sfscm "  #:use-module (ffi-help)\n")
+    (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
+    (sfscm "  #:use-module ((bytestructures guile) #:prefix bs:)\n")
+    (sfscm "  )\n")
+    (sfscm "(define bs:struct bs:bs:struct)\n")
+    (sfscm "(define bs:union bs:bs:union)\n")
+    (sfscm "(define bs:pointer bs:bs:pointer)\n")
+    (sfscm "(define bs:void*  (bs:pointer bs:int32))\n")
+    (nlscm)
+    (sfscm "(define lib-link (dynamic-link ~S))\n" (assq-ref attrs 'library))
+    (sfscm "(define (lib-func name) (dynamic-func name lib-link))\n")
+
+    ;; convert and output foreign declarations
+    (fold
      (lambda (pair type-list)
        (catch 'ffi-help-error
 	 (lambda ()
 	   (cond
-	    (#f
+	    ((declf (car pair))
+	     (nlscm) ;;(c99scm udecl)  <= fix to turn xxx-def to xxx-ref
 	     (udecl->ffi-decl (cdr pair) type-list))
-	    
-	    ((member (car pair) '(
-				  #|
-				  ;;"cairo_get_reference_count"
-				  ;;"cairo_set_dash"
-				  "cairo_bool_t"
-				  "cairo_matrix_t"
-				  "cairo_region_t"
-				  "cairo_destroy_func_t"
-				  "cairo_region_contains_point"
-				  "cairo_set_user_data"
-				  "cairo_surface_t"
-				  "cairo_surface_destroy"
-				  "cairo_move_to" "cairo_line_to"
-				  "cairo_stroke"
-				  "cairo_svg_surface_create"
-				  "cairo_operator_t"
-				  "cairo_t"
-				  "cairo_create"
-				  "cairo_destroy"
-				  |#
-				  "cairo_status_t"
-				  "cairo_font_options_t"
-				  "cairo_font_options_status"
-				  ;;"cairo_path_t"
-				  ))
-	     ;;(simple-format #t "\n~S =>\n" (car pair)) (ppout (cdr pair))
-	     (udecl->ffi-decl (cdr pair) type-list))
-
 	    (else
 	     type-list)))
-	 
 	 (lambda (key fmt . args)
 	   (apply simple-format (current-error-port)
 		  (string-append "ffi-help: " fmt "\n") args)
 	   (sfscm ";; ... failed.\n")
 	   type-list)))
-     
-     fixed-width-int-names
-     udecls)
-    ;;(sf "\n;; --- last line ---\n")
-    ;;(close dport)
-    ;; return port so compiler can copy out more code
+     fixed-width-int-names udecls)
+
+    ;; output global constants (from enum and #define)
+    (sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
+    ;;(gen-lookup-proc prefix ffi-defs all-defs)
+
+    ;; return port so compiler can output remaining code
     dport))
 
 (define-syntax fix-option
   (lambda (x)
     (define (sym->key stx)
       (datum->syntax stx (symbol->keyword (syntax->datum stx))))
-    (syntax-case x (pkg-config include library inc-filter)
-      ((_ pkg-config name) #'(cons 'pkg-config name))
-      ((_ include name) #'(cons 'include name))
-      ((_ library name) #'(cons 'library name))
+    (syntax-case x (decl-filter inc-filter include library pkg-config renamer)
+      ((_ decl-filter proc) #'(cons 'decl-filter proc))
       ((_ inc-filter proc) #'(cons 'inc-filter proc))
+      ((_ include string) #'(cons 'include string))
+      ((_ library string) #'(cons 'library string))
+      ((_ pkg-config string) #'(cons 'pkg-config string))
+      ((_ renamer proc) #'(cons 'renamer proc))
+      ;; the rest gets passed to the module decl
       ((_ key arg) #`(cons #,(sym->key #'key) (quote arg)))
       )))
 
@@ -964,8 +989,17 @@
   (intro-ffi (quote path-list) (module-options attr ...)))
 
 
+;; === file compiler ================
+
 (use-modules (system base language))
 (use-modules (ice-9 pretty-print))
+
+(define (string-member-proc . args)
+  (lambda (s) (member s args)))
+
+;; to convert symbol-based #:renamer to string-based
+(define (string-renamer proc)
+  (lambda (s) (string->symbol (proc (symbol->string s)))))
 
 (define scm-reader (language-reader (lookup-language 'scheme)))
 
@@ -989,5 +1023,3 @@
 	      (iter oport)))))))))
 
 ;; --- last line ---
-
-
