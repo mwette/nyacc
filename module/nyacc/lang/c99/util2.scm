@@ -38,6 +38,8 @@
 	    c99-trans-unit->udict/deep
 	    udict-ref udict-struct-ref udict-union-ref udict-enum-ref
 
+	    c99-trans-unit->ddict udict-enums->ddict
+
 	    expand-typerefs
 	    stripdown
 	    udecl->mspec udecl->mspec/comm
@@ -69,6 +71,7 @@
   ;;#:use-module (system base pmatch)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (ice-9 pretty-print)
+  #:use-module (system base pmatch)
   )
 
 (define tmap-fmt
@@ -574,6 +577,78 @@
       (else
        udecl))))
 (define expand-decl-typerefs expand-typerefs) ;; deprecated
+
+;; === enums and defines 
+
+;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [#:inc-filter proc]
+;; Extract the #defines from a tree as
+;; @example
+;; tree => (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
+;; @end example
+;; @end deffn
+(define* (c99-trans-unit->ddict tree #:optional (seed '()) #:key inc-filter)
+  (define (def? tree)
+    (if (and (eq? 'cpp-stmt (sx-tag tree))
+	     (eq? 'define (sx-tag (sx-ref tree 1))))
+	(can-def-stmt (sx-ref tree 1))
+	#f))
+  (define (can-def-stmt defn)
+    (let* ((name (car (assq-ref defn 'name)))
+	   (args (assq-ref defn 'args))
+	   (repl (car (assq-ref defn 'repl))))
+      (cons name (if args (cons args repl) repl))))
+  (if (pair? tree)
+      (fold-right
+       (lambda (tree seed)
+	 (cond
+	  ((def? tree) =>
+	   (lambda (def-stmt)
+	     ;;(sfout "def-stmt=~S\n" def-stmt)
+	     (cons def-stmt seed)))
+	  ((inc-keeper? tree inc-filter) =>
+	   (lambda (tree)
+	     (c99-trans-unit->ddict tree seed #:inc-filter inc-filter)))
+	  (else seed)))
+       seed
+       (cdr tree))
+      seed))
+
+;; @deffn {Procedure} udict-enums->ddict [seed] => defs
+;; Given a udict this generates a list that looke like the internal
+;; CPP define structure.  That is,
+;; @example
+;; (enum-def-list (enum-def (ident "ABC")) ...)
+;; @end example
+;; @noindent
+;; to
+;; @example
+;; (("ABC" . "0") ...)
+;; @end example
+;; @end deffn
+(define* (udict-enums->ddict udict #:optional (seed '()))
+  (define (gen-nvl enum-def-list)
+    (map
+     (lambda (def)
+       (pmatch def
+	 ((enum-defn (ident ,n) (p-expr (fixed ,v)))
+	  (cons n v))
+	 ((enum-defn (ident ,n) (neg (p-expr (fixed ,v))))
+	  (cons n (string-append "-" v)))
+	 (,otherwise (error "gen-name-val-l" def))))
+     (cdr (canize-enum-def-list enum-def-list))))
+  (append
+   seed
+   (fold-right
+    (lambda (pair seed)
+      (if (and (pair? (car pair)) (eq? 'enum (caar pair)))
+	  (let* ((specl (caddr pair)) (tspec (car (assq-ref specl 'type-spec))))
+	    (if (eq? 'enum-def (car tspec))
+		(append (gen-nvl (assq 'enum-def-list (cdr tspec))) seed)
+		seed))
+	  seed))
+    '()
+    udict)))
+ 
 
 ;; === enum handling ...
   

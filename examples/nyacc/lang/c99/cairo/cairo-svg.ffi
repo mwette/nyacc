@@ -13,9 +13,9 @@
   
   #:decl-filter
   (string-member-proc
-  "cairo_t"
+   "cairo_t"
    "cairo_matrix_t"
-   "cairo_get_font_matrix"
+   ;;"cairo_get_font_matrix"
    )
 
   #:pkg-config "cairo"
@@ -23,7 +23,7 @@
 
   ;; the following are bent pipe to scm-module
   #:export (my-cairo-ftn)
-  #:use-module ((srfi srfi-1) #:select (remove))
+  #:use-module ((srfi srfi-1) #:select (first))
   ;;
   )
 
