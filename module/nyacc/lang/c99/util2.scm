@@ -503,6 +503,7 @@
 ;; =>
 ;; extern const int  (*fctns[2])(int a, double b);
 ;; @end example
+;; TODO: add support for @code{(struct . "foo")} in keepers.
 ;; @end deffn
 (define* (expand-typerefs udecl udecl-dict #:key (keep '()))
   ;; ??? add (init-declr-list) OR having predicate (has-init-declr? decl)

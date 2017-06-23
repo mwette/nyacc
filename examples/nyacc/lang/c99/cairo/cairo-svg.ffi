@@ -15,20 +15,20 @@
   (string-member-proc
    "cairo_t"
    "cairo_matrix_t"
-   ;;"cairo_get_font_matrix"
+   "cairo_get_font_matrix"
    )
 
   #:pkg-config "cairo"
   #:library "libcairo" ;; not needed when pkg-config fully working
 
   ;; the following are bent pipe to scm-module
-  #:export (my-cairo-ftn)
-  #:use-module ((srfi srfi-1) #:select (first))
-  ;;
+  #:use-modules (bytestructures guile)
+  #:export (make-cairo-unit-matrix)
   )
 
-(define my-cairo-hack ()
-  (first '(("hello"))))
+(define (make-cairo-unit-matrix)
+  #f)
+
 
 ;; --- last line ---
 #|
