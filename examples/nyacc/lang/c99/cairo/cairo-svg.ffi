@@ -15,16 +15,17 @@
   (string-member-proc
    "cairo_t"
    "cairo_matrix_t"
-   "cairo_get_font_matrix"
+   ;;"cairo_get_font_matrix"
    )
 
   #:pkg-config "cairo"
   #:library "libcairo" ;; not needed when pkg-config fully working
 
   ;; the following are bent pipe to scm-module
-  #:use-modules (bytestructures guile)
   #:export (make-cairo-unit-matrix)
   )
+
+;; is there a way to add guardians for cairo_destroy cairo_surface_destroy?
 
 (define (make-cairo-unit-matrix)
   #f)

@@ -21,8 +21,8 @@
 ;; What is *eoi* for?
 
 (define-module (nyacc import)
-  #:export-syntax (lalr-parser)
-  #:export (guile-lalr->nyacc-lalr)
+  ;;#:export-syntax (lalr-parser)
+  #:export (lalr-parser guile-lalr->nyacc-lalr)
   #:use-module ((srfi srfi-1) #:select (fold-right))
   )
 

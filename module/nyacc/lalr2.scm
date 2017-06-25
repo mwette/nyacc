@@ -21,8 +21,9 @@
 
 ;;(define-module (system base lalr2)
 (define-module (nyacc lalr2)
-  #:export-syntax (lalr2-spec)
+  ;;#:export-syntax (lalr2-spec)
   #:export (*lalr2-version*
+            lalr2-spec
 	    )
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
 					     lset-intersection lset-difference))

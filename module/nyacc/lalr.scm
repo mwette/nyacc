@@ -19,9 +19,9 @@
 ;; compact needs to deal with it ...
 
 (define-module (nyacc lalr)
-  #:export-syntax (lalr-spec)
+  ;;#:export-syntax (lalr-spec)
   #:export (*nyacc-version*
-	    make-lalr-machine compact-machine hashify-machine 
+	    lalr-spec make-lalr-machine compact-machine hashify-machine 
 	    lalr-start lalr-match-table
 	    restart-spec add-recovery-logic!
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
