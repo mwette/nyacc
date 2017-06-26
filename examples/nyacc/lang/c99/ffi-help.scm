@@ -13,13 +13,15 @@
 (define-module (ffi-help)
   #:export (*ffi-help-version*
 	    define-ffi-module
-	    define-fh-aggregate-type
-	    define-fh-pointer-type
 	    compile-ffi-file
 	    intro-ffi
 	    unwrap-char*
 	    string-member-proc string-renamer
 	    pkg-config-incs
+	    ;; runtime
+	    define-fh-aggregate-type
+	    define-fh-pointer-type
+	    pointer-to
 	    )
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 util1)
@@ -305,7 +307,7 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
       (sfscm "(define ~A-~A ~A)\n" aggr-s aggr-name typename)
       (sfscm "(define-fh-pointer-type ~A*)\n" typename)
       ;;(sfscm "(define-std-pointer-type ~A-~A*)\n" aggr-s aggr-name)
-      (sfscm "(export ~A ~A-~A)\n" aggr-s aggr-name typename)
+      (sfscm "(export ~A-~A ~A)\n" aggr-s aggr-name typename)
       (sfscm ";;(define-fs-wrapper-alias ~A ~A)\n" typename aggr-name)
       )
      (typename
@@ -967,41 +969,60 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 			    args)))))
 
     (syntax-case x ()
-      ((_ name aggr-def)
+      ((_ type aggr-def)
        (with-syntax
-	   ((ll-obj-ctor (gen-id x "make-ll-" #'name))
-	    (obj? (gen-id x #'name "?"))
-	    (obj-desc (gen-id x #'name "-desc"))
-	    (set!-obj-desc (gen-id x "set!-" #'name "-desc"))
-	    (make-obj (gen-id x "make-" #'name))
+	   ((obj? (gen-id x #'type "?"))
+	    (make-obj (gen-id x "make-" #'type))
+
+	    ;;(ll-obj-ctor (gen-id x "make-ll-" #'name))
+	    ;;(obj-desc (gen-id x #'name "-desc"))
+	    ;;(set!-obj-desc (gen-id x "set!-" #'name "-desc"))
 	    ;;(ftab (gen-id x #'name "-ftab")) ;; function table
 	    )
 	 
 	 #`(begin
-	     (define-record-type name
-	       (ll-obj-ctor desc)
-	       obj?
-	       (desc obj-desc set!-obj-desc)
-	       )
+	     ;; 0: desc; 1: pointer-to
+	     ;; display the address used for C code
+	     (define type
+	       (make-vtable
+		"pwpr"
+		(lambda (obj port)
+		  (display "#<" port)
+		  (display (symbol->string (quote type)) port)
+		  (write-char #\space port)
+		  (when #f
+		    (display "bs-desc:0x" port)
+		    (display (number->string
+			      (scm->pointer (struct-ref obj 0))
+			     16) port)
+		    (write-char #\space port))
+		  (display "0x" port)
+		  (display (number->string
+			    (pointer-address
+			     (scm->pointer
+			      (bs:bytestructure-bytevector (struct-ref obj 0))))
+			    16) port)
+		  (display ">" port))))
 
-	     (set-record-type-printer!
-	      name
-	      (lambda (obj port)
-		(display "#<" port)
-		(display (symbol->string (quote name)) port)
-		(write-char #\space port)
-		;;(display "bs:0x" port)
-		(display "0x" port)
-		(display (number->string
-			  (pointer-address
-			   (scm->pointer
-			    (bs:bytestructure-bytevector (obj-desc obj))))
-			  16) port)
-		(display ">" port)))
+	     (define (obj? obj)
+	       (and (struct? obj) (eq? (struct-vtable obj) type)))
+	     (define make-obj
+	       (let ((desc aggr-def)
+		     (obj->pointer (lambda (obj)
+				     (scm->pointer
+				      (bs:bytestructure-bytevector
+				       (struct-ref obj 0)))))
+		     )
+		 (lambda args
+		   (make-struct/no-tail type
+					(apply bs:bytestructure desc args)
+					obj->pointer))))
 
-	     (define (make-obj . args)
-	       (ll-obj-ctor (apply bs:bytestructure aggr-def args)))
+	     (export type-vtable obj? make-obj)))))))
 
-	     (export name make-obj)))))))
+;; right now this returns a ffi pointer
+;; it should probably be a bs:pointer
+(define (pointer-to obj)
+  ((struct-ref obj 1) obj))
 
 ;; --- last line ---

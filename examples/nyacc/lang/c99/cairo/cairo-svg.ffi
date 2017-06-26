@@ -15,7 +15,7 @@
   (string-member-proc
    "cairo_t"
    "cairo_matrix_t"
-   ;;"cairo_get_font_matrix"
+   "cairo_get_font_matrix"
    )
 
   #:pkg-config "cairo"
