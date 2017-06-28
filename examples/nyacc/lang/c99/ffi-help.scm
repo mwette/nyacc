@@ -98,38 +98,6 @@
 
 ;; assume that no raw aggregates get passed to c-functions for now
 
-#|
-
-(use-modules (srfi srfi-9) (srfi srfi-9 gnu))
-
-(define-record-type cairo_matrix_t
-  (make-ll-cairo_matrix_t bs-desc)
-  cairo_matrix_t?
-  (bs-desc ll-cairo_matrix_t-ffi-type set!-ll-cairo_matrix_t-bs-desc)
-  )
-(set-record-type-printer! cairo_matrix_t (make-type-printer "cairo_matrix_t"))
-
-(define (make-cairo_matrix_t #:optional vec)
-  (let ((mx (make-ll-cairo_matrix_t cairo_matrix_t-bs-desc))
-        )
-    #f))
-
-;;(define (fht->bytevector fht)
-
-;; pointer-to (or pointer-to-fht-val) fht => wrapped-pointer
-(define (pointer-to fht) ;; fht = FFI helper type
-  (scm->pointer (fht->bytevector fht)))
-
-(define (make-fht-vector fht x)
-  #f)
-
-Can I make an ffi-helper procedure that does
-  (pointer-to mx)
-
-where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
-
-|#
-
 ;; TODO
 ;; 02 if need foo_t pointer then I gen wrapper for foo_t* but add
 ;;    foo_t to *wrappers* so if I later run into need for foo_t may be prob
@@ -150,8 +118,16 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 (define *uddict* '())
 (define *renamer* identity)
 
-(define *keepers* '())
-(define *wrapped* '()) ;; list of strings, with appended "*" are wrapped
+;; keepers is list of types to keep for udecl->mspec
+;; wrapped is list of types to unwrap for ftn calls
+
+;; wrapped - keepers = pointer types [need the pointer types]
+;; keepers - wrapped = builtin types
+(define *keepers* '()) ;; list of strings of defined types + builtin 
+;;(define *wrapped* '()) ;; list of strings of wrapped types (incl pointers)
+;; I think we can just keep keepers and filter out builtin for wrappers
+;; (struct . "foo")
+;; (pointer-to . "bar_t")
 
 
 (define (sfscm fmt . args)
@@ -297,18 +273,12 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 	 (sflds (cnvt-field-list field-list)))
     (cond
      ((and typename aggr-name)
-      ;;(sfscm "\n;; struct ~A ~A\n" typename)
-      ;;(ppscm
-      ;; `(define-fh-struct-type ,(string->symbol typename)
-      ;;  (,bs-aggr-t (list ,@sflds))))
       (sfscm "(define-fh-aggregate-type ~A\n" typename)
       (ppscm `(,bs-aggr-t (list ,@sflds)) #:per-line-prefix "  ")
       (sfscm "  )\n")
       (sfscm "(define ~A-~A ~A)\n" aggr-s aggr-name typename)
+      (sfscm "(export ~A-~A)\n" aggr-s aggr-name)
       (sfscm "(define-fh-pointer-type ~A*)\n" typename)
-      ;;(sfscm "(define-std-pointer-type ~A-~A*)\n" aggr-s aggr-name)
-      (sfscm "(export ~A-~A ~A)\n" aggr-s aggr-name typename)
-      (sfscm ";;(define-fs-wrapper-alias ~A ~A)\n" typename aggr-name)
       )
      (typename
       (ppscm `(define ,(string->symbol typename) (,bs-aggr-t (list ,@sflds))))
@@ -444,15 +414,17 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
     (((typename ,name)) (string->symbol (string-append "wrap-" name)))
     ;;
     (((pointer-to) (typename ,typename))
-     (if (member typename *wrapped*)
-	 (string->symbol (string-append "wrap-" typename "*"))
-	 #f))
-    (((pointer-to) . ,rest) 'identity)
+     (cond
+      ((member typename ffi-keepers) #f)
+      ((member typename *keepers*)
+       (string->symbol (string-append "wrap-" typename "*")))
+      (else #f)))
+    ;;(((pointer-to) (struct ...
     ;;
     (,otherwise (fherr "mspec->ffi-wrapper missed: ~S" mspec))))
 
+;; given mspec for an exec argument give the unwrapper
 (define (mspec->fh-unwrapper mspec)
-  ;;(sfout "cdr mspec = ~S\n" (cdr mspec))
   (pmatch (cdr mspec)
     (((fixed-type ,name))
      (if (assoc-ref ffi-typemap name) #f (error ":( " name)))
@@ -460,10 +432,13 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
      (if (assoc-ref ffi-typemap name) #f (error ":( " name)))
     (((void)) #f)
     (((pointer-to) (typename ,typename))
-     (if (member typename *wrapped*)
-	 (string->symbol (string-append "unwrap-" typename "*"))
-	 #f))
-    (((pointer-to) . ,rest) 'pointer-address)
+     (cond
+      ((member typename ffi-keepers) #f)
+      ((member typename *keepers*)
+       (string->symbol (string-append "unwrap-" typename "*")))
+      (else #f)))
+    ;;(((pointer-to) (struct-ref) ....)
+    (((pointer-to) . ,rest) #f)
     (((typename ,name)) (string->symbol (string-append "unwrap-" name)))
     (,otherwise
      (fherr "mspec->fh-unwrapper missed: ~S" mspec))))
@@ -494,6 +469,7 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
    '()
    params))
 
+;; This generates the list of arguments to the actual call.
 (define (gen-exec-call-args params)
   (fold-right
    (lambda (name-unwrap seed)
@@ -504,22 +480,21 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
    params))
 
 (define (gen-exec-return-wrapper udecl)
-  ;;(sfout "wrapped=~S\n" *wrapped*)
-  (let* ((udecl (expand-typerefs udecl *uddict* #:keep *wrapped*))
+  (let* ((udecl (expand-typerefs udecl *uddict* #:keep *keepers*))
 	 (mspec (udecl->mspec udecl)))
     (mspec->fh-wrapper mspec)))
 
-;; @deffn {Procedure} make-fctn name specl params
+;; @deffn {Procedure} cnvt-fctn name specl params
 ;; name is string
 ;; specl is decl-spec-list tree
 ;; params is list of param-decl trees (i.e., cdr of param-list tree)
 ;; @end deffn
-(define (make-fctn name rdecl params)
+(define (cnvt-fctn name rdecl params)
   (let* ((decl-return (gen-decl-return rdecl))
 	 (decl-params (gen-decl-params params))
 	 (exec-return (gen-exec-return-wrapper rdecl))
 	 (exec-params (gen-exec-params params)))
-    (sfout "make-fctn\n") (ppout params) (ppout decl-params) (ppout exec-params)
+    (sfout "cnvt-fctn\n") (ppout params) (ppout decl-params) (ppout exec-params)
     (ppscm
      `(define ,(string->symbol name)
 	(let ((f (ffi:pointer->procedure ,decl-return (lib-func ,name)
@@ -553,22 +528,24 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 	(cons (fix-param (car decls) ix) (iter (1+ ix) (cdr decls))))))
 
 ;; intended to provide decl's for pointer-to or vector-of args
-(define (get-needed-defns params type-list)
+(define (get-needed-defns params keep-list)
   (ppout params)
   '())
 
-;; @deffn {Procedure} udecl->ffi-decl udecl udict type-list
-;; Convert a udecl to a ffi-spec
-;; Return updated (string based) type-list, which will be modified if the
+;; @deffn {Procedure} cnvt-udecl udecl udict keep-list
+;; Given udecl produce a ffi-spec.
+;; Return updated (string based) keep-list, which will be modified if the
 ;; declaration is a typedef.  The typelist is the set of keepers used for
 ;; @code{udecl->mspec}.
 ;; @end deffn
-(define (udecl->ffi-decl udecl type-list udict)
+(define (cnvt-udecl udecl keep-list udict)
   (define (ptr-decl specl)
     `(udecl ,specl (init-declr (ptr-declr (pointer) (ident "_")))))
   (define (non-ptr-decl specl)
     `(udecl ,specl (init-declr (ident "_"))))
-  
+
+  (set! *keepers* keep-list)
+
   ;;(ppout udecl)
   (sxml-match udecl
 
@@ -581,7 +558,7 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
      (if (udict-struct-ref udict name) ;; struct is defined
 	 (sfscm ";;(define ~A (delay struct-~A))\n" typename name)
 	 (sfscm "(define-fh-pointer-type ~A*)\n" typename))
-     (cons typename type-list))
+     (cons typename keep-list))
 
     ;; typedef struct foo { ... } foo_t; => struct-foo foo_t foo_t*
     ((udecl
@@ -590,7 +567,7 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
        (type-spec (struct-def (ident ,struct-name) ,field-list)))
       (init-declr (ident ,typename)))
      (cnvt-struct-def typename struct-name field-list)
-     (cons* typename (cons 'struct struct-name) type-list))
+     (cons* typename (cons 'struct struct-name) keep-list))
 
     ;; ENUMs are special because the guts should have global visibility
     ;; enum-def typedef
@@ -600,8 +577,7 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
        (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest)))
       (init-declr (ident ,typename)))
      (cnvt-enum-def typename enum-name enum-def-list) 
-     (set! *wrapped* (cons typename *wrapped*))
-     (cons typename type-list))
+     (cons typename keep-list))
 
     ((udecl
       (decl-spec-list
@@ -609,23 +585,21 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
        (type-spec (enum-def ,enum-def-list . ,rest)))
       (init-declr (ident ,typename)))
      (cnvt-enum-def typename #f enum-def-list)
-     (set! *wrapped* (cons typename *wrapped*))
-     (cons typename type-list))
+     (cons typename keep-list))
 
     ((udecl
       (decl-spec-list
        (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest))))
      (cnvt-enum-def #f enum-name enum-def-list)
      ;; probably never use this as arg to function
-     ;;(set! *wrapped* (cons (cons 'enum enum-name) *wrapped*))
-     type-list)
+     keep-list)
     
     ;; anonymous enum
     ((udecl
       (decl-spec-list
        (type-spec (enum-def ,enum-def-list . ,rest))))
      (cnvt-enum-def #f #f enum-def-list)
-     type-list)
+     keep-list)
     
     ;; fixed typedef 
     ((udecl
@@ -636,7 +610,7 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
      (let ()
        ;; don't use this
        ;;(sfscm "(define-std-type-wrapper ~A ~A)\n\n" typename name)
-       (cons typename type-list)))
+       (cons typename keep-list)))
 
     ;; float typedef
 
@@ -655,8 +629,7 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 	#:per-line-prefix " ")
        (sfscm " )\n")
        (sfscm "(export wrap-~A)\n" typename))
-     (set! *wrapped* (cons typename *wrapped*))
-     (cons typename type-list))
+     (cons typename keep-list))
     
     ;; function returning pointer value
     ((udecl ,specl
@@ -664,8 +637,8 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 	     (ptr-declr
 	      (pointer) (ftn-declr (ident ,name) (param-list . ,params)))))
      ;;(sfscm "\n;; ~A\n" name)
-     (make-fctn name (ptr-decl specl) (fix-params params))
-     type-list)
+     (cnvt-fctn name (ptr-decl specl) (fix-params params))
+     keep-list)
 
     ;; function returning non-pointer value
     ((udecl ,specl
@@ -676,13 +649,13 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
        (sfscm "\n")
        (c99scm (caddr udecl))
        (sfscm "\n"))
-     (make-fctn name (non-ptr-decl specl) (fix-params params))
-     type-list)
+     (cnvt-fctn name (non-ptr-decl specl) (fix-params params))
+     keep-list)
 
     (,otherwise
      (ppout udecl)
-     (fherr "udecl->ffi-decl missed")
-     type-list)))
+     (fherr "cnvt-udecl missed")
+     keep-list)))
 
 ;; === enums and #defined => lookup
 
@@ -805,20 +778,20 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
     
     ;; convert and output foreign declarations
     (fold
-     (lambda (pair type-list)
+     (lambda (pair keep-list)
        (catch 'ffi-help-error
 	 (lambda ()
 	   (cond
 	    ((declf (car pair))
 	     (nlscm) (c99scm (cdr pair)) ;;  <= fix to turn xxx-def to xxx-ref
-	     (udecl->ffi-decl (cdr pair) type-list udict))
+	     (cnvt-udecl (cdr pair) keep-list udict))
 	    (else
-	     type-list)))
+	     keep-list)))
 	 (lambda (key fmt . args)
 	   (apply simple-format (current-error-port)
 		  (string-append "ffi-help: " fmt "\n") args)
 	   (sfscm ";; ... failed.\n")
-	   type-list)))
+	   keep-list)))
      fixed-width-int-names udecls)
 
     ;; output global constants (from enum and #define)
@@ -899,6 +872,7 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 
 ;; === runtime =====================
 
+;; ffi-help-rt.scm 
 
 (define-syntax define-fh-pointer-type
   (lambda (x)
@@ -913,38 +887,21 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 			    args)))))
 
     (syntax-case x ()
-      ((_ name)
+      ((_ type)
        (with-syntax
-	   ((pred (gen-id x #'name "?"))
-	    (wrap (gen-id x "wrap-" #'name))
-	    (unwr (gen-id x "unwrap-" #'name))
+	   ((pred (gen-id x #'type "?"))
+	    (wrap (gen-id x "wrap-" #'type))
+	    (unwr (gen-id x "unwrap-" #'type))
 	    )
          #`(begin
-             (define-wrapped-pointer-type name pred wrap unwr
-               (lambda (v p) 
-                 ((@@ (ice-9 format) format) p
-                  #,(string-append "<" (stx->str #'name) " ~x>")
-                  (pointer-address (unwr v)))))
-             (export pred) (export wrap) (export unwr)))))))
-
-(define x
-  (lambda (x p)
-    (display "#<" p)
-    (display (symbol->string (quote name)) p)
-    (write-char #\space p)
-    (case 'obj-ptr ;; user may want bs desc or raw address
-      ((bs-desc)
-       (display "bs:0x" p)
-       (display (number->string (pointer-address (scm->pointer x)) 16)))
-      ((obj-ptr)
-       (display "0x" p)
-       (display (number->string
-		 (pointer-address
-		  (scm->pointer
-		   (bs:bytestructure-bytevector x)))
-		 16))
-       ))
-    (display ">" p)))
+             (define-wrapped-pointer-type type pred wrap unwr
+               (lambda (v p)
+		 (display "<" p)
+		 (display (symbol->string (quote type)) p)
+		 (display " 0x" p)
+		 (display (number->string (ffi:pointer-address (unwr v)) 16) p)
+		 (display ">" p)))
+             (export type pred wrap unwr)))))))
 
 ;; @deffn {Syntax} define-fh-aggregate-type name desc
 ;; generates a struct type
@@ -971,13 +928,9 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
     (syntax-case x ()
       ((_ type aggr-def)
        (with-syntax
-	   ((obj? (gen-id x #'type "?"))
-	    (make-obj (gen-id x "make-" #'type))
-
-	    ;;(ll-obj-ctor (gen-id x "make-ll-" #'name))
-	    ;;(obj-desc (gen-id x #'name "-desc"))
-	    ;;(set!-obj-desc (gen-id x "set!-" #'name "-desc"))
-	    ;;(ftab (gen-id x #'name "-ftab")) ;; function table
+	   ((type? (gen-id x #'type "?"))
+	    (make-type (gen-id x "make-" #'type))
+	    (wrap (gen-id x "wrap-" #'type "*"))
 	    )
 	 
 	 #`(begin
@@ -998,27 +951,28 @@ where pointer to returns cairo_matrix_t* or struct-_cairo_matrix*
 		    (write-char #\space port))
 		  (display "0x" port)
 		  (display (number->string
-			    (pointer-address
-			     (scm->pointer
+			    (ffi:pointer-address
+			     (ffi:scm->pointer
 			      (bs:bytestructure-bytevector (struct-ref obj 0))))
 			    16) port)
 		  (display ">" port))))
 
-	     (define (obj? obj)
+	     (define (type? obj)
 	       (and (struct? obj) (eq? (struct-vtable obj) type)))
-	     (define make-obj
+	     (define make-type
 	       (let ((desc aggr-def)
 		     (obj->pointer (lambda (obj)
-				     (scm->pointer
-				      (bs:bytestructure-bytevector
-				       (struct-ref obj 0)))))
+				     (wrap
+				      (scm->pointer
+				       (bs:bytestructure-bytevector
+					(struct-ref obj 0))))))
 		     )
 		 (lambda args
 		   (make-struct/no-tail type
 					(apply bs:bytestructure desc args)
 					obj->pointer))))
 
-	     (export type-vtable obj? make-obj)))))))
+	     (export type type? make-type)))))))
 
 ;; right now this returns a ffi pointer
 ;; it should probably be a bs:pointer

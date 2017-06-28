@@ -16,6 +16,15 @@
    "cairo_t"
    "cairo_matrix_t"
    "cairo_get_font_matrix"
+   ;;
+   "cairo_surface_t"
+   "cairo_svg_surface_create"
+   "cairo_create"
+   "cairo_move_to"
+   "cairo_line_to"
+   "cairo_stroke"
+   "cairo_destroy"
+   "cairo_surface_destroy"
    )
 
   #:pkg-config "cairo"
