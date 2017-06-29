@@ -1,0 +1,85 @@
+;; cairo.ffi				-*- Scheme -*-
+
+(define-ffi-module (cairo cairo)
+  #:pkg-config "cairo"
+  ;;#:library ("libcairo") ;; not needed when pkg-config fully working
+
+  ;;#:define ("ABC=123")
+  #:include ("cairo.h"
+	     ;;"cairo-ft.h"
+	     "cairo-gobject.h"
+	     ;;"cairo-pdf.h"
+	     ;;"cairo-ps.h"
+	     ;;"cairo-quartz-image.h"
+	     ;;"cairo-quartz.h"
+	     "cairo-svg.h"
+	     ;;"cairo-tee.h"
+	     ;;"cairo-xml.h"
+	     )
+  #:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
+
+  ;; hacks
+  #:helpers (("_builtin" "__builtin_va_list=void*"))
+
+  ;; #:cpp-defs
+  ;; #:inc-help
+  ;; #:inc-dirs
+    
+  #|
+  #:renamer (string-renamer
+	     (lambda (n)
+	       (if (string=? "cairo" (substring n 0 5)) n
+		   (string-append "cairo-" n))))
+  |#
+  
+  #:decl-filter (string-member-proc
+		 "cairo_t"
+		 "cairo_status_t"
+		 "cairo_matrix_t"
+		 "cairo_get_font_matrix"
+		 ;;
+		 "cairo_surface_t"
+		 "cairo_svg_surface_create"
+		 "cairo_create"
+		 "cairo_move_to"
+		 "cairo_line_to"
+		 "cairo_stroke"
+		 "cairo_destroy"
+		 "cairo_surface_destroy"
+		 "cairo_surface_status"
+		 )
+
+  ;; the following are bent pipe to scm-module
+  ;;#:export (make-cairo-unit-matrix)
+  )
+
+;; is there a way to add guardians for cairo_destroy cairo_surface_destroy?
+
+(define (make-cairo-unit-matrix)
+  #f)
+
+
+;; --- last line ---
+#|
+;;"cairo_get_reference_count"
+;;"cairo_set_dash"
+"cairo_bool_t"
+"cairo_matrix_t"
+"cairo_region_t"
+"cairo_destroy_func_t"
+"cairo_region_contains_point"
+"cairo_set_user_data"
+"cairo_surface_destroy"
+"cairo_move_to" "cairo_line_to"
+"cairo_stroke"
+"cairo_surface_t"
+"cairo_svg_surface_create"
+"cairo_operator_t"
+"cairo_t"
+"cairo_create"
+"cairo_destroy"
+"cairo_status_t"
+"cairo_font_options_t"
+"cairo_font_options_status"
+"cairo_path_t"
+|#

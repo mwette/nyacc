@@ -65,8 +65,8 @@
 ;; @table @code
 ;; @item #:decl-filter proc
 ;; @item #:inc-filter proc
-;; @item #:include string
-;; @item #:library string
+;; @item #:include (string ...)
+;; @item #:library (string ...)
 ;; @item #:pkg-config string
 ;; @item #:renamer proc
 ;; procdure
@@ -112,7 +112,9 @@
   `("/usr/include"
     ;;,(assq-ref %guile-build-info 'includedir)
     ))
-
+(define std-inc-help
+  '(("_builtin" "__builtin_va_list=void*")
+    ))
 
 (define *port* #t)
 (define *uddict* '())
@@ -695,10 +697,30 @@
 (define (pkg-config-incs name)
   (let* ((port (open-input-pipe (string-append "pkg-config --cflags " name)))
 	 (ostr (read-line port))
-	 (incl (string-split ostr #\space))
+	 (items (string-split ostr #\space))
 	 )
     (close-port port)
-    (map (lambda (s) (substring/shared s 2)) incl)))
+    (fold-right
+     (lambda (s l)
+       (if (string=? "-I" (substring/shared s 0 2))
+	   (cons (substring/shared s 2) l)
+	   l))
+     '()
+     items)))
+
+(define (pkg-config-defs name)
+  (let* ((port (open-input-pipe (string-append "pkg-config --cflags " name)))
+	 (ostr (read-line port))
+	 (items (string-split ostr #\space))
+	 )
+    (close-port port)
+    (fold-right
+     (lambda (s l)
+       (if (string=? "-D" (substring/shared s 0 2))
+	   (cons (substring/shared s 2) l)
+	   l))
+     '()
+     items)))
 
 ;; This routine generates a top-level source string-file with all the includes,
 ;; parses it, and then merges one level down of includes into the top level,
@@ -710,19 +732,35 @@
 	     (select-kids (node-typeof? 'trans-unit))))
 	 (merge-inc-bodies
 	  (lambda (t) (cons 'trans-unit (apply append (map cdr (p t)))))))
-    (lambda (cpp-defs inc-dirs inc-files)
-      (let* ((all-defs (append cpp-defs (gen-gcc-defs)))
+    (lambda (attrs) ;;(cpp-defs inc-dirs inc-files helpers)
+      ;;(ppout attrs)
+      (let* ((pkg-config (assq-ref attrs 'pkg-config))
+	     (cpp-defs (or (assq-ref attrs 'cpp-defs) '()))
+	     (inc-dirs (or (assq-ref attrs 'inc-dirs) '()))
+	     (inc-help (or (assq-ref attrs 'inc-help) '()))
+	     (inc-files (or (assq-ref attrs 'include) '()))
+
+	     (inc-dirs (append
+			(if pkg-config (pkg-config-incs pkg-config) '())
+			inc-dirs))
+	     (cpp-defss (append
+			(if pkg-config (pkg-config-defs pkg-config) '())
+			cpp-defs))
+	     (inc-help (append inc-help std-inc-help))
+	     
+	     (inc-dirs (append inc-dirs std-inc-dirs))
+	     (cpp-defs (append cpp-defs (gen-gcc-defs)))
 	     (prog (string-join
 		    (map
 		     (lambda (inc-file)
 		       (string-append "#include \"" inc-file "\"\n"))
-		     inc-files))))
-	;;(sfout "prog:\n~A\n" prog)
+		     inc-files) "")))
 	(with-input-from-string prog
 	  (lambda ()
 	    (and=> 
-	     (parse-c99 #:cpp-defs all-defs
+	     (parse-c99 #:cpp-defs cpp-defs
 			#:inc-dirs inc-dirs
+			#:inc-help inc-help
 			#:mode 'decl #:debug #f)
 	     merge-inc-bodies)))))))
 
@@ -734,19 +772,22 @@
   ;; pkg-config --libs <pkg>
 
   (define (get-tree attrs)
-    (let iter ((defines '()) (inc-dirs std-inc-dirs) (inc-files '())
+    (parse-includes (opts->attrs opts))
+    #;(let iter ((defines '()) (inc-dirs std-inc-dirs) (inc-files '())
 	       (attrs attrs))
+      (sfout "attrs=~S\n" attrs)
       (cond
-       ((null? attrs) (parse-includes (reverse defines)
-				      (reverse inc-dirs)
-				      (reverse inc-files)))
-       ((eqv? 'include (caar attrs))
-	(iter defines inc-dirs (cons (cdar attrs) inc-files) (cdr attrs)))
+       ((null? attrs)
+	(parse-includes defines inc-dirs inc-files
+				      (assq-ref (opts->attrs opts) 'helpers)))
        ((eqv? 'pkg-config (caar attrs))
-	(iter defines (append (pkg-config-incs (cdar attrs)) inc-dirs)
+	(iter defines (append inc-dirs (pkg-config-incs (cdar attrs)))
 	      inc-files (cdr attrs)))
+       ((eqv? 'include (caar attrs))
+	;;(sfout "includes: ~S\n" (cdar attrs))
+	(iter defines inc-dirs (append inc-files (cdar attrs)) (cdr attrs)))
        ((eqv? 'define (caar attrs))
-	(iter (cons (cdar attrs) defines) inc-dirs inc-files (cdr attrs)))
+	(iter (append defines (cdar attrs)) inc-dirs inc-files (cdr attrs)))
        (else
 	;;(simple-format #t "skipping ~S\n" (caar attrs))
 	(iter defines inc-dirs inc-files (cdr attrs))))))
@@ -795,21 +836,26 @@
      fixed-width-int-names udecls)
 
     ;; output global constants (from enum and #define)
-    (sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
-    ;;(gen-lookup-proc prefix ffi-defs all-defs)
+    ;;(sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
+    (gen-lookup-proc prefix ffi-defs all-defs)
 
     ;; return port so compiler can output remaining code
     dport))
 
+;; This macro converts #:key val to '(key val) for ffi-help options
+;; and preserves other #:key-val pairs for passthrough to the module
 (define-syntax fix-option
   (lambda (x)
     (define (sym->key stx)
       (datum->syntax stx (symbol->keyword (syntax->datum stx))))
-    (syntax-case x (decl-filter inc-filter include library pkg-config renamer)
+    (syntax-case x (cpp-defs decl-filter inc-filter inc-help include library
+			     pkg-config renamer)
+      ((_ cpp-defs proc) #'(cons 'cpp-defs proc))
       ((_ decl-filter proc) #'(cons 'decl-filter proc))
       ((_ inc-filter proc) #'(cons 'inc-filter proc))
-      ((_ include string) #'(cons 'include string))
-      ((_ library string) #'(cons 'library string))
+      ((_ inc-help (helper ...)) #'(cons 'inc-help (quote (helper ...))))
+      ((_ include (string ...)) #'(list 'include string ...)) ;; fix to list
+      ((_ library (string ...)) #'(list 'library string ...)) ;; fix to list
       ((_ pkg-config string) #'(cons 'pkg-config string))
       ((_ renamer proc) #'(cons 'renamer proc))
       ;; the rest gets passed to the module decl
@@ -896,7 +942,7 @@
          #`(begin
              (define-wrapped-pointer-type type pred wrap unwr
                (lambda (v p)
-		 (display "<" p)
+		 (display "#<" p)
 		 (display (symbol->string (quote type)) p)
 		 (display " 0x" p)
 		 (display (number->string (ffi:pointer-address (unwr v)) 16) p)

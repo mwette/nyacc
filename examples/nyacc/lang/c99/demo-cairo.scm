@@ -12,7 +12,6 @@
 
 (define cr (cairo_create srf))
 
-#|
 (cairo_move_to cr 10.0 10.0)
 (cairo_line_to cr 190.0 10.0)
 (cairo_line_to cr 190.0 190.0)
@@ -23,5 +22,6 @@
 ;; need to add guardians?
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
+#|
 |#
 
