@@ -113,7 +113,7 @@
     ;;,(assq-ref %guile-build-info 'includedir)
     ))
 (define std-inc-help
-  '(("_builtin" "__builtin_va_list=void*")
+  '(("__builtin" "__builtin_va_list=void*")
     ))
 
 (define *port* #t)
@@ -761,7 +761,7 @@
 	     (parse-c99 #:cpp-defs cpp-defs
 			#:inc-dirs inc-dirs
 			#:inc-help inc-help
-			#:mode 'decl #:debug #f)
+			#:mode 'decl #:debug #t)
 	     merge-inc-bodies)))))))
 
 ;; === main converter ================

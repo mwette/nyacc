@@ -6,9 +6,9 @@
 
   ;;#:define ("ABC=123")
   #:include ("cairo.h"
-	     ;;"cairo-ft.h"
-	     "cairo-gobject.h"
-	     ;;"cairo-pdf.h"
+	     "cairo-ft.h" ;; hangs (infinite-loop?)
+	     ;;"cairo-gobject.h" ;; messy
+	     "cairo-pdf.h"
 	     ;;"cairo-ps.h"
 	     ;;"cairo-quartz-image.h"
 	     ;;"cairo-quartz.h"
@@ -19,7 +19,10 @@
   #:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
 
   ;; hacks
-  #:helpers (("_builtin" "__builtin_va_list=void*"))
+  #:inc-help (;;("glib-object.h GType")
+	      ;;("Carbon/Carbon.h")
+	      ;;("ApplicationServices/ApplicationServices.h")
+	      )
 
   ;; #:cpp-defs
   ;; #:inc-help

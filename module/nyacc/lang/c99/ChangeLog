@@ -1,3 +1,7 @@
+2017-06-29  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cpp.scm (eval-cpp-expr): cleaned up bitwise-or,xor,and
+
 2017-06-17  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* util2.scm (clean-field-list): fixed bug that would add comments

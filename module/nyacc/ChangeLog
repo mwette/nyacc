@@ -1,3 +1,7 @@
+2017-06-29  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (make-chseq-reader): make robust to <eof>
+
 2017-06-11  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (nyacc): make-ident-like-p tested for string but not for

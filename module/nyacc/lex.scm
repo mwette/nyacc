@@ -83,7 +83,7 @@
 (define c:hx (string->char-set "abcdefABCDEF"))
 (define c:sx (string->char-set "lLuU")) ; suffix
 
-(define (lsr chl) (list->string (reverse chl))) ; used often
+(define (lxlsr chl) (list->string (reverse chl))) ; used often
 
 ;; @deffn {Procedure} eval-reader reader string => result
 ;; For test and debug, this procedure will evaluate a reader on a string.
@@ -133,11 +133,11 @@
 	  (cond
 	   ((eof-object? ch)
 	    (if (null? chl) #f
-		(lsr chl)))
+		(lxlsr chl)))
 	   ((char-set-contains? cs-rest ch)
 	    (iter (cons ch chl) (read-char)))
 	   (else (unread-char ch)
-		 (lsr chl))))
+		 (lxlsr chl))))
 	#f)))
 
 ;; @deffn {Procedure} read-c-ident ch => #f|string
@@ -177,7 +177,7 @@
 		   (if (eq? c1 #\newline)
 		       (iter cl (read-char))
 		       (iter (cons* c1 cl) (read-char)))))
-		((eq? ch delim) (cons '$string (lsr cl)))
+		((eq? ch delim) (cons '$string (lxlsr cl)))
 		(else (iter (cons ch cl) (read-char)))))
 	#f)))
 
@@ -249,7 +249,7 @@
 			 (cons (integer->char (read-oct ch)) cl)
 			 (cons c1 cl))))
 		  (read-char))))
-	      ((eq? ch #\") (cons '$string (lsr cl)))
+	      ((eq? ch #\") (cons '$string (lxlsr cl)))
 	      (else (iter (cons ch cl) (read-char)))))))
 
 ;; @deffn {Procedure} make-chlit-reader
@@ -322,9 +322,9 @@
 	  (else (iter chl '$fixed 5 ch))))
 	((11) ;; got l L u or U, look for l or L
 	 (cond
-	  ((eof-object? ch) (cons '$fixed (lsr chl)))
-	  ((char=? #\L ch) (cons '$fixed (lsr (cons ch chl))))
-	  ((char=? #\l ch) (cons '$fixed (lsr (cons ch chl))))
+	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
+	  ((char=? #\L ch) (cons '$fixed (lxlsr (cons ch chl))))
+	  ((char=? #\l ch) (cons '$fixed (lxlsr (cons ch chl))))
 	  (else (iter chl '$fixed 5 ch))))
 	((2)
 	 (cond
@@ -349,7 +349,7 @@
 	  (else (iter chl ty 5 ch))))
 	((5)
 	 (unless (eof-object? ch) (unread-char ch))
-	 (cons ty (lsr chl)))))))
+	 (cons ty (lxlsr chl)))))))
 
 ;; @deffn {Procedure} cnumstr->scm C99-str => scm-str
 ;; Convert C number-string (e.g, @code{0x123LL}) to Scheme numbers-string
@@ -426,16 +426,16 @@
 	 ((assq-ref node (car cl)) => ;; accept or shift next character
 	  (lambda (n)
 	    (if (eq? (caar n) 'else) ; if only else, accept, else read on
-		(cons (cdar n) (lsr cl))
+		(cons (cdar n) (lxlsr cl))
 		(iter (cons (read-char) cl) n))))
 	 ((assq-ref node 'else) => ; else exists, accept
 	  (lambda (tok)
-	    (unread-char (car cl))
-	    (cons tok (lsr (cdr cl)))))
+	    (unless (eof-object? (car cl)) (unread-char (car cl)))
+	    (cons tok (lxlsr (cdr cl)))))
 	 (else ;; reject
 	  (let pushback ((cl cl))
 	    (unless (null? (cdr cl))
-	      (unread-char (car cl))
+	      (unless (eof-object? (car cl)) (unread-char (car cl)))
 	      (pushback (cdr cl))))
 	  #f))))))
 
@@ -485,12 +485,12 @@
 		(if (and (not eat-newline) (eq? #\newline (car sl)))
 		    (unread-char #\newline))
 		(if (and (pair? cl) (eqv? (car cl) #\cr)) ;; rem trailing \r 
-		    (cons tval (lsr (cdr cl)))
-		    (cons tval (lsr cl))))
+		    (cons tval (lxlsr (cdr cl)))
+		    (cons tval (lxlsr cl))))
 	       ((null? il) (find-end cl sl (cons (mc-read-char) il) ps px))
 	       ;;((eof-object? (car il)) (error "open comment" cl))
 	       ((eof-object? (car il))
-		(if (char=? (string-ref ps px) #\newline) (lsr cl)
+		(if (char=? (string-ref ps px) #\newline) (lxlsr cl)
 		    (throw 'nyacc-error "open comment")))
 	       ((eqv? (car il) (string-ref ps px))
 		(find-end cl (cons (car il) sl) (cdr il) ps (1+ px)))
