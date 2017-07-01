@@ -1,5 +1,5 @@
  
-  Copyright (C) 2016 Matthew R. Wette
+  Copyright (C) 2016-2017 Matthew R. Wette
   
   Copying and distribution of the files in this directory, with or without 
   modification, are permitted in any medium without royalty provided the 
@@ -12,4 +12,6 @@ ex03.c	lexical analyzer
 ex04.c	C preprocessor
 ex05.c	declarations
 ex06.c	pretty-print-c99 cases
-inc.h	included by ex01.c
+ex15.c	c99-01.test: #defined #include target
+ex16.h	include/include no C stmts
+inc.h	sample include used by ...

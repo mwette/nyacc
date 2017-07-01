@@ -6,6 +6,9 @@
 ;;; or any later version published by the Free Software Foundation.  See
 ;;; the file COPYING included with the nyacc distribution.
 
+;; TODO:
+;; 1) copyright notice
+
 ;; WARNING: this is a prototype in development: anything goes right now
 
 (add-to-load-path (string-append (getcwd) "/../../../../module"))
@@ -114,8 +117,10 @@
     ))
 (define std-inc-help
   '(("__builtin" "__builtin_va_list=void*")
+    ("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
     ))
 
+(define *debug* #f)
 (define *port* #t)
 (define *uddict* '())
 (define *renamer* identity)
@@ -184,7 +189,12 @@
   (sfscm "(define bs:pointer bs:bs:pointer)\n")
   (sfscm "(define void*  (bs:pointer bs:int32))\n")
   (nlscm)
-  (sfscm "(define lib-link (dynamic-link ~S))\n" (assq-ref opts 'library))
+  (sfscm "(define lib-link (dynamic-link ~S))\n" 
+	 (cond
+	  ((assq-ref opts 'library))	      ; user specific
+	  ((and=> (assq-ref opts 'pkg-config) ; use first from pkg-config
+		  pkg-config-libs) => car)
+	  (else (throw 'ffi-error "no library found"))))
   (sfscm "(define (lib-func name) (dynamic-func name lib-link))\n"))
 
 
@@ -496,7 +506,7 @@
 	 (decl-params (gen-decl-params params))
 	 (exec-return (gen-exec-return-wrapper rdecl))
 	 (exec-params (gen-exec-params params)))
-    (sfout "cnvt-fctn\n") (ppout params) (ppout decl-params) (ppout exec-params)
+    ;;(sfout "cnvt-fctn\n") (ppout params) (ppout decl-params) (ppout exec-params)
     (ppscm
      `(define ,(string->symbol name)
 	(let ((f (ffi:pointer->procedure ,decl-return (lib-func ,name)
@@ -531,7 +541,7 @@
 
 ;; intended to provide decl's for pointer-to or vector-of args
 (define (get-needed-defns params keep-list)
-  (ppout params)
+  (sfout "get-needed-defns [NOT DONE]\n") (ppout params)
   '())
 
 ;; @deffn {Procedure} cnvt-udecl udecl udict keep-list
@@ -655,7 +665,7 @@
      keep-list)
 
     (,otherwise
-     (ppout udecl)
+     (sfout "missed:\n") (ppout udecl)
      (fherr "cnvt-udecl missed")
      keep-list)))
 
@@ -692,35 +702,42 @@
 
 ;; === Parsing the C header(s)
 
+;; Run pkg-config
+(define (pkg-config name . args)
+  (let* ((port (open-input-pipe (string-join (cons* "pkg-config " name args))))
+	 (ostr (read-line port))
+	 (items (string-split ostr #\space)))
+    (close-port port)
+    items))
+
 ;; use pkg-config to get a list of include dirs
 ;; (pkg-config-incs "cairo") => ("/opt/local/include/cairo" ...)
 (define (pkg-config-incs name)
-  (let* ((port (open-input-pipe (string-append "pkg-config --cflags " name)))
-	 (ostr (read-line port))
-	 (items (string-split ostr #\space))
-	 )
-    (close-port port)
     (fold-right
      (lambda (s l)
        (if (string=? "-I" (substring/shared s 0 2))
 	   (cons (substring/shared s 2) l)
 	   l))
      '()
-     items)))
+     (pkg-config name "--cflags")))
 
 (define (pkg-config-defs name)
-  (let* ((port (open-input-pipe (string-append "pkg-config --cflags " name)))
-	 (ostr (read-line port))
-	 (items (string-split ostr #\space))
-	 )
-    (close-port port)
     (fold-right
      (lambda (s l)
        (if (string=? "-D" (substring/shared s 0 2))
 	   (cons (substring/shared s 2) l)
 	   l))
      '()
-     items)))
+     (pkg-config name "--cflags")))
+
+(define (pkg-config-libs name)
+    (fold-right
+     (lambda (s l)
+       (if (string=? "-l" (substring/shared s 0 2))
+	   (cons (string-append "lib" (substring/shared s 2)) l)
+	   l))
+     '()
+     (pkg-config name "--libs")))
 
 ;; This routine generates a top-level source string-file with all the includes,
 ;; parses it, and then merges one level down of includes into the top level,
@@ -761,37 +778,13 @@
 	     (parse-c99 #:cpp-defs cpp-defs
 			#:inc-dirs inc-dirs
 			#:inc-help inc-help
-			#:mode 'decl #:debug #t)
+			#:mode 'decl #:debug *debug*)
 	     merge-inc-bodies)))))))
 
 ;; === main converter ================
 
 ;; process define-ffi-module expression
 (define (intro-ffi path opts)
-  ;; pkg-config --cflags <pkg>
-  ;; pkg-config --libs <pkg>
-
-  (define (get-tree attrs)
-    (parse-includes (opts->attrs opts))
-    #;(let iter ((defines '()) (inc-dirs std-inc-dirs) (inc-files '())
-	       (attrs attrs))
-      (sfout "attrs=~S\n" attrs)
-      (cond
-       ((null? attrs)
-	(parse-includes defines inc-dirs inc-files
-				      (assq-ref (opts->attrs opts) 'helpers)))
-       ((eqv? 'pkg-config (caar attrs))
-	(iter defines (append inc-dirs (pkg-config-incs (cdar attrs)))
-	      inc-files (cdr attrs)))
-       ((eqv? 'include (caar attrs))
-	;;(sfout "includes: ~S\n" (cdar attrs))
-	(iter defines inc-dirs (append inc-files (cdar attrs)) (cdr attrs)))
-       ((eqv? 'define (caar attrs))
-	(iter (append defines (cdar attrs)) inc-dirs inc-files (cdr attrs)))
-       (else
-	;;(simple-format #t "skipping ~S\n" (caar attrs))
-	(iter defines inc-dirs inc-files (cdr attrs))))))
-  
   (let* ((attrs (opts->attrs opts))
 	 (dpath (string-join (map symbol->string path) "/"))
 	 (dport (open-output-file (string-append dpath ".scm")))
@@ -800,7 +793,7 @@
 	 (renamer (or (assq-ref attrs 'renamer) identity))
 	 (prefix (string-append (symbol->string (last path)) "-"))
 	 ;;
-	 (tree (get-tree attrs))	; run parser
+	 (tree (parse-includes (opts->attrs attrs)))
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 ;;
@@ -853,13 +846,17 @@
       ((_ cpp-defs proc) #'(cons 'cpp-defs proc))
       ((_ decl-filter proc) #'(cons 'decl-filter proc))
       ((_ inc-filter proc) #'(cons 'inc-filter proc))
-      ((_ inc-help (helper ...)) #'(cons 'inc-help (quote (helper ...))))
-      ((_ include (string ...)) #'(list 'include string ...)) ;; fix to list
-      ((_ library (string ...)) #'(list 'library string ...)) ;; fix to list
+      ((_ inc-help expr) #'(cons 'inc-help expr))
+      ((_ include expr) #'(cons 'include expr))
+      ((_ library expr) #'(cons 'library expr))
       ((_ pkg-config string) #'(cons 'pkg-config string))
       ((_ renamer proc) #'(cons 'renamer proc))
       ;; the rest gets passed to the module decl
       ((_ key arg) #`(cons #,(sym->key #'key) (quote arg)))
+      ;; old module-like syntax
+      ;;((_ inc-help (helper ...)) #'(cons 'inc-help (quote (helper ...))))
+      ;;((_ include (string ...)) #'(list 'include string ...))
+      ;;((_ library (string ...)) #'(list 'library string ...))
       )))
 
 (define-syntax module-options
@@ -898,6 +895,7 @@
 (define scm-reader (language-reader (lookup-language 'scheme)))
 
 (define (compile-ffi-file file)
+  (sfout "make compile-ffi pass args to intro-ffi (e.g., path to gcc)\n")
   (call-with-input-file file
     (lambda (iport)
       (let iter ((oport #f))

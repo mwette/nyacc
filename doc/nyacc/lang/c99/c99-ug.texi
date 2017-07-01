@@ -69,6 +69,15 @@ syntax for the include-helper optional argument to the parsers is
    ("bar.h" "bar_t" "DEF=456" "MAX(X,Y)=((X)>(Y)?(X):(Y))"))
 @end example
 
+The special helper @code{"__builtin"} will be ``included'' automatically
+at the start of parsing.  This allows one to generate definitions for
+compiler builtins like @code{__builtin_va_list}.
+@example
+(define inc-helper
+ '(("__builtin" "__builtin_va_list=void*")))
+@end example
+
+
 The C99 @code{parser} and @code{xparser} modules export
 @code{c99-std-help}.
 

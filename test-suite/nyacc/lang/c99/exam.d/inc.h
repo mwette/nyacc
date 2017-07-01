@@ -24,4 +24,4 @@ typedef struct {
 /* Initialize ex1 object. */
 int ex1_init(void*);
 
-#endif
+#endif /* last line */

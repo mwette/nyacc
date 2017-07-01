@@ -205,6 +205,8 @@
       ($$ (if (pair? $3)
 	      `(decl ,(tl->list $1) ,(list $3))
 	      `(decl ,(tl->list $1)))))
+     ;; macOS has things like: foo_t bar(int) __asm("bar");
+     ;; (declaration-specifiers darwin-asm ";")
      )
 
     (declaration-specifiers		; S 6.7
@@ -548,6 +550,7 @@
      (selection-statement)
      (iteration-statement)
      (jump-statement)
+     (asm-statement)
      (cpp-statement)
      )
 
@@ -609,6 +612,40 @@
      ("return" ";" ($$ `(return (expr))))
      )
 
+    (asm-statement			; NOT part of C99
+     (asm-expression ";"))
+    (asm-expression			; NOT part of C99
+     ("asm" "(" string-literal ")"
+      ($$ `(asm-expr (@ (extension "GNUC")) ,$3)))
+     ("asm" "(" string-literal asm-outputs ")"
+      ($$ `(asm-expr (@ (extension "GNUC")) ,$3 ,(tl->list $4))))
+     ("asm" "(" string-literal asm-outputs asm-inputs ")"
+      ($$ `(asm-expr (@ (extension "GNUC")) ,$3 ,(tl->list $4) ,(tl->list $5))))
+     ("asm" "(" string-literal asm-outputs asm-inputs asm-clobbers ")"
+      ($$ `(asm-expr (@ (extension "GNUC"))
+		     ,$3 ,(tl->list $4) ,(tl->list $5) ,(tl->list $6)))))
+    (asm-outputs
+     (":" ($$ (make-tl 'asm-outputs)))
+     (":" asm-output ($$ (make-tl 'asm-outputs $2)))
+     (asm-outputs "," asm-output ($$ (tl-append $1 $3))))
+    (asm-output
+     (string-literal "(" identifier ")" ($$ `(asm-operand ,$1 ,$3)))
+     ("[" identifier "]" string-literal "(" identifier ")"
+      ($$ `(asm-operand ,$2 ,$4 ,$6))))
+    (asm-inputs
+     (":" ($$ (make-tl 'asm-inputs)))
+     (":" asm-input ($$ (make-tl 'asm-inputs $2)))
+     (asm-inputs "," asm-input ($$ (tl-append $1 $3))))
+    (asm-input
+     (string-literal "(" expression ")" ($$ `(asm-operand ,$1 ,$3)))
+     ("[" identifier "]" string-literal "(" expression ")"
+      ($$ `(asm-operand ,$2 ,$4 ,$6))))
+    (asm-clobbers
+     (":" ($$ (make-tl 'asm-clobbers)))
+     (":" string-literal ($$ (make-tl 'asm-clobbers $2)))
+     (asm-clobbers "," string-literal ($$ (tl-append $1 $3)))
+     )
+
     ;; external definitions
     (translation-unit			; S 6.9
      (external-declaration-list ($$ (tl->list $1)))
@@ -634,7 +671,7 @@
       ($$ `(extern-block (extern-begin ,$2)
 			 ,@(sx-tail (tl->list $5) 1)
 			 (extern-end))))
-     (";" ($$ `(decl (@ (extension . "GNU C")))))
+     (";" ($$ `(decl (@ (extension "GNUC")))))
      )
     
     (function-definition

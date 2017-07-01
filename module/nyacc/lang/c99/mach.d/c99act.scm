@@ -1,4 +1,4 @@
-;; ./mach.d/c99act.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99act.scm
 
 ;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
@@ -637,6 +637,8 @@
    (lambda ($1 . $rest) $1)
    ;; statement => jump-statement
    (lambda ($1 . $rest) $1)
+   ;; statement => asm-statement
+   (lambda ($1 . $rest) $1)
    ;; statement => cpp-statement
    (lambda ($1 . $rest) $1)
    ;; labeled-statement => identifier ":" statement
@@ -702,6 +704,64 @@
    (lambda ($3 $2 $1 . $rest) `(return ,$2))
    ;; jump-statement => "return" ";"
    (lambda ($2 $1 . $rest) `(return (expr)))
+   ;; asm-statement => asm-expression ";"
+   (lambda ($2 $1 . $rest) $1)
+   ;; asm-expression => "asm" "(" string-literal ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(asm-expr (@ (extension "GNUC")) ,$3))
+   ;; asm-expression => "asm" "(" string-literal asm-outputs ")"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(asm-expr
+        (@ (extension "GNUC"))
+        ,$3
+        ,(tl->list $4)))
+   ;; asm-expression => "asm" "(" string-literal asm-outputs asm-inputs ")"
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(asm-expr
+        (@ (extension "GNUC"))
+        ,$3
+        ,(tl->list $4)
+        ,(tl->list $5)))
+   ;; asm-expression => "asm" "(" string-literal asm-outputs asm-inputs asm...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(asm-expr
+        (@ (extension "GNUC"))
+        ,$3
+        ,(tl->list $4)
+        ,(tl->list $5)
+        ,(tl->list $6)))
+   ;; asm-outputs => ":"
+   (lambda ($1 . $rest) (make-tl 'asm-outputs))
+   ;; asm-outputs => ":" asm-output
+   (lambda ($2 $1 . $rest)
+     (make-tl 'asm-outputs $2))
+   ;; asm-outputs => asm-outputs "," asm-output
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; asm-output => string-literal "(" identifier ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(asm-operand ,$1 ,$3))
+   ;; asm-output => "[" identifier "]" string-literal "(" identifier ")"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(asm-operand ,$2 ,$4 ,$6))
+   ;; asm-inputs => ":"
+   (lambda ($1 . $rest) (make-tl 'asm-inputs))
+   ;; asm-inputs => ":" asm-input
+   (lambda ($2 $1 . $rest) (make-tl 'asm-inputs $2))
+   ;; asm-inputs => asm-inputs "," asm-input
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; asm-input => string-literal "(" expression ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(asm-operand ,$1 ,$3))
+   ;; asm-input => "[" identifier "]" string-literal "(" expression ")"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(asm-operand ,$2 ,$4 ,$6))
+   ;; asm-clobbers => ":"
+   (lambda ($1 . $rest) (make-tl 'asm-clobbers))
+   ;; asm-clobbers => ":" string-literal
+   (lambda ($2 $1 . $rest)
+     (make-tl 'asm-clobbers $2))
+   ;; asm-clobbers => asm-clobbers "," string-literal
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; translation-unit => external-declaration-list
    (lambda ($1 . $rest) (tl->list $1))
    ;; external-declaration-list => 
@@ -729,7 +789,7 @@
         (extern-end)))
    ;; external-declaration => ";"
    (lambda ($1 . $rest)
-     `(decl (@ (extension . "GNU C"))))
+     `(decl (@ (extension "GNUC"))))
    ;; $P2 => 
    (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
    ;; $P3 => 

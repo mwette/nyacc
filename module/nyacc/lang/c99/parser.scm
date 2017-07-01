@@ -86,7 +86,6 @@
 			 #:debug debug)))))
    (lambda (key fmt . args)
      (report-error fmt args)
-     ;;(while (pop-input) (report-error "<in>" '())) ;; ???
      #f)))
 
 ;; --- last line ---

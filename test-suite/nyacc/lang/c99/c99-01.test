@@ -188,6 +188,9 @@
 	     (type-spec (float-type "double")))
 	    (init-declr-list (init-declr (ident "x")))))))
     
+  (pass-if "include w/ #defined arg "
+     (pair? (parse-file "exam.d/ex15.c")))
+
   )
 
 ;; --- last line ---

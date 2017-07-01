@@ -111,12 +111,17 @@
 ;; @deffn {Procedure} cpp-include
 ;; Parse CPP include statement.
 (define (cpp-include)
-  (let* ((beg-ch (skip-il-ws (read-char)))
-	 (end-ch (if (eq? beg-ch #\<) #\> #\"))
-	 (path (let iter ((cl (list beg-ch)) (ch (read-char)))
-		 (if (eq? ch end-ch) (list->string (reverse (cons ch cl)))
-		     (iter (cons ch cl) (read-char))))))
-    `(include ,path)))
+  (define (iter cl ch end-ch)
+    (if (eq? ch end-ch)  (list->string (reverse (cons ch cl)))
+	(iter (cons ch cl) (read-char) end-ch)))
+  (list
+   'include
+   (let ((ch (skip-il-ws (read-char))))
+     (cond
+      ((char=? ch #\<) (iter (list #\<) (read-char) #\>))
+      ((char=? ch #\") (iter (list #\") (read-char) #\"))
+      ((read-c-ident ch))
+      (else (throw 'cpp-error "bad include"))))))
 
 ;; @deffn {Procedure} cpp-line->stmt line defs => (stmt-type text)
 ;; Parse a line from a CPP statement and return a parse tree.

@@ -310,32 +310,30 @@
 	      (set-cpi-defs! info (delete name (cpi-defs info))))
 	  
 	  (define (apply-helper file)
+	    ;;(when (string=? file "stddef.h") (pretty-print (cpi-itynd info)))
 	    (let* ((tyns (assoc-ref (cpi-itynd info) file))
 		   (defs (assoc-ref (cpi-idefd info) file)))
-	      ;;(simple-format #t "apply-helper ~S => ~S\n" file tyns)	 
-	      ;;(simple-format #t "  itynd= ~S\n" (cpi-itynd info))
 	      (when tyns
 		(for-each add-typename tyns)
 		(set-cpi-defs! info (append defs (cpi-defs info))))
 	      tyns))
-	  
+
 	  (define (inc-stmt->file stmt)
-	    (let* ((arg (cadr stmt)) (len (string-length arg)))
+	    (let* ((arg (cadr stmt))
+		   (arg (if (ident-like? arg) ;; #include MYFILE
+			    (expand-cpp-macro-ref arg (cpi-defs info))
+			    arg))
+		   (len (string-length arg)))
 	      (substring arg 1 (1- len))))
 
 	  (define (inc-file->path file)
 	    (find-file-in-dirl file (cpi-incs info)))
 
 	  (define (code-if stmt)
-	    ;;(simple-format #t "code-if: ppxs=~S\n" ppxs)
 	    (case (car ppxs)
 	      ((skip-look skip-done skip) ;; don't eval if excluded
-	       ;;(simple-format #t "code-if: SKIP\n")
 	       (set! ppxs (cons 'skip ppxs)))
 	      (else
-	       ;;(simple-format #t "code-if: KEEP\n")
-	       ;;(simple-format #t "  text=~S\n" (cadr stmt))
-	       ;;(simple-format #t "  defs=~S\n" (cpi-defs info))
 	       (let* ((defs (cpi-defs info))
 		      (val (eval-cpp-cond-text (cadr stmt) defs)))
 		 (if (not val) (c99-err "unresolved: ~S" (cadr stmt)))
@@ -371,6 +369,7 @@
 	  (define (eval-cpp-incl/here stmt) ;; => stmt
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
+	      ;;(simple-format #t "include ~S\n" path)
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -381,6 +380,7 @@
 	    ;; include file as a new tree
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
+	      ;;(simple-format #t "include ~S\n" path)
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found

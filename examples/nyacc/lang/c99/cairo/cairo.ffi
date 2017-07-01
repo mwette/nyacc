@@ -2,39 +2,36 @@
 
 (define-ffi-module (cairo cairo)
   #:pkg-config "cairo"
-  ;;#:library ("libcairo") ;; not needed when pkg-config fully working
-
-  ;;#:define ("ABC=123")
-  #:include ("cairo.h"
-	     "cairo-ft.h" ;; hangs (infinite-loop?)
-	     ;;"cairo-gobject.h" ;; messy
-	     "cairo-pdf.h"
-	     ;;"cairo-ps.h"
-	     ;;"cairo-quartz-image.h"
-	     ;;"cairo-quartz.h"
-	     "cairo-svg.h"
-	     ;;"cairo-tee.h"
-	     ;;"cairo-xml.h"
-	     )
-  #:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
-
-  ;; hacks
-  #:inc-help (;;("glib-object.h GType")
-	      ;;("Carbon/Carbon.h")
-	      ;;("ApplicationServices/ApplicationServices.h")
+  #:include '("cairo.h"
+	      ;;"cairo-ft.h"		; this one is hard
+	      ;;"cairo-gobject.h"		; messy
+	      "cairo-pdf.h"
+	      ;;"cairo-ps.h"
+	      ;;"cairo-quartz-image.h"
+	      ;;"cairo-quartz.h"
+	      "cairo-svg.h"
+	      ;;"cairo-tee.h"
+	      ;;"cairo-xml.h"
 	      )
+  
+  ;; include-proxy
+  #:inc-help (cond
+	      ((string-contains %host-type "darwin")
+	       '(("__builtin" "__builtin_va_list=void*")
+		 ("sys/cdefs.h" "__DARWIN_ALIAS(X)=")))
+	      (else '()))
 
+  ;; #:library '("libcairo")
+  ;; #:define '("ABC=123")
   ;; #:cpp-defs
   ;; #:inc-help
   ;; #:inc-dirs
-    
   #|
   #:renamer (string-renamer
 	     (lambda (n)
 	       (if (string=? "cairo" (substring n 0 5)) n
 		   (string-append "cairo-" n))))
-  |#
-  
+  ;;#:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
   #:decl-filter (string-member-proc
 		 "cairo_t"
 		 "cairo_status_t"
@@ -51,15 +48,16 @@
 		 "cairo_surface_destroy"
 		 "cairo_surface_status"
 		 )
-
+  |#
+  
   ;; the following are bent pipe to scm-module
-  ;;#:export (make-cairo-unit-matrix)
+  #:export (make-cairo-unit-matrix)
   )
 
 ;; is there a way to add guardians for cairo_destroy cairo_surface_destroy?
 
 (define (make-cairo-unit-matrix)
-  #f)
+  (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
 
 
 ;; --- last line ---
