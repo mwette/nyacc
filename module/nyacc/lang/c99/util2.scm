@@ -248,66 +248,60 @@
 	;; Caution: We are not parsing or saving all spec-items here.
 	((decl-spec-list
 	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
-	 ;;(simple-format #t "struct\n")
-	 (acons `(struct . ,name) (make-decl 'struct-def rest2)
+	 (acons `(struct . ,name)
+		(make-decl 'struct-def `((ident ,name) . ,rest2))
 		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 ;;(simple-format #t "struct\n")
-	 (acons '(struct . "*anon*") (make-decl 'struct-def rest2)
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
-	 ;;(simple-format #t "struct\n")
-	 (acons `(struct . ,name) (make-decl 'struct-def rest2)
+	 (acons `(struct . ,name)
+		(make-decl 'struct-def `((ident ,name) . ,rest2))
 		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 ;;(simple-format #t "struct\n")
-	 (acons '(struct . "*anon*") (make-decl 'struct-def rest2)
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail seed))
 
+	;; unions
 	((decl-spec-list
 	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(union . ,name) (make-decl 'union-def rest2)
+	 (acons `(union . ,name)
+		(make-decl 'union-def `((ident ,name) . ,rest2))
 		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (acons `(union . "*anon*") (make-decl 'union-def rest2)
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(union . ,name) (make-decl 'union-def rest2)
+	 (acons `(union . ,name)
+		(make-decl 'union-def `((ident ,name) . ,rest2))
 		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (acons `(union . "*anon*") (make-decl 'union-def rest2)
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail seed))
 
+	;; enums
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
-	 ;;(simple-format #t "enum\n")
 	 (acons `(enum . ,name) (make-decl 'enum-def rest2)
 		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 ;;(simple-format #t "enum\n")
 	 (acons `(enum . "*anon*") (make-decl 'enum-def rest2)
 		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
-	 ;;(simple-format #t "enum\n")
 	 (acons `(enum . ,name) (make-decl 'enum-def rest2)
 		(iter-declrs init-d-l tail seed)))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 ;;(simple-format #t "enum\n")
 	 (acons `(enum . "*anon*") (make-decl 'enum-def rest2)
 		(iter-declrs init-d-l tail seed)))
 

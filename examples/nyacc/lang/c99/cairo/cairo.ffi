@@ -32,23 +32,11 @@
 	       (if (string=? "cairo" (substring n 0 5)) n
 		   (string-append "cairo-" n))))
   ;;#:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
-  #:decl-filter (string-member-proc
-		 "cairo_t"
-		 "cairo_status_t"
-		 "cairo_matrix_t"
-		 "cairo_get_font_matrix"
-		 ;;
-		 "cairo_surface_t"
-		 "cairo_svg_surface_create"
-		 "cairo_create"
-		 "cairo_move_to"
-		 "cairo_line_to"
-		 "cairo_stroke"
-		 "cairo_destroy"
-		 "cairo_surface_destroy"
-		 "cairo_surface_status"
-		 )
   |#
+  #:decl-filter (string-member-proc
+		 ;;"cairo_data_path_t"
+		 '(union . "_cairo_path_data_t")
+		 )
   
   ;; the following are bent pipe to scm-module
   #:export (make-cairo-unit-matrix)
@@ -62,6 +50,20 @@
 
 ;; --- last line ---
 #|
+;;"cairo_t"
+;;"cairo_status_t"
+;;"cairo_matrix_t"
+;;"cairo_get_font_matrix"
+;;
+;;"cairo_surface_t"
+;;"cairo_svg_surface_create"
+;;"cairo_create"
+;;"cairo_move_to"
+;;"cairo_line_to"
+;;"cairo_stroke"
+;;"cairo_destroy"
+;;"cairo_surface_destroy"
+;;"cairo_surface_status"
 ;;"cairo_get_reference_count"
 ;;"cairo_set_dash"
 "cairo_bool_t"

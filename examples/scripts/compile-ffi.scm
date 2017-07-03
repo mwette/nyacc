@@ -1,4 +1,4 @@
-;;; scripts/compile-ffi.scm --- command-line Guile Scheme ffi compiler
+;;; scripts/compile-ffi.scm --- command-line FFI-helper compiler for Guile
 
 ;; Copyright (C) 2017 Matthew R. Wette
 ;;
@@ -9,6 +9,7 @@
 (define-module (scripts compile-ffi)
   #:use-module (ffi-help)
   #:use-module (system base language)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37)
   )
 

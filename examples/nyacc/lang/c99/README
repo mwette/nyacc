@@ -18,6 +18,11 @@ Tcexpr.scm	Run pgen.scm; generates expract.scm.new expract.scm.new
 
 NOTES:
 
+To play with the ffi-helper you need to
+  $ . env.sh 
+This generates cairo/cairo.scm:
+  $ guild compile-ffi cairo/cairo.ffi
+
 https://github.com/TaylanUB/scheme-bytestructures
 
 Tmach.scm
