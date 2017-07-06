@@ -13,30 +13,22 @@
 	      ;;"cairo-tee.h"
 	      ;;"cairo-xml.h"
 	      )
-  
-  ;; include-proxy
   #:inc-help (cond
 	      ((string-contains %host-type "darwin")
 	       '(("__builtin" "__builtin_va_list=void*")
 		 ("sys/cdefs.h" "__DARWIN_ALIAS(X)=")))
 	      (else '()))
-
-  ;; #:library '("libcairo")
-  ;; #:define '("ABC=123")
-  ;; #:cpp-defs
-  ;; #:inc-help
-  ;; #:inc-dirs
-  #|
-  #:renamer (string-renamer
-	     (lambda (n)
-	       (if (string=? "cairo" (substring n 0 5)) n
-		   (string-append "cairo-" n))))
-  ;;#:inc-filter (lambda (path) (string=? "cairo" (substring path 0 5)))
-  |#
-  #:decl-filter (string-member-proc
-		 ;;"cairo_data_path_t"
-		 '(union . "_cairo_path_data_t")
-		 )
+  #:decl-filter (lambda (k)
+		  (cond
+		   ((member k '("cairo_t" ;;"cairo_status_t" "cairo_matrix_t"
+				"cairo_surface_t"
+				"cairo_create"
+				;;"cairo_svg_surface_create"
+				;;"cairo_destroy" "cairo_surface_destroy"
+				;;"cairo_glyph_t" "cairo_path_data_t"
+				)) #t)
+		   ;;((equal? k '(union . "union-_cairo_glyph_t")) #t)
+		   (else #f)))
   
   ;; the following are bent pipe to scm-module
   #:export (make-cairo-unit-matrix)

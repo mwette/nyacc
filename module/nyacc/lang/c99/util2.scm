@@ -499,6 +499,7 @@
 ;; @end example
 ;; TODO: add support for @code{(struct . "foo")} in keepers.
 ;; @end deffn
+;; idea: if we have a pointer to an undefined type, then use void*
 (define* (expand-typerefs udecl udecl-dict #:key (keep '()))
   ;; ??? add (init-declr-list) OR having predicate (has-init-declr? decl)
   (let* ((tag (sx-tag udecl))		; decl or comp-decl
@@ -528,13 +529,11 @@
       ((struct-ref union-ref)
        ;; Still more to think about here.
        ;; If the ref has an associated def, then replace with that.
-       ;; Currently other decl-spec-list items are not included. But they are.
-       (let* ((is-struct (eqv? 'struct-ref (car tspec)))
-	      (ident (cadr tspec))
+       (let* ((ident (cadr tspec))
 	      (name (cadr ident))
-	      (def (if is-struct
-		       (udict-struct-ref udecl-dict name)
-		       (udict-union-ref udecl-dict name))))
+	      (def (case (car tspec)
+		     ((struct-ref) (udict-struct-ref udecl-dict name))
+		     ((union-ref) (udict-union-ref udecl-dict name)))))
 	 (if def
 	     (expand-typerefs `(udecl ,(cadr def) ,declr . ,tail)
 			      udecl-dict #:keep keep)
@@ -558,6 +557,8 @@
 	     (cons* tag fixd-specl tail))))
       
       ((enum-def)
+       (pretty-print udecl)
+       ;; enums should expand to int unless keeper
        (let* ((enum-def-list (sx-find 'enum-def-list tspec))
 	      (fixd-def-list (canize-enum-def-list enum-def-list))
 	      (fixd-tspec `(type-spec (enum-def ,fixd-def-list)))
@@ -566,8 +567,13 @@
 	 fixed-decl))
 
       ((enum-ref)
-       (simple-format (current-error-port) "chack: enum-ref NOT DONE\n")
-       udecl)
+       (let* ((ident (cadr tspec))
+	      (name (cadr ident))
+	      (def (udict-enum-ref udecl-dict name)))
+	 (if def
+	     (expand-typerefs `(udecl ,(cadr def) ,declr . ,tail)
+			      udecl-dict #:keep keep)
+	     udecl)))
 
       (else
        udecl))))
@@ -865,9 +871,9 @@
       ((comp-declr ,item) (unwrap-declr item))
       ((param-declr ,item) (unwrap-declr item))
       (,otherwise
-       (simple-format #t "unwrap-declr: OTHERWISE\n") (pretty-print otherwise)
-       ;; failed got: (array-of (ident "foo")) FROM const char foo[];
-       (error "udecl->mspec failed")
+       (simple-format (current-error-port) "OTHERWISE:\n")
+       (pretty-print otherwise (current-error-port))
+       (error "c99/util2: udecl->mspec failed")
        #f)))
 
   (define (find-type-spec decl-spec-list)

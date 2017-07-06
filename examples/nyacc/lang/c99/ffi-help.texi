@@ -1,0 +1,384 @@
+\input texinfo.tex
+@setfilename ffi-help.info
+@settitle FFI Helper for Guile
+
+@copying
+Copyright (C) 2017 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+@end copying
+
+@headings off
+@everyfooting @| @thispage @|
+@alias section = heading
+@alias subsection = subheading
+@alias subsubsection = subsubheading
+
+@node Top
+@top FFI Helper for Guile
+@format
+Matt Wette
+July 2017
+Version $Id$
+@end format
+
+@section Introduction
+
+The acronym FFI stands for ``Foreign Function Interface''.  It is the
+Guile system for binding functions and variables from C source libraries 
+into guild programs.
+
+The compiler is based on the C99 parser and utilities which are
+include in the @uref{https://www.nongnu.org/nyacc/,@sc{NYACC}}
+package.  Development is currently being performed in the
+@code{c99dev} branch of the associated git repository.  Within the
+@sc{NYACC} distribution, the FFI-helper modules can be found in the
+directory @file{examples/nyacc/lang/c99/}.
+
+Use of the FFI-helper module depends on the
+@uref{https://github.com/TaylanUB/scheme-bytestructures,scheme-bytestrucures}
+module.
+
+@subsection Current Assumptions
+
+Here is a list of assumptions
+@enumerate
+@item
+no raw aggregates get passed to C functions
+@end enumerate
+
+@subsection Caveats
+
+@enumerate
+@item
+Forward references are handled by 
+@end enumerate
+
+@section Demonstration
+
+The FFI Helper may best be introduced through a small example.
+For our example we use the Cairo library.  This example assumes Cairo
+is installed on the system and the associated @emph{pkg-config}
+support is present.
+
+WARNING: The FFI-helper package is under active development and there
+is good chance the following example will cease to work in the future.
+
+We start by genererating, in a directory called @file{cairo}, a file named
+@file{cairo.ffi} with the following contents:
+@example
+(define-ffi-module (cairo cairo)
+  #:pkg-config "cairo"
+  #:include '("cairo.h" "cairo-pdf.h" "cairo-svg.h")
+  #:export (make-cairo-unit-matrix))
+
+(define (make-cairo-unit-matrix)
+  (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
+@end example
+
+Now to generate a Guile module you use @code{guild} as follows:
+@example
+$ guild compile-ffi cairo/cairo.ffi
+@end example
+@noindent
+The above command execution will generate the file
+@file{cairo/cairo.scm}.  Though the file @file{cairo/cairo.ffi} is
+only seven lines long, the file 
+@file{cairo/cairo.scm} will be over a thousand lines long.  It looks
+like the following:
+@example
+(define-module (cairo cairo)
+  #:export (make-cairo-unit-matrix)
+  #:use-module (ffi-help-rt)
+  #:use-module ((system foreign) #:prefix ffi:)
+  #:use-module (bytestructures guile)
+  )
+(define link-lib (dynamic-link "libcairo")
+(define (lib-func name) (dynamic-func name link-lib))
+
+;; int cairo_version(void);
+(define cairo_version
+  (let ((f (ffi:pointer->procedure
+             ffi:int
+             (lib-func "cairo_version")
+             (list))))
+    (lambda () (let () (f)))))
+(export cairo_version)
+
+@dots{} @i{many, many more declarations} @dots{}
+
+(define cairo-lookup
+  (let ((sym-tab
+          '((CAIRO_VERSION_STRING . "1.14.10")
+            @dots{}
+            (CAIRO_SVG_VERSION_1_2 . 2))))
+    (lambda (k) (assq-ref sym-tab k))))
+(export cairo-lookup)
+
+(define (make-cairo-unit-matrix)
+  (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
+@end example
+
+Notice that the helper generated a function @code{cairo-lookup} to
+provide values for all @code{#define}'d symbols and @code{enum}
+values.  In addition, the @code{#:export} option and scheme definition
+provided in the dot-ffi file were copied into associated scm-file.
+
+To execute an example, let's fire up Guile and execute some code:
+@example
+scheme@@(guile-user)> (use-modules (cairo cairo-svg))
+scheme@@(guile-user)> (use-modules (ffi-help-rt))
+scheme@@(guile-user)> (use-modules (system foreign))
+
+scheme@@(guile-user)> (define srf (cairo_svg_surface_create (string->pointer "abc.svg") 200.0 200.0))
+scheme@@(guile-user)> srf
+$1 = #<cairo_surface_t* 0x7f9997d0cd40>
+
+scheme@@(guile-user)> (define cr (cairo_create srf))
+scheme@@(guile-user)> cr
+$2 = #<cairo_t* 0x7f9999809e00>
+
+scheme@@(guile-user)> (define mx (make-cairo_matrix_t))
+scheme@@(guile-user)> mx
+$3 = #<cairo_matrix_t 0x10aac4fa0>
+
+scheme@@(guile-user)> (pointer-to mx)                           
+$4 = #<cairo_matrix_t* 0x10aac4fa0>
+
+scheme@@(guile-user)> (cairo_get_font_matrix cr (pointer-to mx))
+scheme@@(guile-user)>
+
+scheme@@(guile-user)> (cairo_move_to cr 10.0 10.0)
+scheme@@(guile-user)> (cairo_line_to cr 190.0 10.0)
+scheme@@(guile-user)> (cairo_line_to cr 190.0 190.0)
+scheme@@(guile-user)> (cairo_line_to cr 10.0 190.0)
+scheme@@(guile-user)> (cairo_line_to cr 10.0 10.0)
+scheme@@(guile-user)> (cairo_stroke cr)
+
+scheme@@(guile-user)> (cairo_destroy cr)
+scheme@@(guile-user)> (cairo_surface_destroy srf)
+@end example
+The above example should generate an SVG file @file{abc.svg}.
+The call to @code{cairo_get_font_matrix} was not needed: it was
+provided to illustrate the use of @code{pointer-to}: a C function 
+which expects to receive a pointer to an allocated struct of type
+@code{cairo_matrix_t}.
+
+
+@section Creating FFI Modules
+
+@example
+  #:library '("libcairo" "libmisc")
+  #:inc-dirs '("/opt/local/include/cairo" "/opt/local/include")
+  #:renamer (string-renamer
+	     (lambda (n)
+	       (if (string=? "cairo" (substring n 0 5)) n
+		   (string-append "cairo-" n))))
+  #:pkg-config "cairo"
+  #:include '("cairo.h" "cairo-svg.h")
+  #:inc-help (cond
+              ((string-contains %host-type "darwin")
+               '(("__builtin" "__builtin_va_list=void*")
+                 ("sys/cdefs.h" "__DARWIN_ALIAS(X)=")))
+              (else '()))
+  #:decl-filter (string-member-proc
+  		 "cairo_t" "cairo_status_t" "cairo_surface_t"
+                 "cairo_create" "cairo_svg_surface_create"
+                 "cairo_destroy" "cairo_surface_destroy")
+  #:export (make-cairo-unit-matrix)
+@end example
+
+@section The Type System
+
+The FFI Helper uses the Guile struct-vtable constructs to deal with
+types.  In addition to the builtin name and printer fields, each type
+includes
+@table @asis
+@item wrapper
+a procedure to convert a (raw) Scheme object into a FH type
+@item un-wrapper
+(sloppy) procedure to convert a FH type (or simpilar) into a (raw)
+scheme object
+@item pointer-to
+the FH type describing a pointer to this type, or @code{#f}
+@item points-to
+the FH type describing the dereferened pointer type, or @code{#f}
+@end table
+
+@itemize
+@item
+For vectors, structs and unions the raw Scheme object type is
+`bytevector'.
+@item
+For numeric types, the raw Scheme object type is a Scheme numeric type.
+@end itemize
+
+@subsection Support for Aggregate Types
+
+As mentioned @code{scheme-bytestructures} is used to support structs
+and unions.  Here is a segment of generated code to illustrate:
+@example
+;; typedef union _cairo_path_data_t cairo_path_data_t;
+;; union _cairo_path_data_t @{
+;;   struct @{
+;;     cairo_path_data_type_t type;
+;;     int length;
+;;   @} header;
+;;   struct @{
+;;     double x, y;
+;;   @} point;
+;; @};
+(define union-_cairo_path_data_t-desc
+  (bs:union
+    (list `(header
+             ,(bs:struct
+                (list `(type ,cairo_path_data_type_t-desc)
+                      `(length ,int))))
+          `(point ,(bs:struct (list `(y ,double) `(x ,double)))))))
+(define cairo_path_data_t-desc union-_cairo_path_data_t-desc)
+@end example
+@noindent
+Note that forward references are swapped around.
+
+@subsection Type Support
+
+@deffn {Procedure} fh-type? type
+This predicate tests for FH types.
+@end deffn
+
+@deffn {Procedure} fh-object? obj
+This predicate tests for FH objects.
+@end deffn
+
+@deffn {Syntax} define-fh-aggregate-type name desc
+@deffnx {Syntax} define-fh-aggregate-type/p name desc
+@deffnx {Syntax} define-fh-aggregate-type/pp name desc
+The first form generates an FY aggregate type based on a bytestructure
+descriptor.  The second and third forms will build, in addition,
+pointer-to type and pointer-to-pointer-to type.  The primary form
+will generate and export the following:
+@table @code
+@item type
+a Guile (vtable) struct representing the type
+@item type?
+a predicate to test an object to be of type
+@item make
+a procedure to wrap based on args provided to the @code{bytestructure}
+procedure
+@item wrap
+same as @code{make} with one bytevector argument
+@item unwrap
+a procedure to produce a Scheme bytevector
+@end table
+@end deffn
+
+@deffn {Syntax} define-fh-enum-type name sv-map
+Generate an enum type.  Exports wrap, unwrap, type? but no make.
+@end deffn
+
+@deffn {Syntax} define-fh-pointer-type name [desc]
+Generate a pointer type.  With (bytestructure @code{bs:pointer})
+descriptor @var{desc} generates a bytestructe-based type.  Otherwise,
+generates a Guile FFI pointer based type.
+@end deffn
+
+@subsection Function Argument Return Types 
+
+Here are the FFI simple types:
+@verbatim
+  short unsigned-short int unsigned-int long unsigned-long
+  int8 uint8  int16 uint16 int32 uint32 uint64
+  size_t ssize_t ptrdiff_t
+  float double
+  void
+@end verbatim
+
+Here are the BS simple types:
+@verbatim
+  short unsigned-short int unsigned-int long unsigned-long
+  long-long unsigned-long-long
+  int8 uint8  int16 uint16 int32 uint32 uint64
+  size_t ssize_t ptrdiff_t intptr_t uintptr_t
+  float double complex64 complex128
+@end verbatim
+
+
+@section Miscellaneous Notes
+
+Exaplain wrappers.
+
+User is responsible for calling string->pointer and pointer->string.
+
+By definition: wrap is c->scm; unwrap is scm->c.
+ 
+@code{define-ffi-module} options:
+@table @code
+@item #:decl-filter proc
+@item #:inc-filter proc
+@item #:include expr
+expr is string or list or procecure that evaluates to string or list
+@item #:library expr
+expr is string or list or procecure that evaluates to string or list
+@item #:pkg-config string
+@item #:renamer proc
+procdure
+@end table
+
+
+@section Work to Go 
+
+@table @asis
+@item 02
+if need foo_t pointer then I gen wrapper for foo_t* but add
+foo_t to *wrappers* so if I later run into need for foo_t may be prob
+@item 03
+allow user to specify #:renamer (lambda (n) "make_goo" => "make-goo")
+@item 04
+Now the hard part if we want to reference other ffi-modules for types
+or other c-routines.  Say ffi-module foo defines foo_t
+now in ffi-module bar we want to reference, but redefine, foo_t
+@example
+(define-ffi-module (cairo cairo) ...)
+(define-ffi-module (cairo cairo-svg) #:use-ffi-module (cairo cairo)
+@end example
+@item 05
+Should setters for @code{bs:struct} enum fields check for symbolic
+arg?
+@item 06
+Use guardians for @code{cairo_destroy} and
+@code{cairo_surface_destroy}?
+@item 07
+What about vectors? If @code{foo(foo_t x[]},
+@enumerate
+@item user must make vector of foo_t
+@item ffi-module author should generate a make-foo_t-vector procedure
+@end enumerate
+@end table
+
+@subsection Completed
+@table @asis
+@item 01
+@example
+enum-wrap 0 => 'CAIRO_STATUS_SUCCESS
+enum-unwrap 'CAIRO_STATUS_SUCCESS => 0
+@end example
+@end table
+
+@section Administrative Items
+
+@subsection Copyright
+
+Copyright (C) 2017 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+
+@bye
+@c --- last line ---
