@@ -188,11 +188,10 @@
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (bytestructures guile)\n")
     (sfscm "  )\n")
-    (sfscm "(define void*  (bs:pointer int32))\n")
+    ;;(sfscm "(define void*  (bs:pointer int32))\n")
     (for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l)) libraries)
-    (sfscm "(define link-lib (dynamic-link ~S)\n" library)
+    (sfscm "(define link-lib (dynamic-link ~S))\n" library)
     (sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")))
-    (sfscm "(define local-lookup #f)\n")
 
 
 ;; === type conversion ==============
@@ -384,16 +383,16 @@
      ((and typename aggr-name)
       (ppscm `(define ,(string->symbol ty-desc) (,bs-aggr-t (list ,@sflds))))
       (sfscm "(export ~A)\n" ty-desc)
-      (sfscm "(define-std-aggregate-type/p ~A)\n" typename)
+      (sfscm "(define-fh-bytestructure-type/p ~A ~A)\n" typename ty-desc)
       (sfscm "(define ~A-~A ~A)\n" aggr-s aggr-name typename))
      (typename
       (ppscm `(define ,(string->symbol ty-desc) (,bs-aggr-t (list ,@sflds))))
       (sfscm "(export ~A)\n" ty-desc)
-      (sfscm "(define-std-aggregate-type/p ~A*)\n" typename))
+      (sfscm "(define-fh-bytestructure-type/p ~A ~A)\n" typename ty-desc))
      (aggr-name
       (ppscm `(define ,(string->symbol ag-desc) (,bs-aggr-t (list ,@sflds))))
       (sfscm "(export ~A)\n" ag-desc)
-      (sfscm "(define-std-aggregate-type/p ~A-~A)\n" aggr-s aggr-name)))))
+      (sfscm "(define-fh-bytestructure-type/p ~A-~A)\n" aggr-s aggr-name)))))
 
 (define (cnvt-struct-def typename struct-name field-list)
   (cnvt-aggr-def 'struct typename struct-name field-list))
@@ -418,14 +417,15 @@
       (sfscm "(define-fh-enum-type ~A\n" typename)
       (ppscm `(quote ,name-val-l) #:per-line-prefix "  ")
       (sfscm "  )\n")
-      (sfscm "(define enum-~A ~A)\n" enum-name typename)
-      (sfscm "(export enum-~A)\n" enum-name))
+      ;;(sfscm "(define enum-~A ~A)\n" enum-name typename)
+      ;;(sfscm "(export enum-~A)\n" enum-name)
+      )
      (typename
       (sfscm "(define-fh-enum-type ~A\n" typename)
       (ppscm `(quote ,name-val-l) #:per-line-prefix "  ")
       (sfscm "  )\n"))
      (enum-name
-      (sfscm "(define-fh-enum-type ~A\n" typename)
+      (sfscm "(define-f-henum-type enum-~A\n" enum-name)
       (ppscm `(quote ,name-val-l) #:per-line-prefix "  ")
       (sfscm "  )\n")))))
 
@@ -488,18 +488,19 @@
 ;; given mspec for an exec argument give the unwrapper
 (define (mspec->fh-unwrapper mspec)
   (pmatch (cdr mspec)
-    (((fixed-type ,name)) 'unwrap-fixed)
-    (((float-type ,name)) 'unwrap-float)
+    (((fixed-type ,name)) 'unwrap~fixed)
+    (((float-type ,name)) 'unwrap~float)
     (((void)) #f)
+    (((typename ,name)) (string->symbol (string-append "unwrap-" name)))
+    
     (((enum-def (ident ,en) ,rest))
      (cond
       ((member en *keepers*) (string->symbol (string-append "unwrap-" en)))
       (else 'unwrap-enum)))
-    (((typename ,name)) (string->symbol (string-append "unwrap-" name)))
-    
+
     (((pointer-to) (typename ,typename))
      (cond
-      ((member typename ffi-keepers) 'unwrap-pointer)
+      ((member typename ffi-keepers) 'unwrap~pointer)
       ((member typename *keepers*)
        (string->symbol (string-append "unwrap-" typename "*")))
       (else #f)))
@@ -510,7 +511,7 @@
        (string->symbol (string-append "unwrap-struct-" struct-name "*")))
       (else 'pointer-address)))
      
-    (((typename ,name)) (string->symbol (string-append "unwrap-" name)))
+    (((pointer-to) . ,otherwise) 'unwrap~pointer)
 
     (,otherwise
      (fherr "mspec->fh-unwrapper missed: ~S" mspec))))
@@ -527,7 +528,7 @@
 
     (((pointer-to) (typename ,typename))
      (cond
-      ((member typename ffi-keepers) 'make-pointer)
+      ((member typename ffi-keepers) 'ffi:make-pointer)
       ((member typename *keepers*)
        (string->symbol (string-append "wrap-" typename "*")))
       (else #f)))
@@ -536,7 +537,9 @@
      (cond
       ((member (w/struct struct-name) *keepers*)
        (string->symbol (string-append "wrap-struct-" struct-name "*")))
-      (else 'make-pointer)))
+      (else 'ffi:make-pointer)))
+
+    (((pointer-to) . ,otherwise) 'ffi:make-pointer)
 
     (,otherwise (fherr "mspec->fh-wrapper missed: ~S" mspec))))
 
@@ -667,8 +670,6 @@
        (type-spec (fixed-type ,name)))
       (init-declr (ident ,typename)))
      (let ()
-       ;; don't use this
-       ;;(sfscm "(define-std-type-wrapper ~A ~A)\n\n" typename name)
        (cons typename defined)))
 
     ;; typedef double foo_t;
@@ -898,8 +899,14 @@
     (ppscm `(define ,name
 	      (let ((sym-tab '(,@defs)))
 		(lambda (k) (assq-ref sym-tab k)))))
-    (sfscm "(set! local-lookup ~A)\n" name)
-    (sfscm "(export ~A)\n" name)))
+    (sfscm "(export ~A)\n" name)
+    (ppscm
+     `(define (unwrap-enum obj)
+	(cond
+	 ((number? obj) obj)
+	 ((symbol? obj) (,name obj))
+	 ((fh-object? obj) (struct-ref obj 0)) ;; ???
+	 (else (error "type mismatch")))))))
 
 ;; === Parsing the C header(s)
 
@@ -997,8 +1004,8 @@
      bs-defined udecls)
 
     ;; output global constants (from enum and #define)
-    (sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
-    ;;(gen-lookup-proc prefix ffi-defs all-defs)
+    ;;(sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
+    (gen-lookup-proc prefix ffi-defs all-defs)
 
     ;; return port so compiler can output remaining code
     mport))

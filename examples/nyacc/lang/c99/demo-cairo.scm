@@ -1,12 +1,10 @@
-;;(add-to-load-path (string-append (getcwd) "../../../../module"))
-;;(add-to-load-path (getcwd))
-(use-modules (cairo cairo-svg))
-(use-modules (ffi-help))
+(use-modules (cairo cairo))
+(use-modules (ffi-help-rt))
 (use-modules (system foreign)) ;; string->pointer
 
-(define mx (make-cairo_matrix_t))
-(simple-format #t "mx: ~S\n" mx)
-(simple-format #t "&mx: ~S\n" (pointer-to mx))
+;;(define mx (make-cairo_matrix_t))
+;;(simple-format #t "mx: ~S\n" mx)
+;;(simple-format #t "&mx: ~S\n" (pointer-to mx))
 
 (define srf (cairo_svg_surface_create (string->pointer "abc.svg") 200.0 200.0))
 

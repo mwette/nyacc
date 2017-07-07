@@ -20,11 +20,13 @@
 	      (else '()))
   #:decl-filter (lambda (k)
 		  (cond
-		   ((member k '("cairo_t" ;;"cairo_status_t" "cairo_matrix_t"
+		   ((member k '("cairo_t" ;; "cairo_status_t"
+				"cairo_matrix_t"
 				"cairo_surface_t"
 				"cairo_create"
-				;;"cairo_svg_surface_create"
-				;;"cairo_destroy" "cairo_surface_destroy"
+				"cairo_svg_surface_create"
+				"cairo_move_to" "cairo_line_to" "cairo_stroke"
+				"cairo_destroy" "cairo_surface_destroy"
 				;;"cairo_glyph_t" "cairo_path_data_t"
 				)) #t)
 		   ;;((equal? k '(union . "union-_cairo_glyph_t")) #t)
@@ -50,9 +52,6 @@
 ;;"cairo_surface_t"
 ;;"cairo_svg_surface_create"
 ;;"cairo_create"
-;;"cairo_move_to"
-;;"cairo_line_to"
-;;"cairo_stroke"
 ;;"cairo_destroy"
 ;;"cairo_surface_destroy"
 ;;"cairo_surface_status"
