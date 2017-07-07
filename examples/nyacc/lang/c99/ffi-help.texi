@@ -88,7 +88,7 @@ $ guild compile-ffi cairo/cairo.ffi
 The above command execution will generate the file
 @file{cairo/cairo.scm}.  Though the file @file{cairo/cairo.ffi} is
 only seven lines long, the file 
-@file{cairo/cairo.scm} will be over a thousand lines long.  It looks
+@file{cairo/cairo.scm} will be over five thousand lines long.  It looks
 like the following:
 @example
 (define-module (cairo cairo)
@@ -208,6 +208,8 @@ the FH type describing a pointer to this type, or @code{#f}
 @item points-to
 the FH type describing the dereferened pointer type, or @code{#f}
 @end table
+
+Think of wrapper as @code{ffi->scm} and unwrapper as @code{scm->ffi}.
 
 @itemize
 @item

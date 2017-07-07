@@ -18,9 +18,13 @@
 	       '(("__builtin" "__builtin_va_list=void*")
 		 ("sys/cdefs.h" "__DARWIN_ALIAS(X)=")))
 	      (else '()))
+  #|
   #:decl-filter (lambda (k)
 		  (cond
-		   ((member k '("cairo_t" ;; "cairo_status_t"
+		   ((member k '(
+				"cairo_raster_source_acquire_func_t"
+				
+				"cairo_t" ;; "cairo_status_t"
 				"cairo_matrix_t"
 				"cairo_surface_t"
 				"cairo_create"
@@ -31,6 +35,8 @@
 				)) #t)
 		   ;;((equal? k '(union . "union-_cairo_glyph_t")) #t)
 		   (else #f)))
+  |#
+  ;; cairo_raster_source_acquire_func_t
   
   ;; the following are bent pipe to scm-module
   #:export (make-cairo-unit-matrix)

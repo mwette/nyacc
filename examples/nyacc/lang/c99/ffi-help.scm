@@ -37,6 +37,7 @@
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang util)
+  #:use-module ((nyacc lex) #:select (cnumstr->scm))
   ;;#:use-module ((bytestructures guile))
   #:use-module (system foreign)
   #:use-module (sxml fold)
@@ -155,6 +156,9 @@
      ((string? val) (list val))
      (else (throw 'fh-error "value does not resolve to list")))))
 
+(define (cnumstr->num str)
+  (string->number (cnumstr->scm str)))
+
 (define (w/* type)
   (string-append type "*"))
 (define (w/struct type)
@@ -165,6 +169,17 @@
   (string-append "union-" type))
 (define (w/union* type)
   (string-append "union-" type "*"))
+
+(define (w/* type)
+  (cons 'pointer type))
+(define (w/struct type)
+  (cons 'struct type))
+(define (w/struct* type)
+  (cons 'pointer (cons 'struct type)))
+(define (w/union type)
+  (cons 'union type))
+(define (w/union* type)
+  (cons 'pointer (cons 'union type)))
 
 ;; === output scheme module header 
 
@@ -407,9 +422,9 @@
 		      (lambda (def)
 			(pmatch def
 			  ((enum-defn (ident ,n) (p-expr (fixed ,v)))
-			   (cons (string->symbol n) (string->number v)))
+			   (cons (string->symbol n) (cnumstr->num v)))
 			  ((enum-defn (ident ,n) (neg (p-expr (fixed ,v))))
-			   (cons (string->symbol n) (- (string->number v))))
+			   (cons (string->symbol n) (- (cnumstr->num v))))
 			  (,otherwise (error "3: cnvt-enum-def coding" def))))
 		      (cdr (canize-enum-def-list enum-def-list)))))
     (cond
@@ -658,7 +673,7 @@
   (define (non-ptr-decl specl)
     `(udecl ,specl (init-declr (ident "_"))))
 
-  (set! *keepers* defined)
+  (set! *keepers* defined)		; pass around OR make fluid
 
   ;;(ppout udecl)
   (sxml-match udecl
@@ -812,12 +827,31 @@
      defined)
 
 
+;; typedef cairo_surface_t *(*cairo_raster_source_acquire_func_t)(
+;;     cairo_pattern_t *pattern, void *callback_data, cairo_surface_t *target
+;;     , const cairo_rectangle_int_t *extents);
+;; ... failed.
+    #|
+    (udecl (decl-spec-list
+	    (stor-spec (typedef))
+	    (type-spec (typename "cairo_surface_t")))
+           (init-declr
+	    (ptr-declr
+	     (pointer)
+	     (ftn-declr
+	      (scope (ptr-declr
+		      (pointer)
+		      (ident "cairo_raster_source_acquire_func_t")))
+	      (param-list ...)
+    |#
+	   
     ;; function typedef
     ((udecl
       (decl-spec-list (stor-spec (typedef)) . ,rst)
       (init-declr
-       (ftn-declr (scope (ptr-declr (pointer) (ident ,typename)))
-		  (param-list . ,params))))
+       (ftn-declr
+	(scope (ptr-declr (pointer) (ident ,typename)))
+	(param-list . ,params))))
      (let* ((ret-decl `(udecl (decl-spec-list . ,rst) (init-declr (ident "_"))))
 	    (decl-return (gen-decl-return ret-decl))
 	    (decl-params (gen-decl-params params)))
@@ -828,7 +862,28 @@
        (sfscm " )\n")
        (sfscm "(export wrap-~A)\n" typename))
      (cons typename defined))
-    
+
+    ;; function typedef, returning pointer type
+    ((udecl
+      (decl-spec-list (stor-spec (typedef)) . ,rst)
+      (init-declr
+       (ptr-declr
+	(pointer)
+	(ftn-declr
+	 (scope (ptr-declr (pointer) (ident ,typename)))
+	 (param-list . ,params)))))
+     (let* ((ret-decl `(udecl (decl-spec-list . ,rst)
+			      (init-declr (ptr-declr (pointer) (ident "_")))))
+	    (decl-return (gen-decl-return ret-decl))
+	    (decl-params (gen-decl-params params)))
+       (sfscm "(define (wrap-~A proc) ;; => pointer\n" typename)
+       (ppscm
+	`(ffi:procedure->pointer ,decl-return proc (list ,@decl-params))
+	#:per-line-prefix " ")
+       (sfscm " )\n")
+       (sfscm "(export wrap-~A)\n" typename))
+     (cons typename defined))
+
     ;; enum foo { ... };
     ((udecl
       (decl-spec-list
@@ -989,8 +1044,11 @@
        (catch 'ffi-help-error
 	 (lambda ()
 	   (cond
-	    ((and (declf (car pair))		     ; user wants it
-		  (not (member (car pair) defined))) ; not already defined
+	    ((and (declf (car pair))		    ; user wants it
+		  (not (member (car pair) defined)) ; not already defined
+		  #;(not (and (pair? (car pair))	    ; not anonymous enum
+			    (string=? "*anon*" (cadar pair))))
+		  )
 	     (sferr "~S\n" (car pair))
 	     (nlscm) (c99scm (cdr pair)) ;;  <= fix to turn xxx-def to xxx-ref
 	     (cnvt-udecl (cdr pair) udict defined))
@@ -1087,5 +1145,3 @@
 	      (iter oport)))))))))
 
 ;; --- last line ---
-;; undefined pointer is void*
-

@@ -557,7 +557,7 @@
 	     (cons* tag fixd-specl tail))))
       
       ((enum-def)
-       (pretty-print udecl)
+       ;;(pretty-print udecl)
        ;; enums should expand to int unless keeper
        (let* ((enum-def-list (sx-find 'enum-def-list tspec))
 	      (fixd-def-list (canize-enum-def-list enum-def-list))
@@ -674,15 +674,14 @@
        ((null? edl) (cons (car enum-def-list) (reverse rez)))
        ((sxml-match (car edl)
 	  ((enum-defn (ident ,name) (p-expr ,num) . ,rest) #t)
-	 ((enum-defn (ident ,name) (neg (p-expr ,num)) . ,rest) #t)
-	 (,otherwise #f))
+	  ((enum-defn (ident ,name) (neg (p-expr ,num)) . ,rest) #t)
+	  (,otherwise #f))
 	(iter (cons (car edl) rez) ix (cdr edl)))
        (else
-	(let* ((ix1 (let iter ((ix (1+ ix)))
-		      (if (memq ix used) (iter (1+ ix)) ix)))
-	       (is1 (number->string ix1)))
-	  (iter (cons (append (car edl) `((p-expr (fixed ,is1)))) rez)
-		ix1 (cdr edl))))))))
+	(let* ((ix (let iter ((ix ix)) (if (memq ix used) (iter (1+ ix)) ix)))
+	       (is (number->string ix)))
+	  (iter (cons (append (car edl) `((p-expr (fixed ,is)))) rez)
+		(1+ ix) (cdr edl))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
 ;; Gets value of enum where @var{enum-def-list} looks like
