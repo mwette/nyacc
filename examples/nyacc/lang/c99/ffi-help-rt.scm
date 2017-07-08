@@ -11,11 +11,11 @@
 (define-module (ffi-help-rt)
   #:export (fh-type?
 	    fh-object?
-	    define-fh-bytestructure-type
-	    define-fh-bytestructure-type/p
-	    ;;define-fh-bytestructure-type/pp
+	    define-fh-compound-type
+	    define-fh-compound-type/p
+	    ;;define-fh-compound-type/pp
 	    define-fh-pointer-type
-	    define-fh-enum-type
+	    define-fh-enum
 	    pointer-to
 	    unwrap~fixed
 	    unwrap~float
@@ -97,14 +97,14 @@
 		16) port))
     (display ">" port)))
 
-;; @deffn {Syntax} define-fh-aggregate-type name desc
-;; @deffnx {Syntax} define-fh-aggregate-type/p name desc
-;; @deffnx {Syntax} define-fh-aggregate-type/pp name desc
+;; @deffn {Syntax} define-fh-compound-type name desc
+;; @deffnx {Syntax} define-fh-compound-type/p name desc
+;; @deffnx {Syntax} define-fh-compound-type/pp name desc
 ;; The first form generates an FY aggregate type based on a bytestructure
 ;; descriptor.  The second and third forms will build, in addition,
 ;; pointer-to type and pointer-to-pointer-to type.
 ;; @end deffn
-(define-syntax define-fh-bytestructure-type
+(define-syntax define-fh-compound-type
   (lambda (x)
     (define (stx->str stx)
       (symbol->string (syntax->datum stx)))
@@ -116,13 +116,11 @@
 	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type desc)
-       (with-syntax (
-		     (unwrap (gen-id x "unwrap-" #'type))
+       (with-syntax ((unwrap (gen-id x "unwrap-" #'type))
 		     (type? (gen-id x #'type "?"))
 		     (make (gen-id x "make-" #'type))
 		     (wrap (gen-id x "wrap-" #'type))
-		     (bs-ref (gen-id x #'type "-bs-ref"))
-		     )
+		     (bs-ref (gen-id x #'type "-bs-ref")))
 	 #'(begin
 	     (define (unwrap obj)
 	       (bytestructure-bytevector (struct-ref obj 0)))
@@ -162,31 +160,23 @@
 	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ p-type type)
-       (with-syntax (
-		     (p-make (gen-id x "make-" #'type "*"))
+       (with-syntax ((p-make (gen-id x "make-" #'type "*"))
 		     (p-desc (gen-id x  #'type "-*desc"))
-		     (make (gen-id x "make-" #'type))
-		     )
+		     (make (gen-id x "make-" #'type)))
 	 #'(begin
-	     #;(simple-format #t "ref<->deref! ~S ~S\n"
-			    (quote p-type) (quote type))
-	     ;; pointer-to
-	     (struct-set!
+	     (struct-set!		; pointer-to
 	      type (+ vtable-offset-user 1)
 	      (lambda (obj)
 		(p-make
 		 (ffi:pointer-address
 		  (ffi:bytevector->pointer
 		   (bytestructure-bytevector (struct-ref obj 0)))))))
-	     ;; points-to
-	     (struct-set!
+	     (struct-set!		; points-to
 	      type (+ vtable-offset-user 2)
-	      (lambda (obj)
-		;; CHECK THIS
-		(make (bytestructure-ref p-desc '* obj))))
-	     ))))))
+	      (lambda (obj) ;; CHECK THIS
+		(make (bytestructure-ref p-desc '* obj))))))))))
 	 
-(define-syntax define-fh-bytestructure-type/p
+(define-syntax define-fh-compound-type/p
   (lambda (x)
     (define (stx->str stx)
       (symbol->string (syntax->datum stx)))
@@ -201,15 +191,13 @@
        (with-syntax ((p-type (gen-id x #'type "*"))
 		     (p-desc (gen-id x #'type "-*desc"))
 		     (p-make (gen-id x "make-" #'type "*"))
-		     (make (gen-id x "make-" #'type))
-		     )
-	 #`(begin
-	     (define-fh-bytestructure-type type desc)
+		     (make (gen-id x "make-" #'type)))
+	 #'(begin
+	     (define-fh-compound-type type desc)
 	     (define p-desc (bs:pointer desc))
 	     (export p-desc)
-	     (define-fh-bytestructure-type p-type p-desc)
-	     (ref<->deref! p-type type)
-	     ))))))
+	     (define-fh-compound-type p-type p-desc)
+	     (ref<->deref! p-type type)))))))
 
 (define-syntax define-fh-pointer-type
   (lambda (x)
@@ -223,38 +211,36 @@
 	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type desc)			; based on bytestructure
-       (with-syntax
-	   ((pred (gen-id x #'type "?"))
-	    (wrap (gen-id x "wrap-" #'type))
-	    (unwr (gen-id x "unwrap-" #'type))
-	    )
-         #`(begin
-             (ffi:define-wrapped-pointer-type type pred wrap unwr
-               (lambda (v p)
-		 (display "#<" p)
-		 (display (symbol->string (quote #'type)) p)
-		 (display " 0x" p)
-		 (display (number->string (ffi:pointer-address (unwr v)) 16) p)
-		 (display ">" p)))
-             (export type pred wrap unwr))))
-      ((_ type)			      ; based on guile pointer wrapper
-       (with-syntax
-	   ((pred (gen-id x #'type "?"))
-	    (wrap (gen-id x "wrap-" #'type))
-	    (unwr (gen-id x "unwrap-" #'type))
-	    )
-         #`(begin
-             (ffi:define-wrapped-pointer-type type pred wrap unwr
-               (lambda (v p)
-		 (display "#<" p)
-		 (display (symbol->string (quote type)) p)
-		 (display " 0x" p)
-		 (display (number->string (ffi:pointer-address (unwr v)) 16) p)
-		 (display ">" p)))
-             (export type pred wrap unwr))))
+       (with-syntax ((p-desc (gen-id x #'type "-*desc"))
+		     (p-make (gen-id x "make-" #'type "*"))
+		     (make (gen-id x "make-" #'type))
+		     (pred (gen-id x #'type "?"))
+		     (wrap (gen-id x "wrap-" #'type))
+		     (unwrap (gen-id x "unwrap-" #'type)))
+	 (simple-format (current-error-port)
+			"define-fh-pointer-type needs work\n")
+	 #'(begin
+	     (define p-desc (bs:pointer p-desc))
+	     (export p-desc)
+	     (define-fh-compound-type type desc))))
+      ((_ type)		      ; based on guile pointer wrapper
+       (with-syntax ((pred (gen-id x #'type "?"))
+		     (wrap (gen-id x "wrap-" #'type))
+		     (unwrap (gen-id x "unwrap-" #'type)))
+	 #'(begin
+	     (ffi:define-wrapped-pointer-type
+	      type pred wrap unwrap
+	      (lambda (obj port)
+		(display "#<" port)
+		(display (symbol->string (quote #'type)) port)
+		(display " 0x" port)
+		(display (number->string (ffi:pointer-address (unwrap v)) 16)
+			 port)
+		(display ">" port)))
+	     (export type pred wrap unwrap))))
       )))
 
-(define-syntax define-fh-enum-type
+(define-syntax define-fh-enum
   (lambda (x)
     (define (stx->str stx)
       (symbol->string (syntax->datum stx)))
@@ -266,12 +252,12 @@
 	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type nv-map)			; based on bytestructure
-       (with-syntax
-	   ((pred (gen-id x #'type "?"))
-	    (wrap (gen-id x "wrap-" #'type))
-	    (unwr (gen-id x "unwrap-" #'type))
-	    )
-         #`(begin
+       (with-syntax (
+		     (unwrap (gen-id x "unwrap-" #'type))
+		     (type? (gen-id x #'type "?")
+		     (wrap (gen-id x "wrap-" #'type))
+		     )
+         #'(begin
 	     (define wrap
 	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))
 			       nv-map)))
@@ -279,8 +265,7 @@
 	     (define unwrap
 	       (let ((nvl nv-map))
 		 (lambda (name) (assq-ref nvl name))))
-	     (export wrap unwrap)
-	     ))))))
+	     (export wrap unwrap)))))))
 
 (define (make-enum-printer type)
   (lambda (obj port)
@@ -364,7 +349,7 @@
 
 ;; typedef struct { ... } foo_t;
 ;; (define foo_t-desc (bs:struct ...))
-;; (define-aggregate-type foo_t foo_t-desc)
+;; (define-compound-type foo_t foo_t-desc)
 ;;   (define foo_t (make-struct ...))
 ;;   (define foo_t*-desc (bs:pointer foo_t-desc))
 ;; (define obj (make-foo_t #(...)))

@@ -76,9 +76,8 @@
 (define *mport* #t)			; output module port
 (define *udict* '())			; udecl dict
 (define *renamer* identity)		; renamer from ffi-module
-(define *keepers* '()) ;; list of strings of defined types + builtin
-
-;; *keepers* DOES NOT HAVE POINTERS SO 
+(define *wrapped* '())			; has wrapper
+(define *defined* '())			; has wrapper and is bytestructure?
 
 (define (sfscm fmt . args)
   (apply simple-format *mport* fmt args))
@@ -98,10 +97,8 @@
 (define (pperr tree)
   (pretty-print tree (current-error-port) #:per-line-prefix "    "))
 
-
 (define (fherr fmt . args)
   (apply throw 'ffi-help-error fmt args))
-
 
 ;; === utilities
 
@@ -267,7 +264,7 @@
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
 (define (mspec->bs-desc mspec)
-  (let ((keepers *keepers*) (udict *udict*))
+  (let ((keepers *defined*) (udict *udict*))
     (pmatch mspec
       ;; expand typeref, use renamer, ...? 
       (((typename ,ty-name))
@@ -325,7 +322,7 @@
     (cons (eval-string (simple-format #f "(quote `(~A ,~S))" name type)) seed))
 
   ;;(sferr "field-list:\n") (pperr field-list)
-  (let* ((keepers *keepers*) (udict *udict*)
+  (let* ((keepers *defined*) (udict *udict*)
 	 (fldl (clean-field-list field-list)) ; remove lone comments
 	 (flds (cdr fldl))
 	 (uflds (fold munge-comp-decl '() flds)) ; in reverse order
@@ -395,16 +392,16 @@
      ((and typename aggr-name)
       (ppscm `(define ,(string->symbol ty-desc) (,bs-aggr-t (list ,@sflds))))
       (sfscm "(export ~A)\n" ty-desc)
-      (sfscm "(define-fh-bytestructure-type/p ~A ~A)\n" typename ty-desc)
+      (sfscm "(define-fh-compound-type/p ~A ~A)\n" typename ty-desc)
       (sfscm "(define ~A-~A ~A)\n" aggr-s aggr-name typename))
      (typename
       (ppscm `(define ,(string->symbol ty-desc) (,bs-aggr-t (list ,@sflds))))
       (sfscm "(export ~A)\n" ty-desc)
-      (sfscm "(define-fh-bytestructure-type/p ~A ~A)\n" typename ty-desc))
+      (sfscm "(define-fh-compound-type/p ~A ~A)\n" typename ty-desc))
      (aggr-name
       (ppscm `(define ,(string->symbol ag-desc) (,bs-aggr-t (list ,@sflds))))
       (sfscm "(export ~A)\n" ag-desc)
-      (sfscm "(define-fh-bytestructure-type/p ~A-~A)\n" aggr-s aggr-name)))))
+      (sfscm "(define-fh-compound-type/p ~A-~A)\n" aggr-s aggr-name)))))
 
 (define (cnvt-struct-def typename struct-name field-list)
   (cnvt-aggr-def 'struct typename struct-name field-list))
@@ -426,18 +423,18 @@
 		      (cdr (canize-enum-def-list enum-def-list)))))
     (cond
      ((and typename enum-name)
-      (sfscm "(define-fh-enum-type ~A\n" typename)
+      (sfscm "(define-fh-enum ~A\n" typename)
       (ppscm `(quote ,name-val-l) #:per-line-prefix "  ")
       (sfscm "  )\n")
-      ;;(sfscm "(define enum-~A ~A)\n" enum-name typename)
-      ;;(sfscm "(export enum-~A)\n" enum-name)
+      (sfscm "(define unwrap-enum-~A unwrap-~A)\n" enum-name typename)
+      (sfscm "(define wrap-enum-~A wrap-~A)\n" enum-name typename)
       )
      (typename
-      (sfscm "(define-fh-enum-type ~A\n" typename)
+      (sfscm "(define-fh-enum ~A\n" typename)
       (ppscm `(quote ,name-val-l) #:per-line-prefix "  ")
       (sfscm "  )\n"))
      (enum-name
-      (sfscm "(define-fh-enum-type enum-~A\n" enum-name)
+      (sfscm "(define-fh-enum enum-~A\n" enum-name)
       (ppscm `(quote ,name-val-l) #:per-line-prefix "  ")
       (sfscm "  )\n")))))
 
@@ -507,19 +504,19 @@
     
     (((enum-def (ident ,en) ,rest))
      (cond
-      ((member en *keepers*) (string->symbol (string-append "unwrap-" en)))
+      ((member en *wrapped*) (string->symbol (string-append "unwrap-" en)))
       (else 'unwrap-enum)))
 
     (((pointer-to) (typename ,typename))
      (cond
       ((member typename ffi-keepers) 'unwrap~pointer)
-      ((member typename *keepers*)
+      ((member typename *wrapped*)
        (string->symbol (string-append "unwrap-" typename "*")))
       (else #f)))
 
     (((pointer-to) (struct-ref (ident ,struct-name) . ,rest))
      (cond
-      ((member (w/struct struct-name) *keepers*)
+      ((member (w/struct struct-name) *wrapped*)
        (string->symbol (string-append "unwrap-struct-" struct-name "*")))
       (else 'pointer-address)))
      
@@ -541,13 +538,13 @@
     (((pointer-to) (typename ,typename))
      (cond
       ((member typename ffi-keepers) 'ffi:make-pointer)
-      ((member typename *keepers*)
+      ((member typename *wrapped*)
        (string->symbol (string-append "wrap-" typename "*")))
       (else #f)))
     
     (((pointer-to) (struct-ref (ident ,struct-name) . ,rest))
      (cond
-      ((member (w/struct struct-name) *keepers*)
+      ((member (w/struct struct-name) *wrapped*)
        (string->symbol (string-append "wrap-struct-" struct-name "*")))
       (else 'ffi:make-pointer)))
 
@@ -592,7 +589,7 @@
    params))
 
 (define (gen-exec-return-wrapper udecl)
-  (let* ((udecl (expand-typerefs udecl *udict* #:keep *keepers*))
+  (let* ((udecl (expand-typerefs udecl *udict* #:keep *wrapped*))
 	 (mspec (udecl->mspec udecl)))
     (mspec->fh-wrapper mspec)))
 
@@ -658,19 +655,24 @@
     (lambda (udecl)
       (and=> (find-proc udecl) car))))
 
-;; @deffn {Procedure} cnvt-udecl udecl udict defined)
+;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
 ;; Return updated (string based) keep-list, which will be modified if the
 ;; declaration is a typedef.  The typelist is the set of keepers used for
 ;; @code{udecl->mspec}.
 ;; @end deffn
-(define (cnvt-udecl udecl udict defined)
+(define (cnvt-udecl udecl udict wrapped defined)
+  ;; This is a bit sloppy in that we have to know if the converters are
+  ;; creating wrappers and/or (type) defines.
+  
   (define (ptr-decl specl)
     `(udecl ,specl (init-declr (ptr-declr (pointer) (ident "_")))))
   (define (non-ptr-decl specl)
     `(udecl ,specl (init-declr (ident "_"))))
-
-  (set! *keepers* defined)		; pass around OR make fluid
+  
+  ;; pass around OR make fluid
+  (set! *wrapped* wrapped)
+  (set! *defined* defined)
 
   ;;(ppout udecl)
   (sxml-match udecl
@@ -681,10 +683,15 @@
        (stor-spec (typedef))
        (type-spec (fixed-type ,name)))
       (init-declr (ident ,typename)))
-     (let ()
-       (cons typename defined)))
+     (values wrapped defined))
 
     ;; typedef double foo_t;
+    ((udecl
+      (decl-spec-list
+       (stor-spec (typedef))
+       (type-spec (float-type ,name)))
+      (init-declr (ident ,typename)))
+     (values wrapped defined))
 
     ;; typedef enum foo { ... } foo_t;
     ((udecl
@@ -692,8 +699,10 @@
        (stor-spec (typedef))
        (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest)))
       (init-declr (ident ,typename)))
-     (cnvt-enum-def typename enum-name enum-def-list) 
-     (cons* typename (w/enum enum-name) defined))
+     (cnvt-enum-def typename enum-name enum-def-list)
+     (values
+      (cons* typename (w/enum enum-name) wrapped)
+      defined))
 
     ;; typedef enum { ... } foo_t;
     ((udecl
@@ -702,7 +711,9 @@
        (type-spec (enum-def ,enum-def-list . ,rest)))
       (init-declr (ident ,typename)))
      (cnvt-enum-def typename #f enum-def-list)
-     (cons typename defined))
+     (values
+      (cons typename wrapped)
+      defined))
 
     ;; typedef struct foo { ... } foo_t;
     ((udecl
@@ -711,7 +722,9 @@
        (type-spec (struct-def (ident ,struct-name) ,field-list)))
       (init-declr (ident ,typename)))
      (cnvt-struct-def typename struct-name field-list)
-     (cons* typename (w/struct struct-name) defined))
+     (values
+      (cons* typename (w/struct struct-name) wrapped)
+      (cons* typename (w/struct struct-name) defined)))
 
     ;; typedef struct { ... } foo_t;
     ((udecl
@@ -720,7 +733,9 @@
        (type-spec (struct-def ,field-list)))
       (init-declr (ident ,typename)))
      (cnvt-struct-def typename #f field-list)
-     (cons* typename defined))
+     (values
+      (cons typename wrapped)
+      (cons typename defined)))
 
     ;; typedef struct foo foo_t;
     ((udecl
@@ -738,11 +753,15 @@
 			      (type-spec ,struct-def))
 			     (init-declr (ident ,typename)))))
 	 (c99scm struct-udecl)
-	 (cnvt-udecl udecl udict defined)
-	 (cons* typename (w/struct struct-name) defined)))
+	 (cnvt-udecl udecl udict wrapped defined)
+	 (values
+	  (cons* typename (w/struct struct-name) wrapped)
+	  (cons* typename (w/struct struct-name) defined))))
       (else
        (sfscm "(define-fh-pointer-type ~A*)\n" typename)
-       (cons typename defined))))
+       (values
+	(cons typename wrapped)
+	defined))))
 
     ;; typedef union foo { ... } foo_t;
     ((udecl
@@ -751,7 +770,9 @@
        (type-spec (union-def (ident ,union-name) ,field-list)))
       (init-declr (ident ,typename)))
      (cnvt-union-def typename union-name field-list)
-     (cons* typename (w/union union-name) defined))
+     (values
+      (cons* typename (w/union union-name) wrapped)
+      (cons* typename (w/union union-name) defined)))
 
     ;; typedef union { ... } foo_t;
     ((udecl
@@ -760,7 +781,9 @@
        (type-spec (union-def ,field-list)))
       (init-declr (ident ,typename)))
      (cnvt-struct-def typename #f field-list)
-     (cons* typename defined))
+     (values
+      (cons typename wrapped)
+      (cons typename defined)))
 
     ;; typedef union foo foo_t;
     ((udecl
@@ -778,11 +801,15 @@
 			      (type-spec ,union-def))
 			     (init-declr (ident ,typename)))))
 	 (c99scm union-udecl)
-	 (cnvt-udecl udecl udict defined)
-	 (cons* typename (cons 'union union-name) defined)))
+	 (cnvt-udecl udecl udict wrapped defined)
+	 (values
+	  (cons* typename (cons 'union union-name) wrapped)
+	  (cons* typename (cons 'union union-name) defined))))
       (else
        (sfscm "(define-fh-pointer-type ~A*)\n" typename)
-       (cons typename defined))))
+       (values
+	(cons typename wrapped)
+	defined))))
 
     ;; Need to capture declarators like
     ;;   extern struct { int x; } *foo;
@@ -792,10 +819,12 @@
       (decl-spec-list
        (type-spec (struct-def (ident ,struct-name) ,field-list))))
      (if (assoc-ref `(struct . ,struct-name) defined)
-	 defined
+	 (values wrapped defined)
 	 (begin
 	   (cnvt-struct-def #f struct-name field-list)
-	   (cons `(struct . ,struct-name) defined))))
+	   (values
+	    (cons `(struct . ,struct-name) wrapped)
+	    (cons `(struct . ,struct-name) defined)))))
 
     ;; struct { ... } ...
     ((udecl
@@ -803,17 +832,19 @@
        (type-spec (struct-def ,field-list))))
      (sferr "bug in util2? unnamed struct-def\n")
      (pperr udecl)
-     defined)
+     (values wrapped defined))
 
     ;; union foo { ... }.
     ((udecl
       (decl-spec-list
        (type-spec (union-def (ident ,union-name) ,field-list))))
      (if (assoc-ref `(struct . ,union-name) defined)
-	 defined
+	 (values wrapped defined)
 	 (begin
 	   (cnvt-union-def #f union-name field-list)
-	   (cons `(union . ,union-name) defined))))
+	   (values
+	    (cons `(union . ,union-name) wrapped)
+	    (cons `(union . ,union-name) defined)))))
 
     ;; union { ... } ...
     ((udecl
@@ -821,7 +852,7 @@
        (type-spec (union-def ,field-list))))
      (sferr "bug in util2? unnamed union-def\n")
      (pperr udecl)
-     defined)
+     (values wrapped defined))
 
     ;; function typedef
     ((udecl
@@ -839,7 +870,9 @@
 	#:per-line-prefix " ")
        (sfscm " )\n")
        (sfscm "(export unwrap-~A)\n" typename))
-     (cons typename defined))
+     (values
+      (cons typename wrapped)
+      defined))
 
     ;; function typedef, returning pointer type
     ((udecl
@@ -860,7 +893,9 @@
 	#:per-line-prefix " ")
        (sfscm " )\n")
        (sfscm "(export wrap-~A)\n" typename))
-     (cons typename defined))
+     (values
+      (cons typename wrapped)
+      defined))
 
     ;; enum foo { ... };
     ((udecl
@@ -868,24 +903,26 @@
        (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest))))
      (cnvt-enum-def #f enum-name enum-def-list)
      ;; probably never use this as arg to function
-     (cons (w/enum enum-name) defined))
+     (values 
+      (cons (w/enum enum-name) wrapped)
+      defined))
     
     ;; enum { ... };
     ((udecl
       (decl-spec-list
        (type-spec (enum-def ,enum-def-list . ,rest))))
-     ;; this will be handled by lookup
-     ;;(cnvt-enum-def #f #f enum-def-list)
-     defined)
+     ;; This is now filtered in the caller so the C-decl is not printed.
+     (values wrapped defined))
+
+    ;; === functions declarations ======
     
     ;; function returning pointer value
     ((udecl ,specl
 	    (init-declr
 	     (ptr-declr
 	      (pointer) (ftn-declr (ident ,name) (param-list . ,params)))))
-     ;;(sfscm "\n;; ~A\n" name)
      (cnvt-fctn name (ptr-decl specl) (fix-params params))
-     defined)
+     (values wrapped defined))
 
     ;; function returning non-pointer value
     ((udecl ,specl
@@ -897,12 +934,14 @@
        (c99scm (caddr udecl))
        (sfscm "\n"))
      (cnvt-fctn name (non-ptr-decl specl) (fix-params params))
-     defined)
+     (values wrapped defined))
 
     (,otherwise
      (sferr "cnvt-udecl missed:\n") (pperr udecl)
      (fherr "cnvt-udecl missed")
-     defined)))
+     (values wrapped defined))))
+
+
 
 ;; === enums and #defined => lookup
 
@@ -1018,28 +1057,26 @@
     (ffimod-header path opts)
     
     ;; convert and output foreign declarations
-    (fold
-     (lambda (pair defined)
+    (fold-values			; from (sxml fold)
+     (lambda (pair wrapped defined)
        (catch 'ffi-help-error
 	 (lambda ()
 	   (cond
-	    ((and (declf (car pair))		    ; user wants it
-		  (not (member (car pair) defined)) ; not already defined
-		  (not (and (pair? (car pair))	    ; not anonymous enum
-			    (string=? "*anon*" (cdar pair))))
-		  )
-	     (sferr "~S\n" (car pair))
-	     (nlscm) (c99scm (cdr pair)) ;;  <= fix to turn xxx-def to xxx-ref
-	     (cnvt-udecl (cdr pair) udict defined))
-	    (else
-	     ;;(sferr "  skipped\n")
-	     defined)))
+	    ((and ;; Process the declaration if all conditions met:
+	      (declf (car pair))		; 1) user wants it
+	      (not (member (car pair) defined)) ; 2) not already defined
+	      (not (and (pair? (car pair))	; 3) not anonymous
+			(string=? "*anon*" (cdar pair)))))
+	     (nlscm) (c99scm (cdr pair))
+	     (cnvt-udecl (cdr pair) udict wrapped defined))
+	    
+	    (else (values wrapped defined))))
 	 (lambda (key fmt . args)
 	   (apply simple-format (current-error-port)
 		  (string-append "ffi-help: " fmt "\n") args)
 	   (sfscm ";; ... failed.\n")
-	   defined)))
-     bs-defined udecls)
+	   (values wrapped defined))))
+     udecls '() bs-defined)
 
     ;; output global constants (from enum and #define)
     ;;(sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
@@ -1105,7 +1142,10 @@
 (define scm-reader (language-reader (lookup-language 'scheme)))
 
 (define (compile-ffi-file file)
-  (sfout "make compile-ffi pass args to intro-ffi (e.g., path to gcc)\n")
+  (sfout "TODO:\n")
+  (sfout "* pass args from compile-ffi to intro-ffi (e.g., path to gcc)\n")
+  (sfout "* arrays\n")
+  (sfout "* extern variables\n")
   (call-with-input-file file
     (lambda (iport)
       (let iter ((oport #f))

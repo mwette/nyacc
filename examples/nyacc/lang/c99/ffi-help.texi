@@ -204,7 +204,31 @@ Another decl-filter, useful for debugging.
                    (else #f)))
 @end example
                    
+@section The Guile Foreign Function Interface
+
+@subections Function Calls
+
+There are two parts to calling functions.  The first is to declare a
+function from the C-function address, the C-function argument types
+and the C-function return type.  The second is to call the
+function.  Scheme does not have the same type system as C and the
+Guile FFI is forgiving here.   When we declare a C function interface
+with, say, an int32 argument type, Guile expects us to pass a possibly
+negative TBD type. [TODO Figure out what Guile really does wrt
+C-Scheme type validity and conversion.
+
 @section The Type System
+
+We need a (somewhat?) closed type system.  In the FFI Helper we choose
+to classify the following
+@table @asis
+@item compound
+structs, unions and arrays (Scheme does not have arrays)
+@item simple
+fixed and float scalars
+@item special
+special are enums and pointers
+@end table
 
 The FFI Helper uses the Guile struct-vtable constructs to deal with
 types.  In addition to the builtin name and printer fields, each type
