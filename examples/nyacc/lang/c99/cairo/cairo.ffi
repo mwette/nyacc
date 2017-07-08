@@ -3,8 +3,8 @@
 (define-ffi-module (cairo cairo)
   #:pkg-config "cairo"
   #:include '("cairo.h"
-	      ;;"cairo-ft.h"		; this one is hard
-	      ;;"cairo-gobject.h"		; messy
+	      ;;"cairo-ft.h"		; /usr/include rat's nest
+	      ;;"cairo-gobject.h"	; /usr/include rat's nest
 	      "cairo-pdf.h"
 	      ;;"cairo-ps.h"
 	      ;;"cairo-quartz-image.h"
@@ -18,68 +18,14 @@
 	       '(("__builtin" "__builtin_va_list=void*")
 		 ("sys/cdefs.h" "__DARWIN_ALIAS(X)=")))
 	      (else '()))
-  #|
-  #:decl-filter (lambda (k)
-		  (cond
-		   ((member k '(
-				"cairo_raster_source_acquire_func_t"
-				
-				"cairo_t" ;; "cairo_status_t"
-				"cairo_matrix_t"
-				"cairo_surface_t"
-				"cairo_create"
-				"cairo_svg_surface_create"
-				"cairo_move_to" "cairo_line_to" "cairo_stroke"
-				"cairo_destroy" "cairo_surface_destroy"
-				;;"cairo_glyph_t" "cairo_path_data_t"
-				)) #t)
-		   ;;((equal? k '(union . "union-_cairo_glyph_t")) #t)
-		   (else #f)))
-  |#
-  ;; cairo_raster_source_acquire_func_t
-  
+
   ;; the following are bent pipe to scm-module
   #:export (make-cairo-unit-matrix)
   )
 
-;; is there a way to add guardians for cairo_destroy cairo_surface_destroy?
-
 (define (make-cairo-unit-matrix)
   (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
 
-
 ;; --- last line ---
-#|
-;;"cairo_t"
-;;"cairo_status_t"
-;;"cairo_matrix_t"
-;;"cairo_get_font_matrix"
-;;
-;;"cairo_surface_t"
-;;"cairo_svg_surface_create"
-;;"cairo_create"
-;;"cairo_destroy"
-;;"cairo_surface_destroy"
-;;"cairo_surface_status"
-;;"cairo_get_reference_count"
-;;"cairo_set_dash"
-"cairo_bool_t"
-"cairo_matrix_t"
-"cairo_region_t"
-"cairo_destroy_func_t"
-"cairo_region_contains_point"
-"cairo_set_user_data"
-"cairo_surface_destroy"
-"cairo_move_to" "cairo_line_to"
-"cairo_stroke"
-"cairo_surface_t"
-"cairo_svg_surface_create"
-"cairo_operator_t"
-"cairo_t"
-"cairo_create"
-"cairo_destroy"
-"cairo_status_t"
-"cairo_font_options_t"
-"cairo_font_options_status"
-"cairo_path_t"
-|#
+;; is there a way to add guardians for cairo_destroy cairo_surface_destroy?
+

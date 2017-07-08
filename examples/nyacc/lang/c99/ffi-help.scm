@@ -159,27 +159,24 @@
 (define (cnumstr->num str)
   (string->number (cnumstr->scm str)))
 
-(define (w/* type)
-  (string-append type "*"))
-(define (w/struct type)
-  (string-append "struct-" type))
-(define (w/struct* type)
-  (string-append "struct-" type "*"))
-(define (w/union type)
-  (string-append "union-" type))
-(define (w/union* type)
-  (string-append "union-" type "*"))
+;;(define (w/* type) (string-append type "*"))
+;;(define (w/struct type) (string-append "struct-" type))
+;;(define (w/struct* type) (string-append "struct-" type "*"))
+;;(define (w/union type) (string-append "union-" type))
+;;(define (w/union* type) (string-append "union-" type "*"))
 
-(define (w/* type)
-  (cons 'pointer type))
-(define (w/struct type)
-  (cons 'struct type))
-(define (w/struct* type)
-  (cons 'pointer (cons 'struct type)))
-(define (w/union type)
-  (cons 'union type))
-(define (w/union* type)
-  (cons 'pointer (cons 'union type)))
+(define (w/* name)
+  (cons 'pointer name))
+(define (w/struct name)
+  (cons 'struct name))
+(define (w/struct* name)
+  (cons 'pointer (cons 'struct name)))
+(define (w/union name)
+  (cons 'union name))
+(define (w/union* name)
+  (cons 'pointer (cons 'union name)))
+(define (w/enum name)
+  (cons 'enum name))
 
 ;; === output scheme module header 
 
@@ -440,7 +437,7 @@
       (ppscm `(quote ,name-val-l) #:per-line-prefix "  ")
       (sfscm "  )\n"))
      (enum-name
-      (sfscm "(define-f-henum-type enum-~A\n" enum-name)
+      (sfscm "(define-fh-enum-type enum-~A\n" enum-name)
       (ppscm `(quote ,name-val-l) #:per-line-prefix "  ")
       (sfscm "  )\n")))))
 
@@ -696,7 +693,7 @@
        (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest)))
       (init-declr (ident ,typename)))
      (cnvt-enum-def typename enum-name enum-def-list) 
-     (cons typename defined))
+     (cons* typename (w/enum enum-name) defined))
 
     ;; typedef enum { ... } foo_t;
     ((udecl
@@ -826,25 +823,6 @@
      (pperr udecl)
      defined)
 
-
-;; typedef cairo_surface_t *(*cairo_raster_source_acquire_func_t)(
-;;     cairo_pattern_t *pattern, void *callback_data, cairo_surface_t *target
-;;     , const cairo_rectangle_int_t *extents);
-;; ... failed.
-    #|
-    (udecl (decl-spec-list
-	    (stor-spec (typedef))
-	    (type-spec (typename "cairo_surface_t")))
-           (init-declr
-	    (ptr-declr
-	     (pointer)
-	     (ftn-declr
-	      (scope (ptr-declr
-		      (pointer)
-		      (ident "cairo_raster_source_acquire_func_t")))
-	      (param-list ...)
-    |#
-	   
     ;; function typedef
     ((udecl
       (decl-spec-list (stor-spec (typedef)) . ,rst)
@@ -855,12 +833,12 @@
      (let* ((ret-decl `(udecl (decl-spec-list . ,rst) (init-declr (ident "_"))))
 	    (decl-return (gen-decl-return ret-decl))
 	    (decl-params (gen-decl-params params)))
-       (sfscm "(define (wrap-~A proc) ;; => pointer\n" typename)
+       (sfscm "(define (unwrap-~A proc) ;; => pointer\n" typename)
        (ppscm
 	`(ffi:procedure->pointer ,decl-return proc (list ,@decl-params))
 	#:per-line-prefix " ")
        (sfscm " )\n")
-       (sfscm "(export wrap-~A)\n" typename))
+       (sfscm "(export unwrap-~A)\n" typename))
      (cons typename defined))
 
     ;; function typedef, returning pointer type
@@ -890,13 +868,14 @@
        (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest))))
      (cnvt-enum-def #f enum-name enum-def-list)
      ;; probably never use this as arg to function
-     defined)
+     (cons (w/enum enum-name) defined))
     
     ;; enum { ... };
     ((udecl
       (decl-spec-list
        (type-spec (enum-def ,enum-def-list . ,rest))))
-     (cnvt-enum-def #f #f enum-def-list)
+     ;; this will be handled by lookup
+     ;;(cnvt-enum-def #f #f enum-def-list)
      defined)
     
     ;; function returning pointer value
@@ -1046,13 +1025,14 @@
 	   (cond
 	    ((and (declf (car pair))		    ; user wants it
 		  (not (member (car pair) defined)) ; not already defined
-		  #;(not (and (pair? (car pair))	    ; not anonymous enum
-			    (string=? "*anon*" (cadar pair))))
+		  (not (and (pair? (car pair))	    ; not anonymous enum
+			    (string=? "*anon*" (cdar pair))))
 		  )
 	     (sferr "~S\n" (car pair))
 	     (nlscm) (c99scm (cdr pair)) ;;  <= fix to turn xxx-def to xxx-ref
 	     (cnvt-udecl (cdr pair) udict defined))
 	    (else
+	     ;;(sferr "  skipped\n")
 	     defined)))
 	 (lambda (key fmt . args)
 	   (apply simple-format (current-error-port)

@@ -248,18 +248,20 @@
 	;; Caution: We are not parsing or saving all spec-items here.
 	((decl-spec-list
 	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(struct . ,name)
-		(make-decl 'struct-def `((ident ,name) . ,rest2))
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail
+		      (acons `(struct . ,name)
+			     (make-decl 'struct-def `((ident ,name) . ,rest2))
+			     seed)))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
 	 (iter-declrs init-d-l tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(struct . ,name)
-		(make-decl 'struct-def `((ident ,name) . ,rest2))
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail
+		      (acons `(struct . ,name)
+			     (make-decl 'struct-def `((ident ,name) . ,rest2))
+			     seed)))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (struct-def . ,rest2) . ,rest1))
@@ -268,18 +270,20 @@
 	;; unions
 	((decl-spec-list
 	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(union . ,name)
-		(make-decl 'union-def `((ident ,name) . ,rest2))
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail
+		      (acons `(union . ,name)
+			     (make-decl 'union-def `((ident ,name) . ,rest2))
+			     seed)))
 	((decl-spec-list
 	  (type-spec (union-def . ,rest2) . ,rest1))
 	 (iter-declrs init-d-l tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(union . ,name)
-		(make-decl 'union-def `((ident ,name) . ,rest2))
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail
+		      (acons `(union . ,name)
+			     (make-decl 'union-def `((ident ,name) . ,rest2))
+			     seed)))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (union-def . ,rest2) . ,rest1))
@@ -288,22 +292,28 @@
 	;; enums
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(enum . ,name) (make-decl 'enum-def rest2)
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail
+		      (acons `(enum . ,name)
+			     (make-decl 'enum-def `((ident ,name) . ,rest2))
+			     seed)))
 	((decl-spec-list
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 (acons `(enum . "*anon*") (make-decl 'enum-def rest2)
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail
+		      (acons `(enum . "*anon*") (make-decl 'enum-def rest2)
+			     seed)))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
-	 (acons `(enum . ,name) (make-decl 'enum-def rest2)
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail
+		      (acons `(enum . ,name)
+			     (make-decl 'enum-def `((ident ,name) . ,rest2))
+			     seed)))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 (acons `(enum . "*anon*") (make-decl 'enum-def rest2)
-		(iter-declrs init-d-l tail seed)))
+	 (iter-declrs init-d-l tail
+		      (acons `(enum . "*anon*") (make-decl 'enum-def rest2)
+			     seed)))
 
 	(,otherwise
 	 (iter-declrs init-d-l tail seed)))))
@@ -549,7 +559,7 @@
 			    (expand-typerefs fld udecl-dict #:keep keep))
 			  unit-flds))
 	      (fixd-tspec
-	       (if #f ;;ident
+	       (if (and ident #t)
 		   `(type-spec (struct-def ,ident (field-list ,@fixd-flds)))
 		   `(type-spec (struct-def (field-list ,@fixd-flds)))))
 	      (fixd-specl (repl-typespec specl fixd-tspec)))
@@ -559,9 +569,13 @@
       ((enum-def)
        ;;(pretty-print udecl)
        ;; enums should expand to int unless keeper
-       (let* ((enum-def-list (sx-find 'enum-def-list tspec))
+       (let* ((ident (sx-find 'ident tspec))
+	      (enum-def-list (sx-find 'enum-def-list tspec))
 	      (fixd-def-list (canize-enum-def-list enum-def-list))
-	      (fixd-tspec `(type-spec (enum-def ,fixd-def-list)))
+	      (fixd-tspec
+	       (if (and ident #t)
+	       `(type-spec (enum-def ,ident ,fixd-def-list))
+	       `(type-spec (enum-def ,fixd-def-list))))
 	      (fixd-specl (repl-typespec specl fixd-tspec))
 	      (fixed-decl (cons* tag fixd-specl declr tail))) ;; !!!
 	 fixed-decl))

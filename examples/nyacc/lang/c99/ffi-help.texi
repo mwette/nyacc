@@ -192,6 +192,18 @@ which expects to receive a pointer to an allocated struct of type
   #:export (make-cairo-unit-matrix)
 @end example
 
+Another decl-filter, useful for debugging.
+@example
+  #:decl-filter (lambda (k)
+                  (cond
+                   ((member k '(
+                                "cairo_t" "cairo_status_t"
+                                "cairo_glyph_t" "cairo_path_data_t"
+				)) #t)
+                   ((equal? k '(union . "union-_cairo_glyph_t")) #t)
+                   (else #f)))
+@end example
+                   
 @section The Type System
 
 The FFI Helper uses the Guile struct-vtable constructs to deal with
