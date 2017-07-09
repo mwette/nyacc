@@ -11,15 +11,13 @@
 (define-module (ffi-help-rt)
   #:export (fh-type?
 	    fh-object?
-	    define-fh-compound-type
-	    define-fh-compound-type/p
+	    define-fh-compound-type define-fh-compound-type/p
 	    ;;define-fh-compound-type/pp
 	    define-fh-pointer-type
 	    define-fh-enum
+	    define-fh-function define-fh-function/p
 	    pointer-to
-	    unwrap~fixed
-	    unwrap~float
-	    unwrap~pointer
+	    unwrap~fixed unwrap~float unwrap~pointer
 	    wrap-void*
 	    )
   #:use-module (bytestructures guile)
@@ -253,7 +251,9 @@
     (syntax-case x ()
       ((_ type nv-map)			; based on bytestructure
        (with-syntax ((unwrap (gen-id x "unwrap-" #'type))
-		     (wrap (gen-id x "wrap-" #'type)))
+		     (wrap (gen-id x "wrap-" #'type))
+		     (unwrap* (gen-id x "unwrap-" #'type "*"))
+		     )
          #'(begin
 	     (define wrap
 	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))
@@ -262,7 +262,10 @@
 	     (define unwrap
 	       (let ((nvl nv-map))
 		 (lambda (name) (assq-ref nvl name))))
-	     (export wrap unwrap)))))))
+	     (define (unwrap* obj) ;; ugh
+	       (error "pointer to enum type not done"))
+	     (export wrap unwrap unwrap*)
+	     ))))))
 
 (define (make-enum-printer type)
   (lambda (obj port)
@@ -304,6 +307,49 @@
 		    (eq? (struct-vtable obj) type)))
 	     (export make wrap unwrap type type?)))))))
 	     
+(define-syntax define-fh-function
+  (lambda (x)
+    (define (stx->str stx)
+      (symbol->string (syntax->datum stx)))
+    (define (gen-id tmpl-id . args)
+      (datum->syntax
+       tmpl-id
+       (string->symbol
+	(apply string-append
+	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
+    (syntax-case x ()
+      ((_ name return-t args-t)
+       (with-syntax ((wrap (gen-id x "wrap-" #'name))
+		     (unwrap (gen-id x "unwrap-" #'name)))
+	 #'(begin
+	     (define (wrap proc)
+	       (ffi:procedure->pointer return-t proc args-t))
+	     (define (unwrap ptr)
+	       (ffi:pointer->procedure return-t ptr args-t))
+	     ))))))
+
+(define-syntax define-fh-function/p
+  (lambda (x)
+    (define (stx->str stx)
+      (symbol->string (syntax->datum stx)))
+    (define (gen-id tmpl-id . args)
+      (datum->syntax
+       tmpl-id
+       (string->symbol
+	(apply string-append
+	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
+    (syntax-case x ()
+      ((_ name return-t args-t)
+       (with-syntax ((wrap (gen-id x "wrap-" #'name))
+		     (unwrap (gen-id x "unwrap-" #'name))
+		     (wrap* (gen-id x "wrap-" #'name "*"))
+		     (unwrap* (gen-id x "unwrap-" #'name "*")))
+	 #'(begin
+	     (define-fh-function name return-t args-t)
+	     (define wrap* wrap)
+	     (define unwrap* unwrap)
+	     ))))))
+
 ;; right now this returns a ffi pointer
 ;; it should probably be a bs:pointer
 (define (pointer-to obj)

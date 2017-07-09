@@ -388,25 +388,6 @@
    (else
     (let-values (((tag attr spec-l declrs tail) (split-decl decl)))
       (iter-declrs 'comp-udecl attr spec-l declrs tail seed)))))
-(define* (OLD-munge-comp-decl decl seed #:key (expand-enums #f))
-  (cond
-   ;;((not (pair? decl)) (error "bad arg"))
-   ;;((not (eqv? (sx-tag decl) 'comp-decl)) (cons decl seed))
-   ((not (eqv? (sx-tag (sx-ref decl 2)) 'comp-declr-list))
-    (acons (declr-id (sx-ref decl 2)) decl seed))
-   (else
-    (let* ((tag (sx-ref decl 0))
-	   (attr (sx-attr decl))
-	   (spec (sx-ref decl 1))	; (type-spec ...)
-	   (cd-l (sx-ref decl 2))	; (comp-declr-list ...)
-	   (tail (sx-tail decl 3)))	; opt comment, different here
-      (fold-right
-       (lambda (declr seed)
-	 (let ((name (declr-id declr)))
-	   (if attr
-	       (acons name (cons* 'comp-udecl attr spec declr tail) seed)
-	       (acons name (cons* 'comp-udecl spec declr tail) seed))))
-       seed (cdr cd-l))))))
 
 ;; @deffn {Procedure} munge-param-decl param-decl [seed] [#:expand-enums #f]
 ;; This will turn
@@ -451,7 +432,6 @@
     ((ftn-declr ,dir-declr ,rest ...) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
     (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
-(define declr->ident declr-ident)
 
 ;; @deffn {Procedure} declr-id decl => "name"
 ;; This extracts the name from the return value of @code{declr-ident}.
@@ -630,29 +610,6 @@
 	 (if declr (cons* tag fixd-specl declr tail)
 	     (cons* tag fixd-specl tail))))
       
-      ((OLD-enum-def)
-       ;;(pretty-print udecl)
-       ;; enums should expand to int unless keeper
-       (let* ((ident (sx-find 'ident tspec))
-	      (enum-def-list (sx-find 'enum-def-list tspec))
-	      (fixd-def-list (canize-enum-def-list enum-def-list))
-	      (fixd-tspec
-	       (if (and ident #t)
-		   `(type-spec (enum-def ,ident ,fixd-def-list))
-		   `(type-spec (fixed-type "int"))))
-	      (fixd-specl (repl-typespec specl fixd-tspec))
-	      (fixed-decl (cons* tag fixd-specl declr tail)))
-	 fixed-decl))
-
-      ((OLD-enum-ref)
-       (let* ((ident (cadr tspec))
-	      (name (cadr ident))
-	      (def (udict-enum-ref udecl-dict name)))
-	 (if def
-	     (expand-typerefs `(udecl ,(cadr def) ,declr . ,tail)
-			      udecl-dict #:keep keep)
-	     udecl)))
-
       ((enum-def)
        (let* ((ident (sx-find 'ident tspec)))
 	 (if (and ident (member `(enum . ,(cadr ident)) keep))
@@ -672,7 +629,6 @@
 
       (else
        udecl))))
-(define expand-decl-typerefs expand-typerefs) ;; deprecated
 
 ;; === enums and defines 
 
@@ -813,7 +769,7 @@
              (enum-def-list
 	      (enum-defn (ident ,nstr) (p-expr (fixed ,vstr)))))))))
 
-;; === enum handling ...
+;; === stripdown ...
 
 ;;@deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
 ;; This is deprecated.
@@ -1027,13 +983,6 @@
 	  (else
 	   (error "util2: clean-field-list" (car fl)))))))
 
-;; @deffn {Procedure} fix-fields flds => flds
-;; This is just @code{(cdr (clean-field-list `(field-list . ,flds)))}
-;; @end deffn
-(define (fix-fields flds)
-  (cdr (clean-field-list `(field-list . ,flds))))
-
-
 ;; === deprecated ====================
 
 (define tree->udict c99-trans-unit->udict)
@@ -1041,5 +990,8 @@
 (define unwrap-decl munge-decl)
 (define match-comp-decl munge-comp-decl)
 (define match-param-decl munge-param-decl)
+(define expand-decl-typerefs expand-typerefs)
+(define declr->ident declr-ident)
+(define (fix-fields flds) (cdr (clean-field-list `(field-list . ,flds))))
 
 ;; --- last line ---

@@ -832,15 +832,10 @@
      (let* ((ret-decl `(udecl (decl-spec-list . ,rst) (init-declr (ident "_"))))
 	    (decl-return (gen-decl-return ret-decl))
 	    (decl-params (gen-decl-params params)))
-       (sfscm "(define (unwrap-~A proc)\n" typename)
-       (ppscm
-	`(ffi:procedure->pointer ,decl-return proc (list ,@decl-params))
-	#:per-line-prefix " ")
-       (sfscm " )\n")
-       (sfscm "(export unwrap-~A)\n" typename)
-       ;; The following in case sloppy w/ doubling up pointers.
-       ;; typedef void (*foo_t)(int); bar(foo_t *xxx);
-       (sfscm "(define unwrap-~A* unwrap-~A)\n" typename typename)
+       #;(sfscm "(define-fh-function/p ~A ~A '~S)\n"
+	      typename decl-return decl-params)
+       (ppscm `(define-fh-function/p ,(string->symbol typename)
+		 ,decl-return (list ,@decl-params)))
        )
      (values
       (cons typename wrapped)
@@ -859,15 +854,11 @@
 			      (init-declr (ptr-declr (pointer) (ident "_")))))
 	    (decl-return (gen-decl-return ret-decl))
 	    (decl-params (gen-decl-params params)))
-       (sfscm "(define (wrap-~A proc) ;; => pointer\n" typename)
-       (ppscm
-	`(ffi:procedure->pointer ,decl-return proc (list ,@decl-params))
-	#:per-line-prefix " ")
-       (sfscm " )\n")
-       ;; The following in case sloppy w/ doubling up pointers.
-       ;; typedef void (*foo_t)(int); bar(foo_t *xxx);
-       (sfscm "(define unwrap-~A* unwrap-~A)\n" typename typename)
-       (sfscm "(export wrap-~A)\n" typename))
+       #;(sfscm "(define-fh-function ~A ~A '~S)\n"
+	      typename decl-return decl-params)
+       (ppscm `(define-fh-function/p ,(string->symbol typename)
+		 ,decl-return (list ,@decl-params)))
+       )
      (values
       (cons typename wrapped)
       defined))
