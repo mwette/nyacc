@@ -164,7 +164,7 @@
 ;; @end deffn
 (define (find-new-typenames decl)
 
-  ;; like declr->ident in util2.scm
+  ;; like declr-id in util2.scm
   (define (declr->id-name declr)
     (case (car declr)
       ((ident) (sx-ref declr 1))

@@ -153,8 +153,8 @@
      ((string? val) (list val))
      (else (throw 'fh-error "value does not resolve to list")))))
 
-(define (cnumstr->num str)
-  (string->number (cnumstr->scm str)))
+(define (cintstr->num str)
+  (and=> (cintstr->scm str) string->number))
 
 ;;(define (w/* type) (string-append type "*"))
 ;;(define (w/struct type) (string-append "struct-" type))
@@ -297,7 +297,6 @@
 	     (cons (string->symbol (car fspec))
 		   (mspec->bs-desc (cdr fspec)))))
        (cdr fields)))
-
       
       ;; POINTERS
 
@@ -314,19 +313,23 @@
       (,otherwise
        (sferr "mspec:\n")
        (pperr mspec)
-       (fherr "mspec->bs-desc failed"))
+       (error "quit") ;;(quit)
+       (fherr "mspec->bs-desc failed")
+       )
       )))
+
+
+;; --- structs and unions
 
 (define (cnvt-field-list field-list)
   (define (acons-defn name type seed)
     (cons (eval-string (simple-format #f "(quote `(~A ,~S))" name type)) seed))
 
-  ;;(sferr "field-list:\n") (pperr field-list)
-  (let* ((keepers *defined*) (udict *udict*)
-	 (fldl (clean-field-list field-list)) ; remove lone comments
-	 (flds (cdr fldl))
-	 (uflds (fold munge-comp-decl '() flds)) ; in reverse order
+  ;;(sferr "\nfield-list:\n") (pperr field-list) (quit)
+  (let* ((field-list (clean-field-list field-list)) ; remove lone comments
+	 (uflds (fold-right munge-comp-decl '() (cdr field-list)))
 	 )
+    ;; CHANGE TO FOLD-RIGHT
     (let iter ((sflds '()) (decls uflds))
       (if (null? decls) sflds
 	  (let* ((name (caar decls))
@@ -336,54 +339,19 @@
 		 )
 	    (iter (acons-defn name type sflds) (cdr decls)))))))
 
-
-;; --- structs and unions
-
-(define (OLD-cnvt-field-list field-list)
-  (define (acons-defn name type seed)
-    (cons (eval-string (string-append "(quote `(" name " ," type "))")) seed))
-
-  (let* ((fldl (clean-field-list field-list)) ; remove lone comments
-	 (flds (cdr fldl))
-	 (uflds (fold munge-comp-decl '() flds)) ; in reverse order
-	 )
-    (let iter ((sflds '()) (decls uflds))
-      (if (null? decls) sflds
-	  (let* ((name (caar decls))
-		 (udecl (cdar decls))
-		 (spec (udecl->mspec/comm udecl))
-		 (type (mtype->bs (cddr spec)))
-		 )
-	    ;;(nlout) (ppout udecl) (ppout (cons name type))
-	    (iter (acons-defn name type sflds) (cdr decls)))))))
-
-;; aggr-t (tag) is 'struct or 'union
-;; typename is string or #f
-;; aggr-name is string or #f
-
-;; not working with ....
-;; union _cairo_path_data_t {
-;;     struct {
-;;         cairo_path_data_type_t type;
-;;         int length;
-;;     } header;
-;;     struct {
-;;         double x, y;
-;;     } point;
-;; };
-;; should convert to
-#;(define xxx
-  (bs:union
-   (list `(header ,(bs:struct (list `(type ,cairo_data_path_t???)
-				   `(length ,bs:int))))
-	 `(point ,(bs:struct (list `(x ,bs:double) `(y ,bs:double)))))))
+;; This routine will munge the fields and then perform typeref expansion.
+(define (expand-field-list-typerefs field-list)
+  (cons 'field-list
+	(fold-right
+	 (lambda (pair seed)
+	   (cons (expand-typerefs (cdr pair) *udict* #:keep *defined*) seed))
+	 '() (fold-right munge-comp-decl '() (cdr field-list)))))
 
 (define (cnvt-aggr-def aggr-t typename aggr-name field-list)
+  ;;(sferr "\nfield-list:\n") (pperr field-list)
   (let* ((aggr-s (symbol->string aggr-t))
 	 (bs-aggr-t (string->symbol (string-append "bs:" aggr-s)))
-	 (fldl (clean-field-list field-list)) ; remove lone comments
-	 (flds (cdr fldl))
-	 (uflds (fold munge-comp-decl '() flds)) ; in reverse order
+	 (field-list (expand-field-list-typerefs field-list))
 	 (sflds (cnvt-field-list field-list))
 	 (ag-desc (and aggr-name (string-append aggr-s "-" aggr-name "-desc")))
 	 (ty-desc (and typename (string-append typename "-desc")))
@@ -416,9 +384,9 @@
 		      (lambda (def)
 			(pmatch def
 			  ((enum-defn (ident ,n) (p-expr (fixed ,v)))
-			   (cons (string->symbol n) (cnumstr->num v)))
+			   (cons (string->symbol n) (cintstr->num v)))
 			  ((enum-defn (ident ,n) (neg (p-expr (fixed ,v))))
-			   (cons (string->symbol n) (- (cnumstr->num v))))
+			   (cons (string->symbol n) (- (cintstr->num v))))
 			  (,otherwise (error "3: cnvt-enum-def coding" def))))
 		      (cdr (canize-enum-def-list enum-def-list)))))
     (cond
@@ -864,12 +832,16 @@
      (let* ((ret-decl `(udecl (decl-spec-list . ,rst) (init-declr (ident "_"))))
 	    (decl-return (gen-decl-return ret-decl))
 	    (decl-params (gen-decl-params params)))
-       (sfscm "(define (unwrap-~A proc) ;; => pointer\n" typename)
+       (sfscm "(define (unwrap-~A proc)\n" typename)
        (ppscm
 	`(ffi:procedure->pointer ,decl-return proc (list ,@decl-params))
 	#:per-line-prefix " ")
        (sfscm " )\n")
-       (sfscm "(export unwrap-~A)\n" typename))
+       (sfscm "(export unwrap-~A)\n" typename)
+       ;; The following in case sloppy w/ doubling up pointers.
+       ;; typedef void (*foo_t)(int); bar(foo_t *xxx);
+       (sfscm "(define unwrap-~A* unwrap-~A)\n" typename typename)
+       )
      (values
       (cons typename wrapped)
       defined))
@@ -892,10 +864,16 @@
 	`(ffi:procedure->pointer ,decl-return proc (list ,@decl-params))
 	#:per-line-prefix " ")
        (sfscm " )\n")
+       ;; The following in case sloppy w/ doubling up pointers.
+       ;; typedef void (*foo_t)(int); bar(foo_t *xxx);
+       (sfscm "(define unwrap-~A* unwrap-~A)\n" typename typename)
        (sfscm "(export wrap-~A)\n" typename))
      (values
       (cons typename wrapped)
       defined))
+
+    ;; TODO: typedef void (foo_t)(int x)  [instead of *foo_t]
+    ;; TODO: typedef void* (foo_t)(int x)
 
     ;; enum foo { ... };
     ((udecl
@@ -957,7 +935,7 @@
 				  (expand-cpp-macro-ref name a-defs))))
 		   (cond
 		    ((zero? (string-length repl)) seed)
-		    ((string->number repl) =>
+		    ((cintstr->num repl) =>
 		     (lambda (val) (acons (string->symbol name) val seed)))
 		    ((eqv? #\" (string-ref repl 0))
 		     (acons (string->symbol name)
@@ -973,13 +951,17 @@
 	      (let ((sym-tab '(,@defs)))
 		(lambda (k) (assq-ref sym-tab k)))))
     (sfscm "(export ~A)\n" name)
+    ;;
+    (nlscm)
     (ppscm
      `(define (unwrap-enum obj)
 	(cond
 	 ((number? obj) obj)
 	 ((symbol? obj) (,name obj))
 	 ((fh-object? obj) (struct-ref obj 0)) ;; ???
-	 (else (error "type mismatch")))))))
+	 (else (error "type mismatch")))))
+    ))
+
 
 ;; === Parsing the C header(s)
 
@@ -1047,7 +1029,8 @@
 	 (ffi-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter incf))
 	 (all-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter #t))
 	 )
-    ;;(ppout incf) (quit)
+    ;;(ppout enu-defs) (quit)
+    
     ;; set globals
     (set! *udict* udict)
     (set! *mport* mport)
@@ -1064,9 +1047,10 @@
 	   (cond
 	    ((and ;; Process the declaration if all conditions met:
 	      (declf (car pair))		; 1) user wants it
-	      (not (member (car pair) defined)) ; 2) not already defined
+	      (not (member (car pair) wrapped)) ; 2) not already wrapped
 	      (not (and (pair? (car pair))	; 3) not anonymous
 			(string=? "*anon*" (cdar pair)))))
+	     ;;(sferr "~S\n" (car pair))
 	     (nlscm) (c99scm (cdr pair))
 	     (cnvt-udecl (cdr pair) udict wrapped defined))
 	    
@@ -1142,10 +1126,7 @@
 (define scm-reader (language-reader (lookup-language 'scheme)))
 
 (define (compile-ffi-file file)
-  (sfout "TODO:\n")
-  (sfout "* pass args from compile-ffi to intro-ffi (e.g., path to gcc)\n")
-  (sfout "* arrays\n")
-  (sfout "* extern variables\n")
+  (sfout "TODO: compile-ffi args, arrays, extern variables\n")
   (call-with-input-file file
     (lambda (iport)
       (let iter ((oport #f))

@@ -175,7 +175,7 @@
 	      type (+ vtable-offset-user 2)
 	      (lambda (obj) ;; CHECK THIS
 		(make (bytestructure-ref p-desc '* obj))))))))))
-	 
+
 (define-syntax define-fh-compound-type/p
   (lambda (x)
     (define (stx->str stx)
@@ -234,7 +234,7 @@
 		(display "#<" port)
 		(display (symbol->string (quote #'type)) port)
 		(display " 0x" port)
-		(display (number->string (ffi:pointer-address (unwrap v)) 16)
+		(display (number->string (ffi:pointer-address (unwrap obj)) 16)
 			 port)
 		(display ">" port)))
 	     (export type pred wrap unwrap))))
@@ -252,11 +252,8 @@
 	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type nv-map)			; based on bytestructure
-       (with-syntax (
-		     (unwrap (gen-id x "unwrap-" #'type))
-		     (type? (gen-id x #'type "?")
-		     (wrap (gen-id x "wrap-" #'type))
-		     )
+       (with-syntax ((unwrap (gen-id x "unwrap-" #'type))
+		     (wrap (gen-id x "wrap-" #'type)))
          #'(begin
 	     (define wrap
 	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))

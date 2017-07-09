@@ -21,6 +21,7 @@
 	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
 	    ;; for ???
 	    move-if-changed
+	    cintstr->scm
 	    fmterr)
   #:use-module ((srfi srfi-1) #:select(find))
   )
@@ -492,4 +493,37 @@ the file COPYING included with the this distribution.")
     (simple-format (current-error-port) "move-if-changed: no write access\n")
     #f)))
 
+;; @deffn {Procedure} cintstr->scm str => #f|str
+;; Convert a C string for a fixed type to a Scheme string.
+;; If not identified as a C int, then return @code{#f}.
+;; TODO: add support for character literals (and unicode?).
+;; @end deffn
+(define cs:dig (string->char-set "0123456789"))
+(define cs:hex (string->char-set "0123456789ABCDEFabcdef"))
+(define cs:oct (string->char-set "01234567"))
+(define cs:long (string->char-set "lLuU"))
+(define (cintstr->scm str)
+  ;; dl=digits, ba=base, st=state, ix=index
+  ;; 0: "0"->1, else->2
+  ;; 1: "x"->(base 16)2, else->(base 8)2
+  ;; 2: "0"-"9"->(cons ch dl), else->3:
+  ;; 3: "L","l","U","u"->3, eof->(cleanup) else->#f
+  (let ((ln (string-length str)))
+    (let iter ((dl '()) (bx "") (cs cs:dig) (st 0) (ix 0))
+      (if (= ix ln)
+	  (if (null? dl) #f (string-append bx (list->string (reverse dl))))
+	  (case st
+	    ((0) (if (char=? #\0 (string-ref str ix))
+		     (iter dl bx cs 1 (1+ ix))
+		     (iter (cons (string-ref str ix) dl) bx cs 2 (1+ ix))))
+	    ((1) (if (char=? #\x (string-ref str ix))
+		     (iter dl "#x" cs:hex 2 (1+ ix))
+		     (iter dl "#o" cs:oct 2 ix)))
+	    ((2) (if (char-set-contains? cs (string-ref str ix))
+		     (iter (cons (string-ref str ix) dl) bx cs st (1+ ix))
+		     (if (char-set-contains? cs:long (string-ref str ix))
+			 (iter dl bx cs 3 (1+ ix))
+			 #f)))
+	    ((3) #f))))))
+  
 ;;; --- last line ---

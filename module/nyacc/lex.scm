@@ -354,6 +354,7 @@
 ;; @deffn {Procedure} cnumstr->scm C99-str => scm-str
 ;; Convert C number-string (e.g, @code{0x123LL}) to Scheme numbers-string
 ;; (e.g., @code{#x123}).
+;; This probably belongs in @code{(nyacc lang util)}.
 ;; @end deffn
 (define (cnumstr->scm str)
   (define (2- n) (1- (1- n)))
@@ -372,7 +373,7 @@
 		    (string-append "#o" (trim-rt 1))
 		    (trim-rt 0)))
 	    (trim-rt 0)))))
-  
+
 ;; @deffn {Procedure} read-c-num ch => #f|string
 ;; Reader for unsigned numbers as used in C (or close to it).
 ;; @end deffn
