@@ -19,8 +19,15 @@
 	    pointer-to
 	    unwrap~fixed unwrap~float unwrap~pointer
 	    wrap-void*
+	    ;; debugging
+	    fht-unwrap
+	    fht-pointer-to
+	    fht-points-to
+	    bs-data-address
+	    bs-make-printer
 	    )
   #:use-module (bytestructures guile)
+  #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:version (0 10 0)
   )
@@ -74,6 +81,43 @@
     (set-struct-vtable-name! vt name)
     ty))
 
+(define-syntax define-fh-enum
+  (lambda (x)
+    (define (stx->str stx)
+      (symbol->string (syntax->datum stx)))
+    (define (gen-id tmpl-id . args)
+      (datum->syntax
+       tmpl-id
+       (string->symbol
+	(apply string-append
+	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
+    (syntax-case x ()
+      ((_ type nv-map)			; based on bytestructure
+       (with-syntax ((unwrap (gen-id x "unwrap-" #'type))
+		     (wrap (gen-id x "wrap-" #'type))
+		     (unwrap* (gen-id x "unwrap-" #'type "*"))
+		     )
+         #'(begin
+	     (define wrap
+	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))
+			       nv-map)))
+		 (lambda (code) (assq-ref vnl code))))
+	     (define unwrap
+	       (let ((nvl nv-map))
+		 (lambda (name) (assq-ref nvl name))))
+	     (define (unwrap* obj) ;; ugh
+	       (error "pointer to enum type not done"))
+	     (export wrap unwrap unwrap*)
+	     ))))))
+
+;; @deffn {Procedure} bs-data-address bs
+;; Return the raw, numerical address of the bytestruture bytevector data.
+;; @end deffn
+(define (bs-data-address bs)
+  (ffi:pointer-address
+   (ffi:bytevector->pointer
+    (bytestructure-bytevector bs))))
+
 ;; type printer for bytestructures-based types
 (define (make-bs-printer type)
   (lambda (obj port)
@@ -81,19 +125,77 @@
     (display type port)
     (when #f
       (display " bs-desc:0x" port)
-      (display (number->string
-		(ffi:scm->pointer
-		 (struct-ref obj 0))
-		16) port))
+      (display (number->string (ffi:scm->pointer (struct-ref obj 0)) 16) port))
     (when #t
       (display " 0x" port)
-      (display (number->string
-		(ffi:pointer-address
-		 (ffi:scm->pointer
-		  (bytestructure-bytevector
-		   (struct-ref obj 0))))
-		16) port))
+      (display (number->string (bs-data-address (struct-ref obj 0)) 16) port))
     (display ">" port)))
+
+(define (make-bs*-printer type)
+  (lambda (obj port)
+    (display "#<" port)
+    (display type port)
+    (display " 0x" port)
+    (display (number->string (bytestructure-ref (struct-ref obj 0)) 16) port)
+    (display ">" port)))
+
+;; (define foo_t*-desc (bs:pointer foo_t-desc))
+;; (define-fh-pointer-type foo_t* 
+(define-syntax define-fh-pointer-type
+  (lambda (x)
+    (define (stx->str stx)
+      (symbol->string (syntax->datum stx)))
+    (define (gen-id tmpl-id . args)
+      (datum->syntax
+       tmpl-id
+       (string->symbol
+	(apply string-append
+	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
+    (syntax-case x ()
+      ((_ type desc)			; based on bytestructure
+       (with-syntax ((make (gen-id x "make-" #'type))
+		     (type? (gen-id x #'type "?"))
+		     (wrap (gen-id x "wrap-" #'type))
+		     (unwrap (gen-id x "unwrap-" #'type)))
+	 #'(begin
+	     (define (make val)
+	       (cond
+		((bytestructure? val)
+		 (make-struct/no-tail type val))
+		((bytevector? val)
+		 (make-struct/no-tail type (bytestructure desc val)))
+		((number? val)
+		 (make-struct/no-tail type (bytestructure desc val)))
+		(else (make-struct/no-tail type val))))
+	     (define (type? obj)
+	       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
+	     (define (unwrap obj)
+	       (ffi:make-pointer (bs-data-address (struct-ref obj 0))))
+	     (define type
+	       (make-fht (quote type) unwrap #f #f
+			 (make-bs*-printer (quote type))))
+	     (define (wrap val) ;; pointer returned from code
+	       (make (bytestructure type val)))
+	     (export make type? unwrap type wrap)
+	     )))
+	     
+      ((_ type)		      ; based on guile pointer wrapper
+       (with-syntax ((make (gen-id x "make-" #'type))
+		     (pred (gen-id x #'type "?"))
+		     (wrap (gen-id x "wrap-" #'type))
+		     (unwrap (gen-id x "unwrap-" #'type)))
+	 #'(begin
+	     (ffi:define-wrapped-pointer-type
+	      type pred wrap unwrap
+	      (lambda (obj port)
+		(display "#<" port)
+		(display (symbol->string (quote type)) port)
+		(display " 0x" port)
+		(display (number->string (ffi:pointer-address (unwrap obj)) 16)
+			 port)
+		(display ">" port)))
+	     (export type pred wrap unwrap))))
+      )))
 
 ;; @deffn {Syntax} define-fh-compound-type name desc
 ;; @deffnx {Syntax} define-fh-compound-type/p name desc
@@ -141,7 +243,9 @@
 	       (make-struct/no-tail type (bytestructure desc raw)))
 	     (define (bs-ref obj)
 	       (struct-ref obj 0))
-	     (export type type? make wrap unwrap bs-ref)))))))
+	     (export type type? make wrap unwrap bs-ref)
+	     ))))))
+
 
 ;; @deffn {Procedure} ref<->deref! p-type type
 ;; This procedure will ``connect'' the two types so that the procedures
@@ -165,14 +269,12 @@
 	     (struct-set!		; pointer-to
 	      type (+ vtable-offset-user 1)
 	      (lambda (obj)
-		(p-make
-		 (ffi:pointer-address
-		  (ffi:bytevector->pointer
-		   (bytestructure-bytevector (struct-ref obj 0)))))))
-	     (struct-set!		; points-to
+		(p-make (bs-data-address (struct-ref obj 0)))))
+	     (struct-set!		; points-to FIX LATER
 	      type (+ vtable-offset-user 2)
 	      (lambda (obj) ;; CHECK THIS
 		(make (bytestructure-ref p-desc '* obj))))))))))
+
 
 (define-syntax define-fh-compound-type/p
   (lambda (x)
@@ -194,119 +296,11 @@
 	     (define-fh-compound-type type desc)
 	     (define p-desc (bs:pointer desc))
 	     (export p-desc)
-	     (define-fh-compound-type p-type p-desc)
-	     (ref<->deref! p-type type)))))))
-
-(define-syntax define-fh-pointer-type
-  (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
-    (syntax-case x ()
-      ((_ type desc)			; based on bytestructure
-       (with-syntax ((p-desc (gen-id x #'type "-*desc"))
-		     (p-make (gen-id x "make-" #'type "*"))
-		     (make (gen-id x "make-" #'type))
-		     (pred (gen-id x #'type "?"))
-		     (wrap (gen-id x "wrap-" #'type))
-		     (unwrap (gen-id x "unwrap-" #'type)))
-	 (simple-format (current-error-port)
-			"define-fh-pointer-type needs work\n")
-	 #'(begin
-	     (define p-desc (bs:pointer p-desc))
-	     (export p-desc)
-	     (define-fh-compound-type type desc))))
-      ((_ type)		      ; based on guile pointer wrapper
-       (with-syntax ((pred (gen-id x #'type "?"))
-		     (wrap (gen-id x "wrap-" #'type))
-		     (unwrap (gen-id x "unwrap-" #'type)))
-	 #'(begin
-	     (ffi:define-wrapped-pointer-type
-	      type pred wrap unwrap
-	      (lambda (obj port)
-		(display "#<" port)
-		(display (symbol->string (quote #'type)) port)
-		(display " 0x" port)
-		(display (number->string (ffi:pointer-address (unwrap obj)) 16)
-			 port)
-		(display ">" port)))
-	     (export type pred wrap unwrap))))
-      )))
-
-(define-syntax define-fh-enum
-  (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
-    (syntax-case x ()
-      ((_ type nv-map)			; based on bytestructure
-       (with-syntax ((unwrap (gen-id x "unwrap-" #'type))
-		     (wrap (gen-id x "wrap-" #'type))
-		     (unwrap* (gen-id x "unwrap-" #'type "*"))
-		     )
-         #'(begin
-	     (define wrap
-	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))
-			       nv-map)))
-		 (lambda (code) (assq-ref vnl code))))
-	     (define unwrap
-	       (let ((nvl nv-map))
-		 (lambda (name) (assq-ref nvl name))))
-	     (define (unwrap* obj) ;; ugh
-	       (error "pointer to enum type not done"))
-	     (export wrap unwrap unwrap*)
+	     (define-fh-pointer-type p-type p-desc)
+	     (ref<->deref! p-type type)
+	     (export type desc p-type p-desc) ;; only4debugging?
 	     ))))))
 
-(define (make-enum-printer type)
-  (lambda (obj port)
-    (display "#<" port)
-    (display type port)
-    (display " " port)
-    (display (struct-ref obj 0))
-    (display ">" port)))
-
-(define-syntax NEW-define-fh-enum-type
-  (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
-    (syntax-case x ()
-      ((_ type nv-map)
-       (with-syntax ((type? (gen-id x #'type "?"))
-		     (make (gen-id x "make-" #'type))
-		     (wrap (gen-id x "wrap-" #'type))
-		     (unwrap (gen-id x "unwrap-" #'type)))
-	 #`(begin
-	     (define wrap
-	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))
-			       nv-map)))
-		 (lambda (raw)
-		   (make-struct/no-tail type (assq-ref vnl raw)))))
-	     (define (unwrap obj)
-	       (assq-ref nv-map (struct-ref obj 0)))
-	     (define type
-	       (make-fht (quote type) wrap unwrap #f #f
-			 (make-enum-printer #'type)))
-	     (define (type? obj)
-	       (and (fh-object? obj)
-		    (eq? (struct-vtable obj) type)))
-	     (export make wrap unwrap type type?)))))))
-	     
 (define-syntax define-fh-function
   (lambda (x)
     (define (stx->str stx)
@@ -322,10 +316,10 @@
        (with-syntax ((wrap (gen-id x "wrap-" #'name))
 		     (unwrap (gen-id x "unwrap-" #'name)))
 	 #'(begin
-	     (define (wrap proc)
-	       (ffi:procedure->pointer return-t proc args-t))
 	     (define (unwrap ptr)
-	       (ffi:pointer->procedure return-t ptr args-t))
+	       (ffi:procedure->pointer return-t ptr args-t))
+	     (define (wrap proc)
+	       (ffi:pointer->procedure return-t proc args-t))
 	     ))))))
 
 (define-syntax define-fh-function/p
@@ -401,4 +395,3 @@
 ;;   (dereference-pointer
 ;;     (bytevector->pointer
 ;;        (bytestructure-bytevector p-obj))))
-
