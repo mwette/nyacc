@@ -330,14 +330,13 @@
 	 (uflds (fold-right munge-comp-decl '() (cdr field-list)))
 	 )
     ;; CHANGE TO FOLD-RIGHT
-    (let iter ((sflds '()) (decls uflds))
-      (if (null? decls) sflds
+    (let iter ((decls uflds))
+      (if (null? decls) '()
 	  (let* ((name (caar decls))
 		 (udecl (cdar decls))
 		 (spec (udecl->mspec/comm udecl))
-		 (type (mspec->bs-desc (cddr spec)))
-		 )
-	    (iter (acons-defn name type sflds) (cdr decls)))))))
+		 (type (mspec->bs-desc (cddr spec))))
+	  (acons-defn name type (iter (cdr decls))))))))
 
 ;; This routine will munge the fields and then perform typeref expansion.
 (define (expand-field-list-typerefs field-list)
