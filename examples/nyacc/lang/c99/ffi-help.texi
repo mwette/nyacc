@@ -93,7 +93,7 @@ like the following:
 @example
 (define-module (cairo cairo)
   #:export (make-cairo-unit-matrix)
-  #:use-module (ffi-help-rt)
+  #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (bytestructures guile)
   )
@@ -131,7 +131,7 @@ provided in the dot-ffi file were copied into associated scm-file.
 To execute an example, let's fire up Guile and execute some code:
 @example
 scheme@@(guile-user)> (use-modules (cairo cairo-svg))
-scheme@@(guile-user)> (use-modules (ffi-help-rt))
+scheme@@(guile-user)> (use-modules (system ffi-help-rt))
 scheme@@(guile-user)> (use-modules (system foreign))
 
 scheme@@(guile-user)> (define srf (cairo_svg_surface_create (string->pointer "abc.svg") 200.0 200.0))

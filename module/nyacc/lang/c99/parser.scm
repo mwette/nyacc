@@ -42,7 +42,7 @@
        (lambda () (parser lexer #:debug debug))
        (lambda (key fmt . args)
 	 (report-error fmt args)
-	 (pop-input)			; not sure this is the right way
+	 ;;(pop-input)			; not sure this is correct
 	 (throw 'c99-error "C99 parse error"))))))
 
 ;; This is used to parse included files at top level.
@@ -66,26 +66,31 @@
 ;; expressions can be fully evaluated, which may mean adding compiler generated
 ;; defines (e.g., using @code{gen-cpp-defs}).
 ;; @end deffn
+(use-modules (ice-9 pretty-print))
 (define* (parse-c99 #:key
 		    (cpp-defs '())	; CPP defines
 		    (inc-dirs '())	; include dirs
 		    (inc-help '())	; include helpers
 		    (mode 'code)	; mode: 'file, 'code or 'decl
-		    (xdef? #f)		; pred to determine expand
+=		    (xdef? #f)		; pred to determine expand
 		    (debug #f))		; debug
-  (catch
-   'c99-error
-   (lambda ()
-     (if (and (pair? cpp-defs) (pair? (car cpp-defs)))
-	 (error "usage deprecated: use #:cpp-defs '(\"ABC=123\")"))
-     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) inc-help)))
-       (with-fluid*
-	   *info* info
-	   (lambda ()
-	     (c99-raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
-			 #:debug debug)))))
-   (lambda (key fmt . args)
-     (report-error fmt args)
-     #f)))
+  (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) inc-help)))
+    (if (and (pair? cpp-defs) (pair? (car cpp-defs)))
+	;; old: ("ABC" . "123"), new: "ABC=123"
+	(error "usage deprecated: use #:cpp-defs '(\"ABC=123\")"))
+    (with-fluids ((*info* info)
+		  (*input-stack* '()))
+      (catch 'c99-error
+	(lambda () (c99-raw-parser
+		    (gen-c-lexer #:mode mode #:xdef? xdef?)
+		    #:debug debug))
+	(lambda (key fmt . args)
+	  (report-error fmt args)
+	  (when #f
+	    (simple-format (current-error-port)
+			   "input-stack: ~S\ncpi-defs:\n"
+			   (fluid-ref *input-stack*))
+	    (pretty-print (cpi-defs info) (current-error-port)))
+	  #f)))))
 
 ;; --- last line ---

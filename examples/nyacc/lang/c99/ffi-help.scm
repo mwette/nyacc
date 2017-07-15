@@ -22,7 +22,7 @@
 ;; bytestructure->descriptor->ffi-descriptor
 ;; bs:pointer->proc
 
-(define-module (ffi-help)
+(define-module (nyacc lang c99 ffi-help)
   #:export (*ffi-help-version*
 	    define-ffi-module
 	    compile-ffi-file
@@ -43,10 +43,8 @@
   #:use-module (sxml fold)
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
-		 #:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
+		#:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-9 gnu)
   #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-37)
   #:use-module (system base pmatch)
@@ -54,7 +52,6 @@
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
-  ;;#:re-export (make-record-type bs:bytestructure-bytevector)
   #:version (0 10 0)
   )
 
@@ -68,9 +65,19 @@
     "/usr/include"
     ))
 (define std-inc-help
-  '(;;("__builtin" "__builtin_va_list=void*")
-    ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
-    ))
+  (cond
+   ((string-contains %host-type "darwin")
+    '(("__builtin"
+       "__builtin_va_list=void*" "__attribute__(X)=" "__inline="
+       "__asm(X)=" "__asm__(X)=asm(X)")
+      ))
+   (else
+    '(("__builtin"
+       "__builtin_va_list=void*" "__attribute__(X)=" "__inline="
+       "__asm(X)=" "__asm__(X)=asm(X)")
+      ))))
+    
+   
 
 (define *debug* #f)			; parse debug mode
 (define *mport* #t)			; output module port
@@ -193,14 +200,15 @@
     (for-each ;; output pass-through options
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
      (opts->mopts opts))
-    (sfscm "  #:use-module (ffi-help-rt)\n")
+    (sfscm "  #:use-module (system ffi-help-rt)\n")
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (bytestructures guile)\n")
     (sfscm "  )\n")
     ;;(sfscm "(define void*  (bs:pointer int32))\n")
     (for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l)) libraries)
     (sfscm "(define link-lib (dynamic-link ~S))\n" library)
-    (sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")))
+    ;;(sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")
+    ))
 
 
 ;; === type conversion ==============
@@ -263,9 +271,9 @@
 
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
-(define (mspec->bs-desc mspec)
+(define (mtail->bs-desc mspec-tail)
   (let ((keepers *defined*) (udict *udict*))
-    (pmatch mspec
+    (pmatch mspec-tail
       ;; expand typeref, use renamer, ...? 
       (((typename ,ty-name))
        (string->symbol (string-append ty-name "-desc")))
@@ -280,12 +288,12 @@
        'int)
 
       (((struct-def (ident ,struct-name) ,field-list))
-       (mspec->bs-desc `(struct-def ,field-list)))
+       (mtail->bs-desc `(struct-def ,field-list)))
       (((struct-def ,field-list))
        (list 'bs:struct `(list ,@(cnvt-field-list field-list))))
       
       (((union-def (ident ,union-name) ,field-list))
-       (mspec->bs-desc `(union-def ,field-list)))
+       (mtail->bs-desc `(union-def ,field-list)))
       (((union-def ,field-list))
        (list 'bs:union `(list ,@(cnvt-field-list field-list))))
 
@@ -295,7 +303,7 @@
 	 (lambda (fld)
 	   (let ((fspec (udecl->mspec fld)))
 	     (cons (string->symbol (car fspec))
-		   (mspec->bs-desc (cdr fspec)))))
+		   (mtail->bs-desc (cdr fspec)))))
        (cdr fields)))
       
       ;; POINTERS
@@ -310,11 +318,14 @@
        `(bs:pointer ,(assoc-ref bs-typemap fx-name)))
       ;; don't expect to see pointer to enum
 
+      (((array-of ,n) . ,rest)
+       `(bs:vector ,(string->number n) ,(mtail->bs-desc rest)))
+
       (,otherwise
        (sferr "mspec:\n")
-       (pperr mspec)
+       (pperr mspec-tail)
        (error "quit") ;;(quit)
-       (fherr "mspec->bs-desc failed")
+       (fherr "mtail->bs-desc failed")
        )
       )))
 
@@ -335,7 +346,7 @@
 	  (let* ((name (caar decls))
 		 (udecl (cdar decls))
 		 (spec (udecl->mspec/comm udecl))
-		 (type (mspec->bs-desc (cddr spec))))
+		 (type (mtail->bs-desc (cddr spec))))
 	  (acons-defn name type (iter (cdr decls))))))))
 
 ;; This routine will munge the fields and then perform typeref expansion.
@@ -575,14 +586,33 @@
       (ppout decl-params) (ppout exec-params))
     (ppscm
      `(define ,(string->symbol name)
-	(let ((~f (ffi:pointer->procedure ,decl-return (lib-func ,name)
-					 (list ,@decl-params))))
+	(let ((~f (ffi:pointer->procedure ,decl-return
+					  (dynamic-func ,name link-lib)
+					  (list ,@decl-params))))
 	  (lambda ,(gen-exec-arg-names exec-params)
 	    (let ,(gen-exec-unwrappers exec-params)
 	      ,(if exec-return
 		   `(,exec-return (~f ,@(gen-exec-call-args exec-params)))
 		   `(~f ,@(gen-exec-call-args exec-params))))))))
     (sfscm "(export ~A)\n" name)))
+
+;; === externs ========================
+
+(define (cnvt-extern name ms-tail)
+  (let* ((desc (mtail->bs-desc ms-tail))
+	 (desc-name (string->symbol (string-append name "-desc")))
+	 )
+    (sfscm "(define ~A-desc\n" name)
+    (ppscm desc #:per-line-prefix "  ")
+    (sfscm "  )\n")
+    (ppscm `(define ,(string->symbol name)
+	      (bytestructure
+	       ,desc-name
+	       (pointer->bytevector
+		(dynamic-pointer ,name link-lib)
+		(bytestructure-size ,desc-name)))))
+    ))
+
 
 ;; ------------------------------------
 
@@ -730,6 +760,18 @@
 	(cons typename wrapped)
 	defined))))
 
+    ;; typedef struct foo *foo_t;
+    ;; TODO: check for forward reference
+    ((udecl
+      (decl-spec-list
+       (stor-spec (typedef))
+       (type-spec (struct-ref (ident ,struct-name))))
+      (init-declr (ptr-declr (pointer) (ident ,typename))))
+      (sfscm "(define-fh-pointer-type ~A*)\n" typename)
+       (values
+	(cons typename wrapped)
+	defined))
+
     ;; typedef union foo { ... } foo_t;
     ((udecl
       (decl-spec-list
@@ -777,6 +819,18 @@
        (values
 	(cons typename wrapped)
 	defined))))
+
+    ;; typedef union foo *foo_t;
+    ;; TODO: check for forward reference
+    ((udecl
+      (decl-spec-list
+       (stor-spec (typedef))
+       (type-spec (union-ref (ident ,union-name))))
+      (init-declr (ptr-declr (pointer) (ident ,typename))))
+      (sfscm "(define-fh-pointer-type ~A*)\n" typename)
+       (values
+	(cons typename wrapped)
+	defined))
 
     ;; Need to capture declarators like
     ;;   extern struct { int x; } *foo;
@@ -882,7 +936,7 @@
      ;; This is now filtered in the caller so the C-decl is not printed.
      (values wrapped defined))
 
-    ;; === functions declarations ======
+    ;; === function declarations =======
     
     ;; function returning pointer value
     ((udecl ,specl
@@ -904,9 +958,27 @@
      (cnvt-fctn name (non-ptr-decl specl) (fix-params params))
      (values wrapped defined))
 
+    ;; === external variables =========
+
+    ;; pointer
+    ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
+	    (init-declr (ptr-declr (pointer) (ident ,name))))
+     (sfscm "(define ~A (dynamic-pointer ~S link-lib))\n" name name)
+     (values wrapped defined))
+
+    ;; non-pointer
+    ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
+	    ,init-declr . ,rest)
+     (let ((udecl (expand-typerefs udecl udict #:keep *defined*))
+	   (mspec (udecl->mspec udecl))
+	   )
+       ;;(sferr "extern mspec:\n") (pperr mspec)
+       (cnvt-extern (car mspec) (cdr mspec))
+       (values wrapped defined)))
+
     (,otherwise
-     (sferr "cnvt-udecl missed:\n") (pperr udecl)
-     (fherr "cnvt-udecl missed")
+     (sferr "\n") (pperr udecl)
+     (fherr "cnvt-udecl missed --^")
      (values wrapped defined))))
 
 
@@ -917,7 +989,7 @@
 ;; replacemnts down to constants (strings, integers, etc)
 (define (gen-lookup-proc prefix k-defs a-defs)
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
-  (let ((name (string->symbol (string-append prefix "lookup")))
+  (let ((name (string->symbol (string-append prefix "symbol-val")))
 	(defs (fold-right
 	       (lambda (def seed)
 		 (let* ((name (car def))
@@ -983,7 +1055,14 @@
 	     
 	     (inc-dirs (append inc-dirs std-inc-dirs))
 	     
-	     (cpp-defs (append cpp-defs (gen-gcc-defs)))
+	     ;;(cpp-defs (append cpp-defs (gen-gcc-defs)))
+	     (cpp-defs
+	      (append cpp-defs
+		      ;;'("__GNUC__=6")
+		      (remove
+		       (lambda (s)
+			 (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
+		       (gen-gcc-defs))))
 	     (prog (string-join
 		    (map
 		     (lambda (inc-file)
@@ -1042,7 +1121,9 @@
 			(string=? "*anon*" (cdar pair)))))
 	     ;;(sferr "~S\n" (car pair))
 	     (nlscm) (c99scm (cdr pair))
-	     (cnvt-udecl (cdr pair) udict wrapped defined))
+	     (cnvt-udecl (remove-type-qual (cdr pair)) udict wrapped defined)
+	     ;;(cnvt-udecl (cdr pair) udict wrapped defined)
+	     )
 	    
 	    (else (values wrapped defined))))
 	 (lambda (key fmt . args)

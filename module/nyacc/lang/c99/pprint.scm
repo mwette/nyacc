@@ -416,6 +416,15 @@
       ((abs-declr ,pointer ,dir-abs-declr) (ppx pointer) (ppx dir-abs-declr))
       ((abs-declr ,one-of-above) (ppx one-of-above))
 
+      ;; declr-scope
+      ;; declr-array
+      ;; declr-anon-array
+      ;; declr-STAR
+      ;; declr-fctn
+      ((declr-fctn ,dir-abs-declr ,param-type-list)
+       (ppx dir-abs-declr) (sf "(") (ppx param-type-list) (sf ")"))
+      ;; declr-anon-fctn
+
       ((compd-stmt (block-item-list . ,items))
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "}\n"))
       ((compd-stmt-no-newline (block-item-list . ,items))

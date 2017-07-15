@@ -7,7 +7,7 @@
 ;; the file COPYING included with the nyacc distribution.
 
 (define-module (scripts compile-ffi)
-  #:use-module (ffi-help)
+  #:use-module (nyacc lang c99 ffi-help)
   #:use-module (system base language)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37)
@@ -50,7 +50,7 @@ options."
   (format #t "compile-ffi ~A~%" *fh-version*))
 
 (define (compile-ffi . args)
-  (use-modules (ffi-help))		; needed here!
+  (use-modules (nyacc lang c99 ffi-help)) ; needed here, but why
   (if (null? args) (error "expecting argument"))
   (let* ((file (car args)))
      (compile-ffi-file file)))

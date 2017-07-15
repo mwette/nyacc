@@ -71,6 +71,8 @@
       (cons (substring defstr 0 x3) (substring defstr (1+ x3)))))))
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
+;; I think there is a potential bug here in that the alist of cpp-defs/helpers
+;; should be last-in-first-seen ordered.  Probably helpers low prio.
 ;; @end deffn
 (define (make-cpi debug defines incdirs inchelp)
   ;; convert inchelp into inc-file->typenames and inc-file->defines
@@ -108,6 +110,8 @@
 	   (lambda (tl) (set-cpi-ctl! cpi (append tl (cpi-ctl cpi)))))
     (and=> (assoc-ref (cpi-idefd cpi) "__builtin")
 	   (lambda (tl) (set-cpi-defs! cpi (append tl (cpi-defs cpi)))))
+    ;;(fmterr "cpi-defs=\n")
+    ;;(pretty-print (cpi-defs cpi) (current-error-port))
     ;; Return the populated info.
     cpi))
 
@@ -369,7 +373,7 @@
 	  (define (eval-cpp-incl/here stmt) ;; => stmt
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
-	      ;;(simple-format #t "include ~S\n" path)
+	      ;;(fmterr "include ~S\n" path)
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -380,7 +384,7 @@
 	    ;; include file as a new tree
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
-	      ;;(simple-format #t "include ~S\n" path)
+	      ;;(fmterr "include ~S\n" path)
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -403,7 +407,9 @@
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((pragma) stmt) ;; ignore for now
-		     (else (error "bad cpp flow stmt")))))))
+		     (else
+		      (fmterr "stmt: ~S\n" stmt)
+		      (error "1: bad cpp flow stmt")))))))
 	       
 	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
 	    (case (car stmt)
@@ -422,7 +428,9 @@
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((pragma) stmt) ;; ignore for now
-		     (else (error "bad cpp flow stmt")))
+		     (else
+		      (fmterr "stmt: ~S\n" stmt)
+		      (error "2: bad cpp flow stmt")))
 		   stmt))))
 	       
 	  (define (eval-cpp-stmt/file stmt) ;; => stmt
@@ -435,7 +443,9 @@
 	      ((undef) (rem-define (cadr stmt)) stmt)
 	      ((error) stmt)
 	      ((pragma) stmt) ;; need to work this
-	      (else (error "bad cpp flow stmt"))))
+	      (else
+	       (fmterr "stmt: ~S\n" stmt)
+	       (error "3: bad cpp flow stmt"))))
 
 	  ;; Maybe evaluate the CPP statement.
 	  (define (eval-cpp-stmt stmt)
@@ -468,7 +478,13 @@
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
 	  (define (read-cpp-stmt ch)
-	    (and=> (read-cpp-line ch) cpp-line->stmt))
+	    ;;(and=> (read-cpp-line ch) cpp-line->stmt))
+	    (let ((line (read-cpp-line ch)))
+	      (if line
+		  (begin
+		    ;;(fmterr "[~S]\n" line)
+		    (cpp-line->stmt line))
+		  #f)))
 
 	  ;; Recheck for expansions that turn from plain text to macro call:
 	  ;; @example
@@ -486,7 +502,7 @@
 	      (cond
 	       ((eof-object? ch)
 		(set! suppress #f)
-		(if (pop-input) (iter (read-char)) (assc-$ '($end . ""))))
+		(if (pop-input) (iter (read-char)) (assc-$ '($end . "#<eof>"))))
 	       ((eq? ch #\newline) (set! bol #t) (iter (read-char)))
 	       ((char-set-contains? c:ws ch) (iter (read-char)))
 	       (bol
@@ -538,8 +554,9 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
+	    ;;(fmterr "lx iter=>~S\n" pair)
 	    (case (car ppxs)
-	      ((keep) ;;(simple-format #t "lx=>~S\n" pair)
+	      ((keep)
 	       pair)
 	      ((skip-done skip-look skip)
 	       (iter (read-token)))

@@ -47,6 +47,7 @@
 	    expand-typerefs
 	    stripdown
 	    udecl->mspec udecl->mspec/comm
+	    remove-type-qual rem-specl-type-qual
 
 	    unwrap-decl
 	    canize-enum-def-list
@@ -855,6 +856,18 @@
     ;;(pretty-print s-declr)
     (sx-list tag attr specl s-declr)))
 
+;; remove type qualifiers: "const" "volatile" and "restrict"
+(define (rem-specl-type-qual specl-tail)
+  (remove (lambda (elt) (eq? 'type-qual (car elt))) specl-tail))
+(define* (remove-type-qual udecl)
+  (let ((tag (sx-tag udecl))
+	(attr (sx-attr udecl))
+	(specl (sx-ref udecl 1))
+	(rest (sx-tail udecl 2)))
+    (sx-cons* tag attr
+	      (cons 'decl-spec-list (rem-specl-type-qual (sx-tail specl 1)))
+	      rest)))
+      
 (define (declr-is-ptr? declr)
   (and
    (pair? (cdr declr))

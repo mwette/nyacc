@@ -54,7 +54,7 @@
 		       (lambda (ix actn) (wrap-action actn))
 		       actn-v))))
 	 ;;
-	 (dmsg (lambda (s t a) (fmtout "state ~S, token ~S\t=> ~S\n" s t a)))
+	 (dmsg (lambda (s t a) (fmterr "state ~S, token ~S\t=> ~S\n" s t a)))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
 	 ;;(def (assq-ref mtab '$default))
 	 (def (if hashed -1 '$default))
@@ -175,12 +175,12 @@
 		   (gx (reduce-pr stx))
 		   (gl (vector-ref len-v gx))
 		   ($$ (apply (vector-ref xact-v gx) stack)))
-              (if debug (fmtout "state ~S, default => reduce ~S, goto ~S\n"
+              (if debug (fmterr "state ~S, default => reduce ~S, goto ~S\n"
                                 (car state) gx (list-ref state gl)))
 	      (iter (list-tail state gl) (list-tail stack gl)
 		    (cons (vector-ref rto-v gx) $$) lval)))
 	   ((eqv? end (caar stxl))	; only '$end remains, return for i/a
-            (if debug (fmtout "in state ~S, looking at '$end => accept\n"
+            (if debug (fmterr "in state ~S, looking at '$end => accept\n"
 			      (car state)))
 	    (if (reduce? (cdar stxl))
 		;; Assuming this is the final reduction ...
@@ -193,7 +193,7 @@
 		   (stx (or (assq-ref stxl tval)
 			    (assq-ref stxl def)
 			    parse-error)))
-	      ;;(if debug (fmtout "  lval=~S  laval=~S\n" lval laval))
+	      ;;(if debug (fmterr "  lval=~S  laval=~S\n" lval laval))
 	      (if debug (dmsg (car state) (if nval tval sval) stx))
 	      (cond
 	       ((error? stx)

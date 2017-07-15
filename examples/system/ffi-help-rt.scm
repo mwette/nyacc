@@ -1,4 +1,4 @@
-;;; example/nyacc/lang/c99/ffi-help-rt.scm
+;;; example/system/ffi-help-rt.scm
 ;;;
 ;;; Copyright (C) 2016-2017 Matthew R. Wette
 ;;;
@@ -8,7 +8,7 @@
 
 ;; runtime for generated ffi-compiled dot-ffi files
 
-(define-module (ffi-help-rt)
+(define-module (system ffi-help-rt)
   #:export (fh-type?
 	    fh-object?
 	    define-fh-compound-type define-fh-compound-type/p

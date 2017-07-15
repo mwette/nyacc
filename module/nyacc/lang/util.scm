@@ -11,7 +11,7 @@
 (define-module (nyacc lang util)
   #:export (lang-crn-lic 
 	    report-error
-	    push-input pop-input reset-input-stack
+	    *input-stack* push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
 	    sx-tag sx-attr sx-tail sx-ref sx-cons* sx-list
@@ -47,7 +47,7 @@ the file COPYING included with the this distribution.")
 
 ;; === input stack =====================
 
-(define *input-stack* (make-fluid '()))
+(define *input-stack* (make-fluid #f))
 
 (define (reset-input-stack)
   (fluid-set! *input-stack* '()))
@@ -56,6 +56,7 @@ the file COPYING included with the this distribution.")
   (let ((curr (current-input-port))
 	(ipstk (fluid-ref *input-stack*)))
     (fluid-set! *input-stack* (cons curr ipstk))
+    ;;(simple-format (current-error-port) "~S pu=>\n" (length ipstk))
     (set-current-input-port port)))
 
 ;; Return #f if empty
@@ -63,6 +64,7 @@ the file COPYING included with the this distribution.")
   (let ((ipstk (fluid-ref *input-stack*)))
     (if (null? ipstk) #f
 	(begin
+	  ;;(simple-format (current-error-port) "~S <=po\n" (length ipstk))
 	  (set-current-input-port (car ipstk))
 	  (fluid-set! *input-stack* (cdr ipstk))))))
 

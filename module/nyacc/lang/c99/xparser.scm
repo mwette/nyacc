@@ -61,20 +61,18 @@
 		     (xdef? #f)		; pred to determine expand
 		     (debug #f)		; debug?
 		     (tyns '()))	; defined typenames
-  (with-input-from-string expr-string
-    (lambda ()
-      (catch
-       'c99-error
-       (lambda ()
-	 (let ((info (make-cpi debug cpp-defs '(".") inc-help)))
-	   (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
-	   (with-fluid*
-	       *info* info
-	       (lambda ()
-		 (c99x-raw-parser (gen-c-lexer #:mode 'code #:xdef? xdef?)
-			          #:debug debug)))))
-       (lambda (key fmt . rest)
-	 (report-error fmt rest)
-	 #f)))))
+  (let ((info (make-cpi debug cpp-defs '(".") inc-help)))
+    (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
+    (with-input-from-string expr-string
+      (lambda ()
+	(with-fluids ((*info* info)
+		      (*input-stack* '()))
+	  (catch 'c99-error
+	    (lambda () (c99x-raw-parser
+			(gen-c-lexer #:mode 'code #:xdef? xdef?)
+			#:debug debug))))
+	(lambda (key fmt . rest)
+	  (report-error fmt rest)
+	  #f)))))
 
 ;; --- last line ---
