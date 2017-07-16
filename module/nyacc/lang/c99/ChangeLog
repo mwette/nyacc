@@ -1,3 +1,13 @@
+2017-07-16  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): change declr-fctn to abs-fctn-decl;
+	declr-fctn-anon to anon-fctn-declr
+
+2017-07-15  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): for type-qualifier-list return
+	type-qual-list (was decl-spec-list)
+
 2017-07-08  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* util2.scm (munge-decl): If arg is already udecl just return it.
@@ -22,7 +32,7 @@
 2017-06-17  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* util2.scm (clean-field-list): fixed bug that would add comments
-1	when there were none at all
+	when there were none at all
 
 2017-06-16  Matt Wette  <mwette@alumni.caltech.edu>
 

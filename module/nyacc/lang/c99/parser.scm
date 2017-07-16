@@ -72,12 +72,9 @@
 		    (inc-dirs '())	; include dirs
 		    (inc-help '())	; include helpers
 		    (mode 'code)	; mode: 'file, 'code or 'decl
-=		    (xdef? #f)		; pred to determine expand
+		    (xdef? #f)		; pred to determine expand
 		    (debug #f))		; debug
   (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) inc-help)))
-    (if (and (pair? cpp-defs) (pair? (car cpp-defs)))
-	;; old: ("ABC" . "123"), new: "ABC=123"
-	(error "usage deprecated: use #:cpp-defs '(\"ABC=123\")"))
     (with-fluids ((*info* info)
 		  (*input-stack* '()))
       (catch 'c99-error
@@ -86,11 +83,6 @@
 		    #:debug debug))
 	(lambda (key fmt . args)
 	  (report-error fmt args)
-	  (when #f
-	    (simple-format (current-error-port)
-			   "input-stack: ~S\ncpi-defs:\n"
-			   (fluid-ref *input-stack*))
-	    (pretty-print (cpi-defs info) (current-error-port)))
 	  #f)))))
 
 ;; --- last line ---

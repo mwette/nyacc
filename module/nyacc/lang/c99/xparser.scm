@@ -51,28 +51,30 @@
   (let ((info (fluid-ref *info*)))
     (c99x-raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
 
-;; @item {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool]
+;; @deffn {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool] [tyns]
 ;; This needs to be explained in some detail.
-;; [#:tyns '("foo_t")]
+;; [tyns '("foo_t")]
+;; @end deffn
 (define* (parse-c99x expr-string
+		     #:optional
+		     (tyns '())	; defined typenames
 		     #:key
 		     (cpp-defs '())	; CPP defines
 		     (inc-help '())	; include helper
 		     (xdef? #f)		; pred to determine expand
-		     (debug #f)		; debug?
-		     (tyns '()))	; defined typenames
+		     (debug #f))	; debug?
   (let ((info (make-cpi debug cpp-defs '(".") inc-help)))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
     (with-input-from-string expr-string
-      (lambda ()
-	(with-fluids ((*info* info)
-		      (*input-stack* '()))
+      (with-fluids ((*info* info)
+		    (*input-stack* '()))
+	(lambda ()
 	  (catch 'c99-error
 	    (lambda () (c99x-raw-parser
 			(gen-c-lexer #:mode 'code #:xdef? xdef?)
-			#:debug debug))))
-	(lambda (key fmt . rest)
-	  (report-error fmt rest)
-	  #f)))))
+			#:debug debug))
+	    (lambda (key fmt . rest)
+	      (report-error fmt rest)
+	      #f)))))))
 
 ;; --- last line ---

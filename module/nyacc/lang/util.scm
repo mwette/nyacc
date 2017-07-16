@@ -22,8 +22,9 @@
 	    ;; for ???
 	    move-if-changed
 	    cintstr->scm
-	    fmterr)
+	    sferr pperr)
   #:use-module ((srfi srfi-1) #:select(find))
+  #:use-module (ice-9 pretty-print)
   )
 
 ;; This is a generic copyright/licence that will be printed in the output
@@ -34,8 +35,10 @@ This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
 or any later version published by the Free Software Foundation.  See
 the file COPYING included with the this distribution.")
 
-(define (fmterr fmt . args)
+(define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
+(define (pperr exp . kw-args)
+  (apply pretty-print exp (current-error-port) kw-args))
 
 ;; @deffn {Procedure} report-error fmt args
 ;; Report an error: to stderr, providing file and line num info, and add nl.

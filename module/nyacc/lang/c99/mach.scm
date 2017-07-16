@@ -414,14 +414,18 @@
      )
 
     (pointer				; S 6.7.6
-     ("*" type-qualifier-list ($$ `(pointer ,(tl->list $2))))
-     ("*" ($$ '(pointer)))
      ("*" type-qualifier-list pointer ($$ `(pointer ,(tl->list $2) ,$3)))
+     ("*" type-qualifier-list ($$ `(pointer ,(tl->list $2))))
      ("*" pointer ($$ `(pointer ,$2)))
+     ("*" ($$ '(pointer)))
      )
 
-    ;; But put in tree as decl-spec-list
     (type-qualifier-list
+     (type-qualifier ($$ (make-tl 'type-qual-list $1)))
+     (type-qualifier-list type-qualifier ($$ (tl-append $1 $2)))
+     )
+    ;; WAS: But put in tree as decl-spec-list
+    #;(type-qualifier-list
      (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
      (type-qualifier-list type-qualifier ($$ (tl-append $1 $2)))
      )
@@ -459,8 +463,8 @@
      )
 
     (abstract-declarator		; S 6.7.6
-     (pointer ($$ `(abs-declr ,$1)))
      (pointer direct-abstract-declarator ($$ `(abs-declr ,$1 ,$2)))
+     (pointer ($$ `(abs-declr ,$1)))
      (direct-abstract-declarator ($$ `(abs-declr ,$1)))
      )
 
@@ -468,7 +472,7 @@
      ("(" abstract-declarator ")" ($$ `(declr-scope ,$2)))
      (direct-abstract-declarator
       "[" type-qualifier-list assignment-expression "]"
-      ($$ `(declr-array ,$3 ,$4)))
+      ($$ `(declr-array ,$1 ,$3 ,$4)))
      (direct-abstract-declarator
       "[" type-qualifier-list "]"
       ($$ `(declr-array ,$1 ,$3)))
@@ -505,10 +509,10 @@
      (direct-abstract-declarator "[" "*" "]" ($$ `(declr-STAR ,$1)))
      ("[" "*" "]" ($$ '(declr-STAR)))
      (direct-abstract-declarator "(" parameter-type-list ")"
-				 ($$ `(declr-fctn ,$1 ,(tl->list $3))))
-     (direct-abstract-declarator "(" ")" ($$ `(declr-fctn ,$1)))
-     ("(" parameter-type-list ")" ($$ `(declr-anon-fctn ,(tl->list $2))))
-     ("(" ")" ($$ '(declr-anon-fctn)))
+				 ($$ `(abs-fctn-declr ,$1 ,(tl->list $3))))
+     (direct-abstract-declarator "(" ")" ($$ `(abs-fctn-declr ,$1)))
+     ("(" parameter-type-list ")" ($$ `(anon-fctn-declr ,(tl->list $2))))
+     ("(" ")" ($$ '(anon-fctn-declr)))
      )
 
     ;;typedef-name must be hacked w/ the lexical analyzer

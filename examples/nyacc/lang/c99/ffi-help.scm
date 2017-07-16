@@ -1197,10 +1197,12 @@
 (define scm-reader (language-reader (lookup-language 'scheme)))
 
 (define (compile-ffi-file file)
-  (sfout "TODO: compile-ffi args, arrays, extern variables\n")
+  (sfout "TODO: arrays; extern variables; compile-ffi args; va_args\n")
+  ;;(sfout "      arrays;\n")
   (call-with-input-file file
     (lambda (iport)
       (let iter ((oport #f))
+	;; use scm-reader or read here?
 	(let ((exp (scm-reader iport (current-module))))
 	  ;;(display "exp:\n") (pretty-print exp)
 	  (cond

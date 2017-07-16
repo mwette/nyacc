@@ -42,8 +42,10 @@
 	    c99-trans-unit->udict/deep
 	    udict-ref udict-struct-ref udict-union-ref udict-enum-ref
 
+	    ;; generating def's dict
 	    c99-trans-unit->ddict udict-enums->ddict
 
+	    ;; munging
 	    expand-typerefs
 	    stripdown
 	    udecl->mspec udecl->mspec/comm
@@ -53,6 +55,8 @@
 	    canize-enum-def-list
 	    fixed-width-int-names
 
+	    ;; should be
+	    ;; unitize-decl unitize-comp-decl unitize-param-decl
 	    munge-decl munge-comp-decl munge-param-decl
 	    declr-ident declr-id decl-id
 	    split-decl iter-declrs
@@ -73,13 +77,13 @@
   #:use-module (nyacc lang util)
   #:use-module ((sxml fold) #:select (foldts foldts*))
   #:use-module (sxml match)
-  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-11)		; let-values
   #:use-module (srfi srfi-2)
-  #:use-module (srfi srfi-11) ; let-values
-  ;;#:use-module (system base pmatch)
-  #:use-module (nyacc lang c99 pprint)
-  #:use-module (ice-9 pretty-print)
+  #:use-module (srfi srfi-1)
   #:use-module (system base pmatch)
+  ;; debugging:
+  #:use-module (system vm trace)
+  #:use-module (ice-9 pretty-print)
   )
 
 (define (sf fmt . args) (apply simple-format (current-error-port) fmt args))
@@ -910,8 +914,18 @@
 
   (define (unwrap-specl specl)
     (and=> (assq-ref (sx-tail specl) 'type-spec) car))
-   ;;?   (sxml-match tspec
-   ;;?    ((xxx-struct-def (field-list . ,rest))
+
+  (define (unwrap-pointer pointer)  ;; IGNORES TYPE QUALIFIERS
+    (sferr "unwrap-pointer ~S\n" pointer)
+    (sxml-match pointer
+      ((pointer (type-qual-list ,type-qual ...) ,pointer)
+       (cons '(pointer-to) (unwrap-pointer pointer)))
+      ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
+      ((pointer (type-qual-list ,type-qual ...)) '(pointer-to))
+      ((pointer) '(pointer-to))))
+
+  (define (make-abs-dummy) ;; for abstract declarator make a dummy
+    (symbol->string (gensym "@")))
     
   (define* (unwrap-declr declr #:key (const #f))
     ;;(simple-format #t "#:const=~S (car declr)=~S\n" const (car declr))
@@ -920,21 +934,47 @@
        (list name))
       ((init-declr ,item)
        (unwrap-declr item #:const const))
-      ((ptr-declr (pointer . ,r) ,dir-declr)
-       (if const
-	   (cons* '(const) '(pointer-to) (unwrap-declr dir-declr))
-	   (cons '(pointer-to) (unwrap-declr dir-declr))))
+
       ((array-of ,dir-declr ,size)
        (cons `(array-of ,(cnvt-array-size size)) (unwrap-declr dir-declr)))
-      ((ftn-declr ,dir-declr ,params)
-       (cons '(function-returning) (unwrap-declr dir-declr)))
-      ((scope ,expr)
-       (unwrap-declr expr))
+
+      ((ftn-declr ,dir-declr ,param-list)
+       (cons `(function-returning ,param-list) (unwrap-declr dir-declr)))
+
+      ((scope ,expr) (unwrap-declr expr))
+
+      ((ptr-declr ,pointer ,dir-declr)
+       (let ((res (append (unwrap-pointer pointer) (unwrap-declr dir-declr))))
+	 (if const (cons '(const) res) res)))
+
+      ;; abstract declarator and direct abstract declarator
+      ((abs-declr ,pointer ,dir-abs-declr)
+       (append (unwrap-pointer pointer) (unwrap-declr dir-abs-declr)))
+      ((abs-declr ,pointer)
+       (cons* (unwrap-pointer pointer) (make-abs-dummy) '()))
+      ((abs-declr ,dir-abs-declr)
+       #f)
+
+      ;; declr-scope
+      ;; declr-array dir-abs-declr
+      ;; declr-array dir-abs-declr assn-expr
+      ;; declr-array dir-abs-declr type-qual-list
+      ;; declr-array dir-abs-declr type-qual-list assn-expr
+      ((declr-scope ,abs-declr)		; ( abs-declr )
+       #f)
+      ((declr-array ,dir-abs-declr)	; []
+       #f)
+      ((declr-array ,dir-abs-declr ,arg2)
+       #f)
+      ((declr-array ,abs-dir-declr ,type-qual-list ,assn-expr)
+       #f)
+
       ((comp-declr ,item) (unwrap-declr item))
       ((param-declr ,item) (unwrap-declr item))
+
       (,otherwise
-       (simple-format (current-error-port) "OTHERWISE:\n")
-       (pretty-print otherwise (current-error-port))
+       (sferr "OTHERWISE:\n")
+       (pperr otherwise)
        (error "c99/util2: udecl->mspec failed")
        #f)))
 
@@ -944,16 +984,19 @@
 	  (iter (cdr tsl))))) 
   
   (let* (;;(decl-dict (if (pair? rest) (car rest) '()))
-	 (specl (sx-ref decl 1))
+	 (specl (sx-ref decl 1))	; decl-spec-list
 	 (tspec (cadr specl))		; type-spec
 	 (const (and=> (sx-ref specl 2)	; const pointer ???
 		       (lambda (sx) (equal? (sx-ref sx 1) "const"))))
- 	 (declr (or (sx-ref decl 2) ;; param-decl -- e.g., f(void)
-		    '(ident "@arg")))
-	 (comm (sx-ref decl 3))
+ 	 (declr (or (sx-ref decl 2)	; param-decl -- e.g., f(int)
+		    `(ident ,(make-abs-dummy))))
+	 (comm (sx-ref decl 3))		; comment
 	 (m-specl (unwrap-specl specl))
 	 (m-declr (unwrap-declr declr #:const const))
 	 (m-decl (reverse (cons m-specl m-declr))))
+    ;;(sferr "decl:\n") (pperr decl)
+    ;;(sferr "declr:\n") (pperr declr)
+    ;;(sferr "r-mspec: ~S\n" (cons m-specl m-declr))
     m-decl))
 
 (define* (udecl->mspec/comm decl #:key (def-comm ""))

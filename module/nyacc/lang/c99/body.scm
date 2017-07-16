@@ -110,7 +110,7 @@
 	   (lambda (tl) (set-cpi-ctl! cpi (append tl (cpi-ctl cpi)))))
     (and=> (assoc-ref (cpi-idefd cpi) "__builtin")
 	   (lambda (tl) (set-cpi-defs! cpi (append tl (cpi-defs cpi)))))
-    ;;(fmterr "cpi-defs=\n")
+    ;;(sferr "cpi-defs=\n")
     ;;(pretty-print (cpi-defs cpi) (current-error-port))
     ;; Return the populated info.
     cpi))
@@ -373,7 +373,7 @@
 	  (define (eval-cpp-incl/here stmt) ;; => stmt
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
-	      ;;(fmterr "include ~S\n" path)
+	      ;;(sferr "include ~S\n" path)
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -384,7 +384,7 @@
 	    ;; include file as a new tree
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
-	      ;;(fmterr "include ~S\n" path)
+	      ;;(sferr "include ~S\n" path)
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -408,7 +408,7 @@
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((pragma) stmt) ;; ignore for now
 		     (else
-		      (fmterr "stmt: ~S\n" stmt)
+		      (sferr "stmt: ~S\n" stmt)
 		      (error "1: bad cpp flow stmt")))))))
 	       
 	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
@@ -429,7 +429,7 @@
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((pragma) stmt) ;; ignore for now
 		     (else
-		      (fmterr "stmt: ~S\n" stmt)
+		      (sferr "stmt: ~S\n" stmt)
 		      (error "2: bad cpp flow stmt")))
 		   stmt))))
 	       
@@ -444,7 +444,7 @@
 	      ((error) stmt)
 	      ((pragma) stmt) ;; need to work this
 	      (else
-	       (fmterr "stmt: ~S\n" stmt)
+	       (sferr "stmt: ~S\n" stmt)
 	       (error "3: bad cpp flow stmt"))))
 
 	  ;; Maybe evaluate the CPP statement.
@@ -482,7 +482,7 @@
 	    (let ((line (read-cpp-line ch)))
 	      (if line
 		  (begin
-		    ;;(fmterr "[~S]\n" line)
+		    ;;(sferr "[~S]\n" line)
 		    (cpp-line->stmt line))
 		  #f)))
 
@@ -554,7 +554,7 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
-	    ;;(fmterr "lx iter=>~S\n" pair)
+	    ;;(sferr "lx iter=>~S\n" pair)
 	    (case (car ppxs)
 	      ((keep)
 	       pair)

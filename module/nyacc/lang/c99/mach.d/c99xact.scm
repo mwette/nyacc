@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99xact.scm
+;; ./mach.d/c99xact.scm
 
 ;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
@@ -478,19 +478,19 @@
    ;; direct-declarator => direct-declarator "(" ")"
    (lambda ($3 $2 $1 . $rest)
      `(ftn-declr ,$1 (param-list)))
-   ;; pointer => "*" type-qualifier-list
-   (lambda ($2 $1 . $rest)
-     `(pointer ,(tl->list $2)))
-   ;; pointer => "*"
-   (lambda ($1 . $rest) '(pointer))
    ;; pointer => "*" type-qualifier-list pointer
    (lambda ($3 $2 $1 . $rest)
      `(pointer ,(tl->list $2) ,$3))
+   ;; pointer => "*" type-qualifier-list
+   (lambda ($2 $1 . $rest)
+     `(pointer ,(tl->list $2)))
    ;; pointer => "*" pointer
    (lambda ($2 $1 . $rest) `(pointer ,$2))
+   ;; pointer => "*"
+   (lambda ($1 . $rest) '(pointer))
    ;; type-qualifier-list => type-qualifier
    (lambda ($1 . $rest)
-     (make-tl 'decl-spec-list $1))
+     (make-tl 'type-qual-list $1))
    ;; type-qualifier-list => type-qualifier-list type-qualifier
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; parameter-type-list => parameter-list
@@ -520,17 +520,17 @@
      `(type-name ,(tl->list $1) ,$2))
    ;; type-name => declaration-specifiers
    (lambda ($1 . $rest) `(type-name ,(tl->list $1)))
-   ;; abstract-declarator => pointer
-   (lambda ($1 . $rest) `(abs-declr ,$1))
    ;; abstract-declarator => pointer direct-abstract-declarator
    (lambda ($2 $1 . $rest) `(abs-declr ,$1 ,$2))
+   ;; abstract-declarator => pointer
+   (lambda ($1 . $rest) `(abs-declr ,$1))
    ;; abstract-declarator => direct-abstract-declarator
    (lambda ($1 . $rest) `(abs-declr ,$1))
    ;; direct-abstract-declarator => "(" abstract-declarator ")"
    (lambda ($3 $2 $1 . $rest) `(declr-scope ,$2))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(declr-array ,$3 ,$4))
+     `(declr-array ,$1 ,$3 ,$4))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($4 $3 $2 $1 . $rest)
      `(declr-array ,$1 ,$3))
@@ -587,14 +587,14 @@
    (lambda ($3 $2 $1 . $rest) '(declr-STAR))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" paramete...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(declr-fctn ,$1 ,(tl->list $3)))
+     `(abs-fctn-declr ,$1 ,(tl->list $3)))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" ")"
-   (lambda ($3 $2 $1 . $rest) `(declr-fctn ,$1))
+   (lambda ($3 $2 $1 . $rest) `(abs-fctn-declr ,$1))
    ;; direct-abstract-declarator => "(" parameter-type-list ")"
    (lambda ($3 $2 $1 . $rest)
-     `(declr-anon-fctn ,(tl->list $2)))
+     `(anon-fctn-declr ,(tl->list $2)))
    ;; direct-abstract-declarator => "(" ")"
-   (lambda ($2 $1 . $rest) '(declr-anon-fctn))
+   (lambda ($2 $1 . $rest) '(anon-fctn-declr))
    ;; typedef-name => 'typename
    (lambda ($1 . $rest) `(typename ,$1))
    ;; initializer => assignment-expression

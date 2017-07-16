@@ -417,13 +417,27 @@
       ((abs-declr ,one-of-above) (ppx one-of-above))
 
       ;; declr-scope
-      ;; declr-array
+      ((declr-scope ,abs-declr)
+       (sf "(") (ppx abs-declr) (sf ")"))
+	
+      ;; declr-array dir-abs-declr
+      ;; declr-array dir-abs-declr assn-expr
+      ;; declr-array dir-abs-declr type-qual-list
+      ;; declr-array dir-abs-declr type-qual-list assn-expr
+      ((declr-array ,dir-abs-declr)
+       (ppx dir-abs-declr) (sf "[]"))
+      ((declr-array ,dir-abs-declr ,arg2)
+       (ppx dir-abs-declr) (sf "[") (ppx arg2) (sf "]"))
+      ((declr-array ,dir-abs-declr ,arg2 ,arg3)
+       (ppx dir-abs-declr) (sf "[") (ppx arg2) (sf " ") (ppx arg3) (sf "]"))
+	
       ;; declr-anon-array
       ;; declr-STAR
-      ;; declr-fctn
-      ((declr-fctn ,dir-abs-declr ,param-type-list)
+
+      ;; abs-fctn-declr
+      ((abs-fctn-declr ,dir-abs-declr ,param-type-list)
        (ppx dir-abs-declr) (sf "(") (ppx param-type-list) (sf ")"))
-      ;; declr-anon-fctn
+      ;; anon-fctn-declr
 
       ((compd-stmt (block-item-list . ,items))
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "}\n"))
