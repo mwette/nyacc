@@ -60,6 +60,7 @@
 	    munge-decl munge-comp-decl munge-param-decl
 	    declr-ident declr-id decl-id
 	    split-decl iter-declrs
+	    split-adecl
 
 	    clean-field-list
 	    inc-keeper?
@@ -70,8 +71,10 @@
 	    match-decl match-comp-decl match-param-decl
 	    expand-decl-typerefs
 	    fix-fields
-	    ;; debuggins
-	    stripdown-1 stripdown-2
+	    ;; debugging
+	    stripdown-1
+	    tdef-splice-specl
+	    tdef-splice-declr
 	    )
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang util)
@@ -167,23 +170,13 @@
 ;; of one argument, the include path, to indicate whether it should be included
 ;; in the dictionary.
 (define* (c99-trans-unit->udict tree #:optional (seed '()) #:key inc-filter)
-  #;(define (inc-keeper? tree) ;; pull in this (cpp-stmt (include ...)) ?
-    (if (and (eqv? (sx-tag tree) 'cpp-stmt)
-	     (eqv? (sx-tag (sx-ref tree 1)) 'include))
-	(if (procedure? filter)
-	    (filter (let ((arg (sx-ref (sx-ref tree 1) 1)))
-		      (substring arg 1 (1- (string-length arg)))))
-	    filter)
-	#f))
   (if (pair? tree)
-      (fold-right
+      ;;(fold-right			; I think this should be fold(-left)
+      (fold
        (lambda (tree seed)
 	 (cond
 	  ((eqv? (sx-tag tree) 'decl)
 	   (munge-decl tree seed))
-	  #;((inc-keeper? tree inc-filter)
-	   (c99-trans-unit->udict (sx-ref (sx-ref tree 1) 2) seed
-				  #:inc-filter inc-filter))
 	  ((inc-keeper? tree inc-filter) =>
 	   (lambda (tree)
 	     (c99-trans-unit->udict tree seed #:inc-filter inc-filter)))
@@ -201,13 +194,18 @@
 ;; already unitized you get that, else the list (w/o tag) of declarators.
 ;; @example
 ;;   (split-decl
-;;      '(decl (decl-spec-list (typedef) (fixed-type "int")
-;;             (init-declr-list (declr (ident "a")) (declr (ident "b")))))
+;;      '(decl (decl-spec-list (typedef) (fixed-type "int"))
+;;             (init-declr-list (declr (ident "a")) (declr (ident "b")))
+;;             (comment " good stuff ")))
 ;; =>
-;;   (values decl #f (type-spec-list (typedef) (fixed-type "int")
-;;           ((declr (ident "a")) (declr (ident "b"))) ())
+;;   (values decl
+;;           #f
+;;           (decl-spec-list (typedef) (fixed-type "int")
+;;           ((declr (ident "a")) (declr (ident "b")))
+;;           ((comment " good stuff ")))
 ;; @end example
 ;; @end deffn
+;; REPLACE WITH split-adecl
 (define (split-decl decl)
   (let* ((tag (sx-tag decl))
 	 (attr (sx-attr decl))
@@ -386,13 +384,15 @@
 ;; @end deffn
 (define* (munge-comp-decl decl #:optional (seed '()) #:key (expand-enums #f))
   (cond
-   ;;((not (pair? decl)) (error "bad arg"))
-   ;;((not (eqv? (sx-tag decl) 'comp-decl)) (cons decl seed))
-   ((not (eqv? (sx-tag (sx-ref decl 2)) 'comp-declr-list))
+   ((not (pair? decl))
+    (error "bad arg"))
+   ((eqv? (sx-tag decl) 'comp-udecl)
     (acons (udecl-id decl) decl seed))
-   (else
+   ((eqv? (sx-tag (sx-ref decl 2)) 'comp-declr-list)
     (let-values (((tag attr spec-l declrs tail) (split-decl decl)))
-      (iter-declrs 'comp-udecl attr spec-l declrs tail seed)))))
+      (iter-declrs 'comp-udecl attr spec-l declrs tail seed)))
+   (else
+    seed)))
 
 ;; @deffn {Procedure} munge-param-decl param-decl [seed] [#:expand-enums #f]
 ;; This will turn
@@ -504,6 +504,22 @@
     ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
     (,otherwise #f)))
 
+;; @deffn {Procedure} repl-typespec specl/typename replacement-specl
+;; In the declaration-specifiers replease the type-specifier with
+;; the declaration specifiers
+;; This is a helper for expand-typerefs
+;; @end deffn
+(define (repl-typespec decl-spec-list replacement)
+  (fold-right
+   (lambda (item seed)
+     (cond ((symbol? item) (cons item seed))
+	   ((eqv? 'type-spec (car item))
+	    (if (pair? (car replacement))
+		(append replacement seed)
+		(cons replacement seed)))
+	   (else (cons item seed))))
+   '() decl-spec-list))
+
 ;; @deffn {Procedure} splice-declarators orig-declr tdef-declr => 
 ;; Splice the original declarator into the typedef declarator.
 ;; This is a helper for @code{expand-*-typename-ref} procecures.
@@ -531,20 +547,6 @@
    (cdr (foldts* fD fU fH '() tdef-declr)))) ; always init-declr
 
 
-;; @deffn {Procedure} repl-typespec decl-spec-list replacement
-;; This is a helper for expand-typerefs
-;; @end deffn
-(define (repl-typespec decl-spec-list replacement)
-  (fold-right
-   (lambda (item seed)
-     (cond ((symbol? item) (cons item seed))
-	   ((eqv? 'type-spec (car item))
-	    (if (pair? (car replacement))
-		(append replacement seed)
-		(cons replacement seed)))
-	   (else (cons item seed))))
-   '() decl-spec-list))
-
 ;; @deffn {Procedure} expand-typerefs udecl udecl-dict [#:keep '()]
 ;; Given a declaration or component-declaration, return a udecl with all
 ;; typenames (not in @var{keep}), structs and unions, expanded, and
@@ -559,7 +561,7 @@
 ;; idea: if we have a pointer to an undefined type, then use void*
 ;; BUG HERE: if we run into a struct then the struct members have not
 ;; been munged into udecls.  The behavior is actually NOT DEFINED.
-(define* (expand-typerefs udecl udecl-dict #:key (keep '()))
+(define* (old-expand-typerefs udecl udecl-dict #:key (keep '()))
   ;; ??? add (init-declr-list) OR having predicate (has-init-declr? decl)
   (let* ((tag (sx-tag udecl))		; decl or comp-decl
 	 (attr (sx-attr udecl))		; (@ ...)
@@ -583,7 +585,7 @@
 		(fixd-specl (repl-typespec specl (sx-tail tdef-specl 2)))
 		(fixd-declr (splice-declarators declr tdef-declr))
 		(fixed-udecl (cons* tag fixd-specl fixd-declr tail)))
-	   (expand-typerefs fixed-udecl udecl-dict #:keep keep)))))
+	   (old-expand-typerefs fixed-udecl udecl-dict #:keep keep)))))
 
       ((struct-ref union-ref)
        ;; Still more to think about here.
@@ -594,7 +596,7 @@
 		     ((struct-ref) (udict-struct-ref udecl-dict name))
 		     ((union-ref) (udict-union-ref udecl-dict name)))))
 	 (if def
-	     (expand-typerefs `(udecl ,(cadr def) ,declr . ,tail)
+	     (old-expand-typerefs `(udecl ,(cadr def) ,declr . ,tail)
 			      udecl-dict #:keep keep)
 	     udecl)))
 
@@ -605,7 +607,7 @@
 	      (unit-flds (map cdr (fold-right munge-comp-decl '() orig-flds)))
 	      (fixd-flds (map
 			  (lambda (fld)
-			    (expand-typerefs fld udecl-dict #:keep keep))
+			    (old-expand-typerefs fld udecl-dict #:keep keep))
 			  unit-flds))
 	      (fixd-tspec
 	       (if (and ident #t)
@@ -634,6 +636,165 @@
 
       (else
        udecl))))
+
+;; @deffn {Procedure} split-adecl decl => values
+;; This routine splits a declaration (decl, udecl, comp-decl or param-decl)
+;; into its constituent parts.  Attributes are currently not passed.
+;; Get @code{(values tag spec-l declrs tail)}.  If the declrator is
+;; already unitized you get that, else the list (w/o tag) of declarators.
+;; @example
+;;   (split-udecl
+;;      '(udecl (decl-spec-list (typedef) (fixed-type "int"))
+;;              (declr (ident "a"))
+;; =>
+;;   (values decl
+;;           #f
+;;           (decl-spec-list (typedef) (fixed-type "int")
+;;           (declr (ident "a")))
+;; @end example
+;; @end deffn
+(define (split-adecl adecl)
+  (let* ((tag (sx-tag adecl))
+	 (attr (sx-attr adecl))
+	 (specl (sx-ref adecl 1))	; (decl-spec-list ...)
+	 (declr (sx-ref adecl 2))	; *-declr|*-declr-list|comment|#f
+	 (declr (if (and declr (not (eq? (sx-tag declr) 'comment))) declr #f))
+	 (tail (sx-tail adecl (if declr 3 2)))) ; '()|((comment ""))
+    (values tag attr specl declr tail)))
+
+;; allows only one storage specifier besides typedef
+;; call this (injest-in-specl orig-specl repl-specl)
+(define (tdef-splice-specl orig-specl repl-specl)
+  (let iter ((specl '()) (repll '()) (origl (cdr orig-specl)))
+    (cond
+     ((pair? repll)
+      (cond
+       ((equal? (car repll) '(stor-spec (typedef)))
+	(iter specl (cdr repll) origl))
+       ((equal? (car repll) '(stor-spec (const)))
+	(iter (cons (car repll) specl) (cdr repll) origl))
+       ((member (car repll) specl)	; don't duplicate other stor-spec's
+	(iter specl (cdr repll) origl))
+       (else 
+	(iter (cons (car repll) specl) (cdr repll) origl))))
+     ((pair? origl)
+      (cond
+       ((pmatch (car origl) ((type-spec (typename ,name)) #t) (,othersize #f))
+	(iter specl (cdr repl-specl) (cdr origl))) ; now insert replacement
+       ((equal? (car origl) '(stor-spec (const)))
+	(iter (cons (car repl) specl) repll (cdr origl)))
+       ((member (car origl) specl) ; don't duplicate "auto", "extern"
+	(iter specl repll (cdr origl)))
+       (else
+	(iter (cons (car origl) specl) repll (cdr origl)))))
+     (else
+      (cons 'decl-spec-list (reverse specl))))))
+
+(define (tdef-splice-declr orig-declr tdef-declr)
+  (define (probe-declr declr)
+    (sxml-match declr
+      ((ident ,name)
+       (sx-ref orig-declr 1))
+      ((init-declr ,declr . ,rest)
+       `(init-declr ,(probe-declr declr) . ,rest))
+      ((comp-declr ,declr)
+       `(comp-declr ,(probe-declr declr)))
+      ((param-declr ,declr)
+       `(param-declr ,(probe-declr declr)))
+      ((array-of ,dir-declr ,array-spec)
+       `(array-of ,(probe-declr dir-declr) ,array-spec))
+      ((array-of ,dir-declr)
+       `(array-of ,(probe-declr dir-declr)))
+      ((ptr-declr ,pointer ,dir-declr)
+       `(ptr-declr ,pointer ,(probe-declr dir-declr)))
+      ((ftn-declr ,dir-declr . ,rest)
+       `(ftn-declr ,(probe-declr dir-declr) . ,rest))
+      ((scope ,declr)
+       `(scope ,(probe-declr declr)))
+      (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
+  (probe-declr tdef-declr))
+
+;; iterate tdef-splice-declr over a declr-init-list (or equiv)
+(define (tdef-splice-declr-list orig-declr-list tdef-declr)
+  (sx-cons*
+   (sx-tag orig-declr-list) (sx-attr orig-declr-list)
+   (fold-right
+    (lambda (declr seed)
+      (cons (tdef-splice-declr declr tdef-declr) seed))
+    '() (sx-tail orig-declr-list 1))))
+
+;; Replace the type-spec in @var{decl-spec-list} with @var{type-spec}.
+(define (replace-type-spec decl-spec-list type-spec)
+  (sx-cons*
+   (sx-tag decl-spec-list) (sx-attr decl-spec-list)
+   (map
+    (lambda (elt) (if (eq? (sx-tag elt) 'type-spec) type-spec elt))
+    (sx-tail decl-spec-list 1))))
+
+;; adecl can be decl or udecl
+(define (expand-specl-typerefs adecl udict keep)
+
+  (define (re-expand decl)
+    (expand-specl-typerefs decl udict keep))
+
+  (define (splice-typename tag attr specl declr/l tail name udict)
+    (let* ((decl (assoc-ref udict name)) ; decl for typename
+	   (tdef-specl (sx-ref decl 1))	 ; pec's for typename
+	   (tdef-declr (sx-ref decl 2))	 ; declr for typename
+	   ;; splice the typedef specifiers into target:
+	   (fixd-specl (tdef-splice-specl specl tdef-specl)))
+      ;; build up the tree from new decl-spec-list, declr (-list)
+      (sx-cons*
+       tag attr
+       fixd-specl
+       (if (member (sx-tag declr/l) '(init-declr-list comp-declr-list))
+	   (tdef-splice-declr-list declr/l tdef-declr)
+	   (tdef-splice-declr declr/l tdef-declr))
+       tail)))
+  
+  (let-values (((tag attr specl declr tail) (split-adecl adecl)))
+    (let* ((tspec (and=> (sx-find 'type-spec specl) cadr))
+	   (class (sx-tag tspec))	; e.g., typename, fixed-type
+	   (name (sx-ref tspec 1)))	; e.g., "foo_t"
+      (case class
+	((typename)
+	 (if (member name keep) adecl
+	     (re-expand
+	      (splice-typename tag attr specl declr tail name udict))))
+	((struct-ref struct-def union-ref union-def)
+	 (let* ((tag (sx-tag tspec))
+		(attr (sx-attr tspec))
+		(fld1 (sx-ref tspec 1))
+		(ident (if (eq? 'ident (sx-tag fld1)) fld1 #f))
+		(field-list (if ident (sx-ref tspec 2) fld1))
+		(orig-flds (sx-tail field-list 1))
+		(fixd-flds (map re-expand orig-flds))
+		(fixd-field-list `(field-list ,@fixd-flds))
+		(fixd-tspec (if ident
+				(sx-cons* tag attr ident fixd-field-list)
+				(sx-cons* tag attr ident fixd-field-list)))
+		(fixd-specl (replace-type-spec specl fixd-tspec)))
+	   (sx-cons* tag attr fixd-specl declr tail)))
+	(else adecl)))))
+
+(define* (expand-typerefs adecl udict #:optional (keep '()))
+  (expand-specl-typerefs adecl udict keep))
+
+(define* (proto-expand-typerefs adecl udict #:optional (keep '()))
+  (let*-values (((tag attr orig-specl orig-declr tail)
+		 (split-adecl adecl))
+		((repl-specl repl-declr)
+		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
+    (if (and (eq? orig-specl repl-specl)
+	     (eq? orig-declr repl-declr))
+	adecl
+	(sx-cons* tag attr specl declr tail))))
+      
+
+;; bring this back to run expand-typerefs over all udecls
+;;(define* (new-expand-decl-typerefs udecl udecl-dict #:key (keep '()))
+
+;;(define expand-typerefs expand-typerefs)
 
 ;; === enums and defines 
 
@@ -776,46 +937,6 @@
 
 ;; === stripdown ...
 
-;;@deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
-;; This is deprecated.
-;; 1) remove stor-spec
-;; 2) expand typenames
-;; @example
-;; typedef int *x_t;
-;; x_t a[10];
-;; (spec (typename x_t)) (init-declr (array-of 10 (ident a)))
-;; (spec (typedef) (fixed-type "int")) (init-declr (pointer) (ident "x_t"))
-;; =>
-;; (udecl (decl-spec-list (type-spec ...) ... (type-qual "const"))
-;;        (init-declr (ptr-declr (pointer ...)
-;; @end example
-;; @end deffn
-(define* (stripdown-1 udecl decl-dict #:key (keep '()))
-
-  ;;(define strip-list '(stor-spec type-qual comment))
-  (define strip-list '(stor-spec type-qual))
-
-  (define (fsD seed tree)
-    '())
-
-  (define (fsU seed kseed tree)
-    (cond
-     ((eqv? (sx-tag tree) 'stor-spec) seed)
-     ((eqv? (sx-tag tree) 'type-qual) seed)
-     ((null? seed) (reverse kseed))
-     (else (cons (reverse kseed) seed))))
-	
-  (define (fsH seed tree)
-    (cons tree seed))
-
-  (let* ((xdecl (expand-decl-typerefs udecl decl-dict #:keep keep))
-	 (tag (sx-tag xdecl))
-	 (attr (sx-attr xdecl))
-	 (specl (sx-ref xdecl 1))
-	 (declr (sx-ref xdecl 2))
-	 (specl1 (foldts fsD fsU fsH '() specl)))
-    (list tag specl1 declr)))
-
 (define* (stripdown-declr declr #:key const-ptr)
   (define (fD seed tree) '())
 
@@ -915,20 +1036,26 @@
   (define (unwrap-specl specl)
     (and=> (assq-ref (sx-tail specl) 'type-spec) car))
 
-  (define (unwrap-pointer pointer)  ;; IGNORES TYPE QUALIFIERS
-    (sferr "unwrap-pointer ~S\n" pointer)
+  (define (unwrap-pointer pointer)  ;; =>list IGNORES TYPE QUALIFIERS
+    ;;(sferr "unwrap-pointer ~S\n" pointer)
     (sxml-match pointer
       ((pointer (type-qual-list ,type-qual ...) ,pointer)
        (cons '(pointer-to) (unwrap-pointer pointer)))
       ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
-      ((pointer (type-qual-list ,type-qual ...)) '(pointer-to))
-      ((pointer) '(pointer-to))))
+      ((pointer (type-qual-list ,type-qual ...)) '((pointer-to)))
+      ((pointer) '((pointer-to)))
+      (,otherwise
+       (sferr "unwrap-pointer failed on:\n") (pperr pointer)
+       (error "unwrap-pointer"))
+      ))
 
   (define (make-abs-dummy) ;; for abstract declarator make a dummy
     (symbol->string (gensym "@")))
+  (define (make-abs-dummy-tail)
+    (list (make-abs-dummy)))
     
   (define* (unwrap-declr declr #:key (const #f))
-    ;;(simple-format #t "#:const=~S (car declr)=~S\n" const (car declr))
+    ;;(sferr "unwrap-declr:\n") (pperr declr #:per-line-prefix "  ")
     (sxml-match declr
       ((ident ,name)
        (list name))
@@ -940,6 +1067,10 @@
 
       ((ftn-declr ,dir-declr ,param-list)
        (cons `(function-returning ,param-list) (unwrap-declr dir-declr)))
+      ((abs-ftn-declr ,dir-abs-declr)
+       (cons `(function-returning) (unwrap-declr dir-abs-declr)))
+      ((abs-ftn-declr ,dir-abs-declr ,param-list)
+       (cons `(function-returning ,param-list) (unwrap-declr dir-abs-declr)))
 
       ((scope ,expr) (unwrap-declr expr))
 
@@ -950,10 +1081,12 @@
       ;; abstract declarator and direct abstract declarator
       ((abs-declr ,pointer ,dir-abs-declr)
        (append (unwrap-pointer pointer) (unwrap-declr dir-abs-declr)))
-      ((abs-declr ,pointer)
-       (cons* (unwrap-pointer pointer) (make-abs-dummy) '()))
+      ((abs-declr (pointer))
+       (append (unwrap-pointer (sx-ref declr 1)) (make-abs-dummy-tail)))
+      ((abs-declr (pointer ,pointer-val))
+       (cons* '(pointer-to) (make-abs-dummy-tail)))
       ((abs-declr ,dir-abs-declr)
-       #f)
+       (unwrap-declr dir-abs-declr))
 
       ;; declr-scope
       ;; declr-array dir-abs-declr
@@ -961,28 +1094,27 @@
       ;; declr-array dir-abs-declr type-qual-list
       ;; declr-array dir-abs-declr type-qual-list assn-expr
       ((declr-scope ,abs-declr)		; ( abs-declr )
-       #f)
+       (unwrap-declr abs-declr))
       ((declr-array ,dir-abs-declr)	; []
-       #f)
-      ((declr-array ,dir-abs-declr ,arg2)
-       #f)
-      ((declr-array ,abs-dir-declr ,type-qual-list ,assn-expr)
-       #f)
+       (cons '(array-of "") (make-abs-dummy-tail))) ;; ???
+      ((declr-array ,dir-abs-declr (type-qual-list . ,type-quals))
+       ;; TODO: deal with "const" type-qualifier
+       (cons '(array-of "") (make-abs-dummy-tail)))
+      ((declr-array ,dir-abs-declr ,assn-expr)
+       (cons `(array-of ,assn-expr) (unwrap-declr dir-abs-declr)))
+      ((declr-array ,dir-abs-declr ,type-qual-list ,assn-expr)
+       ;; TODO: deal with "const" type-qualifier
+       (cons `(array-of ,assn-expr) (unwrap-declr dir-abs-declr)))
 
       ((comp-declr ,item) (unwrap-declr item))
       ((param-declr ,item) (unwrap-declr item))
 
       (,otherwise
-       (sferr "OTHERWISE:\n")
+       (sferr "unwrap-declr missed:\n")
        (pperr otherwise)
        (error "c99/util2: udecl->mspec failed")
        #f)))
 
-  (define (find-type-spec decl-spec-list)
-    (let iter ((tsl (cdr decl-spec-list)))
-      (if (eqv? 'type-spec (caar tsl)) (car tsl)
-	  (iter (cdr tsl))))) 
-  
   (let* (;;(decl-dict (if (pair? rest) (car rest) '()))
 	 (specl (sx-ref decl 1))	; decl-spec-list
 	 (tspec (cadr specl))		; type-spec
@@ -1049,5 +1181,45 @@
 (define expand-decl-typerefs expand-typerefs)
 (define declr->ident declr-ident)
 (define (fix-fields flds) (cdr (clean-field-list `(field-list . ,flds))))
+
+;;@deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
+;; This is deprecated.
+;; 1) remove stor-spec
+;; 2) expand typenames
+;; @example
+;; typedef int *x_t;
+;; x_t a[10];
+;; (spec (typename x_t)) (init-declr (array-of 10 (ident a)))
+;; (spec (typedef) (fixed-type "int")) (init-declr (pointer) (ident "x_t"))
+;; =>
+;; (udecl (decl-spec-list (type-spec ...) ... (type-qual "const"))
+;;        (init-declr (ptr-declr (pointer ...)
+;; @end example
+;; @end deffn
+(define* (stripdown-1 udecl decl-dict #:key (keep '()))
+
+  ;;(define strip-list '(stor-spec type-qual comment))
+  (define strip-list '(stor-spec type-qual))
+
+  (define (fsD seed tree)
+    '())
+
+  (define (fsU seed kseed tree)
+    (cond
+     ((eqv? (sx-tag tree) 'stor-spec) seed)
+     ((eqv? (sx-tag tree) 'type-qual) seed)
+     ((null? seed) (reverse kseed))
+     (else (cons (reverse kseed) seed))))
+	
+  (define (fsH seed tree)
+    (cons tree seed))
+
+  (let* ((xdecl (expand-decl-typerefs udecl decl-dict keep))
+	 (tag (sx-tag xdecl))
+	 (attr (sx-attr xdecl))
+	 (specl (sx-ref xdecl 1))
+	 (declr (sx-ref xdecl 2))
+	 (specl1 (foldts fsD fsU fsH '() specl)))
+    (list tag specl1 declr)))
 
 ;; --- last line ---

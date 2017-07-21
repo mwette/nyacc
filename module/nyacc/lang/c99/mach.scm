@@ -509,10 +509,10 @@
      (direct-abstract-declarator "[" "*" "]" ($$ `(declr-STAR ,$1)))
      ("[" "*" "]" ($$ '(declr-STAR)))
      (direct-abstract-declarator "(" parameter-type-list ")"
-				 ($$ `(abs-fctn-declr ,$1 ,(tl->list $3))))
-     (direct-abstract-declarator "(" ")" ($$ `(abs-fctn-declr ,$1)))
-     ("(" parameter-type-list ")" ($$ `(anon-fctn-declr ,(tl->list $2))))
-     ("(" ")" ($$ '(anon-fctn-declr)))
+				 ($$ `(abs-ftn-declr ,$1 ,(tl->list $3))))
+     (direct-abstract-declarator "(" ")" ($$ `(abs-ftn-declr ,$1)))
+     ("(" parameter-type-list ")" ($$ `(anon-ftn-declr ,(tl->list $2))))
+     ("(" ")" ($$ '(anon-ftn-declr)))
      )
 
     ;;typedef-name must be hacked w/ the lexical analyzer

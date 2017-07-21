@@ -434,10 +434,10 @@
       ;; declr-anon-array
       ;; declr-STAR
 
-      ;; abs-fctn-declr
-      ((abs-fctn-declr ,dir-abs-declr ,param-type-list)
+      ;; abs-ftn-declr
+      ((abs-ftn-declr ,dir-abs-declr ,param-type-list)
        (ppx dir-abs-declr) (sf "(") (ppx param-type-list) (sf ")"))
-      ;; anon-fctn-declr
+      ;; anon-ftn-declr
 
       ((compd-stmt (block-item-list . ,items))
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "}\n"))

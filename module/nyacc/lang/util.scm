@@ -211,6 +211,15 @@ the file COPYING included with the this distribution.")
    ((not (car rest)) (apply list tag (cdr rest)))
    (else (apply list tag rest))))
 
+;;. maybe change to case-lambda to accept count
+;; @example
+;; (sx-repl-tail (tag (@ ...) (orig-elt ...)) (repl-elt ...))
+;; => 
+;; (sx-repl-tail (tag (@ ...) (repl-elt ...)))
+;; @end example
+(define (sx-repl-tail sexp tail)
+  (sx-cons* (sx-tag sexp) (sx-attr sexp) tail))
+
 ;; @deffn {Procedure} sx-tail sx [ix] => (list)
 ;; Return the ix-th tail starting after the tag and attribut list, where
 ;; @var{ix} must be positive.  For example,
@@ -291,7 +300,7 @@ the file COPYING included with the this distribution.")
     (cons* (sx-tag sx) (cons '@ attrs)
 	   (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
 
-;; @deffn {Procedure} sx-find tag sx => ((tag ...) (tag ...))
+;; @deffn {Procedure} sx-find tag sx => (tag ...)
 ;; Find the first matching element (in the first level).
 ;; @end deffn
 (define (sx-find tag sx)

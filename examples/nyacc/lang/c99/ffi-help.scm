@@ -102,7 +102,7 @@
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (define (pperr tree)
-  (pretty-print tree (current-error-port) #:per-line-prefix "    "))
+  (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
 (define (fherr fmt . args)
   (apply throw 'ffi-help-error fmt args))
@@ -206,7 +206,8 @@
     (sfscm "  )\n")
     ;;(sfscm "(define void*  (bs:pointer int32))\n")
     (for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l)) libraries)
-    (sfscm "(define link-lib (dynamic-link ~S))\n" library)
+    ;;(sfscm "(define link-lib (dynamic-link ~S))\n" library)
+    (sfscm "(dynamic-link ~S)\n" library)
     ;;(sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")
     ))
 
@@ -265,6 +266,8 @@
     ("int32_t" . int32) ("uint32_t" . uint64)
     ("int64_t" . int32) ("uint64_t" . uint64)
     ("float _Complex" . complex64) ("double _Complex" . complex128)
+    ;; hacks:
+    ("char" . int) ;; needs to be treated specially
     ))
 
 (define bs-defined (map car bs-typemap))
@@ -278,6 +281,8 @@
       (((typename ,ty-name))
        (string->symbol (string-append ty-name "-desc")))
 
+      (((fixed-type "char"))
+	'int)
       (((fixed-type ,fx-name))
        (assoc-ref bs-typemap fx-name))
       (((float-type ,fl-name))
@@ -311,7 +316,9 @@
       ;; typename use renamers, ... ???
       (((pointer-to) (typename ,ty-name))
        `(bs:pointer ,ty-name))
-      
+
+      (((pointer-to) (fixed-type "char"))
+       `(bs:pointer int8))
       (((pointer-to) (fixed-type ,fx-name))
        `(bs:pointer ,(assoc-ref bs-typemap fx-name)))
       (((pointer-to) (float-type ,fx-name))
@@ -322,7 +329,7 @@
        `(bs:vector ,(string->number n) ,(mtail->bs-desc rest)))
 
       (,otherwise
-       (sferr "mspec:\n")
+       (sferr "missed mspec:\n")
        (pperr mspec-tail)
        (error "quit") ;;(quit)
        (fherr "mtail->bs-desc failed")
@@ -435,11 +442,14 @@
     ("int32_t" . ffi:int32) ("uint32_t" . ffi:uint32) 
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
     ;; ("intptr_t" . ffi:intptr_t) ("uintptr_t" . ffi:uintptr_t)
+    ;; hack
+    ("char" . ffi:int)
     ))
 
 (define ffi-keepers (map car ffi-typemap))
 
 (define (mspec->ffi-sym mspec)
+  (if (string? (cadr mspec)) (error "xxx"))
   (pmatch (cdr mspec)
     (((pointer-to) . ,rest) ''*)
     (((fixed-type ,name))
@@ -451,7 +461,7 @@
     (((void)) 'ffi:void)
     (((enum-def . ,rest2) . ,rest1) 'ffi:int)
     (((enum-ref . ,rest2) . ,rest1) 'ffi:int)
-    (,otherwise (fherr "mspec->ffi-sym missed: ~S" mspec))))
+    (,otherwise (error "") (fherr "mspec->ffi-sym missed: ~S" mspec))))
 
 ;; Return a mspec for the return type.  The variable is called @code{NAME}.
 (define (gen-decl-return udecl)
@@ -587,7 +597,8 @@
     (ppscm
      `(define ,(string->symbol name)
 	(let ((~f (ffi:pointer->procedure ,decl-return
-					  (dynamic-func ,name link-lib)
+					  ;;(dynamic-func ,name link-lib)
+					  (dynamic-func ,name (dynamic-link))
 					  (list ,@decl-params))))
 	  (lambda ,(gen-exec-arg-names exec-params)
 	    (let ,(gen-exec-unwrappers exec-params)
@@ -609,13 +620,15 @@
 	      (bytestructure
 	       ,desc-name
 	       (pointer->bytevector
-		(dynamic-pointer ,name link-lib)
+		;;(dynamic-pointer ,name link-lib)
+		(dynamic-pointer ,name (dynamic-link))
 		(bytestructure-size ,desc-name)))))
     ))
 
 
 ;; ------------------------------------
 
+(sferr "TODO: fix fix-params\n") ;; remove "arg-~A thingy below
 (define (fix-params param-decls)
 
   (define (remove-void-param params)
@@ -625,6 +638,7 @@
 	'() params))
   
   (define (fix-param param-decl ix)
+    ;; THIS SHOULD NOT FIX PARAMS -- above code should deal with it
     (sxml-match param-decl
       ((param-decl (decl-spec-list . ,specl))
        `(param-decl (decl-spec-list . ,specl)
@@ -963,7 +977,8 @@
     ;; pointer
     ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
 	    (init-declr (ptr-declr (pointer) (ident ,name))))
-     (sfscm "(define ~A (dynamic-pointer ~S link-lib))\n" name name)
+     ;;(sfscm "(define ~A (dynamic-pointer ~S link-lib))\n" name name)
+     (sfscm "(define ~A (dynamic-pointer ~S (dynamic-link)))\n" name name)
      (values wrapped defined))
 
     ;; non-pointer

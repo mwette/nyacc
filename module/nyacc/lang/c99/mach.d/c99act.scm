@@ -587,14 +587,14 @@
    (lambda ($3 $2 $1 . $rest) '(declr-STAR))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" paramete...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(abs-fctn-declr ,$1 ,(tl->list $3)))
+     `(abs-ftn-declr ,$1 ,(tl->list $3)))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" ")"
-   (lambda ($3 $2 $1 . $rest) `(abs-fctn-declr ,$1))
+   (lambda ($3 $2 $1 . $rest) `(abs-ftn-declr ,$1))
    ;; direct-abstract-declarator => "(" parameter-type-list ")"
    (lambda ($3 $2 $1 . $rest)
-     `(anon-fctn-declr ,(tl->list $2)))
+     `(anon-ftn-declr ,(tl->list $2)))
    ;; direct-abstract-declarator => "(" ")"
-   (lambda ($2 $1 . $rest) '(anon-fctn-declr))
+   (lambda ($2 $1 . $rest) '(anon-ftn-declr))
    ;; typedef-name => 'typename
    (lambda ($1 . $rest) `(typename ,$1))
    ;; initializer => assignment-expression
