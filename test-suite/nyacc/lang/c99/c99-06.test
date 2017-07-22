@@ -1,0 +1,94 @@
+;; nyacc/lang/c99/c99-06.test		-*- scheme -*-
+;;
+;; Copyright (C) 2017 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+;; test C99 munge utilities
+
+(add-to-load-path (string-append (getcwd) "/../../../../module/"))
+(add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
+
+(define-module (c99-06)
+  #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 util1)
+  #:use-module (nyacc lang c99 util2)
+  #:use-module (nyacc lang c99 pprint)
+  #:use-module ((sxml xpath) #:select (sxpath))
+  #:use-module (test-suite lib))
+
+(define incs '("exam.d"))
+
+(define (parse-string str)
+  (with-input-from-string str
+    (lambda ()
+      (parse-c99 #:inc-dirs incs #:mode 'decl #:inc-help c99-std-help))))
+
+(define (parse-file file)
+  (with-input-from-file file
+    (lambda ()
+      (parse-c99 #:inc-dirs incs #:mode 'decl))))
+
+(define (c99pp sx)
+  (with-output-to-string
+    (lambda ()
+      (pretty-print-c99 sx))))
+
+(define (test-expand-typerefs code indx xcode)
+  (let* ((tree (parse-string code))
+	 (udict (c99-trans-unit->udict tree))
+	 (decl (and=> ((sxpath `((decl ,indx))) tree) car))
+	 (xdecl (expand-typerefs decl udict))
+	 (ncode (c99pp xdecl)))
+    ;;(display ncode)
+    (equal? ncode xcode)))
+      
+;; parser test
+(with-test-prefix "nyacc/c99-06, munging"
+
+  (pass-if "expand-typerefs w/ function declarator"
+    (test-expand-typerefs
+     (string-append
+      "typedef int *foo_t;\n"
+      "typedef double hmm_t[3];\n"
+      "int bar(foo_t (*baz)(hmm_t y));\n")
+     3
+     ;; =>
+     "int bar(int *(*baz)(double y[3]));\n"))
+
+  (pass-if "expand-typerefs w/ enum-ref"
+    (test-expand-typerefs
+     "enum foo x;\n"
+     1
+     ;; =>
+     "int x;\n"))
+
+  (pass-if "expand-typerefs w/ enum typedef"
+    (test-expand-typerefs
+     "typedef enum _foo foo_t;\nfoo_t x;\n"
+     2
+     ;; =>
+     "int x;\n"))
+
+  (pass-if "expand struct-ref w/ struct-def"
+    (test-expand-typerefs
+     (string-append
+      "struct foo { int a; double b; };\n"
+      "struct foo x;\n")
+     2
+     "struct foo {\n  int a;\n  double b;\n} x;\n"))
+
+  (pass-if "knarly expand-typeref case"
+    (test-expand-typerefs
+     (string-append
+      "typedef int *bla_t[2];\n"
+      "bla_t foo(bla_t (*)(bla_t));\n")
+     2
+     "int *foo(int *(*)(int)[2])[2];\n"))
+
+  )
+
+;; --- last line ---

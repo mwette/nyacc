@@ -641,6 +641,19 @@
       (cons (tdef-splice-declr declr tdef-declr) seed))
     '() (sx-tail orig-declr-list 1))))
 
+;; @deffn {Procedure} compound-key type-spec-tag name
+;; type-spec-tag is struct/union-ref/def
+;; @example
+;; (compound-key 'struct-ref) => struct
+;; (compount-key 'union-ref "_foo") => (union . "_foo")
+;; @end example
+;; @end deffn
+(define* (compound-key type-spec-tag #:optional name)
+  (let ((key (case type-spec-tag
+	       ((struct-ref struct-def) 'struct)
+	       ((union-ref union-def) 'union))))
+    (if name (cons key name) key)))
+
 ;; Replace the type-spec in @var{decl-spec-list} with @var{type-spec}.
 (define (replace-type-spec decl-spec-list type-spec)
   (sx-cons*
@@ -650,6 +663,7 @@
     (sx-tail decl-spec-list 1))))
 
 ;; declr can be xxxx-declr-list or xxxx-declr
+;; This needs to be able to accept @code{#f} @var{declr}.
 (define (expand-specl-typerefs specl declr udict keep)
 
   (define (re-expand specl declr) ;; applied after typename
@@ -662,25 +676,13 @@
   (define (splice-typename specl declr name udict)
     (let* ((decl (assoc-ref udict name)) ; decl for typename
 	   (tdef-specl (sx-ref decl 1))	 ; pec's for typename
-	   (tdef-declr (sx-ref decl 2))	 ; declr for typename
-	   (tdef-type (sx-ref (sx-find 'type-spec tdef-specl) 1))
-	   (name (and=> (sx-find 'ident tdef-type) cadr)))
-      (cond
-       ((and (memq (sx-tag tdef-type) '(enum-def enum-ref))
-	     (not (member `(enum . ,name) keep)))
-	(sferr "enum in splice\n")
-	;; enum and not in keepers; convert to (fixed-type "int")
-	;; Do I need to do this here?  We are rerunning expand, BTW. <= TEST
-	(values
-	 (tdef-splice-specl specl `(decl-spec-list
-				    (type-spec (fixed-type "int"))))
-	 declr))
-       (else
-	(values ;; fixdd-specl fixed-declr
-	 (tdef-splice-specl specl tdef-specl)
-	 (if (declr-list? declr)
-	     (tdef-splice-declr-list declr tdef-declr)
-	     (tdef-splice-declr declr tdef-declr)))))))
+	   (tdef-declr (sx-ref decl 2))) ; declr for typename
+      (values ;; fixdd-specl fixed-declr
+       (tdef-splice-specl specl tdef-specl)
+       (cond
+	((not declr) declr)
+	((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
+	(else (tdef-splice-declr declr tdef-declr))))))
   
   (let* ((tspec (and=> (sx-find 'type-spec specl) cadr))
 	 (class (sx-tag tspec))		; e.g., typename, fixed-type
@@ -708,11 +710,17 @@
 			      (sx-cons* tag attr ident fixd-field-list)))
 	      (fixd-specl (replace-type-spec specl fixd-tspec)))
 	 (values fixd-specl declr)))
-      ((struct-ref union-ref)
-       (if (and=> (sx-find 'ident tspec)
-		  (lambda (id) (not (member `(struct . ,(cadr id)) keep))))
-	   (let () (error "need to replace struct and re-expand"))
-	   (values specl declr)))
+      ((struct-ref union-ref) ;; compound reference; replace w/ def
+       (let* ((cmpd-name (and=> (sx-find 'ident tspec)
+				(lambda (id) (sx-ref id 1))))
+	      (cmpd-key (compound-key class cmpd-name))
+	      (cmpd-decl (and cmpd-key (assoc-ref udict cmpd-key))))
+	 (values
+	  (if (and cmpd-key (member cmpd-key keep))
+	      specl
+	      (replace-type-spec specl
+				 (sx-find 'type-spec (sx-ref cmpd-decl 1))))
+	  declr)))
       ((enum-ref enum-def)
        ;; If not keeper, then replace enum with int.
        (let* ((type (sx-ref (sx-find 'type-spec specl) 1))
@@ -742,35 +750,6 @@
 ;; been munged into udecls.  The behavior is actually NOT DEFINED.
 (define* (expand-typerefs adecl udict #:optional (keep '()))
 
-  (define (fix-param-list? param-list)
-    (or-map
-     (lambda (param seed)
-       (case (sx-tag param)
-	 ((param-decl) (or seed (fix-declr? (sx-ref param 2))))
-	 ((ellipsis) seed)))
-     (sx-tail param-list 1)))
-  
-  (define (fix-declr? declr)
-    (sxml-match declr
-      ((ident ,name) #f)
-      ((init-declr ,declr . ,rest) (fix-declr? declr))
-      ((comp-declr ,declr) (fix-declr? declr))
-      ((param-declr ,declr) (fix-declr? declr))
-      ((array-of ,dir-declr ,array-spec) (fix-declr? dir-declr))
-      ((array-of ,dir-declr) (fix-declr? dir-declr))
-      ((ptr-declr ,pointer ,dir-declr) (fix-declr? dir-declr))
-      ((scope ,declr) (fix-declr? declr))
-      ((ftn-declr ,dir-declr ,param-list)
-       (or (fix-declr? dir-declr) (fix-param-list? param-list)))
-      ((abs-ftn-declr ,dir-declr ,param-list)
-       (or (fix-declr? dir-declr)
-	   (and (eq? 'param-list (sx-tag param-list)) ;; not ident-list
-		(fix-param-list? param-list))))
-      ((anon-ftn-declr ,param-list) (fix-param-list? param-list))
-      ((init-declr-list ,declrs ...) (fold (lambda (v s) (or v s)) #f declrs))
-      ((comp-declr-list ,declrs ...) (fold (lambda (v s) (or v s)) #f declrs))
-      (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
-
   (define (fix-param-list param-list)
     (sx-cons*
      (sx-tag param-list) (sx-attr param-list)
@@ -779,26 +758,27 @@
 	(cons
 	 (case (sx-tag param)
 	   ((param-decl)
-	    ;;(sferr "\nparam:\n") (pperr param)
-	    (if (sx-find 'param-declr param)
-		(let* ((declr1 (sx-ref param 2))
-		       (xparam (expand-typerefs param udict keep))
-		       (declr2 (sx-ref xparam 2)) 
-		       (xdeclr (fix-declr declr2)))
-		  ;;(sferr "xparam:\n") (pperr xparam)
-		  (if (eq? xdeclr declr1)
-		      param
-		      (sx-cons* (sx-tag xparam) (sx-attr xparam)
-				(sx-ref xparam 1) xdeclr (sx-tail xparam 3))))
-		param))
+	    (let* ((declr1 (sx-ref param 2))
+		   (xparam (expand-typerefs param udict keep))
+		   (declr2 (sx-ref xparam 2)) 
+		   (xdeclr (fix-declr declr2))
+		   (xtag (sx-tag xparam))
+		   (xattr (sx-attr xparam))
+		   (xspecl (sx-ref xparam 1)))
+	      (cond
+	       ((and (eq? xparam param) (eq? xdeclr declr1)) param)
+	       (xdeclr (sx-cons* xtag xattr xspecl xdeclr (sx-tail xparam 3)))
+	       (else (sx-cons* xtag xattr xspecl (sx-tail xparam 2))))))
 	   ((ellipsis) param))
 	 seed))
       '() (sx-tail param-list 1))))
   
   (define (fix-declr declr)
+    ;;(sferr "tag=~S\n" (sx-tag declr))
     (sxml-match declr
-      ((ident ,name)
-       declr)
+      (#f declr)
+      ((ident ,name) declr)
+      
       ((init-declr ,declr1 . ,rest)
        (let ((xdeclr (fix-declr declr1)))
 	 (if (eq? xdeclr declr1) declr `(init-declr ,xdeclr . ,rest))))
@@ -817,9 +797,47 @@
       ((ptr-declr ,pointer ,dir-declr)
        (let ((xdeclr (fix-declr dir-declr)))
 	 (if (eq? xdeclr dir-declr) declr `(ptr-declr ,pointer ,xdeclr))))
+
       ((scope ,declr1)
        (let ((xdeclr (fix-declr declr1)))
 	 (if (eq? xdeclr declr1) declr `(scope ,xdeclr))))
+
+      ;; abstract declarator and direct abstract declarator
+      ((abs-declr ,pointer ,dir-abs-declr)
+       (let ((xdeclr (fix-declr dir-abs-declr)))
+	 (if (eq? xdeclr dir-abs-declr) declr `(abs-declr ,pointer ,xdeclr))))
+      ((abs-declr (pointer))
+       declr)
+      ((abs-declr (pointer ,pointer-val))
+       declr)
+      ((abs-declr ,dir-abs-declr)
+       (let ((xdeclr (fix-declr dir-abs-declr)))
+	 (if (eq? xdeclr dir-abs-declr) declr `(abs-declr ,xdeclr))))
+
+      ;; declr-scope
+      ;; declr-array dir-abs-declr
+      ;; declr-array dir-abs-declr assn-expr
+      ;; declr-array dir-abs-declr type-qual-list
+      ;; declr-array dir-abs-declr type-qual-list assn-expr
+      ((declr-scope ,abs-declr)		; ( abs-declr )
+       (let ((xdeclr (fix-declr abs-declr)))
+	 (if (eq? xdeclr abs-declr) declr `(declr-scope ,xdeclr))))
+      ((declr-array ,dir-abs-declr)	; []
+       (let ((xdeclr (fix-declr dir-abs-declr)))
+	 (if (eq? xdeclr dir-abs-declr) declr `(declr-array ,xdeclr))))
+      ((declr-array ,dir-abs-declr (type-qual-list . ,type-quals))
+       (let ((xdeclr (fix-declr dir-abs-declr)))
+	 (if (eq? xdeclr dir-abs-declr) declr
+	     `(declr-array ,xdeclr (type-qual-list . ,type-quals)))))
+      ((declr-array ,dir-abs-declr ,assn-expr)
+       (let ((xdeclr (fix-declr dir-abs-declr)))
+	 (if (eq? xdeclr dir-abs-declr) declr
+	     `(declr-array ,xdeclr ,assn-expr))))
+      ((declr-array ,dir-abs-declr ,type-qual-list ,assn-expr)
+       (let ((xdeclr (fix-declr dir-abs-declr)))
+	 (if (eq? xdeclr dir-abs-declr) declr
+	     `(declr-array ,xdeclr ,type-qual-list ,assn-expr))))
+
       ((ftn-declr ,dir-declr ,param-list)
        (let ((xdeclr (fix-declr dir-declr))
 	     (xparam-list (fix-param-list param-list)))
@@ -851,12 +869,15 @@
   (let*-values (((tag attr orig-specl orig-declr tail)
 		 (split-adecl adecl))
 		((repl-specl repl-declr)
-		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
+		 (expand-specl-typerefs orig-specl orig-declr udict keep))
+		)
     (let ((repl-declr (fix-declr repl-declr)))
       (if (and (eq? orig-specl repl-specl)
 	       (eq? orig-declr repl-declr))
 	  adecl ;; <= unchanged; return original
-	  (sx-cons* tag attr repl-specl repl-declr tail)))))
+	  (if repl-declr
+	      (sx-cons* tag attr repl-specl repl-declr tail)
+	      (sx-cons* tag attr repl-specl tail))))))
 
 ;; === enums and defines ===============
 
@@ -1171,6 +1192,7 @@
        (cons `(function-returning) (unwrap-declr dir-abs-declr)))
       ((abs-ftn-declr ,dir-abs-declr ,param-list)
        (cons `(function-returning ,param-list) (unwrap-declr dir-abs-declr)))
+      ;;((anon-ftn-declr ,param-list) ???
 
       ((scope ,expr) (unwrap-declr expr))
 
