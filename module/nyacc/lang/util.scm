@@ -14,7 +14,7 @@
 	    *input-stack* push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
-	    sx-tag sx-attr sx-tail sx-ref sx-cons* sx-list
+	    sx-tag sx-attr sx-tail sx-length sx-ref sx-cons* sx-list
 	    sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr* sx+attr*
 	    sx-find
 	    ;; for pretty-printing
@@ -173,10 +173,29 @@ the file COPYING included with the this distribution.")
 ;; attributea are `invisible'. For example, @code{'(elt (@abc) "d")}
 ;; is an sx of length two: the tag @code{elt} and the payload @code{"d"}.
 
+(define (sxml-expr? sx)
+  (and (pair? sx) (symbol? (car sx)) (list? sx)))
+
+;; @deffn {Procedure} sx-length sx => <int>
+;; Return the length, don't include attributes, but do include tag
+;; @end deffn
+(define (sx-length sx)
+  (let ((ln (length sx)))
+    (cond
+      ((zero? ln) 0)
+      ((= 1 ln) 1)
+      ((not (pair? (cadr sx))) ln)
+      ((eq? '@ (caadr sx)) (1- ln))
+      (else ln))))
+
 ;; @deffn {Procedure} sx-ref sx ix => item
 ;; Reference the @code{ix}-th element of the list, not counting the optional
 ;; attributes item.  If the list is shorter than the index, return @code{#f}.
+;; [note to author: The behavior to return @code{#f} if no elements is not
+;; consistent with @code{list-ref}.  Consider changing it.  Note also there
+;; is never a danger of an element being @code{#f}.]
 ;; @example
+;; (sx-ref '(abc 1) => #f
 ;; (sx-ref '(abc "def") 1) => "def"
 ;; (sx-ref '(abc (@ (foo "1")) "def") 1) => "def"
 ;; @end example
