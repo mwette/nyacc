@@ -513,6 +513,11 @@
      
     (((pointer-to) . ,otherwise) 'unwrap~pointer)
 
+    ;; TODO: int b[]
+    ;; make ffi-help-rt unwrap bytevector  
+    ;;(((array-of ,size) . ,rest) #f)
+    ;;(((array-of) . ,rest) #f)
+
     (,otherwise
      (sferr "mspec->fh-unwrapper missed:\n") (pperr mspec) (quit)
      (fherr "mspec->fh-unwrapper missed: ~S" mspec))))
@@ -1007,6 +1012,7 @@
 ;; given keeper-defs (k-defs) and all defs (a-defs) expand the keeper
 ;; replacemnts down to constants (strings, integers, etc)
 (define (gen-lookup-proc prefix k-defs a-defs)
+  (sferr "FIX gen-lookup-proc: now comes in reverse order!!\n")
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
   (let ((name (string->symbol (string-append prefix "symbol-val")))
 	(defs (fold-right
@@ -1110,7 +1116,8 @@
 	 (prefix (string-append (symbol->string (last path)) "-"))
 	 ;;
 	 (tree (parse-includes (opts->attrs attrs)))
-	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
+	 ;; trans-unit now does in reverse
+	 (udecls (reverse (c99-trans-unit->udict tree #:inc-filter incf)))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 ;;
 	 (enu-defs (udict-enums->ddict udict))
@@ -1138,7 +1145,7 @@
 	      (not (member (car pair) wrapped)) ; 2) not already wrapped
 	      (not (and (pair? (car pair))	; 3) not anonymous
 			(string=? "*anon*" (cdar pair)))))
-	     ;;(sferr "~S\n" (car pair))
+	     (sferr "~S\n" (car pair))
 	     (nlscm) (c99scm (cdr pair))
 	     (cnvt-udecl (remove-type-qual (cdr pair)) udict wrapped defined)
 	     ;;(cnvt-udecl (cdr pair) udict wrapped defined)

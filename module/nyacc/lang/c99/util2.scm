@@ -150,7 +150,7 @@
 ;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]
 ;; Convert a C parse tree into a assoc-list of global names and definitions.
 ;; This will unwrap @code{init-declr-list} into list of decls w/
-;; @code{init-declr}.
+;; @code{init-declr}.  The declarations come reversed from order in file!
 ;; @example
 ;; BUG: need to add struct and union defn's: struct foo { int x; };
 ;; how to deal with this
@@ -888,6 +888,8 @@
 ;; @example
 ;; tree => (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
 ;; @end example
+;; @noindent
+;; The entries appear in reverse order wrt how in file.
 ;; @end deffn
 (define* (c99-trans-unit->ddict tree #:optional (seed '()) #:key inc-filter)
   (define (def? tree)
@@ -901,7 +903,7 @@
 	   (repl (car (assq-ref defn 'repl))))
       (cons name (if args (cons args repl) repl))))
   (if (pair? tree)
-      (fold-right
+      (fold
        (lambda (tree seed)
 	 (cond
 	  ((def? tree) =>

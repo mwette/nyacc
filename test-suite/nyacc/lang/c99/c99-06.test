@@ -43,8 +43,8 @@
 	 (decl (and=> ((sxpath `((decl ,indx))) tree) car))
 	 (xdecl (expand-typerefs decl udict))
 	 (ncode (c99pp xdecl)))
-    ;;(display ncode)
-    (equal? ncode xcode)))
+    ;;(newline) (display code) (display ncode)
+    (string=? ncode xcode)))
       
 ;; parser test
 (with-test-prefix "nyacc/c99-06, munging"
