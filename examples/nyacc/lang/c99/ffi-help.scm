@@ -345,7 +345,7 @@
 
   ;;(sferr "\nfield-list:\n") (pperr field-list) (quit)
   (let* ((field-list (clean-field-list field-list)) ; remove lone comments
-	 (uflds (fold-right munge-comp-decl '() (cdr field-list)))
+	 (uflds (fold-right unitize-comp-decl '() (cdr field-list)))
 	 )
     ;; CHANGE TO FOLD-RIGHT
     (let iter ((decls uflds))
@@ -361,8 +361,8 @@
   (cons 'field-list
 	(fold-right
 	 (lambda (pair seed)
-	   (cons (expand-typerefs (cdr pair) *udict* #:keep *defined*) seed))
-	 '() (fold-right munge-comp-decl '() (cdr field-list)))))
+	   (cons (expand-typerefs (cdr pair) *udict* *defined*) seed))
+	 '() (fold-right unitize-comp-decl '() (cdr field-list)))))
 
 (define (cnvt-aggr-def aggr-t typename aggr-name field-list)
   ;;(sferr "\nfield-list:\n") (pperr field-list)
@@ -452,6 +452,7 @@
   (if (string? (cadr mspec)) (error "xxx"))
   (pmatch (cdr mspec)
     (((pointer-to) . ,rest) ''*)
+    (((array-of) . ,rest) ''*)
     (((fixed-type ,name))
      (or (assoc-ref ffi-typemap name) (fherr "mspec->ffi-sym: ~A" name)))
     (((float-type ,name))
@@ -461,11 +462,13 @@
     (((void)) 'ffi:void)
     (((enum-def . ,rest2) . ,rest1) 'ffi:int)
     (((enum-ref . ,rest2) . ,rest1) 'ffi:int)
-    (,otherwise (error "") (fherr "mspec->ffi-sym missed: ~S" mspec))))
+    (,otherwise
+     (sferr "mspec->ffi-sym missed:\n") (pperr mspec) (quit)
+     (error "") (fherr "mspec->ffi-sym missed: ~S" mspec))))
 
 ;; Return a mspec for the return type.  The variable is called @code{NAME}.
 (define (gen-decl-return udecl)
-  (let* ((udecl1 (expand-typerefs udecl *udict* #:keep ffi-keepers))
+  (let* ((udecl1 (expand-typerefs udecl *udict* ffi-keepers))
 	 (mspec (udecl->mspec udecl1)))
     (mspec->ffi-sym mspec)))
 
@@ -474,7 +477,7 @@
   ;; mspec->ffi-sym needs to convert enum to int or void*
   (fold-right
    (lambda (param-decl seed)
-     (let* ((udecl1 (expand-typerefs param-decl *udict* #:keep ffi-keepers))
+     (let* ((udecl1 (expand-typerefs param-decl *udict* ffi-keepers))
 	    (mspec (udecl->mspec udecl1)))
        (cons (mspec->ffi-sym mspec) seed)))
    '()
@@ -511,6 +514,7 @@
     (((pointer-to) . ,otherwise) 'unwrap~pointer)
 
     (,otherwise
+     (sferr "mspec->fh-unwrapper missed:\n") (pperr mspec) (quit)
      (fherr "mspec->fh-unwrapper missed: ~S" mspec))))
 
 (define (mspec->fh-wrapper mspec)
@@ -577,7 +581,7 @@
    params))
 
 (define (gen-exec-return-wrapper udecl)
-  (let* ((udecl (expand-typerefs udecl *udict* #:keep *wrapped*))
+  (let* ((udecl (expand-typerefs udecl *udict* *wrapped*))
 	 (mspec (udecl->mspec udecl)))
     (mspec->fh-wrapper mspec)))
 
@@ -984,7 +988,7 @@
     ;; non-pointer
     ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
 	    ,init-declr . ,rest)
-     (let ((udecl (expand-typerefs udecl udict #:keep *defined*))
+     (let ((udecl (expand-typerefs udecl udict *defined*))
 	   (mspec (udecl->mspec udecl))
 	   )
        ;;(sferr "extern mspec:\n") (pperr mspec)

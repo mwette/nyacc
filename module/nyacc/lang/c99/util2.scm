@@ -744,6 +744,8 @@
 ;; =>
 ;; extern const int  (*fctns[2])(int a, double b);
 ;; @end example
+;; @noindent
+;; Note: @var{keep} was formally keyword argument. 
 ;; @end deffn
 ;; idea: if we have a pointer to an undefined type, then use void*
 ;; @*BUG HERE? if we run into a struct then the struct members have not
@@ -1185,6 +1187,8 @@
 
       ((array-of ,dir-declr ,size)
        (cons `(array-of ,(cnvt-array-size size)) (unwrap-declr dir-declr)))
+      ((array-of ,dir-declr)
+       (cons `(array-of) (unwrap-declr dir-declr)))
 
       ((ftn-declr ,dir-declr ,param-list)
        (cons `(function-returning ,param-list) (unwrap-declr dir-declr)))
