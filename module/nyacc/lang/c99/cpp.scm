@@ -385,7 +385,7 @@
 	    (iter2 (cdr argl) (acons (car argl) val argv) (read-char))))
 	 (else
 	  (error "cpp.scm, collect-args: coding error")))))
-     (else (if sp (unread-char #\space)) #f))))
+     (else (unread-char ch) (if sp (unread-char #\space)) #f))))
 
 ;; @deffn {Procedure} px-cpp-ftn-repl argd repl => string
 ;; pre-expand CPP function where @var{argd} is an a-list of arg name
@@ -495,12 +495,10 @@
 ;; @end deffn
 (define* (expand-cpp-macro-ref ident defs #:optional (used '()))
   (let ((rval (assoc-ref defs ident)))
-    ;;(simple-format #t "ex-mac-ref rval=~S\n" rval)
     (cond
      ((member ident used) #f)
      ((string? rval) (expand-cpp-repl rval defs (cons ident used)))
      ((pair? rval)
-      ;;(simple-format #t "rval = ~S\n" rval)
       (and=> (collect-args (car rval) defs used)
 	     (lambda (argd)
 	       (expand-cpp-repl (px-cpp-ftn argd (cdr rval))
