@@ -320,7 +320,13 @@
 	   (iter (cons ch chl) ty 11 (read-char)))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=1"))
 	  (else (iter chl '$fixed 5 ch))))
-	((11) ;; got l L u or U, look for l or L
+	((11) ;; got l, L, u or U, look for l or L
+	 (cond
+	  ((eof-object? ch) (cons '$fixed (lsr chl)))
+	  ((char=? #\L ch) (iter (cons ch chl) ty 12 (read-char)))
+	  ((char=? #\l ch) (iter (cons ch chl) ty 12 (read-char)))
+	  (else (iter chl '$fixed 5 ch))))
+	((12) ;; looking for 2nd l or L
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lsr chl)))
 	  ((char=? #\L ch) (cons '$fixed (lsr (cons ch chl))))
@@ -356,12 +362,14 @@
 ;; (e.g., @code{#x123}).
 ;; @end deffn
 (define (cnumstr->scm str)
-  (define (2- n) (1- (1- n)))
+  (define (2- n) (1- (1- n))) (define (3- n) (1- (2- n)))
   (let* ((nd (string-length str)))
-    (define (trim-rt st) ;; trim LlUu from right
+    (define (trim-rt st) ;; trim U, UL, ULL (and lowercase) from right
       (if (char-set-contains? c:sx (string-ref str (1- nd)))
 	  (if (char-set-contains? c:sx (string-ref str (2- nd)))
-	      (substring str st (2- nd))
+	      (if (char-set-contains? c:sx (string-ref str (3- nd)))
+		  (substring str st (3- nd))
+		  (substring str st (2- nd)))
 	      (substring str st (1- nd)))
 	  (substring str st nd)))
     (if (< nd 2) str

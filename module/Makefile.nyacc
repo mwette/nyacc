@@ -92,11 +92,11 @@ install-srcs: $(NYACC_SRCS)
 .PHONY: dist-files
 dist-files:
 	(cd nyacc/lang/c99; \
-	 guile -L ../../.. \
+	 GUILE_LOAD_PATH= guile --no-auto-compile -L ../../.. \
            -c '(use-modules (nyacc lang c99 cppmach)) (gen-cpp-files ".")'; \
-	 guile -L ../../.. \
+	 GUILE_LOAD_PATH= guile --no-auto-compile -L ../../.. \
            -c '(use-modules (nyacc lang c99 mach)) (gen-c99-files ".")'; \
-	 guile -L ../../.. \
+	 GUILE_LOAD_PATH= guile --no-auto-compile -L ../../.. \
            -c '(use-modules (nyacc lang c99 mach)) (gen-c99x-files ".")')
 
 # --- last line ---

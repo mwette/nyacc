@@ -1,3 +1,18 @@
+2017-07-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cpp.scm (collect-args): when moving from iter1 to iter2 was
+	neglecting to unread-char the character carried from iter1.  Fix
+	based on bug report from janneke.  Thanks again, Jan.
+
+2017-07-28  Wette  <mwette@alumni.caltech.edu>
+
+	* body.scm (gen-c-lexer): bug report by janneke.
+	`#undef NAME' not working; was using delete, now acons #f
+
+	* mach.scm (c99-spec): bug report by janneke.
+	ident-like returns (ident ("foo")) instead of (ident "foo");
+	fixed w/ (car $1) => (sx-ref $1 1)
+
 2017-06-17  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* util2.scm (clean-field-list): fixed bug that would add comments

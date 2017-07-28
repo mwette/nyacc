@@ -306,7 +306,7 @@
      ("union" ident-like ($$ `(union-ref ,$2)))
      )
     ;; because name following struct/union can be indentifier or typeref
-    (ident-like (identifier) (typedef-name ($$ `(ident ,(cdr $1)))))
+    (ident-like (identifier) (typedef-name ($$ `(ident ,(sx-ref $1 1)))))
 
     ;; Calling this field-list in the parse tree.
     (struct-declaration-list		; S 6.7.2.1

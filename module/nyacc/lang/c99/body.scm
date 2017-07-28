@@ -307,7 +307,7 @@
 	      (set-cpi-defs! info (cons cell (cpi-defs info)))))
 	  
 	  (define (rem-define name)
-	      (set-cpi-defs! info (delete name (cpi-defs info))))
+	      (set-cpi-defs! info (acons name #f (cpi-defs info))))
 	  
 	  (define (apply-helper file)
 	    (let* ((tyns (assoc-ref (cpi-itynd info) file))

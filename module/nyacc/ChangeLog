@@ -1,3 +1,10 @@
+2017-07-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (make-num-reader): bug report from janneke: c-parser
+	is not parsing "0ULL".  the num reader has been updated (state 12)
+	to handle this
+	(cnumstr->scm): updated to trim ULL from 0ULL.
+
 2017-06-11  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (nyacc): make-ident-like-p tested for string but not for
