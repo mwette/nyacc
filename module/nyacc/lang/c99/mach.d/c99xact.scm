@@ -360,7 +360,7 @@
    ;; ident-like => identifier
    (lambda ($1 . $rest) $1)
    ;; ident-like => typedef-name
-   (lambda ($1 . $rest) `(ident ,(cdr $1)))
+   (lambda ($1 . $rest) `(ident ,(sx-ref $1 1)))
    ;; struct-declaration-list => struct-declaration
    (lambda ($1 . $rest) (make-tl 'field-list $1))
    ;; struct-declaration-list => lone-comment

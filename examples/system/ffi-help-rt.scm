@@ -349,6 +349,16 @@
 (define (pointer-to obj)
   ((fht-pointer-to (struct-vtable obj)) obj))
 
+;; @deffn {Procedure} make-ftn-arg-unwrapper arg ret-t name args-t => lambda
+;; This procedure will convert an argument, 
+;; @end deffn
+(define (make-ftn-arg-unwrapper ret-t args-t)
+  (lambda (obj)
+    (cond
+     ((pointer? obj) obj)
+     ((procedure? obj) (ffi:procedure->pointer req-t obj args-t))
+     (else (error "expecting pointer or procedure")))))
+
 ;; now support for the base types
 (define (unwrap~fixed obj)
   (cond

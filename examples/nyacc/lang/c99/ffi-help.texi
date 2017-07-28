@@ -55,7 +55,12 @@ no raw aggregates get passed to C functions
 
 @enumerate
 @item
-Forward references are handled by 
+Forward references are handled by lookup.
+@item
+Function pointer types as fields in structures are just turned into
+pointers to @code{intptr_t}.
+@item
+How the hell do I deal with varargs?  Skip for now.
 @end enumerate
 
 @section Demonstration

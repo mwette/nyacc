@@ -204,6 +204,7 @@ the file COPYING included with the this distribution.")
   (define (list-xref l x) (if (> (length l) x) (list-ref l x) #f))
   (cond
    ((zero? ix) (car sx))
+   ((null? (cdr sx)) #f)
    ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
     (list-xref sx (1+ ix)))
    (else
@@ -218,6 +219,11 @@ the file COPYING included with the this distribution.")
 ;; @deffn {Procedure} sx-cons* tag (attr|#f)? ... => sx
 ;; @deffnx {Procedure} sx-list tag (attr|#f)? ... => sx
 ;; Generate the tag and the attr list if it exists.  Note that
+;; The following are equivalent:
+;; @example
+;; (sx-cons* tag attr elt1 elt2 '())
+;; (sx-list tag attr elt1 elt2)
+;; @end example
 ;; @end deffn
 (define (sx-cons* tag . rest)
   (cond

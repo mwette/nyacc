@@ -311,7 +311,7 @@
 	      (set-cpi-defs! info (cons cell (cpi-defs info)))))
 	  
 	  (define (rem-define name)
-	      (set-cpi-defs! info (delete name (cpi-defs info))))
+	    (set-cpi-defs! info (acons name #f (cpi-defs info))))
 	  
 	  (define (apply-helper file)
 	    ;;(when (string=? file "stddef.h") (pretty-print (cpi-itynd info)))
@@ -373,7 +373,6 @@
 	  (define (eval-cpp-incl/here stmt) ;; => stmt
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file)))
-	      ;;(sferr "include ~S\n" path)
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -478,13 +477,7 @@
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
 	  (define (read-cpp-stmt ch)
-	    ;;(and=> (read-cpp-line ch) cpp-line->stmt))
-	    (let ((line (read-cpp-line ch)))
-	      (if line
-		  (begin
-		    ;;(sferr "[~S]\n" line)
-		    (cpp-line->stmt line))
-		  #f)))
+	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
 	  ;; Recheck for expansions that turn from plain text to macro call:
 	  ;; @example

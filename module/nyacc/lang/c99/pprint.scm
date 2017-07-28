@@ -192,8 +192,10 @@
 	  (if (pair? (cdr pair)) (sf " ")))
 	value-l))
 
-      ((comment ,text) (sf "/*~A*/\n" text))
-
+      ((comment ,text)
+       (for-each (lambda (l) (sf l) (sf "\n")) 
+		 (string-split (string-append "/*" text "*/") #\newline)))
+      
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
       
       ((array-ref ,dim ,expr)

@@ -1,3 +1,12 @@
+2017-07-28  Wette  <mwette@alumni.caltech.edu>
+
+	* body.scm (gen-c-lexer): bug report by janneke.
+	`#undef NAME' not working; was using delete, now acons #f
+
+	* mach.scm (c99-spec): bug report by janneke.
+	ident-like returns (ident ("foo")) instead of (ident "foo");
+	fixed w/ (car $1) => (sx-ref $1 1)
+
 2017-07-16  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* mach.scm (c99-spec): change declr-fctn to abs-fctn-decl;
