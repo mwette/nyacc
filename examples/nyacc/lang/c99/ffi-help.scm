@@ -1,4 +1,4 @@
-;;; example/nyacc/lang/c99/ffi-help.scm
+;;; examples/nyacc/lang/c99/ffi-help.scm
 ;;;
 ;;; Copyright (C) 2016-2017 Matthew R. Wette
 ;;;
@@ -69,12 +69,14 @@
   (cond
    ((string-contains %host-type "darwin")
     '(("__builtin"
-       "__builtin_va_list=void*" "__attribute__(X)=" "__inline=" "__inline__="
+       "__builtin_va_list=void*" "__attribute__(X)="
+       "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)=")
       ))
    (else
     '(("__builtin"
-       "__builtin_va_list=void*" "__attribute__(X)=" "__inline=" "__inline__="
+       "__builtin_va_list=void*" "__attribute__(X)="
+       "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)=")
       ))))
 

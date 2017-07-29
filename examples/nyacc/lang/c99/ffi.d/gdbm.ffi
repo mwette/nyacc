@@ -1,0 +1,10 @@
+;; gdbm.ffi				-*- Scheme -*-
+
+(define-ffi-module (gdbm)
+  #:include '("gdbm.h")
+  ;;#:inc-dirs '("/opt/local/include")
+  #:inc-dirs '(",ffi.d" "/opt/local/include")
+  #:library '("libgdbm")
+  )
+
+;; --- last line ---

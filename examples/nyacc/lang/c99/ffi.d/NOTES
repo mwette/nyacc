@@ -1,0 +1,4 @@
+cairo/cairo.ffi		runs 
+gdbm.ffi		runs
+libgit2.ffi		not working at all (I claim includes broken)
+sqlite3.ffi		on mac needs stdarg.h, so needs gcc internal incdir

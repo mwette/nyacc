@@ -1,0 +1,8 @@
+;; sqlite3.ffi				-*- Scheme -*-
+
+(define-ffi-module (sqlite3)
+  #:pkg-config "sqlite3"
+  #:include '("sqlite3.h")
+  )
+
+;; --- last line ---
