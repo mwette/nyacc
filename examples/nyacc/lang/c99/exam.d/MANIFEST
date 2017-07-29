@@ -1,3 +1,7 @@
+cairo01.scm	demo for ffi.d/cairo/cairo.scm
+cairo02.scm	demo for ffi.d/cairo/cairo.scm
+cairo03.scm	demo for ffi.d/cairo/cairo.scm
+
 ex01.c	complex file
 ex02.c	for-loop
 ex03.c	switch

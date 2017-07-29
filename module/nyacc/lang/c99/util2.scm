@@ -1,5 +1,4 @@
-;;; nyacc/lang/c99/util2.scm - C processing code
-;;; call this munge.scm ?
+;;; nyacc/lang/c99/munge.scm - C processing code
 ;;; 
 ;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
@@ -742,6 +741,7 @@
 	      (fld1 (sx-ref tspec 1))
 	      (ident (if (eq? 'ident (sx-tag fld1)) fld1 #f))
 	      (field-list (if ident (sx-ref tspec 2) fld1))
+	      (field-list (clean-field-list field-list)) ; remove comments
 	      (orig-flds (sx-tail field-list 1))
 	      (fixd-flds (map
 			  (lambda (fld) (expand-typerefs fld udict keep))
@@ -1131,9 +1131,9 @@
 ;; @end deffn
 (define (pointer-declr? declr)
   (and
-   (sx-ref declr 1)
+   (pair? declr)
+   (member (car declr) '(init-declr comp-declr param-declr))
    (eqv? 'ptr-declr (sx-tag (sx-ref declr 1)))))
-(define declr-is-ptr? pointer-declr?)
 
 ;; @deffn {Procedure} strip-decl-spec-tail dsl-tail [#:keep-const? #f]
 ;; Remove cruft from declaration-specifiers (tail). ??
@@ -1219,8 +1219,8 @@
     (sxml-match pointer
       ((pointer (type-qual-list ,type-qual ...) ,pointer)
        (cons '(pointer-to) (unwrap-pointer pointer)))
-      ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
       ((pointer (type-qual-list ,type-qual ...)) '((pointer-to)))
+      ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
       ((pointer) '((pointer-to)))
       (,otherwise
        (sferr "unwrap-pointer failed on:\n") (pperr pointer)
@@ -1328,6 +1328,7 @@
 (define expand-decl-typerefs expand-typerefs)
 (define declr->ident declr-ident)
 (define (fix-fields flds) (cdr (clean-field-list `(field-list . ,flds))))
+(define declr-is-ptr? pointer-declr?)
 
 ;;@deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
 ;; This is deprecated.

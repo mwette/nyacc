@@ -401,6 +401,15 @@
       ((pointer ,one) (sf "*") (ppx one))
       ((pointer ,one ,two) (sf "*") (ppx one) (ppx two))
 
+      ((type-qual-list . ,tql)		; see decl-spec-list
+       (pair-for-each
+	(lambda (dsl)
+	  (case (sx-tag (car dsl))
+	    ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
+	    (else (sf "[?:~S]" (car dsl))))
+	  (if (pair? (cdr dsl)) (sf " ")))
+	tql))
+
       ((array-of ,dir-declr ,arg)
        (ppx dir-declr) (sf "[") (ppx arg) (sf "]"))
       ((array-of ,dir-declr)

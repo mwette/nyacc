@@ -1175,19 +1175,17 @@
 ;; === main converter ================
 
 (define (derive-dirpath sfile mbase)
-  (let* ((sbase (string-drop-right sfile 4))
-	 (sfxln (string-suffix-length sbase mbase))
-	 (sblen (string-length sbase)))
-    (if (not (= sfxln (string-length mbase))) ;; <= NEEDS TO BE MORE TOLERANT
-	(error "filename-path inconsistent"))
-    (substring sbase 0 (- sblen sfxln))))
-
+  (if (not sfile) "."
+      (let* ((sbase (string-drop-right sfile 4))
+	     (sfxln (string-suffix-length sbase mbase))
+	     (sblen (string-length sbase)))
+	(if (not (= sfxln (string-length mbase))) ; need more robust
+	    (error "filename-path inconsistent"))
+	(substring sbase 0 (- sblen sfxln)))))
 
 ;; process define-ffi-module expression
 (define (intro-ffi path opts)
   (let* ((options (fluid-ref *options*))
-	 ;;(sfile (assq-ref options 'file))
-	 ;;(sbase (string-drop-right sfile 4))
 	 (mbase (string-append (string-join (map symbol->string path) "/")))
 	 (dirpath (derive-dirpath (assq-ref options 'file) mbase))
 	 (mfile (string-append dirpath mbase ".scm"))

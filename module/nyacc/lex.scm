@@ -322,7 +322,7 @@
 	  (else (iter chl '$fixed 5 ch))))
 	((11) ;; got l, L, u or U, look for l or L
 	 (cond
-	  ((eof-object? ch) (cons '$fixed (lsr chl)))
+	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
 	  ((char=? #\L ch) (iter (cons ch chl) ty 12 (read-char)))
 	  ((char=? #\l ch) (iter (cons ch chl) ty 12 (read-char)))
 	  (else (iter chl '$fixed 5 ch))))

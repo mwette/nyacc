@@ -1,10 +1,11 @@
 ;; exam.d/cairo02.scm
 
 (use-modules (cairo cairo))		; auto-generated from cairo.h etc
-(use-modules (ffi-help-rt))		; pointer-to
+(use-modules (system ffi-help-rt))	; pointer-to
 (use-modules (system foreign))		; string->pointer, pointer<->scm
 
-(define srf (cairo_svg_surface_create (string->pointer "abc.svg") 200.0 200.0))
+(define srf (cairo_svg_surface_create (string->pointer "cairo02.svg")
+				      200.0 200.0))
 (define cr (cairo_create srf))
 
 ;; typedef struct _cairo_user_data_key {
