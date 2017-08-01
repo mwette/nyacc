@@ -150,9 +150,10 @@
  	   `(if ,(string-append "defined(" (rd-ident) ")" (rd-rest))))
 	  ((ifndef)
 	   `(if ,(string-append "!defined(" (rd-ident) ")" (rd-rest))))
-	  ((if elif else endif line error pragma) (list cmd (rd-rest)))
-	  ((warning) (list cmd (rd-rest)))
-	  (else '(unknown "")))))))
+	  ((if elif else endif line error warning pragma) (list cmd (rd-rest)))
+	  ((include_next) (list 'include-next (rd-rest)))
+	  (else
+	   (list 'warning (simple-format #f "unknown CPP line: ~S" line))))))))
 
 (include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/cppact.scm")

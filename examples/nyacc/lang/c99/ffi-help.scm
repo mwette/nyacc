@@ -70,7 +70,10 @@
     '(("__builtin"
        "__builtin_va_list=void*" "__attribute__(X)="
        "__inline=" "__inline__="
-       "__asm(X)=" "__asm__(X)=")
+       "__asm(X)=" "__asm__(X)="
+       ;;"_POSIX_C_SOURCE=200112L"
+       ;;"_XOPEN_SOURE=600L"
+       )
       ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
       ))
    (else
@@ -82,7 +85,7 @@
 
 (define *options* (make-fluid '()))
 (define *prefix* (make-fluid "."))	 ; prefix to files
-(define *debug* (make-fluid #f))	 ; parse debug mode
+(define *debug* (make-fluid #t))	 ; parse debug mode
 (define *mport* (make-fluid #t))	 ; output module port
 (define *udict* (make-fluid '()))	 ; udecl dict
 (define *wrapped* (make-fluid '()))	 ; has wrapper
@@ -1181,19 +1184,13 @@
 	     
 	     
 	     (cpp-defs (append cpp-defs (gen-gcc-defs)))
-	     #;(cpp-defs
-	      (append cpp-defs
-		      ;;'("__GNUC__=6")
-		      (remove
-		       (lambda (s)
-			 (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-		       (gen-gcc-defs))))
 	     (prog (string-join
 		    (map
 		     (lambda (inc-file)
 		       (string-append "#include \"" inc-file "\"\n"))
 		     inc-files) "")))
-	(sferr "inc-dirs:\n") (pperr inc-dirs)
+	;;(sferr "inc-dirs:\n") (pperr inc-dirs)
+	;;(sferr "cpp-defs:\n") (pperr cpp-defs)
 	(with-input-from-string prog
 	  (lambda ()
 	    (and=> 

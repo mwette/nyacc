@@ -237,13 +237,27 @@
 	      (iter (cons #\/ cl) c2)))))
 	 (else (iter (cons ch cl) (read-char)))))))
 
-;; @deffn {Procedure} find-file-in-dirl file dirl => path
+;; @deffn {Procedure} find-file-in-dirl file dirl next => path
+;; Find path to include file expression, (i.e., @code{<foo.h>} or
+;; @code{"foo.h"}.  If @code{"foo.h"} form look in current directory first.
+;; If @var{next} is true then remove current directory from search path.
+;; @*Refs:
+;; @itemize
+;; @item https://gcc.gnu.org/onlinedocs/cpp/Search-Path.html
+;; @item https://gcc.gnu.org/onlinedocs/cpp/Wrapper-Headers.html
+;; @end itemize
 ;; @end deffn
-(define (find-file-in-dirl file dirl)
-  (let iter ((dirl dirl))
-    (if (null? dirl) #f
-	(let ((p (string-append (car dirl) "/" file)))
-	  (if (access? p R_OK) p (iter (cdr dirl)))))))
+(define (find-file-in-dirl file dirl next)
+  (let* ((cid (and=> (port-filename (current-input-port)) dirname))
+	 (file-type (string-ref file 0)) ;; #\< or #\"
+	 (file-name (substring file 1 (1- (string-length file))))
+	 (dirl (if (and cid (char=? #\" file-type)) (cons cid dirl) dirl)))
+    (let iter ((dirl dirl))
+      (if (null? dirl) #f
+	  (if (and next (string=? (car dirl) cid))
+	      (iter (cdr dirl))
+	      (let ((p (string-append (car dirl) "/" file-name)))
+		(if (access? p R_OK) p (iter (cdr dirl)))))))))
 
 (define (def-xdef? name mode)
   (not (eqv? mode 'file)))
@@ -322,16 +336,14 @@
 		(set-cpi-defs! info (append defs (cpi-defs info))))
 	      tyns))
 
-	  (define (inc-stmt->file stmt)
-	    (let* ((arg (cadr stmt))
-		   (arg (if (ident-like? arg) ;; #include MYFILE
-			    (expand-cpp-macro-ref arg (cpi-defs info))
-			    arg))
-		   (len (string-length arg)))
-	      (substring arg 1 (1- len))))
+	  (define (inc-stmt->file stmt) ;; retain <> or ""
+	    (let* ((arg (cadr stmt)))
+	      (if (ident-like? arg) ;; #include MYFILE
+		  (expand-cpp-macro-ref arg (cpi-defs info))
+		  arg)))
 
-	  (define (inc-file->path file)
-	    (find-file-in-dirl file (cpi-incs info)))
+	  (define (inc-file->path file next)
+	    (find-file-in-dirl file (cpi-incs info) next))
 
 	  (define (code-if stmt)
 	    (case (car ppxs)
@@ -370,19 +382,19 @@
 	    (set! ppxs (cdr ppxs))
 	    stmt)
 	  
-	  (define (eval-cpp-incl/here stmt) ;; => stmt
+	  (define* (eval-cpp-incl/here stmt #:optional next) ;; => stmt
 	    (let* ((file (inc-stmt->file stmt))
-		   (path (inc-file->path file)))
+		   (path (inc-file->path file next)))
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
 	       (else (set! bol #t) (push-input (open-input-file path))))
 	      stmt))
 
-	  (define (eval-cpp-incl/tree stmt) ;; => stmt
+	  (define* (eval-cpp-incl/tree stmt #:optional next) ;; => stmt
 	    ;; include file as a new tree
 	    (let* ((file (inc-stmt->file stmt))
-		   (path (inc-file->path file)))
+		   (path (inc-file->path file next)))
 	      ;;(sferr "include ~S\n" path)
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
@@ -402,6 +414,7 @@
 	       (if (eqv? 'keep (car ppxs))
 		   (case (car stmt)
 		     ((include) (eval-cpp-incl/here stmt))
+		     ((include-next) (eval-cpp-incl/here stmt 'next))
 		     ((define) (add-define stmt) stmt)
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
@@ -424,6 +437,10 @@
 		      (if (cpi-top-blev? info)
 			  (eval-cpp-incl/tree stmt)
 			  (eval-cpp-incl/here stmt)))
+		     ((include-next)	; gcc extension
+		      (if (cpi-top-blev? info)
+			  (eval-cpp-incl/tree stmt 'next)
+			  (eval-cpp-incl/here stmt 'next)))
 		     ((define) (add-define stmt) stmt)
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
@@ -473,9 +490,9 @@
 	    (case mode
 	      ((code) #f)
 	      ((decl) (and (cpi-top-blev? info)
-			   (memq (car stmt) '(include define))))
+			   (memq (car stmt) '(include define include-next))))
 	      ((file) (or (cpi-top-blev? info)
-			  (not (eqv? (car stmt) 'include))))
+			  (not (memq (car stmt) '(include include-next)))))
 	      (else (error "lang/c99 coding error"))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
