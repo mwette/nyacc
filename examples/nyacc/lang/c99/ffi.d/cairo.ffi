@@ -1,6 +1,6 @@
 ;; cairo.ffi				-*- Scheme -*-
 
-(define-ffi-module (cairo cairo)
+(define-ffi-module (cairo)
   #:pkg-config "cairo"
   #:include '("cairo.h"
 	      ;;"cairo-ft.h"		; /usr/include rat's nest
@@ -13,12 +13,6 @@
 	      ;;"cairo-tee.h"
 	      ;;"cairo-xml.h"
 	      )
-  #:inc-help (cond
-	      ((string-contains %host-type "darwin")
-	       '(("__builtin" "__builtin_va_list=void*")
-		 ("sys/cdefs.h" "__DARWIN_ALIAS(X)=")))
-	      (else '()))
-
   ;; the following are bent pipe to scm-module
   #:export (make-cairo-unit-matrix)
   )

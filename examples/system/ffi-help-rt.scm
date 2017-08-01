@@ -17,7 +17,7 @@
 	    define-fh-enum
 	    define-fh-function define-fh-function/p
 	    pointer-to
-	    unwrap~fixed unwrap~float unwrap~pointer
+	    unwrap~fixed unwrap~float unwrap~pointer unwrap~array
 	    wrap-void*
 	    ;; debugging
 	    fht-unwrap

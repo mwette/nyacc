@@ -1,0 +1,8 @@
+;; librsvg.ffi				-*- Scheme -*-
+
+(define-ffi-module (librsvg)
+  #:pkg-config "librsvg-2.0"
+  #:include '("librsvg/rsvg.h" "librsvg/rsvg-cairo.h")
+  )
+
+;; --- last line ---

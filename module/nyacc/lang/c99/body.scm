@@ -405,6 +405,7 @@
 		     ((define) (add-define stmt) stmt)
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
+		     ((warning) (report-error "warning: ~A\n" (cdr stmt)))
 		     ((pragma) stmt) ;; ignore for now
 		     (else
 		      (sferr "stmt: ~S\n" stmt)
@@ -426,6 +427,7 @@
 		     ((define) (add-define stmt) stmt)
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
+		     ((warning) (report-error "warning: ~A\n" (cdr stmt)) stmt)
 		     ((pragma) stmt) ;; ignore for now
 		     (else
 		      (sferr "stmt: ~S\n" stmt)
@@ -441,6 +443,7 @@
 	      ((define) (add-define stmt) stmt)
 	      ((undef) (rem-define (cadr stmt)) stmt)
 	      ((error) stmt)
+	      ((warning) stmt)
 	      ((pragma) stmt) ;; need to work this
 	      (else
 	       (sferr "stmt: ~S\n" stmt)

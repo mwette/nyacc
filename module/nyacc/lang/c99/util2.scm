@@ -56,6 +56,8 @@
 	    canize-enum-def-list
 	    fixed-width-int-names
 
+	    typedef-decl?
+	    
 	    ;; should be
 	    ;; unitize-decl unitize-comp-decl unitize-param-decl
 	    unitize-decl unitize-comp-decl unitize-param-decl
@@ -63,7 +65,7 @@
 	    split-decl iter-declrs
 	    split-adecl
 
-	    clean-field-list
+	    clean-field-list clean-fields
 	    inc-keeper?
 
 	    ;; deprecated
@@ -1155,7 +1157,8 @@
 	  (else
 	   (iter (cons (car tail) dsl1) const-seen? (cdr tail)))))))
 
-;; @deffn {Procedure} clean-field-list field-list => flds
+;; @deffn {Procedure} clean-field-list field-list => field-list
+;; @deffnx {Procedure} clean-fields fields => fields
 ;; Process the tagged field-list element of a struct and remove lone comments.
 ;; If a field following a lone comment has no code-comment, the lone comment
 ;; will be used.  For example,
@@ -1170,10 +1173,10 @@
 ;; @end example
 ;; @noindent
 ;; @end deffn
-(define (clean-field-list fld-list)
-  (let iter ((rz '()) (cl '()) (fl (cdr fld-list)))
+(define (clean-fields fields)
+  (let iter ((rz '()) (cl '()) (fl fields))
     (if (null? fl)
-	(cons 'field-list (reverse rz)) ;; => fold-right ?
+	(reverse rz)
 	(pmatch (car fl)
 	  ((comment ...)
 	   (iter rz (cons (cadar fl) cl) (cdr fl)))
@@ -1189,11 +1192,12 @@
 		 (iter (cons (append (car fl) (list cs)) rz) '() (cdr fl)))))
 	  (else
 	   (error "util2: clean-field-list" (car fl)))))))
-
+(define (clean-field-list field-list)
+  (cons (car field-list) (clean-fields (cdr field-list))))
 
 ;; === munged specification ============
 
-;; @deffn {Procedure} udecl->mspec udecl
+;; @deffn {Procedure} udecl->mspec udecl [#:abs-ident #f]
 ;; @deffnx {Procedure} udecl->mspec/comm udecl [#:def-comm ""]
 ;; Turn a stripped-down unit-declaration into an m-spec.  The second version
 ;; include a comment. This assumes decls have been run through
@@ -1205,8 +1209,12 @@
 ;; =>
 ;; ("x" "state vector" (array-of 10) (float "double")
 ;; @end example
+;; @noindent
+;; The optional keyword argument @var{abs-ident} provides a dummy indentifier
+;; to add for abstract declarators.  If an identifier is not provided, a
+;; random identifier starting with @code{@} will be provided.
 ;; @end deffn
-(define (udecl->mspec decl)
+(define* (udecl->mspec decl #:key abs-ident)
 
   (define (cnvt-array-size size-spec)
     (with-output-to-string (lambda () (pretty-print-c99 size-spec))))
@@ -1228,7 +1236,7 @@
       ))
 
   (define (make-abs-dummy) ;; for abstract declarator make a dummy
-    (symbol->string (gensym "@")))
+    (or abs-ident (symbol->string (gensym "@"))))
   (define (make-abs-dummy-tail)
     (list (make-abs-dummy)))
     

@@ -151,6 +151,7 @@
 	  ((ifndef)
 	   `(if ,(string-append "!defined(" (rd-ident) ")" (rd-rest))))
 	  ((if elif else endif line error pragma) (list cmd (rd-rest)))
+	  ((warning) (list cmd (rd-rest)))
 	  (else '(unknown "")))))))
 
 (include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")

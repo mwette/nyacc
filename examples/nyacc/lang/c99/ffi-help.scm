@@ -37,6 +37,7 @@
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang util)
+  #:use-module (nyacc util)
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   ;;#:use-module ((bytestructures guile))
   #:use-module (system foreign)
@@ -62,9 +63,7 @@
 
 (define std-inc-dirs
   `(,(assq-ref %guile-build-info 'includedir)
-    "/usr/include"
-    "/opt/local/lib/gcc48/gcc/x86_64-apple-darwin16/4.8.5/include"
-   ))
+    "/usr/include"))
 (define std-inc-help
   (cond
    ((string-contains %host-type "darwin")
@@ -72,6 +71,7 @@
        "__builtin_va_list=void*" "__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)=")
+      ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
       ))
    (else
     '(("__builtin"
@@ -112,8 +112,24 @@
 
 ;; === utilities
 
-(define (opts->attrs opts)
-  (filter (lambda (pair) (symbol? (car pair))) opts))
+;; @deffn {Procedure} opts->attrs module-opts script-opts
+;; The values in @var{script-opts} override @var{module-opts}.  That is,
+;; if the value is a list then append, else replace.
+;; @end deffn
+(define (opts->attrs module-opts script-opts)
+  ;; module-opts: inc-dirs pkg-config ...
+  ;; script-opts: inc-dirs
+  (fold-right
+   (lambda (opt seed)
+     (cond
+      ((assq-ref seed (car opt)) =>
+       (lambda (val)
+	 (if (pair? val)
+	     (acons (car opt) (append (cdr opt) val) seed)
+	     (acons (car opt) val seed))))
+      (else (cons opt seed))))
+   (filter (lambda (pair) (symbol? (car pair))) module-opts)
+   script-opts))
 
 (define (opts->mopts opts) ;; module options to pass
   (filter (lambda (pair) (keyword? (car pair))) opts))
@@ -187,8 +203,8 @@
 
 ;; === output scheme module header 
 
-(define (ffimod-header path opts)
-  (let* ((attrs (opts->attrs opts))
+(define (ffimod-header path module-opts)
+  (let* ((attrs (opts->attrs module-opts '()))
 	 (pkg-config (assq-ref attrs 'pkg-config))
 	 (libraries (resolve-attr-val (assq-ref attrs 'library)))
 	 (libraries (append
@@ -202,7 +218,7 @@
     (sfscm "(define-module ~S\n" path)
     (for-each ;; output pass-through options
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
-     (opts->mopts opts))
+     (opts->mopts module-opts))
     (sfscm "  #:use-module (system ffi-help-rt)\n")
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (bytestructures guile)\n")
@@ -296,12 +312,12 @@
        'int)
 
       (((struct-def (ident ,struct-name) ,field-list))
-       (mtail->bs-desc `(struct-def ,field-list)))
+       (mtail->bs-desc `((struct-def ,field-list))))
       (((struct-def ,field-list))
        (list 'bs:struct `(list ,@(cnvt-field-list field-list))))
       
       (((union-def (ident ,union-name) ,field-list))
-       (mtail->bs-desc `(union-def ,field-list)))
+       (mtail->bs-desc `((union-def ,field-list))))
       (((union-def ,field-list))
        (list 'bs:union `(list ,@(cnvt-field-list field-list))))
 
@@ -329,7 +345,6 @@
        `(bs:pointer ,(assoc-ref bs-typemap fx-name)))
       (((pointer-to) (float-type ,fx-name))
        `(bs:pointer ,(assoc-ref bs-typemap fx-name)))
-      ;; don't expect to see pointer to enum
 
       ;; bs does not support function pointers
       (((pointer-to) (function-returning . ,rest) . ,rest)
@@ -340,10 +355,16 @@
 
       #;(((pointer-to) (struct-ref (ident ,name)))
        (let ()
-	 #f))
+      #f))
+
+      ;; should use this more
+      (((pointer-to) . ,rest)
+       `(bs:pointer ,(mtail->bs-desc rest)))
 
       (((array-of ,n) . ,rest)
        `(bs:vector ,(string->number n) ,(mtail->bs-desc rest)))
+      (((array-of) . ,rest)
+       `(bs:pointer ,(mtail->bs-desc rest)))
 
       (,otherwise
        (sferr "mtail->bs-desc missed mspec:\n")
@@ -356,15 +377,14 @@
 
 ;; --- structs and unions
 
+;; field-list is (field-list . ,fields)
 (define (cnvt-field-list field-list)
   (define (acons-defn name type seed)
     (cons (eval-string (simple-format #f "(quote `(~A ,~S))" name type)) seed))
 
-  ;;(sferr "\nfield-list:\n") (pperr field-list) (quit)
   (let* ((field-list (clean-field-list field-list)) ; remove lone comments
-	 (uflds (fold-right unitize-comp-decl '() (cdr field-list)))
-	 )
-    ;; CHANGE TO FOLD-RIGHT
+	 (uflds (fold-right unitize-comp-decl '() (cdr field-list))))
+    ;;(sferr "\nuflds:\n") (pperr uflds)
     (let iter ((decls uflds))
       (if (null? decls) '()
 	  (let* ((name (caar decls))
@@ -503,27 +523,23 @@
 	 (mspec (udecl->mspec udecl1)))
     (mspec->ffi-sym mspec)))
 
+(define (int->abs-ident ix)
+  (simple-format #f "arg-~A" ix))
+
 (define (gen-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
   ;; mspec->ffi-sym needs to convert enum to int or void*
-  (fold-right
-   (lambda (param-decl seed)
-     (if (equal? param-decl '(ellipsis)) (fherr "can't do varargs"))
-     (let* ((udecl1 (expand-typerefs param-decl (fluid-ref *udict*)
-				     ffi-keepers))
-	    (mspec (udecl->mspec udecl1)))
-       (when (equal? param-decl
-		     '(zzparam-decl (decl-spec-list
-				   (type-spec (typename "datum")))
-				  (init-declr (ident "arg-2"))))
-	 (sferr "gen-decl-params:\n")
-	 (pperr udecl1)
-	 (pperr mspec)
-	 ;;(quit)
-	 )
-       (cons (mspec->ffi-sym mspec) seed)))
-   '()
-   params))
+  (let iter ((ix 0) (params params))
+    (cond
+     ((null? params) '())
+     ((equal? (car params) '(ellipsis))
+      (fherr "can't do varargs"))
+     (else
+      (let* ((udecl1 (expand-typerefs (car params) (fluid-ref *udict*)
+				      ffi-keepers))
+	     (mspec (udecl->mspec udecl1 #:abs-ident (int->abs-ident ix))))
+	(cons (mspec->ffi-sym mspec)
+	      (iter (1+ ix) (cdr params))))))))
 
 ;; === function calls : unwrap args, call, wrap return
 
@@ -564,8 +580,8 @@
 
       ;; TODO: int b[]
       ;; make ffi-help-rt unwrap bytevector  
-      ;;(((array-of ,size) . ,rest) #f)
-      ;;(((array-of) . ,rest) #f)
+      (((array-of ,size) . ,rest) 'unwrap~array)
+      (((array-of) . ,rest) 'unwrap~array)
 
       (,otherwise
        (sferr "mspec->fh-unwrapper missed:\n") (pperr mspec) (quit)
@@ -693,7 +709,7 @@
 
 ;; ------------------------------------
 
-(sferr "TODO: fix fix-params\n") ;; remove "arg-~A thingy below
+(sferr "TODO: fix fix-params varargs-warning\n") ;; remove "arg-~A thingy below
 (define (fix-params param-decls)
 
   (define (remove-void-param params)
@@ -924,7 +940,22 @@
      (values
       (cons typename wrapped)
       (cons typename defined)))
-    
+
+    ;; typedef foo_t bar_t
+    ((udecl
+      (decl-spec-list
+       (stor-spec (typedef))
+       (type-spec (typename ,name)))
+      (init-declr (ident ,typename)))
+     (cond
+      ((member name wrapped)
+       (sfscm "(define unwrap-~S unwrap-~S)\n" typename name)
+       (sfscm "(define wrap-~S wrap-~S)\n" typename name)
+       (sfscm "(define ~S ~S)\n" typename name)
+       (values (cons typename wrapped) (cons typename defined)))
+      (else
+       (let ((xdecl (expand-typerefs udecl udict defined)))
+	 (cnvt-udecl xdecl udict wrapped defined)))))
 
     ;; Need to capture declarators like
     ;;   extern struct { int x; } *foo;
@@ -980,7 +1011,7 @@
 	    (decl-return (gen-decl-return ret-decl))
 	    (decl-params (gen-decl-params params)))
        (sfscm "(define-fh-function/p ~A\n" typename)
-       (sfscm "  ~S ~S)\n" decl-return decl-params)
+       (sfscm "  ~S ~S)\n" decl-return `(list ,@decl-params))
        #;(ppscm `(define-fh-function/p ,(string->symbol typename)
 		 ,decl-return (list ,@decl-params)))
        )
@@ -1132,7 +1163,6 @@
 	 (merge-inc-bodies
 	  (lambda (t) (cons 'trans-unit (apply append (map cdr (p t)))))))
     (lambda (attrs) ;;(cpp-defs inc-dirs inc-files helpers)
-      ;;(ppout attrs)
       (let* ((pkg-config (assq-ref attrs 'pkg-config))
 	     (cpp-defs (resolve-attr-val (assq-ref attrs 'cpp-defs)))
 	     (inc-dirs (resolve-attr-val (assq-ref attrs 'inc-dirs)))
@@ -1145,12 +1175,13 @@
 	     (inc-dirs (append
 			(if pkg-config (pkg-config-incs pkg-config) '())
 			inc-dirs))
-	     (inc-help (append inc-help std-inc-help))
 	     
 	     (inc-dirs (append inc-dirs std-inc-dirs))
+	     (inc-help (append inc-help std-inc-help))
 	     
-	     ;;(cpp-defs (append cpp-defs (gen-gcc-defs)))
-	     (cpp-defs
+	     
+	     (cpp-defs (append cpp-defs (gen-gcc-defs)))
+	     #;(cpp-defs
 	      (append cpp-defs
 		      ;;'("__GNUC__=6")
 		      (remove
@@ -1162,7 +1193,7 @@
 		     (lambda (inc-file)
 		       (string-append "#include \"" inc-file "\"\n"))
 		     inc-files) "")))
-	;;(sferr "inc-dirs: ~S\n" inc-dirs) (quit)
+	(sferr "inc-dirs:\n") (pperr inc-dirs)
 	(with-input-from-string prog
 	  (lambda ()
 	    (and=> 
@@ -1184,40 +1215,53 @@
 	(substring sbase 0 (- sblen sfxln)))))
 
 ;; process define-ffi-module expression
-(define (intro-ffi path opts)
-  (let* ((options (fluid-ref *options*))
+(define (intro-ffi path module-options)
+  (let* ((script-options (fluid-ref *options*))
 	 (mbase (string-append (string-join (map symbol->string path) "/")))
-	 (dirpath (derive-dirpath (assq-ref options 'file) mbase))
+	 (dirpath (derive-dirpath (assq-ref script-options 'file) mbase))
 	 (mfile (string-append dirpath mbase ".scm"))
 	 (mport (open-output-file mfile))
 	 ;;
-	 (attrs (opts->attrs opts))
+	 (attrs (opts->attrs module-options script-options))
 	 (incf (or (assq-ref attrs 'inc-filter) #f))
 	 (declf (or (assq-ref attrs 'decl-filter) identity))
 	 (renamer (or (assq-ref attrs 'renamer) identity))
 	 (prefix (string-append (symbol->string (last path)) "-"))
 	 ;;
-	 (tree (parse-includes (opts->attrs attrs)))
-	 ;; trans-unit now does in reverse
+	 (tree (parse-includes attrs))
 	 (udecls (reverse (c99-trans-unit->udict tree #:inc-filter incf)))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 ;;
 	 (enu-defs (udict-enums->ddict udict))
 	 (ffi-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter incf))
 	 (all-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter #t))
-	 ;;
+
+	 (tdefs (fold
+		 (lambda (pair seed)
+		   (pmatch (cdr pair)
+		     ((udecl (decl-spec-list (stor-spec (typedef))
+					     (type-spec (fixed-type ,name)))
+			     (init-declr (ident ,name)))
+		      seed)
+		     ((udecl (decl-spec-list (stor-spec (typedef)) . ,rest)
+			     . ,declr)
+		      (cons (car pair) seed))
+		     ((udecl (decl-spec-list
+			      (type-spec (struct-def (ident ,name) . ,flds)))
+			     . ,rest)
+		      (cons (car pair) seed))
+		     (,otherwise
+		      ;;(pperr (cdr pair))
+		      seed)))
+		 '() udecls))
 	 )
-    (sferr "dirpath=~S\n" dirpath)
-    (sferr "mfile=~S\n" mfile)
-    ;;(ppout enu-defs) (quit)
-    
     ;; set globals
     (fluid-set! *udict* udict)
     (fluid-set! *mport* mport)
     ;; renamer?
 
     ;; file and module header
-    (ffimod-header path opts)
+    (ffimod-header path module-options)
     
     ;; convert and output foreign declarations
     (fold-values			; from (sxml fold)
@@ -1242,11 +1286,16 @@
 		  (string-append "ffi-help: " fmt "\n") args)
 	   (sfscm ";; ... failed.\n")
 	   (values wrapped defined))))
-     udecls '() bs-defined)
+     udecls '() (append bs-defined tdefs)) ;; not pretty
 
     ;; output global constants (from enum and #define)
     ;;(sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
     (gen-lookup-proc prefix ffi-defs all-defs)
+
+    ;; output list of defined types
+    (sfscm "\n(define ~Atypes\n  " prefix)
+    (ugly-print tdefs mport)
+    (sfscm ")\n(export ~Atypes)\n" prefix)
 
     ;; return port so compiler can output remaining code
     mport))
@@ -1268,6 +1317,7 @@
       ((_ library expr) #'(cons 'library expr)) ;; eval to list of libs
       ((_ pkg-config string) #'(cons 'pkg-config string))
       ((_ renamer proc) #'(cons 'renamer proc))
+      ((_ use-ffi-module path) #'(cons 'use-ffi-module (quote path)))
       ;; remaining options get passed to the module decl as-is:
       ((_ key arg) #`(cons #,(sym->key #'key) (quote arg)))
       )))

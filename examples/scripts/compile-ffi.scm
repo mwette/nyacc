@@ -41,7 +41,7 @@
   (exit 1))
 
 (define (acons/seed key val seed)
-  (acons key (cons val (or (assq-ref seed key) '()))))
+  (acons key (cons val (or (assq-ref seed key) '())) seed))
 
 (define options
   ;; specification of command-line options
@@ -59,7 +59,7 @@
 	(option '(#\L "load-path") #f #f
 		(lambda (opt name arg seed)
 		  (acons/seed 'load-path arg seed)))
-	(option '(#\I) #f #f
+	(option '(#\I "inc-dir") #t #f
 		(lambda (opt name arg seed)
 		  (acons/seed 'inc-dirs arg seed)))
 	))
@@ -68,7 +68,7 @@
 (define (parse-args args)
   (args-fold args options
              (lambda (opt name arg seed)
-               (fail "~A: unrecognized option" name)
+               (fail "unrecognized option: ~S" name)
                (exit 1))
              (lambda (file seed)
 	       (if (assq-ref 'file seed)
@@ -79,7 +79,7 @@
 (define *fh-version* "0.1.1")
 
 (define (show-version)
-  (format #t "compile-ffi ~A~%" *fh-version*))
+  (simple-format #t "compile-ffi ~A\n" *fh-version*))
 
 (define (compile-ffi . args)
   (use-modules (nyacc lang c99 ffi-help)) ; needed here, but why
@@ -92,14 +92,15 @@ Compile each Guile source file FILE into a Guile object.
 
   -h, --help           print this help message
 
-  -L, --load-path=DIR  add DIR to the front of the module load path
-  -I                   add DIR to list of dir's to search for includes
+  -L  --load-path=DIR  add DIR to the front of the module load path
+  -I  --inc-dir=DIR    add DIR to list of dir's to search for C headers
   -o, --output=OFILE   write output to OFILE
 
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n")
           (exit 0)))
 
-    (compile-ffi-file file options)))
+    (compile-ffi-file file options)
+    ))
 
 (define main compile-ffi)
 
