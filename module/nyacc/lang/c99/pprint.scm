@@ -77,6 +77,25 @@
       ((#\\) "\\")
       (else scm-chr-str))))
 
+(define (char->hex-list ch seed)
+  (define (itox ival) (string-ref "0123456789ABCDE" ival))
+  (let iter ((res seed) (ix 8) (val (char->integer ch)))
+    (cond
+     ((zero? ix) (cons* #\\ #\U res))
+     ((and (zero? val) (= ix 4)) (cons* #\\ #\u res))
+     (else
+      (iter (cons (itox (remainder val 16)) res) (1- ix) (quotient val 16))))))
+
+(define (scmstr->c str)
+  (list->string
+   (string-fold-right
+    (lambda (ch chl)
+      (cond
+       ((char-set-contains? char-set:printing ch) (cons ch chl))
+       ((char=? ch #\nul) (cons* #\\ #\0 chl))
+       (else (char->hex-list ch chl))))
+    '() str)))
+    
 (define protect-expr? (make-protect-expr op-prec op-assc))
 
 ;; @deffn pretty-print-c99 tree [port] [options]
@@ -188,12 +207,12 @@
       ((string . ,value-l)
        (pair-for-each
 	(lambda (pair)
-	  (sf "~S" (car pair))
+	  (sf "~S" (scmstr->c (car pair)))
 	  (if (pair? (cdr pair)) (sf " ")))
 	value-l))
 
       ((comment ,text)
-       (for-each (lambda (l) (sf l) (sf "\n")) 
+       (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n")) 
 		 (string-split (string-append "/*" text "*/") #\newline)))
       
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
@@ -384,10 +403,12 @@
        (for-each ppx defns)
        (pop-il) (sf "}"))
 
-      ((enum-defn (ident ,name) (p-expr (fixed ,value)))
-       (sf "~A = ~A,\n" name value))
-      ((enum-defn (ident ,name) (neg (p-expr (fixed ,value))))
-       (sf "~A = -~A,\n" name value))
+      ((enum-defn (ident ,name) (comment ,comment))
+       (sf "~A, " name) (ppx `(comment ,comment)) (sf "\n"))
+      ((enum-defn (ident ,name) ,expr ,comment)
+       (sf "~A = " name) (ppx expr) (sf ", ") (ppx comment) (sf "\n"))
+      ((enum-defn (ident ,name) ,expr)
+       (sf "~A = " name) (ppx expr) (sf ",\n"))
       ((enum-defn (ident ,name))
        (sf "~A,\n" name))
 

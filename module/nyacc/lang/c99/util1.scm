@@ -1,25 +1,25 @@
-;;; lang/c/util1.scm
-;;;
-;;; Copyright (C) 2015,2016 Matthew R. Wette
-;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by 
-;;; the Free Software Foundation, either version 3 of the License, or 
-;;; (at your option) any later version.
-;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of 
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; lang/c/util1.scm
+;;
+;; Copyright (C) 2015-2017 Matthew R. Wette
+;;
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by 
+;; the Free Software Foundation, either version 3 of the License, or 
+;; (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of 
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; C parser utilities
 
 (define-module (nyacc lang c99 util1)
   #:export (c99-std-help
-	    gen-gcc-defs
+	    get-gcc-cpp-defs get-gcc-inc-dirs
 	    remove-inc-trees
 	    merge-inc-trees!
 	    elifify)
@@ -69,26 +69,62 @@
     ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
     ))
 
-;; @deffn {Procedure} gen-gcc-defs args  [#:CC "clang"] => '("ABC=123" ...)
-;; Generate a list of default defines produced by gcc (or clang).
+(define (resolve-CC CC)
+  (cond
+   (CC CC)
+   ((getenv "CC") => identity)
+   (else "gcc")))
+
+;; @deffn {Procedure} get-gcc-cpp-defs [args] [#:CC "gcc"] => '("ABC=123" ...)
+;; Generate a list of default defines produced by gcc (or other comiler).
+;; If keyword arg @arg{CC} is not provided this procedure looks for environment
+;; variable @code{"CC"}, else it defaults to @code{"gcc"}.
 ;; @end deffn
-(define gen-gcc-defs
+(define get-gcc-cpp-defs
   ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
   ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
   (let ((rx1 (make-regexp "#define\\s+([A-Za-z0-9_]+\\([^)]*\\))\\s+(.*)"))
 	(rx2 (make-regexp "#define\\s+([A-Za-z0-9_]+)\\s+(.*)")))
-    (case-lambda*
-     ((args #:key (CC "gcc"))
+    (lambda* (#:optional (args '()) #:key CC)
       (map
        (lambda (l)
 	 ;; could use (string-delete #\space (match:substring m 1))
 	 (let ((m (or (regexp-exec rx1 l) (regexp-exec rx2 l))))
 	   (string-append (match:substring m 1) "=" (match:substring m 2))))
-       (let ((ip (open-input-pipe (string-append CC " -dM -E - </dev/null"))))
+       (let ((ip (open-input-pipe (string-append (resolve-CC CC)
+						 " -dM -E - </dev/null"))))
 	 (let iter ((lines '()) (line (read-line ip 'trim)))
 	   (if (eof-object? line) lines
-	       (iter (cons line lines) (read-line ip 'trim)))))))
-     ((#:key (CC "gcc")) (gen-gcc-defs '() #:CC CC)))))
+	       (iter (cons line lines) (read-line ip 'trim)))))))))
+
+;; @deffn {Procedure} get-gcc-inc-dirs [args] [#:CC "gcc"] => '("ABC=123" ...)
+;; Generate a list of compiler-internal include directories (for gcc).  If
+;; keyword arg @arg{CC} is not provided this procedure looks for environment
+;; variable @code{"CC"}, else it defaults to @code{"gcc"}.
+;; @end deffn
+(define get-gcc-inc-dirs
+  (let ((rx1 (make-regexp "(.*): *=(.*)$"))
+	(rx2 (make-regexp "(.*): *(.*)$")))
+    (lambda* (#:optional (args '()) #:key CC)
+      (let* ((ip (open-input-pipe (string-append (resolve-CC CC)
+						" -print-search-dirs")))
+	     (il (let iter ((items '()) (line (read-line ip 'trim)))
+		   (cond
+		    ((eof-object? line)
+		     items)
+		    (else
+		     (let* ((m1 (regexp-exec rx1 line))
+			    (m2 (regexp-exec rx2 line)))
+		       (cond
+			(m1 (acons (match:substring m1 1)
+				   (string-split #\: (match:substring m1 2))
+				   items))
+			(m2 (acons (match:substring m2 1)
+				   (match:substring m2 2)
+				   items))
+			(else (sferr "get-gcc-inc-dirs: bad match\n")
+			      items))))))))
+	(list (string-append (assoc-ref il "install") "/include"))))))
 
 ;; @deffn {Procedure} remove-inc-trees tree
 ;; Remove the trees included with cpp-include statements.

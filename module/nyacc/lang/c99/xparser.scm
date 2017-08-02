@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/xparser.scm - copied from parser.scm
 ;;;
-;;; Copyright (C) 2015 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -65,9 +65,9 @@
 		     (debug #f))	; debug?
   (let ((info (make-cpi debug cpp-defs '(".") inc-help)))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
-    (with-input-from-string expr-string
-      (with-fluids ((*info* info)
-		    (*input-stack* '()))
+    (with-fluids ((*info* info)
+		  (*input-stack* '()))
+      (with-input-from-string expr-string
 	(lambda ()
 	  (catch 'c99-error
 	    (lambda () (c99x-raw-parser

@@ -832,8 +832,9 @@
    (lambda ($1 . $rest) `(comment ,$1))
    ;; cpp-statement => 'cpp-stmt
    (lambda ($1 . $rest) `(cpp-stmt ,$1))
-   ;; pragma => 'cpp-pragma
-   (lambda ($1 . $rest) $1)
+   ;; pragma => "_Pragma" "(" string-literal ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(pragma ,(tl->list $3)))
    ))
 
 ;;; end tables

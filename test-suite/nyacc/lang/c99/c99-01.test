@@ -189,7 +189,17 @@
 	    (init-declr-list (init-declr (ident "x")))))))
     
   (pass-if "include w/ #defined arg "
-     (pair? (parse-file "exam.d/ex15.c")))
+    (pair? (parse-file "exam.d/ex15.c")))
+
+  ;; This breaks prior to 0.81.0  I think we need more testing on
+  ;; possible escapes.  See esc-str in cpp.c.
+  (pass-if "CPP string building"
+    (let ((code (string-append
+		 "int x;\n"
+		 "#define XYZ \"bar \\\"-baz\\\"\"\n"
+		 "char *s = XYZ;\n"
+		 )))
+      (if (parse-string code) #t #f)))
 
   )
 

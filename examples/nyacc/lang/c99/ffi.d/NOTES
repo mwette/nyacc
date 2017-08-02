@@ -1,4 +1,5 @@
 cairo/cairo.ffi		runs 
 gdbm.ffi		runs
-libgit2.ffi		not working at all (I claim includes broken)
-sqlite3.ffi		on mac needs stdarg.h, so needs gcc internal incdir
+libgit2.ffi		missing some items
+librsvg.ffi		CPP error
+sqlite3.ffi		long long int; varargs

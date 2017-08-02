@@ -709,7 +709,7 @@
     (code-comment ($code-comm ($$ `(comment ,$1))))
     (lone-comment ($lone-comm ($$ `(comment ,$1))))
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
-    (pragma ('cpp-pragma))
+    (pragma ("_Pragma" "(" string-literal ")" ($$ `(pragma ,(tl->list $3)))))
     )))
 
 

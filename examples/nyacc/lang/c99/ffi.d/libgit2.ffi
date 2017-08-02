@@ -1,15 +1,8 @@
 ;; libgit2.ffi				-*- Scheme -*-
 
-;; NOT WORKING: 
-;; 1) include/git2.h includes include/git2/*.h
-;; 2) include/git2/annotated_commit.h include common.h which lives under
-;;    include/git2
-;; 3) adding include/git2 to search path causes all sorts of problems
-
 (define-ffi-module (libgit2)
   #:include '("git2.h")
   #:inc-filter (lambda (s) (string-contains s "git2/" 0))
-  #:inc-dirs '("/opt/local/include")
   #:library '("git2")
   )
 

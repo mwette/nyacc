@@ -385,6 +385,7 @@
 	  (define* (eval-cpp-incl/here stmt #:optional next) ;; => stmt
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file next)))
+	      (sferr "include ~S\n" path)
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -395,7 +396,7 @@
 	    ;; include file as a new tree
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file next)))
-	      ;;(sferr "include ~S\n" path)
+	      (sferr "include ~S\n" path)
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -538,6 +539,7 @@
 			   (if (procedure? x-def?) (x-def? name mode) x-def?)
 			   (expand-cpp-macro-ref name defs))
 		      => (lambda (repl)
+			   (sferr "repl=~S\n" repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input
 			    (open-input-string
@@ -568,6 +570,7 @@
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
 	    ;;(sferr "lx iter=>~S\n" pair)
+	    (report-error "lx iter=>~S" (list pair))
 	    (case (car ppxs)
 	      ((keep)
 	       pair)

@@ -79,6 +79,7 @@
 	    tdef-splice-specl
 	    tdef-splice-declr
 	    )
+  #:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang util)
   #:use-module ((sxml fold) #:select (foldts foldts*))
@@ -980,12 +981,8 @@
   (define (gen-nvl enum-def-list)
     (map
      (lambda (def)
-       (pmatch def
-	 ((enum-defn (ident ,n) (p-expr (fixed ,v)))
-	  (cons n v))
-	 ((enum-defn (ident ,n) (neg (p-expr (fixed ,v))))
-	  (cons n (string-append "-" v)))
-	 (,otherwise (error "gen-name-val-l" def))))
+       (let ((n (sx-ref (sx-ref def 1) 1)) (x (sx-ref def 2)))
+	 (cons n (number->string (eval-cpp-expr x '())))))
      (cdr (canize-enum-def-list enum-def-list))))
   (append
    seed
@@ -1005,17 +1002,17 @@
   
 ;; @deffn {Procedure} canize-enum-def-list
 ;; Fill in constants for all entries of an enum list.
-;; Expects @code{(enum-def-list (...))} ???
+;; Expects @code{(enum-def-list (...))} (i.e., not the tail).
+;; If constant provided the syntax is preserved.
 ;; @end deffn
 (define (canize-enum-def-list enum-def-list)
   (define (get-used edl)
     (fold
      (lambda (def seed)
        (sxml-match def
-	 ((enum-defn (ident ,name) (p-expr ,num) . ,rest)
-	  (cons (string->number (cadr num)) seed))
-	 ((enum-defn (ident ,name) (neg (p-expr ,num)) . ,rest)
-	  (cons (- (string->number (cadr num))) seed))
+	 ((enum-defn (ident ,name) (comment ,comment)) seed)
+	 ((enum-defn (ident ,name) ,expr . ,rest)
+	  (cons (eval-cpp-expr expr '()) seed))
 	 (,otherwise seed)))
      '() edl))
   (let ((used (get-used (cdr enum-def-list))))
@@ -1023,8 +1020,8 @@
       (cond
        ((null? edl) (cons (car enum-def-list) (reverse rez)))
        ((sxml-match (car edl)
-	  ((enum-defn (ident ,name) (p-expr ,num) . ,rest) #t)
-	  ((enum-defn (ident ,name) (neg (p-expr ,num)) . ,rest) #t)
+	  ((enum-defn (ident ,name) (comment ,comment)) #f)
+	  ((enum-defn (ident ,name) ,expr . ,rest) #t)
 	  (,otherwise #f))
 	(iter (cons (car edl) rez) ix (cdr edl)))
        (else

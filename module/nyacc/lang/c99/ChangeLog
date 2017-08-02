@@ -1,5 +1,14 @@
 2017-08-01  Matt Wette  <mwette@alumni.caltech.edu>
 
+	* cpp.scm (eval-cpp-expr): If tree is (char x) then we need to
+	apply string-ref to get argument for char->integer.
+	(rtokl->string): ugh. when CPP builds strings we need to escape
+	characters to reassemble.  Not sure I have done it all here.
+	Needs more testing.
+
+	* util2.scm (canize-enum-def-list): enum values more robust:
+	was (p-expr (fixed "1")) or (neg (p-expr (fixed "1"))) only.
+
 	* body.scm (gen-c-lexer): added support for CPP #warning
 	(find-file-in-dirl): added logic to look in current directory
 	first, if header.

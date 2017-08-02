@@ -22,7 +22,9 @@
   #:export (
 	    cpp-line->stmt
 	    eval-cpp-cond-text
-	    expand-cpp-macro-ref)
+	    expand-cpp-macro-ref
+	    parse-cpp-expr
+	    eval-cpp-expr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)
@@ -210,7 +212,7 @@
 	(lambda (tree)
 	  (case (car tree)
 	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
-	    ((char) (char->integer (tx1 tree)))
+	    ((char) (char->integer (string-ref (tx1 tree) 0)))
 	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
 	    ((pre-inc post-inc) (1+ (ev1 tree)))
 	    ((pre-dec post-dec) (1- (ev1 tree)))
@@ -238,6 +240,7 @@
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
 	    ((ident) 0)
+	    ((p-expr) (ev1 tree)) ;; hack to use for enum-def's in util2.scm
 	    (else (error "incomplete implementation"))))))
     (eval-expr tree)))
 
@@ -250,7 +253,17 @@
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string chl) stl)))
 
-  ;;(simple-format #t "\nused=~S\n" used)
+  ;; Not sure about this. We want to turn a string into a string.
+  (define (esc-str str)
+    (list->string
+     (string-fold-right
+      (lambda (ch chl)
+	(case ch
+	  ((#\\ #\") (cons* #\\ ch chl))
+	  (else (cons ch chl))))
+      '() str)))
+
+  ;;(sferr "\nused=~S\n" used)
   ;; Works like this: Scan through the list of tokens (key-val pairs or
   ;; lone characters).  Lone characters are collected in a list (@code{chl});
   ;; pairs are converted into strings and combined with list of characters
@@ -279,7 +292,7 @@
 	(((ident . ,iden) . ,rest)
 	 (iter stl chl iden rest))
 	(((string . ,val) . ,rest)
-	 (iter stl (cons #\" chl) val (cons #\" rest)))
+	 (iter stl (cons #\" chl) (esc-str val) (cons #\" rest)))
 	(((defined . ,val) . ,rest)
 	 (iter stl chl val rest))
 	((space space . ,rest)
@@ -328,7 +341,7 @@
   (define (finish rr tkl)
     (let* ((tkl (if end-tok (trim-spaces tkl) tkl))
 	   (repl (rtokl->string tkl)))
-      ;;(if (null? rr) (simple-format #t "finish ~S\n" tkl))
+      ;;(if (null? rr) (sferr "finish ~S\n  repl=~S\n" tkl repl))
       (if (pair? rr)
 	  (expand-cpp-repl repl defs (append rr used)) ;; re-run
 	  repl)))
@@ -338,7 +351,7 @@
 	     (tkl '())			; token list of
 	     (lv 0)			; level
 	     (ch (skip-il-ws (read-char)))) ; next character
-    ;;(unless end-tok (simple-format #t "tkl=~S ch=~S\n" tkl ch))
+    ;;(unless end-tok (sferr "tkl=~S ch=~S\n" tkl ch))
     (cond
      ((eof-object? ch) (finish rr tkl))
      ((and (eqv? end-tok ch) (zero? lv))
@@ -402,7 +415,7 @@
 (define (px-cpp-ftn argd repl)
   (with-input-from-string repl
     (lambda ()
-      ;;(simple-format #t "px-cpp-ftn argd=~S repl=~S\n" argd repl)
+      ;;(sferr "px-cpp-ftn argd=~S repl=~S\n" argd repl)
       (px-cpp-ftn-1 argd))))
 
 (define (px-cpp-ftn-1 argd)

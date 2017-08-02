@@ -105,9 +105,8 @@
               ffi:int
               (dynamic-func "sqlite3_close" (dynamic-link))
               (list '*))))
-    (lambda (@12239)
-      (let ((~@12239 (unwrap-sqlite3* @12239)))
-        (~f ~@12239)))))
+    (lambda (@282)
+      (let ((~@282 (unwrap-sqlite3* @282))) (~f ~@282)))))
 (export sqlite3_close)
 
 ;; int sqlite3_close_v2(sqlite3 *);
@@ -116,9 +115,8 @@
               ffi:int
               (dynamic-func "sqlite3_close_v2" (dynamic-link))
               (list '*))))
-    (lambda (@12241)
-      (let ((~@12241 (unwrap-sqlite3* @12241)))
-        (~f ~@12241)))))
+    (lambda (@284)
+      (let ((~@284 (unwrap-sqlite3* @284))) (~f ~@284)))))
 (export sqlite3_close_v2)
 
 ;; typedef int (*sqlite3_callback)(void *, int, char **, char **);
@@ -132,17 +130,17 @@
               ffi:int
               (dynamic-func "sqlite3_exec" (dynamic-link))
               (list '* '* '* '* '*))))
-    (lambda (@12245 sql callback @12244 errmsg)
-      (let ((~@12245 (unwrap-sqlite3* @12245))
+    (lambda (@288 sql callback @287 errmsg)
+      (let ((~@288 (unwrap-sqlite3* @288))
             (~sql (unwrap~pointer sql))
             (~callback
               ((make-ftn-arg-unwrapper
                  ffi:int
                  (list '* ffi:int '* '*))
                callback))
-            (~@12244 (unwrap~pointer @12244))
+            (~@287 (unwrap~pointer @287))
             (~errmsg (unwrap~pointer errmsg)))
-        (~f ~@12245 ~sql ~callback ~@12244 ~errmsg)))))
+        (~f ~@288 ~sql ~callback ~@287 ~errmsg)))))
 (export sqlite3_exec)
 
 ;; typedef struct sqlite3_file sqlite3_file;
@@ -368,10 +366,10 @@
                 "sqlite3_extended_result_codes"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12267 onoff)
-      (let ((~@12267 (unwrap-sqlite3* @12267))
+    (lambda (@311 onoff)
+      (let ((~@311 (unwrap-sqlite3* @311))
             (~onoff (unwrap~fixed onoff)))
-        (~f ~@12267 ~onoff)))))
+        (~f ~@311 ~onoff)))))
 (export sqlite3_extended_result_codes)
 
 ;; sqlite3_int64 sqlite3_last_insert_rowid(sqlite3 *);
@@ -386,9 +384,8 @@
               ffi:int
               (dynamic-func "sqlite3_changes" (dynamic-link))
               (list '*))))
-    (lambda (@12271)
-      (let ((~@12271 (unwrap-sqlite3* @12271)))
-        (~f ~@12271)))))
+    (lambda (@315)
+      (let ((~@315 (unwrap-sqlite3* @315))) (~f ~@315)))))
 (export sqlite3_changes)
 
 ;; int sqlite3_total_changes(sqlite3 *);
@@ -399,9 +396,8 @@
                 "sqlite3_total_changes"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12273)
-      (let ((~@12273 (unwrap-sqlite3* @12273)))
-        (~f ~@12273)))))
+    (lambda (@317)
+      (let ((~@317 (unwrap-sqlite3* @317))) (~f ~@317)))))
 (export sqlite3_total_changes)
 
 ;; void sqlite3_interrupt(sqlite3 *);
@@ -410,9 +406,8 @@
               ffi:void
               (dynamic-func "sqlite3_interrupt" (dynamic-link))
               (list '*))))
-    (lambda (@12275)
-      (let ((~@12275 (unwrap-sqlite3* @12275)))
-        (~f ~@12275)))))
+    (lambda (@319)
+      (let ((~@319 (unwrap-sqlite3* @319))) (~f ~@319)))))
 (export sqlite3_interrupt)
 
 ;; int sqlite3_complete(const char *sql);
@@ -445,15 +440,14 @@
                 "sqlite3_busy_handler"
                 (dynamic-link))
               (list '* '* '*))))
-    (lambda (@12281 @12280 @12279)
-      (let ((~@12281 (unwrap-sqlite3* @12281))
-            (~@12280
-              ((make-ftn-arg-unwrapper
-                 ffi:int
-                 (list '* ffi:int))
-               @12280))
-            (~@12279 (unwrap~pointer @12279)))
-        (~f ~@12281 ~@12280 ~@12279)))))
+    (lambda (@325 @324 @323)
+      (let ((~@325 (unwrap-sqlite3* @325))
+            (~@324 ((make-ftn-arg-unwrapper
+                      ffi:int
+                      (list '* ffi:int))
+                    @324))
+            (~@323 (unwrap~pointer @323)))
+        (~f ~@325 ~@324 ~@323)))))
 (export sqlite3_busy_handler)
 
 ;; int sqlite3_busy_timeout(sqlite3 *, int ms);
@@ -464,10 +458,10 @@
                 "sqlite3_busy_timeout"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12283 ms)
-      (let ((~@12283 (unwrap-sqlite3* @12283))
+    (lambda (@327 ms)
+      (let ((~@327 (unwrap-sqlite3* @327))
             (~ms (unwrap~fixed ms)))
-        (~f ~@12283 ~ms)))))
+        (~f ~@327 ~ms)))))
 (export sqlite3_busy_timeout)
 
 ;; int sqlite3_get_table(sqlite3 *db, const char *zSql, char ***pazResult, int
@@ -514,10 +508,10 @@
               '*
               (dynamic-func "sqlite3_vmprintf" (dynamic-link))
               (list '* '*))))
-    (lambda (@12289 arg-1)
-      (let ((~@12289 (unwrap~pointer @12289))
+    (lambda (@332 arg-1)
+      (let ((~@332 (unwrap~pointer @332))
             (~arg-1 (unwrap-va_list arg-1)))
-        (~f ~@12289 ~arg-1)))))
+        (~f ~@332 ~arg-1)))))
 (export sqlite3_vmprintf)
 
 ;; char *sqlite3_snprintf(int, char *, const char *, ...);
@@ -529,12 +523,12 @@
               '*
               (dynamic-func "sqlite3_vsnprintf" (dynamic-link))
               (list ffi:int '* '* '*))))
-    (lambda (arg-0 @12293 @12292 arg-3)
+    (lambda (arg-0 @336 @335 arg-3)
       (let ((~arg-0 (unwrap~fixed arg-0))
-            (~@12293 (unwrap~pointer @12293))
-            (~@12292 (unwrap~pointer @12292))
+            (~@336 (unwrap~pointer @336))
+            (~@335 (unwrap~pointer @335))
             (~arg-3 (unwrap-va_list arg-3)))
-        (~f ~arg-0 ~@12293 ~@12292 ~arg-3)))))
+        (~f ~arg-0 ~@336 ~@335 ~arg-3)))))
 (export sqlite3_vsnprintf)
 
 ;; void *sqlite3_malloc(int);
@@ -556,10 +550,10 @@
               '*
               (dynamic-func "sqlite3_realloc" (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12297 arg-1)
-      (let ((~@12297 (unwrap~pointer @12297))
+    (lambda (@340 arg-1)
+      (let ((~@340 (unwrap~pointer @340))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12297 ~arg-1)))))
+        (~f ~@340 ~arg-1)))))
 (export sqlite3_realloc)
 
 ;; void *sqlite3_realloc64(void *, sqlite3_uint64);
@@ -571,9 +565,8 @@
               ffi:void
               (dynamic-func "sqlite3_free" (dynamic-link))
               (list '*))))
-    (lambda (@12300)
-      (let ((~@12300 (unwrap~pointer @12300)))
-        (~f ~@12300)))))
+    (lambda (@343)
+      (let ((~@343 (unwrap~pointer @343))) (~f ~@343)))))
 (export sqlite3_free)
 
 ;; sqlite3_uint64 sqlite3_msize(void *);
@@ -607,15 +600,15 @@
                 "sqlite3_set_authorizer"
                 (dynamic-link))
               (list '* '* '*))))
-    (lambda (@12306 xAuth pUserData)
-      (let ((~@12306 (unwrap-sqlite3* @12306))
+    (lambda (@349 xAuth pUserData)
+      (let ((~@349 (unwrap-sqlite3* @349))
             (~xAuth
               ((make-ftn-arg-unwrapper
                  ffi:int
                  (list '* ffi:int '* '* '* '*))
                xAuth))
             (~pUserData (unwrap~pointer pUserData)))
-        (~f ~@12306 ~xAuth ~pUserData)))))
+        (~f ~@349 ~xAuth ~pUserData)))))
 (export sqlite3_set_authorizer)
 
 ;; void *sqlite3_trace(sqlite3 *, void (*xTrace)(void *, const char *), void *
@@ -625,13 +618,13 @@
               '*
               (dynamic-func "sqlite3_trace" (dynamic-link))
               (list '* '* '*))))
-    (lambda (@12309 xTrace @12308)
-      (let ((~@12309 (unwrap-sqlite3* @12309))
+    (lambda (@352 xTrace @351)
+      (let ((~@352 (unwrap-sqlite3* @352))
             (~xTrace
               ((make-ftn-arg-unwrapper ffi:void (list '* '*))
                xTrace))
-            (~@12308 (unwrap~pointer @12308)))
-        (~f ~@12309 ~xTrace ~@12308)))))
+            (~@351 (unwrap~pointer @351)))
+        (~f ~@352 ~xTrace ~@351)))))
 (export sqlite3_trace)
 
 ;; void *sqlite3_profile(sqlite3 *, void (*xProfile)(void *, const char *, 
@@ -645,8 +638,8 @@
               ffi:int
               (dynamic-func "sqlite3_trace_v2" (dynamic-link))
               (list '* ffi:unsigned-int '* '*))))
-    (lambda (@12313 uMask xCallback pCtx)
-      (let ((~@12313 (unwrap-sqlite3* @12313))
+    (lambda (@356 uMask xCallback pCtx)
+      (let ((~@356 (unwrap-sqlite3* @356))
             (~uMask (unwrap~fixed uMask))
             (~xCallback
               ((make-ftn-arg-unwrapper
@@ -654,7 +647,7 @@
                  (list ffi:unsigned-int '* '* '*))
                xCallback))
             (~pCtx (unwrap~pointer pCtx)))
-        (~f ~@12313 ~uMask ~xCallback ~pCtx)))))
+        (~f ~@356 ~uMask ~xCallback ~pCtx)))))
 (export sqlite3_trace_v2)
 
 ;; void sqlite3_progress_handler(sqlite3 *, int, int (*)(void *), void *);
@@ -665,14 +658,12 @@
                 "sqlite3_progress_handler"
                 (dynamic-link))
               (list '* ffi:int '* '*))))
-    (lambda (@12317 arg-1 @12316 @12315)
-      (let ((~@12317 (unwrap-sqlite3* @12317))
+    (lambda (@360 arg-1 @359 @358)
+      (let ((~@360 (unwrap-sqlite3* @360))
             (~arg-1 (unwrap~fixed arg-1))
-            (~@12316
-              ((make-ftn-arg-unwrapper ffi:int (list '*))
-               @12316))
-            (~@12315 (unwrap~pointer @12315)))
-        (~f ~@12317 ~arg-1 ~@12316 ~@12315)))))
+            (~@359 ((make-ftn-arg-unwrapper ffi:int (list '*)) @359))
+            (~@358 (unwrap~pointer @358)))
+        (~f ~@360 ~arg-1 ~@359 ~@358)))))
 (export sqlite3_progress_handler)
 
 ;; int sqlite3_open(const char *filename, sqlite3 **ppDb);
@@ -777,9 +768,8 @@
               '*
               (dynamic-func "sqlite3_errmsg" (dynamic-link))
               (list '*))))
-    (lambda (@12327)
-      (let ((~@12327 (unwrap-sqlite3* @12327)))
-        (~f ~@12327)))))
+    (lambda (@370)
+      (let ((~@370 (unwrap-sqlite3* @370))) (~f ~@370)))))
 (export sqlite3_errmsg)
 
 ;; const void *sqlite3_errmsg16(sqlite3 *);
@@ -788,9 +778,8 @@
               '*
               (dynamic-func "sqlite3_errmsg16" (dynamic-link))
               (list '*))))
-    (lambda (@12329)
-      (let ((~@12329 (unwrap-sqlite3* @12329)))
-        (~f ~@12329)))))
+    (lambda (@372)
+      (let ((~@372 (unwrap-sqlite3* @372))) (~f ~@372)))))
 (export sqlite3_errmsg16)
 
 ;; const char *sqlite3_errstr(int);
@@ -812,11 +801,11 @@
               ffi:int
               (dynamic-func "sqlite3_limit" (dynamic-link))
               (list '* ffi:int ffi:int))))
-    (lambda (@12333 id newVal)
-      (let ((~@12333 (unwrap-sqlite3* @12333))
+    (lambda (@376 id newVal)
+      (let ((~@376 (unwrap-sqlite3* @376))
             (~id (unwrap~fixed id))
             (~newVal (unwrap~fixed newVal)))
-        (~f ~@12333 ~id ~newVal)))))
+        (~f ~@376 ~id ~newVal)))))
 (export sqlite3_limit)
 
 ;; int sqlite3_prepare(sqlite3 *db, const char *zSql, int nByte, sqlite3_stmt 
@@ -930,9 +919,9 @@
               ffi:int
               (dynamic-func "sqlite3_stmt_busy" (dynamic-link))
               (list '*))))
-    (lambda (@12342)
-      (let ((~@12342 (unwrap-sqlite3_stmt* @12342)))
-        (~f ~@12342)))))
+    (lambda (@385)
+      (let ((~@385 (unwrap-sqlite3_stmt* @385)))
+        (~f ~@385)))))
 (export sqlite3_stmt_busy)
 
 ;; typedef struct sqlite3_value sqlite3_value;
@@ -948,15 +937,14 @@
               ffi:int
               (dynamic-func "sqlite3_bind_blob" (dynamic-link))
               (list '* ffi:int '* ffi:int '*))))
-    (lambda (@12348 arg-1 @12347 n @12346)
-      (let ((~@12348 (unwrap-sqlite3_stmt* @12348))
+    (lambda (@391 arg-1 @390 n @389)
+      (let ((~@391 (unwrap-sqlite3_stmt* @391))
             (~arg-1 (unwrap~fixed arg-1))
-            (~@12347 (unwrap~pointer @12347))
+            (~@390 (unwrap~pointer @390))
             (~n (unwrap~fixed n))
-            (~@12346
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12346)))
-        (~f ~@12348 ~arg-1 ~@12347 ~n ~@12346)))))
+            (~@389 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @389)))
+        (~f ~@391 ~arg-1 ~@390 ~n ~@389)))))
 (export sqlite3_bind_blob)
 
 ;; int sqlite3_bind_blob64(sqlite3_stmt *, int, const void *, sqlite3_uint64, 
@@ -971,11 +959,11 @@
                 "sqlite3_bind_double"
                 (dynamic-link))
               (list '* ffi:int ffi:double))))
-    (lambda (@12351 arg-1 arg-2)
-      (let ((~@12351 (unwrap-sqlite3_stmt* @12351))
+    (lambda (@394 arg-1 arg-2)
+      (let ((~@394 (unwrap-sqlite3_stmt* @394))
             (~arg-1 (unwrap~fixed arg-1))
             (~arg-2 (unwrap~float arg-2)))
-        (~f ~@12351 ~arg-1 ~arg-2)))))
+        (~f ~@394 ~arg-1 ~arg-2)))))
 (export sqlite3_bind_double)
 
 ;; int sqlite3_bind_int(sqlite3_stmt *, int, int);
@@ -984,11 +972,11 @@
               ffi:int
               (dynamic-func "sqlite3_bind_int" (dynamic-link))
               (list '* ffi:int ffi:int))))
-    (lambda (@12353 arg-1 arg-2)
-      (let ((~@12353 (unwrap-sqlite3_stmt* @12353))
+    (lambda (@396 arg-1 arg-2)
+      (let ((~@396 (unwrap-sqlite3_stmt* @396))
             (~arg-1 (unwrap~fixed arg-1))
             (~arg-2 (unwrap~fixed arg-2)))
-        (~f ~@12353 ~arg-1 ~arg-2)))))
+        (~f ~@396 ~arg-1 ~arg-2)))))
 (export sqlite3_bind_int)
 
 ;; int sqlite3_bind_int64(sqlite3_stmt *, int, sqlite3_int64);
@@ -1000,10 +988,10 @@
               ffi:int
               (dynamic-func "sqlite3_bind_null" (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12356 arg-1)
-      (let ((~@12356 (unwrap-sqlite3_stmt* @12356))
+    (lambda (@399 arg-1)
+      (let ((~@399 (unwrap-sqlite3_stmt* @399))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12356 ~arg-1)))))
+        (~f ~@399 ~arg-1)))))
 (export sqlite3_bind_null)
 
 ;; int sqlite3_bind_text(sqlite3_stmt *, int, const char *, int, void (*)(void
@@ -1013,15 +1001,14 @@
               ffi:int
               (dynamic-func "sqlite3_bind_text" (dynamic-link))
               (list '* ffi:int '* ffi:int '*))))
-    (lambda (@12360 arg-1 @12359 arg-3 @12358)
-      (let ((~@12360 (unwrap-sqlite3_stmt* @12360))
+    (lambda (@403 arg-1 @402 arg-3 @401)
+      (let ((~@403 (unwrap-sqlite3_stmt* @403))
             (~arg-1 (unwrap~fixed arg-1))
-            (~@12359 (unwrap~pointer @12359))
+            (~@402 (unwrap~pointer @402))
             (~arg-3 (unwrap~fixed arg-3))
-            (~@12358
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12358)))
-        (~f ~@12360 ~arg-1 ~@12359 ~arg-3 ~@12358)))))
+            (~@401 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @401)))
+        (~f ~@403 ~arg-1 ~@402 ~arg-3 ~@401)))))
 (export sqlite3_bind_text)
 
 ;; int sqlite3_bind_text16(sqlite3_stmt *, int, const void *, int, void (*)(
@@ -1033,15 +1020,14 @@
                 "sqlite3_bind_text16"
                 (dynamic-link))
               (list '* ffi:int '* ffi:int '*))))
-    (lambda (@12364 arg-1 @12363 arg-3 @12362)
-      (let ((~@12364 (unwrap-sqlite3_stmt* @12364))
+    (lambda (@407 arg-1 @406 arg-3 @405)
+      (let ((~@407 (unwrap-sqlite3_stmt* @407))
             (~arg-1 (unwrap~fixed arg-1))
-            (~@12363 (unwrap~pointer @12363))
+            (~@406 (unwrap~pointer @406))
             (~arg-3 (unwrap~fixed arg-3))
-            (~@12362
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12362)))
-        (~f ~@12364 ~arg-1 ~@12363 ~arg-3 ~@12362)))))
+            (~@405 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @405)))
+        (~f ~@407 ~arg-1 ~@406 ~arg-3 ~@405)))))
 (export sqlite3_bind_text16)
 
 ;; int sqlite3_bind_text64(sqlite3_stmt *, int, const char *, sqlite3_uint64, 
@@ -1056,11 +1042,11 @@
                 "sqlite3_bind_value"
                 (dynamic-link))
               (list '* ffi:int '*))))
-    (lambda (@12368 arg-1 @12367)
-      (let ((~@12368 (unwrap-sqlite3_stmt* @12368))
+    (lambda (@411 arg-1 @410)
+      (let ((~@411 (unwrap-sqlite3_stmt* @411))
             (~arg-1 (unwrap~fixed arg-1))
-            (~@12367 (unwrap-sqlite3_value* @12367)))
-        (~f ~@12368 ~arg-1 ~@12367)))))
+            (~@410 (unwrap-sqlite3_value* @410)))
+        (~f ~@411 ~arg-1 ~@410)))))
 (export sqlite3_bind_value)
 
 ;; int sqlite3_bind_zeroblob(sqlite3_stmt *, int, int n);
@@ -1071,11 +1057,11 @@
                 "sqlite3_bind_zeroblob"
                 (dynamic-link))
               (list '* ffi:int ffi:int))))
-    (lambda (@12370 arg-1 n)
-      (let ((~@12370 (unwrap-sqlite3_stmt* @12370))
+    (lambda (@413 arg-1 n)
+      (let ((~@413 (unwrap-sqlite3_stmt* @413))
             (~arg-1 (unwrap~fixed arg-1))
             (~n (unwrap~fixed n)))
-        (~f ~@12370 ~arg-1 ~n)))))
+        (~f ~@413 ~arg-1 ~n)))))
 (export sqlite3_bind_zeroblob)
 
 ;; int sqlite3_bind_zeroblob64(sqlite3_stmt *, int, sqlite3_uint64);
@@ -1089,9 +1075,9 @@
                 "sqlite3_bind_parameter_count"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12373)
-      (let ((~@12373 (unwrap-sqlite3_stmt* @12373)))
-        (~f ~@12373)))))
+    (lambda (@416)
+      (let ((~@416 (unwrap-sqlite3_stmt* @416)))
+        (~f ~@416)))))
 (export sqlite3_bind_parameter_count)
 
 ;; const char *sqlite3_bind_parameter_name(sqlite3_stmt *, int);
@@ -1102,10 +1088,10 @@
                 "sqlite3_bind_parameter_name"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12375 arg-1)
-      (let ((~@12375 (unwrap-sqlite3_stmt* @12375))
+    (lambda (@418 arg-1)
+      (let ((~@418 (unwrap-sqlite3_stmt* @418))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12375 ~arg-1)))))
+        (~f ~@418 ~arg-1)))))
 (export sqlite3_bind_parameter_name)
 
 ;; int sqlite3_bind_parameter_index(sqlite3_stmt *, const char *zName);
@@ -1116,10 +1102,10 @@
                 "sqlite3_bind_parameter_index"
                 (dynamic-link))
               (list '* '*))))
-    (lambda (@12377 zName)
-      (let ((~@12377 (unwrap-sqlite3_stmt* @12377))
+    (lambda (@420 zName)
+      (let ((~@420 (unwrap-sqlite3_stmt* @420))
             (~zName (unwrap~pointer zName)))
-        (~f ~@12377 ~zName)))))
+        (~f ~@420 ~zName)))))
 (export sqlite3_bind_parameter_index)
 
 ;; int sqlite3_clear_bindings(sqlite3_stmt *);
@@ -1130,9 +1116,9 @@
                 "sqlite3_clear_bindings"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12379)
-      (let ((~@12379 (unwrap-sqlite3_stmt* @12379)))
-        (~f ~@12379)))))
+    (lambda (@422)
+      (let ((~@422 (unwrap-sqlite3_stmt* @422)))
+        (~f ~@422)))))
 (export sqlite3_clear_bindings)
 
 ;; int sqlite3_column_count(sqlite3_stmt *pStmt);
@@ -1156,10 +1142,10 @@
                 "sqlite3_column_name"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12382 N)
-      (let ((~@12382 (unwrap-sqlite3_stmt* @12382))
+    (lambda (@425 N)
+      (let ((~@425 (unwrap-sqlite3_stmt* @425))
             (~N (unwrap~fixed N)))
-        (~f ~@12382 ~N)))))
+        (~f ~@425 ~N)))))
 (export sqlite3_column_name)
 
 ;; const void *sqlite3_column_name16(sqlite3_stmt *, int N);
@@ -1170,10 +1156,10 @@
                 "sqlite3_column_name16"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12384 N)
-      (let ((~@12384 (unwrap-sqlite3_stmt* @12384))
+    (lambda (@427 N)
+      (let ((~@427 (unwrap-sqlite3_stmt* @427))
             (~N (unwrap~fixed N)))
-        (~f ~@12384 ~N)))))
+        (~f ~@427 ~N)))))
 (export sqlite3_column_name16)
 
 ;; const char *sqlite3_column_database_name(sqlite3_stmt *, int);
@@ -1184,10 +1170,10 @@
                 "sqlite3_column_database_name"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12386 arg-1)
-      (let ((~@12386 (unwrap-sqlite3_stmt* @12386))
+    (lambda (@429 arg-1)
+      (let ((~@429 (unwrap-sqlite3_stmt* @429))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12386 ~arg-1)))))
+        (~f ~@429 ~arg-1)))))
 (export sqlite3_column_database_name)
 
 ;; const void *sqlite3_column_database_name16(sqlite3_stmt *, int);
@@ -1198,10 +1184,10 @@
                 "sqlite3_column_database_name16"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12388 arg-1)
-      (let ((~@12388 (unwrap-sqlite3_stmt* @12388))
+    (lambda (@431 arg-1)
+      (let ((~@431 (unwrap-sqlite3_stmt* @431))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12388 ~arg-1)))))
+        (~f ~@431 ~arg-1)))))
 (export sqlite3_column_database_name16)
 
 ;; const char *sqlite3_column_table_name(sqlite3_stmt *, int);
@@ -1212,10 +1198,10 @@
                 "sqlite3_column_table_name"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12390 arg-1)
-      (let ((~@12390 (unwrap-sqlite3_stmt* @12390))
+    (lambda (@433 arg-1)
+      (let ((~@433 (unwrap-sqlite3_stmt* @433))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12390 ~arg-1)))))
+        (~f ~@433 ~arg-1)))))
 (export sqlite3_column_table_name)
 
 ;; const void *sqlite3_column_table_name16(sqlite3_stmt *, int);
@@ -1226,10 +1212,10 @@
                 "sqlite3_column_table_name16"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12392 arg-1)
-      (let ((~@12392 (unwrap-sqlite3_stmt* @12392))
+    (lambda (@435 arg-1)
+      (let ((~@435 (unwrap-sqlite3_stmt* @435))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12392 ~arg-1)))))
+        (~f ~@435 ~arg-1)))))
 (export sqlite3_column_table_name16)
 
 ;; const char *sqlite3_column_origin_name(sqlite3_stmt *, int);
@@ -1240,10 +1226,10 @@
                 "sqlite3_column_origin_name"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12394 arg-1)
-      (let ((~@12394 (unwrap-sqlite3_stmt* @12394))
+    (lambda (@437 arg-1)
+      (let ((~@437 (unwrap-sqlite3_stmt* @437))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12394 ~arg-1)))))
+        (~f ~@437 ~arg-1)))))
 (export sqlite3_column_origin_name)
 
 ;; const void *sqlite3_column_origin_name16(sqlite3_stmt *, int);
@@ -1254,10 +1240,10 @@
                 "sqlite3_column_origin_name16"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12396 arg-1)
-      (let ((~@12396 (unwrap-sqlite3_stmt* @12396))
+    (lambda (@439 arg-1)
+      (let ((~@439 (unwrap-sqlite3_stmt* @439))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12396 ~arg-1)))))
+        (~f ~@439 ~arg-1)))))
 (export sqlite3_column_origin_name16)
 
 ;; const char *sqlite3_column_decltype(sqlite3_stmt *, int);
@@ -1268,10 +1254,10 @@
                 "sqlite3_column_decltype"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12398 arg-1)
-      (let ((~@12398 (unwrap-sqlite3_stmt* @12398))
+    (lambda (@441 arg-1)
+      (let ((~@441 (unwrap-sqlite3_stmt* @441))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12398 ~arg-1)))))
+        (~f ~@441 ~arg-1)))))
 (export sqlite3_column_decltype)
 
 ;; const void *sqlite3_column_decltype16(sqlite3_stmt *, int);
@@ -1282,10 +1268,10 @@
                 "sqlite3_column_decltype16"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12400 arg-1)
-      (let ((~@12400 (unwrap-sqlite3_stmt* @12400))
+    (lambda (@443 arg-1)
+      (let ((~@443 (unwrap-sqlite3_stmt* @443))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12400 ~arg-1)))))
+        (~f ~@443 ~arg-1)))))
 (export sqlite3_column_decltype16)
 
 ;; int sqlite3_step(sqlite3_stmt *);
@@ -1294,9 +1280,9 @@
               ffi:int
               (dynamic-func "sqlite3_step" (dynamic-link))
               (list '*))))
-    (lambda (@12402)
-      (let ((~@12402 (unwrap-sqlite3_stmt* @12402)))
-        (~f ~@12402)))))
+    (lambda (@445)
+      (let ((~@445 (unwrap-sqlite3_stmt* @445)))
+        (~f ~@445)))))
 (export sqlite3_step)
 
 ;; int sqlite3_data_count(sqlite3_stmt *pStmt);
@@ -1320,10 +1306,10 @@
                 "sqlite3_column_blob"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12405 iCol)
-      (let ((~@12405 (unwrap-sqlite3_stmt* @12405))
+    (lambda (@448 iCol)
+      (let ((~@448 (unwrap-sqlite3_stmt* @448))
             (~iCol (unwrap~fixed iCol)))
-        (~f ~@12405 ~iCol)))))
+        (~f ~@448 ~iCol)))))
 (export sqlite3_column_blob)
 
 ;; int sqlite3_column_bytes(sqlite3_stmt *, int iCol);
@@ -1334,10 +1320,10 @@
                 "sqlite3_column_bytes"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12407 iCol)
-      (let ((~@12407 (unwrap-sqlite3_stmt* @12407))
+    (lambda (@450 iCol)
+      (let ((~@450 (unwrap-sqlite3_stmt* @450))
             (~iCol (unwrap~fixed iCol)))
-        (~f ~@12407 ~iCol)))))
+        (~f ~@450 ~iCol)))))
 (export sqlite3_column_bytes)
 
 ;; int sqlite3_column_bytes16(sqlite3_stmt *, int iCol);
@@ -1348,10 +1334,10 @@
                 "sqlite3_column_bytes16"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12409 iCol)
-      (let ((~@12409 (unwrap-sqlite3_stmt* @12409))
+    (lambda (@452 iCol)
+      (let ((~@452 (unwrap-sqlite3_stmt* @452))
             (~iCol (unwrap~fixed iCol)))
-        (~f ~@12409 ~iCol)))))
+        (~f ~@452 ~iCol)))))
 (export sqlite3_column_bytes16)
 
 ;; double sqlite3_column_double(sqlite3_stmt *, int iCol);
@@ -1362,10 +1348,10 @@
                 "sqlite3_column_double"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12411 iCol)
-      (let ((~@12411 (unwrap-sqlite3_stmt* @12411))
+    (lambda (@454 iCol)
+      (let ((~@454 (unwrap-sqlite3_stmt* @454))
             (~iCol (unwrap~fixed iCol)))
-        (~f ~@12411 ~iCol)))))
+        (~f ~@454 ~iCol)))))
 (export sqlite3_column_double)
 
 ;; int sqlite3_column_int(sqlite3_stmt *, int iCol);
@@ -1376,10 +1362,10 @@
                 "sqlite3_column_int"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12413 iCol)
-      (let ((~@12413 (unwrap-sqlite3_stmt* @12413))
+    (lambda (@456 iCol)
+      (let ((~@456 (unwrap-sqlite3_stmt* @456))
             (~iCol (unwrap~fixed iCol)))
-        (~f ~@12413 ~iCol)))))
+        (~f ~@456 ~iCol)))))
 (export sqlite3_column_int)
 
 ;; sqlite3_int64 sqlite3_column_int64(sqlite3_stmt *, int iCol);
@@ -1393,10 +1379,10 @@
                 "sqlite3_column_text"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12416 iCol)
-      (let ((~@12416 (unwrap-sqlite3_stmt* @12416))
+    (lambda (@459 iCol)
+      (let ((~@459 (unwrap-sqlite3_stmt* @459))
             (~iCol (unwrap~fixed iCol)))
-        (~f ~@12416 ~iCol)))))
+        (~f ~@459 ~iCol)))))
 (export sqlite3_column_text)
 
 ;; const void *sqlite3_column_text16(sqlite3_stmt *, int iCol);
@@ -1407,10 +1393,10 @@
                 "sqlite3_column_text16"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12418 iCol)
-      (let ((~@12418 (unwrap-sqlite3_stmt* @12418))
+    (lambda (@461 iCol)
+      (let ((~@461 (unwrap-sqlite3_stmt* @461))
             (~iCol (unwrap~fixed iCol)))
-        (~f ~@12418 ~iCol)))))
+        (~f ~@461 ~iCol)))))
 (export sqlite3_column_text16)
 
 ;; int sqlite3_column_type(sqlite3_stmt *, int iCol);
@@ -1421,10 +1407,10 @@
                 "sqlite3_column_type"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12420 iCol)
-      (let ((~@12420 (unwrap-sqlite3_stmt* @12420))
+    (lambda (@463 iCol)
+      (let ((~@463 (unwrap-sqlite3_stmt* @463))
             (~iCol (unwrap~fixed iCol)))
-        (~f ~@12420 ~iCol)))))
+        (~f ~@463 ~iCol)))))
 (export sqlite3_column_type)
 
 ;; sqlite3_value *sqlite3_column_value(sqlite3_stmt *, int iCol);
@@ -1435,10 +1421,10 @@
                 "sqlite3_column_value"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12422 iCol)
-      (let ((~@12422 (unwrap-sqlite3_stmt* @12422))
+    (lambda (@465 iCol)
+      (let ((~@465 (unwrap-sqlite3_stmt* @465))
             (~iCol (unwrap~fixed iCol)))
-        (wrap-sqlite3_value* (~f ~@12422 ~iCol))))))
+        (wrap-sqlite3_value* (~f ~@465 ~iCol))))))
 (export sqlite3_column_value)
 
 ;; int sqlite3_finalize(sqlite3_stmt *pStmt);
@@ -1617,9 +1603,9 @@
                 "sqlite3_aggregate_count"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12429)
-      (let ((~@12429 (unwrap-sqlite3_context* @12429)))
-        (~f ~@12429)))))
+    (lambda (@472)
+      (let ((~@472 (unwrap-sqlite3_context* @472)))
+        (~f ~@472)))))
 (export sqlite3_aggregate_count)
 
 ;; int sqlite3_expired(sqlite3_stmt *);
@@ -1628,9 +1614,9 @@
               ffi:int
               (dynamic-func "sqlite3_expired" (dynamic-link))
               (list '*))))
-    (lambda (@12431)
-      (let ((~@12431 (unwrap-sqlite3_stmt* @12431)))
-        (~f ~@12431)))))
+    (lambda (@474)
+      (let ((~@474 (unwrap-sqlite3_stmt* @474)))
+        (~f ~@474)))))
 (export sqlite3_expired)
 
 ;; int sqlite3_transfer_bindings(sqlite3_stmt *, sqlite3_stmt *);
@@ -1641,10 +1627,10 @@
                 "sqlite3_transfer_bindings"
                 (dynamic-link))
               (list '* '*))))
-    (lambda (@12434 @12433)
-      (let ((~@12434 (unwrap-sqlite3_stmt* @12434))
-            (~@12433 (unwrap-sqlite3_stmt* @12433)))
-        (~f ~@12434 ~@12433)))))
+    (lambda (@477 @476)
+      (let ((~@477 (unwrap-sqlite3_stmt* @477))
+            (~@476 (unwrap-sqlite3_stmt* @476)))
+        (~f ~@477 ~@476)))))
 (export sqlite3_transfer_bindings)
 
 ;; int sqlite3_global_recover(void);
@@ -1681,9 +1667,9 @@
                 "sqlite3_value_blob"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12439)
-      (let ((~@12439 (unwrap-sqlite3_value* @12439)))
-        (~f ~@12439)))))
+    (lambda (@482)
+      (let ((~@482 (unwrap-sqlite3_value* @482)))
+        (~f ~@482)))))
 (export sqlite3_value_blob)
 
 ;; int sqlite3_value_bytes(sqlite3_value *);
@@ -1694,9 +1680,9 @@
                 "sqlite3_value_bytes"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12441)
-      (let ((~@12441 (unwrap-sqlite3_value* @12441)))
-        (~f ~@12441)))))
+    (lambda (@484)
+      (let ((~@484 (unwrap-sqlite3_value* @484)))
+        (~f ~@484)))))
 (export sqlite3_value_bytes)
 
 ;; int sqlite3_value_bytes16(sqlite3_value *);
@@ -1707,9 +1693,9 @@
                 "sqlite3_value_bytes16"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12443)
-      (let ((~@12443 (unwrap-sqlite3_value* @12443)))
-        (~f ~@12443)))))
+    (lambda (@486)
+      (let ((~@486 (unwrap-sqlite3_value* @486)))
+        (~f ~@486)))))
 (export sqlite3_value_bytes16)
 
 ;; double sqlite3_value_double(sqlite3_value *);
@@ -1720,9 +1706,9 @@
                 "sqlite3_value_double"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12445)
-      (let ((~@12445 (unwrap-sqlite3_value* @12445)))
-        (~f ~@12445)))))
+    (lambda (@488)
+      (let ((~@488 (unwrap-sqlite3_value* @488)))
+        (~f ~@488)))))
 (export sqlite3_value_double)
 
 ;; int sqlite3_value_int(sqlite3_value *);
@@ -1731,9 +1717,9 @@
               ffi:int
               (dynamic-func "sqlite3_value_int" (dynamic-link))
               (list '*))))
-    (lambda (@12447)
-      (let ((~@12447 (unwrap-sqlite3_value* @12447)))
-        (~f ~@12447)))))
+    (lambda (@490)
+      (let ((~@490 (unwrap-sqlite3_value* @490)))
+        (~f ~@490)))))
 (export sqlite3_value_int)
 
 ;; sqlite3_int64 sqlite3_value_int64(sqlite3_value *);
@@ -1747,9 +1733,9 @@
                 "sqlite3_value_text"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12450)
-      (let ((~@12450 (unwrap-sqlite3_value* @12450)))
-        (~f ~@12450)))))
+    (lambda (@493)
+      (let ((~@493 (unwrap-sqlite3_value* @493)))
+        (~f ~@493)))))
 (export sqlite3_value_text)
 
 ;; const void *sqlite3_value_text16(sqlite3_value *);
@@ -1760,9 +1746,9 @@
                 "sqlite3_value_text16"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12452)
-      (let ((~@12452 (unwrap-sqlite3_value* @12452)))
-        (~f ~@12452)))))
+    (lambda (@495)
+      (let ((~@495 (unwrap-sqlite3_value* @495)))
+        (~f ~@495)))))
 (export sqlite3_value_text16)
 
 ;; const void *sqlite3_value_text16le(sqlite3_value *);
@@ -1773,9 +1759,9 @@
                 "sqlite3_value_text16le"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12454)
-      (let ((~@12454 (unwrap-sqlite3_value* @12454)))
-        (~f ~@12454)))))
+    (lambda (@497)
+      (let ((~@497 (unwrap-sqlite3_value* @497)))
+        (~f ~@497)))))
 (export sqlite3_value_text16le)
 
 ;; const void *sqlite3_value_text16be(sqlite3_value *);
@@ -1786,9 +1772,9 @@
                 "sqlite3_value_text16be"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12456)
-      (let ((~@12456 (unwrap-sqlite3_value* @12456)))
-        (~f ~@12456)))))
+    (lambda (@499)
+      (let ((~@499 (unwrap-sqlite3_value* @499)))
+        (~f ~@499)))))
 (export sqlite3_value_text16be)
 
 ;; int sqlite3_value_type(sqlite3_value *);
@@ -1799,9 +1785,9 @@
                 "sqlite3_value_type"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12458)
-      (let ((~@12458 (unwrap-sqlite3_value* @12458)))
-        (~f ~@12458)))))
+    (lambda (@501)
+      (let ((~@501 (unwrap-sqlite3_value* @501)))
+        (~f ~@501)))))
 (export sqlite3_value_type)
 
 ;; int sqlite3_value_numeric_type(sqlite3_value *);
@@ -1812,9 +1798,9 @@
                 "sqlite3_value_numeric_type"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12460)
-      (let ((~@12460 (unwrap-sqlite3_value* @12460)))
-        (~f ~@12460)))))
+    (lambda (@503)
+      (let ((~@503 (unwrap-sqlite3_value* @503)))
+        (~f ~@503)))))
 (export sqlite3_value_numeric_type)
 
 ;; unsigned int sqlite3_value_subtype(sqlite3_value *);
@@ -1825,9 +1811,9 @@
                 "sqlite3_value_subtype"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12462)
-      (let ((~@12462 (unwrap-sqlite3_value* @12462)))
-        (~f ~@12462)))))
+    (lambda (@505)
+      (let ((~@505 (unwrap-sqlite3_value* @505)))
+        (~f ~@505)))))
 (export sqlite3_value_subtype)
 
 ;; sqlite3_value *sqlite3_value_dup(const sqlite3_value *);
@@ -1836,9 +1822,9 @@
               '*
               (dynamic-func "sqlite3_value_dup" (dynamic-link))
               (list '*))))
-    (lambda (@12464)
-      (let ((~@12464 (unwrap-sqlite3_value* @12464)))
-        (wrap-sqlite3_value* (~f ~@12464))))))
+    (lambda (@507)
+      (let ((~@507 (unwrap-sqlite3_value* @507)))
+        (wrap-sqlite3_value* (~f ~@507))))))
 (export sqlite3_value_dup)
 
 ;; void sqlite3_value_free(sqlite3_value *);
@@ -1849,9 +1835,9 @@
                 "sqlite3_value_free"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12466)
-      (let ((~@12466 (unwrap-sqlite3_value* @12466)))
-        (~f ~@12466)))))
+    (lambda (@509)
+      (let ((~@509 (unwrap-sqlite3_value* @509)))
+        (~f ~@509)))))
 (export sqlite3_value_free)
 
 ;; void *sqlite3_aggregate_context(sqlite3_context *, int nBytes);
@@ -1862,10 +1848,10 @@
                 "sqlite3_aggregate_context"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12468 nBytes)
-      (let ((~@12468 (unwrap-sqlite3_context* @12468))
+    (lambda (@511 nBytes)
+      (let ((~@511 (unwrap-sqlite3_context* @511))
             (~nBytes (unwrap~fixed nBytes)))
-        (~f ~@12468 ~nBytes)))))
+        (~f ~@511 ~nBytes)))))
 (export sqlite3_aggregate_context)
 
 ;; void *sqlite3_user_data(sqlite3_context *);
@@ -1874,9 +1860,9 @@
               '*
               (dynamic-func "sqlite3_user_data" (dynamic-link))
               (list '*))))
-    (lambda (@12470)
-      (let ((~@12470 (unwrap-sqlite3_context* @12470)))
-        (~f ~@12470)))))
+    (lambda (@513)
+      (let ((~@513 (unwrap-sqlite3_context* @513)))
+        (~f ~@513)))))
 (export sqlite3_user_data)
 
 ;; sqlite3 *sqlite3_context_db_handle(sqlite3_context *);
@@ -1887,9 +1873,9 @@
                 "sqlite3_context_db_handle"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12472)
-      (let ((~@12472 (unwrap-sqlite3_context* @12472)))
-        (wrap-sqlite3* (~f ~@12472))))))
+    (lambda (@515)
+      (let ((~@515 (unwrap-sqlite3_context* @515)))
+        (wrap-sqlite3* (~f ~@515))))))
 (export sqlite3_context_db_handle)
 
 ;; void *sqlite3_get_auxdata(sqlite3_context *, int N);
@@ -1900,10 +1886,10 @@
                 "sqlite3_get_auxdata"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12474 N)
-      (let ((~@12474 (unwrap-sqlite3_context* @12474))
+    (lambda (@517 N)
+      (let ((~@517 (unwrap-sqlite3_context* @517))
             (~N (unwrap~fixed N)))
-        (~f ~@12474 ~N)))))
+        (~f ~@517 ~N)))))
 (export sqlite3_get_auxdata)
 
 ;; void sqlite3_set_auxdata(sqlite3_context *, int N, void *, void (*)(void *)
@@ -1915,14 +1901,13 @@
                 "sqlite3_set_auxdata"
                 (dynamic-link))
               (list '* ffi:int '* '*))))
-    (lambda (@12478 N @12477 @12476)
-      (let ((~@12478 (unwrap-sqlite3_context* @12478))
+    (lambda (@521 N @520 @519)
+      (let ((~@521 (unwrap-sqlite3_context* @521))
             (~N (unwrap~fixed N))
-            (~@12477 (unwrap~pointer @12477))
-            (~@12476
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12476)))
-        (~f ~@12478 ~N ~@12477 ~@12476)))))
+            (~@520 (unwrap~pointer @520))
+            (~@519 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @519)))
+        (~f ~@521 ~N ~@520 ~@519)))))
 (export sqlite3_set_auxdata)
 
 ;; typedef void (*sqlite3_destructor_type)(void *);
@@ -1938,14 +1923,13 @@
                 "sqlite3_result_blob"
                 (dynamic-link))
               (list '* '* ffi:int '*))))
-    (lambda (@12483 @12482 arg-2 @12481)
-      (let ((~@12483 (unwrap-sqlite3_context* @12483))
-            (~@12482 (unwrap~pointer @12482))
+    (lambda (@526 @525 arg-2 @524)
+      (let ((~@526 (unwrap-sqlite3_context* @526))
+            (~@525 (unwrap~pointer @525))
             (~arg-2 (unwrap~fixed arg-2))
-            (~@12481
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12481)))
-        (~f ~@12483 ~@12482 ~arg-2 ~@12481)))))
+            (~@524 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @524)))
+        (~f ~@526 ~@525 ~arg-2 ~@524)))))
 (export sqlite3_result_blob)
 
 ;; void sqlite3_result_blob64(sqlite3_context *, const void *, sqlite3_uint64
@@ -1960,10 +1944,10 @@
                 "sqlite3_result_double"
                 (dynamic-link))
               (list '* ffi:double))))
-    (lambda (@12486 arg-1)
-      (let ((~@12486 (unwrap-sqlite3_context* @12486))
+    (lambda (@529 arg-1)
+      (let ((~@529 (unwrap-sqlite3_context* @529))
             (~arg-1 (unwrap~float arg-1)))
-        (~f ~@12486 ~arg-1)))))
+        (~f ~@529 ~arg-1)))))
 (export sqlite3_result_double)
 
 ;; void sqlite3_result_error(sqlite3_context *, const char *, int);
@@ -1974,11 +1958,11 @@
                 "sqlite3_result_error"
                 (dynamic-link))
               (list '* '* ffi:int))))
-    (lambda (@12489 @12488 arg-2)
-      (let ((~@12489 (unwrap-sqlite3_context* @12489))
-            (~@12488 (unwrap~pointer @12488))
+    (lambda (@532 @531 arg-2)
+      (let ((~@532 (unwrap-sqlite3_context* @532))
+            (~@531 (unwrap~pointer @531))
             (~arg-2 (unwrap~fixed arg-2)))
-        (~f ~@12489 ~@12488 ~arg-2)))))
+        (~f ~@532 ~@531 ~arg-2)))))
 (export sqlite3_result_error)
 
 ;; void sqlite3_result_error16(sqlite3_context *, const void *, int);
@@ -1989,11 +1973,11 @@
                 "sqlite3_result_error16"
                 (dynamic-link))
               (list '* '* ffi:int))))
-    (lambda (@12492 @12491 arg-2)
-      (let ((~@12492 (unwrap-sqlite3_context* @12492))
-            (~@12491 (unwrap~pointer @12491))
+    (lambda (@535 @534 arg-2)
+      (let ((~@535 (unwrap-sqlite3_context* @535))
+            (~@534 (unwrap~pointer @534))
             (~arg-2 (unwrap~fixed arg-2)))
-        (~f ~@12492 ~@12491 ~arg-2)))))
+        (~f ~@535 ~@534 ~arg-2)))))
 (export sqlite3_result_error16)
 
 ;; void sqlite3_result_error_toobig(sqlite3_context *);
@@ -2004,9 +1988,9 @@
                 "sqlite3_result_error_toobig"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12494)
-      (let ((~@12494 (unwrap-sqlite3_context* @12494)))
-        (~f ~@12494)))))
+    (lambda (@537)
+      (let ((~@537 (unwrap-sqlite3_context* @537)))
+        (~f ~@537)))))
 (export sqlite3_result_error_toobig)
 
 ;; void sqlite3_result_error_nomem(sqlite3_context *);
@@ -2017,9 +2001,9 @@
                 "sqlite3_result_error_nomem"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12496)
-      (let ((~@12496 (unwrap-sqlite3_context* @12496)))
-        (~f ~@12496)))))
+    (lambda (@539)
+      (let ((~@539 (unwrap-sqlite3_context* @539)))
+        (~f ~@539)))))
 (export sqlite3_result_error_nomem)
 
 ;; void sqlite3_result_error_code(sqlite3_context *, int);
@@ -2030,10 +2014,10 @@
                 "sqlite3_result_error_code"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12498 arg-1)
-      (let ((~@12498 (unwrap-sqlite3_context* @12498))
+    (lambda (@541 arg-1)
+      (let ((~@541 (unwrap-sqlite3_context* @541))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12498 ~arg-1)))))
+        (~f ~@541 ~arg-1)))))
 (export sqlite3_result_error_code)
 
 ;; void sqlite3_result_int(sqlite3_context *, int);
@@ -2044,10 +2028,10 @@
                 "sqlite3_result_int"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12500 arg-1)
-      (let ((~@12500 (unwrap-sqlite3_context* @12500))
+    (lambda (@543 arg-1)
+      (let ((~@543 (unwrap-sqlite3_context* @543))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12500 ~arg-1)))))
+        (~f ~@543 ~arg-1)))))
 (export sqlite3_result_int)
 
 ;; void sqlite3_result_int64(sqlite3_context *, sqlite3_int64);
@@ -2061,9 +2045,9 @@
                 "sqlite3_result_null"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12503)
-      (let ((~@12503 (unwrap-sqlite3_context* @12503)))
-        (~f ~@12503)))))
+    (lambda (@546)
+      (let ((~@546 (unwrap-sqlite3_context* @546)))
+        (~f ~@546)))))
 (export sqlite3_result_null)
 
 ;; void sqlite3_result_text(sqlite3_context *, const char *, int, void (*)(
@@ -2075,14 +2059,13 @@
                 "sqlite3_result_text"
                 (dynamic-link))
               (list '* '* ffi:int '*))))
-    (lambda (@12507 @12506 arg-2 @12505)
-      (let ((~@12507 (unwrap-sqlite3_context* @12507))
-            (~@12506 (unwrap~pointer @12506))
+    (lambda (@550 @549 arg-2 @548)
+      (let ((~@550 (unwrap-sqlite3_context* @550))
+            (~@549 (unwrap~pointer @549))
             (~arg-2 (unwrap~fixed arg-2))
-            (~@12505
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12505)))
-        (~f ~@12507 ~@12506 ~arg-2 ~@12505)))))
+            (~@548 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @548)))
+        (~f ~@550 ~@549 ~arg-2 ~@548)))))
 (export sqlite3_result_text)
 
 ;; void sqlite3_result_text64(sqlite3_context *, const char *, sqlite3_uint64
@@ -2098,14 +2081,13 @@
                 "sqlite3_result_text16"
                 (dynamic-link))
               (list '* '* ffi:int '*))))
-    (lambda (@12512 @12511 arg-2 @12510)
-      (let ((~@12512 (unwrap-sqlite3_context* @12512))
-            (~@12511 (unwrap~pointer @12511))
+    (lambda (@555 @554 arg-2 @553)
+      (let ((~@555 (unwrap-sqlite3_context* @555))
+            (~@554 (unwrap~pointer @554))
             (~arg-2 (unwrap~fixed arg-2))
-            (~@12510
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12510)))
-        (~f ~@12512 ~@12511 ~arg-2 ~@12510)))))
+            (~@553 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @553)))
+        (~f ~@555 ~@554 ~arg-2 ~@553)))))
 (export sqlite3_result_text16)
 
 ;; void sqlite3_result_text16le(sqlite3_context *, const void *, int, void (*)
@@ -2117,14 +2099,13 @@
                 "sqlite3_result_text16le"
                 (dynamic-link))
               (list '* '* ffi:int '*))))
-    (lambda (@12516 @12515 arg-2 @12514)
-      (let ((~@12516 (unwrap-sqlite3_context* @12516))
-            (~@12515 (unwrap~pointer @12515))
+    (lambda (@559 @558 arg-2 @557)
+      (let ((~@559 (unwrap-sqlite3_context* @559))
+            (~@558 (unwrap~pointer @558))
             (~arg-2 (unwrap~fixed arg-2))
-            (~@12514
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12514)))
-        (~f ~@12516 ~@12515 ~arg-2 ~@12514)))))
+            (~@557 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @557)))
+        (~f ~@559 ~@558 ~arg-2 ~@557)))))
 (export sqlite3_result_text16le)
 
 ;; void sqlite3_result_text16be(sqlite3_context *, const void *, int, void (*)
@@ -2136,14 +2117,13 @@
                 "sqlite3_result_text16be"
                 (dynamic-link))
               (list '* '* ffi:int '*))))
-    (lambda (@12520 @12519 arg-2 @12518)
-      (let ((~@12520 (unwrap-sqlite3_context* @12520))
-            (~@12519 (unwrap~pointer @12519))
+    (lambda (@563 @562 arg-2 @561)
+      (let ((~@563 (unwrap-sqlite3_context* @563))
+            (~@562 (unwrap~pointer @562))
             (~arg-2 (unwrap~fixed arg-2))
-            (~@12518
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12518)))
-        (~f ~@12520 ~@12519 ~arg-2 ~@12518)))))
+            (~@561 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @561)))
+        (~f ~@563 ~@562 ~arg-2 ~@561)))))
 (export sqlite3_result_text16be)
 
 ;; void sqlite3_result_value(sqlite3_context *, sqlite3_value *);
@@ -2154,10 +2134,10 @@
                 "sqlite3_result_value"
                 (dynamic-link))
               (list '* '*))))
-    (lambda (@12523 @12522)
-      (let ((~@12523 (unwrap-sqlite3_context* @12523))
-            (~@12522 (unwrap-sqlite3_value* @12522)))
-        (~f ~@12523 ~@12522)))))
+    (lambda (@566 @565)
+      (let ((~@566 (unwrap-sqlite3_context* @566))
+            (~@565 (unwrap-sqlite3_value* @565)))
+        (~f ~@566 ~@565)))))
 (export sqlite3_result_value)
 
 ;; void sqlite3_result_zeroblob(sqlite3_context *, int n);
@@ -2168,10 +2148,10 @@
                 "sqlite3_result_zeroblob"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12525 n)
-      (let ((~@12525 (unwrap-sqlite3_context* @12525))
+    (lambda (@568 n)
+      (let ((~@568 (unwrap-sqlite3_context* @568))
             (~n (unwrap~fixed n)))
-        (~f ~@12525 ~n)))))
+        (~f ~@568 ~n)))))
 (export sqlite3_result_zeroblob)
 
 ;; int sqlite3_result_zeroblob64(sqlite3_context *, sqlite3_uint64 n);
@@ -2185,10 +2165,10 @@
                 "sqlite3_result_subtype"
                 (dynamic-link))
               (list '* ffi:unsigned-int))))
-    (lambda (@12528 arg-1)
-      (let ((~@12528 (unwrap-sqlite3_context* @12528))
+    (lambda (@571 arg-1)
+      (let ((~@571 (unwrap-sqlite3_context* @571))
             (~arg-1 (unwrap~fixed arg-1)))
-        (~f ~@12528 ~arg-1)))))
+        (~f ~@571 ~arg-1)))))
 (export sqlite3_result_subtype)
 
 ;; int sqlite3_create_collation(sqlite3 *, const char *zName, int eTextRep, 
@@ -2201,8 +2181,8 @@
                 "sqlite3_create_collation"
                 (dynamic-link))
               (list '* '* ffi:int '* '*))))
-    (lambda (@12530 zName eTextRep pArg xCompare)
-      (let ((~@12530 (unwrap-sqlite3* @12530))
+    (lambda (@573 zName eTextRep pArg xCompare)
+      (let ((~@573 (unwrap-sqlite3* @573))
             (~zName (unwrap~pointer zName))
             (~eTextRep (unwrap~fixed eTextRep))
             (~pArg (unwrap~pointer pArg))
@@ -2211,7 +2191,7 @@
                  ffi:int
                  (list '* ffi:int '* ffi:int '*))
                xCompare)))
-        (~f ~@12530 ~zName ~eTextRep ~pArg ~xCompare)))))
+        (~f ~@573 ~zName ~eTextRep ~pArg ~xCompare)))))
 (export sqlite3_create_collation)
 
 ;; int sqlite3_create_collation_v2(sqlite3 *, const char *zName, int eTextRep
@@ -2224,8 +2204,8 @@
                 "sqlite3_create_collation_v2"
                 (dynamic-link))
               (list '* '* ffi:int '* '* '*))))
-    (lambda (@12532 zName eTextRep pArg xCompare xDestroy)
-      (let ((~@12532 (unwrap-sqlite3* @12532))
+    (lambda (@575 zName eTextRep pArg xCompare xDestroy)
+      (let ((~@575 (unwrap-sqlite3* @575))
             (~zName (unwrap~pointer zName))
             (~eTextRep (unwrap~fixed eTextRep))
             (~pArg (unwrap~pointer pArg))
@@ -2237,7 +2217,7 @@
             (~xDestroy
               ((make-ftn-arg-unwrapper ffi:void (list '*))
                xDestroy)))
-        (~f ~@12532
+        (~f ~@575
             ~zName
             ~eTextRep
             ~pArg
@@ -2255,8 +2235,8 @@
                 "sqlite3_create_collation16"
                 (dynamic-link))
               (list '* '* ffi:int '* '*))))
-    (lambda (@12534 zName eTextRep pArg xCompare)
-      (let ((~@12534 (unwrap-sqlite3* @12534))
+    (lambda (@577 zName eTextRep pArg xCompare)
+      (let ((~@577 (unwrap-sqlite3* @577))
             (~zName (unwrap~pointer zName))
             (~eTextRep (unwrap~fixed eTextRep))
             (~pArg (unwrap~pointer pArg))
@@ -2265,7 +2245,7 @@
                  ffi:int
                  (list '* ffi:int '* ffi:int '*))
                xCompare)))
-        (~f ~@12534 ~zName ~eTextRep ~pArg ~xCompare)))))
+        (~f ~@577 ~zName ~eTextRep ~pArg ~xCompare)))))
 (export sqlite3_create_collation16)
 
 ;; int sqlite3_collation_needed(sqlite3 *, void *, void (*)(void *, sqlite3 *
@@ -2277,15 +2257,14 @@
                 "sqlite3_collation_needed"
                 (dynamic-link))
               (list '* '* '*))))
-    (lambda (@12538 @12537 @12536)
-      (let ((~@12538 (unwrap-sqlite3* @12538))
-            (~@12537 (unwrap~pointer @12537))
-            (~@12536
-              ((make-ftn-arg-unwrapper
-                 ffi:void
-                 (list '* '* ffi:int '*))
-               @12536)))
-        (~f ~@12538 ~@12537 ~@12536)))))
+    (lambda (@581 @580 @579)
+      (let ((~@581 (unwrap-sqlite3* @581))
+            (~@580 (unwrap~pointer @580))
+            (~@579 ((make-ftn-arg-unwrapper
+                      ffi:void
+                      (list '* '* ffi:int '*))
+                    @579)))
+        (~f ~@581 ~@580 ~@579)))))
 (export sqlite3_collation_needed)
 
 ;; int sqlite3_collation_needed16(sqlite3 *, void *, void (*)(void *, sqlite3 
@@ -2297,15 +2276,14 @@
                 "sqlite3_collation_needed16"
                 (dynamic-link))
               (list '* '* '*))))
-    (lambda (@12542 @12541 @12540)
-      (let ((~@12542 (unwrap-sqlite3* @12542))
-            (~@12541 (unwrap~pointer @12541))
-            (~@12540
-              ((make-ftn-arg-unwrapper
-                 ffi:void
-                 (list '* '* ffi:int '*))
-               @12540)))
-        (~f ~@12542 ~@12541 ~@12540)))))
+    (lambda (@585 @584 @583)
+      (let ((~@585 (unwrap-sqlite3* @585))
+            (~@584 (unwrap~pointer @584))
+            (~@583 ((make-ftn-arg-unwrapper
+                      ffi:void
+                      (list '* '* ffi:int '*))
+                    @583)))
+        (~f ~@585 ~@584 ~@583)))))
 (export sqlite3_collation_needed16)
 
 ;; int sqlite3_sleep(int);
@@ -2332,9 +2310,8 @@
                 "sqlite3_get_autocommit"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12547)
-      (let ((~@12547 (unwrap-sqlite3* @12547)))
-        (~f ~@12547)))))
+    (lambda (@590)
+      (let ((~@590 (unwrap-sqlite3* @590))) (~f ~@590)))))
 (export sqlite3_get_autocommit)
 
 ;; sqlite3 *sqlite3_db_handle(sqlite3_stmt *);
@@ -2343,9 +2320,9 @@
               '*
               (dynamic-func "sqlite3_db_handle" (dynamic-link))
               (list '*))))
-    (lambda (@12549)
-      (let ((~@12549 (unwrap-sqlite3_stmt* @12549)))
-        (wrap-sqlite3* (~f ~@12549))))))
+    (lambda (@592)
+      (let ((~@592 (unwrap-sqlite3_stmt* @592)))
+        (wrap-sqlite3* (~f ~@592))))))
 (export sqlite3_db_handle)
 
 ;; const char *sqlite3_db_filename(sqlite3 *db, const char *zDbName);
@@ -2396,13 +2373,11 @@
                 "sqlite3_commit_hook"
                 (dynamic-link))
               (list '* '* '*))))
-    (lambda (@12556 @12555 @12554)
-      (let ((~@12556 (unwrap-sqlite3* @12556))
-            (~@12555
-              ((make-ftn-arg-unwrapper ffi:int (list '*))
-               @12555))
-            (~@12554 (unwrap~pointer @12554)))
-        (~f ~@12556 ~@12555 ~@12554)))))
+    (lambda (@599 @598 @597)
+      (let ((~@599 (unwrap-sqlite3* @599))
+            (~@598 ((make-ftn-arg-unwrapper ffi:int (list '*)) @598))
+            (~@597 (unwrap~pointer @597)))
+        (~f ~@599 ~@598 ~@597)))))
 (export sqlite3_commit_hook)
 
 ;; void *sqlite3_rollback_hook(sqlite3 *, void (*)(void *), void *);
@@ -2413,13 +2388,12 @@
                 "sqlite3_rollback_hook"
                 (dynamic-link))
               (list '* '* '*))))
-    (lambda (@12560 @12559 @12558)
-      (let ((~@12560 (unwrap-sqlite3* @12560))
-            (~@12559
-              ((make-ftn-arg-unwrapper ffi:void (list '*))
-               @12559))
-            (~@12558 (unwrap~pointer @12558)))
-        (~f ~@12560 ~@12559 ~@12558)))))
+    (lambda (@603 @602 @601)
+      (let ((~@603 (unwrap-sqlite3* @603))
+            (~@602 ((make-ftn-arg-unwrapper ffi:void (list '*))
+                    @602))
+            (~@601 (unwrap~pointer @601)))
+        (~f ~@603 ~@602 ~@601)))))
 (export sqlite3_rollback_hook)
 
 ;; void *sqlite3_update_hook(sqlite3 *, void (*)(void *, int, char const *, 
@@ -2458,9 +2432,8 @@
                 "sqlite3_db_release_memory"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12567)
-      (let ((~@12567 (unwrap-sqlite3* @12567)))
-        (~f ~@12567)))))
+    (lambda (@610)
+      (let ((~@610 (unwrap-sqlite3* @610))) (~f ~@610)))))
 (export sqlite3_db_release_memory)
 
 ;; sqlite3_int64 sqlite3_soft_heap_limit64(sqlite3_int64 N);
@@ -2787,10 +2760,10 @@
                 "sqlite3_declare_vtab"
                 (dynamic-link))
               (list '* '*))))
-    (lambda (@12587 zSQL)
-      (let ((~@12587 (unwrap-sqlite3* @12587))
+    (lambda (@630 zSQL)
+      (let ((~@630 (unwrap-sqlite3* @630))
             (~zSQL (unwrap~pointer zSQL)))
-        (~f ~@12587 ~zSQL)))))
+        (~f ~@630 ~zSQL)))))
 (export sqlite3_declare_vtab)
 
 ;; int sqlite3_overload_function(sqlite3 *, const char *zFuncName, int nArg);
@@ -2801,11 +2774,11 @@
                 "sqlite3_overload_function"
                 (dynamic-link))
               (list '* '* ffi:int))))
-    (lambda (@12589 zFuncName nArg)
-      (let ((~@12589 (unwrap-sqlite3* @12589))
+    (lambda (@632 zFuncName nArg)
+      (let ((~@632 (unwrap-sqlite3* @632))
             (~zFuncName (unwrap~pointer zFuncName))
             (~nArg (unwrap~fixed nArg)))
-        (~f ~@12589 ~zFuncName ~nArg)))))
+        (~f ~@632 ~zFuncName ~nArg)))))
 (export sqlite3_overload_function)
 
 ;; typedef struct sqlite3_blob sqlite3_blob;
@@ -2826,9 +2799,9 @@
                 "sqlite3_blob_close"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12594)
-      (let ((~@12594 (unwrap-sqlite3_blob* @12594)))
-        (~f ~@12594)))))
+    (lambda (@637)
+      (let ((~@637 (unwrap-sqlite3_blob* @637)))
+        (~f ~@637)))))
 (export sqlite3_blob_close)
 
 ;; int sqlite3_blob_bytes(sqlite3_blob *);
@@ -2839,9 +2812,9 @@
                 "sqlite3_blob_bytes"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12596)
-      (let ((~@12596 (unwrap-sqlite3_blob* @12596)))
-        (~f ~@12596)))))
+    (lambda (@639)
+      (let ((~@639 (unwrap-sqlite3_blob* @639)))
+        (~f ~@639)))))
 (export sqlite3_blob_bytes)
 
 ;; int sqlite3_blob_read(sqlite3_blob *, void *Z, int N, int iOffset);
@@ -2850,12 +2823,12 @@
               ffi:int
               (dynamic-func "sqlite3_blob_read" (dynamic-link))
               (list '* '* ffi:int ffi:int))))
-    (lambda (@12598 Z N iOffset)
-      (let ((~@12598 (unwrap-sqlite3_blob* @12598))
+    (lambda (@641 Z N iOffset)
+      (let ((~@641 (unwrap-sqlite3_blob* @641))
             (~Z (unwrap~pointer Z))
             (~N (unwrap~fixed N))
             (~iOffset (unwrap~fixed iOffset)))
-        (~f ~@12598 ~Z ~N ~iOffset)))))
+        (~f ~@641 ~Z ~N ~iOffset)))))
 (export sqlite3_blob_read)
 
 ;; int sqlite3_blob_write(sqlite3_blob *, const void *z, int n, int iOffset);
@@ -2866,12 +2839,12 @@
                 "sqlite3_blob_write"
                 (dynamic-link))
               (list '* '* ffi:int ffi:int))))
-    (lambda (@12600 z n iOffset)
-      (let ((~@12600 (unwrap-sqlite3_blob* @12600))
+    (lambda (@643 z n iOffset)
+      (let ((~@643 (unwrap-sqlite3_blob* @643))
             (~z (unwrap~pointer z))
             (~n (unwrap~fixed n))
             (~iOffset (unwrap~fixed iOffset)))
-        (~f ~@12600 ~z ~n ~iOffset)))))
+        (~f ~@643 ~z ~n ~iOffset)))))
 (export sqlite3_blob_write)
 
 ;; sqlite3_vfs *sqlite3_vfs_find(const char *zVfsName);
@@ -2893,10 +2866,10 @@
                 "sqlite3_vfs_register"
                 (dynamic-link))
               (list '* ffi:int))))
-    (lambda (@12603 makeDflt)
-      (let ((~@12603 (unwrap-sqlite3_vfs* @12603))
+    (lambda (@646 makeDflt)
+      (let ((~@646 (unwrap-sqlite3_vfs* @646))
             (~makeDflt (unwrap~fixed makeDflt)))
-        (~f ~@12603 ~makeDflt)))))
+        (~f ~@646 ~makeDflt)))))
 (export sqlite3_vfs_register)
 
 ;; int sqlite3_vfs_unregister(sqlite3_vfs *);
@@ -2907,9 +2880,9 @@
                 "sqlite3_vfs_unregister"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12605)
-      (let ((~@12605 (unwrap-sqlite3_vfs* @12605)))
-        (~f ~@12605)))))
+    (lambda (@648)
+      (let ((~@648 (unwrap-sqlite3_vfs* @648)))
+        (~f ~@648)))))
 (export sqlite3_vfs_unregister)
 
 ;; sqlite3_mutex *sqlite3_mutex_alloc(int);
@@ -2933,9 +2906,9 @@
                 "sqlite3_mutex_free"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12608)
-      (let ((~@12608 (unwrap-sqlite3_mutex* @12608)))
-        (~f ~@12608)))))
+    (lambda (@651)
+      (let ((~@651 (unwrap-sqlite3_mutex* @651)))
+        (~f ~@651)))))
 (export sqlite3_mutex_free)
 
 ;; void sqlite3_mutex_enter(sqlite3_mutex *);
@@ -2946,9 +2919,9 @@
                 "sqlite3_mutex_enter"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12610)
-      (let ((~@12610 (unwrap-sqlite3_mutex* @12610)))
-        (~f ~@12610)))))
+    (lambda (@653)
+      (let ((~@653 (unwrap-sqlite3_mutex* @653)))
+        (~f ~@653)))))
 (export sqlite3_mutex_enter)
 
 ;; int sqlite3_mutex_try(sqlite3_mutex *);
@@ -2957,9 +2930,9 @@
               ffi:int
               (dynamic-func "sqlite3_mutex_try" (dynamic-link))
               (list '*))))
-    (lambda (@12612)
-      (let ((~@12612 (unwrap-sqlite3_mutex* @12612)))
-        (~f ~@12612)))))
+    (lambda (@655)
+      (let ((~@655 (unwrap-sqlite3_mutex* @655)))
+        (~f ~@655)))))
 (export sqlite3_mutex_try)
 
 ;; void sqlite3_mutex_leave(sqlite3_mutex *);
@@ -2970,9 +2943,9 @@
                 "sqlite3_mutex_leave"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12614)
-      (let ((~@12614 (unwrap-sqlite3_mutex* @12614)))
-        (~f ~@12614)))))
+    (lambda (@657)
+      (let ((~@657 (unwrap-sqlite3_mutex* @657)))
+        (~f ~@657)))))
 (export sqlite3_mutex_leave)
 
 ;; typedef struct sqlite3_mutex_methods sqlite3_mutex_methods;
@@ -3010,9 +2983,9 @@
                 "sqlite3_mutex_held"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12618)
-      (let ((~@12618 (unwrap-sqlite3_mutex* @12618)))
-        (~f ~@12618)))))
+    (lambda (@661)
+      (let ((~@661 (unwrap-sqlite3_mutex* @661)))
+        (~f ~@661)))))
 (export sqlite3_mutex_held)
 
 ;; int sqlite3_mutex_notheld(sqlite3_mutex *);
@@ -3023,9 +2996,9 @@
                 "sqlite3_mutex_notheld"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12620)
-      (let ((~@12620 (unwrap-sqlite3_mutex* @12620)))
-        (~f ~@12620)))))
+    (lambda (@663)
+      (let ((~@663 (unwrap-sqlite3_mutex* @663)))
+        (~f ~@663)))))
 (export sqlite3_mutex_notheld)
 
 ;; sqlite3_mutex *sqlite3_db_mutex(sqlite3 *);
@@ -3034,9 +3007,9 @@
               '*
               (dynamic-func "sqlite3_db_mutex" (dynamic-link))
               (list '*))))
-    (lambda (@12622)
-      (let ((~@12622 (unwrap-sqlite3* @12622)))
-        (wrap-sqlite3_mutex* (~f ~@12622))))))
+    (lambda (@665)
+      (let ((~@665 (unwrap-sqlite3* @665)))
+        (wrap-sqlite3_mutex* (~f ~@665))))))
 (export sqlite3_db_mutex)
 
 ;; int sqlite3_file_control(sqlite3 *, const char *zDbName, int op, void *);
@@ -3047,12 +3020,12 @@
                 "sqlite3_file_control"
                 (dynamic-link))
               (list '* '* ffi:int '*))))
-    (lambda (@12625 zDbName op @12624)
-      (let ((~@12625 (unwrap-sqlite3* @12625))
+    (lambda (@668 zDbName op @667)
+      (let ((~@668 (unwrap-sqlite3* @668))
             (~zDbName (unwrap~pointer zDbName))
             (~op (unwrap~fixed op))
-            (~@12624 (unwrap~pointer @12624)))
-        (~f ~@12625 ~zDbName ~op ~@12624)))))
+            (~@667 (unwrap~pointer @667)))
+        (~f ~@668 ~zDbName ~op ~@667)))))
 (export sqlite3_file_control)
 
 ;; int sqlite3_test_control(int op, ...);
@@ -3092,13 +3065,13 @@
               ffi:int
               (dynamic-func "sqlite3_db_status" (dynamic-link))
               (list '* ffi:int '* '* ffi:int))))
-    (lambda (@12630 op pCur pHiwtr resetFlg)
-      (let ((~@12630 (unwrap-sqlite3* @12630))
+    (lambda (@673 op pCur pHiwtr resetFlg)
+      (let ((~@673 (unwrap-sqlite3* @673))
             (~op (unwrap~fixed op))
             (~pCur (unwrap~pointer pCur))
             (~pHiwtr (unwrap~pointer pHiwtr))
             (~resetFlg (unwrap~fixed resetFlg)))
-        (~f ~@12630 ~op ~pCur ~pHiwtr ~resetFlg)))))
+        (~f ~@673 ~op ~pCur ~pHiwtr ~resetFlg)))))
 (export sqlite3_db_status)
 
 ;; int sqlite3_stmt_status(sqlite3_stmt *, int op, int resetFlg);
@@ -3109,11 +3082,11 @@
                 "sqlite3_stmt_status"
                 (dynamic-link))
               (list '* ffi:int ffi:int))))
-    (lambda (@12632 op resetFlg)
-      (let ((~@12632 (unwrap-sqlite3_stmt* @12632))
+    (lambda (@675 op resetFlg)
+      (let ((~@675 (unwrap-sqlite3_stmt* @675))
             (~op (unwrap~fixed op))
             (~resetFlg (unwrap~fixed resetFlg)))
-        (~f ~@12632 ~op ~resetFlg)))))
+        (~f ~@675 ~op ~resetFlg)))))
 (export sqlite3_stmt_status)
 
 ;; typedef struct sqlite3_pcache sqlite3_pcache;
@@ -3298,10 +3271,10 @@
               ffi:int
               (dynamic-func "sqlite3_stricmp" (dynamic-link))
               (list '* '*))))
-    (lambda (@12649 @12648)
-      (let ((~@12649 (unwrap~pointer @12649))
-            (~@12648 (unwrap~pointer @12648)))
-        (~f ~@12649 ~@12648)))))
+    (lambda (@692 @691)
+      (let ((~@692 (unwrap~pointer @692))
+            (~@691 (unwrap~pointer @691)))
+        (~f ~@692 ~@691)))))
 (export sqlite3_stricmp)
 
 ;; int sqlite3_strnicmp(const char *, const char *, int);
@@ -3310,11 +3283,11 @@
               ffi:int
               (dynamic-func "sqlite3_strnicmp" (dynamic-link))
               (list '* '* ffi:int))))
-    (lambda (@12652 @12651 arg-2)
-      (let ((~@12652 (unwrap~pointer @12652))
-            (~@12651 (unwrap~pointer @12651))
+    (lambda (@695 @694 arg-2)
+      (let ((~@695 (unwrap~pointer @695))
+            (~@694 (unwrap~pointer @694))
             (~arg-2 (unwrap~fixed arg-2)))
-        (~f ~@12652 ~@12651 ~arg-2)))))
+        (~f ~@695 ~@694 ~arg-2)))))
 (export sqlite3_strnicmp)
 
 ;; int sqlite3_strglob(const char *zGlob, const char *zStr);
@@ -3353,15 +3326,14 @@
               '*
               (dynamic-func "sqlite3_wal_hook" (dynamic-link))
               (list '* '* '*))))
-    (lambda (@12659 @12658 @12657)
-      (let ((~@12659 (unwrap-sqlite3* @12659))
-            (~@12658
-              ((make-ftn-arg-unwrapper
-                 ffi:int
-                 (list '* '* '* ffi:int))
-               @12658))
-            (~@12657 (unwrap~pointer @12657)))
-        (~f ~@12659 ~@12658 ~@12657)))))
+    (lambda (@702 @701 @700)
+      (let ((~@702 (unwrap-sqlite3* @702))
+            (~@701 ((make-ftn-arg-unwrapper
+                      ffi:int
+                      (list '* '* '* ffi:int))
+                    @701))
+            (~@700 (unwrap~pointer @700)))
+        (~f ~@702 ~@701 ~@700)))))
 (export sqlite3_wal_hook)
 
 ;; int sqlite3_wal_autocheckpoint(sqlite3 *db, int N);
@@ -3421,9 +3393,8 @@
                 "sqlite3_vtab_on_conflict"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12665)
-      (let ((~@12665 (unwrap-sqlite3* @12665)))
-        (~f ~@12665)))))
+    (lambda (@708)
+      (let ((~@708 (unwrap-sqlite3* @708))) (~f ~@708)))))
 (export sqlite3_vtab_on_conflict)
 
 ;; int sqlite3_stmt_scanstatus(sqlite3_stmt *pStmt, int idx, int iScanStatusOp
@@ -3451,9 +3422,9 @@
                 "sqlite3_stmt_scanstatus_reset"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12668)
-      (let ((~@12668 (unwrap-sqlite3_stmt* @12668)))
-        (~f ~@12668)))))
+    (lambda (@711)
+      (let ((~@711 (unwrap-sqlite3_stmt* @711)))
+        (~f ~@711)))))
 (export sqlite3_stmt_scanstatus_reset)
 
 ;; int sqlite3_db_cacheflush(sqlite3 *);
@@ -3464,9 +3435,8 @@
                 "sqlite3_db_cacheflush"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12670)
-      (let ((~@12670 (unwrap-sqlite3* @12670)))
-        (~f ~@12670)))))
+    (lambda (@713)
+      (let ((~@713 (unwrap-sqlite3* @713))) (~f ~@713)))))
 (export sqlite3_db_cacheflush)
 
 ;; int sqlite3_system_errno(sqlite3 *);
@@ -3477,9 +3447,8 @@
                 "sqlite3_system_errno"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12672)
-      (let ((~@12672 (unwrap-sqlite3* @12672)))
-        (~f ~@12672)))))
+    (lambda (@715)
+      (let ((~@715 (unwrap-sqlite3* @715))) (~f ~@715)))))
 (export sqlite3_system_errno)
 
 ;; typedef struct sqlite3_snapshot {
@@ -3531,9 +3500,9 @@
                 "sqlite3_snapshot_free"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12678)
-      (let ((~@12678 (unwrap-sqlite3_snapshot* @12678)))
-        (~f ~@12678)))))
+    (lambda (@721)
+      (let ((~@721 (unwrap-sqlite3_snapshot* @721)))
+        (~f ~@721)))))
 (export sqlite3_snapshot_free)
 
 ;; int sqlite3_snapshot_cmp(sqlite3_snapshot *p1, sqlite3_snapshot *p2);
@@ -4124,5 +4093,28 @@
         ((symbol? obj) (sqlite3-symbol-val obj))
         ((fh-object? obj) (struct-ref obj 0))
         (else (error "type mismatch"))))
+
+(define sqlite3-types
+  '((struct . "fts5_api") "fts5_api" (struct . "fts5_tokenizer") 
+    "fts5_tokenizer" "Fts5Tokenizer" (struct . "Fts5ExtensionApi") (struct . 
+    "Fts5PhraseIter") "fts5_extension_function" "Fts5PhraseIter" "Fts5Context"
+    "Fts5ExtensionApi" (struct . "sqlite3_rtree_query_info") (struct . 
+    "sqlite3_rtree_geometry") "sqlite3_rtree_dbl" "sqlite3_rtree_query_info" 
+    "sqlite3_rtree_geometry" (struct . "sqlite3_snapshot") "sqlite3_snapshot" 
+    "sqlite3_backup" (struct . "sqlite3_pcache_methods") 
+    "sqlite3_pcache_methods" (struct . "sqlite3_pcache_methods2") 
+    "sqlite3_pcache_methods2" (struct . "sqlite3_pcache_page") 
+    "sqlite3_pcache_page" "sqlite3_pcache" (struct . "sqlite3_mutex_methods") 
+    "sqlite3_mutex_methods" "sqlite3_blob" (struct . "sqlite3_vtab_cursor") (
+    struct . "sqlite3_vtab") (struct . "sqlite3_index_info") (struct . 
+    "sqlite3_module") "sqlite3_module" "sqlite3_vtab_cursor" 
+    "sqlite3_index_info" "sqlite3_vtab" "sqlite3_destructor_type" 
+    "sqlite3_context" "sqlite3_value" "sqlite3_stmt" (struct . 
+    "sqlite3_mem_methods") "sqlite3_mem_methods" (struct . "sqlite3_vfs") 
+    "sqlite3_syscall_ptr" "sqlite3_vfs" "sqlite3_api_routines" "sqlite3_mutex"
+    (struct . "sqlite3_io_methods") "sqlite3_io_methods" (struct . 
+    "sqlite3_file") "sqlite3_file" "sqlite3_callback" "sqlite3_uint64" 
+    "sqlite3_int64" "sqlite3"))
+(export sqlite3-types)
 
 ;; --- last line ---

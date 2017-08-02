@@ -29,17 +29,16 @@
 	    intro-ffi
 	    unwrap-char*
 	    string-member-proc string-renamer
-	    pkg-config-incs
+	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
 	    )
+  #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 util1)
   #:use-module (nyacc lang c99 util2)
-  #:use-module (nyacc lang c99 cpp)
-  #:use-module (nyacc lang c99 pprint)
-  #:use-module (nyacc lang util)
-  #:use-module (nyacc util)
+  #:use-module ((nyacc lang util) #:select (cintstr->scm sx-ref sx-list))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
-  ;;#:use-module ((bytestructures guile))
+  #:use-module (nyacc util)
   #:use-module (system foreign)
   #:use-module (sxml fold)
   #:use-module (sxml match)
@@ -61,18 +60,21 @@
 
 (define *ffi-help-version* "0.02.0")
 
-(define std-inc-dirs
-  `(,(assq-ref %guile-build-info 'includedir)
-    "/usr/include"))
-(define std-inc-help
+(define fh-inc-dirs
+  (append
+   `(,(assq-ref %guile-build-info 'includedir)
+     "/usr/include")
+   (get-gcc-inc-dirs)))
+(define fh-inc-help
   (cond
    ((string-contains %host-type "darwin")
     '(("__builtin"
-       "__builtin_va_list=void*" "__attribute__(X)="
+       "__builtin_va_list=void*"
+       "__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
-       ;;"_POSIX_C_SOURCE=200112L"
-       ;;"_XOPEN_SOURE=600L"
+       ;;"__dead2=" ;; /usr/include/unistd.h, l.645, __attribute__(X)
+       ;;"__has_include(X)=" ;; kill me, again: unistd.h, l.655
        )
       ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
       ))
@@ -82,6 +84,15 @@
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)=")
       ))))
+(define fh-cpp-defs
+  (cond
+   ((string-contains %host-type "darwin")
+    '("__GNUC__=6")
+    (remove (lambda (s)
+	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
+	    (get-gcc-cpp-defs)))
+   (else
+    '())))
 
 (define *options* (make-fluid '()))
 (define *prefix* (make-fluid "."))	 ; prefix to files
@@ -139,11 +150,14 @@
 
 ;; Run pkg-config
 (define (pkg-config name . args)
-  (let* ((port (open-input-pipe (string-join (cons* "pkg-config " name args))))
-	 (ostr (read-line port))
-	 (items (string-split ostr #\space)))
-    (close-port port)
-    items))
+  (if name
+      (let* ((argl (cons* "pkg-config" name args))
+	     (port (open-input-pipe (string-join argl)))
+	     (ostr (read-line port))
+	     (items (if (eof-object? ostr) '() (string-split ostr #\space))))
+	(close-port port)
+	items)
+      '()))
 
 ;; use pkg-config to get a list of include dirs
 ;; (pkg-config-incs "cairo") => ("/opt/local/include/cairo" ...)
@@ -438,16 +452,11 @@
   (cnvt-aggr-def 'union typename union-name field-list))
 
 ;; --- enums
-
 (define (cnvt-enum-def typename enum-name enum-def-list)
   (let* ((name-val-l (map
 		      (lambda (def)
-			(pmatch def
-			  ((enum-defn (ident ,n) (p-expr (fixed ,v)))
-			   (cons (string->symbol n) (cintstr->num v)))
-			  ((enum-defn (ident ,n) (neg (p-expr (fixed ,v))))
-			   (cons (string->symbol n) (- (cintstr->num v))))
-			  (,otherwise (error "3: cnvt-enum-def coding" def))))
+			(let ((n (sx-ref (sx-ref def 1) 1)) (x (sx-ref def 2)))
+			  (cons (string->symbol n) (eval-cpp-expr x '()))))
 		      (cdr (canize-enum-def-list enum-def-list)))))
     (cond
      ((and typename enum-name)
@@ -662,7 +671,7 @@
 (define (gen-exec-return-wrapper udecl)
   (let* ((udecl (expand-typerefs udecl
 				 (fluid-ref *udict*)
-				 (fluid-ref *wrapped*)))
+				 (fluid-ref *defined*)))
 	 (mspec (udecl->mspec udecl)))
     (mspec->fh-wrapper mspec)))
 
@@ -712,7 +721,7 @@
 
 ;; ------------------------------------
 
-(sferr "TODO: fix fix-params varargs-warning\n") ;; remove "arg-~A thingy below
+;;(sferr "TODO: fix fix-params varargs-warning include-ffi\n")
 (define (fix-params param-decls)
 
   (define (remove-void-param params)
@@ -1165,30 +1174,26 @@
 	     (select-kids (node-typeof? 'trans-unit))))
 	 (merge-inc-bodies
 	  (lambda (t) (cons 'trans-unit (apply append (map cdr (p t)))))))
-    (lambda (attrs) ;;(cpp-defs inc-dirs inc-files helpers)
-      (let* ((pkg-config (assq-ref attrs 'pkg-config))
-	     (cpp-defs (resolve-attr-val (assq-ref attrs 'cpp-defs)))
+    (lambda (attrs)
+      (let* ((cpp-defs (resolve-attr-val (assq-ref attrs 'cpp-defs)))
 	     (inc-dirs (resolve-attr-val (assq-ref attrs 'inc-dirs)))
 	     (inc-help (resolve-attr-val (assq-ref attrs 'inc-help)))
-	     (inc-files (resolve-attr-val (assq-ref attrs 'include)))
 
-	     (cpp-defs (append
-			(if pkg-config (pkg-config-defs pkg-config) '())
-			cpp-defs))
-	     (inc-dirs (append
-			(if pkg-config (pkg-config-incs pkg-config) '())
-			inc-dirs))
+	     (pkg-config (assq-ref attrs 'pkg-config))
+	     (cpp-defs (append (pkg-config-defs pkg-config) cpp-defs))
+	     (inc-dirs (append (pkg-config-incs pkg-config) inc-dirs))
+
+	     (cpp-defs (append cpp-defs fh-cpp-defs))
+	     (inc-dirs (append inc-dirs fh-inc-dirs))
+	     (inc-help (append inc-help fh-inc-help))
 	     
-	     (inc-dirs (append inc-dirs std-inc-dirs))
-	     (inc-help (append inc-help std-inc-help))
-	     
-	     
-	     (cpp-defs (append cpp-defs (gen-gcc-defs)))
+	     (inc-files (resolve-attr-val (assq-ref attrs 'include)))
 	     (prog (string-join
 		    (map
 		     (lambda (inc-file)
 		       (string-append "#include \"" inc-file "\"\n"))
 		     inc-files) "")))
+	
 	;;(sferr "inc-dirs:\n") (pperr inc-dirs)
 	;;(sferr "cpp-defs:\n") (pperr cpp-defs)
 	(with-input-from-string prog
@@ -1197,7 +1202,8 @@
 	     (parse-c99 #:cpp-defs cpp-defs
 			#:inc-dirs inc-dirs
 			#:inc-help inc-help
-			#:mode 'decl #:debug (fluid-ref *debug*))
+			#:mode 'decl
+			#:debug (fluid-ref *debug*))
 	     merge-inc-bodies)))))))
 
 ;; === main converter ================
@@ -1271,7 +1277,7 @@
 	      (not (member (car pair) wrapped)) ; 2) not already wrapped
 	      (not (and (pair? (car pair))	; 3) not anonymous
 			(string=? "*anon*" (cdar pair)))))
-	     (sferr "~S\n" (car pair))
+	     ;;(sferr "~S\n" (car pair))
 	     (nlscm) (c99scm (cdr pair))
 	     (cnvt-udecl (remove-type-qual (cdr pair)) udict wrapped defined)
 	     ;;(cnvt-udecl (cdr pair) udict wrapped defined)
@@ -1360,13 +1366,13 @@
 (define* (compile-ffi-file file #:optional (options '()))
   (with-fluids ((*options* options)
 		(*prefix* ".")
-		(*debug* #f)
+		;;(*debug* #f)
 		(*mport* #t)
 		(*udict* '())
 		(*wrapped* '())
 		(*defined* '())
 		(*renamer* identity))
-    (sfout "TODO: arrays; extern variables; compile-ffi args; va_args\n")
+    ;;(sfout "TODO: arrays; extern variables; compile-ffi args; va_args\n")
     ;;(sfout "      arrays;\n")
     (call-with-input-file file
       (lambda (iport)
