@@ -96,7 +96,7 @@
 
 (define *options* (make-fluid '()))
 (define *prefix* (make-fluid "."))	 ; prefix to files
-(define *debug* (make-fluid #t))	 ; parse debug mode
+(define *debug* (make-fluid #f))	 ; parse debug mode
 (define *mport* (make-fluid #t))	 ; output module port
 (define *udict* (make-fluid '()))	 ; udecl dict
 (define *wrapped* (make-fluid '()))	 ; has wrapper

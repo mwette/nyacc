@@ -1,0 +1,47 @@
+
+Copyright (C) 2015-2017 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+=== To play with example code and try modifications ...
+
+  $ cd examples/nyacc
+  $ source env.sh
+
+=== Hacking on the C99 parser ====
+To play with the C99 code, in place, I recommend the following:
+After sourcing env.sh as above, do
+
+  $ cd lang/c99
+  $ guile tryit.scm
+
+If you modify module/nyacc/lang/c99/mach.scm you will need to rebuild the
+files in the subdirectory mach.d.  To do this run, in guile, the following:
+  (use-modules (nyacc lang c99 mach))
+  (use-modules (nyacc lang c99 cppmach))
+
+  (gen-c99-files ".")
+  (system "touch ./parser.scm")
+  (gen-c99x-files ".")
+  (system "touch ./xparser.scm")
+  (gen-cpp-files ".")
+  (system "touch ./cpp.scm")
+
+Sorry, maybe not all clean, but his is BETAWARE.
+
+=== Javascript parser
+
+This illustrates use of the parser to generate tree-il and run inside guile.
+After sourcing env.sh as above, do
+
+  $ guile
+  ...
+  scheme@(guile-user)> ,L javascript
+  Happy hacking with javascript!  To switch back, type `,L scheme'.
+  javascript@(guile-user)> var = 1;
+  ...
+
+

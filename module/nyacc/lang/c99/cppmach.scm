@@ -97,6 +97,8 @@
      ($chlit ($$ `(char ,$1)))	; char-constant
      ("defined" "(" $ident ")" ($$ `(defined ,$3)))
      ("defined" $ident ($$ `(defined ,$2)))
+     ("__has_include__" "(" $string ")" ($$ `(has-include ,$3)))
+     ("__has_include_next__" "(" $string ")" ($$ `(has-include-next ,$3)))
      ("(" expression-list ")" ($$ $2)))
     (expression-list
      (conditional-expression)
@@ -125,7 +127,7 @@
 			    (xtra-dir "cppact.scm")))
 	(b (move-if-changed (xtra-dir "cpptab.scm.new")
 			    (xtra-dir "cpptab.scm"))))
-    (when (or a b) 
+    (when #f ;; (or a b) 
       (system (string-append "touch " (lang-dir "cpp.scm"))))))
 
 ;; --- last line ---

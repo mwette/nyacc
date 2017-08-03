@@ -1,3 +1,8 @@
+2017-08-02  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (read-c-string): numeric escapes (e.g., \0) were
+	not working due to use of ch instead of c1 in numeric check
+
 2017-07-28  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (make-num-reader): bug report from janneke: c-parser

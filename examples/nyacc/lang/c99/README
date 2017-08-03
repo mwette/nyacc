@@ -20,8 +20,8 @@ NOTES:
 
 To play with the ffi-helper you need to
   $ . env.sh 
-This generates cairo/cairo.scm:
-  $ guild compile-ffi cairo/cairo.ffi
+The following generates ffi.d/cairo.scm:
+  $ guild compile-ffi ffi.d/cairo.ffi
 
 https://github.com/TaylanUB/scheme-bytestructures
 

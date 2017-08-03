@@ -237,28 +237,6 @@
 	      (iter (cons #\/ cl) c2)))))
 	 (else (iter (cons ch cl) (read-char)))))))
 
-;; @deffn {Procedure} find-file-in-dirl file dirl next => path
-;; Find path to include file expression, (i.e., @code{<foo.h>} or
-;; @code{"foo.h"}.  If @code{"foo.h"} form look in current directory first.
-;; If @var{next} is true then remove current directory from search path.
-;; @*Refs:
-;; @itemize
-;; @item https://gcc.gnu.org/onlinedocs/cpp/Search-Path.html
-;; @item https://gcc.gnu.org/onlinedocs/cpp/Wrapper-Headers.html
-;; @end itemize
-;; @end deffn
-(define (find-file-in-dirl file dirl next)
-  (let* ((cid (and=> (port-filename (current-input-port)) dirname))
-	 (file-type (string-ref file 0)) ;; #\< or #\"
-	 (file-name (substring file 1 (1- (string-length file))))
-	 (dirl (if (and cid (char=? #\" file-type)) (cons cid dirl) dirl)))
-    (let iter ((dirl dirl))
-      (if (null? dirl) #f
-	  (if (and next (string=? (car dirl) cid))
-	      (iter (cdr dirl))
-	      (let ((p (string-append (car dirl) "/" file-name)))
-		(if (access? p R_OK) p (iter (cdr dirl)))))))))
-
 (define (def-xdef? name mode)
   (not (eqv? mode 'file)))
 
@@ -351,7 +329,8 @@
 	       (set! ppxs (cons 'skip ppxs)))
 	      (else
 	       (let* ((defs (cpi-defs info))
-		      (val (eval-cpp-cond-text (cadr stmt) defs)))
+		      (val (eval-cpp-cond-text (cadr stmt) defs
+					       #:inc-dirs (cpi-incs info))))
 		 (if (not val) (c99-err "unresolved: ~S" (cadr stmt)))
 		 (if (eq? 'keep (car ppxs))
 		     (if (zero? val)
@@ -365,7 +344,8 @@
 	      ((skip) #t) ;; don't eval if excluded
 	      (else
 	       (let* ((defs (cpi-defs info))
-		      (val (eval-cpp-cond-text (cadr stmt) defs)))
+		      (val (eval-cpp-cond-text (cadr stmt) defs
+					       #:inc-dirs (cpi-incs info))))
 		 (if (not val) (c99-err "unresolved: ~S" (cadr stmt)))
 		 (case (car ppxs)
 		   ((skip-look) (if (not (zero? val)) (set-car! ppxs 'keep)))
@@ -539,7 +519,7 @@
 			   (if (procedure? x-def?) (x-def? name mode) x-def?)
 			   (expand-cpp-macro-ref name defs))
 		      => (lambda (repl)
-			   (sferr "repl=~S\n" repl)
+			   ;;(sferr "repl=~S\n" repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input
 			    (open-input-string
@@ -569,8 +549,7 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
-	    ;;(sferr "lx iter=>~S\n" pair)
-	    (report-error "lx iter=>~S" (list pair))
+	    ;;(report-error "lx iter=>~S" (list pair))
 	    (case (car ppxs)
 	      ((keep)
 	       pair)

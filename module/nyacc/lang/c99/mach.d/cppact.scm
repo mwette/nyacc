@@ -103,6 +103,11 @@
    (lambda ($4 $3 $2 $1 . $rest) `(defined ,$3))
    ;; primary-expression => "defined" '$ident
    (lambda ($2 $1 . $rest) `(defined ,$2))
+   ;; primary-expression => "__has_include__" "(" '$string ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(has-include ,$3))
+   ;; primary-expression => "__has_include_next__" "(" '$string ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(has-include-next ,$3))
    ;; primary-expression => "(" expression-list ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; expression-list => conditional-expression

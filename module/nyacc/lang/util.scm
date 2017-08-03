@@ -59,7 +59,7 @@ the file COPYING included with the this distribution.")
   (let ((curr (current-input-port))
 	(ipstk (fluid-ref *input-stack*)))
     (fluid-set! *input-stack* (cons curr ipstk))
-    ;;(simple-format (current-error-port) "~S pu=>\n" (length ipstk))
+    ;;(sferr "~S pu=>\n" (length ipstk))
     (set-current-input-port port)))
 
 ;; Return #f if empty
@@ -67,7 +67,7 @@ the file COPYING included with the this distribution.")
   (let ((ipstk (fluid-ref *input-stack*)))
     (if (null? ipstk) #f
 	(begin
-	  ;;(simple-format (current-error-port) "~S <=po\n" (length ipstk))
+	  ;;(sferr "~S <=po\n" (length ipstk))
 	  (set-current-input-port (car ipstk))
 	  (fluid-set! *input-stack* (cdr ipstk))))))
 
@@ -564,5 +564,5 @@ the file COPYING included with the this distribution.")
 			 (iter dl bx cs 3 (1+ ix))
 			 #f)))
 	    ((3) #f))))))
-  
+
 ;;; --- last line ---

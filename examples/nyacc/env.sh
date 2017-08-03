@@ -1,6 +1,6 @@
 #!/bin/sh
 # source this file: $ . env.sh
-topdir=`(cd ../../../..; pwd)`
+topdir=`(cd ../..; pwd)`
 if [ "X$GUILE_LOAD_PATH" = "X" ]; then
  GUILE_LOAD_PATH=$topdir/module
 else

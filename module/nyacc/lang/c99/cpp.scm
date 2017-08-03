@@ -24,6 +24,10 @@
 	    eval-cpp-cond-text
 	    expand-cpp-macro-ref
 	    parse-cpp-expr
+	    find-file-in-dirl
+
+	    scan-arg-literal
+	    
 	    eval-cpp-expr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -74,6 +78,28 @@
    ((eof-object? ch) #f)
    ((char=? ch #\.) (read-char) (read-char) "...") ; assumes correct syntax
    (else #f)))
+
+;; @deffn {Procedure} find-file-in-dirl file dirl next => path
+;; Find path to include file expression, (i.e., @code{<foo.h>} or
+;; @code{"foo.h"}.  If @code{"foo.h"} form look in current directory first.
+;; If @var{next} is true then remove current directory from search path.
+;; @*Refs:
+;; @itemize
+;; @item https://gcc.gnu.org/onlinedocs/cpp/Search-Path.html
+;; @item https://gcc.gnu.org/onlinedocs/cpp/Wrapper-Headers.html
+;; @end itemize
+;; @end deffn
+(define (find-file-in-dirl file dirl next)
+  (let* ((cid (and=> (port-filename (current-input-port)) dirname))
+	 (file-type (string-ref file 0)) ;; #\< or #\"
+	 (file-name (substring file 1 (1- (string-length file))))
+	 (dirl (if (and cid (char=? #\" file-type)) (cons cid dirl) dirl)))
+    (let iter ((dirl dirl))
+      (if (null? dirl) #f
+	  (if (and next (string=? (car dirl) cid))
+	      (iter (cdr dirl))
+	      (let ((p (string-append (car dirl) "/" file-name)))
+		(if (access? p R_OK) p (iter (cdr dirl)))))))))
 
 ;; @deffn {Procedure} cpp-define
 ;; Reads CPP define from current input and generates a cooresponding sxml
@@ -200,7 +226,7 @@
 ;; Evaluate a tree produced from @code{parse-cpp-expr}.
 ;; The tree passed to this routine is 
 ;; @end deffn
-(define (eval-cpp-expr tree dict)
+(define* (eval-cpp-expr tree dict #:key (inc-dirs '()))
   (letrec
       ((tx (lambda (tr ix) (list-ref tr ix)))
        (tx1 (lambda (tr) (tx tr 1)))
@@ -214,6 +240,10 @@
 	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
 	    ((char) (char->integer (string-ref (tx1 tree) 0)))
 	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
+	    ((has-include)
+	     (sferr "arg=~S\n" (tx1 tree))
+	     (if (find-file-in-dirl (tx1 tree) inc-dirs #f) 1 0))
+	    ;;((has-include-next) (if (assoc-ref dict (tx1 tree)) 1 0))
 	    ((pre-inc post-inc) (1+ (ev1 tree)))
 	    ((pre-dec post-dec) (1- (ev1 tree)))
 	    ((pos) (ev1 tree))
@@ -294,6 +324,10 @@
 	(((string . ,val) . ,rest)
 	 (iter stl (cons #\" chl) (esc-str val) (cons #\" rest)))
 	(((defined . ,val) . ,rest)
+	 (sferr "defined val=~S\n" val)
+	 (iter stl chl val rest))
+	(((echo . ,val) . ,rest)
+	 (sferr "echo val=~S\n" val)
 	 (iter stl chl val rest))
 	((space space . ,rest)
 	 (iter stl chl nxt rest))
@@ -313,17 +347,35 @@
       (cond
        ((eof-object? ch)
 	(if no-ec
-	    (string-append "defined " (list->string (reverse chl)))
+	    (list->string (cons #\space (reverse chl)))
 	    (cpp-err "illegal argument to `defined'")))
        ((char-set-contains? c:ir ch)
 	(iter (cons ch chl) (read-char)))
        (no-ec
 	(unread-char ch)
-	(string-append "defined " (list->string (reverse chl))))
+	(list->string (cons #\space (reverse chl))))
        ((char=? #\) (skip-il-ws ch))
-	(string-append "defined" (list->string (reverse (cons #\) chl)))))
+	(list->string (reverse (cons #\) chl))))
        (else
 	(cpp-err "illegal argument to  `defined'"))))))
+
+;; must be (\s*<xxx>\s*) OR (\s*"xxx"\s*) => ("<xxx>") OR ("\"xxx\"")
+(define (scan-arg-literal)
+  (let ((ch (read-char)))
+    (sferr "ch=~S\n" ch)
+    (if (or (eof-object? ch) (not (char=? #\( ch))) (cpp-err "expecting `('")))
+  (let iter ((chl '()) (ch (skip-il-ws (read-char))))
+    (sferr "ch=~S\n" ch)
+    (cond
+     ((eof-object? ch) (cpp-err "illegal argument"))
+     ((char=? #\) ch)
+      (let iter2 ((res '()) (chl chl))
+	(cond
+	 ((null? chl) (string-append "(\"" (list->string res) "\")"))
+	 ((and (null? res) (char-whitespace? (car chl))) (iter2 res (cdr chl)))
+	 ;;? ((char=? #\\ (car chl)) (iter2 (c-escape (cadr chl)) (cddr chl)))
+	 (else (iter2 (cons (car chl) res) (cdr chl))))))
+     (else (iter (cons ch chl) (read-char))))))
 
 (define (scan-cpp-input defs used end-tok)
   ;; Works like this: scan for tokens (comments, parens, strings, char's, etc).
@@ -341,7 +393,6 @@
   (define (finish rr tkl)
     (let* ((tkl (if end-tok (trim-spaces tkl) tkl))
 	   (repl (rtokl->string tkl)))
-      ;;(if (null? rr) (sferr "finish ~S\n  repl=~S\n" tkl repl))
       (if (pair? rr)
 	  (expand-cpp-repl repl defs (append rr used)) ;; re-run
 	  repl)))
@@ -354,6 +405,8 @@
     ;;(unless end-tok (sferr "tkl=~S ch=~S\n" tkl ch))
     (cond
      ((eof-object? ch) (finish rr tkl))
+     ;;((eof-object? ch)
+     ;; (if (pop-input) (iter rr tkl lv (read-char)) (finish rr tkl)))
      ((and (eqv? end-tok ch) (zero? lv))
       (unread-char ch) (finish rr tkl))
      ((and end-tok (char=? #\) ch) (zero? lv))
@@ -363,12 +416,24 @@
       (iter rr (cons 'space tkl) lv (skip-il-ws (read-char))))
      ((read-c-ident ch) =>
       (lambda (iden)
-	(if (equal? iden "defined")
-	    (iter rr (acons 'defined (scan-defined-arg) tkl) lv (read-char))
-	    (let ((rval (expand-cpp-macro-ref iden defs used)))
-	      (if rval
-		  (iter #t (cons rval tkl) lv (read-char))
-		  (iter rr (acons 'ident iden tkl) lv (read-char)))))))
+	#;(let ((ch (read-char))) ;; gag if I need this
+	  (if (eof-object? ch) (pop-input) (unread-char ch)))
+	(cond
+	 ((string=? iden "defined")
+	  (iter rr
+		(acons 'echo (string-append iden (scan-defined-arg)) tkl)
+		lv (read-char)))
+	 ((string=? iden "__has_include__") ;; C++17, but needed
+	  (iter rr
+		(acons 'echo (string-append iden (scan-arg-literal)) tkl)
+		lv (read-char)))
+	 (else
+	  (sferr "expanding ~S ...\n" iden)
+	  (let ((rval (expand-cpp-macro-ref iden defs used)))
+	    (sferr "  rval=~S\n" rval)
+	    (if rval
+		(iter #t (cons rval tkl) lv (read-char))
+		(iter rr (acons 'ident iden tkl) lv (read-char))))))))
      ((read-c-string ch) =>
       (lambda (st) (iter rr (acons 'string (cdr st) tkl) lv (read-char))))
      ((char=? #\( ch) (iter rr (cons ch tkl) (1+ lv) (read-char)))
@@ -397,6 +462,7 @@
 	    (iter2 (cdr argl) (acons "__VA_ARGS__" val argv) (read-char))))
 	 ((or (char=? ch #\() (char=? ch #\,))
 	  (let* ((val (scan-cpp-input defs used #\,)))
+	    (sferr "val=~S\n" val)
 	    (iter2 (cdr argl) (acons (car argl) val argv) (read-char))))
 	 (else
 	  (error "cpp.scm, collect-args: coding error")))))
@@ -486,13 +552,18 @@
 ;; Evaluate CPP condition expression (text).
 ;; Undefined identifiers are replaced with @code{0}.
 ;; @end deffn
-(define (eval-cpp-cond-text text defs)
+(define* (eval-cpp-cond-text text defs #:key (inc-dirs '()))
   (with-throw-handler
    'cpp-error
    (lambda ()
+     (when (string-contains text "__has_include")
+       (sferr "text=~S\n" text)
+       (sferr "lkup=>~S\n" (assoc-ref defs "__has_include"))
+       (sferr "    =>~S\n" (assoc-ref defs "__has_include__"))
+       #f)
      (let* ((rhs (cpp-expand-text text defs))
 	    (exp (parse-cpp-expr rhs)))
-       (eval-cpp-expr exp defs)))
+       (eval-cpp-expr exp defs #:inc-dirs inc-dirs)))
    (lambda (key fmt . args)
      (report-error fmt args)
      (throw 'c99-error "CPP error"))))
@@ -510,12 +581,14 @@
 ;; @end deffn
 (define* (expand-cpp-macro-ref ident defs #:optional (used '()))
   (let ((rval (assoc-ref defs ident)))
+    (sferr "xmac: rval=~S\n" rval)
     (cond
      ((member ident used) #f)
      ((string? rval) (expand-cpp-repl rval defs (cons ident used)))
      ((pair? rval)
       (and=> (collect-args (car rval) defs used)
 	     (lambda (argd)
+	       (sferr "argd=~S\n" argd)
 	       (expand-cpp-repl (px-cpp-ftn argd (cdr rval))
 				defs (cons ident used)))))
      ((c99-std-val ident) => identity)

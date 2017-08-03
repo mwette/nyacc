@@ -1,19 +1,19 @@
-;;; nyacc/lex.scm
-;;;
-;;; Copyright (C) 2015-2017 - Matthew R.Wette
-;;; 
-;;; This library is free software; you can redistribute it and/or modify it
-;;; under the terms of the GNU Lesser General Public License as published by
-;;; the Free Software Foundation; either version 3 of the License, or (at
-;;; your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this library; if not, see <http://www.gnu.org/licenses/>
+;; nyacc/lex.scm
+;;
+;; Copyright (C) 2015-2017 - Matthew R.Wette
+;; 
+;; This library is free software; you can redistribute it and/or modify it
+;; under the terms of the GNU Lesser General Public License as published by
+;; the Free Software Foundation; either version 3 of the License, or (at
+;; your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 ;; A module providing procedures for constructing lexical analyzers.
 
@@ -47,6 +47,7 @@
 	    read-c-num
 	    read-oct read-hex
 	    like-c-ident?
+	    c-escape
 	    cnumstr->scm
 	    filter-mt remove-mt map-mt make-ident-like-p 
 	    c:ws c:if c:ir)
@@ -197,16 +198,15 @@
 	  (unread-char ch)
 	  cv))))))
 
-;; @deffn {Procedure} read-hex ch => "0x7f"|#f
-;; Read octal number.
+;; @deffn {Procedure} read-hex => "0x7f"|#f
+;; Read octal number.  Assumes prefix (e.g., "0x" has already been read).
 ;; @end deffn
 (define read-hex
   (let ((cs:dig (string->char-set "0123456789"))
 	(cs:uhx (string->char-set "ABCDEF"))
 	(cs:lhx (string->char-set "abcdef")))
-    (lambda (ch) ;; ch == #\x always
+    (lambda ()
       (let iter ((cv 0) (ch (read-char)) (n 0))
-	(simple-format #t "ch=~S\n" ch)
 	(cond
 	 ((eof-object? ch) cv)
 	 ((> n 2) (unread-char ch) cv)
@@ -217,7 +217,32 @@
 	 ((char-set-contains? cs:lhx ch)
 	  (iter (+ (* 16 cv) (- (char->integer ch) 87)) (read-char) (1+ n)))
 	 (else (unread-char ch) cv))))))
-	
+
+;; @deffn {Procedure} c-escape seed
+;; After @code{\\} in a C string, read the rest of the sequence and cons
+;; the character, if exists, with the seed (a list).  Remember that @code{\n}
+;; should, and will, just return the seed.
+;; @end deffn
+(define (c-escape seed)
+  (let* ((ch (read-char)))
+    (case ch
+      ((#\newline) seed)
+      ((#\\) (cons #\\ seed))
+      ((#\") (cons #\" seed))
+      ((#\') (cons #\' seed))
+      ((#\n) (cons #\newline seed))
+      ((#\r) (cons #\return seed))
+      ((#\b) (cons #\backspace seed))
+      ((#\t) (cons #\tab seed))
+      ((#\f) (cons #\page seed))
+      ((#\a) (cons #\alarm seed))
+      ((#\v) (cons #\vtab seed))
+      ((#\x) (cons (integer->char (read-hex)) seed))
+      (else
+       (if (char-numeric? ch)
+	   (cons (integer->char (read-oct ch)) seed)
+	   (cons ch seed))))))
+
 ;; @deffn {Procedure} read-c-string ch => ($string . "foo")
 ;; Read a C-code string.  Output to code is @code{write} not @code{display}.
 ;; Return #f if @var{ch} is not @code{"}. @*
@@ -228,27 +253,7 @@
 (define (read-c-string ch)
   (if (not (eq? ch #\")) #f
       (let iter ((cl '()) (ch (read-char)))
-	(cond ((eq? ch #\\)
-	       (let ((c1 (read-char)))
-		 (iter
-		  (case c1
-		    ((#\newline) cl)
-		    ((#\\) (cons #\\ cl))
-		    ((#\") (cons #\" cl))
-		    ((#\') (cons #\' cl))
-		    ((#\n) (cons #\newline cl))
-		    ((#\r) (cons #\return cl))
-		    ((#\b) (cons #\backspace cl))
-		    ((#\t) (cons #\tab cl))
-		    ((#\f) (cons #\page cl))
-		    ((#\a) (cons #\alarm cl))
-		    ((#\v) (cons #\vtab cl))
-		    ((#\x) (cons (integer->char (read-hex ch)) cl))
-		    (else
-		     (if (char-numeric? ch)
-			 (cons (integer->char (read-oct ch)) cl)
-			 (cons c1 cl))))
-		  (read-char))))
+	(cond ((eq? ch #\\) (c-escape cl))
 	      ((eq? ch #\") (cons '$string (lxlsr cl)))
 	      (else (iter (cons ch cl) (read-char)))))))
 

@@ -1,0 +1,7 @@
+;; test.ffi				-*- Scheme -*-
+(define-ffi-module (test)
+  #:library "libc"
+  #:include '(;;"dirent.h"
+              "unistd.h"
+	      )
+  )

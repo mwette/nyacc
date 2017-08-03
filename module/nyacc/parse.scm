@@ -112,7 +112,8 @@
 	   (else ;; other action: skip, error, or accept
 	    (case oact
 	      ((skip) (iter state stack nval (lexr)))
-	      ((error) (throw 'nyacc-error
+	      ((error) (error "parse"))
+	      ((xerror) (throw 'nyacc-error
 			      "parse failed at state ~A, on input ~S"
 			      (car state) sval))
 	      (else ;; accept
