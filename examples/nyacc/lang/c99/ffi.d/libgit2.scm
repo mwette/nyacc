@@ -5,7 +5,7 @@
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (bytestructures guile)
   )
-(dynamic-link "git2")
+(dynamic-link "libgit2")
 
 ;; extern int git_annotated_commit_from_ref(git_annotated_commit **out, 
 ;;     git_repository *repo, const git_reference *ref);

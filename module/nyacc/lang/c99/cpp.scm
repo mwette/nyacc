@@ -266,7 +266,6 @@
 	    ((pre-dec post-dec) (1- (ev1 tree)))
 	    ((pos) (ev1 tree))
 	    ((neg) (- (ev1 tree)))
-	    ((bw-not) (bitwise-not (ev1 tree)))
 	    ((not) (if (zero? (ev1 tree)) 1 0))
 	    ((mul) (* (ev1 tree) (ev2 tree)))
 	    ((div) (/ (ev1 tree) (ev2 tree)))
@@ -281,6 +280,7 @@
 	    ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
 	    ((equal) (if (= (ev1 tree) (ev2 tree)) 1 0))
 	    ((noteq) (if (= (ev1 tree) (ev2 tree)) 0 1))
+	    ((bitwise-not) (lognot (ev1 tree)))
 	    ((bitwise-or) (logior (ev1 tree) (ev2 tree)))
 	    ((bitwise-xor) (logxor (ev1 tree) (ev2 tree)))
 	    ((bitwise-and) (logand (ev1 tree) (ev2 tree)))
@@ -288,8 +288,10 @@
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
 	    ((ident) 0)
-	    ((p-expr) (ev1 tree)) ;; hack to use for enum-def's in util2.scm
-	    (else (error "incomplete implementation"))))))
+	    ;; hacks for use in util2.scm:canize-enum-def-list:
+	    ((p-expr) (ev1 tree))
+	    ((cast) (ev2 tree))
+	    (else (error "incomplete eval-cpp-expr implementation"))))))
     (eval-expr tree)))
 
 ;;.@deffn {Procedure} rtokl->string reverse-token-list => string

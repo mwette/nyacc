@@ -545,8 +545,8 @@
      )
 
     (designator
-     ("[" constant-expression "]" ($$ (list 'array-dsgr $2)))
-     ("." identifier ($$ (list 'sel-dsgr $2)))
+     ("[" constant-expression "]" ($$ `(array-dsgr ,$2)))
+     ("." identifier ($$ `(sel-dsgr ,$2)))
      )
 
     ;; statements

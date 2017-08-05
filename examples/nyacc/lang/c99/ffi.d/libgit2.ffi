@@ -3,7 +3,7 @@
 (define-ffi-module (libgit2)
   #:include '("git2.h")
   #:inc-filter (lambda (s) (string-contains s "git2/" 0))
-  #:library '("git2")
+  #:library '("libgit2")
   )
 
 ;; --- last line ---

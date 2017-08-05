@@ -1,7 +1,5 @@
 ;; test.ffi				-*- Scheme -*-
 (define-ffi-module (test)
-  #:library "libc"
-  #:include '(;;"dirent.h"
-              "unistd.h"
-	      )
+  #:pkg-config "glib-2.0"
+  #:include '("gio/gio.h")
   )

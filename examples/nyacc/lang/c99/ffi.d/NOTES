@@ -1,5 +1,7 @@
-cairo/cairo.ffi		runs 
-gdbm.ffi		runs
+cairo/cairo.ffi		not running anymore
+gdbm.ffi		minior issuses
 libgit2.ffi		missing some items
-librsvg.ffi		CPP error
+librsvg.ffi		compiles now (was a bear wrt GCC extensions)
 sqlite3.ffi		long long int; varargs
+
+

@@ -630,9 +630,9 @@
    ;; designator-list => designator-list designator
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; designator => "[" constant-expression "]"
-   (lambda ($3 $2 $1 . $rest) (list 'array-dsgr $2))
+   (lambda ($3 $2 $1 . $rest) `(array-dsgr ,$2))
    ;; designator => "." identifier
-   (lambda ($2 $1 . $rest) (list 'sel-dsgr $2))
+   (lambda ($2 $1 . $rest) `(sel-dsgr ,$2))
    ;; statement => labeled-statement
    (lambda ($1 . $rest) $1)
    ;; statement => compound-statement
