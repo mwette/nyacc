@@ -52,6 +52,8 @@
      (constant ($$ `(p-expr ,$1)))
      (string-literal ($$ `(p-expr ,(tl->list $1))))
      ("(" expression ")" ($$ $2))
+     ("(" "{" block-item-list "}" ")"
+      ($$ `(stmt-expr (@ (extension "GNUC")) ,$3)))
      )
 
     (postfix-expression			; S 6.5.2
@@ -231,7 +233,9 @@
 
     (init-declarator			; S 6.7
      (declarator ($$ `(init-declr ,$1)))
+     (declarator asm-expression ($$ `(init-declr ,$1)))
      (declarator "=" initializer ($$ `(init-declr ,$1 ,$3)))
+     (declarator asm-expression "=" initializer ($$ `(init-declr ,$1 ,$4)))
      )
 
     (storage-class-specifier		; S 6.7.1
@@ -387,7 +391,6 @@
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
      ("(" declarator ")" ($$ `(scope ,$2)))
-
      (direct-declarator
       "[" type-qualifier-list assignment-expression "]"
       ($$ `(array-of ,$1 ,$3 ,$4)))
@@ -506,8 +509,8 @@
      ("[" type-qualifier-list "static" assignment-expression "]"
       ($$ `(declr-anon-array
 	    ,(tl->list (tl-insert '(stor-spec "static") $2)) ,$4)))
-     (direct-abstract-declarator "[" "*" "]" ($$ `(declr-STAR ,$1)))
-     ("[" "*" "]" ($$ '(declr-STAR)))
+     (direct-abstract-declarator "[" "*" "]" ($$ `(declr-star ,$1)))
+     ("[" "*" "]" ($$ '(declr-star)))
      (direct-abstract-declarator "(" parameter-type-list ")"
 				 ($$ `(abs-ftn-declr ,$1 ,(tl->list $3))))
      (direct-abstract-declarator "(" ")" ($$ `(abs-ftn-declr ,$1)))

@@ -887,6 +887,22 @@
        (let ((xdeclr (fix-declr dir-abs-declr)))
 	 (if (eq? xdeclr dir-abs-declr) declr
 	     `(declr-array ,xdeclr ,type-qual-list ,assn-expr))))
+      
+      ;; declr-anon-array type-qual-list assn-expr
+      ((declr-anon-array ,type-qual-list ,assn-expr) declr)
+      ;; declr-anon-array type-qual-list 
+      ((declr-anon-array (type-qual-list ,type-qual-tail)) declr)
+      ;; ???? declr-anon-array assn-expr
+      ((declr-anon-array ,assn-expr) declr)
+      ;; declr-anon-array
+      ((declr-anon-array) declr)
+      ;; declr-star dir-abs-decl
+      ((declr-star ,dir-abs-declr)
+       (let ((xdeclr (fix-declr dir-abs-declr)))
+	 (if (eq? xdeclr dir-abs-declr) declr
+	     `(declr-star ,xdeclr))))
+      ;; declr-star
+      ((declr-star) declr)
 
       ((ftn-declr ,dir-declr ,param-list)
        (let ((xdeclr (fix-declr dir-declr))

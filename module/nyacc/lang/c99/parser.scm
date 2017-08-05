@@ -37,13 +37,11 @@
 			   (cons 'rto-v c99-rto-v) (cons 'mtab c99-mtab)
 			   (cons 'act-v c99-act-v)))))
     (lambda* (lexer #:key (debug #f))
-      (catch
-       'nyacc-error
-       (lambda () (parser lexer #:debug debug))
-       (lambda (key fmt . args)
-	 (report-error fmt args)
-	 ;;(pop-input)			; not sure this is correct
-	 (throw 'c99-error "C99 parse error"))))))
+      (catch 'nyacc-error
+	(lambda () (parser lexer #:debug debug))
+	(lambda (key fmt . args)
+	  (report-error fmt args)
+	  (throw 'c99-error "C99 parse error"))))))
 
 ;; This is used to parse included files at top level.
 (define (run-parse)

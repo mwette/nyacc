@@ -73,8 +73,8 @@
        "__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
-       ;;"__dead2=" ;; /usr/include/unistd.h, l.645, __attribute__(X)
-       ;;"__has_include(X)=" ;; kill me, again: unistd.h, l.655
+       "__has_include=(X)__has_include__(X)"
+       "__extension__="
        )
       ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
       ))
@@ -83,6 +83,8 @@
        "__builtin_va_list=void*" "__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)=")
+       "__has_include=(X)__has_include__(X)"
+       "__extension__="
       ))))
 (define fh-cpp-defs
   (cond
@@ -494,8 +496,11 @@
     ("int32_t" . ffi:int32) ("uint32_t" . ffi:uint32) 
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
     ;; ("intptr_t" . ffi:intptr_t) ("uintptr_t" . ffi:uintptr_t)
-    ;; hack
-    ("char" . ffi:int)
+    ;; hacks
+    ("char" . ffi:int) ("unsigned char" . ffi:unsigned-int)
+    ("long long int" . ffi:long) ("long long" . ffi:long)
+    ("unsigned long long int" . ffi:unsigned-long)
+    ("unsigned long long" . ffi:unsigned-long)
     ))
 
 (define ffi-keepers (map car ffi-typemap))

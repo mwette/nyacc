@@ -18,6 +18,9 @@
    (lambda ($1 . $rest) `(p-expr ,(tl->list $1)))
    ;; primary-expression => "(" expression ")"
    (lambda ($3 $2 $1 . $rest) $2)
+   ;; primary-expression => "(" "{" block-item-list "}" ")"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(stmt-expr (@ (extension "GNUC")) ,$3))
    ;; postfix-expression => primary-expression
    (lambda ($1 . $rest) $1)
    ;; postfix-expression => postfix-expression "[" expression "]"
@@ -223,8 +226,13 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; init-declarator => declarator
    (lambda ($1 . $rest) `(init-declr ,$1))
+   ;; init-declarator => declarator asm-expression
+   (lambda ($2 $1 . $rest) `(init-declr ,$1))
    ;; init-declarator => declarator "=" initializer
    (lambda ($3 $2 $1 . $rest) `(init-declr ,$1 ,$3))
+   ;; init-declarator => declarator asm-expression "=" initializer
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(init-declr ,$1 ,$4))
    ;; storage-class-specifier => "auto"
    (lambda ($1 . $rest) '(stor-spec (auto)))
    ;; storage-class-specifier => "extern"
@@ -582,9 +590,9 @@
         ,(tl->list (tl-insert '(stor-spec "static") $2))
         ,$4))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "*" "]"
-   (lambda ($4 $3 $2 $1 . $rest) `(declr-STAR ,$1))
+   (lambda ($4 $3 $2 $1 . $rest) `(declr-star ,$1))
    ;; direct-abstract-declarator => "[" "*" "]"
-   (lambda ($3 $2 $1 . $rest) '(declr-STAR))
+   (lambda ($3 $2 $1 . $rest) '(declr-star))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" paramete...
    (lambda ($4 $3 $2 $1 . $rest)
      `(abs-ftn-declr ,$1 ,(tl->list $3)))

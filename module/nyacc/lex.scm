@@ -253,7 +253,7 @@
 (define (read-c-string ch)
   (if (not (eq? ch #\")) #f
       (let iter ((cl '()) (ch (read-char)))
-	(cond ((eq? ch #\\) (c-escape cl))
+	(cond ((eq? ch #\\) (iter (c-escape cl) (read-char)))
 	      ((eq? ch #\") (cons '$string (lxlsr cl)))
 	      (else (iter (cons ch cl) (read-char)))))))
 

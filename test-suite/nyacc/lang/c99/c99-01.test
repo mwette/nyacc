@@ -9,13 +9,15 @@
 
 ;; CPP tests
 
-(add-to-load-path (string-append (getcwd) "/../../../../module/"))
-(add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
+;;(add-to-load-path (string-append (getcwd) "/../../../../module/"))
+;;(add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
 
 (define-module (c99-01)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 xparser)
   #:use-module (test-suite lib))
+
+(use-modules (ice-9 pretty-print))
 
 (define incs '("exam.d"))
 
@@ -27,6 +29,7 @@
 (define (parse-string str)
   (with-input-from-string str
     (lambda ()
+      ;;(simple-format #t "\n~A\n" str)
       (parse-c99 #:inc-dirs incs #:mode 'code))))
 
 (define (parse-string-list . str-l)
@@ -89,25 +92,20 @@
 		(add (mul (p-expr (fixed "1")) (p-expr (fixed "2")))
 		     (fctn-call
 		      (p-expr (ident "bar"))
-		      (expr-list
-                       (p-expr (fixed "0"))
-                       (p-expr (fixed "1"))
-                       (p-expr (fixed "2"))
-                       (p-expr (fixed "3"))
-                       (p-expr (fixed "4"))
-                       (mul (p-expr (fixed "2")) (p-expr (fixed "3"))))))))))
+		      (expr-list (p-expr (fixed "0")) (p-expr (fixed "1"))
+				 (p-expr (fixed "2")) (p-expr (fixed "3"))
+				 (p-expr (fixed "4"))
+				 (mul (p-expr (fixed "2"))
+				      (p-expr (fixed "3"))))))))))
        (decl (decl-spec-list
-	      (stor-spec (static))
-	      (type-spec (fixed-type "char")))
+	      (stor-spec (static)) (type-spec (fixed-type "char")))
 	     (init-declr-list
-	      (init-declr
-	       (ptr-declr (pointer) (ident "y"))
-	       (initzer (p-expr (string "bar"))))))
+	      (init-declr (ptr-declr (pointer) (ident "y"))
+			  (initzer (p-expr (string "bar"))))))
        (decl (decl-spec-list (type-spec (fixed-type "int")))
 	     (init-declr-list
 	      (init-declr
-	       (ident "z")
-	       (initzer (p-expr (ident "ex12_abc2")))))))))
+	       (ident "z") (initzer (p-expr (ident "ex12_abc2")))))))))
 
   (pass-if "spacing in tokenization"
     (let ((sx1 (parse-string "#define foo(X) # X\nchar *s = foo(abc def);\n"))
@@ -146,15 +144,13 @@
 		 (expr-list
                   (fctn-call
 		   (p-expr (ident "foo"))
-		   (expr-list
-		    (p-expr (fixed "1"))
-		    (p-expr (fixed "2"))))
+		   (expr-list (p-expr (fixed "1")) (p-expr (fixed "2"))))
                   (p-expr (fixed "3")))))))))))
 
   (pass-if "multiple"
     (and
-     
      (equal?
+
       (parse-string "#define inc(X) X++ + 1\nint x = inc(a);")
       '(trans-unit
        (decl (decl-spec-list (type-spec (fixed-type "int")))
@@ -194,12 +190,35 @@
   ;; This breaks prior to 0.81.0  I think we need more testing on
   ;; possible escapes.  See esc-str in cpp.c.
   (pass-if "CPP string building"
-    (let ((code (string-append
-		 "int x;\n"
-		 "#define XYZ \"bar \\\"-baz\\\"\"\n"
-		 "char *s = XYZ;\n"
-		 )))
-      (if (parse-string code) #t #f)))
+    (if (parse-string-list
+	 "int x;\n"
+	 "#define XYZ \"bar \\\"-baz\\\"\"\n"
+	 "char *s = XYZ;\n") #t #f))
+
+  ;; User needs to #define __has_include __has_include__
+  (pass-if "__has_include"
+    (and
+     (equal?
+      (parse-string-list
+       "#if __has_include__(\"exam.d/inc.h\")\n"
+       "int x;\n"
+       "#else\n"
+       "char x;\n"
+       "#endif\n")
+      '(trans-unit
+	(decl (decl-spec-list (type-spec (fixed-type "int")))
+	      (init-declr-list (init-declr (ident "x"))))))
+     (equal?
+      (parse-string-list
+       "#if __has_include__(\"xxxx.d/inc.h\")\n"
+       "int x;\n"
+       "#else\n"
+       "char x;\n"
+       "#endif\n")
+      '(trans-unit
+	(decl (decl-spec-list (type-spec (fixed-type "char")))
+	      (init-declr-list (init-declr (ident "x"))))))
+     ))
 
   )
 

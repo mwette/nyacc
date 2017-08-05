@@ -151,6 +151,11 @@ definition (used in file mode).  See below.
 @end table
 @fi
 
+Note: The user needs to define 
+@code{"__has_include(X)=__has_include__(X)"} to enable has-include;
+@code{"__has_include=__has_include__"} will not work.  (Should I
+worry that it does not?)
+
 @deffn xdef? name mode => #t|#f
 Given string @var{name} and @var{mode} indicate whether the parser
 should expand using CPP defines.  The default is

@@ -32,25 +32,24 @@
     '(("__builtin"
        "__builtin_va_list=void*"
        "__attribute__(X)="
+       "__extension__="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
-       ;;"__has_include(X)=__has_include__(X)"
-       "__has_include=__has_include__"
-       ;;"__dead2=" ;; /usr/include/unistd.h, l.645, __attribute__(X)
-       ;;"__has_include(X)=" ;; kill me, again: unistd.h, l.655
+       "__has_include(X)=__has_include__(X)"
        )
-      ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
       ))
    (else
     '(("__builtin"
        "__builtin_va_list=void*" "__attribute__(X)="
        "__inline=" "__inline__="
-       "__asm(X)=" "__asm__(X)=")
+       "__asm(X)=" "__asm__(X)="
+       "__extension__="
+       )
       ))))
 
-(define mode 'code)
 (define mode 'file)
 (define mode 'decl)
+(define mode 'code)
 (define debug #f)
 
 (define (parse-file file)
@@ -94,20 +93,10 @@
 	      "struct foo { int a; double b; };\n"
 	      "struct foo x;\n"))
        (code "enum { A = 1<<3, B } bar;\n")
-       (code "char *s = \"foo\0bar\";\n")
-       ;;(code "int x = ((*(expr))->id);\n") ;;  "(*expr)->id")
-       ;;(code "((*(expr))->id)")
        (indx 2)
-       (code (string-append
-	      "#if __has_include(<stdio.h>)\n"
-	      "int x;\n"
-	      "#else\n"
-	      "char x;\n"
-	      "#endif\n"
-	      ))
        (tree (parse-string code))
        ;;(tree (parse-c99x code))
-       ;;(tree (parse-file "null.c"))
+       ;;(tree (parse-file "zz.c"))
        
        ;;(udict (c99-trans-unit->udict tree))
        ;;(udecl (udict-ref udict "bar"))
@@ -115,10 +104,6 @@
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs decl udict))
        )
-  #;(with-input-from-string "(  <f o o.h>  )"
-    (lambda () (sferr "~S\n" (scan-arg-literal)) ))
-  #;(with-input-from-string "_foo__"
-    (lambda () (sferr "~S\n" (read-c-ident #\_))))
   ;;(display code)
   ;;(ppsx tree)
   ;;(pp99 tree)

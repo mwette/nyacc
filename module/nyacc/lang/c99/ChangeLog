@@ -1,3 +1,7 @@
+2017-08-04  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): add GNU compound statement in paren's as expr
+
 2017-08-01  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* cpp.scm (eval-cpp-expr): If tree is (char x) then we need to
