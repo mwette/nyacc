@@ -1,5 +1,14 @@
-(use-modules (cairo cairo))
-(use-modules (ffi-help-rt))
+;;; demo-cairo.scm
+
+;; Copyright (C) 2017 Matthew R. Wette
+
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(use-modules (cairo))
+(use-modules (systme ffi-help-rt))
 (use-modules (system foreign)) ;; string->pointer
 
 ;;(define mx (make-cairo_matrix_t))
@@ -20,6 +29,5 @@
 ;; need to add guardians?
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
-#|
-|#
 
+;;; --- last line ---

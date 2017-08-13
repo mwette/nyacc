@@ -296,7 +296,8 @@
     ("unsigned" . unsigned-int) ("unsigned int" . unsigned-int)
     ("long" . long) ("long int" . long) ("unsigned long" . unsigned-long)
     ("unsigned long int" . unsigned-long) ("long long" . long-long)
-    ("usigned long long" . unsigned-long-long) ("intptr_t" . intptr_)
+    ("long long int" . long-long) ("usigned long long" . unsigned-long-long)
+    ("unsigned long long int" . unsigned-long-long) ("intptr_t" . intptr_)
     ("uintptr_t" . uintptr_t) ("size_t" . size_t) ("ssize_t" . ssize_t)
     ("ptrdiff_t" . ptrdiff_t)
     ("int8_t" . int8) ("uint8_t" . uint8) 
@@ -795,7 +796,13 @@
        (stor-spec (typedef))
        (type-spec (fixed-type ,name)))
       (init-declr (ident ,typename)))
-     (values wrapped defined))
+     (cond
+      ((assoc-ref bs-typemap name) =>
+       (lambda (bs-name) (sfscm "(define ~A-desc ~A)\n" typename bs-name)))
+      (else (sfscm "(define ~A-desc ~A-desc)\n" typename name)))
+     (sfscm "(define unwrap-~A unwrap-fixed)\n" typename)
+     (sfscm "(define wrap-~A identity)\n" typename)
+     (values (cons typename wrapped) (cons typename defined)))
 
     ;; typedef double foo_t;
     ((udecl
@@ -803,7 +810,13 @@
        (stor-spec (typedef))
        (type-spec (float-type ,name)))
       (init-declr (ident ,typename)))
-     (values wrapped defined))
+     (cond
+      ((assoc-ref bs-typemap name) =>
+       (lambda (bs-name) (sfscm "(define ~A-desc ~A)\n" typename bs-name)))
+      (else (sfscm "(define ~A-desc ~A-desc)\n" typename name)))
+     (sfscm "(define unwrap-~A unwrap-float)\n" typename)
+     (sfscm "(define wrap-~A identity)\n" typename)
+     (values (cons typename wrapped) (cons typename defined)))
 
     ;; typedef enum foo { ... } foo_t;
     ((udecl
@@ -966,9 +979,9 @@
       (init-declr (ident ,typename)))
      (cond
       ((member name wrapped)
-       (sfscm "(define unwrap-~S unwrap-~S)\n" typename name)
-       (sfscm "(define wrap-~S wrap-~S)\n" typename name)
-       (sfscm "(define ~S ~S)\n" typename name)
+       (sfscm "(define unwrap-~A unwrap-~A)\n" typename name)
+       (sfscm "(define wrap-~A wrap-~A)\n" typename name)
+       (sfscm "(define ~A ~A)\n" typename name)
        (values (cons typename wrapped) (cons typename defined)))
       (else
        (let ((xdecl (expand-typerefs udecl udict defined)))
@@ -1244,10 +1257,14 @@
 	 (ffi-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter incf))
 	 (all-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter #t))
 
+	 ;; the list of typedefs we will generate (later):
+	 ;; (added to deal with forward references somehow...)
 	 (tdefs (fold
 		 (lambda (pair seed)
 		   (pmatch (cdr pair)
-		     ((udecl (decl-spec-list (stor-spec (typedef))
+		     ;; If I don't have the following, then sqlite.ffi
+		     ;; will overflow the VM trying to expand the typeref
+		     #;((udecl (decl-spec-list (stor-spec (typedef))
 					     (type-spec (fixed-type ,name)))
 			     (init-declr (ident ,name)))
 		      seed)

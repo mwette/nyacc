@@ -23,6 +23,11 @@ To play with the ffi-helper you need to
 The following generates ffi.d/cairo.scm:
   $ guild compile-ffi ffi.d/cairo.ffi
 
+If you have scheme-bytestructure in your GUILE_LOAD_PATH you can try
+  $ guile
+  scheme@(guile-user)> ,use (cairo)
+Currently the above has unresolved reference (which are new bugs)
+
 https://github.com/TaylanUB/scheme-bytestructures
 
 Tmach.scm

@@ -824,7 +824,6 @@
       '() (sx-tail param-list 1))))
   
   (define (fix-declr declr)
-    ;;(sferr "tag=~S\n" (sx-tag declr))
     (sxml-match declr
       (#f declr)
       ((ident ,name) declr)
@@ -1083,6 +1082,18 @@
 	      (enum-defn (ident ,nstr) (p-expr (fixed ,vstr)))))))))
 
 ;; === stripdown =======================
+;; Remove remove @emph{stor-spec} elements from a u-decl.
+;; remove comments and attributes.  what else?
+;; * comments
+;; * attributes
+;; * type-specifiers: register, auto
+;; * declrs: pointer-to type => pointer-to (void)
+;; (stor-spec "auto") => empty
+
+;; needs to work as stream processor, like sxpath, or foldts
+;; (strip-attr)
+;; (stor-spec ,name) w/ name in ("auto" "extern" "register" "static" "typedef")
+;; (type-spec ,type) (void) (fixed-type ,name) (float-type ,name) aggr array
 
 (define* (stripdown-declr declr #:key const-ptr)
   (define (fD seed tree) '())
@@ -1103,7 +1114,6 @@
   (foldts fD fU fH '() declr))
 
 ;; @deffn {Procedure} stripdown udecl => udecl
-;; Remove remove @emph{stor-spec} elements from a u-decl.
 ;; @example
 ;; =>
 ;; @end example

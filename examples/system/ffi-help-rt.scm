@@ -18,6 +18,7 @@
 	    define-fh-function define-fh-function/p
 	    pointer-to
 	    unwrap~fixed unwrap~float unwrap~pointer unwrap~array
+	    make-ftn-arg-unwrapper
 	    wrap-void*
 	    ;; debugging
 	    fht-unwrap
@@ -93,11 +94,12 @@
 	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type nv-map)			; based on bytestructure
-       (with-syntax ((unwrap (gen-id x "unwrap-" #'type))
+       (with-syntax ((desc (gen-id x #'type "-desc"))
+		     (unwrap (gen-id x "unwrap-" #'type))
 		     (wrap (gen-id x "wrap-" #'type))
-		     (unwrap* (gen-id x "unwrap-" #'type "*"))
-		     )
+		     (unwrap* (gen-id x "unwrap-" #'type "*")))
          #'(begin
+	     (define desc int)
 	     (define wrap
 	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))
 			       nv-map)))
@@ -355,8 +357,8 @@
 (define (make-ftn-arg-unwrapper ret-t args-t)
   (lambda (obj)
     (cond
-     ((pointer? obj) obj)
-     ((procedure? obj) (ffi:procedure->pointer req-t obj args-t))
+     ((ffi:pointer? obj) obj)
+     ((procedure? obj) (ffi:procedure->pointer ret-t obj args-t))
      (else (error "expecting pointer or procedure")))))
 
 ;; now support for the base types

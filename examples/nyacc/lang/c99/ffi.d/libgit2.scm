@@ -110,8 +110,7 @@
               (dynamic-func "git_attr_value" (dynamic-link))
               (list '*))))
     (lambda (attr)
-      (let ((~attr (unwrap~pointer attr)))
-        (wrap-git_attr_t (~f ~attr))))))
+      (let ((~attr (unwrap~pointer attr))) (~f ~attr)))))
 (export git_attr_value)
 
 ;; extern int git_attr_get(const char **value_out, git_repository *repo, 
@@ -917,9 +916,9 @@
           `(file_mode ,unsigned-int)
           `(file_open_flags ,int)
           `(notify_flags ,unsigned-int)
-          `(notify_cb ,git_checkout_notify_cb-desc)
+          `(notify_cb ,(bs:pointer intptr_t))
           `(notify_payload ,(bs:pointer intptr_t))
-          `(progress_cb ,git_checkout_progress_cb-desc)
+          `(progress_cb ,(bs:pointer intptr_t))
           `(progress_payload ,(bs:pointer intptr_t))
           `(paths ,(bs:struct
                      (list `(strings ,(bs:pointer (bs:pointer int)))
@@ -930,7 +929,7 @@
           `(ancestor_label ,(bs:pointer int))
           `(our_label ,(bs:pointer int))
           `(their_label ,(bs:pointer int))
-          `(perfdata_cb ,git_checkout_perfdata_cb-desc)
+          `(perfdata_cb ,(bs:pointer intptr_t))
           `(perfdata_payload ,(bs:pointer intptr_t)))))
 (export git_checkout_options-desc)
 (define-fh-compound-type/p git_checkout_options git_checkout_options-desc)
@@ -1199,11 +1198,11 @@
                             (list `(strings ,(bs:pointer (bs:pointer int)))
                                   `(count ,size_t-desc)))))))
           `(bare ,int)
-          `(local ,git_clone_local_t-desc)
+          `(local ,int)
           `(checkout_branch ,(bs:pointer int))
-          `(repository_cb ,git_repository_create_cb-desc)
+          `(repository_cb ,(bs:pointer intptr_t))
           `(repository_cb_payload ,(bs:pointer intptr_t))
-          `(remote_cb ,git_remote_create_cb-desc)
+          `(remote_cb ,(bs:pointer intptr_t))
           `(remote_cb_payload ,(bs:pointer intptr_t)))))
 (export git_clone_options-desc)
 (define-fh-compound-type/p git_clone_options git_clone_options-desc)
@@ -1681,7 +1680,7 @@
   (bs:struct
     (list `(name ,(bs:pointer int))
           `(value ,(bs:pointer int))
-          `(level ,git_config_level_t-desc)
+          `(level ,int)
           `(free ,(bs:pointer intptr_t))
           `(payload ,(bs:pointer intptr_t)))))
 (export git_config_entry-desc)
@@ -1728,7 +1727,7 @@
 ;; } git_cvar_map;
 (define git_cvar_map-desc
   (bs:struct
-    (list `(cvar_type ,git_cvar_t-desc)
+    (list `(cvar_type ,int)
           `(str_match ,(bs:pointer int))
           `(map_value ,int))))
 (export git_cvar_map-desc)
@@ -4250,7 +4249,7 @@
 ;; } git_rebase_operation;
 (define git_rebase_operation-desc
   (bs:struct
-    (list `(type ,git_rebase_operation_t-desc)
+    (list `(type ,int)
           `(id ,(bs:struct (list `(id ,(bs:vector 20 #f)))))
           `(exec ,(bs:pointer int)))))
 (export git_rebase_operation-desc)
@@ -5189,9 +5188,9 @@
 (define git_stash_apply_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
-          `(flags ,git_stash_apply_flags-desc)
+          `(flags ,int)
           `(checkout_options ,git_checkout_options-desc)
-          `(progress_cb ,git_stash_apply_progress_cb-desc)
+          `(progress_cb ,(bs:pointer intptr_t))
           `(progress_payload ,(bs:pointer intptr_t)))))
 (export git_stash_apply_options-desc)
 (define-fh-compound-type/p git_stash_apply_options git_stash_apply_options-desc)
@@ -5366,7 +5365,7 @@
 (define git_status_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
-          `(show ,git_status_show_t-desc)
+          `(show ,int)
           `(flags ,unsigned-int)
           `(pathspec
              ,(bs:struct
@@ -5397,7 +5396,7 @@
 ;; } git_status_entry;
 (define git_status_entry-desc
   (bs:struct
-    (list `(status ,git_status_t-desc)
+    (list `(status ,int)
           `(head_to_index ,(bs:pointer intptr_t))
           `(index_to_workdir ,(bs:pointer intptr_t)))))
 (export git_status_entry-desc)
@@ -6968,34 +6967,7 @@
         (else (error "type mismatch"))))
 
 (define libgit2-types
-  '("git_tag_foreach_cb" (struct . "git_submodule_update_options") 
-    "git_submodule_update_options" "git_submodule_cb" "git_submodule_status_t"
-    "git_status_entry" "git_status_options" "git_status_opt_t" 
-    "git_status_show_t" "git_status_cb" "git_status_t" "git_stash_cb" (struct 
-    . "git_stash_apply_options") "git_stash_apply_options" 
-    "git_stash_apply_progress_cb" "git_stash_apply_progress_t" 
-    "git_stash_apply_flags" "git_stash_flags" "git_revwalk_hide_cb" 
-    "git_sort_t" "git_revspec" "git_revparse_mode_t" "git_revert_options" 
-    "git_reset_t" "git_rebase_operation" "git_rebase_operation_t" 
-    "git_rebase_options" "git_pathspec_flag_t" "git_pathspec_match_list" 
-    "git_pathspec" "git_patch" (struct . "git_odb_writepack") (struct . 
-    "git_odb_stream") "git_odb_stream_t" (struct . "git_odb_expand_id") 
-    "git_odb_expand_id" "git_odb_foreach_cb" "git_note_iterator" 
-    "git_note_foreach_cb" "git_filter_list" "git_filter" "git_filter_flag_t" 
-    "git_filter_mode_t" "git_error_t" "git_error" "git_error_code" 
-    "git_describe_result" "git_describe_format_options" (struct . 
-    "git_describe_options") "git_describe_options" "git_describe_strategy_t" 
-    "git_cvar_map" "git_cvar_t" "git_config_iterator" "git_config_foreach_cb" 
-    (struct . "git_config_entry") "git_config_entry" "git_config_level_t" (
-    struct . "git_clone_options") "git_clone_options" 
-    "git_repository_create_cb" "git_remote_create_cb" "git_clone_local_t" 
-    "git_cherrypick_options" (struct . "git_checkout_options") 
-    "git_checkout_options" "git_checkout_perfdata_cb" 
-    "git_checkout_progress_cb" "git_checkout_notify_cb" 
-    "git_checkout_perfdata" "git_checkout_notify_t" "git_checkout_strategy_t" 
-    "git_branch_iterator" "git_blame" (struct . "git_blame_hunk") 
-    "git_blame_hunk" (struct . "git_blame_options") "git_blame_options" 
-    "git_blame_flag_t" "git_attr_foreach_cb" "git_attr_t"))
+  ())
 (export libgit2-types)
 
 ;; --- last line ---
