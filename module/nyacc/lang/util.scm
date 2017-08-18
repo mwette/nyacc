@@ -6,7 +6,7 @@
 ;;; or any later version published by the Free Software Foundation.  See
 ;;; the file COPYING included with the nyacc distribution.
 
-;; runtime utilities for the parsers -- needs work
+;; runtime utilities for the parsers
 
 (define-module (nyacc lang util)
   #:export (lang-crn-lic 
@@ -14,7 +14,7 @@
 	    *input-stack* push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
-	    sx-tag sx-attr sx-tail sx-length sx-ref sx-cons* sx-list
+	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
 	    sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr* sx+attr*
 	    sx-find
 	    ;; for pretty-printing
@@ -23,7 +23,8 @@
 	    move-if-changed
 	    cintstr->scm
 	    sferr pperr)
-  #:use-module ((srfi srfi-1) #:select(find))
+  #:use-module ((srfi srfi-1) #:select (find fold))
+  ;; #:use-module ((sxml xpath) #:select (sxpath)) ;; see sx-find below
   #:use-module (ice-9 pretty-print)
   )
 
@@ -210,6 +211,15 @@ the file COPYING included with the this distribution.")
    (else
     (list-xref sx ix))))
 
+;; @deffn {Procedure} sx-ref* sx ix1 ix2 ... => item
+;; Equivalent to
+;; @example
+;; (((sx-ref (sx-ref sx ix1) ix2) ...) ...)
+;; @end example
+;; @end deffn
+(define (sx-ref* sx . args)
+  (fold (lambda (ix sx) (sx-ref sx ix)) sx args))
+
 ;; @deffn {Procedure} sx-tag sx => tag
 ;; Return the tag for a tree
 ;; @end deffn
@@ -326,12 +336,26 @@ the file COPYING included with the this distribution.")
 	   (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
 
 ;; @deffn {Procedure} sx-find tag sx => (tag ...)
+;; @deffnx {Procedure} sx-find path sx => (tag ...)
+;; In the first form @var{tag} is a symbolic tag in the first level.
 ;; Find the first matching element (in the first level).
+;; In the second form, the argument @var{path} is a pair.  Apply sxpath
+;; and take it's car,
+;; if found, or return @code{#f}, like lxml's @code{tree.find()} method.
+;; @* NOTE: the path version is currently disabled, to remove dependence
+;; on the module @code{(sxml xpath)}.
 ;; @end deffn
-(define (sx-find tag sx)
-  (find (lambda (node)
-	  (and (pair? node) (eqv? tag (car node))))
-	sx))
+(define (sx-find tag-or-path sx)
+  (cond
+   ((symbol? tag-or-path)
+    (find (lambda (node)
+	    (and (pair? node) (eqv? tag-or-path (car node))))
+	  sx))
+   #;((pair? tag-or-path)
+    (let ((rez ((sxpath tag-or-path) sx)))
+      (if (pair? rez) (car rez) #f)))
+   (else
+    (error "expecting first arg to be tag or sxpath"))))
 
 ;;; === pp ==========================
 ;; @section Pretty-Print and Other Utility Procedures
