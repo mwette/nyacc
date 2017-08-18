@@ -246,9 +246,9 @@
 ;; @end deffn
 (define* (eval-cpp-expr tree dict #:key (inc-dirs '()))
   (letrec
-      ((tx (lambda (tr ix) (list-ref tr ix)))
+      ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (tx tr 1)))
-       (ev (lambda (ex ix) (eval-expr (list-ref ex ix))))
+       (ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
        (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
        (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2
        (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
@@ -287,8 +287,10 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ((ident) 0)
 	    ;; hacks for use in util2.scm:canize-enum-def-list:
+	    ;; If ident is defined then it should have already been expanded.
+	    ;; So then only enum defs remain which should be valid expressions.
+	    ((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
 	    (else (error "incomplete eval-cpp-expr implementation"))))))

@@ -38,6 +38,19 @@
 
 ;; mspec == munged (unwrapped) declaration
 
+;; possible pattern for munging:
+;; (split-<form> form) => (values tag attr|#f ... tail)
+;; (join-<form> tag attr|#f ... tail)
+;; I would have to go through c99/mach.scm to find all forms to do:
+;; decl enum-def
+;;
+;; or
+;; (sx-redo form elt-1 elt-2 ... tail?)
+;; == (sx-cons* (sx-tag form) (sx-attr form) elt-1 elt-2 tail?)
+
+;; Another idea is to make comments attributes and have join be sx-cons*
+;; I think this would simplify a lot.
+
 (define-module (nyacc lang c99 util2)
   #:export (c99-trans-unit->udict
 	    c99-trans-unit->udict/deep
@@ -132,7 +145,7 @@
 
 ;; may need to replace (typename "int32_t") with (fixed-type "int32_t")
 
-;; @deffn {Procedure} ink-keeper? tree inc-filter => #f| tree
+;; @deffn {Procedure} inc-keeper? tree inc-filter => #f| tree
 ;; This is a helper.  @var{inc-filter} is @code{#t}, @code{#f} or a
 ;; precicate procedure, which given the name of the file, determines if
 ;; it should be processed.
@@ -140,12 +153,13 @@
 (define (inc-keeper? tree filter)
   (if (and (eqv? (sx-tag tree) 'cpp-stmt)
 	   (eqv? (sx-tag (sx-ref tree 1)) 'include)
-	   (pair? (sx-ref (sx-ref tree 1) 2))
+	   (pair? (sx-ref* tree 1 2))
 	   (if (procedure? filter)
-	       (filter (let ((arg (sx-ref (sx-ref tree 1) 1)))
-			 (substring arg 1 (1- (string-length arg)))))
+	       (let ((incl (sx-ref* tree 1 1))
+		     (path (sx-attr-ref (sx-ref tree 1) 'path)))
+		 (filter incl path))
 	       filter))
-      (sx-ref (sx-ref tree 1) 2)
+      (sx-ref* tree 1 2)
       #f))
 
 ;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:inc-filter f]
@@ -183,8 +197,8 @@
 	  ((eqv? (sx-tag tree) 'decl)
 	   (unitize-decl tree seed))
 	  ((inc-keeper? tree inc-filter) =>
-	   (lambda (tree)
-	     (c99-trans-unit->udict tree seed #:inc-filter inc-filter)))
+	   (lambda (inc-tree)
+	     (c99-trans-unit->udict inc-tree seed #:inc-filter inc-filter)))
 	  (else seed)))
        seed
        (cdr tree))
@@ -587,8 +601,6 @@
    (car orig-declr)			; init-declr or comp-declr
    (cdr (foldts* fD fU fH '() tdef-declr)))) ; always init-declr
 
-
-
 ;; @deffn {Procedure} split-adecl decl => values
 ;; This routine splits a declaration (decl, udecl, comp-decl or param-decl)
 ;; into its constituent parts.  Attributes are currently not passed.
@@ -955,7 +967,7 @@
 ;; The entries appear in reverse order wrt how in file.
 ;; @end deffn
 (define* (c99-trans-unit->ddict tree #:optional (seed '()) #:key inc-filter)
-  (define (def? tree)
+  (define (cpp-def? tree)
     (if (and (eq? 'cpp-stmt (sx-tag tree))
 	     (eq? 'define (sx-tag (sx-ref tree 1))))
 	(can-def-stmt (sx-ref tree 1))
@@ -969,7 +981,7 @@
       (fold
        (lambda (tree seed)
 	 (cond
-	  ((def? tree) =>
+	  ((cpp-def? tree) =>
 	   (lambda (def-stmt)
 	     (cons def-stmt seed)))
 	  ((inc-keeper? tree inc-filter) =>
@@ -991,59 +1003,64 @@
 ;; @example
 ;; (("ABC" . "0") ...)
 ;; @end example
+;; This procedure expects @var{udict} to be in reverse order wrt the source
+;; input (i.e., as output from @code{c99-trans-unit->udecl}) and generate
+;; symbols in revers order wrt the output;
 ;; @end deffn
 (define* (udict-enums->ddict udict #:optional (seed '()))
-  (define (gen-nvl enum-def-list)
-    (map
-     (lambda (def)
-       (let ((n (sx-ref (sx-ref def 1) 1)) (x (sx-ref def 2)))
-	 (cons n (number->string (eval-cpp-expr x '())))))
-     (cdr (canize-enum-def-list enum-def-list))))
-  (append
-   seed
-   (fold-right
-    (lambda (pair seed)
-      (if (and (pair? (car pair)) (eq? 'enum (caar pair)))
-	  (let* ((specl (caddr pair)) (tspec (car (assq-ref specl 'type-spec))))
-	    (if (eq? 'enum-def (car tspec))
-		(append (gen-nvl (assq 'enum-def-list (cdr tspec))) seed)
-		seed))
-	  seed))
-    '()
-    udict)))
+  (define (gen-nvl enum-def-list seed)
+    (fold
+     (lambda (edef seed) ;; (enum-def (ident ,name) (fixed ,val) ...
+       (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) seed))
+     seed (cdr (canize-enum-def-list enum-def-list seed))))
+  (fold-right
+   (lambda (pair seed)
+     (if (and (pair? (car pair)) (eq? 'enum (caar pair)))
+	 ;; (enum . ,name) ...
+	 (let* ((specl (sx-ref (cdr pair) 1))
+		(tspec (car (assq-ref specl 'type-spec))))
+	   (if (not (eq? 'enum-def (car tspec))) (error "expecting enum-def"))
+	   (gen-nvl (assq 'enum-def-list (cdr tspec)) seed))
+	 ;; else ...
+	 seed))
+   seed udict))
  
 
 ;; === enum handling ===================
   
-;; @deffn {Procedure} canize-enum-def-list
+;; @deffn {Procedure} canize-enum-def-list enum-def-list [defs] => enum-def-list
 ;; Fill in constants for all entries of an enum list.
 ;; Expects @code{(enum-def-list (...))} (i.e., not the tail).
-;; If constant provided the syntax is preserved.
+;; All enum-defs will have the form like @code{(fixed "1")}.
+;; This will perform the transformation
+;; @example
+;; (enum-def-list (enum-def (ident "FOO") ...))
+;; => 
+;; (enum-def-list (enum-def (ident "FOO") (fixed "0") ...))
+;; @end example
+;; @noindent
+;; Note: Does this really need to be @code{(p-expr (fixed "0"))}?
 ;; @end deffn
-(define (canize-enum-def-list enum-def-list)
-  (define (get-used edl)
-    (fold
-     (lambda (def seed)
-       (sxml-match def
-	 ((enum-defn (ident ,name) (comment ,comment)) seed)
-	 ((enum-defn (ident ,name) ,expr . ,rest)
-	  (cons (eval-cpp-expr expr '()) seed))
-	 (,otherwise seed)))
-     '() edl))
-  (let ((used (get-used (cdr enum-def-list))))
-    (let iter ((rez '()) (ix 0) (edl (cdr enum-def-list)))
-      (cond
-       ((null? edl) (cons (car enum-def-list) (reverse rez)))
-       ((sxml-match (car edl)
-	  ((enum-defn (ident ,name) (comment ,comment)) #f)
-	  ((enum-defn (ident ,name) ,expr . ,rest) #t)
-	  (,otherwise #f))
-	(iter (cons (car edl) rez) ix (cdr edl)))
-       (else
-	(let* ((ix (let iter ((ix ix)) (if (memq ix used) (iter (1+ ix)) ix)))
-	       (is (number->string ix)))
-	  (iter (cons (append (car edl) `((p-expr (fixed ,is)))) rez)
-		(1+ ix) (cdr edl))))))))
+(define* (canize-enum-def-list enum-def-list #:optional (ddict '()))
+  (let iter ((rez '()) (nxt 0) (dct ddict) (edl (sx-tail enum-def-list 1)))
+    (cond
+     ((null? edl)
+      (sx-cons* (sx-tag enum-def-list) (sx-attr enum-def-list) (reverse rez)))
+     (else
+      (sxml-match (car edl)
+	((enum-defn ,ident)
+	 (let ((sval (number->string nxt)))
+	   (iter (cons `(enum-defn ,ident (fixed ,sval)) rez)
+		 (1+ nxt)  (acons (sx-ref ident 1) sval dct) (cdr edl))))
+	((enum-defn ,ident (comment ,comm))
+	 (let ((sval (number->string nxt)))
+	   (iter (cons `(enum-defn ,ident (fixed ,sval) (comment ,comm)) rez)
+		 (1+ nxt) (acons (sx-ref ident 1) sval dct) (cdr edl))))
+	((enum-defn ,ident ,expr . ,rest)
+	 (let* ((ival (eval-cpp-expr expr dct))
+		(sval (number->string ival)))
+	   (iter (cons `(enum-defn ,ident (fixed ,sval) . ,rest) rez)
+		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl)))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
 ;; Gets value of enum where @var{enum-def-list} looks like
@@ -1056,11 +1073,10 @@
 ;; @end example
 (define (enum-ref enum-def-list name)
   (let iter ((el (cdr (canize-enum-def-list enum-def-list))))
-    ;;(simple-format #t "~S\n" el)
     (cond
      ((null? el) #f)
-     ((not (eqv? 'enum-defn (caar el))) (iter (cdr el)))
-     ((string=? name (cadr (cadar el))) (cadadr (caddar el)))
+     ((not (eqv? 'enum-defn (sx-tag (car el)))) (iter (cdr el)))
+     ((string=? name (sx-ref* (car el) 1 1)) (sx-ref* (car el) 1 2 1))
      (else (iter (cdr el))))))
 
 ;; @deffn {Procedure} gen-enum-udecl nstr vstr => (udecl ...)

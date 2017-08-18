@@ -1,0 +1,8 @@
+;; glib-object.ffi
+
+(define-ffi-module (glib-object)
+  #:pkg-config "gobject-2.0"
+  #:include '("glib-object.h")
+  )
+
+;; --- last line ---

@@ -2,7 +2,8 @@
 
 (define-ffi-module (libgit2)
   #:include '("git2.h")
-  #:inc-filter (lambda (s) (string-contains s "git2/" 0))
+  #:inc-filter (lambda (file-spec path-spec)
+		 (string-contains path-spec "git2/" 0))
   #:library '("libgit2")
   )
 

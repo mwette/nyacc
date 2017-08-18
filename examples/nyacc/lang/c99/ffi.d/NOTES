@@ -1,7 +1,10 @@
-cairo/cairo.ffi		not running anymore
+cairo.ffi		running OK now
 gdbm.ffi		minior issuses
 libgit2.ffi		missing some items
 librsvg.ffi		compiles now (was a bear wrt GCC extensions)
 sqlite3.ffi		long long int; varargs
 
+rsvg.ffi		to devel/debug #:use-ffi-module (gio gio) etc
 
+glib-object.ffi		filter needs work
+gio/gio.ffi		filter needs work

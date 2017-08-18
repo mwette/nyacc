@@ -92,25 +92,35 @@
        (code (string-append
 	      "struct foo { int a; double b; };\n"
 	      "struct foo x;\n"))
-       (code "enum { A = 1<<3, B } bar;\n")
+       (code "typedef int (*cb)(int *out, int *owner, void *param);\n")
+       (code (string-append
+	      "typedef enum { LOC = 1, REM, ALL = LOC | REM + 4} foo_t;\n"
+	      "typedef enum { FOO = 1, BAR, BAZ = FOO | REM + 8} bar_t;\n"
+	      ))
+       ;;(code "enum { A =12, B = 10, C, D = 1000, E };\n")
        (indx 2)
        (tree (parse-string code))
        ;;(tree (parse-c99x code))
        ;;(tree (parse-file "zz.c"))
        
-       ;;(udict (c99-trans-unit->udict tree))
-       ;;(udecl (udict-ref udict "bar"))
+       (udict (c99-trans-unit->udict tree))
+       ;;(ddict (udict-enums->ddict udict))
+       (udecl (udict-ref udict "foo_t"))
+       (edefl (car ((sxpath '(// enum-def-list)) udecl)))
+       (enumdef (cons 'enum-def edefl))
        ;;(mspec (udecl->mspec udecl))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs decl udict))
        )
-  ;;(display code)
+  (display code)
   ;;(ppsx tree)
   ;;(pp99 tree)
-  ;;(ppsx udecl)
-  ;;(sf "=>\n")
-  ;;(ppsx xdecl)
-  ;;(pp99 xdecl)
+  ;;(ppsx udict)
+  ;;(ppsx ddict)
+  ;;(ppsx edefl)
+  (display "==\n")
+  ;;(ppsx (canize-enum-def-list edefl))
+  (ppsx (udict-enums->ddict udict))
   ;;(set! adecl decl)
   #t)
 
