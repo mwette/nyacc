@@ -141,8 +141,14 @@
     (display (number->string (bytestructure-ref (struct-ref obj 0)) 16) port)
     (display ">" port)))
 
+;; @deffn {Syntax} define-fh-pointer-type name
+;; @deffnx {Syntax} define-fh-pointer-type name desc
+;; @example
 ;; (define foo_t*-desc (bs:pointer foo_t-desc))
-;; (define-fh-pointer-type foo_t* 
+;; (define-fh-pointer-type foo_t*
+;; @end example
+;; The second form is based on already defined @code{bs:pointer} descriptor.
+;; @end deffn
 (define-syntax define-fh-pointer-type
   (lambda (x)
     (define (stx->str stx)
@@ -182,11 +188,13 @@
 	     )))
 	     
       ((_ type)		      ; based on guile pointer wrapper
-       (with-syntax ((make (gen-id x "make-" #'type))
+       (with-syntax ((desc (gen-id x #'type "-desc"))
+		     ;;(make (gen-id x "make-" #'type))
 		     (pred (gen-id x #'type "?"))
 		     (wrap (gen-id x "wrap-" #'type))
 		     (unwrap (gen-id x "unwrap-" #'type)))
 	 #'(begin
+	     (define desc (bs:pointer intptr_t))
 	     (ffi:define-wrapped-pointer-type
 	      type pred wrap unwrap
 	      (lambda (obj port)
@@ -196,7 +204,7 @@
 		(display (number->string (ffi:pointer-address (unwrap obj)) 16)
 			 port)
 		(display ">" port)))
-	     (export type pred wrap unwrap))))
+	     (export desc type pred wrap unwrap))))
       )))
 
 ;; @deffn {Syntax} define-fh-compound-type name desc
@@ -265,7 +273,7 @@
     (syntax-case x ()
       ((_ p-type type)
        (with-syntax ((p-make (gen-id x "make-" #'type "*"))
-		     (p-desc (gen-id x  #'type "-*desc"))
+		     (p-desc (gen-id x  #'type "*-desc"))
 		     (make (gen-id x "make-" #'type)))
 	 #'(begin
 	     (struct-set!		; pointer-to
@@ -291,7 +299,7 @@
     (syntax-case x ()
       ((_ type desc)
        (with-syntax ((p-type (gen-id x #'type "*"))
-		     (p-desc (gen-id x #'type "-*desc"))
+		     (p-desc (gen-id x #'type "*-desc"))
 		     (p-make (gen-id x "make-" #'type "*"))
 		     (make (gen-id x "make-" #'type)))
 	 #'(begin
@@ -303,6 +311,11 @@
 	     (export type desc p-type p-desc) ;; only4debugging?
 	     ))))))
 
+;; @deffn {Syntax} define-fh-function name return-type arg-types
+;; @deffnx {Syntax} define-fh-function/p name return-type arg-types
+;; Define wrapper and unwrapper for the function.  With @code{/p} form
+;; also define pointer descriptor and wrap/unwrap alias.
+;; @end deffn
 (define-syntax define-fh-function
   (lambda (x)
     (define (stx->str stx)
@@ -338,13 +351,15 @@
       ((_ name return-t args-t)
        (with-syntax ((wrap (gen-id x "wrap-" #'name))
 		     (unwrap (gen-id x "unwrap-" #'name))
+		     (desc* (gen-id x #'name "*-desc"))
 		     (wrap* (gen-id x "wrap-" #'name "*"))
 		     (unwrap* (gen-id x "unwrap-" #'name "*")))
 	 #'(begin
 	     (define-fh-function name return-t args-t)
+	     (define desc* (bs:pointer intptr_t))
 	     (define wrap* wrap)
 	     (define unwrap* unwrap)
-	     ))))))
+	     (export desc* wrap* unwrap*)))))))
 
 ;; right now this returns a ffi pointer
 ;; it should probably be a bs:pointer
@@ -386,24 +401,3 @@
   (ffi:make-pointer raw))
 
 ;; --- last line ---
-;; (pointer->bytevector ptr len) => bytevector
-;; (bytevector->pointer bv) => pointer
-
-;; another way to handle this is to define the types
-;; (define foo_t-desc (bs:struct ...))
-;; (define-type foo_t foo_t-desc)
-;; (define foo_t-*desc (bs:pointer foo_t-desc))
-;; (define-type foo_t* foo_t-*desc)
-;; (ref<->deref foo_t* foo_t)
-
-;; typedef struct { ... } foo_t;
-;; (define foo_t-desc (bs:struct ...))
-;; (define-compound-type foo_t foo_t-desc)
-;;   (define foo_t (make-struct ...))
-;;   (define foo_t*-desc (bs:pointer foo_t-desc))
-;; (define obj (make-foo_t #(...)))
-;; (pointer-to obj) => p-obj
-;; (unwrap-foo_t*
-;;   (dereference-pointer
-;;     (bytevector->pointer
-;;        (bytestructure-bytevector p-obj))))

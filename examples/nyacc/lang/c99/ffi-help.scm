@@ -103,6 +103,7 @@
 ;;(define *edefs* (make-fluid '()))	 ; enum-defs
 (define *wrapped* (make-fluid '()))	 ; has wrapper
 (define *defined* (make-fluid '()))	 ; has wrapper and is bytestructure?
+(define *basic-offset* (make-fluid 2))	 ; C code indent lev in .scm comments
 (define *renamer* (make-fluid identity)) ; renamer from ffi-module
 
 (define (sfscm fmt . args)
@@ -110,7 +111,10 @@
 (define* (ppscm tree #:key (per-line-prefix ""))
   (pretty-print tree (fluid-ref *mport*) #:per-line-prefix per-line-prefix))
 (define (c99scm tree)
-  (pretty-print-c99 tree (fluid-ref *mport*) #:per-line-prefix ";; "))
+  (pretty-print-c99 tree
+		    (fluid-ref *mport*)
+		    #:per-line-prefix ";; "
+		    #:basic-offset (fluid-ref *basic-offset*))) 
 (define (nlscm) (newline (fluid-ref *mport*)))
 
 (define (sfout fmt . args)
@@ -242,11 +246,11 @@
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (bytestructures guile)\n")
     (sfscm "  )\n")
-    ;;(sfscm "(define void*  (bs:pointer int32))\n")
     (for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l)) libraries)
     ;;(sfscm "(define link-lib (dynamic-link ~S))\n" library)
     (sfscm "(dynamic-link ~S)\n" library)
     ;;(sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")
+    (sfscm "(define void int) ;; no void in bytestructures\n")
     ))
 
 
@@ -268,7 +272,7 @@
 ;; but use (define foo_t (bs:pointer int))
 
 (define bs-typemap
-  '(;;("void" . void)
+  '(("void" . void)
     ("float" . float) ("double" . double)
     ("short" . short) ("short int" . short) ("unsigned short" . unsigned-short)
     ("unsigned short int" . unsigned-short) ("int" . int)
@@ -334,10 +338,10 @@
 
       ;; typename use renamers, ... ???
       (((pointer-to) (typename ,ty-name))
-       `(bs:pointer ,ty-name))
+      `(bs:pointer ,(string->symbol (string-append ty-name "*-desc"))))
 
       (((pointer-to) (void))
-       `(bs:pointer intptr_t))
+       `(bs:pointer void))
 
       (((pointer-to) (fixed-type "char"))
        `(bs:pointer int8))
@@ -348,10 +352,10 @@
 
       ;; bs does not support function pointers
       (((pointer-to) (function-returning . ,rest) . ,rest)
-       `(bs:pointer intptr_t))
+       `(bs:pointer void))
       (((pointer-to) (struct-ref . ,rest))
        (let () ;; TODO: check for struct-def ???
-	 `(bs:pointer intptr_t)))
+	 `(bs:pointer void)))
 
       #;(((pointer-to) (struct-ref (ident ,name)))
        (let ()
@@ -391,9 +395,6 @@
 		 (udecl (cdar decls))
 		 (spec (udecl->mspec/comm udecl))
 		 (type (mtail->bs-desc (cddr spec))))
-	    (when (string=? name "notify_cb")
-	      (pperr (car decls))
-	      )
 	    (acons-defn name type (iter (cdr decls))))))))
 
 ;; This routine will munge the fields and then perform typeref expansion.
@@ -1275,6 +1276,7 @@
     ;; set globals
     (fluid-set! *udict* udict)
     (fluid-set! *mport* mport)
+    (fluid-set! *basic-offset* (or (assq-ref attrs 'basic-offset) 2))
     ;;(fluid-set! *edefs* enu-defs)
     ;; renamer?
 
@@ -1324,8 +1326,10 @@
   (lambda (x)
     (define (sym->key stx)
       (datum->syntax stx (symbol->keyword (syntax->datum stx))))
-    (syntax-case x (cpp-defs decl-filter inc-dirs inc-filter inc-help
-			     include library pkg-config renamer)
+    (syntax-case x (c-basic-offset
+		    cpp-defs decl-filter inc-dirs inc-filter inc-help include
+		    library pkg-config renamer)
+      ((_ c-basic-offset expr) #'(cons 'basic-offset expr))
       ((_ cpp-defs proc) #'(cons 'cpp-defs proc))
       ((_ decl-filter proc) #'(cons 'decl-filter proc))
       ((_ inc-dirs proc) #'(cons 'inc-dirs proc))
@@ -1387,6 +1391,7 @@
 		;;(*edefs* '())
 		(*wrapped* '())
 		(*defined* '())
+		(*basic-offset* 2)
 		(*renamer* identity))
     ;;(sfout "TODO: arrays; extern variables; compile-ffi args; va_args\n")
     ;;(sfout "      arrays;\n")

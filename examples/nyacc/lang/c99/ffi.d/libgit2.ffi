@@ -5,6 +5,7 @@
   #:inc-filter (lambda (file-spec path-spec)
 		 (string-contains path-spec "git2/" 0))
   #:library '("libgit2")
+  #:c-basic-offset 8			; in git2/*.h
   )
 
 ;; --- last line ---

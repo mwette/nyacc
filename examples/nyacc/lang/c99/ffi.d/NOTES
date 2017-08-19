@@ -1,3 +1,15 @@
+
+
+Missing:
+1) Guile does not have some types.  Need the following:
+   long long, unsigned long long, intptr_t, uintptr_t
+2) Guile does not handle varargs ffi.  I have thoughts on this.
+3) bytestructures does not support function declarations.
+4) arrays as function args done yet?
+
+To compile a cairo.ffi file execute the following shell command:
+  $ guild compile-ffi cairo.ffi
+
 cairo.ffi		running OK now
 gdbm.ffi		minior issuses
 libgit2.ffi		missing some items

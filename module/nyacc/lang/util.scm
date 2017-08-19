@@ -410,7 +410,41 @@ the file COPYING included with the this distribution.")
 	((=) (assc? op))
 	(else #f)))))
 
-;; @deffn {Procedure} make-pp-formatter [port] [#:per-line-prefix ""] => fmtr
+;; @deffn {Procedure} expand-tabs str [col]
+;; Expand tabs where the string @var{str} starts in column @var{col}
+;; (default 0). 
+;; @end deffn
+(define* (expand-tabs str #:optional (col 0))
+
+  (define (fill-tab col chl)
+    (let iter ((chl (if (zero? col) (cons #\space chl) chl))
+	       (col (if (zero? col) (1+ col) col)))
+      (if (zero? (modulo col 8)) chl
+	  (iter (cons #\space chl) (1+ col)))))
+
+  (define (next-tab-col col)
+    (* 8 (quotient col 8)))
+
+  (let ((strlen (string-length str)))
+    (let iter ((chl '()) (col col) (ix 0))
+      (if (= ix strlen) (list->string (reverse chl))
+	  (let ((ch (string-ref str ix)))
+	    (case ch
+	      ((#\newline)
+	       (iter (cons ch chl) 0 (1+ ix)))
+	      ((#\tab)
+	       (iter (fill-tab col chl) (next-tab-col col) (1+ ix)))
+	      (else
+	       (iter (cons ch chl) (1+ col) (1+ ix)))))))))
+
+;; @deffn {Procedure} make-pp-formatter [port] <[options> => fmtr
+;; Options
+;; @table @code
+;; @item #:per-line-prefix
+;; string to prefix each line
+;; @item #:width
+;; Max width of output.  Default is 79 columns.
+;; @end itemize
 ;; @example
 ;; (fmtr 'push) ;; push indent level
 ;; (fmtr 'pop)  ;; pop indent level
@@ -418,28 +452,28 @@ the file COPYING included with the this distribution.")
 ;; @end example
 ;; @end deffn
 (define* (make-pp-formatter #:optional (port (current-output-port))
-			    #:key per-line-prefix)
-  (letrec
-      ((maxcol (- 78 (if per-line-prefix (string-length per-line-prefix) 0)))
-       ;;(maxcol 78)
+			    #:key per-line-prefix (width 79) (basic-offset 2))
+  (letrec*
+      ((pfxlen (string-length (expand-tabs (or per-line-prefix ""))))
+       (maxcol (- width (if per-line-prefix pfxlen 0)))
        (maxind 36)
        (column 0)
        (ind-lev 0)
        (ind-len 0)
        (blanks "                                            ")
        (ind-str (lambda () (substring blanks 0 ind-len)))
-       (cnt-str (lambda () (substring blanks 0 (+ 4 ind-len))))
+       (cnt-str (lambda () (substring blanks 0 (+ basic-offset 2 ind-len))))
        ;;(sf-nl (lambda () (newline) (set! column 0)))
 
        (push-il
 	(lambda ()
 	  (set! ind-lev (min maxind (1+ ind-lev)))
-	  (set! ind-len (* 2 ind-lev))))
+	  (set! ind-len (* basic-offset ind-lev))))
 
        (pop-il
 	(lambda ()
 	  (set! ind-lev (max 0 (1- ind-lev)))
-	  (set! ind-len (* 2 ind-lev))))
+	  (set! ind-len (* basic-offset ind-lev))))
 
        (inc-column!
 	(lambda (inc)
@@ -452,6 +486,9 @@ the file COPYING included with the this distribution.")
        (sf
 	(lambda (fmt . args)
 	  (let* ((str (apply simple-format #f fmt args))
+		 (str (if (and (zero? column) per-line-prefix)
+			  (expand-tabs str pfxlen)
+			  str))
 		 (len (string-length str)))
 	    (cond
 	     ((zero? column)

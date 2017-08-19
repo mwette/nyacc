@@ -1,19 +1,19 @@
-;;; nyacc/lang/c99/pprint.scm
-;;;
-;;; Copyright (C) 2015-2017 Matthew R. Wette
-;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by 
-;;; the Free Software Foundation, either version 3 of the License, or 
-;;; (at your option) any later version.
-;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of 
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; nyacc/lang/c99/pprint.scm
+;;
+;; Copyright (C) 2015-2017 Matthew R. Wette
+;;
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by 
+;; the Free Software Foundation, either version 3 of the License, or 
+;; (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of 
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang c99 pprint)
   #:export (pretty-print-c99)
@@ -98,12 +98,12 @@
     
 (define protect-expr? (make-protect-expr op-prec op-assc))
 
-;; @deffn pretty-print-c99 tree [port] [options]
+;; @deffn {Procedure} pretty-print-c99 tree [port] [options]
 ;; Convert and print a C99 sxml tree to the current output port.
-;; The optional keyword argument @code{#:indent-level} provides the
+;; The optional keyword argument @code{#:basic-offset} provides the
 ;; indent level, with default of 2.
 ;; @table code
-;; @item #:indent-level <level>
+;; @item #:basic-offset <n>
 ;; indent level for C code
 ;; @item #:per-line-prefix <string>
 ;; string
@@ -113,11 +113,11 @@
 ;; @end deffn
 (define* (pretty-print-c99 tree
 			   #:optional (port (current-output-port))
-			   #:key (indent-level 2) ugly per-line-prefix)
+			   #:key ugly per-line-prefix (basic-offset 2))
 
   (define fmtr
     ((if ugly make-pp-formatter/ugly make-pp-formatter)
-     port #:per-line-prefix per-line-prefix))
+     port #:per-line-prefix per-line-prefix #:basic-offset basic-offset))
   (define (push-il)(fmtr 'push))
   (define (pop-il) (fmtr 'pop))
 
@@ -212,6 +212,8 @@
 	value-l))
 
       ((comment ,text)
+       ;; Comments will look funny when indent for input and output
+       ;; are different since multi-line comments will get hosed.  
        (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n")) 
 		 (string-split (string-append "/*" text "*/") #\newline)))
       
