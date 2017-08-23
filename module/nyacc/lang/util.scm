@@ -15,14 +15,17 @@
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
 	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
-	    sx-attr-ref sx-has-attr? sx-set-attr! sx-set-attr* sx+attr*
+	    sx-attr-ref sx-has-attr? sx-attr-set! sx-attr-set* sx+attr*
 	    sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
 	    ;; for ???
 	    move-if-changed
 	    cintstr->scm
-	    sferr pperr)
+	    sferr pperr
+	    ;; depracated
+	    sx-set-attr! sx-set-attr*
+	    )
   #:use-module ((srfi srfi-1) #:select (find fold))
   ;; #:use-module ((sxml xpath) #:select (sxpath)) ;; see sx-find below
   #:use-module (ice-9 pretty-print)
@@ -234,17 +237,33 @@ the file COPYING included with the this distribution.")
 ;; (sx-cons* tag attr elt1 elt2 '())
 ;; (sx-list tag attr elt1 elt2)
 ;; @end example
+;; @noindent
+;; NEW IMPLEMENTATION: now any field that is #f will be skipped
 ;; @end deffn
 (define (sx-cons* tag . rest)
-  (cond
-   ((null? rest) (list tag))
-   ((not (car rest)) (apply cons* tag (cdr rest)))
-   (else (apply cons* tag rest))))
+  (if (null? rest) (error "expecing tail"))
+  ;;(cond
+  ;; ((null? rest) (list tag))
+  ;; ((not (car rest)) (apply cons* tag (cdr rest)))
+  ;; (else (apply cons* tag rest)))
+  (cons tag
+	(let iter ((items rest))
+	  (if (null? (cdr items)) (car items)
+	      (if (car items)
+		  (cons (car items) (iter (cdr items)))
+		  (iter (cdr items)))))))
+
 (define (sx-list tag . rest)
-  (cond
-   ((null? rest) (list tag))
-   ((not (car rest)) (apply list tag (cdr rest)))
-   (else (apply list tag rest))))
+  ;;(cond
+  ;; ((null? rest) (list tag))
+  ;; ((not (car rest)) (apply list tag (cdr rest)))
+  ;; (else (apply list tag rest))))
+  (cons tag
+	(let iter ((items rest))
+	  (if (null? items) '()
+	      (if (car items)
+		  (cons (car items) (iter (cdr items)))
+		  (iter (cdr items)))))))
 
 ;;. maybe change to case-lambda to accept count
 ;; @example
@@ -300,28 +319,30 @@ the file COPYING included with the this distribution.")
 ;; @end deffn
 (define (sx-attr-ref sx key)
   (and=> (sx-attr sx)
-	 (lambda (attr)
-	   (and=> (assq-ref (cdr attr) key) car))))
+	 (lambda (attr) (and=> (assq-ref (cdr attr) key)
+			       car))))
 
-;; @deffn {Procedure} sx-set-attr! sx key val
+;; @deffn {Procedure} sx-attr-set! sx key val
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,
 ;; add it, if it does exist, replace it.
 ;; @end deffn
-(define (sx-set-attr! sx key val)
+(define (sx-attr-set! sx key val)
   (if (sx-has-attr? sx)
       (let ((attr (cadr sx)))
 	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
       (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
   sx)
+(define sx-set-attr! sx-attr-set!)
 
-;; @deffn {Procedure} sx-set-attr* sx key val [key val [key ... ]]
+;; @deffn {Procedure} sx-attr-set* sx key val [key val [key ... ]]
 ;; Generate sx with added or changed attributes.
 ;; @end deffn
-(define (sx-set-attr* sx . rest)
+(define (sx-attr-set* sx . rest)
   (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
     (cond
      ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
      (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
+(define sx-set-attr* sx-attr-set*)
 
 ;; @deffn {Procedure} sx+attr* sx key val [key val [@dots{} ]] => sx
 ;; Add key-val pairs. @var{key} must be a symbol and @var{val} must be
@@ -422,7 +443,8 @@ the file COPYING included with the this distribution.")
       (if (zero? (modulo col 8)) chl
 	  (iter (cons #\space chl) (1+ col)))))
 
-  (define (next-tab-col col)
+  (define (next-tab-col col) ;; TEST THIS !!!
+    ;;(* 8 (quotient (+ 9 col) 8))) ???
     (* 8 (quotient col 8)))
 
   (let ((strlen (string-length str)))
@@ -487,7 +509,15 @@ the file COPYING included with the this distribution.")
 	(lambda (fmt . args)
 	  (let* ((str (apply simple-format #f fmt args))
 		 (str (if (and (zero? column) per-line-prefix)
-			  (expand-tabs str pfxlen)
+			  (begin
+			    (when #f ;;(char=? #\tab (string-ref str 0))
+			      (sferr "expand-tabs (pfxlen=~S)\n" pfxlen)
+			      (sferr "~A\n" str)
+			      (sferr "~A~A\n\n" per-line-prefix
+				     (expand-tabs str pfxlen))
+			      )
+			    (expand-tabs str pfxlen)
+			    )
 			  str))
 		 (len (string-length str)))
 	    (cond

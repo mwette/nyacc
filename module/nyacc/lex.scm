@@ -49,7 +49,7 @@
 	    like-c-ident?
 	    c-escape
 	    cnumstr->scm
-	    filter-mt remove-mt map-mt make-ident-like-p 
+	    filter-mt remove-mt map-mt make-ident-like-p
 	    c:ws c:if c:ir)
   #:use-module ((srfi srfi-1) #:select (remove append-reverse))
   #:use-module (ice-9 pretty-print)
@@ -460,9 +460,11 @@
 ;; test with "/* hello **/"
 ;; If @code{eat-newline} is specified as true then for read comments 
 ;; ending with a newline a newline swallowed with the comment.
-;; Note: assumes backslash is never part of the end
+;; The returned procedure has signature
+;; @code{(proc ch #:optional bol #:skip-prefix #t|#f)}
+;; @* Note: assumes backslash is never part of the end
 ;; @end deffn
-(define* (make-comm-reader comm-table #:key (eat-newline #f))
+(define* (make-comm-reader comm-table #:key eat-newline)
 
   (define (mc-read-char) ;; CHECK THIS
     (let ((ch (read-char)))
@@ -472,11 +474,27 @@
 		(read-char)
 		(begin (unread-char ch) #\\)))
 	  ch)))
-    
+
+  ;; Skip whitespace upto columm @var{col}, and fill in partial tab, if needed.
+  ;; @example
+  ;; (skip-ws-to-col 4 "    def" '(#\newline) => (#\d #\newline)
+  ;; (skip-ws-to-col 6 "\tdef" '(#\newline)) => (#\d #\space #\space #\newline)
+  ;; @end example
+  (define (skip-to-col col il)
+    (let iter ((il il) (cc 0) (ch (read-char)))
+      ;;(simple-format #t " skip-to-col iter il=~S cc=~S ch=~S\n" il cc ch)
+      (cond
+       ((= cc col) (cons ch il))
+       ((> cc col) (iter (cons ch il) (1- cc) #\space)) ; tab over-run
+       ((char=? ch #\space) (iter il (1+ cc) (read-char)))
+       ((char=? ch #\tab) (iter il (* 8 (quotient (+ cc 9) 8)) (read-char)))
+       (else (cons ch il)))))
+	 
   (let ((tree (make-tree comm-table)))
-    (lambda (ch bol)
+    (lambda* (ch #:optional bol #:key skip-prefix)
       (letrec
-	  ((tval (if bol '$lone-comm '$code-comm))
+	  ((scol (1- (port-column (current-input-port)))) ;; 1- since ch read
+	   (tval (if bol '$lone-comm '$code-comm))
 	   (match-beg ;; match start of comment, return end-string
 	    (lambda (cl node)
 	      (cond
@@ -491,27 +509,32 @@
 		    (pushback (cdr cl))))
 		#f))))
 	   (find-end ;; find end of comment, return comment
-	    ;; cl: comm char list; sl: shift list; il: input list;
-	    ;; ps: pattern string; px: pattern index
+	    ;; cl: comm char list (cleared from ps);
+	    ;; sl: shift list (matched from ps); il: input list;
+	    ;; ps: pattern string (e.g., "*/") ; px: pattern index;
 	    (lambda (cl sl il ps px)
 	      (cond
-	       ((eq? px (string-length ps))
+	       ((eq? px (string-length ps)) ; can Guile optimize this?
 		(if (and (not eat-newline) (eq? #\newline (car sl)))
 		    (unread-char #\newline))
-		(if (and (pair? cl) (eqv? (car cl) #\cr)) ;; rem trailing \r 
-		    (cons tval (lxlsr (cdr cl)))
+		(if (and (pair? cl) (eqv? (car cl) #\cr))
+		    (cons tval (lxlsr (cdr cl))) ; remove trailing \r 
 		    (cons tval (lxlsr cl))))
 	       ((null? il) (find-end cl sl (cons (mc-read-char) il) ps px))
-	       ;;((eof-object? (car il)) (error "open comment" cl))
 	       ((eof-object? (car il))
 		(if (char=? (string-ref ps px) #\newline) (lxlsr cl)
 		    (throw 'nyacc-error "open comment")))
 	       ((eqv? (car il) (string-ref ps px))
 		(find-end cl (cons (car il) sl) (cdr il) ps (1+ px)))
+	       ((and (char=? (car il) #\newline) skip-prefix)
+		;; assumes newline can only be end of ps
+		;;(simple-format #t "cl=~S sl=~S il=~S\n" cl sl il)
+		(find-end (cons #\newline (append sl cl)) '()
+			  (skip-to-col scol (cdr il)) ps 0))
 	       (else
 		(let ((il1 (append-reverse sl il)))
 		  (find-end (cons (car il1) cl) '() (cdr il1) ps 0)))))))
-	(let ((ep (match-beg (list ch) tree))) ;; ep == end pattern?
+	(let ((ep (match-beg (list ch) tree))) ;; ep=end pattern (e.g., "*/")
 	  (if ep (find-end '() '() (list (mc-read-char)) ep 0) #f))))))
 
 (define read-c-comm (make-comm-reader '(("/*" . "*/") ("//" . "\n"))))

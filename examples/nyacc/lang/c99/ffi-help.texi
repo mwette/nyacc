@@ -350,9 +350,18 @@ Here are the BS simple types:
 @end verbatim
 
 
+@subsection Library Variables
+
+Access to externs is provide through access procedure:
+@example
+;; C header says: extern int foo_errno;
+;; So we use:
+(foo_errno)
+@end example
+
 @section Miscellaneous Notes
 
-Exaplain wrappers.
+Explain wrappers.
 
 User is responsible for calling string->pointer and pointer->string.
 

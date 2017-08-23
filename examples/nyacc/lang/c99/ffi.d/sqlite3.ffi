@@ -5,4 +5,8 @@
   #:include '("sqlite3.h")
   )
 
+;; Items the FFI helper is not currently generating.
+(define-fh-pointer-type sqlite3_int64* (bs:pointer sqlite_int64-desc))
+(define-fh-pointer-type sqlite3_rtree_dbl (bs:pointer sqlite3_tree_dbl))
+
 ;; --- last line ---

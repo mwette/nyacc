@@ -1,5 +1,3 @@
-
-
 Missing:
 1) Guile does not have some types.  Need the following:
    long long, unsigned long long, intptr_t, uintptr_t
@@ -7,12 +5,25 @@ Missing:
 3) bytestructures does not support function declarations.
 4) arrays as function args done yet?
 
+BROKEN:
+1) struct { char *name; }  =>  (bs:struct `((name (bs:pointer int))))
+                           vs  (bs:struct `((name (bs:pointer uint8))))
+2) use of @193 instead of arg-0 for args			  
+3) sqlite3 not finding sqlite3_set_last_insert_rowid, but
+   a) exists in /opt/local/lib/libsqlite3.dylib
+   a) does not exist in /usr/lib/libsqlite3.dylib
+
+Todo:
+1) find clean way to deal with char being byte and int
+2) move enum comments to ffi.scm comments (currently removed)
+3) recheck (pointer-to x) <=> (object-at y)
+
 To compile a cairo.ffi file execute the following shell command:
   $ guild compile-ffi cairo.ffi
 
-cairo.ffi		running OK now
+cairo.ffi		working
 gdbm.ffi		minior issuses
-libgit2.ffi		missing some items
+libgit2.ffi		working 
 librsvg.ffi		compiles now (was a bear wrt GCC extensions)
 sqlite3.ffi		long long int; varargs
 
@@ -20,3 +31,14 @@ rsvg.ffi		to devel/debug #:use-ffi-module (gio gio) etc
 
 glib-object.ffi		filter needs work
 gio/gio.ffi		filter needs work
+
+
+;; typedef struct foo foo_t;
+(define foo_t-desc (delay struct-foo-desc))
+
+;; typedef int bar_t;
+(define bar_t-desc int)
+
+;; struct foo { 
+;;   bar_t abc;
+;; };

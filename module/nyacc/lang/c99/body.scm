@@ -270,10 +270,7 @@
   ;; read (i.e., the reader sees eof-object) then @var{suppress} is changed
   ;; to @code{#t}.
   (let* ((match-table c99-mtab)
-	 (read-ident read-c-ident)
-	 (read-comm read-c-comm)
-	 ;;
-	 (ident-like? (make-ident-like-p read-ident))
+	 (ident-like? (make-ident-like-p read-c-ident))
 	 ;;
 	 (strtab (filter-mt string? match-table)) ; strings in grammar
 	 (kwstab (filter-mt ident-like? strtab))  ; keyword strings =>
@@ -502,7 +499,7 @@
 	       (bol
 		(set! bol #f)
 		(cond ;; things that depend on bol only
- 		 ((read-comm ch #t) => assc-$)
+ 		 ((read-c-comm ch #t #:skip-prefix #t) => assc-$)
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
 		    (let ((stmt (eval-cpp-stmt stmt))) ; eval can add tree
@@ -510,7 +507,7 @@
 			  (assc-$ `(cpp-stmt . ,stmt))
 			  (iter (read-char))))))
 		 (else (iter ch))))
-	       ((read-ident ch) =>
+	       ((read-c-ident ch) =>
 		(lambda (name)
 		  (let ((symb (string->symbol name))
 			(defs (cpi-defs info)))
@@ -532,7 +529,7 @@
 	       ((read-c-num ch) => assc-$)
 	       ((read-c-string ch) => assc-$)
 	       ((read-c-chlit ch) => assc-$)
-	       ((read-comm ch #f) => assc-$)
+	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
 	       ((and (char=? ch #\{)	; ugly tracking of block-lev in lexer
 		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info) #f) #f)
 	       ((and (char=? ch #\})	; ugly tracking of block-lev in lexer

@@ -6,8 +6,11 @@
   #:use-module (bytestructures guile)
   )
 (dynamic-link "libcairo")
+(define void intptr_t) ;; no void in bytestructures
+(define echo-decls #f)
 
 ;; int cairo_version(void);
+(if echo-decls (display "cairo_version\n"))
 (define cairo_version
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -17,6 +20,7 @@
 (export cairo_version)
 
 ;; const char *cairo_version_string(void);
+(if echo-decls (display "cairo_version_string\n"))
 (define cairo_version_string
   (let ((~f (ffi:pointer->procedure
               '*
@@ -28,15 +32,28 @@
 (export cairo_version_string)
 
 ;; typedef int cairo_bool_t;
+(if echo-decls (display "cairo_bool_t\n"))
+(define cairo_bool_t-desc int)
+(define unwrap-cairo_bool_t unwrap~fixed)
+(define wrap-cairo_bool_t identity)
 
 ;; typedef struct _cairo cairo_t;
-(define-fh-pointer-type cairo_t*)
+(if echo-decls (display "cairo_t\n"))
+(define cairo_t-desc void)
+(define cairo_t*-desc (bs:pointer cairo_t-desc))
+(define-fh-pointer-type cairo_t* cairo_t*-desc)
 
 ;; typedef struct _cairo_surface cairo_surface_t;
-(define-fh-pointer-type cairo_surface_t*)
+(if echo-decls (display "cairo_surface_t\n"))
+(define cairo_surface_t-desc void)
+(define cairo_surface_t*-desc (bs:pointer cairo_surface_t-desc))
+(define-fh-pointer-type cairo_surface_t* cairo_surface_t*-desc)
 
 ;; typedef struct _cairo_device cairo_device_t;
-(define-fh-pointer-type cairo_device_t*)
+(if echo-decls (display "cairo_device_t\n"))
+(define cairo_device_t-desc void)
+(define cairo_device_t*-desc (bs:pointer cairo_device_t-desc))
+(define-fh-pointer-type cairo_device_t* cairo_device_t*-desc)
 
 ;; typedef struct _cairo_matrix {
 ;;   double xx;
@@ -46,6 +63,7 @@
 ;;   double x0;
 ;;   double y0;
 ;; } cairo_matrix_t;
+(if echo-decls (display "cairo_matrix_t\n"))
 (define cairo_matrix_t-desc
   (bs:struct
     (list `(xx ,double)
@@ -59,15 +77,20 @@
 (define struct-_cairo_matrix cairo_matrix_t)
 
 ;; typedef struct _cairo_pattern cairo_pattern_t;
-(define-fh-pointer-type cairo_pattern_t*)
+(if echo-decls (display "cairo_pattern_t\n"))
+(define cairo_pattern_t-desc void)
+(define cairo_pattern_t*-desc (bs:pointer cairo_pattern_t-desc))
+(define-fh-pointer-type cairo_pattern_t* cairo_pattern_t*-desc)
 
 ;; typedef void (*cairo_destroy_func_t)(void *data);
+(if echo-decls (display "cairo_destroy_func_t\n"))
 (define-fh-function/p cairo_destroy_func_t
   ffi:void (list (quote *)))
 
 ;; typedef struct _cairo_user_data_key {
 ;;   int unused;
 ;; } cairo_user_data_key_t;
+(if echo-decls (display "cairo_user_data_key_t\n"))
 (define cairo_user_data_key_t-desc
   (bs:struct (list `(unused ,int))))
 (export cairo_user_data_key_t-desc)
@@ -116,6 +139,7 @@
 ;;   CAIRO_STATUS_JBIG2_GLOBAL_MISSING,
 ;;   CAIRO_STATUS_LAST_STATUS,
 ;; } cairo_status_t;
+(if echo-decls (display "cairo_status_t\n"))
 (define-fh-enum cairo_status_t
   '((CAIRO_STATUS_SUCCESS . 0)
     (CAIRO_STATUS_NO_MEMORY . 1)
@@ -166,6 +190,7 @@
 ;;   CAIRO_CONTENT_ALPHA = 0x2000,
 ;;   CAIRO_CONTENT_COLOR_ALPHA = 0x3000,
 ;; } cairo_content_t;
+(if echo-decls (display "cairo_content_t\n"))
 (define-fh-enum cairo_content_t
   '((CAIRO_CONTENT_COLOR . 4096)
     (CAIRO_CONTENT_ALPHA . 8192)
@@ -183,6 +208,7 @@
 ;;   CAIRO_FORMAT_RGB16_565 = 4,
 ;;   CAIRO_FORMAT_RGB30 = 5,
 ;; } cairo_format_t;
+(if echo-decls (display "cairo_format_t\n"))
 (define-fh-enum cairo_format_t
   '((CAIRO_FORMAT_INVALID . -1)
     (CAIRO_FORMAT_ARGB32 . 0)
@@ -197,11 +223,13 @@
 
 ;; typedef cairo_status_t (*cairo_write_func_t)(void *closure, const 
 ;;     unsigned char *data, unsigned int length);
+(if echo-decls (display "cairo_write_func_t\n"))
 (define-fh-function/p cairo_write_func_t
   ffi:int (list (quote *) (quote *) ffi:unsigned-int))
 
 ;; typedef cairo_status_t (*cairo_read_func_t)(void *closure, unsigned char *
 ;;     data, unsigned int length);
+(if echo-decls (display "cairo_read_func_t\n"))
 (define-fh-function/p cairo_read_func_t
   ffi:int (list (quote *) (quote *) ffi:unsigned-int))
 
@@ -209,6 +237,7 @@
 ;;   int x, y;
 ;;   int width, height;
 ;; } cairo_rectangle_int_t;
+(if echo-decls (display "cairo_rectangle_int_t\n"))
 (define cairo_rectangle_int_t-desc
   (bs:struct
     (list `(y ,int)
@@ -220,6 +249,7 @@
 (define struct-_cairo_rectangle_int cairo_rectangle_int_t)
 
 ;; cairo_t *cairo_create(cairo_surface_t *target);
+(if echo-decls (display "cairo_create\n"))
 (define cairo_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -231,6 +261,7 @@
 (export cairo_create)
 
 ;; cairo_t *cairo_reference(cairo_t *cr);
+(if echo-decls (display "cairo_reference\n"))
 (define cairo_reference
   (let ((~f (ffi:pointer->procedure
               '*
@@ -242,6 +273,7 @@
 (export cairo_reference)
 
 ;; void cairo_destroy(cairo_t *cr);
+(if echo-decls (display "cairo_destroy\n"))
 (define cairo_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -252,6 +284,7 @@
 (export cairo_destroy)
 
 ;; unsigned int cairo_get_reference_count(cairo_t *cr);
+(if echo-decls (display "cairo_get_reference_count\n"))
 (define cairo_get_reference_count
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -264,6 +297,7 @@
 (export cairo_get_reference_count)
 
 ;; void *cairo_get_user_data(cairo_t *cr, const cairo_user_data_key_t *key);
+(if echo-decls (display "cairo_get_user_data\n"))
 (define cairo_get_user_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -277,8 +311,9 @@
         (~f ~cr ~key)))))
 (export cairo_get_user_data)
 
-;; cairo_status_t cairo_set_user_data(cairo_t *cr, const cairo_user_data_key_t
-;;      *key, void *user_data, cairo_destroy_func_t destroy);
+;; cairo_status_t cairo_set_user_data(cairo_t *cr, const cairo_user_data_key_t 
+;;     *key, void *user_data, cairo_destroy_func_t destroy);
+(if echo-decls (display "cairo_set_user_data\n"))
 (define cairo_set_user_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -296,6 +331,7 @@
 (export cairo_set_user_data)
 
 ;; void cairo_save(cairo_t *cr);
+(if echo-decls (display "cairo_save\n"))
 (define cairo_save
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -306,6 +342,7 @@
 (export cairo_save)
 
 ;; void cairo_restore(cairo_t *cr);
+(if echo-decls (display "cairo_restore\n"))
 (define cairo_restore
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -316,6 +353,7 @@
 (export cairo_restore)
 
 ;; void cairo_push_group(cairo_t *cr);
+(if echo-decls (display "cairo_push_group\n"))
 (define cairo_push_group
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -326,6 +364,7 @@
 (export cairo_push_group)
 
 ;; void cairo_push_group_with_content(cairo_t *cr, cairo_content_t content);
+(if echo-decls (display "cairo_push_group_with_content\n"))
 (define cairo_push_group_with_content
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -340,6 +379,7 @@
 (export cairo_push_group_with_content)
 
 ;; cairo_pattern_t *cairo_pop_group(cairo_t *cr);
+(if echo-decls (display "cairo_pop_group\n"))
 (define cairo_pop_group
   (let ((~f (ffi:pointer->procedure
               '*
@@ -351,6 +391,7 @@
 (export cairo_pop_group)
 
 ;; void cairo_pop_group_to_source(cairo_t *cr);
+(if echo-decls (display "cairo_pop_group_to_source\n"))
 (define cairo_pop_group_to_source
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -393,6 +434,7 @@
 ;;   CAIRO_OPERATOR_HSL_COLOR,
 ;;   CAIRO_OPERATOR_HSL_LUMINOSITY,
 ;; } cairo_operator_t;
+(if echo-decls (display "cairo_operator_t\n"))
 (define-fh-enum cairo_operator_t
   '((CAIRO_OPERATOR_CLEAR . 0)
     (CAIRO_OPERATOR_SOURCE . 1)
@@ -428,6 +470,7 @@
 (define wrap-enum-_cairo_operator wrap-cairo_operator_t)
 
 ;; void cairo_set_operator(cairo_t *cr, cairo_operator_t op);
+(if echo-decls (display "cairo_set_operator\n"))
 (define cairo_set_operator
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -442,6 +485,7 @@
 (export cairo_set_operator)
 
 ;; void cairo_set_source(cairo_t *cr, cairo_pattern_t *source);
+(if echo-decls (display "cairo_set_source\n"))
 (define cairo_set_source
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -453,8 +497,9 @@
         (~f ~cr ~source)))))
 (export cairo_set_source)
 
-;; void cairo_set_source_rgb(cairo_t *cr, double red, double green, double 
-;;     blue);
+;; void cairo_set_source_rgb(cairo_t *cr, double red, double green, double blue
+;;     );
+(if echo-decls (display "cairo_set_source_rgb\n"))
 (define cairo_set_source_rgb
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -472,6 +517,7 @@
 
 ;; void cairo_set_source_rgba(cairo_t *cr, double red, double green, double 
 ;;     blue, double alpha);
+(if echo-decls (display "cairo_set_source_rgba\n"))
 (define cairo_set_source_rgba
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -492,8 +538,9 @@
         (~f ~cr ~red ~green ~blue ~alpha)))))
 (export cairo_set_source_rgba)
 
-;; void cairo_set_source_surface(cairo_t *cr, cairo_surface_t *surface, double
-;;      x, double y);
+;; void cairo_set_source_surface(cairo_t *cr, cairo_surface_t *surface, double 
+;;     x, double y);
+(if echo-decls (display "cairo_set_source_surface\n"))
 (define cairo_set_source_surface
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -510,6 +557,7 @@
 (export cairo_set_source_surface)
 
 ;; void cairo_set_tolerance(cairo_t *cr, double tolerance);
+(if echo-decls (display "cairo_set_tolerance\n"))
 (define cairo_set_tolerance
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -532,6 +580,7 @@
 ;;   CAIRO_ANTIALIAS_GOOD,
 ;;   CAIRO_ANTIALIAS_BEST,
 ;; } cairo_antialias_t;
+(if echo-decls (display "cairo_antialias_t\n"))
 (define-fh-enum cairo_antialias_t
   '((CAIRO_ANTIALIAS_DEFAULT . 0)
     (CAIRO_ANTIALIAS_NONE . 1)
@@ -545,6 +594,7 @@
 (define wrap-enum-_cairo_antialias wrap-cairo_antialias_t)
 
 ;; void cairo_set_antialias(cairo_t *cr, cairo_antialias_t antialias);
+(if echo-decls (display "cairo_set_antialias\n"))
 (define cairo_set_antialias
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -562,6 +612,7 @@
 ;;   CAIRO_FILL_RULE_WINDING,
 ;;   CAIRO_FILL_RULE_EVEN_ODD,
 ;; } cairo_fill_rule_t;
+(if echo-decls (display "cairo_fill_rule_t\n"))
 (define-fh-enum cairo_fill_rule_t
   '((CAIRO_FILL_RULE_WINDING . 0)
     (CAIRO_FILL_RULE_EVEN_ODD . 1))
@@ -570,6 +621,7 @@
 (define wrap-enum-_cairo_fill_rule wrap-cairo_fill_rule_t)
 
 ;; void cairo_set_fill_rule(cairo_t *cr, cairo_fill_rule_t fill_rule);
+(if echo-decls (display "cairo_set_fill_rule\n"))
 (define cairo_set_fill_rule
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -584,6 +636,7 @@
 (export cairo_set_fill_rule)
 
 ;; void cairo_set_line_width(cairo_t *cr, double width);
+(if echo-decls (display "cairo_set_line_width\n"))
 (define cairo_set_line_width
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -602,6 +655,7 @@
 ;;   CAIRO_LINE_CAP_ROUND,
 ;;   CAIRO_LINE_CAP_SQUARE,
 ;; } cairo_line_cap_t;
+(if echo-decls (display "cairo_line_cap_t\n"))
 (define-fh-enum cairo_line_cap_t
   '((CAIRO_LINE_CAP_BUTT . 0)
     (CAIRO_LINE_CAP_ROUND . 1)
@@ -611,6 +665,7 @@
 (define wrap-enum-_cairo_line_cap wrap-cairo_line_cap_t)
 
 ;; void cairo_set_line_cap(cairo_t *cr, cairo_line_cap_t line_cap);
+(if echo-decls (display "cairo_set_line_cap\n"))
 (define cairo_set_line_cap
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -629,6 +684,7 @@
 ;;   CAIRO_LINE_JOIN_ROUND,
 ;;   CAIRO_LINE_JOIN_BEVEL,
 ;; } cairo_line_join_t;
+(if echo-decls (display "cairo_line_join_t\n"))
 (define-fh-enum cairo_line_join_t
   '((CAIRO_LINE_JOIN_MITER . 0)
     (CAIRO_LINE_JOIN_ROUND . 1)
@@ -638,6 +694,7 @@
 (define wrap-enum-_cairo_line_join wrap-cairo_line_join_t)
 
 ;; void cairo_set_line_join(cairo_t *cr, cairo_line_join_t line_join);
+(if echo-decls (display "cairo_set_line_join\n"))
 (define cairo_set_line_join
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -653,6 +710,7 @@
 
 ;; void cairo_set_dash(cairo_t *cr, const double *dashes, int num_dashes, 
 ;;     double offset);
+(if echo-decls (display "cairo_set_dash\n"))
 (define cairo_set_dash
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -667,6 +725,7 @@
 (export cairo_set_dash)
 
 ;; void cairo_set_miter_limit(cairo_t *cr, double limit);
+(if echo-decls (display "cairo_set_miter_limit\n"))
 (define cairo_set_miter_limit
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -681,6 +740,7 @@
 (export cairo_set_miter_limit)
 
 ;; void cairo_translate(cairo_t *cr, double tx, double ty);
+(if echo-decls (display "cairo_translate\n"))
 (define cairo_translate
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -694,6 +754,7 @@
 (export cairo_translate)
 
 ;; void cairo_scale(cairo_t *cr, double sx, double sy);
+(if echo-decls (display "cairo_scale\n"))
 (define cairo_scale
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -707,6 +768,7 @@
 (export cairo_scale)
 
 ;; void cairo_rotate(cairo_t *cr, double angle);
+(if echo-decls (display "cairo_rotate\n"))
 (define cairo_rotate
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -719,6 +781,7 @@
 (export cairo_rotate)
 
 ;; void cairo_transform(cairo_t *cr, const cairo_matrix_t *matrix);
+(if echo-decls (display "cairo_transform\n"))
 (define cairo_transform
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -731,6 +794,7 @@
 (export cairo_transform)
 
 ;; void cairo_set_matrix(cairo_t *cr, const cairo_matrix_t *matrix);
+(if echo-decls (display "cairo_set_matrix\n"))
 (define cairo_set_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -743,6 +807,7 @@
 (export cairo_set_matrix)
 
 ;; void cairo_identity_matrix(cairo_t *cr);
+(if echo-decls (display "cairo_identity_matrix\n"))
 (define cairo_identity_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -755,6 +820,7 @@
 (export cairo_identity_matrix)
 
 ;; void cairo_user_to_device(cairo_t *cr, double *x, double *y);
+(if echo-decls (display "cairo_user_to_device\n"))
 (define cairo_user_to_device
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -770,6 +836,7 @@
 (export cairo_user_to_device)
 
 ;; void cairo_user_to_device_distance(cairo_t *cr, double *dx, double *dy);
+(if echo-decls (display "cairo_user_to_device_distance\n"))
 (define cairo_user_to_device_distance
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -785,6 +852,7 @@
 (export cairo_user_to_device_distance)
 
 ;; void cairo_device_to_user(cairo_t *cr, double *x, double *y);
+(if echo-decls (display "cairo_device_to_user\n"))
 (define cairo_device_to_user
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -800,6 +868,7 @@
 (export cairo_device_to_user)
 
 ;; void cairo_device_to_user_distance(cairo_t *cr, double *dx, double *dy);
+(if echo-decls (display "cairo_device_to_user_distance\n"))
 (define cairo_device_to_user_distance
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -815,6 +884,7 @@
 (export cairo_device_to_user_distance)
 
 ;; void cairo_new_path(cairo_t *cr);
+(if echo-decls (display "cairo_new_path\n"))
 (define cairo_new_path
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -825,6 +895,7 @@
 (export cairo_new_path)
 
 ;; void cairo_move_to(cairo_t *cr, double x, double y);
+(if echo-decls (display "cairo_move_to\n"))
 (define cairo_move_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -838,6 +909,7 @@
 (export cairo_move_to)
 
 ;; void cairo_new_sub_path(cairo_t *cr);
+(if echo-decls (display "cairo_new_sub_path\n"))
 (define cairo_new_sub_path
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -850,6 +922,7 @@
 (export cairo_new_sub_path)
 
 ;; void cairo_line_to(cairo_t *cr, double x, double y);
+(if echo-decls (display "cairo_line_to\n"))
 (define cairo_line_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -864,6 +937,7 @@
 
 ;; void cairo_curve_to(cairo_t *cr, double x1, double y1, double x2, double y2
 ;;     , double x3, double y3);
+(if echo-decls (display "cairo_curve_to\n"))
 (define cairo_curve_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -888,6 +962,7 @@
 
 ;; void cairo_arc(cairo_t *cr, double xc, double yc, double radius, double 
 ;;     angle1, double angle2);
+(if echo-decls (display "cairo_arc\n"))
 (define cairo_arc
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -910,6 +985,7 @@
 
 ;; void cairo_arc_negative(cairo_t *cr, double xc, double yc, double radius, 
 ;;     double angle1, double angle2);
+(if echo-decls (display "cairo_arc_negative\n"))
 (define cairo_arc_negative
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -933,6 +1009,7 @@
 (export cairo_arc_negative)
 
 ;; void cairo_rel_move_to(cairo_t *cr, double dx, double dy);
+(if echo-decls (display "cairo_rel_move_to\n"))
 (define cairo_rel_move_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -946,6 +1023,7 @@
 (export cairo_rel_move_to)
 
 ;; void cairo_rel_line_to(cairo_t *cr, double dx, double dy);
+(if echo-decls (display "cairo_rel_line_to\n"))
 (define cairo_rel_line_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -960,6 +1038,7 @@
 
 ;; void cairo_rel_curve_to(cairo_t *cr, double dx1, double dy1, double dx2, 
 ;;     double dy2, double dx3, double dy3);
+(if echo-decls (display "cairo_rel_curve_to\n"))
 (define cairo_rel_curve_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -986,6 +1065,7 @@
 
 ;; void cairo_rectangle(cairo_t *cr, double x, double y, double width, double 
 ;;     height);
+(if echo-decls (display "cairo_rectangle\n"))
 (define cairo_rectangle
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1005,6 +1085,7 @@
 (export cairo_rectangle)
 
 ;; void cairo_close_path(cairo_t *cr);
+(if echo-decls (display "cairo_close_path\n"))
 (define cairo_close_path
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1016,6 +1097,7 @@
 
 ;; void cairo_path_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
 ;;     double *y2);
+(if echo-decls (display "cairo_path_extents\n"))
 (define cairo_path_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1033,6 +1115,7 @@
 (export cairo_path_extents)
 
 ;; void cairo_paint(cairo_t *cr);
+(if echo-decls (display "cairo_paint\n"))
 (define cairo_paint
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1043,6 +1126,7 @@
 (export cairo_paint)
 
 ;; void cairo_paint_with_alpha(cairo_t *cr, double alpha);
+(if echo-decls (display "cairo_paint_with_alpha\n"))
 (define cairo_paint_with_alpha
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1057,6 +1141,7 @@
 (export cairo_paint_with_alpha)
 
 ;; void cairo_mask(cairo_t *cr, cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_mask\n"))
 (define cairo_mask
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1070,6 +1155,7 @@
 
 ;; void cairo_mask_surface(cairo_t *cr, cairo_surface_t *surface, double 
 ;;     surface_x, double surface_y);
+(if echo-decls (display "cairo_mask_surface\n"))
 (define cairo_mask_surface
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1086,6 +1172,7 @@
 (export cairo_mask_surface)
 
 ;; void cairo_stroke(cairo_t *cr);
+(if echo-decls (display "cairo_stroke\n"))
 (define cairo_stroke
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1096,6 +1183,7 @@
 (export cairo_stroke)
 
 ;; void cairo_stroke_preserve(cairo_t *cr);
+(if echo-decls (display "cairo_stroke_preserve\n"))
 (define cairo_stroke_preserve
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1108,6 +1196,7 @@
 (export cairo_stroke_preserve)
 
 ;; void cairo_fill(cairo_t *cr);
+(if echo-decls (display "cairo_fill\n"))
 (define cairo_fill
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1118,6 +1207,7 @@
 (export cairo_fill)
 
 ;; void cairo_fill_preserve(cairo_t *cr);
+(if echo-decls (display "cairo_fill_preserve\n"))
 (define cairo_fill_preserve
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1130,6 +1220,7 @@
 (export cairo_fill_preserve)
 
 ;; void cairo_copy_page(cairo_t *cr);
+(if echo-decls (display "cairo_copy_page\n"))
 (define cairo_copy_page
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1140,6 +1231,7 @@
 (export cairo_copy_page)
 
 ;; void cairo_show_page(cairo_t *cr);
+(if echo-decls (display "cairo_show_page\n"))
 (define cairo_show_page
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1150,6 +1242,7 @@
 (export cairo_show_page)
 
 ;; cairo_bool_t cairo_in_stroke(cairo_t *cr, double x, double y);
+(if echo-decls (display "cairo_in_stroke\n"))
 (define cairo_in_stroke
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1159,10 +1252,11 @@
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
-        (~f ~cr ~x ~y)))))
+        (wrap-cairo_bool_t (~f ~cr ~x ~y))))))
 (export cairo_in_stroke)
 
 ;; cairo_bool_t cairo_in_fill(cairo_t *cr, double x, double y);
+(if echo-decls (display "cairo_in_fill\n"))
 (define cairo_in_fill
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1172,10 +1266,11 @@
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
-        (~f ~cr ~x ~y)))))
+        (wrap-cairo_bool_t (~f ~cr ~x ~y))))))
 (export cairo_in_fill)
 
 ;; cairo_bool_t cairo_in_clip(cairo_t *cr, double x, double y);
+(if echo-decls (display "cairo_in_clip\n"))
 (define cairo_in_clip
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1185,11 +1280,12 @@
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
-        (~f ~cr ~x ~y)))))
+        (wrap-cairo_bool_t (~f ~cr ~x ~y))))))
 (export cairo_in_clip)
 
 ;; void cairo_stroke_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
 ;;     double *y2);
+(if echo-decls (display "cairo_stroke_extents\n"))
 (define cairo_stroke_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1208,6 +1304,7 @@
 
 ;; void cairo_fill_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
 ;;     double *y2);
+(if echo-decls (display "cairo_fill_extents\n"))
 (define cairo_fill_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1225,6 +1322,7 @@
 (export cairo_fill_extents)
 
 ;; void cairo_reset_clip(cairo_t *cr);
+(if echo-decls (display "cairo_reset_clip\n"))
 (define cairo_reset_clip
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1235,6 +1333,7 @@
 (export cairo_reset_clip)
 
 ;; void cairo_clip(cairo_t *cr);
+(if echo-decls (display "cairo_clip\n"))
 (define cairo_clip
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1245,6 +1344,7 @@
 (export cairo_clip)
 
 ;; void cairo_clip_preserve(cairo_t *cr);
+(if echo-decls (display "cairo_clip_preserve\n"))
 (define cairo_clip_preserve
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1258,6 +1358,7 @@
 
 ;; void cairo_clip_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
 ;;     double *y2);
+(if echo-decls (display "cairo_clip_extents\n"))
 (define cairo_clip_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1277,6 +1378,7 @@
 ;; typedef struct _cairo_rectangle {
 ;;   double x, y, width, height;
 ;; } cairo_rectangle_t;
+(if echo-decls (display "cairo_rectangle_t\n"))
 (define cairo_rectangle_t-desc
   (bs:struct
     (list `(height ,double)
@@ -1292,16 +1394,19 @@
 ;;   cairo_rectangle_t *rectangles;
 ;;   int num_rectangles;
 ;; } cairo_rectangle_list_t;
+(if echo-decls (display "cairo_rectangle_list_t\n"))
 (define cairo_rectangle_list_t-desc
   (bs:struct
     (list `(status ,cairo_status_t-desc)
-          `(rectangles ,(bs:pointer "cairo_rectangle_t"))
+          `(rectangles
+             ,(bs:pointer cairo_rectangle_t*-desc))
           `(num_rectangles ,int))))
 (export cairo_rectangle_list_t-desc)
 (define-fh-compound-type/p cairo_rectangle_list_t cairo_rectangle_list_t-desc)
 (define struct-_cairo_rectangle_list cairo_rectangle_list_t)
 
 ;; cairo_rectangle_list_t *cairo_copy_clip_rectangle_list(cairo_t *cr);
+(if echo-decls (display "cairo_copy_clip_rectangle_list\n"))
 (define cairo_copy_clip_rectangle_list
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1315,6 +1420,7 @@
 (export cairo_copy_clip_rectangle_list)
 
 ;; void cairo_rectangle_list_destroy(cairo_rectangle_list_t *rectangle_list);
+(if echo-decls (display "cairo_rectangle_list_destroy\n"))
 (define cairo_rectangle_list_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1329,16 +1435,23 @@
 (export cairo_rectangle_list_destroy)
 
 ;; typedef struct _cairo_scaled_font cairo_scaled_font_t;
-(define-fh-pointer-type cairo_scaled_font_t*)
+(if echo-decls (display "cairo_scaled_font_t\n"))
+(define cairo_scaled_font_t-desc void)
+(define cairo_scaled_font_t*-desc (bs:pointer cairo_scaled_font_t-desc))
+(define-fh-pointer-type cairo_scaled_font_t* cairo_scaled_font_t*-desc)
 
 ;; typedef struct _cairo_font_face cairo_font_face_t;
-(define-fh-pointer-type cairo_font_face_t*)
+(if echo-decls (display "cairo_font_face_t\n"))
+(define cairo_font_face_t-desc void)
+(define cairo_font_face_t*-desc (bs:pointer cairo_font_face_t-desc))
+(define-fh-pointer-type cairo_font_face_t* cairo_font_face_t*-desc)
 
 ;; typedef struct {
 ;;   unsigned long index;
 ;;   double x;
 ;;   double y;
 ;; } cairo_glyph_t;
+(if echo-decls (display "cairo_glyph_t\n"))
 (define cairo_glyph_t-desc
   (bs:struct
     (list `(index ,unsigned-long)
@@ -1348,6 +1461,7 @@
 (define-fh-compound-type/p cairo_glyph_t cairo_glyph_t-desc)
 
 ;; cairo_glyph_t *cairo_glyph_allocate(int num_glyphs);
+(if echo-decls (display "cairo_glyph_allocate\n"))
 (define cairo_glyph_allocate
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1361,6 +1475,7 @@
 (export cairo_glyph_allocate)
 
 ;; void cairo_glyph_free(cairo_glyph_t *glyphs);
+(if echo-decls (display "cairo_glyph_free\n"))
 (define cairo_glyph_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1375,6 +1490,7 @@
 ;;   int num_bytes;
 ;;   int num_glyphs;
 ;; } cairo_text_cluster_t;
+(if echo-decls (display "cairo_text_cluster_t\n"))
 (define cairo_text_cluster_t-desc
   (bs:struct
     (list `(num_bytes ,int) `(num_glyphs ,int))))
@@ -1382,6 +1498,7 @@
 (define-fh-compound-type/p cairo_text_cluster_t cairo_text_cluster_t-desc)
 
 ;; cairo_text_cluster_t *cairo_text_cluster_allocate(int num_clusters);
+(if echo-decls (display "cairo_text_cluster_allocate\n"))
 (define cairo_text_cluster_allocate
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1395,6 +1512,7 @@
 (export cairo_text_cluster_allocate)
 
 ;; void cairo_text_cluster_free(cairo_text_cluster_t *clusters);
+(if echo-decls (display "cairo_text_cluster_free\n"))
 (define cairo_text_cluster_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1411,6 +1529,7 @@
 ;; typedef enum _cairo_text_cluster_flags {
 ;;   CAIRO_TEXT_CLUSTER_FLAG_BACKWARD = 0x00000001,
 ;; } cairo_text_cluster_flags_t;
+(if echo-decls (display "cairo_text_cluster_flags_t\n"))
 (define-fh-enum cairo_text_cluster_flags_t
   '((CAIRO_TEXT_CLUSTER_FLAG_BACKWARD . 1))
   )
@@ -1425,6 +1544,7 @@
 ;;   double x_advance;
 ;;   double y_advance;
 ;; } cairo_text_extents_t;
+(if echo-decls (display "cairo_text_extents_t\n"))
 (define cairo_text_extents_t-desc
   (bs:struct
     (list `(x_bearing ,double)
@@ -1443,6 +1563,7 @@
 ;;   double max_x_advance;
 ;;   double max_y_advance;
 ;; } cairo_font_extents_t;
+(if echo-decls (display "cairo_font_extents_t\n"))
 (define cairo_font_extents_t-desc
   (bs:struct
     (list `(ascent ,double)
@@ -1458,6 +1579,7 @@
 ;;   CAIRO_FONT_SLANT_ITALIC,
 ;;   CAIRO_FONT_SLANT_OBLIQUE,
 ;; } cairo_font_slant_t;
+(if echo-decls (display "cairo_font_slant_t\n"))
 (define-fh-enum cairo_font_slant_t
   '((CAIRO_FONT_SLANT_NORMAL . 0)
     (CAIRO_FONT_SLANT_ITALIC . 1)
@@ -1470,6 +1592,7 @@
 ;;   CAIRO_FONT_WEIGHT_NORMAL,
 ;;   CAIRO_FONT_WEIGHT_BOLD,
 ;; } cairo_font_weight_t;
+(if echo-decls (display "cairo_font_weight_t\n"))
 (define-fh-enum cairo_font_weight_t
   '((CAIRO_FONT_WEIGHT_NORMAL . 0)
     (CAIRO_FONT_WEIGHT_BOLD . 1))
@@ -1484,6 +1607,7 @@
 ;;   CAIRO_SUBPIXEL_ORDER_VRGB,
 ;;   CAIRO_SUBPIXEL_ORDER_VBGR,
 ;; } cairo_subpixel_order_t;
+(if echo-decls (display "cairo_subpixel_order_t\n"))
 (define-fh-enum cairo_subpixel_order_t
   '((CAIRO_SUBPIXEL_ORDER_DEFAULT . 0)
     (CAIRO_SUBPIXEL_ORDER_RGB . 1)
@@ -1501,6 +1625,7 @@
 ;;   CAIRO_HINT_STYLE_MEDIUM,
 ;;   CAIRO_HINT_STYLE_FULL,
 ;; } cairo_hint_style_t;
+(if echo-decls (display "cairo_hint_style_t\n"))
 (define-fh-enum cairo_hint_style_t
   '((CAIRO_HINT_STYLE_DEFAULT . 0)
     (CAIRO_HINT_STYLE_NONE . 1)
@@ -1516,6 +1641,7 @@
 ;;   CAIRO_HINT_METRICS_OFF,
 ;;   CAIRO_HINT_METRICS_ON,
 ;; } cairo_hint_metrics_t;
+(if echo-decls (display "cairo_hint_metrics_t\n"))
 (define-fh-enum cairo_hint_metrics_t
   '((CAIRO_HINT_METRICS_DEFAULT . 0)
     (CAIRO_HINT_METRICS_OFF . 1)
@@ -1525,9 +1651,13 @@
 (define wrap-enum-_cairo_hint_metrics wrap-cairo_hint_metrics_t)
 
 ;; typedef struct _cairo_font_options cairo_font_options_t;
-(define-fh-pointer-type cairo_font_options_t*)
+(if echo-decls (display "cairo_font_options_t\n"))
+(define cairo_font_options_t-desc void)
+(define cairo_font_options_t*-desc (bs:pointer cairo_font_options_t-desc))
+(define-fh-pointer-type cairo_font_options_t* cairo_font_options_t*-desc)
 
 ;; cairo_font_options_t *cairo_font_options_create(void);
+(if echo-decls (display "cairo_font_options_create\n"))
 (define cairo_font_options_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1541,6 +1671,7 @@
 
 ;; cairo_font_options_t *cairo_font_options_copy(const cairo_font_options_t *
 ;;     original);
+(if echo-decls (display "cairo_font_options_copy\n"))
 (define cairo_font_options_copy
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1555,6 +1686,7 @@
 (export cairo_font_options_copy)
 
 ;; void cairo_font_options_destroy(cairo_font_options_t *options);
+(if echo-decls (display "cairo_font_options_destroy\n"))
 (define cairo_font_options_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1568,6 +1700,7 @@
 (export cairo_font_options_destroy)
 
 ;; cairo_status_t cairo_font_options_status(cairo_font_options_t *options);
+(if echo-decls (display "cairo_font_options_status\n"))
 (define cairo_font_options_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1582,6 +1715,7 @@
 
 ;; void cairo_font_options_merge(cairo_font_options_t *options, const 
 ;;     cairo_font_options_t *other);
+(if echo-decls (display "cairo_font_options_merge\n"))
 (define cairo_font_options_merge
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1597,6 +1731,7 @@
 
 ;; cairo_bool_t cairo_font_options_equal(const cairo_font_options_t *options, 
 ;;     const cairo_font_options_t *other);
+(if echo-decls (display "cairo_font_options_equal\n"))
 (define cairo_font_options_equal
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1607,11 +1742,11 @@
     (lambda (options other)
       (let ((~options (unwrap-cairo_font_options_t* options))
             (~other (unwrap-cairo_font_options_t* other)))
-        (~f ~options ~other)))))
+        (wrap-cairo_bool_t (~f ~options ~other))))))
 (export cairo_font_options_equal)
 
-;; unsigned long cairo_font_options_hash(const cairo_font_options_t *options)
-;;     ;
+;; unsigned long cairo_font_options_hash(const cairo_font_options_t *options);
+(if echo-decls (display "cairo_font_options_hash\n"))
 (define cairo_font_options_hash
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-long
@@ -1626,6 +1761,7 @@
 
 ;; void cairo_font_options_set_antialias(cairo_font_options_t *options, 
 ;;     cairo_antialias_t antialias);
+(if echo-decls (display "cairo_font_options_set_antialias\n"))
 (define cairo_font_options_set_antialias
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1641,6 +1777,7 @@
 
 ;; cairo_antialias_t cairo_font_options_get_antialias(const 
 ;;     cairo_font_options_t *options);
+(if echo-decls (display "cairo_font_options_get_antialias\n"))
 (define cairo_font_options_get_antialias
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1655,6 +1792,7 @@
 
 ;; void cairo_font_options_set_subpixel_order(cairo_font_options_t *options, 
 ;;     cairo_subpixel_order_t subpixel_order);
+(if echo-decls (display "cairo_font_options_set_subpixel_order\n"))
 (define cairo_font_options_set_subpixel_order
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1671,6 +1809,7 @@
 
 ;; cairo_subpixel_order_t cairo_font_options_get_subpixel_order(const 
 ;;     cairo_font_options_t *options);
+(if echo-decls (display "cairo_font_options_get_subpixel_order\n"))
 (define cairo_font_options_get_subpixel_order
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1685,6 +1824,7 @@
 
 ;; void cairo_font_options_set_hint_style(cairo_font_options_t *options, 
 ;;     cairo_hint_style_t hint_style);
+(if echo-decls (display "cairo_font_options_set_hint_style\n"))
 (define cairo_font_options_set_hint_style
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1701,6 +1841,7 @@
 
 ;; cairo_hint_style_t cairo_font_options_get_hint_style(const 
 ;;     cairo_font_options_t *options);
+(if echo-decls (display "cairo_font_options_get_hint_style\n"))
 (define cairo_font_options_get_hint_style
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1715,6 +1856,7 @@
 
 ;; void cairo_font_options_set_hint_metrics(cairo_font_options_t *options, 
 ;;     cairo_hint_metrics_t hint_metrics);
+(if echo-decls (display "cairo_font_options_set_hint_metrics\n"))
 (define cairo_font_options_set_hint_metrics
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1731,6 +1873,7 @@
 
 ;; cairo_hint_metrics_t cairo_font_options_get_hint_metrics(const 
 ;;     cairo_font_options_t *options);
+(if echo-decls (display "cairo_font_options_get_hint_metrics\n"))
 (define cairo_font_options_get_hint_metrics
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1745,6 +1888,7 @@
 
 ;; void cairo_select_font_face(cairo_t *cr, const char *family, 
 ;;     cairo_font_slant_t slant, cairo_font_weight_t weight);
+(if echo-decls (display "cairo_select_font_face\n"))
 (define cairo_select_font_face
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1761,6 +1905,7 @@
 (export cairo_select_font_face)
 
 ;; void cairo_set_font_size(cairo_t *cr, double size);
+(if echo-decls (display "cairo_set_font_size\n"))
 (define cairo_set_font_size
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1775,6 +1920,7 @@
 (export cairo_set_font_size)
 
 ;; void cairo_set_font_matrix(cairo_t *cr, const cairo_matrix_t *matrix);
+(if echo-decls (display "cairo_set_font_matrix\n"))
 (define cairo_set_font_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1789,6 +1935,7 @@
 (export cairo_set_font_matrix)
 
 ;; void cairo_get_font_matrix(cairo_t *cr, cairo_matrix_t *matrix);
+(if echo-decls (display "cairo_get_font_matrix\n"))
 (define cairo_get_font_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1802,8 +1949,9 @@
         (~f ~cr ~matrix)))))
 (export cairo_get_font_matrix)
 
-;; void cairo_set_font_options(cairo_t *cr, const cairo_font_options_t *
-;;     options);
+;; void cairo_set_font_options(cairo_t *cr, const cairo_font_options_t *options
+;;     );
+(if echo-decls (display "cairo_set_font_options\n"))
 (define cairo_set_font_options
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1818,6 +1966,7 @@
 (export cairo_set_font_options)
 
 ;; void cairo_get_font_options(cairo_t *cr, cairo_font_options_t *options);
+(if echo-decls (display "cairo_get_font_options\n"))
 (define cairo_get_font_options
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1832,6 +1981,7 @@
 (export cairo_get_font_options)
 
 ;; void cairo_set_font_face(cairo_t *cr, cairo_font_face_t *font_face);
+(if echo-decls (display "cairo_set_font_face\n"))
 (define cairo_set_font_face
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1847,6 +1997,7 @@
 (export cairo_set_font_face)
 
 ;; cairo_font_face_t *cairo_get_font_face(cairo_t *cr);
+(if echo-decls (display "cairo_get_font_face\n"))
 (define cairo_get_font_face
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1861,6 +2012,7 @@
 
 ;; void cairo_set_scaled_font(cairo_t *cr, const cairo_scaled_font_t *
 ;;     scaled_font);
+(if echo-decls (display "cairo_set_scaled_font\n"))
 (define cairo_set_scaled_font
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1876,6 +2028,7 @@
 (export cairo_set_scaled_font)
 
 ;; cairo_scaled_font_t *cairo_get_scaled_font(cairo_t *cr);
+(if echo-decls (display "cairo_get_scaled_font\n"))
 (define cairo_get_scaled_font
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1889,6 +2042,7 @@
 (export cairo_get_scaled_font)
 
 ;; void cairo_show_text(cairo_t *cr, const char *utf8);
+(if echo-decls (display "cairo_show_text\n"))
 (define cairo_show_text
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1902,6 +2056,7 @@
 
 ;; void cairo_show_glyphs(cairo_t *cr, const cairo_glyph_t *glyphs, int 
 ;;     num_glyphs);
+(if echo-decls (display "cairo_show_glyphs\n"))
 (define cairo_show_glyphs
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1915,9 +2070,9 @@
 (export cairo_show_glyphs)
 
 ;; void cairo_show_text_glyphs(cairo_t *cr, const char *utf8, int utf8_len, 
-;;     const cairo_glyph_t *glyphs, int num_glyphs, const cairo_text_cluster_t
-;;      *clusters, int num_clusters, cairo_text_cluster_flags_t cluster_flags)
-;;     ;
+;;     const cairo_glyph_t *glyphs, int num_glyphs, const cairo_text_cluster_t 
+;;     *clusters, int num_clusters, cairo_text_cluster_flags_t cluster_flags);
+(if echo-decls (display "cairo_show_text_glyphs\n"))
 (define cairo_show_text_glyphs
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1961,6 +2116,7 @@
 (export cairo_show_text_glyphs)
 
 ;; void cairo_text_path(cairo_t *cr, const char *utf8);
+(if echo-decls (display "cairo_text_path\n"))
 (define cairo_text_path
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1974,6 +2130,7 @@
 
 ;; void cairo_glyph_path(cairo_t *cr, const cairo_glyph_t *glyphs, int 
 ;;     num_glyphs);
+(if echo-decls (display "cairo_glyph_path\n"))
 (define cairo_glyph_path
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1986,8 +2143,9 @@
         (~f ~cr ~glyphs ~num_glyphs)))))
 (export cairo_glyph_path)
 
-;; void cairo_text_extents(cairo_t *cr, const char *utf8, cairo_text_extents_t
-;;      *extents);
+;; void cairo_text_extents(cairo_t *cr, const char *utf8, cairo_text_extents_t 
+;;     *extents);
+(if echo-decls (display "cairo_text_extents\n"))
 (define cairo_text_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2004,6 +2162,7 @@
 
 ;; void cairo_glyph_extents(cairo_t *cr, const cairo_glyph_t *glyphs, int 
 ;;     num_glyphs, cairo_text_extents_t *extents);
+(if echo-decls (display "cairo_glyph_extents\n"))
 (define cairo_glyph_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2020,6 +2179,7 @@
 (export cairo_glyph_extents)
 
 ;; void cairo_font_extents(cairo_t *cr, cairo_font_extents_t *extents);
+(if echo-decls (display "cairo_font_extents\n"))
 (define cairo_font_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2033,8 +2193,8 @@
         (~f ~cr ~extents)))))
 (export cairo_font_extents)
 
-;; cairo_font_face_t *cairo_font_face_reference(cairo_font_face_t *font_face)
-;;     ;
+;; cairo_font_face_t *cairo_font_face_reference(cairo_font_face_t *font_face);
+(if echo-decls (display "cairo_font_face_reference\n"))
 (define cairo_font_face_reference
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2049,6 +2209,7 @@
 (export cairo_font_face_reference)
 
 ;; void cairo_font_face_destroy(cairo_font_face_t *font_face);
+(if echo-decls (display "cairo_font_face_destroy\n"))
 (define cairo_font_face_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2064,6 +2225,7 @@
 
 ;; unsigned int cairo_font_face_get_reference_count(cairo_font_face_t *
 ;;     font_face);
+(if echo-decls (display "cairo_font_face_get_reference_count\n"))
 (define cairo_font_face_get_reference_count
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -2078,6 +2240,7 @@
 (export cairo_font_face_get_reference_count)
 
 ;; cairo_status_t cairo_font_face_status(cairo_font_face_t *font_face);
+(if echo-decls (display "cairo_font_face_status\n"))
 (define cairo_font_face_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2098,6 +2261,7 @@
 ;;   CAIRO_FONT_TYPE_QUARTZ,
 ;;   CAIRO_FONT_TYPE_USER,
 ;; } cairo_font_type_t;
+(if echo-decls (display "cairo_font_type_t\n"))
 (define-fh-enum cairo_font_type_t
   '((CAIRO_FONT_TYPE_TOY . 0)
     (CAIRO_FONT_TYPE_FT . 1)
@@ -2109,6 +2273,7 @@
 (define wrap-enum-_cairo_font_type wrap-cairo_font_type_t)
 
 ;; cairo_font_type_t cairo_font_face_get_type(cairo_font_face_t *font_face);
+(if echo-decls (display "cairo_font_face_get_type\n"))
 (define cairo_font_face_get_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2124,6 +2289,7 @@
 
 ;; void *cairo_font_face_get_user_data(cairo_font_face_t *font_face, const 
 ;;     cairo_user_data_key_t *key);
+(if echo-decls (display "cairo_font_face_get_user_data\n"))
 (define cairo_font_face_get_user_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2139,8 +2305,9 @@
 (export cairo_font_face_get_user_data)
 
 ;; cairo_status_t cairo_font_face_set_user_data(cairo_font_face_t *font_face, 
-;;     const cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t
-;;      destroy);
+;;     const cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t 
+;;     destroy);
+(if echo-decls (display "cairo_font_face_set_user_data\n"))
 (define cairo_font_face_set_user_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2158,9 +2325,10 @@
           (~f ~font_face ~key ~user_data ~destroy))))))
 (export cairo_font_face_set_user_data)
 
-;; cairo_scaled_font_t *cairo_scaled_font_create(cairo_font_face_t *font_face
-;;     , const cairo_matrix_t *font_matrix, const cairo_matrix_t *ctm, const 
+;; cairo_scaled_font_t *cairo_scaled_font_create(cairo_font_face_t *font_face, 
+;;     const cairo_matrix_t *font_matrix, const cairo_matrix_t *ctm, const 
 ;;     cairo_font_options_t *options);
+(if echo-decls (display "cairo_scaled_font_create\n"))
 (define cairo_scaled_font_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2181,6 +2349,7 @@
 
 ;; cairo_scaled_font_t *cairo_scaled_font_reference(cairo_scaled_font_t *
 ;;     scaled_font);
+(if echo-decls (display "cairo_scaled_font_reference\n"))
 (define cairo_scaled_font_reference
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2195,6 +2364,7 @@
 (export cairo_scaled_font_reference)
 
 ;; void cairo_scaled_font_destroy(cairo_scaled_font_t *scaled_font);
+(if echo-decls (display "cairo_scaled_font_destroy\n"))
 (define cairo_scaled_font_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2210,6 +2380,7 @@
 
 ;; unsigned int cairo_scaled_font_get_reference_count(cairo_scaled_font_t *
 ;;     scaled_font);
+(if echo-decls (display "cairo_scaled_font_get_reference_count\n"))
 (define cairo_scaled_font_get_reference_count
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -2224,6 +2395,7 @@
 (export cairo_scaled_font_get_reference_count)
 
 ;; cairo_status_t cairo_scaled_font_status(cairo_scaled_font_t *scaled_font);
+(if echo-decls (display "cairo_scaled_font_status\n"))
 (define cairo_scaled_font_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2239,6 +2411,7 @@
 
 ;; cairo_font_type_t cairo_scaled_font_get_type(cairo_scaled_font_t *
 ;;     scaled_font);
+(if echo-decls (display "cairo_scaled_font_get_type\n"))
 (define cairo_scaled_font_get_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2254,6 +2427,7 @@
 
 ;; void *cairo_scaled_font_get_user_data(cairo_scaled_font_t *scaled_font, 
 ;;     const cairo_user_data_key_t *key);
+(if echo-decls (display "cairo_scaled_font_get_user_data\n"))
 (define cairo_scaled_font_get_user_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2271,6 +2445,7 @@
 ;; cairo_status_t cairo_scaled_font_set_user_data(cairo_scaled_font_t *
 ;;     scaled_font, const cairo_user_data_key_t *key, void *user_data, 
 ;;     cairo_destroy_func_t destroy);
+(if echo-decls (display "cairo_scaled_font_set_user_data\n"))
 (define cairo_scaled_font_set_user_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2290,6 +2465,7 @@
 
 ;; void cairo_scaled_font_extents(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_font_extents_t *extents);
+(if echo-decls (display "cairo_scaled_font_extents\n"))
 (define cairo_scaled_font_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2304,8 +2480,9 @@
         (~f ~scaled_font ~extents)))))
 (export cairo_scaled_font_extents)
 
-;; void cairo_scaled_font_text_extents(cairo_scaled_font_t *scaled_font, const
-;;      char *utf8, cairo_text_extents_t *extents);
+;; void cairo_scaled_font_text_extents(cairo_scaled_font_t *scaled_font, const 
+;;     char *utf8, cairo_text_extents_t *extents);
+(if echo-decls (display "cairo_scaled_font_text_extents\n"))
 (define cairo_scaled_font_text_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2321,9 +2498,9 @@
         (~f ~scaled_font ~utf8 ~extents)))))
 (export cairo_scaled_font_text_extents)
 
-;; void cairo_scaled_font_glyph_extents(cairo_scaled_font_t *scaled_font, 
-;;     const cairo_glyph_t *glyphs, int num_glyphs, cairo_text_extents_t *
-;;     extents);
+;; void cairo_scaled_font_glyph_extents(cairo_scaled_font_t *scaled_font, const
+;;      cairo_glyph_t *glyphs, int num_glyphs, cairo_text_extents_t *extents);
+(if echo-decls (display "cairo_scaled_font_glyph_extents\n"))
 (define cairo_scaled_font_glyph_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2342,9 +2519,9 @@
 
 ;; cairo_status_t cairo_scaled_font_text_to_glyphs(cairo_scaled_font_t *
 ;;     scaled_font, double x, double y, const char *utf8, int utf8_len, 
-;;     cairo_glyph_t **glyphs, int *num_glyphs, cairo_text_cluster_t **
-;;     clusters, int *num_clusters, cairo_text_cluster_flags_t *cluster_flags)
-;;     ;
+;;     cairo_glyph_t **glyphs, int *num_glyphs, cairo_text_cluster_t **clusters
+;;     , int *num_clusters, cairo_text_cluster_flags_t *cluster_flags);
+(if echo-decls (display "cairo_scaled_font_text_to_glyphs\n"))
 (define cairo_scaled_font_text_to_glyphs
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2399,6 +2576,7 @@
 
 ;; cairo_font_face_t *cairo_scaled_font_get_font_face(cairo_scaled_font_t *
 ;;     scaled_font);
+(if echo-decls (display "cairo_scaled_font_get_font_face\n"))
 (define cairo_scaled_font_get_font_face
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2414,6 +2592,7 @@
 
 ;; void cairo_scaled_font_get_font_matrix(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_matrix_t *font_matrix);
+(if echo-decls (display "cairo_scaled_font_get_font_matrix\n"))
 (define cairo_scaled_font_get_font_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2431,6 +2610,7 @@
 
 ;; void cairo_scaled_font_get_ctm(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_matrix_t *ctm);
+(if echo-decls (display "cairo_scaled_font_get_ctm\n"))
 (define cairo_scaled_font_get_ctm
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2447,6 +2627,7 @@
 
 ;; void cairo_scaled_font_get_scale_matrix(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_matrix_t *scale_matrix);
+(if echo-decls (display "cairo_scaled_font_get_scale_matrix\n"))
 (define cairo_scaled_font_get_scale_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2464,6 +2645,7 @@
 
 ;; void cairo_scaled_font_get_font_options(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_font_options_t *options);
+(if echo-decls (display "cairo_scaled_font_get_font_options\n"))
 (define cairo_scaled_font_get_font_options
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2480,6 +2662,7 @@
 
 ;; cairo_font_face_t *cairo_toy_font_face_create(const char *family, 
 ;;     cairo_font_slant_t slant, cairo_font_weight_t weight);
+(if echo-decls (display "cairo_toy_font_face_create\n"))
 (define cairo_toy_font_face_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2496,6 +2679,7 @@
 (export cairo_toy_font_face_create)
 
 ;; const char *cairo_toy_font_face_get_family(cairo_font_face_t *font_face);
+(if echo-decls (display "cairo_toy_font_face_get_family\n"))
 (define cairo_toy_font_face_get_family
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2511,6 +2695,7 @@
 
 ;; cairo_font_slant_t cairo_toy_font_face_get_slant(cairo_font_face_t *
 ;;     font_face);
+(if echo-decls (display "cairo_toy_font_face_get_slant\n"))
 (define cairo_toy_font_face_get_slant
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2526,6 +2711,7 @@
 
 ;; cairo_font_weight_t cairo_toy_font_face_get_weight(cairo_font_face_t *
 ;;     font_face);
+(if echo-decls (display "cairo_toy_font_face_get_weight\n"))
 (define cairo_toy_font_face_get_weight
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2540,6 +2726,7 @@
 (export cairo_toy_font_face_get_weight)
 
 ;; cairo_font_face_t *cairo_user_font_face_create(void);
+(if echo-decls (display "cairo_user_font_face_create\n"))
 (define cairo_user_font_face_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2554,31 +2741,35 @@
 ;; typedef cairo_status_t (*cairo_user_scaled_font_init_func_t)(
 ;;     cairo_scaled_font_t *scaled_font, cairo_t *cr, cairo_font_extents_t *
 ;;     extents);
+(if echo-decls (display "cairo_user_scaled_font_init_func_t\n"))
 (define-fh-function/p cairo_user_scaled_font_init_func_t
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_user_scaled_font_render_glyph_func_t)(
 ;;     cairo_scaled_font_t *scaled_font, unsigned long glyph, cairo_t *cr, 
 ;;     cairo_text_extents_t *extents);
+(if echo-decls (display "cairo_user_scaled_font_render_glyph_func_t\n"))
 (define-fh-function/p cairo_user_scaled_font_render_glyph_func_t
   ffi:int (list (quote *) ffi:unsigned-long (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_user_scaled_font_text_to_glyphs_func_t)(
 ;;     cairo_scaled_font_t *scaled_font, const char *utf8, int utf8_len, 
-;;     cairo_glyph_t **glyphs, int *num_glyphs, cairo_text_cluster_t **
-;;     clusters, int *num_clusters, cairo_text_cluster_flags_t *cluster_flags)
-;;     ;
+;;     cairo_glyph_t **glyphs, int *num_glyphs, cairo_text_cluster_t **clusters
+;;     , int *num_clusters, cairo_text_cluster_flags_t *cluster_flags);
+(if echo-decls (display "cairo_user_scaled_font_text_to_glyphs_func_t\n"))
 (define-fh-function/p cairo_user_scaled_font_text_to_glyphs_func_t
   ffi:int (list (quote *) (quote *) ffi:int (quote *) (quote *) (quote *) (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_user_scaled_font_unicode_to_glyph_func_t)(
-;;     cairo_scaled_font_t *scaled_font, unsigned long unicode, unsigned long 
-;;     *glyph_index);
+;;     cairo_scaled_font_t *scaled_font, unsigned long unicode, unsigned long *
+;;     glyph_index);
+(if echo-decls (display "cairo_user_scaled_font_unicode_to_glyph_func_t\n"))
 (define-fh-function/p cairo_user_scaled_font_unicode_to_glyph_func_t
   ffi:int (list (quote *) ffi:unsigned-long (quote *)))
 
 ;; void cairo_user_font_face_set_init_func(cairo_font_face_t *font_face, 
 ;;     cairo_user_scaled_font_init_func_t init_func);
+(if echo-decls (display "cairo_user_font_face_set_init_func\n"))
 (define cairo_user_font_face_set_init_func
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2595,9 +2786,9 @@
         (~f ~font_face ~init_func)))))
 (export cairo_user_font_face_set_init_func)
 
-;; void cairo_user_font_face_set_render_glyph_func(cairo_font_face_t *
-;;     font_face, cairo_user_scaled_font_render_glyph_func_t render_glyph_func
-;;     );
+;; void cairo_user_font_face_set_render_glyph_func(cairo_font_face_t *font_face
+;;     , cairo_user_scaled_font_render_glyph_func_t render_glyph_func);
+(if echo-decls (display "cairo_user_font_face_set_render_glyph_func\n"))
 (define cairo_user_font_face_set_render_glyph_func
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2617,6 +2808,7 @@
 ;; void cairo_user_font_face_set_text_to_glyphs_func(cairo_font_face_t *
 ;;     font_face, cairo_user_scaled_font_text_to_glyphs_func_t 
 ;;     text_to_glyphs_func);
+(if echo-decls (display "cairo_user_font_face_set_text_to_glyphs_func\n"))
 (define cairo_user_font_face_set_text_to_glyphs_func
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2636,6 +2828,7 @@
 ;; void cairo_user_font_face_set_unicode_to_glyph_func(cairo_font_face_t *
 ;;     font_face, cairo_user_scaled_font_unicode_to_glyph_func_t 
 ;;     unicode_to_glyph_func);
+(if echo-decls (display "cairo_user_font_face_set_unicode_to_glyph_func\n"))
 (define cairo_user_font_face_set_unicode_to_glyph_func
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2654,6 +2847,7 @@
 
 ;; cairo_user_scaled_font_init_func_t cairo_user_font_face_get_init_func(
 ;;     cairo_font_face_t *font_face);
+(if echo-decls (display "cairo_user_font_face_get_init_func\n"))
 (define cairo_user_font_face_get_init_func
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2669,8 +2863,9 @@
 (export cairo_user_font_face_get_init_func)
 
 ;; cairo_user_scaled_font_render_glyph_func_t 
-;;     cairo_user_font_face_get_render_glyph_func(cairo_font_face_t *font_face
-;;     );
+;;     cairo_user_font_face_get_render_glyph_func(cairo_font_face_t *font_face)
+;;     ;
+(if echo-decls (display "cairo_user_font_face_get_render_glyph_func\n"))
 (define cairo_user_font_face_get_render_glyph_func
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2688,6 +2883,7 @@
 ;; cairo_user_scaled_font_text_to_glyphs_func_t 
 ;;     cairo_user_font_face_get_text_to_glyphs_func(cairo_font_face_t *
 ;;     font_face);
+(if echo-decls (display "cairo_user_font_face_get_text_to_glyphs_func\n"))
 (define cairo_user_font_face_get_text_to_glyphs_func
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2705,6 +2901,7 @@
 ;; cairo_user_scaled_font_unicode_to_glyph_func_t 
 ;;     cairo_user_font_face_get_unicode_to_glyph_func(cairo_font_face_t *
 ;;     font_face);
+(if echo-decls (display "cairo_user_font_face_get_unicode_to_glyph_func\n"))
 (define cairo_user_font_face_get_unicode_to_glyph_func
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2720,6 +2917,7 @@
 (export cairo_user_font_face_get_unicode_to_glyph_func)
 
 ;; cairo_operator_t cairo_get_operator(cairo_t *cr);
+(if echo-decls (display "cairo_get_operator\n"))
 (define cairo_get_operator
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2733,6 +2931,7 @@
 (export cairo_get_operator)
 
 ;; cairo_pattern_t *cairo_get_source(cairo_t *cr);
+(if echo-decls (display "cairo_get_source\n"))
 (define cairo_get_source
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2744,6 +2943,7 @@
 (export cairo_get_source)
 
 ;; double cairo_get_tolerance(cairo_t *cr);
+(if echo-decls (display "cairo_get_tolerance\n"))
 (define cairo_get_tolerance
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -2756,6 +2956,7 @@
 (export cairo_get_tolerance)
 
 ;; cairo_antialias_t cairo_get_antialias(cairo_t *cr);
+(if echo-decls (display "cairo_get_antialias\n"))
 (define cairo_get_antialias
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2769,6 +2970,7 @@
 (export cairo_get_antialias)
 
 ;; cairo_bool_t cairo_has_current_point(cairo_t *cr);
+(if echo-decls (display "cairo_has_current_point\n"))
 (define cairo_has_current_point
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2777,10 +2979,12 @@
                 (dynamic-link))
               (list '*))))
     (lambda (cr)
-      (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
+      (let ((~cr (unwrap-cairo_t* cr)))
+        (wrap-cairo_bool_t (~f ~cr))))))
 (export cairo_has_current_point)
 
 ;; void cairo_get_current_point(cairo_t *cr, double *x, double *y);
+(if echo-decls (display "cairo_get_current_point\n"))
 (define cairo_get_current_point
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2796,6 +3000,7 @@
 (export cairo_get_current_point)
 
 ;; cairo_fill_rule_t cairo_get_fill_rule(cairo_t *cr);
+(if echo-decls (display "cairo_get_fill_rule\n"))
 (define cairo_get_fill_rule
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2809,6 +3014,7 @@
 (export cairo_get_fill_rule)
 
 ;; double cairo_get_line_width(cairo_t *cr);
+(if echo-decls (display "cairo_get_line_width\n"))
 (define cairo_get_line_width
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -2821,6 +3027,7 @@
 (export cairo_get_line_width)
 
 ;; cairo_line_cap_t cairo_get_line_cap(cairo_t *cr);
+(if echo-decls (display "cairo_get_line_cap\n"))
 (define cairo_get_line_cap
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2834,6 +3041,7 @@
 (export cairo_get_line_cap)
 
 ;; cairo_line_join_t cairo_get_line_join(cairo_t *cr);
+(if echo-decls (display "cairo_get_line_join\n"))
 (define cairo_get_line_join
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2847,6 +3055,7 @@
 (export cairo_get_line_join)
 
 ;; double cairo_get_miter_limit(cairo_t *cr);
+(if echo-decls (display "cairo_get_miter_limit\n"))
 (define cairo_get_miter_limit
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -2859,6 +3068,7 @@
 (export cairo_get_miter_limit)
 
 ;; int cairo_get_dash_count(cairo_t *cr);
+(if echo-decls (display "cairo_get_dash_count\n"))
 (define cairo_get_dash_count
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2871,6 +3081,7 @@
 (export cairo_get_dash_count)
 
 ;; void cairo_get_dash(cairo_t *cr, double *dashes, double *offset);
+(if echo-decls (display "cairo_get_dash\n"))
 (define cairo_get_dash
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2884,6 +3095,7 @@
 (export cairo_get_dash)
 
 ;; void cairo_get_matrix(cairo_t *cr, cairo_matrix_t *matrix);
+(if echo-decls (display "cairo_get_matrix\n"))
 (define cairo_get_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2896,6 +3108,7 @@
 (export cairo_get_matrix)
 
 ;; cairo_surface_t *cairo_get_target(cairo_t *cr);
+(if echo-decls (display "cairo_get_target\n"))
 (define cairo_get_target
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2907,6 +3120,7 @@
 (export cairo_get_target)
 
 ;; cairo_surface_t *cairo_get_group_target(cairo_t *cr);
+(if echo-decls (display "cairo_get_group_target\n"))
 (define cairo_get_group_target
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2925,6 +3139,7 @@
 ;;   CAIRO_PATH_CURVE_TO,
 ;;   CAIRO_PATH_CLOSE_PATH,
 ;; } cairo_path_data_type_t;
+(if echo-decls (display "cairo_path_data_type_t\n"))
 (define-fh-enum cairo_path_data_type_t
   '((CAIRO_PATH_MOVE_TO . 0)
     (CAIRO_PATH_LINE_TO . 1)
@@ -2935,6 +3150,7 @@
 (define wrap-enum-_cairo_path_data_type wrap-cairo_path_data_type_t)
 
 ;; typedef union _cairo_path_data_t cairo_path_data_t;
+(if echo-decls (display "cairo_path_data_t\n"))
 ;; union _cairo_path_data_t {
 ;;   struct {
 ;;     cairo_path_data_type_t type;
@@ -2960,16 +3176,18 @@
 ;;   cairo_path_data_t *data;
 ;;   int num_data;
 ;; } cairo_path_t;
+(if echo-decls (display "cairo_path_t\n"))
 (define cairo_path_t-desc
   (bs:struct
     (list `(status ,cairo_status_t-desc)
-          `(data ,(bs:pointer "cairo_path_data_t"))
+          `(data ,(bs:pointer cairo_path_data_t*-desc))
           `(num_data ,int))))
 (export cairo_path_t-desc)
 (define-fh-compound-type/p cairo_path_t cairo_path_t-desc)
 (define struct-cairo_path cairo_path_t)
 
 ;; cairo_path_t *cairo_copy_path(cairo_t *cr);
+(if echo-decls (display "cairo_copy_path\n"))
 (define cairo_copy_path
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2981,6 +3199,7 @@
 (export cairo_copy_path)
 
 ;; cairo_path_t *cairo_copy_path_flat(cairo_t *cr);
+(if echo-decls (display "cairo_copy_path_flat\n"))
 (define cairo_copy_path_flat
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2994,6 +3213,7 @@
 (export cairo_copy_path_flat)
 
 ;; void cairo_append_path(cairo_t *cr, const cairo_path_t *path);
+(if echo-decls (display "cairo_append_path\n"))
 (define cairo_append_path
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3006,6 +3226,7 @@
 (export cairo_append_path)
 
 ;; void cairo_path_destroy(cairo_path_t *path);
+(if echo-decls (display "cairo_path_destroy\n"))
 (define cairo_path_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3019,6 +3240,7 @@
 (export cairo_path_destroy)
 
 ;; cairo_status_t cairo_status(cairo_t *cr);
+(if echo-decls (display "cairo_status\n"))
 (define cairo_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3030,6 +3252,7 @@
 (export cairo_status)
 
 ;; const char *cairo_status_to_string(cairo_status_t status);
+(if echo-decls (display "cairo_status_to_string\n"))
 (define cairo_status_to_string
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3043,6 +3266,7 @@
 (export cairo_status_to_string)
 
 ;; cairo_device_t *cairo_device_reference(cairo_device_t *device);
+(if echo-decls (display "cairo_device_reference\n"))
 (define cairo_device_reference
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3066,6 +3290,7 @@
 ;;   CAIRO_DEVICE_TYPE_WIN32,
 ;;   CAIRO_DEVICE_TYPE_INVALID = -1,
 ;; } cairo_device_type_t;
+(if echo-decls (display "cairo_device_type_t\n"))
 (define-fh-enum cairo_device_type_t
   '((CAIRO_DEVICE_TYPE_DRM . 0)
     (CAIRO_DEVICE_TYPE_GL . 1)
@@ -3081,6 +3306,7 @@
 (define wrap-enum-_cairo_device_type wrap-cairo_device_type_t)
 
 ;; cairo_device_type_t cairo_device_get_type(cairo_device_t *device);
+(if echo-decls (display "cairo_device_get_type\n"))
 (define cairo_device_get_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3094,6 +3320,7 @@
 (export cairo_device_get_type)
 
 ;; cairo_status_t cairo_device_status(cairo_device_t *device);
+(if echo-decls (display "cairo_device_status\n"))
 (define cairo_device_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3107,6 +3334,7 @@
 (export cairo_device_status)
 
 ;; cairo_status_t cairo_device_acquire(cairo_device_t *device);
+(if echo-decls (display "cairo_device_acquire\n"))
 (define cairo_device_acquire
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3120,6 +3348,7 @@
 (export cairo_device_acquire)
 
 ;; void cairo_device_release(cairo_device_t *device);
+(if echo-decls (display "cairo_device_release\n"))
 (define cairo_device_release
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3133,6 +3362,7 @@
 (export cairo_device_release)
 
 ;; void cairo_device_flush(cairo_device_t *device);
+(if echo-decls (display "cairo_device_flush\n"))
 (define cairo_device_flush
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3146,6 +3376,7 @@
 (export cairo_device_flush)
 
 ;; void cairo_device_finish(cairo_device_t *device);
+(if echo-decls (display "cairo_device_finish\n"))
 (define cairo_device_finish
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3159,6 +3390,7 @@
 (export cairo_device_finish)
 
 ;; void cairo_device_destroy(cairo_device_t *device);
+(if echo-decls (display "cairo_device_destroy\n"))
 (define cairo_device_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3172,6 +3404,7 @@
 (export cairo_device_destroy)
 
 ;; unsigned int cairo_device_get_reference_count(cairo_device_t *device);
+(if echo-decls (display "cairo_device_get_reference_count\n"))
 (define cairo_device_get_reference_count
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -3186,6 +3419,7 @@
 
 ;; void *cairo_device_get_user_data(cairo_device_t *device, const 
 ;;     cairo_user_data_key_t *key);
+(if echo-decls (display "cairo_device_get_user_data\n"))
 (define cairo_device_get_user_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3202,6 +3436,7 @@
 ;; cairo_status_t cairo_device_set_user_data(cairo_device_t *device, const 
 ;;     cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t 
 ;;     destroy);
+(if echo-decls (display "cairo_device_set_user_data\n"))
 (define cairo_device_set_user_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3220,6 +3455,7 @@
 
 ;; cairo_surface_t *cairo_surface_create_similar(cairo_surface_t *other, 
 ;;     cairo_content_t content, int width, int height);
+(if echo-decls (display "cairo_surface_create_similar\n"))
 (define cairo_surface_create_similar
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3236,8 +3472,9 @@
           (~f ~other ~content ~width ~height))))))
 (export cairo_surface_create_similar)
 
-;; cairo_surface_t *cairo_surface_create_similar_image(cairo_surface_t *other
-;;     , cairo_format_t format, int width, int height);
+;; cairo_surface_t *cairo_surface_create_similar_image(cairo_surface_t *other, 
+;;     cairo_format_t format, int width, int height);
+(if echo-decls (display "cairo_surface_create_similar_image\n"))
 (define cairo_surface_create_similar_image
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3254,8 +3491,9 @@
           (~f ~other ~format ~width ~height))))))
 (export cairo_surface_create_similar_image)
 
-;; cairo_surface_t *cairo_surface_map_to_image(cairo_surface_t *surface, const
-;;      cairo_rectangle_int_t *extents);
+;; cairo_surface_t *cairo_surface_map_to_image(cairo_surface_t *surface, const 
+;;     cairo_rectangle_int_t *extents);
+(if echo-decls (display "cairo_surface_map_to_image\n"))
 (define cairo_surface_map_to_image
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3272,6 +3510,7 @@
 
 ;; void cairo_surface_unmap_image(cairo_surface_t *surface, cairo_surface_t *
 ;;     image);
+(if echo-decls (display "cairo_surface_unmap_image\n"))
 (define cairo_surface_unmap_image
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3287,6 +3526,7 @@
 
 ;; cairo_surface_t *cairo_surface_create_for_rectangle(cairo_surface_t *target
 ;;     , double x, double y, double width, double height);
+(if echo-decls (display "cairo_surface_create_for_rectangle\n"))
 (define cairo_surface_create_for_rectangle
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3312,6 +3552,7 @@
 ;;   CAIRO_SURFACE_OBSERVER_NORMAL = 0,
 ;;   CAIRO_SURFACE_OBSERVER_RECORD_OPERATIONS = 0x1,
 ;; } cairo_surface_observer_mode_t;
+(if echo-decls (display "cairo_surface_observer_mode_t\n"))
 (define-fh-enum cairo_surface_observer_mode_t
   '((CAIRO_SURFACE_OBSERVER_NORMAL . 0)
     (CAIRO_SURFACE_OBSERVER_RECORD_OPERATIONS . 1))
@@ -3319,6 +3560,7 @@
 
 ;; cairo_surface_t *cairo_surface_create_observer(cairo_surface_t *target, 
 ;;     cairo_surface_observer_mode_t mode);
+(if echo-decls (display "cairo_surface_create_observer\n"))
 (define cairo_surface_create_observer
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3334,11 +3576,13 @@
 
 ;; typedef void (*cairo_surface_observer_callback_t)(cairo_surface_t *observer
 ;;     , cairo_surface_t *target, void *data);
+(if echo-decls (display "cairo_surface_observer_callback_t\n"))
 (define-fh-function/p cairo_surface_observer_callback_t
   ffi:void (list (quote *) (quote *) (quote *)))
 
 ;; cairo_status_t cairo_surface_observer_add_paint_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
+(if echo-decls (display "cairo_surface_observer_add_paint_callback\n"))
 (define cairo_surface_observer_add_paint_callback
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3357,6 +3601,7 @@
 
 ;; cairo_status_t cairo_surface_observer_add_mask_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
+(if echo-decls (display "cairo_surface_observer_add_mask_callback\n"))
 (define cairo_surface_observer_add_mask_callback
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3375,6 +3620,7 @@
 
 ;; cairo_status_t cairo_surface_observer_add_fill_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
+(if echo-decls (display "cairo_surface_observer_add_fill_callback\n"))
 (define cairo_surface_observer_add_fill_callback
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3393,6 +3639,7 @@
 
 ;; cairo_status_t cairo_surface_observer_add_stroke_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
+(if echo-decls (display "cairo_surface_observer_add_stroke_callback\n"))
 (define cairo_surface_observer_add_stroke_callback
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3411,6 +3658,7 @@
 
 ;; cairo_status_t cairo_surface_observer_add_glyphs_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
+(if echo-decls (display "cairo_surface_observer_add_glyphs_callback\n"))
 (define cairo_surface_observer_add_glyphs_callback
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3429,6 +3677,7 @@
 
 ;; cairo_status_t cairo_surface_observer_add_flush_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
+(if echo-decls (display "cairo_surface_observer_add_flush_callback\n"))
 (define cairo_surface_observer_add_flush_callback
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3447,6 +3696,7 @@
 
 ;; cairo_status_t cairo_surface_observer_add_finish_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
+(if echo-decls (display "cairo_surface_observer_add_finish_callback\n"))
 (define cairo_surface_observer_add_finish_callback
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3465,6 +3715,7 @@
 
 ;; cairo_status_t cairo_surface_observer_print(cairo_surface_t *surface, 
 ;;     cairo_write_func_t write_func, void *closure);
+(if echo-decls (display "cairo_surface_observer_print\n"))
 (define cairo_surface_observer_print
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3482,6 +3733,7 @@
 (export cairo_surface_observer_print)
 
 ;; double cairo_surface_observer_elapsed(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_observer_elapsed\n"))
 (define cairo_surface_observer_elapsed
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -3496,6 +3748,7 @@
 
 ;; cairo_status_t cairo_device_observer_print(cairo_device_t *device, 
 ;;     cairo_write_func_t write_func, void *closure);
+(if echo-decls (display "cairo_device_observer_print\n"))
 (define cairo_device_observer_print
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3513,6 +3766,7 @@
 (export cairo_device_observer_print)
 
 ;; double cairo_device_observer_elapsed(cairo_device_t *device);
+(if echo-decls (display "cairo_device_observer_elapsed\n"))
 (define cairo_device_observer_elapsed
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -3526,6 +3780,7 @@
 (export cairo_device_observer_elapsed)
 
 ;; double cairo_device_observer_paint_elapsed(cairo_device_t *device);
+(if echo-decls (display "cairo_device_observer_paint_elapsed\n"))
 (define cairo_device_observer_paint_elapsed
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -3539,6 +3794,7 @@
 (export cairo_device_observer_paint_elapsed)
 
 ;; double cairo_device_observer_mask_elapsed(cairo_device_t *device);
+(if echo-decls (display "cairo_device_observer_mask_elapsed\n"))
 (define cairo_device_observer_mask_elapsed
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -3552,6 +3808,7 @@
 (export cairo_device_observer_mask_elapsed)
 
 ;; double cairo_device_observer_fill_elapsed(cairo_device_t *device);
+(if echo-decls (display "cairo_device_observer_fill_elapsed\n"))
 (define cairo_device_observer_fill_elapsed
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -3565,6 +3822,7 @@
 (export cairo_device_observer_fill_elapsed)
 
 ;; double cairo_device_observer_stroke_elapsed(cairo_device_t *device);
+(if echo-decls (display "cairo_device_observer_stroke_elapsed\n"))
 (define cairo_device_observer_stroke_elapsed
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -3578,6 +3836,7 @@
 (export cairo_device_observer_stroke_elapsed)
 
 ;; double cairo_device_observer_glyphs_elapsed(cairo_device_t *device);
+(if echo-decls (display "cairo_device_observer_glyphs_elapsed\n"))
 (define cairo_device_observer_glyphs_elapsed
   (let ((~f (ffi:pointer->procedure
               ffi:double
@@ -3591,6 +3850,7 @@
 (export cairo_device_observer_glyphs_elapsed)
 
 ;; cairo_surface_t *cairo_surface_reference(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_reference\n"))
 (define cairo_surface_reference
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3604,6 +3864,7 @@
 (export cairo_surface_reference)
 
 ;; void cairo_surface_finish(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_finish\n"))
 (define cairo_surface_finish
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3617,6 +3878,7 @@
 (export cairo_surface_finish)
 
 ;; void cairo_surface_destroy(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_destroy\n"))
 (define cairo_surface_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3630,6 +3892,7 @@
 (export cairo_surface_destroy)
 
 ;; cairo_device_t *cairo_surface_get_device(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_get_device\n"))
 (define cairo_surface_get_device
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3643,6 +3906,7 @@
 (export cairo_surface_get_device)
 
 ;; unsigned int cairo_surface_get_reference_count(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_get_reference_count\n"))
 (define cairo_surface_get_reference_count
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -3656,6 +3920,7 @@
 (export cairo_surface_get_reference_count)
 
 ;; cairo_status_t cairo_surface_status(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_status\n"))
 (define cairo_surface_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3695,6 +3960,7 @@
 ;;   CAIRO_SURFACE_TYPE_SUBSURFACE,
 ;;   CAIRO_SURFACE_TYPE_COGL,
 ;; } cairo_surface_type_t;
+(if echo-decls (display "cairo_surface_type_t\n"))
 (define-fh-enum cairo_surface_type_t
   '((CAIRO_SURFACE_TYPE_IMAGE . 0)
     (CAIRO_SURFACE_TYPE_PDF . 1)
@@ -3726,6 +3992,7 @@
 (define wrap-enum-_cairo_surface_type wrap-cairo_surface_type_t)
 
 ;; cairo_surface_type_t cairo_surface_get_type(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_get_type\n"))
 (define cairo_surface_get_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3739,6 +4006,7 @@
 (export cairo_surface_get_type)
 
 ;; cairo_content_t cairo_surface_get_content(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_get_content\n"))
 (define cairo_surface_get_content
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3753,6 +4021,7 @@
 
 ;; cairo_status_t cairo_surface_write_to_png(cairo_surface_t *surface, const 
 ;;     char *filename);
+(if echo-decls (display "cairo_surface_write_to_png\n"))
 (define cairo_surface_write_to_png
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3768,6 +4037,7 @@
 
 ;; cairo_status_t cairo_surface_write_to_png_stream(cairo_surface_t *surface, 
 ;;     cairo_write_func_t write_func, void *closure);
+(if echo-decls (display "cairo_surface_write_to_png_stream\n"))
 (define cairo_surface_write_to_png_stream
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3786,6 +4056,7 @@
 
 ;; void *cairo_surface_get_user_data(cairo_surface_t *surface, const 
 ;;     cairo_user_data_key_t *key);
+(if echo-decls (display "cairo_surface_get_user_data\n"))
 (define cairo_surface_get_user_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3802,6 +4073,7 @@
 ;; cairo_status_t cairo_surface_set_user_data(cairo_surface_t *surface, const 
 ;;     cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t 
 ;;     destroy);
+(if echo-decls (display "cairo_surface_set_user_data\n"))
 (define cairo_surface_set_user_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3820,6 +4092,7 @@
 
 ;; void cairo_surface_get_mime_data(cairo_surface_t *surface, const char *
 ;;     mime_type, const unsigned char **data, unsigned long *length);
+(if echo-decls (display "cairo_surface_get_mime_data\n"))
 (define cairo_surface_get_mime_data
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3838,6 +4111,7 @@
 ;; cairo_status_t cairo_surface_set_mime_data(cairo_surface_t *surface, const 
 ;;     char *mime_type, const unsigned char *data, unsigned long length, 
 ;;     cairo_destroy_func_t destroy, void *closure);
+(if echo-decls (display "cairo_surface_set_mime_data\n"))
 (define cairo_surface_set_mime_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3863,6 +4137,7 @@
 
 ;; cairo_bool_t cairo_surface_supports_mime_type(cairo_surface_t *surface, 
 ;;     const char *mime_type);
+(if echo-decls (display "cairo_surface_supports_mime_type\n"))
 (define cairo_surface_supports_mime_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3873,11 +4148,12 @@
     (lambda (surface mime_type)
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~mime_type (unwrap~pointer mime_type)))
-        (~f ~surface ~mime_type)))))
+        (wrap-cairo_bool_t (~f ~surface ~mime_type))))))
 (export cairo_surface_supports_mime_type)
 
 ;; void cairo_surface_get_font_options(cairo_surface_t *surface, 
 ;;     cairo_font_options_t *options);
+(if echo-decls (display "cairo_surface_get_font_options\n"))
 (define cairo_surface_get_font_options
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3892,6 +4168,7 @@
 (export cairo_surface_get_font_options)
 
 ;; void cairo_surface_flush(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_flush\n"))
 (define cairo_surface_flush
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3905,6 +4182,7 @@
 (export cairo_surface_flush)
 
 ;; void cairo_surface_mark_dirty(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_mark_dirty\n"))
 (define cairo_surface_mark_dirty
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3917,8 +4195,9 @@
         (~f ~surface)))))
 (export cairo_surface_mark_dirty)
 
-;; void cairo_surface_mark_dirty_rectangle(cairo_surface_t *surface, int x, 
-;;     int y, int width, int height);
+;; void cairo_surface_mark_dirty_rectangle(cairo_surface_t *surface, int x, int
+;;      y, int width, int height);
+(if echo-decls (display "cairo_surface_mark_dirty_rectangle\n"))
 (define cairo_surface_mark_dirty_rectangle
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3935,8 +4214,9 @@
         (~f ~surface ~x ~y ~width ~height)))))
 (export cairo_surface_mark_dirty_rectangle)
 
-;; void cairo_surface_set_device_scale(cairo_surface_t *surface, double 
-;;     x_scale, double y_scale);
+;; void cairo_surface_set_device_scale(cairo_surface_t *surface, double x_scale
+;;     , double y_scale);
+(if echo-decls (display "cairo_surface_set_device_scale\n"))
 (define cairo_surface_set_device_scale
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3953,6 +4233,7 @@
 
 ;; void cairo_surface_get_device_scale(cairo_surface_t *surface, double *
 ;;     x_scale, double *y_scale);
+(if echo-decls (display "cairo_surface_get_device_scale\n"))
 (define cairo_surface_get_device_scale
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3969,6 +4250,7 @@
 
 ;; void cairo_surface_set_device_offset(cairo_surface_t *surface, double 
 ;;     x_offset, double y_offset);
+(if echo-decls (display "cairo_surface_set_device_offset\n"))
 (define cairo_surface_set_device_offset
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3985,6 +4267,7 @@
 
 ;; void cairo_surface_get_device_offset(cairo_surface_t *surface, double *
 ;;     x_offset, double *y_offset);
+(if echo-decls (display "cairo_surface_get_device_offset\n"))
 (define cairo_surface_get_device_offset
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3999,8 +4282,9 @@
         (~f ~surface ~x_offset ~y_offset)))))
 (export cairo_surface_get_device_offset)
 
-;; void cairo_surface_set_fallback_resolution(cairo_surface_t *surface, double
-;;      x_pixels_per_inch, double y_pixels_per_inch);
+;; void cairo_surface_set_fallback_resolution(cairo_surface_t *surface, double 
+;;     x_pixels_per_inch, double y_pixels_per_inch);
+(if echo-decls (display "cairo_surface_set_fallback_resolution\n"))
 (define cairo_surface_set_fallback_resolution
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4019,8 +4303,9 @@
             ~y_pixels_per_inch)))))
 (export cairo_surface_set_fallback_resolution)
 
-;; void cairo_surface_get_fallback_resolution(cairo_surface_t *surface, double
-;;      *x_pixels_per_inch, double *y_pixels_per_inch);
+;; void cairo_surface_get_fallback_resolution(cairo_surface_t *surface, double 
+;;     *x_pixels_per_inch, double *y_pixels_per_inch);
+(if echo-decls (display "cairo_surface_get_fallback_resolution\n"))
 (define cairo_surface_get_fallback_resolution
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4040,6 +4325,7 @@
 (export cairo_surface_get_fallback_resolution)
 
 ;; void cairo_surface_copy_page(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_copy_page\n"))
 (define cairo_surface_copy_page
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4053,6 +4339,7 @@
 (export cairo_surface_copy_page)
 
 ;; void cairo_surface_show_page(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_show_page\n"))
 (define cairo_surface_show_page
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4066,6 +4353,7 @@
 (export cairo_surface_show_page)
 
 ;; cairo_bool_t cairo_surface_has_show_text_glyphs(cairo_surface_t *surface);
+(if echo-decls (display "cairo_surface_has_show_text_glyphs\n"))
 (define cairo_surface_has_show_text_glyphs
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4075,11 +4363,12 @@
               (list '*))))
     (lambda (surface)
       (let ((~surface (unwrap-cairo_surface_t* surface)))
-        (~f ~surface)))))
+        (wrap-cairo_bool_t (~f ~surface))))))
 (export cairo_surface_has_show_text_glyphs)
 
-;; cairo_surface_t *cairo_image_surface_create(cairo_format_t format, int 
-;;     width, int height);
+;; cairo_surface_t *cairo_image_surface_create(cairo_format_t format, int width
+;;     , int height);
+(if echo-decls (display "cairo_image_surface_create\n"))
 (define cairo_image_surface_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4096,6 +4385,7 @@
 (export cairo_image_surface_create)
 
 ;; int cairo_format_stride_for_width(cairo_format_t format, int width);
+(if echo-decls (display "cairo_format_stride_for_width\n"))
 (define cairo_format_stride_for_width
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4111,6 +4401,7 @@
 
 ;; cairo_surface_t *cairo_image_surface_create_for_data(unsigned char *data, 
 ;;     cairo_format_t format, int width, int height, int stride);
+(if echo-decls (display "cairo_image_surface_create_for_data\n"))
 (define cairo_image_surface_create_for_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4129,6 +4420,7 @@
 (export cairo_image_surface_create_for_data)
 
 ;; unsigned char *cairo_image_surface_get_data(cairo_surface_t *surface);
+(if echo-decls (display "cairo_image_surface_get_data\n"))
 (define cairo_image_surface_get_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4142,6 +4434,7 @@
 (export cairo_image_surface_get_data)
 
 ;; cairo_format_t cairo_image_surface_get_format(cairo_surface_t *surface);
+(if echo-decls (display "cairo_image_surface_get_format\n"))
 (define cairo_image_surface_get_format
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4155,6 +4448,7 @@
 (export cairo_image_surface_get_format)
 
 ;; int cairo_image_surface_get_width(cairo_surface_t *surface);
+(if echo-decls (display "cairo_image_surface_get_width\n"))
 (define cairo_image_surface_get_width
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4168,6 +4462,7 @@
 (export cairo_image_surface_get_width)
 
 ;; int cairo_image_surface_get_height(cairo_surface_t *surface);
+(if echo-decls (display "cairo_image_surface_get_height\n"))
 (define cairo_image_surface_get_height
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4181,6 +4476,7 @@
 (export cairo_image_surface_get_height)
 
 ;; int cairo_image_surface_get_stride(cairo_surface_t *surface);
+(if echo-decls (display "cairo_image_surface_get_stride\n"))
 (define cairo_image_surface_get_stride
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4193,8 +4489,8 @@
         (~f ~surface)))))
 (export cairo_image_surface_get_stride)
 
-;; cairo_surface_t *cairo_image_surface_create_from_png(const char *filename)
-;;     ;
+;; cairo_surface_t *cairo_image_surface_create_from_png(const char *filename);
+(if echo-decls (display "cairo_image_surface_create_from_png\n"))
 (define cairo_image_surface_create_from_png
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4209,6 +4505,7 @@
 
 ;; cairo_surface_t *cairo_image_surface_create_from_png_stream(
 ;;     cairo_read_func_t read_func, void *closure);
+(if echo-decls (display "cairo_image_surface_create_from_png_stream\n"))
 (define cairo_image_surface_create_from_png_stream
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4224,6 +4521,7 @@
 
 ;; cairo_surface_t *cairo_recording_surface_create(cairo_content_t content, 
 ;;     const cairo_rectangle_t *extents);
+(if echo-decls (display "cairo_recording_surface_create\n"))
 (define cairo_recording_surface_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4239,6 +4537,7 @@
 
 ;; void cairo_recording_surface_ink_extents(cairo_surface_t *surface, double *
 ;;     x0, double *y0, double *width, double *height);
+(if echo-decls (display "cairo_recording_surface_ink_extents\n"))
 (define cairo_recording_surface_ink_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4257,6 +4556,7 @@
 
 ;; cairo_bool_t cairo_recording_surface_get_extents(cairo_surface_t *surface, 
 ;;     cairo_rectangle_t *extents);
+(if echo-decls (display "cairo_recording_surface_get_extents\n"))
 (define cairo_recording_surface_get_extents
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4267,12 +4567,13 @@
     (lambda (surface extents)
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~extents (unwrap-cairo_rectangle_t* extents)))
-        (~f ~surface ~extents)))))
+        (wrap-cairo_bool_t (~f ~surface ~extents))))))
 (export cairo_recording_surface_get_extents)
 
 ;; typedef cairo_surface_t *(*cairo_raster_source_acquire_func_t)(
-;;     cairo_pattern_t *pattern, void *callback_data, cairo_surface_t *target
-;;     , const cairo_rectangle_int_t *extents);
+;;     cairo_pattern_t *pattern, void *callback_data, cairo_surface_t *target, 
+;;     const cairo_rectangle_int_t *extents);
+(if echo-decls (display "cairo_raster_source_acquire_func_t\n"))
 (define-fh-function/p
   cairo_raster_source_acquire_func_t
   '*
@@ -4280,26 +4581,31 @@
 
 ;; typedef void (*cairo_raster_source_release_func_t)(cairo_pattern_t *pattern
 ;;     , void *callback_data, cairo_surface_t *surface);
+(if echo-decls (display "cairo_raster_source_release_func_t\n"))
 (define-fh-function/p cairo_raster_source_release_func_t
   ffi:void (list (quote *) (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_raster_source_snapshot_func_t)(
 ;;     cairo_pattern_t *pattern, void *callback_data);
+(if echo-decls (display "cairo_raster_source_snapshot_func_t\n"))
 (define-fh-function/p cairo_raster_source_snapshot_func_t
   ffi:int (list (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_raster_source_copy_func_t)(cairo_pattern_t *
 ;;     pattern, void *callback_data, const cairo_pattern_t *other);
+(if echo-decls (display "cairo_raster_source_copy_func_t\n"))
 (define-fh-function/p cairo_raster_source_copy_func_t
   ffi:int (list (quote *) (quote *) (quote *)))
 
-;; typedef void (*cairo_raster_source_finish_func_t)(cairo_pattern_t *pattern
-;;     , void *callback_data);
+;; typedef void (*cairo_raster_source_finish_func_t)(cairo_pattern_t *pattern, 
+;;     void *callback_data);
+(if echo-decls (display "cairo_raster_source_finish_func_t\n"))
 (define-fh-function/p cairo_raster_source_finish_func_t
   ffi:void (list (quote *) (quote *)))
 
 ;; cairo_pattern_t *cairo_pattern_create_raster_source(void *user_data, 
 ;;     cairo_content_t content, int width, int height);
+(if echo-decls (display "cairo_pattern_create_raster_source\n"))
 (define cairo_pattern_create_raster_source
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4318,6 +4624,7 @@
 
 ;; void cairo_raster_source_pattern_set_callback_data(cairo_pattern_t *pattern
 ;;     , void *data);
+(if echo-decls (display "cairo_raster_source_pattern_set_callback_data\n"))
 (define cairo_raster_source_pattern_set_callback_data
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4331,8 +4638,9 @@
         (~f ~pattern ~data)))))
 (export cairo_raster_source_pattern_set_callback_data)
 
-;; void *cairo_raster_source_pattern_get_callback_data(cairo_pattern_t *
-;;     pattern);
+;; void *cairo_raster_source_pattern_get_callback_data(cairo_pattern_t *pattern
+;;     );
+(if echo-decls (display "cairo_raster_source_pattern_get_callback_data\n"))
 (define cairo_raster_source_pattern_get_callback_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4348,6 +4656,7 @@
 ;; void cairo_raster_source_pattern_set_acquire(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_acquire_func_t acquire, 
 ;;     cairo_raster_source_release_func_t release);
+(if echo-decls (display "cairo_raster_source_pattern_set_acquire\n"))
 (define cairo_raster_source_pattern_set_acquire
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4369,6 +4678,7 @@
 ;; void cairo_raster_source_pattern_get_acquire(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_acquire_func_t *acquire, 
 ;;     cairo_raster_source_release_func_t *release);
+(if echo-decls (display "cairo_raster_source_pattern_get_acquire\n"))
 (define cairo_raster_source_pattern_get_acquire
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4389,6 +4699,7 @@
 
 ;; void cairo_raster_source_pattern_set_snapshot(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_snapshot_func_t snapshot);
+(if echo-decls (display "cairo_raster_source_pattern_set_snapshot\n"))
 (define cairo_raster_source_pattern_set_snapshot
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4404,8 +4715,9 @@
         (~f ~pattern ~snapshot)))))
 (export cairo_raster_source_pattern_set_snapshot)
 
-;; cairo_raster_source_snapshot_func_t 
-;;     cairo_raster_source_pattern_get_snapshot(cairo_pattern_t *pattern);
+;; cairo_raster_source_snapshot_func_t cairo_raster_source_pattern_get_snapshot
+;;     (cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_raster_source_pattern_get_snapshot\n"))
 (define cairo_raster_source_pattern_get_snapshot
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4421,6 +4733,7 @@
 
 ;; void cairo_raster_source_pattern_set_copy(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_copy_func_t copy);
+(if echo-decls (display "cairo_raster_source_pattern_set_copy\n"))
 (define cairo_raster_source_pattern_set_copy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4436,6 +4749,7 @@
 
 ;; cairo_raster_source_copy_func_t cairo_raster_source_pattern_get_copy(
 ;;     cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_raster_source_pattern_get_copy\n"))
 (define cairo_raster_source_pattern_get_copy
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4451,6 +4765,7 @@
 
 ;; void cairo_raster_source_pattern_set_finish(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_finish_func_t finish);
+(if echo-decls (display "cairo_raster_source_pattern_set_finish\n"))
 (define cairo_raster_source_pattern_set_finish
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4467,6 +4782,7 @@
 
 ;; cairo_raster_source_finish_func_t cairo_raster_source_pattern_get_finish(
 ;;     cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_raster_source_pattern_get_finish\n"))
 (define cairo_raster_source_pattern_get_finish
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4482,6 +4798,7 @@
 
 ;; cairo_pattern_t *cairo_pattern_create_rgb(double red, double green, double 
 ;;     blue);
+(if echo-decls (display "cairo_pattern_create_rgb\n"))
 (define cairo_pattern_create_rgb
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4496,8 +4813,9 @@
         (wrap-cairo_pattern_t* (~f ~red ~green ~blue))))))
 (export cairo_pattern_create_rgb)
 
-;; cairo_pattern_t *cairo_pattern_create_rgba(double red, double green, double
-;;      blue, double alpha);
+;; cairo_pattern_t *cairo_pattern_create_rgba(double red, double green, double 
+;;     blue, double alpha);
+(if echo-decls (display "cairo_pattern_create_rgba\n"))
 (define cairo_pattern_create_rgba
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4519,6 +4837,7 @@
 
 ;; cairo_pattern_t *cairo_pattern_create_for_surface(cairo_surface_t *surface)
 ;;     ;
+(if echo-decls (display "cairo_pattern_create_for_surface\n"))
 (define cairo_pattern_create_for_surface
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4531,8 +4850,9 @@
         (wrap-cairo_pattern_t* (~f ~surface))))))
 (export cairo_pattern_create_for_surface)
 
-;; cairo_pattern_t *cairo_pattern_create_linear(double x0, double y0, double 
-;;     x1, double y1);
+;; cairo_pattern_t *cairo_pattern_create_linear(double x0, double y0, double x1
+;;     , double y1);
+(if echo-decls (display "cairo_pattern_create_linear\n"))
 (define cairo_pattern_create_linear
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4551,8 +4871,9 @@
         (wrap-cairo_pattern_t* (~f ~x0 ~y0 ~x1 ~y1))))))
 (export cairo_pattern_create_linear)
 
-;; cairo_pattern_t *cairo_pattern_create_radial(double cx0, double cy0, double
-;;      radius0, double cx1, double cy1, double radius1);
+;; cairo_pattern_t *cairo_pattern_create_radial(double cx0, double cy0, double 
+;;     radius0, double cx1, double cy1, double radius1);
+(if echo-decls (display "cairo_pattern_create_radial\n"))
 (define cairo_pattern_create_radial
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4577,6 +4898,7 @@
 (export cairo_pattern_create_radial)
 
 ;; cairo_pattern_t *cairo_pattern_create_mesh(void);
+(if echo-decls (display "cairo_pattern_create_mesh\n"))
 (define cairo_pattern_create_mesh
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4588,6 +4910,7 @@
 (export cairo_pattern_create_mesh)
 
 ;; cairo_pattern_t *cairo_pattern_reference(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_pattern_reference\n"))
 (define cairo_pattern_reference
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4601,6 +4924,7 @@
 (export cairo_pattern_reference)
 
 ;; void cairo_pattern_destroy(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_pattern_destroy\n"))
 (define cairo_pattern_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4614,6 +4938,7 @@
 (export cairo_pattern_destroy)
 
 ;; unsigned int cairo_pattern_get_reference_count(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_pattern_get_reference_count\n"))
 (define cairo_pattern_get_reference_count
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -4627,6 +4952,7 @@
 (export cairo_pattern_get_reference_count)
 
 ;; cairo_status_t cairo_pattern_status(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_pattern_status\n"))
 (define cairo_pattern_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4641,6 +4967,7 @@
 
 ;; void *cairo_pattern_get_user_data(cairo_pattern_t *pattern, const 
 ;;     cairo_user_data_key_t *key);
+(if echo-decls (display "cairo_pattern_get_user_data\n"))
 (define cairo_pattern_get_user_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4657,6 +4984,7 @@
 ;; cairo_status_t cairo_pattern_set_user_data(cairo_pattern_t *pattern, const 
 ;;     cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t 
 ;;     destroy);
+(if echo-decls (display "cairo_pattern_set_user_data\n"))
 (define cairo_pattern_set_user_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4681,6 +5009,7 @@
 ;;   CAIRO_PATTERN_TYPE_MESH,
 ;;   CAIRO_PATTERN_TYPE_RASTER_SOURCE,
 ;; } cairo_pattern_type_t;
+(if echo-decls (display "cairo_pattern_type_t\n"))
 (define-fh-enum cairo_pattern_type_t
   '((CAIRO_PATTERN_TYPE_SOLID . 0)
     (CAIRO_PATTERN_TYPE_SURFACE . 1)
@@ -4693,6 +5022,7 @@
 (define wrap-enum-_cairo_pattern_type wrap-cairo_pattern_type_t)
 
 ;; cairo_pattern_type_t cairo_pattern_get_type(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_pattern_get_type\n"))
 (define cairo_pattern_get_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4707,6 +5037,7 @@
 
 ;; void cairo_pattern_add_color_stop_rgb(cairo_pattern_t *pattern, double 
 ;;     offset, double red, double green, double blue);
+(if echo-decls (display "cairo_pattern_add_color_stop_rgb\n"))
 (define cairo_pattern_add_color_stop_rgb
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4729,6 +5060,7 @@
 
 ;; void cairo_pattern_add_color_stop_rgba(cairo_pattern_t *pattern, double 
 ;;     offset, double red, double green, double blue, double alpha);
+(if echo-decls (display "cairo_pattern_add_color_stop_rgba\n"))
 (define cairo_pattern_add_color_stop_rgba
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4752,6 +5084,7 @@
 (export cairo_pattern_add_color_stop_rgba)
 
 ;; void cairo_mesh_pattern_begin_patch(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_mesh_pattern_begin_patch\n"))
 (define cairo_mesh_pattern_begin_patch
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4765,6 +5098,7 @@
 (export cairo_mesh_pattern_begin_patch)
 
 ;; void cairo_mesh_pattern_end_patch(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_mesh_pattern_end_patch\n"))
 (define cairo_mesh_pattern_end_patch
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4777,8 +5111,9 @@
         (~f ~pattern)))))
 (export cairo_mesh_pattern_end_patch)
 
-;; void cairo_mesh_pattern_curve_to(cairo_pattern_t *pattern, double x1, 
-;;     double y1, double x2, double y2, double x3, double y3);
+;; void cairo_mesh_pattern_curve_to(cairo_pattern_t *pattern, double x1, double
+;;      y1, double x2, double y2, double x3, double y3);
+(if echo-decls (display "cairo_mesh_pattern_curve_to\n"))
 (define cairo_mesh_pattern_curve_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4803,8 +5138,9 @@
         (~f ~pattern ~x1 ~y1 ~x2 ~y2 ~x3 ~y3)))))
 (export cairo_mesh_pattern_curve_to)
 
-;; void cairo_mesh_pattern_line_to(cairo_pattern_t *pattern, double x, double 
-;;     y);
+;; void cairo_mesh_pattern_line_to(cairo_pattern_t *pattern, double x, double y
+;;     );
+(if echo-decls (display "cairo_mesh_pattern_line_to\n"))
 (define cairo_mesh_pattern_line_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4819,8 +5155,9 @@
         (~f ~pattern ~x ~y)))))
 (export cairo_mesh_pattern_line_to)
 
-;; void cairo_mesh_pattern_move_to(cairo_pattern_t *pattern, double x, double 
-;;     y);
+;; void cairo_mesh_pattern_move_to(cairo_pattern_t *pattern, double x, double y
+;;     );
+(if echo-decls (display "cairo_mesh_pattern_move_to\n"))
 (define cairo_mesh_pattern_move_to
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4837,6 +5174,7 @@
 
 ;; void cairo_mesh_pattern_set_control_point(cairo_pattern_t *pattern, 
 ;;     unsigned int point_num, double x, double y);
+(if echo-decls (display "cairo_mesh_pattern_set_control_point\n"))
 (define cairo_mesh_pattern_set_control_point
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4854,6 +5192,7 @@
 
 ;; void cairo_mesh_pattern_set_corner_color_rgb(cairo_pattern_t *pattern, 
 ;;     unsigned int corner_num, double red, double green, double blue);
+(if echo-decls (display "cairo_mesh_pattern_set_corner_color_rgb\n"))
 (define cairo_mesh_pattern_set_corner_color_rgb
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4877,6 +5216,7 @@
 ;; void cairo_mesh_pattern_set_corner_color_rgba(cairo_pattern_t *pattern, 
 ;;     unsigned int corner_num, double red, double green, double blue, double 
 ;;     alpha);
+(if echo-decls (display "cairo_mesh_pattern_set_corner_color_rgba\n"))
 (define cairo_mesh_pattern_set_corner_color_rgba
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4904,8 +5244,9 @@
             ~alpha)))))
 (export cairo_mesh_pattern_set_corner_color_rgba)
 
-;; void cairo_pattern_set_matrix(cairo_pattern_t *pattern, const 
-;;     cairo_matrix_t *matrix);
+;; void cairo_pattern_set_matrix(cairo_pattern_t *pattern, const cairo_matrix_t
+;;      *matrix);
+(if echo-decls (display "cairo_pattern_set_matrix\n"))
 (define cairo_pattern_set_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4921,6 +5262,7 @@
 
 ;; void cairo_pattern_get_matrix(cairo_pattern_t *pattern, cairo_matrix_t *
 ;;     matrix);
+(if echo-decls (display "cairo_pattern_get_matrix\n"))
 (define cairo_pattern_get_matrix
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4940,6 +5282,7 @@
 ;;   CAIRO_EXTEND_REFLECT,
 ;;   CAIRO_EXTEND_PAD,
 ;; } cairo_extend_t;
+(if echo-decls (display "cairo_extend_t\n"))
 (define-fh-enum cairo_extend_t
   '((CAIRO_EXTEND_NONE . 0)
     (CAIRO_EXTEND_REPEAT . 1)
@@ -4951,6 +5294,7 @@
 
 ;; void cairo_pattern_set_extend(cairo_pattern_t *pattern, cairo_extend_t 
 ;;     extend);
+(if echo-decls (display "cairo_pattern_set_extend\n"))
 (define cairo_pattern_set_extend
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4965,6 +5309,7 @@
 (export cairo_pattern_set_extend)
 
 ;; cairo_extend_t cairo_pattern_get_extend(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_pattern_get_extend\n"))
 (define cairo_pattern_get_extend
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4985,6 +5330,7 @@
 ;;   CAIRO_FILTER_BILINEAR,
 ;;   CAIRO_FILTER_GAUSSIAN,
 ;; } cairo_filter_t;
+(if echo-decls (display "cairo_filter_t\n"))
 (define-fh-enum cairo_filter_t
   '((CAIRO_FILTER_FAST . 0)
     (CAIRO_FILTER_GOOD . 1)
@@ -4998,6 +5344,7 @@
 
 ;; void cairo_pattern_set_filter(cairo_pattern_t *pattern, cairo_filter_t 
 ;;     filter);
+(if echo-decls (display "cairo_pattern_set_filter\n"))
 (define cairo_pattern_set_filter
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5012,6 +5359,7 @@
 (export cairo_pattern_set_filter)
 
 ;; cairo_filter_t cairo_pattern_get_filter(cairo_pattern_t *pattern);
+(if echo-decls (display "cairo_pattern_get_filter\n"))
 (define cairo_pattern_get_filter
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5026,6 +5374,7 @@
 
 ;; cairo_status_t cairo_pattern_get_rgba(cairo_pattern_t *pattern, double *red
 ;;     , double *green, double *blue, double *alpha);
+(if echo-decls (display "cairo_pattern_get_rgba\n"))
 (define cairo_pattern_get_rgba
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5045,6 +5394,7 @@
 
 ;; cairo_status_t cairo_pattern_get_surface(cairo_pattern_t *pattern, 
 ;;     cairo_surface_t **surface);
+(if echo-decls (display "cairo_pattern_get_surface\n"))
 (define cairo_pattern_get_surface
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5061,6 +5411,7 @@
 ;; cairo_status_t cairo_pattern_get_color_stop_rgba(cairo_pattern_t *pattern, 
 ;;     int index, double *offset, double *red, double *green, double *blue, 
 ;;     double *alpha);
+(if echo-decls (display "cairo_pattern_get_color_stop_rgba\n"))
 (define cairo_pattern_get_color_stop_rgba
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5086,8 +5437,9 @@
               ~alpha))))))
 (export cairo_pattern_get_color_stop_rgba)
 
-;; cairo_status_t cairo_pattern_get_color_stop_count(cairo_pattern_t *pattern
-;;     , int *count);
+;; cairo_status_t cairo_pattern_get_color_stop_count(cairo_pattern_t *pattern, 
+;;     int *count);
+(if echo-decls (display "cairo_pattern_get_color_stop_count\n"))
 (define cairo_pattern_get_color_stop_count
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5103,6 +5455,7 @@
 
 ;; cairo_status_t cairo_pattern_get_linear_points(cairo_pattern_t *pattern, 
 ;;     double *x0, double *y0, double *x1, double *y1);
+(if echo-decls (display "cairo_pattern_get_linear_points\n"))
 (define cairo_pattern_get_linear_points
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5123,6 +5476,7 @@
 ;; cairo_status_t cairo_pattern_get_radial_circles(cairo_pattern_t *pattern, 
 ;;     double *x0, double *y0, double *r0, double *x1, double *y1, double *r1)
 ;;     ;
+(if echo-decls (display "cairo_pattern_get_radial_circles\n"))
 (define cairo_pattern_get_radial_circles
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5142,8 +5496,9 @@
           (~f ~pattern ~x0 ~y0 ~r0 ~x1 ~y1 ~r1))))))
 (export cairo_pattern_get_radial_circles)
 
-;; cairo_status_t cairo_mesh_pattern_get_patch_count(cairo_pattern_t *pattern
-;;     , unsigned int *count);
+;; cairo_status_t cairo_mesh_pattern_get_patch_count(cairo_pattern_t *pattern, 
+;;     unsigned int *count);
+(if echo-decls (display "cairo_mesh_pattern_get_patch_count\n"))
 (define cairo_mesh_pattern_get_patch_count
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5159,6 +5514,7 @@
 
 ;; cairo_path_t *cairo_mesh_pattern_get_path(cairo_pattern_t *pattern, 
 ;;     unsigned int patch_num);
+(if echo-decls (display "cairo_mesh_pattern_get_path\n"))
 (define cairo_mesh_pattern_get_path
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5175,6 +5531,7 @@
 ;; cairo_status_t cairo_mesh_pattern_get_corner_color_rgba(cairo_pattern_t *
 ;;     pattern, unsigned int patch_num, unsigned int corner_num, double *red, 
 ;;     double *green, double *blue, double *alpha);
+(if echo-decls (display "cairo_mesh_pattern_get_corner_color_rgba\n"))
 (define cairo_mesh_pattern_get_corner_color_rgba
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5212,9 +5569,10 @@
               ~alpha))))))
 (export cairo_mesh_pattern_get_corner_color_rgba)
 
-;; cairo_status_t cairo_mesh_pattern_get_control_point(cairo_pattern_t *
-;;     pattern, unsigned int patch_num, unsigned int point_num, double *x, 
-;;     double *y);
+;; cairo_status_t cairo_mesh_pattern_get_control_point(cairo_pattern_t *pattern
+;;     , unsigned int patch_num, unsigned int point_num, double *x, double *y)
+;;     ;
+(if echo-decls (display "cairo_mesh_pattern_get_control_point\n"))
 (define cairo_mesh_pattern_get_control_point
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5232,8 +5590,9 @@
           (~f ~pattern ~patch_num ~point_num ~x ~y))))))
 (export cairo_mesh_pattern_get_control_point)
 
-;; void cairo_matrix_init(cairo_matrix_t *matrix, double xx, double yx, double
-;;      xy, double yy, double x0, double y0);
+;; void cairo_matrix_init(cairo_matrix_t *matrix, double xx, double yx, double 
+;;     xy, double yy, double x0, double y0);
+(if echo-decls (display "cairo_matrix_init\n"))
 (define cairo_matrix_init
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5257,6 +5616,7 @@
 (export cairo_matrix_init)
 
 ;; void cairo_matrix_init_identity(cairo_matrix_t *matrix);
+(if echo-decls (display "cairo_matrix_init_identity\n"))
 (define cairo_matrix_init_identity
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5271,6 +5631,7 @@
 
 ;; void cairo_matrix_init_translate(cairo_matrix_t *matrix, double tx, double 
 ;;     ty);
+(if echo-decls (display "cairo_matrix_init_translate\n"))
 (define cairo_matrix_init_translate
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5285,8 +5646,8 @@
         (~f ~matrix ~tx ~ty)))))
 (export cairo_matrix_init_translate)
 
-;; void cairo_matrix_init_scale(cairo_matrix_t *matrix, double sx, double sy)
-;;     ;
+;; void cairo_matrix_init_scale(cairo_matrix_t *matrix, double sx, double sy);
+(if echo-decls (display "cairo_matrix_init_scale\n"))
 (define cairo_matrix_init_scale
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5302,6 +5663,7 @@
 (export cairo_matrix_init_scale)
 
 ;; void cairo_matrix_init_rotate(cairo_matrix_t *matrix, double radians);
+(if echo-decls (display "cairo_matrix_init_rotate\n"))
 (define cairo_matrix_init_rotate
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5316,6 +5678,7 @@
 (export cairo_matrix_init_rotate)
 
 ;; void cairo_matrix_translate(cairo_matrix_t *matrix, double tx, double ty);
+(if echo-decls (display "cairo_matrix_translate\n"))
 (define cairo_matrix_translate
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5331,6 +5694,7 @@
 (export cairo_matrix_translate)
 
 ;; void cairo_matrix_scale(cairo_matrix_t *matrix, double sx, double sy);
+(if echo-decls (display "cairo_matrix_scale\n"))
 (define cairo_matrix_scale
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5346,6 +5710,7 @@
 (export cairo_matrix_scale)
 
 ;; void cairo_matrix_rotate(cairo_matrix_t *matrix, double radians);
+(if echo-decls (display "cairo_matrix_rotate\n"))
 (define cairo_matrix_rotate
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5360,6 +5725,7 @@
 (export cairo_matrix_rotate)
 
 ;; cairo_status_t cairo_matrix_invert(cairo_matrix_t *matrix);
+(if echo-decls (display "cairo_matrix_invert\n"))
 (define cairo_matrix_invert
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5372,8 +5738,9 @@
         (wrap-cairo_status_t (~f ~matrix))))))
 (export cairo_matrix_invert)
 
-;; void cairo_matrix_multiply(cairo_matrix_t *result, const cairo_matrix_t *a
-;;     , const cairo_matrix_t *b);
+;; void cairo_matrix_multiply(cairo_matrix_t *result, const cairo_matrix_t *a, 
+;;     const cairo_matrix_t *b);
+(if echo-decls (display "cairo_matrix_multiply\n"))
 (define cairo_matrix_multiply
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5390,6 +5757,7 @@
 
 ;; void cairo_matrix_transform_distance(const cairo_matrix_t *matrix, double *
 ;;     dx, double *dy);
+(if echo-decls (display "cairo_matrix_transform_distance\n"))
 (define cairo_matrix_transform_distance
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5406,6 +5774,7 @@
 
 ;; void cairo_matrix_transform_point(const cairo_matrix_t *matrix, double *x, 
 ;;     double *y);
+(if echo-decls (display "cairo_matrix_transform_point\n"))
 (define cairo_matrix_transform_point
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5421,13 +5790,17 @@
 (export cairo_matrix_transform_point)
 
 ;; typedef struct _cairo_region cairo_region_t;
-(define-fh-pointer-type cairo_region_t*)
+(if echo-decls (display "cairo_region_t\n"))
+(define cairo_region_t-desc void)
+(define cairo_region_t*-desc (bs:pointer cairo_region_t-desc))
+(define-fh-pointer-type cairo_region_t* cairo_region_t*-desc)
 
 ;; typedef enum _cairo_region_overlap {
 ;;   CAIRO_REGION_OVERLAP_IN,
 ;;   CAIRO_REGION_OVERLAP_OUT,
 ;;   CAIRO_REGION_OVERLAP_PART,
 ;; } cairo_region_overlap_t;
+(if echo-decls (display "cairo_region_overlap_t\n"))
 (define-fh-enum cairo_region_overlap_t
   '((CAIRO_REGION_OVERLAP_IN . 0)
     (CAIRO_REGION_OVERLAP_OUT . 1)
@@ -5437,6 +5810,7 @@
 (define wrap-enum-_cairo_region_overlap wrap-cairo_region_overlap_t)
 
 ;; cairo_region_t *cairo_region_create(void);
+(if echo-decls (display "cairo_region_create\n"))
 (define cairo_region_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5449,6 +5823,7 @@
 
 ;; cairo_region_t *cairo_region_create_rectangle(const cairo_rectangle_int_t *
 ;;     rectangle);
+(if echo-decls (display "cairo_region_create_rectangle\n"))
 (define cairo_region_create_rectangle
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5462,8 +5837,9 @@
         (wrap-cairo_region_t* (~f ~rectangle))))))
 (export cairo_region_create_rectangle)
 
-;; cairo_region_t *cairo_region_create_rectangles(const cairo_rectangle_int_t 
-;;     *rects, int count);
+;; cairo_region_t *cairo_region_create_rectangles(const cairo_rectangle_int_t *
+;;     rects, int count);
+(if echo-decls (display "cairo_region_create_rectangles\n"))
 (define cairo_region_create_rectangles
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5478,6 +5854,7 @@
 (export cairo_region_create_rectangles)
 
 ;; cairo_region_t *cairo_region_copy(const cairo_region_t *original);
+(if echo-decls (display "cairo_region_copy\n"))
 (define cairo_region_copy
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5489,6 +5866,7 @@
 (export cairo_region_copy)
 
 ;; cairo_region_t *cairo_region_reference(cairo_region_t *region);
+(if echo-decls (display "cairo_region_reference\n"))
 (define cairo_region_reference
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5502,6 +5880,7 @@
 (export cairo_region_reference)
 
 ;; void cairo_region_destroy(cairo_region_t *region);
+(if echo-decls (display "cairo_region_destroy\n"))
 (define cairo_region_destroy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5516,6 +5895,7 @@
 
 ;; cairo_bool_t cairo_region_equal(const cairo_region_t *a, const 
 ;;     cairo_region_t *b);
+(if echo-decls (display "cairo_region_equal\n"))
 (define cairo_region_equal
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5526,10 +5906,11 @@
     (lambda (a b)
       (let ((~a (unwrap-cairo_region_t* a))
             (~b (unwrap-cairo_region_t* b)))
-        (~f ~a ~b)))))
+        (wrap-cairo_bool_t (~f ~a ~b))))))
 (export cairo_region_equal)
 
 ;; cairo_status_t cairo_region_status(const cairo_region_t *region);
+(if echo-decls (display "cairo_region_status\n"))
 (define cairo_region_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5544,6 +5925,7 @@
 
 ;; void cairo_region_get_extents(const cairo_region_t *region, 
 ;;     cairo_rectangle_int_t *extents);
+(if echo-decls (display "cairo_region_get_extents\n"))
 (define cairo_region_get_extents
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5559,6 +5941,7 @@
 (export cairo_region_get_extents)
 
 ;; int cairo_region_num_rectangles(const cairo_region_t *region);
+(if echo-decls (display "cairo_region_num_rectangles\n"))
 (define cairo_region_num_rectangles
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5573,6 +5956,7 @@
 
 ;; void cairo_region_get_rectangle(const cairo_region_t *region, int nth, 
 ;;     cairo_rectangle_int_t *rectangle);
+(if echo-decls (display "cairo_region_get_rectangle\n"))
 (define cairo_region_get_rectangle
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5589,6 +5973,7 @@
 (export cairo_region_get_rectangle)
 
 ;; cairo_bool_t cairo_region_is_empty(const cairo_region_t *region);
+(if echo-decls (display "cairo_region_is_empty\n"))
 (define cairo_region_is_empty
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5598,11 +5983,12 @@
               (list '*))))
     (lambda (region)
       (let ((~region (unwrap-cairo_region_t* region)))
-        (~f ~region)))))
+        (wrap-cairo_bool_t (~f ~region))))))
 (export cairo_region_is_empty)
 
-;; cairo_region_overlap_t cairo_region_contains_rectangle(const cairo_region_t
-;;      *region, const cairo_rectangle_int_t *rectangle);
+;; cairo_region_overlap_t cairo_region_contains_rectangle(const cairo_region_t 
+;;     *region, const cairo_rectangle_int_t *rectangle);
+(if echo-decls (display "cairo_region_contains_rectangle\n"))
 (define cairo_region_contains_rectangle
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5618,8 +6004,9 @@
           (~f ~region ~rectangle))))))
 (export cairo_region_contains_rectangle)
 
-;; cairo_bool_t cairo_region_contains_point(const cairo_region_t *region, int 
-;;     x, int y);
+;; cairo_bool_t cairo_region_contains_point(const cairo_region_t *region, int x
+;;     , int y);
+(if echo-decls (display "cairo_region_contains_point\n"))
 (define cairo_region_contains_point
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5631,10 +6018,11 @@
       (let ((~region (unwrap-cairo_region_t* region))
             (~x (unwrap~fixed x))
             (~y (unwrap~fixed y)))
-        (~f ~region ~x ~y)))))
+        (wrap-cairo_bool_t (~f ~region ~x ~y))))))
 (export cairo_region_contains_point)
 
 ;; void cairo_region_translate(cairo_region_t *region, int dx, int dy);
+(if echo-decls (display "cairo_region_translate\n"))
 (define cairo_region_translate
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5651,6 +6039,7 @@
 
 ;; cairo_status_t cairo_region_subtract(cairo_region_t *dst, const 
 ;;     cairo_region_t *other);
+(if echo-decls (display "cairo_region_subtract\n"))
 (define cairo_region_subtract
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5666,6 +6055,7 @@
 
 ;; cairo_status_t cairo_region_subtract_rectangle(cairo_region_t *dst, const 
 ;;     cairo_rectangle_int_t *rectangle);
+(if echo-decls (display "cairo_region_subtract_rectangle\n"))
 (define cairo_region_subtract_rectangle
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5682,6 +6072,7 @@
 
 ;; cairo_status_t cairo_region_intersect(cairo_region_t *dst, const 
 ;;     cairo_region_t *other);
+(if echo-decls (display "cairo_region_intersect\n"))
 (define cairo_region_intersect
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5697,6 +6088,7 @@
 
 ;; cairo_status_t cairo_region_intersect_rectangle(cairo_region_t *dst, const 
 ;;     cairo_rectangle_int_t *rectangle);
+(if echo-decls (display "cairo_region_intersect_rectangle\n"))
 (define cairo_region_intersect_rectangle
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5711,8 +6103,9 @@
         (wrap-cairo_status_t (~f ~dst ~rectangle))))))
 (export cairo_region_intersect_rectangle)
 
-;; cairo_status_t cairo_region_union(cairo_region_t *dst, const cairo_region_t
-;;      *other);
+;; cairo_status_t cairo_region_union(cairo_region_t *dst, const cairo_region_t 
+;;     *other);
+(if echo-decls (display "cairo_region_union\n"))
 (define cairo_region_union
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5728,6 +6121,7 @@
 
 ;; cairo_status_t cairo_region_union_rectangle(cairo_region_t *dst, const 
 ;;     cairo_rectangle_int_t *rectangle);
+(if echo-decls (display "cairo_region_union_rectangle\n"))
 (define cairo_region_union_rectangle
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5744,6 +6138,7 @@
 
 ;; cairo_status_t cairo_region_xor(cairo_region_t *dst, const cairo_region_t *
 ;;     other);
+(if echo-decls (display "cairo_region_xor\n"))
 (define cairo_region_xor
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5757,6 +6152,7 @@
 
 ;; cairo_status_t cairo_region_xor_rectangle(cairo_region_t *dst, const 
 ;;     cairo_rectangle_int_t *rectangle);
+(if echo-decls (display "cairo_region_xor_rectangle\n"))
 (define cairo_region_xor_rectangle
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5772,6 +6168,7 @@
 (export cairo_region_xor_rectangle)
 
 ;; void cairo_debug_reset_static_data(void);
+(if echo-decls (display "cairo_debug_reset_static_data\n"))
 (define cairo_debug_reset_static_data
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5786,6 +6183,7 @@
 ;;   CAIRO_PDF_VERSION_1_4,
 ;;   CAIRO_PDF_VERSION_1_5,
 ;; } cairo_pdf_version_t;
+(if echo-decls (display "cairo_pdf_version_t\n"))
 (define-fh-enum cairo_pdf_version_t
   '((CAIRO_PDF_VERSION_1_4 . 0)
     (CAIRO_PDF_VERSION_1_5 . 1))
@@ -5795,6 +6193,7 @@
 
 ;; cairo_surface_t *cairo_pdf_surface_create(const char *filename, double 
 ;;     width_in_points, double height_in_points);
+(if echo-decls (display "cairo_pdf_surface_create\n"))
 (define cairo_pdf_surface_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5814,6 +6213,7 @@
 ;; cairo_surface_t *cairo_pdf_surface_create_for_stream(cairo_write_func_t 
 ;;     write_func, void *closure, double width_in_points, double 
 ;;     height_in_points);
+(if echo-decls (display "cairo_pdf_surface_create_for_stream\n"))
 (define cairo_pdf_surface_create_for_stream
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5840,6 +6240,7 @@
 
 ;; void cairo_pdf_surface_restrict_to_version(cairo_surface_t *surface, 
 ;;     cairo_pdf_version_t version);
+(if echo-decls (display "cairo_pdf_surface_restrict_to_version\n"))
 (define cairo_pdf_surface_restrict_to_version
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5855,6 +6256,7 @@
 
 ;; void cairo_pdf_get_versions(cairo_pdf_version_t const **versions, int *
 ;;     num_versions);
+(if echo-decls (display "cairo_pdf_get_versions\n"))
 (define cairo_pdf_get_versions
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5869,6 +6271,7 @@
 (export cairo_pdf_get_versions)
 
 ;; const char *cairo_pdf_version_to_string(cairo_pdf_version_t version);
+(if echo-decls (display "cairo_pdf_version_to_string\n"))
 (define cairo_pdf_version_to_string
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5883,6 +6286,7 @@
 
 ;; void cairo_pdf_surface_set_size(cairo_surface_t *surface, double 
 ;;     width_in_points, double height_in_points);
+(if echo-decls (display "cairo_pdf_surface_set_size\n"))
 (define cairo_pdf_surface_set_size
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5902,6 +6306,7 @@
 ;;   CAIRO_SVG_VERSION_1_1,
 ;;   CAIRO_SVG_VERSION_1_2,
 ;; } cairo_svg_version_t;
+(if echo-decls (display "cairo_svg_version_t\n"))
 (define-fh-enum cairo_svg_version_t
   '((CAIRO_SVG_VERSION_1_1 . 0)
     (CAIRO_SVG_VERSION_1_2 . 1))
@@ -5911,6 +6316,7 @@
 
 ;; cairo_surface_t *cairo_svg_surface_create(const char *filename, double 
 ;;     width_in_points, double height_in_points);
+(if echo-decls (display "cairo_svg_surface_create\n"))
 (define cairo_svg_surface_create
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5930,6 +6336,7 @@
 ;; cairo_surface_t *cairo_svg_surface_create_for_stream(cairo_write_func_t 
 ;;     write_func, void *closure, double width_in_points, double 
 ;;     height_in_points);
+(if echo-decls (display "cairo_svg_surface_create_for_stream\n"))
 (define cairo_svg_surface_create_for_stream
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5956,6 +6363,7 @@
 
 ;; void cairo_svg_surface_restrict_to_version(cairo_surface_t *surface, 
 ;;     cairo_svg_version_t version);
+(if echo-decls (display "cairo_svg_surface_restrict_to_version\n"))
 (define cairo_svg_surface_restrict_to_version
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5971,6 +6379,7 @@
 
 ;; void cairo_svg_get_versions(cairo_svg_version_t const **versions, int *
 ;;     num_versions);
+(if echo-decls (display "cairo_svg_get_versions\n"))
 (define cairo_svg_get_versions
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5985,6 +6394,7 @@
 (export cairo_svg_get_versions)
 
 ;; const char *cairo_svg_version_to_string(cairo_svg_version_t version);
+(if echo-decls (display "cairo_svg_version_to_string\n"))
 (define cairo_svg_version_to_string
   (let ((~f (ffi:pointer->procedure
               '*
@@ -6000,187 +6410,187 @@
 ;; access to enum symbols and #define'd constants:
 (define cairo-symbol-val
   (let ((sym-tab
-          '((CAIRO_STATUS_LAST_STATUS . 39)
-            (CAIRO_STATUS_JBIG2_GLOBAL_MISSING . 38)
-            (CAIRO_STATUS_DEVICE_FINISHED . 37)
-            (CAIRO_STATUS_INVALID_MESH_CONSTRUCTION . 36)
-            (CAIRO_STATUS_DEVICE_ERROR . 35)
-            (CAIRO_STATUS_DEVICE_TYPE_MISMATCH . 34)
-            (CAIRO_STATUS_USER_FONT_NOT_IMPLEMENTED . 33)
-            (CAIRO_STATUS_INVALID_SIZE . 32)
-            (CAIRO_STATUS_INVALID_WEIGHT . 31)
-            (CAIRO_STATUS_INVALID_SLANT . 30)
-            (CAIRO_STATUS_INVALID_CLUSTERS . 29)
-            (CAIRO_STATUS_NEGATIVE_COUNT . 28)
-            (CAIRO_STATUS_USER_FONT_ERROR . 27)
-            (CAIRO_STATUS_USER_FONT_IMMUTABLE . 26)
-            (CAIRO_STATUS_FONT_TYPE_MISMATCH . 25)
-            (CAIRO_STATUS_INVALID_STRIDE . 24)
-            (CAIRO_STATUS_TEMP_FILE_ERROR . 23)
-            (CAIRO_STATUS_CLIP_NOT_REPRESENTABLE . 22)
-            (CAIRO_STATUS_INVALID_INDEX . 21)
-            (CAIRO_STATUS_INVALID_DSC_COMMENT . 20)
-            (CAIRO_STATUS_INVALID_DASH . 19)
-            (CAIRO_STATUS_FILE_NOT_FOUND . 18)
-            (CAIRO_STATUS_INVALID_VISUAL . 17)
-            (CAIRO_STATUS_INVALID_FORMAT . 16)
-            (CAIRO_STATUS_INVALID_CONTENT . 15)
-            (CAIRO_STATUS_PATTERN_TYPE_MISMATCH . 14)
-            (CAIRO_STATUS_SURFACE_TYPE_MISMATCH . 13)
-            (CAIRO_STATUS_SURFACE_FINISHED . 12)
-            (CAIRO_STATUS_WRITE_ERROR . 11)
-            (CAIRO_STATUS_READ_ERROR . 10)
-            (CAIRO_STATUS_INVALID_PATH_DATA . 9)
-            (CAIRO_STATUS_INVALID_STRING . 8)
-            (CAIRO_STATUS_NULL_POINTER . 7)
-            (CAIRO_STATUS_INVALID_STATUS . 6)
-            (CAIRO_STATUS_INVALID_MATRIX . 5)
-            (CAIRO_STATUS_NO_CURRENT_POINT . 4)
-            (CAIRO_STATUS_INVALID_POP_GROUP . 3)
-            (CAIRO_STATUS_INVALID_RESTORE . 2)
+          '((CAIRO_STATUS_SUCCESS . 0)
             (CAIRO_STATUS_NO_MEMORY . 1)
-            (CAIRO_STATUS_SUCCESS . 0)
-            (CAIRO_CONTENT_COLOR_ALPHA . 12288)
-            (CAIRO_CONTENT_ALPHA . 8192)
+            (CAIRO_STATUS_INVALID_RESTORE . 2)
+            (CAIRO_STATUS_INVALID_POP_GROUP . 3)
+            (CAIRO_STATUS_NO_CURRENT_POINT . 4)
+            (CAIRO_STATUS_INVALID_MATRIX . 5)
+            (CAIRO_STATUS_INVALID_STATUS . 6)
+            (CAIRO_STATUS_NULL_POINTER . 7)
+            (CAIRO_STATUS_INVALID_STRING . 8)
+            (CAIRO_STATUS_INVALID_PATH_DATA . 9)
+            (CAIRO_STATUS_READ_ERROR . 10)
+            (CAIRO_STATUS_WRITE_ERROR . 11)
+            (CAIRO_STATUS_SURFACE_FINISHED . 12)
+            (CAIRO_STATUS_SURFACE_TYPE_MISMATCH . 13)
+            (CAIRO_STATUS_PATTERN_TYPE_MISMATCH . 14)
+            (CAIRO_STATUS_INVALID_CONTENT . 15)
+            (CAIRO_STATUS_INVALID_FORMAT . 16)
+            (CAIRO_STATUS_INVALID_VISUAL . 17)
+            (CAIRO_STATUS_FILE_NOT_FOUND . 18)
+            (CAIRO_STATUS_INVALID_DASH . 19)
+            (CAIRO_STATUS_INVALID_DSC_COMMENT . 20)
+            (CAIRO_STATUS_INVALID_INDEX . 21)
+            (CAIRO_STATUS_CLIP_NOT_REPRESENTABLE . 22)
+            (CAIRO_STATUS_TEMP_FILE_ERROR . 23)
+            (CAIRO_STATUS_INVALID_STRIDE . 24)
+            (CAIRO_STATUS_FONT_TYPE_MISMATCH . 25)
+            (CAIRO_STATUS_USER_FONT_IMMUTABLE . 26)
+            (CAIRO_STATUS_USER_FONT_ERROR . 27)
+            (CAIRO_STATUS_NEGATIVE_COUNT . 28)
+            (CAIRO_STATUS_INVALID_CLUSTERS . 29)
+            (CAIRO_STATUS_INVALID_SLANT . 30)
+            (CAIRO_STATUS_INVALID_WEIGHT . 31)
+            (CAIRO_STATUS_INVALID_SIZE . 32)
+            (CAIRO_STATUS_USER_FONT_NOT_IMPLEMENTED . 33)
+            (CAIRO_STATUS_DEVICE_TYPE_MISMATCH . 34)
+            (CAIRO_STATUS_DEVICE_ERROR . 35)
+            (CAIRO_STATUS_INVALID_MESH_CONSTRUCTION . 36)
+            (CAIRO_STATUS_DEVICE_FINISHED . 37)
+            (CAIRO_STATUS_JBIG2_GLOBAL_MISSING . 38)
+            (CAIRO_STATUS_LAST_STATUS . 39)
             (CAIRO_CONTENT_COLOR . 4096)
-            (CAIRO_FORMAT_RGB30 . 5)
-            (CAIRO_FORMAT_RGB16_565 . 4)
-            (CAIRO_FORMAT_A1 . 3)
-            (CAIRO_FORMAT_A8 . 2)
-            (CAIRO_FORMAT_RGB24 . 1)
-            (CAIRO_FORMAT_ARGB32 . 0)
+            (CAIRO_CONTENT_ALPHA . 8192)
+            (CAIRO_CONTENT_COLOR_ALPHA . 12288)
             (CAIRO_FORMAT_INVALID . -1)
-            (CAIRO_OPERATOR_HSL_LUMINOSITY . 28)
-            (CAIRO_OPERATOR_HSL_COLOR . 27)
-            (CAIRO_OPERATOR_HSL_SATURATION . 26)
-            (CAIRO_OPERATOR_HSL_HUE . 25)
-            (CAIRO_OPERATOR_EXCLUSION . 24)
-            (CAIRO_OPERATOR_DIFFERENCE . 23)
-            (CAIRO_OPERATOR_SOFT_LIGHT . 22)
-            (CAIRO_OPERATOR_HARD_LIGHT . 21)
-            (CAIRO_OPERATOR_COLOR_BURN . 20)
-            (CAIRO_OPERATOR_COLOR_DODGE . 19)
-            (CAIRO_OPERATOR_LIGHTEN . 18)
-            (CAIRO_OPERATOR_DARKEN . 17)
-            (CAIRO_OPERATOR_OVERLAY . 16)
-            (CAIRO_OPERATOR_SCREEN . 15)
-            (CAIRO_OPERATOR_MULTIPLY . 14)
-            (CAIRO_OPERATOR_SATURATE . 13)
-            (CAIRO_OPERATOR_ADD . 12)
-            (CAIRO_OPERATOR_XOR . 11)
-            (CAIRO_OPERATOR_DEST_ATOP . 10)
-            (CAIRO_OPERATOR_DEST_OUT . 9)
-            (CAIRO_OPERATOR_DEST_IN . 8)
-            (CAIRO_OPERATOR_DEST_OVER . 7)
-            (CAIRO_OPERATOR_DEST . 6)
-            (CAIRO_OPERATOR_ATOP . 5)
-            (CAIRO_OPERATOR_OUT . 4)
-            (CAIRO_OPERATOR_IN . 3)
-            (CAIRO_OPERATOR_OVER . 2)
-            (CAIRO_OPERATOR_SOURCE . 1)
+            (CAIRO_FORMAT_ARGB32 . 0)
+            (CAIRO_FORMAT_RGB24 . 1)
+            (CAIRO_FORMAT_A8 . 2)
+            (CAIRO_FORMAT_A1 . 3)
+            (CAIRO_FORMAT_RGB16_565 . 4)
+            (CAIRO_FORMAT_RGB30 . 5)
             (CAIRO_OPERATOR_CLEAR . 0)
-            (CAIRO_ANTIALIAS_BEST . 6)
-            (CAIRO_ANTIALIAS_GOOD . 5)
-            (CAIRO_ANTIALIAS_FAST . 4)
-            (CAIRO_ANTIALIAS_SUBPIXEL . 3)
-            (CAIRO_ANTIALIAS_GRAY . 2)
-            (CAIRO_ANTIALIAS_NONE . 1)
+            (CAIRO_OPERATOR_SOURCE . 1)
+            (CAIRO_OPERATOR_OVER . 2)
+            (CAIRO_OPERATOR_IN . 3)
+            (CAIRO_OPERATOR_OUT . 4)
+            (CAIRO_OPERATOR_ATOP . 5)
+            (CAIRO_OPERATOR_DEST . 6)
+            (CAIRO_OPERATOR_DEST_OVER . 7)
+            (CAIRO_OPERATOR_DEST_IN . 8)
+            (CAIRO_OPERATOR_DEST_OUT . 9)
+            (CAIRO_OPERATOR_DEST_ATOP . 10)
+            (CAIRO_OPERATOR_XOR . 11)
+            (CAIRO_OPERATOR_ADD . 12)
+            (CAIRO_OPERATOR_SATURATE . 13)
+            (CAIRO_OPERATOR_MULTIPLY . 14)
+            (CAIRO_OPERATOR_SCREEN . 15)
+            (CAIRO_OPERATOR_OVERLAY . 16)
+            (CAIRO_OPERATOR_DARKEN . 17)
+            (CAIRO_OPERATOR_LIGHTEN . 18)
+            (CAIRO_OPERATOR_COLOR_DODGE . 19)
+            (CAIRO_OPERATOR_COLOR_BURN . 20)
+            (CAIRO_OPERATOR_HARD_LIGHT . 21)
+            (CAIRO_OPERATOR_SOFT_LIGHT . 22)
+            (CAIRO_OPERATOR_DIFFERENCE . 23)
+            (CAIRO_OPERATOR_EXCLUSION . 24)
+            (CAIRO_OPERATOR_HSL_HUE . 25)
+            (CAIRO_OPERATOR_HSL_SATURATION . 26)
+            (CAIRO_OPERATOR_HSL_COLOR . 27)
+            (CAIRO_OPERATOR_HSL_LUMINOSITY . 28)
             (CAIRO_ANTIALIAS_DEFAULT . 0)
-            (CAIRO_FILL_RULE_EVEN_ODD . 1)
+            (CAIRO_ANTIALIAS_NONE . 1)
+            (CAIRO_ANTIALIAS_GRAY . 2)
+            (CAIRO_ANTIALIAS_SUBPIXEL . 3)
+            (CAIRO_ANTIALIAS_FAST . 4)
+            (CAIRO_ANTIALIAS_GOOD . 5)
+            (CAIRO_ANTIALIAS_BEST . 6)
             (CAIRO_FILL_RULE_WINDING . 0)
-            (CAIRO_LINE_CAP_SQUARE . 2)
-            (CAIRO_LINE_CAP_ROUND . 1)
+            (CAIRO_FILL_RULE_EVEN_ODD . 1)
             (CAIRO_LINE_CAP_BUTT . 0)
-            (CAIRO_LINE_JOIN_BEVEL . 2)
-            (CAIRO_LINE_JOIN_ROUND . 1)
+            (CAIRO_LINE_CAP_ROUND . 1)
+            (CAIRO_LINE_CAP_SQUARE . 2)
             (CAIRO_LINE_JOIN_MITER . 0)
+            (CAIRO_LINE_JOIN_ROUND . 1)
+            (CAIRO_LINE_JOIN_BEVEL . 2)
             (CAIRO_TEXT_CLUSTER_FLAG_BACKWARD . 1)
-            (CAIRO_FONT_SLANT_OBLIQUE . 2)
-            (CAIRO_FONT_SLANT_ITALIC . 1)
             (CAIRO_FONT_SLANT_NORMAL . 0)
-            (CAIRO_FONT_WEIGHT_BOLD . 1)
+            (CAIRO_FONT_SLANT_ITALIC . 1)
+            (CAIRO_FONT_SLANT_OBLIQUE . 2)
             (CAIRO_FONT_WEIGHT_NORMAL . 0)
-            (CAIRO_SUBPIXEL_ORDER_VBGR . 4)
-            (CAIRO_SUBPIXEL_ORDER_VRGB . 3)
-            (CAIRO_SUBPIXEL_ORDER_BGR . 2)
-            (CAIRO_SUBPIXEL_ORDER_RGB . 1)
+            (CAIRO_FONT_WEIGHT_BOLD . 1)
             (CAIRO_SUBPIXEL_ORDER_DEFAULT . 0)
-            (CAIRO_HINT_STYLE_FULL . 4)
-            (CAIRO_HINT_STYLE_MEDIUM . 3)
-            (CAIRO_HINT_STYLE_SLIGHT . 2)
-            (CAIRO_HINT_STYLE_NONE . 1)
+            (CAIRO_SUBPIXEL_ORDER_RGB . 1)
+            (CAIRO_SUBPIXEL_ORDER_BGR . 2)
+            (CAIRO_SUBPIXEL_ORDER_VRGB . 3)
+            (CAIRO_SUBPIXEL_ORDER_VBGR . 4)
             (CAIRO_HINT_STYLE_DEFAULT . 0)
-            (CAIRO_HINT_METRICS_ON . 2)
-            (CAIRO_HINT_METRICS_OFF . 1)
+            (CAIRO_HINT_STYLE_NONE . 1)
+            (CAIRO_HINT_STYLE_SLIGHT . 2)
+            (CAIRO_HINT_STYLE_MEDIUM . 3)
+            (CAIRO_HINT_STYLE_FULL . 4)
             (CAIRO_HINT_METRICS_DEFAULT . 0)
-            (CAIRO_FONT_TYPE_USER . 4)
-            (CAIRO_FONT_TYPE_QUARTZ . 3)
-            (CAIRO_FONT_TYPE_WIN32 . 2)
-            (CAIRO_FONT_TYPE_FT . 1)
+            (CAIRO_HINT_METRICS_OFF . 1)
+            (CAIRO_HINT_METRICS_ON . 2)
             (CAIRO_FONT_TYPE_TOY . 0)
-            (CAIRO_PATH_CLOSE_PATH . 3)
-            (CAIRO_PATH_CURVE_TO . 2)
-            (CAIRO_PATH_LINE_TO . 1)
+            (CAIRO_FONT_TYPE_FT . 1)
+            (CAIRO_FONT_TYPE_WIN32 . 2)
+            (CAIRO_FONT_TYPE_QUARTZ . 3)
+            (CAIRO_FONT_TYPE_USER . 4)
             (CAIRO_PATH_MOVE_TO . 0)
-            (CAIRO_DEVICE_TYPE_INVALID . -1)
-            (CAIRO_DEVICE_TYPE_WIN32 . 7)
-            (CAIRO_DEVICE_TYPE_COGL . 6)
-            (CAIRO_DEVICE_TYPE_XML . 5)
-            (CAIRO_DEVICE_TYPE_XLIB . 4)
-            (CAIRO_DEVICE_TYPE_XCB . 3)
-            (CAIRO_DEVICE_TYPE_SCRIPT . 2)
-            (CAIRO_DEVICE_TYPE_GL . 1)
+            (CAIRO_PATH_LINE_TO . 1)
+            (CAIRO_PATH_CURVE_TO . 2)
+            (CAIRO_PATH_CLOSE_PATH . 3)
             (CAIRO_DEVICE_TYPE_DRM . 0)
-            (CAIRO_SURFACE_OBSERVER_RECORD_OPERATIONS . 1)
+            (CAIRO_DEVICE_TYPE_GL . 1)
+            (CAIRO_DEVICE_TYPE_SCRIPT . 2)
+            (CAIRO_DEVICE_TYPE_XCB . 3)
+            (CAIRO_DEVICE_TYPE_XLIB . 4)
+            (CAIRO_DEVICE_TYPE_XML . 5)
+            (CAIRO_DEVICE_TYPE_COGL . 6)
+            (CAIRO_DEVICE_TYPE_WIN32 . 7)
+            (CAIRO_DEVICE_TYPE_INVALID . -1)
             (CAIRO_SURFACE_OBSERVER_NORMAL . 0)
-            (CAIRO_SURFACE_TYPE_COGL . 24)
-            (CAIRO_SURFACE_TYPE_SUBSURFACE . 23)
-            (CAIRO_SURFACE_TYPE_SKIA . 22)
-            (CAIRO_SURFACE_TYPE_XML . 21)
-            (CAIRO_SURFACE_TYPE_TEE . 20)
-            (CAIRO_SURFACE_TYPE_DRM . 19)
-            (CAIRO_SURFACE_TYPE_GL . 18)
-            (CAIRO_SURFACE_TYPE_VG . 17)
-            (CAIRO_SURFACE_TYPE_RECORDING . 16)
-            (CAIRO_SURFACE_TYPE_QT . 15)
-            (CAIRO_SURFACE_TYPE_SCRIPT . 14)
-            (CAIRO_SURFACE_TYPE_QUARTZ_IMAGE . 13)
-            (CAIRO_SURFACE_TYPE_WIN32_PRINTING . 12)
-            (CAIRO_SURFACE_TYPE_OS2 . 11)
-            (CAIRO_SURFACE_TYPE_SVG . 10)
-            (CAIRO_SURFACE_TYPE_DIRECTFB . 9)
-            (CAIRO_SURFACE_TYPE_BEOS . 8)
-            (CAIRO_SURFACE_TYPE_WIN32 . 7)
-            (CAIRO_SURFACE_TYPE_QUARTZ . 6)
-            (CAIRO_SURFACE_TYPE_GLITZ . 5)
-            (CAIRO_SURFACE_TYPE_XCB . 4)
-            (CAIRO_SURFACE_TYPE_XLIB . 3)
-            (CAIRO_SURFACE_TYPE_PS . 2)
-            (CAIRO_SURFACE_TYPE_PDF . 1)
+            (CAIRO_SURFACE_OBSERVER_RECORD_OPERATIONS . 1)
             (CAIRO_SURFACE_TYPE_IMAGE . 0)
-            (CAIRO_PATTERN_TYPE_RASTER_SOURCE . 5)
-            (CAIRO_PATTERN_TYPE_MESH . 4)
-            (CAIRO_PATTERN_TYPE_RADIAL . 3)
-            (CAIRO_PATTERN_TYPE_LINEAR . 2)
-            (CAIRO_PATTERN_TYPE_SURFACE . 1)
+            (CAIRO_SURFACE_TYPE_PDF . 1)
+            (CAIRO_SURFACE_TYPE_PS . 2)
+            (CAIRO_SURFACE_TYPE_XLIB . 3)
+            (CAIRO_SURFACE_TYPE_XCB . 4)
+            (CAIRO_SURFACE_TYPE_GLITZ . 5)
+            (CAIRO_SURFACE_TYPE_QUARTZ . 6)
+            (CAIRO_SURFACE_TYPE_WIN32 . 7)
+            (CAIRO_SURFACE_TYPE_BEOS . 8)
+            (CAIRO_SURFACE_TYPE_DIRECTFB . 9)
+            (CAIRO_SURFACE_TYPE_SVG . 10)
+            (CAIRO_SURFACE_TYPE_OS2 . 11)
+            (CAIRO_SURFACE_TYPE_WIN32_PRINTING . 12)
+            (CAIRO_SURFACE_TYPE_QUARTZ_IMAGE . 13)
+            (CAIRO_SURFACE_TYPE_SCRIPT . 14)
+            (CAIRO_SURFACE_TYPE_QT . 15)
+            (CAIRO_SURFACE_TYPE_RECORDING . 16)
+            (CAIRO_SURFACE_TYPE_VG . 17)
+            (CAIRO_SURFACE_TYPE_GL . 18)
+            (CAIRO_SURFACE_TYPE_DRM . 19)
+            (CAIRO_SURFACE_TYPE_TEE . 20)
+            (CAIRO_SURFACE_TYPE_XML . 21)
+            (CAIRO_SURFACE_TYPE_SKIA . 22)
+            (CAIRO_SURFACE_TYPE_SUBSURFACE . 23)
+            (CAIRO_SURFACE_TYPE_COGL . 24)
             (CAIRO_PATTERN_TYPE_SOLID . 0)
-            (CAIRO_EXTEND_PAD . 3)
-            (CAIRO_EXTEND_REFLECT . 2)
-            (CAIRO_EXTEND_REPEAT . 1)
+            (CAIRO_PATTERN_TYPE_SURFACE . 1)
+            (CAIRO_PATTERN_TYPE_LINEAR . 2)
+            (CAIRO_PATTERN_TYPE_RADIAL . 3)
+            (CAIRO_PATTERN_TYPE_MESH . 4)
+            (CAIRO_PATTERN_TYPE_RASTER_SOURCE . 5)
             (CAIRO_EXTEND_NONE . 0)
-            (CAIRO_FILTER_GAUSSIAN . 5)
-            (CAIRO_FILTER_BILINEAR . 4)
-            (CAIRO_FILTER_NEAREST . 3)
-            (CAIRO_FILTER_BEST . 2)
-            (CAIRO_FILTER_GOOD . 1)
+            (CAIRO_EXTEND_REPEAT . 1)
+            (CAIRO_EXTEND_REFLECT . 2)
+            (CAIRO_EXTEND_PAD . 3)
             (CAIRO_FILTER_FAST . 0)
-            (CAIRO_REGION_OVERLAP_PART . 2)
-            (CAIRO_REGION_OVERLAP_OUT . 1)
+            (CAIRO_FILTER_GOOD . 1)
+            (CAIRO_FILTER_BEST . 2)
+            (CAIRO_FILTER_NEAREST . 3)
+            (CAIRO_FILTER_BILINEAR . 4)
+            (CAIRO_FILTER_GAUSSIAN . 5)
             (CAIRO_REGION_OVERLAP_IN . 0)
-            (CAIRO_PDF_VERSION_1_5 . 1)
+            (CAIRO_REGION_OVERLAP_OUT . 1)
+            (CAIRO_REGION_OVERLAP_PART . 2)
             (CAIRO_PDF_VERSION_1_4 . 0)
-            (CAIRO_SVG_VERSION_1_2 . 1)
+            (CAIRO_PDF_VERSION_1_5 . 1)
             (CAIRO_SVG_VERSION_1_1 . 0)
+            (CAIRO_SVG_VERSION_1_2 . 1)
             (CAIRO_VERSION_STRING . "1.14.10")
             (CAIRO_MIME_TYPE_JPEG . "image/jpeg")
             (CAIRO_MIME_TYPE_PNG . "image/png")
@@ -6232,8 +6642,8 @@
     "cairo_format_t" "cairo_content_t" "cairo_status_t" (struct . 
     "_cairo_user_data_key") "cairo_user_data_key_t" "cairo_destroy_func_t" 
     "cairo_pattern_t" (struct . "_cairo_matrix") "cairo_matrix_t" 
-    "cairo_device_t" "cairo_surface_t" "cairo_t"))
-(export cairo-types)
+    "cairo_device_t" "cairo_surface_t" "cairo_t" "cairo_bool_t"))
+;;(export cairo-types)
 
 (define (make-cairo-unit-matrix)
   (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))

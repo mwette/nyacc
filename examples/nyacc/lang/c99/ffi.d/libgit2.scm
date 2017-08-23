@@ -6,9 +6,11 @@
   #:use-module (bytestructures guile)
   )
 (dynamic-link "libgit2")
-(define void int) ;; no void in bytestructures
+(define void intptr_t) ;; no void in bytestructures
+(define echo-decls #f)
 
 ;; extern void git_libgit2_version(int *major, int *minor, int *rev);
+(if echo-decls (display "git_libgit2_version\n"))
 (define git_libgit2_version
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -24,11 +26,12 @@
 (export git_libgit2_version)
 
 ;; typedef enum {
-;;         GIT_FEATURE_THREADS = 1<<0,
-;;         GIT_FEATURE_HTTPS = 1<<1,
-;;         GIT_FEATURE_SSH = 1<<2,
-;;         GIT_FEATURE_NSEC = 1<<3,
+;;   GIT_FEATURE_THREADS = 1<<0,
+;;   GIT_FEATURE_HTTPS = 1<<1,
+;;   GIT_FEATURE_SSH = 1<<2,
+;;   GIT_FEATURE_NSEC = 1<<3,
 ;; } git_feature_t;
+(if echo-decls (display "git_feature_t\n"))
 (define-fh-enum git_feature_t
   '((GIT_FEATURE_THREADS . 1)
     (GIT_FEATURE_HTTPS . 2)
@@ -37,6 +40,7 @@
   )
 
 ;; extern int git_libgit2_features(void);
+(if echo-decls (display "git_libgit2_features\n"))
 (define git_libgit2_features
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -48,30 +52,31 @@
 (export git_libgit2_features)
 
 ;; typedef enum {
-;;         GIT_OPT_GET_MWINDOW_SIZE,
-;;         GIT_OPT_SET_MWINDOW_SIZE,
-;;         GIT_OPT_GET_MWINDOW_MAPPED_LIMIT,
-;;         GIT_OPT_SET_MWINDOW_MAPPED_LIMIT,
-;;         GIT_OPT_GET_SEARCH_PATH,
-;;         GIT_OPT_SET_SEARCH_PATH,
-;;         GIT_OPT_SET_CACHE_OBJECT_LIMIT,
-;;         GIT_OPT_SET_CACHE_MAX_SIZE,
-;;         GIT_OPT_ENABLE_CACHING,
-;;         GIT_OPT_GET_CACHED_MEMORY,
-;;         GIT_OPT_GET_TEMPLATE_PATH,
-;;         GIT_OPT_SET_TEMPLATE_PATH,
-;;         GIT_OPT_SET_SSL_CERT_LOCATIONS,
-;;         GIT_OPT_SET_USER_AGENT,
-;;         GIT_OPT_ENABLE_STRICT_OBJECT_CREATION,
-;;         GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION,
-;;         GIT_OPT_SET_SSL_CIPHERS,
-;;         GIT_OPT_GET_USER_AGENT,
-;;         GIT_OPT_ENABLE_OFS_DELTA,
-;;         GIT_OPT_ENABLE_FSYNC_GITDIR,
-;;         GIT_OPT_GET_WINDOWS_SHAREMODE,
-;;         GIT_OPT_SET_WINDOWS_SHAREMODE,
-;;         GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION,
+;;   GIT_OPT_GET_MWINDOW_SIZE,
+;;   GIT_OPT_SET_MWINDOW_SIZE,
+;;   GIT_OPT_GET_MWINDOW_MAPPED_LIMIT,
+;;   GIT_OPT_SET_MWINDOW_MAPPED_LIMIT,
+;;   GIT_OPT_GET_SEARCH_PATH,
+;;   GIT_OPT_SET_SEARCH_PATH,
+;;   GIT_OPT_SET_CACHE_OBJECT_LIMIT,
+;;   GIT_OPT_SET_CACHE_MAX_SIZE,
+;;   GIT_OPT_ENABLE_CACHING,
+;;   GIT_OPT_GET_CACHED_MEMORY,
+;;   GIT_OPT_GET_TEMPLATE_PATH,
+;;   GIT_OPT_SET_TEMPLATE_PATH,
+;;   GIT_OPT_SET_SSL_CERT_LOCATIONS,
+;;   GIT_OPT_SET_USER_AGENT,
+;;   GIT_OPT_ENABLE_STRICT_OBJECT_CREATION,
+;;   GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION,
+;;   GIT_OPT_SET_SSL_CIPHERS,
+;;   GIT_OPT_GET_USER_AGENT,
+;;   GIT_OPT_ENABLE_OFS_DELTA,
+;;   GIT_OPT_ENABLE_FSYNC_GITDIR,
+;;   GIT_OPT_GET_WINDOWS_SHAREMODE,
+;;   GIT_OPT_SET_WINDOWS_SHAREMODE,
+;;   GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION,
 ;; } git_libgit2_opt_t;
+(if echo-decls (display "git_libgit2_opt_t\n"))
 (define-fh-enum git_libgit2_opt_t
   '((GIT_OPT_GET_MWINDOW_SIZE . 0)
     (GIT_OPT_SET_MWINDOW_SIZE . 1)
@@ -101,28 +106,34 @@
   )
 
 ;; extern int git_libgit2_opts(int option, ...);
+(if echo-decls (display "git_libgit2_opts\n"))
 ;; ... failed.
 
 ;; typedef int64_t git_off_t;
+(if echo-decls (display "git_off_t\n"))
+(define wrap-git_off_t identity)
 (define unwrap-git_off_t unwrap~fixed)
 (define git_off_t-desc int32)
 
 ;; typedef int64_t git_time_t;
+(if echo-decls (display "git_time_t\n"))
+(define wrap-git_time_t identity)
 (define unwrap-git_time_t unwrap~fixed)
 (define git_time_t-desc int32)
 
 ;; typedef enum {
-;;         GIT_OBJ_ANY = -2,
-;;         GIT_OBJ_BAD = -1,
-;;         GIT_OBJ__EXT1 = 0,
-;;         GIT_OBJ_COMMIT = 1,
-;;         GIT_OBJ_TREE = 2,
-;;         GIT_OBJ_BLOB = 3,
-;;         GIT_OBJ_TAG = 4,
-;;         GIT_OBJ__EXT2 = 5,
-;;         GIT_OBJ_OFS_DELTA = 6,
-;;         GIT_OBJ_REF_DELTA = 7,
+;;   GIT_OBJ_ANY = -2,
+;;   GIT_OBJ_BAD = -1,
+;;   GIT_OBJ__EXT1 = 0,
+;;   GIT_OBJ_COMMIT = 1,
+;;   GIT_OBJ_TREE = 2,
+;;   GIT_OBJ_BLOB = 3,
+;;   GIT_OBJ_TAG = 4,
+;;   GIT_OBJ__EXT2 = 5,
+;;   GIT_OBJ_OFS_DELTA = 6,
+;;   GIT_OBJ_REF_DELTA = 7,
 ;; } git_otype;
+(if echo-decls (display "git_otype\n"))
 (define-fh-enum git_otype
   '((GIT_OBJ_ANY . -2)
     (GIT_OBJ_BAD . -1)
@@ -137,164 +148,172 @@
   )
 
 ;; typedef struct git_odb git_odb;
-(define-fh-pointer-type git_odb*)
+(if echo-decls (display "git_odb\n"))
+(define git_odb-desc void)
+(define git_odb*-desc (bs:pointer git_odb-desc))
+(define-fh-pointer-type git_odb* git_odb*-desc)
 
 ;; typedef struct git_odb_backend git_odb_backend;
-(define-fh-pointer-type git_odb_backend*)
+(if echo-decls (display "git_odb_backend\n"))
+(define git_odb_backend-desc void)
+(define git_odb_backend*-desc (bs:pointer git_odb_backend-desc))
+(define-fh-pointer-type git_odb_backend* git_odb_backend*-desc)
 
 ;; typedef struct git_odb_object git_odb_object;
-(define-fh-pointer-type git_odb_object*)
+(if echo-decls (display "git_odb_object\n"))
+(define git_odb_object-desc void)
+(define git_odb_object*-desc (bs:pointer git_odb_object-desc))
+(define-fh-pointer-type git_odb_object* git_odb_object*-desc)
 
 ;; typedef struct git_odb_stream git_odb_stream;
-;; struct git_odb_stream {
-;;         git_odb_backend *backend;
-;;         unsigned int mode;
-;;         void *hash_ctx;
-;;         git_off_t declared_size;
-;;         git_off_t received_bytes;
-;;         /**
-;;               * Write at most `len` bytes into `buffer` and advance the stream.
-;;                   
-;;               */
-;;         int (*read)(git_odb_stream *stream, char *buffer, size_t len);
-;;         /**
-;;               * Write `len` bytes from `buffer` into the stream.
-;;               */
-;;         int (*write)(git_odb_stream *stream, const char *buffer, size_t len)
-;;                   ;
-;;         /**
-;;               * Store the contents of the stream as an object with the id
-;;               * specified in `oid`.
-;;               *
-;;               * This method might not be invoked if:
-;;               * - an error occurs earlier with the `write` callback,
-;;               * - the object referred to by `oid` already exists in any backend, or
-;;                   
-;;               * - the final number of received bytes differs from the size declared
-;;                   
-;;               *   with `git_odb_open_wstream()`
-;;               */
-;;         int (*finalize_write)(git_odb_stream *stream, const git_oid *oid);
-;;         /**
-;;               * Free the stream's memory.
-;;               *
-;;               * This method might be called without a call to `finalize_write` if
-;;                   
-;;               * an error occurs or if the object is already present in the ODB.
-;;                   
-;;               */
-;;         void (*free)(git_odb_stream *stream);
-;; };
-(define git_odb_stream-desc
-  (bs:struct
-    (list `(backend ,(bs:pointer git_odb_backend*-desc))
-          `(mode ,unsigned-int)
-          `(hash_ctx ,(bs:pointer void))
-          `(declared_size ,git_off_t-desc)
-          `(received_bytes ,git_off_t-desc)
-          `(read ,(bs:pointer void))
-          `(write ,(bs:pointer void))
-          `(finalize_write ,(bs:pointer void))
-          `(free ,(bs:pointer void)))))
-(export git_odb_stream-desc)
-(define-fh-compound-type/p git_odb_stream git_odb_stream-desc)
-(define struct-git_odb_stream git_odb_stream)
+(if echo-decls (display "git_odb_stream\n"))
+(define git_odb_stream-desc void)
+(define git_odb_stream*-desc (bs:pointer (delay git_odb_stream-desc)))
+(define-fh-pointer-type git_odb_stream* git_odb_stream*-desc)
 
 ;; typedef struct git_odb_writepack git_odb_writepack;
-;; struct git_odb_writepack {
-;;         git_odb_backend *backend;
-;;         int (*append)(git_odb_writepack *writepack, const void *data, size_t
-;;                    size, git_transfer_progress *stats);
-;;         int (*commit)(git_odb_writepack *writepack, git_transfer_progress *
-;;                   stats);
-;;         void (*free)(git_odb_writepack *writepack);
-;; };
-(define git_odb_writepack-desc
-  (bs:struct
-    (list `(backend ,(bs:pointer git_odb_backend*-desc))
-          `(append ,(bs:pointer void))
-          `(commit ,(bs:pointer void))
-          `(free ,(bs:pointer void)))))
-(export git_odb_writepack-desc)
-(define-fh-compound-type/p git_odb_writepack git_odb_writepack-desc)
-(define struct-git_odb_writepack git_odb_writepack)
+(if echo-decls (display "git_odb_writepack\n"))
+(define git_odb_writepack-desc void)
+(define git_odb_writepack*-desc (bs:pointer (delay git_odb_writepack-desc)))
+(define-fh-pointer-type git_odb_writepack* git_odb_writepack*-desc)
 
 ;; typedef struct git_refdb git_refdb;
-(define-fh-pointer-type git_refdb*)
+(if echo-decls (display "git_refdb\n"))
+(define git_refdb-desc void)
+(define git_refdb*-desc (bs:pointer git_refdb-desc))
+(define-fh-pointer-type git_refdb* git_refdb*-desc)
 
 ;; typedef struct git_refdb_backend git_refdb_backend;
-(define-fh-pointer-type git_refdb_backend*)
+(if echo-decls (display "git_refdb_backend\n"))
+(define git_refdb_backend-desc void)
+(define git_refdb_backend*-desc (bs:pointer git_refdb_backend-desc))
+(define-fh-pointer-type git_refdb_backend* git_refdb_backend*-desc)
 
 ;; typedef struct git_repository git_repository;
-(define-fh-pointer-type git_repository*)
+(if echo-decls (display "git_repository\n"))
+(define git_repository-desc void)
+(define git_repository*-desc (bs:pointer git_repository-desc))
+(define-fh-pointer-type git_repository* git_repository*-desc)
 
 ;; typedef struct git_worktree git_worktree;
-(define-fh-pointer-type git_worktree*)
+(if echo-decls (display "git_worktree\n"))
+(define git_worktree-desc void)
+(define git_worktree*-desc (bs:pointer git_worktree-desc))
+(define-fh-pointer-type git_worktree* git_worktree*-desc)
 
 ;; typedef struct git_object git_object;
-(define-fh-pointer-type git_object*)
+(if echo-decls (display "git_object\n"))
+(define git_object-desc void)
+(define git_object*-desc (bs:pointer git_object-desc))
+(define-fh-pointer-type git_object* git_object*-desc)
 
 ;; typedef struct git_revwalk git_revwalk;
-(define-fh-pointer-type git_revwalk*)
+(if echo-decls (display "git_revwalk\n"))
+(define git_revwalk-desc void)
+(define git_revwalk*-desc (bs:pointer git_revwalk-desc))
+(define-fh-pointer-type git_revwalk* git_revwalk*-desc)
 
 ;; typedef struct git_tag git_tag;
-(define-fh-pointer-type git_tag*)
+(if echo-decls (display "git_tag\n"))
+(define git_tag-desc void)
+(define git_tag*-desc (bs:pointer git_tag-desc))
+(define-fh-pointer-type git_tag* git_tag*-desc)
 
 ;; typedef struct git_blob git_blob;
-(define-fh-pointer-type git_blob*)
+(if echo-decls (display "git_blob\n"))
+(define git_blob-desc void)
+(define git_blob*-desc (bs:pointer git_blob-desc))
+(define-fh-pointer-type git_blob* git_blob*-desc)
 
 ;; typedef struct git_commit git_commit;
-(define-fh-pointer-type git_commit*)
+(if echo-decls (display "git_commit\n"))
+(define git_commit-desc void)
+(define git_commit*-desc (bs:pointer git_commit-desc))
+(define-fh-pointer-type git_commit* git_commit*-desc)
 
 ;; typedef struct git_tree_entry git_tree_entry;
-(define-fh-pointer-type git_tree_entry*)
+(if echo-decls (display "git_tree_entry\n"))
+(define git_tree_entry-desc void)
+(define git_tree_entry*-desc (bs:pointer git_tree_entry-desc))
+(define-fh-pointer-type git_tree_entry* git_tree_entry*-desc)
 
 ;; typedef struct git_tree git_tree;
-(define-fh-pointer-type git_tree*)
+(if echo-decls (display "git_tree\n"))
+(define git_tree-desc void)
+(define git_tree*-desc (bs:pointer git_tree-desc))
+(define-fh-pointer-type git_tree* git_tree*-desc)
 
 ;; typedef struct git_treebuilder git_treebuilder;
-(define-fh-pointer-type git_treebuilder*)
+(if echo-decls (display "git_treebuilder\n"))
+(define git_treebuilder-desc void)
+(define git_treebuilder*-desc (bs:pointer git_treebuilder-desc))
+(define-fh-pointer-type git_treebuilder* git_treebuilder*-desc)
 
 ;; typedef struct git_index git_index;
-(define-fh-pointer-type git_index*)
+(if echo-decls (display "git_index\n"))
+(define git_index-desc void)
+(define git_index*-desc (bs:pointer git_index-desc))
+(define-fh-pointer-type git_index* git_index*-desc)
 
 ;; typedef struct git_index_conflict_iterator git_index_conflict_iterator;
-(define-fh-pointer-type git_index_conflict_iterator*)
+(if echo-decls (display "git_index_conflict_iterator\n"))
+(define git_index_conflict_iterator-desc void)
+(define git_index_conflict_iterator*-desc (bs:pointer git_index_conflict_iterator-desc))
+(define-fh-pointer-type git_index_conflict_iterator* git_index_conflict_iterator*-desc)
 
 ;; typedef struct git_config git_config;
-(define-fh-pointer-type git_config*)
+(if echo-decls (display "git_config\n"))
+(define git_config-desc void)
+(define git_config*-desc (bs:pointer git_config-desc))
+(define-fh-pointer-type git_config* git_config*-desc)
 
 ;; typedef struct git_config_backend git_config_backend;
-(define-fh-pointer-type git_config_backend*)
+(if echo-decls (display "git_config_backend\n"))
+(define git_config_backend-desc void)
+(define git_config_backend*-desc (bs:pointer git_config_backend-desc))
+(define-fh-pointer-type git_config_backend* git_config_backend*-desc)
 
 ;; typedef struct git_reflog_entry git_reflog_entry;
-(define-fh-pointer-type git_reflog_entry*)
+(if echo-decls (display "git_reflog_entry\n"))
+(define git_reflog_entry-desc void)
+(define git_reflog_entry*-desc (bs:pointer git_reflog_entry-desc))
+(define-fh-pointer-type git_reflog_entry* git_reflog_entry*-desc)
 
 ;; typedef struct git_reflog git_reflog;
-(define-fh-pointer-type git_reflog*)
+(if echo-decls (display "git_reflog\n"))
+(define git_reflog-desc void)
+(define git_reflog*-desc (bs:pointer git_reflog-desc))
+(define-fh-pointer-type git_reflog* git_reflog*-desc)
 
 ;; typedef struct git_note git_note;
-(define-fh-pointer-type git_note*)
+(if echo-decls (display "git_note\n"))
+(define git_note-desc void)
+(define git_note*-desc (bs:pointer git_note-desc))
+(define-fh-pointer-type git_note* git_note*-desc)
 
 ;; typedef struct git_packbuilder git_packbuilder;
-(define-fh-pointer-type git_packbuilder*)
+(if echo-decls (display "git_packbuilder\n"))
+(define git_packbuilder-desc void)
+(define git_packbuilder*-desc (bs:pointer git_packbuilder-desc))
+(define-fh-pointer-type git_packbuilder* git_packbuilder*-desc)
 
 ;; typedef struct git_time {
-;;         git_time_t time; /**< time in seconds from epoch */
-;;         int offset; /**< timezone offset, in minutes */
+;;   git_time_t time; /**< time in seconds from epoch */
+;;   int offset; /**< timezone offset, in minutes */
 ;; } git_time;
+(if echo-decls (display "git_time\n"))
 (define git_time-desc
-  (bs:struct
-    (list `(time ,git_time_t-desc) `(offset ,int))))
+  (bs:struct (list `(time ,int32) `(offset ,int))))
 (export git_time-desc)
 (define-fh-compound-type/p git_time git_time-desc)
 (define struct-git_time git_time)
 
 ;; typedef struct git_signature {
-;;         char *name; /**< full name of the author */
-;;         char *email; /**< email of the author */
-;;         git_time when; /**< time when the action happened */
+;;   char *name; /**< full name of the author */
+;;   char *email; /**< email of the author */
+;;   git_time when; /**< time when the action happened */
 ;; } git_signature;
+(if echo-decls (display "git_signature\n"))
 (define git_signature-desc
   (bs:struct
     (list `(name ,(bs:pointer int))
@@ -305,32 +324,54 @@
 (define struct-git_signature git_signature)
 
 ;; typedef struct git_reference git_reference;
-(define-fh-pointer-type git_reference*)
+(if echo-decls (display "git_reference\n"))
+(define git_reference-desc void)
+(define git_reference*-desc (bs:pointer git_reference-desc))
+(define-fh-pointer-type git_reference* git_reference*-desc)
 
 ;; typedef struct git_reference_iterator git_reference_iterator;
-(define-fh-pointer-type git_reference_iterator*)
+(if echo-decls (display "git_reference_iterator\n"))
+(define git_reference_iterator-desc void)
+(define git_reference_iterator*-desc (bs:pointer git_reference_iterator-desc))
+(define-fh-pointer-type git_reference_iterator* git_reference_iterator*-desc)
 
 ;; typedef struct git_transaction git_transaction;
-(define-fh-pointer-type git_transaction*)
+(if echo-decls (display "git_transaction\n"))
+(define git_transaction-desc void)
+(define git_transaction*-desc (bs:pointer git_transaction-desc))
+(define-fh-pointer-type git_transaction* git_transaction*-desc)
 
 ;; typedef struct git_annotated_commit git_annotated_commit;
-(define-fh-pointer-type git_annotated_commit*)
+(if echo-decls (display "git_annotated_commit\n"))
+(define git_annotated_commit-desc void)
+(define git_annotated_commit*-desc (bs:pointer git_annotated_commit-desc))
+(define-fh-pointer-type git_annotated_commit* git_annotated_commit*-desc)
 
 ;; typedef struct git_merge_result git_merge_result;
-(define-fh-pointer-type git_merge_result*)
+(if echo-decls (display "git_merge_result\n"))
+(define git_merge_result-desc void)
+(define git_merge_result*-desc (bs:pointer git_merge_result-desc))
+(define-fh-pointer-type git_merge_result* git_merge_result*-desc)
 
 ;; typedef struct git_status_list git_status_list;
-(define-fh-pointer-type git_status_list*)
+(if echo-decls (display "git_status_list\n"))
+(define git_status_list-desc void)
+(define git_status_list*-desc (bs:pointer git_status_list-desc))
+(define-fh-pointer-type git_status_list* git_status_list*-desc)
 
 ;; typedef struct git_rebase git_rebase;
-(define-fh-pointer-type git_rebase*)
+(if echo-decls (display "git_rebase\n"))
+(define git_rebase-desc void)
+(define git_rebase*-desc (bs:pointer git_rebase-desc))
+(define-fh-pointer-type git_rebase* git_rebase*-desc)
 
 ;; typedef enum {
-;;         GIT_REF_INVALID = 0,
-;;         GIT_REF_OID = 1,
-;;         GIT_REF_SYMBOLIC = 2,
-;;         GIT_REF_LISTALL = GIT_REF_OID | GIT_REF_SYMBOLIC,
+;;   GIT_REF_INVALID = 0,
+;;   GIT_REF_OID = 1,
+;;   GIT_REF_SYMBOLIC = 2,
+;;   GIT_REF_LISTALL = GIT_REF_OID | GIT_REF_SYMBOLIC,
 ;; } git_ref_t;
+(if echo-decls (display "git_ref_t\n"))
 (define-fh-enum git_ref_t
   '((GIT_REF_INVALID . 0)
     (GIT_REF_OID . 1)
@@ -339,10 +380,11 @@
   )
 
 ;; typedef enum {
-;;         GIT_BRANCH_LOCAL = 1,
-;;         GIT_BRANCH_REMOTE = 2,
-;;         GIT_BRANCH_ALL = GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE,
+;;   GIT_BRANCH_LOCAL = 1,
+;;   GIT_BRANCH_REMOTE = 2,
+;;   GIT_BRANCH_ALL = GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE,
 ;; } git_branch_t;
+(if echo-decls (display "git_branch_t\n"))
 (define-fh-enum git_branch_t
   '((GIT_BRANCH_LOCAL . 1)
     (GIT_BRANCH_REMOTE . 2)
@@ -350,13 +392,14 @@
   )
 
 ;; typedef enum {
-;;         GIT_FILEMODE_UNREADABLE = 0000000,
-;;         GIT_FILEMODE_TREE = 0040000,
-;;         GIT_FILEMODE_BLOB = 0100644,
-;;         GIT_FILEMODE_BLOB_EXECUTABLE = 0100755,
-;;         GIT_FILEMODE_LINK = 0120000,
-;;         GIT_FILEMODE_COMMIT = 0160000,
+;;   GIT_FILEMODE_UNREADABLE = 0000000,
+;;   GIT_FILEMODE_TREE = 0040000,
+;;   GIT_FILEMODE_BLOB = 0100644,
+;;   GIT_FILEMODE_BLOB_EXECUTABLE = 0100755,
+;;   GIT_FILEMODE_LINK = 0120000,
+;;   GIT_FILEMODE_COMMIT = 0160000,
 ;; } git_filemode_t;
+(if echo-decls (display "git_filemode_t\n"))
 (define-fh-enum git_filemode_t
   '((GIT_FILEMODE_UNREADABLE . 0)
     (GIT_FILEMODE_TREE . 16384)
@@ -367,149 +410,51 @@
   )
 
 ;; typedef struct git_refspec git_refspec;
-(define-fh-pointer-type git_refspec*)
+(if echo-decls (display "git_refspec\n"))
+(define git_refspec-desc void)
+(define git_refspec*-desc (bs:pointer git_refspec-desc))
+(define-fh-pointer-type git_refspec* git_refspec*-desc)
 
 ;; typedef struct git_remote git_remote;
-(define-fh-pointer-type git_remote*)
+(if echo-decls (display "git_remote\n"))
+(define git_remote-desc void)
+(define git_remote*-desc (bs:pointer git_remote-desc))
+(define-fh-pointer-type git_remote* git_remote*-desc)
 
 ;; typedef struct git_transport git_transport;
-(define-fh-pointer-type git_transport*)
+(if echo-decls (display "git_transport\n"))
+(define git_transport-desc void)
+(define git_transport*-desc (bs:pointer git_transport-desc))
+(define-fh-pointer-type git_transport* git_transport*-desc)
 
 ;; typedef struct git_push git_push;
-(define-fh-pointer-type git_push*)
+(if echo-decls (display "git_push\n"))
+(define git_push-desc void)
+(define git_push*-desc (bs:pointer git_push-desc))
+(define-fh-pointer-type git_push* git_push*-desc)
 
 ;; typedef struct git_remote_head git_remote_head;
-;; struct git_remote_head {
-;;         int local; /* available locally */
-;;         git_oid oid;
-;;         git_oid loid;
-;;         char *name;
-;;         /**
-;;               * If the server send a symref mapping for this ref, this will
-;;               * point to the target.
-;;               */
-;;         char *symref_target;
-;; };
-(define git_remote_head-desc
-  (bs:struct
-    (list `(local ,int)
-          `(oid ,git_oid-desc)
-          `(loid ,git_oid-desc)
-          `(name ,(bs:pointer int))
-          `(symref_target ,(bs:pointer int)))))
-(export git_remote_head-desc)
-(define-fh-compound-type/p git_remote_head git_remote_head-desc)
-(define struct-git_remote_head git_remote_head)
+(if echo-decls (display "git_remote_head\n"))
+(define git_remote_head-desc void)
+(define git_remote_head*-desc (bs:pointer (delay git_remote_head-desc)))
+(define-fh-pointer-type git_remote_head* git_remote_head*-desc)
 
 ;; typedef struct git_remote_callbacks git_remote_callbacks;
-;; struct git_remote_callbacks {
-;;         unsigned int version;
-;;         /**
-;;               * Textual progress from the remote. Text send over the
-;;               * progress side-band will be passed to this function (this is
-;;               * the 'counting objects' output).
-;;               */
-;;         git_transport_message_cb sideband_progress;
-;;         /**
-;;               * Completion is called when different parts of the download
-;;               * process are done (currently unused).
-;;               */
-;;         int (*completion)(git_remote_completion_type type, void *data);
-;;         /**
-;;               * This will be called if the remote host requires
-;;               * authentication in order to connect to it.
-;;               *
-;;               * Returning GIT_PASSTHROUGH will make libgit2 behave as
-;;               * though this field isn't set.
-;;               */
-;;         git_cred_acquire_cb credentials;
-;;         /**
-;;               * If cert verification fails, this will be called to let the
-;;               * user make the final decision of whether to allow the
-;;               * connection to proceed. Returns 1 to allow the connection, 0
-;;               * to disallow it or a negative value to indicate an error.
-;;               */
-;;         git_transport_certificate_check_cb certificate_check;
-;;         /**
-;;               * During the download of new data, this will be regularly
-;;               * called with the current count of progress done by the
-;;               * indexer.
-;;               */
-;;         git_transfer_progress_cb transfer_progress;
-;;         /**
-;;               * Each time a reference is updated locally, this function
-;;               * will be called with information about it.
-;;               */
-;;         int (*update_tips)(const char *refname, const git_oid *a, const 
-;;                   git_oid *b, void *data);
-;;         /**
-;;               * Function to call with progress information during pack
-;;               * building. Be aware that this is called inline with pack
-;;               * building operations, so performance may be affected.
-;;               */
-;;         git_packbuilder_progress pack_progress;
-;;         /**
-;;               * Function to call with progress information during the
-;;               * upload portion of a push. Be aware that this is called
-;;               * inline with pack building operations, so performance may be
-;;               * affected.
-;;               */
-;;         git_push_transfer_progress push_transfer_progress;
-;;         /**
-;;               * Called for each updated reference on push. If `status` is
-;;               * not `NULL`, the update was rejected by the remote server
-;;               * and `status` contains the reason given.
-;;               */
-;;         int (*push_update_reference)(const char *refname, const char *status
-;;                   , void *data);
-;;         /**
-;;               * Called once between the negotiation step and the upload. It
-;;               * provides information about what updates will be performed.
-;;               */
-;;         git_push_negotiation push_negotiation;
-;;         /**
-;;               * Create the transport to use for this operation. Leave NULL
-;;               * to auto-detect.
-;;               */
-;;         git_transport_cb transport;
-;;         /**
-;;               * This will be passed to each of the callbacks in this struct
-;;               * as the last parameter.
-;;               */
-;;         void *payload;
-;; };
-(define git_remote_callbacks-desc
-  (bs:struct
-    (list `(version ,unsigned-int)
-          `(sideband_progress
-             ,git_transport_message_cb-desc)
-          `(completion ,(bs:pointer void))
-          `(credentials ,git_cred_acquire_cb-desc)
-          `(certificate_check
-             ,git_transport_certificate_check_cb-desc)
-          `(transfer_progress
-             ,git_transfer_progress_cb-desc)
-          `(update_tips ,(bs:pointer void))
-          `(pack_progress ,git_packbuilder_progress-desc)
-          `(push_transfer_progress
-             ,git_push_transfer_progress-desc)
-          `(push_update_reference ,(bs:pointer void))
-          `(push_negotiation ,git_push_negotiation-desc)
-          `(transport ,git_transport_cb-desc)
-          `(payload ,(bs:pointer void)))))
-(export git_remote_callbacks-desc)
-(define-fh-compound-type/p git_remote_callbacks git_remote_callbacks-desc)
-(define struct-git_remote_callbacks git_remote_callbacks)
+(if echo-decls (display "git_remote_callbacks\n"))
+(define git_remote_callbacks-desc void)
+(define git_remote_callbacks*-desc (bs:pointer (delay git_remote_callbacks-desc)))
+(define-fh-pointer-type git_remote_callbacks* git_remote_callbacks*-desc)
 
 ;; typedef struct git_transfer_progress {
-;;         unsigned int total_objects;
-;;         unsigned int indexed_objects;
-;;         unsigned int received_objects;
-;;         unsigned int local_objects;
-;;         unsigned int total_deltas;
-;;         unsigned int indexed_deltas;
-;;         size_t received_bytes;
+;;   unsigned int total_objects;
+;;   unsigned int indexed_objects;
+;;   unsigned int received_objects;
+;;   unsigned int local_objects;
+;;   unsigned int total_deltas;
+;;   unsigned int indexed_deltas;
+;;   size_t received_bytes;
 ;; } git_transfer_progress;
+(if echo-decls (display "git_transfer_progress\n"))
 (define git_transfer_progress-desc
   (bs:struct
     (list `(total_objects ,unsigned-int)
@@ -524,21 +469,24 @@
 (define struct-git_transfer_progress git_transfer_progress)
 
 ;; typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, 
-;;           void *payload);
+;;     void *payload);
+(if echo-decls (display "git_transfer_progress_cb\n"))
 (define-fh-function/p git_transfer_progress_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; typedef int (*git_transport_message_cb)(const char *str, int len, void *
-;;           payload);
+;;     payload);
+(if echo-decls (display "git_transport_message_cb\n"))
 (define-fh-function/p git_transport_message_cb
   ffi:int (list (quote *) ffi:int (quote *)))
 
 ;; typedef enum git_cert_t {
-;;         GIT_CERT_NONE,
-;;         GIT_CERT_X509,
-;;         GIT_CERT_HOSTKEY_LIBSSH2,
-;;         GIT_CERT_STRARRAY,
+;;   GIT_CERT_NONE,
+;;   GIT_CERT_X509,
+;;   GIT_CERT_HOSTKEY_LIBSSH2,
+;;   GIT_CERT_STRARRAY,
 ;; } git_cert_t;
+(if echo-decls (display "git_cert_t\n"))
 (define-fh-enum git_cert_t
   '((GIT_CERT_NONE . 0)
     (GIT_CERT_X509 . 1)
@@ -549,31 +497,37 @@
 (define wrap-enum-git_cert_t wrap-git_cert_t)
 
 ;; typedef struct {
-;;         /**
-;;               * Type of certificate. A `GIT_CERT_` value.
-;;               */
-;;         git_cert_t cert_type;
+;;   /**
+;;    * Type of certificate. A `GIT_CERT_` value.
+;;    */
+;;   git_cert_t cert_type;
 ;; } git_cert;
+(if echo-decls (display "git_cert\n"))
 (define git_cert-desc
-  (bs:struct (list `(cert_type ,git_cert_t-desc))))
+  (bs:struct (list `(cert_type ,int))))
 (export git_cert-desc)
 (define-fh-compound-type/p git_cert git_cert-desc)
 
 ;; typedef int (*git_transport_certificate_check_cb)(git_cert *cert, int valid
-;;           , const char *host, void *payload);
+;;     , const char *host, void *payload);
+(if echo-decls (display "git_transport_certificate_check_cb\n"))
 (define-fh-function/p git_transport_certificate_check_cb
   ffi:int (list (quote *) ffi:int (quote *) (quote *)))
 
 ;; typedef struct git_submodule git_submodule;
-(define-fh-pointer-type git_submodule*)
+(if echo-decls (display "git_submodule\n"))
+(define git_submodule-desc void)
+(define git_submodule*-desc (bs:pointer git_submodule-desc))
+(define-fh-pointer-type git_submodule* git_submodule*-desc)
 
 ;; typedef enum {
-;;         GIT_SUBMODULE_UPDATE_CHECKOUT = 1,
-;;         GIT_SUBMODULE_UPDATE_REBASE = 2,
-;;         GIT_SUBMODULE_UPDATE_MERGE = 3,
-;;         GIT_SUBMODULE_UPDATE_NONE = 4,
-;;         GIT_SUBMODULE_UPDATE_DEFAULT = 0,
+;;   GIT_SUBMODULE_UPDATE_CHECKOUT = 1,
+;;   GIT_SUBMODULE_UPDATE_REBASE = 2,
+;;   GIT_SUBMODULE_UPDATE_MERGE = 3,
+;;   GIT_SUBMODULE_UPDATE_NONE = 4,
+;;   GIT_SUBMODULE_UPDATE_DEFAULT = 0,
 ;; } git_submodule_update_t;
+(if echo-decls (display "git_submodule_update_t\n"))
 (define-fh-enum git_submodule_update_t
   '((GIT_SUBMODULE_UPDATE_CHECKOUT . 1)
     (GIT_SUBMODULE_UPDATE_REBASE . 2)
@@ -583,12 +537,13 @@
   )
 
 ;; typedef enum {
-;;         GIT_SUBMODULE_IGNORE_UNSPECIFIED = -1,
-;;         GIT_SUBMODULE_IGNORE_NONE = 1,
-;;         GIT_SUBMODULE_IGNORE_UNTRACKED = 2,
-;;         GIT_SUBMODULE_IGNORE_DIRTY = 3,
-;;         GIT_SUBMODULE_IGNORE_ALL = 4,
+;;   GIT_SUBMODULE_IGNORE_UNSPECIFIED = -1,
+;;   GIT_SUBMODULE_IGNORE_NONE = 1,
+;;   GIT_SUBMODULE_IGNORE_UNTRACKED = 2,
+;;   GIT_SUBMODULE_IGNORE_DIRTY = 3,
+;;   GIT_SUBMODULE_IGNORE_ALL = 4,
 ;; } git_submodule_ignore_t;
+(if echo-decls (display "git_submodule_ignore_t\n"))
 (define-fh-enum git_submodule_ignore_t
   '((GIT_SUBMODULE_IGNORE_UNSPECIFIED . -1)
     (GIT_SUBMODULE_IGNORE_NONE . 1)
@@ -598,10 +553,11 @@
   )
 
 ;; typedef enum {
-;;         GIT_SUBMODULE_RECURSE_NO = 0,
-;;         GIT_SUBMODULE_RECURSE_YES = 1,
-;;         GIT_SUBMODULE_RECURSE_ONDEMAND = 2,
+;;   GIT_SUBMODULE_RECURSE_NO = 0,
+;;   GIT_SUBMODULE_RECURSE_YES = 1,
+;;   GIT_SUBMODULE_RECURSE_ONDEMAND = 2,
 ;; } git_submodule_recurse_t;
+(if echo-decls (display "git_submodule_recurse_t\n"))
 (define-fh-enum git_submodule_recurse_t
   '((GIT_SUBMODULE_RECURSE_NO . 0)
     (GIT_SUBMODULE_RECURSE_YES . 1)
@@ -609,32 +565,40 @@
   )
 
 ;; typedef struct git_writestream git_writestream;
+(if echo-decls (display "git_writestream\n"))
+(define git_writestream-desc void)
+(define git_writestream*-desc (bs:pointer (delay git_writestream-desc)))
+(define-fh-pointer-type git_writestream* git_writestream*-desc)
+
 ;; struct git_writestream {
-;;         int (*write)(git_writestream *stream, const char *buffer, size_t len
-;;                   );
-;;         int (*close)(git_writestream *stream);
-;;         void (*free)(git_writestream *stream);
+;;   int (*write)(git_writestream *stream, const char *buffer, size_t len);
+;;   int (*close)(git_writestream *stream);
+;;   void (*free)(git_writestream *stream);
 ;; };
-(define git_writestream-desc
+(if echo-decls (display "(struct . git_writestream)\n"))
+(define struct-git_writestream-desc
   (bs:struct
     (list `(write ,(bs:pointer void))
           `(close ,(bs:pointer void))
           `(free ,(bs:pointer void)))))
-(export git_writestream-desc)
-(define-fh-compound-type/p git_writestream git_writestream-desc)
-(define struct-git_writestream git_writestream)
+(export struct-git_writestream-desc)
+(define-fh-compound-type/p struct-git_writestream struct-git_writestream-desc)
+(set! git_writestream-desc struct-git_writestream-desc)
+(define-fh-compound-type git_writestream git_writestream-desc)
 
 ;; typedef struct git_oid {
-;;         /** raw binary formatted id */
-;;         unsigned char id[20];
+;;   /** raw binary formatted id */
+;;   unsigned char id[20];
 ;; } git_oid;
+(if echo-decls (display "git_oid\n"))
 (define git_oid-desc
-  (bs:struct (list `(id ,(bs:vector 20 #f)))))
+  (bs:struct (list `(id ,(bs:vector 20 uint8)))))
 (export git_oid-desc)
 (define-fh-compound-type/p git_oid git_oid-desc)
 (define struct-git_oid git_oid)
 
 ;; extern int git_oid_fromstr(git_oid *out, const char *str);
+(if echo-decls (display "git_oid_fromstr\n"))
 (define git_oid_fromstr
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -647,6 +611,7 @@
 (export git_oid_fromstr)
 
 ;; extern int git_oid_fromstrp(git_oid *out, const char *str);
+(if echo-decls (display "git_oid_fromstrp\n"))
 (define git_oid_fromstrp
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -659,6 +624,7 @@
 (export git_oid_fromstrp)
 
 ;; extern int git_oid_fromstrn(git_oid *out, const char *str, size_t length);
+(if echo-decls (display "git_oid_fromstrn\n"))
 (define git_oid_fromstrn
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -672,6 +638,7 @@
 (export git_oid_fromstrn)
 
 ;; extern void git_oid_fromraw(git_oid *out, const unsigned char *raw);
+(if echo-decls (display "git_oid_fromraw\n"))
 (define git_oid_fromraw
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -684,6 +651,7 @@
 (export git_oid_fromraw)
 
 ;; extern void git_oid_fmt(char *out, const git_oid *id);
+(if echo-decls (display "git_oid_fmt\n"))
 (define git_oid_fmt
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -696,6 +664,7 @@
 (export git_oid_fmt)
 
 ;; extern void git_oid_nfmt(char *out, size_t n, const git_oid *id);
+(if echo-decls (display "git_oid_nfmt\n"))
 (define git_oid_nfmt
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -709,6 +678,7 @@
 (export git_oid_nfmt)
 
 ;; extern void git_oid_pathfmt(char *out, const git_oid *id);
+(if echo-decls (display "git_oid_pathfmt\n"))
 (define git_oid_pathfmt
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -721,6 +691,7 @@
 (export git_oid_pathfmt)
 
 ;; extern char *git_oid_tostr_s(const git_oid *oid);
+(if echo-decls (display "git_oid_tostr_s\n"))
 (define git_oid_tostr_s
   (let ((~f (ffi:pointer->procedure
               '*
@@ -731,6 +702,7 @@
 (export git_oid_tostr_s)
 
 ;; extern char *git_oid_tostr(char *out, size_t n, const git_oid *id);
+(if echo-decls (display "git_oid_tostr\n"))
 (define git_oid_tostr
   (let ((~f (ffi:pointer->procedure
               '*
@@ -744,6 +716,7 @@
 (export git_oid_tostr)
 
 ;; extern void git_oid_cpy(git_oid *out, const git_oid *src);
+(if echo-decls (display "git_oid_cpy\n"))
 (define git_oid_cpy
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -756,6 +729,7 @@
 (export git_oid_cpy)
 
 ;; extern int git_oid_cmp(const git_oid *a, const git_oid *b);
+(if echo-decls (display "git_oid_cmp\n"))
 (define git_oid_cmp
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -768,6 +742,7 @@
 (export git_oid_cmp)
 
 ;; extern int git_oid_equal(const git_oid *a, const git_oid *b);
+(if echo-decls (display "git_oid_equal\n"))
 (define git_oid_equal
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -780,6 +755,7 @@
 (export git_oid_equal)
 
 ;; extern int git_oid_ncmp(const git_oid *a, const git_oid *b, size_t len);
+(if echo-decls (display "git_oid_ncmp\n"))
 (define git_oid_ncmp
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -793,6 +769,7 @@
 (export git_oid_ncmp)
 
 ;; extern int git_oid_streq(const git_oid *id, const char *str);
+(if echo-decls (display "git_oid_streq\n"))
 (define git_oid_streq
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -805,6 +782,7 @@
 (export git_oid_streq)
 
 ;; extern int git_oid_strcmp(const git_oid *id, const char *str);
+(if echo-decls (display "git_oid_strcmp\n"))
 (define git_oid_strcmp
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -817,6 +795,7 @@
 (export git_oid_strcmp)
 
 ;; extern int git_oid_iszero(const git_oid *id);
+(if echo-decls (display "git_oid_iszero\n"))
 (define git_oid_iszero
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -827,9 +806,13 @@
 (export git_oid_iszero)
 
 ;; typedef struct git_oid_shorten git_oid_shorten;
-(define-fh-pointer-type git_oid_shorten*)
+(if echo-decls (display "git_oid_shorten\n"))
+(define git_oid_shorten-desc void)
+(define git_oid_shorten*-desc (bs:pointer git_oid_shorten-desc))
+(define-fh-pointer-type git_oid_shorten* git_oid_shorten*-desc)
 
 ;; extern git_oid_shorten *git_oid_shorten_new(size_t min_length);
+(if echo-decls (display "git_oid_shorten_new\n"))
 (define git_oid_shorten_new
   (let ((~f (ffi:pointer->procedure
               '*
@@ -843,6 +826,7 @@
 (export git_oid_shorten_new)
 
 ;; extern int git_oid_shorten_add(git_oid_shorten *os, const char *text_id);
+(if echo-decls (display "git_oid_shorten_add\n"))
 (define git_oid_shorten_add
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -857,6 +841,7 @@
 (export git_oid_shorten_add)
 
 ;; extern void git_oid_shorten_free(git_oid_shorten *os);
+(if echo-decls (display "git_oid_shorten_free\n"))
 (define git_oid_shorten_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -870,9 +855,10 @@
 (export git_oid_shorten_free)
 
 ;; typedef struct {
-;;         char *ptr;
-;;         size_t asize, size;
+;;   char *ptr;
+;;   size_t asize, size;
 ;; } git_buf;
+(if echo-decls (display "git_buf\n"))
 (define git_buf-desc
   (bs:struct
     (list `(ptr ,(bs:pointer int))
@@ -882,6 +868,7 @@
 (define-fh-compound-type/p git_buf git_buf-desc)
 
 ;; extern void git_buf_free(git_buf *buffer);
+(if echo-decls (display "git_buf_free\n"))
 (define git_buf_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -893,6 +880,7 @@
 (export git_buf_free)
 
 ;; extern int git_buf_grow(git_buf *buffer, size_t target_size);
+(if echo-decls (display "git_buf_grow\n"))
 (define git_buf_grow
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -905,6 +893,7 @@
 (export git_buf_grow)
 
 ;; extern int git_buf_set(git_buf *buffer, const void *data, size_t datalen);
+(if echo-decls (display "git_buf_set\n"))
 (define git_buf_set
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -918,6 +907,7 @@
 (export git_buf_set)
 
 ;; extern int git_buf_is_binary(const git_buf *buf);
+(if echo-decls (display "git_buf_is_binary\n"))
 (define git_buf_is_binary
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -928,6 +918,7 @@
 (export git_buf_is_binary)
 
 ;; extern int git_buf_contains_nul(const git_buf *buf);
+(if echo-decls (display "git_buf_contains_nul\n"))
 (define git_buf_contains_nul
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -940,6 +931,7 @@
 (export git_buf_contains_nul)
 
 ;; extern int git_repository_open(git_repository **out, const char *path);
+(if echo-decls (display "git_repository_open\n"))
 (define git_repository_open
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -954,7 +946,8 @@
 (export git_repository_open)
 
 ;; extern int git_repository_open_from_worktree(git_repository **out, 
-;;           git_worktree *wt);
+;;     git_worktree *wt);
+(if echo-decls (display "git_repository_open_from_worktree\n"))
 (define git_repository_open_from_worktree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -969,6 +962,7 @@
 (export git_repository_open_from_worktree)
 
 ;; extern int git_repository_wrap_odb(git_repository **out, git_odb *odb);
+(if echo-decls (display "git_repository_wrap_odb\n"))
 (define git_repository_wrap_odb
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -983,7 +977,8 @@
 (export git_repository_wrap_odb)
 
 ;; extern int git_repository_discover(git_buf *out, const char *start_path, int
-;;            across_fs, const char *ceiling_dirs);
+;;      across_fs, const char *ceiling_dirs);
+(if echo-decls (display "git_repository_discover\n"))
 (define git_repository_discover
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1000,12 +995,13 @@
 (export git_repository_discover)
 
 ;; typedef enum {
-;;         GIT_REPOSITORY_OPEN_NO_SEARCH = 1<<0,
-;;         GIT_REPOSITORY_OPEN_CROSS_FS = 1<<1,
-;;         GIT_REPOSITORY_OPEN_BARE = 1<<2,
-;;         GIT_REPOSITORY_OPEN_NO_DOTGIT = 1<<3,
-;;         GIT_REPOSITORY_OPEN_FROM_ENV = 1<<4,
+;;   GIT_REPOSITORY_OPEN_NO_SEARCH = 1<<0,
+;;   GIT_REPOSITORY_OPEN_CROSS_FS = 1<<1,
+;;   GIT_REPOSITORY_OPEN_BARE = 1<<2,
+;;   GIT_REPOSITORY_OPEN_NO_DOTGIT = 1<<3,
+;;   GIT_REPOSITORY_OPEN_FROM_ENV = 1<<4,
 ;; } git_repository_open_flag_t;
+(if echo-decls (display "git_repository_open_flag_t\n"))
 (define-fh-enum git_repository_open_flag_t
   '((GIT_REPOSITORY_OPEN_NO_SEARCH . 1)
     (GIT_REPOSITORY_OPEN_CROSS_FS . 2)
@@ -1015,7 +1011,8 @@
   )
 
 ;; extern int git_repository_open_ext(git_repository **out, const char *path, 
-;;           unsigned int flags, const char *ceiling_dirs);
+;;     unsigned int flags, const char *ceiling_dirs);
+(if echo-decls (display "git_repository_open_ext\n"))
 (define git_repository_open_ext
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1032,7 +1029,8 @@
 (export git_repository_open_ext)
 
 ;; extern int git_repository_open_bare(git_repository **out, const char *
-;;           bare_path);
+;;     bare_path);
+(if echo-decls (display "git_repository_open_bare\n"))
 (define git_repository_open_bare
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1047,6 +1045,7 @@
 (export git_repository_open_bare)
 
 ;; extern void git_repository_free(git_repository *repo);
+(if echo-decls (display "git_repository_free\n"))
 (define git_repository_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1060,7 +1059,8 @@
 (export git_repository_free)
 
 ;; extern int git_repository_init(git_repository **out, const char *path, 
-;;           unsigned is_bare);
+;;     unsigned is_bare);
+(if echo-decls (display "git_repository_init\n"))
 (define git_repository_init
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1076,14 +1076,15 @@
 (export git_repository_init)
 
 ;; typedef enum {
-;;         GIT_REPOSITORY_INIT_BARE = 1u<<0,
-;;         GIT_REPOSITORY_INIT_NO_REINIT = 1u<<1,
-;;         GIT_REPOSITORY_INIT_NO_DOTGIT_DIR = 1u<<2,
-;;         GIT_REPOSITORY_INIT_MKDIR = 1u<<3,
-;;         GIT_REPOSITORY_INIT_MKPATH = 1u<<4,
-;;         GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE = 1u<<5,
-;;         GIT_REPOSITORY_INIT_RELATIVE_GITLINK = 1u<<6,
+;;   GIT_REPOSITORY_INIT_BARE = 1u<<0,
+;;   GIT_REPOSITORY_INIT_NO_REINIT = 1u<<1,
+;;   GIT_REPOSITORY_INIT_NO_DOTGIT_DIR = 1u<<2,
+;;   GIT_REPOSITORY_INIT_MKDIR = 1u<<3,
+;;   GIT_REPOSITORY_INIT_MKPATH = 1u<<4,
+;;   GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE = 1u<<5,
+;;   GIT_REPOSITORY_INIT_RELATIVE_GITLINK = 1u<<6,
 ;; } git_repository_init_flag_t;
+(if echo-decls (display "git_repository_init_flag_t\n"))
 (define-fh-enum git_repository_init_flag_t
   '((GIT_REPOSITORY_INIT_BARE . 1)
     (GIT_REPOSITORY_INIT_NO_REINIT . 2)
@@ -1095,10 +1096,11 @@
   )
 
 ;; typedef enum {
-;;         GIT_REPOSITORY_INIT_SHARED_UMASK = 0,
-;;         GIT_REPOSITORY_INIT_SHARED_GROUP = 0002775,
-;;         GIT_REPOSITORY_INIT_SHARED_ALL = 0002777,
+;;   GIT_REPOSITORY_INIT_SHARED_UMASK = 0,
+;;   GIT_REPOSITORY_INIT_SHARED_GROUP = 0002775,
+;;   GIT_REPOSITORY_INIT_SHARED_ALL = 0002777,
 ;; } git_repository_init_mode_t;
+(if echo-decls (display "git_repository_init_mode_t\n"))
 (define-fh-enum git_repository_init_mode_t
   '((GIT_REPOSITORY_INIT_SHARED_UMASK . 0)
     (GIT_REPOSITORY_INIT_SHARED_GROUP . 1533)
@@ -1106,15 +1108,16 @@
   )
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         uint32_t flags;
-;;         uint32_t mode;
-;;         const char *workdir_path;
-;;         const char *description;
-;;         const char *template_path;
-;;         const char *initial_head;
-;;         const char *origin_url;
+;;   unsigned int version;
+;;   uint32_t flags;
+;;   uint32_t mode;
+;;   const char *workdir_path;
+;;   const char *description;
+;;   const char *template_path;
+;;   const char *initial_head;
+;;   const char *origin_url;
 ;; } git_repository_init_options;
+(if echo-decls (display "git_repository_init_options\n"))
 (define git_repository_init_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -1129,7 +1132,8 @@
 (define-fh-compound-type/p git_repository_init_options git_repository_init_options-desc)
 
 ;; extern int git_repository_init_init_options(git_repository_init_options *
-;;           opts, unsigned int version);
+;;     opts, unsigned int version);
+(if echo-decls (display "git_repository_init_init_options\n"))
 (define git_repository_init_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1144,7 +1148,8 @@
 (export git_repository_init_init_options)
 
 ;; extern int git_repository_init_ext(git_repository **out, const char *
-;;           repo_path, git_repository_init_options *opts);
+;;     repo_path, git_repository_init_options *opts);
+(if echo-decls (display "git_repository_init_ext\n"))
 (define git_repository_init_ext
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1160,6 +1165,7 @@
 (export git_repository_init_ext)
 
 ;; extern int git_repository_head(git_reference **out, git_repository *repo);
+(if echo-decls (display "git_repository_head\n"))
 (define git_repository_head
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1174,7 +1180,8 @@
 (export git_repository_head)
 
 ;; extern int git_repository_head_for_worktree(git_reference **out, 
-;;           git_repository *repo, const char *name);
+;;     git_repository *repo, const char *name);
+(if echo-decls (display "git_repository_head_for_worktree\n"))
 (define git_repository_head_for_worktree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1190,6 +1197,7 @@
 (export git_repository_head_for_worktree)
 
 ;; extern int git_repository_head_detached(git_repository *repo);
+(if echo-decls (display "git_repository_head_detached\n"))
 (define git_repository_head_detached
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1203,7 +1211,8 @@
 (export git_repository_head_detached)
 
 ;; extern int git_repository_head_detached_for_worktree(git_repository *repo, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_repository_head_detached_for_worktree\n"))
 (define git_repository_head_detached_for_worktree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1218,6 +1227,7 @@
 (export git_repository_head_detached_for_worktree)
 
 ;; extern int git_repository_head_unborn(git_repository *repo);
+(if echo-decls (display "git_repository_head_unborn\n"))
 (define git_repository_head_unborn
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1231,6 +1241,7 @@
 (export git_repository_head_unborn)
 
 ;; extern int git_repository_is_empty(git_repository *repo);
+(if echo-decls (display "git_repository_is_empty\n"))
 (define git_repository_is_empty
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1244,21 +1255,22 @@
 (export git_repository_is_empty)
 
 ;; typedef enum {
-;;         GIT_REPOSITORY_ITEM_GITDIR,
-;;         GIT_REPOSITORY_ITEM_WORKDIR,
-;;         GIT_REPOSITORY_ITEM_COMMONDIR,
-;;         GIT_REPOSITORY_ITEM_INDEX,
-;;         GIT_REPOSITORY_ITEM_OBJECTS,
-;;         GIT_REPOSITORY_ITEM_REFS,
-;;         GIT_REPOSITORY_ITEM_PACKED_REFS,
-;;         GIT_REPOSITORY_ITEM_REMOTES,
-;;         GIT_REPOSITORY_ITEM_CONFIG,
-;;         GIT_REPOSITORY_ITEM_INFO,
-;;         GIT_REPOSITORY_ITEM_HOOKS,
-;;         GIT_REPOSITORY_ITEM_LOGS,
-;;         GIT_REPOSITORY_ITEM_MODULES,
-;;         GIT_REPOSITORY_ITEM_WORKTREES,
+;;   GIT_REPOSITORY_ITEM_GITDIR,
+;;   GIT_REPOSITORY_ITEM_WORKDIR,
+;;   GIT_REPOSITORY_ITEM_COMMONDIR,
+;;   GIT_REPOSITORY_ITEM_INDEX,
+;;   GIT_REPOSITORY_ITEM_OBJECTS,
+;;   GIT_REPOSITORY_ITEM_REFS,
+;;   GIT_REPOSITORY_ITEM_PACKED_REFS,
+;;   GIT_REPOSITORY_ITEM_REMOTES,
+;;   GIT_REPOSITORY_ITEM_CONFIG,
+;;   GIT_REPOSITORY_ITEM_INFO,
+;;   GIT_REPOSITORY_ITEM_HOOKS,
+;;   GIT_REPOSITORY_ITEM_LOGS,
+;;   GIT_REPOSITORY_ITEM_MODULES,
+;;   GIT_REPOSITORY_ITEM_WORKTREES,
 ;; } git_repository_item_t;
+(if echo-decls (display "git_repository_item_t\n"))
 (define-fh-enum git_repository_item_t
   '((GIT_REPOSITORY_ITEM_GITDIR . 0)
     (GIT_REPOSITORY_ITEM_WORKDIR . 1)
@@ -1277,7 +1289,8 @@
   )
 
 ;; extern int git_repository_item_path(git_buf *out, git_repository *repo, 
-;;           git_repository_item_t item);
+;;     git_repository_item_t item);
+(if echo-decls (display "git_repository_item_path\n"))
 (define git_repository_item_path
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1288,11 +1301,12 @@
     (lambda (out repo item)
       (let ((~out (unwrap-git_buf* out))
             (~repo (unwrap-git_repository* repo))
-            (~item (unwrap-git_repository_item_t item)))
+            (~item (unwrap~fixed item)))
         (~f ~out ~repo ~item)))))
 (export git_repository_item_path)
 
 ;; extern const char *git_repository_path(git_repository *repo);
+(if echo-decls (display "git_repository_path\n"))
 (define git_repository_path
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1306,6 +1320,7 @@
 (export git_repository_path)
 
 ;; extern const char *git_repository_workdir(git_repository *repo);
+(if echo-decls (display "git_repository_workdir\n"))
 (define git_repository_workdir
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1319,6 +1334,7 @@
 (export git_repository_workdir)
 
 ;; extern const char *git_repository_commondir(git_repository *repo);
+(if echo-decls (display "git_repository_commondir\n"))
 (define git_repository_commondir
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1332,7 +1348,8 @@
 (export git_repository_commondir)
 
 ;; extern int git_repository_set_workdir(git_repository *repo, const char *
-;;           workdir, int update_gitlink);
+;;     workdir, int update_gitlink);
+(if echo-decls (display "git_repository_set_workdir\n"))
 (define git_repository_set_workdir
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1348,6 +1365,7 @@
 (export git_repository_set_workdir)
 
 ;; extern int git_repository_is_bare(git_repository *repo);
+(if echo-decls (display "git_repository_is_bare\n"))
 (define git_repository_is_bare
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1361,6 +1379,7 @@
 (export git_repository_is_bare)
 
 ;; extern int git_repository_is_worktree(git_repository *repo);
+(if echo-decls (display "git_repository_is_worktree\n"))
 (define git_repository_is_worktree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1374,6 +1393,7 @@
 (export git_repository_is_worktree)
 
 ;; extern int git_repository_config(git_config **out, git_repository *repo);
+(if echo-decls (display "git_repository_config\n"))
 (define git_repository_config
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1388,7 +1408,8 @@
 (export git_repository_config)
 
 ;; extern int git_repository_config_snapshot(git_config **out, git_repository *
-;;           repo);
+;;     repo);
+(if echo-decls (display "git_repository_config_snapshot\n"))
 (define git_repository_config_snapshot
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1403,6 +1424,7 @@
 (export git_repository_config_snapshot)
 
 ;; extern int git_repository_odb(git_odb **out, git_repository *repo);
+(if echo-decls (display "git_repository_odb\n"))
 (define git_repository_odb
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1417,6 +1439,7 @@
 (export git_repository_odb)
 
 ;; extern int git_repository_refdb(git_refdb **out, git_repository *repo);
+(if echo-decls (display "git_repository_refdb\n"))
 (define git_repository_refdb
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1431,6 +1454,7 @@
 (export git_repository_refdb)
 
 ;; extern int git_repository_index(git_index **out, git_repository *repo);
+(if echo-decls (display "git_repository_index\n"))
 (define git_repository_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1445,6 +1469,7 @@
 (export git_repository_index)
 
 ;; extern int git_repository_message(git_buf *out, git_repository *repo);
+(if echo-decls (display "git_repository_message\n"))
 (define git_repository_message
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1459,6 +1484,7 @@
 (export git_repository_message)
 
 ;; extern int git_repository_message_remove(git_repository *repo);
+(if echo-decls (display "git_repository_message_remove\n"))
 (define git_repository_message_remove
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1472,6 +1498,7 @@
 (export git_repository_message_remove)
 
 ;; extern int git_repository_state_cleanup(git_repository *repo);
+(if echo-decls (display "git_repository_state_cleanup\n"))
 (define git_repository_state_cleanup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1485,13 +1512,15 @@
 (export git_repository_state_cleanup)
 
 ;; typedef int (*git_repository_fetchhead_foreach_cb)(const char *ref_name, 
-;;           const char *remote_url, const git_oid *oid, unsigned int is_merge, void 
-;;           *payload);
+;;     const char *remote_url, const git_oid *oid, unsigned int is_merge, void 
+;;     *payload);
+(if echo-decls (display "git_repository_fetchhead_foreach_cb\n"))
 (define-fh-function/p git_repository_fetchhead_foreach_cb
   ffi:int (list (quote *) (quote *) (quote *) ffi:unsigned-int (quote *)))
 
 ;; extern int git_repository_fetchhead_foreach(git_repository *repo, 
-;;           git_repository_fetchhead_foreach_cb callback, void *payload);
+;;     git_repository_fetchhead_foreach_cb callback, void *payload);
+(if echo-decls (display "git_repository_fetchhead_foreach\n"))
 (define git_repository_fetchhead_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1502,19 +1531,23 @@
     (lambda (repo callback payload)
       (let ((~repo (unwrap-git_repository* repo))
             (~callback
-              (unwrap-git_repository_fetchhead_foreach_cb
-                callback))
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* '* '* ffi:unsigned-int '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~callback ~payload)))))
 (export git_repository_fetchhead_foreach)
 
 ;; typedef int (*git_repository_mergehead_foreach_cb)(const git_oid *oid, void 
-;;           *payload);
+;;     *payload);
+(if echo-decls (display "git_repository_mergehead_foreach_cb\n"))
 (define-fh-function/p git_repository_mergehead_foreach_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; extern int git_repository_mergehead_foreach(git_repository *repo, 
-;;           git_repository_mergehead_foreach_cb callback, void *payload);
+;;     git_repository_mergehead_foreach_cb callback, void *payload);
+(if echo-decls (display "git_repository_mergehead_foreach\n"))
 (define git_repository_mergehead_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1525,14 +1558,15 @@
     (lambda (repo callback payload)
       (let ((~repo (unwrap-git_repository* repo))
             (~callback
-              (unwrap-git_repository_mergehead_foreach_cb
-                callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~callback ~payload)))))
 (export git_repository_mergehead_foreach)
 
 ;; extern int git_repository_hashfile(git_oid *out, git_repository *repo, const
-;;            char *path, git_otype type, const char *as_path);
+;;      char *path, git_otype type, const char *as_path);
+(if echo-decls (display "git_repository_hashfile\n"))
 (define git_repository_hashfile
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1544,13 +1578,14 @@
       (let ((~out (unwrap-git_oid* out))
             (~repo (unwrap-git_repository* repo))
             (~path (unwrap~pointer path))
-            (~type (unwrap-git_otype type))
+            (~type (unwrap~fixed type))
             (~as_path (unwrap~pointer as_path)))
         (~f ~out ~repo ~path ~type ~as_path)))))
 (export git_repository_hashfile)
 
 ;; extern int git_repository_set_head(git_repository *repo, const char *refname
-;;           );
+;;     );
+(if echo-decls (display "git_repository_set_head\n"))
 (define git_repository_set_head
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1565,7 +1600,8 @@
 (export git_repository_set_head)
 
 ;; extern int git_repository_set_head_detached(git_repository *repo, const 
-;;           git_oid *commitish);
+;;     git_oid *commitish);
+(if echo-decls (display "git_repository_set_head_detached\n"))
 (define git_repository_set_head_detached
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1580,7 +1616,8 @@
 (export git_repository_set_head_detached)
 
 ;; extern int git_repository_set_head_detached_from_annotated(git_repository *
-;;           repo, const git_annotated_commit *commitish);
+;;     repo, const git_annotated_commit *commitish);
+(if echo-decls (display "git_repository_set_head_detached_from_annotated\n"))
 (define git_repository_set_head_detached_from_annotated
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1596,6 +1633,7 @@
 (export git_repository_set_head_detached_from_annotated)
 
 ;; extern int git_repository_detach_head(git_repository *repo);
+(if echo-decls (display "git_repository_detach_head\n"))
 (define git_repository_detach_head
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1609,19 +1647,20 @@
 (export git_repository_detach_head)
 
 ;; typedef enum {
-;;         GIT_REPOSITORY_STATE_NONE,
-;;         GIT_REPOSITORY_STATE_MERGE,
-;;         GIT_REPOSITORY_STATE_REVERT,
-;;         GIT_REPOSITORY_STATE_REVERT_SEQUENCE,
-;;         GIT_REPOSITORY_STATE_CHERRYPICK,
-;;         GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE,
-;;         GIT_REPOSITORY_STATE_BISECT,
-;;         GIT_REPOSITORY_STATE_REBASE,
-;;         GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
-;;         GIT_REPOSITORY_STATE_REBASE_MERGE,
-;;         GIT_REPOSITORY_STATE_APPLY_MAILBOX,
-;;         GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
+;;   GIT_REPOSITORY_STATE_NONE,
+;;   GIT_REPOSITORY_STATE_MERGE,
+;;   GIT_REPOSITORY_STATE_REVERT,
+;;   GIT_REPOSITORY_STATE_REVERT_SEQUENCE,
+;;   GIT_REPOSITORY_STATE_CHERRYPICK,
+;;   GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE,
+;;   GIT_REPOSITORY_STATE_BISECT,
+;;   GIT_REPOSITORY_STATE_REBASE,
+;;   GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
+;;   GIT_REPOSITORY_STATE_REBASE_MERGE,
+;;   GIT_REPOSITORY_STATE_APPLY_MAILBOX,
+;;   GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
 ;; } git_repository_state_t;
+(if echo-decls (display "git_repository_state_t\n"))
 (define-fh-enum git_repository_state_t
   '((GIT_REPOSITORY_STATE_NONE . 0)
     (GIT_REPOSITORY_STATE_MERGE . 1)
@@ -1640,6 +1679,7 @@
   )
 
 ;; extern int git_repository_state(git_repository *repo);
+(if echo-decls (display "git_repository_state\n"))
 (define git_repository_state
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1653,7 +1693,8 @@
 (export git_repository_state)
 
 ;; extern int git_repository_set_namespace(git_repository *repo, const char *
-;;           nmspace);
+;;     nmspace);
+(if echo-decls (display "git_repository_set_namespace\n"))
 (define git_repository_set_namespace
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1668,6 +1709,7 @@
 (export git_repository_set_namespace)
 
 ;; extern const char *git_repository_get_namespace(git_repository *repo);
+(if echo-decls (display "git_repository_get_namespace\n"))
 (define git_repository_get_namespace
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1681,6 +1723,7 @@
 (export git_repository_get_namespace)
 
 ;; extern int git_repository_is_shallow(git_repository *repo);
+(if echo-decls (display "git_repository_is_shallow\n"))
 (define git_repository_is_shallow
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1694,7 +1737,8 @@
 (export git_repository_is_shallow)
 
 ;; extern int git_repository_ident(const char **name, const char **email, const
-;;            git_repository *repo);
+;;      git_repository *repo);
+(if echo-decls (display "git_repository_ident\n"))
 (define git_repository_ident
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1710,7 +1754,8 @@
 (export git_repository_ident)
 
 ;; extern int git_repository_set_ident(git_repository *repo, const char *name, 
-;;           const char *email);
+;;     const char *email);
+(if echo-decls (display "git_repository_set_ident\n"))
 (define git_repository_set_ident
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1726,7 +1771,8 @@
 (export git_repository_set_ident)
 
 ;; extern int git_annotated_commit_from_ref(git_annotated_commit **out, 
-;;           git_repository *repo, const git_reference *ref);
+;;     git_repository *repo, const git_reference *ref);
+(if echo-decls (display "git_annotated_commit_from_ref\n"))
 (define git_annotated_commit_from_ref
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1742,8 +1788,9 @@
 (export git_annotated_commit_from_ref)
 
 ;; extern int git_annotated_commit_from_fetchhead(git_annotated_commit **out, 
-;;           git_repository *repo, const char *branch_name, const char *remote_url, 
-;;           const git_oid *id);
+;;     git_repository *repo, const char *branch_name, const char *remote_url, 
+;;     const git_oid *id);
+(if echo-decls (display "git_annotated_commit_from_fetchhead\n"))
 (define git_annotated_commit_from_fetchhead
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1761,7 +1808,8 @@
 (export git_annotated_commit_from_fetchhead)
 
 ;; extern int git_annotated_commit_lookup(git_annotated_commit **out, 
-;;           git_repository *repo, const git_oid *id);
+;;     git_repository *repo, const git_oid *id);
+(if echo-decls (display "git_annotated_commit_lookup\n"))
 (define git_annotated_commit_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1777,7 +1825,8 @@
 (export git_annotated_commit_lookup)
 
 ;; extern int git_annotated_commit_from_revspec(git_annotated_commit **out, 
-;;           git_repository *repo, const char *revspec);
+;;     git_repository *repo, const char *revspec);
+(if echo-decls (display "git_annotated_commit_from_revspec\n"))
 (define git_annotated_commit_from_revspec
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1793,7 +1842,8 @@
 (export git_annotated_commit_from_revspec)
 
 ;; extern const git_oid *git_annotated_commit_id(const git_annotated_commit *
-;;           commit);
+;;     commit);
+(if echo-decls (display "git_annotated_commit_id\n"))
 (define git_annotated_commit_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1807,6 +1857,7 @@
 (export git_annotated_commit_id)
 
 ;; extern void git_annotated_commit_free(git_annotated_commit *commit);
+(if echo-decls (display "git_annotated_commit_free\n"))
 (define git_annotated_commit_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1820,11 +1871,12 @@
 (export git_annotated_commit_free)
 
 ;; typedef enum {
-;;         GIT_ATTR_UNSPECIFIED_T = 0,
-;;         GIT_ATTR_TRUE_T,
-;;         GIT_ATTR_FALSE_T,
-;;         GIT_ATTR_VALUE_T,
+;;   GIT_ATTR_UNSPECIFIED_T = 0,
+;;   GIT_ATTR_TRUE_T,
+;;   GIT_ATTR_FALSE_T,
+;;   GIT_ATTR_VALUE_T,
 ;; } git_attr_t;
+(if echo-decls (display "git_attr_t\n"))
 (define-fh-enum git_attr_t
   '((GIT_ATTR_UNSPECIFIED_T . 0)
     (GIT_ATTR_TRUE_T . 1)
@@ -1833,18 +1885,19 @@
   )
 
 ;; extern git_attr_t git_attr_value(const char *attr);
+(if echo-decls (display "git_attr_value\n"))
 (define git_attr_value
   (let ((~f (ffi:pointer->procedure
               ffi:int
               (dynamic-func "git_attr_value" (dynamic-link))
               (list '*))))
     (lambda (attr)
-      (let ((~attr (unwrap~pointer attr)))
-        (wrap-git_attr_t (~f ~attr))))))
+      (let ((~attr (unwrap~pointer attr))) (~f ~attr)))))
 (export git_attr_value)
 
 ;; extern int git_attr_get(const char **value_out, git_repository *repo, 
-;;           uint32_t flags, const char *path, const char *name);
+;;     uint32_t flags, const char *path, const char *name);
+(if echo-decls (display "git_attr_get\n"))
 (define git_attr_get
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1860,7 +1913,8 @@
 (export git_attr_get)
 
 ;; extern int git_attr_get_many(const char **values_out, git_repository *repo, 
-;;           uint32_t flags, const char *path, size_t num_attr, const char **names);
+;;     uint32_t flags, const char *path, size_t num_attr, const char **names);
+(if echo-decls (display "git_attr_get_many\n"))
 (define git_attr_get_many
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1882,12 +1936,14 @@
 (export git_attr_get_many)
 
 ;; typedef int (*git_attr_foreach_cb)(const char *name, const char *value, void
-;;            *payload);
+;;      *payload);
+(if echo-decls (display "git_attr_foreach_cb\n"))
 (define-fh-function/p git_attr_foreach_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; extern int git_attr_foreach(git_repository *repo, uint32_t flags, const char
-;;            *path, git_attr_foreach_cb callback, void *payload);
+;;      *path, git_attr_foreach_cb callback, void *payload);
+(if echo-decls (display "git_attr_foreach\n"))
 (define git_attr_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1897,12 +1953,15 @@
       (let ((~repo (unwrap-git_repository* repo))
             (~flags (unwrap~fixed flags))
             (~path (unwrap~pointer path))
-            (~callback (unwrap-git_attr_foreach_cb callback))
+            (~callback
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~flags ~path ~callback ~payload)))))
 (export git_attr_foreach)
 
 ;; extern void git_attr_cache_flush(git_repository *repo);
+(if echo-decls (display "git_attr_cache_flush\n"))
 (define git_attr_cache_flush
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -1916,7 +1975,8 @@
 (export git_attr_cache_flush)
 
 ;; extern int git_attr_add_macro(git_repository *repo, const char *name, const 
-;;           char *values);
+;;     char *values);
+(if echo-decls (display "git_attr_add_macro\n"))
 (define git_attr_add_macro
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1932,7 +1992,8 @@
 (export git_attr_add_macro)
 
 ;; extern int git_object_lookup(git_object **object, git_repository *repo, 
-;;           const git_oid *id, git_otype type);
+;;     const git_oid *id, git_otype type);
+(if echo-decls (display "git_object_lookup\n"))
 (define git_object_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1942,12 +2003,13 @@
       (let ((~object (unwrap~pointer object))
             (~repo (unwrap-git_repository* repo))
             (~id (unwrap-git_oid* id))
-            (~type (unwrap-git_otype type)))
+            (~type (unwrap~fixed type)))
         (~f ~object ~repo ~id ~type)))))
 (export git_object_lookup)
 
 ;; extern int git_object_lookup_prefix(git_object **object_out, git_repository 
-;;           *repo, const git_oid *id, size_t len, git_otype type);
+;;     *repo, const git_oid *id, size_t len, git_otype type);
+(if echo-decls (display "git_object_lookup_prefix\n"))
 (define git_object_lookup_prefix
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1960,12 +2022,13 @@
             (~repo (unwrap-git_repository* repo))
             (~id (unwrap-git_oid* id))
             (~len (unwrap~fixed len))
-            (~type (unwrap-git_otype type)))
+            (~type (unwrap~fixed type)))
         (~f ~object_out ~repo ~id ~len ~type)))))
 (export git_object_lookup_prefix)
 
 ;; extern int git_object_lookup_bypath(git_object **out, const git_object *
-;;           treeish, const char *path, git_otype type);
+;;     treeish, const char *path, git_otype type);
+(if echo-decls (display "git_object_lookup_bypath\n"))
 (define git_object_lookup_bypath
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -1977,11 +2040,12 @@
       (let ((~out (unwrap~pointer out))
             (~treeish (unwrap-git_object* treeish))
             (~path (unwrap~pointer path))
-            (~type (unwrap-git_otype type)))
+            (~type (unwrap~fixed type)))
         (~f ~out ~treeish ~path ~type)))))
 (export git_object_lookup_bypath)
 
 ;; extern const git_oid *git_object_id(const git_object *obj);
+(if echo-decls (display "git_object_id\n"))
 (define git_object_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -1993,6 +2057,7 @@
 (export git_object_id)
 
 ;; extern int git_object_short_id(git_buf *out, const git_object *obj);
+(if echo-decls (display "git_object_short_id\n"))
 (define git_object_short_id
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2007,17 +2072,18 @@
 (export git_object_short_id)
 
 ;; extern git_otype git_object_type(const git_object *obj);
+(if echo-decls (display "git_object_type\n"))
 (define git_object_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
               (dynamic-func "git_object_type" (dynamic-link))
               (list '*))))
     (lambda (obj)
-      (let ((~obj (unwrap-git_object* obj)))
-        (wrap-git_otype (~f ~obj))))))
+      (let ((~obj (unwrap-git_object* obj))) (~f ~obj)))))
 (export git_object_type)
 
 ;; extern git_repository *git_object_owner(const git_object *obj);
+(if echo-decls (display "git_object_owner\n"))
 (define git_object_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2029,6 +2095,7 @@
 (export git_object_owner)
 
 ;; extern void git_object_free(git_object *object);
+(if echo-decls (display "git_object_free\n"))
 (define git_object_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2040,6 +2107,7 @@
 (export git_object_free)
 
 ;; extern const char *git_object_type2string(git_otype type);
+(if echo-decls (display "git_object_type2string\n"))
 (define git_object_type2string
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2048,11 +2116,11 @@
                 (dynamic-link))
               (list ffi:int))))
     (lambda (type)
-      (let ((~type (unwrap-git_otype type)))
-        (~f ~type)))))
+      (let ((~type (unwrap~fixed type))) (~f ~type)))))
 (export git_object_type2string)
 
 ;; extern git_otype git_object_string2type(const char *str);
+(if echo-decls (display "git_object_string2type\n"))
 (define git_object_string2type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2061,11 +2129,11 @@
                 (dynamic-link))
               (list '*))))
     (lambda (str)
-      (let ((~str (unwrap~pointer str)))
-        (wrap-git_otype (~f ~str))))))
+      (let ((~str (unwrap~pointer str))) (~f ~str)))))
 (export git_object_string2type)
 
 ;; extern int git_object_typeisloose(git_otype type);
+(if echo-decls (display "git_object_typeisloose\n"))
 (define git_object_typeisloose
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2074,23 +2142,23 @@
                 (dynamic-link))
               (list ffi:int))))
     (lambda (type)
-      (let ((~type (unwrap-git_otype type)))
-        (~f ~type)))))
+      (let ((~type (unwrap~fixed type))) (~f ~type)))))
 (export git_object_typeisloose)
 
 ;; extern size_t git_object__size(git_otype type);
+(if echo-decls (display "git_object__size\n"))
 (define git_object__size
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
               (dynamic-func "git_object__size" (dynamic-link))
               (list ffi:int))))
     (lambda (type)
-      (let ((~type (unwrap-git_otype type)))
-        (~f ~type)))))
+      (let ((~type (unwrap~fixed type))) (~f ~type)))))
 (export git_object__size)
 
 ;; extern int git_object_peel(git_object **peeled, const git_object *object, 
-;;           git_otype target_type);
+;;     git_otype target_type);
+(if echo-decls (display "git_object_peel\n"))
 (define git_object_peel
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2099,11 +2167,12 @@
     (lambda (peeled object target_type)
       (let ((~peeled (unwrap~pointer peeled))
             (~object (unwrap-git_object* object))
-            (~target_type (unwrap-git_otype target_type)))
+            (~target_type (unwrap~fixed target_type)))
         (~f ~peeled ~object ~target_type)))))
 (export git_object_peel)
 
 ;; extern int git_object_dup(git_object **dest, git_object *source);
+(if echo-decls (display "git_object_dup\n"))
 (define git_object_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2116,7 +2185,8 @@
 (export git_object_dup)
 
 ;; extern int git_blob_lookup(git_blob **blob, git_repository *repo, const 
-;;           git_oid *id);
+;;     git_oid *id);
+(if echo-decls (display "git_blob_lookup\n"))
 (define git_blob_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2130,7 +2200,8 @@
 (export git_blob_lookup)
 
 ;; extern int git_blob_lookup_prefix(git_blob **blob, git_repository *repo, 
-;;           const git_oid *id, size_t len);
+;;     const git_oid *id, size_t len);
+(if echo-decls (display "git_blob_lookup_prefix\n"))
 (define git_blob_lookup_prefix
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2147,6 +2218,7 @@
 (export git_blob_lookup_prefix)
 
 ;; extern void git_blob_free(git_blob *blob);
+(if echo-decls (display "git_blob_free\n"))
 (define git_blob_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2158,6 +2230,7 @@
 (export git_blob_free)
 
 ;; extern const git_oid *git_blob_id(const git_blob *blob);
+(if echo-decls (display "git_blob_id\n"))
 (define git_blob_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2169,6 +2242,7 @@
 (export git_blob_id)
 
 ;; extern git_repository *git_blob_owner(const git_blob *blob);
+(if echo-decls (display "git_blob_owner\n"))
 (define git_blob_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2180,6 +2254,7 @@
 (export git_blob_owner)
 
 ;; extern const void *git_blob_rawcontent(const git_blob *blob);
+(if echo-decls (display "git_blob_rawcontent\n"))
 (define git_blob_rawcontent
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2193,6 +2268,7 @@
 (export git_blob_rawcontent)
 
 ;; extern git_off_t git_blob_rawsize(const git_blob *blob);
+(if echo-decls (display "git_blob_rawsize\n"))
 (define git_blob_rawsize
   (let ((~f (ffi:pointer->procedure
               ffi:int64
@@ -2200,11 +2276,12 @@
               (list '*))))
     (lambda (blob)
       (let ((~blob (unwrap-git_blob* blob)))
-        (wrap-git_off_t (~f ~blob))))))
+        (~f ~blob)))))
 (export git_blob_rawsize)
 
 ;; extern int git_blob_filtered_content(git_buf *out, git_blob *blob, const 
-;;           char *as_path, int check_for_binary_data);
+;;     char *as_path, int check_for_binary_data);
+(if echo-decls (display "git_blob_filtered_content\n"))
 (define git_blob_filtered_content
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2222,7 +2299,8 @@
 (export git_blob_filtered_content)
 
 ;; extern int git_blob_create_fromworkdir(git_oid *id, git_repository *repo, 
-;;           const char *relative_path);
+;;     const char *relative_path);
+(if echo-decls (display "git_blob_create_fromworkdir\n"))
 (define git_blob_create_fromworkdir
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2238,7 +2316,8 @@
 (export git_blob_create_fromworkdir)
 
 ;; extern int git_blob_create_fromdisk(git_oid *id, git_repository *repo, const
-;;            char *path);
+;;      char *path);
+(if echo-decls (display "git_blob_create_fromdisk\n"))
 (define git_blob_create_fromdisk
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2254,7 +2333,8 @@
 (export git_blob_create_fromdisk)
 
 ;; extern int git_blob_create_fromstream(git_writestream **out, git_repository 
-;;           *repo, const char *hintpath);
+;;     *repo, const char *hintpath);
+(if echo-decls (display "git_blob_create_fromstream\n"))
 (define git_blob_create_fromstream
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2270,7 +2350,8 @@
 (export git_blob_create_fromstream)
 
 ;; extern int git_blob_create_fromstream_commit(git_oid *out, git_writestream *
-;;           stream);
+;;     stream);
+(if echo-decls (display "git_blob_create_fromstream_commit\n"))
 (define git_blob_create_fromstream_commit
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2285,7 +2366,8 @@
 (export git_blob_create_fromstream_commit)
 
 ;; extern int git_blob_create_frombuffer(git_oid *id, git_repository *repo, 
-;;           const void *buffer, size_t len);
+;;     const void *buffer, size_t len);
+(if echo-decls (display "git_blob_create_frombuffer\n"))
 (define git_blob_create_frombuffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2302,6 +2384,7 @@
 (export git_blob_create_frombuffer)
 
 ;; extern int git_blob_is_binary(const git_blob *blob);
+(if echo-decls (display "git_blob_is_binary\n"))
 (define git_blob_is_binary
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2315,6 +2398,7 @@
 (export git_blob_is_binary)
 
 ;; extern int git_blob_dup(git_blob **out, git_blob *source);
+(if echo-decls (display "git_blob_dup\n"))
 (define git_blob_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2327,13 +2411,14 @@
 (export git_blob_dup)
 
 ;; typedef enum {
-;;         GIT_BLAME_NORMAL = 0,
-;;         GIT_BLAME_TRACK_COPIES_SAME_FILE = 1<<0,
-;;         GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES = 1<<1,
-;;         GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES = 1<<2,
-;;         GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = 1<<3,
-;;         GIT_BLAME_FIRST_PARENT = 1<<4,
+;;   GIT_BLAME_NORMAL = 0,
+;;   GIT_BLAME_TRACK_COPIES_SAME_FILE = 1<<0,
+;;   GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES = 1<<1,
+;;   GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES = 1<<2,
+;;   GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = 1<<3,
+;;   GIT_BLAME_FIRST_PARENT = 1<<4,
 ;; } git_blame_flag_t;
+(if echo-decls (display "git_blame_flag_t\n"))
 (define-fh-enum git_blame_flag_t
   '((GIT_BLAME_NORMAL . 0)
     (GIT_BLAME_TRACK_COPIES_SAME_FILE . 1)
@@ -2344,14 +2429,15 @@
   )
 
 ;; typedef struct git_blame_options {
-;;         unsigned int version;
-;;         uint32_t flags;
-;;         uint16_t min_match_characters;
-;;         git_oid newest_commit;
-;;         git_oid oldest_commit;
-;;         size_t min_line;
-;;         size_t max_line;
+;;   unsigned int version;
+;;   uint32_t flags;
+;;   uint16_t min_match_characters;
+;;   git_oid newest_commit;
+;;   git_oid oldest_commit;
+;;   size_t min_line;
+;;   size_t max_line;
 ;; } git_blame_options;
+(if echo-decls (display "git_blame_options\n"))
 (define git_blame_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -2366,7 +2452,8 @@
 (define struct-git_blame_options git_blame_options)
 
 ;; extern int git_blame_init_options(git_blame_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_blame_init_options\n"))
 (define git_blame_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2381,16 +2468,17 @@
 (export git_blame_init_options)
 
 ;; typedef struct git_blame_hunk {
-;;         size_t lines_in_hunk;
-;;         git_oid final_commit_id;
-;;         size_t final_start_line_number;
-;;         git_signature *final_signature;
-;;         git_oid orig_commit_id;
-;;         const char *orig_path;
-;;         size_t orig_start_line_number;
-;;         git_signature *orig_signature;
-;;         char boundary;
+;;   size_t lines_in_hunk;
+;;   git_oid final_commit_id;
+;;   size_t final_start_line_number;
+;;   git_signature *final_signature;
+;;   git_oid orig_commit_id;
+;;   const char *orig_path;
+;;   size_t orig_start_line_number;
+;;   git_signature *orig_signature;
+;;   char boundary;
 ;; } git_blame_hunk;
+(if echo-decls (display "git_blame_hunk\n"))
 (define git_blame_hunk-desc
   (bs:struct
     (list `(lines_in_hunk ,size_t)
@@ -2409,9 +2497,13 @@
 (define struct-git_blame_hunk git_blame_hunk)
 
 ;; typedef struct git_blame git_blame;
-(define-fh-pointer-type git_blame*)
+(if echo-decls (display "git_blame\n"))
+(define git_blame-desc void)
+(define git_blame*-desc (bs:pointer git_blame-desc))
+(define-fh-pointer-type git_blame* git_blame*-desc)
 
 ;; extern uint32_t git_blame_get_hunk_count(git_blame *blame);
+(if echo-decls (display "git_blame_get_hunk_count\n"))
 (define git_blame_get_hunk_count
   (let ((~f (ffi:pointer->procedure
               ffi:uint32
@@ -2425,7 +2517,8 @@
 (export git_blame_get_hunk_count)
 
 ;; extern const git_blame_hunk *git_blame_get_hunk_byindex(git_blame *blame, 
-;;           uint32_t index);
+;;     uint32_t index);
+(if echo-decls (display "git_blame_get_hunk_byindex\n"))
 (define git_blame_get_hunk_byindex
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2440,7 +2533,8 @@
 (export git_blame_get_hunk_byindex)
 
 ;; extern const git_blame_hunk *git_blame_get_hunk_byline(git_blame *blame, 
-;;           size_t lineno);
+;;     size_t lineno);
+(if echo-decls (display "git_blame_get_hunk_byline\n"))
 (define git_blame_get_hunk_byline
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2455,7 +2549,8 @@
 (export git_blame_get_hunk_byline)
 
 ;; extern int git_blame_file(git_blame **out, git_repository *repo, const char 
-;;           *path, git_blame_options *options);
+;;     *path, git_blame_options *options);
+(if echo-decls (display "git_blame_file\n"))
 (define git_blame_file
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2470,7 +2565,8 @@
 (export git_blame_file)
 
 ;; extern int git_blame_buffer(git_blame **out, git_blame *reference, const 
-;;           char *buffer, size_t buffer_len);
+;;     char *buffer, size_t buffer_len);
+(if echo-decls (display "git_blame_buffer\n"))
 (define git_blame_buffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2485,6 +2581,7 @@
 (export git_blame_buffer)
 
 ;; extern void git_blame_free(git_blame *blame);
+(if echo-decls (display "git_blame_free\n"))
 (define git_blame_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2496,7 +2593,8 @@
 (export git_blame_free)
 
 ;; extern int git_branch_create(git_reference **out, git_repository *repo, 
-;;           const char *branch_name, const git_commit *target, int force);
+;;     const char *branch_name, const git_commit *target, int force);
+(if echo-decls (display "git_branch_create\n"))
 (define git_branch_create
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2512,8 +2610,9 @@
 (export git_branch_create)
 
 ;; extern int git_branch_create_from_annotated(git_reference **ref_out, 
-;;           git_repository *repository, const char *branch_name, const 
-;;           git_annotated_commit *commit, int force);
+;;     git_repository *repository, const char *branch_name, const 
+;;     git_annotated_commit *commit, int force);
+(if echo-decls (display "git_branch_create_from_annotated\n"))
 (define git_branch_create_from_annotated
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2535,6 +2634,7 @@
 (export git_branch_create_from_annotated)
 
 ;; extern int git_branch_delete(git_reference *branch);
+(if echo-decls (display "git_branch_delete\n"))
 (define git_branch_delete
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2546,10 +2646,14 @@
 (export git_branch_delete)
 
 ;; typedef struct git_branch_iterator git_branch_iterator;
-(define-fh-pointer-type git_branch_iterator*)
+(if echo-decls (display "git_branch_iterator\n"))
+(define git_branch_iterator-desc void)
+(define git_branch_iterator*-desc (bs:pointer git_branch_iterator-desc))
+(define-fh-pointer-type git_branch_iterator* git_branch_iterator*-desc)
 
 ;; extern int git_branch_iterator_new(git_branch_iterator **out, git_repository
-;;            *repo, git_branch_t list_flags);
+;;      *repo, git_branch_t list_flags);
+(if echo-decls (display "git_branch_iterator_new\n"))
 (define git_branch_iterator_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2560,12 +2664,13 @@
     (lambda (out repo list_flags)
       (let ((~out (unwrap~pointer out))
             (~repo (unwrap-git_repository* repo))
-            (~list_flags (unwrap-git_branch_t list_flags)))
+            (~list_flags (unwrap~fixed list_flags)))
         (~f ~out ~repo ~list_flags)))))
 (export git_branch_iterator_new)
 
 ;; extern int git_branch_next(git_reference **out, git_branch_t *out_type, 
-;;           git_branch_iterator *iter);
+;;     git_branch_iterator *iter);
+(if echo-decls (display "git_branch_next\n"))
 (define git_branch_next
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2573,12 +2678,13 @@
               (list '* '* '*))))
     (lambda (out out_type iter)
       (let ((~out (unwrap~pointer out))
-            (~out_type (unwrap-git_branch_t* out_type))
+            (~out_type (unwrap~pointer out_type))
             (~iter (unwrap-git_branch_iterator* iter)))
         (~f ~out ~out_type ~iter)))))
 (export git_branch_next)
 
 ;; extern void git_branch_iterator_free(git_branch_iterator *iter);
+(if echo-decls (display "git_branch_iterator_free\n"))
 (define git_branch_iterator_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2592,7 +2698,8 @@
 (export git_branch_iterator_free)
 
 ;; extern int git_branch_move(git_reference **out, git_reference *branch, const
-;;            char *new_branch_name, int force);
+;;      char *new_branch_name, int force);
+(if echo-decls (display "git_branch_move\n"))
 (define git_branch_move
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2608,7 +2715,8 @@
 (export git_branch_move)
 
 ;; extern int git_branch_lookup(git_reference **out, git_repository *repo, 
-;;           const char *branch_name, git_branch_t branch_type);
+;;     const char *branch_name, git_branch_t branch_type);
+(if echo-decls (display "git_branch_lookup\n"))
 (define git_branch_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2618,11 +2726,12 @@
       (let ((~out (unwrap~pointer out))
             (~repo (unwrap-git_repository* repo))
             (~branch_name (unwrap~pointer branch_name))
-            (~branch_type (unwrap-git_branch_t branch_type)))
+            (~branch_type (unwrap~fixed branch_type)))
         (~f ~out ~repo ~branch_name ~branch_type)))))
 (export git_branch_lookup)
 
 ;; extern int git_branch_name(const char **out, const git_reference *ref);
+(if echo-decls (display "git_branch_name\n"))
 (define git_branch_name
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2635,7 +2744,8 @@
 (export git_branch_name)
 
 ;; extern int git_branch_upstream(git_reference **out, const git_reference *
-;;           branch);
+;;     branch);
+(if echo-decls (display "git_branch_upstream\n"))
 (define git_branch_upstream
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2650,7 +2760,8 @@
 (export git_branch_upstream)
 
 ;; extern int git_branch_set_upstream(git_reference *branch, const char *
-;;           upstream_name);
+;;     upstream_name);
+(if echo-decls (display "git_branch_set_upstream\n"))
 (define git_branch_set_upstream
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2665,7 +2776,8 @@
 (export git_branch_set_upstream)
 
 ;; extern int git_branch_upstream_name(git_buf *out, git_repository *repo, 
-;;           const char *refname);
+;;     const char *refname);
+(if echo-decls (display "git_branch_upstream_name\n"))
 (define git_branch_upstream_name
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2681,6 +2793,7 @@
 (export git_branch_upstream_name)
 
 ;; extern int git_branch_is_head(const git_reference *branch);
+(if echo-decls (display "git_branch_is_head\n"))
 (define git_branch_is_head
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2694,6 +2807,7 @@
 (export git_branch_is_head)
 
 ;; extern int git_branch_is_checked_out(const git_reference *branch);
+(if echo-decls (display "git_branch_is_checked_out\n"))
 (define git_branch_is_checked_out
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2707,7 +2821,8 @@
 (export git_branch_is_checked_out)
 
 ;; extern int git_branch_remote_name(git_buf *out, git_repository *repo, const 
-;;           char *canonical_branch_name);
+;;     char *canonical_branch_name);
+(if echo-decls (display "git_branch_remote_name\n"))
 (define git_branch_remote_name
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2724,7 +2839,8 @@
 (export git_branch_remote_name)
 
 ;; extern int git_branch_upstream_remote(git_buf *buf, git_repository *repo, 
-;;           const char *refname);
+;;     const char *refname);
+(if echo-decls (display "git_branch_upstream_remote\n"))
 (define git_branch_upstream_remote
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2740,7 +2856,8 @@
 (export git_branch_upstream_remote)
 
 ;; extern int git_tree_lookup(git_tree **out, git_repository *repo, const 
-;;           git_oid *id);
+;;     git_oid *id);
+(if echo-decls (display "git_tree_lookup\n"))
 (define git_tree_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2754,7 +2871,8 @@
 (export git_tree_lookup)
 
 ;; extern int git_tree_lookup_prefix(git_tree **out, git_repository *repo, 
-;;           const git_oid *id, size_t len);
+;;     const git_oid *id, size_t len);
+(if echo-decls (display "git_tree_lookup_prefix\n"))
 (define git_tree_lookup_prefix
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2771,6 +2889,7 @@
 (export git_tree_lookup_prefix)
 
 ;; extern void git_tree_free(git_tree *tree);
+(if echo-decls (display "git_tree_free\n"))
 (define git_tree_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2782,6 +2901,7 @@
 (export git_tree_free)
 
 ;; extern const git_oid *git_tree_id(const git_tree *tree);
+(if echo-decls (display "git_tree_id\n"))
 (define git_tree_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2793,6 +2913,7 @@
 (export git_tree_id)
 
 ;; extern git_repository *git_tree_owner(const git_tree *tree);
+(if echo-decls (display "git_tree_owner\n"))
 (define git_tree_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2804,6 +2925,7 @@
 (export git_tree_owner)
 
 ;; extern size_t git_tree_entrycount(const git_tree *tree);
+(if echo-decls (display "git_tree_entrycount\n"))
 (define git_tree_entrycount
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -2817,7 +2939,8 @@
 (export git_tree_entrycount)
 
 ;; extern const git_tree_entry *git_tree_entry_byname(const git_tree *tree, 
-;;           const char *filename);
+;;     const char *filename);
+(if echo-decls (display "git_tree_entry_byname\n"))
 (define git_tree_entry_byname
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2832,7 +2955,8 @@
 (export git_tree_entry_byname)
 
 ;; extern const git_tree_entry *git_tree_entry_byindex(const git_tree *tree, 
-;;           size_t idx);
+;;     size_t idx);
+(if echo-decls (display "git_tree_entry_byindex\n"))
 (define git_tree_entry_byindex
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2847,7 +2971,8 @@
 (export git_tree_entry_byindex)
 
 ;; extern const git_tree_entry *git_tree_entry_byid(const git_tree *tree, const
-;;            git_oid *id);
+;;      git_oid *id);
+(if echo-decls (display "git_tree_entry_byid\n"))
 (define git_tree_entry_byid
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2862,7 +2987,8 @@
 (export git_tree_entry_byid)
 
 ;; extern int git_tree_entry_bypath(git_tree_entry **out, const git_tree *root
-;;           , const char *path);
+;;     , const char *path);
+(if echo-decls (display "git_tree_entry_bypath\n"))
 (define git_tree_entry_bypath
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2878,7 +3004,8 @@
 (export git_tree_entry_bypath)
 
 ;; extern int git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *
-;;           source);
+;;     source);
+(if echo-decls (display "git_tree_entry_dup\n"))
 (define git_tree_entry_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2893,6 +3020,7 @@
 (export git_tree_entry_dup)
 
 ;; extern void git_tree_entry_free(git_tree_entry *entry);
+(if echo-decls (display "git_tree_entry_free\n"))
 (define git_tree_entry_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -2906,6 +3034,7 @@
 (export git_tree_entry_free)
 
 ;; extern const char *git_tree_entry_name(const git_tree_entry *entry);
+(if echo-decls (display "git_tree_entry_name\n"))
 (define git_tree_entry_name
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2919,6 +3048,7 @@
 (export git_tree_entry_name)
 
 ;; extern const git_oid *git_tree_entry_id(const git_tree_entry *entry);
+(if echo-decls (display "git_tree_entry_id\n"))
 (define git_tree_entry_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -2930,6 +3060,7 @@
 (export git_tree_entry_id)
 
 ;; extern git_otype git_tree_entry_type(const git_tree_entry *entry);
+(if echo-decls (display "git_tree_entry_type\n"))
 (define git_tree_entry_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2939,10 +3070,11 @@
               (list '*))))
     (lambda (entry)
       (let ((~entry (unwrap-git_tree_entry* entry)))
-        (wrap-git_otype (~f ~entry))))))
+        (~f ~entry)))))
 (export git_tree_entry_type)
 
 ;; extern git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry);
+(if echo-decls (display "git_tree_entry_filemode\n"))
 (define git_tree_entry_filemode
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2952,11 +3084,12 @@
               (list '*))))
     (lambda (entry)
       (let ((~entry (unwrap-git_tree_entry* entry)))
-        (wrap-git_filemode_t (~f ~entry))))))
+        (~f ~entry)))))
 (export git_tree_entry_filemode)
 
 ;; extern git_filemode_t git_tree_entry_filemode_raw(const git_tree_entry *
-;;           entry);
+;;     entry);
+(if echo-decls (display "git_tree_entry_filemode_raw\n"))
 (define git_tree_entry_filemode_raw
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2966,11 +3099,12 @@
               (list '*))))
     (lambda (entry)
       (let ((~entry (unwrap-git_tree_entry* entry)))
-        (wrap-git_filemode_t (~f ~entry))))))
+        (~f ~entry)))))
 (export git_tree_entry_filemode_raw)
 
 ;; extern int git_tree_entry_cmp(const git_tree_entry *e1, const git_tree_entry
-;;            *e2);
+;;      *e2);
+(if echo-decls (display "git_tree_entry_cmp\n"))
 (define git_tree_entry_cmp
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -2985,7 +3119,8 @@
 (export git_tree_entry_cmp)
 
 ;; extern int git_tree_entry_to_object(git_object **object_out, git_repository 
-;;           *repo, const git_tree_entry *entry);
+;;     *repo, const git_tree_entry *entry);
+(if echo-decls (display "git_tree_entry_to_object\n"))
 (define git_tree_entry_to_object
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3001,7 +3136,8 @@
 (export git_tree_entry_to_object)
 
 ;; extern int git_treebuilder_new(git_treebuilder **out, git_repository *repo, 
-;;           const git_tree *source);
+;;     const git_tree *source);
+(if echo-decls (display "git_treebuilder_new\n"))
 (define git_treebuilder_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3017,6 +3153,7 @@
 (export git_treebuilder_new)
 
 ;; extern void git_treebuilder_clear(git_treebuilder *bld);
+(if echo-decls (display "git_treebuilder_clear\n"))
 (define git_treebuilder_clear
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3030,6 +3167,7 @@
 (export git_treebuilder_clear)
 
 ;; extern unsigned int git_treebuilder_entrycount(git_treebuilder *bld);
+(if echo-decls (display "git_treebuilder_entrycount\n"))
 (define git_treebuilder_entrycount
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -3043,6 +3181,7 @@
 (export git_treebuilder_entrycount)
 
 ;; extern void git_treebuilder_free(git_treebuilder *bld);
+(if echo-decls (display "git_treebuilder_free\n"))
 (define git_treebuilder_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3056,7 +3195,8 @@
 (export git_treebuilder_free)
 
 ;; extern const git_tree_entry *git_treebuilder_get(git_treebuilder *bld, const
-;;            char *filename);
+;;      char *filename);
+(if echo-decls (display "git_treebuilder_get\n"))
 (define git_treebuilder_get
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3071,8 +3211,9 @@
 (export git_treebuilder_get)
 
 ;; extern int git_treebuilder_insert(const git_tree_entry **out, 
-;;           git_treebuilder *bld, const char *filename, const git_oid *id, 
-;;           git_filemode_t filemode);
+;;     git_treebuilder *bld, const char *filename, const git_oid *id, 
+;;     git_filemode_t filemode);
+(if echo-decls (display "git_treebuilder_insert\n"))
 (define git_treebuilder_insert
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3085,12 +3226,13 @@
             (~bld (unwrap-git_treebuilder* bld))
             (~filename (unwrap~pointer filename))
             (~id (unwrap-git_oid* id))
-            (~filemode (unwrap-git_filemode_t filemode)))
+            (~filemode (unwrap~fixed filemode)))
         (~f ~out ~bld ~filename ~id ~filemode)))))
 (export git_treebuilder_insert)
 
 ;; extern int git_treebuilder_remove(git_treebuilder *bld, const char *filename
-;;           );
+;;     );
+(if echo-decls (display "git_treebuilder_remove\n"))
 (define git_treebuilder_remove
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3105,12 +3247,14 @@
 (export git_treebuilder_remove)
 
 ;; typedef int (*git_treebuilder_filter_cb)(const git_tree_entry *entry, void *
-;;           payload);
+;;     payload);
+(if echo-decls (display "git_treebuilder_filter_cb\n"))
 (define-fh-function/p git_treebuilder_filter_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; extern void git_treebuilder_filter(git_treebuilder *bld, 
-;;           git_treebuilder_filter_cb filter, void *payload);
+;;     git_treebuilder_filter_cb filter, void *payload);
+(if echo-decls (display "git_treebuilder_filter\n"))
 (define git_treebuilder_filter
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3121,12 +3265,14 @@
     (lambda (bld filter payload)
       (let ((~bld (unwrap-git_treebuilder* bld))
             (~filter
-              (unwrap-git_treebuilder_filter_cb filter))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               filter))
             (~payload (unwrap~pointer payload)))
         (~f ~bld ~filter ~payload)))))
 (export git_treebuilder_filter)
 
 ;; extern int git_treebuilder_write(git_oid *id, git_treebuilder *bld);
+(if echo-decls (display "git_treebuilder_write\n"))
 (define git_treebuilder_write
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3141,7 +3287,8 @@
 (export git_treebuilder_write)
 
 ;; extern int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *
-;;           bld, git_buf *tree);
+;;     bld, git_buf *tree);
+(if echo-decls (display "git_treebuilder_write_with_buffer\n"))
 (define git_treebuilder_write_with_buffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3157,20 +3304,23 @@
 (export git_treebuilder_write_with_buffer)
 
 ;; typedef int (*git_treewalk_cb)(const char *root, const git_tree_entry *entry
-;;           , void *payload);
+;;     , void *payload);
+(if echo-decls (display "git_treewalk_cb\n"))
 (define-fh-function/p git_treewalk_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef enum {
-;;         GIT_TREEWALK_PRE = 0,
-;;         GIT_TREEWALK_POST = 1,
+;;   GIT_TREEWALK_PRE = 0,
+;;   GIT_TREEWALK_POST = 1,
 ;; } git_treewalk_mode;
+(if echo-decls (display "git_treewalk_mode\n"))
 (define-fh-enum git_treewalk_mode
   '((GIT_TREEWALK_PRE . 0) (GIT_TREEWALK_POST . 1))
   )
 
 ;; extern int git_tree_walk(const git_tree *tree, git_treewalk_mode mode, 
-;;           git_treewalk_cb callback, void *payload);
+;;     git_treewalk_cb callback, void *payload);
+(if echo-decls (display "git_tree_walk\n"))
 (define git_tree_walk
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3178,13 +3328,16 @@
               (list '* ffi:int '* '*))))
     (lambda (tree mode callback payload)
       (let ((~tree (unwrap-git_tree* tree))
-            (~mode (unwrap-git_treewalk_mode mode))
-            (~callback (unwrap-git_treewalk_cb callback))
+            (~mode (unwrap~fixed mode))
+            (~callback
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~tree ~mode ~callback ~payload)))))
 (export git_tree_walk)
 
 ;; extern int git_tree_dup(git_tree **out, git_tree *source);
+(if echo-decls (display "git_tree_dup\n"))
 (define git_tree_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3197,36 +3350,38 @@
 (export git_tree_dup)
 
 ;; typedef enum {
-;;         GIT_TREE_UPDATE_UPSERT,
-;;         GIT_TREE_UPDATE_REMOVE,
+;;   GIT_TREE_UPDATE_UPSERT,
+;;   GIT_TREE_UPDATE_REMOVE,
 ;; } git_tree_update_t;
+(if echo-decls (display "git_tree_update_t\n"))
 (define-fh-enum git_tree_update_t
   '((GIT_TREE_UPDATE_UPSERT . 0)
     (GIT_TREE_UPDATE_REMOVE . 1))
   )
 
 ;; typedef struct {
-;;         /** Update action. If it's an removal, only the path is looked at */
-;;                   
-;;         git_tree_update_t action;
-;;         /** The entry's id */
-;;         git_oid id;
-;;         /** The filemode/kind of object */
-;;         git_filemode_t filemode;
-;;         /** The full path from the root tree */
-;;         const char *path;
+;;   /** Update action. If it's an removal, only the path is looked at */
+;;   git_tree_update_t action;
+;;   /** The entry's id */
+;;   git_oid id;
+;;   /** The filemode/kind of object */
+;;   git_filemode_t filemode;
+;;   /** The full path from the root tree */
+;;   const char *path;
 ;; } git_tree_update;
+(if echo-decls (display "git_tree_update\n"))
 (define git_tree_update-desc
   (bs:struct
-    (list `(action ,git_tree_update_t-desc)
+    (list `(action ,int)
           `(id ,git_oid-desc)
-          `(filemode ,git_filemode_t-desc)
+          `(filemode ,int)
           `(path ,(bs:pointer int)))))
 (export git_tree_update-desc)
 (define-fh-compound-type/p git_tree_update git_tree_update-desc)
 
 ;; extern int git_tree_create_updated(git_oid *out, git_repository *repo, 
-;;           git_tree *baseline, size_t nupdates, const git_tree_update *updates);
+;;     git_tree *baseline, size_t nupdates, const git_tree_update *updates);
+(if echo-decls (display "git_tree_create_updated\n"))
 (define git_tree_create_updated
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3244,9 +3399,10 @@
 (export git_tree_create_updated)
 
 ;; typedef struct git_strarray {
-;;         char **strings;
-;;         size_t count;
+;;   char **strings;
+;;   size_t count;
 ;; } git_strarray;
+(if echo-decls (display "git_strarray\n"))
 (define git_strarray-desc
   (bs:struct
     (list `(strings ,(bs:pointer (bs:pointer int)))
@@ -3256,6 +3412,7 @@
 (define struct-git_strarray git_strarray)
 
 ;; extern void git_strarray_free(git_strarray *array);
+(if echo-decls (display "git_strarray_free\n"))
 (define git_strarray_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3267,6 +3424,7 @@
 (export git_strarray_free)
 
 ;; extern int git_strarray_copy(git_strarray *tgt, const git_strarray *src);
+(if echo-decls (display "git_strarray_copy\n"))
 (define git_strarray_copy
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3279,7 +3437,8 @@
 (export git_strarray_copy)
 
 ;; extern int git_reference_lookup(git_reference **out, git_repository *repo, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_reference_lookup\n"))
 (define git_reference_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3295,7 +3454,8 @@
 (export git_reference_lookup)
 
 ;; extern int git_reference_name_to_id(git_oid *out, git_repository *repo, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_reference_name_to_id\n"))
 (define git_reference_name_to_id
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3311,7 +3471,8 @@
 (export git_reference_name_to_id)
 
 ;; extern int git_reference_dwim(git_reference **out, git_repository *repo, 
-;;           const char *shorthand);
+;;     const char *shorthand);
+(if echo-decls (display "git_reference_dwim\n"))
 (define git_reference_dwim
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3327,8 +3488,9 @@
 (export git_reference_dwim)
 
 ;; extern int git_reference_symbolic_create_matching(git_reference **out, 
-;;           git_repository *repo, const char *name, const char *target, int force, 
-;;           const char *current_value, const char *log_message);
+;;     git_repository *repo, const char *name, const char *target, int force, 
+;;     const char *current_value, const char *log_message);
+(if echo-decls (display "git_reference_symbolic_create_matching\n"))
 (define git_reference_symbolic_create_matching
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3360,8 +3522,9 @@
 (export git_reference_symbolic_create_matching)
 
 ;; extern int git_reference_symbolic_create(git_reference **out, git_repository
-;;            *repo, const char *name, const char *target, int force, const char *
-;;           log_message);
+;;      *repo, const char *name, const char *target, int force, const char *
+;;     log_message);
+(if echo-decls (display "git_reference_symbolic_create\n"))
 (define git_reference_symbolic_create
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3380,8 +3543,9 @@
 (export git_reference_symbolic_create)
 
 ;; extern int git_reference_create(git_reference **out, git_repository *repo, 
-;;           const char *name, const git_oid *id, int force, const char *log_message)
-;;           ;
+;;     const char *name, const git_oid *id, int force, const char *log_message)
+;;     ;
+(if echo-decls (display "git_reference_create\n"))
 (define git_reference_create
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3400,8 +3564,9 @@
 (export git_reference_create)
 
 ;; extern int git_reference_create_matching(git_reference **out, git_repository
-;;            *repo, const char *name, const git_oid *id, int force, const git_oid *
-;;           current_id, const char *log_message);
+;;      *repo, const char *name, const git_oid *id, int force, const git_oid *
+;;     current_id, const char *log_message);
+(if echo-decls (display "git_reference_create_matching\n"))
 (define git_reference_create_matching
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3427,6 +3592,7 @@
 (export git_reference_create_matching)
 
 ;; extern const git_oid *git_reference_target(const git_reference *ref);
+(if echo-decls (display "git_reference_target\n"))
 (define git_reference_target
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3440,6 +3606,7 @@
 (export git_reference_target)
 
 ;; extern const git_oid *git_reference_target_peel(const git_reference *ref);
+(if echo-decls (display "git_reference_target_peel\n"))
 (define git_reference_target_peel
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3453,6 +3620,7 @@
 (export git_reference_target_peel)
 
 ;; extern const char *git_reference_symbolic_target(const git_reference *ref);
+(if echo-decls (display "git_reference_symbolic_target\n"))
 (define git_reference_symbolic_target
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3466,6 +3634,7 @@
 (export git_reference_symbolic_target)
 
 ;; extern git_ref_t git_reference_type(const git_reference *ref);
+(if echo-decls (display "git_reference_type\n"))
 (define git_reference_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3475,10 +3644,11 @@
               (list '*))))
     (lambda (ref)
       (let ((~ref (unwrap-git_reference* ref)))
-        (wrap-git_ref_t (~f ~ref))))))
+        (~f ~ref)))))
 (export git_reference_type)
 
 ;; extern const char *git_reference_name(const git_reference *ref);
+(if echo-decls (display "git_reference_name\n"))
 (define git_reference_name
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3492,7 +3662,8 @@
 (export git_reference_name)
 
 ;; extern int git_reference_resolve(git_reference **out, const git_reference *
-;;           ref);
+;;     ref);
+(if echo-decls (display "git_reference_resolve\n"))
 (define git_reference_resolve
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3507,6 +3678,7 @@
 (export git_reference_resolve)
 
 ;; extern git_repository *git_reference_owner(const git_reference *ref);
+(if echo-decls (display "git_reference_owner\n"))
 (define git_reference_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3520,7 +3692,8 @@
 (export git_reference_owner)
 
 ;; extern int git_reference_symbolic_set_target(git_reference **out, 
-;;           git_reference *ref, const char *target, const char *log_message);
+;;     git_reference *ref, const char *target, const char *log_message);
+(if echo-decls (display "git_reference_symbolic_set_target\n"))
 (define git_reference_symbolic_set_target
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3537,7 +3710,8 @@
 (export git_reference_symbolic_set_target)
 
 ;; extern int git_reference_set_target(git_reference **out, git_reference *ref
-;;           , const git_oid *id, const char *log_message);
+;;     , const git_oid *id, const char *log_message);
+(if echo-decls (display "git_reference_set_target\n"))
 (define git_reference_set_target
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3554,7 +3728,8 @@
 (export git_reference_set_target)
 
 ;; extern int git_reference_rename(git_reference **new_ref, git_reference *ref
-;;           , const char *new_name, int force, const char *log_message);
+;;     , const char *new_name, int force, const char *log_message);
+(if echo-decls (display "git_reference_rename\n"))
 (define git_reference_rename
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3572,6 +3747,7 @@
 (export git_reference_rename)
 
 ;; extern int git_reference_delete(git_reference *ref);
+(if echo-decls (display "git_reference_delete\n"))
 (define git_reference_delete
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3585,6 +3761,7 @@
 (export git_reference_delete)
 
 ;; extern int git_reference_remove(git_repository *repo, const char *name);
+(if echo-decls (display "git_reference_remove\n"))
 (define git_reference_remove
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3599,6 +3776,7 @@
 (export git_reference_remove)
 
 ;; extern int git_reference_list(git_strarray *array, git_repository *repo);
+(if echo-decls (display "git_reference_list\n"))
 (define git_reference_list
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3613,17 +3791,20 @@
 (export git_reference_list)
 
 ;; typedef int (*git_reference_foreach_cb)(git_reference *reference, void *
-;;           payload);
+;;     payload);
+(if echo-decls (display "git_reference_foreach_cb\n"))
 (define-fh-function/p git_reference_foreach_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; typedef int (*git_reference_foreach_name_cb)(const char *name, void *payload
-;;           );
+;;     );
+(if echo-decls (display "git_reference_foreach_name_cb\n"))
 (define-fh-function/p git_reference_foreach_name_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; extern int git_reference_foreach(git_repository *repo, 
-;;           git_reference_foreach_cb callback, void *payload);
+;;     git_reference_foreach_cb callback, void *payload);
+(if echo-decls (display "git_reference_foreach\n"))
 (define git_reference_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3634,13 +3815,15 @@
     (lambda (repo callback payload)
       (let ((~repo (unwrap-git_repository* repo))
             (~callback
-              (unwrap-git_reference_foreach_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~callback ~payload)))))
 (export git_reference_foreach)
 
 ;; extern int git_reference_foreach_name(git_repository *repo, 
-;;           git_reference_foreach_name_cb callback, void *payload);
+;;     git_reference_foreach_name_cb callback, void *payload);
+(if echo-decls (display "git_reference_foreach_name\n"))
 (define git_reference_foreach_name
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3651,12 +3834,14 @@
     (lambda (repo callback payload)
       (let ((~repo (unwrap-git_repository* repo))
             (~callback
-              (unwrap-git_reference_foreach_name_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~callback ~payload)))))
 (export git_reference_foreach_name)
 
 ;; extern int git_reference_dup(git_reference **dest, git_reference *source);
+(if echo-decls (display "git_reference_dup\n"))
 (define git_reference_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3669,6 +3854,7 @@
 (export git_reference_dup)
 
 ;; extern void git_reference_free(git_reference *ref);
+(if echo-decls (display "git_reference_free\n"))
 (define git_reference_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3682,7 +3868,8 @@
 (export git_reference_free)
 
 ;; extern int git_reference_cmp(const git_reference *ref1, const git_reference 
-;;           *ref2);
+;;     *ref2);
+(if echo-decls (display "git_reference_cmp\n"))
 (define git_reference_cmp
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3695,7 +3882,8 @@
 (export git_reference_cmp)
 
 ;; extern int git_reference_iterator_new(git_reference_iterator **out, 
-;;           git_repository *repo);
+;;     git_repository *repo);
+(if echo-decls (display "git_reference_iterator_new\n"))
 (define git_reference_iterator_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3710,7 +3898,8 @@
 (export git_reference_iterator_new)
 
 ;; extern int git_reference_iterator_glob_new(git_reference_iterator **out, 
-;;           git_repository *repo, const char *glob);
+;;     git_repository *repo, const char *glob);
+(if echo-decls (display "git_reference_iterator_glob_new\n"))
 (define git_reference_iterator_glob_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3726,7 +3915,8 @@
 (export git_reference_iterator_glob_new)
 
 ;; extern int git_reference_next(git_reference **out, git_reference_iterator *
-;;           iter);
+;;     iter);
+(if echo-decls (display "git_reference_next\n"))
 (define git_reference_next
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3741,7 +3931,8 @@
 (export git_reference_next)
 
 ;; extern int git_reference_next_name(const char **out, git_reference_iterator 
-;;           *iter);
+;;     *iter);
+(if echo-decls (display "git_reference_next_name\n"))
 (define git_reference_next_name
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3756,6 +3947,7 @@
 (export git_reference_next_name)
 
 ;; extern void git_reference_iterator_free(git_reference_iterator *iter);
+(if echo-decls (display "git_reference_iterator_free\n"))
 (define git_reference_iterator_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -3769,7 +3961,8 @@
 (export git_reference_iterator_free)
 
 ;; extern int git_reference_foreach_glob(git_repository *repo, const char *glob
-;;           , git_reference_foreach_name_cb callback, void *payload);
+;;     , git_reference_foreach_name_cb callback, void *payload);
+(if echo-decls (display "git_reference_foreach_glob\n"))
 (define git_reference_foreach_glob
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3781,13 +3974,15 @@
       (let ((~repo (unwrap-git_repository* repo))
             (~glob (unwrap~pointer glob))
             (~callback
-              (unwrap-git_reference_foreach_name_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~glob ~callback ~payload)))))
 (export git_reference_foreach_glob)
 
 ;; extern int git_reference_has_log(git_repository *repo, const char *refname)
-;;           ;
+;;     ;
+(if echo-decls (display "git_reference_has_log\n"))
 (define git_reference_has_log
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3802,7 +3997,8 @@
 (export git_reference_has_log)
 
 ;; extern int git_reference_ensure_log(git_repository *repo, const char *
-;;           refname);
+;;     refname);
+(if echo-decls (display "git_reference_ensure_log\n"))
 (define git_reference_ensure_log
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3817,6 +4013,7 @@
 (export git_reference_ensure_log)
 
 ;; extern int git_reference_is_branch(const git_reference *ref);
+(if echo-decls (display "git_reference_is_branch\n"))
 (define git_reference_is_branch
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3830,6 +4027,7 @@
 (export git_reference_is_branch)
 
 ;; extern int git_reference_is_remote(const git_reference *ref);
+(if echo-decls (display "git_reference_is_remote\n"))
 (define git_reference_is_remote
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3843,6 +4041,7 @@
 (export git_reference_is_remote)
 
 ;; extern int git_reference_is_tag(const git_reference *ref);
+(if echo-decls (display "git_reference_is_tag\n"))
 (define git_reference_is_tag
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3856,6 +4055,7 @@
 (export git_reference_is_tag)
 
 ;; extern int git_reference_is_note(const git_reference *ref);
+(if echo-decls (display "git_reference_is_note\n"))
 (define git_reference_is_note
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3869,11 +4069,12 @@
 (export git_reference_is_note)
 
 ;; typedef enum {
-;;         GIT_REF_FORMAT_NORMAL = 0u,
-;;         GIT_REF_FORMAT_ALLOW_ONELEVEL = 1u<<0,
-;;         GIT_REF_FORMAT_REFSPEC_PATTERN = 1u<<1,
-;;         GIT_REF_FORMAT_REFSPEC_SHORTHAND = 1u<<2,
+;;   GIT_REF_FORMAT_NORMAL = 0u,
+;;   GIT_REF_FORMAT_ALLOW_ONELEVEL = 1u<<0,
+;;   GIT_REF_FORMAT_REFSPEC_PATTERN = 1u<<1,
+;;   GIT_REF_FORMAT_REFSPEC_SHORTHAND = 1u<<2,
 ;; } git_reference_normalize_t;
+(if echo-decls (display "git_reference_normalize_t\n"))
 (define-fh-enum git_reference_normalize_t
   '((GIT_REF_FORMAT_NORMAL . 0)
     (GIT_REF_FORMAT_ALLOW_ONELEVEL . 1)
@@ -3882,7 +4083,8 @@
   )
 
 ;; extern int git_reference_normalize_name(char *buffer_out, size_t buffer_size
-;;           , const char *name, unsigned int flags);
+;;     , const char *name, unsigned int flags);
+(if echo-decls (display "git_reference_normalize_name\n"))
 (define git_reference_normalize_name
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3899,7 +4101,8 @@
 (export git_reference_normalize_name)
 
 ;; extern int git_reference_peel(git_object **out, git_reference *ref, 
-;;           git_otype type);
+;;     git_otype type);
+(if echo-decls (display "git_reference_peel\n"))
 (define git_reference_peel
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3910,11 +4113,12 @@
     (lambda (out ref type)
       (let ((~out (unwrap~pointer out))
             (~ref (unwrap-git_reference* ref))
-            (~type (unwrap-git_otype type)))
+            (~type (unwrap~fixed type)))
         (~f ~out ~ref ~type)))))
 (export git_reference_peel)
 
 ;; extern int git_reference_is_valid_name(const char *refname);
+(if echo-decls (display "git_reference_is_valid_name\n"))
 (define git_reference_is_valid_name
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -3928,6 +4132,7 @@
 (export git_reference_is_valid_name)
 
 ;; extern const char *git_reference_shorthand(const git_reference *ref);
+(if echo-decls (display "git_reference_shorthand\n"))
 (define git_reference_shorthand
   (let ((~f (ffi:pointer->procedure
               '*
@@ -3941,36 +4146,37 @@
 (export git_reference_shorthand)
 
 ;; typedef enum {
-;;         GIT_DIFF_NORMAL = 0,
-;;         GIT_DIFF_REVERSE = 1u<<0,
-;;         GIT_DIFF_INCLUDE_IGNORED = 1u<<1,
-;;         GIT_DIFF_RECURSE_IGNORED_DIRS = 1u<<2,
-;;         GIT_DIFF_INCLUDE_UNTRACKED = 1u<<3,
-;;         GIT_DIFF_RECURSE_UNTRACKED_DIRS = 1u<<4,
-;;         GIT_DIFF_INCLUDE_UNMODIFIED = 1u<<5,
-;;         GIT_DIFF_INCLUDE_TYPECHANGE = 1u<<6,
-;;         GIT_DIFF_INCLUDE_TYPECHANGE_TREES = 1u<<7,
-;;         GIT_DIFF_IGNORE_FILEMODE = 1u<<8,
-;;         GIT_DIFF_IGNORE_SUBMODULES = 1u<<9,
-;;         GIT_DIFF_IGNORE_CASE = 1u<<10,
-;;         GIT_DIFF_INCLUDE_CASECHANGE = 1u<<11,
-;;         GIT_DIFF_DISABLE_PATHSPEC_MATCH = 1u<<12,
-;;         GIT_DIFF_SKIP_BINARY_CHECK = 1u<<13,
-;;         GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS = 1u<<14,
-;;         GIT_DIFF_UPDATE_INDEX = 1u<<15,
-;;         GIT_DIFF_INCLUDE_UNREADABLE = 1u<<16,
-;;         GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = 1u<<17,
-;;         GIT_DIFF_FORCE_TEXT = 1u<<20,
-;;         GIT_DIFF_FORCE_BINARY = 1u<<21,
-;;         GIT_DIFF_IGNORE_WHITESPACE = 1u<<22,
-;;         GIT_DIFF_IGNORE_WHITESPACE_CHANGE = 1u<<23,
-;;         GIT_DIFF_IGNORE_WHITESPACE_EOL = 1u<<24,
-;;         GIT_DIFF_SHOW_UNTRACKED_CONTENT = 1u<<25,
-;;         GIT_DIFF_SHOW_UNMODIFIED = 1u<<26,
-;;         GIT_DIFF_PATIENCE = 1u<<28,
-;;         GIT_DIFF_MINIMAL = 1<<29,
-;;         GIT_DIFF_SHOW_BINARY = 1<<30,
+;;   GIT_DIFF_NORMAL = 0,
+;;   GIT_DIFF_REVERSE = 1u<<0,
+;;   GIT_DIFF_INCLUDE_IGNORED = 1u<<1,
+;;   GIT_DIFF_RECURSE_IGNORED_DIRS = 1u<<2,
+;;   GIT_DIFF_INCLUDE_UNTRACKED = 1u<<3,
+;;   GIT_DIFF_RECURSE_UNTRACKED_DIRS = 1u<<4,
+;;   GIT_DIFF_INCLUDE_UNMODIFIED = 1u<<5,
+;;   GIT_DIFF_INCLUDE_TYPECHANGE = 1u<<6,
+;;   GIT_DIFF_INCLUDE_TYPECHANGE_TREES = 1u<<7,
+;;   GIT_DIFF_IGNORE_FILEMODE = 1u<<8,
+;;   GIT_DIFF_IGNORE_SUBMODULES = 1u<<9,
+;;   GIT_DIFF_IGNORE_CASE = 1u<<10,
+;;   GIT_DIFF_INCLUDE_CASECHANGE = 1u<<11,
+;;   GIT_DIFF_DISABLE_PATHSPEC_MATCH = 1u<<12,
+;;   GIT_DIFF_SKIP_BINARY_CHECK = 1u<<13,
+;;   GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS = 1u<<14,
+;;   GIT_DIFF_UPDATE_INDEX = 1u<<15,
+;;   GIT_DIFF_INCLUDE_UNREADABLE = 1u<<16,
+;;   GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = 1u<<17,
+;;   GIT_DIFF_FORCE_TEXT = 1u<<20,
+;;   GIT_DIFF_FORCE_BINARY = 1u<<21,
+;;   GIT_DIFF_IGNORE_WHITESPACE = 1u<<22,
+;;   GIT_DIFF_IGNORE_WHITESPACE_CHANGE = 1u<<23,
+;;   GIT_DIFF_IGNORE_WHITESPACE_EOL = 1u<<24,
+;;   GIT_DIFF_SHOW_UNTRACKED_CONTENT = 1u<<25,
+;;   GIT_DIFF_SHOW_UNMODIFIED = 1u<<26,
+;;   GIT_DIFF_PATIENCE = 1u<<28,
+;;   GIT_DIFF_MINIMAL = 1<<29,
+;;   GIT_DIFF_SHOW_BINARY = 1<<30,
 ;; } git_diff_option_t;
+(if echo-decls (display "git_diff_option_t\n"))
 (define-fh-enum git_diff_option_t
   '((GIT_DIFF_NORMAL . 0)
     (GIT_DIFF_REVERSE . 1)
@@ -4006,14 +4212,18 @@
   )
 
 ;; typedef struct git_diff git_diff;
-(define-fh-pointer-type git_diff*)
+(if echo-decls (display "git_diff\n"))
+(define git_diff-desc void)
+(define git_diff*-desc (bs:pointer git_diff-desc))
+(define-fh-pointer-type git_diff* git_diff*-desc)
 
 ;; typedef enum {
-;;         GIT_DIFF_FLAG_BINARY = 1u<<0,
-;;         GIT_DIFF_FLAG_NOT_BINARY = 1u<<1,
-;;         GIT_DIFF_FLAG_VALID_ID = 1u<<2,
-;;         GIT_DIFF_FLAG_EXISTS = 1u<<3,
+;;   GIT_DIFF_FLAG_BINARY = 1u<<0,
+;;   GIT_DIFF_FLAG_NOT_BINARY = 1u<<1,
+;;   GIT_DIFF_FLAG_VALID_ID = 1u<<2,
+;;   GIT_DIFF_FLAG_EXISTS = 1u<<3,
 ;; } git_diff_flag_t;
+(if echo-decls (display "git_diff_flag_t\n"))
 (define-fh-enum git_diff_flag_t
   '((GIT_DIFF_FLAG_BINARY . 1)
     (GIT_DIFF_FLAG_NOT_BINARY . 2)
@@ -4022,18 +4232,19 @@
   )
 
 ;; typedef enum {
-;;         GIT_DELTA_UNMODIFIED = 0,
-;;         GIT_DELTA_ADDED = 1,
-;;         GIT_DELTA_DELETED = 2,
-;;         GIT_DELTA_MODIFIED = 3,
-;;         GIT_DELTA_RENAMED = 4,
-;;         GIT_DELTA_COPIED = 5,
-;;         GIT_DELTA_IGNORED = 6,
-;;         GIT_DELTA_UNTRACKED = 7,
-;;         GIT_DELTA_TYPECHANGE = 8,
-;;         GIT_DELTA_UNREADABLE = 9,
-;;         GIT_DELTA_CONFLICTED = 10,
+;;   GIT_DELTA_UNMODIFIED = 0,
+;;   GIT_DELTA_ADDED = 1,
+;;   GIT_DELTA_DELETED = 2,
+;;   GIT_DELTA_MODIFIED = 3,
+;;   GIT_DELTA_RENAMED = 4,
+;;   GIT_DELTA_COPIED = 5,
+;;   GIT_DELTA_IGNORED = 6,
+;;   GIT_DELTA_UNTRACKED = 7,
+;;   GIT_DELTA_TYPECHANGE = 8,
+;;   GIT_DELTA_UNREADABLE = 9,
+;;   GIT_DELTA_CONFLICTED = 10,
 ;; } git_delta_t;
+(if echo-decls (display "git_delta_t\n"))
 (define-fh-enum git_delta_t
   '((GIT_DELTA_UNMODIFIED . 0)
     (GIT_DELTA_ADDED . 1)
@@ -4049,18 +4260,19 @@
   )
 
 ;; typedef struct {
-;;         git_oid id;
-;;         const char *path;
-;;         git_off_t size;
-;;         uint32_t flags;
-;;         uint16_t mode;
-;;         uint16_t id_abbrev;
+;;   git_oid id;
+;;   const char *path;
+;;   git_off_t size;
+;;   uint32_t flags;
+;;   uint16_t mode;
+;;   uint16_t id_abbrev;
 ;; } git_diff_file;
+(if echo-decls (display "git_diff_file\n"))
 (define git_diff_file-desc
   (bs:struct
     (list `(id ,git_oid-desc)
           `(path ,(bs:pointer int))
-          `(size ,git_off_t-desc)
+          `(size ,int32)
           `(flags ,uint64)
           `(mode ,uint16)
           `(id_abbrev ,uint16))))
@@ -4068,16 +4280,17 @@
 (define-fh-compound-type/p git_diff_file git_diff_file-desc)
 
 ;; typedef struct {
-;;         git_delta_t status;
-;;         uint32_t flags; /**< git_diff_flag_t values */
-;;         uint16_t similarity; /**< for RENAMED and COPIED, value 0-100 */
-;;         uint16_t nfiles; /**< number of files in this delta */
-;;         git_diff_file old_file;
-;;         git_diff_file new_file;
+;;   git_delta_t status;
+;;   uint32_t flags; /**< git_diff_flag_t values */
+;;   uint16_t similarity; /**< for RENAMED and COPIED, value 0-100 */
+;;   uint16_t nfiles; /**< number of files in this delta */
+;;   git_diff_file old_file;
+;;   git_diff_file new_file;
 ;; } git_diff_delta;
+(if echo-decls (display "git_diff_delta\n"))
 (define git_diff_delta-desc
   (bs:struct
-    (list `(status ,git_delta_t-desc)
+    (list `(status ,int)
           `(flags ,uint64)
           `(similarity ,uint16)
           `(nfiles ,uint16)
@@ -4087,54 +4300,57 @@
 (define-fh-compound-type/p git_diff_delta git_diff_delta-desc)
 
 ;; typedef int (*git_diff_notify_cb)(const git_diff *diff_so_far, const 
-;;           git_diff_delta *delta_to_add, const char *matched_pathspec, void *
-;;           payload);
+;;     git_diff_delta *delta_to_add, const char *matched_pathspec, void *
+;;     payload);
+(if echo-decls (display "git_diff_notify_cb\n"))
 (define-fh-function/p git_diff_notify_cb
   ffi:int (list (quote *) (quote *) (quote *) (quote *)))
 
 ;; typedef int (*git_diff_progress_cb)(const git_diff *diff_so_far, const char 
-;;           *old_path, const char *new_path, void *payload);
+;;     *old_path, const char *new_path, void *payload);
+(if echo-decls (display "git_diff_progress_cb\n"))
 (define-fh-function/p git_diff_progress_cb
   ffi:int (list (quote *) (quote *) (quote *) (quote *)))
 
 ;; typedef struct {
-;;         unsigned int version; /**< version for the struct */
-;;         uint32_t flags; /**< defaults to GIT_DIFF_NORMAL */
-;;         /* options controlling which files are in the diff */
-;;         git_submodule_ignore_t ignore_submodules; 
-;;                   /**< submodule ignore rule */
-;;         git_strarray pathspec; /**< defaults to include all paths */
-;;         git_diff_notify_cb notify_cb;
-;;         git_diff_progress_cb progress_cb;
-;;         void *payload;
-;;         /* options controlling how to diff text is generated */
-;;         uint32_t context_lines; /**< defaults to 3 */
-;;         uint32_t interhunk_lines; /**< defaults to 0 */
-;;         uint16_t id_abbrev; /**< default 'core.abbrev' or 7 if unset */
-;;         git_off_t max_size; /**< defaults to 512MB */
-;;         const char *old_prefix; /**< defaults to "a" */
-;;         const char *new_prefix; /**< defaults to "b" */
+;;   unsigned int version; /**< version for the struct */
+;;   uint32_t flags; /**< defaults to GIT_DIFF_NORMAL */
+;;   /* options controlling which files are in the diff */
+;;   git_submodule_ignore_t ignore_submodules; /**< submodule ignore rule */
+;;   git_strarray pathspec; /**< defaults to include all paths */
+;;   git_diff_notify_cb notify_cb;
+;;   git_diff_progress_cb progress_cb;
+;;   void *payload;
+;;   /* options controlling how to diff text is generated */
+;;   uint32_t context_lines; /**< defaults to 3 */
+;;   uint32_t interhunk_lines; /**< defaults to 0 */
+;;   uint16_t id_abbrev; /**< default 'core.abbrev' or 7 if unset */
+;;   git_off_t max_size; /**< defaults to 512MB */
+;;   const char *old_prefix; /**< defaults to "a" */
+;;   const char *new_prefix; /**< defaults to "b" */
 ;; } git_diff_options;
+(if echo-decls (display "git_diff_options\n"))
 (define git_diff_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
           `(flags ,uint64)
-          `(ignore_submodules ,git_submodule_ignore_t-desc)
+          `(ignore_submodules ,int)
           `(pathspec ,git_strarray-desc)
-          `(notify_cb ,git_diff_notify_cb-desc)
-          `(progress_cb ,git_diff_progress_cb-desc)
+          `(notify_cb ,(bs:pointer void))
+          `(progress_cb ,(bs:pointer void))
           `(payload ,(bs:pointer void))
           `(context_lines ,uint64)
           `(interhunk_lines ,uint64)
           `(id_abbrev ,uint16)
-          `(max_size ,git_off_t-desc)
+          `(max_size ,int32)
           `(old_prefix ,(bs:pointer int))
           `(new_prefix ,(bs:pointer int)))))
 (export git_diff_options-desc)
 (define-fh-compound-type/p git_diff_options git_diff_options-desc)
 
 ;; extern int git_diff_init_options(git_diff_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_diff_init_options\n"))
 (define git_diff_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4149,15 +4365,17 @@
 (export git_diff_init_options)
 
 ;; typedef int (*git_diff_file_cb)(const git_diff_delta *delta, float progress
-;;           , void *payload);
+;;     , void *payload);
+(if echo-decls (display "git_diff_file_cb\n"))
 (define-fh-function/p git_diff_file_cb
   ffi:int (list (quote *) ffi:float (quote *)))
 
 ;; typedef enum {
-;;         GIT_DIFF_BINARY_NONE,
-;;         GIT_DIFF_BINARY_LITERAL,
-;;         GIT_DIFF_BINARY_DELTA,
+;;   GIT_DIFF_BINARY_NONE,
+;;   GIT_DIFF_BINARY_LITERAL,
+;;   GIT_DIFF_BINARY_DELTA,
 ;; } git_diff_binary_t;
+(if echo-decls (display "git_diff_binary_t\n"))
 (define-fh-enum git_diff_binary_t
   '((GIT_DIFF_BINARY_NONE . 0)
     (GIT_DIFF_BINARY_LITERAL . 1)
@@ -4165,18 +4383,19 @@
   )
 
 ;; typedef struct {
-;;         /** The type of binary data for this file. */
-;;         git_diff_binary_t type;
-;;         /** The binary data, deflated. */
-;;         const char *data;
-;;         /** The length of the binary data. */
-;;         size_t datalen;
-;;         /** The length of the binary data after inflation. */
-;;         size_t inflatedlen;
+;;   /** The type of binary data for this file. */
+;;   git_diff_binary_t type;
+;;   /** The binary data, deflated. */
+;;   const char *data;
+;;   /** The length of the binary data. */
+;;   size_t datalen;
+;;   /** The length of the binary data after inflation. */
+;;   size_t inflatedlen;
 ;; } git_diff_binary_file;
+(if echo-decls (display "git_diff_binary_file\n"))
 (define git_diff_binary_file-desc
   (bs:struct
-    (list `(type ,git_diff_binary_t-desc)
+    (list `(type ,int)
           `(data ,(bs:pointer int))
           `(datalen ,size_t)
           `(inflatedlen ,size_t))))
@@ -4184,23 +4403,18 @@
 (define-fh-compound-type/p git_diff_binary_file git_diff_binary_file-desc)
 
 ;; typedef struct {
-;;         /**
-;;               * Whether there is data in this binary structure or not.  If this
-;;                   
-;;               * is `1`, then this was produced and included binary content.  If
-;;                   
-;;               * this is `0` then this was generated knowing only that a binary
-;;                   
-;;               * file changed but without providing the data, probably from a patch
-;;                   
-;;               * that said `Binary files a/file.txt and b/file.txt differ`.
-;;               */
-;;         unsigned int contains_data;
-;;         git_diff_binary_file old_file; /**< The contents of the old file. */
-;;                   
-;;         git_diff_binary_file new_file; /**< The contents of the new file. */
-;;                   
+;;   /**
+;;    * Whether there is data in this binary structure or not.  If this
+;;    * is `1`, then this was produced and included binary content.  If
+;;    * this is `0` then this was generated knowing only that a binary
+;;    * file changed but without providing the data, probably from a patch
+;;    * that said `Binary files a/file.txt and b/file.txt differ`.
+;;    */
+;;   unsigned int contains_data;
+;;   git_diff_binary_file old_file; /**< The contents of the old file. */
+;;   git_diff_binary_file new_file; /**< The contents of the new file. */
 ;; } git_diff_binary;
+(if echo-decls (display "git_diff_binary\n"))
 (define git_diff_binary-desc
   (bs:struct
     (list `(contains_data ,unsigned-int)
@@ -4210,18 +4424,20 @@
 (define-fh-compound-type/p git_diff_binary git_diff_binary-desc)
 
 ;; typedef int (*git_diff_binary_cb)(const git_diff_delta *delta, const 
-;;           git_diff_binary *binary, void *payload);
+;;     git_diff_binary *binary, void *payload);
+(if echo-decls (display "git_diff_binary_cb\n"))
 (define-fh-function/p git_diff_binary_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef struct {
-;;         int old_start; /** Starting line number in old_file */
-;;         int old_lines; /** Number of lines in old_file */
-;;         int new_start; /** Starting line number in new_file */
-;;         int new_lines; /** Number of lines in new_file */
-;;         size_t header_len; /** Number of bytes in header text */
-;;         char header[128]; /** Header text, NUL-byte terminated */
+;;   int old_start; /** Starting line number in old_file */
+;;   int old_lines; /** Number of lines in old_file */
+;;   int new_start; /** Starting line number in new_file */
+;;   int new_lines; /** Number of lines in new_file */
+;;   size_t header_len; /** Number of bytes in header text */
+;;   char header[128]; /** Header text, NUL-byte terminated */
 ;; } git_diff_hunk;
+(if echo-decls (display "git_diff_hunk\n"))
 (define git_diff_hunk-desc
   (bs:struct
     (list `(old_start ,int)
@@ -4229,26 +4445,28 @@
           `(new_start ,int)
           `(new_lines ,int)
           `(header_len ,size_t)
-          `(header ,(bs:vector 128 int)))))
+          `(header ,(bs:vector 128 int8)))))
 (export git_diff_hunk-desc)
 (define-fh-compound-type/p git_diff_hunk git_diff_hunk-desc)
 
 ;; typedef int (*git_diff_hunk_cb)(const git_diff_delta *delta, const 
-;;           git_diff_hunk *hunk, void *payload);
+;;     git_diff_hunk *hunk, void *payload);
+(if echo-decls (display "git_diff_hunk_cb\n"))
 (define-fh-function/p git_diff_hunk_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef enum {
-;;         GIT_DIFF_LINE_CONTEXT = ' ',
-;;         GIT_DIFF_LINE_ADDITION = '+',
-;;         GIT_DIFF_LINE_DELETION = '-',
-;;         GIT_DIFF_LINE_CONTEXT_EOFNL = '=',
-;;         GIT_DIFF_LINE_ADD_EOFNL = '>',
-;;         GIT_DIFF_LINE_DEL_EOFNL = '<',
-;;         GIT_DIFF_LINE_FILE_HDR = 'F',
-;;         GIT_DIFF_LINE_HUNK_HDR = 'H',
-;;         GIT_DIFF_LINE_BINARY = 'B',
+;;   GIT_DIFF_LINE_CONTEXT = ' ',
+;;   GIT_DIFF_LINE_ADDITION = '+',
+;;   GIT_DIFF_LINE_DELETION = '-',
+;;   GIT_DIFF_LINE_CONTEXT_EOFNL = '=',
+;;   GIT_DIFF_LINE_ADD_EOFNL = '>',
+;;   GIT_DIFF_LINE_DEL_EOFNL = '<',
+;;   GIT_DIFF_LINE_FILE_HDR = 'F',
+;;   GIT_DIFF_LINE_HUNK_HDR = 'H',
+;;   GIT_DIFF_LINE_BINARY = 'B',
 ;; } git_diff_line_t;
+(if echo-decls (display "git_diff_line_t\n"))
 (define-fh-enum git_diff_line_t
   '((GIT_DIFF_LINE_CONTEXT . 32)
     (GIT_DIFF_LINE_ADDITION . 43)
@@ -4262,18 +4480,17 @@
   )
 
 ;; typedef struct {
-;;         char origin; /**< A git_diff_line_t value */
-;;         int old_lineno; /**< Line number in old file or -1 for added line */
-;;                   
-;;         int new_lineno; 
-;;                   /**< Line number in new file or -1 for deleted line */
-;;         int num_lines; /**< Number of newline characters in content */
-;;         size_t content_len; /**< Number of bytes of data */
-;;         git_off_t content_offset; 
-;;                   /**< Offset in the original file to the content */
-;;         const char *content; 
-;;                   /**< Pointer to diff text, not NUL-byte terminated */
+;;   char origin; /**< A git_diff_line_t value */
+;;   int old_lineno; /**< Line number in old file or -1 for added line */
+;;   int new_lineno; /**< Line number in new file or -1 for deleted line */
+;;   int num_lines; /**< Number of newline characters in content */
+;;   size_t content_len; /**< Number of bytes of data */
+;;   git_off_t content_offset; 
+;;       /**< Offset in the original file to the content */
+;;   const char *content; /**< Pointer to diff text, not NUL-byte terminated */
+;;       
 ;; } git_diff_line;
+(if echo-decls (display "git_diff_line\n"))
 (define git_diff_line-desc
   (bs:struct
     (list `(origin ,int)
@@ -4281,36 +4498,38 @@
           `(new_lineno ,int)
           `(num_lines ,int)
           `(content_len ,size_t)
-          `(content_offset ,git_off_t-desc)
+          `(content_offset ,int32)
           `(content ,(bs:pointer int)))))
 (export git_diff_line-desc)
 (define-fh-compound-type/p git_diff_line git_diff_line-desc)
 
 ;; typedef int (*git_diff_line_cb)(const git_diff_delta *delta, const 
-;;           git_diff_hunk *hunk, const git_diff_line *line, void *payload); 
-;;           /**< user reference data */
+;;     git_diff_hunk *hunk, const git_diff_line *line, void *payload); 
+;;     /**< user reference data */
+(if echo-decls (display "git_diff_line_cb\n"))
 (define-fh-function/p git_diff_line_cb
   ffi:int (list (quote *) (quote *) (quote *) (quote *)))
 
 ;; typedef enum {
-;;         GIT_DIFF_FIND_BY_CONFIG = 0,
-;;         GIT_DIFF_FIND_RENAMES = 1u<<0,
-;;         GIT_DIFF_FIND_RENAMES_FROM_REWRITES = 1u<<1,
-;;         GIT_DIFF_FIND_COPIES = 1u<<2,
-;;         GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED = 1u<<3,
-;;         GIT_DIFF_FIND_REWRITES = 1u<<4,
-;;         GIT_DIFF_BREAK_REWRITES = 1u<<5,
-;;         GIT_DIFF_FIND_AND_BREAK_REWRITES = GIT_DIFF_FIND_REWRITES | 
-;;                   GIT_DIFF_BREAK_REWRITES,
-;;         GIT_DIFF_FIND_FOR_UNTRACKED = 1u<<6,
-;;         GIT_DIFF_FIND_ALL = 0x0ff,
-;;         GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = 0,
-;;         GIT_DIFF_FIND_IGNORE_WHITESPACE = 1u<<12,
-;;         GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = 1u<<13,
-;;         GIT_DIFF_FIND_EXACT_MATCH_ONLY = 1u<<14,
-;;         GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY = 1u<<15,
-;;         GIT_DIFF_FIND_REMOVE_UNMODIFIED = 1u<<16,
+;;   GIT_DIFF_FIND_BY_CONFIG = 0,
+;;   GIT_DIFF_FIND_RENAMES = 1u<<0,
+;;   GIT_DIFF_FIND_RENAMES_FROM_REWRITES = 1u<<1,
+;;   GIT_DIFF_FIND_COPIES = 1u<<2,
+;;   GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED = 1u<<3,
+;;   GIT_DIFF_FIND_REWRITES = 1u<<4,
+;;   GIT_DIFF_BREAK_REWRITES = 1u<<5,
+;;   GIT_DIFF_FIND_AND_BREAK_REWRITES = GIT_DIFF_FIND_REWRITES | 
+;;       GIT_DIFF_BREAK_REWRITES,
+;;   GIT_DIFF_FIND_FOR_UNTRACKED = 1u<<6,
+;;   GIT_DIFF_FIND_ALL = 0x0ff,
+;;   GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = 0,
+;;   GIT_DIFF_FIND_IGNORE_WHITESPACE = 1u<<12,
+;;   GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = 1u<<13,
+;;   GIT_DIFF_FIND_EXACT_MATCH_ONLY = 1u<<14,
+;;   GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY = 1u<<15,
+;;   GIT_DIFF_FIND_REMOVE_UNMODIFIED = 1u<<16,
 ;; } git_diff_find_t;
+(if echo-decls (display "git_diff_find_t\n"))
 (define-fh-enum git_diff_find_t
   '((GIT_DIFF_FIND_BY_CONFIG . 0)
     (GIT_DIFF_FIND_RENAMES . 1)
@@ -4333,15 +4552,15 @@
   )
 
 ;; typedef struct {
-;;         int (*file_signature)(void **out, const git_diff_file *file, const 
-;;                   char *fullpath, void *payload);
-;;         int (*buffer_signature)(void **out, const git_diff_file *file, const
-;;                    char *buf, size_t buflen, void *payload);
-;;         void (*free_signature)(void *sig, void *payload);
-;;         int (*similarity)(int *score, void *siga, void *sigb, void *payload)
-;;                   ;
-;;         void *payload;
+;;   int (*file_signature)(void **out, const git_diff_file *file, const char *
+;;       fullpath, void *payload);
+;;   int (*buffer_signature)(void **out, const git_diff_file *file, const char 
+;;       *buf, size_t buflen, void *payload);
+;;   void (*free_signature)(void *sig, void *payload);
+;;   int (*similarity)(int *score, void *siga, void *sigb, void *payload);
+;;   void *payload;
 ;; } git_diff_similarity_metric;
+(if echo-decls (display "git_diff_similarity_metric\n"))
 (define git_diff_similarity_metric-desc
   (bs:struct
     (list `(file_signature ,(bs:pointer void))
@@ -4353,34 +4572,30 @@
 (define-fh-compound-type/p git_diff_similarity_metric git_diff_similarity_metric-desc)
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /**
-;;               * Combination of git_diff_find_t values (default GIT_DIFF_FIND_BY_CONFIG).
-;;                   
-;;               * NOTE: if you don't explicitly set this, `diff.renames` could be set
-;;                   
-;;               * to false, resulting in `git_diff_find_similar` doing nothing.
-;;                   
-;;               */
-;;         uint32_t flags;
-;;         /** Similarity to consider a file renamed (default 50) */
-;;         uint16_t rename_threshold;
-;;         /** Similarity of modified to be eligible rename source (default 50) */
-;;                   
-;;         uint16_t rename_from_rewrite_threshold;
-;;         /** Similarity to consider a file a copy (default 50) */
-;;         uint16_t copy_threshold;
-;;         /** Similarity to split modify into delete/add pair (default 60) */
-;;         uint16_t break_rewrite_threshold;
-;;         /** Maximum similarity sources to examine for a file (somewhat like
-;;               *  git-diff's `-l` option or `diff.renameLimit` config) (default 200)
-;;                   
-;;               */
-;;         size_t rename_limit;
-;;         /** Pluggable similarity metric; pass NULL to use internal metric */
-;;                   
-;;         git_diff_similarity_metric *metric;
+;;   unsigned int version;
+;;   /**
+;;    * Combination of git_diff_find_t values (default GIT_DIFF_FIND_BY_CONFIG).
+;;       
+;;    * NOTE: if you don't explicitly set this, `diff.renames` could be set
+;;    * to false, resulting in `git_diff_find_similar` doing nothing.
+;;    */
+;;   uint32_t flags;
+;;   /** Similarity to consider a file renamed (default 50) */
+;;   uint16_t rename_threshold;
+;;   /** Similarity of modified to be eligible rename source (default 50) */
+;;   uint16_t rename_from_rewrite_threshold;
+;;   /** Similarity to consider a file a copy (default 50) */
+;;   uint16_t copy_threshold;
+;;   /** Similarity to split modify into delete/add pair (default 60) */
+;;   uint16_t break_rewrite_threshold;
+;;   /** Maximum similarity sources to examine for a file (somewhat like
+;;    *  git-diff's `-l` option or `diff.renameLimit` config) (default 200)
+;;    */
+;;   size_t rename_limit;
+;;   /** Pluggable similarity metric; pass NULL to use internal metric */
+;;   git_diff_similarity_metric *metric;
 ;; } git_diff_find_options;
+(if echo-decls (display "git_diff_find_options\n"))
 (define git_diff_find_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -4396,7 +4611,8 @@
 (define-fh-compound-type/p git_diff_find_options git_diff_find_options-desc)
 
 ;; extern int git_diff_find_init_options(git_diff_find_options *opts, 
-;;           unsigned int version);
+;;     unsigned int version);
+(if echo-decls (display "git_diff_find_init_options\n"))
 (define git_diff_find_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4411,6 +4627,7 @@
 (export git_diff_find_init_options)
 
 ;; extern void git_diff_free(git_diff *diff);
+(if echo-decls (display "git_diff_free\n"))
 (define git_diff_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4422,8 +4639,9 @@
 (export git_diff_free)
 
 ;; extern int git_diff_tree_to_tree(git_diff **diff, git_repository *repo, 
-;;           git_tree *old_tree, git_tree *new_tree, const git_diff_options *opts); 
-;;           /**< can be NULL for defaults */
+;;     git_tree *old_tree, git_tree *new_tree, const git_diff_options *opts); 
+;;     /**< can be NULL for defaults */
+(if echo-decls (display "git_diff_tree_to_tree\n"))
 (define git_diff_tree_to_tree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4441,8 +4659,9 @@
 (export git_diff_tree_to_tree)
 
 ;; extern int git_diff_tree_to_index(git_diff **diff, git_repository *repo, 
-;;           git_tree *old_tree, git_index *index, const git_diff_options *opts); 
-;;           /**< can be NULL for defaults */
+;;     git_tree *old_tree, git_index *index, const git_diff_options *opts); 
+;;     /**< can be NULL for defaults */
+(if echo-decls (display "git_diff_tree_to_index\n"))
 (define git_diff_tree_to_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4460,8 +4679,9 @@
 (export git_diff_tree_to_index)
 
 ;; extern int git_diff_index_to_workdir(git_diff **diff, git_repository *repo, 
-;;           git_index *index, const git_diff_options *opts); 
-;;           /**< can be NULL for defaults */
+;;     git_index *index, const git_diff_options *opts); 
+;;     /**< can be NULL for defaults */
+(if echo-decls (display "git_diff_index_to_workdir\n"))
 (define git_diff_index_to_workdir
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4478,8 +4698,9 @@
 (export git_diff_index_to_workdir)
 
 ;; extern int git_diff_tree_to_workdir(git_diff **diff, git_repository *repo, 
-;;           git_tree *old_tree, const git_diff_options *opts); 
-;;           /**< can be NULL for defaults */
+;;     git_tree *old_tree, const git_diff_options *opts); 
+;;     /**< can be NULL for defaults */
+(if echo-decls (display "git_diff_tree_to_workdir\n"))
 (define git_diff_tree_to_workdir
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4496,8 +4717,9 @@
 (export git_diff_tree_to_workdir)
 
 ;; extern int git_diff_tree_to_workdir_with_index(git_diff **diff, 
-;;           git_repository *repo, git_tree *old_tree, const git_diff_options *opts)
-;;           ; /**< can be NULL for defaults */
+;;     git_repository *repo, git_tree *old_tree, const git_diff_options *opts)
+;;     ; /**< can be NULL for defaults */
+(if echo-decls (display "git_diff_tree_to_workdir_with_index\n"))
 (define git_diff_tree_to_workdir_with_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4514,8 +4736,9 @@
 (export git_diff_tree_to_workdir_with_index)
 
 ;; extern int git_diff_index_to_index(git_diff **diff, git_repository *repo, 
-;;           git_index *old_index, git_index *new_index, const git_diff_options *opts
-;;           ); /**< can be NULL for defaults */
+;;     git_index *old_index, git_index *new_index, const git_diff_options *opts
+;;     ); /**< can be NULL for defaults */
+(if echo-decls (display "git_diff_index_to_index\n"))
 (define git_diff_index_to_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4533,6 +4756,7 @@
 (export git_diff_index_to_index)
 
 ;; extern int git_diff_merge(git_diff *onto, const git_diff *from);
+(if echo-decls (display "git_diff_merge\n"))
 (define git_diff_merge
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4545,7 +4769,8 @@
 (export git_diff_merge)
 
 ;; extern int git_diff_find_similar(git_diff *diff, const git_diff_find_options
-;;            *options);
+;;      *options);
+(if echo-decls (display "git_diff_find_similar\n"))
 (define git_diff_find_similar
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4561,6 +4786,7 @@
 (export git_diff_find_similar)
 
 ;; extern size_t git_diff_num_deltas(const git_diff *diff);
+(if echo-decls (display "git_diff_num_deltas\n"))
 (define git_diff_num_deltas
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -4574,7 +4800,8 @@
 (export git_diff_num_deltas)
 
 ;; extern size_t git_diff_num_deltas_of_type(const git_diff *diff, git_delta_t 
-;;           type);
+;;     type);
+(if echo-decls (display "git_diff_num_deltas_of_type\n"))
 (define git_diff_num_deltas_of_type
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -4584,12 +4811,13 @@
               (list '* ffi:int))))
     (lambda (diff type)
       (let ((~diff (unwrap-git_diff* diff))
-            (~type (unwrap-git_delta_t type)))
+            (~type (unwrap~fixed type)))
         (~f ~diff ~type)))))
 (export git_diff_num_deltas_of_type)
 
 ;; extern const git_diff_delta *git_diff_get_delta(const git_diff *diff, size_t
-;;            idx);
+;;      idx);
+(if echo-decls (display "git_diff_get_delta\n"))
 (define git_diff_get_delta
   (let ((~f (ffi:pointer->procedure
               '*
@@ -4604,6 +4832,7 @@
 (export git_diff_get_delta)
 
 ;; extern int git_diff_is_sorted_icase(const git_diff *diff);
+(if echo-decls (display "git_diff_is_sorted_icase\n"))
 (define git_diff_is_sorted_icase
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4617,8 +4846,9 @@
 (export git_diff_is_sorted_icase)
 
 ;; extern int git_diff_foreach(git_diff *diff, git_diff_file_cb file_cb, 
-;;           git_diff_binary_cb binary_cb, git_diff_hunk_cb hunk_cb, git_diff_line_cb
-;;            line_cb, void *payload);
+;;     git_diff_binary_cb binary_cb, git_diff_hunk_cb hunk_cb, git_diff_line_cb
+;;      line_cb, void *payload);
+(if echo-decls (display "git_diff_foreach\n"))
 (define git_diff_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4626,11 +4856,22 @@
               (list '* '* '* '* '* '*))))
     (lambda (diff file_cb binary_cb hunk_cb line_cb payload)
       (let ((~diff (unwrap-git_diff* diff))
-            (~file_cb (unwrap-git_diff_file_cb file_cb))
+            (~file_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* ffi:float '*))
+               file_cb))
             (~binary_cb
-              (unwrap-git_diff_binary_cb binary_cb))
-            (~hunk_cb (unwrap-git_diff_hunk_cb hunk_cb))
-            (~line_cb (unwrap-git_diff_line_cb line_cb))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               binary_cb))
+            (~hunk_cb
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               hunk_cb))
+            (~line_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* '* '* '*))
+               line_cb))
             (~payload (unwrap~pointer payload)))
         (~f ~diff
             ~file_cb
@@ -4641,6 +4882,7 @@
 (export git_diff_foreach)
 
 ;; extern char git_diff_status_char(git_delta_t status);
+(if echo-decls (display "git_diff_status_char\n"))
 (define git_diff_status_char
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4649,17 +4891,18 @@
                 (dynamic-link))
               (list ffi:int))))
     (lambda (status)
-      (let ((~status (unwrap-git_delta_t status)))
+      (let ((~status (unwrap~fixed status)))
         (~f ~status)))))
 (export git_diff_status_char)
 
 ;; typedef enum {
-;;         GIT_DIFF_FORMAT_PATCH = 1u,
-;;         GIT_DIFF_FORMAT_PATCH_HEADER = 2u,
-;;         GIT_DIFF_FORMAT_RAW = 3u,
-;;         GIT_DIFF_FORMAT_NAME_ONLY = 4u,
-;;         GIT_DIFF_FORMAT_NAME_STATUS = 5u,
+;;   GIT_DIFF_FORMAT_PATCH = 1u,
+;;   GIT_DIFF_FORMAT_PATCH_HEADER = 2u,
+;;   GIT_DIFF_FORMAT_RAW = 3u,
+;;   GIT_DIFF_FORMAT_NAME_ONLY = 4u,
+;;   GIT_DIFF_FORMAT_NAME_STATUS = 5u,
 ;; } git_diff_format_t;
+(if echo-decls (display "git_diff_format_t\n"))
 (define-fh-enum git_diff_format_t
   '((GIT_DIFF_FORMAT_PATCH . 1)
     (GIT_DIFF_FORMAT_PATCH_HEADER . 2)
@@ -4669,7 +4912,8 @@
   )
 
 ;; extern int git_diff_print(git_diff *diff, git_diff_format_t format, 
-;;           git_diff_line_cb print_cb, void *payload);
+;;     git_diff_line_cb print_cb, void *payload);
+(if echo-decls (display "git_diff_print\n"))
 (define git_diff_print
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4677,14 +4921,19 @@
               (list '* ffi:int '* '*))))
     (lambda (diff format print_cb payload)
       (let ((~diff (unwrap-git_diff* diff))
-            (~format (unwrap-git_diff_format_t format))
-            (~print_cb (unwrap-git_diff_line_cb print_cb))
+            (~format (unwrap~fixed format))
+            (~print_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* '* '* '*))
+               print_cb))
             (~payload (unwrap~pointer payload)))
         (~f ~diff ~format ~print_cb ~payload)))))
 (export git_diff_print)
 
 ;; extern int git_diff_to_buf(git_buf *out, git_diff *diff, git_diff_format_t 
-;;           format);
+;;     format);
+(if echo-decls (display "git_diff_to_buf\n"))
 (define git_diff_to_buf
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4693,15 +4942,16 @@
     (lambda (out diff format)
       (let ((~out (unwrap-git_buf* out))
             (~diff (unwrap-git_diff* diff))
-            (~format (unwrap-git_diff_format_t format)))
+            (~format (unwrap~fixed format)))
         (~f ~out ~diff ~format)))))
 (export git_diff_to_buf)
 
 ;; extern int git_diff_blobs(const git_blob *old_blob, const char *old_as_path
-;;           , const git_blob *new_blob, const char *new_as_path, const 
-;;           git_diff_options *options, git_diff_file_cb file_cb, git_diff_binary_cb 
-;;           binary_cb, git_diff_hunk_cb hunk_cb, git_diff_line_cb line_cb, void *
-;;           payload);
+;;     , const git_blob *new_blob, const char *new_as_path, const 
+;;     git_diff_options *options, git_diff_file_cb file_cb, git_diff_binary_cb 
+;;     binary_cb, git_diff_hunk_cb hunk_cb, git_diff_line_cb line_cb, void *
+;;     payload);
+(if echo-decls (display "git_diff_blobs\n"))
 (define git_diff_blobs
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4722,11 +4972,22 @@
             (~new_blob (unwrap-git_blob* new_blob))
             (~new_as_path (unwrap~pointer new_as_path))
             (~options (unwrap-git_diff_options* options))
-            (~file_cb (unwrap-git_diff_file_cb file_cb))
+            (~file_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* ffi:float '*))
+               file_cb))
             (~binary_cb
-              (unwrap-git_diff_binary_cb binary_cb))
-            (~hunk_cb (unwrap-git_diff_hunk_cb hunk_cb))
-            (~line_cb (unwrap-git_diff_line_cb line_cb))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               binary_cb))
+            (~hunk_cb
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               hunk_cb))
+            (~line_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* '* '* '*))
+               line_cb))
             (~payload (unwrap~pointer payload)))
         (~f ~old_blob
             ~old_as_path
@@ -4741,10 +5002,11 @@
 (export git_diff_blobs)
 
 ;; extern int git_diff_blob_to_buffer(const git_blob *old_blob, const char *
-;;           old_as_path, const char *buffer, size_t buffer_len, const char *
-;;           buffer_as_path, const git_diff_options *options, git_diff_file_cb 
-;;           file_cb, git_diff_binary_cb binary_cb, git_diff_hunk_cb hunk_cb, 
-;;           git_diff_line_cb line_cb, void *payload);
+;;     old_as_path, const char *buffer, size_t buffer_len, const char *
+;;     buffer_as_path, const git_diff_options *options, git_diff_file_cb 
+;;     file_cb, git_diff_binary_cb binary_cb, git_diff_hunk_cb hunk_cb, 
+;;     git_diff_line_cb line_cb, void *payload);
+(if echo-decls (display "git_diff_blob_to_buffer\n"))
 (define git_diff_blob_to_buffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4769,11 +5031,22 @@
             (~buffer_len (unwrap~fixed buffer_len))
             (~buffer_as_path (unwrap~pointer buffer_as_path))
             (~options (unwrap-git_diff_options* options))
-            (~file_cb (unwrap-git_diff_file_cb file_cb))
+            (~file_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* ffi:float '*))
+               file_cb))
             (~binary_cb
-              (unwrap-git_diff_binary_cb binary_cb))
-            (~hunk_cb (unwrap-git_diff_hunk_cb hunk_cb))
-            (~line_cb (unwrap-git_diff_line_cb line_cb))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               binary_cb))
+            (~hunk_cb
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               hunk_cb))
+            (~line_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* '* '* '*))
+               line_cb))
             (~payload (unwrap~pointer payload)))
         (~f ~old_blob
             ~old_as_path
@@ -4789,10 +5062,11 @@
 (export git_diff_blob_to_buffer)
 
 ;; extern int git_diff_buffers(const void *old_buffer, size_t old_len, const 
-;;           char *old_as_path, const void *new_buffer, size_t new_len, const char *
-;;           new_as_path, const git_diff_options *options, git_diff_file_cb file_cb, 
-;;           git_diff_binary_cb binary_cb, git_diff_hunk_cb hunk_cb, git_diff_line_cb
-;;            line_cb, void *payload);
+;;     char *old_as_path, const void *new_buffer, size_t new_len, const char *
+;;     new_as_path, const git_diff_options *options, git_diff_file_cb file_cb, 
+;;     git_diff_binary_cb binary_cb, git_diff_hunk_cb hunk_cb, git_diff_line_cb
+;;      line_cb, void *payload);
+(if echo-decls (display "git_diff_buffers\n"))
 (define git_diff_buffers
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4828,11 +5102,22 @@
             (~new_len (unwrap~fixed new_len))
             (~new_as_path (unwrap~pointer new_as_path))
             (~options (unwrap-git_diff_options* options))
-            (~file_cb (unwrap-git_diff_file_cb file_cb))
+            (~file_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* ffi:float '*))
+               file_cb))
             (~binary_cb
-              (unwrap-git_diff_binary_cb binary_cb))
-            (~hunk_cb (unwrap-git_diff_hunk_cb hunk_cb))
-            (~line_cb (unwrap-git_diff_line_cb line_cb))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               binary_cb))
+            (~hunk_cb
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               hunk_cb))
+            (~line_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* '* '* '*))
+               line_cb))
             (~payload (unwrap~pointer payload)))
         (~f ~old_buffer
             ~old_len
@@ -4849,7 +5134,8 @@
 (export git_diff_buffers)
 
 ;; extern int git_diff_from_buffer(git_diff **out, const char *content, size_t 
-;;           content_len);
+;;     content_len);
+(if echo-decls (display "git_diff_from_buffer\n"))
 (define git_diff_from_buffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4865,15 +5151,19 @@
 (export git_diff_from_buffer)
 
 ;; typedef struct git_diff_stats git_diff_stats;
-(define-fh-pointer-type git_diff_stats*)
+(if echo-decls (display "git_diff_stats\n"))
+(define git_diff_stats-desc void)
+(define git_diff_stats*-desc (bs:pointer git_diff_stats-desc))
+(define-fh-pointer-type git_diff_stats* git_diff_stats*-desc)
 
 ;; typedef enum {
-;;         GIT_DIFF_STATS_NONE = 0,
-;;         GIT_DIFF_STATS_FULL = 1u<<0,
-;;         GIT_DIFF_STATS_SHORT = 1u<<1,
-;;         GIT_DIFF_STATS_NUMBER = 1u<<2,
-;;         GIT_DIFF_STATS_INCLUDE_SUMMARY = 1u<<3,
+;;   GIT_DIFF_STATS_NONE = 0,
+;;   GIT_DIFF_STATS_FULL = 1u<<0,
+;;   GIT_DIFF_STATS_SHORT = 1u<<1,
+;;   GIT_DIFF_STATS_NUMBER = 1u<<2,
+;;   GIT_DIFF_STATS_INCLUDE_SUMMARY = 1u<<3,
 ;; } git_diff_stats_format_t;
+(if echo-decls (display "git_diff_stats_format_t\n"))
 (define-fh-enum git_diff_stats_format_t
   '((GIT_DIFF_STATS_NONE . 0)
     (GIT_DIFF_STATS_FULL . 1)
@@ -4883,6 +5173,7 @@
   )
 
 ;; extern int git_diff_get_stats(git_diff_stats **out, git_diff *diff);
+(if echo-decls (display "git_diff_get_stats\n"))
 (define git_diff_get_stats
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4897,6 +5188,7 @@
 (export git_diff_get_stats)
 
 ;; extern size_t git_diff_stats_files_changed(const git_diff_stats *stats);
+(if echo-decls (display "git_diff_stats_files_changed\n"))
 (define git_diff_stats_files_changed
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -4910,6 +5202,7 @@
 (export git_diff_stats_files_changed)
 
 ;; extern size_t git_diff_stats_insertions(const git_diff_stats *stats);
+(if echo-decls (display "git_diff_stats_insertions\n"))
 (define git_diff_stats_insertions
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -4923,6 +5216,7 @@
 (export git_diff_stats_insertions)
 
 ;; extern size_t git_diff_stats_deletions(const git_diff_stats *stats);
+(if echo-decls (display "git_diff_stats_deletions\n"))
 (define git_diff_stats_deletions
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -4936,7 +5230,8 @@
 (export git_diff_stats_deletions)
 
 ;; extern int git_diff_stats_to_buf(git_buf *out, const git_diff_stats *stats, 
-;;           git_diff_stats_format_t format, size_t width);
+;;     git_diff_stats_format_t format, size_t width);
+(if echo-decls (display "git_diff_stats_to_buf\n"))
 (define git_diff_stats_to_buf
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -4947,12 +5242,13 @@
     (lambda (out stats format width)
       (let ((~out (unwrap-git_buf* out))
             (~stats (unwrap-git_diff_stats* stats))
-            (~format (unwrap-git_diff_stats_format_t format))
+            (~format (unwrap~fixed format))
             (~width (unwrap~fixed width)))
         (~f ~out ~stats ~format ~width)))))
 (export git_diff_stats_to_buf)
 
 ;; extern void git_diff_stats_free(git_diff_stats *stats);
+(if echo-decls (display "git_diff_stats_free\n"))
 (define git_diff_stats_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -4966,9 +5262,10 @@
 (export git_diff_stats_free)
 
 ;; typedef enum {
-;;         GIT_DIFF_FORMAT_EMAIL_NONE = 0,
-;;         GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = 1<<0,
+;;   GIT_DIFF_FORMAT_EMAIL_NONE = 0,
+;;   GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = 1<<0,
 ;; } git_diff_format_email_flags_t;
+(if echo-decls (display "git_diff_format_email_flags_t\n"))
 (define-fh-enum git_diff_format_email_flags_t
   '((GIT_DIFF_FORMAT_EMAIL_NONE . 0)
     (GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER
@@ -4977,25 +5274,26 @@
   )
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         git_diff_format_email_flags_t flags;
-;;         /** This patch number */
-;;         size_t patch_no;
-;;         /** Total number of patches in this series */
-;;         size_t total_patches;
-;;         /** id to use for the commit */
-;;         const git_oid *id;
-;;         /** Summary of the change */
-;;         const char *summary;
-;;         /** Commit message's body */
-;;         const char *body;
-;;         /** Author of the change */
-;;         const git_signature *author;
+;;   unsigned int version;
+;;   git_diff_format_email_flags_t flags;
+;;   /** This patch number */
+;;   size_t patch_no;
+;;   /** Total number of patches in this series */
+;;   size_t total_patches;
+;;   /** id to use for the commit */
+;;   const git_oid *id;
+;;   /** Summary of the change */
+;;   const char *summary;
+;;   /** Commit message's body */
+;;   const char *body;
+;;   /** Author of the change */
+;;   const git_signature *author;
 ;; } git_diff_format_email_options;
+(if echo-decls (display "git_diff_format_email_options\n"))
 (define git_diff_format_email_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
-          `(flags ,git_diff_format_email_flags_t-desc)
+          `(flags ,int)
           `(patch_no ,size_t)
           `(total_patches ,size_t)
           `(id ,(bs:pointer git_oid*-desc))
@@ -5006,7 +5304,8 @@
 (define-fh-compound-type/p git_diff_format_email_options git_diff_format_email_options-desc)
 
 ;; extern int git_diff_format_email(git_buf *out, git_diff *diff, const 
-;;           git_diff_format_email_options *opts);
+;;     git_diff_format_email_options *opts);
+(if echo-decls (display "git_diff_format_email\n"))
 (define git_diff_format_email
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5022,9 +5321,10 @@
 (export git_diff_format_email)
 
 ;; extern int git_diff_commit_as_email(git_buf *out, git_repository *repo, 
-;;           git_commit *commit, size_t patch_no, size_t total_patches, 
-;;           git_diff_format_email_flags_t flags, const git_diff_options *diff_opts)
-;;           ;
+;;     git_commit *commit, size_t patch_no, size_t total_patches, 
+;;     git_diff_format_email_flags_t flags, const git_diff_options *diff_opts)
+;;     ;
+(if echo-decls (display "git_diff_commit_as_email\n"))
 (define git_diff_commit_as_email
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5044,8 +5344,7 @@
             (~commit (unwrap-git_commit* commit))
             (~patch_no (unwrap~fixed patch_no))
             (~total_patches (unwrap~fixed total_patches))
-            (~flags
-              (unwrap-git_diff_format_email_flags_t flags))
+            (~flags (unwrap~fixed flags))
             (~diff_opts (unwrap-git_diff_options* diff_opts)))
         (~f ~out
             ~repo
@@ -5057,7 +5356,8 @@
 (export git_diff_commit_as_email)
 
 ;; extern int git_diff_format_email_init_options(git_diff_format_email_options 
-;;           *opts, unsigned int version);
+;;     *opts, unsigned int version);
+(if echo-decls (display "git_diff_format_email_init_options\n"))
 (define git_diff_format_email_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5072,29 +5372,30 @@
 (export git_diff_format_email_init_options)
 
 ;; typedef enum {
-;;         GIT_CHECKOUT_NONE = 0,
-;;         GIT_CHECKOUT_SAFE = 1u<<0,
-;;         GIT_CHECKOUT_FORCE = 1u<<1,
-;;         GIT_CHECKOUT_RECREATE_MISSING = 1u<<2,
-;;         GIT_CHECKOUT_ALLOW_CONFLICTS = 1u<<4,
-;;         GIT_CHECKOUT_REMOVE_UNTRACKED = 1u<<5,
-;;         GIT_CHECKOUT_REMOVE_IGNORED = 1u<<6,
-;;         GIT_CHECKOUT_UPDATE_ONLY = 1u<<7,
-;;         GIT_CHECKOUT_DONT_UPDATE_INDEX = 1u<<8,
-;;         GIT_CHECKOUT_NO_REFRESH = 1u<<9,
-;;         GIT_CHECKOUT_SKIP_UNMERGED = 1u<<10,
-;;         GIT_CHECKOUT_USE_OURS = 1u<<11,
-;;         GIT_CHECKOUT_USE_THEIRS = 1u<<12,
-;;         GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH = 1u<<13,
-;;         GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES = 1u<<18,
-;;         GIT_CHECKOUT_DONT_OVERWRITE_IGNORED = 1u<<19,
-;;         GIT_CHECKOUT_CONFLICT_STYLE_MERGE = 1u<<20,
-;;         GIT_CHECKOUT_CONFLICT_STYLE_DIFF3 = 1u<<21,
-;;         GIT_CHECKOUT_DONT_REMOVE_EXISTING = 1u<<22,
-;;         GIT_CHECKOUT_DONT_WRITE_INDEX = 1u<<23,
-;;         GIT_CHECKOUT_UPDATE_SUBMODULES = 1u<<16,
-;;         GIT_CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED = 1u<<17,
+;;   GIT_CHECKOUT_NONE = 0,
+;;   GIT_CHECKOUT_SAFE = 1u<<0,
+;;   GIT_CHECKOUT_FORCE = 1u<<1,
+;;   GIT_CHECKOUT_RECREATE_MISSING = 1u<<2,
+;;   GIT_CHECKOUT_ALLOW_CONFLICTS = 1u<<4,
+;;   GIT_CHECKOUT_REMOVE_UNTRACKED = 1u<<5,
+;;   GIT_CHECKOUT_REMOVE_IGNORED = 1u<<6,
+;;   GIT_CHECKOUT_UPDATE_ONLY = 1u<<7,
+;;   GIT_CHECKOUT_DONT_UPDATE_INDEX = 1u<<8,
+;;   GIT_CHECKOUT_NO_REFRESH = 1u<<9,
+;;   GIT_CHECKOUT_SKIP_UNMERGED = 1u<<10,
+;;   GIT_CHECKOUT_USE_OURS = 1u<<11,
+;;   GIT_CHECKOUT_USE_THEIRS = 1u<<12,
+;;   GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH = 1u<<13,
+;;   GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES = 1u<<18,
+;;   GIT_CHECKOUT_DONT_OVERWRITE_IGNORED = 1u<<19,
+;;   GIT_CHECKOUT_CONFLICT_STYLE_MERGE = 1u<<20,
+;;   GIT_CHECKOUT_CONFLICT_STYLE_DIFF3 = 1u<<21,
+;;   GIT_CHECKOUT_DONT_REMOVE_EXISTING = 1u<<22,
+;;   GIT_CHECKOUT_DONT_WRITE_INDEX = 1u<<23,
+;;   GIT_CHECKOUT_UPDATE_SUBMODULES = 1u<<16,
+;;   GIT_CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED = 1u<<17,
 ;; } git_checkout_strategy_t;
+(if echo-decls (display "git_checkout_strategy_t\n"))
 (define-fh-enum git_checkout_strategy_t
   '((GIT_CHECKOUT_NONE . 0)
     (GIT_CHECKOUT_SAFE . 1)
@@ -5123,14 +5424,15 @@
   )
 
 ;; typedef enum {
-;;         GIT_CHECKOUT_NOTIFY_NONE = 0,
-;;         GIT_CHECKOUT_NOTIFY_CONFLICT = 1u<<0,
-;;         GIT_CHECKOUT_NOTIFY_DIRTY = 1u<<1,
-;;         GIT_CHECKOUT_NOTIFY_UPDATED = 1u<<2,
-;;         GIT_CHECKOUT_NOTIFY_UNTRACKED = 1u<<3,
-;;         GIT_CHECKOUT_NOTIFY_IGNORED = 1u<<4,
-;;         GIT_CHECKOUT_NOTIFY_ALL = 0x0FFFFu,
+;;   GIT_CHECKOUT_NOTIFY_NONE = 0,
+;;   GIT_CHECKOUT_NOTIFY_CONFLICT = 1u<<0,
+;;   GIT_CHECKOUT_NOTIFY_DIRTY = 1u<<1,
+;;   GIT_CHECKOUT_NOTIFY_UPDATED = 1u<<2,
+;;   GIT_CHECKOUT_NOTIFY_UNTRACKED = 1u<<3,
+;;   GIT_CHECKOUT_NOTIFY_IGNORED = 1u<<4,
+;;   GIT_CHECKOUT_NOTIFY_ALL = 0x0FFFFu,
 ;; } git_checkout_notify_t;
+(if echo-decls (display "git_checkout_notify_t\n"))
 (define-fh-enum git_checkout_notify_t
   '((GIT_CHECKOUT_NOTIFY_NONE . 0)
     (GIT_CHECKOUT_NOTIFY_CONFLICT . 1)
@@ -5142,10 +5444,11 @@
   )
 
 ;; typedef struct {
-;;         size_t mkdir_calls;
-;;         size_t stat_calls;
-;;         size_t chmod_calls;
+;;   size_t mkdir_calls;
+;;   size_t stat_calls;
+;;   size_t chmod_calls;
 ;; } git_checkout_perfdata;
+(if echo-decls (display "git_checkout_perfdata\n"))
 (define git_checkout_perfdata-desc
   (bs:struct
     (list `(mkdir_calls ,size_t)
@@ -5155,71 +5458,65 @@
 (define-fh-compound-type/p git_checkout_perfdata git_checkout_perfdata-desc)
 
 ;; typedef int (*git_checkout_notify_cb)(git_checkout_notify_t why, const char 
-;;           *path, const git_diff_file *baseline, const git_diff_file *target, const
-;;            git_diff_file *workdir, void *payload);
+;;     *path, const git_diff_file *baseline, const git_diff_file *target, const
+;;      git_diff_file *workdir, void *payload);
+(if echo-decls (display "git_checkout_notify_cb\n"))
 (define-fh-function/p git_checkout_notify_cb
   ffi:int (list ffi:int (quote *) (quote *) (quote *) (quote *) (quote *)))
 
 ;; typedef void (*git_checkout_progress_cb)(const char *path, size_t 
-;;           completed_steps, size_t total_steps, void *payload);
+;;     completed_steps, size_t total_steps, void *payload);
+(if echo-decls (display "git_checkout_progress_cb\n"))
 (define-fh-function/p git_checkout_progress_cb
   ffi:void (list (quote *) ffi:size_t ffi:size_t (quote *)))
 
 ;; typedef void (*git_checkout_perfdata_cb)(const git_checkout_perfdata *
-;;           perfdata, void *payload);
+;;     perfdata, void *payload);
+(if echo-decls (display "git_checkout_perfdata_cb\n"))
 (define-fh-function/p git_checkout_perfdata_cb
   ffi:void (list (quote *) (quote *)))
 
 ;; typedef struct git_checkout_options {
-;;         unsigned int version;
-;;         unsigned int checkout_strategy; /**< default will be a dry run */
-;;         int disable_filters; 
-;;                   /**< don't apply filters like CRLF conversion */
-;;         unsigned int dir_mode; /**< default is 0755 */
-;;         unsigned int file_mode; 
-;;                   /**< default is 0644 or 0755 as dictated by blob */
-;;         int file_open_flags; /**< default is O_CREAT | O_TRUNC | O_WRONLY */
-;;                   
-;;         unsigned int notify_flags; /**< see `git_checkout_notify_t` above */
-;;                   
-;;         git_checkout_notify_cb notify_cb;
-;;         void *notify_payload;
-;;         /** Optional callback to notify the consumer of checkout progress. */
-;;                   
-;;         git_checkout_progress_cb progress_cb;
-;;         void *progress_payload;
-;;         /** When not zeroed out, array of fnmatch patterns specifying which
-;;               *  paths should be taken into account, otherwise all files.  Use
-;;                   
-;;               *  GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH to treat as simple list.
-;;                   
-;;               */
-;;         git_strarray paths;
-;;         /** The expected content of the working directory; defaults to HEAD.
-;;                   
-;;               *  If the working directory does not match this baseline information,
-;;                   
-;;               *  that will produce a checkout conflict.
-;;               */
-;;         git_tree *baseline;
-;;         /** Like `baseline` above, though expressed as an index.  This
-;;               *  option overrides `baseline`.
-;;               */
-;;         git_index *baseline_index; 
-;;                   /**< expected content of workdir, expressed as an index. */
-;;         const char *target_directory; 
-;;                   /**< alternative checkout path to workdir */
-;;         const char *ancestor_label; 
-;;                   /**< the name of the common ancestor side of conflicts */
-;;         const char *our_label; 
-;;                   /**< the name of the "our" side of conflicts */
-;;         const char *their_label; 
-;;                   /**< the name of the "their" side of conflicts */
-;;         /** Optional callback to notify the consumer of performance data. */
-;;                   
-;;         git_checkout_perfdata_cb perfdata_cb;
-;;         void *perfdata_payload;
+;;   unsigned int version;
+;;   unsigned int checkout_strategy; /**< default will be a dry run */
+;;   int disable_filters; /**< don't apply filters like CRLF conversion */
+;;   unsigned int dir_mode; /**< default is 0755 */
+;;   unsigned int file_mode; 
+;;       /**< default is 0644 or 0755 as dictated by blob */
+;;   int file_open_flags; /**< default is O_CREAT | O_TRUNC | O_WRONLY */
+;;   unsigned int notify_flags; /**< see `git_checkout_notify_t` above */
+;;   git_checkout_notify_cb notify_cb;
+;;   void *notify_payload;
+;;   /** Optional callback to notify the consumer of checkout progress. */
+;;   git_checkout_progress_cb progress_cb;
+;;   void *progress_payload;
+;;   /** When not zeroed out, array of fnmatch patterns specifying which
+;;    *  paths should be taken into account, otherwise all files.  Use
+;;    *  GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH to treat as simple list.
+;;    */
+;;   git_strarray paths;
+;;   /** The expected content of the working directory; defaults to HEAD.
+;;    *  If the working directory does not match this baseline information,
+;;    *  that will produce a checkout conflict.
+;;    */
+;;   git_tree *baseline;
+;;   /** Like `baseline` above, though expressed as an index.  This
+;;    *  option overrides `baseline`.
+;;    */
+;;   git_index *baseline_index; 
+;;       /**< expected content of workdir, expressed as an index. */
+;;   const char *target_directory; /**< alternative checkout path to workdir */
+;;       
+;;   const char *ancestor_label; 
+;;       /**< the name of the common ancestor side of conflicts */
+;;   const char *our_label; /**< the name of the "our" side of conflicts */
+;;   const char *their_label; /**< the name of the "their" side of conflicts */
+;;       
+;;   /** Optional callback to notify the consumer of performance data. */
+;;   git_checkout_perfdata_cb perfdata_cb;
+;;   void *perfdata_payload;
 ;; } git_checkout_options;
+(if echo-decls (display "git_checkout_options\n"))
 (define git_checkout_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -5229,9 +5526,9 @@
           `(file_mode ,unsigned-int)
           `(file_open_flags ,int)
           `(notify_flags ,unsigned-int)
-          `(notify_cb ,git_checkout_notify_cb-desc)
+          `(notify_cb ,(bs:pointer void))
           `(notify_payload ,(bs:pointer void))
-          `(progress_cb ,git_checkout_progress_cb-desc)
+          `(progress_cb ,(bs:pointer void))
           `(progress_payload ,(bs:pointer void))
           `(paths ,git_strarray-desc)
           `(baseline ,(bs:pointer git_tree*-desc))
@@ -5240,14 +5537,15 @@
           `(ancestor_label ,(bs:pointer int))
           `(our_label ,(bs:pointer int))
           `(their_label ,(bs:pointer int))
-          `(perfdata_cb ,git_checkout_perfdata_cb-desc)
+          `(perfdata_cb ,(bs:pointer void))
           `(perfdata_payload ,(bs:pointer void)))))
 (export git_checkout_options-desc)
 (define-fh-compound-type/p git_checkout_options git_checkout_options-desc)
 (define struct-git_checkout_options git_checkout_options)
 
 ;; extern int git_checkout_init_options(git_checkout_options *opts, 
-;;           unsigned int version);
+;;     unsigned int version);
+(if echo-decls (display "git_checkout_init_options\n"))
 (define git_checkout_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5262,7 +5560,8 @@
 (export git_checkout_init_options)
 
 ;; extern int git_checkout_head(git_repository *repo, const 
-;;           git_checkout_options *opts);
+;;     git_checkout_options *opts);
+(if echo-decls (display "git_checkout_head\n"))
 (define git_checkout_head
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5275,7 +5574,8 @@
 (export git_checkout_head)
 
 ;; extern int git_checkout_index(git_repository *repo, git_index *index, const 
-;;           git_checkout_options *opts);
+;;     git_checkout_options *opts);
+(if echo-decls (display "git_checkout_index\n"))
 (define git_checkout_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5291,7 +5591,8 @@
 (export git_checkout_index)
 
 ;; extern int git_checkout_tree(git_repository *repo, const git_object *treeish
-;;           , const git_checkout_options *opts);
+;;     , const git_checkout_options *opts);
+(if echo-decls (display "git_checkout_tree\n"))
 (define git_checkout_tree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5305,9 +5606,10 @@
 (export git_checkout_tree)
 
 ;; typedef struct git_oidarray {
-;;         git_oid *ids;
-;;         size_t count;
+;;   git_oid *ids;
+;;   size_t count;
 ;; } git_oidarray;
+(if echo-decls (display "git_oidarray\n"))
 (define git_oidarray-desc
   (bs:struct
     (list `(ids ,(bs:pointer git_oid*-desc))
@@ -5317,6 +5619,7 @@
 (define struct-git_oidarray git_oidarray)
 
 ;; extern void git_oidarray_free(git_oidarray *array);
+(if echo-decls (display "git_oidarray_free\n"))
 (define git_oidarray_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5328,11 +5631,15 @@
 (export git_oidarray_free)
 
 ;; typedef struct git_indexer git_indexer;
-(define-fh-pointer-type git_indexer*)
+(if echo-decls (display "git_indexer\n"))
+(define git_indexer-desc void)
+(define git_indexer*-desc (bs:pointer git_indexer-desc))
+(define-fh-pointer-type git_indexer* git_indexer*-desc)
 
 ;; extern int git_indexer_new(git_indexer **out, const char *path, unsigned int
-;;            mode, git_odb *odb, git_transfer_progress_cb progress_cb, void *
-;;           progress_cb_payload);
+;;      mode, git_odb *odb, git_transfer_progress_cb progress_cb, void *
+;;     progress_cb_payload);
+(if echo-decls (display "git_indexer_new\n"))
 (define git_indexer_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5349,7 +5656,8 @@
             (~mode (unwrap~fixed mode))
             (~odb (unwrap-git_odb* odb))
             (~progress_cb
-              (unwrap-git_transfer_progress_cb progress_cb))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               progress_cb))
             (~progress_cb_payload
               (unwrap~pointer progress_cb_payload)))
         (~f ~out
@@ -5361,7 +5669,8 @@
 (export git_indexer_new)
 
 ;; extern int git_indexer_append(git_indexer *idx, const void *data, size_t 
-;;           size, git_transfer_progress *stats);
+;;     size, git_transfer_progress *stats);
+(if echo-decls (display "git_indexer_append\n"))
 (define git_indexer_append
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5378,7 +5687,8 @@
 (export git_indexer_append)
 
 ;; extern int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats
-;;           );
+;;     );
+(if echo-decls (display "git_indexer_commit\n"))
 (define git_indexer_commit
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5393,6 +5703,7 @@
 (export git_indexer_commit)
 
 ;; extern const git_oid *git_indexer_hash(const git_indexer *idx);
+(if echo-decls (display "git_indexer_hash\n"))
 (define git_indexer_hash
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5404,6 +5715,7 @@
 (export git_indexer_hash)
 
 ;; extern void git_indexer_free(git_indexer *idx);
+(if echo-decls (display "git_indexer_free\n"))
 (define git_indexer_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5415,10 +5727,11 @@
 (export git_indexer_free)
 
 ;; typedef struct {
-;;         int32_t seconds;
-;;         /* nsec should not be stored as time_t compatible */
-;;         uint32_t nanoseconds;
+;;   int32_t seconds;
+;;   /* nsec should not be stored as time_t compatible */
+;;   uint32_t nanoseconds;
 ;; } git_index_time;
+(if echo-decls (display "git_index_time\n"))
 (define git_index_time-desc
   (bs:struct
     (list `(seconds ,int32) `(nanoseconds ,uint64))))
@@ -5426,19 +5739,20 @@
 (define-fh-compound-type/p git_index_time git_index_time-desc)
 
 ;; typedef struct git_index_entry {
-;;         git_index_time ctime;
-;;         git_index_time mtime;
-;;         uint32_t dev;
-;;         uint32_t ino;
-;;         uint32_t mode;
-;;         uint32_t uid;
-;;         uint32_t gid;
-;;         uint32_t file_size;
-;;         git_oid id;
-;;         uint16_t flags;
-;;         uint16_t flags_extended;
-;;         const char *path;
+;;   git_index_time ctime;
+;;   git_index_time mtime;
+;;   uint32_t dev;
+;;   uint32_t ino;
+;;   uint32_t mode;
+;;   uint32_t uid;
+;;   uint32_t gid;
+;;   uint32_t file_size;
+;;   git_oid id;
+;;   uint16_t flags;
+;;   uint16_t flags_extended;
+;;   const char *path;
 ;; } git_index_entry;
+(if echo-decls (display "git_index_entry\n"))
 (define git_index_entry-desc
   (bs:struct
     (list `(ctime ,git_index_time-desc)
@@ -5458,31 +5772,33 @@
 (define struct-git_index_entry git_index_entry)
 
 ;; typedef enum {
-;;         GIT_IDXENTRY_EXTENDED = 0x4000,
-;;         GIT_IDXENTRY_VALID = 0x8000,
+;;   GIT_IDXENTRY_EXTENDED = 0x4000,
+;;   GIT_IDXENTRY_VALID = 0x8000,
 ;; } git_indxentry_flag_t;
+(if echo-decls (display "git_indxentry_flag_t\n"))
 (define-fh-enum git_indxentry_flag_t
   '((GIT_IDXENTRY_EXTENDED . 16384)
     (GIT_IDXENTRY_VALID . 32768))
   )
 
 ;; typedef enum {
-;;         GIT_IDXENTRY_INTENT_TO_ADD = 1<<13,
-;;         GIT_IDXENTRY_SKIP_WORKTREE = 1<<14,
-;;         GIT_IDXENTRY_EXTENDED2 = 1<<15,
-;;         GIT_IDXENTRY_EXTENDED_FLAGS = GIT_IDXENTRY_INTENT_TO_ADD | 
-;;                   GIT_IDXENTRY_SKIP_WORKTREE,
-;;         GIT_IDXENTRY_UPDATE = 1<<0,
-;;         GIT_IDXENTRY_REMOVE = 1<<1,
-;;         GIT_IDXENTRY_UPTODATE = 1<<2,
-;;         GIT_IDXENTRY_ADDED = 1<<3,
-;;         GIT_IDXENTRY_HASHED = 1<<4,
-;;         GIT_IDXENTRY_UNHASHED = 1<<5,
-;;         GIT_IDXENTRY_WT_REMOVE = 1<<6,
-;;         GIT_IDXENTRY_CONFLICTED = 1<<7,
-;;         GIT_IDXENTRY_UNPACKED = 1<<8,
-;;         GIT_IDXENTRY_NEW_SKIP_WORKTREE = 1<<9,
+;;   GIT_IDXENTRY_INTENT_TO_ADD = 1<<13,
+;;   GIT_IDXENTRY_SKIP_WORKTREE = 1<<14,
+;;   GIT_IDXENTRY_EXTENDED2 = 1<<15,
+;;   GIT_IDXENTRY_EXTENDED_FLAGS = GIT_IDXENTRY_INTENT_TO_ADD | 
+;;       GIT_IDXENTRY_SKIP_WORKTREE,
+;;   GIT_IDXENTRY_UPDATE = 1<<0,
+;;   GIT_IDXENTRY_REMOVE = 1<<1,
+;;   GIT_IDXENTRY_UPTODATE = 1<<2,
+;;   GIT_IDXENTRY_ADDED = 1<<3,
+;;   GIT_IDXENTRY_HASHED = 1<<4,
+;;   GIT_IDXENTRY_UNHASHED = 1<<5,
+;;   GIT_IDXENTRY_WT_REMOVE = 1<<6,
+;;   GIT_IDXENTRY_CONFLICTED = 1<<7,
+;;   GIT_IDXENTRY_UNPACKED = 1<<8,
+;;   GIT_IDXENTRY_NEW_SKIP_WORKTREE = 1<<9,
 ;; } git_idxentry_extended_flag_t;
+(if echo-decls (display "git_idxentry_extended_flag_t\n"))
 (define-fh-enum git_idxentry_extended_flag_t
   '((GIT_IDXENTRY_INTENT_TO_ADD . 8192)
     (GIT_IDXENTRY_SKIP_WORKTREE . 16384)
@@ -5501,11 +5817,12 @@
   )
 
 ;; typedef enum {
-;;         GIT_INDEXCAP_IGNORE_CASE = 1,
-;;         GIT_INDEXCAP_NO_FILEMODE = 2,
-;;         GIT_INDEXCAP_NO_SYMLINKS = 4,
-;;         GIT_INDEXCAP_FROM_OWNER = -1,
+;;   GIT_INDEXCAP_IGNORE_CASE = 1,
+;;   GIT_INDEXCAP_NO_FILEMODE = 2,
+;;   GIT_INDEXCAP_NO_SYMLINKS = 4,
+;;   GIT_INDEXCAP_FROM_OWNER = -1,
 ;; } git_indexcap_t;
+(if echo-decls (display "git_indexcap_t\n"))
 (define-fh-enum git_indexcap_t
   '((GIT_INDEXCAP_IGNORE_CASE . 1)
     (GIT_INDEXCAP_NO_FILEMODE . 2)
@@ -5514,16 +5831,18 @@
   )
 
 ;; typedef int (*git_index_matched_path_cb)(const char *path, const char *
-;;           matched_pathspec, void *payload);
+;;     matched_pathspec, void *payload);
+(if echo-decls (display "git_index_matched_path_cb\n"))
 (define-fh-function/p git_index_matched_path_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef enum {
-;;         GIT_INDEX_ADD_DEFAULT = 0,
-;;         GIT_INDEX_ADD_FORCE = 1u<<0,
-;;         GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH = 1u<<1,
-;;         GIT_INDEX_ADD_CHECK_PATHSPEC = 1u<<2,
+;;   GIT_INDEX_ADD_DEFAULT = 0,
+;;   GIT_INDEX_ADD_FORCE = 1u<<0,
+;;   GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH = 1u<<1,
+;;   GIT_INDEX_ADD_CHECK_PATHSPEC = 1u<<2,
 ;; } git_index_add_option_t;
+(if echo-decls (display "git_index_add_option_t\n"))
 (define-fh-enum git_index_add_option_t
   '((GIT_INDEX_ADD_DEFAULT . 0)
     (GIT_INDEX_ADD_FORCE . 1)
@@ -5532,12 +5851,13 @@
   )
 
 ;; typedef enum {
-;;         GIT_INDEX_STAGE_ANY = -1,
-;;         GIT_INDEX_STAGE_NORMAL = 0,
-;;         GIT_INDEX_STAGE_ANCESTOR = 1,
-;;         GIT_INDEX_STAGE_OURS = 2,
-;;         GIT_INDEX_STAGE_THEIRS = 3,
+;;   GIT_INDEX_STAGE_ANY = -1,
+;;   GIT_INDEX_STAGE_NORMAL = 0,
+;;   GIT_INDEX_STAGE_ANCESTOR = 1,
+;;   GIT_INDEX_STAGE_OURS = 2,
+;;   GIT_INDEX_STAGE_THEIRS = 3,
 ;; } git_index_stage_t;
+(if echo-decls (display "git_index_stage_t\n"))
 (define-fh-enum git_index_stage_t
   '((GIT_INDEX_STAGE_ANY . -1)
     (GIT_INDEX_STAGE_NORMAL . 0)
@@ -5547,6 +5867,7 @@
   )
 
 ;; extern int git_index_open(git_index **out, const char *index_path);
+(if echo-decls (display "git_index_open\n"))
 (define git_index_open
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5559,6 +5880,7 @@
 (export git_index_open)
 
 ;; extern int git_index_new(git_index **out);
+(if echo-decls (display "git_index_new\n"))
 (define git_index_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5569,6 +5891,7 @@
 (export git_index_new)
 
 ;; extern void git_index_free(git_index *index);
+(if echo-decls (display "git_index_free\n"))
 (define git_index_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -5580,6 +5903,7 @@
 (export git_index_free)
 
 ;; extern git_repository *git_index_owner(const git_index *index);
+(if echo-decls (display "git_index_owner\n"))
 (define git_index_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5591,6 +5915,7 @@
 (export git_index_owner)
 
 ;; extern int git_index_caps(const git_index *index);
+(if echo-decls (display "git_index_caps\n"))
 (define git_index_caps
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5602,6 +5927,7 @@
 (export git_index_caps)
 
 ;; extern int git_index_set_caps(git_index *index, int caps);
+(if echo-decls (display "git_index_set_caps\n"))
 (define git_index_set_caps
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5616,6 +5942,7 @@
 (export git_index_set_caps)
 
 ;; extern unsigned int git_index_version(git_index *index);
+(if echo-decls (display "git_index_version\n"))
 (define git_index_version
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -5627,6 +5954,7 @@
 (export git_index_version)
 
 ;; extern int git_index_set_version(git_index *index, unsigned int version);
+(if echo-decls (display "git_index_set_version\n"))
 (define git_index_set_version
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5641,6 +5969,7 @@
 (export git_index_set_version)
 
 ;; extern int git_index_read(git_index *index, int force);
+(if echo-decls (display "git_index_read\n"))
 (define git_index_read
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5653,6 +5982,7 @@
 (export git_index_read)
 
 ;; extern int git_index_write(git_index *index);
+(if echo-decls (display "git_index_write\n"))
 (define git_index_write
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5664,6 +5994,7 @@
 (export git_index_write)
 
 ;; extern const char *git_index_path(const git_index *index);
+(if echo-decls (display "git_index_path\n"))
 (define git_index_path
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5675,6 +6006,7 @@
 (export git_index_path)
 
 ;; extern const git_oid *git_index_checksum(git_index *index);
+(if echo-decls (display "git_index_checksum\n"))
 (define git_index_checksum
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5688,6 +6020,7 @@
 (export git_index_checksum)
 
 ;; extern int git_index_read_tree(git_index *index, const git_tree *tree);
+(if echo-decls (display "git_index_read_tree\n"))
 (define git_index_read_tree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5702,6 +6035,7 @@
 (export git_index_read_tree)
 
 ;; extern int git_index_write_tree(git_oid *out, git_index *index);
+(if echo-decls (display "git_index_write_tree\n"))
 (define git_index_write_tree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5716,7 +6050,8 @@
 (export git_index_write_tree)
 
 ;; extern int git_index_write_tree_to(git_oid *out, git_index *index, 
-;;           git_repository *repo);
+;;     git_repository *repo);
+(if echo-decls (display "git_index_write_tree_to\n"))
 (define git_index_write_tree_to
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5732,6 +6067,7 @@
 (export git_index_write_tree_to)
 
 ;; extern size_t git_index_entrycount(const git_index *index);
+(if echo-decls (display "git_index_entrycount\n"))
 (define git_index_entrycount
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -5745,6 +6081,7 @@
 (export git_index_entrycount)
 
 ;; extern int git_index_clear(git_index *index);
+(if echo-decls (display "git_index_clear\n"))
 (define git_index_clear
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5756,7 +6093,8 @@
 (export git_index_clear)
 
 ;; extern const git_index_entry *git_index_get_byindex(git_index *index, size_t
-;;            n);
+;;      n);
+(if echo-decls (display "git_index_get_byindex\n"))
 (define git_index_get_byindex
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5771,7 +6109,8 @@
 (export git_index_get_byindex)
 
 ;; extern const git_index_entry *git_index_get_bypath(git_index *index, const 
-;;           char *path, int stage);
+;;     char *path, int stage);
+(if echo-decls (display "git_index_get_bypath\n"))
 (define git_index_get_bypath
   (let ((~f (ffi:pointer->procedure
               '*
@@ -5787,6 +6126,7 @@
 (export git_index_get_bypath)
 
 ;; extern int git_index_remove(git_index *index, const char *path, int stage);
+(if echo-decls (display "git_index_remove\n"))
 (define git_index_remove
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5800,7 +6140,8 @@
 (export git_index_remove)
 
 ;; extern int git_index_remove_directory(git_index *index, const char *dir, int
-;;            stage);
+;;      stage);
+(if echo-decls (display "git_index_remove_directory\n"))
 (define git_index_remove_directory
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5816,7 +6157,8 @@
 (export git_index_remove_directory)
 
 ;; extern int git_index_add(git_index *index, const git_index_entry *
-;;           source_entry);
+;;     source_entry);
+(if echo-decls (display "git_index_add\n"))
 (define git_index_add
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5830,6 +6172,7 @@
 (export git_index_add)
 
 ;; extern int git_index_entry_stage(const git_index_entry *entry);
+(if echo-decls (display "git_index_entry_stage\n"))
 (define git_index_entry_stage
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5843,6 +6186,7 @@
 (export git_index_entry_stage)
 
 ;; extern int git_index_entry_is_conflict(const git_index_entry *entry);
+(if echo-decls (display "git_index_entry_is_conflict\n"))
 (define git_index_entry_is_conflict
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5856,6 +6200,7 @@
 (export git_index_entry_is_conflict)
 
 ;; extern int git_index_add_bypath(git_index *index, const char *path);
+(if echo-decls (display "git_index_add_bypath\n"))
 (define git_index_add_bypath
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5870,7 +6215,8 @@
 (export git_index_add_bypath)
 
 ;; extern int git_index_add_frombuffer(git_index *index, const git_index_entry 
-;;           *entry, const void *buffer, size_t len);
+;;     *entry, const void *buffer, size_t len);
+(if echo-decls (display "git_index_add_frombuffer\n"))
 (define git_index_add_frombuffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5887,6 +6233,7 @@
 (export git_index_add_frombuffer)
 
 ;; extern int git_index_remove_bypath(git_index *index, const char *path);
+(if echo-decls (display "git_index_remove_bypath\n"))
 (define git_index_remove_bypath
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5901,8 +6248,9 @@
 (export git_index_remove_bypath)
 
 ;; extern int git_index_add_all(git_index *index, const git_strarray *pathspec
-;;           , unsigned int flags, git_index_matched_path_cb callback, void *payload)
-;;           ;
+;;     , unsigned int flags, git_index_matched_path_cb callback, void *payload)
+;;     ;
+(if echo-decls (display "git_index_add_all\n"))
 (define git_index_add_all
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5913,13 +6261,15 @@
             (~pathspec (unwrap-git_strarray* pathspec))
             (~flags (unwrap~fixed flags))
             (~callback
-              (unwrap-git_index_matched_path_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~index ~pathspec ~flags ~callback ~payload)))))
 (export git_index_add_all)
 
 ;; extern int git_index_remove_all(git_index *index, const git_strarray *
-;;           pathspec, git_index_matched_path_cb callback, void *payload);
+;;     pathspec, git_index_matched_path_cb callback, void *payload);
+(if echo-decls (display "git_index_remove_all\n"))
 (define git_index_remove_all
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5931,13 +6281,15 @@
       (let ((~index (unwrap-git_index* index))
             (~pathspec (unwrap-git_strarray* pathspec))
             (~callback
-              (unwrap-git_index_matched_path_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~index ~pathspec ~callback ~payload)))))
 (export git_index_remove_all)
 
 ;; extern int git_index_update_all(git_index *index, const git_strarray *
-;;           pathspec, git_index_matched_path_cb callback, void *payload);
+;;     pathspec, git_index_matched_path_cb callback, void *payload);
+(if echo-decls (display "git_index_update_all\n"))
 (define git_index_update_all
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5949,13 +6301,15 @@
       (let ((~index (unwrap-git_index* index))
             (~pathspec (unwrap-git_strarray* pathspec))
             (~callback
-              (unwrap-git_index_matched_path_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~index ~pathspec ~callback ~payload)))))
 (export git_index_update_all)
 
 ;; extern int git_index_find(size_t *at_pos, git_index *index, const char *path
-;;           );
+;;     );
+(if echo-decls (display "git_index_find\n"))
 (define git_index_find
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5969,7 +6323,8 @@
 (export git_index_find)
 
 ;; extern int git_index_find_prefix(size_t *at_pos, git_index *index, const 
-;;           char *prefix);
+;;     char *prefix);
+(if echo-decls (display "git_index_find_prefix\n"))
 (define git_index_find_prefix
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -5985,8 +6340,9 @@
 (export git_index_find_prefix)
 
 ;; extern int git_index_conflict_add(git_index *index, const git_index_entry *
-;;           ancestor_entry, const git_index_entry *our_entry, const git_index_entry 
-;;           *their_entry);
+;;     ancestor_entry, const git_index_entry *our_entry, const git_index_entry 
+;;     *their_entry);
+(if echo-decls (display "git_index_conflict_add\n"))
 (define git_index_conflict_add
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6008,8 +6364,9 @@
 (export git_index_conflict_add)
 
 ;; extern int git_index_conflict_get(const git_index_entry **ancestor_out, 
-;;           const git_index_entry **our_out, const git_index_entry **their_out, 
-;;           git_index *index, const char *path);
+;;     const git_index_entry **our_out, const git_index_entry **their_out, 
+;;     git_index *index, const char *path);
+(if echo-decls (display "git_index_conflict_get\n"))
 (define git_index_conflict_get
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6031,6 +6388,7 @@
 (export git_index_conflict_get)
 
 ;; extern int git_index_conflict_remove(git_index *index, const char *path);
+(if echo-decls (display "git_index_conflict_remove\n"))
 (define git_index_conflict_remove
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6045,6 +6403,7 @@
 (export git_index_conflict_remove)
 
 ;; extern int git_index_conflict_cleanup(git_index *index);
+(if echo-decls (display "git_index_conflict_cleanup\n"))
 (define git_index_conflict_cleanup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6058,6 +6417,7 @@
 (export git_index_conflict_cleanup)
 
 ;; extern int git_index_has_conflicts(const git_index *index);
+(if echo-decls (display "git_index_has_conflicts\n"))
 (define git_index_has_conflicts
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6071,7 +6431,8 @@
 (export git_index_has_conflicts)
 
 ;; extern int git_index_conflict_iterator_new(git_index_conflict_iterator **
-;;           iterator_out, git_index *index);
+;;     iterator_out, git_index *index);
+(if echo-decls (display "git_index_conflict_iterator_new\n"))
 (define git_index_conflict_iterator_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6086,8 +6447,9 @@
 (export git_index_conflict_iterator_new)
 
 ;; extern int git_index_conflict_next(const git_index_entry **ancestor_out, 
-;;           const git_index_entry **our_out, const git_index_entry **their_out, 
-;;           git_index_conflict_iterator *iterator);
+;;     const git_index_entry **our_out, const git_index_entry **their_out, 
+;;     git_index_conflict_iterator *iterator);
+(if echo-decls (display "git_index_conflict_next\n"))
 (define git_index_conflict_next
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6105,7 +6467,8 @@
 (export git_index_conflict_next)
 
 ;; extern void git_index_conflict_iterator_free(git_index_conflict_iterator *
-;;           iterator);
+;;     iterator);
+(if echo-decls (display "git_index_conflict_iterator_free\n"))
 (define git_index_conflict_iterator_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -6120,18 +6483,17 @@
 (export git_index_conflict_iterator_free)
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /** Pointer to the contents of the file. */
-;;         const char *ptr;
-;;         /** Size of the contents pointed to in `ptr`. */
-;;         size_t size;
-;;         /** File name of the conflicted file, or `NULL` to not merge the path. */
-;;                   
-;;         const char *path;
-;;         /** File mode of the conflicted file, or `0` to not merge the mode. */
-;;                   
-;;         unsigned int mode;
+;;   unsigned int version;
+;;   /** Pointer to the contents of the file. */
+;;   const char *ptr;
+;;   /** Size of the contents pointed to in `ptr`. */
+;;   size_t size;
+;;   /** File name of the conflicted file, or `NULL` to not merge the path. */
+;;   const char *path;
+;;   /** File mode of the conflicted file, or `0` to not merge the mode. */
+;;   unsigned int mode;
 ;; } git_merge_file_input;
+(if echo-decls (display "git_merge_file_input\n"))
 (define git_merge_file_input-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -6143,7 +6505,8 @@
 (define-fh-compound-type/p git_merge_file_input git_merge_file_input-desc)
 
 ;; extern int git_merge_file_init_input(git_merge_file_input *opts, 
-;;           unsigned int version);
+;;     unsigned int version);
+(if echo-decls (display "git_merge_file_init_input\n"))
 (define git_merge_file_init_input
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6158,11 +6521,12 @@
 (export git_merge_file_init_input)
 
 ;; typedef enum {
-;;         GIT_MERGE_FIND_RENAMES = 1<<0,
-;;         GIT_MERGE_FAIL_ON_CONFLICT = 1<<1,
-;;         GIT_MERGE_SKIP_REUC = 1<<2,
-;;         GIT_MERGE_NO_RECURSIVE = 1<<3,
+;;   GIT_MERGE_FIND_RENAMES = 1<<0,
+;;   GIT_MERGE_FAIL_ON_CONFLICT = 1<<1,
+;;   GIT_MERGE_SKIP_REUC = 1<<2,
+;;   GIT_MERGE_NO_RECURSIVE = 1<<3,
 ;; } git_merge_flag_t;
+(if echo-decls (display "git_merge_flag_t\n"))
 (define-fh-enum git_merge_flag_t
   '((GIT_MERGE_FIND_RENAMES . 1)
     (GIT_MERGE_FAIL_ON_CONFLICT . 2)
@@ -6171,11 +6535,12 @@
   )
 
 ;; typedef enum {
-;;         GIT_MERGE_FILE_FAVOR_NORMAL = 0,
-;;         GIT_MERGE_FILE_FAVOR_OURS = 1,
-;;         GIT_MERGE_FILE_FAVOR_THEIRS = 2,
-;;         GIT_MERGE_FILE_FAVOR_UNION = 3,
+;;   GIT_MERGE_FILE_FAVOR_NORMAL = 0,
+;;   GIT_MERGE_FILE_FAVOR_OURS = 1,
+;;   GIT_MERGE_FILE_FAVOR_THEIRS = 2,
+;;   GIT_MERGE_FILE_FAVOR_UNION = 3,
 ;; } git_merge_file_favor_t;
+(if echo-decls (display "git_merge_file_favor_t\n"))
 (define-fh-enum git_merge_file_favor_t
   '((GIT_MERGE_FILE_FAVOR_NORMAL . 0)
     (GIT_MERGE_FILE_FAVOR_OURS . 1)
@@ -6184,16 +6549,17 @@
   )
 
 ;; typedef enum {
-;;         GIT_MERGE_FILE_DEFAULT = 0,
-;;         GIT_MERGE_FILE_STYLE_MERGE = 1<<0,
-;;         GIT_MERGE_FILE_STYLE_DIFF3 = 1<<1,
-;;         GIT_MERGE_FILE_SIMPLIFY_ALNUM = 1<<2,
-;;         GIT_MERGE_FILE_IGNORE_WHITESPACE = 1<<3,
-;;         GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE = 1<<4,
-;;         GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL = 1<<5,
-;;         GIT_MERGE_FILE_DIFF_PATIENCE = 1<<6,
-;;         GIT_MERGE_FILE_DIFF_MINIMAL = 1<<7,
+;;   GIT_MERGE_FILE_DEFAULT = 0,
+;;   GIT_MERGE_FILE_STYLE_MERGE = 1<<0,
+;;   GIT_MERGE_FILE_STYLE_DIFF3 = 1<<1,
+;;   GIT_MERGE_FILE_SIMPLIFY_ALNUM = 1<<2,
+;;   GIT_MERGE_FILE_IGNORE_WHITESPACE = 1<<3,
+;;   GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE = 1<<4,
+;;   GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL = 1<<5,
+;;   GIT_MERGE_FILE_DIFF_PATIENCE = 1<<6,
+;;   GIT_MERGE_FILE_DIFF_MINIMAL = 1<<7,
 ;; } git_merge_file_flag_t;
+(if echo-decls (display "git_merge_file_flag_t\n"))
 (define-fh-enum git_merge_file_flag_t
   '((GIT_MERGE_FILE_DEFAULT . 0)
     (GIT_MERGE_FILE_STYLE_MERGE . 1)
@@ -6207,43 +6573,43 @@
   )
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /**
-;;               * Label for the ancestor file side of the conflict which will be prepended
-;;                   
-;;               * to labels in diff3-format merge files.
-;;               */
-;;         const char *ancestor_label;
-;;         /**
-;;               * Label for our file side of the conflict which will be prepended
-;;                   
-;;               * to labels in merge files.
-;;               */
-;;         const char *our_label;
-;;         /**
-;;               * Label for their file side of the conflict which will be prepended
-;;                   
-;;               * to labels in merge files.
-;;               */
-;;         const char *their_label;
-;;         /** The file to favor in region conflicts. */
-;;         git_merge_file_favor_t favor;
-;;         /** see `git_merge_file_flag_t` above */
-;;         git_merge_file_flag_t flags;
+;;   unsigned int version;
+;;   /**
+;;    * Label for the ancestor file side of the conflict which will be prepended
+;;       
+;;    * to labels in diff3-format merge files.
+;;    */
+;;   const char *ancestor_label;
+;;   /**
+;;    * Label for our file side of the conflict which will be prepended
+;;    * to labels in merge files.
+;;    */
+;;   const char *our_label;
+;;   /**
+;;    * Label for their file side of the conflict which will be prepended
+;;    * to labels in merge files.
+;;    */
+;;   const char *their_label;
+;;   /** The file to favor in region conflicts. */
+;;   git_merge_file_favor_t favor;
+;;   /** see `git_merge_file_flag_t` above */
+;;   git_merge_file_flag_t flags;
 ;; } git_merge_file_options;
+(if echo-decls (display "git_merge_file_options\n"))
 (define git_merge_file_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
           `(ancestor_label ,(bs:pointer int))
           `(our_label ,(bs:pointer int))
           `(their_label ,(bs:pointer int))
-          `(favor ,git_merge_file_favor_t-desc)
-          `(flags ,git_merge_file_flag_t-desc))))
+          `(favor ,int)
+          `(flags ,int))))
 (export git_merge_file_options-desc)
 (define-fh-compound-type/p git_merge_file_options git_merge_file_options-desc)
 
 ;; extern int git_merge_file_init_options(git_merge_file_options *opts, 
-;;           unsigned int version);
+;;     unsigned int version);
+(if echo-decls (display "git_merge_file_init_options\n"))
 (define git_merge_file_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6258,25 +6624,24 @@
 (export git_merge_file_init_options)
 
 ;; typedef struct {
-;;         /**
-;;               * True if the output was automerged, false if the output contains
-;;                   
-;;               * conflict markers.
-;;               */
-;;         unsigned int automergeable;
-;;         /**
-;;               * The path that the resultant merge file should use, or NULL if a
-;;                   
-;;               * filename conflict would occur.
-;;               */
-;;         const char *path;
-;;         /** The mode that the resultant merge file should use.  */
-;;         unsigned int mode;
-;;         /** The contents of the merge. */
-;;         const char *ptr;
-;;         /** The length of the merge contents. */
-;;         size_t len;
+;;   /**
+;;    * True if the output was automerged, false if the output contains
+;;    * conflict markers.
+;;    */
+;;   unsigned int automergeable;
+;;   /**
+;;    * The path that the resultant merge file should use, or NULL if a
+;;    * filename conflict would occur.
+;;    */
+;;   const char *path;
+;;   /** The mode that the resultant merge file should use.  */
+;;   unsigned int mode;
+;;   /** The contents of the merge. */
+;;   const char *ptr;
+;;   /** The length of the merge contents. */
+;;   size_t len;
 ;; } git_merge_file_result;
+(if echo-decls (display "git_merge_file_result\n"))
 (define git_merge_file_result-desc
   (bs:struct
     (list `(automergeable ,unsigned-int)
@@ -6288,76 +6653,66 @@
 (define-fh-compound-type/p git_merge_file_result git_merge_file_result-desc)
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /** See `git_merge_flag_t` above */
-;;         git_merge_flag_t flags;
-;;         /**
-;;               * Similarity to consider a file renamed (default 50).  If
-;;               * `GIT_MERGE_FIND_RENAMES` is enabled, added files will be compared
-;;                   
-;;               * with deleted files to determine their similarity.  Files that are
-;;                   
-;;               * more similar than the rename threshold (percentage-wise) will be
-;;                   
-;;               * treated as a rename.
-;;               */
-;;         unsigned int rename_threshold;
-;;         /**
-;;               * Maximum similarity sources to examine for renames (default 200).
-;;                   
-;;               * If the number of rename candidates (add / delete pairs) is greater
-;;                   
-;;               * than this value, inexact rename detection is aborted.
-;;               *
-;;               * This setting overrides the `merge.renameLimit` configuration value.
-;;                   
-;;               */
-;;         unsigned int target_limit;
-;;         /** Pluggable similarity metric; pass NULL to use internal metric */
-;;                   
-;;         git_diff_similarity_metric *metric;
-;;         /**
-;;               * Maximum number of times to merge common ancestors to build a
-;;                   
-;;               * virtual merge base when faced with criss-cross merges.  When this
-;;                   
-;;               * limit is reached, the next ancestor will simply be used instead of
-;;                   
-;;               * attempting to merge it.  The default is unlimited.
-;;               */
-;;         unsigned int recursion_limit;
-;;         /**
-;;               * Default merge driver to be used when both sides of a merge have
-;;                   
-;;               * changed.  The default is the `text` driver.
-;;               */
-;;         const char *default_driver;
-;;         /**
-;;               * Flags for handling conflicting content, to be used with the standard
-;;                   
-;;               * (`text`) merge driver.
-;;               */
-;;         git_merge_file_favor_t file_favor;
-;;         /** see `git_merge_file_flag_t` above */
-;;         git_merge_file_flag_t file_flags;
+;;   unsigned int version;
+;;   /** See `git_merge_flag_t` above */
+;;   git_merge_flag_t flags;
+;;   /**
+;;    * Similarity to consider a file renamed (default 50).  If
+;;    * `GIT_MERGE_FIND_RENAMES` is enabled, added files will be compared
+;;    * with deleted files to determine their similarity.  Files that are
+;;    * more similar than the rename threshold (percentage-wise) will be
+;;    * treated as a rename.
+;;    */
+;;   unsigned int rename_threshold;
+;;   /**
+;;    * Maximum similarity sources to examine for renames (default 200).
+;;    * If the number of rename candidates (add / delete pairs) is greater
+;;    * than this value, inexact rename detection is aborted.
+;;    *
+;;    * This setting overrides the `merge.renameLimit` configuration value.
+;;    */
+;;   unsigned int target_limit;
+;;   /** Pluggable similarity metric; pass NULL to use internal metric */
+;;   git_diff_similarity_metric *metric;
+;;   /**
+;;    * Maximum number of times to merge common ancestors to build a
+;;    * virtual merge base when faced with criss-cross merges.  When this
+;;    * limit is reached, the next ancestor will simply be used instead of
+;;    * attempting to merge it.  The default is unlimited.
+;;    */
+;;   unsigned int recursion_limit;
+;;   /**
+;;    * Default merge driver to be used when both sides of a merge have
+;;    * changed.  The default is the `text` driver.
+;;    */
+;;   const char *default_driver;
+;;   /**
+;;    * Flags for handling conflicting content, to be used with the standard
+;;    * (`text`) merge driver.
+;;    */
+;;   git_merge_file_favor_t file_favor;
+;;   /** see `git_merge_file_flag_t` above */
+;;   git_merge_file_flag_t file_flags;
 ;; } git_merge_options;
+(if echo-decls (display "git_merge_options\n"))
 (define git_merge_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
-          `(flags ,git_merge_flag_t-desc)
+          `(flags ,int)
           `(rename_threshold ,unsigned-int)
           `(target_limit ,unsigned-int)
           `(metric
              ,(bs:pointer git_diff_similarity_metric*-desc))
           `(recursion_limit ,unsigned-int)
           `(default_driver ,(bs:pointer int))
-          `(file_favor ,git_merge_file_favor_t-desc)
-          `(file_flags ,git_merge_file_flag_t-desc))))
+          `(file_favor ,int)
+          `(file_flags ,int))))
 (export git_merge_options-desc)
 (define-fh-compound-type/p git_merge_options git_merge_options-desc)
 
 ;; extern int git_merge_init_options(git_merge_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_merge_init_options\n"))
 (define git_merge_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6372,12 +6727,13 @@
 (export git_merge_init_options)
 
 ;; typedef enum {
-;;         GIT_MERGE_ANALYSIS_NONE = 0,
-;;         GIT_MERGE_ANALYSIS_NORMAL = 1<<0,
-;;         GIT_MERGE_ANALYSIS_UP_TO_DATE = 1<<1,
-;;         GIT_MERGE_ANALYSIS_FASTFORWARD = 1<<2,
-;;         GIT_MERGE_ANALYSIS_UNBORN = 1<<3,
+;;   GIT_MERGE_ANALYSIS_NONE = 0,
+;;   GIT_MERGE_ANALYSIS_NORMAL = 1<<0,
+;;   GIT_MERGE_ANALYSIS_UP_TO_DATE = 1<<1,
+;;   GIT_MERGE_ANALYSIS_FASTFORWARD = 1<<2,
+;;   GIT_MERGE_ANALYSIS_UNBORN = 1<<3,
 ;; } git_merge_analysis_t;
+(if echo-decls (display "git_merge_analysis_t\n"))
 (define-fh-enum git_merge_analysis_t
   '((GIT_MERGE_ANALYSIS_NONE . 0)
     (GIT_MERGE_ANALYSIS_NORMAL . 1)
@@ -6387,10 +6743,11 @@
   )
 
 ;; typedef enum {
-;;         GIT_MERGE_PREFERENCE_NONE = 0,
-;;         GIT_MERGE_PREFERENCE_NO_FASTFORWARD = 1<<0,
-;;         GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY = 1<<1,
+;;   GIT_MERGE_PREFERENCE_NONE = 0,
+;;   GIT_MERGE_PREFERENCE_NO_FASTFORWARD = 1<<0,
+;;   GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY = 1<<1,
 ;; } git_merge_preference_t;
+(if echo-decls (display "git_merge_preference_t\n"))
 (define-fh-enum git_merge_preference_t
   '((GIT_MERGE_PREFERENCE_NONE . 0)
     (GIT_MERGE_PREFERENCE_NO_FASTFORWARD . 1)
@@ -6398,8 +6755,9 @@
   )
 
 ;; extern int git_merge_analysis(git_merge_analysis_t *analysis_out, 
-;;           git_merge_preference_t *preference_out, git_repository *repo, const 
-;;           git_annotated_commit **their_heads, size_t their_heads_len);
+;;     git_merge_preference_t *preference_out, git_repository *repo, const 
+;;     git_annotated_commit **their_heads, size_t their_heads_len);
+(if echo-decls (display "git_merge_analysis\n"))
 (define git_merge_analysis
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6412,10 +6770,8 @@
              repo
              their_heads
              their_heads_len)
-      (let ((~analysis_out
-              (unwrap-git_merge_analysis_t* analysis_out))
-            (~preference_out
-              (unwrap-git_merge_preference_t* preference_out))
+      (let ((~analysis_out (unwrap~pointer analysis_out))
+            (~preference_out (unwrap~pointer preference_out))
             (~repo (unwrap-git_repository* repo))
             (~their_heads (unwrap~pointer their_heads))
             (~their_heads_len (unwrap~fixed their_heads_len)))
@@ -6427,7 +6783,8 @@
 (export git_merge_analysis)
 
 ;; extern int git_merge_base(git_oid *out, git_repository *repo, const git_oid 
-;;           *one, const git_oid *two);
+;;     *one, const git_oid *two);
+(if echo-decls (display "git_merge_base\n"))
 (define git_merge_base
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6442,7 +6799,8 @@
 (export git_merge_base)
 
 ;; extern int git_merge_bases(git_oidarray *out, git_repository *repo, const 
-;;           git_oid *one, const git_oid *two);
+;;     git_oid *one, const git_oid *two);
+(if echo-decls (display "git_merge_bases\n"))
 (define git_merge_bases
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6457,7 +6815,8 @@
 (export git_merge_bases)
 
 ;; extern int git_merge_base_many(git_oid *out, git_repository *repo, size_t 
-;;           length, const git_oid input_array[]);
+;;     length, const git_oid input_array[]);
+(if echo-decls (display "git_merge_base_many\n"))
 (define git_merge_base_many
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6474,7 +6833,8 @@
 (export git_merge_base_many)
 
 ;; extern int git_merge_bases_many(git_oidarray *out, git_repository *repo, 
-;;           size_t length, const git_oid input_array[]);
+;;     size_t length, const git_oid input_array[]);
+(if echo-decls (display "git_merge_bases_many\n"))
 (define git_merge_bases_many
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6491,7 +6851,8 @@
 (export git_merge_bases_many)
 
 ;; extern int git_merge_base_octopus(git_oid *out, git_repository *repo, size_t
-;;            length, const git_oid input_array[]);
+;;      length, const git_oid input_array[]);
+(if echo-decls (display "git_merge_base_octopus\n"))
 (define git_merge_base_octopus
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6508,8 +6869,9 @@
 (export git_merge_base_octopus)
 
 ;; extern int git_merge_file(git_merge_file_result *out, const 
-;;           git_merge_file_input *ancestor, const git_merge_file_input *ours, const 
-;;           git_merge_file_input *theirs, const git_merge_file_options *opts);
+;;     git_merge_file_input *ancestor, const git_merge_file_input *ours, const 
+;;     git_merge_file_input *theirs, const git_merge_file_options *opts);
+(if echo-decls (display "git_merge_file\n"))
 (define git_merge_file
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6526,9 +6888,10 @@
 (export git_merge_file)
 
 ;; extern int git_merge_file_from_index(git_merge_file_result *out, 
-;;           git_repository *repo, const git_index_entry *ancestor, const 
-;;           git_index_entry *ours, const git_index_entry *theirs, const 
-;;           git_merge_file_options *opts);
+;;     git_repository *repo, const git_index_entry *ancestor, const 
+;;     git_index_entry *ours, const git_index_entry *theirs, const 
+;;     git_merge_file_options *opts);
+(if echo-decls (display "git_merge_file_from_index\n"))
 (define git_merge_file_from_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6547,6 +6910,7 @@
 (export git_merge_file_from_index)
 
 ;; extern void git_merge_file_result_free(git_merge_file_result *result);
+(if echo-decls (display "git_merge_file_result_free\n"))
 (define git_merge_file_result_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -6560,8 +6924,9 @@
 (export git_merge_file_result_free)
 
 ;; extern int git_merge_trees(git_index **out, git_repository *repo, const 
-;;           git_tree *ancestor_tree, const git_tree *our_tree, const git_tree *
-;;           their_tree, const git_merge_options *opts);
+;;     git_tree *ancestor_tree, const git_tree *our_tree, const git_tree *
+;;     their_tree, const git_merge_options *opts);
+(if echo-decls (display "git_merge_trees\n"))
 (define git_merge_trees
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6583,8 +6948,9 @@
 (export git_merge_trees)
 
 ;; extern int git_merge_commits(git_index **out, git_repository *repo, const 
-;;           git_commit *our_commit, const git_commit *their_commit, const 
-;;           git_merge_options *opts);
+;;     git_commit *our_commit, const git_commit *their_commit, const 
+;;     git_merge_options *opts);
+(if echo-decls (display "git_merge_commits\n"))
 (define git_merge_commits
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6600,8 +6966,9 @@
 (export git_merge_commits)
 
 ;; extern int git_merge(git_repository *repo, const git_annotated_commit **
-;;           their_heads, size_t their_heads_len, const git_merge_options *merge_opts
-;;           , const git_checkout_options *checkout_opts);
+;;     their_heads, size_t their_heads_len, const git_merge_options *merge_opts
+;;     , const git_checkout_options *checkout_opts);
+(if echo-decls (display "git_merge\n"))
 (define git_merge
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6627,13 +6994,13 @@
 (export git_merge)
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /** For merge commits, the "mainline" is treated as the parent. */
-;;         unsigned int mainline;
-;;         git_merge_options merge_opts; /**< Options for the merging */
-;;         git_checkout_options checkout_opts; /**< Options for the checkout */
-;;                   
+;;   unsigned int version;
+;;   /** For merge commits, the "mainline" is treated as the parent. */
+;;   unsigned int mainline;
+;;   git_merge_options merge_opts; /**< Options for the merging */
+;;   git_checkout_options checkout_opts; /**< Options for the checkout */
 ;; } git_cherrypick_options;
+(if echo-decls (display "git_cherrypick_options\n"))
 (define git_cherrypick_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -6644,7 +7011,8 @@
 (define-fh-compound-type/p git_cherrypick_options git_cherrypick_options-desc)
 
 ;; extern int git_cherrypick_init_options(git_cherrypick_options *opts, 
-;;           unsigned int version);
+;;     unsigned int version);
+(if echo-decls (display "git_cherrypick_init_options\n"))
 (define git_cherrypick_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6659,8 +7027,9 @@
 (export git_cherrypick_init_options)
 
 ;; extern int git_cherrypick_commit(git_index **out, git_repository *repo, 
-;;           git_commit *cherrypick_commit, git_commit *our_commit, unsigned int 
-;;           mainline, const git_merge_options *merge_options);
+;;     git_commit *cherrypick_commit, git_commit *our_commit, unsigned int 
+;;     mainline, const git_merge_options *merge_options);
+(if echo-decls (display "git_cherrypick_commit\n"))
 (define git_cherrypick_commit
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6691,7 +7060,8 @@
 (export git_cherrypick_commit)
 
 ;; extern int git_cherrypick(git_repository *repo, git_commit *commit, const 
-;;           git_cherrypick_options *cherrypick_options);
+;;     git_cherrypick_options *cherrypick_options);
+(if echo-decls (display "git_cherrypick\n"))
 (define git_cherrypick
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6707,19 +7077,46 @@
 (export git_cherrypick)
 
 ;; typedef enum {
-;;         GIT_DIRECTION_FETCH = 0,
-;;         GIT_DIRECTION_PUSH = 1,
+;;   GIT_DIRECTION_FETCH = 0,
+;;   GIT_DIRECTION_PUSH = 1,
 ;; } git_direction;
+(if echo-decls (display "git_direction\n"))
 (define-fh-enum git_direction
   '((GIT_DIRECTION_FETCH . 0)
     (GIT_DIRECTION_PUSH . 1))
   )
 
+;; struct git_remote_head {
+;;   int local; /* available locally */
+;;   git_oid oid;
+;;   git_oid loid;
+;;   char *name;
+;;   /**
+;;    * If the server send a symref mapping for this ref, this will
+;;    * point to the target.
+;;    */
+;;   char *symref_target;
+;; };
+(if echo-decls (display "(struct . git_remote_head)\n"))
+(define struct-git_remote_head-desc
+  (bs:struct
+    (list `(local ,int)
+          `(oid ,git_oid-desc)
+          `(loid ,git_oid-desc)
+          `(name ,(bs:pointer int))
+          `(symref_target ,(bs:pointer int)))))
+(export struct-git_remote_head-desc)
+(define-fh-compound-type/p struct-git_remote_head struct-git_remote_head-desc)
+(set! git_remote_head-desc struct-git_remote_head-desc)
+(define-fh-compound-type git_remote_head git_remote_head-desc)
+
 ;; typedef int (*git_headlist_cb)(git_remote_head *rhead, void *payload);
+(if echo-decls (display "git_headlist_cb\n"))
 (define-fh-function/p git_headlist_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; extern const char *git_refspec_src(const git_refspec *refspec);
+(if echo-decls (display "git_refspec_src\n"))
 (define git_refspec_src
   (let ((~f (ffi:pointer->procedure
               '*
@@ -6731,6 +7128,7 @@
 (export git_refspec_src)
 
 ;; extern const char *git_refspec_dst(const git_refspec *refspec);
+(if echo-decls (display "git_refspec_dst\n"))
 (define git_refspec_dst
   (let ((~f (ffi:pointer->procedure
               '*
@@ -6742,6 +7140,7 @@
 (export git_refspec_dst)
 
 ;; extern const char *git_refspec_string(const git_refspec *refspec);
+(if echo-decls (display "git_refspec_string\n"))
 (define git_refspec_string
   (let ((~f (ffi:pointer->procedure
               '*
@@ -6755,6 +7154,7 @@
 (export git_refspec_string)
 
 ;; extern int git_refspec_force(const git_refspec *refspec);
+(if echo-decls (display "git_refspec_force\n"))
 (define git_refspec_force
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6766,6 +7166,7 @@
 (export git_refspec_force)
 
 ;; extern git_direction git_refspec_direction(const git_refspec *spec);
+(if echo-decls (display "git_refspec_direction\n"))
 (define git_refspec_direction
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6775,11 +7176,12 @@
               (list '*))))
     (lambda (spec)
       (let ((~spec (unwrap-git_refspec* spec)))
-        (wrap-git_direction (~f ~spec))))))
+        (~f ~spec)))))
 (export git_refspec_direction)
 
 ;; extern int git_refspec_src_matches(const git_refspec *refspec, const char *
-;;           refname);
+;;     refname);
+(if echo-decls (display "git_refspec_src_matches\n"))
 (define git_refspec_src_matches
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6794,7 +7196,8 @@
 (export git_refspec_src_matches)
 
 ;; extern int git_refspec_dst_matches(const git_refspec *refspec, const char *
-;;           refname);
+;;     refname);
+(if echo-decls (display "git_refspec_dst_matches\n"))
 (define git_refspec_dst_matches
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6809,7 +7212,8 @@
 (export git_refspec_dst_matches)
 
 ;; extern int git_refspec_transform(git_buf *out, const git_refspec *spec, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_refspec_transform\n"))
 (define git_refspec_transform
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6825,7 +7229,8 @@
 (export git_refspec_transform)
 
 ;; extern int git_refspec_rtransform(git_buf *out, const git_refspec *spec, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_refspec_rtransform\n"))
 (define git_refspec_rtransform
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -6841,57 +7246,60 @@
 (export git_refspec_rtransform)
 
 ;; typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void
-;;            *param);
+;;      *param);
+(if echo-decls (display "git_transport_cb\n"))
 (define-fh-function/p git_transport_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef enum {
-;;         GIT_CERT_SSH_MD5 = 1<<0,
-;;         GIT_CERT_SSH_SHA1 = 1<<1,
+;;   GIT_CERT_SSH_MD5 = 1<<0,
+;;   GIT_CERT_SSH_SHA1 = 1<<1,
 ;; } git_cert_ssh_t;
+(if echo-decls (display "git_cert_ssh_t\n"))
 (define-fh-enum git_cert_ssh_t
   '((GIT_CERT_SSH_MD5 . 1) (GIT_CERT_SSH_SHA1 . 2))
   )
 
 ;; typedef struct {
-;;         git_cert parent;
-;;         /**
-;;               * A hostkey type from libssh2, either
-;;               * `GIT_CERT_SSH_MD5` or `GIT_CERT_SSH_SHA1`
-;;               */
-;;         git_cert_ssh_t type;
-;;         /**
-;;               * Hostkey hash. If type has `GIT_CERT_SSH_MD5` set, this will
-;;               * have the MD5 hash of the hostkey.
-;;               */
-;;         unsigned char hash_md5[16];
-;;         /**
-;;               * Hostkey hash. If type has `GIT_CERT_SSH_SHA1` set, this will
-;;                   
-;;               * have the SHA-1 hash of the hostkey.
-;;               */
-;;         unsigned char hash_sha1[20];
+;;   git_cert parent;
+;;   /**
+;;    * A hostkey type from libssh2, either
+;;    * `GIT_CERT_SSH_MD5` or `GIT_CERT_SSH_SHA1`
+;;    */
+;;   git_cert_ssh_t type;
+;;   /**
+;;    * Hostkey hash. If type has `GIT_CERT_SSH_MD5` set, this will
+;;    * have the MD5 hash of the hostkey.
+;;    */
+;;   unsigned char hash_md5[16];
+;;   /**
+;;    * Hostkey hash. If type has `GIT_CERT_SSH_SHA1` set, this will
+;;    * have the SHA-1 hash of the hostkey.
+;;    */
+;;   unsigned char hash_sha1[20];
 ;; } git_cert_hostkey;
+(if echo-decls (display "git_cert_hostkey\n"))
 (define git_cert_hostkey-desc
   (bs:struct
     (list `(parent ,git_cert-desc)
-          `(type ,git_cert_ssh_t-desc)
-          `(hash_md5 ,(bs:vector 16 #f))
-          `(hash_sha1 ,(bs:vector 20 #f)))))
+          `(type ,int)
+          `(hash_md5 ,(bs:vector 16 uint8))
+          `(hash_sha1 ,(bs:vector 20 uint8)))))
 (export git_cert_hostkey-desc)
 (define-fh-compound-type/p git_cert_hostkey git_cert_hostkey-desc)
 
 ;; typedef struct {
-;;         git_cert parent;
-;;         /**
-;;               * Pointer to the X.509 certificate data
-;;               */
-;;         void *data;
-;;         /**
-;;               * Length of the memory block pointed to by `data`.
-;;               */
-;;         size_t len;
+;;   git_cert parent;
+;;   /**
+;;    * Pointer to the X.509 certificate data
+;;    */
+;;   void *data;
+;;   /**
+;;    * Length of the memory block pointed to by `data`.
+;;    */
+;;   size_t len;
 ;; } git_cert_x509;
+(if echo-decls (display "git_cert_x509\n"))
 (define git_cert_x509-desc
   (bs:struct
     (list `(parent ,git_cert-desc)
@@ -6901,14 +7309,15 @@
 (define-fh-compound-type/p git_cert_x509 git_cert_x509-desc)
 
 ;; typedef enum {
-;;         GIT_CREDTYPE_USERPASS_PLAINTEXT = 1u<<0,
-;;         GIT_CREDTYPE_SSH_KEY = 1u<<1,
-;;         GIT_CREDTYPE_SSH_CUSTOM = 1u<<2,
-;;         GIT_CREDTYPE_DEFAULT = 1u<<3,
-;;         GIT_CREDTYPE_SSH_INTERACTIVE = 1u<<4,
-;;         GIT_CREDTYPE_USERNAME = 1u<<5,
-;;         GIT_CREDTYPE_SSH_MEMORY = 1u<<6,
+;;   GIT_CREDTYPE_USERPASS_PLAINTEXT = 1u<<0,
+;;   GIT_CREDTYPE_SSH_KEY = 1u<<1,
+;;   GIT_CREDTYPE_SSH_CUSTOM = 1u<<2,
+;;   GIT_CREDTYPE_DEFAULT = 1u<<3,
+;;   GIT_CREDTYPE_SSH_INTERACTIVE = 1u<<4,
+;;   GIT_CREDTYPE_USERNAME = 1u<<5,
+;;   GIT_CREDTYPE_SSH_MEMORY = 1u<<6,
 ;; } git_credtype_t;
+(if echo-decls (display "git_credtype_t\n"))
 (define-fh-enum git_credtype_t
   '((GIT_CREDTYPE_USERPASS_PLAINTEXT . 1)
     (GIT_CREDTYPE_SSH_KEY . 2)
@@ -6920,23 +7329,31 @@
   )
 
 ;; typedef struct git_cred git_cred;
+(if echo-decls (display "git_cred\n"))
+(define git_cred-desc void)
+(define git_cred*-desc (bs:pointer (delay git_cred-desc)))
+(define-fh-pointer-type git_cred* git_cred*-desc)
+
 ;; struct git_cred {
-;;         git_credtype_t credtype;
-;;         void (*free)(git_cred *cred);
+;;   git_credtype_t credtype;
+;;   void (*free)(git_cred *cred);
 ;; };
-(define git_cred-desc
+(if echo-decls (display "(struct . git_cred)\n"))
+(define struct-git_cred-desc
   (bs:struct
-    (list `(credtype ,git_credtype_t-desc)
+    (list `(credtype ,int)
           `(free ,(bs:pointer void)))))
-(export git_cred-desc)
-(define-fh-compound-type/p git_cred git_cred-desc)
-(define struct-git_cred git_cred)
+(export struct-git_cred-desc)
+(define-fh-compound-type/p struct-git_cred struct-git_cred-desc)
+(set! git_cred-desc struct-git_cred-desc)
+(define-fh-compound-type git_cred git_cred-desc)
 
 ;; typedef struct {
-;;         git_cred parent;
-;;         char *username;
-;;         char *password;
+;;   git_cred parent;
+;;   char *username;
+;;   char *password;
 ;; } git_cred_userpass_plaintext;
+(if echo-decls (display "git_cred_userpass_plaintext\n"))
 (define git_cred_userpass_plaintext-desc
   (bs:struct
     (list `(parent ,git_cred-desc)
@@ -6946,36 +7363,48 @@
 (define-fh-compound-type/p git_cred_userpass_plaintext git_cred_userpass_plaintext-desc)
 
 ;; typedef struct _LIBSSH2_SESSION LIBSSH2_SESSION;
-(define-fh-pointer-type LIBSSH2_SESSION*)
+(if echo-decls (display "LIBSSH2_SESSION\n"))
+(define LIBSSH2_SESSION-desc void)
+(define LIBSSH2_SESSION*-desc (bs:pointer LIBSSH2_SESSION-desc))
+(define-fh-pointer-type LIBSSH2_SESSION* LIBSSH2_SESSION*-desc)
 
 ;; typedef struct _LIBSSH2_USERAUTH_KBDINT_PROMPT 
-;;           LIBSSH2_USERAUTH_KBDINT_PROMPT;
-(define-fh-pointer-type LIBSSH2_USERAUTH_KBDINT_PROMPT*)
+;;     LIBSSH2_USERAUTH_KBDINT_PROMPT;
+(if echo-decls (display "LIBSSH2_USERAUTH_KBDINT_PROMPT\n"))
+(define LIBSSH2_USERAUTH_KBDINT_PROMPT-desc void)
+(define LIBSSH2_USERAUTH_KBDINT_PROMPT*-desc (bs:pointer LIBSSH2_USERAUTH_KBDINT_PROMPT-desc))
+(define-fh-pointer-type LIBSSH2_USERAUTH_KBDINT_PROMPT* LIBSSH2_USERAUTH_KBDINT_PROMPT*-desc)
 
 ;; typedef struct _LIBSSH2_USERAUTH_KBDINT_RESPONSE 
-;;           LIBSSH2_USERAUTH_KBDINT_RESPONSE;
-(define-fh-pointer-type LIBSSH2_USERAUTH_KBDINT_RESPONSE*)
+;;     LIBSSH2_USERAUTH_KBDINT_RESPONSE;
+(if echo-decls (display "LIBSSH2_USERAUTH_KBDINT_RESPONSE\n"))
+(define LIBSSH2_USERAUTH_KBDINT_RESPONSE-desc void)
+(define LIBSSH2_USERAUTH_KBDINT_RESPONSE*-desc (bs:pointer LIBSSH2_USERAUTH_KBDINT_RESPONSE-desc))
+(define-fh-pointer-type LIBSSH2_USERAUTH_KBDINT_RESPONSE* LIBSSH2_USERAUTH_KBDINT_RESPONSE*-desc)
 
 ;; typedef int (*git_cred_sign_callback)(LIBSSH2_SESSION *session, 
-;;           unsigned char **sig, size_t *sig_len, const unsigned char *data, size_t 
-;;           data_len, void **abstract);
+;;     unsigned char **sig, size_t *sig_len, const unsigned char *data, size_t 
+;;     data_len, void **abstract);
+(if echo-decls (display "git_cred_sign_callback\n"))
 (define-fh-function/p git_cred_sign_callback
   ffi:int (list (quote *) (quote *) (quote *) (quote *) ffi:size_t (quote *)))
 
 ;; typedef void (*git_cred_ssh_interactive_callback)(const char *name, int 
-;;           name_len, const char *instruction, int instruction_len, int num_prompts
-;;           , const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts, 
-;;           LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses, void **abstract);
+;;     name_len, const char *instruction, int instruction_len, int num_prompts
+;;     , const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts, 
+;;     LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses, void **abstract);
+(if echo-decls (display "git_cred_ssh_interactive_callback\n"))
 (define-fh-function/p git_cred_ssh_interactive_callback
   ffi:void (list (quote *) ffi:int (quote *) ffi:int ffi:int (quote *) (quote *) (quote *)))
 
 ;; typedef struct git_cred_ssh_key {
-;;         git_cred parent;
-;;         char *username;
-;;         char *publickey;
-;;         char *privatekey;
-;;         char *passphrase;
+;;   git_cred parent;
+;;   char *username;
+;;   char *publickey;
+;;   char *privatekey;
+;;   char *passphrase;
 ;; } git_cred_ssh_key;
+(if echo-decls (display "git_cred_ssh_key\n"))
 (define git_cred_ssh_key-desc
   (bs:struct
     (list `(parent ,git_cred-desc)
@@ -6988,68 +7417,64 @@
 (define struct-git_cred_ssh_key git_cred_ssh_key)
 
 ;; typedef struct git_cred_ssh_interactive {
-;;         git_cred parent;
-;;         char *username;
-;;         git_cred_ssh_interactive_callback prompt_callback;
-;;         void *payload;
+;;   git_cred parent;
+;;   char *username;
+;;   git_cred_ssh_interactive_callback prompt_callback;
+;;   void *payload;
 ;; } git_cred_ssh_interactive;
+(if echo-decls (display "git_cred_ssh_interactive\n"))
 (define git_cred_ssh_interactive-desc
   (bs:struct
     (list `(parent ,git_cred-desc)
           `(username ,(bs:pointer int))
-          `(prompt_callback
-             ,git_cred_ssh_interactive_callback-desc)
+          `(prompt_callback ,(bs:pointer void))
           `(payload ,(bs:pointer void)))))
 (export git_cred_ssh_interactive-desc)
 (define-fh-compound-type/p git_cred_ssh_interactive git_cred_ssh_interactive-desc)
 (define struct-git_cred_ssh_interactive git_cred_ssh_interactive)
 
 ;; typedef struct git_cred_ssh_custom {
-;;         git_cred parent;
-;;         char *username;
-;;         char *publickey;
-;;         size_t publickey_len;
-;;         git_cred_sign_callback sign_callback;
-;;         void *payload;
+;;   git_cred parent;
+;;   char *username;
+;;   char *publickey;
+;;   size_t publickey_len;
+;;   git_cred_sign_callback sign_callback;
+;;   void *payload;
 ;; } git_cred_ssh_custom;
+(if echo-decls (display "git_cred_ssh_custom\n"))
 (define git_cred_ssh_custom-desc
   (bs:struct
     (list `(parent ,git_cred-desc)
           `(username ,(bs:pointer int))
           `(publickey ,(bs:pointer int))
           `(publickey_len ,size_t)
-          `(sign_callback ,git_cred_sign_callback-desc)
+          `(sign_callback ,(bs:pointer void))
           `(payload ,(bs:pointer void)))))
 (export git_cred_ssh_custom-desc)
 (define-fh-compound-type/p git_cred_ssh_custom git_cred_ssh_custom-desc)
 (define struct-git_cred_ssh_custom git_cred_ssh_custom)
 
 ;; typedef struct git_cred git_cred_default;
-;; struct git_cred {
-;;         git_credtype_t credtype;
-;;         void (*free)(git_cred *cred);
-;; };
-(define git_cred_default-desc
-  (bs:struct
-    (list `(credtype ,git_credtype_t-desc)
-          `(free ,(bs:pointer void)))))
-(export git_cred_default-desc)
-(define-fh-compound-type/p git_cred_default git_cred_default-desc)
-(define struct-git_cred git_cred_default)
+(if echo-decls (display "git_cred_default\n"))
+(define git_cred_default-desc void)
+(define git_cred_default*-desc (bs:pointer (delay git_cred_default-desc)))
+(define-fh-pointer-type git_cred_default* git_cred_default*-desc)
 
 ;; typedef struct git_cred_username {
-;;         git_cred parent;
-;;         char username[1];
+;;   git_cred parent;
+;;   char username[1];
 ;; } git_cred_username;
+(if echo-decls (display "git_cred_username\n"))
 (define git_cred_username-desc
   (bs:struct
     (list `(parent ,git_cred-desc)
-          `(username ,(bs:vector 1 int)))))
+          `(username ,(bs:vector 1 int8)))))
 (export git_cred_username-desc)
 (define-fh-compound-type/p git_cred_username git_cred_username-desc)
 (define struct-git_cred_username git_cred_username)
 
 ;; extern int git_cred_has_username(git_cred *cred);
+(if echo-decls (display "git_cred_has_username\n"))
 (define git_cred_has_username
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7063,7 +7488,8 @@
 (export git_cred_has_username)
 
 ;; extern int git_cred_userpass_plaintext_new(git_cred **out, const char *
-;;           username, const char *password);
+;;     username, const char *password);
+(if echo-decls (display "git_cred_userpass_plaintext_new\n"))
 (define git_cred_userpass_plaintext_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7079,7 +7505,8 @@
 (export git_cred_userpass_plaintext_new)
 
 ;; extern int git_cred_ssh_key_new(git_cred **out, const char *username, const 
-;;           char *publickey, const char *privatekey, const char *passphrase);
+;;     char *publickey, const char *privatekey, const char *passphrase);
+(if echo-decls (display "git_cred_ssh_key_new\n"))
 (define git_cred_ssh_key_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7101,7 +7528,8 @@
 (export git_cred_ssh_key_new)
 
 ;; extern int git_cred_ssh_interactive_new(git_cred **out, const char *username
-;;           , git_cred_ssh_interactive_callback prompt_callback, void *payload);
+;;     , git_cred_ssh_interactive_callback prompt_callback, void *payload);
+(if echo-decls (display "git_cred_ssh_interactive_new\n"))
 (define git_cred_ssh_interactive_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7113,14 +7541,17 @@
       (let ((~out (unwrap~pointer out))
             (~username (unwrap~pointer username))
             (~prompt_callback
-              (unwrap-git_cred_ssh_interactive_callback
-                prompt_callback))
+              ((make-ftn-arg-unwrapper
+                 ffi:void
+                 (list '* ffi:int '* ffi:int ffi:int '* '* '*))
+               prompt_callback))
             (~payload (unwrap~pointer payload)))
         (~f ~out ~username ~prompt_callback ~payload)))))
 (export git_cred_ssh_interactive_new)
 
 ;; extern int git_cred_ssh_key_from_agent(git_cred **out, const char *username)
-;;           ;
+;;     ;
+(if echo-decls (display "git_cred_ssh_key_from_agent\n"))
 (define git_cred_ssh_key_from_agent
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7135,8 +7566,9 @@
 (export git_cred_ssh_key_from_agent)
 
 ;; extern int git_cred_ssh_custom_new(git_cred **out, const char *username, 
-;;           const char *publickey, size_t publickey_len, git_cred_sign_callback 
-;;           sign_callback, void *payload);
+;;     const char *publickey, size_t publickey_len, git_cred_sign_callback 
+;;     sign_callback, void *payload);
+(if echo-decls (display "git_cred_ssh_custom_new\n"))
 (define git_cred_ssh_custom_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7155,7 +7587,10 @@
             (~publickey (unwrap~pointer publickey))
             (~publickey_len (unwrap~fixed publickey_len))
             (~sign_callback
-              (unwrap-git_cred_sign_callback sign_callback))
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* '* '* '* ffi:size_t '*))
+               sign_callback))
             (~payload (unwrap~pointer payload)))
         (~f ~out
             ~username
@@ -7166,6 +7601,7 @@
 (export git_cred_ssh_custom_new)
 
 ;; extern int git_cred_default_new(git_cred **out);
+(if echo-decls (display "git_cred_default_new\n"))
 (define git_cred_default_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7178,6 +7614,7 @@
 (export git_cred_default_new)
 
 ;; extern int git_cred_username_new(git_cred **cred, const char *username);
+(if echo-decls (display "git_cred_username_new\n"))
 (define git_cred_username_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7192,8 +7629,9 @@
 (export git_cred_username_new)
 
 ;; extern int git_cred_ssh_key_memory_new(git_cred **out, const char *username
-;;           , const char *publickey, const char *privatekey, const char *passphrase)
-;;           ;
+;;     , const char *publickey, const char *privatekey, const char *passphrase)
+;;     ;
+(if echo-decls (display "git_cred_ssh_key_memory_new\n"))
 (define git_cred_ssh_key_memory_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7215,6 +7653,7 @@
 (export git_cred_ssh_key_memory_new)
 
 ;; extern void git_cred_free(git_cred *cred);
+(if echo-decls (display "git_cred_free\n"))
 (define git_cred_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -7226,21 +7665,24 @@
 (export git_cred_free)
 
 ;; typedef int (*git_cred_acquire_cb)(git_cred **cred, const char *url, const 
-;;           char *username_from_url, unsigned int allowed_types, void *payload);
+;;     char *username_from_url, unsigned int allowed_types, void *payload);
+(if echo-decls (display "git_cred_acquire_cb\n"))
 (define-fh-function/p git_cred_acquire_cb
   ffi:int (list (quote *) (quote *) (quote *) ffi:unsigned-int (quote *)))
 
 ;; typedef enum {
-;;         GIT_PACKBUILDER_ADDING_OBJECTS = 0,
-;;         GIT_PACKBUILDER_DELTAFICATION = 1,
+;;   GIT_PACKBUILDER_ADDING_OBJECTS = 0,
+;;   GIT_PACKBUILDER_DELTAFICATION = 1,
 ;; } git_packbuilder_stage_t;
+(if echo-decls (display "git_packbuilder_stage_t\n"))
 (define-fh-enum git_packbuilder_stage_t
   '((GIT_PACKBUILDER_ADDING_OBJECTS . 0)
     (GIT_PACKBUILDER_DELTAFICATION . 1))
   )
 
 ;; extern int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
-;;           ;
+;;     ;
+(if echo-decls (display "git_packbuilder_new\n"))
 (define git_packbuilder_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7255,7 +7697,8 @@
 (export git_packbuilder_new)
 
 ;; extern unsigned int git_packbuilder_set_threads(git_packbuilder *pb, 
-;;           unsigned int n);
+;;     unsigned int n);
+(if echo-decls (display "git_packbuilder_set_threads\n"))
 (define git_packbuilder_set_threads
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -7270,7 +7713,8 @@
 (export git_packbuilder_set_threads)
 
 ;; extern int git_packbuilder_insert(git_packbuilder *pb, const git_oid *id, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_packbuilder_insert\n"))
 (define git_packbuilder_insert
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7286,7 +7730,8 @@
 (export git_packbuilder_insert)
 
 ;; extern int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *
-;;           id);
+;;     id);
+(if echo-decls (display "git_packbuilder_insert_tree\n"))
 (define git_packbuilder_insert_tree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7301,7 +7746,8 @@
 (export git_packbuilder_insert_tree)
 
 ;; extern int git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid 
-;;           *id);
+;;     *id);
+(if echo-decls (display "git_packbuilder_insert_commit\n"))
 (define git_packbuilder_insert_commit
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7316,7 +7762,8 @@
 (export git_packbuilder_insert_commit)
 
 ;; extern int git_packbuilder_insert_walk(git_packbuilder *pb, git_revwalk *
-;;           walk);
+;;     walk);
+(if echo-decls (display "git_packbuilder_insert_walk\n"))
 (define git_packbuilder_insert_walk
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7331,7 +7778,8 @@
 (export git_packbuilder_insert_walk)
 
 ;; extern int git_packbuilder_insert_recur(git_packbuilder *pb, const git_oid *
-;;           id, const char *name);
+;;     id, const char *name);
+(if echo-decls (display "git_packbuilder_insert_recur\n"))
 (define git_packbuilder_insert_recur
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7347,6 +7795,7 @@
 (export git_packbuilder_insert_recur)
 
 ;; extern int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
+(if echo-decls (display "git_packbuilder_write_buf\n"))
 (define git_packbuilder_write_buf
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7361,8 +7810,9 @@
 (export git_packbuilder_write_buf)
 
 ;; extern int git_packbuilder_write(git_packbuilder *pb, const char *path, 
-;;           unsigned int mode, git_transfer_progress_cb progress_cb, void *
-;;           progress_cb_payload);
+;;     unsigned int mode, git_transfer_progress_cb progress_cb, void *
+;;     progress_cb_payload);
+(if echo-decls (display "git_packbuilder_write\n"))
 (define git_packbuilder_write
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7375,7 +7825,8 @@
             (~path (unwrap~pointer path))
             (~mode (unwrap~fixed mode))
             (~progress_cb
-              (unwrap-git_transfer_progress_cb progress_cb))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               progress_cb))
             (~progress_cb_payload
               (unwrap~pointer progress_cb_payload)))
         (~f ~pb
@@ -7386,6 +7837,7 @@
 (export git_packbuilder_write)
 
 ;; extern const git_oid *git_packbuilder_hash(git_packbuilder *pb);
+(if echo-decls (display "git_packbuilder_hash\n"))
 (define git_packbuilder_hash
   (let ((~f (ffi:pointer->procedure
               '*
@@ -7399,12 +7851,14 @@
 (export git_packbuilder_hash)
 
 ;; typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *
-;;           payload);
+;;     payload);
+(if echo-decls (display "git_packbuilder_foreach_cb\n"))
 (define-fh-function/p git_packbuilder_foreach_cb
   ffi:int (list (quote *) ffi:size_t (quote *)))
 
 ;; extern int git_packbuilder_foreach(git_packbuilder *pb, 
-;;           git_packbuilder_foreach_cb cb, void *payload);
+;;     git_packbuilder_foreach_cb cb, void *payload);
+(if echo-decls (display "git_packbuilder_foreach\n"))
 (define git_packbuilder_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7414,12 +7868,16 @@
               (list '* '* '*))))
     (lambda (pb cb payload)
       (let ((~pb (unwrap-git_packbuilder* pb))
-            (~cb (unwrap-git_packbuilder_foreach_cb cb))
+            (~cb ((make-ftn-arg-unwrapper
+                    ffi:int
+                    (list '* ffi:size_t '*))
+                  cb))
             (~payload (unwrap~pointer payload)))
         (~f ~pb ~cb ~payload)))))
 (export git_packbuilder_foreach)
 
 ;; extern size_t git_packbuilder_object_count(git_packbuilder *pb);
+(if echo-decls (display "git_packbuilder_object_count\n"))
 (define git_packbuilder_object_count
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -7433,6 +7891,7 @@
 (export git_packbuilder_object_count)
 
 ;; extern size_t git_packbuilder_written(git_packbuilder *pb);
+(if echo-decls (display "git_packbuilder_written\n"))
 (define git_packbuilder_written
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -7446,12 +7905,14 @@
 (export git_packbuilder_written)
 
 ;; typedef int (*git_packbuilder_progress)(int stage, uint32_t current, 
-;;           uint32_t total, void *payload);
+;;     uint32_t total, void *payload);
+(if echo-decls (display "git_packbuilder_progress\n"))
 (define-fh-function/p git_packbuilder_progress
   ffi:int (list ffi:int ffi:uint32 ffi:uint32 (quote *)))
 
 ;; extern int git_packbuilder_set_callbacks(git_packbuilder *pb, 
-;;           git_packbuilder_progress progress_cb, void *progress_cb_payload);
+;;     git_packbuilder_progress progress_cb, void *progress_cb_payload);
+(if echo-decls (display "git_packbuilder_set_callbacks\n"))
 (define git_packbuilder_set_callbacks
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7462,13 +7923,17 @@
     (lambda (pb progress_cb progress_cb_payload)
       (let ((~pb (unwrap-git_packbuilder* pb))
             (~progress_cb
-              (unwrap-git_packbuilder_progress progress_cb))
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list ffi:int ffi:uint32 ffi:uint32 '*))
+               progress_cb))
             (~progress_cb_payload
               (unwrap~pointer progress_cb_payload)))
         (~f ~pb ~progress_cb ~progress_cb_payload)))))
 (export git_packbuilder_set_callbacks)
 
 ;; extern void git_packbuilder_free(git_packbuilder *pb);
+(if echo-decls (display "git_packbuilder_free\n"))
 (define git_packbuilder_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -7482,10 +7947,11 @@
 (export git_packbuilder_free)
 
 ;; typedef enum {
-;;         GIT_PROXY_NONE,
-;;         GIT_PROXY_AUTO,
-;;         GIT_PROXY_SPECIFIED,
+;;   GIT_PROXY_NONE,
+;;   GIT_PROXY_AUTO,
+;;   GIT_PROXY_SPECIFIED,
 ;; } git_proxy_t;
+(if echo-decls (display "git_proxy_t\n"))
 (define-fh-enum git_proxy_t
   '((GIT_PROXY_NONE . 0)
     (GIT_PROXY_AUTO . 1)
@@ -7493,50 +7959,51 @@
   )
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /**
-;;               * The type of proxy to use, by URL, auto-detect.
-;;               */
-;;         git_proxy_t type;
-;;         /**
-;;               * The URL of the proxy.
-;;               */
-;;         const char *url;
-;;         /**
-;;               * This will be called if the remote host requires
-;;               * authentication in order to connect to it.
-;;               *
-;;               * Returning GIT_PASSTHROUGH will make libgit2 behave as
-;;               * though this field isn't set.
-;;               */
-;;         git_cred_acquire_cb credentials;
-;;         /**
-;;               * If cert verification fails, this will be called to let the
-;;               * user make the final decision of whether to allow the
-;;               * connection to proceed. Returns 1 to allow the connection, 0
-;;               * to disallow it or a negative value to indicate an error.
-;;               */
-;;         git_transport_certificate_check_cb certificate_check;
-;;         /**
-;;               * Payload to be provided to the credentials and certificate
-;;               * check callbacks.
-;;               */
-;;         void *payload;
+;;   unsigned int version;
+;;   /**
+;;    * The type of proxy to use, by URL, auto-detect.
+;;    */
+;;   git_proxy_t type;
+;;   /**
+;;    * The URL of the proxy.
+;;    */
+;;   const char *url;
+;;   /**
+;;    * This will be called if the remote host requires
+;;    * authentication in order to connect to it.
+;;    *
+;;    * Returning GIT_PASSTHROUGH will make libgit2 behave as
+;;    * though this field isn't set.
+;;    */
+;;   git_cred_acquire_cb credentials;
+;;   /**
+;;    * If cert verification fails, this will be called to let the
+;;    * user make the final decision of whether to allow the
+;;    * connection to proceed. Returns 1 to allow the connection, 0
+;;    * to disallow it or a negative value to indicate an error.
+;;    */
+;;   git_transport_certificate_check_cb certificate_check;
+;;   /**
+;;    * Payload to be provided to the credentials and certificate
+;;    * check callbacks.
+;;    */
+;;   void *payload;
 ;; } git_proxy_options;
+(if echo-decls (display "git_proxy_options\n"))
 (define git_proxy_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
-          `(type ,git_proxy_t-desc)
+          `(type ,int)
           `(url ,(bs:pointer int))
-          `(credentials ,git_cred_acquire_cb-desc)
-          `(certificate_check
-             ,git_transport_certificate_check_cb-desc)
+          `(credentials ,(bs:pointer void))
+          `(certificate_check ,(bs:pointer void))
           `(payload ,(bs:pointer void)))))
 (export git_proxy_options-desc)
 (define-fh-compound-type/p git_proxy_options git_proxy_options-desc)
 
 ;; extern int git_proxy_init_options(git_proxy_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_proxy_init_options\n"))
 (define git_proxy_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7551,7 +8018,8 @@
 (export git_proxy_init_options)
 
 ;; extern int git_remote_create(git_remote **out, git_repository *repo, const 
-;;           char *name, const char *url);
+;;     char *name, const char *url);
+(if echo-decls (display "git_remote_create\n"))
 (define git_remote_create
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7566,7 +8034,8 @@
 (export git_remote_create)
 
 ;; extern int git_remote_create_with_fetchspec(git_remote **out, git_repository
-;;            *repo, const char *name, const char *url, const char *fetch);
+;;      *repo, const char *name, const char *url, const char *fetch);
+(if echo-decls (display "git_remote_create_with_fetchspec\n"))
 (define git_remote_create_with_fetchspec
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7584,7 +8053,8 @@
 (export git_remote_create_with_fetchspec)
 
 ;; extern int git_remote_create_anonymous(git_remote **out, git_repository *
-;;           repo, const char *url);
+;;     repo, const char *url);
+(if echo-decls (display "git_remote_create_anonymous\n"))
 (define git_remote_create_anonymous
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7600,7 +8070,8 @@
 (export git_remote_create_anonymous)
 
 ;; extern int git_remote_lookup(git_remote **out, git_repository *repo, const 
-;;           char *name);
+;;     char *name);
+(if echo-decls (display "git_remote_lookup\n"))
 (define git_remote_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7614,6 +8085,7 @@
 (export git_remote_lookup)
 
 ;; extern int git_remote_dup(git_remote **dest, git_remote *source);
+(if echo-decls (display "git_remote_dup\n"))
 (define git_remote_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7626,6 +8098,7 @@
 (export git_remote_dup)
 
 ;; extern git_repository *git_remote_owner(const git_remote *remote);
+(if echo-decls (display "git_remote_owner\n"))
 (define git_remote_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -7637,6 +8110,7 @@
 (export git_remote_owner)
 
 ;; extern const char *git_remote_name(const git_remote *remote);
+(if echo-decls (display "git_remote_name\n"))
 (define git_remote_name
   (let ((~f (ffi:pointer->procedure
               '*
@@ -7648,6 +8122,7 @@
 (export git_remote_name)
 
 ;; extern const char *git_remote_url(const git_remote *remote);
+(if echo-decls (display "git_remote_url\n"))
 (define git_remote_url
   (let ((~f (ffi:pointer->procedure
               '*
@@ -7659,6 +8134,7 @@
 (export git_remote_url)
 
 ;; extern const char *git_remote_pushurl(const git_remote *remote);
+(if echo-decls (display "git_remote_pushurl\n"))
 (define git_remote_pushurl
   (let ((~f (ffi:pointer->procedure
               '*
@@ -7672,7 +8148,8 @@
 (export git_remote_pushurl)
 
 ;; extern int git_remote_set_url(git_repository *repo, const char *remote, 
-;;           const char *url);
+;;     const char *url);
+(if echo-decls (display "git_remote_set_url\n"))
 (define git_remote_set_url
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7688,7 +8165,8 @@
 (export git_remote_set_url)
 
 ;; extern int git_remote_set_pushurl(git_repository *repo, const char *remote, 
-;;           const char *url);
+;;     const char *url);
+(if echo-decls (display "git_remote_set_pushurl\n"))
 (define git_remote_set_pushurl
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7704,7 +8182,8 @@
 (export git_remote_set_pushurl)
 
 ;; extern int git_remote_add_fetch(git_repository *repo, const char *remote, 
-;;           const char *refspec);
+;;     const char *refspec);
+(if echo-decls (display "git_remote_add_fetch\n"))
 (define git_remote_add_fetch
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7720,7 +8199,8 @@
 (export git_remote_add_fetch)
 
 ;; extern int git_remote_get_fetch_refspecs(git_strarray *array, const 
-;;           git_remote *remote);
+;;     git_remote *remote);
+(if echo-decls (display "git_remote_get_fetch_refspecs\n"))
 (define git_remote_get_fetch_refspecs
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7735,7 +8215,8 @@
 (export git_remote_get_fetch_refspecs)
 
 ;; extern int git_remote_add_push(git_repository *repo, const char *remote, 
-;;           const char *refspec);
+;;     const char *refspec);
+(if echo-decls (display "git_remote_add_push\n"))
 (define git_remote_add_push
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7751,7 +8232,8 @@
 (export git_remote_add_push)
 
 ;; extern int git_remote_get_push_refspecs(git_strarray *array, const 
-;;           git_remote *remote);
+;;     git_remote *remote);
+(if echo-decls (display "git_remote_get_push_refspecs\n"))
 (define git_remote_get_push_refspecs
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7766,6 +8248,7 @@
 (export git_remote_get_push_refspecs)
 
 ;; extern size_t git_remote_refspec_count(const git_remote *remote);
+(if echo-decls (display "git_remote_refspec_count\n"))
 (define git_remote_refspec_count
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -7779,7 +8262,8 @@
 (export git_remote_refspec_count)
 
 ;; extern const git_refspec *git_remote_get_refspec(const git_remote *remote, 
-;;           size_t n);
+;;     size_t n);
+(if echo-decls (display "git_remote_get_refspec\n"))
 (define git_remote_get_refspec
   (let ((~f (ffi:pointer->procedure
               '*
@@ -7794,8 +8278,9 @@
 (export git_remote_get_refspec)
 
 ;; extern int git_remote_connect(git_remote *remote, git_direction direction, 
-;;           const git_remote_callbacks *callbacks, const git_proxy_options *
-;;           proxy_opts, const git_strarray *custom_headers);
+;;     const git_remote_callbacks *callbacks, const git_proxy_options *
+;;     proxy_opts, const git_strarray *custom_headers);
+(if echo-decls (display "git_remote_connect\n"))
 (define git_remote_connect
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7809,7 +8294,7 @@
              proxy_opts
              custom_headers)
       (let ((~remote (unwrap-git_remote* remote))
-            (~direction (unwrap-git_direction direction))
+            (~direction (unwrap~fixed direction))
             (~callbacks
               (unwrap-git_remote_callbacks* callbacks))
             (~proxy_opts
@@ -7824,7 +8309,8 @@
 (export git_remote_connect)
 
 ;; extern int git_remote_ls(const git_remote_head ***out, size_t *size, 
-;;           git_remote *remote);
+;;     git_remote *remote);
+(if echo-decls (display "git_remote_ls\n"))
 (define git_remote_ls
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7838,6 +8324,7 @@
 (export git_remote_ls)
 
 ;; extern int git_remote_connected(const git_remote *remote);
+(if echo-decls (display "git_remote_connected\n"))
 (define git_remote_connected
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7851,6 +8338,7 @@
 (export git_remote_connected)
 
 ;; extern void git_remote_stop(git_remote *remote);
+(if echo-decls (display "git_remote_stop\n"))
 (define git_remote_stop
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -7862,6 +8350,7 @@
 (export git_remote_stop)
 
 ;; extern void git_remote_disconnect(git_remote *remote);
+(if echo-decls (display "git_remote_disconnect\n"))
 (define git_remote_disconnect
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -7875,6 +8364,7 @@
 (export git_remote_disconnect)
 
 ;; extern void git_remote_free(git_remote *remote);
+(if echo-decls (display "git_remote_free\n"))
 (define git_remote_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -7886,6 +8376,7 @@
 (export git_remote_free)
 
 ;; extern int git_remote_list(git_strarray *out, git_repository *repo);
+(if echo-decls (display "git_remote_list\n"))
 (define git_remote_list
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7898,10 +8389,11 @@
 (export git_remote_list)
 
 ;; typedef enum git_remote_completion_type {
-;;         GIT_REMOTE_COMPLETION_DOWNLOAD,
-;;         GIT_REMOTE_COMPLETION_INDEXING,
-;;         GIT_REMOTE_COMPLETION_ERROR,
+;;   GIT_REMOTE_COMPLETION_DOWNLOAD,
+;;   GIT_REMOTE_COMPLETION_INDEXING,
+;;   GIT_REMOTE_COMPLETION_ERROR,
 ;; } git_remote_completion_type;
+(if echo-decls (display "git_remote_completion_type\n"))
 (define-fh-enum git_remote_completion_type
   '((GIT_REMOTE_COMPLETION_DOWNLOAD . 0)
     (GIT_REMOTE_COMPLETION_INDEXING . 1)
@@ -7911,28 +8403,30 @@
 (define wrap-enum-git_remote_completion_type wrap-git_remote_completion_type)
 
 ;; typedef int (*git_push_transfer_progress)(unsigned int current, unsigned int
-;;            total, size_t bytes, void *payload);
+;;      total, size_t bytes, void *payload);
+(if echo-decls (display "git_push_transfer_progress\n"))
 (define-fh-function/p git_push_transfer_progress
   ffi:int (list ffi:unsigned-int ffi:unsigned-int ffi:size_t (quote *)))
 
 ;; typedef struct {
-;;         /**
-;;               * The source name of the reference
-;;               */
-;;         char *src_refname;
-;;         /**
-;;               * The name of the reference to update on the server
-;;               */
-;;         char *dst_refname;
-;;         /**
-;;               * The current target of the reference
-;;               */
-;;         git_oid src;
-;;         /**
-;;               * The new target for the reference
-;;               */
-;;         git_oid dst;
+;;   /**
+;;    * The source name of the reference
+;;    */
+;;   char *src_refname;
+;;   /**
+;;    * The name of the reference to update on the server
+;;    */
+;;   char *dst_refname;
+;;   /**
+;;    * The current target of the reference
+;;    */
+;;   git_oid src;
+;;   /**
+;;    * The new target for the reference
+;;    */
+;;   git_oid dst;
 ;; } git_push_update;
+(if echo-decls (display "git_push_update\n"))
 (define git_push_update-desc
   (bs:struct
     (list `(src_refname ,(bs:pointer int))
@@ -7943,12 +8437,111 @@
 (define-fh-compound-type/p git_push_update git_push_update-desc)
 
 ;; typedef int (*git_push_negotiation)(const git_push_update **updates, size_t 
-;;           len, void *payload);
+;;     len, void *payload);
+(if echo-decls (display "git_push_negotiation\n"))
 (define-fh-function/p git_push_negotiation
   ffi:int (list (quote *) ffi:size_t (quote *)))
 
+;; struct git_remote_callbacks {
+;;   unsigned int version;
+;;   /**
+;;    * Textual progress from the remote. Text send over the
+;;    * progress side-band will be passed to this function (this is
+;;    * the 'counting objects' output).
+;;    */
+;;   git_transport_message_cb sideband_progress;
+;;   /**
+;;    * Completion is called when different parts of the download
+;;    * process are done (currently unused).
+;;    */
+;;   int (*completion)(git_remote_completion_type type, void *data);
+;;   /**
+;;    * This will be called if the remote host requires
+;;    * authentication in order to connect to it.
+;;    *
+;;    * Returning GIT_PASSTHROUGH will make libgit2 behave as
+;;    * though this field isn't set.
+;;    */
+;;   git_cred_acquire_cb credentials;
+;;   /**
+;;    * If cert verification fails, this will be called to let the
+;;    * user make the final decision of whether to allow the
+;;    * connection to proceed. Returns 1 to allow the connection, 0
+;;    * to disallow it or a negative value to indicate an error.
+;;    */
+;;   git_transport_certificate_check_cb certificate_check;
+;;   /**
+;;    * During the download of new data, this will be regularly
+;;    * called with the current count of progress done by the
+;;    * indexer.
+;;    */
+;;   git_transfer_progress_cb transfer_progress;
+;;   /**
+;;    * Each time a reference is updated locally, this function
+;;    * will be called with information about it.
+;;    */
+;;   int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b
+;;       , void *data);
+;;   /**
+;;    * Function to call with progress information during pack
+;;    * building. Be aware that this is called inline with pack
+;;    * building operations, so performance may be affected.
+;;    */
+;;   git_packbuilder_progress pack_progress;
+;;   /**
+;;    * Function to call with progress information during the
+;;    * upload portion of a push. Be aware that this is called
+;;    * inline with pack building operations, so performance may be
+;;    * affected.
+;;    */
+;;   git_push_transfer_progress push_transfer_progress;
+;;   /**
+;;    * Called for each updated reference on push. If `status` is
+;;    * not `NULL`, the update was rejected by the remote server
+;;    * and `status` contains the reason given.
+;;    */
+;;   int (*push_update_reference)(const char *refname, const char *status, void
+;;        *data);
+;;   /**
+;;    * Called once between the negotiation step and the upload. It
+;;    * provides information about what updates will be performed.
+;;    */
+;;   git_push_negotiation push_negotiation;
+;;   /**
+;;    * Create the transport to use for this operation. Leave NULL
+;;    * to auto-detect.
+;;    */
+;;   git_transport_cb transport;
+;;   /**
+;;    * This will be passed to each of the callbacks in this struct
+;;    * as the last parameter.
+;;    */
+;;   void *payload;
+;; };
+(if echo-decls (display "(struct . git_remote_callbacks)\n"))
+(define struct-git_remote_callbacks-desc
+  (bs:struct
+    (list `(version ,unsigned-int)
+          `(sideband_progress ,(bs:pointer void))
+          `(completion ,(bs:pointer void))
+          `(credentials ,(bs:pointer void))
+          `(certificate_check ,(bs:pointer void))
+          `(transfer_progress ,(bs:pointer void))
+          `(update_tips ,(bs:pointer void))
+          `(pack_progress ,(bs:pointer void))
+          `(push_transfer_progress ,(bs:pointer void))
+          `(push_update_reference ,(bs:pointer void))
+          `(push_negotiation ,(bs:pointer void))
+          `(transport ,(bs:pointer void))
+          `(payload ,(bs:pointer void)))))
+(export struct-git_remote_callbacks-desc)
+(define-fh-compound-type/p struct-git_remote_callbacks struct-git_remote_callbacks-desc)
+(set! git_remote_callbacks-desc struct-git_remote_callbacks-desc)
+(define-fh-compound-type git_remote_callbacks git_remote_callbacks-desc)
+
 ;; extern int git_remote_init_callbacks(git_remote_callbacks *opts, 
-;;           unsigned int version);
+;;     unsigned int version);
+(if echo-decls (display "git_remote_init_callbacks\n"))
 (define git_remote_init_callbacks
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -7963,10 +8556,11 @@
 (export git_remote_init_callbacks)
 
 ;; typedef enum {
-;;         GIT_FETCH_PRUNE_UNSPECIFIED,
-;;         GIT_FETCH_PRUNE,
-;;         GIT_FETCH_NO_PRUNE,
+;;   GIT_FETCH_PRUNE_UNSPECIFIED,
+;;   GIT_FETCH_PRUNE,
+;;   GIT_FETCH_NO_PRUNE,
 ;; } git_fetch_prune_t;
+(if echo-decls (display "git_fetch_prune_t\n"))
 (define-fh-enum git_fetch_prune_t
   '((GIT_FETCH_PRUNE_UNSPECIFIED . 0)
     (GIT_FETCH_PRUNE . 1)
@@ -7974,11 +8568,12 @@
   )
 
 ;; typedef enum {
-;;         GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED = 0,
-;;         GIT_REMOTE_DOWNLOAD_TAGS_AUTO,
-;;         GIT_REMOTE_DOWNLOAD_TAGS_NONE,
-;;         GIT_REMOTE_DOWNLOAD_TAGS_ALL,
+;;   GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED = 0,
+;;   GIT_REMOTE_DOWNLOAD_TAGS_AUTO,
+;;   GIT_REMOTE_DOWNLOAD_TAGS_NONE,
+;;   GIT_REMOTE_DOWNLOAD_TAGS_ALL,
 ;; } git_remote_autotag_option_t;
+(if echo-decls (display "git_remote_autotag_option_t\n"))
 (define-fh-enum git_remote_autotag_option_t
   '((GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED . 0)
     (GIT_REMOTE_DOWNLOAD_TAGS_AUTO . 1)
@@ -7987,51 +8582,53 @@
   )
 
 ;; typedef struct {
-;;         int version;
-;;         /**
-;;               * Callbacks to use for this fetch operation
-;;               */
-;;         git_remote_callbacks callbacks;
-;;         /**
-;;               * Whether to perform a prune after the fetch
-;;               */
-;;         git_fetch_prune_t prune;
-;;         /**
-;;               * Whether to write the results to FETCH_HEAD. Defaults to
-;;               * on. Leave this default in order to behave like git.
-;;               */
-;;         int update_fetchhead;
-;;         /**
-;;               * Determines how to behave regarding tags on the remote, such
-;;               * as auto-downloading tags for objects we're downloading or
-;;               * downloading all of them.
-;;               *
-;;               * The default is to auto-follow tags.
-;;               */
-;;         git_remote_autotag_option_t download_tags;
-;;         /**
-;;               * Proxy options to use, by default no proxy is used.
-;;               */
-;;         git_proxy_options proxy_opts;
-;;         /**
-;;               * Extra headers for this fetch operation
-;;               */
-;;         git_strarray custom_headers;
+;;   int version;
+;;   /**
+;;    * Callbacks to use for this fetch operation
+;;    */
+;;   git_remote_callbacks callbacks;
+;;   /**
+;;    * Whether to perform a prune after the fetch
+;;    */
+;;   git_fetch_prune_t prune;
+;;   /**
+;;    * Whether to write the results to FETCH_HEAD. Defaults to
+;;    * on. Leave this default in order to behave like git.
+;;    */
+;;   int update_fetchhead;
+;;   /**
+;;    * Determines how to behave regarding tags on the remote, such
+;;    * as auto-downloading tags for objects we're downloading or
+;;    * downloading all of them.
+;;    *
+;;    * The default is to auto-follow tags.
+;;    */
+;;   git_remote_autotag_option_t download_tags;
+;;   /**
+;;    * Proxy options to use, by default no proxy is used.
+;;    */
+;;   git_proxy_options proxy_opts;
+;;   /**
+;;    * Extra headers for this fetch operation
+;;    */
+;;   git_strarray custom_headers;
 ;; } git_fetch_options;
+(if echo-decls (display "git_fetch_options\n"))
 (define git_fetch_options-desc
   (bs:struct
     (list `(version ,int)
           `(callbacks ,git_remote_callbacks-desc)
-          `(prune ,git_fetch_prune_t-desc)
+          `(prune ,int)
           `(update_fetchhead ,int)
-          `(download_tags ,git_remote_autotag_option_t-desc)
+          `(download_tags ,int)
           `(proxy_opts ,git_proxy_options-desc)
           `(custom_headers ,git_strarray-desc))))
 (export git_fetch_options-desc)
 (define-fh-compound-type/p git_fetch_options git_fetch_options-desc)
 
 ;; extern int git_fetch_init_options(git_fetch_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_fetch_init_options\n"))
 (define git_fetch_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8046,33 +8643,31 @@
 (export git_fetch_init_options)
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /**
-;;               * If the transport being used to push to the remote requires the creation
-;;                   
-;;               * of a pack file, this controls the number of worker threads used by
-;;                   
-;;               * the packbuilder when creating that pack file to be sent to the remote.
-;;                   
-;;               *
-;;               * If set to 0, the packbuilder will auto-detect the number of threads
-;;                   
-;;               * to create. The default value is 1.
-;;               */
-;;         unsigned int pb_parallelism;
-;;         /**
-;;               * Callbacks to use for this push operation
-;;               */
-;;         git_remote_callbacks callbacks;
-;;         /**
-;;              * Proxy options to use, by default no proxy is used.
-;;              */
-;;         git_proxy_options proxy_opts;
-;;         /**
-;;               * Extra headers for this push operation
-;;               */
-;;         git_strarray custom_headers;
+;;   unsigned int version;
+;;   /**
+;;    * If the transport being used to push to the remote requires the creation
+;;       
+;;    * of a pack file, this controls the number of worker threads used by
+;;    * the packbuilder when creating that pack file to be sent to the remote.
+;;    *
+;;    * If set to 0, the packbuilder will auto-detect the number of threads
+;;    * to create. The default value is 1.
+;;    */
+;;   unsigned int pb_parallelism;
+;;   /**
+;;    * Callbacks to use for this push operation
+;;    */
+;;   git_remote_callbacks callbacks;
+;;   /**
+;;   * Proxy options to use, by default no proxy is used.
+;;   */
+;;   git_proxy_options proxy_opts;
+;;   /**
+;;    * Extra headers for this push operation
+;;    */
+;;   git_strarray custom_headers;
 ;; } git_push_options;
+(if echo-decls (display "git_push_options\n"))
 (define git_push_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -8084,7 +8679,8 @@
 (define-fh-compound-type/p git_push_options git_push_options-desc)
 
 ;; extern int git_push_init_options(git_push_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_push_init_options\n"))
 (define git_push_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8099,7 +8695,8 @@
 (export git_push_init_options)
 
 ;; extern int git_remote_download(git_remote *remote, const git_strarray *
-;;           refspecs, const git_fetch_options *opts);
+;;     refspecs, const git_fetch_options *opts);
+(if echo-decls (display "git_remote_download\n"))
 (define git_remote_download
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8115,7 +8712,8 @@
 (export git_remote_download)
 
 ;; extern int git_remote_upload(git_remote *remote, const git_strarray *
-;;           refspecs, const git_push_options *opts);
+;;     refspecs, const git_push_options *opts);
+(if echo-decls (display "git_remote_upload\n"))
 (define git_remote_upload
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8129,8 +8727,9 @@
 (export git_remote_upload)
 
 ;; extern int git_remote_update_tips(git_remote *remote, const 
-;;           git_remote_callbacks *callbacks, int update_fetchhead, 
-;;           git_remote_autotag_option_t download_tags, const char *reflog_message);
+;;     git_remote_callbacks *callbacks, int update_fetchhead, 
+;;     git_remote_autotag_option_t download_tags, const char *reflog_message);
+(if echo-decls (display "git_remote_update_tips\n"))
 (define git_remote_update_tips
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8148,9 +8747,7 @@
               (unwrap-git_remote_callbacks* callbacks))
             (~update_fetchhead
               (unwrap~fixed update_fetchhead))
-            (~download_tags
-              (unwrap-git_remote_autotag_option_t
-                download_tags))
+            (~download_tags (unwrap~fixed download_tags))
             (~reflog_message (unwrap~pointer reflog_message)))
         (~f ~remote
             ~callbacks
@@ -8160,7 +8757,8 @@
 (export git_remote_update_tips)
 
 ;; extern int git_remote_fetch(git_remote *remote, const git_strarray *refspecs
-;;           , const git_fetch_options *opts, const char *reflog_message);
+;;     , const git_fetch_options *opts, const char *reflog_message);
+(if echo-decls (display "git_remote_fetch\n"))
 (define git_remote_fetch
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8175,7 +8773,8 @@
 (export git_remote_fetch)
 
 ;; extern int git_remote_prune(git_remote *remote, const git_remote_callbacks *
-;;           callbacks);
+;;     callbacks);
+(if echo-decls (display "git_remote_prune\n"))
 (define git_remote_prune
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8189,7 +8788,8 @@
 (export git_remote_prune)
 
 ;; extern int git_remote_push(git_remote *remote, const git_strarray *refspecs
-;;           , const git_push_options *opts);
+;;     , const git_push_options *opts);
+(if echo-decls (display "git_remote_push\n"))
 (define git_remote_push
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8203,6 +8803,7 @@
 (export git_remote_push)
 
 ;; extern const git_transfer_progress *git_remote_stats(git_remote *remote);
+(if echo-decls (display "git_remote_stats\n"))
 (define git_remote_stats
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8214,7 +8815,8 @@
 (export git_remote_stats)
 
 ;; extern git_remote_autotag_option_t git_remote_autotag(const git_remote *
-;;           remote);
+;;     remote);
+(if echo-decls (display "git_remote_autotag\n"))
 (define git_remote_autotag
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8224,11 +8826,12 @@
               (list '*))))
     (lambda (remote)
       (let ((~remote (unwrap-git_remote* remote)))
-        (wrap-git_remote_autotag_option_t (~f ~remote))))))
+        (~f ~remote)))))
 (export git_remote_autotag)
 
 ;; extern int git_remote_set_autotag(git_repository *repo, const char *remote, 
-;;           git_remote_autotag_option_t value);
+;;     git_remote_autotag_option_t value);
+(if echo-decls (display "git_remote_set_autotag\n"))
 (define git_remote_set_autotag
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8239,12 +8842,12 @@
     (lambda (repo remote value)
       (let ((~repo (unwrap-git_repository* repo))
             (~remote (unwrap~pointer remote))
-            (~value
-              (unwrap-git_remote_autotag_option_t value)))
+            (~value (unwrap~fixed value)))
         (~f ~repo ~remote ~value)))))
 (export git_remote_set_autotag)
 
 ;; extern int git_remote_prune_refs(const git_remote *remote);
+(if echo-decls (display "git_remote_prune_refs\n"))
 (define git_remote_prune_refs
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8258,7 +8861,8 @@
 (export git_remote_prune_refs)
 
 ;; extern int git_remote_rename(git_strarray *problems, git_repository *repo, 
-;;           const char *name, const char *new_name);
+;;     const char *name, const char *new_name);
+(if echo-decls (display "git_remote_rename\n"))
 (define git_remote_rename
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8273,6 +8877,7 @@
 (export git_remote_rename)
 
 ;; extern int git_remote_is_valid_name(const char *remote_name);
+(if echo-decls (display "git_remote_is_valid_name\n"))
 (define git_remote_is_valid_name
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8286,6 +8891,7 @@
 (export git_remote_is_valid_name)
 
 ;; extern int git_remote_delete(git_repository *repo, const char *name);
+(if echo-decls (display "git_remote_delete\n"))
 (define git_remote_delete
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8298,6 +8904,7 @@
 (export git_remote_delete)
 
 ;; extern int git_remote_default_branch(git_buf *out, git_remote *remote);
+(if echo-decls (display "git_remote_default_branch\n"))
 (define git_remote_default_branch
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8312,11 +8919,12 @@
 (export git_remote_default_branch)
 
 ;; typedef enum {
-;;         GIT_CLONE_LOCAL_AUTO,
-;;         GIT_CLONE_LOCAL,
-;;         GIT_CLONE_NO_LOCAL,
-;;         GIT_CLONE_LOCAL_NO_LINKS,
+;;   GIT_CLONE_LOCAL_AUTO,
+;;   GIT_CLONE_LOCAL,
+;;   GIT_CLONE_NO_LOCAL,
+;;   GIT_CLONE_LOCAL_NO_LINKS,
 ;; } git_clone_local_t;
+(if echo-decls (display "git_clone_local_t\n"))
 (define-fh-enum git_clone_local_t
   '((GIT_CLONE_LOCAL_AUTO . 0)
     (GIT_CLONE_LOCAL . 1)
@@ -8325,92 +8933,90 @@
   )
 
 ;; typedef int (*git_remote_create_cb)(git_remote **out, git_repository *repo, 
-;;           const char *name, const char *url, void *payload);
+;;     const char *name, const char *url, void *payload);
+(if echo-decls (display "git_remote_create_cb\n"))
 (define-fh-function/p git_remote_create_cb
   ffi:int (list (quote *) (quote *) (quote *) (quote *) (quote *)))
 
 ;; typedef int (*git_repository_create_cb)(git_repository **out, const char *
-;;           path, int bare, void *payload);
+;;     path, int bare, void *payload);
+(if echo-decls (display "git_repository_create_cb\n"))
 (define-fh-function/p git_repository_create_cb
   ffi:int (list (quote *) (quote *) ffi:int (quote *)))
 
 ;; typedef struct git_clone_options {
-;;         unsigned int version;
-;;         /**
-;;               * These options are passed to the checkout step. To disable
-;;               * checkout, set the `checkout_strategy` to
-;;               * `GIT_CHECKOUT_NONE`.
-;;               */
-;;         git_checkout_options checkout_opts;
-;;         /**
-;;               * Options which control the fetch, including callbacks.
-;;               *
-;;               * The callbacks are used for reporting fetch progress, and for acquiring
-;;                   
-;;               * credentials in the event they are needed.
-;;               */
-;;         git_fetch_options fetch_opts;
-;;         /**
-;;               * Set to zero (false) to create a standard repo, or non-zero
-;;               * for a bare repo
-;;               */
-;;         int bare;
-;;         /**
-;;               * Whether to use a fetch or copy the object database.
-;;               */
-;;         git_clone_local_t local;
-;;         /**
-;;               * The name of the branch to checkout. NULL means use the
-;;               * remote's default branch.
-;;               */
-;;         const char *checkout_branch;
-;;         /**
-;;               * A callback used to create the new repository into which to
-;;               * clone. If NULL, the 'bare' field will be used to determine
-;;               * whether to create a bare repository.
-;;               */
-;;         git_repository_create_cb repository_cb;
-;;         /**
-;;               * An opaque payload to pass to the git_repository creation callback.
-;;                   
-;;               * This parameter is ignored unless repository_cb is non-NULL.
-;;               */
-;;         void *repository_cb_payload;
-;;         /**
-;;               * A callback used to create the git_remote, prior to its being
-;;                   
-;;               * used to perform the clone operation. See the documentation for
-;;                   
-;;               * git_remote_create_cb for details. This parameter may be NULL,
-;;                   
-;;               * indicating that git_clone should provide default behavior.
-;;               */
-;;         git_remote_create_cb remote_cb;
-;;         /**
-;;               * An opaque payload to pass to the git_remote creation callback.
-;;                   
-;;               * This parameter is ignored unless remote_cb is non-NULL.
-;;               */
-;;         void *remote_cb_payload;
+;;   unsigned int version;
+;;   /**
+;;    * These options are passed to the checkout step. To disable
+;;    * checkout, set the `checkout_strategy` to
+;;    * `GIT_CHECKOUT_NONE`.
+;;    */
+;;   git_checkout_options checkout_opts;
+;;   /**
+;;    * Options which control the fetch, including callbacks.
+;;    *
+;;    * The callbacks are used for reporting fetch progress, and for acquiring
+;;    * credentials in the event they are needed.
+;;    */
+;;   git_fetch_options fetch_opts;
+;;   /**
+;;    * Set to zero (false) to create a standard repo, or non-zero
+;;    * for a bare repo
+;;    */
+;;   int bare;
+;;   /**
+;;    * Whether to use a fetch or copy the object database.
+;;    */
+;;   git_clone_local_t local;
+;;   /**
+;;    * The name of the branch to checkout. NULL means use the
+;;    * remote's default branch.
+;;    */
+;;   const char *checkout_branch;
+;;   /**
+;;    * A callback used to create the new repository into which to
+;;    * clone. If NULL, the 'bare' field will be used to determine
+;;    * whether to create a bare repository.
+;;    */
+;;   git_repository_create_cb repository_cb;
+;;   /**
+;;    * An opaque payload to pass to the git_repository creation callback.
+;;    * This parameter is ignored unless repository_cb is non-NULL.
+;;    */
+;;   void *repository_cb_payload;
+;;   /**
+;;    * A callback used to create the git_remote, prior to its being
+;;    * used to perform the clone operation. See the documentation for
+;;    * git_remote_create_cb for details. This parameter may be NULL,
+;;    * indicating that git_clone should provide default behavior.
+;;    */
+;;   git_remote_create_cb remote_cb;
+;;   /**
+;;    * An opaque payload to pass to the git_remote creation callback.
+;;    * This parameter is ignored unless remote_cb is non-NULL.
+;;    */
+;;   void *remote_cb_payload;
 ;; } git_clone_options;
+(if echo-decls (display "git_clone_options\n"))
 (define git_clone_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
           `(checkout_opts ,git_checkout_options-desc)
           `(fetch_opts ,git_fetch_options-desc)
           `(bare ,int)
-          `(local ,git_clone_local_t-desc)
+          `(local ,int)
           `(checkout_branch ,(bs:pointer int))
-          `(repository_cb ,git_repository_create_cb-desc)
+          `(repository_cb ,(bs:pointer void))
           `(repository_cb_payload ,(bs:pointer void))
-          `(remote_cb ,git_remote_create_cb-desc)
+          `(remote_cb ,(bs:pointer void))
           `(remote_cb_payload ,(bs:pointer void)))))
 (export git_clone_options-desc)
 (define-fh-compound-type/p git_clone_options git_clone_options-desc)
 (define struct-git_clone_options git_clone_options)
 
 ;; extern int git_clone_init_options(git_clone_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_clone_init_options\n"))
 (define git_clone_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8425,7 +9031,8 @@
 (export git_clone_init_options)
 
 ;; extern int git_clone(git_repository **out, const char *url, const char *
-;;           local_path, const git_clone_options *options);
+;;     local_path, const git_clone_options *options);
+(if echo-decls (display "git_clone\n"))
 (define git_clone
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8440,7 +9047,8 @@
 (export git_clone)
 
 ;; extern int git_commit_lookup(git_commit **commit, git_repository *repo, 
-;;           const git_oid *id);
+;;     const git_oid *id);
+(if echo-decls (display "git_commit_lookup\n"))
 (define git_commit_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8454,7 +9062,8 @@
 (export git_commit_lookup)
 
 ;; extern int git_commit_lookup_prefix(git_commit **commit, git_repository *
-;;           repo, const git_oid *id, size_t len);
+;;     repo, const git_oid *id, size_t len);
+(if echo-decls (display "git_commit_lookup_prefix\n"))
 (define git_commit_lookup_prefix
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8471,6 +9080,7 @@
 (export git_commit_lookup_prefix)
 
 ;; extern void git_commit_free(git_commit *commit);
+(if echo-decls (display "git_commit_free\n"))
 (define git_commit_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -8482,6 +9092,7 @@
 (export git_commit_free)
 
 ;; extern const git_oid *git_commit_id(const git_commit *commit);
+(if echo-decls (display "git_commit_id\n"))
 (define git_commit_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8493,6 +9104,7 @@
 (export git_commit_id)
 
 ;; extern git_repository *git_commit_owner(const git_commit *commit);
+(if echo-decls (display "git_commit_owner\n"))
 (define git_commit_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8504,6 +9116,7 @@
 (export git_commit_owner)
 
 ;; extern const char *git_commit_message_encoding(const git_commit *commit);
+(if echo-decls (display "git_commit_message_encoding\n"))
 (define git_commit_message_encoding
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8517,6 +9130,7 @@
 (export git_commit_message_encoding)
 
 ;; extern const char *git_commit_message(const git_commit *commit);
+(if echo-decls (display "git_commit_message\n"))
 (define git_commit_message
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8530,6 +9144,7 @@
 (export git_commit_message)
 
 ;; extern const char *git_commit_message_raw(const git_commit *commit);
+(if echo-decls (display "git_commit_message_raw\n"))
 (define git_commit_message_raw
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8543,6 +9158,7 @@
 (export git_commit_message_raw)
 
 ;; extern const char *git_commit_summary(git_commit *commit);
+(if echo-decls (display "git_commit_summary\n"))
 (define git_commit_summary
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8556,6 +9172,7 @@
 (export git_commit_summary)
 
 ;; extern const char *git_commit_body(git_commit *commit);
+(if echo-decls (display "git_commit_body\n"))
 (define git_commit_body
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8567,6 +9184,7 @@
 (export git_commit_body)
 
 ;; extern git_time_t git_commit_time(const git_commit *commit);
+(if echo-decls (display "git_commit_time\n"))
 (define git_commit_time
   (let ((~f (ffi:pointer->procedure
               ffi:int64
@@ -8574,10 +9192,11 @@
               (list '*))))
     (lambda (commit)
       (let ((~commit (unwrap-git_commit* commit)))
-        (wrap-git_time_t (~f ~commit))))))
+        (~f ~commit)))))
 (export git_commit_time)
 
 ;; extern int git_commit_time_offset(const git_commit *commit);
+(if echo-decls (display "git_commit_time_offset\n"))
 (define git_commit_time_offset
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8591,6 +9210,7 @@
 (export git_commit_time_offset)
 
 ;; extern const git_signature *git_commit_committer(const git_commit *commit);
+(if echo-decls (display "git_commit_committer\n"))
 (define git_commit_committer
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8604,6 +9224,7 @@
 (export git_commit_committer)
 
 ;; extern const git_signature *git_commit_author(const git_commit *commit);
+(if echo-decls (display "git_commit_author\n"))
 (define git_commit_author
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8615,6 +9236,7 @@
 (export git_commit_author)
 
 ;; extern const char *git_commit_raw_header(const git_commit *commit);
+(if echo-decls (display "git_commit_raw_header\n"))
 (define git_commit_raw_header
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8628,6 +9250,7 @@
 (export git_commit_raw_header)
 
 ;; extern int git_commit_tree(git_tree **tree_out, const git_commit *commit);
+(if echo-decls (display "git_commit_tree\n"))
 (define git_commit_tree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8640,6 +9263,7 @@
 (export git_commit_tree)
 
 ;; extern const git_oid *git_commit_tree_id(const git_commit *commit);
+(if echo-decls (display "git_commit_tree_id\n"))
 (define git_commit_tree_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8653,6 +9277,7 @@
 (export git_commit_tree_id)
 
 ;; extern unsigned int git_commit_parentcount(const git_commit *commit);
+(if echo-decls (display "git_commit_parentcount\n"))
 (define git_commit_parentcount
   (let ((~f (ffi:pointer->procedure
               ffi:unsigned-int
@@ -8666,7 +9291,8 @@
 (export git_commit_parentcount)
 
 ;; extern int git_commit_parent(git_commit **out, const git_commit *commit, 
-;;           unsigned int n);
+;;     unsigned int n);
+(if echo-decls (display "git_commit_parent\n"))
 (define git_commit_parent
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8680,7 +9306,8 @@
 (export git_commit_parent)
 
 ;; extern const git_oid *git_commit_parent_id(const git_commit *commit, 
-;;           unsigned int n);
+;;     unsigned int n);
+(if echo-decls (display "git_commit_parent_id\n"))
 (define git_commit_parent_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -8695,7 +9322,8 @@
 (export git_commit_parent_id)
 
 ;; extern int git_commit_nth_gen_ancestor(git_commit **ancestor, const 
-;;           git_commit *commit, unsigned int n);
+;;     git_commit *commit, unsigned int n);
+(if echo-decls (display "git_commit_nth_gen_ancestor\n"))
 (define git_commit_nth_gen_ancestor
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8711,7 +9339,8 @@
 (export git_commit_nth_gen_ancestor)
 
 ;; extern int git_commit_header_field(git_buf *out, const git_commit *commit, 
-;;           const char *field);
+;;     const char *field);
+(if echo-decls (display "git_commit_header_field\n"))
 (define git_commit_header_field
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8727,8 +9356,9 @@
 (export git_commit_header_field)
 
 ;; extern int git_commit_extract_signature(git_buf *signature, git_buf *
-;;           signed_data, git_repository *repo, git_oid *commit_id, const char *field
-;;           );
+;;     signed_data, git_repository *repo, git_oid *commit_id, const char *field
+;;     );
+(if echo-decls (display "git_commit_extract_signature\n"))
 (define git_commit_extract_signature
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8750,9 +9380,10 @@
 (export git_commit_extract_signature)
 
 ;; extern int git_commit_create(git_oid *id, git_repository *repo, const char *
-;;           update_ref, const git_signature *author, const git_signature *committer
-;;           , const char *message_encoding, const char *message, const git_tree *
-;;           tree, size_t parent_count, const git_commit *parents[]);
+;;     update_ref, const git_signature *author, const git_signature *committer
+;;     , const char *message_encoding, const char *message, const git_tree *
+;;     tree, size_t parent_count, const git_commit *parents[]);
+(if echo-decls (display "git_commit_create\n"))
 (define git_commit_create
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8792,15 +9423,17 @@
 (export git_commit_create)
 
 ;; extern int git_commit_create_v(git_oid *id, git_repository *repo, const char
-;;            *update_ref, const git_signature *author, const git_signature *
-;;           committer, const char *message_encoding, const char *message, const 
-;;           git_tree *tree, size_t parent_count, ...);
+;;      *update_ref, const git_signature *author, const git_signature *
+;;     committer, const char *message_encoding, const char *message, const 
+;;     git_tree *tree, size_t parent_count, ...);
+(if echo-decls (display "git_commit_create_v\n"))
 ;; ... failed.
 
 ;; extern int git_commit_amend(git_oid *id, const git_commit *commit_to_amend, 
-;;           const char *update_ref, const git_signature *author, const git_signature
-;;            *committer, const char *message_encoding, const char *message, const 
-;;           git_tree *tree);
+;;     const char *update_ref, const git_signature *author, const git_signature
+;;      *committer, const char *message_encoding, const char *message, const 
+;;     git_tree *tree);
+(if echo-decls (display "git_commit_amend\n"))
 (define git_commit_amend
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8835,9 +9468,10 @@
 (export git_commit_amend)
 
 ;; extern int git_commit_create_buffer(git_buf *out, git_repository *repo, 
-;;           const git_signature *author, const git_signature *committer, const char 
-;;           *message_encoding, const char *message, const git_tree *tree, size_t 
-;;           parent_count, const git_commit *parents[]);
+;;     const git_signature *author, const git_signature *committer, const char 
+;;     *message_encoding, const char *message, const git_tree *tree, size_t 
+;;     parent_count, const git_commit *parents[]);
+(if echo-decls (display "git_commit_create_buffer\n"))
 (define git_commit_create_buffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8876,8 +9510,9 @@
 (export git_commit_create_buffer)
 
 ;; extern int git_commit_create_with_signature(git_oid *out, git_repository *
-;;           repo, const char *commit_content, const char *signature, const char *
-;;           signature_field);
+;;     repo, const char *commit_content, const char *signature, const char *
+;;     signature_field);
+(if echo-decls (display "git_commit_create_with_signature\n"))
 (define git_commit_create_with_signature
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8904,6 +9539,7 @@
 (export git_commit_create_with_signature)
 
 ;; extern int git_commit_dup(git_commit **out, git_commit *source);
+(if echo-decls (display "git_commit_dup\n"))
 (define git_commit_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -8916,14 +9552,15 @@
 (export git_commit_dup)
 
 ;; typedef enum {
-;;         GIT_CONFIG_LEVEL_PROGRAMDATA = 1,
-;;         GIT_CONFIG_LEVEL_SYSTEM = 2,
-;;         GIT_CONFIG_LEVEL_XDG = 3,
-;;         GIT_CONFIG_LEVEL_GLOBAL = 4,
-;;         GIT_CONFIG_LEVEL_LOCAL = 5,
-;;         GIT_CONFIG_LEVEL_APP = 6,
-;;         GIT_CONFIG_HIGHEST_LEVEL = -1,
+;;   GIT_CONFIG_LEVEL_PROGRAMDATA = 1,
+;;   GIT_CONFIG_LEVEL_SYSTEM = 2,
+;;   GIT_CONFIG_LEVEL_XDG = 3,
+;;   GIT_CONFIG_LEVEL_GLOBAL = 4,
+;;   GIT_CONFIG_LEVEL_LOCAL = 5,
+;;   GIT_CONFIG_LEVEL_APP = 6,
+;;   GIT_CONFIG_HIGHEST_LEVEL = -1,
 ;; } git_config_level_t;
+(if echo-decls (display "git_config_level_t\n"))
 (define-fh-enum git_config_level_t
   '((GIT_CONFIG_LEVEL_PROGRAMDATA . 1)
     (GIT_CONFIG_LEVEL_SYSTEM . 2)
@@ -8935,21 +9572,20 @@
   )
 
 ;; typedef struct git_config_entry {
-;;         const char *name; /**< Name of the entry (normalised) */
-;;         const char *value; /**< String value of the entry */
-;;         git_config_level_t level; 
-;;                   /**< Which config file this was found in */
-;;         void (*free)(struct git_config_entry *entry); 
-;;                   /**< Free function for this entry */
-;;         void *payload; 
-;;                   /**< Opaque value for the free function. Do not read or write */
-;;                   
+;;   const char *name; /**< Name of the entry (normalised) */
+;;   const char *value; /**< String value of the entry */
+;;   git_config_level_t level; /**< Which config file this was found in */
+;;   void (*free)(struct git_config_entry *entry); 
+;;       /**< Free function for this entry */
+;;   void *payload; 
+;;       /**< Opaque value for the free function. Do not read or write */
 ;; } git_config_entry;
+(if echo-decls (display "git_config_entry\n"))
 (define git_config_entry-desc
   (bs:struct
     (list `(name ,(bs:pointer int))
           `(value ,(bs:pointer int))
-          `(level ,git_config_level_t-desc)
+          `(level ,int)
           `(free ,(bs:pointer void))
           `(payload ,(bs:pointer void)))))
 (export git_config_entry-desc)
@@ -8957,6 +9593,7 @@
 (define struct-git_config_entry git_config_entry)
 
 ;; extern void git_config_entry_free(git_config_entry *);
+(if echo-decls (display "git_config_entry_free\n"))
 (define git_config_entry_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -8964,24 +9601,29 @@
                 "git_config_entry_free"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12409)
-      (let ((~@12409 (unwrap-git_config_entry* @12409)))
-        (~f ~@12409)))))
+    (lambda (@12579)
+      (let ((~@12579 (unwrap-git_config_entry* @12579)))
+        (~f ~@12579)))))
 (export git_config_entry_free)
 
 ;; typedef int (*git_config_foreach_cb)(const git_config_entry *, void *);
+(if echo-decls (display "git_config_foreach_cb\n"))
 (define-fh-function/p git_config_foreach_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; typedef struct git_config_iterator git_config_iterator;
-(define-fh-pointer-type git_config_iterator*)
+(if echo-decls (display "git_config_iterator\n"))
+(define git_config_iterator-desc void)
+(define git_config_iterator*-desc (bs:pointer git_config_iterator-desc))
+(define-fh-pointer-type git_config_iterator* git_config_iterator*-desc)
 
 ;; typedef enum {
-;;         GIT_CVAR_FALSE = 0,
-;;         GIT_CVAR_TRUE = 1,
-;;         GIT_CVAR_INT32,
-;;         GIT_CVAR_STRING,
+;;   GIT_CVAR_FALSE = 0,
+;;   GIT_CVAR_TRUE = 1,
+;;   GIT_CVAR_INT32,
+;;   GIT_CVAR_STRING,
 ;; } git_cvar_t;
+(if echo-decls (display "git_cvar_t\n"))
 (define-fh-enum git_cvar_t
   '((GIT_CVAR_FALSE . 0)
     (GIT_CVAR_TRUE . 1)
@@ -8990,19 +9632,21 @@
   )
 
 ;; typedef struct {
-;;         git_cvar_t cvar_type;
-;;         const char *str_match;
-;;         int map_value;
+;;   git_cvar_t cvar_type;
+;;   const char *str_match;
+;;   int map_value;
 ;; } git_cvar_map;
+(if echo-decls (display "git_cvar_map\n"))
 (define git_cvar_map-desc
   (bs:struct
-    (list `(cvar_type ,git_cvar_t-desc)
+    (list `(cvar_type ,int)
           `(str_match ,(bs:pointer int))
           `(map_value ,int))))
 (export git_cvar_map-desc)
 (define-fh-compound-type/p git_cvar_map git_cvar_map-desc)
 
 ;; extern int git_config_find_global(git_buf *out);
+(if echo-decls (display "git_config_find_global\n"))
 (define git_config_find_global
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9015,6 +9659,7 @@
 (export git_config_find_global)
 
 ;; extern int git_config_find_xdg(git_buf *out);
+(if echo-decls (display "git_config_find_xdg\n"))
 (define git_config_find_xdg
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9027,6 +9672,7 @@
 (export git_config_find_xdg)
 
 ;; extern int git_config_find_system(git_buf *out);
+(if echo-decls (display "git_config_find_system\n"))
 (define git_config_find_system
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9039,6 +9685,7 @@
 (export git_config_find_system)
 
 ;; extern int git_config_find_programdata(git_buf *out);
+(if echo-decls (display "git_config_find_programdata\n"))
 (define git_config_find_programdata
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9051,6 +9698,7 @@
 (export git_config_find_programdata)
 
 ;; extern int git_config_open_default(git_config **out);
+(if echo-decls (display "git_config_open_default\n"))
 (define git_config_open_default
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9063,6 +9711,7 @@
 (export git_config_open_default)
 
 ;; extern int git_config_new(git_config **out);
+(if echo-decls (display "git_config_new\n"))
 (define git_config_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9073,7 +9722,8 @@
 (export git_config_new)
 
 ;; extern int git_config_add_file_ondisk(git_config *cfg, const char *path, 
-;;           git_config_level_t level, int force);
+;;     git_config_level_t level, int force);
+(if echo-decls (display "git_config_add_file_ondisk\n"))
 (define git_config_add_file_ondisk
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9084,12 +9734,13 @@
     (lambda (cfg path level force)
       (let ((~cfg (unwrap-git_config* cfg))
             (~path (unwrap~pointer path))
-            (~level (unwrap-git_config_level_t level))
+            (~level (unwrap~fixed level))
             (~force (unwrap~fixed force)))
         (~f ~cfg ~path ~level ~force)))))
 (export git_config_add_file_ondisk)
 
 ;; extern int git_config_open_ondisk(git_config **out, const char *path);
+(if echo-decls (display "git_config_open_ondisk\n"))
 (define git_config_open_ondisk
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9104,7 +9755,8 @@
 (export git_config_open_ondisk)
 
 ;; extern int git_config_open_level(git_config **out, const git_config *parent
-;;           , git_config_level_t level);
+;;     , git_config_level_t level);
+(if echo-decls (display "git_config_open_level\n"))
 (define git_config_open_level
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9115,11 +9767,12 @@
     (lambda (out parent level)
       (let ((~out (unwrap~pointer out))
             (~parent (unwrap-git_config* parent))
-            (~level (unwrap-git_config_level_t level)))
+            (~level (unwrap~fixed level)))
         (~f ~out ~parent ~level)))))
 (export git_config_open_level)
 
 ;; extern int git_config_open_global(git_config **out, git_config *config);
+(if echo-decls (display "git_config_open_global\n"))
 (define git_config_open_global
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9134,6 +9787,7 @@
 (export git_config_open_global)
 
 ;; extern int git_config_snapshot(git_config **out, git_config *config);
+(if echo-decls (display "git_config_snapshot\n"))
 (define git_config_snapshot
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9148,6 +9802,7 @@
 (export git_config_snapshot)
 
 ;; extern void git_config_free(git_config *cfg);
+(if echo-decls (display "git_config_free\n"))
 (define git_config_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -9158,7 +9813,8 @@
 (export git_config_free)
 
 ;; extern int git_config_get_entry(git_config_entry **out, const git_config *
-;;           cfg, const char *name);
+;;     cfg, const char *name);
+(if echo-decls (display "git_config_get_entry\n"))
 (define git_config_get_entry
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9174,7 +9830,8 @@
 (export git_config_get_entry)
 
 ;; extern int git_config_get_int32(int32_t *out, const git_config *cfg, const 
-;;           char *name);
+;;     char *name);
+(if echo-decls (display "git_config_get_int32\n"))
 (define git_config_get_int32
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9190,7 +9847,8 @@
 (export git_config_get_int32)
 
 ;; extern int git_config_get_int64(int64_t *out, const git_config *cfg, const 
-;;           char *name);
+;;     char *name);
+(if echo-decls (display "git_config_get_int64\n"))
 (define git_config_get_int64
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9206,7 +9864,8 @@
 (export git_config_get_int64)
 
 ;; extern int git_config_get_bool(int *out, const git_config *cfg, const char *
-;;           name);
+;;     name);
+(if echo-decls (display "git_config_get_bool\n"))
 (define git_config_get_bool
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9222,7 +9881,8 @@
 (export git_config_get_bool)
 
 ;; extern int git_config_get_path(git_buf *out, const git_config *cfg, const 
-;;           char *name);
+;;     char *name);
+(if echo-decls (display "git_config_get_path\n"))
 (define git_config_get_path
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9238,7 +9898,8 @@
 (export git_config_get_path)
 
 ;; extern int git_config_get_string(const char **out, const git_config *cfg, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_config_get_string\n"))
 (define git_config_get_string
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9254,7 +9915,8 @@
 (export git_config_get_string)
 
 ;; extern int git_config_get_string_buf(git_buf *out, const git_config *cfg, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_config_get_string_buf\n"))
 (define git_config_get_string_buf
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9270,8 +9932,9 @@
 (export git_config_get_string_buf)
 
 ;; extern int git_config_get_multivar_foreach(const git_config *cfg, const char
-;;            *name, const char *regexp, git_config_foreach_cb callback, void *
-;;           payload);
+;;      *name, const char *regexp, git_config_foreach_cb callback, void *
+;;     payload);
+(if echo-decls (display "git_config_get_multivar_foreach\n"))
 (define git_config_get_multivar_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9284,13 +9947,15 @@
             (~name (unwrap~pointer name))
             (~regexp (unwrap~pointer regexp))
             (~callback
-              (unwrap-git_config_foreach_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~cfg ~name ~regexp ~callback ~payload)))))
 (export git_config_get_multivar_foreach)
 
 ;; extern int git_config_multivar_iterator_new(git_config_iterator **out, const
-;;            git_config *cfg, const char *name, const char *regexp);
+;;      git_config *cfg, const char *name, const char *regexp);
+(if echo-decls (display "git_config_multivar_iterator_new\n"))
 (define git_config_multivar_iterator_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9307,7 +9972,8 @@
 (export git_config_multivar_iterator_new)
 
 ;; extern int git_config_next(git_config_entry **entry, git_config_iterator *
-;;           iter);
+;;     iter);
+(if echo-decls (display "git_config_next\n"))
 (define git_config_next
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9320,6 +9986,7 @@
 (export git_config_next)
 
 ;; extern void git_config_iterator_free(git_config_iterator *iter);
+(if echo-decls (display "git_config_iterator_free\n"))
 (define git_config_iterator_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -9333,7 +10000,8 @@
 (export git_config_iterator_free)
 
 ;; extern int git_config_set_int32(git_config *cfg, const char *name, int32_t 
-;;           value);
+;;     value);
+(if echo-decls (display "git_config_set_int32\n"))
 (define git_config_set_int32
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9349,7 +10017,8 @@
 (export git_config_set_int32)
 
 ;; extern int git_config_set_int64(git_config *cfg, const char *name, int64_t 
-;;           value);
+;;     value);
+(if echo-decls (display "git_config_set_int64\n"))
 (define git_config_set_int64
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9365,7 +10034,8 @@
 (export git_config_set_int64)
 
 ;; extern int git_config_set_bool(git_config *cfg, const char *name, int value)
-;;           ;
+;;     ;
+(if echo-decls (display "git_config_set_bool\n"))
 (define git_config_set_bool
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9381,7 +10051,8 @@
 (export git_config_set_bool)
 
 ;; extern int git_config_set_string(git_config *cfg, const char *name, const 
-;;           char *value);
+;;     char *value);
+(if echo-decls (display "git_config_set_string\n"))
 (define git_config_set_string
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9397,7 +10068,8 @@
 (export git_config_set_string)
 
 ;; extern int git_config_set_multivar(git_config *cfg, const char *name, const 
-;;           char *regexp, const char *value);
+;;     char *regexp, const char *value);
+(if echo-decls (display "git_config_set_multivar\n"))
 (define git_config_set_multivar
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9414,6 +10086,7 @@
 (export git_config_set_multivar)
 
 ;; extern int git_config_delete_entry(git_config *cfg, const char *name);
+(if echo-decls (display "git_config_delete_entry\n"))
 (define git_config_delete_entry
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9428,7 +10101,8 @@
 (export git_config_delete_entry)
 
 ;; extern int git_config_delete_multivar(git_config *cfg, const char *name, 
-;;           const char *regexp);
+;;     const char *regexp);
+(if echo-decls (display "git_config_delete_multivar\n"))
 (define git_config_delete_multivar
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9444,7 +10118,8 @@
 (export git_config_delete_multivar)
 
 ;; extern int git_config_foreach(const git_config *cfg, git_config_foreach_cb 
-;;           callback, void *payload);
+;;     callback, void *payload);
+(if echo-decls (display "git_config_foreach\n"))
 (define git_config_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9455,13 +10130,15 @@
     (lambda (cfg callback payload)
       (let ((~cfg (unwrap-git_config* cfg))
             (~callback
-              (unwrap-git_config_foreach_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~cfg ~callback ~payload)))))
 (export git_config_foreach)
 
 ;; extern int git_config_iterator_new(git_config_iterator **out, const 
-;;           git_config *cfg);
+;;     git_config *cfg);
+(if echo-decls (display "git_config_iterator_new\n"))
 (define git_config_iterator_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9476,7 +10153,8 @@
 (export git_config_iterator_new)
 
 ;; extern int git_config_iterator_glob_new(git_config_iterator **out, const 
-;;           git_config *cfg, const char *regexp);
+;;     git_config *cfg, const char *regexp);
+(if echo-decls (display "git_config_iterator_glob_new\n"))
 (define git_config_iterator_glob_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9492,7 +10170,8 @@
 (export git_config_iterator_glob_new)
 
 ;; extern int git_config_foreach_match(const git_config *cfg, const char *
-;;           regexp, git_config_foreach_cb callback, void *payload);
+;;     regexp, git_config_foreach_cb callback, void *payload);
+(if echo-decls (display "git_config_foreach_match\n"))
 (define git_config_foreach_match
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9504,13 +10183,15 @@
       (let ((~cfg (unwrap-git_config* cfg))
             (~regexp (unwrap~pointer regexp))
             (~callback
-              (unwrap-git_config_foreach_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~cfg ~regexp ~callback ~payload)))))
 (export git_config_foreach_match)
 
 ;; extern int git_config_get_mapped(int *out, const git_config *cfg, const char
-;;            *name, const git_cvar_map *maps, size_t map_n);
+;;      *name, const git_cvar_map *maps, size_t map_n);
+(if echo-decls (display "git_config_get_mapped\n"))
 (define git_config_get_mapped
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9528,7 +10209,8 @@
 (export git_config_get_mapped)
 
 ;; extern int git_config_lookup_map_value(int *out, const git_cvar_map *maps, 
-;;           size_t map_n, const char *value);
+;;     size_t map_n, const char *value);
+(if echo-decls (display "git_config_lookup_map_value\n"))
 (define git_config_lookup_map_value
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9545,6 +10227,7 @@
 (export git_config_lookup_map_value)
 
 ;; extern int git_config_parse_bool(int *out, const char *value);
+(if echo-decls (display "git_config_parse_bool\n"))
 (define git_config_parse_bool
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9559,6 +10242,7 @@
 (export git_config_parse_bool)
 
 ;; extern int git_config_parse_int32(int32_t *out, const char *value);
+(if echo-decls (display "git_config_parse_int32\n"))
 (define git_config_parse_int32
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9573,6 +10257,7 @@
 (export git_config_parse_int32)
 
 ;; extern int git_config_parse_int64(int64_t *out, const char *value);
+(if echo-decls (display "git_config_parse_int64\n"))
 (define git_config_parse_int64
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9587,6 +10272,7 @@
 (export git_config_parse_int64)
 
 ;; extern int git_config_parse_path(git_buf *out, const char *value);
+(if echo-decls (display "git_config_parse_path\n"))
 (define git_config_parse_path
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9601,7 +10287,8 @@
 (export git_config_parse_path)
 
 ;; extern int git_config_backend_foreach_match(git_config_backend *backend, 
-;;           const char *regexp, git_config_foreach_cb callback, void *payload);
+;;     const char *regexp, git_config_foreach_cb callback, void *payload);
+(if echo-decls (display "git_config_backend_foreach_match\n"))
 (define git_config_backend_foreach_match
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9613,12 +10300,14 @@
       (let ((~backend (unwrap-git_config_backend* backend))
             (~regexp (unwrap~pointer regexp))
             (~callback
-              (unwrap-git_config_foreach_cb callback))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~backend ~regexp ~callback ~payload)))))
 (export git_config_backend_foreach_match)
 
 ;; extern int git_config_lock(git_transaction **tx, git_config *cfg);
+(if echo-decls (display "git_config_lock\n"))
 (define git_config_lock
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9631,10 +10320,11 @@
 (export git_config_lock)
 
 ;; typedef enum {
-;;         GIT_DESCRIBE_DEFAULT,
-;;         GIT_DESCRIBE_TAGS,
-;;         GIT_DESCRIBE_ALL,
+;;   GIT_DESCRIBE_DEFAULT,
+;;   GIT_DESCRIBE_TAGS,
+;;   GIT_DESCRIBE_ALL,
 ;; } git_describe_strategy_t;
+(if echo-decls (display "git_describe_strategy_t\n"))
 (define-fh-enum git_describe_strategy_t
   '((GIT_DESCRIBE_DEFAULT . 0)
     (GIT_DESCRIBE_TAGS . 1)
@@ -9642,24 +10332,24 @@
   )
 
 ;; typedef struct git_describe_options {
-;;         unsigned int version;
-;;         unsigned int max_candidates_tags; /**< default: 10 */
-;;         unsigned int describe_strategy; 
-;;                   /**< default: GIT_DESCRIBE_DEFAULT */
-;;         const char *pattern;
-;;         /**
-;;               * When calculating the distance from the matching tag or
-;;               * reference, only walk down the first-parent ancestry.
-;;               */
-;;         int only_follow_first_parent;
-;;         /**
-;;               * If no matching tag or reference is found, the describe
-;;               * operation would normally fail. If this option is set, it
-;;               * will instead fall back to showing the full id of the
-;;               * commit.
-;;               */
-;;         int show_commit_oid_as_fallback;
+;;   unsigned int version;
+;;   unsigned int max_candidates_tags; /**< default: 10 */
+;;   unsigned int describe_strategy; /**< default: GIT_DESCRIBE_DEFAULT */
+;;   const char *pattern;
+;;   /**
+;;    * When calculating the distance from the matching tag or
+;;    * reference, only walk down the first-parent ancestry.
+;;    */
+;;   int only_follow_first_parent;
+;;   /**
+;;    * If no matching tag or reference is found, the describe
+;;    * operation would normally fail. If this option is set, it
+;;    * will instead fall back to showing the full id of the
+;;    * commit.
+;;    */
+;;   int show_commit_oid_as_fallback;
 ;; } git_describe_options;
+(if echo-decls (display "git_describe_options\n"))
 (define git_describe_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -9673,7 +10363,8 @@
 (define struct-git_describe_options git_describe_options)
 
 ;; extern int git_describe_init_options(git_describe_options *opts, 
-;;           unsigned int version);
+;;     unsigned int version);
+(if echo-decls (display "git_describe_init_options\n"))
 (define git_describe_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9688,24 +10379,24 @@
 (export git_describe_init_options)
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /**
-;;               * Size of the abbreviated commit id to use. This value is the
-;;               * lower bound for the length of the abbreviated string. The
-;;               * default is 7.
-;;               */
-;;         unsigned int abbreviated_size;
-;;         /**
-;;               * Set to use the long format even when a shorter name could be used.
-;;                   
-;;               */
-;;         int always_use_long_format;
-;;         /**
-;;               * If the workdir is dirty and this is set, this string will
-;;               * be appended to the description string.
-;;               */
-;;         const char *dirty_suffix;
+;;   unsigned int version;
+;;   /**
+;;    * Size of the abbreviated commit id to use. This value is the
+;;    * lower bound for the length of the abbreviated string. The
+;;    * default is 7.
+;;    */
+;;   unsigned int abbreviated_size;
+;;   /**
+;;    * Set to use the long format even when a shorter name could be used.
+;;    */
+;;   int always_use_long_format;
+;;   /**
+;;    * If the workdir is dirty and this is set, this string will
+;;    * be appended to the description string.
+;;    */
+;;   const char *dirty_suffix;
 ;; } git_describe_format_options;
+(if echo-decls (display "git_describe_format_options\n"))
 (define git_describe_format_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -9716,7 +10407,8 @@
 (define-fh-compound-type/p git_describe_format_options git_describe_format_options-desc)
 
 ;; extern int git_describe_init_format_options(git_describe_format_options *
-;;           opts, unsigned int version);
+;;     opts, unsigned int version);
+(if echo-decls (display "git_describe_init_format_options\n"))
 (define git_describe_init_format_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9731,10 +10423,14 @@
 (export git_describe_init_format_options)
 
 ;; typedef struct git_describe_result git_describe_result;
-(define-fh-pointer-type git_describe_result*)
+(if echo-decls (display "git_describe_result\n"))
+(define git_describe_result-desc void)
+(define git_describe_result*-desc (bs:pointer git_describe_result-desc))
+(define-fh-pointer-type git_describe_result* git_describe_result*-desc)
 
 ;; extern int git_describe_commit(git_describe_result **result, git_object *
-;;           committish, git_describe_options *opts);
+;;     committish, git_describe_options *opts);
+(if echo-decls (display "git_describe_commit\n"))
 (define git_describe_commit
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9750,7 +10446,8 @@
 (export git_describe_commit)
 
 ;; extern int git_describe_workdir(git_describe_result **out, git_repository *
-;;           repo, git_describe_options *opts);
+;;     repo, git_describe_options *opts);
+(if echo-decls (display "git_describe_workdir\n"))
 (define git_describe_workdir
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9766,7 +10463,8 @@
 (export git_describe_workdir)
 
 ;; extern int git_describe_format(git_buf *out, const git_describe_result *
-;;           result, const git_describe_format_options *opts);
+;;     result, const git_describe_format_options *opts);
+(if echo-decls (display "git_describe_format\n"))
 (define git_describe_format
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -9782,6 +10480,7 @@
 (export git_describe_format)
 
 ;; extern void git_describe_result_free(git_describe_result *result);
+(if echo-decls (display "git_describe_result_free\n"))
 (define git_describe_result_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -9795,35 +10494,36 @@
 (export git_describe_result_free)
 
 ;; typedef enum {
-;;         GIT_OK = 0,
-;;         GIT_ERROR = -1,
-;;         GIT_ENOTFOUND = -3,
-;;         GIT_EEXISTS = -4,
-;;         GIT_EAMBIGUOUS = -5,
-;;         GIT_EBUFS = -6,
-;;         GIT_EUSER = -7,
-;;         GIT_EBAREREPO = -8,
-;;         GIT_EUNBORNBRANCH = -9,
-;;         GIT_EUNMERGED = -10,
-;;         GIT_ENONFASTFORWARD = -11,
-;;         GIT_EINVALIDSPEC = -12,
-;;         GIT_ECONFLICT = -13,
-;;         GIT_ELOCKED = -14,
-;;         GIT_EMODIFIED = -15,
-;;         GIT_EAUTH = -16,
-;;         GIT_ECERTIFICATE = -17,
-;;         GIT_EAPPLIED = -18,
-;;         GIT_EPEEL = -19,
-;;         GIT_EEOF = -20,
-;;         GIT_EINVALID = -21,
-;;         GIT_EUNCOMMITTED = -22,
-;;         GIT_EDIRECTORY = -23,
-;;         GIT_EMERGECONFLICT = -24,
-;;         GIT_PASSTHROUGH = -30,
-;;         GIT_ITEROVER = -31,
-;;         GIT_RETRY = -32,
-;;         GIT_EMISMATCH = -33,
+;;   GIT_OK = 0,
+;;   GIT_ERROR = -1,
+;;   GIT_ENOTFOUND = -3,
+;;   GIT_EEXISTS = -4,
+;;   GIT_EAMBIGUOUS = -5,
+;;   GIT_EBUFS = -6,
+;;   GIT_EUSER = -7,
+;;   GIT_EBAREREPO = -8,
+;;   GIT_EUNBORNBRANCH = -9,
+;;   GIT_EUNMERGED = -10,
+;;   GIT_ENONFASTFORWARD = -11,
+;;   GIT_EINVALIDSPEC = -12,
+;;   GIT_ECONFLICT = -13,
+;;   GIT_ELOCKED = -14,
+;;   GIT_EMODIFIED = -15,
+;;   GIT_EAUTH = -16,
+;;   GIT_ECERTIFICATE = -17,
+;;   GIT_EAPPLIED = -18,
+;;   GIT_EPEEL = -19,
+;;   GIT_EEOF = -20,
+;;   GIT_EINVALID = -21,
+;;   GIT_EUNCOMMITTED = -22,
+;;   GIT_EDIRECTORY = -23,
+;;   GIT_EMERGECONFLICT = -24,
+;;   GIT_PASSTHROUGH = -30,
+;;   GIT_ITEROVER = -31,
+;;   GIT_RETRY = -32,
+;;   GIT_EMISMATCH = -33,
 ;; } git_error_code;
+(if echo-decls (display "git_error_code\n"))
 (define-fh-enum git_error_code
   '((GIT_OK . 0)
     (GIT_ERROR . -1)
@@ -9856,9 +10556,10 @@
   )
 
 ;; typedef struct {
-;;         char *message;
-;;         int klass;
+;;   char *message;
+;;   int klass;
 ;; } git_error;
+(if echo-decls (display "git_error\n"))
 (define git_error-desc
   (bs:struct
     (list `(message ,(bs:pointer int)) `(klass ,int))))
@@ -9866,41 +10567,42 @@
 (define-fh-compound-type/p git_error git_error-desc)
 
 ;; typedef enum {
-;;         GITERR_NONE = 0,
-;;         GITERR_NOMEMORY,
-;;         GITERR_OS,
-;;         GITERR_INVALID,
-;;         GITERR_REFERENCE,
-;;         GITERR_ZLIB,
-;;         GITERR_REPOSITORY,
-;;         GITERR_CONFIG,
-;;         GITERR_REGEX,
-;;         GITERR_ODB,
-;;         GITERR_INDEX,
-;;         GITERR_OBJECT,
-;;         GITERR_NET,
-;;         GITERR_TAG,
-;;         GITERR_TREE,
-;;         GITERR_INDEXER,
-;;         GITERR_SSL,
-;;         GITERR_SUBMODULE,
-;;         GITERR_THREAD,
-;;         GITERR_STASH,
-;;         GITERR_CHECKOUT,
-;;         GITERR_FETCHHEAD,
-;;         GITERR_MERGE,
-;;         GITERR_SSH,
-;;         GITERR_FILTER,
-;;         GITERR_REVERT,
-;;         GITERR_CALLBACK,
-;;         GITERR_CHERRYPICK,
-;;         GITERR_DESCRIBE,
-;;         GITERR_REBASE,
-;;         GITERR_FILESYSTEM,
-;;         GITERR_PATCH,
-;;         GITERR_WORKTREE,
-;;         GITERR_SHA1,
+;;   GITERR_NONE = 0,
+;;   GITERR_NOMEMORY,
+;;   GITERR_OS,
+;;   GITERR_INVALID,
+;;   GITERR_REFERENCE,
+;;   GITERR_ZLIB,
+;;   GITERR_REPOSITORY,
+;;   GITERR_CONFIG,
+;;   GITERR_REGEX,
+;;   GITERR_ODB,
+;;   GITERR_INDEX,
+;;   GITERR_OBJECT,
+;;   GITERR_NET,
+;;   GITERR_TAG,
+;;   GITERR_TREE,
+;;   GITERR_INDEXER,
+;;   GITERR_SSL,
+;;   GITERR_SUBMODULE,
+;;   GITERR_THREAD,
+;;   GITERR_STASH,
+;;   GITERR_CHECKOUT,
+;;   GITERR_FETCHHEAD,
+;;   GITERR_MERGE,
+;;   GITERR_SSH,
+;;   GITERR_FILTER,
+;;   GITERR_REVERT,
+;;   GITERR_CALLBACK,
+;;   GITERR_CHERRYPICK,
+;;   GITERR_DESCRIBE,
+;;   GITERR_REBASE,
+;;   GITERR_FILESYSTEM,
+;;   GITERR_PATCH,
+;;   GITERR_WORKTREE,
+;;   GITERR_SHA1,
 ;; } git_error_t;
+(if echo-decls (display "git_error_t\n"))
 (define-fh-enum git_error_t
   '((GITERR_NONE . 0)
     (GITERR_NOMEMORY . 1)
@@ -9939,6 +10641,7 @@
   )
 
 ;; extern const git_error *giterr_last(void);
+(if echo-decls (display "giterr_last\n"))
 (define giterr_last
   (let ((~f (ffi:pointer->procedure
               '*
@@ -9948,6 +10651,7 @@
 (export giterr_last)
 
 ;; extern void giterr_clear(void);
+(if echo-decls (display "giterr_clear\n"))
 (define giterr_clear
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -9957,6 +10661,7 @@
 (export giterr_clear)
 
 ;; extern void giterr_set_str(int error_class, const char *string);
+(if echo-decls (display "giterr_set_str\n"))
 (define giterr_set_str
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -9969,6 +10674,7 @@
 (export giterr_set_str)
 
 ;; extern void giterr_set_oom(void);
+(if echo-decls (display "giterr_set_oom\n"))
 (define giterr_set_oom
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -9978,11 +10684,12 @@
 (export giterr_set_oom)
 
 ;; typedef enum {
-;;         GIT_FILTER_TO_WORKTREE = 0,
-;;         GIT_FILTER_SMUDGE = GIT_FILTER_TO_WORKTREE,
-;;         GIT_FILTER_TO_ODB = 1,
-;;         GIT_FILTER_CLEAN = GIT_FILTER_TO_ODB,
+;;   GIT_FILTER_TO_WORKTREE = 0,
+;;   GIT_FILTER_SMUDGE = GIT_FILTER_TO_WORKTREE,
+;;   GIT_FILTER_TO_ODB = 1,
+;;   GIT_FILTER_CLEAN = GIT_FILTER_TO_ODB,
 ;; } git_filter_mode_t;
+(if echo-decls (display "git_filter_mode_t\n"))
 (define-fh-enum git_filter_mode_t
   '((GIT_FILTER_TO_WORKTREE . 0)
     (GIT_FILTER_SMUDGE . 0)
@@ -9991,23 +10698,31 @@
   )
 
 ;; typedef enum {
-;;         GIT_FILTER_DEFAULT = 0u,
-;;         GIT_FILTER_ALLOW_UNSAFE = 1u<<0,
+;;   GIT_FILTER_DEFAULT = 0u,
+;;   GIT_FILTER_ALLOW_UNSAFE = 1u<<0,
 ;; } git_filter_flag_t;
+(if echo-decls (display "git_filter_flag_t\n"))
 (define-fh-enum git_filter_flag_t
   '((GIT_FILTER_DEFAULT . 0)
     (GIT_FILTER_ALLOW_UNSAFE . 1))
   )
 
 ;; typedef struct git_filter git_filter;
-(define-fh-pointer-type git_filter*)
+(if echo-decls (display "git_filter\n"))
+(define git_filter-desc void)
+(define git_filter*-desc (bs:pointer git_filter-desc))
+(define-fh-pointer-type git_filter* git_filter*-desc)
 
 ;; typedef struct git_filter_list git_filter_list;
-(define-fh-pointer-type git_filter_list*)
+(if echo-decls (display "git_filter_list\n"))
+(define git_filter_list-desc void)
+(define git_filter_list*-desc (bs:pointer git_filter_list-desc))
+(define-fh-pointer-type git_filter_list* git_filter_list*-desc)
 
 ;; extern int git_filter_list_load(git_filter_list **filters, git_repository *
-;;           repo, git_blob *blob, const char *path, git_filter_mode_t mode, uint32_t
-;;            flags);
+;;     repo, git_blob *blob, const char *path, git_filter_mode_t mode, uint32_t
+;;      flags);
+(if echo-decls (display "git_filter_list_load\n"))
 (define git_filter_list_load
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10020,13 +10735,14 @@
             (~repo (unwrap-git_repository* repo))
             (~blob (unwrap-git_blob* blob))
             (~path (unwrap~pointer path))
-            (~mode (unwrap-git_filter_mode_t mode))
+            (~mode (unwrap~fixed mode))
             (~flags (unwrap~fixed flags)))
         (~f ~filters ~repo ~blob ~path ~mode ~flags)))))
 (export git_filter_list_load)
 
 ;; extern int git_filter_list_contains(git_filter_list *filters, const char *
-;;           name);
+;;     name);
+(if echo-decls (display "git_filter_list_contains\n"))
 (define git_filter_list_contains
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10041,7 +10757,8 @@
 (export git_filter_list_contains)
 
 ;; extern int git_filter_list_apply_to_data(git_buf *out, git_filter_list *
-;;           filters, git_buf *in);
+;;     filters, git_buf *in);
+(if echo-decls (display "git_filter_list_apply_to_data\n"))
 (define git_filter_list_apply_to_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10057,7 +10774,8 @@
 (export git_filter_list_apply_to_data)
 
 ;; extern int git_filter_list_apply_to_file(git_buf *out, git_filter_list *
-;;           filters, git_repository *repo, const char *path);
+;;     filters, git_repository *repo, const char *path);
+(if echo-decls (display "git_filter_list_apply_to_file\n"))
 (define git_filter_list_apply_to_file
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10074,7 +10792,8 @@
 (export git_filter_list_apply_to_file)
 
 ;; extern int git_filter_list_apply_to_blob(git_buf *out, git_filter_list *
-;;           filters, git_blob *blob);
+;;     filters, git_blob *blob);
+(if echo-decls (display "git_filter_list_apply_to_blob\n"))
 (define git_filter_list_apply_to_blob
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10090,7 +10809,8 @@
 (export git_filter_list_apply_to_blob)
 
 ;; extern int git_filter_list_stream_data(git_filter_list *filters, git_buf *
-;;           data, git_writestream *target);
+;;     data, git_writestream *target);
+(if echo-decls (display "git_filter_list_stream_data\n"))
 (define git_filter_list_stream_data
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10106,7 +10826,8 @@
 (export git_filter_list_stream_data)
 
 ;; extern int git_filter_list_stream_file(git_filter_list *filters, 
-;;           git_repository *repo, const char *path, git_writestream *target);
+;;     git_repository *repo, const char *path, git_writestream *target);
+(if echo-decls (display "git_filter_list_stream_file\n"))
 (define git_filter_list_stream_file
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10123,7 +10844,8 @@
 (export git_filter_list_stream_file)
 
 ;; extern int git_filter_list_stream_blob(git_filter_list *filters, git_blob *
-;;           blob, git_writestream *target);
+;;     blob, git_writestream *target);
+(if echo-decls (display "git_filter_list_stream_blob\n"))
 (define git_filter_list_stream_blob
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10139,6 +10861,7 @@
 (export git_filter_list_stream_blob)
 
 ;; extern void git_filter_list_free(git_filter_list *filters);
+(if echo-decls (display "git_filter_list_free\n"))
 (define git_filter_list_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -10152,6 +10875,7 @@
 (export git_filter_list_free)
 
 ;; extern int git_libgit2_init(void);
+(if echo-decls (display "git_libgit2_init\n"))
 (define git_libgit2_init
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10161,6 +10885,7 @@
 (export git_libgit2_init)
 
 ;; extern int git_libgit2_shutdown(void);
+(if echo-decls (display "git_libgit2_shutdown\n"))
 (define git_libgit2_shutdown
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10172,7 +10897,8 @@
 (export git_libgit2_shutdown)
 
 ;; extern int git_graph_ahead_behind(size_t *ahead, size_t *behind, 
-;;           git_repository *repo, const git_oid *local, const git_oid *upstream);
+;;     git_repository *repo, const git_oid *local, const git_oid *upstream);
+(if echo-decls (display "git_graph_ahead_behind\n"))
 (define git_graph_ahead_behind
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10190,7 +10916,8 @@
 (export git_graph_ahead_behind)
 
 ;; extern int git_graph_descendant_of(git_repository *repo, const git_oid *
-;;           commit, const git_oid *ancestor);
+;;     commit, const git_oid *ancestor);
+(if echo-decls (display "git_graph_descendant_of\n"))
 (define git_graph_descendant_of
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10206,6 +10933,7 @@
 (export git_graph_descendant_of)
 
 ;; extern int git_ignore_add_rule(git_repository *repo, const char *rules);
+(if echo-decls (display "git_ignore_add_rule\n"))
 (define git_ignore_add_rule
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10220,6 +10948,7 @@
 (export git_ignore_add_rule)
 
 ;; extern int git_ignore_clear_internal_rules(git_repository *repo);
+(if echo-decls (display "git_ignore_clear_internal_rules\n"))
 (define git_ignore_clear_internal_rules
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10233,7 +10962,8 @@
 (export git_ignore_clear_internal_rules)
 
 ;; extern int git_ignore_path_is_ignored(int *ignored, git_repository *repo, 
-;;           const char *path);
+;;     const char *path);
+(if echo-decls (display "git_ignore_path_is_ignored\n"))
 (define git_ignore_path_is_ignored
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10249,7 +10979,8 @@
 (export git_ignore_path_is_ignored)
 
 ;; extern int git_message_prettify(git_buf *out, const char *message, int 
-;;           strip_comments, char comment_char);
+;;     strip_comments, char comment_char);
+(if echo-decls (display "git_message_prettify\n"))
 (define git_message_prettify
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10266,15 +10997,20 @@
 (export git_message_prettify)
 
 ;; typedef int (*git_note_foreach_cb)(const git_oid *blob_id, const git_oid *
-;;           annotated_object_id, void *payload);
+;;     annotated_object_id, void *payload);
+(if echo-decls (display "git_note_foreach_cb\n"))
 (define-fh-function/p git_note_foreach_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef struct git_iterator git_note_iterator;
-(define-fh-pointer-type git_note_iterator*)
+(if echo-decls (display "git_note_iterator\n"))
+(define git_note_iterator-desc void)
+(define git_note_iterator*-desc (bs:pointer git_note_iterator-desc))
+(define-fh-pointer-type git_note_iterator* git_note_iterator*-desc)
 
 ;; extern int git_note_iterator_new(git_note_iterator **out, git_repository *
-;;           repo, const char *notes_ref);
+;;     repo, const char *notes_ref);
+(if echo-decls (display "git_note_iterator_new\n"))
 (define git_note_iterator_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10290,6 +11026,7 @@
 (export git_note_iterator_new)
 
 ;; extern void git_note_iterator_free(git_note_iterator *it);
+(if echo-decls (display "git_note_iterator_free\n"))
 (define git_note_iterator_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -10303,7 +11040,8 @@
 (export git_note_iterator_free)
 
 ;; extern int git_note_next(git_oid *note_id, git_oid *annotated_id, 
-;;           git_note_iterator *it);
+;;     git_note_iterator *it);
+(if echo-decls (display "git_note_next\n"))
 (define git_note_next
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10317,7 +11055,8 @@
 (export git_note_next)
 
 ;; extern int git_note_read(git_note **out, git_repository *repo, const char *
-;;           notes_ref, const git_oid *oid);
+;;     notes_ref, const git_oid *oid);
+(if echo-decls (display "git_note_read\n"))
 (define git_note_read
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10332,6 +11071,7 @@
 (export git_note_read)
 
 ;; extern const git_signature *git_note_author(const git_note *note);
+(if echo-decls (display "git_note_author\n"))
 (define git_note_author
   (let ((~f (ffi:pointer->procedure
               '*
@@ -10343,6 +11083,7 @@
 (export git_note_author)
 
 ;; extern const git_signature *git_note_committer(const git_note *note);
+(if echo-decls (display "git_note_committer\n"))
 (define git_note_committer
   (let ((~f (ffi:pointer->procedure
               '*
@@ -10356,6 +11097,7 @@
 (export git_note_committer)
 
 ;; extern const char *git_note_message(const git_note *note);
+(if echo-decls (display "git_note_message\n"))
 (define git_note_message
   (let ((~f (ffi:pointer->procedure
               '*
@@ -10367,6 +11109,7 @@
 (export git_note_message)
 
 ;; extern const git_oid *git_note_id(const git_note *note);
+(if echo-decls (display "git_note_id\n"))
 (define git_note_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -10378,8 +11121,9 @@
 (export git_note_id)
 
 ;; extern int git_note_create(git_oid *out, git_repository *repo, const char *
-;;           notes_ref, const git_signature *author, const git_signature *committer, 
-;;           const git_oid *oid, const char *note, int force);
+;;     notes_ref, const git_signature *author, const git_signature *committer, 
+;;     const git_oid *oid, const char *note, int force);
+(if echo-decls (display "git_note_create\n"))
 (define git_note_create
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10412,8 +11156,9 @@
 (export git_note_create)
 
 ;; extern int git_note_remove(git_repository *repo, const char *notes_ref, 
-;;           const git_signature *author, const git_signature *committer, const 
-;;           git_oid *oid);
+;;     const git_signature *author, const git_signature *committer, const 
+;;     git_oid *oid);
+(if echo-decls (display "git_note_remove\n"))
 (define git_note_remove
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10429,6 +11174,7 @@
 (export git_note_remove)
 
 ;; extern void git_note_free(git_note *note);
+(if echo-decls (display "git_note_free\n"))
 (define git_note_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -10440,6 +11186,7 @@
 (export git_note_free)
 
 ;; extern int git_note_default_ref(git_buf *out, git_repository *repo);
+(if echo-decls (display "git_note_default_ref\n"))
 (define git_note_default_ref
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10454,7 +11201,8 @@
 (export git_note_default_ref)
 
 ;; extern int git_note_foreach(git_repository *repo, const char *notes_ref, 
-;;           git_note_foreach_cb note_cb, void *payload);
+;;     git_note_foreach_cb note_cb, void *payload);
+(if echo-decls (display "git_note_foreach\n"))
 (define git_note_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10463,16 +11211,20 @@
     (lambda (repo notes_ref note_cb payload)
       (let ((~repo (unwrap-git_repository* repo))
             (~notes_ref (unwrap~pointer notes_ref))
-            (~note_cb (unwrap-git_note_foreach_cb note_cb))
+            (~note_cb
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               note_cb))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~notes_ref ~note_cb ~payload)))))
 (export git_note_foreach)
 
 ;; typedef int (*git_odb_foreach_cb)(const git_oid *id, void *payload);
+(if echo-decls (display "git_odb_foreach_cb\n"))
 (define-fh-function/p git_odb_foreach_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; extern int git_odb_new(git_odb **out);
+(if echo-decls (display "git_odb_new\n"))
 (define git_odb_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10483,6 +11235,7 @@
 (export git_odb_new)
 
 ;; extern int git_odb_open(git_odb **out, const char *objects_dir);
+(if echo-decls (display "git_odb_open\n"))
 (define git_odb_open
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10495,6 +11248,7 @@
 (export git_odb_open)
 
 ;; extern int git_odb_add_disk_alternate(git_odb *odb, const char *path);
+(if echo-decls (display "git_odb_add_disk_alternate\n"))
 (define git_odb_add_disk_alternate
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10509,6 +11263,7 @@
 (export git_odb_add_disk_alternate)
 
 ;; extern void git_odb_free(git_odb *db);
+(if echo-decls (display "git_odb_free\n"))
 (define git_odb_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -10519,7 +11274,8 @@
 (export git_odb_free)
 
 ;; extern int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id
-;;           );
+;;     );
+(if echo-decls (display "git_odb_read\n"))
 (define git_odb_read
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10533,7 +11289,8 @@
 (export git_odb_read)
 
 ;; extern int git_odb_read_prefix(git_odb_object **out, git_odb *db, const 
-;;           git_oid *short_id, size_t len);
+;;     git_oid *short_id, size_t len);
+(if echo-decls (display "git_odb_read_prefix\n"))
 (define git_odb_read_prefix
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10550,7 +11307,8 @@
 (export git_odb_read_prefix)
 
 ;; extern int git_odb_read_header(size_t *len_out, git_otype *type_out, git_odb
-;;            *db, const git_oid *id);
+;;      *db, const git_oid *id);
+(if echo-decls (display "git_odb_read_header\n"))
 (define git_odb_read_header
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10560,13 +11318,14 @@
               (list '* '* '* '*))))
     (lambda (len_out type_out db id)
       (let ((~len_out (unwrap~pointer len_out))
-            (~type_out (unwrap-git_otype* type_out))
+            (~type_out (unwrap~pointer type_out))
             (~db (unwrap-git_odb* db))
             (~id (unwrap-git_oid* id)))
         (~f ~len_out ~type_out ~db ~id)))))
 (export git_odb_read_header)
 
 ;; extern int git_odb_exists(git_odb *db, const git_oid *id);
+(if echo-decls (display "git_odb_exists\n"))
 (define git_odb_exists
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10579,7 +11338,8 @@
 (export git_odb_exists)
 
 ;; extern int git_odb_exists_prefix(git_oid *out, git_odb *db, const git_oid *
-;;           short_id, size_t len);
+;;     short_id, size_t len);
+(if echo-decls (display "git_odb_exists_prefix\n"))
 (define git_odb_exists_prefix
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10596,32 +11356,32 @@
 (export git_odb_exists_prefix)
 
 ;; typedef struct git_odb_expand_id {
-;;         /** The object ID to expand */
-;;         git_oid id;
-;;         /**
-;;               * The length of the object ID (in nibbles, or packets of 4 bits; the
-;;                   
-;;               * number of hex characters)
-;;               * */
-;;         unsigned short length;
-;;         /**
-;;               * The (optional) type of the object to search for; leave as `0` or set
-;;                   
-;;               * to `GIT_OBJ_ANY` to query for any object matching the ID.
-;;               */
-;;         git_otype type;
+;;   /** The object ID to expand */
+;;   git_oid id;
+;;   /**
+;;    * The length of the object ID (in nibbles, or packets of 4 bits; the
+;;    * number of hex characters)
+;;    * */
+;;   unsigned short length;
+;;   /**
+;;    * The (optional) type of the object to search for; leave as `0` or set
+;;    * to `GIT_OBJ_ANY` to query for any object matching the ID.
+;;    */
+;;   git_otype type;
 ;; } git_odb_expand_id;
+(if echo-decls (display "git_odb_expand_id\n"))
 (define git_odb_expand_id-desc
   (bs:struct
     (list `(id ,git_oid-desc)
           `(length ,unsigned-short)
-          `(type ,git_otype-desc))))
+          `(type ,int))))
 (export git_odb_expand_id-desc)
 (define-fh-compound-type/p git_odb_expand_id git_odb_expand_id-desc)
 (define struct-git_odb_expand_id git_odb_expand_id)
 
 ;; extern int git_odb_expand_ids(git_odb *db, git_odb_expand_id *ids, size_t 
-;;           count);
+;;     count);
+(if echo-decls (display "git_odb_expand_ids\n"))
 (define git_odb_expand_ids
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10637,6 +11397,7 @@
 (export git_odb_expand_ids)
 
 ;; extern int git_odb_refresh(struct git_odb *db);
+(if echo-decls (display "git_odb_refresh\n"))
 (define git_odb_refresh
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10647,7 +11408,8 @@
 (export git_odb_refresh)
 
 ;; extern int git_odb_foreach(git_odb *db, git_odb_foreach_cb cb, void *payload
-;;           );
+;;     );
+(if echo-decls (display "git_odb_foreach\n"))
 (define git_odb_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10655,13 +11417,15 @@
               (list '* '* '*))))
     (lambda (db cb payload)
       (let ((~db (unwrap-git_odb* db))
-            (~cb (unwrap-git_odb_foreach_cb cb))
+            (~cb ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+                  cb))
             (~payload (unwrap~pointer payload)))
         (~f ~db ~cb ~payload)))))
 (export git_odb_foreach)
 
 ;; extern int git_odb_write(git_oid *out, git_odb *odb, const void *data, 
-;;           size_t len, git_otype type);
+;;     size_t len, git_otype type);
+(if echo-decls (display "git_odb_write\n"))
 (define git_odb_write
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10672,12 +11436,13 @@
             (~odb (unwrap-git_odb* odb))
             (~data (unwrap~pointer data))
             (~len (unwrap~fixed len))
-            (~type (unwrap-git_otype type)))
+            (~type (unwrap~fixed type)))
         (~f ~out ~odb ~data ~len ~type)))))
 (export git_odb_write)
 
 ;; extern int git_odb_open_wstream(git_odb_stream **out, git_odb *db, git_off_t
-;;            size, git_otype type);
+;;      size, git_otype type);
+(if echo-decls (display "git_odb_open_wstream\n"))
 (define git_odb_open_wstream
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10688,13 +11453,14 @@
     (lambda (out db size type)
       (let ((~out (unwrap~pointer out))
             (~db (unwrap-git_odb* db))
-            (~size (unwrap-git_off_t size))
-            (~type (unwrap-git_otype type)))
+            (~size (unwrap~fixed size))
+            (~type (unwrap~fixed type)))
         (~f ~out ~db ~size ~type)))))
 (export git_odb_open_wstream)
 
 ;; extern int git_odb_stream_write(git_odb_stream *stream, const char *buffer, 
-;;           size_t len);
+;;     size_t len);
+(if echo-decls (display "git_odb_stream_write\n"))
 (define git_odb_stream_write
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10710,7 +11476,8 @@
 (export git_odb_stream_write)
 
 ;; extern int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *
-;;           stream);
+;;     stream);
+(if echo-decls (display "git_odb_stream_finalize_write\n"))
 (define git_odb_stream_finalize_write
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10725,7 +11492,8 @@
 (export git_odb_stream_finalize_write)
 
 ;; extern int git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t 
-;;           len);
+;;     len);
+(if echo-decls (display "git_odb_stream_read\n"))
 (define git_odb_stream_read
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10741,6 +11509,7 @@
 (export git_odb_stream_read)
 
 ;; extern void git_odb_stream_free(git_odb_stream *stream);
+(if echo-decls (display "git_odb_stream_free\n"))
 (define git_odb_stream_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -10754,7 +11523,8 @@
 (export git_odb_stream_free)
 
 ;; extern int git_odb_open_rstream(git_odb_stream **out, git_odb *db, const 
-;;           git_oid *oid);
+;;     git_oid *oid);
+(if echo-decls (display "git_odb_open_rstream\n"))
 (define git_odb_open_rstream
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10770,7 +11540,8 @@
 (export git_odb_open_rstream)
 
 ;; extern int git_odb_write_pack(git_odb_writepack **out, git_odb *db, 
-;;           git_transfer_progress_cb progress_cb, void *progress_payload);
+;;     git_transfer_progress_cb progress_cb, void *progress_payload);
+(if echo-decls (display "git_odb_write_pack\n"))
 (define git_odb_write_pack
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10782,14 +11553,16 @@
       (let ((~out (unwrap~pointer out))
             (~db (unwrap-git_odb* db))
             (~progress_cb
-              (unwrap-git_transfer_progress_cb progress_cb))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               progress_cb))
             (~progress_payload
               (unwrap~pointer progress_payload)))
         (~f ~out ~db ~progress_cb ~progress_payload)))))
 (export git_odb_write_pack)
 
 ;; extern int git_odb_hash(git_oid *out, const void *data, size_t len, 
-;;           git_otype type);
+;;     git_otype type);
+(if echo-decls (display "git_odb_hash\n"))
 (define git_odb_hash
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10799,12 +11572,13 @@
       (let ((~out (unwrap-git_oid* out))
             (~data (unwrap~pointer data))
             (~len (unwrap~fixed len))
-            (~type (unwrap-git_otype type)))
+            (~type (unwrap~fixed type)))
         (~f ~out ~data ~len ~type)))))
 (export git_odb_hash)
 
 ;; extern int git_odb_hashfile(git_oid *out, const char *path, git_otype type)
-;;           ;
+;;     ;
+(if echo-decls (display "git_odb_hashfile\n"))
 (define git_odb_hashfile
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10813,12 +11587,13 @@
     (lambda (out path type)
       (let ((~out (unwrap-git_oid* out))
             (~path (unwrap~pointer path))
-            (~type (unwrap-git_otype type)))
+            (~type (unwrap~fixed type)))
         (~f ~out ~path ~type)))))
 (export git_odb_hashfile)
 
 ;; extern int git_odb_object_dup(git_odb_object **dest, git_odb_object *source)
-;;           ;
+;;     ;
+(if echo-decls (display "git_odb_object_dup\n"))
 (define git_odb_object_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10833,6 +11608,7 @@
 (export git_odb_object_dup)
 
 ;; extern void git_odb_object_free(git_odb_object *object);
+(if echo-decls (display "git_odb_object_free\n"))
 (define git_odb_object_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -10846,6 +11622,7 @@
 (export git_odb_object_free)
 
 ;; extern const git_oid *git_odb_object_id(git_odb_object *object);
+(if echo-decls (display "git_odb_object_id\n"))
 (define git_odb_object_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -10857,6 +11634,7 @@
 (export git_odb_object_id)
 
 ;; extern const void *git_odb_object_data(git_odb_object *object);
+(if echo-decls (display "git_odb_object_data\n"))
 (define git_odb_object_data
   (let ((~f (ffi:pointer->procedure
               '*
@@ -10870,6 +11648,7 @@
 (export git_odb_object_data)
 
 ;; extern size_t git_odb_object_size(git_odb_object *object);
+(if echo-decls (display "git_odb_object_size\n"))
 (define git_odb_object_size
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -10883,6 +11662,7 @@
 (export git_odb_object_size)
 
 ;; extern git_otype git_odb_object_type(git_odb_object *object);
+(if echo-decls (display "git_odb_object_type\n"))
 (define git_odb_object_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10892,11 +11672,12 @@
               (list '*))))
     (lambda (object)
       (let ((~object (unwrap-git_odb_object* object)))
-        (wrap-git_otype (~f ~object))))))
+        (~f ~object)))))
 (export git_odb_object_type)
 
 ;; extern int git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int 
-;;           priority);
+;;     priority);
+(if echo-decls (display "git_odb_add_backend\n"))
 (define git_odb_add_backend
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10912,7 +11693,8 @@
 (export git_odb_add_backend)
 
 ;; extern int git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int
-;;            priority);
+;;      priority);
+(if echo-decls (display "git_odb_add_alternate\n"))
 (define git_odb_add_alternate
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10928,6 +11710,7 @@
 (export git_odb_add_alternate)
 
 ;; extern size_t git_odb_num_backends(git_odb *odb);
+(if echo-decls (display "git_odb_num_backends\n"))
 (define git_odb_num_backends
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -10940,7 +11723,8 @@
 (export git_odb_num_backends)
 
 ;; extern int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t 
-;;           pos);
+;;     pos);
+(if echo-decls (display "git_odb_get_backend\n"))
 (define git_odb_get_backend
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10956,7 +11740,8 @@
 (export git_odb_get_backend)
 
 ;; extern int git_odb_backend_pack(git_odb_backend **out, const char *
-;;           objects_dir);
+;;     objects_dir);
+(if echo-decls (display "git_odb_backend_pack\n"))
 (define git_odb_backend_pack
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -10971,8 +11756,9 @@
 (export git_odb_backend_pack)
 
 ;; extern int git_odb_backend_loose(git_odb_backend **out, const char *
-;;           objects_dir, int compression_level, int do_fsync, unsigned int dir_mode
-;;           , unsigned int file_mode);
+;;     objects_dir, int compression_level, int do_fsync, unsigned int dir_mode
+;;     , unsigned int file_mode);
+(if echo-decls (display "git_odb_backend_loose\n"))
 (define git_odb_backend_loose
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11007,7 +11793,8 @@
 (export git_odb_backend_loose)
 
 ;; extern int git_odb_backend_one_pack(git_odb_backend **out, const char *
-;;           index_file);
+;;     index_file);
+(if echo-decls (display "git_odb_backend_one_pack\n"))
 (define git_odb_backend_one_pack
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11022,21 +11809,96 @@
 (export git_odb_backend_one_pack)
 
 ;; typedef enum {
-;;         GIT_STREAM_RDONLY = 1<<1,
-;;         GIT_STREAM_WRONLY = 1<<2,
-;;         GIT_STREAM_RW = GIT_STREAM_RDONLY | GIT_STREAM_WRONLY,
+;;   GIT_STREAM_RDONLY = 1<<1,
+;;   GIT_STREAM_WRONLY = 1<<2,
+;;   GIT_STREAM_RW = GIT_STREAM_RDONLY | GIT_STREAM_WRONLY,
 ;; } git_odb_stream_t;
+(if echo-decls (display "git_odb_stream_t\n"))
 (define-fh-enum git_odb_stream_t
   '((GIT_STREAM_RDONLY . 2)
     (GIT_STREAM_WRONLY . 4)
     (GIT_STREAM_RW . 6))
   )
 
+;; struct git_odb_stream {
+;;   git_odb_backend *backend;
+;;   unsigned int mode;
+;;   void *hash_ctx;
+;;   git_off_t declared_size;
+;;   git_off_t received_bytes;
+;;   /**
+;;    * Write at most `len` bytes into `buffer` and advance the stream.
+;;    */
+;;   int (*read)(git_odb_stream *stream, char *buffer, size_t len);
+;;   /**
+;;    * Write `len` bytes from `buffer` into the stream.
+;;    */
+;;   int (*write)(git_odb_stream *stream, const char *buffer, size_t len);
+;;   /**
+;;    * Store the contents of the stream as an object with the id
+;;    * specified in `oid`.
+;;    *
+;;    * This method might not be invoked if:
+;;    * - an error occurs earlier with the `write` callback,
+;;    * - the object referred to by `oid` already exists in any backend, or
+;;    * - the final number of received bytes differs from the size declared
+;;    *   with `git_odb_open_wstream()`
+;;    */
+;;   int (*finalize_write)(git_odb_stream *stream, const git_oid *oid);
+;;   /**
+;;    * Free the stream's memory.
+;;    *
+;;    * This method might be called without a call to `finalize_write` if
+;;    * an error occurs or if the object is already present in the ODB.
+;;    */
+;;   void (*free)(git_odb_stream *stream);
+;; };
+(if echo-decls (display "(struct . git_odb_stream)\n"))
+(define struct-git_odb_stream-desc
+  (bs:struct
+    (list `(backend ,(bs:pointer git_odb_backend*-desc))
+          `(mode ,unsigned-int)
+          `(hash_ctx ,(bs:pointer void))
+          `(declared_size ,int32)
+          `(received_bytes ,int32)
+          `(read ,(bs:pointer void))
+          `(write ,(bs:pointer void))
+          `(finalize_write ,(bs:pointer void))
+          `(free ,(bs:pointer void)))))
+(export struct-git_odb_stream-desc)
+(define-fh-compound-type/p struct-git_odb_stream struct-git_odb_stream-desc)
+(set! git_odb_stream-desc struct-git_odb_stream-desc)
+(define-fh-compound-type git_odb_stream git_odb_stream-desc)
+
+;; struct git_odb_writepack {
+;;   git_odb_backend *backend;
+;;   int (*append)(git_odb_writepack *writepack, const void *data, size_t size
+;;       , git_transfer_progress *stats);
+;;   int (*commit)(git_odb_writepack *writepack, git_transfer_progress *stats)
+;;       ;
+;;   void (*free)(git_odb_writepack *writepack);
+;; };
+(if echo-decls (display "(struct . git_odb_writepack)\n"))
+(define struct-git_odb_writepack-desc
+  (bs:struct
+    (list `(backend ,(bs:pointer git_odb_backend*-desc))
+          `(append ,(bs:pointer void))
+          `(commit ,(bs:pointer void))
+          `(free ,(bs:pointer void)))))
+(export struct-git_odb_writepack-desc)
+(define-fh-compound-type/p struct-git_odb_writepack struct-git_odb_writepack-desc)
+(set! git_odb_writepack-desc struct-git_odb_writepack-desc)
+(define-fh-compound-type git_odb_writepack git_odb_writepack-desc)
+
 ;; typedef struct git_patch git_patch;
-(define-fh-pointer-type git_patch*)
+(if echo-decls (display "git_patch\n"))
+(define git_patch-desc void)
+(define git_patch*-desc (bs:pointer git_patch-desc))
+(define-fh-pointer-type git_patch* git_patch*-desc)
 
 ;; extern int git_patch_from_diff(git_patch **out, git_diff *diff, size_t idx)
-;;           ;
+;;     ;
+(if echo-decls (display "git_patch_from_diff\n"))
 (define git_patch_from_diff
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11052,8 +11914,9 @@
 (export git_patch_from_diff)
 
 ;; extern int git_patch_from_blobs(git_patch **out, const git_blob *old_blob, 
-;;           const char *old_as_path, const git_blob *new_blob, const char *
-;;           new_as_path, const git_diff_options *opts);
+;;     const char *old_as_path, const git_blob *new_blob, const char *
+;;     new_as_path, const git_diff_options *opts);
+(if echo-decls (display "git_patch_from_blobs\n"))
 (define git_patch_from_blobs
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11082,8 +11945,9 @@
 (export git_patch_from_blobs)
 
 ;; extern int git_patch_from_blob_and_buffer(git_patch **out, const git_blob *
-;;           old_blob, const char *old_as_path, const char *buffer, size_t buffer_len
-;;           , const char *buffer_as_path, const git_diff_options *opts);
+;;     old_blob, const char *old_as_path, const char *buffer, size_t buffer_len
+;;     , const char *buffer_as_path, const git_diff_options *opts);
+(if echo-decls (display "git_patch_from_blob_and_buffer\n"))
 (define git_patch_from_blob_and_buffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11115,8 +11979,9 @@
 (export git_patch_from_blob_and_buffer)
 
 ;; extern int git_patch_from_buffers(git_patch **out, const void *old_buffer, 
-;;           size_t old_len, const char *old_as_path, const char *new_buffer, size_t 
-;;           new_len, const char *new_as_path, const git_diff_options *opts);
+;;     size_t old_len, const char *old_as_path, const char *new_buffer, size_t 
+;;     new_len, const char *new_as_path, const git_diff_options *opts);
+(if echo-decls (display "git_patch_from_buffers\n"))
 (define git_patch_from_buffers
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11151,6 +12016,7 @@
 (export git_patch_from_buffers)
 
 ;; extern void git_patch_free(git_patch *patch);
+(if echo-decls (display "git_patch_free\n"))
 (define git_patch_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -11162,6 +12028,7 @@
 (export git_patch_free)
 
 ;; extern const git_diff_delta *git_patch_get_delta(const git_patch *patch);
+(if echo-decls (display "git_patch_get_delta\n"))
 (define git_patch_get_delta
   (let ((~f (ffi:pointer->procedure
               '*
@@ -11175,6 +12042,7 @@
 (export git_patch_get_delta)
 
 ;; extern size_t git_patch_num_hunks(const git_patch *patch);
+(if echo-decls (display "git_patch_num_hunks\n"))
 (define git_patch_num_hunks
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -11188,7 +12056,8 @@
 (export git_patch_num_hunks)
 
 ;; extern int git_patch_line_stats(size_t *total_context, size_t *
-;;           total_additions, size_t *total_deletions, const git_patch *patch);
+;;     total_additions, size_t *total_deletions, const git_patch *patch);
+(if echo-decls (display "git_patch_line_stats\n"))
 (define git_patch_line_stats
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11213,7 +12082,8 @@
 (export git_patch_line_stats)
 
 ;; extern int git_patch_get_hunk(const git_diff_hunk **out, size_t *
-;;           lines_in_hunk, git_patch *patch, size_t hunk_idx);
+;;     lines_in_hunk, git_patch *patch, size_t hunk_idx);
+(if echo-decls (display "git_patch_get_hunk\n"))
 (define git_patch_get_hunk
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11230,7 +12100,8 @@
 (export git_patch_get_hunk)
 
 ;; extern int git_patch_num_lines_in_hunk(const git_patch *patch, size_t 
-;;           hunk_idx);
+;;     hunk_idx);
+(if echo-decls (display "git_patch_num_lines_in_hunk\n"))
 (define git_patch_num_lines_in_hunk
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11245,7 +12116,8 @@
 (export git_patch_num_lines_in_hunk)
 
 ;; extern int git_patch_get_line_in_hunk(const git_diff_line **out, git_patch *
-;;           patch, size_t hunk_idx, size_t line_of_hunk);
+;;     patch, size_t hunk_idx, size_t line_of_hunk);
+(if echo-decls (display "git_patch_get_line_in_hunk\n"))
 (define git_patch_get_line_in_hunk
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11262,7 +12134,8 @@
 (export git_patch_get_line_in_hunk)
 
 ;; extern size_t git_patch_size(git_patch *patch, int include_context, int 
-;;           include_hunk_headers, int include_file_headers);
+;;     include_hunk_headers, int include_file_headers);
+(if echo-decls (display "git_patch_size\n"))
 (define git_patch_size
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -11285,7 +12158,8 @@
 (export git_patch_size)
 
 ;; extern int git_patch_print(git_patch *patch, git_diff_line_cb print_cb, void
-;;            *payload);
+;;      *payload);
+(if echo-decls (display "git_patch_print\n"))
 (define git_patch_print
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11293,12 +12167,17 @@
               (list '* '* '*))))
     (lambda (patch print_cb payload)
       (let ((~patch (unwrap-git_patch* patch))
-            (~print_cb (unwrap-git_diff_line_cb print_cb))
+            (~print_cb
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* '* '* '*))
+               print_cb))
             (~payload (unwrap~pointer payload)))
         (~f ~patch ~print_cb ~payload)))))
 (export git_patch_print)
 
 ;; extern int git_patch_to_buf(git_buf *out, git_patch *patch);
+(if echo-decls (display "git_patch_to_buf\n"))
 (define git_patch_to_buf
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11311,20 +12190,27 @@
 (export git_patch_to_buf)
 
 ;; typedef struct git_pathspec git_pathspec;
-(define-fh-pointer-type git_pathspec*)
+(if echo-decls (display "git_pathspec\n"))
+(define git_pathspec-desc void)
+(define git_pathspec*-desc (bs:pointer git_pathspec-desc))
+(define-fh-pointer-type git_pathspec* git_pathspec*-desc)
 
 ;; typedef struct git_pathspec_match_list git_pathspec_match_list;
-(define-fh-pointer-type git_pathspec_match_list*)
+(if echo-decls (display "git_pathspec_match_list\n"))
+(define git_pathspec_match_list-desc void)
+(define git_pathspec_match_list*-desc (bs:pointer git_pathspec_match_list-desc))
+(define-fh-pointer-type git_pathspec_match_list* git_pathspec_match_list*-desc)
 
 ;; typedef enum {
-;;         GIT_PATHSPEC_DEFAULT = 0,
-;;         GIT_PATHSPEC_IGNORE_CASE = 1u<<0,
-;;         GIT_PATHSPEC_USE_CASE = 1u<<1,
-;;         GIT_PATHSPEC_NO_GLOB = 1u<<2,
-;;         GIT_PATHSPEC_NO_MATCH_ERROR = 1u<<3,
-;;         GIT_PATHSPEC_FIND_FAILURES = 1u<<4,
-;;         GIT_PATHSPEC_FAILURES_ONLY = 1u<<5,
+;;   GIT_PATHSPEC_DEFAULT = 0,
+;;   GIT_PATHSPEC_IGNORE_CASE = 1u<<0,
+;;   GIT_PATHSPEC_USE_CASE = 1u<<1,
+;;   GIT_PATHSPEC_NO_GLOB = 1u<<2,
+;;   GIT_PATHSPEC_NO_MATCH_ERROR = 1u<<3,
+;;   GIT_PATHSPEC_FIND_FAILURES = 1u<<4,
+;;   GIT_PATHSPEC_FAILURES_ONLY = 1u<<5,
 ;; } git_pathspec_flag_t;
+(if echo-decls (display "git_pathspec_flag_t\n"))
 (define-fh-enum git_pathspec_flag_t
   '((GIT_PATHSPEC_DEFAULT . 0)
     (GIT_PATHSPEC_IGNORE_CASE . 1)
@@ -11336,7 +12222,8 @@
   )
 
 ;; extern int git_pathspec_new(git_pathspec **out, const git_strarray *pathspec
-;;           );
+;;     );
+(if echo-decls (display "git_pathspec_new\n"))
 (define git_pathspec_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11349,6 +12236,7 @@
 (export git_pathspec_new)
 
 ;; extern void git_pathspec_free(git_pathspec *ps);
+(if echo-decls (display "git_pathspec_free\n"))
 (define git_pathspec_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -11359,7 +12247,8 @@
 (export git_pathspec_free)
 
 ;; extern int git_pathspec_matches_path(const git_pathspec *ps, uint32_t flags
-;;           , const char *path);
+;;     , const char *path);
+(if echo-decls (display "git_pathspec_matches_path\n"))
 (define git_pathspec_matches_path
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11375,7 +12264,8 @@
 (export git_pathspec_matches_path)
 
 ;; extern int git_pathspec_match_workdir(git_pathspec_match_list **out, 
-;;           git_repository *repo, uint32_t flags, git_pathspec *ps);
+;;     git_repository *repo, uint32_t flags, git_pathspec *ps);
+(if echo-decls (display "git_pathspec_match_workdir\n"))
 (define git_pathspec_match_workdir
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11392,7 +12282,8 @@
 (export git_pathspec_match_workdir)
 
 ;; extern int git_pathspec_match_index(git_pathspec_match_list **out, git_index
-;;            *index, uint32_t flags, git_pathspec *ps);
+;;      *index, uint32_t flags, git_pathspec *ps);
+(if echo-decls (display "git_pathspec_match_index\n"))
 (define git_pathspec_match_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11409,7 +12300,8 @@
 (export git_pathspec_match_index)
 
 ;; extern int git_pathspec_match_tree(git_pathspec_match_list **out, git_tree *
-;;           tree, uint32_t flags, git_pathspec *ps);
+;;     tree, uint32_t flags, git_pathspec *ps);
+(if echo-decls (display "git_pathspec_match_tree\n"))
 (define git_pathspec_match_tree
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11426,7 +12318,8 @@
 (export git_pathspec_match_tree)
 
 ;; extern int git_pathspec_match_diff(git_pathspec_match_list **out, git_diff *
-;;           diff, uint32_t flags, git_pathspec *ps);
+;;     diff, uint32_t flags, git_pathspec *ps);
+(if echo-decls (display "git_pathspec_match_diff\n"))
 (define git_pathspec_match_diff
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11443,6 +12336,7 @@
 (export git_pathspec_match_diff)
 
 ;; extern void git_pathspec_match_list_free(git_pathspec_match_list *m);
+(if echo-decls (display "git_pathspec_match_list_free\n"))
 (define git_pathspec_match_list_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -11456,7 +12350,8 @@
 (export git_pathspec_match_list_free)
 
 ;; extern size_t git_pathspec_match_list_entrycount(const 
-;;           git_pathspec_match_list *m);
+;;     git_pathspec_match_list *m);
+(if echo-decls (display "git_pathspec_match_list_entrycount\n"))
 (define git_pathspec_match_list_entrycount
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -11470,7 +12365,8 @@
 (export git_pathspec_match_list_entrycount)
 
 ;; extern const char *git_pathspec_match_list_entry(const 
-;;           git_pathspec_match_list *m, size_t pos);
+;;     git_pathspec_match_list *m, size_t pos);
+(if echo-decls (display "git_pathspec_match_list_entry\n"))
 (define git_pathspec_match_list_entry
   (let ((~f (ffi:pointer->procedure
               '*
@@ -11485,7 +12381,8 @@
 (export git_pathspec_match_list_entry)
 
 ;; extern const git_diff_delta *git_pathspec_match_list_diff_entry(const 
-;;           git_pathspec_match_list *m, size_t pos);
+;;     git_pathspec_match_list *m, size_t pos);
+(if echo-decls (display "git_pathspec_match_list_diff_entry\n"))
 (define git_pathspec_match_list_diff_entry
   (let ((~f (ffi:pointer->procedure
               '*
@@ -11500,7 +12397,8 @@
 (export git_pathspec_match_list_diff_entry)
 
 ;; extern size_t git_pathspec_match_list_failed_entrycount(const 
-;;           git_pathspec_match_list *m);
+;;     git_pathspec_match_list *m);
+(if echo-decls (display "git_pathspec_match_list_failed_entrycount\n"))
 (define git_pathspec_match_list_failed_entrycount
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -11514,7 +12412,8 @@
 (export git_pathspec_match_list_failed_entrycount)
 
 ;; extern const char *git_pathspec_match_list_failed_entry(const 
-;;           git_pathspec_match_list *m, size_t pos);
+;;     git_pathspec_match_list *m, size_t pos);
+(if echo-decls (display "git_pathspec_match_list_failed_entry\n"))
 (define git_pathspec_match_list_failed_entry
   (let ((~f (ffi:pointer->procedure
               '*
@@ -11529,63 +12428,46 @@
 (export git_pathspec_match_list_failed_entry)
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /**
-;;               * Used by `git_rebase_init`, this will instruct other clients working
-;;                   
-;;               * on this rebase that you want a quiet rebase experience, which they
-;;                   
-;;               * may choose to provide in an application-specific manner.  This has no
-;;                   
-;;               * effect upon libgit2 directly, but is provided for interoperability
-;;                   
-;;               * between Git tools.
-;;               */
-;;         int quiet;
-;;         /**
-;;               * Used by `git_rebase_init`, this will begin an in-memory rebase,
-;;                   
-;;               * which will allow callers to step through the rebase operations and
-;;                   
-;;               * commit the rebased changes, but will not rewind HEAD or update the
-;;                   
-;;               * repository to be in a rebasing state.  This will not interfere with
-;;                   
-;;               * the working directory (if there is one).
-;;               */
-;;         int inmemory;
-;;         /**
-;;               * Used by `git_rebase_finish`, this is the name of the notes reference
-;;                   
-;;               * used to rewrite notes for rebased commits when finishing the rebase;
-;;                   
-;;               * if NULL, the contents of the configuration option `notes.rewriteRef`
-;;                   
-;;               * is examined, unless the configuration option `notes.rewrite.rebase`
-;;                   
-;;               * is set to false.  If `notes.rewriteRef` is also NULL, notes will
-;;                   
-;;               * not be rewritten.
-;;               */
-;;         const char *rewrite_notes_ref;
-;;         /**
-;;               * Options to control how trees are merged during `git_rebase_next`.
-;;                   
-;;               */
-;;         git_merge_options merge_options;
-;;         /**
-;;               * Options to control how files are written during `git_rebase_init`,
-;;                   
-;;               * `git_rebase_next` and `git_rebase_abort`.  Note that a minimum
-;;                   
-;;               * strategy of `GIT_CHECKOUT_SAFE` is defaulted in `init` and `next`,
-;;                   
-;;               * and a minimum strategy of `GIT_CHECKOUT_FORCE` is defaulted in
-;;                   
-;;               * `abort` to match git semantics.
-;;               */
-;;         git_checkout_options checkout_options;
+;;   unsigned int version;
+;;   /**
+;;    * Used by `git_rebase_init`, this will instruct other clients working
+;;    * on this rebase that you want a quiet rebase experience, which they
+;;    * may choose to provide in an application-specific manner.  This has no
+;;    * effect upon libgit2 directly, but is provided for interoperability
+;;    * between Git tools.
+;;    */
+;;   int quiet;
+;;   /**
+;;    * Used by `git_rebase_init`, this will begin an in-memory rebase,
+;;    * which will allow callers to step through the rebase operations and
+;;    * commit the rebased changes, but will not rewind HEAD or update the
+;;    * repository to be in a rebasing state.  This will not interfere with
+;;    * the working directory (if there is one).
+;;    */
+;;   int inmemory;
+;;   /**
+;;    * Used by `git_rebase_finish`, this is the name of the notes reference
+;;    * used to rewrite notes for rebased commits when finishing the rebase;
+;;    * if NULL, the contents of the configuration option `notes.rewriteRef`
+;;    * is examined, unless the configuration option `notes.rewrite.rebase`
+;;    * is set to false.  If `notes.rewriteRef` is also NULL, notes will
+;;    * not be rewritten.
+;;    */
+;;   const char *rewrite_notes_ref;
+;;   /**
+;;    * Options to control how trees are merged during `git_rebase_next`.
+;;    */
+;;   git_merge_options merge_options;
+;;   /**
+;;    * Options to control how files are written during `git_rebase_init`,
+;;    * `git_rebase_next` and `git_rebase_abort`.  Note that a minimum
+;;    * strategy of `GIT_CHECKOUT_SAFE` is defaulted in `init` and `next`,
+;;    * and a minimum strategy of `GIT_CHECKOUT_FORCE` is defaulted in
+;;    * `abort` to match git semantics.
+;;    */
+;;   git_checkout_options checkout_options;
 ;; } git_rebase_options;
+(if echo-decls (display "git_rebase_options\n"))
 (define git_rebase_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -11598,13 +12480,14 @@
 (define-fh-compound-type/p git_rebase_options git_rebase_options-desc)
 
 ;; typedef enum {
-;;         GIT_REBASE_OPERATION_PICK = 0,
-;;         GIT_REBASE_OPERATION_REWORD,
-;;         GIT_REBASE_OPERATION_EDIT,
-;;         GIT_REBASE_OPERATION_SQUASH,
-;;         GIT_REBASE_OPERATION_FIXUP,
-;;         GIT_REBASE_OPERATION_EXEC,
+;;   GIT_REBASE_OPERATION_PICK = 0,
+;;   GIT_REBASE_OPERATION_REWORD,
+;;   GIT_REBASE_OPERATION_EDIT,
+;;   GIT_REBASE_OPERATION_SQUASH,
+;;   GIT_REBASE_OPERATION_FIXUP,
+;;   GIT_REBASE_OPERATION_EXEC,
 ;; } git_rebase_operation_t;
+(if echo-decls (display "git_rebase_operation_t\n"))
 (define-fh-enum git_rebase_operation_t
   '((GIT_REBASE_OPERATION_PICK . 0)
     (GIT_REBASE_OPERATION_REWORD . 1)
@@ -11615,33 +12498,31 @@
   )
 
 ;; typedef struct {
-;;         /** The type of rebase operation. */
-;;         git_rebase_operation_t type;
-;;         /**
-;;               * The commit ID being cherry-picked.  This will be populated for
-;;                   
-;;               * all operations except those of type `GIT_REBASE_OPERATION_EXEC`.
-;;                   
-;;               */
-;;         const git_oid id;
-;;         /**
-;;               * The executable the user has requested be run.  This will only
-;;                   
-;;               * be populated for operations of type `GIT_REBASE_OPERATION_EXEC`.
-;;                   
-;;               */
-;;         const char *exec;
+;;   /** The type of rebase operation. */
+;;   git_rebase_operation_t type;
+;;   /**
+;;    * The commit ID being cherry-picked.  This will be populated for
+;;    * all operations except those of type `GIT_REBASE_OPERATION_EXEC`.
+;;    */
+;;   const git_oid id;
+;;   /**
+;;    * The executable the user has requested be run.  This will only
+;;    * be populated for operations of type `GIT_REBASE_OPERATION_EXEC`.
+;;    */
+;;   const char *exec;
 ;; } git_rebase_operation;
+(if echo-decls (display "git_rebase_operation\n"))
 (define git_rebase_operation-desc
   (bs:struct
-    (list `(type ,git_rebase_operation_t-desc)
+    (list `(type ,int)
           `(id ,git_oid-desc)
           `(exec ,(bs:pointer int)))))
 (export git_rebase_operation-desc)
 (define-fh-compound-type/p git_rebase_operation git_rebase_operation-desc)
 
 ;; extern int git_rebase_init_options(git_rebase_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_rebase_init_options\n"))
 (define git_rebase_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11656,8 +12537,9 @@
 (export git_rebase_init_options)
 
 ;; extern int git_rebase_init(git_rebase **out, git_repository *repo, const 
-;;           git_annotated_commit *branch, const git_annotated_commit *upstream, 
-;;           const git_annotated_commit *onto, const git_rebase_options *opts);
+;;     git_annotated_commit *branch, const git_annotated_commit *upstream, 
+;;     const git_annotated_commit *onto, const git_rebase_options *opts);
+(if echo-decls (display "git_rebase_init\n"))
 (define git_rebase_init
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11675,7 +12557,8 @@
 (export git_rebase_init)
 
 ;; extern int git_rebase_open(git_rebase **out, git_repository *repo, const 
-;;           git_rebase_options *opts);
+;;     git_rebase_options *opts);
+(if echo-decls (display "git_rebase_open\n"))
 (define git_rebase_open
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11689,6 +12572,7 @@
 (export git_rebase_open)
 
 ;; extern size_t git_rebase_operation_entrycount(git_rebase *rebase);
+(if echo-decls (display "git_rebase_operation_entrycount\n"))
 (define git_rebase_operation_entrycount
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -11702,6 +12586,7 @@
 (export git_rebase_operation_entrycount)
 
 ;; extern size_t git_rebase_operation_current(git_rebase *rebase);
+(if echo-decls (display "git_rebase_operation_current\n"))
 (define git_rebase_operation_current
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -11715,7 +12600,8 @@
 (export git_rebase_operation_current)
 
 ;; extern git_rebase_operation *git_rebase_operation_byindex(git_rebase *rebase
-;;           , size_t idx);
+;;     , size_t idx);
+(if echo-decls (display "git_rebase_operation_byindex\n"))
 (define git_rebase_operation_byindex
   (let ((~f (ffi:pointer->procedure
               '*
@@ -11730,7 +12616,8 @@
 (export git_rebase_operation_byindex)
 
 ;; extern int git_rebase_next(git_rebase_operation **operation, git_rebase *
-;;           rebase);
+;;     rebase);
+(if echo-decls (display "git_rebase_next\n"))
 (define git_rebase_next
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11743,7 +12630,8 @@
 (export git_rebase_next)
 
 ;; extern int git_rebase_inmemory_index(git_index **index, git_rebase *rebase)
-;;           ;
+;;     ;
+(if echo-decls (display "git_rebase_inmemory_index\n"))
 (define git_rebase_inmemory_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11758,8 +12646,9 @@
 (export git_rebase_inmemory_index)
 
 ;; extern int git_rebase_commit(git_oid *id, git_rebase *rebase, const 
-;;           git_signature *author, const git_signature *committer, const char *
-;;           message_encoding, const char *message);
+;;     git_signature *author, const git_signature *committer, const char *
+;;     message_encoding, const char *message);
+(if echo-decls (display "git_rebase_commit\n"))
 (define git_rebase_commit
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11787,6 +12676,7 @@
 (export git_rebase_commit)
 
 ;; extern int git_rebase_abort(git_rebase *rebase);
+(if echo-decls (display "git_rebase_abort\n"))
 (define git_rebase_abort
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11798,7 +12688,8 @@
 (export git_rebase_abort)
 
 ;; extern int git_rebase_finish(git_rebase *rebase, const git_signature *
-;;           signature);
+;;     signature);
+(if echo-decls (display "git_rebase_finish\n"))
 (define git_rebase_finish
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11811,6 +12702,7 @@
 (export git_rebase_finish)
 
 ;; extern void git_rebase_free(git_rebase *rebase);
+(if echo-decls (display "git_rebase_free\n"))
 (define git_rebase_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -11822,6 +12714,7 @@
 (export git_rebase_free)
 
 ;; extern int git_refdb_new(git_refdb **out, git_repository *repo);
+(if echo-decls (display "git_refdb_new\n"))
 (define git_refdb_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11834,6 +12727,7 @@
 (export git_refdb_new)
 
 ;; extern int git_refdb_open(git_refdb **out, git_repository *repo);
+(if echo-decls (display "git_refdb_open\n"))
 (define git_refdb_open
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11846,6 +12740,7 @@
 (export git_refdb_open)
 
 ;; extern int git_refdb_compress(git_refdb *refdb);
+(if echo-decls (display "git_refdb_compress\n"))
 (define git_refdb_compress
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11859,6 +12754,7 @@
 (export git_refdb_compress)
 
 ;; extern void git_refdb_free(git_refdb *refdb);
+(if echo-decls (display "git_refdb_free\n"))
 (define git_refdb_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -11870,7 +12766,8 @@
 (export git_refdb_free)
 
 ;; extern int git_reflog_read(git_reflog **out, git_repository *repo, const 
-;;           char *name);
+;;     char *name);
+(if echo-decls (display "git_reflog_read\n"))
 (define git_reflog_read
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11884,6 +12781,7 @@
 (export git_reflog_read)
 
 ;; extern int git_reflog_write(git_reflog *reflog);
+(if echo-decls (display "git_reflog_write\n"))
 (define git_reflog_write
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11895,7 +12793,8 @@
 (export git_reflog_write)
 
 ;; extern int git_reflog_append(git_reflog *reflog, const git_oid *id, const 
-;;           git_signature *committer, const char *msg);
+;;     git_signature *committer, const char *msg);
+(if echo-decls (display "git_reflog_append\n"))
 (define git_reflog_append
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11910,7 +12809,8 @@
 (export git_reflog_append)
 
 ;; extern int git_reflog_rename(git_repository *repo, const char *old_name, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_reflog_rename\n"))
 (define git_reflog_rename
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11924,6 +12824,7 @@
 (export git_reflog_rename)
 
 ;; extern int git_reflog_delete(git_repository *repo, const char *name);
+(if echo-decls (display "git_reflog_delete\n"))
 (define git_reflog_delete
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11936,6 +12837,7 @@
 (export git_reflog_delete)
 
 ;; extern size_t git_reflog_entrycount(git_reflog *reflog);
+(if echo-decls (display "git_reflog_entrycount\n"))
 (define git_reflog_entrycount
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -11949,7 +12851,8 @@
 (export git_reflog_entrycount)
 
 ;; extern const git_reflog_entry *git_reflog_entry_byindex(const git_reflog *
-;;           reflog, size_t idx);
+;;     reflog, size_t idx);
+(if echo-decls (display "git_reflog_entry_byindex\n"))
 (define git_reflog_entry_byindex
   (let ((~f (ffi:pointer->procedure
               '*
@@ -11964,7 +12867,8 @@
 (export git_reflog_entry_byindex)
 
 ;; extern int git_reflog_drop(git_reflog *reflog, size_t idx, int 
-;;           rewrite_previous_entry);
+;;     rewrite_previous_entry);
+(if echo-decls (display "git_reflog_drop\n"))
 (define git_reflog_drop
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -11979,7 +12883,8 @@
 (export git_reflog_drop)
 
 ;; extern const git_oid *git_reflog_entry_id_old(const git_reflog_entry *entry)
-;;           ;
+;;     ;
+(if echo-decls (display "git_reflog_entry_id_old\n"))
 (define git_reflog_entry_id_old
   (let ((~f (ffi:pointer->procedure
               '*
@@ -11993,7 +12898,8 @@
 (export git_reflog_entry_id_old)
 
 ;; extern const git_oid *git_reflog_entry_id_new(const git_reflog_entry *entry)
-;;           ;
+;;     ;
+(if echo-decls (display "git_reflog_entry_id_new\n"))
 (define git_reflog_entry_id_new
   (let ((~f (ffi:pointer->procedure
               '*
@@ -12007,7 +12913,8 @@
 (export git_reflog_entry_id_new)
 
 ;; extern const git_signature *git_reflog_entry_committer(const 
-;;           git_reflog_entry *entry);
+;;     git_reflog_entry *entry);
+(if echo-decls (display "git_reflog_entry_committer\n"))
 (define git_reflog_entry_committer
   (let ((~f (ffi:pointer->procedure
               '*
@@ -12021,6 +12928,7 @@
 (export git_reflog_entry_committer)
 
 ;; extern const char *git_reflog_entry_message(const git_reflog_entry *entry);
+(if echo-decls (display "git_reflog_entry_message\n"))
 (define git_reflog_entry_message
   (let ((~f (ffi:pointer->procedure
               '*
@@ -12034,6 +12942,7 @@
 (export git_reflog_entry_message)
 
 ;; extern void git_reflog_free(git_reflog *reflog);
+(if echo-decls (display "git_reflog_free\n"))
 (define git_reflog_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -12045,10 +12954,11 @@
 (export git_reflog_free)
 
 ;; typedef enum {
-;;         GIT_RESET_SOFT = 1,
-;;         GIT_RESET_MIXED = 2,
-;;         GIT_RESET_HARD = 3,
+;;   GIT_RESET_SOFT = 1,
+;;   GIT_RESET_MIXED = 2,
+;;   GIT_RESET_HARD = 3,
 ;; } git_reset_t;
+(if echo-decls (display "git_reset_t\n"))
 (define-fh-enum git_reset_t
   '((GIT_RESET_SOFT . 1)
     (GIT_RESET_MIXED . 2)
@@ -12056,7 +12966,8 @@
   )
 
 ;; extern int git_reset(git_repository *repo, git_object *target, git_reset_t 
-;;           reset_type, const git_checkout_options *checkout_opts);
+;;     reset_type, const git_checkout_options *checkout_opts);
+(if echo-decls (display "git_reset\n"))
 (define git_reset
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12065,15 +12976,16 @@
     (lambda (repo target reset_type checkout_opts)
       (let ((~repo (unwrap-git_repository* repo))
             (~target (unwrap-git_object* target))
-            (~reset_type (unwrap-git_reset_t reset_type))
+            (~reset_type (unwrap~fixed reset_type))
             (~checkout_opts
               (unwrap-git_checkout_options* checkout_opts)))
         (~f ~repo ~target ~reset_type ~checkout_opts)))))
 (export git_reset)
 
 ;; extern int git_reset_from_annotated(git_repository *repo, 
-;;           git_annotated_commit *commit, git_reset_t reset_type, const 
-;;           git_checkout_options *checkout_opts);
+;;     git_annotated_commit *commit, git_reset_t reset_type, const 
+;;     git_checkout_options *checkout_opts);
+(if echo-decls (display "git_reset_from_annotated\n"))
 (define git_reset_from_annotated
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12084,14 +12996,15 @@
     (lambda (repo commit reset_type checkout_opts)
       (let ((~repo (unwrap-git_repository* repo))
             (~commit (unwrap-git_annotated_commit* commit))
-            (~reset_type (unwrap-git_reset_t reset_type))
+            (~reset_type (unwrap~fixed reset_type))
             (~checkout_opts
               (unwrap-git_checkout_options* checkout_opts)))
         (~f ~repo ~commit ~reset_type ~checkout_opts)))))
 (export git_reset_from_annotated)
 
 ;; extern int git_reset_default(git_repository *repo, git_object *target, 
-;;           git_strarray *pathspecs);
+;;     git_strarray *pathspecs);
+(if echo-decls (display "git_reset_default\n"))
 (define git_reset_default
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12105,13 +13018,13 @@
 (export git_reset_default)
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         /** For merge commits, the "mainline" is treated as the parent. */
-;;         unsigned int mainline;
-;;         git_merge_options merge_opts; /**< Options for the merging */
-;;         git_checkout_options checkout_opts; /**< Options for the checkout */
-;;                   
+;;   unsigned int version;
+;;   /** For merge commits, the "mainline" is treated as the parent. */
+;;   unsigned int mainline;
+;;   git_merge_options merge_opts; /**< Options for the merging */
+;;   git_checkout_options checkout_opts; /**< Options for the checkout */
 ;; } git_revert_options;
+(if echo-decls (display "git_revert_options\n"))
 (define git_revert_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -12122,7 +13035,8 @@
 (define-fh-compound-type/p git_revert_options git_revert_options-desc)
 
 ;; extern int git_revert_init_options(git_revert_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_revert_init_options\n"))
 (define git_revert_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12137,8 +13051,9 @@
 (export git_revert_init_options)
 
 ;; extern int git_revert_commit(git_index **out, git_repository *repo, 
-;;           git_commit *revert_commit, git_commit *our_commit, unsigned int mainline
-;;           , const git_merge_options *merge_options);
+;;     git_commit *revert_commit, git_commit *our_commit, unsigned int mainline
+;;     , const git_merge_options *merge_options);
+(if echo-decls (display "git_revert_commit\n"))
 (define git_revert_commit
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12167,7 +13082,8 @@
 (export git_revert_commit)
 
 ;; extern int git_revert(git_repository *repo, git_commit *commit, const 
-;;           git_revert_options *given_opts);
+;;     git_revert_options *given_opts);
+(if echo-decls (display "git_revert\n"))
 (define git_revert
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12182,7 +13098,8 @@
 (export git_revert)
 
 ;; extern int git_revparse_single(git_object **out, git_repository *repo, const
-;;            char *spec);
+;;      char *spec);
+(if echo-decls (display "git_revparse_single\n"))
 (define git_revparse_single
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12198,7 +13115,8 @@
 (export git_revparse_single)
 
 ;; extern int git_revparse_ext(git_object **object_out, git_reference **
-;;           reference_out, git_repository *repo, const char *spec);
+;;     reference_out, git_repository *repo, const char *spec);
+(if echo-decls (display "git_revparse_ext\n"))
 (define git_revparse_ext
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12213,10 +13131,11 @@
 (export git_revparse_ext)
 
 ;; typedef enum {
-;;         GIT_REVPARSE_SINGLE = 1<<0,
-;;         GIT_REVPARSE_RANGE = 1<<1,
-;;         GIT_REVPARSE_MERGE_BASE = 1<<2,
+;;   GIT_REVPARSE_SINGLE = 1<<0,
+;;   GIT_REVPARSE_RANGE = 1<<1,
+;;   GIT_REVPARSE_MERGE_BASE = 1<<2,
 ;; } git_revparse_mode_t;
+(if echo-decls (display "git_revparse_mode_t\n"))
 (define-fh-enum git_revparse_mode_t
   '((GIT_REVPARSE_SINGLE . 1)
     (GIT_REVPARSE_RANGE . 2)
@@ -12224,13 +13143,14 @@
   )
 
 ;; typedef struct {
-;;         /** The left element of the revspec; must be freed by the user */
-;;         git_object *from;
-;;         /** The right element of the revspec; must be freed by the user */
-;;         git_object *to;
-;;         /** The intent of the revspec (i.e. `git_revparse_mode_t` flags) */
-;;         unsigned int flags;
+;;   /** The left element of the revspec; must be freed by the user */
+;;   git_object *from;
+;;   /** The right element of the revspec; must be freed by the user */
+;;   git_object *to;
+;;   /** The intent of the revspec (i.e. `git_revparse_mode_t` flags) */
+;;   unsigned int flags;
 ;; } git_revspec;
+(if echo-decls (display "git_revspec\n"))
 (define git_revspec-desc
   (bs:struct
     (list `(from ,(bs:pointer git_object*-desc))
@@ -12240,7 +13160,8 @@
 (define-fh-compound-type/p git_revspec git_revspec-desc)
 
 ;; extern int git_revparse(git_revspec *revspec, git_repository *repo, const 
-;;           char *spec);
+;;     char *spec);
+(if echo-decls (display "git_revparse\n"))
 (define git_revparse
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12254,11 +13175,12 @@
 (export git_revparse)
 
 ;; typedef enum {
-;;         GIT_SORT_NONE = 0,
-;;         GIT_SORT_TOPOLOGICAL = 1<<0,
-;;         GIT_SORT_TIME = 1<<1,
-;;         GIT_SORT_REVERSE = 1<<2,
+;;   GIT_SORT_NONE = 0,
+;;   GIT_SORT_TOPOLOGICAL = 1<<0,
+;;   GIT_SORT_TIME = 1<<1,
+;;   GIT_SORT_REVERSE = 1<<2,
 ;; } git_sort_t;
+(if echo-decls (display "git_sort_t\n"))
 (define-fh-enum git_sort_t
   '((GIT_SORT_NONE . 0)
     (GIT_SORT_TOPOLOGICAL . 1)
@@ -12267,6 +13189,7 @@
   )
 
 ;; extern int git_revwalk_new(git_revwalk **out, git_repository *repo);
+(if echo-decls (display "git_revwalk_new\n"))
 (define git_revwalk_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12279,6 +13202,7 @@
 (export git_revwalk_new)
 
 ;; extern void git_revwalk_reset(git_revwalk *walker);
+(if echo-decls (display "git_revwalk_reset\n"))
 (define git_revwalk_reset
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -12290,6 +13214,7 @@
 (export git_revwalk_reset)
 
 ;; extern int git_revwalk_push(git_revwalk *walk, const git_oid *id);
+(if echo-decls (display "git_revwalk_push\n"))
 (define git_revwalk_push
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12302,6 +13227,7 @@
 (export git_revwalk_push)
 
 ;; extern int git_revwalk_push_glob(git_revwalk *walk, const char *glob);
+(if echo-decls (display "git_revwalk_push_glob\n"))
 (define git_revwalk_push_glob
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12316,6 +13242,7 @@
 (export git_revwalk_push_glob)
 
 ;; extern int git_revwalk_push_head(git_revwalk *walk);
+(if echo-decls (display "git_revwalk_push_head\n"))
 (define git_revwalk_push_head
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12329,6 +13256,7 @@
 (export git_revwalk_push_head)
 
 ;; extern int git_revwalk_hide(git_revwalk *walk, const git_oid *commit_id);
+(if echo-decls (display "git_revwalk_hide\n"))
 (define git_revwalk_hide
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12341,6 +13269,7 @@
 (export git_revwalk_hide)
 
 ;; extern int git_revwalk_hide_glob(git_revwalk *walk, const char *glob);
+(if echo-decls (display "git_revwalk_hide_glob\n"))
 (define git_revwalk_hide_glob
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12355,6 +13284,7 @@
 (export git_revwalk_hide_glob)
 
 ;; extern int git_revwalk_hide_head(git_revwalk *walk);
+(if echo-decls (display "git_revwalk_hide_head\n"))
 (define git_revwalk_hide_head
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12368,6 +13298,7 @@
 (export git_revwalk_hide_head)
 
 ;; extern int git_revwalk_push_ref(git_revwalk *walk, const char *refname);
+(if echo-decls (display "git_revwalk_push_ref\n"))
 (define git_revwalk_push_ref
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12382,6 +13313,7 @@
 (export git_revwalk_push_ref)
 
 ;; extern int git_revwalk_hide_ref(git_revwalk *walk, const char *refname);
+(if echo-decls (display "git_revwalk_hide_ref\n"))
 (define git_revwalk_hide_ref
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12396,6 +13328,7 @@
 (export git_revwalk_hide_ref)
 
 ;; extern int git_revwalk_next(git_oid *out, git_revwalk *walk);
+(if echo-decls (display "git_revwalk_next\n"))
 (define git_revwalk_next
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12408,6 +13341,7 @@
 (export git_revwalk_next)
 
 ;; extern void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
+(if echo-decls (display "git_revwalk_sorting\n"))
 (define git_revwalk_sorting
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -12422,6 +13356,7 @@
 (export git_revwalk_sorting)
 
 ;; extern int git_revwalk_push_range(git_revwalk *walk, const char *range);
+(if echo-decls (display "git_revwalk_push_range\n"))
 (define git_revwalk_push_range
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12436,6 +13371,7 @@
 (export git_revwalk_push_range)
 
 ;; extern void git_revwalk_simplify_first_parent(git_revwalk *walk);
+(if echo-decls (display "git_revwalk_simplify_first_parent\n"))
 (define git_revwalk_simplify_first_parent
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -12449,6 +13385,7 @@
 (export git_revwalk_simplify_first_parent)
 
 ;; extern void git_revwalk_free(git_revwalk *walk);
+(if echo-decls (display "git_revwalk_free\n"))
 (define git_revwalk_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -12460,6 +13397,7 @@
 (export git_revwalk_free)
 
 ;; extern git_repository *git_revwalk_repository(git_revwalk *walk);
+(if echo-decls (display "git_revwalk_repository\n"))
 (define git_revwalk_repository
   (let ((~f (ffi:pointer->procedure
               '*
@@ -12473,12 +13411,14 @@
 (export git_revwalk_repository)
 
 ;; typedef int (*git_revwalk_hide_cb)(const git_oid *commit_id, void *payload)
-;;           ;
+;;     ;
+(if echo-decls (display "git_revwalk_hide_cb\n"))
 (define-fh-function/p git_revwalk_hide_cb
   ffi:int (list (quote *) (quote *)))
 
 ;; extern int git_revwalk_add_hide_cb(git_revwalk *walk, git_revwalk_hide_cb 
-;;           hide_cb, void *payload);
+;;     hide_cb, void *payload);
+(if echo-decls (display "git_revwalk_add_hide_cb\n"))
 (define git_revwalk_add_hide_cb
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12488,13 +13428,16 @@
               (list '* '* '*))))
     (lambda (walk hide_cb payload)
       (let ((~walk (unwrap-git_revwalk* walk))
-            (~hide_cb (unwrap-git_revwalk_hide_cb hide_cb))
+            (~hide_cb
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
+               hide_cb))
             (~payload (unwrap~pointer payload)))
         (~f ~walk ~hide_cb ~payload)))))
 (export git_revwalk_add_hide_cb)
 
 ;; extern int git_signature_new(git_signature **out, const char *name, const 
-;;           char *email, git_time_t time, int offset);
+;;     char *email, git_time_t time, int offset);
+(if echo-decls (display "git_signature_new\n"))
 (define git_signature_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12504,13 +13447,14 @@
       (let ((~out (unwrap~pointer out))
             (~name (unwrap~pointer name))
             (~email (unwrap~pointer email))
-            (~time (unwrap-git_time_t time))
+            (~time (unwrap~fixed time))
             (~offset (unwrap~fixed offset)))
         (~f ~out ~name ~email ~time ~offset)))))
 (export git_signature_new)
 
 ;; extern int git_signature_now(git_signature **out, const char *name, const 
-;;           char *email);
+;;     char *email);
+(if echo-decls (display "git_signature_now\n"))
 (define git_signature_now
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12524,7 +13468,8 @@
 (export git_signature_now)
 
 ;; extern int git_signature_default(git_signature **out, git_repository *repo)
-;;           ;
+;;     ;
+(if echo-decls (display "git_signature_default\n"))
 (define git_signature_default
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12539,6 +13484,7 @@
 (export git_signature_default)
 
 ;; extern int git_signature_from_buffer(git_signature **out, const char *buf);
+(if echo-decls (display "git_signature_from_buffer\n"))
 (define git_signature_from_buffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12553,7 +13499,8 @@
 (export git_signature_from_buffer)
 
 ;; extern int git_signature_dup(git_signature **dest, const git_signature *sig)
-;;           ;
+;;     ;
+(if echo-decls (display "git_signature_dup\n"))
 (define git_signature_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12566,6 +13513,7 @@
 (export git_signature_dup)
 
 ;; extern void git_signature_free(git_signature *sig);
+(if echo-decls (display "git_signature_free\n"))
 (define git_signature_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -12579,11 +13527,12 @@
 (export git_signature_free)
 
 ;; typedef enum {
-;;         GIT_STASH_DEFAULT = 0,
-;;         GIT_STASH_KEEP_INDEX = 1<<0,
-;;         GIT_STASH_INCLUDE_UNTRACKED = 1<<1,
-;;         GIT_STASH_INCLUDE_IGNORED = 1<<2,
+;;   GIT_STASH_DEFAULT = 0,
+;;   GIT_STASH_KEEP_INDEX = 1<<0,
+;;   GIT_STASH_INCLUDE_UNTRACKED = 1<<1,
+;;   GIT_STASH_INCLUDE_IGNORED = 1<<2,
 ;; } git_stash_flags;
+(if echo-decls (display "git_stash_flags\n"))
 (define-fh-enum git_stash_flags
   '((GIT_STASH_DEFAULT . 0)
     (GIT_STASH_KEEP_INDEX . 1)
@@ -12592,7 +13541,8 @@
   )
 
 ;; extern int git_stash_save(git_oid *out, git_repository *repo, const 
-;;           git_signature *stasher, const char *message, uint32_t flags);
+;;     git_signature *stasher, const char *message, uint32_t flags);
+(if echo-decls (display "git_stash_save\n"))
 (define git_stash_save
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12608,24 +13558,26 @@
 (export git_stash_save)
 
 ;; typedef enum {
-;;         GIT_STASH_APPLY_DEFAULT = 0,
-;;         GIT_STASH_APPLY_REINSTATE_INDEX = 1<<0,
+;;   GIT_STASH_APPLY_DEFAULT = 0,
+;;   GIT_STASH_APPLY_REINSTATE_INDEX = 1<<0,
 ;; } git_stash_apply_flags;
+(if echo-decls (display "git_stash_apply_flags\n"))
 (define-fh-enum git_stash_apply_flags
   '((GIT_STASH_APPLY_DEFAULT . 0)
     (GIT_STASH_APPLY_REINSTATE_INDEX . 1))
   )
 
 ;; typedef enum {
-;;         GIT_STASH_APPLY_PROGRESS_NONE = 0,
-;;         GIT_STASH_APPLY_PROGRESS_LOADING_STASH,
-;;         GIT_STASH_APPLY_PROGRESS_ANALYZE_INDEX,
-;;         GIT_STASH_APPLY_PROGRESS_ANALYZE_MODIFIED,
-;;         GIT_STASH_APPLY_PROGRESS_ANALYZE_UNTRACKED,
-;;         GIT_STASH_APPLY_PROGRESS_CHECKOUT_UNTRACKED,
-;;         GIT_STASH_APPLY_PROGRESS_CHECKOUT_MODIFIED,
-;;         GIT_STASH_APPLY_PROGRESS_DONE,
+;;   GIT_STASH_APPLY_PROGRESS_NONE = 0,
+;;   GIT_STASH_APPLY_PROGRESS_LOADING_STASH,
+;;   GIT_STASH_APPLY_PROGRESS_ANALYZE_INDEX,
+;;   GIT_STASH_APPLY_PROGRESS_ANALYZE_MODIFIED,
+;;   GIT_STASH_APPLY_PROGRESS_ANALYZE_UNTRACKED,
+;;   GIT_STASH_APPLY_PROGRESS_CHECKOUT_UNTRACKED,
+;;   GIT_STASH_APPLY_PROGRESS_CHECKOUT_MODIFIED,
+;;   GIT_STASH_APPLY_PROGRESS_DONE,
 ;; } git_stash_apply_progress_t;
+(if echo-decls (display "git_stash_apply_progress_t\n"))
 (define-fh-enum git_stash_apply_progress_t
   '((GIT_STASH_APPLY_PROGRESS_NONE . 0)
     (GIT_STASH_APPLY_PROGRESS_LOADING_STASH . 1)
@@ -12638,34 +13590,36 @@
   )
 
 ;; typedef int (*git_stash_apply_progress_cb)(git_stash_apply_progress_t 
-;;           progress, void *payload);
+;;     progress, void *payload);
+(if echo-decls (display "git_stash_apply_progress_cb\n"))
 (define-fh-function/p git_stash_apply_progress_cb
   ffi:int (list ffi:int (quote *)))
 
 ;; typedef struct git_stash_apply_options {
-;;         unsigned int version;
-;;         /** See `git_stash_apply_flags_t`, above. */
-;;         git_stash_apply_flags flags;
-;;         /** Options to use when writing files to the working directory. */
-;;         git_checkout_options checkout_options;
-;;         /** Optional callback to notify the consumer of application progress. */
-;;                   
-;;         git_stash_apply_progress_cb progress_cb;
-;;         void *progress_payload;
+;;   unsigned int version;
+;;   /** See `git_stash_apply_flags_t`, above. */
+;;   git_stash_apply_flags flags;
+;;   /** Options to use when writing files to the working directory. */
+;;   git_checkout_options checkout_options;
+;;   /** Optional callback to notify the consumer of application progress. */
+;;   git_stash_apply_progress_cb progress_cb;
+;;   void *progress_payload;
 ;; } git_stash_apply_options;
+(if echo-decls (display "git_stash_apply_options\n"))
 (define git_stash_apply_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
-          `(flags ,git_stash_apply_flags-desc)
+          `(flags ,int)
           `(checkout_options ,git_checkout_options-desc)
-          `(progress_cb ,git_stash_apply_progress_cb-desc)
+          `(progress_cb ,(bs:pointer void))
           `(progress_payload ,(bs:pointer void)))))
 (export git_stash_apply_options-desc)
 (define-fh-compound-type/p git_stash_apply_options git_stash_apply_options-desc)
 (define struct-git_stash_apply_options git_stash_apply_options)
 
 ;; extern int git_stash_apply_init_options(git_stash_apply_options *opts, 
-;;           unsigned int version);
+;;     unsigned int version);
+(if echo-decls (display "git_stash_apply_init_options\n"))
 (define git_stash_apply_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12680,7 +13634,8 @@
 (export git_stash_apply_init_options)
 
 ;; extern int git_stash_apply(git_repository *repo, size_t index, const 
-;;           git_stash_apply_options *options);
+;;     git_stash_apply_options *options);
+(if echo-decls (display "git_stash_apply\n"))
 (define git_stash_apply
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12695,12 +13650,14 @@
 (export git_stash_apply)
 
 ;; typedef int (*git_stash_cb)(size_t index, const char *message, const git_oid
-;;            *stash_id, void *payload);
+;;      *stash_id, void *payload);
+(if echo-decls (display "git_stash_cb\n"))
 (define-fh-function/p git_stash_cb
   ffi:int (list ffi:size_t (quote *) (quote *) (quote *)))
 
 ;; extern int git_stash_foreach(git_repository *repo, git_stash_cb callback, 
-;;           void *payload);
+;;     void *payload);
+(if echo-decls (display "git_stash_foreach\n"))
 (define git_stash_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12708,12 +13665,17 @@
               (list '* '* '*))))
     (lambda (repo callback payload)
       (let ((~repo (unwrap-git_repository* repo))
-            (~callback (unwrap-git_stash_cb callback))
+            (~callback
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list ffi:size_t '* '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~callback ~payload)))))
 (export git_stash_foreach)
 
 ;; extern int git_stash_drop(git_repository *repo, size_t index);
+(if echo-decls (display "git_stash_drop\n"))
 (define git_stash_drop
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12726,7 +13688,8 @@
 (export git_stash_drop)
 
 ;; extern int git_stash_pop(git_repository *repo, size_t index, const 
-;;           git_stash_apply_options *options);
+;;     git_stash_apply_options *options);
+(if echo-decls (display "git_stash_pop\n"))
 (define git_stash_pop
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12741,21 +13704,22 @@
 (export git_stash_pop)
 
 ;; typedef enum {
-;;         GIT_STATUS_CURRENT = 0,
-;;         GIT_STATUS_INDEX_NEW = 1u<<0,
-;;         GIT_STATUS_INDEX_MODIFIED = 1u<<1,
-;;         GIT_STATUS_INDEX_DELETED = 1u<<2,
-;;         GIT_STATUS_INDEX_RENAMED = 1u<<3,
-;;         GIT_STATUS_INDEX_TYPECHANGE = 1u<<4,
-;;         GIT_STATUS_WT_NEW = 1u<<7,
-;;         GIT_STATUS_WT_MODIFIED = 1u<<8,
-;;         GIT_STATUS_WT_DELETED = 1u<<9,
-;;         GIT_STATUS_WT_TYPECHANGE = 1u<<10,
-;;         GIT_STATUS_WT_RENAMED = 1u<<11,
-;;         GIT_STATUS_WT_UNREADABLE = 1u<<12,
-;;         GIT_STATUS_IGNORED = 1u<<14,
-;;         GIT_STATUS_CONFLICTED = 1u<<15,
+;;   GIT_STATUS_CURRENT = 0,
+;;   GIT_STATUS_INDEX_NEW = 1u<<0,
+;;   GIT_STATUS_INDEX_MODIFIED = 1u<<1,
+;;   GIT_STATUS_INDEX_DELETED = 1u<<2,
+;;   GIT_STATUS_INDEX_RENAMED = 1u<<3,
+;;   GIT_STATUS_INDEX_TYPECHANGE = 1u<<4,
+;;   GIT_STATUS_WT_NEW = 1u<<7,
+;;   GIT_STATUS_WT_MODIFIED = 1u<<8,
+;;   GIT_STATUS_WT_DELETED = 1u<<9,
+;;   GIT_STATUS_WT_TYPECHANGE = 1u<<10,
+;;   GIT_STATUS_WT_RENAMED = 1u<<11,
+;;   GIT_STATUS_WT_UNREADABLE = 1u<<12,
+;;   GIT_STATUS_IGNORED = 1u<<14,
+;;   GIT_STATUS_CONFLICTED = 1u<<15,
 ;; } git_status_t;
+(if echo-decls (display "git_status_t\n"))
 (define-fh-enum git_status_t
   '((GIT_STATUS_CURRENT . 0)
     (GIT_STATUS_INDEX_NEW . 1)
@@ -12774,15 +13738,17 @@
   )
 
 ;; typedef int (*git_status_cb)(const char *path, unsigned int status_flags, 
-;;           void *payload);
+;;     void *payload);
+(if echo-decls (display "git_status_cb\n"))
 (define-fh-function/p git_status_cb
   ffi:int (list (quote *) ffi:unsigned-int (quote *)))
 
 ;; typedef enum {
-;;         GIT_STATUS_SHOW_INDEX_AND_WORKDIR = 0,
-;;         GIT_STATUS_SHOW_INDEX_ONLY = 1,
-;;         GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
+;;   GIT_STATUS_SHOW_INDEX_AND_WORKDIR = 0,
+;;   GIT_STATUS_SHOW_INDEX_ONLY = 1,
+;;   GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
 ;; } git_status_show_t;
+(if echo-decls (display "git_status_show_t\n"))
 (define-fh-enum git_status_show_t
   '((GIT_STATUS_SHOW_INDEX_AND_WORKDIR . 0)
     (GIT_STATUS_SHOW_INDEX_ONLY . 1)
@@ -12790,23 +13756,24 @@
   )
 
 ;; typedef enum {
-;;         GIT_STATUS_OPT_INCLUDE_UNTRACKED = 1u<<0,
-;;         GIT_STATUS_OPT_INCLUDE_IGNORED = 1u<<1,
-;;         GIT_STATUS_OPT_INCLUDE_UNMODIFIED = 1u<<2,
-;;         GIT_STATUS_OPT_EXCLUDE_SUBMODULES = 1u<<3,
-;;         GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS = 1u<<4,
-;;         GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH = 1u<<5,
-;;         GIT_STATUS_OPT_RECURSE_IGNORED_DIRS = 1u<<6,
-;;         GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX = 1u<<7,
-;;         GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR = 1u<<8,
-;;         GIT_STATUS_OPT_SORT_CASE_SENSITIVELY = 1u<<9,
-;;         GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY = 1u<<10,
-;;         GIT_STATUS_OPT_RENAMES_FROM_REWRITES = 1u<<11,
-;;         GIT_STATUS_OPT_NO_REFRESH = 1u<<12,
-;;         GIT_STATUS_OPT_UPDATE_INDEX = 1u<<13,
-;;         GIT_STATUS_OPT_INCLUDE_UNREADABLE = 1u<<14,
-;;         GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED = 1u<<15,
+;;   GIT_STATUS_OPT_INCLUDE_UNTRACKED = 1u<<0,
+;;   GIT_STATUS_OPT_INCLUDE_IGNORED = 1u<<1,
+;;   GIT_STATUS_OPT_INCLUDE_UNMODIFIED = 1u<<2,
+;;   GIT_STATUS_OPT_EXCLUDE_SUBMODULES = 1u<<3,
+;;   GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS = 1u<<4,
+;;   GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH = 1u<<5,
+;;   GIT_STATUS_OPT_RECURSE_IGNORED_DIRS = 1u<<6,
+;;   GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX = 1u<<7,
+;;   GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR = 1u<<8,
+;;   GIT_STATUS_OPT_SORT_CASE_SENSITIVELY = 1u<<9,
+;;   GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY = 1u<<10,
+;;   GIT_STATUS_OPT_RENAMES_FROM_REWRITES = 1u<<11,
+;;   GIT_STATUS_OPT_NO_REFRESH = 1u<<12,
+;;   GIT_STATUS_OPT_UPDATE_INDEX = 1u<<13,
+;;   GIT_STATUS_OPT_INCLUDE_UNREADABLE = 1u<<14,
+;;   GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED = 1u<<15,
 ;; } git_status_opt_t;
+(if echo-decls (display "git_status_opt_t\n"))
 (define-fh-enum git_status_opt_t
   '((GIT_STATUS_OPT_INCLUDE_UNTRACKED . 1)
     (GIT_STATUS_OPT_INCLUDE_IGNORED . 2)
@@ -12829,22 +13796,24 @@
   )
 
 ;; typedef struct {
-;;         unsigned int version;
-;;         git_status_show_t show;
-;;         unsigned int flags;
-;;         git_strarray pathspec;
+;;   unsigned int version;
+;;   git_status_show_t show;
+;;   unsigned int flags;
+;;   git_strarray pathspec;
 ;; } git_status_options;
+(if echo-decls (display "git_status_options\n"))
 (define git_status_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
-          `(show ,git_status_show_t-desc)
+          `(show ,int)
           `(flags ,unsigned-int)
           `(pathspec ,git_strarray-desc))))
 (export git_status_options-desc)
 (define-fh-compound-type/p git_status_options git_status_options-desc)
 
 ;; extern int git_status_init_options(git_status_options *opts, unsigned int 
-;;           version);
+;;     version);
+(if echo-decls (display "git_status_init_options\n"))
 (define git_status_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12859,13 +13828,14 @@
 (export git_status_init_options)
 
 ;; typedef struct {
-;;         git_status_t status;
-;;         git_diff_delta *head_to_index;
-;;         git_diff_delta *index_to_workdir;
+;;   git_status_t status;
+;;   git_diff_delta *head_to_index;
+;;   git_diff_delta *index_to_workdir;
 ;; } git_status_entry;
+(if echo-decls (display "git_status_entry\n"))
 (define git_status_entry-desc
   (bs:struct
-    (list `(status ,git_status_t-desc)
+    (list `(status ,int)
           `(head_to_index
              ,(bs:pointer git_diff_delta*-desc))
           `(index_to_workdir
@@ -12874,7 +13844,8 @@
 (define-fh-compound-type/p git_status_entry git_status_entry-desc)
 
 ;; extern int git_status_foreach(git_repository *repo, git_status_cb callback, 
-;;           void *payload);
+;;     void *payload);
+(if echo-decls (display "git_status_foreach\n"))
 (define git_status_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12884,13 +13855,18 @@
               (list '* '* '*))))
     (lambda (repo callback payload)
       (let ((~repo (unwrap-git_repository* repo))
-            (~callback (unwrap-git_status_cb callback))
+            (~callback
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* ffi:unsigned-int '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~callback ~payload)))))
 (export git_status_foreach)
 
 ;; extern int git_status_foreach_ext(git_repository *repo, const 
-;;           git_status_options *opts, git_status_cb callback, void *payload);
+;;     git_status_options *opts, git_status_cb callback, void *payload);
+(if echo-decls (display "git_status_foreach_ext\n"))
 (define git_status_foreach_ext
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12901,13 +13877,18 @@
     (lambda (repo opts callback payload)
       (let ((~repo (unwrap-git_repository* repo))
             (~opts (unwrap-git_status_options* opts))
-            (~callback (unwrap-git_status_cb callback))
+            (~callback
+              ((make-ftn-arg-unwrapper
+                 ffi:int
+                 (list '* ffi:unsigned-int '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~opts ~callback ~payload)))))
 (export git_status_foreach_ext)
 
 ;; extern int git_status_file(unsigned int *status_flags, git_repository *repo
-;;           , const char *path);
+;;     , const char *path);
+(if echo-decls (display "git_status_file\n"))
 (define git_status_file
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12921,7 +13902,8 @@
 (export git_status_file)
 
 ;; extern int git_status_list_new(git_status_list **out, git_repository *repo, 
-;;           const git_status_options *opts);
+;;     const git_status_options *opts);
+(if echo-decls (display "git_status_list_new\n"))
 (define git_status_list_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12937,6 +13919,7 @@
 (export git_status_list_new)
 
 ;; extern size_t git_status_list_entrycount(git_status_list *statuslist);
+(if echo-decls (display "git_status_list_entrycount\n"))
 (define git_status_list_entrycount
   (let ((~f (ffi:pointer->procedure
               ffi:size_t
@@ -12951,7 +13934,8 @@
 (export git_status_list_entrycount)
 
 ;; extern const git_status_entry *git_status_byindex(git_status_list *
-;;           statuslist, size_t idx);
+;;     statuslist, size_t idx);
+(if echo-decls (display "git_status_byindex\n"))
 (define git_status_byindex
   (let ((~f (ffi:pointer->procedure
               '*
@@ -12967,6 +13951,7 @@
 (export git_status_byindex)
 
 ;; extern void git_status_list_free(git_status_list *statuslist);
+(if echo-decls (display "git_status_list_free\n"))
 (define git_status_list_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -12981,7 +13966,8 @@
 (export git_status_list_free)
 
 ;; extern int git_status_should_ignore(int *ignored, git_repository *repo, 
-;;           const char *path);
+;;     const char *path);
+(if echo-decls (display "git_status_should_ignore\n"))
 (define git_status_should_ignore
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -12997,21 +13983,22 @@
 (export git_status_should_ignore)
 
 ;; typedef enum {
-;;         GIT_SUBMODULE_STATUS_IN_HEAD = 1u<<0,
-;;         GIT_SUBMODULE_STATUS_IN_INDEX = 1u<<1,
-;;         GIT_SUBMODULE_STATUS_IN_CONFIG = 1u<<2,
-;;         GIT_SUBMODULE_STATUS_IN_WD = 1u<<3,
-;;         GIT_SUBMODULE_STATUS_INDEX_ADDED = 1u<<4,
-;;         GIT_SUBMODULE_STATUS_INDEX_DELETED = 1u<<5,
-;;         GIT_SUBMODULE_STATUS_INDEX_MODIFIED = 1u<<6,
-;;         GIT_SUBMODULE_STATUS_WD_UNINITIALIZED = 1u<<7,
-;;         GIT_SUBMODULE_STATUS_WD_ADDED = 1u<<8,
-;;         GIT_SUBMODULE_STATUS_WD_DELETED = 1u<<9,
-;;         GIT_SUBMODULE_STATUS_WD_MODIFIED = 1u<<10,
-;;         GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED = 1u<<11,
-;;         GIT_SUBMODULE_STATUS_WD_WD_MODIFIED = 1u<<12,
-;;         GIT_SUBMODULE_STATUS_WD_UNTRACKED = 1u<<13,
+;;   GIT_SUBMODULE_STATUS_IN_HEAD = 1u<<0,
+;;   GIT_SUBMODULE_STATUS_IN_INDEX = 1u<<1,
+;;   GIT_SUBMODULE_STATUS_IN_CONFIG = 1u<<2,
+;;   GIT_SUBMODULE_STATUS_IN_WD = 1u<<3,
+;;   GIT_SUBMODULE_STATUS_INDEX_ADDED = 1u<<4,
+;;   GIT_SUBMODULE_STATUS_INDEX_DELETED = 1u<<5,
+;;   GIT_SUBMODULE_STATUS_INDEX_MODIFIED = 1u<<6,
+;;   GIT_SUBMODULE_STATUS_WD_UNINITIALIZED = 1u<<7,
+;;   GIT_SUBMODULE_STATUS_WD_ADDED = 1u<<8,
+;;   GIT_SUBMODULE_STATUS_WD_DELETED = 1u<<9,
+;;   GIT_SUBMODULE_STATUS_WD_MODIFIED = 1u<<10,
+;;   GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED = 1u<<11,
+;;   GIT_SUBMODULE_STATUS_WD_WD_MODIFIED = 1u<<12,
+;;   GIT_SUBMODULE_STATUS_WD_UNTRACKED = 1u<<13,
 ;; } git_submodule_status_t;
+(if echo-decls (display "git_submodule_status_t\n"))
 (define-fh-enum git_submodule_status_t
   '((GIT_SUBMODULE_STATUS_IN_HEAD . 1)
     (GIT_SUBMODULE_STATUS_IN_INDEX . 2)
@@ -13030,35 +14017,35 @@
   )
 
 ;; typedef int (*git_submodule_cb)(git_submodule *sm, const char *name, void *
-;;           payload);
+;;     payload);
+(if echo-decls (display "git_submodule_cb\n"))
 (define-fh-function/p git_submodule_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef struct git_submodule_update_options {
-;;         unsigned int version;
-;;         /**
-;;               * These options are passed to the checkout step. To disable
-;;               * checkout, set the `checkout_strategy` to
-;;               * `GIT_CHECKOUT_NONE`. Generally you will want the use
-;;               * GIT_CHECKOUT_SAFE to update files in the working
-;;               * directory. 
-;;               */
-;;         git_checkout_options checkout_opts;
-;;         /**
-;;               * Options which control the fetch, including callbacks.
-;;               *
-;;               * The callbacks to use for reporting fetch progress, and for acquiring
-;;                   
-;;               * credentials in the event they are needed.
-;;               */
-;;         git_fetch_options fetch_opts;
-;;         /**
-;;               * Allow fetching from the submodule's default remote if the target
-;;                   
-;;               * commit isn't found. Enabled by default.
-;;               */
-;;         int allow_fetch;
+;;   unsigned int version;
+;;   /**
+;;    * These options are passed to the checkout step. To disable
+;;    * checkout, set the `checkout_strategy` to
+;;    * `GIT_CHECKOUT_NONE`. Generally you will want the use
+;;    * GIT_CHECKOUT_SAFE to update files in the working
+;;    * directory. 
+;;    */
+;;   git_checkout_options checkout_opts;
+;;   /**
+;;    * Options which control the fetch, including callbacks.
+;;    *
+;;    * The callbacks to use for reporting fetch progress, and for acquiring
+;;    * credentials in the event they are needed.
+;;    */
+;;   git_fetch_options fetch_opts;
+;;   /**
+;;    * Allow fetching from the submodule's default remote if the target
+;;    * commit isn't found. Enabled by default.
+;;    */
+;;   int allow_fetch;
 ;; } git_submodule_update_options;
+(if echo-decls (display "git_submodule_update_options\n"))
 (define git_submodule_update_options-desc
   (bs:struct
     (list `(version ,unsigned-int)
@@ -13070,7 +14057,8 @@
 (define struct-git_submodule_update_options git_submodule_update_options)
 
 ;; extern int git_submodule_update_init_options(git_submodule_update_options *
-;;           opts, unsigned int version);
+;;     opts, unsigned int version);
+(if echo-decls (display "git_submodule_update_init_options\n"))
 (define git_submodule_update_init_options
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13085,7 +14073,8 @@
 (export git_submodule_update_init_options)
 
 ;; extern int git_submodule_update(git_submodule *submodule, int init, 
-;;           git_submodule_update_options *options);
+;;     git_submodule_update_options *options);
+(if echo-decls (display "git_submodule_update\n"))
 (define git_submodule_update
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13102,7 +14091,8 @@
 (export git_submodule_update)
 
 ;; extern int git_submodule_lookup(git_submodule **out, git_repository *repo, 
-;;           const char *name);
+;;     const char *name);
+(if echo-decls (display "git_submodule_lookup\n"))
 (define git_submodule_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13118,6 +14108,7 @@
 (export git_submodule_lookup)
 
 ;; extern void git_submodule_free(git_submodule *submodule);
+(if echo-decls (display "git_submodule_free\n"))
 (define git_submodule_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -13131,7 +14122,8 @@
 (export git_submodule_free)
 
 ;; extern int git_submodule_foreach(git_repository *repo, git_submodule_cb 
-;;           callback, void *payload);
+;;     callback, void *payload);
+(if echo-decls (display "git_submodule_foreach\n"))
 (define git_submodule_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13141,13 +14133,16 @@
               (list '* '* '*))))
     (lambda (repo callback payload)
       (let ((~repo (unwrap-git_repository* repo))
-            (~callback (unwrap-git_submodule_cb callback))
+            (~callback
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~callback ~payload)))))
 (export git_submodule_foreach)
 
 ;; extern int git_submodule_add_setup(git_submodule **out, git_repository *repo
-;;           , const char *url, const char *path, int use_gitlink);
+;;     , const char *url, const char *path, int use_gitlink);
+(if echo-decls (display "git_submodule_add_setup\n"))
 (define git_submodule_add_setup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13165,6 +14160,7 @@
 (export git_submodule_add_setup)
 
 ;; extern int git_submodule_add_finalize(git_submodule *submodule);
+(if echo-decls (display "git_submodule_add_finalize\n"))
 (define git_submodule_add_finalize
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13178,7 +14174,8 @@
 (export git_submodule_add_finalize)
 
 ;; extern int git_submodule_add_to_index(git_submodule *submodule, int 
-;;           write_index);
+;;     write_index);
+(if echo-decls (display "git_submodule_add_to_index\n"))
 (define git_submodule_add_to_index
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13193,6 +14190,7 @@
 (export git_submodule_add_to_index)
 
 ;; extern git_repository *git_submodule_owner(git_submodule *submodule);
+(if echo-decls (display "git_submodule_owner\n"))
 (define git_submodule_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13206,6 +14204,7 @@
 (export git_submodule_owner)
 
 ;; extern const char *git_submodule_name(git_submodule *submodule);
+(if echo-decls (display "git_submodule_name\n"))
 (define git_submodule_name
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13219,6 +14218,7 @@
 (export git_submodule_name)
 
 ;; extern const char *git_submodule_path(git_submodule *submodule);
+(if echo-decls (display "git_submodule_path\n"))
 (define git_submodule_path
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13232,6 +14232,7 @@
 (export git_submodule_path)
 
 ;; extern const char *git_submodule_url(git_submodule *submodule);
+(if echo-decls (display "git_submodule_url\n"))
 (define git_submodule_url
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13243,7 +14244,8 @@
 (export git_submodule_url)
 
 ;; extern int git_submodule_resolve_url(git_buf *out, git_repository *repo, 
-;;           const char *url);
+;;     const char *url);
+(if echo-decls (display "git_submodule_resolve_url\n"))
 (define git_submodule_resolve_url
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13259,6 +14261,7 @@
 (export git_submodule_resolve_url)
 
 ;; extern const char *git_submodule_branch(git_submodule *submodule);
+(if echo-decls (display "git_submodule_branch\n"))
 (define git_submodule_branch
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13272,7 +14275,8 @@
 (export git_submodule_branch)
 
 ;; extern int git_submodule_set_branch(git_repository *repo, const char *name, 
-;;           const char *branch);
+;;     const char *branch);
+(if echo-decls (display "git_submodule_set_branch\n"))
 (define git_submodule_set_branch
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13288,7 +14292,8 @@
 (export git_submodule_set_branch)
 
 ;; extern int git_submodule_set_url(git_repository *repo, const char *name, 
-;;           const char *url);
+;;     const char *url);
+(if echo-decls (display "git_submodule_set_url\n"))
 (define git_submodule_set_url
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13304,6 +14309,7 @@
 (export git_submodule_set_url)
 
 ;; extern const git_oid *git_submodule_index_id(git_submodule *submodule);
+(if echo-decls (display "git_submodule_index_id\n"))
 (define git_submodule_index_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13317,6 +14323,7 @@
 (export git_submodule_index_id)
 
 ;; extern const git_oid *git_submodule_head_id(git_submodule *submodule);
+(if echo-decls (display "git_submodule_head_id\n"))
 (define git_submodule_head_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13330,6 +14337,7 @@
 (export git_submodule_head_id)
 
 ;; extern const git_oid *git_submodule_wd_id(git_submodule *submodule);
+(if echo-decls (display "git_submodule_wd_id\n"))
 (define git_submodule_wd_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13343,7 +14351,8 @@
 (export git_submodule_wd_id)
 
 ;; extern git_submodule_ignore_t git_submodule_ignore(git_submodule *submodule)
-;;           ;
+;;     ;
+(if echo-decls (display "git_submodule_ignore\n"))
 (define git_submodule_ignore
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13353,11 +14362,12 @@
               (list '*))))
     (lambda (submodule)
       (let ((~submodule (unwrap-git_submodule* submodule)))
-        (wrap-git_submodule_ignore_t (~f ~submodule))))))
+        (~f ~submodule)))))
 (export git_submodule_ignore)
 
 ;; extern int git_submodule_set_ignore(git_repository *repo, const char *name, 
-;;           git_submodule_ignore_t ignore);
+;;     git_submodule_ignore_t ignore);
+(if echo-decls (display "git_submodule_set_ignore\n"))
 (define git_submodule_set_ignore
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13368,12 +14378,13 @@
     (lambda (repo name ignore)
       (let ((~repo (unwrap-git_repository* repo))
             (~name (unwrap~pointer name))
-            (~ignore (unwrap-git_submodule_ignore_t ignore)))
+            (~ignore (unwrap~fixed ignore)))
         (~f ~repo ~name ~ignore)))))
 (export git_submodule_set_ignore)
 
 ;; extern git_submodule_update_t git_submodule_update_strategy(git_submodule *
-;;           submodule);
+;;     submodule);
+(if echo-decls (display "git_submodule_update_strategy\n"))
 (define git_submodule_update_strategy
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13383,11 +14394,12 @@
               (list '*))))
     (lambda (submodule)
       (let ((~submodule (unwrap-git_submodule* submodule)))
-        (wrap-git_submodule_update_t (~f ~submodule))))))
+        (~f ~submodule)))))
 (export git_submodule_update_strategy)
 
 ;; extern int git_submodule_set_update(git_repository *repo, const char *name, 
-;;           git_submodule_update_t update);
+;;     git_submodule_update_t update);
+(if echo-decls (display "git_submodule_set_update\n"))
 (define git_submodule_set_update
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13398,12 +14410,13 @@
     (lambda (repo name update)
       (let ((~repo (unwrap-git_repository* repo))
             (~name (unwrap~pointer name))
-            (~update (unwrap-git_submodule_update_t update)))
+            (~update (unwrap~fixed update)))
         (~f ~repo ~name ~update)))))
 (export git_submodule_set_update)
 
 ;; extern git_submodule_recurse_t git_submodule_fetch_recurse_submodules(
-;;           git_submodule *submodule);
+;;     git_submodule *submodule);
+(if echo-decls (display "git_submodule_fetch_recurse_submodules\n"))
 (define git_submodule_fetch_recurse_submodules
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13413,11 +14426,12 @@
               (list '*))))
     (lambda (submodule)
       (let ((~submodule (unwrap-git_submodule* submodule)))
-        (wrap-git_submodule_recurse_t (~f ~submodule))))))
+        (~f ~submodule)))))
 (export git_submodule_fetch_recurse_submodules)
 
 ;; extern int git_submodule_set_fetch_recurse_submodules(git_repository *repo, 
-;;           const char *name, git_submodule_recurse_t fetch_recurse_submodules);
+;;     const char *name, git_submodule_recurse_t fetch_recurse_submodules);
+(if echo-decls (display "git_submodule_set_fetch_recurse_submodules\n"))
 (define git_submodule_set_fetch_recurse_submodules
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13429,12 +14443,12 @@
       (let ((~repo (unwrap-git_repository* repo))
             (~name (unwrap~pointer name))
             (~fetch_recurse_submodules
-              (unwrap-git_submodule_recurse_t
-                fetch_recurse_submodules)))
+              (unwrap~fixed fetch_recurse_submodules)))
         (~f ~repo ~name ~fetch_recurse_submodules)))))
 (export git_submodule_set_fetch_recurse_submodules)
 
 ;; extern int git_submodule_init(git_submodule *submodule, int overwrite);
+(if echo-decls (display "git_submodule_init\n"))
 (define git_submodule_init
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13449,7 +14463,8 @@
 (export git_submodule_init)
 
 ;; extern int git_submodule_repo_init(git_repository **out, const git_submodule
-;;            *sm, int use_gitlink);
+;;      *sm, int use_gitlink);
+(if echo-decls (display "git_submodule_repo_init\n"))
 (define git_submodule_repo_init
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13465,6 +14480,7 @@
 (export git_submodule_repo_init)
 
 ;; extern int git_submodule_sync(git_submodule *submodule);
+(if echo-decls (display "git_submodule_sync\n"))
 (define git_submodule_sync
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13478,7 +14494,8 @@
 (export git_submodule_sync)
 
 ;; extern int git_submodule_open(git_repository **repo, git_submodule *
-;;           submodule);
+;;     submodule);
+(if echo-decls (display "git_submodule_open\n"))
 (define git_submodule_open
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13493,6 +14510,7 @@
 (export git_submodule_open)
 
 ;; extern int git_submodule_reload(git_submodule *submodule, int force);
+(if echo-decls (display "git_submodule_reload\n"))
 (define git_submodule_reload
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13507,7 +14525,8 @@
 (export git_submodule_reload)
 
 ;; extern int git_submodule_status(unsigned int *status, git_repository *repo, 
-;;           const char *name, git_submodule_ignore_t ignore);
+;;     const char *name, git_submodule_ignore_t ignore);
+(if echo-decls (display "git_submodule_status\n"))
 (define git_submodule_status
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13519,12 +14538,13 @@
       (let ((~status (unwrap~pointer status))
             (~repo (unwrap-git_repository* repo))
             (~name (unwrap~pointer name))
-            (~ignore (unwrap-git_submodule_ignore_t ignore)))
+            (~ignore (unwrap~fixed ignore)))
         (~f ~status ~repo ~name ~ignore)))))
 (export git_submodule_status)
 
 ;; extern int git_submodule_location(unsigned int *location_status, 
-;;           git_submodule *submodule);
+;;     git_submodule *submodule);
+(if echo-decls (display "git_submodule_location\n"))
 (define git_submodule_location
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13540,7 +14560,8 @@
 (export git_submodule_location)
 
 ;; extern int git_tag_lookup(git_tag **out, git_repository *repo, const git_oid
-;;            *id);
+;;      *id);
+(if echo-decls (display "git_tag_lookup\n"))
 (define git_tag_lookup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13554,7 +14575,8 @@
 (export git_tag_lookup)
 
 ;; extern int git_tag_lookup_prefix(git_tag **out, git_repository *repo, const 
-;;           git_oid *id, size_t len);
+;;     git_oid *id, size_t len);
+(if echo-decls (display "git_tag_lookup_prefix\n"))
 (define git_tag_lookup_prefix
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13571,6 +14593,7 @@
 (export git_tag_lookup_prefix)
 
 ;; extern void git_tag_free(git_tag *tag);
+(if echo-decls (display "git_tag_free\n"))
 (define git_tag_free
   (let ((~f (ffi:pointer->procedure
               ffi:void
@@ -13581,6 +14604,7 @@
 (export git_tag_free)
 
 ;; extern const git_oid *git_tag_id(const git_tag *tag);
+(if echo-decls (display "git_tag_id\n"))
 (define git_tag_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13592,6 +14616,7 @@
 (export git_tag_id)
 
 ;; extern git_repository *git_tag_owner(const git_tag *tag);
+(if echo-decls (display "git_tag_owner\n"))
 (define git_tag_owner
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13603,6 +14628,7 @@
 (export git_tag_owner)
 
 ;; extern int git_tag_target(git_object **target_out, const git_tag *tag);
+(if echo-decls (display "git_tag_target\n"))
 (define git_tag_target
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13615,6 +14641,7 @@
 (export git_tag_target)
 
 ;; extern const git_oid *git_tag_target_id(const git_tag *tag);
+(if echo-decls (display "git_tag_target_id\n"))
 (define git_tag_target_id
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13626,6 +14653,7 @@
 (export git_tag_target_id)
 
 ;; extern git_otype git_tag_target_type(const git_tag *tag);
+(if echo-decls (display "git_tag_target_type\n"))
 (define git_tag_target_type
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13634,11 +14662,11 @@
                 (dynamic-link))
               (list '*))))
     (lambda (tag)
-      (let ((~tag (unwrap-git_tag* tag)))
-        (wrap-git_otype (~f ~tag))))))
+      (let ((~tag (unwrap-git_tag* tag))) (~f ~tag)))))
 (export git_tag_target_type)
 
 ;; extern const char *git_tag_name(const git_tag *tag);
+(if echo-decls (display "git_tag_name\n"))
 (define git_tag_name
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13649,6 +14677,7 @@
 (export git_tag_name)
 
 ;; extern const git_signature *git_tag_tagger(const git_tag *tag);
+(if echo-decls (display "git_tag_tagger\n"))
 (define git_tag_tagger
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13660,6 +14689,7 @@
 (export git_tag_tagger)
 
 ;; extern const char *git_tag_message(const git_tag *tag);
+(if echo-decls (display "git_tag_message\n"))
 (define git_tag_message
   (let ((~f (ffi:pointer->procedure
               '*
@@ -13670,8 +14700,9 @@
 (export git_tag_message)
 
 ;; extern int git_tag_create(git_oid *oid, git_repository *repo, const char *
-;;           tag_name, const git_object *target, const git_signature *tagger, const 
-;;           char *message, int force);
+;;     tag_name, const git_object *target, const git_signature *tagger, const 
+;;     char *message, int force);
+(if echo-decls (display "git_tag_create\n"))
 (define git_tag_create
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13695,8 +14726,9 @@
 (export git_tag_create)
 
 ;; extern int git_tag_annotation_create(git_oid *oid, git_repository *repo, 
-;;           const char *tag_name, const git_object *target, const git_signature *
-;;           tagger, const char *message);
+;;     const char *tag_name, const git_object *target, const git_signature *
+;;     tagger, const char *message);
+(if echo-decls (display "git_tag_annotation_create\n"))
 (define git_tag_annotation_create
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13720,7 +14752,8 @@
 (export git_tag_annotation_create)
 
 ;; extern int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, 
-;;           const char *buffer, int force);
+;;     const char *buffer, int force);
+(if echo-decls (display "git_tag_create_frombuffer\n"))
 (define git_tag_create_frombuffer
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13737,7 +14770,8 @@
 (export git_tag_create_frombuffer)
 
 ;; extern int git_tag_create_lightweight(git_oid *oid, git_repository *repo, 
-;;           const char *tag_name, const git_object *target, int force);
+;;     const char *tag_name, const git_object *target, int force);
+(if echo-decls (display "git_tag_create_lightweight\n"))
 (define git_tag_create_lightweight
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13755,6 +14789,7 @@
 (export git_tag_create_lightweight)
 
 ;; extern int git_tag_delete(git_repository *repo, const char *tag_name);
+(if echo-decls (display "git_tag_delete\n"))
 (define git_tag_delete
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13767,6 +14802,7 @@
 (export git_tag_delete)
 
 ;; extern int git_tag_list(git_strarray *tag_names, git_repository *repo);
+(if echo-decls (display "git_tag_list\n"))
 (define git_tag_list
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13779,7 +14815,8 @@
 (export git_tag_list)
 
 ;; extern int git_tag_list_match(git_strarray *tag_names, const char *pattern, 
-;;           git_repository *repo);
+;;     git_repository *repo);
+(if echo-decls (display "git_tag_list_match\n"))
 (define git_tag_list_match
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13795,12 +14832,14 @@
 (export git_tag_list_match)
 
 ;; typedef int (*git_tag_foreach_cb)(const char *name, git_oid *oid, void *
-;;           payload);
+;;     payload);
+(if echo-decls (display "git_tag_foreach_cb\n"))
 (define-fh-function/p git_tag_foreach_cb
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; extern int git_tag_foreach(git_repository *repo, git_tag_foreach_cb callback
-;;           , void *payload);
+;;     , void *payload);
+(if echo-decls (display "git_tag_foreach\n"))
 (define git_tag_foreach
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13808,12 +14847,15 @@
               (list '* '* '*))))
     (lambda (repo callback payload)
       (let ((~repo (unwrap-git_repository* repo))
-            (~callback (unwrap-git_tag_foreach_cb callback))
+            (~callback
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
+               callback))
             (~payload (unwrap~pointer payload)))
         (~f ~repo ~callback ~payload)))))
 (export git_tag_foreach)
 
 ;; extern int git_tag_peel(git_object **tag_target_out, const git_tag *tag);
+(if echo-decls (display "git_tag_peel\n"))
 (define git_tag_peel
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13826,6 +14868,7 @@
 (export git_tag_peel)
 
 ;; extern int git_tag_dup(git_tag **out, git_tag *source);
+(if echo-decls (display "git_tag_dup\n"))
 (define git_tag_dup
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13838,7 +14881,8 @@
 (export git_tag_dup)
 
 ;; extern int git_transaction_new(git_transaction **out, git_repository *repo)
-;;           ;
+;;     ;
+(if echo-decls (display "git_transaction_new\n"))
 (define git_transaction_new
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13853,7 +14897,8 @@
 (export git_transaction_new)
 
 ;; extern int git_transaction_lock_ref(git_transaction *tx, const char *refname
-;;           );
+;;     );
+(if echo-decls (display "git_transaction_lock_ref\n"))
 (define git_transaction_lock_ref
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13868,8 +14913,9 @@
 (export git_transaction_lock_ref)
 
 ;; extern int git_transaction_set_target(git_transaction *tx, const char *
-;;           refname, const git_oid *target, const git_signature *sig, const char *
-;;           msg);
+;;     refname, const git_oid *target, const git_signature *sig, const char *
+;;     msg);
+(if echo-decls (display "git_transaction_set_target\n"))
 (define git_transaction_set_target
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13887,8 +14933,9 @@
 (export git_transaction_set_target)
 
 ;; extern int git_transaction_set_symbolic_target(git_transaction *tx, const 
-;;           char *refname, const char *target, const git_signature *sig, const char 
-;;           *msg);
+;;     char *refname, const char *target, const git_signature *sig, const char 
+;;     *msg);
+(if echo-decls (display "git_transaction_set_symbolic_target\n"))
 (define git_transaction_set_symbolic_target
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13906,7 +14953,8 @@
 (export git_transaction_set_symbolic_target)
 
 ;; extern int git_transaction_set_reflog(git_transaction *tx, const char *
-;;           refname, const git_reflog *reflog);
+;;     refname, const git_reflog *reflog);
+(if echo-decls (display "git_transaction_set_reflog\n"))
 (define git_transaction_set_reflog
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13922,7 +14970,8 @@
 (export git_transaction_set_reflog)
 
 ;; extern int git_transaction_remove(git_transaction *tx, const char *refname)
-;;           ;
+;;     ;
+(if echo-decls (display "git_transaction_remove\n"))
 (define git_transaction_remove
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13937,6 +14986,7 @@
 (export git_transaction_remove)
 
 ;; extern int git_transaction_commit(git_transaction *tx);
+(if echo-decls (display "git_transaction_commit\n"))
 (define git_transaction_commit
   (let ((~f (ffi:pointer->procedure
               ffi:int
@@ -13950,6 +15000,7 @@
 (export git_transaction_commit)
 
 ;; extern void git_transaction_free(git_transaction *tx);
+(if echo-decls (display "git_transaction_free\n"))
 (define git_transaction_free
   (let ((~f (ffi:pointer->procedure
               ffi:void

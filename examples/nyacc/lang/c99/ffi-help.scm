@@ -35,7 +35,8 @@
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 util1)
   #:use-module (nyacc lang c99 util2)
-  #:use-module ((nyacc lang util) #:select (cintstr->scm sx-ref sx-list))
+  #:use-module ((nyacc lang util)
+		#:select (cintstr->scm sx-ref sx-list sx-attr-ref sx-attr-set!))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module (nyacc util)
   #:use-module (system foreign)
@@ -250,7 +251,8 @@
     ;;(sfscm "(define link-lib (dynamic-link ~S))\n" library)
     (sfscm "(dynamic-link ~S)\n" library)
     ;;(sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")
-    (sfscm "(define void int) ;; no void in bytestructures\n")
+    (sfscm "(define void intptr_t) ;; no void in bytestructures\n")
+    (sfscm "(define echo-decls #f)\n")
     ))
 
 
@@ -304,16 +306,12 @@
        (or (assoc-ref bs-typemap name)
 	   (string->symbol (string-append name "-desc"))))
 
-      (((fixed-type "char"))
-	'int)
-      (((fixed-type ,fx-name))
-       (assoc-ref bs-typemap fx-name))
-      (((float-type ,fl-name))
-       (assoc-ref bs-typemap fl-name))
-      (((enum-def (ident ,ident) ,rest))
-       'int)
-      (((enum-def ,rest))
-       'int)
+      (((fixed-type "char")) 'int)
+      (((fixed-type "unsigned char")) 'unsigned-int)
+      (((fixed-type ,fx-name)) (assoc-ref bs-typemap fx-name))
+      (((float-type ,fl-name)) (assoc-ref bs-typemap fl-name))
+      (((enum-def (ident ,ident) ,rest)) 'int)
+      (((enum-def ,rest)) 'int)
 
       (((struct-def (ident ,struct-name) ,field-list))
        (mtail->bs-desc `((struct-def ,field-list))))
@@ -365,6 +363,12 @@
       (((pointer-to) . ,rest)
        `(bs:pointer ,(mtail->bs-desc rest)))
 
+      (((array-of ,n) (fixed-type ,name))
+       (let ((ns (string->number n)))
+	 (cond ;; ugh : need better way to deal with char being byte and int
+	  ((string=? name "char") `(bs:vector ,ns int8))
+	  ((string=? name "unsigned char") `(bs:vector ,ns uint8))
+	  (else `(bs:vector ,ns ,(mtail->bs-desc `((fixed-type ,name))))))))
       (((array-of ,n) . ,rest)
        `(bs:vector ,(string->number n) ,(mtail->bs-desc rest)))
       (((array-of) . ,rest)
@@ -373,7 +377,7 @@
       (,otherwise
        (sferr "mtail->bs-desc missed mspec:\n")
        (pperr mspec-tail)
-       (error "quit") ;;(quit)
+       ;;(error "quit") (quit)
        (fherr "mtail->bs-desc failed")
        )
       )))
@@ -393,6 +397,7 @@
       (if (null? decls) '()
 	  (let* ((name (caar decls))
 		 (udecl (cdar decls))
+		 (udecl (udecl-rem-type-qual udecl)) ;; remove "const" "extern"
 		 (spec (udecl->mspec/comm udecl))
 		 (type (mtail->bs-desc (cddr spec))))
 	    (acons-defn name type (iter (cdr decls))))))))
@@ -512,6 +517,7 @@
 		     (let* ((udict (unitize-comp-decl fld))
 			    (name (caar udict))
 			    (udecl (cdar udict))
+			    (udecl (udecl-rem-type-qual udecl))
 			    (mspec (udecl->mspec udecl)))
 		       (mspec->ffi-sym mspec)))
 		   fields)))
@@ -523,6 +529,7 @@
 ;; Return a mspec for the return type.  The variable is called @code{NAME}.
 (define (gen-decl-return udecl)
   (let* ((udecl1 (expand-typerefs udecl (fluid-ref *udict*) ffi-keepers))
+	 (udecl (udecl-rem-type-qual udecl1))
 	 (mspec (udecl->mspec udecl1)))
     (mspec->ffi-sym mspec)))
 
@@ -541,6 +548,7 @@
      (else
       (let* ((udecl1 (expand-typerefs (car params) (fluid-ref *udict*)
 				      ffi-keepers))
+	     (udecl1 (udecl-rem-type-qual udecl1))
 	     (mspec (udecl->mspec udecl1 #:abs-ident (int->abs-ident ix))))
 	(cons (mspec->ffi-sym mspec)
 	      (iter (1+ ix) (cdr params))))))))
@@ -639,6 +647,7 @@
      (let* ((param-decl (expand-typerefs param-decl
 					 (fluid-ref *udict*)
 					 (fluid-ref *defined*)))
+	    (param-decl (udecl-rem-type-qual param-decl)) ;; ???
 	    (mspec (udecl->mspec param-decl)))
        (acons (car mspec) (mspec->fh-unwrapper mspec) seed)))
    '()
@@ -675,6 +684,7 @@
   (let* ((udecl (expand-typerefs udecl
 				 (fluid-ref *udict*)
 				 (fluid-ref *defined*)))
+	 (udecl (udecl-rem-type-qual udecl))
 	 (mspec (udecl->mspec udecl)))
     (mspec->fh-wrapper mspec)))
 
@@ -709,17 +719,14 @@
 (define (cnvt-extern name ms-tail)
   (let* ((desc (mtail->bs-desc ms-tail))
 	 (desc-name (string->symbol (string-append name "-desc")))
-	 )
-    (sfscm "(define ~A-desc\n" name)
-    (ppscm desc #:per-line-prefix "  ")
-    (sfscm "  )\n")
-    (ppscm `(define ,(string->symbol name)
-	      (bytestructure
-	       ,desc-name
-	       (ffi:pointer->bytevector
-		(dynamic-pointer ,name (dynamic-link))
-		(bytestructure-descriptor-size ,desc-name)))))
-    ))
+	 (code `(define ,(string->symbol name)
+		  (let ((desc* (bs:pointer ,desc))
+			(addr (ffi:pointer-address
+			       (dynamic-pointer ,name (dynamic-link)))))
+		    (lambda ()
+		      (bytestructure-ref (bytestructure desc* addr) '*))))))
+    (ppscm code)
+    (sfscm "(export ~A)\n" name)))
 
 
 ;; ------------------------------------
@@ -777,13 +784,25 @@
   (define (non-ptr-decl specl)
     `(udecl ,specl (init-declr (ident "_"))))
   
-  ;; pass around OR make fluid
+  ;; use fluids OR pass around
   (fluid-set! *wrapped* wrapped)
   (fluid-set! *defined* defined)
 
-  (let-values (((tag attr specl declr tail) (split-adecl udecl)))
-
-    (sxml-match (if declr (list tag specl declr) (list tag specl))
+  (let*-values (((tag attr specl declr tail) (split-adecl udecl))
+		;; strip "extern" "const" etc:
+		((specl) (values (specl-rem-type-qual specl))))
+    ;;(pperr specl)
+    ;; todo: sanitize udecl:
+    ;; 1) remove comments
+    ;; 2) keep attributes!
+    (sxml-match
+        ;;(if declr (list tag specl declr) (list tag specl))
+	(sx-list tag attr specl declr)
+	#;(cond
+	 ((and attr declr) (list tag attr specl declr))
+	 ((and (not attr) declr) (list tag specl declr))
+	 ((and attr (not declr)) (list tag attr specl))
+	 ((and (not attr) (not declr)) (list tag specl)))
       
       ;; typedef int foo_t;
       ((udecl
@@ -858,30 +877,31 @@
 	(cons typename defined)))
 
       ;; typedef struct foo foo_t;
+      ;; This case represents two possible uses:
+      ;; 1) struct foo never defined and foo_t only used as pointer
+      ;; 2) struct foo defined later
       ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef))
 	 (type-spec (struct-ref (ident ,struct-name))))
 	(init-declr (ident ,typename)))
+       (sfscm "(define ~A-desc void)\n" typename)
        (cond
-	((udict-struct-ref udict struct-name)
-	 ;; forward reference, so do both together
-	 (let* ((struct-udecl (udict-struct-ref udict struct-name))
-		(struct-def (car ((sxpath '(// struct-def)) struct-udecl)))
-		(udecl `(udecl (decl-spec-list
-				(stor-spec (typedef))
-				(type-spec ,struct-def))
-			       (init-declr (ident ,typename)))))
-	   (c99scm struct-udecl)
-	   (cnvt-udecl udecl udict wrapped defined)
-	   (values
-	    (cons* typename (w/struct struct-name) wrapped)
-	    (cons* typename (w/struct struct-name) defined))))
+	((udict-struct-ref udict struct-name) => ; struct defined later
+	 (lambda (struct-decl)
+	   ;; Set the typedef attribute for the associated struct-def.
+	   ;; NOT WORKING because we execute c99-trans-unit->udict twice
+	   ;; ^ FIXED with ffi-decls ???
+	   (sx-attr-set! struct-decl 'typedef typename)
+	   (sfscm "(define ~A*-desc (bs:pointer (delay ~A-desc)))\n"
+		  typename typename)))
 	(else
-	 (sfscm "(define-fh-pointer-type ~A*)\n" typename)
-	 (values
-	  (cons typename wrapped)
-	  defined))))
+	 (sfscm "(define ~A*-desc (bs:pointer ~A-desc))\n"
+		typename typename)))
+       (sfscm "(define-fh-pointer-type ~A* ~A*-desc)\n" typename typename)
+       (values
+	(cons typename wrapped)
+	(cons typename defined))) ;; ???
 
       ;; typedef struct foo *foo_t;
       ;; TODO: check for forward reference
@@ -974,8 +994,8 @@
 	(init-declr (ident ,typename)))
        (cond
 	((member name bs-defined)
+	 (sfscm "(define wrap-~A identity)\n" typename)
 	 (sfscm "(define unwrap-~A unwrap~~fixed)\n" typename)
-	 ;;(sfscm "(define wrap-~A identity)\n" typename)
 	 (sfscm "(define ~A-desc ~A)\n" typename (assoc-ref bs-typemap name))
 	 (values wrapped defined))
 	((member name wrapped)
@@ -993,13 +1013,15 @@
       ((udecl
 	(decl-spec-list
 	 (type-spec (struct-def (ident ,struct-name) ,field-list))))
-       (if (assoc-ref (w/struct struct-name) defined)
-	   (values wrapped defined)
-	   (begin
-	     (cnvt-struct-def #f struct-name field-list)
-	     (values
-	      (cons (w/struct struct-name) wrapped)
-	      (cons (w/struct struct-name) defined)))))
+       (cnvt-struct-def #f struct-name field-list)
+       (and=>
+	(sx-attr-ref udecl 'typedef)
+	(lambda (name)
+	  (sfscm "(set! ~A-desc struct-~A-desc)\n" name struct-name)
+	  (sfscm "(define-fh-compound-type ~A ~A-desc)\n" name name)))
+       (values
+	(cons (w/struct struct-name) wrapped)
+	(cons (w/struct struct-name) defined)))
 
       ;; struct { ... } ...
       ((udecl
@@ -1124,16 +1146,16 @@
       ;; non-pointer
       ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
 	      ,init-declr . ,rest)
-       (let ((udecl (expand-typerefs udecl udict (fluid-ref *defined*)))
-	     (mspec (udecl->mspec udecl))
-	     )
+       (let* ((udecl (expand-typerefs udecl udict (fluid-ref *defined*)))
+	      (udecl (udecl-rem-type-qual udecl))
+	      (mspec (udecl->mspec udecl)))
 	 ;;(sferr "extern mspec:\n") (pperr mspec)
 	 (cnvt-extern (car mspec) (cdr mspec))
 	 (values wrapped defined)))
 
       (,otherwise
-       (sferr "see below:\n") (pperr udecl)
-       (quit)
+       (sferr "see below:\n")
+       (pperr udecl)
        (fherr "cnvt-udecl missed --^")
        (values wrapped defined)))))
 
@@ -1253,6 +1275,7 @@
 	 (tree (parse-includes attrs))
 	 (udecls (reverse (c99-trans-unit->udict tree #:inc-filter incf)))
 	 (udict (c99-trans-unit->udict/deep tree))
+	 (ffi-decls (map car udecls))	; just the names, get decls from udict
 	 ;;
 	 (enu-defs (udict-enums->ddict udict))
 	 (ffi-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter incf))
@@ -1271,6 +1294,7 @@
 		(cons (car pair) seed))
 	       (,otherwise seed)))
 	   '() udecls))
+	 (saw-last #f)
 	 )
     
     ;; set globals
@@ -1285,19 +1309,24 @@
     
     ;; convert and output foreign declarations
     (fold-values			; from (sxml fold)
-     (lambda (pair wrapped defined)
+     (lambda (name wrapped defined)	; name can be "foo_t" or (enum . "foo")
        (catch 'ffi-help-error
 	 (lambda ()
 	   (cond
+	    (saw-last (values wrapped defined))
 	    ((and ;; Process the declaration if all conditions met:
-	      (declf (car pair))		; 1) user wants it
-	      (not (member (car pair) wrapped)) ; 2) not already wrapped
-	      (not (and (pair? (car pair))	; 3) not anonymous
-			(string=? "*anon*" (cdar pair)))))
+	      (declf name)		   ; 1) user wants it
+	      (not (member name wrapped))  ; 2) not already wrapped
+	      (not (and (pair? name)	   ; 3) not anonymous
+			(string=? "*anon*" (cdr name)))))
 	     ;;(sferr "~S\n" (car pair))
-	     (nlscm) (c99scm (cdr pair))
-	     (cnvt-udecl (remove-type-qual (cdr pair)) udict wrapped defined)
-	     ;;(cnvt-udecl (cdr pair) udict wrapped defined)
+	     (if (and (string? name)
+		      (string=? "Xgdbm_version" name))
+		 (set! saw-last #t))
+	     (let ((udecl (udict-ref udict name)))
+	       (nlscm) (c99scm udecl)
+	       (sfscm "(if echo-decls (display \"~A\\n\"))\n" name) ;; debug
+	       (cnvt-udecl (udict-ref udict name) udict wrapped defined))
 	     )
 	    
 	    (else (values wrapped defined))))
@@ -1306,7 +1335,8 @@
 		  (string-append "ffi-help: " fmt "\n") args)
 	   (sfscm ";; ... failed.\n")
 	   (values wrapped defined))))
-     udecls '() (append bs-defined ffi-defined))
+     ;;ffi-decls '() (append bs-defined ffi-defined))
+     ffi-decls '() bs-defined)
     
     ;; output global constants (from enum and #define)
     ;;(sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")

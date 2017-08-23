@@ -77,6 +77,9 @@
       ((#\\) "\\")
       (else scm-chr-str))))
 
+;; @deffn {Procedure} char->hex-list ch seed
+;; to be documented
+;; @end deffn
 (define (char->hex-list ch seed)
   (define (itox ival) (string-ref "0123456789ABCDE" ival))
   (let iter ((res seed) (ix 8) (val (char->integer ch)))
@@ -86,6 +89,9 @@
      (else
       (iter (cons (itox (remainder val 16)) res) (1- ix) (quotient val 16))))))
 
+;; @deffn {Procedure} scmstr->c str
+;; to be documented
+;; @end deffn
 (define (scmstr->c str)
   (list->string
    (string-fold-right
@@ -96,7 +102,7 @@
        (else (char->hex-list ch chl))))
     '() str)))
     
-(define protect-expr? (make-protect-expr op-prec op-assc))
+;;(define protect-expr? (make-protect-expr op-prec op-assc))
 
 ;; @deffn {Procedure} pretty-print-c99 tree [port] [options]
 ;; Convert and print a C99 sxml tree to the current output port.
@@ -147,6 +153,8 @@
        (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
     (fmtr 'nlin))
 
+  (define protect-expr? (make-protect-expr op-prec op-assc))
+  
   (define (unary/l op rep rval)
     (sf rep)
     (if (protect-expr? 'rt op rval)
@@ -213,9 +221,25 @@
 
       ((comment ,text)
        ;; Comments will look funny when indent for input and output
-       ;; are different since multi-line comments will get hosed.  
-       (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n")) 
-		 (string-split (string-append "/*" text "*/") #\newline)))
+       ;; are different since multi-line comments will get hosed.
+       (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n"))
+		 (string-split (string-append "/*" text "*/") #\newline))
+       ;; TODO: Since parser now removes prefix, I need to add it back in here.
+       ;; needed:
+       ;; 1) (get-col) to get column
+       ;; 2) (indent-to-col col) to do indents for each line
+       #;(let ((col (get-col))
+	     (lines (string-split text #\newline))
+	     (ind (mk-ind-to-col col)))
+	 (sf "/*") (sf (car lines))
+	 (pair-for-each
+	  (lambda (pair)
+	    (sf "\n")
+	    (if (pair? (cdr pair)) (sf ind))
+	    (sf (cdr pair)))
+	  (cdr lines))
+	 (sf "*/"))
+       )
       
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
       

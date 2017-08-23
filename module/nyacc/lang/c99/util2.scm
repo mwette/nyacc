@@ -63,7 +63,7 @@
 	    expand-typerefs
 	    stripdown
 	    udecl->mspec udecl->mspec/comm
-	    remove-type-qual rem-specl-type-qual
+	    udecl-rem-type-qual specl-rem-type-qual
 
 	    unwrap-decl
 	    canize-enum-def-list
@@ -75,7 +75,7 @@
 	    ;; unitize-decl unitize-comp-decl unitize-param-decl
 	    unitize-decl unitize-comp-decl unitize-param-decl
 	    declr-ident declr-id decl-id
-	    split-decl iter-declrs
+	    iter-declrs
 	    split-adecl
 
 	    clean-field-list clean-fields
@@ -87,6 +87,7 @@
 	    match-decl match-comp-decl match-param-decl
 	    expand-decl-typerefs
 	    fix-fields
+	    split-decl
 	    ;; debugging
 	    stripdown-1
 	    tdef-splice-specl
@@ -182,12 +183,20 @@
 ;; What about anonymous enums?  And enums in general?
 ;; Anonmous enum should be expaneded into 
 ;; @end example
-;; @end deffn
 ;; @noindent
+;; Notes:
+;; @itemize
+;; @item
 ;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
 ;; The inc-filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
 ;; of one argument, the include path, to indicate whether it should be included
 ;; in the dictionary.
+;; @item
+;; If this routine is called multiple times on the same tree the u-decl's will
+;; not be @code{eq?} since the top-level lists are generated on the fly.
+;; (See @code{unitize-decl}.)
+;; @end itemize
+;; @end deffn
 (define* (c99-trans-unit->udict tree #:optional (seed '()) #:key inc-filter)
   (if (pair? tree)
       ;;(fold-right			; I think this should be fold(-left)
@@ -293,13 +302,13 @@
 ;; and @code{udict-ref}.  This procecure is robust to already munged decls.
 ;; To capture enum values as globals use @code{->ddict}.
 ;; @*
-;; Notes: not saving attributes.
+;; Notes: now saving attributes.
 ;; @end deffn
 
 (define* (unitize-decl decl #:optional (seed '()) #:key (expand-enums #f))
   
-  (define (make-udecl type guts)
-    `(udecl (decl-spec-list (type-spec (,type . ,guts)))))
+  (define* (make-udecl type guts #:optional typename)
+    `(udecl (decl-spec-list (type-spec ,(cons type guts)))))
 
   ;;(simple-format #t "unitize-decl ~S\n" decl)
   (cond
@@ -309,113 +318,130 @@
     (acons (udecl-id decl) decl seed))
    
    ((eqv? (sx-tag decl) 'decl)
-    (let*-values (((tag attr spec-l declrs tail) (split-decl decl))
-		  ((tag) (values 'udecl)))
-      (sxml-match spec-l
+    (let*-values (((tag attr specl declrs tail) (split-decl decl))
+		  ((tag) (values 'udecl))
+		  ;;((attr) (values #f))
+		  )
+      (sxml-match specl
+	;; FIX!!!
 	;; Caution: We are not parsing or saving all spec-items here.
-	;; The (iter-declrs ... (acons vs (acons ... (iter-declrs forms
-	;; depend on if the unitize- procedures use fold or fold-right.
+	;; The following forms depend on whether unitize- procedures use
+	;; fold or fold-right.
+	
+	;; 1: (acons name value (iter-declrs tag attr specl declrs tail seed))
+	;; 2: (iter-declrs tag attr specl declrs tail (acons name value seed))
+
+	;; TODO: for the typedefs we should add attr (typedef "name") to
+	;; the associated udecls
+
+	;; struct typedefs 
 	((decl-spec-list
+	  (stor-spec (typedef))
 	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
-	 #;(iter-declrs tag #f spec-l declrs tail
+	 #;(iter-declrs tag attr specl declrs tail
 		      (acons `(struct . ,name)
 			     (make-udecl 'struct-def `((ident ,name) . ,rest2))
 			     seed))
 	 (acons `(struct . ,name)
 		(make-udecl 'struct-def `((ident ,name) . ,rest2))
-		(iter-declrs tag #f spec-l declrs tail seed))
+		(iter-declrs tag attr specl declrs tail seed))
 	 )
 	((decl-spec-list
+	  (stor-spec (typedef))
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 (iter-declrs tag #f spec-l declrs tail seed))
+	 (iter-declrs tag attr specl declrs tail seed))
+	
+	;; union typedefs 
 	((decl-spec-list
 	  (stor-spec (typedef))
+	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	 #;(iter-declrs tag attr specl declrs tail
+		      (acons `(union . ,name)
+			     (make-udecl 'union-def `((ident ,name) . ,rest2))
+			     seed))
+	 (acons `(union . ,name)
+		(make-udecl 'union-def `((ident ,name) . ,rest2))
+		(iter-declrs tag attr specl declrs tail seed))
+	 )
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (union-def . ,rest2) . ,rest1))
+	 (iter-declrs tag attr specl declrs tail seed))
+
+	;; enum typedefs 
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
+	 #;(iter-declrs tag attr specl declrs tail
+		      (acons `(enum . ,name)
+			     (make-udecl 'enum-def `((ident ,name) . ,rest2))
+			     seed))
+	 (acons `(enum . ,name)
+		(make-udecl 'enum-def `((ident ,name) . ,rest2))
+		(iter-declrs tag attr specl declrs tail seed))
+	 )
+	((decl-spec-list
+	  (stor-spec (typedef))
+	  (type-spec (enum-def . ,rest2) . ,rest1))
+	 (iter-declrs tag #f specl declrs tail
+		      (acons `(enum . "*anon*") (make-udecl 'enum-def rest2)
+			     seed))
+	 (acons `(enum . "*anon*") (make-udecl 'enum-def rest2)
+		(iter-declrs tag attr specl declrs tail seed))
+	 )
+	
+	;; structs
+	((decl-spec-list
 	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
-	 #;(iter-declrs tag #f spec-l declrs tail
+	 #;(iter-declrs tag attr specl declrs tail
 		      (acons `(struct . ,name)
 			     (make-udecl 'struct-def `((ident ,name) . ,rest2))
 			     seed))
 	 (acons `(struct . ,name)
 		(make-udecl 'struct-def `((ident ,name) . ,rest2))
-		(iter-declrs tag #f spec-l declrs tail seed))
+		(iter-declrs tag attr specl declrs tail seed))
 	 )
 	((decl-spec-list
-	  (stor-spec (typedef))
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 (iter-declrs tag #f spec-l declrs tail seed))
+	 (iter-declrs tag attr specl declrs tail seed))
 
 	;; unions
 	((decl-spec-list
 	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
-	 #;(iter-declrs tag #f spec-l declrs tail
+	 #;(iter-declrs tag attr specl declrs tail
 		      (acons `(union . ,name)
 			     (make-udecl 'union-def `((ident ,name) . ,rest2))
 			     seed))
 	 (acons `(union . ,name)
 		(make-udecl 'union-def `((ident ,name) . ,rest2))
-		(iter-declrs tag #f spec-l declrs tail seed))
+		(iter-declrs tag attr specl declrs tail seed))
 	 )
 	((decl-spec-list
 	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (iter-declrs tag #f spec-l declrs tail seed))
-	((decl-spec-list
-	  (stor-spec (typedef))
-	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
-	 #;(iter-declrs tag #f spec-l declrs tail
-		      (acons `(union . ,name)
-			     (make-udecl 'union-def `((ident ,name) . ,rest2))
-			     seed))
-	 (acons `(union . ,name)
-		(make-udecl 'union-def `((ident ,name) . ,rest2))
-		(iter-declrs tag #f spec-l declrs tail seed))
-	 )
-	((decl-spec-list
-	  (stor-spec (typedef))
-	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (iter-declrs tag #f spec-l declrs tail seed))
+	 (iter-declrs tag attr specl declrs tail seed))
 
 	;; enums
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
-	 #;(iter-declrs tag #f spec-l declrs tail
+	 #;(iter-declrs tag attr specl declrs tail
 		      (acons `(enum . ,name)
 			     (make-udecl 'enum-def `((ident ,name) . ,rest2))
 			     seed))
 	 (acons `(enum . ,name)
 		(make-udecl 'enum-def `((ident ,name) . ,rest2))
-		(iter-declrs tag #f spec-l declrs tail seed))
+		(iter-declrs tag attr specl declrs tail seed))
 	 )
 	((decl-spec-list
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 #;(iter-declrs tag #f spec-l declrs tail
+	 #;(iter-declrs tag attr specl declrs tail
 		      (acons `(enum . "*anon*") (make-udecl 'enum-def rest2)
 			     seed))
 	 (acons `(enum . "*anon*") (make-udecl 'enum-def rest2)
-		(iter-declrs tag #f spec-l declrs tail seed))
-	 )
-	((decl-spec-list
-	  (stor-spec (typedef))
-	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
-	 #;(iter-declrs tag #f spec-l declrs tail
-		      (acons `(enum . ,name)
-			     (make-udecl 'enum-def `((ident ,name) . ,rest2))
-			     seed))
-	 (acons `(enum . ,name)
-		(make-udecl 'enum-def `((ident ,name) . ,rest2))
-		(iter-declrs tag #f spec-l declrs tail seed))
-	 )
-	((decl-spec-list
-	  (stor-spec (typedef))
-	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 (iter-declrs tag #f spec-l declrs tail
-		      (acons `(enum . "*anon*") (make-udecl 'enum-def rest2)
-			     seed))
-	 (acons `(enum . "*anon*") (make-udecl 'enum-def rest2)
-		(iter-declrs tag #f spec-l declrs tail seed))
+		(iter-declrs tag attr specl declrs tail seed))
 	 )
 
 	(,otherwise
-	 (iter-declrs tag #f spec-l declrs tail seed)))))
+	 (iter-declrs tag attr specl declrs tail seed)))))
    
    ((eqv? (sx-tag decl) 'comp-udecl)
     (acons (udecl-id decl) decl seed))
@@ -1155,16 +1181,18 @@
     (sx-list tag attr specl s-declr)))
 
 ;; remove type qualifiers: "const" "volatile" and "restrict"
-(define (rem-specl-type-qual specl-tail)
+(define (specl-tail-rem-type-qual specl-tail)
   (remove (lambda (elt) (eq? 'type-qual (car elt))) specl-tail))
-(define* (remove-type-qual udecl)
+(define (specl-rem-type-qual specl)
+  (if (not (eq? (sx-tag specl) 'decl-spec-list)) (error "expecting specl"))
+  (sx-cons* (sx-tag specl) (sx-attr specl)
+	    (specl-tail-rem-type-qual (sx-tail specl 1))))
+(define (udecl-rem-type-qual udecl)
   (let ((tag (sx-tag udecl))
 	(attr (sx-attr udecl))
 	(specl (sx-ref udecl 1))
-	(rest (sx-tail udecl 2)))
-    (sx-cons* tag attr
-	      (cons 'decl-spec-list (rem-specl-type-qual (sx-tail specl 1)))
-	      rest)))
+	(tail (sx-tail udecl 2)))
+    (sx-cons* tag attr (specl-rem-type-qual specl) tail)))
 
 ;; @deffn {Procedure} pointer-declr? declr
 ;; This predictate indicates if @var{declr} is a pointer.

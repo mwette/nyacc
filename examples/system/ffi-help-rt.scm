@@ -19,6 +19,7 @@
 	    pointer-to
 	    unwrap~fixed unwrap~float unwrap~pointer unwrap~array
 	    make-ftn-arg-unwrapper
+	    fh:void
 	    wrap-void*
 	    ;; debugging
 	    fht-unwrap
@@ -32,6 +33,7 @@
   #:use-module ((system foreign) #:prefix ffi:)
   #:version (0 10 0)
   )
+(define fh:void int)			; from bytestructures
 
 ;; ffi-helper base type (aka class) with fields
 ;; 0 unwrap
@@ -70,18 +72,22 @@
 (define (fht-points-to obj)
   (struct-ref obj (+ vtable-offset-user 2)))
 
+;; @deffn {Syntax} make-fh-type name unwrap pointer-to value-at printer
 ;; We call make-struct here but we are actually making a vtable
 ;; We should check with struct-vtable?
 ;; name as symbol
-(define* (make-fht name unwrap pointer-to points-to printer)
+(define* (make-fht name unwrap pointer-to value-at printer)
   ;;(simple-format #t "make-fht: ~S\n" name)
   (let* ((ty (make-struct/no-tail ffi-helper-type
 				  (make-struct-layout "pw") ;; 1 slot for value
-				  printer unwrap pointer-to points-to))
+				  printer unwrap pointer-to value-at))
 	 (vt (struct-vtable ty)))
     (set-struct-vtable-name! vt name)
     ty))
 
+;; @deffn {Syntax} make-fh-enum
+;; This makes enum wrapper unwrapper, and descriptor (for int).
+;; @end deffn
 (define-syntax define-fh-enum
   (lambda (x)
     (define (stx->str stx)
@@ -109,7 +115,7 @@
 		 (lambda (name) (assq-ref nvl name))))
 	     (define (unwrap* obj) ;; ugh
 	       (error "pointer to enum type not done"))
-	     (export wrap unwrap unwrap*)
+	     (export desc wrap unwrap unwrap*)
 	     ))))))
 
 ;; @deffn {Procedure} bs-data-address bs
@@ -188,23 +194,18 @@
 	     )))
 	     
       ((_ type)		      ; based on guile pointer wrapper
-       (with-syntax ((desc (gen-id x #'type "-desc"))
-		     ;;(make (gen-id x "make-" #'type))
-		     (pred (gen-id x #'type "?"))
+       ;; (define foo_t-desc void) ;; aka int
+       ;; (define foo_t*-desc (bs:pointer (delay foo_t-desc)))
+       ;; ...
+       ;; (define struct-foo-desc (bs:struct ...))
+       ;; (set! foo_t-desc struct-foo-desc)
+       (with-syntax ((desc (gen-id x "make-" #'type))
+		     (type? (gen-id x #'type "?"))
 		     (wrap (gen-id x "wrap-" #'type))
 		     (unwrap (gen-id x "unwrap-" #'type)))
 	 #'(begin
-	     (define desc (bs:pointer intptr_t))
-	     (ffi:define-wrapped-pointer-type
-	      type pred wrap unwrap
-	      (lambda (obj port)
-		(display "#<" port)
-		(display (symbol->string (quote type)) port)
-		(display " 0x" port)
-		(display (number->string (ffi:pointer-address (unwrap obj)) 16)
-			 port)
-		(display ">" port)))
-	     (export desc type pred wrap unwrap))))
+	     (define-fh-pointer-type type (bs:pointer void))
+	     )))
       )))
 
 ;; @deffn {Syntax} define-fh-compound-type name desc
@@ -259,7 +260,7 @@
 
 ;; @deffn {Procedure} ref<->deref! p-type type
 ;; This procedure will ``connect'' the two types so that the procedures
-;; @code{pointer-to} and @code{points-to} work.
+;; @code{pointer-to} and @code{value-at} work.
 ;; @end deffn
 (define-syntax ref<->deref!
   (lambda (x)
@@ -280,7 +281,7 @@
 	      type (+ vtable-offset-user 1)
 	      (lambda (obj)
 		(p-make (bs-data-address (struct-ref obj 0)))))
-	     (struct-set!		; points-to FIX LATER
+	     (struct-set!		; value-at FIX LATER
 	      type (+ vtable-offset-user 2)
 	      (lambda (obj) ;; CHECK THIS
 		(make (bytestructure-ref p-desc '* obj))))))))))
@@ -328,14 +329,16 @@
 	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ name return-t args-t)
-       (with-syntax ((wrap (gen-id x "wrap-" #'name))
+       (with-syntax ((desc (gen-id x #'name "-desc"))
+		     (wrap (gen-id x "wrap-" #'name))
 		     (unwrap (gen-id x "unwrap-" #'name)))
 	 #'(begin
+	     (define desc (bs:pointer void))
 	     (define (unwrap ptr)
 	       (ffi:procedure->pointer return-t ptr args-t))
 	     (define (wrap proc)
 	       (ffi:pointer->procedure return-t proc args-t))
-	     ))))))
+	     (export desc unwrap wrap)))))))
 
 (define-syntax define-fh-function/p
   (lambda (x)
