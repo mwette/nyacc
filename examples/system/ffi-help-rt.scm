@@ -19,7 +19,6 @@
 	    pointer-to
 	    unwrap~fixed unwrap~float unwrap~pointer unwrap~array
 	    make-ftn-arg-unwrapper
-	    fh:void
 	    wrap-void*
 	    ;; debugging
 	    fht-unwrap
@@ -33,7 +32,6 @@
   #:use-module ((system foreign) #:prefix ffi:)
   #:version (0 10 0)
   )
-(define fh:void int)			; from bytestructures
 
 ;; ffi-helper base type (aka class) with fields
 ;; 0 unwrap
@@ -85,25 +83,27 @@
     (set-struct-vtable-name! vt name)
     ty))
 
+(eval-when (expand load eval)
+  (define (gen-id tmpl-id . args)
+    (define (stx->str stx)
+      (symbol->string (syntax->datum stx)))
+    (datum->syntax
+     tmpl-id
+     (string->symbol
+      (apply string-append
+	     (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args))))))
+
 ;; @deffn {Syntax} make-fh-enum
 ;; This makes enum wrapper unwrapper, and descriptor (for int).
 ;; @end deffn
 (define-syntax define-fh-enum
   (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type nv-map)			; based on bytestructure
-       (with-syntax ((desc (gen-id x #'type "-desc"))
-		     (unwrap (gen-id x "unwrap-" #'type))
-		     (wrap (gen-id x "wrap-" #'type))
-		     (unwrap* (gen-id x "unwrap-" #'type "*")))
+       (with-syntax ((desc (gen-id #'type #'type "-desc"))
+		     (unwrap (gen-id #'type "unwrap-" #'type))
+		     (wrap (gen-id #'type "wrap-" #'type))
+		     (unwrap* (gen-id #'type "unwrap-" #'type "*")))
          #'(begin
 	     (define desc int)
 	     (define wrap
@@ -157,20 +157,12 @@
 ;; @end deffn
 (define-syntax define-fh-pointer-type
   (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type desc)			; based on bytestructure
-       (with-syntax ((make (gen-id x "make-" #'type))
-		     (type? (gen-id x #'type "?"))
-		     (wrap (gen-id x "wrap-" #'type))
-		     (unwrap (gen-id x "unwrap-" #'type)))
+       (with-syntax ((make (gen-id #'type "make-" #'type))
+		     (type? (gen-id #'type #'type "?"))
+		     (wrap (gen-id #'type "wrap-" #'type))
+		     (unwrap (gen-id #'type "unwrap-" #'type)))
 	 #'(begin
 	     (define (make val)
 	       (cond
@@ -199,10 +191,10 @@
        ;; ...
        ;; (define struct-foo-desc (bs:struct ...))
        ;; (set! foo_t-desc struct-foo-desc)
-       (with-syntax ((desc (gen-id x "make-" #'type))
-		     (type? (gen-id x #'type "?"))
-		     (wrap (gen-id x "wrap-" #'type))
-		     (unwrap (gen-id x "unwrap-" #'type)))
+       (with-syntax ((desc (gen-id #'type "make-" #'type))
+		     (type? (gen-id #'type #'type "?"))
+		     (wrap (gen-id #'type "wrap-" #'type))
+		     (unwrap (gen-id #'type "unwrap-" #'type)))
 	 #'(begin
 	     (define-fh-pointer-type type (bs:pointer void))
 	     )))
@@ -217,21 +209,13 @@
 ;; @end deffn
 (define-syntax define-fh-compound-type
   (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type desc)
-       (with-syntax ((unwrap (gen-id x "unwrap-" #'type))
-		     (type? (gen-id x #'type "?"))
-		     (make (gen-id x "make-" #'type))
-		     (wrap (gen-id x "wrap-" #'type))
-		     (bs-ref (gen-id x #'type "-bs-ref")))
+       (with-syntax ((unwrap (gen-id #'type "unwrap-" #'type))
+		     (type? (gen-id #'type #'type "?"))
+		     (make (gen-id #'type "make-" #'type))
+		     (wrap (gen-id #'type "wrap-" #'type))
+		     (bs-ref (gen-id #'type #'type "-bs-ref")))
 	 #'(begin
 	     (define (unwrap obj)
 	       (bytestructure-bytevector (struct-ref obj 0)))
@@ -264,18 +248,11 @@
 ;; @end deffn
 (define-syntax ref<->deref!
   (lambda (x)
-    (define (gen-id tmpl-id . args)
-      (define (stx->str stx) (symbol->string (syntax->datum stx)))
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ p-type type)
-       (with-syntax ((p-make (gen-id x "make-" #'type "*"))
-		     (p-desc (gen-id x  #'type "*-desc"))
-		     (make (gen-id x "make-" #'type)))
+       (with-syntax ((p-make (gen-id #'type "make-" #'type "*"))
+		     (p-desc (gen-id #'type  #'type "*-desc"))
+		     (make (gen-id #'type "make-" #'type)))
 	 #'(begin
 	     (struct-set!		; pointer-to
 	      type (+ vtable-offset-user 1)
@@ -289,20 +266,12 @@
 
 (define-syntax define-fh-compound-type/p
   (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ type desc)
-       (with-syntax ((p-type (gen-id x #'type "*"))
-		     (p-desc (gen-id x #'type "*-desc"))
-		     (p-make (gen-id x "make-" #'type "*"))
-		     (make (gen-id x "make-" #'type)))
+       (with-syntax ((p-type (gen-id #'type #'type "*"))
+		     (p-desc (gen-id #'type #'type "*-desc"))
+		     (p-make (gen-id #'type "make-" #'type "*"))
+		     (make (gen-id #'type "make-" #'type)))
 	 #'(begin
 	     (define-fh-compound-type type desc)
 	     (define p-desc (bs:pointer desc))
@@ -319,46 +288,33 @@
 ;; @end deffn
 (define-syntax define-fh-function
   (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ name return-t args-t)
-       (with-syntax ((desc (gen-id x #'name "-desc"))
-		     (wrap (gen-id x "wrap-" #'name))
-		     (unwrap (gen-id x "unwrap-" #'name)))
+       (with-syntax ((wrap (gen-id #'name "wrap-" #'name))
+		     (unwrap (gen-id #'name "unwrap-" #'name)))
+	 #'(define-fh-function name return-t args-t wrap unwrap)))
+      ((_ name return-t args-t wrap unwrap)
+       (with-syntax ((desc (gen-id #'name #'name "-desc")))
 	 #'(begin
 	     (define desc (bs:pointer void))
-	     (define (unwrap ptr)
-	       (ffi:procedure->pointer return-t ptr args-t))
 	     (define (wrap proc)
 	       (ffi:pointer->procedure return-t proc args-t))
-	     (export desc unwrap wrap)))))))
+	     (define (unwrap ptr)
+	       (ffi:procedure->pointer return-t ptr args-t))
+	     (export desc unwrap wrap))))
+       )))
 
 (define-syntax define-fh-function/p
   (lambda (x)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (define (gen-id tmpl-id . args)
-      (datum->syntax
-       tmpl-id
-       (string->symbol
-	(apply string-append
-	       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ name return-t args-t)
-       (with-syntax ((wrap (gen-id x "wrap-" #'name))
-		     (unwrap (gen-id x "unwrap-" #'name))
-		     (desc* (gen-id x #'name "*-desc"))
-		     (wrap* (gen-id x "wrap-" #'name "*"))
-		     (unwrap* (gen-id x "unwrap-" #'name "*")))
+       (with-syntax ((wrap (gen-id #'name "wrap-" #'name))
+		     (unwrap (gen-id #'name "unwrap-" #'name))
+		     (desc* (gen-id #'name #'name "*-desc"))
+		     (wrap* (gen-id #'name "wrap-" #'name "*"))
+		     (unwrap* (gen-id #'name "unwrap-" #'name "*")))
 	 #'(begin
-	     (define-fh-function name return-t args-t)
+	     (define-fh-function name return-t args-t wrap unwrap)
 	     (define desc* (bs:pointer intptr_t))
 	     (define wrap* wrap)
 	     (define unwrap* unwrap)
