@@ -39,17 +39,17 @@
      '(trans-unit
        (cpp-stmt
 	(include
+	 (@ (path "exam.d/ex14.h"))
 	 "\"ex14.h\""
 	 (trans-unit
-	  (decl (decl-spec-list
+          (decl (decl-spec-list
 		 (stor-spec (typedef))
 		 (type-spec (fixed-type "int")))
-		(init-declr-list (init-declr (ident "eval_t")))))))
+                (init-declr-list (init-declr (ident "eval_t")))))))
        (cpp-stmt (define (name "ABC") (repl "")))
        (decl (decl-spec-list (type-spec (typename "eval_t")))
 	     (init-declr-list (init-declr (ident "x"))))
        (comment " used by c99-04.test "))))
-  
   )
 
 ;; --- last line ---

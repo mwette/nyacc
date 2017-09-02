@@ -1,8 +1,10 @@
-;; glib-object.ffi
+;; glib-object.ffi			-*- Scheme -*-
 
 (define-ffi-module (glib-object)
   #:pkg-config "gobject-2.0"
   #:include '("glib-object.h")
+  #:inc-filter (lambda (file-spec path-spec)
+		 (string-contains path-spec "gobject/" 0))
   )
 
 ;; --- last line ---

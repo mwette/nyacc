@@ -94,6 +94,18 @@
   ;; (code "typedef enum { LOC = 1, REM, ALL = LOC | REM } foo_t;\n")
   ;; should produce LOC = 1, REM = 2, ALL = 3 
 
+  #;(pass-if "knarly expand-typeref case"
+    (let ((code (string-append
+	      "typedef struct foo foo_t;\n"
+	      "struct foo {\n"
+	      "int (*bar)(foo_t*);"
+	      "};\n"
+	      "int baz(foo_t*);"
+	      ))
+	   (udict (c100-trans-unit->udict tree))
+           (udecl (udict-ref udict "baz")))
+       (pair? (expand-typerefs udecl udict '(foo_t)))))
+
   )
 
 ;; --- last line ---

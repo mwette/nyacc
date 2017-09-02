@@ -251,7 +251,7 @@
     ;;(sfscm "(define link-lib (dynamic-link ~S))\n" library)
     (sfscm "(dynamic-link ~S)\n" library)
     ;;(sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")
-    (sfscm "(define void intptr_t) ;; no void in bytestructures\n")
+    (sfscm "(define void intptr_t)\n")
     (sfscm "(define echo-decls #f)\n")
     ))
 
@@ -306,6 +306,7 @@
        (or (assoc-ref bs-typemap name)
 	   (string->symbol (string-append name "-desc"))))
 
+      (((void)) 'void)
       (((fixed-type "char")) 'int)
       (((fixed-type "unsigned char")) 'unsigned-int)
       (((fixed-type ,fx-name)) (assoc-ref bs-typemap fx-name))
@@ -355,6 +356,9 @@
        (let () ;; TODO: check for struct-def ???
 	 `(bs:pointer void)))
 
+      (((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
+       `(bs:pointer void))
+      
       #;(((pointer-to) (struct-ref (ident ,name)))
        (let ()
       #f))
@@ -553,6 +557,14 @@
 	(cons (mspec->ffi-sym mspec)
 	      (iter (1+ ix) (cdr params))))))))
 
+;; Yikes.  I have type defined, but don't want to keep it. ???
+;; I think that if a pointer is not a keeper, then just use void* ?
+;; More complicated.  If a pointer is not a keeper but is struct type
+;; then replace with void*
+;;(display "I found it.
+;; For ffi-decl want only ffi-types but expand typerefs...\n")
+;;(display "NEED TO FIX util2 pointer-declr? !\n")
+
 ;; === function calls : unwrap args, call, wrap return
 
 ;; given mspec for an exec argument give the unwrapper
@@ -716,7 +728,8 @@
 
 ;; === externs ========================
 
-(define (cnvt-extern name ms-tail)
+;; works
+(define (OLD-cnvt-extern name ms-tail)
   (let* ((desc (mtail->bs-desc ms-tail))
 	 (desc-name (string->symbol (string-append name "-desc")))
 	 (code `(define ,(string->symbol name)
@@ -727,6 +740,21 @@
 		      (bytestructure-ref (bytestructure desc* addr) '*))))))
     (ppscm code)
     (sfscm "(export ~A)\n" name)))
+(define (cnvt-extern name ms-tail)
+  (let* ((desc (mtail->bs-desc ms-tail))
+	 (desc-name (string->symbol (string-append name "-desc")))
+	 (code `(define ,(string->symbol name)
+		  (let* ((addr (dynamic-pointer ,name (dynamic-link)))
+			 (bs* (make-bytestructure
+			       (ffi:pointer->bytevector addr (sizeof '*)) 0
+			       (bs:pointer ,desc))))
+		    (case-lambda
+		     (() (bytestructure-ref bs* '*))
+		     ;;((val) (bytestructure-set! bs* '*))
+		     )))))
+    (ppscm code)
+    (sfscm "(export ~A)\n" name)))
+
 
 
 ;; ------------------------------------
@@ -774,6 +802,7 @@
 ;; Return updated (string based) keep-list, which will be modified if the
 ;; declaration is a typedef.  The typelist is the set of keepers used for
 ;; @code{udecl->mspec}.
+;; Returns values wrapped, defined.
 ;; @end deffn
 (define (cnvt-udecl udecl udict wrapped defined)
   ;; This is a bit sloppy in that we have to know if the converters are
@@ -901,7 +930,7 @@
        (sfscm "(define-fh-pointer-type ~A* ~A*-desc)\n" typename typename)
        (values
 	(cons typename wrapped)
-	(cons typename defined))) ;; ???
+	(cons typename defined)))
 
       ;; typedef struct foo *foo_t;
       ;; TODO: check for forward reference
@@ -1233,8 +1262,11 @@
 		    (map
 		     (lambda (inc-file)
 		       (string-append "#include \"" inc-file "\"\n"))
-		     inc-files) "")))
-	
+		     inc-files) ""))
+
+	     ;;(inc-dirs (cons "." inc-dirs)) ;; FOR DEBUGGING
+	     )
+
 	;;(sferr "inc-dirs:\n") (pperr inc-dirs)
 	;;(sferr "cpp-defs:\n") (pperr cpp-defs)
 	(with-input-from-string prog
@@ -1315,13 +1347,14 @@
 	   (cond
 	    (saw-last (values wrapped defined))
 	    ((and ;; Process the declaration if all conditions met:
+	      ;;(equal? name '(struct . "_RsvgHandleClass"))
 	      (declf name)		   ; 1) user wants it
 	      (not (member name wrapped))  ; 2) not already wrapped
 	      (not (and (pair? name)	   ; 3) not anonymous
 			(string=? "*anon*" (cdr name)))))
-	     ;;(sferr "~S\n" (car pair))
-	     (if (and (string? name)
-		      (string=? "Xgdbm_version" name))
+	     ;;(sferr "~A\n" name)
+	     (if (and #f (pair? name) ;;(string? name)
+		      (string=? "_RsvgHandleClass" (cdr name)))
 		 (set! saw-last #t))
 	     (let ((udecl (udict-ref udict name)))
 	       (nlscm) (c99scm udecl)

@@ -55,6 +55,9 @@
     (let* ((sx (parse-file "exam.d/ex05.c")))
       (pair? sx)))
 
+  ;; 
+
   )
+(display "c99-02: need to test typedef inside function -- BROKEN?\n")
 
 ;; --- last line ---

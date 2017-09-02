@@ -393,6 +393,9 @@
       ((comp-declr ,declr) (comp declr #f))
       ((param-declr ,declr) (comp declr #f))
 
+      ((bit-field ,ident ,expr)
+       (ppx ident) (sf " : ") (ppx expr))
+
       ((type-spec ,arg)
        (case (sx-tag arg)
 	 ((fixed-type) (sf "~A" (sx-ref arg 1)))

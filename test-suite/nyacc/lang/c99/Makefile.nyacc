@@ -19,7 +19,6 @@ TESTS = \
 	c99-03.test				\
 	c99-04.test				\
 	c99-05.test				\
-	c99-06.test				\
 	#
 
 check: check-TESTS

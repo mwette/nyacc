@@ -1,4 +1,5 @@
 ;; examples/nyacc/lang/c99/tryit.scm
+;;(debug-set! stack 750)
 
 (use-modules (srfi srfi-1))
 (use-modules (nyacc lang c99 parser))
@@ -24,6 +25,8 @@
 (define inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir)
+     "/opt/local/include/glib-2.0"
+     "/opt/local/lib/glib-2.0/include"
      "/usr/include")
    (get-gcc-inc-dirs)))
 (define inc-help
@@ -88,37 +91,36 @@
 
 (define adecl #f)
 (let* ((code "struct foo { int x, y; } *a, b;\n") (indx 1)
-       (code "typedef int *foo_t[4]; foo_t bar[3], *baz;\n") (indx 2)
        (code (string-append
-	      "struct foo { int a; double b; };\n"
-	      "struct foo x;\n"))
-       (code "typedef int (*cb)(int *out, int *owner, void *param);\n")
-       (code (string-append
-	      "typedef enum { LOC = 1, REM, ALL = LOC | REM + 4} foo_t;\n"
-	      "typedef enum { FOO = 1, BAR, BAZ = FOO | REM + 8} bar_t;\n"
+	      "typedef struct foo foo_t;\n"
+	      "struct foo {\n"
+	      "int (*bar)(foo_t*);"
+	      "} x;\n"
+	      "int baz(foo_t*);"
 	      ))
-       ;;(code "enum { A =12, B = 10, C, D = 1000, E };\n")
        (indx 2)
-       ;;(tree (parse-string code))
+       (tree (parse-string code))
        ;;(tree (parse-c99x code))
-       (tree (parse-file ",ex1.c"))
+       ;;(tree (parse-file "zz4.c"))
        
-       ;;(udict (c99-trans-unit->udict tree))
+       (udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
-       ;;(udecl (udict-ref udict "foo_t"))
+       (udecl '(param-decl (decl-spec-list (type-spec (typename "foo_t")))
+			   (param-declr (abs-declr (pointer)))))
+       (udecl (udict-ref udict "baz"))
+       (udecl (sx-ref tree 2))
        ;;(mspec (udecl->mspec udecl))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs decl udict))
        )
   ;;(display code)
-  (ppsx tree)
+  ;;(ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx udict)
+  (ppsx udecl)
+  (ppsx (expand-typerefs udecl udict '("foo_t")))
   ;;(ppsx ddict)
-  ;;(ppsx edefl)
   ;;(display "==\n")
-  ;;(ppsx (canize-enum-def-list edefl))
-  ;;(ppsx (udict-enums->ddict udict))
   ;;(set! adecl decl)
   #t)
 

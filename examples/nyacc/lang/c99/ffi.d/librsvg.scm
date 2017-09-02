@@ -13,7 +13,7 @@
 (dynamic-link "libintl")
 (dynamic-link "libcairo")
 (dynamic-link "librsvg-2")
-(define void intptr_t) ;; no void in bytestructures
+(define void intptr_t)
 (define echo-decls #f)
 
 ;; GType rsvg_handle_get_type(void);
@@ -86,8 +86,9 @@
   (bs:struct
     (list `(parent
              ,(bs:struct
-                (list `(g_type_class ,GTypeClass-desc)
-                      `(construct_properties ,(bs:pointer GSList*-desc))
+                (list `(g_type_class
+                         ,(bs:struct (list `(g_type ,unsigned-long))))
+                      `(construct_properties ,(bs:pointer void))
                       `(constructor ,(bs:pointer void))
                       `(set_property ,(bs:pointer void))
                       `(get_property ,(bs:pointer void))
@@ -96,9 +97,9 @@
                       `(dispatch_properties_changed ,(bs:pointer void))
                       `(notify ,(bs:pointer void))
                       `(constructed ,(bs:pointer void))
-                      `(flags ,gsize-desc)
-                      `(pdummy ,(bs:vector 6 gpointer-desc)))))
-          `(_abi_padding ,(bs:vector 15 (bs:pointer void))))))
+                      `(flags ,unsigned-long)
+                      `(pdummy ,(bs:vector 6 void)))))
+          `(_abi_padding ,(bs:vector 15 void)))))
 (export struct-_RsvgHandleClass-desc)
 (define-fh-compound-type/p struct-_RsvgHandleClass struct-_RsvgHandleClass-desc)
 (set! RsvgHandleClass-desc struct-_RsvgHandleClass-desc)
@@ -115,11 +116,12 @@
   (bs:struct
     (list `(parent
              ,(bs:struct
-                (list `(g_type_instance ,GTypeInstance-desc)
-                      `(ref_count ,guint-desc)
-                      `(qdata ,(bs:pointer GData*-desc)))))
+                (list `(g_type_instance
+                         ,(bs:struct (list `(g_class ,(bs:pointer void)))))
+                      `(ref_count ,unsigned-int)
+                      `(qdata ,(bs:pointer void)))))
           `(priv ,(bs:pointer RsvgHandlePrivate*-desc))
-          `(_abi_padding ,(bs:vector 15 (bs:pointer void))))))
+          `(_abi_padding ,(bs:vector 15 void)))))
 (export struct-_RsvgHandle-desc)
 (define-fh-compound-type/p struct-_RsvgHandle struct-_RsvgHandle-desc)
 (set! RsvgHandle-desc struct-_RsvgHandle-desc)
@@ -412,7 +414,7 @@
                 (dynamic-link))
               (list ffi:int))))
     (lambda (flags)
-      (let ((~flags (unwrap-RsvgHandleFlags flags)))
+      (let ((~flags (unwrap~fixed flags)))
         (wrap-RsvgHandle* (~f ~flags))))))
 (export rsvg_handle_new_with_flags)
 
@@ -461,7 +463,7 @@
               (list '* ffi:int '* '*))))
     (lambda (file flags cancellable error)
       (let ((~file (unwrap~pointer file))
-            (~flags (unwrap-RsvgHandleFlags flags))
+            (~flags (unwrap~fixed flags))
             (~cancellable (unwrap~pointer cancellable))
             (~error (unwrap~pointer error)))
         (wrap-RsvgHandle*
@@ -482,7 +484,7 @@
     (lambda (input_stream base_file flags cancellable error)
       (let ((~input_stream (unwrap~pointer input_stream))
             (~base_file (unwrap~pointer base_file))
-            (~flags (unwrap-RsvgHandleFlags flags))
+            (~flags (unwrap~fixed flags))
             (~cancellable (unwrap~pointer cancellable))
             (~error (unwrap~pointer error)))
         (wrap-RsvgHandle*
@@ -576,7 +578,9 @@
               (list '* '* '* '*))))
     (lambda (handle size_func user_data user_data_destroy)
       (let ((~handle (unwrap-RsvgHandle* handle))
-            (~size_func (unwrap-RsvgSizeFunc size_func))
+            (~size_func
+              ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
+               size_func))
             (~user_data (unwrap~pointer user_data))
             (~user_data_destroy
               ((make-ftn-arg-unwrapper ffi:void (list '*))

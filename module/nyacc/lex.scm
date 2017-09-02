@@ -84,7 +84,8 @@
 (define c:hx (string->char-set "abcdefABCDEF"))
 (define c:sx (string->char-set "lLuU")) ; suffix
 
-(define (lxlsr chl) (list->string (reverse chl))) ; used often
+;;(define (lxlsr chl) (list->string (reverse chl))) ; used often
+(define lxlsr reverse-list->string)
 
 ;; @deffn {Procedure} eval-reader reader string => result
 ;; For test and debug, this procedure will evaluate a reader on a string.

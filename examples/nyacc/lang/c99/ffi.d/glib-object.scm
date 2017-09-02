@@ -8,760 +8,2268 @@
 (dynamic-link "libglib-2.0")
 (dynamic-link "libintl")
 (dynamic-link "libgobject-2.0")
+(define void intptr_t)
+(define echo-decls #f)
 
-;; access to enum symbols and #define'd constants:
-(define glib-object-symbol-val
-  (let ((sym-tab
-          '((_CLOCK_THREAD_CPUTIME_ID . 16)
-            (_CLOCK_PROCESS_CPUTIME_ID . 12)
-            (_CLOCK_UPTIME_RAW_APPROX . 9)
-            (_CLOCK_UPTIME_RAW . 8)
-            (_CLOCK_MONOTONIC_RAW_APPROX . 5)
-            (_CLOCK_MONOTONIC_RAW . 4)
-            (_CLOCK_MONOTONIC . 6)
-            (_CLOCK_REALTIME . 0)
-            (G_USER_N_DIRECTORIES . 8)
-            (G_USER_DIRECTORY_VIDEOS . 7)
-            (G_USER_DIRECTORY_TEMPLATES . 6)
-            (G_USER_DIRECTORY_PUBLIC_SHARE . 5)
-            (G_USER_DIRECTORY_PICTURES . 4)
-            (G_USER_DIRECTORY_MUSIC . 3)
-            (G_USER_DIRECTORY_DOWNLOAD . 2)
-            (G_USER_DIRECTORY_DOCUMENTS . 1)
-            (G_USER_DIRECTORY_DESKTOP . 0)
-            (G_FORMAT_SIZE_IEC_UNITS . 2)
-            (G_FORMAT_SIZE_LONG_FORMAT . 1)
-            (G_FORMAT_SIZE_DEFAULT . 0)
-            (G_THREAD_ERROR_AGAIN . 0)
-            (G_ONCE_STATUS_READY . 2)
-            (G_ONCE_STATUS_PROGRESS . 1)
-            (G_ONCE_STATUS_NOTCALLED . 0)
-            (G_BOOKMARK_FILE_ERROR_FILE_NOT_FOUND . 7)
-            (G_BOOKMARK_FILE_ERROR_WRITE . 6)
-            (G_BOOKMARK_FILE_ERROR_UNKNOWN_ENCODING . 5)
-            (G_BOOKMARK_FILE_ERROR_READ . 4)
-            (G_BOOKMARK_FILE_ERROR_URI_NOT_FOUND . 3)
-            (G_BOOKMARK_FILE_ERROR_APP_NOT_REGISTERED . 2)
-            (G_BOOKMARK_FILE_ERROR_INVALID_VALUE . 1)
-            (G_BOOKMARK_FILE_ERROR_INVALID_URI . 0)
-            (G_CHECKSUM_SHA384 . 4)
-            (G_CHECKSUM_SHA512 . 3)
-            (G_CHECKSUM_SHA256 . 2)
-            (G_CHECKSUM_SHA1 . 1)
-            (G_CHECKSUM_MD5 . 0)
-            (G_CONVERT_ERROR_NO_MEMORY . 6)
-            (G_CONVERT_ERROR_NOT_ABSOLUTE_PATH . 5)
-            (G_CONVERT_ERROR_BAD_URI . 4)
-            (G_CONVERT_ERROR_PARTIAL_INPUT . 3)
-            (G_CONVERT_ERROR_FAILED . 2)
-            (G_CONVERT_ERROR_ILLEGAL_SEQUENCE . 1)
-            (G_CONVERT_ERROR_NO_CONVERSION . 0)
-            (G_DATE_YEAR . 2)
-            (G_DATE_MONTH . 1)
-            (G_DATE_DAY . 0)
-            (G_DATE_SUNDAY . 7)
-            (G_DATE_SATURDAY . 6)
-            (G_DATE_FRIDAY . 5)
-            (G_DATE_THURSDAY . 4)
-            (G_DATE_WEDNESDAY . 3)
-            (G_DATE_TUESDAY . 2)
-            (G_DATE_MONDAY . 1)
-            (G_DATE_BAD_WEEKDAY . 0)
-            (G_DATE_DECEMBER . 12)
-            (G_DATE_NOVEMBER . 11)
-            (G_DATE_OCTOBER . 10)
-            (G_DATE_SEPTEMBER . 9)
-            (G_DATE_AUGUST . 8)
-            (G_DATE_JULY . 7)
-            (G_DATE_JUNE . 6)
-            (G_DATE_MAY . 5)
-            (G_DATE_APRIL . 4)
-            (G_DATE_MARCH . 3)
-            (G_DATE_FEBRUARY . 2)
-            (G_DATE_JANUARY . 1)
-            (G_DATE_BAD_MONTH . 0)
-            (G_TIME_TYPE_UNIVERSAL . 2)
-            (G_TIME_TYPE_DAYLIGHT . 1)
-            (G_TIME_TYPE_STANDARD . 0)
-            (G_FILE_ERROR_FAILED . 24)
-            (G_FILE_ERROR_NOSYS . 23)
-            (G_FILE_ERROR_PERM . 22)
-            (G_FILE_ERROR_IO . 21)
-            (G_FILE_ERROR_INTR . 20)
-            (G_FILE_ERROR_AGAIN . 19)
-            (G_FILE_ERROR_PIPE . 18)
-            (G_FILE_ERROR_INVAL . 17)
-            (G_FILE_ERROR_BADF . 16)
-            (G_FILE_ERROR_NFILE . 15)
-            (G_FILE_ERROR_MFILE . 14)
-            (G_FILE_ERROR_NOMEM . 13)
-            (G_FILE_ERROR_NOSPC . 12)
-            (G_FILE_ERROR_LOOP . 11)
-            (G_FILE_ERROR_FAULT . 10)
-            (G_FILE_ERROR_TXTBSY . 9)
-            (G_FILE_ERROR_ROFS . 8)
-            (G_FILE_ERROR_NODEV . 7)
-            (G_FILE_ERROR_NXIO . 6)
-            (G_FILE_ERROR_NOTDIR . 5)
-            (G_FILE_ERROR_NOENT . 4)
-            (G_FILE_ERROR_NAMETOOLONG . 3)
-            (G_FILE_ERROR_ACCES . 2)
-            (G_FILE_ERROR_ISDIR . 1)
-            (G_FILE_ERROR_EXIST . 0)
-            (G_FILE_TEST_EXISTS . 16)
-            (G_FILE_TEST_IS_EXECUTABLE . 8)
-            (G_FILE_TEST_IS_DIR . 4)
-            (G_FILE_TEST_IS_SYMLINK . 2)
-            (G_FILE_TEST_IS_REGULAR . 1)
-            (G_TRAVERSE_NON_LEAFS . 0)
-            (G_TRAVERSE_LEAFS . 0)
-            (G_TRAVERSE_MASK . 3)
-            (G_TRAVERSE_ALL . 0)
-            (G_TRAVERSE_NON_LEAVES . 2)
-            (G_TRAVERSE_LEAVES . 1)
-            (G_LEVEL_ORDER . 3)
-            (G_POST_ORDER . 2)
-            (G_PRE_ORDER . 1)
-            (G_IN_ORDER . 0)
-            (G_HOOK_FLAG_MASK . 15)
-            (G_HOOK_FLAG_IN_CALL . 2)
-            (G_HOOK_FLAG_ACTIVE . 1)
-            (G_IO_NVAL . 32)
-            (G_IO_HUP . 16)
-            (G_IO_ERR . 8)
-            (G_IO_PRI . 2)
-            (G_IO_OUT . 4)
-            (G_IO_IN . 1)
-            (G_UNICODE_SPACE_SEPARATOR . 29)
-            (G_UNICODE_PARAGRAPH_SEPARATOR . 28)
-            (G_UNICODE_LINE_SEPARATOR . 27)
-            (G_UNICODE_OTHER_SYMBOL . 26)
-            (G_UNICODE_MATH_SYMBOL . 25)
-            (G_UNICODE_MODIFIER_SYMBOL . 24)
-            (G_UNICODE_CURRENCY_SYMBOL . 23)
-            (G_UNICODE_OPEN_PUNCTUATION . 22)
-            (G_UNICODE_OTHER_PUNCTUATION . 21)
-            (G_UNICODE_INITIAL_PUNCTUATION . 20)
-            (G_UNICODE_FINAL_PUNCTUATION . 19)
-            (G_UNICODE_CLOSE_PUNCTUATION . 18)
-            (G_UNICODE_DASH_PUNCTUATION . 17)
-            (G_UNICODE_CONNECT_PUNCTUATION . 16)
-            (G_UNICODE_OTHER_NUMBER . 15)
-            (G_UNICODE_LETTER_NUMBER . 14)
-            (G_UNICODE_DECIMAL_NUMBER . 13)
-            (G_UNICODE_NON_SPACING_MARK . 12)
-            (G_UNICODE_ENCLOSING_MARK . 11)
-            (G_UNICODE_SPACING_MARK . 10)
-            (G_UNICODE_UPPERCASE_LETTER . 9)
-            (G_UNICODE_TITLECASE_LETTER . 8)
-            (G_UNICODE_OTHER_LETTER . 7)
-            (G_UNICODE_MODIFIER_LETTER . 6)
-            (G_UNICODE_LOWERCASE_LETTER . 5)
-            (G_UNICODE_SURROGATE . 4)
-            (G_UNICODE_PRIVATE_USE . 3)
-            (G_UNICODE_UNASSIGNED . 2)
-            (G_UNICODE_FORMAT . 1)
-            (G_UNICODE_CONTROL . 0)
-            (G_UNICODE_BREAK_ZERO_WIDTH_JOINER . 42)
-            (G_UNICODE_BREAK_EMOJI_MODIFIER . 41)
-            (G_UNICODE_BREAK_EMOJI_BASE . 40)
-            (G_UNICODE_BREAK_REGIONAL_INDICATOR . 39)
-            (G_UNICODE_BREAK_HEBREW_LETTER . 38)
-            (G_UNICODE_BREAK_CONDITIONAL_JAPANESE_STARTER
-              .
-              37)
-            (G_UNICODE_BREAK_CLOSE_PARANTHESIS . 36)
-            (G_UNICODE_BREAK_HANGUL_LVT_SYLLABLE . 35)
-            (G_UNICODE_BREAK_HANGUL_LV_SYLLABLE . 34)
-            (G_UNICODE_BREAK_HANGUL_T_JAMO . 33)
-            (G_UNICODE_BREAK_HANGUL_V_JAMO . 32)
-            (G_UNICODE_BREAK_HANGUL_L_JAMO . 31)
-            (G_UNICODE_BREAK_WORD_JOINER . 30)
-            (G_UNICODE_BREAK_NEXT_LINE . 29)
-            (G_UNICODE_BREAK_UNKNOWN . 28)
-            (G_UNICODE_BREAK_AMBIGUOUS . 27)
-            (G_UNICODE_BREAK_COMPLEX_CONTEXT . 26)
-            (G_UNICODE_BREAK_POSTFIX . 25)
-            (G_UNICODE_BREAK_PREFIX . 24)
-            (G_UNICODE_BREAK_ALPHABETIC . 23)
-            (G_UNICODE_BREAK_SYMBOL . 22)
-            (G_UNICODE_BREAK_INFIX_SEPARATOR . 21)
-            (G_UNICODE_BREAK_NUMERIC . 20)
-            (G_UNICODE_BREAK_IDEOGRAPHIC . 19)
-            (G_UNICODE_BREAK_EXCLAMATION . 18)
-            (G_UNICODE_BREAK_QUOTATION . 17)
-            (G_UNICODE_BREAK_CLOSE_PUNCTUATION . 16)
-            (G_UNICODE_BREAK_OPEN_PUNCTUATION . 15)
-            (G_UNICODE_BREAK_NON_STARTER . 14)
-            (G_UNICODE_BREAK_HYPHEN . 13)
-            (G_UNICODE_BREAK_BEFORE_AND_AFTER . 12)
-            (G_UNICODE_BREAK_BEFORE . 11)
-            (G_UNICODE_BREAK_AFTER . 10)
-            (G_UNICODE_BREAK_SPACE . 9)
-            (G_UNICODE_BREAK_CONTINGENT . 8)
-            (G_UNICODE_BREAK_NON_BREAKING_GLUE . 7)
-            (G_UNICODE_BREAK_INSEPARABLE . 6)
-            (G_UNICODE_BREAK_ZERO_WIDTH_SPACE . 5)
-            (G_UNICODE_BREAK_SURROGATE . 4)
-            (G_UNICODE_BREAK_COMBINING_MARK . 3)
-            (G_UNICODE_BREAK_LINE_FEED . 2)
-            (G_UNICODE_BREAK_CARRIAGE_RETURN . 1)
-            (G_UNICODE_BREAK_MANDATORY . 0)
-            (G_UNICODE_SCRIPT_TANGUT . 137)
-            (G_UNICODE_SCRIPT_OSAGE . 136)
-            (G_UNICODE_SCRIPT_NEWA . 135)
-            (G_UNICODE_SCRIPT_MARCHEN . 134)
-            (G_UNICODE_SCRIPT_BHAIKSUKI . 133)
-            (G_UNICODE_SCRIPT_ADLAM . 132)
-            (G_UNICODE_SCRIPT_SIGNWRITING . 131)
-            (G_UNICODE_SCRIPT_OLD_HUNGARIAN . 130)
-            (G_UNICODE_SCRIPT_MULTANI . 129)
-            (G_UNICODE_SCRIPT_HATRAN . 128)
-            (G_UNICODE_SCRIPT_ANATOLIAN_HIEROGLYPHS . 127)
-            (G_UNICODE_SCRIPT_AHOM . 126)
-            (G_UNICODE_SCRIPT_WARANG_CITI . 125)
-            (G_UNICODE_SCRIPT_TIRHUTA . 124)
-            (G_UNICODE_SCRIPT_SIDDHAM . 123)
-            (G_UNICODE_SCRIPT_PSALTER_PAHLAVI . 122)
-            (G_UNICODE_SCRIPT_PAU_CIN_HAU . 121)
-            (G_UNICODE_SCRIPT_PALMYRENE . 120)
-            (G_UNICODE_SCRIPT_PAHAWH_HMONG . 119)
-            (G_UNICODE_SCRIPT_OLD_PERMIC . 118)
-            (G_UNICODE_SCRIPT_OLD_NORTH_ARABIAN . 117)
-            (G_UNICODE_SCRIPT_NABATAEAN . 116)
-            (G_UNICODE_SCRIPT_MRO . 115)
-            (G_UNICODE_SCRIPT_MODI . 114)
-            (G_UNICODE_SCRIPT_MENDE_KIKAKUI . 113)
-            (G_UNICODE_SCRIPT_MANICHAEAN . 112)
-            (G_UNICODE_SCRIPT_MAHAJANI . 111)
-            (G_UNICODE_SCRIPT_LINEAR_A . 110)
-            (G_UNICODE_SCRIPT_KHUDAWADI . 109)
-            (G_UNICODE_SCRIPT_KHOJKI . 108)
-            (G_UNICODE_SCRIPT_GRANTHA . 107)
-            (G_UNICODE_SCRIPT_ELBASAN . 106)
-            (G_UNICODE_SCRIPT_DUPLOYAN . 105)
-            (G_UNICODE_SCRIPT_CAUCASIAN_ALBANIAN . 104)
-            (G_UNICODE_SCRIPT_BASSA_VAH . 103)
-            (G_UNICODE_SCRIPT_TAKRI . 102)
-            (G_UNICODE_SCRIPT_SORA_SOMPENG . 101)
-            (G_UNICODE_SCRIPT_SHARADA . 100)
-            (G_UNICODE_SCRIPT_MIAO . 99)
-            (G_UNICODE_SCRIPT_MEROITIC_HIEROGLYPHS . 98)
-            (G_UNICODE_SCRIPT_MEROITIC_CURSIVE . 97)
-            (G_UNICODE_SCRIPT_CHAKMA . 96)
-            (G_UNICODE_SCRIPT_MANDAIC . 95)
-            (G_UNICODE_SCRIPT_BRAHMI . 94)
-            (G_UNICODE_SCRIPT_BATAK . 93)
-            (G_UNICODE_SCRIPT_TAI_VIET . 92)
-            (G_UNICODE_SCRIPT_TAI_THAM . 91)
-            (G_UNICODE_SCRIPT_SAMARITAN . 90)
-            (G_UNICODE_SCRIPT_OLD_TURKIC . 89)
-            (G_UNICODE_SCRIPT_OLD_SOUTH_ARABIAN . 88)
-            (G_UNICODE_SCRIPT_MEETEI_MAYEK . 87)
-            (G_UNICODE_SCRIPT_LISU . 86)
-            (G_UNICODE_SCRIPT_KAITHI . 85)
-            (G_UNICODE_SCRIPT_JAVANESE . 84)
-            (G_UNICODE_SCRIPT_INSCRIPTIONAL_PARTHIAN . 83)
-            (G_UNICODE_SCRIPT_INSCRIPTIONAL_PAHLAVI . 82)
-            (G_UNICODE_SCRIPT_IMPERIAL_ARAMAIC . 81)
-            (G_UNICODE_SCRIPT_EGYPTIAN_HIEROGLYPHS . 80)
-            (G_UNICODE_SCRIPT_BAMUM . 79)
-            (G_UNICODE_SCRIPT_AVESTAN . 78)
-            (G_UNICODE_SCRIPT_LYDIAN . 77)
-            (G_UNICODE_SCRIPT_LYCIAN . 76)
-            (G_UNICODE_SCRIPT_CARIAN . 75)
-            (G_UNICODE_SCRIPT_VAI . 74)
-            (G_UNICODE_SCRIPT_OL_CHIKI . 73)
-            (G_UNICODE_SCRIPT_CHAM . 72)
-            (G_UNICODE_SCRIPT_SAURASHTRA . 71)
-            (G_UNICODE_SCRIPT_SUNDANESE . 70)
-            (G_UNICODE_SCRIPT_REJANG . 69)
-            (G_UNICODE_SCRIPT_LEPCHA . 68)
-            (G_UNICODE_SCRIPT_KAYAH_LI . 67)
-            (G_UNICODE_SCRIPT_NKO . 66)
-            (G_UNICODE_SCRIPT_PHAGS_PA . 65)
-            (G_UNICODE_SCRIPT_PHOENICIAN . 64)
-            (G_UNICODE_SCRIPT_CUNEIFORM . 63)
-            (G_UNICODE_SCRIPT_BALINESE . 62)
-            (G_UNICODE_SCRIPT_UNKNOWN . 61)
-            (G_UNICODE_SCRIPT_KHAROSHTHI . 60)
-            (G_UNICODE_SCRIPT_OLD_PERSIAN . 59)
-            (G_UNICODE_SCRIPT_SYLOTI_NAGRI . 58)
-            (G_UNICODE_SCRIPT_TIFINAGH . 57)
-            (G_UNICODE_SCRIPT_GLAGOLITIC . 56)
-            (G_UNICODE_SCRIPT_BUGINESE . 55)
-            (G_UNICODE_SCRIPT_NEW_TAI_LUE . 54)
-            (G_UNICODE_SCRIPT_UGARITIC . 53)
-            (G_UNICODE_SCRIPT_TAI_LE . 52)
-            (G_UNICODE_SCRIPT_LINEAR_B . 51)
-            (G_UNICODE_SCRIPT_SHAVIAN . 50)
-            (G_UNICODE_SCRIPT_OSMANYA . 49)
-            (G_UNICODE_SCRIPT_LIMBU . 48)
-            (G_UNICODE_SCRIPT_CYPRIOT . 47)
-            (G_UNICODE_SCRIPT_BRAILLE . 46)
-            (G_UNICODE_SCRIPT_TAGBANWA . 45)
-            (G_UNICODE_SCRIPT_BUHID . 44)
-            (G_UNICODE_SCRIPT_HANUNOO . 43)
-            (G_UNICODE_SCRIPT_TAGALOG . 42)
-            (G_UNICODE_SCRIPT_YI . 41)
-            (G_UNICODE_SCRIPT_CANADIAN_ABORIGINAL . 40)
-            (G_UNICODE_SCRIPT_TIBETAN . 39)
-            (G_UNICODE_SCRIPT_THAI . 38)
-            (G_UNICODE_SCRIPT_THAANA . 37)
-            (G_UNICODE_SCRIPT_TELUGU . 36)
-            (G_UNICODE_SCRIPT_TAMIL . 35)
-            (G_UNICODE_SCRIPT_SYRIAC . 34)
-            (G_UNICODE_SCRIPT_SINHALA . 33)
-            (G_UNICODE_SCRIPT_RUNIC . 32)
-            (G_UNICODE_SCRIPT_ORIYA . 31)
-            (G_UNICODE_SCRIPT_OLD_ITALIC . 30)
-            (G_UNICODE_SCRIPT_OGHAM . 29)
-            (G_UNICODE_SCRIPT_MYANMAR . 28)
-            (G_UNICODE_SCRIPT_MONGOLIAN . 27)
-            (G_UNICODE_SCRIPT_MALAYALAM . 26)
-            (G_UNICODE_SCRIPT_LATIN . 25)
-            (G_UNICODE_SCRIPT_LAO . 24)
-            (G_UNICODE_SCRIPT_KHMER . 23)
-            (G_UNICODE_SCRIPT_KATAKANA . 22)
-            (G_UNICODE_SCRIPT_KANNADA . 21)
-            (G_UNICODE_SCRIPT_HIRAGANA . 20)
-            (G_UNICODE_SCRIPT_HEBREW . 19)
-            (G_UNICODE_SCRIPT_HANGUL . 18)
-            (G_UNICODE_SCRIPT_HAN . 17)
-            (G_UNICODE_SCRIPT_GURMUKHI . 16)
-            (G_UNICODE_SCRIPT_GUJARATI . 15)
-            (G_UNICODE_SCRIPT_GREEK . 14)
-            (G_UNICODE_SCRIPT_GOTHIC . 13)
-            (G_UNICODE_SCRIPT_GEORGIAN . 12)
-            (G_UNICODE_SCRIPT_ETHIOPIC . 11)
-            (G_UNICODE_SCRIPT_DEVANAGARI . 10)
-            (G_UNICODE_SCRIPT_DESERET . 9)
-            (G_UNICODE_SCRIPT_CYRILLIC . 8)
-            (G_UNICODE_SCRIPT_COPTIC . 7)
-            (G_UNICODE_SCRIPT_CHEROKEE . 6)
-            (G_UNICODE_SCRIPT_BOPOMOFO . 5)
-            (G_UNICODE_SCRIPT_BENGALI . 4)
-            (G_UNICODE_SCRIPT_ARMENIAN . 3)
-            (G_UNICODE_SCRIPT_ARABIC . 2)
-            (G_UNICODE_SCRIPT_INHERITED . 1)
-            (G_UNICODE_SCRIPT_COMMON . 0)
-            (G_UNICODE_SCRIPT_INVALID_CODE . -1)
-            (G_NORMALIZE_NFKC . 0)
-            (G_NORMALIZE_ALL_COMPOSE . 4)
-            (G_NORMALIZE_NFKD . 0)
-            (G_NORMALIZE_ALL . 3)
-            (G_NORMALIZE_NFC . 0)
-            (G_NORMALIZE_DEFAULT_COMPOSE . 2)
-            (G_NORMALIZE_NFD . 0)
-            (G_NORMALIZE_DEFAULT . 1)
-            (G_IO_ERROR_UNKNOWN . 3)
-            (G_IO_ERROR_INVAL . 2)
-            (G_IO_ERROR_AGAIN . 1)
-            (G_IO_ERROR_NONE . 0)
-            (G_IO_CHANNEL_ERROR_FAILED . 8)
-            (G_IO_CHANNEL_ERROR_PIPE . 7)
-            (G_IO_CHANNEL_ERROR_OVERFLOW . 6)
-            (G_IO_CHANNEL_ERROR_NXIO . 5)
-            (G_IO_CHANNEL_ERROR_NOSPC . 4)
-            (G_IO_CHANNEL_ERROR_ISDIR . 3)
-            (G_IO_CHANNEL_ERROR_IO . 2)
-            (G_IO_CHANNEL_ERROR_INVAL . 1)
-            (G_IO_CHANNEL_ERROR_FBIG . 0)
-            (G_IO_STATUS_AGAIN . 3)
-            (G_IO_STATUS_EOF . 2)
-            (G_IO_STATUS_NORMAL . 1)
-            (G_IO_STATUS_ERROR . 0)
-            (G_SEEK_END . 2)
-            (G_SEEK_SET . 1)
-            (G_SEEK_CUR . 0)
-            (G_IO_FLAG_SET_MASK . 0)
-            (G_IO_FLAG_GET_MASK . 0)
-            (G_IO_FLAG_MASK . 31)
-            (G_IO_FLAG_IS_SEEKABLE . 16)
-            (G_IO_FLAG_IS_WRITEABLE . 8)
-            (G_IO_FLAG_IS_WRITABLE . 8)
-            (G_IO_FLAG_IS_READABLE . 4)
-            (G_IO_FLAG_NONBLOCK . 2)
-            (G_IO_FLAG_APPEND . 1)
-            (G_KEY_FILE_ERROR_INVALID_VALUE . 5)
-            (G_KEY_FILE_ERROR_GROUP_NOT_FOUND . 4)
-            (G_KEY_FILE_ERROR_KEY_NOT_FOUND . 3)
-            (G_KEY_FILE_ERROR_NOT_FOUND . 2)
-            (G_KEY_FILE_ERROR_PARSE . 1)
-            (G_KEY_FILE_ERROR_UNKNOWN_ENCODING . 0)
-            (G_KEY_FILE_KEEP_TRANSLATIONS . 2)
-            (G_KEY_FILE_KEEP_COMMENTS . 1)
-            (G_KEY_FILE_NONE . 0)
-            (G_MARKUP_ERROR_MISSING_ATTRIBUTE . 6)
-            (G_MARKUP_ERROR_INVALID_CONTENT . 5)
-            (G_MARKUP_ERROR_UNKNOWN_ATTRIBUTE . 4)
-            (G_MARKUP_ERROR_UNKNOWN_ELEMENT . 3)
-            (G_MARKUP_ERROR_PARSE . 2)
-            (G_MARKUP_ERROR_EMPTY . 1)
-            (G_MARKUP_ERROR_BAD_UTF8 . 0)
-            (G_MARKUP_IGNORE_QUALIFIED . 8)
-            (G_MARKUP_PREFIX_ERROR_POSITION . 4)
-            (G_MARKUP_TREAT_CDATA_AS_TEXT . 2)
-            (G_MARKUP_DO_NOT_USE_THIS_UNSUPPORTED_FLAG . 1)
-            (G_MARKUP_COLLECT_OPTIONAL . 65536)
-            (G_MARKUP_COLLECT_TRISTATE . 4)
-            (G_MARKUP_COLLECT_BOOLEAN . 3)
-            (G_MARKUP_COLLECT_STRDUP . 2)
-            (G_MARKUP_COLLECT_STRING . 1)
-            (G_MARKUP_COLLECT_INVALID . 0)
-            (G_VARIANT_CLASS_DICT_ENTRY . 123)
-            (G_VARIANT_CLASS_TUPLE . 40)
-            (G_VARIANT_CLASS_ARRAY . 97)
-            (G_VARIANT_CLASS_MAYBE . 109)
-            (G_VARIANT_CLASS_VARIANT . 118)
-            (G_VARIANT_CLASS_SIGNATURE . 103)
-            (G_VARIANT_CLASS_OBJECT_PATH . 111)
-            (G_VARIANT_CLASS_STRING . 115)
-            (G_VARIANT_CLASS_DOUBLE . 100)
-            (G_VARIANT_CLASS_HANDLE . 104)
-            (G_VARIANT_CLASS_UINT64 . 116)
-            (G_VARIANT_CLASS_INT64 . 120)
-            (G_VARIANT_CLASS_UINT32 . 117)
-            (G_VARIANT_CLASS_INT32 . 105)
-            (G_VARIANT_CLASS_UINT16 . 113)
-            (G_VARIANT_CLASS_INT16 . 110)
-            (G_VARIANT_CLASS_BYTE . 121)
-            (G_VARIANT_CLASS_BOOLEAN . 98)
-            (G_VARIANT_PARSE_ERROR_VALUE_EXPECTED . 17)
-            (G_VARIANT_PARSE_ERROR_UNTERMINATED_STRING_CONSTANT
-              .
-              16)
-            (G_VARIANT_PARSE_ERROR_UNKNOWN_KEYWORD . 15)
-            (G_VARIANT_PARSE_ERROR_UNEXPECTED_TOKEN . 14)
-            (G_VARIANT_PARSE_ERROR_TYPE_ERROR . 13)
-            (G_VARIANT_PARSE_ERROR_NUMBER_TOO_BIG . 12)
-            (G_VARIANT_PARSE_ERROR_NUMBER_OUT_OF_RANGE . 11)
-            (G_VARIANT_PARSE_ERROR_NO_COMMON_TYPE . 10)
-            (G_VARIANT_PARSE_ERROR_INVALID_TYPE_STRING . 9)
-            (G_VARIANT_PARSE_ERROR_INVALID_SIGNATURE . 8)
-            (G_VARIANT_PARSE_ERROR_INVALID_OBJECT_PATH . 7)
-            (G_VARIANT_PARSE_ERROR_INVALID_FORMAT_STRING . 6)
-            (G_VARIANT_PARSE_ERROR_INVALID_CHARACTER . 5)
-            (G_VARIANT_PARSE_ERROR_INPUT_NOT_AT_END . 4)
-            (G_VARIANT_PARSE_ERROR_DEFINITE_TYPE_EXPECTED
-              .
-              3)
-            (G_VARIANT_PARSE_ERROR_CANNOT_INFER_TYPE . 2)
-            (G_VARIANT_PARSE_ERROR_BASIC_TYPE_EXPECTED . 1)
-            (G_VARIANT_PARSE_ERROR_FAILED . 0)
-            (G_LOG_LEVEL_MASK . -1)
-            (G_LOG_LEVEL_DEBUG . 128)
-            (G_LOG_LEVEL_INFO . 64)
-            (G_LOG_LEVEL_MESSAGE . 32)
-            (G_LOG_LEVEL_WARNING . 16)
-            (G_LOG_LEVEL_CRITICAL . 8)
-            (G_LOG_LEVEL_ERROR . 4)
-            (G_LOG_FLAG_FATAL . 2)
-            (G_LOG_FLAG_RECURSION . 1)
-            (G_LOG_WRITER_UNHANDLED . 0)
-            (G_LOG_WRITER_HANDLED . 1)
-            (G_OPTION_FLAG_NOALIAS . 64)
-            (G_OPTION_FLAG_OPTIONAL_ARG . 32)
-            (G_OPTION_FLAG_FILENAME . 16)
-            (G_OPTION_FLAG_NO_ARG . 8)
-            (G_OPTION_FLAG_REVERSE . 4)
-            (G_OPTION_FLAG_IN_MAIN . 2)
-            (G_OPTION_FLAG_HIDDEN . 1)
-            (G_OPTION_FLAG_NONE . 0)
-            (G_OPTION_ARG_INT64 . 8)
-            (G_OPTION_ARG_DOUBLE . 7)
-            (G_OPTION_ARG_FILENAME_ARRAY . 6)
-            (G_OPTION_ARG_STRING_ARRAY . 5)
-            (G_OPTION_ARG_FILENAME . 4)
-            (G_OPTION_ARG_CALLBACK . 3)
-            (G_OPTION_ARG_INT . 2)
-            (G_OPTION_ARG_STRING . 1)
-            (G_OPTION_ARG_NONE . 0)
-            (G_OPTION_ERROR_FAILED . 2)
-            (G_OPTION_ERROR_BAD_VALUE . 1)
-            (G_OPTION_ERROR_UNKNOWN_OPTION . 0)
-            (G_REGEX_ERROR_CHARACTER_VALUE_TOO_LARGE . 176)
-            (G_REGEX_ERROR_NAME_TOO_LONG . 175)
-            (G_REGEX_ERROR_TOO_MANY_FORWARD_REFERENCES . 172)
-            (G_REGEX_ERROR_NOT_SUPPORTED_IN_CLASS . 171)
-            (G_REGEX_ERROR_MISSING_NAME . 169)
-            (G_REGEX_ERROR_INVALID_CONTROL_CHAR . 168)
-            (G_REGEX_ERROR_BACKTRACKING_CONTROL_VERB_ARGUMENT_REQUIRED
-              .
-              166)
-            (G_REGEX_ERROR_EXTRA_SUBPATTERN_NAME . 165)
-            (G_REGEX_ERROR_INVALID_DATA_CHARACTER . 164)
-            (G_REGEX_ERROR_MISSING_DIGIT . 163)
-            (G_REGEX_ERROR_MISSING_SUBPATTERN_NAME . 162)
-            (G_REGEX_ERROR_NUMBER_TOO_BIG . 161)
-            (G_REGEX_ERROR_UNKNOWN_BACKTRACKING_CONTROL_VERB
-              .
-              160)
-            (G_REGEX_ERROR_BACKTRACKING_CONTROL_VERB_ARGUMENT_FORBIDDEN
-              .
-              159)
-            (G_REGEX_ERROR_INVALID_RELATIVE_REFERENCE . 158)
-            (G_REGEX_ERROR_MISSING_BACK_REFERENCE . 157)
-            (G_REGEX_ERROR_INCONSISTENT_NEWLINE_OPTIONS
-              .
-              156)
-            (G_REGEX_ERROR_DEFINE_REPETION . 155)
-            (G_REGEX_ERROR_TOO_MANY_BRANCHES_IN_DEFINE . 154)
-            (G_REGEX_ERROR_INVALID_OCTAL_VALUE . 151)
-            (G_REGEX_ERROR_TOO_MANY_SUBPATTERNS . 149)
-            (G_REGEX_ERROR_SUBPATTERN_NAME_TOO_LONG . 148)
-            (G_REGEX_ERROR_UNKNOWN_PROPERTY . 147)
-            (G_REGEX_ERROR_MALFORMED_PROPERTY . 146)
-            (G_REGEX_ERROR_DUPLICATE_SUBPATTERN_NAME . 143)
-            (G_REGEX_ERROR_MISSING_SUBPATTERN_NAME_TERMINATOR
-              .
-              142)
-            (G_REGEX_ERROR_INFINITE_LOOP . 140)
-            (G_REGEX_ERROR_SINGLE_BYTE_MATCH_IN_LOOKBEHIND
-              .
-              136)
-            (G_REGEX_ERROR_INVALID_CONDITION . 135)
-            (G_REGEX_ERROR_HEX_CODE_TOO_LARGE . 134)
-            (G_REGEX_ERROR_POSIX_COLLATING_ELEMENTS_NOT_SUPPORTED
-              .
-              131)
-            (G_REGEX_ERROR_UNKNOWN_POSIX_CLASS_NAME . 130)
-            (G_REGEX_ERROR_ASSERTION_EXPECTED . 128)
-            (G_REGEX_ERROR_TOO_MANY_CONDITIONAL_BRANCHES
-              .
-              127)
-            (G_REGEX_ERROR_MALFORMED_CONDITION . 126)
-            (G_REGEX_ERROR_VARIABLE_LENGTH_LOOKBEHIND . 125)
-            (G_REGEX_ERROR_MEMORY_ERROR . 121)
-            (G_REGEX_ERROR_EXPRESSION_TOO_LARGE . 120)
-            (G_REGEX_ERROR_UNTERMINATED_COMMENT . 118)
-            (G_REGEX_ERROR_INEXISTENT_SUBPATTERN_REFERENCE
-              .
-              115)
-            (G_REGEX_ERROR_UNMATCHED_PARENTHESIS . 114)
-            (G_REGEX_ERROR_POSIX_NAMED_CLASS_OUTSIDE_CLASS
-              .
-              113)
-            (G_REGEX_ERROR_UNRECOGNIZED_CHARACTER . 112)
-            (G_REGEX_ERROR_NOTHING_TO_REPEAT . 109)
-            (G_REGEX_ERROR_RANGE_OUT_OF_ORDER . 108)
-            (G_REGEX_ERROR_INVALID_ESCAPE_IN_CHARACTER_CLASS
-              .
-              107)
-            (G_REGEX_ERROR_UNTERMINATED_CHARACTER_CLASS
-              .
-              106)
-            (G_REGEX_ERROR_QUANTIFIER_TOO_BIG . 105)
-            (G_REGEX_ERROR_QUANTIFIERS_OUT_OF_ORDER . 104)
-            (G_REGEX_ERROR_UNRECOGNIZED_ESCAPE . 103)
-            (G_REGEX_ERROR_MISSING_CONTROL_CHAR . 102)
-            (G_REGEX_ERROR_STRAY_BACKSLASH . 101)
-            (G_REGEX_ERROR_INTERNAL . 4)
-            (G_REGEX_ERROR_MATCH . 3)
-            (G_REGEX_ERROR_REPLACE . 2)
-            (G_REGEX_ERROR_OPTIMIZE . 1)
-            (G_REGEX_ERROR_COMPILE . 0)
-            (G_REGEX_JAVASCRIPT_COMPAT . 33554432)
-            (G_REGEX_BSR_ANYCRLF . 8388608)
-            (G_REGEX_NEWLINE_ANYCRLF . 4194304)
-            (G_REGEX_NEWLINE_CRLF . 0)
-            (G_REGEX_NEWLINE_LF . 2097152)
-            (G_REGEX_NEWLINE_CR . 1048576)
-            (G_REGEX_DUPNAMES . 524288)
-            (G_REGEX_FIRSTLINE . 262144)
-            (G_REGEX_OPTIMIZE . 8192)
-            (G_REGEX_NO_AUTO_CAPTURE . 4096)
-            (G_REGEX_RAW . 2048)
-            (G_REGEX_UNGREEDY . 512)
-            (G_REGEX_DOLLAR_ENDONLY . 32)
-            (G_REGEX_ANCHORED . 16)
-            (G_REGEX_EXTENDED . 8)
-            (G_REGEX_DOTALL . 4)
-            (G_REGEX_MULTILINE . 2)
-            (G_REGEX_CASELESS . 1)
-            (G_REGEX_MATCH_NOTEMPTY_ATSTART . 268435456)
-            (G_REGEX_MATCH_PARTIAL_HARD . 134217728)
-            (G_REGEX_MATCH_PARTIAL_SOFT . 0)
-            (G_REGEX_MATCH_BSR_ANY . 16777216)
-            (G_REGEX_MATCH_BSR_ANYCRLF . 8388608)
-            (G_REGEX_MATCH_NEWLINE_ANYCRLF . 0)
-            (G_REGEX_MATCH_NEWLINE_ANY . 4194304)
-            (G_REGEX_MATCH_NEWLINE_CRLF . 0)
-            (G_REGEX_MATCH_NEWLINE_LF . 2097152)
-            (G_REGEX_MATCH_NEWLINE_CR . 1048576)
-            (G_REGEX_MATCH_PARTIAL . 32768)
-            (G_REGEX_MATCH_NOTEMPTY . 1024)
-            (G_REGEX_MATCH_NOTEOL . 256)
-            (G_REGEX_MATCH_NOTBOL . 128)
-            (G_REGEX_MATCH_ANCHORED . 16)
-            (G_ERR_FLOAT_MALFORMED . 7)
-            (G_ERR_FLOAT_RADIX . 6)
-            (G_ERR_DIGIT_RADIX . 5)
-            (G_ERR_NON_DIGIT_IN_CONST . 4)
-            (G_ERR_UNEXP_EOF_IN_COMMENT . 3)
-            (G_ERR_UNEXP_EOF_IN_STRING . 2)
-            (G_ERR_UNEXP_EOF . 1)
-            (G_ERR_UNKNOWN . 0)
-            (G_TOKEN_LAST . 14)
-            (G_TOKEN_COMMENT_MULTI . 13)
-            (G_TOKEN_COMMENT_SINGLE . 12)
-            (G_TOKEN_IDENTIFIER_NULL . 11)
-            (G_TOKEN_IDENTIFIER . 10)
-            (G_TOKEN_SYMBOL . 9)
-            (G_TOKEN_STRING . 8)
-            (G_TOKEN_FLOAT . 7)
-            (G_TOKEN_HEX . 6)
-            (G_TOKEN_INT . 5)
-            (G_TOKEN_OCTAL . 4)
-            (G_TOKEN_BINARY . 3)
-            (G_TOKEN_CHAR . 2)
-            (G_TOKEN_ERROR . 1)
-            (G_TOKEN_NONE . 256)
-            (G_TOKEN_COMMA . 44)
-            (G_TOKEN_EQUAL_SIGN . 61)
-            (G_TOKEN_RIGHT_BRACE . 93)
-            (G_TOKEN_LEFT_BRACE . 91)
-            (G_TOKEN_RIGHT_CURLY . 125)
-            (G_TOKEN_LEFT_CURLY . 123)
-            (G_TOKEN_RIGHT_PAREN . 41)
-            (G_TOKEN_LEFT_PAREN . 40)
-            (G_TOKEN_EOF . 0)
-            (G_SHELL_ERROR_FAILED . 2)
-            (G_SHELL_ERROR_EMPTY_STRING . 1)
-            (G_SHELL_ERROR_BAD_QUOTING . 0)
-            (G_SLICE_CONFIG_CONTENTION_COUNTER . 5)
-            (G_SLICE_CONFIG_CHUNK_SIZES . 4)
-            (G_SLICE_CONFIG_COLOR_INCREMENT . 3)
-            (G_SLICE_CONFIG_WORKING_SET_MSECS . 2)
-            (G_SLICE_CONFIG_BYPASS_MAGAZINES . 0)
-            (G_SLICE_CONFIG_ALWAYS_MALLOC . 1)
-            (G_SPAWN_ERROR_FAILED . 20)
-            (G_SPAWN_ERROR_LIBBAD . 19)
-            (G_SPAWN_ERROR_ISDIR . 18)
-            (G_SPAWN_ERROR_INVAL . 17)
-            (G_SPAWN_ERROR_MFILE . 16)
-            (G_SPAWN_ERROR_NFILE . 15)
-            (G_SPAWN_ERROR_IO . 14)
-            (G_SPAWN_ERROR_TXTBUSY . 13)
-            (G_SPAWN_ERROR_LOOP . 12)
-            (G_SPAWN_ERROR_NOTDIR . 11)
-            (G_SPAWN_ERROR_NOMEM . 10)
-            (G_SPAWN_ERROR_NOENT . 9)
-            (G_SPAWN_ERROR_NAMETOOLONG . 8)
-            (G_SPAWN_ERROR_NOEXEC . 7)
-            (G_SPAWN_ERROR_2BIG . 0)
-            (G_SPAWN_ERROR_TOO_BIG . 6)
-            (G_SPAWN_ERROR_PERM . 5)
-            (G_SPAWN_ERROR_ACCES . 4)
-            (G_SPAWN_ERROR_CHDIR . 3)
-            (G_SPAWN_ERROR_READ . 2)
-            (G_SPAWN_ERROR_FORK . 1)
-            (G_SPAWN_CLOEXEC_PIPES . 256)
-            (G_SPAWN_SEARCH_PATH_FROM_ENVP . 128)
-            (G_SPAWN_FILE_AND_ARGV_ZERO . 64)
-            (G_SPAWN_CHILD_INHERITS_STDIN . 32)
-            (G_SPAWN_STDERR_TO_DEV_NULL . 16)
-            (G_SPAWN_STDOUT_TO_DEV_NULL . 8)
-            (G_SPAWN_SEARCH_PATH . 4)
-            (G_SPAWN_DO_NOT_REAP_CHILD . 2)
-            (G_SPAWN_LEAVE_DESCRIPTORS_OPEN . 1)
-            (G_SPAWN_DEFAULT . 0)
-            (G_ASCII_XDIGIT . 1024)
-            (G_ASCII_UPPER . 512)
-            (G_ASCII_SPACE . 256)
-            (G_ASCII_PUNCT . 128)
-            (G_ASCII_PRINT . 64)
-            (G_ASCII_LOWER . 32)
-            (G_ASCII_GRAPH . 16)
-            (G_ASCII_DIGIT . 8)
-            (G_ASCII_CNTRL . 4)
-            (G_ASCII_ALPHA . 2)
-            (G_ASCII_ALNUM . 1)
-            (G_TEST_TRAP_INHERIT_STDIN . 512)
-            (G_TEST_TRAP_SILENCE_STDERR . 256)
-            (G_TEST_TRAP_SILENCE_STDOUT . 128)
-            (G_TEST_SUBPROCESS_INHERIT_STDERR . 4)
-            (G_TEST_SUBPROCESS_INHERIT_STDOUT . 2)
-            (G_TEST_SUBPROCESS_INHERIT_STDIN . 1)
-            (G_TEST_LOG_STOP_SUITE . 11)
-            (G_TEST_LOG_START_SUITE . 10)
-            (G_TEST_LOG_MESSAGE . 9)
-            (G_TEST_LOG_MAX_RESULT . 8)
-            (G_TEST_LOG_MIN_RESULT . 7)
-            (G_TEST_LOG_STOP_CASE . 6)
-            (G_TEST_LOG_START_CASE . 5)
-            (G_TEST_LOG_SKIP_CASE . 4)
-            (G_TEST_LOG_LIST_CASE . 3)
-            (G_TEST_LOG_START_BINARY . 2)
-            (G_TEST_LOG_ERROR . 1)
-            (G_TEST_LOG_NONE . 0)
-            (G_TEST_BUILT . 1)
-            (G_TEST_DIST . 0)
-            (G_THREAD_PRIORITY_URGENT . 3)
-            (G_THREAD_PRIORITY_HIGH . 2)
-            (G_THREAD_PRIORITY_NORMAL . 1)
-            (G_THREAD_PRIORITY_LOW . 0)
-            (QOS_CLASS_UNSPECIFIED . 0)
-            (QOS_CLASS_BACKGROUND . 9)
-            (QOS_CLASS_UTILITY . 17)
-            (QOS_CLASS_DEFAULT . 21)
-            (QOS_CLASS_USER_INITIATED . 25)
-            (QOS_CLASS_USER_INTERACTIVE . 33)
-            (G_TYPE_DEBUG_MASK . 7)
-            (G_TYPE_DEBUG_INSTANCE_COUNT . 4)
-            (G_TYPE_DEBUG_SIGNALS . 2)
-            (G_TYPE_DEBUG_OBJECTS . 1)
-            (G_TYPE_DEBUG_NONE . 0)
-            (G_TYPE_FLAG_DEEP_DERIVABLE . 8)
-            (G_TYPE_FLAG_DERIVABLE . 4)
-            (G_TYPE_FLAG_INSTANTIATABLE . 2)
-            (G_TYPE_FLAG_CLASSED . 1)
-            (G_TYPE_FLAG_VALUE_ABSTRACT . 32)
-            (G_TYPE_FLAG_ABSTRACT . 16)
-            (G_PARAM_DEPRECATED . 2147483648)
-            (G_PARAM_EXPLICIT_NOTIFY . 1073741824)
-            (G_PARAM_STATIC_BLURB . 128)
-            (G_PARAM_STATIC_NICK . 64)
-            (G_PARAM_PRIVATE . 0)
-            (G_PARAM_STATIC_NAME . 32)
-            (G_PARAM_LAX_VALIDATION . 16)
-            (G_PARAM_CONSTRUCT_ONLY . 8)
-            (G_PARAM_CONSTRUCT . 4)
-            (G_PARAM_READWRITE . 0)
-            (G_PARAM_WRITABLE . 2)
-            (G_PARAM_READABLE . 1)
-            (G_SIGNAL_DEPRECATED . 256)
-            (G_SIGNAL_MUST_COLLECT . 128)
-            (G_SIGNAL_NO_HOOKS . 64)
-            (G_SIGNAL_ACTION . 32)
-            (G_SIGNAL_DETAILED . 16)
-            (G_SIGNAL_NO_RECURSE . 8)
-            (G_SIGNAL_RUN_CLEANUP . 4)
-            (G_SIGNAL_RUN_LAST . 2)
-            (G_SIGNAL_RUN_FIRST . 1)
-            (G_CONNECT_SWAPPED . 2)
-            (G_CONNECT_AFTER . 1)
-            (G_SIGNAL_MATCH_UNBLOCKED . 32)
-            (G_SIGNAL_MATCH_DATA . 16)
-            (G_SIGNAL_MATCH_FUNC . 8)
-            (G_SIGNAL_MATCH_CLOSURE . 4)
-            (G_SIGNAL_MATCH_DETAIL . 2)
-            (G_SIGNAL_MATCH_ID . 1)
-            (G_BINDING_INVERT_BOOLEAN . 4)
-            (G_BINDING_SYNC_CREATE . 2)
-            (G_BINDING_BIDIRECTIONAL . 1)
-            (G_BINDING_DEFAULT . 0))))
-    (lambda (k) (assq-ref sym-tab k))))
-(export glib-object-symbol-val)
+;; typedef gsize GType;
+(if echo-decls (display "GType\n"))
+(define GType-desc unsigned-long)
+(define unwrap-GType unwrap~fixed)
+(define wrap-GType identity)
 
-(define (unwrap-enum obj)
-  (cond ((number? obj) obj)
-        ((symbol? obj) (glib-object-symbol-val obj))
-        ((fh-object? obj) (struct-ref obj 0))
-        (else (error "type mismatch"))))
+;; typedef struct _GValue GValue;
+(if echo-decls (display "GValue\n"))
+(define GValue-desc void)
+(define GValue*-desc (bs:pointer (delay GValue-desc)))
+(define-fh-pointer-type GValue* GValue*-desc)
 
-(define glib-object-types
-  '())
-;;(export glib-object-types)
+;; typedef union _GTypeCValue GTypeCValue;
+(if echo-decls (display "GTypeCValue\n"))
+(define-fh-pointer-type GTypeCValue*)
 
-;; --- last line ---
+;; typedef struct _GTypePlugin GTypePlugin;
+(if echo-decls (display "GTypePlugin\n"))
+(define GTypePlugin-desc void)
+(define GTypePlugin*-desc (bs:pointer GTypePlugin-desc))
+(define-fh-pointer-type GTypePlugin* GTypePlugin*-desc)
+
+;; typedef struct _GTypeClass GTypeClass;
+(if echo-decls (display "GTypeClass\n"))
+(define GTypeClass-desc void)
+(define GTypeClass*-desc (bs:pointer (delay GTypeClass-desc)))
+(define-fh-pointer-type GTypeClass* GTypeClass*-desc)
+
+;; typedef struct _GTypeInterface GTypeInterface;
+(if echo-decls (display "GTypeInterface\n"))
+(define GTypeInterface-desc void)
+(define GTypeInterface*-desc (bs:pointer (delay GTypeInterface-desc)))
+(define-fh-pointer-type GTypeInterface* GTypeInterface*-desc)
+
+;; typedef struct _GTypeInstance GTypeInstance;
+(if echo-decls (display "GTypeInstance\n"))
+(define GTypeInstance-desc void)
+(define GTypeInstance*-desc (bs:pointer (delay GTypeInstance-desc)))
+(define-fh-pointer-type GTypeInstance* GTypeInstance*-desc)
+
+;; typedef struct _GTypeInfo GTypeInfo;
+(if echo-decls (display "GTypeInfo\n"))
+(define GTypeInfo-desc void)
+(define GTypeInfo*-desc (bs:pointer (delay GTypeInfo-desc)))
+(define-fh-pointer-type GTypeInfo* GTypeInfo*-desc)
+
+;; typedef struct _GTypeFundamentalInfo GTypeFundamentalInfo;
+(if echo-decls (display "GTypeFundamentalInfo\n"))
+(define GTypeFundamentalInfo-desc void)
+(define GTypeFundamentalInfo*-desc (bs:pointer (delay GTypeFundamentalInfo-desc)))
+(define-fh-pointer-type GTypeFundamentalInfo* GTypeFundamentalInfo*-desc)
+
+;; typedef struct _GInterfaceInfo GInterfaceInfo;
+(if echo-decls (display "GInterfaceInfo\n"))
+(define GInterfaceInfo-desc void)
+(define GInterfaceInfo*-desc (bs:pointer (delay GInterfaceInfo-desc)))
+(define-fh-pointer-type GInterfaceInfo* GInterfaceInfo*-desc)
+
+;; typedef struct _GTypeValueTable GTypeValueTable;
+(if echo-decls (display "GTypeValueTable\n"))
+(define GTypeValueTable-desc void)
+(define GTypeValueTable*-desc (bs:pointer (delay GTypeValueTable-desc)))
+(define-fh-pointer-type GTypeValueTable* GTypeValueTable*-desc)
+
+;; typedef struct _GTypeQuery GTypeQuery;
+(if echo-decls (display "GTypeQuery\n"))
+(define GTypeQuery-desc void)
+(define GTypeQuery*-desc (bs:pointer (delay GTypeQuery-desc)))
+(define-fh-pointer-type GTypeQuery* GTypeQuery*-desc)
+
+;; struct _GTypeClass {
+;;   /*< private >*/
+;;   GType g_type;
+;; };
+(if echo-decls (display "(struct . _GTypeClass)\n"))
+(define struct-_GTypeClass-desc
+  (bs:struct (list `(g_type ,GType-desc))))
+(export struct-_GTypeClass-desc)
+(define-fh-compound-type/p struct-_GTypeClass struct-_GTypeClass-desc)
+(set! GTypeClass-desc struct-_GTypeClass-desc)
+(define-fh-compound-type GTypeClass GTypeClass-desc)
+
+;; struct _GTypeInstance {
+;;   /*< private >*/
+;;   GTypeClass *g_class;
+;; };
+(if echo-decls (display "(struct . _GTypeInstance)\n"))
+(define struct-_GTypeInstance-desc
+  (bs:struct
+    (list `(g_class ,(bs:pointer GTypeClass*-desc)))))
+(export struct-_GTypeInstance-desc)
+(define-fh-compound-type/p struct-_GTypeInstance struct-_GTypeInstance-desc)
+(set! GTypeInstance-desc struct-_GTypeInstance-desc)
+(define-fh-compound-type GTypeInstance GTypeInstance-desc)
+
+;; struct _GTypeInterface {
+;;   /*< private >*/
+;;   GType g_type; /* iface type */
+;;   GType g_instance_type;
+;; };
+(if echo-decls (display "(struct . _GTypeInterface)\n"))
+(define struct-_GTypeInterface-desc
+  (bs:struct
+    (list `(g_type ,GType-desc)
+          `(g_instance_type ,GType-desc))))
+(export struct-_GTypeInterface-desc)
+(define-fh-compound-type/p struct-_GTypeInterface struct-_GTypeInterface-desc)
+(set! GTypeInterface-desc struct-_GTypeInterface-desc)
+(define-fh-compound-type GTypeInterface GTypeInterface-desc)
+
+;; struct _GTypeQuery {
+;;   GType type;
+;;   const gchar *type_name;
+;;   guint class_size;
+;;   guint instance_size;
+;; };
+(if echo-decls (display "(struct . _GTypeQuery)\n"))
+(define struct-_GTypeQuery-desc
+  (bs:struct
+    (list `(type ,GType-desc)
+          `(type_name ,(bs:pointer void))
+          `(class_size ,unsigned-int)
+          `(instance_size ,unsigned-int))))
+(export struct-_GTypeQuery-desc)
+(define-fh-compound-type/p struct-_GTypeQuery struct-_GTypeQuery-desc)
+(set! GTypeQuery-desc struct-_GTypeQuery-desc)
+(define-fh-compound-type GTypeQuery GTypeQuery-desc)
+
+;; typedef enum {
+;;   G_TYPE_DEBUG_NONE = 0,
+;;   G_TYPE_DEBUG_OBJECTS = 1<<0,
+;;   G_TYPE_DEBUG_SIGNALS = 1<<1,
+;;   G_TYPE_DEBUG_INSTANCE_COUNT = 1<<2,
+;;   G_TYPE_DEBUG_MASK = 0x07,
+;; } GTypeDebugFlags;
+(if echo-decls (display "GTypeDebugFlags\n"))
+(define-fh-enum GTypeDebugFlags
+  '((G_TYPE_DEBUG_NONE . 0)
+    (G_TYPE_DEBUG_OBJECTS . 1)
+    (G_TYPE_DEBUG_SIGNALS . 2)
+    (G_TYPE_DEBUG_INSTANCE_COUNT . 4)
+    (G_TYPE_DEBUG_MASK . 7))
+  )
+
+;; extern void g_type_init(void);
+(if echo-decls (display "g_type_init\n"))
+(define g_type_init
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func "g_type_init" (dynamic-link))
+              (list))))
+    (lambda () (let () (~f)))))
+(export g_type_init)
+
+;; extern void g_type_init_with_debug_flags(GTypeDebugFlags debug_flags);
+(if echo-decls (display "g_type_init_with_debug_flags\n"))
+(define g_type_init_with_debug_flags
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_init_with_debug_flags"
+                (dynamic-link))
+              (list ffi:int))))
+    (lambda (debug_flags)
+      (let ((~debug_flags (unwrap~fixed debug_flags)))
+        (~f ~debug_flags)))))
+(export g_type_init_with_debug_flags)
+
+;; extern const gchar *g_type_name(GType type);
+(if echo-decls (display "g_type_name\n"))
+(define g_type_name
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_type_name" (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_name)
+
+;; extern GQuark g_type_qname(GType type);
+(if echo-decls (display "g_type_qname\n"))
+(define g_type_qname
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-int
+              (dynamic-func "g_type_qname" (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_qname)
+
+;; extern GType g_type_from_name(const gchar *name);
+(if echo-decls (display "g_type_from_name\n"))
+(define g_type_from_name
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func "g_type_from_name" (dynamic-link))
+              (list '*))))
+    (lambda (name)
+      (let ((~name (unwrap~pointer name)))
+        (wrap-GType (~f ~name))))))
+(export g_type_from_name)
+
+;; extern GType g_type_parent(GType type);
+(if echo-decls (display "g_type_parent\n"))
+(define g_type_parent
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func "g_type_parent" (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type)))
+        (wrap-GType (~f ~type))))))
+(export g_type_parent)
+
+;; extern guint g_type_depth(GType type);
+(if echo-decls (display "g_type_depth\n"))
+(define g_type_depth
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-int
+              (dynamic-func "g_type_depth" (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_depth)
+
+;; extern GType g_type_next_base(GType leaf_type, GType root_type);
+(if echo-decls (display "g_type_next_base\n"))
+(define g_type_next_base
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func "g_type_next_base" (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long))))
+    (lambda (leaf_type root_type)
+      (let ((~leaf_type (unwrap-GType leaf_type))
+            (~root_type (unwrap-GType root_type)))
+        (wrap-GType (~f ~leaf_type ~root_type))))))
+(export g_type_next_base)
+
+;; extern gboolean g_type_is_a(GType type, GType is_a_type);
+(if echo-decls (display "g_type_is_a\n"))
+(define g_type_is_a
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func "g_type_is_a" (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long))))
+    (lambda (type is_a_type)
+      (let ((~type (unwrap-GType type))
+            (~is_a_type (unwrap-GType is_a_type)))
+        (~f ~type ~is_a_type)))))
+(export g_type_is_a)
+
+;; extern gpointer g_type_class_ref(GType type);
+(if echo-decls (display "g_type_class_ref\n"))
+(define g_type_class_ref
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_type_class_ref" (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_class_ref)
+
+;; extern gpointer g_type_class_peek(GType type);
+(if echo-decls (display "g_type_class_peek\n"))
+(define g_type_class_peek
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_type_class_peek" (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_class_peek)
+
+;; extern gpointer g_type_class_peek_static(GType type);
+(if echo-decls (display "g_type_class_peek_static\n"))
+(define g_type_class_peek_static
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_class_peek_static"
+                (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_class_peek_static)
+
+;; extern void g_type_class_unref(gpointer g_class);
+(if echo-decls (display "g_type_class_unref\n"))
+(define g_type_class_unref
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_class_unref"
+                (dynamic-link))
+              (list '*))))
+    (lambda (g_class)
+      (let ((~g_class (unwrap~pointer g_class)))
+        (~f ~g_class)))))
+(export g_type_class_unref)
+
+;; extern gpointer g_type_class_peek_parent(gpointer g_class);
+(if echo-decls (display "g_type_class_peek_parent\n"))
+(define g_type_class_peek_parent
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_class_peek_parent"
+                (dynamic-link))
+              (list '*))))
+    (lambda (g_class)
+      (let ((~g_class (unwrap~pointer g_class)))
+        (~f ~g_class)))))
+(export g_type_class_peek_parent)
+
+;; extern gpointer g_type_interface_peek(gpointer instance_class, GType 
+;;     iface_type);
+(if echo-decls (display "g_type_interface_peek\n"))
+(define g_type_interface_peek
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_interface_peek"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (instance_class iface_type)
+      (let ((~instance_class (unwrap~pointer instance_class))
+            (~iface_type (unwrap-GType iface_type)))
+        (~f ~instance_class ~iface_type)))))
+(export g_type_interface_peek)
+
+;; extern gpointer g_type_interface_peek_parent(gpointer g_iface);
+(if echo-decls (display "g_type_interface_peek_parent\n"))
+(define g_type_interface_peek_parent
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_interface_peek_parent"
+                (dynamic-link))
+              (list '*))))
+    (lambda (g_iface)
+      (let ((~g_iface (unwrap~pointer g_iface)))
+        (~f ~g_iface)))))
+(export g_type_interface_peek_parent)
+
+;; extern gpointer g_type_default_interface_ref(GType g_type);
+(if echo-decls (display "g_type_default_interface_ref\n"))
+(define g_type_default_interface_ref
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_default_interface_ref"
+                (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (g_type)
+      (let ((~g_type (unwrap-GType g_type)))
+        (~f ~g_type)))))
+(export g_type_default_interface_ref)
+
+;; extern gpointer g_type_default_interface_peek(GType g_type);
+(if echo-decls (display "g_type_default_interface_peek\n"))
+(define g_type_default_interface_peek
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_default_interface_peek"
+                (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (g_type)
+      (let ((~g_type (unwrap-GType g_type)))
+        (~f ~g_type)))))
+(export g_type_default_interface_peek)
+
+;; extern void g_type_default_interface_unref(gpointer g_iface);
+(if echo-decls (display "g_type_default_interface_unref\n"))
+(define g_type_default_interface_unref
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_default_interface_unref"
+                (dynamic-link))
+              (list '*))))
+    (lambda (g_iface)
+      (let ((~g_iface (unwrap~pointer g_iface)))
+        (~f ~g_iface)))))
+(export g_type_default_interface_unref)
+
+;; extern GType *g_type_children(GType type, guint *n_children);
+(if echo-decls (display "g_type_children\n"))
+(define g_type_children
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_type_children" (dynamic-link))
+              (list ffi:unsigned-long '*))))
+    (lambda (type n_children)
+      (let ((~type (unwrap-GType type))
+            (~n_children (unwrap~pointer n_children)))
+        (wrap-GType* (~f ~type ~n_children))))))
+(export g_type_children)
+
+;; extern GType *g_type_interfaces(GType type, guint *n_interfaces);
+(if echo-decls (display "g_type_interfaces\n"))
+(define g_type_interfaces
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_type_interfaces" (dynamic-link))
+              (list ffi:unsigned-long '*))))
+    (lambda (type n_interfaces)
+      (let ((~type (unwrap-GType type))
+            (~n_interfaces (unwrap~pointer n_interfaces)))
+        (wrap-GType* (~f ~type ~n_interfaces))))))
+(export g_type_interfaces)
+
+;; extern void g_type_set_qdata(GType type, GQuark quark, gpointer data);
+(if echo-decls (display "g_type_set_qdata\n"))
+(define g_type_set_qdata
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func "g_type_set_qdata" (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-int '*))))
+    (lambda (type quark data)
+      (let ((~type (unwrap-GType type))
+            (~quark (unwrap~fixed quark))
+            (~data (unwrap~pointer data)))
+        (~f ~type ~quark ~data)))))
+(export g_type_set_qdata)
+
+;; extern gpointer g_type_get_qdata(GType type, GQuark quark);
+(if echo-decls (display "g_type_get_qdata\n"))
+(define g_type_get_qdata
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_type_get_qdata" (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-int))))
+    (lambda (type quark)
+      (let ((~type (unwrap-GType type))
+            (~quark (unwrap~fixed quark)))
+        (~f ~type ~quark)))))
+(export g_type_get_qdata)
+
+;; extern void g_type_query(GType type, GTypeQuery *query);
+(if echo-decls (display "g_type_query\n"))
+(define g_type_query
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func "g_type_query" (dynamic-link))
+              (list ffi:unsigned-long '*))))
+    (lambda (type query)
+      (let ((~type (unwrap-GType type))
+            (~query (unwrap-GTypeQuery* query)))
+        (~f ~type ~query)))))
+(export g_type_query)
+
+;; extern int g_type_get_instance_count(GType type);
+(if echo-decls (display "g_type_get_instance_count\n"))
+(define g_type_get_instance_count
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_get_instance_count"
+                (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_get_instance_count)
+
+;; typedef void (*GBaseInitFunc)(gpointer g_class);
+(if echo-decls (display "GBaseInitFunc\n"))
+(define-fh-function/p GBaseInitFunc
+  ffi:void (list (quote *)))
+
+;; typedef void (*GBaseFinalizeFunc)(gpointer g_class);
+(if echo-decls (display "GBaseFinalizeFunc\n"))
+(define-fh-function/p GBaseFinalizeFunc
+  ffi:void (list (quote *)))
+
+;; typedef void (*GClassInitFunc)(gpointer g_class, gpointer class_data);
+(if echo-decls (display "GClassInitFunc\n"))
+(define-fh-function/p GClassInitFunc
+  ffi:void (list (quote *) (quote *)))
+
+;; typedef void (*GClassFinalizeFunc)(gpointer g_class, gpointer class_data);
+(if echo-decls (display "GClassFinalizeFunc\n"))
+(define-fh-function/p GClassFinalizeFunc
+  ffi:void (list (quote *) (quote *)))
+
+;; typedef void (*GInstanceInitFunc)(GTypeInstance *instance, gpointer g_class)
+;;     ;
+(if echo-decls (display "GInstanceInitFunc\n"))
+(define-fh-function/p GInstanceInitFunc
+  ffi:void (list (quote *) (quote *)))
+
+;; typedef void (*GInterfaceInitFunc)(gpointer g_iface, gpointer iface_data);
+(if echo-decls (display "GInterfaceInitFunc\n"))
+(define-fh-function/p GInterfaceInitFunc
+  ffi:void (list (quote *) (quote *)))
+
+;; typedef void (*GInterfaceFinalizeFunc)(gpointer g_iface, gpointer iface_data
+;;     );
+(if echo-decls (display "GInterfaceFinalizeFunc\n"))
+(define-fh-function/p GInterfaceFinalizeFunc
+  ffi:void (list (quote *) (quote *)))
+
+;; typedef gboolean (*GTypeClassCacheFunc)(gpointer cache_data, GTypeClass *
+;;     g_class);
+(if echo-decls (display "GTypeClassCacheFunc\n"))
+(define-fh-function/p GTypeClassCacheFunc
+  ffi:int (list (quote *) (quote *)))
+
+;; typedef void (*GTypeInterfaceCheckFunc)(gpointer check_data, gpointer 
+;;     g_iface);
+(if echo-decls (display "GTypeInterfaceCheckFunc\n"))
+(define-fh-function/p GTypeInterfaceCheckFunc
+  ffi:void (list (quote *) (quote *)))
+
+;; typedef enum {
+;;   G_TYPE_FLAG_CLASSED = 1<<0,
+;;   G_TYPE_FLAG_INSTANTIATABLE = 1<<1,
+;;   G_TYPE_FLAG_DERIVABLE = 1<<2,
+;;   G_TYPE_FLAG_DEEP_DERIVABLE = 1<<3,
+;; } GTypeFundamentalFlags;
+(if echo-decls (display "GTypeFundamentalFlags\n"))
+(define-fh-enum GTypeFundamentalFlags
+  '((G_TYPE_FLAG_CLASSED . 1)
+    (G_TYPE_FLAG_INSTANTIATABLE . 2)
+    (G_TYPE_FLAG_DERIVABLE . 4)
+    (G_TYPE_FLAG_DEEP_DERIVABLE . 8))
+  )
+
+;; typedef enum {
+;;   G_TYPE_FLAG_ABSTRACT = 1<<4,
+;;   G_TYPE_FLAG_VALUE_ABSTRACT = 1<<5,
+;; } GTypeFlags;
+(if echo-decls (display "GTypeFlags\n"))
+(define-fh-enum GTypeFlags
+  '((G_TYPE_FLAG_ABSTRACT . 16)
+    (G_TYPE_FLAG_VALUE_ABSTRACT . 32))
+  )
+
+;; struct _GTypeInfo {
+;;   /* interface types, classed types, instantiated types */
+;;   guint16 class_size;
+;;   GBaseInitFunc base_init;
+;;   GBaseFinalizeFunc base_finalize;
+;;   /* interface types, classed types, instantiated types */
+;;   GClassInitFunc class_init;
+;;   GClassFinalizeFunc class_finalize;
+;;   gconstpointer class_data;
+;;   /* instantiated types */
+;;   guint16 instance_size;
+;;   guint16 n_preallocs;
+;;   GInstanceInitFunc instance_init;
+;;   /* value handling */
+;;   const GTypeValueTable *value_table;
+;; };
+(if echo-decls (display "(struct . _GTypeInfo)\n"))
+(define struct-_GTypeInfo-desc
+  (bs:struct
+    (list `(class_size ,unsigned-short)
+          `(base_init ,(bs:pointer void))
+          `(base_finalize ,(bs:pointer void))
+          `(class_init ,(bs:pointer void))
+          `(class_finalize ,(bs:pointer void))
+          `(class_data ,(bs:pointer void))
+          `(instance_size ,unsigned-short)
+          `(n_preallocs ,unsigned-short)
+          `(instance_init ,(bs:pointer void))
+          `(value_table ,(bs:pointer GTypeValueTable*-desc)))))
+(export struct-_GTypeInfo-desc)
+(define-fh-compound-type/p struct-_GTypeInfo struct-_GTypeInfo-desc)
+(set! GTypeInfo-desc struct-_GTypeInfo-desc)
+(define-fh-compound-type GTypeInfo GTypeInfo-desc)
+
+;; struct _GTypeFundamentalInfo {
+;;   GTypeFundamentalFlags type_flags;
+;; };
+(if echo-decls (display "(struct . _GTypeFundamentalInfo)\n"))
+(define struct-_GTypeFundamentalInfo-desc
+  (bs:struct (list `(type_flags ,int))))
+(export struct-_GTypeFundamentalInfo-desc)
+(define-fh-compound-type/p struct-_GTypeFundamentalInfo struct-_GTypeFundamentalInfo-desc)
+(set! GTypeFundamentalInfo-desc struct-_GTypeFundamentalInfo-desc)
+(define-fh-compound-type GTypeFundamentalInfo GTypeFundamentalInfo-desc)
+
+;; struct _GInterfaceInfo {
+;;   GInterfaceInitFunc interface_init;
+;;   GInterfaceFinalizeFunc interface_finalize;
+;;   gpointer interface_data;
+;; };
+(if echo-decls (display "(struct . _GInterfaceInfo)\n"))
+(define struct-_GInterfaceInfo-desc
+  (bs:struct
+    (list `(interface_init ,(bs:pointer void))
+          `(interface_finalize ,(bs:pointer void))
+          `(interface_data ,(bs:pointer void)))))
+(export struct-_GInterfaceInfo-desc)
+(define-fh-compound-type/p struct-_GInterfaceInfo struct-_GInterfaceInfo-desc)
+(set! GInterfaceInfo-desc struct-_GInterfaceInfo-desc)
+(define-fh-compound-type GInterfaceInfo GInterfaceInfo-desc)
+
+;; struct _GTypeValueTable {
+;;   void (*value_init)(GValue *value);
+;;   void (*value_free)(GValue *value);
+;;   void (*value_copy)(const GValue *src_value, GValue *dest_value);
+;;   /* varargs functionality (optional) */
+;;   gpointer (*value_peek_pointer)(const GValue *value);
+;;   const gchar *collect_format;
+;;   gchar *(*collect_value)(GValue *value, guint n_collect_values, GTypeCValue
+;;        *collect_values, guint collect_flags);
+;;   const gchar *lcopy_format;
+;;   gchar *(*lcopy_value)(const GValue *value, guint n_collect_values, 
+;;       GTypeCValue *collect_values, guint collect_flags);
+;; };
+(if echo-decls (display "(struct . _GTypeValueTable)\n"))
+(define struct-_GTypeValueTable-desc
+  (bs:struct
+    (list `(value_init ,(bs:pointer void))
+          `(value_free ,(bs:pointer void))
+          `(value_copy ,(bs:pointer void))
+          `(value_peek_pointer ,(bs:pointer void))
+          `(collect_format ,(bs:pointer void))
+          `(collect_value ,(bs:pointer void))
+          `(lcopy_format ,(bs:pointer void))
+          `(lcopy_value ,(bs:pointer void)))))
+(export struct-_GTypeValueTable-desc)
+(define-fh-compound-type/p struct-_GTypeValueTable struct-_GTypeValueTable-desc)
+(set! GTypeValueTable-desc struct-_GTypeValueTable-desc)
+(define-fh-compound-type GTypeValueTable GTypeValueTable-desc)
+
+;; extern GType g_type_register_static(GType parent_type, const gchar *
+;;     type_name, const GTypeInfo *info, GTypeFlags flags);
+(if echo-decls (display "g_type_register_static\n"))
+(define g_type_register_static
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func
+                "g_type_register_static"
+                (dynamic-link))
+              (list ffi:unsigned-long '* '* ffi:int))))
+    (lambda (parent_type type_name info flags)
+      (let ((~parent_type (unwrap-GType parent_type))
+            (~type_name (unwrap~pointer type_name))
+            (~info (unwrap-GTypeInfo* info))
+            (~flags (unwrap~fixed flags)))
+        (wrap-GType
+          (~f ~parent_type ~type_name ~info ~flags))))))
+(export g_type_register_static)
+
+;; extern GType g_type_register_static_simple(GType parent_type, const gchar *
+;;     type_name, guint class_size, GClassInitFunc class_init, guint 
+;;     instance_size, GInstanceInitFunc instance_init, GTypeFlags flags);
+(if echo-decls (display "g_type_register_static_simple\n"))
+(define g_type_register_static_simple
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func
+                "g_type_register_static_simple"
+                (dynamic-link))
+              (list ffi:unsigned-long
+                    '*
+                    ffi:unsigned-int
+                    '*
+                    ffi:unsigned-int
+                    '*
+                    ffi:int))))
+    (lambda (parent_type
+             type_name
+             class_size
+             class_init
+             instance_size
+             instance_init
+             flags)
+      (let ((~parent_type (unwrap-GType parent_type))
+            (~type_name (unwrap~pointer type_name))
+            (~class_size (unwrap~fixed class_size))
+            (~class_init
+              ((make-ftn-arg-unwrapper ffi:void (list '* '*))
+               class_init))
+            (~instance_size (unwrap~fixed instance_size))
+            (~instance_init
+              ((make-ftn-arg-unwrapper ffi:void (list '* '*))
+               instance_init))
+            (~flags (unwrap~fixed flags)))
+        (wrap-GType
+          (~f ~parent_type
+              ~type_name
+              ~class_size
+              ~class_init
+              ~instance_size
+              ~instance_init
+              ~flags))))))
+(export g_type_register_static_simple)
+
+;; extern GType g_type_register_dynamic(GType parent_type, const gchar *
+;;     type_name, GTypePlugin *plugin, GTypeFlags flags);
+(if echo-decls (display "g_type_register_dynamic\n"))
+(define g_type_register_dynamic
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func
+                "g_type_register_dynamic"
+                (dynamic-link))
+              (list ffi:unsigned-long '* '* ffi:int))))
+    (lambda (parent_type type_name plugin flags)
+      (let ((~parent_type (unwrap-GType parent_type))
+            (~type_name (unwrap~pointer type_name))
+            (~plugin (unwrap-GTypePlugin* plugin))
+            (~flags (unwrap~fixed flags)))
+        (wrap-GType
+          (~f ~parent_type ~type_name ~plugin ~flags))))))
+(export g_type_register_dynamic)
+
+;; extern GType g_type_register_fundamental(GType type_id, const gchar *
+;;     type_name, const GTypeInfo *info, const GTypeFundamentalInfo *finfo, 
+;;     GTypeFlags flags);
+(if echo-decls (display "g_type_register_fundamental\n"))
+(define g_type_register_fundamental
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func
+                "g_type_register_fundamental"
+                (dynamic-link))
+              (list ffi:unsigned-long '* '* '* ffi:int))))
+    (lambda (type_id type_name info finfo flags)
+      (let ((~type_id (unwrap-GType type_id))
+            (~type_name (unwrap~pointer type_name))
+            (~info (unwrap-GTypeInfo* info))
+            (~finfo (unwrap-GTypeFundamentalInfo* finfo))
+            (~flags (unwrap~fixed flags)))
+        (wrap-GType
+          (~f ~type_id ~type_name ~info ~finfo ~flags))))))
+(export g_type_register_fundamental)
+
+;; extern void g_type_add_interface_static(GType instance_type, GType 
+;;     interface_type, const GInterfaceInfo *info);
+(if echo-decls (display "g_type_add_interface_static\n"))
+(define g_type_add_interface_static
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_add_interface_static"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long '*))))
+    (lambda (instance_type interface_type info)
+      (let ((~instance_type (unwrap-GType instance_type))
+            (~interface_type (unwrap-GType interface_type))
+            (~info (unwrap-GInterfaceInfo* info)))
+        (~f ~instance_type ~interface_type ~info)))))
+(export g_type_add_interface_static)
+
+;; extern void g_type_add_interface_dynamic(GType instance_type, GType 
+;;     interface_type, GTypePlugin *plugin);
+(if echo-decls (display "g_type_add_interface_dynamic\n"))
+(define g_type_add_interface_dynamic
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_add_interface_dynamic"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long '*))))
+    (lambda (instance_type interface_type plugin)
+      (let ((~instance_type (unwrap-GType instance_type))
+            (~interface_type (unwrap-GType interface_type))
+            (~plugin (unwrap-GTypePlugin* plugin)))
+        (~f ~instance_type ~interface_type ~plugin)))))
+(export g_type_add_interface_dynamic)
+
+;; extern void g_type_interface_add_prerequisite(GType interface_type, GType 
+;;     prerequisite_type);
+(if echo-decls (display "g_type_interface_add_prerequisite\n"))
+(define g_type_interface_add_prerequisite
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_interface_add_prerequisite"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long))))
+    (lambda (interface_type prerequisite_type)
+      (let ((~interface_type (unwrap-GType interface_type))
+            (~prerequisite_type
+              (unwrap-GType prerequisite_type)))
+        (~f ~interface_type ~prerequisite_type)))))
+(export g_type_interface_add_prerequisite)
+
+;; extern GType *g_type_interface_prerequisites(GType interface_type, guint *
+;;     n_prerequisites);
+(if echo-decls (display "g_type_interface_prerequisites\n"))
+(define g_type_interface_prerequisites
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_interface_prerequisites"
+                (dynamic-link))
+              (list ffi:unsigned-long '*))))
+    (lambda (interface_type n_prerequisites)
+      (let ((~interface_type (unwrap-GType interface_type))
+            (~n_prerequisites
+              (unwrap~pointer n_prerequisites)))
+        (wrap-GType*
+          (~f ~interface_type ~n_prerequisites))))))
+(export g_type_interface_prerequisites)
+
+;; extern void g_type_class_add_private(gpointer g_class, gsize private_size);
+(if echo-decls (display "g_type_class_add_private\n"))
+(define g_type_class_add_private
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_class_add_private"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (g_class private_size)
+      (let ((~g_class (unwrap~pointer g_class))
+            (~private_size (unwrap~fixed private_size)))
+        (~f ~g_class ~private_size)))))
+(export g_type_class_add_private)
+
+;; extern gint g_type_add_instance_private(GType class_type, gsize private_size
+;;     );
+(if echo-decls (display "g_type_add_instance_private\n"))
+(define g_type_add_instance_private
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_add_instance_private"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long))))
+    (lambda (class_type private_size)
+      (let ((~class_type (unwrap-GType class_type))
+            (~private_size (unwrap~fixed private_size)))
+        (~f ~class_type ~private_size)))))
+(export g_type_add_instance_private)
+
+;; extern gpointer g_type_instance_get_private(GTypeInstance *instance, GType 
+;;     private_type);
+(if echo-decls (display "g_type_instance_get_private\n"))
+(define g_type_instance_get_private
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_instance_get_private"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (instance private_type)
+      (let ((~instance (unwrap-GTypeInstance* instance))
+            (~private_type (unwrap-GType private_type)))
+        (~f ~instance ~private_type)))))
+(export g_type_instance_get_private)
+
+;; extern void g_type_class_adjust_private_offset(gpointer g_class, gint *
+;;     private_size_or_offset);
+(if echo-decls (display "g_type_class_adjust_private_offset\n"))
+(define g_type_class_adjust_private_offset
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_class_adjust_private_offset"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (g_class private_size_or_offset)
+      (let ((~g_class (unwrap~pointer g_class))
+            (~private_size_or_offset
+              (unwrap~pointer private_size_or_offset)))
+        (~f ~g_class ~private_size_or_offset)))))
+(export g_type_class_adjust_private_offset)
+
+;; extern void g_type_add_class_private(GType class_type, gsize private_size);
+(if echo-decls (display "g_type_add_class_private\n"))
+(define g_type_add_class_private
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_add_class_private"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long))))
+    (lambda (class_type private_size)
+      (let ((~class_type (unwrap-GType class_type))
+            (~private_size (unwrap~fixed private_size)))
+        (~f ~class_type ~private_size)))))
+(export g_type_add_class_private)
+
+;; extern gpointer g_type_class_get_private(GTypeClass *klass, GType 
+;;     private_type);
+(if echo-decls (display "g_type_class_get_private\n"))
+(define g_type_class_get_private
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_class_get_private"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (klass private_type)
+      (let ((~klass (unwrap-GTypeClass* klass))
+            (~private_type (unwrap-GType private_type)))
+        (~f ~klass ~private_type)))))
+(export g_type_class_get_private)
+
+;; extern gint g_type_class_get_instance_private_offset(gpointer g_class);
+(if echo-decls (display "g_type_class_get_instance_private_offset\n"))
+(define g_type_class_get_instance_private_offset
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_class_get_instance_private_offset"
+                (dynamic-link))
+              (list '*))))
+    (lambda (g_class)
+      (let ((~g_class (unwrap~pointer g_class)))
+        (~f ~g_class)))))
+(export g_type_class_get_instance_private_offset)
+
+;; extern void g_type_ensure(GType type);
+(if echo-decls (display "g_type_ensure\n"))
+(define g_type_ensure
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func "g_type_ensure" (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_ensure)
+
+;; extern guint g_type_get_type_registration_serial(void);
+(if echo-decls (display "g_type_get_type_registration_serial\n"))
+(define g_type_get_type_registration_serial
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-int
+              (dynamic-func
+                "g_type_get_type_registration_serial"
+                (dynamic-link))
+              (list))))
+    (lambda () (let () (~f)))))
+(export g_type_get_type_registration_serial)
+
+;; extern GTypePlugin *g_type_get_plugin(GType type);
+(if echo-decls (display "g_type_get_plugin\n"))
+(define g_type_get_plugin
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_type_get_plugin" (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type)))
+        (wrap-GTypePlugin* (~f ~type))))))
+(export g_type_get_plugin)
+
+;; extern GTypePlugin *g_type_interface_get_plugin(GType instance_type, GType 
+;;     interface_type);
+(if echo-decls (display "g_type_interface_get_plugin\n"))
+(define g_type_interface_get_plugin
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_interface_get_plugin"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long))))
+    (lambda (instance_type interface_type)
+      (let ((~instance_type (unwrap-GType instance_type))
+            (~interface_type (unwrap-GType interface_type)))
+        (wrap-GTypePlugin*
+          (~f ~instance_type ~interface_type))))))
+(export g_type_interface_get_plugin)
+
+;; extern GType g_type_fundamental_next(void);
+(if echo-decls (display "g_type_fundamental_next\n"))
+(define g_type_fundamental_next
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func
+                "g_type_fundamental_next"
+                (dynamic-link))
+              (list))))
+    (lambda () (let () (wrap-GType (~f))))))
+(export g_type_fundamental_next)
+
+;; extern GType g_type_fundamental(GType type_id);
+(if echo-decls (display "g_type_fundamental\n"))
+(define g_type_fundamental
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func
+                "g_type_fundamental"
+                (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type_id)
+      (let ((~type_id (unwrap-GType type_id)))
+        (wrap-GType (~f ~type_id))))))
+(export g_type_fundamental)
+
+;; extern GTypeInstance *g_type_create_instance(GType type);
+(if echo-decls (display "g_type_create_instance\n"))
+(define g_type_create_instance
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_create_instance"
+                (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type)))
+        (wrap-GTypeInstance* (~f ~type))))))
+(export g_type_create_instance)
+
+;; extern void g_type_free_instance(GTypeInstance *instance);
+(if echo-decls (display "g_type_free_instance\n"))
+(define g_type_free_instance
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_free_instance"
+                (dynamic-link))
+              (list '*))))
+    (lambda (instance)
+      (let ((~instance (unwrap-GTypeInstance* instance)))
+        (~f ~instance)))))
+(export g_type_free_instance)
+
+;; extern void g_type_add_class_cache_func(gpointer cache_data, 
+;;     GTypeClassCacheFunc cache_func);
+(if echo-decls (display "g_type_add_class_cache_func\n"))
+(define g_type_add_class_cache_func
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_add_class_cache_func"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (cache_data cache_func)
+      (let ((~cache_data (unwrap~pointer cache_data))
+            (~cache_func
+              ((make-ftn-arg-unwrapper ffi:void (list '* '*))
+               cache_func)))
+        (~f ~cache_data ~cache_func)))))
+(export g_type_add_class_cache_func)
+
+;; extern void g_type_remove_class_cache_func(gpointer cache_data, 
+;;     GTypeClassCacheFunc cache_func);
+(if echo-decls (display "g_type_remove_class_cache_func\n"))
+(define g_type_remove_class_cache_func
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_remove_class_cache_func"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (cache_data cache_func)
+      (let ((~cache_data (unwrap~pointer cache_data))
+            (~cache_func
+              ((make-ftn-arg-unwrapper ffi:void (list '* '*))
+               cache_func)))
+        (~f ~cache_data ~cache_func)))))
+(export g_type_remove_class_cache_func)
+
+;; extern void g_type_class_unref_uncached(gpointer g_class);
+(if echo-decls (display "g_type_class_unref_uncached\n"))
+(define g_type_class_unref_uncached
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_class_unref_uncached"
+                (dynamic-link))
+              (list '*))))
+    (lambda (g_class)
+      (let ((~g_class (unwrap~pointer g_class)))
+        (~f ~g_class)))))
+(export g_type_class_unref_uncached)
+
+;; extern void g_type_add_interface_check(gpointer check_data, 
+;;     GTypeInterfaceCheckFunc check_func);
+(if echo-decls (display "g_type_add_interface_check\n"))
+(define g_type_add_interface_check
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_add_interface_check"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (check_data check_func)
+      (let ((~check_data (unwrap~pointer check_data))
+            (~check_func
+              ((make-ftn-arg-unwrapper ffi:void (list '* '*))
+               check_func)))
+        (~f ~check_data ~check_func)))))
+(export g_type_add_interface_check)
+
+;; extern void g_type_remove_interface_check(gpointer check_data, 
+;;     GTypeInterfaceCheckFunc check_func);
+(if echo-decls (display "g_type_remove_interface_check\n"))
+(define g_type_remove_interface_check
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_type_remove_interface_check"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (check_data check_func)
+      (let ((~check_data (unwrap~pointer check_data))
+            (~check_func
+              ((make-ftn-arg-unwrapper ffi:void (list '* '*))
+               check_func)))
+        (~f ~check_data ~check_func)))))
+(export g_type_remove_interface_check)
+
+;; extern GTypeValueTable *g_type_value_table_peek(GType type);
+(if echo-decls (display "g_type_value_table_peek\n"))
+(define g_type_value_table_peek
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_value_table_peek"
+                (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type)))
+        (wrap-GTypeValueTable* (~f ~type))))))
+(export g_type_value_table_peek)
+
+;; extern gboolean g_type_check_instance(GTypeInstance *instance);
+(if echo-decls (display "g_type_check_instance\n"))
+(define g_type_check_instance
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_check_instance"
+                (dynamic-link))
+              (list '*))))
+    (lambda (instance)
+      (let ((~instance (unwrap-GTypeInstance* instance)))
+        (~f ~instance)))))
+(export g_type_check_instance)
+
+;; extern GTypeInstance *g_type_check_instance_cast(GTypeInstance *instance, 
+;;     GType iface_type);
+(if echo-decls (display "g_type_check_instance_cast\n"))
+(define g_type_check_instance_cast
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_check_instance_cast"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (instance iface_type)
+      (let ((~instance (unwrap-GTypeInstance* instance))
+            (~iface_type (unwrap-GType iface_type)))
+        (wrap-GTypeInstance* (~f ~instance ~iface_type))))))
+(export g_type_check_instance_cast)
+
+;; extern gboolean g_type_check_instance_is_a(GTypeInstance *instance, GType 
+;;     iface_type);
+(if echo-decls (display "g_type_check_instance_is_a\n"))
+(define g_type_check_instance_is_a
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_check_instance_is_a"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (instance iface_type)
+      (let ((~instance (unwrap-GTypeInstance* instance))
+            (~iface_type (unwrap-GType iface_type)))
+        (~f ~instance ~iface_type)))))
+(export g_type_check_instance_is_a)
+
+;; extern gboolean g_type_check_instance_is_fundamentally_a(GTypeInstance *
+;;     instance, GType fundamental_type);
+(if echo-decls (display "g_type_check_instance_is_fundamentally_a\n"))
+(define g_type_check_instance_is_fundamentally_a
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_check_instance_is_fundamentally_a"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (instance fundamental_type)
+      (let ((~instance (unwrap-GTypeInstance* instance))
+            (~fundamental_type
+              (unwrap-GType fundamental_type)))
+        (~f ~instance ~fundamental_type)))))
+(export g_type_check_instance_is_fundamentally_a)
+
+;; extern GTypeClass *g_type_check_class_cast(GTypeClass *g_class, GType 
+;;     is_a_type);
+(if echo-decls (display "g_type_check_class_cast\n"))
+(define g_type_check_class_cast
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_check_class_cast"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (g_class is_a_type)
+      (let ((~g_class (unwrap-GTypeClass* g_class))
+            (~is_a_type (unwrap-GType is_a_type)))
+        (wrap-GTypeClass* (~f ~g_class ~is_a_type))))))
+(export g_type_check_class_cast)
+
+;; extern gboolean g_type_check_class_is_a(GTypeClass *g_class, GType is_a_type
+;;     );
+(if echo-decls (display "g_type_check_class_is_a\n"))
+(define g_type_check_class_is_a
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_check_class_is_a"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (g_class is_a_type)
+      (let ((~g_class (unwrap-GTypeClass* g_class))
+            (~is_a_type (unwrap-GType is_a_type)))
+        (~f ~g_class ~is_a_type)))))
+(export g_type_check_class_is_a)
+
+;; extern gboolean g_type_check_is_value_type(GType type);
+(if echo-decls (display "g_type_check_is_value_type\n"))
+(define g_type_check_is_value_type
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_check_is_value_type"
+                (dynamic-link))
+              (list ffi:unsigned-long))))
+    (lambda (type)
+      (let ((~type (unwrap-GType type))) (~f ~type)))))
+(export g_type_check_is_value_type)
+
+;; extern gboolean g_type_check_value(GValue *value);
+(if echo-decls (display "g_type_check_value\n"))
+(define g_type_check_value
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_check_value"
+                (dynamic-link))
+              (list '*))))
+    (lambda (value)
+      (let ((~value (unwrap-GValue* value)))
+        (~f ~value)))))
+(export g_type_check_value)
+
+;; extern gboolean g_type_check_value_holds(GValue *value, GType type);
+(if echo-decls (display "g_type_check_value_holds\n"))
+(define g_type_check_value_holds
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_type_check_value_holds"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (value type)
+      (let ((~value (unwrap-GValue* value))
+            (~type (unwrap-GType type)))
+        (~f ~value ~type)))))
+(export g_type_check_value_holds)
+
+;; extern gboolean g_type_test_flags(GType type, guint flags);
+(if echo-decls (display "g_type_test_flags\n"))
+(define g_type_test_flags
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func "g_type_test_flags" (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-int))))
+    (lambda (type flags)
+      (let ((~type (unwrap-GType type))
+            (~flags (unwrap~fixed flags)))
+        (~f ~type ~flags)))))
+(export g_type_test_flags)
+
+;; extern const gchar *g_type_name_from_instance(GTypeInstance *instance);
+(if echo-decls (display "g_type_name_from_instance\n"))
+(define g_type_name_from_instance
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_name_from_instance"
+                (dynamic-link))
+              (list '*))))
+    (lambda (instance)
+      (let ((~instance (unwrap-GTypeInstance* instance)))
+        (~f ~instance)))))
+(export g_type_name_from_instance)
+
+;; extern const gchar *g_type_name_from_class(GTypeClass *g_class);
+(if echo-decls (display "g_type_name_from_class\n"))
+(define g_type_name_from_class
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_type_name_from_class"
+                (dynamic-link))
+              (list '*))))
+    (lambda (g_class)
+      (let ((~g_class (unwrap-GTypeClass* g_class)))
+        (~f ~g_class)))))
+(export g_type_name_from_class)
+
+;; typedef void (*GValueTransform)(const GValue *src_value, GValue *dest_value)
+;;     ;
+(if echo-decls (display "GValueTransform\n"))
+(define-fh-function/p GValueTransform
+  ffi:void (list (quote *) (quote *)))
+
+;; struct _GValue {
+;;   /*< private >*/
+;;   GType g_type;
+;;   /* public for GTypeValueTable methods */
+;;   union {
+;;     gint v_int;
+;;     guint v_uint;
+;;     glong v_long;
+;;     gulong v_ulong;
+;;     gint64 v_int64;
+;;     guint64 v_uint64;
+;;     gfloat v_float;
+;;     gdouble v_double;
+;;     gpointer v_pointer;
+;;   } data[2];
+;; };
+(if echo-decls (display "(struct . _GValue)\n"))
+(define struct-_GValue-desc
+  (bs:struct
+    (list `(g_type ,GType-desc)
+          `(data ,(bs:vector
+                    2
+                    (bs:union
+                      (list `(v_int ,int)
+                            `(v_uint ,unsigned-int)
+                            `(v_long ,long)
+                            `(v_ulong ,unsigned-long)
+                            `(v_int64 ,#f)
+                            `(v_uint64 ,unsigned-long)
+                            `(v_float ,float)
+                            `(v_double ,double)
+                            `(v_pointer ,(bs:pointer void)))))))))
+(export struct-_GValue-desc)
+(define-fh-compound-type/p struct-_GValue struct-_GValue-desc)
+(set! GValue-desc struct-_GValue-desc)
+(define-fh-compound-type GValue GValue-desc)
+
+;; extern GValue *g_value_init(GValue *value, GType g_type);
+(if echo-decls (display "g_value_init\n"))
+(define g_value_init
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_value_init" (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (value g_type)
+      (let ((~value (unwrap-GValue* value))
+            (~g_type (unwrap-GType g_type)))
+        (wrap-GValue* (~f ~value ~g_type))))))
+(export g_value_init)
+
+;; extern void g_value_copy(const GValue *src_value, GValue *dest_value);
+(if echo-decls (display "g_value_copy\n"))
+(define g_value_copy
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func "g_value_copy" (dynamic-link))
+              (list '* '*))))
+    (lambda (src_value dest_value)
+      (let ((~src_value (unwrap-GValue* src_value))
+            (~dest_value (unwrap-GValue* dest_value)))
+        (~f ~src_value ~dest_value)))))
+(export g_value_copy)
+
+;; extern GValue *g_value_reset(GValue *value);
+(if echo-decls (display "g_value_reset\n"))
+(define g_value_reset
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_value_reset" (dynamic-link))
+              (list '*))))
+    (lambda (value)
+      (let ((~value (unwrap-GValue* value)))
+        (wrap-GValue* (~f ~value))))))
+(export g_value_reset)
+
+;; extern void g_value_unset(GValue *value);
+(if echo-decls (display "g_value_unset\n"))
+(define g_value_unset
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func "g_value_unset" (dynamic-link))
+              (list '*))))
+    (lambda (value)
+      (let ((~value (unwrap-GValue* value)))
+        (~f ~value)))))
+(export g_value_unset)
+
+;; extern void g_value_set_instance(GValue *value, gpointer instance);
+(if echo-decls (display "g_value_set_instance\n"))
+(define g_value_set_instance
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_value_set_instance"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (value instance)
+      (let ((~value (unwrap-GValue* value))
+            (~instance (unwrap~pointer instance)))
+        (~f ~value ~instance)))))
+(export g_value_set_instance)
+
+;; extern void g_value_init_from_instance(GValue *value, gpointer instance);
+(if echo-decls (display "g_value_init_from_instance\n"))
+(define g_value_init_from_instance
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_value_init_from_instance"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (value instance)
+      (let ((~value (unwrap-GValue* value))
+            (~instance (unwrap~pointer instance)))
+        (~f ~value ~instance)))))
+(export g_value_init_from_instance)
+
+;; extern gboolean g_value_fits_pointer(const GValue *value);
+(if echo-decls (display "g_value_fits_pointer\n"))
+(define g_value_fits_pointer
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_value_fits_pointer"
+                (dynamic-link))
+              (list '*))))
+    (lambda (value)
+      (let ((~value (unwrap-GValue* value)))
+        (~f ~value)))))
+(export g_value_fits_pointer)
+
+;; extern gpointer g_value_peek_pointer(const GValue *value);
+(if echo-decls (display "g_value_peek_pointer\n"))
+(define g_value_peek_pointer
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_value_peek_pointer"
+                (dynamic-link))
+              (list '*))))
+    (lambda (value)
+      (let ((~value (unwrap-GValue* value)))
+        (~f ~value)))))
+(export g_value_peek_pointer)
+
+;; extern gboolean g_value_type_compatible(GType src_type, GType dest_type);
+(if echo-decls (display "g_value_type_compatible\n"))
+(define g_value_type_compatible
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_value_type_compatible"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long))))
+    (lambda (src_type dest_type)
+      (let ((~src_type (unwrap-GType src_type))
+            (~dest_type (unwrap-GType dest_type)))
+        (~f ~src_type ~dest_type)))))
+(export g_value_type_compatible)
+
+;; extern gboolean g_value_type_transformable(GType src_type, GType dest_type)
+;;     ;
+(if echo-decls (display "g_value_type_transformable\n"))
+(define g_value_type_transformable
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_value_type_transformable"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long))))
+    (lambda (src_type dest_type)
+      (let ((~src_type (unwrap-GType src_type))
+            (~dest_type (unwrap-GType dest_type)))
+        (~f ~src_type ~dest_type)))))
+(export g_value_type_transformable)
+
+;; extern gboolean g_value_transform(const GValue *src_value, GValue *
+;;     dest_value);
+(if echo-decls (display "g_value_transform\n"))
+(define g_value_transform
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func "g_value_transform" (dynamic-link))
+              (list '* '*))))
+    (lambda (src_value dest_value)
+      (let ((~src_value (unwrap-GValue* src_value))
+            (~dest_value (unwrap-GValue* dest_value)))
+        (~f ~src_value ~dest_value)))))
+(export g_value_transform)
+
+;; extern void g_value_register_transform_func(GType src_type, GType dest_type
+;;     , GValueTransform transform_func);
+(if echo-decls (display "g_value_register_transform_func\n"))
+(define g_value_register_transform_func
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_value_register_transform_func"
+                (dynamic-link))
+              (list ffi:unsigned-long ffi:unsigned-long '*))))
+    (lambda (src_type dest_type transform_func)
+      (let ((~src_type (unwrap-GType src_type))
+            (~dest_type (unwrap-GType dest_type))
+            (~transform_func
+              ((make-ftn-arg-unwrapper ffi:void (list '* '*))
+               transform_func)))
+        (~f ~src_type ~dest_type ~transform_func)))))
+(export g_value_register_transform_func)
+
+;; typedef enum {
+;;   G_PARAM_READABLE = 1<<0,
+;;   G_PARAM_WRITABLE = 1<<1,
+;;   G_PARAM_READWRITE = G_PARAM_READABLE | G_PARAM_WRITABLE,
+;;   G_PARAM_CONSTRUCT = 1<<2,
+;;   G_PARAM_CONSTRUCT_ONLY = 1<<3,
+;;   G_PARAM_LAX_VALIDATION = 1<<4,
+;;   G_PARAM_STATIC_NAME = 1<<5,
+;;   G_PARAM_PRIVATE = G_PARAM_STATIC_NAME,
+;;   G_PARAM_STATIC_NICK = 1<<6,
+;;   G_PARAM_STATIC_BLURB = 1<<7,
+;;   G_PARAM_EXPLICIT_NOTIFY = 1<<30,
+;;   G_PARAM_DEPRECATED = (gint)(1u<<31),
+;; } GParamFlags;
+(if echo-decls (display "GParamFlags\n"))
+(define-fh-enum GParamFlags
+  '((G_PARAM_READABLE . 1)
+    (G_PARAM_WRITABLE . 2)
+    (G_PARAM_READWRITE . 3)
+    (G_PARAM_CONSTRUCT . 4)
+    (G_PARAM_CONSTRUCT_ONLY . 8)
+    (G_PARAM_LAX_VALIDATION . 16)
+    (G_PARAM_STATIC_NAME . 32)
+    (G_PARAM_PRIVATE . 32)
+    (G_PARAM_STATIC_NICK . 64)
+    (G_PARAM_STATIC_BLURB . 128)
+    (G_PARAM_EXPLICIT_NOTIFY . 1073741824)
+    (G_PARAM_DEPRECATED . 2147483648))
+  )
+
+;; typedef struct _GParamSpec GParamSpec;
+(if echo-decls (display "GParamSpec\n"))
+(define GParamSpec-desc void)
+(define GParamSpec*-desc (bs:pointer (delay GParamSpec-desc)))
+(define-fh-pointer-type GParamSpec* GParamSpec*-desc)
+
+;; typedef struct _GParamSpecClass GParamSpecClass;
+(if echo-decls (display "GParamSpecClass\n"))
+(define GParamSpecClass-desc void)
+(define GParamSpecClass*-desc (bs:pointer (delay GParamSpecClass-desc)))
+(define-fh-pointer-type GParamSpecClass* GParamSpecClass*-desc)
+
+;; typedef struct _GParameter GParameter;
+(if echo-decls (display "GParameter\n"))
+(define GParameter-desc void)
+(define GParameter*-desc (bs:pointer (delay GParameter-desc)))
+(define-fh-pointer-type GParameter* GParameter*-desc)
+
+;; typedef struct _GParamSpecPool GParamSpecPool;
+(if echo-decls (display "GParamSpecPool\n"))
+(define GParamSpecPool-desc void)
+(define GParamSpecPool*-desc (bs:pointer GParamSpecPool-desc))
+(define-fh-pointer-type GParamSpecPool* GParamSpecPool*-desc)
+
+;; struct _GParamSpec {
+;;   GTypeInstance g_type_instance;
+;;   const gchar *name; /* interned string */
+;;   GParamFlags flags;
+;;   GType value_type;
+;;   GType owner_type; /* class or interface using this property */
+;;   /*< private >*/
+;;   gchar *_nick;
+;;   gchar *_blurb;
+;;   GData *qdata;
+;;   guint ref_count;
+;;   guint param_id; /* sort-criteria */
+;; };
+(if echo-decls (display "(struct . _GParamSpec)\n"))
+(define struct-_GParamSpec-desc
+  (bs:struct
+    (list `(g_type_instance ,GTypeInstance-desc)
+          `(name ,(bs:pointer void))
+          `(flags ,int)
+          `(value_type ,GType-desc)
+          `(owner_type ,GType-desc)
+          `(_nick ,(bs:pointer void))
+          `(_blurb ,(bs:pointer void))
+          `(qdata ,(bs:pointer void))
+          `(ref_count ,unsigned-int)
+          `(param_id ,unsigned-int))))
+(export struct-_GParamSpec-desc)
+(define-fh-compound-type/p struct-_GParamSpec struct-_GParamSpec-desc)
+(set! GParamSpec-desc struct-_GParamSpec-desc)
+(define-fh-compound-type GParamSpec GParamSpec-desc)
+
+;; struct _GParamSpecClass {
+;;   GTypeClass g_type_class;
+;;   GType value_type;
+;;   void (*finalize)(GParamSpec *pspec);
+;;   /* GParam methods */
+;;   void (*value_set_default)(GParamSpec *pspec, GValue *value);
+;;   gboolean (*value_validate)(GParamSpec *pspec, GValue *value);
+;;   gint (*values_cmp)(GParamSpec *pspec, const GValue *value1, const GValue *
+;;       value2);
+;;   /*< private >*/
+;;   gpointer dummy[4];
+;; };
+(if echo-decls (display "(struct . _GParamSpecClass)\n"))
+(define struct-_GParamSpecClass-desc
+  (bs:struct
+    (list `(g_type_class ,GTypeClass-desc)
+          `(value_type ,GType-desc)
+          `(finalize ,(bs:pointer void))
+          `(value_set_default ,(bs:pointer void))
+          `(value_validate ,(bs:pointer void))
+          `(values_cmp ,(bs:pointer void))
+          `(dummy ,(bs:vector 4 void)))))
+(export struct-_GParamSpecClass-desc)
+(define-fh-compound-type/p struct-_GParamSpecClass struct-_GParamSpecClass-desc)
+(set! GParamSpecClass-desc struct-_GParamSpecClass-desc)
+(define-fh-compound-type GParamSpecClass GParamSpecClass-desc)
+
+;; struct _GParameter {
+;;   const gchar *name;
+;;   GValue value;
+;; };
+(if echo-decls (display "(struct . _GParameter)\n"))
+(define struct-_GParameter-desc
+  (bs:struct
+    (list `(name ,(bs:pointer void))
+          `(value ,GValue-desc))))
+(export struct-_GParameter-desc)
+(define-fh-compound-type/p struct-_GParameter struct-_GParameter-desc)
+(set! GParameter-desc struct-_GParameter-desc)
+(define-fh-compound-type GParameter GParameter-desc)
+
+;; extern GParamSpec *g_param_spec_ref(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_ref\n"))
+(define g_param_spec_ref
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_param_spec_ref" (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (wrap-GParamSpec* (~f ~pspec))))))
+(export g_param_spec_ref)
+
+;; extern void g_param_spec_unref(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_unref\n"))
+(define g_param_spec_unref
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_param_spec_unref"
+                (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (~f ~pspec)))))
+(export g_param_spec_unref)
+
+;; extern void g_param_spec_sink(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_sink\n"))
+(define g_param_spec_sink
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func "g_param_spec_sink" (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (~f ~pspec)))))
+(export g_param_spec_sink)
+
+;; extern GParamSpec *g_param_spec_ref_sink(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_ref_sink\n"))
+(define g_param_spec_ref_sink
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_ref_sink"
+                (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (wrap-GParamSpec* (~f ~pspec))))))
+(export g_param_spec_ref_sink)
+
+;; extern gpointer g_param_spec_get_qdata(GParamSpec *pspec, GQuark quark);
+(if echo-decls (display "g_param_spec_get_qdata\n"))
+(define g_param_spec_get_qdata
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_get_qdata"
+                (dynamic-link))
+              (list '* ffi:unsigned-int))))
+    (lambda (pspec quark)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~quark (unwrap~fixed quark)))
+        (~f ~pspec ~quark)))))
+(export g_param_spec_get_qdata)
+
+;; extern void g_param_spec_set_qdata(GParamSpec *pspec, GQuark quark, gpointer
+;;      data);
+(if echo-decls (display "g_param_spec_set_qdata\n"))
+(define g_param_spec_set_qdata
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_param_spec_set_qdata"
+                (dynamic-link))
+              (list '* ffi:unsigned-int '*))))
+    (lambda (pspec quark data)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~quark (unwrap~fixed quark))
+            (~data (unwrap~pointer data)))
+        (~f ~pspec ~quark ~data)))))
+(export g_param_spec_set_qdata)
+
+;; extern void g_param_spec_set_qdata_full(GParamSpec *pspec, GQuark quark, 
+;;     gpointer data, GDestroyNotify destroy);
+(if echo-decls (display "g_param_spec_set_qdata_full\n"))
+(define g_param_spec_set_qdata_full
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_param_spec_set_qdata_full"
+                (dynamic-link))
+              (list '* ffi:unsigned-int '* '*))))
+    (lambda (pspec quark data destroy)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~quark (unwrap~fixed quark))
+            (~data (unwrap~pointer data))
+            (~destroy
+              ((make-ftn-arg-unwrapper ffi:void (list '*))
+               destroy)))
+        (~f ~pspec ~quark ~data ~destroy)))))
+(export g_param_spec_set_qdata_full)
+
+;; extern gpointer g_param_spec_steal_qdata(GParamSpec *pspec, GQuark quark);
+(if echo-decls (display "g_param_spec_steal_qdata\n"))
+(define g_param_spec_steal_qdata
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_steal_qdata"
+                (dynamic-link))
+              (list '* ffi:unsigned-int))))
+    (lambda (pspec quark)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~quark (unwrap~fixed quark)))
+        (~f ~pspec ~quark)))))
+(export g_param_spec_steal_qdata)
+
+;; extern GParamSpec *g_param_spec_get_redirect_target(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_get_redirect_target\n"))
+(define g_param_spec_get_redirect_target
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_get_redirect_target"
+                (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (wrap-GParamSpec* (~f ~pspec))))))
+(export g_param_spec_get_redirect_target)
+
+;; extern void g_param_value_set_default(GParamSpec *pspec, GValue *value);
+(if echo-decls (display "g_param_value_set_default\n"))
+(define g_param_value_set_default
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_param_value_set_default"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (pspec value)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~value (unwrap-GValue* value)))
+        (~f ~pspec ~value)))))
+(export g_param_value_set_default)
+
+;; extern gboolean g_param_value_defaults(GParamSpec *pspec, GValue *value);
+(if echo-decls (display "g_param_value_defaults\n"))
+(define g_param_value_defaults
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_param_value_defaults"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (pspec value)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~value (unwrap-GValue* value)))
+        (~f ~pspec ~value)))))
+(export g_param_value_defaults)
+
+;; extern gboolean g_param_value_validate(GParamSpec *pspec, GValue *value);
+(if echo-decls (display "g_param_value_validate\n"))
+(define g_param_value_validate
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_param_value_validate"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (pspec value)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~value (unwrap-GValue* value)))
+        (~f ~pspec ~value)))))
+(export g_param_value_validate)
+
+;; extern gboolean g_param_value_convert(GParamSpec *pspec, const GValue *
+;;     src_value, GValue *dest_value, gboolean strict_validation);
+(if echo-decls (display "g_param_value_convert\n"))
+(define g_param_value_convert
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_param_value_convert"
+                (dynamic-link))
+              (list '* '* '* ffi:int))))
+    (lambda (pspec src_value dest_value strict_validation)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~src_value (unwrap-GValue* src_value))
+            (~dest_value (unwrap-GValue* dest_value))
+            (~strict_validation
+              (unwrap~fixed strict_validation)))
+        (~f ~pspec
+            ~src_value
+            ~dest_value
+            ~strict_validation)))))
+(export g_param_value_convert)
+
+;; extern gint g_param_values_cmp(GParamSpec *pspec, const GValue *value1, 
+;;     const GValue *value2);
+(if echo-decls (display "g_param_values_cmp\n"))
+(define g_param_values_cmp
+  (let ((~f (ffi:pointer->procedure
+              ffi:int
+              (dynamic-func
+                "g_param_values_cmp"
+                (dynamic-link))
+              (list '* '* '*))))
+    (lambda (pspec value1 value2)
+      (let ((~pspec (unwrap-GParamSpec* pspec))
+            (~value1 (unwrap-GValue* value1))
+            (~value2 (unwrap-GValue* value2)))
+        (~f ~pspec ~value1 ~value2)))))
+(export g_param_values_cmp)
+
+;; extern const gchar *g_param_spec_get_name(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_get_name\n"))
+(define g_param_spec_get_name
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_get_name"
+                (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (~f ~pspec)))))
+(export g_param_spec_get_name)
+
+;; extern const gchar *g_param_spec_get_nick(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_get_nick\n"))
+(define g_param_spec_get_nick
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_get_nick"
+                (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (~f ~pspec)))))
+(export g_param_spec_get_nick)
+
+;; extern const gchar *g_param_spec_get_blurb(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_get_blurb\n"))
+(define g_param_spec_get_blurb
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_get_blurb"
+                (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (~f ~pspec)))))
+(export g_param_spec_get_blurb)
+
+;; extern void g_value_set_param(GValue *value, GParamSpec *param);
+(if echo-decls (display "g_value_set_param\n"))
+(define g_value_set_param
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func "g_value_set_param" (dynamic-link))
+              (list '* '*))))
+    (lambda (value param)
+      (let ((~value (unwrap-GValue* value))
+            (~param (unwrap-GParamSpec* param)))
+        (~f ~value ~param)))))
+(export g_value_set_param)
+
+;; extern GParamSpec *g_value_get_param(const GValue *value);
+(if echo-decls (display "g_value_get_param\n"))
+(define g_value_get_param
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_value_get_param" (dynamic-link))
+              (list '*))))
+    (lambda (value)
+      (let ((~value (unwrap-GValue* value)))
+        (wrap-GParamSpec* (~f ~value))))))
+(export g_value_get_param)
+
+;; extern GParamSpec *g_value_dup_param(const GValue *value);
+(if echo-decls (display "g_value_dup_param\n"))
+(define g_value_dup_param
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func "g_value_dup_param" (dynamic-link))
+              (list '*))))
+    (lambda (value)
+      (let ((~value (unwrap-GValue* value)))
+        (wrap-GParamSpec* (~f ~value))))))
+(export g_value_dup_param)
+
+;; extern void g_value_take_param(GValue *value, GParamSpec *param);
+(if echo-decls (display "g_value_take_param\n"))
+(define g_value_take_param
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_value_take_param"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (value param)
+      (let ((~value (unwrap-GValue* value))
+            (~param (unwrap-GParamSpec* param)))
+        (~f ~value ~param)))))
+(export g_value_take_param)
+
+;; extern void g_value_set_param_take_ownership(GValue *value, GParamSpec *
+;;     param);
+(if echo-decls (display "g_value_set_param_take_ownership\n"))
+(define g_value_set_param_take_ownership
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_value_set_param_take_ownership"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (value param)
+      (let ((~value (unwrap-GValue* value))
+            (~param (unwrap-GParamSpec* param)))
+        (~f ~value ~param)))))
+(export g_value_set_param_take_ownership)
+
+;; extern const GValue *g_param_spec_get_default_value(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_get_default_value\n"))
+(define g_param_spec_get_default_value
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_get_default_value"
+                (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (wrap-GValue* (~f ~pspec))))))
+(export g_param_spec_get_default_value)
+
+;; extern GQuark g_param_spec_get_name_quark(GParamSpec *pspec);
+(if echo-decls (display "g_param_spec_get_name_quark\n"))
+(define g_param_spec_get_name_quark
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-int
+              (dynamic-func
+                "g_param_spec_get_name_quark"
+                (dynamic-link))
+              (list '*))))
+    (lambda (pspec)
+      (let ((~pspec (unwrap-GParamSpec* pspec)))
+        (~f ~pspec)))))
+(export g_param_spec_get_name_quark)
+
+;; typedef struct _GParamSpecTypeInfo GParamSpecTypeInfo;
+(if echo-decls (display "GParamSpecTypeInfo\n"))
+(define GParamSpecTypeInfo-desc void)
+(define GParamSpecTypeInfo*-desc (bs:pointer (delay GParamSpecTypeInfo-desc)))
+(define-fh-pointer-type GParamSpecTypeInfo* GParamSpecTypeInfo*-desc)
+
+;; struct _GParamSpecTypeInfo {
+;;   /* type system portion */
+;;   guint16 instance_size; /* obligatory */
+;;   guint16 n_preallocs; /* optional */
+;;   void (*instance_init)(GParamSpec *pspec); /* optional */
+;;   /* class portion */
+;;   GType value_type; /* obligatory */
+;;   void (*finalize)(GParamSpec *pspec); /* optional */
+;;   void (*value_set_default)(GParamSpec *pspec, GValue *value);
+;;   gboolean (*value_validate)(GParamSpec *pspec, GValue *value);
+;;   gint (*values_cmp)(GParamSpec *pspec, const GValue *value1, const GValue *
+;;       value2);
+;; };
+(if echo-decls (display "(struct . _GParamSpecTypeInfo)\n"))
+(define struct-_GParamSpecTypeInfo-desc
+  (bs:struct
+    (list `(instance_size ,unsigned-short)
+          `(n_preallocs ,unsigned-short)
+          `(instance_init ,(bs:pointer void))
+          `(value_type ,GType-desc)
+          `(finalize ,(bs:pointer void))
+          `(value_set_default ,(bs:pointer void))
+          `(value_validate ,(bs:pointer void))
+          `(values_cmp ,(bs:pointer void)))))
+(export struct-_GParamSpecTypeInfo-desc)
+(define-fh-compound-type/p struct-_GParamSpecTypeInfo struct-_GParamSpecTypeInfo-desc)
+(set! GParamSpecTypeInfo-desc struct-_GParamSpecTypeInfo-desc)
+(define-fh-compound-type GParamSpecTypeInfo GParamSpecTypeInfo-desc)
+
+;; extern GType g_param_type_register_static(const gchar *name, const 
+;;     GParamSpecTypeInfo *pspec_info);
+(if echo-decls (display "g_param_type_register_static\n"))
+(define g_param_type_register_static
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func
+                "g_param_type_register_static"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (name pspec_info)
+      (let ((~name (unwrap~pointer name))
+            (~pspec_info
+              (unwrap-GParamSpecTypeInfo* pspec_info)))
+        (wrap-GType (~f ~name ~pspec_info))))))
+(export g_param_type_register_static)
+
+;; GType _g_param_type_register_static_constant(const gchar *name, const 
+;;     GParamSpecTypeInfo *pspec_info, GType opt_type);
+(if echo-decls (display "_g_param_type_register_static_constant\n"))
+(define _g_param_type_register_static_constant
+  (let ((~f (ffi:pointer->procedure
+              ffi:unsigned-long
+              (dynamic-func
+                "_g_param_type_register_static_constant"
+                (dynamic-link))
+              (list '* '* ffi:unsigned-long))))
+    (lambda (name pspec_info opt_type)
+      (let ((~name (unwrap~pointer name))
+            (~pspec_info
+              (unwrap-GParamSpecTypeInfo* pspec_info))
+            (~opt_type (unwrap-GType opt_type)))
+        (wrap-GType (~f ~name ~pspec_info ~opt_type))))))
+(export _g_param_type_register_static_constant)
+
+;; extern gpointer g_param_spec_internal(GType param_type, const gchar *name, 
+;;     const gchar *nick, const gchar *blurb, GParamFlags flags);
+(if echo-decls (display "g_param_spec_internal\n"))
+(define g_param_spec_internal
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_internal"
+                (dynamic-link))
+              (list ffi:unsigned-long '* '* '* ffi:int))))
+    (lambda (param_type name nick blurb flags)
+      (let ((~param_type (unwrap-GType param_type))
+            (~name (unwrap~pointer name))
+            (~nick (unwrap~pointer nick))
+            (~blurb (unwrap~pointer blurb))
+            (~flags (unwrap~fixed flags)))
+        (~f ~param_type ~name ~nick ~blurb ~flags)))))
+(export g_param_spec_internal)
+
+;; extern GParamSpecPool *g_param_spec_pool_new(gboolean type_prefixing);
+(if echo-decls (display "g_param_spec_pool_new\n"))
+(define g_param_spec_pool_new
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_pool_new"
+                (dynamic-link))
+              (list ffi:int))))
+    (lambda (type_prefixing)
+      (let ((~type_prefixing (unwrap~fixed type_prefixing)))
+        (wrap-GParamSpecPool* (~f ~type_prefixing))))))
+(export g_param_spec_pool_new)
+
+;; extern void g_param_spec_pool_insert(GParamSpecPool *pool, GParamSpec *pspec
+;;     , GType owner_type);
+(if echo-decls (display "g_param_spec_pool_insert\n"))
+(define g_param_spec_pool_insert
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_param_spec_pool_insert"
+                (dynamic-link))
+              (list '* '* ffi:unsigned-long))))
+    (lambda (pool pspec owner_type)
+      (let ((~pool (unwrap-GParamSpecPool* pool))
+            (~pspec (unwrap-GParamSpec* pspec))
+            (~owner_type (unwrap-GType owner_type)))
+        (~f ~pool ~pspec ~owner_type)))))
+(export g_param_spec_pool_insert)
+
+;; extern void g_param_spec_pool_remove(GParamSpecPool *pool, GParamSpec *pspec
+;;     );
+(if echo-decls (display "g_param_spec_pool_remove\n"))
+(define g_param_spec_pool_remove
+  (let ((~f (ffi:pointer->procedure
+              ffi:void
+              (dynamic-func
+                "g_param_spec_pool_remove"
+                (dynamic-link))
+              (list '* '*))))
+    (lambda (pool pspec)
+      (let ((~pool (unwrap-GParamSpecPool* pool))
+            (~pspec (unwrap-GParamSpec* pspec)))
+        (~f ~pool ~pspec)))))
+(export g_param_spec_pool_remove)
+
+;; extern GParamSpec *g_param_spec_pool_lookup(GParamSpecPool *pool, const 
+;;     gchar *param_name, GType owner_type, gboolean walk_ancestors);
+(if echo-decls (display "g_param_spec_pool_lookup\n"))
+(define g_param_spec_pool_lookup
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_pool_lookup"
+                (dynamic-link))
+              (list '* '* ffi:unsigned-long ffi:int))))
+    (lambda (pool param_name owner_type walk_ancestors)
+      (let ((~pool (unwrap-GParamSpecPool* pool))
+            (~param_name (unwrap~pointer param_name))
+            (~owner_type (unwrap-GType owner_type))
+            (~walk_ancestors (unwrap~fixed walk_ancestors)))
+        (wrap-GParamSpec*
+          (~f ~pool
+              ~param_name
+              ~owner_type
+              ~walk_ancestors))))))
+(export g_param_spec_pool_lookup)
+
+;; extern GList *g_param_spec_pool_list_owned(GParamSpecPool *pool, GType 
+;;     owner_type);
+(if echo-decls (display "g_param_spec_pool_list_owned\n"))
+(define g_param_spec_pool_list_owned
+  (let ((~f (ffi:pointer->procedure
+              '*
+              (dynamic-func
+                "g_param_spec_pool_list_owned"
+                (dynamic-link))
+              (list '* ffi:unsigned-long))))
+    (lambda (pool owner_type)
+      (let ((~pool (unwrap-GParamSpecPool* pool))
+            (~owner_type (unwrap-GType owner_type)))
+        (~f ~pool ~owner_type)))))
+(export g_param_spec_pool_list_owned)
+
+;; extern GParamSpec **g_param_spec_pool_list(GParamSpecPool *pool, GType 
+;;     owner_type, guint *n_pspecs_p);
+(if echo-decls (display "g_param_spec_pool_list\n"))
+;; ... failed.
+
+;; typedef struct _GClosure GClosure;
+(if echo-decls (display "GClosure\n"))
+(define GClosure-desc void)
+(define GClosure*-desc (bs:pointer (delay GClosure-desc)))
+(define-fh-pointer-type GClosure* GClosure*-desc)
+
+;; typedef struct _GClosureNotifyData GClosureNotifyData;
+(if echo-decls (display "GClosureNotifyData\n"))
+(define GClosureNotifyData-desc void)
+(define GClosureNotifyData*-desc (bs:pointer (delay GClosureNotifyData-desc)))
+(define-fh-pointer-type GClosureNotifyData* GClosureNotifyData*-desc)
+
+;; typedef void (*GCallback)(void);
+(if echo-decls (display "GCallback\n"))
+(define-fh-function/p GCallback
+  ffi:void (list ffi:void))
+
+;; typedef void (*GClosureNotify)(gpointer data, GClosure *closure);
+(if echo-decls (display "GClosureNotify\n"))
+(define-fh-function/p GClosureNotify
+  ffi:void (list (quote *) (quote *)))
+
+;; typedef void (*GClosureMarshal)(GClosure *closure, GValue *return_value, 
+;;     guint n_param_values, const GValue *param_values, gpointer 
+;;     invocation_hint, gpointer marshal_data);
+(if echo-decls (display "GClosureMarshal\n"))
+(define-fh-function/p GClosureMarshal
+  ffi:void (list (quote *) (quote *) ffi:unsigned-int (quote *) (quote *) (quote *)))
+
+;; typedef void (*GVaClosureMarshal)(GClosure *closure, GValue *return_value, 
+;;     gpointer instance, va_list args, gpointer marshal_data, int n_params, 
+;;     GType *param_types);
+(if echo-decls (display "GVaClosureMarshal\n"))
+(define-fh-function/p GVaClosureMarshal
+  ffi:void (list (quote *) (quote *) (quote *) (quote *) (quote *) ffi:int (quote *)))
+
+;; typedef struct _GCClosure GCClosure;
+(if echo-decls (display "GCClosure\n"))
+(define GCClosure-desc void)
+(define GCClosure*-desc (bs:pointer (delay GCClosure-desc)))
+(define-fh-pointer-type GCClosure* GCClosure*-desc)
+
+;; struct _GClosureNotifyData {
+;;   gpointer data;
+;;   GClosureNotify notify;
+;; };
+(if echo-decls (display "(struct . _GClosureNotifyData)\n"))
+(define struct-_GClosureNotifyData-desc
+  (bs:struct
+    (list `(data ,(bs:pointer void))
+          `(notify ,(bs:pointer void)))))
+(export struct-_GClosureNotifyData-desc)
+(define-fh-compound-type/p struct-_GClosureNotifyData struct-_GClosureNotifyData-desc)
+(set! GClosureNotifyData-desc struct-_GClosureNotifyData-desc)
+(define-fh-compound-type GClosureNotifyData GClosureNotifyData-desc)
+
+;; struct _GClosure {
+;;   /*< private >*/
+;;   volatile guint ref_count : 15;
+;;   /* meta_marshal is not used anymore but must be zero for historical reasons
+;;       
+;;      as it was exposed in the G_CLOSURE_N_NOTIFIERS macro */
+;;   volatile guint meta_marshal_nouse : 1;
+;;   volatile guint n_guards : 1;
+;;   volatile guint n_fnotifiers : 2; /* finalization notifiers */
+;;   volatile guint n_inotifiers : 8; /* invalidation notifiers */
+;;   volatile guint in_inotify : 1;
+;;   volatile guint floating : 1;
+;;   /*< protected >*/
+;;   volatile guint derivative_flag : 1;
+;;   /*< public >*/
+;;   volatile guint in_marshal : 1;
+;;   volatile guint is_invalid : 1;
+;;   /*< private >*/
+;;   void (*marshal)(GClosure *closure, GValue *return_value, guint 
+;;       n_param_values, const GValue *param_values, gpointer invocation_hint, 
+;;       gpointer marshal_data);
+;;   /*< protected >*/
+;;   gpointer data;
+;;   /*< private >*/
+;;   GClosureNotifyData *notifiers;
+;;   /* invariants/constrains:
+;;    * - ->marshal and ->data are _invalid_ as soon as ->is_invalid==TRUE
+;;    * - invocation of all inotifiers occours prior to fnotifiers
+;;    * - order of inotifiers is random
+;;    *   inotifiers may _not_ free/invalidate parameter values (e.g. ->data)
+;;    * - order of fnotifiers is random
+;;    * - each notifier may only be removed before or during its invocation
+;;    * - reference counting may only happen prior to fnotify invocation
+;;    *   (in that sense, fnotifiers are really finalization handlers)
+;;    */
+;; };
+(if echo-decls (display "(struct . _GClosure)\n"))

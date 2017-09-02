@@ -220,7 +220,7 @@
 	    (if (eq? c2 #\newline)
 		(iter cl (read-char))
 		(iter (cons* c2 ch cl) (read-char)))))
-	 ((eq? ch #\/) ;; swallow comments, event w/ newlines
+	 ((eq? ch #\/) ;; swallow comments, even w/ newlines
 	  (let ((c2 (read-char)))
 	    (cond
 	     ((eqv? c2 #\*)

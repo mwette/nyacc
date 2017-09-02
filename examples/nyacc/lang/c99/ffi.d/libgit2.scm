@@ -6,7 +6,7 @@
   #:use-module (bytestructures guile)
   )
 (dynamic-link "libgit2")
-(define void intptr_t) ;; no void in bytestructures
+(define void intptr_t)
 (define echo-decls #f)
 
 ;; extern void git_libgit2_version(int *major, int *minor, int *rev);
@@ -9601,9 +9601,9 @@
                 "git_config_entry_free"
                 (dynamic-link))
               (list '*))))
-    (lambda (@12579)
-      (let ((~@12579 (unwrap-git_config_entry* @12579)))
-        (~f ~@12579)))))
+    (lambda (@76)
+      (let ((~@76 (unwrap-git_config_entry* @76)))
+        (~f ~@76)))))
 (export git_config_entry_free)
 
 ;; typedef int (*git_config_foreach_cb)(const git_config_entry *, void *);

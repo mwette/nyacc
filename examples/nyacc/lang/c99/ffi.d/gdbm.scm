@@ -6,7 +6,7 @@
   #:use-module (bytestructures guile)
   )
 (dynamic-link "libgdbm")
-(define void intptr_t) ;; no void in bytestructures
+(define void intptr_t)
 (define echo-decls #f)
 
 ;; typedef unsigned long long int gdbm_count_t;
@@ -37,13 +37,14 @@
 ;; extern int const gdbm_version_number[3];
 (if echo-decls (display "gdbm_version_number\n"))
 (define gdbm_version_number
-  (let ((desc* (bs:pointer (bs:vector 3 int)))
-        (addr (ffi:pointer-address
-                (dynamic-pointer
-                  "gdbm_version_number"
-                  (dynamic-link)))))
-    (lambda ()
-      (bytestructure-ref (bytestructure desc* addr) '*))))
+  (let* ((addr (dynamic-pointer
+                 "gdbm_version_number"
+                 (dynamic-link)))
+         (bs* (make-bytestructure
+                (ffi:pointer->bytevector addr (sizeof '*))
+                0
+                (bs:pointer (bs:vector 3 int)))))
+    (case-lambda (() (bytestructure-ref bs* '*)))))
 (export gdbm_version_number)
 
 ;; extern GDBM_FILE gdbm_fd_open(int fd, const char *file_name, int block_size
@@ -62,12 +63,11 @@
             (~fatal_func
               ((make-ftn-arg-unwrapper ffi:void (list '*))
                fatal_func)))
-        (wrap-GDBM_FILE
-          (~f ~fd
-              ~file_name
-              ~block_size
-              ~flags
-              ~fatal_func))))))
+        (~f ~fd
+            ~file_name
+            ~block_size
+            ~flags
+            ~fatal_func)))))
 (export gdbm_fd_open)
 
 ;; extern GDBM_FILE gdbm_open(const char *, int, int, int, void (*)(const char 
@@ -78,15 +78,15 @@
               '*
               (dynamic-func "gdbm_open" (dynamic-link))
               (list '* ffi:int ffi:int ffi:int '*))))
-    (lambda (@300 arg-1 arg-2 arg-3 @299)
-      (let ((~@300 (unwrap~pointer @300))
+    (lambda (@12356 arg-1 arg-2 arg-3 @12355)
+      (let ((~@12356 (unwrap~pointer @12356))
             (~arg-1 (unwrap~fixed arg-1))
             (~arg-2 (unwrap~fixed arg-2))
             (~arg-3 (unwrap~fixed arg-3))
-            (~@299 ((make-ftn-arg-unwrapper ffi:void (list '*))
-                    @299)))
-        (wrap-GDBM_FILE
-          (~f ~@300 ~arg-1 ~arg-2 ~arg-3 ~@299))))))
+            (~@12355
+              ((make-ftn-arg-unwrapper ffi:void (list '*))
+               @12355)))
+        (~f ~@12356 ~arg-1 ~arg-2 ~arg-3 ~@12355)))))
 (export gdbm_open)
 
 ;; extern void gdbm_close(GDBM_FILE);
@@ -97,7 +97,7 @@
               (dynamic-func "gdbm_close" (dynamic-link))
               (list '*))))
     (lambda (arg-0)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0)))
+      (let ((~arg-0 (unwrap~pointer arg-0)))
         (~f ~arg-0)))))
 (export gdbm_close)
 
@@ -112,7 +112,7 @@
                     (list '* ffi:int)
                     ffi:int))))
     (lambda (arg-0 arg-1 arg-2 arg-3)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
+      (let ((~arg-0 (unwrap~pointer arg-0))
             (~arg-1 (unwrap-datum arg-1))
             (~arg-2 (unwrap-datum arg-2))
             (~arg-3 (unwrap~fixed arg-3)))
@@ -127,7 +127,7 @@
               (dynamic-func "gdbm_fetch" (dynamic-link))
               (list '* (list '* ffi:int)))))
     (lambda (arg-0 arg-1)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
+      (let ((~arg-0 (unwrap~pointer arg-0))
             (~arg-1 (unwrap-datum arg-1)))
         (wrap-datum (~f ~arg-0 ~arg-1))))))
 (export gdbm_fetch)
@@ -140,7 +140,7 @@
               (dynamic-func "gdbm_delete" (dynamic-link))
               (list '* (list '* ffi:int)))))
     (lambda (arg-0 arg-1)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
+      (let ((~arg-0 (unwrap~pointer arg-0))
             (~arg-1 (unwrap-datum arg-1)))
         (~f ~arg-0 ~arg-1)))))
 (export gdbm_delete)
@@ -153,7 +153,7 @@
               (dynamic-func "gdbm_firstkey" (dynamic-link))
               (list '*))))
     (lambda (arg-0)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0)))
+      (let ((~arg-0 (unwrap~pointer arg-0)))
         (wrap-datum (~f ~arg-0))))))
 (export gdbm_firstkey)
 
@@ -165,7 +165,7 @@
               (dynamic-func "gdbm_nextkey" (dynamic-link))
               (list '* (list '* ffi:int)))))
     (lambda (arg-0 arg-1)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
+      (let ((~arg-0 (unwrap~pointer arg-0))
             (~arg-1 (unwrap-datum arg-1)))
         (wrap-datum (~f ~arg-0 ~arg-1))))))
 (export gdbm_nextkey)
@@ -178,7 +178,7 @@
               (dynamic-func "gdbm_reorganize" (dynamic-link))
               (list '*))))
     (lambda (arg-0)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0)))
+      (let ((~arg-0 (unwrap~pointer arg-0)))
         (~f ~arg-0)))))
 (export gdbm_reorganize)
 
@@ -190,7 +190,7 @@
               (dynamic-func "gdbm_sync" (dynamic-link))
               (list '*))))
     (lambda (arg-0)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0)))
+      (let ((~arg-0 (unwrap~pointer arg-0)))
         (~f ~arg-0)))))
 (export gdbm_sync)
 
@@ -202,7 +202,7 @@
               (dynamic-func "gdbm_exists" (dynamic-link))
               (list '* (list '* ffi:int)))))
     (lambda (arg-0 arg-1)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
+      (let ((~arg-0 (unwrap~pointer arg-0))
             (~arg-1 (unwrap-datum arg-1)))
         (~f ~arg-0 ~arg-1)))))
 (export gdbm_exists)
@@ -214,12 +214,12 @@
               ffi:int
               (dynamic-func "gdbm_setopt" (dynamic-link))
               (list '* ffi:int '* ffi:int))))
-    (lambda (arg-0 arg-1 @311 arg-3)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
+    (lambda (arg-0 arg-1 @12357 arg-3)
+      (let ((~arg-0 (unwrap~pointer arg-0))
             (~arg-1 (unwrap~fixed arg-1))
-            (~@311 (unwrap~pointer @311))
+            (~@12357 (unwrap~pointer @12357))
             (~arg-3 (unwrap~fixed arg-3)))
-        (~f ~arg-0 ~arg-1 ~@311 ~arg-3)))))
+        (~f ~arg-0 ~arg-1 ~@12357 ~arg-3)))))
 (export gdbm_setopt)
 
 ;; extern int gdbm_fdesc(GDBM_FILE);
@@ -230,7 +230,7 @@
               (dynamic-func "gdbm_fdesc" (dynamic-link))
               (list '*))))
     (lambda (arg-0)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0)))
+      (let ((~arg-0 (unwrap~pointer arg-0)))
         (~f ~arg-0)))))
 (export gdbm_fdesc)
 
@@ -241,12 +241,12 @@
               ffi:int
               (dynamic-func "gdbm_export" (dynamic-link))
               (list '* '* ffi:int ffi:int))))
-    (lambda (arg-0 @314 arg-2 arg-3)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
-            (~@314 (unwrap~pointer @314))
+    (lambda (arg-0 @12358 arg-2 arg-3)
+      (let ((~arg-0 (unwrap~pointer arg-0))
+            (~@12358 (unwrap~pointer @12358))
             (~arg-2 (unwrap~fixed arg-2))
             (~arg-3 (unwrap~fixed arg-3)))
-        (~f ~arg-0 ~@314 ~arg-2 ~arg-3)))))
+        (~f ~arg-0 ~@12358 ~arg-2 ~arg-3)))))
 (export gdbm_export)
 
 ;; extern int gdbm_export_to_file(GDBM_FILE dbf, FILE *fp);
@@ -259,7 +259,7 @@
                 (dynamic-link))
               (list '* '*))))
     (lambda (dbf fp)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))
+      (let ((~dbf (unwrap~pointer dbf))
             (~fp (unwrap~pointer fp)))
         (~f ~dbf ~fp)))))
 (export gdbm_export_to_file)
@@ -271,11 +271,11 @@
               ffi:int
               (dynamic-func "gdbm_import" (dynamic-link))
               (list '* '* ffi:int))))
-    (lambda (arg-0 @317 arg-2)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
-            (~@317 (unwrap~pointer @317))
+    (lambda (arg-0 @12359 arg-2)
+      (let ((~arg-0 (unwrap~pointer arg-0))
+            (~@12359 (unwrap~pointer @12359))
             (~arg-2 (unwrap~fixed arg-2)))
-        (~f ~arg-0 ~@317 ~arg-2)))))
+        (~f ~arg-0 ~@12359 ~arg-2)))))
 (export gdbm_import)
 
 ;; extern int gdbm_import_from_file(GDBM_FILE dbf, FILE *fp, int flag);
@@ -288,7 +288,7 @@
                 (dynamic-link))
               (list '* '* ffi:int))))
     (lambda (dbf fp flag)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))
+      (let ((~dbf (unwrap~pointer dbf))
             (~fp (unwrap~pointer fp))
             (~flag (unwrap~fixed flag)))
         (~f ~dbf ~fp ~flag)))))
@@ -302,7 +302,7 @@
               (dynamic-func "gdbm_count" (dynamic-link))
               (list '* '*))))
     (lambda (dbf pcount)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))
+      (let ((~dbf (unwrap~pointer dbf))
             (~pcount (unwrap-gdbm_count_t* pcount)))
         (~f ~dbf ~pcount)))))
 (export gdbm_count)
@@ -349,7 +349,7 @@
               (dynamic-func "gdbm_recover" (dynamic-link))
               (list '* '* ffi:int))))
     (lambda (dbf rcvr flags)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))
+      (let ((~dbf (unwrap~pointer dbf))
             (~rcvr (unwrap-gdbm_recovery* rcvr))
             (~flags (unwrap~fixed flags)))
         (~f ~dbf ~rcvr ~flags)))))
@@ -363,13 +363,13 @@
               ffi:int
               (dynamic-func "gdbm_dump" (dynamic-link))
               (list '* '* ffi:int ffi:int ffi:int))))
-    (lambda (arg-0 @324 fmt open_flags mode)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
-            (~@324 (unwrap~pointer @324))
+    (lambda (arg-0 @12360 fmt open_flags mode)
+      (let ((~arg-0 (unwrap~pointer arg-0))
+            (~@12360 (unwrap~pointer @12360))
             (~fmt (unwrap~fixed fmt))
             (~open_flags (unwrap~fixed open_flags))
             (~mode (unwrap~fixed mode)))
-        (~f ~arg-0 ~@324 ~fmt ~open_flags ~mode)))))
+        (~f ~arg-0 ~@12360 ~fmt ~open_flags ~mode)))))
 (export gdbm_dump)
 
 ;; extern int gdbm_dump_to_file(GDBM_FILE, FILE *, int fmt);
@@ -379,11 +379,11 @@
               ffi:int
               (dynamic-func "gdbm_dump_to_file" (dynamic-link))
               (list '* '* ffi:int))))
-    (lambda (arg-0 @326 fmt)
-      (let ((~arg-0 (unwrap-GDBM_FILE arg-0))
-            (~@326 (unwrap~pointer @326))
+    (lambda (arg-0 @12361 fmt)
+      (let ((~arg-0 (unwrap~pointer arg-0))
+            (~@12361 (unwrap~pointer @12361))
             (~fmt (unwrap~fixed fmt)))
-        (~f ~arg-0 ~@326 ~fmt)))))
+        (~f ~arg-0 ~@12361 ~fmt)))))
 (export gdbm_dump_to_file)
 
 ;; extern int gdbm_load(GDBM_FILE *, const char *, int replace, int meta_flags
@@ -394,13 +394,13 @@
               ffi:int
               (dynamic-func "gdbm_load" (dynamic-link))
               (list '* '* ffi:int ffi:int '*))))
-    (lambda (@329 @328 replace meta_flags line)
-      (let ((~@329 (unwrap-GDBM_FILE* @329))
-            (~@328 (unwrap~pointer @328))
+    (lambda (@12363 @12362 replace meta_flags line)
+      (let ((~@12363 (unwrap~pointer @12363))
+            (~@12362 (unwrap~pointer @12362))
             (~replace (unwrap~fixed replace))
             (~meta_flags (unwrap~fixed meta_flags))
             (~line (unwrap~pointer line)))
-        (~f ~@329 ~@328 ~replace ~meta_flags ~line)))))
+        (~f ~@12363 ~@12362 ~replace ~meta_flags ~line)))))
 (export gdbm_load)
 
 ;; extern int gdbm_load_from_file(GDBM_FILE *, FILE *, int replace, int 
@@ -413,13 +413,13 @@
                 "gdbm_load_from_file"
                 (dynamic-link))
               (list '* '* ffi:int ffi:int '*))))
-    (lambda (@332 @331 replace meta_flags line)
-      (let ((~@332 (unwrap-GDBM_FILE* @332))
-            (~@331 (unwrap~pointer @331))
+    (lambda (@12365 @12364 replace meta_flags line)
+      (let ((~@12365 (unwrap~pointer @12365))
+            (~@12364 (unwrap~pointer @12364))
             (~replace (unwrap~fixed replace))
             (~meta_flags (unwrap~fixed meta_flags))
             (~line (unwrap~pointer line)))
-        (~f ~@332 ~@331 ~replace ~meta_flags ~line)))))
+        (~f ~@12365 ~@12364 ~replace ~meta_flags ~line)))))
 (export gdbm_load_from_file)
 
 ;; extern int gdbm_copy_meta(GDBM_FILE dst, GDBM_FILE src);
@@ -430,8 +430,8 @@
               (dynamic-func "gdbm_copy_meta" (dynamic-link))
               (list '* '*))))
     (lambda (dst src)
-      (let ((~dst (unwrap-GDBM_FILE dst))
-            (~src (unwrap-GDBM_FILE src)))
+      (let ((~dst (unwrap~pointer dst))
+            (~src (unwrap~pointer src)))
         (~f ~dst ~src)))))
 (export gdbm_copy_meta)
 
@@ -444,31 +444,34 @@
 ;; extern gdbm_error gdbm_errno;
 (if echo-decls (display "gdbm_errno\n"))
 (define gdbm_errno
-  (let ((desc* (bs:pointer gdbm_error-desc))
-        (addr (ffi:pointer-address
-                (dynamic-pointer "gdbm_errno" (dynamic-link)))))
-    (lambda ()
-      (bytestructure-ref (bytestructure desc* addr) '*))))
+  (let* ((addr (dynamic-pointer "gdbm_errno" (dynamic-link)))
+         (bs* (make-bytestructure
+                (ffi:pointer->bytevector addr (sizeof '*))
+                0
+                (bs:pointer gdbm_error-desc))))
+    (case-lambda (() (bytestructure-ref bs* '*)))))
 (export gdbm_errno)
 
 ;; extern const char *constgdbm_errlist[];
 (if echo-decls (display "gdbm_errlist\n"))
 (define gdbm_errlist
-  (let ((desc* (bs:pointer (bs:pointer (bs:pointer int))))
-        (addr (ffi:pointer-address
-                (dynamic-pointer "gdbm_errlist" (dynamic-link)))))
-    (lambda ()
-      (bytestructure-ref (bytestructure desc* addr) '*))))
+  (let* ((addr (dynamic-pointer "gdbm_errlist" (dynamic-link)))
+         (bs* (make-bytestructure
+                (ffi:pointer->bytevector addr (sizeof '*))
+                0
+                (bs:pointer (bs:pointer (bs:pointer int))))))
+    (case-lambda (() (bytestructure-ref bs* '*)))))
 (export gdbm_errlist)
 
 ;; extern int const gdbm_syserr[];
 (if echo-decls (display "gdbm_syserr\n"))
 (define gdbm_syserr
-  (let ((desc* (bs:pointer (bs:pointer int)))
-        (addr (ffi:pointer-address
-                (dynamic-pointer "gdbm_syserr" (dynamic-link)))))
-    (lambda ()
-      (bytestructure-ref (bytestructure desc* addr) '*))))
+  (let* ((addr (dynamic-pointer "gdbm_syserr" (dynamic-link)))
+         (bs* (make-bytestructure
+                (ffi:pointer->bytevector addr (sizeof '*))
+                0
+                (bs:pointer (bs:pointer int)))))
+    (case-lambda (() (bytestructure-ref bs* '*)))))
 (export gdbm_syserr)
 
 ;; extern gdbm_error gdbm_last_errno(GDBM_FILE dbf);
@@ -479,7 +482,7 @@
               (dynamic-func "gdbm_last_errno" (dynamic-link))
               (list '*))))
     (lambda (dbf)
-      (let ((~dbf (unwrap-GDBM_FILE dbf)))
+      (let ((~dbf (unwrap~pointer dbf)))
         (wrap-gdbm_error (~f ~dbf))))))
 (export gdbm_last_errno)
 
@@ -491,7 +494,7 @@
               (dynamic-func "gdbm_last_syserr" (dynamic-link))
               (list '*))))
     (lambda (dbf)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))) (~f ~dbf)))))
+      (let ((~dbf (unwrap~pointer dbf))) (~f ~dbf)))))
 (export gdbm_last_syserr)
 
 ;; extern void gdbm_set_errno(GDBM_FILE dbf, gdbm_error ec, int fatal);
@@ -502,7 +505,7 @@
               (dynamic-func "gdbm_set_errno" (dynamic-link))
               (list '* ffi:int ffi:int))))
     (lambda (dbf ec fatal)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))
+      (let ((~dbf (unwrap~pointer dbf))
             (~ec (unwrap-gdbm_error ec))
             (~fatal (unwrap~fixed fatal)))
         (~f ~dbf ~ec ~fatal)))))
@@ -516,7 +519,7 @@
               (dynamic-func "gdbm_clear_error" (dynamic-link))
               (list '*))))
     (lambda (dbf)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))) (~f ~dbf)))))
+      (let ((~dbf (unwrap~pointer dbf))) (~f ~dbf)))))
 (export gdbm_clear_error)
 
 ;; extern int gdbm_needs_recovery(GDBM_FILE dbf);
@@ -529,7 +532,7 @@
                 (dynamic-link))
               (list '*))))
     (lambda (dbf)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))) (~f ~dbf)))))
+      (let ((~dbf (unwrap~pointer dbf))) (~f ~dbf)))))
 (export gdbm_needs_recovery)
 
 ;; extern int gdbm_check_syserr(gdbm_error n);
@@ -563,7 +566,7 @@
               (dynamic-func "gdbm_db_strerror" (dynamic-link))
               (list '*))))
     (lambda (dbf)
-      (let ((~dbf (unwrap-GDBM_FILE dbf))) (~f ~dbf)))))
+      (let ((~dbf (unwrap~pointer dbf))) (~f ~dbf)))))
 (export gdbm_db_strerror)
 
 ;; extern int gdbm_version_cmp(int const a[], int const b[]);

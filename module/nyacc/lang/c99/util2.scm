@@ -36,6 +36,12 @@
 ;;  unitize-decl is shallow: it only works on init-decl-list.
 ;;  You may need to rerun if ...
 
+;; TODO
+;;   in expand-typerefs if need to expand `foo_t *x' then change to
+;;  if struct use `struct foo *x;'
+;;  if fixed/float use `int *x;' etc
+;;  if function use `void *x;'
+
 ;; mspec == munged (unwrapped) declaration
 
 ;; possible pattern for munging:
@@ -108,8 +114,10 @@
   )
 ;; undocumented Guile builtins: or-map
 
-(define (sf fmt . args) (apply simple-format (current-error-port) fmt args))
-(define (pp exp) (pretty-print exp (current-error-port)))
+;;(define (sf fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (pperr exp)
+  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
+(define OA object-address)
 
 (define tmap-fmt
   '(("char" "%hhd")
@@ -122,6 +130,42 @@
     ("unsigned long int" "%lu")
     ("long long int" "%lld")
     ("unsigned long long int" "%llu")))
+
+;; @deffn {Procedure} pointer-declr? declr
+;; This predictate indicates if @var{declr} is a pointer.
+;; Does not handle @code{(*ftn)()}.
+;; The argument can also be @code{init-declr-list} or @code{comp-declr-list}
+;; in which case all elements need to be pointers.
+;; @end deffn
+(define (OLD-pointer-declr? declr)
+  (and
+   (pair? declr)
+   (case (sx-tag declr)
+     ((init-declr comp-declr param-declr)
+      (member (sx-tag (sx-ref declr 1)) '(ptr-declr array-of ftn-declr)))
+     ((init-declr-list comp-declr-list)
+      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed))
+	    #t (sx-tail declr)))
+     (else #f))))
+(define (pointer-declr? declr)
+  ;;(sferr "pointer-declr? ~S\n" declr)
+  (sxml-match declr
+    (#f #f)
+    ((init-declr ,declr) (pointer-declr? declr))
+    ((comp-declr ,declr) (pointer-declr? declr))
+    ((param-declr ,declr) (pointer-declr? declr))
+    ;;
+    ((ptr-declr ,pointer ,dir-declr) #t)
+    ((array-of . ,rest) #t)
+    ((ftn-declr . ,rest) #t)
+    ((abs-declr (pointer . ,r1) . ,r2) #t)
+    ;;
+    ((init-declr-list ,declrs ...)
+     (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+    ((comp-declr-list ,declrs ...)
+     (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+    ;;
+    (,otherwise #f)))
 
 ;; Use the term @dfn{udecl}, or unit-declaration, for a declaration which has
 ;; only one decl-item.  That is where,
@@ -601,32 +645,6 @@
 	   (else (cons item seed))))
    '() decl-spec-list))
 
-;; @deffn {Procedure} splice-declarators orig-declr tdef-declr => 
-;; Splice the original declarator into the typedef declarator.
-;; This is a helper for @code{expand-*-typename-ref} procecures.
-;; @end deffn
-(define (splice-declarators orig-declr tdef-declr)
-  
-  (define (fD seed tree)		; => (values seed tree)
-    (sxml-match tree
-      ((param-list . ,rest) (values tree '())) ; don't process
-      ((ident ,name) (values (reverse (cadr orig-declr)) '())) ; replace
-      (,otherwise (values '() tree))))
-
-  (define (fU seed kseed tree)
-    (let ((ktree (case (car kseed)
-		   ((param-list ident) kseed)
-		   (else (reverse kseed)))))
-      (if (null? seed) ktree (cons ktree seed))))
-
-  (define (fH seed tree)
-    (cons tree seed))
-
-  ;; This cons transfers the tag from orig-declr to the result.
-  (cons
-   (car orig-declr)			; init-declr or comp-declr
-   (cdr (foldts* fD fU fH '() tdef-declr)))) ; always init-declr
-
 ;; @deffn {Procedure} split-adecl decl => values
 ;; This routine splits a declaration (decl, udecl, comp-decl or param-decl)
 ;; into its constituent parts.  Attributes are currently not passed.
@@ -681,7 +699,7 @@
        ((pmatch (car origl) ((type-spec (typename ,name)) #t) (,othersize #f))
 	(iter specl (cdr repl-specl) (cdr origl))) ; now insert replacement
        ((equal? (car origl) '(stor-spec (const)))
-	(iter (cons (car repl) specl) repll (cdr origl)))
+	(iter (cons (car repll) specl) repll (cdr origl)))
        ((member (car origl) specl) ; don't duplicate "auto", "extern"
 	(iter specl repll (cdr origl)))
        (else
@@ -689,6 +707,16 @@
      (else
       (cons 'decl-spec-list (reverse specl))))))
 
+;; Consider
+;; @example
+;; typedef int *foo_t;
+;; foo_t bla[3];
+;; @end example
+;; @noindent
+;; maps
+;; @example
+;; bla[3] => *(bla[3])
+;; @end example
 (define (tdef-splice-declr orig-declr tdef-declr)
   (define (probe-declr declr)
     (sxml-match declr
@@ -713,7 +741,9 @@
       (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
   (probe-declr tdef-declr))
 
+;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
 ;; iterate tdef-splice-declr over a declr-init-list (or equiv)
+;; @end deffn
 (define (tdef-splice-declr-list orig-declr-list tdef-declr)
   (sx-cons*
    (sx-tag orig-declr-list) (sx-attr orig-declr-list)
@@ -744,32 +774,41 @@
     (sx-tail decl-spec-list 1))))
 
 ;; declr can be xxxx-declr-list or xxxx-declr
-;; This needs to be able to accept @code{#f} @var{declr}.
+;; This needs to be able to accept @code{#f} @var{declr}. <= done, methinks
 (define (expand-specl-typerefs specl declr udict keep)
+  ;; In the process of expanding typerefs it is crutial that routines which
+  ;; expand parts return the original if no change made.  That is, if there
+  ;; are no changes then @code{(eq? (expand-typerefs expr) expr)} is true.
+  ;; If not, then infinite loop will result.
 
   (define (re-expand specl declr) ;; applied after typename
     (expand-specl-typerefs specl declr udict keep))
 
   (define (splice-typename specl declr name udict)
     (let* ((decl (assoc-ref udict name)) ; decl for typename
-	   (tdef-specl (sx-ref decl 1))	 ; pec's for typename
+	   (tdef-specl (sx-ref decl 1))	 ; specs for typename
 	   (tdef-declr (sx-ref decl 2))) ; declr for typename
       (values ;; fixdd-specl fixed-declr
        (tdef-splice-specl specl tdef-specl)
-       (cond
+       (cond ;; #f, init-declr-list, init-declr|comp-declr
 	((not declr) declr)
 	((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
 	(else (tdef-splice-declr declr tdef-declr))))))
-  
+
   (let* ((tspec (and=> (sx-find 'type-spec specl) cadr))
 	 (class (sx-tag tspec))		; e.g., typename, fixed-type
 	 (name (sx-ref tspec 1)))	; e.g., "foo_t"
     (case class
       ((typename)
+       (when #f ;;(string=? name "sqlite3_vfs")
+	 (sferr "\n")
+	 (pperr specl) (pperr declr)
+	 (sferr "pointer-declr => ~S\n" (pointer-declr? declr))
+	 ;;(error "stopping")
+	 )
        (cond
 	((member name keep)		; keeper; don't expand
 	 (values specl declr))
-
 	((pointer-declr? declr)		; pointer, replace with void*
 	 (values (replace-type-spec specl '(type-spec (void))) declr))
 	(else				; expand
@@ -782,7 +821,7 @@
 	      (fld1 (sx-ref tspec 1))
 	      (ident (if (eq? 'ident (sx-tag fld1)) fld1 #f))
 	      (field-list (if ident (sx-ref tspec 2) fld1))
-	      (field-list (clean-field-list field-list)) ; remove comments
+	      (field-list (clean-field-list field-list)) ; why remove comments?
 	      (orig-flds (sx-tail field-list 1))
 	      (fixd-flds (map
 			  (lambda (fld) (expand-typerefs fld udict keep))
@@ -794,19 +833,18 @@
 	      (fixd-tspec `(type-spec ,fixd-struct))
 	      (fixd-specl (replace-type-spec specl fixd-tspec)))
 	 (values fixd-specl declr)))
-      ((struct-ref union-ref) ;; compound reference; replace w/ def
-       (let* ((cmpd-name (and=> (sx-find 'ident tspec)
+      ((struct-ref union-ref) ;; compound reference; replace unless pointer
+       (let* ((c-name (and=> (sx-find 'ident tspec)
 				(lambda (id) (sx-ref id 1))))
-	      (cmpd-key (compound-key class cmpd-name))
-	      (cmpd-decl (and cmpd-key (assoc-ref udict cmpd-key))))
-	 (values
-	  (cond
-	   ((and cmpd-key (member cmpd-key keep)) specl)
-	   ((not cmpd-decl) specl) ;; comp-decl not found, just preserve it
-	   ((sx-find 'type-spec (sx-ref cmpd-decl 1)) =>
-	    (lambda (repl-spec) (replace-type-spec specl repl-spec)))
-	   (else specl))
-	  declr)))
+	      (c-key (compound-key class c-name))
+	      (c-decl (and c-key (assoc-ref udict c-key)))
+	      (t-spec (and c-decl (sx-find 'type-spec (sx-ref c-decl 1)))))
+	 (if (or (and c-key (member c-key keep))
+		 (not c-decl)
+		 (pointer-declr? declr))
+	     (values specl declr)
+	     (let ((r-specl (replace-type-spec specl t-spec)))
+	       (re-expand r-specl declr)))))
       ((enum-ref enum-def)
        ;; If not keeper, then replace enum with int.
        (let* ((type (sx-ref (sx-find 'type-spec specl) 1))
@@ -837,8 +875,31 @@
 ;; @*BUG HERE? if we run into a struct then the struct members have not
 ;; been munged into udecls.  The behavior is actually NOT DEFINED.
 (define* (expand-typerefs adecl udict #:optional (keep '()))
+  ;; In the process of expanding typerefs it is crutial that routines which
+  ;; expand parts return the original if no change made.  That is, if there
+  ;; are no changes then @code{(eq? (expand-typerefs expr) expr)} is true.
+  ;; If not, then infinite loop will result.
 
   (define (fix-param-list param-list)
+    (let* ((tail (sx-tail param-list 1))
+	   (xtail
+	    (let iter ((xparams '()) (chg? #f) (params tail))
+	      (if (null? params)
+		  (if chg? (reverse xparams) tail)
+		  (case (sx-tag (car params))
+		    ((param-decl)
+		     (let* ((param (car params))
+			    (xparam (expand-typerefs param udict keep)))
+		       (if (eq? param xparam)
+			   (iter (cons param xparams) chg? (cdr params))
+			   (iter (cons xparam xparams) #t (cdr params)))))
+		    ((ellipsis)
+		     (iter (cons (car params) xparams) chg? (cdr params))))))))
+      (if (eq? xtail tail)
+	  param-list
+	  (sx-cons* (sx-tag param-list) (sx-attr param-list) xtail))))
+
+  (define (OLD-fix-param-list param-list)
     (sx-cons*
      (sx-tag param-list) (sx-attr param-list)
      (fold-right
@@ -846,6 +907,7 @@
 	(cons
 	 (case (sx-tag param)
 	   ((param-decl)
+	    ;; should use split-adecl
 	    (let* ((declr1 (sx-ref param 2))
 		   (xparam (expand-typerefs param udict keep))
 		   (declr2 (sx-ref xparam 2)) 
@@ -860,8 +922,10 @@
 	   ((ellipsis) param))
 	 seed))
       '() (sx-tail param-list 1))))
-  
+
+  ;; This will check for function declrs and fix parameters.
   (define (fix-declr declr)
+    ;;(sferr "fix-declr:\n") (pperr declr)
     (sxml-match declr
       (#f declr)
       ((ident ,name) declr)
@@ -941,11 +1005,13 @@
       ;; declr-star
       ((declr-star) declr)
 
+      ;; ftn-declr
       ((ftn-declr ,dir-declr ,param-list)
        (let ((xdeclr (fix-declr dir-declr))
 	     (xparam-list (fix-param-list param-list)))
 	 (if (and (eq? xdeclr dir-declr) (eq? xparam-list param-list)) declr
 	     `(ftn-declr ,xdeclr ,xparam-list))))
+      
       ((abs-ftn-declr ,dir-declr ,param-list)
        (let ((xdeclr (fix-declr dir-declr))
 	     (xparam-list (if (eq? 'param-list (sx-tag param-list))
@@ -957,6 +1023,8 @@
        (let ((xparam-list (fix-param-list param-list)))
 	 (if (eq? xparam-list param-list) declr
 	     `(anon-ftn-declr ,xparam-list))))
+
+      ;; declr-lists too
       ((init-declr-list . ,declrs)
        (let ((xdeclrs (map fix-declr declrs)))
 	 (if (fold (lambda (l r seed) (and (eq? l r) seed)) #t xdeclrs declrs)
@@ -964,23 +1032,22 @@
 	     `(init-declr-list . ,xdeclrs))))
       ((comp-declr-list . ,declrs)
        (let ((xdeclrs (map fix-declr declrs)))
+	 ;;(sferr "    declrs, xdeclrs:\n") (pperr declrs) (pperr xdeclrs)
 	 (if (fold (lambda (l r seed) (and (eq? l r) seed)) #t xdeclrs declrs)
 	     declr
 	     `(comp-declr-list . ,xdeclrs))))
+      
       (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
-    
+
   (let*-values (((tag attr orig-specl orig-declr tail)
 		 (split-adecl adecl))
 		((repl-specl repl-declr)
-		 (expand-specl-typerefs orig-specl orig-declr udict keep))
-		)
+		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
     (let ((repl-declr (fix-declr repl-declr)))
       (if (and (eq? orig-specl repl-specl)
 	       (eq? orig-declr repl-declr))
 	  adecl ;; <= unchanged; return original
-	  (if repl-declr
-	      (sx-cons* tag attr repl-specl repl-declr tail)
-	      (sx-cons* tag attr repl-specl tail))))))
+	  (sx-cons* tag attr repl-specl repl-declr tail)))))
 
 ;; === enums and defines ===============
 
@@ -1193,16 +1260,6 @@
 	(specl (sx-ref udecl 1))
 	(tail (sx-tail udecl 2)))
     (sx-cons* tag attr (specl-rem-type-qual specl) tail)))
-
-;; @deffn {Procedure} pointer-declr? declr
-;; This predictate indicates if @var{declr} is a pointer.
-;; Does not handle vectors (yet).
-;; @end deffn
-(define (pointer-declr? declr)
-  (and
-   (pair? declr)
-   (member (car declr) '(init-declr comp-declr param-declr))
-   (eqv? 'ptr-declr (sx-tag (sx-ref declr 1)))))
 
 ;; @deffn {Procedure} strip-decl-spec-tail dsl-tail [#:keep-const? #f]
 ;; Remove cruft from declaration-specifiers (tail). ??
@@ -1447,3 +1504,40 @@
 
 
 ;; --- last line ---
+#|
+;; @deffn {Procedure} splice-declarators orig-declr tdef-declr => 
+;; Splice the original declarator into the typedef declarator.
+;; This is a helper for @code{expand-*-typename-ref} procecures.
+;; Consider
+;; @example
+;; typedef int *foo_t;
+;; foo_t bla[3];
+;; @end example
+;; @noindent
+;; maps
+;; @example
+;; bla[3] => *(bla[3])
+;; @end example
+;; @end deffn
+(define (splice-declarators orig-declr tdef-declr)
+  
+  (define (fD seed tree)		; => (values seed tree)
+    (sxml-match tree
+      ((param-list . ,rest) (values tree '())) ; don't process
+      ((ident ,name) (values (reverse (cadr orig-declr)) '())) ; replace
+      (,otherwise (values '() tree))))
+
+  (define (fU seed kseed tree)
+    (let ((ktree (case (car kseed)
+		   ((param-list ident) kseed)
+		   (else (reverse kseed)))))
+      (if (null? seed) ktree (cons ktree seed))))
+
+  (define (fH seed tree)
+    (cons tree seed))
+
+  ;; This cons transfers the tag from orig-declr to the result.
+  (cons
+   (car orig-declr)			; init-declr or comp-declr
+   (cdr (foldts* fD fU fH '() tdef-declr)))) ; always init-declr
+|#

@@ -1,3 +1,8 @@
+2017-08-31  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cpp.scm (cpp-define): major bug: was using drain-input when I
+	should be using get-string-all, same for cpp-line->stmt
+
 2017-08-04  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* mach.scm (c99-spec): add GNU compound statement in paren's as expr

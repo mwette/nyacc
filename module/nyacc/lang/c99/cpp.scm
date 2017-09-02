@@ -32,6 +32,7 @@
   #:use-module (nyacc lang util)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (ice-9 match)
+  #:use-module (ice-9 textual-ports)
   #:use-module (system base pmatch)
   )
 
@@ -137,7 +138,7 @@
 
   (define (p-rest la) ;; parse rest
     (cond ((eof-object? la) "")
-	  (else (unread-char la) (drain-input (current-input-port)))))
+	  (else (unread-char la) (get-string-all (current-input-port)))))
 
   (let* ((name (read-c-ident (skip-il-ws (read-char))))
 	 (args (or (p-args (read-char)) '()))
@@ -175,7 +176,7 @@
   (define (rd-num) (and=> (read-c-num (skip-il-ws (read-char))) cdr))
   (define (rd-rest) (let ((ch (skip-il-ws (read-char))))
 		      (if (not (eof-object? ch)) (unread-char ch))
-		      (drain-input (current-input-port))))
+		      (get-string-all (current-input-port))))
   (with-input-from-string line
     (lambda ()
       (let ((ch (skip-il-ws (read-char))))
@@ -447,7 +448,7 @@
      (else
       (iter rr (cons ch tkl) lv (read-char))))))
 
-;; @deffn {Procedure} collect-args arglargd defs used => argd
+;; @deffn {Procedure} collect-args argl defs used => argd
 ;; Collect arguments to a macro which appears in C code.  If not looking at
 ;; @code{(} return @code{#f}, else scan and eat up to closing @code{)}.
 ;; If multiple whitespace characters are skipped at the front then only
