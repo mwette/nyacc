@@ -7,4 +7,8 @@
   #:library '("libgit2")
   )
 
+(define git_repository**-desc (bs:pointer git_repository*-desc))
+(define-fh-pointer-type git_repository** git_repository**-desc)
+(ref<->deref! git_repository** git_repository*)
+
 ;; --- last line ---

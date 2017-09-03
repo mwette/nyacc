@@ -1314,18 +1314,8 @@
 	 (all-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter #t))
 
 	 ;; the list of typedefs we will generate (later):
-	 ;; (added to deal with forward references somehow...)
-	 (ffi-defined
-	  (fold
-	   (lambda (pair seed)
-	     (pmatch (cdr pair)
-	       ((udecl (decl-spec-list (stor-spec (typedef)) . ,rest) . ,declr)
-		(cons (car pair) seed))
-	       ((udecl (decl-spec-list
-			(type-spec (struct-def (ident ,name) . ,flds))) . ,rest)
-		(cons (car pair) seed))
-	       (,otherwise seed)))
-	   '() udecls))
+	 (ffi-defined #f)
+
 	 (saw-last #f)
 	 )
     
@@ -1340,36 +1330,38 @@
     (ffimod-header path module-options)
     
     ;; convert and output foreign declarations
-    (fold-values			; from (sxml fold)
-     (lambda (name wrapped defined)	; name can be "foo_t" or (enum . "foo")
-       (catch 'ffi-help-error
-	 (lambda ()
-	   (cond
-	    (saw-last (values wrapped defined))
-	    ((and ;; Process the declaration if all conditions met:
-	      ;;(equal? name '(struct . "_RsvgHandleClass"))
-	      (declf name)		   ; 1) user wants it
-	      (not (member name wrapped))  ; 2) not already wrapped
-	      (not (and (pair? name)	   ; 3) not anonymous
-			(string=? "*anon*" (cdr name)))))
-	     ;;(sferr "~A\n" name)
-	     (if (and #f (pair? name) ;;(string? name)
-		      (string=? "_RsvgHandleClass" (cdr name)))
-		 (set! saw-last #t))
-	     (let ((udecl (udict-ref udict name)))
-	       (nlscm) (c99scm udecl)
-	       (sfscm "(if echo-decls (display \"~A\\n\"))\n" name) ;; debug
-	       (cnvt-udecl (udict-ref udict name) udict wrapped defined))
-	     )
-	    
-	    (else (values wrapped defined))))
-	 (lambda (key fmt . args)
-	   (apply simple-format (current-error-port)
-		  (string-append "ffi-help: " fmt "\n") args)
-	   (sfscm ";; ... failed.\n")
-	   (values wrapped defined))))
-     ;;ffi-decls '() (append bs-defined ffi-defined))
-     ffi-decls '() bs-defined)
+    (call-with-values
+	(lambda ()
+	  (fold-values			  ; from (sxml fold)
+	   (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
+	     (catch 'ffi-help-error
+	       (lambda ()
+		 (cond
+		  (saw-last (values wrapped defined))
+		  ((and ;; Process the declaration if all conditions met:
+		    ;;(equal? name '(struct . "_RsvgHandleClass"))
+		    (declf name)		; 1) user wants it
+		    (not (member name wrapped))	; 2) not already wrapped
+		    (not (and (pair? name)	; 3) not anonymous
+			      (string=? "*anon*" (cdr name)))))
+		   ;;(sferr "~A\n" name)
+		   (if (and #f (pair? name)
+			    (string=? "_RsvgHandleClass" (cdr name)))
+		       (set! saw-last #t))
+		   (let ((udecl (udict-ref udict name)))
+		     (nlscm) (c99scm udecl)
+		     (sfscm "(if echo-decls (display \"~A\\n\"))\n" name)
+		     (cnvt-udecl (udict-ref udict name) udict wrapped defined))
+		   )
+		  (else (values wrapped defined))))
+	       (lambda (key fmt . args)
+		 (apply simple-format (current-error-port)
+			(string-append "ffi-help: " fmt "\n") args)
+		 (sfscm ";; ... failed.\n")
+		 (values wrapped defined))))
+	   ffi-decls '() bs-defined))
+      (lambda (wrapped defined)
+	(set! ffi-defined defined)))
     
     ;; output global constants (from enum and #define)
     ;;(sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
@@ -1463,12 +1455,11 @@
 	(let iter ((oport #f))
 	  ;; use scm-reader or read here?
 	  (let ((exp (scm-reader iport (current-module))))
-	    ;;(display "exp:\n") (pretty-print exp)
 	    (cond
 	     ((eof-object? exp)
 	      (when oport
 		(display "\n;; --- last line ---\n" oport)
-		(close oport)))
+		(close-port oport)))
 	     ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
 	      (iter (eval exp (current-module))))
 	     (else

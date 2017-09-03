@@ -16,6 +16,7 @@
 	    define-fh-pointer-type
 	    define-fh-enum
 	    define-fh-function define-fh-function/p
+	    ref<->deref!
 	    pointer-to
 	    unwrap~fixed unwrap~float unwrap~pointer unwrap~array
 	    make-ftn-arg-unwrapper
@@ -56,7 +57,12 @@
        (eq? (struct-vtable type) ffi-helper-type)))
 
 ;; @deffn {Procedure} fh-object? obj
-;; This predicate tests for FH objects.
+;; This predicate tests for FH objects, i.e., FFI defined types.
+;; @example
+;; (define-fh-pointer-type foo_t* foo_t*-desc)
+;; (define val (make-foo_t*))
+;; (fh-object? val) => #t
+;; @end example
 ;; @end deffn
 (define (fh-object? obj)
   (and
@@ -176,7 +182,7 @@
 	     (define (type? obj)
 	       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
 	     (define (unwrap obj)
-	       (ffi:make-pointer (bs-data-address (struct-ref obj 0))))
+	       (unwrap~pointer obj))
 	     (define type
 	       (make-fht (quote type) unwrap #f #f
 			 (make-bs*-printer (quote type))))
@@ -186,18 +192,7 @@
 	     )))
 	     
       ((_ type)		      ; based on guile pointer wrapper
-       ;; (define foo_t-desc void) ;; aka int
-       ;; (define foo_t*-desc (bs:pointer (delay foo_t-desc)))
-       ;; ...
-       ;; (define struct-foo-desc (bs:struct ...))
-       ;; (set! foo_t-desc struct-foo-desc)
-       (with-syntax ((desc (gen-id #'type "make-" #'type))
-		     (type? (gen-id #'type #'type "?"))
-		     (wrap (gen-id #'type "wrap-" #'type))
-		     (unwrap (gen-id #'type "unwrap-" #'type)))
-	 #'(begin
-	     (define-fh-pointer-type type (bs:pointer void))
-	     )))
+       #'(define-fh-pointer-type type (bs:pointer void)))
       )))
 
 ;; @deffn {Syntax} define-fh-compound-type name desc
@@ -350,10 +345,9 @@
 ;; FFI wants to see a ffi:pointer type
 (define (unwrap~pointer obj)
   (cond
-   ;;((ffi:pointer? obj) (ffi:pointer-address obj))
    ((ffi:pointer? obj) obj)
    ((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
-   ;;((fh-object? obj) (ffi:make-pointer (unwrap~pointer (struct-ref obj 0))))
+   ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
    (else (error "expecting pointer type"))))
 
 (define (wrap-void* raw)

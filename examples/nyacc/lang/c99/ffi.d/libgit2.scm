@@ -9601,9 +9601,9 @@
                 "git_config_entry_free"
                 (dynamic-link))
               (list '*))))
-    (lambda (@76)
-      (let ((~@76 (unwrap-git_config_entry* @76)))
-        (~f ~@76)))))
+    (lambda (@12252)
+      (let ((~@12252 (unwrap-git_config_entry* @12252)))
+        (~f ~@12252)))))
 (export git_config_entry_free)
 
 ;; typedef int (*git_config_foreach_cb)(const git_config_entry *, void *);
@@ -15588,90 +15588,65 @@
         (else (error "type mismatch"))))
 
 (define libgit2-types
-  '("git_tag_foreach_cb" (struct . "git_submodule_update_options") 
-    "git_submodule_update_options" "git_submodule_cb" "git_submodule_status_t"
-    "git_status_entry" "git_status_options" "git_status_opt_t" 
-    "git_status_show_t" "git_status_cb" "git_status_t" "git_stash_cb" (struct 
-    . "git_stash_apply_options") "git_stash_apply_options" 
-    "git_stash_apply_progress_cb" "git_stash_apply_progress_t" 
-    "git_stash_apply_flags" "git_stash_flags" "git_revwalk_hide_cb" 
-    "git_sort_t" "git_revspec" "git_revparse_mode_t" "git_revert_options" 
-    "git_reset_t" "git_rebase_operation" "git_rebase_operation_t" 
-    "git_rebase_options" "git_pathspec_flag_t" "git_pathspec_match_list" 
+  '("git_submodule_update_options" (struct . "git_submodule_update_options")
+    "git_status_entry" "git_status_options" "git_stash_apply_options" (struct
+    . "git_stash_apply_options") "git_revspec" "git_revert_options" 
+    "git_rebase_operation" "git_rebase_options" "git_pathspec_match_list" 
     "git_pathspec" "git_patch" (struct . "git_odb_writepack") (struct . 
-    "git_odb_stream") "git_odb_stream_t" (struct . "git_odb_expand_id") 
-    "git_odb_expand_id" "git_odb_foreach_cb" "git_note_iterator" 
-    "git_note_foreach_cb" "git_filter_list" "git_filter" "git_filter_flag_t" 
-    "git_filter_mode_t" "git_error_t" "git_error" "git_error_code" 
-    "git_describe_result" "git_describe_format_options" (struct . 
-    "git_describe_options") "git_describe_options" "git_describe_strategy_t" 
-    "git_cvar_map" "git_cvar_t" "git_config_iterator" "git_config_foreach_cb" 
-    (struct . "git_config_entry") "git_config_entry" "git_config_level_t" (
-    struct . "git_clone_options") "git_clone_options" 
-    "git_repository_create_cb" "git_remote_create_cb" "git_clone_local_t" 
-    "git_push_options" "git_fetch_options" "git_remote_autotag_option_t" 
-    "git_fetch_prune_t" (struct . "git_remote_callbacks") 
-    "git_push_negotiation" "git_push_update" "git_push_transfer_progress" 
-    "git_remote_completion_type" "git_proxy_options" "git_proxy_t" 
-    "git_packbuilder_progress" "git_packbuilder_foreach_cb" 
-    "git_packbuilder_stage_t" "git_cred_acquire_cb" (struct . 
-    "git_cred_username") "git_cred_username" "git_cred_default" (struct . 
-    "git_cred_ssh_custom") "git_cred_ssh_custom" (struct . 
-    "git_cred_ssh_interactive") "git_cred_ssh_interactive" (struct . 
-    "git_cred_ssh_key") "git_cred_ssh_key" "git_cred_ssh_interactive_callback"
-    "git_cred_sign_callback" "LIBSSH2_USERAUTH_KBDINT_RESPONSE" 
-    "LIBSSH2_USERAUTH_KBDINT_PROMPT" "LIBSSH2_SESSION" 
-    "git_cred_userpass_plaintext" (struct . "git_cred") "git_cred" 
-    "git_credtype_t" "git_cert_x509" "git_cert_hostkey" "git_cert_ssh_t" 
-    "git_transport_cb" "git_headlist_cb" (struct . "git_remote_head") 
-    "git_direction" "git_cherrypick_options" "git_merge_preference_t" 
-    "git_merge_analysis_t" "git_merge_options" "git_merge_file_result" 
-    "git_merge_file_options" "git_merge_file_flag_t" "git_merge_file_favor_t" 
-    "git_merge_flag_t" "git_merge_file_input" "git_index_stage_t" 
-    "git_index_add_option_t" "git_index_matched_path_cb" "git_indexcap_t" 
-    "git_idxentry_extended_flag_t" "git_indxentry_flag_t" (struct . 
-    "git_index_entry") "git_index_entry" "git_index_time" "git_indexer" (
-    struct . "git_oidarray") "git_oidarray" (struct . "git_checkout_options") 
-    "git_checkout_options" "git_checkout_perfdata_cb" 
-    "git_checkout_progress_cb" "git_checkout_notify_cb" 
-    "git_checkout_perfdata" "git_checkout_notify_t" "git_checkout_strategy_t" 
-    "git_diff_format_email_options" "git_diff_format_email_flags_t" 
-    "git_diff_stats_format_t" "git_diff_stats" "git_diff_format_t" 
-    "git_diff_find_options" "git_diff_similarity_metric" "git_diff_find_t" 
-    "git_diff_line_cb" "git_diff_line" "git_diff_line_t" "git_diff_hunk_cb" 
-    "git_diff_hunk" "git_diff_binary_cb" "git_diff_binary" 
-    "git_diff_binary_file" "git_diff_binary_t" "git_diff_file_cb" 
-    "git_diff_options" "git_diff_progress_cb" "git_diff_notify_cb" 
-    "git_diff_delta" "git_diff_file" "git_delta_t" "git_diff_flag_t" 
-    "git_diff" "git_diff_option_t" "git_reference_normalize_t" 
-    "git_reference_foreach_name_cb" "git_reference_foreach_cb" (struct . 
-    "git_strarray") "git_strarray" "git_tree_update" "git_tree_update_t" 
-    "git_treewalk_mode" "git_treewalk_cb" "git_treebuilder_filter_cb" 
-    "git_branch_iterator" "git_blame" (struct . "git_blame_hunk") 
-    "git_blame_hunk" (struct . "git_blame_options") "git_blame_options" 
-    "git_blame_flag_t" "git_attr_foreach_cb" "git_attr_t" 
-    "git_repository_state_t" "git_repository_mergehead_foreach_cb" 
-    "git_repository_fetchhead_foreach_cb" "git_repository_item_t" 
-    "git_repository_init_options" "git_repository_init_mode_t" 
-    "git_repository_init_flag_t" "git_repository_open_flag_t" "git_buf" 
-    "git_oid_shorten" (struct . "git_oid") "git_oid" (struct . 
-    "git_writestream") "git_writestream" "git_submodule_recurse_t" 
-    "git_submodule_ignore_t" "git_submodule_update_t" "git_submodule" 
-    "git_transport_certificate_check_cb" "git_cert" "git_cert_t" 
-    "git_transport_message_cb" "git_transfer_progress_cb" (struct . 
-    "git_transfer_progress") "git_transfer_progress" "git_remote_callbacks" 
-    "git_remote_head" "git_push" "git_transport" "git_remote" "git_refspec" 
-    "git_filemode_t" "git_branch_t" "git_ref_t" "git_rebase" "git_status_list"
-    "git_merge_result" "git_annotated_commit" "git_transaction" 
-    "git_reference_iterator" "git_reference" (struct . "git_signature") 
-    "git_signature" (struct . "git_time") "git_time" "git_packbuilder" 
-    "git_note" "git_reflog" "git_reflog_entry" "git_config_backend" 
-    "git_config" "git_index_conflict_iterator" "git_index" "git_treebuilder" 
-    "git_tree" "git_tree_entry" "git_commit" "git_blob" "git_tag" 
-    "git_revwalk" "git_object" "git_worktree" "git_repository" 
-    "git_refdb_backend" "git_refdb" "git_odb_writepack" "git_odb_stream" 
-    "git_odb_object" "git_odb_backend" "git_odb" "git_otype" "git_time_t" 
-    "git_off_t" "git_libgit2_opt_t" "git_feature_t"))
+    "git_odb_stream") "git_odb_expand_id" (struct . "git_odb_expand_id") 
+    "git_note_iterator" "git_filter_list" "git_filter" "git_error" 
+    "git_describe_result" "git_describe_format_options" "git_describe_options"
+    (struct . "git_describe_options") "git_cvar_map" "git_config_iterator" 
+    "git_config_entry" (struct . "git_config_entry") "git_clone_options" (
+    struct . "git_clone_options") "git_push_options" "git_fetch_options" (
+    struct . "git_remote_callbacks") "git_push_update" "git_proxy_options" 
+    "git_cred_username" (struct . "git_cred_username") "git_cred_default" 
+    "git_cred_ssh_custom" (struct . "git_cred_ssh_custom") 
+    "git_cred_ssh_interactive" (struct . "git_cred_ssh_interactive") 
+    "git_cred_ssh_key" (struct . "git_cred_ssh_key") 
+    "LIBSSH2_USERAUTH_KBDINT_RESPONSE" "LIBSSH2_USERAUTH_KBDINT_PROMPT" 
+    "LIBSSH2_SESSION" "git_cred_userpass_plaintext" (struct . "git_cred") 
+    "git_cred" "git_cert_x509" "git_cert_hostkey" (struct . "git_remote_head")
+    "git_cherrypick_options" "git_merge_options" "git_merge_file_result" 
+    "git_merge_file_options" "git_merge_file_input" "git_index_entry" (struct 
+    . "git_index_entry") "git_index_time" "git_indexer" "git_oidarray" (struct
+    . "git_oidarray") "git_checkout_options" (struct . "git_checkout_options"
+    ) "git_checkout_perfdata" "git_diff_format_email_options" "git_diff_stats"
+    "git_diff_find_options" "git_diff_similarity_metric" "git_diff_line" 
+    "git_diff_hunk" "git_diff_binary" "git_diff_binary_file" 
+    "git_diff_options" "git_diff_delta" "git_diff_file" "git_diff" 
+    "git_strarray" (struct . "git_strarray") "git_tree_update" 
+    "git_branch_iterator" "git_blame" "git_blame_hunk" (struct . 
+    "git_blame_hunk") "git_blame_options" (struct . "git_blame_options") 
+    "git_repository_init_options" "git_buf" "git_oid_shorten" "git_oid" (
+    struct . "git_oid") (struct . "git_writestream") "git_writestream" 
+    "git_submodule" "git_cert" "git_transfer_progress" (struct . 
+    "git_transfer_progress") "git_remote_callbacks" "git_remote_head" 
+    "git_push" "git_transport" "git_remote" "git_refspec" "git_rebase" 
+    "git_status_list" "git_merge_result" "git_annotated_commit" 
+    "git_transaction" "git_reference_iterator" "git_reference" "git_signature"
+    (struct . "git_signature") "git_time" (struct . "git_time") 
+    "git_packbuilder" "git_note" "git_reflog" "git_reflog_entry" 
+    "git_config_backend" "git_config" "git_index_conflict_iterator" 
+    "git_index" "git_treebuilder" "git_tree" "git_tree_entry" "git_commit" 
+    "git_blob" "git_tag" "git_revwalk" "git_object" "git_worktree" 
+    "git_repository" "git_refdb_backend" "git_refdb" "git_odb_writepack" 
+    "git_odb_stream" "git_odb_object" "git_odb_backend" "git_odb" "void" 
+    "float" "double" "short" "short int" "unsigned short" "unsigned short int"
+    "int" "unsigned" "unsigned int" "long" "long int" "unsigned long" 
+    "unsigned long int" "long long" "long long int" "usigned long long" 
+    "unsigned long long int" "intptr_t" "uintptr_t" "size_t" "ssize_t" 
+    "ptrdiff_t" "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t" 
+    "int64_t" "uint64_t" "float _Complex" "double _Complex" "char"))
 ;;(export libgit2-types)
+
+(define git_repository**-desc
+  (bs:pointer git_repository*-desc))
+
+(define-fh-pointer-type
+  git_repository**
+  git_repository**-desc)
+
+(ref<->deref! git_repository** git_repository*)
 
 ;; --- last line ---
