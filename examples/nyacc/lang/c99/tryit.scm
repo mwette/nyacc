@@ -98,6 +98,13 @@
 	      "} x;\n"
 	      "int baz(foo_t*);"
 	      ))
+       (code (string-append
+	      "struct foo {\n"
+	      "int x[3+2];\n"
+	      "int y: 2;\n"
+	      "int z: 3;\n"
+	      "} a;\n"
+	      ))
        (indx 2)
        (tree (parse-string code))
        ;;(tree (parse-c99x code))
@@ -105,22 +112,23 @@
        
        (udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
-       (udecl '(param-decl (decl-spec-list (type-spec (typename "foo_t")))
-			   (param-declr (abs-declr (pointer)))))
-       (udecl (udict-ref udict "baz"))
-       (udecl (sx-ref tree 2))
-       ;;(mspec (udecl->mspec udecl))
+       (udecl (udict-ref udict "a"))
+       (flds (sx-ref* udecl 1 1 1 2))
+       (flds (fold-right unitize-decl '() (sx-tail flds 1)))
+       (x-spec (udecl->mspec (cdr (list-ref flds 0))))
+       (y-spec (udecl->mspec (cdr (list-ref flds 1))))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs decl udict))
        )
   ;;(display code)
-  ;;(ppsx tree)
-  ;;(pp99 tree)
-  ;;(ppsx udict)
-  (ppsx udecl)
-  (ppsx (expand-typerefs udecl udict '("foo_t")))
+  ;;(ppsx udecl)
+  (ppsx flds)
+  (display "==\n")
+  (ppsx x-spec)
+  (ppsx y-spec)
+  ;;(ppsx mspec)
+  ;;(ppsx (expand-typerefs udecl udict '("foo_t")))
   ;;(ppsx ddict)
-  ;;(display "==\n")
   ;;(set! adecl decl)
   #t)
 

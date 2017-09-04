@@ -211,7 +211,8 @@
 ;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]
 ;; Convert a C parse tree into a assoc-list of global names and definitions.
 ;; This will unwrap @code{init-declr-list} into list of decls w/
-;; @code{init-declr}.  The declarations come reversed from order in file!
+;; @code{init-declr}.
+;; The declarations come reversed from order in file!
 ;; @example
 ;; BUG: need to add struct and union defn's: struct foo { int x; };
 ;; how to deal with this
@@ -566,6 +567,7 @@
     ((ptr-declr ,pointer ,dir-declr) (declr-ident dir-declr))
     ((ftn-declr ,dir-declr ,rest ...) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
+    ((bit-field ,ident . ,rest) ident)
     (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
 
 ;; @deffn {Procedure} declr-id decl => "name"
@@ -929,6 +931,7 @@
     (sxml-match declr
       (#f declr)
       ((ident ,name) declr)
+      ((bit-field . ,rest) declr)
       
       ((init-declr ,declr1 . ,rest)
        (let ((xdeclr (fix-declr declr1)))
@@ -1340,7 +1343,7 @@
 ;; @end deffn
 (define* (udecl->mspec decl #:key abs-ident)
 
-  (define (cnvt-array-size size-spec)
+  (define (cnvt-size-expr size-spec)
     (with-output-to-string (lambda () (pretty-print-c99 size-spec))))
 
   (define (unwrap-specl specl)
@@ -1373,7 +1376,7 @@
        (unwrap-declr item #:const const))
 
       ((array-of ,dir-declr ,size)
-       (cons `(array-of ,(cnvt-array-size size)) (unwrap-declr dir-declr)))
+       (cons `(array-of ,(cnvt-size-expr size)) (unwrap-declr dir-declr)))
       ((array-of ,dir-declr)
        (cons `(array-of) (unwrap-declr dir-declr)))
 
@@ -1418,6 +1421,9 @@
       ((declr-array ,dir-abs-declr ,type-qual-list ,assn-expr)
        ;; TODO: deal with "const" type-qualifier
        (cons `(array-of ,assn-expr) (unwrap-declr dir-abs-declr)))
+
+      ((bit-field (ident ,name) ,size)
+       (list `(bit-field ,(cnvt-size-expr size)) name))
 
       ((comp-declr ,item) (unwrap-declr item))
       ((param-declr ,item) (unwrap-declr item))

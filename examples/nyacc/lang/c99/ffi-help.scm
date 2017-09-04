@@ -96,6 +96,7 @@
    (else
     '())))
 
+;; change to parameters
 (define *options* (make-fluid '()))
 (define *prefix* (make-fluid "."))	 ; prefix to files
 (define *debug* (make-fluid #f))	 ; parse debug mode
@@ -824,14 +825,18 @@
     ;; todo: sanitize udecl:
     ;; 1) remove comments
     ;; 2) keep attributes!
-    (sxml-match
-        ;;(if declr (list tag specl declr) (list tag specl))
-	(sx-list tag attr specl declr)
-	#;(cond
-	 ((and attr declr) (list tag attr specl declr))
-	 ((and (not attr) declr) (list tag specl declr))
-	 ((and attr (not declr)) (list tag attr specl))
-	 ((and (not attr) (not declr)) (list tag specl)))
+    (sxml-match (sx-list tag attr specl declr)
+
+      ;; typedef void *ptr_t;
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (void)))
+	(init-declr (ptr-declr (pointer) (ident ,typename))))
+       (sfscm "(define ~A-desc (bs:pointer void))\n" typename)
+       (sfscm "(export ~A-desc)\n" typename)
+       (sfscm "(define-fh-pointer-type ~A ~A-desc\n" typename typename)
+       (values (cons typename wrapped) (cons typename defined)))
       
       ;; typedef int foo_t;
       ((udecl
@@ -843,6 +848,7 @@
 	((assoc-ref bs-typemap name) =>
 	 (lambda (bs-name) (sfscm "(define ~A-desc ~A)\n" typename bs-name)))
 	(else (sfscm "(define ~A-desc ~A-desc)\n" typename name)))
+       (sfscm "(export ~A-desc)\n" typename)
        (sfscm "(define unwrap-~A unwrap~~fixed)\n" typename)
        (sfscm "(define wrap-~A identity)\n" typename)
        (values (cons typename wrapped) (cons typename defined)))
@@ -1350,7 +1356,7 @@
 		       (set! saw-last #t))
 		   (let ((udecl (udict-ref udict name)))
 		     (nlscm) (c99scm udecl)
-		     (sfscm "(if echo-decls (display \"~A\\n\"))\n" name)
+		     ;;(sfscm "(if echo-decls (display \"~A\\n\"))\n" name)
 		     (cnvt-udecl (udict-ref udict name) udict wrapped defined))
 		   )
 		  (else (values wrapped defined))))

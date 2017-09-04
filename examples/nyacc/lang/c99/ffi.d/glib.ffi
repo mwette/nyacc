@@ -1,0 +1,10 @@
+;; glib.ffi				-*- Scheme -*-
+
+(define-ffi-module (glib)
+  #:pkg-config "glib-2.0"
+  #:include '("glib.h")
+  #:inc-filter (lambda (file-spec path-spec)
+		 (string-contains path-spec "glib/" 0))
+  )
+
+;; --- last line ---

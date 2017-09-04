@@ -8,9 +8,7 @@
 (use-modules (libgit2))
 
 (define repo (make-git_repository* 0))
-;; but should probably allow (define repo (make-git_repository*))
 
-(define sp (string->pointer repo-path))
 (define rez #f)
 
 (set! rez (git_repository_open (pointer-to repo) (string->pointer repo-path)))
