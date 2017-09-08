@@ -1,6 +1,6 @@
 ;; TMPL.ffi				-*- Scheme -*-
 
-(define-ffi-module (TMPL)
+(define-ffi-module (ffi TMPL)
   #:pkg-config "TMPL"
   #:include '("TMPL.h")
   )

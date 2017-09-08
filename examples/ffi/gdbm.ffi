@@ -1,6 +1,6 @@
 ;; gdbm.ffi				-*- Scheme -*-
 
-(define-ffi-module (gdbm)
+(define-ffi-module (ffi gdbm)
   #:include '("gdbm.h")
   #:library '("libgdbm")
   )

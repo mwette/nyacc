@@ -1,0 +1,18 @@
+# ffi/Makefile.nyacc
+
+FFI_SCMS = \
+	cairo.scm gdbm.scm \
+	sqlite3.scm \
+	gio.scm glib.scm gobject.scm librsvg.scm \
+	libgit2.scm
+
+%.scm: %.ffi
+	guild compile-ffi $<
+
+all: 
+
+gobject.scm: glib.scm
+gio.scm: glib.scm
+librsvg.scm: gobject.scm
+
+# --- last line ---

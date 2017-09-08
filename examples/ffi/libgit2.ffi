@@ -1,6 +1,6 @@
 ;; libgit2.ffi				-*- Scheme -*-
 
-(define-ffi-module (libgit2)
+(define-ffi-module (ffi libgit2)
   #:include '("git2.h")
   #:inc-filter (lambda (file-spec path-spec)
 		 (string-contains path-spec "git2/" 0))

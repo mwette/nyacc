@@ -1,6 +1,6 @@
 ;; cairo.ffi				-*- Scheme -*-
 
-(define-ffi-module (cairo)
+(define-ffi-module (ffi cairo)
   #:pkg-config "cairo"
   #:include '("cairo.h"
 	      ;;"cairo-ft.h"		; /usr/include rat's nest
