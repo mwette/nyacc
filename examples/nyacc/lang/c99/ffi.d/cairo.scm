@@ -10,49 +10,48 @@
 (define echo-decls #f)
 
 ;; int cairo_version(void);
-(if echo-decls (display "cairo_version\n"))
 (define cairo_version
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func "cairo_version" (dynamic-link))
-              (list))))
-    (lambda () (let () (~f)))))
+  (let ((~f #f))
+    (lambda ()
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_version" ffi:int (list))))
+      (let () (~f)))))
 (export cairo_version)
 
 ;; const char *cairo_version_string(void);
-(if echo-decls (display "cairo_version_string\n"))
 (define cairo_version_string
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_version_string"
-                (dynamic-link))
-              (list))))
-    (lambda () (let () (~f)))))
+  (let ((~f #f))
+    (lambda ()
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_version_string" '* (list))))
+      (let () (~f)))))
 (export cairo_version_string)
 
 ;; typedef int cairo_bool_t;
-(if echo-decls (display "cairo_bool_t\n"))
 (define cairo_bool_t-desc int)
+(export cairo_bool_t-desc)
 (define unwrap-cairo_bool_t unwrap~fixed)
 (define wrap-cairo_bool_t identity)
+(export cairo_bool_t-desc unwrap-cairo_bool_t wrap-cairo_bool_t)
 
 ;; typedef struct _cairo cairo_t;
-(if echo-decls (display "cairo_t\n"))
 (define cairo_t-desc void)
 (define cairo_t*-desc (bs:pointer cairo_t-desc))
+(export cairo_t*-desc)
 (define-fh-pointer-type cairo_t* cairo_t*-desc)
 
 ;; typedef struct _cairo_surface cairo_surface_t;
-(if echo-decls (display "cairo_surface_t\n"))
 (define cairo_surface_t-desc void)
 (define cairo_surface_t*-desc (bs:pointer cairo_surface_t-desc))
+(export cairo_surface_t*-desc)
 (define-fh-pointer-type cairo_surface_t* cairo_surface_t*-desc)
 
 ;; typedef struct _cairo_device cairo_device_t;
-(if echo-decls (display "cairo_device_t\n"))
 (define cairo_device_t-desc void)
 (define cairo_device_t*-desc (bs:pointer cairo_device_t-desc))
+(export cairo_device_t*-desc)
 (define-fh-pointer-type cairo_device_t* cairo_device_t*-desc)
 
 ;; typedef struct _cairo_matrix {
@@ -63,7 +62,6 @@
 ;;   double x0;
 ;;   double y0;
 ;; } cairo_matrix_t;
-(if echo-decls (display "cairo_matrix_t\n"))
 (define cairo_matrix_t-desc
   (bs:struct
     (list `(xx ,double)
@@ -77,20 +75,18 @@
 (define struct-_cairo_matrix cairo_matrix_t)
 
 ;; typedef struct _cairo_pattern cairo_pattern_t;
-(if echo-decls (display "cairo_pattern_t\n"))
 (define cairo_pattern_t-desc void)
 (define cairo_pattern_t*-desc (bs:pointer cairo_pattern_t-desc))
+(export cairo_pattern_t*-desc)
 (define-fh-pointer-type cairo_pattern_t* cairo_pattern_t*-desc)
 
 ;; typedef void (*cairo_destroy_func_t)(void *data);
-(if echo-decls (display "cairo_destroy_func_t\n"))
 (define-fh-function/p cairo_destroy_func_t
   ffi:void (list (quote *)))
 
 ;; typedef struct _cairo_user_data_key {
 ;;   int unused;
 ;; } cairo_user_data_key_t;
-(if echo-decls (display "cairo_user_data_key_t\n"))
 (define cairo_user_data_key_t-desc
   (bs:struct (list `(unused ,int))))
 (export cairo_user_data_key_t-desc)
@@ -139,7 +135,6 @@
 ;;   CAIRO_STATUS_JBIG2_GLOBAL_MISSING,
 ;;   CAIRO_STATUS_LAST_STATUS,
 ;; } cairo_status_t;
-(if echo-decls (display "cairo_status_t\n"))
 (define-fh-enum cairo_status_t
   '((CAIRO_STATUS_SUCCESS . 0)
     (CAIRO_STATUS_NO_MEMORY . 1)
@@ -190,7 +185,6 @@
 ;;   CAIRO_CONTENT_ALPHA = 0x2000,
 ;;   CAIRO_CONTENT_COLOR_ALPHA = 0x3000,
 ;; } cairo_content_t;
-(if echo-decls (display "cairo_content_t\n"))
 (define-fh-enum cairo_content_t
   '((CAIRO_CONTENT_COLOR . 4096)
     (CAIRO_CONTENT_ALPHA . 8192)
@@ -208,7 +202,6 @@
 ;;   CAIRO_FORMAT_RGB16_565 = 4,
 ;;   CAIRO_FORMAT_RGB30 = 5,
 ;; } cairo_format_t;
-(if echo-decls (display "cairo_format_t\n"))
 (define-fh-enum cairo_format_t
   '((CAIRO_FORMAT_INVALID . -1)
     (CAIRO_FORMAT_ARGB32 . 0)
@@ -223,13 +216,11 @@
 
 ;; typedef cairo_status_t (*cairo_write_func_t)(void *closure, const 
 ;;     unsigned char *data, unsigned int length);
-(if echo-decls (display "cairo_write_func_t\n"))
 (define-fh-function/p cairo_write_func_t
   ffi:int (list (quote *) (quote *) ffi:unsigned-int))
 
 ;; typedef cairo_status_t (*cairo_read_func_t)(void *closure, unsigned char *
 ;;     data, unsigned int length);
-(if echo-decls (display "cairo_read_func_t\n"))
 (define-fh-function/p cairo_read_func_t
   ffi:int (list (quote *) (quote *) ffi:unsigned-int))
 
@@ -237,7 +228,6 @@
 ;;   int x, y;
 ;;   int width, height;
 ;; } cairo_rectangle_int_t;
-(if echo-decls (display "cairo_rectangle_int_t\n"))
 (define cairo_rectangle_int_t-desc
   (bs:struct
     (list `(y ,int)
@@ -249,63 +239,60 @@
 (define struct-_cairo_rectangle_int cairo_rectangle_int_t)
 
 ;; cairo_t *cairo_create(cairo_surface_t *target);
-(if echo-decls (display "cairo_create\n"))
 (define cairo_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func "cairo_create" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (target)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_create" '* (list '*))))
       (let ((~target (unwrap-cairo_surface_t* target)))
         (wrap-cairo_t* (~f ~target))))))
 (export cairo_create)
 
 ;; cairo_t *cairo_reference(cairo_t *cr);
-(if echo-decls (display "cairo_reference\n"))
 (define cairo_reference
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func "cairo_reference" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_reference" '* (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_t* (~f ~cr))))))
 (export cairo_reference)
 
 ;; void cairo_destroy(cairo_t *cr);
-(if echo-decls (display "cairo_destroy\n"))
 (define cairo_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_destroy" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_destroy" ffi:void (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_destroy)
 
 ;; unsigned int cairo_get_reference_count(cairo_t *cr);
-(if echo-decls (display "cairo_get_reference_count\n"))
 (define cairo_get_reference_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:unsigned-int
-              (dynamic-func
-                "cairo_get_reference_count"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_reference_count"
+                ffi:unsigned-int
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_reference_count)
 
 ;; void *cairo_get_user_data(cairo_t *cr, const cairo_user_data_key_t *key);
-(if echo-decls (display "cairo_get_user_data\n"))
 (define cairo_get_user_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_get_user_data"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr key)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_user_data"
+                '*
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~key (unwrap-cairo_user_data_key_t* key)))
         (~f ~cr ~key)))))
@@ -313,15 +300,15 @@
 
 ;; cairo_status_t cairo_set_user_data(cairo_t *cr, const cairo_user_data_key_t 
 ;;     *key, void *user_data, cairo_destroy_func_t destroy);
-(if echo-decls (display "cairo_set_user_data\n"))
 (define cairo_set_user_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_set_user_data"
-                (dynamic-link))
-              (list '* '* '* '*))))
+  (let ((~f #f))
     (lambda (cr key user_data destroy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_user_data"
+                ffi:int
+                (list '* '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~key (unwrap-cairo_user_data_key_t* key))
             (~user_data (unwrap~pointer user_data))
@@ -332,75 +319,74 @@
 (export cairo_set_user_data)
 
 ;; void cairo_save(cairo_t *cr);
-(if echo-decls (display "cairo_save\n"))
 (define cairo_save
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_save" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_save" ffi:void (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_save)
 
 ;; void cairo_restore(cairo_t *cr);
-(if echo-decls (display "cairo_restore\n"))
 (define cairo_restore
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_restore" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_restore" ffi:void (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_restore)
 
 ;; void cairo_push_group(cairo_t *cr);
-(if echo-decls (display "cairo_push_group\n"))
 (define cairo_push_group
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_push_group" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_push_group"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_push_group)
 
 ;; void cairo_push_group_with_content(cairo_t *cr, cairo_content_t content);
-(if echo-decls (display "cairo_push_group_with_content\n"))
 (define cairo_push_group_with_content
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_push_group_with_content"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (cr content)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_push_group_with_content"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~content (unwrap~fixed content)))
         (~f ~cr ~content)))))
 (export cairo_push_group_with_content)
 
 ;; cairo_pattern_t *cairo_pop_group(cairo_t *cr);
-(if echo-decls (display "cairo_pop_group\n"))
 (define cairo_pop_group
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func "cairo_pop_group" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_pop_group" '* (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_pattern_t* (~f ~cr))))))
 (export cairo_pop_group)
 
 ;; void cairo_pop_group_to_source(cairo_t *cr);
-(if echo-decls (display "cairo_pop_group_to_source\n"))
 (define cairo_pop_group_to_source
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pop_group_to_source"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pop_group_to_source"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_pop_group_to_source)
 
@@ -435,7 +421,6 @@
 ;;   CAIRO_OPERATOR_HSL_COLOR,
 ;;   CAIRO_OPERATOR_HSL_LUMINOSITY,
 ;; } cairo_operator_t;
-(if echo-decls (display "cairo_operator_t\n"))
 (define-fh-enum cairo_operator_t
   '((CAIRO_OPERATOR_CLEAR . 0)
     (CAIRO_OPERATOR_SOURCE . 1)
@@ -471,28 +456,30 @@
 (define wrap-enum-_cairo_operator wrap-cairo_operator_t)
 
 ;; void cairo_set_operator(cairo_t *cr, cairo_operator_t op);
-(if echo-decls (display "cairo_set_operator\n"))
 (define cairo_set_operator
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_operator"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (cr op)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_operator"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~op (unwrap~fixed op)))
         (~f ~cr ~op)))))
 (export cairo_set_operator)
 
 ;; void cairo_set_source(cairo_t *cr, cairo_pattern_t *source);
-(if echo-decls (display "cairo_set_source\n"))
 (define cairo_set_source
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_set_source" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr source)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_source"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~source (unwrap-cairo_pattern_t* source)))
         (~f ~cr ~source)))))
@@ -500,15 +487,15 @@
 
 ;; void cairo_set_source_rgb(cairo_t *cr, double red, double green, double blue
 ;;     );
-(if echo-decls (display "cairo_set_source_rgb\n"))
 (define cairo_set_source_rgb
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_source_rgb"
-                (dynamic-link))
-              (list '* ffi:double ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr red green blue)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_source_rgb"
+                ffi:void
+                (list '* ffi:double ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~red (unwrap~float red))
             (~green (unwrap~float green))
@@ -518,19 +505,19 @@
 
 ;; void cairo_set_source_rgba(cairo_t *cr, double red, double green, double 
 ;;     blue, double alpha);
-(if echo-decls (display "cairo_set_source_rgba\n"))
 (define cairo_set_source_rgba
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_source_rgba"
-                (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (cr red green blue alpha)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_source_rgba"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~red (unwrap~float red))
             (~green (unwrap~float green))
@@ -541,15 +528,15 @@
 
 ;; void cairo_set_source_surface(cairo_t *cr, cairo_surface_t *surface, double 
 ;;     x, double y);
-(if echo-decls (display "cairo_set_source_surface\n"))
 (define cairo_set_source_surface
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_source_surface"
-                (dynamic-link))
-              (list '* '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr surface x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_source_surface"
+                ffi:void
+                (list '* '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~surface (unwrap-cairo_surface_t* surface))
             (~x (unwrap~float x))
@@ -558,15 +545,15 @@
 (export cairo_set_source_surface)
 
 ;; void cairo_set_tolerance(cairo_t *cr, double tolerance);
-(if echo-decls (display "cairo_set_tolerance\n"))
 (define cairo_set_tolerance
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_tolerance"
-                (dynamic-link))
-              (list '* ffi:double))))
+  (let ((~f #f))
     (lambda (cr tolerance)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_tolerance"
+                ffi:void
+                (list '* ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~tolerance (unwrap~float tolerance)))
         (~f ~cr ~tolerance)))))
@@ -581,7 +568,6 @@
 ;;   CAIRO_ANTIALIAS_GOOD,
 ;;   CAIRO_ANTIALIAS_BEST,
 ;; } cairo_antialias_t;
-(if echo-decls (display "cairo_antialias_t\n"))
 (define-fh-enum cairo_antialias_t
   '((CAIRO_ANTIALIAS_DEFAULT . 0)
     (CAIRO_ANTIALIAS_NONE . 1)
@@ -595,15 +581,15 @@
 (define wrap-enum-_cairo_antialias wrap-cairo_antialias_t)
 
 ;; void cairo_set_antialias(cairo_t *cr, cairo_antialias_t antialias);
-(if echo-decls (display "cairo_set_antialias\n"))
 (define cairo_set_antialias
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_antialias"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (cr antialias)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_antialias"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~antialias (unwrap~fixed antialias)))
         (~f ~cr ~antialias)))))
@@ -613,7 +599,6 @@
 ;;   CAIRO_FILL_RULE_WINDING,
 ;;   CAIRO_FILL_RULE_EVEN_ODD,
 ;; } cairo_fill_rule_t;
-(if echo-decls (display "cairo_fill_rule_t\n"))
 (define-fh-enum cairo_fill_rule_t
   '((CAIRO_FILL_RULE_WINDING . 0)
     (CAIRO_FILL_RULE_EVEN_ODD . 1))
@@ -622,30 +607,30 @@
 (define wrap-enum-_cairo_fill_rule wrap-cairo_fill_rule_t)
 
 ;; void cairo_set_fill_rule(cairo_t *cr, cairo_fill_rule_t fill_rule);
-(if echo-decls (display "cairo_set_fill_rule\n"))
 (define cairo_set_fill_rule
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_fill_rule"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (cr fill_rule)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_fill_rule"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~fill_rule (unwrap~fixed fill_rule)))
         (~f ~cr ~fill_rule)))))
 (export cairo_set_fill_rule)
 
 ;; void cairo_set_line_width(cairo_t *cr, double width);
-(if echo-decls (display "cairo_set_line_width\n"))
 (define cairo_set_line_width
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_line_width"
-                (dynamic-link))
-              (list '* ffi:double))))
+  (let ((~f #f))
     (lambda (cr width)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_line_width"
+                ffi:void
+                (list '* ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~width (unwrap~float width)))
         (~f ~cr ~width)))))
@@ -656,7 +641,6 @@
 ;;   CAIRO_LINE_CAP_ROUND,
 ;;   CAIRO_LINE_CAP_SQUARE,
 ;; } cairo_line_cap_t;
-(if echo-decls (display "cairo_line_cap_t\n"))
 (define-fh-enum cairo_line_cap_t
   '((CAIRO_LINE_CAP_BUTT . 0)
     (CAIRO_LINE_CAP_ROUND . 1)
@@ -666,15 +650,15 @@
 (define wrap-enum-_cairo_line_cap wrap-cairo_line_cap_t)
 
 ;; void cairo_set_line_cap(cairo_t *cr, cairo_line_cap_t line_cap);
-(if echo-decls (display "cairo_set_line_cap\n"))
 (define cairo_set_line_cap
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_line_cap"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (cr line_cap)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_line_cap"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~line_cap (unwrap~fixed line_cap)))
         (~f ~cr ~line_cap)))))
@@ -685,7 +669,6 @@
 ;;   CAIRO_LINE_JOIN_ROUND,
 ;;   CAIRO_LINE_JOIN_BEVEL,
 ;; } cairo_line_join_t;
-(if echo-decls (display "cairo_line_join_t\n"))
 (define-fh-enum cairo_line_join_t
   '((CAIRO_LINE_JOIN_MITER . 0)
     (CAIRO_LINE_JOIN_ROUND . 1)
@@ -695,15 +678,15 @@
 (define wrap-enum-_cairo_line_join wrap-cairo_line_join_t)
 
 ;; void cairo_set_line_join(cairo_t *cr, cairo_line_join_t line_join);
-(if echo-decls (display "cairo_set_line_join\n"))
 (define cairo_set_line_join
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_line_join"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (cr line_join)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_line_join"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~line_join (unwrap~fixed line_join)))
         (~f ~cr ~line_join)))))
@@ -711,13 +694,15 @@
 
 ;; void cairo_set_dash(cairo_t *cr, const double *dashes, int num_dashes, 
 ;;     double offset);
-(if echo-decls (display "cairo_set_dash\n"))
 (define cairo_set_dash
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_set_dash" (dynamic-link))
-              (list '* '* ffi:int ffi:double))))
+  (let ((~f #f))
     (lambda (cr dashes num_dashes offset)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_dash"
+                ffi:void
+                (list '* '* ffi:int ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~dashes (unwrap~pointer dashes))
             (~num_dashes (unwrap~fixed num_dashes))
@@ -726,28 +711,30 @@
 (export cairo_set_dash)
 
 ;; void cairo_set_miter_limit(cairo_t *cr, double limit);
-(if echo-decls (display "cairo_set_miter_limit\n"))
 (define cairo_set_miter_limit
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_miter_limit"
-                (dynamic-link))
-              (list '* ffi:double))))
+  (let ((~f #f))
     (lambda (cr limit)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_miter_limit"
+                ffi:void
+                (list '* ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~limit (unwrap~float limit)))
         (~f ~cr ~limit)))))
 (export cairo_set_miter_limit)
 
 ;; void cairo_translate(cairo_t *cr, double tx, double ty);
-(if echo-decls (display "cairo_translate\n"))
 (define cairo_translate
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_translate" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr tx ty)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_translate"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~tx (unwrap~float tx))
             (~ty (unwrap~float ty)))
@@ -755,13 +742,15 @@
 (export cairo_translate)
 
 ;; void cairo_scale(cairo_t *cr, double sx, double sy);
-(if echo-decls (display "cairo_scale\n"))
 (define cairo_scale
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_scale" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr sx sy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scale"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~sx (unwrap~float sx))
             (~sy (unwrap~float sy)))
@@ -769,67 +758,73 @@
 (export cairo_scale)
 
 ;; void cairo_rotate(cairo_t *cr, double angle);
-(if echo-decls (display "cairo_rotate\n"))
 (define cairo_rotate
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_rotate" (dynamic-link))
-              (list '* ffi:double))))
+  (let ((~f #f))
     (lambda (cr angle)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_rotate"
+                ffi:void
+                (list '* ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~angle (unwrap~float angle)))
         (~f ~cr ~angle)))))
 (export cairo_rotate)
 
 ;; void cairo_transform(cairo_t *cr, const cairo_matrix_t *matrix);
-(if echo-decls (display "cairo_transform\n"))
 (define cairo_transform
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_transform" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_transform"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~cr ~matrix)))))
 (export cairo_transform)
 
 ;; void cairo_set_matrix(cairo_t *cr, const cairo_matrix_t *matrix);
-(if echo-decls (display "cairo_set_matrix\n"))
 (define cairo_set_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_set_matrix" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_matrix"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~cr ~matrix)))))
 (export cairo_set_matrix)
 
 ;; void cairo_identity_matrix(cairo_t *cr);
-(if echo-decls (display "cairo_identity_matrix\n"))
 (define cairo_identity_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_identity_matrix"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_identity_matrix"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_identity_matrix)
 
 ;; void cairo_user_to_device(cairo_t *cr, double *x, double *y);
-(if echo-decls (display "cairo_user_to_device\n"))
 (define cairo_user_to_device
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_user_to_device"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (cr x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_to_device"
+                ffi:void
+                (list '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~pointer x))
             (~y (unwrap~pointer y)))
@@ -837,15 +832,15 @@
 (export cairo_user_to_device)
 
 ;; void cairo_user_to_device_distance(cairo_t *cr, double *dx, double *dy);
-(if echo-decls (display "cairo_user_to_device_distance\n"))
 (define cairo_user_to_device_distance
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_user_to_device_distance"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (cr dx dy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_to_device_distance"
+                ffi:void
+                (list '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~dx (unwrap~pointer dx))
             (~dy (unwrap~pointer dy)))
@@ -853,15 +848,15 @@
 (export cairo_user_to_device_distance)
 
 ;; void cairo_device_to_user(cairo_t *cr, double *x, double *y);
-(if echo-decls (display "cairo_device_to_user\n"))
 (define cairo_device_to_user
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_device_to_user"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (cr x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_to_user"
+                ffi:void
+                (list '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~pointer x))
             (~y (unwrap~pointer y)))
@@ -869,15 +864,15 @@
 (export cairo_device_to_user)
 
 ;; void cairo_device_to_user_distance(cairo_t *cr, double *dx, double *dy);
-(if echo-decls (display "cairo_device_to_user_distance\n"))
 (define cairo_device_to_user_distance
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_device_to_user_distance"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (cr dx dy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_to_user_distance"
+                ffi:void
+                (list '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~dx (unwrap~pointer dx))
             (~dy (unwrap~pointer dy)))
@@ -885,24 +880,28 @@
 (export cairo_device_to_user_distance)
 
 ;; void cairo_new_path(cairo_t *cr);
-(if echo-decls (display "cairo_new_path\n"))
 (define cairo_new_path
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_new_path" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_new_path"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_new_path)
 
 ;; void cairo_move_to(cairo_t *cr, double x, double y);
-(if echo-decls (display "cairo_move_to\n"))
 (define cairo_move_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_move_to" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_move_to"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
@@ -910,26 +909,28 @@
 (export cairo_move_to)
 
 ;; void cairo_new_sub_path(cairo_t *cr);
-(if echo-decls (display "cairo_new_sub_path\n"))
 (define cairo_new_sub_path
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_new_sub_path"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_new_sub_path"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_new_sub_path)
 
 ;; void cairo_line_to(cairo_t *cr, double x, double y);
-(if echo-decls (display "cairo_line_to\n"))
 (define cairo_line_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_line_to" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_line_to"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
@@ -938,19 +939,21 @@
 
 ;; void cairo_curve_to(cairo_t *cr, double x1, double y1, double x2, double y2
 ;;     , double x3, double y3);
-(if echo-decls (display "cairo_curve_to\n"))
 (define cairo_curve_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_curve_to" (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (cr x1 y1 x2 y2 x3 y3)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_curve_to"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x1 (unwrap~float x1))
             (~y1 (unwrap~float y1))
@@ -963,18 +966,20 @@
 
 ;; void cairo_arc(cairo_t *cr, double xc, double yc, double radius, double 
 ;;     angle1, double angle2);
-(if echo-decls (display "cairo_arc\n"))
 (define cairo_arc
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_arc" (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (cr xc yc radius angle1 angle2)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_arc"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~xc (unwrap~float xc))
             (~yc (unwrap~float yc))
@@ -986,20 +991,20 @@
 
 ;; void cairo_arc_negative(cairo_t *cr, double xc, double yc, double radius, 
 ;;     double angle1, double angle2);
-(if echo-decls (display "cairo_arc_negative\n"))
 (define cairo_arc_negative
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_arc_negative"
-                (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (cr xc yc radius angle1 angle2)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_arc_negative"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~xc (unwrap~float xc))
             (~yc (unwrap~float yc))
@@ -1010,13 +1015,15 @@
 (export cairo_arc_negative)
 
 ;; void cairo_rel_move_to(cairo_t *cr, double dx, double dy);
-(if echo-decls (display "cairo_rel_move_to\n"))
 (define cairo_rel_move_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_rel_move_to" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr dx dy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_rel_move_to"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~dx (unwrap~float dx))
             (~dy (unwrap~float dy)))
@@ -1024,13 +1031,15 @@
 (export cairo_rel_move_to)
 
 ;; void cairo_rel_line_to(cairo_t *cr, double dx, double dy);
-(if echo-decls (display "cairo_rel_line_to\n"))
 (define cairo_rel_line_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_rel_line_to" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr dx dy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_rel_line_to"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~dx (unwrap~float dx))
             (~dy (unwrap~float dy)))
@@ -1039,21 +1048,21 @@
 
 ;; void cairo_rel_curve_to(cairo_t *cr, double dx1, double dy1, double dx2, 
 ;;     double dy2, double dx3, double dy3);
-(if echo-decls (display "cairo_rel_curve_to\n"))
 (define cairo_rel_curve_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_rel_curve_to"
-                (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (cr dx1 dy1 dx2 dy2 dx3 dy3)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_rel_curve_to"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~dx1 (unwrap~float dx1))
             (~dy1 (unwrap~float dy1))
@@ -1066,17 +1075,19 @@
 
 ;; void cairo_rectangle(cairo_t *cr, double x, double y, double width, double 
 ;;     height);
-(if echo-decls (display "cairo_rectangle\n"))
 (define cairo_rectangle
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_rectangle" (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (cr x y width height)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_rectangle"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y))
@@ -1086,27 +1097,29 @@
 (export cairo_rectangle)
 
 ;; void cairo_close_path(cairo_t *cr);
-(if echo-decls (display "cairo_close_path\n"))
 (define cairo_close_path
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_close_path" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_close_path"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_close_path)
 
 ;; void cairo_path_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
 ;;     double *y2);
-(if echo-decls (display "cairo_path_extents\n"))
 (define cairo_path_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_path_extents"
-                (dynamic-link))
-              (list '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (cr x1 y1 x2 y2)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_path_extents"
+                ffi:void
+                (list '* '* '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x1 (unwrap~pointer x1))
             (~y1 (unwrap~pointer y1))
@@ -1116,39 +1129,37 @@
 (export cairo_path_extents)
 
 ;; void cairo_paint(cairo_t *cr);
-(if echo-decls (display "cairo_paint\n"))
 (define cairo_paint
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_paint" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_paint" ffi:void (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_paint)
 
 ;; void cairo_paint_with_alpha(cairo_t *cr, double alpha);
-(if echo-decls (display "cairo_paint_with_alpha\n"))
 (define cairo_paint_with_alpha
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_paint_with_alpha"
-                (dynamic-link))
-              (list '* ffi:double))))
+  (let ((~f #f))
     (lambda (cr alpha)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_paint_with_alpha"
+                ffi:void
+                (list '* ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~alpha (unwrap~float alpha)))
         (~f ~cr ~alpha)))))
 (export cairo_paint_with_alpha)
 
 ;; void cairo_mask(cairo_t *cr, cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_mask\n"))
 (define cairo_mask
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_mask" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_mask" ffi:void (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~cr ~pattern)))))
@@ -1156,15 +1167,15 @@
 
 ;; void cairo_mask_surface(cairo_t *cr, cairo_surface_t *surface, double 
 ;;     surface_x, double surface_y);
-(if echo-decls (display "cairo_mask_surface\n"))
 (define cairo_mask_surface
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mask_surface"
-                (dynamic-link))
-              (list '* '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr surface surface_x surface_y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mask_surface"
+                ffi:void
+                (list '* '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~surface (unwrap-cairo_surface_t* surface))
             (~surface_x (unwrap~float surface_x))
@@ -1173,128 +1184,136 @@
 (export cairo_mask_surface)
 
 ;; void cairo_stroke(cairo_t *cr);
-(if echo-decls (display "cairo_stroke\n"))
 (define cairo_stroke
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_stroke" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_stroke" ffi:void (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_stroke)
 
 ;; void cairo_stroke_preserve(cairo_t *cr);
-(if echo-decls (display "cairo_stroke_preserve\n"))
 (define cairo_stroke_preserve
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_stroke_preserve"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_stroke_preserve"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_stroke_preserve)
 
 ;; void cairo_fill(cairo_t *cr);
-(if echo-decls (display "cairo_fill\n"))
 (define cairo_fill
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_fill" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_fill" ffi:void (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_fill)
 
 ;; void cairo_fill_preserve(cairo_t *cr);
-(if echo-decls (display "cairo_fill_preserve\n"))
 (define cairo_fill_preserve
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_fill_preserve"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_fill_preserve"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_fill_preserve)
 
 ;; void cairo_copy_page(cairo_t *cr);
-(if echo-decls (display "cairo_copy_page\n"))
 (define cairo_copy_page
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_copy_page" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_copy_page"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_copy_page)
 
 ;; void cairo_show_page(cairo_t *cr);
-(if echo-decls (display "cairo_show_page\n"))
 (define cairo_show_page
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_show_page" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_show_page"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_show_page)
 
 ;; cairo_bool_t cairo_in_stroke(cairo_t *cr, double x, double y);
-(if echo-decls (display "cairo_in_stroke\n"))
 (define cairo_in_stroke
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func "cairo_in_stroke" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_in_stroke"
+                ffi:int
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
-        (wrap-cairo_bool_t (~f ~cr ~x ~y))))))
+        (~f ~cr ~x ~y)))))
 (export cairo_in_stroke)
 
 ;; cairo_bool_t cairo_in_fill(cairo_t *cr, double x, double y);
-(if echo-decls (display "cairo_in_fill\n"))
 (define cairo_in_fill
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func "cairo_in_fill" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_in_fill"
+                ffi:int
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
-        (wrap-cairo_bool_t (~f ~cr ~x ~y))))))
+        (~f ~cr ~x ~y)))))
 (export cairo_in_fill)
 
 ;; cairo_bool_t cairo_in_clip(cairo_t *cr, double x, double y);
-(if echo-decls (display "cairo_in_clip\n"))
 (define cairo_in_clip
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func "cairo_in_clip" (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (cr x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_in_clip"
+                ffi:int
+                (list '* ffi:double ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
-        (wrap-cairo_bool_t (~f ~cr ~x ~y))))))
+        (~f ~cr ~x ~y)))))
 (export cairo_in_clip)
 
 ;; void cairo_stroke_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
 ;;     double *y2);
-(if echo-decls (display "cairo_stroke_extents\n"))
 (define cairo_stroke_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_stroke_extents"
-                (dynamic-link))
-              (list '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (cr x1 y1 x2 y2)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_stroke_extents"
+                ffi:void
+                (list '* '* '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x1 (unwrap~pointer x1))
             (~y1 (unwrap~pointer y1))
@@ -1305,15 +1324,15 @@
 
 ;; void cairo_fill_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
 ;;     double *y2);
-(if echo-decls (display "cairo_fill_extents\n"))
 (define cairo_fill_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_fill_extents"
-                (dynamic-link))
-              (list '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (cr x1 y1 x2 y2)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_fill_extents"
+                ffi:void
+                (list '* '* '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x1 (unwrap~pointer x1))
             (~y1 (unwrap~pointer y1))
@@ -1323,51 +1342,52 @@
 (export cairo_fill_extents)
 
 ;; void cairo_reset_clip(cairo_t *cr);
-(if echo-decls (display "cairo_reset_clip\n"))
 (define cairo_reset_clip
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_reset_clip" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_reset_clip"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_reset_clip)
 
 ;; void cairo_clip(cairo_t *cr);
-(if echo-decls (display "cairo_clip\n"))
 (define cairo_clip
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_clip" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_clip" ffi:void (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_clip)
 
 ;; void cairo_clip_preserve(cairo_t *cr);
-(if echo-decls (display "cairo_clip_preserve\n"))
 (define cairo_clip_preserve
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_clip_preserve"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_clip_preserve"
+                ffi:void
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_clip_preserve)
 
 ;; void cairo_clip_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
 ;;     double *y2);
-(if echo-decls (display "cairo_clip_extents\n"))
 (define cairo_clip_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_clip_extents"
-                (dynamic-link))
-              (list '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (cr x1 y1 x2 y2)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_clip_extents"
+                ffi:void
+                (list '* '* '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x1 (unwrap~pointer x1))
             (~y1 (unwrap~pointer y1))
@@ -1379,7 +1399,6 @@
 ;; typedef struct _cairo_rectangle {
 ;;   double x, y, width, height;
 ;; } cairo_rectangle_t;
-(if echo-decls (display "cairo_rectangle_t\n"))
 (define cairo_rectangle_t-desc
   (bs:struct
     (list `(height ,double)
@@ -1395,56 +1414,55 @@
 ;;   cairo_rectangle_t *rectangles;
 ;;   int num_rectangles;
 ;; } cairo_rectangle_list_t;
-(if echo-decls (display "cairo_rectangle_list_t\n"))
 (define cairo_rectangle_list_t-desc
   (bs:struct
     (list `(status ,int)
           `(rectangles
-             ,(bs:pointer cairo_rectangle_t*-desc))
+             ,(bs:pointer (delay cairo_rectangle_t*-desc)))
           `(num_rectangles ,int))))
 (export cairo_rectangle_list_t-desc)
 (define-fh-compound-type/p cairo_rectangle_list_t cairo_rectangle_list_t-desc)
 (define struct-_cairo_rectangle_list cairo_rectangle_list_t)
 
 ;; cairo_rectangle_list_t *cairo_copy_clip_rectangle_list(cairo_t *cr);
-(if echo-decls (display "cairo_copy_clip_rectangle_list\n"))
 (define cairo_copy_clip_rectangle_list
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_copy_clip_rectangle_list"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_copy_clip_rectangle_list"
+                '*
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_rectangle_list_t* (~f ~cr))))))
 (export cairo_copy_clip_rectangle_list)
 
 ;; void cairo_rectangle_list_destroy(cairo_rectangle_list_t *rectangle_list);
-(if echo-decls (display "cairo_rectangle_list_destroy\n"))
 (define cairo_rectangle_list_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_rectangle_list_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (rectangle_list)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_rectangle_list_destroy"
+                ffi:void
+                (list '*))))
       (let ((~rectangle_list
               (unwrap-cairo_rectangle_list_t* rectangle_list)))
         (~f ~rectangle_list)))))
 (export cairo_rectangle_list_destroy)
 
 ;; typedef struct _cairo_scaled_font cairo_scaled_font_t;
-(if echo-decls (display "cairo_scaled_font_t\n"))
 (define cairo_scaled_font_t-desc void)
 (define cairo_scaled_font_t*-desc (bs:pointer cairo_scaled_font_t-desc))
+(export cairo_scaled_font_t*-desc)
 (define-fh-pointer-type cairo_scaled_font_t* cairo_scaled_font_t*-desc)
 
 ;; typedef struct _cairo_font_face cairo_font_face_t;
-(if echo-decls (display "cairo_font_face_t\n"))
 (define cairo_font_face_t-desc void)
 (define cairo_font_face_t*-desc (bs:pointer cairo_font_face_t-desc))
+(export cairo_font_face_t*-desc)
 (define-fh-pointer-type cairo_font_face_t* cairo_font_face_t*-desc)
 
 ;; typedef struct {
@@ -1452,7 +1470,6 @@
 ;;   double x;
 ;;   double y;
 ;; } cairo_glyph_t;
-(if echo-decls (display "cairo_glyph_t\n"))
 (define cairo_glyph_t-desc
   (bs:struct
     (list `(index ,unsigned-long)
@@ -1462,27 +1479,29 @@
 (define-fh-compound-type/p cairo_glyph_t cairo_glyph_t-desc)
 
 ;; cairo_glyph_t *cairo_glyph_allocate(int num_glyphs);
-(if echo-decls (display "cairo_glyph_allocate\n"))
 (define cairo_glyph_allocate
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_glyph_allocate"
-                (dynamic-link))
-              (list ffi:int))))
+  (let ((~f #f))
     (lambda (num_glyphs)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_glyph_allocate"
+                '*
+                (list ffi:int))))
       (let ((~num_glyphs (unwrap~fixed num_glyphs)))
         (wrap-cairo_glyph_t* (~f ~num_glyphs))))))
 (export cairo_glyph_allocate)
 
 ;; void cairo_glyph_free(cairo_glyph_t *glyphs);
-(if echo-decls (display "cairo_glyph_free\n"))
 (define cairo_glyph_free
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_glyph_free" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (glyphs)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_glyph_free"
+                ffi:void
+                (list '*))))
       (let ((~glyphs (unwrap-cairo_glyph_t* glyphs)))
         (~f ~glyphs)))))
 (export cairo_glyph_free)
@@ -1491,7 +1510,6 @@
 ;;   int num_bytes;
 ;;   int num_glyphs;
 ;; } cairo_text_cluster_t;
-(if echo-decls (display "cairo_text_cluster_t\n"))
 (define cairo_text_cluster_t-desc
   (bs:struct
     (list `(num_bytes ,int) `(num_glyphs ,int))))
@@ -1499,29 +1517,29 @@
 (define-fh-compound-type/p cairo_text_cluster_t cairo_text_cluster_t-desc)
 
 ;; cairo_text_cluster_t *cairo_text_cluster_allocate(int num_clusters);
-(if echo-decls (display "cairo_text_cluster_allocate\n"))
 (define cairo_text_cluster_allocate
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_text_cluster_allocate"
-                (dynamic-link))
-              (list ffi:int))))
+  (let ((~f #f))
     (lambda (num_clusters)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_text_cluster_allocate"
+                '*
+                (list ffi:int))))
       (let ((~num_clusters (unwrap~fixed num_clusters)))
         (wrap-cairo_text_cluster_t* (~f ~num_clusters))))))
 (export cairo_text_cluster_allocate)
 
 ;; void cairo_text_cluster_free(cairo_text_cluster_t *clusters);
-(if echo-decls (display "cairo_text_cluster_free\n"))
 (define cairo_text_cluster_free
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_text_cluster_free"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (clusters)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_text_cluster_free"
+                ffi:void
+                (list '*))))
       (let ((~clusters
               (unwrap-cairo_text_cluster_t* clusters)))
         (~f ~clusters)))))
@@ -1530,7 +1548,6 @@
 ;; typedef enum _cairo_text_cluster_flags {
 ;;   CAIRO_TEXT_CLUSTER_FLAG_BACKWARD = 0x00000001,
 ;; } cairo_text_cluster_flags_t;
-(if echo-decls (display "cairo_text_cluster_flags_t\n"))
 (define-fh-enum cairo_text_cluster_flags_t
   '((CAIRO_TEXT_CLUSTER_FLAG_BACKWARD . 1))
   )
@@ -1545,7 +1562,6 @@
 ;;   double x_advance;
 ;;   double y_advance;
 ;; } cairo_text_extents_t;
-(if echo-decls (display "cairo_text_extents_t\n"))
 (define cairo_text_extents_t-desc
   (bs:struct
     (list `(x_bearing ,double)
@@ -1564,7 +1580,6 @@
 ;;   double max_x_advance;
 ;;   double max_y_advance;
 ;; } cairo_font_extents_t;
-(if echo-decls (display "cairo_font_extents_t\n"))
 (define cairo_font_extents_t-desc
   (bs:struct
     (list `(ascent ,double)
@@ -1580,7 +1595,6 @@
 ;;   CAIRO_FONT_SLANT_ITALIC,
 ;;   CAIRO_FONT_SLANT_OBLIQUE,
 ;; } cairo_font_slant_t;
-(if echo-decls (display "cairo_font_slant_t\n"))
 (define-fh-enum cairo_font_slant_t
   '((CAIRO_FONT_SLANT_NORMAL . 0)
     (CAIRO_FONT_SLANT_ITALIC . 1)
@@ -1593,7 +1607,6 @@
 ;;   CAIRO_FONT_WEIGHT_NORMAL,
 ;;   CAIRO_FONT_WEIGHT_BOLD,
 ;; } cairo_font_weight_t;
-(if echo-decls (display "cairo_font_weight_t\n"))
 (define-fh-enum cairo_font_weight_t
   '((CAIRO_FONT_WEIGHT_NORMAL . 0)
     (CAIRO_FONT_WEIGHT_BOLD . 1))
@@ -1608,7 +1621,6 @@
 ;;   CAIRO_SUBPIXEL_ORDER_VRGB,
 ;;   CAIRO_SUBPIXEL_ORDER_VBGR,
 ;; } cairo_subpixel_order_t;
-(if echo-decls (display "cairo_subpixel_order_t\n"))
 (define-fh-enum cairo_subpixel_order_t
   '((CAIRO_SUBPIXEL_ORDER_DEFAULT . 0)
     (CAIRO_SUBPIXEL_ORDER_RGB . 1)
@@ -1626,7 +1638,6 @@
 ;;   CAIRO_HINT_STYLE_MEDIUM,
 ;;   CAIRO_HINT_STYLE_FULL,
 ;; } cairo_hint_style_t;
-(if echo-decls (display "cairo_hint_style_t\n"))
 (define-fh-enum cairo_hint_style_t
   '((CAIRO_HINT_STYLE_DEFAULT . 0)
     (CAIRO_HINT_STYLE_NONE . 1)
@@ -1642,7 +1653,6 @@
 ;;   CAIRO_HINT_METRICS_OFF,
 ;;   CAIRO_HINT_METRICS_ON,
 ;; } cairo_hint_metrics_t;
-(if echo-decls (display "cairo_hint_metrics_t\n"))
 (define-fh-enum cairo_hint_metrics_t
   '((CAIRO_HINT_METRICS_DEFAULT . 0)
     (CAIRO_HINT_METRICS_OFF . 1)
@@ -1652,79 +1662,79 @@
 (define wrap-enum-_cairo_hint_metrics wrap-cairo_hint_metrics_t)
 
 ;; typedef struct _cairo_font_options cairo_font_options_t;
-(if echo-decls (display "cairo_font_options_t\n"))
 (define cairo_font_options_t-desc void)
 (define cairo_font_options_t*-desc (bs:pointer cairo_font_options_t-desc))
+(export cairo_font_options_t*-desc)
 (define-fh-pointer-type cairo_font_options_t* cairo_font_options_t*-desc)
 
 ;; cairo_font_options_t *cairo_font_options_create(void);
-(if echo-decls (display "cairo_font_options_create\n"))
 (define cairo_font_options_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_font_options_create"
-                (dynamic-link))
-              (list))))
+  (let ((~f #f))
     (lambda ()
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_create"
+                '*
+                (list))))
       (let () (wrap-cairo_font_options_t* (~f))))))
 (export cairo_font_options_create)
 
 ;; cairo_font_options_t *cairo_font_options_copy(const cairo_font_options_t *
 ;;     original);
-(if echo-decls (display "cairo_font_options_copy\n"))
 (define cairo_font_options_copy
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_font_options_copy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (original)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_copy"
+                '*
+                (list '*))))
       (let ((~original
               (unwrap-cairo_font_options_t* original)))
         (wrap-cairo_font_options_t* (~f ~original))))))
 (export cairo_font_options_copy)
 
 ;; void cairo_font_options_destroy(cairo_font_options_t *options);
-(if echo-decls (display "cairo_font_options_destroy\n"))
 (define cairo_font_options_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_font_options_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_destroy"
+                ffi:void
+                (list '*))))
       (let ((~options (unwrap-cairo_font_options_t* options)))
         (~f ~options)))))
 (export cairo_font_options_destroy)
 
 ;; cairo_status_t cairo_font_options_status(cairo_font_options_t *options);
-(if echo-decls (display "cairo_font_options_status\n"))
 (define cairo_font_options_status
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_options_status"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_status"
+                ffi:int
+                (list '*))))
       (let ((~options (unwrap-cairo_font_options_t* options)))
         (~f ~options)))))
 (export cairo_font_options_status)
 
 ;; void cairo_font_options_merge(cairo_font_options_t *options, const 
 ;;     cairo_font_options_t *other);
-(if echo-decls (display "cairo_font_options_merge\n"))
 (define cairo_font_options_merge
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_font_options_merge"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (options other)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_merge"
+                ffi:void
+                (list '* '*))))
       (let ((~options (unwrap-cairo_font_options_t* options))
             (~other (unwrap-cairo_font_options_t* other)))
         (~f ~options ~other)))))
@@ -1732,45 +1742,45 @@
 
 ;; cairo_bool_t cairo_font_options_equal(const cairo_font_options_t *options, 
 ;;     const cairo_font_options_t *other);
-(if echo-decls (display "cairo_font_options_equal\n"))
 (define cairo_font_options_equal
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_options_equal"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (options other)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_equal"
+                ffi:int
+                (list '* '*))))
       (let ((~options (unwrap-cairo_font_options_t* options))
             (~other (unwrap-cairo_font_options_t* other)))
-        (wrap-cairo_bool_t (~f ~options ~other))))))
+        (~f ~options ~other)))))
 (export cairo_font_options_equal)
 
 ;; unsigned long cairo_font_options_hash(const cairo_font_options_t *options);
-(if echo-decls (display "cairo_font_options_hash\n"))
 (define cairo_font_options_hash
-  (let ((~f (ffi:pointer->procedure
-              ffi:unsigned-long
-              (dynamic-func
-                "cairo_font_options_hash"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_hash"
+                ffi:unsigned-long
+                (list '*))))
       (let ((~options (unwrap-cairo_font_options_t* options)))
         (~f ~options)))))
 (export cairo_font_options_hash)
 
 ;; void cairo_font_options_set_antialias(cairo_font_options_t *options, 
 ;;     cairo_antialias_t antialias);
-(if echo-decls (display "cairo_font_options_set_antialias\n"))
 (define cairo_font_options_set_antialias
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_font_options_set_antialias"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (options antialias)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_set_antialias"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~options (unwrap-cairo_font_options_t* options))
             (~antialias (unwrap~fixed antialias)))
         (~f ~options ~antialias)))))
@@ -1778,30 +1788,30 @@
 
 ;; cairo_antialias_t cairo_font_options_get_antialias(const 
 ;;     cairo_font_options_t *options);
-(if echo-decls (display "cairo_font_options_get_antialias\n"))
 (define cairo_font_options_get_antialias
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_options_get_antialias"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_get_antialias"
+                ffi:int
+                (list '*))))
       (let ((~options (unwrap-cairo_font_options_t* options)))
         (~f ~options)))))
 (export cairo_font_options_get_antialias)
 
 ;; void cairo_font_options_set_subpixel_order(cairo_font_options_t *options, 
 ;;     cairo_subpixel_order_t subpixel_order);
-(if echo-decls (display "cairo_font_options_set_subpixel_order\n"))
 (define cairo_font_options_set_subpixel_order
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_font_options_set_subpixel_order"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (options subpixel_order)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_set_subpixel_order"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~options (unwrap-cairo_font_options_t* options))
             (~subpixel_order (unwrap~fixed subpixel_order)))
         (~f ~options ~subpixel_order)))))
@@ -1809,30 +1819,30 @@
 
 ;; cairo_subpixel_order_t cairo_font_options_get_subpixel_order(const 
 ;;     cairo_font_options_t *options);
-(if echo-decls (display "cairo_font_options_get_subpixel_order\n"))
 (define cairo_font_options_get_subpixel_order
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_options_get_subpixel_order"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_get_subpixel_order"
+                ffi:int
+                (list '*))))
       (let ((~options (unwrap-cairo_font_options_t* options)))
         (~f ~options)))))
 (export cairo_font_options_get_subpixel_order)
 
 ;; void cairo_font_options_set_hint_style(cairo_font_options_t *options, 
 ;;     cairo_hint_style_t hint_style);
-(if echo-decls (display "cairo_font_options_set_hint_style\n"))
 (define cairo_font_options_set_hint_style
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_font_options_set_hint_style"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (options hint_style)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_set_hint_style"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~options (unwrap-cairo_font_options_t* options))
             (~hint_style (unwrap~fixed hint_style)))
         (~f ~options ~hint_style)))))
@@ -1840,30 +1850,30 @@
 
 ;; cairo_hint_style_t cairo_font_options_get_hint_style(const 
 ;;     cairo_font_options_t *options);
-(if echo-decls (display "cairo_font_options_get_hint_style\n"))
 (define cairo_font_options_get_hint_style
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_options_get_hint_style"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_get_hint_style"
+                ffi:int
+                (list '*))))
       (let ((~options (unwrap-cairo_font_options_t* options)))
         (~f ~options)))))
 (export cairo_font_options_get_hint_style)
 
 ;; void cairo_font_options_set_hint_metrics(cairo_font_options_t *options, 
 ;;     cairo_hint_metrics_t hint_metrics);
-(if echo-decls (display "cairo_font_options_set_hint_metrics\n"))
 (define cairo_font_options_set_hint_metrics
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_font_options_set_hint_metrics"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (options hint_metrics)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_set_hint_metrics"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~options (unwrap-cairo_font_options_t* options))
             (~hint_metrics (unwrap~fixed hint_metrics)))
         (~f ~options ~hint_metrics)))))
@@ -1871,30 +1881,30 @@
 
 ;; cairo_hint_metrics_t cairo_font_options_get_hint_metrics(const 
 ;;     cairo_font_options_t *options);
-(if echo-decls (display "cairo_font_options_get_hint_metrics\n"))
 (define cairo_font_options_get_hint_metrics
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_options_get_hint_metrics"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_options_get_hint_metrics"
+                ffi:int
+                (list '*))))
       (let ((~options (unwrap-cairo_font_options_t* options)))
         (~f ~options)))))
 (export cairo_font_options_get_hint_metrics)
 
 ;; void cairo_select_font_face(cairo_t *cr, const char *family, 
 ;;     cairo_font_slant_t slant, cairo_font_weight_t weight);
-(if echo-decls (display "cairo_select_font_face\n"))
 (define cairo_select_font_face
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_select_font_face"
-                (dynamic-link))
-              (list '* '* ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (cr family slant weight)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_select_font_face"
+                ffi:void
+                (list '* '* ffi:int ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~family (unwrap~pointer family))
             (~slant (unwrap~fixed slant))
@@ -1903,45 +1913,45 @@
 (export cairo_select_font_face)
 
 ;; void cairo_set_font_size(cairo_t *cr, double size);
-(if echo-decls (display "cairo_set_font_size\n"))
 (define cairo_set_font_size
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_font_size"
-                (dynamic-link))
-              (list '* ffi:double))))
+  (let ((~f #f))
     (lambda (cr size)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_font_size"
+                ffi:void
+                (list '* ffi:double))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~size (unwrap~float size)))
         (~f ~cr ~size)))))
 (export cairo_set_font_size)
 
 ;; void cairo_set_font_matrix(cairo_t *cr, const cairo_matrix_t *matrix);
-(if echo-decls (display "cairo_set_font_matrix\n"))
 (define cairo_set_font_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_font_matrix"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_font_matrix"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~cr ~matrix)))))
 (export cairo_set_font_matrix)
 
 ;; void cairo_get_font_matrix(cairo_t *cr, cairo_matrix_t *matrix);
-(if echo-decls (display "cairo_get_font_matrix\n"))
 (define cairo_get_font_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_get_font_matrix"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_font_matrix"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~cr ~matrix)))))
@@ -1949,45 +1959,45 @@
 
 ;; void cairo_set_font_options(cairo_t *cr, const cairo_font_options_t *options
 ;;     );
-(if echo-decls (display "cairo_set_font_options\n"))
 (define cairo_set_font_options
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_font_options"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_font_options"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~options (unwrap-cairo_font_options_t* options)))
         (~f ~cr ~options)))))
 (export cairo_set_font_options)
 
 ;; void cairo_get_font_options(cairo_t *cr, cairo_font_options_t *options);
-(if echo-decls (display "cairo_get_font_options\n"))
 (define cairo_get_font_options
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_get_font_options"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_font_options"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~options (unwrap-cairo_font_options_t* options)))
         (~f ~cr ~options)))))
 (export cairo_get_font_options)
 
 ;; void cairo_set_font_face(cairo_t *cr, cairo_font_face_t *font_face);
-(if echo-decls (display "cairo_set_font_face\n"))
 (define cairo_set_font_face
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_font_face"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_font_face"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~font_face
               (unwrap-cairo_font_face_t* font_face)))
@@ -1995,30 +2005,27 @@
 (export cairo_set_font_face)
 
 ;; cairo_font_face_t *cairo_get_font_face(cairo_t *cr);
-(if echo-decls (display "cairo_get_font_face\n"))
 (define cairo_get_font_face
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_get_font_face"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_get_font_face" '* (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_font_face_t* (~f ~cr))))))
 (export cairo_get_font_face)
 
 ;; void cairo_set_scaled_font(cairo_t *cr, const cairo_scaled_font_t *
 ;;     scaled_font);
-(if echo-decls (display "cairo_set_scaled_font\n"))
 (define cairo_set_scaled_font
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_set_scaled_font"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr scaled_font)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_set_scaled_font"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font)))
@@ -2026,27 +2033,29 @@
 (export cairo_set_scaled_font)
 
 ;; cairo_scaled_font_t *cairo_get_scaled_font(cairo_t *cr);
-(if echo-decls (display "cairo_get_scaled_font\n"))
 (define cairo_get_scaled_font
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_get_scaled_font"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_scaled_font"
+                '*
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_scaled_font_t* (~f ~cr))))))
 (export cairo_get_scaled_font)
 
 ;; void cairo_show_text(cairo_t *cr, const char *utf8);
-(if echo-decls (display "cairo_show_text\n"))
 (define cairo_show_text
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_show_text" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr utf8)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_show_text"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~utf8 (unwrap~pointer utf8)))
         (~f ~cr ~utf8)))))
@@ -2054,13 +2063,15 @@
 
 ;; void cairo_show_glyphs(cairo_t *cr, const cairo_glyph_t *glyphs, int 
 ;;     num_glyphs);
-(if echo-decls (display "cairo_show_glyphs\n"))
 (define cairo_show_glyphs
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_show_glyphs" (dynamic-link))
-              (list '* '* ffi:int))))
+  (let ((~f #f))
     (lambda (cr glyphs num_glyphs)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_show_glyphs"
+                ffi:void
+                (list '* '* ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~glyphs (unwrap-cairo_glyph_t* glyphs))
             (~num_glyphs (unwrap~fixed num_glyphs)))
@@ -2070,21 +2081,8 @@
 ;; void cairo_show_text_glyphs(cairo_t *cr, const char *utf8, int utf8_len, 
 ;;     const cairo_glyph_t *glyphs, int num_glyphs, const cairo_text_cluster_t 
 ;;     *clusters, int num_clusters, cairo_text_cluster_flags_t cluster_flags);
-(if echo-decls (display "cairo_show_text_glyphs\n"))
 (define cairo_show_text_glyphs
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_show_text_glyphs"
-                (dynamic-link))
-              (list '*
-                    '*
-                    ffi:int
-                    '*
-                    ffi:int
-                    '*
-                    ffi:int
-                    ffi:int))))
+  (let ((~f #f))
     (lambda (cr
              utf8
              utf8_len
@@ -2093,6 +2091,19 @@
              clusters
              num_clusters
              cluster_flags)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_show_text_glyphs"
+                ffi:void
+                (list '*
+                      '*
+                      ffi:int
+                      '*
+                      ffi:int
+                      '*
+                      ffi:int
+                      ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~utf8 (unwrap~pointer utf8))
             (~utf8_len (unwrap~fixed utf8_len))
@@ -2113,13 +2124,15 @@
 (export cairo_show_text_glyphs)
 
 ;; void cairo_text_path(cairo_t *cr, const char *utf8);
-(if echo-decls (display "cairo_text_path\n"))
 (define cairo_text_path
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_text_path" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr utf8)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_text_path"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~utf8 (unwrap~pointer utf8)))
         (~f ~cr ~utf8)))))
@@ -2127,13 +2140,15 @@
 
 ;; void cairo_glyph_path(cairo_t *cr, const cairo_glyph_t *glyphs, int 
 ;;     num_glyphs);
-(if echo-decls (display "cairo_glyph_path\n"))
 (define cairo_glyph_path
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_glyph_path" (dynamic-link))
-              (list '* '* ffi:int))))
+  (let ((~f #f))
     (lambda (cr glyphs num_glyphs)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_glyph_path"
+                ffi:void
+                (list '* '* ffi:int))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~glyphs (unwrap-cairo_glyph_t* glyphs))
             (~num_glyphs (unwrap~fixed num_glyphs)))
@@ -2142,15 +2157,15 @@
 
 ;; void cairo_text_extents(cairo_t *cr, const char *utf8, cairo_text_extents_t 
 ;;     *extents);
-(if echo-decls (display "cairo_text_extents\n"))
 (define cairo_text_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_text_extents"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (cr utf8 extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_text_extents"
+                ffi:void
+                (list '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~utf8 (unwrap~pointer utf8))
             (~extents (unwrap-cairo_text_extents_t* extents)))
@@ -2159,15 +2174,15 @@
 
 ;; void cairo_glyph_extents(cairo_t *cr, const cairo_glyph_t *glyphs, int 
 ;;     num_glyphs, cairo_text_extents_t *extents);
-(if echo-decls (display "cairo_glyph_extents\n"))
 (define cairo_glyph_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_glyph_extents"
-                (dynamic-link))
-              (list '* '* ffi:int '*))))
+  (let ((~f #f))
     (lambda (cr glyphs num_glyphs extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_glyph_extents"
+                ffi:void
+                (list '* '* ffi:int '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~glyphs (unwrap-cairo_glyph_t* glyphs))
             (~num_glyphs (unwrap~fixed num_glyphs))
@@ -2176,45 +2191,45 @@
 (export cairo_glyph_extents)
 
 ;; void cairo_font_extents(cairo_t *cr, cairo_font_extents_t *extents);
-(if echo-decls (display "cairo_font_extents\n"))
 (define cairo_font_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_font_extents"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_extents"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~extents (unwrap-cairo_font_extents_t* extents)))
         (~f ~cr ~extents)))))
 (export cairo_font_extents)
 
 ;; cairo_font_face_t *cairo_font_face_reference(cairo_font_face_t *font_face);
-(if echo-decls (display "cairo_font_face_reference\n"))
 (define cairo_font_face_reference
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_font_face_reference"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_face_reference"
+                '*
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (wrap-cairo_font_face_t* (~f ~font_face))))))
 (export cairo_font_face_reference)
 
 ;; void cairo_font_face_destroy(cairo_font_face_t *font_face);
-(if echo-decls (display "cairo_font_face_destroy\n"))
 (define cairo_font_face_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_font_face_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_face_destroy"
+                ffi:void
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
@@ -2222,30 +2237,30 @@
 
 ;; unsigned int cairo_font_face_get_reference_count(cairo_font_face_t *
 ;;     font_face);
-(if echo-decls (display "cairo_font_face_get_reference_count\n"))
 (define cairo_font_face_get_reference_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:unsigned-int
-              (dynamic-func
-                "cairo_font_face_get_reference_count"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_face_get_reference_count"
+                ffi:unsigned-int
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
 (export cairo_font_face_get_reference_count)
 
 ;; cairo_status_t cairo_font_face_status(cairo_font_face_t *font_face);
-(if echo-decls (display "cairo_font_face_status\n"))
 (define cairo_font_face_status
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_face_status"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_face_status"
+                ffi:int
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
@@ -2258,7 +2273,6 @@
 ;;   CAIRO_FONT_TYPE_QUARTZ,
 ;;   CAIRO_FONT_TYPE_USER,
 ;; } cairo_font_type_t;
-(if echo-decls (display "cairo_font_type_t\n"))
 (define-fh-enum cairo_font_type_t
   '((CAIRO_FONT_TYPE_TOY . 0)
     (CAIRO_FONT_TYPE_FT . 1)
@@ -2270,15 +2284,15 @@
 (define wrap-enum-_cairo_font_type wrap-cairo_font_type_t)
 
 ;; cairo_font_type_t cairo_font_face_get_type(cairo_font_face_t *font_face);
-(if echo-decls (display "cairo_font_face_get_type\n"))
 (define cairo_font_face_get_type
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_face_get_type"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_face_get_type"
+                ffi:int
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
@@ -2286,15 +2300,15 @@
 
 ;; void *cairo_font_face_get_user_data(cairo_font_face_t *font_face, const 
 ;;     cairo_user_data_key_t *key);
-(if echo-decls (display "cairo_font_face_get_user_data\n"))
 (define cairo_font_face_get_user_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_font_face_get_user_data"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (font_face key)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_face_get_user_data"
+                '*
+                (list '* '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face))
             (~key (unwrap-cairo_user_data_key_t* key)))
@@ -2304,15 +2318,15 @@
 ;; cairo_status_t cairo_font_face_set_user_data(cairo_font_face_t *font_face, 
 ;;     const cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t 
 ;;     destroy);
-(if echo-decls (display "cairo_font_face_set_user_data\n"))
 (define cairo_font_face_set_user_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_font_face_set_user_data"
-                (dynamic-link))
-              (list '* '* '* '*))))
+  (let ((~f #f))
     (lambda (font_face key user_data destroy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_font_face_set_user_data"
+                ffi:int
+                (list '* '* '* '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face))
             (~key (unwrap-cairo_user_data_key_t* key))
@@ -2326,15 +2340,15 @@
 ;; cairo_scaled_font_t *cairo_scaled_font_create(cairo_font_face_t *font_face, 
 ;;     const cairo_matrix_t *font_matrix, const cairo_matrix_t *ctm, const 
 ;;     cairo_font_options_t *options);
-(if echo-decls (display "cairo_scaled_font_create\n"))
 (define cairo_scaled_font_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_scaled_font_create"
-                (dynamic-link))
-              (list '* '* '* '*))))
+  (let ((~f #f))
     (lambda (font_face font_matrix ctm options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_create"
+                '*
+                (list '* '* '* '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face))
             (~font_matrix
@@ -2347,30 +2361,30 @@
 
 ;; cairo_scaled_font_t *cairo_scaled_font_reference(cairo_scaled_font_t *
 ;;     scaled_font);
-(if echo-decls (display "cairo_scaled_font_reference\n"))
 (define cairo_scaled_font_reference
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_scaled_font_reference"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (scaled_font)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_reference"
+                '*
+                (list '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font)))
         (wrap-cairo_scaled_font_t* (~f ~scaled_font))))))
 (export cairo_scaled_font_reference)
 
 ;; void cairo_scaled_font_destroy(cairo_scaled_font_t *scaled_font);
-(if echo-decls (display "cairo_scaled_font_destroy\n"))
 (define cairo_scaled_font_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_scaled_font_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (scaled_font)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_destroy"
+                ffi:void
+                (list '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font)))
         (~f ~scaled_font)))))
@@ -2378,30 +2392,30 @@
 
 ;; unsigned int cairo_scaled_font_get_reference_count(cairo_scaled_font_t *
 ;;     scaled_font);
-(if echo-decls (display "cairo_scaled_font_get_reference_count\n"))
 (define cairo_scaled_font_get_reference_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:unsigned-int
-              (dynamic-func
-                "cairo_scaled_font_get_reference_count"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (scaled_font)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_get_reference_count"
+                ffi:unsigned-int
+                (list '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font)))
         (~f ~scaled_font)))))
 (export cairo_scaled_font_get_reference_count)
 
 ;; cairo_status_t cairo_scaled_font_status(cairo_scaled_font_t *scaled_font);
-(if echo-decls (display "cairo_scaled_font_status\n"))
 (define cairo_scaled_font_status
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_scaled_font_status"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (scaled_font)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_status"
+                ffi:int
+                (list '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font)))
         (~f ~scaled_font)))))
@@ -2409,15 +2423,15 @@
 
 ;; cairo_font_type_t cairo_scaled_font_get_type(cairo_scaled_font_t *
 ;;     scaled_font);
-(if echo-decls (display "cairo_scaled_font_get_type\n"))
 (define cairo_scaled_font_get_type
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_scaled_font_get_type"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (scaled_font)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_get_type"
+                ffi:int
+                (list '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font)))
         (~f ~scaled_font)))))
@@ -2425,15 +2439,15 @@
 
 ;; void *cairo_scaled_font_get_user_data(cairo_scaled_font_t *scaled_font, 
 ;;     const cairo_user_data_key_t *key);
-(if echo-decls (display "cairo_scaled_font_get_user_data\n"))
 (define cairo_scaled_font_get_user_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_scaled_font_get_user_data"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (scaled_font key)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_get_user_data"
+                '*
+                (list '* '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~key (unwrap-cairo_user_data_key_t* key)))
@@ -2443,15 +2457,15 @@
 ;; cairo_status_t cairo_scaled_font_set_user_data(cairo_scaled_font_t *
 ;;     scaled_font, const cairo_user_data_key_t *key, void *user_data, 
 ;;     cairo_destroy_func_t destroy);
-(if echo-decls (display "cairo_scaled_font_set_user_data\n"))
 (define cairo_scaled_font_set_user_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_scaled_font_set_user_data"
-                (dynamic-link))
-              (list '* '* '* '*))))
+  (let ((~f #f))
     (lambda (scaled_font key user_data destroy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_set_user_data"
+                ffi:int
+                (list '* '* '* '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~key (unwrap-cairo_user_data_key_t* key))
@@ -2464,15 +2478,15 @@
 
 ;; void cairo_scaled_font_extents(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_font_extents_t *extents);
-(if echo-decls (display "cairo_scaled_font_extents\n"))
 (define cairo_scaled_font_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_scaled_font_extents"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (scaled_font extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_extents"
+                ffi:void
+                (list '* '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~extents (unwrap-cairo_font_extents_t* extents)))
@@ -2481,15 +2495,15 @@
 
 ;; void cairo_scaled_font_text_extents(cairo_scaled_font_t *scaled_font, const 
 ;;     char *utf8, cairo_text_extents_t *extents);
-(if echo-decls (display "cairo_scaled_font_text_extents\n"))
 (define cairo_scaled_font_text_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_scaled_font_text_extents"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (scaled_font utf8 extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_text_extents"
+                ffi:void
+                (list '* '* '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~utf8 (unwrap~pointer utf8))
@@ -2499,15 +2513,15 @@
 
 ;; void cairo_scaled_font_glyph_extents(cairo_scaled_font_t *scaled_font, const
 ;;      cairo_glyph_t *glyphs, int num_glyphs, cairo_text_extents_t *extents);
-(if echo-decls (display "cairo_scaled_font_glyph_extents\n"))
 (define cairo_scaled_font_glyph_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_scaled_font_glyph_extents"
-                (dynamic-link))
-              (list '* '* ffi:int '*))))
+  (let ((~f #f))
     (lambda (scaled_font glyphs num_glyphs extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_glyph_extents"
+                ffi:void
+                (list '* '* ffi:int '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~glyphs (unwrap-cairo_glyph_t* glyphs))
@@ -2520,23 +2534,8 @@
 ;;     scaled_font, double x, double y, const char *utf8, int utf8_len, 
 ;;     cairo_glyph_t **glyphs, int *num_glyphs, cairo_text_cluster_t **clusters
 ;;     , int *num_clusters, cairo_text_cluster_flags_t *cluster_flags);
-(if echo-decls (display "cairo_scaled_font_text_to_glyphs\n"))
 (define cairo_scaled_font_text_to_glyphs
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_scaled_font_text_to_glyphs"
-                (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    '*
-                    ffi:int
-                    '*
-                    '*
-                    '*
-                    '*
-                    '*))))
+  (let ((~f #f))
     (lambda (scaled_font
              x
              y
@@ -2547,6 +2546,21 @@
              clusters
              num_clusters
              cluster_flags)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_text_to_glyphs"
+                ffi:int
+                (list '*
+                      ffi:double
+                      ffi:double
+                      '*
+                      ffi:int
+                      '*
+                      '*
+                      '*
+                      '*
+                      '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~x (unwrap~float x))
@@ -2572,15 +2586,15 @@
 
 ;; cairo_font_face_t *cairo_scaled_font_get_font_face(cairo_scaled_font_t *
 ;;     scaled_font);
-(if echo-decls (display "cairo_scaled_font_get_font_face\n"))
 (define cairo_scaled_font_get_font_face
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_scaled_font_get_font_face"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (scaled_font)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_get_font_face"
+                '*
+                (list '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font)))
         (wrap-cairo_font_face_t* (~f ~scaled_font))))))
@@ -2588,15 +2602,15 @@
 
 ;; void cairo_scaled_font_get_font_matrix(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_matrix_t *font_matrix);
-(if echo-decls (display "cairo_scaled_font_get_font_matrix\n"))
 (define cairo_scaled_font_get_font_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_scaled_font_get_font_matrix"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (scaled_font font_matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_get_font_matrix"
+                ffi:void
+                (list '* '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~font_matrix
@@ -2606,15 +2620,15 @@
 
 ;; void cairo_scaled_font_get_ctm(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_matrix_t *ctm);
-(if echo-decls (display "cairo_scaled_font_get_ctm\n"))
 (define cairo_scaled_font_get_ctm
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_scaled_font_get_ctm"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (scaled_font ctm)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_get_ctm"
+                ffi:void
+                (list '* '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~ctm (unwrap-cairo_matrix_t* ctm)))
@@ -2623,15 +2637,15 @@
 
 ;; void cairo_scaled_font_get_scale_matrix(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_matrix_t *scale_matrix);
-(if echo-decls (display "cairo_scaled_font_get_scale_matrix\n"))
 (define cairo_scaled_font_get_scale_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_scaled_font_get_scale_matrix"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (scaled_font scale_matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_get_scale_matrix"
+                ffi:void
+                (list '* '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~scale_matrix
@@ -2641,15 +2655,15 @@
 
 ;; void cairo_scaled_font_get_font_options(cairo_scaled_font_t *scaled_font, 
 ;;     cairo_font_options_t *options);
-(if echo-decls (display "cairo_scaled_font_get_font_options\n"))
 (define cairo_scaled_font_get_font_options
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_scaled_font_get_font_options"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (scaled_font options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_scaled_font_get_font_options"
+                ffi:void
+                (list '* '*))))
       (let ((~scaled_font
               (unwrap-cairo_scaled_font_t* scaled_font))
             (~options (unwrap-cairo_font_options_t* options)))
@@ -2658,15 +2672,15 @@
 
 ;; cairo_font_face_t *cairo_toy_font_face_create(const char *family, 
 ;;     cairo_font_slant_t slant, cairo_font_weight_t weight);
-(if echo-decls (display "cairo_toy_font_face_create\n"))
 (define cairo_toy_font_face_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_toy_font_face_create"
-                (dynamic-link))
-              (list '* ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (family slant weight)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_toy_font_face_create"
+                '*
+                (list '* ffi:int ffi:int))))
       (let ((~family (unwrap~pointer family))
             (~slant (unwrap~fixed slant))
             (~weight (unwrap~fixed weight)))
@@ -2675,15 +2689,15 @@
 (export cairo_toy_font_face_create)
 
 ;; const char *cairo_toy_font_face_get_family(cairo_font_face_t *font_face);
-(if echo-decls (display "cairo_toy_font_face_get_family\n"))
 (define cairo_toy_font_face_get_family
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_toy_font_face_get_family"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_toy_font_face_get_family"
+                '*
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
@@ -2691,15 +2705,15 @@
 
 ;; cairo_font_slant_t cairo_toy_font_face_get_slant(cairo_font_face_t *
 ;;     font_face);
-(if echo-decls (display "cairo_toy_font_face_get_slant\n"))
 (define cairo_toy_font_face_get_slant
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_toy_font_face_get_slant"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_toy_font_face_get_slant"
+                ffi:int
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
@@ -2707,44 +2721,42 @@
 
 ;; cairo_font_weight_t cairo_toy_font_face_get_weight(cairo_font_face_t *
 ;;     font_face);
-(if echo-decls (display "cairo_toy_font_face_get_weight\n"))
 (define cairo_toy_font_face_get_weight
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_toy_font_face_get_weight"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_toy_font_face_get_weight"
+                ffi:int
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
 (export cairo_toy_font_face_get_weight)
 
 ;; cairo_font_face_t *cairo_user_font_face_create(void);
-(if echo-decls (display "cairo_user_font_face_create\n"))
 (define cairo_user_font_face_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_user_font_face_create"
-                (dynamic-link))
-              (list))))
+  (let ((~f #f))
     (lambda ()
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_create"
+                '*
+                (list))))
       (let () (wrap-cairo_font_face_t* (~f))))))
 (export cairo_user_font_face_create)
 
 ;; typedef cairo_status_t (*cairo_user_scaled_font_init_func_t)(
 ;;     cairo_scaled_font_t *scaled_font, cairo_t *cr, cairo_font_extents_t *
 ;;     extents);
-(if echo-decls (display "cairo_user_scaled_font_init_func_t\n"))
 (define-fh-function/p cairo_user_scaled_font_init_func_t
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_user_scaled_font_render_glyph_func_t)(
 ;;     cairo_scaled_font_t *scaled_font, unsigned long glyph, cairo_t *cr, 
 ;;     cairo_text_extents_t *extents);
-(if echo-decls (display "cairo_user_scaled_font_render_glyph_func_t\n"))
 (define-fh-function/p cairo_user_scaled_font_render_glyph_func_t
   ffi:int (list (quote *) ffi:unsigned-long (quote *) (quote *)))
 
@@ -2752,52 +2764,50 @@
 ;;     cairo_scaled_font_t *scaled_font, const char *utf8, int utf8_len, 
 ;;     cairo_glyph_t **glyphs, int *num_glyphs, cairo_text_cluster_t **clusters
 ;;     , int *num_clusters, cairo_text_cluster_flags_t *cluster_flags);
-(if echo-decls (display "cairo_user_scaled_font_text_to_glyphs_func_t\n"))
 (define-fh-function/p cairo_user_scaled_font_text_to_glyphs_func_t
   ffi:int (list (quote *) (quote *) ffi:int (quote *) (quote *) (quote *) (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_user_scaled_font_unicode_to_glyph_func_t)(
 ;;     cairo_scaled_font_t *scaled_font, unsigned long unicode, unsigned long *
 ;;     glyph_index);
-(if echo-decls (display "cairo_user_scaled_font_unicode_to_glyph_func_t\n"))
 (define-fh-function/p cairo_user_scaled_font_unicode_to_glyph_func_t
   ffi:int (list (quote *) ffi:unsigned-long (quote *)))
 
 ;; void cairo_user_font_face_set_init_func(cairo_font_face_t *font_face, 
 ;;     cairo_user_scaled_font_init_func_t init_func);
-(if echo-decls (display "cairo_user_font_face_set_init_func\n"))
 (define cairo_user_font_face_set_init_func
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_user_font_face_set_init_func"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (font_face init_func)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_set_init_func"
+                ffi:void
+                (list '* '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face))
             (~init_func
-              ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
                init_func)))
         (~f ~font_face ~init_func)))))
 (export cairo_user_font_face_set_init_func)
 
 ;; void cairo_user_font_face_set_render_glyph_func(cairo_font_face_t *font_face
 ;;     , cairo_user_scaled_font_render_glyph_func_t render_glyph_func);
-(if echo-decls (display "cairo_user_font_face_set_render_glyph_func\n"))
 (define cairo_user_font_face_set_render_glyph_func
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_user_font_face_set_render_glyph_func"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (font_face render_glyph_func)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_set_render_glyph_func"
+                ffi:void
+                (list '* '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face))
             (~render_glyph_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* ffi:unsigned-long '* '*))
                render_glyph_func)))
         (~f ~font_face ~render_glyph_func)))))
@@ -2806,20 +2816,20 @@
 ;; void cairo_user_font_face_set_text_to_glyphs_func(cairo_font_face_t *
 ;;     font_face, cairo_user_scaled_font_text_to_glyphs_func_t 
 ;;     text_to_glyphs_func);
-(if echo-decls (display "cairo_user_font_face_set_text_to_glyphs_func\n"))
 (define cairo_user_font_face_set_text_to_glyphs_func
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_user_font_face_set_text_to_glyphs_func"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (font_face text_to_glyphs_func)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_set_text_to_glyphs_func"
+                ffi:void
+                (list '* '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face))
             (~text_to_glyphs_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* '* ffi:int '* '* '* '* '*))
                text_to_glyphs_func)))
         (~f ~font_face ~text_to_glyphs_func)))))
@@ -2828,20 +2838,20 @@
 ;; void cairo_user_font_face_set_unicode_to_glyph_func(cairo_font_face_t *
 ;;     font_face, cairo_user_scaled_font_unicode_to_glyph_func_t 
 ;;     unicode_to_glyph_func);
-(if echo-decls (display "cairo_user_font_face_set_unicode_to_glyph_func\n"))
 (define cairo_user_font_face_set_unicode_to_glyph_func
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_user_font_face_set_unicode_to_glyph_func"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (font_face unicode_to_glyph_func)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_set_unicode_to_glyph_func"
+                ffi:void
+                (list '* '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face))
             (~unicode_to_glyph_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* ffi:unsigned-long '*))
                unicode_to_glyph_func)))
         (~f ~font_face ~unicode_to_glyph_func)))))
@@ -2849,15 +2859,15 @@
 
 ;; cairo_user_scaled_font_init_func_t cairo_user_font_face_get_init_func(
 ;;     cairo_font_face_t *font_face);
-(if echo-decls (display "cairo_user_font_face_get_init_func\n"))
 (define cairo_user_font_face_get_init_func
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_user_font_face_get_init_func"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_get_init_func"
+                '*
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
@@ -2866,15 +2876,15 @@
 ;; cairo_user_scaled_font_render_glyph_func_t 
 ;;     cairo_user_font_face_get_render_glyph_func(cairo_font_face_t *font_face)
 ;;     ;
-(if echo-decls (display "cairo_user_font_face_get_render_glyph_func\n"))
 (define cairo_user_font_face_get_render_glyph_func
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_user_font_face_get_render_glyph_func"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_get_render_glyph_func"
+                '*
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
@@ -2883,15 +2893,15 @@
 ;; cairo_user_scaled_font_text_to_glyphs_func_t 
 ;;     cairo_user_font_face_get_text_to_glyphs_func(cairo_font_face_t *
 ;;     font_face);
-(if echo-decls (display "cairo_user_font_face_get_text_to_glyphs_func\n"))
 (define cairo_user_font_face_get_text_to_glyphs_func
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_user_font_face_get_text_to_glyphs_func"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_get_text_to_glyphs_func"
+                '*
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
@@ -2900,95 +2910,93 @@
 ;; cairo_user_scaled_font_unicode_to_glyph_func_t 
 ;;     cairo_user_font_face_get_unicode_to_glyph_func(cairo_font_face_t *
 ;;     font_face);
-(if echo-decls (display "cairo_user_font_face_get_unicode_to_glyph_func\n"))
 (define cairo_user_font_face_get_unicode_to_glyph_func
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_user_font_face_get_unicode_to_glyph_func"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (font_face)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_user_font_face_get_unicode_to_glyph_func"
+                '*
+                (list '*))))
       (let ((~font_face
               (unwrap-cairo_font_face_t* font_face)))
         (~f ~font_face)))))
 (export cairo_user_font_face_get_unicode_to_glyph_func)
 
 ;; cairo_operator_t cairo_get_operator(cairo_t *cr);
-(if echo-decls (display "cairo_get_operator\n"))
 (define cairo_get_operator
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_get_operator"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_operator"
+                ffi:int
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_operator)
 
 ;; cairo_pattern_t *cairo_get_source(cairo_t *cr);
-(if echo-decls (display "cairo_get_source\n"))
 (define cairo_get_source
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func "cairo_get_source" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_get_source" '* (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_pattern_t* (~f ~cr))))))
 (export cairo_get_source)
 
 ;; double cairo_get_tolerance(cairo_t *cr);
-(if echo-decls (display "cairo_get_tolerance\n"))
 (define cairo_get_tolerance
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_get_tolerance"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_tolerance"
+                ffi:double
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_tolerance)
 
 ;; cairo_antialias_t cairo_get_antialias(cairo_t *cr);
-(if echo-decls (display "cairo_get_antialias\n"))
 (define cairo_get_antialias
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_get_antialias"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_antialias"
+                ffi:int
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_antialias)
 
 ;; cairo_bool_t cairo_has_current_point(cairo_t *cr);
-(if echo-decls (display "cairo_has_current_point\n"))
 (define cairo_has_current_point
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_has_current_point"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
-      (let ((~cr (unwrap-cairo_t* cr)))
-        (wrap-cairo_bool_t (~f ~cr))))))
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_has_current_point"
+                ffi:int
+                (list '*))))
+      (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_has_current_point)
 
 ;; void cairo_get_current_point(cairo_t *cr, double *x, double *y);
-(if echo-decls (display "cairo_get_current_point\n"))
 (define cairo_get_current_point
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_get_current_point"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (cr x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_current_point"
+                ffi:void
+                (list '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~x (unwrap~pointer x))
             (~y (unwrap~pointer y)))
@@ -2996,91 +3004,93 @@
 (export cairo_get_current_point)
 
 ;; cairo_fill_rule_t cairo_get_fill_rule(cairo_t *cr);
-(if echo-decls (display "cairo_get_fill_rule\n"))
 (define cairo_get_fill_rule
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_get_fill_rule"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_fill_rule"
+                ffi:int
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_fill_rule)
 
 ;; double cairo_get_line_width(cairo_t *cr);
-(if echo-decls (display "cairo_get_line_width\n"))
 (define cairo_get_line_width
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_get_line_width"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_line_width"
+                ffi:double
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_line_width)
 
 ;; cairo_line_cap_t cairo_get_line_cap(cairo_t *cr);
-(if echo-decls (display "cairo_get_line_cap\n"))
 (define cairo_get_line_cap
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_get_line_cap"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_line_cap"
+                ffi:int
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_line_cap)
 
 ;; cairo_line_join_t cairo_get_line_join(cairo_t *cr);
-(if echo-decls (display "cairo_get_line_join\n"))
 (define cairo_get_line_join
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_get_line_join"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_line_join"
+                ffi:int
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_line_join)
 
 ;; double cairo_get_miter_limit(cairo_t *cr);
-(if echo-decls (display "cairo_get_miter_limit\n"))
 (define cairo_get_miter_limit
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_get_miter_limit"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_miter_limit"
+                ffi:double
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_miter_limit)
 
 ;; int cairo_get_dash_count(cairo_t *cr);
-(if echo-decls (display "cairo_get_dash_count\n"))
 (define cairo_get_dash_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_get_dash_count"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_dash_count"
+                ffi:int
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_get_dash_count)
 
 ;; void cairo_get_dash(cairo_t *cr, double *dashes, double *offset);
-(if echo-decls (display "cairo_get_dash\n"))
 (define cairo_get_dash
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_get_dash" (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (cr dashes offset)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_dash"
+                ffi:void
+                (list '* '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~dashes (unwrap~pointer dashes))
             (~offset (unwrap~pointer offset)))
@@ -3088,40 +3098,41 @@
 (export cairo_get_dash)
 
 ;; void cairo_get_matrix(cairo_t *cr, cairo_matrix_t *matrix);
-(if echo-decls (display "cairo_get_matrix\n"))
 (define cairo_get_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_get_matrix" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_matrix"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~cr ~matrix)))))
 (export cairo_get_matrix)
 
 ;; cairo_surface_t *cairo_get_target(cairo_t *cr);
-(if echo-decls (display "cairo_get_target\n"))
 (define cairo_get_target
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func "cairo_get_target" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_get_target" '* (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_surface_t* (~f ~cr))))))
 (export cairo_get_target)
 
 ;; cairo_surface_t *cairo_get_group_target(cairo_t *cr);
-(if echo-decls (display "cairo_get_group_target\n"))
 (define cairo_get_group_target
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_get_group_target"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_get_group_target"
+                '*
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_surface_t* (~f ~cr))))))
 (export cairo_get_group_target)
@@ -3132,7 +3143,6 @@
 ;;   CAIRO_PATH_CURVE_TO,
 ;;   CAIRO_PATH_CLOSE_PATH,
 ;; } cairo_path_data_type_t;
-(if echo-decls (display "cairo_path_data_type_t\n"))
 (define-fh-enum cairo_path_data_type_t
   '((CAIRO_PATH_MOVE_TO . 0)
     (CAIRO_PATH_LINE_TO . 1)
@@ -3143,7 +3153,6 @@
 (define wrap-enum-_cairo_path_data_type wrap-cairo_path_data_type_t)
 
 ;; typedef union _cairo_path_data_t cairo_path_data_t;
-(if echo-decls (display "cairo_path_data_t\n"))
 ;; union _cairo_path_data_t {
 ;;   struct {
 ;;     cairo_path_data_type_t type;
@@ -3167,104 +3176,103 @@
 ;;   cairo_path_data_t *data;
 ;;   int num_data;
 ;; } cairo_path_t;
-(if echo-decls (display "cairo_path_t\n"))
 (define cairo_path_t-desc
   (bs:struct
     (list `(status ,int)
-          `(data ,(bs:pointer cairo_path_data_t*-desc))
+          `(data ,(bs:pointer (delay cairo_path_data_t*-desc)))
           `(num_data ,int))))
 (export cairo_path_t-desc)
 (define-fh-compound-type/p cairo_path_t cairo_path_t-desc)
 (define struct-cairo_path cairo_path_t)
 
 ;; cairo_path_t *cairo_copy_path(cairo_t *cr);
-(if echo-decls (display "cairo_copy_path\n"))
 (define cairo_copy_path
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func "cairo_copy_path" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_copy_path" '* (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_path_t* (~f ~cr))))))
 (export cairo_copy_path)
 
 ;; cairo_path_t *cairo_copy_path_flat(cairo_t *cr);
-(if echo-decls (display "cairo_copy_path_flat\n"))
 (define cairo_copy_path_flat
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_copy_path_flat"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_copy_path_flat"
+                '*
+                (list '*))))
       (let ((~cr (unwrap-cairo_t* cr)))
         (wrap-cairo_path_t* (~f ~cr))))))
 (export cairo_copy_path_flat)
 
 ;; void cairo_append_path(cairo_t *cr, const cairo_path_t *path);
-(if echo-decls (display "cairo_append_path\n"))
 (define cairo_append_path
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_append_path" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (cr path)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_append_path"
+                ffi:void
+                (list '* '*))))
       (let ((~cr (unwrap-cairo_t* cr))
             (~path (unwrap-cairo_path_t* path)))
         (~f ~cr ~path)))))
 (export cairo_append_path)
 
 ;; void cairo_path_destroy(cairo_path_t *path);
-(if echo-decls (display "cairo_path_destroy\n"))
 (define cairo_path_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_path_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (path)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_path_destroy"
+                ffi:void
+                (list '*))))
       (let ((~path (unwrap-cairo_path_t* path)))
         (~f ~path)))))
 (export cairo_path_destroy)
 
 ;; cairo_status_t cairo_status(cairo_t *cr);
-(if echo-decls (display "cairo_status\n"))
 (define cairo_status
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func "cairo_status" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (cr)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_status" ffi:int (list '*))))
       (let ((~cr (unwrap-cairo_t* cr))) (~f ~cr)))))
 (export cairo_status)
 
 ;; const char *cairo_status_to_string(cairo_status_t status);
-(if echo-decls (display "cairo_status_to_string\n"))
 (define cairo_status_to_string
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_status_to_string"
-                (dynamic-link))
-              (list ffi:int))))
+  (let ((~f #f))
     (lambda (status)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_status_to_string"
+                '*
+                (list ffi:int))))
       (let ((~status (unwrap~fixed status)))
         (~f ~status)))))
 (export cairo_status_to_string)
 
 ;; cairo_device_t *cairo_device_reference(cairo_device_t *device);
-(if echo-decls (display "cairo_device_reference\n"))
 (define cairo_device_reference
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_device_reference"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_reference"
+                '*
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (wrap-cairo_device_t* (~f ~device))))))
 (export cairo_device_reference)
@@ -3280,7 +3288,6 @@
 ;;   CAIRO_DEVICE_TYPE_WIN32,
 ;;   CAIRO_DEVICE_TYPE_INVALID = -1,
 ;; } cairo_device_type_t;
-(if echo-decls (display "cairo_device_type_t\n"))
 (define-fh-enum cairo_device_type_t
   '((CAIRO_DEVICE_TYPE_DRM . 0)
     (CAIRO_DEVICE_TYPE_GL . 1)
@@ -3296,128 +3303,128 @@
 (define wrap-enum-_cairo_device_type wrap-cairo_device_type_t)
 
 ;; cairo_device_type_t cairo_device_get_type(cairo_device_t *device);
-(if echo-decls (display "cairo_device_get_type\n"))
 (define cairo_device_get_type
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_device_get_type"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_get_type"
+                ffi:int
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_get_type)
 
 ;; cairo_status_t cairo_device_status(cairo_device_t *device);
-(if echo-decls (display "cairo_device_status\n"))
 (define cairo_device_status
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_device_status"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_status"
+                ffi:int
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_status)
 
 ;; cairo_status_t cairo_device_acquire(cairo_device_t *device);
-(if echo-decls (display "cairo_device_acquire\n"))
 (define cairo_device_acquire
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_device_acquire"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_acquire"
+                ffi:int
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_acquire)
 
 ;; void cairo_device_release(cairo_device_t *device);
-(if echo-decls (display "cairo_device_release\n"))
 (define cairo_device_release
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_device_release"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_release"
+                ffi:void
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_release)
 
 ;; void cairo_device_flush(cairo_device_t *device);
-(if echo-decls (display "cairo_device_flush\n"))
 (define cairo_device_flush
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_device_flush"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_flush"
+                ffi:void
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_flush)
 
 ;; void cairo_device_finish(cairo_device_t *device);
-(if echo-decls (display "cairo_device_finish\n"))
 (define cairo_device_finish
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_device_finish"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_finish"
+                ffi:void
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_finish)
 
 ;; void cairo_device_destroy(cairo_device_t *device);
-(if echo-decls (display "cairo_device_destroy\n"))
 (define cairo_device_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_device_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_destroy"
+                ffi:void
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_destroy)
 
 ;; unsigned int cairo_device_get_reference_count(cairo_device_t *device);
-(if echo-decls (display "cairo_device_get_reference_count\n"))
 (define cairo_device_get_reference_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:unsigned-int
-              (dynamic-func
-                "cairo_device_get_reference_count"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_get_reference_count"
+                ffi:unsigned-int
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_get_reference_count)
 
 ;; void *cairo_device_get_user_data(cairo_device_t *device, const 
 ;;     cairo_user_data_key_t *key);
-(if echo-decls (display "cairo_device_get_user_data\n"))
 (define cairo_device_get_user_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_device_get_user_data"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (device key)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_get_user_data"
+                '*
+                (list '* '*))))
       (let ((~device (unwrap-cairo_device_t* device))
             (~key (unwrap-cairo_user_data_key_t* key)))
         (~f ~device ~key)))))
@@ -3426,15 +3433,15 @@
 ;; cairo_status_t cairo_device_set_user_data(cairo_device_t *device, const 
 ;;     cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t 
 ;;     destroy);
-(if echo-decls (display "cairo_device_set_user_data\n"))
 (define cairo_device_set_user_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_device_set_user_data"
-                (dynamic-link))
-              (list '* '* '* '*))))
+  (let ((~f #f))
     (lambda (device key user_data destroy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_set_user_data"
+                ffi:int
+                (list '* '* '* '*))))
       (let ((~device (unwrap-cairo_device_t* device))
             (~key (unwrap-cairo_user_data_key_t* key))
             (~user_data (unwrap~pointer user_data))
@@ -3446,15 +3453,15 @@
 
 ;; cairo_surface_t *cairo_surface_create_similar(cairo_surface_t *other, 
 ;;     cairo_content_t content, int width, int height);
-(if echo-decls (display "cairo_surface_create_similar\n"))
 (define cairo_surface_create_similar
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_surface_create_similar"
-                (dynamic-link))
-              (list '* ffi:int ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (other content width height)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_create_similar"
+                '*
+                (list '* ffi:int ffi:int ffi:int))))
       (let ((~other (unwrap-cairo_surface_t* other))
             (~content (unwrap~fixed content))
             (~width (unwrap~fixed width))
@@ -3465,15 +3472,15 @@
 
 ;; cairo_surface_t *cairo_surface_create_similar_image(cairo_surface_t *other, 
 ;;     cairo_format_t format, int width, int height);
-(if echo-decls (display "cairo_surface_create_similar_image\n"))
 (define cairo_surface_create_similar_image
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_surface_create_similar_image"
-                (dynamic-link))
-              (list '* ffi:int ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (other format width height)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_create_similar_image"
+                '*
+                (list '* ffi:int ffi:int ffi:int))))
       (let ((~other (unwrap-cairo_surface_t* other))
             (~format (unwrap~fixed format))
             (~width (unwrap~fixed width))
@@ -3484,15 +3491,15 @@
 
 ;; cairo_surface_t *cairo_surface_map_to_image(cairo_surface_t *surface, const 
 ;;     cairo_rectangle_int_t *extents);
-(if echo-decls (display "cairo_surface_map_to_image\n"))
 (define cairo_surface_map_to_image
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_surface_map_to_image"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (surface extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_map_to_image"
+                '*
+                (list '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~extents
               (unwrap-cairo_rectangle_int_t* extents)))
@@ -3501,15 +3508,15 @@
 
 ;; void cairo_surface_unmap_image(cairo_surface_t *surface, cairo_surface_t *
 ;;     image);
-(if echo-decls (display "cairo_surface_unmap_image\n"))
 (define cairo_surface_unmap_image
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_unmap_image"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (surface image)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_unmap_image"
+                ffi:void
+                (list '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~image (unwrap-cairo_surface_t* image)))
         (~f ~surface ~image)))))
@@ -3517,19 +3524,19 @@
 
 ;; cairo_surface_t *cairo_surface_create_for_rectangle(cairo_surface_t *target
 ;;     , double x, double y, double width, double height);
-(if echo-decls (display "cairo_surface_create_for_rectangle\n"))
 (define cairo_surface_create_for_rectangle
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_surface_create_for_rectangle"
-                (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (target x y width height)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_create_for_rectangle"
+                '*
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~target (unwrap-cairo_surface_t* target))
             (~x (unwrap~float x))
             (~y (unwrap~float y))
@@ -3543,7 +3550,6 @@
 ;;   CAIRO_SURFACE_OBSERVER_NORMAL = 0,
 ;;   CAIRO_SURFACE_OBSERVER_RECORD_OPERATIONS = 0x1,
 ;; } cairo_surface_observer_mode_t;
-(if echo-decls (display "cairo_surface_observer_mode_t\n"))
 (define-fh-enum cairo_surface_observer_mode_t
   '((CAIRO_SURFACE_OBSERVER_NORMAL . 0)
     (CAIRO_SURFACE_OBSERVER_RECORD_OPERATIONS . 1))
@@ -3551,15 +3557,15 @@
 
 ;; cairo_surface_t *cairo_surface_create_observer(cairo_surface_t *target, 
 ;;     cairo_surface_observer_mode_t mode);
-(if echo-decls (display "cairo_surface_create_observer\n"))
 (define cairo_surface_create_observer
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_surface_create_observer"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (target mode)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_create_observer"
+                '*
+                (list '* ffi:int))))
       (let ((~target (unwrap-cairo_surface_t* target))
             (~mode (unwrap~fixed mode)))
         (wrap-cairo_surface_t* (~f ~target ~mode))))))
@@ -3567,21 +3573,20 @@
 
 ;; typedef void (*cairo_surface_observer_callback_t)(cairo_surface_t *observer
 ;;     , cairo_surface_t *target, void *data);
-(if echo-decls (display "cairo_surface_observer_callback_t\n"))
 (define-fh-function/p cairo_surface_observer_callback_t
   ffi:void (list (quote *) (quote *) (quote *)))
 
 ;; cairo_status_t cairo_surface_observer_add_paint_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
-(if echo-decls (display "cairo_surface_observer_add_paint_callback\n"))
 (define cairo_surface_observer_add_paint_callback
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_observer_add_paint_callback"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (abstract_surface func data)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_add_paint_callback"
+                ffi:int
+                (list '* '* '*))))
       (let ((~abstract_surface
               (unwrap-cairo_surface_t* abstract_surface))
             (~func ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
@@ -3592,15 +3597,15 @@
 
 ;; cairo_status_t cairo_surface_observer_add_mask_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
-(if echo-decls (display "cairo_surface_observer_add_mask_callback\n"))
 (define cairo_surface_observer_add_mask_callback
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_observer_add_mask_callback"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (abstract_surface func data)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_add_mask_callback"
+                ffi:int
+                (list '* '* '*))))
       (let ((~abstract_surface
               (unwrap-cairo_surface_t* abstract_surface))
             (~func ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
@@ -3611,15 +3616,15 @@
 
 ;; cairo_status_t cairo_surface_observer_add_fill_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
-(if echo-decls (display "cairo_surface_observer_add_fill_callback\n"))
 (define cairo_surface_observer_add_fill_callback
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_observer_add_fill_callback"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (abstract_surface func data)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_add_fill_callback"
+                ffi:int
+                (list '* '* '*))))
       (let ((~abstract_surface
               (unwrap-cairo_surface_t* abstract_surface))
             (~func ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
@@ -3630,15 +3635,15 @@
 
 ;; cairo_status_t cairo_surface_observer_add_stroke_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
-(if echo-decls (display "cairo_surface_observer_add_stroke_callback\n"))
 (define cairo_surface_observer_add_stroke_callback
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_observer_add_stroke_callback"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (abstract_surface func data)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_add_stroke_callback"
+                ffi:int
+                (list '* '* '*))))
       (let ((~abstract_surface
               (unwrap-cairo_surface_t* abstract_surface))
             (~func ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
@@ -3649,15 +3654,15 @@
 
 ;; cairo_status_t cairo_surface_observer_add_glyphs_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
-(if echo-decls (display "cairo_surface_observer_add_glyphs_callback\n"))
 (define cairo_surface_observer_add_glyphs_callback
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_observer_add_glyphs_callback"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (abstract_surface func data)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_add_glyphs_callback"
+                ffi:int
+                (list '* '* '*))))
       (let ((~abstract_surface
               (unwrap-cairo_surface_t* abstract_surface))
             (~func ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
@@ -3668,15 +3673,15 @@
 
 ;; cairo_status_t cairo_surface_observer_add_flush_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
-(if echo-decls (display "cairo_surface_observer_add_flush_callback\n"))
 (define cairo_surface_observer_add_flush_callback
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_observer_add_flush_callback"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (abstract_surface func data)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_add_flush_callback"
+                ffi:int
+                (list '* '* '*))))
       (let ((~abstract_surface
               (unwrap-cairo_surface_t* abstract_surface))
             (~func ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
@@ -3687,15 +3692,15 @@
 
 ;; cairo_status_t cairo_surface_observer_add_finish_callback(cairo_surface_t *
 ;;     abstract_surface, cairo_surface_observer_callback_t func, void *data);
-(if echo-decls (display "cairo_surface_observer_add_finish_callback\n"))
 (define cairo_surface_observer_add_finish_callback
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_observer_add_finish_callback"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (abstract_surface func data)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_add_finish_callback"
+                ffi:int
+                (list '* '* '*))))
       (let ((~abstract_surface
               (unwrap-cairo_surface_t* abstract_surface))
             (~func ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
@@ -3706,19 +3711,19 @@
 
 ;; cairo_status_t cairo_surface_observer_print(cairo_surface_t *surface, 
 ;;     cairo_write_func_t write_func, void *closure);
-(if echo-decls (display "cairo_surface_observer_print\n"))
 (define cairo_surface_observer_print
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_observer_print"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (surface write_func closure)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_print"
+                ffi:int
+                (list '* '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~write_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* '* ffi:unsigned-int))
                write_func))
             (~closure (unwrap~pointer closure)))
@@ -3726,34 +3731,34 @@
 (export cairo_surface_observer_print)
 
 ;; double cairo_surface_observer_elapsed(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_observer_elapsed\n"))
 (define cairo_surface_observer_elapsed
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_surface_observer_elapsed"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_observer_elapsed"
+                ffi:double
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_observer_elapsed)
 
 ;; cairo_status_t cairo_device_observer_print(cairo_device_t *device, 
 ;;     cairo_write_func_t write_func, void *closure);
-(if echo-decls (display "cairo_device_observer_print\n"))
 (define cairo_device_observer_print
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_device_observer_print"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (device write_func closure)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_observer_print"
+                ffi:int
+                (list '* '* '*))))
       (let ((~device (unwrap-cairo_device_t* device))
             (~write_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* '* ffi:unsigned-int))
                write_func))
             (~closure (unwrap~pointer closure)))
@@ -3761,169 +3766,169 @@
 (export cairo_device_observer_print)
 
 ;; double cairo_device_observer_elapsed(cairo_device_t *device);
-(if echo-decls (display "cairo_device_observer_elapsed\n"))
 (define cairo_device_observer_elapsed
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_device_observer_elapsed"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_observer_elapsed"
+                ffi:double
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_observer_elapsed)
 
 ;; double cairo_device_observer_paint_elapsed(cairo_device_t *device);
-(if echo-decls (display "cairo_device_observer_paint_elapsed\n"))
 (define cairo_device_observer_paint_elapsed
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_device_observer_paint_elapsed"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_observer_paint_elapsed"
+                ffi:double
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_observer_paint_elapsed)
 
 ;; double cairo_device_observer_mask_elapsed(cairo_device_t *device);
-(if echo-decls (display "cairo_device_observer_mask_elapsed\n"))
 (define cairo_device_observer_mask_elapsed
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_device_observer_mask_elapsed"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_observer_mask_elapsed"
+                ffi:double
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_observer_mask_elapsed)
 
 ;; double cairo_device_observer_fill_elapsed(cairo_device_t *device);
-(if echo-decls (display "cairo_device_observer_fill_elapsed\n"))
 (define cairo_device_observer_fill_elapsed
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_device_observer_fill_elapsed"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_observer_fill_elapsed"
+                ffi:double
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_observer_fill_elapsed)
 
 ;; double cairo_device_observer_stroke_elapsed(cairo_device_t *device);
-(if echo-decls (display "cairo_device_observer_stroke_elapsed\n"))
 (define cairo_device_observer_stroke_elapsed
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_device_observer_stroke_elapsed"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_observer_stroke_elapsed"
+                ffi:double
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_observer_stroke_elapsed)
 
 ;; double cairo_device_observer_glyphs_elapsed(cairo_device_t *device);
-(if echo-decls (display "cairo_device_observer_glyphs_elapsed\n"))
 (define cairo_device_observer_glyphs_elapsed
-  (let ((~f (ffi:pointer->procedure
-              ffi:double
-              (dynamic-func
-                "cairo_device_observer_glyphs_elapsed"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (device)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_device_observer_glyphs_elapsed"
+                ffi:double
+                (list '*))))
       (let ((~device (unwrap-cairo_device_t* device)))
         (~f ~device)))))
 (export cairo_device_observer_glyphs_elapsed)
 
 ;; cairo_surface_t *cairo_surface_reference(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_reference\n"))
 (define cairo_surface_reference
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_surface_reference"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_reference"
+                '*
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (wrap-cairo_surface_t* (~f ~surface))))))
 (export cairo_surface_reference)
 
 ;; void cairo_surface_finish(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_finish\n"))
 (define cairo_surface_finish
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_finish"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_finish"
+                ffi:void
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_finish)
 
 ;; void cairo_surface_destroy(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_destroy\n"))
 (define cairo_surface_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_destroy"
+                ffi:void
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_destroy)
 
 ;; cairo_device_t *cairo_surface_get_device(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_get_device\n"))
 (define cairo_surface_get_device
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_surface_get_device"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_device"
+                '*
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (wrap-cairo_device_t* (~f ~surface))))))
 (export cairo_surface_get_device)
 
 ;; unsigned int cairo_surface_get_reference_count(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_get_reference_count\n"))
 (define cairo_surface_get_reference_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:unsigned-int
-              (dynamic-func
-                "cairo_surface_get_reference_count"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_reference_count"
+                ffi:unsigned-int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_get_reference_count)
 
 ;; cairo_status_t cairo_surface_status(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_status\n"))
 (define cairo_surface_status
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_status"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_status"
+                ffi:int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_status)
@@ -3955,7 +3960,6 @@
 ;;   CAIRO_SURFACE_TYPE_SUBSURFACE,
 ;;   CAIRO_SURFACE_TYPE_COGL,
 ;; } cairo_surface_type_t;
-(if echo-decls (display "cairo_surface_type_t\n"))
 (define-fh-enum cairo_surface_type_t
   '((CAIRO_SURFACE_TYPE_IMAGE . 0)
     (CAIRO_SURFACE_TYPE_PDF . 1)
@@ -3987,44 +3991,44 @@
 (define wrap-enum-_cairo_surface_type wrap-cairo_surface_type_t)
 
 ;; cairo_surface_type_t cairo_surface_get_type(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_get_type\n"))
 (define cairo_surface_get_type
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_get_type"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_type"
+                ffi:int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_get_type)
 
 ;; cairo_content_t cairo_surface_get_content(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_get_content\n"))
 (define cairo_surface_get_content
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_get_content"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_content"
+                ffi:int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_get_content)
 
 ;; cairo_status_t cairo_surface_write_to_png(cairo_surface_t *surface, const 
 ;;     char *filename);
-(if echo-decls (display "cairo_surface_write_to_png\n"))
 (define cairo_surface_write_to_png
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_write_to_png"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (surface filename)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_write_to_png"
+                ffi:int
+                (list '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~filename (unwrap~pointer filename)))
         (~f ~surface ~filename)))))
@@ -4032,19 +4036,19 @@
 
 ;; cairo_status_t cairo_surface_write_to_png_stream(cairo_surface_t *surface, 
 ;;     cairo_write_func_t write_func, void *closure);
-(if echo-decls (display "cairo_surface_write_to_png_stream\n"))
 (define cairo_surface_write_to_png_stream
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_write_to_png_stream"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (surface write_func closure)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_write_to_png_stream"
+                ffi:int
+                (list '* '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~write_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* '* ffi:unsigned-int))
                write_func))
             (~closure (unwrap~pointer closure)))
@@ -4053,15 +4057,15 @@
 
 ;; void *cairo_surface_get_user_data(cairo_surface_t *surface, const 
 ;;     cairo_user_data_key_t *key);
-(if echo-decls (display "cairo_surface_get_user_data\n"))
 (define cairo_surface_get_user_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_surface_get_user_data"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (surface key)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_user_data"
+                '*
+                (list '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~key (unwrap-cairo_user_data_key_t* key)))
         (~f ~surface ~key)))))
@@ -4070,15 +4074,15 @@
 ;; cairo_status_t cairo_surface_set_user_data(cairo_surface_t *surface, const 
 ;;     cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t 
 ;;     destroy);
-(if echo-decls (display "cairo_surface_set_user_data\n"))
 (define cairo_surface_set_user_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_set_user_data"
-                (dynamic-link))
-              (list '* '* '* '*))))
+  (let ((~f #f))
     (lambda (surface key user_data destroy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_set_user_data"
+                ffi:int
+                (list '* '* '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~key (unwrap-cairo_user_data_key_t* key))
             (~user_data (unwrap~pointer user_data))
@@ -4090,15 +4094,15 @@
 
 ;; void cairo_surface_get_mime_data(cairo_surface_t *surface, const char *
 ;;     mime_type, const unsigned char **data, unsigned long *length);
-(if echo-decls (display "cairo_surface_get_mime_data\n"))
 (define cairo_surface_get_mime_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_get_mime_data"
-                (dynamic-link))
-              (list '* '* '* '*))))
+  (let ((~f #f))
     (lambda (surface mime_type data length)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_mime_data"
+                ffi:void
+                (list '* '* '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~mime_type (unwrap~pointer mime_type))
             (~data (unwrap~pointer data))
@@ -4109,15 +4113,15 @@
 ;; cairo_status_t cairo_surface_set_mime_data(cairo_surface_t *surface, const 
 ;;     char *mime_type, const unsigned char *data, unsigned long length, 
 ;;     cairo_destroy_func_t destroy, void *closure);
-(if echo-decls (display "cairo_surface_set_mime_data\n"))
 (define cairo_surface_set_mime_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_set_mime_data"
-                (dynamic-link))
-              (list '* '* '* ffi:unsigned-long '* '*))))
+  (let ((~f #f))
     (lambda (surface mime_type data length destroy closure)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_set_mime_data"
+                ffi:int
+                (list '* '* '* ffi:unsigned-long '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~mime_type (unwrap~pointer mime_type))
             (~data (unwrap~pointer data))
@@ -4136,75 +4140,75 @@
 
 ;; cairo_bool_t cairo_surface_supports_mime_type(cairo_surface_t *surface, 
 ;;     const char *mime_type);
-(if echo-decls (display "cairo_surface_supports_mime_type\n"))
 (define cairo_surface_supports_mime_type
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_supports_mime_type"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (surface mime_type)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_supports_mime_type"
+                ffi:int
+                (list '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~mime_type (unwrap~pointer mime_type)))
-        (wrap-cairo_bool_t (~f ~surface ~mime_type))))))
+        (~f ~surface ~mime_type)))))
 (export cairo_surface_supports_mime_type)
 
 ;; void cairo_surface_get_font_options(cairo_surface_t *surface, 
 ;;     cairo_font_options_t *options);
-(if echo-decls (display "cairo_surface_get_font_options\n"))
 (define cairo_surface_get_font_options
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_get_font_options"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (surface options)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_font_options"
+                ffi:void
+                (list '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~options (unwrap-cairo_font_options_t* options)))
         (~f ~surface ~options)))))
 (export cairo_surface_get_font_options)
 
 ;; void cairo_surface_flush(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_flush\n"))
 (define cairo_surface_flush
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_flush"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_flush"
+                ffi:void
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_flush)
 
 ;; void cairo_surface_mark_dirty(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_mark_dirty\n"))
 (define cairo_surface_mark_dirty
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_mark_dirty"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_mark_dirty"
+                ffi:void
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_mark_dirty)
 
 ;; void cairo_surface_mark_dirty_rectangle(cairo_surface_t *surface, int x, int
 ;;      y, int width, int height);
-(if echo-decls (display "cairo_surface_mark_dirty_rectangle\n"))
 (define cairo_surface_mark_dirty_rectangle
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_mark_dirty_rectangle"
-                (dynamic-link))
-              (list '* ffi:int ffi:int ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (surface x y width height)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_mark_dirty_rectangle"
+                ffi:void
+                (list '* ffi:int ffi:int ffi:int ffi:int))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~x (unwrap~fixed x))
             (~y (unwrap~fixed y))
@@ -4215,15 +4219,15 @@
 
 ;; void cairo_surface_set_device_scale(cairo_surface_t *surface, double x_scale
 ;;     , double y_scale);
-(if echo-decls (display "cairo_surface_set_device_scale\n"))
 (define cairo_surface_set_device_scale
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_set_device_scale"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (surface x_scale y_scale)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_set_device_scale"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~x_scale (unwrap~float x_scale))
             (~y_scale (unwrap~float y_scale)))
@@ -4232,15 +4236,15 @@
 
 ;; void cairo_surface_get_device_scale(cairo_surface_t *surface, double *
 ;;     x_scale, double *y_scale);
-(if echo-decls (display "cairo_surface_get_device_scale\n"))
 (define cairo_surface_get_device_scale
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_get_device_scale"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (surface x_scale y_scale)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_device_scale"
+                ffi:void
+                (list '* '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~x_scale (unwrap~pointer x_scale))
             (~y_scale (unwrap~pointer y_scale)))
@@ -4249,15 +4253,15 @@
 
 ;; void cairo_surface_set_device_offset(cairo_surface_t *surface, double 
 ;;     x_offset, double y_offset);
-(if echo-decls (display "cairo_surface_set_device_offset\n"))
 (define cairo_surface_set_device_offset
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_set_device_offset"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (surface x_offset y_offset)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_set_device_offset"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~x_offset (unwrap~float x_offset))
             (~y_offset (unwrap~float y_offset)))
@@ -4266,15 +4270,15 @@
 
 ;; void cairo_surface_get_device_offset(cairo_surface_t *surface, double *
 ;;     x_offset, double *y_offset);
-(if echo-decls (display "cairo_surface_get_device_offset\n"))
 (define cairo_surface_get_device_offset
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_get_device_offset"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (surface x_offset y_offset)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_device_offset"
+                ffi:void
+                (list '* '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~x_offset (unwrap~pointer x_offset))
             (~y_offset (unwrap~pointer y_offset)))
@@ -4283,15 +4287,15 @@
 
 ;; void cairo_surface_set_fallback_resolution(cairo_surface_t *surface, double 
 ;;     x_pixels_per_inch, double y_pixels_per_inch);
-(if echo-decls (display "cairo_surface_set_fallback_resolution\n"))
 (define cairo_surface_set_fallback_resolution
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_set_fallback_resolution"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (surface x_pixels_per_inch y_pixels_per_inch)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_set_fallback_resolution"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~x_pixels_per_inch
               (unwrap~float x_pixels_per_inch))
@@ -4304,15 +4308,15 @@
 
 ;; void cairo_surface_get_fallback_resolution(cairo_surface_t *surface, double 
 ;;     *x_pixels_per_inch, double *y_pixels_per_inch);
-(if echo-decls (display "cairo_surface_get_fallback_resolution\n"))
 (define cairo_surface_get_fallback_resolution
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_get_fallback_resolution"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (surface x_pixels_per_inch y_pixels_per_inch)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_get_fallback_resolution"
+                ffi:void
+                (list '* '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~x_pixels_per_inch
               (unwrap~pointer x_pixels_per_inch))
@@ -4324,58 +4328,58 @@
 (export cairo_surface_get_fallback_resolution)
 
 ;; void cairo_surface_copy_page(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_copy_page\n"))
 (define cairo_surface_copy_page
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_copy_page"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_copy_page"
+                ffi:void
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_copy_page)
 
 ;; void cairo_surface_show_page(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_show_page\n"))
 (define cairo_surface_show_page
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_surface_show_page"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_show_page"
+                ffi:void
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_surface_show_page)
 
 ;; cairo_bool_t cairo_surface_has_show_text_glyphs(cairo_surface_t *surface);
-(if echo-decls (display "cairo_surface_has_show_text_glyphs\n"))
 (define cairo_surface_has_show_text_glyphs
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_surface_has_show_text_glyphs"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_surface_has_show_text_glyphs"
+                ffi:int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
-        (wrap-cairo_bool_t (~f ~surface))))))
+        (~f ~surface)))))
 (export cairo_surface_has_show_text_glyphs)
 
 ;; cairo_surface_t *cairo_image_surface_create(cairo_format_t format, int width
 ;;     , int height);
-(if echo-decls (display "cairo_image_surface_create\n"))
 (define cairo_image_surface_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_image_surface_create"
-                (dynamic-link))
-              (list ffi:int ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (format width height)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_create"
+                '*
+                (list ffi:int ffi:int ffi:int))))
       (let ((~format (unwrap~fixed format))
             (~width (unwrap~fixed width))
             (~height (unwrap~fixed height)))
@@ -4384,15 +4388,15 @@
 (export cairo_image_surface_create)
 
 ;; int cairo_format_stride_for_width(cairo_format_t format, int width);
-(if echo-decls (display "cairo_format_stride_for_width\n"))
 (define cairo_format_stride_for_width
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_format_stride_for_width"
-                (dynamic-link))
-              (list ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (format width)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_format_stride_for_width"
+                ffi:int
+                (list ffi:int ffi:int))))
       (let ((~format (unwrap~fixed format))
             (~width (unwrap~fixed width)))
         (~f ~format ~width)))))
@@ -4400,15 +4404,15 @@
 
 ;; cairo_surface_t *cairo_image_surface_create_for_data(unsigned char *data, 
 ;;     cairo_format_t format, int width, int height, int stride);
-(if echo-decls (display "cairo_image_surface_create_for_data\n"))
 (define cairo_image_surface_create_for_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_image_surface_create_for_data"
-                (dynamic-link))
-              (list '* ffi:int ffi:int ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (data format width height stride)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_create_for_data"
+                '*
+                (list '* ffi:int ffi:int ffi:int ffi:int))))
       (let ((~data (unwrap~pointer data))
             (~format (unwrap~fixed format))
             (~width (unwrap~fixed width))
@@ -4419,103 +4423,103 @@
 (export cairo_image_surface_create_for_data)
 
 ;; unsigned char *cairo_image_surface_get_data(cairo_surface_t *surface);
-(if echo-decls (display "cairo_image_surface_get_data\n"))
 (define cairo_image_surface_get_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_image_surface_get_data"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_get_data"
+                '*
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_image_surface_get_data)
 
 ;; cairo_format_t cairo_image_surface_get_format(cairo_surface_t *surface);
-(if echo-decls (display "cairo_image_surface_get_format\n"))
 (define cairo_image_surface_get_format
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_image_surface_get_format"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_get_format"
+                ffi:int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_image_surface_get_format)
 
 ;; int cairo_image_surface_get_width(cairo_surface_t *surface);
-(if echo-decls (display "cairo_image_surface_get_width\n"))
 (define cairo_image_surface_get_width
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_image_surface_get_width"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_get_width"
+                ffi:int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_image_surface_get_width)
 
 ;; int cairo_image_surface_get_height(cairo_surface_t *surface);
-(if echo-decls (display "cairo_image_surface_get_height\n"))
 (define cairo_image_surface_get_height
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_image_surface_get_height"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_get_height"
+                ffi:int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_image_surface_get_height)
 
 ;; int cairo_image_surface_get_stride(cairo_surface_t *surface);
-(if echo-decls (display "cairo_image_surface_get_stride\n"))
 (define cairo_image_surface_get_stride
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_image_surface_get_stride"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_get_stride"
+                ffi:int
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (~f ~surface)))))
 (export cairo_image_surface_get_stride)
 
 ;; cairo_surface_t *cairo_image_surface_create_from_png(const char *filename);
-(if echo-decls (display "cairo_image_surface_create_from_png\n"))
 (define cairo_image_surface_create_from_png
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_image_surface_create_from_png"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (filename)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_create_from_png"
+                '*
+                (list '*))))
       (let ((~filename (unwrap~pointer filename)))
         (wrap-cairo_surface_t* (~f ~filename))))))
 (export cairo_image_surface_create_from_png)
 
 ;; cairo_surface_t *cairo_image_surface_create_from_png_stream(
 ;;     cairo_read_func_t read_func, void *closure);
-(if echo-decls (display "cairo_image_surface_create_from_png_stream\n"))
 (define cairo_image_surface_create_from_png_stream
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_image_surface_create_from_png_stream"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (read_func closure)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_image_surface_create_from_png_stream"
+                '*
+                (list '* '*))))
       (let ((~read_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* '* ffi:unsigned-int))
                read_func))
             (~closure (unwrap~pointer closure)))
@@ -4524,15 +4528,15 @@
 
 ;; cairo_surface_t *cairo_recording_surface_create(cairo_content_t content, 
 ;;     const cairo_rectangle_t *extents);
-(if echo-decls (display "cairo_recording_surface_create\n"))
 (define cairo_recording_surface_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_recording_surface_create"
-                (dynamic-link))
-              (list ffi:int '*))))
+  (let ((~f #f))
     (lambda (content extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_recording_surface_create"
+                '*
+                (list ffi:int '*))))
       (let ((~content (unwrap~fixed content))
             (~extents (unwrap-cairo_rectangle_t* extents)))
         (wrap-cairo_surface_t* (~f ~content ~extents))))))
@@ -4540,15 +4544,15 @@
 
 ;; void cairo_recording_surface_ink_extents(cairo_surface_t *surface, double *
 ;;     x0, double *y0, double *width, double *height);
-(if echo-decls (display "cairo_recording_surface_ink_extents\n"))
 (define cairo_recording_surface_ink_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_recording_surface_ink_extents"
-                (dynamic-link))
-              (list '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (surface x0 y0 width height)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_recording_surface_ink_extents"
+                ffi:void
+                (list '* '* '* '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~x0 (unwrap~pointer x0))
             (~y0 (unwrap~pointer y0))
@@ -4559,24 +4563,23 @@
 
 ;; cairo_bool_t cairo_recording_surface_get_extents(cairo_surface_t *surface, 
 ;;     cairo_rectangle_t *extents);
-(if echo-decls (display "cairo_recording_surface_get_extents\n"))
 (define cairo_recording_surface_get_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_recording_surface_get_extents"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (surface extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_recording_surface_get_extents"
+                ffi:int
+                (list '* '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~extents (unwrap-cairo_rectangle_t* extents)))
-        (wrap-cairo_bool_t (~f ~surface ~extents))))))
+        (~f ~surface ~extents)))))
 (export cairo_recording_surface_get_extents)
 
 ;; typedef cairo_surface_t *(*cairo_raster_source_acquire_func_t)(
 ;;     cairo_pattern_t *pattern, void *callback_data, cairo_surface_t *target, 
 ;;     const cairo_rectangle_int_t *extents);
-(if echo-decls (display "cairo_raster_source_acquire_func_t\n"))
 (define-fh-function/p
   cairo_raster_source_acquire_func_t
   '*
@@ -4584,39 +4587,35 @@
 
 ;; typedef void (*cairo_raster_source_release_func_t)(cairo_pattern_t *pattern
 ;;     , void *callback_data, cairo_surface_t *surface);
-(if echo-decls (display "cairo_raster_source_release_func_t\n"))
 (define-fh-function/p cairo_raster_source_release_func_t
   ffi:void (list (quote *) (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_raster_source_snapshot_func_t)(
 ;;     cairo_pattern_t *pattern, void *callback_data);
-(if echo-decls (display "cairo_raster_source_snapshot_func_t\n"))
 (define-fh-function/p cairo_raster_source_snapshot_func_t
   ffi:int (list (quote *) (quote *)))
 
 ;; typedef cairo_status_t (*cairo_raster_source_copy_func_t)(cairo_pattern_t *
 ;;     pattern, void *callback_data, const cairo_pattern_t *other);
-(if echo-decls (display "cairo_raster_source_copy_func_t\n"))
 (define-fh-function/p cairo_raster_source_copy_func_t
   ffi:int (list (quote *) (quote *) (quote *)))
 
 ;; typedef void (*cairo_raster_source_finish_func_t)(cairo_pattern_t *pattern, 
 ;;     void *callback_data);
-(if echo-decls (display "cairo_raster_source_finish_func_t\n"))
 (define-fh-function/p cairo_raster_source_finish_func_t
   ffi:void (list (quote *) (quote *)))
 
 ;; cairo_pattern_t *cairo_pattern_create_raster_source(void *user_data, 
 ;;     cairo_content_t content, int width, int height);
-(if echo-decls (display "cairo_pattern_create_raster_source\n"))
 (define cairo_pattern_create_raster_source
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pattern_create_raster_source"
-                (dynamic-link))
-              (list '* ffi:int ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (user_data content width height)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_create_raster_source"
+                '*
+                (list '* ffi:int ffi:int ffi:int))))
       (let ((~user_data (unwrap~pointer user_data))
             (~content (unwrap~fixed content))
             (~width (unwrap~fixed width))
@@ -4627,15 +4626,15 @@
 
 ;; void cairo_raster_source_pattern_set_callback_data(cairo_pattern_t *pattern
 ;;     , void *data);
-(if echo-decls (display "cairo_raster_source_pattern_set_callback_data\n"))
 (define cairo_raster_source_pattern_set_callback_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_raster_source_pattern_set_callback_data"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern data)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_set_callback_data"
+                ffi:void
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~data (unwrap~pointer data)))
         (~f ~pattern ~data)))))
@@ -4643,15 +4642,15 @@
 
 ;; void *cairo_raster_source_pattern_get_callback_data(cairo_pattern_t *pattern
 ;;     );
-(if echo-decls (display "cairo_raster_source_pattern_get_callback_data\n"))
 (define cairo_raster_source_pattern_get_callback_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_raster_source_pattern_get_callback_data"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_get_callback_data"
+                '*
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_raster_source_pattern_get_callback_data)
@@ -4659,15 +4658,15 @@
 ;; void cairo_raster_source_pattern_set_acquire(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_acquire_func_t acquire, 
 ;;     cairo_raster_source_release_func_t release);
-(if echo-decls (display "cairo_raster_source_pattern_set_acquire\n"))
 (define cairo_raster_source_pattern_set_acquire
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_raster_source_pattern_set_acquire"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (pattern acquire release)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_set_acquire"
+                ffi:void
+                (list '* '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~acquire
               ((make-ftn-arg-unwrapper '* (list '* '* '* '*))
@@ -4681,15 +4680,15 @@
 ;; void cairo_raster_source_pattern_get_acquire(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_acquire_func_t *acquire, 
 ;;     cairo_raster_source_release_func_t *release);
-(if echo-decls (display "cairo_raster_source_pattern_get_acquire\n"))
 (define cairo_raster_source_pattern_get_acquire
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_raster_source_pattern_get_acquire"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (pattern acquire release)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_get_acquire"
+                ffi:void
+                (list '* '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~acquire (unwrap~pointer acquire))
             (~release (unwrap~pointer release)))
@@ -4698,80 +4697,80 @@
 
 ;; void cairo_raster_source_pattern_set_snapshot(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_snapshot_func_t snapshot);
-(if echo-decls (display "cairo_raster_source_pattern_set_snapshot\n"))
 (define cairo_raster_source_pattern_set_snapshot
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_raster_source_pattern_set_snapshot"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern snapshot)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_set_snapshot"
+                ffi:void
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~snapshot
-              ((make-ftn-arg-unwrapper ffi:void (list '* '*))
+              ((make-ftn-arg-unwrapper ffi:int (list '* '*))
                snapshot)))
         (~f ~pattern ~snapshot)))))
 (export cairo_raster_source_pattern_set_snapshot)
 
 ;; cairo_raster_source_snapshot_func_t cairo_raster_source_pattern_get_snapshot
 ;;     (cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_raster_source_pattern_get_snapshot\n"))
 (define cairo_raster_source_pattern_get_snapshot
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_raster_source_pattern_get_snapshot"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_get_snapshot"
+                '*
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_raster_source_pattern_get_snapshot)
 
 ;; void cairo_raster_source_pattern_set_copy(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_copy_func_t copy);
-(if echo-decls (display "cairo_raster_source_pattern_set_copy\n"))
 (define cairo_raster_source_pattern_set_copy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_raster_source_pattern_set_copy"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern copy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_set_copy"
+                ffi:void
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
-            (~copy ((make-ftn-arg-unwrapper ffi:void (list '* '* '*))
+            (~copy ((make-ftn-arg-unwrapper ffi:int (list '* '* '*))
                     copy)))
         (~f ~pattern ~copy)))))
 (export cairo_raster_source_pattern_set_copy)
 
 ;; cairo_raster_source_copy_func_t cairo_raster_source_pattern_get_copy(
 ;;     cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_raster_source_pattern_get_copy\n"))
 (define cairo_raster_source_pattern_get_copy
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_raster_source_pattern_get_copy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_get_copy"
+                '*
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_raster_source_pattern_get_copy)
 
 ;; void cairo_raster_source_pattern_set_finish(cairo_pattern_t *pattern, 
 ;;     cairo_raster_source_finish_func_t finish);
-(if echo-decls (display "cairo_raster_source_pattern_set_finish\n"))
 (define cairo_raster_source_pattern_set_finish
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_raster_source_pattern_set_finish"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern finish)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_set_finish"
+                ffi:void
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~finish
               ((make-ftn-arg-unwrapper ffi:void (list '* '*))
@@ -4781,30 +4780,30 @@
 
 ;; cairo_raster_source_finish_func_t cairo_raster_source_pattern_get_finish(
 ;;     cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_raster_source_pattern_get_finish\n"))
 (define cairo_raster_source_pattern_get_finish
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_raster_source_pattern_get_finish"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_raster_source_pattern_get_finish"
+                '*
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_raster_source_pattern_get_finish)
 
 ;; cairo_pattern_t *cairo_pattern_create_rgb(double red, double green, double 
 ;;     blue);
-(if echo-decls (display "cairo_pattern_create_rgb\n"))
 (define cairo_pattern_create_rgb
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pattern_create_rgb"
-                (dynamic-link))
-              (list ffi:double ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (red green blue)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_create_rgb"
+                '*
+                (list ffi:double ffi:double ffi:double))))
       (let ((~red (unwrap~float red))
             (~green (unwrap~float green))
             (~blue (unwrap~float blue)))
@@ -4813,18 +4812,18 @@
 
 ;; cairo_pattern_t *cairo_pattern_create_rgba(double red, double green, double 
 ;;     blue, double alpha);
-(if echo-decls (display "cairo_pattern_create_rgba\n"))
 (define cairo_pattern_create_rgba
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pattern_create_rgba"
-                (dynamic-link))
-              (list ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (red green blue alpha)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_create_rgba"
+                '*
+                (list ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~red (unwrap~float red))
             (~green (unwrap~float green))
             (~blue (unwrap~float blue))
@@ -4835,33 +4834,33 @@
 
 ;; cairo_pattern_t *cairo_pattern_create_for_surface(cairo_surface_t *surface)
 ;;     ;
-(if echo-decls (display "cairo_pattern_create_for_surface\n"))
 (define cairo_pattern_create_for_surface
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pattern_create_for_surface"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_create_for_surface"
+                '*
+                (list '*))))
       (let ((~surface (unwrap-cairo_surface_t* surface)))
         (wrap-cairo_pattern_t* (~f ~surface))))))
 (export cairo_pattern_create_for_surface)
 
 ;; cairo_pattern_t *cairo_pattern_create_linear(double x0, double y0, double x1
 ;;     , double y1);
-(if echo-decls (display "cairo_pattern_create_linear\n"))
 (define cairo_pattern_create_linear
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pattern_create_linear"
-                (dynamic-link))
-              (list ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (x0 y0 x1 y1)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_create_linear"
+                '*
+                (list ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~x0 (unwrap~float x0))
             (~y0 (unwrap~float y0))
             (~x1 (unwrap~float x1))
@@ -4871,20 +4870,20 @@
 
 ;; cairo_pattern_t *cairo_pattern_create_radial(double cx0, double cy0, double 
 ;;     radius0, double cx1, double cy1, double radius1);
-(if echo-decls (display "cairo_pattern_create_radial\n"))
 (define cairo_pattern_create_radial
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pattern_create_radial"
-                (dynamic-link))
-              (list ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (cx0 cy0 radius0 cx1 cy1 radius1)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_create_radial"
+                '*
+                (list ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~cx0 (unwrap~float cx0))
             (~cy0 (unwrap~float cy0))
             (~radius0 (unwrap~float radius0))
@@ -4896,84 +4895,85 @@
 (export cairo_pattern_create_radial)
 
 ;; cairo_pattern_t *cairo_pattern_create_mesh(void);
-(if echo-decls (display "cairo_pattern_create_mesh\n"))
 (define cairo_pattern_create_mesh
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
+  (let ((~f #f))
+    (lambda ()
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
                 "cairo_pattern_create_mesh"
-                (dynamic-link))
-              (list))))
-    (lambda () (let () (wrap-cairo_pattern_t* (~f))))))
+                '*
+                (list))))
+      (let () (wrap-cairo_pattern_t* (~f))))))
 (export cairo_pattern_create_mesh)
 
 ;; cairo_pattern_t *cairo_pattern_reference(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_pattern_reference\n"))
 (define cairo_pattern_reference
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pattern_reference"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_reference"
+                '*
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (wrap-cairo_pattern_t* (~f ~pattern))))))
 (export cairo_pattern_reference)
 
 ;; void cairo_pattern_destroy(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_pattern_destroy\n"))
 (define cairo_pattern_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pattern_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_destroy"
+                ffi:void
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_pattern_destroy)
 
 ;; unsigned int cairo_pattern_get_reference_count(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_pattern_get_reference_count\n"))
 (define cairo_pattern_get_reference_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:unsigned-int
-              (dynamic-func
-                "cairo_pattern_get_reference_count"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_reference_count"
+                ffi:unsigned-int
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_pattern_get_reference_count)
 
 ;; cairo_status_t cairo_pattern_status(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_pattern_status\n"))
 (define cairo_pattern_status
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_status"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_status"
+                ffi:int
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_pattern_status)
 
 ;; void *cairo_pattern_get_user_data(cairo_pattern_t *pattern, const 
 ;;     cairo_user_data_key_t *key);
-(if echo-decls (display "cairo_pattern_get_user_data\n"))
 (define cairo_pattern_get_user_data
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pattern_get_user_data"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern key)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_user_data"
+                '*
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~key (unwrap-cairo_user_data_key_t* key)))
         (~f ~pattern ~key)))))
@@ -4982,15 +4982,15 @@
 ;; cairo_status_t cairo_pattern_set_user_data(cairo_pattern_t *pattern, const 
 ;;     cairo_user_data_key_t *key, void *user_data, cairo_destroy_func_t 
 ;;     destroy);
-(if echo-decls (display "cairo_pattern_set_user_data\n"))
 (define cairo_pattern_set_user_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_set_user_data"
-                (dynamic-link))
-              (list '* '* '* '*))))
+  (let ((~f #f))
     (lambda (pattern key user_data destroy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_set_user_data"
+                ffi:int
+                (list '* '* '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~key (unwrap-cairo_user_data_key_t* key))
             (~user_data (unwrap~pointer user_data))
@@ -5008,7 +5008,6 @@
 ;;   CAIRO_PATTERN_TYPE_MESH,
 ;;   CAIRO_PATTERN_TYPE_RASTER_SOURCE,
 ;; } cairo_pattern_type_t;
-(if echo-decls (display "cairo_pattern_type_t\n"))
 (define-fh-enum cairo_pattern_type_t
   '((CAIRO_PATTERN_TYPE_SOLID . 0)
     (CAIRO_PATTERN_TYPE_SURFACE . 1)
@@ -5021,34 +5020,34 @@
 (define wrap-enum-_cairo_pattern_type wrap-cairo_pattern_type_t)
 
 ;; cairo_pattern_type_t cairo_pattern_get_type(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_pattern_get_type\n"))
 (define cairo_pattern_get_type
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_type"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_type"
+                ffi:int
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_pattern_get_type)
 
 ;; void cairo_pattern_add_color_stop_rgb(cairo_pattern_t *pattern, double 
 ;;     offset, double red, double green, double blue);
-(if echo-decls (display "cairo_pattern_add_color_stop_rgb\n"))
 (define cairo_pattern_add_color_stop_rgb
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pattern_add_color_stop_rgb"
-                (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (pattern offset red green blue)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_add_color_stop_rgb"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~offset (unwrap~float offset))
             (~red (unwrap~float red))
@@ -5059,20 +5058,20 @@
 
 ;; void cairo_pattern_add_color_stop_rgba(cairo_pattern_t *pattern, double 
 ;;     offset, double red, double green, double blue, double alpha);
-(if echo-decls (display "cairo_pattern_add_color_stop_rgba\n"))
 (define cairo_pattern_add_color_stop_rgba
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pattern_add_color_stop_rgba"
-                (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (pattern offset red green blue alpha)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_add_color_stop_rgba"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~offset (unwrap~float offset))
             (~red (unwrap~float red))
@@ -5083,50 +5082,50 @@
 (export cairo_pattern_add_color_stop_rgba)
 
 ;; void cairo_mesh_pattern_begin_patch(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_mesh_pattern_begin_patch\n"))
 (define cairo_mesh_pattern_begin_patch
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mesh_pattern_begin_patch"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_begin_patch"
+                ffi:void
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_mesh_pattern_begin_patch)
 
 ;; void cairo_mesh_pattern_end_patch(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_mesh_pattern_end_patch\n"))
 (define cairo_mesh_pattern_end_patch
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mesh_pattern_end_patch"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_end_patch"
+                ffi:void
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_mesh_pattern_end_patch)
 
 ;; void cairo_mesh_pattern_curve_to(cairo_pattern_t *pattern, double x1, double
 ;;      y1, double x2, double y2, double x3, double y3);
-(if echo-decls (display "cairo_mesh_pattern_curve_to\n"))
 (define cairo_mesh_pattern_curve_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mesh_pattern_curve_to"
-                (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (pattern x1 y1 x2 y2 x3 y3)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_curve_to"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~x1 (unwrap~float x1))
             (~y1 (unwrap~float y1))
@@ -5139,15 +5138,15 @@
 
 ;; void cairo_mesh_pattern_line_to(cairo_pattern_t *pattern, double x, double y
 ;;     );
-(if echo-decls (display "cairo_mesh_pattern_line_to\n"))
 (define cairo_mesh_pattern_line_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mesh_pattern_line_to"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (pattern x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_line_to"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
@@ -5156,15 +5155,15 @@
 
 ;; void cairo_mesh_pattern_move_to(cairo_pattern_t *pattern, double x, double y
 ;;     );
-(if echo-decls (display "cairo_mesh_pattern_move_to\n"))
 (define cairo_mesh_pattern_move_to
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mesh_pattern_move_to"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (pattern x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_move_to"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~x (unwrap~float x))
             (~y (unwrap~float y)))
@@ -5173,15 +5172,15 @@
 
 ;; void cairo_mesh_pattern_set_control_point(cairo_pattern_t *pattern, 
 ;;     unsigned int point_num, double x, double y);
-(if echo-decls (display "cairo_mesh_pattern_set_control_point\n"))
 (define cairo_mesh_pattern_set_control_point
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mesh_pattern_set_control_point"
-                (dynamic-link))
-              (list '* ffi:unsigned-int ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (pattern point_num x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_set_control_point"
+                ffi:void
+                (list '* ffi:unsigned-int ffi:double ffi:double))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~point_num (unwrap~fixed point_num))
             (~x (unwrap~float x))
@@ -5191,19 +5190,19 @@
 
 ;; void cairo_mesh_pattern_set_corner_color_rgb(cairo_pattern_t *pattern, 
 ;;     unsigned int corner_num, double red, double green, double blue);
-(if echo-decls (display "cairo_mesh_pattern_set_corner_color_rgb\n"))
 (define cairo_mesh_pattern_set_corner_color_rgb
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mesh_pattern_set_corner_color_rgb"
-                (dynamic-link))
-              (list '*
-                    ffi:unsigned-int
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (pattern corner_num red green blue)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_set_corner_color_rgb"
+                ffi:void
+                (list '*
+                      ffi:unsigned-int
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~corner_num (unwrap~fixed corner_num))
             (~red (unwrap~float red))
@@ -5215,20 +5214,20 @@
 ;; void cairo_mesh_pattern_set_corner_color_rgba(cairo_pattern_t *pattern, 
 ;;     unsigned int corner_num, double red, double green, double blue, double 
 ;;     alpha);
-(if echo-decls (display "cairo_mesh_pattern_set_corner_color_rgba\n"))
 (define cairo_mesh_pattern_set_corner_color_rgba
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_mesh_pattern_set_corner_color_rgba"
-                (dynamic-link))
-              (list '*
-                    ffi:unsigned-int
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (pattern corner_num red green blue alpha)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_set_corner_color_rgba"
+                ffi:void
+                (list '*
+                      ffi:unsigned-int
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~corner_num (unwrap~fixed corner_num))
             (~red (unwrap~float red))
@@ -5245,15 +5244,15 @@
 
 ;; void cairo_pattern_set_matrix(cairo_pattern_t *pattern, const cairo_matrix_t
 ;;      *matrix);
-(if echo-decls (display "cairo_pattern_set_matrix\n"))
 (define cairo_pattern_set_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pattern_set_matrix"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_set_matrix"
+                ffi:void
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~pattern ~matrix)))))
@@ -5261,15 +5260,15 @@
 
 ;; void cairo_pattern_get_matrix(cairo_pattern_t *pattern, cairo_matrix_t *
 ;;     matrix);
-(if echo-decls (display "cairo_pattern_get_matrix\n"))
 (define cairo_pattern_get_matrix
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pattern_get_matrix"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_matrix"
+                ffi:void
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~pattern ~matrix)))))
@@ -5281,7 +5280,6 @@
 ;;   CAIRO_EXTEND_REFLECT,
 ;;   CAIRO_EXTEND_PAD,
 ;; } cairo_extend_t;
-(if echo-decls (display "cairo_extend_t\n"))
 (define-fh-enum cairo_extend_t
   '((CAIRO_EXTEND_NONE . 0)
     (CAIRO_EXTEND_REPEAT . 1)
@@ -5293,30 +5291,30 @@
 
 ;; void cairo_pattern_set_extend(cairo_pattern_t *pattern, cairo_extend_t 
 ;;     extend);
-(if echo-decls (display "cairo_pattern_set_extend\n"))
 (define cairo_pattern_set_extend
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pattern_set_extend"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (pattern extend)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_set_extend"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~extend (unwrap~fixed extend)))
         (~f ~pattern ~extend)))))
 (export cairo_pattern_set_extend)
 
 ;; cairo_extend_t cairo_pattern_get_extend(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_pattern_get_extend\n"))
 (define cairo_pattern_get_extend
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_extend"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_extend"
+                ffi:int
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_pattern_get_extend)
@@ -5329,7 +5327,6 @@
 ;;   CAIRO_FILTER_BILINEAR,
 ;;   CAIRO_FILTER_GAUSSIAN,
 ;; } cairo_filter_t;
-(if echo-decls (display "cairo_filter_t\n"))
 (define-fh-enum cairo_filter_t
   '((CAIRO_FILTER_FAST . 0)
     (CAIRO_FILTER_GOOD . 1)
@@ -5343,45 +5340,45 @@
 
 ;; void cairo_pattern_set_filter(cairo_pattern_t *pattern, cairo_filter_t 
 ;;     filter);
-(if echo-decls (display "cairo_pattern_set_filter\n"))
 (define cairo_pattern_set_filter
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pattern_set_filter"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (pattern filter)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_set_filter"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~filter (unwrap~fixed filter)))
         (~f ~pattern ~filter)))))
 (export cairo_pattern_set_filter)
 
 ;; cairo_filter_t cairo_pattern_get_filter(cairo_pattern_t *pattern);
-(if echo-decls (display "cairo_pattern_get_filter\n"))
 (define cairo_pattern_get_filter
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_filter"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (pattern)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_filter"
+                ffi:int
+                (list '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
         (~f ~pattern)))))
 (export cairo_pattern_get_filter)
 
 ;; cairo_status_t cairo_pattern_get_rgba(cairo_pattern_t *pattern, double *red
 ;;     , double *green, double *blue, double *alpha);
-(if echo-decls (display "cairo_pattern_get_rgba\n"))
 (define cairo_pattern_get_rgba
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_rgba"
-                (dynamic-link))
-              (list '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (pattern red green blue alpha)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_rgba"
+                ffi:int
+                (list '* '* '* '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~red (unwrap~pointer red))
             (~green (unwrap~pointer green))
@@ -5392,15 +5389,15 @@
 
 ;; cairo_status_t cairo_pattern_get_surface(cairo_pattern_t *pattern, 
 ;;     cairo_surface_t **surface);
-(if echo-decls (display "cairo_pattern_get_surface\n"))
 (define cairo_pattern_get_surface
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_surface"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern surface)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_surface"
+                ffi:int
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~surface (unwrap~pointer surface)))
         (~f ~pattern ~surface)))))
@@ -5409,15 +5406,15 @@
 ;; cairo_status_t cairo_pattern_get_color_stop_rgba(cairo_pattern_t *pattern, 
 ;;     int index, double *offset, double *red, double *green, double *blue, 
 ;;     double *alpha);
-(if echo-decls (display "cairo_pattern_get_color_stop_rgba\n"))
 (define cairo_pattern_get_color_stop_rgba
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_color_stop_rgba"
-                (dynamic-link))
-              (list '* ffi:int '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (pattern index offset red green blue alpha)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_color_stop_rgba"
+                ffi:int
+                (list '* ffi:int '* '* '* '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~index (unwrap~fixed index))
             (~offset (unwrap~pointer offset))
@@ -5436,15 +5433,15 @@
 
 ;; cairo_status_t cairo_pattern_get_color_stop_count(cairo_pattern_t *pattern, 
 ;;     int *count);
-(if echo-decls (display "cairo_pattern_get_color_stop_count\n"))
 (define cairo_pattern_get_color_stop_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_color_stop_count"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern count)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_color_stop_count"
+                ffi:int
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~count (unwrap~pointer count)))
         (~f ~pattern ~count)))))
@@ -5452,15 +5449,15 @@
 
 ;; cairo_status_t cairo_pattern_get_linear_points(cairo_pattern_t *pattern, 
 ;;     double *x0, double *y0, double *x1, double *y1);
-(if echo-decls (display "cairo_pattern_get_linear_points\n"))
 (define cairo_pattern_get_linear_points
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_linear_points"
-                (dynamic-link))
-              (list '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (pattern x0 y0 x1 y1)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_linear_points"
+                ffi:int
+                (list '* '* '* '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~x0 (unwrap~pointer x0))
             (~y0 (unwrap~pointer y0))
@@ -5472,15 +5469,15 @@
 ;; cairo_status_t cairo_pattern_get_radial_circles(cairo_pattern_t *pattern, 
 ;;     double *x0, double *y0, double *r0, double *x1, double *y1, double *r1)
 ;;     ;
-(if echo-decls (display "cairo_pattern_get_radial_circles\n"))
 (define cairo_pattern_get_radial_circles
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_pattern_get_radial_circles"
-                (dynamic-link))
-              (list '* '* '* '* '* '* '*))))
+  (let ((~f #f))
     (lambda (pattern x0 y0 r0 x1 y1 r1)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pattern_get_radial_circles"
+                ffi:int
+                (list '* '* '* '* '* '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~x0 (unwrap~pointer x0))
             (~y0 (unwrap~pointer y0))
@@ -5493,15 +5490,15 @@
 
 ;; cairo_status_t cairo_mesh_pattern_get_patch_count(cairo_pattern_t *pattern, 
 ;;     unsigned int *count);
-(if echo-decls (display "cairo_mesh_pattern_get_patch_count\n"))
 (define cairo_mesh_pattern_get_patch_count
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_mesh_pattern_get_patch_count"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (pattern count)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_get_patch_count"
+                ffi:int
+                (list '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~count (unwrap~pointer count)))
         (~f ~pattern ~count)))))
@@ -5509,15 +5506,15 @@
 
 ;; cairo_path_t *cairo_mesh_pattern_get_path(cairo_pattern_t *pattern, 
 ;;     unsigned int patch_num);
-(if echo-decls (display "cairo_mesh_pattern_get_path\n"))
 (define cairo_mesh_pattern_get_path
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_mesh_pattern_get_path"
-                (dynamic-link))
-              (list '* ffi:unsigned-int))))
+  (let ((~f #f))
     (lambda (pattern patch_num)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_get_path"
+                '*
+                (list '* ffi:unsigned-int))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~patch_num (unwrap~fixed patch_num)))
         (wrap-cairo_path_t* (~f ~pattern ~patch_num))))))
@@ -5526,20 +5523,8 @@
 ;; cairo_status_t cairo_mesh_pattern_get_corner_color_rgba(cairo_pattern_t *
 ;;     pattern, unsigned int patch_num, unsigned int corner_num, double *red, 
 ;;     double *green, double *blue, double *alpha);
-(if echo-decls (display "cairo_mesh_pattern_get_corner_color_rgba\n"))
 (define cairo_mesh_pattern_get_corner_color_rgba
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_mesh_pattern_get_corner_color_rgba"
-                (dynamic-link))
-              (list '*
-                    ffi:unsigned-int
-                    ffi:unsigned-int
-                    '*
-                    '*
-                    '*
-                    '*))))
+  (let ((~f #f))
     (lambda (pattern
              patch_num
              corner_num
@@ -5547,6 +5532,18 @@
              green
              blue
              alpha)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_get_corner_color_rgba"
+                ffi:int
+                (list '*
+                      ffi:unsigned-int
+                      ffi:unsigned-int
+                      '*
+                      '*
+                      '*
+                      '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~patch_num (unwrap~fixed patch_num))
             (~corner_num (unwrap~fixed corner_num))
@@ -5566,15 +5563,15 @@
 ;; cairo_status_t cairo_mesh_pattern_get_control_point(cairo_pattern_t *pattern
 ;;     , unsigned int patch_num, unsigned int point_num, double *x, double *y)
 ;;     ;
-(if echo-decls (display "cairo_mesh_pattern_get_control_point\n"))
 (define cairo_mesh_pattern_get_control_point
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_mesh_pattern_get_control_point"
-                (dynamic-link))
-              (list '* ffi:unsigned-int ffi:unsigned-int '* '*))))
+  (let ((~f #f))
     (lambda (pattern patch_num point_num x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_mesh_pattern_get_control_point"
+                ffi:int
+                (list '* ffi:unsigned-int ffi:unsigned-int '* '*))))
       (let ((~pattern (unwrap-cairo_pattern_t* pattern))
             (~patch_num (unwrap~fixed patch_num))
             (~point_num (unwrap~fixed point_num))
@@ -5585,19 +5582,21 @@
 
 ;; void cairo_matrix_init(cairo_matrix_t *matrix, double xx, double yx, double 
 ;;     xy, double yy, double x0, double y0);
-(if echo-decls (display "cairo_matrix_init\n"))
 (define cairo_matrix_init
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func "cairo_matrix_init" (dynamic-link))
-              (list '*
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double
-                    ffi:double))))
+  (let ((~f #f))
     (lambda (matrix xx yx xy yy x0 y0)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_init"
+                ffi:void
+                (list '*
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double
+                      ffi:double))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~xx (unwrap~float xx))
             (~yx (unwrap~float yx))
@@ -5609,30 +5608,30 @@
 (export cairo_matrix_init)
 
 ;; void cairo_matrix_init_identity(cairo_matrix_t *matrix);
-(if echo-decls (display "cairo_matrix_init_identity\n"))
 (define cairo_matrix_init_identity
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_init_identity"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_init_identity"
+                ffi:void
+                (list '*))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~matrix)))))
 (export cairo_matrix_init_identity)
 
 ;; void cairo_matrix_init_translate(cairo_matrix_t *matrix, double tx, double 
 ;;     ty);
-(if echo-decls (display "cairo_matrix_init_translate\n"))
 (define cairo_matrix_init_translate
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_init_translate"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (matrix tx ty)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_init_translate"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~tx (unwrap~float tx))
             (~ty (unwrap~float ty)))
@@ -5640,15 +5639,15 @@
 (export cairo_matrix_init_translate)
 
 ;; void cairo_matrix_init_scale(cairo_matrix_t *matrix, double sx, double sy);
-(if echo-decls (display "cairo_matrix_init_scale\n"))
 (define cairo_matrix_init_scale
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_init_scale"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (matrix sx sy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_init_scale"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~sx (unwrap~float sx))
             (~sy (unwrap~float sy)))
@@ -5656,30 +5655,30 @@
 (export cairo_matrix_init_scale)
 
 ;; void cairo_matrix_init_rotate(cairo_matrix_t *matrix, double radians);
-(if echo-decls (display "cairo_matrix_init_rotate\n"))
 (define cairo_matrix_init_rotate
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_init_rotate"
-                (dynamic-link))
-              (list '* ffi:double))))
+  (let ((~f #f))
     (lambda (matrix radians)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_init_rotate"
+                ffi:void
+                (list '* ffi:double))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~radians (unwrap~float radians)))
         (~f ~matrix ~radians)))))
 (export cairo_matrix_init_rotate)
 
 ;; void cairo_matrix_translate(cairo_matrix_t *matrix, double tx, double ty);
-(if echo-decls (display "cairo_matrix_translate\n"))
 (define cairo_matrix_translate
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_translate"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (matrix tx ty)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_translate"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~tx (unwrap~float tx))
             (~ty (unwrap~float ty)))
@@ -5687,15 +5686,15 @@
 (export cairo_matrix_translate)
 
 ;; void cairo_matrix_scale(cairo_matrix_t *matrix, double sx, double sy);
-(if echo-decls (display "cairo_matrix_scale\n"))
 (define cairo_matrix_scale
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_scale"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (matrix sx sy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_scale"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~sx (unwrap~float sx))
             (~sy (unwrap~float sy)))
@@ -5703,45 +5702,45 @@
 (export cairo_matrix_scale)
 
 ;; void cairo_matrix_rotate(cairo_matrix_t *matrix, double radians);
-(if echo-decls (display "cairo_matrix_rotate\n"))
 (define cairo_matrix_rotate
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_rotate"
-                (dynamic-link))
-              (list '* ffi:double))))
+  (let ((~f #f))
     (lambda (matrix radians)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_rotate"
+                ffi:void
+                (list '* ffi:double))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~radians (unwrap~float radians)))
         (~f ~matrix ~radians)))))
 (export cairo_matrix_rotate)
 
 ;; cairo_status_t cairo_matrix_invert(cairo_matrix_t *matrix);
-(if echo-decls (display "cairo_matrix_invert\n"))
 (define cairo_matrix_invert
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_matrix_invert"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (matrix)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_invert"
+                ffi:int
+                (list '*))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix)))
         (~f ~matrix)))))
 (export cairo_matrix_invert)
 
 ;; void cairo_matrix_multiply(cairo_matrix_t *result, const cairo_matrix_t *a, 
 ;;     const cairo_matrix_t *b);
-(if echo-decls (display "cairo_matrix_multiply\n"))
 (define cairo_matrix_multiply
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_multiply"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (result a b)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_multiply"
+                ffi:void
+                (list '* '* '*))))
       (let ((~result (unwrap-cairo_matrix_t* result))
             (~a (unwrap-cairo_matrix_t* a))
             (~b (unwrap-cairo_matrix_t* b)))
@@ -5750,15 +5749,15 @@
 
 ;; void cairo_matrix_transform_distance(const cairo_matrix_t *matrix, double *
 ;;     dx, double *dy);
-(if echo-decls (display "cairo_matrix_transform_distance\n"))
 (define cairo_matrix_transform_distance
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_transform_distance"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (matrix dx dy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_transform_distance"
+                ffi:void
+                (list '* '* '*))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~dx (unwrap~pointer dx))
             (~dy (unwrap~pointer dy)))
@@ -5767,15 +5766,15 @@
 
 ;; void cairo_matrix_transform_point(const cairo_matrix_t *matrix, double *x, 
 ;;     double *y);
-(if echo-decls (display "cairo_matrix_transform_point\n"))
 (define cairo_matrix_transform_point
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_matrix_transform_point"
-                (dynamic-link))
-              (list '* '* '*))))
+  (let ((~f #f))
     (lambda (matrix x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_matrix_transform_point"
+                ffi:void
+                (list '* '* '*))))
       (let ((~matrix (unwrap-cairo_matrix_t* matrix))
             (~x (unwrap~pointer x))
             (~y (unwrap~pointer y)))
@@ -5783,9 +5782,9 @@
 (export cairo_matrix_transform_point)
 
 ;; typedef struct _cairo_region cairo_region_t;
-(if echo-decls (display "cairo_region_t\n"))
 (define cairo_region_t-desc void)
 (define cairo_region_t*-desc (bs:pointer cairo_region_t-desc))
+(export cairo_region_t*-desc)
 (define-fh-pointer-type cairo_region_t* cairo_region_t*-desc)
 
 ;; typedef enum _cairo_region_overlap {
@@ -5793,7 +5792,6 @@
 ;;   CAIRO_REGION_OVERLAP_OUT,
 ;;   CAIRO_REGION_OVERLAP_PART,
 ;; } cairo_region_overlap_t;
-(if echo-decls (display "cairo_region_overlap_t\n"))
 (define-fh-enum cairo_region_overlap_t
   '((CAIRO_REGION_OVERLAP_IN . 0)
     (CAIRO_REGION_OVERLAP_OUT . 1)
@@ -5803,28 +5801,26 @@
 (define wrap-enum-_cairo_region_overlap wrap-cairo_region_overlap_t)
 
 ;; cairo_region_t *cairo_region_create(void);
-(if echo-decls (display "cairo_region_create\n"))
 (define cairo_region_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_region_create"
-                (dynamic-link))
-              (list))))
-    (lambda () (let () (wrap-cairo_region_t* (~f))))))
+  (let ((~f #f))
+    (lambda ()
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_region_create" '* (list))))
+      (let () (wrap-cairo_region_t* (~f))))))
 (export cairo_region_create)
 
 ;; cairo_region_t *cairo_region_create_rectangle(const cairo_rectangle_int_t *
 ;;     rectangle);
-(if echo-decls (display "cairo_region_create_rectangle\n"))
 (define cairo_region_create_rectangle
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_region_create_rectangle"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (rectangle)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_create_rectangle"
+                '*
+                (list '*))))
       (let ((~rectangle
               (unwrap-cairo_rectangle_int_t* rectangle)))
         (wrap-cairo_region_t* (~f ~rectangle))))))
@@ -5832,101 +5828,100 @@
 
 ;; cairo_region_t *cairo_region_create_rectangles(const cairo_rectangle_int_t *
 ;;     rects, int count);
-(if echo-decls (display "cairo_region_create_rectangles\n"))
 (define cairo_region_create_rectangles
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_region_create_rectangles"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (rects count)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_create_rectangles"
+                '*
+                (list '* ffi:int))))
       (let ((~rects (unwrap-cairo_rectangle_int_t* rects))
             (~count (unwrap~fixed count)))
         (wrap-cairo_region_t* (~f ~rects ~count))))))
 (export cairo_region_create_rectangles)
 
 ;; cairo_region_t *cairo_region_copy(const cairo_region_t *original);
-(if echo-decls (display "cairo_region_copy\n"))
 (define cairo_region_copy
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func "cairo_region_copy" (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (original)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc "cairo_region_copy" '* (list '*))))
       (let ((~original (unwrap-cairo_region_t* original)))
         (wrap-cairo_region_t* (~f ~original))))))
 (export cairo_region_copy)
 
 ;; cairo_region_t *cairo_region_reference(cairo_region_t *region);
-(if echo-decls (display "cairo_region_reference\n"))
 (define cairo_region_reference
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_region_reference"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (region)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_reference"
+                '*
+                (list '*))))
       (let ((~region (unwrap-cairo_region_t* region)))
         (wrap-cairo_region_t* (~f ~region))))))
 (export cairo_region_reference)
 
 ;; void cairo_region_destroy(cairo_region_t *region);
-(if echo-decls (display "cairo_region_destroy\n"))
 (define cairo_region_destroy
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_region_destroy"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (region)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_destroy"
+                ffi:void
+                (list '*))))
       (let ((~region (unwrap-cairo_region_t* region)))
         (~f ~region)))))
 (export cairo_region_destroy)
 
 ;; cairo_bool_t cairo_region_equal(const cairo_region_t *a, const 
 ;;     cairo_region_t *b);
-(if echo-decls (display "cairo_region_equal\n"))
 (define cairo_region_equal
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_equal"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (a b)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_equal"
+                ffi:int
+                (list '* '*))))
       (let ((~a (unwrap-cairo_region_t* a))
             (~b (unwrap-cairo_region_t* b)))
-        (wrap-cairo_bool_t (~f ~a ~b))))))
+        (~f ~a ~b)))))
 (export cairo_region_equal)
 
 ;; cairo_status_t cairo_region_status(const cairo_region_t *region);
-(if echo-decls (display "cairo_region_status\n"))
 (define cairo_region_status
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_status"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (region)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_status"
+                ffi:int
+                (list '*))))
       (let ((~region (unwrap-cairo_region_t* region)))
         (~f ~region)))))
 (export cairo_region_status)
 
 ;; void cairo_region_get_extents(const cairo_region_t *region, 
 ;;     cairo_rectangle_int_t *extents);
-(if echo-decls (display "cairo_region_get_extents\n"))
 (define cairo_region_get_extents
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_region_get_extents"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (region extents)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_get_extents"
+                ffi:void
+                (list '* '*))))
       (let ((~region (unwrap-cairo_region_t* region))
             (~extents
               (unwrap-cairo_rectangle_int_t* extents)))
@@ -5934,30 +5929,30 @@
 (export cairo_region_get_extents)
 
 ;; int cairo_region_num_rectangles(const cairo_region_t *region);
-(if echo-decls (display "cairo_region_num_rectangles\n"))
 (define cairo_region_num_rectangles
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_num_rectangles"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (region)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_num_rectangles"
+                ffi:int
+                (list '*))))
       (let ((~region (unwrap-cairo_region_t* region)))
         (~f ~region)))))
 (export cairo_region_num_rectangles)
 
 ;; void cairo_region_get_rectangle(const cairo_region_t *region, int nth, 
 ;;     cairo_rectangle_int_t *rectangle);
-(if echo-decls (display "cairo_region_get_rectangle\n"))
 (define cairo_region_get_rectangle
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_region_get_rectangle"
-                (dynamic-link))
-              (list '* ffi:int '*))))
+  (let ((~f #f))
     (lambda (region nth rectangle)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_get_rectangle"
+                ffi:void
+                (list '* ffi:int '*))))
       (let ((~region (unwrap-cairo_region_t* region))
             (~nth (unwrap~fixed nth))
             (~rectangle
@@ -5966,30 +5961,30 @@
 (export cairo_region_get_rectangle)
 
 ;; cairo_bool_t cairo_region_is_empty(const cairo_region_t *region);
-(if echo-decls (display "cairo_region_is_empty\n"))
 (define cairo_region_is_empty
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_is_empty"
-                (dynamic-link))
-              (list '*))))
+  (let ((~f #f))
     (lambda (region)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_is_empty"
+                ffi:int
+                (list '*))))
       (let ((~region (unwrap-cairo_region_t* region)))
-        (wrap-cairo_bool_t (~f ~region))))))
+        (~f ~region)))))
 (export cairo_region_is_empty)
 
 ;; cairo_region_overlap_t cairo_region_contains_rectangle(const cairo_region_t 
 ;;     *region, const cairo_rectangle_int_t *rectangle);
-(if echo-decls (display "cairo_region_contains_rectangle\n"))
 (define cairo_region_contains_rectangle
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_contains_rectangle"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (region rectangle)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_contains_rectangle"
+                ffi:int
+                (list '* '*))))
       (let ((~region (unwrap-cairo_region_t* region))
             (~rectangle
               (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -5998,31 +5993,31 @@
 
 ;; cairo_bool_t cairo_region_contains_point(const cairo_region_t *region, int x
 ;;     , int y);
-(if echo-decls (display "cairo_region_contains_point\n"))
 (define cairo_region_contains_point
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_contains_point"
-                (dynamic-link))
-              (list '* ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (region x y)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_contains_point"
+                ffi:int
+                (list '* ffi:int ffi:int))))
       (let ((~region (unwrap-cairo_region_t* region))
             (~x (unwrap~fixed x))
             (~y (unwrap~fixed y)))
-        (wrap-cairo_bool_t (~f ~region ~x ~y))))))
+        (~f ~region ~x ~y)))))
 (export cairo_region_contains_point)
 
 ;; void cairo_region_translate(cairo_region_t *region, int dx, int dy);
-(if echo-decls (display "cairo_region_translate\n"))
 (define cairo_region_translate
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_region_translate"
-                (dynamic-link))
-              (list '* ffi:int ffi:int))))
+  (let ((~f #f))
     (lambda (region dx dy)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_translate"
+                ffi:void
+                (list '* ffi:int ffi:int))))
       (let ((~region (unwrap-cairo_region_t* region))
             (~dx (unwrap~fixed dx))
             (~dy (unwrap~fixed dy)))
@@ -6031,15 +6026,15 @@
 
 ;; cairo_status_t cairo_region_subtract(cairo_region_t *dst, const 
 ;;     cairo_region_t *other);
-(if echo-decls (display "cairo_region_subtract\n"))
 (define cairo_region_subtract
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_subtract"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (dst other)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_subtract"
+                ffi:int
+                (list '* '*))))
       (let ((~dst (unwrap-cairo_region_t* dst))
             (~other (unwrap-cairo_region_t* other)))
         (~f ~dst ~other)))))
@@ -6047,15 +6042,15 @@
 
 ;; cairo_status_t cairo_region_subtract_rectangle(cairo_region_t *dst, const 
 ;;     cairo_rectangle_int_t *rectangle);
-(if echo-decls (display "cairo_region_subtract_rectangle\n"))
 (define cairo_region_subtract_rectangle
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_subtract_rectangle"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (dst rectangle)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_subtract_rectangle"
+                ffi:int
+                (list '* '*))))
       (let ((~dst (unwrap-cairo_region_t* dst))
             (~rectangle
               (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6064,15 +6059,15 @@
 
 ;; cairo_status_t cairo_region_intersect(cairo_region_t *dst, const 
 ;;     cairo_region_t *other);
-(if echo-decls (display "cairo_region_intersect\n"))
 (define cairo_region_intersect
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_intersect"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (dst other)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_intersect"
+                ffi:int
+                (list '* '*))))
       (let ((~dst (unwrap-cairo_region_t* dst))
             (~other (unwrap-cairo_region_t* other)))
         (~f ~dst ~other)))))
@@ -6080,15 +6075,15 @@
 
 ;; cairo_status_t cairo_region_intersect_rectangle(cairo_region_t *dst, const 
 ;;     cairo_rectangle_int_t *rectangle);
-(if echo-decls (display "cairo_region_intersect_rectangle\n"))
 (define cairo_region_intersect_rectangle
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_intersect_rectangle"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (dst rectangle)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_intersect_rectangle"
+                ffi:int
+                (list '* '*))))
       (let ((~dst (unwrap-cairo_region_t* dst))
             (~rectangle
               (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6097,15 +6092,15 @@
 
 ;; cairo_status_t cairo_region_union(cairo_region_t *dst, const cairo_region_t 
 ;;     *other);
-(if echo-decls (display "cairo_region_union\n"))
 (define cairo_region_union
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_union"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (dst other)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_union"
+                ffi:int
+                (list '* '*))))
       (let ((~dst (unwrap-cairo_region_t* dst))
             (~other (unwrap-cairo_region_t* other)))
         (~f ~dst ~other)))))
@@ -6113,15 +6108,15 @@
 
 ;; cairo_status_t cairo_region_union_rectangle(cairo_region_t *dst, const 
 ;;     cairo_rectangle_int_t *rectangle);
-(if echo-decls (display "cairo_region_union_rectangle\n"))
 (define cairo_region_union_rectangle
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_union_rectangle"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (dst rectangle)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_union_rectangle"
+                ffi:int
+                (list '* '*))))
       (let ((~dst (unwrap-cairo_region_t* dst))
             (~rectangle
               (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6130,13 +6125,15 @@
 
 ;; cairo_status_t cairo_region_xor(cairo_region_t *dst, const cairo_region_t *
 ;;     other);
-(if echo-decls (display "cairo_region_xor\n"))
 (define cairo_region_xor
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func "cairo_region_xor" (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (dst other)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_xor"
+                ffi:int
+                (list '* '*))))
       (let ((~dst (unwrap-cairo_region_t* dst))
             (~other (unwrap-cairo_region_t* other)))
         (~f ~dst ~other)))))
@@ -6144,15 +6141,15 @@
 
 ;; cairo_status_t cairo_region_xor_rectangle(cairo_region_t *dst, const 
 ;;     cairo_rectangle_int_t *rectangle);
-(if echo-decls (display "cairo_region_xor_rectangle\n"))
 (define cairo_region_xor_rectangle
-  (let ((~f (ffi:pointer->procedure
-              ffi:int
-              (dynamic-func
-                "cairo_region_xor_rectangle"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (dst rectangle)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_region_xor_rectangle"
+                ffi:int
+                (list '* '*))))
       (let ((~dst (unwrap-cairo_region_t* dst))
             (~rectangle
               (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6160,22 +6157,22 @@
 (export cairo_region_xor_rectangle)
 
 ;; void cairo_debug_reset_static_data(void);
-(if echo-decls (display "cairo_debug_reset_static_data\n"))
 (define cairo_debug_reset_static_data
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
+  (let ((~f #f))
+    (lambda ()
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
                 "cairo_debug_reset_static_data"
-                (dynamic-link))
-              (list))))
-    (lambda () (let () (~f)))))
+                ffi:void
+                (list))))
+      (let () (~f)))))
 (export cairo_debug_reset_static_data)
 
 ;; typedef enum _cairo_pdf_version {
 ;;   CAIRO_PDF_VERSION_1_4,
 ;;   CAIRO_PDF_VERSION_1_5,
 ;; } cairo_pdf_version_t;
-(if echo-decls (display "cairo_pdf_version_t\n"))
 (define-fh-enum cairo_pdf_version_t
   '((CAIRO_PDF_VERSION_1_4 . 0)
     (CAIRO_PDF_VERSION_1_5 . 1))
@@ -6185,15 +6182,15 @@
 
 ;; cairo_surface_t *cairo_pdf_surface_create(const char *filename, double 
 ;;     width_in_points, double height_in_points);
-(if echo-decls (display "cairo_pdf_surface_create\n"))
 (define cairo_pdf_surface_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pdf_surface_create"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (filename width_in_points height_in_points)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pdf_surface_create"
+                '*
+                (list '* ffi:double ffi:double))))
       (let ((~filename (unwrap~pointer filename))
             (~width_in_points (unwrap~float width_in_points))
             (~height_in_points
@@ -6205,21 +6202,21 @@
 ;; cairo_surface_t *cairo_pdf_surface_create_for_stream(cairo_write_func_t 
 ;;     write_func, void *closure, double width_in_points, double 
 ;;     height_in_points);
-(if echo-decls (display "cairo_pdf_surface_create_for_stream\n"))
 (define cairo_pdf_surface_create_for_stream
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pdf_surface_create_for_stream"
-                (dynamic-link))
-              (list '* '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (write_func
              closure
              width_in_points
              height_in_points)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pdf_surface_create_for_stream"
+                '*
+                (list '* '* ffi:double ffi:double))))
       (let ((~write_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* '* ffi:unsigned-int))
                write_func))
             (~closure (unwrap~pointer closure))
@@ -6235,15 +6232,15 @@
 
 ;; void cairo_pdf_surface_restrict_to_version(cairo_surface_t *surface, 
 ;;     cairo_pdf_version_t version);
-(if echo-decls (display "cairo_pdf_surface_restrict_to_version\n"))
 (define cairo_pdf_surface_restrict_to_version
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pdf_surface_restrict_to_version"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (surface version)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pdf_surface_restrict_to_version"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~version (unwrap~fixed version)))
         (~f ~surface ~version)))))
@@ -6251,45 +6248,45 @@
 
 ;; void cairo_pdf_get_versions(cairo_pdf_version_t const **versions, int *
 ;;     num_versions);
-(if echo-decls (display "cairo_pdf_get_versions\n"))
 (define cairo_pdf_get_versions
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pdf_get_versions"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (versions num_versions)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pdf_get_versions"
+                ffi:void
+                (list '* '*))))
       (let ((~versions (unwrap~pointer versions))
             (~num_versions (unwrap~pointer num_versions)))
         (~f ~versions ~num_versions)))))
 (export cairo_pdf_get_versions)
 
 ;; const char *cairo_pdf_version_to_string(cairo_pdf_version_t version);
-(if echo-decls (display "cairo_pdf_version_to_string\n"))
 (define cairo_pdf_version_to_string
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_pdf_version_to_string"
-                (dynamic-link))
-              (list ffi:int))))
+  (let ((~f #f))
     (lambda (version)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pdf_version_to_string"
+                '*
+                (list ffi:int))))
       (let ((~version (unwrap~fixed version)))
         (~f ~version)))))
 (export cairo_pdf_version_to_string)
 
 ;; void cairo_pdf_surface_set_size(cairo_surface_t *surface, double 
 ;;     width_in_points, double height_in_points);
-(if echo-decls (display "cairo_pdf_surface_set_size\n"))
 (define cairo_pdf_surface_set_size
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_pdf_surface_set_size"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (surface width_in_points height_in_points)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_pdf_surface_set_size"
+                ffi:void
+                (list '* ffi:double ffi:double))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~width_in_points (unwrap~float width_in_points))
             (~height_in_points
@@ -6301,7 +6298,6 @@
 ;;   CAIRO_SVG_VERSION_1_1,
 ;;   CAIRO_SVG_VERSION_1_2,
 ;; } cairo_svg_version_t;
-(if echo-decls (display "cairo_svg_version_t\n"))
 (define-fh-enum cairo_svg_version_t
   '((CAIRO_SVG_VERSION_1_1 . 0)
     (CAIRO_SVG_VERSION_1_2 . 1))
@@ -6311,15 +6307,15 @@
 
 ;; cairo_surface_t *cairo_svg_surface_create(const char *filename, double 
 ;;     width_in_points, double height_in_points);
-(if echo-decls (display "cairo_svg_surface_create\n"))
 (define cairo_svg_surface_create
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_svg_surface_create"
-                (dynamic-link))
-              (list '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (filename width_in_points height_in_points)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_svg_surface_create"
+                '*
+                (list '* ffi:double ffi:double))))
       (let ((~filename (unwrap~pointer filename))
             (~width_in_points (unwrap~float width_in_points))
             (~height_in_points
@@ -6331,21 +6327,21 @@
 ;; cairo_surface_t *cairo_svg_surface_create_for_stream(cairo_write_func_t 
 ;;     write_func, void *closure, double width_in_points, double 
 ;;     height_in_points);
-(if echo-decls (display "cairo_svg_surface_create_for_stream\n"))
 (define cairo_svg_surface_create_for_stream
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_svg_surface_create_for_stream"
-                (dynamic-link))
-              (list '* '* ffi:double ffi:double))))
+  (let ((~f #f))
     (lambda (write_func
              closure
              width_in_points
              height_in_points)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_svg_surface_create_for_stream"
+                '*
+                (list '* '* ffi:double ffi:double))))
       (let ((~write_func
               ((make-ftn-arg-unwrapper
-                 ffi:void
+                 ffi:int
                  (list '* '* ffi:unsigned-int))
                write_func))
             (~closure (unwrap~pointer closure))
@@ -6361,15 +6357,15 @@
 
 ;; void cairo_svg_surface_restrict_to_version(cairo_surface_t *surface, 
 ;;     cairo_svg_version_t version);
-(if echo-decls (display "cairo_svg_surface_restrict_to_version\n"))
 (define cairo_svg_surface_restrict_to_version
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_svg_surface_restrict_to_version"
-                (dynamic-link))
-              (list '* ffi:int))))
+  (let ((~f #f))
     (lambda (surface version)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_svg_surface_restrict_to_version"
+                ffi:void
+                (list '* ffi:int))))
       (let ((~surface (unwrap-cairo_surface_t* surface))
             (~version (unwrap~fixed version)))
         (~f ~surface ~version)))))
@@ -6377,30 +6373,30 @@
 
 ;; void cairo_svg_get_versions(cairo_svg_version_t const **versions, int *
 ;;     num_versions);
-(if echo-decls (display "cairo_svg_get_versions\n"))
 (define cairo_svg_get_versions
-  (let ((~f (ffi:pointer->procedure
-              ffi:void
-              (dynamic-func
-                "cairo_svg_get_versions"
-                (dynamic-link))
-              (list '* '*))))
+  (let ((~f #f))
     (lambda (versions num_versions)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_svg_get_versions"
+                ffi:void
+                (list '* '*))))
       (let ((~versions (unwrap~pointer versions))
             (~num_versions (unwrap~pointer num_versions)))
         (~f ~versions ~num_versions)))))
 (export cairo_svg_get_versions)
 
 ;; const char *cairo_svg_version_to_string(cairo_svg_version_t version);
-(if echo-decls (display "cairo_svg_version_to_string\n"))
 (define cairo_svg_version_to_string
-  (let ((~f (ffi:pointer->procedure
-              '*
-              (dynamic-func
-                "cairo_svg_version_to_string"
-                (dynamic-link))
-              (list ffi:int))))
+  (let ((~f #f))
     (lambda (version)
+      (when (not ~f)
+            (set! ~f
+              (fh-link-proc
+                "cairo_svg_version_to_string"
+                '*
+                (list ffi:int))))
       (let ((~version (unwrap~fixed version)))
         (~f ~version)))))
 (export cairo_svg_version_to_string)
@@ -6616,32 +6612,16 @@
         (else (error "type mismatch"))))
 
 (define cairo-types
-  '("cairo_svg_version_t" "cairo_pdf_version_t" "cairo_region_overlap_t" 
-    "cairo_region_t" "cairo_filter_t" "cairo_extend_t" "cairo_pattern_type_t" 
-    "cairo_raster_source_finish_func_t" "cairo_raster_source_copy_func_t" 
-    "cairo_raster_source_snapshot_func_t" "cairo_raster_source_release_func_t"
-    "cairo_raster_source_acquire_func_t" "cairo_surface_type_t" 
-    "cairo_surface_observer_callback_t" "cairo_surface_observer_mode_t" 
-    "cairo_device_type_t" (struct . "cairo_path") "cairo_path_t" 
-    "cairo_path_data_t" "cairo_path_data_type_t" 
-    "cairo_user_scaled_font_unicode_to_glyph_func_t" 
-    "cairo_user_scaled_font_text_to_glyphs_func_t" 
-    "cairo_user_scaled_font_render_glyph_func_t" 
-    "cairo_user_scaled_font_init_func_t" "cairo_font_type_t" 
-    "cairo_font_options_t" "cairo_hint_metrics_t" "cairo_hint_style_t" 
-    "cairo_subpixel_order_t" "cairo_font_weight_t" "cairo_font_slant_t" 
-    "cairo_font_extents_t" "cairo_text_extents_t" "cairo_text_cluster_flags_t"
-    "cairo_text_cluster_t" "cairo_glyph_t" "cairo_font_face_t" 
-    "cairo_scaled_font_t" (struct . "_cairo_rectangle_list") 
-    "cairo_rectangle_list_t" (struct . "_cairo_rectangle") "cairo_rectangle_t"
-    "cairo_line_join_t" "cairo_line_cap_t" "cairo_fill_rule_t" 
-    "cairo_antialias_t" "cairo_operator_t" (struct . "_cairo_rectangle_int") 
-    "cairo_rectangle_int_t" "cairo_read_func_t" "cairo_write_func_t" 
-    "cairo_format_t" "cairo_content_t" "cairo_status_t" (struct . 
-    "_cairo_user_data_key") "cairo_user_data_key_t" "cairo_destroy_func_t" 
-    "cairo_pattern_t" (struct . "_cairo_matrix") "cairo_matrix_t" 
-    "cairo_device_t" "cairo_surface_t" "cairo_t" "cairo_bool_t"))
-;;(export cairo-types)
+  '("cairo_t" "cairo_surface_t" "cairo_device_t" (struct . "_cairo_matrix") 
+    "cairo_matrix_t" "cairo_pattern_t" (struct . "_cairo_user_data_key") 
+    "cairo_user_data_key_t" (struct . "_cairo_rectangle_int") 
+    "cairo_rectangle_int_t" (struct . "_cairo_rectangle") "cairo_rectangle_t" 
+    (struct . "_cairo_rectangle_list") "cairo_rectangle_list_t" 
+    "cairo_scaled_font_t" "cairo_font_face_t" "cairo_glyph_t" 
+    "cairo_text_cluster_t" "cairo_text_extents_t" "cairo_font_extents_t" 
+    "cairo_font_options_t" (union . "_cairo_path_data_t") "cairo_path_data_t" 
+    (struct . "cairo_path") "cairo_path_t" "cairo_region_t"))
+;;(export cairotypes)
 
 (define (make-cairo-unit-matrix)
   (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))

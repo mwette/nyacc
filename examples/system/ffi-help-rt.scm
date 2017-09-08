@@ -21,6 +21,7 @@
 	    unwrap~fixed unwrap~float unwrap~pointer unwrap~array
 	    make-ftn-arg-unwrapper
 	    wrap-void*
+	    fh-link-proc
 	    ;; debugging
 	    fht-unwrap
 	    fht-pointer-to
@@ -352,5 +353,11 @@
 
 (define (wrap-void* raw)
   (ffi:make-pointer raw))
+
+;; @deffn {Procedure} fh-link-proc name return args
+;; link from loaded libraries
+;; @end deffn
+(define (fh-link-proc name return args)
+  (ffi:pointer->procedure return (dynamic-func name (dynamic-link)) args))
 
 ;; --- last line ---

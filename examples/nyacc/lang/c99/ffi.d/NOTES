@@ -1,6 +1,6 @@
-Missing:
+MISSING:
 1) Guile does not have some types.  Need the following:
-   long long, unsigned long long, intptr_t, uintptr_t
+   long long, unsigned long long, intptr_t, uintptr_t, long double (glib)
 2) Guile does not handle varargs ffi.  I have thoughts on this.
 3) bytestructures does not support function declarations.
 4) arrays as function args done yet?
@@ -10,10 +10,14 @@ BROKEN:
                            vs  (bs:struct `((name (bs:pointer uint8))))
 2) use of @193 instead of arg-0 for args			  
 
-Todo:
+TODO:
 1) find clean way to deal with char being byte and int
 2) move enum comments to ffi.scm comments (currently removed)
 3) recheck (pointer-to x) <=> (object-at y)
+
+NOTES:
+1) need to memoize dynamic-func calls because some functions appear in
+   headers but not in the libraries (obsolete, debugging?)
 
 To compile a cairo.ffi file execute the following shell command:
   $ guild compile-ffi cairo.ffi
@@ -23,6 +27,9 @@ gdbm.ffi		working ?
 libgit2.ffi		working 
 librsvg.ffi		working
 sqlite3.ffi		working
+glib.ffi		long double, varargs
+gobject.ffi		???
+gio.ffi			???
 
 IN WORK:
 rsvg.ffi		to devel/debug #:use-ffi-module (gio gio) etc

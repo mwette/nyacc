@@ -68,8 +68,8 @@
 	    ;; munging
 	    expand-typerefs
 	    stripdown
-	    udecl->mspec udecl->mspec/comm
 	    udecl-rem-type-qual specl-rem-type-qual
+	    udecl->mspec udecl->mspec/comm mspec->udecl
 
 	    unwrap-decl
 	    canize-enum-def-list
@@ -149,6 +149,30 @@
      (else #f))))
 (define (pointer-declr? declr)
   ;;(sferr "pointer-declr? ~S\n" declr)
+  (sxml-match declr
+    (#f #f)
+    ((init-declr ,declr) (pointer-declr? declr))
+    ((comp-declr ,declr) (pointer-declr? declr))
+    ((param-declr ,declr) (pointer-declr? declr))
+    ;;
+    ((ptr-declr ,pointer ,dir-declr) #t)
+    ((array-of . ,rest) #t)
+    ((ftn-declr . ,rest) #t)
+    ((abs-declr (pointer . ,r1) . ,r2) #t)
+    ;;
+    ((init-declr-list ,declrs ...)
+     (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+    ((comp-declr-list ,declrs ...)
+     (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+    ;;
+    (,otherwise #f)))
+;; @deffn {Procedure} pointer-stor-declr? declr => #t|#f
+;; @deffnx {Procedure} pointer-pass-declr? declr => #t|#f
+;; This predicate determines if the declarator is implemented as a pointer.
+;; That is, it is an explicit pointer, an array (ERROR), or a function.
+;; @end deffn
+;;(define (pointer-stor-declr? declr)
+(define (pointer-pass-declr? declr)
   (sxml-match declr
     (#f #f)
     ((init-declr ,declr) (pointer-declr? declr))
@@ -802,17 +826,14 @@
 	 (name (sx-ref tspec 1)))	; e.g., "foo_t"
     (case class
       ((typename)
-       (when #f ;;(string=? name "sqlite3_vfs")
-	 (sferr "\n")
-	 (pperr specl) (pperr declr)
-	 (sferr "pointer-declr => ~S\n" (pointer-declr? declr))
-	 ;;(error "stopping")
-	 )
        (cond
 	((member name keep)		; keeper; don't expand
 	 (values specl declr))
-	((pointer-declr? declr)		; pointer, replace with void*
-	 (values (replace-type-spec specl '(type-spec (void))) declr))
+	#;((pointer-declr? name)		; replace with void*
+	 (let ((specl (replace-type-spec specl '(type-spec (void)))))
+	   (call-with-values
+	       (lambda () (splice-typename specl declr name udict)))
+	   (lambda (specl declr) (re-expand specl declr))))
 	(else				; expand
 	 (call-with-values
 	     (lambda () (splice-typename specl declr name udict))
@@ -1046,6 +1067,9 @@
 		 (split-adecl adecl))
 		((repl-specl repl-declr)
 		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
+    ;;(sferr "orig-specl, orig-declr, repl-specl, repl-declr\n")
+    ;;(pperr orig-specl) (pperr orig-declr)
+    ;;(pperr repl-specl) (pperr repl-declr)
     (let ((repl-declr (fix-declr repl-declr)))
       (if (and (eq? orig-specl repl-specl)
 	       (eq? orig-declr repl-declr))
@@ -1455,6 +1479,35 @@
   (let* ((comm (or (and=> (sx-ref decl 3) cadr) def-comm))
 	 (spec (udecl->mspec decl)))
     (cons* (car spec) comm (cdr spec))))
+
+
+;; @deffn {Procedure} mspec->udecl mspec xxx
+;; needed for xxx
+;; @end deffn
+(define* (mspec->udecl mspec)
+
+  (define (make-udecl types declr)
+    `(udecl (decl-spec-list (type-spec ,types)) (init-declr ,declr)))
+
+  (define (doit declr mspec-tail)
+    (pmatch mspec-tail
+      (((fixed-type ,name)) (make-udecl (car mspec-tail) declr))
+      (((float-type ,name)) (make-udecl (car mspec-tail) declr))
+      (((typename ,name)) (make-udecl (car mspec-tail) declr))
+      (((void)) (make-udecl (car mspec-tail) declr))
+      
+      (((pointer-to) . ,rest)
+       (doit `(ptr-declr (pointer) ,declr) rest))
+       
+      (,otherwise
+       (sferr "util2/mspec->udecl missed:\n")
+       (pperr otherwise)
+       (error "util2/mspec->udecl failed")
+       #f)))
+
+  (let ((name (car mspec))
+	(rest (cdr mspec)))
+    (doit `(ident ,name) rest)))
 
 ;; === deprecated ====================
 

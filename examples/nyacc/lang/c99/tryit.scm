@@ -92,18 +92,16 @@
 (define adecl #f)
 (let* ((code "struct foo { int x, y; } *a, b;\n") (indx 1)
        (code (string-append
-	      "typedef struct foo foo_t;\n"
-	      "struct foo {\n"
-	      "int (*bar)(foo_t*);"
-	      "} x;\n"
-	      "int baz(foo_t*);"
+	      "typedef int *foo_t;\n"
+	      "typedef double hmm_t[3];\n"
+	      "int baz(foo_t (*baz)(hmm_t y));\n"
 	      ))
-       (code (string-append
-	      "struct foo {\n"
-	      "int x[3+2];\n"
-	      "int y: 2;\n"
-	      "int z: 3;\n"
-	      "} a;\n"
+       (xcode (string-append
+	      "typedef struct { int x; } foo_t;\n"
+	      "foo_t *y;\n"
+	      ;; expand as
+	      ;; 1) struct struct__foo_t *y;
+	      ;; 2) void *y;
 	      ))
        (indx 2)
        (tree (parse-string code))
@@ -112,20 +110,14 @@
        
        (udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
-       (udecl (udict-ref udict "a"))
-       (flds (sx-ref* udecl 1 1 1 2))
-       (flds (fold-right unitize-decl '() (sx-tail flds 1)))
-       (x-spec (udecl->mspec (cdr (list-ref flds 0))))
-       (y-spec (udecl->mspec (cdr (list-ref flds 1))))
+       (udecl (udict-ref udict "baz"))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
-       ;;(xdecl (expand-typerefs decl udict))
+       (xdecl (expand-typerefs udecl udict))
        )
   ;;(display code)
-  ;;(ppsx udecl)
-  (ppsx flds)
+  (pp99 udecl)
   (display "==\n")
-  (ppsx x-spec)
-  (ppsx y-spec)
+  (pp99 xdecl)
   ;;(ppsx mspec)
   ;;(ppsx (expand-typerefs udecl udict '("foo_t")))
   ;;(ppsx ddict)

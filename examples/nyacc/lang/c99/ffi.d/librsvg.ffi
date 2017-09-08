@@ -1,8 +1,8 @@
 ;; librsvg.ffi				-*- Scheme -*-
 
 (define-ffi-module (librsvg)
+  #:use-ffi-module (gobject)
   #:pkg-config "librsvg-2.0"
-  ;;#:include '("librsvg/rsvg.h" "librsvg/rsvg-cairo.h")
   #:include '("librsvg/rsvg.h")
   )
 

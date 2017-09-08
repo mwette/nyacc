@@ -1,3 +1,8 @@
+2017-09-04  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util2.scm (expand-specl-typerefs): fixed c99-06 test 1:
+	was => int (*baz)(..., now => int *(*bar)(...
+
 2017-08-31  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* cpp.scm (cpp-define): major bug: was using drain-input when I

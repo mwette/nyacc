@@ -1,6 +1,7 @@
-;; gio/gio.ffi				-*- Scheme -*-
+;; gio.ffi				-*- Scheme -*-
 
-(define-ffi-module (gio gio)
+(define-ffi-module (gio)
+  #:use-ffi-module (glib)
   #:pkg-config "gio-2.0"
   #:include '("gio/gio.h")
   #:inc-filter (lambda (f p) (string-contains p "gio/" 0))
