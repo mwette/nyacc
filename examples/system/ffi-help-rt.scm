@@ -347,6 +347,7 @@
 (define (unwrap~pointer obj)
   (cond
    ((ffi:pointer? obj) obj)
+   ((string? obj) (string->pointer obj))
    ((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
    ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
    (else (error "expecting pointer type"))))

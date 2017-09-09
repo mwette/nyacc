@@ -4,6 +4,7 @@ MISSING:
 2) Guile does not handle varargs ffi.  I have thoughts on this.
 3) bytestructures does not support function declarations.
 4) arrays as function args done yet?
+5) patterns for in/out semantics; see http://www.swig.org/article_cpp.html
 
 BROKEN:
 1) struct { char *name; }  =>  (bs:struct `((name (bs:pointer int))))

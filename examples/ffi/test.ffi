@@ -1,4 +1,0 @@
-(define-ffi-module (test)
-  #:pkg-config "glib-2.0"
-  #:include '("gio/gio.h")
-  )

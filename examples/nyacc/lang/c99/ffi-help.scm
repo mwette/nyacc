@@ -827,34 +827,15 @@
 
 ;; === externs ========================
 
-;; works
-(define (OLD-cnvt-extern name ms-tail)
-  (let* ((desc (mtail->bs-desc ms-tail))
-	 (desc-name (string->symbol (string-append name "-desc")))
-	 (code `(define ,(string->symbol name)
-		  (let* ((addr #f) (bs* #f))
-		    (case-lambda
-		     (()
-		      (when (not addr)
-			(set! addr (dynamic-pointer ,name (dynamic-link)))
-			(set! bs* (make-bytestructure
-				   (ffi:pointer->bytevector
-				    addr (ffi:sizeof '*)) 0
-				    (bs:pointer ,desc))))
-		      (bytestructure-ref bs* '*))
-		     ;;((val) (bytestructure-set! bs* '*))
-		     )))))
-    (ppscm code)
-    (sfscm "(export ~A)\n" name)))
 (define (cnvt-extern name ms-tail)
   (let* ((desc (mtail->bs-desc ms-tail))
 	 (desc-name (string->symbol (string-append name "-desc")))
 	 (code `(define ,(string->symbol name)
-		  (let* ((bs* #f)
-			 (memoize-bs*
+		  (let* ((addr #f)
+			 (memoize-addr
 			  (lambda ()
-			    (when (not addr)
-			      (set! bs*
+			    (unless addr
+			      (set! addr
 				    (make-bytestructure
 				     (ffi:pointer->bytevector
 				      (dynamic-pointer ,name (dynamic-link))
@@ -862,9 +843,9 @@
 				      (bs:pointer ,desc)))))))
 		    (case-lambda
 		     (()
-		      (memoize-bs*)
-		      (bytestructure-ref bs* '*))
-		     ;;((val) (bytestructure-set! bs* '*))
+		      (memoize-addr)
+		      (bytestructure-ref addr '*))
+		     ;;((val) (bytestructure-set! addr '*))
 		     )))))
     (ppscm code)
     (sfscm "(export ~A)\n" name)))
@@ -910,6 +891,25 @@
     (lambda (udecl)
       (and=> (find-proc udecl) car))))
 
+
+;; assume unit-declarator
+(define (cleanup-udecl specl declr)
+  (let* ((fctn? (pair? ((sxpath '(// ftn-declr)) declr)))
+	 (specl (remove (lambda (node)
+			  (or (equal? node '(stor-spec (auto)))
+			      (equal? node '(stor-spec (register)))
+			      (equal? node '(stor-spec (static)))
+			      (and (pair? node)
+				   (equal? (car node) 'type-qual))
+			      ))
+			specl))
+	 (specl (if fctn?
+		    (remove (lambda (node)
+			      (equal? node '(stor-spec (extern)))) specl)
+		    specl))
+	 )
+    (values specl declr)))
+
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
 ;; Return updated (string based) keep-list, which will be modified if the
@@ -931,13 +931,13 @@
   (*defined* defined)
 
   (let*-values (((tag attr specl declr tail) (split-adecl udecl))
-		;; strip "extern" "const" etc:
-		((specl) (values (specl-rem-type-qual specl))))
+		((specl declr) (cleanup-udecl specl declr))
+		)
     ;;(pperr specl)
     ;; todo: sanitize udecl:
     ;; 1) remove comments
     ;; 2) keep attributes!
-    (sxml-match (sx-list tag attr specl declr)
+    (sxml-match (sx-list tag #f specl declr)
 
       ;; typedef void *ptr_t;
       ((udecl
@@ -1334,20 +1334,29 @@
       ((udecl ,specl
 	      (init-declr
 	       (ptr-declr
-		(pointer) (ftn-declr (ident ,name) (param-list . ,params)))))
+		(pointer . ,rest)
+		(ftn-declr (ident ,name) (param-list . ,params)))))
        (cnvt-fctn name (ptr-decl specl) (fix-params params))
        (values wrapped defined))
 
       ;; function returning non-pointer value
+      ;; TODO: parse ident part and process separately
       ((udecl ,specl
 	      (init-declr
 	       (ftn-declr (ident ,name) (param-list . ,params))))
-       (when #f ;; specifier and declarator on separate lines
-	 (c99scm specl)
-	 (sfscm "\n")
-	 (c99scm (caddr udecl))
-	 (sfscm "\n"))
        (cnvt-fctn name (non-ptr-decl specl) (fix-params params))
+       (values wrapped defined))
+      ((udecl ,specl
+	      (init-declr
+	       (ftn-declr (scope (ident ,name)) (param-list . ,params))))
+       (cnvt-fctn name (non-ptr-decl specl) (fix-params params))
+       (values wrapped defined))
+      ((udecl ,specl
+	      (init-declr
+	       (ftn-declr (scope (ptr-declr (pointer . ,rest)
+					    (ident ,name)))
+			  (param-list . ,params))))
+       (cnvt-fctn name (ptr-decl specl) (fix-params params))
        (values wrapped defined))
 
       ;; === external variables =========
@@ -1373,6 +1382,9 @@
       (,otherwise
        (sferr "see below:\n")
        (pperr udecl)
+       (sferr "-\n")
+       (pperr `(udecl ,specl ,declr))
+       (error "cnvt-udecl")
        (fherr "cnvt-udecl missed --^")
        (values wrapped defined)))))
 
@@ -1470,7 +1482,7 @@
 ;; === main converter ================
 
 (define (derive-dirpath sfile mbase)
-  (if (not sfile) "."
+  (if (not sfile) "./"
       (let* ((sbase (string-drop-right sfile 4))
 	     (sfxln (string-suffix-length sbase mbase))
 	     (sblen (string-length sbase)))

@@ -1,6 +1,7 @@
 *~
 ,*
 *.new
+*.go
 .DS_Store
 lang.txt
 lang.zip

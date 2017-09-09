@@ -1,0 +1,28 @@
+# ffi/Makefile.nyacc
+
+GUILE = guile
+GUILD = guild
+
+FFI_FILES = \
+	ffi/cairo.ffi ffi/gdbm.ffi \
+	ffi/sqlite3.ffi \
+	ffi/glib.ffi ffi/gobject.ffi ffi/gio.ffi ffi/librsvg.ffi \
+	ffi/libgit2.ffi
+
+FFI_GO_FILES = $(FFI_FILES:.ffi=.go)
+
+.INTERMEDIATE: ffi/%.scm %.scm
+
+%.scm: %.ffi
+	guild compile-ffi $< 
+
+%.go: %.scm
+	guild compile -o $@ $<
+
+all: $(FFI_GO_FILES)
+
+ffi/gobject.scm: ffi/glib.scm
+ffi/gio.scm: ffi/glib.scm
+ffi/librsvg.scm: ffi/gobject.scm
+
+# --- last line ---
