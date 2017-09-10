@@ -194,7 +194,7 @@
 	       (make-fht (quote type) unwrap #f #f
 			 (make-bs*-printer (quote type))))
 	     (define (wrap val) ;; pointer returned from code
-	       (make (bytestructure type val)))
+	       (make (bytestructure desc (ffi:pointer-address val))))
 	     (export make type? unwrap type wrap)
 	     )))
 	     
@@ -353,7 +353,7 @@
 (define (unwrap~pointer obj)
   (cond
    ((ffi:pointer? obj) obj)
-   ((string? obj) (string->pointer obj))
+   ((string? obj) (ffi:string->pointer obj))
    ((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
    ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
    (else (error "expecting pointer type"))))

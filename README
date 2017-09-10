@@ -1,4 +1,4 @@
-This is version 0.82.0 of NYACC (Not Yet Another Compiler Compiler!).
+This is version 0.82.0+c99dev of NYACC (Not Yet Another Compiler Compiler!).
 
 Copyright (C) 2015-2017 Matthew R. Wette
 
@@ -29,3 +29,6 @@ The module code is in module/nyacc.  Modules are imported as follows:
 
 The syntax and nomenclature should be considered not stable.
 
+The experimental FFI Helper feature requries the bytestructures 
+package from:
+  https://github.com/TaylanUB/scheme-bytestructures

@@ -19,6 +19,8 @@
 ;; bytestructure->descriptor->ffi-descriptor
 ;; bs:pointer->proc
 
+;; For enum typedefs we are not creating types but just using wrappers.
+
 (define-module (nyacc lang c99 ffi-help)
   #:export (*ffi-help-version*
 	    define-ffi-module
@@ -747,7 +749,9 @@
 (define (gen-exec-params params)
   (fold-right
    (lambda (param-decl seed)
-     (let* ((param-decl (expand-typerefs param-decl (*udict*) (*defined*)))
+     ;; Changed to (*wrapped*) to include enum types.  If we need (*defined*)
+     ;; then we will need to create enum types in cnvt-udecl typedefs.
+     (let* ((param-decl (expand-typerefs param-decl (*udict*) (*wrapped*)))
 	    (param-decl (udecl-rem-type-qual param-decl)) ;; ???
 	    (mspec (udecl->mspec param-decl)))
        (acons (car mspec) (mspec->fh-unwrapper mspec) seed)))
@@ -792,33 +796,18 @@
 ;; specl is decl-spec-list tree
 ;; params is list of param-decl trees (i.e., cdr of param-list tree)
 ;; @end deffn
-(define (OLD-cnvt-fctn name rdecl params)
-  #;(when (string=? name "gdbm_store") (sfout "cnvt-fctn\n") (ppout params))
-  (let* ((decl-return (gen-decl-return rdecl))
-	 (decl-params (gen-decl-params params))
-	 (exec-return (gen-exec-return-wrapper rdecl))
-	 (exec-params (gen-exec-params params)))
-    (when #f
-      (sfout "cnvt-fctn\n") (ppout params)
-      (ppout decl-params) (ppout exec-params))
-    (ppscm
-     `(define ,(string->symbol name)
-	(let ((~f #f))
-	  (lambda ,(gen-exec-arg-names exec-params)
-	    (unless ~f
-	      (set! ~f (fh-link-proc
-			,name ,decl-return (list ,@decl-params))))
-	    (let ,(gen-exec-unwrappers exec-params)
-	      ,(if exec-return
-		   `(,exec-return (~f ,@(gen-exec-call-args exec-params)))
-		   `(~f ,@(gen-exec-call-args exec-params))))))))
-    (sfscm "(export ~A)\n" name)))
 (define (cnvt-fctn name rdecl params)
   (let* ((decl-return (gen-decl-return rdecl))
 	 (decl-params (gen-decl-params params))
 	 (exec-return (gen-exec-return-wrapper rdecl))
 	 (exec-params (gen-exec-params params))
 	 (_name (string->symbol (string-append "~" name))))
+    (when #f ;;(string=? name "cairo_image_surface_create")
+      (ppout (*wrapped*))
+      (sfout "cnvt-fctn\n") (ppout params)
+      (ppout decl-params) (ppout exec-params)
+      (error "x")
+      )
     (sfscm "(define ~A #f)\n" _name)
     (ppscm
      `(define (,(string->symbol name) ,@(gen-exec-arg-names exec-params))
