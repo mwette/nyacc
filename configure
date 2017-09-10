@@ -107,5 +107,6 @@ sed -e "s|@guile@|$GUILE|" \
     -e "s|@site_scm_go_dir@|$SITE_SCM_GO_DIR|" \
     -e "s|@infodir@|$INFODIR|" \
     < Makefile.in > Makefile
+sleep 1
 
 # --- last line ---

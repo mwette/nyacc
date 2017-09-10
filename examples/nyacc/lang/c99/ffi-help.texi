@@ -211,7 +211,7 @@ Another decl-filter, useful for debugging.
                    
 @section The Guile Foreign Function Interface
 
-@subections Function Calls
+@subsection Function Calls
 
 There are two parts to calling functions.  The first is to declare a
 function from the C-function address, the C-function argument types

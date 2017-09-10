@@ -1,4 +1,4 @@
-;;; scripts/compile-ffi.scm --- command-line FFI-helper compiler for Guile
+;;; scripts/compile-ffi.scm --- NYACC's command-line FFI compiler
 
 ;; Copyright (C) 2017 Matthew R. Wette
 ;;
@@ -99,9 +99,19 @@ Compile each Guile source file FILE into a Guile object.
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n")
           (exit 0)))
 
-    (compile-ffi-file file options)
-    ))
+    (catch 'ffi-help-error
+      (lambda ()
+	(compile-ffi-file file options))
+      (lambda (key fmt . args)
+	(apply simple-format (current-error-port)
+	       (string-append "*** compile-ffi: " fmt "\n") args)
+	(exit 1)))
+    (exit 0)))
 
 (define main compile-ffi)
+
+;;; Todo:
+
+;; 1) remove output file on error? => generate default output file here
 
 ;; --- last line ---

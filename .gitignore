@@ -2,8 +2,9 @@
 ,*
 *.new
 *.go
-.DS_Store
 lang.txt
 lang.zip
 gram.y
 Makefile
+examples/ffi/*.scm
+.DS_Store

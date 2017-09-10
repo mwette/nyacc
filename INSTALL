@@ -7,6 +7,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+
 To configure:
   $ ./configure
 or
@@ -20,5 +21,10 @@ To install only sources in /path/to/dest:
   $ make install-srcs
 
 You must specify site_scm_go_dir to avoid use of `guile'.
+
+
+If you want to install the experiental FFI Helper files:
+  $ make install-ffi-help
+(See `info ffi-help'.  Compiling can take some time.)
 
 The file HACKING has hints for modifying and trying code.

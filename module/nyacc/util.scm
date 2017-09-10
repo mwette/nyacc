@@ -179,33 +179,33 @@
 	    (display str port)
 	    (+ col len)))))))
 
-  (letrec ((out-p (or port (current-output-port)))
-	   (leader (make-string 2 #\space))
-	   (strout (make-strout indent extent out-p))
+  (letrec* ((out-p (or port (current-output-port)))
+	    (leader (make-string 2 #\space))
+	    (strout (make-strout indent extent out-p))
 
-	   (iter1
-	    (lambda (col sx)
-	      (cond
-	       ((pair? sx) (strout (iter2 (strout col "(") sx) ")"))
-	       ((vector? sx)
-		(strout
-		 (vector-fold
-		  (lambda (ix col elt)
-		    (iter1 (if (zero? ix) col (strout col " ")) elt))
-		  (strout col "#(") sx) ")"))
-	       ((null? sx) (strout col "'()"))
-	       (else (strout col (obj->str sx))))))
-	   
-	   (iter2
-	    (lambda (col sx)
-	      (cond
-	       ((pair? sx)
-		(if (null? (cdr sx))
-		    (iter2 (iter1 col (car sx)) (cdr sx))
-		    (iter2 (strout (iter1 col (car sx)) " ") (cdr sx))))
-	       ((null? sx) col)
-	       (else (strout (strout col ". ") (obj->str sx))))))
-	   )
+	    (iter1
+	     (lambda (col sx)
+	       (cond
+		((pair? sx) (strout (iter2 (strout col "(") sx) ")"))
+		((vector? sx)
+		 (strout
+		  (vector-fold
+		   (lambda (ix col elt)
+		     (iter1 (if (zero? ix) col (strout col " ")) elt))
+		   (strout col "#(") sx) ")"))
+		((null? sx) (strout col "'()"))
+		(else (strout col (obj->str sx))))))
+	    
+	    (iter2
+	     (lambda (col sx)
+	       (cond
+		((pair? sx)
+		 (if (null? (cdr sx))
+		     (iter2 (iter1 col (car sx)) (cdr sx))
+		     (iter2 (strout (iter1 col (car sx)) " ") (cdr sx))))
+		((null? sx) col)
+		(else (strout (strout col ". ") (obj->str sx))))))
+	    )
     ;;(simple-format out-p leader)
     (iter1 (if (pair? sexp) (strout indent "'") indent) sexp)
     ;;(iter1 indent sexp)

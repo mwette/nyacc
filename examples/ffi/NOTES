@@ -15,6 +15,7 @@ TODO:
 1) find clean way to deal with char being byte and int
 2) move enum comments to ffi.scm comments (currently removed)
 3) recheck (pointer-to x) <=> (object-at y)
+4) check handling of char as int and int8
 
 NOTES:
 1) need to memoize dynamic-func calls because some functions appear in

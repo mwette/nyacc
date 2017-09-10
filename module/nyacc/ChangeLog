@@ -1,3 +1,9 @@
+2017-09-10  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util.scm (ugly-print): changed letrec to letrec*.  Not sure why
+	this has been working forever and broke in install context.  Seems
+	to work now.
+
 2017-08-20  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (make-comm-reader): added option to remove prefix

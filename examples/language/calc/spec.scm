@@ -1,4 +1,4 @@
-;;; nyacc/lang/calc/spec.scm
+;;; nyacc/lang/calc/spec.scm - NYACC's calculator demo
 ;;;
 ;;; Copyright (C) 2015 Matthew R. Wette
 ;;;

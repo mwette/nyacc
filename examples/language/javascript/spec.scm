@@ -1,4 +1,4 @@
-;;; javascript specification for Guile
+;;; NYACC's javascript specification for Guile
 ;;;
 ;;; Copyright (C) 2015,2017 Matthew R. Wette
 ;;;

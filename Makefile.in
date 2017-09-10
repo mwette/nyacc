@@ -17,22 +17,31 @@ all:
 
 .PHONY: install
 install:
-	(cd module; \
+	@(cd module; \
 	 make -f Makefile.nyacc GUILE=$(GUILE) \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
 		 install)
-	(cd doc/nyacc; \
+	@(cd doc/nyacc; \
 	 make -f Makefile.nyacc GUILE=$(GUILE) \
 		 INFODIR=$(INFODIR) \
 		 install)
 
 .PHONY: install-srcs
 install-srcs:
-	(cd module; \
+	@(cd module; \
 	 make -f Makefile.nyacc \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 install-srcs)
+
+.PHONY: install-ffi-help
+install-ffi-help:
+	@(cd examples; \
+	 make -f Makefile.nyacc \
+		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
+		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
+		 INFODIR=$(INFODIR) \
+		 install-ffi-help)
 
 .PHONY: dist-files
 dist-files:

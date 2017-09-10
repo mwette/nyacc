@@ -45,3 +45,7 @@ After sourcing env.sh as above, do
   ...
 
 
+=== Hacking on the FFI Helper ====
+  $ cd examples
+  $ guild compile-ffi ffi/cairo.ffi
+

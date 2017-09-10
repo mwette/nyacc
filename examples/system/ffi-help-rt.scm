@@ -1,4 +1,4 @@
-;;; example/system/ffi-help-rt.scm
+;;; example/system/ffi-help-rt.scm - NYACC's FFI help runtime
 ;;;
 ;;; Copyright (C) 2016-2017 Matthew R. Wette
 ;;;
@@ -12,28 +12,34 @@
   #:export (fh-type?
 	    fh-object?
 	    define-fh-compound-type define-fh-compound-type/p
-	    ;;define-fh-compound-type/pp
 	    define-fh-pointer-type
+	    ref<->deref!
 	    define-fh-enum
 	    define-fh-function define-fh-function/p
-	    ref<->deref!
 	    pointer-to
-	    unwrap~fixed unwrap~float unwrap~pointer unwrap~array
+	    unwrap~fixed unwrap~float
+	    unwrap~pointer unwrap~array
 	    make-ftn-arg-unwrapper
-	    wrap-void*
 	    fh-link-proc
+	    void*
+	    
 	    ;; debugging
 	    fht-unwrap
 	    fht-pointer-to
 	    fht-points-to
 	    bs-data-address
 	    bs-make-printer
+	    ;; deprecated
+	    wrap-void*
 	    )
   #:use-module (bytestructures guile)
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:version (0 10 0)
   )
+
+;; All other types are var's, so we need one for '* to avoid special cases.
+(define void* '*)
 
 ;; ffi-helper base type (aka class) with fields
 ;; 0 unwrap
@@ -351,6 +357,9 @@
    ((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
    ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
    (else (error "expecting pointer type"))))
+
+
+;; === deprecated ===================
 
 (define (wrap-void* raw)
   (ffi:make-pointer raw))
