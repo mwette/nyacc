@@ -75,18 +75,20 @@
        "__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
-       "__has_include=(X)__has_include__(X)"
+       "__has_include(X)=__has_include__(X)"
        "__extension__="
        )
       ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
       ))
    (else
     '(("__builtin"
-       "__builtin_va_list=void*" "__attribute__(X)="
+       "__builtin_va_list=void*"
+       "__attribute__(X)="
        "__inline=" "__inline__="
-       "__asm(X)=" "__asm__(X)=")
-       "__has_include=(X)__has_include__(X)"
+       "__asm(X)=" "__asm__(X)="
+       "__has_include(X)=__has_include__(X)"
        "__extension__="
+       )
       ))))
 (define fh-cpp-defs
   (cond
