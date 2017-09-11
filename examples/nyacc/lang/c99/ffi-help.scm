@@ -188,29 +188,35 @@
 (define (pkg-config-incs name)
   (fold-right
    (lambda (s l)
-     (if (string=? "-I" (substring/shared s 0 2))
-	 (cons (substring/shared s 2) l)
-	 l))
+     (cond 
+      ((< (string-length s) 3) l)
+      ((string=? "-I" (substring/shared s 0 2))
+       (cons (substring/shared s 2) l))
+      (else l)))
    '()
    (pkg-config name "--cflags")))
 
 (define (pkg-config-defs name)
   (fold-right
    (lambda (s l)
-       (if (string=? "-D" (substring/shared s 0 2))
-	   (cons (substring/shared s 2) l)
-	   l))
-     '()
-     (pkg-config name "--cflags")))
+     (cond 
+      ((< (string-length s) 3) l)
+      ((string=? "-D" (substring/shared s 0 2))
+       (cons (substring/shared s 2) l))
+      (else l)))
+   '()
+   (pkg-config name "--cflags")))
 
 (define (pkg-config-libs name)
-    (fold-right
-     (lambda (s l)
-       (if (string=? "-l" (substring/shared s 0 2))
-	   (cons (string-append "lib" (substring/shared s 2)) l)
-	   l))
-     '()
-     (pkg-config name "--libs")))
+  (fold-right
+   (lambda (s l)
+     (cond 
+      ((< (string-length s) 3) l)
+      ((string=? "-l" (substring/shared s 0 2))
+       (cons (string-append "lib" (substring/shared s 2)) l))
+      (else l)))
+   '()
+   (pkg-config name "--libs")))
 
 (define (resolve-attr-val val)
   (let* ((val (if (procedure? val) (val) val)))
