@@ -82,8 +82,7 @@
       ))
    (else
     '(("__builtin"
-       "__builtin_va_list=void*"
-       "__attribute__(X)="
+       "__builtin_va_list=void*" "__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
@@ -810,12 +809,6 @@
 	 (exec-return (gen-exec-return-wrapper rdecl))
 	 (exec-params (gen-exec-params params))
 	 (_name (string->symbol (string-append "~" name))))
-    (when #f ;;(string=? name "cairo_image_surface_create")
-      (ppout (*wrapped*))
-      (sfout "cnvt-fctn\n") (ppout params)
-      (ppout decl-params) (ppout exec-params)
-      (error "x")
-      )
     (sfscm "(define ~A #f)\n" _name)
     (ppscm
      `(define (,(string->symbol name) ,@(gen-exec-arg-names exec-params))
