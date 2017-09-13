@@ -8,9 +8,14 @@
 
 ;; runtime for generated ffi-compiled dot-ffi files
 
+
+;; TODO
+;; * maybe remove bs-ref, use fh-object-val instead
+
 (define-module (system ffi-help-rt)
   #:export (fh-type?
 	    fh-object?
+	    fh-object-val
 	    define-fh-compound-type define-fh-compound-type/p
 	    define-fh-pointer-type
 	    ref<->deref!
@@ -75,6 +80,13 @@
   (and
    (struct? obj)
    (fh-type? (struct-vtable obj))))
+
+;; @deffn {Procedure} fh-object-val obj
+;; Return the value associate with the object.  This is most often
+;; (I think) a bytestructure.
+;; @deffn
+(define (fh-object-val obj)
+  (struct-ref obj 0))
 
 (define (fht-unwrap obj)
   (struct-ref obj (+ vtable-offset-user 0)))
