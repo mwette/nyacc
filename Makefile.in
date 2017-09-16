@@ -47,6 +47,7 @@ install-ffi-help:
 dist-files:
 	(cd module; make -f Makefile.nyacc dist-files)
 	(cd doc/nyacc; make -f Makefile.nyacc dist-files)
+	(cd examples; make -f Makefile.nyacc dist-files)
 
 .PHONY: check
 check:

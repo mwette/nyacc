@@ -88,6 +88,10 @@ install-fh-srcs: $(FH_SCMS) $(FH_FFIS)
 	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
 	done
 
+.PHONY: dist-files
+dist-files:
+	(cd nyacc/lang/c99; makeinfo ffi-help.texi)
+
 ffi/gobject.scm: ffi/glib.scm
 ffi/gio.scm: ffi/glib.scm
 ffi/librsvg.scm: ffi/gobject.scm

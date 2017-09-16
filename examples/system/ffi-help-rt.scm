@@ -434,12 +434,6 @@
    ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
    (else (error "expecting pointer type"))))
 
-
-;; === deprecated ===================
-
-(define (wrap-void* raw)
-  (ffi:make-pointer raw))
-
 ;; @deffn {Procedure} fh-link-proc name return args [library]
 ;; Generate Guile procedure from C library.  The argument @var{library}
 ;; results from @code{(dymamic-link "lib")}.  If @var{library} is not
@@ -448,5 +442,10 @@
 (define* (fh-link-proc name return args #:optional library)
   (ffi:pointer->procedure
    return (dynamic-func name (or library (dynamic-link))) args))
+
+;; === deprecated ===================
+
+(define (wrap-void* raw)
+  (ffi:make-pointer raw))
 
 ;; --- last line ---

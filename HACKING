@@ -47,5 +47,7 @@ After sourcing env.sh as above, do
 
 === Hacking on the FFI Helper ====
   $ cd examples
+  $ source env.sh 			# if you haven't done so previously
   $ guild compile-ffi ffi/cairo.ffi
-
+  $ cd nyacc/lang/c99/exam.d
+  $ guile demo-cairo.scm		# should generate demo-cairo.png
