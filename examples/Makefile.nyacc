@@ -22,6 +22,9 @@ FH_FFIS = \
 	ffi/glib.ffi ffi/gobject.ffi ffi/gio.ffi \
 	ffi/librsvg.ffi
 
+FH_FFIS = \
+	ffi/cairo.ffi ffi/gdbm.ffi ffi/sqlite3.ffi
+
 # -------------------------------------
 # development:
 
