@@ -1,13 +1,13 @@
 ;; generated with `guild compile-ffi ffi/cairo.ffi'
 
 (define-module (ffi cairo)
+  #:export (M_PI M_2PI make-cairo-unit-matrix)
   #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (bytestructures guile)
   )
 (dynamic-link "libcairo")
 (define void intptr_t)
-(define echo-decls #f)
 
 ;; int cairo_version(void);
 (define ~cairo_version #f)
@@ -327,14 +327,13 @@
   (let ((~cr (unwrap-cairo_t* cr))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
-        (~destroy
-          ((make-ftn-arg-unwrapper ffi:void (list void*))
-           destroy)))
-    (~cairo_set_user_data
-      ~cr
-      ~key
-      ~user_data
-      ~destroy)))
+        (~destroy (unwrap-cairo_destroy_func_t destroy)))
+    (wrap-cairo_status_t
+      (~cairo_set_user_data
+        ~cr
+        ~key
+        ~user_data
+        ~destroy))))
 (export cairo_set_user_data)
 
 ;; void cairo_save(cairo_t *cr);
@@ -387,7 +386,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~cr (unwrap-cairo_t* cr))
-        (~content (unwrap~fixed content)))
+        (~content (unwrap-cairo_content_t content)))
     (~cairo_push_group_with_content ~cr ~content)))
 (export cairo_push_group_with_content)
 
@@ -495,7 +494,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~cr (unwrap-cairo_t* cr))
-        (~op (unwrap~fixed op)))
+        (~op (unwrap-cairo_operator_t op)))
     (~cairo_set_operator ~cr ~op)))
 (export cairo_set_operator)
 
@@ -625,7 +624,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~cr (unwrap-cairo_t* cr))
-        (~antialias (unwrap~fixed antialias)))
+        (~antialias (unwrap-cairo_antialias_t antialias)))
     (~cairo_set_antialias ~cr ~antialias)))
 (export cairo_set_antialias)
 
@@ -651,7 +650,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~cr (unwrap-cairo_t* cr))
-        (~fill_rule (unwrap~fixed fill_rule)))
+        (~fill_rule (unwrap-cairo_fill_rule_t fill_rule)))
     (~cairo_set_fill_rule ~cr ~fill_rule)))
 (export cairo_set_fill_rule)
 
@@ -694,7 +693,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~cr (unwrap-cairo_t* cr))
-        (~line_cap (unwrap~fixed line_cap)))
+        (~line_cap (unwrap-cairo_line_cap_t line_cap)))
     (~cairo_set_line_cap ~cr ~line_cap)))
 (export cairo_set_line_cap)
 
@@ -722,7 +721,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~cr (unwrap-cairo_t* cr))
-        (~line_join (unwrap~fixed line_join)))
+        (~line_join (unwrap-cairo_line_join_t line_join)))
     (~cairo_set_line_join ~cr ~line_join)))
 (export cairo_set_line_join)
 
@@ -1349,7 +1348,7 @@
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
-    (~cairo_in_stroke ~cr ~x ~y)))
+    (wrap-cairo_bool_t (~cairo_in_stroke ~cr ~x ~y))))
 (export cairo_in_stroke)
 
 ;; cairo_bool_t cairo_in_fill(cairo_t *cr, double x, double y);
@@ -1365,7 +1364,7 @@
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
-    (~cairo_in_fill ~cr ~x ~y)))
+    (wrap-cairo_bool_t (~cairo_in_fill ~cr ~x ~y))))
 (export cairo_in_fill)
 
 ;; cairo_bool_t cairo_in_clip(cairo_t *cr, double x, double y);
@@ -1381,7 +1380,7 @@
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
-    (~cairo_in_clip ~cr ~x ~y)))
+    (wrap-cairo_bool_t (~cairo_in_clip ~cr ~x ~y))))
 (export cairo_in_clip)
 
 ;; void cairo_stroke_extents(cairo_t *cr, double *x1, double *y1, double *x2, 
@@ -1814,7 +1813,8 @@
         ffi:int
         (list void*))))
   (let ((~options (unwrap-cairo_font_options_t* options)))
-    (~cairo_font_options_status ~options)))
+    (wrap-cairo_status_t
+      (~cairo_font_options_status ~options))))
 (export cairo_font_options_status)
 
 ;; void cairo_font_options_merge(cairo_font_options_t *options, const 
@@ -1846,7 +1846,8 @@
         (list void* void*))))
   (let ((~options (unwrap-cairo_font_options_t* options))
         (~other (unwrap-cairo_font_options_t* other)))
-    (~cairo_font_options_equal ~options ~other)))
+    (wrap-cairo_bool_t
+      (~cairo_font_options_equal ~options ~other))))
 (export cairo_font_options_equal)
 
 ;; unsigned long cairo_font_options_hash(const cairo_font_options_t *options);
@@ -1877,7 +1878,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~options (unwrap-cairo_font_options_t* options))
-        (~antialias (unwrap~fixed antialias)))
+        (~antialias (unwrap-cairo_antialias_t antialias)))
     (~cairo_font_options_set_antialias
       ~options
       ~antialias)))
@@ -1895,7 +1896,8 @@
         ffi:int
         (list void*))))
   (let ((~options (unwrap-cairo_font_options_t* options)))
-    (~cairo_font_options_get_antialias ~options)))
+    (wrap-cairo_antialias_t
+      (~cairo_font_options_get_antialias ~options))))
 (export cairo_font_options_get_antialias)
 
 ;; void cairo_font_options_set_subpixel_order(cairo_font_options_t *options, 
@@ -1912,7 +1914,8 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~options (unwrap-cairo_font_options_t* options))
-        (~subpixel_order (unwrap~fixed subpixel_order)))
+        (~subpixel_order
+          (unwrap-cairo_subpixel_order_t subpixel_order)))
     (~cairo_font_options_set_subpixel_order
       ~options
       ~subpixel_order)))
@@ -1930,7 +1933,8 @@
         ffi:int
         (list void*))))
   (let ((~options (unwrap-cairo_font_options_t* options)))
-    (~cairo_font_options_get_subpixel_order ~options)))
+    (wrap-cairo_subpixel_order_t
+      (~cairo_font_options_get_subpixel_order ~options))))
 (export cairo_font_options_get_subpixel_order)
 
 ;; void cairo_font_options_set_hint_style(cairo_font_options_t *options, 
@@ -1947,7 +1951,8 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~options (unwrap-cairo_font_options_t* options))
-        (~hint_style (unwrap~fixed hint_style)))
+        (~hint_style
+          (unwrap-cairo_hint_style_t hint_style)))
     (~cairo_font_options_set_hint_style
       ~options
       ~hint_style)))
@@ -1965,7 +1970,8 @@
         ffi:int
         (list void*))))
   (let ((~options (unwrap-cairo_font_options_t* options)))
-    (~cairo_font_options_get_hint_style ~options)))
+    (wrap-cairo_hint_style_t
+      (~cairo_font_options_get_hint_style ~options))))
 (export cairo_font_options_get_hint_style)
 
 ;; void cairo_font_options_set_hint_metrics(cairo_font_options_t *options, 
@@ -1982,7 +1988,8 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~options (unwrap-cairo_font_options_t* options))
-        (~hint_metrics (unwrap~fixed hint_metrics)))
+        (~hint_metrics
+          (unwrap-cairo_hint_metrics_t hint_metrics)))
     (~cairo_font_options_set_hint_metrics
       ~options
       ~hint_metrics)))
@@ -2000,7 +2007,8 @@
         ffi:int
         (list void*))))
   (let ((~options (unwrap-cairo_font_options_t* options)))
-    (~cairo_font_options_get_hint_metrics ~options)))
+    (wrap-cairo_hint_metrics_t
+      (~cairo_font_options_get_hint_metrics ~options))))
 (export cairo_font_options_get_hint_metrics)
 
 ;; void cairo_select_font_face(cairo_t *cr, const char *family, 
@@ -2016,8 +2024,8 @@
         (list void* void* ffi:int ffi:int))))
   (let ((~cr (unwrap-cairo_t* cr))
         (~family (unwrap~pointer family))
-        (~slant (unwrap~fixed slant))
-        (~weight (unwrap~fixed weight)))
+        (~slant (unwrap-cairo_font_slant_t slant))
+        (~weight (unwrap-cairo_font_weight_t weight)))
     (~cairo_select_font_face
       ~cr
       ~family
@@ -2231,7 +2239,8 @@
         (~clusters
           (unwrap-cairo_text_cluster_t* clusters))
         (~num_clusters (unwrap~fixed num_clusters))
-        (~cluster_flags (unwrap~fixed cluster_flags)))
+        (~cluster_flags
+          (unwrap-cairo_text_cluster_flags_t cluster_flags)))
     (~cairo_show_text_glyphs
       ~cr
       ~utf8
@@ -2392,7 +2401,8 @@
         (list void*))))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
-    (~cairo_font_face_status ~font_face)))
+    (wrap-cairo_status_t
+      (~cairo_font_face_status ~font_face))))
 (export cairo_font_face_status)
 
 ;; typedef enum _cairo_font_type {
@@ -2424,7 +2434,8 @@
         (list void*))))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
-    (~cairo_font_face_get_type ~font_face)))
+    (wrap-cairo_font_type_t
+      (~cairo_font_face_get_type ~font_face))))
 (export cairo_font_face_get_type)
 
 ;; void *cairo_font_face_get_user_data(cairo_font_face_t *font_face, const 
@@ -2464,14 +2475,13 @@
           (unwrap-cairo_font_face_t* font_face))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
-        (~destroy
-          ((make-ftn-arg-unwrapper ffi:void (list void*))
-           destroy)))
-    (~cairo_font_face_set_user_data
-      ~font_face
-      ~key
-      ~user_data
-      ~destroy)))
+        (~destroy (unwrap-cairo_destroy_func_t destroy)))
+    (wrap-cairo_status_t
+      (~cairo_font_face_set_user_data
+        ~font_face
+        ~key
+        ~user_data
+        ~destroy))))
 (export cairo_font_face_set_user_data)
 
 ;; cairo_scaled_font_t *cairo_scaled_font_create(cairo_font_face_t *font_face, 
@@ -2566,7 +2576,8 @@
         (list void*))))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
-    (~cairo_scaled_font_status ~scaled_font)))
+    (wrap-cairo_status_t
+      (~cairo_scaled_font_status ~scaled_font))))
 (export cairo_scaled_font_status)
 
 ;; cairo_font_type_t cairo_scaled_font_get_type(cairo_scaled_font_t *
@@ -2582,7 +2593,8 @@
         (list void*))))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
-    (~cairo_scaled_font_get_type ~scaled_font)))
+    (wrap-cairo_font_type_t
+      (~cairo_scaled_font_get_type ~scaled_font))))
 (export cairo_scaled_font_get_type)
 
 ;; void *cairo_scaled_font_get_user_data(cairo_scaled_font_t *scaled_font, 
@@ -2624,14 +2636,13 @@
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
-        (~destroy
-          ((make-ftn-arg-unwrapper ffi:void (list void*))
-           destroy)))
-    (~cairo_scaled_font_set_user_data
-      ~scaled_font
-      ~key
-      ~user_data
-      ~destroy)))
+        (~destroy (unwrap-cairo_destroy_func_t destroy)))
+    (wrap-cairo_status_t
+      (~cairo_scaled_font_set_user_data
+        ~scaled_font
+        ~key
+        ~user_data
+        ~destroy))))
 (export cairo_scaled_font_set_user_data)
 
 ;; void cairo_scaled_font_extents(cairo_scaled_font_t *scaled_font, 
@@ -2746,18 +2757,21 @@
         (~num_glyphs (unwrap~pointer num_glyphs))
         (~clusters (unwrap~pointer clusters))
         (~num_clusters (unwrap~pointer num_clusters))
-        (~cluster_flags (unwrap~pointer cluster_flags)))
-    (~cairo_scaled_font_text_to_glyphs
-      ~scaled_font
-      ~x
-      ~y
-      ~utf8
-      ~utf8_len
-      ~glyphs
-      ~num_glyphs
-      ~clusters
-      ~num_clusters
-      ~cluster_flags)))
+        (~cluster_flags
+          (unwrap-cairo_text_cluster_flags_t*
+            cluster_flags)))
+    (wrap-cairo_status_t
+      (~cairo_scaled_font_text_to_glyphs
+        ~scaled_font
+        ~x
+        ~y
+        ~utf8
+        ~utf8_len
+        ~glyphs
+        ~num_glyphs
+        ~clusters
+        ~num_clusters
+        ~cluster_flags))))
 (export cairo_scaled_font_text_to_glyphs)
 
 ;; cairo_font_face_t *cairo_scaled_font_get_font_face(cairo_scaled_font_t *
@@ -2871,8 +2885,8 @@
         void*
         (list void* ffi:int ffi:int))))
   (let ((~family (unwrap~pointer family))
-        (~slant (unwrap~fixed slant))
-        (~weight (unwrap~fixed weight)))
+        (~slant (unwrap-cairo_font_slant_t slant))
+        (~weight (unwrap-cairo_font_weight_t weight)))
     (wrap-cairo_font_face_t*
       (~cairo_toy_font_face_create
         ~family
@@ -2908,7 +2922,8 @@
         (list void*))))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
-    (~cairo_toy_font_face_get_slant ~font_face)))
+    (wrap-cairo_font_slant_t
+      (~cairo_toy_font_face_get_slant ~font_face))))
 (export cairo_toy_font_face_get_slant)
 
 ;; cairo_font_weight_t cairo_toy_font_face_get_weight(cairo_font_face_t *
@@ -2924,7 +2939,8 @@
         (list void*))))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
-    (~cairo_toy_font_face_get_weight ~font_face)))
+    (wrap-cairo_font_weight_t
+      (~cairo_toy_font_face_get_weight ~font_face))))
 (export cairo_toy_font_face_get_weight)
 
 ;; cairo_font_face_t *cairo_user_font_face_create(void);
@@ -2983,10 +2999,8 @@
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~init_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* void* void*))
-           init_func)))
+          (unwrap-cairo_user_scaled_font_init_func_t
+            init_func)))
     (~cairo_user_font_face_set_init_func
       ~font_face
       ~init_func)))
@@ -3008,10 +3022,8 @@
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~render_glyph_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* ffi:unsigned-long void* void*))
-           render_glyph_func)))
+          (unwrap-cairo_user_scaled_font_render_glyph_func_t
+            render_glyph_func)))
     (~cairo_user_font_face_set_render_glyph_func
       ~font_face
       ~render_glyph_func)))
@@ -3034,17 +3046,8 @@
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~text_to_glyphs_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void*
-                   void*
-                   ffi:int
-                   void*
-                   void*
-                   void*
-                   void*
-                   void*))
-           text_to_glyphs_func)))
+          (unwrap-cairo_user_scaled_font_text_to_glyphs_func_t
+            text_to_glyphs_func)))
     (~cairo_user_font_face_set_text_to_glyphs_func
       ~font_face
       ~text_to_glyphs_func)))
@@ -3067,10 +3070,8 @@
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~unicode_to_glyph_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* ffi:unsigned-long void*))
-           unicode_to_glyph_func)))
+          (unwrap-cairo_user_scaled_font_unicode_to_glyph_func_t
+            unicode_to_glyph_func)))
     (~cairo_user_font_face_set_unicode_to_glyph_func
       ~font_face
       ~unicode_to_glyph_func)))
@@ -3089,7 +3090,8 @@
         (list void*))))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
-    (~cairo_user_font_face_get_init_func ~font_face)))
+    (wrap-cairo_user_scaled_font_init_func_t
+      (~cairo_user_font_face_get_init_func ~font_face))))
 (export cairo_user_font_face_get_init_func)
 
 ;; cairo_user_scaled_font_render_glyph_func_t 
@@ -3107,8 +3109,9 @@
         (list void*))))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
-    (~cairo_user_font_face_get_render_glyph_func
-      ~font_face)))
+    (wrap-cairo_user_scaled_font_render_glyph_func_t
+      (~cairo_user_font_face_get_render_glyph_func
+        ~font_face))))
 (export cairo_user_font_face_get_render_glyph_func)
 
 ;; cairo_user_scaled_font_text_to_glyphs_func_t 
@@ -3126,8 +3129,9 @@
         (list void*))))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
-    (~cairo_user_font_face_get_text_to_glyphs_func
-      ~font_face)))
+    (wrap-cairo_user_scaled_font_text_to_glyphs_func_t
+      (~cairo_user_font_face_get_text_to_glyphs_func
+        ~font_face))))
 (export cairo_user_font_face_get_text_to_glyphs_func)
 
 ;; cairo_user_scaled_font_unicode_to_glyph_func_t 
@@ -3145,8 +3149,9 @@
         (list void*))))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
-    (~cairo_user_font_face_get_unicode_to_glyph_func
-      ~font_face)))
+    (wrap-cairo_user_scaled_font_unicode_to_glyph_func_t
+      (~cairo_user_font_face_get_unicode_to_glyph_func
+        ~font_face))))
 (export cairo_user_font_face_get_unicode_to_glyph_func)
 
 ;; cairo_operator_t cairo_get_operator(cairo_t *cr);
@@ -3160,7 +3165,7 @@
         ffi:int
         (list void*))))
   (let ((~cr (unwrap-cairo_t* cr)))
-    (~cairo_get_operator ~cr)))
+    (wrap-cairo_operator_t (~cairo_get_operator ~cr))))
 (export cairo_get_operator)
 
 ;; cairo_pattern_t *cairo_get_source(cairo_t *cr);
@@ -3202,7 +3207,8 @@
         ffi:int
         (list void*))))
   (let ((~cr (unwrap-cairo_t* cr)))
-    (~cairo_get_antialias ~cr)))
+    (wrap-cairo_antialias_t
+      (~cairo_get_antialias ~cr))))
 (export cairo_get_antialias)
 
 ;; cairo_bool_t cairo_has_current_point(cairo_t *cr);
@@ -3216,7 +3222,8 @@
         ffi:int
         (list void*))))
   (let ((~cr (unwrap-cairo_t* cr)))
-    (~cairo_has_current_point ~cr)))
+    (wrap-cairo_bool_t
+      (~cairo_has_current_point ~cr))))
 (export cairo_has_current_point)
 
 ;; void cairo_get_current_point(cairo_t *cr, double *x, double *y);
@@ -3246,7 +3253,8 @@
         ffi:int
         (list void*))))
   (let ((~cr (unwrap-cairo_t* cr)))
-    (~cairo_get_fill_rule ~cr)))
+    (wrap-cairo_fill_rule_t
+      (~cairo_get_fill_rule ~cr))))
 (export cairo_get_fill_rule)
 
 ;; double cairo_get_line_width(cairo_t *cr);
@@ -3274,7 +3282,7 @@
         ffi:int
         (list void*))))
   (let ((~cr (unwrap-cairo_t* cr)))
-    (~cairo_get_line_cap ~cr)))
+    (wrap-cairo_line_cap_t (~cairo_get_line_cap ~cr))))
 (export cairo_get_line_cap)
 
 ;; cairo_line_join_t cairo_get_line_join(cairo_t *cr);
@@ -3288,7 +3296,8 @@
         ffi:int
         (list void*))))
   (let ((~cr (unwrap-cairo_t* cr)))
-    (~cairo_get_line_join ~cr)))
+    (wrap-cairo_line_join_t
+      (~cairo_get_line_join ~cr))))
 (export cairo_get_line_join)
 
 ;; double cairo_get_miter_limit(cairo_t *cr);
@@ -3495,7 +3504,7 @@
         ffi:int
         (list void*))))
   (let ((~cr (unwrap-cairo_t* cr)))
-    (~cairo_status ~cr)))
+    (wrap-cairo_status_t (~cairo_status ~cr))))
 (export cairo_status)
 
 ;; const char *cairo_status_to_string(cairo_status_t status);
@@ -3508,7 +3517,7 @@
         "cairo_status_to_string"
         void*
         (list ffi:int))))
-  (let ((~status (unwrap~fixed status)))
+  (let ((~status (unwrap-cairo_status_t status)))
     (~cairo_status_to_string ~status)))
 (export cairo_status_to_string)
 
@@ -3563,7 +3572,8 @@
         ffi:int
         (list void*))))
   (let ((~device (unwrap-cairo_device_t* device)))
-    (~cairo_device_get_type ~device)))
+    (wrap-cairo_device_type_t
+      (~cairo_device_get_type ~device))))
 (export cairo_device_get_type)
 
 ;; cairo_status_t cairo_device_status(cairo_device_t *device);
@@ -3577,7 +3587,8 @@
         ffi:int
         (list void*))))
   (let ((~device (unwrap-cairo_device_t* device)))
-    (~cairo_device_status ~device)))
+    (wrap-cairo_status_t
+      (~cairo_device_status ~device))))
 (export cairo_device_status)
 
 ;; cairo_status_t cairo_device_acquire(cairo_device_t *device);
@@ -3591,7 +3602,8 @@
         ffi:int
         (list void*))))
   (let ((~device (unwrap-cairo_device_t* device)))
-    (~cairo_device_acquire ~device)))
+    (wrap-cairo_status_t
+      (~cairo_device_acquire ~device))))
 (export cairo_device_acquire)
 
 ;; void cairo_device_release(cairo_device_t *device);
@@ -3699,14 +3711,13 @@
   (let ((~device (unwrap-cairo_device_t* device))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
-        (~destroy
-          ((make-ftn-arg-unwrapper ffi:void (list void*))
-           destroy)))
-    (~cairo_device_set_user_data
-      ~device
-      ~key
-      ~user_data
-      ~destroy)))
+        (~destroy (unwrap-cairo_destroy_func_t destroy)))
+    (wrap-cairo_status_t
+      (~cairo_device_set_user_data
+        ~device
+        ~key
+        ~user_data
+        ~destroy))))
 (export cairo_device_set_user_data)
 
 ;; cairo_surface_t *cairo_surface_create_similar(cairo_surface_t *other, 
@@ -3725,7 +3736,7 @@
         void*
         (list void* ffi:int ffi:int ffi:int))))
   (let ((~other (unwrap-cairo_surface_t* other))
-        (~content (unwrap~fixed content))
+        (~content (unwrap-cairo_content_t content))
         (~width (unwrap~fixed width))
         (~height (unwrap~fixed height)))
     (wrap-cairo_surface_t*
@@ -3752,7 +3763,7 @@
         void*
         (list void* ffi:int ffi:int ffi:int))))
   (let ((~other (unwrap-cairo_surface_t* other))
-        (~format (unwrap~fixed format))
+        (~format (unwrap-cairo_format_t format))
         (~width (unwrap~fixed width))
         (~height (unwrap~fixed height)))
     (wrap-cairo_surface_t*
@@ -3852,7 +3863,7 @@
         void*
         (list void* ffi:int))))
   (let ((~target (unwrap-cairo_surface_t* target))
-        (~mode (unwrap~fixed mode)))
+        (~mode (unwrap-cairo_surface_observer_mode_t mode)))
     (wrap-cairo_surface_t*
       (~cairo_surface_create_observer ~target ~mode))))
 (export cairo_surface_create_observer)
@@ -3878,15 +3889,13 @@
         (list void* void* void*))))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
-        (~func ((make-ftn-arg-unwrapper
-                  ffi:void
-                  (list void* void* void*))
-                func))
+        (~func (unwrap-cairo_surface_observer_callback_t func))
         (~data (unwrap~pointer data)))
-    (~cairo_surface_observer_add_paint_callback
-      ~abstract_surface
-      ~func
-      ~data)))
+    (wrap-cairo_status_t
+      (~cairo_surface_observer_add_paint_callback
+        ~abstract_surface
+        ~func
+        ~data))))
 (export cairo_surface_observer_add_paint_callback)
 
 ;; cairo_status_t cairo_surface_observer_add_mask_callback(cairo_surface_t *
@@ -3905,15 +3914,13 @@
         (list void* void* void*))))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
-        (~func ((make-ftn-arg-unwrapper
-                  ffi:void
-                  (list void* void* void*))
-                func))
+        (~func (unwrap-cairo_surface_observer_callback_t func))
         (~data (unwrap~pointer data)))
-    (~cairo_surface_observer_add_mask_callback
-      ~abstract_surface
-      ~func
-      ~data)))
+    (wrap-cairo_status_t
+      (~cairo_surface_observer_add_mask_callback
+        ~abstract_surface
+        ~func
+        ~data))))
 (export cairo_surface_observer_add_mask_callback)
 
 ;; cairo_status_t cairo_surface_observer_add_fill_callback(cairo_surface_t *
@@ -3932,15 +3939,13 @@
         (list void* void* void*))))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
-        (~func ((make-ftn-arg-unwrapper
-                  ffi:void
-                  (list void* void* void*))
-                func))
+        (~func (unwrap-cairo_surface_observer_callback_t func))
         (~data (unwrap~pointer data)))
-    (~cairo_surface_observer_add_fill_callback
-      ~abstract_surface
-      ~func
-      ~data)))
+    (wrap-cairo_status_t
+      (~cairo_surface_observer_add_fill_callback
+        ~abstract_surface
+        ~func
+        ~data))))
 (export cairo_surface_observer_add_fill_callback)
 
 ;; cairo_status_t cairo_surface_observer_add_stroke_callback(cairo_surface_t *
@@ -3959,15 +3964,13 @@
         (list void* void* void*))))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
-        (~func ((make-ftn-arg-unwrapper
-                  ffi:void
-                  (list void* void* void*))
-                func))
+        (~func (unwrap-cairo_surface_observer_callback_t func))
         (~data (unwrap~pointer data)))
-    (~cairo_surface_observer_add_stroke_callback
-      ~abstract_surface
-      ~func
-      ~data)))
+    (wrap-cairo_status_t
+      (~cairo_surface_observer_add_stroke_callback
+        ~abstract_surface
+        ~func
+        ~data))))
 (export cairo_surface_observer_add_stroke_callback)
 
 ;; cairo_status_t cairo_surface_observer_add_glyphs_callback(cairo_surface_t *
@@ -3986,15 +3989,13 @@
         (list void* void* void*))))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
-        (~func ((make-ftn-arg-unwrapper
-                  ffi:void
-                  (list void* void* void*))
-                func))
+        (~func (unwrap-cairo_surface_observer_callback_t func))
         (~data (unwrap~pointer data)))
-    (~cairo_surface_observer_add_glyphs_callback
-      ~abstract_surface
-      ~func
-      ~data)))
+    (wrap-cairo_status_t
+      (~cairo_surface_observer_add_glyphs_callback
+        ~abstract_surface
+        ~func
+        ~data))))
 (export cairo_surface_observer_add_glyphs_callback)
 
 ;; cairo_status_t cairo_surface_observer_add_flush_callback(cairo_surface_t *
@@ -4013,15 +4014,13 @@
         (list void* void* void*))))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
-        (~func ((make-ftn-arg-unwrapper
-                  ffi:void
-                  (list void* void* void*))
-                func))
+        (~func (unwrap-cairo_surface_observer_callback_t func))
         (~data (unwrap~pointer data)))
-    (~cairo_surface_observer_add_flush_callback
-      ~abstract_surface
-      ~func
-      ~data)))
+    (wrap-cairo_status_t
+      (~cairo_surface_observer_add_flush_callback
+        ~abstract_surface
+        ~func
+        ~data))))
 (export cairo_surface_observer_add_flush_callback)
 
 ;; cairo_status_t cairo_surface_observer_add_finish_callback(cairo_surface_t *
@@ -4040,15 +4039,13 @@
         (list void* void* void*))))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
-        (~func ((make-ftn-arg-unwrapper
-                  ffi:void
-                  (list void* void* void*))
-                func))
+        (~func (unwrap-cairo_surface_observer_callback_t func))
         (~data (unwrap~pointer data)))
-    (~cairo_surface_observer_add_finish_callback
-      ~abstract_surface
-      ~func
-      ~data)))
+    (wrap-cairo_status_t
+      (~cairo_surface_observer_add_finish_callback
+        ~abstract_surface
+        ~func
+        ~data))))
 (export cairo_surface_observer_add_finish_callback)
 
 ;; cairo_status_t cairo_surface_observer_print(cairo_surface_t *surface, 
@@ -4067,15 +4064,13 @@
         (list void* void* void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~write_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* void* ffi:unsigned-int))
-           write_func))
+          (unwrap-cairo_write_func_t write_func))
         (~closure (unwrap~pointer closure)))
-    (~cairo_surface_observer_print
-      ~surface
-      ~write_func
-      ~closure)))
+    (wrap-cairo_status_t
+      (~cairo_surface_observer_print
+        ~surface
+        ~write_func
+        ~closure))))
 (export cairo_surface_observer_print)
 
 ;; double cairo_surface_observer_elapsed(cairo_surface_t *surface);
@@ -4108,15 +4103,13 @@
         (list void* void* void*))))
   (let ((~device (unwrap-cairo_device_t* device))
         (~write_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* void* ffi:unsigned-int))
-           write_func))
+          (unwrap-cairo_write_func_t write_func))
         (~closure (unwrap~pointer closure)))
-    (~cairo_device_observer_print
-      ~device
-      ~write_func
-      ~closure)))
+    (wrap-cairo_status_t
+      (~cairo_device_observer_print
+        ~device
+        ~write_func
+        ~closure))))
 (export cairo_device_observer_print)
 
 ;; double cairo_device_observer_elapsed(cairo_device_t *device);
@@ -4286,7 +4279,8 @@
         ffi:int
         (list void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
-    (~cairo_surface_status ~surface)))
+    (wrap-cairo_status_t
+      (~cairo_surface_status ~surface))))
 (export cairo_surface_status)
 
 ;; typedef enum _cairo_surface_type {
@@ -4357,7 +4351,8 @@
         ffi:int
         (list void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
-    (~cairo_surface_get_type ~surface)))
+    (wrap-cairo_surface_type_t
+      (~cairo_surface_get_type ~surface))))
 (export cairo_surface_get_type)
 
 ;; cairo_content_t cairo_surface_get_content(cairo_surface_t *surface);
@@ -4371,7 +4366,8 @@
         ffi:int
         (list void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
-    (~cairo_surface_get_content ~surface)))
+    (wrap-cairo_content_t
+      (~cairo_surface_get_content ~surface))))
 (export cairo_surface_get_content)
 
 ;; cairo_status_t cairo_surface_write_to_png(cairo_surface_t *surface, const 
@@ -4387,7 +4383,8 @@
         (list void* void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~filename (unwrap~pointer filename)))
-    (~cairo_surface_write_to_png ~surface ~filename)))
+    (wrap-cairo_status_t
+      (~cairo_surface_write_to_png ~surface ~filename))))
 (export cairo_surface_write_to_png)
 
 ;; cairo_status_t cairo_surface_write_to_png_stream(cairo_surface_t *surface, 
@@ -4406,15 +4403,13 @@
         (list void* void* void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~write_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* void* ffi:unsigned-int))
-           write_func))
+          (unwrap-cairo_write_func_t write_func))
         (~closure (unwrap~pointer closure)))
-    (~cairo_surface_write_to_png_stream
-      ~surface
-      ~write_func
-      ~closure)))
+    (wrap-cairo_status_t
+      (~cairo_surface_write_to_png_stream
+        ~surface
+        ~write_func
+        ~closure))))
 (export cairo_surface_write_to_png_stream)
 
 ;; void *cairo_surface_get_user_data(cairo_surface_t *surface, const 
@@ -4452,14 +4447,13 @@
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
-        (~destroy
-          ((make-ftn-arg-unwrapper ffi:void (list void*))
-           destroy)))
-    (~cairo_surface_set_user_data
-      ~surface
-      ~key
-      ~user_data
-      ~destroy)))
+        (~destroy (unwrap-cairo_destroy_func_t destroy)))
+    (wrap-cairo_status_t
+      (~cairo_surface_set_user_data
+        ~surface
+        ~key
+        ~user_data
+        ~destroy))))
 (export cairo_surface_set_user_data)
 
 ;; void cairo_surface_get_mime_data(cairo_surface_t *surface, const char *
@@ -4515,17 +4509,16 @@
         (~mime_type (unwrap~pointer mime_type))
         (~data (unwrap~pointer data))
         (~length (unwrap~fixed length))
-        (~destroy
-          ((make-ftn-arg-unwrapper ffi:void (list void*))
-           destroy))
+        (~destroy (unwrap-cairo_destroy_func_t destroy))
         (~closure (unwrap~pointer closure)))
-    (~cairo_surface_set_mime_data
-      ~surface
-      ~mime_type
-      ~data
-      ~length
-      ~destroy
-      ~closure)))
+    (wrap-cairo_status_t
+      (~cairo_surface_set_mime_data
+        ~surface
+        ~mime_type
+        ~data
+        ~length
+        ~destroy
+        ~closure))))
 (export cairo_surface_set_mime_data)
 
 ;; cairo_bool_t cairo_surface_supports_mime_type(cairo_surface_t *surface, 
@@ -4543,9 +4536,10 @@
         (list void* void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~mime_type (unwrap~pointer mime_type)))
-    (~cairo_surface_supports_mime_type
-      ~surface
-      ~mime_type)))
+    (wrap-cairo_bool_t
+      (~cairo_surface_supports_mime_type
+        ~surface
+        ~mime_type))))
 (export cairo_surface_supports_mime_type)
 
 ;; void cairo_surface_get_font_options(cairo_surface_t *surface, 
@@ -4804,7 +4798,8 @@
         ffi:int
         (list void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
-    (~cairo_surface_has_show_text_glyphs ~surface)))
+    (wrap-cairo_bool_t
+      (~cairo_surface_has_show_text_glyphs ~surface))))
 (export cairo_surface_has_show_text_glyphs)
 
 ;; cairo_surface_t *cairo_image_surface_create(cairo_format_t format, int width
@@ -4818,7 +4813,7 @@
         "cairo_image_surface_create"
         void*
         (list ffi:int ffi:int ffi:int))))
-  (let ((~format (unwrap~fixed format))
+  (let ((~format (unwrap-cairo_format_t format))
         (~width (unwrap~fixed width))
         (~height (unwrap~fixed height)))
     (wrap-cairo_surface_t*
@@ -4838,7 +4833,7 @@
         "cairo_format_stride_for_width"
         ffi:int
         (list ffi:int ffi:int))))
-  (let ((~format (unwrap~fixed format))
+  (let ((~format (unwrap-cairo_format_t format))
         (~width (unwrap~fixed width)))
     (~cairo_format_stride_for_width ~format ~width)))
 (export cairo_format_stride_for_width)
@@ -4860,7 +4855,7 @@
         void*
         (list void* ffi:int ffi:int ffi:int ffi:int))))
   (let ((~data (unwrap~pointer data))
-        (~format (unwrap~fixed format))
+        (~format (unwrap-cairo_format_t format))
         (~width (unwrap~fixed width))
         (~height (unwrap~fixed height))
         (~stride (unwrap~fixed stride)))
@@ -4898,7 +4893,8 @@
         ffi:int
         (list void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
-    (~cairo_image_surface_get_format ~surface)))
+    (wrap-cairo_format_t
+      (~cairo_image_surface_get_format ~surface))))
 (export cairo_image_surface_get_format)
 
 ;; int cairo_image_surface_get_width(cairo_surface_t *surface);
@@ -4971,11 +4967,7 @@
         "cairo_image_surface_create_from_png_stream"
         void*
         (list void* void*))))
-  (let ((~read_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* void* ffi:unsigned-int))
-           read_func))
+  (let ((~read_func (unwrap-cairo_read_func_t read_func))
         (~closure (unwrap~pointer closure)))
     (wrap-cairo_surface_t*
       (~cairo_image_surface_create_from_png_stream
@@ -4994,7 +4986,7 @@
         "cairo_recording_surface_create"
         void*
         (list ffi:int void*))))
-  (let ((~content (unwrap~fixed content))
+  (let ((~content (unwrap-cairo_content_t content))
         (~extents (unwrap-cairo_rectangle_t* extents)))
     (wrap-cairo_surface_t*
       (~cairo_recording_surface_create
@@ -5046,9 +5038,10 @@
         (list void* void*))))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~extents (unwrap-cairo_rectangle_t* extents)))
-    (~cairo_recording_surface_get_extents
-      ~surface
-      ~extents)))
+    (wrap-cairo_bool_t
+      (~cairo_recording_surface_get_extents
+        ~surface
+        ~extents))))
 (export cairo_recording_surface_get_extents)
 
 ;; typedef cairo_surface_t *(*cairo_raster_source_acquire_func_t)(
@@ -5095,7 +5088,7 @@
         void*
         (list void* ffi:int ffi:int ffi:int))))
   (let ((~user_data (unwrap~pointer user_data))
-        (~content (unwrap~fixed content))
+        (~content (unwrap-cairo_content_t content))
         (~width (unwrap~fixed width))
         (~height (unwrap~fixed height)))
     (wrap-cairo_pattern_t*
@@ -5160,15 +5153,11 @@
         (list void* void* void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~acquire
-          ((make-ftn-arg-unwrapper
-             void*
-             (list void* void* void* void*))
-           acquire))
+          (unwrap-cairo_raster_source_acquire_func_t
+            acquire))
         (~release
-          ((make-ftn-arg-unwrapper
-             ffi:void
-             (list void* void* void*))
-           release)))
+          (unwrap-cairo_raster_source_release_func_t
+            release)))
     (~cairo_raster_source_pattern_set_acquire
       ~pattern
       ~acquire
@@ -5191,8 +5180,12 @@
         ffi:void
         (list void* void* void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
-        (~acquire (unwrap~pointer acquire))
-        (~release (unwrap~pointer release)))
+        (~acquire
+          (unwrap-cairo_raster_source_acquire_func_t*
+            acquire))
+        (~release
+          (unwrap-cairo_raster_source_release_func_t*
+            release)))
     (~cairo_raster_source_pattern_get_acquire
       ~pattern
       ~acquire
@@ -5214,10 +5207,8 @@
         (list void* void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~snapshot
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* void*))
-           snapshot)))
+          (unwrap-cairo_raster_source_snapshot_func_t
+            snapshot)))
     (~cairo_raster_source_pattern_set_snapshot
       ~pattern
       ~snapshot)))
@@ -5236,8 +5227,9 @@
         void*
         (list void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
-    (~cairo_raster_source_pattern_get_snapshot
-      ~pattern)))
+    (wrap-cairo_raster_source_snapshot_func_t
+      (~cairo_raster_source_pattern_get_snapshot
+        ~pattern))))
 (export cairo_raster_source_pattern_get_snapshot)
 
 ;; void cairo_raster_source_pattern_set_copy(cairo_pattern_t *pattern, 
@@ -5254,10 +5246,7 @@
         ffi:void
         (list void* void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
-        (~copy ((make-ftn-arg-unwrapper
-                  ffi:int
-                  (list void* void* void*))
-                copy)))
+        (~copy (unwrap-cairo_raster_source_copy_func_t copy)))
     (~cairo_raster_source_pattern_set_copy
       ~pattern
       ~copy)))
@@ -5275,7 +5264,8 @@
         void*
         (list void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
-    (~cairo_raster_source_pattern_get_copy ~pattern)))
+    (wrap-cairo_raster_source_copy_func_t
+      (~cairo_raster_source_pattern_get_copy ~pattern))))
 (export cairo_raster_source_pattern_get_copy)
 
 ;; void cairo_raster_source_pattern_set_finish(cairo_pattern_t *pattern, 
@@ -5293,10 +5283,7 @@
         (list void* void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~finish
-          ((make-ftn-arg-unwrapper
-             ffi:void
-             (list void* void*))
-           finish)))
+          (unwrap-cairo_raster_source_finish_func_t finish)))
     (~cairo_raster_source_pattern_set_finish
       ~pattern
       ~finish)))
@@ -5314,8 +5301,9 @@
         void*
         (list void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
-    (~cairo_raster_source_pattern_get_finish
-      ~pattern)))
+    (wrap-cairo_raster_source_finish_func_t
+      (~cairo_raster_source_pattern_get_finish
+        ~pattern))))
 (export cairo_raster_source_pattern_get_finish)
 
 ;; cairo_pattern_t *cairo_pattern_create_rgb(double red, double green, double 
@@ -5507,7 +5495,8 @@
         ffi:int
         (list void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
-    (~cairo_pattern_status ~pattern)))
+    (wrap-cairo_status_t
+      (~cairo_pattern_status ~pattern))))
 (export cairo_pattern_status)
 
 ;; void *cairo_pattern_get_user_data(cairo_pattern_t *pattern, const 
@@ -5545,14 +5534,13 @@
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
-        (~destroy
-          ((make-ftn-arg-unwrapper ffi:void (list void*))
-           destroy)))
-    (~cairo_pattern_set_user_data
-      ~pattern
-      ~key
-      ~user_data
-      ~destroy)))
+        (~destroy (unwrap-cairo_destroy_func_t destroy)))
+    (wrap-cairo_status_t
+      (~cairo_pattern_set_user_data
+        ~pattern
+        ~key
+        ~user_data
+        ~destroy))))
 (export cairo_pattern_set_user_data)
 
 ;; typedef enum _cairo_pattern_type {
@@ -5585,7 +5573,8 @@
         ffi:int
         (list void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
-    (~cairo_pattern_get_type ~pattern)))
+    (wrap-cairo_pattern_type_t
+      (~cairo_pattern_get_type ~pattern))))
 (export cairo_pattern_get_type)
 
 ;; void cairo_pattern_add_color_stop_rgb(cairo_pattern_t *pattern, double 
@@ -5920,7 +5909,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
-        (~extend (unwrap~fixed extend)))
+        (~extend (unwrap-cairo_extend_t extend)))
     (~cairo_pattern_set_extend ~pattern ~extend)))
 (export cairo_pattern_set_extend)
 
@@ -5935,7 +5924,8 @@
         ffi:int
         (list void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
-    (~cairo_pattern_get_extend ~pattern)))
+    (wrap-cairo_extend_t
+      (~cairo_pattern_get_extend ~pattern))))
 (export cairo_pattern_get_extend)
 
 ;; typedef enum _cairo_filter {
@@ -5969,7 +5959,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
-        (~filter (unwrap~fixed filter)))
+        (~filter (unwrap-cairo_filter_t filter)))
     (~cairo_pattern_set_filter ~pattern ~filter)))
 (export cairo_pattern_set_filter)
 
@@ -5984,7 +5974,8 @@
         ffi:int
         (list void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
-    (~cairo_pattern_get_filter ~pattern)))
+    (wrap-cairo_filter_t
+      (~cairo_pattern_get_filter ~pattern))))
 (export cairo_pattern_get_filter)
 
 ;; cairo_status_t cairo_pattern_get_rgba(cairo_pattern_t *pattern, double *red
@@ -6008,12 +5999,13 @@
         (~green (unwrap~pointer green))
         (~blue (unwrap~pointer blue))
         (~alpha (unwrap~pointer alpha)))
-    (~cairo_pattern_get_rgba
-      ~pattern
-      ~red
-      ~green
-      ~blue
-      ~alpha)))
+    (wrap-cairo_status_t
+      (~cairo_pattern_get_rgba
+        ~pattern
+        ~red
+        ~green
+        ~blue
+        ~alpha))))
 (export cairo_pattern_get_rgba)
 
 ;; cairo_status_t cairo_pattern_get_surface(cairo_pattern_t *pattern, 
@@ -6029,7 +6021,8 @@
         (list void* void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~surface (unwrap~pointer surface)))
-    (~cairo_pattern_get_surface ~pattern ~surface)))
+    (wrap-cairo_status_t
+      (~cairo_pattern_get_surface ~pattern ~surface))))
 (export cairo_pattern_get_surface)
 
 ;; cairo_status_t cairo_pattern_get_color_stop_rgba(cairo_pattern_t *pattern, 
@@ -6064,14 +6057,15 @@
         (~green (unwrap~pointer green))
         (~blue (unwrap~pointer blue))
         (~alpha (unwrap~pointer alpha)))
-    (~cairo_pattern_get_color_stop_rgba
-      ~pattern
-      ~index
-      ~offset
-      ~red
-      ~green
-      ~blue
-      ~alpha)))
+    (wrap-cairo_status_t
+      (~cairo_pattern_get_color_stop_rgba
+        ~pattern
+        ~index
+        ~offset
+        ~red
+        ~green
+        ~blue
+        ~alpha))))
 (export cairo_pattern_get_color_stop_rgba)
 
 ;; cairo_status_t cairo_pattern_get_color_stop_count(cairo_pattern_t *pattern, 
@@ -6089,9 +6083,10 @@
         (list void* void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~count (unwrap~pointer count)))
-    (~cairo_pattern_get_color_stop_count
-      ~pattern
-      ~count)))
+    (wrap-cairo_status_t
+      (~cairo_pattern_get_color_stop_count
+        ~pattern
+        ~count))))
 (export cairo_pattern_get_color_stop_count)
 
 ;; cairo_status_t cairo_pattern_get_linear_points(cairo_pattern_t *pattern, 
@@ -6115,12 +6110,13 @@
         (~y0 (unwrap~pointer y0))
         (~x1 (unwrap~pointer x1))
         (~y1 (unwrap~pointer y1)))
-    (~cairo_pattern_get_linear_points
-      ~pattern
-      ~x0
-      ~y0
-      ~x1
-      ~y1)))
+    (wrap-cairo_status_t
+      (~cairo_pattern_get_linear_points
+        ~pattern
+        ~x0
+        ~y0
+        ~x1
+        ~y1))))
 (export cairo_pattern_get_linear_points)
 
 ;; cairo_status_t cairo_pattern_get_radial_circles(cairo_pattern_t *pattern, 
@@ -6149,14 +6145,15 @@
         (~x1 (unwrap~pointer x1))
         (~y1 (unwrap~pointer y1))
         (~r1 (unwrap~pointer r1)))
-    (~cairo_pattern_get_radial_circles
-      ~pattern
-      ~x0
-      ~y0
-      ~r0
-      ~x1
-      ~y1
-      ~r1)))
+    (wrap-cairo_status_t
+      (~cairo_pattern_get_radial_circles
+        ~pattern
+        ~x0
+        ~y0
+        ~r0
+        ~x1
+        ~y1
+        ~r1))))
 (export cairo_pattern_get_radial_circles)
 
 ;; cairo_status_t cairo_mesh_pattern_get_patch_count(cairo_pattern_t *pattern, 
@@ -6174,9 +6171,10 @@
         (list void* void*))))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~count (unwrap~pointer count)))
-    (~cairo_mesh_pattern_get_patch_count
-      ~pattern
-      ~count)))
+    (wrap-cairo_status_t
+      (~cairo_mesh_pattern_get_patch_count
+        ~pattern
+        ~count))))
 (export cairo_mesh_pattern_get_patch_count)
 
 ;; cairo_path_t *cairo_mesh_pattern_get_path(cairo_pattern_t *pattern, 
@@ -6230,14 +6228,15 @@
         (~green (unwrap~pointer green))
         (~blue (unwrap~pointer blue))
         (~alpha (unwrap~pointer alpha)))
-    (~cairo_mesh_pattern_get_corner_color_rgba
-      ~pattern
-      ~patch_num
-      ~corner_num
-      ~red
-      ~green
-      ~blue
-      ~alpha)))
+    (wrap-cairo_status_t
+      (~cairo_mesh_pattern_get_corner_color_rgba
+        ~pattern
+        ~patch_num
+        ~corner_num
+        ~red
+        ~green
+        ~blue
+        ~alpha))))
 (export cairo_mesh_pattern_get_corner_color_rgba)
 
 ;; cairo_status_t cairo_mesh_pattern_get_control_point(cairo_pattern_t *pattern
@@ -6266,12 +6265,13 @@
         (~point_num (unwrap~fixed point_num))
         (~x (unwrap~pointer x))
         (~y (unwrap~pointer y)))
-    (~cairo_mesh_pattern_get_control_point
-      ~pattern
-      ~patch_num
-      ~point_num
-      ~x
-      ~y)))
+    (wrap-cairo_status_t
+      (~cairo_mesh_pattern_get_control_point
+        ~pattern
+        ~patch_num
+        ~point_num
+        ~x
+        ~y))))
 (export cairo_mesh_pattern_get_control_point)
 
 ;; void cairo_matrix_init(cairo_matrix_t *matrix, double xx, double yx, double 
@@ -6428,7 +6428,8 @@
         ffi:int
         (list void*))))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix)))
-    (~cairo_matrix_invert ~matrix)))
+    (wrap-cairo_status_t
+      (~cairo_matrix_invert ~matrix))))
 (export cairo_matrix_invert)
 
 ;; void cairo_matrix_multiply(cairo_matrix_t *result, const cairo_matrix_t *a, 
@@ -6607,7 +6608,7 @@
         (list void* void*))))
   (let ((~a (unwrap-cairo_region_t* a))
         (~b (unwrap-cairo_region_t* b)))
-    (~cairo_region_equal ~a ~b)))
+    (wrap-cairo_bool_t (~cairo_region_equal ~a ~b))))
 (export cairo_region_equal)
 
 ;; cairo_status_t cairo_region_status(const cairo_region_t *region);
@@ -6621,7 +6622,8 @@
         ffi:int
         (list void*))))
   (let ((~region (unwrap-cairo_region_t* region)))
-    (~cairo_region_status ~region)))
+    (wrap-cairo_status_t
+      (~cairo_region_status ~region))))
 (export cairo_region_status)
 
 ;; void cairo_region_get_extents(const cairo_region_t *region, 
@@ -6687,7 +6689,8 @@
         ffi:int
         (list void*))))
   (let ((~region (unwrap-cairo_region_t* region)))
-    (~cairo_region_is_empty ~region)))
+    (wrap-cairo_bool_t
+      (~cairo_region_is_empty ~region))))
 (export cairo_region_is_empty)
 
 ;; cairo_region_overlap_t cairo_region_contains_rectangle(const cairo_region_t 
@@ -6706,9 +6709,10 @@
   (let ((~region (unwrap-cairo_region_t* region))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
-    (~cairo_region_contains_rectangle
-      ~region
-      ~rectangle)))
+    (wrap-cairo_region_overlap_t
+      (~cairo_region_contains_rectangle
+        ~region
+        ~rectangle))))
 (export cairo_region_contains_rectangle)
 
 ;; cairo_bool_t cairo_region_contains_point(const cairo_region_t *region, int x
@@ -6725,7 +6729,8 @@
   (let ((~region (unwrap-cairo_region_t* region))
         (~x (unwrap~fixed x))
         (~y (unwrap~fixed y)))
-    (~cairo_region_contains_point ~region ~x ~y)))
+    (wrap-cairo_bool_t
+      (~cairo_region_contains_point ~region ~x ~y))))
 (export cairo_region_contains_point)
 
 ;; void cairo_region_translate(cairo_region_t *region, int dx, int dy);
@@ -6757,7 +6762,8 @@
         (list void* void*))))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~other (unwrap-cairo_region_t* other)))
-    (~cairo_region_subtract ~dst ~other)))
+    (wrap-cairo_status_t
+      (~cairo_region_subtract ~dst ~other))))
 (export cairo_region_subtract)
 
 ;; cairo_status_t cairo_region_subtract_rectangle(cairo_region_t *dst, const 
@@ -6774,9 +6780,10 @@
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
-    (~cairo_region_subtract_rectangle
-      ~dst
-      ~rectangle)))
+    (wrap-cairo_status_t
+      (~cairo_region_subtract_rectangle
+        ~dst
+        ~rectangle))))
 (export cairo_region_subtract_rectangle)
 
 ;; cairo_status_t cairo_region_intersect(cairo_region_t *dst, const 
@@ -6792,7 +6799,8 @@
         (list void* void*))))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~other (unwrap-cairo_region_t* other)))
-    (~cairo_region_intersect ~dst ~other)))
+    (wrap-cairo_status_t
+      (~cairo_region_intersect ~dst ~other))))
 (export cairo_region_intersect)
 
 ;; cairo_status_t cairo_region_intersect_rectangle(cairo_region_t *dst, const 
@@ -6809,9 +6817,10 @@
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
-    (~cairo_region_intersect_rectangle
-      ~dst
-      ~rectangle)))
+    (wrap-cairo_status_t
+      (~cairo_region_intersect_rectangle
+        ~dst
+        ~rectangle))))
 (export cairo_region_intersect_rectangle)
 
 ;; cairo_status_t cairo_region_union(cairo_region_t *dst, const cairo_region_t 
@@ -6827,7 +6836,8 @@
         (list void* void*))))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~other (unwrap-cairo_region_t* other)))
-    (~cairo_region_union ~dst ~other)))
+    (wrap-cairo_status_t
+      (~cairo_region_union ~dst ~other))))
 (export cairo_region_union)
 
 ;; cairo_status_t cairo_region_union_rectangle(cairo_region_t *dst, const 
@@ -6844,7 +6854,8 @@
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
-    (~cairo_region_union_rectangle ~dst ~rectangle)))
+    (wrap-cairo_status_t
+      (~cairo_region_union_rectangle ~dst ~rectangle))))
 (export cairo_region_union_rectangle)
 
 ;; cairo_status_t cairo_region_xor(cairo_region_t *dst, const cairo_region_t *
@@ -6860,7 +6871,8 @@
         (list void* void*))))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~other (unwrap-cairo_region_t* other)))
-    (~cairo_region_xor ~dst ~other)))
+    (wrap-cairo_status_t
+      (~cairo_region_xor ~dst ~other))))
 (export cairo_region_xor)
 
 ;; cairo_status_t cairo_region_xor_rectangle(cairo_region_t *dst, const 
@@ -6877,7 +6889,8 @@
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
-    (~cairo_region_xor_rectangle ~dst ~rectangle)))
+    (wrap-cairo_status_t
+      (~cairo_region_xor_rectangle ~dst ~rectangle))))
 (export cairo_region_xor_rectangle)
 
 ;; void cairo_debug_reset_static_data(void);
@@ -6946,10 +6959,7 @@
         void*
         (list void* void* ffi:double ffi:double))))
   (let ((~write_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* void* ffi:unsigned-int))
-           write_func))
+          (unwrap-cairo_write_func_t write_func))
         (~closure (unwrap~pointer closure))
         (~width_in_points (unwrap~float width_in_points))
         (~height_in_points
@@ -6976,7 +6986,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~surface (unwrap-cairo_surface_t* surface))
-        (~version (unwrap~fixed version)))
+        (~version (unwrap-cairo_pdf_version_t version)))
     (~cairo_pdf_surface_restrict_to_version
       ~surface
       ~version)))
@@ -7008,7 +7018,7 @@
         "cairo_pdf_version_to_string"
         void*
         (list ffi:int))))
-  (let ((~version (unwrap~fixed version)))
+  (let ((~version (unwrap-cairo_pdf_version_t version)))
     (~cairo_pdf_version_to_string ~version)))
 (export cairo_pdf_version_to_string)
 
@@ -7089,10 +7099,7 @@
         void*
         (list void* void* ffi:double ffi:double))))
   (let ((~write_func
-          ((make-ftn-arg-unwrapper
-             ffi:int
-             (list void* void* ffi:unsigned-int))
-           write_func))
+          (unwrap-cairo_write_func_t write_func))
         (~closure (unwrap~pointer closure))
         (~width_in_points (unwrap~float width_in_points))
         (~height_in_points
@@ -7119,7 +7126,7 @@
         ffi:void
         (list void* ffi:int))))
   (let ((~surface (unwrap-cairo_surface_t* surface))
-        (~version (unwrap~fixed version)))
+        (~version (unwrap-cairo_svg_version_t version)))
     (~cairo_svg_surface_restrict_to_version
       ~surface
       ~version)))
@@ -7151,7 +7158,7 @@
         "cairo_svg_version_to_string"
         void*
         (list ffi:int))))
-  (let ((~version (unwrap~fixed version)))
+  (let ((~version (unwrap-cairo_svg_version_t version)))
     (~cairo_svg_version_to_string ~version)))
 (export cairo_svg_version_to_string)
 
@@ -7376,6 +7383,10 @@
     "cairo_font_options_t" (union . "_cairo_path_data_t") "cairo_path_data_t" 
     (struct . "cairo_path") "cairo_path_t" "cairo_region_t"))
 (export ffi-cairo-types)
+
+(define M_PI 3.141592653589793)
+
+(define M_2PI 6.283185307179586)
 
 (define (make-cairo-unit-matrix)
   (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))

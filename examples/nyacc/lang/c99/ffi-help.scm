@@ -109,6 +109,9 @@
 (define *defined* (make-parameter '()))	 ; has wrapper and is bytestructure?
 (define *renamer* (make-parameter identity)) ; renamer from ffi-module
 (define *errmsgs* (make-parameter '()))	     ; list of warnings
+;; what about option to trace
+
+(define *echo-decls* #f)		; add echo-decls code for debugging
 
 (define (sfscm fmt . args)
   (apply simple-format (*mport*) fmt args))
@@ -259,10 +262,7 @@
 	 (libraries (resolve-attr-val (assq-ref attrs 'library)))
 	 (libraries (append
 		     (if pkg-config (pkg-config-libs pkg-config) '())
-		     libraries))
-	 ;;(libraries (reverse libraries))
-	 (library (car libraries))
-	 (libraries (cdr libraries)))
+		     libraries)))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n" (path->path path))
     (nlscm)
     (sfscm "(define-module ~S\n" path)
@@ -272,19 +272,18 @@
 	((eq? 'use-ffi-module (car pair))
 	 (sfscm "  #:use-module ~S\n" (cdr pair)))))
      module-opts)
+    ;;
     (for-each ;; output pass-through options
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
      (opts->mopts module-opts))
+    ;;
     (sfscm "  #:use-module (system ffi-help-rt)\n")
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (bytestructures guile)\n")
     (sfscm "  )\n")
     (for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l)) libraries)
-    ;;(sfscm "(define link-lib (dynamic-link ~S))\n" library)
-    (sfscm "(dynamic-link ~S)\n" library)
-    ;;(sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")
     (sfscm "(define void intptr_t)\n")
-    (sfscm "(define echo-decls #f)\n")
+    (if *echo-decls* (sfscm "(define echo-decls #f)\n"))
     ))
 
 
@@ -703,6 +702,7 @@
 	      (decl-return (mspec->ffi-sym mspec))
 	      (decl-params (gen-decl-params params)))
 	 ;;(sferr "FIX RET => ~S\n" mspec)
+	 ;; (if (equal? (last decl-params) '...) (fherr "")
 	 `(make-ftn-arg-unwrapper ,decl-return (list ,@decl-params))))
       
       (((pointer-to) . ,otherwise) 'unwrap~pointer)
@@ -793,7 +793,8 @@
    params))
 
 (define (gen-exec-return-wrapper udecl)
-  (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
+  ;;(let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
+  (let* ((udecl (expand-typerefs udecl (*udict*) (*wrapped*)))
 	 (udecl (udecl-rem-type-qual udecl))
 	 (mspec (udecl->mspec udecl)))
     (mspec->fh-wrapper mspec)))
@@ -808,17 +809,34 @@
 	 (decl-params (gen-decl-params params))
 	 (exec-return (gen-exec-return-wrapper rdecl))
 	 (exec-params (gen-exec-params params))
-	 (_name (string->symbol (string-append "~" name))))
-    (sfscm "(define ~A #f)\n" _name)
+	 (sname (string->symbol name))
+	 (~name (string->symbol (string-append "~" name)))
+	 (call `(,~name ,@(gen-exec-call-args exec-params))))
+    (sfscm "(define ~A #f)\n" ~name)
     (ppscm
-     `(define (,(string->symbol name) ,@(gen-exec-arg-names exec-params))
-	(unless ,_name
-	  (set! ,_name (fh-link-proc
-		    ,name ,decl-return (list ,@decl-params))))
+     `(define (,sname ,@(gen-exec-arg-names exec-params))
+	(unless ,~name
+	  (set! ,~name (fh-link-proc ,name ,decl-return (list ,@decl-params))))
 	(let ,(gen-exec-unwrappers exec-params)
-	  ,(if exec-return
-	       `(,exec-return (,_name ,@(gen-exec-call-args exec-params)))
-	       `(,_name ,@(gen-exec-call-args exec-params))))))
+	  ,(if exec-return (list exec-return call) call))))
+    (sfscm "(export ~A)\n" name)))
+;; may work !!
+(define (cnvt-fctn/varargs name rdecl params)
+  (let* ((decl-return (gen-decl-return rdecl))
+	 (decl-params (gen-decl-params params))
+	 (exec-return (gen-exec-return-wrapper rdecl))
+	 (exec-params (gen-exec-params params))
+	 (sname (string->symbol name))
+	 (~name (string->symbol (string-append "~" name)))
+	 (call `(apply
+		 ,~name ,@(gen-exec-call-args exec-params) (map cdr ~rest))))
+    (sfscm ";; to be used with fh-cast\n")
+    (ppscm
+     `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
+	(let ((decl-params (append ,decl-params (map car ~rest)))
+	      (,~name (fh-link-proc ,name ,decl-return decl-params))
+	      ,@(gen-exec-unwrappers exec-params))
+	  ,(if exec-return `(,exec-return call) call))))
     (sfscm "(export ~A)\n" name)))
 
 ;; === externs ========================
@@ -1531,7 +1549,7 @@
 		 seed))
 	   '() module-options))
 	 )
-    
+
     ;; set globals
     (*udict* udict)
     (*mport* mport)
@@ -1565,7 +1583,8 @@
 		       (set! saw-last #t))
 		   (let ((udecl (udict-ref udict name)))
 		     (nlscm) (c99scm udecl)
-		     ;;(sfscm "(if echo-decls (display \"~A\\n\"))\n" name)
+		     (if *echo-decls*
+			 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
 		     (cnvt-udecl (udict-ref udict name) udict wrapped defined))
 		   )
 		  
@@ -1599,7 +1618,9 @@
 
 ;; This macro converts #:key val to '(key val) for ffi-help options
 ;; and preserves other #:key-val pairs for passthrough to the module
-(define-syntax fix-option
+;; Note that keywords are converted to symbols before they get here
+;; NOT USED.
+(define-syntax parse-ffimod-option
   (lambda (x)
     (define (sym->key stx)
       (datum->syntax stx (symbol->keyword (syntax->datum stx))))
@@ -1615,30 +1636,44 @@
       ((_ library expr) #'(cons 'library expr)) ;; eval to list of libs
       ((_ pkg-config string) #'(cons 'pkg-config string))
       ((_ renamer proc) #'(cons 'renamer proc))
-      ((_ use-ffi-module path) #'(cons 'use-ffi-module (quote path)))
+      ;;((_ use-ffi-module path) #'(cons 'use-ffi-module (quote path)))
       ;; remaining options get passed to the module decl as-is:
-      ((_ key arg) #`(cons #,(sym->key #'key) (quote arg)))
+      ;;((_ key val) #`(cons #,(sym->key #'key) (quote val)))
+      ;;((_ key val) #`(cons #,(symbol->keyword #'key) (quote val)))
       )))
 
-(define-syntax module-options
+(define-syntax parse-module-options
   (lambda (x)
     (define (key->sym stx)
-      (datum->syntax x (keyword->symbol (syntax->datum stx))))
+      (datum->syntax stx (keyword->symbol (syntax->datum stx))))
+    (define (ffimod-option? key)
+      (and (keyword? key)
+	   (member key '(#:cpp-defs
+			 #:decl-filter #:inc-dirs #:inc-filter #:inc-help
+			 #:include #:library #:pkg-config #:renamer
+			 #:use-ffi-module))))
+    (define (module-option? key) (keyword? key))
 
     (syntax-case x ()
       ((_ key val option ...)
-       (keyword? (syntax->datum #'key))
+       (ffimod-option? (syntax->datum #'key))
        #`(cons
-	  (fix-option #,(key->sym #'key) val)
-	  (module-options option ...)))
+	  (cons (quote #,(key->sym #'key)) val)
+	  (parse-module-options option ...)))
+
+      ((_ key val option ...)
+       (module-option? (syntax->datum #'key))
+       #`(cons
+	  (cons key (quote val))
+	  (parse-module-options option ...)))
       
-      ;; ??? uncommenting generates syntax error but above fendor is passing
-      ;;((_ key val option ...) (syntax-error "ffi: illegal keyword"))
+      ((_ key val option ...)
+       #'(syntax-error "compile-ffi: expecting keyword"))
       
       ((_) #''()))))
 
 (define-syntax-rule (define-ffi-module path-list attr ...)
-  (intro-ffi (quote path-list) (module-options attr ...)))
+  (intro-ffi (quote path-list) (parse-module-options attr ...)))
 
 
 ;; === file compiler ================
@@ -1667,7 +1702,7 @@
 		 (*defined* '())
 		 (*renamer* identity)
 		 (*errmsgs* '()))
-    (sfout "+++ warning: the FFI Helper is experimental\n")
+    (sfout "+++ warning: the FFI helper is experimental\n")
     ;; if not interactive ...
     (debug-disable 'backtrace)
     (call-with-input-file file

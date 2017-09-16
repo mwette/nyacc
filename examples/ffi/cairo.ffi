@@ -14,12 +14,13 @@
 	      ;;"cairo-xml.h"
 	      )
   ;; the following are bent pipe to scm-module
-  #:export (make-cairo-unit-matrix)
+  #:export (M_PI M_2PI make-cairo-unit-matrix)
   )
+
+(define M_PI 3.14159265358979323846)
+(define M_2PI 6.283185307179586)
 
 (define (make-cairo-unit-matrix)
   (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
 
 ;; --- last line ---
-;; is there a way to add guardians for cairo_destroy cairo_surface_destroy?
-

@@ -9,9 +9,6 @@
 ;; runtime for generated ffi-compiled dot-ffi files
 
 
-;; TODO
-;; * maybe remove bs-ref, use fh-object-val instead
-
 (define-module (system ffi-help-rt)
   #:export (fh-type?
 	    fh-object?
@@ -26,6 +23,7 @@
 	    unwrap~pointer unwrap~array
 	    make-ftn-arg-unwrapper
 	    fh-link-proc
+	    fh-cast
 	    void*
 	    
 	    ;; debugging
@@ -228,8 +226,7 @@
        (with-syntax ((unwrap (gen-id #'type "unwrap-" #'type))
 		     (type? (gen-id #'type #'type "?"))
 		     (make (gen-id #'type "make-" #'type))
-		     (wrap (gen-id #'type "wrap-" #'type))
-		     (bs-ref (gen-id #'type #'type "-bs-ref")))
+		     (wrap (gen-id #'type "wrap-" #'type)))
 	 #'(begin
 	     (define (unwrap obj)
 	       (bytestructure-bytevector (struct-ref obj 0)))
@@ -250,9 +247,7 @@
 		 (make-struct/no-tail type (apply bytestructure desc args)))))
 	     (define (wrap raw)	; raw is bytevector
 	       (make-struct/no-tail type (bytestructure desc raw)))
-	     (define (bs-ref obj)
-	       (struct-ref obj 0))
-	     (export type type? make wrap unwrap bs-ref)
+	     (export type type? make wrap unwrap)
 	     ))))))
 
 
@@ -316,7 +311,17 @@
 	     (define (unwrap ptr)
 	       (ffi:procedure->pointer return-t ptr args-t))
 	     (export desc unwrap wrap))))
-       )))
+      )))
+
+;; @deffn {Procecure} fh-case type expr
+;; For use on varargs calls, cast to a ffi type.
+;; @example
+;; (use-modules ((system foreign) #:prefix 'ffi:))
+;; (fh-cast ffi:short 321)
+;; @end example
+;; @end deffn
+(define (fh-cast type expr)
+  (cons type expr))
 
 (define-syntax define-fh-function/p
   (lambda (x)
@@ -339,7 +344,7 @@
 (define (pointer-to obj)
   ((fht-pointer-to (struct-vtable obj)) obj))
 
-;; @deffn {Procedure} make-ftn-arg-unwrapper arg ret-t name args-t => lambda
+;; @deffn {Procedure} make-ftn-arg-unwrapper ret-t args-t => lambda
 ;; This procedure will convert an argument, 
 ;; @end deffn
 (define (make-ftn-arg-unwrapper ret-t args-t)
