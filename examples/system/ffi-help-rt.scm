@@ -13,18 +13,21 @@
   #:export (fh-type?
 	    fh-object?
 	    fh-object-val
-	    define-fh-compound-type define-fh-compound-type/p
+	    pointer-to
+	    fh-cast
+	    
 	    define-fh-pointer-type
-	    ref<->deref!
+	    define-fh-compound-type define-fh-compound-type/p
+	    define-fh-fixed define-fh-fixed/p
+	    define-fh-float define-fh-float/p
 	    define-fh-enum
 	    define-fh-function define-fh-function/p
-	    pointer-to
 	    unwrap~fixed unwrap~float
 	    unwrap~pointer unwrap~array
 	    make-ftn-arg-unwrapper
 	    fh-link-proc
-	    fh-cast
 	    void*
+	    ref<->deref!
 	    
 	    ;; debugging
 	    fht-unwrap
@@ -115,31 +118,6 @@
      (string->symbol
       (apply string-append
 	     (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args))))))
-
-;; @deffn {Syntax} make-fh-enum
-;; This makes enum wrapper unwrapper, and descriptor (for int).
-;; @end deffn
-(define-syntax define-fh-enum
-  (lambda (x)
-    (syntax-case x ()
-      ((_ type nv-map)			; based on bytestructure
-       (with-syntax ((desc (gen-id #'type #'type "-desc"))
-		     (unwrap (gen-id #'type "unwrap-" #'type))
-		     (wrap (gen-id #'type "wrap-" #'type))
-		     (unwrap* (gen-id #'type "unwrap-" #'type "*")))
-         #'(begin
-	     (define desc int)
-	     (define wrap
-	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))
-			       nv-map)))
-		 (lambda (code) (assq-ref vnl code))))
-	     (define unwrap
-	       (let ((nvl nv-map))
-		 (lambda (name) (assq-ref nvl name))))
-	     (define (unwrap* obj) ;; ugh
-	       (error "pointer to enum type not done"))
-	     (export desc wrap unwrap unwrap*)
-	     ))))))
 
 ;; @deffn {Procedure} bs-data-address bs
 ;; Return the raw, numerical address of the bytestruture bytevector data.
@@ -250,7 +228,6 @@
 	     (export type type? make wrap unwrap)
 	     ))))))
 
-
 ;; @deffn {Procedure} ref<->deref! p-type type
 ;; This procedure will ``connect'' the two types so that the procedures
 ;; @code{pointer-to} and @code{value-at} work.
@@ -272,7 +249,6 @@
 	      (lambda (obj) ;; CHECK THIS
 		(make (bytestructure-ref p-desc '* obj))))))))))
 
-
 (define-syntax define-fh-compound-type/p
   (lambda (x)
     (syntax-case x ()
@@ -287,8 +263,91 @@
 	     (export p-desc)
 	     (define-fh-pointer-type p-type p-desc)
 	     (ref<->deref! p-type type)
-	     (export type desc p-type p-desc) ;; only4debugging?
-	     ))))))
+	     (export type desc p-type p-desc)))))))
+
+;; @deffn {Syntax} define-fh-fixed name desc
+;; @deffn {Syntax} define-fh-fixed/p name desc
+;; Define wrappers for a fixed type, and optionally for its pointer type.
+;; (Is descriptor needed?)
+;; @end deffn
+(define-syntax define-fh-fixed
+  (lambda (x)
+    (syntax-case x ()
+      ((_ type desc)
+       (with-syntax ((unwrap (gen-id #'type "unwrap-" #'type))
+		     (wrap (gen-id #'type "wrap-" #'type)))
+	 #'(begin
+	     (define unwrap unwrap~fixed)
+	     (define wrap identity)
+	     (export wrap unwrap)))))))
+(define-syntax define-fh-fixed/p
+  (lambda (x)
+    (syntax-case x ()
+      ((_ type desc)
+       (with-syntax ((unwrap* (gen-id #'type "unwrap-" #'type "*"))
+		     (wrap* (gen-id #'type "wrap-" #'type "*"))
+		     (desc* (gen-id #'type "*-desc")))
+	 #'(begin
+	     (define-fh-fixed type desc)
+	     (define desc* (bs:pointer desc))
+	     (define unwrap* unwrap~pointer)
+	     (define wrap* identity)
+	     (export desc* wrap* unwrap*)))))))
+
+;; @deffn {Syntax} define-fh-float name desc
+;; @deffn {Syntax} define-fh-float/p name desc
+;; Define wrappers for a fixed type, and optionally for its pointer type.
+;; (Is descriptor needed?)
+;; @end deffn
+(define-syntax define-fh-float
+  (lambda (x)
+    (syntax-case x ()
+      ((_ type desc)
+       (with-syntax ((unwrap (gen-id #'type "unwrap-" #'type))
+		     (wrap (gen-id #'type "wrap-" #'type)))
+	 #'(begin
+	     (define unwrap unwrap~float)
+	     (define wrap identity)
+	     (export wrap unwrap)))))))
+(define-syntax define-fh-float/p
+  (lambda (x)
+    (syntax-case x ()
+      ((_ type desc)
+       (with-syntax ((unwrap* (gen-id #'type "unwrap-" #'type "*"))
+		     (wrap* (gen-id #'type "wrap-" #'type "*"))
+		     (desc* (gen-id #'type "*-desc")))
+	 #'(begin
+	     (define-fh-float type desc)
+	     (define desc* (bs:pointer desc))
+	     (define unwrap* unwrap~pointer)
+	     (define wrap* identity)
+	     (export desc* wrap* unwrap*)))))))
+
+
+
+;; @deffn {Syntax} make-fh-enum
+;; This makes enum wrapper unwrapper, and descriptor (for int).
+;; @end deffn
+(define-syntax define-fh-enum
+  (lambda (x)
+    (syntax-case x ()
+      ((_ type nv-map)			; based on bytestructure
+       (with-syntax ((desc (gen-id #'type #'type "-desc"))
+		     (unwrap (gen-id #'type "unwrap-" #'type))
+		     (wrap (gen-id #'type "wrap-" #'type))
+		     (unwrap* (gen-id #'type "unwrap-" #'type "*")))
+         #'(begin
+	     (define desc int)
+	     (define wrap
+	       (let ((vnl (map (lambda (pair) (cons (cdr pair) (car pair)))
+			       nv-map)))
+		 (lambda (code) (assq-ref vnl code))))
+	     (define unwrap
+	       (let ((nvl nv-map))
+		 (lambda (name) (assq-ref nvl name))))
+	     (define (unwrap* obj) ;; ugh
+	       (error "pointer to enum type not done"))
+	     (export desc wrap unwrap unwrap*)))))))
 
 ;; @deffn {Syntax} define-fh-function name return-type arg-types
 ;; @deffnx {Syntax} define-fh-function/p name return-type arg-types
@@ -381,10 +440,13 @@
 (define (wrap-void* raw)
   (ffi:make-pointer raw))
 
-;; @deffn {Procedure} fh-link-proc name return args
-;; link from loaded libraries
+;; @deffn {Procedure} fh-link-proc name return args [library]
+;; Generate Guile procedure from C library.  The argument @var{library}
+;; results from @code{(dymamic-link "lib")}.  If @var{library} is not
+;; provided @code{(dymamic-link)} is used.
 ;; @end deffn
-(define (fh-link-proc name return args)
-  (ffi:pointer->procedure return (dynamic-func name (dynamic-link)) args))
+(define* (fh-link-proc name return args #:optional library)
+  (ffi:pointer->procedure
+   return (dynamic-func name (or library (dynamic-link))) args))
 
 ;; --- last line ---

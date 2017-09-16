@@ -73,6 +73,9 @@
              (lambda (file seed)
 	       (if (assq-ref 'file seed)
 		   (fail "only one input file can be specified"))
+	       (or (assq-ref seed 'any-suffix)
+		   (string-suffix? ".ffi" file)
+		   (fail "expecting .ffi suffix"))
 	       (acons 'file file seed))
 	     '()))
 
@@ -113,5 +116,6 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n")
 ;;; Todo:
 
 ;; 1) remove output file on error? => generate default output file here
+;; 2) add arg to override default file suffix (i.e., `.ffi'): 'any-suffix
 
 ;; --- last line ---

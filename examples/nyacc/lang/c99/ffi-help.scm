@@ -262,7 +262,9 @@
 	 (libraries (resolve-attr-val (assq-ref attrs 'library)))
 	 (libraries (append
 		     (if pkg-config (pkg-config-libs pkg-config) '())
-		     libraries)))
+		     libraries))
+	 (library (car libraries))
+	 (libraries (cdr libraries)))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n" (path->path path))
     (nlscm)
     (sfscm "(define-module ~S\n" path)
@@ -281,7 +283,11 @@
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (bytestructures guile)\n")
     (sfscm "  )\n")
-    (for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l)) libraries)
+    ;;
+    (for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l)) (reverse libraries))
+    (sfscm "(define link-lib (dynamic-link ~S))\n" library)
+    ;;(sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")
+    ;;
     (sfscm "(define void intptr_t)\n")
     (if *echo-decls* (sfscm "(define echo-decls #f)\n"))
     ))
@@ -816,7 +822,9 @@
     (ppscm
      `(define (,sname ,@(gen-exec-arg-names exec-params))
 	(unless ,~name
-	  (set! ,~name (fh-link-proc ,name ,decl-return (list ,@decl-params))))
+	  (set! ,~name
+		(fh-link-proc ,name ,decl-return (list ,@decl-params)
+			      link-lib)))
 	(let ,(gen-exec-unwrappers exec-params)
 	  ,(if exec-return (list exec-return call) call))))
     (sfscm "(export ~A)\n" name)))
@@ -834,7 +842,7 @@
     (ppscm
      `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
 	(let ((decl-params (append ,decl-params (map car ~rest)))
-	      (,~name (fh-link-proc ,name ,decl-return decl-params))
+	      (,~name (fh-link-proc ,name ,decl-return decl-params link-lib))
 	      ,@(gen-exec-unwrappers exec-params))
 	  ,(if exec-return `(,exec-return call) call))))
     (sfscm "(export ~A)\n" name)))
@@ -989,10 +997,7 @@
 	 (error "yuck")
 	 (sfscm "(define ~A-desc ~A-desc)\n" typename name)))
        (sfscm "(export ~A-desc)\n" typename)
-       (sfscm "(define unwrap-~A unwrap~~fixed)\n" typename)
-       (sfscm "(define wrap-~A identity)\n" typename)
-       (sfscm "(export ~A-desc unwrap-~A wrap-~A)\n"
-	      typename typename typename)
+       (sfscm "(define-fh-fixed/p ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) defined))
 
       ;; typedef double foo_t;
@@ -1005,10 +1010,8 @@
 	((assoc-ref bs-typemap name) =>
 	 (lambda (bs-name) (sfscm "(define ~A-desc ~A)\n" typename bs-name)))
 	(else (sfscm "(define ~A-desc ~A-desc)\n" typename name)))
-       (sfscm "(define unwrap-~A unwrap~~float)\n" typename)
-       (sfscm "(define wrap-~A identity)\n" typename)
-       (sfscm "(export ~A-desc unwrap-~A wrap-~A)\n"
-	      typename typename typename)
+       (sfscm "(export ~A-desc)\n" typename)
+       (sfscm "(define-fh-float/p ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) (cons typename defined)))
 
       ;; typedef enum foo { ... } foo_t;
@@ -1655,6 +1658,12 @@
     (define (module-option? key) (keyword? key))
 
     (syntax-case x ()
+      ((_ key val option ...)
+       (eq? (syntax->datum #'key) #:use-ffi-module)
+       #`(cons
+	  (cons (quote #,(key->sym #'key)) (quote val))
+	  (parse-module-options option ...)))
+
       ((_ key val option ...)
        (ffimod-option? (syntax->datum #'key))
        #`(cons

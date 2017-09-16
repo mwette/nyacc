@@ -6,7 +6,7 @@
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (bytestructures guile)
   )
-(dynamic-link "libcairo")
+(define link-lib (dynamic-link "libcairo"))
 (define void intptr_t)
 
 ;; int cairo_version(void);
@@ -15,7 +15,11 @@
   (unless
     ~cairo_version
     (set! ~cairo_version
-      (fh-link-proc "cairo_version" ffi:int (list))))
+      (fh-link-proc
+        "cairo_version"
+        ffi:int
+        (list)
+        link-lib)))
   (let () (~cairo_version)))
 (export cairo_version)
 
@@ -28,16 +32,15 @@
       (fh-link-proc
         "cairo_version_string"
         void*
-        (list))))
+        (list)
+        link-lib)))
   (let () (~cairo_version_string)))
 (export cairo_version_string)
 
 ;; typedef int cairo_bool_t;
 (define cairo_bool_t-desc int)
 (export cairo_bool_t-desc)
-(define unwrap-cairo_bool_t unwrap~fixed)
-(define wrap-cairo_bool_t identity)
-(export cairo_bool_t-desc unwrap-cairo_bool_t wrap-cairo_bool_t)
+(define-fh-fixed/p cairo_bool_t cairo_bool_t-desc)
 
 ;; typedef struct _cairo cairo_t;
 (define cairo_t-desc void)
@@ -251,7 +254,11 @@
   (unless
     ~cairo_create
     (set! ~cairo_create
-      (fh-link-proc "cairo_create" void* (list void*))))
+      (fh-link-proc
+        "cairo_create"
+        void*
+        (list void*)
+        link-lib)))
   (let ((~target (unwrap-cairo_surface_t* target)))
     (wrap-cairo_t* (~cairo_create ~target))))
 (export cairo_create)
@@ -265,7 +272,8 @@
       (fh-link-proc
         "cairo_reference"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_t* (~cairo_reference ~cr))))
 (export cairo_reference)
@@ -279,7 +287,8 @@
       (fh-link-proc
         "cairo_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_destroy ~cr)))
 (export cairo_destroy)
@@ -293,7 +302,8 @@
       (fh-link-proc
         "cairo_get_reference_count"
         ffi:unsigned-int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_get_reference_count ~cr)))
 (export cairo_get_reference_count)
@@ -307,7 +317,8 @@
       (fh-link-proc
         "cairo_get_user_data"
         void*
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~key (unwrap-cairo_user_data_key_t* key)))
     (~cairo_get_user_data ~cr ~key)))
@@ -323,7 +334,8 @@
       (fh-link-proc
         "cairo_set_user_data"
         ffi:int
-        (list void* void* void* void*))))
+        (list void* void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
@@ -342,7 +354,11 @@
   (unless
     ~cairo_save
     (set! ~cairo_save
-      (fh-link-proc "cairo_save" ffi:void (list void*))))
+      (fh-link-proc
+        "cairo_save"
+        ffi:void
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_save ~cr)))
 (export cairo_save)
@@ -356,7 +372,8 @@
       (fh-link-proc
         "cairo_restore"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_restore ~cr)))
 (export cairo_restore)
@@ -370,7 +387,8 @@
       (fh-link-proc
         "cairo_push_group"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_push_group ~cr)))
 (export cairo_push_group)
@@ -384,7 +402,8 @@
       (fh-link-proc
         "cairo_push_group_with_content"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~content (unwrap-cairo_content_t content)))
     (~cairo_push_group_with_content ~cr ~content)))
@@ -399,7 +418,8 @@
       (fh-link-proc
         "cairo_pop_group"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_pattern_t* (~cairo_pop_group ~cr))))
 (export cairo_pop_group)
@@ -413,7 +433,8 @@
       (fh-link-proc
         "cairo_pop_group_to_source"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_pop_group_to_source ~cr)))
 (export cairo_pop_group_to_source)
@@ -492,7 +513,8 @@
       (fh-link-proc
         "cairo_set_operator"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~op (unwrap-cairo_operator_t op)))
     (~cairo_set_operator ~cr ~op)))
@@ -507,7 +529,8 @@
       (fh-link-proc
         "cairo_set_source"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~source (unwrap-cairo_pattern_t* source)))
     (~cairo_set_source ~cr ~source)))
@@ -523,7 +546,8 @@
       (fh-link-proc
         "cairo_set_source_rgb"
         ffi:void
-        (list void* ffi:double ffi:double ffi:double))))
+        (list void* ffi:double ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~red (unwrap~float red))
         (~green (unwrap~float green))
@@ -545,7 +569,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~red (unwrap~float red))
         (~green (unwrap~float green))
@@ -569,7 +594,8 @@
       (fh-link-proc
         "cairo_set_source_surface"
         ffi:void
-        (list void* void* ffi:double ffi:double))))
+        (list void* void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~surface (unwrap-cairo_surface_t* surface))
         (~x (unwrap~float x))
@@ -586,7 +612,8 @@
       (fh-link-proc
         "cairo_set_tolerance"
         ffi:void
-        (list void* ffi:double))))
+        (list void* ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~tolerance (unwrap~float tolerance)))
     (~cairo_set_tolerance ~cr ~tolerance)))
@@ -622,7 +649,8 @@
       (fh-link-proc
         "cairo_set_antialias"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~antialias (unwrap-cairo_antialias_t antialias)))
     (~cairo_set_antialias ~cr ~antialias)))
@@ -648,7 +676,8 @@
       (fh-link-proc
         "cairo_set_fill_rule"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~fill_rule (unwrap-cairo_fill_rule_t fill_rule)))
     (~cairo_set_fill_rule ~cr ~fill_rule)))
@@ -663,7 +692,8 @@
       (fh-link-proc
         "cairo_set_line_width"
         ffi:void
-        (list void* ffi:double))))
+        (list void* ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~width (unwrap~float width)))
     (~cairo_set_line_width ~cr ~width)))
@@ -691,7 +721,8 @@
       (fh-link-proc
         "cairo_set_line_cap"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~line_cap (unwrap-cairo_line_cap_t line_cap)))
     (~cairo_set_line_cap ~cr ~line_cap)))
@@ -719,7 +750,8 @@
       (fh-link-proc
         "cairo_set_line_join"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~line_join (unwrap-cairo_line_join_t line_join)))
     (~cairo_set_line_join ~cr ~line_join)))
@@ -735,7 +767,8 @@
       (fh-link-proc
         "cairo_set_dash"
         ffi:void
-        (list void* void* ffi:int ffi:double))))
+        (list void* void* ffi:int ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~dashes (unwrap~pointer dashes))
         (~num_dashes (unwrap~fixed num_dashes))
@@ -752,7 +785,8 @@
       (fh-link-proc
         "cairo_set_miter_limit"
         ffi:void
-        (list void* ffi:double))))
+        (list void* ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~limit (unwrap~float limit)))
     (~cairo_set_miter_limit ~cr ~limit)))
@@ -767,7 +801,8 @@
       (fh-link-proc
         "cairo_translate"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~tx (unwrap~float tx))
         (~ty (unwrap~float ty)))
@@ -783,7 +818,8 @@
       (fh-link-proc
         "cairo_scale"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~sx (unwrap~float sx))
         (~sy (unwrap~float sy)))
@@ -799,7 +835,8 @@
       (fh-link-proc
         "cairo_rotate"
         ffi:void
-        (list void* ffi:double))))
+        (list void* ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~angle (unwrap~float angle)))
     (~cairo_rotate ~cr ~angle)))
@@ -814,7 +851,8 @@
       (fh-link-proc
         "cairo_transform"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~matrix (unwrap-cairo_matrix_t* matrix)))
     (~cairo_transform ~cr ~matrix)))
@@ -829,7 +867,8 @@
       (fh-link-proc
         "cairo_set_matrix"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~matrix (unwrap-cairo_matrix_t* matrix)))
     (~cairo_set_matrix ~cr ~matrix)))
@@ -844,7 +883,8 @@
       (fh-link-proc
         "cairo_identity_matrix"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_identity_matrix ~cr)))
 (export cairo_identity_matrix)
@@ -858,7 +898,8 @@
       (fh-link-proc
         "cairo_user_to_device"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~pointer x))
         (~y (unwrap~pointer y)))
@@ -874,7 +915,8 @@
       (fh-link-proc
         "cairo_user_to_device_distance"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~dx (unwrap~pointer dx))
         (~dy (unwrap~pointer dy)))
@@ -890,7 +932,8 @@
       (fh-link-proc
         "cairo_device_to_user"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~pointer x))
         (~y (unwrap~pointer y)))
@@ -906,7 +949,8 @@
       (fh-link-proc
         "cairo_device_to_user_distance"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~dx (unwrap~pointer dx))
         (~dy (unwrap~pointer dy)))
@@ -922,7 +966,8 @@
       (fh-link-proc
         "cairo_new_path"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_new_path ~cr)))
 (export cairo_new_path)
@@ -936,7 +981,8 @@
       (fh-link-proc
         "cairo_move_to"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
@@ -952,7 +998,8 @@
       (fh-link-proc
         "cairo_new_sub_path"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_new_sub_path ~cr)))
 (export cairo_new_sub_path)
@@ -966,7 +1013,8 @@
       (fh-link-proc
         "cairo_line_to"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
@@ -989,7 +1037,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x1 (unwrap~float x1))
         (~y1 (unwrap~float y1))
@@ -1015,7 +1064,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~xc (unwrap~float xc))
         (~yc (unwrap~float yc))
@@ -1046,7 +1096,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~xc (unwrap~float xc))
         (~yc (unwrap~float yc))
@@ -1071,7 +1122,8 @@
       (fh-link-proc
         "cairo_rel_move_to"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~dx (unwrap~float dx))
         (~dy (unwrap~float dy)))
@@ -1087,7 +1139,8 @@
       (fh-link-proc
         "cairo_rel_line_to"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~dx (unwrap~float dx))
         (~dy (unwrap~float dy)))
@@ -1110,7 +1163,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~dx1 (unwrap~float dx1))
         (~dy1 (unwrap~float dy1))
@@ -1142,7 +1196,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y))
@@ -1160,7 +1215,8 @@
       (fh-link-proc
         "cairo_close_path"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_close_path ~cr)))
 (export cairo_close_path)
@@ -1175,7 +1231,8 @@
       (fh-link-proc
         "cairo_path_extents"
         ffi:void
-        (list void* void* void* void* void*))))
+        (list void* void* void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x1 (unwrap~pointer x1))
         (~y1 (unwrap~pointer y1))
@@ -1193,7 +1250,8 @@
       (fh-link-proc
         "cairo_paint"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_paint ~cr)))
 (export cairo_paint)
@@ -1207,7 +1265,8 @@
       (fh-link-proc
         "cairo_paint_with_alpha"
         ffi:void
-        (list void* ffi:double))))
+        (list void* ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~alpha (unwrap~float alpha)))
     (~cairo_paint_with_alpha ~cr ~alpha)))
@@ -1222,7 +1281,8 @@
       (fh-link-proc
         "cairo_mask"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~pattern (unwrap-cairo_pattern_t* pattern)))
     (~cairo_mask ~cr ~pattern)))
@@ -1242,7 +1302,8 @@
       (fh-link-proc
         "cairo_mask_surface"
         ffi:void
-        (list void* void* ffi:double ffi:double))))
+        (list void* void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~surface (unwrap-cairo_surface_t* surface))
         (~surface_x (unwrap~float surface_x))
@@ -1263,7 +1324,8 @@
       (fh-link-proc
         "cairo_stroke"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_stroke ~cr)))
 (export cairo_stroke)
@@ -1277,7 +1339,8 @@
       (fh-link-proc
         "cairo_stroke_preserve"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_stroke_preserve ~cr)))
 (export cairo_stroke_preserve)
@@ -1288,7 +1351,11 @@
   (unless
     ~cairo_fill
     (set! ~cairo_fill
-      (fh-link-proc "cairo_fill" ffi:void (list void*))))
+      (fh-link-proc
+        "cairo_fill"
+        ffi:void
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_fill ~cr)))
 (export cairo_fill)
@@ -1302,7 +1369,8 @@
       (fh-link-proc
         "cairo_fill_preserve"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_fill_preserve ~cr)))
 (export cairo_fill_preserve)
@@ -1316,7 +1384,8 @@
       (fh-link-proc
         "cairo_copy_page"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_copy_page ~cr)))
 (export cairo_copy_page)
@@ -1330,7 +1399,8 @@
       (fh-link-proc
         "cairo_show_page"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_show_page ~cr)))
 (export cairo_show_page)
@@ -1344,7 +1414,8 @@
       (fh-link-proc
         "cairo_in_stroke"
         ffi:int
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
@@ -1360,7 +1431,8 @@
       (fh-link-proc
         "cairo_in_fill"
         ffi:int
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
@@ -1376,7 +1448,8 @@
       (fh-link-proc
         "cairo_in_clip"
         ffi:int
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
@@ -1393,7 +1466,8 @@
       (fh-link-proc
         "cairo_stroke_extents"
         ffi:void
-        (list void* void* void* void* void*))))
+        (list void* void* void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x1 (unwrap~pointer x1))
         (~y1 (unwrap~pointer y1))
@@ -1412,7 +1486,8 @@
       (fh-link-proc
         "cairo_fill_extents"
         ffi:void
-        (list void* void* void* void* void*))))
+        (list void* void* void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x1 (unwrap~pointer x1))
         (~y1 (unwrap~pointer y1))
@@ -1430,7 +1505,8 @@
       (fh-link-proc
         "cairo_reset_clip"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_reset_clip ~cr)))
 (export cairo_reset_clip)
@@ -1441,7 +1517,11 @@
   (unless
     ~cairo_clip
     (set! ~cairo_clip
-      (fh-link-proc "cairo_clip" ffi:void (list void*))))
+      (fh-link-proc
+        "cairo_clip"
+        ffi:void
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_clip ~cr)))
 (export cairo_clip)
@@ -1455,7 +1535,8 @@
       (fh-link-proc
         "cairo_clip_preserve"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_clip_preserve ~cr)))
 (export cairo_clip_preserve)
@@ -1470,7 +1551,8 @@
       (fh-link-proc
         "cairo_clip_extents"
         ffi:void
-        (list void* void* void* void* void*))))
+        (list void* void* void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x1 (unwrap~pointer x1))
         (~y1 (unwrap~pointer y1))
@@ -1516,7 +1598,8 @@
       (fh-link-proc
         "cairo_copy_clip_rectangle_list"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_rectangle_list_t*
       (~cairo_copy_clip_rectangle_list ~cr))))
@@ -1531,7 +1614,8 @@
       (fh-link-proc
         "cairo_rectangle_list_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~rectangle_list
           (unwrap-cairo_rectangle_list_t* rectangle_list)))
     (~cairo_rectangle_list_destroy ~rectangle_list)))
@@ -1573,7 +1657,8 @@
       (fh-link-proc
         "cairo_glyph_allocate"
         void*
-        (list ffi:int))))
+        (list ffi:int)
+        link-lib)))
   (let ((~num_glyphs (unwrap~fixed num_glyphs)))
     (wrap-cairo_glyph_t*
       (~cairo_glyph_allocate ~num_glyphs))))
@@ -1588,7 +1673,8 @@
       (fh-link-proc
         "cairo_glyph_free"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~glyphs (unwrap-cairo_glyph_t* glyphs)))
     (~cairo_glyph_free ~glyphs)))
 (export cairo_glyph_free)
@@ -1612,7 +1698,8 @@
       (fh-link-proc
         "cairo_text_cluster_allocate"
         void*
-        (list ffi:int))))
+        (list ffi:int)
+        link-lib)))
   (let ((~num_clusters (unwrap~fixed num_clusters)))
     (wrap-cairo_text_cluster_t*
       (~cairo_text_cluster_allocate ~num_clusters))))
@@ -1627,7 +1714,8 @@
       (fh-link-proc
         "cairo_text_cluster_free"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~clusters
           (unwrap-cairo_text_cluster_t* clusters)))
     (~cairo_text_cluster_free ~clusters)))
@@ -1765,7 +1853,8 @@
       (fh-link-proc
         "cairo_font_options_create"
         void*
-        (list))))
+        (list)
+        link-lib)))
   (let ()
     (wrap-cairo_font_options_t*
       (~cairo_font_options_create))))
@@ -1781,7 +1870,8 @@
       (fh-link-proc
         "cairo_font_options_copy"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~original
           (unwrap-cairo_font_options_t* original)))
     (wrap-cairo_font_options_t*
@@ -1797,7 +1887,8 @@
       (fh-link-proc
         "cairo_font_options_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options)))
     (~cairo_font_options_destroy ~options)))
 (export cairo_font_options_destroy)
@@ -1811,7 +1902,8 @@
       (fh-link-proc
         "cairo_font_options_status"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options)))
     (wrap-cairo_status_t
       (~cairo_font_options_status ~options))))
@@ -1827,7 +1919,8 @@
       (fh-link-proc
         "cairo_font_options_merge"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options))
         (~other (unwrap-cairo_font_options_t* other)))
     (~cairo_font_options_merge ~options ~other)))
@@ -1843,7 +1936,8 @@
       (fh-link-proc
         "cairo_font_options_equal"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options))
         (~other (unwrap-cairo_font_options_t* other)))
     (wrap-cairo_bool_t
@@ -1859,7 +1953,8 @@
       (fh-link-proc
         "cairo_font_options_hash"
         ffi:unsigned-long
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options)))
     (~cairo_font_options_hash ~options)))
 (export cairo_font_options_hash)
@@ -1876,7 +1971,8 @@
       (fh-link-proc
         "cairo_font_options_set_antialias"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options))
         (~antialias (unwrap-cairo_antialias_t antialias)))
     (~cairo_font_options_set_antialias
@@ -1894,7 +1990,8 @@
       (fh-link-proc
         "cairo_font_options_get_antialias"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options)))
     (wrap-cairo_antialias_t
       (~cairo_font_options_get_antialias ~options))))
@@ -1912,7 +2009,8 @@
       (fh-link-proc
         "cairo_font_options_set_subpixel_order"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options))
         (~subpixel_order
           (unwrap-cairo_subpixel_order_t subpixel_order)))
@@ -1931,7 +2029,8 @@
       (fh-link-proc
         "cairo_font_options_get_subpixel_order"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options)))
     (wrap-cairo_subpixel_order_t
       (~cairo_font_options_get_subpixel_order ~options))))
@@ -1949,7 +2048,8 @@
       (fh-link-proc
         "cairo_font_options_set_hint_style"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options))
         (~hint_style
           (unwrap-cairo_hint_style_t hint_style)))
@@ -1968,7 +2068,8 @@
       (fh-link-proc
         "cairo_font_options_get_hint_style"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options)))
     (wrap-cairo_hint_style_t
       (~cairo_font_options_get_hint_style ~options))))
@@ -1986,7 +2087,8 @@
       (fh-link-proc
         "cairo_font_options_set_hint_metrics"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options))
         (~hint_metrics
           (unwrap-cairo_hint_metrics_t hint_metrics)))
@@ -2005,7 +2107,8 @@
       (fh-link-proc
         "cairo_font_options_get_hint_metrics"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~options (unwrap-cairo_font_options_t* options)))
     (wrap-cairo_hint_metrics_t
       (~cairo_font_options_get_hint_metrics ~options))))
@@ -2021,7 +2124,8 @@
       (fh-link-proc
         "cairo_select_font_face"
         ffi:void
-        (list void* void* ffi:int ffi:int))))
+        (list void* void* ffi:int ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~family (unwrap~pointer family))
         (~slant (unwrap-cairo_font_slant_t slant))
@@ -2042,7 +2146,8 @@
       (fh-link-proc
         "cairo_set_font_size"
         ffi:void
-        (list void* ffi:double))))
+        (list void* ffi:double)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~size (unwrap~float size)))
     (~cairo_set_font_size ~cr ~size)))
@@ -2057,7 +2162,8 @@
       (fh-link-proc
         "cairo_set_font_matrix"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~matrix (unwrap-cairo_matrix_t* matrix)))
     (~cairo_set_font_matrix ~cr ~matrix)))
@@ -2072,7 +2178,8 @@
       (fh-link-proc
         "cairo_get_font_matrix"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~matrix (unwrap-cairo_matrix_t* matrix)))
     (~cairo_get_font_matrix ~cr ~matrix)))
@@ -2088,7 +2195,8 @@
       (fh-link-proc
         "cairo_set_font_options"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~options (unwrap-cairo_font_options_t* options)))
     (~cairo_set_font_options ~cr ~options)))
@@ -2103,7 +2211,8 @@
       (fh-link-proc
         "cairo_get_font_options"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~options (unwrap-cairo_font_options_t* options)))
     (~cairo_get_font_options ~cr ~options)))
@@ -2118,7 +2227,8 @@
       (fh-link-proc
         "cairo_set_font_face"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~font_face
           (unwrap-cairo_font_face_t* font_face)))
@@ -2134,7 +2244,8 @@
       (fh-link-proc
         "cairo_get_font_face"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_font_face_t*
       (~cairo_get_font_face ~cr))))
@@ -2150,7 +2261,8 @@
       (fh-link-proc
         "cairo_set_scaled_font"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
@@ -2166,7 +2278,8 @@
       (fh-link-proc
         "cairo_get_scaled_font"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_scaled_font_t*
       (~cairo_get_scaled_font ~cr))))
@@ -2181,7 +2294,8 @@
       (fh-link-proc
         "cairo_show_text"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~utf8 (unwrap~pointer utf8)))
     (~cairo_show_text ~cr ~utf8)))
@@ -2197,7 +2311,8 @@
       (fh-link-proc
         "cairo_show_glyphs"
         ffi:void
-        (list void* void* ffi:int))))
+        (list void* void* ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~glyphs (unwrap-cairo_glyph_t* glyphs))
         (~num_glyphs (unwrap~fixed num_glyphs)))
@@ -2230,7 +2345,8 @@
               ffi:int
               void*
               ffi:int
-              ffi:int))))
+              ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~utf8 (unwrap~pointer utf8))
         (~utf8_len (unwrap~fixed utf8_len))
@@ -2261,7 +2377,8 @@
       (fh-link-proc
         "cairo_text_path"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~utf8 (unwrap~pointer utf8)))
     (~cairo_text_path ~cr ~utf8)))
@@ -2277,7 +2394,8 @@
       (fh-link-proc
         "cairo_glyph_path"
         ffi:void
-        (list void* void* ffi:int))))
+        (list void* void* ffi:int)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~glyphs (unwrap-cairo_glyph_t* glyphs))
         (~num_glyphs (unwrap~fixed num_glyphs)))
@@ -2294,7 +2412,8 @@
       (fh-link-proc
         "cairo_text_extents"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~utf8 (unwrap~pointer utf8))
         (~extents (unwrap-cairo_text_extents_t* extents)))
@@ -2315,7 +2434,8 @@
       (fh-link-proc
         "cairo_glyph_extents"
         ffi:void
-        (list void* void* ffi:int void*))))
+        (list void* void* ffi:int void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~glyphs (unwrap-cairo_glyph_t* glyphs))
         (~num_glyphs (unwrap~fixed num_glyphs))
@@ -2336,7 +2456,8 @@
       (fh-link-proc
         "cairo_font_extents"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~extents (unwrap-cairo_font_extents_t* extents)))
     (~cairo_font_extents ~cr ~extents)))
@@ -2351,7 +2472,8 @@
       (fh-link-proc
         "cairo_font_face_reference"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_font_face_t*
@@ -2367,7 +2489,8 @@
       (fh-link-proc
         "cairo_font_face_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (~cairo_font_face_destroy ~font_face)))
@@ -2383,7 +2506,8 @@
       (fh-link-proc
         "cairo_font_face_get_reference_count"
         ffi:unsigned-int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (~cairo_font_face_get_reference_count ~font_face)))
@@ -2398,7 +2522,8 @@
       (fh-link-proc
         "cairo_font_face_status"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_status_t
@@ -2431,7 +2556,8 @@
       (fh-link-proc
         "cairo_font_face_get_type"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_font_type_t
@@ -2448,7 +2574,8 @@
       (fh-link-proc
         "cairo_font_face_get_user_data"
         void*
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~key (unwrap-cairo_user_data_key_t* key)))
@@ -2470,7 +2597,8 @@
       (fh-link-proc
         "cairo_font_face_set_user_data"
         ffi:int
-        (list void* void* void* void*))))
+        (list void* void* void* void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~key (unwrap-cairo_user_data_key_t* key))
@@ -2499,7 +2627,8 @@
       (fh-link-proc
         "cairo_scaled_font_create"
         void*
-        (list void* void* void* void*))))
+        (list void* void* void* void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~font_matrix
@@ -2524,7 +2653,8 @@
       (fh-link-proc
         "cairo_scaled_font_reference"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
     (wrap-cairo_scaled_font_t*
@@ -2540,7 +2670,8 @@
       (fh-link-proc
         "cairo_scaled_font_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
     (~cairo_scaled_font_destroy ~scaled_font)))
@@ -2557,7 +2688,8 @@
       (fh-link-proc
         "cairo_scaled_font_get_reference_count"
         ffi:unsigned-int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
     (~cairo_scaled_font_get_reference_count
@@ -2573,7 +2705,8 @@
       (fh-link-proc
         "cairo_scaled_font_status"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
     (wrap-cairo_status_t
@@ -2590,7 +2723,8 @@
       (fh-link-proc
         "cairo_scaled_font_get_type"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
     (wrap-cairo_font_type_t
@@ -2607,7 +2741,8 @@
       (fh-link-proc
         "cairo_scaled_font_get_user_data"
         void*
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~key (unwrap-cairo_user_data_key_t* key)))
@@ -2631,7 +2766,8 @@
       (fh-link-proc
         "cairo_scaled_font_set_user_data"
         ffi:int
-        (list void* void* void* void*))))
+        (list void* void* void* void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~key (unwrap-cairo_user_data_key_t* key))
@@ -2655,7 +2791,8 @@
       (fh-link-proc
         "cairo_scaled_font_extents"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~extents (unwrap-cairo_font_extents_t* extents)))
@@ -2677,7 +2814,8 @@
       (fh-link-proc
         "cairo_scaled_font_text_extents"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~utf8 (unwrap~pointer utf8))
@@ -2702,7 +2840,8 @@
       (fh-link-proc
         "cairo_scaled_font_glyph_extents"
         ffi:void
-        (list void* void* ffi:int void*))))
+        (list void* void* ffi:int void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~glyphs (unwrap-cairo_glyph_t* glyphs))
@@ -2746,7 +2885,8 @@
               void*
               void*
               void*
-              void*))))
+              void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~x (unwrap~float x))
@@ -2784,7 +2924,8 @@
       (fh-link-proc
         "cairo_scaled_font_get_font_face"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font)))
     (wrap-cairo_font_face_t*
@@ -2803,7 +2944,8 @@
       (fh-link-proc
         "cairo_scaled_font_get_font_matrix"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~font_matrix
@@ -2823,7 +2965,8 @@
       (fh-link-proc
         "cairo_scaled_font_get_ctm"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~ctm (unwrap-cairo_matrix_t* ctm)))
@@ -2842,7 +2985,8 @@
       (fh-link-proc
         "cairo_scaled_font_get_scale_matrix"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~scale_matrix
@@ -2864,7 +3008,8 @@
       (fh-link-proc
         "cairo_scaled_font_get_font_options"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~scaled_font
           (unwrap-cairo_scaled_font_t* scaled_font))
         (~options (unwrap-cairo_font_options_t* options)))
@@ -2883,7 +3028,8 @@
       (fh-link-proc
         "cairo_toy_font_face_create"
         void*
-        (list void* ffi:int ffi:int))))
+        (list void* ffi:int ffi:int)
+        link-lib)))
   (let ((~family (unwrap~pointer family))
         (~slant (unwrap-cairo_font_slant_t slant))
         (~weight (unwrap-cairo_font_weight_t weight)))
@@ -2903,7 +3049,8 @@
       (fh-link-proc
         "cairo_toy_font_face_get_family"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (~cairo_toy_font_face_get_family ~font_face)))
@@ -2919,7 +3066,8 @@
       (fh-link-proc
         "cairo_toy_font_face_get_slant"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_font_slant_t
@@ -2936,7 +3084,8 @@
       (fh-link-proc
         "cairo_toy_font_face_get_weight"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_font_weight_t
@@ -2952,7 +3101,8 @@
       (fh-link-proc
         "cairo_user_font_face_create"
         void*
-        (list))))
+        (list)
+        link-lib)))
   (let ()
     (wrap-cairo_font_face_t*
       (~cairo_user_font_face_create))))
@@ -2995,7 +3145,8 @@
       (fh-link-proc
         "cairo_user_font_face_set_init_func"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~init_func
@@ -3018,7 +3169,8 @@
       (fh-link-proc
         "cairo_user_font_face_set_render_glyph_func"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~render_glyph_func
@@ -3042,7 +3194,8 @@
       (fh-link-proc
         "cairo_user_font_face_set_text_to_glyphs_func"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~text_to_glyphs_func
@@ -3066,7 +3219,8 @@
       (fh-link-proc
         "cairo_user_font_face_set_unicode_to_glyph_func"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face))
         (~unicode_to_glyph_func
@@ -3087,7 +3241,8 @@
       (fh-link-proc
         "cairo_user_font_face_get_init_func"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_user_scaled_font_init_func_t
@@ -3106,7 +3261,8 @@
       (fh-link-proc
         "cairo_user_font_face_get_render_glyph_func"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_user_scaled_font_render_glyph_func_t
@@ -3126,7 +3282,8 @@
       (fh-link-proc
         "cairo_user_font_face_get_text_to_glyphs_func"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_user_scaled_font_text_to_glyphs_func_t
@@ -3146,7 +3303,8 @@
       (fh-link-proc
         "cairo_user_font_face_get_unicode_to_glyph_func"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~font_face
           (unwrap-cairo_font_face_t* font_face)))
     (wrap-cairo_user_scaled_font_unicode_to_glyph_func_t
@@ -3163,7 +3321,8 @@
       (fh-link-proc
         "cairo_get_operator"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_operator_t (~cairo_get_operator ~cr))))
 (export cairo_get_operator)
@@ -3177,7 +3336,8 @@
       (fh-link-proc
         "cairo_get_source"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_pattern_t* (~cairo_get_source ~cr))))
 (export cairo_get_source)
@@ -3191,7 +3351,8 @@
       (fh-link-proc
         "cairo_get_tolerance"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_get_tolerance ~cr)))
 (export cairo_get_tolerance)
@@ -3205,7 +3366,8 @@
       (fh-link-proc
         "cairo_get_antialias"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_antialias_t
       (~cairo_get_antialias ~cr))))
@@ -3220,7 +3382,8 @@
       (fh-link-proc
         "cairo_has_current_point"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_bool_t
       (~cairo_has_current_point ~cr))))
@@ -3235,7 +3398,8 @@
       (fh-link-proc
         "cairo_get_current_point"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~x (unwrap~pointer x))
         (~y (unwrap~pointer y)))
@@ -3251,7 +3415,8 @@
       (fh-link-proc
         "cairo_get_fill_rule"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_fill_rule_t
       (~cairo_get_fill_rule ~cr))))
@@ -3266,7 +3431,8 @@
       (fh-link-proc
         "cairo_get_line_width"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_get_line_width ~cr)))
 (export cairo_get_line_width)
@@ -3280,7 +3446,8 @@
       (fh-link-proc
         "cairo_get_line_cap"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_line_cap_t (~cairo_get_line_cap ~cr))))
 (export cairo_get_line_cap)
@@ -3294,7 +3461,8 @@
       (fh-link-proc
         "cairo_get_line_join"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_line_join_t
       (~cairo_get_line_join ~cr))))
@@ -3309,7 +3477,8 @@
       (fh-link-proc
         "cairo_get_miter_limit"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_get_miter_limit ~cr)))
 (export cairo_get_miter_limit)
@@ -3323,7 +3492,8 @@
       (fh-link-proc
         "cairo_get_dash_count"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (~cairo_get_dash_count ~cr)))
 (export cairo_get_dash_count)
@@ -3337,7 +3507,8 @@
       (fh-link-proc
         "cairo_get_dash"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~dashes (unwrap~pointer dashes))
         (~offset (unwrap~pointer offset)))
@@ -3353,7 +3524,8 @@
       (fh-link-proc
         "cairo_get_matrix"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~matrix (unwrap-cairo_matrix_t* matrix)))
     (~cairo_get_matrix ~cr ~matrix)))
@@ -3368,7 +3540,8 @@
       (fh-link-proc
         "cairo_get_target"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_surface_t* (~cairo_get_target ~cr))))
 (export cairo_get_target)
@@ -3382,7 +3555,8 @@
       (fh-link-proc
         "cairo_get_group_target"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_surface_t*
       (~cairo_get_group_target ~cr))))
@@ -3445,7 +3619,8 @@
       (fh-link-proc
         "cairo_copy_path"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_path_t* (~cairo_copy_path ~cr))))
 (export cairo_copy_path)
@@ -3459,7 +3634,8 @@
       (fh-link-proc
         "cairo_copy_path_flat"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_path_t* (~cairo_copy_path_flat ~cr))))
 (export cairo_copy_path_flat)
@@ -3473,7 +3649,8 @@
       (fh-link-proc
         "cairo_append_path"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr))
         (~path (unwrap-cairo_path_t* path)))
     (~cairo_append_path ~cr ~path)))
@@ -3488,7 +3665,8 @@
       (fh-link-proc
         "cairo_path_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~path (unwrap-cairo_path_t* path)))
     (~cairo_path_destroy ~path)))
 (export cairo_path_destroy)
@@ -3502,7 +3680,8 @@
       (fh-link-proc
         "cairo_status"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~cr (unwrap-cairo_t* cr)))
     (wrap-cairo_status_t (~cairo_status ~cr))))
 (export cairo_status)
@@ -3516,7 +3695,8 @@
       (fh-link-proc
         "cairo_status_to_string"
         void*
-        (list ffi:int))))
+        (list ffi:int)
+        link-lib)))
   (let ((~status (unwrap-cairo_status_t status)))
     (~cairo_status_to_string ~status)))
 (export cairo_status_to_string)
@@ -3530,7 +3710,8 @@
       (fh-link-proc
         "cairo_device_reference"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (wrap-cairo_device_t*
       (~cairo_device_reference ~device))))
@@ -3570,7 +3751,8 @@
       (fh-link-proc
         "cairo_device_get_type"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (wrap-cairo_device_type_t
       (~cairo_device_get_type ~device))))
@@ -3585,7 +3767,8 @@
       (fh-link-proc
         "cairo_device_status"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (wrap-cairo_status_t
       (~cairo_device_status ~device))))
@@ -3600,7 +3783,8 @@
       (fh-link-proc
         "cairo_device_acquire"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (wrap-cairo_status_t
       (~cairo_device_acquire ~device))))
@@ -3615,7 +3799,8 @@
       (fh-link-proc
         "cairo_device_release"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_release ~device)))
 (export cairo_device_release)
@@ -3629,7 +3814,8 @@
       (fh-link-proc
         "cairo_device_flush"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_flush ~device)))
 (export cairo_device_flush)
@@ -3643,7 +3829,8 @@
       (fh-link-proc
         "cairo_device_finish"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_finish ~device)))
 (export cairo_device_finish)
@@ -3657,7 +3844,8 @@
       (fh-link-proc
         "cairo_device_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_destroy ~device)))
 (export cairo_device_destroy)
@@ -3671,7 +3859,8 @@
       (fh-link-proc
         "cairo_device_get_reference_count"
         ffi:unsigned-int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_get_reference_count ~device)))
 (export cairo_device_get_reference_count)
@@ -3686,7 +3875,8 @@
       (fh-link-proc
         "cairo_device_get_user_data"
         void*
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device))
         (~key (unwrap-cairo_user_data_key_t* key)))
     (~cairo_device_get_user_data ~device ~key)))
@@ -3707,7 +3897,8 @@
       (fh-link-proc
         "cairo_device_set_user_data"
         ffi:int
-        (list void* void* void* void*))))
+        (list void* void* void* void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
@@ -3734,7 +3925,8 @@
       (fh-link-proc
         "cairo_surface_create_similar"
         void*
-        (list void* ffi:int ffi:int ffi:int))))
+        (list void* ffi:int ffi:int ffi:int)
+        link-lib)))
   (let ((~other (unwrap-cairo_surface_t* other))
         (~content (unwrap-cairo_content_t content))
         (~width (unwrap~fixed width))
@@ -3761,7 +3953,8 @@
       (fh-link-proc
         "cairo_surface_create_similar_image"
         void*
-        (list void* ffi:int ffi:int ffi:int))))
+        (list void* ffi:int ffi:int ffi:int)
+        link-lib)))
   (let ((~other (unwrap-cairo_surface_t* other))
         (~format (unwrap-cairo_format_t format))
         (~width (unwrap~fixed width))
@@ -3784,7 +3977,8 @@
       (fh-link-proc
         "cairo_surface_map_to_image"
         void*
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~extents
           (unwrap-cairo_rectangle_int_t* extents)))
@@ -3802,7 +3996,8 @@
       (fh-link-proc
         "cairo_surface_unmap_image"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~image (unwrap-cairo_surface_t* image)))
     (~cairo_surface_unmap_image ~surface ~image)))
@@ -3827,7 +4022,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~target (unwrap-cairo_surface_t* target))
         (~x (unwrap~float x))
         (~y (unwrap~float y))
@@ -3861,7 +4057,8 @@
       (fh-link-proc
         "cairo_surface_create_observer"
         void*
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~target (unwrap-cairo_surface_t* target))
         (~mode (unwrap-cairo_surface_observer_mode_t mode)))
     (wrap-cairo_surface_t*
@@ -3886,7 +4083,8 @@
       (fh-link-proc
         "cairo_surface_observer_add_paint_callback"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
         (~func (unwrap-cairo_surface_observer_callback_t func))
@@ -3911,7 +4109,8 @@
       (fh-link-proc
         "cairo_surface_observer_add_mask_callback"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
         (~func (unwrap-cairo_surface_observer_callback_t func))
@@ -3936,7 +4135,8 @@
       (fh-link-proc
         "cairo_surface_observer_add_fill_callback"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
         (~func (unwrap-cairo_surface_observer_callback_t func))
@@ -3961,7 +4161,8 @@
       (fh-link-proc
         "cairo_surface_observer_add_stroke_callback"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
         (~func (unwrap-cairo_surface_observer_callback_t func))
@@ -3986,7 +4187,8 @@
       (fh-link-proc
         "cairo_surface_observer_add_glyphs_callback"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
         (~func (unwrap-cairo_surface_observer_callback_t func))
@@ -4011,7 +4213,8 @@
       (fh-link-proc
         "cairo_surface_observer_add_flush_callback"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
         (~func (unwrap-cairo_surface_observer_callback_t func))
@@ -4036,7 +4239,8 @@
       (fh-link-proc
         "cairo_surface_observer_add_finish_callback"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~abstract_surface
           (unwrap-cairo_surface_t* abstract_surface))
         (~func (unwrap-cairo_surface_observer_callback_t func))
@@ -4061,7 +4265,8 @@
       (fh-link-proc
         "cairo_surface_observer_print"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~write_func
           (unwrap-cairo_write_func_t write_func))
@@ -4082,7 +4287,8 @@
       (fh-link-proc
         "cairo_surface_observer_elapsed"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_surface_observer_elapsed ~surface)))
 (export cairo_surface_observer_elapsed)
@@ -4100,7 +4306,8 @@
       (fh-link-proc
         "cairo_device_observer_print"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device))
         (~write_func
           (unwrap-cairo_write_func_t write_func))
@@ -4121,7 +4328,8 @@
       (fh-link-proc
         "cairo_device_observer_elapsed"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_observer_elapsed ~device)))
 (export cairo_device_observer_elapsed)
@@ -4135,7 +4343,8 @@
       (fh-link-proc
         "cairo_device_observer_paint_elapsed"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_observer_paint_elapsed ~device)))
 (export cairo_device_observer_paint_elapsed)
@@ -4149,7 +4358,8 @@
       (fh-link-proc
         "cairo_device_observer_mask_elapsed"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_observer_mask_elapsed ~device)))
 (export cairo_device_observer_mask_elapsed)
@@ -4163,7 +4373,8 @@
       (fh-link-proc
         "cairo_device_observer_fill_elapsed"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_observer_fill_elapsed ~device)))
 (export cairo_device_observer_fill_elapsed)
@@ -4177,7 +4388,8 @@
       (fh-link-proc
         "cairo_device_observer_stroke_elapsed"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_observer_stroke_elapsed ~device)))
 (export cairo_device_observer_stroke_elapsed)
@@ -4191,7 +4403,8 @@
       (fh-link-proc
         "cairo_device_observer_glyphs_elapsed"
         ffi:double
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~device (unwrap-cairo_device_t* device)))
     (~cairo_device_observer_glyphs_elapsed ~device)))
 (export cairo_device_observer_glyphs_elapsed)
@@ -4205,7 +4418,8 @@
       (fh-link-proc
         "cairo_surface_reference"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (wrap-cairo_surface_t*
       (~cairo_surface_reference ~surface))))
@@ -4220,7 +4434,8 @@
       (fh-link-proc
         "cairo_surface_finish"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_surface_finish ~surface)))
 (export cairo_surface_finish)
@@ -4234,7 +4449,8 @@
       (fh-link-proc
         "cairo_surface_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_surface_destroy ~surface)))
 (export cairo_surface_destroy)
@@ -4248,7 +4464,8 @@
       (fh-link-proc
         "cairo_surface_get_device"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (wrap-cairo_device_t*
       (~cairo_surface_get_device ~surface))))
@@ -4263,7 +4480,8 @@
       (fh-link-proc
         "cairo_surface_get_reference_count"
         ffi:unsigned-int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_surface_get_reference_count ~surface)))
 (export cairo_surface_get_reference_count)
@@ -4277,7 +4495,8 @@
       (fh-link-proc
         "cairo_surface_status"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (wrap-cairo_status_t
       (~cairo_surface_status ~surface))))
@@ -4349,7 +4568,8 @@
       (fh-link-proc
         "cairo_surface_get_type"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (wrap-cairo_surface_type_t
       (~cairo_surface_get_type ~surface))))
@@ -4364,7 +4584,8 @@
       (fh-link-proc
         "cairo_surface_get_content"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (wrap-cairo_content_t
       (~cairo_surface_get_content ~surface))))
@@ -4380,7 +4601,8 @@
       (fh-link-proc
         "cairo_surface_write_to_png"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~filename (unwrap~pointer filename)))
     (wrap-cairo_status_t
@@ -4400,7 +4622,8 @@
       (fh-link-proc
         "cairo_surface_write_to_png_stream"
         ffi:int
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~write_func
           (unwrap-cairo_write_func_t write_func))
@@ -4422,7 +4645,8 @@
       (fh-link-proc
         "cairo_surface_get_user_data"
         void*
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~key (unwrap-cairo_user_data_key_t* key)))
     (~cairo_surface_get_user_data ~surface ~key)))
@@ -4443,7 +4667,8 @@
       (fh-link-proc
         "cairo_surface_set_user_data"
         ffi:int
-        (list void* void* void* void*))))
+        (list void* void* void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
@@ -4470,7 +4695,8 @@
       (fh-link-proc
         "cairo_surface_get_mime_data"
         ffi:void
-        (list void* void* void* void*))))
+        (list void* void* void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~mime_type (unwrap~pointer mime_type))
         (~data (unwrap~pointer data))
@@ -4504,7 +4730,8 @@
               void*
               ffi:unsigned-long
               void*
-              void*))))
+              void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~mime_type (unwrap~pointer mime_type))
         (~data (unwrap~pointer data))
@@ -4533,7 +4760,8 @@
       (fh-link-proc
         "cairo_surface_supports_mime_type"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~mime_type (unwrap~pointer mime_type)))
     (wrap-cairo_bool_t
@@ -4552,7 +4780,8 @@
       (fh-link-proc
         "cairo_surface_get_font_options"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~options (unwrap-cairo_font_options_t* options)))
     (~cairo_surface_get_font_options
@@ -4569,7 +4798,8 @@
       (fh-link-proc
         "cairo_surface_flush"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_surface_flush ~surface)))
 (export cairo_surface_flush)
@@ -4583,7 +4813,8 @@
       (fh-link-proc
         "cairo_surface_mark_dirty"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_surface_mark_dirty ~surface)))
 (export cairo_surface_mark_dirty)
@@ -4603,7 +4834,8 @@
       (fh-link-proc
         "cairo_surface_mark_dirty_rectangle"
         ffi:void
-        (list void* ffi:int ffi:int ffi:int ffi:int))))
+        (list void* ffi:int ffi:int ffi:int ffi:int)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~x (unwrap~fixed x))
         (~y (unwrap~fixed y))
@@ -4630,7 +4862,8 @@
       (fh-link-proc
         "cairo_surface_set_device_scale"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~x_scale (unwrap~float x_scale))
         (~y_scale (unwrap~float y_scale)))
@@ -4653,7 +4886,8 @@
       (fh-link-proc
         "cairo_surface_get_device_scale"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~x_scale (unwrap~pointer x_scale))
         (~y_scale (unwrap~pointer y_scale)))
@@ -4676,7 +4910,8 @@
       (fh-link-proc
         "cairo_surface_set_device_offset"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~x_offset (unwrap~float x_offset))
         (~y_offset (unwrap~float y_offset)))
@@ -4699,7 +4934,8 @@
       (fh-link-proc
         "cairo_surface_get_device_offset"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~x_offset (unwrap~pointer x_offset))
         (~y_offset (unwrap~pointer y_offset)))
@@ -4722,7 +4958,8 @@
       (fh-link-proc
         "cairo_surface_set_fallback_resolution"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~x_pixels_per_inch
           (unwrap~float x_pixels_per_inch))
@@ -4747,7 +4984,8 @@
       (fh-link-proc
         "cairo_surface_get_fallback_resolution"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~x_pixels_per_inch
           (unwrap~pointer x_pixels_per_inch))
@@ -4768,7 +5006,8 @@
       (fh-link-proc
         "cairo_surface_copy_page"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_surface_copy_page ~surface)))
 (export cairo_surface_copy_page)
@@ -4782,7 +5021,8 @@
       (fh-link-proc
         "cairo_surface_show_page"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_surface_show_page ~surface)))
 (export cairo_surface_show_page)
@@ -4796,7 +5036,8 @@
       (fh-link-proc
         "cairo_surface_has_show_text_glyphs"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (wrap-cairo_bool_t
       (~cairo_surface_has_show_text_glyphs ~surface))))
@@ -4812,7 +5053,8 @@
       (fh-link-proc
         "cairo_image_surface_create"
         void*
-        (list ffi:int ffi:int ffi:int))))
+        (list ffi:int ffi:int ffi:int)
+        link-lib)))
   (let ((~format (unwrap-cairo_format_t format))
         (~width (unwrap~fixed width))
         (~height (unwrap~fixed height)))
@@ -4832,7 +5074,8 @@
       (fh-link-proc
         "cairo_format_stride_for_width"
         ffi:int
-        (list ffi:int ffi:int))))
+        (list ffi:int ffi:int)
+        link-lib)))
   (let ((~format (unwrap-cairo_format_t format))
         (~width (unwrap~fixed width)))
     (~cairo_format_stride_for_width ~format ~width)))
@@ -4853,7 +5096,8 @@
       (fh-link-proc
         "cairo_image_surface_create_for_data"
         void*
-        (list void* ffi:int ffi:int ffi:int ffi:int))))
+        (list void* ffi:int ffi:int ffi:int ffi:int)
+        link-lib)))
   (let ((~data (unwrap~pointer data))
         (~format (unwrap-cairo_format_t format))
         (~width (unwrap~fixed width))
@@ -4877,7 +5121,8 @@
       (fh-link-proc
         "cairo_image_surface_get_data"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_image_surface_get_data ~surface)))
 (export cairo_image_surface_get_data)
@@ -4891,7 +5136,8 @@
       (fh-link-proc
         "cairo_image_surface_get_format"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (wrap-cairo_format_t
       (~cairo_image_surface_get_format ~surface))))
@@ -4906,7 +5152,8 @@
       (fh-link-proc
         "cairo_image_surface_get_width"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_image_surface_get_width ~surface)))
 (export cairo_image_surface_get_width)
@@ -4920,7 +5167,8 @@
       (fh-link-proc
         "cairo_image_surface_get_height"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_image_surface_get_height ~surface)))
 (export cairo_image_surface_get_height)
@@ -4934,7 +5182,8 @@
       (fh-link-proc
         "cairo_image_surface_get_stride"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (~cairo_image_surface_get_stride ~surface)))
 (export cairo_image_surface_get_stride)
@@ -4948,7 +5197,8 @@
       (fh-link-proc
         "cairo_image_surface_create_from_png"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~filename (unwrap~pointer filename)))
     (wrap-cairo_surface_t*
       (~cairo_image_surface_create_from_png ~filename))))
@@ -4966,7 +5216,8 @@
       (fh-link-proc
         "cairo_image_surface_create_from_png_stream"
         void*
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~read_func (unwrap-cairo_read_func_t read_func))
         (~closure (unwrap~pointer closure)))
     (wrap-cairo_surface_t*
@@ -4985,7 +5236,8 @@
       (fh-link-proc
         "cairo_recording_surface_create"
         void*
-        (list ffi:int void*))))
+        (list ffi:int void*)
+        link-lib)))
   (let ((~content (unwrap-cairo_content_t content))
         (~extents (unwrap-cairo_rectangle_t* extents)))
     (wrap-cairo_surface_t*
@@ -5009,7 +5261,8 @@
       (fh-link-proc
         "cairo_recording_surface_ink_extents"
         ffi:void
-        (list void* void* void* void* void*))))
+        (list void* void* void* void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~x0 (unwrap~pointer x0))
         (~y0 (unwrap~pointer y0))
@@ -5035,7 +5288,8 @@
       (fh-link-proc
         "cairo_recording_surface_get_extents"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~extents (unwrap-cairo_rectangle_t* extents)))
     (wrap-cairo_bool_t
@@ -5086,7 +5340,8 @@
       (fh-link-proc
         "cairo_pattern_create_raster_source"
         void*
-        (list void* ffi:int ffi:int ffi:int))))
+        (list void* ffi:int ffi:int ffi:int)
+        link-lib)))
   (let ((~user_data (unwrap~pointer user_data))
         (~content (unwrap-cairo_content_t content))
         (~width (unwrap~fixed width))
@@ -5111,7 +5366,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_set_callback_data"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~data (unwrap~pointer data)))
     (~cairo_raster_source_pattern_set_callback_data
@@ -5130,7 +5386,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_get_callback_data"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (~cairo_raster_source_pattern_get_callback_data
       ~pattern)))
@@ -5150,7 +5407,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_set_acquire"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~acquire
           (unwrap-cairo_raster_source_acquire_func_t
@@ -5178,7 +5436,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_get_acquire"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~acquire
           (unwrap-cairo_raster_source_acquire_func_t*
@@ -5204,7 +5463,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_set_snapshot"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~snapshot
           (unwrap-cairo_raster_source_snapshot_func_t
@@ -5225,7 +5485,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_get_snapshot"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (wrap-cairo_raster_source_snapshot_func_t
       (~cairo_raster_source_pattern_get_snapshot
@@ -5244,7 +5505,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_set_copy"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~copy (unwrap-cairo_raster_source_copy_func_t copy)))
     (~cairo_raster_source_pattern_set_copy
@@ -5262,7 +5524,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_get_copy"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (wrap-cairo_raster_source_copy_func_t
       (~cairo_raster_source_pattern_get_copy ~pattern))))
@@ -5280,7 +5543,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_set_finish"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~finish
           (unwrap-cairo_raster_source_finish_func_t finish)))
@@ -5299,7 +5563,8 @@
       (fh-link-proc
         "cairo_raster_source_pattern_get_finish"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (wrap-cairo_raster_source_finish_func_t
       (~cairo_raster_source_pattern_get_finish
@@ -5316,7 +5581,8 @@
       (fh-link-proc
         "cairo_pattern_create_rgb"
         void*
-        (list ffi:double ffi:double ffi:double))))
+        (list ffi:double ffi:double ffi:double)
+        link-lib)))
   (let ((~red (unwrap~float red))
         (~green (unwrap~float green))
         (~blue (unwrap~float blue)))
@@ -5337,7 +5603,8 @@
         (list ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~red (unwrap~float red))
         (~green (unwrap~float green))
         (~blue (unwrap~float blue))
@@ -5360,7 +5627,8 @@
       (fh-link-proc
         "cairo_pattern_create_for_surface"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface)))
     (wrap-cairo_pattern_t*
       (~cairo_pattern_create_for_surface ~surface))))
@@ -5379,7 +5647,8 @@
         (list ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~x0 (unwrap~float x0))
         (~y0 (unwrap~float y0))
         (~x1 (unwrap~float x1))
@@ -5409,7 +5678,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~cx0 (unwrap~float cx0))
         (~cy0 (unwrap~float cy0))
         (~radius0 (unwrap~float radius0))
@@ -5435,7 +5705,8 @@
       (fh-link-proc
         "cairo_pattern_create_mesh"
         void*
-        (list))))
+        (list)
+        link-lib)))
   (let ()
     (wrap-cairo_pattern_t*
       (~cairo_pattern_create_mesh))))
@@ -5450,7 +5721,8 @@
       (fh-link-proc
         "cairo_pattern_reference"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (wrap-cairo_pattern_t*
       (~cairo_pattern_reference ~pattern))))
@@ -5465,7 +5737,8 @@
       (fh-link-proc
         "cairo_pattern_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (~cairo_pattern_destroy ~pattern)))
 (export cairo_pattern_destroy)
@@ -5479,7 +5752,8 @@
       (fh-link-proc
         "cairo_pattern_get_reference_count"
         ffi:unsigned-int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (~cairo_pattern_get_reference_count ~pattern)))
 (export cairo_pattern_get_reference_count)
@@ -5493,7 +5767,8 @@
       (fh-link-proc
         "cairo_pattern_status"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (wrap-cairo_status_t
       (~cairo_pattern_status ~pattern))))
@@ -5509,7 +5784,8 @@
       (fh-link-proc
         "cairo_pattern_get_user_data"
         void*
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~key (unwrap-cairo_user_data_key_t* key)))
     (~cairo_pattern_get_user_data ~pattern ~key)))
@@ -5530,7 +5806,8 @@
       (fh-link-proc
         "cairo_pattern_set_user_data"
         ffi:int
-        (list void* void* void* void*))))
+        (list void* void* void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~key (unwrap-cairo_user_data_key_t* key))
         (~user_data (unwrap~pointer user_data))
@@ -5571,7 +5848,8 @@
       (fh-link-proc
         "cairo_pattern_get_type"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (wrap-cairo_pattern_type_t
       (~cairo_pattern_get_type ~pattern))))
@@ -5596,7 +5874,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~offset (unwrap~float offset))
         (~red (unwrap~float red))
@@ -5631,7 +5910,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~offset (unwrap~float offset))
         (~red (unwrap~float red))
@@ -5656,7 +5936,8 @@
       (fh-link-proc
         "cairo_mesh_pattern_begin_patch"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (~cairo_mesh_pattern_begin_patch ~pattern)))
 (export cairo_mesh_pattern_begin_patch)
@@ -5670,7 +5951,8 @@
       (fh-link-proc
         "cairo_mesh_pattern_end_patch"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (~cairo_mesh_pattern_end_patch ~pattern)))
 (export cairo_mesh_pattern_end_patch)
@@ -5698,7 +5980,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~x1 (unwrap~float x1))
         (~y1 (unwrap~float y1))
@@ -5726,7 +6009,8 @@
       (fh-link-proc
         "cairo_mesh_pattern_line_to"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
@@ -5743,7 +6027,8 @@
       (fh-link-proc
         "cairo_mesh_pattern_move_to"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~x (unwrap~float x))
         (~y (unwrap~float y)))
@@ -5767,7 +6052,8 @@
         (list void*
               ffi:unsigned-int
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~point_num (unwrap~fixed point_num))
         (~x (unwrap~float x))
@@ -5798,7 +6084,8 @@
               ffi:unsigned-int
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~corner_num (unwrap~fixed corner_num))
         (~red (unwrap~float red))
@@ -5834,7 +6121,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~corner_num (unwrap~fixed corner_num))
         (~red (unwrap~float red))
@@ -5860,7 +6148,8 @@
       (fh-link-proc
         "cairo_pattern_set_matrix"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~matrix (unwrap-cairo_matrix_t* matrix)))
     (~cairo_pattern_set_matrix ~pattern ~matrix)))
@@ -5876,7 +6165,8 @@
       (fh-link-proc
         "cairo_pattern_get_matrix"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~matrix (unwrap-cairo_matrix_t* matrix)))
     (~cairo_pattern_get_matrix ~pattern ~matrix)))
@@ -5907,7 +6197,8 @@
       (fh-link-proc
         "cairo_pattern_set_extend"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~extend (unwrap-cairo_extend_t extend)))
     (~cairo_pattern_set_extend ~pattern ~extend)))
@@ -5922,7 +6213,8 @@
       (fh-link-proc
         "cairo_pattern_get_extend"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (wrap-cairo_extend_t
       (~cairo_pattern_get_extend ~pattern))))
@@ -5957,7 +6249,8 @@
       (fh-link-proc
         "cairo_pattern_set_filter"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~filter (unwrap-cairo_filter_t filter)))
     (~cairo_pattern_set_filter ~pattern ~filter)))
@@ -5972,7 +6265,8 @@
       (fh-link-proc
         "cairo_pattern_get_filter"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern)))
     (wrap-cairo_filter_t
       (~cairo_pattern_get_filter ~pattern))))
@@ -5993,7 +6287,8 @@
       (fh-link-proc
         "cairo_pattern_get_rgba"
         ffi:int
-        (list void* void* void* void* void*))))
+        (list void* void* void* void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~red (unwrap~pointer red))
         (~green (unwrap~pointer green))
@@ -6018,7 +6313,8 @@
       (fh-link-proc
         "cairo_pattern_get_surface"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~surface (unwrap~pointer surface)))
     (wrap-cairo_status_t
@@ -6049,7 +6345,8 @@
               void*
               void*
               void*
-              void*))))
+              void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~index (unwrap~fixed index))
         (~offset (unwrap~pointer offset))
@@ -6080,7 +6377,8 @@
       (fh-link-proc
         "cairo_pattern_get_color_stop_count"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~count (unwrap~pointer count)))
     (wrap-cairo_status_t
@@ -6104,7 +6402,8 @@
       (fh-link-proc
         "cairo_pattern_get_linear_points"
         ffi:int
-        (list void* void* void* void* void*))))
+        (list void* void* void* void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~x0 (unwrap~pointer x0))
         (~y0 (unwrap~pointer y0))
@@ -6137,7 +6436,8 @@
       (fh-link-proc
         "cairo_pattern_get_radial_circles"
         ffi:int
-        (list void* void* void* void* void* void* void*))))
+        (list void* void* void* void* void* void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~x0 (unwrap~pointer x0))
         (~y0 (unwrap~pointer y0))
@@ -6168,7 +6468,8 @@
       (fh-link-proc
         "cairo_mesh_pattern_get_patch_count"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~count (unwrap~pointer count)))
     (wrap-cairo_status_t
@@ -6187,7 +6488,8 @@
       (fh-link-proc
         "cairo_mesh_pattern_get_path"
         void*
-        (list void* ffi:unsigned-int))))
+        (list void* ffi:unsigned-int)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~patch_num (unwrap~fixed patch_num)))
     (wrap-cairo_path_t*
@@ -6220,7 +6522,8 @@
               void*
               void*
               void*
-              void*))))
+              void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~patch_num (unwrap~fixed patch_num))
         (~corner_num (unwrap~fixed corner_num))
@@ -6259,7 +6562,8 @@
               ffi:unsigned-int
               ffi:unsigned-int
               void*
-              void*))))
+              void*)
+        link-lib)))
   (let ((~pattern (unwrap-cairo_pattern_t* pattern))
         (~patch_num (unwrap~fixed patch_num))
         (~point_num (unwrap~fixed point_num))
@@ -6290,7 +6594,8 @@
               ffi:double
               ffi:double
               ffi:double
-              ffi:double))))
+              ffi:double)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~xx (unwrap~float xx))
         (~yx (unwrap~float yx))
@@ -6317,7 +6622,8 @@
       (fh-link-proc
         "cairo_matrix_init_identity"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix)))
     (~cairo_matrix_init_identity ~matrix)))
 (export cairo_matrix_init_identity)
@@ -6332,7 +6638,8 @@
       (fh-link-proc
         "cairo_matrix_init_translate"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~tx (unwrap~float tx))
         (~ty (unwrap~float ty)))
@@ -6348,7 +6655,8 @@
       (fh-link-proc
         "cairo_matrix_init_scale"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~sx (unwrap~float sx))
         (~sy (unwrap~float sy)))
@@ -6364,7 +6672,8 @@
       (fh-link-proc
         "cairo_matrix_init_rotate"
         ffi:void
-        (list void* ffi:double))))
+        (list void* ffi:double)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~radians (unwrap~float radians)))
     (~cairo_matrix_init_rotate ~matrix ~radians)))
@@ -6379,7 +6688,8 @@
       (fh-link-proc
         "cairo_matrix_translate"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~tx (unwrap~float tx))
         (~ty (unwrap~float ty)))
@@ -6395,7 +6705,8 @@
       (fh-link-proc
         "cairo_matrix_scale"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~sx (unwrap~float sx))
         (~sy (unwrap~float sy)))
@@ -6411,7 +6722,8 @@
       (fh-link-proc
         "cairo_matrix_rotate"
         ffi:void
-        (list void* ffi:double))))
+        (list void* ffi:double)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~radians (unwrap~float radians)))
     (~cairo_matrix_rotate ~matrix ~radians)))
@@ -6426,7 +6738,8 @@
       (fh-link-proc
         "cairo_matrix_invert"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix)))
     (wrap-cairo_status_t
       (~cairo_matrix_invert ~matrix))))
@@ -6442,7 +6755,8 @@
       (fh-link-proc
         "cairo_matrix_multiply"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~result (unwrap-cairo_matrix_t* result))
         (~a (unwrap-cairo_matrix_t* a))
         (~b (unwrap-cairo_matrix_t* b)))
@@ -6459,7 +6773,8 @@
       (fh-link-proc
         "cairo_matrix_transform_distance"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~dx (unwrap~pointer dx))
         (~dy (unwrap~pointer dy)))
@@ -6479,7 +6794,8 @@
       (fh-link-proc
         "cairo_matrix_transform_point"
         ffi:void
-        (list void* void* void*))))
+        (list void* void* void*)
+        link-lib)))
   (let ((~matrix (unwrap-cairo_matrix_t* matrix))
         (~x (unwrap~pointer x))
         (~y (unwrap~pointer y)))
@@ -6512,7 +6828,11 @@
   (unless
     ~cairo_region_create
     (set! ~cairo_region_create
-      (fh-link-proc "cairo_region_create" void* (list))))
+      (fh-link-proc
+        "cairo_region_create"
+        void*
+        (list)
+        link-lib)))
   (let ()
     (wrap-cairo_region_t* (~cairo_region_create))))
 (export cairo_region_create)
@@ -6527,7 +6847,8 @@
       (fh-link-proc
         "cairo_region_create_rectangle"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
     (wrap-cairo_region_t*
@@ -6544,7 +6865,8 @@
       (fh-link-proc
         "cairo_region_create_rectangles"
         void*
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~rects (unwrap-cairo_rectangle_int_t* rects))
         (~count (unwrap~fixed count)))
     (wrap-cairo_region_t*
@@ -6560,7 +6882,8 @@
       (fh-link-proc
         "cairo_region_copy"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~original (unwrap-cairo_region_t* original)))
     (wrap-cairo_region_t*
       (~cairo_region_copy ~original))))
@@ -6575,7 +6898,8 @@
       (fh-link-proc
         "cairo_region_reference"
         void*
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region)))
     (wrap-cairo_region_t*
       (~cairo_region_reference ~region))))
@@ -6590,7 +6914,8 @@
       (fh-link-proc
         "cairo_region_destroy"
         ffi:void
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region)))
     (~cairo_region_destroy ~region)))
 (export cairo_region_destroy)
@@ -6605,7 +6930,8 @@
       (fh-link-proc
         "cairo_region_equal"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~a (unwrap-cairo_region_t* a))
         (~b (unwrap-cairo_region_t* b)))
     (wrap-cairo_bool_t (~cairo_region_equal ~a ~b))))
@@ -6620,7 +6946,8 @@
       (fh-link-proc
         "cairo_region_status"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region)))
     (wrap-cairo_status_t
       (~cairo_region_status ~region))))
@@ -6636,7 +6963,8 @@
       (fh-link-proc
         "cairo_region_get_extents"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region))
         (~extents
           (unwrap-cairo_rectangle_int_t* extents)))
@@ -6652,7 +6980,8 @@
       (fh-link-proc
         "cairo_region_num_rectangles"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region)))
     (~cairo_region_num_rectangles ~region)))
 (export cairo_region_num_rectangles)
@@ -6667,7 +6996,8 @@
       (fh-link-proc
         "cairo_region_get_rectangle"
         ffi:void
-        (list void* ffi:int void*))))
+        (list void* ffi:int void*)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region))
         (~nth (unwrap~fixed nth))
         (~rectangle
@@ -6687,7 +7017,8 @@
       (fh-link-proc
         "cairo_region_is_empty"
         ffi:int
-        (list void*))))
+        (list void*)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region)))
     (wrap-cairo_bool_t
       (~cairo_region_is_empty ~region))))
@@ -6705,7 +7036,8 @@
       (fh-link-proc
         "cairo_region_contains_rectangle"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6725,7 +7057,8 @@
       (fh-link-proc
         "cairo_region_contains_point"
         ffi:int
-        (list void* ffi:int ffi:int))))
+        (list void* ffi:int ffi:int)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region))
         (~x (unwrap~fixed x))
         (~y (unwrap~fixed y)))
@@ -6742,7 +7075,8 @@
       (fh-link-proc
         "cairo_region_translate"
         ffi:void
-        (list void* ffi:int ffi:int))))
+        (list void* ffi:int ffi:int)
+        link-lib)))
   (let ((~region (unwrap-cairo_region_t* region))
         (~dx (unwrap~fixed dx))
         (~dy (unwrap~fixed dy)))
@@ -6759,7 +7093,8 @@
       (fh-link-proc
         "cairo_region_subtract"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~other (unwrap-cairo_region_t* other)))
     (wrap-cairo_status_t
@@ -6776,7 +7111,8 @@
       (fh-link-proc
         "cairo_region_subtract_rectangle"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6796,7 +7132,8 @@
       (fh-link-proc
         "cairo_region_intersect"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~other (unwrap-cairo_region_t* other)))
     (wrap-cairo_status_t
@@ -6813,7 +7150,8 @@
       (fh-link-proc
         "cairo_region_intersect_rectangle"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6833,7 +7171,8 @@
       (fh-link-proc
         "cairo_region_union"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~other (unwrap-cairo_region_t* other)))
     (wrap-cairo_status_t
@@ -6850,7 +7189,8 @@
       (fh-link-proc
         "cairo_region_union_rectangle"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6868,7 +7208,8 @@
       (fh-link-proc
         "cairo_region_xor"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~other (unwrap-cairo_region_t* other)))
     (wrap-cairo_status_t
@@ -6885,7 +7226,8 @@
       (fh-link-proc
         "cairo_region_xor_rectangle"
         ffi:int
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~dst (unwrap-cairo_region_t* dst))
         (~rectangle
           (unwrap-cairo_rectangle_int_t* rectangle)))
@@ -6902,7 +7244,8 @@
       (fh-link-proc
         "cairo_debug_reset_static_data"
         ffi:void
-        (list))))
+        (list)
+        link-lib)))
   (let () (~cairo_debug_reset_static_data)))
 (export cairo_debug_reset_static_data)
 
@@ -6930,7 +7273,8 @@
       (fh-link-proc
         "cairo_pdf_surface_create"
         void*
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~filename (unwrap~pointer filename))
         (~width_in_points (unwrap~float width_in_points))
         (~height_in_points
@@ -6957,7 +7301,8 @@
       (fh-link-proc
         "cairo_pdf_surface_create_for_stream"
         void*
-        (list void* void* ffi:double ffi:double))))
+        (list void* void* ffi:double ffi:double)
+        link-lib)))
   (let ((~write_func
           (unwrap-cairo_write_func_t write_func))
         (~closure (unwrap~pointer closure))
@@ -6984,7 +7329,8 @@
       (fh-link-proc
         "cairo_pdf_surface_restrict_to_version"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~version (unwrap-cairo_pdf_version_t version)))
     (~cairo_pdf_surface_restrict_to_version
@@ -7002,7 +7348,8 @@
       (fh-link-proc
         "cairo_pdf_get_versions"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~versions (unwrap~pointer versions))
         (~num_versions (unwrap~pointer num_versions)))
     (~cairo_pdf_get_versions ~versions ~num_versions)))
@@ -7017,7 +7364,8 @@
       (fh-link-proc
         "cairo_pdf_version_to_string"
         void*
-        (list ffi:int))))
+        (list ffi:int)
+        link-lib)))
   (let ((~version (unwrap-cairo_pdf_version_t version)))
     (~cairo_pdf_version_to_string ~version)))
 (export cairo_pdf_version_to_string)
@@ -7035,7 +7383,8 @@
       (fh-link-proc
         "cairo_pdf_surface_set_size"
         ffi:void
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~width_in_points (unwrap~float width_in_points))
         (~height_in_points
@@ -7070,7 +7419,8 @@
       (fh-link-proc
         "cairo_svg_surface_create"
         void*
-        (list void* ffi:double ffi:double))))
+        (list void* ffi:double ffi:double)
+        link-lib)))
   (let ((~filename (unwrap~pointer filename))
         (~width_in_points (unwrap~float width_in_points))
         (~height_in_points
@@ -7097,7 +7447,8 @@
       (fh-link-proc
         "cairo_svg_surface_create_for_stream"
         void*
-        (list void* void* ffi:double ffi:double))))
+        (list void* void* ffi:double ffi:double)
+        link-lib)))
   (let ((~write_func
           (unwrap-cairo_write_func_t write_func))
         (~closure (unwrap~pointer closure))
@@ -7124,7 +7475,8 @@
       (fh-link-proc
         "cairo_svg_surface_restrict_to_version"
         ffi:void
-        (list void* ffi:int))))
+        (list void* ffi:int)
+        link-lib)))
   (let ((~surface (unwrap-cairo_surface_t* surface))
         (~version (unwrap-cairo_svg_version_t version)))
     (~cairo_svg_surface_restrict_to_version
@@ -7142,7 +7494,8 @@
       (fh-link-proc
         "cairo_svg_get_versions"
         ffi:void
-        (list void* void*))))
+        (list void* void*)
+        link-lib)))
   (let ((~versions (unwrap~pointer versions))
         (~num_versions (unwrap~pointer num_versions)))
     (~cairo_svg_get_versions ~versions ~num_versions)))
@@ -7157,7 +7510,8 @@
       (fh-link-proc
         "cairo_svg_version_to_string"
         void*
-        (list ffi:int))))
+        (list ffi:int)
+        link-lib)))
   (let ((~version (unwrap-cairo_svg_version_t version)))
     (~cairo_svg_version_to_string ~version)))
 (export cairo_svg_version_to_string)
