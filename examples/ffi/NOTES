@@ -24,17 +24,14 @@ NOTES:
 To compile a cairo.ffi file execute the following shell command:
   $ guild compile-ffi cairo.ffi
 
-cairo.ffi		working
+cairo.ffi		working : runs demo progs OK
 gdbm.ffi		working ?
 libgit2.ffi		working 
 librsvg.ffi		working
 sqlite3.ffi		working
 glib.ffi		long double, varargs
-gobject.ffi		???
-gio.ffi			???
+gobject.ffi		works, but takes time
+gio.ffi			works, but takes time
 
 IN WORK:
-rsvg.ffi		to devel/debug #:use-ffi-module (gio gio) etc
-glib-object.ffi		filter needs work
-gio/gio.ffi		not working
 
