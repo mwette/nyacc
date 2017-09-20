@@ -16,6 +16,8 @@ TODO:
 2) move enum comments to ffi.scm comments (currently removed)
 3) recheck (pointer-to x) <=> (object-at y)
 4) check handling of char as int and int8
+5) allow suck-in of #defines (e.g., M_PI, HUGE_VAL from math.h)
+   but may not work cause '#define HUGE_VAL __builtin_huge_val()'
 
 NOTES:
 1) need to memoize dynamic-func calls because some functions appear in

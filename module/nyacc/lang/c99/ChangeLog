@@ -1,3 +1,7 @@
+2017-09-20  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* pprint.scm (pretty-print-c99): added enum-ref
+
 2017-09-04  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* util2.scm (expand-specl-typerefs): fixed c99-06 test 1:

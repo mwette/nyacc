@@ -1,0 +1,8 @@
+;; zlib.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi zlib)
+  #:pkg-config "zlib"
+  #:include '("zlib.h")
+  )
+
+;; --- last line ---

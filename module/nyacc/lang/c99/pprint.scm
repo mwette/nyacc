@@ -404,6 +404,7 @@
 	 ((struct-def) (ppx arg))
 	 ((union-ref) (ppx arg))
 	 ((union-def) (ppx arg))
+	 ((enum-ref) (ppx arg))
 	 ((enum-def) (ppx arg))
 	 ((typename) (sf "~A" (sx-ref arg 1)))
 	 ((void) (sf "void"))
@@ -420,6 +421,9 @@
        (struct-union-def 'union name fields))
       ((union-def (field-list . ,fields))
        (struct-union-def 'union #f fields))
+
+      ((enum-ref (ident ,name))
+       (sf "enum ~A" name))
 
       ((enum-def (ident ,name) (enum-def-list . ,edl))
        (sf "enum ~A " name) (ppx `(enum-def-list . ,edl))) ; SPACE ???

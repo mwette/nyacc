@@ -1,0 +1,18 @@
+;; linear.ffi				-*- Scheme -*-
+
+;; see https://github.com/cjlin1/liblinear
+(define-ffi-module (ffi linear)
+  #:include '("linear.h")
+  #:library '("liblinear")
+  #:export (linear-symval)
+  )
+
+(define-public struct-feature_node**-desc
+  (bs:pointer struct-feature_node*-desc))
+(define-fh-pointer-type struct-feature_node** struct-feature_node**-desc)
+(ref<->deref! struct-feature_node** struct-feature_node*)
+
+;;(define linear-INF +inf.0)
+(define linear-symval ffi-linear-symbol-val)
+
+;; --- last line ---

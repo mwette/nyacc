@@ -2,9 +2,18 @@
 ;;;
 ;;; Copyright (C) 2016-2017 Matthew R. Wette
 ;;;
-;;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;;; or any later version published by the Free Software Foundation.  See
-;;; the file COPYING included with the nyacc distribution.
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Lesser General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 3 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Lesser General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Lesser General Public License
+;;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 ;; WARNING: this is a prototype in development: anything goes right now
 
@@ -53,13 +62,12 @@
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
-  #:version (0 10 0)
+  #:version (0 82 2)
   )
 
 (use-modules (ice-9 pretty-print))
 
-
-(define *ffi-help-version* "0.02.0")
+(define *ffi-help-version* "0.82.2")
 
 (define fh-inc-dirs
   (append
@@ -316,7 +324,8 @@
     ("signed short int" . short) ("int" . int) ("signed" . int)
     ("signed int" . int) ("long" . long) ("long int" . long)
     ("signed long" . long) ("signed long int" . long) ("long long" . long)
-    ("long long int" . long) ("signed long long int" . long)
+    ("long long int" . long) ("signed long long" . long)
+    ("signed long long int" . long)
     ("unsigned short int" . unsigned-short) ("unsigned short" . unsigned-short)
     ("unsigned int" . unsigned-int) ("unsigned" . unsigned-int)
     ("unsigned long int" . unsigned-long) ("unsigned long" . unsigned-long)
@@ -330,8 +339,8 @@
     ("int64_t" . int32) ("uint64_t" . uint64)
     ("float _Complex" . complex64) ("double _Complex" . complex128)
     ;; hacks:
-    ;;   char needs to be treated specially
-    ("char" . int) ("signed char" . int) ("unsigned char" . unsigned-int)
+    ("char" . int8) ("signed char" . int8) ("unsigned char" . uint8)
+    ("_Bool" . int8)
     ))
 
 (define bs-defined (map car bs-typemap))
@@ -358,6 +367,8 @@
        (mtail->bs-desc `((struct-def ,field-list))))
       (((struct-def ,field-list))
        (list 'bs:struct `(list ,@(cnvt-field-list field-list))))
+      (((struct-ref (ident ,struct-name)))
+       (string->symbol (string-append "struct-" struct-name "-desc")))
       
       (((union-def (ident ,union-name) ,field-list))
        (mtail->bs-desc `((union-def ,field-list))))
@@ -446,7 +457,7 @@
   (define (acons-bfld name type seed)	; bit-field
     (let ((size (list-ref type 1)) (type (list-ref type 2)))
       (cons (eval-string
-	     (simple-format #f "(quote `(~A ,~S ,~A))" name type size)) seed)))
+	     (simple-format #f "(quote `(~A ,~S ~A))" name type size)) seed)))
 
   (let* ((field-list (clean-field-list field-list)) ; remove lone comments
 	 (uflds (fold-right unitize-comp-decl '() (cdr field-list))))
@@ -475,6 +486,13 @@
 	     (cons (expand-typerefs (cdr pair) udict defined) seed))
 	   '() (fold-right unitize-comp-decl '() (cdr field-list))))))
 
+;; @deffn {Procedure} cnvt-aggr-def aggr-t typename aggr-name field-list
+;; Output an aggregate definition, where
+;; @var{attr-t} is a string of @code{"struct"} or @code{"union"},
+;; @var{typename} is a string for the typename, or @code{#f},
+;; @var{aggr-name} is a string for the struct or union name, or @code{#f},
+;; and @var{field-list} is the field-list from the C syntax tree.
+;; @end deffn
 (define (cnvt-aggr-def aggr-t typename aggr-name field-list)
   ;;(sferr "\nfield-list:\n") (pperr field-list)
   (let* ((aggr-s (symbol->string aggr-t))
@@ -489,7 +507,7 @@
       (ppscm `(define ,(string->symbol ty-desc) (,bs-aggr-t (list ,@sflds))))
       (sfscm "(export ~A)\n" ty-desc)
       (sfscm "(define-fh-compound-type/p ~A ~A)\n" typename ty-desc)
-      (sfscm "(define ~A-~A ~A)\n" aggr-s aggr-name typename))
+      (sfscm "(define-fh-compound-type/p ~A-~A ~A)\n" aggr-s aggr-name ty-desc))
      (typename
       (ppscm `(define ,(string->symbol ty-desc) (,bs-aggr-t (list ,@sflds))))
       (sfscm "(export ~A)\n" ty-desc)
@@ -555,14 +573,16 @@
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
     ;; hacks
     ("intptr_t" . ffi:long) ("uintptr_t" . ffi:usigned-long)
-    ("char" . ffi:int)
-    ("signed char" . ffi:int)
-    ("unsigned char" . ffi:unsigned-int)
+    ("char" . ffi:int8)
+    ("signed char" . ffi:int8)
+    ("unsigned char" . ffi:uint8)
     ("long long" . ffi:long)
     ("long long int" . ffi:long)
+    ("signed long long" . ffi:long)
     ("signed long long int" . ffi:long)
     ("unsigned long long" . ffi:unsigned-long)
     ("unsigned long long int" . ffi:unsigned-long)
+    ("_Bool" . ffi:int8)
     ))
 
 (define ffi-defined (map car ffi-typemap))
@@ -584,6 +604,7 @@
   (pmatch (cdr mspec)
     (((pointer-to) . ,rest) 'void*)
     (((array-of) . ,rest) 'void*)
+    (((array-of ,size) . ,rest) 'void*)
     (((fixed-type ,name))
      (or (assoc-ref ffi-typemap name)
 	 (fherr/once "no FFI fixed-type for ~A" name)))
@@ -915,6 +936,7 @@
 
 
 ;; assume unit-declarator
+;; TODO (ptr-declr (pointer (type-qual-list (type-qual "const"))))
 (define (cleanup-udecl specl declr)
   (let* ((fctn? (pair? ((sxpath '(// ftn-declr)) declr)))
 	 (specl (remove (lambda (node)
@@ -967,8 +989,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (void)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
-       (sfscm "(define ~A-desc (bs:pointer void))\n" typename)
-       (sfscm "(export ~A-desc)\n" typename)
+       (sfscm "(define-public ~A-desc (bs:pointer void))\n" typename)
        (sfscm "(define-fh-pointer-type ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) (cons typename defined)))
       
@@ -978,9 +999,9 @@
 	 (stor-spec (typedef))
 	 (type-spec (void)))
 	(init-declr (ident ,typename)))
-       (sfscm "(define ~A-desc void)\n" typename)
-       (sfscm "(define ~A*-desc (bs:pointer ~A-desc))\n" typename typename)
-       (sfscm "(export ~A-desc ~A*-desc)\n" typename typename)
+       (sfscm "(define-public ~A-desc void)\n" typename)
+       (sfscm "(define-public ~A*-desc (bs:pointer ~A-desc))\n"
+	      typename typename)
        (sfscm "(define-fh-pointer-type ~A* ~A-desc)\n" typename typename)
        (values (cons (w/* typename) wrapped) (cons (w/* typename) defined)))
       
@@ -992,11 +1013,11 @@
 	(init-declr (ident ,typename)))
        (cond
 	((assoc-ref bs-typemap name) =>
-	 (lambda (bs-name) (sfscm "(define ~A-desc ~A)\n" typename bs-name)))
+	 (lambda (bs-name)
+	   (sfscm "(define-public ~A-desc ~A)\n" typename bs-name)))
 	(else
 	 (error "yuck")
-	 (sfscm "(define ~A-desc ~A-desc)\n" typename name)))
-       (sfscm "(export ~A-desc)\n" typename)
+	 (sfscm "(define-public ~A-desc ~A-desc)\n" typename name)))
        (sfscm "(define-fh-fixed/p ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) defined))
 
@@ -1008,9 +1029,9 @@
 	(init-declr (ident ,typename)))
        (cond
 	((assoc-ref bs-typemap name) =>
-	 (lambda (bs-name) (sfscm "(define ~A-desc ~A)\n" typename bs-name)))
-	(else (sfscm "(define ~A-desc ~A-desc)\n" typename name)))
-       (sfscm "(export ~A-desc)\n" typename)
+	 (lambda (bs-name)
+	   (sfscm "(define-public ~A-desc ~A)\n" typename bs-name)))
+	(else (sfscm "(define-public ~A-desc ~A-desc)\n" typename name)))
        (sfscm "(define-fh-float/p ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1036,6 +1057,17 @@
 	(cons typename wrapped)
 	defined))
 
+      ;; typedef enum foo foo_t;
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (enum-ref (ident ,enum-name))))
+	(init-declr (ident ,typename)))
+       (sfscm "(define-public wrap-~A wrap-enum-~A)\n" typename enum-name)
+       (values
+	(cons typename wrapped)
+	defined))
+	
       ;; typedef struct foo { ... } foo_t;
       ((udecl
 	(decl-spec-list
@@ -1067,8 +1099,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-ref (ident ,struct-name))))
 	(init-declr (ident ,typename)))
-       (sfscm "(define ~A-desc void)\n" typename)
-       (sfscm "(export ~A-desc)\n" typename)
+       (sfscm "(define-public ~A-desc void)\n" typename)
        (cond
 	((udict-struct-ref udict struct-name) => ; struct defined later
 	 (lambda (struct-decl)
@@ -1076,12 +1107,11 @@
 	   ;; NOT WORKING because we execute c99-trans-unit->udict twice
 	   ;; ^ FIXED with ffi-decls ???
 	   (sx-attr-set! struct-decl 'typedef typename)
-	   (sfscm "(define ~A*-desc (bs:pointer (delay ~A-desc)))\n"
+	   (sfscm "(define-public ~A*-desc (bs:pointer (delay ~A-desc)))\n"
 		  typename typename)))
 	(else
-	 (sfscm "(define ~A*-desc (bs:pointer ~A-desc))\n"
+	 (sfscm "(define-public ~A*-desc (bs:pointer ~A-desc))\n"
 		typename typename)))
-       (sfscm "(export ~A*-desc)\n" typename)
        (sfscm "(define-fh-pointer-type ~A* ~A*-desc)\n" typename typename)
        (values
 	(cons typename wrapped)
@@ -1163,8 +1193,7 @@
       ((udecl
 	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
-       (sfscm "(define ~A-desc (bs:pointer ~A-desc))\n" typename name)
-       (sfscm "(export ~A-desc)\n" typename)
+       (sfscm "(define-public ~A-desc (bs:pointer ~A-desc))\n" typename name)
        (sfscm "(define-fh-pointer-type ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1172,9 +1201,8 @@
       ((udecl
 	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
 	(init-declr (ptr-declr (pointer (pointer)) (ident ,typename))))
-       (sfscm "(define ~A-desc (bs:pointer (bs:pointer ~A-desc)))\n"
+       (sfscm "(define-public ~A-desc (bs:pointer (bs:pointer ~A-desc)))\n"
 	      typename name)
-       (sfscm "(export ~A-desc)\n" typename)
        (sfscm "(define-fh-pointer-type ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1182,8 +1210,7 @@
       ((udecl
 	(decl-spec-list (stor-spec (typedef)) (type-spec (void)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
-       (sfscm "(define ~A-desc (bs:pointer void)\n")
-       (sfscm "(export ~A-desc)\n" typename)
+       (sfscm "(define-public ~A-desc (bs:pointer void)\n")
        (sfscm "(define-fh-pointer-type ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1198,17 +1225,16 @@
 	 (sfscm "(define wrap-~A identity)\n" typename)
 	 (sfscm "(define unwrap-~A unwrap~~fixed) ;; FIX ME\n" typename)
 	 (sfscm "(define ~A-desc ~A)\n" typename (assoc-ref bs-typemap name))
-	 (sfscm ";;(export wrap-~A unwrap-~A ~A-desc\n"
+	 (sfscm ";;(export wrap-~A unwrap-~A ~A-desc)\n"
 		typename typename typename)
 	 (values (cons typename wrapped) defined))
 	((member name defined)
 	 (sfscm ";; should add (define-fh-aliased-type typename name)\n")
-	 (sfscm "(define ~A-desc ~A-desc)\n" typename name)
-	 (sfscm "(export ~A-desc)\n" typename)
+	 (sfscm "(define-public ~A-desc ~A-desc)\n" typename name)
 	 (sfscm "(define make-~A make-~A)\n" typename name)
 	 (sfscm "(define unwrap-~A unwrap-~A)\n" typename name)
 	 (sfscm "(define wrap-~A wrap-~A)\n" typename name)
-	 (sfscm ";;(export make-~A wrap-~A unwrap-~A ~A-desc\n"
+	 (sfscm ";;(export make-~A wrap-~A unwrap-~A ~A-desc)\n"
 		typename typename typename typename)
 	 (values (cons typename wrapped) (cons typename defined)))
 	((member name wrapped)
@@ -1219,14 +1245,14 @@
 	 (let ((xdecl (expand-typerefs udecl udict defined)))
 	   (cnvt-udecl xdecl udict wrapped defined)))))
 
-       ;; YIKES, from gio.h
+       ;; SPECIAL CASE, from glib-2.0/gio.h
       ((udecl
 	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
 	(init-declr
 	 (ptr-declr (pointer (pointer))
 		    (scope (ftn-declr (scope (ptr-declr) (ident ,typename))
 				      ,param-list)))))
-       (sfscm "(define ~A-desc (bs:pointer void))\n" typename)
+       (sfscm "(define-public ~A-desc (bs:pointer void))\n" typename)
        (sfscm "(define-fh-pointer-type ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) (cons typename defined)))
       ((udecl
@@ -1235,9 +1261,42 @@
 	 (ptr-declr (pointer (pointer))
 		    (ftn-declr (scope (ptr-declr (pointer) (ident ,typename)))
 			       ,param-list))))
-       (sfscm "(define ~A-desc (bs:pointer void))\n" typename)
+       (sfscm "(define-public ~A-desc (bs:pointer void))\n" typename)
        (sfscm "(define-fh-pointer-type ~A ~A-desc)\n" typename typename)
        (values (cons typename wrapped) (cons typename defined)))
+
+      ;; SPECIAL CASE, from zzip/zzip.h
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (fixed-type ,typename))) ;; char
+	(init-declr
+	 (ptr-declr
+	  (pointer (type-qual-list . ,rest))
+	  (ident ,name))))
+       (sfscm "(define-public ~A-desc (bs:pointer void))\n" typename)
+       (sfscm "(define-fh-pointer-type ~A ~A-desc)\n" typename typename)
+       (values (cons typename wrapped) (cons typename defined)))
+
+      ;; SPECIAL CASE, from hdf5.h
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (fixed-type "unsigned char")))
+	(init-declr
+	 (array-of
+	  (ident "hdset_reg_ref_t")
+	  (add (sizeof-type
+		(type-name
+		 (decl-spec-list (type-spec (typename "haddr_t")))))
+	       (p-expr (fixed "4"))))))
+       (let* ((typename "haddr_t")
+	      (size (+ (sizeof '*) 4))
+	      )
+	 (sfscm "(define-public ~A-desc (bs:vector ~A '*))\n" size typename)
+	 (sfscm "(define-fh-compound-type/p ~A ~A-desc)\n" typename typename)
+	 (values (cons typename wrapped) (cons typename defined))))
+      
 
       ;; === structs and unions ==========
 

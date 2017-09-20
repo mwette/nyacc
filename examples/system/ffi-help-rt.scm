@@ -2,19 +2,28 @@
 ;;;
 ;;; Copyright (C) 2016-2017 Matthew R. Wette
 ;;;
-;;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;;; or any later version published by the Free Software Foundation.  See
-;;; the file COPYING included with the nyacc distribution.
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Lesser General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 3 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Lesser General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Lesser General Public License
+;;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 ;; runtime for generated ffi-compiled dot-ffi files
-
 
 (define-module (system ffi-help-rt)
   #:export (fh-type?
 	    fh-object?
 	    fh-object-val
-	    pointer-to
+	    pointer-to points-to
 	    fh-cast
+	    void*
 	    
 	    define-fh-pointer-type
 	    define-fh-compound-type define-fh-compound-type/p
@@ -26,35 +35,31 @@
 	    unwrap~pointer unwrap~array
 	    make-ftn-arg-unwrapper
 	    fh-link-proc
-	    void*
 	    ref<->deref!
+
+	    fh-bsref fh-bsset!
 	    
 	    ;; debugging
-	    fht-unwrap
-	    fht-pointer-to
-	    fht-points-to
-	    bs-data-address
-	    bs-make-printer
+	    fht-unwrap fht-pointer-to fht-points-to
+	    bs-data-address make-bs-printer
 	    ;; deprecated
-	    wrap-void*
 	    )
   #:use-module (bytestructures guile)
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
-  #:version (0 10 0)
+  #:version (0 82 2)
   )
 
-;; All other types are var's, so we need one for '* to avoid special cases.
+;; All other FFI types are variables which as bound to constant expressions.
+;; Here we bind '* to a variable to avoid special cases in the code generator.
 (define void* '*)
 
-;; ffi-helper base type (aka class) with fields
-;; 0 unwrap
-;; 1 pointer-to : (pointer-to foo_t-obj) => address-of-obj
-;; 2 points-to : (points-to address-of-obj) => foo_t-obj
-;;   dereference : (dereference address-of-obj) => foo_t-obj
-;; NOTES:
-;; 1) we don't need wrap
-;; 2) we don't need unwrap unless we want generic unwrap
+;; The FFI helper uses a base type based on Guile structs and vtables.
+;; The base vtable uses these (lambda (obj) ...) fields:
+;; 0 unwrap	: convert helper-type object to ffi argument
+;; 1 pointer-to	: (pointer-to <foo_t-obj>) => <foo_t*-obj>
+;; 2 points-to	: (points-to <foo_t*-obj>) => <foo_t-obj>
+;; The C-based types will add a slot for the object value.
 (define ffi-helper-type
   (make-vtable
    (string-append standard-vtable-fields "prpwpw")
@@ -443,9 +448,53 @@
   (ffi:pointer->procedure
    return (dynamic-func name (or library (dynamic-link))) args))
 
+
+;; @deffn {Syntax} define-fh-base-type
+;; Define wrappers for base types like @code{double}, @code{int}, etc.
+;; @end deffn
+(define-syntax-rule (define-fh-base-type type ...)
+  (define-fh-compound-type/p type ...))
+
+(define double-desc double)
+(define-fh-base-type fh-double double-desc)
+(define int-desc int)
+(define-fh-base-type fh-int int-desc)
+(define unsigned-int-desc unsigned-int)
+(define-fh-base-type fh-unsigned-int unsigned-int-desc)
+
+(define-syntax-rule (fh-bsref obj arg ...)
+  (bytestructure-ref (fh-object-val obj) arg ...))
+
+(define-syntax-rule (fh-bsset! obj arg ...)
+  (bytestructure-set! (fh-object-val obj) arg ...))
+
 ;; === deprecated ===================
 
-(define (wrap-void* raw)
-  (ffi:make-pointer raw))
+;; @deffn {Syntax} define-fh-base-type
+;; supports pointer also
+;; @end deffn
+(define-syntax define-fh-base-type-xxx
+  (lambda (x)
+    (syntax-case x ()
+      ((_ type ffi-type)
+       (with-syntax ((make (gen-id #'type "make-" #'type))
+		     (type? (gen-id #'type #'type "?"))
+		     (wrap (gen-id #'type "wrap-" #'type))
+		     (unwrap (gen-id #'type "unwrap-" #'type))
+		     (p-type (gen-id #'type #'type "*"))
+		     )
+	 #'(begin
+	     (define make
+	       (case-lamba
+		((val) (make-struct/no-tail type val))
+		(() (make-struct/no-tail type (default-val ffi-type)))))
+	     (define type
+	       (make-fht (quote type) unwrap
+			 (lambda (obj) 0) ;; pointer-to
+			 #f (make-bs-printer (quote type))))
+	     ))))))
+
+(define (default-val ffi-type)
+  #f)
 
 ;; --- last line ---

@@ -1,0 +1,8 @@
+;; zziplib.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi zziplib)
+  #:pkg-config "zziplib"
+  #:include '("zzip/zzip.h")
+  )
+
+;; --- last line ---
