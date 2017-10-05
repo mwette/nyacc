@@ -1,3 +1,7 @@
+2017-09-23  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util.scm: updated ugly-print w/ new api similar to pretty-print
+
 2017-09-10  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* util.scm (ugly-print): changed letrec to letrec*.  Not sure why

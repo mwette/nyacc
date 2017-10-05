@@ -384,7 +384,10 @@
      ("restrict" ($$ `(type-qual ,$1)))
      )
 
-    (function-specifier ("inline" ($$ `(fctn-spec ,$1))))
+    (function-specifier
+     ("inline" ($$ `(fctn-spec ,$1)))
+     ("_Noreturn" ($$ `(fctn-spec ,$1)))
+     )
     
     (declarator
      (pointer direct-declarator ($$ `(ptr-declr ,$1 ,$2)))

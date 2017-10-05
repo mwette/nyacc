@@ -20,7 +20,7 @@
 
 ;; test def parser: show parse tree
 (when #t
-  (let* ((file "exam.d/ex01.c")
+  (let* ((file "c99-exam/ex01.c")
 	 (defs '("arch=x86_64"))
 	 (incs  '("exam.d"))
 	 (parse (lambda () (parse-c99

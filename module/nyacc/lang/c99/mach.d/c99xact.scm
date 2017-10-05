@@ -440,6 +440,8 @@
    (lambda ($1 . $rest) `(type-qual ,$1))
    ;; function-specifier => "inline"
    (lambda ($1 . $rest) `(fctn-spec ,$1))
+   ;; function-specifier => "_Noreturn"
+   (lambda ($1 . $rest) `(fctn-spec ,$1))
    ;; declarator => pointer direct-declarator
    (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
    ;; declarator => direct-declarator

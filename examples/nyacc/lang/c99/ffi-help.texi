@@ -222,8 +222,125 @@ with, say, an int32 argument type, Guile expects us to pass a possibly
 negative TBD type. [TODO Figure out what Guile really does wrt
 C-Scheme type validity and conversion.
 
+@section Bytestructure Function Type
+We need to add bytestructure function (pointer) type.  Now C is a bit
+odd about function and function pointers.  They are treated as the
+same.  We will work functions as follows, where @code{f-bs} represents
+a pointer to a function bytestructure 
+@example
+(fh-object-ref f-bs) => #<pointer ...>
+(fh-object-ref f-bs '*) => #<procedure ...>
+@end example
+@noindent
+On the other hand, setters can take either.  Any of these will get
+the desired behavior:
+@example
+(fh-object-set! f-bs #<pointer ...>)
+(fh-object-set! f-bs #<number>) ;; aka pointer-address
+(fh-object-set! f-bs #<procedure ...>)
+@end example
+@noindent
+We still have to deal with @code{ref<->deref!}.  I think this should
+be self referencing.  That is
+@example
+(pointer-to f-bs) => f-bs
+@end example
+
+This descriptor includes fields
+@enumerate
+@item return descriptor
+@item parameter list
+@end enumerate
+@noindent
+Elements of parameter list may be
+@itemize
+@item descriptor
+@item a pair: symbolic name and descriptor
+@item the ellipsis symbol: @code{'...}
+@end itemize
+
+When @code{bs:function} is called to create a descriptor, either the
+descriptor for the return type, or the list of descriptors for the
+parameters can be a promise.  That is
+@example
+(define f-desc (bs:function (delay ret-desc) (delay (list int xxx xxx))))
+@end example
+@noindent
+
 @section The Type System
 
+We want a closed type system with accessors and setters.  We rely on
+@emph{bytestrutures} for compound types, vectors, etc.  For base C
+types we will keep xxx.  Enums are a speial case.
+Let use the following convention
+@table @code
+@item objS
+FH object with scheme type representation
+@item objB
+FH object with underying bytestructure representation
+@item valGS
+A Guile Scheme value: number, xxx
+@item valGP
+A Guile Pointer (@code{#<pointer ...>})
+@item valBS
+A bytestructure: @code{#<bytestructure ...>}.
+@item valBV
+A bytevector @code{#<bytevector ...>}.
+@end table
+@noindent
+There will be FH types for structs, unions, vectors, pointers, but not
+for enums, scalar integer or floating types.  Strings will be handled
+as pointers.
+
+Consider working with the following C types
+@table @code
+@item foo_t
+a compount type
+@item bar_t
+a typedef for a doulble
+@item int
+base type
+@item who_t
+an enum
+@end table
+
+The user use cases are generate variable
+@itemize
+@item
+Generate type w/ any content:
+@code{(make foo_t)}
+@item
+
+@code{(make foo_t objGS)}
+@item
+@code{(make foo_t objBS)}
+@end itemize
+
+@itemize
+@item
+Pass pointer to data to C function:
+@example
+(define v (make-double))
+(c_funtion (pointer-to v))
+(fh-object-ref v) => number
+@end example
+@end itemize
+
+@code{bar_t} that is a @code{double} and an enum type @code{baz_t}.
+In the items below, @code{foo_t} is a type and @code{bar} is a wrap/unwrap.
+@itemize
+@item
+(make-foo_t) => #<foo_t valS> | #<foo_t valX>
+@item
+(make-foo_t valS) => #<foo_t valS|valX>
+@item
+(fh-object-ref objS) => valS
+@item
+(fh-object-ref objX) => valX
+@item
+(fh-object-ref objX 'sel) => valX | valS
+@end itemize
+@noindent
 We need a (somewhat?) closed type system.  In the FFI Helper we choose
 to classify the following
 @table @asis
@@ -289,6 +406,20 @@ Note that forward references are swapped around.
 
 @subsection Type Support
 
+For @code{bytestructures}, arguments to setters and return values
+from getters are Scheme values for numerical types and bytestructures
+for other types (e.g., structs and unions).
+
+In FH C object types are either ``wrapped'' or ``defined''.  If a type
+is wrapped then we provide a wrap and unwrap function for that type.
+Numeric types and enum's are wrapped.  Other types are defined as FH
+types.  The FH types have a wrapper and unwrapper properties.  These
+properties are procedures and
+can be accessed with
+@code{(fht-unwrap type)} and @code{(fht-wrap type)}
+or executed with
+@code{(fh-unwrap object)} and @code{(fh-wrap object)}.
+
 @deffn {Procedure} fh-type? type
 This predicate tests for FH types.
 @end deffn
@@ -319,6 +450,19 @@ a procedure to produce a Scheme bytevector
 @end table
 @end deffn
 
+The following shows that we can store a procedure as a bogus
+bytevector.
+@example
+(use-modules ((system foreign) #:prefix ffi:))
+(define (foo arg) arg)
+(define foo-ptr (ffi:procedure->pointer ffi:int foo (list ffi:int)))
+(define foo-bv (ffi:pointer->bytevector foo-ptr (ffi:sizeof '*)))
+(define foo-bv-ptr (ffi:bytevector->pointer foo-bv))
+(define foo-echo (ffi:pointer->procedure ffi:int foo-bv-ptr (list ffi:int)))
+@end example
+@noindent
+But we won't use this.
+
 @deffn {Syntax} define-fh-enum-type name sv-map
 Generate an enum type.  Exports wrap, unwrap, type? but no make.
 @end deffn
@@ -328,6 +472,7 @@ Generate a pointer type.  With (bytestructure @code{bs:pointer})
 descriptor @var{desc} generates a bytestructe-based type.  Otherwise,
 generates a Guile FFI pointer based type.
 @end deffn
+
 
 @subsection Function Argument Return Types 
 
@@ -348,6 +493,20 @@ Here are the BS simple types:
   size_t ssize_t ptrdiff_t intptr_t uintptr_t
   float double complex64 complex128
 @end verbatim
+
+The C standard says
+@quote
+A declaration of a parameter as ‘‘function returning type’’ shall be
+adjusted to ‘‘pointer to function returning type.’’
+@end quote
+I'm guessing this goes for struct fields as well.
+
+C says bitfields are (signed) int, unsigned int, or _Bool.
+
+C says if function parameter declared as arrays should be interpreted
+as pointers.
+
+@example
 
 
 @subsection Library Variables

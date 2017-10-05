@@ -1,6 +1,6 @@
 ;;; nyacc/util.scm
 ;;;
-;;; Copyright (C) 2014-2016 Matthew R. Wette
+;;; Copyright (C) 2014-2017 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -25,7 +25,7 @@
 	    map-attr->vector
 	    x-flip x-comb
 	    write-vec
-	    ugly-print
+	    ugly-print OLD-ugly-print
 	    tzort
 	    )
   #:use-module ((srfi srfi-43) #:select (vector-fold))
@@ -39,17 +39,22 @@
   (apply simple-format (current-error-port) fmt args))
 (define fmt simple-format)
 
-;; @item make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
+;; @deffn {Procedure} make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
 ;; This is a helper for @code{mkact}.
+;; @end deffn
 (define (make-arg-list n)
   (let ((mkarg
 	 (lambda (i) (string->symbol (string-append "$" (number->string i))))))
     (let iter ((r '(. $rest)) (i 1))
       (if (> i n) r (iter (cons (mkarg i) r) (1+ i))))))
 
-;; @item wrap-action (n . guts) => `(lambda ($n ... $2 $1 . $rest) ,@guts)
-;; Wrap user-specified action (body, as list) of n arguments in a lambda.
-;; The rationale for the arglist format is that we can @code{apply} this
+;; @deffn {Procedure} wrap-action (n . guts) => quoted procedure
+;; Wrap user-specified action (body, as a quoted list of expressions) with
+;; n arguments to generate a quoted lambda.  That is,
+;; @example
+;;  `(lambda ($n ... $2 $1 . $rest) ,@guts)
+;; @end example
+;; The rationale for the arglist format is that we @code{apply} this
 ;; lambda to the the semantic stack.
 (define (wrap-action actn)
   (cons* 'lambda (make-arg-list (car actn)) (cdr actn)))
@@ -69,21 +74,15 @@
     (if (null? al0) al1
 	(iter (if (assoc (caar al0) al1) al1 (cons (car al0) al1)) (cdr al0)))))
 
-;; @deffn fixed-point proc seed
-;; .item fixed-point-by-elt proc seed
-;; @example
-;; proc: element list -> list
-;; @end example
-;; proc will take an element and insert updates at the front of list
-;; and return the list
-;; seed is a list
-;; fixed-point processes a list
-;; The procedure @code{proc} takes as arguments an element from the list
-;; and the entire list.   Updates should be cons'd onto the front of the
-;; list.
-;; It works by setting prev to the empty list and next, curr and item to
-;; the seed.  The item reference is propagated through the current list
-;; until it reaches prev.  The calls to proc will update @code{next}.
+;; @deffn {Procedure} fixed-point proc seed
+;; This generates the fixed point for @var{proc} applied to @var{seed},
+;; a list.  The procedure @code{proc} takes as arguments an element from
+;; the list and the entire list.   Updates should be cons'd onto the front
+;; of the list.
+;;
+;; The routine works by setting prev to the empty list and next, curr and
+;; item to the seed.  The item reference is propagated through the current
+;; list until it reaches prev.  The calls to proc will update @code{next}.
 ;; @example
 ;; next-> +---+
 ;;        |   |
@@ -95,8 +94,8 @@
 ;;        |   |
 ;;        +---+
 ;; @end example
+;; @end deffn
 (define (fixed-point proc seed)
-  ;; (let ((seed (if (null? seed) (fixed-point proc (proc seed '())))))
   (let iter ((prev '()) (item seed) (curr seed) (next seed))
     (cond
      ((not (eqv? item prev))
@@ -155,16 +154,18 @@
     (fmt port ")")))
 
 
-;; @deffn ugly-print sexp [#:indent 4] [#:extent 78] [#:port port]
+;; @deffn {Procedure} OLD-ugly-print sexp [port] [#:indent 4] [#:extent 78]
 ;; This will print in compact form which shows no structure.
-(define* (ugly-print sexp #:optional port #:key (indent 4) (extent 78))
+;; @end deffn
+(define* (OLD-ugly-print sexp #:optional port #:key (indent 4) (extent 78))
 
   (define (obj->str obj)
     (simple-format #f "~S" obj))
 
-  ;; @deffn make-strout indent extent port
+  ;; @deffn {Procedure} make-strout indent extent port
   ;; This will generate a procedure of signature @code{(proc col str)} which
   ;; takes a column and string, prints the string and returns updated column.
+  ;; @end deffn
   (define (make-strout ind ext port)
     (let ((leader (make-string ind #\space)))
       (lambda (col str)
@@ -212,9 +213,85 @@
     ;;(newline out-p)
     ))
 
+;; @deffn {Procedure} ugly-print sexp [port] [options]
+;; This will print in compact form which shows no structure.  The optional
+;; keyword argument @var{#:pre-line-prefix} prints the provided string
+;; at the start of each continued line.  The default is four spaces.
+;; @end deffn
+(define* (ugly-print sexp #:optional (port (current-output-port))
+		     #:key (per-line-prefix "") (width 78) trim-ends)
+
+  (define plplen (string-length per-line-prefix))
+   
+  ;;(define (obj->str obj) (simple-format #f "~S" obj))
+  (define obj->str object->string)
+
+  ;; @deffn {Procedure} strout column string-or-number
+  ;; Nominally takes a column and string, prints the string and returns updated
+  ;; column.  If passed a number instead of string guarantee that many chars.
+  ;; @end deffn
+  (define (strout col str)
+    (cond
+     ((number? str)
+      (if (> (+ col str) width) (strout col "\n") col))
+     ((string=? "\n" str)
+      (newline port)
+      (display per-line-prefix port)
+      (display " " port)
+      (1+ plplen))
+     ((> (+ col (string-length str)) width)
+      (if (string-every #\space str)
+	  (strout col "\n")
+	  (strout (strout col "\n") str)))
+     (else
+      (display str port)
+      (+ col (string-length str)))))
+
+  (letrec*
+      ((iter1 (lambda (col sx)
+		(cond
+		 ((pair? sx)
+		  ;;(fmterr "[car sx=~S]" (car sx))
+		  (case (car sx)
+		    ((quote)
+		     (iter2 (strout (strout col 3) "'") (cdr sx)))
+		    ((quasiquote)
+		     (iter2 (strout (strout col 3) "`") (cdr sx)))
+		    ((unquote)
+		     (iter2 (strout (strout col 2) ",") (cdr sx)))
+		    ((unquote-splicing)
+		     (iter2 (strout (strout col 3) ",@") (cdr sx)))
+		    (else
+		     (strout (iter2 (strout col "(") sx) ")"))))
+		 ((vector? sx)
+		  (strout
+		   (vector-fold
+		    (lambda (ix col elt)
+		      (iter1 (if (zero? ix) col (strout col " ")) elt))
+		    (strout col "#(") sx) ")"))
+		 ((null? sx) (strout col "'()"))
+		 (else (strout col (obj->str sx))))))
+	    
+       (iter2 (lambda (col sx)
+		(cond
+		 ((pair? sx)
+		  (if (null? (cdr sx))
+		      (iter2 (iter1 col (car sx)) (cdr sx))
+		      (iter2 (strout (iter1 col (car sx)) " ") (cdr sx))))
+		 ((null? sx) col)
+		 (else (strout (strout col ". ") (obj->str sx)))))))
+
+    (if (not trim-ends) (strout 0 per-line-prefix))
+    ;;(if (pair? sexp) (fmterr "car sexp=~S\n" (car sexp)))
+    (iter1 plplen sexp)
+    ;;(if (and (pair? sexp) (memq (car sexp) '(quote quasiquote)))
+;;	       (cadr sexp) sexp))
+    (if (not trim-ends) (newline port))
+    (if #f #f)))
+
 ;; stuff
 
-;; @deffn depth-first-search graph => (values ht gv tv xl)
+;; @deffn {Procedure} depth-first-search graph => (values ht gv tv xl)
 ;; The argument @var{gfraph} is a list of verticies and adjacency nodes:
 ;; @example
 ;; graph => ((1 2 3 4) (2 6 7) ...)
@@ -229,6 +306,7 @@
 ;; vector of (d . f)
 ;; @end table
 ;; ref: Algorithms, p 478
+;; @end deffn
 (define (depth-first-search graph)
   (let* ((n (length graph))
 	   (ht (make-hash-table n))	; vertex -> index

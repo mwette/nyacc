@@ -1987,9 +1987,14 @@
 (define* (write-lalr-tables mach filename #:key (lang 'scheme) (prefix ""))
 
   (define (write-table mach name port)
-    (fmt port "(define ~A~A\n  " prefix name)
-    (ugly-print (assq-ref mach name) port)
-    (fmt port ")\n\n"))
+    (let ((sexp (assq-ref mach name)))
+      (if (pair? sexp)
+	  (fmt port "(define ~A~A\n  '" prefix name)
+	  (fmt port "(define ~A~A\n  " prefix name))
+      (ugly-print (assq-ref mach name) port
+		  #:per-line-prefix "   " #:trim-ends #t)
+      ;;(ugly-print (assq-ref mach name) port)
+      (fmt port ")\n\n")))
 
   (call-with-output-file filename
     (lambda (port)

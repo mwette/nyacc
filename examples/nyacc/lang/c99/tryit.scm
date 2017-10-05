@@ -10,6 +10,7 @@
 (use-modules (nyacc lang c99 util2))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
+(use-modules (nyacc util))
 (use-modules (ice-9 pretty-print))
 (use-modules (sxml xpath))
 
@@ -90,7 +91,7 @@
 ;;(and=> (parse-c99x "(a*b)+c") ppsx)
 
 (define adecl #f)
-(let* ((code "struct foo { int x, y; } *a, b;\n") (indx 1)
+#;(let* ((code "struct foo { int x, y; } *a, b;\n") (indx 1)
        (code (string-append
 	      "typedef int *foo_t;\n"
 	      "typedef double hmm_t[3];\n"
@@ -127,5 +128,25 @@
 ;; ex12.c: illustrates removal of comment prefix, offset-8 => offset-2
 ;;(let ((tree (parse-file "exam.d/ex12.c"))) (pp99 tree))
       
+(ugly-print (quote `(abc ,@def)))
+
+
+(define n1570a ;; sec 6.7.8
+  (string-append
+   "typedef signed int t;\n"
+   "typedef int plain;\n"
+   "struct tag {\n"
+   "  unsigned t:4;\n"
+   "  const t:5;\n"
+   "  plain r:5;\n"
+   "};\n"))
+(define n1570b
+  (string-append
+   n1570a
+   "int foo() {\n"
+   "  t f(t (t));\n"
+   "  long t;\n"
+   "  return 1;\n"
+   "};\n"))
 
 ;; --- last line ---
