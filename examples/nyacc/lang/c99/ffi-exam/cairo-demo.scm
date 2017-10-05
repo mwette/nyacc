@@ -13,14 +13,12 @@
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 200 200))
 (define cr (cairo_create srf))
 
-#|
 (cairo_move_to cr 10.0 10.0)
 (cairo_line_to cr 190.0 10.0)
 (cairo_line_to cr 190.0 190.0)
 (cairo_line_to cr 10.0 190.0)
 (cairo_line_to cr 10.0 10.0)
 (cairo_stroke cr)
-|#
 
 (cairo_surface_write_to_png srf "cairo-demo.png")
 (cairo_destroy cr)

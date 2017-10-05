@@ -850,7 +850,7 @@
 	      (decl-params (gen-decl-params params)))
 	 ;;(sferr "FIX RET => ~S\n" mspec)
 	 ;; (if (equal? (last decl-params) '...) (fherr "")
-	 `(make-ftn-arg-unwrapper ,decl-return (list ,@decl-params))))
+	 `(make-fctn-param-unwrapper ,decl-return (list ,@decl-params))))
       
       (((pointer-to) . ,otherwise) 'unwrap~pointer)
 
