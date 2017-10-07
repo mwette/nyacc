@@ -106,7 +106,7 @@ Lookup @code{enum name}.
 
 @section From Util2
 
-@include util2_scm.texi
+@include munge_scm.texi
 
 
 @bye
