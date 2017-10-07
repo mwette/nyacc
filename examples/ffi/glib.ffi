@@ -8,12 +8,10 @@
 		     (string=? file-spec "glibconfig.h")))
   )
 
-(define gpointer*-desc (bs:pointer gpointer-desc))
-(export gpointer*-desc)
-(define-fh-pointer-type gpointer* gpointer*-desc)
+(define-public gpointer*-desc (bs:pointer gpointer-desc))
+(define-fh-pointer-type gpointer* gpointer*-desc gpointer*? make-gpointer*)
 
-(define gdouble*-desc (bs:pointer double))
-(export gdouble*-desc)
-(define-fh-pointer-type gdouble* gdouble*-desc)
+(define-public gdouble*-desc (bs:pointer double))
+(define-fh-pointer-type gdouble* gdouble*-desc gdouble*? make-gdouble*)
 
 ;; --- last line ---

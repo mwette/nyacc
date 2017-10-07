@@ -1,11 +1,17 @@
 ;; exam.d/cairo02.scm
 
-(use-modules (cairo cairo))		; auto-generated from cairo.h etc
+;; Copyright (C) 2017 Matthew R. Wette
+
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(use-modules (ffi cairo))		; auto-generated from cairo.h etc
 (use-modules (system ffi-help-rt))	; pointer-to
 (use-modules (system foreign))		; string->pointer, pointer<->scm
 
-(define srf (cairo_svg_surface_create (string->pointer "cairo02.svg")
-				      200.0 200.0))
+(define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 200 200))
 (define cr (cairo_create srf))
 
 ;; typedef struct _cairo_user_data_key {
@@ -24,6 +30,7 @@
 	 
 (cairo_set_user_data cr (pointer-to k1) (scm->pointer v1) d1)
 
+(cairo_surface_write_to_png srf "cairo02.png")
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
 

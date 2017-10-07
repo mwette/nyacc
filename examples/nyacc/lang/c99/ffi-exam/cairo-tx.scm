@@ -22,7 +22,7 @@
 (cairo_line_to cr 10.0 10.0)
 (cairo_stroke cr)
 
-(cairo_surface_write_to_png srf "cairo-text.png")
+(cairo_surface_write_to_png srf "cairo-tx.png")
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
 

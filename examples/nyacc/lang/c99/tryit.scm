@@ -6,8 +6,8 @@
 (use-modules (nyacc lang c99 xparser))
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 pprint))
+(use-modules (nyacc lang c99 munge))
 (use-modules (nyacc lang c99 util1))
-(use-modules (nyacc lang c99 util2))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
@@ -128,8 +128,7 @@
 ;; ex12.c: illustrates removal of comment prefix, offset-8 => offset-2
 ;;(let ((tree (parse-file "exam.d/ex12.c"))) (pp99 tree))
       
-(ugly-print (quote `(abc ,@def)))
-
+;;(ugly-print (quote `(abc ,@def)))
 
 (define n1570a ;; sec 6.7.8
   (string-append
@@ -150,3 +149,75 @@
    "};\n"))
 
 ;; --- last line ---
+(define ffi-cairo-types
+  '((struct . "_cairo")
+    "cairo_t"
+    (struct . "_cairo_surface")
+    "cairo_surface_t"
+    (struct . "_cairo_device")
+    "cairo_device_t"
+    (struct . "_cairo_matrix")
+    "cairo_matrix_t"
+    (struct . "_cairo_pattern")
+    "cairo_pattern_t"
+    (pointer . "cairo_destroy_func_t")
+    (struct . "_cairo_user_data_key")
+    "cairo_user_data_key_t"
+    (pointer . "cairo_write_func_t")
+    (pointer . "cairo_read_func_t")
+    (struct . "_cairo_rectangle_int")
+    "cairo_rectangle_int_t"
+    (struct . "_cairo_rectangle")
+    "cairo_rectangle_t"
+    (struct . "_cairo_rectangle_list")
+    "cairo_rectangle_list_t"
+    (struct . "_cairo_scaled_font")
+    "cairo_scaled_font_t"
+    (struct . "_cairo_font_face")
+    "cairo_font_face_t"
+    "cairo_glyph_t"
+    "cairo_text_cluster_t"
+    "cairo_text_extents_t"
+    "cairo_font_extents_t"
+    (struct . "_cairo_font_options")
+    "cairo_font_options_t"
+    (pointer . "cairo_user_scaled_font_init_func_t")
+    (pointer
+      .
+      "cairo_user_scaled_font_render_glyph_func_t")
+    (pointer
+      .
+      "cairo_user_scaled_font_text_to_glyphs_func_t")
+    (pointer
+      .
+      "cairo_user_scaled_font_unicode_to_glyph_func_t")
+    (union . "_cairo_path_data_t")
+    "cairo_path_data_t"
+    (struct . "cairo_path")
+    "cairo_path_t"
+    (pointer . "cairo_surface_observer_callback_t")
+    (pointer . "cairo_raster_source_release_func_t")
+    (pointer . "cairo_raster_source_snapshot_func_t")
+    (pointer . "cairo_raster_source_copy_func_t")
+    (pointer . "cairo_raster_source_finish_func_t")
+    (struct . "_cairo_region")
+    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+    11 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
+    "cairo_region_t")
+)
+
+
+(begin
+  (display "1234567890123456789012345678901234567890")
+  (display "1234567890123456789012345678901234567890")
+  (newline)
+  (display "(define types\n")
+  (display "  '")
+  (ugly-print ffi-cairo-types #:per-line-prefix "   " #:trim-ends #t)
+  (display ")\n")
+  )

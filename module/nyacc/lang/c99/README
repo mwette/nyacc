@@ -27,7 +27,7 @@ xparser.scm	C expression parser
 pprint.scm	C pretty printer, from SXML output of above parsers
 
 util1.scm	utilities merge, remove trees from included files
-util2.scm	utilities to process information in trees
+munge.scm	utilities to process information in trees
 
 mach.d/
   cppact.scm	cpp expression parser actions, generated from cppmach.scm

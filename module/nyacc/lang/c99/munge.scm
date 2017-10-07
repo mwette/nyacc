@@ -57,7 +57,7 @@
 ;; Another idea is to make comments attributes and have join be sx-cons*
 ;; I think this would simplify a lot.
 
-(define-module (nyacc lang c99 util2)
+(define-module (nyacc lang c99 munge)
   #:export (c99-trans-unit->udict
 	    c99-trans-unit->udict/deep
 	    udict-ref udict-struct-ref udict-union-ref udict-enum-ref
@@ -592,7 +592,7 @@
     ((ftn-declr ,dir-declr ,rest ...) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
     ((bit-field ,ident . ,rest) ident)
-    (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
+    (,otherwise (throw 'util-error "c99/munge: unknown declarator: " declr))))
 
 ;; @deffn {Procedure} declr-id decl => "name"
 ;; This extracts the name from the return value of @code{declr-ident}.
@@ -764,7 +764,7 @@
        `(ftn-declr ,(probe-declr dir-declr) . ,rest))
       ((scope ,declr)
        `(scope ,(probe-declr declr)))
-      (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
+      (,otherwise (throw 'util-error "c99/munge: unknown declarator: " declr))))
   (probe-declr tdef-declr))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
@@ -1061,7 +1061,7 @@
 	     declr
 	     `(comp-declr-list . ,xdeclrs))))
       
-      (,otherwise (throw 'util-error "c99/util2: unknown declarator: " declr))))
+      (,otherwise (throw 'util-error "c99/munge: unknown declarator: " declr))))
 
   (let*-values (((tag attr orig-specl orig-declr tail)
 		 (split-adecl adecl))
@@ -1342,7 +1342,7 @@
 	     (if (null? cl) (iter (cons (car fl) rz) '() (cdr fl))
 		 (iter (cons (append (car fl) (list cs)) rz) '() (cdr fl)))))
 	  (else
-	   (error "util2: clean-field-list" (car fl)))))))
+	   (error "munge: clean-field-list" (car fl)))))))
 (define (clean-field-list field-list)
   (cons (car field-list) (clean-fields (cdr field-list))))
 
@@ -1453,9 +1453,9 @@
       ((param-declr ,item) (unwrap-declr item))
 
       (,otherwise
-       (sferr "util2/unwrap-declr missed:\n")
+       (sferr "munge/unwrap-declr missed:\n")
        (pperr otherwise)
-       (error "c99/util2: udecl->mspec failed")
+       (error "c99/munge: udecl->mspec failed")
        #f)))
 
   ;;(sferr "decl:\n") (pperr decl)
@@ -1500,9 +1500,9 @@
        (doit `(ptr-declr (pointer) ,declr) rest))
        
       (,otherwise
-       (sferr "util2/mspec->udecl missed:\n")
+       (sferr "munge/mspec->udecl missed:\n")
        (pperr otherwise)
-       (error "util2/mspec->udecl failed")
+       (error "munge/mspec->udecl failed")
        #f)))
 
   (let ((name (car mspec))

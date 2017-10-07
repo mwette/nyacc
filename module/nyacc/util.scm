@@ -219,11 +219,10 @@
 ;; at the start of each continued line.  The default is four spaces.
 ;; @end deffn
 (define* (ugly-print sexp #:optional (port (current-output-port))
-		     #:key (per-line-prefix "") (width 78) trim-ends)
+		     #:key (per-line-prefix "") (width 79) trim-ends)
 
   (define plplen (string-length per-line-prefix))
-   
-  ;;(define (obj->str obj) (simple-format #f "~S" obj))
+
   (define obj->str object->string)
 
   ;; @deffn {Procedure} strout column string-or-number
@@ -233,59 +232,57 @@
   (define (strout col str)
     (cond
      ((number? str)
-      (if (> (+ col str) width) (strout col "\n") col))
+      (if (>= (+ col str) width) (strout col "\n") col))
      ((string=? "\n" str)
       (newline port)
       (display per-line-prefix port)
       (display " " port)
       (1+ plplen))
-     ((> (+ col (string-length str)) width)
-      (if (string-every #\space str)
-	  (strout col "\n")
-	  (strout (strout col "\n") str)))
+     ((and (string=? str ")") (= width col))
+      (display str port)
+      (1+ col))
+     ((>= (+ col (string-length str)) width)
+      (cond
+       ((string-every #\space str) (strout col "\n"))
+       (else (strout (strout col "\n") str))))
      (else
       (display str port)
       (+ col (string-length str)))))
 
   (letrec*
-      ((iter1 (lambda (col sx)
-		(cond
-		 ((pair? sx)
-		  ;;(fmterr "[car sx=~S]" (car sx))
-		  (case (car sx)
-		    ((quote)
-		     (iter2 (strout (strout col 3) "'") (cdr sx)))
-		    ((quasiquote)
-		     (iter2 (strout (strout col 3) "`") (cdr sx)))
-		    ((unquote)
-		     (iter2 (strout (strout col 2) ",") (cdr sx)))
-		    ((unquote-splicing)
-		     (iter2 (strout (strout col 3) ",@") (cdr sx)))
-		    (else
-		     (strout (iter2 (strout col "(") sx) ")"))))
-		 ((vector? sx)
-		  (strout
-		   (vector-fold
-		    (lambda (ix col elt)
-		      (iter1 (if (zero? ix) col (strout col " ")) elt))
-		    (strout col "#(") sx) ")"))
-		 ((null? sx) (strout col "'()"))
-		 (else (strout col (obj->str sx))))))
-	    
-       (iter2 (lambda (col sx)
-		(cond
-		 ((pair? sx)
-		  (if (null? (cdr sx))
-		      (iter2 (iter1 col (car sx)) (cdr sx))
-		      (iter2 (strout (iter1 col (car sx)) " ") (cdr sx))))
-		 ((null? sx) col)
-		 (else (strout (strout col ". ") (obj->str sx)))))))
+      ((iter1
+	(lambda (col sx)
+	  (cond
+	   ((pair? sx)
+	    ;;(fmterr "[car sx=~S]" (car sx))
+	    (case (car sx)
+	      ((quote) (iter2 (strout (strout col 3) "'") (cdr sx)))
+	      ((quasiquote) (iter2 (strout (strout col 3) "`") (cdr sx)))
+	      ((unquote) (iter2 (strout (strout col 2) ",") (cdr sx)))
+	      ((unquote-splicing) (iter2 (strout (strout col 3) ",@") (cdr sx)))
+	      ;;(else (strout (iter2 (strout col "(") sx) ")"))))
+	      ;; (strout col 8) is kludge to prevent lone `(' at end of line
+	      (else (strout (iter2 (strout (strout col 8) "(") sx) ")"))))
+	   ((vector? sx)
+	    (strout
+	     (vector-fold
+	      (lambda (ix col elt)
+		(iter1 (if (zero? ix) col (strout col " ")) elt))
+	      (strout col "#(") sx) ")"))
+	   ((null? sx) (strout col "'()"))
+	   (else (strout col (obj->str sx))))))
+       (iter2
+	(lambda (col sx)
+	  (cond
+	   ((pair? sx)
+	    (if (null? (cdr sx))
+		(iter2 (iter1 col (car sx)) (cdr sx))
+		(iter2 (strout (iter1 col (car sx)) " ") (cdr sx))))
+	   ((null? sx) col)
+	   (else (strout (strout col ". ") (obj->str sx)))))))
 
     (if (not trim-ends) (strout 0 per-line-prefix))
-    ;;(if (pair? sexp) (fmterr "car sexp=~S\n" (car sexp)))
     (iter1 plplen sexp)
-    ;;(if (and (pair? sexp) (memq (car sexp) '(quote quasiquote)))
-;;	       (cadr sexp) sexp))
     (if (not trim-ends) (newline port))
     (if #f #f)))
 
