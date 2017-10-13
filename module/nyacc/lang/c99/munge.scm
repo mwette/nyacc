@@ -829,11 +829,14 @@
        (cond
 	((member name keep)		; keeper; don't expand
 	 (values specl declr))
-	#;((pointer-declr? name)		; replace with void*
+	((and #t ;; (pointer-declr? declr)
+	      (member (cons 'pointer name) keep))
+	 (values specl declr))
+	(#f ;;(pointer-declr? name)		; replace with void*
 	 (let ((specl (replace-type-spec specl '(type-spec (void)))))
 	   (call-with-values
-	       (lambda () (splice-typename specl declr name udict)))
-	   (lambda (specl declr) (re-expand specl declr))))
+	       (lambda () (splice-typename specl declr name udict))
+	     (lambda (specl declr) (re-expand specl declr)))))
 	(else				; expand
 	 (call-with-values
 	     (lambda () (splice-typename specl declr name udict))
@@ -859,10 +862,12 @@
       ((struct-ref union-ref) ;; compound reference; replace unless pointer
        (let* ((c-name (and=> (sx-find 'ident tspec)
 				(lambda (id) (sx-ref id 1))))
-	      (c-key (compound-key class c-name))
+	      (c-key (compound-key class c-name)) ;; e.g., (struct . "foo")
 	      (c-decl (and c-key (assoc-ref udict c-key)))
 	      (t-spec (and c-decl (sx-find 'type-spec (sx-ref c-decl 1)))))
-	 (if (or (and c-key (member c-key keep))
+	 (if (or (and c-key
+		      (or (member c-key keep)
+			  (member (cons 'pointer c-key) keep)))
 		 (not c-decl)
 		 (pointer-declr? declr))
 	     (values specl declr)
@@ -892,7 +897,9 @@
 ;; extern const int  (*fctns[2])(int a, double b);
 ;; @end example
 ;; @noindent
-;; Note: @var{keep} was formally keyword argument. 
+;; Note: @var{keep} was formally keyword argument.@*
+;; Note: works with @code{(struct . "foo")}@*
+;; Note: works with @code{(pointer . "foo_t")}
 ;; @end deffn
 ;; idea: if we have a pointer to an undefined type, then use void*
 ;; @*BUG HERE? if we run into a struct then the struct members have not

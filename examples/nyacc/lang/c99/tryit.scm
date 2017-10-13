@@ -91,34 +91,30 @@
 ;;(and=> (parse-c99x "(a*b)+c") ppsx)
 
 (define adecl #f)
-#;(let* ((code "struct foo { int x, y; } *a, b;\n") (indx 1)
+(let* ((code "struct foo { int x, y; } *a, b;\n") (indx 1)
        (code (string-append
 	      "typedef int *foo_t;\n"
 	      "typedef double hmm_t[3];\n"
 	      "int baz(foo_t (*baz)(hmm_t y));\n"
 	      ))
-       (xcode (string-append
-	      "typedef struct { int x; } foo_t;\n"
+       (code (string-append
+	      "typedef struct foo foo_t;\n"
 	      "foo_t *y;\n"
-	      ;; expand as
-	      ;; 1) struct struct__foo_t *y;
-	      ;; 2) void *y;
+	      "foo_t z;\n"
 	      ))
        (indx 2)
        (tree (parse-string code))
-       ;;(tree (parse-c99x code))
-       ;;(tree (parse-file "zz4.c"))
-       
        (udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
-       (udecl (udict-ref udict "baz"))
+       (udecl (udict-ref udict "z"))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
-       (xdecl (expand-typerefs udecl udict))
+       (xdecl (expand-typerefs udecl udict '((struct . "foo"))))
        )
   ;;(display code)
-  (pp99 udecl)
-  (display "==\n")
-  (pp99 xdecl)
+  (ppsx udecl)
+  (ppsx xdecl)
+  ;;(display "==\n")
+  ;;(pp99 xdecl)
   ;;(ppsx mspec)
   ;;(ppsx (expand-typerefs udecl udict '("foo_t")))
   ;;(ppsx ddict)
@@ -149,75 +145,3 @@
    "};\n"))
 
 ;; --- last line ---
-(define ffi-cairo-types
-  '((struct . "_cairo")
-    "cairo_t"
-    (struct . "_cairo_surface")
-    "cairo_surface_t"
-    (struct . "_cairo_device")
-    "cairo_device_t"
-    (struct . "_cairo_matrix")
-    "cairo_matrix_t"
-    (struct . "_cairo_pattern")
-    "cairo_pattern_t"
-    (pointer . "cairo_destroy_func_t")
-    (struct . "_cairo_user_data_key")
-    "cairo_user_data_key_t"
-    (pointer . "cairo_write_func_t")
-    (pointer . "cairo_read_func_t")
-    (struct . "_cairo_rectangle_int")
-    "cairo_rectangle_int_t"
-    (struct . "_cairo_rectangle")
-    "cairo_rectangle_t"
-    (struct . "_cairo_rectangle_list")
-    "cairo_rectangle_list_t"
-    (struct . "_cairo_scaled_font")
-    "cairo_scaled_font_t"
-    (struct . "_cairo_font_face")
-    "cairo_font_face_t"
-    "cairo_glyph_t"
-    "cairo_text_cluster_t"
-    "cairo_text_extents_t"
-    "cairo_font_extents_t"
-    (struct . "_cairo_font_options")
-    "cairo_font_options_t"
-    (pointer . "cairo_user_scaled_font_init_func_t")
-    (pointer
-      .
-      "cairo_user_scaled_font_render_glyph_func_t")
-    (pointer
-      .
-      "cairo_user_scaled_font_text_to_glyphs_func_t")
-    (pointer
-      .
-      "cairo_user_scaled_font_unicode_to_glyph_func_t")
-    (union . "_cairo_path_data_t")
-    "cairo_path_data_t"
-    (struct . "cairo_path")
-    "cairo_path_t"
-    (pointer . "cairo_surface_observer_callback_t")
-    (pointer . "cairo_raster_source_release_func_t")
-    (pointer . "cairo_raster_source_snapshot_func_t")
-    (pointer . "cairo_raster_source_copy_func_t")
-    (pointer . "cairo_raster_source_finish_func_t")
-    (struct . "_cairo_region")
-    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
-    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
-    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
-    11 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
-    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
-    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
-    1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
-    "cairo_region_t")
-)
-
-
-(begin
-  (display "1234567890123456789012345678901234567890")
-  (display "1234567890123456789012345678901234567890")
-  (newline)
-  (display "(define types\n")
-  (display "  '")
-  (ugly-print ffi-cairo-types #:per-line-prefix "   " #:trim-ends #t)
-  (display ")\n")
-  )

@@ -62,6 +62,9 @@
 	(option '(#\I "inc-dir") #t #f
 		(lambda (opt name arg seed)
 		  (acons/seed 'inc-dirs arg seed)))
+
+	(option '(#\X "make-go") #f #f
+		(lambda (opt name arg seed) (acons 'make-go #t seed)))
 	))
 
 ;; from scripts/compile.scm
@@ -87,7 +90,9 @@
 (define (compile-ffi . args)
   (use-modules (nyacc lang c99 ffi-help)) ; needed here, but why
   (let* ((options (parse-args args))
-	 (file (assoc-ref options 'file)))
+	 (file (assoc-ref options 'file))
+	 (base (string-drop-right file 4))
+	 (dot-scm (string-append base ".scm")))
     (if (or (assq-ref options 'help) (not file))
         (begin
           (simple-format #t "Usage: compile [OPTION] FILE...
@@ -109,6 +114,10 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n")
 	(apply simple-format (current-error-port)
 	       (string-append "*** compile-ffi: " fmt "\n") args)
 	(exit 1)))
+
+    (if (assq-ref options 'make-go)
+	(compile dot-scm))
+    
     (exit 0)))
 
 (define main compile-ffi)

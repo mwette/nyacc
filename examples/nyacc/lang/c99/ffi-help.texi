@@ -269,6 +269,10 @@ parameters can be a promise.  That is
 
 @section The Type System
 
+Explain why in Scheme we need to have distinct pointer types!  And
+then explain how we deal with them: type => define type*.
+expand-typerefs will not expand pointer types if
+
 We want a closed type system with accessors and setters.  We rely on
 @emph{bytestrutures} for compound types, vectors, etc.  For base C
 types we will keep xxx.  Enums are a speial case.
@@ -403,6 +407,83 @@ and unions.  Here is a segment of generated code to illustrate:
 @end example
 @noindent
 Note that forward references are swapped around.
+
+@subsubsection forward references
+
+Here we do it but store @code{GObject} 
+@example
+;; typedef struct _GObject GObject;
+(define-public GObject-desc 'void)
+(define-public GObject*-desc (bs:pointer (delay GObject-desc)))
+(define-fh-pointer-type GObject* GObject*-desc GObject*? make-GObject*)
+(export GObject* GObject*? make-GObject*)
+@end example
+
+@example
+;; typedef struct _GObject GInitiallyUnowned;
+(define-public GInitiallyUnowned-desc 'void)
+(define-public GInitiallyUnowned*-desc
+  (bs:pointer (delay GInitiallyUnowned-desc)))
+(define-fh-pointer-type GInitiallyUnowned* GInitiallyUnowned*-desc 
+                        GInitiallyUnowned*? make-GInitiallyUnowned*)
+(export GInitiallyUnowned* GInitiallyUnowned*? make-GInitiallyUnowned*)
+@end example
+
+@example
+;; struct _GObject {
+;;   GTypeInstance g_type_instance;
+;;   /*< private >*/
+;;   volatile guint ref_count;
+;;   GData *qdata;
+;; };
+(define-public struct-_GObject-desc
+  (bs:struct
+    (list `(g_type_instance ,GTypeInstance-desc)
+          `(ref_count ,unsigned-int)
+          `(qdata ,(bs:pointer GData-desc)))))
+(define-fh-compound-type struct-_GObject struct-_GObject-desc struct-_GObject?
+ make-struct-_GObject)
+(export struct-_GObject struct-_GObject? make-struct-_GObject)
+(define-public struct-_GObject*-desc
+  (bs:pointer struct-_GObject-desc))
+(define-fh-pointer-type struct-_GObject* struct-_GObject*-desc 
+ struct-_GObject*? make-struct-_GObject*)
+(export struct-_GObject* struct-_GObject*? make-struct-_GObject*)
+(ref<->deref! struct-_GObject* make-struct-_GObject*
+              struct-_GObject make-struct-_GObject)
+(set! GObject-desc struct-_GObject-desc)
+(define-fh-compound-type GObject GObject-desc GObject? make-GObject)
+(export GObject GObject? make-GObject)
+@end example
+
+
+@subsection Base Types
+
+The module @code{(system ffi-help-rt)} provides types for
+the following
+@table @code
+@item char*
+string pointer
+@item double*
+pointer to double
+@item int*
+pointer to int
+@item unsigned-int*
+pointer to unsigned int
+@end table
+@noindent
+These types are useful for sitaions where the corresponding types are
+passed by reference as return types.  For example
+@lisp
+(let ((name (make-char*)))
+  (some_function (pointer-to name))
+  (display "name: ") (display (char*->string name)) (newline))
+(let ((return-val (make-double))) ;; <= to do ???
+  (another_function (pointer-to return-val))
+  (simple-format #t "val is ~S\n" (fh-object-ref return-val)))
+@end lisp
+
+
 
 @subsection Type Support
 

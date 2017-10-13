@@ -6,7 +6,9 @@
   )
 
 ;; Items the FFI helper is not currently generating.
-(define-fh-pointer-type sqlite3_int64* (bs:pointer sqlite_int64-desc))
-(define-fh-pointer-type sqlite3_rtree_dbl (bs:pointer sqlite3_tree_dbl))
+(define-fh-pointer-type sqlite3_int64* (bs:pointer sqlite_int64-desc)
+  sqlite3_int64*? make-sqlite_int64*)
+(define-fh-pointer-type sqlite3_rtree_dbl (bs:pointer sqlite3_tree_dbl)
+  sqlite3_rtree_dbl? make-sqlite3_rtree_dbl)
 
 ;; --- last line ---

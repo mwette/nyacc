@@ -9,8 +9,10 @@
 
 (define-public struct-feature_node**-desc
   (bs:pointer struct-feature_node*-desc))
-(define-fh-pointer-type struct-feature_node** struct-feature_node**-desc)
-(ref<->deref! struct-feature_node** struct-feature_node*)
+(define-fh-pointer-type struct-feature_node** struct-feature_node**-desc
+  struct-feature_node**? make-struct-feature_node**)
+(ref<->deref! struct-feature_node** make-struct-feature_node**
+	      struct-feature_node* make-struct-feature_node*)
 
 ;;(define linear-INF +inf.0)
 (define linear-symval ffi-linear-symbol-val)
