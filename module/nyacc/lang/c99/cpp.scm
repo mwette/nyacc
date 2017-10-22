@@ -241,11 +241,12 @@
    (lambda (key fmt . args)
      (apply throw 'cpp-error fmt args))))
 
-;; @deffn {Procedure} eval-cpp-expr tree dict => datum
+;; @deffn {Procedure} eval-cpp-expr tree [options] => datum
 ;; Evaluate a tree produced from @code{parse-cpp-expr}.
-;; The tree passed to this routine is 
+;; Options include optional dictionary for defines and values
+;; and @code{#:inc-dirs} for @code{has_include} etc
 ;; @end deffn
-(define* (eval-cpp-expr tree dict #:key (inc-dirs '()))
+(define* (eval-cpp-expr tree #:optional (dict '()) #:key (inc-dirs '()))
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (tx tr 1)))
@@ -545,11 +546,11 @@
 
 ;; === exports =======================
 
-;; @deffn {Procedure} eval-cpp-cond-text text defs => string
+;; @deffn {Procedure} eval-cpp-cond-text text [defs] => string
 ;; Evaluate CPP condition expression (text).
 ;; Undefined identifiers are replaced with @code{0}.
 ;; @end deffn
-(define* (eval-cpp-cond-text text defs #:key (inc-dirs '()))
+(define* (eval-cpp-cond-text text #:optional (defs '()) #:key (inc-dirs '()))
   (with-throw-handler
    'cpp-error
    (lambda ()

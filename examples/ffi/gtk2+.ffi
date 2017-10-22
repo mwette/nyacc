@@ -1,0 +1,17 @@
+;; gtk2+.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi gtk2+)
+  #:pkg-config "gtk+-2.0"
+  #:include '("gtk/gtk.h")
+  #:inc-filter (lambda (f p) (string-contains p "gtk/" 0))
+  #:use-ffi-module (ffi gdk2)
+  #:use-ffi-module (ffi pango)
+  #:use-ffi-module (ffi gobject)
+  #:use-ffi-module (ffi glib)
+  )
+
+(define-fh-pointer-type GtkEnumValue* int*-desc
+  GtkEnumValue*? make-GtkEnumValue*)
+(export GtkEnumValue* GtkEnumValue*? make-GtkEnumValue*)
+  
+;; --- last line ---

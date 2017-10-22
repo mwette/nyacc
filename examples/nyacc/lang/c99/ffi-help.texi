@@ -43,6 +43,10 @@ Use of the FFI-helper module depends on the
 @uref{https://github.com/TaylanUB/scheme-bytestructures,scheme-bytestrucures}
 module.
 
+We generate types for all C types and their pointers.  This makes
+working C types convenient, I think, at the cost of bloating the
+namespace.
+
 @subsection Current Assumptions
 
 Here is a list of assumptions
@@ -598,6 +602,70 @@ Access to externs is provide through access procedure:
 ;; So we use:
 (foo_errno)
 @end example
+
+@section Debugging FFI Helper Modules
+
+Since this is not all straightforward you will get errors.
+
+Method
+@enumerate
+@item
+compile-ffi with flag to echo declarations
+@item
+compile -O0 the resulting scm file
+@item
+guile -c '(use-modules (ffi mymod))'
+@end enumerate
+
+@subsection @code{MAX_HEAP_SECTS}
+
+The message is
+@quote
+Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
+@end quote
+The message comes from the garbage collector.  It means you've run out
+of memory.  The recommended fix is to @code{GC_INITIAL_HEAP_SIZE} to
+something big:
+@example
+export GC_INITIAL_HEAP_SIZE=16G
+@end example
+I found that this actually came from a bug in the ff-compiler which
+generated this code:
+@example
+  (bs:struct
+    (list ...
+          `(compose_buffer ,(bs:vector #f unsigned-int))
+@end example
+@noindent
+The original C declaration was
+struct _GtkIMContextSimple {
+  ...
+  guint compose_buffer[7 + 1];
+  ...
+};
+@end example
+@noindent
+
+@subsection Warning: Possibly Unbound Variable
+
+@example
+;;; ffi/gtk2+.scm:3564:5: warning: possibly unbound variable `GtkEnumValue*'
+;;; ffi/gtk2+.scm:3581:5: warning: possibly unbound variable `GtkFlagValue*'
+;;; ffi/gtk2+.scm:10717:11: warning: possibly unbound variable `GtkAllocation*'
+;;; ffi/gtk2+.scm:15107:15: warning: possibly unbound variable `GdkNativeWindow'
+;;; ffi/gtk2+.scm:15122:15: warning: possibly unbound variable `GdkNativeWindow'
+;;; ffi/gtk2+.scm:26522:11: warning: possibly unbound variable `GSignalCMarshaller'
+;;; ffi/gtk2+.scm:62440:11: warning: possibly unbound variable `GdkNativeWindow'
+;;; ffi/gtk2+.scm:62453:5: warning: possibly unbound variable `GdkNativeWindow'
+@end example
+
+When I see this I usually check the scm file and see one of many
+things
+@table @code
+@item (fht-unwrap GtkAllocation*)
+This usually means that @code{GtkAllocation} was somehow defined
+but not the pointer type.
+@end table
 
 @section Miscellaneous Notes
 

@@ -40,7 +40,8 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (0 82 2))
+  #:version (0 10 1))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:
@@ -108,8 +109,15 @@
 ;; Right now this returns a ffi pointer.
 ;; TODO: add field option so we can do (pointer-to xstr 'vec)
 (define (pointer-to obj)
-  (or (fh-object? obj) (error "expecting ffi-help object"))
-  ((fht-pointer-to (struct-vtable obj)) obj))
+  (cond
+   ((fh-object? obj)
+    ((fht-pointer-to (struct-vtable obj)) obj))
+   ((bytestructure? obj)
+    (ffi:bytevector->pointer (bytestructure-bytevector obj)))
+   ((bytevector? obj)
+    (ffi:bytevector->pointer obj))
+   (else
+    (error "expecting something I can point to"))))
 
 ;; === objects ============
 
@@ -291,18 +299,15 @@
        (define type
 	 (make-fht
 	  (quote type)
-	  (lambda (obj)				; unwrap
-	    (cond
-	     ((procedure? obj)			; lambda => pointer
-	      (ffi:procedure->pointer
-	       (function-metadata-return-descriptor
-		(ptr-desc->ftn-meta desc))
-	       obj
-	       (function-metadata-param-descriptor-list
-		(ptr-desc->ftn-meta desc))))
-	     (else (unwrap~pointer obj))))
-	  (lambda (val) ;; wrap
-	    (make (bytestructure desc (ffi:pointer-address val))))
+	  (lambda (obj) (cond
+			 ((procedure? obj)
+			  (let* ((meta (ptr-desc->ftn-meta desc)))
+			    (ffi:procedure->pointer
+			     (function-metadata-return-descriptor meta)
+			     obj
+			     (function-metadata-param-descriptor-list meta))))
+			 (else (unwrap~pointer obj))))
+	  (lambda (val) (make (bytestructure desc (ffi:pointer-address val))))
 	  #f					; pointer-to
 	  (lambda (obj) (fh-object-ref obj '*)) ; value-at
 	  (make-bs*-printer (quote type))))
@@ -315,15 +320,14 @@
 	    ((number? val) (bytestructure desc val))
 	    ((ffi:pointer? val) (bytestructure desc (ffi:pointer-address val)))
 	    ((procedure? val) ;; special case, procedure not pointer
-	     (bytestructure
-	      desc
-	      (ffi:pointer-address
-	       (ffi:procedure->pointer
-		(function-metadata-return-descriptor
-		 (ptr-desc->ftn-meta desc))
-		val
-		(function-metadata-param-descriptor-list
-		 (ptr-desc->ftn-meta desc))))))
+	     (let ((meta (ptr->desc->ftn-meta desc)))
+	       (bytestructure
+		desc
+		(ffi:pointer-address
+		 (ffi:procedure->pointer
+		  (function-metadata-return-descriptor meta)
+		  val
+		  (function-metadata-param-descriptor-list meta))))))
 	    (else (error "bad argument type"))))
 	  (() (make-struct/no-tail type (bytestructure desc)))))
        (export type type? make)))))
@@ -458,6 +462,7 @@
   (lambda args
     (let ((ffi-l (arg-list->ffi-list param-ffi-list args))
 	  (arg-l (map arg->val args)))
+      (sferr "return=~S  params=~S\n" return-ffi ffi-l)
       (apply (ffi:pointer->procedure return-ffi pointer ffi-l) arg-l))))
 
 ;; right now the code generator only uses ffi types
@@ -466,10 +471,6 @@
     (if syntax?
 	#`(bytestructure-descriptor->ffi-descriptor %return-desc)
 	(bytestructure-descriptor->ffi-descriptor %return-desc)))
-  (define (get-return-ffi syntax?)
-    (if syntax?
-	#`%return-desc
-	%return-desc))
   #;(define (get-param-ffi-list syntax?)
     (let iter ((params %param-desc-list))
       (cond
@@ -483,6 +484,10 @@
 	(cons (bytestructure-descriptor->ffi-descriptor (car params))
 	      (iter (cdr params))))
        (else (error "bad parameter")))))
+  (define (get-return-ffi syntax?)
+    (if syntax?
+	#`%return-desc
+	%return-desc))
   (define (get-param-ffi-list syntax?)
     (let iter ((params %param-desc-list))
       (cond
@@ -494,7 +499,6 @@
   (define alignment size)
   (define attributes
     (let iter ((param-l %param-desc-list))
-
       (cond ((null? param-l) '())
 	    ((eq? '... (car param-l)) '(varargs))
 	    (else (iter (cdr param-l))))))

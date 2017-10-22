@@ -1,0 +1,14 @@
+;; pango.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi pango)
+  #:pkg-config "pango"
+  #:include '("pango/pango.h")
+  #:inc-filter (lambda (f p) (string-contains p "pango/" 0))
+  #:use-ffi-module (ffi glib)
+  #:use-ffi-module (ffi gobject)
+  )
+
+;; PangoScript is an enum.  Some routines return pointer to int for this.
+(define-public wrap-PangoScript* (fht-wrap int*))
+
+;; --- last line ---

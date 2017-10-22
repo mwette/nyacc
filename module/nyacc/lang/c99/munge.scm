@@ -1088,22 +1088,32 @@
 ;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [#:inc-filter proc]
 ;; Extract the #defines from a tree as
 ;; @example
-;; tree => (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
+;;  (define (name "ABC") (repl "repl"))
+;;  (define (name "MAX") (args "X" "Y") (repl "(X)..."))
+;; =>
+;;  (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
 ;; @end example
 ;; @noindent
 ;; The entries appear in reverse order wrt how in file.
+;; @*
+;; New option: #:skip-fdefs to skip function defs
 ;; @end deffn
-(define* (c99-trans-unit->ddict tree #:optional (seed '()) #:key inc-filter)
+(define* (c99-trans-unit->ddict tree
+				#:optional (seed '())
+				#:key inc-filter skip-fdefs)
+  (define (can-def-stmt defn)
+    (let* ((tail (sx-tail defn 1))
+	   (name (car (assq-ref tail 'name)))
+	   (args (assq-ref tail 'args))
+	   (repl (car (assq-ref tail 'repl))))
+      (cons name (if args (cons args repl) repl))))
   (define (cpp-def? tree)
     (if (and (eq? 'cpp-stmt (sx-tag tree))
-	     (eq? 'define (sx-tag (sx-ref tree 1))))
+	     (eq? 'define (sx-tag (sx-ref tree 1)))
+	     (not (and skip-fdefs (assq 'args (sx-tail (sx-ref tree 1) 1))))
+	     )
 	(can-def-stmt (sx-ref tree 1))
 	#f))
-  (define (can-def-stmt defn)
-    (let* ((name (car (assq-ref defn 'name)))
-	   (args (assq-ref defn 'args))
-	   (repl (car (assq-ref defn 'repl))))
-      (cons name (if args (cons args repl) repl))))
   (if (pair? tree)
       (fold
        (lambda (tree seed)

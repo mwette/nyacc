@@ -5,7 +5,7 @@
   #:include '("glib.h")
   #:inc-filter (lambda (file-spec path-spec)
 		 (or (string-contains path-spec "glib/" 0)
-		     (string=? file-spec "glibconfig.h")))
+		     (string=? file-spec "<glibconfig.h>")))
   )
 
 (define-public gpointer*-desc (bs:pointer gpointer-desc))

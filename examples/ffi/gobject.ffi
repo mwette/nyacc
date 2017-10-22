@@ -6,6 +6,21 @@
   #:include '("glib-object.h")
   #:inc-filter (lambda (file-spec path-spec)
 		 (string-contains path-spec "gobject/" 0))
+  #:use-module ((system foreign) #:prefix ffi: #:select(%null-pointer))
   )
+
+(define NULL ffi:%null-pointer)
+
+(define-public (g_signal_connect instance detailed_signal c_handler data)
+  (g_signal_connect_data instance detailed_signal c_handler data NULL 0))
+
+(define-public (g_signal_connect_after instance detailed_signal c_handler data)
+  (g_signal_connect_data instance detailed_signal c_handler data NULL
+			 'G_CONNECT_AFTER))
+
+(define-public (g_signal_connect_swapped instance detailed_signal c_handler
+					 data)
+  (g_signal_connect_data instance detailed_signal c_handler data NULL
+			 'G_CONNECT_SWAPPED))
 
 ;; --- last line ---
