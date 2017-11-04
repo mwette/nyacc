@@ -1,6 +1,10 @@
 BUGs and TODOs
 
-C99-010	<= next id
+C99-011	<= next id
+
+C99-010	27 Oct 2017, M.Wette
+	typename scope is not maintained: this is bad
+	See examples/nyacc/lang/c99/c99-exam/ex13.c
 
 C99-009	18 Mar 2017, M.Wette
 	pprint generates two spaces in declarations e.g.,

@@ -1,4 +1,4 @@
-;; demo-git2.scm
+;; libgit2-demo1.scm
 
 (define repo-path "/Users/mwette/repo/github.com/pycparser")
 
@@ -18,8 +18,4 @@
 (if (zero? rez)
     (display "repo is not empty.\n")
     (display "repo is empty.\n"))
-
-
-
-
 

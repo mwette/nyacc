@@ -1,0 +1,69 @@
+
+block	--> { stmt [ ';' ] } [ finish [ ';' ] ]
+
+stmt	--> var { ',' var } '=' exprs
+	 |  call
+	 |  DO block END
+	 |  WHILE expr DO block END
+         |  REPEAT block UNTIL expr
+	 |  IF expr THEN block 
+	      { ELSEIF expr THEN block }
+	      [ ELSE block ] END
+	 |  FOR name '=' expr ',' expr [ ',' expr ] DO block END
+	 |  FOR name ',' name IN expr DO block END 
+	 |  FUNCTION func_name '(' [ params ] ')' block END
+	 |  LOCAL name { ',' name } [ '=' exprs ]
+
+finish	--> RETURN [ exprs ] |  BREAK [ name ]
+
+func_name --> name { '.' key } [ ':' key ]
+
+key     --> name  
+
+params  --> '...' | name { ',' name } [ ',' '...' ]
+
+exprs	--> expr { ',' expr }
+
+expr    --> primary | var | call | expr binop expr | unop expr
+
+primary --> NIL | number | literal | '%' name | table_cons
+	 |  FUNCTION '(' [ params ] ')' block END | '(' expr ')' 
+
+var     --> name
+         |  primary index
+         |  var index
+         |  call index
+
+index   --> '[' expr ']' | '.' key
+
+call    --> primary [ ':' key ] args
+         |  var [ ':' key ] args
+         |  call [ ':' key ] args
+
+args    --> '(' [ exprs ] ')' | table_cons | literal
+
+table_cons --> '{' [ fields ] '}'
+
+fields  --> expr_fields [ ';' [ mapping_fields ] ]
+         |  mapping_fields [ ';' [ expr_fields ] ]
+         |  ';' [ expr_fields | mapping_fields ]
+
+expr_fields --> exprs [ ',' ]
+
+mapping_fields --> mapping_field { ',' mapping_field }  [ ',' ]
+
+mapping_field --> '[' expr ']' '=' expr | key '=' expr
+
+binop   --> '+' | '-' | '*' | '/' | '^' | '..' | AND | OR
+         |  '<' | '<=' | '>' | '>=' | '==' | '~='
+
+unop    --> '-' | NOT
+Note that left parenthesis, left brace, and literals are preferentially treated as arguments rather than as starting a new expression. This rule comes into effect when interpreting a call as a statement, or a primary, variable, or call as an expression. Without this rule, the grammar is ambiguous.
+
+This is a change in the Lua 4.1 grammar that I'm not happy about. It makes the ; no longer a pure optional statement terminator. -- ET
+One can generalize a key to include keywords without ambiguity by replacing the key production with the following.
+
+key     --> name | AND | BREAK | DO | END | ELSE | ELSEIF
+         |  FOR | FUNCTION | GLOBAL | IF | IN | LOCAL | NIL
+         |  NOT | OR | RETURN | REPEAT | THEN | UNTIL | WHILE
+
