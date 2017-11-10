@@ -103,16 +103,22 @@
 	      "foo_t z;\n"
 	      ))
        (code "int x = 0x00000000FFFFFFFFLLU;")
+       (code (string-append
+	      "typedef struct {\n"
+	      "  unsigned int is_bin : 1, is_write : 2;\n"
+	      "  long lineno;"
+	      "} foo_t;\n"
+	      ))
        (indx 2)
        (tree (parse-string code))
-       ;;(udict (c99-trans-unit->udict tree))
+       (udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
        ;;(udecl (udict-ref udict "z"))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs udecl udict '((struct . "foo"))))
        )
   ;;(display code)
-  (ppsx tree)
+  (ppsx udict)
   ;;(ppsx xdecl)
   ;;(display "==\n")
   ;;(pp99 xdecl)

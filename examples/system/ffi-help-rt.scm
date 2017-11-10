@@ -320,7 +320,7 @@
 	    ((number? val) (bytestructure desc val))
 	    ((ffi:pointer? val) (bytestructure desc (ffi:pointer-address val)))
 	    ((procedure? val) ;; special case, procedure not pointer
-	     (let ((meta (ptr->desc->ftn-meta desc)))
+	     (let ((meta (ptr-desc->ftn-meta desc)))
 	       (bytestructure
 		desc
 		(ffi:pointer-address

@@ -549,6 +549,7 @@
 	   '() (fold-right unitize-comp-decl '() (cdr field-list))))))
 
 ;; field-list is (field-list . ,fields)
+(sferr "TODO: bitfield order is broken\n")
 (define (cnvt-field-list field-list)
 
   (define (acons-defn name type seed)
@@ -815,13 +816,15 @@
 	((member name wrapped) (string->symbol (string-append "unwrap-" name)))
 	(else #f)))
       
-      (((enum-def (ident ,en) ,rest))
+      (((enum-def (ident ,name) ,rest))
        (cond
-	((member en wrapped) (string->symbol (string-append "unwrap-" en)))
+	((member (w/enum name) wrapped)
+	 (string->symbol (string-append "unwrap-enum-" name)))
 	(else 'unwrap-enum)))
-      (((enum-ref (ident ,en)))
+      (((enum-ref (ident ,name)))
        (cond
-	((member en wrapped) (string->symbol (string-append "unwrap-" en)))
+	((member (w/enum name) wrapped)
+	 (string->symbol (string-append "unwrap-enum-" name)))
 	(else 'unwrap-enum)))
 
       (((pointer-to) (typename ,typename))
@@ -883,11 +886,13 @@
 
       (((enum-def (ident ,name) ,rest))
        (cond
-	((member name wrapped) (string->symbol (string-append "wrap-" name)))
+	((member (w/enum name) wrapped)
+	 (string->symbol (string-append "wrap-enum-" name)))
 	(else 'wrap-enum)))
       (((enum-ref (ident ,name)))
        (cond
-	((member name wrapped) (string->symbol (string-append "wrap-" name)))
+	((member (w/enum name) wrapped)
+	 (string->symbol (string-append "wrap-enum-" name)))
 	(else 'wrap-enum)))
 
       (((pointer-to) (typename ,typename))
