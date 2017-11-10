@@ -337,8 +337,8 @@
     ("ssize_t" . ssize_t) ("ptrdiff_t" . ptrdiff_t)
     ("int8_t" . int8) ("uint8_t" . uint8) 
     ("int16_t" . int16) ("uint16_t" . uint16) 
-    ("int32_t" . int32) ("uint32_t" . uint64)
-    ("int64_t" . int32) ("uint64_t" . uint64)
+    ("int32_t" . int32) ("uint32_t" . uint32)
+    ("int64_t" . int64) ("uint64_t" . uint64)
     ("float _Complex" . complex64) ("double _Complex" . complex128)
     ;; hacks:
     ("char" . int8) ("signed char" . int8) ("unsigned char" . uint8)
@@ -549,7 +549,6 @@
 	   '() (fold-right unitize-comp-decl '() (cdr field-list))))))
 
 ;; field-list is (field-list . ,fields)
-(sferr "TODO: bitfield order is broken\n")
 (define (cnvt-field-list field-list)
 
   (define (acons-defn name type seed)
@@ -560,13 +559,15 @@
       (cons (eval-string
 	     (simple-format #f "(quote `(~A ,~S ~A))" name type size)) seed)))
 
+  ;;(sferr "\nfield-list:\n") (pperr field-list)
   (let* ((field-list (clean-field-list field-list)) ; remove lone comments
 	 (uflds (fold-right unitize-comp-decl '() (cdr field-list))))
-    ;;(sferr "\nuflds:\n") (pperr uflds)
+    ;;(sferr "field-list:\n") (pperr field-list)
     (let iter ((decls uflds))
       (if (null? decls) '()
 	  (let* ((name (caar decls))
 		 (udecl (cdar decls))
+		 ;; fix the following, look at cleanup-udecl
 		 (udecl (udecl-rem-type-qual udecl)) ;; remove "const" "extern"
 		 (spec (udecl->mspec/comm udecl))
 		 (tail (cddr spec))
@@ -1777,7 +1778,7 @@
 	 (prefix (string-append (path->name path) "-"))
 	 ;;
 	 (tree (parse-includes attrs))
-	 (udecls (reverse (c99-trans-unit->udict tree #:inc-filter incf)))
+	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
 	 ;; TODO: clean this up
