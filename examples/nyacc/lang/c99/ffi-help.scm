@@ -819,6 +819,10 @@
        (cond
 	((member en wrapped) (string->symbol (string-append "unwrap-" en)))
 	(else 'unwrap-enum)))
+      (((enum-ref (ident ,en)))
+       (cond
+	((member en wrapped) (string->symbol (string-append "unwrap-" en)))
+	(else 'unwrap-enum)))
 
       (((pointer-to) (typename ,typename))
        (cond
@@ -878,6 +882,10 @@
 	(else #f)))
 
       (((enum-def (ident ,name) ,rest))
+       (cond
+	((member name wrapped) (string->symbol (string-append "wrap-" name)))
+	(else 'wrap-enum)))
+      (((enum-ref (ident ,name)))
        (cond
 	((member name wrapped) (string->symbol (string-append "wrap-" name)))
 	(else 'wrap-enum)))

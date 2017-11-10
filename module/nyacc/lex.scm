@@ -298,6 +298,7 @@
 ;; i, f and e are lists of characters
 ;; @end deffn
 (define (make-num-reader)
+  ;; This will incorrectly parse 123LUL but I don't care right now.
   ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
   ;; Removed support for leading '.' to be a number.
   (lambda (ch1)
@@ -326,17 +327,16 @@
 	   (iter (cons ch chl) ty 11 (read-char)))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=1"))
 	  (else (iter chl '$fixed 5 ch))))
-	((11) ;; got l, L, u or U, look for l or L
+	((11) ;; got lLuU suffix, look for a second
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
-	  ((char=? #\L ch) (iter (cons ch chl) ty 12 (read-char)))
-	  ((char=? #\l ch) (iter (cons ch chl) ty 12 (read-char)))
+	  ((char-set-contains? c:sx ch) (iter (cons ch chl) ty 12 (read-char)))
 	  (else (iter chl '$fixed 5 ch))))
-	((12) ;; looking for 2nd l or L
+	((12) ;; got lLuU suffix, look for a third
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
-	  ((char=? #\L ch) (cons '$fixed (lxlsr (cons ch chl))))
-	  ((char=? #\l ch) (cons '$fixed (lxlsr (cons ch chl))))
+	  ((char-set-contains? c:sx ch)
+	   (iter (cons ch chl) '$fixed 5 (read-char)))
 	  (else (iter chl '$fixed 5 ch))))
 	((2)
 	 (cond
