@@ -82,7 +82,10 @@
 (define c:ir (string->char-set digit c:if)) ; ident, rest chars
 (define c:nx (string->char-set "eEdD"))	; number exponent
 (define c:hx (string->char-set "abcdefABCDEF"))
-(define c:sx (string->char-set "lLuU")) ; suffix
+(define c:sx (string->char-set "lLuU")) ; fixed suffix
+(define c:fx (string->char-set "fFlL")) ; float suffix
+(define c:bx (string->char-set "pP"))	; binary float suffix
+(define c:cx (string->char-set "LuU"))	; char prefix
 
 ;;(define (lxlsr chl) (list->string (reverse chl))) ; used often
 (define lxlsr reverse-list->string)
@@ -270,23 +273,30 @@
 ;; @end example
 ;; @end deffn
 (define (read-c-chlit ch)
-  (if (not (eqv? ch #\')) #f
-      (let ((c1 (read-char)) (c2 (read-char)))
-	(if (eqv? c1 #\\)
-	    (let ((c3 (read-char)))
-	      (cons '$chlit
-		    (case c2
-		      ((#\0) "\0")	   ; nul U+0000 (#\U+...)
-		      ((#\a) "\a")	   ; alert U+0007
-		      ((#\b) "\b")	   ; backspace U+0008
-		      ((#\t) "\t")	   ; horizontal tab U+0009
-		      ((#\n) "\n")	   ; newline U+000A
-		      ((#\v) "\v")	   ; verticle tab U+000B
-		      ((#\f) "\f")	   ; formfeed U+000C
-		      ((#\r) "\r")	   ; return U+000D
-		      ((#\\ #\' #\" #\? #\|) (string c2))
-		      (else (error "bad escape sequence")))))
-	    (cons '$chlit (string c1))))))
+  (cond
+   ((char=? ch #\')
+    (let ((c1 (read-char)) (c2 (read-char)))
+      (if (eqv? c1 #\\)
+	  (let ((c3 (read-char)))
+	    (cons '$chlit
+		  (case c2
+		    ((#\0) "\0")	   ; nul U+0000 (#\U+...)
+		    ((#\a) "\a")	   ; alert U+0007
+		    ((#\b) "\b")	   ; backspace U+0008
+		    ((#\t) "\t")	   ; horizontal tab U+0009
+		    ((#\n) "\n")	   ; newline U+000A
+		    ((#\v) "\v")	   ; verticle tab U+000B
+		    ((#\f) "\f")	   ; formfeed U+000C
+		    ((#\r) "\r")	   ; return U+000D
+		    ((#\\ #\' #\" #\? #\|) (string c2))
+		    (else (error "bad escape sequence")))))
+	  (cons '$chlit (string c1)))))
+   ((char-set-contains? c:cx ch)
+    (let ((c1 (read-char)))
+      (cond
+       ((char=? c1 #\') (read-c-chlit c1))
+       (else (unread-char c1) (unread-char ch) #f))))
+   (else #f)))
 
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
 
@@ -298,7 +308,7 @@
 ;; i, f and e are lists of characters
 ;; @end deffn
 (define (make-num-reader)
-  ;; This will incorrectly parse 123LUL but I don't care right now.
+  ;; This will incorrectly parse 123LUL.  Does not handler hex floats.
   ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
   ;; Removed support for leading '.' to be a number.
   (lambda (ch1)
@@ -344,6 +354,8 @@
 	  ((char-numeric? ch) (iter (cons ch chl) ty 2 (read-char)))
 	  ((char-set-contains? c:nx ch)
 	   (iter (cons ch (fix-dot chl)) ty 3 (read-char)))
+	  ((char-set-contains? c:fx ch)
+	   (cons '$float (lxlsr (cons ch (fix-dot chl)))))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=2"))
 	  (else (iter (fix-dot chl) ty 5 ch))))
 	((3)
@@ -618,13 +630,13 @@
 	     ((read-comm ch bol) =>
 	      (lambda (p) (set! bol #f) (assc-$ p)))
 	     ((skip-comm ch) (iter (read-char)))
+	     ((read-num ch) => assc-$)	  ; => $fixed or $float
+	     ((read-string ch) => assc-$) ; => $string
+	     ((read-chlit ch) => assc-$)  ; => $chlit
 	     ((read-ident ch) =>
 	      (lambda (s) (or (and=> (assq-ref keytab (string->symbol s))
 				     (lambda (tval) (cons tval s)))
 			      (assc-$ (cons '$ident s)))))
-	     ((read-num ch) => assc-$)	  ; => $fixed or $float
-	     ((read-string ch) => assc-$) ; => $string
-	     ((read-chlit ch) => assc-$)  ; => $chlit
 	     ((read-chseq ch) => identity)
 	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	     (else (cons ch ch))))))))) ; should be error

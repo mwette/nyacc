@@ -109,6 +109,8 @@
 	      "  long lineno;"
 	      "} foo_t;\n"
 	      ))
+       (code "double x = 123.4f;")
+       (code "#if L'c'\nint x = 1;\n#endif\n")
        (indx 2)
        (tree (parse-string code))
        (udict (c99-trans-unit->udict tree))
@@ -118,7 +120,7 @@
        ;;(xdecl (expand-typerefs udecl udict '((struct . "foo"))))
        )
   ;;(display code)
-  (ppsx udict)
+  (ppsx tree)
   ;;(ppsx xdecl)
   ;;(display "==\n")
   ;;(pp99 xdecl)

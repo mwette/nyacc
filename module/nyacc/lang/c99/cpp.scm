@@ -224,7 +224,10 @@
 
 ;; generate a lexical analyzer per string
 (define gen-cpp-lexer
-  (make-lexer-generator cpp-mtab #:comm-skipper cpp-comm-skipper))
+  (make-lexer-generator cpp-mtab
+			#:comm-skipper cpp-comm-skipper
+			#:chlit-reader read-c-chlit
+			#:num-reader read-c-num))
 
 ;; @deffn {Procedure} parse-cpp-expr text => tree
 ;; Given a string returns a cpp parse tree.  This is called by
