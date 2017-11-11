@@ -1,5 +1,8 @@
 2017-11-11  Matt Wette  <mwette@alumni.caltech.edu>
 
+	* body.scm (gen-c-lexer): Since include files now have <> or "" I
+	need to strip them off before looking through the helper list.
+
 	* cpp.scm (expand-cpp-macro-ref): Fixed, once again, the def-bwl.c
 	bug reported by Jan N:
 	was:

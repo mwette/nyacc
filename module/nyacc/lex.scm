@@ -295,7 +295,7 @@
     (let ((c1 (read-char)))
       (cond
        ((char=? c1 #\') (read-c-chlit c1))
-       (else (unread-char c1) (unread-char ch) #f))))
+       (else (unread-char c1) #f))))
    (else #f)))
 
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))

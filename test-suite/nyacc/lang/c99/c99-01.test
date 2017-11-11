@@ -234,6 +234,22 @@
 		 (enum-defn (ident "TOK_LAST"))
 		 (enum-defn (ident "TOK_ASM_mov"))))))))))
 
+  (pass-if "Jan's ELF32_ST_INFO macro test"
+    (equal?
+     (parse-file "exam.d/ex18.c")
+     '(trans-unit
+       (decl (decl-spec-list (type-spec (fixed-type "int")))
+	     (init-declr-list
+	      (init-declr
+	       (ident "x")
+	       (initzer
+                (add (lshift
+		      (p-expr (fixed "1"))
+		      (p-expr (fixed "4")))
+                     (bitwise-and
+		      (p-expr (fixed "0"))
+		      (p-expr (fixed "0xf")))))))))))
+
   )
 
 ;; --- last line ---

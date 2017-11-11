@@ -81,7 +81,7 @@
 ;; to be documented
 ;; @end deffn
 (define (char->hex-list ch seed)
-  (define (itox ival) (string-ref "0123456789ABCDE" ival))
+  (define (itox ival) (string-ref "0123456789ABCDEF" ival))
   (let iter ((res seed) (ix 8) (val (char->integer ch)))
     (cond
      ((zero? ix) (cons* #\\ #\U res))

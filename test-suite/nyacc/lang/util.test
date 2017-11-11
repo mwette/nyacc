@@ -37,6 +37,7 @@
   ;; Should return #t if something there and #f if done.
   (pass-if "input-stack/2"
     (let ((sp (open-input-string "abc")))
+      (reset-input-stack) ;; maybe with-dynamic-extent
       (push-input sp)
       (and (pop-input) (not (pop-input)))))
 

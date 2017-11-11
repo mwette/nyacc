@@ -311,8 +311,9 @@
 	    (set-cpi-defs! info (acons name #f (cpi-defs info))))
 	  
 	  (define (apply-helper file)
-	    ;;(when (string=? file "stddef.h") (pretty-print (cpi-itynd info)))
-	    (let* ((tyns (assoc-ref (cpi-itynd info) file))
+	    ;; file will include <> or "", need to strip
+	    (let* ((file (substring/shared file 1 (1- (string-length file))))
+		   (tyns (assoc-ref (cpi-itynd info) file))
 		   (defs (assoc-ref (cpi-idefd info) file)))
 	      (when tyns
 		(for-each add-typename tyns)
@@ -370,7 +371,7 @@
 	  (define* (eval-cpp-incl/here stmt #:optional next) ;; => stmt
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file next)))
-	      ;;(sferr "include ~S\n" path)
+	      ;;(sferr "include ~S => ~S\n" file path)
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found

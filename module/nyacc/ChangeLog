@@ -1,3 +1,8 @@
+2017-11-11  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (read-c-chlit): removed (unread-char ch) for U but no '
+	This bug was causingd janneke's tccpp.c to not parse.
+
 2017-09-23  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* util.scm: updated ugly-print w/ new api similar to pretty-print
