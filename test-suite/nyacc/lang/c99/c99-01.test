@@ -220,6 +220,20 @@
 	      (init-declr-list (init-declr (ident "x"))))))
      ))
 
+  (pass-if "Jan's macro-name redef test"
+    (equal?
+     (parse-file "exam.d/ex17.c")
+     '(trans-unit
+       (comment " provided by Jan Nieuwenhuizen")
+       (comment " worked in 0.80.4, broken in 0.82.1")
+       (decl (decl-spec-list
+	      (type-spec
+	       (enum-def
+                (ident "tcc_token")
+                (enum-def-list
+		 (enum-defn (ident "TOK_LAST"))
+		 (enum-defn (ident "TOK_ASM_mov"))))))))))
+
   )
 
 ;; --- last line ---

@@ -516,7 +516,6 @@
 			   (if (procedure? x-def?) (x-def? name mode) x-def?)
 			   (expand-cpp-macro-ref name defs))
 		      => (lambda (repl)
-			   ;;(sferr "repl=~S\n" repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
 			   (iter (read-char))))

@@ -39,7 +39,6 @@
 	    make-chseq-reader
 	    make-num-reader
 	    eval-reader
-	    make-like-ident-p
  	    read-c-ident
  	    read-c-comm
 	    read-c-string
@@ -50,7 +49,10 @@
 	    c-escape
 	    cnumstr->scm
 	    filter-mt remove-mt map-mt make-ident-like-p
-	    c:ws c:if c:ir)
+	    c:ws c:if c:ir
+	    ;; deprecated
+	    make-like-ident-p
+	    )
   #:use-module ((srfi srfi-1) #:select (remove append-reverse))
   #:use-module (ice-9 pretty-print)
   )
@@ -158,15 +160,13 @@
 (define (make-ident-like-p reader)
   (lambda (s) (and (string? s)
 		   (positive? (string-length s))
-		   (eval-reader reader s))))
-(define make-like-ident-p make-ident-like-p)
-
+		   (eval-reader reader s)
+		   #t)))
 
 ;; @deffn {Procedure} like-c-ident? ch 
 ;; Determine if a string qualifies as a C identifier.
 ;; @end deffn
-(define like-c-ident? (make-like-ident-p read-c-ident))
-
+(define like-c-ident? (make-ident-like-p read-c-ident))
 
 ;; @deffn {Procedure} make-string-reader delim
 ;; Generate a reader that uses @code{delim} as delimiter for strings.
@@ -642,5 +642,9 @@
 	     (else (cons ch ch))))))))) ; should be error
 
 ;; @end table
+
+;; === deprecated
+
+(define make-like-ident-p make-ident-like-p)
 
 ;; --- last line ---

@@ -576,16 +576,17 @@
 ;; @end example
 ;; @end deffn
 (define* (expand-cpp-macro-ref ident defs #:optional (used '()))
-  ;;(sferr "x-mref ~S\n" ident)
+  ;;(sferr "x-mref ~S  used=~S\n" ident used)
   (let ((rval (assoc-ref defs ident)))
     (cond
      ((member ident used) #f)
      ((string? rval)
       (let* ((used (cons ident used))
 	     (repl (cpp-expand-text rval defs used)))
-	;;(sferr "rerun ~S\n" repl)
+	;;(sferr "rerun ~S => ~S\n" repl (ident-like? repl))
 	(if (ident-like? repl)
-	    (or (expand-cpp-macro-ref repl defs (cons repl used)) repl)
+	    ;; between 0.80.4 and 0.82.1 I had (cons repl used)
+	    (or (expand-cpp-macro-ref repl defs used) repl)
 	    repl)))
      ((pair? rval)
       (and=> (collect-args (car rval) defs used)
