@@ -62,7 +62,7 @@
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
-  #:version (0 82 2)
+  #:version (0 82 3)
   )
 
 (use-modules (ice-9 pretty-print))

@@ -33,7 +33,7 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/mach.go			\
 	nyacc/lang/c99/pprint.go		\
 	nyacc/lang/c99/util1.go			\
-	nyacc/lang/c99/util2.go			
+	nyacc/lang/c99/munge.go			
 
 NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
 	nyacc/lang/c99/body.scm			\
