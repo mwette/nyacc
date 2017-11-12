@@ -20,8 +20,8 @@
 
 (define-module (nyacc lalr)
   ;;#:export-syntax (lalr-spec)
-  #:export (*nyacc-version*
-	    lalr-spec make-lalr-machine compact-machine hashify-machine 
+  #:export (lalr-spec
+	    make-lalr-machine compact-machine hashify-machine 
 	    lalr-start lalr-match-table
 	    restart-spec add-recovery-logic!
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
@@ -35,14 +35,14 @@
 	    terminal? non-terminal?
 	    range-next
 	    )
+  #:re-export (*nyacc-version*)
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
 					     lset-intersection lset-difference))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each vector-any))
   #:use-module (nyacc util)
+  #:use-module (nyacc version)
   )
-
-(define *nyacc-version* "0.82.4")
 
 ;; @deffn proxy-? sym rhs
 ;; @example

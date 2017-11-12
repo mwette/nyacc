@@ -46,7 +46,8 @@ install:
 	xparser.go
 	pprint.go
 	util1.go
-	util1.go
+	munge.go
+	version.go
 
 cpp.scm: cppmach.scm
 

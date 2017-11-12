@@ -19,21 +19,19 @@
 ;; I need to find way to preserve srconf, rrconf after hashify.
 ;; compact needs to deal with it ...
 
-;;(define-module (system base lalr2)
+;;(define-module (system base bison)
 (define-module (nyacc lalr2)
-  ;;#:export-syntax (lalr2-spec)
-  #:export (*lalr2-version*
-            lalr2-spec
+  #:export (*bison-version*
+            bison-parser
 	    )
-  #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
-					     lset-intersection lset-difference))
+;;  #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
+;;					     lset-intersection lset-difference))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
-  #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each vector-any))
-  #:use-module (nyacc util) ;; fmt fmtstr
+;;  #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each vector-any))
   )
 (use-modules (ice-9 pretty-print))
 
-(define *lalr2-version* "0.01.0")
+(define *bison-version* "0.01.0")
 
 (define (fmtstr fmt . args)
   (apply simple-format #f fmt args))
@@ -42,6 +40,41 @@
 (define (fmtout fmt . args)
   (apply simple-format #t fmt args))
 (define fmt simple-format)
+
+;;(define *tokens* (make-fluid '())) ;; wonder if we can hack tokens
+
+;; --- import from lalr & lalr.upstream --------
+
+(define-record-type lexical-token
+  (make-lexical-token category source value)
+  lexical-token?
+  (category lexical-token-category)
+  (source   lexical-token-source)
+  (value    lexical-token-value))
+(export make-lexical-token lexical-token?
+	lexical-token-category lexical-token-source
+	lexical-token-value)
+
+(define-record-type source-location
+  (make-source-location input line column offset length)
+  source-location?
+  (input   source-location-input)
+  (line    source-location-line)
+  (column  source-location-column)
+  (offset  source-location-offset)
+  (length  source-location-length))
+(export make-source-location source-location?
+	source-location-input source-location-line
+	source-location-column source-location-offset
+	source-location-length)
+
+(define (source-location->source-properties loc)
+  `((filename . ,(source-location-input loc))
+    (line . ,(source-location-line loc))
+    (column . ,(source-location-column loc))))
+(export source-location->source-properties)
+
+;; --------------------------------------
 
 ;; @deffn reserved? grammar-symbol
 ;; Determine whether the syntax argument is a reserved symbol, that is.
@@ -58,90 +91,95 @@
 ;; @deffn {Syntax} lalr2-spec grammar => spec
 ;; This routine reads a grammar in a scheme-like syntax and returns an a-list.
 ;; @end deffn
-(define-syntax lalr2-spec
-  (syntax-rules +++ () 
-    ((_ <expr> +++)
-     (letrec-syntax
-	 ((parse-rhs
-	   (lambda (x)
-	     ;; The following is syntax-case because we use a fender.
-	     (syntax-case x (quote $$ $prec $empty)
-	       ;; action specifications
-	       ((_ ($$ <guts> ...) <e2> ...)
-		#'(cons '(action #f <guts> ...) (parse-rhs <e2> ...)))
-	       ;; other internal $-syntax
-	       ((_ ($prec <tok>) <e2> ...)
-		#'(cons (cons 'prec (tokenize <tok>)) (parse-rhs <e2> ...)))
-	       ((_ $empty <e2> ...)	; TODO: propagate to processor
-		#'(cons '(empty) (parse-rhs <e2> ...)))
-	       ;; terminals and non-terminals
-	       ((_ (quote <e1>) <e2> ...)
-		#'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
-	       ((_ (<f> ...) <e2> ...)
-		#'(cons (<f> ...) (parse-rhs <e2> ...)))
-	       ((_ <e1> <e2> ...)
-		(identifier? (syntax <e1>)) ; fender to trap non-terminals
-		(if (reserved? (syntax <e1>))
-		    #'(cons '(terminal . <e1>) (parse-rhs <e2> ...))
-		    #'(cons '(non-terminal . <e1>) (parse-rhs <e2> ...))))
-	       ((_ <e1> <e2> ...)
-		#'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
-	       ((_) #'(list)))))
-	  (parse-rhs-list
-	   (syntax-rules ()
-	     ((_ (<ex> ...) <rhs> ...)
-	      (cons (parse-rhs <ex> ...) (parse-rhs-list <rhs> ...)))
-	     ((_) '())))
-	  (parse-grammar
-	   (syntax-rules ()
-	     ((_ (<lhs> <rhs> ...) <prod> ...)
-	      (cons (cons '<lhs> (parse-rhs-list <rhs> ...))
-		    (parse-grammar <prod> ...)))
-	     ((_) '())))
-	  (tokenize
-	   (lambda (x)
-	     (syntax-case x ()
-	       ((_ <tk>) (identifier? (syntax <tk>)) #'(quote <tk>))
-	       ((_ <tk>) #'<tk>))))
-	  (tokenize-list
-	   (syntax-rules ()
-	     ((_ <tk1> <tk2> ...)
-	      (cons (tokenize <tk1>) (tokenize-list <tk2> ...)))
-	     ((_) '())))
-	  (parse-precedence
-	   (syntax-rules (left right nonassoc)
-	     ((_ (left <tk> ...) <ex> ...)
-	      (cons (cons 'left (tokenize-list <tk> ...))
-		    (parse-precedence <ex> ...)))
-	     ((_ (right <tk> ...) <ex> ...)
-	      (cons (cons 'right (tokenize-list <tk> ...))
-		    (parse-precedence <ex> ...)))
-	     ((_ (nonassoc <tk> ...) <ex> ...)
-	      (cons (cons 'nonassoc (tokenize-list <tk> ...))
-		    (parse-precedence <ex> ...)))
-	     ((_ <tk> <ex> ...)
-	      (cons (list 'undecl (tokenize <tk>))
-		    (parse-precedence <ex> ...)))
-	     ((_) '())))
-	  (lalr-spec-1
-	   (syntax-rules (start expect notice prec< prec> grammar)
-	     ((_ (start <symb>) <e> ...)
-	      (cons (cons 'start '<symb>) (lalr-spec-1 <e> ...)))
-	     ((_ (expect <n>) <e> ...)
-	      (cons (cons 'expect <n>) (lalr-spec-1 <e> ...)))
-	     ((_ (notice <str>) <e> ...)
-	      (cons (cons 'notice <str>) (lalr-spec-1 <e> ...)))
-	     ((_ (prec< <ex> ...) <e> ...)
-	      (cons (cons 'precedence (parse-precedence <ex> ...))
-		    (lalr-spec-1 <e> ...)))
-	     ((_ (prec> <ex> ...) <e> ...)
-	      (cons (cons 'precedence (reverse (parse-precedence <ex> ...)))
-		    (lalr-spec-1 <e> ...)))
-	     ((_ (grammar <prod> ...) <e> ...)
-	      (cons (cons 'grammar (parse-grammar <prod> ...))
-		    (lalr-spec-1 <e> ...))) 
-	     ((_) '()))))
-       (identity (lalr-spec-1 <expr> +++))))))
+(define-syntax parse-rhs
+  (lambda (x)
+    (syntax-case x (quote $$ $prec $empty)
+      ((_ ($$ <guts> ...) <e2> ...)
+       #'(cons '(action #f <guts> ...) (parse-rhs <e2> ...)))
+      ;; other internal $-syntax
+      ((_ ($prec <tok>) <e2> ...)
+       #'(cons (cons 'prec (tokenize <tok>)) (parse-rhs <e2> ...)))
+      ((_ $empty <e2> ...)	; TODO: propagate to processor
+       #'(cons '(empty) (parse-rhs <e2> ...)))
+      ;; terminals and non-terminals
+      ((_ (quote <e1>) <e2> ...)
+       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+      ((_ (<f> ...) <e2> ...)
+       #'(cons (<f> ...) (parse-rhs <e2> ...)))
+      ((_ <e1> <e2> ...)
+       (identifier? (syntax <e1>)) ; fender to trap non-terminals
+       (if (reserved? (syntax <e1>))
+	   #'(cons '(terminal . <e1>) (parse-rhs <e2> ...))
+	   #'(cons '(non-terminal . <e1>) (parse-rhs <e2> ...))))
+      ((_ <e1> <e2> ...)
+       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+      ((_) #'(list)))))
+
+(define-syntax parse-rhs-list
+  (syntax-rules ()
+    ((_ (<ex> ...) <rhs> ...)
+     (cons (parse-rhs <ex> ...) (parse-rhs-list <rhs> ...)))
+    ((_) '())))
+
+
+(define-syntax parse-grammar
+  (syntax-rules ()
+    ((_ (<lhs> <rhs> ...) <prod> ...)
+     (cons (cons '<lhs> (parse-rhs-list <rhs> ...))
+	   (parse-grammar <prod> ...)))
+    ((_) '())))
+
+(define-syntax tokenize
+  (lambda (x)
+    (syntax-case x ()
+      ((_ <tk>) (identifier? (syntax <tk>)) #'(quote <tk>))
+      ((_ <tk>) #'<tk>))))
+
+(define-syntax tokenize-list
+  (syntax-rules ()
+    ((_ <tk1> <tk2> ...)
+     (cons (tokenize <tk1>) (tokenize-list <tk2> ...)))
+    ((_) '())))
+
+(define-syntax parse-precedence
+  (syntax-rules (left right nonassoc)
+    ((_ (left <tk> ...) <ex> ...)
+     (cons (cons 'left (tokenize-list <tk> ...))
+	   (parse-precedence <ex> ...)))
+    ((_ (right <tk> ...) <ex> ...)
+     (cons (cons 'right (tokenize-list <tk> ...))
+	   (parse-precedence <ex> ...)))
+    ((_ (nonassoc <tk> ...) <ex> ...)
+     (cons (cons 'nonassoc (tokenize-list <tk> ...))
+	   (parse-precedence <ex> ...)))
+    ((_ <tk> <ex> ...)
+     (cons (list 'undecl (tokenize <tk>))
+	   (parse-precedence <ex> ...)))
+    ((_) '())))
+
+(define-syntax bison-spec-1
+  (syntax-rules (start expect notice prec< prec> grammar)
+    ((_ (start <symb>) <e> ...)
+     (cons (cons 'start '<symb>) (lalr-spec-1 <e> ...)))
+    ((_ (expect <n>) <e> ...)
+     (cons (cons 'expect <n>) (lalr-spec-1 <e> ...)))
+    ((_ (notice <str>) <e> ...)
+     (cons (cons 'notice <str>) (lalr-spec-1 <e> ...)))
+    ((_ (prec< <ex> ...) <e> ...)
+     (cons (cons 'precedence (parse-precedence <ex> ...))
+	   (lalr-spec-1 <e> ...)))
+    ((_ (prec> <ex> ...) <e> ...)
+     (cons (cons 'precedence (reverse (parse-precedence <ex> ...)))
+	   (lalr-spec-1 <e> ...)))
+    ((_ (grammar <prod> ...) <e> ...)
+     (cons (cons 'grammar (parse-grammar <prod> ...))
+	   (lalr-spec-1 <e> ...))) 
+    ((_) '())))
+
+(define-syntax bison-parser
+  (syntax-rules ()
+    ((_ <expr> ...)
+     '(identity (bison-spec-1 <expr> ...)))))
 
 ;; @deffn atomize terminal => object
 ;; Generate an atomic object for a terminal.   Expected terminals are strings,

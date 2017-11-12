@@ -1,0 +1,5 @@
+This is my attempt to "fix" the builtin guile lalr parser module.
+Plan is to use my syntax but have an external bison executable 
+convert the grammar to a parse machine.
+
+See lalr2.scm and bison.scm in module/nyacc/.
