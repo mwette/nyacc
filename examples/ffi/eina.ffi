@@ -1,0 +1,8 @@
+;; eina.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi eina)
+  #:pkg-config "eina"
+  #:include '("Eina.h")
+  )
+
+;; --- last line ---

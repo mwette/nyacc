@@ -1657,39 +1657,46 @@
 
 ;; given keeper-defs (k-defs) and cpp defs (c-defs) expand the keeper
 ;; replacemnts down to constants (strings, integers, etc)
-(display "TODO: fix gen-lookup-proc: it's including imported symbols\n")
-(define (gen-lookup-proc prefix keep-defs cpp-defs)
+(define (gen-lookup-proc prefix keep-defs cpp-defs ext-mods)
   ;; @var{keep-defs} is list of CPP defs and enum key/val pairs. It is
   ;; possible for an enum symbol to be used as a macro function so we
   ;; need to first check for integer before trying expand-cpp-macro-ref.
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
-  (let ((name (string->symbol (string-append prefix "symbol-val")))
-	(defs (fold
-	       (lambda (def seed)
-		 (let* ((name (car def)) (val (cdr def))
-			(repl (cond
-			       ((pair? val) #f)
-			       ((string->number (cdr def)) (cdr def))
-			       (else (expand-cpp-macro-ref name cpp-defs)))))
-		   (cond
-		    ((not repl) seed)
-		    ((not (string? repl)) (sferr "not string: ~S\n" repl))
-		    ((zero? (string-length repl)) seed)
-		    ((cintstr->num repl) =>
-		     (lambda (val) (acons (string->symbol name) val seed)))
-		    ((eqv? #\" (string-ref repl 0))
-		     (acons (string->symbol name)
-			    (regexp-substitute/global ;; "abc" "def" => "abcdef"
-			     #f "\"\\s*\""
-			     (substring repl 1 (- (string-length repl) 1))
-			     'pre 'post)
-			    seed))
-		    (else seed))))
-	       '()
-	       keep-defs)))
+  (let ((name
+	 (string->symbol (string-append prefix "symbol-val")))
+	(defs
+	  (fold
+	   (lambda (def seed)
+	     (let* ((name (car def)) (val (cdr def))
+		    (repl (cond
+			   ((pair? val) #f)
+			   ((string->number (cdr def)) (cdr def))
+			   (else (expand-cpp-macro-ref name cpp-defs)))))
+	       (cond
+		((not repl) seed)
+		((not (string? repl)) (sferr "not string: ~S\n" repl))
+		((zero? (string-length repl)) seed)
+		((cintstr->num repl) =>
+		 (lambda (val) (acons (string->symbol name) val seed)))
+		((eqv? #\" (string-ref repl 0))
+		 (acons (string->symbol name)
+			(regexp-substitute/global ;; "abc" "def" => "abcdef"
+			 #f "\"\\s*\""
+			 (substring repl 1 (- (string-length repl) 1))
+			 'pre 'post)
+			seed))
+		(else seed))))
+	   '()
+	   keep-defs))
+	(ext-ftns			; lookup in use-ffi-modules
+	 (map
+	  (lambda (mod)
+	    (list (string->symbol
+		   (string-append (path->name mod) "-symbol-val")) 'k))
+	  ext-mods)))
     (ppscm `(define ,name
 	      (let ((sym-tab '(,@defs)))
-		(lambda (k) (assq-ref sym-tab k)))))
+		(lambda (k) (or (assq-ref sym-tab k) ,@ext-ftns)))))
     (sfscm "(export ~A)\n" name)
     ;;
     (nlscm)
@@ -1738,8 +1745,6 @@
 	     ;;(inc-dirs (cons "." inc-dirs)) ;; FOR DEBUGGING
 	     )
 
-	;;(sferr "inc-dirs:\n") (pperr inc-dirs)
-	;;(sferr "cpp-defs:\n") (pperr cpp-defs)
 	(or (with-input-from-string prog
 	      (lambda ()
 		(and=> 
@@ -1781,8 +1786,10 @@
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
+
 	 ;; TODO: clean this up
-	 (enu-defs (udict-enums->ddict udict))
+	 ;;(enu-defs (udict-enums->ddict udict))
+	 (enu-defs (udict-enums->ddict udecls))
 	 (ffi-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter incf))
 	 (cpp-defs (c99-trans-unit->ddict tree #:inc-filter #t))
 	 (all-defs (c99-trans-unit->ddict tree enu-defs
@@ -1793,20 +1800,22 @@
 
 	 (saw-last #f)
 
-	 (externs
-	  (fold
+	 (ext-mods			; list of exernal modules as syms?
+	  (fold-right
 	   (lambda (opt seed)
-	     (if (eq? (car opt) 'use-ffi-module)
-		 (let* ((upath (cdr opt))
-			(modul (resolve-module upath))
-			(pname (path->name upath))
-			(vname (string->symbol (string-append pname "-types")))
-			;;(var (module-variable modul vname))
-			(var (module-ref modul vname))
-			)
-		   (append var seed))
-		 seed))
+	     (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
 	   '() module-options))
+	 (ext-defd			; list of exernal defined
+	  (fold
+	   (lambda (upath seed)
+	     (unless (resolve-module upath)
+	       (error "module not defined:" upath))
+	     (let* ((modul (resolve-module upath))
+		    (pname (path->name upath))
+		    (vname (string->symbol (string-append pname "-types")))
+		    (var (module-ref modul vname)))
+	       (append var seed)))
+	   '() ext-mods))
 	 )
 
     ;; set globals
@@ -1858,7 +1867,7 @@
 		 (values wrapped defined))))
 	   ;; We need to have externs in wrapped because function param types
 	   ;; have wrapped types preserved (e.g., enums).
-	   ffi-decls externs (append bs-defined externs)))
+	   ffi-decls ext-defd (append bs-defined ext-defd)))
       (lambda (wrapped defined)
 	;; Set ffimod-defined for including, but removed built-in types.
 	(let* ((bity (car bs-defined))	; first built-in type
@@ -1868,8 +1877,7 @@
 	  (set! ffimod-defined defd))))
     
     ;; output global constants (from enum and #define)
-    ;;(sfscm "\n;; PLEASE un-comment gen-lookup-proc\n")
-    (gen-lookup-proc prefix ffi-defs cpp-defs)
+    (gen-lookup-proc prefix ffi-defs cpp-defs ext-mods)
 
     ;; output list of defined types
     (sfscm "\n(define ~A-types\n  '" (path->name path))

@@ -1,3 +1,12 @@
+lang/lua/
+
+Copyright (C) 2017 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
 
 block	--> { stmt [ ';' ] } [ finish [ ';' ] ]
 
@@ -58,10 +67,17 @@ binop   --> '+' | '-' | '*' | '/' | '^' | '..' | AND | OR
          |  '<' | '<=' | '>' | '>=' | '==' | '~='
 
 unop    --> '-' | NOT
-Note that left parenthesis, left brace, and literals are preferentially treated as arguments rather than as starting a new expression. This rule comes into effect when interpreting a call as a statement, or a primary, variable, or call as an expression. Without this rule, the grammar is ambiguous.
 
-This is a change in the Lua 4.1 grammar that I'm not happy about. It makes the ; no longer a pure optional statement terminator. -- ET
-One can generalize a key to include keywords without ambiguity by replacing the key production with the following.
+Note that left parenthesis, left brace, and literals are
+preferentially treated as arguments rather than as starting a new
+expression. This rule comes into effect when interpreting a call as a
+statement, or a primary, variable, or call as an expression. Without
+this rule, the grammar is ambiguous.
+
+This is a change in the Lua 4.1 grammar that I'm not happy about. It
+makes the ; no longer a pure optional statement terminator. -- ET One
+can generalize a key to include keywords without ambiguity by
+replacing the key production with the following.
 
 key     --> name | AND | BREAK | DO | END | ELSE | ELSEIF
          |  FOR | FUNCTION | GLOBAL | IF | IN | LOCAL | NIL

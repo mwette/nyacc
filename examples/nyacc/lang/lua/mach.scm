@@ -1,4 +1,26 @@
+;; nyacc/lang/lua/mach.scm
+;;
+;; Copyright (C) 2017 Matthew R. Wette
+;;
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by 
+;; the Free Software Foundation, either version 3 of the License, or 
+;; (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of 
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+(define-module (nyacc lang lua mach)
+  #:export (lua-spec
+	    )
+  #:use-module (nyacc lang util)
+  #:use-module (nyacc lalr)
+  )
 
 (define lua-spec
   (lalr-spec
@@ -84,6 +106,83 @@
      ("(" expr ")")
      )
 
-    )
+    (var
+     (name)
+     (primary index)
+     (var index)
+     (call index)
+     )
 
+    (index
+     ("[" expr "]")
+     ("." key)
+     )
+
+    (call
+     (primary ":" key args)
+     (primary args)
+     (var ":" key args)
+     (var args)
+     (call ":" key args)
+     (call args)
+     )
+
+    (args
+     ("(" exprs ")")
+     ("(" ")")
+     (table-cons)
+     (literal)
+     )
+
+    (table-cons
+     ("{" fields "}")
+     ("{" "}")
+     )
+
+    (fields
+     (expr-fields ";" mapping-fields)
+     (expr-fields ";")
+     (expr-fields)
+     (mapping-fields ";" expr-fields)
+     (mapping-fields ";")
+     (mapping-fields)
+     (";" expr-fields)
+     (";" mapping-fields)
+     )
+
+    (expr-fields
+     (exprs ",")
+     (exprs)
+     )
+
+    (mapping-fields
+     (mapping-field)
+     (mapping-fields "," mapping-field)
+     (mapping-fields ",")
+     )
+
+    (mapping-field
+     ("[" expr "]" "=" expr)
+     (key "=" expr)
+     )
+
+    (binop
+     ("+") ("-") ("*") ("/")
+     ("^") ("..")
+     ("and") ("or")
+     ("<") ("<=") (">") (">=") ("==") ("~=")
+     )
+
+    (unop
+     ("-") ("not")
+     )
     
+    (key-hack
+     (name) ("and") ("break") ("do") ("end") ("else") ("elseif") ("for")
+     ("function") ("global") ("if") ("in") ("local") ("nil") ("not") ("or")
+     ("return") ("repeat") ("then") ("until") ("while")
+     )
+      
+    )))
+
+;; --- last line ---

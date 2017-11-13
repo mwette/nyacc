@@ -115,8 +115,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n")
 	       (string-append "*** compile-ffi: " fmt "\n") args)
 	(exit 1)))
 
-    (if (assq-ref options 'make-go)
-	(compile dot-scm))
+    ;;(if (assq-ref options 'make-go) (compile dot-scm))
     
     (exit 0)))
 

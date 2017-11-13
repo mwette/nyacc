@@ -1,3 +1,8 @@
+2017-11-12  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (read-oct): changed (read-oct ch) to (read-oct) to be
+	consistent with (read-hex).
+
 2017-11-11  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (read-c-chlit): removed (unread-char ch) for U but no '
