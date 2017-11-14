@@ -380,7 +380,7 @@
    ;; struct-declaration-list => ";"
    (lambda ($1 . $rest) (make-tl 'field-list))
    ;; struct-declaration-list => struct-declaration-list ";"
-   (lambda ($2 $1 . $rest) (make-tl 'field-list))
+   (lambda ($2 $1 . $rest) $1)
    ;; struct-declaration => specifier-qualifier-list struct-declarator-list...
    (lambda ($4 $3 $2 $1 . $rest)
      (if (pair? $4)

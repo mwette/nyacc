@@ -325,7 +325,7 @@
      (struct-declaration-list lone-comment ($$ (tl-append $1 $2)))
      ;; the following added 13 Nov 2017
      (";" ($$ (make-tl 'field-list)))
-     (struct-declaration-list ";" ($$ (make-tl 'field-list)))
+     (struct-declaration-list ";" ($$ $1))
      )
 
     (struct-declaration			; S 6.7.2.1
