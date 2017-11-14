@@ -1,3 +1,8 @@
+2017-11-13  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): added lone `;' in structs and unions
+	(struct-declaration-list production)
+
 2017-11-11  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* body.scm (gen-c-lexer): Since include files now have <> or "" I

@@ -377,6 +377,10 @@
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; struct-declaration-list => struct-declaration-list lone-comment
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; struct-declaration-list => ";"
+   (lambda ($1 . $rest) (make-tl 'field-list))
+   ;; struct-declaration-list => struct-declaration-list ";"
+   (lambda ($2 $1 . $rest) (make-tl 'field-list))
    ;; struct-declaration => specifier-qualifier-list struct-declarator-list...
    (lambda ($4 $3 $2 $1 . $rest)
      (if (pair? $4)

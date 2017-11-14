@@ -1,4 +1,4 @@
-This is ffi-help.info, produced by makeinfo version 6.4 from
+This is ffi-help.info, produced by makeinfo version 6.5 from
 ffi-help.texi.
 
 Copyright (C) 2017 - Matthew R. Wette.
@@ -35,6 +35,10 @@ FFI-helper modules can be found in the directory
 
    Use of the FFI-helper module depends on the scheme-bytestrucures
 (https://github.com/TaylanUB/scheme-bytestructures) module.
+
+   We generate types for all C types and their pointers.  This makes
+working C types convenient, I think, at the cost of bloating the
+namespace.
 
 Current Assumptions
 -------------------
@@ -197,9 +201,92 @@ argument type, Guile expects us to pass a possibly negative TBD type.
 [TODO Figure out what Guile really does wrt C-Scheme type validity and
 conversion.
 
+Bytestructure Function Type
+===========================
+
+We need to add bytestructure function (pointer) type.  Now C is a bit
+odd about function and function pointers.  They are treated as the same.
+We will work functions as follows, where 'f-bs' represents a pointer to
+a function bytestructure
+     (fh-object-ref f-bs) => #<pointer ...>
+     (fh-object-ref f-bs '*) => #<procedure ...>
+On the other hand, setters can take either.  Any of these will get the
+desired behavior:
+     (fh-object-set! f-bs #<pointer ...>)
+     (fh-object-set! f-bs #<number>) ;; aka pointer-address
+     (fh-object-set! f-bs #<procedure ...>)
+We still have to deal with 'ref<->deref!'.  I think this should be self
+referencing.  That is
+     (pointer-to f-bs) => f-bs
+
+   This descriptor includes fields
+  1. return descriptor
+  2. parameter list
+Elements of parameter list may be
+   * descriptor
+   * a pair: symbolic name and descriptor
+   * the ellipsis symbol: ''...'
+
+   When 'bs:function' is called to create a descriptor, either the
+descriptor for the return type, or the list of descriptors for the
+parameters can be a promise.  That is
+     (define f-desc (bs:function (delay ret-desc) (delay (list int xxx xxx))))
+
 The Type System
 ===============
 
+Explain why in Scheme we need to have distinct pointer types!  And then
+explain how we deal with them: type => define type*.  expand-typerefs
+will not expand pointer types if
+
+   We want a closed type system with accessors and setters.  We rely on
+_bytestrutures_ for compound types, vectors, etc.  For base C types we
+will keep xxx.  Enums are a speial case.  Let use the following
+convention
+'objS'
+     FH object with scheme type representation
+'objB'
+     FH object with underying bytestructure representation
+'valGS'
+     A Guile Scheme value: number, xxx
+'valGP'
+     A Guile Pointer ('#<pointer ...>')
+'valBS'
+     A bytestructure: '#<bytestructure ...>'.
+'valBV'
+     A bytevector '#<bytevector ...>'.
+There will be FH types for structs, unions, vectors, pointers, but not
+for enums, scalar integer or floating types.  Strings will be handled as
+pointers.
+
+   Consider working with the following C types
+'foo_t'
+     a compount type
+'bar_t'
+     a typedef for a doulble
+'int'
+     base type
+'who_t'
+     an enum
+
+   The user use cases are generate variable
+   * Generate type w/ any content: '(make foo_t)'
+   * 
+     '(make foo_t objGS)'
+   * '(make foo_t objBS)'
+
+   * Pass pointer to data to C function:
+          (define v (make-double))
+          (c_funtion (pointer-to v))
+          (fh-object-ref v) => number
+
+   'bar_t' that is a 'double' and an enum type 'baz_t'.  In the items
+below, 'foo_t' is a type and 'bar' is a wrap/unwrap.
+   * (make-foo_t) => #<foo_t valS> | #<foo_t valX>
+   * (make-foo_t valS) => #<foo_t valS|valX>
+   * (fh-object-ref objS) => valS
+   * (fh-object-ref objX) => valX
+   * (fh-object-ref objX 'sel) => valX | valS
 We need a (somewhat?)  closed type system.  In the FFI Helper we choose
 to classify the following
 compound
@@ -254,8 +341,84 @@ unions.  Here is a segment of generated code to illustrate:
      (define cairo_path_data_t-desc union-_cairo_path_data_t-desc)
 Note that forward references are swapped around.
 
+forward references
+..................
+
+Here we do it but store 'GObject'
+     ;; typedef struct _GObject GObject;
+     (define-public GObject-desc 'void)
+     (define-public GObject*-desc (bs:pointer (delay GObject-desc)))
+     (define-fh-pointer-type GObject* GObject*-desc GObject*? make-GObject*)
+     (export GObject* GObject*? make-GObject*)
+
+     ;; typedef struct _GObject GInitiallyUnowned;
+     (define-public GInitiallyUnowned-desc 'void)
+     (define-public GInitiallyUnowned*-desc
+       (bs:pointer (delay GInitiallyUnowned-desc)))
+     (define-fh-pointer-type GInitiallyUnowned* GInitiallyUnowned*-desc
+                             GInitiallyUnowned*? make-GInitiallyUnowned*)
+     (export GInitiallyUnowned* GInitiallyUnowned*? make-GInitiallyUnowned*)
+
+     ;; struct _GObject {
+     ;;   GTypeInstance g_type_instance;
+     ;;   /*< private >*/
+     ;;   volatile guint ref_count;
+     ;;   GData *qdata;
+     ;; };
+     (define-public struct-_GObject-desc
+       (bs:struct
+         (list `(g_type_instance ,GTypeInstance-desc)
+               `(ref_count ,unsigned-int)
+               `(qdata ,(bs:pointer GData-desc)))))
+     (define-fh-compound-type struct-_GObject struct-_GObject-desc struct-_GObject?
+      make-struct-_GObject)
+     (export struct-_GObject struct-_GObject? make-struct-_GObject)
+     (define-public struct-_GObject*-desc
+       (bs:pointer struct-_GObject-desc))
+     (define-fh-pointer-type struct-_GObject* struct-_GObject*-desc
+      struct-_GObject*? make-struct-_GObject*)
+     (export struct-_GObject* struct-_GObject*? make-struct-_GObject*)
+     (ref<->deref! struct-_GObject* make-struct-_GObject*
+                   struct-_GObject make-struct-_GObject)
+     (set! GObject-desc struct-_GObject-desc)
+     (define-fh-compound-type GObject GObject-desc GObject? make-GObject)
+     (export GObject GObject? make-GObject)
+
+Base Types
+----------
+
+The module '(system ffi-help-rt)' provides types for the following
+'char*'
+     string pointer
+'double*'
+     pointer to double
+'int*'
+     pointer to int
+'unsigned-int*'
+     pointer to unsigned int
+These types are useful for sitaions where the corresponding types are
+passed by reference as return types.  For example
+     (let ((name (make-char*)))
+       (some_function (pointer-to name))
+       (display "name: ") (display (char*->string name)) (newline))
+     (let ((return-val (make-double))) ;; <= to do ???
+       (another_function (pointer-to return-val))
+       (simple-format #t "val is ~S\n" (fh-object-ref return-val)))
+
 Type Support
 ------------
+
+For 'bytestructures', arguments to setters and return values from
+getters are Scheme values for numerical types and bytestructures for
+other types (e.g., structs and unions).
+
+   In FH C object types are either "wrapped" or "defined".  If a type is
+wrapped then we provide a wrap and unwrap function for that type.
+Numeric types and enum's are wrapped.  Other types are defined as FH
+types.  The FH types have a wrapper and unwrapper properties.  These
+properties are procedures and can be accessed with '(fht-unwrap type)'
+and '(fht-wrap type)' or executed with '(fh-unwrap object)' and
+'(fh-wrap object)'.
 
  -- Procedure: fh-type? type
      This predicate tests for FH types.
@@ -282,6 +445,16 @@ Type Support
      'unwrap'
           a procedure to produce a Scheme bytevector
 
+   The following shows that we can store a procedure as a bogus
+bytevector.
+     (use-modules ((system foreign) #:prefix ffi:))
+     (define (foo arg) arg)
+     (define foo-ptr (ffi:procedure->pointer ffi:int foo (list ffi:int)))
+     (define foo-bv (ffi:pointer->bytevector foo-ptr (ffi:sizeof '*)))
+     (define foo-bv-ptr (ffi:bytevector->pointer foo-bv))
+     (define foo-echo (ffi:pointer->procedure ffi:int foo-bv-ptr (list ffi:int)))
+But we won't use this.
+
  -- Syntax: define-fh-enum-type name sv-map
      Generate an enum type.  Exports wrap, unwrap, type?  but no make.
 
@@ -307,20 +480,107 @@ Here are the FFI simple types:
   size_t ssize_t ptrdiff_t intptr_t uintptr_t
   float double complex64 complex128
 
-Library Variables
------------------
+   The C standard says
+     A declaration of a parameter as ‘‘function returning type’’
+     shall be adjusted to ‘‘pointer to function returning
+     type.’’
+   I'm guessing this goes for struct fields as well.
 
-Access to externs is provide through access procedure:
-     ;; C header says: extern int foo_errno;
-     ;; So we use:
-     (foo_errno)
+   C says bitfields are (signed) int, unsigned int, or _Bool.
+
+   C says if function parameter declared as arrays should be interpreted
+as pointers.
+
+
+
+     Library Variables
+     -----------------
+
+
+     Access to externs is provide through access procedure:
+          ;; C header says: extern int foo_errno;
+          ;; So we use:
+          (foo_errno)
+
+     Debugging FFI Helper Modules
+     ============================
+
+
+     Since this is not all straightforward you will get errors.
+
+     Method
+       1. compile-ffi with flag to echo declarations
+       2. compile -O0 the resulting scm file
+       3. guile -c '(use-modules (ffi mymod))'
+
+     'MAX_HEAP_SECTS'
+     ----------------
+
+
+     The message is
+          Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
+     The message comes from the garbage collector.  It means you've run out
+     of memory.  The recommended fix is to GC_INITIAL_HEAP_SIZE to
+     something big:
+          export GC_INITIAL_HEAP_SIZE=16G
+     I found that this actually came from a bug in the ff-compiler which
+     generated this code:
+            (bs:struct
+              (list ...
+                    `(compose_buffer ,(bs:vector #f unsigned-int))
+     The original C declaration was
+     struct _GtkIMContextSimple {
+       ...
+       guint compose_buffer[7 + 1];
+       ...
+     };
+
+Warning: Possibly Unbound Variable
+----------------------------------
+
+     ;;; ffi/gtk2+.scm:3564:5: warning: possibly unbound variable `GtkEnumValue*'
+     ;;; ffi/gtk2+.scm:3581:5: warning: possibly unbound variable `GtkFlagValue*'
+     ;;; ffi/gtk2+.scm:10717:11: warning: possibly unbound variable `GtkAllocation*'
+     ;;; ffi/gtk2+.scm:15107:15: warning: possibly unbound variable `GdkNativeWindow'
+     ;;; ffi/gtk2+.scm:15122:15: warning: possibly unbound variable `GdkNativeWindow'
+     ;;; ffi/gtk2+.scm:26522:11: warning: possibly unbound variable `GSignalCMarshaller'
+     ;;; ffi/gtk2+.scm:62440:11: warning: possibly unbound variable `GdkNativeWindow'
+     ;;; ffi/gtk2+.scm:62453:5: warning: possibly unbound variable `GdkNativeWindow'
+
+   When I see this I usually check the scm file and see one of many
+things
+'(fht-unwrap GtkAllocation*)'
+     This usually means that 'GtkAllocation' was somehow defined but not
+     the pointer type.
 
 Miscellaneous Notes
 ===================
 
-Explain wrappers.
+Unwrapping and Wrapping
+-----------------------
 
-   User is responsible for calling string->pointer and pointer->string.
+For functions we use _unwrappers_ and _wrappers_.  Arguments to a
+function are unwrapped before being passed to the routine generated by
+'pointer->procedure'.  The end user will nominally not be using these
+procedures.  If an argument is a pointer to a type with a typedef (e.g.,
+a struct type) then the type unwrapper is called
+     ((fht-unwrap <type>) arg) => ~arg
+If the argument is not associated with a defined type (e.g., enums) then
+the associated unwrapper will be called:
+     (unwrap-enum-foo arg) => ~arg
+     (unwrap~float arg) => ~arg
+     OR
+     (unwrap-enum-foo 'FOO_TRUE) => 1
+     (unwrap~float 1) => 1.0
+
+   In 'ffi-help.scm', the code generator, we convert structs, unions and
+their associated typedefs to defined types, but enums and enum typedefs
+are only provided with unwrappers and wrappers.
+
+Other
+-----
+
+User is responsible for calling string->pointer and pointer->string.
 
    By definition: wrap is c->scm; unwrap is scm->c.
 

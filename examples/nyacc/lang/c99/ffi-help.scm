@@ -1800,7 +1800,7 @@
 
 	 (saw-last #f)
 
-	 (ext-mods			; list of exernal modules as syms?
+	 (ext-mods			; ext modules (e.g., '(ffi cairo) ...)
 	  (fold-right
 	   (lambda (opt seed)
 	     (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))

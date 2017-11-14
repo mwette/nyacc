@@ -434,12 +434,12 @@ Here we do it but store @code{GObject}
 @end example
 
 @example
-;; struct _GObject {
+;; struct _GObject @{
 ;;   GTypeInstance g_type_instance;
 ;;   /*< private >*/
 ;;   volatile guint ref_count;
 ;;   GData *qdata;
-;; };
+;; @};
 (define-public struct-_GObject-desc
   (bs:struct
     (list `(g_type_instance ,GTypeInstance-desc)
@@ -580,10 +580,10 @@ Here are the BS simple types:
 @end verbatim
 
 The C standard says
-@quote
+@quotation
 A declaration of a parameter as ‘‘function returning type’’ shall be
 adjusted to ‘‘pointer to function returning type.’’
-@end quote
+@end quotation
 I'm guessing this goes for struct fields as well.
 
 C says bitfields are (signed) int, unsigned int, or _Bool.
@@ -620,9 +620,9 @@ guile -c '(use-modules (ffi mymod))'
 @subsection @code{MAX_HEAP_SECTS}
 
 The message is
-@quote
+@quotation
 Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
-@end quote
+@end quotation
 The message comes from the garbage collector.  It means you've run out
 of memory.  The recommended fix is to @code{GC_INITIAL_HEAP_SIZE} to
 something big:
@@ -638,11 +638,11 @@ generated this code:
 @end example
 @noindent
 The original C declaration was
-struct _GtkIMContextSimple {
+struct _GtkIMContextSimple @{
   ...
   guint compose_buffer[7 + 1];
   ...
-};
+@};
 @end example
 @noindent
 
@@ -691,7 +691,7 @@ OR
 (unwrap~float 1) => 1.0
 @end example
 
-In @path{ffi-help.scm}, the code generator, we convert structs, unions and
+In @file{ffi-help.scm}, the code generator, we convert structs, unions and
 their associated typedefs to defined types, but enums and enum
 typedefs are only provided with unwrappers and wrappers.
 

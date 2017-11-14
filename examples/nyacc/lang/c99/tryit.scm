@@ -26,8 +26,8 @@
 (define inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir)
-     "/opt/local/include/glib-2.0"
-     "/opt/local/lib/glib-2.0/include"
+     "/opt/local/include/eina-1"
+     "/opt/local/include/eina-1/eina"
      "/usr/include")
    (get-gcc-inc-dirs)))
 (define inc-help
@@ -111,8 +111,10 @@
 	      ))
        (code "double x = 123.4f;")
        (code "#if L'c'\nint x = 1;\n#endif\n")
+       (code "#include <Eina.h>\nint x = 1;\n")
+       (code "struct { ; int x; ; } y;\n")
        (indx 2)
-       ;;(tree (parse-string code))
+       (tree (parse-string code))
        ;;(tree (parse-file "xxx.c"))
        ;;(udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
@@ -120,10 +122,9 @@
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs udecl udict '((struct . "foo"))))
        )
-  (sferr "~S\n" (with-input-from-string "12'"
-		  (lambda () (read-hex))))
+  ;;(sferr "~S\n" (with-input-from-string "12'" (lambda () (read-hex))))
   ;;(display code)
-  ;;(ppsx tree)
+  (ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx xdecl)
   ;;(display "==\n")
@@ -132,6 +133,7 @@
   ;;(ppsx (expand-typerefs udecl udict '("foo_t")))
   ;;(ppsx ddict)
   ;;(set! adecl decl)
+  ;;(ppsx (get-gcc-cpp-defs))
   #t)
 
 ;; ex12.c: illustrates removal of comment prefix, offset-8 => offset-2
