@@ -17,10 +17,12 @@
 (define cpp-defs
   (cond
    ((string-contains %host-type "darwin")
-    '("__GNUC__=6")
-    (remove (lambda (s)
-	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-	    (get-gcc-cpp-defs)))
+    (append
+     '("__GNUC__=6" "__signed=signed")
+     #;(remove (lambda (s)
+	       (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
+	     (get-gcc-cpp-defs))
+     ))
    (else
     '())))
 (define inc-dirs
@@ -28,6 +30,7 @@
    `(,(assq-ref %guile-build-info 'includedir)
      "/opt/local/include/eina-1"
      "/opt/local/include/eina-1/eina"
+     "/tmp"
      "/usr/include")
    (get-gcc-inc-dirs)))
 (define inc-help
@@ -112,7 +115,19 @@
        (code "double x = 123.4f;")
        (code "#if L'c'\nint x = 1;\n#endif\n")
        (code "#include <Eina.h>\nint x = 1;\n")
-       (code "struct { ; int x; ; } y;\n")
+       (code "#include <stdint.h>\nint8_t x;\n")
+       ;;(code "#include <_types/_uint8_t.h>\n")
+       (code (string-append
+	      "#include <sys/_types/_int8_t.h>\n"
+	      ;;"#include <sys/_types/_int16_t.h>\n"
+	      ;;"#include <sys/_types/_int32_t.h>\n"
+	      ;;"#include <sys/_types/_int64_t.h>\n"
+	      ;;"#include <_types/_uint8_t.h>\n"
+	      ;;"#include <_types/_uint16_t.h>\n"
+	      ;;"#include <_types/_uint32_t.h>\n"
+	      ;;"#include <_types/_uint64_t.h>\n"
+	      ))
+       (code "#include <_int8_t.h>\n")
        (indx 2)
        (tree (parse-string code))
        ;;(tree (parse-file "xxx.c"))

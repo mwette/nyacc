@@ -213,7 +213,8 @@
   (if (not (eq? ch #\#)) #f
       (let iter ((cl '()) (ch (read-char)))
 	(cond
-	 ((eof-object? ch) (throw 'cpp-error "CPP lines must end in newline"))
+	 ;;((eof-object? ch) (throw 'cpp-error "CPP lines must end in newline"))
+	 ((eof-object? ch) (list->string (reverse cl)))
 	 ((eq? ch #\newline) (unread-char ch) (list->string (reverse cl)))
 	 ((eq? ch #\\)
 	  (let ((c2 (read-char)))

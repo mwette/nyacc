@@ -3,6 +3,8 @@
 (define-ffi-module (ffi eina)
   #:pkg-config "eina"
   #:include '("Eina.h")
+  #:inc-filter (lambda (file-spec path-spec)
+                 (string-contains file-spec "eina" 0))
   )
 
 ;; --- last line ---

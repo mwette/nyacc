@@ -85,6 +85,7 @@
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
        "__extension__="
+       "__signed=signed"
        )
       ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
       ))
@@ -1149,6 +1150,16 @@
 		)
     (sxml-match (sx-list tag #f specl declr)
 
+      ;; typedef void **ptr_t;
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef)) (type-spec (void)))
+	(init-declr (ptr-declr (pointer (pointer)) (ident ,typename))))
+       (sfscm "(define-public ~A-desc (bs:pointer (bs:pointer 'void)))\n"
+	      typename)
+       (fhscm-def-pointer typename)
+       (values (cons typename wrapped) (cons typename defined)))
+      
       ;; typedef void *ptr_t;
       ((udecl
 	(decl-spec-list
@@ -1646,8 +1657,8 @@
       (,otherwise
        (sferr "see below:\n")
        (pperr udecl)
-       (sferr "-\n")
-       (pperr `(udecl ,specl ,declr))
+       ;;(sferr "-\n")
+       ;;(pperr `(udecl ,specl ,declr))
        (error "cnvt-udecl")
        (fherr "cnvt-udecl missed --^")
        (values wrapped defined)))))
