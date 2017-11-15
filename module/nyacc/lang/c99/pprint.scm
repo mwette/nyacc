@@ -208,6 +208,11 @@
 
       ((p-expr ,expr) (ppx expr))
       ((ident ,name) (sf "~A" name))
+      ((char (@ (type ,type)) ,value)
+       (cond
+	((string=? type "wchar_t") (sf "L'~A'" (scmchs->c value)))
+	((string=? type "char16_t") (sf "u'~A'" (scmchs->c value)))
+	((string=? type "char32_t") (sf "U'~A'" (scmchs->c value)))))
       ((char ,value) (sf "'~A'" (scmchs->c (sx-ref tree 1))))
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
