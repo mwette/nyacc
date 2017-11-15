@@ -82,6 +82,7 @@
   (parse-string (apply string-append str-l)))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
+(define pp pretty-print)
 (define ppsx (lambda (sx) (pretty-print sx #:per-line-prefix "  ")))
 (define pp99 pretty-print-c99)
 
@@ -129,7 +130,7 @@
 	      ))
        (code "#include <_int8_t.h>\n")
        (indx 2)
-       (tree (parse-string code))
+       ;;(tree (parse-string code))
        ;;(tree (parse-file "xxx.c"))
        ;;(udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
@@ -139,7 +140,8 @@
        )
   ;;(sferr "~S\n" (with-input-from-string "12'" (lambda () (read-hex))))
   ;;(display code)
-  (ppsx tree)
+  (pp (with-input-from-string "c' " (lambda () (read-c-chlit #\'))))
+  ;;(ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx xdecl)
   ;;(display "==\n")

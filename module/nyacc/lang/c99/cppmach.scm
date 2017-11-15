@@ -93,8 +93,11 @@
      (postfix-expression "--" ($$ `(post-dec ,$1))))
     (primary-expression
      ($ident ($$ `(ident ,$1)))
-     ($fixed ($$ `(fixed ,$1)))	; integer-constant
-     ($chlit ($$ `(char ,$1)))	; char-constant
+     ($fixed ($$ `(fixed ,$1)))		; integer literal
+     ($chlit ($$ `(char ,$1)))		; char literal
+     ($chlit/L ($$ `(char (@ (type "wchar_t")) ,$1)))
+     ($chlit/u ($$ `(char (@ (type "char16_t")) ,$1)))
+     ($chlit/U ($$ `(char (@ (type "char32_t")) ,$1)))
      ("defined" "(" $ident ")" ($$ `(defined ,$3)))
      ("defined" $ident ($$ `(defined ,$2)))
      ("__has_include__" "(" $string ")" ($$ `(has-include ,$3)))

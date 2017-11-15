@@ -252,7 +252,7 @@
 (define* (eval-cpp-expr tree #:optional (dict '()) #:key (inc-dirs '()))
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
-       (tx1 (lambda (tr) (tx tr 1)))
+       (tx1 (lambda (tr) (sx-ref tr 1)))
        (ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
        (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
        (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2

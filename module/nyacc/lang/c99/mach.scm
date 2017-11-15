@@ -712,9 +712,13 @@
      ('cpp-ident ($$ `(ident ,$1)))
      )
     (constant
-     ($fixed ($$ `(fixed ,$1)))		; integer-constant
-     ($float ($$ `(float ,$1)))		; floating-constant
-     ($chlit ($$ `(char ,$1))))		; char-constant
+     ($fixed ($$ `(fixed ,$1)))		; integer literal
+     ($float ($$ `(float ,$1)))		; floating literal
+     ($chlit ($$ `(char ,$1)))		; char literal
+     ($chlit/L ($$ `(char (@ (type "wchar_t")) ,$1)))
+     ($chlit/u ($$ `(char (@ (type "char16_t")) ,$1)))
+     ($chlit/U ($$ `(char (@ (type "char32_t")) ,$1)))
+     )
     (string-literal
      ($string ($$ (make-tl 'string $1))) ; string-constant
      (string-literal $string ($$ (tl-append $1 $2))))

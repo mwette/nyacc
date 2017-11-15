@@ -836,6 +836,15 @@
    (lambda ($1 . $rest) `(float ,$1))
    ;; constant => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
+   ;; constant => '$chlit/L
+   (lambda ($1 . $rest)
+     `(char (@ (type "wchar_t")) ,$1))
+   ;; constant => '$chlit/u
+   (lambda ($1 . $rest)
+     `(char (@ (type "char16_t")) ,$1))
+   ;; constant => '$chlit/U
+   (lambda ($1 . $rest)
+     `(char (@ (type "char32_t")) ,$1))
    ;; string-literal => '$string
    (lambda ($1 . $rest) (make-tl 'string $1))
    ;; string-literal => string-literal '$string

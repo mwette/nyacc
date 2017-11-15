@@ -17,7 +17,7 @@
 
 ;; A module providing procedures for constructing lexical analyzers.
 
-;; '$fixed '$float '$string '$chlit '$ident
+;; '$fixed '$float '$string '$ident '$chlit '$chlit/L '$chlit/u '$chlit/U
 
 ;; todo: change lexer to return @code{cons-source} instead of @code{cons}
 ;; todo: to be fully compliant, C readers need to deal with \ at end of line
@@ -267,8 +267,10 @@
 
 ;; @deffn {Procedure} read-c-chlit ch
 ;; @example
-;; ... 'c' ... => (read-c-chlit #\') => '($ch-lit . #\c)
+;; ... 'c' ... => (read-c-chlit #\') => '($chlit . #\c)
 ;; @end example
+;; This will return @code{$chlit}, $code{$chlit/L} for @code{wchar_t},
+;; @code{$chlit/u} for @code{char16_t}, or @code{$chlit/U} for @code{char32_t}.
 ;; @end deffn
 (define (old-read-c-chlit ch)
   (cond
@@ -296,7 +298,9 @@
        (else (unread-char c1) #f))))
    (else #f)))
 
-(define (new-read-c-chlit ch)
+;; Will return $chlit, $chlit/L, $chlit/u, $chlit/U where
+;; L means wchar_t, u means char16_t and U means char32_t
+(define (read-c-chlit ch)
   (define (read-esc-char)
     (let ((c2 (read-char)))
       (case c2
@@ -310,6 +314,8 @@
 	((#\0) (string (integer->char (read-oct)))) ; octal
 	((#\x) (string (integer->char (read-hex)))) ; hex
 	(else (error "bad escape sequence")))))
+  (define (wchar t)
+    (case t ((#\L) '$chlit/L) ((#\u) '$chlit/u) ((#\U) '$chlit/U)))
   (cond
    ((char=? ch #\')
     (let* ((c1 (read-char))
@@ -319,12 +325,10 @@
    ((char-set-contains? c:cx ch)
     (let ((c1 (read-char)))
       (cond
-       ((char=? c1 #\') `($chlit (@ (size "wide")) ,(read-c-chlit c1)))
+       ((char=? c1 #\') (cons (wchar ch) (cdr (read-c-chlit c1))))
        (else (unread-char c1) #f))))
    (else #f)))
 
-(define read-c-chlit new-read-c-chlit)
-  
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
 
 ;; @deffn {Procedure} make-num-reader => (proc ch) => #f|($fixed . "1")|($float . "1.0")
