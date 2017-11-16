@@ -788,7 +788,8 @@
   (let iter ((ix 0) (params (fix-params params)))
     (cond
      ((null? params) '())
-     ((equal? (car params) '(ellipsis)) (fherr/once "no varargs (yet)") '...)
+     ;;((equal? (car params) '(ellipsis)) (fherr/once "no varargs (yet)") '...)
+     ((equal? (car params) '(ellipsis)) '())
      (else
       ;;(sferr "\nP: ~S\n" (car params))
       (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
@@ -922,14 +923,16 @@
 (define (gen-exec-params params)
   (fold-right
    (lambda (param-decl seed)
-     ;; Changed to (*wrapped*) to include enum types.  If we need (*defined*)
-     ;; then we will need to create enum types in cnvt-udecl typedefs.
-     (let* ((param-decl (expand-typerefs param-decl (*udict*) (*wrapped*)))
-	    (param-decl (udecl-rem-type-qual param-decl)) ;; ???
-	    (mspec (udecl->mspec param-decl)))
-       (acons (car mspec) (mspec->fh-unwrapper mspec) seed)))
-   '()
-   params))
+     (cond
+      ((equal? param-decl '(ellipsis)) seed)
+      (else
+       ;; Changed to (*wrapped*) to include enum types.  If we need (*defined*)
+       ;; then we will need to create enum types in cnvt-udecl typedefs.
+       (let* ((param-decl (expand-typerefs param-decl (*udict*) (*wrapped*)))
+	      (param-decl (udecl-rem-type-qual param-decl)) ;; ???
+	      (mspec (udecl->mspec param-decl)))
+	 (acons (car mspec) (mspec->fh-unwrapper mspec) seed)))))
+   '() params))
 
 ;; given list of name-unwrap pairs generate function arg names
 (define (gen-exec-arg-names params)
@@ -993,6 +996,7 @@
 (define (cnvt-fctn name rdecl params)
   ;;(when (string=? name "cairo_create") (pperr (*wrapped*)))
   (let* ((params (fix-params params))
+	 (varargs? (equal? (last params) '(ellipsis)))
 	 (decl-return (gen-decl-return rdecl))
 	 (decl-params (gen-decl-params params))
 	 (exec-return (gen-exec-return-wrapper rdecl))
@@ -1000,44 +1004,30 @@
 	 (sname (string->symbol name))
 	 (~name (string->symbol (string-append "~" name)))
 	 ;;(call `(,~name ,@(gen-exec-call-args exec-params)))
+	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
+			  (map cdr ~rest)))
 	 (call `((force ,~name) ,@(gen-exec-call-args exec-params)))
 	 )
-    #;(sfscm "(define ~A #f)\n" ~name)
-    #;(ppscm
-     `(define (,sname ,@(gen-exec-arg-names exec-params))
-	(unless ,~name
-	  (set! ,~name
-		(fh-link-proc ,name ,decl-return (list ,@decl-params)
-			      link-lib)))
-	(let ,(gen-exec-unwrappers exec-params)
-	  ,(if exec-return (list exec-return call) call))))
-    (ppscm `(define ,~name
-	      (delay (fh-link-proc ,name ,decl-return
-				   (list ,@decl-params) link-lib))))
-    (ppscm
-     `(define (,sname ,@(gen-exec-arg-names exec-params))
-	(let ,(gen-exec-unwrappers exec-params)
-	  ,(if exec-return (list exec-return call) call))))
-    (sfscm "(export ~A)\n" name)))
-;; may work !!
-(define (cnvt-fctn/varargs name rdecl params)
-  (let* ((params (fix-params params))
-	 (decl-return (gen-decl-return rdecl))
-	 (decl-params (gen-decl-params params))
-	 (exec-return (gen-exec-return-wrapper rdecl))
-	 (exec-params (gen-exec-params params))
-	 (sname (string->symbol name))
-	 (~name (string->symbol (string-append "~" name)))
-	 (call `(apply
-		 ,~name ,@(gen-exec-call-args exec-params) (map cdr ~rest))))
-    (sfscm ";; to be used with fh-cast\n")
-    (ppscm
+    (cond
+     (varargs?
+      (sfscm ";; to be used with fh-cast\n")
+      (ppscm
      `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
-	(let ((decl-params (append ,decl-params (map car ~rest)))
-	      (,~name (fh-link-proc ,name ,decl-return decl-params link-lib))
-	      ,@(gen-exec-unwrappers exec-params))
-	  ,(if exec-return `(,exec-return call) call))))
-    (sfscm "(export ~A)\n" name)))
+	(let ((,~name (fh-link-proc
+		       ,name ,decl-return
+		       (append (list ,@decl-params) (map car ~rest))
+		       link-lib))
+		      ,@(gen-exec-unwrappers exec-params))
+	  ,(if exec-return `(,exec-return va-call) va-call)))))
+     (else
+      (ppscm `(define ,~name
+		(delay (fh-link-proc ,name ,decl-return
+				     (list ,@decl-params) link-lib))))
+      (ppscm
+       `(define (,sname ,@(gen-exec-arg-names exec-params))
+	  (let ,(gen-exec-unwrappers exec-params)
+	    ,(if exec-return (list exec-return call) call))))))
+      (sfscm "(export ~A)\n" name)))
 
 ;; === externs ========================
 

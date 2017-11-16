@@ -269,7 +269,8 @@
 	      (lambda (ix col elt)
 		(iter1 (if (zero? ix) col (strout col " ")) elt))
 	      (strout col "#(") sx) ")"))
-	   ((null? sx) (strout col "'()"))
+	   ;;((null? sx) (strout col "'()"))
+	   ((null? sx) (strout col "()"))
 	   (else (strout col (obj->str sx))))))
        (iter2
 	(lambda (col sx)
