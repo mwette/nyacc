@@ -38,11 +38,19 @@
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
 					     lset-intersection lset-difference))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
-  #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each vector-any))
+  ;;#:use-module ((srfi srfi-43) #:select (vector-map vector-for-each vector-any))
   #:use-module (nyacc util)
   )
+(cond-expand
+  (guile-2
+   (use-modules (srfi srfi-43)))
+  (guile
+   (use-modules (ice-9 optargs))
+   (use-modules (ice-9 syncase))
+   (use-modules (nyacc compat18)))
+  )
 
-(define *nyacc-version* "0.82.4")
+(define *nyacc-version* "0.82.5")
 
 ;; @deffn proxy-? sym rhs
 ;; @example

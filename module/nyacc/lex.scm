@@ -56,6 +56,11 @@
   #:use-module ((srfi srfi-1) #:select (remove append-reverse))
   #:use-module (ice-9 pretty-print)
   )
+(cond-expand
+  (guile-2 #t)
+  (guile
+   (use-modules (ice-9 optargs))
+   (use-modules (ice-9 syncase))))
 
 ;; @section Constructing Lexical Analyzers
 ;; The @code{lex} module provides a set of procedures to build lexical
