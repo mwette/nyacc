@@ -28,7 +28,13 @@
 	    ugly-print OLD-ugly-print
 	    tzort
 	    )
-  #:use-module ((srfi srfi-43) #:select (vector-fold))
+  )
+(cond-expand
+  (guile-2
+   (use-modules (srfi srfi-43)))
+  (guile
+   (use-modules (ice-9 optargs))
+   (use-modules (nyacc compat18)))
   )
 
 (define (fmtstr fmt . args)

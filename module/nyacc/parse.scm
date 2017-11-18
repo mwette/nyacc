@@ -21,8 +21,14 @@
 (define-module (nyacc parse)
   #:export (make-lalr-parser make-lalr-ia-parser)
   #:use-module (nyacc util)
-  #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
+  ;;#:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   )
+(cond-expand
+  (guile-2
+   (use-modules (srfi srfi-43)))
+  (guile
+   (use-modules (ice-9 optargs))
+   (use-modules (nyacc compat18))))
 
 ;; @item (machine-hashed? mach) => #t|#f
 ;; Indicate if the machine has been hashed.
