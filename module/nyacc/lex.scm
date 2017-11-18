@@ -17,7 +17,7 @@
 
 ;; A module providing procedures for constructing lexical analyzers.
 
-;; '$fixed '$float '$string '$chlit '$ident
+;; '$fixed '$float '$string '$ident '$chlit '$chlit/L '$chlit/u '$chlit/U
 
 ;; todo: change lexer to return @code{cons-source} instead of @code{cons}
 ;; todo: to be fully compliant, C readers need to deal with \ at end of line
@@ -186,24 +186,24 @@
 		(else (iter (cons ch cl) (read-char)))))
 	#f)))
 
-;; @deffn {Procedure} read-oct ch => "0123"|#f
-;; Read octal number.
+;; @deffn {Procedure} read-oct => 123|#f
+;; Read octal number, assuming @code{\0} have already been read.
+;; Return integer.
 ;; @end deffn
 (define read-oct
   (let ((cs:oct (string->char-set "01234567")))
-    (lambda (ch)
-      (let iter ((cv 0) (ch ch) (n 1))
+    (lambda ()
+      (let iter ((cv 0) (ch (read-char)) (n 0))
 	(cond
 	 ((eof-object? ch) cv)
-	 ((> n 3) (unread-char ch) cv)
+	 ;;((> n 3) (unread-char ch) cv)
 	 ((char-set-contains? cs:oct ch)
 	  (iter (+ (* 8 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
-	 (else
-	  (unread-char ch)
-	  cv))))))
+	 (else (unread-char ch) cv))))))
 
-;; @deffn {Procedure} read-hex => "0x7f"|#f
-;; Read octal number.  Assumes prefix (e.g., "0x" has already been read).
+;; @deffn {Procedure} read-hex => 123|#f
+;; Read hex number.  Assumes prefix (e.g., "0x" has already been read).
+;; Returns integer.
 ;; @end deffn
 (define read-hex
   (let ((cs:dig (string->char-set "0123456789"))
@@ -213,7 +213,7 @@
       (let iter ((cv 0) (ch (read-char)) (n 0))
 	(cond
 	 ((eof-object? ch) cv)
-	 ((> n 2) (unread-char ch) cv)
+	 ;;((> n 2) (unread-char ch) cv)
 	 ((char-set-contains? cs:dig ch)
 	  (iter (+ (* 16 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
 	 ((char-set-contains? cs:uhx ch)
@@ -241,11 +241,9 @@
       ((#\f) (cons #\page seed))
       ((#\a) (cons #\alarm seed))
       ((#\v) (cons #\vtab seed))
+      ((#\0) (cons (integer->char (read-oct)) seed))
       ((#\x) (cons (integer->char (read-hex)) seed))
-      (else
-       (if (char-numeric? ch)
-	   (cons (integer->char (read-oct ch)) seed)
-	   (cons ch seed))))))
+      (else (cons ch seed)))))
 
 ;; @deffn {Procedure} read-c-string ch => ($string . "foo")
 ;; Read a C-code string.  Output to code is @code{write} not @code{display}.
@@ -269,10 +267,12 @@
 
 ;; @deffn {Procedure} read-c-chlit ch
 ;; @example
-;; ... 'c' ... => (read-c-chlit #\') => '($ch-lit . #\c)
+;; ... 'c' ... => (read-c-chlit #\') => '($chlit . #\c)
 ;; @end example
+;; This will return @code{$chlit}, $code{$chlit/L} for @code{wchar_t},
+;; @code{$chlit/u} for @code{char16_t}, or @code{$chlit/U} for @code{char32_t}.
 ;; @end deffn
-(define (read-c-chlit ch)
+(define (old-read-c-chlit ch)
   (cond
    ((char=? ch #\')
     (let ((c1 (read-char)) (c2 (read-char)))
@@ -297,6 +297,39 @@
        ((char=? c1 #\') (read-c-chlit c1))
        (else (unread-char c1) #f))))
    (else #f)))
+
+;; Will return $chlit, $chlit/L, $chlit/u, $chlit/U where
+;; L means wchar_t, u means char16_t and U means char32_t
+(define (new-read-c-chlit ch)
+  (define (read-esc-char)
+    (let ((c2 (read-char)))
+      (case c2
+	((#\a) "\a")			; alert U+0007
+	((#\b) "\b")			; backspace U+0008
+	((#\t) "\t")			; horizontal tab U+0009
+	((#\n) "\n")			; newline U+000A
+	((#\v) "\v")			; verticle tab U+000B
+	((#\f) "\f")			; formfeed U+000C
+	((#\r) "\r")			; return U+000D
+	((#\0) (string (integer->char (read-oct)))) ; octal
+	((#\x) (string (integer->char (read-hex)))) ; hex
+	(else (error "bad escape sequence")))))
+  (define (wchar t)
+    (case t ((#\L) '$chlit/L) ((#\u) '$chlit/u) ((#\U) '$chlit/U)))
+  (cond
+   ((char=? ch #\')
+    (let* ((c1 (read-char))
+	   (sc (if (eqv? c1 #\\) (read-esc-char) (string c1))))
+      (if (not (char=? #\' (read-char))) (error "bad char lit"))
+      (cons '$chlit sc)))
+   ((char-set-contains? c:cx ch)
+    (let ((c1 (read-char)))
+      (cond
+       ((char=? c1 #\') (cons (wchar ch) (cdr (read-c-chlit c1))))
+       (else (unread-char c1) #f))))
+   (else #f)))
+
+(define read-c-chlit new-read-c-chlit)
 
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
 
