@@ -25,8 +25,13 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
-  #:use-module ((srfi srfi-43) #:select (vector-map))
   )
+(cond-expand
+ (guile-2
+  (use-modules ((srfi srfi-43) #:select (vector-map))))
+ (else
+  (use-modules (nyacc compat18))))
+  
 
 ;; This parses EcmaScript v3 1999.  Some v5 2011 items are added as comments.
 
@@ -123,11 +128,14 @@
      )
 
     ;; from v5.1
-    #;(PropertyAssignment
+    #|
+    (PropertyAssignment
      (PropertyName ":" AssignmentExpression)
      ("get" PropertyName "(" ")" "{" FunctionBody "}")
-     ("set" PropertyName "(" PropertySetParametersList ")" "{" FunctionBody "}")
+     ("set" PropertyName "(" PropertySetParametersList ")"
+      "{" FunctionBody "}")
      )
+    |#
 
     (PropertyName
      (Identifier)

@@ -7,8 +7,6 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path "../../../../module")
-
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
 (use-modules (nyacc parse))
@@ -40,29 +38,31 @@
 
 (calc1-demo "2 + 2")
 
-#|
+#!
 ;; To debug, generate the .out file and use `calc1-eval' fromn below.
 (with-output-to-file "calc1.out"
   (lambda ()
     (pp-lalr-grammar calc1-mach)
     (pp-lalr-machine calc1-mach)))
-|#
-#|
+!#
+#!
 (define (calc1-eval str)
   (with-input-from-string str
     (lambda () (raw-parser (gen-lexer) #:debug #t))))
-|#
+!#
 
-#| ;; to generate actions and tables
+#!
+;; to generate actions and tables
 (let ((mach (compact-machine (hashify-machine calc1-mach))))
   (write-lalr-actions mach "calc1-act.scm")
   (write-lalr-tables mach "calc1-tab.scm"))
-|#
+!#
 
-#| ;; to see equivalent bison input file
+#!
+;; to see equivalent bison input file
 (use-modules (nyacc export))
 (with-output-to-file "calc1.y"
   (lambda () (lalr->bison calc1-mach)))
-|#
+!#
 
 ;; --- last line ---

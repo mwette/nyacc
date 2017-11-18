@@ -30,6 +30,12 @@
   ;; #:use-module ((sxml xpath) #:select (sxpath)) ;; see sx-find below
   #:use-module (ice-9 pretty-print)
   )
+(cond-expand
+  (guile-2
+   #t)
+  (else
+   (use-modules (ice-9 optargs))
+   (use-modules (srfi srfi-16))))
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
@@ -54,7 +60,7 @@ the file COPYING included with the this distribution.")
 
 ;; === input stack =====================
 
-(define *input-stack* (make-fluid #f))
+(define *input-stack* (make-fluid))
 
 (define (reset-input-stack)
   (fluid-set! *input-stack* '()))
@@ -372,9 +378,6 @@ the file COPYING included with the this distribution.")
     (find (lambda (node)
 	    (and (pair? node) (eqv? tag-or-path (car node))))
 	  sx))
-   #;((pair? tag-or-path)
-    (let ((rez ((sxpath tag-or-path) sx)))
-      (if (pair? rez) (car rez) #f)))
    (else
     (error "expecting first arg to be tag or sxpath"))))
 

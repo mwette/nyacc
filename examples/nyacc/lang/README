@@ -1,6 +1,6 @@
 nyacc/lang/README
 
-Copyright (C) 2015,2016 Matthew R. Wette
+Copyright (C) 2015-2017 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -10,6 +10,9 @@ without any warranty.
 The intention of this directory is to provide parsers for languages.
 The parsers will be built with attributed grammar semantics.  The
 parse tree will be in sxml format.
+
+These example should compile with 2.0.13 and later.
+The calc/calc1 demo runs with guile 1.8.
 
 This directory hosts parsers, typically with attributed grammar semantics.
 

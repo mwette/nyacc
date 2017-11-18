@@ -244,8 +244,8 @@
       ((#\b) (cons #\backspace seed))
       ((#\t) (cons #\tab seed))
       ((#\f) (cons #\page seed))
-      ((#\a) (cons #\alarm seed))
-      ((#\v) (cons #\vtab seed))
+      ((#\a) (cons #\bel seed))	      ; guile 1.8 doesn't know #\alarm
+      ((#\v) (cons #\vt seed))	      ; guile 1.8 doesn't know #\vtab
       ((#\0) (cons (integer->char (read-oct)) seed))
       ((#\x) (cons (integer->char (read-hex)) seed))
       (else (cons ch seed)))))
@@ -287,7 +287,7 @@
 		  (case c2
 		    ((#\0) "\0")	   ; nul U+0000 (#\U+...)
 		    ((#\a) "\a")	   ; alert U+0007
-		    ((#\b) "\b")	   ; backspace U+0008
+		    ((#\b) (integer->char 8)) ; backspace U+0008
 		    ((#\t) "\t")	   ; horizontal tab U+0009
 		    ((#\n) "\n")	   ; newline U+000A
 		    ((#\v) "\v")	   ; verticle tab U+000B
@@ -309,13 +309,13 @@
   (define (read-esc-char)
     (let ((c2 (read-char)))
       (case c2
-	((#\a) "\a")			; alert U+0007
-	((#\b) "\b")			; backspace U+0008
-	((#\t) "\t")			; horizontal tab U+0009
-	((#\n) "\n")			; newline U+000A
-	((#\v) "\v")			; verticle tab U+000B
-	((#\f) "\f")			; formfeed U+000C
-	((#\r) "\r")			; return U+000D
+	((#\a) "\a")		   ; alert U+0007
+	((#\b) (integer->char 8))  ; backspace U+0008 not in guile 1.8
+	((#\t) "\t")		   ; horizontal tab U+0009
+	((#\n) "\n")		   ; newline U+000A
+	((#\v) "\v")		   ; verticle tab U+000B
+	((#\f) "\f")		   ; formfeed U+000C
+	((#\r) "\r")		   ; return U+000D
 	((#\0) (string (integer->char (read-oct)))) ; octal
 	((#\x) (string (integer->char (read-hex)))) ; hex
 	(else (error "bad escape sequence")))))

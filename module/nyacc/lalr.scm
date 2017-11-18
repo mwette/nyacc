@@ -39,7 +39,6 @@
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
 					     lset-intersection lset-difference))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
-  ;;#:use-module ((srfi srfi-43) #:select (vector-map vector-for-each vector-any))
   #:use-module (nyacc util)
   )
 (cond-expand
@@ -48,6 +47,8 @@
   (guile
    (use-modules (ice-9 optargs))
    (use-modules (ice-9 syncase))
+   (export lalr-spec-1 parse-precedence parse-grammar
+	   parse-rhs-list parse-rhs)
    (use-modules (nyacc compat18)))
   )
 
@@ -126,111 +127,6 @@
 ;; Currently, the number of arguments for items is computed in the routine
 ;; @code{process-grammar}.
 ;; @end deffn
-#;(define-syntax lalr-spec
-  (syntax-rules +++ () 
-    ((_ <expr> +++)
-     (letrec-syntax
-	 ((parse-rhs
-	  (lambda (x)
-	    ;; The following is syntax-case because we use a fender.
-	    (syntax-case x (quote $$ $$/ref $$-ref $prec $empty $? $* $+)
-	      ;; action specifications
-	      ((_ ($$ <guts> ...) <e2> ...)
-	       #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
-	      ((_ ($$-ref <ref>) <e2> ...)
-	       ;;#'(cons '(action #f <ref> #f) (parse-rhs <e2> ...)))
-	       #'(cons `(action #f ,<ref> . #f) (parse-rhs <e2> ...)))
-	      ((_ ($$/ref <ref> <guts> ...) <e2> ...)
-	       #'(cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...)))
-
-	      ;; other internal $-syntax
-	      ((_ ($prec <tok>) <e2> ...)
-	       #'(cons (cons 'prec (tokenize <tok>)) (parse-rhs <e2> ...)))
-	      ((_ $empty <e2> ...)	; TODO: propagate to processor
-	       #'(parse-rhs <e2> ...))
-	      
-	      ;; (experimental) proxies
-	      ((_ ($? <s1> <s2> ...) <e2> ...)
-	       #'(cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
-		       (parse-rhs <e2> ...)))
-	      ((_ ($+ <s1> <s2> ...) <e2> ...)
-	       #'(cons (cons* 'proxy proxy-+ (parse-rhs <s1> <s2> ...))
-		       (parse-rhs <e2> ...)))
-	      ((_ ($* <s1> <s2> ...) <e2> ...)
-	       #'(cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
-		       (parse-rhs <e2> ...)))
-	      
-	      ;; terminals and non-terminals
-	      ((_ (quote <e1>) <e2> ...)
-	       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
-	      ((_ (<f> ...) <e2> ...)
-	       #'(cons (<f> ...) (parse-rhs <e2> ...)))
-	      ((_ <e1> <e2> ...)
-	       (identifier? (syntax <e1>)) ; fender to trap non-term's
-	       (if (reserved? (syntax <e1>))
-		   #'(cons '(terminal . <e1>) (parse-rhs <e2> ...))
-		   #'(cons '(non-terminal . <e1>) (parse-rhs <e2> ...))))
-	      ((_ <e1> <e2> ...)
-	       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
-	      ((_) #'(list)))))
-       (parse-rhs-list
-	(syntax-rules ()
-	  ((_ (<ex> ...) <rhs> ...)
-	   (cons (parse-rhs <ex> ...)
-		 (parse-rhs-list <rhs> ...)))
-	  ((_) '())))
-       (parse-grammar
-	(syntax-rules ()
-	  ((_ (<lhs> <rhs> ...) <prod> ...)
-	   (cons (cons '<lhs> (parse-rhs-list <rhs> ...))
-		 (parse-grammar <prod> ...)))
-	  ((_) '())))
-       (tokenize
-	(lambda (x)
-	  (syntax-case x ()
-	    ((_ <tk>) (identifier? (syntax <tk>)) #'(quote <tk>))
-	    ((_ <tk>) #'<tk>))))
-       (tokenize-list
-	(syntax-rules ()
-	  ((_ <tk1> <tk2> ...)
-	   (cons (tokenize <tk1>) (tokenize-list <tk2> ...)))
-	  ((_) '())))
-       (parse-precedence
-	(syntax-rules (left right nonassoc)
-	  ((_ (left <tk> ...) <ex> ...)
-	   (cons (cons 'left (tokenize-list <tk> ...))
-		 (parse-precedence <ex> ...)))
-	  ((_ (right <tk> ...) <ex> ...)
-	   (cons (cons 'right (tokenize-list <tk> ...))
-		 (parse-precedence <ex> ...)))
-	  ((_ (nonassoc <tk> ...) <ex> ...)
-	   (cons (cons 'nonassoc (tokenize-list <tk> ...))
-		 (parse-precedence <ex> ...)))
-	  ((_ <tk> <ex> ...)
-	   (cons (list 'undecl (tokenize <tk>))
-		 (parse-precedence <ex> ...)))
-	  ((_) '())))
-       (lalr-spec-1
-	(syntax-rules (start expect notice reserve prec< prec> grammar)
-	  ((_ (start <symb>) <e> ...)
-	   (cons (cons 'start '<symb>) (lalr-spec-1 <e> ...)))
-	  ((_ (expect <n>) <e> ...)
-	   (cons (cons 'expect <n>) (lalr-spec-1 <e> ...)))
-	  ((_ (notice <str>) <e> ...)
-	   (cons (cons 'notice <str>) (lalr-spec-1 <e> ...)))
-	  ((_ (reserve <t1> ...) <e> ...)
-	   (cons (list 'reserve <t1> ...) (lalr-spec-1 <e> ...)))
-	  ((_ (prec< <ex> ...) <e> ...)
-	   (cons (cons 'precedence (parse-precedence <ex> ...))
-		 (lalr-spec-1 <e> ...)))
-	  ((_ (prec> <ex> ...) <e> ...)
-	   (cons (cons 'precedence (reverse (parse-precedence <ex> ...)))
-		 (lalr-spec-1 <e> ...)))
-	  ((_ (grammar <prod> ...) <e> ...)
-	   (cons (cons 'grammar (parse-grammar <prod> ...))
-		 (lalr-spec-1 <e> ...))) 
-	  ((_) '()))))
-       (process-spec (lalr-spec-1 <expr> +++))))))
 
 (define-syntax parse-rhs
   (lambda (x)
@@ -238,43 +134,42 @@
     (syntax-case x (quote $$ $$/ref $$-ref $prec $empty $? $* $+)
       ;; action specifications
       ((_ ($$ <guts> ...) <e2> ...)
-       #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
+       (syntax (cons '(action #f #f <guts> ...) (parse-rhs <e2> ...))))
       ((_ ($$-ref <ref>) <e2> ...)
-       ;;#'(cons '(action #f <ref> #f) (parse-rhs <e2> ...)))
-       #'(cons `(action #f ,<ref> . #f) (parse-rhs <e2> ...)))
+       (syntax (cons `(action #f ,<ref> . #f) (parse-rhs <e2> ...))))
       ((_ ($$/ref <ref> <guts> ...) <e2> ...)
-       #'(cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...)))
+       (syntax (cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...))))
 
       ;; other internal $-syntax
       ((_ ($prec <tok>) <e2> ...)
-       #'(cons (cons 'prec (tokenize <tok>)) (parse-rhs <e2> ...)))
+       (syntax (cons (cons 'prec <tok>) (parse-rhs <e2> ...))))
       ((_ $empty <e2> ...)	; TODO: propagate to processor
-       #'(parse-rhs <e2> ...))
+       (syntax (parse-rhs <e2> ...)))
       
       ;; (experimental) proxies
       ((_ ($? <s1> <s2> ...) <e2> ...)
-       #'(cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
-	       (parse-rhs <e2> ...)))
+       (syntax (cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
+		     (parse-rhs <e2> ...))))
       ((_ ($+ <s1> <s2> ...) <e2> ...)
-       #'(cons (cons* 'proxy proxy-+ (parse-rhs <s1> <s2> ...))
-	       (parse-rhs <e2> ...)))
+       (syntax (cons (cons* 'proxy proxy-+ (parse-rhs <s1> <s2> ...))
+		     (parse-rhs <e2> ...))))
       ((_ ($* <s1> <s2> ...) <e2> ...)
-       #'(cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
-	       (parse-rhs <e2> ...)))
+       (syntax (cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
+		     (parse-rhs <e2> ...))))
       
       ;; terminals and non-terminals
       ((_ (quote <e1>) <e2> ...)
-       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+       (syntax (cons '(terminal . <e1>) (parse-rhs <e2> ...))))
       ((_ (<f> ...) <e2> ...)
-       #'(cons (<f> ...) (parse-rhs <e2> ...)))
+       (syntax (cons (<f> ...) (parse-rhs <e2> ...))))
       ((_ <e1> <e2> ...)
        (identifier? (syntax <e1>)) ; fender to trap non-term's
        (if (reserved? (syntax <e1>))
-	   #'(cons '(terminal . <e1>) (parse-rhs <e2> ...))
-	   #'(cons '(non-terminal . <e1>) (parse-rhs <e2> ...))))
+	   (syntax (cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+	   (syntax (cons '(non-terminal . <e1>) (parse-rhs <e2> ...)))))
       ((_ <e1> <e2> ...)
-       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
-      ((_) #'(list)))))
+       (syntax (cons '(terminal . <e1>) (parse-rhs <e2> ...))))
+      ((_) (syntax (list))))))
 
 (define-syntax parse-rhs-list
   (syntax-rules ()
@@ -289,31 +184,23 @@
      (cons (cons '<lhs> (parse-rhs-list <rhs> ...))
 	   (parse-grammar <prod> ...)))
     ((_) '())))
-(define-syntax tokenize
-  (lambda (x)
-    (syntax-case x ()
-      ((_ <tk>) (identifier? (syntax <tk>)) #'(quote <tk>))
-      ((_ <tk>) #'<tk>))))
-(define-syntax tokenize-list
-  (syntax-rules ()
-    ((_ <tk1> <tk2> ...)
-     (cons (tokenize <tk1>) (tokenize-list <tk2> ...)))
-    ((_) '())))
+
 (define-syntax parse-precedence
   (syntax-rules (left right nonassoc)
     ((_ (left <tk> ...) <ex> ...)
-     (cons (cons 'left (tokenize-list <tk> ...))
+     (cons (cons 'left (list <tk> ...))
 	   (parse-precedence <ex> ...)))
     ((_ (right <tk> ...) <ex> ...)
-     (cons (cons 'right (tokenize-list <tk> ...))
+     (cons (cons 'right (list <tk> ...))
 	   (parse-precedence <ex> ...)))
     ((_ (nonassoc <tk> ...) <ex> ...)
-     (cons (cons 'nonassoc (tokenize-list <tk> ...))
+     (cons (cons 'nonassoc (list <tk> ...))
 	   (parse-precedence <ex> ...)))
     ((_ <tk> <ex> ...)
-     (cons (list 'undecl (tokenize <tk>))
+     (cons (list 'undecl <tk>)
 	   (parse-precedence <ex> ...)))
     ((_) '())))
+
 (define-syntax lalr-spec-1
   (syntax-rules (start expect notice reserve prec< prec> grammar)
     ((_ (start <symb>) <e> ...)
@@ -334,10 +221,11 @@
      (cons (cons 'grammar (parse-grammar <prod> ...))
 	   (lalr-spec-1 <e> ...))) 
     ((_) '())))
+
 (define-syntax lalr-spec
   (syntax-rules () 
     ((_ <expr> ...)
-       (process-spec (lalr-spec-1 <expr> ...)))))
+     (process-spec (lalr-spec-1 <expr> ...)))))
 
 ;; @deffn atomize terminal => object
 ;; Generate an atomic object for a terminal.   Expected terminals are strings,
@@ -622,7 +510,7 @@
 ;; cycles to access core parameters of the specification.  This includes
 ;; the list of non-terminals, the vector of left-hand side symbols and the
 ;; vector of vector of right-hand side symbols.
-(define *lalr-core* (make-fluid #f))
+(define *lalr-core* (make-fluid))
 
 ;; @deffn {Procedure} lalr-start spec => symbol
 ;; Return the start symbol for the grammar.
@@ -1544,8 +1432,6 @@
 		       (cons (cons ix (car actl)) ftl) (cdr actl)))
 	     ))
 	  ((old-rrconf)
-	   #;(fmterr "*** reduce-reduce conflict: in state ~A on ~A: ~A\n"
-		   ix (obj->str (find-terminal (caar actl) tl)) (cddar actl))
 	   (iter ix (cons (car actl) pat) rat wrn
 		 (cons (cons ix (car actl)) ftl) (cdr actl)))
 	  (else
@@ -1619,8 +1505,7 @@
   (let* ((kis-v (assq-ref mach 'kis-v))
 	 (rhs-v (assq-ref mach 'rhs-v))
 	 (pat-v (assq-ref mach 'pat-v))
-	 (n (vector-length pat-v))
-	 )
+	 (n (vector-length pat-v)))
     (vector-for-each
      (lambda (kx kis)
        ;;(fmtout "kis=~S\n " kis)
@@ -1633,10 +1518,8 @@
 	      (vector-set! pat-v kx
 			   (append
 			    (vector-ref pat-v kx)
-			    `(($default shift . ,kx))))
-	      #;(fmtout " => ~S\n" (vector-ref pat-v kx)))))
+			    `(($default shift . ,kx)))))))
 	kis)
-       ;;(fmtout "\n")
        #f)
      kis-v)
     mach))

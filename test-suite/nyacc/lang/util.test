@@ -13,6 +13,10 @@
 (define-module (util)
   #:use-module (nyacc lang util)
   #:use-module (test-suite lib))
+(cond-expand
+  (guile-2 #t)
+  (else
+   (use-modules (nyacc compat18))))
 
 (with-test-prefix "nyacc/util"
 
@@ -41,7 +45,8 @@
       (push-input sp)
       (and (pop-input) (not (pop-input)))))
 
-  #;(pass-if "test1"
+  #!
+  (pass-if "test1"
     (let* ((tl0 (make-tl 'abc 1))
 	   (tl1 (tl-append tl0 2))
 	   (tl2 (tl-insert tl1 'a))
@@ -50,8 +55,10 @@
 	   (tl5 (tl-insert tl4 'z))
 	   (tlx tl5))
       (equal? (tl->list tlx) '(abc (@ (x "true")) z a 1 2 20 25))))
+  !#
 
-  #;(pass-if "test2"
+  #!
+  (pass-if "test2"
     (let* ((tl (make-tl 'abc 1)))
       (set! tl (tl-append tl 2))
       (set! tl (tl-insert tl 'a))
@@ -67,6 +74,7 @@
       (equal? (tl->list tl)
 	      '(abc (@ (x "true") (y "true") (z "true"))
 		    YYY a 1 2 20 30 40 a b c ZZZ))))
+  !#
 
   )
 
