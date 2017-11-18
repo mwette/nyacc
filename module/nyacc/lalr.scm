@@ -21,7 +21,8 @@
 (define-module (nyacc lalr)
   ;;#:export-syntax (lalr-spec)
   #:export (*nyacc-version*
-	    lalr-spec make-lalr-machine compact-machine hashify-machine 
+	    lalr-spec process-spec
+	    make-lalr-machine compact-machine hashify-machine 
 	    lalr-start lalr-match-table
 	    restart-spec add-recovery-logic!
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
@@ -125,7 +126,7 @@
 ;; Currently, the number of arguments for items is computed in the routine
 ;; @code{process-grammar}.
 ;; @end deffn
-(define-syntax lalr-spec
+#;(define-syntax lalr-spec
   (syntax-rules +++ () 
     ((_ <expr> +++)
      (letrec-syntax
@@ -230,6 +231,113 @@
 		 (lalr-spec-1 <e> ...))) 
 	  ((_) '()))))
        (process-spec (lalr-spec-1 <expr> +++))))))
+
+(define-syntax parse-rhs
+  (lambda (x)
+    ;; The following is syntax-case because we use a fender.
+    (syntax-case x (quote $$ $$/ref $$-ref $prec $empty $? $* $+)
+      ;; action specifications
+      ((_ ($$ <guts> ...) <e2> ...)
+       #'(cons '(action #f #f <guts> ...) (parse-rhs <e2> ...)))
+      ((_ ($$-ref <ref>) <e2> ...)
+       ;;#'(cons '(action #f <ref> #f) (parse-rhs <e2> ...)))
+       #'(cons `(action #f ,<ref> . #f) (parse-rhs <e2> ...)))
+      ((_ ($$/ref <ref> <guts> ...) <e2> ...)
+       #'(cons `(action #f ,<ref> <guts> ...) (parse-rhs <e2> ...)))
+
+      ;; other internal $-syntax
+      ((_ ($prec <tok>) <e2> ...)
+       #'(cons (cons 'prec (tokenize <tok>)) (parse-rhs <e2> ...)))
+      ((_ $empty <e2> ...)	; TODO: propagate to processor
+       #'(parse-rhs <e2> ...))
+      
+      ;; (experimental) proxies
+      ((_ ($? <s1> <s2> ...) <e2> ...)
+       #'(cons (cons* 'proxy proxy-? (parse-rhs <s1> <s2> ...))
+	       (parse-rhs <e2> ...)))
+      ((_ ($+ <s1> <s2> ...) <e2> ...)
+       #'(cons (cons* 'proxy proxy-+ (parse-rhs <s1> <s2> ...))
+	       (parse-rhs <e2> ...)))
+      ((_ ($* <s1> <s2> ...) <e2> ...)
+       #'(cons (cons* 'proxy proxy-* (parse-rhs <s1> <s2> ...))
+	       (parse-rhs <e2> ...)))
+      
+      ;; terminals and non-terminals
+      ((_ (quote <e1>) <e2> ...)
+       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+      ((_ (<f> ...) <e2> ...)
+       #'(cons (<f> ...) (parse-rhs <e2> ...)))
+      ((_ <e1> <e2> ...)
+       (identifier? (syntax <e1>)) ; fender to trap non-term's
+       (if (reserved? (syntax <e1>))
+	   #'(cons '(terminal . <e1>) (parse-rhs <e2> ...))
+	   #'(cons '(non-terminal . <e1>) (parse-rhs <e2> ...))))
+      ((_ <e1> <e2> ...)
+       #'(cons '(terminal . <e1>) (parse-rhs <e2> ...)))
+      ((_) #'(list)))))
+
+(define-syntax parse-rhs-list
+  (syntax-rules ()
+    ((_ (<ex> ...) <rhs> ...)
+     (cons (parse-rhs <ex> ...)
+	   (parse-rhs-list <rhs> ...)))
+    ((_) '())))
+
+(define-syntax parse-grammar
+  (syntax-rules ()
+    ((_ (<lhs> <rhs> ...) <prod> ...)
+     (cons (cons '<lhs> (parse-rhs-list <rhs> ...))
+	   (parse-grammar <prod> ...)))
+    ((_) '())))
+(define-syntax tokenize
+  (lambda (x)
+    (syntax-case x ()
+      ((_ <tk>) (identifier? (syntax <tk>)) #'(quote <tk>))
+      ((_ <tk>) #'<tk>))))
+(define-syntax tokenize-list
+  (syntax-rules ()
+    ((_ <tk1> <tk2> ...)
+     (cons (tokenize <tk1>) (tokenize-list <tk2> ...)))
+    ((_) '())))
+(define-syntax parse-precedence
+  (syntax-rules (left right nonassoc)
+    ((_ (left <tk> ...) <ex> ...)
+     (cons (cons 'left (tokenize-list <tk> ...))
+	   (parse-precedence <ex> ...)))
+    ((_ (right <tk> ...) <ex> ...)
+     (cons (cons 'right (tokenize-list <tk> ...))
+	   (parse-precedence <ex> ...)))
+    ((_ (nonassoc <tk> ...) <ex> ...)
+     (cons (cons 'nonassoc (tokenize-list <tk> ...))
+	   (parse-precedence <ex> ...)))
+    ((_ <tk> <ex> ...)
+     (cons (list 'undecl (tokenize <tk>))
+	   (parse-precedence <ex> ...)))
+    ((_) '())))
+(define-syntax lalr-spec-1
+  (syntax-rules (start expect notice reserve prec< prec> grammar)
+    ((_ (start <symb>) <e> ...)
+     (cons (cons 'start '<symb>) (lalr-spec-1 <e> ...)))
+    ((_ (expect <n>) <e> ...)
+     (cons (cons 'expect <n>) (lalr-spec-1 <e> ...)))
+    ((_ (notice <str>) <e> ...)
+     (cons (cons 'notice <str>) (lalr-spec-1 <e> ...)))
+    ((_ (reserve <t1> ...) <e> ...)
+     (cons (list 'reserve <t1> ...) (lalr-spec-1 <e> ...)))
+    ((_ (prec< <ex> ...) <e> ...)
+     (cons (cons 'precedence (parse-precedence <ex> ...))
+	   (lalr-spec-1 <e> ...)))
+    ((_ (prec> <ex> ...) <e> ...)
+     (cons (cons 'precedence (reverse (parse-precedence <ex> ...)))
+	   (lalr-spec-1 <e> ...)))
+    ((_ (grammar <prod> ...) <e> ...)
+     (cons (cons 'grammar (parse-grammar <prod> ...))
+	   (lalr-spec-1 <e> ...))) 
+    ((_) '())))
+(define-syntax lalr-spec
+  (syntax-rules () 
+    ((_ <expr> ...)
+       (process-spec (lalr-spec-1 <expr> ...)))))
 
 ;; @deffn atomize terminal => object
 ;; Generate an atomic object for a terminal.   Expected terminals are strings,
