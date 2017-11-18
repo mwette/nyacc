@@ -116,32 +116,22 @@
        (code "double x = 123.4f;")
        (code "#if L'c'\nint x = 1;\n#endif\n")
        (code "#include <Eina.h>\nint x = 1;\n")
-       (code "#include <stdint.h>\nint8_t x;\n")
-       ;;(code "#include <_types/_uint8_t.h>\n")
-       (code (string-append
-	      "#include <sys/_types/_int8_t.h>\n"
-	      ;;"#include <sys/_types/_int16_t.h>\n"
-	      ;;"#include <sys/_types/_int32_t.h>\n"
-	      ;;"#include <sys/_types/_int64_t.h>\n"
-	      ;;"#include <_types/_uint8_t.h>\n"
-	      ;;"#include <_types/_uint16_t.h>\n"
-	      ;;"#include <_types/_uint32_t.h>\n"
-	      ;;"#include <_types/_uint64_t.h>\n"
-	      ))
-       (code "#include <_int8_t.h>\n")
+       ;;(code "wchar_t x = U'c';\n")
        (indx 2)
-       ;;(tree (parse-string code))
+       (tree (parse-string code))
        ;;(tree (parse-file "xxx.c"))
        ;;(udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
-       ;;(udecl (udict-ref udict "z"))
+       ;;(udecl (udict-ref udict "x"))
+       ;;(mdecl (udecl->mspec udecl))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs udecl udict '((struct . "foo"))))
+       #;(cpp-defs '(("G_VA_COPY" . "va_copy")
+		   ("va_copy" ("a" "b") . "__builtin(a,b)")))
        )
   ;;(sferr "~S\n" (with-input-from-string "12'" (lambda () (read-hex))))
   ;;(display code)
-  (pp (with-input-from-string "c' " (lambda () (read-c-chlit #\'))))
-  ;;(ppsx tree)
+  (ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx xdecl)
   ;;(display "==\n")

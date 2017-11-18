@@ -32,7 +32,6 @@
   #:use-module (nyacc lang util)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 textual-ports)
   #:use-module (system base pmatch)
   )
 
@@ -68,6 +67,13 @@
    ((eof-object? ch) ch)
    ((char-set-contains? inline-whitespace ch) (skip-il-ws (read-char)))
    (else ch)))
+
+;; This reads the rest of the input, with ch and returns a string;
+;; Replaces get-string-all from (ice-9 textual-ports).
+(define (read-rest ch)
+  (list->string (let iter ((ch ch))
+		  (if (eof-object? ch) '()
+		      (cons ch (iter (read-char)))))))
 
 ;; Not sure about this. We want to turn a list of tokens into a string
 ;; with proper escapes.
@@ -136,9 +142,7 @@
 	   ((eq? la #\,) (iter args (skip-il-ws (read-char))))))
 	(begin (if (char? la) (unread-char la)) #f)))
 
-  (define (p-rest la) ;; parse rest
-    (cond ((eof-object? la) "")
-	  (else (unread-char la) (get-string-all (current-input-port)))))
+  (define (p-rest la) (read-rest la))
 
   (let* ((name (read-c-ident (skip-il-ws (read-char))))
 	 (args (or (p-args (read-char)) '()))
@@ -174,9 +178,7 @@
 (define (cpp-line->stmt line)
   (define (rd-ident) (read-c-ident (skip-il-ws (read-char))))
   (define (rd-num) (and=> (read-c-num (skip-il-ws (read-char))) cdr))
-  (define (rd-rest) (let ((ch (skip-il-ws (read-char))))
-		      (if (not (eof-object? ch)) (unread-char ch))
-		      (get-string-all (current-input-port))))
+  (define (rd-rest) (read-rest (skip-il-ws (read-char))))
   (with-input-from-string line
     (lambda ()
       (let ((ch (skip-il-ws (read-char))))
@@ -459,7 +461,9 @@
 ;; one @code{#\space} is re-inserted.
 ;; @end deffn
 (define (collect-args argl defs used)
+  ;;(sferr "collect-args\n")
   (let iter1 ((sp #f) (ch (read-char)))
+    ;;(sferr "collect-args iter: ch=~S\n" ch)
     (cond
      ((eof-object? ch) (if sp (unread-char #\space)) #f)
      ((char-set-contains? inline-whitespace ch) (iter1 #t (read-char)))
@@ -574,6 +578,9 @@
 ;; ("ABC" . "123")
 ;; ("MAX" ("X" "Y") . "((X)>(Y)?(X):(Y))")
 ;; @end example
+;; @noindent
+;; Note that this routine will look in the current-input so if you want to
+;; expand text, 
 ;; @end deffn
 (define* (expand-cpp-macro-ref ident defs #:optional (used '()))
   (let ((rval (assoc-ref defs ident)))
@@ -586,6 +593,9 @@
 	    (or (expand-cpp-macro-ref repl defs used) repl)
 	    repl)))
      ((pair? rval)
+      ;; GNU CPP manual: "A function-like macro is only expanded if its name
+      ;; appears with a pair of parentheses after it.  If you just write the
+      ;; name, it is left alone."
       (and=> (collect-args (car rval) defs used)
 	     (lambda (argd)
 	       (let* ((used (cons ident used))

@@ -289,7 +289,7 @@
 	 (xp2 (sxpath '(decl))))
     ;; mode: 'code|'file|'decl
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
-    (lambda* (#:key (mode 'code) (xdef? #f))
+    (lambda* (#:key (mode 'code) xdef? show-includes)
       (let ((bol #t)		 ; begin-of-line condition
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
@@ -372,7 +372,7 @@
 	  (define* (eval-cpp-incl/here stmt #:optional next) ;; => stmt
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file next)))
-	      ;;(sferr "include ~S => ~S\n" file path)
+	      (if show-includes (sferr "include ~S => ~S\n" file path))
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -383,7 +383,7 @@
 	    ;; include file as a new tree
 	    (let* ((file (inc-stmt->file stmt))
 		   (path (inc-file->path file next)))
-	      ;;(sferr "include ~S\n" path)
+	      (if show-includes (sferr "include ~S => ~S\n" file path))
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -509,6 +509,7 @@
 			  (assc-$ `(cpp-stmt . ,stmt))
 			  (iter (read-char))))))
 		 (else (iter ch))))
+	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
 	       ((read-c-ident ch) =>
 		(lambda (name)
 		  (let ((symb (string->symbol name))
@@ -529,7 +530,6 @@
 		      (cons (assq-ref symtab '$ident) name))))))
 	       ((read-c-num ch) => assc-$)
 	       ((read-c-string ch) => assc-$)
-	       ((read-c-chlit ch) => assc-$)
 	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
 	       ((and (char=? ch #\{)	; ugly tracking of block-lev in lexer
 		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info) #f) #f)

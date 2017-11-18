@@ -1,3 +1,8 @@
+2017-11-18  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cpp.scm (read-rest): new procedure to replace get-string-all
+	from (ice-9 textual-ports); remove use-module (ice-9 textual-ports)
+
 2017-11-15  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* pprint.scm (pretty-print-c99): added case for wide char types

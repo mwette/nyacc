@@ -300,7 +300,7 @@
 
 ;; Will return $chlit, $chlit/L, $chlit/u, $chlit/U where
 ;; L means wchar_t, u means char16_t and U means char32_t
-(define (read-c-chlit ch)
+(define (new-read-c-chlit ch)
   (define (read-esc-char)
     (let ((c2 (read-char)))
       (case c2
@@ -328,6 +328,8 @@
        ((char=? c1 #\') (cons (wchar ch) (cdr (read-c-chlit c1))))
        (else (unread-char c1) #f))))
    (else #f)))
+
+(define read-c-chlit new-read-c-chlit)
 
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
 

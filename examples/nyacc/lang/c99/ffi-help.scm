@@ -39,6 +39,7 @@
 	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
 	    ;; debugging
 	    ffi-symmap
+	    fhoo
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
@@ -64,6 +65,8 @@
   #:use-module (ice-9 regex)
   #:version (0 82 4)
   )
+
+(define (fhoo) #t)			; debugging
 
 (use-modules (ice-9 pretty-print))
 
@@ -343,6 +346,7 @@
     ("float _Complex" . complex64) ("double _Complex" . complex128)
     ;; hacks:
     ("char" . int8) ("signed char" . int8) ("unsigned char" . uint8)
+    ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
     ("_Bool" . int8)
     ))
 
@@ -528,7 +532,7 @@
     (fhscm-export-def name)
     ;;(sfscm "(export ~A ~A? make-~A)\n" name name name)
     ))
-  
+
 (define* (fhscm-def-fixed name)
   (sfscm "(define unwrap-~A unwrap~~fixed)\n" name)
   (sfscm "(define wrap-~A identity)\n" name))
@@ -692,13 +696,10 @@
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
     ;; hacks
     ("intptr_t" . ffi:long) ("uintptr_t" . ffi:usigned-long)
-    ("char" . ffi:int8)
-    ("signed char" . ffi:int8)
-    ("unsigned char" . ffi:uint8)
-    ("long long" . ffi:long)
-    ("long long int" . ffi:long)
-    ("signed long long" . ffi:long)
-    ("signed long long int" . ffi:long)
+    ("char" . ffi:int8) ("signed char" . ffi:int8) ("unsigned char" . ffi:uint8)
+    ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
+    ("long long" . ffi:long) ("long long int" . ffi:long)
+    ("signed long long" . ffi:long) ("signed long long int" . ffi:long)
     ("unsigned long long" . ffi:unsigned-long)
     ("unsigned long long int" . ffi:unsigned-long)
     ("_Bool" . ffi:int8)
@@ -858,7 +859,8 @@
 	      (decl-return (mspec->ffi-sym mspec))
 	      (decl-params (gen-decl-params params)))
 	 ;;(sferr "FIX RET => ~S\n" mspec)
-	 (if (equal? (last decl-params) '...) (fherr/once "no varargs (yet)"))
+	 (if (and (pair? decl-params) (equal? (last decl-params) '...))
+	     (fherr/once "no varargs (yet)"))
 	 `(make-fctn-param-unwrapper ,decl-return (list ,@decl-params))))
       
       (((pointer-to) . ,otherwise) 'unwrap~pointer)
@@ -924,6 +926,7 @@
   (fold-right
    (lambda (param-decl seed)
      (cond
+      ;;((equal? (car params) '(ellipsis)) (fherr/once "no varargs (yet)") '...)
       ((equal? param-decl '(ellipsis)) seed)
       (else
        ;; Changed to (*wrapped*) to include enum types.  If we need (*defined*)
@@ -996,7 +999,7 @@
 (define (cnvt-fctn name rdecl params)
   ;;(when (string=? name "cairo_create") (pperr (*wrapped*)))
   (let* ((params (fix-params params))
-	 (varargs? (equal? (last params) '(ellipsis)))
+	 (varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
 	 (decl-return (gen-decl-return rdecl))
 	 (decl-params (gen-decl-params params))
 	 (exec-return (gen-exec-return-wrapper rdecl))
@@ -1012,13 +1015,13 @@
      (varargs?
       (sfscm ";; to be used with fh-cast\n")
       (ppscm
-     `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
-	(let ((,~name (fh-link-proc
-		       ,name ,decl-return
-		       (append (list ,@decl-params) (map car ~rest))
-		       link-lib))
-		      ,@(gen-exec-unwrappers exec-params))
-	  ,(if exec-return `(,exec-return va-call) va-call)))))
+       `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
+	  (let ((,~name (fh-link-proc
+			 ,name ,decl-return
+			 (append (list ,@decl-params) (map car ~rest))
+			 link-lib))
+		,@(gen-exec-unwrappers exec-params))
+	    ,(if exec-return `(,exec-return va-call) va-call)))))
      (else
       (ppscm `(define ,~name
 		(delay (fh-link-proc ,name ,decl-return
@@ -1027,7 +1030,7 @@
        `(define (,sname ,@(gen-exec-arg-names exec-params))
 	  (let ,(gen-exec-unwrappers exec-params)
 	    ,(if exec-return (list exec-return call) call))))))
-      (sfscm "(export ~A)\n" name)))
+    (sfscm "(export ~A)\n" name)))
 
 ;; === externs ========================
 
@@ -1040,17 +1043,17 @@
 			  (lambda ()
 			    (unless addr
 			      (set! addr
-				    (make-bytestructure
-				     (ffi:pointer->bytevector
-				      (dynamic-pointer ,name (dynamic-link))
-				      (ffi:sizeof '*)) 0
-				      (bs:pointer ,desc)))))))
+				(make-bytestructure
+				 (ffi:pointer->bytevector
+				  (dynamic-pointer ,name (dynamic-link))
+				  (ffi:sizeof '*)) 0
+				  (bs:pointer ,desc)))))))
 		    (case-lambda
-		     (()
-		      (memoize-addr)
-		      (bytestructure-ref addr '*))
-		     ;;((val) (bytestructure-set! addr '*))
-		     )))))
+		      (()
+		       (memoize-addr)
+		       (bytestructure-ref addr '*))
+		      ;;((val) (bytestructure-set! addr '*))
+		      )))))
     (ppscm code)
     (sfscm "(export ~A)\n" name)))
 
@@ -1285,7 +1288,7 @@
 	   (back-ref-extend! struct-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (bs:pointer (delay ~A-desc)))\n"
-		typename typename)))
+		  typename typename)))
 	(else
 	 ;; 3) struct never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
@@ -1360,7 +1363,7 @@
 	   (back-ref-extend! union-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (bs:pointer (delay ~A-desc)))\n"
-		typename typename)))
+		  typename typename)))
 	(else
 	 ;; 3) union never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
@@ -1389,7 +1392,7 @@
 	   (back-ref-extend! union-decl (sw/& typename))
 	   (sfscm "(define-public ~A&-desc 'void)\n" typename)
 	   (sfscm "(define-public ~A-desc (bs:pointer (delay ~A&-desc)))\n"
-		typename typename)))
+		  typename typename)))
 	(else
 	 ;; 3) union never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)))
@@ -1659,6 +1662,7 @@
 ;; given keeper-defs (k-defs) and cpp defs (c-defs) expand the keeper
 ;; replacemnts down to constants (strings, integers, etc)
 (define (gen-lookup-proc prefix keep-defs cpp-defs ext-mods)
+
   ;; @var{keep-defs} is list of CPP defs and enum key/val pairs. It is
   ;; possible for an enum symbol to be used as a macro function so we
   ;; need to first check for integer before trying expand-cpp-macro-ref.
@@ -1668,11 +1672,15 @@
 	(defs
 	  (fold
 	   (lambda (def seed)
+	     (sferr "fold ~S\n" def)
 	     (let* ((name (car def)) (val (cdr def))
 		    (repl (cond
 			   ((pair? val) #f)
 			   ((string->number (cdr def)) (cdr def))
-			   (else (expand-cpp-macro-ref name cpp-defs)))))
+			   (else
+			    ;; or maybe should export/use cpp-expand-text
+			    (with-input-from-string ""
+			      (expand-cpp-macro-ref name cpp-defs))))))
 	       (cond
 		((not repl) seed)
 		((not (string? repl)) (sferr "not string: ~S\n" repl))
@@ -1818,6 +1826,7 @@
 	       (append var seed)))
 	   '() ext-mods))
 	 )
+    ;;(quit)
 
     ;; set globals
     (*udict* udict)
@@ -1853,12 +1862,13 @@
 		     (set! saw-last #t)
 		     )
 		   (let ((udecl (udict-ref udict name)))
+		     (when (equal? name "GVariantType_autoptr")
+		       #t)
+		     ;;
 		     (nlscm) (c99scm udecl)
 		     (if *echo-decls*
 			 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
-		     (cnvt-udecl (udict-ref udict name) udict wrapped defined))
-		   )
-		  
+		     (cnvt-udecl (udict-ref udict name) udict wrapped defined)))
 		  (else (values wrapped defined))))
 	       (lambda (key fmt . args)
 		 (if fmt
@@ -1876,6 +1886,7 @@
 		       (if (eq? (car defs) bity) res
 			   (iter (cons (car defs) res) (cdr defs))))))
 	  (set! ffimod-defined defd))))
+    (quit)
     
     ;; output global constants (from enum and #define)
     (gen-lookup-proc prefix ffi-defs cpp-defs ext-mods)
