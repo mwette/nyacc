@@ -9,9 +9,6 @@
 
 ;; test C99 parser in decl mode
 
-(add-to-load-path (string-append (getcwd) "/../../../../module/"))
-(add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
-
 (define-module (c99-04)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 util1)

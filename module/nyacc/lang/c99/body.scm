@@ -29,9 +29,9 @@
 
 ;; issue w/ brlev: not intended to beused with `extern "C" {'
 
+(use-modules ((srfi srfi-1) #:select (fold-right)))
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
-(use-modules ((sxml xpath) #:select (sxpath)))
-(use-modules (ice-9 pretty-print)) ;; for debugging
+(use-modules (ice-9 pretty-print))	; for debugging
 
 (define-record-type cpi
   (make-cpi-1)
@@ -110,9 +110,6 @@
 	   (lambda (tl) (set-cpi-ctl! cpi (append tl (cpi-ctl cpi)))))
     (and=> (assoc-ref (cpi-idefd cpi) "__builtin")
 	   (lambda (tl) (set-cpi-defs! cpi (append tl (cpi-defs cpi)))))
-    ;;(sferr "cpi-defs=\n")
-    ;;(pretty-print (cpi-defs cpi) (current-error-port))
-    ;; Return the populated info.
     cpi))
 
 (define *info* (make-fluid #f))
@@ -285,8 +282,14 @@
 	 ;;
 	 (t-ident (assq-ref symtab '$ident))
 	 (t-typename (assq-ref symtab 'typename))
-	 (xp1 (sxpath '(cpp-stmt define)))
-	 (xp2 (sxpath '(decl))))
+	 (xp1 (lambda (stmts)
+		(fold-right
+		 (lambda (stmt seed)
+		   (if (and (eqv? 'cpp-stmt (sx-tag stmt))
+			    (eqv? 'define (sx-tag (sx-ref stmt 1))))
+		       (cons (sx-ref stmt 1) seed)
+		       seed))
+		 '() stmts))))
     ;; mode: 'code|'file|'decl
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
     (lambda* (#:key (mode 'code) xdef? show-includes)

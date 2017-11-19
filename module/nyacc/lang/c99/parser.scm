@@ -24,6 +24,13 @@
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
   )
+(cond-expand
+  (guile-2
+   #t)
+  (else
+   (use-modules (ice-9 optargs))
+   (use-modules (ice-9 syncase))
+   (use-modules (nyacc compat18))))
 
 (include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
 (include-from-path "nyacc/lang/c99/body.scm")

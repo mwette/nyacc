@@ -287,7 +287,7 @@
 		  (case c2
 		    ((#\0) "\0")	   ; nul U+0000 (#\U+...)
 		    ((#\a) "\a")	   ; alert U+0007
-		    ((#\b) (integer->char 8)) ; backspace U+0008
+		    ((#\b) "\x08")	   ; backspace U+0008
 		    ((#\t) "\t")	   ; horizontal tab U+0009
 		    ((#\n) "\n")	   ; newline U+000A
 		    ((#\v) "\v")	   ; verticle tab U+000B
@@ -310,7 +310,7 @@
     (let ((c2 (read-char)))
       (case c2
 	((#\a) "\a")		   ; alert U+0007
-	((#\b) (integer->char 8))  ; backspace U+0008 not in guile 1.8
+	((#\b) "\x08")		   ; backspace U+0008 not in guile 1.8
 	((#\t) "\t")		   ; horizontal tab U+0009
 	((#\n) "\n")		   ; newline U+000A
 	((#\v) "\v")		   ; verticle tab U+000B

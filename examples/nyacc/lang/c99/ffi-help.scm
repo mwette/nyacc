@@ -1021,7 +1021,7 @@
 			 (append (list ,@decl-params) (map car ~rest))
 			 link-lib))
 		,@(gen-exec-unwrappers exec-params))
-	    ,(if exec-return `(,exec-return va-call) va-call)))))
+	    ,(if exec-return (list exec-return va-call) va-call)))))
      (else
       (ppscm `(define ,~name
 		(delay (fh-link-proc ,name ,decl-return
@@ -1672,7 +1672,6 @@
 	(defs
 	  (fold
 	   (lambda (def seed)
-	     (sferr "fold ~S\n" def)
 	     (let* ((name (car def)) (val (cdr def))
 		    (repl (cond
 			   ((pair? val) #f)
@@ -1680,7 +1679,8 @@
 			   (else
 			    ;; or maybe should export/use cpp-expand-text
 			    (with-input-from-string ""
-			      (expand-cpp-macro-ref name cpp-defs))))))
+			      (lambda ()
+				(expand-cpp-macro-ref name cpp-defs)))))))
 	       (cond
 		((not repl) seed)
 		((not (string? repl)) (sferr "not string: ~S\n" repl))
@@ -1886,7 +1886,6 @@
 		       (if (eq? (car defs) bity) res
 			   (iter (cons (car defs) res) (cdr defs))))))
 	  (set! ffimod-defined defd))))
-    (quit)
     
     ;; output global constants (from enum and #define)
     (gen-lookup-proc prefix ffi-defs cpp-defs ext-mods)

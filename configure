@@ -28,7 +28,7 @@ help() {
     echo " "
 }
 
-if [ "X$GUILE" == "X" ]; then
+if [ "X$GUILE" = "X" ]; then
     GUIlE=guile
 fi
 
@@ -65,12 +65,12 @@ while [ "$*" ]; do
     shift
 done
 
-if [ "X$GUILE" == "X" ]; then
+if [ "X$GUILE" = "X" ]; then
     GUILE=guile
 fi
 
-if [ "X$site_scm_dir" == "X" ]; then
-    if [ "X$prefix" == "X" ]; then
+if [ "X$site_scm_dir" = "X" ]; then
+    if [ "X$prefix" = "X" ]; then
 	SITE_SCM_DIR=`$GUILE -c '(display (%site-dir))'`
     else
 	EFF_VER=`$GUILE -c "(display (effective-version))"`
@@ -80,8 +80,8 @@ else
     SITE_SCM_DIR=$site_scm_dir
 fi
 
-if [ "X$site_scm_go_dir" == "X" ]; then
-    if [ "X$prefix" == "X" ]; then
+if [ "X$site_scm_go_dir" = "X" ]; then
+    if [ "X$prefix" = "X" ]; then
 	SITE_SCM_GO_DIR=`$GUILE -c '(display (%site-ccache-dir))'`
     else
 	EFF_VER=`$GUILE -c "(display (effective-version))"`
@@ -91,8 +91,8 @@ else
     SITE_SCM_GO_DIR=$site_scm_go_dir
 fi
 
-if [ "X$infodir" == "X" ]; then
-    if [ "X$prefix" == "X" ]; then
+if [ "X$infodir" = "X" ]; then
+    if [ "X$prefix" = "X" ]; then
 	INFODIR=`$GUILE -c "(display (assq-ref %guile-build-info 'infodir))"`
     else
 	INFODIR=$prefix/share/info

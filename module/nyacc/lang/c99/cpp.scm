@@ -29,11 +29,14 @@
 	    eval-cpp-expr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lang util)
-  #:use-module (rnrs arithmetic bitwise)
-  #:use-module (ice-9 match)
-  #:use-module (system base pmatch)
-  )
+  #:use-module (nyacc lang util))
+(cond-expand
+  (guile-2
+   (use-modules (rnrs arithmetic bitwise))
+   (use-modules (system base pmatch)))
+  (else
+   (use-modules (ice-9 optargs))
+   (use-modules (nyacc compat18))))
 
 (define c99-std-defs
   '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"

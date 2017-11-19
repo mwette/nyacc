@@ -23,9 +23,7 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
-  #:use-module ((srfi srfi-9) #:select (define-record-type))
-  #:use-module ((sxml xpath) #:select (sxpath))
-  )
+  #:use-module ((srfi srfi-9) #:select (define-record-type)))
 
 (include-from-path "nyacc/lang/c99/mach.d/c99xtab.scm")
 (define c99-mtab c99x-mtab)
