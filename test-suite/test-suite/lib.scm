@@ -15,11 +15,22 @@
 ;;; You should have received a copy of the GNU Lesser General Public License
 ;;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
+#!
 (cond-expand
   (guile-2
-   (load-from-path "test-suite/2.0/lib.scm"))
+   (load-from-path "test-suite/2.0/lib.scm")
+   1)
   (guile
-   (load-from-path "test-suite/1.8/lib.scm"))
+   (load-from-path "test-suite/1.8/lib.scm")
+   1)
+  (else #t))
+!#
+(cond-expand
+  (guile-2
+   (include-from-path "test-suite/2.0/lib.scm"))
+  (guile
+   (use-modules (nyacc compat18))
+   (include-from-path "test-suite/1.8/lib.scm"))
   (else #t))
   
 ;; --- last line ---

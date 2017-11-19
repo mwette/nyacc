@@ -123,7 +123,7 @@
          kf))
     ((_ v lit kt kf) (if (eq? v (quote lit)) kt kf))))
 
-
+;; this works for some but not for lambda-case in srfi-16
 (define-syntax include-from-path
   (syntax-rules ()
     ((_ file)
@@ -134,7 +134,6 @@
 	 (cond
 	  ((eof-object? exp) (if #f #f))
 	  (else
-	   ;;(simple-format #t "exp=~S\n" exp)
 	   (eval exp env)
 	   (iter (read port)))))))))
 

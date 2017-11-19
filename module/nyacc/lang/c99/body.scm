@@ -112,7 +112,7 @@
 	   (lambda (tl) (set-cpi-defs! cpi (append tl (cpi-defs cpi)))))
     cpi))
 
-(define *info* (make-fluid #f))
+(define *info* (make-fluid))
 	  
 ;; @deffn {Procedure} typename? name
 ;; Called by lexer to determine if symbol is a typename.
@@ -128,16 +128,16 @@
 
 (define cpi-inc-blev!
   (case-lambda
-   ((info) (set-cpi-blev! info (1+ (cpi-blev info))))
-   (() (cpi-inc-blev! (fluid-ref *info*)))))
+    ((info) (set-cpi-blev! info (1+ (cpi-blev info))))
+    (() (cpi-inc-blev! (fluid-ref *info*)))))
 (define cpi-dec-blev!
   (case-lambda
-   ((info) (set-cpi-blev! info (1- (cpi-blev info))))
-   (() (cpi-dec-blev! (fluid-ref *info*)))))
+    ((info) (set-cpi-blev! info (1- (cpi-blev info))))
+    (() (cpi-dec-blev! (fluid-ref *info*)))))
 (define cpi-top-blev?
   (case-lambda
-   ((info) (zero? (cpi-blev info)))
-   (() (cpi-top-blev? (fluid-ref *info*)))))
+    ((info) (zero? (cpi-blev info)))
+    (() (cpi-top-blev? (fluid-ref *info*)))))
 
 ;; @deffn {Procedure} add-typename name
 ;; Helper for @code{save-typenames}.

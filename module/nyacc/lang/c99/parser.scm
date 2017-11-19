@@ -25,9 +25,9 @@
   #:use-module (nyacc lang c99 cpp)
   )
 (cond-expand
-  (guile-2
-   #t)
+  (guile-2 #t)
   (else
+   (use-modules (srfi srfi-16))
    (use-modules (ice-9 optargs))
    (use-modules (ice-9 syncase))
    (use-modules (nyacc compat18))))
