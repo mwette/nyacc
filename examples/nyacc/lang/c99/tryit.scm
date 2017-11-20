@@ -9,6 +9,7 @@
 (use-modules (nyacc lang c99 munge))
 (use-modules (nyacc lang c99 util1))
 (use-modules (nyacc lang util))
+(use-modules (nyacc lang sx-match))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (ice-9 pretty-print))
@@ -54,9 +55,9 @@
        )
       ))))
 
-(define mode 'file)
 (define mode 'decl)
 (define mode 'code)
+(define mode 'file)
 (define debug #f)
 
 (define (parse-file file)
@@ -126,10 +127,7 @@
        ;;(mdecl (udecl->mspec udecl))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs udecl udict '((struct . "foo"))))
-       #;(cpp-defs '(("G_VA_COPY" . "va_copy")
-		   ("va_copy" ("a" "b") . "__builtin(a,b)")))
        )
-  ;;(sferr "~S\n" (with-input-from-string "12'" (lambda () (read-hex))))
   ;;(display code)
   ;;(ppsx tree)
   ;;(pp99 tree)
@@ -143,13 +141,15 @@
   ;;(ppsx (get-gcc-cpp-defs))
   #t)
 
-(pp
- (sx-match '(foo (bar "baz") "hello")
-   ((foo (bar . ,text) . ,rest) #t) (* #f))
- )
+;;(pp (sx-match '(foo (bar "baz") "hello")
+;;       ((foo (bar . ,text) . ,rest) #t) (* #f)))
 
 ;; ex12.c: illustrates removal of comment prefix, offset-8 => offset-2
-;;(let ((tree (parse-file "exam.d/ex12.c"))) (pp99 tree))
+;;(let ((tree (parse-file "c99-exam/ex12.c"))) (pp99 tree))
+
+;; (pp (sx-match '(foo "hello") ((foo . *) #t) (* #f)))
+
+(let ((tree (parse-file "c99-exam/ex01.c"))) (pp99 tree))
       
 ;;(ugly-print (quote `(abc ,@def)))
 ;; --- last line ---

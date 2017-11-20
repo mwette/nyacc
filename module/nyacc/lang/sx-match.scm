@@ -18,6 +18,7 @@
 ;; sx-match: somewhat like sxml-match but hoping to be more usable and more
 ;; efficient for nyacc.  Note that sxml-match used in c99/pprint has to be
 ;; broken up in order to not overflow the stack during compilation.
+;; This uses only syntax-rules; sxml uses syntax-case.
 
 (define-module (nyacc lang sx-match)
   #:export (sx-match))
@@ -33,6 +34,7 @@
 ;; patterns:
 ;;   (foo (@ . ,<name>) (bar ,abc) ...)
 ;;   (foo (bar ,abc) ...)
+;;   (foo ... , *)
 ;;   (* ...)			any sexp
 ;;   *				any node (i.e., sexp or text)
 ;; or use `*any*'
@@ -84,6 +86,7 @@
  
 ;; kt kf are continuation syntax expresions
 ;; [ht][vp] = [head,tail][value,pattern]
+;; Can this be set up to match a string constant?
 (define-syntax sxm-node
   (syntax-rules (unquote ? *)
     ((_ v ? kt kf) kt)
@@ -99,8 +102,9 @@
 ;; sxm-tail val pat kt kf
 ;; match tail of sexp = list of nodes
 (define-syntax sxm-tail
-  (syntax-rules (unquote)
+  (syntax-rules (unquote *)
     ((_ v () kt kf) (if (null? v) kt kf))
+    ((_ v * kt kf) kt)
     ((_ v (unquote var) kt kf) (let ((var v)) kt))
     ((_ v (hp . tp) kt kf)
      (let ((hv (car v)) (tv (cdr v)))

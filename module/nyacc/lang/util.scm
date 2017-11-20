@@ -320,13 +320,16 @@ the file COPYING included with the this distribution.")
 	  #f)
       #f))
 
-;; @deffn {Procedure} sx-attr-ref sx key => val
+;; @deffn {Procedure} sx-attr-ref sx|node|tail key => val
 ;; Return an attribute value given the key, or @code{#f}.
+;; Also works if passed the attribute node @code{(@ ...)} or its tail.
 ;; @end deffn
 (define (sx-attr-ref sx key)
-  (and=> (sx-attr sx)
-	 (lambda (attr) (and=> (assq-ref (cdr attr) key)
-			       car))))
+  (let ((attr-tail (cond ((pair? (car sx)) sx)
+			 ((eqv? '@ (car sx)) (car sx))
+			 ((sx-attr sx))
+			 (else '()))))
+    (and=> (assq-ref attr-tail key) car)))
 
 ;; @deffn {Procedure} sx-attr-set! sx key val
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,

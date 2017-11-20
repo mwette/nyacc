@@ -19,6 +19,7 @@
   #:export (pretty-print-c99)
   #:use-module ((srfi srfi-1) #:select (pair-for-each))
   #:use-module (nyacc lang util)
+  #:use-module (nyacc lang sx-match)
   #:use-module (sxml match)
   #:use-module (ice-9 pretty-print)
   )
@@ -131,7 +132,7 @@
 
   (define (cpp-ppx tree)
     (fmtr 'nlin)
-    (sxml-match tree
+    (sx-match tree
       ((define (name ,name) (args . ,args) (repl ,repl))
        (sf "#define ~A(" name)
        (pair-for-each
@@ -146,11 +147,12 @@
       ((else) (sf "#else\n"))
       ((endif ,text) (sf "#endif ~A\n" text))
       ((endif) (sf "#endif\n"))
-      ((include . ,rest) (sf "#include ~A\n" (sx-ref tree 1)))
+      ;;((include . ,rest) (sf "#include ~A\n" (sx-ref tree 1)))
+      ((include ,file . *) (sf "#include ~A\n" file))
       ((error ,text) (sf "#error ~A\n" text))
       ((pragma ,text) (sf "#pragma ~A\n" text))
-      (,otherwise
-       (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
+      ;;(,x (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
+      (* (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
     (fmtr 'nlin))
 
   (define protect-expr? (make-protect-expr op-prec op-assc))
@@ -204,16 +206,28 @@
 
   ;; TODO: comp-lit
   (define (ppx-1 tree)
-    (sxml-match tree
+    ;;(sxml-match tree
+    (sx-match tree
 
       ((p-expr ,expr) (ppx expr))
       ((ident ,name) (sf "~A" name))
+      #|
       ((char (@ (type ,type)) ,value)
        (cond
 	((string=? type "wchar_t") (sf "L'~A'" (scmchs->c value)))
 	((string=? type "char16_t") (sf "u'~A'" (scmchs->c value)))
 	((string=? type "char32_t") (sf "U'~A'" (scmchs->c value)))))
       ((char ,value) (sf "'~A'" (scmchs->c (sx-ref tree 1))))
+      |#
+      ;; #|
+      ((char (@ . ,al) ,value)
+       (let ((type (sx-attr-ref al 'type)))
+	 (cond
+	  ((string=? type "wchar_t") (sf "L'~A'" (scmchs->c value)))
+	  ((string=? type "char16_t") (sf "u'~A'" (scmchs->c value)))
+	  ((string=? type "char32_t") (sf "U'~A'" (scmchs->c value)))
+	  (else (sf "'~A'" (scmchs->c value))))))
+      ;; |#
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
 
@@ -337,12 +351,14 @@
       ;; #|
       ;; gotta break up ppx because sxml-match seems to eat stack space:
       ;; everthing together results in SIGABRT from vm_error_stack_overflow()
-      (,otherwise
+      ;;(,otherwise
+      (*
        (ppx-2 tree))))
   
   (define (ppx-2 tree)
     
-    (sxml-match tree
+    ;;(sxml-match tree
+    (sx-match tree
       ;; sxml-match continues here to avoid stack overflow
       ;; |#
 
@@ -450,8 +466,9 @@
       ((enum-defn (ident ,name))
        (sf "~A,\n" name))
 
-      ((fctn-spec "inline")
-       (sf "inline "))			; SPACE ???
+      ;;((fctn-spec "inline")
+      ((fctn-spec ,spec)
+       (sf "~S " spec))			; SPACE ???
 
       ((ptr-declr ,ptr ,dir-declr)
        (ppx ptr) (ppx dir-declr))
@@ -517,12 +534,14 @@
       ;; #|
       ;; gotta break up ppx because sxml-match seems to eat stack space:
       ;; everthing together results in SIGABRT from vm_error_stack_overflow()
-      (,otherwise
+      ;;(,otherwise
+      (*
        (ppx-3 tree))))
   
   (define (ppx-3 tree)
 
-    (sxml-match tree
+    ;;(sxml-match tree
+    (sx-match tree
       ;; sxml-match continues here to avoid stack overflow
       ;; |#
       
@@ -659,7 +678,8 @@
       ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
       ((extern-end) (sf "}\n"))
 
-      (,otherwise
+      ;;(,otherwise
+      (*
        (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))
       ))
 
