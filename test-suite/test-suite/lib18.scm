@@ -1,31 +1,27 @@
 ;;;; test-suite/lib.scm --- generic support for testing
-;;;; Copyright (C) 1999, 2000, 2001, 2004, 2006, 2007, 2009, 2010,
-;;;;   2011, 2012, 2013, 2014 Free Software Foundation, Inc.
+;;;; Copyright (C) 1999, 2000, 2001, 2004, 2006, 2007 Free Software Foundation, Inc.
 ;;;;
-;;;; This program is free software; you can redistribute it and/or
-;;;; modify it under the terms of the GNU Lesser General Public
-;;;; License as published by the Free Software Foundation; either
-;;;; version 3, or (at your option) any later version.
+;;;; This program is free software; you can redistribute it and/or modify
+;;;; it under the terms of the GNU General Public License as published by
+;;;; the Free Software Foundation; either version 2, or (at your option)
+;;;; any later version.
 ;;;;
 ;;;; This program is distributed in the hope that it will be useful,
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;;; GNU Lesser General Public License for more details.
+;;;; GNU General Public License for more details.
 ;;;;
-;;;; You should have received a copy of the GNU Lesser General Public
-;;;; License along with this software; see the file COPYING.LESSER.
-;;;; If not, write to the Free Software Foundation, Inc., 51 Franklin
-;;;; Street, Fifth Floor, Boston, MA 02110-1301 USA
+;;;; You should have received a copy of the GNU General Public License
+;;;; along with this software; see the file COPYING.  If not, write to
+;;;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;;;; Boston, MA 02110-1301 USA
 
-(define-module (test-suite lib)
-  #:use-module (ice-9 stack-catch)
-  #:use-module (ice-9 regex)
-  #:autoload   (srfi srfi-1)  (append-map)
-  #:autoload   (system base compile) (compile)
-  #:export (
+(define-module (test-suite lib18)
+  :use-module (ice-9 stack-catch)
+  :use-module (ice-9 regex)
+  :export (
 
  ;; Exceptions which are commonly being tested for.
- exception:syntax-pattern-unmatched
  exception:bad-variable
  exception:missing-expression
  exception:out-of-range exception:unbound-var
@@ -34,37 +30,20 @@
  exception:numerical-overflow
  exception:struct-set!-denied
  exception:system-error
- exception:encoding-error
  exception:miscellaneous-error
  exception:string-contains-nul
- exception:read-error
- exception:null-pointer-error
- exception:vm-error
 
  ;; Reporting passes and failures.
  run-test
  pass-if expect-fail
- pass-if-equal
  pass-if-exception expect-fail-exception
 
  ;; Naming groups of tests in a regular fashion.
- with-test-prefix
- with-test-prefix*
- with-test-prefix/c&e
- current-test-prefix
+ with-test-prefix with-test-prefix* current-test-prefix
  format-test-name
 
  ;; Using the debugging evaluator.
  with-debugging-evaluator with-debugging-evaluator*
-
- ;; Clearing stale references on the C stack for GC-sensitive tests.
- clear-stale-stack-references
-
- ;; Using a given locale
- with-locale with-locale* with-latin1-locale with-latin1-locale*
-
- ;; The bit bucket.
- %null-device
 
  ;; Reporting results in various ways.
  register-reporter unregister-reporter reporter-registered?
@@ -126,7 +105,7 @@
 ;;;;
 ;;;; * (pass-if-exception name exception body) will pass if the execution of
 ;;;;   body causes the given exception to be thrown.  If no exception is
-;;;;   thrown, the test fails.  If some other exception is thrown, it is an
+;;;;   thrown, the test fails.  If some other exception is thrown, is is an
 ;;;;   error.
 ;;;; * (expect-fail-exception name exception body) will pass unexpectedly if
 ;;;;   the execution of body causes the given exception to be thrown.  If no
@@ -185,7 +164,7 @@
 ;;;;   ("basic arithmetic" "subtraction"), and
 ;;;;   ("multiplication").
 ;;;;
-;;;; WITH-TEST-PREFIX can be nested.  Each WITH-TEST-PREFIX appends
+;;;; WITH-TEST-PREFIX can be nested.  Each WITH-TEST-PREFIX postpends
 ;;;; a new element to the current prefix:
 ;;;;
 ;;;; (with-test-prefix "arithmetic"
@@ -264,8 +243,6 @@
 ;;;;
 
 ;;; Define some exceptions which are commonly being tested for.
-(define exception:syntax-pattern-unmatched
-  (cons 'syntax-error "source expression failed to match any pattern"))
 (define exception:bad-variable
   (cons 'syntax-error "Bad variable"))
 (define exception:missing-expression
@@ -286,16 +263,8 @@
   (cons 'misc-error "^set! denied for field"))
 (define exception:system-error
   (cons 'system-error ".*"))
-(define exception:encoding-error
-  (cons 'encoding-error "(cannot convert.* to output locale|input (locale conversion|decoding) error)"))
 (define exception:miscellaneous-error
   (cons 'misc-error "^.*"))
-(define exception:read-error
-  (cons 'read-error "^.*$"))
-(define exception:null-pointer-error
-  (cons 'null-pointer-error "^.*$"))
-(define exception:vm-error
-  (cons 'vm-error "^.*$"))
 
 ;; as per throw in scm_to_locale_stringn()
 (define exception:string-contains-nul
@@ -318,71 +287,50 @@
 
 ;;; The central testing routine.
 ;;; The idea is taken from Greg, the GNUstep regression test environment.
-(define run-test
-  (let ((test-running #f))
-    (lambda (name expect-pass thunk)
-      (if test-running
-          (error "Nested calls to run-test are not permitted."))
-      (let ((test-name (full-name name)))
-            (set! test-running #t)
-            (catch #t
-              (lambda ()
-                (let ((result (thunk)))
-                  (if (eq? result #t) (throw 'pass))
-                  (if (eq? result #f) (throw 'fail))
-                  (throw 'unresolved)))
-              (lambda (key . args)
-                (case key
-                  ((pass)
-                   (report (if expect-pass 'pass 'upass) test-name))
-                  ((fail)
-                   ;; ARGS may contain extra info about the failure,
-                   ;; such as the expected and actual value.
-                   (apply report (if expect-pass 'fail 'xfail)
-                          test-name
-                          args))
-                  ((unresolved untested unsupported)
-                   (report key test-name))
-                  ((quit)
-                   (report 'unresolved test-name)
-                   (quit))
-                  (else
-                   (report 'error test-name (cons key args))))))
-            (set! test-running #f)))))
+(define run-test #f)
+(let ((test-running #f))
+  (define (local-run-test name expect-pass thunk)
+    (if test-running
+	(error "Nested calls to run-test are not permitted.")
+	(let ((test-name (full-name name)))
+	  (set! test-running #t)
+	  (catch #t
+	    (lambda ()
+	      (let ((result (thunk)))
+		(if (eq? result #t) (throw 'pass))
+		(if (eq? result #f) (throw 'fail))
+		(throw 'unresolved)))
+	    (lambda (key . args)
+	      (case key
+		((pass)
+		 (report (if expect-pass 'pass 'upass) test-name))
+		((fail)
+		 (report (if expect-pass 'fail 'xfail) test-name))
+		((unresolved untested unsupported)
+		 (report key test-name))
+		((quit)
+		 (report 'unresolved test-name)
+		 (quit))
+		(else
+		 (report 'error test-name (cons key args))))))
+	  (set! test-running #f))))
+  (set! run-test local-run-test))
 
 ;;; A short form for tests that are expected to pass, taken from Greg.
-(define-syntax pass-if
-  (syntax-rules ()
-    ((_ name)
-     ;; presume this is a simple test, i.e. (pass-if (even? 2))
-     ;; where the body should also be the name.
-     (run-test 'name #t (lambda () name)))
-    ((_ name rest ...)
-     (run-test name #t (lambda () rest ...)))))
-
-(define-syntax pass-if-equal
-  (syntax-rules ()
-    "Succeed if and only if BODY's return value is equal? to EXPECTED."
-    ((_ expected body)
-     (pass-if-equal 'body expected body))
-    ((_ name expected body ...)
-     (run-test name #t
-               (lambda ()
-                 (let ((result (begin body ...)))
-                   (or (equal? expected result)
-                       (throw 'fail
-                              'expected-value expected
-                              'actual-value result))))))))
+(defmacro pass-if (name . rest)
+  (if (and (null? rest) (pair? name))
+      ;; presume this is a simple test, i.e. (pass-if (even? 2))
+      ;; where the body should also be the name.
+      `(run-test ',name #t (lambda () ,name))
+      `(run-test ,name #t (lambda () ,@rest))))
 
 ;;; A short form for tests that are expected to fail, taken from Greg.
-(define-syntax expect-fail
-  (syntax-rules ()
-    ((_ name)
-     ;; presume this is a simple test, i.e. (expect-fail (even? 2))
-     ;; where the body should also be the name.
-     (run-test 'name #f (lambda () name)))
-    ((_ name rest ...)
-     (run-test name #f (lambda () rest ...)))))
+(defmacro expect-fail (name . rest)
+  (if (and (null? rest) (pair? name))
+      ;; presume this is a simple test, i.e. (expect-fail (even? 2))
+      ;; where the body should also be the name.
+      `(run-test ',name #f (lambda () ,name))
+      `(run-test ,name #f (lambda () ,@rest))))
 
 ;;; A helper function to implement the macros that test for exceptions.
 (define (run-test-exception name exception expect-pass thunk)
@@ -414,16 +362,12 @@
             (apply throw key proc message rest))))))))
 
 ;;; A short form for tests that expect a certain exception to be thrown.
-(define-syntax pass-if-exception
-  (syntax-rules ()
-    ((_ name exception body rest ...)
-     (run-test-exception name exception #t (lambda () body rest ...)))))
+(defmacro pass-if-exception (name exception body . rest)
+  `(,run-test-exception ,name ,exception #t (lambda () ,body ,@rest)))
 
 ;;; A short form for tests expected to fail to throw a certain exception.
-(define-syntax expect-fail-exception
-  (syntax-rules ()
-    ((_ name exception body rest ...)
-     (run-test-exception name exception #f (lambda () body rest ...)))))
+(defmacro expect-fail-exception (name exception body . rest)
+  `(,run-test-exception ,name ,exception #f (lambda () ,body ,@rest)))
 
 
 ;;;; TEST NAMES
@@ -431,25 +375,23 @@
 
 ;;;; Turn a test name into a nice human-readable string.
 (define (format-test-name name)
-  ;; Choose a Unicode-capable encoding so that the string port can contain any
-  ;; valid Unicode character.
-  (with-fluids ((%default-port-encoding "UTF-8"))
-    (call-with-output-string
-     (lambda (port)
-       (let loop ((name name)
-                  (separator ""))
-         (if (pair? name)
-             (begin
-               (display separator port)
-               (display (car name) port)
-               (loop (cdr name) ": "))))))))
+  (call-with-output-string
+   (lambda (port)
+     (let loop ((name name)
+		(separator ""))
+       (if (pair? name)
+	   (begin
+	     (display separator port)
+	     (display (car name) port)
+	     (loop (cdr name) ": ")))))))
 
 ;;;; For a given test-name, deliver the full name including all prefixes.
 (define (full-name name)
   (append (current-test-prefix) (list name)))
 
 ;;; A fluid containing the current test prefix, as a list.
-(define prefix-fluid (make-fluid '()))
+(define prefix-fluid (make-fluid))
+(fluid-set! prefix-fluid '())
 (define (current-test-prefix)
   (fluid-ref prefix-fluid))
 
@@ -466,45 +408,16 @@
 ;;; The name prefix is only changed within the dynamic scope of the
 ;;; with-test-prefix expression.  Return the value returned by the last
 ;;; BODY expression.
-(define-syntax with-test-prefix
-  (syntax-rules ()
-    ((_ prefix body ...)
-     (with-test-prefix* prefix (lambda () body ...)))))
-
-(define-syntax c&e
-  (syntax-rules (pass-if pass-if-equal pass-if-exception)
-    "Run the given tests both with the evaluator and the compiler/VM."
-    ((_ (pass-if test-name exp))
-     (begin (pass-if (string-append test-name " (eval)")
-                     (primitive-eval 'exp))
-            (pass-if (string-append test-name " (compile)")
-                     (compile 'exp #:to 'value #:env (current-module)))))
-    ((_ (pass-if-equal test-name val exp))
-     (begin (pass-if-equal (string-append test-name " (eval)") val
-              (primitive-eval 'exp))
-            (pass-if-equal (string-append test-name " (compile)") val
-              (compile 'exp #:to 'value #:env (current-module)))))
-    ((_ (pass-if-exception test-name exc exp))
-     (begin (pass-if-exception (string-append test-name " (eval)")
-                               exc (primitive-eval 'exp))
-            (pass-if-exception (string-append test-name " (compile)")
-                               exc (compile 'exp #:to 'value
-                                            #:env (current-module)))))))
-
-;;; (with-test-prefix/c&e PREFIX BODY ...)
-;;; Same as `with-test-prefix', but the enclosed tests are run both with
-;;; the compiler/VM and the evaluator.
-(define-syntax with-test-prefix/c&e
-  (syntax-rules ()
-    ((_ section-name exp ...)
-     (with-test-prefix section-name (c&e exp) ...))))
+(defmacro with-test-prefix (prefix . body)
+  `(with-test-prefix* ,prefix (lambda () ,@body)))
 
 ;;; Call THUNK using the debugging evaluator.
 (define (with-debugging-evaluator* thunk)
   (let ((dopts #f))
     (dynamic-wind
 	(lambda ()
-	  (set! dopts (debug-options)))
+	  (set! dopts (debug-options))
+	  (debug-enable 'debug))
 	thunk
 	(lambda ()
 	  (debug-options dopts)))))
@@ -513,77 +426,6 @@
 (define-macro (with-debugging-evaluator . body)
   `(with-debugging-evaluator* (lambda () ,@body)))
 
-;; Recurse through a C function that should clear any values that might
-;; have spilled on the stack temporarily.  (The salient feature of
-;; with-continuation-barrier is that currently it is implemented as a C
-;; function that recursively calls the VM.)
-;;
-(define* (clear-stale-stack-references #:optional (n 10))
-  (if (positive? n)
-      (with-continuation-barrier
-       (lambda ()
-         (clear-stale-stack-references (1- n))))))
-
-;;; Call THUNK with a given locale
-(define (with-locale* nloc thunk)
-  (let ((loc #f))
-    (dynamic-wind
-	(lambda ()
-          (if (defined? 'setlocale)
-              (begin
-                (set! loc (false-if-exception (setlocale LC_ALL)))
-                (if (or (not loc)
-                        (not (false-if-exception (setlocale LC_ALL nloc))))
-                    (throw 'unresolved)))
-              (throw 'unresolved)))
-	thunk
-	(lambda ()
-          (if (and (defined? 'setlocale) loc)
-              (setlocale LC_ALL loc))))))
-
-;;; Evaluate BODY... using the given locale.
-(define-syntax with-locale
-  (syntax-rules ()
-    ((_ loc body ...)
-     (with-locale* loc (lambda () body ...)))))
-
-;;; Try out several ISO-8859-1 locales and run THUNK under the one that works
-;;; (if any).
-(define (with-latin1-locale* thunk)
-  (define %locales
-    (append-map (lambda (name)
-                  (list (string-append name ".ISO-8859-1")
-                        (string-append name ".iso88591")
-                        (string-append name ".ISO8859-1")))
-                '("ca_ES" "da_DK" "de_DE" "es_ES" "es_MX" "en_GB" "en_US"
-                  "fr_FR" "pt_PT" "nl_NL" "sv_SE")))
-
-  (let loop ((locales %locales))
-    (if (null? locales)
-        (throw 'unresolved)
-        (catch 'unresolved
-          (lambda ()
-            (with-locale* (car locales) thunk))
-          (lambda (key . args)
-            (loop (cdr locales)))))))
-
-;;; Evaluate BODY... using an ISO-8859-1 locale or throw `unresolved' if none
-;;; was found.
-(define-syntax with-latin1-locale
-  (syntax-rules ()
-    ((_ body ...)
-     (with-latin1-locale* (lambda () body ...)))))
-
-(define %null-device
-  ;; On Windows (MinGW), /dev/null does not exist and we must instead
-  ;; use NUL.  Note that file system procedures automatically translate
-  ;; /dev/null, so this variable is only useful for shell snippets.
-
-  ;; Test for Windowsness by checking whether the current directory name
-  ;; starts with a drive letter.
-  (if (string-match "^[a-zA-Z]:[/\\]" (getcwd))
-      "NUL"
-      "/dev/null"))
 
 
 ;;;; REPORTERS

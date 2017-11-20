@@ -19,6 +19,17 @@
 ;; efficient for nyacc.  Note that sxml-match used in c99/pprint has to be
 ;; broken up in order to not overflow the stack during compilation.
 
+(define-module (nyacc lang sx-match)
+  #:export (sx-match))
+
+;; syntax of sexp:
+;;   sexp: (tag node ...) | (tag (@ sexp ...) node ...)
+;;   node: sexp | *text*
+;; OR
+;;   sexp: (tag tail) | (tag (@ sexp ...) tail)
+;;   tail: (node ...)
+;;   node: sexp | *text*
+
 ;; patterns:
 ;;   (foo (@ . ,<name>) (bar ,abc) ...)
 ;;   (foo (bar ,abc) ...)
@@ -39,29 +50,65 @@
 (define-syntax-rule (sx-match e c ...)
   (let ((v e)) (sx-match-1 v c ...)))
 
+(define-syntax sx-match-1
+  (syntax-rules ()
+    ((_ v (pat exp ...) c1 ...)
+     (let ((kf (lambda () (sx-match-1 v c1 ...))))
+       (sxm-sexp v pat (begin exp ...) (kf))))
+    ((_ v) (error "sx-match: nothing matches"))))
+
+;; sxm-sexp val pat kt kf
+;; match sexp
+(define-syntax sxm-sexp
+  (syntax-rules (@ * ? unquote)
+    ;; capture attributes
+    ((_ v (tag (@ . (unquote al)) . nl) kt kf)
+     (sxm-tag (car v) tag
+	      (if (sxm-has-attr-list? v)
+		  (let ((al (cdadr v))) (sxm-tail (cddr v) nl kt kf))
+		  (let ((al '())) (sxm-tail (cdr v) nl kt kf)))
+	      kf))
+    ;; ignore attributes; ND0 may be an attr node. If so, ignore it.
+    ((_ v (tag . nl) kt kf)
+     (sxm-tag (car v) tag
+	      (if (sxm-has-attr-list? v)
+		  (sxm-tail (cddr v) nl kt kf)
+		  (sxm-tail (cdr v) nl kt kf))
+	      kf))
+    ;; accept anything
+    ;;((_ v (* ...) kt kf) kt)
+    ((_ v * kt kf) kt)
+    ;;((_ v (? ...) kt kf) kt)
+    ;;((_ v ? kt kf) kt)
+    ))
+ 
 ;; kt kf are continuation syntax expresions
 ;; [ht][vp] = [head,tail][value,pattern]
-(define-syntax sxm-tail
-  (syntax-rules (unquote ?)
+(define-syntax sxm-node
+  (syntax-rules (unquote ? *)
     ((_ v ? kt kf) kt)
+    ((_ v * kt kf) kt)
     ((_ v () kt kf) (if (null? v) kt kf))
-    ((_ v ,var kt kf) (let ((var v)) kt))
+    ((_ v (unquote var) kt kf) (let ((var v)) kt))
     ((_ v (hp . tp) kt kf)
      (if (pair? v)
-	 (let ((hv (car v)) (tv (cdr v)))
-	   (sxm-tail hv hp (sxm-tail tv tp kt kf) kf))
+	 (sxm-sexp v (hp . tp) kt kf)
 	 kf))
-    ;;((_ v p kt kf) kt))) ;; must be text, and always ? or , for text
-    ))
+    ((_ v s) (if (string? v) kt kf))))
 
-;; nv = node value; np = node pattern
-(define-syntax sxm-attr
-  (syntax-rules (@)
-    ((_ nv (@ . ,var)) #t)
-    ((_ nv np) #f)
-    ((_ nv) #f)))
-	
-;; sx-match-tag tag-val tag-pat
+;; sxm-tail val pat kt kf
+;; match tail of sexp = list of nodes
+(define-syntax sxm-tail
+  (syntax-rules (unquote)
+    ((_ v () kt kf) (if (null? v) kt kf))
+    ((_ v (unquote var) kt kf) (let ((var v)) kt))
+    ((_ v (hp . tp) kt kf)
+     (let ((hv (car v)) (tv (cdr v)))
+       (sxm-node hv hp (sxm-tail tv tp kt kf) kf)))
+    ((_ v p kt kf) kf)))
+
+;; sxm-tag val pat kt kf
+;; match tag
 (define-syntax sxm-tag
   (syntax-rules ()
     ((_ tv (t0 t1 ...) kt kf)
@@ -69,32 +116,9 @@
     ((_ tv t0 kt kf)
      (if (eqv? tv 't0) kt kf))))
 
-(define-syntax sx-match-1
-  (syntax-rules (@ * unquote)
-    ((_ v) (if #f #f))
-    ((_ v ((tag) ex ...) c1 ...)
-     (let ((kf (lambda () (sx-match-1 v c1 ...))))
-       (sxm-tag (car v) tag (begin ex ...) (kf))))
-    ((_ v ((tag (@ . ,pl)) ex ...) c1 ...)
-     (let ((kf (lambda () (sx-match-1 v c1 ...))))
-       (sxm-tag (car v) tag (let ((pl (cdadr v))) ex ...) (kf))))
-    ;; capture attributes
-    ((_ v ((tag (@ . ,pl) . nl) ex ...) c1 ...)
-     (let ((kf (lambda () (sx-match-1 v c1 ...))) (pl (cdadr v)))
-       (sxm-tag (car v) tag
-		(sxm-tail (cddr v) nl (let ((pl (cdadr v))) ex ...) kf)
-		(kf))))
-    ;; ignore attributes; ND0 may be an attr node. If so, ignore it.
-    ((_ v ((tag nd0 . nl) ex ...) c1 ...)
-     (let ((kf (lambda () (sx-match-1 v c1 ...))))
-       (sxm-tag (car v) tag
-		     (if (sxm-attr (cadr v) nd0)
-			 (sxm-tail (cddr v) nl (begin ex ...) kf)
-			 (sxm-tail (cdr v) (nd0 . nl) (begin ex ...) kf))
-		     (kf))))
-    ;; else part, as sexp or node
-    ((_ v ((* ...) ex ...)) (begin ex ...))
-    ((_ v (* ex ...)) (begin ex ...))
-    ))
-
+;; sxm-has-attr-list? val
+(define-syntax sxm-has-attr-list?
+  (syntax-rules ()
+    ((_ v) (and (pair? (cdr v)) (pair? (cadr v)) (eqv? '@ (caadr v))))))
+	
 ;; --- last line ---

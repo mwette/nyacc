@@ -114,11 +114,11 @@
 	      "} foo_t;\n"
 	      ))
        (code "double x = 123.4f;")
-       (code "#if L'c'\nint x = 1;\n#endif\n")
-       (code "#include <Eina.h>\nint x = 1;\n")
+       ;;(code "#if L'c'\nint x = 1;\n#endif\n")
+       ;;(code "#include <Eina.h>\nint x = 1;\n")
        ;;(code "wchar_t x = U'c';\n")
        (indx 2)
-       (tree (parse-string code))
+       ;;(tree (parse-string code))
        ;;(tree (parse-file "xxx.c"))
        ;;(udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
@@ -131,7 +131,7 @@
        )
   ;;(sferr "~S\n" (with-input-from-string "12'" (lambda () (read-hex))))
   ;;(display code)
-  (ppsx tree)
+  ;;(ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx xdecl)
   ;;(display "==\n")
@@ -143,27 +143,13 @@
   ;;(ppsx (get-gcc-cpp-defs))
   #t)
 
+(pp
+ (sx-match '(foo (bar "baz") "hello")
+   ((foo (bar . ,text) . ,rest) #t) (* #f))
+ )
+
 ;; ex12.c: illustrates removal of comment prefix, offset-8 => offset-2
 ;;(let ((tree (parse-file "exam.d/ex12.c"))) (pp99 tree))
       
 ;;(ugly-print (quote `(abc ,@def)))
-
-(define n1570a ;; sec 6.7.8
-  (string-append
-   "typedef signed int t;\n"
-   "typedef int plain;\n"
-   "struct tag {\n"
-   "  unsigned t:4;\n"
-   "  const t:5;\n"
-   "  plain r:5;\n"
-   "};\n"))
-(define n1570b
-  (string-append
-   n1570a
-   "int foo() {\n"
-   "  t f(t (t));\n"
-   "  long t;\n"
-   "  return 1;\n"
-   "};\n"))
-
 ;; --- last line ---
