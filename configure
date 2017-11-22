@@ -7,6 +7,8 @@
 # Copying and distribution of this file, with or without modification
 # is granted.  This file is offered as-is, without any warranty.
 
+nyacc_version=0.82.4
+
 help() {
     echo "'configure' sets up the top-level Makefile for your local guile"
     echo " "
@@ -43,7 +45,7 @@ while [ "$*" ]; do
 	    exit 0
 	    ;;
 	-V|--version)
-	    echo "nyacc version 0.82.4"
+	    echo "nyacc version ${nyacc_version}"
 	    exit 0
 	    ;;
         --guile=*)
