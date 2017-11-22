@@ -15,6 +15,9 @@ help() {
     echo
     echo "Configuration options are:"
     echo "  -h --help            show options and quit"
+    echo "  -V --version         version information"
+    echo "  --guile=<guile>      guile executable"
+    echo "  --guild=<guild>      guild executable"
     echo "  --prefix             guile-relative prefix as usual"
     echo "  --site-scm-dir       where to install site-local scm files"
     echo "  --site-scm-go-dir    where to install site-local go files"
@@ -28,10 +31,6 @@ help() {
     echo " "
 }
 
-if [ "X$GUILE" = "X" ]; then
-    GUIlE=guile
-fi
-
 prefix=
 site_scm_dir=
 site_scm_go_dir=
@@ -42,6 +41,13 @@ while [ "$*" ]; do
 	-h|--help)
 	    help
 	    exit 0
+	    ;;
+	-V|--version)
+	    echo "nyacc version 0.82.4"
+	    exit 0
+	    ;;
+        --guile=*)
+	    guile=`echo $1 | sed -e 's/^--guile=//'`
 	    ;;
 	--prefix=*)
 	    prefix=`echo $1 | sed -e 's/^--prefix=//'`
@@ -65,8 +71,21 @@ while [ "$*" ]; do
     shift
 done
 
-if [ "X$GUILE" = "X" ]; then
+if [ "X$guile" != "X" ]; then
+    if [ "X$guild" = "X" ]; then
+        echo "warning: guile specified but not guild"
+    fi
+    GUILE=$guile
+elif [ "X$GUILE" = "X" ]; then
+    if [ "X$GUILD" = "X" ]; then
+        echo "warning: GUILE specified but not GUILD"
+    fi
     GUILE=guile
+fi
+if [ "X$guild" != "X" ]; then
+    GUILD=$guild
+elif [ "X$GUILD" = "X" ]; then
+    GUILD=guild
 fi
 
 if [ "X$site_scm_dir" = "X" ]; then
@@ -103,6 +122,7 @@ fi
 
 echo "creating Makefile"
 sed -e "s|@guile@|$GUILE|" \
+    -e "s|@guild@|$GUILD|" \
     -e "s|@site_scm_dir@|$SITE_SCM_DIR|" \
     -e "s|@site_scm_go_dir@|$SITE_SCM_GO_DIR|" \
     -e "s|@infodir@|$INFODIR|" \

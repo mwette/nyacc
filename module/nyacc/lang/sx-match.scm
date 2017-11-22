@@ -24,7 +24,8 @@
   #:export (sx-match sx-haz-attr?))
 (cond-expand
  (guile-2 #t)
- (else (use-modules (ice-9 syncase))))
+ (guile
+  (use-modules (ice-9 syncase))))
 
 ;; sx-haz-attr? val
 (define (sx-haz-attr? sx)

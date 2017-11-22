@@ -6,6 +6,7 @@
 # is granted.  This file is offered as-is, without any warranty.
 
 GUILE=@guile@
+GUILD=@guild@
 SITE_SCM_DIR=@site_scm_dir@
 SITE_SCM_GO_DIR=@site_scm_go_dir@
 INFODIR=@infodir@
@@ -18,12 +19,12 @@ all:
 .PHONY: install
 install:
 	@(cd module; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) \
+	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
 		 install)
 	@(cd doc/nyacc; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) \
+	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
 		 INFODIR=$(INFODIR) \
 		 install)
 
@@ -37,7 +38,7 @@ install-srcs:
 .PHONY: install-ffi-help
 install-ffi-help:
 	@(cd examples; \
-	 make -f Makefile.nyacc \
+	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
 		 INFODIR=$(INFODIR) \
@@ -45,12 +46,16 @@ install-ffi-help:
 
 .PHONY: dist-files
 dist-files:
-	(cd module; make -f Makefile.nyacc dist-files)
-	(cd doc/nyacc; make -f Makefile.nyacc dist-files)
-	(cd examples; make -f Makefile.nyacc dist-files)
+	(cd module; \
+	 make -f Makefile.nyacc GUILE=$GUILE GUILD=$GUILD dist-files)
+	(cd doc/nyacc; \
+	 make -f Makefile.nyacc GUILE=$(GUILE) dist-files)
+	(cd examples; \
+	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) dist-files)
 
 .PHONY: check
 check:
-	(cd test-suite/nyacc; make -f Makefile.nyacc check)
+	(cd test-suite/nyacc; \
+	 make -f Makefile.nyacc GUILE=$GUILE check)
 
 # --- last line ---

@@ -50,8 +50,7 @@
    (use-modules (ice-9 syncase))
    (export lalr-spec-1 parse-precedence parse-grammar
 	   parse-rhs-list parse-rhs)
-   (use-modules (nyacc compat18)))
-  )
+   (use-modules (nyacc compat18))))
 
 ;; @deffn proxy-? sym rhs
 ;; @example

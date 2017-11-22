@@ -33,7 +33,7 @@
 (cond-expand
   (guile-2
    #t)
-  (else
+  (guile
    (use-modules (ice-9 optargs))
    (use-modules (srfi srfi-16))))
 

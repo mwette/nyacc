@@ -11,7 +11,7 @@ SUBDIRS = c99
 
 TESTS_ENVIRONMENT = \
         GUILE_LOAD_PATH= GUILE_AUTO_COMPILE=0 \
-	guile -L `pwd`/../../../module -L `pwd`/../..
+	$(GUILE) -L `pwd`/../../../module -L `pwd`/../..
 
 TESTS = \
 	util.test				\
@@ -22,10 +22,10 @@ check: check-TESTS
 
 check-TESTS: $(TESTS)
 	@for test in $(TESTS); do \
-		$(TESTS_ENVIRONMENT) $$test; \
+	  $(TESTS_ENVIRONMENT) $$test; \
 	done
 	@for dir in $(SUBDIRS); do \
-		(cd $$dir; make -f Makefile.nyacc check-TESTS); \
+	  (cd $$dir; make -f Makefile.nyacc GUILE=$(GUILE) check-TESTS); \
 	done
 
 # --- last line ---
