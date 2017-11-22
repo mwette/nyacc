@@ -18,7 +18,8 @@
 ;; runtime for generated ffi-compiled dot-ffi files
 
 (define-module (system ffi-help-rt)
-  #:export (fh-type?
+  #:export (*ffi-help-version*
+	    fh-type?
 	    fh-object? fh-object-val
 	    fh-object-ref fh-object-set!
 	    pointer-to value-at
@@ -40,7 +41,10 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (0 10 1))
+  #:version (0 10 0))
+
+(define *ffi-help-version* "0.82.4+c99dev")
+
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
 ;; The FFI helper uses a base type based on Guile structs and vtables.
