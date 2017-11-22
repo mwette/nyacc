@@ -103,7 +103,7 @@
     (lambda (ch chl)
       (cond
        ((char-set-contains? char-set:printing ch) (cons ch chl))
-       ((char=? ch #\space) (cons \#space chl))
+       ((char=? ch #\space) (cons #\space chl))
        ((memq ch '(#\nul #\alarm #\backspace #\tab #\linefeed #\newline
 		   #\vtab #\page #\return)) (cons* #\\ (esc->ch ch) chl))
        (else (char->hex-list ch chl))))
