@@ -1,0 +1,6 @@
+This directory contains a partial copy of the scheme-bytestructures package
+available from https://github.com/TaylanUB/scheme-bytestrutures and covered
+by the GNU GENERAL PUBLIC LICENSE, version 3.
+
+This code was synced and copied Wed Nov 22 17:56:32 UTC 2017
+from commit a86380b7ce4d021babf7a18fcda673505d9f51e5.

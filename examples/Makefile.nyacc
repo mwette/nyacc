@@ -46,10 +46,10 @@ all: $(FFI_GO_FILES)
 
 .PHONY: install-ffi-help
 install-ffi-help: install-fh-srcs
-	@if GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-		guile -c '(use-modules (bytestructures guile))'; then \
-	  true; else echo "*** You need bytestructures installed."; exit 1; fi
 	@mkdir -p $(SITE_SCM_GO_DIR)
+	@if GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
+		$(GUILE) -c '(use-modules (bytestructures guile))'; then \
+	  true; else echo "*** You need bytestructures installed."; exit 1; fi
 	@echo "installing FFI HELPER binaries in $(SITE_SCM_GO_DIR)"
 	@for scmfile in $(FH_SCMS); do \
 	  if test ! -d $(SITE_SCM_DIR)/`dirname $${scmfile}`; then \
@@ -57,7 +57,7 @@ install-ffi-help: install-fh-srcs
 	  fi; \
 	  binfile=`echo $${scmfile} | sed -e 's/\.scm$$/.go/'`; \
 	  (GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-	  	guild compile -o $(SITE_SCM_GO_DIR)/$${binfile} \
+	  	$(GUILD) compile -o $(SITE_SCM_GO_DIR)/$${binfile} \
 			$(SITE_SCM_DIR)/$${scmfile} || exit 1; \
 	   ); \
 	done
@@ -68,9 +68,9 @@ install-ffi-help: install-fh-srcs
 	  scmfile=`echo $${ffifile} | sed -e 's/\.ffi$$/.scm/'`; \
 	  binfile=`echo $${scmfile} | sed -e 's/\.scm$$/.go/'`; \
 	  (GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-		guild compile-ffi $(SITE_SCM_DIR)/$${ffifile} || exit 1; \
+		$(GUILD) compile-ffi $(SITE_SCM_DIR)/$${ffifile} || exit 1; \
 	   GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-	  	guild compile -o $(SITE_SCM_GO_DIR)/$${binfile} \
+	  	$(GUILD) compile -o $(SITE_SCM_GO_DIR)/$${binfile} \
 			$(SITE_SCM_DIR)/$${scmfile} || exit 1; \
            ); \
 	done
