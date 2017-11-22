@@ -51,6 +51,9 @@ while [ "$*" ]; do
         --guile=*)
 	    guile=`echo $1 | sed -e 's/^--guile=//'`
 	    ;;
+        --guild=*)
+	    guild=`echo $1 | sed -e 's/^--guild=//'`
+	    ;;
 	--prefix=*)
 	    prefix=`echo $1 | sed -e 's/^--prefix=//'`
 	    ;;
