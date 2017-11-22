@@ -25,6 +25,10 @@
   #:export (lalr-parser guile-lalr->nyacc-lalr)
   #:use-module ((srfi srfi-1) #:select (fold-right))
   )
+(cond-expand
+ (guile-2 #t)
+ (else
+  (use-modules (ice-9 syncase))))
 
 (define (convert-tree spec0)
   (let* ((terms (cons '*eoi* (car spec0)))

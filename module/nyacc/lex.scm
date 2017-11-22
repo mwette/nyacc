@@ -241,7 +241,7 @@
       ((#\') (cons #\' seed))
       ((#\n) (cons #\newline seed))
       ((#\r) (cons #\return seed))
-      ((#\b) (cons #\backspace seed))
+      ((#\b) (cons #\bs seed))
       ((#\t) (cons #\tab seed))
       ((#\f) (cons #\page seed))
       ((#\a) (cons #\bel seed))	      ; guile 1.8 doesn't know #\alarm
@@ -277,39 +277,11 @@
 ;; This will return @code{$chlit}, $code{$chlit/L} for @code{wchar_t},
 ;; @code{$chlit/u} for @code{char16_t}, or @code{$chlit/U} for @code{char32_t}.
 ;; @end deffn
-(define (old-read-c-chlit ch)
-  (cond
-   ((char=? ch #\')
-    (let ((c1 (read-char)) (c2 (read-char)))
-      (if (eqv? c1 #\\)
-	  (let ((c3 (read-char)))
-	    (cons '$chlit
-		  (case c2
-		    ((#\0) "\0")	   ; nul U+0000 (#\U+...)
-		    ((#\a) "\a")	   ; alert U+0007
-		    ((#\b) "\x08")	   ; backspace U+0008
-		    ((#\t) "\t")	   ; horizontal tab U+0009
-		    ((#\n) "\n")	   ; newline U+000A
-		    ((#\v) "\v")	   ; verticle tab U+000B
-		    ((#\f) "\f")	   ; formfeed U+000C
-		    ((#\r) "\r")	   ; return U+000D
-		    ((#\\ #\' #\" #\? #\|) (string c2))
-		    (else (error "bad escape sequence")))))
-	  (cons '$chlit (string c1)))))
-   ((char-set-contains? c:cx ch)
-    (let ((c1 (read-char)))
-      (cond
-       ((char=? c1 #\') (read-c-chlit c1))
-       (else (unread-char c1) #f))))
-   (else #f)))
-
-;; Will return $chlit, $chlit/L, $chlit/u, $chlit/U where
-;; L means wchar_t, u means char16_t and U means char32_t
-(define (new-read-c-chlit ch)
+(define (read-c-chlit ch)
   (define (read-esc-char)
     (let ((c2 (read-char)))
       (case c2
-	((#\a) "\a")		   ; alert U+0007
+	((#\a) "\x07")		   ; alert U+0007
 	((#\b) "\x08")		   ; backspace U+0008 not in guile 1.8
 	((#\t) "\t")		   ; horizontal tab U+0009
 	((#\n) "\n")		   ; newline U+000A
@@ -334,16 +306,13 @@
        (else (unread-char c1) #f))))
    (else #f)))
 
-(define read-c-chlit new-read-c-chlit)
-
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
 
-;; @deffn {Procedure} make-num-reader => (proc ch) => #f|($fixed . "1")|($float . "1.0")
-;; Reads C numbers.
-;; This routine will clean by adding "0" before or after dot.
-;; may want to replace "eEdD" w/ "e"
-;; integer decimal(#t/#f) fraction exponent looking-at
-;; i, f and e are lists of characters
+;; @deffn {Procedure} make-num-reader => (proc ch) => #f|fixed|float
+;; Where @emph{fixed} is @code{($fixed . "1")} and @emph{float} is
+;; @code{($float . "1.0")}
+;; This procedure reads C numeric literals.
+;; Some literals are cleaned: @code{"0"} may be added before or after dot.
 ;; @end deffn
 (define (make-num-reader)
   ;; This will incorrectly parse 123LUL.  Does not handler hex floats.

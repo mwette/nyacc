@@ -20,9 +20,12 @@
   #:use-module ((srfi srfi-1) #:select (pair-for-each))
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-match)
-  #:use-module (sxml match)
   #:use-module (ice-9 pretty-print)
   )
+(cond-expand
+ (guile-2 #t)
+ (else
+  (use-modules (ice-9 optargs))))
 
 (define op-sym
   (let ((ot '(("=" . eq) ("+=" . pl-eq) ("-=" . mi-eq) ("*=" . ti-eq)
@@ -68,14 +71,8 @@
 (define (scmchs->c scm-chr-str)
   (let ((ch (string-ref scm-chr-str 0)))
     (case ch
-      ((#\nul) "\\0")
-      ((#\alarm) "\\a")
-      ((#\backspace) "\\b")
-      ((#\tab) "\\t")
-      ((#\newline) "\\n")
-      ((#\vtab) "\\v")
-      ((#\page) "\\f")
-      ((#\\) "\\")
+      ((#\nul) "\\0") ((#\bel) "\\a") ((#\bs) "\\b") ((#\ht) "\\t")
+      ((#\nl) "\\n") ((#\vt) "\\v") ((#\np) "\\f") ((#\cr) "\\r") ((#\\) "\\")
       (else scm-chr-str))))
 
 ;; @deffn {Procedure} char->hex-list ch seed
@@ -91,8 +88,8 @@
       (iter (cons (itox (remainder val 16)) res) (1- ix) (quotient val 16))))))
 
 (define (esc->ch ch)
-  (case ch ((#\nul) #\0) ((#\alarm) #\a) ((#\backspace) #\b) ((#\tab) #\t)
-	((#\newline) #\n) ((#\vtab) #\v) ((#\page) #\f) ((#\return) #\r)))
+  (case ch ((#\nul) #\0) ((#\bel) #\a) ((#\bs) #\b) ((#\ht) #\t)
+	((#\nl) #\n) ((#\vt) #\v) ((#\np) #\f) ((#\cr) #\r)))
    
 ;; @deffn {Procedure} scmstr->c str
 ;; to be documented
@@ -104,8 +101,8 @@
       (cond
        ((char-set-contains? char-set:printing ch) (cons ch chl))
        ((char=? ch #\space) (cons #\space chl))
-       ((memq ch '(#\nul #\alarm #\backspace #\tab #\linefeed #\newline
-		   #\vtab #\page #\return)) (cons* #\\ (esc->ch ch) chl))
+       ((memq ch '(#\nul #\bel #\bs #\ht #\nl #\vt #\np #\cr))
+	(cons* #\\ (esc->ch ch) chl))
        (else (char->hex-list ch chl))))
     '() str)))
     
@@ -153,11 +150,9 @@
       ((else) (sf "#else\n"))
       ((endif ,text) (sf "#endif ~A\n" text))
       ((endif) (sf "#endif\n"))
-      ;;((include . ,rest) (sf "#include ~A\n" (sx-ref tree 1)))
       ((include ,file . *) (sf "#include ~A\n" file))
       ((error ,text) (sf "#error ~A\n" text))
       ((pragma ,text) (sf "#pragma ~A\n" text))
-      ;;(,x (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
       (* (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
     (fmtr 'nlin))
 
@@ -213,20 +208,10 @@
   ;; TODO: comp-lit
   ;; sx-match 270kB; sxml-match 255kB
   (define (ppx-1 tree)
-    ;;(sxml-match tree
     (sx-match tree
 
       ((p-expr ,expr) (ppx expr))
       ((ident ,name) (sf "~A" name))
-      #|
-      ((char (@ (type ,type)) ,value)
-       (cond
-	((string=? type "wchar_t") (sf "L'~A'" (scmchs->c value)))
-	((string=? type "char16_t") (sf "u'~A'" (scmchs->c value)))
-	((string=? type "char32_t") (sf "U'~A'" (scmchs->c value)))))
-      ((char ,value) (sf "'~A'" (scmchs->c (sx-ref tree 1))))
-      |#
-      ;; #|
       ((char (@ . ,al) ,value)
        (let ((type (sx-attr-ref al 'type)))
 	 (cond
@@ -235,7 +220,6 @@
 	  ((string=? type "char16_t") (sf "u'~A'" (scmchs->c value)))
 	  ((string=? type "char32_t") (sf "U'~A'" (scmchs->c value)))
 	  (else (throw 'c99-error "bad type")))))
-      ;; |#
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
 
@@ -255,7 +239,8 @@
        ;; needed:
        ;; 1) (get-col) to get column
        ;; 2) (indent-to-col col) to do indents for each line
-       #;(let ((col (get-col))
+       #!
+       (let ((col (get-col))
 	     (lines (string-split text #\newline))
 	     (ind (mk-ind-to-col col)))
 	 (sf "/*") (sf (car lines))
@@ -266,6 +251,7 @@
 	    (sf (cdr pair)))
 	  (cdr lines))
 	 (sf "*/"))
+       !#
        )
       
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
@@ -355,20 +341,6 @@
 	    (sf ", "))
 	   (else (ppx (car pair)))))
 	expr-list))
-
-      ;; #|
-      ;; gotta break up ppx because sxml-match seems to eat stack space:
-      ;; everthing together results in SIGABRT from vm_error_stack_overflow()
-      ;;(,otherwise
-      (,otherwise
-       (ppx-2 tree))))
-  
-  (define (ppx-2 tree)
-    
-    ;;(sxml-match tree
-    (sx-match tree
-      ;; sxml-match continues here to avoid stack overflow
-      ;; |#
 
       ((udecl . ,rest)
        (ppx `(decl . ,rest)))
@@ -539,19 +511,6 @@
       ((compd-stmt-no-newline (block-item-list . ,items))
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "} "))
       
-      ;; #|
-      ;; gotta break up ppx because sxml-match seems to eat stack space:
-      ;; everthing together results in SIGABRT from vm_error_stack_overflow()
-      (,otherwise
-       (ppx-3 tree))))
-  
-  (define (ppx-3 tree)
-
-    ;;(sxml-match tree
-    (sx-match tree
-      ;; sxml-match continues here to avoid stack overflow
-      ;; |#
-      
       ;; expression-statement
       ((expr-stmt) (sf ";\n"))
       ((expr-stmt ,expr) (ppx expr) (sf ";\n"))
@@ -685,9 +644,7 @@
       ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
       ((extern-end) (sf "}\n"))
 
-      (,otherwise
-       (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))
-      ))
+      (* (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))))
 
   (define ppx ppx-1)
 

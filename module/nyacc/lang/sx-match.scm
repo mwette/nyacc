@@ -22,12 +22,17 @@
 
 (define-module (nyacc lang sx-match)
   #:export (sx-match sx-haz-attr?))
+(cond-expand
+ (guile-2 #t)
+ (else (use-modules (ice-9 syncase))))
 
 ;; sx-haz-attr? val
 (define (sx-haz-attr? sx)
   (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx)) #t))
 	
 ;; Given that a tag must be ... we define the syntax of SXML as follows:
+;; SXML is a text format for XML using S-expressions, sexp's whose first
+;; element is a symbol for a legal XML tag.  The syntax is:
 ;;   sexp: (tag node ...) | (tag (@ sexp ...) node ...)
 ;;   node: sexp | *text*
 ;; OR
@@ -35,6 +40,11 @@
 ;;   attl: (@ (k "v") ...)
 ;;   tail: (node ...)
 ;;   node: sexp | *text*
+;; where
+;;   tag is a Scheme symbol for a legal XML tag name
+;;   attl is an attribute list, a list whose first element is '@
+;;   tail is a list of node
+;;   node is sexp or a text string.
 
 ;; patterns:
 ;; attribute list only specified by (@ . ,<name>) where <name> is a var name
@@ -60,8 +70,10 @@
 ;; At runtime, when @var{pat} is matched against @var{exp}, then @var{body ...}
 ;; will be evaluated.
 ;; @end deffn
-(define-syntax-rule (sx-match e c ...)
-  (let ((v e)) (sx-match-1 v c ...)))
+(define-syntax sx-match
+  (syntax-rules ()
+    ((_ e c ...)
+     (let ((v e)) (sx-match-1 v c ...)))))
 
 (define-syntax sx-match-1
   (syntax-rules ()

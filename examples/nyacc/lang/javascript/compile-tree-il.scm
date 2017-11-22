@@ -40,7 +40,7 @@
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
   #:use-module (nyacc lang javascript jslib)
-  #:use-module ((sxml match) #:select (sxml-match))
+  #:use-module (nyacc lang sx-match)
   #:use-module ((sxml fold) #:select (foldts*-values))
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (language tree-il)
@@ -467,7 +467,7 @@
     ;; declarations: we need to trap ident references and replace them
     
     ;;(sferr "fD: tree=~S ...\n" (car tree))
-    (sxml-match tree
+    (sx-match tree
 
       ((Identifier ,name)
        ;;(sferr "fD: ret null\n")
@@ -501,13 +501,13 @@
       ((obj-ref ,expr (Identifier ,name))
        (values `(ooa-ref ,expr (PropertyName ,name)) '() dict))
 
-      ((Block ,elts ...) ;; see comments on SourceElements below
+      ((Block . ,elts) ;; see comments on SourceElements below
        (let* ((elts (remove-empties elts))
 	      (elts (cleanup-labels elts))
 	      (elts (fold-in-blocks elts)))
 	 (values tree '() dict)))
       
-      ((StatementList ,stmts ...)
+      ((StatementList . ,stmts)
        (let* ((stmts (remove-empties stmts))
 	      (stmts (fold-in-blocks stmts)))
 	 (values tree '() dict)))
@@ -518,50 +518,50 @@
 	 (if (not tree1) (error "lookup failed"))
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
-      ((do ,rest ...)
+      ((do . ,rest)
        (values tree '() (add-exit "~exit" (push-scope dict))))
 
-      ((while ,rest ...)
+      ((while . ,rest)
        (values tree '() (add-exit "~exit" (push-scope dict))))
 
-      ((for ,rest ...)
+      ((for . ,rest)
        (values tree '() (add-exit "~exit" (push-scope dict))))
 
-      ((for-in ,rest ...)
+      ((for-in . ,rest)
        (values tree '() (add-exit "~exit" (push-scope dict))))
 
-      ((SwitchStatement ,rest ...)
+      ((SwitchStatement . ,rest)
        (values tree '() (add-lexical "~val"
 				     (add-exit "~exit" (push-scope dict)))))
 
       ((LabelledStatement (Identifier ,name) ,stmt)
        (values tree '() (add-label name dict)))
 
-      ((TryStatement ,expr ...)
+      ((TryStatement . ,expr)
        (values tree '() (add-exit "~catch" (push-scope dict))))
        
       ((Catch (Identifier ,name) ,block)
        (values tree '() (add-lexical name dict)))
        
-      ((FunctionDeclaration (Identifier ,name) ,rest ...)
+      ((FunctionDeclaration (Identifier ,name) . ,rest)
        (values tree '()
 	       (add-exit "~return"
 			 (add-lexical "this"
 				      (push-scope (add-symboldef name dict))))))
       
-      ((FunctionExpression (Identifier ,name) ,rest ...)
+      ((FunctionExpression (Identifier ,name) . ,rest)
        (values tree '()
 	       (add-exit "~return"
 			 (add-lexical "this"
 				      (add-lexical name (push-scope dict))))))
       
-      ((FunctionExpression ,rest ...)
+      ((FunctionExpression . ,rest)
        (values tree '()
 	       (add-exit "~return"
 			 (add-lexical "this"
 			    (add-symboldef "*anon*" (push-scope dict))))))
       
-      ((FormalParameterList ,idlist ...)
+      ((FormalParameterList . ,idlist)
        ;; For all functions we just use rest arg and then express each
        ;; var reference as (list-ref @args index)
        ;; Another option is to use case-lambda ...
@@ -592,7 +592,7 @@
 	      (elts (if (top-level? dict) elts (fold-in-blocks elts))))
 	 (values (cons 'SourceElements elts) '() dict)))
 
-      (,otherwise
+      (*
        ;;(sferr "fD: otherwise\n") (pperr tree)
        (values tree '() dict))
       ))

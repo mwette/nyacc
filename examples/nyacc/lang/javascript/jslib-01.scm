@@ -60,7 +60,7 @@
 (define (js:bit-and lt rt)		; FIX
   (logand lt rt))
 (define (js:bit-or lt rt)		; FIX
-  (logor lt rt))
+  (logior lt rt))
 (define (js:bit-xor lt rt)		; FIX
   (logxor lt rt))
 (define (js:or lt rt)			; FIX
