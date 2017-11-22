@@ -47,7 +47,7 @@ install-ffi-help:
 .PHONY: dist-files
 dist-files:
 	(cd module; \
-	 make -f Makefile.nyacc GUILE=$GUILE GUILD=$GUILD dist-files)
+	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) dist-files)
 	(cd doc/nyacc; \
 	 make -f Makefile.nyacc GUILE=$(GUILE) dist-files)
 	(cd examples; \
@@ -56,6 +56,10 @@ dist-files:
 .PHONY: check
 check:
 	(cd test-suite/nyacc; \
-	 make -f Makefile.nyacc GUILE=$GUILE check)
+	 make -f Makefile.nyacc GUILE=$(GUILE) check)
+
+.PHONY: dist-clean
+dist-clean:
+	rm -f Makefile
 
 # --- last line ---

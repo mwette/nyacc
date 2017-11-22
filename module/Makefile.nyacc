@@ -51,19 +51,19 @@ NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
 nyacc/lang/c99/mach.d/c99act.scm \
 nyacc/lang/c99/mach.d/c99tab.scm : nyacc/lang/c99/mach.scm
 	GUILE_LOAD_PATH=`pwd` \
-	$GUILE -l $< -c \
+	$(GUILE) -l $< -c \
 		'((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
 
 nyacc/lang/c99/mach.d/c99xact.scm \
 nyacc/lang/c99/mach.d/c99xtab.scm : nyacc/lang/c99/mach.scm
 	GUILE_LOAD_PATH=`pwd` \
-	$GUILE -l $< -c \
+	$(GUILE) -l $< -c \
 		'((@ (nyacc lang c99 mach) gen-c99x-files) "nyacc/lang/c99")'
 
 nyacc/lang/c99/mach.d/cppact.scm \
 nyacc/lang/c99/mach.d/cpptab.scm : nyacc/lang/c99/cppmach.scm
 	GUILE_LOAD_PATH=`pwd` \
-	$GUILE -l $< -c \
+	$(GUILE) -l $< -c \
 		'((@ (nyacc lang c99 cppmach) gen-cpp-files) "nyacc/lang/c99")'
 
 .PHONY: install
@@ -75,7 +75,7 @@ install: install-srcs
 	    mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	  GUILE_LOAD_PATH=$(SITE_SCM_DIR) $GUILD compile \
+	  GUILE_LOAD_PATH=$(SITE_SCM_DIR) $(GUILD) compile \
 		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
 	  sleep 1; \
 	done
@@ -93,11 +93,11 @@ install-srcs: $(NYACC_SRCS)
 .PHONY: dist-files
 dist-files:
 	(cd nyacc/lang/c99; \
-	 GUILE_LOAD_PATH= $GUILE --no-auto-compile -L ../../.. \
+	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
            -c '(use-modules (nyacc lang c99 cppmach)) (gen-cpp-files ".")'; \
-	 GUILE_LOAD_PATH= $GUILE --no-auto-compile -L ../../.. \
+	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
            -c '(use-modules (nyacc lang c99 mach)) (gen-c99-files ".")'; \
-	 GUILE_LOAD_PATH= $GUILE --no-auto-compile -L ../../.. \
+	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
            -c '(use-modules (nyacc lang c99 mach)) (gen-c99x-files ".")')
 
 # --- last line ---
