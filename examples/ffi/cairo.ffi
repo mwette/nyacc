@@ -27,7 +27,9 @@
 	cairo_raster_source_acquire_func_t*?
 	make-cairo_raster_source_acquire_func_t*)
 (ref<->deref! cairo_raster_source_acquire_func_t*
-	      cairo_raster_source_acquire_func_t)
+	      make-cairo_raster_source_acquire_func_t*
+	      cairo_raster_source_acquire_func_t
+	      make-cairo_raster_source_acquire_func_t)
 
 (define-public cairo_raster_source_release_func_t*-desc
   (bs:pointer  cairo_raster_source_release_func_t-desc))
@@ -39,7 +41,9 @@
 	cairo_raster_source_release_func_t*?
 	make-cairo_raster_source_release_func_t*)
 (ref<->deref! cairo_raster_source_release_func_t*
-	      cairo_raster_source_release_func_t)
+	      make-cairo_raster_source_release_func_t*
+	      cairo_raster_source_release_func_t
+	      make-cairo_raster_source_release_func_t)
 
 (define M_PI 3.14159265358979323846)
 (define M_2PI 6.283185307179586)

@@ -343,10 +343,19 @@
 ;; (use-modules ((system foreign) #:prefix 'ffi:))
 ;; (fh-cast ffi:short 321)
 ;; @end deffn 
-(define (fh:cast type value)
-  (cons type value))
-(define (fh-cast type expr)
-  (cons type expr))
+(define (fh:cast type expr)
+  (let* ((r-type
+	  (cond
+	   ((bytestructures-descriptor? type)
+	    (bytestructure-descriptor->ffi-descriptor type))
+	   (else type)))
+	(r-expr
+	 (cond
+	  ((and (equal? r-type ffi-void*) (string? expr))
+	   (ffi:string->pointer expr))
+	  (else expr))))
+    (cons r-type r-expr))
+(define fh-cast fh:cast)
 
 ;; --- unwrap / wrap procedures
 

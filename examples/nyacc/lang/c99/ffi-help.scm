@@ -277,8 +277,8 @@
 	 (libraries (append
 		     (if pkg-config (pkg-config-libs pkg-config) '())
 		     libraries))
-	 (library (car libraries))
-	 (libraries (cdr libraries)))
+	 (library (and (pair? libraries) (car libraries)))
+	 (libraries (and (pair? libraries) (cdr libraries))))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n" (path->path path))
     (nlscm)
     (sfscm "(define-module ~S\n" path)
@@ -298,13 +298,13 @@
     (sfscm "  #:use-module (bytestructures guile)\n")
     (sfscm "  )\n")
     ;;
-    (for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l)) (reverse libraries))
-    (sfscm "(define link-lib (dynamic-link ~S))\n" library)
-    ;;(sfscm "(define (lib-func name) (dynamic-func name link-lib))\n")
-    ;;
-    ;;(sfscm "(define void intptr_t)\n")  ; bytestructures now has 'void
-    (if *echo-decls* (sfscm "(define echo-decls #t)\n"))
-    ))
+    (if libraries
+	(for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l))
+		  (reverse libraries)))
+    (if library
+	(sfscm "(define link-lib (dynamic-link ~S))\n" library)
+	(sfscm "(define link-lib (dynamic-link))\n"))
+    (if *echo-decls* (sfscm "(define echo-decls #t)\n"))))
 
 
 ;; === type conversion ==============
