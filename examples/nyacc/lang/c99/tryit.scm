@@ -29,10 +29,8 @@
 (define inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir)
-     "/opt/local/include/eina-1"
-     "/opt/local/include/eina-1/eina"
-     "/tmp"
-     "/usr/include")
+     "/usr/include"
+     "c99-exam")
    (get-gcc-inc-dirs)))
 (define inc-help
   (cond
@@ -118,10 +116,16 @@
        ;;(code "#if L'c'\nint x = 1;\n#endif\n")
        ;;(code "#include <Eina.h>\nint x = 1;\n")
        ;;(code "wchar_t x = U'c';\n")
+       (code "char x = '\\b';\nchar *y = \"\\b\";\n")
+       (code (string-append
+	      "typedef int *bla_t[2];\n"
+	      "bla_t foo(bla_t (*)(bla_t));\n"))
        (indx 2)
-       ;;(tree (parse-string code))
+       (tree (parse-string code))
        ;;(tree (parse-file "xxx.c"))
-       ;;(udict (c99-trans-unit->udict tree))
+       (udict (c99-trans-unit->udict tree))
+       (decl (and=> ((sxpath `((decl ,indx))) tree) car))
+       (xdecl (expand-typerefs decl udict))
        ;;(ddict (udict-enums->ddict udict))
        ;;(udecl (udict-ref udict "x"))
        ;;(mdecl (udecl->mspec udecl))
@@ -130,14 +134,8 @@
        )
   ;;(display code)
   ;;(ppsx tree)
-  ;;(pp99 tree)
-  ;;(ppsx xdecl)
-  ;;(display "==\n")
-  ;;(pp99 xdecl)
-  ;;(ppsx mspec)
-  ;;(ppsx (expand-typerefs udecl udict '("foo_t")))
-  ;;(ppsx ddict)
-  ;;(set! adecl decl)
+  ;;(ppsx decl)
+  (pp99 xdecl)
   ;;(ppsx (get-gcc-cpp-defs))
   #t)
 
@@ -145,11 +143,7 @@
 ;;       ((foo (bar . ,text) . ,rest) #t) (* #f)))
 
 ;; ex12.c: illustrates removal of comment prefix, offset-8 => offset-2
-;;(let ((tree (parse-file "c99-exam/ex12.c"))) (pp99 tree))
 
-;; (pp (sx-match '(foo "hello") ((foo . *) #t) (* #f)))
-
-(let ((tree (parse-file "c99-exam/ex01.c"))) (pp99 tree))
-      
+;;(let ((tree (parse-file "c99-exam/ex01.c"))) (pp99 tree))
 ;;(ugly-print (quote `(abc ,@def)))
 ;; --- last line ---

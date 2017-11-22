@@ -316,22 +316,24 @@
 	  
 	  (define (apply-helper file)
 	    ;; file will include <> or "", need to strip
-	    (let* ((file (substring/shared file 1 (1- (string-length file))))
-		   (tyns (assoc-ref (cpi-itynd info) file))
+	    (let* ((tyns (assoc-ref (cpi-itynd info) file))
 		   (defs (assoc-ref (cpi-idefd info) file)))
 	      (when tyns
 		(for-each add-typename tyns)
 		(set-cpi-defs! info (append defs (cpi-defs info))))
 	      tyns))
 
-	  (define (inc-stmt->file stmt) ;; retain <> or ""
+	  (define (inc-stmt->file-spec stmt) ;; retain <> or ""
 	    (let* ((arg (cadr stmt)))
 	      (if (ident-like? arg) ;; #include MYFILE
 		  (expand-cpp-macro-ref arg (cpi-defs info))
 		  arg)))
 
-	  (define (inc-file->path file next)
-	    (find-incl-in-dirl file (cpi-incs info) next))
+	  (define (file-spec->file spec)
+	    (substring/shared spec 1 (1- (string-length spec))))
+
+	  (define (inc-file-spec->path spec next)
+	    (find-incl-in-dirl spec (cpi-incs info) next))
 
 	  (define (code-if stmt)
 	    (case (car ppxs)
@@ -373,8 +375,9 @@
 	    stmt)
 	  
 	  (define* (eval-cpp-incl/here stmt #:optional next) ;; => stmt
-	    (let* ((file (inc-stmt->file stmt))
-		   (path (inc-file->path file next)))
+	    (let* ((spec (inc-stmt->file-spec stmt))
+		   (file (file-spec->file spec))
+		   (path (inc-file-spec->path spec next)))
 	      (if show-includes (sferr "include ~S => ~S\n" file path))
 	      (cond
 	       ((apply-helper file))
@@ -384,8 +387,9 @@
 
 	  (define* (eval-cpp-incl/tree stmt #:optional next) ;; => stmt
 	    ;; include file as a new tree
-	    (let* ((file (inc-stmt->file stmt))
-		   (path (inc-file->path file next)))
+	    (let* ((spec (inc-stmt->file-spec stmt))
+		   (file (file-spec->file spec))
+		   (path (inc-file-spec->path spec next)))
 	      (if show-includes (sferr "include ~S => ~S\n" file path))
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper

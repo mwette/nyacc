@@ -15,6 +15,7 @@ TESTS_ENVIRONMENT = \
 
 TESTS = \
 	util.test				\
+	sx-match.test				\
 	#
 
 check: check-TESTS

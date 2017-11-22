@@ -21,17 +21,27 @@
 ;; This uses only syntax-rules; sxml uses syntax-case.
 
 (define-module (nyacc lang sx-match)
-  #:export (sx-match))
+  #:export (sx-match sx-haz-attr?))
 
-;; syntax of sexp:
+;; sx-haz-attr? val
+(define (sx-haz-attr? sx)
+  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx)) #t))
+	
+;; Given that a tag must be ... we define the syntax of SXML as follows:
 ;;   sexp: (tag node ...) | (tag (@ sexp ...) node ...)
 ;;   node: sexp | *text*
 ;; OR
-;;   sexp: (tag tail) | (tag (@ sexp ...) tail)
+;;   sexp: (tag attl tail) | (tag tail)
+;;   attl: (@ (k "v") ...)
 ;;   tail: (node ...)
 ;;   node: sexp | *text*
 
 ;; patterns:
+;; attribute list only specified by (@ . ,<name>) where <name> is a var name
+;; Specify attribute list if you want to capture the list of attributes with
+;; a binding.  Otherwise leave it out.  The only way to test for no attributes
+;; is to capture the a-list and test with @code{pair?}
+;; 
 ;;   (foo (@ . ,<name>) (bar ,abc) ...)
 ;;   (foo (bar ,abc) ...)
 ;;   (foo ... , *)
@@ -43,6 +53,7 @@
 ;; ideas:
 ;;   instead of (* ...) use (*any* ...)
 ;;   use (*text* "text") to match text or (*text* ,text)
+;; kt kf are continuation syntax expresions
 
 ;; @deffn {Syntax} sx-match exp (pat body ...) ...
 ;; This syntax will attempt to match @var{expr} against the patterns.
@@ -62,55 +73,25 @@
 ;; sxm-sexp val pat kt kf
 ;; match sexp
 (define-syntax sxm-sexp
-  (syntax-rules (@ * ? unquote)
+  (syntax-rules (@ * unquote)
+    ((_ v (unquote _) kt kf) kt) ;; TEMP HACK; later remove ,otherwise
     ;; capture attributes
     ((_ v (tag (@ . (unquote al)) . nl) kt kf)
      (sxm-tag (car v) tag
-	      (if (sxm-has-attr-list? v)
+	      (if (sx-haz-attr? v)
 		  (let ((al (cdadr v))) (sxm-tail (cddr v) nl kt kf))
 		  (let ((al '())) (sxm-tail (cdr v) nl kt kf)))
 	      kf))
-    ;; ignore attributes; ND0 may be an attr node. If so, ignore it.
+    ;; ignore attributes; (cadr v) may be an attr node. If so, ignore it.
     ((_ v (tag . nl) kt kf)
      (sxm-tag (car v) tag
-	      (if (sxm-has-attr-list? v)
+	      (if (sx-haz-attr? v)
 		  (sxm-tail (cddr v) nl kt kf)
 		  (sxm-tail (cdr v) nl kt kf))
 	      kf))
     ;; accept anything
-    ;;((_ v (* ...) kt kf) kt)
-    ((_ v * kt kf) kt)
-    ;;((_ v (? ...) kt kf) kt)
-    ;;((_ v ? kt kf) kt)
-    ))
+    ((_ v * kt kf) kt)))
  
-;; kt kf are continuation syntax expresions
-;; [ht][vp] = [head,tail][value,pattern]
-;; Can this be set up to match a string constant?
-(define-syntax sxm-node
-  (syntax-rules (unquote ? *)
-    ((_ v ? kt kf) kt)
-    ((_ v * kt kf) kt)
-    ((_ v () kt kf) (if (null? v) kt kf))
-    ((_ v (unquote var) kt kf) (let ((var v)) kt))
-    ((_ v (hp . tp) kt kf)
-     (if (pair? v)
-	 (sxm-sexp v (hp . tp) kt kf)
-	 kf))
-    ((_ v s) (if (string? v) kt kf))))
-
-;; sxm-tail val pat kt kf
-;; match tail of sexp = list of nodes
-(define-syntax sxm-tail
-  (syntax-rules (unquote *)
-    ((_ v () kt kf) (if (null? v) kt kf))
-    ((_ v * kt kf) kt)
-    ((_ v (unquote var) kt kf) (let ((var v)) kt))
-    ((_ v (hp . tp) kt kf)
-     (let ((hv (car v)) (tv (cdr v)))
-       (sxm-node hv hp (sxm-tail tv tp kt kf) kf)))
-    ((_ v p kt kf) kf)))
-
 ;; sxm-tag val pat kt kf
 ;; match tag
 (define-syntax sxm-tag
@@ -120,9 +101,29 @@
     ((_ tv t0 kt kf)
      (if (eqv? tv 't0) kt kf))))
 
-;; sxm-has-attr-list? val
-(define-syntax sxm-has-attr-list?
-  (syntax-rules ()
-    ((_ v) (and (pair? (cdr v)) (pair? (cadr v)) (eqv? '@ (caadr v))))))
-	
+;; sxm-tail val pat kt kf
+;; match tail of sexp = list of nodes
+(define-syntax sxm-tail
+  (syntax-rules (unquote *)
+    ((_ v () kt kf) (if (null? v) kt kf))
+    ((_ v * kt kf) kt)
+    ((_ v (unquote var) kt kf) (let ((var v)) kt))
+    ((_ v (hp . tp) kt kf)
+     (if (pair? v)
+	 (let ((hv (car v)) (tv (cdr v)))
+	   (sxm-node hv hp (sxm-tail tv tp kt kf) kf))
+	 kf))
+    ((_ v p kt kf) kf)))
+
+;; [ht][vp] = [head,tail][value,pattern]
+;; Can this be set up to match a string constant?
+(define-syntax sxm-node
+  (syntax-rules (unquote *)
+    ((_ v * kt kf) kt)
+    ((_ v () kt kf) (if (null? v) kt kf))
+    ((_ v (unquote var) kt kf) (let ((var v)) kt))
+    ((_ v (hp . tp) kt kf)
+     (if (pair? v) (sxm-sexp v (hp . tp) kt kf) kf))
+    ((_ v s) (if (string? v) kt kf))))
+
 ;; --- last line ---

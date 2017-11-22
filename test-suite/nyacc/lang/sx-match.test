@@ -1,0 +1,93 @@
+;;; nyacc/lang/sx-match.test		-*- scheme -*-
+;;; 
+;;; Copyright (C) 2017 Matthew R. Wette
+;;; 
+;;; Copying and distribution of this file, with or without modification,
+;;; are permitted in any medium without royalty provided the copyright
+;;; notice and this notice are preserved.  This file is offered as-is,
+;;; without any warranty.
+
+(define-module (sx-match)
+  #:use-module (nyacc lang sx-match))
+(cond-expand
+  (guile-2
+   (use-modules (test-suite lib)))
+  (else
+   (use-modules (test-suite lib18))
+   (use-modules (nyacc compat18))))
+
+(with-test-prefix "nyacc/sx-match"
+
+  (pass-if "basics"
+    (and
+     (sx-match '(foo (bar)) (* #t))
+     (sx-match '(foo "hello") ((foo *) #t) (* #t))
+     (sx-match '(foo (bar (baz))) ((foo (bar (baz))) #t) (* #f))
+     (sx-match '(foo (bar)) ((foo ,nd) (equal? '(bar) nd)) (* #f))
+     #t))
+
+  (pass-if "w/ val attr, w/ pat attr"
+    (and
+     (sx-match '(foo (@ (a "1") (b "2")))
+       ((foo (@ . ,al)) #t)
+       (* #f))
+     (sx-match '(foo (@ (a "1")) "hello")
+       ((foo (@ . ,al) . ,rest) #t)
+       (* #f))
+     (sx-match '(foo (@) (bar "baz") "hello")
+       ((foo (bar (@ . ,al) . ,text) . ,rest) #t)
+       (* #f))
+     (sx-match '(foo (bar (@ (a "1")) "baz") "hello")
+       ((foo (@ . ,al) (bar . ,text) . ,rest) #t)
+       (* #f))
+     #t))
+
+  (pass-if "no val attr, w/ pat attr"
+    (and
+     (sx-match '(foo) ((foo (@ . ,al)) #t) (* #f))
+     (sx-match '(foo "hello") ((foo (@ . ,al) . ,rest) #t) (* #f))
+     (sx-match '(foo (bar "baz") "hello")
+       ((foo (bar (@ . ,al) . ,text) . ,rest) #t) (* #f))
+     (sx-match '(foo (bar "baz") "hello")
+       ((foo (@ . ,al) (bar . ,text) . ,rest) #t) (* #f))
+     #t))
+
+  (pass-if "w/ val attr, no pat attr"
+    (and
+     (sx-match '(foo (@ (a "1") (b "2"))) ((foo) #t) (* #f))
+     (sx-match '(foo (@ (a "1")) "hello") ((foo . ,rest) #t) (* #f))
+     (sx-match '(foo (@) (bar "baz") "hello")
+       ((foo (bar . ,text) . ,rest) #t) (* #f))
+     (sx-match '(foo (bar (@ (a "1")) "baz") "hello")
+       ((foo (bar . ,text) . ,rest) #t) (* #f))
+     #t))
+
+  (pass-if "no val attr, no pat attr"
+    (and
+     (sx-match '(foo) ((foo) #t) (* #f))
+     (sx-match '(foo "hello") ((foo . ,rest) #t) (* #f))
+     (sx-match '(foo (bar "baz") "hello")
+       ((foo (bar . ,text) . ,rest) #t) (* #f))
+     #t))
+
+  (pass-if "more random tests"
+    (and
+     (sx-match '(foo "abc" "def") ((foo (bar . *)) #f) (* #t))
+     (sx-match '(foo "hi") ((foo ,greet) (string=? greet "hi")) (* #f))
+     (sx-match '(foo "hi") ((foo . ,rest) (string=? (car rest) "hi")) (* #f))
+     #t))
+  
+  ;;(pp (sx-match '(foo "hello") ((bar ,text) #f) (* #f)))
+
+  ;;(define sx '(bar (@ (x "1")) "hello"))
+  ;;(define sx '(bar "hello"))
+  ;;(define sx '(bar))
+  ;;(define sx '(bar (@ (x "1"))))
+  ;;(sx-match sx
+  ;;((bar ,text) (sf "match w/ text=~S\n" text) #t)
+  ;;((bar (@ . ,al)) (sf "match singleton/attr\n") #t)
+  ;; ((bar) (sf "match singleton\n") #t)
+  ;;(* #t)
+  )
+
+;;; --- last line ---

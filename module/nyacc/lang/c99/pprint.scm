@@ -90,6 +90,10 @@
      (else
       (iter (cons (itox (remainder val 16)) res) (1- ix) (quotient val 16))))))
 
+(define (esc->ch ch)
+  (case ch ((#\nul) #\0) ((#\alarm) #\a) ((#\backspace) #\b) ((#\tab) #\t)
+	((#\newline) #\n) ((#\vtab) #\v) ((#\page) #\f) ((#\return) #\r)))
+   
 ;; @deffn {Procedure} scmstr->c str
 ;; to be documented
 ;; @end deffn
@@ -99,7 +103,9 @@
     (lambda (ch chl)
       (cond
        ((char-set-contains? char-set:printing ch) (cons ch chl))
-       ((char=? ch #\nul) (cons* #\\ #\0 chl))
+       ((char=? ch #\space) (cons \#space chl))
+       ((memq ch '(#\nul #\alarm #\backspace #\tab #\linefeed #\newline
+		   #\vtab #\page #\return)) (cons* #\\ (esc->ch ch) chl))
        (else (char->hex-list ch chl))))
     '() str)))
     
@@ -205,6 +211,7 @@
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
 
   ;; TODO: comp-lit
+  ;; sx-match 270kB; sxml-match 255kB
   (define (ppx-1 tree)
     ;;(sxml-match tree
     (sx-match tree
@@ -223,10 +230,11 @@
       ((char (@ . ,al) ,value)
        (let ((type (sx-attr-ref al 'type)))
 	 (cond
+	  ((not type) (sf "'~A'" (scmchs->c value)))
 	  ((string=? type "wchar_t") (sf "L'~A'" (scmchs->c value)))
 	  ((string=? type "char16_t") (sf "u'~A'" (scmchs->c value)))
 	  ((string=? type "char32_t") (sf "U'~A'" (scmchs->c value)))
-	  (else (sf "'~A'" (scmchs->c value))))))
+	  (else (throw 'c99-error "bad type")))))
       ;; |#
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
@@ -234,7 +242,7 @@
       ((string . ,value-l)
        (pair-for-each
 	(lambda (pair)
-	  (sf "~S" (scmstr->c (car pair)))
+	  (sf "\"~A\"" (scmstr->c (car pair)))
 	  (if (pair? (cdr pair)) (sf " ")))
 	value-l))
 
@@ -352,7 +360,7 @@
       ;; gotta break up ppx because sxml-match seems to eat stack space:
       ;; everthing together results in SIGABRT from vm_error_stack_overflow()
       ;;(,otherwise
-      (*
+      (,otherwise
        (ppx-2 tree))))
   
   (define (ppx-2 tree)
@@ -534,8 +542,7 @@
       ;; #|
       ;; gotta break up ppx because sxml-match seems to eat stack space:
       ;; everthing together results in SIGABRT from vm_error_stack_overflow()
-      ;;(,otherwise
-      (*
+      (,otherwise
        (ppx-3 tree))))
   
   (define (ppx-3 tree)
@@ -678,8 +685,7 @@
       ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
       ((extern-end) (sf "}\n"))
 
-      ;;(,otherwise
-      (*
+      (,otherwise
        (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))
       ))
 

@@ -325,7 +325,8 @@ the file COPYING included with the this distribution.")
 ;; Also works if passed the attribute node @code{(@ ...)} or its tail.
 ;; @end deffn
 (define (sx-attr-ref sx key)
-  (let ((attr-tail (cond ((pair? (car sx)) sx)
+  (let ((attr-tail (cond ((null? sx) sx)
+			 ((pair? (car sx)) sx)
 			 ((eqv? '@ (car sx)) (car sx))
 			 ((sx-attr sx))
 			 (else '()))))
