@@ -229,16 +229,16 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make
       (case-lambda
-       ((val)
-	(cond
-	 ((bytestructure? val)
-	  (make-struct/no-tail type val))
-	 ((bytevector? val)
-	  (make-struct/no-tail type (bytestructure desc val)))
-	 ((number? val)
-	  (make-struct/no-tail type (bytestructure desc val)))
-	 (else (make-struct/no-tail type val))))
-       (() (make 0))))))
+	((val)
+	 (cond
+	  ((bytestructure? val)
+	   (make-struct/no-tail type val))
+	  ((bytevector? val)
+	   (make-struct/no-tail type (bytestructure desc val)))
+	  ((number? val)
+	   (make-struct/no-tail type (bytestructure desc val)))
+	  (else (make-struct/no-tail type val))))
+	(() (make 0))))))
 
 ;; @deffn {Syntax} ref<->deref! p-type p-make type make
 ;; This procedure will ``connect'' the two types so that the procedures
@@ -261,7 +261,7 @@
 	      (fht-pointer-to type)
 	      (fht-value-at type)
 	      (fht-printer type))))
-  
+
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
 ;; The first form generates an FY aggregate type based on a bytestructure
 ;; descriptor.  The second and third forms will build, in addition,
@@ -281,10 +281,10 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make
       (case-lambda
-       ((arg) (if (bytestructure? arg)
-		  (make-struct/no-tail type arg)
-		  (make-struct/no-tail type (bytestructure desc arg))))
-       (args (make-struct/no-tail type (apply bytestructure desc args)))))))
+	((arg) (if (bytestructure? arg)
+		   (make-struct/no-tail type arg)
+		   (make-struct/no-tail type (bytestructure desc arg))))
+	(args (make-struct/no-tail type (apply bytestructure desc args)))))))
 
 ;; @deffn {Syntax} define-fh-function-type type desc type? make
 ;; document this
@@ -319,21 +319,21 @@
 	 (and (fh-object? obj) (eq? (struct-vtable obj) type)))
        (define make
 	 (case-lambda
-	  ((val)
-	   (cond
-	    ((number? val) (bytestructure desc val))
-	    ((ffi:pointer? val) (bytestructure desc (ffi:pointer-address val)))
-	    ((procedure? val) ;; special case, procedure not pointer
-	     (let ((meta (ptr-desc->ftn-meta desc)))
-	       (bytestructure
-		desc
-		(ffi:pointer-address
-		 (ffi:procedure->pointer
-		  (function-metadata-return-descriptor meta)
-		  val
-		  (function-metadata-param-descriptor-list meta))))))
-	    (else (error "bad argument type"))))
-	  (() (make-struct/no-tail type (bytestructure desc)))))
+	   ((val)
+	    (cond
+	     ((number? val) (bytestructure desc val))
+	     ((ffi:pointer? val) (bytestructure desc (ffi:pointer-address val)))
+	     ((procedure? val) ;; special case, procedure not pointer
+	      (let ((meta (ptr-desc->ftn-meta desc)))
+		(bytestructure
+		 desc
+		 (ffi:pointer-address
+		  (ffi:procedure->pointer
+		   (function-metadata-return-descriptor meta)
+		   val
+		   (function-metadata-param-descriptor-list meta))))))
+	     (else (error "bad argument type"))))
+	   (() (make-struct/no-tail type (bytestructure desc)))))
        (export type type? make)))))
 
 ;; @deffn {Procedure} fh:cast type value
@@ -346,15 +346,15 @@
 (define (fh:cast type expr)
   (let* ((r-type
 	  (cond
-	   ((bytestructures-descriptor? type)
+	   ((bytestructure-descriptor? type)
 	    (bytestructure-descriptor->ffi-descriptor type))
 	   (else type)))
-	(r-expr
-	 (cond
-	  ((and (equal? r-type ffi-void*) (string? expr))
-	   (ffi:string->pointer expr))
-	  (else expr))))
-    (cons r-type r-expr))
+	 (r-expr
+	  (cond
+	   ((and (equal? r-type ffi-void*) (string? expr))
+	    (ffi:string->pointer expr))
+	   (else expr))))
+    (cons r-type r-expr)))
 (define fh-cast fh:cast)
 
 ;; --- unwrap / wrap procedures
@@ -481,22 +481,22 @@
 ;; right now the code generator only uses ffi types
 (define (fh:function %return-desc %param-desc-list)
   #;(define (get-return-ffi syntax?)
-    (if syntax?
-	#`(bytestructure-descriptor->ffi-descriptor %return-desc)
-	(bytestructure-descriptor->ffi-descriptor %return-desc)))
+  (if syntax?
+  #`(bytestructure-descriptor->ffi-descriptor %return-desc)
+  (bytestructure-descriptor->ffi-descriptor %return-desc)))
   #;(define (get-param-ffi-list syntax?)
-    (let iter ((params %param-desc-list))
-      (cond
-       ((null? params)
-	'())
-       ((pair? (car params))		; (list name desc)
-	(cons (cadar params) (iter (cdr params))))
-       ((eq? '... (car params))		; '...
-	'())
-       ((bytestructure-descriptor? (car params)) ; desc
-	(cons (bytestructure-descriptor->ffi-descriptor (car params))
-	      (iter (cdr params))))
-       (else (error "bad parameter")))))
+  (let iter ((params %param-desc-list))
+  (cond
+  ((null? params)
+  '())
+  ((pair? (car params))		; (list name desc)
+  (cons (cadar params) (iter (cdr params))))
+  ((eq? '... (car params))		; '...
+  '())
+  ((bytestructure-descriptor? (car params)) ; desc
+  (cons (bytestructure-descriptor->ffi-descriptor (car params))
+  (iter (cdr params))))
+  (else (error "bad parameter")))))
   (define (get-return-ffi syntax?)
     (if syntax?
 	#`%return-desc
