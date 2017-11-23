@@ -152,8 +152,6 @@
   ;;(sferr "pointer-declr? ~S\n" declr)
   (and
    declr
-   ;;(sxml-match declr
-   ;;(#f #f)
    (sx-match declr
      ((init-declr ,declr) (pointer-declr? declr))
      ((comp-declr ,declr) (pointer-declr? declr))
@@ -388,7 +386,6 @@
     (let*-values (((tag attr specl declrs tail) (split-decl decl))
 		  ((tag) (values 'udecl)))
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
-      ;;(sxml-match specl
       (sx-match specl
 
 	;; struct typedefs 
@@ -531,7 +528,6 @@
 ;; This is used by @code{trans-unit->udict}.
 ;; @end deffn
 (define (declr-ident declr)
-  ;;(sxml-match declr
   (sx-match declr
     ((ident ,name) declr)
     ((init-declr ,declr . ,rest) (declr-ident declr))
@@ -607,7 +603,6 @@
 ;; @deffn {Procedure} typedef-decl? decl)
 ;; @end deffn
 (define (typedef-decl? decl)
-  ;;(sxml-match decl
   (sx-match decl
     ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
     (* #f)))
@@ -910,8 +905,6 @@
     ;;(sferr "fix-declr:\n") (pperr declr)
     (and
      declr
-     ;;(sxml-match declr
-     ;;(#f declr)
      (sx-match declr
        ((ident ,name) declr)
        ((bit-field . ,rest) declr)
@@ -1139,7 +1132,6 @@
      ((null? edl)
       (sx-cons* (sx-tag enum-def-list) (sx-attr enum-def-list) (reverse rez)))
      (else
-      ;;(sxml-match (car edl)
       (sx-match (car edl)
 	((enum-defn ,ident)
 	 (let ((sval (number->string nxt)))
@@ -1348,8 +1340,6 @@
 
   (define (unwrap-pointer pointer)  ;; =>list IGNORES TYPE QUALIFIERS
     ;;(sferr "unwrap-pointer ~S\n" pointer)
-    ;;(sxml-match pointer
-    ;;(pperr pointer)
     (sx-match pointer
       ((pointer (type-qual-list . ,type-qual) ,pointer)
        (cons '(pointer-to) (unwrap-pointer pointer)))
@@ -1367,7 +1357,6 @@
   
   (define* (unwrap-declr declr #:key (const #f))
     ;;(sferr "unwrap-declr:\n") (pperr declr #:per-line-prefix "  ")
-    ;;(sxml-match declr
     (sx-match declr
       ((ident ,name)
        (list name))

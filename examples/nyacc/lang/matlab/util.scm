@@ -24,10 +24,10 @@
 	    name-expr->decl
 	    )
   #:use-module (nyacc lang util)
+  #:use-module (nyacc lang sx-match)
   #:use-module (ice-9 pretty-print)
   #:use-module (ice-9 regex)
   #:use-module ((sxml fold) #:select (foldts*-values))
-  #:use-module (sxml match)
   )
 
 ;; probably also need some sort of overall declaration form
@@ -54,7 +54,7 @@
 ;; decl
 ;; decl: fctn, struct, array, double, int
 #;(define (name-expr->c-decl name expr) ;; => decl
-  (sxml-match expr
+  (sx-match expr
     ((aref-or-call (ident "zeros") ,ex-l)
      #f)))
 
@@ -91,7 +91,7 @@
 ;; Given an lval return the root identifier name as a string.
 ;; @var{disp} is the disposition (e.g., struct) of the lval
 (define* (lval->ident lval #:optional (disp 'unknown))
-  (sxml-match lval
+  (sx-match lval
     ((ident ,name) (cons name disp))
     ((sel ,ident ,lval) (lval->ident lval 'struct))
     ((array-ref ,lval ,ex-l)
@@ -102,8 +102,7 @@
      (case disp
        ((struct) (lval->ident lval disp))
        (else (lval->ident lval 'array))))
-    (,otherwise
-     (throw 'util-error "unknown lval: ~S" lval))))
+    (* (throw 'util-error "unknown lval: ~S" lval))))
 
 (define (binary-rank lval rval)
   (and lval rval (max lval rval)))
@@ -163,7 +162,7 @@
   ;; Then pass through c99 parser OR Maybe not
 
   (define (fD tree seed dict) ;; => (values tree seed dict)
-    (sxml-match tree
+    (sx-match tree
       ((function-file (@ (file ,name)) . ,rest)
        (values tree '()
 	       (cons*
@@ -189,8 +188,7 @@
        ;;(values tree '() (d-add-rank dict name (length (sx-tail lval 1)))))
        (values tree '() dict))
 
-      (,otherwise
-       (values tree '() dict))))
+      (* (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
     ;;(when (pair? tree) (simple-format #t "cartree=~S\n" (car tree)))
@@ -231,7 +229,7 @@
 (define (declify-script tree . rest)
   
   (define (fD tree seed dict) ;; => (values tree seed dict)
-    (sxml-match tree
+    (sx-match tree
       ((script-file (@ (file ,name)) . ,rest)
        (values tree '()
 	       (cons*
@@ -256,8 +254,7 @@
        ;;(fout "    ->rank =>~S\n" (expr->rank lval))
        (values tree '() dict))
 
-      (,otherwise
-       (values tree '() dict))))
+      (* (values tree '() dict))))
   
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
     ;;(fout "tree-tag=~S kseed=~S\n" (car tree) kseed)

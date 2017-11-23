@@ -32,18 +32,18 @@
     (lambda () (lalr->bison dxl-spec))))
 
 (use-modules (sxml fold))
-(use-modules (sxml match))
+(use-modules (nyacc lang sx-match))
 
 
 ;; NOW WORKING
 (define (elifify tree)
   (define (fU tree)
-    (sxml-match tree
+    (sx-match tree
       ((if ,x1 ,t1 (if ,x2 ,t2 (else-if ,x3 ,t3) . ,rest))
        `(if ,x1 ,t1 (else-if ,x2 ,t2) (else-if ,x3 ,t3) . ,rest))
       ((if ,x1 ,t1 (if ,x2 ,t2 . ,rest))
        `(if ,x1 ,t1 (else-if ,x2 ,t2) . ,rest))
-      (,otherwise
+      (*
        tree)))
   (foldt fU identity tree))
 

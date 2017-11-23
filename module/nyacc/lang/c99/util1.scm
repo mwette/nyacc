@@ -228,13 +228,6 @@
 ;; @end deffn
 (define (elifify tree)
   (define (fU tree)
-    #;(sxml-match tree
-      ((if ,x1 ,t1 (if ,x2 ,t2 (else-if ,x3 ,t3) . ,rest))
-       `(if ,x1 ,t1 (else-if ,x2 ,t2) (else-if ,x3 ,t3) . ,rest))
-      ((if ,x1 ,t1 (if ,x2 ,t2 . ,rest))
-       `(if ,x1 ,t1 (else-if ,x2 ,t2) . ,rest))
-      (,otherwise
-       tree))
     (sx-match tree
       ((if ,x1 ,t1 (if ,x2 ,t2 (else-if ,x3 ,t3) . ,rest))
        `(if ,x1 ,t1 (else-if ,x2 ,t2) (else-if ,x3 ,t3) . ,rest))

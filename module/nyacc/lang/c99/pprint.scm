@@ -206,7 +206,6 @@
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
 
   ;; TODO: comp-lit
-  ;; sx-match 270kB; sxml-match 255kB
   (define (ppx-1 tree)
     (sx-match tree
 

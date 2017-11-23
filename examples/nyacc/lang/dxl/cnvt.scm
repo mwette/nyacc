@@ -1,6 +1,6 @@
 ;;; nyacc/lang/dxl/cnvt.scm -- convert dxl to javascript
 ;;;
-;;; Copyright (C) 2015,2016 Matthew R. Wette
+;;; Copyright (C) 2015-2017 Matthew R. Wette
 ;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by 
@@ -20,10 +20,10 @@
 (add-to-load-path (string-append (getcwd) "/../.."))
 
 (use-modules (nyacc lang util))
+(use-modules (nyacc lang sx-match))
 (use-modules (nyacc lang dxl mach))
 (use-modules (nyacc lang dxl mach))
 (use-modules (nyacc lang javascript pprint))
-(use-modules (sxml match))
 (use-modules (sxml fold))
 (use-modules ((srfi srfi-1) #:select (fold append-reverse)))
 (use-modules (ice-9 pretty-print))
