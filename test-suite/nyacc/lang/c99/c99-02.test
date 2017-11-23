@@ -55,6 +55,6 @@
   ;; 
 
   )
-(display "c99-02: need to test typedef inside function -- BROKEN?\n")
+(display "TODO: nyacc/c99-02: test typedef inside function scope\n")
 
 ;; --- last line ---

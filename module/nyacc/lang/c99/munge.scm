@@ -1465,7 +1465,7 @@
     `(udecl (decl-spec-list (type-spec ,types)) (init-declr ,declr)))
 
   (define (doit declr mspec-tail)
-    (sx-match mspec-tail
+    (pmatch mspec-tail
       (((fixed-type ,name)) (make-udecl (car mspec-tail) declr))
       (((float-type ,name)) (make-udecl (car mspec-tail) declr))
       (((typename ,name)) (make-udecl (car mspec-tail) declr))
@@ -1474,7 +1474,7 @@
       (((pointer-to) . ,rest)
        (doit `(ptr-declr (pointer) ,declr) rest))
       
-      (*
+      (,*
        (sferr "munge/mspec->udecl missed:\n")
        (pperr mspec-tail)
        (error "munge/mspec->udecl failed")
