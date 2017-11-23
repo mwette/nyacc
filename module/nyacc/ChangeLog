@@ -1,3 +1,9 @@
+2017-11-23  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (read-c-chlit): did not parse '\177' correctly (prev
+	code fix may have done this).  Fixed (I hope) and added test
+	case for escapes in C chlit and C string in test-suite.
+
 2017-11-12  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (read-oct): changed (read-oct ch) to (read-oct) to be

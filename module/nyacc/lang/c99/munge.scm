@@ -153,33 +153,6 @@
   (and
    declr
    ;;(sxml-match declr
-     ;;(#f #f)
-   (sx-match declr
-     ((init-declr ,declr) (pointer-declr? declr))
-     ((comp-declr ,declr) (pointer-declr? declr))
-     ((param-declr ,declr) (pointer-declr? declr))
-     ;;
-     ((ptr-declr ,pointer ,dir-declr) #t)
-     ((array-of . ,rest) #t)
-     ((ftn-declr . ,rest) #t)
-     ((abs-declr (pointer . ,r1) . ,r2) #t)
-     ;;
-     ((init-declr-list . ,declrs)
-      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-     ((comp-declr-list . ,declrs)
-      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-     ;;
-     (,otherwise #f))))
-;; @deffn {Procedure} pointer-stor-declr? declr => #t|#f
-;; @deffnx {Procedure} pointer-pass-declr? declr => #t|#f
-;; This predicate determines if the declarator is implemented as a pointer.
-;; That is, it is an explicit pointer, an array (ERROR), or a function.
-;; @end deffn
-;;(define (pointer-stor-declr? declr)
-(define (pointer-pass-declr? declr)
-  (and
-   declr
-   ;;(sxml-match declr
    ;;(#f #f)
    (sx-match declr
      ((init-declr ,declr) (pointer-declr? declr))
@@ -196,7 +169,32 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (,otherwise #f))))
+     (* #f))))
+;; @deffn {Procedure} pointer-stor-declr? declr => #t|#f
+;; @deffnx {Procedure} pointer-pass-declr? declr => #t|#f
+;; This predicate determines if the declarator is implemented as a pointer.
+;; That is, it is an explicit pointer, an array (ERROR), or a function.
+;; @end deffn
+;;(define (pointer-stor-declr? declr)
+(define (pointer-pass-declr? declr)
+  (and
+   declr
+   (sx-match declr
+     ((init-declr ,declr) (pointer-declr? declr))
+     ((comp-declr ,declr) (pointer-declr? declr))
+     ((param-declr ,declr) (pointer-declr? declr))
+     ;;
+     ((ptr-declr ,pointer ,dir-declr) #t)
+     ((array-of . ,rest) #t)
+     ((ftn-declr . ,rest) #t)
+     ((abs-declr (pointer . ,r1) . ,r2) #t)
+     ;;
+     ((init-declr-list . ,declrs)
+      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+     ((comp-declr-list . ,declrs)
+      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+     ;;
+     (* #f))))
 
 ;; Use the term @dfn{udecl}, or unit-declaration, for a declaration which has
 ;; only one decl-item.  That is where,
@@ -437,8 +435,8 @@
 	((decl-spec-list
 	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(struct . ,name)
-		(make-udecl 'struct-def `((ident ,name) . ,rest2))
-		tag attr specl declrs tail seed))
+		 (make-udecl 'struct-def `((ident ,name) . ,rest2))
+		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
 	 (iter-declrs tag attr specl declrs tail seed))
@@ -464,8 +462,7 @@
 	 (update `(enum . "*anon*") (make-udecl 'enum-def rest2)
 		 tag attr specl declrs tail seed))
 
-	(,otherwise
-	 (iter-declrs tag attr specl declrs tail seed)))))
+	(* (iter-declrs tag attr specl declrs tail seed)))))
    
    ((eqv? (sx-tag decl) 'comp-udecl) (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag decl) 'comp-decl) (unitize-comp-decl decl seed))
@@ -528,7 +525,7 @@
 	     (ident (declr-ident declr))
 	     (name (cadr ident)))
 	(acons name decl seed))))
-	
+
 ;; @deffn {Procedure} declr-ident declr => (ident "name")
 ;; Given a declarator, aka @code{init-declr}, return the identifier.
 ;; This is used by @code{trans-unit->udict}.
@@ -546,7 +543,7 @@
     ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
     ((bit-field ,ident . ,rest) ident)
-    (,otherwise (throw 'util-error "c99/munge: unknown declarator: " declr))))
+    (* (throw 'util-error "c99/munge: unknown declarator: " declr))))
 
 ;; @deffn {Procedure} declr-id decl => "name"
 ;; This extracts the name from the return value of @code{declr-ident}.
@@ -613,7 +610,7 @@
   ;;(sxml-match decl
   (sx-match decl
     ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
-    (,otherwise #f)))
+    (* #f)))
 
 ;; @deffn {Procedure} repl-typespec decl-spec-list repl-type-spec
 ;; In the decl-spec-list replace the type-specifier.
@@ -700,7 +697,6 @@
 ;; @end example
 (define (tdef-splice-declr orig-declr tdef-declr)
   (define (probe-declr declr)
-    ;;(sxml-match declr
     (sx-match declr
       ((ident ,name)
        (sx-ref orig-declr 1))
@@ -720,7 +716,7 @@
        `(ftn-declr ,(probe-declr dir-declr) . ,rest))
       ((scope ,declr)
        `(scope ,(probe-declr declr)))
-      (,otherwise (throw 'util-error "c99/munge: unknown declarator: " declr))))
+      (* (throw 'util-error "c99/munge: unknown declarator: " declr))))
   (probe-declr tdef-declr))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
@@ -817,7 +813,7 @@
 	 (values fixd-specl declr)))
       ((struct-ref union-ref) ;; compound reference; replace unless pointer
        (let* ((c-name (and=> (sx-find 'ident tspec)
-				(lambda (id) (sx-ref id 1))))
+			     (lambda (id) (sx-ref id 1))))
 	      (c-key (compound-key class c-name)) ;; e.g., (struct . "foo")
 	      (c-decl (and c-key (assoc-ref udict c-key)))
 	      (t-spec (and c-decl (sx-find 'type-spec (sx-ref c-decl 1)))))
@@ -1027,7 +1023,7 @@
 	      declr
 	      `(comp-declr-list . ,xdeclrs))))
        
-       (,otherwise (throw 'util-error "c99/munge: unknown declarator: " declr)))))
+       (* (throw 'util-error "c99/munge: unknown declarator: " declr)))))
 
   (let*-values (((tag attr orig-specl orig-declr tail)
 		 (split-adecl adecl))
@@ -1120,10 +1116,10 @@
 	 ;; else ...
 	 seed))
    seed udict))
- 
+
 
 ;; === enum handling ===================
-  
+
 ;; @deffn {Procedure} canize-enum-def-list enum-def-list [defs] => enum-def-list
 ;; Fill in constants for all entries of an enum list.
 ;; Expects @code{(enum-def-list (...))} (i.e., not the tail).
@@ -1220,10 +1216,10 @@
 	  (cons (reverse kseed) seed)
 	  seed))
      (else (cons (reverse kseed) seed))))
-	
+  
   (define (fH seed tree)
     (cons tree seed))
-   
+  
   (foldts fD fU fH '() declr))
 
 ;; @deffn {Procedure} stripdown udecl => udecl
@@ -1360,16 +1356,15 @@
       ((pointer (type-qual-list . ,type-qual)) '((pointer-to)))
       ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
       ((pointer) '((pointer-to)))
-      (,otherwise
+      (*
        (sferr "unwrap-pointer failed on:\n") (pperr pointer)
-       (error "unwrap-pointer"))
-      ))
+       (error "unwrap-pointer"))))
 
   (define (make-abs-dummy) ;; for abstract declarator make a dummy
     (or abs-ident (symbol->string (gensym "@"))))
   (define (make-abs-dummy-tail)
     (list (make-abs-dummy)))
-    
+  
   (define* (unwrap-declr declr #:key (const #f))
     ;;(sferr "unwrap-declr:\n") (pperr declr #:per-line-prefix "  ")
     ;;(sxml-match declr
@@ -1432,7 +1427,7 @@
       ((comp-declr ,item) (unwrap-declr item))
       ((param-declr ,item) (unwrap-declr item))
 
-      (,otherwise
+      (*
        (sferr "munge/unwrap-declr missed:\n")
        (pperr declr)
        (error "c99/munge: udecl->mspec failed")
@@ -1470,7 +1465,7 @@
     `(udecl (decl-spec-list (type-spec ,types)) (init-declr ,declr)))
 
   (define (doit declr mspec-tail)
-    (pmatch mspec-tail
+    (sx-match mspec-tail
       (((fixed-type ,name)) (make-udecl (car mspec-tail) declr))
       (((float-type ,name)) (make-udecl (car mspec-tail) declr))
       (((typename ,name)) (make-udecl (car mspec-tail) declr))
@@ -1478,10 +1473,10 @@
       
       (((pointer-to) . ,rest)
        (doit `(ptr-declr (pointer) ,declr) rest))
-       
-      (,otherwise
+      
+      (*
        (sferr "munge/mspec->udecl missed:\n")
-       (pperr otherwise)
+       (pperr mspec-tail)
        (error "munge/mspec->udecl failed")
        #f)))
 
@@ -1529,7 +1524,7 @@
      ((eqv? (sx-tag tree) 'type-qual) seed)
      ((null? seed) (reverse kseed))
      (else (cons (reverse kseed) seed))))
-	
+  
   (define (fsH seed tree)
     (cons tree seed))
 
@@ -1543,40 +1538,3 @@
 
 
 ;; --- last line ---
-#|
-;; @deffn {Procedure} splice-declarators orig-declr tdef-declr => 
-;; Splice the original declarator into the typedef declarator.
-;; This is a helper for @code{expand-*-typename-ref} procecures.
-;; Consider
-;; @example
-;; typedef int *foo_t;
-;; foo_t bla[3];
-;; @end example
-;; @noindent
-;; maps
-;; @example
-;; bla[3] => *(bla[3])
-;; @end example
-;; @end deffn
-(define (splice-declarators orig-declr tdef-declr)
-  
-  (define (fD seed tree)		; => (values seed tree)
-    (sxml-match tree
-      ((param-list . ,rest) (values tree '())) ; don't process
-      ((ident ,name) (values (reverse (cadr orig-declr)) '())) ; replace
-      (,otherwise (values '() tree))))
-
-  (define (fU seed kseed tree)
-    (let ((ktree (case (car kseed)
-		   ((param-list ident) kseed)
-		   (else (reverse kseed)))))
-      (if (null? seed) ktree (cons ktree seed))))
-
-  (define (fH seed tree)
-    (cons tree seed))
-
-  ;; This cons transfers the tag from orig-declr to the result.
-  (cons
-   (car orig-declr)			; init-declr or comp-declr
-   (cdr (foldts* fD fU fH '() tdef-declr)))) ; always init-declr
-|#

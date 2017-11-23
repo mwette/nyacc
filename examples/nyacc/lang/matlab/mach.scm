@@ -108,7 +108,7 @@
      (non-comment-statement))
     (non-comment-statement
      (term ($$ #f))
-     (lval-expr "(" expr-list ")" term ($$ `(call ,$1 ,(tl->list $3))))
+     (lval-expr "(" expr-list ")" term ($$ `(call-stmt ,$1 ,(tl->list $3))))
      (lval-expr "=" expr term ($$ `(assn ,$1 ,$3)))
      ("[" lval-expr-list "]" "=" ident "(" ")" term
       ($$ `(multi-assign ,(tl->list $2) ,$5 (expr-list))))

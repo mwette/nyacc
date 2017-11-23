@@ -121,11 +121,11 @@
 	      "typedef int *bla_t[2];\n"
 	      "bla_t foo(bla_t (*)(bla_t));\n"))
        (indx 2)
-       (tree (parse-string code))
+       ;;(tree (parse-string code))
        ;;(tree (parse-file "xxx.c"))
-       (udict (c99-trans-unit->udict tree))
-       (decl (and=> ((sxpath `((decl ,indx))) tree) car))
-       (xdecl (expand-typerefs decl udict))
+       ;;(udict (c99-trans-unit->udict tree))
+       ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
+       ;;(xdecl (expand-typerefs decl udict))
        ;;(ddict (udict-enums->ddict udict))
        ;;(udecl (udict-ref udict "x"))
        ;;(mdecl (udecl->mspec udecl))
@@ -135,9 +135,17 @@
   ;;(display code)
   ;;(ppsx tree)
   ;;(ppsx decl)
-  (pp99 xdecl)
+  ;;(pp99 xdecl)
   ;;(ppsx (get-gcc-cpp-defs))
   #t)
+
+(sf "~S\n"
+    (with-input-from-string "'\\177'"
+	(lambda () (read-c-chlit (read-char)))))
+
+(sf "~S\n"
+    (with-input-from-string "\"\\177\""
+	(lambda () (read-c-string (read-char)))))
 
 ;;(pp (sx-match '(foo (bar "baz") "hello")
 ;;       ((foo (bar . ,text) . ,rest) #t) (* #f)))

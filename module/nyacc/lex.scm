@@ -54,7 +54,6 @@
 	    make-like-ident-p
 	    )
   #:use-module ((srfi srfi-1) #:select (remove append-reverse))
-  #:use-module (ice-9 pretty-print)
   )
 (cond-expand
   (guile-2 #t)
@@ -62,6 +61,8 @@
    (use-modules (ice-9 optargs))
    (use-modules (ice-9 syncase))))
 
+(define (sf fmt . args) (apply simple-format #t fmt args))
+  
 ;; @section Constructing Lexical Analyzers
 ;; The @code{lex} module provides a set of procedures to build lexical
 ;; analyzers.  The approach is to first build a set of @defn{readers} for 
@@ -247,6 +248,8 @@
       ((#\a) (cons #\bel seed))	      ; guile 1.8 doesn't know #\alarm
       ((#\v) (cons #\vt seed))	      ; guile 1.8 doesn't know #\vtab
       ((#\0) (cons (integer->char (read-oct)) seed))
+      ((#\1 #\2 #\3 #\4 #\5 #\6 #\7)
+       (unread-char ch) (cons (integer->char (read-oct)) seed))
       ((#\x) (cons (integer->char (read-hex)) seed))
       (else (cons ch seed)))))
 
@@ -281,16 +284,19 @@
   (define (read-esc-char)
     (let ((c2 (read-char)))
       (case c2
-	((#\a) "\x07")		   ; alert U+0007
-	((#\b) "\x08")		   ; backspace U+0008 not in guile 1.8
 	((#\t) "\t")		   ; horizontal tab U+0009
 	((#\n) "\n")		   ; newline U+000A
 	((#\v) "\v")		   ; verticle tab U+000B
 	((#\f) "\f")		   ; formfeed U+000C
 	((#\r) "\r")		   ; return U+000D
+	((#\a) "\x07")		   ; alert U+0007
+	((#\b) "\x08")		   ; backspace U+0008 not in guile 1.8
 	((#\0) (string (integer->char (read-oct)))) ; octal
+	((#\1 #\2 #\3 #\4 #\5 #\6 #\7)		    ; octal
+	 (unread-char c2) (string (integer->char (read-oct))))
 	((#\x) (string (integer->char (read-hex)))) ; hex
-	(else (error "bad escape sequence")))))
+	((#\\ #\' #\" #\? #\|) (string c2))
+	(else (error "bad escape sequence" c2)))))
   (define (wchar t)
     (case t ((#\L) '$chlit/L) ((#\u) '$chlit/u) ((#\U) '$chlit/U)))
   (cond

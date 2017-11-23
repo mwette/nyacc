@@ -25,6 +25,7 @@
 	    )
   #:use-module (nyacc lang util)
   #:use-module (ice-9 pretty-print)
+  #:use-module (ice-9 regex)
   #:use-module ((sxml fold) #:select (foldts*-values))
   #:use-module (sxml match)
   )
@@ -133,12 +134,12 @@
 ;; should be (for now) struct double vector matrix
 
 (define fold-in-decl
-  (let ((rx1 (make-regexp "^~\s*([0-9A-Za-z]+)\s*:\s*([0-9A-Za-z]+)")))
+  (let ((rx1 (make-regexp "^~\\s*([0-9A-Za-z]+)\\s*:\\s*([0-9A-Za-z]+)")))
     (lambda (str seed)
-      (let ((m (regexp-exec str)))
+      (let ((m (regexp-exec rx1 str)))
 	(if m
-	    (acons (match:string m 1) (match:string m 2) seed)
-	    seeed)))))
+	    (acons (match:substring m 1) (match:substring m 2) seed)
+	    seed)))))
 
 ;; matrix: oset rstr cstr flag double *
 ;; vector: double *
@@ -265,7 +266,7 @@
       ((assn)
        (let* ((assn (reverse kseed))
 	      (lval (sx-ref assn 1)) (rval (sx-ref assn 2))
-	      (ltyp (sx-atr-ref lval 'type))
+	      (ltyp (sx-attr-ref lval 'type))
 	      (rtype (sx-attr-ref rval 'type))
 	      (rrank (and=> (sx-attr-ref rval 'rank) string->number))
 	      )

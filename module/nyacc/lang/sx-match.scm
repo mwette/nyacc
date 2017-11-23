@@ -87,7 +87,6 @@
 ;; match sexp
 (define-syntax sxm-sexp
   (syntax-rules (@ * unquote)
-    ((_ v (unquote _) kt kf) kt) ;; TEMP HACK; later remove ,otherwise
     ;; capture attributes
     ((_ v (tag (@ . (unquote al)) . nl) kt kf)
      (sxm-tag (car v) tag

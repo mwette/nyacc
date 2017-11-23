@@ -32,8 +32,33 @@
 
 (with-test-prefix "nyacc/lex-01"
 
+  ;; escape character 
+  (pass-if "C char literals"
+    (fold
+     (lambda (pair pass)
+       (and pass
+            (string=?
+             (with-input-from-string (car pair)
+               (lambda () (or (and=> (read-c-chlit (read-char)) cdr) "")))
+	     (cdr pair))))
+     #t
+     '(("'\\177'" . "\x7f")
+       )))
+
+  (pass-if "C strings"
+    (fold
+     (lambda (pair pass)
+       (and pass
+            (string=?
+             (with-input-from-string (car pair)
+               (lambda () (or (and=> (read-c-string (read-char)) cdr) "")))
+	     (cdr pair))))
+     #t
+     '(("\"\\177\"" . "\x7f")
+       )))
+
   ;; Check that comment ending in newline does not eat the newline.
-  (pass-if "comm-reader-01"
+  (pass-if "C comments"
     (with-input-from-string "//abc\ndef"
       (lambda ()
 	(let* ((tp (read-comm-1 (read-char) #f))
@@ -42,7 +67,7 @@
 	       (equal? ch #\newline))))))
 
   ;; C99 number string to Scheme number string (which works w/ string->number)
-  (pass-if "cnumstr->scm"
+  (pass-if "C num to Scheme num (as strings)"
     (fold
      (lambda (pair pass)
        (and pass (string=? (cnumstr->scm (car pair)) (cdr pair))))

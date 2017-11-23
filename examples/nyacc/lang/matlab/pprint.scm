@@ -19,7 +19,7 @@
   #:export (pretty-print-ml)
   #:use-module ((srfi srfi-1) #:select (pair-for-each fold-right))
   #:use-module (nyacc lang util)
-  #:use-module (sxml match)
+  #:use-module (nyacc lang sx-match)
   #:use-module (ice-9 pretty-print)
   )
 
@@ -104,7 +104,7 @@
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
   
   (define (ppx tree)
-    (sxml-match tree
+    (sx-match tree
 
       ((script-file . ,rest)
        #f)
@@ -136,15 +136,47 @@
        (sf "~A" ident))
 
       ((stmt-list . ,stmts)
-       (for-each
-	(lambda (stmt)
-	  (ppx stmt)
-	  (sf "\n")
-	  )
-	stmts))
+       (for-each (lambda (stmt) (ppx stmt) (sf "\n")) stmts))
+
+      ((call-stmt ,name . ,args)
+       (ppx name) (sf "(")
+       (pair-for-each
+	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) ", "))
+	args)
+       (sf ");"))
+
+      ((aref-or-call ,name . ,args)
+       (ppx name) (sf "(")
+       (pair-for-each
+	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) ", "))
+	args)
+       (sf ")"))
 
       ((assn ,lhs ,rhs)
        (ppx lhs) (sf " = ") (ppx rhs) (sf ";"))
+
+      ((multi-assign ,lvals ,name ,args)
+       (sf "[") (for-each ppx lvals) (sf "] = ")
+       (ppx name) (sf "(")
+       (pair-for-each
+	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+	args)
+       (sf ");\n"))
+
+      ((for . ,rest)
+       #f)
+
+      ((while . ,rest)
+       #f)
+
+      ((if . ,rest)
+       #f)
+
+      ((switch . ,rest)
+       #f)
+
+      ((return ,value)
+       (sf "return ") (ppx value) (sf ";\n"))
 
       ((command (ident ,name) (arg-list . ,args))
        (sf "~A" name)
@@ -191,7 +223,7 @@
       ((le ,lval ,rval) (binary 'le " <= " lval rval))
       ((ge ,lval ,rval) (binary 'ge " >= " lval rval))
       ((eq ,lval ,rval) (binary 'eq " == " lval rval))
-      ((neq ,lval ,rval) (binary 'neq " != " lval rval))
+      ((neq ,lval ,rval) (binary 'neq " ~= " lval rval))
 
       ((add ,lval ,rval) (binary 'add " + " lval rval))
       ((sub ,lval ,rval) (binary 'sub " - " lval rval))
@@ -205,103 +237,7 @@
       ((float ,value) (sf "~A" value))
       ((string ,value) (sf "'~A'" (string->matlab value)))
       
-      #|
-      ((p-expr ,expr) (ppx expr))
-      ((char ,value) (sf "'~A'" (sx-ref tree 1)))
-
-      ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
-      
-      ((bitwise-not ,expr) (unary/l 'bitwise-not "~" expr))
-      ((not ,expr) (unary/l 'not "!" expr))
-
-      ((cast ,tn ,ex)
-      (sf "(") (ppx tn) (sf ")")
-      (if (protect-expr? 'rt 'cast ex)
-      (ppx/p ex)
-      (ppx ex)))
-
-      ((mod ,lval ,rval) (binary 'mod "%" lval rval))
-      
-      ((post-inc ,expr) (unary/r 'post-inc "++" expr))
-      ((post-dec ,expr) (unary/r 'post-dec "--" expr))
-      
-      ((array-of ,dir-declr ,arg)
-      (ppx dir-declr) (sf "[") (ppx arg) (sf "]"))
-      ((array-of ,dir-declr)
-      (ppx dir-declr) (sf "[]"))
-      ;; MORE TO GO
-      
-      ;; selection-statement
-      ((if . ,rest)
-      (let ((cond-part (sx-ref tree 1))
-      (then-part (sx-ref tree 2)))
-      (sf "if (") (ppx cond-part) (sf ") ")
-      (ppx then-part)
-      (let iter ((else-l (sx-tail tree 3)))
-      (cond
-      ((null? else-l) #t)
-      ((eqv? 'else-if (caar else-l))
-      (sf "else if (") (ppx (sx-ref (car else-l) 1)) (sf ") ")
-      (ppx (sx-ref (car else-l) 2))
-      (iter (cdr else-l)))
-      (else
-      (sf "else ")
-      (ppx (car else-l)))))))
-
-      ((switch ,expr (compd-stmt (block-item-list . ,items)))
-      (sf "switch (") (ppx expr) (sf ") {\n")
-      (for-each
-      (lambda (item)
-      (unless (memq (car item) '(case default)) (push-il))
-      (ppx item)
-      (unless (memq (car item) '(case default)) (pop-il)))
-      items)
-      (sf "}\n"))
-
-      ;; labeled-statement
-      ((case ,expr ,stmt)
-      (sf "case ") (ppx expr) (sf ":\n")
-      (push-il) (ppx stmt) (pop-il))
-
-      ((default ,stmt)
-      (sf "default:\n")
-      (push-il) (ppx stmt) (pop-il))
-
-      ;; This does not meet the convention of "} while" on same line. 
-      ((do-while ,stmt ,expr)
-      (sf "do ")
-      (if (eqv? 'compd-stmt (sx-tag stmt)) 
-      (ppx (cons 'compd-stmt-no-newline (cdr stmt)))
-      (ppx stmt))
-      (sf "while (") (ppx expr) (sf ");\n"))
-      
-      ;; for
-      ((for (decl . ,rest) ,test ,iter ,stmt)
-      (sf "for (") (ppx `(decl-no-newline . ,rest))
-      (sf " ") (ppx test) (sf "; ") (ppx iter) (sf ") ")
-      (ppx stmt))
-
-      ((for (decl . ,rest) ,expr2 ,expr3 ,stmt)
-      (sf "for (")
-      (ppx `(decl . ,rest)) (sf " ") (ppx expr2) (sf "; ") (ppx expr3)
-      (sf ") ") (ppx stmt))
-      ((for ,expr1 ,expr2 ,expr3 ,stmt)
-      (sf "for (")
-      (ppx expr1) (sf "; ") (ppx expr2) (sf "; ") (ppx expr3)
-      (sf ") ") (ppx stmt))
-
-      ;; jump-statement
-      ((goto ,where)
-      (pop-il)			; unindent
-      (sf "goto ~A;" (sx-ref where 1))
-      ;; comment?
-      (sf "\n")
-      (push-il))			; re-indent
-      |#
-
-      (,otherwise
-       (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))
-      ))
+      (* (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
 
   (ppx tree))
 
