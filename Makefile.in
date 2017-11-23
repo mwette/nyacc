@@ -19,30 +19,39 @@ all:
 .PHONY: install
 install:
 	@(cd module; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
+	  make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
 		 install)
 	@(cd doc/nyacc; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
+	  make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
 		 INFODIR=$(INFODIR) \
 		 install)
 
 .PHONY: install-srcs
 install-srcs:
 	@(cd module; \
-	 make -f Makefile.nyacc \
+	  make -f Makefile.nyacc \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 install-srcs)
 
 .PHONY: install-ffi-help
 install-ffi-help:
 	@(cd examples; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
+	  make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
 		 INFODIR=$(INFODIR) \
 		 install-ffi-help)
+
+.PHONY: install-bytestructures
+install-bytestructures:
+        @(cd examples; \
+          make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
+                 SITE_SCM_DIR=$(SITE_SCM_DIR) \
+                 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
+                 INFODIR=$(INFODIR) \
+                 install-bytestructures)
 
 .PHONY: dist-files
 dist-files:

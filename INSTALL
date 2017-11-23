@@ -25,8 +25,14 @@ You must specify site_scm_go_dir to avoid use of `guile'.
 
 If you want to install the experiental FFI Helper files:
   $ make install-ffi-help
+
 The FFI Helper requires the bytestructures package, from
   https://github.com/TaylanUB/scheme-bytestructures
-See `info ffi-help' for more.  Compiling can take some time.
+`make install-ffi-helper' will fail if this package is not installed.
+If you don't want to clone this package from the git repo, then nyacc has
+a copy: use `make install-bytestructures' before `make install-ffi-help'.
+
+See `info ffi-help' for more detail.  Note: compiling the output off the
+ffi-helper output of can take some time, due to size.
 
 The file HACKING has hints for modifying and trying code.

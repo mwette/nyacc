@@ -49,7 +49,10 @@ install-ffi-help: install-fh-srcs
 	@mkdir -p $(SITE_SCM_GO_DIR)
 	@if GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
 		$(GUILE) -c '(use-modules (bytestructures guile))'; then \
-	  true; else echo "*** You need bytestructures installed."; exit 1; fi
+	   true; else \
+	      echo "*** You need scheme-bytestructures installed."; \
+	      echo '    Try "make install-bytestructures"'; \
+         exit 1; fi
 	@echo "installing FFI HELPER binaries in $(SITE_SCM_GO_DIR)"
 	@for scmfile in $(FH_SCMS); do \
 	  if test ! -d $(SITE_SCM_DIR)/`dirname $${scmfile}`; then \
@@ -95,5 +98,40 @@ dist-files:
 ffi/gobject.scm: ffi/glib.scm
 ffi/gio.scm: ffi/glib.scm
 ffi/librsvg.scm: ffi/gobject.scm
+
+# - temp until bytestructures has tarball dist
+
+BS_GOS = \
+	bytestructures/guile \
+	bytestructures/guile/base \
+	bytestructures/guile/bitfields \
+	bytestructures/guile/bytevectors \
+	bytestructures/guile/cstring-pointer \
+	bytestructures/guile/explicit-endianness \
+	bytestructures/guile/ffi \
+	bytestructures/guile/numeric-all \
+	bytestructures/guile/numeric-data-model \
+	bytestructures/guile/numeric-metadata \
+	bytestructures/guile/numeric \
+	bytestructures/guile/pointer \
+	bytestructures/guile/string \
+	bytestructures/guile/struct \
+	bytestructures/guile/union \
+	bytestructures/guile/utils \
+	bytestructures/guile/vector \
+	bytestructures/r6/bytevectors
+
+.PHONY: install-bytestructures
+install-bytestructures:
+	@echo "installing bytestructures in $(SITE_SCM_GO_DIR)"
+	@tar cf - bytestructures | (cd $(SITE_SCM_DIR); tar xf -)
+	@mkdir -p $(SITE_SCM_GO_DIR)/bytestructures
+	@mkdir -p $(SITE_SCM_GO_DIR)/bytestructures/guile
+	@mkdir -p $(SITE_SCM_GO_DIR)/bytestructures/r6
+	@for base in $(BS_GOS); do \
+	  (GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
+	  	$(GUILD) compile -o $(SITE_SCM_GO_DIR)/$${base}.go \
+			$(SITE_SCM_DIR)/$${base}.scm || exit 1; ); \
+	done
 
 # --- last line ---
