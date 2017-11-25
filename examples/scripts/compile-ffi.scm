@@ -112,7 +112,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n")
 	(compile-ffi-file file options))
       (lambda (key fmt . args)
 	(apply simple-format (current-error-port)
-	       (string-append "*** compile-ffi: " fmt "\n") args)
+	       (string-append "compile-ffi: " fmt "\n") args)
 	(exit 1)))
 
     ;;(if (assq-ref options 'make-go) (compile dot-scm))

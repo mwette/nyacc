@@ -34,6 +34,7 @@
   #:export (*ffi-help-version*
 	    define-ffi-module
 	    compile-ffi-file
+	    load-include-file
 	    intro-ffi
 	    string-member-proc string-renamer
 	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
@@ -604,13 +605,13 @@
 	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc"))))
     (cond
      ((and typename aggr-name)
-      (sfscm ";; == ~A =>\n" typename)
+      ;;(sfscm ";; == ~A =>\n" typename)
       (ppscm `(define-public ,ty-desc ,(list bs-aggr-t `(list ,@sflds))))
       (fhscm-def-compound typename)
       (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
       (fhscm-ref-deref typename)
-      (sfscm ";; == ~A =>\n" aggrname)
+      ;;(sfscm ";; == ~A =>\n" aggrname)
       (ppscm `(define-public ,ag-desc ,ty-desc))
       (fhscm-def-compound aggrname)
       (ppscm `(define-public ,ag*-desc ,ty*-desc))
@@ -1017,14 +1018,14 @@
       (ppscm
        `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
 	  (let ((,~name (fh-link-proc
-			 ,name ,decl-return
+			 ,decl-return ,name
 			 (append (list ,@decl-params) (map car ~rest))
 			 link-lib))
 		,@(gen-exec-unwrappers exec-params))
 	    ,(if exec-return (list exec-return va-call) va-call)))))
      (else
       (ppscm `(define ,~name
-		(delay (fh-link-proc ,name ,decl-return
+		(delay (fh-link-proc ,decl-return ,name
 				     (list ,@decl-params) link-lib))))
       (ppscm
        `(define (,sname ,@(gen-exec-arg-names exec-params))
@@ -1966,6 +1967,16 @@
   (intro-ffi (quote path-list) (parse-module-options attr ...)))
 
 
+;; === load includes ================
+
+(define* (load-include-file filename
+			    #:key pkg-config)
+  (let* ((attrs (acons 'include (list filename) '()))
+	 (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
+	 (tree (parse-includes attrs))
+	 )
+    (if #f #f)))
+
 ;; === file compiler ================
 
 (use-modules (system base language))
@@ -2028,6 +2039,8 @@
     (sfout "ffi-help: WARNING: the FFI helper is experimental\n")
     ;; if not interactive ...
     (debug-disable 'backtrace)
+    (if (not (access? file R_OK))
+	(throw 'ffi-help-error "ERROR: not found: ~S" file))
     (call-with-input-file file
       (lambda (iport)
 	(let iter ((oport #f) (exp (read iport)))

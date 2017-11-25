@@ -50,10 +50,10 @@
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:
 ;; 0 unwrap	: convert helper-type object to ffi argument
-;; 1 unwrap	: convert helper-type object to ffi argument
+;; 1 wrap	: convert ffi object to helper-type object
 ;; 2 pointer-to	: (pointer-to <foo_t-obj>) => <foo_t*-obj>
 ;; 3 value-at	: (value-at <foo_t*-obj>) => <foo_t-obj>
-;; The C-based types will add a slot for the object value.
+;; The C-based (child) types will add a slot for the object value.
 (define ffi-helper-type
   (make-vtable
    (string-append standard-vtable-fields "prprpwpw")
@@ -168,6 +168,8 @@
      (string->symbol
       (apply string-append
              (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args))))))
+
+
 ;; --- typedefs
 
 ;; @deffn {Procedure} bs-addr bst
@@ -420,12 +422,12 @@
 
 ;; --- other items --------------------
 
-;; @deffn {Procedure} fh-link-proc name return args [library]
+;; @deffn {Procedure} fh-link-proc return name args [library]
 ;; Generate Guile procedure from C library.  The argument @var{library}
 ;; results from @code{(dymamic-link "lib")}.  If @var{library} is not
 ;; provided @code{(dymamic-link)} is used.
 ;; @end deffn
-(define* (fh-link-proc name return args #:optional library)
+(define* (fh-link-proc return name args #:optional library)
   (ffi:pointer->procedure
    return (dynamic-func name (or library (dynamic-link))) args))
 
