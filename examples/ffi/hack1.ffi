@@ -1,0 +1,12 @@
+;; hack1.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi hack1)
+  #:pkg-config "TMPL"
+  #:api-code "
+#include <gtk.h>
+int 
+  ")
+
+
+
+;; --- last line ---
