@@ -47,6 +47,7 @@
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 util1)
+  #:use-module (nyacc version)
   #:use-module ((nyacc lang util)
 		#:select (cintstr->scm sx-ref sx-list sx-attr-ref sx-attr-set!))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
@@ -64,6 +65,7 @@
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
+  #:re-export (*nyacc-version*)
   #:version (0 82 4)
   )
 
@@ -71,14 +73,21 @@
 
 (use-modules (ice-9 pretty-print))
 
-(define *ffi-help-version* "0.82.2")
+;;(define *ffi-help-version* "0.82.2")
 
+(define fh-cpp-defs
+  (cond
+   ((string-contains %host-type "darwin")
+    '("__GNUC__=6")
+    (remove (lambda (s)
+	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
+	    (get-gcc-cpp-defs)))
+   (else '())))
 (define fh-inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir)
      "/usr/include")
    (get-gcc-inc-dirs)))
-(set! fh-inc-dirs (cons "." fh-inc-dirs)) ; DEBUGGING
 (define fh-inc-help
   (cond
    ((string-contains %host-type "darwin")
@@ -102,15 +111,9 @@
        "__extension__="
        )
       ))))
-(define fh-cpp-defs
-  (cond
-   ((string-contains %host-type "darwin")
-    '("__GNUC__=6")
-    (remove (lambda (s)
-	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-	    (get-gcc-cpp-defs)))
-   (else
-    '())))
+
+;; DEBUGGING
+(set! fh-inc-dirs (cons "." fh-inc-dirs))
 
 ;; change to parameters
 (define *options* (make-parameter '()))
@@ -277,9 +280,7 @@
 	 (libraries (resolve-attr-val (assq-ref attrs 'library)))
 	 (libraries (append
 		     (if pkg-config (pkg-config-libs pkg-config) '())
-		     libraries))
-	 (library (and (pair? libraries) (car libraries)))
-	 (libraries (and (pair? libraries) (cdr libraries))))
+		     libraries)))
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n" (path->path path))
     (nlscm)
     (sfscm "(define-module ~S\n" path)
@@ -299,14 +300,11 @@
     (sfscm "  #:use-module (bytestructures guile)\n")
     (sfscm "  )\n")
     ;;
-    (if libraries
-	(for-each (lambda (l) (sfscm "(dynamic-link ~S)\n" l))
-		  (reverse libraries)))
-    (if library
-	(sfscm "(define link-lib (dynamic-link ~S))\n" library)
-	(sfscm "(define link-lib (dynamic-link))\n"))
+    (ppscm
+     `(define link-libs
+	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
+    ;;(sfscm "(define link-lib (car link-libs))\n")
     (if *echo-decls* (sfscm "(define echo-decls #t)\n"))))
-
 
 ;; === type conversion ==============
 
@@ -1020,13 +1018,13 @@
 	  (let ((,~name (fh-link-proc
 			 ,decl-return ,name
 			 (append (list ,@decl-params) (map car ~rest))
-			 link-lib))
+			 link-libs))
 		,@(gen-exec-unwrappers exec-params))
 	    ,(if exec-return (list exec-return va-call) va-call)))))
      (else
       (ppscm `(define ,~name
 		(delay (fh-link-proc ,decl-return ,name
-				     (list ,@decl-params) link-lib))))
+				     (list ,@decl-params) link-libs))))
       (ppscm
        `(define (,sname ,@(gen-exec-arg-names exec-params))
 	  (let ,(gen-exec-unwrappers exec-params)
@@ -1722,9 +1720,37 @@
 
 ;; === Parsing the C header(s)
 
+;; @deffn parse-code code [attrs]
+;; Parse @var{code}, a Scheme string, using cpp-defs and inc-dirs from
+;; @var{attrs}.
+;; This procedure is used by @code{parse-includes}.
+;; @end deffn
+(define* (parse-code code #:optional (attrs '()))
+  (let* ((cpp-defs (resolve-attr-val (assq-ref attrs 'cpp-defs)))
+	 (inc-dirs (resolve-attr-val (assq-ref attrs 'inc-dirs)))
+	 (inc-help (resolve-attr-val (assq-ref attrs 'inc-help)))
+	 ;;
+	 (pkg-config (assq-ref attrs 'pkg-config))
+	 (cpp-defs (append (pkg-config-defs pkg-config) cpp-defs))
+	 (inc-dirs (append (pkg-config-incs pkg-config) inc-dirs))
+	 ;;
+	 (cpp-defs (append cpp-defs fh-cpp-defs))
+	 (inc-dirs (append inc-dirs fh-inc-dirs))
+	 (inc-help (append inc-help fh-inc-help)))
+    (or (with-input-from-string code
+	  (lambda ()
+	    (parse-c99 #:cpp-defs cpp-defs
+		       #:inc-dirs inc-dirs
+		       #:inc-help inc-help
+		       #:mode 'decl
+		       #:debug (*debug*))))
+	(fherr "parse failed"))))
+
+;; @deffn parse-includes attrs
 ;; This routine generates a top-level source string-file with all the includes,
 ;; parses it, and then merges one level down of includes into the top level,
 ;; as if the bodies of the incudes had been combined into one file.
+;; @end deffn
 (define parse-includes
   (let* ((p (node-join
 	     (select-kids (node-typeof? 'cpp-stmt))
@@ -1733,38 +1759,13 @@
 	 (merge-inc-bodies
 	  (lambda (t) (cons 'trans-unit (apply append (map cdr (p t)))))))
     (lambda (attrs)
-      (let* ((cpp-defs (resolve-attr-val (assq-ref attrs 'cpp-defs)))
-	     (inc-dirs (resolve-attr-val (assq-ref attrs 'inc-dirs)))
-	     (inc-help (resolve-attr-val (assq-ref attrs 'inc-help)))
-
-	     (pkg-config (assq-ref attrs 'pkg-config))
-	     (cpp-defs (append (pkg-config-defs pkg-config) cpp-defs))
-	     (inc-dirs (append (pkg-config-incs pkg-config) inc-dirs))
-
-	     (cpp-defs (append cpp-defs fh-cpp-defs))
-	     (inc-dirs (append inc-dirs fh-inc-dirs))
-	     (inc-help (append inc-help fh-inc-help))
-	     
-	     (inc-files (resolve-attr-val (assq-ref attrs 'include)))
+      (let* ((inc-files (resolve-attr-val (assq-ref attrs 'include)))
 	     (prog (string-join
 		    (map
 		     (lambda (inc-file)
 		       (string-append "#include \"" inc-file "\"\n"))
-		     inc-files) ""))
-
-	     ;;(inc-dirs (cons "." inc-dirs)) ;; FOR DEBUGGING
-	     )
-
-	(or (with-input-from-string prog
-	      (lambda ()
-		(and=> 
-		 (parse-c99 #:cpp-defs cpp-defs
-			    #:inc-dirs inc-dirs
-			    #:inc-help inc-help
-			    #:mode 'decl
-			    #:debug (*debug*))
-		 merge-inc-bodies)))
-	    (fherr "parse failed"))))))
+		     inc-files) "")))
+	(and=> (parse-code prog attrs) merge-inc-bodies)))))
 
 ;; === main converter ================
 
@@ -1792,7 +1793,11 @@
 	 (renamer (or (assq-ref attrs 'renamer) identity))
 	 (prefix (string-append (path->name path) "-"))
 	 ;;
-	 (tree (parse-includes attrs))
+	 (tree (cond
+		((assq-ref attrs 'include) (parse-includes attrs))
+		((assq-ref attrs 'api-code) =>
+		 (lambda (code) (parse-code code attrs)))
+		(else (fherr "expecing #:includes or #:api-code"))))
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
@@ -1827,7 +1832,7 @@
 	       (append var seed)))
 	   '() ext-mods))
 	 )
-    ;;(quit)
+    ;;(pperr udecls) (quit)
 
     ;; set globals
     (*udict* udict)
@@ -1843,6 +1848,7 @@
 	(lambda ()
 	  (fold-values			  ; from (sxml fold)
 	   (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
+	     ;;(sferr "declf ~S => ~S\n" name (declf name))
 	     (catch 'ffi-help-error
 	       (lambda ()
 		 (cond
@@ -1863,13 +1869,10 @@
 		     (set! saw-last #t)
 		     )
 		   (let ((udecl (udict-ref udict name)))
-		     (when (equal? name "GVariantType_autoptr")
-		       #t)
-		     ;;
 		     (nlscm) (c99scm udecl)
 		     (if *echo-decls*
 			 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
-		     (cnvt-udecl (udict-ref udict name) udict wrapped defined)))
+		     (cnvt-udecl udecl udict wrapped defined)))
 		  (else (values wrapped defined))))
 	       (lambda (key fmt . args)
 		 (if fmt
@@ -1909,9 +1912,10 @@
   (lambda (x)
     (define (sym->key stx)
       (datum->syntax stx (symbol->keyword (syntax->datum stx))))
-    (syntax-case x (cpp-defs
-		    decl-filter inc-dirs inc-filter inc-help include
+    (syntax-case x (api-code
+		    cpp-defs decl-filter inc-dirs inc-filter inc-help include
 		    library pkg-config renamer)
+      ((_ api-code code) #'(cons 'api-code code))
       ((_ cpp-defs proc) #'(cons 'cpp-defs proc))
       ((_ decl-filter proc) #'(cons 'decl-filter proc))
       ((_ inc-dirs proc) #'(cons 'inc-dirs proc))
@@ -1933,9 +1937,9 @@
       (datum->syntax stx (keyword->symbol (syntax->datum stx))))
     (define (ffimod-option? key)
       (and (keyword? key)
-	   (member key '(#:cpp-defs
-			 #:decl-filter #:inc-dirs #:inc-filter #:inc-help
-			 #:include #:library #:pkg-config #:renamer
+	   (member key '(#:api-code
+			 #:cpp-defs #:decl-filter #:inc-dirs #:inc-filter
+			 #:inc-help #:include #:library #:pkg-config #:renamer
 			 #:use-ffi-module))))
     (define (module-option? key) (keyword? key))
 
@@ -1969,6 +1973,8 @@
 
 ;; === load includes ================
 
+
+;; and=> with-output-to-string  eval
 (define* (load-include-file filename
 			    #:key pkg-config)
   (let* ((attrs (acons 'include (list filename) '()))

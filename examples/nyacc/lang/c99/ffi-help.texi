@@ -14,169 +14,233 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 @headings off
 @everyfooting @| @thispage @|
-@alias section = heading
-@alias subsection = subheading
-@alias subsubsection = subsubheading
 
 @node Top
 @top FFI Helper for Guile
 @format
 Matt Wette
-July 2017
-Version $Id$
+December 2017
+With NYACC Version 0.99.1
 @end format
+
+@raisesections
 
 @section Introduction
 
-The acronym FFI stands for ``Foreign Function Interface''.  It is the
-Guile system for binding functions and variables from C source libraries 
-into guild programs.
+The acronym FFI stands for ``Foreign Function Interface''.  It refers
+to the Guile facility for binding functions and variables from C source
+libraries into Guile programs.  This distribution provides utilities
+for generating a loadable Guile module from a set of C declarations
+and associated libraries.  The C declarations can, and conventionally
+do, come from naming a set of C include files.  The
+nominal method for use is to write a @emph{ffi-module} specification
+in a file which includes a @code{define-ffi-module} declaration and
+then use the command @code{guild compile-ffi} to convert this to Guile
+Scheme.
+@example
+$ guild compile-ffi ffi/cairo.ffi
+wrote `ffi/cairo.scm'
+@end example
+@noindent
+Note that no C code is generated.  The hooks to access C-coded
+functions in the Cairo library are provided in 100% Guile Scheme.
 
-The compiler is based on the C99 parser and utilities which are
-include in the @uref{https://www.nongnu.org/nyacc/,@sc{NYACC}}
-package.  Development is currently being performed in the
+The compiler for the FFI Helper (FH) is based on the C parser and utilities
+which are included in the @uref{https://www.nongnu.org/nyacc,@sc{NYACC}}
+package.  Development for the FH is currently being performed in the
 @code{c99dev} branch of the associated git repository.  Within the
-@sc{NYACC} distribution, the FFI-helper modules can be found in the
-directory @file{examples/nyacc/lang/c99/}.
+@sc{NYACC} distribution, the relevant modules can be found under the
+directory @file{examples/}.
 
 Use of the FFI-helper module depends on the
-@uref{https://github.com/TaylanUB/scheme-bytestructures,scheme-bytestrucures}
-module.
+@emph{scheme-bytestructure} package available from
+@uref{https://github.com/TaylanUB/scheme-bytestructures}.  Since this
+package is currently not under version control we provide a partial
+copy in the @sc{NYACC} distribution.
 
-We generate types for all C types and their pointers.  This makes
-working C types convenient, I think, at the cost of bloating the
-namespace.
+At runtime, after the FFI Helper has been used to create Scheme code,
+the modules @code{(system ffi-help-rt)} and @code{(bytestructures
+guile)} are required.  No other code from the @sc{NYACC} distribution
+is needed.  However, note that this is C code we are working with, the
+generated code may well contain operating system and machine dependencies.
 
-@subsection Current Assumptions
-
-Here is a list of assumptions
-@enumerate
-@item
-no raw aggregates get passed to C functions
-@end enumerate
-
-@subsection Caveats
-
-@enumerate
-@item
-Forward references are handled by lookup.
-@item
-Function pointer types as fields in structures are just turned into
-pointers to @code{intptr_t}.
-@item
-How the hell do I deal with varargs?  Skip for now.
-@end enumerate
+You are probably hoping to see an example, so let's do that.
 
 @section Demonstration
 
-The FFI Helper may best be introduced through a small example.
-For our example we use the Cairo library.  This example assumes Cairo
-is installed on the system and the associated @emph{pkg-config}
-support is present.
+This is a small FFI Helper example to illustrate its use.  We will
+start with the @uref{cairographics.org,Cairo} package because that is
+the first one I started with in developing the FFI Helper.  Say you
+are an avid Guile user and want to be able to use Cairo in Guile.
+Notes that on most systems Cairo comes with the associated
+@emph{pkg-config} support files; this demo depends on that support.
 
 WARNING: The FFI-helper package is under active development and there
-is good chance the following example will cease to work in the future.
+is some chance the following example will cease to work in the future.
 
-We start by genererating, in a directory called @file{cairo}, a file named
-@file{cairo.ffi} with the following contents:
+If you want to follow along and are working in the distribution
+tree, you should source the file @file{env.sh} in the @file{examples}
+directory.
+
+By practice, I like to put all FH generated modules under a directory
+called @file{ffi/}, so we will do that.  We start by generating, in
+the @file{ffi} directory, a file named @file{cairo.ffi} with the
+following contents:
 @example
-(define-ffi-module (cairo cairo)
+(define-ffi-module (ffi cairo)
   #:pkg-config "cairo"
-  #:include '("cairo.h" "cairo-pdf.h" "cairo-svg.h")
-  #:export (make-cairo-unit-matrix))
-
-(define (make-cairo-unit-matrix)
-  (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
+  #:include '("cairo.h" "cairo-pdf.h" "cairo-svg.h"))
 @end example
 
 Now to generate a Guile module you use @code{guild} as follows:
 @example
-$ guild compile-ffi cairo/cairo.ffi
+$ guild compile-ffi ffi/cairo.ffi
+wrote `ffi/cairo.scm'
 @end example
 @noindent
-The above command execution will generate the file
-@file{cairo/cairo.scm}.  Though the file @file{cairo/cairo.ffi} is
-only seven lines long, the file 
-@file{cairo/cairo.scm} will be over five thousand lines long.  It looks
+Though the file @file{cairo/cairo.ffi} is only three lines long, the file 
+@file{ffi/cairo.scm} will be over five thousand lines long.  It looks
 like the following:
 @example
-(define-module (cairo cairo)
-  #:export (make-cairo-unit-matrix)
+(define-module (ffi cairo)
   #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (bytestructures guile)
   )
-(define link-lib (dynamic-link "libcairo")
-(define (lib-func name) (dynamic-func name link-lib))
+(define link-libs
+  (list (dynamic-link "libcairo")))
 
 ;; int cairo_version(void);
-(define cairo_version
-  (let ((f (ffi:pointer->procedure
-             ffi:int
-             (lib-func "cairo_version")
-             (list))))
-    (lambda () (let () (f)))))
+(define ~cairo_version
+  (delay (fh-link-proc
+           ffi:int
+           "cairo_version"
+           (list)
+           link-libs)))
+(define (cairo_version)
+  (let () ((force ~cairo_version))))
 (export cairo_version)
+
+@dots{}
+
+;; typedef struct _cairo_matrix @{
+;;   double xx;
+;;   double yx;
+;;   double xy;
+;;   double yy;
+;;   double x0;
+;;   double y0;
+;; @} cairo_matrix_t;
+(define-public cairo_matrix_t-desc
+  (bs:struct
+    (list `(xx ,double)
+          `(yx ,double)
+          `(xy ,double)
+          `(yy ,double)
+          `(x0 ,double)
+          `(y0 ,double))))
+(define-fh-compound-type cairo_matrix_t cairo_matrix_t-desc cairo_matrix_t?
+ make-cairo_matrix_t)
+(export cairo_matrix_t cairo_matrix_t? make-cairo_matrix_t)
 
 @dots{} @i{many, many more declarations} @dots{}
 
-(define cairo-lookup
+;; access to enum symbols and #define'd constants:
+(define ffi-cairo-symbol-val
   (let ((sym-tab
-          '((CAIRO_VERSION_STRING . "1.14.10")
-            @dots{}
-            (CAIRO_SVG_VERSION_1_2 . 2))))
-    (lambda (k) (assq-ref sym-tab k))))
+          '((CAIRO_SVG_VERSION_1_1 . 0)
+            (CAIRO_SVG_VERSION_1_2 . 1)
+            (CAIRO_PDF_VERSION_1_4 . 0)
+            (CAIRO_PDF_VERSION_1_5 . 1)
+            (CAIRO_REGION_OVERLAP_IN . 0)
+            (CAIRO_REGION_OVERLAP_OUT . 1)
+            (CAIRO_REGION_OVERLAP_PART . 2)
+            (CAIRO_FILTER_FAST . 0)
+            (CAIRO_FILTER_GOOD . 1)
+            (CAIRO_FILTER_BEST . 2)
+            @dots{} @i{more constants} @dots{}
+            (CAIRO_MIME_TYPE_JBIG2_GLOBAL_ID
+              .
+              "application/x-cairo.jbig2-global-id"))))
+    (lambda (k) (or (assq-ref sym-tab k)))))
+(export ffi-cairo-symbol-val)
 (export cairo-lookup)
 
-(define (make-cairo-unit-matrix)
-  (make-cairo_matrix_t #(1.0 0.0 0.0 1.0 0.0 0.0)))
+@dots{} @i{more} @dots{}
+
 @end example
-
-Notice that the helper generated a function @code{cairo-lookup} to
-provide values for all @code{#define}'d symbols and @code{enum}
-values.  In addition, the @code{#:export} option and scheme definition
-provided in the dot-ffi file were copied into associated scm-file.
-
-To execute an example, let's fire up Guile and execute some code:
+@noindent
+Note that from the @emph{pkg-config} spec the FH compiler picks up the
+required libraries to bind in.  Also, @code{#define} based constants,
+as well as those defined by enums, are provided in a lookup function
+@code{ffi-cairo-symbol-val}.  So, for example
 @example
-scheme@@(guile-user)> (use-modules (cairo cairo-svg))
-scheme@@(guile-user)> (use-modules (system ffi-help-rt))
-scheme@@(guile-user)> (use-modules (system foreign))
-
-scheme@@(guile-user)> (define srf (cairo_svg_surface_create (string->pointer "abc.svg") 200.0 200.0))
-scheme@@(guile-user)> srf
-$1 = #<cairo_surface_t* 0x7f9997d0cd40>
-
-scheme@@(guile-user)> (define cr (cairo_create srf))
-scheme@@(guile-user)> cr
-$2 = #<cairo_t* 0x7f9999809e00>
-
-scheme@@(guile-user)> (define mx (make-cairo_matrix_t))
-scheme@@(guile-user)> mx
-$3 = #<cairo_matrix_t 0x10aac4fa0>
-
-scheme@@(guile-user)> (pointer-to mx)                           
-$4 = #<cairo_matrix_t* 0x10aac4fa0>
-
-scheme@@(guile-user)> (cairo_get_font_matrix cr (pointer-to mx))
-scheme@@(guile-user)>
-
-scheme@@(guile-user)> (cairo_move_to cr 10.0 10.0)
-scheme@@(guile-user)> (cairo_line_to cr 190.0 10.0)
-scheme@@(guile-user)> (cairo_line_to cr 190.0 190.0)
-scheme@@(guile-user)> (cairo_line_to cr 10.0 190.0)
-scheme@@(guile-user)> (cairo_line_to cr 10.0 10.0)
-scheme@@(guile-user)> (cairo_stroke cr)
-
-scheme@@(guile-user)> (cairo_destroy cr)
-scheme@@(guile-user)> (cairo_surface_destroy srf)
+guile> (use-modules (ffi cairo))
+;;; ffi/cairo.scm:6112:11: warning: possibly unbound variable `cairo_raster_source_acquire_func_t*'
+;;; ffi/cairo.scm:6115:11: warning: possibly unbound variable `cairo_raster_source_release_func_t*'
+guile> (ffi-cairo-symbol-val 'CAIRO_FORMAT_ARGB32))
+$1 = 0
 @end example
-The above example should generate an SVG file @file{abc.svg}.
-The call to @code{cairo_get_font_matrix} was not needed: it was
-provided to illustrate the use of @code{pointer-to}: a C function 
-which expects to receive a pointer to an allocated struct of type
-@code{cairo_matrix_t}.
+@noindent
+We will discuss the warnings later.  These are signals that extra code
+needs to be added to the ffi module.  But you see how the constants
+(but not CPP function macros) can be accessed.
 
+Let's try something more useful: a real program.  Create the following
+code in a file, say @code{cairo-demo.scm}, then fire up a Guile sesion
+and @code{load} the file.
+@example
+(use-modules (ffi cairo))
+(define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 200 200))
+(define cr (cairo_create srf))
+(cairo_move_to cr 10.0 10.0)
+(cairo_line_to cr 190.0 10.0)
+(cairo_line_to cr 190.0 190.0)
+(cairo_line_to cr 10.0 190.0)
+(cairo_line_to cr 10.0 10.0)
+(cairo_stroke cr)
+(cairo_surface_write_to_png srf "cairo-demo.png")
+(cairo_destroy cr)
+(cairo_surface_destroy srf)
+@end example
+@noindent
+If we set up everything correctly you should have the target
+@code{png} image of a square.  A few items in the above code are
+notable.  First, the call to @code{cairo_image_surface_create}
+accepted a symbolic form (@code{'CAIRO_FORMAT_ARGB32}) for the format.
+It would have also accepted the associated constant @code{0}.  In
+addition, procedures declared in @code{(ffi cairo)} will accept Scheme
+strings where the C function wants ``pointer to string.''
+
+Now try this in your Guile session:
+@example
+guile> srf
+$4 = #<cairo_surface_t* 0x7fda53e01880>
+guile> cr
+$5 = #<cairo_t* 0x7fda54828800>
+@end example
+@noindent
+Note that the FH keeps track of the C types you use.  This can be
+useful for debugging but may bloat the namespace.  The constants you
+see are the pointer values.  But it goes further.  Let's generate a
+matrix type:
+@example
+guile> (define m (make-cairo_matrix_t))
+guile> m
+$6 = #<cairo_matrix_t 0x10cc26c00>
+guile> (use-modules (system ffh-help-rt))
+guile> (pointer-to m)
+$7 = #<cairo_matrix_t* 0x10cc26c00>
+@end example
+@noindent
+When it comes to C APIs that expect the user to allocate memory for a
+structure and pass the pointer address to the C function, FH provides
+a solution:
+@example
+guile> (cairo_get_matrix cr (pointer-to m))
+guile> (fh-object-ref m 'xx)
+$9 = 1.0
+@end example
 
 @section Creating FFI Modules
 
@@ -211,6 +275,41 @@ Another decl-filter, useful for debugging.
 				)) #t)
                    ((equal? k '(union . "union-_cairo_glyph_t")) #t)
                    (else #f)))
+@end example
+
+@section Trimming Things Down
+
+After using the FFI Helper to provide code for some packages you may
+notice that the quantity of code produced is large.  For example, to
+generate a guile interface for gtk2+, along with glib, gobject, pango
+and gdk you will end up with over 100k lines of scm code.  This may
+seem bulky.  Instead it may be preferable to generate a small number
+of calls for gtk and work from there.  In order to achieve this you
+could use the (upcoming) @code{#:api-code} interface.  This is akin
+to generating a small dot-h file and BLA BLA BLA.
+
+For example, if we wanted to just generate code for the gtk hello
+world demo we could geneate
+@example
+(define-ffi-module (hack1)
+  #:pkg-config "gtk+-2.0"
+  #:api-code "
+  #include <gtk2.h>
+  void gtk_init(int *argc, char ***argv);
+  g_signal_connect
+  void gtk_container_set_border_width(GtkContainer *container,
+       guint border_width);
+  void gtk_container_add(GtkContainer *container, GtkWidget *widget);
+  void gtk_widget_show(GtkWidget *widget);
+  void gtk_main(void);
+  "
+@end example
+
+Since the above example does not ask the FH to pull in typedef's then
+the pointer types will be expanded to native.  You could invent your
+own types or echo the typedefs from the package headers
+@example
+
 @end example
                    
 @section The Guile Foreign Function Interface
@@ -591,8 +690,6 @@ C says bitfields are (signed) int, unsigned int, or _Bool.
 C says if function parameter declared as arrays should be interpreted
 as pointers.
 
-@example
-
 
 @subsection Library Variables
 
@@ -638,6 +735,7 @@ generated this code:
 @end example
 @noindent
 The original C declaration was
+@example
 struct _GtkIMContextSimple @{
   ...
   guint compose_buffer[7 + 1];
@@ -648,7 +746,7 @@ struct _GtkIMContextSimple @{
 
 @subsection Warning: Possibly Unbound Variable
 
-@example
+@smallexample
 ;;; ffi/gtk2+.scm:3564:5: warning: possibly unbound variable `GtkEnumValue*'
 ;;; ffi/gtk2+.scm:3581:5: warning: possibly unbound variable `GtkFlagValue*'
 ;;; ffi/gtk2+.scm:10717:11: warning: possibly unbound variable `GtkAllocation*'
@@ -657,7 +755,7 @@ struct _GtkIMContextSimple @{
 ;;; ffi/gtk2+.scm:26522:11: warning: possibly unbound variable `GSignalCMarshaller'
 ;;; ffi/gtk2+.scm:62440:11: warning: possibly unbound variable `GdkNativeWindow'
 ;;; ffi/gtk2+.scm:62453:5: warning: possibly unbound variable `GdkNativeWindow'
-@end example
+@end smallexample
 
 When I see this I usually check the scm file and see one of many
 things
@@ -666,6 +764,24 @@ things
 This usually means that @code{GtkAllocation} was somehow defined
 but not the pointer type.
 @end table
+
+@section Brief API Specification
+
+What might go into the Guile Ref Manual needs to include these:
+@example
+#:api-code
+#:cpp-defs
+#:decl-filter
+#:inc-dirs
+#:inc-filter
+#:inc-help
+#:include
+#:library
+#:pkg-config
+#:renamer
+#:use-ffi-module
+@end example
+
 
 @section Miscellaneous Notes
 
@@ -714,6 +830,66 @@ expr is string or list or procecure that evaluates to string or list
 procdure
 @end table
 
+Here are the type of hacks I need to parse inside @file{/usr/include}
+with NYACC's C99 parser.  There is no such thing as a working C standard.
+@example
+(define cpp-defs
+  (cond
+   ((string-contains %host-type "darwin")
+    '("__GNUC__=6")
+    (remove (lambda (s)
+	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
+	    (get-gcc-cpp-defs)))
+   (else '())))
+(define fh-inc-dirs
+  (append
+   `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
+   (get-gcc-inc-dirs)))
+(define fh-inc-help
+  (cond
+   ((string-contains %host-type "darwin")
+    '(("__builtin"
+       "__builtin_va_list=void*"
+       "__attribute__(X)="
+       "__inline=" "__inline__="
+       "__asm(X)=" "__asm__(X)="
+       "__has_include(X)=__has_include__(X)"
+       "__extension__="
+       "__signed=signed"
+       )))
+   (else
+    '(("__builtin"
+       "__builtin_va_list=void*" "__attribute__(X)="
+       "__inline=" "__inline__="
+       "__asm(X)=" "__asm__(X)="
+       "__has_include(X)=__has_include__(X)"
+       "__extension__="
+       )))))
+@end example
+
+@subsection Current Assumptions
+
+We generate types for all C types and their pointers.  This makes
+working C types convenient, I think, at the cost of bloating the
+namespace.
+
+Here is a list of assumptions
+@enumerate
+@item
+no raw aggregates get passed to C functions
+@end enumerate
+
+@subsection Caveats
+
+@enumerate
+@item
+Forward references are handled by lookup.
+@item
+Function pointer types as fields in structures are just turned into
+pointers to @code{intptr_t}.
+@item
+How the hell do I deal with varargs?  Skip for now.
+@end enumerate
 
 @section Work to Go 
 
