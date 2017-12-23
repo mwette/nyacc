@@ -179,21 +179,6 @@
 	(ppx/p rval)
 	(ppx rval)))
 
-  (define (comp declr initr)
-    (let ((iexpr (and initr (sx-ref initr 1))))
-      (ppx declr)
-      (when initr
-	(sf " = ")
-	(case (sx-tag iexpr)
-	  ((initzer-list)
-	   (sf "{")
-	   (for-each
-	    (lambda (expr) (ppx (sx-ref expr 1)) (sf ", "))
-	    (sx-tail iexpr 1))
-	   (sf "}"))
-	  (else
-	   (ppx iexpr))))))
-
   (define (struct-union-def struct-or-union name fields)
     (if name
 	(sf "~A ~A {\n" struct-or-union name)
@@ -388,10 +373,12 @@
 	  (if (pair? (cdr pair)) (sf ", ")))
 	rest))
 
-      ((init-declr ,declr ,initr) (comp declr initr))
-      ((init-declr ,declr) (comp declr #f))
-      ((comp-declr ,declr) (comp declr #f))
-      ((param-declr ,declr) (comp declr #f))
+      ((init-declr ,declr ,initr) (ppx declr) (ppx initr))
+      ((init-declr ,declr) (ppx declr))
+      ((comp-declr ,declr) (ppx declr))
+      ((param-declr ,declr) (ppx declr))
+      ;; This should work with sx-match, to replace above three.
+      ;;(((init-declr comp-declr param-declr) ,declr) (ppx declr))
 
       ((bit-field ,ident ,expr)
        (ppx ident) (sf " : ") (ppx expr))
@@ -504,6 +491,20 @@
       ((abs-ftn-declr ,dir-abs-declr ,param-type-list)
        (ppx dir-abs-declr) (sf "(") (ppx param-type-list) (sf ")"))
       ;; anon-ftn-declr
+
+      ;; initializer
+      ((initzer ,expr)
+       (sf " = ") (ppx expr))
+      
+      ;; initializer-list
+      ((initzer-list . ,items)
+       (sf "{") ;; or "{ "
+       (pair-for-each
+	(lambda (pair)
+	  (ppx (sx-ref (car pair) 1))
+	  (if (pair? (cdr pair)) (sf ", ")))
+	items)
+       (sf "}")) ;; or " }"
 
       ((compd-stmt (block-item-list . ,items))
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "}\n"))

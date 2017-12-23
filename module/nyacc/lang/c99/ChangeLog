@@ -1,3 +1,19 @@
+2017-12-23  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* pprint.scm (pretty-print-c99): added initializer and
+	initializer-list, and removed (comp declr initr)
+
+2017-12-13  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util1.scm (get-gcc-inc-dirs): update to use -Wp,-v.  Note this
+	may break because it uses "2>&1" to get stderr.  check w/ csh
+	please -- works for me
+
+2017-12-10  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* munge.scm: note: at some point in the past changed util2.scm to
+	munge.scm
+
 2017-11-18  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* cpp.scm (read-rest): new procedure to replace get-string-all
