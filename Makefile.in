@@ -46,12 +46,12 @@ install-ffi-help:
 
 .PHONY: install-bytestructures
 install-bytestructures:
-        @(cd examples; \
-          make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
-                 SITE_SCM_DIR=$(SITE_SCM_DIR) \
-                 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
-                 INFODIR=$(INFODIR) \
-                 install-bytestructures)
+	@(cd examples; \
+	  make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
+		SITE_SCM_DIR=$(SITE_SCM_DIR) \
+		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
+		INFODIR=$(INFODIR) \
+		install-bytestructures)
 
 .PHONY: dist-files
 dist-files:

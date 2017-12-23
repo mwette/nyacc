@@ -98,34 +98,25 @@
 	   (if (eof-object? line) lines
 	       (iter (cons line lines) (read-line ip 'trim)))))))))
 
-;; @deffn {Procedure} get-gcc-inc-dirs [args] [#:CC "gcc"] => '("ABC=123" ...)
+;; @deffn {Procedure} get-gcc-inc-dirs [args] [#:CC "gcc"] =>
 ;; Generate a list of compiler-internal include directories (for gcc).  If
 ;; keyword arg @arg{CC} is not provided this procedure looks for environment
 ;; variable @code{"CC"}, else it defaults to @code{"gcc"}.
 ;; @end deffn
-(define get-gcc-inc-dirs
-  (let ((rx1 (make-regexp "(.*): *=(.*)$"))
-	(rx2 (make-regexp "(.*): *(.*)$")))
-    (lambda* (#:optional (args '()) #:key CC)
-      (let* ((ip (open-input-pipe (string-append (resolve-CC CC)
-						" -print-search-dirs")))
-	     (il (let iter ((items '()) (line (read-line ip 'trim)))
-		   (cond
-		    ((eof-object? line)
-		     items)
-		    (else
-		     (let* ((m1 (regexp-exec rx1 line))
-			    (m2 (regexp-exec rx2 line)))
-		       (cond
-			(m1 (acons (match:substring m1 1)
-				   (string-split #\: (match:substring m1 2))
-				   items))
-			(m2 (acons (match:substring m2 1)
-				   (match:substring m2 2)
-				   items))
-			(else (sferr "get-gcc-inc-dirs: bad match\n")
-			      items))))))))
-	(list (string-append (assoc-ref il "install") "/include"))))))
+(define* (get-gcc-inc-dirs #:optional (args '()) #:key CC)
+  (let ((ip (open-input-pipe (string-append
+			      (resolve-CC CC) " -E -Wp,-v - </dev/null 2>&1"))))
+    (let iter ((dirs '()) (grab #f) (line (read-line ip 'trim)))
+      (cond
+       ((eof-object? line) dirs)
+       ((string=? line "#include <...> search starts here:")
+	(iter dirs #t (read-line ip 'trim)))
+       ((string=? line "End of search list.") dirs)
+       (grab
+	(iter (cons (string-trim-both line) dirs)
+	      grab (read-line ip 'trim)))
+       (else
+	(iter dirs grab (read-line ip 'trim)))))))
 
 ;; @deffn {Procedure} remove-inc-trees tree
 ;; Remove the trees included with cpp-include statements.

@@ -52,7 +52,7 @@ install-ffi-help: install-fh-srcs
 	   true; else \
 	      echo "*** You need scheme-bytestructures installed."; \
 	      echo '    Try "make install-bytestructures"'; \
-         exit 1; fi
+	exit 1; fi
 	@echo "installing FFI HELPER binaries in $(SITE_SCM_GO_DIR)"
 	@for scmfile in $(FH_SCMS); do \
 	  if test ! -d $(SITE_SCM_DIR)/`dirname $${scmfile}`; then \
@@ -75,7 +75,7 @@ install-ffi-help: install-fh-srcs
 	   GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
 	  	$(GUILD) compile -o $(SITE_SCM_GO_DIR)/$${binfile} \
 			$(SITE_SCM_DIR)/$${scmfile} || exit 1; \
-           ); \
+	  ); \
 	done
 	@if test ! -d $(INFODIR); then mkdir -p $(INFODIR); fi;
 	cp nyacc/lang/c99/ffi-help.info $(INFODIR)

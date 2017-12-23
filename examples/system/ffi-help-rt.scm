@@ -31,7 +31,7 @@
 	    define-fh-function*-type
 	    ref<->deref!
 
-	    fht-wrap fht-unwrap
+	    fht-wrap fht-unwrap fh-wrap fh-unwrap
 	    unwrap~fixed unwrap~float
 	    unwrap~pointer unwrap~array
 	    make-fctn-param-unwrapper
@@ -40,8 +40,7 @@
   #:use-module (bytestructures guile ffi)
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
-  #:use-module (srfi srfi-9)
-  #:version (0 10 0))
+  #:use-module (srfi srfi-9))
 
 (define *ffi-help-version* "0.82.4+c99dev")
 
@@ -218,6 +217,7 @@
 ;; @end example
 ;; The second form is based on already defined @code{bs:pointer} descriptor.
 ;; @end deffn
+(display "ffi-help-rt TODO: add pointer handler in make-<pointer-type>\n")
 (define-syntax-rule (define-fh-pointer-type type desc type? make)
   (begin
     (define type
@@ -239,6 +239,7 @@
 	   (make-struct/no-tail type (bytestructure desc val)))
 	  ((number? val)
 	   (make-struct/no-tail type (bytestructure desc val)))
+	  ;;((pointer? val) todo)
 	  (else (make-struct/no-tail type val))))
 	(() (make 0))))))
 
@@ -422,15 +423,22 @@
 
 ;; --- other items --------------------
 
-;; @deffn {Procedure} fh-link-proc return name args [library]
-;; Generate Guile procedure from C library.  The argument @var{library}
-;; results from @code{(dymamic-link "lib")}.  If @var{library} is not
-;; provided @code{(dymamic-link)} is used.
+;; @deffn {Procedure} fh-link-proc return name args dy-lib-list
+;; Generate Guile procedure from C library. 
 ;; @end deffn
-(define* (fh-link-proc return name args #:optional library)
-  (ffi:pointer->procedure
-   return (dynamic-func name (or library (dynamic-link))) args))
-
+(define* (fh-link-proc return name args dl-lib-list)
+  ;; Given a list of links (output of @code{(dynamic-link @it{library})}
+  ;; try to get the dynamic-func for the provided function.  Usually
+  ;; the first dynamic link is @code{(dynamic-link)} and that should work.
+  ;; But on some systems we need to find the actual library :(, apparently.
+  (let ((dfunc (let iter ((dll (cons (dynamic-link) dl-lib-list)))
+		 (cond
+		  ((null? dll) (throw 'ffi-help-error "fctn not found"))
+		  ((catch #t
+		     (lambda () (dynamic-func name (car dll)))
+		     (lambda args #f)))
+		  (else (iter (cdr dll)))))))
+    (and dfunc (ffi:pointer->procedure return dfunc args))))
 
 ;; @deffn {Procedure} fh:function return-desc param-desc-list
 ;; @deffnx {Syntax} define-fh-function*-type name desc type? make

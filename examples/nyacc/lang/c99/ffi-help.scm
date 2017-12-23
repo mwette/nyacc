@@ -1114,6 +1114,7 @@
   (let ((aval (sx-attr-ref decl 'typedef)))
     (if aval (string-split aval #\,) '())))
 
+(display "TODO: struct xyz { }; followed by typedef struct xyz *xyz_t\n")
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
 ;; Return updated (string based) keep-list, which will be modified if the

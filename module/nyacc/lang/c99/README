@@ -10,8 +10,7 @@ without any warranty.
 manifest:
 
 cpp.scm		C preprocessor using tables
-		includes: cppbody.scm cppact.scm,cpptab.scm
-cppbody.scm	eval-cpp-expr procedure
+		includes: cppact.scm,cpptab.scm
 cppmach.scm	CPP expression grammer, machine and act/tab file generation
 
 mach.scm	C grammer, machine and act/tab file generation

@@ -64,7 +64,7 @@ guile)} are required.  No other code from the @sc{NYACC} distribution
 is needed.  However, note that this is C code we are working with, the
 generated code may well contain operating system and machine dependencies.
 
-You are probably hoping to see an example, so let's do that.
+You are probably hoping to see an example, so let's try one.
 
 @section Demonstration
 
@@ -204,7 +204,7 @@ and @code{load} the file.
 (cairo_surface_destroy srf)
 @end example
 @noindent
-If we set up everything correctly you should have the target
+If we set up everything correctly we should have the target
 @code{png} image of a square.  A few items in the above code are
 notable.  First, the call to @code{cairo_image_surface_create}
 accepted a symbolic form (@code{'CAIRO_FORMAT_ARGB32}) for the format.
@@ -369,6 +369,34 @@ parameters can be a promise.  That is
 (define f-desc (bs:function (delay ret-desc) (delay (list int xxx xxx))))
 @end example
 @noindent
+
+@section FFI Helper Theory of Operation
+
+Here is how the FH works.  The specification, via the dot-ffi file,
+determines which declarations are to be included in the target module.
+If there is no declartion filter, then all the declarations from
+specified include files are targeted.  This means typedefs, aggregate
+definitions, function declarations, and external variable declarations.
+In C typedefs define type aliases, so there is no harm in expanding
+typedefs which appear outside the specification.  For example, say we
+specified only @file{foo.h} to be included and @file{foo.h} includes
+@file{bar.h}.  Furthermore, @file{foo.h} includes a struct typedef
+@code{foo_t} which references a type @code{bar_t} from @file{bar.h},
+then the FH will expand @code{bar_t}.  That is,
+@example
+typedef int bar_t;   /* from bar.h */
+typedef struct { bar_t x; double y; } foo_t; /* from foo.h */
+@end example
+@noindent
+Now, since @code{bar_t} is not included in our specification, the FH
+will treat @code{foo_t} as if it had been declared as
+@example
+typedef struct { int x; double y; } foo_t; /* from foo.h */
+@end example
+
+Another item the FH deals with is pointers.  BLA BLA BLA
+
+
 
 @section The Type System
 

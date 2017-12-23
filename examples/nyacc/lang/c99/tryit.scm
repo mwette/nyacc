@@ -134,10 +134,10 @@
        ;;(xdecl (expand-typerefs udecl udict '((struct . "foo"))))
        )
   ;;(display code)
-  (ppsx tree)
+  ;;(ppsx tree)
   ;;(ppsx decl)
   ;;(pp99 xdecl)
-  ;;(ppsx (get-gcc-cpp-defs))
+  ;;(ppsx (get-gcc-inc-dirs))
   #t)
 
 #|
