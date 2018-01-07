@@ -87,12 +87,12 @@ struct foo;
 @item
 enum value
 @example
-enum { FOO = 1 };
+enum @{ FOO = 1 @};
 @end example
 @end itemize
 
 We provide the following:
-@table code
+@table @code
 @item udict-ref udict name
 Lookup name in udict.  This is like assoc-ref but will check through
 enums also.
@@ -106,7 +106,7 @@ Lookup @code{enum name}.
 
 @section From Util2
 
-@include munge_scm.texi
+@c @include munge_scm.texi
 
 
 @bye

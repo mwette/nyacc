@@ -1,10 +1,19 @@
 ;;; module/nyacc/util.scm
 ;;;
-;;; Copyright (C) 2015-2017 Matthew R. Wette
+;;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;;
-;;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;;; or any later version published by the Free Software Foundation.  See
-;;; the file COPYING included with the nyacc distribution.
+;;; This library is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU Lesser General Public
+;;; License as published by the Free Software Foundation; either
+;;; version 3 of the License, or (at your option) any later version.
+;;;
+;;; This library is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Lesser General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Lesser General Public License
+;;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 ;; runtime utilities for the parsers
 
@@ -41,9 +50,11 @@
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
 (define lang-crn-lic "
 
-This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-or any later version published by the Free Software Foundation.  See
-the file COPYING included with the this distribution.")
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 3 of the License, or (at your option) any later version.
+See the file COPYING.LESSER included with the this distribution.")
 
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))

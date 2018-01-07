@@ -408,6 +408,7 @@
   (ffi:pointer->string (ffi:make-pointer (fh-object-ref obj))))
 (export make-char* char*->string)
 
+(display "TODO: make-double\n")
 (define double*-desc (bs:pointer double))
 (define-fh-pointer-type double* double*-desc double*? make-double*)
 (export double* double*-desc double*? make-double*)

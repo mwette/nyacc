@@ -2,9 +2,11 @@
 
 ;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
-;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See
-;; the file COPYING included with the this distribution.
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;; See the file COPYING.LESSER included with the this distribution.
 
 (define c99-len-v
   #(1 1 1 1 3 5 1 4 4 3 3 3 2 2 6 7 1 3 1 3 2 1 1 2 2 2 2 4 1 1 1 1 1 1 1 4 1
