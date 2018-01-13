@@ -75,8 +75,13 @@
 	      printer
 	      (or unwrap (lambda (obj) (error "no unwrapper")))
 	      (or wrap (lambda (obj) (error "no wrapper")))
-	      (or pointer-to (lambda (obj) (error "no pointer-to")))
-	      (or value-at (lambda (obj) (error "no value-at")))
+	      ;;(or pointer-to (lambda (obj) (error "no pointer-to")))
+	      (or pointer-to (lambda (obj) (ffi:bytevector->pointer
+					    (bytestructure-bytevector
+					     (fh-object-val obj)))))
+	      ;;(or value-at (lambda (obj) (error "no value-at")))
+	      (or value-at (lambda (obj) (bytestructure-ref
+					  (fh-object-val obj) '*)))
 	      ))
 	 (vt (struct-vtable ty)))
     (set-struct-vtable-name! vt name)
@@ -122,6 +127,15 @@
    (else
     (error "expecting something I can point to"))))
 
+(define (value-at obj)
+  (cond
+   ((fh-object? obj)
+    ((fht-value-at (struct-vtable obj)) obj))
+   ((bytestructure? obj)
+    (bytestructure-ref obj '*))
+   (else
+    (throw 'ffi-help-error "expecting something I can dereference"))))
+
 ;; === objects ============
 
 ;; @deffn {Procedure} fh-object? obj
@@ -145,12 +159,14 @@
   (struct-vtable obj))
 
 ;; @deffn {Procedure} fh-object-val obj
-;; Return the value associate with the object.  This is most often
-;; (I think) a bytestructure.
+;; Return the bytestructure object associate with the FH object.
+;; If @var{object} is a bytestructure, return that.
 ;; @deffn
 (define (fh-object-val obj)
-  (or (fh-object? obj) (error "expecting ffi-help object"))
-  (struct-ref obj 0))
+  (cond
+   ((fh-object? obj) (struct-ref obj 0))
+   ((bytestructure? obj) obj)
+   (else (error "expecting ffi-help object or bytestructure"))))
 
 (define-syntax-rule (fh-object-ref obj arg ...)
   (bytestructure-ref (fh-object-val obj) arg ...))
@@ -217,7 +233,6 @@
 ;; @end example
 ;; The second form is based on already defined @code{bs:pointer} descriptor.
 ;; @end deffn
-(display "ffi-help-rt TODO: add pointer handler in make-<pointer-type>\n")
 (define-syntax-rule (define-fh-pointer-type type desc type? make)
   (begin
     (define type
@@ -239,7 +254,9 @@
 	   (make-struct/no-tail type (bytestructure desc val)))
 	  ((number? val)
 	   (make-struct/no-tail type (bytestructure desc val)))
-	  ;;((pointer? val) todo)
+	  ((ffi:pointer? val)
+	   (make-struct/no-tail type (bytestructure desc
+						    (ffi:pointer-address val))))
 	  (else (make-struct/no-tail type val))))
 	(() (make 0))))))
 
@@ -266,9 +283,7 @@
 	      (fht-printer type))))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
-;; The first form generates an FY aggregate type based on a bytestructure
-;; descriptor.  The second and third forms will build, in addition,
-;; pointer-to type and pointer-to-pointer-to type.
+;; Generates an FY aggregate type based on a bytestructure descriptor.
 ;; @end deffn
 (define-syntax-rule (define-fh-compound-type type desc type? make)
   (begin
@@ -289,16 +304,192 @@
 		   (make-struct/no-tail type (bytestructure desc arg))))
 	(args (make-struct/no-tail type (apply bytestructure desc args)))))))
 
-;; @deffn {Syntax} define-fh-function-type type desc type? make
+;; == extension to bytestructures ==============================================
+
+;; @deffn {Procedure} fh:function return-desc param-desc-list
+;; @deffnx {Syntax} define-fh-function*-type name desc type? make
+;; Generate a descriptor for a function pseudo-type, and then the associated
+;; function pointer type. 
+;; @example
+;; (define foo_t*-desc (bs:pointer (delay ffi:double (list ffi:double))))
+;; (define-fh-function-type foo_t* foo_t*-desc foo_t? make-foo_t)
+;; @end example
+;; @end deffn
+(define-record-type <function-metadata>
+  (make-function-metadata return-descriptor param-descriptor-list attributes)
+  function-metadata?
+  (return-descriptor function-metadata-return-descriptor)
+  (param-descriptor-list function-metadata-param-descriptor-list)
+  (attributes function-metadata-attributes))
+
+(define (pointer->procedure/varargs return-ffi pointer param-ffi-list)
+  (define (arg->ffi arg)
+    (cond
+     ((bytestructure? arg)
+      (bytestructure-descriptor->ffi-descriptor
+       (bytestructure-descriptor arg)))
+     ((and (pair? arg) (bytestructure-descriptor? (car arg)))
+      (bytestructure-descriptor->ffi-descriptor (car arg)))
+     ((pair? arg) (car arg))
+     (else (error "can't interpret argument"))))
+  (define (arg->val arg)
+    (cond
+     ((bytestructure? arg) (bytestructure-ref arg))
+     ((and (pair? arg) (bytestructure? (cdr arg)))
+      (bytestructure-ref (cdr arg)))
+     ((pair? arg) (cdr arg))
+     (else arg)))
+  (define (arg-list->ffi-list param-list arg-list)
+    (let iter ((param-l param-list) (argl arg-list))
+      (cond
+       ((pair? param-l) (cons (car param-l) (iter (cdr param-l) (cdr argl))))
+       ((pair? argl) (cons (arg->ffi (car argl)) (iter param-l (cdr argl))))
+       (else '()))))
+  (lambda args
+    (let ((ffi-l (arg-list->ffi-list param-ffi-list args))
+	  (arg-l (map arg->val args)))
+      (sferr "return=~S  params=~S\n" return-ffi ffi-l)
+      (apply (ffi:pointer->procedure return-ffi pointer ffi-l) arg-l))))
+
+;; right now the code generator only uses ffi types
+(define (old-fh:function %return-desc %param-desc-list)
+  #;(define (get-return-ffi syntax?)
+  (if syntax?
+  #`(bytestructure-descriptor->ffi-descriptor %return-desc)
+  (bytestructure-descriptor->ffi-descriptor %return-desc)))
+  #;(define (get-param-ffi-list syntax?)
+  (let iter ((params %param-desc-list))
+  (cond
+  ((null? params)
+  '())
+  ((pair? (car params))		; (list name desc)
+  (cons (cadar params) (iter (cdr params))))
+  ((eq? '... (car params))		; '...
+  '())
+  ((bytestructure-descriptor? (car params)) ; desc
+  (cons (bytestructure-descriptor->ffi-descriptor (car params))
+  (iter (cdr params))))
+  (else (error "bad parameter")))))
+  (define (get-return-ffi syntax?)
+    (if syntax?
+	#`%return-desc
+	%return-desc))
+  (define (get-param-ffi-list syntax?)
+    (let iter ((params %param-desc-list))
+      (cond
+       ((null? params) '())
+       ((pair? (car params)) (cons (cadar params) (iter (cdr params))))
+       ((eq? '... (car params)) '())
+       (else (cons (car params) (iter (cdr params)))))))
+  (define size (ffi:sizeof '*))
+  (define alignment size)
+  (define attributes
+    (let iter ((param-l %param-desc-list))
+      (cond ((null? param-l) '())
+	    ((eq? '... (car param-l)) '(varargs))
+	    (else (iter (cdr param-l))))))
+  (define (getter syntax? bytevector offset) ; assumes zero offset!
+    (if (memq 'varargs attributes)
+	(if syntax?
+	    #`(pointer->procedure/varargs
+	       (get-return-ffi #f)
+	       (ffi:bytevector->pointer bytevector)
+	       (get-param-ffi-list #f))
+	    (pointer->procedure/varargs
+	     (get-return-ffi #f)
+	     (ffi:bytevector->pointer bytevector)
+	     (get-param-ffi-list #f)))
+	(if syntax?
+	    #`(ffi:pointer->procedure
+	       #,(get-return-ffi #t)
+	       (ffi:bytevector->pointer #,bytevector)
+	       #,(get-param-ffi-list #t))
+	    (ffi:pointer->procedure
+	     (get-return-ffi #f)
+	     (ffi:bytevector->pointer bytevector)
+	     (get-param-ffi-list #f)))))
+  (define meta
+    (make-function-metadata %return-desc %param-desc-list attributes))
+  (make-bytestructure-descriptor size alignment #f getter #f meta))
+
+;; ==============
+
+;; @deffn {Procedure} fh:function return-desc param-desc-list
+;; @deffnx {Syntax} define-fh-function*-type name desc type? make
+;; Generate a descriptor for a function pseudo-type, and then the associated
+;; function pointer type. 
+;; @example
+;; (define foo_t*-desc (bs:pointer (delay (fh:function double (list double)))))
+;; (define-fh-function-type foo_t* foo_t*-desc foo_t? make-foo_t)
+;; @end example
+;; @end deffn
+(define (fh:function %return-desc %param-desc-list)
+  (define (get-return-ffi syntax?)
+    (if syntax?
+	#`%return-desc
+	%return-desc))
+  (define (get-param-ffi-list syntax?)
+    (let iter ((params %param-desc-list))
+      (cond
+       ((null? params) '())
+       ((pair? (car params)) (cons (cadar params) (iter (cdr params))))
+       ((eq? '... (car params)) '())
+       (else (cons (car params) (iter (cdr params)))))))
+  (define size (ffi:sizeof '*))
+  (define alignment size)
+  (define attributes
+    (let iter ((param-l %param-desc-list))
+      (cond ((null? param-l) '())
+	    ((eq? '... (car param-l)) '(varargs))
+	    (else (iter (cdr param-l))))))
+  (define (getter syntax? bytevector offset) ; assumes zero offset!
+    (if (memq 'varargs attributes)
+	(if syntax?
+	    #`(pointer->procedure/varargs
+	       (get-return-ffi #f)
+	       (ffi:bytevector->pointer bytevector)
+	       (get-param-ffi-list #f))
+	    (pointer->procedure/varargs
+	     (get-return-ffi #f)
+	     (ffi:bytevector->pointer bytevector)
+	     (get-param-ffi-list #f)))
+	(if syntax?
+	    #`(ffi:pointer->procedure
+	       #,(get-return-ffi #t)
+	       (ffi:bytevector->pointer #,bytevector)
+	       #,(get-param-ffi-list #t))
+	    (ffi:pointer->procedure
+	     (get-return-ffi #f)
+	     (ffi:bytevector->pointer bytevector)
+	     (get-param-ffi-list #f)))))
+  (define meta
+    (make-function-metadata %return-desc %param-desc-list attributes))
+  (make-bytestructure-descriptor size alignment #f getter #f meta))
+
+;; =============================================================================
+
+(define (bs-desc->ffi-desc bs-desc)
+  (cond
+   ((bytestructure-descriptor? bs-desc)
+    (bytestructure-descriptor->ffi-descriptor bs-desc))
+   ((eq? bs-desc 'void) ffi:void)
+   (else (error "missed type"))))
+
+;; given a fs:function return pair: (return-type . arg-list)
+(define (fs-function*-signature desc)
+  (let* ((meta (bytestructure-descriptor-metadata desc))
+	 (desc (pointer-metadata-content-descriptor meta))
+	 (desc (if (promise? desc) (force desc) desc))
+	 (meta (bytestructure-descriptor-metadata desc))
+	 (bs-rt (function-metadata-return-descriptor meta))
+	 (ffi-rt (bs-desc->ffi-desc bs-rt))
+	 (bs-al (function-metadata-param-descriptor-list meta))
+	 (ffi-bs-al (map bs-desc->ffi-desc bs-al)))
+    (cons ffi-rt ffi-bs-al)))
+
+;; @deffn {Syntax} define-fh-function*-type type desc type? make
 ;; document this
 ;; @end deffn
-(define (ptr-desc->ftn-meta ptr-desc)
-  (let* ((ptr-meta (bytestructure-descriptor-metadata ptr-desc))
-	 (content (pointer-metadata-content-descriptor ptr-meta))
-	 (ftn-desc (if (promise? content) (force content) content))
-	 (ftn-meta (bytestructure-descriptor-metadata ftn-desc)))
-    ftn-meta))
-
 (define-syntax define-fh-function*-type
   (syntax-rules ()
     ((_ type desc type? make)
@@ -306,17 +497,19 @@
        (define type
 	 (make-fht
 	  (quote type)
-	  (lambda (obj) (cond
-			 ((procedure? obj)
-			  (let* ((meta (ptr-desc->ftn-meta desc)))
-			    (ffi:procedure->pointer
-			     (function-metadata-return-descriptor meta)
-			     obj
-			     (function-metadata-param-descriptor-list meta))))
-			 (else (unwrap~pointer obj))))
+	  ;; unwrap:
+	  (lambda (obj)
+	    (cond
+	     ((procedure? obj)
+	      (let* ((sig (fs-function*-signature desc)))
+		(ffi:procedure->pointer (car sig) obj (cdr sig))))
+	     (else (unwrap~pointer obj))))
+	  ;; wrap:
 	  (lambda (val) (make (bytestructure desc (ffi:pointer-address val))))
-	  #f					; pointer-to
-	  (lambda (obj) (fh-object-ref obj '*)) ; value-at
+	  ;; pointer-to:
+	  #f
+	  ;; value-at:
+	  (lambda (obj)	(fh-object-ref obj '*))
 	  (make-bs*-printer (quote type))))
        (define (type? obj)
 	 (and (fh-object? obj) (eq? (struct-vtable obj) type)))
@@ -326,15 +519,12 @@
 	    (cond
 	     ((number? val) (bytestructure desc val))
 	     ((ffi:pointer? val) (bytestructure desc (ffi:pointer-address val)))
-	     ((procedure? val) ;; special case, procedure not pointer
-	      (let ((meta (ptr-desc->ftn-meta desc)))
+	     ((procedure? val) ;; special case, proceadure not pointer
+	      (let* ((sig (fs-function*-signature desc)))
 		(bytestructure
 		 desc
 		 (ffi:pointer-address
-		  (ffi:procedure->pointer
-		   (function-metadata-return-descriptor meta)
-		   val
-		   (function-metadata-param-descriptor-list meta))))))
+		  (ffi:procedure->pointer (car sig) val (cdr sig))))))
 	     (else (error "bad argument type"))))
 	   (() (make-struct/no-tail type (bytestructure desc)))))
        (export type type? make)))))
@@ -408,19 +598,43 @@
   (ffi:pointer->string (ffi:make-pointer (fh-object-ref obj))))
 (export make-char* char*->string)
 
-(display "TODO: make-double\n")
-(define double*-desc (bs:pointer double))
-(define-fh-pointer-type double* double*-desc double*? make-double*)
-(export double* double*-desc double*? make-double*)
+(define-syntax make-maker
+  (syntax-rules ()
+    ((_ desc make-bs-obj)
+     (define-public make-bs-obj
+       (case-lambda
+	 ((arg) (bytestructure desc arg))
+	 (() (bytestructure desc)))))))
 
-(define int*-desc (bs:pointer int))
-(define-fh-pointer-type int* int*-desc int*? make-int*)
-(export int* int*-desc int*? make-int*)
+(make-maker short make-short) (make-maker unsigned-short make-unsigned-short)
+(make-maker int make-int) (make-maker unsigned-int make-unsigned-int)
+(make-maker long make-long) (make-maker unsigned-long make-unsigned-long)
+(make-maker intptr_t make-intptr_t) (make-maker uintptr_t make-uintptr_t)
+(make-maker size_t make-size_t) (make-maker ssize_t make-ssize_t)
+(make-maker ptrdiff_t make-ptrdiff_t)
+(make-maker float make-float) (make-maker double make-double)
+(make-maker int8 make-int8) (make-maker uint8 make-uint8)
+(make-maker int16 make-int16) (make-maker uint16 make-uint16)
+(make-maker int32 make-int32) (make-maker uint32 make-uint32)
+(make-maker int64 make-int64) (make-maker uint64 make-uint64)
 
-(define unsigned-int*-desc (bs:pointer unsigned-int))
-(define-fh-pointer-type fh-unsigned-int* unsigned-int*-desc
-  unsigned-int*? make-unsigned-int*)
-(export unsigned-int* unsigned-int*-desc unsigned-int*? make-unsigned-int*)
+(define-syntax define-base-pointer-type
+  (lambda (x)
+    (syntax-case x ()
+      ((_ desc)
+       (with-syntax ((desc* (gen-id #'desc #'desc "*-desc"))
+		     (type* (gen-id #'desc #'desc "*"))
+		     (type*? (gen-id #'desc #'desc "*?"))
+		     (make* (gen-id #'desc "make-" #'desc "*")))
+	 #'(begin
+	     (define desc* (bs:pointer desc))
+	     (define-fh-pointer-type type* desc* type*? make*)
+	     (export type* desc* type*? make-type*)))))))
+
+(define-base-pointer-type short) (define-base-pointer-type unsigned-short)
+(define-base-pointer-type int) (define-base-pointer-type unsigned-int)
+(define-base-pointer-type long) (define-base-pointer-type unsigned-long)
+(define-base-pointer-type float) (define-base-pointer-type double)
 
 ;; --- other items --------------------
 
@@ -434,120 +648,12 @@
   ;; But on some systems we need to find the actual library :(, apparently.
   (let ((dfunc (let iter ((dll (cons (dynamic-link) dl-lib-list)))
 		 (cond
-		  ((null? dll) (throw 'ffi-help-error "fctn not found"))
+		  ((null? dll) (throw 'ffi-help-error "function not found"))
 		  ((catch #t
 		     (lambda () (dynamic-func name (car dll)))
 		     (lambda args #f)))
 		  (else (iter (cdr dll)))))))
     (and dfunc (ffi:pointer->procedure return dfunc args))))
 
-;; @deffn {Procedure} fh:function return-desc param-desc-list
-;; @deffnx {Syntax} define-fh-function*-type name desc type? make
-;; Generate a descriptor for a function pseudo-type, and then the associated
-;; function pointer type. 
-;; @example
-;; (define foo_t*-desc (bs:pointer (delay ffi:double (list ffi:double))))
-;; (define-fh-function-type foo_t* foo_t*-desc foo_t? make-foo_t)
-;; @end example
-;; @end deffn
-(define-record-type <function-metadata>
-  (make-function-metadata return-descriptor param-descriptor-list attributes)
-  function-metadata?
-  (return-descriptor function-metadata-return-descriptor)
-  (param-descriptor-list function-metadata-param-descriptor-list)
-  (attributes function-metadata-attributes))
-
-;;(define (fh:function-return-ffi descriptor) ...)
-;;(define (fh:function-param-ffi-list descriptor) ...)
-
-(define (pointer->procedure/varargs return-ffi pointer param-ffi-list)
-  (define (arg->ffi arg)
-    (cond
-     ((bytestructure? arg)
-      (bytestructure-descriptor->ffi-descriptor
-       (bytestructure-descriptor arg)))
-     ((and (pair? arg) (bytestructure-descriptor? (car arg)))
-      (bytestructure-descriptor->ffi-descriptor (car arg)))
-     ((pair? arg) (car arg))
-     (else (error "can't interpret argument"))))
-  (define (arg->val arg)
-    (cond
-     ((bytestructure? arg) (bytestructure-ref arg))
-     ((and (pair? arg) (bytestructure? (cdr arg)))
-      (bytestructure-ref (cdr arg)))
-     ((pair? arg) (cdr arg))
-     (else arg)))
-  (define (arg-list->ffi-list param-list arg-list)
-    (let iter ((param-l param-list) (argl arg-list))
-      (cond
-       ((pair? param-l) (cons (car param-l) (iter (cdr param-l) (cdr argl))))
-       ((pair? argl) (cons (arg->ffi (car argl)) (iter param-l (cdr argl))))
-       (else '()))))
-  (lambda args
-    (let ((ffi-l (arg-list->ffi-list param-ffi-list args))
-	  (arg-l (map arg->val args)))
-      (sferr "return=~S  params=~S\n" return-ffi ffi-l)
-      (apply (ffi:pointer->procedure return-ffi pointer ffi-l) arg-l))))
-
-;; right now the code generator only uses ffi types
-(define (fh:function %return-desc %param-desc-list)
-  #;(define (get-return-ffi syntax?)
-  (if syntax?
-  #`(bytestructure-descriptor->ffi-descriptor %return-desc)
-  (bytestructure-descriptor->ffi-descriptor %return-desc)))
-  #;(define (get-param-ffi-list syntax?)
-  (let iter ((params %param-desc-list))
-  (cond
-  ((null? params)
-  '())
-  ((pair? (car params))		; (list name desc)
-  (cons (cadar params) (iter (cdr params))))
-  ((eq? '... (car params))		; '...
-  '())
-  ((bytestructure-descriptor? (car params)) ; desc
-  (cons (bytestructure-descriptor->ffi-descriptor (car params))
-  (iter (cdr params))))
-  (else (error "bad parameter")))))
-  (define (get-return-ffi syntax?)
-    (if syntax?
-	#`%return-desc
-	%return-desc))
-  (define (get-param-ffi-list syntax?)
-    (let iter ((params %param-desc-list))
-      (cond
-       ((null? params) '())
-       ((pair? (car params)) (cons (cadar params) (iter (cdr params))))
-       ((eq? '... (car params)) '())
-       (else (cons (car params) (iter (cdr params)))))))
-  (define size (ffi:sizeof '*))
-  (define alignment size)
-  (define attributes
-    (let iter ((param-l %param-desc-list))
-      (cond ((null? param-l) '())
-	    ((eq? '... (car param-l)) '(varargs))
-	    (else (iter (cdr param-l))))))
-  (define (getter syntax? bytevector offset) ; assumes zero offset!
-    (if (memq 'varargs attributes)
-	(if syntax?
-	    #`(pointer->procedure/varargs
-	       (get-return-ffi #f)
-	       (ffi:bytevector->pointer bytevector)
-	       (get-param-ffi-list #f))
-	    (pointer->procedure/varargs
-	     (get-return-ffi #f)
-	     (ffi:bytevector->pointer bytevector)
-	     (get-param-ffi-list #f)))
-	(if syntax?
-	    #`(ffi:pointer->procedure
-	       #,(get-return-ffi #t)
-	       (ffi:bytevector->pointer #,bytevector)
-	       #,(get-param-ffi-list #t))
-	    (ffi:pointer->procedure
-	     (get-return-ffi #f)
-	     (ffi:bytevector->pointer bytevector)
-	     (get-param-ffi-list #f)))))
-  (define meta
-    (make-function-metadata %return-desc %param-desc-list attributes))
-  (make-bytestructure-descriptor size alignment #f getter #f meta))
 
 ;; --- last line ---

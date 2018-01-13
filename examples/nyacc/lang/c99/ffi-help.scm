@@ -779,6 +779,15 @@
 	 (mspec (udecl->mspec udecl1)))
     (mspec->ffi-sym mspec)))
 
+(display "ffi-help TODO: make mspec->ffi mspec->bs consistent.\n")
+(define (mspec->bs-desc mspec) (mtail->bs-desc (cdr mspec)))
+
+(define (gen-bs-decl-return udecl)
+  (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
+	 (udecl (udecl-rem-type-qual udecl1))
+	 (mspec (udecl->mspec udecl1)))
+    (mspec->bs-desc mspec)))
+
 (define (int->abs-ident ix)
   (simple-format #f "arg-~A" ix))
 
@@ -797,6 +806,20 @@
 	     (mspec (udecl->mspec udecl1 #:abs-ident (int->abs-ident ix))))
 	;;(sferr "  ~S\n" udecl1)
 	(cons (mspec->ffi-sym mspec)
+	      (iter (1+ ix) (cdr params))))))))
+
+(define (gen-bs-decl-params params)
+  ;; Note that expand-typerefs will not eliminate enums or struct-refs :
+  ;; mspec->ffi-sym needs to convert enum to int or void*
+  (let iter ((ix 0) (params (fix-params params)))
+    (cond
+     ((null? params) '())
+     ((equal? (car params) '(ellipsis)) '())
+     (else
+      (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
+	     (udecl1 (udecl-rem-type-qual udecl1))
+	     (mspec (udecl->mspec udecl1 #:abs-ident (int->abs-ident ix))))
+	(cons (mspec->bs-desc mspec)
 	      (iter (1+ ix) (cdr params))))))))
 
 ;; === function calls : unwrap args, call, wrap return
@@ -1114,7 +1137,9 @@
   (let ((aval (sx-attr-ref decl 'typedef)))
     (if aval (string-split aval #\,) '())))
 
-(display "TODO: struct xyz { }; followed by typedef struct xyz *xyz_t\n")
+;;(display "TODO: struct xyz { }; followed by typedef struct xyz *xyz_t\n")
+;;^-- instead have user run (ref<->deref! ...
+
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
 ;; Return updated (string based) keep-list, which will be modified if the
@@ -1411,8 +1436,11 @@
        ;;(if (string=? typename "git_reference_foreach") (pperr udecl))
        (let* ((ret-decl `(udecl (decl-spec-list . ,rst)
 				(init-declr (ident "_"))))
-	      (decl-return (gen-decl-return ret-decl))
-	      (decl-params (gen-decl-params params)))
+	      ;;(decl-return (gen-decl-return ret-decl))
+	      ;;(decl-params (gen-decl-params params))
+	      (decl-return (gen-bs-decl-return ret-decl))
+	      (decl-params (gen-bs-decl-params params))
+	      )
 	 (fhscm-def-function* typename decl-return decl-params))
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1427,8 +1455,11 @@
 	   (param-list . ,params)))))
        (let* ((ret-decl `(udecl (decl-spec-list . ,rst)
 				(init-declr (ptr-declr (pointer) (ident "_")))))
+	      ;;(decl-return (gen-decl-return ret-decl))
+	      ;;(decl-params (gen-decl-params params))
 	      (decl-return (gen-decl-return ret-decl))
-	      (decl-params (gen-decl-params params)))
+	      (decl-params (gen-decl-params params))
+	      )
 	 (fhscm-def-function* typename decl-return decl-params))
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1768,7 +1799,7 @@
 		     inc-files) "")))
 	(and=> (parse-code prog attrs) merge-inc-bodies)))))
 
-;; === main converter ================
+;; === main converter ==================
 
 (define (derive-dirpath sfile mbase)
   (if (not sfile) "./"
@@ -1779,8 +1810,16 @@
 	    (error "filename-path inconsistent"))
 	(substring sbase 0 (- sblen sfxln)))))
 
+;; ripped off from ice-9/boot-9.scm
+(define (more-recent? stat1 stat2)
+  ;; Return #t when STAT1 has an mtime greater than that of STAT2.
+  (or (> (stat:mtime stat1) (stat:mtime stat2))
+      (and (= (stat:mtime stat1) (stat:mtime stat2))
+	   (>= (stat:mtimensec stat1)
+	       (stat:mtimensec stat2)))))
+
 ;; process define-ffi-module expression
-(define (intro-ffi path module-options)
+(define (expand-ffi-module-spec path module-options)
   (let* ((script-options (*options*))
 	 ;;(mbase (string-append (string-join (map symbol->string path) "/")))
 	 (mbase (path->path path))
@@ -1834,6 +1873,13 @@
 	   '() ext-mods))
 	 )
     ;;(pperr udecls) (quit)
+    (for-each
+     (lambda (ext)
+       (let (
+	     )
+	 (sf "ext=~S\n" ext)
+       #f)
+     ext-mods)
 
     ;; set globals
     (*udict* udict)
@@ -1969,7 +2015,7 @@
       ((_) #''()))))
 
 (define-syntax-rule (define-ffi-module path-list attr ...)
-  (intro-ffi (quote path-list) (parse-module-options attr ...)))
+  (expand-ffi-module-spec (quote path-list) (parse-module-options attr ...)))
 
 
 ;; === load includes ================
