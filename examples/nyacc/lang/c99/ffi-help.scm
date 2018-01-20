@@ -261,6 +261,8 @@
 (define (sw/* name) (string-append name "*"))
 (define (sw/*-desc name) (string-append name "*-desc"))
 (define (sw/& name) (string-append name "&"))
+(define (sw/struct* name) (string-append "struct-" name "*"))
+(define (sw/union* name) (string-append "struct-" name "*"))
 
 ;; I was using (pointer . name) in *defined* but this has issues
 ;; because expand-typerefs does not recognize it.  Is a change needed?
@@ -931,8 +933,13 @@
       (((pointer-to) (struct-ref (ident ,struct-name) . ,rest))
        (cond
 	((member (w/struct struct-name) wrapped)
-	 `(fht-wrap ,(string->symbol (sw/* struct-name))))
-	;;(else 'wrap~pointer)))
+	 `(fht-wrap ,(string->symbol (sw/struct* struct-name))))
+	(else #f)))
+
+      (((pointer-to) (union-ref (ident ,union-name) . ,rest))
+       (cond
+	((member (w/union union-name) wrapped)
+	 `(fht-wrap ,(string->symbol (sw/union* union-name))))
 	(else #f)))
 
       ;;(((pointer-to) . ,otherwise) 'ffi:make-pointer)
@@ -984,7 +991,6 @@
    params))
 
 (define (gen-exec-return-wrapper udecl)
-  ;;(let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
   (let* ((udecl (expand-typerefs udecl (*udict*) (*wrapped*)))
 	 (udecl (udecl-rem-type-qual udecl))
 	 (mspec (udecl->mspec udecl)))
@@ -1016,7 +1022,6 @@
 ;; params is list of param-decl trees (i.e., cdr of param-list tree)
 ;; @end deffn
 (define (cnvt-fctn name rdecl params)
-  ;;(when (string=? name "cairo_create") (pperr (*wrapped*)))
   (let* ((params (fix-params params))
 	 (varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
 	 (decl-return (gen-decl-return rdecl))
@@ -1055,10 +1060,11 @@
 
 (define (cnvt-extern name ms-tail)
   (let ((desc (mtail->bs-desc ms-tail)))
+    (sfscm ";; (~A) => bytestructure\n" name)
     (ppscm
      `(define-public ,(string->symbol name)
-	(let ((prom (delay (fh-link-bstr ,name ,desc link-libs))))
-	  (lambda () (force prom)))))))
+	(let ((bstr-promise (delay (fh-link-bstr ,name ,desc link-libs))))
+	  (lambda () (force bstr-promise)))))))
 
 ;; ------------------------------------
 
@@ -1251,7 +1257,20 @@
        (sfscm "(define-public wrap-~A wrap-enum-~A)\n" typename enum-name)
        (sfscm "(define-public unwrap-~A unwrap-enum-~A)\n" typename enum-name)
        (values (cons typename wrapped) defined))
-      
+
+      ;; need better way ???
+      ;; typedef struct foo { ... } foo_t;
+      ;; missing typedef struct foo { ... } *foo_t;
+      ;; typedef struct { ... } foo_t;
+      ;; missing typedef struct { ... } *foo_t;
+      ;; typedef struct foo foo_t;
+      ;; typedef struct foo *foo_t;
+      ;; =>
+      ;; (decl-spec-list
+      ;;  (stor-spec typedef) (type-spec (struct-def . ,rest)))
+      ;; (init-declr . ,rest)
+      ;; 
+
       ;; typedef struct foo { ... } foo_t;
       ((udecl
 	(decl-spec-list
@@ -1264,6 +1283,17 @@
 	(cons* typename (w/* typename) (w/struct struct-name) wrapped)
 	(cons* typename (w/* typename) (w/struct struct-name) defined)))
 
+      ;; typedef struct foo { ... } *foo_t;
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (struct-def (ident ,struct-name) ,field-list)))
+	(init-declr (ptr-declr (pointer) (ident ,typename))))
+       (cnvt-struct-def (sw/* typename) struct-name field-list)
+       (values
+	(cons* (w/* typename) (w/struct struct-name) wrapped)
+	(cons* (w/* typename) (w/struct struct-name) defined)))
+
       ;; typedef struct { ... } foo_t;
       ((udecl
 	(decl-spec-list
@@ -1271,9 +1301,18 @@
 	 (type-spec (struct-def ,field-list)))
 	(init-declr (ident ,typename)))
        (cnvt-struct-def typename #f field-list)
-       
        (values (cons* typename (w/* typename) wrapped)
 	       (cons* typename (w/* typename) defined)))
+
+      ;; typedef struct { ... } *foo_t;
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (struct-def ,field-list)))
+	(init-declr (ptr-declr (pointer) (ident ,typename))))
+       (cnvt-struct-def (sw/* typename) #f field-list)
+       (values (cons* (w/* typename) wrapped)
+	       (cons* (w/* typename) defined)))
 
       ;; typedef struct foo foo_t;
       ((udecl
@@ -1589,14 +1628,11 @@
       ;; pointer
       ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
 	      (init-declr (ptr-declr (pointer) (ident ,name))))
-       (sfscm ";; *** external pointer variable\n")
        ;; This needs to have a delay and handler
        (let* ((udecl (expand-typerefs udecl udict (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mspec (udecl->mspec udecl)))
-	 (sferr "extern mspec:\n") (pperr mspec)
 	 (cnvt-extern (car mspec) (cdr mspec)))
-       ;;(sfscm "(define ~A (dynamic-pointer ~S (dynamic-link)))\n" name name)
        (values wrapped defined))
 
       ;; non-pointer
@@ -1605,7 +1641,6 @@
        (let* ((udecl (expand-typerefs udecl udict (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mspec (udecl->mspec udecl)))
-	 ;;(sferr "extern mspec:\n") (pperr mspec)
 	 (cnvt-extern (car mspec) (cdr mspec))
 	 (values wrapped defined)))
 

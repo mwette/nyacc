@@ -21,7 +21,14 @@
   (display "Hello World!\n")
   )
 ;; Need to hand cast because signature of GCallback is void (*f)(void)
-(define ~hello (ffi:procedure->pointer ffi:void hello (list '* '*)))
+;;(define ~hello (ffi:procedure->pointer ffi:void hello (list '* '*)))
+
+;; 
+(define ~hello
+  (make-GtkCallback
+   (lambda (widget data)
+     (display "Hello world!\n"))))
+;; then below we use (fh-cast GCallback ~hello)
 
 (define (delete-event widget event data)
   (display "delete event occurred\n")
@@ -54,6 +61,7 @@
 
   (set! button (gtk_button_new_with_label "Hello World"))
   (g_signal_connect button "clicked" ~hello NULL)
+  ;;(g_signal_connect button "clicked" (fh-cast GCallback hello) NULL)
   (g_signal_connect_swapped button "clicked" widget_destroy window)
   (gtk_container_add window button)
 

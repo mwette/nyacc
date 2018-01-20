@@ -35,7 +35,7 @@
 	    unwrap~fixed unwrap~float
 	    unwrap~pointer unwrap~array
 	    make-fctn-param-unwrapper
-	    fh-link-proc ffi-void*)
+	    fh-link-proc fh-link-bstr ffi-void*)
   #:use-module (bytestructures guile)
   #:use-module (bytestructures guile ffi)
   #:use-module (rnrs bytevectors)
@@ -500,9 +500,13 @@
 	  ;; unwrap:
 	  (lambda (obj)
 	    (cond
-	     ((procedure? obj)
+	     ((procedure? obj)		; a lambda
 	      (let* ((sig (fs-function*-signature desc)))
 		(ffi:procedure->pointer (car sig) obj (cdr sig))))
+	     #;((and (pair? obj)
+	     (or (fh-type? (car obj))
+	     (bytestructure-descriptor? (car obj))))
+	     #f)
 	     (else (unwrap~pointer obj))))
 	  ;; wrap:
 	  (lambda (val) (make (bytestructure desc (ffi:pointer-address val))))
@@ -535,14 +539,22 @@
 ;; (fh-cast foo_desc_t* 321)
 ;; (use-modules ((system foreign) #:prefix 'ffi:))
 ;; (fh-cast ffi:short 321)
-;; @end deffn 
+;; We might have a procedure that wants be passed as a pointer but
+;; @end deffn
+;; use cases
+;; @itemize
+;; @item
+;; @example
+;; (lambda (x y) #f) => (procedure->pointer void (list '* '*))
+;; @end example
+;; @end itemize
 (define (fh:cast type expr)
-  (let* ((r-type
+  (let* ((r-type			; resolved type
 	  (cond
 	   ((bytestructure-descriptor? type)
 	    (bytestructure-descriptor->ffi-descriptor type))
 	   (else type)))
-	 (r-expr
+	 (r-expr			; resolved value
 	  (cond
 	   ((and (equal? r-type ffi-void*) (string? expr))
 	    (ffi:string->pointer expr))
@@ -571,6 +583,9 @@
    ((string? obj) (ffi:string->pointer obj))
    ((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
    ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
+   ;; TODO: work out casting pointer types
+   ;;((and (pair? obj)
+   ;;(or (fh-type? (car obj)) (bytestructure-descriptor? (car obj))))
    (else (error "expecting pointer type"))))
 
 ;; @deffn {Procedure} make-fctn-param-unwrapper ret-t args-t => lambda
@@ -638,6 +653,15 @@
 
 ;; --- other items --------------------
 
+(define (find-addr name dl-lib-list)
+  (let iter ((dll (cons (dynamic-link) dl-lib-list)))
+    (cond
+     ((null? dll) (throw 'ffi-help-error "function not found"))
+     ((catch #t
+	(lambda () (dynamic-func name (car dll)))
+	(lambda args #f)))
+     (else (iter (cdr dll))))))
+
 ;; @deffn {Procedure} fh-link-proc return name args dy-lib-list
 ;; Generate Guile procedure from C library. 
 ;; @end deffn
@@ -646,14 +670,15 @@
   ;; try to get the dynamic-func for the provided function.  Usually
   ;; the first dynamic link is @code{(dynamic-link)} and that should work.
   ;; But on some systems we need to find the actual library :(, apparently.
-  (let ((dfunc (let iter ((dll (cons (dynamic-link) dl-lib-list)))
-		 (cond
-		  ((null? dll) (throw 'ffi-help-error "function not found"))
-		  ((catch #t
-		     (lambda () (dynamic-func name (car dll)))
-		     (lambda args #f)))
-		  (else (iter (cdr dll)))))))
+  (let ((dfunc (find-addr name dl-lib-list)))
     (and dfunc (ffi:pointer->procedure return dfunc args))))
 
+;; @deffn {Procedure} fh-link-bstr name desc db-lib-list => bytestructure
+;; Generate a bytestructure from the bytes in the library at the var addr.
+;; @end deffn
+(define* (fh-link-bstr name desc dl-lib-list)
+  (let* ((addr (find-addr name dl-lib-list))
+	 (size (bytestructure-descriptor-size desc)))
+    (make-bytestructure (ffi:pointer->bytevector addr size) 0 desc)))
 
 ;; --- last line ---
