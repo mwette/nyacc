@@ -1928,18 +1928,16 @@
 	 (cpp-defs (c99-trans-unit->ddict tree #:inc-filter #t))
 	 (all-defs (c99-trans-unit->ddict tree enu-defs
 					  #:inc-filter #t #:skip-fdefs #t))
-
 	 ;; the list of typedefs we will generate (later):
 	 (ffimod-defined #f)
-
-	 (saw-last #f)
-
-	 (ext-mods			; ext modules (e.g., '(ffi cairo) ...)
+	 ;; ext modules (e.g., '(ffi cairo) ...)
+	 (ext-mods
 	  (fold-right
 	   (lambda (opt seed)
 	     (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
 	   '() module-options))
-	 (ext-defd			; list of exernal defined
+	 ;; list of exernal defined
+	 (ext-defd			
 	  (fold
 	   (lambda (upath seed)
 	     (unless (resolve-module upath)
@@ -1951,8 +1949,6 @@
 	       (append var seed)))
 	   '() ext-mods))
 	 )
-    ;;(pperr udecls) (quit)
-
     ;; set globals
     (*udict* udict)
     (*mport* mport)
@@ -1963,64 +1959,15 @@
     (ffimod-header path module-options)
 
     ;; Convert and output foreign declarations.
-    ;; This should be pushed into a separate function so we can do this
-    ;; interactively also.
-    #;(call-with-values
-	(lambda ()
-	  (fold-values			  ; from (sxml fold)
-	   (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
-	     ;;(sferr "declf ~S => ~S\n" name (declf name))
-	     (catch 'ffi-help-error
-	       (lambda ()
-		 (cond
-		  (saw-last
-		   (c99scm (udict-ref udict name))
-		   (values wrapped defined)) ; for debugging
-		  
-		  ((and ;; Process the declaration if all conditions met:
-		    (declf name)		; 1) user wants it
-		    (not (member name defined))	; 2) not already defined
-		    (not (and (pair? name)	; 3) not anonymous
-			      (string=? "*anon*" (cdr name)))))
-		   ;;(sferr "~A\n" name)
-		   (when (or
-			  ;;(equal? name "gtk_im_context_simple_get_type")
-			  #f)
-		     ;;(pperr (udict-ref udict name))
-		     (set! saw-last #t)
-		     )
-		   (let ((udecl (udict-ref udict name)))
-		     (nlscm) (c99scm udecl)
-		     (if *echo-decls*
-			 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
-		     (cnvt-udecl udecl udict wrapped defined)))
-		  (else (values wrapped defined))))
-	       ;; exception handler:
-	       (lambda (key fmt . args)
-		 (if fmt
-		     (apply simple-format (current-error-port)
-			    (string-append "ffi-help: " fmt "\n") args))
-		 (sfscm ";; ... failed.\n")
-		 (values wrapped defined))))
-	   ;; We need to have externs in wrapped because function param types
-	   ;; have wrapped types preserved (e.g., enums).
-	   ffi-decls ext-defd (append bs-defined ext-defd)))
-      (lambda (wrapped defined)
-	;; Set ffimod-defined for including, but removed built-in types.
-	(let* ((bity (car bs-defined))	; first built-in type
-	       (defd (let iter ((res '()) (defs defined))
-		       (if (eq? (car defs) bity) res
-			   (iter (cons (car defs) res) (cdr defs))))))
-	  (set! ffimod-defined defd))))
-    
     (call-with-values
 	(lambda ()
-	  ;; We need to have externs in wrapped because function param types
-	  ;; have wrapped types preserved (e.g., enums).
+	  ;; We need to have externs in wrapped because function param
+	  ;; type have wrapped types preserved (e.g., enums).
 	  (process-decls ffi-decls udict
+			 ;; wrapped and defined:
 			 ext-defd (append bs-defined ext-defd)
-			 ;; #:options options
-			 ))
+			 ;; declaration filter
+			 #:declf declf))
       (lambda (wrapped defined)
 	;; Set ffimod-defined for including, but removed built-in types.
 	(let* ((bity (car bs-defined))	; first built-in type
@@ -2143,6 +2090,11 @@
 	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
 	   (tree (parse-includes attrs))
 	   )
+      (process-decls ffi-decls udict
+		     ;; wrapped and defined:
+		     ext-defd (append bs-defined ext-defd)
+		     ;; declaration filter
+		     #:declf declf))
       (if #f #f))))
 
 ;; === file compiler ================
@@ -2194,35 +2146,3 @@
 	    (iter oport (read iport)))))))))
 
 ;; --- last line ---
-(define* (OLD-compile-ffi-file file #:optional (options '()))
-  (parameterize ((*options* (acons 'file file options))
-		 (*prefix* ".")
-		 (*mport* #t)
-		 (*udict* '())
-		 (*wrapped* '())
-		 (*defined* '())
-		 (*renamer* identity)
-		 (*errmsgs* '()))
-    ;;(sfout "+++ warning: the FFI helper is experimental\n")
-    (sfout "ffi-help: WARNING: the FFI helper is experimental\n")
-    ;; if not interactive ...
-    (debug-disable 'backtrace)
-    (call-with-input-file file
-      (lambda (iport)
-	(let iter ((oport #f))
-	  ;; use scm-reader or read here?
-	  (let ((exp (scm-reader iport (current-module))))
-	    (cond
-	     ((eof-object? exp)
-	      (when oport
-		(display "\n;; --- last line ---\n" oport)
-		(sferr "wrote `~A'\n" (port-filename oport))
-		(close-port oport)))
-	     ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
-	      (iter (eval exp (current-module))))
-	     (else
-	      (when oport
-		(newline oport)
-		(pretty-print exp oport)
-		(iter oport))))))))))
-
