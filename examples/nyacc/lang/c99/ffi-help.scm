@@ -70,10 +70,7 @@
   )
 
 (define (fhoo) #t)			; debugging
-
 (use-modules (ice-9 pretty-print))
-
-;;(define *ffi-help-version* "0.82.2")
 
 (define fh-cpp-defs
   (cond
@@ -117,7 +114,7 @@
 
 ;; change to parameters
 (define *options* (make-parameter '()))
-(define *prefix* (make-parameter "."))	 ; prefix to files
+(define *prefix* (make-parameter ""))	 ; name prefix (e.g., prefix-syms)
 (define *debug* (make-parameter #f))	 ; parse debug mode
 (define *mport* (make-parameter #t))	 ; output module port
 (define *udict* (make-parameter '()))	 ; udecl dict
@@ -177,6 +174,9 @@
 ;; '(abc def) => "abc/def"
 (define (path->path path)
   (string-join (map symbol->string path) "/"))
+
+(define (link-libs)
+  (string->symbol (string-append (*prefix*) "-llibs")))
 
 ;; @deffn {Procedure} opts->attrs module-opts script-opts
 ;; The values in @var{script-opts} override @var{module-opts}.  That is,
@@ -303,7 +303,7 @@
     (sfscm "  )\n")
     ;;
     (ppscm
-     `(define link-libs
+     `(define ,(link-libs)
 	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
     ;;(sfscm "(define link-lib (car link-libs))\n")
     (if *echo-decls* (sfscm "(define echo-decls #t)\n"))))
@@ -1043,13 +1043,13 @@
 	  (let ((,~name (fh-link-proc
 			 ,decl-return ,name
 			 (append (list ,@decl-params) (map car ~rest))
-			 link-libs))
+			 ,(link-libs)))
 		,@(gen-exec-unwrappers exec-params))
 	    ,(if exec-return (list exec-return va-call) va-call)))))
      (else
       (ppscm `(define ,~name
-		(delay (fh-link-proc ,decl-return ,name
-				     (list ,@decl-params) link-libs))))
+		(delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
+				     ,(link-libs)))))
       (ppscm
        `(define (,sname ,@(gen-exec-arg-names exec-params))
 	  (let ,(gen-exec-unwrappers exec-params)
@@ -1063,7 +1063,7 @@
     (sfscm ";; (~A) => bytestructure\n" name)
     (ppscm
      `(define-public ,(string->symbol name)
-	(let ((bstr-promise (delay (fh-link-bstr ,name ,desc link-libs))))
+	(let ((bstr-promise (delay (fh-link-bstr ,name ,desc ,(link-libs)))))
 	  (lambda () (force bstr-promise)))))))
 
 ;; ------------------------------------
@@ -1715,14 +1715,14 @@
 
 ;; given keeper-defs (k-defs) and cpp defs (c-defs) expand the keeper
 ;; replacemnts down to constants (strings, integers, etc)
-(define (gen-lookup-proc prefix keep-defs cpp-defs ext-mods)
+(define (gen-lookup-proc keep-defs cpp-defs ext-mods)
 
   ;; @var{keep-defs} is list of CPP defs and enum key/val pairs. It is
   ;; possible for an enum symbol to be used as a macro function so we
   ;; need to first check for integer before trying expand-cpp-macro-ref.
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
   (let ((name
-	 (string->symbol (string-append prefix "symbol-val")))
+	 (string->symbol (string-append (*prefix*) "symbol-val")))
 	(defs
 	  (fold
 	   (lambda (def seed)
@@ -1867,7 +1867,7 @@
 
 ;; => (values wrapped defined)
 (define* (process-decls decls udict
-			#:optional wrapped defined
+			#:optional (wrapped '()) (defined '())
 			#:key (declf (lambda (n) #t))
 			)
   (let* () ;;(declf (if declf declf (lambda (name) #t))))
@@ -1877,9 +1877,9 @@
 	 (lambda ()
 	   (cond
 	    ((and ;; Process the declaration if all conditions met:
-	      (declf name)		; 1) user wants it
-	      (not (member name defined))	; 2) not already defined
-	      (not (and (pair? name)	; 3) not anonymous
+	      (declf name)		  ; 1) user wants it
+	      (not (member name defined)) ; 2) not already defined
+	      (not (and (pair? name)	  ; 3) not anonymous
 			(string=? "*anon*" (cdr name)))))
 	     (let ((udecl (udict-ref udict name)))
 	       (nlscm) (c99scm udecl)
@@ -1910,7 +1910,6 @@
 	 (incf (or (assq-ref attrs 'inc-filter) #f))
 	 (declf (or (assq-ref attrs 'decl-filter) identity))
 	 (renamer (or (assq-ref attrs 'renamer) identity))
-	 (prefix (string-append (path->name path) "-"))
 	 ;;
 	 (tree (cond
 		((assq-ref attrs 'include) (parse-includes attrs))
@@ -1950,6 +1949,7 @@
 	   '() ext-mods))
 	 )
     ;; set globals
+    (*prefix* (path->name path))
     (*udict* udict)
     (*mport* mport)
     (*all-defs* all-defs)
@@ -1977,7 +1977,7 @@
 	  (set! ffimod-defined defd))))
     
     ;; output global constants (from enum and #define)
-    (gen-lookup-proc prefix ffi-defs cpp-defs ext-mods)
+    (gen-lookup-proc ffi-defs cpp-defs ext-mods)
 
     ;; output list of defined types
     (sfscm "\n(define ~A-types\n  '" (path->name path))
@@ -1988,6 +1988,65 @@
 
     ;; return port so compiler can output remaining code
     mport))
+
+
+
+;; === load includes ================
+
+
+;; @deffn {Procedure} load-include-file filename [pkg-config]
+;; This is the functionality that Ludo was asking for: to be at guile
+;; prompt and be able to issue
+;; @example
+;; (use-modules (nyacc lang c99 ffi-help))
+;; (load-include-file "cairo.h" #:pkg-config "cairo")
+;; @end example
+;; @end deffn
+;; + Right now the only way would be to generate a file and eval it, because
+;;   our code generates strings and not lists.
+;; + and=> with-output-to-string  eval
+;; + first need to cut up intro-ffi
+
+;; options:
+;;   api-code cpp-defs decl-filter
+;;   inc-dirs inc-filter inc-help include
+;;   library pkg-config renamer
+(define* (load-include-file filename
+			    #:key pkg-config)
+  (parameterize ((*options* '())
+		 (*wrapped* '())
+		 (*defined* '())
+		 (*renamer* identity)
+		 (*errmsgs* '()))
+    (let* ((attrs (acons 'include (list filename) '()))
+	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
+	   (tree (parse-includes attrs))
+	   (udict (c99-trans-unit->udict/deep tree))
+	   (udecls (c99-trans-unit->udict tree))
+	   (decls (map car udecls))
+	   (scmfile ".fh_temp.scm") ; ugly hack, need tmpfile w/ .scm ending
+	   )
+      (*prefix* (symbol->string (gensym "fh-")))
+      (*mport* (open-output-file scmfile))
+      (*udict* udict)
+      (sfscm "(use-modules (system ffi-help-rt))\n")
+      (sfscm "(use-modules ((system foreign) #:prefix ffi:))\n")
+      (sfscm "(use-modules (bytestructures guile))\n")
+      (ppscm `(define ,(link-libs)
+		(list ,@(map
+			 (lambda (l) `(dynamic-link ,l))
+			 (pkg-config-libs pkg-config)))))
+      (process-decls decls udict '() bs-defined)
+      (close (*mport*))
+      (load scmfile)
+      (delete-file scmfile)
+      (if #f #f))))
+
+
+;; === file compiler ================
+
+(use-modules (system base language))
+(use-modules (ice-9 pretty-print))
 
 ;; This macro converts #:key val to '(key val) for ffi-help options
 ;; and preserves other #:key-val pairs for passthrough to the module
@@ -2055,53 +2114,6 @@
 (define-syntax-rule (define-ffi-module path-list attr ...)
   (expand-ffi-module-spec (quote path-list) (parse-module-options attr ...)))
 
-
-;; === load includes ================
-
-
-;; @deffn {Procedure} load-include-file filename [pkg-config]
-;; This is the functionality that Ludo was asking for: to be at guile
-;; prompt and be able to issue
-;; @example
-;; (load-include-file "cairo.h" #:pkg-config "cairo")
-;; @end example
-;; @end deffn
-;; + Right now the only way would be to generate a file and eval it, because
-;;   our code generates strings and not lists.
-;; + and=> with-output-to-string  eval
-;; + first need to cut up intro-ffi
-;; + need to 
-(define* (load-include-file filename
-			    #:key pkg-config)
-  (parameterize ((*options*
-		  (let*
-		      ((oz '())
-		       (oz (if pkg-config (acons 'pkg-config pkg-config oz)))
-		       )
-		    oz))
-		 (*prefix* ".")
-		 (*mport* #t)
-		 (*udict* '())
-		 (*wrapped* '())
-		 (*defined* '())
-		 (*renamer* identity)
-		 (*errmsgs* '()))
-    (let* ((attrs (acons 'include (list filename) '()))
-	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
-	   (tree (parse-includes attrs))
-	   )
-      (process-decls ffi-decls udict
-		     ;; wrapped and defined:
-		     ext-defd (append bs-defined ext-defd)
-		     ;; declaration filter
-		     #:declf declf)
-      (if #f #f))))
-
-;; === file compiler ================
-
-(use-modules (system base language))
-(use-modules (ice-9 pretty-print))
-
 (define (string-member-proc . args)
   (lambda (s) (member s args)))
 
@@ -2116,7 +2128,7 @@
 ;; @end deffn
 (define* (compile-ffi-file file #:optional (options '()))
   (parameterize ((*options* (acons 'file file options))
-		 (*prefix* ".")
+		 (*prefix* "?")
 		 (*mport* #t)
 		 (*udict* '())
 		 (*wrapped* '())
