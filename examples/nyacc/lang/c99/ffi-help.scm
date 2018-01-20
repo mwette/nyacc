@@ -2094,7 +2094,7 @@
 		     ;; wrapped and defined:
 		     ext-defd (append bs-defined ext-defd)
 		     ;; declaration filter
-		     #:declf declf))
+		     #:declf declf)
       (if #f #f))))
 
 ;; === file compiler ================
