@@ -1865,6 +1865,36 @@
 	   (sleep 2))))
      ext-mods)))
 
+;; => (values wrapped defined)
+(define* (process-decls decls udict
+			#:optional wrapped defined
+			#:key (declf (lambda (n) #t))
+			)
+  (let* () ;;(declf (if declf declf (lambda (name) #t))))
+    (fold-values			  ; from (sxml fold)
+     (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
+       (catch 'ffi-help-error
+	 (lambda ()
+	   (cond
+	    ((and ;; Process the declaration if all conditions met:
+	      (declf name)		; 1) user wants it
+	      (not (member name defined))	; 2) not already defined
+	      (not (and (pair? name)	; 3) not anonymous
+			(string=? "*anon*" (cdr name)))))
+	     (let ((udecl (udict-ref udict name)))
+	       (nlscm) (c99scm udecl)
+	       (if *echo-decls*
+		   (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
+	       (cnvt-udecl udecl udict wrapped defined)))
+	    (else (values wrapped defined))))
+	 ;; exception handler:
+	 (lambda (key fmt . args)
+	   (if fmt (apply simple-format (current-error-port)
+			  (string-append "ffi-help: " fmt "\n") args))
+	   (sfscm ";; ... failed.\n")
+	   (values wrapped defined))))
+     decls wrapped defined)))
+
 ;; process define-ffi-module expression
 ;; was intro-ffi
 (define (expand-ffi-module-spec path module-options)
@@ -1932,8 +1962,10 @@
     ;; file and module header
     (ffimod-header path module-options)
 
-    ;; convert and output foreign declarations
-    (call-with-values
+    ;; Convert and output foreign declarations.
+    ;; This should be pushed into a separate function so we can do this
+    ;; interactively also.
+    #;(call-with-values
 	(lambda ()
 	  (fold-values			  ; from (sxml fold)
 	   (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
@@ -1973,6 +2005,22 @@
 	   ;; We need to have externs in wrapped because function param types
 	   ;; have wrapped types preserved (e.g., enums).
 	   ffi-decls ext-defd (append bs-defined ext-defd)))
+      (lambda (wrapped defined)
+	;; Set ffimod-defined for including, but removed built-in types.
+	(let* ((bity (car bs-defined))	; first built-in type
+	       (defd (let iter ((res '()) (defs defined))
+		       (if (eq? (car defs) bity) res
+			   (iter (cons (car defs) res) (cdr defs))))))
+	  (set! ffimod-defined defd))))
+    
+    (call-with-values
+	(lambda ()
+	  ;; We need to have externs in wrapped because function param types
+	  ;; have wrapped types preserved (e.g., enums).
+	  (process-decls ffi-decls udict
+			 ext-defd (append bs-defined ext-defd)
+			 ;; #:options options
+			 ))
       (lambda (wrapped defined)
 	;; Set ffimod-defined for including, but removed built-in types.
 	(let* ((bity (car bs-defined))	; first built-in type
@@ -2064,14 +2112,38 @@
 ;; === load includes ================
 
 
-;; and=> with-output-to-string  eval
+;; @deffn {Procedure} load-include-file filename [pkg-config]
+;; This is the functionality that Ludo was asking for: to be at guile
+;; prompt and be able to issue
+;; @example
+;; (load-include-file "cairo.h" #:pkg-config "cairo")
+;; @end example
+;; @end deffn
+;; + Right now the only way would be to generate a file and eval it, because
+;;   our code generates strings and not lists.
+;; + and=> with-output-to-string  eval
+;; + first need to cut up intro-ffi
+;; + need to 
 (define* (load-include-file filename
 			    #:key pkg-config)
-  (let* ((attrs (acons 'include (list filename) '()))
-	 (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
-	 (tree (parse-includes attrs))
-	 )
-    (if #f #f)))
+  (parameterize ((*options*
+		  (let*
+		      ((oz '())
+		       (oz (if pkg-config (acons 'pkg-config pkg-config oz)))
+		       )
+		    oz))
+		 (*prefix* ".")
+		 (*mport* #t)
+		 (*udict* '())
+		 (*wrapped* '())
+		 (*defined* '())
+		 (*renamer* identity)
+		 (*errmsgs* '()))
+    (let* ((attrs (acons 'include (list filename) '()))
+	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
+	   (tree (parse-includes attrs))
+	   )
+      (if #f #f))))
 
 ;; === file compiler ================
 
@@ -2090,6 +2162,38 @@
 ;; @deffn {Procedure} compile-ffi-file file [options]
 ;; This procedure will 
 ;; @end deffn
+(define* (compile-ffi-file file #:optional (options '()))
+  (parameterize ((*options* (acons 'file file options))
+		 (*prefix* ".")
+		 (*mport* #t)
+		 (*udict* '())
+		 (*wrapped* '())
+		 (*defined* '())
+		 (*renamer* identity)
+		 (*errmsgs* '()))
+    (sfout "ffi-help: WARNING: the FFI helper is experimental\n")
+    ;; if not interactive ...
+    (debug-disable 'backtrace)
+    (if (not (access? file R_OK))
+	(throw 'ffi-help-error "ERROR: not found: ~S" file))
+    (call-with-input-file file
+      (lambda (iport)
+	(let iter ((oport #f) (exp (read iport)))
+	  (cond
+	   ((eof-object? exp)
+	    (when oport
+	      (display "\n;; --- last line ---\n" oport)
+	      (sferr "wrote `~A'\n" (port-filename oport))
+	      (close-port oport)))
+	   ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
+	    (iter (eval exp (current-module)) (read iport)))
+	   (else
+	    (when oport
+	      (newline oport)
+	      (pretty-print exp oport))
+	    (iter oport (read iport)))))))))
+
+;; --- last line ---
 (define* (OLD-compile-ffi-file file #:optional (options '()))
   (parameterize ((*options* (acons 'file file options))
 		 (*prefix* ".")
@@ -2122,36 +2226,3 @@
 		(pretty-print exp oport)
 		(iter oport))))))))))
 
-(define* (compile-ffi-file file #:optional (options '()))
-  (parameterize ((*options* (acons 'file file options))
-		 (*prefix* ".")
-		 (*mport* #t)
-		 (*udict* '())
-		 (*wrapped* '())
-		 (*defined* '())
-		 (*renamer* identity)
-		 (*errmsgs* '()))
-    ;;(sfout "+++ warning: the FFI helper is experimental\n")
-    (sfout "ffi-help: WARNING: the FFI helper is experimental\n")
-    ;; if not interactive ...
-    (debug-disable 'backtrace)
-    (if (not (access? file R_OK))
-	(throw 'ffi-help-error "ERROR: not found: ~S" file))
-    (call-with-input-file file
-      (lambda (iport)
-	(let iter ((oport #f) (exp (read iport)))
-	  (cond
-	   ((eof-object? exp)
-	    (when oport
-	      (display "\n;; --- last line ---\n" oport)
-	      (sferr "wrote `~A'\n" (port-filename oport))
-	      (close-port oport)))
-	   ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
-	    (iter (eval exp (current-module)) (read iport)))
-	   (else
-	    (when oport
-	      (newline oport)
-	      (pretty-print exp oport))
-	    (iter oport (read iport)))))))))
-
-;; --- last line ---
