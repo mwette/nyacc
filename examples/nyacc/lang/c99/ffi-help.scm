@@ -66,7 +66,7 @@
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
   #:re-export (*nyacc-version*)
-  #:version (0 82 4)
+  #:version (0 83 0)
   )
 
 (define (fhoo) #t)			; debugging

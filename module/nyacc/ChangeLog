@@ -1,3 +1,7 @@
+2018-01-21  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* version.scm: release version 0.83.0
+
 2017-11-23  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (read-c-chlit): did not parse '\177' correctly (prev
