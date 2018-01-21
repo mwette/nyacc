@@ -2,10 +2,11 @@
 
 ;; This is diverse in declarations.
 (define-ffi-module (ffi hdf5)
+  #:pkg-config "hdf5"
   #:include '("hdf5.h" "hdf5_hl.h")
   #:inc-filter (lambda (file-spec path-spec)
 		 (string-prefix? "\"H5" file-spec))
-  #:library '("libhdf5")
+  ;;#:library '("libhdf5")
   )
 
 ;; --- last line ---

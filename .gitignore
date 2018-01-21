@@ -2,6 +2,9 @@
 ,*
 *.new
 *.go
+*.aux
+*.log
+*.toc
 lang.txt
 lang.zip
 gram.y

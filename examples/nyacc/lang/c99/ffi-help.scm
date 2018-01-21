@@ -35,11 +35,11 @@
 	    define-ffi-module
 	    compile-ffi-file
 	    load-include-file
-	    intro-ffi
+	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl-str fh-scm-str->scm-exp
 	    string-member-proc string-renamer
 	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
 	    ;; debugging
-	    ffi-symmap
+	    ;;ffi-symmap
 	    fhoo
 	    )
   #:use-module (nyacc lang c99 cpp)
@@ -388,6 +388,8 @@
        (mtail->bs-desc `((union-def ,field-list))))
       (((union-def ,field-list))
        (list 'bs:union `(list ,@(cnvt-field-list field-list))))
+      (((union-ref (ident ,union-name)))
+       (string->symbol (string-append "union-" union-name "-desc")))
 
       ;; POINTERS
 
@@ -1722,7 +1724,7 @@
   ;; need to first check for integer before trying expand-cpp-macro-ref.
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
   (let ((name
-	 (string->symbol (string-append (*prefix*) "symbol-val")))
+	 (string->symbol (string-append (*prefix*) "-symbol-val")))
 	(defs
 	  (fold
 	   (lambda (def seed)
@@ -1991,8 +1993,46 @@
 
 
 
-;; === load includes ================
+;; === test compiler ================
 
+(define* (fh-cnvt-udecl udecl udict #:key (prefix "fh"))
+  (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
+		 (*renamer* identity) (*errmsgs* '()) (*prefix* prefix)
+		 (*mport* (open-output-string)) (*udict* udict))
+    (cnvt-udecl udecl udict '() '())
+    (let ((res (get-output-string (*mport*))))
+      (close (*mport*))
+      res)))
+
+;; convert string-body of Scheme code to a Scheme expression
+;; @example
+;; (fh-scm-str->scm-exp "(define a 1)") => '(begin (define a 1))
+;; @end example
+(define (fh-scm-str->scm-exp str)
+  (call-with-input-string str
+    (lambda (iport)
+      (cons 'begin
+	    (let iter ((exp (read iport)))
+	      (if (eof-object? exp) '()
+		  (cons exp (iter (read iport)))))))))
+
+;; Convert declaration with @var{name} in string-body of C @var{code}
+;; to string-body of Scheme code.
+;; @example
+;; (fh-cnvt-cdecl "sqrt" "double sqrt(double x);") =>
+;;   "(define ~sqrt ...)\n (define (sqrt x) ...)"
+;; @end example
+(define* (fh-cnvt-cdecl->str name code #:key (prefix "fh"))
+  (let* ((tree (with-input-from-string code parse-c99))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict name)))
+    (fh-cnvt-udecl udecl udict)))
+
+;; like above but then convert to Scheme expression
+(define* (fh-cnvt-cdecl name code #:key (prefix "fh"))
+  (and=> (fh-cnvt-cdecl->str name code #:prefix prefix) fh-scm-str->scm-exp))
+			     
+;; === repl compiler ================
 
 ;; @deffn {Procedure} load-include-file filename [pkg-config]
 ;; This is the functionality that Ludo was asking for: to be at guile
@@ -2013,11 +2053,9 @@
 ;;   library pkg-config renamer
 (define* (load-include-file filename
 			    #:key pkg-config)
-  (parameterize ((*options* '())
-		 (*wrapped* '())
-		 (*defined* '())
-		 (*renamer* identity)
-		 (*errmsgs* '()))
+  (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
+		 (*renamer* identity) (*errmsgs* '())
+		 (*prefix* "") (*mport* #t) (*udict* '()))
     (let* ((attrs (acons 'include (list filename) '()))
 	   (attrs (if pkg-config (acons 'pkg-config pkg-config attrs) attrs))
 	   (tree (parse-includes attrs))
@@ -2127,14 +2165,9 @@
 ;; This procedure will 
 ;; @end deffn
 (define* (compile-ffi-file file #:optional (options '()))
-  (parameterize ((*options* (acons 'file file options))
-		 (*prefix* "?")
-		 (*mport* #t)
-		 (*udict* '())
-		 (*wrapped* '())
-		 (*defined* '())
-		 (*renamer* identity)
-		 (*errmsgs* '()))
+  (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
+		 (*renamer* identity) (*errmsgs* '())
+		 (*prefix* "") (*mport* #t) (*udict* '()))
     (sfout "ffi-help: WARNING: the FFI helper is experimental\n")
     ;; if not interactive ...
     (debug-disable 'backtrace)

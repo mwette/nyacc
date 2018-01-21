@@ -36,7 +36,7 @@
 
 (define (fail fmt . args)
   (apply simple-format (current-error-port)
-	 (string-append "error: " fmt "\n")
+	 (string-append "compile-ffi: " fmt "\n")
 	 args)
   (exit 1))
 

@@ -2,7 +2,7 @@
 @setfilename ffi-help.info
 @settitle FFI Helper for Guile
 
-@clear skip
+@clear no-skip
 
 @copying
 Copyright (C) 2017-2018 -- Matthew R. Wette.
@@ -527,7 +527,7 @@ passed by reference as return types.  For example
 
 @c STOPPED HERE STOPPED HERE STOPPED HERE STOPPED HERE STOPPED HERE
 
-@ifset skip
+@ifset no-skip
 @c work on the runtime design:
 @c * types
 @c   fh-type?
