@@ -51,3 +51,26 @@ After sourcing env.sh as above, do
   $ guild compile-ffi ffi/cairo.ffi
   $ cd nyacc/lang/c99/exam.d
   $ guile demo-cairo.scm		# should generate demo-cairo.png
+
+  $ guile
+  guile> (use-modules (nyacc lang c99 ffi-help))
+  guile> (use-modules (bytestructures guile))
+  guile> (use-modules (system ffi-help-rt))
+  guile> (use-modules ((system foreign) #:prefix ffi:))
+  guile> (define fh-llibs '())
+  guile> (define fexp (fh-cnvt-cdecl "fmod" "double fmod(double x,double y);")
+  guile> ,pp exp
+  $1 = (begin
+    (define ~fmod
+      (delay (fh-link-proc
+               ffi:double
+               "fmod"
+               (list ffi:double ffi:double)
+               fh-llibs)))
+    (define (fmod x y)
+      (let ((~x (unwrap~float x)) (~y (unwrap~float y)))
+        ((force ~fmod) ~x ~y)))
+    (export fmod))
+  guile> (eval exp (current-module))
+  guile> (fmod 2.3 0.5)
+  $2 = 0.2999999999999998

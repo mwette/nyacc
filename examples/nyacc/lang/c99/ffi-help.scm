@@ -359,6 +359,25 @@
     (unless ns (sferr "vector hell: ~S\n" expr))
     ns))
 
+;; given a union-descriptor geneate a bounding struct-descriptor
+(define (bounding-struct-descriptor union-descriptor)
+  (let ((size (bytestructure-descriptor-size union-descriptor))
+	(align (bytestructure-descriptor-alignment union-descriptor))
+	(diff (- size align)))
+    (if (positive? diff)
+	(case align
+	  ((8) (bs:struct `(x ,double) `(y ,(bs-vector diff uint8))))
+	  ((4) (bs:struct `(x ,uint32) `(y ,(bs-vector diff uint8))))
+	  ((2) (bs:struct `(x ,uint16) `(y ,(bs-vector diff uint8))))
+	  ((1) (bs:struct `(x ,uint8) `(y ,(bs-vector diff uint8))))
+	  (else (error "unknown alignment")))
+	(case align
+	  ((8) (bs:struct `(x ,double)))
+	  ((4) (bs:struct `(x ,uint32)))
+	  ((2) (bs:struct `(x ,uint16)))
+	  ((1) (bs:struct `(x ,uint8)))
+	  (else (error "unknown alignment"))))))
+
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
 (define (mtail->bs-desc mspec-tail)
