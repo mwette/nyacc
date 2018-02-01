@@ -22,7 +22,7 @@
   #:use-module (nyacc lang sx-match)
   #:use-module (ice-9 pretty-print)
   )
-(cond-expand
+(cond-expand ;; for MES
  (guile-2 #t)
  (else
   (use-modules (ice-9 optargs))))

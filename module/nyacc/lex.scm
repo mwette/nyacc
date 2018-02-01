@@ -55,7 +55,7 @@
 	    )
   #:use-module ((srfi srfi-1) #:select (remove append-reverse))
   )
-(cond-expand
+(cond-expand ;; for MES
   (guile-2 #t)
   (guile
    (use-modules (ice-9 optargs))

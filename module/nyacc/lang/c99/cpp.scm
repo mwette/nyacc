@@ -30,7 +30,7 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util))
-(cond-expand
+(cond-expand ;; for MES
   (guile-2
    (use-modules (rnrs arithmetic bitwise))
    (use-modules (system base pmatch)))
