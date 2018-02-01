@@ -1,3 +1,10 @@
+2018-02-01  Matt Wette  <mwette@alumni.caltech.edu>
+
+	new release 0.83.1
+	* modules/nyacc/lang/c99: added cxmach, cxeval, ach.d/cxact,
+	mach.d/cxtab, .scm; these are for evaluating constant expressions
+	and needed for munge and ffi-help
+
 2017-09-16  Matt Wette  <mwette@alumni.caltech.edu>
 
 	new release 0.82.1
