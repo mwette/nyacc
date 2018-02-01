@@ -124,6 +124,9 @@
       (* #f))))
 
 (define (eval-ident tree udict)
+;;   (let ((xxx)
+;;  (cond
+;;    ((assoc-ref dict (sx-ref tree 1)) => string->number) 0))
   #f)
 
 (define* (eval-c99-cx tree #:optional (udict '()))

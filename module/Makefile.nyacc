@@ -99,6 +99,8 @@ dist-files:
 	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
 	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99-files ".")'; \
 	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
-	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99x-files ".")')
+	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99x-files ".")'; \
+	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
+	    -c '(use-modules (nyacc lang c99 cxmach)) (gen-c99cx-files ".")')
 
 # --- last line ---

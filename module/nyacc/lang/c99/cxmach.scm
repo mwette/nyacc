@@ -16,7 +16,7 @@
 ;;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang c99 cxmach)
-  #:export (gen-cx-files)
+  #:export (gen-c99cx-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -136,10 +136,10 @@
 
 ;;; =====================================
 
-;; @item gen-cx-files [dir] => #t
+;; @item gen-c99cx-files [dir] => #t
 ;; Update or generate the files @quot{cppact.scm} and @quot{cpptab.scm}.
 ;; If there are no changes to existing files, no update occurs.
-(define (gen-cx-files . rest)
+(define (gen-c99cx-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
   (define (xtra-dir path)

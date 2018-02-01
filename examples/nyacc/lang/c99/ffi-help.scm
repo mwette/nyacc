@@ -360,6 +360,7 @@
     ns))
 
 ;; given a union-descriptor geneate a bounding struct-descriptor
+#|
 (define (bounding-struct-descriptor union-descriptor)
   (let ((size (bytestructure-descriptor-size union-descriptor))
 	(align (bytestructure-descriptor-alignment union-descriptor))
@@ -377,6 +378,7 @@
 	  ((2) (bs:struct `(x ,uint16)))
 	  ((1) (bs:struct `(x ,uint8)))
 	  (else (error "unknown alignment"))))))
+|#
 
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members

@@ -1,4 +1,4 @@
-;; mach.d/cxtab.scm
+;; ./mach.d/cxtab.scm
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;; 
