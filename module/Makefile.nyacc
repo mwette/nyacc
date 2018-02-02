@@ -81,7 +81,8 @@ install: install-srcs
 	  sleep 1; \
 	done
 
-install-srcs: $(NYACC_SRCS)
+.PHONY: install-srcs
+install-srcs:
 	@mkdir -p $(SITE_SCM_DIR)
 	@echo "installing NYACC sources in $(SITE_SCM_DIR)"
 	@for file in $(NYACC_SRCS); do \

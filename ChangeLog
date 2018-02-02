@@ -1,6 +1,10 @@
 2018-02-01  Matt Wette  <mwette@alumni.caltech.edu>
 
-	new release 0.83.1
+	new release 0.83.2
+	* updated modules/Makefile.nyacc: install-srcs no longer depends
+	on NYACC_SRCS
+
+	* new release 0.83.1
 	* modules/nyacc/lang/c99: added cxmach, cxeval, ach.d/cxact,
 	mach.d/cxtab, .scm; these are for evaluating constant expressions
 	and needed for munge and ffi-help
