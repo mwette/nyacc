@@ -39,7 +39,7 @@
   ;; #:use-module ((sxml xpath) #:select (sxpath)) ;; see sx-find below
   #:use-module (ice-9 pretty-print)
   )
-(cond-expand
+(cond-expand ;; for MES
   (guile-2
    #t)
   (guile

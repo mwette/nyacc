@@ -1,4 +1,4 @@
-This is nyacc-ug.info, produced by makeinfo version 6.3 from
+This is nyacc-ug.info, produced by makeinfo version 6.1 from
 nyacc-ug.texi.
 
 Copyright (C) 2015-2017 - Matthew R. Wette.
@@ -743,6 +743,9 @@ from provided readers.  Now we introduce our lex'er generator generator:
      Generate a predicate, from a reader, that determines if a string
      qualifies as an identifier.
 
+ -- Procedure: like-c-ident? ch
+     Determine if a string qualifies as a C identifier.
+
  -- Procedure: make-string-reader delim
      Generate a reader that uses 'delim' as delimiter for strings.
      TODO: need to handle matlab-type strings.  TODO: need to handle
@@ -833,6 +836,23 @@ statement is parsed, an action could declare 'foo_t' to now be a
 typename.  In the lexical analyzer, as tokens that look like identifers
 are parsed they are checked against the list of typenames and if a match
 is found, ''typename' is returned, otherwise '$ident' is returned.
+
+   Another example of this handshaking is used in the JavaScript parser.
+The language allows newline as a statement terminator, but it must be
+prevented in certain places, for example between '++' and an expression
+in the post-increment operator.  We handle this using a mid-rule action
+to tell the lexer to skip newline if that is the next token.
+       (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc $1)))
+The procedure 'NSI' in the lex'er is as follows:
+     (define (NSI) ;; no semicolon insertion
+       (fluid-set! *insert-semi* #f))
+and the newline reader in the lex'er acts as follows:
+       ...
+       ((eqv? ch #\newline)
+        (if (fluid-ref *insert-semi*)
+            (cons semicolon ";")
+            (iter (read-char))))
+       ...
 
 2.7 Parser Tables
 =================
@@ -1141,6 +1161,10 @@ To work with the trees described in the last section use
  -- Procedure: sx-set-attr* sx key val [key val [key ... ]]
      Generate sx with added or changed attributes.
 
+ -- Procedure: sx+attr* sx key val [key val [... ]] => sx
+     Add key-val pairs.  KEY must be a symbol and VAL must be a string.
+     Return a new _sx_.
+
  -- Procedure: sx-find tag sx => ((tag ...) (tag ...))
      Find the first matching element (in the first level).
 
@@ -1281,18 +1305,18 @@ Ref: sublanguage20688
 Ref: Parser21009
 Ref: match table24753
 Ref: lex26556
-Ref: parser-lexer33575
-Ref: Parser Tables34388
-Ref: Hashing and Compacting35371
-Ref: Debugging37021
-Ref: Human Readable Output37132
-Node: Translation39297
-Ref: Tagged Lists41747
-Ref: SXML Parse Trees43693
-Node: Coding to the Compiler Tower45455
-Ref: Pretty Print46683
-Node: Administrative46879
-Node: TODOs47898
-Node: References48919
+Ref: parser-lexer33664
+Ref: Parser Tables35234
+Ref: Hashing and Compacting36217
+Ref: Debugging37867
+Ref: Human Readable Output37978
+Node: Translation40143
+Ref: Tagged Lists42593
+Ref: SXML Parse Trees44539
+Node: Coding to the Compiler Tower46456
+Ref: Pretty Print47684
+Node: Administrative47880
+Node: TODOs48899
+Node: References49920
 
 End Tag Table

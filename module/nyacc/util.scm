@@ -28,7 +28,7 @@
 	    tzort
 	    )
   )
-(cond-expand
+(cond-expand ;; for MES
   (guile-2
    (use-modules (srfi srfi-43)))
   (guile

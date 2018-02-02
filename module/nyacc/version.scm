@@ -1,6 +1,6 @@
 ;;; nyacc/version.scm
 ;;;
-;;; Copyright (C) 2017 Matthew R. Wette
+;;; Copyright (C) 2017-2018 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -18,6 +18,6 @@
 (define-module (nyacc version)
   #:export (*nyacc-version*))
 
-(define *nyacc-version* "0.83.0+c99dev")
+(define *nyacc-version* "0.83.3+c99dev")
 
 ;; --- last line ---

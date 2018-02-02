@@ -1,6 +1,6 @@
 # module/Makefile.nyacc			-*- Makefile -*-
 #
-# Copyright (C) 2015-2017 -  Matthew R. Wette
+# Copyright (C) 2015-2018 -  Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -35,7 +35,9 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/mach.go			\
 	nyacc/lang/c99/pprint.go		\
 	nyacc/lang/c99/util1.go			\
-	nyacc/lang/c99/munge.go			
+	nyacc/lang/c99/munge.go			\
+	nyacc/lang/c99/cxmach.go		\
+	nyacc/lang/c99/cxeval.go		
 
 NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
 	nyacc/lang/c99/body.scm			\
@@ -44,7 +46,9 @@ NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
 	nyacc/lang/c99/mach.d/c99xact.scm	\
 	nyacc/lang/c99/mach.d/c99xtab.scm	\
 	nyacc/lang/c99/mach.d/cppact.scm	\
-	nyacc/lang/c99/mach.d/cpptab.scm
+	nyacc/lang/c99/mach.d/cpptab.scm	\
+	nyacc/lang/c99/mach.d/cxact.scm		\
+	nyacc/lang/c99/mach.d/cxtab.scm		
 
 NYACC_BINS = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
 NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
@@ -81,7 +85,8 @@ install: install-srcs
 	  sleep 1; \
 	done
 
-install-srcs: $(NYACC_SRCS)
+.PHONY: install-srcs
+install-srcs:
 	@mkdir -p $(SITE_SCM_DIR)
 	@echo "installing NYACC sources in $(SITE_SCM_DIR)"
 	@for file in $(NYACC_SRCS); do \
@@ -99,6 +104,8 @@ dist-files:
 	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
 	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99-files ".")'; \
 	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
-	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99x-files ".")')
+	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99x-files ".")'; \
+	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
+	    -c '(use-modules (nyacc lang c99 cxmach)) (gen-c99cx-files ".")')
 
 # --- last line ---

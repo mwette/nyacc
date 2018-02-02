@@ -21,8 +21,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 @top FFI Helper for Guile
 @format
 Matt Wette
-January 2018
-With NYACC Version 0.83.0+c99dev
+February 2018
+With NYACC Version 0.83.3+c99dev
 @end format
 
 @c ======================================

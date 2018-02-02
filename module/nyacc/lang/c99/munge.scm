@@ -100,6 +100,7 @@
 	    tdef-splice-declr
 	    )
   #:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
+  #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-match)
@@ -1143,6 +1144,7 @@
 		 (1+ nxt) (acons (sx-ref ident 1) sval dct) (cdr edl))))
 	((enum-defn ,ident ,expr . ,rest)
 	 (let* ((ival (eval-cpp-expr expr dct))
+	 ;;(let* ((ival (eval-c99-cx expr dct))
 		(sval (number->string ival)))
 	   (iter (cons `(enum-defn ,ident (fixed ,sval) . ,rest) rez)
 		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl)))))))))

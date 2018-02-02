@@ -22,10 +22,6 @@
 
 (define-module (nyacc lang sx-match)
   #:export (sx-match sx-haz-attr?))
-(cond-expand
- (guile-2 #t)
- (guile
-  (use-modules (ice-9 syncase))))
 
 ;; sx-haz-attr? val
 (define (sx-haz-attr? sx)

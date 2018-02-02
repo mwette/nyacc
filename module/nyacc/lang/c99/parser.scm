@@ -24,7 +24,7 @@
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
   )
-(cond-expand
+(cond-expand ;; for MES
   (guile-2 #t)
   (else
    (use-modules (srfi srfi-16))

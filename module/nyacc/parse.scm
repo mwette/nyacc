@@ -21,9 +21,8 @@
 (define-module (nyacc parse)
   #:export (make-lalr-parser make-lalr-ia-parser)
   #:use-module (nyacc util)
-  ;;#:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   )
-(cond-expand
+(cond-expand ;; for MES
   (guile-2
    (use-modules (srfi srfi-43)))
   (guile
@@ -46,6 +45,7 @@
 ;; (with-input-from-file "sourcefile.xyz" (lambda () (xyz-parse (gen-lexer))))
 ;; @end example
 ;; The generated parser is reentrant.
+(use-modules (ice-9 pretty-print))
 (define* (make-lalr-parser mach)
   (let* ((len-v (assq-ref mach 'len-v))	 ; production RHS length
 	 (rto-v (assq-ref mach 'rto-v))	 ; reduce to
