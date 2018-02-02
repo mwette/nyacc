@@ -112,7 +112,7 @@
 ;; DEBUGGING
 (set! fh-inc-dirs (cons "." fh-inc-dirs))
 
-;; change to parameters
+;; maybe change to a record-type
 (define *options* (make-parameter '()))
 (define *prefix* (make-parameter ""))	 ; name prefix (e.g., prefix-syms)
 (define *debug* (make-parameter #f))	 ; parse debug mode
@@ -355,10 +355,19 @@
 
 (define (const-expr->number expr)
   (let ((ns (or (string->number expr)
-		(eval-cpp-expr (parse-cpp-expr expr) (*all-defs*)))))
+		(catch 'cpp-error
+		  (lambda ()
+		    (sferr "cx=~S\n" cx)
+		    (let ((cx (parse-cpp-expr expr)))
+		      (sferr "cx=~S\n" cx)
+		      (eval-cpp-expr cx (*all-defs*))))
+		  (lambda (key . args)
+		    (error "oops")
+		    #f)))))
     (unless ns (sferr "vector hell: ~S\n" expr))
     ns))
 
+#|
 ;; given a union-descriptor geneate a bounding struct-descriptor
 (define (bounding-struct-descriptor union-descriptor)
   (let ((size (bytestructure-descriptor-size union-descriptor))
@@ -377,6 +386,7 @@
 	  ((2) (bs:struct `(x ,uint16)))
 	  ((1) (bs:struct `(x ,uint8)))
 	  (else (error "unknown alignment"))))))
+|#
 
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members

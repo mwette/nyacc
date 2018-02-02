@@ -33,6 +33,7 @@
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules (ice-9 pretty-print))	; for debugging
 
+;; C parser info (?)
 (define-record-type cpi
   (make-cpi-1)
   cpi?
@@ -93,7 +94,7 @@
     (set-cpi-defs! cpi (map split-cppdef defines)) ; list of define strings
     (set-cpi-incs! cpi incdirs)		; list of include dir's
     (set-cpi-ptl! cpi '())		; list of lists of typenames
-    (set-cpi-ctl! cpi '())		; list of typenames
+    (set-cpi-ctl! cpi '())		; list of current typenames
     (set-cpi-blev! cpi 0)		; brace/block level
     ;; Break up the helpers into typenames and defines.
     (let iter ((itynd '()) (idefd '()) (helpers inchelp))

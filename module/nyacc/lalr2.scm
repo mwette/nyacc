@@ -1,7 +1,7 @@
 (add-to-load-path "/Users/mwette/repo/sv/nyacc-master/module")
-;;; system/base/lalr2.scm
+;;; system/base/lalrz.scm
 ;;;
-;;; Copyright (C) 2014-2017 Matthew R. Wette
+;;; Copyright (C) 2014-2018 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,11 @@
 ;; I need to find way to preserve srconf, rrconf after hashify.
 ;; compact needs to deal with it ...
 
-;;(define-module (system base bison)
+;; todo add token expression to compensate for use of symbol constants
+;; that is, 'expr => (token expr) and expr
+
+;; random name : lalr2 might be interpreted as LALR(2)
+;;(define-module (system base lalrz)
 (define-module (nyacc lalr2)
   #:export (*bison-version*
             bison-parser

@@ -10,7 +10,7 @@
 
 (define-module (fh-01)
   #:use-module (nyacc lang c99 ffi-help)
-  #:use-module (nyacc lang c99 munge)
+  ;;#:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 parser)
   #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
@@ -53,11 +53,18 @@
 ;; FFI Helper basic test
 (with-test-prefix "nyacc/fh-01, basic ffi-help"
 
-  (pass-if "demo 01"
+  #;(pass-if "demo 01"
     (let* ((fexp (fh-cnvt-cdecl "fmod"
 				"double fmod(double x, double y);\n")))
       (eval fexp (current-module))
       (sf "fmod(2.3, 0.5) = ~S\n" (fmod 2.3 0.5))
+      #t))
+
+  (pass-if "hsearch"
+    (let* ()
+      (compile-ffi-file "ffi/hsearch.ffi")
+      (use-modules (ffi hsearch))
+      ;;(let ((key1 (ffi::
       #t))
 
   (pass-if "real tests" #f)

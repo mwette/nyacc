@@ -1,6 +1,6 @@
 Install instructions for NYACC
 
-Copyright (C) 2015-2017 Matthew R. Wette
+Copyright (C) 2015-2018 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -29,8 +29,6 @@ If you want to install the experiental FFI Helper files:
 The FFI Helper requires the bytestructures package, from
   https://github.com/TaylanUB/scheme-bytestructures
 `make install-ffi-helper' will fail if this package is not installed.
-If you don't want to clone this package from the git repo, then nyacc has
-a copy: use `make install-bytestructures' before `make install-ffi-help'.
 
 See `info ffi-help' for more detail.  Note: compiling the output off the
 ffi-helper output of can take some time, due to size.

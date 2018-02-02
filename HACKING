@@ -49,7 +49,7 @@ After sourcing env.sh as above, do
   $ cd examples
   $ source env.sh 			# if you haven't done so previously
   $ guild compile-ffi ffi/cairo.ffi
-  $ cd nyacc/lang/c99/exam.d
+  $ cd nyacc/lang/c99/ffi-exam
   $ guile demo-cairo.scm		# should generate demo-cairo.png
 
   $ guile
