@@ -527,6 +527,16 @@ passed by reference as return types.  For example
 
 @c STOPPED HERE STOPPED HERE STOPPED HERE STOPPED HERE STOPPED HERE
 
+@c cover @code{fh-find-symbol-addr}
+
+You can pass a bytestructure struct value:
+@example
+guile> (make-ENTRY `((key 0) (data 0)))
+#<ENTRY 0x18a10b0>
+@end example
+
+TODO: should we support @code{(make-ENTRY 0 0)} ?
+
 @ifset no-skip
 @c work on the runtime design:
 @c * types

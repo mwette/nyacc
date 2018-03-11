@@ -22,7 +22,7 @@
 	    fh-type?
 	    fh-object? fh-object-val
 	    fh-object-ref fh-object-set!
-	    pointer-to value-at
+	    pointer-to value-at NULL
 
 	    fh:function fh:cast fh-cast bs-addr
 	    define-fh-pointer-type
@@ -31,6 +31,7 @@
 	    define-fh-function*-type
 	    ref<->deref!
 
+	    fh-find-symbol-addr
 	    fht-wrap fht-unwrap fh-wrap fh-unwrap
 	    unwrap~fixed unwrap~float
 	    unwrap~pointer unwrap~array
@@ -135,6 +136,8 @@
     (bytestructure-ref obj '*))
    (else
     (throw 'ffi-help-error "expecting something I can dereference"))))
+
+(define NULL ffi:%null-pointer)
 
 ;; === objects ============
 
@@ -503,11 +506,10 @@
 	     ((procedure? obj)		; a lambda
 	      (let* ((sig (fs-function*-signature desc)))
 		(ffi:procedure->pointer (car sig) obj (cdr sig))))
-	     #;((and (pair? obj)
-	     (or (fh-type? (car obj))
-	     (bytestructure-descriptor? (car obj))))
-	     #f)
-	     (else (unwrap~pointer obj))))
+	     ((and (pair? obj) (fh-type? (car obj))) ; fh-cast
+	      (unwrap~pointer (cdr obj)))
+	     (else
+	      (unwrap~pointer obj))))
 	  ;; wrap:
 	  (lambda (val) (make (bytestructure desc (ffi:pointer-address val))))
 	  ;; pointer-to:
@@ -653,7 +655,7 @@
 
 ;; --- other items --------------------
 
-(define (find-addr name dl-lib-list)
+(define (fh-find-symbol-addr name dl-lib-list)
   (let iter ((dll (cons (dynamic-link) dl-lib-list)))
     (cond
      ((null? dll) (throw 'ffi-help-error "function not found"))
@@ -670,14 +672,14 @@
   ;; try to get the dynamic-func for the provided function.  Usually
   ;; the first dynamic link is @code{(dynamic-link)} and that should work.
   ;; But on some systems we need to find the actual library :(, apparently.
-  (let ((dfunc (find-addr name dl-lib-list)))
+  (let ((dfunc (fh-find-symbol-addr name dl-lib-list)))
     (and dfunc (ffi:pointer->procedure return dfunc args))))
 
 ;; @deffn {Procedure} fh-link-bstr name desc db-lib-list => bytestructure
 ;; Generate a bytestructure from the bytes in the library at the var addr.
 ;; @end deffn
 (define* (fh-link-bstr name desc dl-lib-list)
-  (let* ((addr (find-addr name dl-lib-list))
+  (let* ((addr (fh-find-symbol-addr name dl-lib-list))
 	 (size (bytestructure-descriptor-size desc)))
     (make-bytestructure (ffi:pointer->bytevector addr size) 0 desc)))
 

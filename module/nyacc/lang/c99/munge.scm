@@ -1334,8 +1334,12 @@
 ;; @end deffn
 (define* (udecl->mspec decl #:key abs-ident)
 
+  ;; Hmm.  We convert array size back to C code (string).  Now that I am working
+  ;; on constant expression eval (eval-c99-cx) maybe we should change that.
   (define (cnvt-size-expr size-spec)
-    (with-output-to-string (lambda () (pretty-print-c99 size-spec))))
+    ;;(with-output-to-string (lambda () (pretty-print-c99 size-spec)))
+    size-spec
+    )
 
   (define (unwrap-specl specl)
     (and=> (assq-ref (sx-tail specl) 'type-spec) car))

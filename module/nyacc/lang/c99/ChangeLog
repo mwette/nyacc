@@ -1,3 +1,9 @@
+2018-02-19  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* ../../../../examples/nyacc/lang/c99/ffi-help.scm
+	(mtail->bs-desc): bug in (pointer-to typename) to (assoc-ref map
+	name) from (assoc-ref name map)
+
 2017-12-23  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* pprint.scm (pretty-print-c99): added initializer and

@@ -8,6 +8,7 @@
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 pprint))
 (use-modules (nyacc lang c99 munge))
+(use-modules (nyacc lang c99 cxeval))
 (use-modules (nyacc lang c99 util1))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lang sx-match))
@@ -54,10 +55,11 @@
        )
       ))))
 
-(define mode 'decl)
 (define mode 'code)
+(define mode 'decl)
 (define mode 'file)
 (define debug #f)
+(define xdef? (lambda (name mode) (memq mode '(code))))
 
 (define (parse-file file)
   (with-input-from-file file
@@ -66,7 +68,7 @@
 		 #:inc-dirs inc-dirs
 		 #:inc-help inc-help
 		 #:mode mode #:debug debug
-		 #:xdef? #t))))
+		 #:xdef? xdef?))))
 
 (define (parse-string str)
   ;;(simple-format #t "~S => \n" str)
@@ -76,7 +78,7 @@
 		 #:inc-dirs inc-dirs 
 		 #:inc-help inc-help
 		 #:mode mode #:debug debug 
-		 #:xdef? #t))))
+		 #:xdef? xdef?))))
 
 (define (parse-string-list . str-l)
   (parse-string (apply string-append str-l)))
@@ -121,30 +123,46 @@
        (code (string-append
 	      "typedef int *bla_t[2];\n"
 	      "bla_t foo(bla_t (*)(bla_t));\n"))
+       (code (string-append
+	      "#define NX 3\n"
+	      "const int zz = 3;"
+	      "int x[NX+1];\n"))
        (indx 2)
+       
        ;;(tree (parse-c99x "\"\""))
-       ;;(tree (parse-string code))
-       ;;(tree (parse-file "xxx.c"))
-       ;;(udict (c99-trans-unit->udict tree))
+       (tree (parse-string code))
+       ;;(tree (parse-file "c99-exam/ex14.c"))
+       ;;(expr (sx-ref* tree 2 2 1 1 2))
+       
+       (udict (c99-trans-unit->udict tree))
+       ;;(ddict (udict-enums->ddict udict))
+       (ddict (c99-trans-unit->ddict tree))
+       
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs decl udict))
-       ;;(ddict (udict-enums->ddict udict))
        ;;(udecl (udict-ref udict "x"))
        ;;(mdecl (udecl->mspec udecl))
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
-       ;;(xdecl (expand-typerefs udecl udict '((struct . "foo"))))
        ;;(exp (parse-c99x "1+2"))
-       (exp (parse-c99x "sizeof(\"abc\")"))
-       (val (eval-c99-cx exp))
+       ;;(exp (parse-c99x "sizeof(\"abc\")"))
+       ;;(val (eval-c99-cx exp))
        )
-  (ppsx exp)
-  (ppsx val)
+  ;;(ppsx exp)
+  ;;(ppsx val)
   ;;(display code)
-  ;;(ppsx tree)
+  (ppsx tree)
+  ;;(ppsx expr)
+  ;;(sf "dd:\n") (ppsx ddict)
+  ;;(ppsx (eval-c99-cx expr udict ddict))
+  ;;(sf "~S\n" (
   ;;(ppsx decl)
   ;;(pp99 xdecl)
   ;;(ppsx (get-gcc-inc-dirs))
   #t)
+
+;;(use-modules (nyacc lang c99 ffi-help))
+
+;;(define fmod (fh-c-fun-decl->procedure "doulble fmod(double x, double y)"))
 
 #|
 (sf "~S\n"

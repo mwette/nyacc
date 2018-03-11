@@ -92,7 +92,7 @@
 	 (spec-list (sx-ref type-name 1))
 	 (type-spec (assq 'type-spec (sx-tail spec-list 1)))
 	 )
-    (pp type-spec)
+    ;;(pp type-spec)
     (sx-match (sx-ref type-spec 1)
       ((fixed-type ,name)
        (let* ((ffi-type (assoc-ref ffi-type-map name)))
@@ -170,7 +170,7 @@
 
 	    ((sizeof-type) (eval-sizeof-type tree udict))
 	    ((sizeof-expr) (eval-sizeof-expr tree udict))
-	    ((ident) (eval-ident-value tree udict))
+	    ((ident) (eval-ident tree udict))
 	    
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
