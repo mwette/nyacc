@@ -53,7 +53,8 @@
 ;; This is used to parse included files at top level.
 (define (run-parse)
   (let ((info (fluid-ref *info*)))
-    (c99-raw-parser (gen-c-lexer #:mode 'decl) #:debug (cpi-debug info))))
+    (c99-raw-parser (gen-c-lexer #:mode 'decl #:show-incs (cpi-shinc info))
+		    #:debug (cpi-debug info))))
 
 ;; @deffn {Procedure} parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
 ;;               [#:mode ('code|'file|'decl)] [#:debug bool]
@@ -78,13 +79,14 @@
 		    (inc-help '())	; include helpers
 		    (mode 'code)	; mode: 'file, 'code or 'decl
 		    (xdef? #f)		; pred to determine expand
+		    (show-incs #f)	; show include files
 		    (debug #f))		; debug
-  (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) inc-help)))
+  (let ((info (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
     (with-fluids ((*info* info)
 		  (*input-stack* '()))
       (catch 'c99-error
 	(lambda () (c99-raw-parser
-		    (gen-c-lexer #:mode mode #:xdef? xdef?)
+		    (gen-c-lexer #:mode mode #:xdef? xdef? #:show-incs show-incs)
 		    #:debug debug))
 	(lambda (key fmt . args)
 	  (report-error fmt args)

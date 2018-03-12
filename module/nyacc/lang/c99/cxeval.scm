@@ -25,6 +25,7 @@
   #:use-module (nyacc util)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang c99 cpp)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (system foreign)
@@ -123,13 +124,24 @@
        (string-length str))
       (* #f))))
 
-(define (eval-ident tree udict)
-;;   (let ((xxx)
-;;  (cond
-;;    ((assoc-ref dict (sx-ref tree 1)) => string->number) 0))
-  #f)
+;;(define (expand-c99x-defs tree defs)
+;;  (let ((
 
-(define* (eval-c99-cx tree #:optional (udict '()))
+(define (eval-ident name udict ddict)
+  (cond
+   ((assoc-ref ddict name) =>
+    (lambda (hit)
+      (let ((expr (parse-cpp-expr hit)))
+	(eval-c99-cx expr udict ddict))))
+   ;; could be in any enum
+   #;((assoc-ref udict name) =>
+    (lambda (hit)
+      (sx-match hit
+	((decl ,specl ,xxx)
+	 #f))))
+   (else #f)))
+
+(define* (eval-c99-cx tree #:optional udict ddict)
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (sx-ref tr 1)))
@@ -170,7 +182,7 @@
 
 	    ((sizeof-type) (eval-sizeof-type tree udict))
 	    ((sizeof-expr) (eval-sizeof-expr tree udict))
-	    ((ident) (eval-ident tree udict))
+	    ((ident) (eval-ident (sx-ref tree 1) udict ddict))
 	    
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))

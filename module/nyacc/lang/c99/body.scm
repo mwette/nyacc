@@ -38,6 +38,7 @@
   (make-cpi-1)
   cpi?
   (debug cpi-debug set-cpi-debug!)	; debug #t #f
+  (shinc cpi-shinc set-cpi-shinc!)	; show includes
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
   (inc-tynd cpi-itynd set-cpi-itynd!)	; a-l of incfile => typenames
@@ -75,7 +76,7 @@
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers
 ;; should be last-in-first-seen ordered.  Probably helpers low prio.
 ;; @end deffn
-(define (make-cpi debug defines incdirs inchelp)
+(define (make-cpi debug shinc defines incdirs inchelp)
   ;; convert inchelp into inc-file->typenames and inc-file->defines
   ;; Any entry for an include file which contains `=' is considered
   ;; a define; otherwise, the entry is a typename.
@@ -91,6 +92,7 @@
 
   (let* ((cpi (make-cpi-1)))
     (set-cpi-debug! cpi debug)		; print states debug 
+    (set-cpi-shinc! cpi shinc)		; print includes
     (set-cpi-defs! cpi (map split-cppdef defines)) ; list of define strings
     (set-cpi-incs! cpi incdirs)		; list of include dir's
     (set-cpi-ptl! cpi '())		; list of lists of typenames
@@ -293,13 +295,15 @@
 		 '() stmts))))
     ;; mode: 'code|'file|'decl
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
-    (lambda* (#:key (mode 'code) xdef? show-includes)
+    (lambda* (#:key (mode 'code) xdef? show-incs)
       (let ((bol #t)		 ; begin-of-line condition
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
 	    (info (fluid-ref *info*))	; info shared w/ parser
 	    ;;(brlev 0)			; brace level
-	    (x-def? (or xdef? def-xdef?))
+	    (x-def? (cond ((procedure? xdef?) xdef?)
+			  ((eq? xdef? #t) (lambda (n m) #t))
+			  (else def-xdef?)))
 	    )
 	;; Return the first (tval . lval) pair not excluded by the CPP.
 	(lambda ()
@@ -379,7 +383,7 @@
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
 		   (path (inc-file-spec->path spec next)))
-	      (if show-includes (sferr "include ~S => ~S\n" file path))
+	      (if show-incs (sferr "include ~S => ~S\n" file path))
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -391,7 +395,7 @@
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
 		   (path (inc-file-spec->path spec next)))
-	      (if show-includes (sferr "include ~S => ~S\n" file path))
+	      (if show-incs (sferr "include ~S => ~S\n" file path))
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -524,13 +528,15 @@
 			(defs (cpi-defs info)))
 		    (cond
 		     ((and (not suppress)
-			   (if (procedure? x-def?) (x-def? name mode) x-def?)
+			   (x-def? name mode)
 			   (expand-cpp-macro-ref name defs))
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
+		      ;;^minor bug: won't work on #define keyword xxx; try ...
+		      ;; (and (not (assoc-ref name defs)) (assq-ref keytab symb))
 		      => (lambda (t) (cons t name)))
 		     ((typename? name)
 		      (cons (assq-ref symtab 'typename) name))

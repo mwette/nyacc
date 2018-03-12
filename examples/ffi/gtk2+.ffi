@@ -20,4 +20,7 @@
 (define-public ~gtk_widget_destroy
   (fh-find-symbol-addr "gtk_widget_destroy" ffi-gtk2+-llibs))
 
+(define-public ~gtk_main_quit
+  (fh-find-symbol-addr "gtk_main_quit" ffi-gtk2+-llibs))
+
 ;; --- last line ---
