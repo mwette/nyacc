@@ -1,29 +1,15 @@
-#!/opt/local/bin/guile
-!#
-(define (sf fmt . args) (apply simple-format #t fmt args))
+;; gtkdemo.scm
+;;   https://developer.gnome.org/gtk-tutorial/stable/c39.html#SEC-HELLOWORLD
 
-;; https://developer.gnome.org/gtk-tutorial/stable/c39.html#SEC-HELLOWORLD
-
-;; This is all broken because we don't support casts.
-
-(use-modules (ffi glib))
-(use-modules (ffi gobject))
-(use-modules (ffi gtk2+))
-(use-modules (bytestructures guile))
 (use-modules (system ffi-help-rt))
-(use-modules ((system foreign) #:prefix ffi:))
+(use-modules (bytestructures guile))
 
-;;(define NULL ffi:%null-pointer)
+(use-modules (ffi glib))		; ffi:31 scm:31889
+(use-modules (ffi gobject))		; ffi:26 scm:12044
+(use-modules (ffi gtk2+))		; ffi:26 scm:92964
 
-;; Note that Gtk uses a lot of casts to deal with functions that
-;; take pointers to functions that have varying signatures.  For
-;; this reason we do ...
-
-;; Need to hand cast because signature of GCallback is void (*f)(void)
-;;(define ~hello (ffi:procedure->pointer ffi:void hello (list '* '*)))
-
-;; This will, in effect, generate a FFI code wrapper around the lambda.
-;; then below we use (fh-cast GCallback hello)
+;; This will generate a FFI code wrapper around the lambda.  Then below
+;; we use (fh-cast GCallback hello) to match the argument signature.
 (define hello
   (make-GtkCallback
    (lambda (widget data)
@@ -56,4 +42,5 @@
   (gtk_main))
 
 (main)
+
 ;; --- last line ---
