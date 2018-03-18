@@ -1,6 +1,22 @@
 ;; mkjit.scm
 
-;; try to convert GNU lightning to Scheme
+;; Copyright (C) 2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;; convert GNU lightning macros to Scheme functions
+;; see output in exmamples/ffi/lightning.ffi
 
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 xparser))
@@ -8,116 +24,78 @@
 (use-modules (nyacc lang c99 util1))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lang sx-match))
+(use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (srfi srfi-1))
 (use-modules (ice-9 pretty-print))
 (use-modules ((sxml xpath) #:select (sxpath)))
 
 (define (sferr fmt . args) (apply simple-format #t fmt args))
-(define pperr pretty-print)
-
+(define (pperr exp) (pretty-print exp #:per-line-prefix ""))
 
 (define cpp-defs
   (append
-   '("__GNUC__=6" "__signed=signed")
-   (remove (lambda (s)
-	     (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-	   (get-gcc-cpp-defs))))
+   '("__restrict=restrict")
+   (get-gcc-cpp-defs)))
 
 (define inc-dirs
   (append
-   '("/opt/local/include" "/usr/include")
+   '("/usr/include")
    (get-gcc-inc-dirs)))
 
 (define inc-help
-  (append
-   '(("__builtin"
-      "_sc=char" "_uc=unsigned\\ char" "_us=unsigned\\ short"
-      "_ui=unsigned\\ int" "_sl=long" "_ul=unsigned\\ long"))
-   (cond
-    ((string-contains %host-type "darwin")
-     '(("__builtin"
-	"__builtin_va_list=void*"
-	"__attribute__(X)="
-	"__inline=" "__inline__="
-	"__asm(X)=" "__asm__(X)="
-	"__has_include(X)=__has_include__(X)"
-	"__extension__="
-	"__signed=signed"
-	)))
-    (else
-     '(("__builtin"
-	"__builtin_va_list=void*" "__attribute__(X)="
-	"__inline=" "__inline__="
-	"__asm(X)=" "__asm__(X)="
-	"__has_include(X)=__has_include__(X)"
-	"__extension__="
-	))))))
+  (cond
+   ((string-contains %host-type "darwin")
+    '(("__builtin" "__builtin_va_list=void*"
+       "__attribute__(X)="
+       "__inline=" "__inline__="
+       "__asm(X)=" "__asm__(X)="
+       "__has_include(X)=__has_include__(X)"
+       "__extension__=" "__signed=signed")))
+   (else
+    '(("__builtin"
+       "__builtin_va_list=void*" "__attribute__(X)="
+       "__inline=" "__inline__="
+       "__asm(X)=" "__asm__(X)="
+       "__has_include(X)=__has_include__(X)"
+       "__extension__=")))))
 
-(define merge-inc-bodies
-  (let* ((p (sxpath '(cpp-stmt include trans-unit))))
-    (lambda (t) (cons 'trans-unit (apply append (map cdr (p t)))))))
-
+;; for defining macros.  Let's see how far we can go here ...
 (define (c99->scm expr)
-  (sferr "c99->scm\n") (pperr expr)
   (sx-match expr
-    ((fctn-call (ident ,name) (expr-list . ,argl))
-     `(,name X)
-     )
-    (*
-     ;;(sferr "missed ~S\n" expr)
-     #f)))
+    ((fctn-call (p-expr (ident ,name)) (expr-list . ,args))
+     (cons (string->symbol name) (map c99->scm args)))
+    ((p-expr (ident ,name)) (string->symbol name))
+    ((p-expr (fixed ,value)) (string->number (cnumstr->scm value)))
+    ((and ,l ,r) `(and ,(c99->scm l) ,(c99->scm r)))
+    ((le ,l ,r) `(<= ,(c99->scm l) ,(c99->scm r)))
+    ((ge ,l ,r) `(>= ,(c99->scm l) ,(c99->scm r)))
+    ((bitwise-and ,l ,r) `(logand ,(c99->scm l) ,(c99->scm r)))
+    (* (sferr "can't handle this:\n") (pperr expr))))
 
-    
 (define (cnvt)
-  (define (cnvt-fctn name args repl)
-    (let* ((n (string->symbol name))
-	   (a (map string->symbol args))
-	   (r (catch 'c99-error
-		(lambda () (parse-c99x repl))
-		(lambda (tag . rest)
-		  (sferr "missed ~S\n" repl))))
-	   (x `(define (,n ,@a) #f))
-	   )
-      (pretty-print x)
-      (if r
-	  (c99->scm r)
-	  (sferr "not parsing ~S\n" repl))
-      #f))
-  (define (cnvt-cpp-def stmt)
-    (let ((name (car (assq-ref (sx-tail stmt 1) 'name)))
-	  (args (assq-ref (sx-tail stmt 1) 'args))
-	  (repl (car (assq-ref (sx-tail stmt 1) 'repl)))
-	  )
-      (if args
-	  (cnvt-fctn name args repl))
-      #f))
+  (define (cnvt-cpp-ftn-def defn)
+    (let* ((name (car defn)) (argl (cadr defn)) (repl (cddr defn))
+	   (expr (parse-c99x repl))
+	   (name (string->symbol name)) (argl (map string->symbol argl)))
+      ;;(sferr "~S:\n" name)  (pperr expr)
+      (sferr "\n")
+      (pperr `(define (,name ,@argl) ,(c99->scm expr)))))
+  (define (inc-filter file-spec path-spec)
+    (string-contains path-spec "lightning"))
   (let* ((tree (with-input-from-string "#include <lightning.h>\n"
 		 (lambda ()
 		   (parse-c99 #:cpp-defs cpp-defs
 			      #:inc-dirs inc-dirs
 			      #:inc-help inc-help
 			      #:mode 'decl))))
-	 (tree (merge-inc-bodies tree))
-	 (tree (merge-inc-bodies tree))
-	 )
+	 (ddict (c99-trans-unit->ddict tree #:inc-filter inc-filter)))
     (for-each
-     (lambda (item)
-       (case (car item)
-	 ((comment)
-	  #f)
-	 ((decl)
-	  #f)
-	 ((cpp-stmt)
-	  (case (sx-tag (sx-ref item 1))
-	    ((define) (cnvt-cpp-def (sx-ref item 1)))
-	    (else #f)))
-	 (else
-	  ;; jit_flush_code jit_fail 
-	  ;;(pperr item)
-	  #f)))
-     (cdr tree))
-    ))
+     (lambda (defn)
+       (cond
+	((string=? (car defn) "offsetof") #f)
+	((pair? (cdr defn)) (cnvt-cpp-ftn-def defn))))
+     ddict)))
 
 (cnvt)
 
