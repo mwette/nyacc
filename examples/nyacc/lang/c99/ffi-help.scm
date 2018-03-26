@@ -46,6 +46,7 @@
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 xparser)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 cxeval)
@@ -1432,7 +1433,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (union-def ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-struct-def typename #f field-list)
+       (cnvt-union-def typename #f field-list)
        (values (cons* typename (w/* typename) wrapped)
 	       (cons* typename (w/* typename) defined)))
 
@@ -1768,12 +1769,13 @@
   ;; possible for an enum symbol to be used as a macro function so we
   ;; need to first check for integer before trying expand-cpp-macro-ref.
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
-  (let ((name
-	 (string->symbol (string-append (*prefix*) "-symbol-val")))
+  (let ((st-name (string->symbol (string-append (*prefix*) "-symbol-tab")))
+	(sv-name (string->symbol (string-append (*prefix*) "-symbol-val")))
 	(defs
 	  (fold
 	   (lambda (def seed)
 	     (let* ((name (car def)) (val (cdr def))
+		    (symb (string->symbol name))
 		    (repl (cond
 			   ((pair? val) #f)
 			   ((string->number (cdr def)) (cdr def))
@@ -1782,20 +1784,33 @@
 			    (with-input-from-string ""
 			      (lambda ()
 				(expand-cpp-macro-ref name cpp-defs)))))))
+	       ;;(if (string=? name "DBUS_TYPE_BOOLEAN") (sferr "~S\n" repl))
+	       ;; TODO: try to reduce all this to the parse-c99x one
 	       (cond
 		((not repl) seed)
 		((not (string? repl)) (sferr "not string: ~S\n" repl))
 		((zero? (string-length repl)) seed)
-		((cintstr->num repl) =>
-		 (lambda (val) (acons (string->symbol name) val seed)))
+		((cintstr->num repl) => (lambda (val) (acons symb val seed)))
+		((string=? "\"\0\"" repl) (acons symb repl seed)) ;; hack
 		((eqv? #\" (string-ref repl 0))
-		 (acons (string->symbol name)
+		 ;; This breaks when a string contains #\nul
+		 (acons symb
 			(regexp-substitute/global ;; "abc" "def" => "abcdef"
 			 #f "\"\\s*\""
-			 (substring repl 1 (- (string-length repl) 1))
+			 (substring repl 1 (1- (string-length repl)))
 			 'pre 'post)
 			seed))
-		(else seed))))
+		((with-error-to-port (open-output-file "/dev/null")
+		   ;; TRY ALL THIS WAY
+		   (lambda ()
+		     (catch 'c99-error
+		       (lambda () (parse-c99x repl))
+		       (lambda () #f))))
+		 => (lambda (val) (acons symb (eval-c99-cx val) seed)))
+		;;
+		(else
+		 ;;(sferr "gen-lookup-proc misssed ~A ~S\n" name repl)
+		 seed))))
 	   '()
 	   keep-defs))
 	(ext-ftns			; lookup in use-ffi-modules
@@ -1804,17 +1819,16 @@
 	    (list (string->symbol
 		   (string-append (path->name mod) "-symbol-val")) 'k))
 	  ext-mods)))
-    (ppscm `(define ,name
-	      (let ((sym-tab '(,@defs)))
-		(lambda (k) (or (assq-ref sym-tab k) ,@ext-ftns)))))
-    (sfscm "(export ~A)\n" name)
+    (ppscm `(define ,st-name '(,@defs)))
+    (ppscm `(define ,sv-name (lambda (k) (or (assq-ref ,st-name k) ,@ext-ftns))))
+    (sfscm "(export ~A)\n" sv-name)
     ;;
     (nlscm)
     (ppscm
      `(define (unwrap-enum obj)
 	(cond
 	 ((number? obj) obj)
-	 ((symbol? obj) (,name obj))
+	 ((symbol? obj) (,sv-name obj))
 	 ((fh-object? obj) (struct-ref obj 0)) ;; ???
 	 (else (error "type mismatch")))))
     ))
@@ -1977,12 +1991,12 @@
 	 (ffi-defs (c99-trans-unit->ddict tree ffi-enu-defs #:inc-filter incf))
 	 (cpp-defs (c99-trans-unit->ddict tree #:inc-filter #t))
 	 (all-enu-defs (udict-enums->ddict udict))
-	 (all-defs (c99-trans-unit->ddict tree all-enu-defs
-					  #:inc-filter #t #:skip-fdefs #t))
+	 (all-defs (c99-trans-unit->ddict
+		    tree all-enu-defs #:inc-filter #t #:skip-fdefs #t))
 	 (ddict all-defs)
 	 ;; the list of typedefs we will generate (later):
 	 (ffimod-defined #f)
-	 ;; ext modules (e.g., '(ffi cairo) ...)
+	 ;; ext modules [from #:use-modules (ffi cairo)]
 	 (ext-mods
 	  (fold-right
 	   (lambda (opt seed)

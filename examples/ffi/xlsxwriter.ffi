@@ -1,0 +1,14 @@
+;; xlsxwriter.ffi			-*- Scheme -*-
+;;
+;; library source:
+;;   from https://github.com/jmcnamara/libxlsxwriter
+
+(define-ffi-module (ffi xlsxwriter)
+  #:include '("xlsxwriter.h") 
+  #:library '("libxlsxwriter") 
+  ;;#:library '("libxlsxwriter" "libzlib")  ???
+  #:inc-filter (lambda (f p) (string-contains p "xlsxwriter" 0))
+  #:inc-dirs '("/usr/local/include")
+  )
+
+;; --- last line ---

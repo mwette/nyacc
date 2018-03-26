@@ -1,0 +1,36 @@
+;; dbus.ffi				-*- Scheme -*-
+;;
+;; Copyright (C) 2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+(define-ffi-module (ffi dbus)
+  #:pkg-config "dbus-1"
+  #:include '("dbus/dbus.h")
+  #:inc-filter (lambda (file path) (string-contains path "dbus/" 0))
+  )
+
+;; (DBUS 'SERVICE_BUS) => "org.freedesktop.DBus"
+(define DBUS
+  (let* ((cnvt (lambda (pair seed)
+		 (let* ((k (car pair)) (v (cdr pair)) (n (symbol->string k)))
+		   (if (string-prefix? "DBUS_" n)
+		       (acons (string->symbol (substring n 5)) v seed)
+		       seed))))
+	 (symtab (let iter ((o '()) (i ffi-dbus-symbol-tab))
+		   (if (null? i) o (iter (cnvt (car i) o) (cdr i))))))
+    (lambda (key) (assq-ref symtab key))))
+(export DBUS)
+
+;; --- last line ---

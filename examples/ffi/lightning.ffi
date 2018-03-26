@@ -6,7 +6,6 @@
   #:library '("liblightning")
   )
 
-
 ;; the following generated from examples/nyacc/lang/c99/mkjit.scm
 
 (define (jit_get_note n u v w)

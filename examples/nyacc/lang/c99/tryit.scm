@@ -128,15 +128,16 @@
 	      "const int zz = 3;"
 	      "int x[NX+1];\n"))
        (indx 2)
+       (code "((int)'q')")
        
        ;;(tree (parse-c99x "\"\""))
-       (tree (parse-string code))
+       ;;(tree (parse-c99x code))
        ;;(tree (parse-file "c99-exam/ex14.c"))
        ;;(expr (sx-ref* tree 2 2 1 1 2))
        
-       (udict (c99-trans-unit->udict tree))
+       ;;(udict (c99-trans-unit->udict tree))
        ;;(ddict (udict-enums->ddict udict))
-       (ddict (c99-trans-unit->ddict tree))
+       ;;(ddict (c99-trans-unit->ddict tree))
        
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs decl udict))
@@ -146,12 +147,13 @@
        ;;(exp (parse-c99x "1+2"))
        ;;(exp (parse-c99x "sizeof(\"abc\")"))
        ;;(val (eval-c99-cx exp))
+       (tree (parse-c99x "((int)'q')"))
        )
   ;;(ppsx exp)
   ;;(ppsx val)
   ;;(display code)
   (ppsx tree)
-  ;;(ppsx expr)
+  (ppsx (eval-c99-cx tree))
   ;;(sf "dd:\n") (ppsx ddict)
   ;;(ppsx (eval-c99-cx expr udict ddict))
   ;;(sf "~S\n" (
