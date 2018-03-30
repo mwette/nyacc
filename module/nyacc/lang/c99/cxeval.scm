@@ -133,13 +133,15 @@
     (lambda (hit)
       (let ((expr (parse-cpp-expr hit)))
 	(eval-c99-cx expr udict ddict))))
-   ;; could be in any enum
-   #;((assoc-ref udict name) =>
-    (lambda (hit)
-      (sx-match hit
-	((decl ,specl ,xxx)
-	 #f))))
-   (else #f)))
+   (else
+    (error "missed" name)
+    #f)))
+
+#|
+(define (typedef? name udict)
+  (let ((decl (assoc-ref udict name)))
+    (and decl (eq? 'typedef (sx-tag (sx-ref* decl 1 1 1))))))
+|#
 
 (define* (eval-c99-cx tree #:optional udict ddict)
   (letrec
@@ -154,6 +156,7 @@
 	  (case (car tree)
 	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
 	    ((char) (char->integer (string-ref (tx1 tree) 0)))
+	    ((string) (string-join (sx-tail tree 1) ""))
 	    ((pre-inc post-inc) (1+ (ev1 tree)))
 	    ((pre-dec post-dec) (1- (ev1 tree)))
 	    ((pos) (ev1 tree))
@@ -183,7 +186,7 @@
 	    ((sizeof-type) (eval-sizeof-type tree udict))
 	    ((sizeof-expr) (eval-sizeof-expr tree udict))
 	    ((ident) (eval-ident (sx-ref tree 1) udict ddict))
-	    
+
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
 	    (else (error "incomplete eval-c99-cx implementation"))))))

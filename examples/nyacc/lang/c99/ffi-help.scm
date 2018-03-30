@@ -53,7 +53,8 @@
   #:use-module (nyacc lang c99 util1)
   #:use-module (nyacc version)
   #:use-module ((nyacc lang util)
-		#:select (cintstr->scm sx-ref sx-list sx-attr-ref sx-attr-set!))
+		#:select (cintstr->scm sx-tag sx-ref sx-ref* sx-list
+				       sx-attr-ref sx-attr-set!))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:use-module (system foreign)
@@ -123,6 +124,7 @@
 (define *mport* (make-parameter #t))	 ; output module port
 (define *udict* (make-parameter '()))	 ; udecl dict
 (define *ddict* (make-parameter '()))	 ; cpp-def dict
+(define *tdefs* (make-parameter '()))	 ; typenames
 (define *wrapped* (make-parameter '()))	 ; wrappers for foo_t and foo_t*
 (define *defined* (make-parameter '()))	 ; has wrapper and is bytestructure?
 (define *renamer* (make-parameter identity)) ; renamer from ffi-module
@@ -277,6 +279,15 @@
 (define (w/* name) (cons 'pointer name))
 (define (w/struct* name) (cons 'pointer (cons 'struct name)))
 (define (w/union* name) (cons 'pointer (cons 'union name)))
+
+(define (udict->typenames udict)
+  (fold
+   (lambda (pair seed)
+     (let ((name (car pair)) (decl (cdr pair)))
+       (if (eq? 'typedef (and=> (sx-ref* decl 1 1 1) sx-tag))
+	   (cons name seed)
+	   seed)))
+   '() udict))
 
 ;; === output scheme module header 
 
@@ -1790,7 +1801,9 @@
 		((not repl) seed)
 		((not (string? repl)) (sferr "not string: ~S\n" repl))
 		((zero? (string-length repl)) seed)
+		;;
 		((cintstr->num repl) => (lambda (val) (acons symb val seed)))
+		#|
 		((string=? "\"\0\"" repl) (acons symb repl seed)) ;; hack
 		((eqv? #\" (string-ref repl 0))
 		 ;; This breaks when a string contains #\nul
@@ -1800,13 +1813,16 @@
 			 (substring repl 1 (1- (string-length repl)))
 			 'pre 'post)
 			seed))
+		|#
 		((with-error-to-port (open-output-file "/dev/null")
-		   ;; TRY ALL THIS WAY
 		   (lambda ()
 		     (catch 'c99-error
-		       (lambda () (parse-c99x repl))
+		       (lambda ()
+			 (parse-c99x repl (*tdefs*) #:cpp-defs cpp-defs))
 		       (lambda () #f))))
-		 => (lambda (val) (acons symb (eval-c99-cx val) seed)))
+		 => (lambda (val)
+		      (let ((cv (eval-c99-cx val (*udict*) (*ddict*))))
+			(if cv (acons symb cv seed) seed))))
 		;;
 		(else
 		 ;;(sferr "gen-lookup-proc misssed ~A ~S\n" name repl)
@@ -2020,6 +2036,7 @@
     (*udict* udict)
     (*mport* mport)
     (*ddict* ddict)
+    (*tdefs* (udict->typenames udict))
     ;; renamer?
 
     ;; file and module header

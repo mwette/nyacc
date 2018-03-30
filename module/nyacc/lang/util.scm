@@ -238,7 +238,7 @@ See the file COPYING.LESSER included with the this distribution.")
 ;; @end example
 ;; @end deffn
 (define (sx-ref* sx . args)
-  (fold (lambda (ix sx) (sx-ref sx ix)) sx args))
+  (fold (lambda (ix sx) (and (pair? sx) (sx-ref sx ix))) sx args))
 
 ;; @deffn {Procedure} sx-tag sx => tag
 ;; Return the tag for a tree

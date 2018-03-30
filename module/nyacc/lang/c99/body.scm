@@ -75,6 +75,8 @@
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers
 ;; should be last-in-first-seen ordered.  Probably helpers low prio.
+;; The (CPP) defines can appear as pairs: then they have already been split.
+;; (This is used by @code{parse-c99x}.)
 ;; @end deffn
 (define (make-cpi debug shinc defines incdirs inchelp)
   ;; convert inchelp into inc-file->typenames and inc-file->defines
@@ -90,10 +92,13 @@
 	  (lambda (def) (iter tyns (cons def defs) (cdr ents))))
 	 (else (iter (cons (car ents) tyns) defs (cdr ents)))))))
 
+  (define (split-if-needed def)
+    (if (pair? def) def (split-cppdef def)))
+
   (let* ((cpi (make-cpi-1)))
     (set-cpi-debug! cpi debug)		; print states debug 
     (set-cpi-shinc! cpi shinc)		; print includes
-    (set-cpi-defs! cpi (map split-cppdef defines)) ; list of define strings
+    (set-cpi-defs! cpi (map split-if-needed defines)) ; def's as pairs
     (set-cpi-incs! cpi incdirs)		; list of include dir's
     (set-cpi-ptl! cpi '())		; list of lists of typenames
     (set-cpi-ctl! cpi '())		; list of current typenames
