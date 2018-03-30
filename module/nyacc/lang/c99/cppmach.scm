@@ -58,8 +58,8 @@
 			     ($$ `(bitwise-and ,$1 ,$3))))
     (equality-expression
      (relational-expression)
-     (equality-expression "==" relational-expression ($$ `(equal ,$1 ,$3)))
-     (equality-expression "!=" relational-expression ($$ `(noteq ,$1 ,$3))))
+     (equality-expression "==" relational-expression ($$ `(eq ,$1 ,$3)))
+     (equality-expression "!=" relational-expression ($$ `(ne ,$1 ,$3))))
     (relational-expression
      (shift-expression)
      (relational-expression "<" shift-expression ($$ `(lt ,$1 ,$3)))

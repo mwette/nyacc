@@ -131,10 +131,12 @@
   (cond
    ((assoc-ref ddict name) =>
     (lambda (hit)
-      (let ((expr (parse-cpp-expr hit)))
-	(eval-c99-cx expr udict ddict))))
+      ;; This should actually go through the cpp-expander first methinks.
+      (and (string? hit)
+	   (let ((expr (parse-cpp-expr hit)))
+	     (eval-c99-cx expr udict ddict)))))
    (else
-    (error "missed" name)
+    ;;(error "missed" name)
     #f)))
 
 #|
@@ -145,51 +147,55 @@
 
 (define* (eval-c99-cx tree #:optional udict ddict)
   (letrec
-      ((tx (lambda (tr ix) (sx-ref tr ix)))
-       (tx1 (lambda (tr) (sx-ref tr 1)))
-       (ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
+      ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
        (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
        (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2
        (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
+       (uop (lambda (op ex) (and ex (op ex))))
+       (bop (lambda (op lt rt) (and lt rt (op lt rt))))
        (eval-expr
 	(lambda (tree)
 	  (case (car tree)
-	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
-	    ((char) (char->integer (string-ref (tx1 tree) 0)))
+	    ((fixed) (string->number (cnumstr->scm (sx-ref tree 1))))
+	    ((float) (string->number (cnumstr->scm (sx-ref tree 1))))
+	    ((char) (char->integer (string-ref (sx-ref tree 1) 0)))
 	    ((string) (string-join (sx-tail tree 1) ""))
-	    ((pre-inc post-inc) (1+ (ev1 tree)))
-	    ((pre-dec post-dec) (1- (ev1 tree)))
-	    ((pos) (ev1 tree))
-	    ((neg) (- (ev1 tree)))
-	    ((not) (if (zero? (ev1 tree)) 1 0))
-	    ((mul) (* (ev1 tree) (ev2 tree)))
-	    ((div) (/ (ev1 tree) (ev2 tree)))
-	    ((mod) (modulo (ev1 tree) (ev2 tree)))
-	    ((add) (+ (ev1 tree) (ev2 tree)))
-	    ((sub) (- (ev1 tree) (ev2 tree)))
-	    ((lshift) (bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
-	    ((rshift) (bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
-	    ((lt) (if (< (ev1 tree) (ev2 tree)) 1 0))
-	    ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
-	    ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
-	    ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
-	    ((equal) (if (= (ev1 tree) (ev2 tree)) 1 0))
-	    ((noteq) (if (= (ev1 tree) (ev2 tree)) 0 1))
-	    ((bitwise-not) (lognot (ev1 tree)))
-	    ((bitwise-or) (logior (ev1 tree) (ev2 tree)))
-	    ((bitwise-xor) (logxor (ev1 tree) (ev2 tree)))
-	    ((bitwise-and) (logand (ev1 tree) (ev2 tree)))
+	    ((pre-inc post-inc) (uop 1+ (ev1 tree)))
+	    ((pre-dec post-dec) (uop 1- (ev1 tree)))
+	    ((pos) (and tree (ev1 tree)))
+	    ((neg) (uop - (ev1 tree)))
+	    ((not) (and tree (if (equal? 0 (ev1 tree)) 1 0)))
+	    ((mul) (bop * (ev1 tree) (ev2 tree)))
+	    ((div) (bop / (ev1 tree) (ev2 tree)))
+	    ((mod) (bop modulo (ev1 tree) (ev2 tree)))
+	    ((add) (bop + (ev1 tree) (ev2 tree)))
+	    ((sub) (bop - (ev1 tree) (ev2 tree)))
+	    ((lshift) (bop bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
+	    ((rshift) (bop bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
+	    ((lt) (if (bop < (ev1 tree) (ev2 tree)) 1 0))
+	    ((le) (if (bop <= (ev1 tree) (ev2 tree)) 1 0))
+	    ((gt) (if (bop > (ev1 tree) (ev2 tree)) 1 0))
+	    ((ge) (if (bop >= (ev1 tree) (ev2 tree)) 1 0))
+	    ((eq) (if (bop = (ev1 tree) (ev2 tree)) 1 0))
+	    ((ne) (if (bop = (ev1 tree) (ev2 tree)) 0 1))
+	    ((bitwise-not) (uop lognot (ev1 tree)))
+	    ((bitwise-or) (bop logior (ev1 tree) (ev2 tree)))
+	    ((bitwise-xor) (bop logxor (ev1 tree) (ev2 tree)))
+	    ((bitwise-and) (bop logand (ev1 tree) (ev2 tree)))
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
+	    ;;
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-
 	    ((sizeof-type) (eval-sizeof-type tree udict))
 	    ((sizeof-expr) (eval-sizeof-expr tree udict))
 	    ((ident) (eval-ident (sx-ref tree 1) udict ddict))
-
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
-	    (else (error "incomplete eval-c99-cx implementation"))))))
+	    ((fctn-call) #f)		; assume not constant
+	    ;;
+	    ((i-sel) #f) ;; TODO
+	    ((d-sel) #f) ;; TODO
+	    (else (error "eval-c99-cx: missed" (car tree)))))))
     (eval-expr tree)))
 
 ;; --- last line ---
