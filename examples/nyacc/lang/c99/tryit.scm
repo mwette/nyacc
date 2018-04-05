@@ -17,17 +17,19 @@
 (use-modules (ice-9 pretty-print))
 (use-modules (sxml xpath))
 
+(define (sf fmt . args) (apply simple-format #t fmt args))
+(define pp pretty-print)
+(define ppsx (lambda (sx) (pretty-print sx #:per-line-prefix "  ")))
+(define pp99 pretty-print-c99)
+
 (define cpp-defs
   (cond
    ((string-contains %host-type "darwin")
     (append
      '("__GNUC__=6" "__signed=signed")
-     #;(remove (lambda (s)
-	       (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-	     (get-gcc-cpp-defs))
      ))
    (else
-    '())))
+    (get-gcc-cpp-defs))))
 (define inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir)
@@ -39,7 +41,7 @@
    ((string-contains %host-type "darwin")
     '(("__builtin"
        "__builtin_va_list=void*"
-       "__attribute__(X)="
+       ;;"__attribute__(X)="
        "__extension__="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
@@ -48,9 +50,11 @@
       ))
    (else
     '(("__builtin"
-       "__builtin_va_list=void*" "__attribute__(X)="
+       "__builtin_va_list=void*" 
+       ;;"__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
+       "__has_include(X)=__has_include__(X)"
        "__extension__="
        )
       ))))
@@ -64,6 +68,7 @@
 (define (parse-file file)
   (with-input-from-file file
     (lambda ()
+      ;;(pp cpp-defs) (pp inc-help)
       (parse-c99 #:cpp-defs cpp-defs 
 		 #:inc-dirs inc-dirs
 		 #:inc-help inc-help
@@ -82,11 +87,6 @@
 
 (define (parse-string-list . str-l)
   (parse-string (apply string-append str-l)))
-
-(define (sf fmt . args) (apply simple-format #t fmt args))
-(define pp pretty-print)
-(define ppsx (lambda (sx) (pretty-print sx #:per-line-prefix "  ")))
-(define pp99 pretty-print-c99)
 
 ;; The standard says:
 ;;   For two qualified types to be compatible, both shall have the identically
@@ -128,16 +128,6 @@
 	      "const int zz = 3;"
 	      "int x[NX+1];\n"))
        (indx 2)
-       (code "((int)'q')")
-       
-       ;;(tree (parse-c99x "\"\""))
-       ;;(tree (parse-c99x code))
-       ;;(tree (parse-file "c99-exam/ex14.c"))
-       ;;(expr (sx-ref* tree 2 2 1 1 2))
-       
-       ;;(udict (c99-trans-unit->udict tree))
-       ;;(ddict (udict-enums->ddict udict))
-       ;;(ddict (c99-trans-unit->ddict tree))
        
        ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs decl udict))
@@ -148,12 +138,19 @@
        ;;(exp (parse-c99x "sizeof(\"abc\")"))
        ;;(val (eval-c99-cx exp))
        ;;(tree (parse-c99x "((int)'q')"))
-       (tree (parse-c99x "\"abc\" \"def\""))
+       ;;(tree (parse-c99x "\"abc\" \"def\""))
+       (tree (parse-file "zzz.c"))
+       (udict (c99-trans-unit->udict
+	       tree
+	       #:inc-filter
+	       (lambda (file path) (string=? file "<sys/epoll.h>"))))
+       (udecl (udict-struct-ref udict "epoll_event"))
        )
   ;;(ppsx exp)
   ;;(ppsx val)
   ;;(display code)
   (ppsx tree)
+  ;;(ppsx udecl)
   ;;(ppsx (eval-c99-cx tree))
   ;;(sf "dd:\n") (ppsx ddict)
   ;;(ppsx (eval-c99-cx expr udict ddict))

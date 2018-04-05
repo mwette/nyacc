@@ -28,6 +28,8 @@
 ;; bytestructure->descriptor->ffi-descriptor
 ;; bs:pointer->proc
 
+;; TODO: add renamer
+
 ;; For enum typedefs we are not creating types but just using wrappers.
 
 (define-module (nyacc lang c99 ffi-help)
@@ -80,11 +82,12 @@
 (define fh-cpp-defs
   (cond
    ((string-contains %host-type "darwin")
-    '("__GNUC__=6")
+    ;;'("__GNUC__=6" "__signed=signed")
     (remove (lambda (s)
 	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
 	    (get-gcc-cpp-defs)))
    (else '())))
+    
 (define fh-inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir)
@@ -95,7 +98,7 @@
    ((string-contains %host-type "darwin")
     '(("__builtin"
        "__builtin_va_list=void*"
-       "__attribute__(X)="
+       ;;"__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
@@ -106,7 +109,8 @@
       ))
    (else
     '(("__builtin"
-       "__builtin_va_list=void*" "__attribute__(X)="
+       "__builtin_va_list=void*"
+       ;;"__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
@@ -140,6 +144,8 @@
 (define* (upscm tree #:key (per-line-prefix ""))
   (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
 (define (c99scm tree)
+  (when (equal? "epoll_event" (sx-ref* tree 1 1 1 1 1))
+    (sferr "c99scm:\n") (pperr tree))
   (pretty-print-c99 tree
 		    (*mport*)
 		    #:per-line-prefix ";; "))
@@ -1202,10 +1208,16 @@
   (*wrapped* wrapped)
   (*defined* defined)
 
+  (when (equal? "epoll_event" (sx-ref* udecl 1 1 1 1 1))
+    (sferr "udecl:\n") (pperr udecl))
   (let*-values (((tag attr specl declr tail) (split-adecl udecl))
 		((specl declr) (cleanup-udecl specl declr))
+		((clean-udecl) (values (sx-list tag #f specl declr)))
 		)
-    (sxml-match (sx-list tag #f specl declr)
+    (when (equal? "epoll_event" (sx-ref* udecl 1 1 1 1 1))
+      (sferr "clean-udecl:\n") (pperr clean-udecl))
+    ;;(sxml-match (sx-list tag #f specl declr)
+    (sxml-match clean-udecl
 
       ;; typedef void **ptr_t;
       ((udecl
@@ -1577,6 +1589,7 @@
       ((udecl
 	(decl-spec-list
 	 (type-spec (struct-def (ident ,struct-name) ,field-list))))
+       (sferr "struct foo { ... }:\n") (pperr clean-udecl)
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
@@ -1590,7 +1603,8 @@
 		   (cons (w/struct struct-name) defined))))
 	((not (member (w/struct struct-name) defined))
 	 (cnvt-struct-def #f struct-name field-list)
-	 ;; Hopting don't need w/struct*
+	 (if attr (sfscm ";; packed ~S\n" attr))
+	 ;; Hoping don't need w/struct*
 	 (values (cons* (w/struct struct-name) wrapped)
 		 (cons* (w/struct struct-name) defined)))
 	(else
@@ -1871,6 +1885,9 @@
 	 (inc-help (append inc-help fh-inc-help)))
     (or (with-input-from-string code
 	  (lambda ()
+	    (sferr "===\n")
+	    (pperr cpp-defs)
+	    (pperr inc-help)
 	    (parse-c99 #:cpp-defs cpp-defs
 		       #:inc-dirs inc-dirs
 		       #:inc-help inc-help
@@ -2039,6 +2056,9 @@
     (*tdefs* (udict->typenames udict))
     ;; renamer?
 
+    (pperr (sx-ref* tree 15))
+    (quit)
+
     ;; file and module header
     (ffimod-header path module-options)
 
@@ -2068,7 +2088,7 @@
     (ugly-print ffimod-defined mport #:per-line-prefix "   " #:trim-ends #t)
     (sfscm ")\n(export ~A-types)\n" (path->name path))
 
-    (sfscm "\n;; TODO: add renamer\n")
+    ;;(sfscm "\n;; TODO: add renamer\n")
 
     ;; return port so compiler can output remaining code
     mport))

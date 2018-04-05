@@ -3,6 +3,7 @@
 ;; https://stackoverflow.com/questions/9378593/dbuswatch-and-dbustimeout-examples
 
 (use-modules (ice-9 pretty-print))
+(use-modules (ice-9 format))
 (define (sf fmt . args) (apply simple-format #t fmt args))
 
 (use-modules (system ffi-help-rt))
@@ -11,10 +12,13 @@
 
 (use-modules (ice-9 threads))
 (use-modules (srfi srfi-1))
+(use-modules (srfi srfi-9))
 
 (use-modules (ffi epoll))
 (use-modules (ffi dbus))
 (use-modules (dbus00))
+
+(define d-a (@@ (bytestructures guile struct) debug-alignment))
 
 ;; ====================================
 ;; use case 01: want to queue in any thread, poll for ready
@@ -22,8 +26,6 @@
 (define TRUE 1)
 (define FALSE 0)
 (define (nonzero? val) (not (zero? val)))
-
-(define (dbus-free data) (if #f #f))
 
 ;; convert mask of DBUS_WATCH to enum EPOLL_EVENTS
 (define (dbus-watch-flags->epoll-events dbus-flags)
@@ -52,13 +54,58 @@
 	 dbus-flags))
    0 '(1 4 8 16)))
 
-;;(define dbus-guard (make-guardian))
-(define *dbus-guard-list* '())
-(define (dbus-guard item)
-  (set! *dbus-guard-list* (cons item *dbus-guard-list*)))
-(define (dbus-release item)
-  (if (not (member item *dbus-guard-list*)) (error "dbus/epoll code bug"))
-  (set! *dbus-guard-list* (delete item dbus-guard-list)))
+(define-record-type dbus-data
+  (make-dbus-data fd ev wv)
+  dbus-data?
+  (fd dbus-data-fd)			; epoll fd, if in epoll set
+  (ev dbus-data-ev)			; epoll event
+  (wv dbus-data-wv set-dbus-data-wv!)	; watch vector
+  )
+
+(define dbus-data-maxw 3)
+
+(define (scm->addr scm)
+  (ffi:pointer-address (ffi:scm->pointer scm)))
+(define (addr->scm addr)
+  (ffi:pointer->scm (ffi:make-pointer addr)))
+
+(define *dbus-fd-dict* (make-hash-table 31))
+
+;; if not found add a blank entry
+(define (dbus-lookup-fd fd)
+  (or (hashv-ref *dbus-fd-dict* fd)
+      (let* ((event (make-struct-epoll_event))
+	     (ddent (make-dbus-data fd event (make-vector 2 #f))))
+	(hashv-set! *dbus-fd-dict* fd ddent)
+	(fh-object-set! event 'data 'ptr (scm->addr ddent))
+	(sf "new event=~S at data-ptr=~S  event=~S\n"
+	    ;;event
+	    (fh-object-val event)
+	    (scm->addr ddent)
+	    ;;(dbus-data-ev ddent)
+	    (fh-object-val (dbus-data-ev ddent))
+	    )
+	(format #t "  0x~x\n" (scm->addr ddent))
+	ddent)))
+
+(define (find-wv-slot wv)
+  (let iter ((i 0))
+    (cond
+     ((= i dbus-data-maxw) -1)
+     ((vector-ref wv i) (iter (1+ i)))
+     (else i))))
+
+(define (dbus-data-watched? ddent)
+  (= 0 (find-wv-slot (dbus-data-wv ddent))))
+
+(define (dbus-data-watchless? ddent)
+  (not (dbus-data-watched? ddent)))
+       
+(define (dbus-fd-watchless? fd)
+  (not (and=> (hashv-ref *dbus-fd-dict* fd) dbus-data-watched?)))
+  
+(define (dbus-data-free ddent)
+  (if #f #f))
 
 (define (dispatch-status connection ~status data)
   (display "dispatch-status called\n")
@@ -69,57 +116,73 @@
     #f))
 
 (define (add-watch ~watch data)
-  ;; design is broken because one fd may be associated with multiple watches
   (let* ((watch (make-DBusWatch* ~watch))
 	 (muxfd (ffi:pointer-address data))
-	 (addfd (dbus_watch_get_fd watch))
+	 (addfd (dbus_watch_get_unix_fd watch))
 	 (flags (dbus_watch_get_flags watch))
-	 (events (if (nonzero? (dbus_watch_get_enabled watch))
-		     (dbus-watch-flags->epoll-events flags)
-		     0))
-	 (ev (make-struct-epoll_event)))
+	 (ddent (dbus-lookup-fd muxfd))
+	 (event (dbus-data-ev ddent))
+	 )
     (when #t
       (sf "\nadd-watch  ~S  ~S  ...\n" watch data)
       (sf "  addfd: ~S\n" addfd)
-      (sf "  enabled: ~S\n" (dbus_watch_get_enabled watch))
-      (sf "  flags ~S -> events: ~S\n" flags events))
+      ;;(sf "  enabled: ~S\n" (dbus_watch_get_enabled watch))
+      (sf "  flags ~S\n" flags)
+      ;;(sf "  ddent ~S\n" ddent)
+      (sf "  event ~S w/ data-ptr=~S\n"
+	  (fh-object-val event)
+	  (fh-object-ref event 'data 'ptr))
+      ;;(sf "    data-ptr=~S\n" (fh-object-ref event 'data 'ptr))
+      )
+
+    (dbus_watch_set_data watch (ffi:scm->pointer ddent) dbus-data-free)
     
-    (dbus-guard-event ev)
-    (fh-object-set! ev 'events events)
-    (fh-object-set! ev 'data 'ptr (fh-object-ref watch))
-    (if (nonzero? events)		; <== NEEDED because broken design
-	(epoll_ctl muxfd (EPOLL '_CTL_ADD) addfd (pointer-to ev)))
-    ;;
-    (dbus_watch_set_data watch (pointer-to ev) dbus-free)
+    ;; Set up the indended set of epoll events.
+    (if (nonzero? (dbus_watch_get_enabled watch))
+	(fh-object-set! event 'events
+			(logior (fh-object-ref event 'events)
+				(dbus-watch-flags->epoll-events flags))))
+
+    (sf "    ~S\n" (bytestructure-bytevector (fh-object-val event)))
+
+    ;; If this is the use of this fd, then initialize the ev and add to epoll.
+    (if (dbus-data-watchless? ddent)
+	(epoll_ctl muxfd (EPOLL '_CTL_ADD) addfd (ffi:scm->pointer ddent)))
+      
+    ;; Set watches based on flags.
+    (let* ((wv (dbus-data-wv ddent)) (wx (find-wv-slot wv)))
+      (sf "wx=~S\n" wx)
+      (if (negative? wx) (error "max exceeded")
+	  (vector-set! wv wx watch)))
+    
     TRUE))
 
 (define (remove-watch ~watch data)
   (let* ((watch (make-DBusWatch* ~watch))
 	 (muxfd (ffi:pointer-address data))
-	 (delfd (dbus_watch_get_fd watch))
-	 (ev (ffi:pointer->scm (dbus_watch_get_data watch)))
+	 (delfd (dbus_watch_get_unix_fd watch))
+	 ;;(ddent (dbus_watch_get_data watch))
+	 (ddent (hashv *dbus-fd-dict* delfd))
+	 (event (dbus-data-ev ddent))
+	 (events (fh-object-ref event 'events))
 	 )
     (when #t
       (sf "\nrem-watch  ~S  ~S\n" watch data)
       )
-    ;;(epoll_ctl muxfd (EPOLL '_CTL_DEL) delfd (pointer-to ev))
-    (dbus-release-event ev)
+    ;; remove watch from ddent and fix events mask.
+    ;; if no watches left then remove fd from epoll
+    ;;(if (no more watches on this fd)
+    ;;    (epoll_ctl muxfd (EPOLL '_CTL_DEL) delfd (ffi:scm->pointer ddent)))
     (if #f #f)))
 
 (define (watch-toggled ~watch data)
   (let* ((watch (make-DBusWatch* ~watch))
 	 (muxfd (ffi:pointer-address data))
 	 (flags (dbus_watch_get_flags watch))
-	 (events (if (nonzero? (dbus_watch_get_enabled watch))
-		     (dbus-watch-flags->epoll-events flags)
-		     0))
-	 (ev (ffi:pointer->scm (dbus_watch_get_data watch))))
+	 )
     (when #t
       (sf "watch-tog  ~S  ~S ...\n" watch data)
       (sf "  enabled: ~S\n" (dbus_watch_get_enabled watch)))
-    (fh-object-set! ev 'events events)
-    ;; Do I need the following to just change the events?
-    ;;(epoll_ctl muxfd (EPOLL '_CTL_MOD) addfd (pointer-to ev))
     (if #f #f)))
 
 ;; timeout is DBusTimeout
@@ -155,46 +218,82 @@
 (define (my-main-loop connection)
   (let* ((muxfd (epoll_create 1))
 	 (data (ffi:make-pointer muxfd))
-	 (max-events 10)
-	 (eventv (make-struct-epoll_event-vec max-events)))
+	 (max-events 2)
+	 ;;(eventv (make-struct-epoll_event-vec max-events))
+	 ;;(eventp (pointer-to eventv))
+	 (eventv (bytestructure (bs:vector max-events struct-epoll_event-desc)))
+	 (bs-bvec (bytestructure-bytevector eventv))
+	 (bs-offs (bytestructure-offset eventv))
+	 (eventp (ffi:bytevector->pointer bs-bvec))
+	 ;;(max-events 1)
+	 ;;(eventv (make-struct-epoll_event))
+	 ;;(eventp (pointer-to eventv))
+	 )
     ;; Set up MT locks, and mainloop hook functions.
     (dbus_threads_init_default)
     (dbus_connection_set_dispatch_status_function
-     connection dispatch-status data dbus-free)
+     connection dispatch-status data dbus-data-free)
     (dbus_connection_set_watch_functions
-     connection add-watch remove-watch watch-toggled data dbus-free)
+     connection add-watch remove-watch watch-toggled data dbus-data-free)
     (dbus_connection_set_timeout_functions
-     connection add-timeout remove-timeout timeout-toggled data dbus-free)
+     connection add-timeout remove-timeout timeout-toggled data dbus-data-free)
     ;; These are in dbus list archive 008859.html.
     (dbus_connection_add_filter connection filter-func NULL NULL)
     (dbus_bus_add_match connection "type='signal'" NULL)
     (dbus_bus_add_match connection "type='method_call'" NULL)
     ;;
     (let loop ()
-      (let ((n (epoll_wait muxfd (pointer-to eventv) max-events -1)))
-	(sf "\nloop n=~S\n" n)
-	(let iter ((i 0))
-	  (unless (>= i n)
-	    (let* ((event (fh-object-ref eventv i))
-		   (events (bytestructure-ref event 'events))
-		   (flags (epoll-events->dbus-watch-flags events))
-		   (data-ptr (bytestructure-ref event 'data 'ptr))
-		   (watch (make-DBusWatch* data-ptr))
-		   )
-	      (sf " i=~S ...\n" i)
-	      (sf "  epoll-events=~S => dbus-watch-flags=~S\n" events flags)
-	      (sf "  watch=~S\n" watch)
-	      (sf "  watch fd=~S\n" (dbus_watch_get_fd watch))
-	      (while (equal? FALSE (dbus_watch_handle watch flags)) (sleep 1))
-	      (dbus_connection_ref connection)
-	      (while (eq? 'DBUS_DISPATCH_DATA_REMAINS
-			  (dbus_connection_get_dispatch_status connection))
-		(sf "  dispatch ...\n")
-		(dbus_connection_dispatch connection))
-	      (dbus_connection_unref connection)
-	      (sleep 1)
-	      #t)
-	    (iter (1+ i)))))
+      (let iter ((n (epoll_wait muxfd eventp max-events -1)))
+	(unless (zero? n)
+	  (sf " n=~S ...\n" n)
+	  (sf "bs-offs ~S\n" bs-offs)
+	  ;;(sf "eventv[0] ~S\n" (fh-object-ref eventv 0))
+	  (let* (
+		 ;;(event (fh-object-ref eventv (1- n)))
+		 (event (bytestructure-ref eventv (1- n)))
+		 ;;(event (fh-object-ref eventv))
+		 ;;(event (fh-object-ref eventv))
+		 (events (bytestructure-ref event 'events))
+		 (data-ptr (bytestructure-ref event 'data 'ptr))
+		 (ddent (addr->scm data-ptr))
+		 #;(watches (fold
+			   (lambda (x s) (if x (cons x s) s))
+			   '()
+			   (list (dbus-data-w0 ddent)
+		 (dbus-data-w1 ddent))))
+		 (watches '())
+		 )
+	    (sf "eventv=~S ~S\n" eventv (bytestructure-bytevector eventv))
+	    ;;(sf "eventp=~S\n" eventp)
+	    ;;(sf "event =~S ~S\n" event (bytestructure-bytevector event))
+	    (sf "event0=~S ~S\n"
+		(bytestructure-ref eventv 0)
+		(bytestructure-bytevector (bytestructure-ref eventv 0)))
+	    (sf "event1=~S ~S ~S\n"
+		(bytestructure-ref eventv 1)
+		(bytestructure-offset (bytestructure-ref eventv 1))
+		(bytestructure-bytevector (bytestructure-ref eventv 1)))
+	    ;;(sf "events=~S\n" events)
+	    (format #t "events=0x~x\n" events)
+	    (sf "data-ptr=~S\n" data-ptr)
+	    ;;(sf "ddent=~S\n" ddent)
+	    ;;(sf "watches=~S\n" watches)
+	    (quit)
+	    (for-each
+	     (lambda (watch)
+	       (let ((flags (logand (dbus_watch_get_flags watch)
+				    (epoll-events->dbus-watch-flags events))))
+		 (while (equal? FALSE (dbus_watch_handle watch flags)) (sleep 1))
+		 (dbus_connection_ref connection)
+		 (while (eq? 'DBUS_DISPATCH_DATA_REMAINS
+			     (dbus_connection_get_dispatch_status connection))
+		   (sf "  dispatch ...\n")
+		   (dbus_connection_dispatch connection))
+		 (dbus_connection_unref connection)))
+	     watches)
+	    (sleep 1)
+	    #t))
+	  (iter (1- n)))
       (loop))
     ;;
     (close-fdes muxfd)))

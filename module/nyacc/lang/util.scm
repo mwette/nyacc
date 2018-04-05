@@ -18,7 +18,7 @@
 ;; runtime utilities for the parsers
 
 (define-module (nyacc lang util)
-  #:export (lang-crn-lic 
+  #:export (lang-crn-lic
 	    report-error
 	    *input-stack* push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr

@@ -193,8 +193,11 @@
 	    ((cast) (ev2 tree))
 	    ((fctn-call) #f)		; assume not constant
 	    ;;
-	    ((i-sel) #f) ;; TODO
-	    ((d-sel) #f) ;; TODO
+	    ;; TODO 
+	    ((i-sel) #f)
+	    ((d-sel) #f)
+	    ((array-ref) #f)
+	    ;;
 	    (else (error "eval-c99-cx: missed" (car tree)))))))
     (eval-expr tree)))
 
