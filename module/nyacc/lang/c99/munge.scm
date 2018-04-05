@@ -116,7 +116,7 @@
   )
 ;; undocumented Guile builtins: or-map
 
-;;(define (sf fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 (define OA object-address)
@@ -359,13 +359,17 @@
 ;; and @code{udict-ref}.  This procecure is robust to already munged decls.
 ;; To capture enum values as globals use @code{->ddict}.
 ;; @*
-;; Notes: now saving attributes.
+;; Notes: Now saving attributes at top level.  Adding attributes for
+;; struct and union (e.g., @code{__packed__}.  The latter is needed
+;; because they appear in files under @file{/usr/include}.
 ;; @end deffn
 
 (define* (unitize-decl decl #:optional (seed '()))
   
-  (define* (make-udecl type guts #:optional typename)
-    `(udecl (decl-spec-list (type-spec ,(cons type guts)))))
+  (define* (make-udecl type attr guts #:optional typename)
+    (if (and attr (pair? attr))
+	`(udecl (decl-spec-list (type-spec ,(cons* type `(@ ,@attr) guts))))
+	`(udecl (decl-spec-list (type-spec ,(cons type guts))))))
 
   ;; update depends on whether unitize- procedures use fold or fold-right
   (define (update-left name value tag attr specl declrs tail seed)
@@ -377,6 +381,7 @@
   (define update update-right)
 
   ;;(simple-format #t "unitize-decl ~S\n" decl)
+  ;; TODO: add attr
   (cond
    ((not (pair? decl))
     (error "bad arg"))
@@ -392,9 +397,9 @@
 	;; struct typedefs 
 	((decl-spec-list
 	  (stor-spec (typedef))
-	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(struct . ,name)
-		 (make-udecl 'struct-def `((ident ,name) . ,rest2))
+		 (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
@@ -404,9 +409,9 @@
 	;; union typedefs 
 	((decl-spec-list
 	  (stor-spec (typedef))
-	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (union-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(union . ,name)
-		 (make-udecl 'union-def `((ident ,name) . ,rest2))
+		 (make-udecl 'union-def aattr `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
@@ -418,22 +423,22 @@
 	  (stor-spec (typedef))
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(enum . ,name)
-		 (make-udecl 'enum-def `((ident ,name) . ,rest2))
+		 (make-udecl 'enum-def #f `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def . ,rest2) . ,rest1))
 	 (iter-declrs tag #f specl declrs tail
-		      (acons `(enum . "*anon*") (make-udecl 'enum-def rest2)
+		      (acons `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 			     seed))
-	 (update `(enum . "*anon*") (make-udecl 'enum-def rest2)
+	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 		 tag attr specl declrs tail seed))
 	
 	;; structs
 	((decl-spec-list
-	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(struct . ,name)
-		 (make-udecl 'struct-def `((ident ,name) . ,rest2))
+		 (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
@@ -441,9 +446,9 @@
 
 	;; unions
 	((decl-spec-list
-	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (union-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(union . ,name)
-		 (make-udecl 'union-def `((ident ,name) . ,rest2))
+		 (make-udecl 'union-def aattr `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (type-spec (union-def . ,rest2) . ,rest1))
@@ -453,11 +458,11 @@
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(enum . ,name)
-		 (make-udecl 'enum-def `((ident ,name) . ,rest2))
+		 (make-udecl 'enum-def #f `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 (update `(enum . "*anon*") (make-udecl 'enum-def rest2)
+	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 		 tag attr specl declrs tail seed))
 
 	(* (iter-declrs tag attr specl declrs tail seed)))))
@@ -1457,6 +1462,7 @@
 (define* (mspec->udecl mspec)
 
   (define (make-udecl types declr)
+    ;; TODO: w/ attr needed?
     `(udecl (decl-spec-list (type-spec ,types)) (init-declr ,declr)))
 
   (define (doit declr mspec-tail)

@@ -29,8 +29,10 @@
 
 ;; issue w/ brlev: not intended to beused with `extern "C" {'
 
+(use-modules (nyacc lang sx-match))
 (use-modules ((srfi srfi-1) #:select (fold-right)))
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
+(use-modules (ice-9 regex))
 (use-modules (ice-9 pretty-print))	; for debugging
 
 ;; C parser info (?)
@@ -203,6 +205,20 @@
   ;; @code{add-typename}.  Then return the decl.
   (for-each add-typename (find-new-typenames decl))
   decl)
+
+;; 
+(define gen-attributes
+  (let ((rx (make-regexp "^__(.*)__$")))
+    (lambda (spec)
+      ;; spec is '(attributes "packed") ...)
+      (sx-match spec
+	((attributes ,name)
+	 (cond
+	  ((regexp-exec rx name) =>
+	   (lambda (m) (cons (match:substring m 1) "")))
+	  (else
+	   (cons name ""))))
+	))))
 
 ;; ------------------------------------------------------------------------
 

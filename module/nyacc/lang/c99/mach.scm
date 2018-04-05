@@ -34,13 +34,16 @@
 
 ;; @deffn {Variable} c99-spec
 ;; This variable is the specification a-list for the hacked ISO C99 language.
+;; Well, actually, this does not produce pure C99 spec: it has been extended
+;; to be able be used for practical purposes so it now parses forms like
+;; @code{__asm__} and @code{__attribute__}.
 ;; Run this through @code{make-lalr-machine} to get an a-list for the
 ;; automaton.  The grammar is modified to parse CPP statements and comments.
 ;; The output of the end parser will be a SXML tree (w/o the @code{*TOP*} node.
 ;; @end deffn
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2016,2017 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2016-2018 Matthew R. Wette"
 			  lang-crn-lic))
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< 'imp		       ; "implied type" SR-conflict resolution
@@ -202,9 +205,10 @@
     (declaration			; S 6.7
      (declaration-specifiers
       init-declarator-list
+      opt-attribute-specifier
       ($$ (save-typenames `(decl ,(tl->list $1) ,(tl->list $2))))
       ";" opt-code-comment
-      ($$ (if (pair? $5) (append $3 (list $5)) $3)))
+      ($$ (if (pair? $6) (append $4 (list $6)) $4)))
      (declaration-specifiers
       ";" opt-code-comment
       ($$ (if (pair? $3)
@@ -301,6 +305,40 @@
      ("long" "double" "_Complex" ($$ '(complex-type "long double _Complex")))
      )
 
+    ;; Support for __attributes__(( ... )).  See the gcc documentation.
+    ;; The documentation is not rigourous about defining where the
+    ;; attribute specifier can appear.  This is my best attempt.  MW 04/07/18
+    (attribute-specifier
+     ("__attribute__" "(" "(" attribute-list ")" ")" ($$ (tl->list $4)))
+     (attr-name ($$ `(attributes $1))))
+    (attr-name
+     ("__packed__") ("__aligned__") ("__alignof__"))
+    (attribute-list
+     ($empty ($$ '(attributes)))
+     (attribute ($$ (make-tl 'attributes $1)))
+     (attribute-list "," ($$ $1))
+     (attribute-list "," attribute ($$ (tl-append $1 $3))))
+    (attribute
+     (attr-name ($$ (cons $1 "")))
+     ($ident ($$ (cons $1 "")))
+     (attr-name "(" attr-expr-list ")"
+		($$ (cons $1
+			  (string-append
+			   "(" (string-join (cdr (tl->list $3)) ",") ")")))))
+    (attr-expr-list
+     (attribute-expr ($$ (make-tl 'attr-expr-list $1)))
+     (attr-expr-list "," attribute-expr ($$ (tl-append $1 $3))))
+    (attr-call-name ($ident) (attr-name))
+    (attribute-expr
+     (type-name ($$ (sx-ref* $1 1 1 1 1))) ;; check this
+     (attr-call-name)
+     (attr-call-name "(" attr-expr-list ")"
+	     ($$ (string-append $1 "(" (string-join (cdr (tl->list $3))) ")"))))
+    (opt-attribute-specifier
+     (attribute-specifier)
+     ($empty)
+     )
+
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier		; S 6.7.2.1
      ("struct" ident-like "{" struct-declaration-list "}"
@@ -313,6 +351,26 @@
      ("union" "{" struct-declaration-list "}"
       ($$ `(union-def ,(tl->list $3))))
      ("union" ident-like ($$ `(union-ref ,$2)))
+     ;; with attribute specifier at end:
+
+     ("struct" ident-like "{" struct-declaration-list "}" attribute-specifier
+      ($$ `(struct-def (@ ,(gen-attributes $6)) ,$2 ,(tl->list $4))))
+
+     ("struct" "{" struct-declaration-list "}" attribute-specifier
+      ($$ `(struct-def (@ ,(gen-attributes $5)) ,(tl->list $3))))
+     ("union" ident-like "{" struct-declaration-list "}" attribute-specifier
+      ($$ `(union-def (@ ,(gen-attributes $6)) ,$2 ,(tl->list $4))))
+     ("union" "{" struct-declaration-list "}" attribute-specifier
+      ($$ `(union-def (@ ,(gen-attributes $5)) ,(tl->list $3))))
+     ;; with attribute specifier by keyword:
+     ("struct" attribute-specifier ident-like "{" struct-declaration-list "}"
+      ($$ `(struct-def ,$2 ,(tl->list $4))))
+     ("struct" attribute-specifier "{" struct-declaration-list "}"
+      ($$ `(struct-def ,(tl->list $3))))
+     ("union" attribute-specifier ident-like "{" struct-declaration-list "}"
+      ($$ `(union-def ,$2 ,(tl->list $4))))
+     ("union" attribute-specifier "{" struct-declaration-list "}"
+      ($$ `(union-def ,(tl->list $3))))
      )
     ;; because name following struct/union can be indentifier or typeref
     (ident-like (identifier) (typedef-name ($$ `(ident ,(sx-ref $1 1)))))
@@ -330,10 +388,17 @@
 
     (struct-declaration			; S 6.7.2.1
      (specifier-qualifier-list
-      struct-declarator-list ";" opt-code-comment
-      ($$ (if (pair? $4)
-	      `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$4)
-	      `(comp-decl ,(tl->list $1) ,(tl->list $2)))))
+      struct-declarator-list
+      opt-attribute-specifier
+      ";" opt-code-comment
+      ($$ (if (pair? $3)
+	      (if (pair? $5)
+		  `(comp-decl (@ ,@(cdr $3)) ,(tl->list $1) ,(tl->list $2) ,$5)
+		  `(comp-decl (@ ,@(cdr $3)) ,(tl->list $1) ,(tl->list $2)))
+	      (if (pair? $5)
+		  `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$5)
+		  `(comp-decl ,(tl->list $1) ,(tl->list $2))))
+	  ))
      (specifier-qualifier-list		; anon' struct or union
       ";" opt-code-comment
       ($$ (if (pair? $3)
@@ -672,7 +737,8 @@
      (external-declaration-list
       external-declaration
       ;; A ``kludge'' to deal with @code{extern "C" ...}:
-      ($$ (if (eqv? (sx-tag $2) 'extern-block) (tl-extend $1 (sx-tail $2 1))
+      ($$ (if (eqv? (sx-tag $2) 'extern-block)
+	      (tl-extend $1 (sx-tail $2 1))
 	      (tl-append $1 $2))))
      )
 
@@ -760,11 +826,13 @@
 			(inc-help '())	; typedef dictionary
 			(mode 'file)	; mode: 'file or 'code
 			(xdef? #f)	; expand def function: proc name mode
+			(show-incs #f)	; show includes
 			(debug #f))	; debug
   (catch
    #t ;; 'c99-error 'cpp-error 'nyacc-error
    (lambda ()
-     (let ((info (make-cpi debug cpp-defs (cons "." inc-dirs) inc-help)))
+     (let ((info (make-cpi show-incs debug cpp-defs
+			   (cons "." inc-dirs) inc-help)))
        (with-fluid*
 	   *info* info
 	   (lambda ()
