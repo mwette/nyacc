@@ -630,7 +630,7 @@
 ;; and @var{field-list} is the field-list from the C syntax tree.
 ;; @end deffn
 
-(define (cnvt-aggr-def aggr-t typename aggr-name field-list)
+(define (cnvt-aggr-def aggr-t attr typename aggr-name field-list)
   ;;(sferr "\nfield-list:\n") (pperr field-list)
   (let* ((field-list (expand-field-list-typerefs field-list))
 	 (sflds (cnvt-field-list field-list))
@@ -668,11 +668,11 @@
       (fhscm-def-pointer (sw/* aggrname))
       (fhscm-ref-deref aggrname)))))
 
-(define (cnvt-struct-def typename struct-name field-list)
-  (cnvt-aggr-def 'struct typename struct-name field-list))
+(define (cnvt-struct-def attr typename struct-name field-list)
+  (cnvt-aggr-def 'struct attr typename struct-name field-list))
 
-(define (cnvt-union-def typename union-name field-list)
-  (cnvt-aggr-def 'union typename union-name field-list))
+(define (cnvt-union-def attr typename union-name field-list)
+  (cnvt-aggr-def 'union attr typename union-name field-list))
 
 ;; --- enums
 
@@ -1337,7 +1337,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def (ident ,struct-name) ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-struct-def typename struct-name field-list)
+       (cnvt-struct-def #f typename struct-name field-list)
        (values
 	;; Hoping don't need to add (w/struct* struct-name)
 	(cons* typename (w/* typename) (w/struct struct-name) wrapped)
@@ -1349,7 +1349,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def (ident ,struct-name) ,field-list)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
-       (cnvt-struct-def (sw/* typename) struct-name field-list)
+       (cnvt-struct-def #f (sw/* typename) struct-name field-list)
        (values
 	(cons* (w/* typename) (w/struct struct-name) wrapped)
 	(cons* (w/* typename) (w/struct struct-name) defined)))
@@ -1360,7 +1360,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-struct-def typename #f field-list)
+       (cnvt-struct-def #f typename #f field-list)
        (values (cons* typename (w/* typename) wrapped)
 	       (cons* typename (w/* typename) defined)))
 
@@ -1370,7 +1370,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def ,field-list)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
-       (cnvt-struct-def (sw/* typename) #f field-list)
+       (cnvt-struct-def #f (sw/* typename) #f field-list)
        (values (cons* (w/* typename) wrapped)
 	       (cons* (w/* typename) defined)))
 
@@ -1434,7 +1434,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (union-def (ident ,union-name) ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-union-def typename union-name field-list)
+       (cnvt-union-def #f typename union-name field-list)
        (values
 	(cons* typename (w/* typename) (w/union union-name) wrapped)
 	(cons* typename (w/* typename) (w/union union-name) defined)))
@@ -1445,7 +1445,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (union-def ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-union-def typename #f field-list)
+       (cnvt-union-def #f typename #f field-list)
        (values (cons* typename (w/* typename) wrapped)
 	       (cons* typename (w/* typename) defined)))
 
@@ -1577,12 +1577,13 @@
       ;; struct foo { ... }.
       ((udecl
 	(decl-spec-list
-	 (type-spec (struct-def (ident ,struct-name) ,field-list))))
-       (sferr "struct foo { ... }:\n") (pperr clean-udecl)
+	 (type-spec (struct-def (@ . ,aattr) (ident ,struct-name) ,field-list))))
+       ;;(sferr "struct foo { ... }:\n") (pperr clean-udecl)
+       (if aattr (sfscm ";; packed ~S\n" aattr))
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
-	   (cnvt-struct-def #f struct-name field-list)
+	   (cnvt-struct-def #f #f struct-name field-list)
 	   (for-each
 	    (lambda (name)
 	      (sfscm "(set! ~A-desc struct-~A-desc)\n" name struct-name)
@@ -1591,8 +1592,7 @@
 	   (values (cons (w/struct struct-name) wrapped)
 		   (cons (w/struct struct-name) defined))))
 	((not (member (w/struct struct-name) defined))
-	 (cnvt-struct-def #f struct-name field-list)
-	 (if attr (sfscm ";; packed ~S\n" attr))
+	 (cnvt-struct-def #f #f struct-name field-list)
 	 ;; Hoping don't need w/struct*
 	 (values (cons* (w/struct struct-name) wrapped)
 		 (cons* (w/struct struct-name) defined)))
@@ -1614,7 +1614,7 @@
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
-	   (cnvt-union-def #f union-name field-list)
+	   (cnvt-union-def #f #f union-name field-list)
 	   (for-each
 	    (lambda (name)
 	      (sfscm "(set! ~A-desc union-~A-desc)\n" name union-name)
@@ -1623,7 +1623,7 @@
 	   (values (cons (w/union union-name) wrapped)
 		   (cons (w/union union-name) defined))))
 	((not (member (w/union union-name) defined))
-	 (cnvt-union-def #f union-name field-list)
+	 (cnvt-union-def #f #f union-name field-list)
 	 (values (cons (w/union union-name) wrapped)
 		 (cons (w/union union-name) defined)))
 	(else
