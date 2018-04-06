@@ -181,13 +181,14 @@
 
   (define (pp-attr attr) ;; attributes
     (string-join
-     (pair-for-each
-      (lambda (key val)
+     (map
+      (lambda (val)
+	;;(simple-format #t "a: ~S\n" val)
 	(cond
-	 ((string=? key "packed") "__packed__")
-	 (else (error "pprint: missing attribute handle"))))
+	 ((string=? (car val) "packed") "__packed__")
+	 (else (car val))))
       attr)
-     ""))
+     " "))
 
   (define (struct-union-def struct-or-union attr name fields)
     (if name

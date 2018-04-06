@@ -24,17 +24,12 @@
 
 (define cpp-defs
   (cond
-   ((string-contains %host-type "darwin")
-    (append
-     '("__GNUC__=6" "__signed=signed")
-     ))
-   (else
-    (get-gcc-cpp-defs))))
+   ((string-contains %host-type "darwin") '("__GNUC__=6" "__signed=signed"))
+   (else (get-gcc-cpp-defs))))
 (define inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir)
-     "/usr/include"
-     "c99-exam")
+     "/usr/include" "c99-exam")
    (get-gcc-inc-dirs)))
 (define inc-help
   (cond
@@ -44,6 +39,8 @@
        ;;"__attribute__(X)="
        "__extension__="
        "__inline=" "__inline__="
+       "__restrict="
+       "__THROW="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
        )
@@ -53,27 +50,31 @@
        "__builtin_va_list=void*" 
        ;;"__attribute__(X)="
        "__inline=" "__inline__="
+       "__restrict="
+       "__THROW="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
        "__extension__="
        )
       ))))
 
+(define mode 'file)
 (define mode 'code)
 (define mode 'decl)
-(define mode 'file)
 (define debug #f)
-(define xdef? (lambda (name mode) (memq mode '(code))))
+(define xdef? (lambda (name mode) (memq mode '(code decl))))
 
 (define (parse-file file)
   (with-input-from-file file
     (lambda ()
-      ;;(pp cpp-defs) (pp inc-help)
+      ;;(pp cpp-defs) (pp inc-help) (pp inc-dirs)
       (parse-c99 #:cpp-defs cpp-defs 
 		 #:inc-dirs inc-dirs
 		 #:inc-help inc-help
 		 #:mode mode #:debug debug
-		 #:xdef? xdef?))))
+		 #:show-incs #f
+		 ;;#:xdef? xdef?
+		 ))))
 
 (define (parse-string str)
   ;;(simple-format #t "~S => \n" str)
@@ -82,7 +83,7 @@
       (parse-c99 #:cpp-defs cpp-defs
 		 #:inc-dirs inc-dirs 
 		 #:inc-help inc-help
-		 #:mode mode #:debug debug 
+		 #:mode mode #:debug debug
 		 #:xdef? xdef?))))
 
 (define (parse-string-list . str-l)
@@ -97,88 +98,33 @@
 ;;(and=> (parse-c99x "(a*b)+c") ppsx)
 
 (define adecl #f)
-(let* ((code "struct foo { int x, y; } *a, b;\n") (indx 1)
-       (code (string-append
+(ppsx cpp-defs)
+(ppsx inc-dirs)
+(ppsx inc-help)
+(let* ((code (string-append
 	      "typedef int *foo_t;\n"
 	      "typedef double hmm_t[3];\n"
 	      "int baz(foo_t (*baz)(hmm_t y));\n"
 	      ))
-       (code (string-append
-	      "typedef struct foo foo_t;\n"
-	      "foo_t *y;\n"
-	      "foo_t z;\n"
-	      ))
-       (code "int x = 0x00000000FFFFFFFFLLU;")
-       (code (string-append
-	      "typedef struct {\n"
-	      "  unsigned int is_bin : 1, is_write : 2;\n"
-	      "  long lineno;"
-	      "} foo_t;\n"
-	      ))
-       (code "double x = 123.4f;")
-       ;;(code "#if L'c'\nint x = 1;\n#endif\n")
-       ;;(code "#include <Eina.h>\nint x = 1;\n")
-       ;;(code "wchar_t x = U'c';\n")
-       (code "char x = '\\b';\nchar *y = \"\\b\";\n")
-       (code (string-append
-	      "typedef int *bla_t[2];\n"
-	      "bla_t foo(bla_t (*)(bla_t));\n"))
-       (code (string-append
-	      "#define NX 3\n"
-	      "const int zz = 3;"
-	      "int x[NX+1];\n"))
-       (indx 2)
-       
-       ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
        ;;(xdecl (expand-typerefs decl udict))
        ;;(udecl (udict-ref udict "x"))
        ;;(mdecl (udecl->mspec udecl))
-       ;;(decl (and=> ((sxpath `((decl ,indx))) tree) car))
-       ;;(exp (parse-c99x "1+2"))
-       ;;(exp (parse-c99x "sizeof(\"abc\")"))
-       ;;(val (eval-c99-cx exp))
        ;;(tree (parse-c99x "((int)'q')"))
        ;;(tree (parse-c99x "\"abc\" \"def\""))
        (tree (parse-file "zzz.c"))
-       (udict (c99-trans-unit->udict
-	       tree
-	       #:inc-filter
-	       (lambda (file path) (string=? file "<sys/epoll.h>"))))
-       (udecl (udict-struct-ref udict "epoll_event"))
+       ;;(decl (sx-ref* tree 153)) ;; for zzz.e
+       ;;(udecl (unitize-decl decl))
+       ;;(udict (c99-trans-unit->udict tree))
+       ;;(udecl (udict-struct-ref udict "epoll_event"))
        )
-  ;;(ppsx exp)
-  ;;(ppsx val)
   ;;(display code)
   (ppsx tree)
+  ;;(ppsx decl)
   ;;(ppsx udecl)
   ;;(ppsx (eval-c99-cx tree))
   ;;(sf "dd:\n") (ppsx ddict)
   ;;(ppsx (eval-c99-cx expr udict ddict))
-  ;;(sf "~S\n" (
-  ;;(ppsx decl)
-  ;;(pp99 xdecl)
   ;;(ppsx (get-gcc-inc-dirs))
   #t)
 
-;;(use-modules (nyacc lang c99 ffi-help))
-
-;;(define fmod (fh-c-fun-decl->procedure "doulble fmod(double x, double y)"))
-
-#|
-(sf "~S\n"
-    (with-input-from-string "'\\177'"
-	(lambda () (read-c-chlit (read-char)))))
-
-(sf "~S\n"
-    (with-input-from-string "\"\\177\""
-	(lambda () (read-c-string (read-char)))))
-|#
-
-;;(pp (sx-match '(foo (bar "baz") "hello")
-;;       ((foo (bar . ,text) . ,rest) #t) (* #f)))
-
-;; ex12.c: illustrates removal of comment prefix, offset-8 => offset-2
-
-;;(let ((tree (parse-file "c99-exam/ex01.c"))) (pp99 tree))
-;;(ugly-print (quote `(abc ,@def)))
 ;; --- last line ---

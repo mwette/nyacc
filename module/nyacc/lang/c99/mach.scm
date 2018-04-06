@@ -208,7 +208,13 @@
       opt-attribute-specifier
       ($$ (save-typenames `(decl ,(tl->list $1) ,(tl->list $2))))
       ";" opt-code-comment
-      ($$ (if (pair? $6) (append $4 (list $6)) $4)))
+      ($$ (if (pair? $3)
+	      (if (pair? $6)
+		  `(decl ,$3 ,(sx-ref $4 1) ,(sx-ref $4 2) ,$6)
+		  `(decl ,$3 ,(sx-ref $4 1) ,(sx-ref $4 2)))
+	      (if (pair? $6)
+		  `(decl ,(sx-ref $4 1) ,(sx-ref $4 2) ,$6)
+		  $4))))
      (declaration-specifiers
       ";" opt-code-comment
       ($$ (if (pair? $3)
@@ -313,55 +319,57 @@
      (attr-name ($$ `(attributes $1))))
     (attr-name
      ("__packed__") ("__aligned__") ("__alignof__"))
+    (attr-ident
+     (attr-name) ($ident))
     (attribute-list
-     ($empty ($$ '(attributes)))
-     (attribute ($$ (make-tl 'attributes $1)))
+     ($empty ($$ '(@)))
+     (attribute ($$ (make-tl '@ $1)))
      (attribute-list "," ($$ $1))
      (attribute-list "," attribute ($$ (tl-append $1 $3))))
     (attribute
-     (attr-name ($$ (cons $1 "")))
-     ($ident ($$ (cons $1 "")))
-     (attr-name "(" attr-expr-list ")"
-		($$ (cons $1
-			  (string-append
-			   "(" (string-join (cdr (tl->list $3)) ",") ")")))))
+     (attr-ident ($$ (list $1 "")))
+     (attr-ident
+      "(" attr-expr-list ")"
+      ($$ (list $1 (attr-expr-list->string (tl->list $3))))))
     (attr-expr-list
      (attribute-expr ($$ (make-tl 'attr-expr-list $1)))
      (attr-expr-list "," attribute-expr ($$ (tl-append $1 $3))))
     (attr-call-name ($ident) (attr-name))
     (attribute-expr
      (type-name ($$ (sx-ref* $1 1 1 1 1))) ;; check this
+     ($fixed)				   ; <= EXPAND THIS
      (attr-call-name)
-     (attr-call-name "(" attr-expr-list ")"
-	     ($$ (string-append $1 "(" (string-join (cdr (tl->list $3))) ")"))))
+     (attr-call-name
+      "(" attr-expr-list ")"
+      ($$ (string-append $1 (attr-expr-list->string (cdr $3))))))
+    ;; This is ugly because gcc actually allows multiple specifiers
     (opt-attribute-specifier
-     (attribute-specifier)
      ($empty)
+     (opt-attribute-specifier attribute-specifier
+			      ($$ (if (pair? $1) (append $1 (cdr $2)) $2)))
      )
 
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier		; S 6.7.2.1
-     ("struct" ident-like "{" struct-declaration-list "}"
-      ($$ `(struct-def ,$2 ,(tl->list $4))))
-     ("struct" "{" struct-declaration-list "}"
-      ($$ `(struct-def ,(tl->list $3))))
+     ("struct" ident-like "{" struct-declaration-list "}" opt-attribute-specifier
+      ($$ (if (pair? $6)
+	      `(struct-def ,$6 ,$2 ,(tl->list $4))
+	      `(struct-def ,$2 ,(tl->list $4)))))
+     ("struct" "{" struct-declaration-list "}" opt-attribute-specifier
+      ($$ (if (pair? $5)
+	      `(struct-def ,$5 ,(tl->list $3))
+	      `(struct-def ,(tl->list $3)))))
      ("struct" ident-like ($$ `(struct-ref ,$2)))
-     ("union" ident-like "{" struct-declaration-list "}"
-      ($$ `(union-def ,$2 ,(tl->list $4))))
-     ("union" "{" struct-declaration-list "}"
-      ($$ `(union-def ,(tl->list $3))))
+     ("union" ident-like "{" struct-declaration-list "}" opt-attribute-specifier
+      ($$ (if (pair? $6)
+	      `(union-def ,$6 ,$2 ,(tl->list $4))
+	      `(union-def ,$2 ,(tl->list $4)))))
+     ("union" "{" struct-declaration-list "}" opt-attribute-specifier
+      ($$ (if (pair? $5)
+	      `(union-def ,$5 ,(tl->list $3))
+	      `(union-def ,(tl->list $3)))))
      ("union" ident-like ($$ `(union-ref ,$2)))
-     ;; with attribute specifier at end:
 
-     ("struct" ident-like "{" struct-declaration-list "}" attribute-specifier
-      ($$ `(struct-def (@ ,(gen-attributes $6)) ,$2 ,(tl->list $4))))
-
-     ("struct" "{" struct-declaration-list "}" attribute-specifier
-      ($$ `(struct-def (@ ,(gen-attributes $5)) ,(tl->list $3))))
-     ("union" ident-like "{" struct-declaration-list "}" attribute-specifier
-      ($$ `(union-def (@ ,(gen-attributes $6)) ,$2 ,(tl->list $4))))
-     ("union" "{" struct-declaration-list "}" attribute-specifier
-      ($$ `(union-def (@ ,(gen-attributes $5)) ,(tl->list $3))))
      ;; with attribute specifier by keyword:
      ("struct" attribute-specifier ident-like "{" struct-declaration-list "}"
       ($$ `(struct-def ,$2 ,(tl->list $4))))
@@ -393,8 +401,8 @@
       ";" opt-code-comment
       ($$ (if (pair? $3)
 	      (if (pair? $5)
-		  `(comp-decl (@ ,@(cdr $3)) ,(tl->list $1) ,(tl->list $2) ,$5)
-		  `(comp-decl (@ ,@(cdr $3)) ,(tl->list $1) ,(tl->list $2)))
+		  `(comp-decl ,$3 ,(tl->list $1) ,(tl->list $2) ,$5)
+		  `(comp-decl ,$3 ,(tl->list $1) ,(tl->list $2)))
 	      (if (pair? $5)
 		  `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$5)
 		  `(comp-decl ,(tl->list $1) ,(tl->list $2))))

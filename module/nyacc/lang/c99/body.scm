@@ -206,11 +206,11 @@
   (for-each add-typename (find-new-typenames decl))
   decl)
 
-;; 
+;; NOT USED NOW
 (define gen-attributes
   (let ((rx (make-regexp "^__(.*)__$")))
     (lambda (spec)
-      ;; spec is '(attributes "packed") ...)
+      ;; spec is '(@ ("packed" "packed") ...)
       (sx-match spec
 	((attributes ,name)
 	 (cond
@@ -219,6 +219,10 @@
 	  (else
 	   (cons name ""))))
 	))))
+
+;; used in c99-spec actions for attribute-specifiers
+(define (attr-expr-list->string attr-expr-list)
+  (string-append "(" (string-join (cdr attr-expr-list) ",") ")"))
 
 ;; ------------------------------------------------------------------------
 
@@ -404,7 +408,7 @@
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
 		   (path (inc-file-spec->path spec next)))
-	      (if show-incs (sferr "include ~S => ~S\n" file path))
+	      (if show-incs (sferr "include ~A => ~S\n" spec path))
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -416,7 +420,7 @@
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
 		   (path (inc-file-spec->path spec next)))
-	      (if show-incs (sferr "include ~S => ~S\n" file path))
+	      (if show-incs (sferr "include ~A => ~S\n" spec path))
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found

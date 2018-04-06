@@ -86,37 +86,31 @@
     (remove (lambda (s)
 	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
 	    (get-gcc-cpp-defs)))
-   (else '())))
+   (else (get-gcc-cpp-defs))))
     
 (define fh-inc-dirs
   (append
-   `(,(assq-ref %guile-build-info 'includedir)
-     "/usr/include")
+   `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
    (get-gcc-inc-dirs)))
 (define fh-inc-help
   (cond
    ((string-contains %host-type "darwin")
     '(("__builtin"
        "__builtin_va_list=void*"
-       ;;"__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
-       "__extension__="
+       "__extension__=" "__restrict=" "__THROW="
        "__signed=signed"
-       )
-      ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
-      ))
+       )))
    (else
     '(("__builtin"
        "__builtin_va_list=void*"
-       ;;"__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
-       "__extension__="
-       )
-      ))))
+       "__extension__=" "__restrict=" "__THROW="
+       )))))
 
 ;; DEBUGGING
 (set! fh-inc-dirs (cons "." fh-inc-dirs))
@@ -144,7 +138,7 @@
 (define* (upscm tree #:key (per-line-prefix ""))
   (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
 (define (c99scm tree)
-  (when (equal? "epoll_event" (sx-ref* tree 1 1 1 1 1))
+  #;(when (equal? "epoll_event" (sx-ref* tree 1 1 1 1 1))
     (sferr "c99scm:\n") (pperr tree))
   (pretty-print-c99 tree
 		    (*mport*)
@@ -1208,15 +1202,10 @@
   (*wrapped* wrapped)
   (*defined* defined)
 
-  (when (equal? "epoll_event" (sx-ref* udecl 1 1 1 1 1))
-    (sferr "udecl:\n") (pperr udecl))
   (let*-values (((tag attr specl declr tail) (split-adecl udecl))
 		((specl declr) (cleanup-udecl specl declr))
 		((clean-udecl) (values (sx-list tag #f specl declr)))
 		)
-    (when (equal? "epoll_event" (sx-ref* udecl 1 1 1 1 1))
-      (sferr "clean-udecl:\n") (pperr clean-udecl))
-    ;;(sxml-match (sx-list tag #f specl declr)
     (sxml-match clean-udecl
 
       ;; typedef void **ptr_t;
@@ -1885,9 +1874,6 @@
 	 (inc-help (append inc-help fh-inc-help)))
     (or (with-input-from-string code
 	  (lambda ()
-	    (sferr "===\n")
-	    (pperr cpp-defs)
-	    (pperr inc-help)
 	    (parse-c99 #:cpp-defs cpp-defs
 		       #:inc-dirs inc-dirs
 		       #:inc-help inc-help
@@ -1994,6 +1980,9 @@
 ;; was intro-ffi
 (define (expand-ffi-module-spec path module-options)
   (check-deps module-options)
+  ;;(sferr "cpp-defs:\n") (pperr fh-cpp-defs)
+  ;;(sferr "inc-dirs:\n") (pperr fh-inc-dirs)
+  ;;(sferr "inc-help:\n") (pperr fh-inc-help)
   (let* ((script-options (*options*))
 	 ;;(mbase (string-append (string-join (map symbol->string path) "/")))
 	 (mbase (path->path path))
@@ -2011,6 +2000,12 @@
 		((assq-ref attrs 'api-code) =>
 		 (lambda (code) (parse-code code attrs)))
 		(else (fherr "expecing #:includes or #:api-code"))))
+	 #;(tree (with-input-from-string "#include <sys/epoll.h>\n"
+				(lambda ()
+				  (parse-c99 #:inc-dirs fh-inc-dirs
+					     #:cpp-defs fh-cpp-defs
+					     #:inc-help fh-inc-help
+					     ))))
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
@@ -2055,9 +2050,6 @@
     (*ddict* ddict)
     (*tdefs* (udict->typenames udict))
     ;; renamer?
-
-    (pperr (sx-ref* tree 15))
-    (quit)
 
     ;; file and module header
     (ffimod-header path module-options)

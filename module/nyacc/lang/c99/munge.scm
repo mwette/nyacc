@@ -139,16 +139,6 @@
 ;; The argument can also be @code{init-declr-list} or @code{comp-declr-list}
 ;; in which case all elements need to be pointers.
 ;; @end deffn
-(define (OLD-pointer-declr? declr)
-  (and
-   (pair? declr)
-   (case (sx-tag declr)
-     ((init-declr comp-declr param-declr)
-      (member (sx-tag (sx-ref declr 1)) '(ptr-declr array-of ftn-declr)))
-     ((init-declr-list comp-declr-list)
-      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed))
-	    #t (sx-tail declr)))
-     (else #f))))
 (define (pointer-declr? declr)
   ;;(sferr "pointer-declr? ~S\n" declr)
   (and

@@ -33,6 +33,9 @@
 (cond-expand ;; for MES
   (guile-2
    (use-modules (rnrs arithmetic bitwise))
+   (use-modules (ice-9 pretty-print))
+   (define pp pretty-print)
+   (define (sf fmt . args) (apply simple-format #t fmt args))
    (use-modules (system base pmatch)))
   (else
    (use-modules (ice-9 optargs))

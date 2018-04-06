@@ -191,7 +191,13 @@
    (lambda ($1 . $rest) $1)
    ;; declaration => declaration-specifiers init-declarator-list opt-attrib...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (if (pair? $6) (append $4 (list $6)) $4))
+     (if (pair? $3)
+       (if (pair? $6)
+         `(decl ,$3 ,(sx-ref $4 1) ,(sx-ref $4 2) ,$6)
+         `(decl ,$3 ,(sx-ref $4 1) ,(sx-ref $4 2)))
+       (if (pair? $6)
+         `(decl ,(sx-ref $4 1) ,(sx-ref $4 2) ,$6)
+         $4)))
    ;; declaration => declaration-specifiers ";" opt-code-comment
    (lambda ($3 $2 $1 . $rest)
      (if (pair? $3)
@@ -362,25 +368,23 @@
    (lambda ($1 . $rest) $1)
    ;; attr-name => "__alignof__"
    (lambda ($1 . $rest) $1)
+   ;; attr-ident => attr-name
+   (lambda ($1 . $rest) $1)
+   ;; attr-ident => '$ident
+   (lambda ($1 . $rest) $1)
    ;; attribute-list => 
-   (lambda $rest '(attributes))
+   (lambda $rest '(@))
    ;; attribute-list => attribute
-   (lambda ($1 . $rest) (make-tl 'attributes $1))
+   (lambda ($1 . $rest) (make-tl '@ $1))
    ;; attribute-list => attribute-list ","
    (lambda ($2 $1 . $rest) $1)
    ;; attribute-list => attribute-list "," attribute
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; attribute => attr-name
-   (lambda ($1 . $rest) (cons $1 ""))
-   ;; attribute => '$ident
-   (lambda ($1 . $rest) (cons $1 ""))
-   ;; attribute => attr-name "(" attr-expr-list ")"
+   ;; attribute => attr-ident
+   (lambda ($1 . $rest) (list $1 ""))
+   ;; attribute => attr-ident "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     (cons $1
-           (string-append
-             "("
-             (string-join (cdr (tl->list $3)) ",")
-             ")")))
+     (list $1 (attr-expr-list->string (tl->list $3))))
    ;; attr-expr-list => attribute-expr
    (lambda ($1 . $rest)
      (make-tl 'attr-expr-list $1))
@@ -392,57 +396,44 @@
    (lambda ($1 . $rest) $1)
    ;; attribute-expr => type-name
    (lambda ($1 . $rest) (sx-ref* $1 1 1 1 1))
+   ;; attribute-expr => '$fixed
+   (lambda ($1 . $rest) $1)
    ;; attribute-expr => attr-call-name
    (lambda ($1 . $rest) $1)
    ;; attribute-expr => attr-call-name "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      (string-append
        $1
-       "("
-       (string-join (cdr (tl->list $3)))
-       ")"))
-   ;; opt-attribute-specifier => attribute-specifier
-   (lambda ($1 . $rest) $1)
+       (attr-expr-list->string (cdr $3))))
    ;; opt-attribute-specifier => 
    (lambda $rest (list))
+   ;; opt-attribute-specifier => opt-attribute-specifier attribute-specifier
+   (lambda ($2 $1 . $rest)
+     (if (pair? $1) (append $1 (cdr $2)) $2))
    ;; struct-or-union-specifier => "struct" ident-like "{" struct-declarati...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     (if (pair? $6)
+       `(struct-def ,$6 ,$2 ,(tl->list $4))
+       `(struct-def ,$2 ,(tl->list $4))))
+   ;; struct-or-union-specifier => "struct" "{" struct-declaration-list "}"...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(struct-def ,$2 ,(tl->list $4)))
-   ;; struct-or-union-specifier => "struct" "{" struct-declaration-list "}"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(struct-def ,(tl->list $3)))
+     (if (pair? $5)
+       `(struct-def ,$5 ,(tl->list $3))
+       `(struct-def ,(tl->list $3))))
    ;; struct-or-union-specifier => "struct" ident-like
    (lambda ($2 $1 . $rest) `(struct-ref ,$2))
    ;; struct-or-union-specifier => "union" ident-like "{" struct-declaratio...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(union-def ,$2 ,(tl->list $4)))
-   ;; struct-or-union-specifier => "union" "{" struct-declaration-list "}"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(union-def ,(tl->list $3)))
-   ;; struct-or-union-specifier => "union" ident-like
-   (lambda ($2 $1 . $rest) `(union-ref ,$2))
-   ;; struct-or-union-specifier => "struct" ident-like "{" struct-declarati...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(struct-def
-        (@ ,(gen-attributes $6))
-        ,$2
-        ,(tl->list $4)))
-   ;; struct-or-union-specifier => "struct" "{" struct-declaration-list "}"...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(struct-def
-        (@ ,(gen-attributes $5))
-        ,(tl->list $3)))
-   ;; struct-or-union-specifier => "union" ident-like "{" struct-declaratio...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(union-def
-        (@ ,(gen-attributes $6))
-        ,$2
-        ,(tl->list $4)))
+     (if (pair? $6)
+       `(union-def ,$6 ,$2 ,(tl->list $4))
+       `(union-def ,$2 ,(tl->list $4))))
    ;; struct-or-union-specifier => "union" "{" struct-declaration-list "}" ...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(union-def
-        (@ ,(gen-attributes $5))
-        ,(tl->list $3)))
+     (if (pair? $5)
+       `(union-def ,$5 ,(tl->list $3))
+       `(union-def ,(tl->list $3))))
+   ;; struct-or-union-specifier => "union" ident-like
+   (lambda ($2 $1 . $rest) `(union-ref ,$2))
    ;; struct-or-union-specifier => "struct" attribute-specifier ident-like ...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(struct-def ,$2 ,(tl->list $4)))
@@ -475,15 +466,8 @@
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (if (pair? $3)
        (if (pair? $5)
-         `(comp-decl
-            (@ ,@(cdr $3))
-            ,(tl->list $1)
-            ,(tl->list $2)
-            ,$5)
-         `(comp-decl
-            (@ ,@(cdr $3))
-            ,(tl->list $1)
-            ,(tl->list $2)))
+         `(comp-decl ,$3 ,(tl->list $1) ,(tl->list $2) ,$5)
+         `(comp-decl ,$3 ,(tl->list $1) ,(tl->list $2)))
        (if (pair? $5)
          `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$5)
          `(comp-decl ,(tl->list $1) ,(tl->list $2)))))
