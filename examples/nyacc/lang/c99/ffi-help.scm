@@ -640,11 +640,16 @@
 	 (ty-desc (and typename (strings->symbol typename "-desc")))
 	 (ty*-desc (and typename (strings->symbol typename "*-desc")))
 	 (ag-desc (and aggrname (strings->symbol aggrname "-desc")))
-	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc"))))
+	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc")))
+	 (packed? (and attr (assoc-ref attr "__packed__")))
+	 (bs-spec (if packed?
+		      (list bs-aggr-t #t `(list ,@sflds))
+		      (list bs-aggr-t `(list ,@sflds))))
+	 )
     (cond
      ((and typename aggr-name)
       ;;(sfscm ";; == ~A =>\n" typename)
-      (ppscm `(define-public ,ty-desc ,(list bs-aggr-t `(list ,@sflds))))
+      (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
       (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
@@ -656,13 +661,13 @@
       (fhscm-def-pointer (sw/* aggrname))
       (fhscm-ref-deref aggrname))
      (typename
-      (ppscm `(define-public ,ty-desc ,(list bs-aggr-t `(list ,@sflds))))
+      (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
       (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
       (fhscm-ref-deref typename))
      (aggr-name
-      (ppscm `(define-public ,ag-desc ,(list bs-aggr-t `(list ,@sflds))))
+      (ppscm `(define-public ,ag-desc ,bs-spec))
       (fhscm-def-compound aggrname)
       (ppscm `(define-public ,ag*-desc (bs:pointer ,ag-desc)))
       (fhscm-def-pointer (sw/* aggrname))
@@ -1583,7 +1588,7 @@
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
-	   (cnvt-struct-def #f #f struct-name field-list)
+	   (cnvt-struct-def aattr #f struct-name field-list)
 	   (for-each
 	    (lambda (name)
 	      (sfscm "(set! ~A-desc struct-~A-desc)\n" name struct-name)
@@ -1592,7 +1597,7 @@
 	   (values (cons (w/struct struct-name) wrapped)
 		   (cons (w/struct struct-name) defined))))
 	((not (member (w/struct struct-name) defined))
-	 (cnvt-struct-def #f #f struct-name field-list)
+	 (cnvt-struct-def aattr #f struct-name field-list)
 	 ;; Hoping don't need w/struct*
 	 (values (cons* (w/struct struct-name) wrapped)
 		 (cons* (w/struct struct-name) defined)))
