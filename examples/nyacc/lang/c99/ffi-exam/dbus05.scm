@@ -10,12 +10,6 @@
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define pp pretty-print)
 
-(define msg (dbus_message_new_method_call
-	     "org.freedesktop.DBus"		; bus name (was NULL)
-	     "/org/freedesktop/DBus"		; object path
-	     "org.freedesktop.DBus.Debug.Stats"	; interface name
-	     "GetStats"))			; method
-
 (define (send-msg conn msg)
   (let ((pending (make-DBusPendingCall*)))
     (or (dbus_connection_send_with_reply conn msg (pointer-to pending) -1)
@@ -24,10 +18,8 @@
     pending))
 
 (define (handle-it pending)
-  (dbus_pending_call_block pending)
   (let ((msg (dbus_pending_call_steal_reply pending))
-	(msg-iter (make-DBusMessageIter))
-	)
+	(msg-iter (make-DBusMessageIter)))
     (if (zero? (fh-object-ref msg)) (error "*** reply message NULL\n"))
     (dbus_pending_call_unref pending)
     (dbus_message_iter_init msg (pointer-to msg-iter))
@@ -35,5 +27,36 @@
     (pretty-print (read-dbus-val (pointer-to msg-iter)) #:per-line-prefix "  ")
     (dbus_message_unref msg)))
 
-;; (define conn (start-dbus-session-loop))
+(define (block-and-handle-it pending)
+  (dbus_pending_call_block pending)
+  (handle-it pending))
+
+(define (there-yet? pending)
+  (eqv? TRUE (dbus_pending_call_get_completed pending)))
+
+;; ==========================================================================
+
+(define conn (spawn-dbus-mainloop 'session))
+(define pending #f)
+
+(sleep 1)
+
+(define msg (dbus_message_new_method_call
+	     "org.freedesktop.DBus"		; bus name (was NULL)
+	     "/org/freedesktop/DBus"		; object path
+	     "org.freedesktop.DBus.Debug.Stats"	; interface name
+	     "GetStats"))			; method
+
+(define (test-it)
+  (set! pending (send-msg conn msg))
+  ;;(sf "pending=~S\n" pending)
+  (sf "there-yet? => ~S\n" (there-yet? pending))
+  (sleep 1)
+  (sf "there-yet? => ~S\n" (there-yet? pending))
+  ;;(block-and-handle-it pending)
+  )
+
+(test-it)
+(sleep 3)
+
 ;; --- last line ---

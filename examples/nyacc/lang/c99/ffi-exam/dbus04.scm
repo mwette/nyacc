@@ -3,7 +3,7 @@
 ;; https://stackoverflow.com/questions/9378593/dbuswatch-and-dbustimeout-examples
 
 (define-module (dbus04)
-  #:export (start-dbus-session-loop)
+  #:export (spawn-dbus-mainloop)
   )
   
 (use-modules (ice-9 pretty-print))
@@ -27,9 +27,16 @@
 ;; ====================================
 ;; use case 01: want to queue in any thread, poll for ready
 
-(define TRUE 1)
-(define FALSE 0)
-(define (nonzero? val) (not (zero? val)))
+;; moved to dbus00
+;;(define TRUE 1)
+;;(define FALSE 0)
+;;(define (nonzero? val) (not (zero? val)))
+
+;; notes
+;; 1) One can call epoll_ctl while epoll_wait is blocked in another thread.
+;;    ref: epoll_wait man page
+;; 2) It is safe to use scm->pointer and pointer->scm as long as the pointed
+;;    object was allocated with scm_gc_malloc().  (Ref: Ludo answer to Q on list)
 
 ;; convert mask of DBUS_WATCH to enum EPOLL_EVENTS
 (define (dbus-watch-flags->epoll-events dbus-flags)
@@ -95,10 +102,10 @@
 
 (define (dbus-data-watchless? ddent)
   (not (dbus-data-watched? ddent)))
-       
+
 (define (dbus-fd-watchless? fd)
   (not (and=> (hashv-ref *dbus-fd-dict* fd) dbus-data-watched?)))
-  
+
 (define (dbus-data-free ddent)
   (if #f #f))
 
@@ -115,7 +122,7 @@
 	 (addfd (dbus_watch_get_unix_fd watch))
 	 (flags (dbus_watch_get_flags watch))
 	 (ddent (dbus-lookup-fd muxfd))
-	 (event (dbus-data-ev ddent))	 )
+	 (event (dbus-data-ev ddent)))
     ;;(ff "\nadd-watch  ~s: addfd=~s flags=0x~x...\n" watch addfd flags)
 
     (dbus_watch_set_data watch (ffi:scm->pointer ddent) dbus-data-free)
@@ -129,7 +136,7 @@
     ;; If this is the use of this fd, then initialize the ev and add to epoll.
     (if (dbus-data-watchless? ddent)
 	(epoll_ctl muxfd (EPOLL '_CTL_ADD) addfd (pointer-to event)))
-      
+    
     ;; Set watches based on flags.
     (let* ((wv (dbus-data-wv ddent)) (wx (find-wv-slot wv)))
       (if (negative? wx) (error "max exceeded")
@@ -169,20 +176,35 @@
       (sf "  enabled: ~S\n" (dbus_watch_get_enabled watch)))
     (if #f #f)))
 
+
+(use-modules (sched))
+
+(define *dbus-sched* (make-scheduler))
+
+(define (dbus-timeout-handler sch timeout)
+  (sf "\ntimeout handler called\n")
+  (dbus_timeout_handle timeout))
+
 ;; timeout is DBusTimeout
-(define add-timeout
-  (lambda (timeout data)
-    (display "add-tmout called\n")
+(define (add-timeout ~timeout data)
+  (let* ((timeout (make-DBusWatch* ~timeout))
+	 (interval (dbus_timeout_get_interval timeout))
+	 (tod (gettimeofday))
+	 (exp (t+us tod interval)))
+    (ff "add-tmout: ~s to expire at ~s\n" timeout exp)
+    (schedule-event *dbus-sched* exp dbus-timeout-handler timeout)
+    (write #\x (ffi:pointer->scm data))	; wake up mainloop
     TRUE))
 
-(define remove-timeout
-  (lambda (timeout data)
-    (display "rem-tmout called\n")
+(define (remove-timeout ~timeout data)
+  (let* ((timeout (make-DBusWatch* ~timeout)))
+    (ff "rem-tmout: ~s at ~s\n" timeout (gettimeofday))
+    (cancel-events/data *dbus-sched* timeout)
     (if #f #f)))
 
-(define timeout-toggled
-  (lambda (timeout data)
-    (display "tmout-tog called\n")
+(define (timeout-toggled timeout data)
+  (let ()
+    (display "tmout-tog called (to be completed!)\n")
     (if #f #f)))
 
 ;; This sets up capability to make runtime-sized vectors and use
@@ -202,48 +224,78 @@
   ;;(DBUS 'HANDLER_RESULT_HANDLED)
   )
 
+(define (set-nonblocking! port)
+  (fcntl port F_SETFL (logior O_NONBLOCK (fcntl port F_GETFL))))
+
 (define (my-main-loop connection)
+  (define (dispatch-em)
+    (while (eq? 'DBUS_DISPATCH_DATA_REMAINS
+		(dbus_connection_get_dispatch_status connection))
+      (dbus_connection_dispatch connection)))
+  
+  (define (handle-watch watch flags)
+    (let ((flags (logand flags (dbus_watch_get_flags watch))))
+      ;; This loop-sleeps while out of memory.
+      (while (equal? FALSE (dbus_watch_handle watch flags))
+	(sleep 1))))
+  
   (let* ((muxfd (epoll_create 1))
-	 (data (ffi:make-pointer muxfd))
+	 (muxpt (ffi:make-pointer muxfd))
+	 (wpipe (pipe)) (wiport (car wpipe)) (woport (cdr wpipe))
+	 (~woport (ffi:scm->pointer woport))
 	 (max-events 2)
 	 (eventv (make-struct-epoll_event-vec max-events))
 	 (eventp (pointer-to eventv)))
-    ;; Set up MT locks, and mainloop hook functions.
+
+    ;; Set up wakeup, initiated from handlers.
+    (setvbuf woport  'none)
+    (set-nonblocking! woport)
+    (set-nonblocking! wiport) ;; needed?
+    (let ((event (make-struct-epoll_event)))
+      (fh-object-set! event 'events (EPOLL 'IN))
+      (epoll_ctl muxfd (EPOLL '_CTL_ADD) (port->fdes wiport) (pointer-to event)))
+    ;; Set up DBus MT locks, and mainloop hook functions.
     (dbus_threads_init_default)
     (dbus_connection_set_dispatch_status_function
-     connection dispatch-status data dbus-data-free)
+     connection dispatch-status muxpt dbus-data-free)
     (dbus_connection_set_watch_functions
-     connection add-watch remove-watch watch-toggled data dbus-data-free)
+     connection add-watch remove-watch watch-toggled muxpt dbus-data-free)
     (dbus_connection_set_timeout_functions
-     connection add-timeout remove-timeout timeout-toggled data dbus-data-free)
+     connection add-timeout remove-timeout timeout-toggled ~woport NULL)
     ;; These are in dbus list archive 008859.html.
     (dbus_connection_add_filter connection filter-func NULL NULL)
-    (dbus_bus_add_match connection "type='signal'" NULL)
+    ;;(dbus_bus_add_match connection "type='signal'" NULL)
     (dbus_bus_add_match connection "type='method_call'" NULL)
-    ;;
     (let loop ()
-      ;;(display "waiting ...\n")
       (let iter ((i 0) (n (epoll_wait muxfd eventp max-events -1)))
+	;; timeouts use (pair (gettimeofday)) => (sec . usec)
+	(let iter ((tod (gettimeofday))
+		   (nxt (earliest-event-time *dbus-sched*)))
+	  ;; find timeout events and dispatch
+	  (when (t< tod nxt)
+	    (exec-schedule *dbus-sched* tod)
+	    (iter (gettimeofday) (earliest-event-time *dbus-sched*))))
+	;; events: wake-up or watches
 	(unless (= i n)
-	  ;;(sf "\n  i=~S ...\n" i)
+	  ;;(sf "\n  i=~S/~S ...\n" i n)
 	  (let* ((event (fh-object-ref eventv i))
 		 (events (bytestructure-ref event 'events))
-		 (data-ptr (bytestructure-ref event 'data 'ptr))
-		 (ddent (addr->scm data-ptr))
-		 (flags (epoll-events->dbus-watch-flags events)))
-	    (vector-for-each
-	     (lambda (ix watch)
-	       (when watch
-		 (let ((flags (logand flags (dbus_watch_get_flags watch))))
-		   (while (equal? FALSE (dbus_watch_handle watch flags))
-		     (sleep 1))
-		   (dbus_connection_ref connection)
-		   (while (eq? 'DBUS_DISPATCH_DATA_REMAINS
-			       (dbus_connection_get_dispatch_status connection))
-		     ;;(sf "    dispatch ...\n")
-		     (dbus_connection_dispatch connection))
-		   (dbus_connection_unref connection))))
-	     (dbus-data-wv ddent)))
+		 (data-ptr (bytestructure-ref event 'data 'ptr)))
+	    (cond
+	     ((zero? data-ptr)
+	      (read-char wiport))
+	     (else
+	      (let* ((flags (epoll-events->dbus-watch-flags events))
+		     (ddent (addr->scm data-ptr)))
+		;;(ff "flags=0x~x\n" flags)
+		(vector-for-each
+		 (lambda (ix watch)
+		   (when watch
+		     (handle-watch watch flags)
+		     (dbus_connection_ref connection)
+		     (dispatch-em)
+		     (dbus_connection_unref connection)))
+		 (dbus-data-wv ddent))))))
 	  (iter (1+ i) n)))
       (loop))
     ;;
@@ -258,13 +310,18 @@
 ;;(sf "conn=~S\n" (ffi:pointer->string (dbus_bus_get_unique_name conn)))
 ;;(my-main-loop conn) ;; later in a dedicated thread
 
-(define (start-dbus-session-loop)
-  (let* ((error
+(define (spawn-dbus-mainloop service)
+  (let* ((bus-id
+	  (case service
+	    ((session) 'DBUS_BUS_SESSION)
+	    ((system) 'DBUS_BUS_SYSTEM)
+	    (else (error "bad bus id"))))
+	 (error
 	  (let ((error (make-DBusError)))
 	    (dbus_error_init (pointer-to error))
 	    error))
 	 (conn
-	  (let ((conn (dbus_bus_get 'DBUS_BUS_SESSION (pointer-to error))))
+	  (let ((conn (dbus_bus_get bus-id (pointer-to error))))
 	    (check-error error)
 	    (sf "conn: ~S\n"
 		(ffi:pointer->string (dbus_bus_get_unique_name conn)))
