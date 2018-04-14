@@ -55,11 +55,13 @@
 	    )
   #:use-module ((srfi srfi-1) #:select (remove append-reverse))
   )
-(cond-expand ;; for MES
-  (guile-2 #t)
+(cond-expand
+  (mes)
+  (guile-2)
   (guile
    (use-modules (ice-9 optargs))
-   (use-modules (ice-9 syncase))))
+   (use-modules (ice-9 syncase)))
+  (else))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
   

@@ -1584,7 +1584,6 @@
 	(decl-spec-list
 	 (type-spec (struct-def (@ . ,aattr) (ident ,struct-name) ,field-list))))
        ;;(sferr "struct foo { ... }:\n") (pperr clean-udecl)
-       (if aattr (sfscm ";; packed ~S\n" aattr))
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)

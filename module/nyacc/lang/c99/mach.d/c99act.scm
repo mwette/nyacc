@@ -357,10 +357,14 @@
    ;; complex-type-specifier => "long" "double" "_Complex"
    (lambda ($3 $2 $1 . $rest)
      '(complex-type "long double _Complex"))
-   ;; attribute-specifier => "__attribute__" "(" "(" attribute-list ")" ")"
+   ;; attribute-specifier => attribute-specifier-single
+   (lambda ($1 . $rest) $1)
+   ;; attribute-specifier => attribute-specifier attribute-specifier-single
+   (lambda ($2 $1 . $rest) (append $1 (cdr $2)))
+   ;; attribute-specifier-single => "__attribute__" "(" "(" attribute-list ...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      (tl->list $4))
-   ;; attribute-specifier => attr-name
+   ;; attribute-specifier-single => attr-name
    (lambda ($1 . $rest) `(attributes $1))
    ;; attr-name => "__packed__"
    (lambda ($1 . $rest) $1)
@@ -381,10 +385,12 @@
    ;; attribute-list => attribute-list "," attribute
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; attribute => attr-ident
-   (lambda ($1 . $rest) (list $1 ""))
+   (lambda ($1 . $rest)
+     (list (string->symbol $1) ""))
    ;; attribute => attr-ident "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     (list $1 (attr-expr-list->string (tl->list $3))))
+     (list (string->symbol $1)
+           (attr-expr-list->string (tl->list $3))))
    ;; attr-expr-list => attribute-expr
    (lambda ($1 . $rest)
      (make-tl 'attr-expr-list $1))
@@ -398,18 +404,19 @@
    (lambda ($1 . $rest) (sx-ref* $1 1 1 1 1))
    ;; attribute-expr => '$fixed
    (lambda ($1 . $rest) $1)
+   ;; attribute-expr => '$string
+   (lambda ($1 . $rest) $1)
    ;; attribute-expr => attr-call-name
    (lambda ($1 . $rest) $1)
    ;; attribute-expr => attr-call-name "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      (string-append
        $1
-       (attr-expr-list->string (cdr $3))))
+       (attr-expr-list->string (tl->list $3))))
    ;; opt-attribute-specifier => 
    (lambda $rest (list))
-   ;; opt-attribute-specifier => opt-attribute-specifier attribute-specifier
-   (lambda ($2 $1 . $rest)
-     (if (pair? $1) (append $1 (cdr $2)) $2))
+   ;; opt-attribute-specifier => attribute-specifier
+   (lambda ($1 . $rest) $1)
    ;; struct-or-union-specifier => "struct" ident-like "{" struct-declarati...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      (if (pair? $6)
@@ -874,6 +881,8 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => declaration
    (lambda ($1 . $rest) $1)
+   ;; external-declaration => attribute-specifier declaration
+   (lambda ($2 $1 . $rest) $2)
    ;; external-declaration => lone-comment
    (lambda ($1 . $rest) $1)
    ;; external-declaration => cpp-statement

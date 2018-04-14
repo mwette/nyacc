@@ -29,7 +29,9 @@
 (define inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir)
-     "/usr/include" "c99-exam")
+     "/usr/include" "c99-exam"
+     "/usr/include/dbus-1.0" "/usr/lib/x86_64-linux-gnu/dbus-1.0/include"
+     )
    (get-gcc-inc-dirs)))
 (define inc-help
   (cond
@@ -98,9 +100,9 @@
 ;;(and=> (parse-c99x "(a*b)+c") ppsx)
 
 (define adecl #f)
-(ppsx cpp-defs)
-(ppsx inc-dirs)
-(ppsx inc-help)
+;;(ppsx cpp-defs)
+;;(ppsx inc-dirs)
+;;(ppsx inc-help)
 (let* ((code (string-append
 	      "typedef int *foo_t;\n"
 	      "typedef double hmm_t[3];\n"
@@ -110,20 +112,14 @@
        ;;(udecl (udict-ref udict "x"))
        ;;(mdecl (udecl->mspec udecl))
        ;;(tree (parse-c99x "((int)'q')"))
-       ;;(tree (parse-c99x "\"abc\" \"def\""))
-       (tree (parse-file "zzz.c"))
+       (tree (parse-file "zzz.e"))
        ;;(decl (sx-ref* tree 153)) ;; for zzz.e
        ;;(udecl (unitize-decl decl))
        ;;(udict (c99-trans-unit->udict tree))
        ;;(udecl (udict-struct-ref udict "epoll_event"))
        )
-  ;;(display code)
-  (ppsx tree)
-  ;;(ppsx decl)
-  ;;(ppsx udecl)
+  ;;(ppsx tree)
   ;;(ppsx (eval-c99-cx tree))
-  ;;(sf "dd:\n") (ppsx ddict)
-  ;;(ppsx (eval-c99-cx expr udict ddict))
   ;;(ppsx (get-gcc-inc-dirs))
   #t)
 

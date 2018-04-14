@@ -39,12 +39,13 @@
   ;; #:use-module ((sxml xpath) #:select (sxpath)) ;; see sx-find below
   #:use-module (ice-9 pretty-print)
   )
-(cond-expand ;; for MES
-  (guile-2
-   #t)
+(cond-expand
+  (mes)
+  (guile-2)
   (guile
    (use-modules (ice-9 optargs))
-   (use-modules (srfi srfi-16))))
+   (use-modules (srfi srfi-16)))
+  (else))
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.

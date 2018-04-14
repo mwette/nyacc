@@ -314,7 +314,12 @@
     ;; Support for __attributes__(( ... )).  See the gcc documentation.
     ;; The documentation is not rigourous about defining where the
     ;; attribute specifier can appear.  This is my best attempt.  MW 04/07/18
+    ;; https://gcc.gnu.org/onlinedocs/gcc-4.7.0/gcc/Attribute-Syntax.html
     (attribute-specifier
+     (attribute-specifier-single)
+     (attribute-specifier attribute-specifier-single
+			  ($$ (append $1 (cdr $2)))))
+    (attribute-specifier-single
      ("__attribute__" "(" "(" attribute-list ")" ")" ($$ (tl->list $4)))
      (attr-name ($$ `(attributes $1))))
     (attr-name
@@ -327,26 +332,24 @@
      (attribute-list "," ($$ $1))
      (attribute-list "," attribute ($$ (tl-append $1 $3))))
     (attribute
-     (attr-ident ($$ (list $1 "")))
+     (attr-ident ($$ (list (string->symbol $1) "")))
      (attr-ident
       "(" attr-expr-list ")"
-      ($$ (list $1 (attr-expr-list->string (tl->list $3))))))
+      ($$ (list (string->symbol $1) (attr-expr-list->string (tl->list $3))))))
     (attr-expr-list
      (attribute-expr ($$ (make-tl 'attr-expr-list $1)))
      (attr-expr-list "," attribute-expr ($$ (tl-append $1 $3))))
     (attr-call-name ($ident) (attr-name))
     (attribute-expr
      (type-name ($$ (sx-ref* $1 1 1 1 1))) ;; check this
-     ($fixed)				   ; <= EXPAND THIS
+     ($fixed) ($string)			   ; <= EXPAND THIS
      (attr-call-name)
      (attr-call-name
       "(" attr-expr-list ")"
-      ($$ (string-append $1 (attr-expr-list->string (cdr $3))))))
-    ;; This is ugly because gcc actually allows multiple specifiers
+      ($$ (string-append $1 (attr-expr-list->string (tl->list $3))))))
     (opt-attribute-specifier
      ($empty)
-     (opt-attribute-specifier attribute-specifier
-			      ($$ (if (pair? $1) (append $1 (cdr $2)) $2)))
+     (attribute-specifier)
      )
 
     ;; This one modified: split out struct-or-union = "struct"|"union"
@@ -753,6 +756,7 @@
     (external-declaration		; S 6.9
      (function-definition)
      (declaration)
+     (attribute-specifier declaration ($$ $2)) ;; ignore __attribute__ for now
      (lone-comment)
      (cpp-statement)
      (pragma)

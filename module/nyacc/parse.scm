@@ -22,12 +22,14 @@
   #:export (make-lalr-parser make-lalr-ia-parser)
   #:use-module (nyacc util)
   )
-(cond-expand ;; for MES
+(cond-expand
+  (mes)
   (guile-2
    (use-modules (srfi srfi-43)))
   (guile
    (use-modules (ice-9 optargs))
-   (use-modules (nyacc compat18))))
+   (use-modules (nyacc compat18)))
+  (else))
 
 ;; @item (machine-hashed? mach) => #t|#f
 ;; Indicate if the machine has been hashed.

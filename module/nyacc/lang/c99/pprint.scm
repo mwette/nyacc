@@ -185,8 +185,8 @@
       (lambda (val)
 	;;(simple-format #t "a: ~S\n" val)
 	(cond
-	 ((string=? (car val) "packed") "__packed__")
-	 (else (car val))))
+	 ((eq? (car val) 'packed) "__packed__")
+	 (else (symbol->string (car val)))))
       attr)
      " "))
 

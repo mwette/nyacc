@@ -28,13 +28,14 @@
 	    tzort
 	    )
   )
-(cond-expand ;; for MES
+(cond-expand
+  (mes)
   (guile-2
    (use-modules (srfi srfi-43)))
   (guile
    (use-modules (ice-9 optargs))
    (use-modules (nyacc compat18)))
-  )
+  (else))
 
 (define (fmtstr fmt . args)
   (apply simple-format #f fmt args))
