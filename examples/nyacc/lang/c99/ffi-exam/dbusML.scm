@@ -2,15 +2,10 @@
 ;; https://lists.freedesktop.org/archives/dbus/2007-October/008859.html
 ;; https://stackoverflow.com/questions/9378593/dbuswatch-and-dbustimeout-examples
 
-(define-module (dbus04)
+(define-module (dbusML)
   #:export (spawn-dbus-mainloop)
   )
   
-(use-modules (ice-9 pretty-print))
-(use-modules (ice-9 format))
-(define (sf fmt . args) (apply simple-format #t fmt args))
-(define (ff fmt . args) (apply format #t fmt args))
-
 (use-modules (system ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 (use-modules (bytestructures guile))
@@ -23,6 +18,11 @@
 (use-modules (ffi epoll))
 (use-modules (ffi dbus))
 (use-modules (dbus00))
+
+(use-modules (ice-9 pretty-print))
+(use-modules (ice-9 format))
+(define (sf fmt . args) (apply simple-format #t fmt args))
+(define (ff fmt . args) (apply format #t fmt args))
 
 ;; ====================================
 ;; use case 01: want to queue in any thread, poll for ready
@@ -187,18 +187,18 @@
 
 ;; timeout is DBusTimeout
 (define (add-timeout ~timeout data)
-  (let* ((timeout (make-DBusWatch* ~timeout))
+  (let* ((tod (gettimeofday))
+	 (timeout (make-DBusWatch* ~timeout))
 	 (interval (dbus_timeout_get_interval timeout))
-	 (tod (gettimeofday))
 	 (exp (t+us tod interval)))
-    (ff "add-tmout: ~s to expire at ~s\n" timeout exp)
+    (ff "add-tmout: ~s expire at ~s\n" timeout exp)
     (schedule-event *dbus-sched* exp dbus-timeout-handler timeout)
     (write #\x (ffi:pointer->scm data))	; wake up mainloop
     TRUE))
 
 (define (remove-timeout ~timeout data)
   (let* ((timeout (make-DBusWatch* ~timeout)))
-    (ff "rem-tmout: ~s at ~s\n" timeout (gettimeofday))
+    (ff "rem-tmout: ~s cancel at ~s\n" timeout (gettimeofday))
     (cancel-events/data *dbus-sched* timeout)
     (if #f #f)))
 
@@ -271,7 +271,6 @@
 	;; timeouts use (pair (gettimeofday)) => (sec . usec)
 	(let iter ((tod (gettimeofday))
 		   (nxt (earliest-event-time *dbus-sched*)))
-	  ;; find timeout events and dispatch
 	  (when (t< tod nxt)
 	    (exec-schedule *dbus-sched* tod)
 	    (iter (gettimeofday) (earliest-event-time *dbus-sched*))))
@@ -328,6 +327,7 @@
 	    conn))
 	 )
     (call-with-new-thread (lambda () (my-main-loop conn)))
+    (sleep 1)
     conn))
 
 ;; --- last line ---

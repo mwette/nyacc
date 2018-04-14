@@ -1,12 +1,21 @@
 ;;
 
 (define-module (dbus00)
-  #:export (check-error get-bval read-dbus-val)
+  #:export (check-error
+	    get-bval
+	    read-dbus-val
+	    nonzero?
+	    TRUE FALSE
+	    )
   #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (bytestructures guile)
   #:use-module (ffi dbus)
   )
+
+(define TRUE 1)
+(define FALSE 0)
+(define (nonzero? val) (not (zero? val)))
 
 (define (check-error error)
   (or (zero? (dbus_error_is_set (pointer-to error)))
