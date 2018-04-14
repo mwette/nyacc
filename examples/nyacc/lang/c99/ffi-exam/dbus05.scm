@@ -1,4 +1,4 @@
-;; dbus05.scm - dbus04 applied to example
+;; dbus05.scm - example for mainloop
 
 (use-modules (dbus00))
 (use-modules (dbusML))
@@ -12,7 +12,8 @@
 
 (define (send-msg conn msg)
   (let ((pending (make-DBusPendingCall*)))
-    (or (dbus_connection_send_with_reply conn msg (pointer-to pending) -1)
+    (if (eqv? FALSE
+	      (dbus_connection_send_with_reply conn msg (pointer-to pending) -1))
 	(error "*** send_with_reply FAILED\n"))
     (dbus_message_unref msg)
     pending))
@@ -36,11 +37,10 @@
 
 ;; ==========================================================================
 
-
 (define conn (spawn-dbus-mainloop 'session))
 
 (define msg (dbus_message_new_method_call
-	     "org.freedesktop.DBus"		; bus name (was NULL)
+	     "org.freedesktop.DBus"		; bus name
 	     "/org/freedesktop/DBus"		; object path
 	     "org.freedesktop.DBus.Debug.Stats"	; interface name
 	     "GetStats"))			; method

@@ -191,14 +191,14 @@
 	 (timeout (make-DBusWatch* ~timeout))
 	 (interval (dbus_timeout_get_interval timeout))
 	 (exp (t+us tod interval)))
-    (ff "add-tmout: ~s expire at ~s\n" timeout exp)
+    ;;(ff "add-tmout: ~s expire at ~s\n" timeout exp)
     (schedule-event *dbus-sched* exp dbus-timeout-handler timeout)
     (write #\x (ffi:pointer->scm data))	; wake up mainloop
     TRUE))
 
 (define (remove-timeout ~timeout data)
   (let* ((timeout (make-DBusWatch* ~timeout)))
-    (ff "rem-tmout: ~s cancel at ~s\n" timeout (gettimeofday))
+    ;;(ff "rem-tmout: ~s cancel at ~s\n" timeout (gettimeofday))
     (cancel-events/data *dbus-sched* timeout)
     (if #f #f)))
 
@@ -322,10 +322,7 @@
 	 (conn
 	  (let ((conn (dbus_bus_get bus-id (pointer-to error))))
 	    (check-error error)
-	    (sf "conn: ~S\n"
-		(ffi:pointer->string (dbus_bus_get_unique_name conn)))
-	    conn))
-	 )
+	    conn)))
     (call-with-new-thread (lambda () (my-main-loop conn)))
     (sleep 1)
     conn))
