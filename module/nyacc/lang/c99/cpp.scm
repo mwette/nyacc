@@ -29,7 +29,9 @@
 	    eval-cpp-expr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lang util))
+  #:use-module (nyacc lang sx-util)
+  #:use-module ((nyacc lang util) #:select (report-error))
+  )
 (cond-expand ;; for MES
   (guile-2
    (use-modules (rnrs arithmetic bitwise))

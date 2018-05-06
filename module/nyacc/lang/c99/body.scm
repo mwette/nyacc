@@ -29,7 +29,8 @@
 
 ;; issue w/ brlev: not intended to beused with `extern "C" {'
 
-(use-modules (nyacc lang sx-match))
+(use-modules (nyacc lang sx-util))
+(use-modules (nyacc lang util))
 (use-modules ((srfi srfi-1) #:select (fold-right)))
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules (ice-9 regex))

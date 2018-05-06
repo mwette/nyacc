@@ -19,7 +19,7 @@
   #:export (pretty-print-c99)
   #:use-module ((srfi srfi-1) #:select (pair-for-each))
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   #:use-module (ice-9 pretty-print)
   )
 (cond-expand ;; for MES
@@ -153,7 +153,7 @@
       ((include ,file . *) (sf "#include ~A\n" file))
       ((error ,text) (sf "#error ~A\n" text))
       ((pragma ,text) (sf "#pragma ~A\n" text))
-      (* (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
+      (else (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
     (fmtr 'nlin))
 
   (define protect-expr? (make-protect-expr op-prec op-assc))
@@ -660,7 +660,7 @@
       ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
       ((extern-end) (sf "}\n"))
 
-      (* (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))))
+      (else (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))))
 
   (define ppx ppx-1)
 

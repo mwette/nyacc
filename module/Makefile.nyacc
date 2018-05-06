@@ -22,7 +22,7 @@ NYACC_BASE_BINS =				\
 	nyacc/parse.go				\
 	nyacc/util.go				\
 	nyacc/version.go			\
-	nyacc/lang/sx-match.go			\
+	nyacc/lang/sx-util.go			\
 	nyacc/lang/util.go
 
 NYACC_BASE_SRCS = $(patsubst %.go,%.scm,$(NYACC_BASE_BINS))

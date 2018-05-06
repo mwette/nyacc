@@ -54,9 +54,8 @@
   #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 util1)
   #:use-module (nyacc version)
-  #:use-module ((nyacc lang util)
-		#:select (cintstr->scm sx-tag sx-ref sx-ref* sx-list
-				       sx-attr-ref sx-attr-set!))
+  #:use-module (nyacc lang sx-util)
+  #:use-module ((nyacc lang util) #:select (cintstr->scm))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:use-module (system foreign)
@@ -209,7 +208,7 @@
 ;; Run pkg-config
 (define (pkg-config name . args)
   (if name
-      (let* ((cmdstr (string-join (cons* "pkg-config" name args)))
+      (let* ((cmdstr (string-append "pkg-config" " " (string-join args) " " name))
 	     (port (open-input-pipe cmdstr))
 	     (ostr (read-line port))
 	     (status (close-pipe port))
@@ -1764,6 +1763,15 @@
 	 ;;(sfscm "(define-fh-compound-type/p ~A ~A-desc)\n" typename typename)
 	 (fhscm-def-compound typename)
 	 (values (cons typename wrapped) (cons typename defined))))
+
+      ;; from gtk+-3.0/gtk/gtk.h
+      ((udecl (decl-spec-list
+	       (stor-spec (typedef))
+	       (type-spec (fixed-type "char")))
+	      (init-declr
+	       (ptr-declr (pointer) (ident "GtkStock"))))
+       (sferr "missed gtk3 decl not expanded\n")
+       (values wrapped defined))
       
       ;; === missed =====================
 

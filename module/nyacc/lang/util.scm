@@ -23,9 +23,9 @@
 	    *input-stack* push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
-	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
-	    sx-attr-ref sx-has-attr? sx-attr-set! sx-attr-set* sx+attr*
-	    sx-find
+	    ;;sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
+	    ;;sx-attr-ref sx-has-attr? sx-attr-set! sx-attr-set* sx+attr*
+	    ;;sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
 	    ;; for ???
@@ -188,6 +188,7 @@ See the file COPYING.LESSER included with the this distribution.")
   (error "not implemented (yet)")
   )
 
+#!
 ;; === sx ==============================
 ;; @section SXML Utility Procedures
 ;; Some lot of these look like existing Guile list procedures (e.g.,
@@ -396,6 +397,7 @@ See the file COPYING.LESSER included with the this distribution.")
 	  sx))
    (else
     (error "expecting first arg to be tag or sxpath"))))
+!#
 
 ;;; === pp ==========================
 ;; @section Pretty-Print and Other Utility Procedures

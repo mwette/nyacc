@@ -23,8 +23,8 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
-  #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-match)
+  #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))
+  #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
@@ -101,7 +101,7 @@
       ((float-type ,name)
        (let* ((ffi-type (assoc-ref ffi-type-map name)))
 	 (sizeof ffi-type)))
-      (* (pp type-spec))
+      (else (pp type-spec))
       )
   #t))
 
@@ -122,7 +122,7 @@
     (sx-match expr
       ((p-expr (string ,str))
        (string-length str))
-      (* #f))))
+      (else #f))))
 
 ;;(define (expand-c99x-defs tree defs)
 ;;  (let ((

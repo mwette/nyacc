@@ -103,7 +103,7 @@
   #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts foldts*))
   #:use-module (sxml match)
   #:use-module (srfi srfi-11)		; let-values
@@ -158,7 +158,7 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (* #f))))
+     (else #f))))
 ;; @deffn {Procedure} pointer-stor-declr? declr => #t|#f
 ;; @deffnx {Procedure} pointer-pass-declr? declr => #t|#f
 ;; This predicate determines if the declarator is implemented as a pointer.
@@ -183,7 +183,7 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (* #f))))
+     (else #f))))
 
 ;; Use the term @dfn{udecl}, or unit-declaration, for a declaration which has
 ;; only one decl-item.  That is where,
@@ -455,7 +455,7 @@
 	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 		 tag attr specl declrs tail seed))
 
-	(* (iter-declrs tag attr specl declrs tail seed)))))
+	(else (iter-declrs tag attr specl declrs tail seed)))))
    
    ((eqv? (sx-tag decl) 'comp-udecl) (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag decl) 'comp-decl) (unitize-comp-decl decl seed))
@@ -535,7 +535,7 @@
     ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
     ((bit-field ,ident . ,rest) ident)
-    (* (throw 'util-error "c99/munge: unknown declarator: " declr))))
+    (else (throw 'util-error "c99/munge: unknown declarator: " declr))))
 
 ;; @deffn {Procedure} declr-id decl => "name"
 ;; This extracts the name from the return value of @code{declr-ident}.
@@ -601,7 +601,7 @@
 (define (typedef-decl? decl)
   (sx-match decl
     ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
-    (* #f)))
+    (else #f)))
 
 ;; @deffn {Procedure} repl-typespec decl-spec-list repl-type-spec
 ;; In the decl-spec-list replace the type-specifier.
@@ -707,7 +707,7 @@
        `(ftn-declr ,(probe-declr dir-declr) . ,rest))
       ((scope ,declr)
        `(scope ,(probe-declr declr)))
-      (* (throw 'util-error "c99/munge: unknown declarator: " declr))))
+      (else (throw 'util-error "c99/munge: unknown declarator: " declr))))
   (probe-declr tdef-declr))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
@@ -1012,7 +1012,7 @@
 	      declr
 	      `(comp-declr-list . ,xdeclrs))))
        
-       (* (throw 'util-error "c99/munge: unknown declarator: " declr)))))
+       (else (throw 'util-error "c99/munge: unknown declarator: " declr)))))
 
   (let*-values (((tag attr orig-specl orig-declr tail)
 		 (split-adecl adecl))
@@ -1347,7 +1347,7 @@
       ((pointer (type-qual-list . ,type-qual)) '((pointer-to)))
       ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
       ((pointer) '((pointer-to)))
-      (*
+      (else
        (sferr "unwrap-pointer failed on:\n") (pperr pointer)
        (error "unwrap-pointer"))))
 
@@ -1417,7 +1417,7 @@
       ((comp-declr ,item) (unwrap-declr item))
       ((param-declr ,item) (unwrap-declr item))
 
-      (*
+      (else
        (sferr "munge/unwrap-declr missed:\n")
        (pperr declr)
        (error "c99/munge: udecl->mspec failed")
