@@ -93,7 +93,7 @@ install-fh-srcs: $(FH_SCMS) $(FH_FFIS)
 
 .PHONY: dist-files
 dist-files:
-	(cd nyacc/lang/c99; makeinfo ffi-help.texi)
+	@echo "nothing in examples"
 
 ffi/gobject.scm: ffi/glib.scm
 ffi/gio.scm: ffi/glib.scm

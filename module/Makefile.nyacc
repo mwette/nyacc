@@ -114,6 +114,8 @@ install-fh-bins:
 		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
 	    sleep 1; \
 	  done; \
+	else; \
+	  echo "FFI helper binaries not installed: bytestructures needed"; \
 	fi
 
 
