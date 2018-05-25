@@ -32,7 +32,7 @@ install-info:
 
 .PHONY: dist-files
 dist-files: \
-	nyacc-ug.info nyacc-ug.pdf nyacc-ug.html
+	nyacc-ug.info nyacc-ug.pdf nyacc-ug.html \
 	ffi-help.info ffi-help.pdf ffi-help.html
 
 %_scm.texi: ../../module/nyacc/%.scm

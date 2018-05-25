@@ -1,4 +1,4 @@
-;;; example/system/ffi-help-rt.scm - NYACC's FFI help runtime
+;;; system/ffi-help-rt.scm - NYACC's FFI help runtime
 ;;;
 ;;; Copyright (C) 2016-2018 Matthew R. Wette
 ;;;
