@@ -40,18 +40,18 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/util1.go			\
 	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxmach.go		\
-	nyacc/lang/c99/cxeval.go		
+	nyacc/lang/c99/cxeval.go		\
+	nyacc/lang/c99/mach.d/c99act.go		\
+	nyacc/lang/c99/mach.d/c99tab.go		\
+	nyacc/lang/c99/mach.d/c99xact.go	\
+	nyacc/lang/c99/mach.d/c99xtab.go	\
+	nyacc/lang/c99/mach.d/cppact.go		\
+	nyacc/lang/c99/mach.d/cpptab.go		\
+	nyacc/lang/c99/mach.d/cxact.go		\
+	nyacc/lang/c99/mach.d/cxtab.go		
 
 NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
-	nyacc/lang/c99/body.scm			\
-	nyacc/lang/c99/mach.d/c99act.scm	\
-	nyacc/lang/c99/mach.d/c99tab.scm	\
-	nyacc/lang/c99/mach.d/c99xact.scm	\
-	nyacc/lang/c99/mach.d/c99xtab.scm	\
-	nyacc/lang/c99/mach.d/cppact.scm	\
-	nyacc/lang/c99/mach.d/cpptab.scm	\
-	nyacc/lang/c99/mach.d/cxact.scm		\
-	nyacc/lang/c99/mach.d/cxtab.scm		
+	nyacc/lang/c99/body.scm			
 
 NYACC_BINS = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
 NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
@@ -106,7 +106,8 @@ install-fh-srcs:
 .PHONY: install-fh-bins
 install-fh-bins:
 	@if GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-		$(GUILE) -c '(use-modules (bytestructures guile))'; then \
+		$(GUILE) -c '(use-modules (bytestructures guile))' \
+			>/dev/null 2>&1; then \
 	  echo "installing FFI helper binaries in $(SITE_SCM_GO_DIR)"; \
 	  for binfile in $(NYACC_FH_BINS); do \
 	    if test ! -d $(SITE_SCM_DIR)/`dirname $${binfile}`; then \
