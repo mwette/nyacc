@@ -598,6 +598,7 @@
 ;; chrtab = characters
 ;; comm-reader : if parser does not deal with comments must return #f
 ;;               but problem with character ..
+;; extra-reader: insert an user-defined reader
 ;; match-table:
 ;; @enumerate
 ;; symbol -> (string . symbol)
