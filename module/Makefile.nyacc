@@ -8,6 +8,9 @@
 # without any warranty.
 #
 
+GUILE=guile
+GUILD=guild
+
 default:
 	@echo SITE_SCM_DIR = $(SITE_SCM_DIR)
 	@echo SITE_SCM_GO_DIR = $(SITE_SCM_GO_DIR)
@@ -114,7 +117,7 @@ install-fh-bins:
 		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
 	    sleep 1; \
 	  done; \
-	else; \
+	else \
 	  echo "FFI helper binaries not installed: bytestructures needed"; \
 	fi
 
