@@ -28,9 +28,12 @@ install: install-info
 install-info:
 	mkdir -p $(INFODIR)
 	$(INSTALL) nyacc-ug.info $(DESTDIR)$(INFODIR)/nyacc-ug.info
+	$(INSTALL) ffi-help.info $(DESTDIR)$(INFODIR)/ffi-help.info
 
 .PHONY: dist-files
-dist-files: nyacc-ug.info nyacc-ug.pdf nyacc-ug.html
+dist-files: \
+	nyacc-ug.info nyacc-ug.pdf nyacc-ug.html
+	ffi-help.info ffi-help.pdf ffi-help.html
 
 %_scm.texi: ../../module/nyacc/%.scm
 	./pull-texi.scm $< >$@
