@@ -7,7 +7,7 @@
 # Copying and distribution of this file, with or without modification
 # is granted.  This file is offered as-is, without any warranty.
 
-nyacc_version=0.83.3+c99dev
+nyacc_version=0.84.0
 
 help() {
     echo "'configure' sets up the top-level Makefile for your local guile"
