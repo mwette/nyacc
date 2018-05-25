@@ -1,3 +1,9 @@
+To generate a scm from ffi, using cairo.ffi as example:
+$ guild compile-ffi ffi/cairo.ffi
+wrote `ffi/cairo.scm'
+
+
+
 MISSING:
 1) Guile does not have some types.  Need the following:
    long long, unsigned long long, intptr_t, uintptr_t, long double (glib)
