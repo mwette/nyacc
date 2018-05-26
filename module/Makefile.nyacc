@@ -40,15 +40,7 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/util1.go			\
 	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxmach.go		\
-	nyacc/lang/c99/cxeval.go		\
-	nyacc/lang/c99/mach.d/c99act.go		\
-	nyacc/lang/c99/mach.d/c99tab.go		\
-	nyacc/lang/c99/mach.d/c99xact.go	\
-	nyacc/lang/c99/mach.d/c99xtab.go	\
-	nyacc/lang/c99/mach.d/cppact.go		\
-	nyacc/lang/c99/mach.d/cpptab.go		\
-	nyacc/lang/c99/mach.d/cxact.go		\
-	nyacc/lang/c99/mach.d/cxtab.go		
+	nyacc/lang/c99/cxeval.go		
 
 NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
 	nyacc/lang/c99/body.scm			
