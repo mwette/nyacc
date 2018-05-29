@@ -1,10 +1,12 @@
-;; lang/modelica/actions.scm
+;; mach.d/moact.scm
 
-;; Copyright (C) 2015 Matthew R. Wette
+;; Copyright 2016-2017 Matthew R. Wette
 ;; 
-;; This software is covered by the GNU GENERAL PUBLIC LICENCE, Version 3,
-;; or any later version published by the Free Software Foundation.  See the
-;; file COPYING included with the this distribution.
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;; See the file COPYING.LESSER included with the this distribution.
 
 (define act-v
   (vector
@@ -13,80 +15,73 @@
    ;; stored-definition => 
    (lambda $rest `(stored-defn))
    ;; stored-definition => stored-definition-1 stored-definition-2
-   (lambda ($2 $1 . $rest) `(stored-defn FIX))
+   (lambda ($2 $1 . $rest) `(stored-defn ,$1 ,$2))
    ;; stored-definition => stored-definition-2
    (lambda ($1 . $rest) (tl->list $1))
    ;; stored-definition-1 => "within" name ";"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(within ,$2))
    ;; stored-definition-1 => "within" ";"
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) '(within))
    ;; stored-definition-2 => "final" class-definition ";"
-   (lambda ($3 $2 $1 . $rest) `(FIX01))
+   (lambda ($3 $2 $1 . $rest)
+     (make-tl
+       'class-defn-list
+       (sx+attr* $2 'final "yes")))
    ;; stored-definition-2 => class-definition ";"
-   (lambda ($2 $1 . $rest) (make-tl 'defn-list $1))
+   (lambda ($2 $1 . $rest)
+     (make-tl 'class-defn-list $1))
    ;; stored-definition-2 => stored-definition-2 "final" class-definition ";"
-   (lambda ($4 $3 $2 $1 . $rest) `(FIX01))
+   (lambda ($4 $3 $2 $1 . $rest)
+     (tl-append $3 (sx+attr* $3 'final "yes")))
    ;; stored-definition-2 => stored-definition-2 class-definition ";"
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; class-definition => "encapsulated" class-prefixes class-specifier
    (lambda ($3 $2 $1 . $rest)
-     `(class-def
-        ,(tl->list (tl+attr $2 'encapsulated "yes"))
-        $3))
+     (append
+       (tl->list (tl+attr $2 'encapsulated "yes"))
+       $3))
    ;; class-definition => class-prefixes class-specifier
    (lambda ($2 $1 . $rest)
-     (simple-format #t "$2=~S\n" $2)
-     (simple-format #t "  >~S\n" (tl->list $2))
-     `(class-def ,(tl->list $2)))
+     (append (tl->list $1) $2))
    ;; class-prefixes => "partial" class-prefixes-1
    (lambda ($2 $1 . $rest)
-     (tl+attr $2 'partial "yes"))
+     (tl+attr (make-tl $2) 'partial "yes"))
    ;; class-prefixes => class-prefixes-1
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (make-tl $1))
    ;; class-prefixes-1 => "class"
-   (lambda ($1 . $rest) (make-tl 'class))
+   (lambda ($1 . $rest) 'class)
    ;; class-prefixes-1 => "model"
-   (lambda ($1 . $rest) (make-tl 'model))
+   (lambda ($1 . $rest) 'model)
    ;; class-prefixes-1 => "operator" "record"
-   (lambda ($2 $1 . $rest)
-     (tl+attr (make-tl 'record) 'type "operator"))
+   (lambda ($2 $1 . $rest) 'operator-record)
    ;; class-prefixes-1 => "record"
-   (lambda ($1 . $rest) (make-tl 'record))
+   (lambda ($1 . $rest) 'record)
    ;; class-prefixes-1 => "block"
-   (lambda ($1 . $rest) (make-tl 'block))
+   (lambda ($1 . $rest) 'block)
    ;; class-prefixes-1 => "expandable" "connector"
-   (lambda ($2 $1 . $rest)
-     (tl+attr (make-tl 'connector) 'expandable "yes"))
+   (lambda ($2 $1 . $rest) 'expandable-connector)
    ;; class-prefixes-1 => "connector"
-   (lambda ($1 . $rest) (make-tl 'connector))
+   (lambda ($1 . $rest) 'connector)
    ;; class-prefixes-1 => "type"
-   (lambda ($1 . $rest) (make-tl 'type))
+   (lambda ($1 . $rest) 'type)
    ;; class-prefixes-1 => "package"
-   (lambda ($1 . $rest) (make-tl 'package))
+   (lambda ($1 . $rest) 'package)
    ;; class-prefixes-1 => "impure" "operator" "function"
    (lambda ($3 $2 $1 . $rest)
-     (tl+attr
-       (make-tl 'operator-function)
-       'impure
-       "yes"))
+     'impure-operator-function)
    ;; class-prefixes-1 => "pure" "operator" "function"
    (lambda ($3 $2 $1 . $rest)
-     (tl+attr
-       (make-tl 'operator-function)
-       'pure
-       "yes"))
+     'pure-operator-function)
    ;; class-prefixes-1 => "impure" "function"
-   (lambda ($2 $1 . $rest)
-     (make-tl 'impure-function))
+   (lambda ($2 $1 . $rest) 'impure-function)
    ;; class-prefixes-1 => "pure" "function"
-   (lambda ($2 $1 . $rest) (make-tl 'pure-function))
+   (lambda ($2 $1 . $rest) 'pure-function)
    ;; class-prefixes-1 => "operator" "function"
-   (lambda ($2 $1 . $rest)
-     (make-tl 'operator-function))
+   (lambda ($2 $1 . $rest) 'operator-function)
    ;; class-prefixes-1 => "function"
-   (lambda ($1 . $rest) (make-tl 'function))
+   (lambda ($1 . $rest) 'function)
    ;; class-prefixes-1 => "operator"
-   (lambda ($1 . $rest) (make-tl 'operator))
+   (lambda ($1 . $rest) 'operator)
    ;; class-specifier => long-class-specifier
    (lambda ($1 . $rest) $1)
    ;; class-specifier => short-class-specifier
@@ -95,64 +90,73 @@
    (lambda ($1 . $rest) $1)
    ;; long-class-specifier => ident string-comment composition "end" ident
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (if (not (string=? (cadr $1) (cadr $5)))
-       (error "ident's don't match"))
-     (list $1 $2 $3))
+     (check-ids $1 $5)
+     (if (pair? $2) (list $1 $2 $3) (list $1 $3)))
    ;; long-class-specifier => "extends" ident class-modification string-com...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     (if (not (string=? (cadr $2) (cadr $7)))
-       (error "ident's don't match"))
+     (check-ids $2 $7)
      (list '(@ extends . "yes") $2 $3 $4 $5))
    ;; long-class-specifier => "extends" ident string-comment composition "e...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (if (not (string=? (cadr $2) (cadr $6)))
-       (error "ident's don't match"))
+     (check-ids $2 $6)
      (list '(@ extends . "yes") $2 $3 $4))
-   ;; short-class-specifier => ident "=" base-prefix name array-subscripts ...
+   ;; short-class-specifier => ident "=" base-prefix type-specifier array-s...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      (list $1 `(is ,$3 ,$4 ,$5 ,$6 ,$7)))
-   ;; short-class-specifier => ident "=" base-prefix name array-subscripts ...
+   ;; short-class-specifier => ident "=" base-prefix type-specifier array-s...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; short-class-specifier => ident "=" base-prefix name class-modificatio...
+   ;; short-class-specifier => ident "=" base-prefix type-specifier class-m...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; short-class-specifier => ident "=" base-prefix name comment
+   ;; short-class-specifier => ident "=" base-prefix type-specifier comment
    (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; short-class-specifier => ident "=" "enumeration" "(" filler-1 ")" com...
+   ;; short-class-specifier => ident "=" "enumeration" "(" enum-list ")" co...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; filler-1 => 
-   (lambda $rest (list))
-   ;; filler-1 => enum-list
-   (lambda ($1 . $rest) $1)
-   ;; filler-1 => ":"
-   (lambda ($1 . $rest) $1)
-   ;; der-class-specifier => ident "=" "der" "(" name "," der-class-specifi...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   ;; short-class-specifier => ident "=" "enumeration" "(" ":" ")" comment
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   ;; der-class-specifier => ident "=" "der" "(" type-specifier "," der-cla...
+   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(der-class-specifier ... (tl->list $7)))
    ;; der-class-specifier-1 => ident
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (make-tl 'ident-list $1))
    ;; der-class-specifier-1 => der-class-specifier-1 ";" ident
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; base-prefix => 
-   (lambda $rest (list))
-   ;; base-prefix => type-prefix
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; base-prefix => "input"
+   (lambda ($1 . $rest) $1)
+   ;; base-prefix => "output"
    (lambda ($1 . $rest) $1)
    ;; enum-list => enumeration-literal
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (make-tl 'enum-list $1))
    ;; enum-list => enum-list "," enumeration-literal
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; enumeration-literal => ident comment
    (lambda ($2 $1 . $rest) $1)
    ;; composition => element-list composition-1-list external-part opt-anno...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     (if (pair? $4)
+       `(composition ,$1 ,$2 ,$3 ,$4)
+       `(composition ,$1 ,$2 ,$3)))
    ;; composition => element-list composition-1-list opt-annotation
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     (if (pair? $3)
+       `(composition ,$1 ,$2 ,$3)
+       `(composition ,$1 ,$2)))
    ;; composition => element-list external-part opt-annotation
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     (if (pair? $3)
+       `(composition ,$1 ,$2 ,$3)
+       `(composition ,$1 ,$2)))
    ;; composition => element-list opt-annotation
-   (lambda ($2 $1 . $rest) $1)
-   ;; composition-1-list => composition-1
-   (lambda ($1 . $rest) $1)
-   ;; composition-1-list => composition-1-list composition-1
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest)
+     (if (pair? $2)
+       `(composition ,$1 ,$2)
+       `(composition ,$1)))
+   ;; composition-1-list => composition-1-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; composition-1-list-1 => composition-1
+   (lambda ($1 . $rest)
+     (make-tl 'composition-list $1))
+   ;; composition-1-list-1 => composition-1-list composition-1
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; composition-1 => "public"
    (lambda ($1 . $rest) $1)
    ;; composition-1 => "public" element-list
@@ -191,10 +195,13 @@
    (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; external-function-call => ident "(" ")"
    (lambda ($3 $2 $1 . $rest) $1)
-   ;; element-list => element ";"
-   (lambda ($2 $1 . $rest) $1)
-   ;; element-list => element-list element ";"
-   (lambda ($3 $2 $1 . $rest) $1)
+   ;; element-list => element-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; element-list-1 => element ";"
+   (lambda ($2 $1 . $rest)
+     (make-tl 'element-list $1))
+   ;; element-list-1 => element-list-1 element ";"
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; element => import-clause
    (lambda ($1 . $rest) $1)
    ;; element => extends-clause
@@ -276,27 +283,32 @@
    ;; constraining-clause => "constrainedby" name
    (lambda ($2 $1 . $rest) $1)
    ;; component-clause => type-prefix type-specifier array-subscripts compo...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(component-clause ,$1 ,$2 ,$3 ,$4))
    ;; component-clause => type-prefix type-specifier component-list
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(component-clause ,$1 ,$2 ,$3))
    ;; component-clause => type-specifier array-subscripts component-list
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(component-clause ,$1 ,$2 ,$3))
    ;; component-clause => type-specifier component-list
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest)
+     `(component-clause ,$1 ,$2))
    ;; type-prefix => type-prefix-1 type-prefix-2 type-prefix-3
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(type-prefix ,$1 ,$2 ,$3))
    ;; type-prefix => type-prefix-1 type-prefix-2
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(type-prefix ,$1 ,$2))
    ;; type-prefix => type-prefix-1 type-prefix-3
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(type-prefix ,$1 ,$2))
    ;; type-prefix => type-prefix-2 type-prefix-3
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(type-prefix ,$1 ,$2))
    ;; type-prefix => type-prefix-1
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-prefix ,$1))
    ;; type-prefix => type-prefix-2
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-prefix ,$1))
    ;; type-prefix => type-prefix-3
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-prefix ,$1))
    ;; type-prefix-1 => "flow"
    (lambda ($1 . $rest) $1)
    ;; type-prefix-1 => "stream"
@@ -417,9 +429,11 @@
      `(init-alg-section (stmt-list)))
    ;; algorithm-section => "algorithm"
    (lambda ($1 . $rest) `(alg-section (stmt-list)))
-   ;; equation-list => equation ";"
+   ;; equation-list => equation-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; equation-list-1 => equation ";"
    (lambda ($2 $1 . $rest) (make-tl 'eqn-list $1))
-   ;; equation-list => equation-list equation ";"
+   ;; equation-list-1 => equation-list-1 equation ";"
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; equation => equation-1 comment
    (lambda ($2 $1 . $rest) (append $1 (list $2)))
@@ -681,7 +695,7 @@
    ;; expression-list-list => expression-list-list ";" expression-list
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; name => ident
-   (lambda ($1 . $rest) `(name ,$1))
+   (lambda ($1 . $rest) $1)
    ;; name => "." ident
    (lambda ($2 $1 . $rest) `(sel ,$2))
    ;; name => name "." ident
@@ -707,21 +721,25 @@
    ;; $P14 => array-subscripts
    (lambda ($1 . $rest) $1)
    ;; function-call-args => "(" function-arguments ")"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) $2)
    ;; function-call-args => "(" ")"
-   (lambda ($2 $1 . $rest) $1)
-   ;; function-arguments => function-argument function-argument-1
-   (lambda ($2 $1 . $rest) $1)
-   ;; function-arguments => named-arguments
-   (lambda ($1 . $rest) $1)
-   ;; function-argument-1 => "," function-arguments
-   (lambda ($2 $1 . $rest) $1)
-   ;; function-argument-1 => "for" for-indices
-   (lambda ($2 $1 . $rest) $1)
-   ;; named-arguments => named-argument
-   (lambda ($1 . $rest) $1)
-   ;; named-arguments => named-arguments "," named-argument
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) '(ftn-args))
+   ;; function-arguments => function-arguments-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; function-arguments => named-only-arguments-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; function-arguments-1 => function-argument
+   (lambda ($1 . $rest) (make-tl 'ftn-args $1))
+   ;; function-arguments-1 => function-arguments-1 "," function-argument
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
+   ;; named-arguments => named-only-arguments-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; named-only-arguments-1 => named-argument
+   (lambda ($1 . $rest) (make-tl 'ftn-args $1))
+   ;; named-only-arguments-1 => named-only-arguments-1 "," named-argument
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; named-only-arguments-1 => function-arguments-1 "," named-argument
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; named-argument => ident "=" function-argument
    (lambda ($3 $2 $1 . $rest) $1)
    ;; function-argument => "function" name "(" named-arguments ")"
@@ -752,12 +770,12 @@
    (lambda ($1 . $rest) $1)
    ;; comment => string-comment annotation
    (lambda ($2 $1 . $rest)
-     (if $1 `(comment ,$1 ,$2) `(comment ,$2)))
+     (if (pair? $1) `(comment ,$1 ,$2) `(comment ,$2)))
    ;; comment => string-comment
    (lambda ($1 . $rest)
-     (if $1 `(comment ,$1) '(comment)))
+     (if (pair? $1) `(comment ,$1) '(comment)))
    ;; string-comment => 
-   (lambda $rest #f)
+   (lambda $rest (list))
    ;; string-comment => string-cat
    (lambda ($1 . $rest) $1)
    ;; string-cat => string

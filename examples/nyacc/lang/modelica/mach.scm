@@ -15,7 +15,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-;; idea: make changes and call it Modzillica
+;; ideas:
+;; 1) call it: mozdefica
 
 (define-module (nyacc lang modelica mach)
   #:export (modelica-spec
@@ -30,6 +31,11 @@
   #:use-module (ice-9 pretty-print)
   )
 
+(define (check-ids st nd)
+  (if (not (string=? (cadr st) (cadr nd)))
+      (throw 'mo-error "ident's don't match")))
+
+;; based on version 3.4, I believe
 (define modelica-spec
   (lalr-spec
    (notice (string-append "Copyright 2016-2017 Matthew R. Wette" lang-crn-lic))
@@ -38,7 +44,7 @@
     
     ;; B.2.1
     (stored-definition
-     ( ($$ `(stored-defn)))
+     ($empty ($$ `(stored-defn)))
      (stored-definition-1 stored-definition-2 ($$ `(stored-defn ,$1 ,$2)))
      (stored-definition-2 ($$ (tl->list $1)))
      )
@@ -58,38 +64,30 @@
     ;; B.2.2 Class Definition
     (class-definition
      ("encapsulated" class-prefixes class-specifier
-      ($$ `(class-def ,(tl->list (tl+attr $2 'encapsulated "yes")) $3)))
-     (class-prefixes class-specifier
-		     ($$
-		      (simple-format #t "$2=~S\n" $2)
-		      (simple-format #t "  >~S\n" (tl->list $2))
-		      `(class-def ,(tl->list $2))))
+      ($$ (append (tl->list (tl+attr $2 'encapsulated "yes")) $3)))
+     (class-prefixes class-specifier ($$ (append (tl->list $1) $2)))
      )
-    ;; modified from spec to deal with conflicts
     (class-prefixes
-     ("partial" class-prefixes-1 ($$ (tl+attr $2 'partial "yes")))
-     (class-prefixes-1)
+     ("partial" class-prefixes-1 ($$ (tl+attr (make-tl $2) 'partial "yes")))
+     (class-prefixes-1 ($$ (make-tl $1)))
      )
     (class-prefixes-1
-     ("class" ($$ (make-tl 'class)))
-     ("model" ($$ (make-tl 'model)))
-     ("operator" "record" ($$ (tl+attr (make-tl 'record) 'type "operator")))
-     ("record" ($$ (make-tl 'record)))
-     ("block" ($$ (make-tl 'block)))
-     ("expandable" "connector"
-      ($$ (tl+attr (make-tl 'connector) 'expandable "yes")))
-     ("connector" ($$ (make-tl 'connector)))
-     ("type" ($$ (make-tl 'type)))
-     ("package" ($$ (make-tl 'package)))
-     ("impure" "operator" "function"
-      ($$ (tl+attr (make-tl 'operator-function) 'impure "yes")))
-     ("pure" "operator" "function"
-      ($$ (tl+attr (make-tl 'operator-function) 'pure "yes")))
-     ("impure" "function" ($$ (make-tl 'impure-function)))
-     ("pure" "function" ($$ (make-tl 'pure-function)))
-     ("operator" "function" ($$ (make-tl 'operator-function)))
-     ("function" ($$ (make-tl 'function)))
-     ("operator" ($$ (make-tl 'operator)))
+     ("class" ($$ 'class))
+     ("model" ($$ 'model))
+     ("operator" "record" ($$ 'operator-record))
+     ("record" ($$ 'record))
+     ("block" ($$ 'block))
+     ("expandable" "connector" ($$ 'expandable-connector))
+     ("connector" ($$ 'connector))
+     ("type" ($$ 'type))
+     ("package" ($$ 'package))
+     ("impure" "operator" "function" ($$ 'impure-operator-function))
+     ("pure" "operator" "function" ($$ 'pure-operator-function))
+     ("impure" "function" ($$ 'impure-function))
+     ("pure" "function" ($$ 'pure-function))
+     ("operator" "function" ($$ 'operator-function))
+     ("function" ($$ 'function))
+     ("operator" ($$ 'operator))
      )
 
     (class-specifier
@@ -100,21 +98,15 @@
 
     (long-class-specifier
      (ident string-comment composition "end" ident
-	    ($$ (if (not (string=? (cadr $1) (cadr $5)))
-		    (error "ident's don't match"))
-		(list $1 $2 $3)))
+	    ($$ (check-ids $1 $5) (if (pair? $2) (list $1 $2 $3) (list $1 $3))))
      ("extends" ident class-modification string-comment composition "end" ident
-      ($$ (if (not (string=? (cadr $2) (cadr $7)))
-	      (throw 'mo-error "ident's don't match"))
-	  (list '(@ extends . "yes") $2 $3 $4 $5)))
+      ($$ (check-ids $2 $7) (list '(@ extends . "yes") $2 $3 $4 $5)))
      ("extends" ident string-comment composition "end" ident
-      ($$ (if (not (string=? (cadr $2) (cadr $6)))
-	      (throw 'mo-error "ident's don't match"))
-	  (list '(@ extends . "yes") $2 $3 $4)))
+      ($$ (check-ids $2 $6) (list '(@ extends . "yes") $2 $3 $4)))
      )
 
     (short-class-specifier
-     (ident "=" base-prefix type-specificer array-subscripts
+     (ident "=" base-prefix type-specifier array-subscripts
 	    class-modification comment
 	    ($$ (list $1 `(is ,$3 ,$4 ,$5 ,$6 ,$7))))
      (ident "=" base-prefix type-specifier array-subscripts comment)
@@ -147,18 +139,32 @@
     ;; ===================== update to v3.4 stopped here ======================
 
     (composition
-     (element-list composition-1-list external-part opt-annotation)
-     (element-list composition-1-list opt-annotation)
-     (element-list external-part opt-annotation)
-     (element-list opt-annotation)
+     (element-list composition-1-list external-part opt-annotation
+		   ($$ (if (pair? $4)
+			   `(composition ,$1 ,$2 ,$3 ,$4)
+			   `(composition ,$1 ,$2 ,$3))))
+     (element-list composition-1-list opt-annotation
+		   ($$ (if (pair? $3)
+			   `(composition ,$1 ,$2 ,$3)
+			   `(composition ,$1 ,$2))))
+     (element-list external-part opt-annotation
+		   ($$ (if (pair? $3)
+			   `(composition ,$1 ,$2 ,$3)
+			   `(composition ,$1 ,$2))))
+     (element-list opt-annotation
+		   ($$ (if (pair? $2)
+			   `(composition ,$1 ,$2)
+			   `(composition ,$1))))
      )
     (composition-1-list
-     (composition-1)
-     (composition-1-list composition-1)
+     (composition-1-list-1 ($$ (tl->list $1))))
+    (composition-1-list-1
+     (composition-1 ($$ (make-tl 'composition-list $1)))
+     (composition-1-list composition-1 ($$ (tl-append $1 $2)))
      )
     (composition-1
      ("public")
-     ("public"  element-list)
+     ("public" element-list)
      ("protected")
      ("protected" element-list)
      (equation-section)
@@ -184,17 +190,19 @@
      )
 
     (element-list
-     (element ";")
-     (element-list element ";"))
+     (element-list-1 ($$ (tl->list $1))))
+    (element-list-1
+     (element ";" ($$ (make-tl 'element-list $1)))
+     (element-list-1 element ";" ($$ (tl-append $1 $2))))
 
     (element
-	(import-clause)
-      (extends-clause)
-      ("redeclare" ($? "final") ($? "inner") ($? "outer") element-1)
-      ("final" ($? "inner") ($? "outer") element-1)
-      ("inner" ($? "outer") element-1)
-      ("outer" element-1)
-      (element-1)
+     (import-clause)
+     (extends-clause)
+     ("redeclare" ($? "final") ($? "inner") ($? "outer") element-1)
+     ("final" ($? "inner") ($? "outer") element-1)
+     ("inner" ($? "outer") element-1)
+     ("outer" element-1)
+     (element-1)
       )
     (element-1
      (class-definition)
@@ -239,20 +247,28 @@
 
     ;; B.2.4 Component Clause
     (component-clause
-     (type-prefix type-specifier array-subscripts component-list)
-     (type-prefix type-specifier component-list)
-     (type-specifier array-subscripts component-list)
-     (type-specifier component-list)
+     (type-prefix type-specifier array-subscripts component-list
+		  ($$ `(component-clause ,$1 ,$2 ,$3 ,$4)))
+     (type-prefix type-specifier component-list
+		  ($$ `(component-clause ,$1 ,$2 ,$3)))
+     (type-specifier array-subscripts component-list
+		     ($$ `(component-clause ,$1 ,$2 ,$3)))
+     (type-specifier component-list
+		     ($$ `(component-clause ,$1 ,$2)))
      )
 
     (type-prefix
-     (type-prefix-1 type-prefix-2 type-prefix-3)
-     (type-prefix-1 type-prefix-2)
-     (type-prefix-1 type-prefix-3)
-     (type-prefix-2 type-prefix-3)
-     (type-prefix-1)
-     (type-prefix-2)
-     (type-prefix-3)
+     (type-prefix-1 type-prefix-2 type-prefix-3
+		    ($$ `(type-prefix ,$1 ,$2 ,$3)))
+     (type-prefix-1 type-prefix-2
+		    ($$ `(type-prefix ,$1 ,$2)))
+     (type-prefix-1 type-prefix-3
+		    ($$ `(type-prefix ,$1 ,$2)))
+     (type-prefix-2 type-prefix-3
+		    ($$ `(type-prefix ,$1 ,$2)))
+     (type-prefix-1 ($$ `(type-prefix ,$1)))
+     (type-prefix-2 ($$ `(type-prefix ,$1)))
+     (type-prefix-3 ($$ `(type-prefix ,$1)))
      ;;() ;; causes conflicts so fix component-clause and base-prefix p-rules
      )
     (type-prefix-1 ("flow") ("stream"))
@@ -361,8 +377,10 @@
 
     ;; my addition:
     (equation-list
+     (equation-list-1 ($$ (tl->list $1))))
+    (equation-list-1
      (equation ";" ($$ (make-tl 'eqn-list $1)))
-     (equation-list equation ";" ($$ (tl-append $1 $2)))
+     (equation-list-1 equation ";" ($$ (tl-append $1 $2)))
      )
 
     (equation (equation-1 comment ($$ (append $1 (list $2)))))
@@ -587,7 +605,7 @@
      )
 
     (name
-     (ident ($$ `(name ,$1)))
+     (ident ($$ $1))
      ("." ident ($$ `(sel ,$2)))
      (name "." ident ($$ `(sel ,$3 ,$1)))
      )
@@ -602,16 +620,26 @@
      )
 
     (function-call-args
-     ("(" function-arguments ")")
-     ("(" ")")
+     ("(" function-arguments ")" ($$ $2))
+     ("(" ")" ($$ '(ftn-args)))
      )
 
+    ;; production in Appendix B is hosed up wrt what is in S 12.4.2
     (function-arguments
-     (function-argument function-argument-1)
-     (named-arguments))
-    (function-argument-1 ("," function-arguments) ("for" for-indices))
-
-    (named-arguments (named-argument) (named-arguments "," named-argument))
+     (function-arguments-1 ($$ (tl->list $1)))
+     (named-only-arguments-1 ($$ (tl->list $1))))
+    (function-arguments-1
+     (function-argument ($$ (make-tl 'ftn-args $1)))
+     (function-arguments-1 "," function-argument ($$ (tl-append $1 $2))))
+    (named-arguments
+     (named-only-arguments-1 ($$ (tl->list $1))))
+    (named-only-arguments-1
+     (named-argument ($$ (make-tl 'ftn-args $1)))
+     (named-only-arguments-1 "," named-argument ($$ (tl-append $1 $3)))
+     (function-arguments-1 "," named-argument ($$ (tl-append $1 $3)))
+     )
+    ;;(function-argument-1 ("," function-arguments) ("for" for-indices))
+    ;;(named-arguments (named-argument) (named-arguments "," named-argument))
 
     (named-argument (ident "=" function-argument))
 
@@ -646,12 +674,13 @@
      )
 
     (comment
-     (string-comment annotation ($$ (if $1 `(comment ,$1 ,$2) `(comment ,$2))))
-     (string-comment ($$ (if $1 `(comment ,$1) '(comment))))
+     (string-comment annotation
+		     ($$ (if (pair? $1) `(comment ,$1 ,$2) `(comment ,$2))))
+     (string-comment ($$ (if (pair? $1) `(comment ,$1) '(comment))))
      )
 
     (string-comment
-     ( ($$ #f))
+     ($empty)
      (string-cat))
     (string-cat
      (string ($$ (make-tl 'string-comment $1)))
@@ -693,8 +722,8 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (write-lalr-actions matlab-mach (xtra-dir "moact.scm.new"))
-  (write-lalr-tables matlab-mach (xtra-dir "motab.scm.new"))
+  (write-lalr-actions modelica-mach (xtra-dir "moact.scm.new"))
+  (write-lalr-tables modelica-mach (xtra-dir "motab.scm.new"))
   (let ((a (move-if-changed (xtra-dir "moact.scm.new")
 			    (xtra-dir "moact.scm")))
 	(b (move-if-changed (xtra-dir "motab.scm.new")

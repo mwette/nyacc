@@ -21,15 +21,17 @@
       (pp-lalr-grammar modelica-spec)
       (pp-lalr-machine modelica-mach)))
   (write-lalr-tables modelica-mach "mach.d/motab.scm.new")
+  (system "mv mach.d/motab.scm.new mach.d/motab.scm")
   (write-lalr-actions modelica-mach "mach.d/moact.scm.new")
+  (system "mv mach.d/moact.scm.new mach.d/moact.scm")
   )
 		
 (when #f
   (with-output-to-file "gram.y.new"
     (lambda () (lalr->bison modelica-spec))))
 
-(when #f
-  (let ((res (with-input-from-file "exam.d/ex1.mo"
+(when #t
+  (let ((res (with-input-from-file "exam.d/ex2.mo"
                (lambda ()
                   (modelica-parser (gen-mod-lexer) #:debug #f)))))
     (pretty-print res)))
