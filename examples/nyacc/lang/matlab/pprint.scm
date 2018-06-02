@@ -19,7 +19,7 @@
   #:export (pretty-print-ml)
   #:use-module ((srfi srfi-1) #:select (pair-for-each fold-right))
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   #:use-module (ice-9 pretty-print)
   )
 
@@ -93,12 +93,11 @@
 
   (define (string->matlab st)
     (if (string-any #\' st)
-	(list->string
-	 (reverse
-	  (string-fold
-	   (lambda (ch seed)
-	     (if (char=? #\' ch) (cons* #\' ch seed) (cons ch seed)))
-	   st)))
+	(reverse-list->string
+	 (string-fold
+	  (lambda (ch seed)
+	    (if (char=? #\' ch) (cons* #\' ch seed) (cons ch seed)))
+	  '() st))
 	st))
 
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
@@ -237,7 +236,7 @@
       ((float ,value) (sf "~A" value))
       ((string ,value) (sf "'~A'" (string->matlab value)))
       
-      (* (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
+      (else (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
 
   (ppx tree))
 

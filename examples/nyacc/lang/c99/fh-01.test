@@ -50,17 +50,20 @@
 
 (define fh-llibs '())
 
+(define (nearly-equal? f1 f2)
+  (< (abs (- f1 f2)) 0.0001))
+
 ;; FFI Helper basic test
-(with-test-prefix "nyacc/fh-01, basic ffi-help"
+(with-test-prefix "nyacc/ffi-help"
+  ;;(add-to-load-path (getcwd))
 
-  (pass-if "demo 01"
-    (let* ((fexp (fh-cnvt-cdecl "fmod"
-				"double fmod(double x, double y);\n")))
-      (eval fexp (current-module))
-      (sf "fmod(2.3, 0.5) = ~S\n" (fmod 2.3 0.5))
-      #t))
+  (pass-if "C-fun->proc fmod"
+    (let* ((expr (C-fun-decl->scm "double fmod(double x, double y);\n"))
+	   (fmod (eval expr (current-module))))
+      (nearly-equal? 0.3 (fmod 2.3 0.5))))
 
-  (pass-if "real tests" #f)
+  (compile-ffi-file "ffi/hsearch-s.ffi")
+  (use-modules (ffi hsearch-t))
 
   )
 

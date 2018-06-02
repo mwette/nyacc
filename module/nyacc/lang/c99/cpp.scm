@@ -29,10 +29,15 @@
 	    eval-cpp-expr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lang util))
+  #:use-module (nyacc lang sx-util)
+  #:use-module ((nyacc lang util) #:select (report-error))
+  )
 (cond-expand ;; for MES
   (guile-2
    (use-modules (rnrs arithmetic bitwise))
+   (use-modules (ice-9 pretty-print))
+   (define pp pretty-print)
+   (define (sf fmt . args) (apply simple-format #t fmt args))
    (use-modules (system base pmatch)))
   (else
    (use-modules (ice-9 optargs))
@@ -288,8 +293,8 @@
 	    ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
 	    ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
 	    ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
-	    ((equal) (if (= (ev1 tree) (ev2 tree)) 1 0))
-	    ((noteq) (if (= (ev1 tree) (ev2 tree)) 0 1))
+	    ((eq) (if (= (ev1 tree) (ev2 tree)) 1 0))
+	    ((ne) (if (= (ev1 tree) (ev2 tree)) 0 1))
 	    ((bitwise-not) (lognot (ev1 tree)))
 	    ((bitwise-or) (logior (ev1 tree) (ev2 tree)))
 	    ((bitwise-xor) (logxor (ev1 tree) (ev2 tree)))

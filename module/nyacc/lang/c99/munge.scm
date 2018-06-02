@@ -103,7 +103,7 @@
   #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts foldts*))
   #:use-module (sxml match)
   #:use-module (srfi srfi-11)		; let-values
@@ -116,7 +116,7 @@
   )
 ;; undocumented Guile builtins: or-map
 
-;;(define (sf fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 (define OA object-address)
@@ -139,16 +139,6 @@
 ;; The argument can also be @code{init-declr-list} or @code{comp-declr-list}
 ;; in which case all elements need to be pointers.
 ;; @end deffn
-(define (OLD-pointer-declr? declr)
-  (and
-   (pair? declr)
-   (case (sx-tag declr)
-     ((init-declr comp-declr param-declr)
-      (member (sx-tag (sx-ref declr 1)) '(ptr-declr array-of ftn-declr)))
-     ((init-declr-list comp-declr-list)
-      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed))
-	    #t (sx-tail declr)))
-     (else #f))))
 (define (pointer-declr? declr)
   ;;(sferr "pointer-declr? ~S\n" declr)
   (and
@@ -168,7 +158,7 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (* #f))))
+     (else #f))))
 ;; @deffn {Procedure} pointer-stor-declr? declr => #t|#f
 ;; @deffnx {Procedure} pointer-pass-declr? declr => #t|#f
 ;; This predicate determines if the declarator is implemented as a pointer.
@@ -193,7 +183,7 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (* #f))))
+     (else #f))))
 
 ;; Use the term @dfn{udecl}, or unit-declaration, for a declaration which has
 ;; only one decl-item.  That is where,
@@ -359,13 +349,17 @@
 ;; and @code{udict-ref}.  This procecure is robust to already munged decls.
 ;; To capture enum values as globals use @code{->ddict}.
 ;; @*
-;; Notes: now saving attributes.
+;; Notes: Now saving attributes at top level.  Adding attributes for
+;; struct and union (e.g., @code{__packed__}.  The latter is needed
+;; because they appear in files under @file{/usr/include}.
 ;; @end deffn
 
 (define* (unitize-decl decl #:optional (seed '()))
   
-  (define* (make-udecl type guts #:optional typename)
-    `(udecl (decl-spec-list (type-spec ,(cons type guts)))))
+  (define* (make-udecl type attr guts #:optional typename)
+    (if (and attr (pair? attr))
+	`(udecl (decl-spec-list (type-spec ,(cons* type `(@ ,@attr) guts))))
+	`(udecl (decl-spec-list (type-spec ,(cons type guts))))))
 
   ;; update depends on whether unitize- procedures use fold or fold-right
   (define (update-left name value tag attr specl declrs tail seed)
@@ -377,6 +371,7 @@
   (define update update-right)
 
   ;;(simple-format #t "unitize-decl ~S\n" decl)
+  ;; TODO: add attr
   (cond
    ((not (pair? decl))
     (error "bad arg"))
@@ -392,9 +387,9 @@
 	;; struct typedefs 
 	((decl-spec-list
 	  (stor-spec (typedef))
-	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(struct . ,name)
-		 (make-udecl 'struct-def `((ident ,name) . ,rest2))
+		 (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
@@ -404,9 +399,9 @@
 	;; union typedefs 
 	((decl-spec-list
 	  (stor-spec (typedef))
-	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (union-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(union . ,name)
-		 (make-udecl 'union-def `((ident ,name) . ,rest2))
+		 (make-udecl 'union-def aattr `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
@@ -418,22 +413,22 @@
 	  (stor-spec (typedef))
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(enum . ,name)
-		 (make-udecl 'enum-def `((ident ,name) . ,rest2))
+		 (make-udecl 'enum-def #f `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def . ,rest2) . ,rest1))
 	 (iter-declrs tag #f specl declrs tail
-		      (acons `(enum . "*anon*") (make-udecl 'enum-def rest2)
+		      (acons `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 			     seed))
-	 (update `(enum . "*anon*") (make-udecl 'enum-def rest2)
+	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 		 tag attr specl declrs tail seed))
 	
 	;; structs
 	((decl-spec-list
-	  (type-spec (struct-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(struct . ,name)
-		 (make-udecl 'struct-def `((ident ,name) . ,rest2))
+		 (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
@@ -441,9 +436,9 @@
 
 	;; unions
 	((decl-spec-list
-	  (type-spec (union-def (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (union-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(union . ,name)
-		 (make-udecl 'union-def `((ident ,name) . ,rest2))
+		 (make-udecl 'union-def aattr `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (type-spec (union-def . ,rest2) . ,rest1))
@@ -453,14 +448,14 @@
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(enum . ,name)
-		 (make-udecl 'enum-def `((ident ,name) . ,rest2))
+		 (make-udecl 'enum-def #f `((ident ,name) . ,rest2))
 		 tag attr specl declrs tail seed))
 	((decl-spec-list
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 (update `(enum . "*anon*") (make-udecl 'enum-def rest2)
+	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 		 tag attr specl declrs tail seed))
 
-	(* (iter-declrs tag attr specl declrs tail seed)))))
+	(else (iter-declrs tag attr specl declrs tail seed)))))
    
    ((eqv? (sx-tag decl) 'comp-udecl) (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag decl) 'comp-decl) (unitize-comp-decl decl seed))
@@ -540,7 +535,7 @@
     ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
     ((bit-field ,ident . ,rest) ident)
-    (* (throw 'util-error "c99/munge: unknown declarator: " declr))))
+    (else (throw 'util-error "c99/munge: unknown declarator: " declr))))
 
 ;; @deffn {Procedure} declr-id decl => "name"
 ;; This extracts the name from the return value of @code{declr-ident}.
@@ -606,7 +601,7 @@
 (define (typedef-decl? decl)
   (sx-match decl
     ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
-    (* #f)))
+    (else #f)))
 
 ;; @deffn {Procedure} repl-typespec decl-spec-list repl-type-spec
 ;; In the decl-spec-list replace the type-specifier.
@@ -712,7 +707,7 @@
        `(ftn-declr ,(probe-declr dir-declr) . ,rest))
       ((scope ,declr)
        `(scope ,(probe-declr declr)))
-      (* (throw 'util-error "c99/munge: unknown declarator: " declr))))
+      (else (throw 'util-error "c99/munge: unknown declarator: " declr))))
   (probe-declr tdef-declr))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
@@ -1017,7 +1012,7 @@
 	      declr
 	      `(comp-declr-list . ,xdeclrs))))
        
-       (* (throw 'util-error "c99/munge: unknown declarator: " declr)))))
+       (else (throw 'util-error "c99/munge: unknown declarator: " declr)))))
 
   (let*-values (((tag attr orig-specl orig-declr tail)
 		 (split-adecl adecl))
@@ -1334,8 +1329,12 @@
 ;; @end deffn
 (define* (udecl->mspec decl #:key abs-ident)
 
+  ;; Hmm.  We convert array size back to C code (string).  Now that I am working
+  ;; on constant expression eval (eval-c99-cx) maybe we should change that.
   (define (cnvt-size-expr size-spec)
-    (with-output-to-string (lambda () (pretty-print-c99 size-spec))))
+    ;;(with-output-to-string (lambda () (pretty-print-c99 size-spec)))
+    size-spec
+    )
 
   (define (unwrap-specl specl)
     (and=> (assq-ref (sx-tail specl) 'type-spec) car))
@@ -1348,7 +1347,7 @@
       ((pointer (type-qual-list . ,type-qual)) '((pointer-to)))
       ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
       ((pointer) '((pointer-to)))
-      (*
+      (else
        (sferr "unwrap-pointer failed on:\n") (pperr pointer)
        (error "unwrap-pointer"))))
 
@@ -1418,7 +1417,7 @@
       ((comp-declr ,item) (unwrap-declr item))
       ((param-declr ,item) (unwrap-declr item))
 
-      (*
+      (else
        (sferr "munge/unwrap-declr missed:\n")
        (pperr declr)
        (error "c99/munge: udecl->mspec failed")
@@ -1453,6 +1452,7 @@
 (define* (mspec->udecl mspec)
 
   (define (make-udecl types declr)
+    ;; TODO: w/ attr needed?
     `(udecl (decl-spec-list (type-spec ,types)) (init-declr ,declr)))
 
   (define (doit declr mspec-tail)

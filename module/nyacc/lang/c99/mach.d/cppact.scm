@@ -42,9 +42,9 @@
    ;; equality-expression => relational-expression
    (lambda ($1 . $rest) $1)
    ;; equality-expression => equality-expression "==" relational-expression
-   (lambda ($3 $2 $1 . $rest) `(equal ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
    ;; equality-expression => equality-expression "!=" relational-expression
-   (lambda ($3 $2 $1 . $rest) `(noteq ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(ne ,$1 ,$3))
    ;; relational-expression => shift-expression
    (lambda ($1 . $rest) $1)
    ;; relational-expression => relational-expression "<" shift-expression

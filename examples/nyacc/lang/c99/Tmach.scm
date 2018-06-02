@@ -19,7 +19,7 @@
 (use-modules (ice-9 pretty-print))
 
 ;; test def parser: show parse tree
-(when #t
+(when #f
   (let* ((file "c99-exam/ex01.c")
 	 (defs '("arch=x86_64"))
 	 (incs  '("exam.d"))

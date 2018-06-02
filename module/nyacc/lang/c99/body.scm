@@ -29,14 +29,19 @@
 
 ;; issue w/ brlev: not intended to beused with `extern "C" {'
 
+(use-modules (nyacc lang sx-util))
+(use-modules (nyacc lang util))
 (use-modules ((srfi srfi-1) #:select (fold-right)))
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
+(use-modules (ice-9 regex))
 (use-modules (ice-9 pretty-print))	; for debugging
 
+;; C parser info (?)
 (define-record-type cpi
   (make-cpi-1)
   cpi?
   (debug cpi-debug set-cpi-debug!)	; debug #t #f
+  (shinc cpi-shinc set-cpi-shinc!)	; show includes
   (defines cpi-defs set-cpi-defs!)	; #defines
   (incdirs cpi-incs set-cpi-incs!)	; #includes
   (inc-tynd cpi-itynd set-cpi-itynd!)	; a-l of incfile => typenames
@@ -73,8 +78,10 @@
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers
 ;; should be last-in-first-seen ordered.  Probably helpers low prio.
+;; The (CPP) defines can appear as pairs: then they have already been split.
+;; (This is used by @code{parse-c99x}.)
 ;; @end deffn
-(define (make-cpi debug defines incdirs inchelp)
+(define (make-cpi debug shinc defines incdirs inchelp)
   ;; convert inchelp into inc-file->typenames and inc-file->defines
   ;; Any entry for an include file which contains `=' is considered
   ;; a define; otherwise, the entry is a typename.
@@ -88,12 +95,16 @@
 	  (lambda (def) (iter tyns (cons def defs) (cdr ents))))
 	 (else (iter (cons (car ents) tyns) defs (cdr ents)))))))
 
+  (define (split-if-needed def)
+    (if (pair? def) def (split-cppdef def)))
+
   (let* ((cpi (make-cpi-1)))
     (set-cpi-debug! cpi debug)		; print states debug 
-    (set-cpi-defs! cpi (map split-cppdef defines)) ; list of define strings
+    (set-cpi-shinc! cpi shinc)		; print includes
+    (set-cpi-defs! cpi (map split-if-needed defines)) ; def's as pairs
     (set-cpi-incs! cpi incdirs)		; list of include dir's
     (set-cpi-ptl! cpi '())		; list of lists of typenames
-    (set-cpi-ctl! cpi '())		; list of typenames
+    (set-cpi-ctl! cpi '())		; list of current typenames
     (set-cpi-blev! cpi 0)		; brace/block level
     ;; Break up the helpers into typenames and defines.
     (let iter ((itynd '()) (idefd '()) (helpers inchelp))
@@ -196,6 +207,24 @@
   (for-each add-typename (find-new-typenames decl))
   decl)
 
+;; NOT USED NOW
+(define gen-attributes
+  (let ((rx (make-regexp "^__(.*)__$")))
+    (lambda (spec)
+      ;; spec is '(@ ("packed" "packed") ...)
+      (sx-match spec
+	((attributes ,name)
+	 (cond
+	  ((regexp-exec rx name) =>
+	   (lambda (m) (cons (match:substring m 1) "")))
+	  (else
+	   (cons name ""))))
+	))))
+
+;; used in c99-spec actions for attribute-specifiers
+(define (attr-expr-list->string attr-expr-list)
+  (string-append "(" (string-join (cdr attr-expr-list) ",") ")"))
+
 ;; ------------------------------------------------------------------------
 
 (define (c99-err . args)
@@ -292,13 +321,15 @@
 		 '() stmts))))
     ;; mode: 'code|'file|'decl
     ;; xdef?: (proc name mode) => #t|#f  : do we expand #define?
-    (lambda* (#:key (mode 'code) xdef? show-includes)
+    (lambda* (#:key (mode 'code) xdef? show-incs)
       (let ((bol #t)		 ; begin-of-line condition
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
 	    (info (fluid-ref *info*))	; info shared w/ parser
 	    ;;(brlev 0)			; brace level
-	    (x-def? (or xdef? def-xdef?))
+	    (x-def? (cond ((procedure? xdef?) xdef?)
+			  ((eq? xdef? #t) (lambda (n m) #t))
+			  (else def-xdef?)))
 	    )
 	;; Return the first (tval . lval) pair not excluded by the CPP.
 	(lambda ()
@@ -378,7 +409,7 @@
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
 		   (path (inc-file-spec->path spec next)))
-	      (if show-includes (sferr "include ~S => ~S\n" file path))
+	      (if show-incs (sferr "include ~A => ~S\n" spec path))
 	      (cond
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -390,7 +421,7 @@
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
 		   (path (inc-file-spec->path spec next)))
-	      (if show-includes (sferr "include ~S => ~S\n" file path))
+	      (if show-incs (sferr "include ~A => ~S\n" spec path))
 	      (cond
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
@@ -523,13 +554,15 @@
 			(defs (cpi-defs info)))
 		    (cond
 		     ((and (not suppress)
-			   (if (procedure? x-def?) (x-def? name mode) x-def?)
+			   (x-def? name mode)
 			   (expand-cpp-macro-ref name defs))
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
+		      ;;^minor bug: won't work on #define keyword xxx; try ...
+		      ;; (and (not (assoc-ref name defs)) (assq-ref keytab symb))
 		      => (lambda (t) (cons t name)))
 		     ((typename? name)
 		      (cons (assq-ref symtab 'typename) name))

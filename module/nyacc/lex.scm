@@ -55,11 +55,13 @@
 	    )
   #:use-module ((srfi srfi-1) #:select (remove append-reverse))
   )
-(cond-expand ;; for MES
-  (guile-2 #t)
+(cond-expand
+  (mes)
+  (guile-2)
   (guile
    (use-modules (ice-9 optargs))
-   (use-modules (ice-9 syncase))))
+   (use-modules (ice-9 syncase)))
+  (else))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
   
@@ -325,65 +327,68 @@
   ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
   ;; Removed support for leading '.' to be a number.
   (lambda (ch1)
-    ;; chl: char list; ty: '$fixed or '$float; st: state; ch: input char
-    (let iter ((chl '()) (ty #f) (st 0) (ch ch1))
+    ;; chl: char list; ty: '$fixed or '$float; st: state; ch: next ch; ba: base
+    (let iter ((chl '()) (ty #f) (ba 10) (st 0) (ch ch1))
       (case st
 	((0)
 	 (cond
-	  ((eof-object? ch) (iter chl ty 5 ch))
-	  ((char=? #\0 ch) (iter (cons ch chl) '$fixed 10 (read-char))) 
-	  ((char-numeric? ch) (iter chl '$fixed 1 ch))
+	  ((eof-object? ch) (iter chl ty ba 5 ch))
+	  ((char=? #\0 ch) (iter (cons ch chl) '$fixed 8 10 (read-char))) 
+	  ((char-numeric? ch) (iter chl '$fixed ba 1 ch))
 	  (else #f)))
 	((10) ;; allow x after 0
 	 (cond
-	  ((eof-object? ch) (iter chl ty 5 ch))
-	  ((char=? #\x ch) (iter (cons ch chl) ty 1 (read-char)))
-	  (else (iter chl ty 1 ch))))
+	  ((eof-object? ch) (iter chl ty ba 5 ch))
+	  ((char=? #\x ch) (iter (cons ch chl) ty 16 1 (read-char)))
+	  (else (iter chl ty ba 1 ch))))
 	((1)
 	 (cond
-	  ((eof-object? ch) (iter chl ty 5 ch))
-	  ((char-numeric? ch) (iter (cons ch chl) ty 1 (read-char)))
-	  ((char=? #\. ch) (iter (cons #\. chl) '$float 2 (read-char)))
-	  ((char-set-contains? c:hx ch)
-	   (iter (cons ch chl) ty 1 (read-char)))
+	  ((eof-object? ch) (iter chl ty ba 5 ch))
+	  ((char-numeric? ch) (iter (cons ch chl) ty ba 1 (read-char)))
+	  ((char=? #\. ch) (iter (cons #\. chl) '$float ba 2 (read-char)))
+	  ((and (= ba 16) (char-set-contains? c:hx ch))
+	   (iter (cons ch chl) ty ba 1 (read-char)))
 	  ((char-set-contains? c:sx ch)
-	   (iter (cons ch chl) ty 11 (read-char)))
+	   (iter (cons ch chl) ty ba 11 (read-char)))
+	  ((char-set-contains? c:nx ch)
+	   (iter (cons ch chl) '$float ba 3 (read-char)))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=1"))
-	  (else (iter chl '$fixed 5 ch))))
+	  (else (iter chl '$fixed ba 5 ch))))
 	((11) ;; got lLuU suffix, look for a second
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
-	  ((char-set-contains? c:sx ch) (iter (cons ch chl) ty 12 (read-char)))
-	  (else (iter chl '$fixed 5 ch))))
+	  ((char-set-contains? c:sx ch)
+	   (iter (cons ch chl) ty ba 12 (read-char)))
+	  (else (iter chl '$fixed ba 5 ch))))
 	((12) ;; got lLuU suffix, look for a third
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
 	  ((char-set-contains? c:sx ch)
-	   (iter (cons ch chl) '$fixed 5 (read-char)))
-	  (else (iter chl '$fixed 5 ch))))
+	   (iter (cons ch chl) '$fixed 5 ba (read-char)))
+	  (else (iter chl '$fixed ba 5 ch))))
 	((2)
 	 (cond
-	  ((eof-object? ch) (iter chl ty 5 ch))
-	  ((char-numeric? ch) (iter (cons ch chl) ty 2 (read-char)))
+	  ((eof-object? ch) (iter chl ty ba 5 ch))
+	  ((char-numeric? ch) (iter (cons ch chl) ty ba 2 (read-char)))
 	  ((char-set-contains? c:nx ch)
-	   (iter (cons ch (fix-dot chl)) ty 3 (read-char)))
+	   (iter (cons ch (fix-dot chl)) ty ba 3 (read-char)))
 	  ((char-set-contains? c:fx ch)
 	   (cons '$float (lxlsr (cons ch (fix-dot chl)))))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=2"))
-	  (else (iter (fix-dot chl) ty 5 ch))))
+	  (else (iter (fix-dot chl) ty ba 5 ch))))
 	((3)
 	 (cond
-	  ((eof-object? ch) (iter chl ty 5 ch))
+	  ((eof-object? ch) (iter chl ty ba 5 ch))
 	  ((or (char=? #\+ ch) (char=? #\- ch))
-	   (iter (cons ch chl) ty 4 (read-char)))
-	  ((char-numeric? ch) (iter chl ty 4 ch))
+	   (iter (cons ch chl) ty ba 4 (read-char)))
+	  ((char-numeric? ch) (iter chl ty ba 4 ch))
 	  (else (error "syntax3"))))
 	((4)
 	 (cond
-	  ((eof-object? ch) (iter chl ty 5 ch))
-	  ((char-numeric? ch) (iter (cons ch chl) ty 4 (read-char)))
+	  ((eof-object? ch) (iter chl ty ba 5 ch))
+	  ((char-numeric? ch) (iter (cons ch chl) ty ba 4 (read-char)))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=4"))
-	  (else (iter chl ty 5 ch))))
+	  (else (iter chl ty ba 5 ch))))
 	((5)
 	 (unless (eof-object? ch) (unread-char ch))
 	 (cons ty (lxlsr chl)))))))
@@ -593,6 +598,7 @@
 ;; chrtab = characters
 ;; comm-reader : if parser does not deal with comments must return #f
 ;;               but problem with character ..
+;; extra-reader: insert an user-defined reader
 ;; match-table:
 ;; @enumerate
 ;; symbol -> (string . symbol)
@@ -603,10 +609,11 @@
 ;; todo: maybe separate reading of keywords from identifiers: (keywd ch) =>
 ;; @end deffn
 (define* (make-lexer-generator match-table
-			       #:key ident-reader num-reader
+			       #:key
+			       ident-reader num-reader
 			       string-reader chlit-reader
 			       comm-reader comm-skipper
-			       space-chars)
+			       space-chars extra-reader)
   (let* ((read-ident (or ident-reader (make-ident-reader c:if c:ir)))
 	 (read-num (or num-reader (make-num-reader)))
 	 (read-string (or string-reader (make-string-reader #\")))
@@ -618,6 +625,7 @@
 			 ((list? spaces) (list->char-set spaces))
 			 ((char-set? spaces) spaces)
 			 (else (error "expecting string list or char-set"))))
+	 (read-extra (or extra-reader (lambda (ch) #f)))
 	 ;;
 	 (ident-like? (make-ident-like-p read-ident))
 	 ;;
@@ -638,6 +646,7 @@
 	    (cond
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
 	     ;;((eq? ch #\newline) (set! bol #t) (iter (read-char)))
+	     ((read-extra ch))
 	     ((char-set-contains? space-cs ch) (iter (read-char)))
 	     ((and (eqv? ch #\newline) (set! bol #t) #f))
 	     ((read-comm ch bol) =>

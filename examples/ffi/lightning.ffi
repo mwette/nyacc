@@ -1,0 +1,126 @@
+;; lightning.ffi			-*- Scheme -*-
+
+(define-ffi-module (ffi lightning)
+  #:include '("lightning.h" "lightning/jit_x86.h")
+  #:inc-filter (lambda (file path) (string-contains path "lightning/"))
+  #:library '("liblightning")
+  )
+
+;; the following generated from examples/nyacc/lang/c99/mkjit.scm
+
+(define (jit_get_note n u v w)
+  (_jit_get_note _jit n u v w))
+
+(define (jit_pointer_p u)
+  (_jit_pointer_p _jit u))
+
+(define (jit_callee_save_p u)
+  (_jit_callee_save_p _jit u))
+
+(define (jit_arg_register_p u)
+  (_jit_arg_register_p _jit u))
+
+(define (jit_new_node_pwd c u v w)
+  (_jit_new_node_pwd _jit c u v w))
+
+(define (jit_new_node_pwf c u v w)
+  (_jit_new_node_pwf _jit c u v w))
+
+(define (jit_new_node_pww c u v w)
+  (_jit_new_node_pww _jit c u v w))
+
+(define (jit_new_node_wwd c u v w)
+  (_jit_new_node_wwd _jit c u v w))
+
+(define (jit_new_node_wwf c u v w)
+  (_jit_new_node_wwf _jit c u v w))
+
+(define (jit_new_node_qww c l h v w)
+  (_jit_new_node_qww _jit c l h v w))
+
+(define (jit_new_node_www c u v w)
+  (_jit_new_node_www _jit c u v w))
+
+(define (jit_new_node_wd c u v)
+  (_jit_new_node_wd _jit c u v))
+
+(define (jit_new_node_wf c u v)
+  (_jit_new_node_wf _jit c u v))
+
+(define (jit_new_node_pw c u v)
+  (_jit_new_node_pw _jit c u v))
+
+(define (jit_new_node_dp c u v)
+  (_jit_new_node_dp _jit c u v))
+
+(define (jit_new_node_fp c u v)
+  (_jit_new_node_fp _jit c u v))
+
+(define (jit_new_node_wp c u v)
+  (_jit_new_node_wp _jit c u v))
+
+(define (jit_new_node_ww c u v)
+  (_jit_new_node_ww _jit c u v))
+
+(define (jit_new_node_p c u)
+  (_jit_new_node_p _jit c u))
+
+(define (jit_new_node_d c u)
+  (_jit_new_node_d _jit c u))
+
+(define (jit_new_node_f c u)
+  (_jit_new_node_f _jit c u))
+
+(define (jit_new_node_w c u)
+  (_jit_new_node_w _jit c u))
+
+(define (jit_new_node c) (_jit_new_node _jit c))
+
+(define (jit_tramp u) (_jit_tramp _jit u))
+
+(define (jit_frame u) (_jit_frame _jit u))
+
+(define (jit_set_data u v w)
+  (_jit_set_data _jit u v w))
+
+(define (jit_get_data u v)
+  (_jit_get_data _jit u v))
+
+(define (jit_set_code u v)
+  (_jit_set_code _jit u v))
+
+(define (jit_get_code u) (_jit_get_code _jit u))
+
+(define (jit_patch_abs u v)
+  (_jit_patch_abs _jit u v))
+
+(define (jit_patch_at u v)
+  (_jit_patch_at _jit u v))
+
+(define (jit_patch u) (_jit_patch _jit u))
+
+(define (jit_target_p u) (_jit_target_p _jit u))
+
+(define (jit_indirect_p u)
+  (_jit_indirect_p _jit u))
+
+(define (jit_forward_p u)
+  (_jit_forward_p _jit u))
+
+(define (jit_address node)
+  (_jit_address _jit node))
+
+(define (jit_regno reg) (logand reg 32767))
+
+(define (jit_class reg) (logand reg 4294901760))
+
+(define (JIT_F index) (jit_f index))
+
+(define (JIT_V index) (jit_v index))
+
+(define (JIT_R index) (jit_r index))
+
+(define (jit_x87_reg_p reg)
+  (and (>= reg _ST0) (<= reg _ST6)))
+
+;; --- last line ---

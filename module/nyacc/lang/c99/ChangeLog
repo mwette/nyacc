@@ -1,3 +1,20 @@
+2018-04-05  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): Committed major surgery to add handling of
+	attribute specifiers to be returned as attributes like
+	(@ ("packed" "") ("aligned" "(__alignof__(long long))"))
+
+2018-03-10  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* body.scm (gen-c-lexer): Worked on x-def usage.  I'm still unsure
+	if read-c-ident logic is all correct.
+
+2018-02-19  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* ../../../../examples/nyacc/lang/c99/ffi-help.scm
+	(mtail->bs-desc): bug in (pointer-to typename) to (assoc-ref map
+	name) from (assoc-ref name map)
+
 2017-12-23  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* pprint.scm (pretty-print-c99): added initializer and

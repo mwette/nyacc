@@ -7,7 +7,7 @@
 # Copying and distribution of this file, with or without modification
 # is granted.  This file is offered as-is, without any warranty.
 
-nyacc_version=0.83.3
+nyacc_version=0.84.1
 
 help() {
     echo "'configure' sets up the top-level Makefile for your local guile"
@@ -82,10 +82,11 @@ if [ "X$guile" != "X" ]; then
     fi
     GUILE=$guile
 elif [ "X$GUILE" = "X" ]; then
+    GUILE=guile
+else
     if [ "X$GUILD" = "X" ]; then
         echo "warning: GUILE specified but not GUILD"
     fi
-    GUILE=guile
 fi
 if [ "X$guild" != "X" ]; then
     GUILD=$guild

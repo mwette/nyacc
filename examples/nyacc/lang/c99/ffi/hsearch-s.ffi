@@ -1,0 +1,7 @@
+;; hsearch-s.ffi			-*- Scheme -*-
+
+(define-ffi-module (ffi hsearch-s)
+  #:include '("search.h")
+  )
+
+;; --- last line ---

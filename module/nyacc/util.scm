@@ -20,7 +20,7 @@
 	    fmtstr fmtout fmterr fmt
 	    wrap-action
 	    obj->str
-	    fixed-point prune-assoc
+	    fixpoint prune-assoc
 	    map-attr->vector
 	    x-flip x-comb
 	    write-vec
@@ -28,13 +28,14 @@
 	    tzort
 	    )
   )
-(cond-expand ;; for MES
+(cond-expand
+  (mes)
   (guile-2
    (use-modules (srfi srfi-43)))
   (guile
    (use-modules (ice-9 optargs))
    (use-modules (nyacc compat18)))
-  )
+  (else))
 
 (define (fmtstr fmt . args)
   (apply simple-format #f fmt args))
@@ -79,8 +80,8 @@
     (if (null? al0) al1
 	(iter (if (assoc (caar al0) al1) al1 (cons (car al0) al1)) (cdr al0)))))
 
-;; @deffn {Procedure} fixed-point proc seed
-;; This generates the fixed point for @var{proc} applied to @var{seed},
+;; @deffn {Procedure} fixpoint proc seed
+;; This generates the fixpoint for @var{proc} applied to @var{seed},
 ;; a list.  The procedure @code{proc} takes as arguments an element from
 ;; the list and the entire list.   Updates should be cons'd onto the front
 ;; of the list.
@@ -100,7 +101,7 @@
 ;;        +---+
 ;; @end example
 ;; @end deffn
-(define (fixed-point proc seed)
+(define (fixpoint proc seed)
   (let iter ((prev '()) (item seed) (curr seed) (next seed))
     (cond
      ((not (eqv? item prev))
@@ -110,10 +111,10 @@
      (else
       curr))))
 
-;; @deffn vector-fixed-point proc vec => vec
+;; @deffn vector-fixpoint proc vec => vec
 ;; (proc vec) => chg (boolean)
 ;; Not used yet (in step3).
-(define (vector-fixed-point proc vec)
+(define (vector-fixpoint proc vec)
   (let iter ((chg #t))
     (if chg (proc vec) vec)))
 

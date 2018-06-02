@@ -1,6 +1,6 @@
 Install instructions for NYACC
 
-Copyright (C) 2015-2017 Matthew R. Wette
+Copyright (C) 2015-2018 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -14,6 +14,19 @@ or
   $ ./configure --prefix=/path/to/root
 or
   $ ./configure --site_scm_dir=/path/to/dest --site_scm_go_dir=/dummy
+
+There is nothing to make:
+  $ make
+  nothing to make
+
+You can run the tests:
+  $ make check
+    (cd test-suite/nyacc; \
+     make -f Makefile.nyacc GUILE=guile check)
+    make[1]: Entering directory ...
+    PASS: nyacc/lex-01: C char literals
+    PASS: nyacc/lex-01: C strings
+    ...
 
 
 To install only sources in /path/to/dest:
@@ -29,8 +42,6 @@ If you want to install the experiental FFI Helper files:
 The FFI Helper requires the bytestructures package, from
   https://github.com/TaylanUB/scheme-bytestructures
 `make install-ffi-helper' will fail if this package is not installed.
-If you don't want to clone this package from the git repo, then nyacc has
-a copy: use `make install-bytestructures' before `make install-ffi-help'.
 
 See `info ffi-help' for more detail.  Note: compiling the output off the
 ffi-helper output of can take some time, due to size.

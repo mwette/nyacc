@@ -1,3 +1,9 @@
+To generate a scm from ffi, using cairo.ffi as example:
+$ guild compile-ffi ffi/cairo.ffi
+wrote `ffi/cairo.scm'
+
+
+
 MISSING:
 1) Guile does not have some types.  Need the following:
    long long, unsigned long long, intptr_t, uintptr_t, long double (glib)
@@ -12,28 +18,25 @@ BROKEN:
 2) use of @193 instead of arg-0 for args			  
 
 TODO:
-1) find clean way to deal with char being byte and int
 2) move enum comments to ffi.scm comments (currently removed)
 3) recheck (pointer-to x) <=> (object-at y)
-4) check handling of char as int and int8
 5) allow suck-in of #defines (e.g., M_PI, HUGE_VAL from math.h)
    but may not work cause '#define HUGE_VAL __builtin_huge_val()'
 
 NOTES:
-1) need to memoize dynamic-func calls because some functions appear in
-   headers but not in the libraries (obsolete, debugging?)
 
 To compile a cairo.ffi file execute the following shell command:
   $ guild compile-ffi cairo.ffi
 
-cairo.ffi		working : runs demo progs OK
-gdbm.ffi		working ?
+cairo.ffi		working
+gdbm.ffi		working?
 libgit2.ffi		working 
 librsvg.ffi		working
 sqlite3.ffi		working
-glib.ffi		long double, varargs
-gobject.ffi		works, but takes time
-gio.ffi			works, but takes time
+glib.ffi		long double
+gobject.ffi		working
+gio.ffi			working
+gtk2+.ffi		working
 
 IN WORK:
 

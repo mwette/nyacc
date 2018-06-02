@@ -1,0 +1,12 @@
+;; epoll.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi epoll)
+  #:include '("sys/epoll.h")
+  )
+
+(define-public EPOLL (make-symtab-function ffi-epoll-symbol-tab "EPOLL"))
+
+(define-public (make-epoll-event . args)
+  (apply logand (map unwrap-enum-EPOLL_EVENTS args)))
+
+;; --- last line ---

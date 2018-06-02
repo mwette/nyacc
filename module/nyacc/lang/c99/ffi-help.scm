@@ -28,6 +28,8 @@
 ;; bytestructure->descriptor->ffi-descriptor
 ;; bs:pointer->proc
 
+;; TODO: add renamer
+
 ;; For enum typedefs we are not creating types but just using wrappers.
 
 (define-module (nyacc lang c99 ffi-help)
@@ -37,6 +39,8 @@
 	    load-include-file
 	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl-str fh-scm-str->scm-exp
 	    string-member-proc string-renamer
+	    ;;
+	    C-fun-decl->scm
 	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
 	    ;; debugging
 	    ;;ffi-symmap
@@ -44,12 +48,14 @@
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 xparser)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 munge)
+  #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 util1)
   #:use-module (nyacc version)
-  #:use-module ((nyacc lang util)
-		#:select (cintstr->scm sx-ref sx-list sx-attr-ref sx-attr-set!))
+  #:use-module (nyacc lang sx-util)
+  #:use-module ((nyacc lang util) #:select (cintstr->scm))
   #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:use-module (system foreign)
@@ -75,55 +81,52 @@
 (define fh-cpp-defs
   (cond
    ((string-contains %host-type "darwin")
-    '("__GNUC__=6")
+    ;;'("__GNUC__=6" "__signed=signed")
     (remove (lambda (s)
 	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
 	    (get-gcc-cpp-defs)))
-   (else '())))
+   (else (get-gcc-cpp-defs))))
+    
 (define fh-inc-dirs
   (append
-   `(,(assq-ref %guile-build-info 'includedir)
-     "/usr/include")
+   `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
    (get-gcc-inc-dirs)))
 (define fh-inc-help
   (cond
    ((string-contains %host-type "darwin")
     '(("__builtin"
        "__builtin_va_list=void*"
-       "__attribute__(X)="
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
-       "__extension__="
+       "__extension__=" "__restrict=" "__THROW="
        "__signed=signed"
-       )
-      ;;("sys/cdefs.h" "__DARWIN_ALIAS(X)=")
-      ))
+       )))
    (else
     '(("__builtin"
-       "__builtin_va_list=void*" "__attribute__(X)="
+       "__builtin_va_list=void*"
        "__inline=" "__inline__="
        "__asm(X)=" "__asm__(X)="
        "__has_include(X)=__has_include__(X)"
-       "__extension__="
-       )
-      ))))
+       "__extension__=" "__restrict=" "__THROW="
+       )))))
 
 ;; DEBUGGING
 (set! fh-inc-dirs (cons "." fh-inc-dirs))
 
-;; change to parameters
+;; maybe change to a record-type
 (define *options* (make-parameter '()))
 (define *prefix* (make-parameter ""))	 ; name prefix (e.g., prefix-syms)
 (define *debug* (make-parameter #f))	 ; parse debug mode
 (define *mport* (make-parameter #t))	 ; output module port
 (define *udict* (make-parameter '()))	 ; udecl dict
+(define *ddict* (make-parameter '()))	 ; cpp-def dict
+(define *tdefs* (make-parameter '()))	 ; typenames
 (define *wrapped* (make-parameter '()))	 ; wrappers for foo_t and foo_t*
 (define *defined* (make-parameter '()))	 ; has wrapper and is bytestructure?
 (define *renamer* (make-parameter identity)) ; renamer from ffi-module
 (define *errmsgs* (make-parameter '()))	     ; list of warnings
 ;; what about option to trace
-(define *all-defs* (make-parameter '()))
 
 (define *echo-decls* #f)		; add echo-decls code for debugging
 
@@ -134,6 +137,8 @@
 (define* (upscm tree #:key (per-line-prefix ""))
   (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
 (define (c99scm tree)
+  #;(when (equal? "epoll_event" (sx-ref* tree 1 1 1 1 1))
+    (sferr "c99scm:\n") (pperr tree))
   (pretty-print-c99 tree
 		    (*mport*)
 		    #:per-line-prefix ";; "))
@@ -203,7 +208,7 @@
 ;; Run pkg-config
 (define (pkg-config name . args)
   (if name
-      (let* ((cmdstr (string-join (cons* "pkg-config" name args)))
+      (let* ((cmdstr (string-append "pkg-config" " " (string-join args) " " name))
 	     (port (open-input-pipe cmdstr))
 	     (ostr (read-line port))
 	     (status (close-pipe port))
@@ -273,6 +278,15 @@
 (define (w/* name) (cons 'pointer name))
 (define (w/struct* name) (cons 'pointer (cons 'struct name)))
 (define (w/union* name) (cons 'pointer (cons 'union name)))
+
+(define (udict->typenames udict)
+  (fold
+   (lambda (pair seed)
+     (let ((name (car pair)) (decl (cdr pair)))
+       (if (eq? 'typedef (and=> (sx-ref* decl 1 1 1) sx-tag))
+	   (cons name seed)
+	   seed)))
+   '() udict))
 
 ;; === output scheme module header 
 
@@ -354,13 +368,15 @@
 (define bs-defined (map car bs-typemap))
 
 (define (const-expr->number expr)
-  (let ((ns (or (string->number expr)
-		(eval-cpp-expr (parse-cpp-expr expr) (*all-defs*)))))
-    (unless ns (sferr "vector hell: ~S\n" expr))
-    ns))
+  (catch 'c99-error
+    (lambda ()
+      (let ((cx (eval-c99-cx expr (*udict*) (*ddict*))))
+	(unless cx (sferr "expr=~S\n" expr))
+	cx))
+    (lambda (key . args) (sferr "const-expr->number failed: ~S\n" expr) #f)))
 
+#!
 ;; given a union-descriptor geneate a bounding struct-descriptor
-#|
 (define (bounding-struct-descriptor union-descriptor)
   (let ((size (bytestructure-descriptor-size union-descriptor))
 	(align (bytestructure-descriptor-alignment union-descriptor))
@@ -378,14 +394,14 @@
 	  ((2) (bs:struct `(x ,uint16)))
 	  ((1) (bs:struct `(x ,uint8)))
 	  (else (error "unknown alignment"))))))
-|#
+!#
 
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
 (define (mtail->bs-desc mspec-tail)
   (let ((defined (*defined*))) ;; (udict (*udict*)))
     (pmatch mspec-tail
-      ;; expand typeref, use renamer, ...? 
+      ;; expand typeref, use renamer,
       (((typename ,name))
        (or (assoc-ref bs-typemap name)
 	   (string->symbol (string-append name "-desc"))))
@@ -417,7 +433,7 @@
       ;; typename use renamers, ... ???
       (((pointer-to) (typename ,name))
        (cond
-	((assoc-ref name bs-typemap) =>
+	((assoc-ref bs-typemap name) =>
 	 (lambda (n) `(bs:pointer ,n)))
 	((member (w/* name) defined)
 	 (strings->symbol name "*-desc"))
@@ -553,9 +569,7 @@
 	      ,(string->symbol (string-append name "?"))
 	      ,(string->symbol (string-append "make-" name))
 	      ))
-    (fhscm-export-def name)
-    ;;(sfscm "(export ~A ~A? make-~A)\n" name name name)
-    ))
+    (fhscm-export-def name)))
 
 (define* (fhscm-def-fixed name)
   (sfscm "(define unwrap-~A unwrap~~fixed)\n" name)
@@ -615,7 +629,7 @@
 ;; and @var{field-list} is the field-list from the C syntax tree.
 ;; @end deffn
 
-(define (cnvt-aggr-def aggr-t typename aggr-name field-list)
+(define (cnvt-aggr-def aggr-t attr typename aggr-name field-list)
   ;;(sferr "\nfield-list:\n") (pperr field-list)
   (let* ((field-list (expand-field-list-typerefs field-list))
 	 (sflds (cnvt-field-list field-list))
@@ -625,11 +639,16 @@
 	 (ty-desc (and typename (strings->symbol typename "-desc")))
 	 (ty*-desc (and typename (strings->symbol typename "*-desc")))
 	 (ag-desc (and aggrname (strings->symbol aggrname "-desc")))
-	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc"))))
+	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc")))
+	 (packed? (and attr (assoc-ref attr "__packed__")))
+	 (bs-spec (if packed?
+		      (list bs-aggr-t #t `(list ,@sflds))
+		      (list bs-aggr-t `(list ,@sflds))))
+	 )
     (cond
      ((and typename aggr-name)
       ;;(sfscm ";; == ~A =>\n" typename)
-      (ppscm `(define-public ,ty-desc ,(list bs-aggr-t `(list ,@sflds))))
+      (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
       (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
@@ -641,23 +660,23 @@
       (fhscm-def-pointer (sw/* aggrname))
       (fhscm-ref-deref aggrname))
      (typename
-      (ppscm `(define-public ,ty-desc ,(list bs-aggr-t `(list ,@sflds))))
+      (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
       (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
       (fhscm-ref-deref typename))
      (aggr-name
-      (ppscm `(define-public ,ag-desc ,(list bs-aggr-t `(list ,@sflds))))
+      (ppscm `(define-public ,ag-desc ,bs-spec))
       (fhscm-def-compound aggrname)
       (ppscm `(define-public ,ag*-desc (bs:pointer ,ag-desc)))
       (fhscm-def-pointer (sw/* aggrname))
       (fhscm-ref-deref aggrname)))))
 
-(define (cnvt-struct-def typename struct-name field-list)
-  (cnvt-aggr-def 'struct typename struct-name field-list))
+(define (cnvt-struct-def attr typename struct-name field-list)
+  (cnvt-aggr-def 'struct attr typename struct-name field-list))
 
-(define (cnvt-union-def typename union-name field-list)
-  (cnvt-aggr-def 'union typename union-name field-list))
+(define (cnvt-union-def attr typename union-name field-list)
+  (cnvt-aggr-def 'union attr typename union-name field-list))
 
 ;; --- enums
 
@@ -682,8 +701,11 @@
   (let* ((name-val-l
 	  (map
 	   (lambda (def)
-	     (let ((n (sx-ref (sx-ref def 1) 1)) (x (sx-ref def 2)))
-	       (cons (string->symbol n) (eval-cpp-expr x '()))))
+	     (let ((n (sx-ref (sx-ref def 1) 1)) (x (sx-ref def 2))
+		   )
+	       ;;(sferr "x=~S\n" x)
+	       ;;(cons (string->symbol n) (eval-cpp-expr x '()))))
+	       (cons (string->symbol n) (eval-c99-cx x '()))))
 	   (cdr (canize-enum-def-list enum-def-list)))))
     (cond
      ((and typename enum-name)
@@ -751,10 +773,10 @@
     (((array-of ,size) . ,rest) 'ffi-void*)
     (((fixed-type ,name))
      (or (assoc-ref ffi-typemap name)
-	 (fherr/once "no FFI fixed-type for ~A" name)))
+	 (fherr/once "no FFI type for ~A" name)))
     (((float-type ,name))
      (or (assoc-ref ffi-typemap name)
-	 (fherr/once "no FFI float-type for ~S" name)))
+	 (fherr/once "no FFI type for ~S" name)))
     (((typename ,name) . ,rest)
      (or (assoc-ref ffi-typemap name)
 	 (fherr "no FFI type for ~S" name)))
@@ -1069,14 +1091,24 @@
 			 ,(link-libs)))
 		,@(gen-exec-unwrappers exec-params))
 	    ,(if exec-return (list exec-return va-call) va-call)))))
-     (else
+     (#f ;; separate ~name and name defines
       (ppscm `(define ,~name
 		(delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
 				     ,(link-libs)))))
       (ppscm
        `(define (,sname ,@(gen-exec-arg-names exec-params))
 	  (let ,(gen-exec-unwrappers exec-params)
-	    ,(if exec-return (list exec-return call) call))))))
+	    ,(if exec-return (list exec-return call) call)))))
+     (else ;; combined ~name and name defines
+      (ppscm
+       `(define ,sname
+	  (let ((,~name
+		 (delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
+				      ,(link-libs)))))
+	    (lambda ,(gen-exec-arg-names exec-params)
+	      (let ,(gen-exec-unwrappers exec-params)
+		,(if exec-return (list exec-return call) call))))))
+      ))
     (sfscm "(export ~A)\n" name)))
 
 ;; === externs ========================
@@ -1159,6 +1191,8 @@
 ;; NOT SURE WHAT defined MEANS NOW
 ;; was bytestructure in fh-type, but for
 ;; for any type we also declare a poitner type
+;; TODO: decls need to be broken out into one of the forms:
+;; function typedef struct-ref/def union-ref/def enum variable
 (define (cnvt-udecl udecl udict wrapped defined)
   ;; This is a bit sloppy in that we have to know if the converters are
   ;; creating wrappers and/or (type) defines.
@@ -1174,14 +1208,16 @@
 
   (let*-values (((tag attr specl declr tail) (split-adecl udecl))
 		((specl declr) (cleanup-udecl specl declr))
+		((clean-udecl) (values (sx-list tag #f specl declr)))
 		)
-    (sxml-match (sx-list tag #f specl declr)
+    (sxml-match clean-udecl
 
       ;; typedef void **ptr_t;
       ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef)) (type-spec (void)))
 	(init-declr (ptr-declr (pointer (pointer)) (ident ,typename))))
+       ;; FIX
        (sfscm "(define-public ~A-desc (bs:pointer (bs:pointer 'void)))\n"
 	      typename)
        (fhscm-def-pointer typename)
@@ -1192,6 +1228,7 @@
 	(decl-spec-list
 	 (stor-spec (typedef)) (type-spec (void)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
+       ;; FIX
        (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
@@ -1202,6 +1239,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (void)))
 	(init-declr (ident ,typename)))
+       ;; FIX
        (sfscm "(define-public ~A-desc 'void)\n" typename)
        (sfscm "(define-public ~A*-desc (bs:pointer ~A-desc))\n"
 	      typename typename)
@@ -1215,6 +1253,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (fixed-type ,name)))
 	(init-declr (ident ,typename)))
+       ;; FIX
        (sfscm "(define-public ~A-desc ~A)\n"
 	      typename (assoc-ref bs-typemap name))
        (values wrapped defined))
@@ -1237,9 +1276,11 @@
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
        (cond
 	((member name defined)
+	 ;; FIX
 	 (sfscm "(define-public ~A-desc (bs:pointer ~A-desc))\n" typename name)
 	 (fhscm-def-pointer typename))
 	(else
+	 ;; FIX
 	 (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
 	 (fhscm-def-pointer typename)))
        (values (cons typename wrapped) (cons typename defined)))
@@ -1300,7 +1341,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def (ident ,struct-name) ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-struct-def typename struct-name field-list)
+       (cnvt-struct-def #f typename struct-name field-list)
        (values
 	;; Hoping don't need to add (w/struct* struct-name)
 	(cons* typename (w/* typename) (w/struct struct-name) wrapped)
@@ -1312,7 +1353,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def (ident ,struct-name) ,field-list)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
-       (cnvt-struct-def (sw/* typename) struct-name field-list)
+       (cnvt-struct-def #f (sw/* typename) struct-name field-list)
        (values
 	(cons* (w/* typename) (w/struct struct-name) wrapped)
 	(cons* (w/* typename) (w/struct struct-name) defined)))
@@ -1323,7 +1364,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-struct-def typename #f field-list)
+       (cnvt-struct-def #f typename #f field-list)
        (values (cons* typename (w/* typename) wrapped)
 	       (cons* typename (w/* typename) defined)))
 
@@ -1333,7 +1374,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def ,field-list)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
-       (cnvt-struct-def (sw/* typename) #f field-list)
+       (cnvt-struct-def #f (sw/* typename) #f field-list)
        (values (cons* (w/* typename) wrapped)
 	       (cons* (w/* typename) defined)))
 
@@ -1397,7 +1438,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (union-def (ident ,union-name) ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-union-def typename union-name field-list)
+       (cnvt-union-def #f typename union-name field-list)
        (values
 	(cons* typename (w/* typename) (w/union union-name) wrapped)
 	(cons* typename (w/* typename) (w/union union-name) defined)))
@@ -1408,7 +1449,7 @@
 	 (stor-spec (typedef))
 	 (type-spec (union-def ,field-list)))
 	(init-declr (ident ,typename)))
-       (cnvt-struct-def typename #f field-list)
+       (cnvt-union-def #f typename #f field-list)
        (values (cons* typename (w/* typename) wrapped)
 	       (cons* typename (w/* typename) defined)))
 
@@ -1540,11 +1581,12 @@
       ;; struct foo { ... }.
       ((udecl
 	(decl-spec-list
-	 (type-spec (struct-def (ident ,struct-name) ,field-list))))
+	 (type-spec (struct-def (@ . ,aattr) (ident ,struct-name) ,field-list))))
+       ;;(sferr "struct foo { ... }:\n") (pperr clean-udecl)
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
-	   (cnvt-struct-def #f struct-name field-list)
+	   (cnvt-struct-def aattr #f struct-name field-list)
 	   (for-each
 	    (lambda (name)
 	      (sfscm "(set! ~A-desc struct-~A-desc)\n" name struct-name)
@@ -1553,8 +1595,8 @@
 	   (values (cons (w/struct struct-name) wrapped)
 		   (cons (w/struct struct-name) defined))))
 	((not (member (w/struct struct-name) defined))
-	 (cnvt-struct-def #f struct-name field-list)
-	 ;; Hopting don't need w/struct*
+	 (cnvt-struct-def aattr #f struct-name field-list)
+	 ;; Hoping don't need w/struct*
 	 (values (cons* (w/struct struct-name) wrapped)
 		 (cons* (w/struct struct-name) defined)))
 	(else
@@ -1575,7 +1617,7 @@
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
-	   (cnvt-union-def #f union-name field-list)
+	   (cnvt-union-def #f #f union-name field-list)
 	   (for-each
 	    (lambda (name)
 	      (sfscm "(set! ~A-desc union-~A-desc)\n" name union-name)
@@ -1584,7 +1626,7 @@
 	   (values (cons (w/union union-name) wrapped)
 		   (cons (w/union union-name) defined))))
 	((not (member (w/union union-name) defined))
-	 (cnvt-union-def #f union-name field-list)
+	 (cnvt-union-def #f #f union-name field-list)
 	 (values (cons (w/union union-name) wrapped)
 		 (cons (w/union union-name) defined)))
 	(else
@@ -1721,6 +1763,15 @@
 	 ;;(sfscm "(define-fh-compound-type/p ~A ~A-desc)\n" typename typename)
 	 (fhscm-def-compound typename)
 	 (values (cons typename wrapped) (cons typename defined))))
+
+      ;; from gtk+-3.0/gtk/gtk.h
+      ((udecl (decl-spec-list
+	       (stor-spec (typedef))
+	       (type-spec (fixed-type "char")))
+	      (init-declr
+	       (ptr-declr (pointer) (ident "GtkStock"))))
+       (sferr "missed gtk3 decl not expanded\n")
+       (values wrapped defined))
       
       ;; === missed =====================
 
@@ -1744,12 +1795,13 @@
   ;; possible for an enum symbol to be used as a macro function so we
   ;; need to first check for integer before trying expand-cpp-macro-ref.
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
-  (let ((name
-	 (string->symbol (string-append (*prefix*) "-symbol-val")))
+  (let ((st-name (string->symbol (string-append (*prefix*) "-symbol-tab")))
+	(sv-name (string->symbol (string-append (*prefix*) "-symbol-val")))
 	(defs
 	  (fold
 	   (lambda (def seed)
 	     (let* ((name (car def)) (val (cdr def))
+		    (symb (string->symbol name))
 		    (repl (cond
 			   ((pair? val) #f)
 			   ((string->number (cdr def)) (cdr def))
@@ -1758,20 +1810,38 @@
 			    (with-input-from-string ""
 			      (lambda ()
 				(expand-cpp-macro-ref name cpp-defs)))))))
+	       ;;(if (string=? name "DBUS_TYPE_BOOLEAN") (sferr "~S\n" repl))
+	       ;; TODO: try to reduce all this to the parse-c99x one
 	       (cond
 		((not repl) seed)
 		((not (string? repl)) (sferr "not string: ~S\n" repl))
 		((zero? (string-length repl)) seed)
-		((cintstr->num repl) =>
-		 (lambda (val) (acons (string->symbol name) val seed)))
+		;;
+		((cintstr->num repl) => (lambda (val) (acons symb val seed)))
+		#|
+		((string=? "\"\0\"" repl) (acons symb repl seed)) ;; hack
 		((eqv? #\" (string-ref repl 0))
-		 (acons (string->symbol name)
+		 ;; This breaks when a string contains #\nul
+		 (acons symb
 			(regexp-substitute/global ;; "abc" "def" => "abcdef"
 			 #f "\"\\s*\""
-			 (substring repl 1 (- (string-length repl) 1))
+			 (substring repl 1 (1- (string-length repl)))
 			 'pre 'post)
 			seed))
-		(else seed))))
+		|#
+		((with-error-to-port (open-output-file "/dev/null")
+		   (lambda ()
+		     (catch 'c99-error
+		       (lambda ()
+			 (parse-c99x repl (*tdefs*) #:cpp-defs cpp-defs))
+		       (lambda () #f))))
+		 => (lambda (val)
+		      (let ((cv (eval-c99-cx val (*udict*) (*ddict*))))
+			(if cv (acons symb cv seed) seed))))
+		;;
+		(else
+		 ;;(sferr "gen-lookup-proc misssed ~A ~S\n" name repl)
+		 seed))))
 	   '()
 	   keep-defs))
 	(ext-ftns			; lookup in use-ffi-modules
@@ -1780,17 +1850,16 @@
 	    (list (string->symbol
 		   (string-append (path->name mod) "-symbol-val")) 'k))
 	  ext-mods)))
-    (ppscm `(define ,name
-	      (let ((sym-tab '(,@defs)))
-		(lambda (k) (or (assq-ref sym-tab k) ,@ext-ftns)))))
-    (sfscm "(export ~A)\n" name)
+    (ppscm `(define ,st-name '(,@defs)))
+    (ppscm `(define ,sv-name (lambda (k) (or (assq-ref ,st-name k) ,@ext-ftns))))
+    (sfscm "(export ~A)\n" sv-name)
     ;;
     (nlscm)
     (ppscm
      `(define (unwrap-enum obj)
 	(cond
 	 ((number? obj) obj)
-	 ((symbol? obj) (,name obj))
+	 ((symbol? obj) (,sv-name obj))
 	 ((fh-object? obj) (struct-ref obj 0)) ;; ???
 	 (else (error "type mismatch")))))
     ))
@@ -1821,6 +1890,7 @@
 		       #:inc-dirs inc-dirs
 		       #:inc-help inc-help
 		       #:mode 'decl
+		       #:show-incs #f
 		       #:debug (*debug*))))
 	(fherr "parse failed"))))
 
@@ -1922,6 +1992,9 @@
 ;; was intro-ffi
 (define (expand-ffi-module-spec path module-options)
   (check-deps module-options)
+  ;;(sferr "cpp-defs:\n") (pperr fh-cpp-defs)
+  ;;(sferr "inc-dirs:\n") (pperr fh-inc-dirs)
+  ;;(sferr "inc-help:\n") (pperr fh-inc-help)
   (let* ((script-options (*options*))
 	 ;;(mbase (string-append (string-join (map symbol->string path) "/")))
 	 (mbase (path->path path))
@@ -1939,20 +2012,31 @@
 		((assq-ref attrs 'api-code) =>
 		 (lambda (code) (parse-code code attrs)))
 		(else (fherr "expecing #:includes or #:api-code"))))
+	 #;(tree (with-input-from-string "#include <sys/epoll.h>\n"
+				(lambda ()
+				  (parse-c99 #:inc-dirs fh-inc-dirs
+					     #:cpp-defs fh-cpp-defs
+					     #:inc-help fh-inc-help
+					     ))))
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
 
-	 ;; TODO: clean this up
-	 ;;(enu-defs (udict-enums->ddict udict))
-	 (enu-defs (udict-enums->ddict udecls))
-	 (ffi-defs (c99-trans-unit->ddict tree enu-defs #:inc-filter incf))
+	 ;; OK, I think this is fixed now.  Was ...
+	 ;; 1. If udict, then exported symbols looks good, but ref's don't work
+	 ;; 2. If udecls, refs work but bloated symval struct.
+	 ;; The conflict is in
+	 ;; const-expr->number VS call to gen-lookup-proc 1st arg ffi-defs
+	 (ffi-enu-defs (udict-enums->ddict udecls))
+	 (ffi-defs (c99-trans-unit->ddict tree ffi-enu-defs #:inc-filter incf))
 	 (cpp-defs (c99-trans-unit->ddict tree #:inc-filter #t))
-	 (all-defs (c99-trans-unit->ddict tree enu-defs
-					  #:inc-filter #t #:skip-fdefs #t))
+	 (all-enu-defs (udict-enums->ddict udict))
+	 (all-defs (c99-trans-unit->ddict
+		    tree all-enu-defs #:inc-filter #t #:skip-fdefs #t))
+	 (ddict all-defs)
 	 ;; the list of typedefs we will generate (later):
 	 (ffimod-defined #f)
-	 ;; ext modules (e.g., '(ffi cairo) ...)
+	 ;; ext modules [from #:use-modules (ffi cairo)]
 	 (ext-mods
 	  (fold-right
 	   (lambda (opt seed)
@@ -1975,7 +2059,8 @@
     (*prefix* (path->name path))
     (*udict* udict)
     (*mport* mport)
-    (*all-defs* all-defs)
+    (*ddict* ddict)
+    (*tdefs* (udict->typenames udict))
     ;; renamer?
 
     ;; file and module header
@@ -2007,7 +2092,7 @@
     (ugly-print ffimod-defined mport #:per-line-prefix "   " #:trim-ends #t)
     (sfscm ")\n(export ~A-types)\n" (path->name path))
 
-    (sfscm "\n;; TODO: add renamer\n")
+    ;;(sfscm "\n;; TODO: add renamer\n")
 
     ;; return port so compiler can output remaining code
     mport))
@@ -2015,6 +2100,23 @@
 
 
 ;; === test compiler ================
+
+;; @deffn {Procedure} C-fun-decl->scm code
+;; Generate a symbolic expression that evals to a Guile procedure.
+;; @example
+;; (define fmod-exp (C-fun-decl->proc "double dmod(double, double);"))
+;; (define fmod (eval fmod-exp (current-module)))
+;; (fmod 2.3 0.5)
+;; @end example
+;; @end deffn
+(define (C-fun-decl->scm code)
+  (let* ((tree (with-input-from-string code parse-c99))
+	 (udict (unitize-decl (sx-ref tree 1)))
+	 (name (caar udict)) (udecl (cdar udict))
+	 (gen1 (fh-cnvt-udecl udecl '()))
+	 (gen2 (with-input-from-string gen1 read))
+	 (gen3 (caddr gen2)))
+    gen3))
 
 (define* (fh-cnvt-udecl udecl udict #:key (prefix "fh"))
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
@@ -2187,9 +2289,9 @@
 ;; @end deffn
 (define* (compile-ffi-file file #:optional (options '()))
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
-		 (*renamer* identity) (*errmsgs* '())
-		 (*prefix* "") (*mport* #t) (*udict* '()))
-    (sfout "ffi-help: WARNING: the FFI helper is experimental\n")
+		 (*renamer* identity) (*errmsgs* '()) (*prefix* "")
+		 (*mport* #t) (*udict* '()) (*ddict* '()))
+    (sferr "ffi-help: WARNING: the FFI helper is experimental\n")
     ;; if not interactive ...
     (debug-disable 'backtrace)
     (if (not (access? file R_OK))

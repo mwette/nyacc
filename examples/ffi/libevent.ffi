@@ -1,0 +1,11 @@
+;; libevent.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi libevent)
+  ;;#:pkg-config "libevent"
+  #:include '("event2/event.h")
+  #:inc-filter (lambda (file-spec path-spec)
+                (string-contains path-spec "event2/" 0))
+  #:library '(libevent_core)
+  )
+
+;; --- last line ---

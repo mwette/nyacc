@@ -24,11 +24,10 @@
 	    merge-inc-trees!
 	    elifify)
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   #:use-module ((srfi srfi-1) #:select (append-reverse))
   #:use-module (srfi srfi-2) ;; and-let*
   #:use-module (sxml fold)
-  ;;#:use-module (sxml match) ; use sx-match instead
   #:use-module (ice-9 popen)		; gen-cc-defs
   #:use-module (ice-9 rdelim)		; gen-cc-defs
   #:use-module (ice-9 regex)		; gen-cc-defs
@@ -224,7 +223,7 @@
        `(if ,x1 ,t1 (else-if ,x2 ,t2) (else-if ,x3 ,t3) . ,rest))
       ((if ,x1 ,t1 (if ,x2 ,t2 . ,rest))
        `(if ,x1 ,t1 (else-if ,x2 ,t2) . ,rest))
-      (*
+      (else
        tree))
     )
   (foldt fU identity tree))

@@ -18,14 +18,14 @@
 ;; runtime utilities for the parsers
 
 (define-module (nyacc lang util)
-  #:export (lang-crn-lic 
+  #:export (lang-crn-lic
 	    report-error
 	    *input-stack* push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
-	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
-	    sx-attr-ref sx-has-attr? sx-attr-set! sx-attr-set* sx+attr*
-	    sx-find
+	    ;;sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
+	    ;;sx-attr-ref sx-has-attr? sx-attr-set! sx-attr-set* sx+attr*
+	    ;;sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
 	    ;; for ???
@@ -39,12 +39,13 @@
   ;; #:use-module ((sxml xpath) #:select (sxpath)) ;; see sx-find below
   #:use-module (ice-9 pretty-print)
   )
-(cond-expand ;; for MES
-  (guile-2
-   #t)
+(cond-expand
+  (mes)
+  (guile-2)
   (guile
    (use-modules (ice-9 optargs))
-   (use-modules (srfi srfi-16))))
+   (use-modules (srfi srfi-16)))
+  (else))
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
@@ -187,6 +188,7 @@ See the file COPYING.LESSER included with the this distribution.")
   (error "not implemented (yet)")
   )
 
+#!
 ;; === sx ==============================
 ;; @section SXML Utility Procedures
 ;; Some lot of these look like existing Guile list procedures (e.g.,
@@ -238,7 +240,7 @@ See the file COPYING.LESSER included with the this distribution.")
 ;; @end example
 ;; @end deffn
 (define (sx-ref* sx . args)
-  (fold (lambda (ix sx) (sx-ref sx ix)) sx args))
+  (fold (lambda (ix sx) (and (pair? sx) (sx-ref sx ix))) sx args))
 
 ;; @deffn {Procedure} sx-tag sx => tag
 ;; Return the tag for a tree
@@ -395,6 +397,7 @@ See the file COPYING.LESSER included with the this distribution.")
 	  sx))
    (else
     (error "expecting first arg to be tag or sxpath"))))
+!#
 
 ;;; === pp ==========================
 ;; @section Pretty-Print and Other Utility Procedures

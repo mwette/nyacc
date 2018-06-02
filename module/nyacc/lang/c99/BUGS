@@ -1,6 +1,11 @@
 BUGs and TODOs
 
-C99-011	<= next id
+C99-012	<= next id
+
+C99-011	10 Mar 2018, M.Wette
+	in cxeval, need to resolve enum name to value :(
+	the code currently does not do this, and ffi-help is breaking
+	gtk/inputdialog.h refers to GDK_AXIS_LAST, enumval in gdk/gdkinput.h
 
 C99-010	27 Oct 2017, M.Wette
 	typename scope is not maintained: this is bad

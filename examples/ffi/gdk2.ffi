@@ -15,4 +15,6 @@
 (define-fh-pointer-type GdkAtom* GdkAtom*-desc GdkAtom*? make-GdkAtom*)
 (export GdkAtom* GdkAtom*? make-GdkAtom*)
 
+(define-public gdk-symval ffi-gdk2-symbol-val)
+
 ;; --- last line ---

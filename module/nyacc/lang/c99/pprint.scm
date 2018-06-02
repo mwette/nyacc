@@ -19,7 +19,7 @@
   #:export (pretty-print-c99)
   #:use-module ((srfi srfi-1) #:select (pair-for-each))
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   #:use-module (ice-9 pretty-print)
   )
 (cond-expand ;; for MES
@@ -153,7 +153,7 @@
       ((include ,file . *) (sf "#include ~A\n" file))
       ((error ,text) (sf "#error ~A\n" text))
       ((pragma ,text) (sf "#pragma ~A\n" text))
-      (* (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
+      (else (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
     (fmtr 'nlin))
 
   (define protect-expr? (make-protect-expr op-prec op-assc))
@@ -179,10 +179,25 @@
 	(ppx/p rval)
 	(ppx rval)))
 
-  (define (struct-union-def struct-or-union name fields)
+  (define (pp-attr attr) ;; attributes
+    (string-join
+     (map
+      (lambda (val)
+	;;(simple-format #t "a: ~S\n" val)
+	(cond
+	 ((eq? (car val) 'packed) "__packed__")
+	 (else (symbol->string (car val)))))
+      attr)
+     " "))
+
+  (define (struct-union-def struct-or-union attr name fields)
     (if name
-	(sf "~A ~A {\n" struct-or-union name)
-	(sf "~A {\n" struct-or-union))
+	(if (pair? attr)
+	    (sf "~A ~A ~A {\n" struct-or-union (pp-attr attr) name)
+	    (sf "~A ~A {\n" struct-or-union name))
+	(if (pair? attr)
+	    (sf "~A ~A {\n" struct-or-union (pp-attr attr))
+	    (sf "~A {\n" struct-or-union)))
     (push-il)
     (for-each ppx fields)
     (pop-il)
@@ -383,14 +398,15 @@
       ((bit-field ,ident ,expr)
        (ppx ident) (sf " : ") (ppx expr))
 
-      ((type-spec ,arg)
+      ;;((type-spec ,arg)
+      ((type-spec (@ . ,aattr) ,arg)
        (case (sx-tag arg)
 	 ((fixed-type) (sf "~A" (sx-ref arg 1)))
 	 ((float-type) (sf "~A" (sx-ref arg 1)))
 	 ((struct-ref) (ppx arg))
-	 ((struct-def) (ppx arg))
+	 ((struct-def) (if (pair? aattr) (sf " ~S" (pp-attr aattr))) (ppx arg))
 	 ((union-ref) (ppx arg))
-	 ((union-def) (ppx arg))
+	 ((union-def) (if (pair? aattr) (sf " ~S" (pp-attr aattr))) (ppx arg))
 	 ((enum-ref) (ppx arg))
 	 ((enum-def) (ppx arg))
 	 ((typename) (sf "~A" (sx-ref arg 1)))
@@ -400,14 +416,14 @@
       ((struct-ref (ident ,name)) (sf "struct ~A" name))
       ((union-ref (ident ,name)) (sf "union ~A" name))
       
-      ((struct-def (ident ,name) (field-list . ,fields))
-       (struct-union-def 'struct name fields))
-      ((struct-def (field-list . ,fields))
-       (struct-union-def 'struct #f fields))
-      ((union-def (ident ,name) (field-list . ,fields))
-       (struct-union-def 'union name fields))
-      ((union-def (field-list . ,fields))
-       (struct-union-def 'union #f fields))
+      ((struct-def (@ . ,aattr) (ident ,name) (field-list . ,fields))
+       (struct-union-def 'struct aattr name fields))
+      ((struct-def (@ . ,aattr) (field-list . ,fields))
+       (struct-union-def 'struct aattr #f fields))
+      ((union-def (@ . ,aattr) (ident ,name) (field-list . ,fields))
+       (struct-union-def 'union aattr name fields))
+      ((union-def (@ . ,aattr) (field-list . ,fields))
+       (struct-union-def 'union aattr #f fields))
 
       ((enum-ref (ident ,name))
        (sf "enum ~A" name))
@@ -644,7 +660,7 @@
       ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
       ((extern-end) (sf "}\n"))
 
-      (* (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))))
+      (else (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))))
 
   (define ppx ppx-1)
 

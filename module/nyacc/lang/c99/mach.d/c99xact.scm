@@ -1,6 +1,6 @@
 ;; ./mach.d/c99xact.scm
 
-;; Copyright (C) 2016,2017 Matthew R. Wette
+;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -189,16 +189,22 @@
        `(comma-expr ,$1 ,$3)))
    ;; constant-expression => conditional-expression
    (lambda ($1 . $rest) $1)
-   ;; declaration => declaration-specifiers init-declarator-list $P1 ";" op...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     (if (pair? $5) (append $3 (list $5)) $3))
+   ;; declaration => declaration-specifiers init-declarator-list opt-attrib...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     (if (pair? $3)
+       (if (pair? $6)
+         `(decl ,$3 ,(sx-ref $4 1) ,(sx-ref $4 2) ,$6)
+         `(decl ,$3 ,(sx-ref $4 1) ,(sx-ref $4 2)))
+       (if (pair? $6)
+         `(decl ,(sx-ref $4 1) ,(sx-ref $4 2) ,$6)
+         $4)))
    ;; declaration => declaration-specifiers ";" opt-code-comment
    (lambda ($3 $2 $1 . $rest)
      (if (pair? $3)
        `(decl ,(tl->list $1) ,(list $3))
        `(decl ,(tl->list $1))))
    ;; $P1 => 
-   (lambda ($2 $1 . $rest)
+   (lambda ($3 $2 $1 . $rest)
      (save-typenames
        `(decl ,(tl->list $1) ,(tl->list $2))))
    ;; declaration-specifiers => storage-class-specifier
@@ -351,22 +357,102 @@
    ;; complex-type-specifier => "long" "double" "_Complex"
    (lambda ($3 $2 $1 . $rest)
      '(complex-type "long double _Complex"))
-   ;; struct-or-union-specifier => "struct" ident-like "{" struct-declarati...
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(struct-def ,$2 ,(tl->list $4)))
-   ;; struct-or-union-specifier => "struct" "{" struct-declaration-list "}"
+   ;; attribute-specifier => attribute-specifier-single
+   (lambda ($1 . $rest) $1)
+   ;; attribute-specifier => attribute-specifier attribute-specifier-single
+   (lambda ($2 $1 . $rest) (append $1 (cdr $2)))
+   ;; attribute-specifier-single => "__attribute__" "(" "(" attribute-list ...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     (tl->list $4))
+   ;; attribute-specifier-single => attr-name
+   (lambda ($1 . $rest) `(attributes $1))
+   ;; attr-name => "__packed__"
+   (lambda ($1 . $rest) $1)
+   ;; attr-name => "__aligned__"
+   (lambda ($1 . $rest) $1)
+   ;; attr-name => "__alignof__"
+   (lambda ($1 . $rest) $1)
+   ;; attr-ident => attr-name
+   (lambda ($1 . $rest) $1)
+   ;; attr-ident => '$ident
+   (lambda ($1 . $rest) $1)
+   ;; attribute-list => 
+   (lambda $rest '(@))
+   ;; attribute-list => attribute
+   (lambda ($1 . $rest) (make-tl '@ $1))
+   ;; attribute-list => attribute-list ","
+   (lambda ($2 $1 . $rest) $1)
+   ;; attribute-list => attribute-list "," attribute
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; attribute => attr-ident
+   (lambda ($1 . $rest)
+     (list (string->symbol $1) ""))
+   ;; attribute => attr-ident "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(struct-def ,(tl->list $3)))
+     (list (string->symbol $1)
+           (attr-expr-list->string (tl->list $3))))
+   ;; attr-expr-list => attribute-expr
+   (lambda ($1 . $rest)
+     (make-tl 'attr-expr-list $1))
+   ;; attr-expr-list => attr-expr-list "," attribute-expr
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; attr-call-name => '$ident
+   (lambda ($1 . $rest) $1)
+   ;; attr-call-name => attr-name
+   (lambda ($1 . $rest) $1)
+   ;; attribute-expr => type-name
+   (lambda ($1 . $rest) (sx-ref* $1 1 1 1 1))
+   ;; attribute-expr => '$fixed
+   (lambda ($1 . $rest) $1)
+   ;; attribute-expr => '$string
+   (lambda ($1 . $rest) $1)
+   ;; attribute-expr => attr-call-name
+   (lambda ($1 . $rest) $1)
+   ;; attribute-expr => attr-call-name "(" attr-expr-list ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     (string-append
+       $1
+       (attr-expr-list->string (tl->list $3))))
+   ;; opt-attribute-specifier => 
+   (lambda $rest (list))
+   ;; opt-attribute-specifier => attribute-specifier
+   (lambda ($1 . $rest) $1)
+   ;; struct-or-union-specifier => "struct" ident-like "{" struct-declarati...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     (if (pair? $6)
+       `(struct-def ,$6 ,$2 ,(tl->list $4))
+       `(struct-def ,$2 ,(tl->list $4))))
+   ;; struct-or-union-specifier => "struct" "{" struct-declaration-list "}"...
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     (if (pair? $5)
+       `(struct-def ,$5 ,(tl->list $3))
+       `(struct-def ,(tl->list $3))))
    ;; struct-or-union-specifier => "struct" ident-like
    (lambda ($2 $1 . $rest) `(struct-ref ,$2))
    ;; struct-or-union-specifier => "union" ident-like "{" struct-declaratio...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     (if (pair? $6)
+       `(union-def ,$6 ,$2 ,(tl->list $4))
+       `(union-def ,$2 ,(tl->list $4))))
+   ;; struct-or-union-specifier => "union" "{" struct-declaration-list "}" ...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(union-def ,$2 ,(tl->list $4)))
-   ;; struct-or-union-specifier => "union" "{" struct-declaration-list "}"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(union-def ,(tl->list $3)))
+     (if (pair? $5)
+       `(union-def ,$5 ,(tl->list $3))
+       `(union-def ,(tl->list $3))))
    ;; struct-or-union-specifier => "union" ident-like
    (lambda ($2 $1 . $rest) `(union-ref ,$2))
+   ;; struct-or-union-specifier => "struct" attribute-specifier ident-like ...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(struct-def ,$2 ,(tl->list $4)))
+   ;; struct-or-union-specifier => "struct" attribute-specifier "{" struct-...
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(struct-def ,(tl->list $3)))
+   ;; struct-or-union-specifier => "union" attribute-specifier ident-like "...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(union-def ,$2 ,(tl->list $4)))
+   ;; struct-or-union-specifier => "union" attribute-specifier "{" struct-d...
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(union-def ,(tl->list $3)))
    ;; ident-like => identifier
    (lambda ($1 . $rest) $1)
    ;; ident-like => typedef-name
@@ -384,10 +470,14 @@
    ;; struct-declaration-list => struct-declaration-list ";"
    (lambda ($2 $1 . $rest) $1)
    ;; struct-declaration => specifier-qualifier-list struct-declarator-list...
-   (lambda ($4 $3 $2 $1 . $rest)
-     (if (pair? $4)
-       `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$4)
-       `(comp-decl ,(tl->list $1) ,(tl->list $2))))
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     (if (pair? $3)
+       (if (pair? $5)
+         `(comp-decl ,$3 ,(tl->list $1) ,(tl->list $2) ,$5)
+         `(comp-decl ,$3 ,(tl->list $1) ,(tl->list $2)))
+       (if (pair? $5)
+         `(comp-decl ,(tl->list $1) ,(tl->list $2) ,$5)
+         `(comp-decl ,(tl->list $1) ,(tl->list $2)))))
    ;; struct-declaration => specifier-qualifier-list ";" opt-code-comment
    (lambda ($3 $2 $1 . $rest)
      (if (pair? $3)
@@ -791,6 +881,8 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => declaration
    (lambda ($1 . $rest) $1)
+   ;; external-declaration => attribute-specifier declaration
+   (lambda ($2 $1 . $rest) $2)
    ;; external-declaration => lone-comment
    (lambda ($1 . $rest) $1)
    ;; external-declaration => cpp-statement

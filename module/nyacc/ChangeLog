@@ -1,3 +1,19 @@
+2018-05-12  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (make-lexer-generator): added extra keyword arg to
+	handle extra reader.  This makes the lexer-generator a bit more
+	flexible for non-C languages.
+	(make-num-reader): update to read "12-3" as a float
+
+2018-05-05  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/util.scm: removed sx- routines; renamed sxml-util to
+	sx-util; removed sx-match;  sx-match is now in sx-util
+
+2018-03-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/util.scm: sx-ref* now returns #f for non-usable xxx
+
 2018-01-21  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* version.scm: release version 0.83.0

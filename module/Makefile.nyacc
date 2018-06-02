@@ -8,6 +8,9 @@
 # without any warranty.
 #
 
+GUILE=guile
+GUILD=guild
+
 default:
 	@echo SITE_SCM_DIR = $(SITE_SCM_DIR)
 	@echo SITE_SCM_GO_DIR = $(SITE_SCM_GO_DIR)
@@ -22,7 +25,7 @@ NYACC_BASE_BINS =				\
 	nyacc/parse.go				\
 	nyacc/util.go				\
 	nyacc/version.go			\
-	nyacc/lang/sx-match.go			\
+	nyacc/lang/sx-util.go			\
 	nyacc/lang/util.go
 
 NYACC_BASE_SRCS = $(patsubst %.go,%.scm,$(NYACC_BASE_BINS))
@@ -48,10 +51,80 @@ NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
 	nyacc/lang/c99/mach.d/cppact.scm	\
 	nyacc/lang/c99/mach.d/cpptab.scm	\
 	nyacc/lang/c99/mach.d/cxact.scm		\
-	nyacc/lang/c99/mach.d/cxtab.scm		
+	nyacc/lang/c99/mach.d/cxtab.scm
+
 
 NYACC_BINS = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
 NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
+
+NYACC_FH_BINS =					\
+	nyacc/lang/c99/ffi-help.go		\
+	system/ffi-help-rt.go			\
+	scripts/compile-ffi.go			
+
+NYACC_FH_SRCS = $(patsubst %.go,%.scm,$(NYACC_FH_BINS))
+
+
+.PHONY: install
+install: install-srcs install-fh-srcs install-bins install-fh-bins
+
+.PHONY: install-srcs
+install-srcs:
+	@mkdir -p $(SITE_SCM_DIR)
+	@echo "installing NYACC sources in $(SITE_SCM_DIR)"
+	@for file in $(NYACC_SRCS); do \
+	  if test ! -d $(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
+	  fi; \
+	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
+	done
+
+.PHONY: install-bins
+install-bins:
+	@mkdir -p $(SITE_SCM_GO_DIR)
+	@echo "installing NYACC binaries in $(SITE_SCM_GO_DIR)"
+	@for binfile in $(NYACC_BINS); do \
+	  if test ! -d $(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	    mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	  fi; \
+	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	  GUILE_LOAD_PATH=$(SITE_SCM_DIR) $(GUILD) compile \
+		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
+	  sleep 1; \
+	done
+
+.PHONY: install-fh-srcs
+install-fh-srcs:
+	@mkdir -p $(SITE_SCM_DIR)
+	@echo "installing FFI helper sources in $(SITE_SCM_DIR)"
+	@for file in $(NYACC_FH_SRCS); do \
+	  if test ! -d $(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
+	  fi; \
+	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
+	done
+
+.PHONY: install-fh-bins
+install-fh-bins:
+	@if GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
+		$(GUILE) -c '(use-modules (bytestructures guile))' \
+			>/dev/null 2>&1; then \
+	  echo "installing FFI helper binaries in $(SITE_SCM_GO_DIR)"; \
+	  for binfile in $(NYACC_FH_BINS); do \
+	    if test ! -d $(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	      mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	    fi; \
+	    srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	    GUILE_LOAD_PATH=$(SITE_SCM_DIR) $(GUILD) compile \
+		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
+	    sleep 1; \
+	  done; \
+	else \
+	  echo "FFI helper binaries not installed: bytestructures needed"; \
+	fi
+
+
+# === files for making source tarballs
 
 nyacc/lang/c99/mach.d/c99act.scm \
 nyacc/lang/c99/mach.d/c99tab.scm : nyacc/lang/c99/mach.scm
@@ -70,31 +143,6 @@ nyacc/lang/c99/mach.d/cpptab.scm : nyacc/lang/c99/cppmach.scm
 	GUILE_LOAD_PATH=`pwd` \
 	$(GUILE) -l $< -c \
 		'((@ (nyacc lang c99 cppmach) gen-cpp-files) "nyacc/lang/c99")'
-
-.PHONY: install
-install: install-srcs
-	@mkdir -p $(SITE_SCM_GO_DIR)
-	@echo "installing NYACC binaries in $(SITE_SCM_GO_DIR)"
-	@for binfile in $(NYACC_BINS); do \
-	  if test ! -d $(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	    mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
-	  fi; \
-	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	  GUILE_LOAD_PATH=$(SITE_SCM_DIR) $(GUILD) compile \
-		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
-	  sleep 1; \
-	done
-
-.PHONY: install-srcs
-install-srcs:
-	@mkdir -p $(SITE_SCM_DIR)
-	@echo "installing NYACC sources in $(SITE_SCM_DIR)"
-	@for file in $(NYACC_SRCS); do \
-	  if test ! -d $(SITE_SCM_DIR)/`dirname $${file}`; then \
-	    mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
-	  fi; \
-	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
-	done
 
 .PHONY: dist-files
 dist-files:

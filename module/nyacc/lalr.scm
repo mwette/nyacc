@@ -873,7 +873,7 @@
 		    (iter ll (1+ gx) #f #() 0)
 		    (iter ll gx (vector-ref lhs-v gx) (vector-ref rhs-v gx) 0)))
 	       (else ll))))))
-    (fixed-point find-new (find-new #f '()))))
+    (fixpoint find-new (find-new #f '()))))
 
 ;; @deffn merge1 v l
 ;; add v to l if not in l
@@ -990,9 +990,9 @@
   ;;      and each terminal b in FIRST(ya)
   ;;      such that [B => .z, b] is not in I do
   ;;        add [B => .z, b] to I
-  ;; The routine @code{fixed-point} operates on one element of the input set.
+  ;; The routine @code{fixpoint} operates on one element of the input set.
   (prune-assoc
-   (fixed-point
+   (fixpoint
     (lambda (la-item seed)
       (let* ((item (car la-item)) (toks (cdr la-item)) (symb (looking-at item)))
 	(cond

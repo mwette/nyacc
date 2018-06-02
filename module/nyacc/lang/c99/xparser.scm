@@ -61,7 +61,7 @@
 		     (inc-help '())	; include helper
 		     (xdef? #f)		; pred to determine expand
 		     (debug #f))	; debug?
-  (let ((info (make-cpi debug cpp-defs '(".") inc-help)))
+  (let ((info (make-cpi debug #f cpp-defs '(".") inc-help)))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
     (with-fluids ((*info* info)
 		  (*input-stack* '()))

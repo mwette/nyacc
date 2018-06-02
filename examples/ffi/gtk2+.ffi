@@ -13,5 +13,14 @@
 (define-fh-pointer-type GtkEnumValue* int*-desc
   GtkEnumValue*? make-GtkEnumValue*)
 (export GtkEnumValue* GtkEnumValue*? make-GtkEnumValue*)
+
+(define-public gtk2-sym ffi-gtk2+-symbol-val)
   
+;; This is the c function.
+(define-public ~gtk_widget_destroy
+  (fh-find-symbol-addr "gtk_widget_destroy" ffi-gtk2+-llibs))
+
+(define-public ~gtk_main_quit
+  (fh-find-symbol-addr "gtk_main_quit" ffi-gtk2+-llibs))
+
 ;; --- last line ---
