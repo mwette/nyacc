@@ -33,7 +33,6 @@
 (define-language calc
   #:title	"calc"
   #:reader	calc-reader
-  ;;#:compilers   `((tree-il . ,compile-tree-il))
   #:compilers   `((cps . ,compile-cps))
   #:printer	write)
 
