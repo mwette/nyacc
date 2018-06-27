@@ -33,7 +33,7 @@
 
 (define (check-ids st nd)
   (if (not (string=? (cadr st) (cadr nd)))
-      (throw 'mo-error "ident's don't match")))
+      (throw 'mo-error "end name does not match")))
 
 ;; based on version 3.4, I believe
 (define modelica-spec
@@ -611,12 +611,16 @@
      )
 
     ;; changed to deal with rr-conf
+    ;; (comp-ref (array-ref 3 (sel xxx 
     (component-reference
-     (component-reference-1)
-     (component-reference-1 "." ident ($? array-subscripts)))
+     (component-reference-1 ($$ `(comp-ref ,$1))))
     (component-reference-1
-     (ident ($? array-subscripts))
-     ("." ident ($? array-subscripts))
+     (component-reference-2)
+     ("." component-reference-2 ($$ `(sel ,$2)))
+     (component-reference-1 "." component-reference-2 ($$ `(sel ,$3 ,$1))))
+    (component-reference-2
+     (ident ($$ $1))
+     (ident array-subscripts ($$ `(ary-ref ,$2 ,$1)))
      )
 
     (function-call-args
@@ -661,11 +665,10 @@
      )
 
     (array-subscripts
-     ("[" array-subscript-list "]")
-     )
+     ("[" array-subscript-list "]" ($$ (tl->list $2))))
     (array-subscript-list
-     (subscript)
-     (array-subscript-list "," subscript)
+     (subscript ($$ (make-tl 'array-subscripts $1)))
+     (array-subscript-list "," subscript ($$ (tl-append $1 $3)))
      )
 
     (subscript

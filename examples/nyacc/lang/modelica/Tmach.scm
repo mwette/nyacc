@@ -31,9 +31,9 @@
     (lambda () (lalr->bison modelica-spec))))
 
 (when #t
-  (let ((res (with-input-from-file "exam.d/ex2.mo"
+  (let ((res (with-input-from-file ",acs.mo" ;;"exam.d/ex2.mo"
                (lambda ()
-                  (modelica-parser (gen-mod-lexer) #:debug #f)))))
+                  (modelica-parser (gen-mod-lexer) #:debug #t)))))
     (pretty-print res)))
 
 ;; --- last line ---
