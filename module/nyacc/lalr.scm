@@ -1,6 +1,6 @@
 ;;; nyacc/lalr.scm
 ;;;
-;;; Copyright (C) 2014-2017 Matthew R. Wette
+;;; Copyright (C) 2014-2018 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -35,23 +35,25 @@
   #:use-module (nyacc version)
   )
 
-;; @deffn proxy-? sym rhs
+;; @deffn {Procedure} proxy-? sym rhs
 ;; @example
 ;; (LHS (($? RHS))
 ;; ($P (($$ #f))
 ;;     ($P RHS ($$ (set-cdr! (last-pair $1) (list $2)) $1)))
 ;; @end example
+;; @end deffn
 (define (proxy-? sym rhs)
   (list sym
 	(list '(action #f #f (list)))
 	rhs))
 
-;; @deffn proxy-+ sym rhs
+;; @deffn {Procedure} proxy-+ sym rhs
 ;; @example
 ;; (LHS (($* RHS))
 ;; ($P (($$ '()))
 ;;     ($P RHS ($$ (set-cdr! (last-pair $1) (list $2)) $1)))
 ;; @end example
+;; @end deffn
 (define (proxy-* sym rhs)
   (if (pair? (filter (lambda (elt) (eqv? 'action (car elt))) rhs))
       (error "no RHS action allowed")) ;; rhs
@@ -63,12 +65,13 @@
 			  (set-cdr! (last-pair $1) (list $2))
 			  $1)))))
 
-;; @deffn proxy-+ sym rhs
+;; @deffn {Procedure} proxy-+ sym rhs
 ;; @example
 ;; (LHS (($+ RHS))
 ;; ($P (RHS ($$ (list $1)))
 ;;     ($P RHS ($$ (set-cdr! (last-pair $1) (list $2)) $1)))
 ;; @end example
+;; @end deffn
 (define (proxy-+ sym rhs)
   (if (pair? (filter (lambda (elt) (eq? 'action (car elt))) rhs))
       (error "no RHS action allowed")) ;; rhs
@@ -80,7 +83,7 @@
 			  (set-cdr! (last-pair $1) (list $2))
 			  $1)))))
 
-;; @deffn reserved? grammar-symbol
+;; @deffn {Procedure} reserved? grammar-symbol
 ;; Determine whether the syntax argument is a reserved symbol, that is.
 ;; So instead of writing @code{'$fixed} for syntax one can write
 ;; @code{$fixed}.  We may want to change this to
@@ -88,6 +91,7 @@
 ;; (reserved-terminal? grammar-symbol)
 ;; (reserved-non-term? grammar-symbol)
 ;; @end example
+;; @end deffn
 (define (reserved? grammar-symbol)
   ;; If the first character `$' then it's reserved.
   (eqv? #\$ (string-ref (symbol->string (syntax->datum grammar-symbol)) 0)))
@@ -208,43 +212,48 @@
     ((_ <expr> ...)
      (process-spec (lalr-spec-1 <expr> ...)))))
 
-;; @deffn atomize terminal => object
+;; @deffn {Procedure} atomize terminal => object
 ;; Generate an atomic object for a terminal.   Expected terminals are strings,
 ;; characters and symbols.  This will convert the strings @code{s} to symbols
 ;; of the form @code{'$:s}.
+;; @end deffn
 (define (atomize terminal)
   (if (string? terminal)
       (string->symbol (string-append "$:" terminal))
       terminal))
 
-;; @deffn normize terminal => char|symbol
+;; @deffn {Procedure} normize terminal => char|symbol
 ;; Normalize a token. This routine will normalize tokens in order to check
 ;; for similarities. For example, @code{"+"} and @code{#\+} are similar,
 ;; @code{'foo} and @code{"foo"} are similar.
+;; @end deffn
 (define (normize terminal)
   (if (not (string? terminal)) terminal
       (if (= 1 (string-length terminal))
 	  (string-ref terminal 0)
 	  (string->symbol terminal))))
 
-;; @deffn eqv-terminal? a b
+;; @deffn {Procedure} eqv-terminal? a b
 ;; This is a predicate to determine if the terminals @code{a} and @code{b}
 ;; are equivalent.
+;; @end deffn
 (define (eqv-terminal? a b)
   (eqv? (atomize a) (atomize b)))
 
-;; @deffn find-terminal symb term-l => term-symb
+;; @deffn {Procedure} find-terminal symb term-l => term-symb
 ;; Find the terminal in @code{term-l} that is equivalent to @code{symb}.
+;; @end deffn
 (define (find-terminal symb term-l)
   (let iter ((tl term-l))
     (if (null? tl) #f
 	(if (eqv-terminal? symb (car tl)) (car tl)
 	    (iter (cdr tl))))))
   
-;; @deffn process-spec tree => specification (as a-list)
+;; @deffn {Procedure} process-spec tree => specification (as a-list)
 ;; Here we sweep through the production rules. We flatten and order the rules
 ;; and place all p-rules with like LHSs together.  There is a non-trivial
 ;; amount of extra code to deal with mid-rule actions (MRAs).
+;; @end deffn
 (define (process-spec tree)
 
   ;; Make a new symbol. This is a helper for proxies and mid-rule-actions.
@@ -298,11 +307,13 @@
 
   ;;.@deffn make-mra-proxy sy pel act => ???
   ;; Generate a mid-rule-action proxy.
+  ;; @end deffn
   (define (make-mra-proxy sy pel act)
     (list sy (list (cons* 'action (length pel) (cdr act)))))
 
   ;; @deffn gram-check-2 tl nl err-l
   ;; Check for fatal: symbol used as terminal and non-terminal.
+  ;; @end deffn
   (define (gram-check-2 tl nl err-l)
     (let ((cf (lset-intersection eqv? (map atomize tl) nl)))
       (if (pair? cf)
@@ -311,6 +322,7 @@
 	       
   ;; @deffn gram-check-3 ll nl err-l
   ;; Check for fatal: non-terminal's w/o production rule.
+  ;; @end deffn
   (define (gram-check-3 ll nl err-l)
     (fold
      (lambda (n l)
@@ -322,6 +334,7 @@
   ;; @deffn gram-check-4 ll nl err-l
   ;; Check for warning: unused LHS.
   ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
+  ;; @end deffn
   (define (gram-check-4 ll nl err-l)
     (fold
      (lambda (s l) (cons (fmtstr "+++ LHS not used in any RHS: ~A" s) l))
@@ -1161,7 +1174,7 @@
 	(iter #f 0 '() '() '() '()))))
     p-mach))
 
-;; @deffn {Procedure} reductions kit-v sx => ((tokA gxA1 ...) (tokB ...) ...)
+;; @deffn {Procedure} reductions kit-v sx => ((tokA gxA1 ...) ...)
 ;; This is a helper for @code{step4}.
 ;; Return an a-list of reductions for state @code{sx}.
 ;; The a-list pairs are make of a token and a list of prule indicies.
@@ -1594,8 +1607,9 @@
 	(lambda () (step1 spec))
 	(lambda () (fluid-set! *lalr-core* prev-core)))))
 
-;; @deffn with-spec spec proc arg ...
+;; @deffn {Procedure} with-spec spec proc arg ...
 ;; Execute with spec or mach.
+;; @end deffn
 (define (with-spec spec proc . args)
   (if (not spec) (error "with-spec: expecting valid specification"))
   (let ((prev-core (fluid-ref *lalr-core*)))
@@ -1604,8 +1618,9 @@
 	(lambda () (apply proc args))
 	(lambda () (fluid-set! *lalr-core* prev-core)))))
 
-;; @deffn lalr-match-table mach => match-table
+;; @deffn {Procedure} lalr-match-table mach => match-table
 ;; Get the match-table
+;; @end deffn
 (define (lalr-match-table mach)
   (assq-ref mach 'mtab))
 
@@ -1851,6 +1866,7 @@
 		    (list (string-append " " (elt->str e tl)))))))))))
 
 ;; @deffn {Procedure} pp-lalr-notice spec [port]
+;; @deffn pp-lalr-notice spec [port]
 ;; @end deffn
 (define (pp-lalr-notice spec . rest)
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
