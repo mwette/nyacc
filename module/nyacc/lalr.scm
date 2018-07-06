@@ -25,15 +25,7 @@
 	    restart-spec add-recovery-logic!
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
 	    write-lalr-actions write-lalr-tables
-	    pp-rule find-terminal gen-match-table ; used by (nyacc bison)
-
-	    ;; for debugging:
-	    with-spec make-LR0-machine
-	    its-member its-trans
-	    looking-at first-item
-	    terminal? non-terminal?
-	    range-next
-	    )
+	    pp-rule find-terminal gen-match-table) ; used by (nyacc bison)
   #:re-export (*nyacc-version*)
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
 					     lset-intersection lset-difference))
@@ -502,8 +494,7 @@
 	       (cons 'prp-v (map-attr->vector al 'prec)) ; per-rule precedence
 	       (cons 'act-v (map-attr->vector al 'act))
 	       (cons 'ref-v (map-attr->vector al 'ref)) ; action references
-	       (cons 'err-l err-l)
-	       ))))))))
+	       (cons 'err-l err-l)))))))))
   
 ;;; === Code for processing the specification. ================================
 
@@ -523,7 +514,6 @@
 ;; This record holds the minimum data from the grammar needed to build the
 ;; machine from the grammar specification.
 (define-record-type lalr-core-type
-  ;;(make-lalr-core non-terms terminals start lhs-v rhs-v eps-l)
   (make-lalr-core non-terms terminals lhs-v rhs-v eps-l)
   lalr-core-type?
   (non-terms core-non-terms)	      ; list of non-terminals
@@ -583,7 +573,7 @@
    ((eqv? b '$error) 'gt)
    ((<? a b po) (if (<? b a po) 'eq 'lt))
    (else (if (<? b a po) 'gt #f))))
-  
+
 ;; @deffn {Procedure} non-terminal? symb
 ;; @end deffn
 (define (non-terminal? symb)
@@ -1059,7 +1049,7 @@
 	 (sd (if (pair? ar)		; set difference
 		 (lset-difference eqv? tokens (cdr ar))
 		 tokens)))
-    (cond ; no entry, update entry, no update
+    (cond ;; no entry, update entry, no update
      ((null? tokens) #f)
      ((not ar) (vector-set! kit-v kx (acons item tokens al)) #t)
      ((pair? sd) (set-cdr! ar (append sd (cdr ar))) #t)
@@ -1097,7 +1087,7 @@
 (define (step2 p-mach)
   (let* ((kis-v (assq-ref p-mach 'kis-v))
 	 (kix-v (assq-ref p-mach 'kix-v)) ; transitions?
-	 (nkset (vector-length kis-v))	; number of k-item-sets
+	 (nkset (vector-length kis-v))	  ; number of k-item-sets
 	 ;; kernel-itemset tokens
 	 (kit-v (make-vector nkset '())) ; sx => alist: (item latoks)
 	 ;; kernel-itemset propagations
@@ -1126,7 +1116,6 @@
 	(iter (1+ kx)
 	      ;; End-items don't shift, so don't propagate.
 	      (remove last-item? (vector-ref kis-v (1+ kx)))))))
-    ;;(when #f (pp-kip-v kip-v) (pp-kit-v kit-v)) ; for debugging
     (cons* (cons 'kit-v kit-v) (cons 'kip-v kip-v) p-mach)))
 
 ;; debug for step2
@@ -1237,9 +1226,11 @@
       (iter ral (cdr lais) (cdar lais) (expand-k-item (caar lais)) 0 '()))
 
      (else ral))))
+
 ;; I think the above is broken because I'm not including the proper tail
 ;; string.  The following just uses closure to do the job.  It works but
 ;; may not be very efficient: seems a bit brute force.
+
 (define (new-reductions kit-v sx)
   (let iter ((ral '())			  ; result: reduction a-list
 	     (klais (vector-ref kit-v sx)) ; kernel la-item list
@@ -1274,6 +1265,7 @@
 
      (else
       ral))))
+
 (define reductions new-reductions)
 
 ;; Generate parse-action-table from the shift a-list and reduce a-list.
@@ -1393,9 +1385,8 @@
 	 (rat-v (make-vector nst '()))	  ; removed-act tab /state
 	 (gen-pat-ix (lambda (ix)	  ; pat from shifts & reduc's
 		       (gen-pat (vector-ref kix-v ix) (reductions kit-v ix))))
-	 (prp-v (assq-ref p-mach 'prp-v))  ; per-rule precedence
-	 (tl (assq-ref p-mach 'terminals)) ; for error msgs
-	 )
+	 (prp-v (assq-ref p-mach 'prp-v))   ; per-rule precedence
+	 (tl (assq-ref p-mach 'terminals))) ; for error msgs
     ;; We run through each itemset.
     ;; @enumerate
     ;; @item We have a-list of symbols to shift state (i.e., @code{kix-v}).
@@ -1456,21 +1447,13 @@
 		  (tok (car act)) ;;(sft (caddr act)) (red (cdddr act))
 		  (prl (cddr act))	; p-rule rrconf list
 		  (rpl (map (lambda (pr) (vector-ref prp-v pr)) prl)) ; prec's
-		  (uniq (uniqmax-prec prl rpl prec)) ; unique rule to use
-		  )
-	     ;;(simple-format #t "was=~S\n" (car actl))
-	     ;;(simple-format #t " is=~S\n" (cons* (caar actl) 'reduce uniq))
-	     ;;(simple-format #t "uniql=~S\n" uniq)
+		  (uniq (uniqmax-prec prl rpl prec))) ; unique rule to use
 	     (if uniq
 		 (iter ix (cons (cons* (caar actl) 'reduce uniq) pat)
 		       rat ;; need to update by filtering out uniq
 		       wrn ftl (cdr actl))
 		 (iter ix (cons (car actl) pat) rat wrn
-		       (cons (cons ix (car actl)) ftl) (cdr actl)))
-	     ))
-	  ((old-rrconf)
-	   (iter ix (cons (car actl) pat) rat wrn
-		 (cons (cons ix (car actl)) ftl) (cdr actl)))
+		       (cons (cons ix (car actl)) ftl) (cdr actl)))))
 	  (else
 	   (error "PROBLEM"))))
        ((null? actl)
@@ -1487,8 +1470,7 @@
 			(reverse wrn)))
 	  (for-each
 	   (lambda (m) (fmterr "*** fatal: ~A\n" (conf->str m)))
-	   (reverse ftl))
-	  ))))
+	   (reverse ftl))))))
     ;; Return mach with parse-action and removed-action tables.
     (cons* (cons 'pat-v pat-v) (cons 'rat-v rat-v) p-mach)))
 
@@ -1540,6 +1522,7 @@
 ;; @deffn {Procedure} add-recovery-logic! mach => mach
 ;; Target of transition from @code{'$error} should have a default rule that
 ;; loops back.
+;; @end deffn
 (define (add-recovery-logic-1 mach)
   (let* ((kis-v (assq-ref mach 'kis-v))
 	 (rhs-v (assq-ref mach 'rhs-v))
@@ -1840,13 +1823,13 @@
 
 ;; === grammar/machine printing ======
 
-;; @deffn elt->str elt terms => string
+;; @deffn {Procedure} elt->str elt terms => string
 ;; @end deffn
 (define (elt->str elt terms)
   (or (and=> (find-terminal elt terms) obj->str)
       (symbol->string elt)))
 
-;; @deffn pp-rule indent gx [port]
+;; @deffn {Procedure} pp-rule indent gx [port]
 ;; Pretty-print a production rule.
 ;; @end deffn
 (define (pp-rule il gx . rest)
@@ -1860,7 +1843,7 @@
     (vector-for-each (lambda (ix e) (fmt port " ~A" (elt->str e tl))) rhs)
     (newline port)))
 	 
-;; @deffn pp-item item => string
+;; @deffn {Procedure} pp-item item => string
 ;; This could be called item->string.
 ;; This needs terminals to work correctly, like pp-lalr-grammar.
 ;; @end deffn
@@ -1882,6 +1865,7 @@
 		  (let ((e (vector-ref rhs rx)))
 		    (list (string-append " " (elt->str e tl)))))))))))
 
+;; @deffn {Procedure} pp-lalr-notice spec [port]
 ;; @deffn pp-lalr-notice spec [port]
 ;; @end deffn
 (define (pp-lalr-notice spec . rest)
@@ -1891,7 +1875,7 @@
     (for-each (lambda (l) (simple-format port "  ~A\n" l)) lines)
     (newline)))
 
-;; @deffn pp-lalr-grammar spec [port]
+;; @deffn {Procedure} pp-lalr-grammar spec [port]
 ;; Pretty-print the grammar to the specified port, or current output.
 ;; @end deffn
 (define (pp-lalr-grammar spec . rest)
@@ -1919,7 +1903,7 @@
     (newline port)
     (fluid-set! *lalr-core* prev-core)))
 
-;; @deffn pp-lalr-machine mach [port]
+;; @deffn {Procedure} pp-lalr-machine mach [port]
 ;; Print the states of the parser with items and shift/reduce actions.
 ;; @end deffn
 (define (pp-lalr-machine mach . rest)
@@ -2113,5 +2097,4 @@
       (display ";;; end tables" port)
       (newline port))))
 
-;; @end itemize
 ;;; --- last line ---
