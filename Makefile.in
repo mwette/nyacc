@@ -22,18 +22,18 @@ install:
 	  make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
-		 install)
+		 DESTDIR=$(DESTDIR) install)
 	@(cd doc/nyacc; \
 	  make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
 		 INFODIR=$(INFODIR) \
-		 install)
+		 DESTDIR=$(DESTDIR) install)
 
 .PHONY: install-srcs
 install-srcs:
 	@(cd module; \
 	  make -f Makefile.nyacc \
 		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
-		 install-srcs)
+		 DESTDIR=$(DESTDIR) install-srcs)
 
 .PHONY: install-ffi-help
 install-ffi-help:
