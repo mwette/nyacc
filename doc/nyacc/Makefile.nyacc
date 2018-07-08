@@ -9,7 +9,6 @@
 #
 # build the documentation
 
-DESTDIR=
 INSTALL=cp
 INFODIR=$(shell guile -c "(display (assq-ref %guile-build-info 'infodir))")
 
