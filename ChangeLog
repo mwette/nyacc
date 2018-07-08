@@ -1,3 +1,11 @@
+2018-07-08  Matt Wette  <mwette@alumni.caltech.edu>
+
+	new release 0.84.2
+	* updated Makefile.in: added DESTDIR=$(DESTDIR) for install targets
+	* updated modules/Makefile.nyacc: added DESTDIR= support
+	* updated doc/nyacc/Makefile.nyacc: removed DESTDIR=
+	* updated modules/nyacc/lalr.scm: cleaned up comments
+
 2018-02-01  Matt Wette  <mwette@alumni.caltech.edu>
 
 	new release 0.83.3
