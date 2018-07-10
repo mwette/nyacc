@@ -63,17 +63,16 @@
   (let* ((match-table mtab)
 	 (space-cs (string->char-set " \t\r"))
 	 ;;
-	 (strtab (filter-mt string? match-table)) ; strings in grammar
-	 (kwstab (filter-mt like-c-ident? strtab)) ; keyword strings =>
-	 (keytab (map-mt string->symbol kwstab)) ; keywords in grammar
-	 (chrseq (remove-mt like-c-ident? strtab))  ; character sequences
-	 (symtab (filter-mt symbol? match-table)) ; symbols in grammar
-	 (chrtab (filter-mt char? match-table))	; characters in grammar
+	 (strtab (filter-mt string? match-table))  ; strings in gram
+	 (kwstab (filter-mt like-c-ident? strtab)) ; keywd strings =>
+	 (keytab (map-mt string->symbol kwstab))   ; keywds in gram
+	 (chrseq (remove-mt like-c-ident? strtab)) ; character seq's
+	 (symtab (filter-mt symbol? match-table))  ; sym's in gram
+	 (chrtab (filter-mt char? match-table))	   ; char's in gram
 	 ;;
 	 (read-chseq (make-chseq-reader chrseq))
 	 (semicolon (assoc-ref chrseq ";"))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair))))
-	 )
+	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (lambda ()
       (let ((bol #t))
 	(lambda ()
@@ -84,12 +83,13 @@
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
 	     ((char-set-contains? space-cs ch) (iter (read-char)))
 	     ((eqv? ch #\newline)
+	      (set! bol #t)
 	      (if (fluid-ref *insert-semi*)
-		  (cons semicolon ";")
+		  (cons semicolon "\n")
 		  (iter (read-char))))
-	     ((and (eqv? ch #\newline) (set! bol #t) #f))
-	     ((read-js-string ch) => assc-$)
 	     ((read-c-comm ch bol) (iter (read-char)))
+	     ((and (set! bol #f) #f))
+	     ((read-js-string ch) => assc-$)
 	     ((read-js-ident ch) =>
 	      (lambda (s)
 		(or (and=> (assq-ref keytab (string->symbol s))
@@ -100,14 +100,13 @@
 	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	     (else (cons ch (string ch))))))))))) ; should be error
 
-#|
-    (InputElementDiv
-     (WhiteSpace) (LineTerminator) (Comment) (Token) (DivPunctuator))
-    (InputElementRegExp
-     (WhiteSpace) (LineTerminator) (Comment) (Token) (RegularExpressionLiteral))
-    (WhiteSpace ("\t") ("\vt") ("\ff") (" ") ("&nbsp;") ("&usp;"))
-    (LineTerminator ("\n") ("\r") (LS) (PS))
-    (MultiLineComment ('multiline-comment))
-|#
+
+;; (InputElementDiv
+;;  (WhiteSpace) (LineTerminator) (Comment) (Token) (DivPunctuator))
+;; (InputElementRegExp
+;;  (WhiteSpace) (LineTerminator) (Comment) (Token) (RegularExpressionLiteral)
+;;  (WhiteSpace ("\t") ("\vt") ("\ff") (" ") ("&nbsp;") ("&usp;"))
+;; (LineTerminator ("\n") ("\r") (LS) (PS))
+;; (MultiLineComment ('multiline-comment))
 
 ;;; --- last line ---

@@ -9,10 +9,6 @@
 
 ;; random
 
-(add-to-load-path (string-append (getcwd) "/../../../../module/"))
-(add-to-load-path (string-append (getcwd) "/../../../../examples/"))
-(add-to-load-path (string-append (getcwd) "/../../../../test-suite/"))
-
 (define-module (js-02)
   #:use-module (nyacc lang javascript parser)
   #:use-module (nyacc lang javascript separser)

@@ -40,7 +40,7 @@
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
   #:use-module (nyacc lang javascript jslib)
-  #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts*-values))
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (language tree-il)
@@ -49,25 +49,19 @@
 (use-modules (ice-9 pretty-print))
 
 ;; === portability ===================
-;; guile 2.0 => 2.0 changes:
-;; 1) (apply ... => (call ...
-;; 2) (apply (primitive cons) ... => (primcall cons ...
-;; 3) (begin ex1 ex2 ... => (seq ex1 (seq ex2 (seq ex3 ...
+;; no longer supports guile 2.0: assuming 2.2
 
-(define-syntax-rule (if-guile-20 then else)
-  (if (string=? "2.0" (effective-version)) then else))
-
-;; guile 2.0 or 2.2
-(define il-call (if-guile-20 'apply 'call))
-(define (make-call proc . args) (cons* il-call proc args))
-(define (make-pcall name . args)
-  (if-guile-20 (cons* 'apply `(primitive ,name) args)
-	       (cons* 'primcall name args)))
-(define (il-begin . expr-list)
-  (if-guile-20
-   (cons 'begin expr-list)
-   (let iter ((xl expr-list))
-     (cons* 'seq (car xl) (if (null? xl) '(void) (iter (cdr xl)))))))
+;; list of expressions to (seq ... (last))
+(define (block expr-or-expr-list)
+  (cond
+   ((pair? expr-or-expr-list)
+    (let iter ((xl expr-or-expr-list))
+      (if (null? (cdr xl)) (car xl)
+	  (cons* 'seq (car xl) (iter (cdr xl))))))
+   ((null? expr-or-expr-list)
+    `(void))
+   (else
+    expr-or-expr-list)))
 
 (define (jsym) (gensym "JS~"))
 
@@ -257,7 +251,7 @@
 (define (make-let bindings exprs)
   (let iter ((names '()) (gsyms '()) (vals '()) (binds bindings))
     (if (null? binds)
-	`(let ,(reverse names) ,(reverse gsyms) ,(reverse vals) (begin ,@exprs))
+	`(let ,(reverse names) ,(reverse gsyms) ,(reverse vals) ,(block exprs))
 	(iter (cons (car (cdaar binds)) names)
 	      (cons (cadr (cdaar binds)) gsyms)
 	      (cons (cadar binds) vals)
@@ -294,8 +288,8 @@
 (define (make-case val sym psym kseed next)
   `(let (~key) (,sym)
 	((if (lexical ~key ,psym) (const #t)
-	    (apply (primitive equal?) ,val ,(cadr kseed))))
-	(begin (if (lexical ~key ,sym) ,(car kseed) (void))
+	    (prim-call equal? ,val ,(cadr kseed))))
+	(seq (if (lexical ~key ,sym) ,(car kseed) (void))
 	       ,next)))
 	 
 ;; @deffn {Procedure} resolve-ref ref => exp
@@ -307,7 +301,7 @@
 (define (resolve-ref ref)
   (let ((tag (car ref)))
     (if (or (vector? tag) (hash-table? tag))
-	`(apply ,(jslib-ref 'js-ooa-get) ,ref)
+	`(call ,(jslib-ref 'js-ooa-get) ,ref)
 	ref)))
 
 ;; @deffn {Procedure} op-on-ref ref op ord => `(let ...)
@@ -321,20 +315,20 @@
 	 (val (case (car ref)
 		((toplevel) ref)
 		((lexical) ref)
-		(else `(apply ,(jslib-ref 'js-ooa-get) ,ref))))
+		(else `(call ,(jslib-ref 'js-ooa-get) ,ref))))
 	 (loc `(lexical ~ref ,sym))
-	 (sum `(apply ,(jslib-ref op) (const 1) ,loc))
+	 (sum `(call ,(jslib-ref op) (const 1) ,loc))
 	 (set (case (car ref)
 		((toplevel lexical) `(set! ,ref ,sum))
-		(else `(apply ,(jslib-ref 'js-ooa-put) ,ref ,sum))))
+		(else `(call ,(jslib-ref 'js-ooa-put) ,ref ,sum))))
 	 (rval (case ord ((pre) val) ((post) loc))))
-    `(let (~ref) (,sym) (,val) (begin ,set ,rval))))
+    `(let (~ref) (,sym) (,val) (seq ,set (seq ,rval (void))))))
 
 ;; for lt + rt, etc
 (define (op-call op kseed)
-  (rev/repl 'apply (jslib-ref op) kseed))
+  (rev/repl 'call (jslib-ref op) kseed))
 (define (op-call/prim op kseed)
-  (rev/repl 'apply `(primitive ,op) kseed))
+  (rev/repl 'prim-call op kseed))
 
 ;; deffn {Procedure} op-assn kseed => `(set! lhs rhs)
 ;; op-assn: for lhs += rhs etc
@@ -351,7 +345,7 @@
 	    (op (assq-ref opmap (caadr kseed)))
 	    (rhs (car kseed)))
 	(if op
-	    `(set! ,lhs ,(make-call `(@@ ,jslib-mod ,op) lhs rhs))
+	    `(set! ,lhs (call (@@ ,jslib-mod ,op) lhs rhs))
 	    `(set! ,lhs ,rhs))))))
 
 ;; reverse list but replace new head with @code{head}
@@ -372,11 +366,11 @@
 
 ;; ====================================
 	 
-;; @deffn {Procedure} js-xml->tree-il-ext exp env opts
+;; @deffn {Procedure} js-sxml->tree-il/ext exp env opts
 ;; Compile javascript SXML tree to external tree-il representation.
 ;; This one is public because it's needed for debugging the compiler.
 ;; @end deffn
-(define (js-sxml->tree-il-ext exp env opts)
+(define (js-sxml->tree-il/ext exp env opts)
 
   ;; In the case where we pick off ``low hanging fruit'' we need to coordinate
   ;; the actions of the up and down handlers.   The down handler will provide
@@ -569,9 +563,9 @@
 	      (gsym (list-ref (car args) 3)) ; need gensym ref
 	      (dikt (fold
 		     (lambda (name indx seed)
-		       (acons name (make-call `(toplevel list-ref)
-					      `(lexical @args ,gsym)
-					      `(const ,indx))
+		       (acons name `(call (toplevel list-ref)
+					  (lexical @args ,gsym)
+					  (const ,indx))
 			      seed))
 		     args
 		     (map cadr idlist)
@@ -592,11 +586,14 @@
 	      (elts (if (top-level? dict) elts (fold-in-blocks elts))))
 	 (values (cons 'SourceElements elts) '() dict)))
 
-      (*
+      (else
        ;;(sferr "fD: otherwise\n") (pperr tree)
        (values tree '() dict))
       ))
 
+  (define (opcall-node op seed kseed kdict)
+    (values (cons (rev/repl 'call (jslib-ref op) kseed) seed) kdict))
+  
   (define (fU tree seed dict kseed kdict) ;; => seed dict
     ;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
     ;; This routine rolls up processes leaves into the current branch.
@@ -618,7 +615,7 @@
        ;; ArrayLiteral
        ;; mkary is just primitive vector
        ((ArrayLiteral)
-	(let ((exp (apply make-call `(@@ ,jslib-mod mkary) (car kseed))))
+	(let ((exp `(call (@@ ,jslib-mod mkary) (car kseed))))
 	  (values (cons exp seed) kdict)))
        
        ;; ElementList
@@ -638,7 +635,7 @@
        ;; PropertyNameAndValueList
        ((PropertyNameAndValueList)
 	(values
-	 (cons `(apply (@@ ,jslib-mod mkobj) ,@(rtail kseed)) seed)
+	 (cons `(call (@@ ,jslib-mod mkobj) ,@(rtail kseed)) seed)
 	 kdict))
 
        ;; PropertyNameAndValue
@@ -655,9 +652,9 @@
        ;; a bit ugly now ???
        ((ooa-ref)
 	(values
-	 (cons `(apply (primitive cons)
-		       (apply ,(jslib-ref 'js-resolve) ,(cadr kseed))
-		       ,(car kseed))
+	 (cons `(prim-call cons
+			   (call ,(jslib-ref 'js-resolve) ,(cadr kseed))
+			   ,(car kseed))
 	       seed) kdict))
 
        ;; new: for now just call object
@@ -667,7 +664,7 @@
        ;; Should defined be boxed?
        ((CallExpression) ;; need to deal with "this"
 	;;(pperr (cons* 'apply (cadr kseed) (car kseed)))
-	(values (cons (cons* 'apply (cadr kseed) (car kseed)) seed) kdict))
+	(values (cons (cons* 'call (cadr kseed) (car kseed)) seed) kdict))
 
        ;; ArgumentList
        ((ArgumentList) ;; append-reverse-car ??? 
@@ -694,22 +691,22 @@
 	(values (cons (op-on-ref (car kseed) 'js:- 'pre) seed) kdict))
 
        ;; pos neg ~ not
-       ((pos) (values (cons (op-call 'js:pos kseed) seed) kdict))
-       ((neg) (values (cons (op-call 'js:neg kseed) seed) kdict))
-       ((lognot) (values (cons (op-call 'js:lognot kseed) seed) kdict))
-       ((not) (values (cons (op-call 'js:not kseed) seed) kdict))
+       ((pos) (opcall-node 'js:pos seed kseed kdict))
+       ((neg) (opcall-node 'js:neg seed kseed kdict))
+       ((lognot) (opcall-node 'js:lognot seed kseed kdict))
+       ((not) (opcall-node 'js:not seed kseed kdict))
 
        ;; mul div mod add sub
-       ((mul) (values (cons (op-call 'js:* kseed) seed) kdict))
-       ((div) (values (cons (op-call 'js:/ kseed) seed) kdict))
-       ((mod) (values (cons (op-call 'js:% kseed) seed) kdict))
-       ((add) (values (cons (op-call 'js:+ kseed) seed) kdict))
-       ((sub) (values (cons (op-call 'js:- kseed) seed) kdict))
+       ((mul) (opcall-node 'js:* seed kseed kdict))
+       ((div) (opcall-node 'js:/ seed kseed kdict))
+       ((mod) (opcall-node 'js:% seed kseed kdict))
+       ((add) (opcall-node 'js:+ seed kseed kdict))
+       ((sub) (opcall-node 'js:- seed kseed kdict))
        
        ;; lshift rshift rrshift
-       ((lshift) (values (cons (op-call 'js:lshift kseed) seed) kdict))
-       ((rshift) (values (cons (op-call 'js:rshift kseed) seed) kdict))
-       ((rrshift) (values (cons (op-call 'js:rrshift kseed) seed) kdict))
+       ((lshift) (opcall-node 'js:lshift seed kseed kdict))
+       ((rshift) (opcall-node 'js:rshift seed kseed kdict))
+       ((rrshift) (opcall-node 'js:rrshift seed kseed kdict))
 
        ;; lt gt le ge
        ((lt) (values (cons (op-call 'js:lt kseed) seed) kdict))
@@ -755,7 +752,7 @@
 	       (exp1 (if (pair? tail) (car tail) #f))
 	       (blck (if (and exp1 (eqv? 'bindings (car exp1)))
 			 (make-let (cdar tail) (cdr tail))
-			 (cons 'begin tail))))
+			 (block tail))))
 	  (values (cons blck seed) kdict)))
 
        ((StatementList)
@@ -763,7 +760,7 @@
 	       (exp1 (if (pair? tail) (car tail) #f))
 	       (blck (if (and exp1 (eqv? 'bindings (car exp1)))
 			 (make-let (cdar tail) (cdr tail))
-			 (cons 'begin tail))))
+			 (block tail))))
 	  (values (cons blck seed) kdict)))
 
        ;; VariableStatement
@@ -814,6 +811,7 @@
 			  `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)))
 		      seed) kdict))
 
+       ;; ======================================================================
        ;; @subheading Iteration with @code{do}, @code{while} and @code{for}
        ;;
        ;; @item During fD we push scope w/ ~exit, the abort tag.
@@ -844,14 +842,16 @@
 	       (isym (jsym)) (iloop-ref `(lexical ~iloop ,isym))
 	       (osym (jsym)) (oloop-ref `(lexical ~oloop ,osym))
 	       (csym (jsym)) (cont?-ref `(lexical ~cont? ,csym))
-	       (ibody `(begin ,stmt (if ,kond ,(make-call iloop-ref) (void))))
+	       (ibody `(seq ,stmt (if ,kond (call ,iloop-ref) (void))))
 	       (hdlr `(if ,cont?-ref ,kond (const #f)))
 	       (obody `(if ,(with-exit-handler
-			     xtag `(begin ,(make-call iloop-ref) (const #f))
-			     hdlr cont?-ref) ,(make-call oloop-ref) (void)))
+			     xtag `(seq (call ,iloop-ref) (const #f))
+			     hdlr cont?-ref)
+			   (call ,oloop-ref)
+			   (void)))
 	       (body `(letrec (~iloop ~oloop) (,isym ,osym)
 			      (,(make-thunk ibody) ,(make-thunk obody))
-			      ,(make-call oloop-ref))))
+			      (call ,oloop-ref))))
 	  (values (cons body seed) (pop-scope kdict))))
 
        ((while)
@@ -860,14 +860,18 @@
 	       (isym (jsym)) (iloop-ref `(lexical ~iloop ,isym))
 	       (osym (jsym)) (oloop-ref `(lexical ~oloop ,osym))
 	       (csym (jsym)) (cont?-ref `(lexical ~cont? ,csym))
-	       (ibody `(if ,kond (begin ,stmt ,(make-call iloop-ref)) (void)))
+	       (ibody `(if ,kond
+			   (seq ,stmt (seq (call ,iloop-ref) (void)))
+			   (void)))
 	       (hdlr cont?-ref)
 	       (obody `(if ,(with-exit-handler
-			     xtag `(begin ,(make-call iloop-ref) (const #f))
-			     hdlr cont?-ref) ,(make-call oloop-ref) (void)))
+			     xtag
+			     `(seq (call ,iloop-ref) (seq (const #f) (void)))
+			     hdlr cont?-ref)
+			   (call ,oloop-ref) (void)))
 	       (body `(letrec (~iloop ~oloop) (,isym ,osym)
 			      (,(make-thunk ibody) ,(make-thunk obody))
-			      ,(make-call oloop-ref))))
+			      (call ,oloop-ref))))
 	  (values (cons body seed) (pop-scope kdict))))
 
        ;; for    : pop-scope needed
@@ -909,6 +913,7 @@
 
        ;; WithStatement
 
+       ;; ======================================================================
        ;; @subheading Switch Statement
        ;; The pattern for SwitchStatment is as follows:
        ;; given
@@ -948,12 +953,12 @@
 	(let* ((v-ref (lookup "~val" kdict))	  ; val ref
 	       (v-val (resolve-ref (cadr kseed))) ; expr as l-val
 	       (body (pmatch (car kseed)
-		       (((let . ,A-clz) (begin . ,def) (let . ,B-clz))
-			`(begin (let . ,A-clz) (let . ,B-clz) . ,def))
-		       (((let . ,A-clz) (begin . ,def))
-			`(begin (let . ,A-clz) . ,def))
-		       (((begin . ,def) (let . ,B-clz))
-			`(begin (let . ,B-clz) . ,def))
+		       (((let . ,A-clz) (seq . ,def) (let . ,B-clz))
+			(block (cons* `(let . ,A-clz) `(let . ,B-clz) def)))
+		       (((let . ,A-clz) (seq . ,def))
+			(block (cons `(let . ,A-clz) def)))
+		       (((seq . ,def) (let . ,B-clz))
+			(block (cons `(let . ,B-clz) def)))
 		       (((let . ,A-clz)) `(let . ,A-clz))))
 	       (csym (jsym)) (cont?-ref `(lexical ~cont? ,csym))
 	       (px (lookup "~exit" dict)) ; parent exit
@@ -993,6 +998,7 @@
        ((LabelledStatement)
 	(values (cons (car kseed) seed) kdict))
 
+       ;; ======================================================================
        ;; @subheading Exceptions
        ;; @example
        ;; try { stmts } catch (var) { stmts }
@@ -1022,11 +1028,11 @@
 		       ((,try-stmts (lambda-case . ,rest))
 			`(prompt (const ,ctag) ,try-stmts ,(cadr rseed)))
 		       ((,try-stmts ,finally)
-			`(begin
+			`(seq
 			   ,(with-exit-handler ctag try-stmts '(void) dummy)
 			   ,finally))
 		       (,otherwise
-			`(begin 
+			`(seq
 			   (prompt (const ,ctag) ,(car rseed) ,(cadr rseed))
 			   ,(caddr rseed))))))
 	  (values (cons body seed) (pop-scope kdict))))
@@ -1042,6 +1048,8 @@
        ((Finally)
 	(values (cons (car kseed) seed) kdict))
 
+       ;; ======================================================================
+
        ;; FunctionDeclaration (see also fU)
        ((FunctionDeclaration)
 	(let* ((il-name (cadr kseed))
@@ -1050,7 +1058,7 @@
 	       (this (caddr (lookup "this" kdict)))
 	       (args (list-ref (lookup "@args" kdict) 2))
 	       (ptag (lookup "~return" kdict))
-	       (body (with-exit-arg ptag `(begin ,@(car kseed))))
+	       (body (with-exit-arg ptag (block (car kseed))))
 	       (fctn `(define ,name
 			,(make-function this args body #:name name))))
 	  (values (cons fctn seed) (pop-scope kdict))))
@@ -1060,7 +1068,7 @@
 	(let* ((this (lookup "this" kdict))
 	       (args (list-ref (lookup "@args" kdict) 2))
 	       (ptag (lookup "~return" kdict))
-	       (body (with-exit-arg ptag `(begin ,@(car kseed))))
+	       (body (with-exit-arg ptag (block (car kseed))))
 	       (fctn (make-function this args body)))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
@@ -1070,7 +1078,7 @@
 
        ;; Program
        ((Program)
-	(values (cons 'begin (car kseed)) kdict))
+	(values (block (car kseed)) kdict))
        
        ;; SourceElements
        ((SourceElements)
@@ -1087,15 +1095,20 @@
   ;; We generate a dictionary with the env (module?) available at the top.
   (let ((dict (acons '@top #t (acons '@M env JSdict)))
 	(sexp `(*TOP* ,exp)))
-    (foldts*-values fD fU fH sexp '() dict)))
+    (call-with-values
+	(lambda () (foldts*-values fD fU fH sexp '() dict))
+      (lambda (seed dict) seed))))
+
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
   (sferr "sxml:\n") (pperr exp)
-  (let* ((xrep (js-sxml->tree-il-ext exp env opts)))
-    (sferr "tree-il:\n") (pperr xrep)
-    (values (parse-tree-il '(const "[skip compile & execute]")) env env)
-    (values (parse-tree-il xrep) env env)
-    ))
+  (if exp
+      (let* ((xrep (js-sxml->tree-il/ext exp env opts)))
+	;;(sferr "tree-il:\n") (pperr xrep)
+	(values (parse-tree-il '(const "[skip compile & execute]")) env env)
+	;;(values (parse-tree-il xrep) env env)
+	)
+      (values (parse-tree-il '(const "javascript parse error")) env env)))
 
 ;; --- last line ---

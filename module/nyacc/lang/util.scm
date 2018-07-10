@@ -18,7 +18,7 @@
 ;; runtime utilities for the parsers
 
 (define-module (nyacc lang util)
-  #:export (lang-crn-lic
+  #:export (lang-crn-lgpl3+
 	    report-error
 	    *input-stack* push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
@@ -34,6 +34,7 @@
 	    sferr pperr
 	    ;; depracated
 	    sx-set-attr! sx-set-attr*
+	    lang-crn-lic
 	    )
   #:use-module ((srfi srfi-1) #:select (find fold))
   ;; #:use-module ((sxml xpath) #:select (sxpath)) ;; see sx-find below
@@ -49,13 +50,14 @@
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
-(define lang-crn-lic "
+(define lang-crn-lgpl3+ "
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
 version 3 of the License, or (at your option) any later version.
 See the file COPYING.LESSER included with the this distribution.")
+(define lang-crn-lic lang-crn-lgpl3+)
 
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))

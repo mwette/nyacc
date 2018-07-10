@@ -21,7 +21,7 @@
   #:export (pretty-print-js)
   #:use-module ((srfi srfi-1) #:select (pair-for-each))
   #:use-module (nyacc lang util)
-  ;;#:use-modules (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   )
 
 (define op-prec

@@ -21,8 +21,7 @@
   #:export (parse-js-selt js-reader)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
-  #:use-module (nyacc lang util)
-  )
+  #:use-module (nyacc lang util))
 
 (include-from-path "nyacc/lang/javascript/mach.d/setab.scm")
 (include-from-path "nyacc/lang/javascript/body.scm")
@@ -30,7 +29,7 @@
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
-  (make-lalr-ia-parser 
+  (make-lalr-ia-parser/num		; TEMPORARY 
    (list
     (cons 'len-v len-v)
     (cons 'pat-v pat-v)
@@ -45,7 +44,7 @@
 ;; @end example
 ;; @end deffn
 (define* (parse-js-selt #:key debug)
-  (catch
+   (catch
    'nyacc-error
    (lambda ()
      (with-fluid*
@@ -57,12 +56,14 @@
 
 ;; This is used for language support in guile REPL.  See Compiling to the
 ;; Virtual Machine in the Guile Reference Manual.
-(use-modules (ice-9 pretty-print))
 (define (js-reader port env)
   (let ((iport (current-input-port)))
     (dynamic-wind
 	(lambda () (set-current-input-port port))
-	(lambda () `(Program (SourceElements ,(parse-js-selt #:debug #f))))
+	(lambda () (and=> (parse-js-selt #:debug #f)
+			  (lambda (s)
+			    (display "\nparse-js-elt returns\n")
+			    `(Program (SourceElements ,s)))))
 	(lambda () (set-current-input-port iport)))))
 
 ;; --- last line ---

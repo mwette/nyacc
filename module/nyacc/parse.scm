@@ -1,6 +1,6 @@
 ;;; nyacc/parse.scm
 ;;;
-;;; Copyright (C) 2014-2017 Matthew R. Wette
+;;; Copyright (C) 2014-2018 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -15,13 +15,14 @@
 ;;; You should have received a copy of the GNU Lesser General Public License
 ;;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-;; make parser that provide list of la-toks to lexer:
-;; e.g., if comment not in latok, just throw away
+;; procedures to generate parsers, given a lexical analyzer
+;; one for files; one for interactive use: newline is possible end of input
 
 (define-module (nyacc parse)
-  #:export (make-lalr-parser make-lalr-ia-parser)
-  #:use-module (nyacc util)
-  )
+  #:export (make-lalr-parser
+	    make-lalr-ia-parser
+	    make-lalr-ia-parser/num)
+  #:use-module (nyacc util))
 (cond-expand
   (mes)
   (guile-2
@@ -47,7 +48,13 @@
 ;; (with-input-from-file "sourcefile.xyz" (lambda () (xyz-parse (gen-lexer))))
 ;; @end example
 ;; The generated parser is reentrant.
-(use-modules (ice-9 pretty-print))
+(define (dmsg s t a) (fmterr "state ~S, token ~S\t=> ~S\n" s t a))
+(define (make-xct av)
+  (if (procedure? (vector-ref av 0))
+      av
+      (vector-map (lambda (ix f) (eval f (current-module)))
+		  (vector-map (lambda (ix actn) (wrap-action actn)) av))))
+
 (define* (make-lalr-parser mach)
   (let* ((len-v (assq-ref mach 'len-v))	 ; production RHS length
 	 (rto-v (assq-ref mach 'rto-v))	 ; reduce to
@@ -62,7 +69,6 @@
 		       (lambda (ix actn) (wrap-action actn))
 		       actn-v))))
 	 ;;
-	 (dmsg (lambda (s t a) (fmterr "state ~S, token ~S\t=> ~S\n" s t a)))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
 	 ;;(def (assq-ref mtab '$default))
 	 (def (if hashed -1 '$default))
@@ -126,12 +132,120 @@
 	      (else ;; accept
 	       (car stack))))))))))
 
-;; @item make-lalr-ia-parser mach
+
+(define (parse-error state laval)
+  (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
+	(ln (1+ (port-line (current-input-port)))))
+    (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
+	    fn ln (car state) (cdr laval)))
+  #f)
+
+;; @deffn {Procedure} make-lalr-ia-parser mach
 ;; Make an interactive parser.   This will automatically process default
 ;; redunctions if that is the only choice, and does not wait for '$end to
 ;; return.  This needs algorithm verification.  Makes some assumptions that
-;; need to be verified.
-(use-modules (ice-9 pretty-print))
+;; need to be verified. @*
+;; Assume a parser is built to accept a list of expressions.  We are done when
+;; the state stack is at zero and the lookahead is a newline.@*
+;; Currently hardcoded to look for newline or EOF as end of input.
+;; @end deffn
+(define* (make-lalr-ia-parser/sym mach)
+  (let* ((len-v (assq-ref mach 'len-v))
+	 (rto-v (assq-ref mach 'rto-v))
+	 (pat-v (assq-ref mach 'pat-v))
+	 (xct-v (make-xct (assq-ref mach 'act-v)))
+	 (mtab (assq-ref mach 'mtab))
+	 (end (assq-ref mtab '$end)))
+    (lambda* (lexr #:key debug)
+      (let iter ((state (list 0))	; state stack
+		 (stack (list '$@))	; sval stack
+		 (nval #f)		; prev reduce to non-term val
+		 (lval #f))		; lexical value (from lex'er)
+	(let ((stxl (vector-ref pat-v (car state))))
+	  (cond
+	   ((eqv? '$default (caar stxl))
+	    (let* ((stx (cdar stxl))
+		   (gx (cdr stx))
+		   (gl (vector-ref len-v gx))
+		   ($$ (apply (vector-ref xct-v gx) stack)))
+	      (iter (list-tail state gl) (list-tail stack gl)
+		    (cons (vector-ref rto-v gx) $$) lval)))
+	   ((and (null? (cdr state)) lval (or (eof-object? (cdr lval))
+					      (string=? "\n" (cdr lval))))
+	    (cdr nval))
+	   (else
+	    (let* ((laval (or nval (or lval (lexr))))
+		   (tval (car laval)) (sval (cdr laval))
+		   (stx (or (assq-ref stxl tval)
+			    (assq-ref stxl '$default)
+			    (cons 'error 0))))
+	      (cond
+	       ((eq? 'error (car stx))	; error
+		(let ((fn (or (port-filename (current-input-port)) "(unknown)"))
+		      (ln (1+ (port-line (current-input-port)))))
+		  (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
+			  fn ln (car state) sval))
+		#f)
+	       ((eq? 'shift (car stx))
+		(iter (cons (cdr stx) state) (cons sval stack)
+		      #f (if nval lval #f)))
+	       ((eq? 'reduce (car stx))
+		(let* ((gx (cdr stx)) (gl (vector-ref len-v gx))
+		       ($$ (apply (vector-ref xct-v gx) stack)))
+		  (iter (list-tail state gl)
+			(list-tail stack gl)
+			(cons (vector-ref rto-v gx) $$)
+			(if nval lval laval)
+			)))
+	       (else ;; accept
+		(car stack)))))))))))
+
+(define (dmsg/n s t a)
+  (cond
+   ((positive? a) (fmterr "state ~S, token ~S\t=> shift ~S\n" s t a))
+   ((negative? a) (fmterr "state ~S, token ~S\t=> reduce ~S\n" s t (- a)))
+   ((zero? a) (fmterr "state ~S, token ~S\t=> accept\n" s t))
+   (else (error "coding error in (nyacc parse)"))))
+
+(define* (make-lalr-ia-parser/num mach)
+  (let* ((len-v (assq-ref mach 'len-v))
+	 (rto-v (assq-ref mach 'rto-v))
+	 (pat-v (assq-ref mach 'pat-v))
+	 (xct-v (make-xct (assq-ref mach 'act-v))))
+    (lambda* (lexr #:key debug)
+      (let iter ((state (list 0))	; state stack
+		 (stack (list '$@))	; sval stack
+		 (nval #f)		; prev reduce to non-term val
+		 (lval #f))		; lexical value (from lex'er)
+	(if (not (or nval lval))
+	    (iter state stack nval (lexr)) ; get token
+	    (let* ((laval (or nval lval))
+		   (tval (car laval)) (sval (cdr laval))
+		   (stxl (vector-ref pat-v (car state)))	  
+		   (stx (or (assq-ref stxl tval) (assq-ref stxl -1) #f)))
+	      (if debug (dmsg/n (car state) (if nval tval sval) stx))
+	      (cond
+	       ((eq? #f stx)		; error
+		(parse-error state laval))
+	       ((and lval		; "\n" = $end
+		     (not (eq? (car lval) -2))
+		     (string=? (cdr lval) "\n")
+		     (assq-ref stxl -2))
+		(iter state stack nval (cons -2 "\n")))
+	       ((negative? stx)		; reduce
+		(let* ((gx (abs stx))
+		       (gl (vector-ref len-v gx))
+		       ($$ (apply (vector-ref xct-v gx) stack)))
+		  (iter (list-tail state gl) 
+			(list-tail stack gl)
+			(cons (vector-ref rto-v gx) $$)
+			lval)))
+	       ((positive? stx)		; shift
+		(iter (cons stx state) (cons sval stack) #f (if nval lval #f)))
+	       (else			; accept
+		(car stack)))))))))
+	       
+
 (define* (make-lalr-ia-parser mach)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))	; reduce to
@@ -205,7 +319,7 @@
 	      (if debug (dmsg (car state) (if nval tval sval) stx))
 	      (cond
 	       ((error? stx)
-		(let ((fn (or (port-filename (current-input-port)) "(???)"))
+		(let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 		      (ln (1+ (port-line (current-input-port)))))
 		  (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
 			  fn ln (car state) sval))
@@ -223,6 +337,11 @@
 			)))
 	       (else ;; accept
 		(car stack)))))))))))
-  
+
+(define* (NEW-make-lalr-ia-parser mach)
+  (if (number? (caar (vector-ref (assq-ref mach 'pat-v) 0)))
+      (make-lalr-ia-parser/num mach)	; hashed
+      (make-lalr-ia-parser/sym mach)))	; not hashed
+
 ;; @end itemize
 ;;; --- last line ---

@@ -25,13 +25,7 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
-  )
-(cond-expand
- (guile-2
-  (use-modules ((srfi srfi-43) #:select (vector-map))))
- (else
-  (use-modules (nyacc compat18))))
-  
+  #:use-module ((srfi srfi-43) #:select (vector-map)))
 
 ;; This parses EcmaScript v3 1999.  Some v5 2011 items are added as comments.
 
@@ -44,7 +38,8 @@
 
 (define js-spec
   (lalr-spec
-   (notice (string-append "Copyright 2015-2017 Matthew R. Wette" lang-crn-lic))
+   (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
+			  lang-crn-lgpl3+))
    (reserve "abstract" "boolean" "byte" "char" "class" "const" "debugger"
 	    "double" "enum" "export" "extends" "final" "float" "goto"
 	    "implements" "import" "int" "interface" "long" "native" 
@@ -605,22 +600,20 @@
      )
 
     (FunctionBody
-     (SourceElements ($$ (tl->list $1)))
-     )
+     (SourceElements))
 
     (Program
-     (SourceElements ($$ (list 'Program (tl->list $1))))
-     )
+     (SourceElements ($$ `(Program ,$1))))
 
     (SourceElements
+     (SourceElements-1 ($$ (tl->list $1))))
+    (SourceElements-1
      (SourceElement ($$ (make-tl 'SourceElements $1)))
-     (SourceElements SourceElement ($$ (tl-append $1 $2)))
-     )
+     (SourceElements-1 SourceElement ($$ (tl-append $1 $2))))
 
     (SourceElement
      (Statement)
-     (FunctionDeclaration)
-     )
+     (FunctionDeclaration))
     
     )))
 
@@ -676,7 +669,8 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (let* ((se-spec (restart-spec js-spec 'SourceElement))
+  (let* (;;(se-spec (restart-spec js-spec 'SourceElement))
+	 (se-spec (restart-spec js-spec 'SourceElements))
 	 (se-mach (make-lalr-machine se-spec))
 	 (se-mach (compact-machine se-mach))
 	 (se-mach (hashify-machine se-mach)))
@@ -687,8 +681,7 @@
 			    (xtra-dir "seact.scm")))
 	(b (move-if-changed (xtra-dir "setab.scm.new")
 			    (xtra-dir "setab.scm"))))
-    #;(when (or a b)
-    (system (string-append "touch " (lang-dir "separser.scm"))))
+    ;;(when (or a b) (system (string-append "touch " (lang-dir "separser.scm"))))
     (or a b)))
 
 

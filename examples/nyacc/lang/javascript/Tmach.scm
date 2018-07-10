@@ -8,10 +8,8 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (string-append (getcwd) "/../../../../module/"))
-(add-to-load-path (string-append (getcwd) "/../../../../examples/"))
-
 (use-modules (nyacc lang javascript mach))
+
 (when redo
   (gen-js-files) (system "touch parser.scm")
   (gen-se-files) (system "touch separser.scm"))
@@ -31,10 +29,10 @@
       (pp-lalr-grammar js-spec)
       (pp-lalr-machine js-mach))))
 
-(when #f
+(when redo
   (with-output-to-file ",selang.txt"
     (lambda ()
-      (let* ((spec (restart-spec js-spec 'SourceElement))
+      (let* ((spec (restart-spec js-spec 'SourceElements))
 	     (mach (compact-machine
 		    (hashify-machine
 		     (make-lalr-machine spec)))))
@@ -46,7 +44,7 @@
   (with-output-to-file "gram.y.new"
     (lambda () (lalr->bison js-spec))))
 
-(when #t
+(when #f
   (let* ((xargs (cdr (program-arguments)))
 	 (file (if (pair? xargs) (car xargs) ",ex1.js"))
 	 (res (with-input-from-file file dev-parse-js)))

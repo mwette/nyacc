@@ -1,6 +1,6 @@
 ;; mach.d/jsact.scm
 
-;; Copyright 2015-2017 Matthew R. Wette
+;; Copyright 2015-2018 Matthew R. Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -556,14 +556,15 @@
    ;; FormalParameterList => FormalParameterList "," Identifier
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; FunctionBody => SourceElements
-   (lambda ($1 . $rest) (tl->list $1))
+   (lambda ($1 . $rest) $1)
    ;; Program => SourceElements
-   (lambda ($1 . $rest)
-     (list 'Program (tl->list $1)))
-   ;; SourceElements => SourceElement
+   (lambda ($1 . $rest) `(Program ,$1))
+   ;; SourceElements => SourceElements-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; SourceElements-1 => SourceElement
    (lambda ($1 . $rest)
      (make-tl 'SourceElements $1))
-   ;; SourceElements => SourceElements SourceElement
+   ;; SourceElements-1 => SourceElements-1 SourceElement
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; SourceElement => Statement
    (lambda ($1 . $rest) $1)

@@ -1758,7 +1758,8 @@
 ;; list through the ident-reader.
 ;; NOTE: The parser is hardcoded to assume that the phony token for the
 ;; default (reduce) action is @code{'$default} for unhashed machine or
-;; @code{-1} for a hashed machine.
+;; @code{-1} for a hashed machine.  In addition, we use @code{-2} for
+;; @code{$end}.
 
 ;; NEW: need to add reduction of ERROR
 
@@ -1777,8 +1778,8 @@
 	     (non-terms (assq-ref mach 'non-terms))
 	     (lhs-v (assq-ref mach 'lhs-v))
 	     (sm ;; = (cons sym->int int->sym)
-	      (let iter ((si (list (cons '$default -1)))
-			 (is (list (cons -1 '$default)))
+	      (let iter ((si (list (cons '$default -1) (cons '$end -2)))
+			 (is (list (cons -1 '$default) (cons -2 '$end)))
 			 (ix 1) (tl terminals) (nl non-terms))
 		(if (null? nl) (cons (reverse si) (reverse is))
 		    (let* ((s (atomize (if (pair? tl) (car tl) (car nl))))
