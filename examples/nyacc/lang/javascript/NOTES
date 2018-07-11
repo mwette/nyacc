@@ -1,4 +1,4 @@
-Copyright (C) 2015-2017 Matthew R. Wette
+Copyright (C) 2015-2018 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -10,3 +10,14 @@ something is broken wrt se parser:
 (parse-se "function foo() { return 1; }") => (return (const 1))
 
 regular parser works fine.  Is lalr restart not working ???
+
+Also, using at command line you need to terminate expression with ';',
+or add extra newline.
+
+  javascript> 1+2;
+  3
+  javascript> 1+2
+  ...
+  3
+  javascript>
+

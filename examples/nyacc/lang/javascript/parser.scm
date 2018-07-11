@@ -21,8 +21,7 @@
   #:export (parse-js)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
-  #:use-module (nyacc lang util)
-  )
+  #:use-module (nyacc lang util))
 
 (include-from-path "nyacc/lang/javascript/mach.d/jstab.scm")
 (include-from-path "nyacc/lang/javascript/body.scm")

@@ -659,8 +659,7 @@
 			    (xtra-dir "jsact.scm")))
 	(b (move-if-changed (xtra-dir "jstab.scm.new")
 			    (xtra-dir "jstab.scm"))))
-    (when (or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm"))))
+    ;;(when (or a b) (system (string-append "touch " (lang-dir "parser.scm"))))
     (or a b)))
 
 (define (gen-se-files . rest)
@@ -669,8 +668,7 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (let* (;;(se-spec (restart-spec js-spec 'SourceElement))
-	 (se-spec (restart-spec js-spec 'SourceElements))
+  (let* ((se-spec (restart-spec js-spec 'SourceElements))
 	 (se-mach (make-lalr-machine se-spec))
 	 (se-mach (compact-machine se-mach))
 	 (se-mach (hashify-machine se-mach)))

@@ -1102,12 +1102,12 @@
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => 
 (define (compile-tree-il exp env opts)
-  (sferr "sxml:\n") (pperr exp)
+  ;;(sferr "sxml:\n") (pperr exp)
   (if exp
       (let* ((xrep (js-sxml->tree-il/ext exp env opts)))
 	;;(sferr "tree-il:\n") (pperr xrep)
-	(values (parse-tree-il '(const "[skip compile & execute]")) env env)
-	;;(values (parse-tree-il xrep) env env)
+	;;(values (parse-tree-il '(const "[skip compile & execute]")) env env)
+	(values (parse-tree-il xrep) env env)
 	)
       (values (parse-tree-il '(const "javascript parse error")) env env)))
 

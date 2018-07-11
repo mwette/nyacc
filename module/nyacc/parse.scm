@@ -32,10 +32,33 @@
    (use-modules (nyacc compat18)))
   (else))
 
-;; @item (machine-hashed? mach) => #t|#f
+;; @deffn {Procedure} (machine-hashed? mach) => #t|#f
 ;; Indicate if the machine has been hashed.
+;; @end deffn
 (define (machine-hashed? mach)
   (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
+
+(define (parse-error state laval)
+  (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
+	(ln (1+ (port-line (current-input-port)))))
+    (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
+	    fn ln (car state) (cdr laval)))
+  #f)
+
+(define (make-xct av)
+  (if (procedure? (vector-ref av 0))
+      av
+      (vector-map (lambda (ix f) (eval f (current-module)))
+		  (vector-map (lambda (ix actn) (wrap-action actn)) av))))
+
+(define (dmsg/n s t a)
+  (cond
+   ((positive? a) (fmterr "state ~S, token ~S\t=> shift ~S\n" s t a))
+   ((negative? a) (fmterr "state ~S, token ~S\t=> reduce ~S\n" s t (- a)))
+   ((zero? a) (fmterr "state ~S, token ~S\t=> accept\n" s t))
+   (else (error "coding error in (nyacc parse)"))))
+
+(define (dmsg s t a) (fmterr "state ~S, token ~S\t=> ~S\n" s t a))
 
 ;; @item make-lalr-parser mach => parser
 ;; This generates a procedure that takes one argument, a lexical analyzer:
@@ -48,13 +71,6 @@
 ;; (with-input-from-file "sourcefile.xyz" (lambda () (xyz-parse (gen-lexer))))
 ;; @end example
 ;; The generated parser is reentrant.
-(define (dmsg s t a) (fmterr "state ~S, token ~S\t=> ~S\n" s t a))
-(define (make-xct av)
-  (if (procedure? (vector-ref av 0))
-      av
-      (vector-map (lambda (ix f) (eval f (current-module)))
-		  (vector-map (lambda (ix actn) (wrap-action actn)) av))))
-
 (define* (make-lalr-parser mach)
   (let* ((len-v (assq-ref mach 'len-v))	 ; production RHS length
 	 (rto-v (assq-ref mach 'rto-v))	 ; reduce to
@@ -133,13 +149,6 @@
 	       (car stack))))))))))
 
 
-(define (parse-error state laval)
-  (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-	(ln (1+ (port-line (current-input-port)))))
-    (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
-	    fn ln (car state) (cdr laval)))
-  #f)
-
 ;; @deffn {Procedure} make-lalr-ia-parser mach
 ;; Make an interactive parser.   This will automatically process default
 ;; redunctions if that is the only choice, and does not wait for '$end to
@@ -200,12 +209,8 @@
 	       (else ;; accept
 		(car stack)))))))))))
 
-(define (dmsg/n s t a)
-  (cond
-   ((positive? a) (fmterr "state ~S, token ~S\t=> shift ~S\n" s t a))
-   ((negative? a) (fmterr "state ~S, token ~S\t=> reduce ~S\n" s t (- a)))
-   ((zero? a) (fmterr "state ~S, token ~S\t=> accept\n" s t))
-   (else (error "coding error in (nyacc parse)"))))
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
 
 (define* (make-lalr-ia-parser/num mach)
   (let* ((len-v (assq-ref mach 'len-v))
@@ -227,7 +232,7 @@
 	      (cond
 	       ((eq? #f stx)		; error
 		(parse-error state laval))
-	       ((and lval		; "\n" = $end
+	       ((and lval		; "\n" as $end
 		     (not (eq? (car lval) -2))
 		     (string=? (cdr lval) "\n")
 		     (assq-ref stxl -2))

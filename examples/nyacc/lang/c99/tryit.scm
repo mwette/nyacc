@@ -11,7 +11,7 @@
 (use-modules (nyacc lang c99 cxeval))
 (use-modules (nyacc lang c99 util1))
 (use-modules (nyacc lang util))
-(use-modules (nyacc lang sx-match))
+(use-modules (nyacc lang sx-util))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (ice-9 pretty-print))

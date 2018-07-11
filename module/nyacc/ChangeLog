@@ -1,3 +1,11 @@
+2018-07-09  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lalr.scm (compact-machine): force $end to be -2, so parsers
+	don't have to look up the value
+
+	* parse.scm (make-lalr-ia-parser/num): added /sym and /num parsers;
+	abandoning attempt to make general purpose parsers for hashed/unhashed
+
 2018-05-12  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (make-lexer-generator): added extra keyword arg to

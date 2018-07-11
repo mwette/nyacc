@@ -61,9 +61,7 @@
     (dynamic-wind
 	(lambda () (set-current-input-port port))
 	(lambda () (and=> (parse-js-selt #:debug #f)
-			  (lambda (s)
-			    (display "\nparse-js-elt returns\n")
-			    `(Program (SourceElements ,s)))))
+			  (lambda (s) `(Program ,s))))
 	(lambda () (set-current-input-port iport)))))
 
 ;; --- last line ---
