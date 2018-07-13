@@ -256,10 +256,10 @@
 ;; @end deffn
 (define (process-spec tree)
 
-  ;; Make a new symbol. This is a helper for proxies and mid-rule-actions.
+  ;; Generate a new symbol. This is a helper for proxies and mid-rule-actions.
   ;; The counter here is the only @code{set!} in @code{process-spec}.
   ;; Otherwise, I believe @code{process-spec} is referentially transparent.
-  (define maksy
+  (define gensy
     (let ((cntr 1))
       (lambda ()
 	(let ((c cntr))
@@ -305,13 +305,13 @@
 	 `(prec . ,(reverse pll))
 	 `(assc (left ,@la) (right ,@ra) (nonassoc ,@na)))))))
 
-  ;;.@deffn make-mra-proxy sy pel act => ???
+  ;;.@deffn {Procedure} make-mra-proxy sy pel act => ???
   ;; Generate a mid-rule-action proxy.
   ;; @end deffn
   (define (make-mra-proxy sy pel act)
     (list sy (list (cons* 'action (length pel) (cdr act)))))
 
-  ;; @deffn gram-check-2 tl nl err-l
+  ;; @deffn {Procedure} gram-check-2 tl nl err-l
   ;; Check for fatal: symbol used as terminal and non-terminal.
   ;; @end deffn
   (define (gram-check-2 tl nl err-l)
@@ -331,7 +331,7 @@
 	   l))
      err-l nl))
 
-  ;; @deffn gram-check-4 ll nl err-l
+  ;; @deffn {Procedure} gram-check-4 ll nl err-l
   ;; Check for warning: unused LHS.
   ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
   ;; @end deffn
@@ -348,6 +348,8 @@
 		 (cdr all))))))
 
   ;; TODO: check for repeated tokens in precedence spec's: prec<, prec>
+
+  ;; IN PROGRESS: add zero-rule $accept : start-symbol $end
 
   (let* ((gram (assq-ref tree 'grammar))
 	 (start-symbol (and=> (assq-ref tree 'start) atomize))
@@ -370,7 +372,7 @@
 		      (ref . all) (act 1 $1))))
 	       (tl (append '($code-comm $lone-comm $error $end) ; terminals
 			   (or (assq-ref tree 'reserve) '())))
-	       (nl (list start-symbol))	; set of non-terminals
+	       (nl (list start-symbol)) ; set of non-terminals
 	       ;;
 	       (head gram)	       ; head of unprocessed productions
 	       (prox '())	       ; proxy productions for MRA
@@ -393,7 +395,7 @@
 	  ((action)
 	   (if (pair? (cdr rhs))
 	       ;; mid-rule action: generate a proxy (car act is # args)
-	       (let* ((sy (maksy))
+	       (let* ((sy (gensy))
 		      (pr (make-mra-proxy sy pel (cdar rhs))))
 		 (iter ll @l tl (cons sy nl) head (cons pr prox)
 		       lhs tail rhs-l attr (cons sy pel) (cdr rhs)))
@@ -401,7 +403,7 @@
 	       (iter ll @l tl nl head prox lhs tail
 		     rhs-l (acons 'action (cdar rhs) attr) pel (cdr rhs))))
 	  ((proxy)
-	   (let* ((sy (maksy))
+	   (let* ((sy (gensy))
 		  (pf (cadar rhs))	; proxy function
 		  (p1 (pf sy (cddar rhs))))
 	     (iter ll @l tl (cons sy nl) head (cons p1 prox) lhs
@@ -1510,13 +1512,15 @@
 ;; Others are provided as strings.
 ;; @end enumerate
 ;; The procedure @code{hashify-machine} will convert the cdrs to integers.
-;; Test: "$abc" => ("$abc" '$abc) '$abc => ('$abc . '$abc)
+;; Test: "$abc" => ("$abc" '$abc) '$abc => ('$abc . '$abc) @*
+;; Note: Adding in $start sym for interactive parser helper.
 ;; @end deffn
 (define (gen-match-table mach)
-  (cons
-   (cons 'mtab (map (lambda (term) (cons term (atomize term)))
+  (acons 'mtab
+	 (cons (cons '$start (lalr-start mach))
+	       (map (lambda (term) (cons term (atomize term)))
 		    (assq-ref mach 'terminals)))
-   mach))
+	 mach))
 
 
 ;; @deffn {Procedure} add-recovery-logic! mach => mach
@@ -1636,7 +1640,7 @@
       (vector-for-each
        (lambda (ix pat)
 	 (for-each
-	  (lambda (a) (if (or (eqv? (car a) '$default) (eqv? (car a) -1))
+	  (lambda (a) (if (or (eqv? (car a) '$default) (eqv? (car a) 1))
 			  (abort-to-prompt 'got-it)))
 	  pat))
        (assq-ref mach 'pat-v))
@@ -1646,7 +1650,7 @@
 
 ;; The list of tokens that do not get absorbed into default reductions.
 ;; See @code{compact-machine} below.
-(define default-keepers '($error $lone-comm $code-comm $end))
+(define required-keepers '($error $lone-comm $code-comm))
 
 ;; @deffn {Procedure} compact-machine mach [#:keep 3] [#:keepers '()] => mach
 ;; A "filter" to compact the parse table.  For each state this will replace
@@ -1658,6 +1662,7 @@
 ;; unaccounted comments are skipped).
 ;; @end deffn
 (define* (compact-machine mach #:key (keep 3) (keepers '()))
+  (if (< keep 0) (error "expecting keep > 0"))
   (let* ((pat-v (assq-ref mach 'pat-v))
 	 (nst (vector-length pat-v))
 	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
@@ -1670,11 +1675,11 @@
 			 (lambda (a r) (and (eq? 'reduce (car a))
 					    (eqv? r (cdr a))))))
 	 (mk-default (if hashed
-			 (lambda (r) (cons -1 (- r)))
+			 (lambda (r) (cons 1 (- r)))
 			 (lambda (r) `($default reduce . ,r))))
 	 (mtab (assq-ref mach 'mtab))
 	 (keepers (map (lambda (k) (assq-ref mtab k))
-		       (append keepers default-keepers))))
+		       (append keepers required-keepers))))
 
     ;; Keep an a-list mapping reduction prod-rule => count.
     (let iter ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))
@@ -1778,9 +1783,9 @@
 	     (non-terms (assq-ref mach 'non-terms))
 	     (lhs-v (assq-ref mach 'lhs-v))
 	     (sm ;; = (cons sym->int int->sym)
-	      (let iter ((si (list (cons '$default -1) (cons '$end -2)))
-			 (is (list (cons -1 '$default) (cons -2 '$end)))
-			 (ix 1) (tl terminals) (nl non-terms))
+	      (let iter ((si (list (cons '$default 1)))
+			 (is (list (cons 1 '$default)))
+			 (ix 2) (tl terminals) (nl non-terms))
 		(if (null? nl) (cons (reverse si) (reverse is))
 		    (let* ((s (atomize (if (pair? tl) (car tl) (car nl))))
 			   (tl1 (if (pair? tl) (cdr tl) tl))

@@ -212,43 +212,79 @@
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 
+;; parsing interfactive is a bit of a challenge
+;; 1) parsers parse entire strings, we want only one reduction
+;; approach
+;; when we reduct rhs[0][1] we should be done
+
+;; Important
+
+;; requires build with @code{compact-machine} and @code{#:keep 0}.
+;; This then allows the ia-parser to perform default-only reductions
+;; where no lookahead token is required
+
+;; IA parser requires that the top-level unit not be duplicated
+;; in other parts of the grammar.
+;; So I changed
+;; @example
+;; FunctionBody => SourceElements
+;; Program => SourceElements
+;; SourceElements => SourceElement ...
+;; SourceElement => ...
+;; @end example
+;; to
+;; @example
+;; FunctionBody => FunctionElements
+;; Program => ProgramElements
+;; FunctionElements => FunctionElement ...
+;; FunctionElement => ...
+;; ProgramElements => ProgramElement ...
+;; ProgramElement => ...
+;; @end example
+
 (define* (make-lalr-ia-parser/num mach)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
-	 (xct-v (make-xct (assq-ref mach 'act-v))))
+	 (xct-v (make-xct (assq-ref mach 'act-v)))
+	 (start (and=> (assq-ref mach 'mtab)
+		       (lambda (mtab) (assq-ref mtab '$start)))))
     (lambda* (lexr #:key debug)
       (let iter ((state (list 0))	; state stack
 		 (stack (list '$@))	; sval stack
 		 (nval #f)		; prev reduce to non-term val
 		 (lval #f))		; lexical value (from lex'er)
-	(if (not (or nval lval))
-	    (iter state stack nval (lexr)) ; get token
-	    (let* ((laval (or nval lval))
-		   (tval (car laval)) (sval (cdr laval))
-		   (stxl (vector-ref pat-v (car state)))	  
-		   (stx (or (assq-ref stxl tval) (assq-ref stxl -1) #f)))
-	      (if debug (dmsg/n (car state) (if nval tval sval) stx))
-	      (cond
-	       ((eq? #f stx)		; error
-		(parse-error state laval))
-	       ((and lval		; "\n" as $end
-		     (not (eq? (car lval) -2))
-		     (string=? (cdr lval) "\n")
-		     (assq-ref stxl -2))
-		(iter state stack nval (cons -2 "\n")))
-	       ((negative? stx)		; reduce
-		(let* ((gx (abs stx))
-		       (gl (vector-ref len-v gx))
-		       ($$ (apply (vector-ref xct-v gx) stack)))
-		  (iter (list-tail state gl) 
-			(list-tail stack gl)
-			(cons (vector-ref rto-v gx) $$)
-			lval)))
-	       ((positive? stx)		; shift
-		(iter (cons stx state) (cons sval stack) #f (if nval lval #f)))
-	       (else			; accept
-		(car stack)))))))))
+	(cond
+	 ((and nval (eqv? (car nval) start)) ; done
+	  (cdr nval))
+	 ((not (or nval lval))
+	  ;; reload lval unless only default reduction
+	  (if (eqv? 1 (caar (vector-ref pat-v (car state))))
+	      (iter state stack (cons 1 #f) lval)
+	      (iter state stack nval (lexr))))
+	 (else
+	  (let* ((laval (or nval lval))
+		 (tval (car laval))
+		 (sval (cdr laval))
+		 (stxl (vector-ref pat-v (car state)))	  
+		 (stx (or (assq-ref stxl tval) (assq-ref stxl 1) #f)))
+	    (if debug (dmsg/n (car state) (if nval tval sval) stx))
+	    (cond
+	     ((eq? #f stx)		; error
+	      (parse-error state laval))
+	     ((negative? stx)		; reduce
+	      (let* ((gx (abs stx))
+		     (gl (vector-ref len-v gx))
+		     ($$ (apply (vector-ref xct-v gx) stack)))
+		(iter (list-tail state gl)
+		      (list-tail stack gl)
+		      (cons (vector-ref rto-v gx) $$)
+		      lval)))
+	     ((positive? stx)		; shift
+	      (iter (cons stx state) (cons sval stack) #f (if nval lval #f)))
+	     (else			; accept
+	      (car stack))))))))))
+
 	       
 
 (define* (make-lalr-ia-parser mach)

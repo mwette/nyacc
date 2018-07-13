@@ -10,7 +10,7 @@
 
 (define act-v
   (vector
-   ;; $start => SourceElements
+   ;; $start => ProgramElement
    (lambda ($1 . $rest) $1)
    ;; Literal => NullLiteral
    (lambda ($1 . $rest) $1)
@@ -555,20 +555,27 @@
      (make-tl 'FormalParameterList $1))
    ;; FormalParameterList => FormalParameterList "," Identifier
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; FunctionBody => SourceElements
-   (lambda ($1 . $rest) $1)
-   ;; Program => SourceElements
-   (lambda ($1 . $rest) `(Program ,$1))
-   ;; SourceElements => SourceElements-1
+   ;; FunctionBody => FunctionElements
    (lambda ($1 . $rest) (tl->list $1))
-   ;; SourceElements-1 => SourceElement
+   ;; FunctionElements => FunctionElement
    (lambda ($1 . $rest)
      (make-tl 'SourceElements $1))
-   ;; SourceElements-1 => SourceElements-1 SourceElement
+   ;; FunctionElements => FunctionElements FunctionElement
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; SourceElement => Statement
+   ;; FunctionElement => Statement
    (lambda ($1 . $rest) $1)
-   ;; SourceElement => FunctionDeclaration
+   ;; FunctionElement => FunctionDeclaration
+   (lambda ($1 . $rest) $1)
+   ;; Program => ProgramElements
+   (lambda ($1 . $rest) `(Program ,(tl->list $1)))
+   ;; ProgramElements => ProgramElement
+   (lambda ($1 . $rest)
+     (make-tl 'SourceElements $1))
+   ;; ProgramElements => ProgramElements ProgramElement
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; ProgramElement => Statement
+   (lambda ($1 . $rest) $1)
+   ;; ProgramElement => FunctionDeclaration
    (lambda ($1 . $rest) $1)
    ))
 

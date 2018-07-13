@@ -599,19 +599,30 @@
      (FormalParameterList "," Identifier ($$ (tl-append $1 $3)))
      )
 
+    ;; I have duplicated SourceElement as FunctionElement and ProgramElement
+    ;; in order to allow this grammar to be reused for interactive parser.
+    ;; The ia-parser will use ProgramElement as the start symbol.
+    
     (FunctionBody
-     (SourceElements))
+     (FunctionElements ($$ (tl->list $1)))
+     )
 
+    (FunctionElements
+     (FunctionElement ($$ (make-tl 'SourceElements $1)))
+     (FunctionElements FunctionElement ($$ (tl-append $1 $2))))
+
+    (FunctionElement
+     (Statement)
+     (FunctionDeclaration))
+    
     (Program
-     (SourceElements ($$ `(Program ,$1))))
+     (ProgramElements ($$ `(Program ,(tl->list $1)))))
 
-    (SourceElements
-     (SourceElements-1 ($$ (tl->list $1))))
-    (SourceElements-1
-     (SourceElement ($$ (make-tl 'SourceElements $1)))
-     (SourceElements-1 SourceElement ($$ (tl-append $1 $2))))
+    (ProgramElements
+     (ProgramElement ($$ (make-tl 'SourceElements $1)))
+     (ProgramElements ProgramElement ($$ (tl-append $1 $2))))
 
-    (SourceElement
+    (ProgramElement
      (Statement)
      (FunctionDeclaration))
     
@@ -668,9 +679,10 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (let* ((se-spec (restart-spec js-spec 'SourceElements))
+  (let* (;;(se-spec (restart-spec js-spec 'SourceElement))
+	 (se-spec (restart-spec js-spec 'ProgramElement))
 	 (se-mach (make-lalr-machine se-spec))
-	 (se-mach (compact-machine se-mach))
+	 (se-mach (compact-machine se-mach #:keep 0))
 	 (se-mach (hashify-machine se-mach)))
     (write-lalr-actions se-mach (xtra-dir "seact.scm.new"))
     (write-lalr-tables se-mach (xtra-dir "setab.scm.new")))

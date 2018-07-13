@@ -1,3 +1,14 @@
+2018-07-12  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* parse.scm (make-lalr-ia-parser/num): broke make-lalr-ia-parser
+	into make-lalr-ia-parser/sym for unhashed and
+	make-lalr-ia-parser/num for hashed.  The /num version is working;
+	need to recode the sym one still.
+
+	* lalr.scm (compact-machine): removed $end from required-keepers;
+	changed $default from -1 to 1 so that all token values are > 0.
+	The pat-v could potentially now be a vector.
+
 2018-07-09  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm (compact-machine): force $end to be -2, so parsers

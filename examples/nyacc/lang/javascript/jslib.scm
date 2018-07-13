@@ -19,7 +19,9 @@
 
 (define-module (nyacc lang javascript jslib)
   #:export (JSdict
-	    js:undefined)
+	    js:undefined
+	    js:null
+	    )
   )
 
 (define (obj-toString obj)
@@ -39,14 +41,13 @@
     (js-ooa-put ,(mkref 'js-ooa-put))
     ))
 
-;; null is 'js:null
-
 ;; this should throw an Error object
 (define (js-error text)
   (throw 'js-error text))
 (export js-error)
 
 (define js:undefined (if #f #f))
+(define js:null '())
 
 ;; like python str(obj)
 (define (g-str obj)

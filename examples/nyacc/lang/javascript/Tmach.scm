@@ -32,13 +32,15 @@
 (when redo
   (with-output-to-file ",selang.txt"
     (lambda ()
-      (let* ((spec (restart-spec js-spec 'SourceElements))
-	     (mach (compact-machine
-		    (hashify-machine
-		     (make-lalr-machine spec)))))
-      (pp-lalr-notice spec)
-      (pp-lalr-grammar spec)
-      (pp-lalr-machine mach)))))
+      ;; This needs to be same as in mach.scm!
+      (let* (;;(se-spec (restart-spec js-spec 'SourceElement))
+	     (se-spec (restart-spec js-spec 'ProgramElement))
+	     (se-mach (make-lalr-machine se-spec))
+	     (se-mach (compact-machine se-mach #:keep 0))
+	     (se-mach (hashify-machine se-mach)))
+	;;(pp-lalr-notice se-spec)
+	(pp-lalr-grammar se-spec)
+	(pp-lalr-machine se-mach)))))
 
 (when #f
   (with-output-to-file "gram.y.new"

@@ -34,7 +34,8 @@
 ;; NOTES
 ;; @itemize
 ;; @item JS functions will need to be re-implemented as objects, with the
-;;       `[[Call]]' property used to make calls.  
+;;       `[[Call]]' property used to make calls.
+;; @item don't support the arguments property in functions
 ;; @end itemize
 
 (define-module (nyacc lang javascript compile-tree-il)
@@ -44,9 +45,9 @@
   #:use-module ((sxml fold) #:select (foldts*-values))
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (language tree-il)
-  #:use-module (system base pmatch)
-  )
+  #:use-module (system base pmatch))
 (use-modules (ice-9 pretty-print))
+(define pp pretty-print)
 
 ;; === portability ===================
 ;; no longer supports guile 2.0: assuming 2.2
@@ -57,13 +58,14 @@
    ((pair? expr-or-expr-list)
     (let iter ((xl expr-or-expr-list))
       (if (null? (cdr xl)) (car xl)
-	  (cons* 'seq (car xl) (iter (cdr xl))))))
+	  `(seq ,(car xl) ,(iter (cdr xl))))))
    ((null? expr-or-expr-list)
-    `(void))
+    '(void))
    (else
     expr-or-expr-list)))
 
 (define (jsym) (gensym "JS~"))
+(define (genjsym name) (gensym (string-append name "-")))
 
 ;; === debugging =====================
 
@@ -88,6 +90,7 @@
 ;; we just use rest arg and then express each
 ;; var reference as (list-ref @args index)
 ;; Another option is to use case-lambda ...
+;; CHANGE THIS.  Use optional arguments for everything
 
 ;; @subheading non-tail return
 ;; need to use prompts here, I think ... Hey just use let/ec ?
@@ -118,6 +121,9 @@
 (define jslib-mod '(nyacc lang javascript jslib))
 (define (jslib-ref name) `(@@ (nyacc lang javascript jslib) ,name))
 
+(define undefined (jslib-ref 'js:undefined))
+(define null (jslib-ref 'js:null))
+
 ;; may need to push-level (blocks) and push-scope (functions)
 
 ;; push/pop scope level
@@ -134,7 +140,7 @@
 
 ;; Add lexical to dict, return dict
 (define (add-lexical name dict)
-  (acons name `(lexical ,(string->symbol name) ,(jsym)) dict))
+  (acons name `(lexical ,(string->symbol name) ,(genjsym name)) dict))
 
 ;; (add-lexicals name1 name2 ... dict) 
 (define (add-lexicals . args)
@@ -178,7 +184,7 @@
 ;; === using prompts ====================
 
 (define (add-exit name dict)
-  (acons name (make-prompt-tag "JS~") dict))
+  (acons name (genjsym name) dict))
 
 ;; @deffn {Procedure} find-exit-tag name dict => prompt-tag
 ;; used along with @code{with-exit} (see below)
@@ -198,22 +204,25 @@
 	(if (not sym) (error "JS: exit not found for " name))
 	sym)))
     
-;; @deffn {Procedure} with-exit tag body
+;; @deffn {Procedure} with-return-escape tag body
 ;; use for return and break where break is passed '(void)
 ;; tag is from (make-prompt-tag)
 ;; @end deffn
-(define (with-exit-arg tag body)
-  (let ((arg-sym (jsym)))
-    `(prompt
-      (const ,tag)
-      ,body
-      (lambda-case (((cont arg) #f #f #f () (,(jsym) ,arg-sym))
-		    (lexical arg ,arg-sym))))))
+(define (with-return-escape esc-sym body)
+  (let ((arg-sym (genjsym "arg")))
+    `(let (return) (,esc-sym) ((primcall make-prompt-tag))
+	  (prompt #t (lexical return ,esc-sym)
+		  ,body
+		  (lambda ()
+		    (lambda-case
+		     (((k arg) #f #f #f () (,(genjsym "k") ,arg-sym))
+		      (lexical arg ,arg-sym))))))))
 
 ;; now handler has one arg: called-by-continue?
 ;; tagvar is (
+;; *** SEE with-return-escape ***
 (define (with-exit-handler tag body handler arg)
-  `(prompt
+  `(prompt #f
     (const ,tag)
     ,body
     (lambda-case (((k ,(cadr arg)) #f #f #f () (,(jsym) ,(caddr arg)))
@@ -261,19 +270,20 @@
 ;; Generate a thunk.
 ;; @end deffn
 (define* (make-thunk expr #:key name)
-  `(lambda ,(if name '((name)) '()) (lambda-case ((() #f #f #f () ()) ,expr))))
+  `(lambda ,(if name '((namhe)) '()) (lambda-case ((() #f #f #f () ()) ,expr))))
 
-;; body needs a line to build "var arguments" from Array(@args)
-;; Right now args is the gensym of the rest argument named @code{@@args}.
+
+;; Pass arguments as optional and add @code{this} keyword argument.
 (define* (make-function this args body #:key name)
   (if (not args) (error "no args"))
-  `(lambda ,(if name `((name ,name)) '())
-     ;; If I add this as first argument, then calls to guile procedures
-     ;; don't work.  Either dynamic binding to this or check if js call
-     ;; (e.g., add meta of (js . #t)
-     ;; -
-     ;;(lambda-case (((this) #f @args #f () (,this ,args)) ,body))))
-     (lambda-case ((() #f @args #f () (,args)) ,body))))
+  `(lambda ,(if name `((name . ,name)) '())
+     (lambda-case ((()			; req
+		    ,(map car args)	; opt
+		    #f			; rest
+		    (#f (#:this this ,this)) ; kw
+		    (,@(map (lambda (v) undefined) args) ,undefined) ; inits
+		    (,@(map cadr args) ,this)) ; syms
+		   ,body))))
 
 ;; used in fU for switch cases
 ;; (let ((key (if key #t (equal? case-key val))))
@@ -466,11 +476,13 @@
       ((Identifier ,name)
        ;;(sferr "fD: ret null\n")
        (let ((ref (lookup name dict)))
-	 (if (not ref) (error "lookup 2 failed"))
+	 (if (not ref) (error "js: lookup 2 failed"))
 	 (values '() ref dict)))
       
       ((PrimaryExpression (this))
-       (error "not implemented: PrimaryExpression (this)"))
+       (let ((ref (lookup "this" dict)))
+	 (if (not ref) (error "js: lookup 2 failed"))
+	 (values '() ref dict)))
 	      
       ((PrimaryExpression (Identifier ,name))
        (let ((ident (lookup name dict)))
@@ -539,26 +551,23 @@
        
       ((FunctionDeclaration (Identifier ,name) . ,rest)
        (values tree '()
-	       (add-exit "~return"
+	       (add-exit "return"
 			 (add-lexical "this"
 				      (push-scope (add-symboldef name dict))))))
       
       ((FunctionExpression (Identifier ,name) . ,rest)
        (values tree '()
-	       (add-exit "~return"
+	       (add-exit "return"
 			 (add-lexical "this"
 				      (add-lexical name (push-scope dict))))))
       
       ((FunctionExpression . ,rest)
        (values tree '()
-	       (add-exit "~return"
+	       (add-exit "return"
 			 (add-lexical "this"
 			    (add-symboldef "*anon*" (push-scope dict))))))
       
-      ((FormalParameterList . ,idlist)
-       ;; For all functions we just use rest arg and then express each
-       ;; var reference as (list-ref @args index)
-       ;; Another option is to use case-lambda ...
+      #;((FormalParameterList . ,idlist)
        (let* ((args (add-lexical "@args" dict))
 	      (gsym (list-ref (car args) 3)) ; need gensym ref
 	      (dikt (fold
@@ -574,6 +583,8 @@
 		     ))
 	      )
 	 (values tree '() dikt)))
+      ((FormalParameterList . ,idlist)
+       (values tree '() (fold add-lexical dict (map cadr idlist))))
       
       ((SourceElements . ,elts) ;; a list of statements and fctn-decls
        ;; Fix up list of source elements.
@@ -826,13 +837,16 @@
        ;; 	      (stmt)
        ;; 	      (if (kond) (iloop))))
        ;;      (oloop (lambda ()
-       ;; 	      (prompt
-       ;; 	       (lambda () (iloop) #f)
-       ;; 	       (lambda (k cont?) (if cont? (kond) #f))))))
+       ;; 	       (prompt #f
+       ;; 	        (lambda () (iloop) #f)
+       ;; 	        (lambda (k cont?) (if cont? (iloop) #f)))))) ??????
        ;;   (oloop))
        ;; @example
        ;; @noindent
-       ;; where continue=(abort #t) and break=(abort #f)
+       ;; where @code{kond} is the condition, @code{continue} generates
+       ;; @code{(abort #t)} and @code{break} generates @code{(abort #f)}.
+
+       ;; ^--| change to use two prompt tags; see ice-9 code for `while'
 
        
        ;; do: "do" stmt "while" expr ;
@@ -888,7 +902,7 @@
 	  (if (> (length kseed) 1)
 	      (error "unsupported JS: continue <label>")
 	      `(abort (const ,(find-exit-tag "~exit" kdict))
-		      ((const #t)) (const '())))
+		      ((const #t)) (const ())))
 	  seed) kdict))
 
        ;; BreakStatement: abort w/ zero args
@@ -898,17 +912,17 @@
 	  (if (> (length kseed) 1)
 	      (error "unsupported JS: break <label>")
 	      `(abort (const ,(find-exit-tag "~exit" kdict)) ((const #f))
-		      (const '())))
+		      (const ())))
 	  seed) kdict))
 
        ;; ReturnStatement: abort w/ one arg
        ((ReturnStatement)
 	(values
-	 (cons `(abort (const ,(find-exit-tag "~return" kdict))
+	 (cons `(abort (lexical return ,(find-exit-tag "return" kdict))
 		       (,(if (> (length kseed) 1)
 			     (car kseed)	       ; argument
 			     (lookup "this" kdict)))   ; default
-		       (const '()))
+		       (const ()))
 	       seed) kdict))
 
        ;; WithStatement
@@ -1050,15 +1064,15 @@
 
        ;; ======================================================================
 
-       ;; FunctionDeclaration (see also fU)
+       ;; FunctionDeclaration (see also fD)
        ((FunctionDeclaration)
-	(let* ((il-name (cadr kseed))
+	(let* ((il-name (caddr kseed))
 	       (name (case (car il-name)
 		       ((@ @@) (caddr il-name)) (else (cadr il-name))))
 	       (this (caddr (lookup "this" kdict)))
-	       (args (list-ref (lookup "@args" kdict) 2))
-	       (ptag (lookup "~return" kdict))
-	       (body (with-exit-arg ptag (block (car kseed))))
+	       (args (map cdr (cdadr kseed))) ;; '((x JS-123) (y JS-124))
+	       (ptag (lookup "return" kdict))
+	       (body (with-return-escape ptag (block (car kseed))))
 	       (fctn `(define ,name
 			,(make-function this args body #:name name))))
 	  (values (cons fctn seed) (pop-scope kdict))))
@@ -1066,15 +1080,15 @@
        ;; FunctionExpression
        ((FunctionExpression)
 	(let* ((this (lookup "this" kdict))
-	       (args (list-ref (lookup "@args" kdict) 2))
-	       (ptag (lookup "~return" kdict))
-	       (body (with-exit-arg ptag (block (car kseed))))
+	       (args (cdar kseed))
+	       (ptag (lookup "return" kdict))
+	       (body (with-return-escape ptag (block (cadr kseed))))
 	       (fctn (make-function this args body)))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FormalParameterList
-       ((FormalParameterList) ;; all in @code{@@args}.
-	(values seed kdict))
+       ((FormalParameterList)
+	(values (cons (reverse kseed) seed) kdict))
 
        ;; Program
        ((Program)
@@ -1100,15 +1114,17 @@
       (lambda (seed dict) seed))))
 
 
-;; @deffn {Procedure} compile-tree-il exp env opts => 
+;; @deffn {Procedure} compile-tree-il exp env opts =>
+(use-modules (language tree-il compile-cps))
 (define (compile-tree-il exp env opts)
-  ;;(sferr "sxml:\n") (pperr exp)
+  (sferr "sxml:\n") (pperr exp)
   (if exp
-      (let* ((xrep (js-sxml->tree-il/ext exp env opts)))
-	;;(sferr "tree-il:\n") (pperr xrep)
-	;;(values (parse-tree-il '(const "[skip compile & execute]")) env env)
+      (let* ((xrep (js-sxml->tree-il/ext exp env opts))
+	     )
+	(sferr "tree-il:\n") (pperr xrep)
 	(values (parse-tree-il xrep) env env)
+	;;(values (parse-tree-il '(const "[skip compile & execute]")) env env)
 	)
-      (values (parse-tree-il '(const "javascript parse error")) env env)))
+      (values (parse-tree-il '(const "*** syntax error")) env env)))
 
 ;; --- last line ---
