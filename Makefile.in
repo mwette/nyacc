@@ -1,10 +1,11 @@
 # Makefile.in for nyacc
 #
-# Copyright (C) 2017 Matthew R. Wette
+# Copyright (C) 2017-2018 Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification
 # is granted.  This file is offered as-is, without any warranty.
 
+prefix=@prefix@
 GUILE=@guile@
 GUILD=@guild@
 SITE_SCM_DIR=@site_scm_dir@
@@ -19,21 +20,23 @@ all:
 .PHONY: install
 install:
 	@(cd module; \
-	  make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
-		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
-		 SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
-		 DESTDIR=$(DESTDIR) install)
+	  make -f Makefile.nyacc \
+		GUILE=$(GUILE) GUILD=$(GUILD) \
+		SITE_SCM_DIR=$(SITE_SCM_DIR) \
+		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
+		DESTDIR=$(DESTDIR) install)
 	@(cd doc/nyacc; \
-	  make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) \
-		 INFODIR=$(INFODIR) \
-		 DESTDIR=$(DESTDIR) install)
+	  make -f Makefile.nyacc \
+		GUILE=$(GUILE) GUILD=$(GUILD) \
+		INFODIR=$(INFODIR) \
+		DESTDIR=$(DESTDIR) install)
 
 .PHONY: install-srcs
 install-srcs:
 	@(cd module; \
 	  make -f Makefile.nyacc \
-		 SITE_SCM_DIR=$(SITE_SCM_DIR) \
-		 DESTDIR=$(DESTDIR) install-srcs)
+		SITE_SCM_DIR=$(SITE_SCM_DIR) \
+		DESTDIR=$(DESTDIR) install-srcs)
 
 .PHONY: install-ffi-help
 install-ffi-help:

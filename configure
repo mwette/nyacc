@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # configure
 #
@@ -127,7 +127,8 @@ else
 fi
 
 echo "creating Makefile"
-sed -e "s|@guile@|$GUILE|" \
+sed -e "s|@prefix@|$prefix|" \
+    -e "s|@guile@|$GUILE|" \
     -e "s|@guild@|$GUILD|" \
     -e "s|@site_scm_dir@|$SITE_SCM_DIR|" \
     -e "s|@site_scm_go_dir@|$SITE_SCM_GO_DIR|" \
