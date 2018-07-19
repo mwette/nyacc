@@ -98,15 +98,17 @@
 
 ;; @deffn {Procedure} js-make-object @dots{} => js-obj
 ;; Make an object given name, value, name, value, ...
+;; @example
+;; (define console (js-make-object ("abc" . 123) ("log" . (lambda* ...))))
+;; @end example
 ;; @end deffn
-(define (js-make-object . rest)
+(define-public (js-make-object . rest)
   (let ((obj (make-hash-table 31)))
     (let iter ((pairs rest))
       (when (pair? pairs)
 	(hash-set! obj (car pairs) (cadr pairs))
 	(iter (cddr pairs))))
     obj))
-(export js-make-object)
 (define mkobj js-make-object)
 
 (define (js-make-array . rest)
@@ -146,7 +148,7 @@
 
 ;; ==============================
 
-(define Math (make-hash-table 31))
+(define-public Math (make-hash-table 31))
 (hashq-set! Math 'sqrt (lambda (n) (sqrt n)))
 
 (define Number (make-hash-table 31))
@@ -155,7 +157,15 @@
 (hash-set! Number 'NaN (nan))
 (hash-set! Number 'toString (lambda (n) (number->string n)))
 
+;; for me
 
 (include-from-path "nyacc/lang/javascript/jslib-01.scm")
+
+(define-public (js_lookup name)
+  (let ((var (module-variable (current-module) (string->symbol name))))
+    (if var (variable-ref var) (throw 'js-error "not defined"))))
+
+(define-public (js_format fmt . args)
+  (apply simple-format #t fmt args))
 
 ;; --- last line ---

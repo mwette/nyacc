@@ -40,10 +40,10 @@
 
 (define (parse-error state laval)
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-	(ln (1+ (port-line (current-input-port)))))
-    (fmterr "~A:~A: parse failed at state ~A, on input ~S\n"
-	    fn ln (car state) (cdr laval)))
-  #f)
+	(ln (port-line (current-input-port))))
+    (throw 'nyacc-error
+	   "~A:~A: parse failed at state ~A, on input ~S\n"
+	   fn ln (car state) (cdr laval))))
 
 (define (make-xct av)
   (if (procedure? (vector-ref av 0))
@@ -247,8 +247,7 @@
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
 	 (xct-v (make-xct (assq-ref mach 'act-v)))
-	 (start (and=> (assq-ref mach 'mtab)
-		       (lambda (mtab) (assq-ref mtab '$start)))))
+	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
     (lambda* (lexr #:key debug)
       (let iter ((state (list 0))	; state stack
 		 (stack (list '$@))	; sval stack
@@ -284,8 +283,6 @@
 	      (iter (cons stx state) (cons sval stack) #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
-
-	       
 
 (define* (make-lalr-ia-parser mach)
   (let* ((len-v (assq-ref mach 'len-v))

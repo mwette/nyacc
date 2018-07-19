@@ -21,3 +21,9 @@ or add extra newline.
   3
   javascript>
 
+
+should lexer cache a token?
+
+define lexer (gen-lexer)
+(parse lexer)
+;; does parser need to pushback a token?

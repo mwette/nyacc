@@ -1,0 +1,118 @@
+\input texinfo.tex
+@setfilename nagel.info
+@settitle Not Another Guile Extension Language!
+
+@headings off
+@everyfooting @| @thispage @|
+
+@node Top
+@top Not Another Guile Extension Language!
+@format
+Matt Wette
+July 2018
+@end format
+
+@heading Read, Parse and Compile
+
+A language may have two or three phases to get to lower level.
+The first is parsing which reads text and turns into the languages own
+intermediate form, typically for one the language compilers.  There
+may be an additional step using a parser, which converts output from
+the reader into something for the compiler.  Tree-IL works this way:
+it has an intermediate text form which can be generated using scheme
+list expressions and binary form using scheme records.
+
+@subheading Compiling a File 
+
+Define a joint is
+@enumerate
+@item javascript to tree-il
+@item tree-il to cps
+@item cps to bytecode
+@end enumerate
+
+The signature is
+@example
+compile exp env0 opts => exp env2 env1
+@end example
+for a chain of joints, compile-file will run the reader to get an
+expression then iterate on the elements of the joint, providing
+env1 as continuation to env0 in the next iteration.
+On iteration of the next expression env0 is env?
+
+Say the compilers are @code{comp:jvs->til} and @code{comp:til->byt}.
+We ignore options.  Let's pretend that cps is the joint (even though
+tree-il is a possible joint).  We use ``mid'' to designate the joint.
+Then the program that generate a bytecode file is
+@lisp
+(let*-values
+  ((jvs-c0) (jvs-def-env))
+  ;;
+  ((til-x1 til-e1 jvs-c1) (comp:jvs->til (read-jvs port jvs-c0) jvs-c0))
+  ((cps-x1 cps-e1 til-c1) (comp:til->cps til-x1 til-e1))
+  ;;
+  ((til-x2 til-e2 jvs-c2) (comp:jvs->til (read-jvs port jvs-c1) jvs-c1))
+  ((cps-x2 cps-e2 til-c2) (comp:til->cps til-x2 til-e2))
+  ;;
+  ((exps) (cps-joiner (list cps-x1 cps-x2) cps-e2)
+  ((byt byt-e5 bytcps-c1) (comp:cps->byt exps cps-e2))
+@end lisp
+This seems to say that a compiler can use it's own env but needs to
+pass out an env that can be used by lower levels.
+
+Note that if the top-level language is a joint, then the compiler
+will just read expressions, combine them and then send to the comiler
+in one shot.
+
+@subheading Compiling a File
+
+
+@heading Modules
+
+@subheading @file{system/base/compile}) 
+In the procedure @code{read-and-compile} which iterates on
+@code{read-and-parse} to read one expression at a time to
+@enumerate
+@item read-and-parse env port cenv => exp
+@item 
+@end enumerate
+
+We refer to ``from'' as ``top'' and ``to'' as ``bottom''.  For our
+example, javascript is at the top and bytecode is at the bottom.
+
+If the language spec defines a parser then read, is followed by parse.
+
+find-language-joint:
+This finds the highest level language that provides a means for joining
+expressions, and called this the ``joint.''  The reader will parse
+and compile one expression at a time to the joint, combine
+expressions, then compile the sequence to the bottom.
+
+We use reader-parser to refer to reader or reader, followed by parser,
+if the parser exists.
+
+language spec fields:
+@table
+@item reader
+@code{reader port env -> exp} reads from port and generates an expression
+@item parser
+@code{parser env -> env} converts reader expression to input for
+compiler; an example is tree-il which has ``external form'' that can
+be pretty-printed and ``internal form'' which is a record tree
+@item joiner
+@code{joiner exp-list -> exp} joins a list of expressions into a
+single expression.  In Scheme: (exp ...) -> (begin exp exp exp) so
+the joiner is @code{(cons 'begin exps)}.
+@end table
+
+On EOF the reader-parser should return 
+
+Signatures
+@example
+reader port cenv -> exp
+parser exp -> exp
+compiler 
+@end example
+
+
+@bye

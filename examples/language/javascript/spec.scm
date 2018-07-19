@@ -1,4 +1,4 @@
-;;; NYACC's javascript specification for Guile
+;;; NYACC javascript specification for Guile
 
 ;; Copyright (C) 2015,2017-2018 Matthew R. Wette
 ;;
@@ -23,11 +23,24 @@
   #:use-module (nyacc lang javascript pprint)
   #:use-module (system base language))
 
+;; so probably the reader should have 
+
 (define-language javascript
   #:title	"javascript"
   #:reader	js-reader
+  ;;#:reader	(lambda (p e) (if (eq? e (interaction-enviornment))
+  ;;				  (js-user-reader p e)
+  ;;				  (js-file-reader p e)))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
-  #:printer	pretty-print-js)
+  #:printer	pretty-print-js
+  ;;#:joiner	(lambda (exps env) (cons 'SourceStatements (map cddr exps)))
+  #:make-default-environment
+		(lambda ()
+		  ;; ripoff from language/scheme/spec.scm
+		  (let ((env (make-fresh-user-module)))
+		    (module-define! env 'current-reader (make-fluid))
+		    env))
+  )
 
 ;; --- last line ---

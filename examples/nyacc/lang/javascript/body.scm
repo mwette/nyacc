@@ -39,7 +39,7 @@
     (make-ident-reader idf idr)))
 
 ;; @deffn {Procecure} read-js-string ch => ($string "abc") | #f
-(define (read-js-string delim)
+(define-public (read-js-string delim)
   (if (not (or (eq? delim #\') (eq? delim #\"))) #f
       (let iter ((cl '()) (ch (read-char)))
 	(cond ((eq? ch #\\)
@@ -59,7 +59,11 @@
 	      ((eq? ch delim) (cons '$string (list->string (reverse cl))))
 	      (else (iter (cons ch cl) (read-char)))))))
 
-(define gen-js-lexer
+;; Add #! ... !# to comment format so that we can use shebang scripts.
+(define read-js-comm
+  (make-comm-reader '(("/*" . "*/") ("//" . "\n") ("#!" . "!#"))))
+
+(define-public gen-js-lexer
   (let* ((match-table mtab)
 	 (space-cs (string->char-set " \t\r"))
 	 ;;
@@ -76,29 +80,29 @@
     (lambda ()
       (let ((bol #t))
 	(lambda ()
-          (define (cont rez) (fluid-set! *insert-semi* #t) rez)
-          (cont
-	  (let iter ((ch (read-char)))
-	    (cond
-	     ((eof-object? ch) (assc-$ (cons '$end ch)))
-	     ((char-set-contains? space-cs ch) (iter (read-char)))
-	     ((eqv? ch #\newline)
-	      (set! bol #t)
-	      (if (fluid-ref *insert-semi*)
-		  (cons semicolon "\n")
-		  (iter (read-char))))
-	     ((read-c-comm ch bol) (iter (read-char)))
-	     ((and (set! bol #f) #f))
-	     ((read-js-string ch) => assc-$)
-	     ((read-js-ident ch) =>
-	      (lambda (s)
-		(or (and=> (assq-ref keytab (string->symbol s))
-			   (lambda (tval) (cons tval s)))
-		    (assc-$ (cons '$ident s)))))
-	     ((read-c-num ch) => assc-$)
-	     ((read-chseq ch) => identity)
-	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-	     (else (cons ch (string ch))))))))))) ; should be error
+          (define (process lexeme) (fluid-set! *insert-semi* #t) lexeme)
+          (process
+	   (let iter ((ch (read-char)))
+	     (cond
+	      ((eof-object? ch) (assc-$ (cons '$end ch)))
+	      ((char-set-contains? space-cs ch) (iter (read-char)))
+	      ((eqv? ch #\newline)
+	       (set! bol #t)
+	       (if (fluid-ref *insert-semi*)
+		   (cons semicolon "\n")
+		   (iter (read-char))))
+	      ((read-js-comm ch bol) (iter (read-char)))
+	      ((and (set! bol #f) #f))
+	      ((read-js-string ch) => assc-$)
+	      ((read-js-ident ch) =>
+	       (lambda (s)
+		 (or (and=> (assq-ref keytab (string->symbol s))
+			    (lambda (tval) (cons tval s)))
+		     (assc-$ (cons '$ident s)))))
+	      ((read-c-num ch) => assc-$)
+	      ((read-chseq ch) => identity)
+	      ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+	      (else (cons ch (string ch))))))))))) ; should be error
 
 
 ;; (InputElementDiv

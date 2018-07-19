@@ -43,25 +43,71 @@
 ;; `(Program (SourceElements ,(parse-js-selt)))
 ;; @end example
 ;; @end deffn
-(define* (parse-js-selt #:key debug)
+(define* (parse-js-selt)
    (catch
    'nyacc-error
    (lambda ()
      (with-fluid*
 	 *insert-semi* #t
-	 (lambda () (raw-parser (gen-js-lexer) #:debug debug))))
+	 (lambda () (raw-parser (gen-js-lexer) #:debug #f))))
    (lambda (key fmt . rest)
      (apply simple-format (current-error-port) fmt rest)
      #f)))
 
-;; This is used for language support in guile REPL.  See Compiling to the
-;; Virtual Machine in the Guile Reference Manual.
+;; If a syntax error is detected by the reader then we usually want to flush
+;; input until an end of statement is seen.  And return #f
+(define flush-input-after-error
+  (let ((read-string (make-string-reader #\")))
+    (lambda (port)
+      (let iter ((ch (read-char port)))
+	(cond
+	 ((eqv? ch #\;) #f)
+	 ((read-js-string ch) (iter (read-char port)))
+	 ((read-c-comm ch #t) #f)
+	 (else (iter (read-char port))))))))
+
+;; This is used for language support in guile REPL.  See ``Compiling to the
+;; Virtual Machine'' in the Guile Reference Manual.  What is not documented
+;; is that the reader should return the eof-object to stop reading from the
+;; port.
 (define (js-reader port env)
-  (let ((iport (current-input-port)))
-    (dynamic-wind
-	(lambda () (set-current-input-port port))
-	(lambda () (and=> (parse-js-selt #:debug #f)
-			  (lambda (s) `(Program (SourceElements ,s)))))
-	(lambda () (set-current-input-port iport)))))
+  (if (eof-object? (peek-char port))
+      (read-char port)
+      (let ((selt (with-input-from-port port parse-js-selt)))
+	(cond
+	 ((equal? selt '(EmptyStatement)) #f)
+	 (selt `(Program (SourceElements ,selt)))
+	 (else (flush-input-after-error port) #f)))))
+
+
+(define new-parse-js-selt
+  (let ((raw-parser
+	 (make-lalr-ia-parser/num
+	  (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
+		(cons 'mtab mtab) (cons 'act-v act-v)))))
+    (lambda (new-parse-js-selt lexer)
+      (catch 'nyacc-error
+	(lambda ()
+	  (with-fluid*
+	      *insert-semi* #t
+	    (lambda () (raw-parser lexer #:debug #f))))
+	(lambda (key fmt . rest)
+	  (apply simple-format (current-error-port) fmt rest)
+	  #f)))))
+
+(define js-user-reader
+  (let ((lexer (gen-js-lexer)))
+    (lambda (port env)
+      (cond
+       ((eof-object? (peek-char port))
+	(error "separser: need to regen lexer") ;; (set! lexer (gen-js-lexer))
+	(read-char port))
+       (else
+	(let ((selt (with-input-from-port port
+		      (lambda () (new-parse-js-selt lexer)))))
+	  (cond
+	   ((equal? selt '(EmptyStatement)) #f)
+	   (selt `(Program (SourceElements ,selt)))
+	   (else (flush-input-after-error port) #f))))))))
 
 ;; --- last line ---
