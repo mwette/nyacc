@@ -27,3 +27,13 @@ should lexer cache a token?
 define lexer (gen-lexer)
 (parse lexer)
 ;; does parser need to pushback a token?
+
+
+lexer should only turn one newline into semi so '\n' '\n' => ';'
+
+
+new scope rules:
+Functions can have vars anywhere at function top level
+Blocks can only have lets at beginning
+In fU for functions, sweep through the function and find re-decls
+need (lookup-in-function to see if a repeated binding)

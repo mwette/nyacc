@@ -63,6 +63,7 @@
 (define read-js-comm
   (make-comm-reader '(("/*" . "*/") ("//" . "\n") ("#!" . "!#"))))
 
+;; maybe turn double newline into ';'
 (define-public gen-js-lexer
   (let* ((match-table mtab)
 	 (space-cs (string->char-set " \t\r"))

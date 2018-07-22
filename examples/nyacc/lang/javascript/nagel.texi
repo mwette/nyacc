@@ -12,6 +12,20 @@ Matt Wette
 July 2018
 @end format
 
+@heading ideas
+
+In JS lexer, maybe double-newline should be ';'.  So in JS, we can parse
+@example
+TryStatement
+  : Try stmts Catch stmts Finally stmts
+  | Try stmts Catch stmts [';']
+@end example
+
+Rule: all N-languages should allow @code{#! ... !#} as a comment.
+and #L to end of line as a comment.
+
+Note: Guile reads language files with encoding always set to UTF-8.
+
 @heading Read, Parse and Compile
 
 A language may have two or three phases to get to lower level.

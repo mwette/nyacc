@@ -360,27 +360,41 @@
    (lambda ($1 . $rest) $1)
    ;; Statement => TryStatement
    (lambda ($1 . $rest) $1)
+   ;; Block => "{" LetStatementList StatementList "}"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(Block unquote
+             (append
+               (sx-tail (tl->list $2))
+               (sx-tail (tl->list $3)))))
    ;; Block => "{" StatementList "}"
    (lambda ($3 $2 $1 . $rest)
-     `(Block unquote (cdr (tl->list $2))))
+     `(Block unquote (sx-tail (tl->list $2))))
    ;; Block => "{" "}"
    (lambda ($2 $1 . $rest) '(Block))
+   ;; LetStatementList => LetStatement
+   (lambda ($1 . $rest)
+     (make-tl 'LetStatementList $1))
+   ;; LetStatementList => LetStatementList LetStatement
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; LetStatement => "let" DeclarationList ";"
+   (lambda ($3 $2 $1 . $rest)
+     `(LetStatement ,(tl->list $2)))
    ;; StatementList => Statement
    (lambda ($1 . $rest) (make-tl 'StatementList $1))
    ;; StatementList => StatementList Statement
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; VariableStatement => "var" VariableDeclarationList ";"
+   ;; VariableStatement => "var" DeclarationList ";"
    (lambda ($3 $2 $1 . $rest)
      `(VariableStatement ,(tl->list $2)))
-   ;; VariableDeclarationList => VariableDeclaration
+   ;; DeclarationList => VariableDeclaration
    (lambda ($1 . $rest)
-     (make-tl 'VariableDeclarationList $1))
-   ;; VariableDeclarationList => VariableDeclarationList "," VariableDeclar...
+     (make-tl 'DeclarationList $1))
+   ;; DeclarationList => DeclarationList "," VariableDeclaration
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; VariableDeclarationListNoIn => VariableDeclarationNoIn
+   ;; DeclarationListNoIn => VariableDeclarationNoIn
    (lambda ($1 . $rest)
-     (make-tl 'VariableDeclarationList $1))
-   ;; VariableDeclarationListNoIn => VariableDeclarationListNoIn "," Variab...
+     (make-tl 'DeclarationList $1))
+   ;; DeclarationListNoIn => DeclarationListNoIn "," VariableDeclarationNoIn
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; VariableDeclaration => Identifier Initializer
    (lambda ($2 $1 . $rest)
@@ -416,7 +430,7 @@
    ;; IterationStatement => "for" "(" OptExprStmtNoIn OptExprStmt OptExprCl...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(for $3 $4 $5 $6))
-   ;; IterationStatement => "for" "(" "var" VariableDeclarationListNoIn ";"...
+   ;; IterationStatement => "for" "(" "var" DeclarationListNoIn ";" OptExpr...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for $4 $6 $7 $8))
    ;; IterationStatement => "for" "(" LeftHandSideExpression "in" Expressio...
@@ -559,7 +573,7 @@
    (lambda ($1 . $rest) (tl->list $1))
    ;; FunctionElements => FunctionElement
    (lambda ($1 . $rest)
-     (make-tl 'SourceElements $1))
+     (make-tl 'FunctionElements $1))
    ;; FunctionElements => FunctionElements FunctionElement
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; FunctionElement => Statement
@@ -570,7 +584,7 @@
    (lambda ($1 . $rest) `(Program ,(tl->list $1)))
    ;; ProgramElements => ProgramElement
    (lambda ($1 . $rest)
-     (make-tl 'SourceElements $1))
+     (make-tl 'ProgramElements $1))
    ;; ProgramElements => ProgramElements ProgramElement
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; ProgramElement => Statement

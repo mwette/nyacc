@@ -41,6 +41,7 @@
 ;; @item Update to es5.
 ;; @item Implement objects and prototypes correctly.
 ;; @item Implement unary and binary operators (in jslib-01.scm) correctly.
+;; @item add let only allow var at top-level and function start scope
 ;; @end itemize
 ;;
 ;; NOTES
@@ -48,6 +49,10 @@
 ;; @item JS functions will need to be re-implemented as objects, with the
 ;;       `[[Call]]' property used to make calls.
 ;; @item don't support the arguments property in functions
+;; @item could maybe handle this using
+;;  d.f1 = function... => d.f1 = (let ((this d)) f1)
+;;  but then d1.f = d0.f does not work
+;; @item (void) == (const *unspecified*) i think
 ;; @end itemize
 
 (define-module (nyacc lang javascript compile-tree-il)
@@ -55,9 +60,8 @@
   #:use-module (nyacc lang javascript jslib)
   #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts*-values))
-  #:use-module ((srfi srfi-1) #:select (fold))
+  #:use-module ((srfi srfi-1) #:select (fold append-reverse))
   #:use-module (language tree-il)
-  #:use-module (system base pmatch)
   #:use-module (ice-9 match)
   )
 (use-modules (ice-9 pretty-print))
@@ -66,17 +70,24 @@
 ;; === portability ===================
 ;; no longer supports guile 2.0: assuming 2.2
 
-;; list of expressions to (seq ... (last))
+;; @deffn {Procedure} block expr-or-expr-list => expr | (seq ex1 (seq ... exN))
+;; Return an expression or build a seq-train returning last expression.
+;; @end deffn
 (define (block expr-or-expr-list)
-  (cond
-   ((pair? expr-or-expr-list)
-    (let iter ((xl expr-or-expr-list))
-      (if (null? (cdr xl)) (car xl)
-	  `(seq ,(car xl) ,(iter (cdr xl))))))
-   ((null? expr-or-expr-list)
-    '(void))
-   (else
-    expr-or-expr-list)))
+  (if (pair? (car expr-or-expr-list))
+      ;; expr list
+      (let iter ((xl expr-or-expr-list))
+	(if (null? (cdr xl)) (car xl)
+	    `(seq ,(car xl) ,(iter (cdr xl)))))
+      expr-or-expr-list))
+
+;; @deffn {Procedure} vblock expr-list => (seq ex1 (seq ... (void)))
+;; Return an expression or build a seq-train returning undefined.
+;; @end deffn
+(define (vblock expr-list)
+  (let iter ((expl expr-list))
+    (if (null? expl) '(void)
+	(acons 'seq (car expl) (iter (cdr expl))))))
 
 (define (jsym) (gensym "JS~"))
 (define (genjsym name) (gensym (string-append name "-")))
@@ -112,9 +123,10 @@
 ;; (let/ec return ((var1 val1) (var2 val2)) ... (return x) ...)
 ;; @end example
 
-;; SourceElements occurs in a Program (top-level) or as Function Body
-;; We translate Program to begin
-;; We translate FunctionBody to let
+;; ProgramElements occurs in a Program (top-level).
+;; We translate Program to seq (aka begin).
+;; FunctionElements occurs in a Function.
+;; We translate FunctionBody to let.
 
 ;; the dictionary will maintain entries with
 ;; '(lexical var JS~123)
@@ -135,7 +147,8 @@
 (define jslib-mod '(nyacc lang javascript jslib))
 (define (jslib-ref name) `(@@ (nyacc lang javascript jslib) ,name))
 
-(define undefined (jslib-ref 'js:undefined))
+;;(define undefined (jslib-ref 'js:undefined))
+(define undefined '(void))
 (define null (jslib-ref 'js:null))
 
 ;; may need to push-level (blocks) and push-scope (functions)
@@ -162,8 +175,8 @@
     (if (null? (cddr args)) (add-lexical (car args) (cadr args))
 	(add-lexical (car args) (iter (cdr args))))))
 
-;; Add lexcial or toplevel based on level.
-(define (add-symboldef name dict)
+;; Add lexical or toplevel based on level.
+(define (add-symbol name dict)
   (if (top-level? dict)
       (add-toplevel name dict)
       (add-lexical name dict)))
@@ -289,6 +302,9 @@
 (define (rtail kseed)
   (cdr (reverse kseed)))
 
+(define (singleton? expr)
+  (and (pair? expr) (null? (cdr expr))))
+
 ;; (and a b c) => (if a (if b (if c #t #f) #f) #f)
 (define (make-and . args)
   (let iter ((args args))
@@ -304,8 +320,8 @@
 ;; @deffn {Procedure} make-let bindings exprs
 ;; Generates a Tree-IL let form from arguments, where @var{bindings} looks like
 ;; @example
-;; (((lexical v JS~5897) #<unspecified>)
-;;  ((lexical w JS~5898) (const 3)))
+;; '((bind v v~5897 (void))
+;;   (bind w w~5898 (const 3)))
 ;; @end example
 ;; @noindent
 ;; and @var{exprs} is a list of expressions, to something like
@@ -314,13 +330,45 @@
 ;; @end example
 ;; @end deffn
 (define (make-let bindings exprs)
-  (let iter ((names '()) (gsyms '()) (vals '()) (binds bindings))
-    (if (null? binds)
+  (let iter ((names '()) (gsyms '()) (vals '()) (bindings bindings))
+    (if (null? bindings)
 	`(let ,(reverse names) ,(reverse gsyms) ,(reverse vals) ,(block exprs))
-	(iter (cons (car (cdaar binds)) names)
-	      (cons (cadr (cdaar binds)) gsyms)
-	      (cons (cadar binds) vals)
-	      (cdr binds)))))
+	(iter (cons (list-ref (car bindings) 1) names)
+	      (cons (list-ref (car bindings) 2) gsyms)
+	      (cons (list-ref (car bindings) 3) vals)
+	      (cdr bindings)))))
+
+;; @deffn {Procedure} make-let/maybe exprs
+;; If car of @var{exprs} is @code{(bindings ...)} then build a @code{let}
+;; else build a block.
+;; @end deffn
+(define (make-let/maybe exprs)
+  (if (and (pair? exprs) (eq? 'bindings (caar exprs)))
+      (make-let (cdar exprs) (cdr exprs))
+      (block exprs)))
+
+;; @deffn {Procedure} wrap-bindings body => body
+;; @example
+;; (seq (bindings ...) ...) => (let ... (seq ...))
+;; expr => expr
+;; @end example
+;; and I think I need to use letrec*
+(define (wrap-bindings body)
+  ;;(sferr "wrap:\n") (pperr body)
+  (let iter ((bindings '()) (rest body))
+    (match rest
+      (`(seq (bindings . ,bnds) . ,rst)
+       (iter (fold cons bindings bnds) rst))
+      (_
+       (if (null? bindings)
+	   body
+	   (let iter ((names '()) (gsyms '()) (inits '()) (binds bindings))
+	     (if (null? binds)
+		 `(letrec* ,names ,gsyms ,inits rest)
+		 (iter (cons (list-ref (car binds) 1) names)
+		       (cons (list-ref (car binds) 2) gsyms)
+		       (cons (list-ref (car binds) 3) inits)
+		       (cdr binds)))))))))
 
 ;; @deffn {Procedure} make-thunk expr => `(lambda ...)
 ;; Generate a thunk.
@@ -386,7 +434,7 @@
 		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
 
 ;; Pass arguments as optional and add @code{this} keyword argument.
-(define* (make-function this args body #:key name)
+(define (make-function name this args body)
   (if (not args) (error "no args"))
   `(lambda ,(if name `((name . ,name)) '())
      (lambda-case ((()			; req
@@ -499,12 +547,12 @@
   ;; a kid-seed in order and generate a null list.  The up handler, upon seeing
   ;; a null list, will just incorporate the kids w/o the normal reverse.
 
-  ;; @deffn {Procedure} remove-empties src-elts-tail => src-elts-tail
+  ;; @deffn {Procedure} remove-empties elements => elements
   ;; @end deffn
-  (define (remove-empties src-elts-tail)
-    (let iter ((src src-elts-tail))
-      (if (null? src) '()
-	  (let ((elt (car src)) (rest (cdr src)))
+  (define (remove-empties elements)
+    (let iter ((elts elements))
+      (if (null? elts) '()
+	  (let ((elt (car elts)) (rest (cdr elts)))
 	    (if (eq? (car elt) 'EmptyStatement)
 		(iter rest)
 		(cons elt (iter rest)))))))
@@ -515,9 +563,11 @@
   (define (labelable-stmt? stmt)
     (memq (car stmt) '(do while for for-in BreakStatement LabelledStatement)))
   
-  ;; @deffn {Procedure} cleanup-labels src-elts-tail => src-elts-tail
-  ;; Assumes all top-level EmptyStatements have been removed.
-  ;; This reduces @code{LabelledStatement}s to the form
+  ;; @deffn {Procedure} cleanup-labels elements => elements
+  ;; The argument @var{elements} is the tail of @code{ProgramElements}
+  ;; or @code{FunctionElements}.  This procedure assumes all top-level
+  ;; @code{EmptyStatements} have been removed.  This procedure reduces
+  ;; @code{LabelledStatement}s to the form
   ;; @example
   ;; @dots{} (LabelledStatement id iter-stmt) @dots{}
   ;; @dots{} (LabelledStatement id (LabelledStatement id iter-stmt)) @dots{}
@@ -551,27 +601,80 @@
 		      (cons `(LabelledStatement ,id ,stmt) (iter rest)))))
 	      (cons (car src) (iter (cdr src)))))))
 
+  ;; @deffn {Procedure} hoist-decls elements => elements
+  ;; Move all variable declarations to front and replace old ones with
+  ;; assignment.
+  ;; @end deffn
+  (define hoist-stmts '(VariableStatement LetStatement))
+  (define (split-dstmt dstmt hoisted rest) ;; => hoisted rest
+    ;; move Let/VariableStatement to hoisted, moving initializers
+    ;; to decls as assignment statements
+    (let iter ((hdecls '()) (rest rest) (decls (cdadr dstmt)))
+      (if (null? decls)
+	  (values (cons `(,(car dstmt) (DeclarationList ,hdecls)) hoisted) rest)
+	  (let* ((decl (car decls))
+		 (init (if (= 3 (length decl)) (caddr decl) #f))
+		 (decl (if init (list (car decl) (cadr decl)) decl)))
+	    (iter (cons decl hdecls)
+		  (if init
+		      (cons `(ExpressionStatement
+			      (AssignmentExpression
+			       (PrimaryExpression ,(cadr decl))
+			       (assign "=") ,(cadr init)))
+			    rest)
+		      rest)
+		  (cdr decls))))))
+  (define (hoist-decls elements)
+    (let ((tail (let iter ((elts elements)) ; tail after Let/VarStatements
+		  (cond
+		   ((null? elts) elts)
+		   ((not (memq (caar elts) hoist-stmts)) elts)
+		   (iter (cdr elts))))))
+      (let iter ((hoisted '()) (rest '()) (elts tail))
+	(cond
+	 ((null? elts)
+	  (if (null? hoisted)
+	      elements			   ; nothing hoisted
+	      (let iter2 ((elts elements)) ; rebuild statement list
+		(if (eq? elts tail) (append-reverse hoisted (reverse rest))
+		    (cons (car elts) (iter2 (cdr elts)))))))
+	 ((memq (caar elts) hoist-stmts)
+	  (call-with-values		; decl=>hoisted init=>rest
+	      (lambda () (split-dstmt (car elts) hoisted rest))
+	    (lambda (hoisted rest)
+	      (iter hoisted rest (cdr elts)))))
+	 (else
+	  (iter hoisted (cons (car elts) rest) (cdr elts)))))))
+	  
   
-  ;; @deffn {Procedure} fold-in-blocks src-elts-tail => src-elts-tail
+  ;; @deffn {Procedure} fold-in-blocks elts-tail => elts-tail
+  ;; NOTE: THIS IS NOT CORRECT.  JS DOES NOT SCOPE BLOCKS.@*
   ;; Look through source elements.  Change every var xxx to a
   ;; @example
-  ;; (@dots{} (VariableStatement (VariableDeclrationList ...)) @dots{})
+  ;; (@dots{} (VariableStatement (DeclarationList ...)) @dots{})
   ;; @end example
   ;; @noindent
-  ;; (@dots{} (VariableDeclarationList ...) (Block @dots{}))
+  ;; (@dots{} (DeclarationList ...) (Block @dots{}))
   ;; @example
   ;; @dots{} @{ var a = 1; @dots{} @}
   ;; @end example
   ;; @noindent
-  ;; We assume no elements of @code{SourceElements} is text.
+  ;; We assume no elements of @code{FunctionElements} is text.
   ;; @end deffn
-  (define (fold-in-blocks src-elts-tail)
+  (define (x-fold-in-blocks src-elts-tail)
     (let iter ((src  src-elts-tail))
       (if (null? src) '()
 	  (let ((elt (car src)) (rest (cdr src)))
 	    (if (eq? (car elt) 'VariableStatement)
 		(list (cons* 'Block (cadr elt) (iter rest)))
 		(cons elt (iter rest)))))))
+
+  ;; @deffn {Procedure} check-scoping elements
+  ;; Check blocks to make sure @code{var} is only used in blocks at entry
+  ;; to functions.  Otherwise issue an error message.
+  ;; @end deffn
+  (define (check-scoping elements)
+    elements)
 		     
   (define (fD tree seed dict) ;; => tree seed dict
     ;; This handles branches as we go down the tree.  We do two things here:
@@ -595,22 +698,11 @@
 	   (sferr "javascript: maybe undefined: ~A\n" name)
 	   (values '() `(toplevel ,(string->symbol name)) dict)))))
 
-      ;; may not need this
-      #;((PrimaryExpression (Identifier ,name))
-       (let ((ref (lookup name dict)))
-	 (cond
-	  (ref
-	   (values '() ref dict))
-	  (else
-	   ;; maybe not defined, assume toplevel
-	   (sferr "javascript: maybe undefined: ~A\n" name)
-	   (values '() `(toplevel ,(string->symbol name) dict))))))
-
       ((PrimaryExpression (this))
        (let ((ref (lookup "this" dict)))
 	 (if (not ref) (error "javascript: not found: \"this\""))
 	 (values '() ref dict)))
-	      
+      
       ((PrimaryExpression (NullLiteral ,null))
        (values '() '(const js:null) dict))
 
@@ -629,19 +721,18 @@
       ((obj-ref ,expr (Identifier ,name))
        (values `(ooa-ref ,expr (PropertyName ,name)) '() dict))
 
-      ((Block . ,elts) ;; see comments on SourceElements below
+      ((Block . ,elts) ;; see comments on FunctionElements below
        (let* ((elts (remove-empties elts))
-	      (elts (cleanup-labels elts))
-	      (elts (fold-in-blocks elts)))
+	      (elts (cleanup-labels elts)))
 	 (values tree '() dict)))
       
       ((StatementList . ,stmts)
        (let* ((stmts (remove-empties stmts))
-	      (stmts (fold-in-blocks stmts)))
+	      (stmts (check-scoping stmts)))
 	 (values tree '() dict)))
       
       ((VariableDeclaration (Identifier ,name) . ,rest)
-       (let* ((dict1 (add-symboldef name dict))
+       (let* ((dict1 (add-symbol name dict))
 	      (tree1 (lookup name dict1)))
 	 (if (not tree1) (error "javascript coding error"))
 	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
@@ -659,7 +750,7 @@
        (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
 
       ((SwitchStatement . ,rest)
-       (values tree '() (add-lexicals "sw~val" "break" (push-scope dict))))
+       (values tree '() (add-lexicals "swx~val" "break" (push-scope dict))))
 
       ((LabelledStatement (Identifier ,name) ,stmt)
        (values tree '() (add-label name dict)))
@@ -673,30 +764,33 @@
       ((FunctionDeclaration (Identifier ,name) . ,rest)
        (values
 	tree '()
-	(add-lexicals "this" "return" (push-scope (add-symboldef name dict)))))
+	(add-lexicals "this" "return" (push-scope (add-symbol name dict)))))
       
       ((FunctionExpression (Identifier ,name) . ,rest)
        (values tree '() (add-lexicals "this" "return" name (push-scope dict))))
 
       ((FunctionExpression . ,rest)
-       ;; TODO: why are we 
        (values tree '()
 	       (add-lexicals "this" "return"
-			     (push-scope (add-symboldef "*anon*" dict)))))
+			     (push-scope (add-symbol "*anon*" dict)))))
       
       ((FormalParameterList . ,idlist)
        (values tree '() (fold add-lexical dict (map cadr idlist))))
       
-      ((SourceElements . ,elts) ;; a list of statements and fctn-decls
-       ;; Fix up list of source elements.
+      ((FunctionElements . ,elts)
+       ;; Fix up list of function elements.
+       ;; 
        ;; 1) Remove EmptyStatements.
        ;; 2) If LabelledStatement has EmptyStatement, merge with following
        ;;    do, while, for or switch.  Otherwise remove.
        ;; 3) Make to VDL always followed by a Block to end of SourceElements.
        (let* ((elts (remove-empties elts))
-	      (elts (cleanup-labels elts))
-	      (elts (if (top-level? dict) elts (fold-in-blocks elts))))
-	 (values (cons 'SourceElements elts) '() dict)))
+	      (elts (hoist-decls elts))
+	      (elts (cleanup-labels elts)))
+	 (values `(FunctionElements . ,elts) '() dict)))
+
+      ((ProgramElements . ,elts) ;; a list of top-level statements
+       (values tree '() dict))
 
       (else
        ;;(sferr "fD: otherwise\n") (pperr tree)
@@ -707,7 +801,11 @@
     (values (cons (rev/repl 'call (jslib-ref op) kseed) seed) kdict))
   
   (define (fU tree seed dict kseed kdict) ;; => seed dict
-    ;;(sferr "fU: kseed=~S\n    seed=~S\n" kseed seed) (pperr tree)
+    (when #f
+      (sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
+      (sferr "    kseed=~S\n    seed=~S\n" kseed seed)
+      ;;(pperr tree)
+      )
     ;; This routine rolls up processes leaves into the current branch.
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
@@ -716,14 +814,14 @@
      
      (case (car tree)
        ((*TOP*)
-	(values kseed kdict))
+	(values (car kseed) kdict))
 
        ;; Identifier: handled in fD above
 
        ;; PrimaryExpression (w/ ArrayLiteral or ObjectLiteral only)
        ((PrimaryExpression)
 	(values (cons (car kseed) seed) kdict))
-      
+       
        ;; ArrayLiteral
        ;; mkary is just primitive vector
        ((ArrayLiteral)
@@ -785,7 +883,7 @@
        ;; post-inc
        ((post-inc)
 	(values (cons (op-on-ref (car kseed) 'js:+ 'post) seed) kdict))
-	
+       
        ;; post-dec
        ((post-dec)
 	(values (cons (op-on-ref (car kseed) 'js:- 'post) seed) kdict))
@@ -858,49 +956,40 @@
 
        ;; expr-list
 
-       ;; Block
+       ;; Block : has same elements as StatementList
+       ;; except decl's will be let (by static semantics)
        ((Block)
-	(let* ((tail (rtail kseed))
-	       (exp1 (if (pair? tail) (car tail) #f))
-	       (blck (if (and exp1 (eqv? 'bindings (car exp1)))
-			 (make-let (cdar tail) (cdr tail))
-			 (block tail))))
-	  (values (cons blck seed) kdict)))
+	(values (cons (wrap-bindings (block (rtail kseed))) seed) kdict))
 
        ((StatementList)
-	(let* ((tail (rtail kseed))
-	       (exp1 (if (pair? tail) (car tail) #f))
-	       (blck (if (and exp1 (eqv? 'bindings (car exp1)))
-			 (make-let (cdar tail) (cdr tail))
-			 (block tail))))
-	  (values (cons blck seed) kdict)))
+	(values (cons (block (rtail kseed)) seed) kdict))
+
+       ;; LetStatement
+       ((LetStatement)
+	(values (cons (car kseed) seed) kdict))
 
        ;; VariableStatement
        ((VariableStatement)
 	(values (cons (car kseed) seed) kdict))
 
-       ;; VariableDeclarationList
-       ((VariableDeclarationList)
-	(let* ((top (top-level? dict))
-	       (tag (if top 'begin 'bindings)) ; begin or bindings for let
-	       (tail (rtail kseed)))
-	  (values (cons (cons tag tail) seed) kdict)))
+       ;; DeclarationList
+       ((DeclarationList)
+	(values
+	 (acons (if (top-level? dict) 'begin 'bindings) (rtail kseed) seed)
+	 kdict))
        
        ;; VariableDeclaration
        ((VariableDeclaration)
-	(let* ((top (top-level? dict))
-	       (w/i (= 3 (length kseed))) ; w/ initializer
-	       (elt0 (list-ref kseed 0))
-	       (elt1 (list-ref kseed 1)))
+	(let* ((tail (rtail kseed))
+	       (name (cadar tail))
+	       (gsym (if (eq? 'lexical (caar tail)) (caddar tail) #f))
+	       (init (if (null? (cdr tail)) '(void) (cadr tail))))
+	  ;;(sferr "vdef: name=~S init=~S gsym=~S\n" name init gsym)
 	  (values
 	   (cons
-	    (if top
-		(if w/i ;; toplevel defines
-		    `(define ,(cadr elt1) ,elt0)
-		    `(define ,(cadr elt0) (void)))
-		(if w/i ;; bindings for let
-		    (list elt1 elt0)
-		    (list elt0 '(void))))
+	    (if (top-level? dict)
+		`(define ,name ,init)
+		`(bind ,name ,gsym ,init))
 	    seed)
 	   kdict)))
        
@@ -1013,16 +1102,16 @@
        ;; CaseBlock CaseClauses CaseClause DefaultClause
        ((SwitchStatement)
 	(let* ((expr (cadr kseed))
-	       (body (pmatch (car kseed)
-		       (((let . ,A-clz) (seq . ,def) (let . ,B-clz))
+	       (body (match (car kseed)
+		       (`((let . ,A-clz) (seq . ,def) (let . ,B-clz))
 			(block (cons* `(let . ,A-clz) `(let . ,B-clz) def)))
-		       (((let . ,A-clz) (seq . ,def))
+		       (`((let . ,A-clz) (seq . ,def))
 			(block (cons `(let . ,A-clz) def)))
-		       (((seq . ,def) (let . ,B-clz))
+		       (`((seq . ,def) (let . ,B-clz))
 			(block (cons `(let . ,B-clz) def)))
-		       (((let . ,A-clz)) `(let . ,A-clz))))
-	       (vsym (lkup-gensym "sw~val" kdict))
-	       (body `(let (sw~val) (,vsym) (,expr) ,body))
+		       (`((let . ,A-clz)) `(let . ,A-clz))))
+	       (vsym (lkup-gensym "swx~val" kdict))
+	       (body `(let (swx~val) (,vsym) (,expr) ,body))
 	       (body (with-escape (lookup "break" kdict) body)))
 	  (values (cons body seed) (pop-scope kdict))))
 
@@ -1032,7 +1121,7 @@
        ((CaseClauses)
 	(values
 	 (cons 
-	  (let ((val (lookup "sw~val" kdict)))
+	  (let ((val (lookup "swx~val" kdict)))
 	    (let iter ((next '(void)) (sym (jsym)) (ks kseed))
 	      (if (eq? (car ks) 'CaseClauses)
 		  `(let (~key) (,sym) ((const #f)) ,next)
@@ -1111,39 +1200,49 @@
 
        ;; ======================================================================
 
-       ;; FunctionDeclaration (see also fD)
+       ;; FunctionDeclaration (see also fD above)
+       ;; If the body starts with (bindings ...) then make a let.
        ((FunctionDeclaration)
-	(let* ((il-name (caddr kseed))
-	       (name (case (car il-name)
-		       ((@ @@) (caddr il-name)) (else (cadr il-name))))
+	(let* ((name (let ((n (caddr kseed)))
+		       (if (memq (car n) '(@ @@)) (caddr n) (cadr n))))
 	       (this (caddr (lookup "this" kdict)))
 	       (args (map cdr (cdadr kseed))) ;; '((x JS-123) (y JS-124))
 	       (ptag (lookup "return" kdict))
-	       (body (with-escape/arg ptag (block (car kseed))))
-	       (fctn `(define ,name
-			,(make-function this args body #:name name))))
-	  (values (cons fctn seed) (pop-scope kdict))))
+	       (body (wrap-bindings (car kseed)))
+	       (body (with-escape/arg ptag (block body)))
+	       (fctn (make-function name this args body)))
+	  (values (cons `(define ,name ,fctn) seed) (pop-scope kdict))))
 
        ;; FunctionExpression
+       ;; If the function has a name then wrap in a let so it can recurse.
        ((FunctionExpression)
-	(let* ((this (lookup "this" kdict))
-	       (args (cdar kseed))
+	(let* ((lref (if (pair? (caddr kseed)) (caddr kseed) #f))
+	       (name (if lref (cadr lref) #f))
+	       (gsym (if lref (caddr lref) #f))
+	       (this (caddr (lookup "this" kdict)))
+	       (args (map cdr (cdadr kseed))) ;; '((x JS-123) (y JS-124))
 	       (ptag (lookup "return" kdict))
-	       (body (with-escape/arg ptag (block (cadr kseed))))
-	       (fctn (make-function this args body)))
+ 	       (body (wrap-bindings (car kseed)))
+	       (body (with-escape/arg ptag (block body)))
+	       (fctn (make-function name this args body))
+	       (fctn (if lref `(let (,name) (,gsym) (,fctn) ,lref))))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FormalParameterList
        ((FormalParameterList)
 	(values (cons (reverse kseed) seed) kdict))
 
+       ;; FunctionElements
+       ((FunctionElements)
+	(values (cons (block (rtail kseed)) seed) kdict))
+
        ;; Program
        ((Program)
-	(values (block (car kseed)) kdict))
+	(values (car kseed) kdict))
        
-       ;; SourceElements
-       ((SourceElements)
-	(values (cons (rtail kseed) seed) kdict))
+       ;; ProgramElements
+       ((ProgramElements)
+	(values (cons (block (rtail kseed)) seed) kdict))
 
        (else
 	(cond
@@ -1175,17 +1274,23 @@
 ;; @end deffn
 (define (compile-tree-il exp env opts)
   ;;(sferr "env=module? ~S\n" (module? env))
-  (sferr "\nenv=~S\n" env)
-  ;;(sferr "sxml:") (pp exp)
-  (let ((js-env (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
-    (if exp
+  ;;(sferr "\nenv=~S\n" env)
+  ;;(sferr "sxml:\n") (pp exp)
+  (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
+    (if exp 
 	(call-with-values
-	    (lambda () (js-sxml->tree-il/ext exp js-env opts))
+	    (lambda () (js-sxml->tree-il/ext exp cenv opts))
 	  (lambda (exp cenv)
-	    (sferr "tree-il:\n") (pperr exp)
+	    ;;(sferr "tree-il:\n") (pperr exp)
 	    ;;(values (parse-tree-il exp) env cenv)
 	    (values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
 	    ))
-	(values (parse-tree-il '(void)) env js-env))))
+	(values (parse-tree-il '(void)) env cenv))))
+
+(use-modules (nyacc lang javascript separser))
+(define-public (test-1)
+  (let* ((prog "function f(x) { var a,b=1; a = 1; var c,d=4; return a+d; }")
+	 (tree (with-input-from-string prog parse-js-elt)))
+    (compile-tree-il tree (current-module) '())))
 
 ;; --- last line ---

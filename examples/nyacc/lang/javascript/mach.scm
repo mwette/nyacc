@@ -36,6 +36,12 @@
 
 ;; NSI = "no semi-colon insertion"
 
+;; @subheading Deviations from Ecmascript
+;; @itemize
+;; @item Supports @code{let} in block context
+;; @item @code{var} is not allowed in block context
+;; @end itemize
+
 (define js-spec
   (lalr-spec
    (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
@@ -369,16 +375,14 @@
       "," AssignmentExpression
       ($$ (if (and (pair? (car $1)) (eqv? 'expr-list (caar $1)))
 	      (tl-append $1 $3)
-	      (make-tl 'expr-list $1 $3))))
-     )
+	      (make-tl 'expr-list $1 $3)))))
     (ExpressionNoIn
      (AssignmentExpressionNoIn)
      (ExpressionNoIn
       "," AssignmentExpressionNoIn
       ($$ (if (and (pair? (car $1)) (eqv? 'expr-list (caar $1)))
 	      (tl-append $1 $3)
-	      (make-tl 'expr-list $1 $3))))
-     )
+	      (make-tl 'expr-list $1 $3)))))
 	    
     ;; A.4
     (Statement
@@ -399,30 +403,42 @@
      ;;(DebuggerStatement) v5.1
      )
 
+    ;; Allow "var" statements in block but only at beginning and only
+    ;; at function block entry, by static semantics so we can generate
+    ;; error messages.
     (Block
-     ("{" StatementList "}" ($prec 'stmt) ($$ `(Block . ,(cdr (tl->list $2)))))
+     ;;("{" StatementList "}" ($prec 'stmt) ($$ `(Block . ,(cdr (tl->list $2)))))
+     ("{" LetStatementList StatementList "}" ($prec 'stmt)
+      ($$ `(Block . ,(append (sx-tail (tl->list $2))
+			     (sx-tail (tl->list $3))))))
+     ("{" StatementList "}" ($prec 'stmt)
+      ($$ `(Block . ,(sx-tail (tl->list $2)))))
      ("{" "}" ($prec 'stmt) ($$ '(Block)))
      )
 
+    (LetStatementList
+     (LetStatement ($$ (make-tl 'LetStatementList $1)))
+     (LetStatementList LetStatement ($$ (tl-append $1 $2))))
+
+    (LetStatement
+     ("let" DeclarationList ";"
+      ($$ `(LetStatement ,(tl->list $2)))))
+
     (StatementList
      (Statement ($$ (make-tl 'StatementList $1)))
-     (StatementList Statement ($$ (tl-append $1 $2)))
-     )
+     (StatementList Statement ($$ (tl-append $1 $2))))
 
     (VariableStatement
-     ("var" VariableDeclarationList ";"
-      ($$ `(VariableStatement ,(tl->list $2))))
-     )
+     ("var" DeclarationList ";"
+       ($$ `(VariableStatement ,(tl->list $2)))))
 
-    (VariableDeclarationList
-     (VariableDeclaration ($$ (make-tl 'VariableDeclarationList $1)))
-     (VariableDeclarationList "," VariableDeclaration ($$ (tl-append $1 $3)))
-     )
-    (VariableDeclarationListNoIn
-     (VariableDeclarationNoIn ($$ (make-tl 'VariableDeclarationList $1)))
-     (VariableDeclarationListNoIn "," VariableDeclarationNoIn
-				  ($$ (tl-append $1 $3)))
-     )
+    (DeclarationList
+     (VariableDeclaration ($$ (make-tl 'DeclarationList $1)))
+     (DeclarationList "," VariableDeclaration ($$ (tl-append $1 $3))))
+    (DeclarationListNoIn
+     (VariableDeclarationNoIn ($$ (make-tl 'DeclarationList $1)))
+     (DeclarationListNoIn "," VariableDeclarationNoIn
+				  ($$ (tl-append $1 $3))))
 
     (VariableDeclaration
      (Identifier Initializer ($$ `(VariableDeclaration ,$1 ,$2)))
@@ -462,7 +478,7 @@
       ($$ `(while ,$3 ,$5)))
      ("for" "(" OptExprStmtNoIn OptExprStmt OptExprClose Statement
       ($$ `(for $3 $4 $5 $6)))
-     ("for" "(" "var" VariableDeclarationListNoIn ";" OptExprStmt
+     ("for" "(" "var" DeclarationListNoIn ";" OptExprStmt
       OptExprClose Statement
       ($$ `(for $4 $6 $7 $8)))		; ???
      ("for" "(" LeftHandSideExpression "in" Expression ")" Statement
@@ -596,19 +612,17 @@
 
     (FormalParameterList
      (Identifier ($$ (make-tl 'FormalParameterList $1)))
-     (FormalParameterList "," Identifier ($$ (tl-append $1 $3)))
-     )
+     (FormalParameterList "," Identifier ($$ (tl-append $1 $3))))
 
     ;; I have duplicated SourceElement as FunctionElement and ProgramElement
     ;; in order to allow this grammar to be reused for interactive parser.
     ;; The ia-parser will use ProgramElement as the start symbol.
     
     (FunctionBody
-     (FunctionElements ($$ (tl->list $1)))
-     )
+     (FunctionElements ($$ (tl->list $1))))
 
     (FunctionElements
-     (FunctionElement ($$ (make-tl 'SourceElements $1)))
+     (FunctionElement ($$ (make-tl 'FunctionElements $1)))
      (FunctionElements FunctionElement ($$ (tl-append $1 $2))))
 
     (FunctionElement
@@ -619,7 +633,7 @@
      (ProgramElements ($$ `(Program ,(tl->list $1)))))
 
     (ProgramElements
-     (ProgramElement ($$ (make-tl 'SourceElements $1)))
+     (ProgramElement ($$ (make-tl 'ProgramElements $1)))
      (ProgramElements ProgramElement ($$ (tl-append $1 $2))))
 
     (ProgramElement

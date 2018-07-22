@@ -18,9 +18,10 @@
 ;; JavaScript SourceElement parser - for interactive use
 
 (define-module (nyacc lang javascript separser)
-  #:export (parse-js-selt js-reader)
+  #:export (parse-js-elt js-reader)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
+  #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang util))
 
 (include-from-path "nyacc/lang/javascript/mach.d/setab.scm")
@@ -37,13 +38,13 @@
     (cons 'mtab mtab)
     (cons 'act-v act-v))))
 
-;; @deffn {Procedure} parse-js-selt [#:debug bool] 
-;; Parse a source element.  We need to wrap as follows to use w/ compiler:
+;; @deffn {Procedure} parse-js-elt [#:debug bool] 
+;; Parse a program element.  We need to wrap as follows to use w/ compiler:
 ;; @example
-;; `(Program (SourceElements ,(parse-js-selt)))
+;; `(Program (SourceElements ,(parse-js-elt)))
 ;; @end example
 ;; @end deffn
-(define* (parse-js-selt)
+(define* (parse-js-elt)
    (catch
    'nyacc-error
    (lambda ()
@@ -73,10 +74,11 @@
 (define (js-reader port env)
   (if (eof-object? (peek-char port))
       (read-char port)
-      (let ((selt (with-input-from-port port parse-js-selt)))
+      (let ((elt (with-input-from-port port parse-js-elt)))
 	(cond
-	 ((equal? selt '(EmptyStatement)) #f)
-	 (selt `(Program (SourceElements ,selt)))
+	 ((equal? elt '(EmptyStatement)) #f)
+	 ;;(selt `(Program (SourceElements ,elt)))
+	 (elt)
 	 (else (flush-input-after-error port) #f)))))
 
 
