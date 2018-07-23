@@ -1,4 +1,4 @@
-;; mach.d/seact.scm
+;; mach.d/iaact.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 

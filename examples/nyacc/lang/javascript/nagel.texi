@@ -55,9 +55,9 @@ env1 as continuation to env0 in the next iteration.
 On iteration of the next expression env0 is env?
 
 Say the compilers are @code{comp:jvs->til} and @code{comp:til->byt}.
-We ignore options.  Let's pretend that cps is the joint (even though
-tree-il is a possible joint).  We use ``mid'' to designate the joint.
-Then the program that generate a bytecode file is
+(We will ignore options for now.)  Let's pretend that cps is the joint
+(even though tree-il is a possible joint).  We use ``mid'' to
+designate the joint.  Then the program that generate a bytecode file is
 @lisp
 (let*-values
   ((jvs-c0) (jvs-def-env))

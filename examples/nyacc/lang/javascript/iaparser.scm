@@ -1,4 +1,4 @@
-;;; nyacc/lang/javascript/separser.scm
+;;; nyacc/lang/javascript/iaparser.scm
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -17,16 +17,16 @@
 
 ;; JavaScript SourceElement parser - for interactive use
 
-(define-module (nyacc lang javascript separser)
+(define-module (nyacc lang javascript iaparser)
   #:export (parse-js-elt js-reader)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang util))
 
-(include-from-path "nyacc/lang/javascript/mach.d/setab.scm")
+(include-from-path "nyacc/lang/javascript/mach.d/iatab.scm")
 (include-from-path "nyacc/lang/javascript/body.scm")
-(include-from-path "nyacc/lang/javascript/mach.d/seact.scm")
+(include-from-path "nyacc/lang/javascript/mach.d/iaact.scm")
 
 ;; Parse given a token generator.  Uses fluid @code{*info*}.
 (define raw-parser
@@ -77,17 +77,16 @@
       (let ((elt (with-input-from-port port parse-js-elt)))
 	(cond
 	 ((equal? elt '(EmptyStatement)) #f)
-	 ;;(selt `(Program (SourceElements ,elt)))
 	 (elt)
 	 (else (flush-input-after-error port) #f)))))
 
 
-(define new-parse-js-selt
+(define new-parse-js-elt
   (let ((raw-parser
 	 (make-lalr-ia-parser/num
 	  (list (cons 'len-v len-v) (cons 'pat-v pat-v) (cons 'rto-v rto-v)
 		(cons 'mtab mtab) (cons 'act-v act-v)))))
-    (lambda (new-parse-js-selt lexer)
+    (lambda (new-parse-js-elt lexer)
       (catch 'nyacc-error
 	(lambda ()
 	  (with-fluid*
@@ -102,14 +101,14 @@
     (lambda (port env)
       (cond
        ((eof-object? (peek-char port))
-	(error "separser: need to regen lexer") ;; (set! lexer (gen-js-lexer))
+	(error "iaparser: need to regen lexer") ;; (set! lexer (gen-js-lexer))
 	(read-char port))
        (else
-	(let ((selt (with-input-from-port port
-		      (lambda () (new-parse-js-selt lexer)))))
+	(let ((elt (with-input-from-port port
+		     (lambda () (new-parse-js-elt lexer)))))
 	  (cond
-	   ((equal? selt '(EmptyStatement)) #f)
-	   (selt `(Program (SourceElements ,selt)))
+	   ((equal? elt '(EmptyStatement)) #f)
+	   (elt `(Program (ProgramElements ,elt)))
 	   (else (flush-input-after-error port) #f))))))))
 
 ;; --- last line ---

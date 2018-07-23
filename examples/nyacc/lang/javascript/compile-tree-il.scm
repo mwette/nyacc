@@ -34,13 +34,16 @@
 
 ;; TODO:
 ;; @itemize
-;; @item convert to guile-2.2 (atomic-box, apply->call, begin->seq)
-;; @item Implement @code{this}.
+;; @item Imeplement @code{with}.
 ;; @item Imeplement @code{for}.
 ;; @item Imeplement @code{for-in}.
 ;; @item Update to es5.
 ;; @item Implement objects and prototypes correctly.
 ;; @item Implement unary and binary operators (in jslib-01.scm) correctly.
+;; @end itemize
+;;
+;; DONE:
+;; @itemize
 ;; @item add let only allow var at top-level and function start scope
 ;; @end itemize
 ;;
@@ -53,6 +56,7 @@
 ;;  d.f1 = function... => d.f1 = (let ((this d)) f1)
 ;;  but then d1.f = d0.f does not work
 ;; @item (void) == (const *unspecified*) i think
+;; @item need atomic-box?
 ;; @end itemize
 
 (define-module (nyacc lang javascript compile-tree-il)
@@ -319,10 +323,6 @@
 
 ;; @deffn {Procedure} make-let bindings exprs
 ;; Generates a Tree-IL let form from arguments, where @var{bindings} looks like
-;; @example
-;; '((bind v v~5897 (void))
-;;   (bind w w~5898 (const 3)))
-;; @end example
 ;; @noindent
 ;; and @var{exprs} is a list of expressions, to something like
 ;; @example
@@ -338,37 +338,34 @@
 	      (cons (list-ref (car bindings) 3) vals)
 	      (cdr bindings)))))
 
-;; @deffn {Procedure} make-let/maybe exprs
-;; If car of @var{exprs} is @code{(bindings ...)} then build a @code{let}
-;; else build a block.
-;; @end deffn
-(define (make-let/maybe exprs)
-  (if (and (pair? exprs) (eq? 'bindings (caar exprs)))
-      (make-let (cdar exprs) (cdr exprs))
-      (block exprs)))
-
 ;; @deffn {Procedure} wrap-bindings body => body
 ;; @example
 ;; (seq (bindings ...) ...) => (let ... (seq ...))
 ;; expr => expr
 ;; @end example
-;; and I think I need to use letrec*
+;; @noindent where bindings may look like
+;; @example
+;; (bindings (bind v v~5897 (void))(bind w w~5898 (const 3)))
+;; @end example
+;; @noindent
+;; Oh, I think this needs to use @code{letrec*}.
 (define (wrap-bindings body)
-  ;;(sferr "wrap:\n") (pperr body)
-  (let iter ((bindings '()) (rest body))
+  ;;(sferr "wrap:\n  body\n") (pperr body)
+  (let iter1 ((bindings '()) (rest body))
     (match rest
-      (`(seq (bindings . ,bnds) . ,rst)
-       (iter (fold cons bindings bnds) rst))
+      (`(seq (bindings . ,bnds) ,rst)
+       (iter1 (fold cons bindings bnds) rst))
       (_
+       ;;(sferr "  bindings, rest:\n") (pperr bindings) (pperr rest)
        (if (null? bindings)
 	   body
-	   (let iter ((names '()) (gsyms '()) (inits '()) (binds bindings))
+	   (let iter2 ((names '()) (gsyms '()) (inits '()) (binds bindings))
 	     (if (null? binds)
-		 `(letrec* ,names ,gsyms ,inits rest)
-		 (iter (cons (list-ref (car binds) 1) names)
-		       (cons (list-ref (car binds) 2) gsyms)
-		       (cons (list-ref (car binds) 3) inits)
-		       (cdr binds)))))))))
+		 `(letrec* ,names ,gsyms ,inits ,rest)
+		 (iter2 (cons (list-ref (car binds) 1) names)
+			(cons (list-ref (car binds) 2) gsyms)
+			(cons (list-ref (car binds) 3) inits)
+			(cdr binds)))))))))
 
 ;; @deffn {Procedure} make-thunk expr => `(lambda ...)
 ;; Generate a thunk.
@@ -778,12 +775,11 @@
        (values tree '() (fold add-lexical dict (map cadr idlist))))
       
       ((FunctionElements . ,elts)
-       ;; Fix up list of function elements.
-       ;; 
+       ;; Fix up list of function elements:
        ;; 1) Remove EmptyStatements.
        ;; 2) If LabelledStatement has EmptyStatement, merge with following
        ;;    do, while, for or switch.  Otherwise remove.
-       ;; 3) Make to VDL always followed by a Block to end of SourceElements.
+       ;; 3) Make to DeclList always followed by a Block to end of Elements.???
        (let* ((elts (remove-empties elts))
 	      (elts (hoist-decls elts))
 	      (elts (cleanup-labels elts)))
@@ -1264,33 +1260,35 @@
 
 (use-modules (language tree-il compile-cps))
 
-;; @deffn {Procedure} compile-tree-il exp env opts =>
-;; @end deffn
+;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv
 ;; On input @var{exp} is the SXML from our reader, @var{env} is ``an
 ;; environment'', and @var{opts} is a keyword list of options.  The procedure
 ;; return three values: the compiled expressin, the corresponding environment
-;; for the target for the compiled language, and a continuation environment.
-;; What does this mean? the fuck if I know (right now, I need to read S9.4.2)
+;; for the target for the compiled language, and a continuation environment
+;; for the next javascript tree.
 ;; @end deffn
 (define (compile-tree-il exp env opts)
   ;;(sferr "env=module? ~S\n" (module? env))
   ;;(sferr "\nenv=~S\n" env)
   ;;(sferr "sxml:\n") (pp exp)
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
+    (sferr "env=~S\n" env)
+    (sferr "cenv=~S\n" cenv)
     (if exp 
 	(call-with-values
 	    (lambda () (js-sxml->tree-il/ext exp cenv opts))
 	  (lambda (exp cenv)
 	    ;;(sferr "tree-il:\n") (pperr exp)
-	    ;;(values (parse-tree-il exp) env cenv)
-	    (values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
-	    ))
+	    (values (parse-tree-il exp) env cenv)
+	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
+     	    ))
 	(values (parse-tree-il '(void)) env cenv))))
 
-(use-modules (nyacc lang javascript separser))
+#|
+(use-modules (nyacc lang javascript iaparser))
 (define-public (test-1)
   (let* ((prog "function f(x) { var a,b=1; a = 1; var c,d=4; return a+d; }")
 	 (tree (with-input-from-string prog parse-js-elt)))
     (compile-tree-il tree (current-module) '())))
-
+|#
 ;; --- last line ---

@@ -17,7 +17,7 @@
 
 (define-module (language javascript spec)
   #:export (javascript)
-  #:use-module (nyacc lang javascript separser)
+  #:use-module (nyacc lang javascript iaparser)
   #:use-module (nyacc lang javascript compile-tree-il)
   #:use-module (nyacc lang javascript jslib)
   #:use-module (nyacc lang javascript pprint)
@@ -34,7 +34,6 @@
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-js
-  ;;#:joiner	(lambda (exps env) (cons 'SourceStatements (map cddr exps)))
   #:make-default-environment
 		(lambda ()
 		  ;; ripoff from language/scheme/spec.scm

@@ -1,4 +1,4 @@
-;; mach.d/setab.scm
+;; mach.d/iatab.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 

@@ -19,7 +19,7 @@
   #:export (js-spec
 	    js-mach
 	    dev-parse-js
-	    gen-js-files gen-se-files)
+	    gen-js-files gen-ia-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
@@ -687,25 +687,24 @@
     ;;(when (or a b) (system (string-append "touch " (lang-dir "parser.scm"))))
     (or a b)))
 
-(define (gen-se-files . rest)
+(define (gen-ia-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (let* (;;(se-spec (restart-spec js-spec 'SourceElement))
-	 (se-spec (restart-spec js-spec 'ProgramElement))
-	 (se-mach (make-lalr-machine se-spec))
-	 (se-mach (compact-machine se-mach #:keep 0))
-	 (se-mach (hashify-machine se-mach)))
-    (write-lalr-actions se-mach (xtra-dir "seact.scm.new"))
-    (write-lalr-tables se-mach (xtra-dir "setab.scm.new")))
+  (let* ((ia-spec (restart-spec js-spec 'ProgramElement))
+	 (ia-mach (make-lalr-machine ia-spec))
+	 (ia-mach (compact-machine ia-mach #:keep 0))
+	 (ia-mach (hashify-machine ia-mach)))
+    (write-lalr-actions ia-mach (xtra-dir "iaact.scm.new"))
+    (write-lalr-tables ia-mach (xtra-dir "iatab.scm.new")))
   
-  (let ((a (move-if-changed (xtra-dir "seact.scm.new")
-			    (xtra-dir "seact.scm")))
-	(b (move-if-changed (xtra-dir "setab.scm.new")
-			    (xtra-dir "setab.scm"))))
-    ;;(when (or a b) (system (string-append "touch " (lang-dir "separser.scm"))))
+  (let ((a (move-if-changed (xtra-dir "iaact.scm.new")
+			    (xtra-dir "iaact.scm")))
+	(b (move-if-changed (xtra-dir "iatab.scm.new")
+			    (xtra-dir "iatab.scm"))))
+    ;;(when (or a b) (system (string-append "touch " (lang-dir "iaparser.scm"))))
     (or a b)))
 
 

@@ -1,7 +1,7 @@
 (define redo #t)
 ;; Tmach.scm - javascript
 ;;
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; Copyright (C) 2015,2016,2018 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -12,7 +12,7 @@
 
 (when redo
   (gen-js-files) (system "touch parser.scm")
-  (gen-se-files) (system "touch separser.scm"))
+  (gen-ia-files) (system "touch iaparser.scm"))
 
 (use-modules (nyacc lang javascript parser))
 (use-modules (nyacc lang javascript pprint))
@@ -30,17 +30,16 @@
       (pp-lalr-machine js-mach))))
 
 (when redo
-  (with-output-to-file ",selang.txt"
+  (with-output-to-file ",ialang.txt"
     (lambda ()
       ;; This needs to be same as in mach.scm!
-      (let* (;;(se-spec (restart-spec js-spec 'SourceElement))
-	     (se-spec (restart-spec js-spec 'ProgramElement))
-	     (se-mach (make-lalr-machine se-spec))
-	     (se-mach (compact-machine se-mach #:keep 0))
-	     (se-mach (hashify-machine se-mach)))
-	;;(pp-lalr-notice se-spec)
-	(pp-lalr-grammar se-spec)
-	(pp-lalr-machine se-mach)))))
+      (let* ((ia-spec (restart-spec js-spec 'ProgramElement))
+	     (ia-mach (make-lalr-machine ia-spec))
+	     (ia-mach (compact-machine ia-mach #:keep 0))
+	     (ia-mach (hashify-machine ia-mach)))
+	;;(pp-lalr-notice ia-spec)
+	(pp-lalr-grammar ia-spec)
+	(pp-lalr-machine ia-mach)))))
 
 (when #f
   (with-output-to-file "gram.y.new"
