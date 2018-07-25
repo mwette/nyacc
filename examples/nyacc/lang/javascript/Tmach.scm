@@ -11,8 +11,9 @@
 (use-modules (nyacc lang javascript mach))
 
 (when redo
-  (gen-js-files) (system "touch parser.scm")
-  (gen-ia-files) (system "touch iaparser.scm"))
+  (gen-javascript-files)
+  ;;(system "touch parser.scm")
+  )
 
 (use-modules (nyacc lang javascript parser))
 (use-modules (nyacc lang javascript pprint))
@@ -23,27 +24,22 @@
 (use-modules (ice-9 pretty-print))
 
 (when redo
-  (with-output-to-file ",lang.txt"
+  (with-output-to-file ",file.txt"
     (lambda ()
-      (pp-lalr-notice js-spec)
-      (pp-lalr-grammar js-spec)
-      (pp-lalr-machine js-mach))))
+      (pp-lalr-notice javascript-spec)
+      (pp-lalr-grammar javascript-spec)
+      (pp-lalr-machine javascript-mach))))
 
 (when redo
-  (with-output-to-file ",ialang.txt"
+  (with-output-to-file ",stmt.txt"
     (lambda ()
-      ;; This needs to be same as in mach.scm!
-      (let* ((ia-spec (restart-spec js-spec 'ProgramElement))
-	     (ia-mach (make-lalr-machine ia-spec))
-	     (ia-mach (compact-machine ia-mach #:keep 0))
-	     (ia-mach (hashify-machine ia-mach)))
-	;;(pp-lalr-notice ia-spec)
-	(pp-lalr-grammar ia-spec)
-	(pp-lalr-machine ia-mach)))))
+	;;(pp-lalr-notice javascript-ia-spec)
+	(pp-lalr-grammar javascript-ia-spec)
+	(pp-lalr-machine javascript-ia-mach))))
 
 (when #f
   (with-output-to-file "gram.y.new"
-    (lambda () (lalr->bison js-spec))))
+    (lambda () (lalr->bison javascript-spec))))
 
 (when #f
   (let* ((xargs (cdr (program-arguments)))

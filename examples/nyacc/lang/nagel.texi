@@ -26,6 +26,8 @@ and #L to end of line as a comment.
 
 Note: Guile reads language files with encoding always set to UTF-8.
 
+Note: Guile assumes reader/compiler will return EOF on end of input.
+
 @heading Read, Parse and Compile
 
 A language may have two or three phases to get to lower level.
@@ -80,6 +82,11 @@ in one shot.
 
 @subheading Compiling a File
 
+@heading Common Procedures
+
+@deffn {Procedure} lookup name dict => (lexical ...)|(toplevel ...)|(@@@@ ...)
+where @var{name} is a string and @var{dict} is an a-list dictionary
+@end deffn
 
 @heading Modules
 

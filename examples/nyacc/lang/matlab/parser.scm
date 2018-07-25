@@ -16,36 +16,76 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang matlab parser)
-  #:export (parse-ml)
+  #:export (parse-ml ml-stmt-reader)
   #:use-module (nyacc lex)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util))
 
-(include-from-path "nyacc/lang/matlab/mach.d/mltab.scm")
 (include-from-path "nyacc/lang/matlab/body.scm")
+
+;;(define *info* (make-fluid))
+
+;; === file parser 
+
+(include-from-path "nyacc/lang/matlab/mach.d/mltab.scm")
 (include-from-path "nyacc/lang/matlab/mach.d/mlact.scm")
 
-(define *info* (make-fluid))
+(define gen-matlab-lexer (make-matlab-lexer-generator ml-mtab))
 
-;; Parse given a token generator.  Uses fluid @code{*info*}.
+;; Parse given a token generator.
 (define raw-parser
   (make-lalr-parser 
    (list
-    (cons 'len-v len-v)
-    (cons 'pat-v pat-v)
-    (cons 'rto-v rto-v)
-    (cons 'mtab mtab)
-    (cons 'act-v act-v))))
+    (cons 'len-v ml-len-v)
+    (cons 'pat-v ml-pat-v)
+    (cons 'rto-v ml-rto-v)
+    (cons 'mtab ml-mtab)
+    (cons 'act-v ml-act-v))))
 
-;; @item parse-dxl [#:debug bool])
 (define* (parse-ml #:key debug)
   (catch
    'parse-error
    (lambda ()
      (raw-parser (gen-matlab-lexer) #:debug debug))
-   (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) fmt rest)
+   (lambda (key fmt . args)
+     (apply simple-format (current-error-port) fmt args)
      #f)))
+
+;; === interactive parser
+
+(include-from-path "nyacc/lang/matlab/mach.d/ia-mltab.scm")
+(include-from-path "nyacc/lang/matlab/mach.d/ia-mlact.scm")
+
+(define gen-ia-matlab-lexer (make-matlab-lexer-generator ia-ml-mtab))
+
+(define raw-ia-parser
+  (make-lalr-ia-parser/num
+   (list (cons 'len-v ia-ml-len-v) (cons 'pat-v ia-ml-pat-v)
+	 (cons 'rto-v ia-ml-rto-v) (cons 'mtab ia-ml-mtab)
+	 (cons 'act-v ia-ml-act-v))))
+
+(define (parse-ml-stmt lexer)
+  (catch 'nyacc-error
+    (lambda ()
+      (raw-ia-parser lexer #:debug #f))
+    (lambda (key fmt . args)
+      (apply simple-format (current-error-port) fmt args)
+      #f)))
+
+(define ml-stmt-reader
+  (let ((lexer (gen-ia-matlab-lexer)))
+    (lambda (port env)
+      (cond
+       ((eof-object? (peek-char port))
+	(read-char port))
+       (else
+	(let ((stmt (with-input-from-port port
+		      (lambda () (parse-ml-stmt lexer)))))
+	  (cond
+	   ((equal? stmt '(empty-stmt)) #f)
+	   (stmt)
+	   ;;(else (flush-input-after-error port) #f)
+	   )))))))
 
 ;; --- last line ---

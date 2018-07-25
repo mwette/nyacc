@@ -15,10 +15,6 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-;;(add-to-load-path (string-append (getcwd) "/../../../nyacc.git/module"))
-;;(add-to-load-path (string-append (getcwd) "/../../../nyacc.git/examples"))
-(add-to-load-path (string-append (getcwd) "/../.."))
-
 (use-modules (nyacc lang util))
 (use-modules (nyacc lang sx-match))
 (use-modules (nyacc lang dxl mach))

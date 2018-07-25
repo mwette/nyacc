@@ -1648,24 +1648,19 @@
     ;; otherwise, return #t.
     (lambda () #t)))
 
-;; The list of tokens that do not get absorbed into default reductions.
-;; See @code{compact-machine} below.
-(define required-keepers '($error $lone-comm $code-comm))
-
 ;; @deffn {Procedure} compact-machine mach [#:keep 3] [#:keepers '()] => mach
 ;; A "filter" to compact the parse table.  For each state this will replace
 ;; the most populus set of reductions of the same production rule with a
-;; default production.  However, reductions triggered by user-specified keepers
-;; and the default keepers -- @code{'$error}, @code{'$end}, @code{'$lone-comm}
-;; and @code{'$lone-comm} are not counted.  The parser will want to treat
-;; errors and comments separately so that they can be trapped (e.g.,
-;; unaccounted comments are skipped).
+;; default production.  However, reductions triggered by @var{keepers} --
+;; by default @code{$lone-comm} and @code{$code-comm} -- and the required
+;; keeper -- @code{'$error} -- are not counted.  The keepers can then be
+;; trapped by the parser (e.g., to skip un-accounted comments).
 ;; @end deffn
-(define* (compact-machine mach #:key (keep 3) (keepers '()))
+(define* (compact-machine mach #:key (keep 3) (keepers '($lone-comm $code-comm)))
   (if (< keep 0) (error "expecting keep > 0"))
   (let* ((pat-v (assq-ref mach 'pat-v))
 	 (nst (vector-length pat-v))
-	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
+	 (hashed (number? (caar (vector-ref pat-v 0)))) ; hashified?
 	 (reduce? (if hashed
 		      (lambda (a) (and (number? a) (negative? a)))
 		      (lambda (a) (eq? 'reduce (car a)))))
@@ -1679,7 +1674,7 @@
 			 (lambda (r) `($default reduce . ,r))))
 	 (mtab (assq-ref mach 'mtab))
 	 (keepers (map (lambda (k) (assq-ref mtab k))
-		       (append keepers required-keepers))))
+		       (cons '$error keepers))))
 
     ;; Keep an a-list mapping reduction prod-rule => count.
     (let iter ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))

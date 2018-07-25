@@ -1,4 +1,4 @@
-;;; nyacc/lang/javascript/jslib.scm
+;;; nyacc/lang/javascript/xlib.scm - extension library
 
 ;; Copyright (C) 2015,2017-2018 Matthew R. Wette
 ;;
@@ -17,7 +17,7 @@
 
 ;;; needs: null, undefined, undeclared?,
 
-(define-module (nyacc lang javascript jslib)
+(define-module (nyacc lang javascript xlib)
   #:export (JSdict
 	    js:undefined
 	    js:null
@@ -159,7 +159,7 @@
 
 ;; for me
 
-(include-from-path "nyacc/lang/javascript/jslib-01.scm")
+(include-from-path "nyacc/lang/javascript/xlib-01.scm")
 
 (define-public (js_lookup name)
   (let ((var (module-variable (current-module) (string->symbol name))))

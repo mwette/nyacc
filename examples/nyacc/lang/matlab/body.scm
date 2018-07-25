@@ -67,24 +67,22 @@
      ((eqv? ch #\newline) (read-char))
      (else (iter (read-char))))))
   
-(define gen-matlab-lexer
-
-  (let* ((match-table mtab)
-	 (read-string matlab-read-string)
+(define-public (make-matlab-lexer-generator match-table)
+  (let* ((read-string matlab-read-string)
 	 (read-comm matlab-read-comm)
 	 (read-ident read-c-ident)
 	 (space-cs (string->char-set " \t\r\f"))
 	 ;;
 	 (strtab (filter-mt string? match-table)) ; strings in grammar
-	 (kwstab (filter-mt like-c-ident? strtab))  ; keyword strings =>
-	 (keytab (map-mt string->symbol kwstab))  ; keywords in grammar
-	 (chrseq (remove-mt like-c-ident? strtab))  ; character sequences
+	 (kwstab (filter-mt like-c-ident? strtab)) ; keyword strings =>
+	 (keytab (map-mt string->symbol kwstab)) ; keywords in grammar
+	 (chrseq (remove-mt like-c-ident? strtab)) ; character sequences
 	 (symtab (filter-mt symbol? match-table)) ; symbols in grammar
-	 (chrtab (filter-mt char? match-table))	  ; characters in grammar
-	 ;;
+	 (chrtab (filter-mt char? match-table))	; characters in grammar
 	 (read-chseq (make-chseq-reader chrseq))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair))))
-	 )
+	 (newline-val (assoc-ref chrseq "\n"))
+	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
+    (if (not newline-val) (error "matlab setup error"))
     (lambda ()
       (let ((qms #f) (bol #t))		; qms: quote means space
 	(lambda ()
@@ -93,7 +91,8 @@
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
  	     ((elipsis? ch) (iter (skip-to-next-line)))
 	     ((eqv? ch #\newline)
-	      (set! bol #t) (cons (assq-ref chrtab #\newline) "\n"))
+	      (set! bol #t)
+	      (cons newline-val "\n"))
 	     ((char-set-contains? space-cs ch) (iter (read-char)))
 	     ((read-comm ch bol) => assc-$)
 	     (bol (set! bol #f) (iter ch))
@@ -106,11 +105,8 @@
 	     ((read-c-num ch) => (lambda (p) (set! qms #f) (assc-$ p)))
 	     ((eqv? ch #\') (if qms (assc-$ (read-string ch)) (read-chseq ch)))
 	     ((read-chseq ch) =>
-	      (lambda (p)
-		(cond ((memq ch '(#\= #\, #\()) (set! qms #t))
-		      (else (set! qms #f)))
-		p))
+	      (lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
 	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-	     (else (cons ch (string ch)))))))))) ; else should be error
+	     (else (cons ch (string ch))))))))))
 
 ;;; --- last line ---

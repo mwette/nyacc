@@ -7,9 +7,6 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (string-append (getcwd) "/../../../../examples/"))
-(add-to-load-path (string-append (getcwd) "/../../../../module/"))
-
 (use-modules (nyacc lang dxl mach))
 (use-modules (nyacc lalr))
 (use-modules (nyacc export))

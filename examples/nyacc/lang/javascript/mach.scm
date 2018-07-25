@@ -16,10 +16,12 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang javascript mach)
-  #:export (js-spec
-	    js-mach
+  #:export (javascript-spec
+	    javascript-mach
+	    javascript-ia-spec
+	    javascript-ia-mach
 	    dev-parse-js
-	    gen-js-files gen-ia-files)
+	    gen-javascript-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
@@ -27,7 +29,10 @@
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-43) #:select (vector-map)))
 
-;; This parses EcmaScript v3 1999.  Some v5 2011 items are added as comments.
+;; This was started with EcmaScript v3 sped.
+;; Some v5 2011 items are added as comments.
+;; Also added "let".
+;; Added: "var" not allowed in blocks, only "let"
 
 ;; The 'NoIn' variants are needed to avoid confusing the in operator 
 ;; in a relational expression with the in operator in a for statement.
@@ -42,7 +47,7 @@
 ;; @item @code{var} is not allowed in block context
 ;; @end itemize
 
-(define js-spec
+(define javascript-spec
   (lalr-spec
    (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
 			  lang-crn-lgpl3+))
@@ -642,70 +647,58 @@
     
     )))
 
-(define js-mach
+;; === parsers ==========================
+
+(define javascript-mach
   (hashify-machine
    (compact-machine
-    (make-lalr-machine js-spec))))
-
-(define len-v (assq-ref js-mach 'len-v))
-(define pat-v (assq-ref js-mach 'pat-v))
-(define rto-v (assq-ref js-mach 'rto-v))
-(define mtab (assq-ref js-mach 'mtab))
-(define sya-v (vector-map (lambda (ix actn) (wrap-action actn))
-			  (assq-ref js-mach 'act-v)))
-(define act-v (vector-map (lambda (ix f) (eval f (current-module))) sya-v))
+    (make-lalr-machine javascript-spec))))
 
 (include-from-path "nyacc/lang/javascript/body.scm")
 
-(define raw-parser (make-lalr-parser js-mach))
+(define gen-js-lexer (make-js-lexer-generator (assq-ref javascript-mach 'mtab)))
+
+(define raw-parser (make-lalr-parser javascript-mach))
 
 (define* (dev-parse-js #:key debug)
-  (catch
-   'nyacc-error
+  (catch 'nyacc-error
    (lambda ()
-     (with-fluid*
-	 *insert-semi* #t
-	 (lambda () (raw-parser (gen-js-lexer) #:debug debug))))
+     (with-fluid* *insert-semi* #t
+       (lambda () (raw-parser (gen-js-lexer) #:debug debug))))
    (lambda (key fmt . args)
      (report-error fmt args)
      #f)))
 
-;; ======= gen files
+(define javascript-ia-spec (restart-spec javascript-spec 'ProgramElement))
 
-(define (gen-js-files . rest)
+(define javascript-ia-mach
+  (let* ((mach (make-lalr-machine javascript-ia-spec))
+	 (mach (compact-machine mach #:keep 0))
+	 (mach (hashify-machine mach)))
+    mach))
+
+;; === automaton file generators =========
+
+(define (gen-javascript-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (write-lalr-actions js-mach (xtra-dir "jsact.scm.new"))
-  (write-lalr-tables js-mach (xtra-dir "jstab.scm.new"))
+  (write-lalr-actions javascript-mach (xtra-dir "jsact.scm.new") #:prefix "js-")
+  (write-lalr-tables javascript-mach (xtra-dir "jstab.scm.new") #:prefix "js-")
+  (write-lalr-actions javascript-ia-mach
+		      (xtra-dir "ia-jsact.scm.new") #:prefix "ia-js-")
+  (write-lalr-tables javascript-ia-mach
+		     (xtra-dir "ia-jstab.scm.new") #:prefix "ia-js-")
   (let ((a (move-if-changed (xtra-dir "jsact.scm.new")
 			    (xtra-dir "jsact.scm")))
 	(b (move-if-changed (xtra-dir "jstab.scm.new")
-			    (xtra-dir "jstab.scm"))))
-    ;;(when (or a b) (system (string-append "touch " (lang-dir "parser.scm"))))
-    (or a b)))
-
-(define (gen-ia-files . rest)
-  (define (lang-dir path)
-    (if (pair? rest) (string-append (car rest) "/" path) path))
-  (define (xtra-dir path)
-    (lang-dir (string-append "mach.d/" path)))
-
-  (let* ((ia-spec (restart-spec js-spec 'ProgramElement))
-	 (ia-mach (make-lalr-machine ia-spec))
-	 (ia-mach (compact-machine ia-mach #:keep 0))
-	 (ia-mach (hashify-machine ia-mach)))
-    (write-lalr-actions ia-mach (xtra-dir "iaact.scm.new"))
-    (write-lalr-tables ia-mach (xtra-dir "iatab.scm.new")))
-  
-  (let ((a (move-if-changed (xtra-dir "iaact.scm.new")
-			    (xtra-dir "iaact.scm")))
-	(b (move-if-changed (xtra-dir "iatab.scm.new")
-			    (xtra-dir "iatab.scm"))))
-    ;;(when (or a b) (system (string-append "touch " (lang-dir "iaparser.scm"))))
-    (or a b)))
-
+			    (xtra-dir "jstab.scm")))
+	(c (move-if-changed (xtra-dir "ia-jsact.scm.new")
+			    (xtra-dir "ia-jsact.scm")))
+	(d (move-if-changed (xtra-dir "ia-jstab.scm.new")
+			    (xtra-dir "ia-jstab.scm"))))
+    (or a b c d)))
 
 ;;; --- last line ---

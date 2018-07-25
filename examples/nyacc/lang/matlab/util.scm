@@ -24,7 +24,7 @@
 	    name-expr->decl
 	    )
   #:use-module (nyacc lang util)
-  #:use-module (nyacc lang sx-match)
+  #:use-module (nyacc lang sx-util)
   #:use-module (ice-9 pretty-print)
   #:use-module (ice-9 regex)
   #:use-module ((sxml fold) #:select (foldts*-values))
@@ -102,7 +102,7 @@
      (case disp
        ((struct) (lval->ident lval disp))
        (else (lval->ident lval 'array))))
-    (* (throw 'util-error "unknown lval: ~S" lval))))
+    (else (throw 'util-error "unknown lval: ~S" lval))))
 
 (define (binary-rank lval rval)
   (and lval rval (max lval rval)))
@@ -188,7 +188,7 @@
        ;;(values tree '() (d-add-rank dict name (length (sx-tail lval 1)))))
        (values tree '() dict))
 
-      (* (values tree '() dict))))
+      (else (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
     ;;(when (pair? tree) (simple-format #t "cartree=~S\n" (car tree)))
@@ -230,10 +230,10 @@
   
   (define (fD tree seed dict) ;; => (values tree seed dict)
     (sx-match tree
-      ((script-file (@ (file ,name)) . ,rest)
+      ((script-file (@ . ,attr) . ,rest)
        (values tree '()
 	       (cons*
-		(cons "file" name)
+		(cons "file" (assq-ref attr "file"))
 		dict)))
 
       ((assn (aref-or-call ,expr ,ex-l) . ,rval)
@@ -254,7 +254,7 @@
        ;;(fout "    ->rank =>~S\n" (expr->rank lval))
        (values tree '() dict))
 
-      (* (values tree '() dict))))
+      (else (values tree '() dict))))
   
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
     ;;(fout "tree-tag=~S kseed=~S\n" (car tree) kseed)

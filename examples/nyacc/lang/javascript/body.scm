@@ -64,9 +64,8 @@
   (make-comm-reader '(("/*" . "*/") ("//" . "\n") ("#!" . "!#"))))
 
 ;; maybe turn double newline into ';'
-(define-public gen-js-lexer
-  (let* ((match-table mtab)
-	 (space-cs (string->char-set " \t\r"))
+(define-public (make-js-lexer-generator match-table)
+  (let* ((space-cs (string->char-set " \t\r"))
 	 ;;
 	 (strtab (filter-mt string? match-table))  ; strings in gram
 	 (kwstab (filter-mt like-c-ident? strtab)) ; keywd strings =>

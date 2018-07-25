@@ -1,3 +1,11 @@
+2018-07-25  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lalr.scm (compact-machine): The default set of keepers is now
+	($lone-comm $code-comm) and the requires keepers list was removed
+	but $error is hardcoded as only required keeper.  I was having
+	issues with the ia-parser/num because it looks for lone $default
+	to reduce without lookahead.  I still need to think about this.
+
 2018-07-12  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* parse.scm (make-lalr-ia-parser/num): broke make-lalr-ia-parser

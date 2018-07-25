@@ -1,4 +1,4 @@
-;; mach.d/iaact.scm
+;; mach.d/ia-jsact.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 
@@ -8,7 +8,7 @@
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING.LESSER included with the this distribution.
 
-(define act-v
+(define ia-js-act-v
   (vector
    ;; $start => ProgramElement
    (lambda ($1 . $rest) $1)

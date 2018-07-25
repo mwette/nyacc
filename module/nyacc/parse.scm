@@ -25,11 +25,7 @@
   #:use-module (nyacc util))
 (cond-expand
   (mes)
-  (guile-2
-   (use-modules (srfi srfi-43)))
-  (guile
-   (use-modules (ice-9 optargs))
-   (use-modules (nyacc compat18)))
+  (guile-2 (use-modules (srfi srfi-43)))
   (else))
 
 ;; @deffn {Procedure} (machine-hashed? mach) => #t|#f

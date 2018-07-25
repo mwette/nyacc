@@ -39,7 +39,7 @@
 ;; @item Imeplement @code{for-in}.
 ;; @item Update to es5.
 ;; @item Implement objects and prototypes correctly.
-;; @item Implement unary and binary operators (in jslib-01.scm) correctly.
+;; @item Implement unary and binary operators (in xlib-01.scm) correctly.
 ;; @end itemize
 ;;
 ;; DONE:
@@ -61,15 +61,19 @@
 
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il js-sxml->tree-il-ext)
-  #:use-module (nyacc lang javascript jslib)
+  #:use-module (nyacc lang javascript xlib)
   #:use-module (nyacc lang sx-util)
+  #:use-module (nyacc lang nx-util)
   #:use-module ((sxml fold) #:select (foldts*-values))
   #:use-module ((srfi srfi-1) #:select (fold append-reverse))
   #:use-module (language tree-il)
   #:use-module (ice-9 match)
   )
 (use-modules (ice-9 pretty-print))
-(define pp pretty-print)
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
+(define (pperr tree)
+  (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
 ;; === portability ===================
 ;; no longer supports guile 2.0: assuming 2.2
@@ -94,14 +98,10 @@
 	(acons 'seq (car expl) (iter (cdr expl))))))
 
 (define (jsym) (gensym "JS~"))
-(define (genjsym name) (gensym (string-append name "-")))
+;;(define genjsym genxsym)
 
-;; === debugging =====================
+;; =======================
 
-(define (sferr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
-(define (pperr tree)
-  (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
 ;; @heading variable scope
 ;; Variables in the compiler are kept in a scope-stack with the highest
@@ -148,61 +148,26 @@
 
 ;; === symbol table ================
 
-(define jslib-mod '(nyacc lang javascript jslib))
-(define (jslib-ref name) `(@@ (nyacc lang javascript jslib) ,name))
+(define xlib-mod '(nyacc lang javascript xlib))
+(define (xlib-ref name) `(@@ (nyacc lang javascript xlib) ,name))
 
-;;(define undefined (jslib-ref 'js:undefined))
 (define undefined '(void))
-(define null (jslib-ref 'js:null))
+(define null (xlib-ref 'js:null))
 
 ;; may need to push-level (blocks) and push-scope (functions)
-
-;; push/pop scope level
-(define (push-scope dict)
-  (list (cons '@P dict)))
-(define (pop-scope dict)
-  (or (assq-ref dict '@P) (error "coding error: too many pops")))
-(define (top-level? dict)
-  (assoc-ref dict '@top))
-
-;; Add toplevel to dict, return dict
-(define (add-toplevel name dict)
-  (acons name `(toplevel ,(string->symbol name)) dict))
-
-;; Add lexical to dict, return dict
-(define (add-lexical name dict)
-  (acons name `(lexical ,(string->symbol name) ,(genjsym name)) dict))
-
-;; (add-lexicals name1 name2 ... dict) 
-(define (add-lexicals . args)
-  (let iter ((args args))
-    (if (null? (cddr args)) (add-lexical (car args) (cadr args))
-	(add-lexical (car args) (iter (cdr args))))))
-
-;; Add lexical or toplevel based on level.
-(define (add-symbol name dict)
-  (if (top-level? dict)
-      (add-toplevel name dict)
-      (add-lexical name dict)))
 
 ;; add label for continue break.  The value will be a pair
 ;; with car the continue ref and cdr the break ref
 (define (add-label name dict)
   (acons name (cons #f #f) dict))
 
-(define (c-name->guile name)
-  ;; | scm_  | _ - | ! _x | _to_ -> | _less < | _gr > | _leq <= | _geq >= |
-  (string-map (lambda (ch) (if (char=? ch #\_) #\- ch)) name))
+;;(define (c-name->guile name)
+;;  ;; | scm_  | _ - | ! _x | _to_ -> | _less < | _gr > | _leq <= | _geq >= |
+;;  (string-map (lambda (ch) (if (char=? ch #\_) #\- ch)) name))
 
-(define (find-in-env name env)
-  (let ((sym (string->symbol name)))
-    (if (module-variable env sym)
-	`(@@ ,(module-name env) ,sym)
-	#f)))
-
-(define jslib-module (resolve-module '(nyacc lang javascript jslib)))
+(define xlib-module (resolve-module '(nyacc lang javascript xlib)))
 		       
-(define (lookup name dict)
+#;(define (x-lookup name dict)
   (cond
    ((not dict) #f)
    ((null? dict) #f)
@@ -211,8 +176,20 @@
     (lambda (dict) (lookup name dict)))
    ((find-in-env name (assoc-ref dict '@M)))
    ((find-in-env (c-name->guile name) (assoc-ref dict '@M)))
-   ((find-in-env name jslib-module))
+   ((find-in-env name xlib-module))
    (else #f)))
+
+(define push-scope nx-push-scope)
+(define pop-scope nx-pop-scope)
+(define top-level? nx-top-level?)
+(define add-toplevel nx-add-toplevel)
+(define add-lexical nx-add-lexical)
+(define add-lexicals nx-add-lexicals)
+(define add-symbol nx-add-symbol)
+(define (lookup name dict)
+  (or (nx-lookup name dict)
+      (nx-lookup-in-env name xlib-module)))
+
 
 ;; @deffn {Procedure} lkup-gensym name dict [label] => gensym
 ;; lookup up nearest parent lexical and return gensym
@@ -249,7 +226,7 @@
 		    (cdr args)))))
     (lambda (names gsyms)
       `(lambda ()
-	 (lambda-case ((,(cons 'k names) #f #f #f () ,(cons (genjsym "k") gsyms))
+	 (lambda-case ((,(cons 'k names) #f #f #f () ,(cons (genxsym "k") gsyms))
 		       ,body))))))
 	 
 ;; @deffn {Procedure} with-escape tag-ref body
@@ -264,31 +241,31 @@
 	  (prompt #t ,tag-ref ,body ,hdlr))))
   
 (define (with-escape/arg tag-ref body)
-  (let ((arg-gsym (genjsym "arg")))
+  (let ((arg-gsym (genxsym "arg")))
     (with-escape/handler
      tag-ref body
      `(lambda ()
-	(lambda-case (((k arg) #f #f #f () (,(genjsym "k") ,arg-gsym))
+	(lambda-case (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
 		      (lexical arg ,arg-gsym)))))))
 
 (define (with-escape tag-ref body)
-  (let ((arg-gsym (genjsym "arg")))
+  (let ((arg-gsym (genxsym "arg")))
     (with-escape/handler
      tag-ref body
      `(lambda ()
-	(lambda-case (((k) #f #f #f () (,(genjsym "k")))
+	(lambda-case (((k) #f #f #f () (,(genxsym "k")))
 		      (void)))))))
 
 (define (xx-with-escape/arg tag-ref body)
   (let ((tag-name (cadr tag-ref))
 	(tag-gsym (caddr tag-ref))
-	(arg-gsym (genjsym "arg")))
+	(arg-gsym (genxsym "arg")))
     `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
 	  (prompt #t ,tag-ref
 		  ,body
 		  (lambda ()
 		    (lambda-case
-		     (((k arg) #f #f #f () (,(genjsym "k") ,arg-gsym))
+		     (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
 		      (lexical arg ,arg-gsym))))))))
 (define (xx-with-escape tag-ref body)
   (let ((tag-name (cadr tag-ref))
@@ -298,7 +275,7 @@
 		  ,body
 		  (lambda ()
 		    (lambda-case
-		     (((k) #f #f #f () (,(genjsym "k")))
+		     (((k) #f #f #f () (,(genxsym "k")))
 		      (void))))))))
 
 ;; === codegen procedures =============
@@ -403,18 +380,18 @@
 ;; @code{(lambda () (iloop))} for do-while and @*
 ;; @code{(lambda () (if (expr) (iloop)))} for while-do.
 (define (make-loop expr body dict ilsym tbody)
-  (let* ((olsym (genjsym "oloop"))
+  (let* ((olsym (genxsym "oloop"))
 	 (bsym (lkup-gensym "break" dict))
 	 (csym (lkup-gensym "continue" dict))
 	 (icall `(call (lexical iloop ,ilsym)))
 	 (ocall `(call (lexical oloop ,olsym)))
 	 (iloop (make-thunk `(seq ,body (if ,expr ,icall (void)))))
   	 (ohdlr `(lambda ()
-		   (lambda-case (((k) #f #f #f () (,(genjsym "k")))
+		   (lambda-case (((k) #f #f #f () (,(genxsym "k")))
 				 (if ,expr ,ocall (void))))))
 	 (oloop (make-thunk `(prompt #t (lexical continue ,csym) ,tbody ,ohdlr)))
  	 (hdlr `(lambda ()
-		  (lambda-case (((k) #f #f #f () (,(genjsym "k"))) (void))))))
+		  (lambda-case (((k) #f #f #f () (,(genxsym "k"))) (void))))))
     `(let (break continue) (,bsym ,csym)
 	  ((primcall make-prompt-tag (const break))
 	   (primcall make-prompt-tag (const continue)))
@@ -422,11 +399,11 @@
 		  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
 
 (define (make-do-while expr body dict)
-  (let ((ilsym (genjsym "iloop")))
+  (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym `(call (lexical iloop ,ilsym)))))
 
 (define (make-while expr body dict)
-  (let ((ilsym (genjsym "iloop")))
+  (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym
 		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
 
@@ -468,7 +445,7 @@
 (define (resolve-ref ref)
   (let ((tag (car ref)))
     (if (or (vector? tag) (hash-table? tag))
-	`(call ,(jslib-ref 'js-ooa-get) ,ref)
+	`(call ,(xlib-ref 'js-ooa-get) ,ref)
 	ref)))
 
 ;; @deffn {Procedure} op-on-ref ref op ord => `(let ...)
@@ -482,18 +459,18 @@
 	 (val (case (car ref)
 		((toplevel) ref)
 		((lexical) ref)
-		(else `(call ,(jslib-ref 'js-ooa-get) ,ref))))
+		(else `(call ,(xlib-ref 'js-ooa-get) ,ref))))
 	 (loc `(lexical ~ref ,sym))
-	 (sum `(call ,(jslib-ref op) (const 1) ,loc))
+	 (sum `(call ,(xlib-ref op) (const 1) ,loc))
 	 (set (case (car ref)
 		((toplevel lexical) `(set! ,ref ,sum))
-		(else `(call ,(jslib-ref 'js-ooa-put) ,ref ,sum))))
+		(else `(call ,(xlib-ref 'js-ooa-put) ,ref ,sum))))
 	 (rval (case ord ((pre) val) ((post) loc))))
     `(let (~ref) (,sym) (,val) (seq ,set (seq ,rval (void))))))
 
 ;; for lt + rt, etc
 (define (op-call op kseed)
-  (rev/repl 'call (jslib-ref op) kseed))
+  (rev/repl 'call (xlib-ref op) kseed))
 (define (op-call/prim op kseed)
   (rev/repl 'prim-call op kseed))
 
@@ -512,7 +489,7 @@
 	    (op (assq-ref opmap (caadr kseed)))
 	    (rhs (car kseed)))
 	(if op
-	    `(set! ,lhs (call (@@ ,jslib-mod ,op) lhs rhs))
+	    `(set! ,lhs (call (@@ ,xlib-mod ,op) lhs rhs))
 	    `(set! ,lhs ,rhs))))))
 
 ;; reverse list but replace new head with @code{head}
@@ -794,7 +771,7 @@
       ))
 
   (define (opcall-node op seed kseed kdict)
-    (values (cons (rev/repl 'call (jslib-ref op) kseed) seed) kdict))
+    (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict))
   
   (define (fU tree seed dict kseed kdict) ;; => seed dict
     (when #f
@@ -821,7 +798,7 @@
        ;; ArrayLiteral
        ;; mkary is just primitive vector
        ((ArrayLiteral)
-	(let ((exp `(call (@@ ,jslib-mod mkary) (car kseed))))
+	(let ((exp `(call (@@ ,xlib-mod mkary) (car kseed))))
 	  (values (cons exp seed) kdict)))
        
        ;; ElementList
@@ -841,7 +818,7 @@
        ;; PropertyNameAndValueList
        ((PropertyNameAndValueList)
 	(values
-	 (cons `(call (@@ ,jslib-mod mkobj) ,@(rtail kseed)) seed)
+	 (cons `(call (@@ ,xlib-mod mkobj) ,@(rtail kseed)) seed)
 	 kdict))
 
        ;; PropertyNameAndValue
@@ -859,7 +836,7 @@
        ((ooa-ref)
 	(values
 	 (cons `(prim-call cons
-			   (call ,(jslib-ref 'js-resolve) ,(cadr kseed))
+			   (call ,(xlib-ref 'js-resolve) ,(cadr kseed))
 			   ,(car kseed))
 	       seed) kdict))
 
@@ -1272,8 +1249,8 @@
   ;;(sferr "\nenv=~S\n" env)
   ;;(sferr "sxml:\n") (pp exp)
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
-    (sferr "env=~S\n" env)
-    (sferr "cenv=~S\n" cenv)
+    ;;(sferr "env=~S\n" env)
+    ;;(sferr "cenv=~S\n" cenv)
     (if exp 
 	(call-with-values
 	    (lambda () (js-sxml->tree-il/ext exp cenv opts))
@@ -1285,7 +1262,7 @@
 	(values (parse-tree-il '(void)) env cenv))))
 
 #|
-(use-modules (nyacc lang javascript iaparser))
+(use-modules (nyacc lang javascript ia-parser))
 (define-public (test-1)
   (let* ((prog "function f(x) { var a,b=1; a = 1; var c,d=4; return a+d; }")
 	 (tree (with-input-from-string prog parse-js-elt)))

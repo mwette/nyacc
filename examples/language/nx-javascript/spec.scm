@@ -15,21 +15,20 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-(define-module (language javascript spec)
-  #:export (javascript)
-  #:use-module (nyacc lang javascript iaparser)
+(define-module (language nx-javascript spec)
+  #:export (nx-javascript)
+  #:use-module (nyacc lang javascript parser)
   #:use-module (nyacc lang javascript compile-tree-il)
-  #:use-module (nyacc lang javascript jslib)
   #:use-module (nyacc lang javascript pprint)
   #:use-module (system base language))
 
 ;; so probably the reader should have 
 
-(define-language javascript
-  #:title	"javascript"
-  #:reader	js-reader
+(define-language nx-javascript
+  #:title	"nx-javascript"
+  #:reader	js-stmt-reader
   ;;#:reader	(lambda (p e) (if (eq? e (interaction-enviornment))
-  ;;				  (js-user-reader p e)
+  ;;				  (js-stmt-reader p e)
   ;;				  (js-file-reader p e)))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))

@@ -22,8 +22,9 @@
 (define-module (nyacc lang matlab mach)
   #:export (matlab-spec
 	    matlab-mach
+	    matlab-ia-spec
+	    matlab-ia-mach
 	    dev-parse-ml
-	    gen-matlab-lexer
 	    gen-matlab-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
@@ -46,8 +47,7 @@
     
     (mfile
      (script-file ($$ (tl->list (add-file-attr $1))))
-     (function-file ($$ (tl->list (add-file-attr $1))))
-     )
+     (function-file ($$ (tl->list (add-file-attr $1)))))
 
     (script-file
      (lone-comment-list
@@ -59,24 +59,21 @@
 
     (function-file
      (function-defn ($$ (make-tl 'function-file $1)))
-     (function-file function-defn ($$ (tl-append $1 $2)))
-     )
+     (function-file function-defn ($$ (tl-append $1 $2))))
 
     (function-defn
-     (function-decl non-comment-statement statement-list opt-end
+     (function-decl non-comment-statement stmt-list opt-end
       ($$ `(fctn-defn ,$1 ,(tl->list (if $2 (tl-insert $3 $2) $3)))))
      (function-decl non-comment-statement opt-end
       ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
      (function-decl opt-end
-      ($$ `(fctn-defn ,$1 (stmt-list))))
-     )
+      ($$ `(fctn-defn ,$1 (stmt-list)))))
     (opt-end () ("end" term-list))
 
     (function-decl
      (function-decl-line lone-comment-list
 			 ($$ (append $1 (list (tl->list $2)))))
      (function-decl-line))
-    (nl-list (#\newline) (nl-list #\newline))
 
     (function-decl-line
      ;; fctn-decl name input-args output-args
@@ -99,39 +96,38 @@
      (ident ($$ (make-tl 'ident-list $1)))
      (ident-list "," ident ($$ (tl-append $1 $3))))
 
-    (statement-list
+    (stmt-list
      (statement ($$ (if $1 (make-tl 'stmt-list $1) (make-tl 'stmt-list))))
-     (statement-list statement ($$ (if $2 (tl-append $1 $2) $1))))
+     (stmt-list statement ($$ (if $2 (tl-append $1 $2) $1))))
 
     (statement
      (lone-comment)
      (non-comment-statement))
     (non-comment-statement
-     (term ($$ #f))
+     (term ($$ '(empty-stmt)))
      (lval-expr "(" expr-list ")" term ($$ `(call-stmt ,$1 ,(tl->list $3))))
      (lval-expr "=" expr term ($$ `(assn ,$1 ,$3)))
      ("[" lval-expr-list "]" "=" ident "(" ")" term
       ($$ `(multi-assign ,(tl->list $2) ,$5 (expr-list))))
      ("[" lval-expr-list "]" "=" ident "(" expr-list ")" term
       ($$ `(multi-assign ,(tl->list $2) ,$5 ,(tl->list $7))))
-     ("for" ident "=" expr term statement-list "end" term
+     ("for" ident "=" expr term stmt-list "end" term
       ($$ `(for ,$2 ,$4 ,(tl->list $6))))
-     ("while" expr term statement-list "end" term
+     ("while" expr term stmt-list "end" term
       ($$ `(while ,$2 ,(tl->list $4))))
-     ("if" expr term statement-list elseif-list "else" statement-list "end" term
+     ("if" expr term stmt-list elseif-list "else" stmt-list "end" term
       ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)) (else ,(tl->list $7)))))
-     ("if" expr term statement-list "else" statement-list "end" term
+     ("if" expr term stmt-list "else" stmt-list "end" term
       ($$ `(if ,$2 ,(tl->list $4) (else ,(tl->list $6)))))
-     ("if" expr term statement-list "end" term
+     ("if" expr term stmt-list "end" term
       ($$ `(if ,$2 ,(tl->list $4))))
-     ("switch" expr term case-list "otherwise" term statement-list "end" term
+     ("switch" expr term case-list "otherwise" term stmt-list "end" term
       ($$ `(switch ,$2 ,@(tl->list $4) (otherwise ,(tl->list $7)))))
      ("switch" expr term case-list "end" term
       ($$ `(switch ,$2 ,@(tl->list $4))))
      ("return" term
       ($$ '(return)))
-     (command arg-list term ($$ `(command ,$1 ,(tl->list $2))))
-     )
+     (command arg-list term ($$ `(command ,$1 ,(tl->list $2)))))
 
     (lval-expr-list
      (lval-expr ($$ (make-tl 'lval-expr-list $1)))
@@ -148,15 +144,15 @@
      (arg-list ident ($$ (tl-append $1 (cons 'arg $2)))))
 
     (elseif-list
-     ("elseif" expr term statement-list
+     ("elseif" expr term stmt-list
       ($$ (make-tl 'elseif-list `(elseif ,$2 ,(tl->list $4)))))
-     (elseif-list "elseif" expr term statement-list
+     (elseif-list "elseif" expr term stmt-list
 		   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5)))))
      )
     
     (case-list
      ($empty ($$ (make-tl 'case-list)))
-     (case-list "case" expr term statement-list
+     (case-list "case" expr term stmt-list
 		($$ (tl-append $1 `(case ,$3 ,(tl->list $5)))))
      )
 
@@ -249,49 +245,63 @@
      (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
      (matrix-row-list row-term matrix-row ($$ (tl-append $1 (tl->list $3))))
      )
-    (row-term (";") (#\newline))
+    (row-term (";") (nl))
 
     (matrix-row
      (expr ($$ (make-tl 'row $1)))
-     (matrix-row "," expr ($$ (tl-append $1 $3)))
-     )
+     (matrix-row "," expr ($$ (tl-append $1 $3))))
 
     (term-list (term) (term-list term))
 
-    (lone-comment-list
-     (lone-comment #\newline ($$ (make-tl 'comm-list $1)))
-     (lone-comment-list lone-comment #\newline ($$ (tl-append $1 $2))))
+    (term (nl) (";") (","))
 
-    (term (#\newline) (";") (","))
+    ;;(nl-list (nl) (nl-list nl))
+    
+    (lone-comment-list
+     (lone-comment nl ($$ (make-tl 'comm-list $1)))
+     (lone-comment-list lone-comment nl ($$ (tl-append $1 $2))))
+
     (ident ($ident ($$ `(ident ,$1))))
     (number ($fixed ($$ `(fixed ,$1))) ($float ($$ `(float ,$1))))
     (string ($string ($$ `(string ,$1))))
     (lone-comment ($lone-comm ($$ `(comm ,$1))))
     ;;(code-comment ($code-comm ($$ `(comm ,$1))))
+    (nl ("\n"))
     )))
 
-;; === parser ==========================
+;; === parsers ==========================
 
 (define matlab-mach
-  (identity ;;(hashify-machine
-   (identity ;;(compact-machine
+  (hashify-machine
+   (compact-machine
     (make-lalr-machine matlab-spec))))
 
-(define mtab (assq-ref matlab-mach 'mtab))
 (include-from-path "nyacc/lang/matlab/body.scm")
+
+(define gen-ml-lexer (make-matlab-lexer-generator (assq-ref matlab-mach 'mtab)))
 
 (define raw-parser (make-lalr-parser matlab-mach))
 
 (define* (dev-parse-ml #:key debug)
-  (catch
-   'parse-error
-   (lambda ()
-     (raw-parser (gen-matlab-lexer) #:debug debug))
-   (lambda (key fmt . rest)
-     (apply simple-format (current-error-port) (string-append fmt "\n") rest)
+  (catch 'nyacc-error
+    (lambda ()
+      (raw-parser (gen-ml-lexer) #:debug debug))
+   (lambda (key fmt . args)
+     (report-error fmt args)
      #f)))
 
-;; === automaton file generator =========
+(define matlab-ia-spec (restart-spec matlab-spec 'non-comment-statement))
+
+;; NOTE: Need to deal with comments.  The ia-parser looks for lone $defaults
+;; to reduce w/o lookahead token but the compact-machine will add $lone-comm
+;; so we remove $lone-comm from keepers here.
+(define matlab-ia-mach
+  (let* ((mach (make-lalr-machine matlab-ia-spec))
+	 (mach (compact-machine mach #:keep 0 #:keepers '()))
+	 (mach (hashify-machine mach)))
+    mach))
+
+;; === automaton file generators =========
 
 (define (gen-matlab-files . rest)
   (define (lang-dir path)
@@ -299,13 +309,21 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (write-lalr-actions matlab-mach (xtra-dir "mlact.scm.new"))
-  (write-lalr-tables matlab-mach (xtra-dir "mltab.scm.new"))
+  (write-lalr-actions matlab-mach (xtra-dir "mlact.scm.new") #:prefix "ml-")
+  (write-lalr-tables matlab-mach (xtra-dir "mltab.scm.new") #:prefix "ml-")
+  (write-lalr-actions matlab-ia-mach (xtra-dir "ia-mlact.scm.new")
+		      #:prefix "ia-ml-")
+  (write-lalr-tables matlab-ia-mach (xtra-dir "ia-mltab.scm.new")
+		     #:prefix "ia-ml-")
   (let ((a (move-if-changed (xtra-dir "mlact.scm.new")
 			    (xtra-dir "mlact.scm")))
 	(b (move-if-changed (xtra-dir "mltab.scm.new")
-			    (xtra-dir "mltab.scm"))))
-    (when (or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm"))))))
+			    (xtra-dir "mltab.scm")))
+	(c (move-if-changed (xtra-dir "ia-mlact.scm.new")
+			    (xtra-dir "ia-mlact.scm")))
+	(d (move-if-changed (xtra-dir "ia-mltab.scm.new")
+			    (xtra-dir "ia-mltab.scm"))))
+    (or a b c d)))
 
 ;;; --- last line ---
+ 
