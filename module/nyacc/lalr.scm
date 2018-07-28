@@ -35,6 +35,12 @@
   #:use-module (nyacc version)
   )
 
+
+;; token values for default reduction and erro, sync with parser.scm
+;; used in hashify-machine, compact-machine
+(define $default 1)
+(define $error 2)
+
 ;; @deffn {Procedure} proxy-? sym rhs
 ;; @example
 ;; (LHS (($? RHS))
@@ -370,8 +376,8 @@
 	       (@l (list		; attributes per prod' rule
 		    `((rhs . ,(vector start-symbol))
 		      (ref . all) (act 1 $1))))
-	       (tl (append '($code-comm $lone-comm $error $end) ; terminals
-			   (or (assq-ref tree 'reserve) '())))
+	       (tl (cons* '$error '$end ; terminals
+			  (or (assq-ref tree 'reserve) '())))
 	       (nl (list start-symbol)) ; set of non-terminals
 	       ;;
 	       (head gram)	       ; head of unprocessed productions
@@ -1651,10 +1657,9 @@
 ;; @deffn {Procedure} compact-machine mach [#:keep 3] [#:keepers '()] => mach
 ;; A "filter" to compact the parse table.  For each state this will replace
 ;; the most populus set of reductions of the same production rule with a
-;; default production.  However, reductions triggered by @var{keepers} --
-;; by default @code{$lone-comm} and @code{$code-comm} -- and the required
-;; keeper -- @code{'$error} -- are not counted.  The keepers can then be
-;; trapped by the parser (e.g., to skip un-accounted comments).
+;; default production.  However, reductions triggered by @var{keepers} and
+;; the required keeper -- @code{'$error} -- are not counted.  The keepers
+;; can then be trapped by the parser (e.g., to skip un-accounted comments).
 ;; @end deffn
 (define* (compact-machine mach #:key (keep 3) (keepers '($lone-comm $code-comm)))
   (if (< keep 0) (error "expecting keep > 0"))
@@ -1670,7 +1675,7 @@
 			 (lambda (a r) (and (eq? 'reduce (car a))
 					    (eqv? r (cdr a))))))
 	 (mk-default (if hashed
-			 (lambda (r) (cons 1 (- r)))
+			 (lambda (r) (cons $default (- r)))
 			 (lambda (r) `($default reduce . ,r))))
 	 (mtab (assq-ref mach 'mtab))
 	 (keepers (map (lambda (k) (assq-ref mtab k))
@@ -1778,9 +1783,12 @@
 	     (non-terms (assq-ref mach 'non-terms))
 	     (lhs-v (assq-ref mach 'lhs-v))
 	     (sm ;; = (cons sym->int int->sym)
-	      (let iter ((si (list (cons '$default 1)))
-			 (is (list (cons 1 '$default)))
-			 (ix 2) (tl terminals) (nl non-terms))
+	      (let iter ((si (list (cons '$default $default)
+				   (cons '$error $error)))
+			 (is (list (cons $default '$default)
+				   (cons '$error $error)))
+			 (ix (1+ (max $default $error 0)))
+			 (tl terminals) (nl non-terms))
 		(if (null? nl) (cons (reverse si) (reverse is))
 		    (let* ((s (atomize (if (pair? tl) (car tl) (car nl))))
 			   (tl1 (if (pair? tl) (cdr tl) tl))
