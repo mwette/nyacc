@@ -1,12 +1,12 @@
 \input texinfo.tex
-@setfilename nagel.info
-@settitle Not Another Guile Extension Language!
+@setfilename nx-devel.info
+@settitle Developing NYACC Extension Languages
 
 @headings off
 @everyfooting @| @thispage @|
 
 @node Top
-@top Not Another Guile Extension Language!
+@top Developing NYACC Extension Languages
 @format
 Matt Wette
 July 2018
@@ -77,7 +77,7 @@ This seems to say that a compiler can use it's own env but needs to
 pass out an env that can be used by lower levels.
 
 Note that if the top-level language is a joint, then the compiler
-will just read expressions, combine them and then send to the comiler
+will just read expressions, combine them and then send to the compiler
 in one shot.
 
 @subheading Compiling a File
@@ -87,6 +87,23 @@ in one shot.
 @deffn {Procedure} lookup name dict => (lexical ...)|(toplevel ...)|(@@@@ ...)
 where @var{name} is a string and @var{dict} is an a-list dictionary
 @end deffn
+
+For langauges that generate automatic definitions (e.g., by
+assignment) our technique is to top wrap top-level statements in
+a TIL @code{seq}-string to define variables if needed. Here is TIL code:
+@lisp
+(let (var) (,var) ((call (toplevel module-local-variable)
+		         (call (toplevel current-module))
+		         (const ,sym)))
+  (if (lexical var ,var) (void) (define ,sym (void))))
+@end lisp
+where @code{sym} is the symbol for which we want a toplevel slot
+assigned. The routine to generate this is called
+@code{make-toplevel-defcheck} and the routine which wraps a toplevel
+TIL expression with symbols appearing in our symbol table is called
+@code{add-topdefs}.  Right now this is in @file{matlab/compile-tree-il.scm}
+
+
 
 @heading Modules
 

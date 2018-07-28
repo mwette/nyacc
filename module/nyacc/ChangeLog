@@ -1,3 +1,7 @@
+2018-07-27  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* parse.scm: Removed dependence on srfi-43 by adding vector-map.
+
 2018-07-25  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm (compact-machine): The default set of keepers is now

@@ -20,6 +20,10 @@
 	    nx-push-scope nx-pop-scope nx-top-level?
 	    nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-symbol
 	    nx-lookup-in-env nx-lookup
+	    rtail singleton?
+	    make-and make-or
+	    rev/repl
+	    opcall-generator
 	    )
   )
 
@@ -75,5 +79,44 @@
    ((nx-lookup-in-env name (assoc-ref dict '@M)))
    ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
    (else #f)))
+
+(define (rtail kseed)
+  (cdr (reverse kseed)))
+
+(define (singleton? expr)
+  (and (pair? expr) (null? (cdr expr))))
+
+;; (and a b c) => (if a (if b (if c #t #f) #f) #f)
+(define (make-and . args)
+  (let iter ((args args))
+    (if (null? args) '(const #t)
+	`(if ,(car args) ,(iter (cdr args)) (const #f)))))
+
+;; (or a b c) => (if a #t (if b #t (if c #t #f)))
+(define (make-or . args)
+  (let iter ((args args))
+    (if (null? args) '(const #f)
+	`(if ,(car args) (const #t) ,(iter (cdr args))))))
+
+;; reverse list but replace new head with @code{head}
+;; @example
+;; (rev/repl 'a '(4 3 2 1)) => '(a 2 3 4)
+;; @end example
+(define rev/repl
+  (case-lambda
+   ((arg0 revl)
+    (let iter ((res '()) (inp revl))
+      (if (null? (cdr inp)) (cons arg0 res)
+          (iter (cons (car inp) res) (cdr inp)))))
+   ((arg0 arg1 revl)
+    (let iter ((res '()) (inp revl))
+      (if (null? (cdr inp)) (cons* arg0 arg1 res)
+          (iter (cons (car inp) res) (cdr inp)))))
+   ))
+
+(define (opcall-generator xlib)
+  (define (xlib-ref name) `(@@ ,xlib ,name))
+  (lambda (op seed kseed kdict)
+    (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict)))
 
 ;; --- last line ---

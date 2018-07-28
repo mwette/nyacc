@@ -16,6 +16,18 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang matlab xlib)
+  #:export (xdict
+	    ml:+
+	    )
   )
+
+(define xdict
+  '(
+    ))
+
+(define (ml:+ a b) (+ a b))
+(define (ml:- a b) (- a b))
+(define (ml:* a b) (* a b))
+(define (ml:/ a b) (/ a b))
 
 ;; --- last line ---

@@ -280,24 +280,6 @@
 
 ;; === codegen procedures =============
 
-(define (rtail kseed)
-  (cdr (reverse kseed)))
-
-(define (singleton? expr)
-  (and (pair? expr) (null? (cdr expr))))
-
-;; (and a b c) => (if a (if b (if c #t #f) #f) #f)
-(define (make-and . args)
-  (let iter ((args args))
-    (if (null? args) '(const #t)
-	`(if ,(car args) ,(iter (cdr args)) (const #f)))))
-
-;; (or a b c) => (if a #t (if b #t (if c #t #f)))
-(define (make-or . args)
-  (let iter ((args args))
-    (if (null? args) '(const #f)
-	`(if ,(car args) (const #t) ,(iter (cdr args))))))
-
 ;; @deffn {Procedure} make-let bindings exprs
 ;; Generates a Tree-IL let form from arguments, where @var{bindings} looks like
 ;; @noindent
@@ -492,22 +474,10 @@
 	    `(set! ,lhs (call (@@ ,xlib-mod ,op) lhs rhs))
 	    `(set! ,lhs ,rhs))))))
 
-;; reverse list but replace new head with @code{head}
-;; @example
-;; (rev/repl 'a '(4 3 2 1)) => '(a 2 3 4)
-;; @end example
-(define rev/repl
-  (case-lambda
-   ((arg0 revl)
-    (let iter ((res '()) (inp revl))
-      (if (null? (cdr inp)) (cons arg0 res)
-	  (iter (cons (car inp) res) (cdr inp)))))
-   ((arg0 arg1 revl)
-    (let iter ((res '()) (inp revl))
-      (if (null? (cdr inp)) (cons* arg0 arg1 res)
-	  (iter (cons (car inp) res) (cdr inp)))))
-   ))
-
+(define (opcall-node op seed kseed kdict)
+  (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict))
+(define make-opcall xlib-mod)
+  
 ;; ====================================
 	 
 ;; @deffn {Procedure} js-sxml->tree-il/ext exp env opts
@@ -770,9 +740,6 @@
        (values tree '() dict))
       ))
 
-  (define (opcall-node op seed kseed kdict)
-    (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict))
-  
   (define (fU tree seed dict kseed kdict) ;; => seed dict
     (when #f
       (sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
@@ -783,7 +750,7 @@
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
     (if
-     (null? tree) (values (cons kseed seed) dict)
+     (null? tree) (values (cons kseed seed) kdict)
      
      (case (car tree)
        ((*TOP*)
@@ -1247,7 +1214,7 @@
 (define (compile-tree-il exp env opts)
   ;;(sferr "env=module? ~S\n" (module? env))
   ;;(sferr "\nenv=~S\n" env)
-  ;;(sferr "sxml:\n") (pp exp)
+  (sferr "sxml:\n") (pperr exp)
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
     ;;(sferr "env=~S\n" env)
     ;;(sferr "cenv=~S\n" cenv)

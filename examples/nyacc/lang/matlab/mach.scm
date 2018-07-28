@@ -181,8 +181,8 @@
 
     (equality-expr
      (rel-expr)
-     (equality-expr "==" rel-expr ($$ `(equal ,$1 ,$3)))
-     (equality-expr "~=" rel-expr ($$ `(noteq ,$1 ,$3)))
+     (equality-expr "==" rel-expr ($$ `(eq ,$1 ,$3)))
+     (equality-expr "~=" rel-expr ($$ `(ne ,$1 ,$3)))
      )
 
     (rel-expr
