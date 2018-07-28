@@ -7,13 +7,13 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-;;(use-modules (nyacc lang c99 mach))
+(use-modules (nyacc lang c99 mach))
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 pprint))	; pretty-print-c99
 (use-modules (nyacc lang c99 util1))	; remove-inc-trees
 (use-modules (nyacc lang c99 munge))	; tree->udict
 (use-modules (nyacc lang util))		; move-if-changed
-;;(use-modules (nyacc lalr))
+(use-modules (nyacc lalr))
 (use-modules (nyacc util))
 ;;(use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
@@ -49,5 +49,10 @@
     #t))
 
 
+(when #t
+  (with-output-to-file ",lang.txt"
+    (lambda ()
+      (pp-lalr-grammar c99-spec)
+      (pp-lalr-machine c99-mach))))
 
 ;; --- last line ---

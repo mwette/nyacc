@@ -9,7 +9,6 @@
 #
 # build the documentation
 
-DESTDIR=
 INSTALL=cp
 INFODIR=$(shell guile -c "(display (assq-ref %guile-build-info 'infodir))")
 
@@ -26,7 +25,7 @@ install: install-info
 
 .PHONY: install-info
 install-info:
-	mkdir -p $(INFODIR)
+	mkdir -p $(DESTDIR)$(INFODIR)
 	$(INSTALL) nyacc-ug.info $(DESTDIR)$(INFODIR)/nyacc-ug.info
 	$(INSTALL) ffi-help.info $(DESTDIR)$(INFODIR)/ffi-help.info
 

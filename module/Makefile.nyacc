@@ -70,38 +70,39 @@ install: install-srcs install-fh-srcs install-bins install-fh-bins
 
 .PHONY: install-srcs
 install-srcs:
-	@mkdir -p $(SITE_SCM_DIR)
+	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
 	@echo "installing NYACC sources in $(SITE_SCM_DIR)"
 	@for file in $(NYACC_SRCS); do \
-	  if test ! -d $(SITE_SCM_DIR)/`dirname $${file}`; then \
-	    mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
+	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 
 .PHONY: install-bins
 install-bins:
-	@mkdir -p $(SITE_SCM_GO_DIR)
+	@mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	@echo "installing NYACC binaries in $(SITE_SCM_GO_DIR)"
 	@for binfile in $(NYACC_BINS); do \
-	  if test ! -d $(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	    mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	  GUILE_LOAD_PATH=$(SITE_SCM_DIR) $(GUILD) compile \
-		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+		-o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+		$(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
 	  sleep 1; \
 	done
 
 .PHONY: install-fh-srcs
 install-fh-srcs:
-	@mkdir -p $(SITE_SCM_DIR)
+	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
 	@echo "installing FFI helper sources in $(SITE_SCM_DIR)"
 	@for file in $(NYACC_FH_SRCS); do \
-	  if test ! -d $(SITE_SCM_DIR)/`dirname $${file}`; then \
-	    mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
+	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 
 .PHONY: install-fh-bins
@@ -111,12 +112,13 @@ install-fh-bins:
 			>/dev/null 2>&1; then \
 	  echo "installing FFI helper binaries in $(SITE_SCM_GO_DIR)"; \
 	  for binfile in $(NYACC_FH_BINS); do \
-	    if test ! -d $(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	      mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	    if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	      mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	    fi; \
 	    srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	    GUILE_LOAD_PATH=$(SITE_SCM_DIR) $(GUILD) compile \
-		-o $(SITE_SCM_GO_DIR)/$${binfile} $(SITE_SCM_DIR)/$${srcfile}; \
+	    GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+		-o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+		$(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
 	    sleep 1; \
 	  done; \
 	else \
