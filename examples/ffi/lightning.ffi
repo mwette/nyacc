@@ -110,9 +110,9 @@
 (define (jit_address node)
   (_jit_address _jit node))
 
-(define (jit_regno reg) (logand reg 32767))
+(define (jit_regno reg) (logand reg #x00007fff))
 
-(define (jit_class reg) (logand reg 4294901760))
+(define (jit_class reg) (logand reg #xffff0000))
 
 (define (JIT_F index) (jit_f index))
 
