@@ -1654,14 +1654,14 @@
     ;; otherwise, return #t.
     (lambda () #t)))
 
-;; @deffn {Procedure} compact-machine mach [#:keep 3] [#:keepers '()] => mach
+;; @deffn {Procedure} compact-machine mach [#:keep 0] [#:keepers '()] => mach
 ;; A "filter" to compact the parse table.  For each state this will replace
 ;; the most populus set of reductions of the same production rule with a
 ;; default production.  However, reductions triggered by @var{keepers} and
 ;; the required keeper -- @code{'$error} -- are not counted.  The keepers
 ;; can then be trapped by the parser (e.g., to skip un-accounted comments).
 ;; @end deffn
-(define* (compact-machine mach #:key (keep 3) (keepers '()))
+(define* (compact-machine mach #:key (keep 0) (keepers '()))
   (if (< keep 0) (error "expecting keep > 0"))
   (let* ((pat-v (assq-ref mach 'pat-v))
 	 (nst (vector-length pat-v))

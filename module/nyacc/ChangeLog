@@ -1,5 +1,7 @@
 2018-07-29  Matt Wette  <mwette@alumni.caltech.edu>
 
+	* lalr.scm (compact-machine): default for #:keep is now 0, was 3
+
 	* parse.scm: reworked the parsers; instead of one for interactive
 	and one for non-interative, with each handling unhashed (symbolic)
 	or hashed (numberic), we now have one for symbolic and one for

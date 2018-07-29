@@ -50,7 +50,7 @@
 (define javascript-spec
   (lalr-spec
    (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
-			  lang-crn-lgpl3+))
+			  license-lgpl3+))
    (reserve "abstract" "boolean" "byte" "char" "class" "const" "debugger"
 	    "double" "enum" "export" "extends" "final" "float" "goto"
 	    "implements" "import" "int" "interface" "long" "native" 
@@ -672,33 +672,24 @@
 (define javascript-ia-spec (restart-spec javascript-spec 'ProgramElement))
 
 (define javascript-ia-mach
-  (let* ((mach (make-lalr-machine javascript-ia-spec))
-	 (mach (compact-machine mach #:keep 0))
-	 (mach (hashify-machine mach)))
-    mach))
+  (hashify-machine
+   (compact-machine
+    (make-lalr-machine javascript-ia-spec))))
 
 ;; === automaton file generators =========
 
-(define (gen-javascript-files . rest)
-  (define (lang-dir path)
-    (if (pair? rest) (string-append (car rest) "/" path) path))
-  (define (xtra-dir path)
-    (lang-dir (string-append "mach.d/" path)))
-
-  (write-lalr-actions javascript-mach (xtra-dir "jsact.scm.new") #:prefix "js-")
-  (write-lalr-tables javascript-mach (xtra-dir "jstab.scm.new") #:prefix "js-")
+(define* (gen-javascript-files #:optional (path "."))
+  (define (mdir file) (mach-dir path file))
+  (write-lalr-actions javascript-mach (mdir "jsact.scm.new") #:prefix "js-")
+  (write-lalr-tables javascript-mach (mdir "jstab.scm.new") #:prefix "js-")
   (write-lalr-actions javascript-ia-mach
-		      (xtra-dir "ia-jsact.scm.new") #:prefix "ia-js-")
+		      (mdir "ia-jsact.scm.new") #:prefix "ia-js-")
   (write-lalr-tables javascript-ia-mach
-		     (xtra-dir "ia-jstab.scm.new") #:prefix "ia-js-")
-  (let ((a (move-if-changed (xtra-dir "jsact.scm.new")
-			    (xtra-dir "jsact.scm")))
-	(b (move-if-changed (xtra-dir "jstab.scm.new")
-			    (xtra-dir "jstab.scm")))
-	(c (move-if-changed (xtra-dir "ia-jsact.scm.new")
-			    (xtra-dir "ia-jsact.scm")))
-	(d (move-if-changed (xtra-dir "ia-jstab.scm.new")
-			    (xtra-dir "ia-jstab.scm"))))
+		     (mdir "ia-jstab.scm.new") #:prefix "ia-js-")
+  (let ((a (move-if-changed (mdir "jsact.scm.new") (mdir "jsact.scm")))
+	(b (move-if-changed (mdir "jstab.scm.new") (mdir "jstab.scm")))
+	(c (move-if-changed (mdir "ia-jsact.scm.new") (mdir "ia-jsact.scm")))
+	(d (move-if-changed (mdir "ia-jstab.scm.new") (mdir "ia-jstab.scm"))))
     (or a b c d)))
 
 ;;; --- last line ---

@@ -65,10 +65,13 @@
 (define gen-ia-js-lexer (make-js-lexer-generator ia-js-mtab))
 
 (define raw-ia-parser
-  (make-lalr-ia-parser/num		; TEMPORARY 
+  ;;(make-lalr-ia-parser/num		; TEMPORARY 
+  (make-lalr-parser
    (list (cons 'len-v ia-js-len-v) (cons 'pat-v ia-js-pat-v)
 	 (cons 'rto-v ia-js-rto-v) (cons 'mtab ia-js-mtab)
-	 (cons 'act-v ia-js-act-v))))
+	 (cons 'act-v ia-js-act-v))
+   #:interactive #t
+   ))
 
 ;; @deffn {Procedure} parse-js-stmt
 ;; Parse a program statement from interactive user.
