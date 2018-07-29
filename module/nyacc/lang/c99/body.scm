@@ -267,8 +267,15 @@
 (define (def-xdef? name mode)
   (not (eqv? mode 'file)))
 
-;; @deffn {Procedure} gen-c-lexer [#:mode mode] [#:xdef? proc] => procedure
-;; Generate a context-sensitive lexer for the C99 language.  The generated
+  
+;; @deffn {Procedure} make-c99-lexer-generator match-table run-parse => proc
+;; This generates a procedure which has the signature
+;; @example
+;; proc [#:mode mode] [#:xdef? proc] => procedure
+;; @end example
+;; to be passed to the c99 parsers.
+;; The proc will generate a context-sensitive lexer for the C99 language.
+;; The generated
 ;; lexical analyzer reads and passes comments and optionally CPP statements
 ;; to the parser.  The keyword argument @var{mode} will determine if CPP
 ;; statements are passed (@code{'file} mode) or parsed and executed
@@ -281,7 +288,7 @@
 ;; (define (def-xdef? mode name) (eqv? mode 'code))
 ;; @end example
 ;; @end deffn
-(define gen-c-lexer
+(define (make-c99-lexer-generator match-table run-parse)
   ;; This gets ugly in order to handle cpp.  The CPP will tokenize, expand,
   ;; then convert back to a string.
   ;;
@@ -296,8 +303,7 @@
   ;; inserted via a string-port on the port stack.  When that port is fully
   ;; read (i.e., the reader sees eof-object) then @var{suppress} is changed
   ;; to @code{#t}.
-  (let* ((match-table c99-mtab)
-	 (ident-like? (make-ident-like-p read-c-ident))
+  (let* ((ident-like? (make-ident-like-p read-c-ident))
 	 ;;
 	 (strtab (filter-mt string? match-table)) ; strings in grammar
 	 (kwstab (filter-mt ident-like? strtab))  ; keyword strings =>
@@ -329,8 +335,7 @@
 	    ;;(brlev 0)			; brace level
 	    (x-def? (cond ((procedure? xdef?) xdef?)
 			  ((eq? xdef? #t) (lambda (n m) #t))
-			  (else def-xdef?)))
-	    )
+			  (else def-xdef?))))
 	;; Return the first (tval . lval) pair not excluded by the CPP.
 	(lambda ()
 
@@ -450,7 +455,7 @@
 		     (else
 		      (sferr "stmt: ~S\n" stmt)
 		      (error "1: bad cpp flow stmt")))))))
-	       
+	  
 	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
 	    (case (car stmt)
 	      ((if) (code-if stmt))
@@ -478,7 +483,7 @@
 		      (sferr "stmt: ~S\n" stmt)
 		      (error "2: bad cpp flow stmt")))
 		   stmt))))
-	       
+	  
 	  (define (eval-cpp-stmt/file stmt) ;; => stmt
 	    (case (car stmt)
 	      ((if) (cpi-push) stmt)
@@ -498,16 +503,16 @@
 	  ;; Maybe evaluate the CPP statement.
 	  (define (eval-cpp-stmt stmt)
 	    (with-throw-handler
-	     'cpp-error
-	     (lambda ()
-	       (case mode
-		 ((code) (eval-cpp-stmt/code stmt))
-		 ((decl) (eval-cpp-stmt/decl stmt))
-		 ((file) (eval-cpp-stmt/file stmt))
-		 (else (error "lang/c99 coding error"))))
-	     (lambda (key fmt . rest)
-	       (report-error fmt rest)
-	       (throw 'c99-error "CPP error"))))
+		'cpp-error
+	      (lambda ()
+		(case mode
+		  ((code) (eval-cpp-stmt/code stmt))
+		  ((decl) (eval-cpp-stmt/decl stmt))
+		  ((file) (eval-cpp-stmt/file stmt))
+		  (else (error "lang/c99 coding error"))))
+	      (lambda (key fmt . rest)
+		(report-error fmt rest)
+		(throw 'c99-error "CPP error"))))
 
 	  ;; Predicate to determine if we pass the cpp-stmt to the parser.
 	  ;; @itemize
@@ -591,7 +596,6 @@
 	       pair)
 	      ((skip-done skip-look skip)
 	       (iter (read-token)))
-	      (else (error "coding error"))))
-	  )))))
+	      (else (error "coding error")))))))))
 
 ;; --- last line ---

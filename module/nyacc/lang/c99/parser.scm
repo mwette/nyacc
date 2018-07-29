@@ -18,43 +18,48 @@
 ;; C parser
 
 (define-module (nyacc lang c99 parser)
-  #:export (parse-c99)
+  #:export (parse-c99 parse-c99x gen-c99-lexer gen-c99x-lexer gen-c-lexer)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
   )
 (cond-expand ;; for MES
-  (guile-2 #t)
+  (guile-2 
+   (use-modules (ice-9 pretty-print)))
   (else
    (use-modules (srfi srfi-16))
    (use-modules (ice-9 optargs))
    (use-modules (ice-9 syncase))
    (use-modules (nyacc compat18))))
 
-(include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
+;; Setting up the parsers is a little
+
 (include-from-path "nyacc/lang/c99/body.scm")
+
+;; === file parser ====================
+
+(include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/c99act.scm")
 
-;; Parse given a token generator.  Uses fluid @code{*info*}.
-;; A little ugly wrt re-throw but
 (define c99-raw-parser
-  (let ((parser (make-lalr-parser
-		     (list (cons 'len-v c99-len-v) (cons 'pat-v c99-pat-v)
-			   (cons 'rto-v c99-rto-v) (cons 'mtab c99-mtab)
-			   (cons 'act-v c99-act-v)))))
-    (lambda* (lexer #:key (debug #f))
-      (catch 'nyacc-error
-	(lambda () (parser lexer #:debug debug))
-	(lambda (key fmt . args)
-	  (report-error fmt args)
-	  (throw 'c99-error "C99 parse error"))))))
-
-;; This is used to parse included files at top level.
-(define (run-parse)
-  (let ((info (fluid-ref *info*)))
-    (c99-raw-parser (gen-c-lexer #:mode 'decl #:show-incs (cpi-shinc info))
-		    #:debug (cpi-debug info))))
+  (make-lalr-parser
+   (list (cons 'len-v c99-len-v) (cons 'pat-v c99-pat-v)
+	 (cons 'rto-v c99-rto-v) (cons 'mtab c99-mtab)
+	 (cons 'act-v c99-act-v))
+   #:skip-if-unexp '($lone-comm $code-comm)))
+	      
+(define gen-c99-lexer
+  (letrec ((run-parse
+	    (lambda ()
+	      (let ((info (fluid-ref *info*)))
+		(c99-raw-parser
+		 (gen-lexer #:mode 'decl #:show-incs (cpi-shinc info))
+		 #:debug (cpi-debug info)))))
+	   (gen-lexer
+	    (make-c99-lexer-generator c99-mtab run-parse)))
+    gen-lexer))
+(define gen-c-lexer gen-c99-lexer)
 
 ;; @deffn {Procedure} parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
 ;;               [#:mode ('code|'file|'decl)] [#:debug bool]
@@ -72,7 +77,6 @@
 ;; expressions can be fully evaluated, which may mean adding compiler generated
 ;; defines (e.g., using @code{gen-cpp-defs}).
 ;; @end deffn
-(use-modules (ice-9 pretty-print))
 (define* (parse-c99 #:key
 		    (cpp-defs '())	; CPP defines
 		    (inc-dirs '())	; include dirs
@@ -85,11 +89,58 @@
     (with-fluids ((*info* info)
 		  (*input-stack* '()))
       (catch 'c99-error
-	(lambda () (c99-raw-parser
-		    (gen-c-lexer #:mode mode #:xdef? xdef? #:show-incs show-incs)
+	(lambda () (c99-raw-parser (gen-c99-lexer #:mode mode #:xdef? xdef?
+						  #:show-incs show-incs)
 		    #:debug debug))
 	(lambda (key fmt . args)
 	  (report-error fmt args)
 	  #f)))))
+
+
+;; === expr parser ====================
+
+(include-from-path "nyacc/lang/c99/mach.d/c99xtab.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99xact.scm")
+
+(define c99x-raw-parser
+  (make-lalr-parser
+   (list (cons 'len-v c99x-len-v) (cons 'pat-v c99x-pat-v)
+	 (cons 'rto-v c99x-rto-v) (cons 'mtab c99x-mtab)
+	 (cons 'act-v c99x-act-v))
+   #:skip-if-unexp '($lone-comm $code-comm)))
+
+(define gen-c99x-lexer
+  (letrec ((run-parse
+	    (lambda ()
+	      (throw 'c99-error "this parser does not recurse #include")))
+	   (gen-lexer
+	    (make-c99-lexer-generator c99x-mtab run-parse)))
+    gen-lexer))
+  
+;; @deffn {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool] [tyns]
+;; This needs to be explained in some detail.
+;; [tyns '("foo_t")]
+;; @end deffn
+(define* (parse-c99x expr-string
+		     #:optional
+		     (tyns '())	; defined typenames
+		     #:key
+		     (cpp-defs '())	; CPP defines
+		     (inc-help '())	; include helper
+		     (xdef? #f)		; pred to determine expand
+		     (debug #f))	; debug?
+  (let ((info (make-cpi debug #f cpp-defs '(".") inc-help)))
+    (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
+    (with-fluids ((*info* info)
+		  (*input-stack* '()))
+      (with-input-from-string expr-string
+	(lambda ()
+	  (catch 'c99-error
+	    (lambda () (c99x-raw-parser
+			(gen-c99x-lexer #:mode 'code #:xdef? xdef?)
+			#:debug debug))
+	    (lambda (key fmt . rest)
+	      (report-error fmt rest)
+	      #f)))))))
 
 ;; --- last line ---

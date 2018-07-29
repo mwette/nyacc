@@ -34,7 +34,6 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/cpp.go			\
 	nyacc/lang/c99/cppmach.go		\
 	nyacc/lang/c99/parser.go		\
-	nyacc/lang/c99/xparser.go               \
 	nyacc/lang/c99/mach.go			\
 	nyacc/lang/c99/pprint.go		\
 	nyacc/lang/c99/util1.go			\

@@ -1,3 +1,15 @@
+2018-07-29  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* parse.scm: reworked the parsers; instead of one for interactive
+	and one for non-interative, with each handling unhashed (symbolic)
+	or hashed (numberic), we now have one for symbolic and one for
+	numeric with each handling interactive and non-interactive; I
+	think this is now cleaner
+
+	* lang/util.scm: removed dead sx- code; now in sx-util.scm;
+	moved lang-dir, xtra-dir from lang/mach.scm files to here and
+	renamed xtra-dir to mach-dir
+
 2018-07-27  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* parse.scm: Removed dependence on srfi-43 by adding vector-map.

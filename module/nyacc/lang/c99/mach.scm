@@ -21,8 +21,7 @@
 ;;   https://gcc.gnu.org/onlinedocs/gcc/C-Extensions.html#C-Extensions
 
 (define-module (nyacc lang c99 mach)
-  #:export (c99-spec c99-mach dev-parse-c dev-parse-c99
-	    gen-c99-files gen-c99x-files)
+  #:export (c99-spec c99-mach c99x-spec c99x-mach gen-c99-files)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
@@ -44,7 +43,7 @@
 (define c99-spec
   (lalr-spec
    (notice (string-append "Copyright (C) 2016-2018 Matthew R. Wette"
-			  lang-crn-lic))
+			  license-lgpl3+))
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< 'imp		       ; "implied type" SR-conflict resolution
 	  "char" "short" "int" "long"
@@ -220,8 +219,8 @@
       ($$ (if (pair? $3)
 	      `(decl ,(tl->list $1) ,(list $3))
 	      `(decl ,(tl->list $1)))))
-     ;; macOS has things like: foo_t bar(int) __asm("bar");
-     ;; (declaration-specifiers darwin-asm ";")
+     ;; macOS has decl's like `int bar(int) __asm("bar");' :
+     ;;(declaration-specifiers darwin-asm ";")
      )
 
     (declaration-specifiers		; S 6.7
@@ -806,55 +805,28 @@
     (pragma ("_Pragma" "(" string-literal ")" ($$ `(pragma ,(tl->list $3)))))
     )))
 
+;;; === parsers =========================
+
+;; We setup dev parser because circular dependence between lexer and parser
+;; due to parsing include files as units for code and decl mode.
+;; update: This is doable now (see parser.scm) but wait until it's needed.
 
 (define c99-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine c99-spec))))
+    (make-lalr-machine c99-spec))
+   #:keep 2
+   #:keepers '($code-comm $lone-comm)))
 
-;;; =====================================
+(define c99x-spec (restart-spec c99-mach 'expression))
 
-;; The following are needed by the code in pbody.scm.
-(define c99-len-v (assq-ref c99-mach 'len-v))
-(define c99-pat-v (assq-ref c99-mach 'pat-v))
-(define c99-rto-v (assq-ref c99-mach 'rto-v))
-(define c99-mtab (assq-ref c99-mach 'mtab))
-(define c99-act-v (vector-map
-		   (lambda (ix f) (eval f (current-module)))
-		   (vector-map (lambda (ix actn) (wrap-action actn))
-			       (assq-ref c99-mach 'act-v))))
-
-(include-from-path "nyacc/lang/c99/body.scm")
-
-(define c99-raw-parser (make-lalr-parser c99-mach))
-
-(define (run-parse)
-  (let ((info (fluid-ref *info*)))
-    (c99-raw-parser (gen-c-lexer) #:debug (cpi-debug info))))
-
-(define* (dev-parse-c99 #:key
-			(cpp-defs '())	; CPP defines
-			(inc-dirs '())	; include directories
-			(inc-help '())	; typedef dictionary
-			(mode 'file)	; mode: 'file or 'code
-			(xdef? #f)	; expand def function: proc name mode
-			(show-incs #f)	; show includes
-			(debug #f))	; debug
-  (catch
-   #t ;; 'c99-error 'cpp-error 'nyacc-error
-   (lambda ()
-     (let ((info (make-cpi show-incs debug cpp-defs
-			   (cons "." inc-dirs) inc-help)))
-       (with-fluid*
-	   *info* info
-	   (lambda ()
-	     (c99-raw-parser (gen-c-lexer #:mode mode #:xdef? xdef?)
-			 #:debug debug)))))
-   (lambda (key fmt . rest)
-     (report-error fmt rest)
-     #f)))
-
-(define dev-parse-c dev-parse-c99)
+;; does the c expression parser need to handle comments?
+(define c99x-mach
+  (compact-machine
+   (hashify-machine
+    (make-lalr-machine c99x-spec))
+   #:keep 2
+   #:keepers '($code-comm $lone-comm)))
 
 ;;; =====================================
 
@@ -863,50 +835,23 @@
 ;; These are the tables and actions for the C99 parser.
 ;; If there are no changes to existing files, no update occurs.
 ;; @end deffn
-(define (gen-c99-files . rest)
-  (define (lang-dir path)
-    (if (pair? rest) (string-append (car rest) "/" path) path))
-  (define (xtra-dir path)
-    (lang-dir (string-append "mach.d/" path)))
+(define* (gen-c99-files #:optional (path "."))
+  (define (mdir file) (mach-dir path file))
+  (write-lalr-actions c99-mach (mdir "c99act.scm.new") #:prefix "c99-")
+  (write-lalr-tables c99-mach (mdir "c99tab.scm.new") #:prefix "c99-")
+  (write-lalr-actions c99x-mach (mdir "c99xact.scm.new") #:prefix "c99x-")
+  (write-lalr-tables c99x-mach (mdir "c99xtab.scm.new") #:prefix "c99x-")
+  (let ((a (move-if-changed (mdir "c99act.scm.new") (mdir "c99act.scm")))
+	(b (move-if-changed (mdir "c99tab.scm.new") (mdir "c99tab.scm")))
+	(c (move-if-changed (mdir "c99xact.scm.new") (mdir "c99xact.scm")))
+	(d (move-if-changed (mdir "c99xtab.scm.new") (mdir "c99xtab.scm"))))
+    (or a b c d)))
 
-  (write-lalr-actions c99-mach (xtra-dir "c99act.scm.new") #:prefix "c99-")
-  (write-lalr-tables c99-mach (xtra-dir "c99tab.scm.new") #:prefix "c99-")
-  (let ((a (move-if-changed (xtra-dir "c99act.scm.new")
-			    (xtra-dir "c99act.scm")))
-	(b (move-if-changed (xtra-dir "c99tab.scm.new")
-			    (xtra-dir "c99tab.scm"))))
-    #;(when (or a b) 
-    (system (string-append "touch " (lang-dir "parser.scm"))))
-    (or a b)))
+;; === deprecated ==================
 
-;; @deffn {Procedure} gen-c99x-files [dir] => #t
-;; Update or generate the files @quot{c99xact.scm} and @quot{c99xtab.scm}.
-;; These are the tables and actions for the C99 expression parser.
-;; If there are no changes to existing files, no update occurs.
-;; @end deffn
-(define (gen-c99x-files . rest)
-  (define (lang-dir path)
-    (if (pair? rest) (string-append (car rest) "/" path) path))
-  (define (xtra-dir path)
-    (lang-dir (string-append "mach.d/" path)))
+;; should use define-deprecated from ice-9/deprecated.scm
+;;(define gen-c99x-files gen-c99-files)
 
-  (let* ((cexpr-spec (restart-spec c99-mach 'expression))
-	 (cexpr-mach (compact-machine
-		      (hashify-machine
-		       (make-lalr-machine cexpr-spec)))))
-    (write-lalr-actions cexpr-mach (xtra-dir "c99xact.scm.new")
-			#:prefix "c99x-")
-    (write-lalr-tables cexpr-mach (xtra-dir "c99xtab.scm.new")
-		       #:prefix "c99x-"))
-    
-  (let ((a (move-if-changed (xtra-dir "c99xact.scm.new")
-			    (xtra-dir "c99xact.scm")))
-	(b (move-if-changed (xtra-dir "c99xtab.scm.new")
-			    (xtra-dir "c99xtab.scm"))))
-    (when (or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm")))
-      #;(compile-file (lang-dir "xparser.scm"))
-      )
-    (or a b)))
+;;(define dev-parse-c dev-parse-c99)
 
 ;; --- last line ---

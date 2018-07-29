@@ -18,21 +18,19 @@
 ;; runtime utilities for the parsers
 
 (define-module (nyacc lang util)
-  #:export (lang-crn-lgpl3+
+  #:export (license-lgpl3+
 	    report-error
 	    *input-stack* push-input pop-input reset-input-stack
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
-	    ;;sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
-	    ;;sx-attr-ref sx-has-attr? sx-attr-set! sx-attr-set* sx+attr*
-	    ;;sx-find
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
 	    ;; for ???
 	    move-if-changed
 	    cintstr->scm
 	    sferr pperr
-	    ;; depracated
+	    mach-dir
+	    ;; deprecated
 	    sx-set-attr! sx-set-attr*
 	    lang-crn-lic
 	    )
@@ -50,14 +48,14 @@
 
 ;; This is a generic copyright/licence that will be printed in the output
 ;; of the examples/nyacc/lang/*/ actions.scm and tables.scm files.
-(define lang-crn-lgpl3+ "
+(define license-lgpl3+ "
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
 version 3 of the License, or (at your option) any later version.
 See the file COPYING.LESSER included with the this distribution.")
-(define lang-crn-lic lang-crn-lgpl3+)
+(define lang-crn-lic license-lgpl3+)
 
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
@@ -190,216 +188,10 @@ See the file COPYING.LESSER included with the this distribution.")
   (error "not implemented (yet)")
   )
 
-#!
-;; === sx ==============================
-;; @section SXML Utility Procedures
-;; Some lot of these look like existing Guile list procedures (e.g.,
-;; @code{sx-tail} versus @code{list-tail} but in sx lists the optional
-;; attributea are `invisible'. For example, @code{'(elt (@abc) "d")}
-;; is an sx of length two: the tag @code{elt} and the payload @code{"d"}.
+;;; === misc ========================
 
-(define (sxml-expr? sx)
-  (and (pair? sx) (symbol? (car sx)) (list? sx)))
-
-;; @deffn {Procedure} sx-length sx => <int>
-;; Return the length, don't include attributes, but do include tag
-;; @end deffn
-(define (sx-length sx)
-  (let ((ln (length sx)))
-    (cond
-      ((zero? ln) 0)
-      ((= 1 ln) 1)
-      ((not (pair? (cadr sx))) ln)
-      ((eq? '@ (caadr sx)) (1- ln))
-      (else ln))))
-
-;; @deffn {Procedure} sx-ref sx ix => item
-;; Reference the @code{ix}-th element of the list, not counting the optional
-;; attributes item.  If the list is shorter than the index, return @code{#f}.
-;; [note to author: The behavior to return @code{#f} if no elements is not
-;; consistent with @code{list-ref}.  Consider changing it.  Note also there
-;; is never a danger of an element being @code{#f}.]
-;; @example
-;; (sx-ref '(abc 1) => #f
-;; (sx-ref '(abc "def") 1) => "def"
-;; (sx-ref '(abc (@ (foo "1")) "def") 1) => "def"
-;; @end example
-;; @end deffn
-(define (sx-ref sx ix)
-  (define (list-xref l x) (if (> (length l) x) (list-ref l x) #f))
-  (cond
-   ((zero? ix) (car sx))
-   ((null? (cdr sx)) #f)
-   ((and (pair? (cadr sx)) (eqv? '@ (caadr sx)))
-    (list-xref sx (1+ ix)))
-   (else
-    (list-xref sx ix))))
-
-;; @deffn {Procedure} sx-ref* sx ix1 ix2 ... => item
-;; Equivalent to
-;; @example
-;; (((sx-ref (sx-ref sx ix1) ix2) ...) ...)
-;; @end example
-;; @end deffn
-(define (sx-ref* sx . args)
-  (fold (lambda (ix sx) (and (pair? sx) (sx-ref sx ix))) sx args))
-
-;; @deffn {Procedure} sx-tag sx => tag
-;; Return the tag for a tree
-;; @end deffn
-(define (sx-tag sx)
-  (if (pair? sx) (car sx) #f))
-
-;; @deffn {Procedure} sx-cons* tag (attr|#f)? ... => sx
-;; @deffnx {Procedure} sx-list tag (attr|#f)? ... => sx
-;; Generate the tag and the attr list if it exists.  Note that
-;; The following are equivalent:
-;; @example
-;; (sx-cons* tag attr elt1 elt2 '())
-;; (sx-list tag attr elt1 elt2)
-;; @end example
-;; @noindent
-;; NEW IMPLEMENTATION: now any field that is #f will be skipped
-;; @end deffn
-(define (sx-cons* tag . rest)
-  (if (null? rest) (error "expecing tail"))
-  ;;(cond
-  ;; ((null? rest) (list tag))
-  ;; ((not (car rest)) (apply cons* tag (cdr rest)))
-  ;; (else (apply cons* tag rest)))
-  (cons tag
-	(let iter ((items rest))
-	  (if (null? (cdr items)) (car items)
-	      (if (car items)
-		  (cons (car items) (iter (cdr items)))
-		  (iter (cdr items)))))))
-
-(define (sx-list tag . rest)
-  ;;(cond
-  ;; ((null? rest) (list tag))
-  ;; ((not (car rest)) (apply list tag (cdr rest)))
-  ;; (else (apply list tag rest))))
-  (cons tag
-	(let iter ((items rest))
-	  (if (null? items) '()
-	      (if (car items)
-		  (cons (car items) (iter (cdr items)))
-		  (iter (cdr items)))))))
-
-;;. maybe change to case-lambda to accept count
-;; @example
-;; (sx-repl-tail (tag (@ ...) (orig-elt ...)) (repl-elt ...))
-;; => 
-;; (sx-repl-tail (tag (@ ...) (repl-elt ...)))
-;; @end example
-(define (sx-repl-tail sexp tail)
-  (sx-cons* (sx-tag sexp) (sx-attr sexp) tail))
-
-;; @deffn {Procedure} sx-tail sx [ix] => (list)
-;; Return the ix-th tail starting after the tag and attribut list, where
-;; @var{ix} must be positive.  For example,
-;; @example
-;; (sx-tail '(tag (@ (abc . "123")) (foo) (bar)) 1) => ((foo) (bar))
-;; @end example
-;; Without second argument @var{ix} is 1.
-;; @end deffn
-(define sx-tail
-  (case-lambda
-   ((sx ix)
-    (cond
-     ((zero? ix) (error "sx-tail: expecting index greater than 0"))
-     ((and (pair? (cadr sx)) (eqv? '@ (caadr sx))) (list-tail sx (1+ ix)))
-     (else (list-tail sx ix))))
-   ((sx)
-    (sx-tail sx 1))))
-
-;; @deffn {Procedure} sx-has-attr? sx
-;; p to determine if @arg{sx} has attributes.
-;; @end deffn
-(define (sx-has-attr? sx)
-  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx))))
-
-;; @deffn {Procedure} sx-attr sx => '(@ ...)|#f
-;; @example
-;; (sx-attr '(abc (@ (foo "1")) def) 1) => '(@ (foo "1"))
-;; @end example
-;; should change this to
-;; @example
-;; (sx-attr sx) => '((a . 1) (b . 2) ...)
-;; @end example
-;; @end deffn
-(define (sx-attr sx)
-  (if (and (pair? (cdr sx)) (pair? (cadr sx)))
-      (if (eqv? '@ (caadr sx))
-	  (cadr sx)
-	  #f)
-      #f))
-
-;; @deffn {Procedure} sx-attr-ref sx|node|tail key => val
-;; Return an attribute value given the key, or @code{#f}.
-;; Also works if passed the attribute node @code{(@ ...)} or its tail.
-;; @end deffn
-(define (sx-attr-ref sx key)
-  (let ((attr-tail (cond ((null? sx) sx)
-			 ((pair? (car sx)) sx)
-			 ((eqv? '@ (car sx)) (car sx))
-			 ((sx-attr sx))
-			 (else '()))))
-    (and=> (assq-ref attr-tail key) car)))
-
-;; @deffn {Procedure} sx-attr-set! sx key val
-;; Set attribute for sx.  If no attributes exist, if key does not exist,
-;; add it, if it does exist, replace it.
-;; @end deffn
-(define (sx-attr-set! sx key val)
-  (if (sx-has-attr? sx)
-      (let ((attr (cadr sx)))
-	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
-      (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
-  sx)
-(define sx-set-attr! sx-attr-set!)
-
-;; @deffn {Procedure} sx-attr-set* sx key val [key val [key ... ]]
-;; Generate sx with added or changed attributes.
-;; @end deffn
-(define (sx-attr-set* sx . rest)
-  (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
-    (cond
-     ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
-     (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
-(define sx-set-attr* sx-attr-set*)
-
-;; @deffn {Procedure} sx+attr* sx key val [key val [@dots{} ]] => sx
-;; Add key-val pairs. @var{key} must be a symbol and @var{val} must be
-;; a string.  Return a new @emph{sx}.
-;; @end deffn
-(define (sx+attr* sx . rest)
-  (let* ((attrs (if (sx-has-attr? sx) (cdr (sx-attr sx)) '()))
-	 (attrs (let iter ((kvl rest))
-		  (if (null? kvl) attrs
-		      (cons (list (car kvl) (cadr kvl)) (iter (cddr kvl)))))))
-    (cons* (sx-tag sx) (cons '@ attrs)
-	   (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
-
-;; @deffn {Procedure} sx-find tag sx => (tag ...)
-;; @deffnx {Procedure} sx-find path sx => (tag ...)
-;; In the first form @var{tag} is a symbolic tag in the first level.
-;; Find the first matching element (in the first level).
-;; In the second form, the argument @var{path} is a pair.  Apply sxpath
-;; and take it's car,
-;; if found, or return @code{#f}, like lxml's @code{tree.find()} method.
-;; @* NOTE: the path version is currently disabled, to remove dependence
-;; on the module @code{(sxml xpath)}.
-;; @end deffn
-(define (sx-find tag-or-path sx)
-  (cond
-   ((symbol? tag-or-path)
-    (find (lambda (node)
-	    (and (pair? node) (eqv? tag-or-path (car node))))
-	  sx))
-   (else
-    (error "expecting first arg to be tag or sxpath"))))
-!#
+(define (mach-dir path file)
+  (string-append path "/mach.d/" file))
 
 ;;; === pp ==========================
 ;; @section Pretty-Print and Other Utility Procedures

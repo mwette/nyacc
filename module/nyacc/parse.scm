@@ -20,6 +20,9 @@
 
 (define-module (nyacc parse)
   #:export (make-lalr-parser
+	    ;;
+	    old-make-lalr-parser
+	    new-make-lalr-parser
 	    make-lalr-ia-parser
 	    make-lalr-ia-parser/sym
 	    make-lalr-ia-parser/num)
@@ -59,12 +62,19 @@
 
 (define (dmsg/n s t a)
   (cond
+   ((not a) (sferr "state ~S, token ~S\t=> parse error\n" s t))
    ((positive? a) (sferr "state ~S, token ~S\t=> shift ~S\n" s t a))
    ((negative? a) (sferr "state ~S, token ~S\t=> reduce ~S\n" s t (- a)))
    ((zero? a) (sferr "state ~S, token ~S\t=> accept\n" s t))
    (else (error "coding error in (nyacc parse)"))))
 
-(define (dmsg s t a) (sferr "state ~S, token ~S\t=> ~S\n" s t a))
+(define (dmsg/s s t a)
+  (case (car a)
+    ((error) (sferr "state ~S, token ~S\t=> parse error\n" s t))
+    ((shift) (sferr "state ~S, token ~S\t=> shift ~S\n" s t (cdr a)))
+    ((reduce) (sferr "state ~S, token ~S\t=> reduce ~S\n" s t (cdr a)))
+    ((accept) (sferr "state ~S, token ~S\t=> accept\n" s t))
+    (else (error "coding error in (nyacc parse)"))))
 
 (define (parse-error state laval)
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
@@ -84,7 +94,8 @@
 ;; (with-input-from-file "sourcefile.xyz" (lambda () (xyz-parse (gen-lexer))))
 ;; @end example
 ;; The generated parser is reentrant.
-(define* (make-lalr-parser mach)
+(define* (old-make-lalr-parser mach)
+  (define (dmsg s t a) (sferr "state ~S, token ~S\t=> ~S\n" s t a))
   (let* ((len-v (assq-ref mach 'len-v))	 ; production RHS length
 	 (rto-v (assq-ref mach 'rto-v))	 ; reduce to
 	 (pat-v (assq-ref mach 'pat-v))	 ; parse action (shift, reduce) table
@@ -160,9 +171,8 @@
 	      (else ;; accept
 	       (car stack))))))))))
 
-(define* (make-lalr-parser/sym mach #:key (skip-if-unexp '()))
-  (let* ((mtab (assq-ref mach 'mtab))
-	 (len-v (assq-ref mach 'len-v))
+(define* (make-lalr-parser/sym mach #:key (skip-if-unexp '()) interactive)
+  (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
 	 (xct-v (make-xct (assq-ref mach 'act-v)))
@@ -173,7 +183,7 @@
 		 (nval #f)		; prev reduce to non-term val
 		 (lval #f))		; lexical value (from lex'er)
 	(cond
-	 #;((and nval (eqv? (car nval) start)) ; done
+	 ((and interactive nval (eqv? (car nval) start)) ; done
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? '$default (caar (vector-ref pat-v (car state))))
@@ -184,8 +194,9 @@
 		 (tval (car laval))
 		 (sval (cdr laval))
 		 (stxl (vector-ref pat-v (car state)))
-		 (stx (or (assq-ref stxl tval) (assq-ref stxl '$default) #f)))
-	    (if debug (dmsg/n (car state) (if nval tval sval) stx))
+		 (stx (or (assq-ref stxl tval) (assq-ref stxl '$default)
+			  (cons '$error #f))))
+	    (if debug (dmsg/s (car state) (if nval tval sval) stx))
 	    (cond
 	     ((eq? '$error (car stx))	; error ???
 	      (if (memq tval skip-if-unexp)
@@ -200,11 +211,12 @@
 		      (cons (vector-ref rto-v gx) $$)
 		      lval)))
 	     ((eq? 'shift (car stx))	; shift
-	      (iter (cons stx state) (cons sval stack) #f (if nval lval #f)))
+	      (iter (cons (cdr stx) state) (cons sval stack)
+		    #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
 
-(define* (make-lalr-parser/num mach #:key (skip-if-unexp '()))
+(define* (make-lalr-parser/num mach #:key (skip-if-unexp '()) interactive)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
@@ -216,7 +228,7 @@
 		 (nval #f)		; prev reduce to non-term val
 		 (lval #f))		; lexical value (from lex'er)
 	(cond
-	 #;((and nval (eqv? (car nval) start)) ; done w/ interactive
+	 ((and interactive nval (eqv? (car nval) start)) ; done
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? $default (caar (vector-ref pat-v (car state))))
@@ -227,7 +239,9 @@
 		 (tval (car laval))
 		 (sval (cdr laval))
 		 (stxl (vector-ref pat-v (car state)))
-		 (stx (or (assq-ref stxl tval) (assq-ref stxl $default) #f)))
+		 (stx (or (assq-ref stxl tval)
+			  (and (not (memq tval skip-if-unexp))
+			       (assq-ref stxl $default)))))
 	    (if debug (dmsg/n (car state) (if nval tval sval) stx))
 	    (cond
 	     ((eq? #f stx)		; error
@@ -247,14 +261,17 @@
 	     (else			; accept
 	      (car stack))))))))))
 
-(define* (new-make-lalr-parser mach #:key (skip-if-unexp '()))
+(define* (new-make-lalr-parser mach #:key (skip-if-unexp '()) interactive)
   (let* ((mtab (assq-ref mach 'mtab))
-	 (siu (map (lambda (n) (assoc-ref mtab n)) skip-if-unexp)))
+	 (siu (map (lambda (n) (assoc-ref mtab n)) skip-if-unexp))
+	 (iact interactive))
     (if (number? (caar (vector-ref (assq-ref mach 'pat-v) 0)))
 	;; hashed:
-	(make-lalr-parser/num mach #:skip-if-unexp siu)
+	(make-lalr-parser/num mach #:skip-if-unexp siu #:interactive iact)
 	;; not hashed:
-	(make-lalr-parser/sym mach))))
+	(make-lalr-parser/sym mach #:skip-if-unexp siu #:interactive iact))))
+
+(define make-lalr-parser new-make-lalr-parser)
 
 
 ;; @deffn {Procedure} make-lalr-ia-parser mach [#:skip-if-unexp ()]
@@ -263,7 +280,8 @@
 ;; be processed without grabbing a lookahead token.  If the optional
 ;; keyword @var{#:skip-if-unexp} is provided then that list of tokens
 ;; (e.g., for comments) will be skipped if the machine does not expect
-;; them.
+;; them.  If you add non-terminals to @var{skip-if-unexp} then you need
+;; to add those to @code{#:keepers} for @code{compact-machine}
 ;; @end deffn
 
 (define* (make-lalr-ia-parser/sym mach #:key (skip-if-unexp '()))
@@ -290,7 +308,9 @@
 		 (tval (car laval))
 		 (sval (cdr laval))
 		 (stxl (vector-ref pat-v (car state)))
-		 (stx (or (assq-ref stxl tval) (assq-ref stxl '$default) #f)))
+		 (stx (or (assq-ref stxl tval)
+			  (assq-ref stxl '$default)
+			  #f)))
 	    (if debug (dmsg/n (car state) (if nval tval sval) stx))
 	    (cond
 	     ((eq? '$error (car stx))	; error ???
@@ -306,7 +326,8 @@
 		      (cons (vector-ref rto-v gx) $$)
 		      lval)))
 	     ((eq? 'shift (car stx))	; shift
-	      (iter (cons stx state) (cons sval stack) #f (if nval lval #f)))
+	      (iter (cons (cdr stx) state) (cons sval stack)
+		    #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
 
@@ -333,7 +354,9 @@
 		 (tval (car laval))
 		 (sval (cdr laval))
 		 (stxl (vector-ref pat-v (car state)))
-		 (stx (or (assq-ref stxl tval) (assq-ref stxl $default) #f)))
+		 (stx (or (assq-ref stxl tval)
+			  (assq-ref stxl '$default)
+			  #f)))
 	    (if debug (dmsg/n (car state) (if nval tval sval) stx))
 	    (cond
 	     ((eq? #f stx)		; error

@@ -48,7 +48,7 @@
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
-  #:use-module (nyacc lang c99 xparser)
+  ;;#:use-module (nyacc lang c99 xparser)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 cxeval)

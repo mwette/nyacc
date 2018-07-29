@@ -1661,7 +1661,7 @@
 ;; the required keeper -- @code{'$error} -- are not counted.  The keepers
 ;; can then be trapped by the parser (e.g., to skip un-accounted comments).
 ;; @end deffn
-(define* (compact-machine mach #:key (keep 3) (keepers '($lone-comm $code-comm)))
+(define* (compact-machine mach #:key (keep 3) (keepers '()))
   (if (< keep 0) (error "expecting keep > 0"))
   (let* ((pat-v (assq-ref mach 'pat-v))
 	 (nst (vector-length pat-v))

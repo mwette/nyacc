@@ -93,7 +93,12 @@ install-fh-srcs: $(FH_SCMS) $(FH_FFIS)
 
 .PHONY: dist-files
 dist-files:
-	@echo "nothing in examples"
+	@if test -f nyacc/lang/c99/,file.txt; then \
+	  (cd nyacc/lang/c99; \
+	   cp ,file.txt lang.txt; \
+	   zip lang.zip lang.txt; \
+	   rm lang.txt) \
+	fi
 
 ffi/gobject.scm: ffi/glib.scm
 ffi/gio.scm: ffi/glib.scm

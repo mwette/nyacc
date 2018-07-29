@@ -19,7 +19,6 @@
 ;; see output in exmamples/ffi/lightning.ffi
 
 (use-modules (nyacc lang c99 parser))
-(use-modules (nyacc lang c99 xparser))
 (use-modules (nyacc lang c99 munge))
 (use-modules (nyacc lang c99 util1))
 (use-modules (nyacc lang util))

@@ -4,7 +4,6 @@
 (use-modules (srfi srfi-1))
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxeval))
-(use-modules (nyacc lang c99 xparser))
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 pprint))
 (use-modules (nyacc lang c99 munge))

@@ -1,14 +1,18 @@
 ;; Tmach.scm - demo C99: CPP and parser
 ;;
-;; Copyright (C) 2015,2016 Matthew R. Wette
+;; Copyright (C) 2015,2016,2018 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
+(define mod-dir "../../../../module/nyacc/lang/c99")
+
 (use-modules (nyacc lang c99 mach))
 (use-modules (nyacc lang c99 parser))
+(use-modules (nyacc lang c99 cxmach))
+(use-modules (nyacc lang c99 cxeval))
 (use-modules (nyacc lang c99 pprint))	; pretty-print-c99
 (use-modules (nyacc lang c99 util1))	; remove-inc-trees
 (use-modules (nyacc lang c99 munge))	; tree->udict
@@ -18,41 +22,39 @@
 ;;(use-modules (nyacc export))
 (use-modules (ice-9 pretty-print))
 
-;; test def parser: show parse tree
-(when #f
-  (let* ((file "c99-exam/ex01.c")
-	 (defs '("arch=x86_64"))
-	 (incs  '("exam.d"))
-	 (parse (lambda () (parse-c99
-			    #:cpp-defs defs #:inc-dirs incs
-			    #:debug #f #:mode 'file #:xdef? #f)))
-	 (sx (with-input-from-file file parse))
-	 #|
-	 (dd (tree->udict sx))
-	 (dt (assoc-ref dd "foo_t"))
-	 (d0 (assoc-ref dd "abc"))
-         (d1 (stripdown d0 dd))
-	 (u1 (udecl->mspec d1))
-	 (fl (cadadr u1))
-	 |#
-         )
-    #;(for-each
-     (lambda (fld)
-       (let ((mspec (udecl->mspec fld dd))
-	     (mspec/c (udecl->mspec/comm fld dd)))
-	 ;;(pretty-print mspec)
-	 (pretty-print mspec/c)
-	 ))
-    (cdr fl))
-    (pretty-print-c99 sx)
-    ;;(pretty-print sx)
-    #t))
-
+(when #t
+  (if (gen-c99-files mod-dir)
+      (compile-file (string-append mod-dir "/parser.scm"))))
 
 (when #t
-  (with-output-to-file ",lang.txt"
+  (with-output-to-file ",file.txt"
     (lambda ()
+      (pp-lalr-notice c99-spec)
       (pp-lalr-grammar c99-spec)
-      (pp-lalr-machine c99-mach))))
+      (pp-lalr-machine c99-mach)))
+  (with-output-to-file ",expr.txt"
+    (lambda ()
+      (pp-lalr-notice c99x-spec)
+      (pp-lalr-grammar c99x-spec)
+      (pp-lalr-machine c99x-mach)))
+  #t)
+
+(when #t
+  (if (gen-c99cx-files mod-dir)
+      (compile-file (string-append mod-dir "/cxeval.scm"))))
+
+(when #t
+  (with-output-to-file ",cexp.txt"
+    (lambda ()
+      (pp-lalr-notice c99cx-spec)
+      (pp-lalr-grammar c99cx-spec)
+      (pp-lalr-machine c99cx-mach)))
+  #t)
+
+(when #f
+  (pretty-print
+   (with-input-from-string
+       "int x;\nint inc(int x) { return x + 1; }\n"
+     parse-c99)))
 
 ;; --- last line ---

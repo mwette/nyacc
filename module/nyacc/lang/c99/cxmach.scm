@@ -16,25 +16,22 @@
 ;;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang c99 cxmach)
-  #:export (gen-c99cx-files)
+  #:export (c99cx-spec c99cx-mach gen-c99cx-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module (nyacc lang util)
-  ;;#:use-module (nyacc lang sx-util)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (system foreign)
-  ;;#:use-module (system base pmatch)
   )
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 
-(define c99-cexpr-spec
+(define c99cx-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2018 Matthew R. Wette"
-			  lang-crn-lic))
+   (notice (string-append "Copyright (C) 2018 Matthew R. Wette" license-lgpl3+))
    (expect 0)
    (start constant-expression)
    (grammar
@@ -130,31 +127,22 @@
      (string-literal $string ($$ (tl-append $1 $2))))
     )))
 
-(define c99-cexpr-mach
+(define c99cx-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine c99-cexpr-spec))))
+    (make-lalr-machine c99cx-spec))))
 
 ;;; =====================================
 
 ;; @item gen-c99cx-files [dir] => #t
 ;; Update or generate the files @quot{cppact.scm} and @quot{cpptab.scm}.
 ;; If there are no changes to existing files, no update occurs.
-(define (gen-c99cx-files . rest)
-  (define (lang-dir path)
-    (if (pair? rest) (string-append (car rest) "/" path) path))
-  (define (xtra-dir path)
-    (lang-dir (string-append "mach.d/" path)))
-
-  (write-lalr-actions c99-cexpr-mach (xtra-dir "cxact.scm.new")
-		      #:prefix "c99cx-")
-  (write-lalr-tables c99-cexpr-mach (xtra-dir "cxtab.scm.new")
-		     #:prefix "c99cx-")
-  (let ((a (move-if-changed (xtra-dir "cxact.scm.new")
-			    (xtra-dir "cxact.scm")))
-	(b (move-if-changed (xtra-dir "cxtab.scm.new")
-			    (xtra-dir "cxtab.scm"))))
-    (when #f ;; (or a b) 
-      (system (string-append "touch " (lang-dir "c99cxeval.scm"))))))
+(define* (gen-c99cx-files #:optional (path "."))
+  (define (mdir file) (mach-dir path file))
+  (write-lalr-actions c99cx-mach (mdir "c99cxact.scm.new") #:prefix "c99cx-")
+  (write-lalr-tables c99cx-mach (mdir "c99cxtab.scm.new") #:prefix "c99cx-")
+  (let ((a (move-if-changed (mdir "c99cxact.scm.new") (mdir "c99cxact.scm")))
+	(b (move-if-changed (mdir "c99cxtab.scm.new") (mdir "c99cxtab.scm"))))
+    (or a b)))
 
 ;; --- last line ---

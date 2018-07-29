@@ -58,16 +58,16 @@
 (define (sizeof-string-const name)
   #f)
 
-(include-from-path "nyacc/lang/c99/mach.d/cxtab.scm")
-(include-from-path "nyacc/lang/c99/mach.d/cxact.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99cxtab.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99cxact.scm")
 
 (define c99cx-raw-parser
   (make-lalr-parser
-   `((len-v . ,c99cx-len-v) (pat-v . ,c99cx-pat-v)
-     (rto-v . ,c99cx-rto-v) (mtab . ,c99cx-mtab)
-     (act-v . ,c99cx-act-v))))
+   (list (cons 'len-v c99cx-len-v) (cons 'pat-v c99cx-pat-v)
+	 (cons 'rto-v c99cx-rto-v) (cons 'mtab c99cx-mtab)
+	 (cons 'act-v c99cx-act-v))))
 
-(define gen-cx-lexer
+(define gen-c99cx-lexer
   (let* ((reader (make-comm-reader '(("/*" . "*/"))))
 	 (comm-skipper (lambda (ch) (reader ch #f))))
     (make-lexer-generator c99cx-mtab
@@ -75,12 +75,12 @@
 			  #:chlit-reader read-c-chlit
 			  #:num-reader read-c-num)))
 
-(define (parse-c99-cx text)
+(define (parse-c99cx text)
   (with-throw-handler
    'nyacc-error
    (lambda ()
      (with-input-from-string text
-       (lambda () (c99cx-raw-parser (gen-cx-lexer)))))
+       (lambda () (c99cx-raw-parser (gen-c99cx-lexer)))))
    (lambda (key fmt . args)
      (apply throw 'cpp-error fmt args))))
 

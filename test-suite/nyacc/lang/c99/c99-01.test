@@ -11,7 +11,6 @@
 
 (define-module (c99-01)
   #:use-module (nyacc lang c99 parser)
-  #:use-module (nyacc lang c99 xparser)
   #:use-module (test-suite lib))
 
 (use-modules (ice-9 pretty-print))
