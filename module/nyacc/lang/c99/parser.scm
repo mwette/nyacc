@@ -24,21 +24,20 @@
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
   )
-(cond-expand ;; for MES
-  (guile-2 
-   (use-modules (ice-9 pretty-print)))
-  (else
+(cond-expand
+  (guile-2)
+  (guile
    (use-modules (srfi srfi-16))
    (use-modules (ice-9 optargs))
    (use-modules (ice-9 syncase))
-   (use-modules (nyacc compat18))))
+   (use-modules (nyacc compat18)))
+  (else))
 
 ;; Setting up the parsers is a little
 
 (include-from-path "nyacc/lang/c99/body.scm")
 
 ;; === file parser ====================
-
 (include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/c99act.scm")
 
@@ -50,16 +49,7 @@
    #:skip-if-unexp '($lone-comm $code-comm)))
 	      
 (define gen-c99-lexer
-  (letrec ((run-parse
-	    (lambda ()
-	      (let ((info (fluid-ref *info*)))
-		(c99-raw-parser
-		 (gen-lexer #:mode 'decl #:show-incs (cpi-shinc info))
-		 #:debug (cpi-debug info)))))
-	   (gen-lexer
-	    (make-c99-lexer-generator c99-mtab run-parse)))
-    gen-lexer))
-(define gen-c-lexer gen-c99-lexer)
+  (make-c99-lexer-generator c99-mtab c99-raw-parser))
 
 ;; @deffn {Procedure} parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
 ;;               [#:mode ('code|'file|'decl)] [#:debug bool]
@@ -110,12 +100,7 @@
    #:skip-if-unexp '($lone-comm $code-comm)))
 
 (define gen-c99x-lexer
-  (letrec ((run-parse
-	    (lambda ()
-	      (throw 'c99-error "this parser does not recurse #include")))
-	   (gen-lexer
-	    (make-c99-lexer-generator c99x-mtab run-parse)))
-    gen-lexer))
+  (make-c99-lexer-generator c99x-mtab c99x-raw-parser))
   
 ;; @deffn {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool] [tyns]
 ;; This needs to be explained in some detail.

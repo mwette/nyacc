@@ -128,16 +128,12 @@ install-fh-bins:
 # === files for making source tarballs
 
 nyacc/lang/c99/mach.d/c99act.scm \
-nyacc/lang/c99/mach.d/c99tab.scm : nyacc/lang/c99/mach.scm
-	GUILE_LOAD_PATH=`pwd` \
-	$(GUILE) -l $< -c \
-		'((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
-
+nyacc/lang/c99/mach.d/c99tab.scm \
 nyacc/lang/c99/mach.d/c99xact.scm \
 nyacc/lang/c99/mach.d/c99xtab.scm : nyacc/lang/c99/mach.scm
 	GUILE_LOAD_PATH=`pwd` \
 	$(GUILE) -l $< -c \
-		'((@ (nyacc lang c99 mach) gen-c99x-files) "nyacc/lang/c99")'
+		'((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
 
 nyacc/lang/c99/mach.d/cppact.scm \
 nyacc/lang/c99/mach.d/cpptab.scm : nyacc/lang/c99/cppmach.scm
@@ -152,8 +148,6 @@ dist-files:
 	    -c '(use-modules (nyacc lang c99 cppmach)) (gen-cpp-files ".")'; \
 	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
 	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99-files ".")'; \
-	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
-	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99x-files ".")'; \
 	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
 	    -c '(use-modules (nyacc lang c99 cxmach)) (gen-c99cx-files ".")')
 

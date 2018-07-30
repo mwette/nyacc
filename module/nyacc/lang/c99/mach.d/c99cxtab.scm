@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99cxtab.scm
+;; ./mach.d/c99cxtab.scm
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;; 

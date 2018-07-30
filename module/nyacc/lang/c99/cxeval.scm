@@ -68,6 +68,7 @@
 	 (cons 'act-v c99cx-act-v))))
 
 (define gen-c99cx-lexer
+  ;;(make-c99-lexer-generator c99x-mtab c99cx-raw-parser))
   (let* ((reader (make-comm-reader '(("/*" . "*/"))))
 	 (comm-skipper (lambda (ch) (reader ch #f))))
     (make-lexer-generator c99cx-mtab
