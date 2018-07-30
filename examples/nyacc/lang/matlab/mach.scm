@@ -1,6 +1,6 @@
 ;;; lang/matlab/mach.scm
 
-;; Copyright (C) 2015,2017-2018 Matthew R. Wette
+;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -41,7 +41,7 @@
 
 (define matlab-spec
   (lalr-spec
-   (notice (string-append "Copyright 2016 Matthew R. Wette" lang-crn-lic))
+   (notice (string-append "Copyright 2015-2018 Matthew R. Wette" license-lgpl3+))
    (start mfile)
    (grammar
     
@@ -105,6 +105,8 @@
      (non-comment-statement))
     (non-comment-statement
      (term ($$ '(empty-stmt)))
+     ;;(expr term ($$ `(expr-stmt ,expr))) <= lotsa reduce-reduce conflicts
+     (lval-expr term ($$ `(expr-stmt ,expr))) ;; <= shift-reduce on ; , \n
      (lval-expr "(" expr-list ")" term ($$ `(call-stmt ,$1 ,(tl->list $3))))
      (lval-expr "=" expr term ($$ `(assn ,$1 ,$3)))
      ("[" lval-expr-list "]" "=" ident "(" ")" term

@@ -1212,12 +1212,10 @@
 ;; for the next javascript tree.
 ;; @end deffn
 (define (compile-tree-il exp env opts)
-  ;;(sferr "env=module? ~S\n" (module? env))
   ;;(sferr "\nenv=~S\n" env)
-  (sferr "sxml:\n") (pperr exp)
+  ;;(sferr "sxml:\n") (pperr exp)
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
-    ;;(sferr "env=~S\n" env)
-    ;;(sferr "cenv=~S\n" cenv)
+    ;;(sferr "env=~S\ncenv=~S" env cenv)
     (if exp 
 	(call-with-values
 	    (lambda () (js-sxml->tree-il/ext exp cenv opts))

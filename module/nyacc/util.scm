@@ -25,13 +25,11 @@
 	    x-flip x-comb
 	    write-vec
 	    ugly-print OLD-ugly-print
-	    tzort
-	    )
-  )
+	    tzort)
+  #:use-module ((srfi srfi-43) #:select (vector-fold)))
 (cond-expand
   (mes)
-  (guile-2
-   (use-modules (srfi srfi-43)))
+  (guile-2)
   (guile
    (use-modules (ice-9 optargs))
    (use-modules (nyacc compat18)))

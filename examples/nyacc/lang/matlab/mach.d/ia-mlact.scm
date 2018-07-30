@@ -1,6 +1,6 @@
 ;; mach.d/ia-mlact.scm
 
-;; Copyright 2016 Matthew R. Wette
+;; Copyright 2015-2018 Matthew R. Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -91,6 +91,8 @@
    (lambda ($1 . $rest) $1)
    ;; non-comment-statement => term
    (lambda ($1 . $rest) '(empty-stmt))
+   ;; non-comment-statement => lval-expr term
+   (lambda ($2 $1 . $rest) `(expr-stmt ,expr))
    ;; non-comment-statement => lval-expr "(" expr-list ")" term
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(call-stmt ,$1 ,(tl->list $3)))
@@ -187,9 +189,9 @@
    ;; equality-expr => rel-expr
    (lambda ($1 . $rest) $1)
    ;; equality-expr => equality-expr "==" rel-expr
-   (lambda ($3 $2 $1 . $rest) `(equal ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(eq ,$1 ,$3))
    ;; equality-expr => equality-expr "~=" rel-expr
-   (lambda ($3 $2 $1 . $rest) `(noteq ,$1 ,$3))
+   (lambda ($3 $2 $1 . $rest) `(ne ,$1 ,$3))
    ;; rel-expr => add-expr
    (lambda ($1 . $rest) $1)
    ;; rel-expr => rel-expr "<" add-expr

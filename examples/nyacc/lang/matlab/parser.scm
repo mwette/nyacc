@@ -18,9 +18,10 @@
 (define-module (nyacc lang matlab parser)
   #:export (parse-ml ml-stmt-reader)
   #:use-module (nyacc lex)
-  #:use-module (nyacc lalr)
+  ;;#:use-module (nyacc lalr)
   #:use-module (nyacc parse)
-  #:use-module (nyacc lang util))
+  #:use-module (nyacc lang util)	; tl routines
+  )
 
 (include-from-path "nyacc/lang/matlab/body.scm")
 
@@ -60,10 +61,11 @@
 (define gen-ia-matlab-lexer (make-matlab-lexer-generator ia-ml-mtab))
 
 (define raw-ia-parser
-  (make-lalr-ia-parser/num
+  (make-lalr-parser
    (list (cons 'len-v ia-ml-len-v) (cons 'pat-v ia-ml-pat-v)
 	 (cons 'rto-v ia-ml-rto-v) (cons 'mtab ia-ml-mtab)
-	 (cons 'act-v ia-ml-act-v))))
+	 (cons 'act-v ia-ml-act-v))
+   #:interactive #t))
 
 (define (parse-ml-stmt lexer)
   (catch 'nyacc-error

@@ -135,7 +135,11 @@
 
        ((assn)
 	(let ((tail (rtail kseed)))
-	  (values (cons `(set! ,(car tail) ,(cadr tail)) kseed) kdict)))
+	  ;;(values (cons `(set! ,(car tail) ,(cadr tail)) kseed) kdict)))
+	  ;; The following will return assigned expression.
+	  (values (cons `(seq (set! ,(car tail) ,(cadr tail)) ,(car tail))
+			kseed)
+		  kdict)))
 
        ((multi-assn) ;; TODO
 	(values (cons '(void) kseed) kdict))

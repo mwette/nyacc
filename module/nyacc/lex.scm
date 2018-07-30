@@ -39,22 +39,20 @@
 	    make-chseq-reader
 	    make-num-reader
 	    eval-reader
- 	    read-c-ident
+ 	    read-c-ident read-c$-ident
  	    read-c-comm
 	    read-c-string
 	    read-c-chlit
 	    read-c-num
 	    read-oct read-hex
-	    like-c-ident?
+	    like-c-ident? like-c$-ident?
 	    c-escape
 	    cnumstr->scm
 	    filter-mt remove-mt map-mt make-ident-like-p
 	    c:ws c:if c:ir
 	    ;; deprecated
-	    make-like-ident-p
-	    )
-  #:use-module ((srfi srfi-1) #:select (remove append-reverse))
-  )
+	    make-like-ident-p)
+  #:use-module ((srfi srfi-1) #:select (remove append-reverse)))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
   
@@ -83,7 +81,7 @@
 	       (string->char-set! ucase cs)
 	       (string->char-set! lcase cs)))
 (define c:ir (string->char-set digit c:if)) ; ident, rest chars
-(define c:nx (string->char-set "eEdD"))	; number exponent
+(define c:nx (string->char-set "eEdD"))	    ; number exponent
 (define c:hx (string->char-set "abcdefABCDEF"))
 (define c:sx (string->char-set "lLuU")) ; fixed suffix
 (define c:fx (string->char-set "fFlL")) ; float suffix
@@ -148,11 +146,6 @@
 		 (lxlsr chl))))
 	#f)))
 
-;; @deffn {Procedure} read-c-ident ch => #f|string
-;; If ident pointer at following char, else (if #f) ch still last-read.
-;; @end deffn
-(define read-c-ident (make-ident-reader c:if c:ir))
-
 ;; @deffn {Procedure} make-ident-like-p ident-reader
 ;; Generate a predicate, from a reader, that determines if a string qualifies
 ;; as an identifier. 
@@ -164,10 +157,28 @@
 		   (eval-reader reader s)
 		   #t)))
 
+;; @deffn {Procedure} read-c-ident ch => #f|string
+;; If ident pointer at following char, else (if #f) ch still last-read.
+;; @end deffn
+(define read-c-ident (make-ident-reader c:if c:ir))
+
 ;; @deffn {Procedure} like-c-ident? ch 
 ;; Determine if a string qualifies as a C identifier.
 ;; @end deffn
 (define like-c-ident? (make-ident-like-p read-c-ident))
+
+;; @deffn {Procedure} read-c$-ident ch => #f|string
+;; Similar to @code{read-c-ident}: it allows initial @code{$}.
+;; @end deffn
+(define read-c$-ident
+  (let ((cs (char-set-copy c:if)))
+    (string->char-set! "$" cs)
+    (make-ident-reader cs c:ir)))
+
+;; @deffn {Procedure} like-c$-ident? ch 
+;; Similar to @code{like-c-ident}: it allows initial @code{$}.
+;; @end deffn
+(define like-c$-ident? (make-ident-like-p read-c$-ident))
 
 ;; @deffn {Procedure} make-string-reader delim
 ;; Generate a reader that uses @code{delim} as delimiter for strings.

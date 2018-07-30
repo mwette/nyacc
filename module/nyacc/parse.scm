@@ -20,17 +20,9 @@
 
 (define-module (nyacc parse)
   #:export (make-lalr-parser
-	    ;;
-	    old-make-lalr-parser
-	    new-make-lalr-parser
-	    make-lalr-ia-parser
-	    make-lalr-ia-parser/sym
-	    make-lalr-ia-parser/num)
-  )
-;;(cond-expand
-;;  (mes)
-;;  (guile-2 (use-modules (srfi srfi-43)))
-;;  (else))
+	    make-lalr-parser/sym
+	    make-lalr-parser/num))
+
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 
@@ -83,7 +75,7 @@
 	   "~A:~A: parse failed at state ~A, on input ~S\n"
 	   fn ln (car state) (cdr laval))))
 
-;; @item make-lalr-parser mach => parser
+;; @item make-lalr-parser mach [#:skip-if-unexp '()] [#:interactive #f] => parser
 ;; This generates a procedure that takes one argument, a lexical analyzer:
 ;; @example
 ;; (parser lexical-analyzer [#:debug #t])
@@ -94,83 +86,6 @@
 ;; (with-input-from-file "sourcefile.xyz" (lambda () (xyz-parse (gen-lexer))))
 ;; @end example
 ;; The generated parser is reentrant.
-(define* (old-make-lalr-parser mach)
-  (define (dmsg s t a) (sferr "state ~S, token ~S\t=> ~S\n" s t a))
-  (let* ((len-v (assq-ref mach 'len-v))	 ; production RHS length
-	 (rto-v (assq-ref mach 'rto-v))	 ; reduce to
-	 (pat-v (assq-ref mach 'pat-v))	 ; parse action (shift, reduce) table
-	 (actn-v (assq-ref mach 'act-v)) ; symbolic actions
-	 (mtab (assq-ref mach 'mtab))
-	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
-		     (vector-map
-		      ;; Turn symbolic action into executable procedures:
-		      (lambda (ix f) (eval f (current-module)))
-		      (vector-map
-		       (lambda (ix actn) (wrap-action actn))
-		       actn-v))))
-	 ;;
-	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
-	 (def (if hashed $default '$default))
-	 (end (assq-ref mtab '$end))
-	 (err (assq-ref mtab '$error))
-	 (comm (list (assq-ref mtab '$lone-comm) (assq-ref mtab '$code-comm)))
-	 ;; predicate to test for shift action:
-	 (shift? (if hashed
-		     (lambda (a) (positive? a))
-		     (lambda (a) (eq? 'shift (car a)))))
-	 ;; On shift, transition to this state:
-	 (shift-to (if hashed (lambda (x) x) (lambda (x) (cdr x))))
-	 ;; Predicate to test for reduce action:
-	 (reduce? (if hashed
-		      (lambda (a) (negative? a))
-		      (lambda (a) (eq? 'reduce (car a)))))
-	 ;; On reduce, reduce this production-rule:
-	 (reduce-pr (if hashed abs cdr))
-	 ;; If error, make the right packet.
-	 (other (if hashed 0 '(other . 0)))
-	 )
-
-    (lambda* (lexr #:key debug)
-      (let iter ((state (list 0))	; state stack
-		 (stack (list '$@))	; sval stack
-		 (nval #f)		; prev reduce to non-term val
-		 (lval (lexr)))		; lexical value (from lex'er)
-
-	(let* ((tval (car (if nval nval lval))) ; token (syntax value)
-	       (sval (cdr (if nval nval lval))) ; semantic value
-	       (stxl (vector-ref pat-v (car state))) ; state transition xtra
-	       (oact #f) ;; if not shift/reduce, then accept, error or skip
-	       (stx (cond ;; state transition
-		     ((assq-ref stxl tval)) ; shift/reduce in table
-		     ((memq tval comm) (set! oact 'skip) other)
-		     ((assq-ref stxl err)) ; error recovery
-		     ((assq-ref stxl def))  ; default action
-		     (else (set! oact 'error) other))))
-
-	  (if debug (dmsg (car state) (if nval tval sval) stx))
-	  (cond
-	   ((shift? stx)
-	    ;; We could check here to determine if next transition only has a
-	    ;; default reduction and, if so, go ahead and process the reduction
-	    ;; without reading another input token.  Needed for interactive.
-	    (iter (cons (shift-to stx) state) (cons sval stack)
-		  #f (if nval lval (lexr))))
-	   ((reduce? stx)
-	    (let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
-		   ($$ (apply (vector-ref xact-v gx) stack)))
-	      (iter (list-tail state gl) 
-		    (list-tail stack gl)
-		    (cons (vector-ref rto-v gx) $$)
-		    lval)))
-	   (else ;; other action: skip, error, or accept
-	    (case oact
-	      ((skip) (iter state stack nval (lexr)))
-	      ((error) (throw 'nyacc-error
-			      "parse failed at state ~A, on input ~S"
-			      (car state) sval))
-	      (else ;; accept
-	       (car stack))))))))))
-
 (define* (make-lalr-parser/sym mach #:key (skip-if-unexp '()) interactive)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))
@@ -261,7 +176,7 @@
 	     (else			; accept
 	      (car stack))))))))))
 
-(define* (new-make-lalr-parser mach #:key (skip-if-unexp '()) interactive)
+(define* (make-lalr-parser mach #:key (skip-if-unexp '()) interactive)
   (let* ((mtab (assq-ref mach 'mtab))
 	 (siu (map (lambda (n) (assoc-ref mtab n)) skip-if-unexp))
 	 (iact interactive))
@@ -271,8 +186,85 @@
 	;; not hashed:
 	(make-lalr-parser/sym mach #:skip-if-unexp siu #:interactive iact))))
 
-(define make-lalr-parser new-make-lalr-parser)
 
+;; == deprecated ===============================================================
+
+(define* (old-make-lalr-parser mach)
+  (define (dmsg s t a) (sferr "state ~S, token ~S\t=> ~S\n" s t a))
+  (let* ((len-v (assq-ref mach 'len-v))	 ; production RHS length
+	 (rto-v (assq-ref mach 'rto-v))	 ; reduce to
+	 (pat-v (assq-ref mach 'pat-v))	 ; parse action (shift, reduce) table
+	 (actn-v (assq-ref mach 'act-v)) ; symbolic actions
+	 (mtab (assq-ref mach 'mtab))
+	 (xact-v (if (procedure? (vector-ref actn-v 0)) actn-v
+		     (vector-map
+		      ;; Turn symbolic action into executable procedures:
+		      (lambda (ix f) (eval f (current-module)))
+		      (vector-map
+		       (lambda (ix actn) (wrap-action actn))
+		       actn-v))))
+	 ;;
+	 (hashed (number? (caar (vector-ref pat-v 0)))) ; been hashified?
+	 (def (if hashed $default '$default))
+	 (end (assq-ref mtab '$end))
+	 (err (assq-ref mtab '$error))
+	 (comm (list (assq-ref mtab '$lone-comm) (assq-ref mtab '$code-comm)))
+	 ;; predicate to test for shift action:
+	 (shift? (if hashed
+		     (lambda (a) (positive? a))
+		     (lambda (a) (eq? 'shift (car a)))))
+	 ;; On shift, transition to this state:
+	 (shift-to (if hashed (lambda (x) x) (lambda (x) (cdr x))))
+	 ;; Predicate to test for reduce action:
+	 (reduce? (if hashed
+		      (lambda (a) (negative? a))
+		      (lambda (a) (eq? 'reduce (car a)))))
+	 ;; On reduce, reduce this production-rule:
+	 (reduce-pr (if hashed abs cdr))
+	 ;; If error, make the right packet.
+	 (other (if hashed 0 '(other . 0)))
+	 )
+
+    (lambda* (lexr #:key debug)
+      (let iter ((state (list 0))	; state stack
+		 (stack (list '$@))	; sval stack
+		 (nval #f)		; prev reduce to non-term val
+		 (lval (lexr)))		; lexical value (from lex'er)
+
+	(let* ((tval (car (if nval nval lval))) ; token (syntax value)
+	       (sval (cdr (if nval nval lval))) ; semantic value
+	       (stxl (vector-ref pat-v (car state))) ; state transition xtra
+	       (oact #f) ;; if not shift/reduce, then accept, error or skip
+	       (stx (cond ;; state transition
+		     ((assq-ref stxl tval)) ; shift/reduce in table
+		     ((memq tval comm) (set! oact 'skip) other)
+		     ((assq-ref stxl err)) ; error recovery
+		     ((assq-ref stxl def))  ; default action
+		     (else (set! oact 'error) other))))
+
+	  (if debug (dmsg (car state) (if nval tval sval) stx))
+	  (cond
+	   ((shift? stx)
+	    ;; We could check here to determine if next transition only has a
+	    ;; default reduction and, if so, go ahead and process the reduction
+	    ;; without reading another input token.  Needed for interactive.
+	    (iter (cons (shift-to stx) state) (cons sval stack)
+		  #f (if nval lval (lexr))))
+	   ((reduce? stx)
+	    (let* ((gx (reduce-pr stx)) (gl (vector-ref len-v gx))
+		   ($$ (apply (vector-ref xact-v gx) stack)))
+	      (iter (list-tail state gl) 
+		    (list-tail stack gl)
+		    (cons (vector-ref rto-v gx) $$)
+		    lval)))
+	   (else ;; other action: skip, error, or accept
+	    (case oact
+	      ((skip) (iter state stack nval (lexr)))
+	      ((error) (throw 'nyacc-error
+			      "parse failed at state ~A, on input ~S"
+			      (car state) sval))
+	      (else ;; accept
+	       (car stack))))))))))
 
 ;; @deffn {Procedure} make-lalr-ia-parser mach [#:skip-if-unexp ()]
 ;; Make an interactive parser.  The machine should have been built with

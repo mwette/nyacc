@@ -70,11 +70,11 @@
 (define-public (make-matlab-lexer-generator match-table)
   (let* ((read-string matlab-read-string)
 	 (read-comm matlab-read-comm)
-	 (read-ident read-c-ident)
+	 (read-ident read-c$-ident)
 	 (space-cs (string->char-set " \t\r\f"))
 	 ;;
 	 (strtab (filter-mt string? match-table)) ; strings in grammar
-	 (kwstab (filter-mt like-c-ident? strtab)) ; keyword strings =>
+	 (kwstab (filter-mt like-c$-ident? strtab)) ; keyword strings =>
 	 (keytab (map-mt string->symbol kwstab)) ; keywords in grammar
 	 (chrseq (remove-mt like-c-ident? strtab)) ; character sequences
 	 (symtab (filter-mt symbol? match-table)) ; symbols in grammar

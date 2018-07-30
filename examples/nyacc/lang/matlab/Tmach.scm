@@ -23,18 +23,16 @@
 ;; To generate the tables which will be included in the "fast" parser.
 (when #t
   (gen-matlab-files)
-  ;;(system "touch parser.scm")
+  (compile-file "parser.scm")
   )
 
 ;; Geneates a text file showing the grammar and state machine.
 (when #t
-  (with-output-to-file ",lang.txt"
+  (with-output-to-file ",file.txt"
     (lambda ()
       ;;(pp-lalr-notice matlab-spec)
       (pp-lalr-grammar matlab-spec)
-      (pp-lalr-machine matlab-mach))))
-
-(when #t
+      (pp-lalr-machine matlab-mach)))
   (with-output-to-file ",stmt.txt"
     (lambda ()
       ;;(pp-lalr-notice matlab-ia-spec)
