@@ -60,7 +60,7 @@
 ;; @end itemize
 
 (define-module (nyacc lang javascript compile-tree-il)
-  #:export (compile-tree-il js-sxml->tree-il-ext)
+  #:export (compile-tree-il)
   #:use-module (nyacc lang javascript xlib)
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang nx-util)
@@ -480,11 +480,11 @@
   
 ;; ====================================
 	 
-;; @deffn {Procedure} js-sxml->tree-il/ext exp env opts
-;; Compile javascript SXML tree to external tree-il representation.
+;; @deffn {Procedure} xlang-sxml->xtil exp env opts
+;; Compile extension SXML tree to external Tree-IL representation.
 ;; This one is public because it's needed for debugging the compiler.
 ;; @end deffn
-(define (js-sxml->tree-il/ext exp env opts)
+(define-public (xlang-sxml->xtil exp env opts)
 
   ;; In the case where we pick off ``low hanging fruit'' we need to coordinate
   ;; the actions of the up and down handlers.   The down handler will provide
@@ -1218,7 +1218,7 @@
     ;;(sferr "env=~S\ncenv=~S" env cenv)
     (if exp 
 	(call-with-values
-	    (lambda () (js-sxml->tree-il/ext exp cenv opts))
+	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
 	    ;;(sferr "tree-il:\n") (pperr exp)
 	    (values (parse-tree-il exp) env cenv)
