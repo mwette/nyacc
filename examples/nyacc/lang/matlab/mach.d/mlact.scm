@@ -91,19 +91,10 @@
    (lambda ($1 . $rest) $1)
    ;; non-comment-statement => term
    (lambda ($1 . $rest) '(empty-stmt))
-   ;; non-comment-statement => lval-expr term
-   (lambda ($2 $1 . $rest) `(expr-stmt ,expr))
-   ;; non-comment-statement => lval-expr "(" expr-list ")" term
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(call-stmt ,$1 ,(tl->list $3)))
-   ;; non-comment-statement => lval-expr "=" expr term
+   ;; non-comment-statement => expr term
+   (lambda ($2 $1 . $rest) `(expr-stmt ,$1))
+   ;; non-comment-statement => expr "=" expr term
    (lambda ($4 $3 $2 $1 . $rest) `(assn ,$1 ,$3))
-   ;; non-comment-statement => "[" lval-expr-list "]" "=" ident "(" ")" term
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(multi-assign ,(tl->list $2) ,$5 (expr-list)))
-   ;; non-comment-statement => "[" lval-expr-list "]" "=" ident "(" expr-li...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(multi-assign ,(tl->list $2) ,$5 ,(tl->list $7)))
    ;; non-comment-statement => "for" ident "=" expr term stmt-list "end" term
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$2 ,$4 ,(tl->list $6)))
@@ -136,11 +127,6 @@
    ;; non-comment-statement => command arg-list term
    (lambda ($3 $2 $1 . $rest)
      `(command ,$1 ,(tl->list $2)))
-   ;; lval-expr-list => lval-expr
-   (lambda ($1 . $rest)
-     (make-tl 'lval-expr-list $1))
-   ;; lval-expr-list => lval-expr-list "," lval-expr
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; command => "global"
    (lambda ($1 . $rest) '(ident "global"))
    ;; command => "clear"
@@ -208,6 +194,10 @@
    (lambda ($3 $2 $1 . $rest) `(add ,$1 ,$3))
    ;; add-expr => add-expr "-" mul-expr
    (lambda ($3 $2 $1 . $rest) `(sub ,$1 ,$3))
+   ;; add-expr => add-expr ".+" mul-expr
+   (lambda ($3 $2 $1 . $rest) `(dot-add ,$1 ,$3))
+   ;; add-expr => add-expr ".-" mul-expr
+   (lambda ($3 $2 $1 . $rest) `(dot-sub ,$1 ,$3))
    ;; mul-expr => unary-expr
    (lambda ($1 . $rest) $1)
    ;; mul-expr => mul-expr "*" unary-expr
@@ -234,21 +224,22 @@
    (lambda ($2 $1 . $rest) $2)
    ;; unary-expr => "~" postfix-expr
    (lambda ($2 $1 . $rest) `(not ,$2))
-   ;; postfix-expr => lval-expr
-   (lambda ($1 . $rest) $1)
    ;; postfix-expr => primary-expr
    (lambda ($1 . $rest) $1)
    ;; postfix-expr => postfix-expr "'"
-   (lambda ($2 $1 . $rest) `(xpose ,$1))
+   (lambda ($2 $1 . $rest) `(transpose ,$1))
    ;; postfix-expr => postfix-expr ".'"
-   (lambda ($2 $1 . $rest) `(conj-xpose ,$1))
-   ;; lval-expr => ident
-   (lambda ($1 . $rest) $1)
-   ;; lval-expr => lval-expr "(" expr-list ")"
+   (lambda ($2 $1 . $rest) `(conj-transpose ,$1))
+   ;; postfix-expr => postfix-expr "(" expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(aref-or-call ,$1 ,(tl->list $3)))
-   ;; lval-expr => lval-expr "." ident
+   ;; postfix-expr => postfix-expr "(" ")"
+   (lambda ($3 $2 $1 . $rest)
+     `(aref-or-call ,$1 (expr-list)))
+   ;; postfix-expr => postfix-expr "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
+   ;; primary-expr => ident
+   (lambda ($1 . $rest) $1)
    ;; primary-expr => number
    (lambda ($1 . $rest) $1)
    ;; primary-expr => string

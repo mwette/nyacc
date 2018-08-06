@@ -1,4 +1,4 @@
-;;; lang/matlab/mach.scm
+;; lang/matlab/mach.scm
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -15,9 +15,13 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
+;;; Description:
+
 ;; matlab parser
 ;; 1) does NOT parse lone expressions of the form [ 1, 2] => syntax error
 ;; 2) does NOT support non-comma rows [ 1 2 ] => syntax error
+
+;;; Code:
 
 (define-module (nyacc lang matlab mach)
   #:export (matlab-spec
@@ -105,14 +109,8 @@
      (non-comment-statement))
     (non-comment-statement
      (term ($$ '(empty-stmt)))
-     ;;(expr term ($$ `(expr-stmt ,expr))) <= lotsa reduce-reduce conflicts
-     (lval-expr term ($$ `(expr-stmt ,expr))) ;; <= shift-reduce on ; , \n
-     (lval-expr "(" expr-list ")" term ($$ `(call-stmt ,$1 ,(tl->list $3))))
-     (lval-expr "=" expr term ($$ `(assn ,$1 ,$3)))
-     ("[" lval-expr-list "]" "=" ident "(" ")" term
-      ($$ `(multi-assign ,(tl->list $2) ,$5 (expr-list))))
-     ("[" lval-expr-list "]" "=" ident "(" expr-list ")" term
-      ($$ `(multi-assign ,(tl->list $2) ,$5 ,(tl->list $7))))
+     (expr term ($$ `(expr-stmt ,$1))) ;;<= lotsa reduce-reduce conflicts
+     (expr "=" expr term ($$ `(assn ,$1 ,$3)))
      ("for" ident "=" expr term stmt-list "end" term
       ($$ `(for ,$2 ,$4 ,(tl->list $6))))
      ("while" expr term stmt-list "end" term
@@ -129,11 +127,7 @@
       ($$ `(switch ,$2 ,@(tl->list $4))))
      ("return" term
       ($$ '(return)))
-     (command arg-list term ($$ `(command ,$1 ,(tl->list $2)))))
-
-    (lval-expr-list
-     (lval-expr ($$ (make-tl 'lval-expr-list $1)))
-     (lval-expr-list "," lval-expr ($$ (tl-append $1 $3)))
+     (command arg-list term ($$ `(command ,$1 ,(tl->list $2))))
      )
 
     (command
@@ -199,6 +193,8 @@
      (mul-expr)
      (add-expr "+" mul-expr ($$ `(add ,$1 ,$3)))
      (add-expr "-" mul-expr ($$ `(sub ,$1 ,$3)))
+     (add-expr ".+" mul-expr ($$ `(dot-add ,$1 ,$3)))
+     (add-expr ".-" mul-expr ($$ `(dot-sub ,$1 ,$3)))
      )
 
     (mul-expr
@@ -221,19 +217,15 @@
      )
 
     (postfix-expr
-     (lval-expr)
      (primary-expr)
-     (postfix-expr "'" ($$ `(xpose ,$1)))
-     (postfix-expr ".'" ($$ `(conj-xpose ,$1)))
-     )
-
-    (lval-expr
-     (ident)
-     (lval-expr "(" expr-list ")" ($$ `(aref-or-call ,$1 ,(tl->list $3))))
-     (lval-expr "." ident ($$ `(sel ,$3 ,$1)))
-     )
+     (postfix-expr "'" ($$ `(transpose ,$1)))
+     (postfix-expr ".'" ($$ `(conj-transpose ,$1)))
+     (postfix-expr "(" expr-list ")" ($$ `(aref-or-call ,$1 ,(tl->list $3))))
+     (postfix-expr "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
+     (postfix-expr "." ident ($$ `(sel ,$3 ,$1))))
     
     (primary-expr
+     (ident)
      (number)
      (string)
      ("(" expr ")" ($$ $2))
@@ -327,5 +319,4 @@
 			    (xtra-dir "ia-mltab.scm"))))
     (or a b c d)))
 
-;;; --- last line ---
- 
+;; --- last line ---

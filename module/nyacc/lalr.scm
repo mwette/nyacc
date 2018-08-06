@@ -1967,14 +1967,14 @@
 				((positive? p) 'shift)
 				((negative? p) 'reduce)
 				(else 'accept)))
-		      (gt (and=> p abs)))
+		      (gt (if p (abs p) "")))
 		 (fmt port "\t\t~A => ~A ~A\n"
 		      (elt->str (assq-ref i->s sy) terms)
 		      pa gt))))
 	 pat)
 	(for-each			; action, print it
 	 (lambda (ra)
-	   ;; FIX: should indicate if precedence removed user rule or default
+	   ;; FIX: indicate if precedence removed by user rule or default
 	   (fmt port "\t\t[~A => ~A ~A] REMOVED by ~A\n"
 		(elt->str (caar ra) terms) (cadar ra) (cddar ra)
 		(case (cdr ra)

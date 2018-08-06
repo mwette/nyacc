@@ -1,4 +1,4 @@
-;;; compile javascript sxml from parser to tree-il
+;; compile javascript sxml from parser to tree-il
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -14,6 +14,8 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;;; Description:
 
 ;; My goal in this development was to get experience with comping SXML trees
 ;; to tree-il: putting together patterns and utility procedures for converting
@@ -46,8 +48,9 @@
 ;; @itemize
 ;; @item add let only allow var at top-level and function start scope
 ;; @end itemize
-;;
-;; NOTES
+
+;;; Notes:
+
 ;; @itemize
 ;; @item JS functions will need to be re-implemented as objects, with the
 ;;       `[[Call]]' property used to make calls.
@@ -58,6 +61,8 @@
 ;; @item (void) == (const *unspecified*) i think
 ;; @item need atomic-box?
 ;; @end itemize
+
+;;; Code:
 
 (define-module (nyacc lang javascript compile-tree-il)
   #:export (compile-tree-il)
@@ -325,12 +330,6 @@
 			(cons (list-ref (car binds) 2) gsyms)
 			(cons (list-ref (car binds) 3) inits)
 			(cdr binds)))))))))
-
-;; @deffn {Procedure} make-thunk expr => `(lambda ...)
-;; Generate a thunk.
-;; @end deffn
-(define* (make-thunk expr #:key name)
-  `(lambda ,(if name '((namhe)) '()) (lambda-case ((() #f #f #f () ()) ,expr))))
 
 ;; @deffn {Procedure} make-do-while expr body bsym csym
 ;; @deffnx {Procedure} make-while expr body bsym csym

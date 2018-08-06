@@ -21,7 +21,7 @@
 	    nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-symbol
 	    nx-lookup-in-env nx-lookup
 	    rtail singleton?
-	    make-and make-or
+	    make-and make-or make-thunk
 	    rev/repl
 	    opcall-generator
 	    )
@@ -118,5 +118,12 @@
   (define (xlib-ref name) `(@@ ,xlib ,name))
   (lambda (op seed kseed kdict)
     (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict)))
+
+;; @deffn {Procedure} make-thunk expr => `(lambda ...)
+;; Generate a thunk.
+;; @end deffn
+(define* (make-thunk expr #:key name)
+  `(lambda ,(if name `((name . ,name)) '())
+     (lambda-case ((() #f #f #f () ()) ,expr))))
 
 ;; --- last line ---

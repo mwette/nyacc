@@ -39,6 +39,7 @@
 
 (define xlib-mod '(nyacc lang matlab xlib))
 (define xlib-module (resolve-module xlib-mod))
+(define (xlib-ref name) `(@@ (nyacc lang matlab xlib) ,name))
 		       
 (define push-scope nx-push-scope)
 (define pop-scope nx-pop-scope)
@@ -130,8 +131,8 @@
        ((empty-statement)
 	(values (cons '(void) kseed) kdict))
 
-       ((call-stmt) ;; TODO
-	(values (cons '(void) kseed) kdict))
+       ((expr-stmt)
+	(values (cons (car kseed) seed) kdict))
 
        ((assn)
 	(let ((tail (rtail kseed)))
@@ -142,7 +143,22 @@
 		  kdict)))
 
        ((multi-assn) ;; TODO
-	(values (cons '(void) kseed) kdict))
+	;;(values (cons '(void) kseed) kdict))
+	(let* ((body (car kseed))
+	       (lvals (cadr kseed))	; assume list of lexvals or topvals
+	       )
+	  (sferr "========\n")
+	  (pperr lvals)
+	  (sferr "========\n")
+	  `(primcall
+	    call-with-values
+	    ,(make-thunk body)
+	    `(lambda ()
+	       (lambda-case ((() #f #f #f () ())
+			     (box-set! xx)
+			     )
+			    )))
+	  (values (cons '(void) seed) kdict)))
        
        ((for) ;; TODO
 	(values (cons '(void) kseed) kdict))
@@ -167,17 +183,55 @@
        ((command) ;; TODO
 	(values (cons '(void) kseed) kdict))
 
-
-       ((lval-expr-list) ;; TODO
-	(values (cons '(void) kseed) kdict))
+       ((expr-list)
+	(values (cons `(primcall list ,@(rtail kseed)) seed) kdict))
 
        ((colon-expr) ;; TODO
 	(values (cons '(void) kseed) kdict))
 
+       ((or) (make-opcall 'ml:or seed kseed kdict))
+       ((and) (make-opcall 'ml:and seed kseed kdict))
+       ((eq) (make-opcall 'ml:eq seed kseed kdict))
+       ((ne) (make-opcall 'ml:ne seed kseed kdict))
+       ((lt) (make-opcall 'ml:lt seed kseed kdict))
+       ((gt) (make-opcall 'ml:gt seed kseed kdict))
+       ((le) (make-opcall 'ml:le seed kseed kdict))
+       ((ge) (make-opcall 'ml:ge seed kseed kdict))
+       
        ((add) (make-opcall 'ml:+ seed kseed kdict))
        ((sub) (make-opcall 'ml:- seed kseed kdict))
+       ((dot-add) (make-opcall 'ml:.+ seed kseed kdict))
+       ((dot-sub) (make-opcall 'ml:.- seed kseed kdict))
        ((mul) (make-opcall 'ml:* seed kseed kdict))
        ((div) (make-opcall 'ml:/ seed kseed kdict))
+       ((ldiv) (make-opcall 'ml:\ seed kseed kdict))
+       ((pow) (make-opcall 'ml:^ seed kseed kdict))
+       ((dot-mul) (make-opcall 'ml:.* seed kseed kdict))
+       ((dot-div) (make-opcall 'ml:./ seed kseed kdict))
+       ((dot-pow) (make-opcall 'ml:.^ seed kseed kdict))
+       
+       ((neg) (make-opcall 'ml:neg seed kseed kdict))
+       ((pos) (make-opcall 'ml:pos seed kseed kdict))
+       ((not) (make-opcall 'ml:not seed kseed kdict))
+       
+       ((transpose) (make-opcall 'ml:xpose seed kseed kdict))
+       ((conj-transpose) (make-opcall 'ml:cj-xpose seed kseed kdict))
+
+       ;; aref-or-call
+       ((aref-or-call)
+	(values
+	 (cons `(call ,(xlib-ref 'ml:aref-or-call) ,@(rtail kseed)) seed)
+	 kdict))
+
+       ;; sel
+
+       ;; row
+       ;; matrix
+       ;; cell-array
+
+       ;; comm-list
+
+       ;; ident, fixed, float, string, comm
 
        (else
 	(cond

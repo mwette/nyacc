@@ -16,18 +16,60 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang matlab xlib)
-  #:export (xdict
-	    ml:+
-	    )
+  #:export (xdict)
+  #:use-module (srfi srfi-9)
   )
 
 (define xdict
   '(
     ))
 
-(define (ml:+ a b) (+ a b))
-(define (ml:- a b) (- a b))
-(define (ml:* a b) (* a b))
-(define (ml:/ a b) (/ a b))
+(define-record-type ml:range
+  (make-ml:range lb inc ub)
+  ml:range?
+  (lb ml:range-lb)
+  (inc ml:range-inc)
+  (ub ml:range-ub))
+
+(define-public (ml:or a b) (if (and (zero? a) (zero? b)) 0 1))
+(define-public (ml:and a b) (if (or (zero? a) (zero? b)) 0 1))
+(define-public (ml:eq a b) (if (equal? a b) 1 0))
+(define-public (ml:ne a b) (- 1 (ml:eq a b)))
+(define-public (ml:lt a b) (if (< a b) 1 0))
+(define-public (ml:gt a b) (if (> a b) 1 0))
+(define-public (ml:le a b) (if (<= a b) 1 0))
+(define-public (ml:ge a b) (if (>= a b) 1 0))
+(define-public (ml:+ a b) (+ a b))
+(define-public (ml:- a b) (- a b))
+(define-public (ml:* a b) (* a b))
+(define-public (ml:/ a b) (/ a b))
+
+(define-public (ml:vector-ref vec arg)
+  ;; arg can be a positive integer, a range, or an array
+  (cond
+   ((integer? arg) (vector-ref vec (1- arg)))
+   (else (error "matlab: expecing integer, range or array"))))
+
+(define-public (ml:array-ref vec . args)
+  ;; args can be positive integer, a range, or an array
+  (let ((arg (car args))
+	)
+    (cond
+     ((integer? arg) (array-ref vec (1- arg)))
+     (else (error "matlab: expecing integer, range or array")))))
+
+(define-public (ml:aref-or-call proc-or-array . args)
+  (cond
+   ((procedure? proc-or-array)
+    (apply proc-or-array args))
+   ((vector? proc-or-array)
+    (unless (= 1 (length args))
+      (error "matlab: vector ref requires 1 int arg"))
+    (apply ml:vector-ref proc-or-array (car args)))
+   ((array? proc-or-array)
+    (apply ml:array-ref proc-or-array args))
+   (else
+    (error "expecting function or array"))))
+      
 
 ;; --- last line ---
