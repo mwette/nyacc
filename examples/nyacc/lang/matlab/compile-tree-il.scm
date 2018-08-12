@@ -26,7 +26,7 @@
   #:use-module (nyacc lang sx-util)
   ;;#:use-module (nyacc lang util)
   #:use-module ((sxml fold) #:select (foldts*-values))
-  #:use-module ((srfi srfi-1) #:select (fold append-reverse))
+  #:use-module ((srfi srfi-1) #:select (fold fold-right append-reverse))
   #:use-module (language tree-il)
   #:use-module (ice-9 match)
   ;;#:use-module (system base compile)
@@ -77,7 +77,16 @@
      (else (iter (cdr refs))))))
 
 (define make-opcall (opcall-generator xlib-mod))
-					   
+
+;; @deffn {Procedure} display-result? tree
+;; Predicate that looks at @code{term} attribute to determine if user wants
+;; the result of this statement displayed.  In Guile, this is implemented as
+;; a return value for the translated statement.
+;; @end deffn
+(define (display-result? tree)
+  (and=> (sx-attr-ref tree 'term)
+	 (lambda (t) (not (string=? t ";")))))
+
 ;; @deffn {Procedure} xlang-sxml->xtil exp env opts
 ;; Compile extension SXML tree to external Tree-IL representation.
 ;; This one is public because it's needed for debugging the compiler.
@@ -88,13 +97,10 @@
     (sx-match tree
 
       ((ident ,name)
-       (let ((ref (lookup name dict)))
-	 (cond
-	  (ref
-	   (values '() ref dict))
-	  (else
-	   (let ((dict (add-symbol name dict)))
-	     (values '() (lookup name dict) dict))))))
+       (cond
+	((lookup name dict) => (lambda (r) (values '() r dict)))
+	(else (let ((dict (add-symbol name dict)))
+		(values '() (lookup name dict) dict)))))
 
       ((fixed ,sval)
        (values '() `(const ,(string->number sval)) dict))
@@ -102,6 +108,33 @@
       ((float ,sval)
        (values '() `(const ,(string->number sval)) dict))
 
+      ;; (assn (ident ,name) ,rhs))=> (var-assn (ident ,name) ,rhs)
+      ;; (assn (aref-or-call ,ident ,expl)) => (elt-assn ,ident ,expl ,rhs)
+      ;; (assn (sel ,ident ,expr) ,rhs) => (mem-assn ,ident ,expr ,rhs)
+      ;; (assn . ,other) => syntax error
+      ((assn (ident ,name) ,rhs)
+       (values `(var-assn (ident ,name) ,rhs) '() dict))
+      ((assn (aref-or-call ,ident ,expl) ,rhs)
+       (values `(elt-assn ,ident ,expl ,rhs) '() dict))
+      ((assn (sel ,ident ,expr) ,rhs)
+       (values `(mem-assn ,ident ,expr ,rhs) '() dict))
+      ((assn . ,other)
+       (throw 'nyacc-error "syntax error"))
+
+      ((fctn-defn (fctn-decl (ident ,name)
+			     (ident-list . ,inargs)
+			     (ident-list . ,outargs))
+		  ,_)
+       ;; note: In the following (1) placement of "return" and (2) use of
+       ;; fold (vs fold-right) is critical for fctn-defn handling in fU.
+       (let* ((dict (push-scope (add-symbol name dict)))
+	      (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
+			  dict inargs))
+	      (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
+			  dict outargs))
+	      (dict (add-lexical "return" dict)))
+	 (values tree '() dict)))
+       
       (else
        (values tree '() dict))))
 
@@ -123,42 +156,111 @@
        ((*TOP*)
 	(values (add-topdefs kdict (car kseed)) kdict))
 
+       ((function-file)
+	(let* ((tail (rtail kseed))
+	       (body (fold-right
+		      (lambda (stmt body) (if body `(seq ,stmt ,body) stmt))
+		      #f tail)))
+	  (values (cons body seed) kdict)))
+
        ;; For functions, need to check kdict for lexicals and add them.
-       ;; set *TOP* for toplevel versoin of same.  (gen add-lexdefs
-       ;; ((function)
+       ((fctn-defn)
+	(let* ((tail (rtail kseed))
+	       (decl (list-ref tail 0))
+	       (name (cadr (list-ref decl 1)))
+	       (iargs (cdr (list-ref decl 2))) ; in reverse order
+	       (oargs (cdr (list-ref decl 3))) ; in reverse order
+	       (lvars (let iter ((ldict kdict))
+			(if (string=? "return" (caar ldict)) oargs
+			    (cons (cdar ldict) (iter (cdr ldict))))))
+	       ;; Ensure that last call is a return.
+	       (body (list-ref tail 1))
+	       ;; Set up the return prompt expr
+	       (ptag (lookup "return" kdict))
+	       (body (with-escape ptag body))
+	       ;; The tail expression is return value(s).
+	       (rval (case (length oargs)
+		       ((0) '(void))
+		       ((1) (car oargs))
+		       (else `(primcall values ,@oargs))))
+	       (body `(seq ,body ,rval))
+	       ;; Now wrap in local `let'
+	       (body (let iter ((nl '()) (ll '()) (vl '()) (vs lvars))
+		       (if (null? vs)
+			   `(let ,nl ,ll ,vl ,body)
+			   (iter
+			    (cons (list-ref (car vs) 1) nl)
+			    (cons (list-ref (car vs) 2) ll)
+			    (cons '(void) vl)
+			    (cdr vs)))))
+	       ;;
+	       (fctn `(set! (toplevel ,name)
+			(lambda ((name . ,name))
+			  (lambda-case ((() ,(map cadr iargs) #f #f
+					 ,(map (lambda (v) '(void)) iargs)
+					 ,(map caddr iargs)) ,body))))))
+	  (values (cons fctn seed) (pop-scope kdict))))
+
+       ;; fctn-decl: handled by fctn-defn case
+
+       ((stmt-list)
+	(let* ((tail (rtail kseed))
+	       (body (fold-right
+		      (lambda (stmt body) (if body `(seq ,stmt ,body) stmt))
+		      #f tail)))
+	  (values (cons body seed) kdict)))
 
        ;; Statements
-       ((empty-statement)
-	(values (cons '(void) kseed) kdict))
+       ((empty-stmt)
+	(values seed kdict))
 
        ((expr-stmt)
 	(values (cons (car kseed) seed) kdict))
 
-       ((assn)
-	(let ((tail (rtail kseed)))
-	  ;;(values (cons `(set! ,(car tail) ,(cadr tail)) kseed) kdict)))
-	  ;; The following will return assigned expression.
-	  (values (cons `(seq (set! ,(car tail) ,(cadr tail)) ,(car tail))
-			kseed)
-		  kdict)))
+       ;; Assignment needs to deal with all left hand expressions
+       ;; 1) (ident ,name)
+       ;; 2) (aref-or-call ,expr-list)
+       ;; 3) (sel (ident ,name) ,expr)
+       ;; ...
+       ;; 1) set!
+       ;; 2) vector-set!
+       ;; 3) array-set!
+       ;; 4) hash-set!
+       ((var-assn)
+	(let* ((tail (rtail kseed))
+	       (lhs (car tail))
+	       (rhs (cadr tail))
+	       (stmt `(set! ,lhs ,rhs))
+	       (disp (display-result? tree)))
+	  (values (cons (if disp `(seq ,stmt ,lhs) stmt) seed) kdict)))
 
-       ((multi-assn) ;; TODO
-	;;(values (cons '(void) kseed) kdict))
+       ((multi-assn)
+	;; This executes a call within a call-with-values where the values
+	;; handler does a sequence of set! for lhs args.
+	;;   [a, b] = f(1, 2, 3);
+	;; =>
+	;;   (call-with-values
+	;;       (lambda () (f 1 2 3))
+	;;     (lambda ($arg0 $arg1 . $rest)
+	;;       (set! a $arg0)
+	;;       (set! b $arg1))
+	;; TODO: currently use set! but need to expand
 	(let* ((body (car kseed))
-	       (lvals (cadr kseed))	; assume list of lexvals or topvals
-	       )
-	  (sferr "========\n")
-	  (pperr lvals)
-	  (sferr "========\n")
-	  `(primcall
-	    call-with-values
-	    ,(make-thunk body)
-	    `(lambda ()
-	       (lambda-case ((() #f #f #f () ())
-			     (box-set! xx)
-			     )
-			    )))
-	  (values (cons '(void) seed) kdict)))
+	       (lvals (cdadr kseed))
+	       (avars (let iter ((lvs lvals) (ix 0))
+			(if (null? lvs) '()
+			    (let* ((n (string-append "$arg" (number->string ix)))
+				   (s (string->symbol n)) (g (genxsym n))
+				   (x `(set! ,(car lvs) (lexical ,s ,g))))
+			      (cons (list s g x) (iter (cdr lvs) (1+ ix)))))))
+	       (rest (genxsym "$rest"))
+	       (body `(primcall
+		       call-with-values ,(make-thunk body)
+		       (lambda ()
+			 (lambda-case ((,(map car avars) #f $rest #f
+					() (,@(map cadr avars) ,rest))
+				       ,(vblock (map caddr avars))))))))
+	  (values (cons body seed) kdict)))
        
        ((for) ;; TODO
 	(values (cons '(void) kseed) kdict))
@@ -177,14 +279,16 @@
        ((case) ;; TODO
 	(values (cons '(void) kseed) kdict))
 
-       ((return) ;; TODO
-	(values (cons '(void) kseed) kdict))
+       ((return)
+	(values
+	 (cons `(abort ,(lookup "return" kdict) () (const ())) seed)
+	 kdict))
 
        ((command) ;; TODO
 	(values (cons '(void) kseed) kdict))
 
        ((expr-list)
-	(values (cons `(primcall list ,@(rtail kseed)) seed) kdict))
+	(values (cons (reverse kseed) seed) kdict))
 
        ((colon-expr) ;; TODO
 	(values (cons '(void) kseed) kdict))
@@ -219,9 +323,10 @@
 
        ;; aref-or-call
        ((aref-or-call)
-	(values
-	 (cons `(call ,(xlib-ref 'ml:aref-or-call) ,@(rtail kseed)) seed)
-	 kdict))
+	(let ((proc-or-array (cadr kseed)) (args (cdar kseed)))
+	  (values
+	   (cons `(call ,(xlib-ref 'ml:aref-or-call) ,proc-or-array ,@args) seed)
+	   kdict)))
 
        ;; sel
 
@@ -232,6 +337,8 @@
        ;; comm-list
 
        ;; ident, fixed, float, string, comm
+
+       ((@) (values seed kdict))
 
        (else
 	(cond
@@ -244,21 +351,14 @@
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
   )
 
-;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv
-;; On input @var{exp} is the SXML from our reader, @var{env} is ``an
-;; environment'', and @var{opts} is a keyword list of options.  The procedure
-;; return three values: the compiled expressin, the corresponding environment
-;; for the target for the compiled language, and a continuation environment
-;; for the next javascript tree.
-;; @end deffn
 (define (compile-tree-il exp env opts)
-  (sferr "sxml:\n") (pperr exp)
-  (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
+  ;;(sferr "sxml:\n") (pperr exp)
+  (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
     (if exp 
 	(call-with-values
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    (sferr "tree-il:\n") (pperr exp)
+	    ;;(sferr "tree-il:\n") (pperr exp)
 	    (values (parse-tree-il exp) env cenv)
 	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
      	    ))

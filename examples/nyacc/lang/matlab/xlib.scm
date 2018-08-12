@@ -19,6 +19,8 @@
   #:export (xdict)
   #:use-module (srfi srfi-9)
   )
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
 
 (define xdict
   '(
@@ -46,9 +48,10 @@
 
 (define-public (ml:vector-ref vec arg)
   ;; arg can be a positive integer, a range, or an array
+  ;;(sferr "arg=~S\n" arg)
   (cond
    ((integer? arg) (vector-ref vec (1- arg)))
-   (else (error "matlab: expecing integer, range or array"))))
+   (else (error "matlab: expecing vector arg of integer, range or array"))))
 
 (define-public (ml:array-ref vec . args)
   ;; args can be positive integer, a range, or an array
@@ -56,20 +59,27 @@
 	)
     (cond
      ((integer? arg) (array-ref vec (1- arg)))
-     (else (error "matlab: expecing integer, range or array")))))
+     (else (error "matlab: expecting array args of integer, range or array")))))
 
 (define-public (ml:aref-or-call proc-or-array . args)
+  ;;(sferr "proc-or-array=~S  args=~S\n" proc-or-array args)
   (cond
    ((procedure? proc-or-array)
     (apply proc-or-array args))
    ((vector? proc-or-array)
     (unless (= 1 (length args))
       (error "matlab: vector ref requires 1 int arg"))
-    (apply ml:vector-ref proc-or-array (car args)))
+    (ml:vector-ref proc-or-array (car args)))
    ((array? proc-or-array)
     (apply ml:array-ref proc-or-array args))
    (else
     (error "expecting function or array"))))
+
+(define-public (ml:elt-assn arry expl value)
+  #f)
+      
+(define-public (ml:mem-assn arry expl value)
+  #f)
       
 
 ;; --- last line ---

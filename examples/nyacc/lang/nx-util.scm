@@ -22,8 +22,10 @@
 	    nx-lookup-in-env nx-lookup
 	    rtail singleton?
 	    make-and make-or make-thunk
+	    with-escape/handler with-escape/arg with-escape/expr with-escape
 	    rev/repl
 	    opcall-generator
+	    block vblock
 	    )
   )
 
@@ -125,5 +127,74 @@
 (define* (make-thunk expr #:key name)
   `(lambda ,(if name `((name . ,name)) '())
      (lambda-case ((() #f #f #f () ()) ,expr))))
+
+;; === Using Prompts 
+
+;; @deffn {Procedure} make-handler args body
+;; Generate an escape @code{lambda} for a prompt.  The continuation arg
+;; is not used.  @var{args} is a list of lexical references and @var{body}
+;; is an expression that may reference the args.
+;; @end deffn
+(define (make-handler args body)
+  (call-with-values
+      (lambda ()
+	(let iter ((names '()) (gsyms '()) (args args))
+	  (if (null? args)
+	      (values (reverse names) (reverse gsyms))
+	      (iter (cons (cadar args) names)
+		    (cons (caddar args) gsyms)
+		    (cdr args)))))
+    (lambda (names gsyms)
+      `(lambda ()
+	 (lambda-case ((,(cons 'k names) #f #f #f () ,(cons (genxsym "k") gsyms))
+		       ,body))))))
+	 
+;; @deffn {Procedure} with-escape tag-ref body
+;; @deffx {Procedure} with-escape/arg tag-ref body
+;; @deffx {Procedure} with-escape/expr tag-ref body
+;; use for return and break where break is passed '(void)
+;; tag-ref is of the form (lexical name gensym)
+;; @var{expr} is a fixed expression 
+;; @end deffn
+(define (with-escape/handler tag-ref body hdlr)
+  (let ((tag-name (cadr tag-ref))
+	(tag-gsym (caddr tag-ref)))
+    `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
+	  (prompt #t ,tag-ref ,body ,hdlr))))
+  
+(define (with-escape/arg tag-ref body)
+  (let ((arg-gsym (genxsym "arg")))
+    (with-escape/handler
+     tag-ref body
+     `(lambda ()
+	(lambda-case (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
+		      (lexical arg ,arg-gsym)))))))
+
+(define (with-escape/expr tag-ref body expr)
+  (with-escape/handler
+   tag-ref body
+   `(lambda () (lambda-case (((k) #f #f #f () (,(genxsym "k"))) ,expr)))))
+
+(define (with-escape tag-ref body)
+  (with-escape/expr tag-ref body '(void)))
+
+;; @deffn {Procedure} block expr-or-expr-list => expr | (seq ex1 (seq ... exN))
+;; Return an expression or build a seq-train returning last expression.
+;; @end deffn
+(define (block expr-or-expr-list)
+  (if (pair? (car expr-or-expr-list))
+      ;; expr list
+      (let iter ((xl expr-or-expr-list))
+	(if (null? (cdr xl)) (car xl)
+	    `(seq ,(car xl) ,(iter (cdr xl)))))
+      expr-or-expr-list))
+
+;; @deffn {Procedure} vblock expr-list => (seq ex1 (seq ... (void)))
+;; Return an expression or build a seq-train returning undefined.
+;; @end deffn
+(define (vblock expr-list)
+  (let iter ((xl expr-list))
+    (if (null? xl) '(void)
+	`(seq ,(car xl) ,(iter (cdr xl))))))
 
 ;; --- last line ---

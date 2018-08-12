@@ -421,7 +421,7 @@
 	       ((apply-helper file))
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
 	       (else (set! bol #t) (push-input (open-input-file path))))
-	      (sx+attr* stmt 'path path)))
+	      (sx-attr-add stmt 'path path)))
 
 	  (define* (eval-cpp-incl/tree stmt #:optional next) ;; => stmt
 	    ;; include file as a new tree
@@ -435,7 +435,7 @@
 	       ((with-input-from-file path run-parse) => ; add tree
 	       (lambda (tree)
 		 (for-each add-define (getdefs tree))
-		 (append (sx+attr* stmt 'path path) (list tree)))))))
+		 (append (sx-attr-add stmt 'path path) (list tree)))))))
 
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
 	    (case (car stmt)

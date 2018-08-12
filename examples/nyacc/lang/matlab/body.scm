@@ -46,7 +46,9 @@
 		       (cons '$string (list->string (reverse cl)))))))
 	      (else (iter (cons ch cl) (read-char)))))))
 
-(define matlab-read-comm (make-comm-reader '(("%" . "\n"))))
+(define matlab-read-comm
+  (make-comm-reader '(("%" . "\n")
+		      ("#!" . "!#") ("#lang" . "\n"))))
 
 ;; elipsis reader "..." whitespace "\n"
 (define (elipsis? ch)

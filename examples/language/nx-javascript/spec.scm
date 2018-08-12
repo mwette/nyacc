@@ -1,4 +1,4 @@
-;;; NYACC javascript specification for Guile
+;; Nyacc eXtension for javascript
 
 ;; Copyright (C) 2015,2017-2018 Matthew R. Wette
 ;;
@@ -15,6 +15,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
+;;; Code:
+
 (define-module (language nx-javascript spec)
   #:export (nx-javascript)
   #:use-module (nyacc lang javascript parser)
@@ -22,14 +24,11 @@
   #:use-module (nyacc lang javascript pprint)
   #:use-module (system base language))
 
-;; so probably the reader should have 
-
 (define-language nx-javascript
   #:title	"nx-javascript"
-  #:reader	js-stmt-reader
-  ;;#:reader	(lambda (p e) (if (eq? e (interaction-enviornment))
-  ;;				  (js-stmt-reader p e)
-  ;;				  (js-file-reader p e)))
+  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
+  				  (js-stmt-reader p e)
+  				  (js-file-reader p e)))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-js
@@ -38,7 +37,6 @@
 		  ;; ripoff from language/scheme/spec.scm
 		  (let ((env (make-fresh-user-module)))
 		    (module-define! env 'current-reader (make-fluid))
-		    env))
-  )
+		    env)))
 
 ;; --- last line ---

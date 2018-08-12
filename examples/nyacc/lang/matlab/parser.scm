@@ -1,4 +1,4 @@
-;;; nyacc/lang/matlab/parser.scm
+;; nyacc/lang/matlab/parser.scm
 
 ;; Copyright (C) 2016,2018 Matthew R. Wette
 ;;
@@ -15,13 +15,13 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
+;;; Code:
+
 (define-module (nyacc lang matlab parser)
-  #:export (parse-ml ml-stmt-reader)
+  #:export (parse-ml ml-stmt-reader ml-file-reader)
   #:use-module (nyacc lex)
-  ;;#:use-module (nyacc lalr)
   #:use-module (nyacc parse)
-  #:use-module (nyacc lang util)	; tl routines
-  )
+  #:use-module (nyacc lang util))
 
 (include-from-path "nyacc/lang/matlab/body.scm")
 
@@ -52,6 +52,13 @@
    (lambda (key fmt . args)
      (apply simple-format (current-error-port) fmt args)
      #f)))
+
+(define (ml-file-reader port env)
+  (with-input-from-port port
+    (lambda ()
+      (if (eof-object? (peek-char port))
+	  (read-char port)
+	  (parse-ml #:debug #f)))))
 
 ;; === interactive parser
 

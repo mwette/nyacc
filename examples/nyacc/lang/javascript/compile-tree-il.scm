@@ -83,27 +83,7 @@
 ;; === portability ===================
 ;; no longer supports guile 2.0: assuming 2.2
 
-;; @deffn {Procedure} block expr-or-expr-list => expr | (seq ex1 (seq ... exN))
-;; Return an expression or build a seq-train returning last expression.
-;; @end deffn
-(define (block expr-or-expr-list)
-  (if (pair? (car expr-or-expr-list))
-      ;; expr list
-      (let iter ((xl expr-or-expr-list))
-	(if (null? (cdr xl)) (car xl)
-	    `(seq ,(car xl) ,(iter (cdr xl)))))
-      expr-or-expr-list))
-
-;; @deffn {Procedure} vblock expr-list => (seq ex1 (seq ... (void)))
-;; Return an expression or build a seq-train returning undefined.
-;; @end deffn
-(define (vblock expr-list)
-  (let iter ((expl expr-list))
-    (if (null? expl) '(void)
-	(acons 'seq (car expl) (iter (cdr expl))))))
-
 (define (jsym) (gensym "JS~"))
-;;(define genjsym genxsym)
 
 ;; =======================
 
@@ -213,76 +193,6 @@
 	(if (not sym) (error "javascript: not found:" name))
 	(caddr sym))))
 
-;; === using prompts ====================
-
-;; @deffn {Procedure} make-handler args body
-;; Generate an escape @code{lambda} for a prompt.  The continuation arg
-;; is not used.  @var{args} is a list of lexical references and @var{body}
-;; is an expression that may reference the args.
-;; @end deffn
-(define (make-handler args body)
-  (call-with-values
-      (lambda ()
-	(let iter ((names '()) (gsyms '()) (args args))
-	  (if (null? args)
-	      (values (reverse names) (reverse gsyms))
-	      (iter (cons (cadar args) names)
-		    (cons (caddar args) gsyms)
-		    (cdr args)))))
-    (lambda (names gsyms)
-      `(lambda ()
-	 (lambda-case ((,(cons 'k names) #f #f #f () ,(cons (genxsym "k") gsyms))
-		       ,body))))))
-	 
-;; @deffn {Procedure} with-escape tag-ref body
-;; @deffx {Procedure} with-escape/arg tag-ref body
-;; use for return and break where break is passed '(void)
-;; tag-ref is of the form (lexical name gensym)
-;; @end deffn
-(define (with-escape/handler tag-ref body hdlr)
-  (let ((tag-name (cadr tag-ref))
-	(tag-gsym (caddr tag-ref)))
-    `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
-	  (prompt #t ,tag-ref ,body ,hdlr))))
-  
-(define (with-escape/arg tag-ref body)
-  (let ((arg-gsym (genxsym "arg")))
-    (with-escape/handler
-     tag-ref body
-     `(lambda ()
-	(lambda-case (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
-		      (lexical arg ,arg-gsym)))))))
-
-(define (with-escape tag-ref body)
-  (let ((arg-gsym (genxsym "arg")))
-    (with-escape/handler
-     tag-ref body
-     `(lambda ()
-	(lambda-case (((k) #f #f #f () (,(genxsym "k")))
-		      (void)))))))
-
-(define (xx-with-escape/arg tag-ref body)
-  (let ((tag-name (cadr tag-ref))
-	(tag-gsym (caddr tag-ref))
-	(arg-gsym (genxsym "arg")))
-    `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
-	  (prompt #t ,tag-ref
-		  ,body
-		  (lambda ()
-		    (lambda-case
-		     (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
-		      (lexical arg ,arg-gsym))))))))
-(define (xx-with-escape tag-ref body)
-  (let ((tag-name (cadr tag-ref))
-	(tag-gsym (caddr tag-ref)))
-    `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
-	  (prompt #t ,tag-ref
-		  ,body
-		  (lambda ()
-		    (lambda-case
-		     (((k) #f #f #f () (,(genxsym "k")))
-		      (void))))))))
-
 ;; === codegen procedures =============
 
 ;; @deffn {Procedure} make-let bindings exprs
@@ -309,7 +219,7 @@
 ;; @end example
 ;; @noindent where bindings may look like
 ;; @example
-;; (bindings (bind v v~5897 (void))(bind w w~5898 (const 3)))
+;; (bindings (bind v v~5897 (void)) (bind w w~5898 (const 3)))
 ;; @end example
 ;; @noindent
 ;; Oh, I think this needs to use @code{letrec*}.
@@ -1192,24 +1102,11 @@
     (values (cons leaf seed) dict))
 
   ;; We generate a dictionary with the env (module?) available at the top.
-  #;(let ((dict (acons '@top #t (acons '@M env JSdict)))
-	(sexp `(*TOP* ,exp)))
-    (call-with-values
-	(lambda () (foldts*-values fD fU fH sexp '() dict))
-      (lambda (seed dict) seed)))
-  (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
-  )
+  (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
 
 
 (use-modules (language tree-il compile-cps))
 
-;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv
-;; On input @var{exp} is the SXML from our reader, @var{env} is ``an
-;; environment'', and @var{opts} is a keyword list of options.  The procedure
-;; return three values: the compiled expressin, the corresponding environment
-;; for the target for the compiled language, and a continuation environment
-;; for the next javascript tree.
-;; @end deffn
 (define (compile-tree-il exp env opts)
   ;;(sferr "\nenv=~S\n" env)
   ;;(sferr "sxml:\n") (pperr exp)

@@ -30,6 +30,11 @@ Note: Guile assumes reader/compiler will return EOF on end of input.
 
 Note: Extensions should allow identifiers to start with `$'.
 
+Note: If language functions have special variables the convention is
+to pass via keyword aruments.  For example, in javacript all functions
+accept the @code{#:this} keyword.  (I should add @code{#:nargin} etc.
+to matlab.)
+
 @heading Read, Parse and Compile
 
 A language may have two or three phases to get to lower level.
@@ -105,6 +110,13 @@ assigned. The routine to generate this is called
 TIL expression with symbols appearing in our symbol table is called
 @code{add-topdefs}.  Right now this is in @file{matlab/compile-tree-il.scm}
 
+@deffn {Procedure} compile-tree-il exp env opts => exp env cenv
+On input @var{exp} is the SXML from our reader, @var{env} is ``an
+environment'', and @var{opts} is a keyword list of options.  The procedure
+returns three values: the compiled expression, the corresponding environment
+for the target for the compiled language, and a continuation environment
+for the next source tree.
+@end deffn
 
 
 @heading Modules

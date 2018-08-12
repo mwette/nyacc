@@ -1,26 +1,28 @@
-;;; module/nyacc/sx-util.scm
-;;;
-;;; Copyright (C) 2015-2018 Matthew R. Wette
-;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Lesser General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 3 of the License, or (at your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+;; module/nyacc/sx-util.scm
+
+;; Copyright (C) 2015-2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 ;; runtime utilities for the parsers
+
+;;; Code:
 
 (define-module (nyacc lang sx-util)
   #:export (sx-tag
 	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
-	    sx-attr-ref sx-has-attr? sx-attr-set! sx-attr-set* sx+attr*
+	    sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
 	    sx-find
 	    sx-match sx-haz-addr?)
   #:use-module ((srfi srfi-1) #:select (find fold)))
@@ -186,6 +188,33 @@
 			 (else '()))))
     (and=> (assq-ref attr-tail key) car)))
 
+;; @deffn {Procedure} sx-attr-add sx key val
+;; Add attribute to sx.
+;; @end deffn
+(define (sx-attr-add sx key val)
+  (cons
+   (car sx)
+   (if (sx-has-attr? sx)
+       (cons `(@ (,key ,val)
+		 ,@(let iter ((atl (cdr (sx-attr sx))))
+		     (cond ((null? atl) '())
+			   ((eq? key (caar atl)) (iter (cdr atl)))
+			   (else (cons (car atl) (iter (cdr atl)))))))
+	     (cddr sx))
+       (cons `(@ (,key ,val)) (cdr sx)))))
+
+;; @deffn {Procedure} sx-attr-add* sx key val [key val [@dots{} ]] => sx
+;; Add key-val pairs. @var{key} must be a symbol and @var{val} must be
+;; a string.  Return a new @emph{sx}.
+;; @end deffn
+(define (sx-attr-add* sx . rest)
+  (let* ((attrs (if (sx-has-attr? sx) (cdr (sx-attr sx)) '()))
+	 (attrs (let iter ((kvl rest))
+		  (if (null? kvl) attrs
+		      (cons (list (car kvl) (cadr kvl)) (iter (cddr kvl)))))))
+    (cons* (sx-tag sx) (cons '@ attrs)
+	   (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
+
 ;; @deffn {Procedure} sx-attr-set! sx key val
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,
 ;; add it, if it does exist, replace it.
@@ -196,29 +225,6 @@
 	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
       (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
   sx)
-(define sx-set-attr! sx-attr-set!)
-
-;; @deffn {Procedure} sx-attr-set* sx key val [key val [key ... ]]
-;; Generate sx with added or changed attributes.
-;; @end deffn
-(define (sx-attr-set* sx . rest)
-  (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
-    (cond
-     ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
-     (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
-(define sx-set-attr* sx-attr-set*)
-
-;; @deffn {Procedure} sx+attr* sx key val [key val [@dots{} ]] => sx
-;; Add key-val pairs. @var{key} must be a symbol and @var{val} must be
-;; a string.  Return a new @emph{sx}.
-;; @end deffn
-(define (sx+attr* sx . rest)
-  (let* ((attrs (if (sx-has-attr? sx) (cdr (sx-attr sx)) '()))
-	 (attrs (let iter ((kvl rest))
-		  (if (null? kvl) attrs
-		      (cons (list (car kvl) (cadr kvl)) (iter (cddr kvl)))))))
-    (cons* (sx-tag sx) (cons '@ attrs)
-	   (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
 
 ;; @deffn {Procedure} sx-find tag sx => (tag ...)
 ;; @deffnx {Procedure} sx-find path sx => (tag ...)
@@ -358,4 +364,16 @@
      (if (pair? v) (sxm-sexp v (hp . tp) kt kf) kf))
     ((_ v s) (if (string? v) kt kf))))
 
-;;; --- last line ---
+;;; deprecated:
+
+(define sx-set-attr! sx-attr-set!)
+
+(define (sx-attr-set* sx . rest)
+  (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
+    (cond
+     ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
+     (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
+
+(define sx-set-attr* sx-attr-set*)
+
+;; --- last line ---

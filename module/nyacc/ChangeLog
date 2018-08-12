@@ -1,3 +1,8 @@
+2018-08-11  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/sx-util.scm: removed sx+attr routines, added sx-attr-add
+	and sx-attr-add*; updated c99/body.scm to use sx-attr-add
+
 2018-07-29  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm (compact-machine): default for #:keep is now 0, was 3

@@ -108,26 +108,28 @@
      (lone-comment)
      (non-comment-statement))
     (non-comment-statement
-     (term ($$ '(empty-stmt)))
-     (expr term ($$ `(expr-stmt ,$1))) ;;<= lotsa reduce-reduce conflicts
-     (expr "=" expr term ($$ `(assn ,$1 ,$3)))
-     ("for" ident "=" expr term stmt-list "end" term
+     (non-comment-statement-1 term ($$ (sx-attr-add $1 'term $2))))
+    (non-comment-statement-1
+     ($empty ($$ '(empty-stmt)))
+     (expr ($$ `(expr-stmt ,$1)))
+     (expr "=" expr ($$ `(assn ,$1 ,$3)))
+     ("for" ident "=" expr term stmt-list "end"
       ($$ `(for ,$2 ,$4 ,(tl->list $6))))
-     ("while" expr term stmt-list "end" term
+     ("while" expr term stmt-list "end"
       ($$ `(while ,$2 ,(tl->list $4))))
-     ("if" expr term stmt-list elseif-list "else" stmt-list "end" term
+     ("if" expr term stmt-list elseif-list "else" stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)) (else ,(tl->list $7)))))
-     ("if" expr term stmt-list "else" stmt-list "end" term
+     ("if" expr term stmt-list "else" stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4) (else ,(tl->list $6)))))
-     ("if" expr term stmt-list "end" term
+     ("if" expr term stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4))))
-     ("switch" expr term case-list "otherwise" term stmt-list "end" term
+     ("switch" expr term case-list "otherwise" term stmt-list "end"
       ($$ `(switch ,$2 ,@(tl->list $4) (otherwise ,(tl->list $7)))))
-     ("switch" expr term case-list "end" term
+     ("switch" expr term case-list "end"
       ($$ `(switch ,$2 ,@(tl->list $4))))
-     ("return" term
+     ("return"
       ($$ '(return)))
-     (command arg-list term ($$ `(command ,$1 ,(tl->list $2))))
+     (command arg-list ($$ `(command ,$1 ,(tl->list $2))))
      )
 
     (command

@@ -1,4 +1,4 @@
-;;; NYACC matlab specification for Guile
+;; Nyacc eXtension for matlab
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -15,6 +15,8 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
+;;; Code:
+
 (define-module (language nx-matlab spec)
   #:export (nx-matlab)
   #:use-module (nyacc lang matlab parser)
@@ -24,7 +26,9 @@
 
 (define-language nx-matlab
   #:title	"nx-matlab"
-  #:reader	ml-stmt-reader
+  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
+				  (ml-stmt-reader p e)
+				  (ml-file-reader p e)))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-ml

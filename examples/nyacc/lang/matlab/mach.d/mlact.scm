@@ -89,43 +89,46 @@
    (lambda ($1 . $rest) $1)
    ;; statement => non-comment-statement
    (lambda ($1 . $rest) $1)
-   ;; non-comment-statement => term
-   (lambda ($1 . $rest) '(empty-stmt))
-   ;; non-comment-statement => expr term
-   (lambda ($2 $1 . $rest) `(expr-stmt ,$1))
-   ;; non-comment-statement => expr "=" expr term
-   (lambda ($4 $3 $2 $1 . $rest) `(assn ,$1 ,$3))
-   ;; non-comment-statement => "for" ident "=" expr term stmt-list "end" term
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement => non-comment-statement-1 term
+   (lambda ($2 $1 . $rest)
+     (sx-attr-add $1 'term $2))
+   ;; non-comment-statement-1 => 
+   (lambda $rest '(empty-stmt))
+   ;; non-comment-statement-1 => expr
+   (lambda ($1 . $rest) `(expr-stmt ,$1))
+   ;; non-comment-statement-1 => expr "=" expr
+   (lambda ($3 $2 $1 . $rest) `(assn ,$1 ,$3))
+   ;; non-comment-statement-1 => "for" ident "=" expr term stmt-list "end"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$2 ,$4 ,(tl->list $6)))
-   ;; non-comment-statement => "while" expr term stmt-list "end" term
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "while" expr term stmt-list "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$2 ,(tl->list $4)))
-   ;; non-comment-statement => "if" expr term stmt-list elseif-list "else" ...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "if" expr term stmt-list elseif-list "else...
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2
         ,(tl->list $4)
         ,@(cdr (tl->list $5))
         (else ,(tl->list $7))))
-   ;; non-comment-statement => "if" expr term stmt-list "else" stmt-list "e...
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "if" expr term stmt-list "else" stmt-list ...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4) (else ,(tl->list $6))))
-   ;; non-comment-statement => "if" expr term stmt-list "end" term
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "if" expr term stmt-list "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4)))
-   ;; non-comment-statement => "switch" expr term case-list "otherwise" ter...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "switch" expr term case-list "otherwise" t...
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(switch
         ,$2
         ,@(tl->list $4)
         (otherwise ,(tl->list $7))))
-   ;; non-comment-statement => "switch" expr term case-list "end" term
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "switch" expr term case-list "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
      `(switch ,$2 ,@(tl->list $4)))
-   ;; non-comment-statement => "return" term
-   (lambda ($2 $1 . $rest) '(return))
-   ;; non-comment-statement => command arg-list term
-   (lambda ($3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "return"
+   (lambda ($1 . $rest) '(return))
+   ;; non-comment-statement-1 => command arg-list
+   (lambda ($2 $1 . $rest)
      `(command ,$1 ,(tl->list $2)))
    ;; command => "global"
    (lambda ($1 . $rest) '(ident "global"))
