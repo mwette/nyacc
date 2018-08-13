@@ -35,6 +35,8 @@ to pass via keyword aruments.  For example, in javacript all functions
 accept the @code{#:this} keyword.  (I should add @code{#:nargin} etc.
 to matlab.)
 
+Question: Should associative arrays be indexed by symbols or strings?
+
 @heading Read, Parse and Compile
 
 A language may have two or three phases to get to lower level.

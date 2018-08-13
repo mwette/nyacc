@@ -22,10 +22,6 @@
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
-(define xdict
-  '(
-    ))
-
 (define-record-type ml:range
   (make-ml:range lb inc ub)
   ml:range?
@@ -75,11 +71,25 @@
    (else
     (error "expecting function or array"))))
 
-(define-public (ml:elt-assn arry expl value)
+(define-public (ml:assn-elt arry expl value)
   #f)
       
-(define-public (ml:mem-assn arry expl value)
-  #f)
-      
+(define-public (ml:make-struct . args)
+  (make-hash-table 31))
+
+(define-public (ml:struct-ref expr name)
+  (unless (hash-table? expr) (error "expecting hash table"))
+  (hashq-ref expr name))
+  
+(define-public (ml:struct-set! expr name value)
+  (unless (hash-table? expr) (error "expecting hash table"))
+  (hashq-set! expr name value)
+  (if #f #f))
+
+
+(define xdict
+ `(
+   ("struct" . (@ (nyacc lang matlab xlib) ml:make-struct))
+    ))
 
 ;; --- last line ---

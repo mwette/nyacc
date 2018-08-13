@@ -1,22 +1,26 @@
-;;; nyacc/parse.scm
-;;;
-;;; Copyright (C) 2014-2018 Matthew R. Wette
-;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Lesser General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 3 of the License, or (at your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful,
+;; nyacc/parse.scm
+
+;; Copyright (C) 2014-2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
 ;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
-;;;
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
 ;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this library; if not, see <http://www.gnu.org/licenses/>
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;;; Description:
 
 ;; procedures to generate parsers, given a lexical analyzer
 ;; one for files; one for interactive use: newline is possible end of input
+
+;;; Code:
 
 (define-module (nyacc parse)
   #:export (make-lalr-parser
@@ -94,8 +98,8 @@
 	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
     (lambda* (lexr #:key debug)
       (let iter ((state (list 0))	; state stack
-		 (stack (list '$@))	; sval stack
-		 (nval #f)		; prev reduce to non-term val
+		 (stack (list '$@))	; semantic value stack
+		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'er)
 	(cond
 	 ((and interactive nval (eqv? (car nval) start)) ; done
@@ -139,9 +143,9 @@
 	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
     (lambda* (lexr #:key debug)
       (let iter ((state (list 0))	; state stack
-		 (stack (list '$@))	; sval stack
-		 (nval #f)		; prev reduce to non-term val
-		 (lval #f))		; lexical value (from lex'er)
+		 (stack (list '$@))	; semantic value stack
+		 (nval #f)		; non-terminal from prev reduction
+		 (lval #f))		; lexical value (from lex'r)
 	(cond
 	 ((and interactive nval (eqv? (car nval) start)) ; done
 	  (cdr nval))
@@ -187,7 +191,7 @@
 	(make-lalr-parser/sym mach #:skip-if-unexp siu #:interactive iact))))
 
 
-;; == deprecated ===============================================================
+;; == deprecated =============================================================
 
 (define* (old-make-lalr-parser mach)
   (define (dmsg s t a) (sferr "state ~S, token ~S\t=> ~S\n" s t a))
