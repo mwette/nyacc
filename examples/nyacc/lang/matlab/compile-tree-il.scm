@@ -1,4 +1,4 @@
-;;; compile matlab sxml to tree-il
+;; compile matlab sxml to tree-il
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -18,6 +18,8 @@
 ;; limitations:
 ;; 1) variables cannot be introduced by lhs expression:
 ;;    i.e., a = 1 is OK, but a(1) = 1 is not
+
+;;; Code:
 
 (define-module (nyacc lang matlab compile-tree-il)
   #:export (compile-tree-il)
@@ -247,6 +249,7 @@
 	       (rhs (cadr tail))
 	       (stmt `(set! ,lhs ,rhs))
 	       (disp (display-result? tree)))
+	  (sferr "assn-var:\n") (pperr kseed) ;;(pperr lhs) (pperr rhs)
 	  (values (cons (if disp `(seq ,stmt ,lhs) stmt) seed) kdict)))
 
        ((assn-elt) ;; element assignment
@@ -317,7 +320,12 @@
 	(values (cons (reverse kseed) seed) kdict))
 
        ((colon-expr) ;; TODO
-	(values (cons '(void) kseed) kdict))
+	(let* ((tail (rtail kseed))
+	       (lb (list-ref tail 0))
+	       (inc (if (= 2 (length tail)) '(const 1) (list-ref tail 1)))
+	       (ub (list-ref tail (if (= 2 (length tail)) 1 2))))
+	  (values (cons `(call ,(xlib-ref 'make-ml:range) ,lb ,inc ,ub) seed)
+		  kdict)))
 
        ((or) (make-opcall 'ml:or seed kseed kdict))
        ((and) (make-opcall 'ml:and seed kseed kdict))

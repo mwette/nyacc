@@ -155,18 +155,15 @@
      (tl-append $1 `(case ,$3 ,(tl->list $5))))
    ;; expr-list => expr
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
-   ;; expr-list => ":"
-   (lambda ($1 . $rest)
-     (make-tl 'expr-list '(colon-expr)))
    ;; expr-list => expr-list "," expr
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; expr-list => expr-list "," ":"
-   (lambda ($3 $2 $1 . $rest)
-     (tl-append $1 '(colon-expr)))
    ;; expr => or-expr
    (lambda ($1 . $rest) $1)
-   ;; expr => expr ":" or-expr
+   ;; expr => or-expr ":" or-expr
    (lambda ($3 $2 $1 . $rest) `(colon-expr ,$1 ,$3))
+   ;; expr => or-expr ":" or-expr ":" or-expr
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(colon-expr ,$1 ,$3 ,$5))
    ;; or-expr => and-expr
    (lambda ($1 . $rest) $1)
    ;; or-expr => or-expr "|" and-expr

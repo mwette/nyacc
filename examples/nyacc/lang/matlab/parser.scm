@@ -25,7 +25,26 @@
 
 (include-from-path "nyacc/lang/matlab/body.scm")
 
-;;(define *info* (make-fluid))
+;; === static semantics
+
+(use-modules (sxml fold))
+(use-modules (nyacc lang sx-util))
+
+;; @deffn {Procedure} update-matlab-tree tree => tree
+;; change find multiple value assignment and change to @code{multi-assn}.
+;; @end deffn
+(define (update-matlab-tree tree)
+
+  (define (fU tree)
+    (sx-match tree
+      ((assn (matrix (row . ,elts)) ,rhs)
+       `(multi-assn (lval-list . ,elts) ,rhs))
+      (else tree)))
+  
+  (define (fH tree)
+    tree)
+  
+  (cadr (foldt fU fH `(*TOP* ,tree))))
 
 ;; === file parser 
 
@@ -58,7 +77,8 @@
     (lambda ()
       (if (eof-object? (peek-char port))
 	  (read-char port)
-	  (parse-ml #:debug #f)))))
+	  (update-matlab-tree
+	   (parse-ml #:debug #f))))))
 
 ;; === interactive parser
 
@@ -91,36 +111,13 @@
        (else
 	(let* ((stmt (with-input-from-port port
 		      (lambda () (parse-ml-stmt lexer))))
-	       (stmt (find-massign stmt)))
+	       (stmt (update-matlab-tree stmt)))
 	  (cond
 	   ((equal? stmt '(empty-stmt)) #f)
 	   (stmt)
 	   ;;(else (flush-input-after-error port) #f)
 	   )))))))
 
-
-;; === static semantics
-
-;; change [ ... ] = to multi-assign
-
-(use-modules (sxml fold))
-(use-modules (nyacc lang sx-util))
-(use-modules (ice-9 pretty-print))
-(define pp pretty-print)
-
-(define (find-massign tree)
-
-  (define (fU tree)
-    ;;(pp tree)
-    (sx-match tree
-      ((assn (matrix (row . ,elts)) ,rhs)
-       `(multi-assn (lval-list . ,elts) ,rhs))
-      (else tree)))
-  
-  (define (fH tree)
-    tree)
-  
-  (cadr (foldt fU fH `(*TOP* ,tree))))
 
 ;; ... (assn (
 ;;

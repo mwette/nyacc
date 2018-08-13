@@ -18,8 +18,13 @@
 ;;; Description:
 
 ;; matlab parser
-;; 1) does NOT parse lone expressions of the form [ 1, 2] => syntax error
-;; 2) does NOT support non-comma rows [ 1 2 ] => syntax error
+;; 1) does NOT support non-comma rows [ 1 2 ] => syntax error
+
+;; TODO:
+;; 1) function handles: {foo = @bar;} where bar is a function
+;; 2) anonymous functions: {foo = @(arg1,arg2) arg1 + arg2;}
+;; 3) structs
+;; 4) cell arrays (hoping not needed)
 
 ;;; Code:
 
@@ -36,12 +41,6 @@
   #:use-module (nyacc parse)
   #:use-module (ice-9 pretty-print)
   )
-
-;; TODO:
-;; 1) function handles: {foo = @bar;} where bar is a function
-;; 2) anonymous functions: {foo = @(arg1,arg2) arg1 + arg2;}
-;; 3) structs
-;; 4) cell arrays (hoping not needed)
 
 (define matlab-spec
   (lalr-spec
@@ -155,16 +154,27 @@
      )
 
     ;; Lone colon-expr's can only exist in expr-list for array ref.
-    (expr-list
+    #;(expr-list
      (expr ($$ (make-tl 'expr-list $1)))
      (":" ($$ (make-tl 'expr-list '(colon-expr))))
      (expr-list "," expr ($$ (tl-append $1 $3)))
      (expr-list "," ":" ($$ (tl-append $1 '(colon-expr))))
+    )
+    #;(expr
+     (or-expr)
+     (expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
+    )
+    ;;^ expr-list and colon-expr changed 08/13/18 =>
+
+    (expr-list
+     (expr ($$ (make-tl 'expr-list $1)))
+     (expr-list "," expr ($$ (tl-append $1 $3)))
      )
 
     (expr
      (or-expr)
-     (expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
+     (or-expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
+     (or-expr ":" or-expr ":" or-expr ($$ `(colon-expr ,$1 ,$3 ,$5)))
      )
 
     (or-expr
