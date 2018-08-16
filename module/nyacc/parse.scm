@@ -102,7 +102,9 @@
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'er)
 	(cond
-	 ((and interactive nval (eqv? (car nval) start)) ; done
+	 ((and interactive nval (eqv? (car nval) start)
+	       (zero? (car state)) 	; :( - needed for matlab
+	       ) ; done
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? '$default (caar (vector-ref pat-v (car state))))
@@ -135,19 +137,30 @@
 	     (else			; accept
 	      (car stack))))))))))
 
+;;(use-modules (ice-9 pretty-print))
+;;(define (pperr exp)
+;;  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
+;;(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (define* (make-lalr-parser/num mach #:key (skip-if-unexp '()) interactive)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
 	 (xct-v (make-xct (assq-ref mach 'act-v)))
 	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
+    ;;(sferr "start=~S\n" start)
     (lambda* (lexr #:key debug)
       (let iter ((state (list 0))	; state stack
 		 (stack (list '$@))	; semantic value stack
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'r)
+	;;(sferr "state=~S\n" state)
+	;;(pperr stack)
 	(cond
-	 ((and interactive nval (eqv? (car nval) start)) ; done
+	 ((and interactive nval
+	       (eqv? (car nval) start)
+	       (zero? (car state)) 	; :( - needed for matlab
+	       ) ; done
+	  ;;(sferr "DONE\n")
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? $default (caar (vector-ref pat-v (car state))))

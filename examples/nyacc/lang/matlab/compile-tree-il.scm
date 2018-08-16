@@ -76,6 +76,7 @@
      ((string? (caar refs))
       `(seq ,(make-toplevel-defcheck (caar refs))
 	    ,(iter (cdr refs))))
+     ((eq? '@top (caar refs)) expr)
      (else (iter (cdr refs))))))
 
 (define make-opcall (opcall-generator xlib-mod))
@@ -89,6 +90,40 @@
   (and=> (sx-attr-ref tree 'term)
 	 (lambda (t) (not (string=? t ";")))))
 
+;; lvar: loop variable -- e.g., (lexical i i-1234)
+;; should be
+;; (make-for lvar init next body dict)
+(define-public (make-for lvar expr body dict)
+  (let* ((rsym (genxsym "%range")) (rval `(lexical %range ,rsym))
+	 (frst `(call ,(xlib-ref 'ml:iter-first) ,rval))
+	 (next `(call ,(xlib-ref 'ml:iter-next) ,rval ,lvar))
+	 (ilsym (genxsym "iloop"))
+	 
+	 (olsym (genxsym "oloop"))
+	 (bsym (lookup-gensym "break" dict))
+	 (csym (lookup-gensym "continue" dict))
+	 (inext `(call (lexical iloop ,ilsym) ,next))
+	 (ifrst `(call (lexical iloop ,ilsym) ,frst))
+	 (ocall `(call (lexical oloop ,olsym)))
+
+	 (iloop `(lambda ((name . iloop))
+		   (lambda-case (((,(cadr lvar)) #f #f #f () (,(caddr lvar)))
+				 (if ,lvar (seq ,body ,inext) (void))))))
+	 
+  	 (ohdlr `(lambda () (lambda-case (((k) #f #f #f () (,(genxsym "k")))
+					  ,inext))))
+	 (oloop (make-thunk `(prompt #t (lexical continue ,csym) ,ifrst ,ohdlr)
+			    #:name 'oloop))
+ 	 (hdlr `(lambda () (lambda-case (((k) #f #f #f () (,(genxsym "k")))
+					 (void))))))
+    ;; NOTE: the range could also go into the letrec
+    `(let (%range break continue) (,rsym ,bsym ,csym)
+	  (,expr
+	   (primcall make-prompt-tag (const break))
+	   (primcall make-prompt-tag (const continue)))
+	  (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
+		  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
+  
 ;; @deffn {Procedure} xlang-sxml->xtil exp env opts
 ;; Compile extension SXML tree to external Tree-IL representation.
 ;; This one is public because it's needed for debugging the compiler.
@@ -112,6 +147,9 @@
 
       ((sel (ident ,name) ,expr)
        (values `(sel ,name ,expr) '() dict))
+
+      ((for . ,rest)
+       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
 
       ;; (assn (ident ,name) ,rhs))=> (assn-var (ident ,name) ,rhs)
       ;; (assn (aref-or-call ,aexp ,expl)) => (assn-elt ,aexp ,expl ,rhs)
@@ -249,7 +287,7 @@
 	       (rhs (cadr tail))
 	       (stmt `(set! ,lhs ,rhs))
 	       (disp (display-result? tree)))
-	  (sferr "assn-var:\n") (pperr kseed) ;;(pperr lhs) (pperr rhs)
+	  ;;(sferr "assn-var:\n") (pperr kseed) ;;(pperr lhs) (pperr rhs)
 	  (values (cons (if disp `(seq ,stmt ,lhs) stmt) seed) kdict)))
 
        ((assn-elt) ;; element assignment
@@ -290,9 +328,20 @@
 					() (,@(map caddr avars) ,rest))
 				       ,(vblock lhsxs)))))))
 	  (values (cons body seed) kdict)))
+
+       ;; looping
+       ;; 1) matlab does have break statement, and continue I think
+       ;; 2) for needs index and should call ml:iter-first ml:iter-next
        
+       ;; ("for" ident "=" expr term stmt-list "end"
        ((for) ;; TODO
-	(values (cons '(void) kseed) kdict))
+	(let* ((tail (rtail kseed))
+	       (lvar (list-ref tail 0))	; lvar
+	       (expr (list-ref tail 1))	; expr
+	       (body (list-ref tail 2))	; stmt-list
+	       (stmt (make-for lvar expr body kdict))
+	       )
+	  (values (cons stmt kseed) (pop-scope kdict))))
        
        ((while) ;; TODO
 	(values (cons '(void) kseed) kdict))

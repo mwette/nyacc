@@ -120,6 +120,16 @@ for the target for the compiled language, and a continuation environment
 for the next source tree.
 @end deffn
 
+@subheading Looping
+
+In @code{fD} we add lexical variable for the break and continue prompt tags:
+@lisp
+ ((for . ,rest)
+  (values tree '() (add-lexicals "break" "continue" (push-scope
+  dict))))
+@end lisp
+
+
 
 @heading Modules
 

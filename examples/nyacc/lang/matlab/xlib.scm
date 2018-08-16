@@ -28,19 +28,53 @@
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
-(define-record-type ml-range
-  (make-ml-range lb inc ub)
-  ml-range?
-  (lb ml-range-lb)
-  (inc ml-range-inc)
-  (ub ml-range-ub))
-;; above generates syntax; we need procedures
-(define-public (make-ml:range lb inc ub) (make-ml-range lb inc ub))
-(define-public (ml:range? obj) (ml-range? obj))
-(define-public (ml:range-lb rng) (ml-range-lb rng))
-(define-public (ml:range-inc rng) (ml-range-inc rng))
-(define-public (ml:range-inc rng) (ml-range-ub rng))
+(define* (xassert cnd #:optional msg)
+  (unless cnd (error (or msg "assertion failed"))))
 
+(define-record-type ml-range
+  (make-ml-range start delta end)
+  ml-range?
+  (start ml-range-start)
+  (delta ml-range-delta)
+  (end ml-range-end))
+;; above generates syntax; we need procedures
+(define-public (make-ml:range start delta end) (make-ml-range start delta end))
+(define-public (ml:range? obj) (ml-range? obj))
+(define-public (ml:range-start rng) (ml-range-start rng))
+(define-public (ml:range-delta rng) (ml-range-delta rng))
+(define-public (ml:range-end rng) (ml-range-end rng))
+
+;; @deffn {Procedure} ml:range-next rng index
+;; Given an index in a range, generate the next index, or @code{#f} if
+;; there is no next index.
+;; @end deffn
+(define-public (ml:range-next rng index)
+  (xassert (ml:range? rng))
+  (let ((nx (+ index (ml:range-delta rng))))
+    (if (positive? (ml:range-delta rng))
+	(if (> nx (ml:range-end rng)) #f nx)
+	(if (< nx (ml:range-end rng)) #f nx))))
+
+;; for 1-d array do the same
+(define-public (ml:array-next ary index)
+  (xassert (array? ary))
+  (let* ((ub (cadr (car (array-shape ary))))
+	 (nx (1+ index)))
+    (if (> nx ub) #f nx)))
+
+(define-public (ml:iter-first obj)
+  (cond
+   ((ml:range? obj) (ml:range-start obj))
+   ((array? obj)
+    (xassert (= 1 (array-rank obj)) "expecting array to be 1-d")
+    (array-ref obj (caar (array-shape obj))))
+   (else (xassert #f "expecting range or array"))))
+
+(define-public (ml:iter-next obj index)
+  (cond
+   ((ml:range? obj) (ml:range-next obj index))
+   ((array? obj) (ml:array-next obj index))
+   (else (xassert #f "expecting range or array"))))
 
 (define-public (ml:or a b) (if (and (zero? a) (zero? b)) 0 1))
 (define-public (ml:and a b) (if (or (zero? a) (zero? b)) 0 1))

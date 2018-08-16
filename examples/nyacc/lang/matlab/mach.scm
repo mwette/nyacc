@@ -60,6 +60,8 @@
       ($$ (if $1 (make-tl 'script-file $1) (make-tl 'script-file))))
      (script-file statement ($$ (if $2 (tl-append $1 $2) $1))))
 
+    ;;(interaction (non-comment-statement))
+
     (function-file
      (function-defn ($$ (make-tl 'function-file $1)))
      (function-file function-defn ($$ (tl-append $1 $2))))
@@ -284,19 +286,8 @@
 
 (include-from-path "nyacc/lang/matlab/body.scm")
 
-(define gen-ml-lexer (make-matlab-lexer-generator (assq-ref matlab-mach 'mtab)))
-
-(define raw-parser (make-lalr-parser matlab-mach))
-
-(define* (dev-parse-ml #:key debug)
-  (catch 'nyacc-error
-    (lambda ()
-      (raw-parser (gen-ml-lexer) #:debug debug))
-   (lambda (key fmt . args)
-     (report-error fmt args)
-     #f)))
-
 (define matlab-ia-spec (restart-spec matlab-spec 'non-comment-statement))
+;;(define matlab-ia-spec (restart-spec matlab-spec 'interaction))
 
 ;; NOTE: Need to deal with comments.  The ia-parser looks for lone $defaults
 ;; to reduce w/o lookahead token but the compact-machine will add $lone-comm

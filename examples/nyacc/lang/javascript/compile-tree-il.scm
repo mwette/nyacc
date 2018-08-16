@@ -176,23 +176,6 @@
       (nx-lookup-in-env name xlib-module)))
 
 
-;; @deffn {Procedure} lkup-gensym name dict [label] => gensym
-;; lookup up nearest parent lexical and return gensym
-;; (lkup-gensym "foo" dict) => JS~1234
-;; (lkup-gensym "foo" dict #:label "oloop") => JS~432
-;; @end deffn
-(define* (lkup-gensym name dict #:key label)
-  (if label
-      (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
-	(if (not pdict) #f
-	    (if (and (assoc-ref pdict label)
-		     (assoc-ref "~exit" cdict))
-		(assoc-ref name cdict)
-		(iter pdict (assoc-ref pdict '@P)))))
-      (let* ((sym (lookup name dict)))
-	(if (not sym) (error "javascript: not found:" name))
-	(caddr sym))))
-
 ;; === codegen procedures =============
 
 ;; @deffn {Procedure} make-let bindings exprs
@@ -240,63 +223,6 @@
 			(cons (list-ref (car binds) 2) gsyms)
 			(cons (list-ref (car binds) 3) inits)
 			(cdr binds)))))))))
-
-;; @deffn {Procedure} make-do-while expr body bsym csym
-;; @deffnx {Procedure} make-while expr body bsym csym
-;; This generates code for the following source:
-;; @example
-;; "do" body "where" expr
-;; "while" body "do" expr
-;; @end example
-;; @noindent
-;; where @arg{expr} is the condtional expression, @arg{body} is the body,
-;; @arg{bsym} is the gensym for @code{break}, @arg{csym} is the gensym for
-;; @code{continue}.  The code generated is based on the following pattern:
-;; @example
-;; (let ((break! (make-prompt-tag 'break))
-;;       (continue! (make-prompt-tag 'continue)))
-;;    (letrec ((iloop (lambda () (body) (if (expr) (iloop))))
-;;             (oloop
-;;              (lambda ()
-;;               (call-with-prompt continue!
-;;                  thunk
-;;                  (lambda (k) (if (expr) (oloop)))))))
-;;      (call-with-prompt break!
-;;        oloop
-;;        (lambda (k) (if #f #f))))))
-;; @end example
-;; @noindent
-;; where @code{break!} and @code{continue!} are lexicals generated for
-;; the code and @code{thunk} is @*
-;; @code{(lambda () (iloop))} for do-while and @*
-;; @code{(lambda () (if (expr) (iloop)))} for while-do.
-(define (make-loop expr body dict ilsym tbody)
-  (let* ((olsym (genxsym "oloop"))
-	 (bsym (lkup-gensym "break" dict))
-	 (csym (lkup-gensym "continue" dict))
-	 (icall `(call (lexical iloop ,ilsym)))
-	 (ocall `(call (lexical oloop ,olsym)))
-	 (iloop (make-thunk `(seq ,body (if ,expr ,icall (void)))))
-  	 (ohdlr `(lambda ()
-		   (lambda-case (((k) #f #f #f () (,(genxsym "k")))
-				 (if ,expr ,ocall (void))))))
-	 (oloop (make-thunk `(prompt #t (lexical continue ,csym) ,tbody ,ohdlr)))
- 	 (hdlr `(lambda ()
-		  (lambda-case (((k) #f #f #f () (,(genxsym "k"))) (void))))))
-    `(let (break continue) (,bsym ,csym)
-	  ((primcall make-prompt-tag (const break))
-	   (primcall make-prompt-tag (const continue)))
-	  (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
-		  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
-
-(define (make-do-while expr body dict)
-  (let ((ilsym (genxsym "iloop")))
-    (make-loop expr body dict ilsym `(call (lexical iloop ,ilsym)))))
-
-(define (make-while expr body dict)
-  (let ((ilsym (genxsym "iloop")))
-    (make-loop expr body dict ilsym
-		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
 
 ;; Pass arguments as optional and add @code{this} keyword argument.
 (define (make-function name this args body)
@@ -959,7 +885,7 @@
 		       (`((seq . ,def) (let . ,B-clz))
 			(block (cons `(let . ,B-clz) def)))
 		       (`((let . ,A-clz)) `(let . ,A-clz))))
-	       (vsym (lkup-gensym "swx~val" kdict))
+	       (vsym (lookup-gensym "swx~val" kdict))
 	       (body `(let (swx~val) (,vsym) (,expr) ,body))
 	       (body (with-escape (lookup "break" kdict) body)))
 	  (values (cons body seed) (pop-scope kdict))))
@@ -1020,7 +946,7 @@
        ((TryStatement)
 	(let* ((rseed (rtail kseed))
 	       (try-stmts (car rseed))
-	       (ctag (lkup-gensym "catch" kdict))
+	       (ctag (lookup-gensym "catch" kdict))
 	       (catch (match (cdr rseed)
 			((`(catch ,hdlr) . rest) hdlr)
 			(otherwise (make-handler '() '(void)))))
@@ -1038,7 +964,7 @@
        ((Catch)
 	(let* ((arg-name (cadr (cadr tree)))	 ; arg name as string
 	       (a-sym (string->symbol arg-name)) ; as symbol
-	       (a-gsym (lkup-gensym arg-name kdict)) ; its gensym
+	       (a-gsym (lookup-gensym arg-name kdict)) ; its gensym
 	       (catch `(lambda ()
 			 (lambda-case (((k ,a-sym) #f #f #f () (,(jsym) ,a-gsym))
 				       ,(car kseed))))))

@@ -26,6 +26,7 @@
 	    rev/repl
 	    opcall-generator
 	    block vblock
+	    make-loop make-do-while make-while lookup-gensym
 	    )
   )
 
@@ -196,5 +197,93 @@
   (let iter ((xl expr-list))
     (if (null? xl) '(void)
 	`(seq ,(car xl) ,(iter (cdr xl))))))
+
+;; @deffn {Procedure} lookup-gensym name dict [label] => gensym
+;; lookup up nearest parent lexical and return gensym
+;; (lookup-gensym "foo" dict) => JS~1234
+;; (lookup-gensym "foo" dict #:label "oloop") => JS~432
+;; @end deffn
+(define* (lookup-gensym name dict #:key label)
+  (if label
+      (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
+	(if (not pdict) #f
+	    (if (and (assoc-ref pdict label)
+		     (assoc-ref "~exit" cdict))
+		(assoc-ref name cdict)
+		(iter pdict (assoc-ref pdict '@P)))))
+      (let* ((sym (nx-lookup name dict)))
+	(if (not sym) (error "javascript: not found:" name))
+	(caddr sym))))
+
+;; @deffn {Procedure} make-loop expr body dict ilsym tbody
+;; This is a helper procedure for building loops like the following:
+;; @example
+;; "do" body "where" expr
+;; "while" body "do" expr
+;; "for" i "in" range "do" body
+;; @end example
+;; @noindent
+;; The argument @var{expr} is the conditional, @var{body} is the code to
+;; execute, which may contain @code{abort-to-prompt} given by @code{break}
+;; or @code{continue}.
+;; The code generated is based on the following pattern:
+;; @example
+;; (let ((break! (make-prompt-tag 'break))
+;;       (continue! (make-prompt-tag 'continue)))
+;;    (letrec ((iloop (lambda () (body) (if (expr) (iloop))))
+;;             (oloop
+;;              (lambda ()
+;;               (call-with-prompt continue!
+;;                  thunk
+;;                  (lambda (k) (if (expr) (oloop)))))))
+;;      (call-with-prompt break!
+;;        oloop
+;;        (lambda (k) (if #f #f))))))
+;; @end example
+;; @noindent
+;; where @code{break!} and @code{continue!} are lexicals generated for
+;; the code and @code{thunk} is @*
+;; @code{(lambda () (iloop))} for do-while and @*
+;; @code{(lambda () (if (expr) (iloop)))} for while-do.
+;; @end deffn
+;; TODO #:key (break "break") (continue "continue")
+(define* (make-loop expr body dict ilsym tbody)
+  (let* ((olsym (genxsym "oloop"))
+	 (bsym (lookup-gensym "break" dict))
+	 (csym (lookup-gensym "continue" dict))
+	 (icall `(call (lexical iloop ,ilsym)))
+	 (ocall `(call (lexical oloop ,olsym)))
+	 (iloop (make-thunk `(seq ,body (if ,expr ,icall (void))) #:name 'iloop))
+  	 (ohdlr `(lambda ()
+		   (lambda-case (((k) #f #f #f () (,(genxsym "k")))
+				 (if ,expr ,ocall (void))))))
+	 (oloop (make-thunk `(prompt #t (lexical continue ,csym) ,tbody ,ohdlr)
+			    #:name 'oloop))
+ 	 (hdlr `(lambda ()
+		  (lambda-case (((k) #f #f #f () (,(genxsym "k"))) (void))))))
+    `(let (break continue) (,bsym ,csym)
+	  ((primcall make-prompt-tag (const break))
+	   (primcall make-prompt-tag (const continue)))
+	  (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
+		  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
+
+;;
+;; @deffn {Procedure} make-do-while expr body dict
+;; This generates code for do-while loops where @arg{expr} is the condtional
+;; expression, @arg{body} is the body, @arg{dict} is the scope dictionary
+;; which must contain the labels for @code{break} and @code{continue}.
+(define (make-do-while expr body dict)
+  (let ((ilsym (genxsym "iloop")))
+    (make-loop expr body dict ilsym `(call (lexical iloop ,ilsym)))))
+
+;; @deffn {Procedure} make-while expr body dict
+;; This generates code for the following source:
+;; where @arg{expr} is the condtional expression, @arg{body} is the body,
+;; @arg{bsym} is the gensym for @code{break}, @arg{csym} is the gensym for
+;; @code{continue}. 
+(define (make-while expr body dict)
+  (let ((ilsym (genxsym "iloop")))
+    (make-loop expr body dict ilsym
+		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
 
 ;; --- last line ---
