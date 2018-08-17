@@ -418,8 +418,54 @@
 	       seed)
 	 kdict))
 
+       ;; @section Matrix Constructs
+       ;; Static semantics will extract the following:
+       ;; @itemize
+       ;; @item 1-D matrices (aka vectors) with only scalar integers:
+       ;; These can include @code{+-*} expressions.  Used for indices.
+       ;; @item 2-D matrices with only scalar floats:
+       ;; These can include @code{+-*/} expressions. More efficient than ...
+       ;; @item other matrices:
+       ;; If a matrix expression includes, say, a variable reference, then the
+       ;; dimension of that variable can only be determined at run-time.
+       ;; @end itemize
+
        ;; row
-       ;; matrix
+       ((row)
+	(values (cons (reverse kseed) seed) kdict))
+       
+       ;; matrix TODO
+       ((matrix)
+	(values (cons `(const 1001) seed) kdict))
+
+       ((float-matrix)
+	;; In a `let', create an array and then set a row at a time.
+	;; In the following M=nrow-1, N=ncol-1.
+	;; (let (($aval (make-array 'f64 nrow ncol))
+	;;   (ml:array-set-row! 0 (list a00 a01 ... a0N))
+	;;   ...
+	;;   (ml:array-set-row! M (list aM0 aM1 ... aMN))
+	;;   $aval)
+	 (let* ((tail (rtail kseed))
+		(row1 (car tail))
+		(ncol (length (sx-tail row1)))
+		(asym (genxsym "$aval"))
+		(aval `(lexical $aval ,asym))
+		(nrow (length tail))
+		(makea `(call (toplevel make-typed-array) (const f64)
+			      (const 0.0) (const ,nrow) (const ,ncol)))
+		(body (let iter ((ix 0) (rows tail))
+			(if (null? rows) aval
+			    `(seq (call ,(xlib-ref 'ml:array-set-row!)
+					,aval (const ,ix)
+					(primcall list . ,(cdar rows)))
+				  ,(iter (1+ ix) (cdr rows))))))
+		(expr `(let ($aval) (,asym) (,makea) ,body)))
+	   (values (cons expr seed) kdict)))
+	 
+       ((fixed-vector)
+	(values (cons `(primcall vector . ,(rtail kseed)) seed) kdict))
+
        ;; cell-array
 
        ;; comm-list
@@ -440,13 +486,13 @@
   )
 
 (define (compile-tree-il exp env opts)
-  (sferr "sxml:\n") (pperr exp)
+  ;;(sferr "sxml:\n") (pperr exp)
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
     (if exp 
 	(call-with-values
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    (sferr "tree-il:\n") (pperr exp)
+	    ;;(sferr "tree-il:\n") (pperr exp)
 	    (values (parse-tree-il exp) env cenv)
 	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
      	    ))

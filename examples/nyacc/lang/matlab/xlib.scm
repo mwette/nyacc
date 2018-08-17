@@ -96,6 +96,17 @@
    ((integer? arg) (vector-ref vec (1- arg)))
    (else (error "matlab: expecing vector arg of integer, range or array"))))
 
+;; ===
+
+;; Note:
+;; We use row-major order, whereas MATLAB used column major order,
+;; or at least it originally did.  Not sure since super matrices.
+;;
+
+;; matrix: f64-typed array
+;; cell array: untyped array
+;; struct: hashv table
+
 (define-public (ml:array-ref vec . args)
   ;; args can be positive integer, a range, or an array
   (let ((arg (car args))
@@ -103,6 +114,12 @@
     (cond
      ((integer? arg) (array-ref vec (1- arg)))
      (else (error "matlab: expecting array args of integer, range or array")))))
+
+(define-public (ml:array-set-row! ary ix row)
+  (let iter ((jx 0) (elts row))
+    (unless (null? elts)
+      (array-set! ary (car elts) ix jx)
+      (iter (1+ jx) (cdr elts)))))
 
 (define-public (ml:aref-or-call proc-or-array . args)
   ;;(sferr "proc-or-array=~S  args=~S\n" proc-or-array args)
@@ -145,6 +162,8 @@
   (hashq-set! expr name value)
   (if #f #f))
 
+
+;; ===
 
 (define xdict
  `(
