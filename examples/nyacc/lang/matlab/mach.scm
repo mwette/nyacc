@@ -120,14 +120,16 @@
       ($$ `(while ,$2 ,(tl->list $4))))
      ("if" expr term stmt-list elseif-list "else" stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)) (else ,(tl->list $7)))))
+     ("if" expr term stmt-list elseif-list "end"
+      ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)))))
      ("if" expr term stmt-list "else" stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4) (else ,(tl->list $6)))))
      ("if" expr term stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4))))
      ("switch" expr term case-list "otherwise" term stmt-list "end"
-      ($$ `(switch ,$2 ,@(tl->list $4) (otherwise ,(tl->list $7)))))
+      ($$ `(switch ,$2 ,@(cdr (tl->list $4)) (otherwise ,(tl->list $7)))))
      ("switch" expr term case-list "end"
-      ($$ `(switch ,$2 ,@(tl->list $4))))
+      ($$ `(switch ,$2 ,@(cdr (tl->list $4)))))
      ("return"
       ($$ '(return)))
      (command arg-list ($$ `(command ,$1 ,(tl->list $2))))
@@ -148,12 +150,24 @@
      (elseif-list "elseif" expr term stmt-list
 		   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5)))))
      )
-    
+
+    ;; The switch case for this matlab only allows case-expr of form
+    ;; @code{fixed}, @code{string}, @code{fixed-list} or @code{string-list}.
     (case-list
      ($empty ($$ (make-tl 'case-list)))
-     (case-list "case" expr term stmt-list
-		($$ (tl-append $1 `(case ,$3 ,(tl->list $5)))))
-     )
+     (case-list "case" case-expr term stmt-list
+		($$ (tl-append $1 `(case ,$3 ,(tl->list $5))))))
+    (case-expr
+     (fixed) (string)
+     ("{" fixed-list "}" ($$ (tl->list $2)))
+     ("{" string-list "}" ($$ (tl->list $2))))
+    (fixed-list
+     (fixed ($$ (make-tl 'fixed-list $1)))
+     (fixed-list fixed ($$ (tl-append $1 $2))))
+    (string-list
+     (string ($$ (make-tl 'string-list $1)))
+     (string-list string ($$ (tl-append $1 $2))))
+     
 
     ;; Lone colon-expr's can only exist in expr-list for array ref.
     #;(expr-list
@@ -177,6 +191,8 @@
      (or-expr)
      (or-expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
      (or-expr ":" or-expr ":" or-expr ($$ `(colon-expr ,$1 ,$3 ,$5)))
+     (or-expr ":" "end" ($$ `(colon-expr ,$1 (end))))
+     (or-expr ":" or-expr ":" "end" ($$ `(colon-expr ,$1 ,$3 (end))))
      )
 
     (or-expr
@@ -270,7 +286,9 @@
      (lone-comment-list lone-comment nl ($$ (tl-append $1 $2))))
 
     (ident ($ident ($$ `(ident ,$1))))
-    (number ($fixed ($$ `(fixed ,$1))) ($float ($$ `(float ,$1))))
+    (fixed ($fixed ($$ `(fixed ,$1))))
+    (float ($float ($$ `(float ,$1))))
+    (number (fixed) (float))
     (string ($string ($$ `(string ,$1))))
     (lone-comment ($lone-comm ($$ `(comm ,$1))))
     ;;(code-comment ($code-comm ($$ `(comm ,$1))))

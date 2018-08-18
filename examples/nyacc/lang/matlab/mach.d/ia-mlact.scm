@@ -110,6 +110,9 @@
         ,(tl->list $4)
         ,@(cdr (tl->list $5))
         (else ,(tl->list $7))))
+   ;; non-comment-statement-1 => "if" expr term stmt-list elseif-list "end"
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5))))
    ;; non-comment-statement-1 => "if" expr term stmt-list "else" stmt-list ...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4) (else ,(tl->list $6))))
@@ -120,11 +123,11 @@
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(switch
         ,$2
-        ,@(tl->list $4)
+        ,@(cdr (tl->list $4))
         (otherwise ,(tl->list $7))))
    ;; non-comment-statement-1 => "switch" expr term case-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(switch ,$2 ,@(tl->list $4)))
+     `(switch ,$2 ,@(cdr (tl->list $4))))
    ;; non-comment-statement-1 => "return"
    (lambda ($1 . $rest) '(return))
    ;; non-comment-statement-1 => command arg-list
@@ -150,9 +153,25 @@
      (tl-append $1 `(elseif ,$3 ,(tl->list $5))))
    ;; case-list => 
    (lambda $rest (make-tl 'case-list))
-   ;; case-list => case-list "case" expr term stmt-list
+   ;; case-list => case-list "case" case-expr term stmt-list
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(case ,$3 ,(tl->list $5))))
+   ;; case-expr => fixed
+   (lambda ($1 . $rest) $1)
+   ;; case-expr => string
+   (lambda ($1 . $rest) $1)
+   ;; case-expr => "{" fixed-list "}"
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
+   ;; case-expr => "{" string-list "}"
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
+   ;; fixed-list => fixed
+   (lambda ($1 . $rest) (make-tl 'fixed-list $1))
+   ;; fixed-list => fixed-list fixed
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; string-list => string
+   (lambda ($1 . $rest) (make-tl 'string-list $1))
+   ;; string-list => string-list string
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; expr-list => expr
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
    ;; expr-list => expr-list "," expr
@@ -164,6 +183,12 @@
    ;; expr => or-expr ":" or-expr ":" or-expr
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(colon-expr ,$1 ,$3 ,$5))
+   ;; expr => or-expr ":" "end"
+   (lambda ($3 $2 $1 . $rest)
+     `(colon-expr ,$1 (end)))
+   ;; expr => or-expr ":" or-expr ":" "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(colon-expr ,$1 ,$3 (end)))
    ;; or-expr => and-expr
    (lambda ($1 . $rest) $1)
    ;; or-expr => or-expr "|" and-expr
@@ -285,10 +310,14 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; ident => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
-   ;; number => '$fixed
+   ;; fixed => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
-   ;; number => '$float
+   ;; float => '$float
    (lambda ($1 . $rest) `(float ,$1))
+   ;; number => fixed
+   (lambda ($1 . $rest) $1)
+   ;; number => float
+   (lambda ($1 . $rest) $1)
    ;; string => '$string
    (lambda ($1 . $rest) `(string ,$1))
    ;; lone-comment => '$lone-comm

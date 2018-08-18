@@ -86,7 +86,7 @@
      ((and (= 1 nrow) (fixed-vec? row1)) `(fixed-vector . ,(cdr row1)))
      ((float-mat? mat) `(float-matrix . ,(cdr mat)))
      (else mat))))
-	  
+
 ;; @deffn {Procedure} update-matlab-tree tree => tree
 ;; change find multiple value assignment and change to @code{multi-assn}.
 ;; @end deffn
@@ -97,7 +97,7 @@
       ((assn (matrix (row . ,elts)) ,rhs)
        `(multi-assn (lval-list . ,elts) ,rhs))
       ((colon-expr . ,rest)
-       (if (fixed-colon-expr? tree) `(fixed-colon-expr ,(cdr tree)) tree))
+       (if (fixed-colon-expr? tree) `(fixed-colon-expr . ,(cdr tree)) tree))
       ((matrix . ,rest)
        (check-matrix tree))
       (else tree)))

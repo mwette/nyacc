@@ -145,8 +145,49 @@
       ((float ,sval)
        (values '() `(const ,(string->number sval)) dict))
 
+      ((string ,sval)
+       (values '() `(const ,sval) dict))
+
       ((sel (ident ,name) ,expr)
        (values `(sel ,name ,expr) '() dict))
+
+      ((switch ,expr . ,rest)
+       ;; Convert
+       ;;  (switch expr (case a stmts) (case b stmts) ... (otherwise stmts))
+       ;; to
+       ;;  (switchx expr (xif expr stmt (xif expr stmt ...  stmt))
+       (values
+	`(xswitch ,expr
+		  ,(let iter ((tail rest))
+		     (cond
+		      ((null? tail) '(empty-stmt))
+		      ((eq? 'otherwise (sx-tag (car tail))) (sx-ref (car tail) 1))
+		      ((eq? 'case (sx-tag (car tail)))
+		       `(xif (eq (ident "swx-val") ,(sx-ref (car tail) 1))
+			     ,(sx-ref (car tail) 2) ,(iter (cdr tail))))
+		      (else (error "unsupported case-expr")))))
+	'() (add-lexicals "swx~val" "break" (push-scope dict))))
+
+      ((if ,expr ,stmts . ,rest)
+       ;; Convert
+       ;;  (xif expr stmt (elseif expr stmt) ... (else stmt))
+       ;; to
+       ;;  (xif expr stmt (ifx expr stmt ...  stmt))
+       (values
+	`(xif ,expr ,stmts
+	      ,(let iter ((tail rest))
+		 (cond
+		  ((null? tail) '(empty-stmt))
+		  ((eq? 'else (sx-tag (car tail))) (sx-ref (car tail) 1))
+		  ((eq? 'elseif (sx-tag (car tail)))
+		   `(xif ,(sx-ref (car tail) 1) ; cond
+			 ,(sx-ref (car tail) 2) ; then
+			 ,(iter (cdr tail))))   ; else
+		  (else (error "oops")))))
+	'() dict))
+
+      ((while . ,rest)
+       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
 
       ((for . ,rest)
        (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
@@ -275,7 +316,7 @@
 
        ;; Statements
        ((empty-stmt)
-	(values seed kdict))
+	(values (cons '(void) seed) kdict))
 
        ((expr-stmt)
 	(values (cons (car kseed) seed) kdict))
@@ -332,6 +373,8 @@
        ;; looping
        ;; 1) matlab does have break statement, and continue I think
        ;; 2) for needs index and should call ml:iter-first ml:iter-next
+       ;; 3) BUG top-levels can be introduced here, but we pop scope
+       ;;    so these need to be moved to function or global scope
        
        ;; ("for" ident "=" expr term stmt-list "end"
        ((for) ;; TODO
@@ -343,19 +386,29 @@
 	       )
 	  (values (cons stmt kseed) (pop-scope kdict))))
        
-       ((while) ;; TODO
-	(values (cons '(void) kseed) kdict))
-       
-       ((if) ;; TODO
-	(values (cons '(void) kseed) kdict))
-       
-       ((switch) ;; TODO
-	(values (cons '(void) kseed) kdict))
+       ((while)
+	(let* ((tail (rtail kseed))
+	       (expr `(if (primcall zero? ,(car tail)) (const #f) (const #t)))
+	       (body (cdr tail)))
+	  (values (cons (make-while expr body kdict) kseed) (pop-scope kdict))))
 
-       ((case-list) ;; TODO
-	(values (cons '(void) kseed) kdict))
-       ((case) ;; TODO
-	(values (cons '(void) kseed) kdict))
+       ;; @code{if} converted to @code{xif} in fD
+       ((xif)
+	(let* ((tail (rtail kseed))
+	       (cond1 `(if (primcall zero? ,(car tail)) (const #f) (const #t)))
+	       (then1 (cadr tail))
+	       (else1 (caddr tail)))
+	  (values (cons `(if ,cond1 ,then1 ,else1) seed) kdict)))
+       
+       ;; converted in @code{fD} from switch, case-list, case, otherwise
+       ((xswitch)
+	(let* ((body (car kseed))
+	       (expr (cadr kseed))
+	       (swxv (lookup "swx-val" kdict))
+	       (swxg (caddr swxv)))
+	  (values
+	   (cons `(let (swx-val) (,swxg) (,expr) ,body) kseed)
+	   (pop-scope kdict))))
 
        ((return)
 	(values
@@ -368,7 +421,7 @@
        ((expr-list)
 	(values (cons (reverse kseed) seed) kdict))
 
-       ((colon-expr) ;; TODO
+       ((colon-expr fixed-colon-expr)
 	(let* ((tail (rtail kseed))
 	       (lb (list-ref tail 0))
 	       (inc (if (= 2 (length tail)) '(const 1) (list-ref tail 1)))
@@ -486,13 +539,13 @@
   )
 
 (define (compile-tree-il exp env opts)
-  ;;(sferr "sxml:\n") (pperr exp)
+  (sferr "sxml:\n") (pperr exp)
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
     (if exp 
 	(call-with-values
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    ;;(sferr "tree-il:\n") (pperr exp)
+	    (sferr "tree-il:\n") (pperr exp)
 	    (values (parse-tree-il exp) env cenv)
 	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
      	    ))
