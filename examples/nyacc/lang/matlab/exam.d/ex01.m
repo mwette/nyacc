@@ -3,10 +3,10 @@ function osig = pid(state, isig)
 % more docs
 
   global param
-  state = [ 1, 2 ];
+  state = [ 1.0, 2.0 ]';
   Kp = 1.0; Ki = 2.0; Kd = 3.0; dt = 1.0;
   desc = 'hello, world';
-  A = [ 0.0, 1.0; -2.0, -3.0 ]';
+  A = [ 0.0, 1.0; -2.0, -3.0 ];
 
   state(0) = state(0) + dt*isig;
   deriv = (isig - state(1))/dt;

@@ -24,6 +24,7 @@
 	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
 	    sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
 	    sx-find
+	    sx-split sx-split* sx-join sx-join*
 	    sx-match sx-haz-addr?)
   #:use-module ((srfi srfi-1) #:select (find fold)))
 (cond-expand
@@ -244,6 +245,30 @@
 	  sx))
    (else
     (error "expecting first arg to be tag or sxpath"))))
+
+;; @deffn {Procedure} sx-split sexp => tag attr|#f tail
+;; @deffnx {Procedure} sx-split* sexp => tag attr|#f exp ...
+;; Split an SXML element into its constituent parts, as a @code{values}.
+;; @end deffn
+(define (sx-split sexp)
+  (let ((tag (sx-tag sexp))
+	 (attr (sx-attr sexp))
+	 (tail (sx-tail sexp)))
+    (values tag attr tail)))
+(define (sx-split* sexp)
+  (let ((tag (sx-tag sexp))
+	 (attr (sx-attr sexp))
+	 (tail (sx-tail sexp)))
+    (apply values tag attr tail)))
+
+;; @deffn {Procedure} sx-join tag attr|#f tail => sexp
+;; @deffnx {Procedure} sx-join* tag attr|#f exp ... => sexp
+;; Build an SXML element by its parts.  If @var{ATTR} is @code{#f} skip;
+;; @end deffn
+(define (sx-join tag attr tail)
+  (if attr (cons* tag attr tail) (cons tag tail)))
+(define (sx-join* tag attr . tail)
+  (if attr (cons* tag attr tail) (cons tag tail)))
 
 ;; ============================================================================
 

@@ -44,27 +44,59 @@
 (define (xlib-ref name) `(@@ (nyacc lang matlab xlib) ,name))
 		       
 (define push-scope nx-push-scope)
-(define pop-scope nx-pop-scope)
+;;(define pop-scope nx-pop-scope)
 (define top-level? nx-top-level?)
 (define add-toplevel nx-add-toplevel)
 (define add-lexical nx-add-lexical)
 (define add-lexicals nx-add-lexicals)
-(define add-symbol nx-add-symbol)
+;;(define add-symbol nx-add-symbol)
 (define (lookup name dict)
   (or (nx-lookup name dict)
       (nx-lookup-in-env name xlib-module)))
 
-;; @deffn {Procedure} ensure-toplevel name
-;; Generate a TIL expression that will ensure the toplevel name is defined.
-;; If a define needs to be issues the value is @code{(void)}.
+;; This will push undeclared lexicals up one level.  Needs cleanup?
+(define (pop-scope dict)
+  (let ((pdict (nx-pop-scope dict)))
+    (let iter ((prev #f) (next dict))
+      ;;(sferr "pop next=~S\n" next)
+      (cond
+       ((eq? '@L (caar next)) (cond (prev (set-cdr! next pdict) dict)
+				    (else pdict)))
+       ((eq? '@P (caar next)) (cdar next))
+       (else (iter (car next) (cdr next)))))))
+
+;; @deffn {Procedure} function-scope? dict
+;; Looks up the dict levels to see if there exists a @code{'@F} tag,
+;; which denotes that context is in a function.
 ;; @end deffn
-(define (make-toplevel-defcheck name)
-  (let ((var (genxsym "var")) (sym (string->symbol name)))
-    `(let (var) (,var)
-	  ((call (toplevel module-local-variable)
-		 (call (toplevel current-module))
-		 (const ,sym)))
-	  (if (lexical var ,var) (void) (define ,sym (void))))))
+(define (function-scope? dict)
+  (let iter ((dict dict))
+    (cond
+     ((nx-top-level? dict) #f)
+     ((assq-ref '@F dict) #t)
+     (else (iter (nx-pop-scope dict))))))
+
+;; In matlab, variables are not declared so this will add to either the
+;; containting function or toplevel.
+(define (add-symbol name dict)
+  (if (function-scope? dict)
+      (nx-add-lexical name dict)
+      (nx-add-toplevel name dict)))
+		   
+;; @deffn {Procedure} make-def-ifndef name
+;; Generate a TIL expression that will ensure the toplevel name is defined.
+;; If a define needs to be issues the value is @code{(void)}.  Generates
+;; @example
+;; (if (defined? 'a) undefined (define a undefined))
+;; @end example
+;; @noindent
+;; where @code{undefined} is like @code{(if #f #f)}.
+;; @end deffn
+(define (make-def-ifndef symbol)
+  `(if (call (toplevel module-local-variable)
+	     (call (toplevel current-module))
+	     (const ,symbol))
+       (void) (define ,symbol (void))))
 
 ;; Add toplevel def's from dict before evaluating expression.  This puts
 ;; @var{expr} at the end of a chain of @code{seq}'s that execution
@@ -74,7 +106,7 @@
     (cond
      ((null? refs) expr)
      ((string? (caar refs))
-      `(seq ,(make-toplevel-defcheck (caar refs))
+      `(seq ,(make-def-ifndef (string->symbol (caar refs)))
 	    ,(iter (cdr refs))))
      ((eq? '@top (caar refs)) expr)
      (else (iter (cdr refs))))))
@@ -153,26 +185,28 @@
 
       ((switch ,expr . ,rest)
        ;; Convert
-       ;;  (switch expr (case a stmts) (case b stmts) ... (otherwise stmts))
+       ;;  (switch expr (case a stmtL) (case b stmtL) ... (otherwise stmtL))
        ;; to
-       ;;  (switchx expr (xif expr stmt (xif expr stmt ...  stmt))
+       ;;  (xswitch expr (xif expr stmtL (xif expr stmtL ...  stmtL))
        (values
 	`(xswitch ,expr
 		  ,(let iter ((tail rest))
 		     (cond
 		      ((null? tail) '(empty-stmt))
-		      ((eq? 'otherwise (sx-tag (car tail))) (sx-ref (car tail) 1))
+		      ((eq? 'otherwise (sx-tag (car tail)))
+		       (sx-ref (car tail) 1))
 		      ((eq? 'case (sx-tag (car tail)))
 		       `(xif (eq (ident "swx-val") ,(sx-ref (car tail) 1))
 			     ,(sx-ref (car tail) 2) ,(iter (cdr tail))))
 		      (else (error "unsupported case-expr")))))
-	'() (add-lexicals "swx~val" "break" (push-scope dict))))
+	'()
+	(acons '@L "switch" (add-lexicals "swx-val" "break" (push-scope dict)))))
 
       ((if ,expr ,stmts . ,rest)
        ;; Convert
-       ;;  (xif expr stmt (elseif expr stmt) ... (else stmt))
+       ;;  (if expr stmt (elseif expr stmt) ... (else stmt))
        ;; to
-       ;;  (xif expr stmt (ifx expr stmt ...  stmt))
+       ;;  (xif expr stmt (xif expr stmt ...  stmt))
        (values
 	`(xif ,expr ,stmts
 	      ,(let iter ((tail rest))
@@ -187,25 +221,29 @@
 	'() dict))
 
       ((while . ,rest)
-       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
+       (values tree '()
+	       (acons '@L "while"
+		      (add-lexicals "break" "continue" (push-scope dict)))))
 
       ((for . ,rest)
-       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
+       (values tree '()
+	       (acons '@L "for"
+		      (add-lexicals "break" "continue" (push-scope dict)))))
 
       ;; (assn (ident ,name) ,rhs))=> (assn-var (ident ,name) ,rhs)
       ;; (assn (aref-or-call ,aexp ,expl)) => (assn-elt ,aexp ,expl ,rhs)
       ;; (assn (sel ,ident ,expr) ,rhs) => (assn-mem ,ident ,expr ,rhs)
       ;; (assn . ,other) => syntax error
-      ((assn (ident ,name) ,rhsx)	; assign variable
-       (values `(assn-var (ident ,name) ,rhsx) '() dict))
-      ((assn (aref-or-call ,aexp ,expl) ,rhsx) ; assign element
-       (values `(assn-elt ,aexp ,expl ,rhsx) '() dict))
-      ((assn (sel (ident ,name) ,expr) ,rhsx) ; assign member
-       (values `(assn-mem ,expr ,name ,rhsx) '() dict))
+      ((assn (@ . ,attr) (ident ,name) ,rhsx)	; assign variable
+       (values `(assn-var (@ . ,attr) (ident ,name) ,rhsx) '() dict))
+      ((assn (@ . ,attr) (aref-or-call ,aexp ,expl) ,rhsx) ; assign element
+       (values `(assn-elt (@ . ,attr) ,aexp ,expl ,rhsx) '() dict))
+      ((assn (@ . ,attr) (sel (ident ,name) ,expr) ,rhsx) ; assign member
+       (values `(assn-mem (@ . ,attr) ,expr ,name ,rhsx) '() dict))
       ((assn . ,other)
        (throw 'nyacc-error "syntax error"))
 
-      ((multi-assn (lval-list . ,elts) ,rhsx)
+      ((multi-assn (@ . ,attr) (lval-list . ,elts) ,rhsx)
        (let* ((lval-expl
 	       (let iter ((elts elts) (ix 0))
 		 (if (null? elts) '()
@@ -220,10 +258,10 @@
 			   `(assn-elt ,aexp ,expl ,rv))
 			  ((sel (ident ,name) ,expr)
 			   `(assn-mem ,expr ,name ,rv))
-			  (else
-			   (throw 'nyacc-error "bad lhs syntax")))
+			  (else (throw 'nyacc-error "bad lhs syntax")))
 			(iter (cdr elts) (1+ ix))))))))
-	 (values `(multi-assn (lval-list . ,lval-expl) ,rhsx) '() dict)))
+	 (values `(multi-assn (@ . ,attr) (lval-list . ,lval-expl) ,rhsx)
+		 '() dict)))
 
       ((fctn-defn (fctn-decl (ident ,name)
 			     (ident-list . ,inargs)
@@ -236,7 +274,8 @@
 			  dict inargs))
 	      (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
 			  dict outargs))
-	      (dict (add-lexical "return" dict)))
+	      (dict (add-lexical "return" dict))
+	      (dict (acons '@F name dict)))
 	 (values tree '() dict)))
        
       (else
@@ -275,7 +314,8 @@
 	       (iargs (cdr (list-ref decl 2))) ; in reverse order
 	       (oargs (cdr (list-ref decl 3))) ; in reverse order
 	       (lvars (let iter ((ldict kdict))
-			(if (string=? "return" (caar ldict)) oargs
+			;;(if (string=? "return" (caar ldict)) oargs
+			(if (eq? '@F (caar ldict)) oargs
 			    (cons (cdar ldict) (iter (cdr ldict))))))
 	       ;; Ensure that last call is a return.
 	       (body (list-ref tail 1))
@@ -362,12 +402,17 @@
 	       (lhsxs (cdadr kseed))	; expr's generated by fD above
 	       (avars (map last lhsxs))	; rhs of assn-var, -elt or -mem
 	       (rest (genxsym "$rest"))
+	       (disp (display-result? tree))
+	       (blok (vblock lhsxs))
+	       (blok (if (display-result? tree)
+			 `(seq ,blok (primcall values ,@avars))
+			 blok))
 	       (body `(primcall
 		       call-with-values ,(make-thunk body)
 		       (lambda ()
 			 (lambda-case ((,(map cadr avars) #f $rest #f
 					() (,@(map caddr avars) ,rest))
-				       ,(vblock lhsxs)))))))
+				       ,blok))))))
 	  (values (cons body seed) kdict)))
 
        ;; looping
@@ -539,13 +584,13 @@
   )
 
 (define (compile-tree-il exp env opts)
-  (sferr "sxml:\n") (pperr exp)
+  ;;(sferr "sxml:\n") (pperr exp)
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
     (if exp 
 	(call-with-values
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    (sferr "tree-il:\n") (pperr exp)
+	    ;;(sferr "tree-il:\n") (pperr exp)
 	    (values (parse-tree-il exp) env cenv)
 	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
      	    ))

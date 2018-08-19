@@ -94,8 +94,8 @@
 
   (define (fU tree)
     (sx-match tree
-      ((assn (matrix (row . ,elts)) ,rhs)
-       `(multi-assn (lval-list . ,elts) ,rhs))
+      ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
+       `(multi-assn (@ . ,attr) (lval-list . ,elts) ,rhs))
       ((colon-expr . ,rest)
        (if (fixed-colon-expr? tree) `(fixed-colon-expr . ,(cdr tree)) tree))
       ((matrix . ,rest)
