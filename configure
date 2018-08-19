@@ -7,7 +7,7 @@
 # Copying and distribution of this file, with or without modification
 # is granted.  This file is offered as-is, without any warranty.
 
-nyacc_version=0.85.1
+nyacc_version=0.85.2
 
 help() {
     echo "'configure' sets up the top-level Makefile for your local guile"
@@ -72,6 +72,9 @@ while [ "$*" ]; do
 	--infodir=*)
 	    infodir=`echo $1 | sed -e 's/^--infodir=//'`
 	    ;;
+	--*)
+	    echo "configure: ignoring $1"
+ 	    ;;
     esac
     shift
 done
