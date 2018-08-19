@@ -368,7 +368,7 @@
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
 	  ((char-set-contains? c:sx ch)
-	   (iter (cons ch chl) '$fixed 5 ba (read-char)))
+	   (iter (cons ch chl) '$fixed ba 5 (read-char)))
 	  (else (iter chl '$fixed ba 5 ch))))
 	((2)
 	 (cond
