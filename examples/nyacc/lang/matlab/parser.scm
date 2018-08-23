@@ -136,7 +136,6 @@
 (define (ml-file-reader port env)
   (with-input-from-port port
     (lambda ()
-      (display "parse file\n")
       (if (eof-object? (peek-char port))
 	  (read-char port)
 	  (update-matlab-tree

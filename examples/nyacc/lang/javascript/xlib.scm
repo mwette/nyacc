@@ -103,13 +103,20 @@
 ;; @end example
 ;; @end deffn
 (define-public (js-make-object . rest)
-  (let ((obj (make-hash-table 31)))
+  (let ((obj (make-hash-table)))
     (let iter ((pairs rest))
       (when (pair? pairs)
-	(hash-set! obj (car pairs) (cadr pairs))
+	(hashq-set! obj (car pairs) (cadr pairs))
 	(iter (cddr pairs))))
     obj))
 (define mkobj js-make-object)
+
+;; new 180821
+(define-public (js:ooa-ref ooa arg)
+  (cond
+   ((vector? ooa) (vector-ref ooa arg))
+   ((hash-table? ooa) (hashq-ref ooa arg))
+   (else (error "expecing object or array:" ooa))))
 
 (define (js-make-array . rest)
   (apply vector rest))
@@ -120,20 +127,21 @@
   (cond
    ((not (pair? exp)) exp)
    ((vector? (car exp)) (vector-ref (car exp) (js-resolve (cdr exp))))
-   ((hash-table? (car exp)) (hash-ref (car exp) (js-resolve (cdr exp))))
+   ((hash-table? (car exp)) (hashq-ref (car exp) (js-resolve (cdr exp))))
    (else exp)))
 
 (define (js-ooa-get ooa-elt)
   (cond
    ((not (pair? ooa-elt)) (js-error "js-ooa-get"))
-   ((hash-table? (car ooa-elt)) (hash-ref (car ooa-elt) (cdr ooa-elt)))
+   ((hash-table? (car ooa-elt)) (hashq-ref (car ooa-elt) (cdr ooa-elt)))
    ((vector? (car ooa-elt)) (vector-ref (car ooa-elt) (cdr ooa-elt)))
    (else (js-error "js-ooa-get"))))
 (export js-ooa-get)
+
 (define (js-ooa-put ooa-elt val)
   (cond
    ((not (pair? ooa-elt)) (js-error "js-ooa-put 1"))
-   ((hash-table? (car ooa-elt)) (hash-set! (car ooa-elt) (cdr ooa-elt) val))
+   ((hash-table? (car ooa-elt)) (hashq-set! (car ooa-elt) (cdr ooa-elt) val))
    ((vector? (car ooa-elt)) (vector-set! (car ooa-elt) (cdr ooa-elt) val))
    (else (js-error "js-ooa-put 2"))))
 (export js-ooa-put)

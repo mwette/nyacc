@@ -21,6 +21,21 @@ TryStatement
   | Try stmts Catch stmts [';']
 @end example
 
+To be able to generate @code{set!}, @code{hash-set!},
+@code{vector-set!} etc.{} I like to ``catch'' the tree in the
+down stage of @code{foldts*-values}, using @code{sx-match} to convert
+the AST from
+@example
+(assign (obj-ref ,expr (ident ,name) ,rhs))
+@end example
+@noindent
+to
+@example
+(obj-assign ,expr ,name ,rhs))
+@end example
+@noindent
+This prevents @code{fD} from adding @code{name} into the symbol table.
+
 Rule: all N-languages should allow @code{#! ... !#} as a comment.
 and #L to end of line as a comment.
 

@@ -494,16 +494,44 @@
       ((PrimaryExpression (StringLiteral ,str))
        (values '() `(const ,str) dict))
 
+      ((CallExpression
+	(obj-ref ,expr (PrimaryExpression (Identifier ,name))) ,arg-list)
+       (sferr "1\n")
+       (values `(obj-CallExpression ,expr ,name ,arg-list) '() dict))
+      ((CallExpression (obj-ref ,expr (Identifier ,name)) ,arg-list)
+       (sferr "2\n")
+       (values `(obj-CallExpression ,expr ,name ,arg-list) '() dict))
+      ((CallExpression . ,rest)
+       (values tree '() dict))
+
       ((PropertyNameAndValue (Identifier ,name) ,expr)
        (values `(PropertyNameAndValue (PropertyName ,name) ,expr) '() dict))
 
       ((obj-ref ,expr (Identifier ,name))
-       (values `(ooa-ref ,expr (PropertyName ,name)) '() dict))
+       (values `(ooa-ref ,expr ,name) '() dict))
 
       ((Block . ,elts) ;; see comments on FunctionElements below
        (let* ((elts (remove-empties elts))
 	      (elts (cleanup-labels elts)))
 	 (values tree '() dict)))
+
+      ;; Convert AssignmentExpression to:
+      ;; 1) var-AssignmentExpression => ... (set! ...)
+      ;; 2) obj-AssignmentExpression => ... (hash-set! ...)
+      ;; 3) ooa-AssignmentExpression => ... (vector-set! ...)|(hash-set! ...)
+      ;; TODO: check LeftHandSideExpression
+      ((AssignmentExpression
+	(@ . ,attr) (PrimaryExpression (Identifier ,name)) ,assn ,rhs)
+       (values `(var-AssignmentExpression ,(cdr tree)) '() dict))
+      ((AssignmentExpression
+	(@ . ,attr) (obj-ref ,expr (Identifier ,name)) ,assn ,rhs)
+       (values
+	`(obj-AssignmentExpression (@ . ,attr) ,expr ,name ,assn ,rhs)
+	'() dict))
+      ((AssignmentExpression (@ . ,attr) (ooa-ref ,expr ,expr) ,rhs)
+       (values
+	`(ooa-AssignmentExpression (@ . ,attr) ,expr ,expr ,rhs)
+	'() dict))
       
       ((StatementList . ,stmts)
        (let* ((stmts (remove-empties stmts))
@@ -596,7 +624,7 @@
        ;; PrimaryExpression (w/ ArrayLiteral or ObjectLiteral only)
        ((PrimaryExpression)
 	(values (cons (car kseed) seed) kdict))
-       
+
        ;; ArrayLiteral
        ;; mkary is just primitive vector
        ((ArrayLiteral)
@@ -615,10 +643,16 @@
 
        ;; ObjectLiteral
        ((ObjectLiteral)
-	(values (cons (car kseed) seed) kdict))
+	(let* ((tail (rtail kseed)))
+	  (values
+	   (cons
+	    (if (null? tail) `(call (toplevel make-hash-table)) (car tail))
+	    seed)
+	   kdict)))
        
        ;; PropertyNameAndValueList
        ((PropertyNameAndValueList)
+	(sferr "prop list\n") (pperr (reverse kseed))
 	(values
 	 (cons `(call (@@ ,xlib-mod mkobj) ,@(rtail kseed)) seed)
 	 kdict))
@@ -629,25 +663,41 @@
 
        ;; PropertyName
        ((PropertyName)
-	(values (cons `(const ,(car kseed)) seed) kdict))
+	(values (cons `(const ,(string->symbol (car kseed))) seed) kdict))
 
        ;; ooa-ref (object-or-array ref), a cons cell: (dict name)
        ;; obj-ref: converted to ooa-ref in fD
        ;; => (cons <expr> <name>)
        ;; a bit ugly now ???
        ((ooa-ref)
-	(values
-	 (cons `(prim-call cons
-			   (call ,(xlib-ref 'js-resolve) ,(cadr kseed))
-			   ,(car kseed))
-	       seed) kdict))
+	(sferr "ooaref:\n") (pperr (rtail kseed))
+	(let* ((expr `(primcall cons
+				 (call ,(xlib-ref 'js-resolve) ,(cadr kseed))
+				 ,(car kseed)))
+	       (tail (rtail kseed))
+	       (ooa (list-ref tail 0))
+	       (arg `(const ,(string->symbol (list-ref tail 1))))
+	       (expr `(call ,(xlib-ref 'js:ooa-ref) ,ooa ,arg))
+	       )
+	  (pperr expr)
+	  (values (cons expr seed) kdict)))
 
        ;; new: for now just call object
        ((new) (values (cons (car kseed) seed) kdict))
        
-       ;; CallExpression ;; this should probably insert a (de-ref fct)(args)
-       ;; Should defined be boxed?
-       ((CallExpression) ;; need to deal with "this"
+        ;; obj-CallExpression obj name args : add args #:this obj
+       ((obj-CallExpression)
+	(let* ((tail (rtail kseed))
+	       (obj (list-ref tail 0))
+	       (mem `(const ,(string->symbol (list-ref tail 1))))
+	       (args (list-ref tail 2))
+	       (args (append args (list `(const #:this) obj)))
+	       (expr `(call (call ,(xlib-ref 'js:ooa-ref) ,obj ,mem) . ,args)))
+	  ;;(sferr "obj-C\n") (pperr tail)
+	  (values (cons expr seed) kdict)))
+       
+       ;; CallExpression
+       ((CallExpression)
 	;;(pperr (cons* 'apply (cadr kseed) (car kseed)))
 	(values (cons (cons* 'call (cadr kseed) (car kseed)) seed) kdict))
 
@@ -726,9 +776,20 @@
        ;; assign mul-assign div-assign od-assign add-assign sub-assign
        ;; lshift-assign rshift-assign rrshift-assign and-assign
        ;; xor-assign or-assign
-       ((AssignmentExpression)
-	(values (cons (op-assn kseed) seed) kdict))
+       ;; Note that assignment needs to return the value always
+       ((var-AssignmentExpression)
+	(let* ((tail (rtail kseed))
+	       )
+	  (sferr "obj-Ass\n") (pperr tail)
+	  (values (cons (op-assn kseed) seed) kdict)))
 
+       ((obj-AssignmentExpression)
+	(let* ((tail (rtail kseed))
+	       )
+	  (sferr "obj-Ass\n") (pperr tail)
+	  (values (cons '(void) seed) dict)))
+	;;;;`(obj-AssignmentExpression (@ . ,attr) ,expr ,name ,op ,rhs)
+       
        ;; expr-list
 
        ;; Block : has same elements as StatementList
@@ -1035,14 +1096,14 @@
 
 (define (compile-tree-il exp env opts)
   ;;(sferr "\nenv=~S\n" env)
-  ;;(sferr "sxml:\n") (pperr exp)
+  (sferr "sxml:\n") (pperr exp)
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
     ;;(sferr "env=~S\ncenv=~S" env cenv)
     (if exp 
 	(call-with-values
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    ;;(sferr "tree-il:\n") (pperr exp)
+	    (sferr "tree-il:\n") (pperr exp)
 	    (values (parse-tree-il exp) env cenv)
 	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
      	    ))

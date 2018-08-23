@@ -24,6 +24,7 @@
 	    make-and make-or make-thunk
 	    with-escape/handler with-escape/arg with-escape/expr with-escape
 	    rev/repl
+	    make-handler
 	    opcall-generator
 	    block vblock
 	    make-loop make-do-while make-while lookup-gensym
