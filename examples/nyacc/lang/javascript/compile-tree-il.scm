@@ -682,8 +682,12 @@
 	  (pperr expr)
 	  (values (cons expr seed) kdict)))
 
-       ;; new: for now just call object
-       ((new) (values (cons (car kseed) seed) kdict))
+       ;; new
+       ((new)
+	(let* ((tail (rtail kseed))
+	       (expr `(call ,(car tail) ,@(cadr tail) (const #:this)
+			    (call (toplevel make-hash-table)))))
+	  (values (cons expr seed) kdict)))
        
         ;; obj-CallExpression obj name args : add args #:this obj
        ((obj-CallExpression)

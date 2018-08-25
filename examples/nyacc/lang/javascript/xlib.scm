@@ -27,10 +27,6 @@
 (define (obj-toString obj)
   "[object Object]")
 
-(define (js-make-object . rest)
-  (let ((dict (make-hash-table 31)))
-    (hash-set! dict "toString" obj-toString)
-    ))
 
 (define (mkref name) `(@@ (nyacc lang javascript jslib) ,name))
 
