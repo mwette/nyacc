@@ -19,9 +19,9 @@
   #:export (read-command
 	    read-tcl-stmt
 	    read-tcl-body
-	    split-body tclme
-	    cnvt-tcl-tree
-	    cnvt-args
+	    split-body
+	    cnvt-tcl cnvt-args cnvt-body
+	    tclme
 	    )
   )
 
@@ -29,11 +29,11 @@
 (define (db fmt . args) #f)
 
 (define (xunread-char char port)
-  (sf "unread-char ~S\n" char)
+  ;;(sf "unread-char ~S\n" char)
   (unread-char char port))
 (define (xread-char port)
   (let ((ch (read-char port)))
-    (sf "read-char ~S\n" ch)
+    ;;(sf "read-char ~S\n" ch)
     ch))
 
 (define (rls chl) (reverse-list->string chl))
@@ -60,15 +60,20 @@
 (define cs:lix (string->char-set "(" cs:rs+ws))
 (define cs:rix (string->char-set ")"))
 
+(define (report-error fmt . args)
+  (let* ((port (current-input-port))
+	 (fn (or (port-filename port) "(unknown)"))
+	 (ln (1+ (port-line port))))
+    (apply simple-format (current-error-port) fmt args))
+  (throw 'tcl-error))
+
 (define (read-command port)
   (letrec
-      ((report-error
+      ((error
 	(lambda (fmt . args)
-	  (let ((fn (or (port-filename port) "(unknown)"))
-		(ln (1+ (port-line port))))
-	    (apply simple-format (current-error-port) fmt args))
-	  (throw 'tcl-error)))
-
+	  (with-input-from-port port
+	    (lambda () (apply report-error port fmt args)))))
+       
        (swallow
 	(lambda (val)
 	  (db "swallow ")
@@ -153,7 +158,7 @@
        (read-brace
 	(lambda ()
 	  (let loop ((chl '()) (bl 1) (ch (xread-char port)))
-	    (sf "B:       ch=~S bl=~S chl=~S\n" ch bl chl)
+	    (db "B:       ch=~S bl=~S chl=~S\n" ch bl chl)
 	    (cond
 	     ((eof-object? ch) (error "no end brace"))
 	     ((char=? ch #\})
@@ -167,12 +172,12 @@
        
        (read-frag
 	(lambda (end-cs)
-	  (sf "\n")
+	  ;;(sf "\n")
 	  (let loop ((tag #f)
 		     (chl '())
 		     (bl (if (eq? end-cs cs:rcurly) 1 0))
 		     (ch (xread-char port)))
-	    (sf "F:     tag=~S ch=~S chl=~S bl=~S end-cs=~S\n"
+	    (db "F:     tag=~S ch=~S chl=~S bl=~S end-cs=~S\n"
 		tag ch chl bl end-cs)
 	    (cond
 	     ((eof-object? ch)
@@ -204,7 +209,10 @@
 		      `(deref ,frag ,(read-index))
 		      `(deref ,frag))))))
 	     ((char=? ch #\{) (read-brace))
-	     ((char=? ch #\[) (swallow (read-cmmd cs:rs)))
+	     ((char=? ch #\[)
+	      (cond
+	       (tag (finish tag chl ch))
+	       (else (swallow (read-cmmd cs:rs)))))
 	     ((char=? ch #\") (swallow (read-frag cs:dquote)))
 	     ((not tag) (loop 'string (cons ch chl) bl (xread-char port)))
 	     (else (loop tag (cons ch chl) bl (xread-char port)))))))
@@ -229,6 +237,10 @@
     ;; or (swallow (read-cmmd cs:ct))
     ))
 
+(use-modules ((sxml fold) #:select (foldt)))
+(use-modules (nyacc lang sx-util))
+(use-modules (sxml match))
+
 ;; For strings which are known to be interpreted as bodies,
 ;; split them into a sequence of commands.
 (define (split-body body)
@@ -239,21 +251,30 @@
        (let loop ((cmd (read-command port)))
 	 (cond
 	  ((eof-object? cmd) '())
-	  ((null? (cdr cmd)) (loop (read-command port)))
-	  (else (cons cmd (loop (read-command port))))))))))
+	  ((null? (cdr cmd)) (loop (cnvt-tcl (read-command port)))) ; skip empty
+	  (else (cons cmd (loop (cnvt-tcl (read-command port)))))))))))
 
-(use-modules ((sxml fold) #:select (foldt)))
-(use-modules (nyacc lang sx-util))
+;; args string => (arg-list (arg "abc") (opt-arg "def" "123") (rest "args"))
+;; @table asis
+;; @item @code{arg} @emph{var}
+;; @item @code{opt-arg} @emph{var} @emph{val}
+;; @item @code{rest "args"}
+;; @end table
 
-;; args string => (arg-list (arg "abc") (arg "abc" "123") ((args)))
+(define (cnvt-expr tree)
+  (let ((tail (sx-tail tree))
+	)
+    tree))
+
 (define (cnvt-args astr)
   (with-input-from-string astr
     (lambda ()
-      (define (unread-chl chl)
+      (define (unread-chl-1 chl)
 	(cond
 	 ((null? chl))
+	 ((null? (cdr chl)))
 	 ((eof-object? (car chl)))
-	 (else (unread-char (car chl)) (unread-chl (cdr chl)))))
+	 (else (unread-char (car chl)) (unread-chl-1 (cdr chl)))))
       (define (skip-ws ch)
 	(if (char-set-contains? cs:ws ch) (skip-ws (read-char)) ch))
       (define (read-non-ws ch)
@@ -262,61 +283,70 @@
 	   ((eof-object? ch) (rls chl))
 	   ((char-set-contains? cs:ws ch) (rls chl))
 	   (else (loop (cons ch chl) (read-char))))))
-      (define (read-args-kw)
-	(let loop ((kw '(#\a #\r #\g #\s)) (chl '()) (ch (read-char)))
-	  (sf "rak chl=~S ch=~S\n" chl ch)
+      (define (read-pair ch)
+	(if (not (char=? ch #\{)) #f
+	    (let loop ((arg #f) (chl '()) (ch (read-char)))
+	      (cond
+	       ((eof-object? ch) (report-error "missing right brace"))
+	       ((char=? ch #\}) `(opt-arg ,arg ,(rls chl)))
+	       ((char-set-contains? cs:ws ch)
+		(if arg
+		    (if (pair? chl)
+			(loop arg (cons ch chl) (read-char))
+			(loop arg chl (read-char)))
+		    (loop (rls chl) '() (read-char))))
+	       (else (loop arg (cons ch chl) (read-char)))))))
+      (define (read-args-kw ch)
+	(let loop ((kw '(#\a #\r #\g #\s)) (chl '()) (ch ch))
 	  (cond
-	   ((null? (car kw)) #t)
-	   ((eof-object? ch) (unread-chl (cons ch chl)) #f)
-	   ((char=? (car kw) ch) (loop (cdr kw) (cons (car kw) chl) (read-char)))
-	   (else (unread-chl (cons ch chl)) #f))))
-      (define (read-pair)
-	(read-char)
-	(let loop ((arg #f) (chl '()) (ch (read-char)))
-	  (cond
-	   ((eof-object? ch) (unread-char ch) #f)
-	   ((char=? ch #\}) `(opt-arg ,arg ,(rls chl)))
-	   ((char-set-contains? cs:ws ch)
-	    (if arg
-		(if (pair? chl)
-		    (loop arg (cons ch chl) (read-char))
-		    (loop arg chl (read-char)))
-		(loop (rls chl) '() (read-char))))
-	   (else (loop arg (cons ch chl) (read-char))))))
+	   ((null? kw) #t)
+	   ((eof-object? ch) (unread-chl-1 chl) #f)
+	   ((char=? ch (car kw)) (loop (cdr kw) (cons (car kw) chl) (read-char)))
+	   (else (unread-chl-1 (cons ch chl)) #f))))
       (cons
        'arg-list
-       (let loop ((ch (peek-char)))
-	 (sf "\npeek ~S\n" ch)
+       (let loop ((ch (read-char)))
 	 (cond
 	  ((eof-object? ch) '())
-	  ((and (sf "1\n") #f))
-	  ((char-set-contains? cs:ws ch)
-	   (loop (read-char)))
-	  ((and (sf "2\n") #f))
-	  ((char=? ch #\{)
-	   (cons (read-pair) (loop (read-char))))
-	  ((and (sf "3\n") #f))
-	  ((read-args-kw)
-	   (cons '(args) (loop (read-char))))
-	  ((and (sf "4\n") #f))
-	  (else
-	   (let ((argval (read-non-ws (read-char))))
-	     (cons `(arg ,argval) (loop (read-char)))))))))))
-    
+	  ((char-set-contains? cs:ws ch) (loop (read-char)))
+	  ((char=? ch #\{) (cons (read-pair ch) (loop (read-char))))
+	  ((read-args-kw ch) (cons '(rest "args") (loop (read-char))))
+	  (else (let ((argval (read-non-ws ch)))
+		  (cons `(arg ,argval) (loop (read-char)))))))))))
+
 ;; should be converted to a chl (see nyacc lexer)
-(define reserved-proc-names
-  '("expr" "if" "proc" "set" "while"))
+(define tcl-res-cmds
+  '(("expr"
+     . (lambda (tree)
+	 tree))
+    ("if"
+     . (lambda (tree)
+	 (sxml-match tree
+	   ((command "if" ,cond ,then ,else)
+	    `(if ,(cnvt-expr cond) ,(cnvt-body then) ,(cnvt-body else)))
+	   (,otherwise
+	    (report-error "usage: if cond then else")))))
+    ("proc"
+     . (lambda (tree)
+	 (sxml-match tree
+	   ((command "proc" ,name ,args ,body)
+	    `(proc ,name ,(cnvt-args args) ,(cnvt-body body)))
+	   (,otherwise
+	    (report-error "usage: proc name args body")))))
+    ("set"
+     . #f)
+    ("while"
+     . #f)))
+
+;;(define (cnvt-expr words)
 
 ;; proc if while expr
-(define (cnvt-tcl-tree tree)
+(define (cnvt-tcl tree)
   (case (sx-tag tree)
     ((command)
-     (let ((cmd (sx-ref tree 1)))
-       (cond
-	((string=? "proc") ;; proc name args body
-	 `(proc (sx-ref tree 1) xxx))
-	(else
-	 tree))))
+     (cond
+      ((assoc-ref tcl-res-cmds (sx-ref tree 1)) => (lambda (p) (p tree)))
+      (else tree)))
     ((word)
      tree)
     (else

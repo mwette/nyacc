@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+java object model:
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Details_of_the_Object_Model
+
 something is broken wrt se parser:
 
 (parse-se "function foo() { return 1; }") => (return (const 1))
