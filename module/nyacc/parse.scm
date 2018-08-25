@@ -74,7 +74,7 @@
 
 (define (parse-error state laval)
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-	(ln (port-line (current-input-port))))
+	(ln (1+ (port-line (current-input-port)))))
     (throw 'nyacc-error
 	   "~A:~A: parse failed at state ~A, on input ~S\n"
 	   fn ln (car state) (cdr laval))))
