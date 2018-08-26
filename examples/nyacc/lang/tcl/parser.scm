@@ -15,12 +15,19 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
+;; args string => (arg-list (arg "abc") (opt-arg "def" "123") (rest "args"))
+;; @table asis
+;; @item @code{arg} @emph{var}
+;; @item @code{opt-arg} @emph{var} @emph{val}
+;; @item @code{rest "args"}
+;; @end table
+
 (define-module (nyacc lang tcl parser)
   #:export (read-command
 	    read-tcl-stmt
 	    read-tcl-body
 	    split-body
-	    cnvt-tcl cnvt-args cnvt-body
+	    cnvt-tcl cnvt-args cnvt-expr
 	    tclme
 	    )
   )
@@ -239,7 +246,11 @@
 
 (use-modules ((sxml fold) #:select (foldt)))
 (use-modules (nyacc lang sx-util))
+(use-modules (nyacc lalr))
+(use-modules (nyacc lex))
+(use-modules (nyacc parse))
 (use-modules (sxml match))
+(use-modules ((srfi srfi-1) #:select (fold-right)))
 
 ;; For strings which are known to be interpreted as bodies,
 ;; split them into a sequence of commands.
@@ -254,18 +265,46 @@
 	  ((null? (cdr cmd)) (loop (cnvt-tcl (read-command port)))) ; skip empty
 	  (else (cons cmd (loop (cnvt-tcl (read-command port)))))))))))
 
-;; args string => (arg-list (arg "abc") (opt-arg "def" "123") (rest "args"))
-;; @table asis
-;; @item @code{arg} @emph{var}
-;; @item @code{opt-arg} @emph{var} @emph{val}
-;; @item @code{rest "args"}
-;; @end table
+(include-from-path "nyacc/lang/tcl/mach.d/expr-act.scm")
+(include-from-path "nyacc/lang/tcl/mach.d/expr-tab.scm")
+
+(define expr-lexr ((make-lexer-generator tcl-expr-mtab)))
+  
+(define raw-parser
+  (make-lalr-parser
+   (list (cons 'act-v tcl-expr-act-v) (cons 'len-v tcl-expr-len-v)
+	 (cons 'pat-v tcl-expr-pat-v) (cons 'rto-v tcl-expr-rto-v)
+	 (cons 'mtab tcl-expr-mtab))))
+
+(define (parse-expr-string str)
+  (with-input-from-string str
+    (lambda ()
+      (catch 'nyacc-error
+	(lambda ()
+	  (raw-parser expr-lexr #:debug #f))
+	(lambda (key fmt . args)
+	  (apply simple-format (current-error-port) fmt args))
+	#f))))
 
 (define (cnvt-expr tree)
-  (let ((tail (sx-tail tree))
-	)
-    tree))
-
+  (let* ((terms (fold-right
+		 (lambda (term terms)
+		   (if (string? term)
+		       (cons term terms)
+		       (append (sx-tail term) terms)))
+		 '() (sx-tail tree)))
+	 (toks (fold-right
+		(lambda (term toks)
+		  (if
+		   (string? term)
+		   (cons (parse-expr-string term) toks)
+		   (case (car term)
+		     ((command) (cons term toks))
+		     (else (cons term toks)))))
+		'() terms))
+	 )
+    toks))
+	   
 (define (cnvt-args astr)
   (with-input-from-string astr
     (lambda ()
@@ -323,14 +362,14 @@
      . (lambda (tree)
 	 (sxml-match tree
 	   ((command "if" ,cond ,then ,else)
-	    `(if ,(cnvt-expr cond) ,(cnvt-body then) ,(cnvt-body else)))
+	    `(if ,(cnvt-expr cond) ,(split-body then) ,(split-body else)))
 	   (,otherwise
 	    (report-error "usage: if cond then else")))))
     ("proc"
      . (lambda (tree)
 	 (sxml-match tree
 	   ((command "proc" ,name ,args ,body)
-	    `(proc ,name ,(cnvt-args args) ,(cnvt-body body)))
+	    `(proc ,name ,(cnvt-args args) ,(split-body body)))
 	   (,otherwise
 	    (report-error "usage: proc name args body")))))
     ("set"
