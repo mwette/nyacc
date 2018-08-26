@@ -97,7 +97,7 @@
 
        ;; before leaving add a call to make sure all toplevels are defined
        ((*TOP*)
-	(values (add-topdefs kdict (car kseed)) kdict))
+	(values (car kseed) kdict))
 
        ((command)
 	#f)
@@ -127,11 +127,14 @@
   (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
     (if exp 
 	(call-with-values
-	    (lambda () (xlang-sxml->tree-il/ext exp cenv opts))
+	    (lambda ()
+	      ;;(xlang-sxml->tree-il/ext exp cenv opts)
+	      (values #f cenv)
+	      )
 	  (lambda (exp cenv)
-	    (sferr "tree-il:\n") (pperr exp)
-	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
+	    ;;(sferr "tree-il:\n") (pperr exp)
+	    ;;(values (parse-tree-il exp) env cenv)
+	    (values (parse-tree-il '(const "[hello]")) env cenv)
      	    ))
 	(values (parse-tree-il '(void)) env cenv))))
 

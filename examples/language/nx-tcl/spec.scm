@@ -1,4 +1,4 @@
-;; Nyacc eXtension for Tcl
+;;; language/nx-tcl/spec.scm - Nyacc eXtension for Tcl
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -28,6 +28,7 @@
   #:reader	read-tcl-stmt
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
+  #:printer	write
   #:make-default-environment
 		(lambda ()
 		  (let ((env (make-fresh-user-module)))
