@@ -85,12 +85,12 @@
 (define flush-input-after-error
   (let ((read-string (make-string-reader #\")))
     (lambda (port)
-      (let iter ((ch (read-char port)))
+      (let loop ((ch (read-char port)))
 	(cond
 	 ((eqv? ch #\;) #f)
-	 ((read-js-string ch) (iter (read-char port)))
+	 ((read-js-string ch) (loop (read-char port)))
 	 ((read-c-comm ch #t) #f)
-	 (else (iter (read-char port))))))))
+	 (else (loop (read-char port))))))))
 
 (define (js-stmt-reader port env)
   (if (eof-object? (peek-char port))

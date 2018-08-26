@@ -187,10 +187,10 @@
 ;; @end example
 ;; @end deffn
 (define (make-let bindings exprs)
-  (let iter ((names '()) (gsyms '()) (vals '()) (bindings bindings))
+  (let loop ((names '()) (gsyms '()) (vals '()) (bindings bindings))
     (if (null? bindings)
 	`(let ,(reverse names) ,(reverse gsyms) ,(reverse vals) ,(block exprs))
-	(iter (cons (list-ref (car bindings) 1) names)
+	(loop (cons (list-ref (car bindings) 1) names)
 	      (cons (list-ref (car bindings) 2) gsyms)
 	      (cons (list-ref (car bindings) 3) vals)
 	      (cdr bindings)))))
@@ -208,18 +208,18 @@
 ;; Oh, I think this needs to use @code{letrec*}.
 (define (wrap-bindings body)
   ;;(sferr "wrap:\n  body\n") (pperr body)
-  (let iter1 ((bindings '()) (rest body))
+  (let loop1 ((bindings '()) (rest body))
     (match rest
       (`(seq (bindings . ,bnds) ,rst)
-       (iter1 (fold cons bindings bnds) rst))
+       (loop1 (fold cons bindings bnds) rst))
       (_
        ;;(sferr "  bindings, rest:\n") (pperr bindings) (pperr rest)
        (if (null? bindings)
 	   body
-	   (let iter2 ((names '()) (gsyms '()) (inits '()) (binds bindings))
+	   (let loop2 ((names '()) (gsyms '()) (inits '()) (binds bindings))
 	     (if (null? binds)
 		 `(letrec* ,names ,gsyms ,inits ,rest)
-		 (iter2 (cons (list-ref (car binds) 1) names)
+		 (loop2 (cons (list-ref (car binds) 1) names)
 			(cons (list-ref (car binds) 2) gsyms)
 			(cons (list-ref (car binds) 3) inits)
 			(cdr binds)))))))))
@@ -329,12 +329,12 @@
   ;; @deffn {Procedure} remove-empties elements => elements
   ;; @end deffn
   (define (remove-empties elements)
-    (let iter ((elts elements))
+    (let loop ((elts elements))
       (if (null? elts) '()
 	  (let ((elt (car elts)) (rest (cdr elts)))
 	    (if (eq? (car elt) 'EmptyStatement)
-		(iter rest)
-		(cons elt (iter rest)))))))
+		(loop rest)
+		(cons elt (loop rest)))))))
 
   ;; @deffn {Procedure} labelable-stmt? stmt => #f|stmt
   ;; This predicate determines if the statement can have a preceeding label.
@@ -356,7 +356,7 @@
   ;; @code{switch}, or removes them if not preceeding iteration statement.
   ;; @end deffn
   (define (cleanup-labels src-elts-tail)
-    (let iter ((src src-elts-tail))
+    (let loop ((src src-elts-tail))
       (if (null? src) '()
 	  (if (eq? (caar src) 'LabelledStatement)
 	      (call-with-values
@@ -376,9 +376,9 @@
 			(simple-format (current-error-port)
 				       "removing misplaced label: ~A\n"
 				       (cadr id))
-			(iter rest))
-		      (cons `(LabelledStatement ,id ,stmt) (iter rest)))))
-	      (cons (car src) (iter (cdr src)))))))
+			(loop rest))
+		      (cons `(LabelledStatement ,id ,stmt) (loop rest)))))
+	      (cons (car src) (loop (cdr src)))))))
 
   ;; @deffn {Procedure} hoist-decls elements => elements
   ;; Move all variable declarations to front and replace old ones with
@@ -388,13 +388,13 @@
   (define (split-dstmt dstmt hoisted rest) ;; => hoisted rest
     ;; move Let/VariableStatement to hoisted, moving initializers
     ;; to decls as assignment statements
-    (let iter ((hdecls '()) (rest rest) (decls (cdadr dstmt)))
+    (let loop ((hdecls '()) (rest rest) (decls (cdadr dstmt)))
       (if (null? decls)
 	  (values (cons `(,(car dstmt) (DeclarationList ,hdecls)) hoisted) rest)
 	  (let* ((decl (car decls))
 		 (init (if (= 3 (length decl)) (caddr decl) #f))
 		 (decl (if init (list (car decl) (cadr decl)) decl)))
-	    (iter (cons decl hdecls)
+	    (loop (cons decl hdecls)
 		  (if init
 		      (cons `(ExpressionStatement
 			      (AssignmentExpression
@@ -404,26 +404,26 @@
 		      rest)
 		  (cdr decls))))))
   (define (hoist-decls elements)
-    (let ((tail (let iter ((elts elements)) ; tail after Let/VarStatements
+    (let ((tail (let loop ((elts elements)) ; tail after Let/VarStatements
 		  (cond
 		   ((null? elts) elts)
 		   ((not (memq (caar elts) hoist-stmts)) elts)
-		   (iter (cdr elts))))))
-      (let iter ((hoisted '()) (rest '()) (elts tail))
+		   (loop (cdr elts))))))
+      (let loop ((hoisted '()) (rest '()) (elts tail))
 	(cond
 	 ((null? elts)
 	  (if (null? hoisted)
 	      elements			   ; nothing hoisted
-	      (let iter2 ((elts elements)) ; rebuild statement list
+	      (let loop2 ((elts elements)) ; rebuild statement list
 		(if (eq? elts tail) (append-reverse hoisted (reverse rest))
-		    (cons (car elts) (iter2 (cdr elts)))))))
+		    (cons (car elts) (loop2 (cdr elts)))))))
 	 ((memq (caar elts) hoist-stmts)
 	  (call-with-values		; decl=>hoisted init=>rest
 	      (lambda () (split-dstmt (car elts) hoisted rest))
 	    (lambda (hoisted rest)
-	      (iter hoisted rest (cdr elts)))))
+	      (loop hoisted rest (cdr elts)))))
 	 (else
-	  (iter hoisted (cons (car elts) rest) (cdr elts)))))))
+	  (loop hoisted (cons (car elts) rest) (cdr elts)))))))
 	  
   
   ;; @deffn {Procedure} fold-in-blocks elts-tail => elts-tail
@@ -441,12 +441,12 @@
   ;; We assume no elements of @code{FunctionElements} is text.
   ;; @end deffn
   (define (x-fold-in-blocks src-elts-tail)
-    (let iter ((src  src-elts-tail))
+    (let loop ((src  src-elts-tail))
       (if (null? src) '()
 	  (let ((elt (car src)) (rest (cdr src)))
 	    (if (eq? (car elt) 'VariableStatement)
-		(list (cons* 'Block (cadr elt) (iter rest)))
-		(cons elt (iter rest)))))))
+		(list (cons* 'Block (cadr elt) (loop rest)))
+		(cons elt (loop rest)))))))
 
   ;; @deffn {Procedure} check-scoping elements
   ;; Check blocks to make sure @code{var} is only used in blocks at entry
@@ -962,11 +962,11 @@
 	(values
 	 (cons 
 	  (let ((val (lookup "swx~val" kdict)))
-	    (let iter ((next '(void)) (sym (jsym)) (ks kseed))
+	    (let loop ((next '(void)) (sym (jsym)) (ks kseed))
 	      (if (eq? (car ks) 'CaseClauses)
 		  `(let (~key) (,sym) ((const #f)) ,next)
 		  (let ((psym (jsym)))
-		    (iter (make-case val sym psym (car ks) next)
+		    (loop (make-case val sym psym (car ks) next)
 			  psym (cdr ks))))))
 	  seed)
 	 kdict))

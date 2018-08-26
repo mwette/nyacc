@@ -96,18 +96,18 @@
 	;; Return the first (tval lval) pair not excluded by the CPP.
 	(lambda ()
 	  (define (read-token)
-	    (let iter ((ch (read-char)))
+	    (let loop ((ch (read-char)))
 	      (cond
 	       ((eof-object? ch) (assc-$ '($end . EOF)))
 	       ((eq? ch #\newline) (set! bol #t) (cons tv-semi ch))
-	       ((char-set-contains? c:ws ch) (iter (read-char)))
+	       ((char-set-contains? c:ws ch) (loop (read-char)))
 	       (bol
 		(cond
 		 #;((read-comm ch) =>
 		 (lambda (c) (assc-$ (cons '$lone-comm (cdr c)))))
-		 ((read-comm ch bol) (iter (read-char)))
+		 ((read-comm ch bol) (loop (read-char)))
 		 ;;((read-cpp-line ch) => (lambda (s) (assc-$ (exec-cpp s))))
-		 (else (set! bol #f) (iter ch))))
+		 (else (set! bol #f) (loop ch))))
 	       ((read-ident ch) =>
 		(lambda (str)
 		  (let ((sym (string->symbol str)))
@@ -119,7 +119,7 @@
 	       ((read-c-chlit ch) => assc-$)
 	       #;((read-comm ch) =>
 	       (lambda (c) (assc-$ (cons '$code-comm (cdr c)))))
-	       ((read-comm ch bol) (iter (read-char)))
+	       ((read-comm ch bol) (loop (read-char)))
 	       ;;((and (simple-format #t "chs=>~S\n" (read-chseq ch)) #f))
 	       ((read-chseq ch) => identity)
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))

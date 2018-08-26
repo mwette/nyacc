@@ -144,12 +144,12 @@
 ;; vector: double *
 	     
 (define (parse-type-decls stmts)
-  (let iter ((out '()) (stmts stmts))
+  (let loop ((out '()) (stmts stmts))
     (cond
      ((null? stmts) out)
      ((not (eqv? 'comm (caar stmts))) out)
      (else
-      (iter (fold-in-decl (cadar stmts) out) (cdr stmts))))))
+      (loop (fold-in-decl (cadar stmts) out) (cdr stmts))))))
 
 ;; @deffn declify-ffile tree [dict] => tree
 ;; This needs work.
@@ -240,9 +240,9 @@
        (values `(assn (array-ref ,expr ,ex-l)) '() dict))
       
       ((assn (ident ,name) (aref-or-call (ident "struct") ,ex-l))
-       (let ((kvl (let iter ((kvl '()) (al (sx-tail ex-l 1)))
+       (let ((kvl (let loop ((kvl '()) (al (sx-tail ex-l 1)))
 		    (if (null? al) (reverse kvl)
-			(iter (cons (list (cadar al) (cadr al))
+			(loop (cons (list (cadar al) (cadr al))
 				    kvl) (cddr al)))))
 	     )
 	 (fout "struct ~S: ~S\n" name (map car kvl))

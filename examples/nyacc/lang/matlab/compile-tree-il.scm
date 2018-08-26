@@ -57,24 +57,24 @@
 ;; This will push undeclared lexicals up one level.  Needs cleanup?
 (define (pop-scope dict)
   (let ((pdict (nx-pop-scope dict)))
-    (let iter ((prev #f) (next dict))
+    (let loop ((prev #f) (next dict))
       ;;(sferr "pop next=~S\n" next)
       (cond
        ((eq? '@L (caar next)) (cond (prev (set-cdr! next pdict) dict)
 				    (else pdict)))
        ((eq? '@P (caar next)) (cdar next))
-       (else (iter (car next) (cdr next)))))))
+       (else (loop (car next) (cdr next)))))))
 
 ;; @deffn {Procedure} function-scope? dict
 ;; Looks up the dict levels to see if there exists a @code{'@F} tag,
 ;; which denotes that context is in a function.
 ;; @end deffn
 (define (function-scope? dict)
-  (let iter ((dict dict))
+  (let loop ((dict dict))
     (cond
      ((nx-top-level? dict) #f)
      ((assq '@F dict) #t)
-     (else (iter (nx-pop-scope dict))))))
+     (else (loop (nx-pop-scope dict))))))
 
 ;; In matlab, variables are not declared so this will add to either the
 ;; containting function or toplevel.
@@ -102,14 +102,14 @@
 ;; @var{expr} at the end of a chain of @code{seq}'s that execution
 ;; conditional defines to a void.  See @code{make-toplevel-defcheck}.
 (define (add-topdefs dict expr)
-  (let iter ((refs dict))
+  (let loop ((refs dict))
     (cond
      ((null? refs) expr)
      ((string? (caar refs))
       `(seq ,(make-def-ifndef (string->symbol (caar refs)))
-	    ,(iter (cdr refs))))
+	    ,(loop (cdr refs))))
      ((eq? '@top (caar refs)) expr)
-     (else (iter (cdr refs))))))
+     (else (loop (cdr refs))))))
 
 (define make-opcall (opcall-generator xlib-mod))
 
@@ -190,14 +190,14 @@
        ;;  (xswitch expr (xif expr stmtL (xif expr stmtL ...  stmtL))
        (values
 	`(xswitch ,expr
-		  ,(let iter ((tail rest))
+		  ,(let loop ((tail rest))
 		     (cond
 		      ((null? tail) '(empty-stmt))
 		      ((eq? 'otherwise (sx-tag (car tail)))
 		       (sx-ref (car tail) 1))
 		      ((eq? 'case (sx-tag (car tail)))
 		       `(xif (eq (ident "swx-val") ,(sx-ref (car tail) 1))
-			     ,(sx-ref (car tail) 2) ,(iter (cdr tail))))
+			     ,(sx-ref (car tail) 2) ,(loop (cdr tail))))
 		      (else (error "unsupported case-expr")))))
 	'()
 	(acons '@L "switch" (add-lexicals "swx-val" "break" (push-scope dict)))))
@@ -209,14 +209,14 @@
        ;;  (xif expr stmt (xif expr stmt ...  stmt))
        (values
 	`(xif ,expr ,stmts
-	      ,(let iter ((tail rest))
+	      ,(let loop ((tail rest))
 		 (cond
 		  ((null? tail) '(empty-stmt))
 		  ((eq? 'else (sx-tag (car tail))) (sx-ref (car tail) 1))
 		  ((eq? 'elseif (sx-tag (car tail)))
 		   `(xif ,(sx-ref (car tail) 1) ; cond
 			 ,(sx-ref (car tail) 2) ; then
-			 ,(iter (cdr tail))))   ; else
+			 ,(loop (cdr tail))))   ; else
 		  (else (error "oops")))))
 	'() dict))
 
@@ -245,7 +245,7 @@
 
       ((multi-assn (@ . ,attr) (lval-list . ,elts) ,rhsx)
        (let* ((lval-expl
-	       (let iter ((elts elts) (ix 0))
+	       (let loop ((elts elts) (ix 0))
 		 (if (null? elts) '()
 		     (let* ((n (string-append "arg" (number->string ix)))
 			    (s (string->symbol n)) (g (genxsym n))
@@ -259,7 +259,7 @@
 			  ((sel (ident ,name) ,expr)
 			   `(mem-assn ,expr ,name ,rv))
 			  (else (throw 'nyacc-error "bad lhs syntax")))
-			(iter (cdr elts) (1+ ix))))))))
+			(loop (cdr elts) (1+ ix))))))))
 	 (values `(multi-assn (@ . ,attr) (lval-list . ,lval-expl) ,rhsx)
 		 '() dict)))
 
@@ -313,10 +313,10 @@
 	       (name (cadr (list-ref decl 1)))
 	       (iargs (cdr (list-ref decl 2))) ; in reverse order
 	       (oargs (cdr (list-ref decl 3))) ; in reverse order
-	       (lvars (let iter ((ldict kdict))
+	       (lvars (let loop ((ldict kdict))
 			;;(if (string=? "return" (caar ldict)) oargs
 			(if (eq? '@F (caar ldict)) oargs
-			    (cons (cdar ldict) (iter (cdr ldict))))))
+			    (cons (cdar ldict) (loop (cdr ldict))))))
 	       ;; Ensure that last call is a return.
 	       (body (list-ref tail 1))
 	       ;; Set up the return prompt expr
@@ -329,10 +329,10 @@
 		       (else `(primcall values ,@oargs))))
 	       (body `(seq ,body ,rval))
 	       ;; Now wrap in local `let'
-	       (body (let iter ((nl '()) (ll '()) (vl '()) (vs lvars))
+	       (body (let loop ((nl '()) (ll '()) (vl '()) (vs lvars))
 		       (if (null? vs)
 			   `(let ,nl ,ll ,vl ,body)
-			   (iter
+			   (loop
 			    (cons (list-ref (car vs) 1) nl)
 			    (cons (list-ref (car vs) 2) ll)
 			    (cons '(void) vl)
@@ -552,12 +552,12 @@
 		(nrow (length tail))
 		(makea `(call (toplevel make-typed-array) (const f64)
 			      (const 0.0) (const ,nrow) (const ,ncol)))
-		(body (let iter ((ix 0) (rows tail))
+		(body (let loop ((ix 0) (rows tail))
 			(if (null? rows) aval
 			    `(seq (call ,(xlib-ref 'ml:array-set-row!)
 					,aval (const ,ix)
 					(primcall list . ,(cdar rows)))
-				  ,(iter (1+ ix) (cdr rows))))))
+				  ,(loop (1+ ix) (cdr rows))))))
 		(expr `(let ($aval) (,asym) (,makea) ,body)))
 	   (values (cons expr seed) kdict)))
 	 

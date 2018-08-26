@@ -368,6 +368,9 @@
     (else
      tree)))
 
+;; @deffn {Procedure} read-tcl-stmt port env
+;; Guile extension language routine to read a single statement.
+;; @end deffn
 (define (read-tcl-stmt port env)
   (let* ((cmmd (read-command port))
 	 (cmmd (cnvt-tcl cmmd))

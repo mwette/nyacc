@@ -31,20 +31,20 @@
 
 (define (matlab-read-string ch)
   (if (not (eq? ch #\')) #f
-      (let iter ((cl '()) (ch (read-char)))
+      (let loop ((cl '()) (ch (read-char)))
 	(cond ((eq? ch #\\)
 	       (let ((c1 (read-char)))
 		 (if (eq? c1 #\newline)
-		     (iter cl (read-char))
-		     (iter (cons c1 cl) (read-char)))))
+		     (loop cl (read-char))
+		     (loop (cons c1 cl) (read-char)))))
 	      ((eq? ch #\')
 	       (let ((nextch (read-char)))
 		 (if (eq? #\' nextch)
-		     (iter (cons ch cl) (read-char))
+		     (loop (cons ch cl) (read-char))
 		     (begin
 		       (unread-char nextch)
 		       (cons '$string (list->string (reverse cl)))))))
-	      (else (iter (cons ch cl) (read-char)))))))
+	      (else (loop (cons ch cl) (read-char)))))))
 
 (define matlab-read-comm
   (make-comm-reader '(("%" . "\n")
@@ -63,11 +63,11 @@
       #f))
 
 (define (skip-to-next-line)
-  (let iter ((ch (read-char)))
+  (let loop ((ch (read-char)))
     (cond
      ((eof-object? ch) ch)
      ((eqv? ch #\newline) (read-char))
-     (else (iter (read-char))))))
+     (else (loop (read-char))))))
   
 (define-public (make-matlab-lexer-generator match-table)
   (let* ((read-string matlab-read-string)
@@ -88,14 +88,14 @@
     (lambda ()
       (let ((qms #f) (bol #t))		; qms: quote means string
 	(lambda ()
-	  (let iter ((ch (read-char)))
+	  (let loop ((ch (read-char)))
 	    (cond
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
- 	     ((elipsis? ch) (iter (skip-to-next-line)))
+ 	     ((elipsis? ch) (loop (skip-to-next-line)))
 	     ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
-	     ((char-set-contains? space-cs ch) (set! qms #t) (iter (read-char)))
+	     ((char-set-contains? space-cs ch) (set! qms #t) (loop (read-char)))
 	     ((read-comm ch bol) => assc-$)
-	     (bol (set! bol #f) (iter ch))
+	     (bol (set! bol #f) (loop ch))
 	     ((read-ident ch) =>	; returns string
 	      (lambda (s)
 		(set! qms #f)

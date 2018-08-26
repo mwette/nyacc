@@ -100,10 +100,10 @@
 ;; @end deffn
 (define-public (js-make-object . rest)
   (let ((obj (make-hash-table)))
-    (let iter ((pairs rest))
+    (let loop ((pairs rest))
       (when (pair? pairs)
 	(hashq-set! obj (car pairs) (cadr pairs))
-	(iter (cddr pairs))))
+	(loop (cddr pairs))))
     obj))
 (define mkobj js-make-object)
 

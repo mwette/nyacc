@@ -116,10 +116,10 @@
      (else (error "matlab: expecting array args of integer, range or array")))))
 
 (define-public (ml:array-set-row! ary ix row)
-  (let iter ((jx 0) (elts row))
+  (let loop ((jx 0) (elts row))
     (unless (null? elts)
       (array-set! ary (car elts) ix jx)
-      (iter (1+ jx) (cdr elts)))))
+      (loop (1+ jx) (cdr elts)))))
 
 (define-public (ml:aref-or-call proc-or-array . args)
   ;;(sferr "proc-or-array=~S  args=~S\n" proc-or-array args)

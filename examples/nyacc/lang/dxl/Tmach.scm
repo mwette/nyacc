@@ -55,9 +55,9 @@
 #;(let ((lx (gen-dxl-lexer)))
   (with-input-from-file "exam.d/ex1.dxl"
     (lambda ()
-      (let iter ((tp (lx)))
+      (let loop ((tp (lx)))
 	(unless (eqv? (cdr tp) 'EOF)
 	  (simple-format #t "~S\n" (cdr tp))
-(iter (lx)))))))
+(loop (lx)))))))
 
 ;; --- last line ---

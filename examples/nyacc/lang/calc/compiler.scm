@@ -42,9 +42,9 @@
 
 
  (define (mkseq expr-list)
-   (let iter ((xl expr-list))
+   (let loop ((xl expr-list))
      (if (null? xl) '((void))
-	 (cons* 'seq (car expr-list) (iter (cdr expr-list))))))
+	 (cons* 'seq (car expr-list) (loop (cdr expr-list))))))
 
  (define (show/til expr)
    `(seq (call (toplevel display) ,expr) (seq (call (toplevel newline)) (void))))

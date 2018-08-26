@@ -41,10 +41,10 @@
 ;; @deffn {Procecure} read-js-string ch => ($string "abc") | #f
 (define-public (read-js-string delim)
   (if (not (or (eq? delim #\') (eq? delim #\"))) #f
-      (let iter ((cl '()) (ch (read-char)))
+      (let loop ((cl '()) (ch (read-char)))
 	(cond ((eq? ch #\\)
 	       (let ((c1 (read-char)))
-		 (iter
+		 (loop
 		  (case c1 		; see sec 7.8.4 in es5.1 spec
 		    ((#\newline) (throw 'js-err "newline in string literal"))
 		    ((#\' #\" #\\) (cons c1 cl))
@@ -57,7 +57,7 @@
 		    (else (cons c1 cl)))
 		  (read-char))))
 	      ((eq? ch delim) (cons '$string (list->string (reverse cl))))
-	      (else (iter (cons ch cl) (read-char)))))))
+	      (else (loop (cons ch cl) (read-char)))))))
 
 ;; Add #! ... !# to comment format so that we can use shebang scripts.
 (define read-js-comm
@@ -83,16 +83,16 @@
 	(lambda ()
           (define (process lexeme) (fluid-set! *insert-semi* #t) lexeme)
           (process
-	   (let iter ((ch (read-char)))
+	   (let loop ((ch (read-char)))
 	     (cond
 	      ((eof-object? ch) (assc-$ (cons '$end ch)))
-	      ((char-set-contains? space-cs ch) (iter (read-char)))
+	      ((char-set-contains? space-cs ch) (loop (read-char)))
 	      ((eqv? ch #\newline)
 	       (set! bol #t)
 	       (if (fluid-ref *insert-semi*)
 		   (cons semicolon "\n")
-		   (iter (read-char))))
-	      ((read-js-comm ch bol) (iter (read-char)))
+		   (loop (read-char))))
+	      ((read-js-comm ch bol) (loop (read-char)))
 	      ((and (set! bol #f) #f))
 	      ((read-js-string ch) => assc-$)
 	      ((read-js-ident ch) =>
