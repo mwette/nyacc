@@ -349,4 +349,11 @@
     . 46) ("for" . 47) ("," . 48) (")" . 49) ("(" . 50) ("=" . 51) ("]" . 52) 
     ("[" . 53) ("function" . 54) ("end" . 55) ($error . 2) ($end . 57)))
 
+(define ml-tables
+  (list
+   (cons 'len-v ml-len-v)
+   (cons 'pat-v ml-pat-v)
+   (cons 'rto-v ml-rto-v)
+   (cons 'mtab ml-mtab)))
+
 ;;; end tables

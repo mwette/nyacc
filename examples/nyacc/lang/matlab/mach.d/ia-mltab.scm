@@ -301,4 +301,11 @@
     . 46) ("for" . 47) ("," . 48) (")" . 49) ("(" . 50) ("=" . 51) ("]" . 52) 
     ("[" . 53) ("function" . 54) ("end" . 55) ($error . 2) ($end . 57)))
 
+(define ia-ml-tables
+  (list
+   (cons 'len-v ia-ml-len-v)
+   (cons 'pat-v ia-ml-pat-v)
+   (cons 'rto-v ia-ml-rto-v)
+   (cons 'mtab ia-ml-mtab)))
+
 ;;; end tables

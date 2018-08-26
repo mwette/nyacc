@@ -116,13 +116,7 @@
 
 ;; Parse given a token generator.
 (define raw-parser
-  (make-lalr-parser 
-   (list
-    (cons 'len-v ml-len-v)
-    (cons 'pat-v ml-pat-v)
-    (cons 'rto-v ml-rto-v)
-    (cons 'mtab ml-mtab)
-    (cons 'act-v ml-act-v))))
+  (make-lalr-parser (acons 'act-v ml-act-v) ml-tables))
 
 (define* (parse-ml #:key debug)
   (catch
@@ -150,9 +144,7 @@
 
 (define raw-ia-parser
   (make-lalr-parser
-   (list (cons 'len-v ia-ml-len-v) (cons 'pat-v ia-ml-pat-v)
-	 (cons 'rto-v ia-ml-rto-v) (cons 'mtab ia-ml-mtab)
-	 (cons 'act-v ia-ml-act-v))
+   (acons 'act-v ia-ml-act-v ia-ml-tables)
    #:interactive #t))
 
 (define (parse-ml-stmt lexer)

@@ -15,7 +15,9 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-;; JavaScript parser
+;;; Description:
+
+;; This is a JavaScript parser for Guile.
 
 (define-module (nyacc lang javascript parser)
   #:export (parse-js js-stmt-reader js-file-reader)
@@ -34,10 +36,7 @@
 (define gen-js-lexer (make-js-lexer-generator js-mtab))
 
 (define raw-parser
-  (make-lalr-parser 
-   (list (cons 'len-v js-len-v) (cons 'pat-v js-pat-v)
-    (cons 'rto-v js-rto-v) (cons 'mtab js-mtab)
-    (cons 'act-v js-act-v))))
+  (make-lalr-parser (acons 'act-v js-act-v js-tables)))
 
 ;; @deffn {Procedure} parse-js-file [#:debug bool] 
 ;; to be documented
@@ -65,13 +64,9 @@
 (define gen-ia-js-lexer (make-js-lexer-generator ia-js-mtab))
 
 (define raw-ia-parser
-  ;;(make-lalr-ia-parser/num		; TEMPORARY 
   (make-lalr-parser
-   (list (cons 'len-v ia-js-len-v) (cons 'pat-v ia-js-pat-v)
-	 (cons 'rto-v ia-js-rto-v) (cons 'mtab ia-js-mtab)
-	 (cons 'act-v ia-js-act-v))
-   #:interactive #t
-   ))
+   (acons 'act-v ia-js-act-v ia-js-tables)
+   #:interactive #t))
 
 ;; @deffn {Procedure} parse-js-stmt
 ;; Parse a program statement from interactive user.

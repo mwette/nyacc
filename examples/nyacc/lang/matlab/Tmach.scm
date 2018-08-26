@@ -30,12 +30,12 @@
 (when #t
   (with-output-to-file ",file.txt"
     (lambda ()
-      ;;(pp-lalr-notice matlab-spec)
+      (pp-lalr-notice matlab-spec)
       (pp-lalr-grammar matlab-spec)
       (pp-lalr-machine matlab-mach)))
   (with-output-to-file ",stmt.txt"
     (lambda ()
-      ;;(pp-lalr-notice matlab-ia-spec)
+      (pp-lalr-notice matlab-ia-spec)
       (pp-lalr-grammar matlab-ia-spec)
       (pp-lalr-machine matlab-ia-mach))))
 

@@ -1069,4 +1069,11 @@
     "synchronized" . 116) ("throws" . 117) ("transient" . 118) ("volatile" . 
     119)))
 
+(define js-tables
+  (list
+   (cons 'len-v js-len-v)
+   (cons 'pat-v js-pat-v)
+   (cons 'rto-v js-rto-v)
+   (cons 'mtab js-mtab)))
+
 ;;; end tables
