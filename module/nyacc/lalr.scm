@@ -2043,6 +2043,12 @@
       (write-table mach 'pat-v port)
       (write-table mach 'rto-v port)
       (write-table mach 'mtab port)
+      ;; generate alist
+      (fmt port "(define ~Atables\n  (list\n" prefix)
+      (fmt port "   (cons 'len-v ~Alen-v)\n" prefix)
+      (fmt port "   (cons 'pat-v ~Apat-v)\n" prefix)
+      (fmt port "   (cons 'rto-v ~Arto-v)\n" prefix)
+      (fmt port "   (cons 'mtab ~Amtab)))\n\n" prefix)
       (display ";;; end tables" port)
       (newline port))))
 
