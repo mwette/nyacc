@@ -36,14 +36,12 @@ To install only sources in /path/to/dest:
 You must specify site_scm_go_dir to avoid use of `guile'.
 
 
-If you want to install the experiental FFI Helper files:
-  $ make install-ffi-help
-
 The FFI Helper requires the bytestructures package, from
   https://github.com/TaylanUB/scheme-bytestructures
-`make install-ffi-helper' will fail if this package is not installed.
+The installer will not compile ffi-helper files if this package 
+is not installed.
 
-See `info ffi-help' for more detail.  Note: compiling the output off the
-ffi-helper output of can take some time, due to size.
+See `info ffi-help' for more detail on the FFI Helper.
+Note: Compiling the ffi-helper output of can take some time, due to size.
 
 The file HACKING has hints for modifying and trying code.

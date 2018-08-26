@@ -1,4 +1,4 @@
-;; ./mach.d/cpptab.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/cpptab.scm
 
 ;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
@@ -137,5 +137,12 @@
     (">" . 28) ("<=" . 29) ("<" . 30) ("!=" . 31) ("==" . 32) ("&" . 33) 
     ("^" . 34) ("|" . 35) ("&&" . 36) ("||" . 37) (":" . 38) ("?" . 39) 
     ($error . 2) ($end . 41)))
+
+(define cpp-tables
+  (list
+   (cons 'len-v cpp-len-v)
+   (cons 'pat-v cpp-pat-v)
+   (cons 'rto-v cpp-rto-v)
+   (cons 'mtab cpp-mtab)))
 
 ;;; end tables

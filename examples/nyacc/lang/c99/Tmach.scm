@@ -10,6 +10,7 @@
 (define mod-dir "../../../../module/nyacc/lang/c99")
 
 (use-modules (nyacc lang c99 mach))
+(use-modules (nyacc lang c99 cppmach))
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxmach))
 (use-modules (nyacc lang c99 cxeval))
@@ -23,6 +24,8 @@
 (use-modules (ice-9 pretty-print))
 
 (when #t
+  (if (gen-cpp-files mod-dir)
+      (compile-file (string-append mod-dir "/cpp.scm")))
   (if (gen-c99-files mod-dir)
       (compile-file (string-append mod-dir "/parser.scm"))))
 
@@ -39,11 +42,7 @@
       (pp-lalr-machine c99x-mach)))
   #t)
 
-(when #t
-  (if (gen-c99cx-files mod-dir)
-      (compile-file (string-append mod-dir "/cxeval.scm"))))
-
-(when #t
+(when #f
   (with-output-to-file ",cexp.txt"
     (lambda ()
       (pp-lalr-notice c99cx-spec)

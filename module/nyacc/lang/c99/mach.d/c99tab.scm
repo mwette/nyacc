@@ -1,4 +1,4 @@
-;; ./mach.d/c99tab.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99tab.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
@@ -1048,5 +1048,12 @@
     ("+" . 92) ("*" . 93) ("&" . 94) ("sizeof" . 95) ("," . 96) ("--" . 97) 
     ("++" . 98) ("->" . 99) ("." . 100) ("]" . 101) ("[" . 102) ("}" . 103) 
     ("{" . 104) (")" . 105) ("(" . 106) ($error . 2) ($end . 108)))
+
+(define c99-tables
+  (list
+   (cons 'len-v c99-len-v)
+   (cons 'pat-v c99-pat-v)
+   (cons 'rto-v c99-rto-v)
+   (cons 'mtab c99-mtab)))
 
 ;;; end tables

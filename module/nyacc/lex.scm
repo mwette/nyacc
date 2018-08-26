@@ -329,7 +329,7 @@
 (define (make-num-reader)
   ;; This will incorrectly parse 123LUL.  Does not handler hex floats.
   ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
-  ;; Removed support for leading '.' to be a number.
+  ;; NO LONGER Removed support for leading '.' to be a number.
   (lambda (ch1)
     ;; chl: char list; ty: '$fixed or '$float; st: state; ch: next ch; ba: base
     (let iter ((chl '()) (ty #f) (ba 10) (st 0) (ch ch1))
@@ -339,12 +339,18 @@
 	  ((eof-object? ch) (iter chl ty ba 5 ch))
 	  ((char=? #\0 ch) (iter (cons ch chl) '$fixed 8 10 (read-char))) 
 	  ((char-numeric? ch) (iter chl '$fixed ba 1 ch))
+	  ((char=? #\. ch) (iter (cons ch chl) #f ba 15 (read-char))) 
 	  (else #f)))
 	((10) ;; allow x after 0
 	 (cond
 	  ((eof-object? ch) (iter chl ty ba 5 ch))
 	  ((char=? #\x ch) (iter (cons ch chl) ty 16 1 (read-char)))
 	  (else (iter chl ty ba 1 ch))))
+	((15) ;; got `.' only
+	 (cond
+	  ((eof-object? ch) (unread-char ch) #f)
+	  ((char-numeric? ch) (iter (cons ch chl) '$float ba 2 (read-char)))
+	  (else (unread-char ch) #f)))
 	((1)
 	 (cond
 	  ((eof-object? ch) (iter chl ty ba 5 ch))
