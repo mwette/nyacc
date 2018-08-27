@@ -1,4 +1,4 @@
-;; compile tcl sxml to tree-il
+;;; nyacc/lang/tcl/compile-tree-il.scm - compile tcl sxml to tree-il
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -42,6 +42,7 @@
 
 (define xlib-mod '(nyacc lang tcl xlib))
 (define xlib-module (resolve-module xlib-mod))
+(define (xlib-ref name) `(@@ (nyacc lang tcl xlib) ,name))
 
 ;; scope must be manipulated at execution time
 ;; the @code{proc} command should push-scope
@@ -64,7 +65,13 @@
 (define-public (sxml->xtil exp env opts)
 
   (define (fD tree seed dict) ;; => tree seed dict
+    (when #f
+      (sferr "fD: ~S\n" tree)
+      )
     (sx-match tree
+
+      ((string ,sval)
+       (values '() `(const ,sval) dict))
 
       ((deref ,name)
        (let ((ref (lookup name dict)))
@@ -100,7 +107,14 @@
 	(values (car kseed) kdict))
 
        ((command)
-	#f)
+	(sferr "COMMAND NOT IMPLEMNENTED\n")
+	(values (cons (reverse kseed) seed) kdict))
+
+       ((expr)
+	;;(sferr "expr: ~S\n" (reverse kseed))
+	(values
+	 (cons `(call ,(xlib-ref 'tcl:expr) . ,(rtail kseed)) seed)
+	 kdict))
 
        (else
 	(cond
@@ -128,13 +142,13 @@
     (if exp 
 	(call-with-values
 	    (lambda ()
-	      ;;(xlang-sxml->tree-il/ext exp cenv opts)
-	      (values #f cenv)
+	      (sxml->xtil exp cenv opts)
+	      ;;(values #f cenv)
 	      )
 	  (lambda (exp cenv)
-	    ;;(sferr "tree-il:\n") (pperr exp)
-	    ;;(values (parse-tree-il exp) env cenv)
-	    (values (parse-tree-il '(const "[hello]")) env cenv)
+	    (sferr "tree-il:\n") (pperr exp)
+	    (values (parse-tree-il exp) env cenv)
+	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
      	    ))
 	(values (parse-tree-il '(void)) env cenv))))
 

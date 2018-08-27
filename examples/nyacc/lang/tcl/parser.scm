@@ -1,4 +1,4 @@
-;; parser.scm
+;;; nyacc/lang/tcl/parser.scm - parse tcl code
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -15,12 +15,16 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
+;;; Notes:
+
 ;; args string => (arg-list (arg "abc") (opt-arg "def" "123") (rest "args"))
 ;; @table asis
 ;; @item @code{arg} @emph{var}
 ;; @item @code{opt-arg} @emph{var} @emph{val}
 ;; @item @code{rest "args"}
 ;; @end table
+
+;;; Code:
 
 (define-module (nyacc lang tcl parser)
   #:export (read-command
@@ -160,7 +164,8 @@
 	(lambda (tag chl ch)
 	  (db "F:     finish ~S ~S ~S\n" tag chl ch)
 	  (unless (eof-object? ch) (xunread-char ch port))
-	  (case tag ((string) (rls chl)) (else (list tag (rls chl))))))
+	  ;;(case tag ((string) (rls chl)) (else (list tag (rls chl))))))
+	  (list tag (rls chl))))
 
        (read-brace
 	(lambda ()
@@ -265,11 +270,8 @@
 ;; convert all words in an expr command to a single list of frags
 (define (cnvt-expr-tail tail)
   (let* ((terms (fold-right
-		 (lambda (word terms)
-		   (append (if (string? word)
-			       (list " " word)
-			       (cons " " (sx-tail word)))
-			   terms))
+		  (lambda (word terms)
+		    (cons* `(string " ") word terms))
 		 '() tail))
 	 (toks (fold-right
 		(lambda (term toks)
@@ -333,19 +335,24 @@
 (define tcl-res-cmds
   `(("expr"
      . ,(lambda (tree)
-	  tree))
+	  `(expr . ,(cnvt-expr-tail (cddr tree)))))
     ("if"
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command "if" ,cond ,then ,else)
-	     `(if ,(cnvt-expr-tail cond) ,(split-body then) ,(split-body else)))
+	    ;; TODO : deal with "elseif" 
+	    ((command (string "if") ,cond ,then)
+	     `(if (expr . ,(cnvt-expr-tail (list cond))) ,(split-body then)))
+	    ((command (string "if") ,cond ,then (string "else") ,else)
+	     `(if (expr . ,(cnvt-expr-tail (list cond)))
+		  ,(split-body then) ,(split-body else)))
+	    ((command (string "if") ,cond ,then . ,elseifs)
+	     (error "TODO"))
 	    (,otherwise
 	     (report-error "usage: if cond then else")))))
     ("proc"
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command "proc" ,name ,args ,body)
-	     (sf "proc\n")
+	    ((command (string "proc") ,name ,args ,body)
 	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
 	    (,otherwise
 	     (report-error "usage: proc name args body")))))
@@ -354,14 +361,12 @@
     ("while"
      . #f)))
 
-;;(define (cnvt-expr words)
-
 ;; proc if while expr
 (define (cnvt-tcl tree)
   (case (sx-tag tree)
     ((command)
      (cond
-      ((assoc-ref tcl-res-cmds (sx-ref tree 1)) => (lambda (p) (p tree)))
+      ((assoc-ref tcl-res-cmds (sx-ref* tree 1 1)) => (lambda (p) (p tree)))
       (else tree)))
     ((word)
      tree)
@@ -376,6 +381,12 @@
 	 (cmmd (cnvt-tcl cmmd))
 	 )
     cmmd))
+
+(define (read-tcl-file port env)
+  `(body
+    (let loop ((cmd (read-command port)))
+      (if (eof-object? cmd) '()
+	  (cons cmd (loop (read-command port)))))))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
@@ -416,12 +427,6 @@ abc def$ghi$jkl
 abc [def ${ghi}] lkj
 abc [def ${ghi jkl}] mno
 ")))
-
-(define (read-tcl-body port)
-  `(body
-    (let loop ((cmd (read-command port)))
-      (if (eof-object? cmd) '()
-	  (cons cmd (loop (read-command port)))))))
 
 
 ;;|#

@@ -1,4 +1,4 @@
-;; tcl/xlib.scm
+;;; nyacc/lang/tcl/xlib.scm
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -15,12 +15,19 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
+;;; Notes:
+
+;; 1) expr needs exp (i.e., ** as in 2**4 => 16)
+
 ;;; Code:
 
 (define-module (nyacc lang tcl xlib)
   #:export (xdict tcl-eval)
   #:use-module (rnrs arithmetic bitwise)
   )
+(use-modules (ice-9 pretty-print))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (pperr exp) (pretty-print exp (current-error-port)))
 
 ;; Evaluate expression (a string)
 (define* (tcl-eval expr #:optional (env (current-module)))
@@ -96,7 +103,6 @@
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
 	    ((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
-	    ((p-expr) (ev1 tree))
 	    (else (error "incomplete expr implementation"))))))
     (eval-expr tree)))
 
@@ -104,11 +110,17 @@
 ;; @var{frags} is a list of string fragments.  We join, parse and execute.
 ;; @end deffn
 ;; Do we need a dictionary argument ?
-(define-public (tcl:expr frags)
-  (let* ((xarg (string-join frags ""))
+(define-public (tcl:expr . frags)
+  (let* ((strs (map (lambda (f) (if (string? f) f (simple-format #t "~S" f)))
+		    frags))
+	 (xarg (string-join strs ""))
 	 (tree (parse-expr-string xarg))
 	 (xval (eval-expr tree))
 	 )
+    ;;(sferr "expr: ~S\n" xarg)
+    ;;(pperr tree)
+    ;;(sferr "  => ~S\n" xval)
+    ;;(eval-expr (parse-expr-string xarg))
     xval))
 
 ;; === xdict

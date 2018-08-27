@@ -1,3 +1,12 @@
+nyacc/lang/matlab/NOTES
+
+Copyright (C) 2018 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
 
 (define a  #2f64:2:3((1 2 3) (4 5 6)))
 
