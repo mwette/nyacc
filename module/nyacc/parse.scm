@@ -1,9 +1,9 @@
-;; nyacc/parse.scm
+;;; nyacc/parse.scm
 
 ;; Copyright (C) 2014-2018 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
-; modify it under the terms of the GNU Lesser General Public
+;; modify it under the terms of the GNU Lesser General Public
 ;; License as published by the Free Software Foundation; either
 ;; version 3 of the License, or (at your option) any later version.
 ;;
@@ -79,11 +79,23 @@
 	   "~A:~A: parse failed at state ~A, on input ~S\n"
 	   fn ln (car state) (cdr laval))))
 
-;; @item make-lalr-parser mach [#:skip-if-unexp '()] [#:interactive #f] => parser
+;; @deffn {Procedure} make-lalr-parser mach [options] => parser
+;; where options are 
+;; @table
+;; @item #:skip-if-unexp 
+;; This is a list of tokens to skip if not expected.  It is used
+;; to allow comments to be skipped.  The default is @code{'()}.
+;; @item #:interactive
+;; This is a Boolean, defaulting to @code{#f}, telling the parser
+;; that this is being called interactively, so that @code{$end} is
+;; not expected.
+;; @end table
+;; @noindent
 ;; This generates a procedure that takes one argument, a lexical analyzer:
 ;; @example
 ;; (parser lexical-analyzer [#:debug #t])
 ;; @end example
+;; @noindent
 ;; and is used as
 ;; @example
 ;; (define xyz-parse (make-lalr-parser xyz-mach))
@@ -274,116 +286,4 @@
 	      (else ;; accept
 	       (car stack))))))))))
 
-;; @deffn {Procedure} make-lalr-ia-parser mach [#:skip-if-unexp ()]
-;; Make an interactive parser.  The machine should have been built with
-;; @code{(compact-machine mach #:keep 0)} so that default reductions can
-;; be processed without grabbing a lookahead token.  If the optional
-;; keyword @var{#:skip-if-unexp} is provided then that list of tokens
-;; (e.g., for comments) will be skipped if the machine does not expect
-;; them.  If you add non-terminals to @var{skip-if-unexp} then you need
-;; to add those to @code{#:keepers} for @code{compact-machine}
-;; @end deffn
-
-(define* (make-lalr-ia-parser/sym mach #:key (skip-if-unexp '()))
-  (let* ((mtab (assq-ref mach 'mtab))
-	 (len-v (assq-ref mach 'len-v))
-	 (rto-v (assq-ref mach 'rto-v))
-	 (pat-v (assq-ref mach 'pat-v))
-	 (xct-v (make-xct (assq-ref mach 'act-v)))
-	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
-    (lambda* (lexr #:key debug)
-      (let iter ((state (list 0))	; state stack
-		 (stack (list '$@))	; sval stack
-		 (nval #f)		; prev reduce to non-term val
-		 (lval #f))		; lexical value (from lex'er)
-	(cond
-	 ((and nval (eqv? (car nval) start)) ; done
-	  (cdr nval))
-	 ((not (or nval lval))
-	  (if (eqv? '$default (caar (vector-ref pat-v (car state))))
-	      (iter state stack (cons '$default #f) lval) ; default reduction
-	      (iter state stack nval (lexr))))		  ; reload
-	 (else
-	  (let* ((laval (or nval lval))
-		 (tval (car laval))
-		 (sval (cdr laval))
-		 (stxl (vector-ref pat-v (car state)))
-		 (stx (or (assq-ref stxl tval)
-			  (assq-ref stxl '$default)
-			  #f)))
-	    (if debug (dmsg/n (car state) (if nval tval sval) stx))
-	    (cond
-	     ((eq? '$error (car stx))	; error ???
-	      (if (memq tval skip-if-unexp)
-		  (iter state stack #f #f)
-		  (parse-error state laval)))
-	     ((eq? 'reduce (car stx))	; reduce
-	      (let* ((gx (cdr stx))
-		     (gl (vector-ref len-v gx))
-		     ($$ (apply (vector-ref xct-v gx) stack)))
-		(iter (list-tail state gl)
-		      (list-tail stack gl)
-		      (cons (vector-ref rto-v gx) $$)
-		      lval)))
-	     ((eq? 'shift (car stx))	; shift
-	      (iter (cons (cdr stx) state) (cons sval stack)
-		    #f (if nval lval #f)))
-	     (else			; accept
-	      (car stack))))))))))
-
-(define* (make-lalr-ia-parser/num mach #:key (skip-if-unexp '()))
-  (let* ((len-v (assq-ref mach 'len-v))
-	 (rto-v (assq-ref mach 'rto-v))
-	 (pat-v (assq-ref mach 'pat-v))
-	 (xct-v (make-xct (assq-ref mach 'act-v)))
-	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
-    (lambda* (lexr #:key debug)
-      (let iter ((state (list 0))	; state stack
-		 (stack (list '$@))	; sval stack
-		 (nval #f)		; prev reduce to non-term val
-		 (lval #f))		; lexical value (from lex'er)
-	(cond
-	 ((and nval (eqv? (car nval) start)) ; done
-	  (cdr nval))
-	 ((not (or nval lval))
-	  (if (eqv? $default (caar (vector-ref pat-v (car state))))
-	      (iter state stack (cons $default #f) lval) ; default reduction
-	      (iter state stack nval (lexr))))		 ; reload
-	 (else
-	  (let* ((laval (or nval lval))
-		 (tval (car laval))
-		 (sval (cdr laval))
-		 (stxl (vector-ref pat-v (car state)))
-		 (stx (or (assq-ref stxl tval)
-			  (assq-ref stxl '$default)
-			  #f)))
-	    (if debug (dmsg/n (car state) (if nval tval sval) stx))
-	    (cond
-	     ((eq? #f stx)		; error
-	      (if (memq tval skip-if-unexp)
-		  (iter state stack #f #f)
-		  (parse-error state laval)))
-	     ((negative? stx)		; reduce
-	      (let* ((gx (abs stx))
-		     (gl (vector-ref len-v gx))
-		     ($$ (apply (vector-ref xct-v gx) stack)))
-		(iter (list-tail state gl)
-		      (list-tail stack gl)
-		      (cons (vector-ref rto-v gx) $$)
-		      lval)))
-	     ((positive? stx)		; shift
-	      (iter (cons stx state) (cons sval stack) #f (if nval lval #f)))
-	     (else			; accept
-	      (car stack))))))))))
-
-(define* (make-lalr-ia-parser mach #:key (skip-if-unexp '()))
-  (let* ((mtab (assq-ref mach 'mtab))
-	 (siu (map (lambda (n) (assoc-ref mtab n)) skip-if-unexp)))
-    (if (number? (caar (vector-ref (assq-ref mach 'pat-v) 0)))
-	;; hashed:
-	(make-lalr-ia-parser/num mach #:skip-if-unexp siu)
-	;; not hashed:
-	(make-lalr-ia-parser/sym mach))))
-
-;; @end itemize
 ;;; --- last line ---
