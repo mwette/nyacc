@@ -102,7 +102,10 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
+	    ;;((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
+	    ((ident) (or (and=> (assoc-ref dict (tx1 tree))
+				(lambda (s) (string->number (cnumstr->scm s))))
+			 0))
 	    (else (error "incomplete expr implementation"))))))
     (eval-expr tree)))
 

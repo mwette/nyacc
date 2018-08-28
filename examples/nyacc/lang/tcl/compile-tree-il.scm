@@ -75,15 +75,16 @@
 
       ((deref ,name)
        (let ((ref (lookup name dict)))
-	 (cond
-	  (ref
-	   (values '() ref dict))
-	  (else
-	   (let ((dict (add-symbol name dict)))
-	     (values '() (lookup name dict) dict))))))
+	 (unless ref (throw 'tcl-error "undefined variable"))
+	 (values '() ref dict)))
 
       ((deref ,name ,index)
        (error "indexing not done"))
+
+      ;;((proc ,
+
+      ((set (string ,name) ,value)
+       (values `(set ,name ,value) '() dict))
       
       (else
        (values tree '() dict))))
@@ -110,6 +111,14 @@
 	(sferr "COMMAND NOT IMPLEMNENTED\n")
 	(values (cons (reverse kseed) seed) kdict))
 
+       ((set)
+	(let ((name (cadr kseed))
+	      (value (car kseed)))
+	  ;; FIX NEED TO USE LEXICAL FOR PROC SCOPE
+	  (values
+	   (cons `(define ,(string->symbol name) ,value) seed)
+	   kdict)))
+       
        ((expr)
 	;;(sferr "expr: ~S\n" (reverse kseed))
 	(values
@@ -142,13 +151,13 @@
     (if exp 
 	(call-with-values
 	    (lambda ()
-	      (sxml->xtil exp cenv opts)
-	      ;;(values #f cenv)
+	      ;;(sxml->xtil exp cenv opts)
+	      (values #f cenv)
 	      )
 	  (lambda (exp cenv)
 	    (sferr "tree-il:\n") (pperr exp)
-	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
+	    ;;(values (parse-tree-il exp) env cenv)
+	    (values (parse-tree-il '(const "[hello]")) env cenv)
      	    ))
 	(values (parse-tree-il '(void)) env cenv))))
 

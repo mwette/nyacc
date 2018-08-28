@@ -46,6 +46,9 @@
   (let ((ch (read-char port)))
     ;;(sf "read-char ~S\n" ch)
     ch))
+(define (echo obj)
+  (sf " ~S\n" obj)
+  obj)
 
 (define (rls chl) (reverse-list->string chl))
 
@@ -68,7 +71,8 @@
 (define cs:rcurly (string->char-set "}"))
 (define cs:dquote (string->char-set "\""))
 
-(define cs:lix (string->char-set "(" cs:rs+ws))
+;;(define cs:lix (string->char-set "(" cs:rs+ws))
+(define cs:lix (string->char-set "(" cs:ct+ws))
 (define cs:rix (string->char-set ")"))
 
 (define (report-error fmt . args)
@@ -135,7 +139,7 @@
 	     
 	     ((char=? #\{ ch)
 	      (xread-char port) ;; {
-	      (loop (foldin (read-brace) wordl) (peek-char port)))
+	      (loop (cons (read-brace) wordl) (peek-char port)))
 
 	     ;;((eq? end-cs cs:nl)
 	     ((eq? end-cs cs:ct)
@@ -212,11 +216,12 @@
 	       (tag (finish tag chl ch))
 	       (else
 		(let* ((frag (read-frag cs:lix))
+		       (frag (sx-ref frag 1)) ; extract string value
 		       (ch1 (peek-char port))
 		       (indx (cond ((eof-object? ch1) #f)
 				   ((char=? ch1 #\() #t)
-				   (else #f)))
-		       )
+				   (else #f))))
+		  (db "frag=~S ch1=~S\n" frag ch1)
 		  (if indx
 		      `(deref ,frag ,(read-index))
 		      `(deref ,frag))))))
@@ -269,9 +274,12 @@
 
 ;; convert all words in an expr command to a single list of frags
 (define (cnvt-expr-tail tail)
-  (let* ((terms (fold-right
-		  (lambda (word terms)
-		    (cons* `(string " ") word terms))
+  (let* ((blank `(string " "))
+	 (terms (fold-right
+		 (lambda (word terms)
+		   (if (eq? 'word (sx-tag word))
+		       (append (list blank) (cdr word) terms)
+		       (cons* blank word terms)))
 		 '() tail))
 	 (toks (fold-right
 		(lambda (term toks)
@@ -335,7 +343,8 @@
 (define tcl-res-cmds
   `(("expr"
      . ,(lambda (tree)
-	  `(expr . ,(cnvt-expr-tail (cddr tree)))))
+	  (sf "expr:\n ~S\n" tree)
+	  (echo `(expr . ,(cnvt-expr-tail (cddr tree))))))
     ("if"
      . ,(lambda (tree)
 	  (sxml-match tree
@@ -347,19 +356,26 @@
 		  ,(split-body then) ,(split-body else)))
 	    ((command (string "if") ,cond ,then . ,elseifs)
 	     (error "TODO"))
-	    (,otherwise
+	    (,_
 	     (report-error "usage: if cond then else")))))
     ("proc"
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command (string "proc") ,name ,args ,body)
+	    ((command (string "proc") (string ,name) ,args ,body)
 	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
 	    (,otherwise
 	     (report-error "usage: proc name args body")))))
     ("set"
-     . #f)
+     . ,(lambda (tree)
+	  `(set . ,(sx-tail tree 2))))
     ("while"
-     . #f)))
+     . ,(lambda (tree)
+	  (sxml-match tree
+	    ((command (string "while" ,cond ,body))
+	     `(while (expr . ,(cnvt-expr-tail (list cond))) ,body))
+	    (,_
+	     (report-error "usage: while cond body")))))
+    ))
 
 ;; proc if while expr
 (define (cnvt-tcl tree)
