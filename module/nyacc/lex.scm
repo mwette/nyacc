@@ -1,5 +1,5 @@
-;; nyacc/lex.scm
-;;
+;;; nyacc/lex.scm
+
 ;; Copyright (C) 2015-2017 - Matthew R.Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or modify it
@@ -14,6 +14,8 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;;; Description:
 
 ;; A module providing procedures for constructing lexical analyzers.
 
@@ -30,6 +32,8 @@
 ;; read-comm changed to (read-comm ch bol) where bol is begin-of-line cond
 ;; 
 ;; read-c-ident 
+
+;;; Code:
 
 (define-module (nyacc lex)
   #:export (make-lexer-generator

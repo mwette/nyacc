@@ -1,4 +1,4 @@
-;; module/nyacc/sx-util.scm
+;;; module/nyacc/sx-util.scm
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
