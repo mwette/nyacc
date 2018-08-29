@@ -45,6 +45,9 @@ all: $(FFI_GO_FILES)
 	install-nx-matlab \
 	install-nx-tcl
 
+install-nx-languages:
+	@true
+
 UTDIR=nyacc/lang
 
 NYACC_NXUTIL_SRCS= $(UTDIR)/nx-util.scm $(UTDIR)/nx-lib.scm $(UTDIR)/nx-load.scm
@@ -74,11 +77,44 @@ install-nx-utils:
           sleep 1; \
         done
 
-install-nx-languages:
-	@true
+
+JSDIR=nyacc/lang/javascript
+
+NYACC_JAVASCRIPT_SRCS= \
+	$(JSDIR)/body.scm $(JSDIR)/compile-tree-il.scm $(JSDIR)/mach.scm \
+	$(JSDIR)/mach.d/ia-jsact.scm $(JSDIR)/mach.d/ia-jstab.scm \
+	$(JSDIR)/mach.d/jsact.scm $(JSDIR)/mach.d/jstab.scm $(JSDIR)/parser.scm \
+	$(JSDIR)/pprint.scm $(JSDIR)/xlib.scm $(JSDIR)/xlib-01.scm
+
+NYACC_JAVASCRIPT_BINS= \
+	$(JSDIR)/compile-tree-il.go $(JSDIR)/mach.d/ia-jsact.go \
+	$(JSDIR)/mach.d/ia-jstab.go $(JSDIR)/mach.d/jsact.go \
+	$(JSDIR)/mach.d/jstab.go $(JSDIR)/parser.go $(JSDIR)/pprint.go \
+	$(JSDIR)/xlib.go
 
 install-nx-javascript:
-	@true
+	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
+	@echo "installing nx-javascript sources in $(SITE_SCM_DIR)"
+	@for file in $(NYACC_JAVASCRIPT_SRCS); do \
+	set -x ; \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
+	  fi; \
+	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	done
+	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
+	@echo "installing nx-javascript binaries in $(SITE_SCM_GO_DIR)"
+	@for binfile in $(NYACC_JAVASCRIPT_BINS); do \
+	set -x ; \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	  fi; \
+	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+                -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+                $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
+          sleep 1; \
+        done
 
 MLDIR=nyacc/lang/matlab
 

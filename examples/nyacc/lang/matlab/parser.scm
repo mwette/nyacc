@@ -1,4 +1,4 @@
-;; nyacc/lang/matlab/parser.scm
+;;; nyacc/lang/matlab/parser.scm - parsing 
 
 ;; Copyright (C) 2016,2018 Matthew R. Wette
 ;;
@@ -116,7 +116,7 @@
 
 ;; Parse given a token generator.
 (define raw-parser
-  (make-lalr-parser (acons 'act-v ml-act-v) ml-tables))
+  (make-lalr-parser (acons 'act-v ml-act-v ml-tables)))
 
 (define* (parse-ml #:key debug)
   (catch
