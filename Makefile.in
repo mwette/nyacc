@@ -42,6 +42,21 @@ install-srcs:
 install-ffi-help:
 	@echo "FFI helper now part of normal distribution"
 
+.PHONY: install-nx-languages \
+	install-nx-javascript \
+	install-nx-matlab \
+	install-nx-tcl
+install-nx-languages \
+	install-nx-javascript \
+	install-nx-matlab \
+	install-nx-tcl \
+	:
+	@(cd examples: \
+	  make -f Makefile.nyacc \
+		SITE_SCM_DIR=$(SITE_SCM_DIR) \
+		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
+		DESTDIR=$(DESTDIR) install-nx-utils $@)
+
 .PHONY: dist-files
 dist-files:
 	(cd module; \

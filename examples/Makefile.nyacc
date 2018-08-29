@@ -1,6 +1,6 @@
-# ffi/Makefile.nyacc			-*- Makefile -*-
+# examples/Makefile.nyacc		-*- Makefile -*-
 #
-# Copyright (C) 2017 -  Matthew R. Wette
+# Copyright (C) 2017,2018 -  Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -10,11 +10,6 @@
 
 GUILE = guile
 GUILD = guild
-
-FH_SCMS = \
-	nyacc/lang/c99/ffi-help.scm \
-	scripts/compile-ffi.scm \
-	system/ffi-help-rt.scm
 
 FH_FFIS = \
 	ffi/cairo.ffi ffi/gdbm.ffi ffi/sqlite3.ffi \
@@ -44,52 +39,90 @@ all: $(FFI_GO_FILES)
 
 # -------------------------------------
 
-.PHONY: install-ffi-help
-install-ffi-help: install-fh-srcs
-	@mkdir -p $(SITE_SCM_GO_DIR)
-	@if GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-		$(GUILE) -c '(use-modules (bytestructures guile))'; then \
-	   true; else \
-	      echo "*** You need scheme-bytestructures installed."; \
-	      echo '    Try "make install-bytestructures"'; \
-	exit 1; fi
-	@echo "installing FFI HELPER binaries in $(SITE_SCM_GO_DIR)"
-	@for scmfile in $(FH_SCMS); do \
-	  if test ! -d $(SITE_SCM_DIR)/`dirname $${scmfile}`; then \
-	    mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${scmfile}`; \
-	  fi; \
-	  binfile=`echo $${scmfile} | sed -e 's/\.scm$$/.go/'`; \
-	  (GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-	  	$(GUILD) compile -o $(SITE_SCM_GO_DIR)/$${binfile} \
-			$(SITE_SCM_DIR)/$${scmfile} || exit 1; \
-	   ); \
-	done
-	@for ffifile in $(FH_FFIS); do \
-	  if test ! -d $(SITE_SCM_GO_DIR)/`dirname $${ffifile}`; then \
-	    mkdir -p $(SITE_SCM_GO_DIR)/`dirname $${ffifile}`; \
-	  fi; \
-	  scmfile=`echo $${ffifile} | sed -e 's/\.ffi$$/.scm/'`; \
-	  binfile=`echo $${scmfile} | sed -e 's/\.scm$$/.go/'`; \
-	  (GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-		$(GUILD) compile-ffi $(SITE_SCM_DIR)/$${ffifile} || exit 1; \
-	   GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-	  	$(GUILD) compile -o $(SITE_SCM_GO_DIR)/$${binfile} \
-			$(SITE_SCM_DIR)/$${scmfile} || exit 1; \
-	  ); \
-	done
-	@if test ! -d $(INFODIR); then mkdir -p $(INFODIR); fi;
-	cp nyacc/lang/c99/ffi-help.info $(INFODIR)
+.PHONY:	install-nx-languages \
+	install-nx-utils \
+	install-nx-javascript \
+	install-nx-matlab \
+	install-nx-tcl
 
-.PHONY: install-fh-srcs
-install-fh-srcs: $(FH_SCMS) $(FH_FFIS)
-	@mkdir -p $(SITE_SCM_DIR)
-	@echo "installing FFI HELPER sources in $(SITE_SCM_DIR)"
-	@for file in $(FH_SCMS) $(FH_FFIS); do \
-	  if test ! -d $(SITE_SCM_DIR)/`dirname $${file}`; then \
-	    mkdir -p $(SITE_SCM_DIR)/`dirname $${file}`; \
+UTDIR=nyacc/lang
+
+NYACC_NXUTIL_SRCS= $(UTDIR)/nx-util.scm $(UTDIR)/nx-lib.scm $(UTDIR)/nx-load.scm
+NYACC_NXUTIL_BINS= $(UTDIR)/nx-util.go $(UTDIR)/nx-lib.go $(UTDIR)/nx-load.go
+
+install-nx-utils:
+	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
+	@echo "installing nx utilility sources in $(SITE_SCM_DIR)"
+	@for file in $(NYACC_NXUTIL_SRCS); do \
+	set -x ; \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(SITE_SCM_DIR)/$${file}; \
+	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
+	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
+	@echo "installing nx utility binaries in $(SITE_SCM_GO_DIR)"
+	@for binfile in $(NYACC_NXUTIL_BINS); do \
+	set -x ; \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	  fi; \
+	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+                -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+                $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
+          sleep 1; \
+        done
+
+install-nx-languages:
+	@true
+
+install-nx-javascript:
+	@true
+
+MLDIR=nyacc/lang/matlab
+
+NYACC_MATLAB_SRCS= \
+	$(MLDIR)/body.scm $(MLDIR)/compile-tree-il.scm $(MLDIR)/mach.scm \
+	$(MLDIR)/parser.scm $(MLDIR)/pprint.scm $(MLDIR)/util.scm \
+	$(MLDIR)/xlib.scm \
+	$(MLDIR)/mach.d/ia-mlact.scm $(MLDIR)/mach.d/ia-mltab.scm \
+	$(MLDIR)/mach.d/mlact.scm $(MLDIR)/mach.d/mltab.scm
+
+NYACC_MATLAB_BINS =  \
+	$(MLDIR)/compile-tree-il.go $(MLDIR)/parser.go $(MLDIR)/pprint.go \
+	$(MLDIR)/util.go $(MLDIR)/xlib.go \
+	$(MLDIR)/mach.d/ia-mlact.go $(MLDIR)/mach.d/ia-mltab.go \
+	$(MLDIR)/mach.d/mlact.go $(MLDIR)/mach.d/mltab.go
+
+.PHONY: install-nx-matlab
+install-nx-matlab:
+	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
+	@echo "installing nx-matlab sources in $(SITE_SCM_DIR)"
+	@for file in $(NYACC_MATLAB_SRCS); do \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
+	  fi; \
+	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	done
+	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
+	@echo "installing nx-matlab binaries in $(SITE_SCM_GO_DIR)"
+	@for binfile in $(NYACC_MATLAB_BINS); do \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	  fi; \
+	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+                -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+                $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
+          sleep 1; \
+        done
+
+install-nx-tcl:
+	@true
+
+
+# -------------------------------------
 
 .PHONY: dist-files
 dist-files:

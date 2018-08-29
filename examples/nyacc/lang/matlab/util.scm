@@ -178,7 +178,7 @@
       ((fctn-decl (ident ,name) . ,rest)
        (let ((scope (if (equal? name (assoc-ref dict "file")) "pub" "prv"))
 	     )
-	 (values (sx+attr* tree 'scope scope) '() dict)))
+	 (values (sx-attr-add* tree 'scope scope) '() dict)))
 
       ((assn (aref-or-call ,expr ,ex-l) . ,rval)
        (values `(assn (array-ref ,expr ,ex-l)) '() dict))
@@ -239,7 +239,7 @@
       ((assn (aref-or-call ,expr ,ex-l) . ,rval)
        (values `(assn (array-ref ,expr ,ex-l)) '() dict))
       
-      ((assn (ident ,name) (aref-or-call (ident "struct") ,ex-l))
+      #;((assn (ident ,name) (aref-or-call (ident "struct") ,ex-l))
        (let ((kvl (let loop ((kvl '()) (al (sx-tail ex-l 1)))
 		    (if (null? al) (reverse kvl)
 			(loop (cons (list (cadar al) (cadr al))
