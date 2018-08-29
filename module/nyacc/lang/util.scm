@@ -1,4 +1,4 @@
-;;; module/nyacc/util.scm
+;;; module/nyacc/util.scm - runtime utilities for the parsers
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -14,8 +14,6 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
-
-;; runtime utilities for the parsers
 
 ;;; Code:
 

@@ -1,19 +1,21 @@
-;;; lang/c99/body.scm
-;;;
-;;; Copyright (C) 2015-2018 Matthew R. Wette
-;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Lesser General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 3 of the License, or (at your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+;;; lang/c99/body.scm - parser body, inserted in parser.scm
+
+;; Copyright (C) 2015-2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+
+;;; Notes:
 
 ;; Notes on the code design may be found in doc/nyacc/lang/c99-hg.info
 
@@ -28,6 +30,8 @@
 ;; CPP defines (e.g., "INT_MAX=12344").
 
 ;; issue w/ brlev: not intended to beused with `extern "C" {'
+
+;;; Code:
 
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))

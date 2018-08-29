@@ -15,6 +15,8 @@
 ;; You should have received a copy of the licence with this software.
 ;; If not, see <http://www.gnu.org/licenses/>.
 
+;;; Code:
+
 (define-module (nyacc export)
   #:export (lalr->bison
 	    lalr->guile

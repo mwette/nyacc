@@ -1,4 +1,4 @@
-;;; nyacc/bison.scm
+;;; nyacc/bison.scm - export bison
 
 ;; Copyright (C) 2016,2018 Matthew R. Wette
 ;;
@@ -14,6 +14,8 @@
 ;;
 ;; You should have received a copy of the licence with this software.
 ;; If not, see <http://www.gnu.org/licenses/>.
+
+;;; Code:
 
 (define-module (nyacc bison)
   #:export (make-lalr-machine/bison)
