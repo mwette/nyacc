@@ -1,4 +1,4 @@
-;; nyacc/lang/c99/pprint.scm
+;;; nyacc/lang/c99/pprint.scm - C pretty-printer
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -14,6 +14,8 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;;; Code:
 
 (define-module (nyacc lang c99 pprint)
   #:export (pretty-print-c99)

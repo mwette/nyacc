@@ -1,21 +1,21 @@
-;;; nyacc/lang/c99/munge.scm - C processing code
-;;; 
-;;; Copyright (C) 2015-2018 Matthew R. Wette
-;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Lesser General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 3 of the License, or (at your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+;;; nyacc/lang/c99/munge.scm - util's for processing output of the C99 parser
 
-;; utilities for processing output trees
+;; Copyright (C) 2015-2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+
+;;; Notes:
 
 ;; KEEPING STRUCTS ENUMS etc
 ;; if have typename and want to keep it, then change
@@ -56,6 +56,8 @@
 
 ;; Another idea is to make comments attributes and have join be sx-cons*
 ;; I think this would simplify a lot.
+
+;;; Code:
 
 (define-module (nyacc lang c99 munge)
   #:export (c99-trans-unit->udict
