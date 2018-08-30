@@ -34,6 +34,19 @@
 ;; done.  I'm still absorbing those and don't know how much insight I can
 ;; provide. -- Matt - 15 Jul 2018
 
+;;; Notes:
+
+;; @itemize
+;; @item JS functions will need to be re-implemented as objects, with the
+;;       `[[Call]]' property used to make calls.
+;; @item don't support the arguments property in functions
+;; @item could maybe handle this using
+;;  d.f1 = function... => d.f1 = (let ((this d)) f1)
+;;  but then d1.f = d0.f does not work
+;; @item (void) == (const *unspecified*) i think
+;; @item need atomic-box?
+;; @end itemize
+
 ;; TODO:
 ;; @itemize
 ;; @item Imeplement @code{with}.
@@ -49,23 +62,10 @@
 ;; @item add let only allow var at top-level and function start scope
 ;; @end itemize
 
-;;; Notes:
-
-;; @itemize
-;; @item JS functions will need to be re-implemented as objects, with the
-;;       `[[Call]]' property used to make calls.
-;; @item don't support the arguments property in functions
-;; @item could maybe handle this using
-;;  d.f1 = function... => d.f1 = (let ((this d)) f1)
-;;  but then d1.f = d0.f does not work
-;; @item (void) == (const *unspecified*) i think
-;; @item need atomic-box?
-;; @end itemize
-
 ;;; Code:
 
 (define-module (nyacc lang javascript compile-tree-il)
-  #:export (compile-tree-il)
+  #:export (compile-tree-il show-javascript-sxml show-javascript-xtil)
   #:use-module (nyacc lang javascript xlib)
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang nx-util)
@@ -1098,18 +1098,21 @@
 
 (use-modules (language tree-il compile-cps))
 
+(define show-sxml #f)
+(define (show-javascript-sxml v) (set! show-sxml v))
+(define show-xtil #f)
+(define (show-javascript-xtil v) (set! show-xtil v))
+
 (define (compile-tree-il exp env opts)
-  ;;(sferr "\nenv=~S\n" env)
-  (sferr "sxml:\n") (pperr exp)
+  (when show-sxml (sferr "sxml:\n") (pperr exp))
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
-    ;;(sferr "env=~S\ncenv=~S" env cenv)
     (if exp 
 	(call-with-values
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    (sferr "tree-il:\n") (pperr exp)
+	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
 	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
+	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
      	    ))
 	(values (parse-tree-il '(void)) env cenv))))
 

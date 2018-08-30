@@ -59,8 +59,8 @@
 (define cs:nl+ws (string->char-set "\n" cs:ws))
 
 ;; command terminator
-(define cs:ct (string->char-set ";\n"))
-(define cs:ct+ws (string->char-set ";\n" cs:ws))
+(define cs:ct (string->char-set "];\n"))
+(define cs:ct+ws (string->char-set "];\n" cs:ws))
 
 (define cs:rs (string->char-set "]"))	; right square
 (define cs:rs+ws (string->char-set "]" cs:ws))
@@ -221,15 +221,17 @@
 		       (indx (cond ((eof-object? ch1) #f)
 				   ((char=? ch1 #\() #t)
 				   (else #f))))
-		  (db "frag=~S ch1=~S\n" frag ch1)
+		  (db "$frag=~S ch1=~S\n" frag ch1)
 		  (if indx
 		      `(deref ,frag ,(read-index))
 		      `(deref ,frag))))))
 	     ((char=? ch #\{) (read-brace))
+
 	     ((char=? ch #\[)
 	      (cond
 	       (tag (finish tag chl ch))
 	       (else (swallow (read-cmmd cs:rs)))))
+	     
 	     ((char=? ch #\") (swallow (read-frag cs:dquote)))
 	     ((not tag) (loop 'string (cons ch chl) bl (xread-char port)))
 	     (else (loop tag (cons ch chl) bl (xread-char port)))))))
@@ -261,6 +263,7 @@
 
 ;; For strings which are known to be interpreted as bodies,
 ;; split them into a sequence of commands.
+;; body is string
 (define (split-body body)
   (cons
    'body
@@ -343,8 +346,7 @@
 (define tcl-res-cmds
   `(("expr"
      . ,(lambda (tree)
-	  (sf "expr:\n ~S\n" tree)
-	  (echo `(expr . ,(cnvt-expr-tail (cddr tree))))))
+	  `(expr . ,(cnvt-expr-tail (sx-tail tree 2)))))
     ("if"
      . ,(lambda (tree)
 	  (sxml-match tree
@@ -356,34 +358,44 @@
 		  ,(split-body then) ,(split-body else)))
 	    ((command (string "if") ,cond ,then . ,elseifs)
 	     (error "TODO"))
-	    (,_
-	     (report-error "usage: if cond then else")))))
+	    (,_ (report-error "usage: if cond then else")))))
     ("proc"
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command (string "proc") (string ,name) ,args ,body)
-	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
-	    (,otherwise
-	     (report-error "usage: proc name args body")))))
+	    ((command (string "proc") (string ,name) (string ,args)
+		      (string ,body))
+	     (sf "proc: ~S\n" tree)
+	     (sf "  args: ~S\n" args)
+	     (sf "  body: ~S\n" body)
+	     (echo `(proc ,name ,(cnvt-args args) ,(split-body body))))
+	    (,_ (report-error "usage: proc name args body")))))
     ("set"
      . ,(lambda (tree)
 	  `(set . ,(sx-tail tree 2))))
     ("while"
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command (string "while" ,cond ,body))
-	     `(while (expr . ,(cnvt-expr-tail (list cond))) ,body))
-	    (,_
-	     (report-error "usage: while cond body")))))
+	    ((command (string "while") ,cond (string ,body))
+	     `(while (expr . ,(cnvt-expr-tail (list cond))) ,(split-body body)))
+	    (,_ (report-error "usage: while cond body")))))
+    ;;("array" . #f)
+    ;;("list" . #f)
+    ;; === string-> Scheme for calling Scheme functions
+    ;;("number" . #f)
+    ;;("integer" . #f)
     ))
 
-;; proc if while expr
+;; convert special commands and words into nx-tcl syntax
+;; @example
+;; (cnvt-tcl '(command (string "expr") ...)) => (expr ...)
+;; @end example
 (define (cnvt-tcl tree)
   (case (sx-tag tree)
     ((command)
-     (cond
-      ((assoc-ref tcl-res-cmds (sx-ref* tree 1 1)) => (lambda (p) (p tree)))
-      (else tree)))
+     (let* ((cmmd `(command . ,(map cnvt-tcl (sx-tail tree))))
+	    (name (sx-ref* cmmd 1 1)))
+       (or (and=> (assoc-ref tcl-res-cmds name) (lambda (p) (p cmmd)))
+	   cmmd)))
     ((word)
      tree)
     (else

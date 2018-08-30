@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-;;; Description:
+;;; Notes:
 
 ;; limitations:
 ;; 1) variables cannot be introduced by lhs expression:
@@ -24,7 +24,7 @@
 ;;; Code:
 
 (define-module (nyacc lang tcl compile-tree-il)
-  #:export (compile-tree-il)
+  #:export (compile-tree-il show-tcl-sxml show-tcl-xtil)
   #:use-module (nyacc lang tcl xlib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
@@ -42,7 +42,6 @@
 
 (define xlib-mod '(nyacc lang tcl xlib))
 (define xlib-module (resolve-module xlib-mod))
-(define (xlib-ref name) `(@@ (nyacc lang tcl xlib) ,name))
 
 ;; scope must be manipulated at execution time
 ;; the @code{proc} command should push-scope
@@ -76,15 +75,40 @@
       ((deref ,name)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "undefined variable"))
-	 (values '() ref dict)))
+	 (values '() `(call ,(xlib-ref 'tcl:string<-) ,ref) dict)))
 
-      ((deref ,name ,index)
-       (error "indexing not done"))
+      ((deref ,name ,expr)
+       (let ((ref (lookup name dict)))
+	 (unless ref (throw 'tcl-error "undefined variable"))
+	 (values '() `(call ,(xlib-ref 'tcl:string<-) ,ref ,expr) dict)))
+
+      ;; convert (C) string to number (i.e., 0xf => 15)
+      ((number (deref ,name))
+       (error "not implemented"))
+      ((number (deref ,name) ,indx)
+       (error "not implemented"))
+      ((number ,arg)
+       (error "not implemented"))
+
+      ((integer (deref ,name))
+       (error "not implemented"))
+      ((integer (deref ,name ,indx))
+       (error "not implemented"))
+      ((integer ,arg)
+       (error "not implemented"))
+
+      ((list . ,items) ;; ???
+       (error "not implemented"))
 
       ;;((proc ,
 
       ((set (string ,name) ,value)
        (values `(set ,name ,value) '() dict))
+
+      ((command (string ,name) . ,args)
+       (let ((ref (lookup name dict)))
+	 (unless ref (throw 'tcl-error "not defined"))
+	 (values `(command ,ref . ,args) '() dict)))
       
       (else
        (values tree '() dict))))
@@ -108,8 +132,7 @@
 	(values (car kseed) kdict))
 
        ((command)
-	(sferr "COMMAND NOT IMPLEMNENTED\n")
-	(values (cons (reverse kseed) seed) kdict))
+	(values (cons `(call . ,(rtail kseed)) seed) kdict))
 
        ((set)
 	(let ((name (cadr kseed))
@@ -136,6 +159,11 @@
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
   )
 
+(define show-sxml #f)
+(define (show-tcl-sxml v) (set! show-sxml v))
+(define show-xtil #f)
+(define (show-tcl-xtil v) (set! show-xtil v))
+
 ;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv
 ;; On input @var{exp} is the SXML from our reader, @var{env} is ``an
 ;; environment'', and @var{opts} is a keyword list of options.  The procedure
@@ -143,22 +171,32 @@
 ;; for the target for the compiled language, and a continuation environment
 ;; for the next parsed syntax tree.
 ;; @end deffn
+(set! show-sxml #t)
+(set! show-xtil #t)
 (define (compile-tree-il exp env opts)
-  (sferr "sxml:\n") (pperr exp)
+  (when show-sxml (sferr "sxml:\n") (pperr exp))
   ;; Need to make an interp.  All Tcl commands execute in an interp
   ;; so need (interp-lookup at turntime)
   (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
     (if exp 
 	(call-with-values
 	    (lambda ()
-	      ;;(sxml->xtil exp cenv opts)
-	      (values #f cenv)
+	      (sxml->xtil exp cenv opts)
+	      ;;(values #f cenv)
 	      )
 	  (lambda (exp cenv)
-	    (sferr "tree-il:\n") (pperr exp)
+	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
 	    ;;(values (parse-tree-il exp) env cenv)
 	    (values (parse-tree-il '(const "[hello]")) env cenv)
-     	    ))
+     	    )
+	  )
 	(values (parse-tree-il '(void)) env cenv))))
+
+;;; Thoughts:
+
+;; scheme calls need to be
+;; [xcall name [number x] [<type> v] ...]
+
+;; (deref xxx) should always check and convert to string
 
 ;; --- last line ---

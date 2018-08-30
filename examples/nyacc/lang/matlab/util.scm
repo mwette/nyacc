@@ -28,6 +28,7 @@
   #:use-module (ice-9 pretty-print)
   #:use-module (ice-9 regex)
   #:use-module ((sxml fold) #:select (foldts*-values))
+  #:use-module (sxml match)
   )
 
 ;; probably also need some sort of overall declaration form
@@ -229,7 +230,7 @@
 (define (declify-script tree . rest)
   
   (define (fD tree seed dict) ;; => (values tree seed dict)
-    (sx-match tree
+    (sxml-match tree
       ((script-file (@ . ,attr) . ,rest)
        (values tree '()
 	       (cons*
@@ -254,7 +255,7 @@
        ;;(fout "    ->rank =>~S\n" (expr->rank lval))
        (values tree '() dict))
 
-      (else (values tree '() dict))))
+      (,_ (values tree '() dict))))
   
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
     ;;(fout "tree-tag=~S kseed=~S\n" (car tree) kseed)

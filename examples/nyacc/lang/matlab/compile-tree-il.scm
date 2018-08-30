@@ -1,4 +1,4 @@
-;; compile matlab sxml to tree-il
+;;; nyacc/lang/matlab/compile-tree-il.scm compile matlab sxml to tree-il
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -14,6 +14,8 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;;; Notes:
 
 ;; limitations:
 ;; 1) variables cannot be introduced by lhs expression:
@@ -583,14 +585,19 @@
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
   )
 
+(define show-sxml #f)
+(define (show-matlab-sxml v) (set! show-sxml v))
+(define show-xtil #f)
+(define (show-matlab-xtil v) (set! show-xtil v))
+
 (define (compile-tree-il exp env opts)
-  ;;(sferr "sxml:\n") (pperr exp)
+  (when show-sxml (sferr "sxml:\n") (pperr exp))
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env xdict)) env)))
     (if exp 
 	(call-with-values
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    ;;(sferr "tree-il:\n") (pperr exp)
+	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
 	    (values (parse-tree-il exp) env cenv)
 	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
      	    ))

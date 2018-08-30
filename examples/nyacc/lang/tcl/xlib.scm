@@ -22,7 +22,7 @@
 ;;; Code:
 
 (define-module (nyacc lang tcl xlib)
-  #:export (xdict tcl-eval)
+  #:export (xdict xlib-ref tcl-eval)
   #:use-module (rnrs arithmetic bitwise)
   )
 (use-modules (ice-9 pretty-print))
@@ -34,6 +34,8 @@
   #f
   ;;(eval-string expr #:lang 'nx-tcl)
   )
+
+(define (xlib-ref name) `(@@ (nyacc lang tcl xlib) ,name))
 
 ;; expr evaluator
 
@@ -126,10 +128,39 @@
     ;;(eval-expr (parse-expr-string xarg))
     xval))
 
+;; @deffn {Procedure} tcl:string<- [value] [index]
+;; Convert value to string.
+;; @end deffn
+(define-public tcl:string<-
+  (case-lambda
+   ((val)
+    (cond
+     ((string? val) val)
+     ((number? val) (number->string val))
+     ((list? val) (string-join val))
+     ;;((vector? val) ...
+     (else (call-with-output-string (lambda (port) (display val port))))))
+   ((val indx)
+    (error "indexed deref not implemented")
+    )))
+
+(define-public tcl:puts
+  (case-lambda
+   ((val) (display val) (newline))
+   ((arg0 val)
+    (if (string=? arg0 "-nonewline")
+	(display val)
+	(display val arg0)))		; broken need arg0 => port
+   ((nnl chid val)
+    (unless (string=? nnl "-nonewline") (throw 'tcl-error "puts: bad arg"))
+    "(not implemented)"
+    )))
+
 ;; === xdict
 
 (define xdict
-  '((
-     )))
+  `(
+    ("puts" . ,(xlib-ref 'tcl:puts))
+     ))
 
 ;; --- last line ---
