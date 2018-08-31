@@ -42,7 +42,7 @@ all: $(FFI_GO_FILES)
 .PHONY:	install-nx-languages \
 	install-nx-utils \
 	install-nx-javascript \
-	install-nx-matlab \
+	install-nx-octave \
 	install-nx-tcl
 
 install-nx-languages:
@@ -116,7 +116,7 @@ install-nx-javascript:
           sleep 1; \
         done
 
-MLDIR=nyacc/lang/matlab
+MLDIR=nyacc/lang/octave
 
 NYACC_MATLAB_SRCS= \
 	$(MLDIR)/body.scm $(MLDIR)/compile-tree-il.scm $(MLDIR)/mach.scm \
@@ -131,10 +131,10 @@ NYACC_MATLAB_BINS =  \
 	$(MLDIR)/mach.d/ia-mlact.go $(MLDIR)/mach.d/ia-mltab.go \
 	$(MLDIR)/mach.d/mlact.go $(MLDIR)/mach.d/mltab.go
 
-.PHONY: install-nx-matlab
-install-nx-matlab:
+.PHONY: install-nx-octave
+install-nx-octave:
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
-	@echo "installing nx-matlab sources in $(SITE_SCM_DIR)"
+	@echo "installing nx-octave sources in $(SITE_SCM_DIR)"
 	@for file in $(NYACC_MATLAB_SRCS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
@@ -142,7 +142,7 @@ install-nx-matlab:
 	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	@echo "installing nx-matlab binaries in $(SITE_SCM_GO_DIR)"
+	@echo "installing nx-octave binaries in $(SITE_SCM_GO_DIR)"
 	@for binfile in $(NYACC_MATLAB_BINS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \

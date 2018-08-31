@@ -1,4 +1,4 @@
-;; lang/matlab/mach.scm
+;; lang/octave/mach.scm
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -17,7 +17,7 @@
 
 ;;; Description:
 
-;; matlab parser
+;; octave parser
 ;; 1) does NOT support non-comma rows [ 1 2 ] => syntax error
 
 ;; TODO:
@@ -28,13 +28,13 @@
 
 ;;; Code:
 
-(define-module (nyacc lang matlab mach)
-  #:export (matlab-spec
-	    matlab-mach
-	    matlab-ia-spec
-	    matlab-ia-mach
+(define-module (nyacc lang octave mach)
+  #:export (octave-spec
+	    octave-mach
+	    octave-ia-spec
+	    octave-ia-mach
 	    dev-parse-ml
-	    gen-matlab-files)
+	    gen-octave-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
@@ -42,7 +42,7 @@
   #:use-module (ice-9 pretty-print)
   )
 
-(define matlab-spec
+(define octave-spec
   (lalr-spec
    (notice (string-append "Copyright 2015-2018 Matthew R. Wette" license-lgpl3+))
    (start mfile)
@@ -151,7 +151,7 @@
 		   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5)))))
      )
 
-    ;; The switch case for this matlab only allows case-expr of form
+    ;; The switch case for this octave only allows case-expr of form
     ;; @code{fixed}, @code{string}, @code{fixed-list} or @code{string-list}.
     (case-list
      ($empty ($$ (make-tl 'case-list)))
@@ -297,38 +297,38 @@
 
 ;; === parsers ==========================
 
-(define matlab-mach
+(define octave-mach
   (hashify-machine
    (compact-machine
-    (make-lalr-machine matlab-spec))))
+    (make-lalr-machine octave-spec))))
 
-(include-from-path "nyacc/lang/matlab/body.scm")
+(include-from-path "nyacc/lang/octave/body.scm")
 
-(define matlab-ia-spec (restart-spec matlab-spec 'non-comment-statement))
-;;(define matlab-ia-spec (restart-spec matlab-spec 'interaction))
+(define octave-ia-spec (restart-spec octave-spec 'non-comment-statement))
+;;(define octave-ia-spec (restart-spec octave-spec 'interaction))
 
 ;; NOTE: Need to deal with comments.  The ia-parser looks for lone $defaults
 ;; to reduce w/o lookahead token but the compact-machine will add $lone-comm
 ;; so we remove $lone-comm from keepers here.
-(define matlab-ia-mach
-  (let* ((mach (make-lalr-machine matlab-ia-spec))
+(define octave-ia-mach
+  (let* ((mach (make-lalr-machine octave-ia-spec))
 	 (mach (compact-machine mach #:keep 0 #:keepers '()))
 	 (mach (hashify-machine mach)))
     mach))
 
 ;; === automaton file generators =========
 
-(define (gen-matlab-files . rest)
+(define (gen-octave-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (write-lalr-actions matlab-mach (xtra-dir "mlact.scm.new") #:prefix "ml-")
-  (write-lalr-tables matlab-mach (xtra-dir "mltab.scm.new") #:prefix "ml-")
-  (write-lalr-actions matlab-ia-mach (xtra-dir "ia-mlact.scm.new")
+  (write-lalr-actions octave-mach (xtra-dir "mlact.scm.new") #:prefix "ml-")
+  (write-lalr-tables octave-mach (xtra-dir "mltab.scm.new") #:prefix "ml-")
+  (write-lalr-actions octave-ia-mach (xtra-dir "ia-mlact.scm.new")
 		      #:prefix "ia-ml-")
-  (write-lalr-tables matlab-ia-mach (xtra-dir "ia-mltab.scm.new")
+  (write-lalr-tables octave-ia-mach (xtra-dir "ia-mltab.scm.new")
 		     #:prefix "ia-ml-")
   (let ((a (move-if-changed (xtra-dir "mlact.scm.new")
 			    (xtra-dir "mlact.scm")))

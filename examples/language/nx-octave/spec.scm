@@ -1,4 +1,4 @@
-;; Nyacc eXtension for matlab
+;; Nyacc eXtension for octave
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -17,15 +17,15 @@
 
 ;;; Code:
 
-(define-module (language nx-matlab spec)
-  #:export (nx-matlab)
-  #:use-module (nyacc lang matlab parser)
-  #:use-module (nyacc lang matlab compile-tree-il)
-  #:use-module (nyacc lang matlab pprint)
+(define-module (language nx-octave spec)
+  #:export (nx-octave)
+  #:use-module (nyacc lang octave parser)
+  #:use-module (nyacc lang octave compile-tree-il)
+  #:use-module (nyacc lang octave pprint)
   #:use-module (system base language))
 
-(define-language nx-matlab
-  #:title	"nx-matlab"
+(define-language nx-octave
+  #:title	"nx-octave"
   #:reader	(lambda (p e) (if (eq? e (interaction-environment))
 				  (ml-stmt-reader p e)
 				  (ml-file-reader p e)))

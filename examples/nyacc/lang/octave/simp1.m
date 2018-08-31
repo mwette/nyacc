@@ -1,3 +1,3 @@
-#lang nx-matlab
+#lang nx-octave
 function c = simp1(a, b)
 c = a + b

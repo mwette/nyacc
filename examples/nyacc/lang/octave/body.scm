@@ -1,4 +1,4 @@
-;;; lang/matlab/body.scm
+;;; lang/octave/body.scm
 ;;;
 ;;; Copyright (C) 2015,2018 Matthew R. Wette
 ;;;
@@ -18,7 +18,7 @@
 ;; @deffn add-file-attr tl => tl
 ;; Given a tagged-list this routine adds an attribute @code{(file basename)}
 ;; which is the basename (with @code{.m} removed) of the current input.
-;; This is used for the top-level node of the matlab parse tree to indicate
+;; This is used for the top-level node of the octave parse tree to indicate
 ;; from which file the script or function file originated.  For example,
 ;; @example
 ;; (function-file (@ (file "myftn")) (fctn-defn (ident "myftn") ...
@@ -29,7 +29,7 @@
 
 ;;; === lexical analyzer
 
-(define (matlab-read-string ch)
+(define (octave-read-string ch)
   (if (not (eq? ch #\')) #f
       (let loop ((cl '()) (ch (read-char)))
 	(cond ((eq? ch #\\)
@@ -46,7 +46,7 @@
 		       (cons '$string (list->string (reverse cl)))))))
 	      (else (loop (cons ch cl) (read-char)))))))
 
-(define matlab-read-comm
+(define octave-read-comm
   (make-comm-reader '(("%" . "\n")
 		      ("#!" . "!#") ("#lang" . "\n"))))
 
@@ -69,9 +69,9 @@
      ((eqv? ch #\newline) (read-char))
      (else (loop (read-char))))))
   
-(define-public (make-matlab-lexer-generator match-table)
-  (let* ((read-string matlab-read-string)
-	 (read-comm matlab-read-comm)
+(define-public (make-octave-lexer-generator match-table)
+  (let* ((read-string octave-read-string)
+	 (read-comm octave-read-comm)
 	 (read-ident read-c$-ident)
 	 (space-cs (string->char-set " \t\r\f"))
 	 ;;
@@ -83,8 +83,9 @@
 	 (chrtab (filter-mt char? match-table))	; characters in grammar
 	 (read-chseq (make-chseq-reader chrseq))
 	 (newline-val (assoc-ref chrseq "\n"))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
-    (if (not newline-val) (error "matlab setup error"))
+	 (assc-$ 
+          (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
+    (if (not newline-val) (error "octave setup error"))
     (lambda ()
       (let ((qms #f) (bol #t))		; qms: quote means string
 	(lambda ()

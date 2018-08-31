@@ -1,4 +1,4 @@
-;; nyacc/lang/matlab/xlib.scm - extension library
+;; nyacc/lang/octave/xlib.scm - extension library
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -21,7 +21,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang matlab xlib)
+(define-module (nyacc lang octave xlib)
   #:export (xdict)
   #:use-module (srfi srfi-9)
   )
@@ -94,7 +94,7 @@
   ;;(sferr "arg=~S\n" arg)
   (cond
    ((integer? arg) (vector-ref vec (1- arg)))
-   (else (error "matlab: expecing vector arg of integer, range or array"))))
+   (else (error "octave: expecing vector arg of integer, range or array"))))
 
 ;; ===
 
@@ -113,7 +113,7 @@
 	)
     (cond
      ((integer? arg) (array-ref vec (1- arg)))
-     (else (error "matlab: expecting array args of integer, range or array")))))
+     (else (error "octave: expecting array args of integer, range or array")))))
 
 (define-public (ml:array-set-row! ary ix row)
   (let loop ((jx 0) (elts row))
@@ -128,7 +128,7 @@
     (apply proc-or-array args))
    ((vector? proc-or-array)
     (unless (= 1 (length args))
-      (error "matlab: vector ref requires 1 int arg"))
+      (error "octave: vector ref requires 1 int arg"))
     (ml:vector-ref proc-or-array (car args)))
    ((array? proc-or-array)
     (apply ml:array-ref proc-or-array args))
@@ -167,7 +167,7 @@
 
 (define xdict
  `(
-   ("struct" . (@ (nyacc lang matlab xlib) ml:make-struct))
+   ("struct" . (@ (nyacc lang octave xlib) ml:make-struct))
     ))
 
 ;; --- last line ---

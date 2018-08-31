@@ -68,7 +68,7 @@
       (nx-add-lexical name dict)))
 
 (define (nx-lookup-in-env name env)
-  (let ((sym (string->symbol name)))
+  (let ((sym (if (string? name) (string->symbol name) name)))
     (if (module-variable env sym)
 	`(@@ ,(module-name env) ,sym)
 	#f)))

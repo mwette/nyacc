@@ -1,4 +1,4 @@
-;;; nyacc/lang/matlab/parser.scm - parsing 
+;;; nyacc/lang/octave/parser.scm - parsing 
 
 ;; Copyright (C) 2016,2018 Matthew R. Wette
 ;;
@@ -17,13 +17,13 @@
 
 ;;; Code:
 
-(define-module (nyacc lang matlab parser)
+(define-module (nyacc lang octave parser)
   #:export (parse-ml ml-stmt-reader ml-file-reader)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util))
 
-(include-from-path "nyacc/lang/matlab/body.scm")
+(include-from-path "nyacc/lang/octave/body.scm")
 
 ;; === static semantics
 
@@ -37,7 +37,8 @@
 (use-modules ((srfi srfi-1) #:select (fold)))
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
-(define (pperr exp) (pretty-print exp (current-error-port)))
+(define (pperr exp)
+  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
 (define (fixed-colon-expr? expr)
   (sx-match expr
@@ -87,10 +88,10 @@
      ((float-mat? mat) `(float-matrix . ,(cdr mat)))
      (else mat))))
 
-;; @deffn {Procedure} update-matlab-tree tree => tree
+;; @deffn {Procedure} update-octave-tree tree => tree
 ;; change find multiple value assignment and change to @code{multi-assn}.
 ;; @end deffn
-(define (update-matlab-tree tree)
+(define (update-octave-tree tree)
 
   (define (fU tree)
     (sx-match tree
@@ -109,10 +110,10 @@
 
 ;; === file parser 
 
-(include-from-path "nyacc/lang/matlab/mach.d/mltab.scm")
-(include-from-path "nyacc/lang/matlab/mach.d/mlact.scm")
+(include-from-path "nyacc/lang/octave/mach.d/mltab.scm")
+(include-from-path "nyacc/lang/octave/mach.d/mlact.scm")
 
-(define gen-matlab-lexer (make-matlab-lexer-generator ml-mtab))
+(define gen-octave-lexer (make-octave-lexer-generator ml-mtab))
 
 ;; Parse given a token generator.
 (define raw-parser
@@ -122,7 +123,7 @@
   (catch
    'parse-error
    (lambda ()
-     (raw-parser (gen-matlab-lexer) #:debug debug))
+     (raw-parser (gen-octave-lexer) #:debug debug))
    (lambda (key fmt . args)
      (apply simple-format (current-error-port) fmt args)
      #f)))
@@ -132,15 +133,15 @@
     (lambda ()
       (if (eof-object? (peek-char port))
 	  (read-char port)
-	  (update-matlab-tree
+	  (update-octave-tree
 	   (parse-ml #:debug #f))))))
 
 ;; === interactive parser
 
-(include-from-path "nyacc/lang/matlab/mach.d/ia-mltab.scm")
-(include-from-path "nyacc/lang/matlab/mach.d/ia-mlact.scm")
+(include-from-path "nyacc/lang/octave/mach.d/ia-mltab.scm")
+(include-from-path "nyacc/lang/octave/mach.d/ia-mlact.scm")
 
-(define gen-ia-matlab-lexer (make-matlab-lexer-generator ia-ml-mtab))
+(define gen-ia-octave-lexer (make-octave-lexer-generator ia-ml-mtab))
 
 (define raw-ia-parser
   (make-lalr-parser
@@ -156,7 +157,7 @@
       #f)))
 
 (define ml-stmt-reader
-  (let ((lexer (gen-ia-matlab-lexer)))
+  (let ((lexer (gen-ia-octave-lexer)))
     (lambda (port env)
       (cond
        ((eof-object? (peek-char port))
@@ -164,7 +165,7 @@
        (else
 	(let* ((stmt (with-input-from-port port
 		      (lambda () (parse-ml-stmt lexer))))
-	       (stmt (update-matlab-tree stmt)))
+	       (stmt (update-octave-tree stmt)))
 	  (cond
 	   ((equal? stmt '(empty-stmt)) #f)
 	   (stmt)

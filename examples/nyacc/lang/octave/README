@@ -1,18 +1,14 @@
-nyacc/lang/matlab/NOTES
+nyacc/lang/octave/
 
-Copyright (C) 2018 Matthew R. Wette
+Copyright (C) 2015-2018 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+The example dot-m files in this directory and the subdirectory exam.d 
+are also covered by the above copyright and license.
 
-(define a  #2f64:2:3((1 2 3) (4 5 6)))
 
-a = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0];
 
-a = zeros(2,3);
-a(1,1) = 1.0;
-(let ((a (make-array 0.0 2 3)))
-  (array-set! a 1.0 2 2))

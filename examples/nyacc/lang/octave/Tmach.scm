@@ -1,4 +1,4 @@
-;; nyacc/lang/matlab/Tmach.scm - matlab
+;; nyacc/lang/octave/Tmach.scm - octave (aka matlab)
 ;;
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;; 
@@ -7,8 +7,8 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (nyacc lang matlab mach))
-(use-modules (nyacc lang matlab parser))
+(use-modules (nyacc lang octave mach))
+(use-modules (nyacc lang octave parser))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lalr))
 (use-modules (nyacc util))
@@ -22,7 +22,7 @@
 
 ;; To generate the tables which will be included in the "fast" parser.
 (when #t
-  (gen-matlab-files)
+  (gen-octave-files)
   (compile-file "parser.scm")
   )
 
@@ -30,23 +30,23 @@
 (when #t
   (with-output-to-file ",file.txt"
     (lambda ()
-      (pp-lalr-notice matlab-spec)
-      (pp-lalr-grammar matlab-spec)
-      (pp-lalr-machine matlab-mach)))
+      (pp-lalr-notice octave-spec)
+      (pp-lalr-grammar octave-spec)
+      (pp-lalr-machine octave-mach)))
   (with-output-to-file ",stmt.txt"
     (lambda ()
-      (pp-lalr-notice matlab-ia-spec)
-      (pp-lalr-grammar matlab-ia-spec)
-      (pp-lalr-machine matlab-ia-mach))))
+      (pp-lalr-notice octave-ia-spec)
+      (pp-lalr-grammar octave-ia-spec)
+      (pp-lalr-machine octave-ia-mach))))
 
 (when #f ;; reg parser from parser.scm
   (let ((sx0 (with-input-from-file "exam.d/ex03b.m"
 	       (lambda () (parse-ml #:debug #f)))))
     (pretty-print sx0)))
 
-;; Experimental matlab->c converter.
+;; Experimental octave->c converter.
 #|
-(use-modules (nyacc lang matlab util))
+(use-modules (nyacc lang octave util))
 (when #f
   (let* ((file "exam.d/ex03b.m")
 	 (sx0 (with-input-from-file file dev-parse-ml)))

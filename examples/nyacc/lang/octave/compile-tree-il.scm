@@ -1,4 +1,4 @@
-;;; nyacc/lang/matlab/compile-tree-il.scm compile matlab sxml to tree-il
+;;; nyacc/lang/octave/compile-tree-il.scm compile octave sxml to tree-il
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -23,9 +23,9 @@
 
 ;;; Code:
 
-(define-module (nyacc lang matlab compile-tree-il)
-  #:export (compile-tree-il)
-  #:use-module (nyacc lang matlab xlib)
+(define-module (nyacc lang octave compile-tree-il)
+  #:export (compile-tree-il show-octave-sxml show-octave-xtil)
+  #:use-module (nyacc lang octave xlib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
   ;;#:use-module (nyacc lang util)
@@ -41,9 +41,9 @@
 (define (pperr tree)
   (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
-(define xlib-mod '(nyacc lang matlab xlib))
+(define xlib-mod '(nyacc lang octave xlib))
 (define xlib-module (resolve-module xlib-mod))
-(define (xlib-ref name) `(@@ (nyacc lang matlab xlib) ,name))
+(define (xlib-ref name) `(@@ (nyacc lang octave xlib) ,name))
 		       
 (define push-scope nx-push-scope)
 ;;(define pop-scope nx-pop-scope)
@@ -78,7 +78,7 @@
      ((assq '@F dict) #t)
      (else (loop (nx-pop-scope dict))))))
 
-;; In matlab, variables are not declared so this will add to either the
+;; In octave, variables are not declared so this will add to either the
 ;; containting function or toplevel.
 (define (add-symbol name dict)
   (if (function-scope? dict)
@@ -107,7 +107,14 @@
   (let loop ((refs dict))
     (cond
      ((null? refs) expr)
-     ((string? (caar refs))
+     ((string? (caar refs)) ;; add define if not in toplevel
+      (let* ((env0 (lookup '@M dict))
+	     (name (caar refs))
+	     (ref (nx-lookup-in-env name env0)))
+	(if ref
+	    (loop (cdr refs))
+	    `(seq (define ,(string->symbol name) (void)) ,(loop (cdr refs))))))
+     (#f ;;(string? (caar refs)) ;; check at runtime
       `(seq ,(make-def-ifndef (string->symbol (caar refs)))
 	    ,(loop (cdr refs))))
      ((eq? '@top (caar refs)) expr)
@@ -418,7 +425,7 @@
 	  (values (cons body seed) kdict)))
 
        ;; looping
-       ;; 1) matlab does have break statement, and continue I think
+       ;; 1) octave does have break statement, and continue I think
        ;; 2) for needs index and should call ml:iter-first ml:iter-next
        ;; 3) BUG top-levels can be introduced here, but we pop scope
        ;;    so these need to be moved to function or global scope
@@ -586,9 +593,9 @@
   )
 
 (define show-sxml #f)
-(define (show-matlab-sxml v) (set! show-sxml v))
+(define (show-octave-sxml v) (set! show-sxml v))
 (define show-xtil #f)
-(define (show-matlab-xtil v) (set! show-xtil v))
+(define (show-octave-xtil v) (set! show-xtil v))
 
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))

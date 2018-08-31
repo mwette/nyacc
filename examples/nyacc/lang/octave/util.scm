@@ -1,4 +1,4 @@
-;;; nyacc/lang/matlab/util.scm - matlab processing code
+;;; nyacc/lang/octave/util.scm - octave processing code
 
 ;; Copyright (C) 2016,2018 Matthew R. Wette
 ;;
@@ -17,7 +17,7 @@
 
 ;; utilities for processing output trees
 
-(define-module (nyacc lang matlab util)
+(define-module (nyacc lang octave util)
   #:export (
 	    apply-ml-sem ;; apply static semantics
 	    declify-ffile declify-script
@@ -154,7 +154,7 @@
 
 ;; @deffn declify-ffile tree [dict] => tree
 ;; This needs work.
-;; The idea is to end up with declarations for a matlab function-file.
+;; The idea is to end up with declarations for a octave function-file.
 ;; The filename function should be public, all others private.
 (define (declify-ffile tree . rest)
 
@@ -225,7 +225,7 @@
 
 ;; @deffn declify-script tree [dict] => tree
 ;; This needs work.
-;; The idea is to end up with declarations for a matlab function-file.
+;; The idea is to end up with declarations for a octave function-file.
 ;; The filename function should be public, all others private.
 (define (declify-script tree . rest)
   
