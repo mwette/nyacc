@@ -61,7 +61,8 @@
 
 ;; Add #! ... !# to comment format so that we can use shebang scripts.
 (define read-js-comm
-  (make-comm-reader '(("/*" . "*/") ("//" . "\n") ("#!" . "!#"))))
+  (make-comm-reader '(("/*" . "*/") ("//" . "\n")
+		      ("#!" . "!#") ("#lang" . "\n"))))
 
 ;; maybe turn double newline into ';'
 (define-public (make-js-lexer-generator match-table)

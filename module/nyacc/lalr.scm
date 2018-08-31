@@ -1,22 +1,26 @@
 ;;; nyacc/lalr.scm
-;;;
-;;; Copyright (C) 2014-2018 Matthew R. Wette
-;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Lesser General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 3 of the License, or (at your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;; Copyright (C) 2014-2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;;; Notes:
 
 ;; I need to find way to preserve srconf, rrconf after hashify.
 ;; compact needs to deal with it ...
+
+;;; Code:
 
 (define-module (nyacc lalr)
   #:export (lalr-spec process-spec
@@ -1967,14 +1971,14 @@
 				((positive? p) 'shift)
 				((negative? p) 'reduce)
 				(else 'accept)))
-		      (gt (and=> p abs)))
+		      (gt (if p (abs p) "")))
 		 (fmt port "\t\t~A => ~A ~A\n"
 		      (elt->str (assq-ref i->s sy) terms)
 		      pa gt))))
 	 pat)
 	(for-each			; action, print it
 	 (lambda (ra)
-	   ;; FIX: should indicate if precedence removed user rule or default
+	   ;; FIX: indicate if precedence removed by user rule or default
 	   (fmt port "\t\t[~A => ~A ~A] REMOVED by ~A\n"
 		(elt->str (caar ra) terms) (cadar ra) (cddar ra)
 		(case (cdr ra)
@@ -2043,6 +2047,12 @@
       (write-table mach 'pat-v port)
       (write-table mach 'rto-v port)
       (write-table mach 'mtab port)
+      ;; generate alist
+      (fmt port "(define ~Atables\n  (list\n" prefix)
+      (fmt port "   (cons 'len-v ~Alen-v)\n" prefix)
+      (fmt port "   (cons 'pat-v ~Apat-v)\n" prefix)
+      (fmt port "   (cons 'rto-v ~Arto-v)\n" prefix)
+      (fmt port "   (cons 'mtab ~Amtab)))\n\n" prefix)
       (display ";;; end tables" port)
       (newline port))))
 

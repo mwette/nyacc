@@ -1,6 +1,6 @@
-;;; nyacc/version.scm
+;; tcl/xlib.scm
 
-;; Copyright (C) 2017-2018 Matthew R. Wette
+;; Copyright (C) 2018 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -13,13 +13,16 @@
 ;; Lesser General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
-;; along with this library; if not, see <http://www.gnu.org/licenses/>
+;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
 
-(define-module (nyacc version)
-  #:export (*nyacc-version*))
+(define-module (nyacc lang tcl xlib)
+  #:export (tcl-eval)
+  )
 
-(define *nyacc-version* "0.85.3")
+;; Evaluate expression (a string)
+(define* (tcl-eval expr #:optional (env (current-module)))
+  (eval-string expr #:lang 'nx-tcl))
 
 ;; --- last line ---

@@ -1,3 +1,8 @@
+2018-08-19  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* update merged nx-matlab updates from nxdev branch; added fix
+	for nyacc/lex.scm to parse #xffff00000
+
 2018-07-29  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* update reworked the nyacc parser.scm file (see nyacc/ChangeLog);

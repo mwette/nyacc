@@ -89,58 +89,50 @@
    (lambda ($1 . $rest) $1)
    ;; statement => non-comment-statement
    (lambda ($1 . $rest) $1)
-   ;; non-comment-statement => term
-   (lambda ($1 . $rest) '(empty-stmt))
-   ;; non-comment-statement => lval-expr term
-   (lambda ($2 $1 . $rest) `(expr-stmt ,expr))
-   ;; non-comment-statement => lval-expr "(" expr-list ")" term
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(call-stmt ,$1 ,(tl->list $3)))
-   ;; non-comment-statement => lval-expr "=" expr term
-   (lambda ($4 $3 $2 $1 . $rest) `(assn ,$1 ,$3))
-   ;; non-comment-statement => "[" lval-expr-list "]" "=" ident "(" ")" term
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(multi-assign ,(tl->list $2) ,$5 (expr-list)))
-   ;; non-comment-statement => "[" lval-expr-list "]" "=" ident "(" expr-li...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(multi-assign ,(tl->list $2) ,$5 ,(tl->list $7)))
-   ;; non-comment-statement => "for" ident "=" expr term stmt-list "end" term
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement => non-comment-statement-1 term
+   (lambda ($2 $1 . $rest)
+     (sx-attr-add $1 'term $2))
+   ;; non-comment-statement-1 => 
+   (lambda $rest '(empty-stmt))
+   ;; non-comment-statement-1 => expr
+   (lambda ($1 . $rest) `(expr-stmt ,$1))
+   ;; non-comment-statement-1 => expr "=" expr
+   (lambda ($3 $2 $1 . $rest) `(assn ,$1 ,$3))
+   ;; non-comment-statement-1 => "for" ident "=" expr term stmt-list "end"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$2 ,$4 ,(tl->list $6)))
-   ;; non-comment-statement => "while" expr term stmt-list "end" term
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "while" expr term stmt-list "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$2 ,(tl->list $4)))
-   ;; non-comment-statement => "if" expr term stmt-list elseif-list "else" ...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "if" expr term stmt-list elseif-list "else...
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2
         ,(tl->list $4)
         ,@(cdr (tl->list $5))
         (else ,(tl->list $7))))
-   ;; non-comment-statement => "if" expr term stmt-list "else" stmt-list "e...
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(if ,$2 ,(tl->list $4) (else ,(tl->list $6))))
-   ;; non-comment-statement => "if" expr term stmt-list "end" term
+   ;; non-comment-statement-1 => "if" expr term stmt-list elseif-list "end"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5))))
+   ;; non-comment-statement-1 => "if" expr term stmt-list "else" stmt-list ...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(if ,$2 ,(tl->list $4) (else ,(tl->list $6))))
+   ;; non-comment-statement-1 => "if" expr term stmt-list "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4)))
-   ;; non-comment-statement => "switch" expr term case-list "otherwise" ter...
-   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "switch" expr term case-list "otherwise" t...
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(switch
         ,$2
-        ,@(tl->list $4)
+        ,@(cdr (tl->list $4))
         (otherwise ,(tl->list $7))))
-   ;; non-comment-statement => "switch" expr term case-list "end" term
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(switch ,$2 ,@(tl->list $4)))
-   ;; non-comment-statement => "return" term
-   (lambda ($2 $1 . $rest) '(return))
-   ;; non-comment-statement => command arg-list term
-   (lambda ($3 $2 $1 . $rest)
+   ;; non-comment-statement-1 => "switch" expr term case-list "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(switch ,$2 ,@(cdr (tl->list $4))))
+   ;; non-comment-statement-1 => "return"
+   (lambda ($1 . $rest) '(return))
+   ;; non-comment-statement-1 => command arg-list
+   (lambda ($2 $1 . $rest)
      `(command ,$1 ,(tl->list $2)))
-   ;; lval-expr-list => lval-expr
-   (lambda ($1 . $rest)
-     (make-tl 'lval-expr-list $1))
-   ;; lval-expr-list => lval-expr-list "," lval-expr
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; command => "global"
    (lambda ($1 . $rest) '(ident "global"))
    ;; command => "clear"
@@ -161,23 +153,42 @@
      (tl-append $1 `(elseif ,$3 ,(tl->list $5))))
    ;; case-list => 
    (lambda $rest (make-tl 'case-list))
-   ;; case-list => case-list "case" expr term stmt-list
+   ;; case-list => case-list "case" case-expr term stmt-list
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (tl-append $1 `(case ,$3 ,(tl->list $5))))
+   ;; case-expr => fixed
+   (lambda ($1 . $rest) $1)
+   ;; case-expr => string
+   (lambda ($1 . $rest) $1)
+   ;; case-expr => "{" fixed-list "}"
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
+   ;; case-expr => "{" string-list "}"
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
+   ;; fixed-list => fixed
+   (lambda ($1 . $rest) (make-tl 'fixed-list $1))
+   ;; fixed-list => fixed-list fixed
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; string-list => string
+   (lambda ($1 . $rest) (make-tl 'string-list $1))
+   ;; string-list => string-list string
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; expr-list => expr
    (lambda ($1 . $rest) (make-tl 'expr-list $1))
-   ;; expr-list => ":"
-   (lambda ($1 . $rest)
-     (make-tl 'expr-list '(colon-expr)))
    ;; expr-list => expr-list "," expr
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; expr-list => expr-list "," ":"
-   (lambda ($3 $2 $1 . $rest)
-     (tl-append $1 '(colon-expr)))
    ;; expr => or-expr
    (lambda ($1 . $rest) $1)
-   ;; expr => expr ":" or-expr
+   ;; expr => or-expr ":" or-expr
    (lambda ($3 $2 $1 . $rest) `(colon-expr ,$1 ,$3))
+   ;; expr => or-expr ":" or-expr ":" or-expr
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(colon-expr ,$1 ,$3 ,$5))
+   ;; expr => or-expr ":" "end"
+   (lambda ($3 $2 $1 . $rest)
+     `(colon-expr ,$1 (end)))
+   ;; expr => or-expr ":" or-expr ":" "end"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(colon-expr ,$1 ,$3 (end)))
    ;; or-expr => and-expr
    (lambda ($1 . $rest) $1)
    ;; or-expr => or-expr "|" and-expr
@@ -208,6 +219,10 @@
    (lambda ($3 $2 $1 . $rest) `(add ,$1 ,$3))
    ;; add-expr => add-expr "-" mul-expr
    (lambda ($3 $2 $1 . $rest) `(sub ,$1 ,$3))
+   ;; add-expr => add-expr ".+" mul-expr
+   (lambda ($3 $2 $1 . $rest) `(dot-add ,$1 ,$3))
+   ;; add-expr => add-expr ".-" mul-expr
+   (lambda ($3 $2 $1 . $rest) `(dot-sub ,$1 ,$3))
    ;; mul-expr => unary-expr
    (lambda ($1 . $rest) $1)
    ;; mul-expr => mul-expr "*" unary-expr
@@ -234,21 +249,22 @@
    (lambda ($2 $1 . $rest) $2)
    ;; unary-expr => "~" postfix-expr
    (lambda ($2 $1 . $rest) `(not ,$2))
-   ;; postfix-expr => lval-expr
-   (lambda ($1 . $rest) $1)
    ;; postfix-expr => primary-expr
    (lambda ($1 . $rest) $1)
    ;; postfix-expr => postfix-expr "'"
-   (lambda ($2 $1 . $rest) `(xpose ,$1))
+   (lambda ($2 $1 . $rest) `(transpose ,$1))
    ;; postfix-expr => postfix-expr ".'"
-   (lambda ($2 $1 . $rest) `(conj-xpose ,$1))
-   ;; lval-expr => ident
-   (lambda ($1 . $rest) $1)
-   ;; lval-expr => lval-expr "(" expr-list ")"
+   (lambda ($2 $1 . $rest) `(conj-transpose ,$1))
+   ;; postfix-expr => postfix-expr "(" expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(aref-or-call ,$1 ,(tl->list $3)))
-   ;; lval-expr => lval-expr "." ident
+   ;; postfix-expr => postfix-expr "(" ")"
+   (lambda ($3 $2 $1 . $rest)
+     `(aref-or-call ,$1 (expr-list)))
+   ;; postfix-expr => postfix-expr "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
+   ;; primary-expr => ident
+   (lambda ($1 . $rest) $1)
    ;; primary-expr => number
    (lambda ($1 . $rest) $1)
    ;; primary-expr => string
@@ -294,10 +310,14 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; ident => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
-   ;; number => '$fixed
+   ;; fixed => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
-   ;; number => '$float
+   ;; float => '$float
    (lambda ($1 . $rest) `(float ,$1))
+   ;; number => fixed
+   (lambda ($1 . $rest) $1)
+   ;; number => float
+   (lambda ($1 . $rest) $1)
    ;; string => '$string
    (lambda ($1 . $rest) `(string ,$1))
    ;; lone-comment => '$lone-comm

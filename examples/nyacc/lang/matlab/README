@@ -1,14 +1,14 @@
 nyacc/lang/matlab/
 
-Copyright (C) 2015-2017 Matthew R. Wette
+Copyright (C) 2015-2018 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-The example dot-m files in exam.d are also covered by the above
-copyright and license.
+The example dot-m files in this directory and the subdirectory exam.d 
+are also covered by the above copyright and license.
 
 
 

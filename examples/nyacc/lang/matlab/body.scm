@@ -46,7 +46,9 @@
 		       (cons '$string (list->string (reverse cl)))))))
 	      (else (iter (cons ch cl) (read-char)))))))
 
-(define matlab-read-comm (make-comm-reader '(("%" . "\n"))))
+(define matlab-read-comm
+  (make-comm-reader '(("%" . "\n")
+		      ("#!" . "!#") ("#lang" . "\n"))))
 
 ;; elipsis reader "..." whitespace "\n"
 (define (elipsis? ch)
@@ -84,16 +86,14 @@
 	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (if (not newline-val) (error "matlab setup error"))
     (lambda ()
-      (let ((qms #f) (bol #t))		; qms: quote means space
+      (let ((qms #f) (bol #t))		; qms: quote means string
 	(lambda ()
 	  (let iter ((ch (read-char)))
 	    (cond
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
  	     ((elipsis? ch) (iter (skip-to-next-line)))
-	     ((eqv? ch #\newline)
-	      (set! bol #t)
-	      (cons newline-val "\n"))
-	     ((char-set-contains? space-cs ch) (iter (read-char)))
+	     ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
+	     ((char-set-contains? space-cs ch) (set! qms #t) (iter (read-char)))
 	     ((read-comm ch bol) => assc-$)
 	     (bol (set! bol #f) (iter ch))
 	     ((read-ident ch) =>	; returns string

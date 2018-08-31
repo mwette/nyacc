@@ -1,4 +1,4 @@
-;; ./mach.d/c99cxtab.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99cxtab.scm
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;; 
@@ -159,4 +159,10 @@
     ("." . 37) ("]" . 38) ("[" . 39) (")" . 40) ("(" . 41) ($error . 2) 
     ($end . 43)))
 
+(define c99cx-tables
+  (list
+   (cons 'len-v c99cx-len-v)
+   (cons 'pat-v c99cx-pat-v)
+   (cons 'rto-v c99cx-rto-v)
+   (cons 'mtab c99cx-mtab)))
 ;;; end tables

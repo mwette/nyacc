@@ -1,4 +1,4 @@
-;; Nyacc eXtension for matlab
+;; Nyacc eXtension for Tcl
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -17,21 +17,17 @@
 
 ;;; Code:
 
-(define-module (language nx-matlab spec)
-  #:export (nx-matlab)
-  #:use-module (nyacc lang matlab parser)
-  #:use-module (nyacc lang matlab compile-tree-il)
-  #:use-module (nyacc lang matlab pprint)
+(define-module (language nx-tcl spec)
+  #:export (nx-tcl)
+  #:use-module (nyacc lang tcl parser)
+  #:use-module (nyacc lang tcl compile-tree-il)
   #:use-module (system base language))
 
-(define-language nx-matlab
-  #:title	"nx-matlab"
-  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
-				  (ml-stmt-reader p e)
-				  (ml-file-reader p e)))
+(define-language nx-tcl
+  #:title	"nx-tcl"
+  #:reader	read-tcl-stmt
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
-  #:printer	pretty-print-ml
   #:make-default-environment
 		(lambda ()
 		  (let ((env (make-fresh-user-module)))

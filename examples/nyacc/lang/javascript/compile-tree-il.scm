@@ -1,4 +1,4 @@
-;;; compile javascript sxml from parser to tree-il
+;; compile javascript sxml from parser to tree-il
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -14,6 +14,8 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;;; Description:
 
 ;; My goal in this development was to get experience with comping SXML trees
 ;; to tree-il: putting together patterns and utility procedures for converting
@@ -46,8 +48,9 @@
 ;; @itemize
 ;; @item add let only allow var at top-level and function start scope
 ;; @end itemize
-;;
-;; NOTES
+
+;;; Notes:
+
 ;; @itemize
 ;; @item JS functions will need to be re-implemented as objects, with the
 ;;       `[[Call]]' property used to make calls.
@@ -59,8 +62,10 @@
 ;; @item need atomic-box?
 ;; @end itemize
 
+;;; Code:
+
 (define-module (nyacc lang javascript compile-tree-il)
-  #:export (compile-tree-il js-sxml->tree-il-ext)
+  #:export (compile-tree-il)
   #:use-module (nyacc lang javascript xlib)
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang nx-util)
@@ -78,27 +83,7 @@
 ;; === portability ===================
 ;; no longer supports guile 2.0: assuming 2.2
 
-;; @deffn {Procedure} block expr-or-expr-list => expr | (seq ex1 (seq ... exN))
-;; Return an expression or build a seq-train returning last expression.
-;; @end deffn
-(define (block expr-or-expr-list)
-  (if (pair? (car expr-or-expr-list))
-      ;; expr list
-      (let iter ((xl expr-or-expr-list))
-	(if (null? (cdr xl)) (car xl)
-	    `(seq ,(car xl) ,(iter (cdr xl)))))
-      expr-or-expr-list))
-
-;; @deffn {Procedure} vblock expr-list => (seq ex1 (seq ... (void)))
-;; Return an expression or build a seq-train returning undefined.
-;; @end deffn
-(define (vblock expr-list)
-  (let iter ((expl expr-list))
-    (if (null? expl) '(void)
-	(acons 'seq (car expl) (iter (cdr expl))))))
-
 (define (jsym) (gensym "JS~"))
-;;(define genjsym genxsym)
 
 ;; =======================
 
@@ -191,93 +176,6 @@
       (nx-lookup-in-env name xlib-module)))
 
 
-;; @deffn {Procedure} lkup-gensym name dict [label] => gensym
-;; lookup up nearest parent lexical and return gensym
-;; (lkup-gensym "foo" dict) => JS~1234
-;; (lkup-gensym "foo" dict #:label "oloop") => JS~432
-;; @end deffn
-(define* (lkup-gensym name dict #:key label)
-  (if label
-      (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
-	(if (not pdict) #f
-	    (if (and (assoc-ref pdict label)
-		     (assoc-ref "~exit" cdict))
-		(assoc-ref name cdict)
-		(iter pdict (assoc-ref pdict '@P)))))
-      (let* ((sym (lookup name dict)))
-	(if (not sym) (error "javascript: not found:" name))
-	(caddr sym))))
-
-;; === using prompts ====================
-
-;; @deffn {Procedure} make-handler args body
-;; Generate an escape @code{lambda} for a prompt.  The continuation arg
-;; is not used.  @var{args} is a list of lexical references and @var{body}
-;; is an expression that may reference the args.
-;; @end deffn
-(define (make-handler args body)
-  (call-with-values
-      (lambda ()
-	(let iter ((names '()) (gsyms '()) (args args))
-	  (if (null? args)
-	      (values (reverse names) (reverse gsyms))
-	      (iter (cons (cadar args) names)
-		    (cons (caddar args) gsyms)
-		    (cdr args)))))
-    (lambda (names gsyms)
-      `(lambda ()
-	 (lambda-case ((,(cons 'k names) #f #f #f () ,(cons (genxsym "k") gsyms))
-		       ,body))))))
-	 
-;; @deffn {Procedure} with-escape tag-ref body
-;; @deffx {Procedure} with-escape/arg tag-ref body
-;; use for return and break where break is passed '(void)
-;; tag-ref is of the form (lexical name gensym)
-;; @end deffn
-(define (with-escape/handler tag-ref body hdlr)
-  (let ((tag-name (cadr tag-ref))
-	(tag-gsym (caddr tag-ref)))
-    `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
-	  (prompt #t ,tag-ref ,body ,hdlr))))
-  
-(define (with-escape/arg tag-ref body)
-  (let ((arg-gsym (genxsym "arg")))
-    (with-escape/handler
-     tag-ref body
-     `(lambda ()
-	(lambda-case (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
-		      (lexical arg ,arg-gsym)))))))
-
-(define (with-escape tag-ref body)
-  (let ((arg-gsym (genxsym "arg")))
-    (with-escape/handler
-     tag-ref body
-     `(lambda ()
-	(lambda-case (((k) #f #f #f () (,(genxsym "k")))
-		      (void)))))))
-
-(define (xx-with-escape/arg tag-ref body)
-  (let ((tag-name (cadr tag-ref))
-	(tag-gsym (caddr tag-ref))
-	(arg-gsym (genxsym "arg")))
-    `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
-	  (prompt #t ,tag-ref
-		  ,body
-		  (lambda ()
-		    (lambda-case
-		     (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
-		      (lexical arg ,arg-gsym))))))))
-(define (xx-with-escape tag-ref body)
-  (let ((tag-name (cadr tag-ref))
-	(tag-gsym (caddr tag-ref)))
-    `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
-	  (prompt #t ,tag-ref
-		  ,body
-		  (lambda ()
-		    (lambda-case
-		     (((k) #f #f #f () (,(genxsym "k")))
-		      (void))))))))
-
 ;; === codegen procedures =============
 
 ;; @deffn {Procedure} make-let bindings exprs
@@ -304,7 +202,7 @@
 ;; @end example
 ;; @noindent where bindings may look like
 ;; @example
-;; (bindings (bind v v~5897 (void))(bind w w~5898 (const 3)))
+;; (bindings (bind v v~5897 (void)) (bind w w~5898 (const 3)))
 ;; @end example
 ;; @noindent
 ;; Oh, I think this needs to use @code{letrec*}.
@@ -325,69 +223,6 @@
 			(cons (list-ref (car binds) 2) gsyms)
 			(cons (list-ref (car binds) 3) inits)
 			(cdr binds)))))))))
-
-;; @deffn {Procedure} make-thunk expr => `(lambda ...)
-;; Generate a thunk.
-;; @end deffn
-(define* (make-thunk expr #:key name)
-  `(lambda ,(if name '((namhe)) '()) (lambda-case ((() #f #f #f () ()) ,expr))))
-
-;; @deffn {Procedure} make-do-while expr body bsym csym
-;; @deffnx {Procedure} make-while expr body bsym csym
-;; This generates code for the following source:
-;; @example
-;; "do" body "where" expr
-;; "while" body "do" expr
-;; @end example
-;; @noindent
-;; where @arg{expr} is the condtional expression, @arg{body} is the body,
-;; @arg{bsym} is the gensym for @code{break}, @arg{csym} is the gensym for
-;; @code{continue}.  The code generated is based on the following pattern:
-;; @example
-;; (let ((break! (make-prompt-tag 'break))
-;;       (continue! (make-prompt-tag 'continue)))
-;;    (letrec ((iloop (lambda () (body) (if (expr) (iloop))))
-;;             (oloop
-;;              (lambda ()
-;;               (call-with-prompt continue!
-;;                  thunk
-;;                  (lambda (k) (if (expr) (oloop)))))))
-;;      (call-with-prompt break!
-;;        oloop
-;;        (lambda (k) (if #f #f))))))
-;; @end example
-;; @noindent
-;; where @code{break!} and @code{continue!} are lexicals generated for
-;; the code and @code{thunk} is @*
-;; @code{(lambda () (iloop))} for do-while and @*
-;; @code{(lambda () (if (expr) (iloop)))} for while-do.
-(define (make-loop expr body dict ilsym tbody)
-  (let* ((olsym (genxsym "oloop"))
-	 (bsym (lkup-gensym "break" dict))
-	 (csym (lkup-gensym "continue" dict))
-	 (icall `(call (lexical iloop ,ilsym)))
-	 (ocall `(call (lexical oloop ,olsym)))
-	 (iloop (make-thunk `(seq ,body (if ,expr ,icall (void)))))
-  	 (ohdlr `(lambda ()
-		   (lambda-case (((k) #f #f #f () (,(genxsym "k")))
-				 (if ,expr ,ocall (void))))))
-	 (oloop (make-thunk `(prompt #t (lexical continue ,csym) ,tbody ,ohdlr)))
- 	 (hdlr `(lambda ()
-		  (lambda-case (((k) #f #f #f () (,(genxsym "k"))) (void))))))
-    `(let (break continue) (,bsym ,csym)
-	  ((primcall make-prompt-tag (const break))
-	   (primcall make-prompt-tag (const continue)))
-	  (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
-		  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
-
-(define (make-do-while expr body dict)
-  (let ((ilsym (genxsym "iloop")))
-    (make-loop expr body dict ilsym `(call (lexical iloop ,ilsym)))))
-
-(define (make-while expr body dict)
-  (let ((ilsym (genxsym "iloop")))
-    (make-loop expr body dict ilsym
-		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
 
 ;; Pass arguments as optional and add @code{this} keyword argument.
 (define (make-function name this args body)
@@ -480,11 +315,11 @@
   
 ;; ====================================
 	 
-;; @deffn {Procedure} js-sxml->tree-il/ext exp env opts
-;; Compile javascript SXML tree to external tree-il representation.
+;; @deffn {Procedure} xlang-sxml->xtil exp env opts
+;; Compile extension SXML tree to external Tree-IL representation.
 ;; This one is public because it's needed for debugging the compiler.
 ;; @end deffn
-(define (js-sxml->tree-il/ext exp env opts)
+(define-public (xlang-sxml->xtil exp env opts)
 
   ;; In the case where we pick off ``low hanging fruit'' we need to coordinate
   ;; the actions of the up and down handlers.   The down handler will provide
@@ -1050,7 +885,7 @@
 		       (`((seq . ,def) (let . ,B-clz))
 			(block (cons `(let . ,B-clz) def)))
 		       (`((let . ,A-clz)) `(let . ,A-clz))))
-	       (vsym (lkup-gensym "swx~val" kdict))
+	       (vsym (lookup-gensym "swx~val" kdict))
 	       (body `(let (swx~val) (,vsym) (,expr) ,body))
 	       (body (with-escape (lookup "break" kdict) body)))
 	  (values (cons body seed) (pop-scope kdict))))
@@ -1111,7 +946,7 @@
        ((TryStatement)
 	(let* ((rseed (rtail kseed))
 	       (try-stmts (car rseed))
-	       (ctag (lkup-gensym "catch" kdict))
+	       (ctag (lookup-gensym "catch" kdict))
 	       (catch (match (cdr rseed)
 			((`(catch ,hdlr) . rest) hdlr)
 			(otherwise (make-handler '() '(void)))))
@@ -1129,7 +964,7 @@
        ((Catch)
 	(let* ((arg-name (cadr (cadr tree)))	 ; arg name as string
 	       (a-sym (string->symbol arg-name)) ; as symbol
-	       (a-gsym (lkup-gensym arg-name kdict)) ; its gensym
+	       (a-gsym (lookup-gensym arg-name kdict)) ; its gensym
 	       (catch `(lambda ()
 			 (lambda-case (((k ,a-sym) #f #f #f () (,(jsym) ,a-gsym))
 				       ,(car kseed))))))
@@ -1193,24 +1028,11 @@
     (values (cons leaf seed) dict))
 
   ;; We generate a dictionary with the env (module?) available at the top.
-  #;(let ((dict (acons '@top #t (acons '@M env JSdict)))
-	(sexp `(*TOP* ,exp)))
-    (call-with-values
-	(lambda () (foldts*-values fD fU fH sexp '() dict))
-      (lambda (seed dict) seed)))
-  (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
-  )
+  (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
 
 
 (use-modules (language tree-il compile-cps))
 
-;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv
-;; On input @var{exp} is the SXML from our reader, @var{env} is ``an
-;; environment'', and @var{opts} is a keyword list of options.  The procedure
-;; return three values: the compiled expressin, the corresponding environment
-;; for the target for the compiled language, and a continuation environment
-;; for the next javascript tree.
-;; @end deffn
 (define (compile-tree-il exp env opts)
   ;;(sferr "\nenv=~S\n" env)
   ;;(sferr "sxml:\n") (pperr exp)
@@ -1218,7 +1040,7 @@
     ;;(sferr "env=~S\ncenv=~S" env cenv)
     (if exp 
 	(call-with-values
-	    (lambda () (js-sxml->tree-il/ext exp cenv opts))
+	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
 	    ;;(sferr "tree-il:\n") (pperr exp)
 	    (values (parse-tree-il exp) env cenv)
