@@ -1,3 +1,8 @@
+2018-08-12  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (make-num-reader): for case (12) iter args swapped:
+	fixed with "5 ba" => "ba 5"
+
 2018-07-29  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm (compact-machine): default for #:keep is now 0, was 3

@@ -314,8 +314,8 @@
 	 (chrtab (filter-mt char? match-table))	  ; characters in grammar
 	 ;;
 	 (read-chseq (make-chseq-reader chrseq))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair))))
-
+	 (assc-$ (lambda (pair)
+		   (cons (assq-ref symtab (car pair)) (cdr pair))))
 	 ;;
 	 (t-ident (assq-ref symtab '$ident))
 	 (t-typename (assq-ref symtab 'typename)))
@@ -540,7 +540,9 @@
 	      (cond
 	       ((eof-object? ch)
 		(set! suppress #f)
-		(if (pop-input) (iter (read-char)) (assc-$ '($end . "#<eof>"))))
+		(if (pop-input)
+		    (iter (read-char))
+		    (assc-$ '($end . "#<eof>"))))
 	       ((eq? ch #\newline) (set! bol #t) (iter (read-char)))
 	       ((char-set-contains? c:ws ch) (iter (read-char)))
 	       (bol
@@ -568,8 +570,9 @@
 			   (push-input (open-input-string repl))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
-		      ;;^minor bug: won't work on #define keyword xxx; try ...
-		      ;; (and (not (assoc-ref name defs)) (assq-ref keytab symb))
+		      ;;^minor bug: won't work on #define keyword xxx
+		      ;; try (and (not (assoc-ref name defs))
+		      ;;          (assq-ref keytab symb))
 		      => (lambda (t) (cons t name)))
 		     ((typename? name)
 		      (cons (assq-ref symtab 'typename) name))
