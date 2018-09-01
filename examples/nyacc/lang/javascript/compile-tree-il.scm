@@ -206,6 +206,7 @@
 ;; @end example
 ;; @noindent
 ;; Oh, I think this needs to use @code{letrec*}.
+;; @end deffn
 (define (wrap-bindings body)
   ;;(sferr "wrap:\n  body\n") (pperr body)
   (let loop1 ((bindings '()) (rest body))
@@ -225,6 +226,7 @@
 			(cdr binds)))))))))
 
 ;; Pass arguments as optional and add @code{this} keyword argument.
+;; change to use (make-arity from args) (see tcl/c-t-il.scm
 (define (make-function name this args body)
   (if (not args) (error "no args"))
   `(lambda ,(if name `((name . ,name)) '())

@@ -61,13 +61,13 @@
 (use-modules (system base compile))
 (use-modules (language tree-il))
 
-;; #<matlab: a = [1, 2]; >#
+;; #<nx-octave: a = [1, 2]; >#
 ;; this needs to return a scheme expression
 ;; so probably use reader to convert tree-il
 ;; then convert to scheme
 (define (read-inline-code reader-char port)
   (let* ((str-port (open-output-string))
-	 (lang (let loop ((chl '()) (ch (read-char port)))
+	 (name (let loop ((chl '()) (ch (read-char port)))
 		 (cond
 		  ((eof-object? ch) ch)
 		  ((char=? ch #\:) (reverse-list->string chl))
@@ -85,7 +85,7 @@
 		   (display ch str-port)
 		   (loop (read-char port))))))
 	 ;;
-	 (lang (lookup-language (string->symbol lang)))
+	 (lang (lookup-language (string->symbol name)))
 	 (lread (and lang (language-reader lang)))
 	 (lcomp (and lang (assq-ref (language-compilers lang) 'tree-il)))
 	 ;;
@@ -99,7 +99,7 @@
 	 (xtil (unparse-tree-il itil))
 	 (scm (decompile itil))
 	 )
-    (unless lang (error "no such language:"))
+    (unless lang (error "no such language:" name))
     #;(call-with-input-string code
       (let loop ((block '(begin)) (sxml (lread port (current-module))))
 	(if (eof-object? sxml)

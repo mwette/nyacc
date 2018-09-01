@@ -29,7 +29,7 @@
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts*-values))
-  #:use-module ((srfi srfi-1) #:select (fold append-reverse))
+  #:use-module ((srfi srfi-1) #:select (fold fold-right append-reverse))
   #:use-module (language tree-il)
   #:use-module (ice-9 match)
   ;;#:use-module (system base compile)
@@ -57,7 +57,32 @@
       (nx-lookup-in-env name xlib-module)))
 
 (define make-opcall (opcall-generator xlib-mod))
-					   
+
+;; @deffn {Procedure} make-arity args
+;; This procedure generates a tree-il arity part of a lambda-case.
+;; @end deffn
+(define (make-arity args)
+  (let loop ((req '()) (opt '()) (rest #f) (inits '()) (gsyms '()) (args args))
+    (if (null? args)
+	(list (reverse req) (reverse opt) rest #f
+	      (reverse inits) (reverse gsyms))
+	(let* ((arg (car args))
+	       (lref (cadr arg)) (var (cadr lref)) (sym (caddr lref)))
+	  (case (car arg)
+	    ((arg)
+	     (loop (cons var req) opt rest inits (cons sym gsyms) (cdr args)))
+	    ((opt-arg)
+	     (loop req (cons var opt) rest (cons (caddr arg) inits)
+		   (cons sym gsyms) (cdr args)))
+	    ((rest)
+	     (loop req opt var inits (cons sym gsyms) (cdr args)))
+	    (else (error "coding error")))))))
+
+(define (make-function name arity body)
+  (let* ((meta '((lang . nx-tcl)))
+	 (meta (if name (cons `(name . ,name) meta) meta)))
+    `(lambda ,meta (lambda-case (,arity ,body)))))
+
 ;; @deffn {Procedure} sxml->xtil exp env opts
 ;; Compile SXML tree to external Tree-IL representation.
 ;; @end deffn
@@ -74,12 +99,12 @@
 
       ((deref ,name)
        (let ((ref (lookup name dict)))
-	 (unless ref (throw 'tcl-error "undefined variable"))
+	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
 	 (values '() `(call ,(xlib-ref 'tcl:string<-) ,ref) dict)))
 
       ((deref ,name ,expr)
        (let ((ref (lookup name dict)))
-	 (unless ref (throw 'tcl-error "undefined variable"))
+	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
 	 (values '() `(call ,(xlib-ref 'tcl:string<-) ,ref ,expr) dict)))
 
       ;; convert (C) string to number (i.e., 0xf => 15)
@@ -100,10 +125,25 @@
       ((list . ,items) ;; ???
        (error "not implemented"))
 
-      ;;((proc ,
-
+      ((proc ,name (arg-list . ,args) ,body)
+       ;; replace each name with (lexical name gsym)
+       (let* ((dict (add-symbol name dict))
+	      (nref (lookup name dict))
+	      (dict (push-scope dict))
+	      (dict (fold (lambda (a d) (add-lexical (cadr a) d)) dict args))
+	      (args (fold-right ;; replace arg-name with lexical-ref
+		     (lambda (a l)
+		       (cons (cons* (car a) (lookup (cadr a) dict) (cddr a)) l))
+		     '() args))
+	      (dict (add-lexical "return" dict))
+	      (dict (acons '@F name dict))
+	      )
+	 (values `(proc ,nref (arg-list . ,args) ,body) '() dict)))
+      
       ((set (string ,name) ,value)
-       (values `(set ,name ,value) '() dict))
+       (let* ((dict (add-symbol name dict))
+	      (nref (lookup name dict)))
+	 (values `(set ,nref ,value) '() dict)))
 
       ((command (string ,name) . ,args)
        (let ((ref (lookup name dict)))
@@ -134,12 +174,53 @@
        ((command)
 	(values (cons `(call . ,(rtail kseed)) seed) kdict))
 
+       ((proc)
+	(let* ((tail (rtail kseed))
+	       (name-ref (list-ref tail 0))
+	       (ptag (lookup "return" kdict))
+	       (argl (list-ref tail 1))
+	       (body (block (cdr (list-ref tail 2))))
+	       (arity (make-arity (cdr argl)))
+	       ;; add lexicals : CLEAN THIS UP -- used in nx-octave also
+	       (lvars (let loop ((ldict kdict))
+			(if (eq? '@F (caar ldict)) '()
+			    (cons (cdar ldict) (loop (cdr ldict))))))
+	       (body (let loop ((nl '()) (ll '()) (vl '()) (vs lvars))
+		       (if (null? vs)
+			   `(let ,nl ,ll ,vl ,body)
+			   (loop
+			    (cons (list-ref (car vs) 1) nl)
+			    (cons (list-ref (car vs) 2) ll)
+			    (cons '(void) vl)
+			    (cdr vs)))))
+	       ;;
+	       (body (with-escape/arg ptag body))
+	       (fctn (make-function (cadr name-ref) arity body))
+	       (stmt (if (eq? 'toplevel (car name-ref))
+			 `(define ,(cadr name-ref) ,fctn)
+			 `(set! ,name-ref ,fctn))) ;; never used methinks
+	       )
+	  ;;(sferr "proc ~S:\n" name-ref) (pperr tail) (pperr fctn)
+	  (values (cons stmt seed) (pop-scope kdict))))
+
+       ((return)
+	(values
+	 (cons `(abort ,(lookup "return" kdict)
+		       (,(if (> (length kseed) 1) (car kseed) '(void)))
+		       (const ()))
+	       seed)
+	 kdict))
+
        ((set)
-	(let ((name (cadr kseed))
-	      (value (car kseed)))
-	  ;; FIX NEED TO USE LEXICAL FOR PROC SCOPE
+	(let* ((value (car kseed))
+	       (nref (cadr kseed))
+	       (toplev? (eq? (car nref) 'toplevel)))
+	  ;;(sferr "set:") (pperr (reverse kseed))
 	  (values
-	   (cons `(define ,(string->symbol name) ,value) seed)
+	   (cons (if toplev?
+		     `(define ,(cadr nref) ,value)
+		     `(set! ,nref ,value))
+		 seed)
 	   kdict)))
        
        ((expr)
@@ -156,8 +237,12 @@
   (define (fH leaf seed dict)
     (values (cons leaf seed) dict))
 
-  (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
-  )
+  (catch 'tcl-error
+    (lambda () (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
+    (lambda (key fmt . args)
+      (apply simple-format (current-error-port)
+	     (string-append "*** tcl: " fmt "\n") args)
+      (values '(void) env))))
 
 (define show-sxml #f)
 (define (show-tcl-sxml v) (set! show-sxml v))
@@ -171,8 +256,8 @@
 ;; for the target for the compiled language, and a continuation environment
 ;; for the next parsed syntax tree.
 ;; @end deffn
-(set! show-sxml #t)
-(set! show-xtil #t)
+(set! show-sxml #f)
+(set! show-xtil #f)
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
   ;; Need to make an interp.  All Tcl commands execute in an interp
@@ -186,8 +271,8 @@
 	      )
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    ;;(values (parse-tree-il exp) env cenv)
-	    (values (parse-tree-il '(const "[hello]")) env cenv)
+	    (values (parse-tree-il exp) env cenv)
+	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
      	    )
 	  )
 	(values (parse-tree-il '(void)) env cenv))))

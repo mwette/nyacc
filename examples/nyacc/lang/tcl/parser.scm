@@ -71,8 +71,8 @@
 (define cs:rcurly (string->char-set "}"))
 (define cs:dquote (string->char-set "\""))
 
-;;(define cs:lix (string->char-set "(" cs:rs+ws))
-(define cs:lix (string->char-set "(" cs:ct+ws))
+;; variable terminator
+(define cs:vt (string->char-set "(+-*/%&|!^<>?" cs:ct+ws))
 (define cs:rix (string->char-set ")"))
 
 (define (report-error fmt . args)
@@ -215,7 +215,7 @@
 	      (cond
 	       (tag (finish tag chl ch))
 	       (else
-		(let* ((frag (read-frag cs:lix))
+		(let* ((frag (read-frag cs:vt))
 		       (frag (sx-ref frag 1)) ; extract string value
 		       (ch1 (peek-char port))
 		       (indx (cond ((eof-object? ch1) #f)
@@ -272,8 +272,9 @@
        (let loop ((cmd (read-command port)))
 	 (cond
 	  ((eof-object? cmd) '())
-	  ((null? (cdr cmd)) (loop (cnvt-tcl (read-command port)))) ; skip empty
-	  (else (cons cmd (loop (cnvt-tcl (read-command port)))))))))))
+	  ((null? (cdr cmd)) (loop (cnvt-tcl (read-command port))))
+	  (else
+	   (cons (cnvt-tcl cmd) (loop (cnvt-tcl (read-command port)))))))))))
 
 ;; convert all words in an expr command to a single list of frags
 (define (cnvt-expr-tail tail)
@@ -316,7 +317,7 @@
 	    (let loop ((arg #f) (chl '()) (ch (read-char)))
 	      (cond
 	       ((eof-object? ch) (report-error "missing right brace"))
-	       ((char=? ch #\}) `(opt-arg ,arg ,(rls chl)))
+	       ((char=? ch #\}) `(opt-arg ,arg (string ,(rls chl))))
 	       ((char-set-contains? cs:ws ch)
 		(if arg
 		    (if (pair? chl)
@@ -360,15 +361,16 @@
 	     (error "TODO"))
 	    (,_ (report-error "usage: if cond then else")))))
     ("proc"
+     ;; This assumes default arguments are strings constants.
      . ,(lambda (tree)
 	  (sxml-match tree
 	    ((command (string "proc") (string ,name) (string ,args)
 		      (string ,body))
-	     (sf "proc: ~S\n" tree)
-	     (sf "  args: ~S\n" args)
-	     (sf "  body: ~S\n" body)
-	     (echo `(proc ,name ,(cnvt-args args) ,(split-body body))))
+	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
 	    (,_ (report-error "usage: proc name args body")))))
+    ("return"
+     . ,(lambda (tree)
+	  `(return ,(sx-ref tree 2))))
     ("set"
      . ,(lambda (tree)
 	  `(set . ,(sx-tail tree 2))))
