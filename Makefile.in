@@ -44,11 +44,11 @@ install-ffi-help:
 
 .PHONY: install-nx-languages \
 	install-nx-javascript \
-	install-nx-matlab \
+	install-nx-octave \
 	install-nx-tcl
 install-nx-languages \
 	install-nx-javascript \
-	install-nx-matlab \
+	install-nx-octave \
 	install-nx-tcl \
 	:
 	@(cd examples: \
