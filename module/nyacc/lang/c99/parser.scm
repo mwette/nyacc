@@ -1,21 +1,21 @@
-;;; nyacc/lang/c99/parser.scm
-;;;
-;;; Copyright (C) 2015-2018 Matthew R. Wette
-;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Lesser General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 3 of the License, or (at your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; C parser
+;; Copyright (C) 2015-2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+
+;;; Code:
 
 (define-module (nyacc lang c99 parser)
   #:export (parse-c99 parse-c99x gen-c99-lexer gen-c99x-lexer gen-c-lexer)
@@ -79,13 +79,17 @@
     (with-fluids ((*info* info)
 		  (*input-stack* '()))
       (catch 'c99-error
-	(lambda () (c99-raw-parser (gen-c99-lexer #:mode mode #:xdef? xdef?
-						  #:show-incs show-incs)
-		    #:debug debug))
+	(lambda ()
+	  (catch 'nyacc-error
+	    (lambda () (c99-raw-parser
+			(gen-c99-lexer #:mode mode
+				       #:xdef? xdef?
+				       #:show-incs show-incs)
+			#:debug debug))
+	    (lambda (key fmt . args) (apply throw 'c99-error fmt args))))
 	(lambda (key fmt . args)
 	  (report-error fmt args)
 	  #f)))))
-
 
 ;; === expr parser ====================
 
@@ -121,9 +125,13 @@
       (with-input-from-string expr-string
 	(lambda ()
 	  (catch 'c99-error
-	    (lambda () (c99x-raw-parser
-			(gen-c99x-lexer #:mode 'code #:xdef? xdef?)
-			#:debug debug))
+	    (lambda ()
+	      (catch 'nyacc-error
+		(lambda ()
+		  (c99x-raw-parser (gen-c99x-lexer #:mode 'code #:xdef? xdef?)
+				   #:debug debug))
+		(lambda (key fmt . args)
+		  (apply throw 'c99-error fmt args))))
 	    (lambda (key fmt . rest)
 	      (report-error fmt rest)
 	      #f)))))))

@@ -1,4 +1,3 @@
-(add-to-load-path "/Users/mwette/repo/sv/nyacc-master/module")
 ;;; system/base/lalrz.scm
 ;;;
 ;;; Copyright (C) 2014-2018 Matthew R. Wette

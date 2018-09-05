@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-;; WARNING: this is a prototype in development: anything goes right now
+;;; Notes:
 
 ;; @table code
 ;; @item mspec->fh-wrapper
@@ -31,6 +31,8 @@
 ;; TODO: add renamer
 
 ;; For enum typedefs we are not creating types but just using wrappers.
+
+;;; Code:
 
 (define-module (nyacc lang c99 ffi-help)
   #:export (*ffi-help-version*

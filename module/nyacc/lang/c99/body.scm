@@ -1,19 +1,21 @@
-;;; lang/c99/body.scm
-;;;
-;;; Copyright (C) 2015-2018 Matthew R. Wette
-;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Lesser General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 3 of the License, or (at your option) any later version.
-;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Lesser General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Lesser General Public License
-;;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+;;; lang/c99/body.scm - parser body, inserted in parser.scm
+
+;; Copyright (C) 2015-2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>.
+
+;;; Notes:
 
 ;; Notes on the code design may be found in doc/nyacc/lang/c99-hg.info
 
@@ -28,6 +30,8 @@
 ;; CPP defines (e.g., "INT_MAX=12344").
 
 ;; issue w/ brlev: not intended to beused with `extern "C" {'
+
+;;; Code:
 
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
@@ -314,8 +318,8 @@
 	 (chrtab (filter-mt char? match-table))	  ; characters in grammar
 	 ;;
 	 (read-chseq (make-chseq-reader chrseq))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair))))
-
+	 (assc-$ (lambda (pair)
+		   (cons (assq-ref symtab (car pair)) (cdr pair))))
 	 ;;
 	 (t-ident (assq-ref symtab '$ident))
 	 (t-typename (assq-ref symtab 'typename)))
@@ -540,7 +544,9 @@
 	      (cond
 	       ((eof-object? ch)
 		(set! suppress #f)
-		(if (pop-input) (iter (read-char)) (assc-$ '($end . "#<eof>"))))
+		(if (pop-input)
+		    (iter (read-char))
+		    (assc-$ '($end . "#<eof>"))))
 	       ((eq? ch #\newline) (set! bol #t) (iter (read-char)))
 	       ((char-set-contains? c:ws ch) (iter (read-char)))
 	       (bol
@@ -568,8 +574,9 @@
 			   (push-input (open-input-string repl))
 			   (iter (read-char))))
 		     ((assq-ref keytab symb)
-		      ;;^minor bug: won't work on #define keyword xxx; try ...
-		      ;; (and (not (assoc-ref name defs)) (assq-ref keytab symb))
+		      ;;^minor bug: won't work on #define keyword xxx
+		      ;; try (and (not (assoc-ref name defs))
+		      ;;          (assq-ref keytab symb))
 		      => (lambda (t) (cons t name)))
 		     ((typename? name)
 		      (cons (assq-ref symtab 'typename) name))
