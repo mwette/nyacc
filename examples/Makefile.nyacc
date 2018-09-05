@@ -44,8 +44,11 @@ all: $(FFI_GO_FILES)
 	install-nx-javascript \
 	install-nx-octave \
 	install-nx-tcl
-
-install-nx-languages:
+install-nx-languages: \
+	install-nx-utils \
+	install-nx-javascript \
+	install-nx-octave \
+	install-nx-tcl
 	@true
 
 UTDIR=nyacc/lang
