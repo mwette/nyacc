@@ -1,6 +1,6 @@
 \input texinfo.tex
 @setfilename nyacc-ug.info
-@settitle Not Yet Another Compiler Compiler!
+@settitle Not Yet Another Compiler Compiler
 
 @copying
 Copyright (C) 2015-2017 -- Matthew R. Wette.
@@ -25,7 +25,7 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @end direntry
 
 @titlepage
-@title Not Yet Another Compiler-Compiler!
+@title Not Yet Another Compiler-Compiler
 @subtitle A LALR(1) Parser Generator Implemented in Guile
 @subtitle DRAFT User's manual for NYACC version 0.79.0
 @author Matt Wette
