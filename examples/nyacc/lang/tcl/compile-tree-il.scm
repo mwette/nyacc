@@ -259,7 +259,7 @@
 ;; for the target for the compiled language, and a continuation environment
 ;; for the next parsed syntax tree.
 ;; @end deffn
-(set! show-sxml #t)
+(set! show-sxml #f)
 (set! show-xtil #f)
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))

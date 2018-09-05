@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99cxtab.scm
+;; ./mach.d/c99cxtab.scm
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;; 
@@ -165,4 +165,5 @@
    (cons 'pat-v c99cx-pat-v)
    (cons 'rto-v c99cx-rto-v)
    (cons 'mtab c99cx-mtab)))
+
 ;;; end tables

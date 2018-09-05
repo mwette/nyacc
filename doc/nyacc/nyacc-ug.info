@@ -1,4 +1,4 @@
-This is nyacc-ug.info, produced by makeinfo version 6.1 from
+This is nyacc-ug.info, produced by texi2any version 6.1 from
 nyacc-ug.texi.
 
 Copyright (C) 2015-2017 - Matthew R. Wette.
@@ -298,6 +298,9 @@ in the previous chapter, the syntax generates an association list, or
      This is the expected number of shift-reduce conflicts to occur.
 'start'
      This specifies the top-level starting non-terminal.
+'alt-start'
+     This specifies alternative start symbols used in 'restart-spec'.
+     Its use prevents warning messages.
 'grammar'
      the grammar see below
 
@@ -1300,23 +1303,23 @@ Node: Top622
 Node: Demonstration877
 Node: Parsing10919
 Ref: Specification11367
-Ref: Recovery from Syntax Errors19806
-Ref: sublanguage20688
-Ref: Parser21009
-Ref: match table24753
-Ref: lex26556
-Ref: parser-lexer33664
-Ref: Parser Tables35234
-Ref: Hashing and Compacting36217
-Ref: Debugging37867
-Ref: Human Readable Output37978
-Node: Translation40143
-Ref: Tagged Lists42593
-Ref: SXML Parse Trees44539
-Node: Coding to the Compiler Tower46456
-Ref: Pretty Print47684
-Node: Administrative47880
-Node: TODOs48899
-Node: References49920
+Ref: Recovery from Syntax Errors19928
+Ref: sublanguage20810
+Ref: Parser21131
+Ref: match table24875
+Ref: lex26678
+Ref: parser-lexer33786
+Ref: Parser Tables35356
+Ref: Hashing and Compacting36339
+Ref: Debugging37989
+Ref: Human Readable Output38100
+Node: Translation40265
+Ref: Tagged Lists42715
+Ref: SXML Parse Trees44661
+Node: Coding to the Compiler Tower46578
+Ref: Pretty Print47806
+Node: Administrative48002
+Node: TODOs49021
+Node: References50042
 
 End Tag Table
