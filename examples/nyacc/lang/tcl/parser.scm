@@ -413,10 +413,12 @@
     cmmd))
 
 (define (read-tcl-file port env)
-  `(body
-    (let loop ((cmd (read-command port)))
-      (if (eof-object? cmd) '()
-	  (cons cmd (loop (read-command port)))))))
+  (if (eof-object? (peek-char port))
+      (read-char port)
+      `(body
+	(let loop ((cmd (read-command port)))
+	  (if (eof-object? cmd) '()
+	      (cons cmd (loop (read-command port))))))))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)

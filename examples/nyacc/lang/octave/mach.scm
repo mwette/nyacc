@@ -33,7 +33,7 @@
 	    octave-mach
 	    octave-ia-spec
 	    octave-ia-mach
-	    dev-parse-ml
+	    dev-parse-oct
 	    gen-octave-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
@@ -46,11 +46,18 @@
   (lalr-spec
    (notice (string-append "Copyright 2015-2018 Matthew R. Wette" license-lgpl3+))
    (start mfile)
+   ;;(alt-start interaction) ;; not working
    (grammar
     
     (mfile
      (script-file ($$ (tl->list (add-file-attr $1))))
      (function-file ($$ (tl->list (add-file-attr $1)))))
+
+    ;;(interaction (interaction-1))
+    ;;(interaction-1
+    ;; (non-comment-statement)
+    ;; ;;(statement)
+    ;; (function-defn))
 
     (script-file
      (lone-comment-list
@@ -59,8 +66,6 @@
      (non-comment-statement
       ($$ (if $1 (make-tl 'script-file $1) (make-tl 'script-file))))
      (script-file statement ($$ (if $2 (tl-append $1 $2) $1))))
-
-    ;;(interaction (non-comment-statement))
 
     (function-file
      (function-defn ($$ (make-tl 'function-file $1)))
@@ -313,7 +318,8 @@
 (define octave-ia-mach
   (let* ((mach (make-lalr-machine octave-ia-spec))
 	 (mach (compact-machine mach #:keep 0 #:keepers '()))
-	 (mach (hashify-machine mach)))
+	 (mach (hashify-machine mach))
+	 )
     mach))
 
 ;; === automaton file generators =========
@@ -324,20 +330,22 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (write-lalr-actions octave-mach (xtra-dir "mlact.scm.new") #:prefix "ml-")
-  (write-lalr-tables octave-mach (xtra-dir "mltab.scm.new") #:prefix "ml-")
-  (write-lalr-actions octave-ia-mach (xtra-dir "ia-mlact.scm.new")
-		      #:prefix "ia-ml-")
-  (write-lalr-tables octave-ia-mach (xtra-dir "ia-mltab.scm.new")
-		     #:prefix "ia-ml-")
-  (let ((a (move-if-changed (xtra-dir "mlact.scm.new")
-			    (xtra-dir "mlact.scm")))
-	(b (move-if-changed (xtra-dir "mltab.scm.new")
-			    (xtra-dir "mltab.scm")))
-	(c (move-if-changed (xtra-dir "ia-mlact.scm.new")
-			    (xtra-dir "ia-mlact.scm")))
-	(d (move-if-changed (xtra-dir "ia-mltab.scm.new")
-			    (xtra-dir "ia-mltab.scm"))))
+  (write-lalr-actions octave-mach (xtra-dir "oct-act.scm.new")
+		      #:prefix "oct-")
+  (write-lalr-tables octave-mach (xtra-dir "oct-tab.scm.new")
+		     #:prefix "oct-")
+  (write-lalr-actions octave-ia-mach (xtra-dir "octia-act.scm.new")
+		      #:prefix "octia-")
+  (write-lalr-tables octave-ia-mach (xtra-dir "octia-tab.scm.new")
+		     #:prefix "octia-")
+  (let ((a (move-if-changed (xtra-dir "oct-act.scm.new")
+			    (xtra-dir "oct-act.scm")))
+	(b (move-if-changed (xtra-dir "oct-tab.scm.new")
+			    (xtra-dir "oct-tab.scm")))
+	(c (move-if-changed (xtra-dir "octia-act.scm.new")
+			    (xtra-dir "octia-act.scm")))
+	(d (move-if-changed (xtra-dir "octia-tab.scm.new")
+			    (xtra-dir "octia-tab.scm"))))
     (or a b c d)))
 
 ;; --- last line ---

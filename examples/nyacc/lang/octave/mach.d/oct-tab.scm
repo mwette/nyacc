@@ -1,4 +1,4 @@
-;; mach.d/mltab.scm
+;; mach.d/oct-tab.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 
@@ -8,13 +8,13 @@
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING.LESSER included with the this distribution.
 
-(define ml-len-v
+(define oct-len-v
   #(1 1 1 2 1 2 1 2 4 3 2 0 2 2 1 10 9 8 7 6 5 1 3 1 2 1 1 2 0 1 3 7 5 8 6 7 
     5 8 5 1 2 1 1 1 2 4 5 0 5 1 1 3 3 1 2 1 2 1 3 1 3 5 3 5 1 3 1 3 1 3 3 1 3 
     3 3 3 1 3 3 3 3 1 3 3 3 3 3 3 3 3 1 2 2 2 1 2 2 4 3 3 1 1 1 3 2 3 2 3 1 3 
     1 1 1 3 1 2 1 1 1 2 3 1 1 1 1 1 1 1 1))
 
-(define ml-pat-v
+(define oct-pat-v
   #(((6 . 1) (7 . 2) (5 . 3) (58 . 4) (77 . 5) (8 . 6) (36 . 7) (53 . 8) 
     (50 . 9) (76 . 10) (63 . 11) (87 . 12) (64 . 13) (13 . 14) (25 . 15) 
     (24 . 16) (65 . 17) (66 . 18) (67 . 19) (68 . 20) (69 . 21) (70 . 22) 
@@ -329,7 +329,7 @@
     (85 . 47) (95 . 156) (44 . -46) (38 . -46) (55 . -46) (1 . -28)) ((1 . -15
     ))))
 
-(define ml-rto-v
+(define oct-rto-v
   #(#f 100 100 99 99 99 98 98 94 94 94 91 91 93 93 89 89 89 89 89 89 88 88 92
     92 95 95 96 84 84 84 84 84 84 84 84 84 84 84 84 84 80 80 79 79 82 82 81 81
     78 78 78 78 75 75 74 74 73 73 83 83 83 83 83 72 72 71 71 70 70 70 69 69 69
@@ -337,7 +337,7 @@
     65 64 64 64 64 64 64 64 64 62 62 60 60 61 61 90 90 86 86 86 97 97 87 77 58
     63 63 76 85 59))
 
-(define ml-mtab
+(define oct-mtab
   '(($start . 100) ("\n" . 3) ($lone-comm . 4) ($string . 5) ($float . 6) 
     ($fixed . 7) ($ident . 8) (";" . 9) ("." . 10) (".'" . 11) ("'" . 12) 
     ("~" . 13) (".^" . 14) (".\\" . 15) ("./" . 16) (".*" . 17) ("^" . 18) 
@@ -349,11 +349,11 @@
     . 46) ("for" . 47) ("," . 48) (")" . 49) ("(" . 50) ("=" . 51) ("]" . 52) 
     ("[" . 53) ("function" . 54) ("end" . 55) ($error . 2) ($end . 57)))
 
-(define ml-tables
+(define oct-tables
   (list
-   (cons 'len-v ml-len-v)
-   (cons 'pat-v ml-pat-v)
-   (cons 'rto-v ml-rto-v)
-   (cons 'mtab ml-mtab)))
+   (cons 'len-v oct-len-v)
+   (cons 'pat-v oct-pat-v)
+   (cons 'rto-v oct-rto-v)
+   (cons 'mtab oct-mtab)))
 
 ;;; end tables

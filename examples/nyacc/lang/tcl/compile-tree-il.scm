@@ -79,7 +79,7 @@
 	    (else (error "coding error")))))))
 
 (define (make-function name arity body)
-  (let* ((meta '((lang . nx-tcl)))
+  (let* ((meta '((language . nx-tcl)))
 	 (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case (,arity ,body)))))
 
@@ -149,6 +149,9 @@
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "not defined"))
 	 (values `(command ,ref . ,args) '() dict)))
+
+      ((command)
+       (values '() '(void) dict))
       
       (else
        (values tree '() dict))))

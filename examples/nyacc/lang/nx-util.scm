@@ -39,24 +39,82 @@
 
 (define (genxsym name) (gensym (string-append name "-")))
 
-;; push/pop scope level
+;; @deffn {Procedure} nx-push-scope dict
+;; Push scope level of dict, returning new dict.
+;; @end deffn
 (define (nx-push-scope dict)
+  "- Procedure: nx-push-scope dict
+     Push scope level of dict, returning new dict."
   (list (cons '@P dict)))
+
+;; @deffn {Procedure} nx-push-scope dict
+;; Pop scope level of dictionary @var{dict}, returning dictionary
+;; for popped scope.
+;; @end deffn
 (define (nx-pop-scope dict)
+  "- Procedure: nx-push-scope dict
+     Pop scope level of dictionary DICT, returning dictionary for popped
+     scope."
   (or (assq-ref dict '@P) (error "coding error: too many pops")))
+
+;; @deffn {Procedure} nx-top-level? dict
+;; This is a predicate to indicate if @var{dict}'s scope top-level.
+;; for popped scope.
+;; @end deffn
 (define (nx-top-level? dict)
+  "- Procedure: nx-top-level? dict
+     This is a predicate to indicate if DICT's scope top-level.  for
+     popped scope."
   (assoc-ref dict '@top))
 
-;; Add toplevel to dict, return dict
+;; @deffn {Procedure} nx-add-toplevel name dict
+;; Given a string @var{name} and dictionary @var{dict} return a new
+;; dictionary with a top-level reference for name added.  This can be
+;; retrieved with @code{nx-lookup name dict} where @code{dict} is the
+;; return value.
+;; @example
+;; (let ((dict (nx-add-toplevel "foo" dict)))
+;;    (nx-lookup "foo" dict)) => (toplevel foo)
+;; @end example
+;; @end deffn
 (define (nx-add-toplevel name dict)
+  "- Procedure: nx-add-toplevel name dict
+     Given a string NAME and dictionary DICT return a new dictionary
+     with a top-level reference for name added.  This can be retrieved
+     with 'nx-lookup name dict' where 'dict' is the return value.
+          (let ((dict (nx-add-toplevel \"foo\" dict)))
+             (nx-lookup \"foo\" dict)) => (toplevel foo)"
   (acons name `(toplevel ,(string->symbol name)) dict))
 
-;; Add lexical to dict, return dict
+;; @deffn {Procedure} nx-add-lexical name dict
+;; Given a string @var{name} and dictionary @var{dict} return a new
+;; dictionary with a lexical reference added.  The reference can be
+;; retrieved with @code{nx-lookup name dict} where @code{dict} is the
+;; return value.
+;; @example
+;; (let ((dict (nx-add-lexical "foo" dict)))
+;;    (nx-lookup "foo" dict)) => (lexical foo foo-123)
+;; @end example
+;; @end deffn
 (define (nx-add-lexical name dict)
+  "- Procedure: nx-add-lexical name dict
+     Given a string NAME and dictionary DICT return a new dictionary
+     with a lexical reference added.  The reference can be retrieved
+     with 'nx-lookup name dict' where 'dict' is the return value.
+          (let ((dict (nx-add-lexical \"foo\" dict)))
+             (nx-lookup \"foo\" dict)) => (lexical foo foo-123)"
   (acons name `(lexical ,(string->symbol name) ,(genxsym name)) dict))
 
-;; (add-lexicals name1 name2 ... dict) 
+;; @deffn {Procedure} nx-add-lexicals name1 ... nameN dict
+;; A fold-right with @code{nx-add-lexical}, equivalent to
+;; @example
+;; (fold-right nx-add-lexical dict (name1 ... nameN))
+;; @end example
+;; @end deffn
 (define (nx-add-lexicals . args)
+  "- Procedure: nx-add-lexicals name1 ... nameN dict
+     A fold-right with 'nx-add-lexical', equivalent to
+          (fold-right nx-add-lexical dict (name1 ... nameN))"
   (let iter ((args args))
     (if (null? (cddr args)) (nx-add-lexical (car args) (cadr args))
 	(nx-add-lexical (car args) (iter (cdr args))))))
@@ -129,12 +187,14 @@
   (lambda (op seed kseed kdict)
     (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict)))
 
-;; @deffn {Procedure} make-thunk expr => `(lambda ...)
-;; Generate a thunk.
+;; @deffn {Procedure} make-thunk expr [#:name name] [#:lang lang]
+;; Generate a thunk @code{`(lambda ...)}.
 ;; @end deffn
-(define* (make-thunk expr #:key name)
-  `(lambda ,(if name `((name . ,name)) '())
-     (lambda-case ((() #f #f #f () ()) ,expr))))
+(define* (make-thunk expr #:key name lang)
+  (let* ((meta '())
+	 (meta (if lang (cons `(language . ,lang) meta) meta))
+	 (meta (if name (cons `(name . ,name) meta) meta)))
+    `(lambda ,meta (lambda-case ((() #f #f #f () ()) ,expr)))))
 
 ;; === Using Prompts 
 
@@ -144,6 +204,10 @@
 ;; is an expression that may reference the args.
 ;; @end deffn
 (define (make-handler args body)
+  "- Procedure: make-handler args body
+     Generate an escape 'lambda' for a prompt.  The continuation arg is
+     not used.  ARGS is a list of lexical references and BODY is an
+     expression that may reference the args."
   (call-with-values
       (lambda ()
 	(let iter ((names '()) (gsyms '()) (args args))
@@ -160,9 +224,9 @@
 ;; @deffn {Procedure} with-escape tag-ref body
 ;; @deffx {Procedure} with-escape/arg tag-ref body
 ;; @deffx {Procedure} with-escape/expr tag-ref body
-;; use for return and break where break is passed '(void)
-;; tag-ref is of the form (lexical name gensym)
-;; @var{expr} is a fixed expression 
+;; This is used to generate return and break where break is passed '(void).
+;; @var{tag-ref} is of the form @code{(lexical name gensym)} and
+;; @var{expr} is an expression.
 ;; @end deffn
 (define (with-escape/handler tag-ref body hdlr)
   (let ((tag-name (cadr tag-ref))

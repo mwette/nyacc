@@ -1,4 +1,4 @@
-;; ./mach.d/ia-jsact.scm
+;; ./mach.d/ia-js-act.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 

@@ -1,3 +1,8 @@
+2018-09-05  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lalr.scm (process-spec): added alt-start spec attribute in order
+	to prevent warning about unused LHS non-terminals; but not working
+
 2018-08-19  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/sx-util.scm: added sx-split, sx-split*, sx-join, sx-join*

@@ -17,7 +17,7 @@
 
 (when #f ;; using the "development" parser
   (let* ((sx0 (with-input-from-file "exam.d/ex03a.m"
-		(lambda () (dev-parse-ml #:debug #f)))))
+		(lambda () (dev-parse-oct #:debug #f)))))
     (pretty-print sx0)))
 
 ;; To generate the tables which will be included in the "fast" parser.
@@ -41,7 +41,7 @@
 
 (when #f ;; reg parser from parser.scm
   (let ((sx0 (with-input-from-file "exam.d/ex03b.m"
-	       (lambda () (parse-ml #:debug #f)))))
+	       (lambda () (parse-oct #:debug #f)))))
     (pretty-print sx0)))
 
 ;; Experimental octave->c converter.
@@ -49,7 +49,7 @@
 (use-modules (nyacc lang octave util))
 (when #f
   (let* ((file "exam.d/ex03b.m")
-	 (sx0 (with-input-from-file file dev-parse-ml)))
+	 (sx0 (with-input-from-file file dev-parse-oct)))
     (pretty-print sx0)
     (let ((sx1 (and sx0 (declify-ffile sx0))))
       (pretty-print sx1)

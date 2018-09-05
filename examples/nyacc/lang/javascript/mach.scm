@@ -680,16 +680,16 @@
 
 (define* (gen-javascript-files #:optional (path "."))
   (define (mdir file) (mach-dir path file))
-  (write-lalr-actions javascript-mach (mdir "jsact.scm.new") #:prefix "js-")
-  (write-lalr-tables javascript-mach (mdir "jstab.scm.new") #:prefix "js-")
+  (write-lalr-actions javascript-mach (mdir "js-act.scm.new") #:prefix "js-")
+  (write-lalr-tables javascript-mach (mdir "js-tab.scm.new") #:prefix "js-")
   (write-lalr-actions javascript-ia-mach
-		      (mdir "ia-jsact.scm.new") #:prefix "ia-js-")
+		      (mdir "ia-js-act.scm.new") #:prefix "ia-js-")
   (write-lalr-tables javascript-ia-mach
-		     (mdir "ia-jstab.scm.new") #:prefix "ia-js-")
-  (let ((a (move-if-changed (mdir "jsact.scm.new") (mdir "jsact.scm")))
-	(b (move-if-changed (mdir "jstab.scm.new") (mdir "jstab.scm")))
-	(c (move-if-changed (mdir "ia-jsact.scm.new") (mdir "ia-jsact.scm")))
-	(d (move-if-changed (mdir "ia-jstab.scm.new") (mdir "ia-jstab.scm"))))
+		     (mdir "ia-js-tab.scm.new") #:prefix "ia-js-")
+  (let ((a (move-if-changed (mdir "js-act.scm.new") (mdir "js-act.scm")))
+	(b (move-if-changed (mdir "js-tab.scm.new") (mdir "js-tab.scm")))
+	(c (move-if-changed (mdir "ia-js-act.scm.new") (mdir "ia-js-act.scm")))
+	(d (move-if-changed (mdir "ia-js-tab.scm.new") (mdir "ia-js-tab.scm"))))
     (or a b c d)))
 
 ;;; --- last line ---

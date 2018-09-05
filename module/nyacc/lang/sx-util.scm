@@ -150,6 +150,7 @@
    ((sx ix)
     (cond
      ((zero? ix) (error "sx-tail: expecting index greater than 0"))
+     ((null? (cdr sx)) (list-tail sx ix))
      ((and (pair? (cadr sx)) (eqv? '@ (caadr sx))) (list-tail sx (1+ ix)))
      (else (list-tail sx ix))))
    ((sx)

@@ -30,8 +30,8 @@
 
 ;; === file parser ===================
 
-(include-from-path "nyacc/lang/javascript/mach.d/jstab.scm")
-(include-from-path "nyacc/lang/javascript/mach.d/jsact.scm")
+(include-from-path "nyacc/lang/javascript/mach.d/js-tab.scm")
+(include-from-path "nyacc/lang/javascript/mach.d/js-act.scm")
 
 (define gen-js-lexer (make-js-lexer-generator js-mtab))
 
@@ -54,12 +54,14 @@
 ;; Read file unit from port and return SXML AST.
 ;; @end deffn
 (define (js-file-reader port env)
-  (with-input-from-port port parse-js))
+  (if (eof-object? (peek-char port))
+      (read-char port)
+      (with-input-from-port port parse-js)))
 
 ;; === interactive parser =============
 
-(include-from-path "nyacc/lang/javascript/mach.d/ia-jstab.scm")
-(include-from-path "nyacc/lang/javascript/mach.d/ia-jsact.scm")
+(include-from-path "nyacc/lang/javascript/mach.d/ia-js-tab.scm")
+(include-from-path "nyacc/lang/javascript/mach.d/ia-js-act.scm")
 
 (define gen-ia-js-lexer (make-js-lexer-generator ia-js-mtab))
 

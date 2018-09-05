@@ -353,6 +353,9 @@ These specifiers are used to specify precedence and associativity symbols.
 This is the expected number of shift-reduce conflicts to occur.
 @item start
 This specifies the top-level starting non-terminal.
+@item alt-start
+This specifies alternative start symbols used in @code{restart-spec}.
+Its use prevents warning messages.
 @item grammar
 the grammar see below
 @end table

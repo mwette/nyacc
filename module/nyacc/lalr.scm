@@ -193,9 +193,11 @@
     ((_) '())))
 
 (define-syntax lalr-spec-1
-  (syntax-rules (start expect notice reserve prec< prec> grammar)
+  (syntax-rules (start alt-start expect notice reserve prec< prec> grammar)
     ((_ (start <symb>) <e> ...)
      (cons (cons 'start '<symb>) (lalr-spec-1 <e> ...)))
+    ((_ (alt-start <sym1> <sym2> ...) <e> ...)
+     (cons (cons 'alt-start '(<sym1> <sym2> ...)) (lalr-spec-1 <e> ...)))
     ((_ (expect <n>) <e> ...)
      (cons (cons 'expect <n>) (lalr-spec-1 <e> ...)))
     ((_ (notice <str>) <e> ...)
@@ -342,16 +344,18 @@
   ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
   ;; @end deffn
   (define (gram-check-4 ll nl err-l)
-    (fold
-     (lambda (s l) (cons (fmtstr "+++ LHS not used in any RHS: ~A" s) l))
-     err-l
-     (let iter ((ull '()) (all ll)) ; unused LHSs, all LHS's
-       (if (null? all) ull
-	   (iter (if (or (memq (car all) nl)
-			 (memq (car all) ull)
-			 (eq? (car all) '$start))
-		     ull (cons (car all) ull))
-		 (cdr all))))))
+    (let ((alt-start (or (assq-ref tree 'alt-start) '())))
+      (fold
+       (lambda (s l) (cons (fmtstr "+++ LHS not used in any RHS: ~A" s) l))
+       err-l
+       (let iter ((ull '()) (all ll)) ; unused LHSs, all LHS's
+	 (if (null? all) ull
+	     (iter (if (or (memq (car all) nl)
+			   (memq (car all) ull)
+			   (memq (car all) alt-start) ; new 02Sep18
+			   (eq? (car all) '$start))
+		       ull (cons (car all) ull))
+		   (cdr all)))))))
 
   ;; TODO: check for repeated tokens in precedence spec's: prec<, prec>
 
@@ -1812,6 +1816,10 @@
 			 (d (case ac
 			      ((shift) ds) ((reduce) (- ds))
 			      ((accept) 0) (else #f))))
+		    ;; If a rule is not used then ??? and then what? 180901
+		    ;;(cond
+		    ;; (t (iter2 (acons t d al1) (cdr al0)))
+		    ;; (else (iter2 (acons 0 0 al1) (cdr al0)))))))
 		    (unless t
 		      (fmterr "~S ~S ~S\n" tk ac ds)
 		      (error "expect something"))

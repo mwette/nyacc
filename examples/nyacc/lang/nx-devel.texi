@@ -104,7 +104,22 @@ Note that if the top-level language is a joint, then the compiler
 will just read expressions, combine them and then send to the compiler
 in one shot.
 
-@subheading Compiling a File
+@subheading Converting Your SXML Tree to Tree-IL
+
+The NX languages use @code{foldts*-values} from @code{(sxml fold)}.
+The tree keeps track of an auxiliary dictionary, implemented as
+an asssociative list (a-list).  The function @code{foldts*-values}
+operates on a function (named @code{fD}) that analyzes SXML subtrees
+on the way down and a function (named @code{fU}) that builds Tree-IL
+trees on the way up.  If scope is pushed for some construct on the
+way down, it should be popped (from @code{kdict}) on the way up.
+
+Note that declarations usually must be processed on the way down, so
+that identifiers will be associated with the correct declarations.
+
+In @code{fD} we also process simple trees.  These cases usally
+include, for example, constants (e.g., @code{(float "12.3")}) and
+identifiers (e.g., @code{(ident "foo")}.
 
 @heading Common Procedures
 

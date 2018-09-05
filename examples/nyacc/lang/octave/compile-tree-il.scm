@@ -99,6 +99,14 @@
 	     (call (toplevel current-module))
 	     (const ,symbol))
        (void) (define ,symbol (void))))
+;; another option: like `(define-once foo (if #f #f))'
+(define (x-make-def-indef symbol)
+  `(define ,symbol
+     (if (call (toplevel module-local-variable)
+	       (call (toplevel current-module))
+	       (const ,symbol))
+	 (toplevel ,symbol)
+	 (void))))
 
 ;; Add toplevel def's from dict before evaluating expression.  This puts
 ;; @var{expr} at the end of a chain of @code{seq}'s that execution
@@ -348,10 +356,10 @@
 			    (cdr vs)))))
 	       ;;
 	       (fctn `(set! (toplevel ,name)
-			(lambda ((name . ,name))
-			  (lambda-case ((() ,(map cadr iargs) #f #f
-					 ,(map (lambda (v) '(void)) iargs)
-					 ,(map caddr iargs)) ,body))))))
+			    (lambda ((name . ,name) (language . nx-octave))
+			      (lambda-case ((() ,(map cadr iargs) #f #f
+					     ,(map (lambda (v) '(void)) iargs)
+					     ,(map caddr iargs)) ,body))))))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; fctn-decl: handled by fctn-defn case
@@ -606,7 +614,7 @@
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
 	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[compile-tree-il skip]")) env cenv)
+	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
      	    ))
 	(values (parse-tree-il '(void)) env cenv))))
 

@@ -1,4 +1,4 @@
-(define redo #t)
+(define redo #f)
 ;; Tmach.scm - javascript
 ;;
 ;; Copyright (C) 2015,2016,2018 Matthew R. Wette

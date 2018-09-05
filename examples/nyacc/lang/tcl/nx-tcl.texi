@@ -1,0 +1,22 @@
+\input texinfo.tex
+@setfilename nx-tcl.info
+@settitle Tcl Nyacc Extension
+
+@headings off
+@everyfooting @| @thispage @|
+
+@node Top
+@top Tcl Nyacc Extension
+@format
+Matt Wette
+September 2018
+@end format
+
+@heading Notes
+
+In Tcl all values are strings.  However, some functions may return 
+numbers or lists, so Tcl eventually wants those as strings.  Tcl
+is lazy with respect to converting to string.  In some cases this
+makes code more effecient and robust.
+
+@bye

@@ -18,7 +18,7 @@
 ;;; Code:
 
 (define-module (nyacc lang octave parser)
-  #:export (parse-ml ml-stmt-reader ml-file-reader)
+  #:export (parse-oct read-oct-stmt read-oct-file)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util))
@@ -110,16 +110,16 @@
 
 ;; === file parser 
 
-(include-from-path "nyacc/lang/octave/mach.d/mltab.scm")
-(include-from-path "nyacc/lang/octave/mach.d/mlact.scm")
+(include-from-path "nyacc/lang/octave/mach.d/oct-tab.scm")
+(include-from-path "nyacc/lang/octave/mach.d/oct-act.scm")
 
-(define gen-octave-lexer (make-octave-lexer-generator ml-mtab))
+(define gen-octave-lexer (make-octave-lexer-generator oct-mtab))
 
 ;; Parse given a token generator.
 (define raw-parser
-  (make-lalr-parser (acons 'act-v ml-act-v ml-tables)))
+  (make-lalr-parser (acons 'act-v oct-act-v oct-tables)))
 
-(define* (parse-ml #:key debug)
+(define* (parse-oct #:key debug)
   (catch
    'parse-error
    (lambda ()
@@ -128,27 +128,25 @@
      (apply simple-format (current-error-port) fmt args)
      #f)))
 
-(define (ml-file-reader port env)
+(define (read-oct-file port env)
   (with-input-from-port port
     (lambda ()
       (if (eof-object? (peek-char port))
 	  (read-char port)
 	  (update-octave-tree
-	   (parse-ml #:debug #f))))))
+	   (parse-oct #:debug #f))))))
 
 ;; === interactive parser
 
-(include-from-path "nyacc/lang/octave/mach.d/ia-mltab.scm")
-(include-from-path "nyacc/lang/octave/mach.d/ia-mlact.scm")
-
-(define gen-ia-octave-lexer (make-octave-lexer-generator ia-ml-mtab))
+(include-from-path "nyacc/lang/octave/mach.d/octia-tab.scm")
+(include-from-path "nyacc/lang/octave/mach.d/octia-act.scm")
 
 (define raw-ia-parser
   (make-lalr-parser
-   (acons 'act-v ia-ml-act-v ia-ml-tables)
+   (acons 'act-v octia-act-v octia-tables)
    #:interactive #t))
 
-(define (parse-ml-stmt lexer)
+(define (parse-oct-stmt lexer)
   (catch 'nyacc-error
     (lambda ()
       (raw-ia-parser lexer #:debug #f))
@@ -156,24 +154,23 @@
       (apply simple-format (current-error-port) fmt args)
       #f)))
 
-(define ml-stmt-reader
-  (let ((lexer (gen-ia-octave-lexer)))
+(define gen-octave-ia-lexer (make-octave-lexer-generator octia-mtab))
+
+(define read-oct-stmt
+  (let ((lexer (gen-octave-ia-lexer)))
     (lambda (port env)
       (cond
        ((eof-object? (peek-char port))
 	(read-char port))
        (else
 	(let* ((stmt (with-input-from-port port
-		      (lambda () (parse-ml-stmt lexer))))
+		      (lambda () (parse-oct-stmt lexer))))
 	       (stmt (update-octave-tree stmt)))
+	  ;;(sferr "stmt=~S\n" stmt)
 	  (cond
 	   ((equal? stmt '(empty-stmt)) #f)
 	   (stmt)
 	   ;;(else (flush-input-after-error port) #f)
 	   )))))))
-
-
-;; ... (assn (
-;;
 
 ;; --- last line ---

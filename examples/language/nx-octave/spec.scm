@@ -27,8 +27,8 @@
 (define-language nx-octave
   #:title	"nx-octave"
   #:reader	(lambda (p e) (if (eq? e (interaction-environment))
-				  (ml-stmt-reader p e)
-				  (ml-file-reader p e)))
+				  (read-oct-stmt p e)
+				  (read-oct-file p e)))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-ml

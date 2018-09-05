@@ -29,7 +29,18 @@
 ;;   B) one class (type) entry and N interface entries
 ;; This module will need to provide run-time type determination.  Well,
 ;; We need a procedure (obj-call obj name args)
-;; 
+;;
+;; Idea: for each object add a lang-specific field to decorate
+;; (hashq-ref* obj 'lang 'nx-javascript) => ...
+
+;; @subheading Object Architecture
+;; The principles are
+;; @itemize
+;; @item campatability among many languages important
+;; @item strict language adherence is not priority
+;; @item base Scheme compatiblity is priority
+;; @item speed is not high priority
+;; @end itemize
 
 ;;; Todos:
 

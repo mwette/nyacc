@@ -47,6 +47,16 @@
 ;; @item need atomic-box?
 ;; @end itemize
 
+;; https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/\
+;;   Details_of_the_Object_Model
+;; If Manager: Employee
+;; function Manager() {
+;;   Employee.call(this);
+;;   this.reports = [];
+;; }
+;; Manager.prototype = Object.create(Employee.prototype);
+;; Manager.prototype.constructor = Manager;
+
 ;; TODO:
 ;; @itemize
 ;; @item Imeplement @code{with}.
@@ -225,18 +235,22 @@
 			(cons (list-ref (car binds) 3) inits)
 			(cdr binds)))))))))
 
-;; Pass arguments as optional and add @code{this} keyword argument.
-;; change to use (make-arity from args) (see tcl/c-t-il.scm
+;; @deffn {Procedure} make-function name this args body
+;; Pass arguments as optional and add @code{this} keyword argument.@*
+;; Note: Change this @code{make-arity} (see tcl/c-t-il.scm).
+;; @end deffn.
 (define (make-function name this args body)
-  (if (not args) (error "no args"))
-  `(lambda ,(if name `((name . ,name)) '())
-     (lambda-case ((()			; req
-		    ,(map car args)	; opt
-		    #f			; rest
-		    (#f (#:this this ,this)) ; kw
-		    (,@(map (lambda (v) undefined) args) ,undefined) ; inits
-		    (,@(map cadr args) ,this)) ; syms
-		   ,body))))
+  (unless args (error "no args"))
+  (let* ((meta '((language . nx-javascript)))
+	 (meta (if name (cons `(name . ,name) meta) meta)))
+    `(lambda ,meta
+       (lambda-case ((()			; req
+		      ,(map car args)	; opt
+		      #f			; rest
+		      (#f (#:this this ,this)) ; kw
+		      (,@(map (lambda (v) undefined) args) ,undefined) ; inits
+		      (,@(map cadr args) ,this)) ; syms
+		     ,body)))))
 
 ;; used in fU for switch cases
 ;; (let ((key (if key #t (equal? case-key val))))
@@ -254,7 +268,8 @@
 	    (prim-call equal? ,val ,(cadr kseed))))
 	(seq (if (lexical ~key ,sym) ,(car kseed) (void))
 	       ,next)))
-	 
+
+;; NOT USED -- NOT NEEDED
 ;; @deffn {Procedure} resolve-ref ref => exp
 ;; WARNING: I think this is more subtle than I am making it.@*
 ;; Resolve a possible reference (lval) to an expression (rval).
@@ -293,9 +308,9 @@
 (define (op-call/prim op kseed)
   (rev/repl 'prim-call op kseed))
 
-;; deffn {Procedure} op-assn kseed => `(set! lhs rhs)
+;; @deffn {Procedure} op-assn kseed => `(set! lhs rhs)
 ;; op-assn: for lhs += rhs etc
-;; end deffn
+;; @end deffn
 (define op-assn
   (let ((opmap
 	 '((mul-assign . js:*) (div-assign . js:/) (mod-assign . js:%)
@@ -584,7 +599,10 @@
 			     (push-scope (add-symbol "*anon*" dict)))))
       
       ((FormalParameterList . ,idlist)
-       (values tree '() (fold add-lexical dict (map cadr idlist))))
+       (values tree '()
+	       (acons 'arguments-used? #f
+		      (add-lexical "arguments"
+				   (fold add-lexical dict (map cadr idlist))))))
       
       ((FunctionElements . ,elts)
        ;; Fix up list of function elements:
@@ -1045,6 +1063,7 @@
        ;; FunctionDeclaration (see also fD above)
        ;; If the body starts with (bindings ...) then make a let.
        ((FunctionDeclaration)
+	;; TODO: check for arguments-used?
 	(let* ((name (let ((n (caddr kseed)))
 		       (if (memq (car n) '(@ @@)) (caddr n) (cadr n))))
 	       (this (caddr (lookup "this" kdict)))
@@ -1053,6 +1072,8 @@
 	       (body (wrap-bindings (car kseed)))
 	       (body (with-escape/arg ptag (block body)))
 	       (fctn (make-function name this args body)))
+	  (if (assq-ref kdict 'arguments-used?)
+	      (throw 'javascript-error "function `arguments' not supported yet"))
 	  (values (cons `(define ,name ,fctn) seed) (pop-scope kdict))))
 
        ;; FunctionExpression
@@ -1068,6 +1089,8 @@
 	       (body (with-escape/arg ptag (block body)))
 	       (fctn (make-function name this args body))
 	       (fctn (if lref `(let (,name) (,gsym) (,fctn) ,lref))))
+	  (if (assq-ref kdict 'arguments-used?)
+	      (throw 'javascript-error "function `arguments' not supported yet"))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FormalParameterList

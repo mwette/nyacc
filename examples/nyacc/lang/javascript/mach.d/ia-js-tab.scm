@@ -1,4 +1,4 @@
-;; ./mach.d/ia-jstab.scm
+;; ./mach.d/ia-js-tab.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 

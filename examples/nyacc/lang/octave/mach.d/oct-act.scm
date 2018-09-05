@@ -1,4 +1,4 @@
-;; mach.d/ia-mlact.scm
+;; mach.d/oct-act.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 
@@ -8,9 +8,9 @@
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING.LESSER included with the this distribution.
 
-(define ia-ml-act-v
+(define oct-act-v
   (vector
-   ;; $start => non-comment-statement
+   ;; $start => mfile
    (lambda ($1 . $rest) $1)
    ;; mfile => script-file
    (lambda ($1 . $rest)
