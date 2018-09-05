@@ -219,10 +219,7 @@
 (include-from-path "nyacc/lang/c99/mach.d/cppact.scm")
 
 (define cpp-raw-parser
-  (make-lalr-parser
-   (list (cons 'len-v cpp-len-v) (cons 'pat-v cpp-pat-v)
-	 (cons 'rto-v cpp-rto-v) (cons 'mtab cpp-mtab)
-	 (cons 'act-v cpp-act-v))))
+  (make-lalr-parser (acons 'act-v cpp-act-v cpp-tables)))
 
 (define (cpp-err fmt . args)
   (apply throw 'cpp-error fmt args))

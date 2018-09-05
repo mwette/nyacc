@@ -43,9 +43,7 @@
 
 (define c99-raw-parser
   (make-lalr-parser
-   (list (cons 'len-v c99-len-v) (cons 'pat-v c99-pat-v)
-	 (cons 'rto-v c99-rto-v) (cons 'mtab c99-mtab)
-	 (cons 'act-v c99-act-v))
+   (acons 'act-v c99-act-v c99-tables)
    #:skip-if-unexp '($lone-comm $code-comm)))
 	      
 (define gen-c99-lexer
@@ -98,9 +96,7 @@
 
 (define c99x-raw-parser
   (make-lalr-parser
-   (list (cons 'len-v c99x-len-v) (cons 'pat-v c99x-pat-v)
-	 (cons 'rto-v c99x-rto-v) (cons 'mtab c99x-mtab)
-	 (cons 'act-v c99x-act-v))
+   (acons 'act-v c99x-act-v c99x-tables)
    #:skip-if-unexp '($lone-comm $code-comm)))
 
 (define gen-c99x-lexer
