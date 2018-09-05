@@ -1,3 +1,7 @@
+2018-09-05  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* util1.scm (get-gcc-cpp-defs): removed dependence on regex
+
 2018-04-05  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* mach.scm (c99-spec): Committed major surgery to add handling of

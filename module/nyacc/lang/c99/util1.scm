@@ -30,7 +30,6 @@
   #:use-module (sxml fold)
   #:use-module (ice-9 popen)		; gen-gcc-cpp-defs
   #:use-module (ice-9 rdelim)		; gen-gcc-cpp-defs
-  #:use-module (ice-9 regex)		; get-gcc-cpp-defs
 )
 
 ;; include-helper for C99 std
@@ -75,27 +74,40 @@
    ((getenv "CC") => identity)
    (else "gcc")))
 
+;; @deffn {Procedure} convert-def line
+;; Convert string in gcc cpp defs to pair of strings for term and replacement.
+;; @end deffn
+(define (convert-line line)
+  (with-input-from-string line
+    (lambda ()
+      (let loop ((term '()) (acc '()) (st 0) (ch (read-char)))
+	(case st
+	  ((0) ;; skip #define
+	   (if (char=? #\space)
+	       (loop term acc 1 (read-char))
+	       (loop term acc 0 (read-char))))
+	  ((1) ;; read term
+	   (if (char=? #\space)
+	       (loop (reverse-list->string acc) '() 2 (read-char))
+	       (loop term (cons ch acc) st (read-char))))
+	  ((2) ;; read rest
+	   (if (char=? #\newline)
+	       (string-append term "=" (reverse-list->string acc))
+	       (loop term (cons ch acc) st (read-char)))))))))
+
 ;; @deffn {Procedure} get-gcc-cpp-defs [args] [#:CC "gcc"] => '("ABC=123" ...)
 ;; Generate a list of default defines produced by gcc (or other comiler).
 ;; If keyword arg @arg{CC} is not provided this procedure looks for environment
 ;; variable @code{"CC"}, else it defaults to @code{"gcc"}.
 ;; @end deffn
-(define get-gcc-cpp-defs
+(define* (get-gcc-cpp-defs #:optional (args '()) #:key CC)
   ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
   ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
-  (let ((rx1 (make-regexp "#define\\s+([A-Za-z0-9_]+\\([^)]*\\))\\s+(.*)"))
-	(rx2 (make-regexp "#define\\s+([A-Za-z0-9_]+)\\s+(.*)")))
-    (lambda* (#:optional (args '()) #:key CC)
-      (map
-       (lambda (l)
-	 ;; could use (string-delete #\space (match:substring m 1))
-	 (let ((m (or (regexp-exec rx1 l) (regexp-exec rx2 l))))
-	   (string-append (match:substring m 1) "=" (match:substring m 2))))
-       (let ((ip (open-input-pipe (string-append (resolve-CC CC)
-						 " -dM -E - </dev/null"))))
-	 (let iter ((lines '()) (line (read-line ip 'trim)))
-	   (if (eof-object? line) lines
-	       (iter (cons line lines) (read-line ip 'trim)))))))))
+  (let* ((cmd (string-append (resolve-CC CC) " -dM -E - </dev/null"))
+	 (ip (open-input-pipe cmd)))
+    (let loop ((line (read-line ip 'trim)))
+      (if (eof-object? line) '()
+	  (cons (convert-line line) (loop (read-line ip 'trim)))))))
 
 ;; @deffn {Procedure} get-gcc-inc-dirs [args] [#:CC "gcc"] =>
 ;; Generate a list of compiler-internal include directories (for gcc).  If

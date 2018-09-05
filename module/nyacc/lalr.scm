@@ -37,6 +37,7 @@
   #:use-module (srfi srfi-43)
   #:use-module (nyacc util)
   #:use-module (nyacc version)
+  #:use-module (ice-9 pretty-print)
   )
 
 
@@ -1993,9 +1994,6 @@
 
 ;; === output routines ===============
 
-(use-modules (ice-9 pretty-print))
-(use-modules (ice-9 regex))
-
 (define (write-notice mach port)
   (let* ((comm-leader ";; ")
 	 (notice (assq-ref (assq-ref mach 'attr) 'notice))
@@ -2005,11 +2003,10 @@
      lines)
     (if (pair? lines) (newline port))))
 
-(define (string-sub str pat repl)
-  (let ((m (string-match pat str)))
-    (if m
-	(regexp-substitute #f m 'pre repl 'post)
-	str)))
+(define (drop-dot-new filename)
+  (if (string-suffix? ".new" filename)
+      (string-drop-right filename 4)
+      filename))
 
 ;; @deffn {Procedure} write-lalr-tables mach filename [optons]
 ;; Options are
@@ -2041,7 +2038,7 @@
 
   (call-with-output-file filename
     (lambda (port)
-      (fmt port ";; ~A\n\n" (string-sub filename ".new$" ""))
+      (fmt port ";; ~A\n\n" (drop-dot-new filename))
       (write-notice mach port)
       (write-table mach 'len-v port)
       (write-table mach 'pat-v port)
@@ -2110,7 +2107,7 @@
 
   (call-with-output-file filename
     (lambda (port)
-      (fmt port ";; ~A\n\n" (string-sub filename ".new$" ""))
+      (fmt port ";; ~A\n\n" (drop-dot-new filename))
       (write-notice mach port)
       (write-actions mach port)
       (display ";;; end tables" port)
