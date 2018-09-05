@@ -17,6 +17,9 @@
 
 ;;; Notes:
 
+;; TODO: be more agressive to parse 123 as fixed and 567.0 as float.
+;; We can convert to string later.
+
 ;; args string => (arg-list (arg "abc") (opt-arg "def" "123") (rest "args"))
 ;; @table asis
 ;; @item @code{arg} @emph{var}
@@ -34,6 +37,7 @@
 	    cnvt-tcl cnvt-args cnvt-expr-tail
 	    tclme
 	    )
+  #:use-module (nyacc lex)		; for read-c-num
   )
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -179,7 +183,7 @@
 	     ((eof-object? ch) (error "no end brace"))
 	     ((char=? ch #\})
 	      (if (= 1 bl)
-		  (list 'string (rls chl))
+		  (list '$string (rls chl))
 		  (loop (cons ch chl) (1- bl) (xread-char port))))
 	     ((char=? ch #\{)
 	      (loop (cons ch chl) (1+ bl) (xread-char port)))
@@ -189,9 +193,9 @@
        (read-frag
 	(lambda (end-cs)
 	  ;;(sf "\n")
-	  (let loop ((tag #f)
+	  (let loop ((tag #f)		; tag: string etc
 		     (chl '())
-		     (bl (if (eq? end-cs cs:rcurly) 1 0))
+		     (bl (if (eq? end-cs cs:rcurly) 1 0)) ; brace level
 		     (ch (xread-char port)))
 	    (db "F:     tag=~S ch=~S chl=~S bl=~S end-cs=~S\n"
 		tag ch chl bl end-cs)
@@ -199,6 +203,11 @@
 	     ((eof-object? ch)
 	      (if (positive? bl) (error "missing end-brace"))
 	      (if (pair? chl) (finish tag chl ch) end-cs))
+	     
+	     ;; see if this works to get numbers
+	     ;;((and (not tag) (read-c-num ch)) =>
+	     ;; (lambda (p) (list (car p) (cdr p))))
+	     
 	     ((and (zero? bl) (char-set-contains? end-cs ch))
 	      (db "F:     done\n")
 	      (if tag (finish tag chl ch)
@@ -233,7 +242,7 @@
 	       (else (swallow (read-cmmd cs:rs)))))
 	     
 	     ((char=? ch #\") (swallow (read-frag cs:dquote)))
-	     ((not tag) (loop 'string (cons ch chl) bl (xread-char port)))
+	     ((not tag) (loop '$string (cons ch chl) bl (xread-char port)))
 	     (else (loop tag (cons ch chl) bl (xread-char port)))))))
 
        (read-index
@@ -278,7 +287,7 @@
 
 ;; convert all words in an expr command to a single list of frags
 (define (cnvt-expr-tail tail)
-  (let* ((blank `(string " "))
+  (let* ((blank `($string " "))
 	 (terms (fold-right
 		 (lambda (word terms)
 		   (if (eq? 'word (sx-tag word))
@@ -317,7 +326,7 @@
 	    (let loop ((arg #f) (chl '()) (ch (read-char)))
 	      (cond
 	       ((eof-object? ch) (report-error "missing right brace"))
-	       ((char=? ch #\}) `(opt-arg ,arg (string ,(rls chl))))
+	       ((char=? ch #\}) `(opt-arg ,arg ($string ,(rls chl))))
 	       ((char-set-contains? cs:ws ch)
 		(if arg
 		    (if (pair? chl)
@@ -352,20 +361,20 @@
      . ,(lambda (tree)
 	  (sxml-match tree
 	    ;; TODO : deal with "elseif" 
-	    ((command (string "if") ,cond ,then)
+	    ((command ($string "if") ,cond ,then)
 	     `(if (expr . ,(cnvt-expr-tail (list cond))) ,(split-body then)))
-	    ((command (string "if") ,cond ,then (string "else") ,else)
+	    ((command ($string "if") ,cond ,then ($string "else") ,else)
 	     `(if (expr . ,(cnvt-expr-tail (list cond)))
 		  ,(split-body then) ,(split-body else)))
-	    ((command (string "if") ,cond ,then . ,elseifs)
+	    ((command ($string "if") ,cond ,then . ,elseifs)
 	     (error "TODO"))
 	    (,_ (report-error "usage: if cond then else")))))
     ("proc"
      ;; This assumes default arguments are strings constants.
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command (string "proc") (string ,name) (string ,args)
-		      (string ,body))
+	    ((command ($string "proc") ($string ,name) ($string ,args)
+		      ($string ,body))
 	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
 	    (,_ (report-error "usage: proc name args body")))))
     ("return"
@@ -377,7 +386,7 @@
     ("while"
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command (string "while") ,cond (string ,body))
+	    ((command ($string "while") ,cond ($string ,body))
 	     `(while (expr . ,(cnvt-expr-tail (list cond))) ,(split-body body)))
 	    (,_ (report-error "usage: while cond body")))))
     ;;("array" . #f)

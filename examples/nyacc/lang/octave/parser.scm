@@ -88,10 +88,14 @@
      ((float-mat? mat) `(float-matrix . ,(cdr mat)))
      (else mat))))
 
-;; @deffn {Procedure} update-octave-tree tree => tree
-;; change find multiple value assignment and change to @code{multi-assn}.
+;; @deffn {Procedure} apply-octave-statics tree => tree
+;; Apply static semantics for Octave.  Currently, this includes
+;; @itemize
+;; @item Change @code{assn} with matrix expression on LHS to a
+;; multiple value assignment (@code{multi-assn}).
+;; @end itemize
 ;; @end deffn
-(define (update-octave-tree tree)
+(define (apply-octave-statics tree)
 
   (define (fU tree)
     (sx-match tree
@@ -103,8 +107,7 @@
        (check-matrix tree))
       (else tree)))
   
-  (define (fH tree)
-    tree)
+  (define (fH tree) tree)
   
   (cadr (foldt fU fH `(*TOP* ,tree))))
 
@@ -123,7 +126,8 @@
   (catch
    'parse-error
    (lambda ()
-     (raw-parser (gen-octave-lexer) #:debug debug))
+     (apply-octave-statics
+      (raw-parser (gen-octave-lexer) #:debug debug)))
    (lambda (key fmt . args)
      (apply simple-format (current-error-port) fmt args)
      #f)))
@@ -133,8 +137,7 @@
     (lambda ()
       (if (eof-object? (peek-char port))
 	  (read-char port)
-	  (update-octave-tree
-	   (parse-oct #:debug #f))))))
+	  (parse-oct #:debug #f)))))
 
 ;; === interactive parser
 
@@ -149,7 +152,8 @@
 (define (parse-oct-stmt lexer)
   (catch 'nyacc-error
     (lambda ()
-      (raw-ia-parser lexer #:debug #f))
+      (apply-octave-statics
+       (raw-ia-parser lexer #:debug #f)))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port) fmt args)
       #f)))
@@ -165,7 +169,7 @@
        (else
 	(let* ((stmt (with-input-from-port port
 		      (lambda () (parse-oct-stmt lexer))))
-	       (stmt (update-octave-tree stmt)))
+	       (stmt (apply-octave-statics stmt)))
 	  ;;(sferr "stmt=~S\n" stmt)
 	  (cond
 	   ((equal? stmt '(empty-stmt)) #f)

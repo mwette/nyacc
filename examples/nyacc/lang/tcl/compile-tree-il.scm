@@ -94,7 +94,7 @@
       )
     (sx-match tree
 
-      ((string ,sval)
+      (($string ,sval)
        (values '() `(const ,sval) dict))
 
       ((deref ,name)
@@ -140,12 +140,12 @@
 	      )
 	 (values `(proc ,nref (arg-list . ,args) ,body) '() dict)))
       
-      ((set (string ,name) ,value)
+      ((set ($string ,name) ,value)
        (let* ((dict (add-symbol name dict))
 	      (nref (lookup name dict)))
 	 (values `(set ,nref ,value) '() dict)))
 
-      ((command (string ,name) . ,args)
+      ((command ($string ,name) . ,args)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "not defined"))
 	 (values `(command ,ref . ,args) '() dict)))
@@ -259,7 +259,7 @@
 ;; for the target for the compiled language, and a continuation environment
 ;; for the next parsed syntax tree.
 ;; @end deffn
-(set! show-sxml #f)
+(set! show-sxml #t)
 (set! show-xtil #f)
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))

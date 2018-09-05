@@ -54,10 +54,7 @@
      (function-file ($$ (tl->list (add-file-attr $1)))))
 
     ;;(interaction (interaction-1))
-    ;;(interaction-1
-    ;; (non-comment-statement)
-    ;; ;;(statement)
-    ;; (function-defn))
+    (interaction (statement) (function-defn))
 
     (script-file
      (lone-comment-list

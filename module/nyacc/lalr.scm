@@ -1600,6 +1600,9 @@
 ;; It might be useful to add hashify and compact with keyword arguments.
 ;; @end deffn
 (define (make-lalr-machine spec)
+  "- Procedure: make-lalr-machine spec => pgen
+     Generate a-list of items used for building/debugging parsers.  It
+     might be useful to add hashify and compact with keyword arguments."
   (if (not spec) (error "make-lalr-machine: expecting valid specification"))
   (let ((prev-core (fluid-ref *lalr-core*)))
     (dynamic-wind
@@ -1888,9 +1891,11 @@
 		    (list (string-append " " (elt->str e tl)))))))))))
 
 ;; @deffn {Procedure} pp-lalr-notice spec [port]
-;; @deffn pp-lalr-notice spec [port]
+;; This prints the text in the @code{notice} construct of a language spec.
 ;; @end deffn
 (define (pp-lalr-notice spec . rest)
+  "- Procedure: pp-lalr-notice spec [port]
+     This prints the text in the 'notice' construct of a language spec."
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (notice (assq-ref (assq-ref spec 'attr) 'notice))
 	 (lines (if notice (string-split notice #\newline) '())))
@@ -1901,6 +1906,8 @@
 ;; Pretty-print the grammar to the specified port, or current output.
 ;; @end deffn
 (define (pp-lalr-grammar spec . rest)
+  "- Procedure: pp-lalr-grammar spec [port]
+     Pretty-print the grammar to the specified port, or current output."
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref spec 'lhs-v))
 	 (rhs-v (assq-ref spec 'rhs-v))
@@ -1929,6 +1936,8 @@
 ;; Print the states of the parser with items and shift/reduce actions.
 ;; @end deffn
 (define (pp-lalr-machine mach . rest)
+  "- Procedure: pp-lalr-machine mach [port]
+     Print the states of the parser with items and shift/reduce actions."
   (let* ((port (if (pair? rest) (car rest) (current-output-port)))
 	 (lhs-v (assq-ref mach 'lhs-v))
 	 (rhs-v (assq-ref mach 'rhs-v))
