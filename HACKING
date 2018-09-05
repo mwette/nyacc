@@ -8,14 +8,14 @@ without any warranty.
 
 === To play with example code and try modifications ...
 
-  $ cd examples/nyacc
+  $ cd examples
   $ source env.sh
 
 === Hacking on the C99 parser ====
 To play with the C99 code, in place, I recommend the following:
-After sourcing env.sh as above, do
+After sourcing env.sh as above, execute
 
-  $ cd lang/c99
+  $ cd nyacc/lang/c99
   $ guile tryit.scm
 
 If you modify module/nyacc/lang/c99/mach.scm you will need to rebuild the
@@ -24,26 +24,29 @@ files in the subdirectory mach.d.  To do this run, in guile, the following:
   (use-modules (nyacc lang c99 cppmach))
 
   (gen-c99-files ".")
-  (system "touch ./parser.scm")
-  (gen-c99x-files ".")
-  (system "touch ./xparser.scm")
+  (compile-file "parser.scm")
   (gen-cpp-files ".")
-  (system "touch ./cpp.scm")
+  (compile-file "cpp.scm")
 
-Sorry, maybe not all clean, but his is BETAWARE.
-
-=== Javascript parser
-
-This illustrates use of the parser to generate tree-il and run inside guile.
-After sourcing env.sh as above, do
+=== Nyacc eXtension languages (or not-exactly languages)
 
   $ guile
   ...
-  scheme@(guile-user)> ,L javascript
-  Happy hacking with javascript!  To switch back, type `,L scheme'.
-  javascript@(guile-user)> var = 1;
-  ...
-
+  scheme@(guile-user)> ,L nx-javascript
+  Happy hacking with nx-javascript!  To switch back, type `,L scheme'.
+  nx-javascript@(guile-user)> var a = 1;
+  nx-javascript@(guile-user)> ,L nx-octave
+  Happy hacking with nx-octave!  To switch back, type `,L nx-javascript'.
+  nx-octave@(guile-user)> b = 2;
+  nx-octave@(guile-user)> ,L nx-tcl
+  Happy hacking with nx-tcl!  To switch back, type `,L nx-octave'.
+  nx-tcl@(guile-user)> set c 3
+  nx-tcl@(guile-user)> ,L scheme
+  Happy hacking with Scheme!  To switch back, type `,L nx-tcl'.
+  scheme@(guile-user)> (+ a b)
+  $1 = 3
+  scheme@(guile-user)> c
+  $2 = "3"
 
 === Hacking on the FFI Helper ====
   $ cd examples

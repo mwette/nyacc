@@ -39,9 +39,13 @@ You must specify site_scm_go_dir to avoid use of `guile'.
 The FFI Helper requires the bytestructures package, from
   https://github.com/TaylanUB/scheme-bytestructures
 The installer will not compile ffi-helper files if this package 
-is not installed.
+is not installed.  (But it will install the helper sources.)
 
 See `info ffi-help' for more detail on the FFI Helper.
 Note: Compiling the ffi-helper output of can take some time, due to size.
+
+
+To install the infant nx-languages (javascript, octave, tcl) type
+  $ make install-nx-languages
 
 The file HACKING has hints for modifying and trying code.
