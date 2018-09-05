@@ -93,8 +93,8 @@
 	 (file (assoc-ref options 'file)))
     (if (or (assq-ref options 'help) (not file))
         (begin
-          (simple-format #t "Usage: compile [OPTION] FILE...
-Compile each Guile source file FILE into a Guile object.
+          (simple-format #t "Usage: compile [OPTION] FILE
+Generate a Guile Scheme file from the source FFI file FILE.
 
   -h, --help           print this help message
 
