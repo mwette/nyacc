@@ -51,7 +51,7 @@ install-nx-languages \
 	install-nx-octave \
 	install-nx-tcl \
 	:
-	@(cd examples: \
+	@(cd examples; \
 	  make -f Makefile.nyacc \
 		SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \

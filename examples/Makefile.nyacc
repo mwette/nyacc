@@ -57,7 +57,6 @@ install-nx-utils:
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
 	@echo "installing nx utilility sources in $(SITE_SCM_DIR)"
 	@for file in $(NYACC_NXUTIL_SRCS); do \
-	set -x ; \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
@@ -66,7 +65,6 @@ install-nx-utils:
 	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	@echo "installing nx utility binaries in $(SITE_SCM_GO_DIR)"
 	@for binfile in $(NYACC_NXUTIL_BINS); do \
-	set -x ; \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
@@ -82,22 +80,19 @@ JSDIR=nyacc/lang/javascript
 
 NYACC_JAVASCRIPT_SRCS= language/nx-javascript/spec.scm \
 	$(JSDIR)/body.scm $(JSDIR)/compile-tree-il.scm $(JSDIR)/mach.scm \
-	$(JSDIR)/mach.d/ia-jsact.scm $(JSDIR)/mach.d/ia-jstab.scm \
-	$(JSDIR)/mach.d/jsact.scm $(JSDIR)/mach.d/jstab.scm \
+	$(JSDIR)/mach.d/ia-js-act.scm $(JSDIR)/mach.d/ia-js-tab.scm \
+	$(JSDIR)/mach.d/js-act.scm $(JSDIR)/mach.d/js-tab.scm \
 	$(JSDIR)/parser.scm $(JSDIR)/pprint.scm $(JSDIR)/xlib.scm \
 	$(JSDIR)/xlib-01.scm
 
 NYACC_JAVASCRIPT_BINS= language/nx-javascript/spec.go \
-	$(JSDIR)/compile-tree-il.go $(JSDIR)/mach.d/ia-jsact.go \
-	$(JSDIR)/mach.d/ia-jstab.go $(JSDIR)/mach.d/jsact.go \
-	$(JSDIR)/mach.d/jstab.go $(JSDIR)/parser.go $(JSDIR)/pprint.go \
+	$(JSDIR)/compile-tree-il.go $(JSDIR)/parser.go $(JSDIR)/pprint.go \
 	$(JSDIR)/xlib.go
 
 install-nx-javascript:
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
 	@echo "installing nx-javascript sources in $(SITE_SCM_DIR)"
 	@for file in $(NYACC_JAVASCRIPT_SRCS); do \
-	set -x ; \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
@@ -106,7 +101,6 @@ install-nx-javascript:
 	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	@echo "installing nx-javascript binaries in $(SITE_SCM_GO_DIR)"
 	@for binfile in $(NYACC_JAVASCRIPT_BINS); do \
-	set -x ; \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
@@ -123,14 +117,12 @@ NYACC_OCTAVE_SRCS= language/nx-octave/spec.scm \
 	$(MLDIR)/body.scm $(MLDIR)/compile-tree-il.scm $(MLDIR)/mach.scm \
 	$(MLDIR)/parser.scm $(MLDIR)/pprint.scm $(MLDIR)/util.scm \
 	$(MLDIR)/xlib.scm \
-	$(MLDIR)/mach.d/ia-mlact.scm $(MLDIR)/mach.d/ia-mltab.scm \
-	$(MLDIR)/mach.d/mlact.scm $(MLDIR)/mach.d/mltab.scm
+	$(MLDIR)/mach.d/oct-act.scm $(MLDIR)/mach.d/oct-tab.scm \
+	$(MLDIR)/mach.d/octia-act.scm $(MLDIR)/mach.d/octia-tab.scm
 
 NYACC_OCTAVE_BINS = language/nx-octave/spec.go \
 	$(MLDIR)/compile-tree-il.go $(MLDIR)/parser.go $(MLDIR)/pprint.go \
-	$(MLDIR)/util.go $(MLDIR)/xlib.go \
-	$(MLDIR)/mach.d/ia-mlact.go $(MLDIR)/mach.d/ia-mltab.go \
-	$(MLDIR)/mach.d/mlact.go $(MLDIR)/mach.d/mltab.go
+	$(MLDIR)/util.go $(MLDIR)/xlib.go
 
 .PHONY: install-nx-octave
 install-nx-octave:
@@ -158,16 +150,13 @@ install-nx-octave:
 TCLDIR=nyacc/lang/tcl
 
 NYACC_TCL_SRCS= language/nx-tcl/spec.scm \
-	$(TCLDIR)/body.scm $(TCLDIR)/compile-tree-il.scm $(TCLDIR)/mach.scm \
-	$(TCLDIR)/parser.scm $(TCLDIR)/pprint.scm $(TCLDIR)/util.scm \
-	$(TCLDIR)/xlib.scm \
+	$(TCLDIR)/compile-tree-il.scm $(TCLDIR)/mach.scm \
+	$(TCLDIR)/parser.scm $(TCLDIR)/xlib.scm \
 	$(TCLDIR)/mach.d/expr-act.scm $(TCLDIR)/mach.d/expr-tab.scm
 
 NYACC_TCL_BINS = language/nx-tcl/spec.go \
-	$(TCLDIR)/compile-tree-il.go $(TCLDIR)/parser.go $(TCLDIR)/pprint.go \
-	$(TCLDIR)/util.go $(TCLDIR)/xlib.go \
-	$(TCLDIR)/mach.d/ia-mlact.go $(TCLDIR)/mach.d/ia-mltab.go \
-	$(TCLDIR)/mach.d/mlact.go $(TCLDIR)/mach.d/mltab.go
+	$(TCLDIR)/compile-tree-il.go $(TCLDIR)/mach.go \
+	$(TCLDIR)/parser.go $(TCLDIR)/xlib.go
 
 .PHONY: install-nx-tcl
 install-nx-tcl:
