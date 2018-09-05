@@ -90,13 +90,11 @@
 (define (compile-ffi . args)
   (use-modules (nyacc lang c99 ffi-help)) ; needed here, but why
   (let* ((options (parse-args args))
-	 (file (assoc-ref options 'file))
-	 (base (string-drop-right file 4))
-	 (dot-scm (string-append base ".scm")))
+	 (file (assoc-ref options 'file)))
     (if (or (assq-ref options 'help) (not file))
         (begin
-          (simple-format #t "Usage: compile [OPTION] FILE...
-Compile each Guile source file FILE into a Guile object.
+          (simple-format #t "Usage: compile [OPTION] FILE
+Generate a Guile Scheme file from the source FFI file FILE.
 
   -h, --help           print this help message
 
@@ -107,16 +105,16 @@ Compile each Guile source file FILE into a Guile object.
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n")
           (exit 0)))
 
-    (catch 'ffi-help-error
-      (lambda ()
-	(compile-ffi-file file options))
-      (lambda (key fmt . args)
-	(apply simple-format (current-error-port)
-	       (string-append "compile-ffi: " fmt "\n") args)
-	(exit 1)))
+    (let* ((base (string-drop-right file 4))
+	   (dot-scm (string-append base ".scm")))
+      (catch 'ffi-help-error
+	(lambda ()
+	  (compile-ffi-file file options))
+	(lambda (key fmt . args)
+	  (apply simple-format (current-error-port)
+		 (string-append "compile-ffi: " fmt "\n") args)
+	  (exit 1))))
 
-    ;;(if (assq-ref options 'make-go) (compile dot-scm))
-    
     (exit 0)))
 
 (define main compile-ffi)
