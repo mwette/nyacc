@@ -79,13 +79,17 @@
     (with-fluids ((*info* info)
 		  (*input-stack* '()))
       (catch 'c99-error
-	(lambda () (c99-raw-parser (gen-c99-lexer #:mode mode #:xdef? xdef?
-						  #:show-incs show-incs)
-		    #:debug debug))
+	(lambda ()
+	  (catch 'nyacc-error
+	    (lambda () (c99-raw-parser
+			(gen-c99-lexer #:mode mode
+				       #:xdef? xdef?
+				       #:show-incs show-incs)
+			#:debug debug))
+	    (lambda (key fmt . args) (apply throw 'c99-error fmt args))))
 	(lambda (key fmt . args)
 	  (report-error fmt args)
 	  #f)))))
-
 
 ;; === expr parser ====================
 
@@ -121,9 +125,13 @@
       (with-input-from-string expr-string
 	(lambda ()
 	  (catch 'c99-error
-	    (lambda () (c99x-raw-parser
-			(gen-c99x-lexer #:mode 'code #:xdef? xdef?)
-			#:debug debug))
+	    (lambda ()
+	      (catch 'nyacc-error
+		(lambda ()
+		  (c99x-raw-parser (gen-c99x-lexer #:mode 'code #:xdef? xdef?)
+				   #:debug debug))
+		(lambda (key fmt . args)
+		  (apply throw 'c99-error fmt args))))
 	    (lambda (key fmt . rest)
 	      (report-error fmt rest)
 	      #f)))))))
