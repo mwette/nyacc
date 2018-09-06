@@ -25,6 +25,10 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang util))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pperr exp)
+  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
 (include-from-path "nyacc/lang/javascript/body.scm")
 
@@ -60,6 +64,18 @@
 
 ;; === interactive parser =============
 
+;; If a syntax error is detected by the reader then we usually want to flush
+;; input until an end of statement is seen.  And return #f
+(define flush-input-after-error
+  (let ((read-string (make-string-reader #\")))
+    (lambda (port)
+      (let loop ((ch (read-char port)))
+	(cond
+	 ((eqv? ch #\;) #f)
+	 ((read-js-string ch) (loop (read-char port)))
+	 ((read-c-comm ch #t) #f)
+	 (else (loop (read-char port))))))))
+
 (include-from-path "nyacc/lang/javascript/mach.d/ia-js-tab.scm")
 (include-from-path "nyacc/lang/javascript/mach.d/ia-js-act.scm")
 
@@ -81,18 +97,7 @@
     (lambda (key fmt . rest)
       (apply simple-format (current-error-port) fmt rest)
       #f)))
-
-;; If a syntax error is detected by the reader then we usually want to flush
-;; input until an end of statement is seen.  And return #f
-(define flush-input-after-error
-  (let ((read-string (make-string-reader #\")))
-    (lambda (port)
-      (let loop ((ch (read-char port)))
-	(cond
-	 ((eqv? ch #\;) #f)
-	 ((read-js-string ch) (loop (read-char port)))
-	 ((read-c-comm ch #t) #f)
-	 (else (loop (read-char port))))))))
+(export parse-js-stmt)
 
 (define (js-stmt-reader port env)
   (if (eof-object? (peek-char port))

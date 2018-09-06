@@ -1,6 +1,6 @@
 \input texinfo.tex
-@setfilename nx-tcl.info
-@settitle Notes on NX-Tcl
+@setfilename nx-octave.info
+@settitle Notes on NX-Octave
 
 @copying
 Copyright (C) 2018 -- Matthew R. Wette.
@@ -16,21 +16,23 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @everyfooting @| @thispage @|
 
 @node Top
-@top Notes on NX-Tcl
+@top Notes on NX-Octave
 @format
 Matt Wette
-September 2018
+July 2018
 @end format
 
-@heading Notes
+@c @node Notes on NX-Octave
+@heading Notes on NX-Octave
 
-You can't redefine commands that would usually not be redefined.
-That includes @code{proc}, @code{while}, @code{if}, etc.
+All functions must have an end.
 
-In Tcl all values are strings.  However, some functions may return 
-numbers or lists, so Tcl eventually wants those as strings.  Tcl
-is lazy with respect to converting to string.  In some cases this
-makes code more effecient and robust.
+In the discussion below trivial items are commants and empty statements.
+
+The file-parser will parser a script file or a function file.
+In a function file the first nontrivial item is a function definition.
+In a script file the first nontrivial item is a nontrivial statement.
+
 
 @bye
 @c --- last line ---

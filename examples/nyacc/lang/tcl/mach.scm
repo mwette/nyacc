@@ -34,7 +34,8 @@
    (grammar
     (conditional-expression
      (logical-or-expression)
-     (logical-or-expression "?" logical-or-expression ":" conditional-expression
+     (logical-or-expression "?" logical-or-expression
+			    ":" conditional-expression
 			    ($$ `(cond-expr ,$1 ,$3 ,$5))))
     (logical-or-expression
      (logical-and-expression)
@@ -92,6 +93,7 @@
     (primary-expression
      ($ident ($$ `(ident ,$1)))
      ($fixed ($$ `(fixed ,$1)))		; integer literal
+     ($float ($$ `(float ,$1)))		; float literal
      ($chlit ($$ `(char ,$1)))		; char literal
      ;;($chlit/L ($$ `(char (@ (type "wchar_t")) ,$1)))
      ;;($chlit/u ($$ `(char (@ (type "char16_t")) ,$1)))

@@ -99,6 +99,8 @@
    (lambda ($1 . $rest) `(ident ,$1))
    ;; primary-expression => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
+   ;; primary-expression => '$float
+   (lambda ($1 . $rest) `(float ,$1))
    ;; primary-expression => '$chlit
    (lambda ($1 . $rest) `(char ,$1))
    ;; primary-expression => "(" expression-list ")"

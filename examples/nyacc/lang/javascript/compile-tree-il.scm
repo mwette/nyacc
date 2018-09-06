@@ -386,7 +386,8 @@
 			      (values id stmt rest))
 			  (if (labelable-stmt? stmt)
 			      (values id stmt rest)
-			      (values id '(EmptyStatement) (cons stmt rest))))))
+			      (values id '(EmptyStatement)
+				      (cons stmt rest))))))
 		(lambda (id stmt rest)
 		  (if (eqv? 'EmptyStatement (car stmt))
 		      (begin
@@ -407,7 +408,8 @@
     ;; to decls as assignment statements
     (let loop ((hdecls '()) (rest rest) (decls (cdadr dstmt)))
       (if (null? decls)
-	  (values (cons `(,(car dstmt) (DeclarationList ,hdecls)) hoisted) rest)
+	  (values (cons `(,(car dstmt) (DeclarationList ,hdecls)) hoisted)
+		  rest)
 	  (let* ((decl (car decls))
 		 (init (if (= 3 (length decl)) (caddr decl) #f))
 		 (decl (if init (list (car decl) (cadr decl)) decl)))
@@ -599,10 +601,11 @@
 			     (push-scope (add-symbol "*anon*" dict)))))
       
       ((FormalParameterList . ,idlist)
-       (values tree '()
-	       (acons 'arguments-used? #f
-		      (add-lexical "arguments"
-				   (fold add-lexical dict (map cadr idlist))))))
+       (values
+	tree '()
+	(acons 'arguments-used? #f
+	       (add-lexical "arguments"
+			    (fold add-lexical dict (map cadr idlist))))))
       
       ((FunctionElements . ,elts)
        ;; Fix up list of function elements:
@@ -636,6 +639,7 @@
      (null? tree) (values (cons kseed seed) kdict)
      
      (case (car tree)
+       
        ((*TOP*)
 	(values (car kseed) kdict))
 
@@ -872,7 +876,7 @@
 			  `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)))
 		      seed) kdict))
 
-       ;; ======================================================================
+       ;; =====================================================================
        ;; @subheading Iteration with @code{do}, @code{while} and @code{for}
        ;;
        ;; @item During fD we push scope w/ ~exit, the abort tag.
@@ -901,14 +905,16 @@
        
        ;; ContinueStatement: abort w/ zero args
        ((ContinueStatement)
-	(if (> (length kseed) 1) (throw 'js-error "unsupported: break <label>"))
+	(if (> (length kseed) 1)
+	    (throw 'js-error "unsupported: break <label>"))
 	(values
 	 (cons `(abort ,(lookup "continue" kdict) () (const ())) seed)
 	 kdict))
 
        ;; BreakStatement: abort w/ zero args
        ((BreakStatement)
-	(if (> (length kseed) 1) (throw 'js-error "unsupported: break <label>"))
+	(if (> (length kseed) 1)
+	    (throw 'js-error "unsupported: break <label>"))
 	(values
 	 (cons `(abort ,(lookup "break" kdict) () (const ())) seed)
 	 kdict))
@@ -924,7 +930,7 @@
 
        ;; WithStatement
 
-       ;; ======================================================================
+       ;; ====================================================================
        ;; @subheading Switch Statement
        ;; The pattern for SwitchStatment is as follows:
        ;; given
@@ -1003,7 +1009,7 @@
        ((LabelledStatement)
 	(values (cons (car kseed) seed) kdict))
 
-       ;; ======================================================================
+       ;; ====================================================================
        ;; @subheading Exceptions
        ;; @example
        ;; try { stmt ... } catch (var) { stmt ... }
@@ -1040,7 +1046,8 @@
 			  (`((finally . ,stmts)) stmts)
 			  (otherwise '(void))))
 	       (body
-		`(let (catch) (,ctag) ((primcall make-prompt-tag (const catch)))
+		`(let (catch) (,ctag)
+		      ((primcall make-prompt-tag (const catch)))
 		      (seq
 		       (prompt #t (lexical catch ,ctag) ,try-stmts ,catch)
 		       ,finally))))
@@ -1050,15 +1057,15 @@
 	(let* ((arg-name (cadr (cadr tree)))	 ; arg name as string
 	       (a-sym (string->symbol arg-name)) ; as symbol
 	       (a-gsym (lookup-gensym arg-name kdict)) ; its gensym
-	       (catch `(lambda ()
-			 (lambda-case (((k ,a-sym) #f #f #f () (,(jsym) ,a-gsym))
-				       ,(car kseed))))))
-	  (values (acons 'catch catch seed) kdict)))
+	       (jcatch `(lambda ()
+			  (lambda-case (((k ,a-sym) #f #f #f ()
+					 (,(jsym) ,a-gsym)) ,(car kseed))))))
+	  (values (acons 'catch jcatch seed) kdict)))
 
        ((Finally)
 	(values (acons 'finally (car kseed) seed) kdict))
 
-       ;; ======================================================================
+       ;; ====================================================================
 
        ;; FunctionDeclaration (see also fD above)
        ;; If the body starts with (bindings ...) then make a let.
@@ -1073,7 +1080,8 @@
 	       (body (with-escape/arg ptag (block body)))
 	       (fctn (make-function name this args body)))
 	  (if (assq-ref kdict 'arguments-used?)
-	      (throw 'javascript-error "function `arguments' not supported yet"))
+	      (throw 'javascript-error
+		     "function `arguments' not supported yet"))
 	  (values (cons `(define ,name ,fctn) seed) (pop-scope kdict))))
 
        ;; FunctionExpression
@@ -1090,7 +1098,8 @@
 	       (fctn (make-function name this args body))
 	       (fctn (if lref `(let (,name) (,gsym) (,fctn) ,lref))))
 	  (if (assq-ref kdict 'arguments-used?)
-	      (throw 'javascript-error "function `arguments' not supported yet"))
+	      (throw 'javascript-error
+		     "function `arguments' not supported yet"))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FormalParameterList
@@ -1103,7 +1112,7 @@
 
        ;; Program
        ((Program)
-	(values (car kseed) kdict))
+	(values (cons (car kseed) seed) kdict))
        
        ;; ProgramElements
        ((ProgramElements)
@@ -1120,8 +1129,6 @@
   ;; We generate a dictionary with the env (module?) available at the top.
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
 
-
-(use-modules (language tree-il compile-cps))
 
 (define show-sxml #f)
 (define (show-javascript-sxml v) (set! show-sxml v))

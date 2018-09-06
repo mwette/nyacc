@@ -32,12 +32,15 @@
 (define-module (nyacc lang tcl parser)
   #:export (read-command
 	    read-tcl-stmt
-	    read-tcl-body
+	    read-tcl-file
+	    ;; debugging:
 	    split-body
-	    cnvt-tcl cnvt-args cnvt-expr-tail
+	    cnvt-tree
+	    cnvt-args
+	    splice-xtail
 	    tclme
 	    )
-  #:use-module (nyacc lex)		; for read-c-num
+  #:use-module ((nyacc lex) #:select (read-c-num cnumstr->scm))
   )
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -123,11 +126,15 @@
 	    (cond
 	     ((eof-object? ch)
 	      (db "C: done\n")
-	      (if (pair? wordl) (cons 'command (reverse wordl)) ch))
+	      (if (pair? wordl)
+		  (cons 'command (reverse wordl))
+		  ch))
 
 	     ((char-set-contains? end-cs ch)
 	      (db "C: done\n")
-	      (cons 'command (reverse wordl)))
+	      (if (pair? wordl)
+		  `(command ,@(reverse wordl))
+		  '(command (string "NOOP"))))
 	     
 	     ((char-set-contains? cs:ws ch)
 	      (xread-char port)
@@ -183,7 +190,7 @@
 	     ((eof-object? ch) (error "no end brace"))
 	     ((char=? ch #\})
 	      (if (= 1 bl)
-		  (list '$string (rls chl))
+		  (list 'string (rls chl))
 		  (loop (cons ch chl) (1- bl) (xread-char port))))
 	     ((char=? ch #\{)
 	      (loop (cons ch chl) (1+ bl) (xread-char port)))
@@ -203,11 +210,6 @@
 	     ((eof-object? ch)
 	      (if (positive? bl) (error "missing end-brace"))
 	      (if (pair? chl) (finish tag chl ch) end-cs))
-	     
-	     ;; see if this works to get numbers
-	     ;;((and (not tag) (read-c-num ch)) =>
-	     ;; (lambda (p) (list (car p) (cdr p))))
-	     
 	     ((and (zero? bl) (char-set-contains? end-cs ch))
 	      (db "F:     done\n")
 	      (if tag (finish tag chl ch)
@@ -215,7 +217,8 @@
 	     ((and (char=? ch #\\) (zero? bl)) ;; a b f n r t v ; xhh ...
 	      (let* ((c2 (xread-char port))
 		     (c1 (case c2
-			   ((#\a) #\alarm) ((#\b) #\backspace);((#\f) #\formfeed)
+			   ((#\a) #\alarm) ((#\b) #\backspace)
+			   ;;((#\f) #\formfeed)
 			   ((#\n) #\newline) ((#\r) #\return) ((#\t) #\tab)
 			   (else c2))))
 
@@ -242,7 +245,7 @@
 	       (else (swallow (read-cmmd cs:rs)))))
 	     
 	     ((char=? ch #\") (swallow (read-frag cs:dquote)))
-	     ((not tag) (loop '$string (cons ch chl) bl (xread-char port)))
+	     ((not tag) (loop 'string (cons ch chl) bl (xread-char port)))
 	     (else (loop tag (cons ch chl) bl (xread-char port)))))))
 
        (read-index
@@ -281,13 +284,12 @@
        (let loop ((cmd (read-command port)))
 	 (cond
 	  ((eof-object? cmd) '())
-	  ((null? (cdr cmd)) (loop (cnvt-tcl (read-command port))))
-	  (else
-	   (cons (cnvt-tcl cmd) (loop (cnvt-tcl (read-command port)))))))))))
+	  ((null? (cdr cmd)) (loop (read-command port)))
+	  (else (cons cmd (loop (read-command port))))))))))
 
 ;; convert all words in an expr command to a single list of frags
-(define (cnvt-expr-tail tail)
-  (let* ((blank `($string " "))
+(define (splice-xtail tail)
+  (let* ((blank `(string " "))
 	 (terms (fold-right
 		 (lambda (word terms)
 		   (if (eq? 'word (sx-tag word))
@@ -326,7 +328,7 @@
 	    (let loop ((arg #f) (chl '()) (ch (read-char)))
 	      (cond
 	       ((eof-object? ch) (report-error "missing right brace"))
-	       ((char=? ch #\}) `(opt-arg ,arg ($string ,(rls chl))))
+	       ((char=? ch #\}) `(opt-arg ,arg (string ,(rls chl))))
 	       ((char-set-contains? cs:ws ch)
 		(if arg
 		    (if (pair? chl)
@@ -339,7 +341,8 @@
 	  (cond
 	   ((null? kw) #t)
 	   ((eof-object? ch) (unread-chl-1 chl) #f)
-	   ((char=? ch (car kw)) (loop (cdr kw) (cons (car kw) chl) (read-char)))
+	   ((char=? ch (car kw))
+	    (loop (cdr kw) (cons (car kw) chl) (read-char)))
 	   (else (unread-chl-1 (cons ch chl)) #f))))
       (cons
        'arg-list
@@ -352,29 +355,40 @@
 	  (else (let ((argval (read-non-ws ch)))
 		  (cons `(arg ,argval) (loop (read-char)))))))))))
 
+(define (num-string cstr)
+  (and=> 
+   (with-input-from-string cstr
+     (lambda ()
+       (read-c-num (read-char))))
+   (lambda (p)
+     (case (car p)
+       (($fixed) `(fixed ,(cnumstr->scm (cdr p))))
+       (($float) `(float ,(cdr p)))
+       (else (error "coding error"))))))
+
 ;; should be converted to a chl (see nyacc lexer)
 (define tcl-res-cmds
   `(("expr"
      . ,(lambda (tree)
-	  `(expr . ,(cnvt-expr-tail (sx-tail tree 2)))))
+	  `(expr . ,(splice-xtail (sx-tail tree 2)))))
     ("if"
      . ,(lambda (tree)
 	  (sxml-match tree
 	    ;; TODO : deal with "elseif" 
-	    ((command ($string "if") ,cond ,then)
-	     `(if (expr . ,(cnvt-expr-tail (list cond))) ,(split-body then)))
-	    ((command ($string "if") ,cond ,then ($string "else") ,else)
-	     `(if (expr . ,(cnvt-expr-tail (list cond)))
+	    ((command (string "if") ,cond ,then)
+	     `(if (expr . ,(splice-xtail (list cond))) ,(split-body then)))
+	    ((command (string "if") ,cond ,then (string "else") ,else)
+	     `(if (expr . ,(splice-xtail (list cond)))
 		  ,(split-body then) ,(split-body else)))
-	    ((command ($string "if") ,cond ,then . ,elseifs)
+	    ((command (string "if") ,cond ,then . ,elseifs)
 	     (error "TODO"))
 	    (,_ (report-error "usage: if cond then else")))))
     ("proc"
      ;; This assumes default arguments are strings constants.
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command ($string "proc") ($string ,name) ($string ,args)
-		      ($string ,body))
+	    ((command (string "proc") (string ,name) (string ,args)
+		      (string ,body))
 	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
 	    (,_ (report-error "usage: proc name args body")))))
     ("return"
@@ -386,8 +400,9 @@
     ("while"
      . ,(lambda (tree)
 	  (sxml-match tree
-	    ((command ($string "while") ,cond ($string ,body))
-	     `(while (expr . ,(cnvt-expr-tail (list cond))) ,(split-body body)))
+	    ((command (string "while") ,cond (string ,body))
+	     `(while (expr . ,(splice-xtail (list cond)))
+		,(split-body body)))
 	    (,_ (report-error "usage: while cond body")))))
     ;;("array" . #f)
     ;;("list" . #f)
@@ -396,28 +411,63 @@
     ;;("integer" . #f)
     ))
 
-;; convert special commands and words into nx-tcl syntax
+;; @deffn {Procedure} nxify-command form => form
+;; Convert commands like @code{while} or @code{proc} to
+;; the associated nx-tcl form.
+;; @example
+;; (nxify-command '(command "if" "1" "set x 3")) =>
+;;   (if (expr "1") (body "set x 3")))
+;; @end example
+;; @noindent
+;; Further processing should be executed on the body.
+;; @end deffn
+(define (nxify-command tree)
+  (or (and=> (assoc-ref tcl-res-cmds (sx-ref* tree 1 1))
+	     (lambda (proc) (proc tree)))
+      tree))
+
+ ;; convert special commands and words into nx-tcl syntax
 ;; @example
 ;; (cnvt-tcl '(command (string "expr") ...)) => (expr ...)
 ;; @end example
-(define (cnvt-tcl tree)
-  (case (sx-tag tree)
-    ((command)
-     (let* ((cmmd `(command . ,(map cnvt-tcl (sx-tail tree))))
-	    (name (sx-ref* cmmd 1 1)))
-       (or (and=> (assoc-ref tcl-res-cmds name) (lambda (p) (p cmmd)))
-	   cmmd)))
-    ((word)
-     tree)
-    (else
-     tree)))
+(define (cnvt-tree tree)
+  (letrec
+      ((cnvt-elt
+	(lambda (tree)
+	  (if (string? tree) tree
+	      (case (sx-tag tree)
+		((command)
+		 (or (and=> (nxify-command tree) cnvt-tree)
+		     (let* ((tail0 (sx-tail tree))
+			    (tail1 (cnvt-tail tail0)))
+		       (if (eq? tail1 tail0) tree `(command . ,tail1)))))
+		((string)
+		 (or (num-string (sx-ref tree 1)) tree))
+		(else
+		 (let* ((tag (sx-tag tree))
+			(tail0 (sx-tail tree))
+			(tail1 (cnvt-tail tail0)))
+		   (if (eq? tail1 tail0) tree (cons tag tail1))))))))
+       (cnvt-tail
+	(lambda (tail)
+	  (if (null? tail) tail
+	      (let* ((head0 (car tail)) (head1 (cnvt-elt head0))
+		     (tail0 (cdr tail)) (tail1 (cnvt-tail tail0)))
+		(if (eq? head1 head0)
+		    (if (eq? tail1 tail0)
+			tail
+			(cons head0 tail1))
+		    (if (eq? tail1 tail0)
+			(cons head1 tail0)
+			(cons head1 tail1))))))))
+    (cnvt-elt tree)))
 
 ;; @deffn {Procedure} read-tcl-stmt port env
 ;; Guile extension language routine to read a single statement.
 ;; @end deffn
 (define (read-tcl-stmt port env)
   (let* ((cmmd (read-command port))
-	 (cmmd (cnvt-tcl cmmd))
+	 (cmmd (cnvt-tree cmmd))
 	 )
     cmmd))
 
