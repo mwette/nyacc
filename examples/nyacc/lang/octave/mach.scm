@@ -44,42 +44,43 @@
 
 (define octave-spec
   (lalr-spec
-   (notice (string-append "Copyright 2015-2018 Matthew R. Wette" license-lgpl3+))
-   (start mfile)
-   ;;(alt-start interaction) ;; not working
+   (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
+			  license-lgpl3+))
+   (start translation-unit)
    (grammar
     
-    (mfile
-     (script-file ($$ (tl->list (add-file-attr $1))))
-     (function-file ($$ (tl->list (add-file-attr $1)))))
+    (translation-unit
+     (triv-stmt-list nontrivial-statement mlang-item-list
+		     ($$ `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
+     (triv-stmt-list function-defn mlang-item-list
+		     ($$ `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
+     (nontrivial-statement mlang-item-list
+			    ($$ `(script ,$1 ,@(sx-tail $2))))
+     (function-defn mlang-item-list
+			    ($$ `(function-file ,$1 ,@(sx-tail $2)))))
 
-    ;;(interaction (interaction-1))
-    (interaction (statement) (function-defn))
-
-    (script-file
-     (lone-comment-list
-      non-comment-statement
-      ($$ (make-tl 'script-file (tl->list $1))))
-     (non-comment-statement
-      ($$ (if $1 (make-tl 'script-file $1) (make-tl 'script-file))))
-     (script-file statement ($$ (if $2 (tl-append $1 $2) $1))))
-
-    (function-file
-     (function-defn ($$ (make-tl 'function-file $1)))
-     (function-file function-defn ($$ (tl-append $1 $2))))
+    (mlang-item-list
+     (mlang-item-list-1 ($$ (tl->list $1))))
+    (mlang-item-list-1
+     ($empty ($$ (make-tl 'mitem-list)))
+     (mlang-item-list-1 mlang-item ($$ (tl-append $1 $2))))
+    
+    (mlang-item
+     (function-defn)
+     (statement))
 
     (function-defn
-     (function-decl non-comment-statement stmt-list opt-end
+     (function-decl nontrivial-statement stmt-list the-end
       ($$ `(fctn-defn ,$1 ,(tl->list (if $2 (tl-insert $3 $2) $3)))))
-     (function-decl non-comment-statement opt-end
+     (function-decl nontrivial-statement the-end
       ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
-     (function-decl opt-end
+     (function-decl the-end
       ($$ `(fctn-defn ,$1 (stmt-list)))))
-    (opt-end () ("end" term-list))
+    (the-end ("end" term)) 
 
     (function-decl
      (function-decl-line lone-comment-list
-			 ($$ (append $1 (list (tl->list $2)))))
+			 ($$ (append $1 (list $2))))
      (function-decl-line))
 
     (function-decl-line
@@ -98,7 +99,6 @@
       ($$ `(fctn-decl ,$2 (ident-list) (ident-list))))
       )
 
-    ;;(opt-ident-list () (ident-list))
     (ident-list
      (ident ($$ (make-tl 'ident-list $1)))
      (ident-list "," ident ($$ (tl-append $1 $3))))
@@ -107,13 +107,23 @@
      (statement ($$ (if $1 (make-tl 'stmt-list $1) (make-tl 'stmt-list))))
      (stmt-list statement ($$ (if $2 (tl-append $1 $2) $1))))
 
+    (triv-stmt-list
+     (triv-stmt-list-1 ($$ (tl->list $1))))
+    (triv-stmt-list-1
+     (trivial-statement ($$ (make-tl 'triv-stmt-list $1)))
+     (triv-stmt-list-1 trivial-statement ($$ (tl-append $1 $2))))
+
     (statement
-     (lone-comment)
-     (non-comment-statement))
-    (non-comment-statement
-     (non-comment-statement-1 term ($$ (sx-attr-add $1 'term $2))))
-    (non-comment-statement-1
-     ($empty ($$ '(empty-stmt)))
+     (trivial-statement)
+     (nontrivial-statement))
+
+    (trivial-statement
+     (lone-comment "\n")
+     (term ($$ '(empty-stmt))))
+
+    (nontrivial-statement
+     (nontrivial-statement-1 term ($$ (sx-attr-add $1 'term $2))))
+    (nontrivial-statement-1
      (expr ($$ `(expr-stmt ,$1)))
      (expr "=" expr ($$ `(assn ,$1 ,$3)))
      ("for" ident "=" expr term stmt-list "end"
@@ -121,7 +131,9 @@
      ("while" expr term stmt-list "end"
       ($$ `(while ,$2 ,(tl->list $4))))
      ("if" expr term stmt-list elseif-list "else" stmt-list "end"
-      ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)) (else ,(tl->list $7)))))
+      ($$ `(if ,$2 ,(tl->list $4)
+	       ,@(cdr (tl->list $5))
+	       (else ,(tl->list $7)))))
      ("if" expr term stmt-list elseif-list "end"
       ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)))))
      ("if" expr term stmt-list "else" stmt-list "end"
@@ -281,11 +293,11 @@
 
     (term (nl) (";") (","))
 
-    ;;(nl-list (nl) (nl-list nl))
-    
     (lone-comment-list
+     (lone-comment-list-1 ($$ (tl->list $1))))
+    (lone-comment-list-1
      (lone-comment nl ($$ (make-tl 'comm-list $1)))
-     (lone-comment-list lone-comment nl ($$ (tl-append $1 $2))))
+     (lone-comment-list-1 lone-comment nl ($$ (tl-append $1 $2))))
 
     (ident ($ident ($$ `(ident ,$1))))
     (fixed ($fixed ($$ `(fixed ,$1))))
@@ -306,12 +318,9 @@
 
 (include-from-path "nyacc/lang/octave/body.scm")
 
-(define octave-ia-spec (restart-spec octave-spec 'non-comment-statement))
-;;(define octave-ia-spec (restart-spec octave-spec 'interaction))
 
-;; NOTE: Need to deal with comments.  The ia-parser looks for lone $defaults
-;; to reduce w/o lookahead token but the compact-machine will add $lone-comm
-;; so we remove $lone-comm from keepers here.
+(define octave-ia-spec (restart-spec octave-spec 'mlang-item))
+
 (define octave-ia-mach
   (let* ((mach (make-lalr-machine octave-ia-spec))
 	 (mach (compact-machine mach #:keep 0 #:keepers '()))

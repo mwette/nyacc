@@ -94,8 +94,14 @@
       )
     (sx-match tree
 
-      (($string ,sval)
+      ((string ,sval)
        (values '() `(const ,sval) dict))
+
+      ((fixed ,sval)
+       (values '() `(const ,(string->number sval)) dict))
+
+      ((float ,sval)
+       (values '() `(const ,(string->number sval)) dict))
 
       ((deref ,name)
        (let ((ref (lookup name dict)))
@@ -133,19 +139,20 @@
 	      (dict (fold (lambda (a d) (add-lexical (cadr a) d)) dict args))
 	      (args (fold-right ;; replace arg-name with lexical-ref
 		     (lambda (a l)
-		       (cons (cons* (car a) (lookup (cadr a) dict) (cddr a)) l))
+		       (cons (cons* (car a) (lookup (cadr a) dict) (cddr a))
+			     l))
 		     '() args))
 	      (dict (add-lexical "return" dict))
 	      (dict (acons '@F name dict))
 	      )
 	 (values `(proc ,nref (arg-list . ,args) ,body) '() dict)))
       
-      ((set ($string ,name) ,value)
+      ((set (string ,name) ,value)
        (let* ((dict (add-symbol name dict))
 	      (nref (lookup name dict)))
 	 (values `(set ,nref ,value) '() dict)))
 
-      ((command ($string ,name) . ,args)
+      ((command (string ,name) . ,args)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "not defined"))
 	 (values `(command ,ref . ,args) '() dict)))
@@ -259,8 +266,8 @@
 ;; for the target for the compiled language, and a continuation environment
 ;; for the next parsed syntax tree.
 ;; @end deffn
-(set! show-sxml #f)
-(set! show-xtil #f)
+(set! show-sxml #t)
+(set! show-xtil #t)
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
   ;; Need to make an interp.  All Tcl commands execute in an interp
@@ -274,8 +281,8 @@
 	      )
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
+	    ;;(values (parse-tree-il exp) env cenv)
+	    (values (parse-tree-il '(const "[hello]")) env cenv)
      	    )
 	  )
 	(values (parse-tree-il '(void)) env cenv))))

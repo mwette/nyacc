@@ -22,6 +22,10 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pperr exp)
+  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
 (include-from-path "nyacc/lang/octave/body.scm")
 
@@ -124,15 +128,16 @@
 
 (define* (parse-oct #:key debug)
   (catch
-   'parse-error
+   'nyacc-error
    (lambda ()
-     (apply-octave-statics
+     (identity ;;apply-octave-statics
       (raw-parser (gen-octave-lexer) #:debug debug)))
    (lambda (key fmt . args)
      (apply simple-format (current-error-port) fmt args)
      #f)))
 
 (define (read-oct-file port env)
+  ;;(sferr "file:\n")
   (with-input-from-port port
     (lambda ()
       (if (eof-object? (peek-char port))
@@ -153,7 +158,7 @@
   (catch 'nyacc-error
     (lambda ()
       (apply-octave-statics
-       (raw-ia-parser lexer #:debug #f)))
+       (raw-ia-parser lexer #:debug #t)))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port) fmt args)
       #f)))
@@ -163,6 +168,7 @@
 (define read-oct-stmt
   (let ((lexer (gen-octave-ia-lexer)))
     (lambda (port env)
+      ;;(sferr "stmt:\n")
       (cond
        ((eof-object? (peek-char port))
 	(read-char port))

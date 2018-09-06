@@ -217,7 +217,8 @@
 			     ,(sx-ref (car tail) 2) ,(loop (cdr tail))))
 		      (else (error "unsupported case-expr")))))
 	'()
-	(acons '@L "switch" (add-lexicals "swx-val" "break" (push-scope dict)))))
+	(acons '@L "switch"
+	       (add-lexicals "swx-val" "break" (push-scope dict)))))
 
       ((if ,expr ,stmts . ,rest)
        ;; Convert
@@ -294,29 +295,35 @@
 	      (dict (add-lexical "return" dict))
 	      (dict (acons '@F name dict)))
 	 (values tree '() dict)))
+
+      ;;((comm . ,_) (values '() '() dict))
        
       (else
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
+    ;; This routine rolls up processes leaves into the current branch.
+    ;; We have to be careful about returning kdict vs dict.
+    ;; Approach: always return kdict or (pop-scope kdict)
     (when #f
       (sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
       (sferr "    kseed=~S\n    seed=~S\n" kseed seed)
       ;;(pperr tree)
       )
-    ;; This routine rolls up processes leaves into the current branch.
-    ;; We have to be careful about returning kdict vs dict.
-    ;; Approach: always return kdict or (pop-scope kdict)
     (if
-     (null? tree) (values (cons kseed seed) kdict)
-     
+     (null? tree) (if (null? kseed)
+		      (values seed kdict)		; fD said ignore
+		      (values (cons kseed seed) kdict)) ; fD replacement
+
      (case (car tree)
 
        ;; before leaving add a call to make sure all toplevels are defined
        ((*TOP*)
 	(values (add-topdefs kdict (car kseed)) kdict))
 
-       ((function-file)
+       ((comm) (values seed kdict))
+
+       ((script function-file)
 	(let* ((tail (rtail kseed))
 	       (body (fold-right
 		      (lambda (stmt body) (if body `(seq ,stmt ,body) stmt))
@@ -523,7 +530,8 @@
        ((aref-or-call)
 	(let ((proc-or-array (cadr kseed)) (args (cdar kseed)))
 	  (values
-	   (cons `(call ,(xlib-ref 'ml:aref-or-call) ,proc-or-array ,@args) seed)
+	   (cons `(call ,(xlib-ref 'ml:aref-or-call) ,proc-or-array ,@args)
+		 seed)
 	   kdict)))
 
        ((sel)
@@ -600,7 +608,7 @@
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
   )
 
-(define show-sxml #f)
+(define show-sxml #t)
 (define (show-octave-sxml v) (set! show-sxml v))
 (define show-xtil #f)
 (define (show-octave-xtil v) (set! show-xtil v))

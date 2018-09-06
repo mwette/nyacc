@@ -66,7 +66,7 @@
 
 (define sx-ref list-ref)
 
-(define* (eval-expr tree #:optional (dict '()))
+(define (eval-expr tree)
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (sx-ref tr 1)))
@@ -104,28 +104,20 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ;;((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
-	    ((ident) (or (and=> (assoc-ref dict (tx1 tree))
-				(lambda (s) (string->number (cnumstr->scm s))))
-			 0))
 	    (else (error "incomplete expr implementation"))))))
     (eval-expr tree)))
+
+(define (tcl:any->str any)
+  (if (string? any) any (simple-format #f "~A" any)))
 
 ;; @deffn {Procedure} tcl:expr frags
 ;; @var{frags} is a list of string fragments.  We join, parse and execute.
 ;; @end deffn
-;; Do we need a dictionary argument ?
 (define-public (tcl:expr . frags)
-  (let* ((strs (map (lambda (f) (if (string? f) f (simple-format #t "~S" f)))
-		    frags))
+  (let* ((strs (map tcl:any->str frags))
 	 (xarg (string-join strs ""))
 	 (tree (parse-expr-string xarg))
-	 (xval (eval-expr tree))
-	 )
-    ;;(sferr "expr: ~S\n" xarg)
-    ;;(pperr tree)
-    ;;(sferr "  => ~S\n" xval)
-    ;;(eval-expr (parse-expr-string xarg))
+	 (xval (eval-expr tree)))
     xval))
 
 ;; @deffn {Procedure} tcl:string<- [value] [index]
