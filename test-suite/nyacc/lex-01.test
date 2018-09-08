@@ -45,6 +45,18 @@
      '(("'\\177'" . "\x7f")
        )))
 
+  (pass-if "C numeric literals"
+    (fold
+     (lambda (pair pass)
+       (and pass
+	    (string=?
+	     (with-input-from-string (car pair)
+	       (lambda () (or (and=> (read-c-num (read-char)) cdr) "")))
+	     (cdr pair))))
+     #t
+     '(("0b11" . "0b11")
+       )))
+
   (pass-if "C strings"
     (fold
      (lambda (pair pass)
@@ -72,7 +84,8 @@
      (lambda (pair pass)
        (and pass (string=? (cnumstr->scm (car pair)) (cdr pair))))
      #t
-     '(("0L" . "0") ("01l" . "#o1") ("0LL" . "0") ("0xa" . "#xa")
+     '(("0L" . "0") ("01l" . "#o1") ("0LL" . "0")
+       ("0xa" . "#xa") ("0b11" . "#b11")
        ("0123" . "#o123") ("1234" . "1234") ("0.1e10" . "0.1e10"))))
 
   )
