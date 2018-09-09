@@ -345,10 +345,11 @@
 	  ((char-numeric? ch) (iter chl '$fixed ba 1 ch))
 	  ((char=? #\. ch) (iter (cons ch chl) #f ba 15 (read-char))) 
 	  (else #f)))
-	((10) ;; allow x after 0
+	((10) ;; allow x, b after 0
 	 (cond
 	  ((eof-object? ch) (iter chl ty ba 5 ch))
 	  ((char=? #\x ch) (iter (cons ch chl) ty 16 1 (read-char)))
+	  ((char=? #\b ch) (iter (cons ch chl) ty 2 1 (read-char)))
 	  (else (iter chl ty ba 1 ch))))
 	((15) ;; got `.' only
 	 (cond
@@ -425,11 +426,14 @@
 	  (substring str st nd)))
     (if (< nd 2) str
 	(if (char=? #\0 (string-ref str 0))
-	    (if (char=? #\x (string-ref str 1))
-		(string-append "#x" (trim-rt 2))
-		(if (char-numeric? (string-ref str 1))
-		    (string-append "#o" (trim-rt 1))
-		    (trim-rt 0)))
+	    (cond
+	     ((char=? #\x (string-ref str 1))
+	      (string-append "#x" (trim-rt 2)))
+	     ((char=? #\b (string-ref str 1))
+	      (string-append "#b" (trim-rt 2)))
+	     ((char-numeric? (string-ref str 1))
+	      (string-append "#o" (trim-rt 1)))
+	     (else (trim-rt 0)))
 	    (trim-rt 0)))))
 
 ;; @deffn {Procedure} read-c-num ch => #f|string
