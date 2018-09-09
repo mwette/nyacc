@@ -743,7 +743,7 @@
     ("int32_t" . ffi:int32) ("uint32_t" . ffi:uint32) 
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
     ;; hacks
-    ("intptr_t" . ffi:long) ("uintptr_t" . ffi:usigned-long)
+    ("intptr_t" . ffi:long) ("uintptr_t" . ffi:unsigned-long)
     ("char" . ffi:int8) ("signed char" . ffi:int8) ("unsigned char" . ffi:uint8)
     ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
     ("long long" . ffi:long) ("long long int" . ffi:long)
