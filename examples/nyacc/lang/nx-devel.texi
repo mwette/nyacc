@@ -19,7 +19,7 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @top Developing NYACC Extension Languages
 @format
 Matt Wette
-July 2018
+September 2018
 @end format
 
 @heading ideas

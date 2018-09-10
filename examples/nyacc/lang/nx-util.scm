@@ -222,8 +222,8 @@
 		       ,body))))))
 	 
 ;; @deffn {Procedure} with-escape tag-ref body
-;; @deffx {Procedure} with-escape/arg tag-ref body
-;; @deffx {Procedure} with-escape/expr tag-ref body
+;; @deffnx {Procedure} with-escape/arg tag-ref body
+;; @deffnx {Procedure} with-escape/expr tag-ref body
 ;; This is used to generate return and break where break is passed '(void).
 ;; @var{tag-ref} is of the form @code{(lexical name gensym)} and
 ;; @var{expr} is an expression.
@@ -265,6 +265,8 @@
 ;; Return an expression or build a seq-train returning undefined.
 ;; @end deffn
 (define (vblock expr-list)
+  "- Procedure: vblock expr-list => (seq ex1 (seq ... (void)))
+     Return an expression or build a seq-train returning undefined."
   (let iter ((xl expr-list))
     (if (null? xl) '(void)
 	`(seq ,(car xl) ,(iter (cdr xl))))))
@@ -275,6 +277,10 @@
 ;; (lookup-gensym "foo" dict #:label "oloop") => JS~432
 ;; @end deffn
 (define* (lookup-gensym name dict #:key label)
+  "- Procedure: lookup-gensym name dict [label] => gensym
+     lookup up nearest parent lexical and return gensym (lookup-gensym
+     \"foo\" dict) => JS~1234 (lookup-gensym \"foo\" dict #:label \"oloop\")
+     => JS~432"
   (if label
       (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
 	(if (not pdict) #f
@@ -319,6 +325,29 @@
 ;; @end deffn
 ;; TODO #:key (break "break") (continue "continue")
 (define* (make-loop expr body dict ilsym tbody)
+  "- Procedure: make-loop expr body dict ilsym tbody
+     This is a helper procedure for building loops like the following:
+          \"do\" body \"where\" expr
+          \"while\" body \"do\" expr
+          \"for\" i \"in\" range \"do\" body
+     The argument EXPR is the conditional, BODY is the code to execute,
+     which may contain 'abort-to-prompt' given by 'break' or 'continue'.
+     The code generated is based on the following pattern:
+          (let ((break! (make-prompt-tag 'break))
+                (continue! (make-prompt-tag 'continue)))
+             (letrec ((iloop (lambda () (body) (if (expr) (iloop))))
+                      (oloop
+                       (lambda ()
+                        (call-with-prompt continue!
+                           thunk
+                           (lambda (k) (if (expr) (oloop)))))))
+               (call-with-prompt break!
+                 oloop
+                 (lambda (k) (if #f #f))))))
+     where 'break!' and 'continue!' are lexicals generated for the code
+     and 'thunk' is
+     '(lambda () (iloop))' for do-while and
+     '(lambda () (if (expr) (iloop)))' for while-do."
   (let* ((olsym (genxsym "oloop"))
 	 (bsym (lookup-gensym "break" dict))
 	 (csym (lookup-gensym "continue" dict))
@@ -338,21 +367,31 @@
 	  (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
 		  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
 
-;;
 ;; @deffn {Procedure} make-do-while expr body dict
-;; This generates code for do-while loops where @arg{expr} is the condtional
-;; expression, @arg{body} is the body, @arg{dict} is the scope dictionary
+;; This generates code for do-while loops where @var{expr} is the condtional
+;; expression, @var{body} is the body, @var{dict} is the scope dictionary
 ;; which must contain the labels for @code{break} and @code{continue}.
+;; @end deffn
 (define (make-do-while expr body dict)
+  "- Procedure: make-do-while expr body dict
+     This generates code for do-while loops where EXPR is the condtional
+     expression, BODY is the body, DICT is the scope dictionary which
+     must contain the labels for 'break' and 'continue'."
   (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym `(call (lexical iloop ,ilsym)))))
 
 ;; @deffn {Procedure} make-while expr body dict
 ;; This generates code for the following source:
-;; where @arg{expr} is the condtional expression, @arg{body} is the body,
-;; @arg{bsym} is the gensym for @code{break}, @arg{csym} is the gensym for
-;; @code{continue}. 
+;; where @var{expr} is the condtional expression, @var{body} is the body,
+;; and is the scope dictionary which must contain the labels for
+;; @code{break} and @code{continue}.
+;; @end deffn
 (define (make-while expr body dict)
+  "- Procedure: make-while expr body dict
+     This generates code for the following source: where EXPR is the
+     condtional expression, BODY is the body, and is the scope
+     dictionary which must contain the labels for 'break' and
+     'continue'."
   (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym
 		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))

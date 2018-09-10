@@ -32,6 +32,9 @@
 ;;
 ;; Idea: for each object add a lang-specific field to decorate
 ;; (hashq-ref* obj 'lang 'nx-javascript) => ...
+;;
+;; Feeling: in scheme (lisp) there is really no strong distinction between
+;; an integer, float and a procedure.  They are all data.
 
 ;; @subheading Object Architecture
 ;; The principles are
@@ -42,6 +45,9 @@
 ;; @item speed is not high priority
 ;; @end itemize
 
+;; Tcl arrays are ordered -- alist?
+;; Tcl dicts are unordered
+
 ;;; Todos:
 
 ;;  1) add traits (aka interfaces)
@@ -50,10 +56,12 @@
 
 (define-module (nyacc lang nx-lib)
   #:export (nx-get-method
+	    ;;
+	    make-nx-hash-table nx-hash-ref nx-hash-set!
+	    nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
+	    ;;
 	    install-inline-language-evaluator
-	    uninstall-inline-language-evaluator
-	    read-inline-code
-	    )
+	    uninstall-inline-language-evaluator)
   )
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
@@ -68,14 +76,63 @@
 
 (define fooo 1)
 
+;;; hash tables
+
+;; maybe this should be a Guile (record) type
+
+;; This is guile hash table with v keys
+;; The hash table has a {lang} key to another hash table.
+;; each language gets an entry in the lang entry so ...
+
+(define %nx-lang-key '{nx-lang})
+
+(define (nx-hash-add-lang htab lang)
+  (unless (hash-key? htab %nx-lang-key)
+    (hashv-set! htab %nx-lang-key (make-hash-table 7)))
+  (let ((ltab (hashv-ref htab '%nx-lang-key)))
+    (hashv-set! ltab lang (make-hash-table 7))))
+
+(define (nx-hash-lang-ref htab lang key)
+  (let ((ltab (hashv-ref (hashv-ref htab %nx-lang-key) lang)))
+    (hashv-ref ltab key)))
+
+(define (nx-hash-lang-set! htab lang key val)
+  (let ((ltab (hashv-ref (hashv-ref htab %nx-lang-key) lang)))
+    (hashv-set! ltab key val)))
+
+(define* (make-nx-hash-table #:optional (n 31) #:key (lang #f))
+  (let ((htab (make-hash-table n)))
+    (if lang (nx-hash-add-lang htab lang))
+    htab))
+
+(define (nx-hash-ref htab key)
+  (hashq-ref htab key))
+
+(define (nx-hash-set! htab key val)
+  (hashq-set! htab key val))
+
+
+;;; in-line reading
+
 (use-modules (system base language))
 (use-modules (system base compile))
 (use-modules (language tree-il))
 
-;; #<nx-octave: a = [1, 2]; >#
-;; this needs to return a scheme expression
-;; so probably use reader to convert tree-il
-;; then convert to scheme
+;; @deffn {Procedure} read-inline-code read-char port
+;; @example
+;; scheme@(guile-user)> (define x #<nx-octave: [1, 2]; >#)
+;; @end example
+;; @noindent
+;; This executes code like it was written on the command line.
+;; So the above is equivalent to:
+;; @example
+;; scheme@(guile-user)> ,L nx-octave
+;; nx-octave@(guile-user)> [1, 2];
+;; $1 = #(1 2)
+;; nx-octave@(guile-user)> ,L scheme
+;; scheme@(guile-user)> (define a $1)
+;; @end example
+;; @end deffn
 (define (read-inline-code reader-char port)
   (let* ((str-port (open-output-string))
 	 (name (let loop ((chl '()) (ch (read-char port)))
@@ -90,7 +147,9 @@
 		   (let ((ch1 (read-char port)))
 		     (cond
 		      ((eof-object? ch) (error "oops"))
-		      ((char=? ch1 #\#) (get-output-string str-port))
+		      ((char=? ch1 #\#)
+		       (display "\n" str-port)
+		       (get-output-string str-port))
 		      (else (display ch str-port) (loop ch1)))))
 		  (else
 		   (display ch str-port)
@@ -111,22 +170,37 @@
 	 (scm (decompile itil))
 	 )
     (unless lang (error "no such language:" name))
-    #;(call-with-input-string code
-      (let loop ((block '(begin)) (sxml (lread port (current-module))))
-	(if (eof-object? sxml)
-	    (reverse block)
-	    (loop (cons sxml block)
-		  (lread port (current-module))))))
-    ;;(when sxml (sferr "<sxml:\n") (pperr sxml))
-    ;;(when xtil (sferr "<xtil:\n") (pperr xtil))
-    ;;(when scm (sferr "<scm:\n") (pperr scm))
-    ;;code
     scm))
 
+;; @deffn {Procedure} install-inline-language-evaluator
+;; Install the extension language reader macro @code{#<} ... @code{>#}.
+;; This reader macro will evaluate statements in extension languages, which
+;; often have expression statements can return a value.  Here is an example:
+;; @example
+;; scheme@@(guile-user)> (define a 1)
+;; scheme@@(guile-user)> (define b #<ecmascript: a + 10; >#)
+;; scheme@@(guile-user)> b
+;; $1 = 11
+;; @end example
+;; @end deffn
 (define (install-inline-language-evaluator)
+  "- Procedure: install-inline-language-evaluator
+     Install the extension language reader macro '#<' ...  '>#'.  This
+     reader macro will evaluate statements in extension languages, which
+     often have expression statements can return a value.  Here is an
+     example:
+          scheme@(guile-user)> (define a 1)
+          scheme@(guile-user)> (define b #<ecmascript: a + 10; >#)
+          scheme@(guile-user)> b
+          $1 = 11"
   (read-hash-extend #\< read-inline-code))
 
+;; @deffn {Procedure} uninstall-inline-language-evaluator
+;; Clear the reader macro @code{#<}.  
+;; @end deffn
 (define (uninstall-inline-language-evaluator)
+  "- Procedure: uninstall-inline-language-evaluator
+     Clear the reader macro '#<'."
   (read-hash-extend #\< #f))
 
 ;; --- last line ---
