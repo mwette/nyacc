@@ -1,0 +1,43 @@
+;;; nyacc/lang/tcl/tcl-01.test
+
+(define (try str)
+  (let ((res (call-with-input-string str read-command)))
+    (sf "\n~S =>\n" str)
+    (pp res)))
+
+(define (tclme)
+  (for-each
+   try
+   (list
+    "a"
+    ;;"abc"
+    ;;"abc def ghi"
+    ;;"abc \"def ghi\""
+    ;;"abc [def ghi] "
+    ;;"abc [def ghi] lkj"
+    ;;"abc [def $ghi] lkj"
+    ;;"abc def$ghi"
+    ;;"abc def$ghi$jkl"
+    ;;"abc [def ${ghi}] lkj"
+    ;;"abc [def ${ghi jkl}] mno"
+    ;;"abc {a {b 1} c}"
+    ;; later
+    ;;"abc ${def}(ghi)"
+    )))
+
+#|
+(define (tclme)
+  (pp (split-body "
+abc def ghi
+abc \"def ghi\"
+abc [def ghi] 
+abc [def ghi] lkj
+abc [def $ghi] lkj
+abc def$ghi
+abc def$ghi$jkl
+abc [def ${ghi}] lkj
+abc [def ${ghi jkl}] mno
+")))
+
+
+;; --- last line --- 

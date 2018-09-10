@@ -107,34 +107,54 @@
 	    (else (error "incomplete expr implementation"))))))
     (eval-expr tree)))
 
-(define (tcl:any->str any)
-  (if (string? any) any (simple-format #f "~A" any)))
+(define-public (tcl:word . args)
+  (apply string-append (map tcl:any->str args)))
 
 ;; @deffn {Procedure} tcl:expr frags
 ;; @var{frags} is a list of string fragments.  We join, parse and execute.
 ;; @end deffn
 (define-public (tcl:expr . frags)
   (let* ((strs (map tcl:any->str frags))
-	 (xarg (string-join strs ""))
+	 (xarg (apply string-append strs))
 	 (tree (parse-expr-string xarg))
 	 (xval (eval-expr tree)))
     xval))
 
-;; @deffn {Procedure} tcl:string<- [value] [index]
+
+;; @deffn {Procedure} tcl:list arg ...
+;; This creates a tcl list.
+;; @end deffn
+(define-public (tcl:list . args)
+  args)
+
+;; arrays are what set abc(foo) mean
+;; they are apparently ordered
+
+(define-public (tcl:array-get name index)
+  (let ((key (if (string? index) (string->symbol index) index)))
+  (hashq-ref name key)))
+
+(define (tcl:list->string tcl-list)
+  (map (lambda (elt)
+	 (let ((str (tcl:any->str elt)))
+	   (if (string-any #\space str) (string-append "{" str "}") str)))
+       tcl-list))
+
+;; @deffn {Procedure} tcl:any->str [value] [index]
 ;; Convert value to string.
 ;; @end deffn
-(define-public tcl:string<-
+(define-public tcl:any->str
   (case-lambda
-   ((val)
-    (cond
-     ((string? val) val)
-     ((number? val) (number->string val))
-     ((list? val) (string-join val))
-     ;;((vector? val) ...
-     (else (call-with-output-string (lambda (port) (display val port))))))
-   ((val indx)
-    (error "indexed deref not implemented")
-    )))
+    ((val)
+     (cond
+      ((string? val) val)
+      ((number? val) (number->string val))
+      ((list? val) (tcl:list->string val))
+      ;;((vector? val) ...
+      (else (simple-format #f "~A" any)))
+     ((val index)
+      (error "indexed deref not implemented")
+      ))))
 
 (define-public tcl:puts
   (case-lambda

@@ -1,4 +1,4 @@
-;;; language/nx-tcl/spec.scm - NYACC extension for Tcl
+;;; nyacc/lang/modelica/body.scm
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -17,25 +17,8 @@
 
 ;;; Code:
 
-(define-module (language nx-tcl spec)
-  #:export (nx-tcl)
-  #:use-module (nyacc lang tcl parser)
-  #:use-module (nyacc lang tcl compile-tree-il)
-  #:use-module (system base language))
-
-(define-language nx-tcl
-  #:title	"nx-tcl"
-  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
-  				  (read-tcl-stmt p e)
-  				  (read-tcl-file p e)))
-  #:compilers   `((tree-il . ,compile-tree-il))
-  #:evaluator	(lambda (exp mod) (primitive-eval exp))
-  #:printer	write
-  #:make-default-environment
-		(lambda ()
-		  (let ((env (make-fresh-user-module)))
-		    (module-define! env 'current-reader (make-fluid))
-		    env))
-  )
+(define (check-ids st nd)
+  (if (not (string=? (cadr st) (cadr nd)))
+      (throw 'mo-error "end name does not match")))
 
 ;; --- last line ---

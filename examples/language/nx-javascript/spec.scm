@@ -1,4 +1,4 @@
-;; Nyacc eXtension for javascript
+;; language/nx-javascript/spec.scm - NYACC extension for JavaScript
 
 ;; Copyright (C) 2015,2017-2018 Matthew R. Wette
 ;;
