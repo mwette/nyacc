@@ -1,4 +1,4 @@
-/* ex1.mo
+/* ex01.mo
  *
  * Copyright (C) 2015 Matthew R. Wette
  * 
