@@ -608,7 +608,7 @@
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
   )
 
-(define show-sxml #t)
+(define show-sxml #f)
 (define (show-octave-sxml v) (set! show-sxml v))
 (define show-xtil #f)
 (define (show-octave-xtil v) (set! show-xtil v))
