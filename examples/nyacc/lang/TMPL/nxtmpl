@@ -1,7 +1,5 @@
 #!/bin/sh
-
-##exec guile --language=nx-TMPL $0
-
+# -*- scheme -*-
 exec guile $0 $*
 !#
 
