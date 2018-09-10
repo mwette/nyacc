@@ -20,29 +20,42 @@
 ;; The desire to generate a Modelica parser in Scheme is what 
 ;; started my effort to generate NYACC.  - Matt
 
+;; I believe this is based on version 3.4 of the Modelica Specification.
+
+;; Need a better language, methinks.  This is a bit bloated IMO.
+;; So here I ramble - MW
+;;
+;; function ... algorithm ... end
+;; model ... equation ... end
+;; if parameter then need state maybe
+;; and way to designate "manifest" vs "derived" parameters
+;; memcache?
+;; loops with bounds
+;; package
+;; cond
+;; when () => xxx
+;; when () => ...
+;; end cond
+;; mat, vec, int, float, fixed
+;; make word after end optional
+;; I think inner/outer means dynamically the outer is dynamically bound.
+;; maybe use monads?
+
 ;;; Code:
 
 (define-module (nyacc lang modelica mach)
   #:export (modelica-spec
 	    modelica-mach
-	    modelica-parser
-	    gen-mod-lexer
-	    parse-mo)
+	    gen-modelica-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
-  #:use-module (nyacc lang util)
-  #:use-module (ice-9 pretty-print)
-  )
+  #:use-module (nyacc lang util))
 
-(define (check-ids st nd)
-  (if (not (string=? (cadr st) (cadr nd)))
-      (throw 'mo-error "end name does not match")))
-
-;; based on version 3.4, I believe
 (define modelica-spec
   (lalr-spec
-   (notice (string-append "Copyright 2016-2017 Matthew R. Wette" lang-crn-lic))
+   (notice (string-append "Copyright (c) 2015-2018 Matthew R. Wette"
+			  license-lgpl3+))
    (start stored-definition)
    (grammar
     
@@ -58,10 +71,10 @@
      )
     (stored-definition-2
      ("final" class-definition ";"
-      ($$ (make-tl 'class-defn-list (sx+attr* $2 'final "yes"))))
-     (class-definition ";" ($$ (make-tl 'class-defn-list $1)))
+      ($$ (make-tl 'stored-defn (sx-attr-add $2 'final "yes"))))
+     (class-definition ";" ($$ (make-tl 'stored-defn $1)))
      (stored-definition-2 "final" class-definition ";"
-			  ($$ (tl-append $3 (sx+attr* $3 'final "yes"))))
+			  ($$ (tl-append $3 (sx-attr-add $3 'final "yes"))))
      (stored-definition-2 class-definition ";" ($$ (tl-append $1 $2)))
      )
 
@@ -104,16 +117,17 @@
      (ident string-comment composition "end" ident
 	    ($$ (check-ids $1 $5) (if (pair? $2) (list $1 $2 $3) (list $1 $3))))
      ("extends" ident class-modification string-comment composition "end" ident
-      ($$ (check-ids $2 $7) (list '(@ extends . "yes") $2 $3 $4 $5)))
+      ($$ (check-ids $1 $5) (list '(@ extends . "yes") $2 $3 $4 $5)))
      ("extends" ident string-comment composition "end" ident
-      ($$ (check-ids $2 $6) (list '(@ extends . "yes") $2 $3 $4)))
+      ($$ (check-ids $1 $5) (list '(@ extends . "yes") $2 $3 $4)))
      )
 
     (short-class-specifier
      (ident "=" base-prefix type-specifier array-subscripts
 	    class-modification comment
 	    ($$ (list $1 `(is ,$3 ,$4 ,$5 ,$6 ,$7))))
-     (ident "=" base-prefix type-specifier array-subscripts comment)
+     (ident "=" base-prefix type-specifier array-subscripts comment
+	    )
      
      (ident "=" base-prefix type-specifier class-modification comment)
      (ident "=" base-prefix type-specifier comment)
@@ -498,7 +512,7 @@
       ($$ `(when-eq ,$2 ,$3 ,@(cdr (tl->list $4))))))
     (elsewhen-eq-list
      (elsewhen-eq-part ($$ (make-tl 'l $1)))
-     (elsewhen-eq-list elsewhen-eq-part ($$ (tl->append $1 $2))))
+     (elsewhen-eq-list elsewhen-eq-part ($$ (tl-append $1 $2))))
     (elsewhen-eq-part
      ("elsewhen" expression "then" ($$ `(elsewhen ,$2 (expr-list))))
      ("elsewhen" expression "then" expression-list ($$ `(elsewhen ,$2 ,$4))))
@@ -508,7 +522,7 @@
       ($$ `(when-st ,$2 ,$3 ,@(cdr (tl->list $4))))))
     (elsewhen-st-list
      (elsewhen-st-part ($$ (make-tl 'l $1)))
-     (elsewhen-st-list elsewhen-st-part ($$ (tl->append $1 $2))))
+     (elsewhen-st-list elsewhen-st-part ($$ (tl-append $1 $2))))
     (elsewhen-st-part
      ("elsewhen" expression "then" ($$ `(elsewhen ,$2 (stmt-list))))
      ("elsewhen" expression "then" statement-list ($$ `(elsewhen ,$2 ,$4))))
@@ -690,8 +704,10 @@
      ($empty)
      (string-cat))
     (string-cat
+     (string-cat-1 ($$ (tl->list $1))))
+    (string-cat-1
      (string ($$ (make-tl 'string-comment $1)))
-     (string-cat "+" string ($$ (tl-append $1 $3))))
+     (string-cat-1 "+" string ($$ (tl-append $1 $3))))
     
     (opt-annotation () (annotation ";"))
     (annotation
@@ -706,37 +722,21 @@
     (string ($string ($$ `(string ,$1))))
     )))
 
+;; === machines =========================
+
 (define modelica-mach
-  (identity ;; hashify-machine
-   (identity ;; compact-machine
+  (hashify-machine
+   (compact-machine
     (make-lalr-machine modelica-spec))))
-
-;; does not support Q-ident (single quoted identifier)
-(define gen-mod-lexer
-  (make-lexer-generator (lalr-match-table modelica-mach)
-			#:comm-skipper read-c-comm
-			))
-
-(define modelica-parser (make-lalr-parser modelica-mach))
-
-(define (parse-mo) (modelica-parser (gen-mod-lexer)))
 
 ;; === automaton file generator =========
 
-(define (gen-modelica-files . rest)
-  (define (lang-dir path)
-    (if (pair? rest) (string-append (car rest) "/" path) path))
-  (define (xtra-dir path)
-    (lang-dir (string-append "mach.d/" path)))
-
-  (write-lalr-actions modelica-mach (xtra-dir "moact.scm.new"))
-  (write-lalr-tables modelica-mach (xtra-dir "motab.scm.new"))
-  (let ((a (move-if-changed (xtra-dir "moact.scm.new")
-			    (xtra-dir "moact.scm")))
-	(b (move-if-changed (xtra-dir "motab.scm.new")
-			    (xtra-dir "motab.scm"))))
-    (when #f ;;(or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm"))))
+(define* (gen-modelica-files #:optional (path "."))
+  (define (mdir file) (mach-dir path file))
+  (write-lalr-actions modelica-mach (mdir "mo-act.scm.new") #:prefix "mo-")
+  (write-lalr-tables modelica-mach (mdir "mo-tab.scm.new") #:prefix "mo-")
+  (let ((a (move-if-changed (mdir "mo-act.scm.new") (mdir "mo-act.scm")))
+	(b (move-if-changed (mdir "mo-tab.scm.new") (mdir "mo-tab.scm"))))
     (or a b)))
 
 ;; --- last line ---

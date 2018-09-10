@@ -1,6 +1,6 @@
-;; mach.d/moact.scm
+;; ./mach.d/mo-act.scm
 
-;; Copyright 2016-2017 Matthew R. Wette
+;; Copyright (c) 2015-2018 Matthew R. Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -8,7 +8,7 @@
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING.LESSER included with the this distribution.
 
-(define act-v
+(define mo-act-v
   (vector
    ;; $start => stored-definition
    (lambda ($1 . $rest) $1)
@@ -25,14 +25,14 @@
    ;; stored-definition-2 => "final" class-definition ";"
    (lambda ($3 $2 $1 . $rest)
      (make-tl
-       'class-defn-list
-       (sx+attr* $2 'final "yes")))
+       'stored-defn
+       (sx-attr-add $2 'final "yes")))
    ;; stored-definition-2 => class-definition ";"
    (lambda ($2 $1 . $rest)
-     (make-tl 'class-defn-list $1))
+     (make-tl 'stored-defn $1))
    ;; stored-definition-2 => stored-definition-2 "final" class-definition ";"
    (lambda ($4 $3 $2 $1 . $rest)
-     (tl-append $3 (sx+attr* $3 'final "yes")))
+     (tl-append $3 (sx-attr-add $3 'final "yes")))
    ;; stored-definition-2 => stored-definition-2 class-definition ";"
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; class-definition => "encapsulated" class-prefixes class-specifier
@@ -94,11 +94,11 @@
      (if (pair? $2) (list $1 $2 $3) (list $1 $3)))
    ;; long-class-specifier => "extends" ident class-modification string-com...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     (check-ids $2 $7)
+     (check-ids $1 $5)
      (list '(@ extends . "yes") $2 $3 $4 $5))
    ;; long-class-specifier => "extends" ident string-comment composition "e...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (check-ids $2 $6)
+     (check-ids $1 $5)
      (list '(@ extends . "yes") $2 $3 $4))
    ;; short-class-specifier => ident "=" base-prefix type-specifier array-s...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
@@ -562,7 +562,7 @@
    ;; elsewhen-eq-list => elsewhen-eq-part
    (lambda ($1 . $rest) (make-tl 'l $1))
    ;; elsewhen-eq-list => elsewhen-eq-list elsewhen-eq-part
-   (lambda ($2 $1 . $rest) (tl->append $1 $2))
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; elsewhen-eq-part => "elsewhen" expression "then"
    (lambda ($3 $2 $1 . $rest)
      `(elsewhen ,$2 (expr-list)))
@@ -575,7 +575,7 @@
    ;; elsewhen-st-list => elsewhen-st-part
    (lambda ($1 . $rest) (make-tl 'l $1))
    ;; elsewhen-st-list => elsewhen-st-list elsewhen-st-part
-   (lambda ($2 $1 . $rest) (tl->append $1 $2))
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; elsewhen-st-part => "elsewhen" expression "then"
    (lambda ($3 $2 $1 . $rest)
      `(elsewhen ,$2 (stmt-list)))
@@ -701,25 +701,17 @@
    ;; name => name "." ident
    (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
    ;; component-reference => component-reference-1
+   (lambda ($1 . $rest) `(comp-ref ,$1))
+   ;; component-reference-1 => component-reference-2
    (lambda ($1 . $rest) $1)
-   ;; component-reference => component-reference-1 "." ident $P12
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; $P12 => 
-   (lambda $rest (list))
-   ;; $P12 => array-subscripts
+   ;; component-reference-1 => "." component-reference-2
+   (lambda ($2 $1 . $rest) `(sel ,$2))
+   ;; component-reference-1 => component-reference-1 "." component-reference-2
+   (lambda ($3 $2 $1 . $rest) `(sel ,$3 ,$1))
+   ;; component-reference-2 => ident
    (lambda ($1 . $rest) $1)
-   ;; component-reference-1 => ident $P13
-   (lambda ($2 $1 . $rest) $1)
-   ;; component-reference-1 => "." ident $P14
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; $P13 => 
-   (lambda $rest (list))
-   ;; $P13 => array-subscripts
-   (lambda ($1 . $rest) $1)
-   ;; $P14 => 
-   (lambda $rest (list))
-   ;; $P14 => array-subscripts
-   (lambda ($1 . $rest) $1)
+   ;; component-reference-2 => ident array-subscripts
+   (lambda ($2 $1 . $rest) `(ary-ref ,$2 ,$1))
    ;; function-call-args => "(" function-arguments ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; function-call-args => "(" ")"
@@ -759,11 +751,12 @@
    ;; expression-list => expression-list "," expression
    (lambda ($3 $2 $1 . $rest) $1)
    ;; array-subscripts => "[" array-subscript-list "]"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
    ;; array-subscript-list => subscript
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest)
+     (make-tl 'array-subscripts $1))
    ;; array-subscript-list => array-subscript-list "," subscript
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; subscript => ":"
    (lambda ($1 . $rest) $1)
    ;; subscript => expression
@@ -778,10 +771,12 @@
    (lambda $rest (list))
    ;; string-comment => string-cat
    (lambda ($1 . $rest) $1)
-   ;; string-cat => string
+   ;; string-cat => string-cat-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; string-cat-1 => string
    (lambda ($1 . $rest)
      (make-tl 'string-comment $1))
-   ;; string-cat => string-cat "+" string
+   ;; string-cat-1 => string-cat-1 "+" string
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; opt-annotation => 
    (lambda $rest (list))
