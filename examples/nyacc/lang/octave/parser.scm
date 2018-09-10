@@ -158,7 +158,7 @@
   (catch 'nyacc-error
     (lambda ()
       (apply-octave-statics
-       (raw-ia-parser lexer #:debug #t)))
+       (raw-ia-parser lexer #:debug #f)))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port) fmt args)
       #f)))
