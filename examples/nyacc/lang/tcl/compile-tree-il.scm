@@ -42,6 +42,7 @@
 
 (define xlib-mod '(nyacc lang tcl xlib))
 (define xlib-module (resolve-module xlib-mod))
+(define (xlib-ref name) `(@@ (nyacc lang tcl xlib) ,name))
 
 ;; scope must be manipulated at execution time
 ;; the @code{proc} command should push-scope
@@ -106,12 +107,13 @@
       ((deref ,name)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
-	 (values '() `(call ,(xlib-ref 'tcl:string<-) ,ref) dict)))
+	 (values '() ref dict)))
 
       ((deref ,name ,expr)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
-	 (values '() `(call ,(xlib-ref 'tcl:string<-) ,ref ,expr) dict)))
+	 ;;(values '() `(call ,(xlib-ref 'tcl:any->) ,ref ,expr) dict)))
+	 (values '() `(call ,(xlib-ref 'tcl:array-ref) ,ref ,expr) dict)))
 
       ;; convert (C) string to number (i.e., 0xf => 15)
       ((number (deref ,name))
@@ -146,6 +148,11 @@
 	      (dict (acons '@F name dict))
 	      )
 	 (values `(proc ,nref (arg-list . ,args) ,body) '() dict)))
+
+      ((incr (string ,var) ,val)
+       (values `(incr ,var ,val) '() dict))
+      ((incr (string ,var))
+       (values `(incr ,var (const 1)) '() dict))
       
       ((set (string ,name) ,value)
        (let* ((dict (add-symbol name dict))
@@ -184,6 +191,9 @@
        ((command)
 	(values (cons `(call . ,(rtail kseed)) seed) kdict))
 
+       ((comment)
+	(values seed kdict))
+
        ((proc)
 	(let* ((tail (rtail kseed))
 	       (name-ref (list-ref tail 0))
@@ -213,6 +223,38 @@
 	  ;;(sferr "proc ~S:\n" name-ref) (pperr tail) (pperr fctn)
 	  (values (cons stmt seed) (pop-scope kdict))))
 
+       ;; others to add: incr foreach while continue break
+       ((incr)
+	(let* ((tail (rtail kseed))
+	       (name (car tail))
+	       (expr (cadr tail))
+	       (vref (lookup (car tail) kdict))
+	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
+	  (values (cons stmt seed) kdict)))
+
+       ;; for allows continue and break
+       ((for)
+	(sferr "todo: for\n")
+	(values (cons '(void) seed) kdict))
+
+       ;; conditional: elseif and else are translated by the default case
+       ((if)
+	(let* ((tail (rtail kseed))
+	       (cond-expr `(primcall not (primcall zero? ,(list-ref tail 0))))
+	       (then-expr (list-ref tail 1))
+	       (rest-part (list-tail tail 2))
+	       (rest-expr
+		(let loop ((rest-part rest-part))
+		  (match rest-part
+		    ('() '(void))
+		    (`((else ,body)) (block body))
+		    (`((elseif ,cond-part ,body-part) . ,rest)
+		     `(if (primcall not (primcall zero? ,cond-part))
+			  ,body-part
+			  ,(loop (cdr rest-part)))))))
+	       (stmt `(if ,cond-expr ,then-expr ,rest-expr)))
+	  (values (cons stmt seed) kdict)))
+
        ((return)
 	(values
 	 (cons `(abort ,(lookup "return" kdict)
@@ -232,11 +274,22 @@
 		     `(set! ,nref ,value))
 		 seed)
 	   kdict)))
+
+       ((body)
+	(values (cons (block (rtail kseed)) seed) kdict))
        
+       ((void)
+	(values (cons '(void) seed) kdict))
+
        ((expr)
 	;;(sferr "expr: ~S\n" (reverse kseed))
 	(values
 	 (cons `(call ,(xlib-ref 'tcl:expr) . ,(rtail kseed)) seed)
+	 kdict))
+
+       ((word)
+	(values
+	 (cons `(call ,(xlib-ref 'tcl:word) . ,(rtail kseed)) seed)
 	 kdict))
 
        (else
@@ -254,9 +307,9 @@
 	     (string-append "*** tcl: " fmt "\n") args)
       (values '(void) env))))
 
-(define show-sxml #f)
+(define show-sxml #t)
 (define (show-tcl-sxml v) (set! show-sxml v))
-(define show-xtil #f)
+(define show-xtil #t)
 (define (show-tcl-xtil v) (set! show-xtil v))
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv
@@ -266,8 +319,6 @@
 ;; for the target for the compiled language, and a continuation environment
 ;; for the next parsed syntax tree.
 ;; @end deffn
-(set! show-sxml #t)
-(set! show-xtil #t)
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
   ;; Need to make an interp.  All Tcl commands execute in an interp
@@ -286,12 +337,5 @@
      	    )
 	  )
 	(values (parse-tree-il '(void)) env cenv))))
-
-;;; Thoughts:
-
-;; scheme calls need to be
-;; [xcall name [number x] [<type> v] ...]
-
-;; (deref xxx) should always check and convert to string
 
 ;; --- last line ---

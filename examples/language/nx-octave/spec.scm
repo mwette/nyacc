@@ -1,4 +1,4 @@
-;; Nyacc eXtension for octave
+;; language/nx-octave/spec.scm - NYACC extension for Octave
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
