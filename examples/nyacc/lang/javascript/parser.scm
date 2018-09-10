@@ -20,7 +20,7 @@
 ;; This is a JavaScript parser for Guile.
 
 (define-module (nyacc lang javascript parser)
-  #:export (parse-js js-stmt-reader js-file-reader)
+  #:export (parse-js read-js-stmt read-js-file)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang sx-util)
@@ -54,10 +54,10 @@
       (apply simple-format (current-error-port) fmt rest)
       #f)))
 
-;; @deffn {Procedure} js-file-reader port env => sxml
+;; @deffn {Procedure} read-js-file port env => sxml
 ;; Read file unit from port and return SXML AST.
 ;; @end deffn
-(define (js-file-reader port env)
+(define (read-js-file port env)
   (if (eof-object? (peek-char port))
       (read-char port)
       (with-input-from-port port parse-js)))
@@ -99,7 +99,7 @@
       #f)))
 (export parse-js-stmt)
 
-(define (js-stmt-reader port env)
+(define (read-js-stmt port env)
   (if (eof-object? (peek-char port))
       (read-char port)
       (let ((elt (with-input-from-port port parse-js-stmt)))
