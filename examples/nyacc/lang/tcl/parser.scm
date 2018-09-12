@@ -217,10 +217,9 @@
 	  ;;(if (not (char=? #\( (read-char port))) (error "coding error"))
 	  (if (char=? (peek-char port) #\() (read-char port))
 	  (let ((word (read-word cs:rparen)))
-	    (sf "index word=~S\n" word)
+	    ;;(sf "index word=~S\n" word)
 	    (if (not (char=? #\) (read-char port))) (error "coding error"))
-	    ;;`(index ,@(cdr word)))))
-	    `(index ,word))))
+	    `(index . ,(foldin word '())))))
        
        (read-escape
 	;; a b f n r t v ; xhh ...
@@ -241,9 +240,9 @@
 			     ((char=? ch1 #\() #t)
 			     (else #f))))
 	    (db "$frag=~S ch1=~S\n" frag ch1)
-	    (echo (if indx
+	    (if indx
 		      `(deref-indexed ,frag ,(cadr (read-index)))
-		      `(deref ,frag))))))
+		      `(deref ,frag)))))
 
        (init-blev			; initial brace level
 	(lambda (end-cs) (if (eq? end-cs cs:rcurly) 1 0)))
@@ -466,7 +465,7 @@
 	    ((command (string "set") (string ,name) . ,rest)
 	     `(set . ,(sx-tail tree 2)))
 	    ((command (string "set") (word (string ,name) (index ,indx)) . ,rest)
-	     `(set-indexed (string ,name) (index ,indx) . ,rest))
+	     `(set-indexed (string ,name) (word ,indx) . ,rest))
 	    ;;(,_ (report-error "can't handle this yet")))))
 	    (,_ `(set . ,(sx-tail tree 2))))))
     ("while"
@@ -506,19 +505,24 @@
 ;; (cnvt-tcl '(command (string "expr") ...)) => (expr ...)
 ;; @end example
 (define (cnvt-tree tree)
+  (sf "tree=~S\n" tree)
   (letrec
       ((cnvt-elt
 	(lambda (tree)
 	  (if (string? tree) tree
-	      (case (sx-tag tree)
-		((command)
+	      (sxml-match tree
+		((command . ,rest)
 		 (or (and=> (nxify-command tree) cnvt-tree)
 		     (let* ((tail0 (sx-tail tree))
 			    (tail1 (cnvt-tail tail0)))
 		       (if (eq? tail1 tail0) tree `(command . ,tail1)))))
-		((string)
-		 (or (num-string (sx-ref tree 1)) tree))
-		(else
+		((string ,val)
+		 (or (num-string val) tree))
+		((word (string ,val))
+		 (cnvt-tree (sx-ref tree 1)))
+		((word . ,rest)
+		 `(word . ,(map cnvt-tree rest)))
+		(,_
 		 (let* ((tag (sx-tag tree))
 			(tail0 (sx-tail tree))
 			(tail1 (cnvt-tail tail0)))
@@ -553,7 +557,6 @@
 (define (read-tcl-file port env)
   "- Procedure: read-tcl-file port env
      Read a Tcl file.  Return a SXML tree."
-  (sf "\n")
   (if (eof-object? (peek-char port))
       (read-char port)
       (cons
@@ -561,10 +564,9 @@
        (let loop ((cmd (read-command port)))
 	 (if (eof-object? cmd) '()
 	     (let ((cmd1 cmd) (cmd2 (cnvt-tree cmd)))
-	       (sf "cmd1:\n") (pp cmd1)
+	       ;;(sf "cmd1:\n") (pp cmd1)
 	       ;;(sf "cmd2::n") (pp cmd2)
 	       (cons (cnvt-tree cmd) (loop (read-command port))))))))
-  (sf "\n")
   )
 
 

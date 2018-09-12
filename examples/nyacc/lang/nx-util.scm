@@ -27,7 +27,7 @@
 	    nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-symbol
 	    nx-lookup-in-env nx-lookup
 	    rtail singleton?
-	    make-and make-or make-thunk
+	    make-and make-or make-thunk make-defonce
 	    with-escape/handler with-escape/arg with-escape/expr with-escape
 	    rev/repl
 	    make-handler
@@ -195,6 +195,23 @@
 	 (meta (if lang (cons `(language . ,lang) meta) meta))
 	 (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case ((() #f #f #f () ()) ,expr)))))
+
+;; @deffn {Procedure} make-defonce name value
+;; Generate a TIL expression that will ensure the toplevel name is defined.
+;; If a define needs to be issues the value is @code{(void)}.  Generates
+;; @example
+;; (if (defined? 'a) undefined (define a undefined))
+;; @end example
+;; @noindent
+;; where @code{undefined} is like @code{(if #f #f)}.
+;; @end deffn
+(define (make-defonce symbol value)
+  `(define ,symbol
+	 (if (call (toplevel module-variable)
+		   (call (toplevel current-module))
+		   (const ,symbol))
+	     (toplevel ,symbol)
+	     ,value)))
 
 ;; === Using Prompts 
 
