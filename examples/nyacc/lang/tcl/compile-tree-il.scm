@@ -158,6 +158,12 @@
        (let* ((dict (add-symbol name dict))
 	      (nref (lookup name dict)))
 	 (values `(set ,nref ,value) '() dict)))
+      ;;((set otherwise could be ugly
+
+      ((set-indexed (string ,name) ,index ,value)
+       (let* ((dict (add-symbol name dict))
+	      (nref (lookup name dict)))
+       (values `(set-indexed ,nref ,index ,value) '() dict)))
 
       ((command (string ,name) . ,args)
        (let ((ref (lookup name dict)))
@@ -275,6 +281,22 @@
 		 seed)
 	   kdict)))
 
+       ((set-indexed)
+	;; This only works if the variable appeared as string constant in fD.?
+	(let* ((value (car kseed))
+	       (indx (cadr kseed))
+	       (nref (caddr kseed))
+	       (toplev? (eq? (car nref) 'toplevel)))
+	  (values
+	   (cons
+	   `(seq
+	     ,(if toplev?
+		  (make-defonce (cadr nref) `(call ,(xlib-ref 'tcl:make-array)))
+		  `(set! ,nref (if (call (toplevel hash-table?) ,nref) ,nref
+				  `(call ,(xlib-ref 'tcl:make-array)))))
+	     (call ,(xlib-ref 'tcl:array-set) ,nref ,indx ,value))
+	   seed) kdict)))
+
        ((body)
 	(values (cons (block (rtail kseed)) seed) kdict))
        
@@ -332,8 +354,8 @@
 	      )
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    ;;(values (parse-tree-il exp) env cenv)
-	    (values (parse-tree-il '(const "[hello]")) env cenv)
+	    (values (parse-tree-il exp) env cenv)
+	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
      	    )
 	  )
 	(values (parse-tree-il '(void)) env cenv))))

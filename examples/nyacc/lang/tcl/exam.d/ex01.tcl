@@ -1,1 +1,2 @@
-set q$a(x$b) 1
+set a(x) b
+

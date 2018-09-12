@@ -1,7 +1,5 @@
 #!/bin/sh
-
-##exec guile --language=nx-tcl $0
-
+# -*- scheme -*-
 exec guile $0 $*
 !#
 
@@ -36,7 +34,9 @@ exec guile $0 $*
 	 (file (assoc-ref options 'file)))
     (let* ((tree (call-with-input-file file
 		   (lambda (port) (read-tcl-file port (current-module))))))
-      (pretty-print tree))))
+      (pretty-print tree)
+      (display "--------------------------------------\n")
+      (if #f #f))))
 
 (apply compile-nx-file (cdr (program-arguments)))
 

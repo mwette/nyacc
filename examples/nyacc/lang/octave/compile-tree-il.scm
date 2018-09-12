@@ -85,29 +85,6 @@
       (nx-add-lexical name dict)
       (nx-add-toplevel name dict)))
 		   
-;; @deffn {Procedure} make-def-ifndef name
-;; Generate a TIL expression that will ensure the toplevel name is defined.
-;; If a define needs to be issues the value is @code{(void)}.  Generates
-;; @example
-;; (if (defined? 'a) undefined (define a undefined))
-;; @end example
-;; @noindent
-;; where @code{undefined} is like @code{(if #f #f)}.
-;; @end deffn
-(define (make-def-ifndef symbol)
-  `(if (call (toplevel module-local-variable)
-	     (call (toplevel current-module))
-	     (const ,symbol))
-       (void) (define ,symbol (void))))
-;; another option: like `(define-once foo (if #f #f))'
-(define (x-make-def-indef symbol)
-  `(define ,symbol
-     (if (call (toplevel module-local-variable)
-	       (call (toplevel current-module))
-	       (const ,symbol))
-	 (toplevel ,symbol)
-	 (void))))
-
 ;; Add toplevel def's from dict before evaluating expression.  This puts
 ;; @var{expr} at the end of a chain of @code{seq}'s that execution
 ;; conditional defines to a void.  See @code{make-toplevel-defcheck}.
@@ -122,9 +99,6 @@
 	(if ref
 	    (loop (cdr refs))
 	    `(seq (define ,(string->symbol name) (void)) ,(loop (cdr refs))))))
-     (#f ;;(string? (caar refs)) ;; check at runtime
-      `(seq ,(make-def-ifndef (string->symbol (caar refs)))
-	    ,(loop (cdr refs))))
      ((eq? '@top (caar refs)) expr)
      (else (loop (cdr refs))))))
 

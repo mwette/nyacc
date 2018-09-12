@@ -127,12 +127,37 @@
 (define-public (tcl:list . args)
   args)
 
+;; === (associative) arrays 
+
 ;; arrays are what set abc(foo) mean
 ;; they are apparently ordered
 
+;; @deffn {Procedure} tcl:make-array name
+;; Make an array.  In Tcl this actually takes an argument and would add
+;; to the current scope.  To do that this would need to look like
+;; @example
+;; (tcl:make-array dict name)
+;; @end example
+;; @end deffn
+(define-public (tcl:make-array)
+  (make-hash-table))
+
+;; @deffn {Procedure} tcl:array-get name index
+;; Get value from the array.  What if not there?
+;; The argument @var{index} will be converted to a symbol.@*
+;; Note: What if it's an integer (e.g., @code{1}, or then @code{"1"}).
+;; @end deffn
 (define-public (tcl:array-get name index)
   (let ((key (if (string? index) (string->symbol index) index)))
-  (hashq-ref name key)))
+    (hashq-ref name key)))
+
+;; @deffn {Procedure} tcl:array-set name index value
+;; @end deffn
+(define-public (tcl:array-set name index value)
+  (let ((key (if (string? index) (string->symbol index) index)))
+    (hashq-set! name key value)))
+
+;; ===================================
 
 (define (tcl:list->string tcl-list)
   (map (lambda (elt)
@@ -151,10 +176,10 @@
       ((number? val) (number->string val))
       ((list? val) (tcl:list->string val))
       ;;((vector? val) ...
-      (else (simple-format #f "~A" any)))
+      (else (simple-format #f "~A" val))))
      ((val index)
       (error "indexed deref not implemented")
-      ))))
+      )))
 
 (define-public tcl:puts
   (case-lambda
