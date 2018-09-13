@@ -153,9 +153,13 @@
 
 ;; @deffn {Procedure} tcl:array-set name index value
 ;; @end deffn
-(define-public (tcl:array-set name index value)
+(define-public (tcl:array-set1 name index value)
   (let ((key (if (string? index) (string->symbol index) index)))
     (hashq-set! name key value)))
+
+;;(define-public (ztcl:array-set env name value)
+;;  (let ((key (if (string? index) (string->symbol index) index)))
+;;    (hashq-set! name key value)))
 
 ;; ===================================
 
@@ -183,7 +187,7 @@
 
 (define-public tcl:puts
   (case-lambda
-   ((val) (display val) (newline))
+   ((val) (display (tcl:any->str val)) (newline))
    ((arg0 val)
     (if (string=? arg0 "-nonewline")
 	(display val)
@@ -192,6 +196,12 @@
     (unless (string=? nnl "-nonewline") (throw 'tcl-error "puts: bad arg"))
     "(not implemented)"
     )))
+
+;; === format
+
+
+
+
 
 ;; === xdict
 
