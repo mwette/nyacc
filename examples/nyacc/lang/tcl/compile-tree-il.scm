@@ -192,7 +192,10 @@
 
        ;; before leaving add a call to make sure all toplevels are defined
        ((*TOP*)
-	(values (car kseed) kdict))
+	(let ((tail (rtail kseed)))
+	  (cond
+	   ((null? tail) (values '(void) kdict)) ; just comments
+	   (else (values (car kseed) kdict)))))
 
        ((command)
 	(values (cons `(call . ,(rtail kseed)) seed) kdict))
@@ -273,7 +276,6 @@
 	(let* ((value (car kseed))
 	       (nref (cadr kseed))
 	       (toplev? (eq? (car nref) 'toplevel)))
-	  ;;(sferr "set:") (pperr (reverse kseed))
 	  (values
 	   (cons (if toplev?
 		     `(define ,(cadr nref) ,value)
@@ -294,7 +296,7 @@
 		  (make-defonce (cadr nref) `(call ,(xlib-ref 'tcl:make-array)))
 		  `(set! ,nref (if (call (toplevel hash-table?) ,nref) ,nref
 				  `(call ,(xlib-ref 'tcl:make-array)))))
-	     (call ,(xlib-ref 'tcl:array-set) ,nref ,indx ,value))
+	     (call ,(xlib-ref 'tcl:array-set1) ,nref ,indx ,value))
 	   seed) kdict)))
 
        ((body)
@@ -329,9 +331,9 @@
 	     (string-append "*** tcl: " fmt "\n") args)
       (values '(void) env))))
 
-(define show-sxml #t)
+(define show-sxml #f)
 (define (show-tcl-sxml v) (set! show-sxml v))
-(define show-xtil #t)
+(define show-xtil #f)
 (define (show-tcl-xtil v) (set! show-xtil v))
 
 ;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv

@@ -328,6 +328,7 @@
 			  (cons term toks)
 			  (cons term toks))))
 		'() (cdr terms))))
+    ;;(sf "sxt ~S => ~S\n" tail toks)
     toks))
 
 ;; @deffn {Procedure} cnvt-args astr
@@ -393,7 +394,8 @@
   (and=> 
    (with-input-from-string cstr
      (lambda ()
-       (read-c-num (read-char))))
+       (let ((val (read-c-num (read-char))))
+	 (and (eof-object? (peek-char)) val))))
    (lambda (p)
      (case (car p)
        (($fixed) `(fixed ,(cnumstr->scm (cdr p))))
@@ -505,7 +507,7 @@
 ;; (cnvt-tcl '(command (string "expr") ...)) => (expr ...)
 ;; @end example
 (define (cnvt-tree tree)
-  (sf "tree=~S\n" tree)
+  ;;(sf "tree=~S\n" tree)
   (letrec
       ((cnvt-elt
 	(lambda (tree)
@@ -521,17 +523,23 @@
 		((word (string ,val))
 		 (cnvt-tree (sx-ref tree 1)))
 		((word . ,rest)
-		 `(word . ,(map cnvt-tree rest)))
+		 (let* ((tail0 (sx-tail tree))
+			(tail1 (cnvt-tail tail0)))
+		   (if (eq? tail1 tail0) tree `(word . ,tail1))))
 		(,_
 		 (let* ((tag (sx-tag tree))
 			(tail0 (sx-tail tree))
 			(tail1 (cnvt-tail tail0)))
+		   ;;(sf "cnvt _ tag=~S\n" tag)
+		   ;;(sf "     tail0=~S tail1=~S\n" tail0 tail1)
 		   (if (eq? tail1 tail0) tree (cons tag tail1))))))))
        (cnvt-tail
 	(lambda (tail)
 	  (if (null? tail) tail
 	      (let* ((head0 (car tail)) (head1 (cnvt-elt head0))
 		     (tail0 (cdr tail)) (tail1 (cnvt-tail tail0)))
+		;;(sf "cnvt-tail ~S ~S\n" head0 tail0)
+		;;(sf "cnvt-tail ~S ~S\n" head1 tail1)
 		(if (eq? head1 head0)
 		    (if (eq? tail1 tail0)
 			tail
@@ -549,6 +557,8 @@
      Guile extension language routine to read a single statement."
   (let* ((cmmd0 (read-command port))
 	 (cmmd1 (cnvt-tree cmmd0)))
+    ;;(sf "s:cmd1:\n ") (pp cmmd0)
+    ;;(sf "s:cmd2:\n ") (pp cmmd1)
     cmmd1))
 
 ;; @deffn {Procedure} read-tcl-file port env

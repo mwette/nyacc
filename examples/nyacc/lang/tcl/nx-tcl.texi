@@ -32,5 +32,17 @@ numbers or lists, so Tcl eventually wants those as strings.  Tcl
 is lazy with respect to converting to string.  In some cases this
 makes code more effecient and robust.
 
+@subsubheading Dynamic Stack
+Keep a dynamic ``stack'' variable, add a commands to save proc-local
+variable in the environment. and push a frame as each proc is called.
+We need one call to save to d-stack and another to ref from the
+d-stack.  This would be added as a fluid to the top-level env.
+@example
+downvar local-name
+upvar [level] stack-name local-name
+@end example
+Error message: ``no such upvar''@*
+I think we should ignore the level.
+
 @bye
 @c --- last line ---
