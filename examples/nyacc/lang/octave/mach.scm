@@ -146,7 +146,7 @@
       ($$ `(switch ,$2 ,@(cdr (tl->list $4)))))
      ("return"
       ($$ '(return)))
-     (command arg-list ($$ `(command ,$1 ,(tl->list $2))))
+     (command arg-list ($$ `(command ,$1 ,@(cdr (tl->list $2)))))
      )
 
     (command

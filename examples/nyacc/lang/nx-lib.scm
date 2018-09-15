@@ -87,7 +87,7 @@
 (define %nx-lang-key '{nx-lang})
 
 (define (nx-hash-add-lang htab lang)
-  (unless (hash-key? htab %nx-lang-key)
+  (unless (hashq-ref htab %nx-lang-key)
     (hashv-set! htab %nx-lang-key (make-hash-table 7)))
   (let ((ltab (hashv-ref htab '%nx-lang-key)))
     (hashv-set! ltab lang (make-hash-table 7))))
@@ -111,8 +111,36 @@
 (define (nx-hash-set! htab key val)
   (hashq-set! htab key val))
 
+(define (sprintf fmt . args)
+  (define rls reverse-list->string)
+  (define (numstr->string val)
+    (if (string? val) val (number->string val)))
+  (define (escape ch)
+    (case ch
+      ((#\\) #\\)
+      ((#\n) #\newline)
+      (else ch)))
+  (with-input-from-string fmt
+    (lambda ()
+      (let loop ((stl '()) (chl '()) (ch (read-char)) (args args))
+	;;(sf "ch=~S\n" ch)
+	(cond
+	 ((eof-object? ch)
+	  (apply string-append (reverse (cons (rls chl) stl))))
+	 ((char=? ch #\%)
+	  (let ((ch1 (read-char)))
+	    (case ch1
+	      ((#\\) (loop stl (cons (escape ch1) chl) (read-char) args))
+	      ((#\%) (loop stl (cons ch1 chl) (read-char) args))
+	      ((#\s) (loop (cons* (car args) (rls chl) stl) '()
+			   (read-char) (cdr args)))
+	      ((#\d #\f) (loop (cons* (numstr->string (car args)) (rls chl) stl)
+			       '() (read-char) (cdr args)))
+	      (else (error "sprintf: unknown % char")))))
+	 (else
+	  (loop stl (cons ch chl) (read-char) args)))))))
 
-;;; in-line reading
+;;; === in-line reading =========================================================
 
 (use-modules (system base language))
 (use-modules (system base compile))
