@@ -186,7 +186,9 @@
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
     (if
-     (null? tree) (values (cons kseed seed) kdict)
+     (null? tree) (if (null? kseed)
+		      (values seed kdict) 
+		      (values (cons kseed seed) kdict))
      
      (case (car tree)
 
@@ -239,6 +241,12 @@
 	       (expr (cadr tail))
 	       (vref (lookup (car tail) kdict))
 	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
+	  (values (cons stmt seed) kdict)))
+
+       ((format)
+	(let* ((tail (rtail kseed))
+	       (stmt `(call (@@ (nyacc lang nx-lib) sprintf) . ,tail))
+	       )
 	  (values (cons stmt seed) kdict)))
 
        ;; for allows continue and break
@@ -331,18 +339,11 @@
 	     (string-append "*** tcl: " fmt "\n") args)
       (values '(void) env))))
 
-(define show-sxml #f)
+(define show-sxml #t)
 (define (show-tcl-sxml v) (set! show-sxml v))
-(define show-xtil #f)
+(define show-xtil #t)
 (define (show-tcl-xtil v) (set! show-xtil v))
 
-;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv
-;; On input @var{exp} is the SXML from our reader, @var{env} is ``an
-;; environment'', and @var{opts} is a keyword list of options.  The procedure
-;; return three values: the compiled expressin, the corresponding environment
-;; for the target for the compiled language, and a continuation environment
-;; for the next parsed syntax tree.
-;; @end deffn
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
   ;; Need to make an interp.  All Tcl commands execute in an interp

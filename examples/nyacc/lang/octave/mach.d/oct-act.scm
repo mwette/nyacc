@@ -139,7 +139,7 @@
    (lambda ($1 . $rest) '(return))
    ;; nontrivial-statement-1 => command arg-list
    (lambda ($2 $1 . $rest)
-     `(command ,$1 ,(tl->list $2)))
+     `(command ,$1 ,@(cdr (tl->list $2))))
    ;; command => "global"
    (lambda ($1 . $rest) '(ident "global"))
    ;; command => "clear"

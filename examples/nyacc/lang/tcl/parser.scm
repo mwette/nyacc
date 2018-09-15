@@ -440,6 +440,8 @@
      . ,(lambda (tree) `(continue)))
     ("expr"
      . ,(lambda (tree) `(expr . ,(splice-xtail (sx-tail tree 2)))))
+    ("format"
+     . ,(lambda (tree) `(format . ,(sx-tail tree 2))))
     ("if"
      . ,(lambda (tree)
 	  (sxml-match tree ;; TODO : deal with "elseif" 
