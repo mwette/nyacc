@@ -34,12 +34,12 @@
    (lambda ($1 . $rest) $1)
    ;; mlang-item => statement
    (lambda ($1 . $rest) $1)
-   ;; function-defn => function-decl nontrivial-statement stmt-list the-end
+   ;; function-defn => function-decl non-comment-statement stmt-list the-end
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-defn
         ,$1
         ,(tl->list (if $2 (tl-insert $3 $2) $3))))
-   ;; function-defn => function-decl nontrivial-statement the-end
+   ;; function-defn => function-decl non-comment-statement the-end
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn
         ,$1
@@ -93,6 +93,10 @@
    ;; statement => trivial-statement
    (lambda ($1 . $rest) $1)
    ;; statement => nontrivial-statement
+   (lambda ($1 . $rest) $1)
+   ;; non-comment-statement => term
+   (lambda ($1 . $rest) '(empty-stmt))
+   ;; non-comment-statement => nontrivial-statement
    (lambda ($1 . $rest) $1)
    ;; trivial-statement => lone-comment "\n"
    (lambda ($2 $1 . $rest) $1)
