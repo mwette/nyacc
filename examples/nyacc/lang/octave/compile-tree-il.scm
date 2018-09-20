@@ -39,7 +39,7 @@
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (define (pperr tree)
-  (pretty-print tree (current-error-port) #:per-line-prefix "  "))
+  (pretty-print tree (current-error-port) #:per-line-prefix "  " #:width 130))
 
 (define xlib-mod '(nyacc lang octave xlib))
 (define xlib-module (resolve-module xlib-mod))
@@ -113,15 +113,22 @@
   (and=> (sx-attr-ref tree 'term)
 	 (lambda (t) (not (string=? t ";")))))
 
+;; @deffn {Procedure} make-for lvar iter body dict
 ;; lvar: loop variable -- (lexical i i-1234) or (toplevel i)
-;; should be
-;; (make-for lvar init next body dict)
-;; @code{m-iter} is the iterator
+;; @var{iter} is an iterator
 ;; TODO: deal with cases where lvar is local scope or non-local scope
+;; @example
+;; (let loop (($ivar (iter-first iter)))
+;;    (when $ivar
+;;      (set! lvar $ivar)
+;;      body 
+;;      (loop (iter:next $iter $ivar))))
+;; @end example
+;; @end deffn
 (define-public (make-for lvar expr body dict)
   (let* ((toplev? (eq? 'toplevel (car lvar)))
-	 (ivar (if toplev? `(lexical $ivar ,(genxsym "$ivar")) lvar))
-	 (body (if toplev? `(seq (set! ,lvar ,ivar) ,body)))
+	 (ivar `(lexical $ivar ,(genxsym "$ivar")))
+	 ;;(body `(if ,ivar (seq ,body
 	 ;;
 	 (rsym (genxsym "$iter")) (rval `(lexical $iter ,rsym))
 	 (frst `(call ,(xlib-ref 'oct:iter-first) ,rval))
@@ -133,9 +140,13 @@
 	 (inext `(call (lexical iloop ,ilsym) ,next))
 	 (ifrst `(call (lexical iloop ,ilsym) ,frst))
 	 (ocall `(call (lexical oloop ,olsym)))
+
 	 (iloop `(lambda ((name . iloop))
 		   (lambda-case (((,(cadr ivar)) #f #f #f () (,(caddr ivar)))
-				 (if ,ivar (seq ,body ,inext) (void))))))
+				 (if ,ivar
+				     (seq (set! ,lvar ,ivar)
+					  (seq ,body ,inext))
+				     (void))))))
 	 
   	 (ohdlr `(lambda () (lambda-case (((k) #f #f #f () (,(genxsym "k")))
 					  ,inext))))
@@ -160,6 +171,9 @@
 ;; @end deffn
 (define (xlang-sxml->xtil exp env opts)
 
+  (define (rem-empties stmts)
+    (filter (lambda (item) (not (eq? 'empty-stmt (sx-tag item)))) stmts))
+  
   (define (fD tree seed dict) ;; => tree seed dict
     (sx-match tree
 
@@ -224,10 +238,15 @@
 	       (acons '@L "while"
 		      (add-lexicals "break" "continue" (push-scope dict)))))
 
-      ((for . ,rest)
-       (values tree '()
-	       (acons '@L "for"
-		      (add-lexicals "break" "continue" (push-scope dict)))))
+      ((for (ident ,name) . ,rest)
+       ;;(sferr "for:\n") (pperr tree)
+       (let* ((ref (lookup name dict))
+	      (dict (if (and ref (eq? 'lexical (car ref))) dict
+		       (add-lexical name dict)))
+	      (dict (push-scope dict))
+	      (dict (add-lexicals "break" "continue" dict)))
+	 (values tree '() dict)))
+      ((for . ,rest) (error "missed for"))
 
       ;; (assn (ident ,name) ,rhs))=> (var-assn (ident ,name) ,rhs)
       ;; (assn (aref-or-call ,aexp ,expl)) => (elt-assn ,aexp ,expl ,rhs)
@@ -261,12 +280,17 @@
 			(loop (cdr elts) (1+ ix))))))))
 	 (values `(multi-assn (@ . ,attr) (lval-list . ,lval-expl) ,rhsx)
 		 '() dict)))
+      ((multi-assn . ,rest) (error "missed multi-assn"))
+
+      ((stmt-list . ,stmts)
+       (values `(stmt-list . ,(rem-empties stmts)) '() dict))
 
       ((fctn-defn (fctn-decl (ident ,name)
 			     (ident-list . ,inargs)
-			     (ident-list . ,outargs))
-		  ,_)
-       ;; note: In the following (1) placement of "return" and (2) use of
+			     (ident-list . ,outargs)
+			     . ,comms)
+		  ,stmt-list)
+       ;; Note: In the following (1) placement of "return" and (2) use of
        ;; fold (vs fold-right) is critical for fctn-defn handling in fU.
        (let* ((dict (push-scope (add-symbol name dict)))
 	      (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
@@ -274,8 +298,16 @@
 	      (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
 			  dict outargs))
 	      (dict (add-lexical "return" dict))
-	      (dict (acons '@F name dict)))
-	 (values tree '() dict)))
+	      (dict (acons '@F name dict))
+	      (dstr (if (null? comms) ""
+			(string-join (map cadr (cdr comms)) "\n"))))
+	 ;; TODO: add docstring @code{dstr}
+	 (values
+	  `(fctn-defn (fctn-decl (ident ,name) (ident-list . ,inargs)
+				 (ident-list . ,outargs) (string ,dstr))
+		      ,stmt-list)
+	  '() dict)))
+      ((fctn-defn . ,rest) (error "missed fctn-defn"))
 
       ((command (ident ,cname) . ,args)
        (unless (string=? cname "global") (error "bad command: ~S" cname))
@@ -294,9 +326,10 @@
     ;; Approach: always return kdict or (pop-scope kdict)
     (when #f
       (sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
-      (sferr "    kseed=~S\n    seed=~S\n" kseed seed)
+      ;;(sferr "    kseed=~S\n    seed=~S\n" kseed seed)
       ;;(pperr tree)
       )
+    ;; (case ((pair? tree) all stuff) (pair? kseed) ... (else 
     (if
      (null? tree) (if (null? kseed)
 		      (values seed kdict)		; fD said ignore
@@ -324,12 +357,18 @@
 	       (name (cadr (list-ref decl 1)))
 	       (iargs (cdr (list-ref decl 2))) ; in reverse order
 	       (oargs (cdr (list-ref decl 3))) ; in reverse order
+	       ;;(docst (list-ref decl 4))
+	       ;;(x (begin (sferr "iargs:\n") (pperr iargs) #f))
+	       ;;(x (begin (sferr "oargs:\n") (pperr oargs) #f))
+	       ;;(x (begin (sferr "kdict:\n") (pperr kdict) #f))
 	       (lvars (let loop ((ldict kdict))
 			(cond
 			 ((eq? '@F (caar ldict)) oargs)
-			 ((eq? 'toplevel (cadar ldict)) (loop (cdr ldict)))
-			 (else (cons (cdar ldict) (loop (cdr ldict)))))))
-	       (x (sferr "lvars=~S\n" lvars))
+			 ((and (pair? (cdar ldict)) (eq? 'lexical (cadar ldict)))
+			  (cons (cdar ldict) (loop (cdr ldict))))
+			 (else (loop (cdr ldict))))))
+	       ;;(x (begin (sferr "lvars:\n") (pperr lvars)))
+	       ;;(x (begin (sferr "tail:\n") (pperr tail)))
 	       ;; Ensure that last call is a return.
 	       (body (list-ref tail 1))
 	       ;; Set up the return prompt expr
@@ -343,6 +382,7 @@
 	       (body `(seq ,body ,rval))
 	       ;; Now wrap in local `let'
 	       (body (let loop ((nl '()) (ll '()) (vl '()) (vs lvars))
+		       ;;(sferr "vs=\n") (pperr vs)
 		       (if (null? vs)
 			   `(let ,nl ,ll ,vl ,body)
 			   (loop
@@ -598,14 +638,14 @@
 	 (else (values (cons (reverse kseed) seed) kdict)))))))
 
   (define (fH leaf seed dict)
-    (values (cons leaf seed) dict))
+    (values (if (null? leaf) seed (cons leaf seed)) dict))
 
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
   )
 
 (define show-sxml #t)
 (define (show-octave-sxml v) (set! show-sxml v))
-(define show-xtil #t)
+(define show-xtil #f)
 (define (show-octave-xtil v) (set! show-xtil v))
 
 (define (compile-tree-il exp env opts)
@@ -616,8 +656,8 @@
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
+	    ;;(values (parse-tree-il exp) env cenv)
+	    (values (parse-tree-il '(const "[hello]")) env cenv)
      	    ))
 	(values (parse-tree-il '(void)) env cenv))))
 

@@ -70,18 +70,18 @@
      (statement))
 
     (function-defn
-     (function-decl nontrivial-statement stmt-list the-end
+     (function-decl non-comment-statement stmt-list the-end
       ($$ `(fctn-defn ,$1 ,(tl->list (if $2 (tl-insert $3 $2) $3)))))
-     (function-decl nontrivial-statement the-end
+     (function-decl non-comment-statement the-end
       ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
      (function-decl the-end
       ($$ `(fctn-defn ,$1 (stmt-list)))))
+    
     (the-end ("end" term)) 
 
     (function-decl
-     (function-decl-line lone-comment-list
-			 ($$ (append $1 (list $2))))
-     (function-decl-line))
+     (function-decl-line lone-comment-list ($$ (append $1 (list $2))))
+     (function-decl-line ($$ $1)))
 
     (function-decl-line
      ;; fctn-decl name input-args output-args
@@ -115,6 +115,10 @@
 
     (statement
      (trivial-statement)
+     (nontrivial-statement))
+
+    (non-comment-statement
+     (term ($$ '(empty-stmt)))
      (nontrivial-statement))
 
     (trivial-statement
@@ -182,20 +186,6 @@
      (string ($$ (make-tl 'string-list $1)))
      (string-list string ($$ (tl-append $1 $2))))
      
-
-    ;; Lone colon-expr's can only exist in expr-list for array ref.
-    #;(expr-list
-     (expr ($$ (make-tl 'expr-list $1)))
-     (":" ($$ (make-tl 'expr-list '(colon-expr))))
-     (expr-list "," expr ($$ (tl-append $1 $3)))
-     (expr-list "," ":" ($$ (tl-append $1 '(colon-expr))))
-    )
-    #;(expr
-     (or-expr)
-     (expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
-    )
-    ;;^ expr-list and colon-expr changed 08/13/18 =>
-
     (expr-list
      (expr ($$ (make-tl 'expr-list $1)))
      (expr-list "," expr ($$ (tl-append $1 $3)))
