@@ -130,7 +130,6 @@
 (define-public (make-for lvar expr body dict)
   (let* ((toplev? (eq? 'toplevel (car lvar)))
 	 (ivar `(lexical $ivar ,(genxsym "$ivar")))
-	 ;;(body `(if ,ivar (seq ,body
 	 ;;
 	 (rsym (genxsym "$iter")) (rval `(lexical $iter ,rsym))
 	 (frst `(call ,(xlib-ref 'oct:iter-first) ,rval))
@@ -142,14 +141,12 @@
 	 (inext `(call (lexical iloop ,ilsym) ,next))
 	 (ifrst `(call (lexical iloop ,ilsym) ,frst))
 	 (ocall `(call (lexical oloop ,olsym)))
-
 	 (iloop `(lambda ((name . iloop))
 		   (lambda-case (((,(cadr ivar)) #f #f #f () (,(caddr ivar)))
 				 (if ,ivar
 				     (seq (set! ,lvar ,ivar)
 					  (seq ,body ,inext))
 				     (void))))))
-	 
   	 (ohdlr `(lambda () (lambda-case (((k) #f #f #f () (,(genxsym "k")))
 					  ,inext))))
 	 (oloop (make-thunk `(prompt #t (lexical continue ,csym) ,ifrst ,ohdlr)
@@ -163,9 +160,7 @@
 	   (primcall make-prompt-tag (const break))
 	   (primcall make-prompt-tag (const continue)))
 	  (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
-    (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))
-    ;;`(void)
-    ))
+    (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
   
 ;; @deffn {Procedure} xlang-sxml->xtil exp env opts
 ;; Compile extension SXML tree to external Tree-IL representation.
@@ -476,6 +471,7 @@
        ;; 2) for needs index and should call oct:iter-first oct:iter-next
        ;; 3) BUG top-levels can be introduced here, but we pop scope
        ;;    so these need to be moved to function or global scope
+       ;; 4) for-loops do not restrict scope of the iteration var
        
        ;; ("for" ident "=" expr term stmt-list "end"
        ((for) ;; TODO
@@ -483,13 +479,7 @@
 	       (lvar (list-ref tail 0))	; lvar
 	       (expr (list-ref tail 1))	; expr
 	       (body (list-ref tail 2))	; stmt-list
-	       (stmt (make-for lvar expr body kdict))
-	       )
-	  ;;(sferr "for:\n") (pperr tail)
-	  ;;(sferr "lvar:\n") (pperr lvar)
-	  ;;(sferr "expr:\n") (pperr expr)
-	  ;;(sferr "body:\n") (pperr body)
-	  ;;(sferr "for:\n") (pperr stmt)
+	       (stmt (make-for lvar expr body kdict)))
 	  (values (cons stmt seed) (pop-scope kdict))))
        
        ((while)
@@ -627,8 +617,6 @@
 	(values (cons `(primcall vector . ,(rtail kseed)) seed) kdict))
 
        ;; cell-array
-
-       ;; comm-list
 
        ;; ident, fixed, float, string, comm
 
