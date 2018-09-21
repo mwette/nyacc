@@ -37,9 +37,11 @@
   )
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
+  ;;(apply simple-format (current-error-port) fmt args))
+  (apply simple-format (current-output-port) fmt args))
 (define (pperr tree)
-  (pretty-print tree (current-error-port) #:per-line-prefix "  " #:width 130))
+  ;;(pretty-print tree (current-error-port) #:per-line-prefix "  " #:width 130))
+  (pretty-print tree (current-output-port) #:per-line-prefix "  " #:width 130))
 
 (define xlib-mod '(nyacc lang octave xlib))
 (define xlib-module (resolve-module xlib-mod))
@@ -371,6 +373,7 @@
 	       ;;(x (begin (sferr "tail:\n") (pperr tail)))
 	       ;; Ensure that last call is a return.
 	       (body (list-ref tail 1))
+	       ;;(x (begin (sferr "body/1:\n") (pperr body)))
 	       ;; Set up the return prompt expr
 	       (ptag (lookup "return" kdict))
 	       (body (with-escape ptag body))
@@ -486,9 +489,8 @@
 	  ;;(sferr "lvar:\n") (pperr lvar)
 	  ;;(sferr "expr:\n") (pperr expr)
 	  ;;(sferr "body:\n") (pperr body)
-	  (sferr "stmt:\n") (pperr stmt)
-	  (values (cons stmt kseed) (pop-scope kdict))))
-	  ;;(values (cons '(void) kseed) (pop-scope kdict))))
+	  ;;(sferr "for:\n") (pperr stmt)
+	  (values (cons stmt seed) (pop-scope kdict))))
        
        ((while)
 	(let* ((tail (rtail kseed))
@@ -643,7 +645,7 @@
   (foldts*-values fD fU fH `(*TOP* ,exp) '() env)
   )
 
-(define show-sxml #t)
+(define show-sxml #f)
 (define (show-octave-sxml v) (set! show-sxml v))
 (define show-xtil #f)
 (define (show-octave-xtil v) (set! show-xtil v))
@@ -656,8 +658,8 @@
 	    (lambda () (xlang-sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    ;;(values (parse-tree-il exp) env cenv)
-	    (values (parse-tree-il '(const "[hello]")) env cenv)
+	    (values (parse-tree-il exp) env cenv)
+	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
      	    ))
 	(values (parse-tree-il '(void)) env cenv))))
 
