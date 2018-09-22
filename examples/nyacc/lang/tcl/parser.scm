@@ -134,11 +134,11 @@
 	     ((char=? ch #\#)
 	      `(comment
 		,(reverse-list->string
-		  (let loop ((chl '()) (ch (read-char port)))
+		  (let loop2 ((chl '()) (ch (read-char port)))
 		    (cond
 		     ((eof-object? ch) chl)
-		     ((char=? ch #\newline) chl)
-		     (else (loop (cons ch chl) (read-char port))))))))
+		     ((char=? ch #\newline) (unread-char ch port) chl)
+		     (else (loop2 (cons ch chl) (read-char port))))))))
 
 	     ((char-set-contains? end-cs ch)
 	      (db "C: done\n")
@@ -294,7 +294,6 @@
     ;; or (swallow (read-cmmd cs:ct))
     ))
 
-
 ;; @deffn {Procedure} split-body body
 ;; For the string @var{body} which is known to be interpreted as a sequence
 ;; of commands, split the string into a sequence of commands inside a
@@ -310,6 +309,13 @@
 	  ((eof-object? cmd) '())
 	  ((null? (cdr cmd)) (loop (read-command port)))
 	  (else (cons cmd (loop (read-command port))))))))))
+
+(define (fix-expr-string xstr)
+  (let* ((cmmd (call-with-input-string (string-append "expr " xstr)
+		(lambda (port) (read-command port))))
+	 (tail (sx-tail cmmd 2))
+	 (tail (splice-xtail tail)))
+    `(expr . ,tail)))
 
 ;; convert all words in an expr command to a single list of frags
 (define (splice-xtail tail)
@@ -391,16 +397,20 @@
 ;; or @code{(float "4.56")} or return @code{#f} if not a number.
 ;; @end deffn
 (define (num-string cstr)
-  (and=> 
-   (with-input-from-string cstr
-     (lambda ()
-       (let ((val (read-c-num (read-char))))
-	 (and (eof-object? (peek-char)) val))))
-   (lambda (p)
-     (case (car p)
-       (($fixed) `(fixed ,(cnumstr->scm (cdr p))))
-       (($float) `(float ,(cdr p)))
-       (else (error "coding error"))))))
+  ;; includes ugliness to add sign
+  (let* ((neg? (char=? #\- (string-ref cstr 0)))
+	 (cstr (if neg? (substring/shared cstr 1) cstr)))
+    (define (addsign s) (if neg? (string-append "-" s) s))
+    (and=> 
+     (with-input-from-string cstr
+       (lambda ()
+	 (let ((val (read-c-num (read-char))))
+	   (and (eof-object? (peek-char)) val))))
+     (lambda (p)
+       (case (car p)
+	 (($fixed) `(fixed ,(addsign (cnumstr->scm (cdr p)))))
+	 (($float) `(float ,(addsign (cdr p))))
+	 (else (error "coding error")))))))
 
 ;; ((string "elseif") cond-part body-part . rest)
 ;; ((string "else") body-part)
@@ -410,9 +420,9 @@
     ('() '())
     (`((string "else") (string ,body-part))
      `((else ,(split-body body-part))))
-    (`((string "elseif") ,cond-part (string ,body-part) . ,rest)
+    (`((string "elseif") (string ,cnd) (string ,body-part) . ,rest)
      (cons
-      `(elseif (expr ,@(splice-xtail (list cond-part))) ,(split-body body-part))
+      `(elseif ,(fix-expr-string cnd) ,(split-body body-part))
       (cnvt-cond-tail (list-tail ctail 3))))
     (_
      (throw 'tcl-error "syntax error"))))
@@ -445,9 +455,8 @@
     ("if"
      . ,(lambda (tree)
 	  (sxml-match tree ;; TODO : deal with "elseif" 
-	    ((command (string "if") ,cond-part (string ,then-body) . ,rest)
-	     `(if (expr ,@(splice-xtail (list cond-part)))
-		  ,(split-body then-body)
+	    ((command (string "if") (string ,cnd) (string ,bdy) . ,rest)
+	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
 		  . ,(cnvt-cond-tail rest)))
 	    (,_ (report-error "usage: if cond then else")))))
     ("incr"

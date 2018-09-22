@@ -1,29 +1,60 @@
-;;; nyacc/lang/tcl/tcl-01.test
+;; nyacc/lang/tcl/tcl-01.test		-*- scheme -*-
+;;
+;; Copyright (C) 2017 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
 
-(define (try str)
-  (let ((res (call-with-input-string str read-command)))
-    (sf "\n~S =>\n" str)
-    (pp res)))
+(define-module (tcl-01)
+  #:use-module (nyacc lang tcl parser)
+  ;;#:use-module (language nx-tcl spec)
+  #:use-module ((srfi srfi-1) #:select (fold))
+  #:use-module (test-suite lib))
 
-(define (tclme)
-  (for-each
-   try
-   (list
-    "a"
-    ;;"abc"
-    ;;"abc def ghi"
-    ;;"abc \"def ghi\""
-    ;;"abc [def ghi] "
-    ;;"abc [def ghi] lkj"
-    ;;"abc [def $ghi] lkj"
-    ;;"abc def$ghi"
-    ;;"abc def$ghi$jkl"
-    ;;"abc [def ${ghi}] lkj"
-    ;;"abc [def ${ghi jkl}] mno"
-    ;;"abc {a {b 1} c}"
-    ;; later
-    ;;"abc ${def}(ghi)"
-    )))
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
+(define (sf fmt . args) (apply simple-format #t fmt args))
+
+(with-test-prefix "nyacc/lang/tcl-01, parser"
+
+  (pass-if "read-command"
+    (fold
+     (lambda (pair ok?)
+       (and ok?
+	    (equal? (call-with-input-string (car pair) read-command)
+		    (cdr pair))))
+     #t
+     '(("a" . (command (string "a")))
+       ("abc" . (command (string "abc")))
+       ("abc def ghi" . (command (string "abc") (string "def") (string "ghi")))
+       ("abc \"def ghi\"" . (command (string "abc") (string "def ghi")))
+       ("abc [def ghi]"
+	. (command (string "abc") (command (string "def") (string "ghi"))))
+       ("abc [def ghi] ljk"
+	. (command (string "abc") (command (string "def") (string "ghi"))
+		   (string "ljk")))
+       ("abc def$ghi"
+	. (command (string "abc") (word (string "def") (deref "ghi"))))
+       ("abc def$ghi$jkl"
+	. (command (string "abc")
+		   (word (string "def") (deref "ghi") (deref "jkl"))))
+       ("abc [def ${ghi}] jkl"
+	. (command (string "abc")
+		   (command (string "def") (deref "ghi"))
+		   (string "jkl")))
+       ("abc [def ${ghi jkl}] mno"
+	. (command (string "abc")
+		   (command (string "def") (deref "ghi jkl") )
+		   (string "mno")))
+       ("abc {a {b 1} c}"
+	. (command (string "abc") (string "a {b 1} c")))
+       ("abc ${def}(ghi)"
+	. (command (string "abc")
+		   (deref-indexed "def" (string "ghi"))))
+       ))))
+
 
 #|
 (define (tclme)
@@ -38,6 +69,6 @@ abc def$ghi$jkl
 abc [def ${ghi}] lkj
 abc [def ${ghi jkl}] mno
 ")))
-
+|#
 
 ;; --- last line --- 

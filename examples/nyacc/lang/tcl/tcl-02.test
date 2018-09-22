@@ -1,0 +1,47 @@
+;; nyacc/lang/tcl/tcl-02.test		-*- scheme -*-
+;;
+;; Copyright (C) 2017 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-module (tcl-02)
+  #:use-module (system base compile)
+  #:use-module (test-suite lib))
+
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
+(define (sf fmt . args) (apply simple-format #t fmt args))
+
+(define a)
+(define b)
+(define c)
+(define d)
+(define e)
+(define f)
+(define _1pl)
+
+(with-test-prefix "tcl-02"
+
+  (pass-if "compile tcl-02.tcl"
+    (string? (compile-file "tcl-02.tcl" #:from 'nx-tcl)))
+  (load "tcl-02.tcl")
+
+  (pass-if "set/expr"
+    (= c 12))
+
+  (pass-if "proc"
+    (= 3 (_1pl 2)))
+
+  (pass-if "if-else"
+    (and
+     (= d 3)
+     (= e 4)
+     (= f 6)
+     #t))
+
+  )
+
+;; --- last line --- 
