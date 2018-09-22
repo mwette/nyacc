@@ -339,9 +339,9 @@
 	     (string-append "*** tcl: " fmt "\n") args)
       (values '(void) env))))
 
-(define show-sxml #t)
+(define show-sxml #f)
 (define (show-tcl-sxml v) (set! show-sxml v))
-(define show-xtil #t)
+(define show-xtil #f)
 (define (show-tcl-xtil v) (set! show-xtil v))
 
 (define (compile-tree-il exp env opts)

@@ -79,6 +79,8 @@
 	  (case (car tree)
 	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
 	    ((float) (string->number (cnumstr->scm (tx1 tree))))
+	    ((string) (sx-ref tree 1))
+	    ((ident) (sx-ref tree 1))
 	    ((pre-inc post-inc) (1+ (ev1 tree)))
 	    ((pre-dec post-dec) (1- (ev1 tree)))
 	    ((pos) (ev1 tree))
@@ -104,7 +106,7 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    (else (error "incomplete expr implementation"))))))
+	    (else (error "incomplete expr implementation" tree))))))
     (eval-expr tree)))
 
 (define-public (tcl:word . args)
@@ -196,11 +198,6 @@
     (unless (string=? nnl "-nonewline") (throw 'tcl-error "puts: bad arg"))
     "(not implemented)"
     )))
-
-;; === format
-
-
-
 
 
 ;; === xdict
