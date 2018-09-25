@@ -122,7 +122,7 @@
       (loop (1+ jx) (cdr elts)))))
 
 (define-public (oct:aref-or-call proc-or-array . args)
-  ;;(sferr "proc-or-array=~S  args=~S\n" proc-or-array args)
+  (sferr "proc-or-array=~S  args=~S\n" proc-or-array args)
   (cond
    ((procedure? proc-or-array)
     (apply proc-or-array args))

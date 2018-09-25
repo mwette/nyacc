@@ -130,7 +130,7 @@
   (catch
    'nyacc-error
    (lambda ()
-     (identity ;;apply-octave-statics
+     (apply-octave-statics
       (raw-parser (gen-octave-lexer) #:debug debug)))
    (lambda (key fmt . args)
      (apply simple-format (current-error-port) fmt args)

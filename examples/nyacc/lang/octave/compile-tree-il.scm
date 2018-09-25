@@ -82,7 +82,8 @@
 
 ;; In octave, variables are not declared so this will add to either the
 ;; containting function or toplevel.
-(define (add-symbol name dict)
+(define add-symbol nx-add-symbol)
+#;(define (add-symbol name dict)
   (if (function-scope? dict)
       (nx-add-lexical name dict)
       (nx-add-toplevel name dict)))
@@ -160,8 +161,30 @@
 	   (primcall make-prompt-tag (const break))
 	   (primcall make-prompt-tag (const continue)))
 	  (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
-    (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
-  
+		  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
+
+;; turn
+;; @example
+;;  ((set! (lexical foo foo-1) (lambda ...) (set! (lexical bar bar-1) ...)
+;; into
+;;  ((foo bar ...) (foo-1 bar-1 ...) ((lambda ...) (lambda ...) ...))
+;; @end example
+(define (funcs->letrec main rest)
+  (let loop ((names '()) (gsyms '()) (vals '()) (funcs rest))
+    (if (null? funcs)
+	(let* ((nref (cadr main)) (name (cadr nref)) (gsym (caddr nref))
+	       (names (cons name (reverse names)))
+	       (gsyms (cons gsym (reverse gsyms)))
+	       (vals (cons (caddr main) (reverse vals))))
+	  `(letrec ,names ,gsyms ,vals ,nref))
+	(let* ((func (car funcs)) (nref (cadr func))
+	       (name (cadr nref)) (gsym (caddr nref)))
+	  (loop (cons name names) (cons gsym gsyms) (cons (caddr func) vals)
+		(cdr funcs))))))
+
+;;(define (trim-func-names dict)
+
+
 ;; @deffn {Procedure} xlang-sxml->xtil exp env opts
 ;; Compile extension SXML tree to external Tree-IL representation.
 ;; This one is public because it's needed for debugging the compiler.
@@ -175,10 +198,7 @@
     (sx-match tree
 
       ((ident ,name)
-       (cond
-	((lookup name dict) => (lambda (r) (values '() r dict)))
-	(else (let ((dict (add-symbol name dict)))
-		(values '() (lookup name dict) dict)))))
+       (values '() (lookup name dict) dict))
 
       ((fixed ,sval)
        (values '() `(const ,(string->number sval)) dict))
@@ -243,20 +263,23 @@
 	      (dict (push-scope dict))
 	      (dict (add-lexicals "break" "continue" dict)))
 	 (values tree '() dict)))
-      ((for . ,rest) (error "missed for"))
+      ((for . ,rest) (throw 'nyacc-error "syntax error: for"))
 
       ;; (assn (ident ,name) ,rhs))=> (var-assn (ident ,name) ,rhs)
       ;; (assn (aref-or-call ,aexp ,expl)) => (elt-assn ,aexp ,expl ,rhs)
       ;; (assn (sel ,ident ,expr) ,rhs) => (mem-assn ,ident ,expr ,rhs)
       ;; (assn . ,other) => syntax error
       ((assn (@ . ,attr) (ident ,name) ,rhsx)	; assign variable
-       (values `(var-assn (@ . ,attr) (ident ,name) ,rhsx) '() dict))
+       (let* ((ref (lookup name dict))
+	      (dict (if ref dict (add-symbol name dict))))
+	 ;;(sferr "dict:\n") (pperr dict)
+	 (values `(var-assn (@ . ,attr) (ident ,name) ,rhsx) '() dict)))
       ((assn (@ . ,attr) (aref-or-call ,aexp ,expl) ,rhsx) ; assign element
        (values `(elt-assn (@ . ,attr) ,aexp ,expl ,rhsx) '() dict))
       ((assn (@ . ,attr) (sel (ident ,name) ,expr) ,rhsx) ; assign member
        (values `(mem-assn (@ . ,attr) ,expr ,name ,rhsx) '() dict))
-      ((assn . ,other)
-       (throw 'nyacc-error "syntax error"))
+      
+      ((assn . ,other) (throw 'nyacc-error "syntax error: assn"))
 
       ((multi-assn (@ . ,attr) (lval-list . ,elts) ,rhsx)
        (let* ((lval-expl
@@ -267,29 +290,30 @@
 			    (rv `(lexical ,s ,g)))
 		       (cons
 			(sx-match (car elts)
-			  ((ident ,name)
-			   `(var-assn (ident ,name) ,rv))
-			  ((aref-or-call ,aexp ,expl)
-			   `(elt-assn ,aexp ,expl ,rv))
-			  ((sel (ident ,name) ,expr)
-			   `(mem-assn ,expr ,name ,rv))
+			  ((ident ,name) `(var-assn (ident ,name) ,rv))
+			  ((aref-or-call ,ax ,xl) `(elt-assn ,ax ,xl ,rv))
+			  ((sel (ident ,name) ,expr) `(mem-assn ,expr ,name ,rv))
 			  (else (throw 'nyacc-error "bad lhs syntax")))
 			(loop (cdr elts) (1+ ix))))))))
 	 (values `(multi-assn (@ . ,attr) (lval-list . ,lval-expl) ,rhsx)
 		 '() dict)))
-      ((multi-assn . ,rest) (error "missed multi-assn"))
+      ((multi-assn . ,rest) (throw 'nyacc-error "syntax error: multi-assn"))
 
       ((stmt-list . ,stmts)
        (values `(stmt-list . ,(rem-empties stmts)) '() dict))
 
+      ;; Notes:
+      ;; 1) We add toplevel if function is toplevel, otherwise it appears
+      ;;    in a function-file and we have already set up dict entries.
+      ;; 2) In the following (1) placement of "return" and (2) use of fold
+      ;;    (vs fold-right) is critical for fctn-defn handling in fU.
       ((fctn-defn (fctn-decl (ident ,name)
 			     (ident-list . ,inargs)
 			     (ident-list . ,outargs)
 			     . ,comms)
 		  ,stmt-list)
-       ;; Note: In the following (1) placement of "return" and (2) use of
-       ;; fold (vs fold-right) is critical for fctn-defn handling in fU.
-       (let* ((dict (push-scope (add-symbol name dict)))
+       (let* ((dict (if (top-level? dict) (add-symbol name dict) dict))
+	      (dict (push-scope dict))
 	      (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
 			  dict inargs))
 	      (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
@@ -299,12 +323,13 @@
 	      (dstr (if (null? comms) ""
 			(string-join (map cadr (cdr comms)) "\n"))))
 	 ;; TODO: add docstring @code{dstr}
+	 ;;(sferr "fctn aft dict:\n") (pperr dict)
 	 (values
 	  `(fctn-defn (fctn-decl (ident ,name) (ident-list . ,inargs)
 				 (ident-list . ,outargs) (string ,dstr))
 		      ,stmt-list)
 	  '() dict)))
-      ((fctn-defn . ,rest) (error "missed fctn-defn"))
+      ((fctn-defn . ,rest) (throw 'nyacc-error "syntax error: function def"))
 
       ((command (ident ,cname) . ,args)
        (unless (string=? cname "global") (error "bad command: ~S" cname))
@@ -312,8 +337,16 @@
 	'() '()
 	(fold (lambda (arg dict) (add-toplevel (sx-ref arg 1) dict)) dict args)))
 
-      ((comm . ,_) (values '() '() dict))
-       
+      ((function-file . ,tail)
+       ;; Here we add provide ability for forward refs to all functions.
+       (values tree '()
+	       (fold (lambda (tree dict)
+		       (sx-match tree
+			 ((fctn-defn (fctn-decl (ident ,name) . ,_1) . ,_2)
+			  (add-lexical name dict))
+			 (else dict)))
+		     (push-scope dict) tail)))
+
       (else
        (values tree '() dict))))
 
@@ -336,39 +369,51 @@
 
        ;; before leaving add a call to make sure all toplevels are defined
        ((*TOP*)
-	(values (add-topdefs kdict (car kseed)) kdict))
+	(let ((tail (rtail kseed)))
+	  (cond
+	   ((null? tail) (values '(void) kdict)) ; just comments
+	   (else (values (add-topdefs kdict (car kseed)) kdict)))))
 
        ((comm) (values seed kdict))
 
-       ((script function-file)
-	(let* ((tail (rtail kseed))
+       ((script)
+	(let* ((tail (delete '(void) (rtail kseed)))
+	       (tail (if (pair? tail) tail '(void))) ; needed?
 	       (body (fold-right
 		      (lambda (stmt body) (if body `(seq ,stmt ,body) stmt))
 		      #f tail)))
 	  (values (cons body seed) kdict)))
 
+       ((function-file)
+	;; This puts all the functions into a letrec and defins a toplevel
+	;; to that.  The letrec returns the top function ref.
+	;; Also, we pop scope and add toplevel to parent scope.
+	(let* ((tail (delete '(void) (rtail kseed)))
+	       (main (car tail))
+	       (rest (cdr tail))
+	       (lrec (funcs->letrec main rest))
+	       (name (symbol->string (cadadr main)))
+	       (xdict (add-toplevel name (pop-scope kdict)))
+	       (nref (lookup name xdict))
+	       (body `(set! ,nref ,lrec)))
+	  (values (cons body seed) xdict)))
+	
        ;; For functions, need to check kdict for lexicals and add them.
        ((fctn-defn)
 	(let* ((tail (rtail kseed))
 	       (decl (list-ref tail 0))
-	       (name (cadr (list-ref decl 1)))
+	       (n-ref (list-ref decl 1))
+	       (name (cadr n-ref))
 	       (iargs (cdr (list-ref decl 2))) ; in reverse order
 	       (oargs (cdr (list-ref decl 3))) ; in reverse order
-	       ;;(docst (list-ref decl 4))
-	       ;;(x (begin (sferr "iargs:\n") (pperr iargs) #f))
-	       ;;(x (begin (sferr "oargs:\n") (pperr oargs) #f))
-	       ;;(x (begin (sferr "kdict:\n") (pperr kdict) #f))
 	       (lvars (let loop ((ldict kdict))
 			(cond
 			 ((eq? '@F (caar ldict)) oargs)
 			 ((and (pair? (cdar ldict)) (eq? 'lexical (cadar ldict)))
 			  (cons (cdar ldict) (loop (cdr ldict))))
 			 (else (loop (cdr ldict))))))
-	       ;;(x (begin (sferr "lvars:\n") (pperr lvars)))
-	       ;;(x (begin (sferr "tail:\n") (pperr tail)))
 	       ;; Ensure that last call is a return.
 	       (body (list-ref tail 1))
-	       ;;(x (begin (sferr "body/1:\n") (pperr body)))
 	       ;; Set up the return prompt expr
 	       (ptag (lookup "return" kdict))
 	       (body (with-escape ptag body))
@@ -380,20 +425,18 @@
 	       (body `(seq ,body ,rval))
 	       ;; Now wrap in local `let'
 	       (body (let loop ((nl '()) (ll '()) (vl '()) (vs lvars))
-		       ;;(sferr "vs=\n") (pperr vs)
-		       (if (null? vs)
-			   `(let ,nl ,ll ,vl ,body)
+		       (if (null? vs) `(let ,nl ,ll ,vl ,body)
 			   (loop
 			    (cons (list-ref (car vs) 1) nl)
 			    (cons (list-ref (car vs) 2) ll)
 			    (cons '(void) vl)
 			    (cdr vs)))))
 	       ;;
-	       (fctn `(set! (toplevel ,name)
-			    (lambda ((name . ,name) (language . nx-octave))
-			      (lambda-case ((() ,(map cadr iargs) #f #f
-					     ,(map (lambda (v) '(void)) iargs)
-					     ,(map caddr iargs)) ,body))))))
+	       (fctn
+		`(set! ,n-ref (lambda ((name . ,name) (language . nx-octave))
+				(lambda-case ((() ,(map cadr iargs) #f #f
+					       ,(map (lambda (v) '(void)) iargs)
+					       ,(map caddr iargs)) ,body))))))
 	  (values (cons fctn seed) (pop-scope kdict))))
 
        ;; fctn-decl: handled by fctn-defn case
