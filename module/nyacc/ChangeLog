@@ -1,3 +1,9 @@
+2018-09-23  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (make-comm-reader): For comment patterns ending with
+	newline, when see eof-object should return match pair but was just
+	returning the string (i.e., was "comment" now '($lone-comm "comment"))
+
 2018-09-05  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lalr.scm (process-spec): added alt-start spec attribute in order

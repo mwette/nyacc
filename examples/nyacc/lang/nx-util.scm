@@ -37,7 +37,8 @@
 	    )
   )
 
-(define (genxsym name) (gensym (string-append name "-")))
+(define (genxsym name)
+  (gensym (string-append (if (string? name) name (symbol->string name)) "-")))
 
 ;; @deffn {Procedure} nx-push-scope dict
 ;; Push scope level of dict, returning new dict.
