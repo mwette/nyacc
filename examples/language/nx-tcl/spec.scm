@@ -25,9 +25,10 @@
 
 (define-language nx-tcl
   #:title	"nx-tcl"
-  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
-  				  (read-tcl-stmt p e)
-  				  (read-tcl-file p e)))
+  #:reader	(lambda (p e) (cond
+			       ((file-port? p) (read-tcl-file p e))
+			       ((interaction-environment) (read-tcl-stmt p e))
+			       (else (read-tcl-file p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	write
