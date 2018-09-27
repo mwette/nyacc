@@ -26,9 +26,10 @@
 
 (define-language nx-javascript
   #:title	"nx-javascript"
-  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
-  				  (read-js-stmt p e)
-  				  (read-js-file p e)))
+  #:reader	(lambda (p e) (cond
+			       ((file-port? p) (read-js-file p e))
+			       ((interaction-environment) (read-js-stmt p e))
+			       (else (read-js-file p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-js

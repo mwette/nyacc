@@ -541,7 +541,7 @@
       ;; TODO: check LeftHandSideExpression
       ((AssignmentExpression
 	(@ . ,attr) (PrimaryExpression (Identifier ,name)) ,assn ,rhs)
-       (values `(var-AssignmentExpression ,(cdr tree)) '() dict))
+       (values `(var-AssignmentExpression . ,(cdr tree)) '() dict))
       ((AssignmentExpression
 	(@ . ,attr) (obj-ref ,expr (Identifier ,name)) ,assn ,rhs)
        (values
@@ -808,15 +808,12 @@
        ((var-AssignmentExpression)
 	(let* ((tail (rtail kseed))
 	       )
-	  (sferr "obj-Ass\n") (pperr tail)
+	  (sferr "obj-Ass\n") (pperr (reverse kseed)) ;;(pperr tail)
 	  (values (cons (op-assn kseed) seed) kdict)))
 
        ((obj-AssignmentExpression)
-	(let* ((tail (rtail kseed))
-	       )
-	  (sferr "obj-Ass\n") (pperr tail)
+	(let* ((tail (rtail kseed)))
 	  (values (cons '(void) seed) dict)))
-	;;;;`(obj-AssignmentExpression (@ . ,attr) ,expr ,name ,op ,rhs)
        
        ;; expr-list
 

@@ -70,6 +70,8 @@
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
+(define nx-undefined (if #f #f))
+
 ;; @deffn {Procedure} nx-get-method obj name
 ;; find a 
 ;; @end deffn 
