@@ -28,6 +28,8 @@
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
+(define undefined (if #f #f))
+
 (define* (xassert cnd #:optional msg)
   (unless cnd (error (or msg "assertion failed"))))
 
@@ -98,6 +100,14 @@
 
 ;; ===
 
+;; inargs and outargs are initialized to 
+(define-public (oct:narg . args)
+  (let loop ((args args))
+    (if (null? args) 0
+	(if (eq? (car args) undefined)
+	    (loop (cdr args))
+	    (1+ (loop (cdr args)))))))
+
 ;; Note:
 ;; We use row-major order, whereas MATLAB used column major order,
 ;; or at least it originally did.  Not sure since super matrices.
@@ -122,7 +132,6 @@
       (loop (1+ jx) (cdr elts)))))
 
 (define-public (oct:aref-or-call proc-or-array . args)
-  (sferr "proc-or-array=~S  args=~S\n" proc-or-array args)
   (cond
    ((procedure? proc-or-array)
     (apply proc-or-array args))

@@ -23,6 +23,7 @@
 
 (define-module (nyacc lang nx-util)
   #:export (genxsym
+	    nx-undefined-xtil
 	    nx-push-scope nx-pop-scope nx-top-level?
 	    nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-symbol
 	    nx-lookup-in-env nx-lookup
@@ -39,6 +40,8 @@
 
 (define (genxsym name)
   (gensym (string-append (if (string? name) name (symbol->string name)) "-")))
+
+(define nx-undefined-xtil `(const ,(if #f #f)))
 
 ;; @deffn {Procedure} nx-push-scope dict
 ;; Push scope level of dict, returning new dict.
