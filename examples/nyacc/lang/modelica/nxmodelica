@@ -4,8 +4,13 @@ exec guile $0 $*
 !#
 
 (use-modules (nyacc lang modelica parser))
+(use-modules (nyacc lang sx-util))
+(use-modules ((srfi srfi-1) #:select (fold)))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 pretty-print))
+
+(define (sf fmt . args) (apply simple-format #t fmt args))
+(define (pp exp) (pretty-print exp #:per-line-prefix "  "))
 
 (define (fail fmt . args)
   (apply simple-format (current-error-port)
@@ -14,7 +19,14 @@ exec guile $0 $*
   (exit 1))
 
 (define options
-  (list))
+  (list (option '(#\h "help") #f #f
+		(lambda (opt name arg seed)
+		  (sf "hmmm\n")
+		  (acons 'help? #t seed)))
+	(option '(#\g "gen") #t #f
+		(lambda (opt name arg seed)
+		  (acons 'gen arg seed)))
+	))
 
 (define (parse-args args)
   (args-fold args options
@@ -22,20 +34,52 @@ exec guile $0 $*
 	       (fail "unrecognized option: ~S" name)
 	       (exit 1))
 	     (lambda (file seed)
-	       (if (assq-ref 'file seed)
-		   (fail "only one inupt file can be specified"))
 	       (if (string-suffix? file ".mo")
 		   (fail "expecting .mo file"))
-	       (acons 'file file seed))
-	     '()))
+	       (acons 'files (cons file (assq-ref seed 'files)) seed))
+	     '((files))))
 
-(define (compile-nx-file . args)
+(define (update-dict file dict)
+  (let ((tree (call-with-input-file file
+		(lambda (port) (read-mo-file port (current-module))))))
+    (fold
+     (lambda (defn dict)
+       (sx-match defn
+	 (((class connector) (ident ,name) . ,_)
+	  (acons name defn dict))
+	 (else
+	  (sf "missed\n") (pp defn)
+	  dict)))
+     dict (sx-tail tree))))
+
+(define cnvt #f)
+
+(define (convert-nx-file . args)
   (let* ((options (parse-args args))
-	 (file (assoc-ref options 'file)))
-    (let* ((tree (call-with-input-file file
-		   (lambda (port) (read-mo-file port (current-module))))))
-      (pretty-print tree))))
+	 (files (assoc-ref options 'files))
+	 (dict (fold update-dict '() files)))
+      ;;(sf "files=~S\n" files)
+      ;;(sf "dict:\n") (pp dict)
+      (and=> (assq-ref options 'gen)
+	     (lambda (name)
+	       (sf "converting ~S ...\n" name)
+	       (cnvt name dict)
+	       #f))
+      #f))
 
-(apply compile-nx-file (cdr (program-arguments)))
+;; =============================================================================
+
+(define (expand
+
+(set!
+ cnvt
+ (lambda (name dict)
+   (let* ((form (assq-ref dict name))
+	  )
+     #f)))
+
+;; =============================================================================
+
+(apply convert-nx-file (cdr (program-arguments)))
 
 ;; --- last line ---
