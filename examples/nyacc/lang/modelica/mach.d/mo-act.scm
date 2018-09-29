@@ -91,7 +91,7 @@
    ;; long-class-specifier => ident string-comment composition "end" ident
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (check-ids $1 $5)
-     (if (pair? $2) (list $1 $2 $3) (list $1 $3)))
+     (list $1 $3))
    ;; long-class-specifier => "extends" ident class-modification string-com...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      (check-ids $1 $5)
@@ -102,23 +102,30 @@
      (list '(@ extends . "yes") $2 $3 $4))
    ;; short-class-specifier => ident "=" base-prefix type-specifier array-s...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     (list $1 `(is ,$3 ,$4 ,$5 ,$6 ,$7)))
+     `(short-class-spec ,$1 ,$3 ,$4 ,$5 ,$6))
    ;; short-class-specifier => ident "=" base-prefix type-specifier array-s...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(short-class-spec ,$1 ,$3 ,$4 ,$5))
    ;; short-class-specifier => ident "=" base-prefix type-specifier class-m...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(short-class-spec ,$1 ,$3 ,$4 ,$5))
    ;; short-class-specifier => ident "=" base-prefix type-specifier comment
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(short-class-spec ,$1 ,$3 ,$4))
    ;; short-class-specifier => ident "=" "enumeration" "(" enum-list ")" co...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(short-class-enum-spec ,$1 ,$5))
    ;; short-class-specifier => ident "=" "enumeration" "(" ":" ")" comment
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(short-class-enum-spec ,$1 ,$5))
    ;; der-class-specifier => ident "=" "der" "(" type-specifier "," der-cla...
    (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(der-class-specifier ... (tl->list $7)))
-   ;; der-class-specifier-1 => ident
+     `(der-class-specifier ,$1 ,$5 ,$7))
+   ;; der-class-specifier-1 => ident-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; ident-list-1 => ident
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
-   ;; der-class-specifier-1 => der-class-specifier-1 ";" ident
+   ;; ident-list-1 => ident-list-1 ";" ident
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; base-prefix => "input"
    (lambda ($1 . $rest) $1)
@@ -188,13 +195,17 @@
    ;; language-specification => string
    (lambda ($1 . $rest) $1)
    ;; external-function-call => component-reference "=" ident "(" expressio...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(ext-fctn-call ,$1 ,$3 ,$5))
    ;; external-function-call => component-reference "=" ident "(" ")"
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(ext-fctn-call ,$1 ,$3 '(expr-list)))
    ;; external-function-call => ident "(" expression-list ")"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(ext-fctn-call ,$1 ,$3))
    ;; external-function-call => ident "(" ")"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(ext-fctn-call ,$1 '(expr-list)))
    ;; element-list => element-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; element-list-1 => element ";"
@@ -240,9 +251,7 @@
    (lambda $rest (list))
    ;; $P6 => "outer"
    (lambda ($1 . $rest) $1)
-   ;; element-1 => class-definition
-   (lambda ($1 . $rest) $1)
-   ;; element-1 => component-clause
+   ;; element-1 => element-2
    (lambda ($1 . $rest) $1)
    ;; element-1 => "replaceable" element-2 constraining-clause comment
    (lambda ($4 $3 $2 $1 . $rest) $1)
@@ -271,17 +280,18 @@
    ;; import-list => import-list "," ident
    (lambda ($3 $2 $1 . $rest) $1)
    ;; extends-clause => "extends" name class-modification annotation
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest) `(extends ,$2 ,$3))
    ;; extends-clause => "extends" name class-modification
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(extends ,$2 ,$3))
    ;; extends-clause => "extends" name annotation
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(extends ,$2))
    ;; extends-clause => "extends" name
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(extends ,$2))
    ;; constraining-clause => "constrainedby" name class-modification
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(constrained-by ,$1 ,$2))
    ;; constraining-clause => "constrainedby" name
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(constrained-by ,$1))
    ;; component-clause => type-prefix type-specifier array-subscripts compo...
    (lambda ($4 $3 $2 $1 . $rest)
      `(component-clause ,$1 ,$2 ,$3 ,$4))
@@ -324,19 +334,22 @@
    ;; type-prefix-3 => "output"
    (lambda ($1 . $rest) $1)
    ;; type-specifier => name
-   (lambda ($1 . $rest) $1)
-   ;; component-list => component-declaration
-   (lambda ($1 . $rest) $1)
-   ;; component-list => component-list "," component-declaration
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($1 . $rest) `(type-spec ,$1))
+   ;; component-list => component-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; component-list-1 => component-declaration
+   (lambda ($1 . $rest) (make-tl 'comp-list $1))
+   ;; component-list-1 => component-list-1 "," component-declaration
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; component-declaration => declaration condition-attribute comment
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(comp-decl ,$1 ,$2))
    ;; component-declaration => declaration comment
    (lambda ($2 $1 . $rest) $1)
    ;; condition-attribute => "if" expression
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(if ,$2))
    ;; declaration => ident $P7 $P8
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     (make-sx 'decl #f $1 $2 $3))
    ;; $P7 => 
    (lambda $rest (list))
    ;; $P7 => array-subscripts
@@ -354,13 +367,15 @@
    ;; modification => ":=" expression
    (lambda ($2 $1 . $rest) $1)
    ;; class-modification => "(" argument-list ")"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) $2)
    ;; class-modification => "(" ")"
-   (lambda ($2 $1 . $rest) $1)
-   ;; argument-list => argument
-   (lambda ($1 . $rest) $1)
-   ;; argument-list => argument-list "," argument
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) '(arg-list))
+   ;; argument-list => arg-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; arg-list-1 => argument
+   (lambda ($1 . $rest) (make-tl 'arg-list $1))
+   ;; arg-list-1 => arg-list-1 "," argument
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; argument => element-modification-or-replaceable
    (lambda ($1 . $rest) $1)
    ;; argument => element-redeclaration
@@ -436,7 +451,7 @@
    ;; equation-list-1 => equation-list-1 equation ";"
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; equation => equation-1 comment
-   (lambda ($2 $1 . $rest) (append $1 (list $2)))
+   (lambda ($2 $1 . $rest) $1)
    ;; equation-1 => simple-expression "=" expression
    (lambda ($3 $2 $1 . $rest) `(equate ,$1 ,$3))
    ;; equation-1 => if-equation
@@ -454,7 +469,7 @@
    ;; statement-list => statement-list statement ";"
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; statement => statement-1 comment
-   (lambda ($2 $1 . $rest) (append $1 (list $2)))
+   (lambda ($2 $1 . $rest) $1)
    ;; statement-1 => component-reference ":=" expression
    (lambda ($3 $2 $1 . $rest) `(assign ,$1 ,$3))
    ;; statement-1 => component-reference function-call-args
@@ -649,7 +664,7 @@
    ;; term => factor
    (lambda ($1 . $rest) $1)
    ;; term => term mul-op factor
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) (list $2 $1 $3))
    ;; mul-op => "*"
    (lambda ($1 . $rest) 'mul)
    ;; mul-op => "/"
@@ -658,12 +673,18 @@
    (lambda ($1 . $rest) 'dot-mul)
    ;; mul-op => "./"
    (lambda ($1 . $rest) 'dot-div)
-   ;; factor => primary
+   ;; factor => unary-expr
    (lambda ($1 . $rest) $1)
-   ;; factor => factor "^" primary
+   ;; factor => factor "^" unary-expr
    (lambda ($3 $2 $1 . $rest) `(pow ,$1 ,$2))
-   ;; factor => factor ".^" primary
+   ;; factor => factor ".^" unary-expr
    (lambda ($3 $2 $1 . $rest) `(dot-pow ,$1 ,$2))
+   ;; unary-expr => primary
+   (lambda ($1 . $rest) $1)
+   ;; unary-expr => "+" primary
+   (lambda ($2 $1 . $rest) `(pos ,$2))
+   ;; unary-expr => "-" primary
+   (lambda ($2 $1 . $rest) `(neg ,$2))
    ;; primary => unsigned-number
    (lambda ($1 . $rest) `(p-expr ,$1))
    ;; primary => string
@@ -673,23 +694,22 @@
    ;; primary => "true"
    (lambda ($1 . $rest) `(p-expr '(true)))
    ;; primary => name function-call-args
-   (lambda ($2 $1 . $rest)
-     `(fctn-call ,$1 ,(tl->list $2)))
+   (lambda ($2 $1 . $rest) `(fctn-call ,$1 ,$2))
    ;; primary => "der" function-call-args
    (lambda ($2 $1 . $rest) `(der ,$2))
    ;; primary => name
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(p-expr ,$1))
    ;; primary => name array-subscripts
    (lambda ($2 $1 . $rest) `(array-elt ,$1 ,$2))
    ;; primary => "(" output-expression-list ")"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(p-expr ,$2))
    ;; primary => "[" expression-list-list "]"
    (lambda ($3 $2 $1 . $rest)
      `(matrix
         ,(map (lambda (row) (cons 'row (cdr row)))
               (cdr (tl->list $2)))))
    ;; primary => "{" function-arguments "}"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(??? ,$2))
    ;; expression-list-list => expression-list
    (lambda ($1 . $rest) (make-tl 'rows $1))
    ;; expression-list-list => expression-list-list ";" expression-list
@@ -733,11 +753,12 @@
    ;; named-only-arguments-1 => function-arguments-1 "," named-argument
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; named-argument => ident "=" function-argument
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(named-arg ,$1 ,$3))
    ;; function-argument => "function" name "(" named-arguments ")"
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(fctn-arg ,$2 ,$4))
    ;; function-argument => "function" name "(" ")"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest) `(fctn-arg ,$2))
    ;; function-argument => expression
    (lambda ($1 . $rest) $1)
    ;; output-expression-list => ","
@@ -746,10 +767,12 @@
    (lambda ($1 . $rest) $1)
    ;; output-expression-list => output-expression-list "," expression
    (lambda ($3 $2 $1 . $rest) $1)
-   ;; expression-list => expression
-   (lambda ($1 . $rest) $1)
-   ;; expression-list => expression-list "," expression
-   (lambda ($3 $2 $1 . $rest) $1)
+   ;; expression-list => expression-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; expression-list-1 => expression
+   (lambda ($1 . $rest) (make-tl 'expr-list $1))
+   ;; expression-list-1 => expression-list-1 "," expression
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; array-subscripts => "[" array-subscript-list "]"
    (lambda ($3 $2 $1 . $rest) (tl->list $2))
    ;; array-subscript-list => subscript
@@ -766,7 +789,7 @@
      (if (pair? $1) `(comment ,$1 ,$2) `(comment ,$2)))
    ;; comment => string-comment
    (lambda ($1 . $rest)
-     (if (pair? $1) `(comment ,$1) '(comment)))
+     (if (pair? $1) `(comment ,$1) '()))
    ;; string-comment => 
    (lambda $rest (list))
    ;; string-comment => string-cat

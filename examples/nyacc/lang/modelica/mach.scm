@@ -115,7 +115,7 @@
 
     (long-class-specifier
      (ident string-comment composition "end" ident
-	    ($$ (check-ids $1 $5) (if (pair? $2) (list $1 $2 $3) (list $1 $3))))
+	    ($$ (check-ids $1 $5) (list $1 $3)))
      ("extends" ident class-modification string-comment composition "end" ident
       ($$ (check-ids $1 $5) (list '(@ extends . "yes") $2 $3 $4 $5)))
      ("extends" ident string-comment composition "end" ident
@@ -125,24 +125,27 @@
     (short-class-specifier
      (ident "=" base-prefix type-specifier array-subscripts
 	    class-modification comment
-	    ($$ (list $1 `(is ,$3 ,$4 ,$5 ,$6 ,$7))))
+	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5 ,$6)))
      (ident "=" base-prefix type-specifier array-subscripts comment
-	    )
-     
-     (ident "=" base-prefix type-specifier class-modification comment)
-     (ident "=" base-prefix type-specifier comment)
-     (ident "=" "enumeration" "(" enum-list ")" comment)
-     (ident "=" "enumeration" "(" ":" ")" comment)
+	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5)))
+     (ident "=" base-prefix type-specifier class-modification comment
+	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5)))
+     (ident "=" base-prefix type-specifier comment
+	    ($$ `(short-class-spec ,$1 ,$3 ,$4)))
+     (ident "=" "enumeration" "(" enum-list ")" comment
+	    ($$ `(short-class-enum-spec ,$1 ,$5)))
+     (ident "=" "enumeration" "(" ":" ")" comment
+	    ($$ `(short-class-enum-spec ,$1 ,$5)))
      )
 
     (der-class-specifier
      (ident "=" "der" "(" type-specifier "," der-class-specifier-1 ")" comment
-	    ($$ `(der-class-specifier ... (tl->list $7))))
-     )
+	    ($$ `(der-class-specifier ,$1 ,$5 ,$7))))
     (der-class-specifier-1 ;; or ident-colon-list
+      (ident-list-1 ($$ (tl->list $1))))
+    (ident-list-1
      (ident ($$ (make-tl 'ident-list $1)))
-     (der-class-specifier-1 ";" ident ($$ (tl-append $1 $3)))
-     )
+     (ident-list-1 ";" ident ($$ (tl-append $1 $3))))
 
     (base-prefix ("input") ("output"))
 
@@ -151,8 +154,7 @@
      (enum-list "," enumeration-literal ($$ (tl-append $1 $3))))
 
     (enumeration-literal
-     (ident comment)
-     )
+     (ident comment ($$ $1)))
 
     ;; ===================== update to v3.4 stopped here ======================
 
@@ -201,10 +203,14 @@
     (language-specification (string))
 
     (external-function-call
-     (component-reference "=" ident "(" expression-list ")")
-     (component-reference "=" ident "(" ")")
-     (ident "(" expression-list ")")
-     (ident "(" ")")
+     (component-reference "=" ident "(" expression-list ")"
+			  ($$ `(ext-fctn-call ,$1 ,$3 ,$5)))
+     (component-reference "=" ident "(" ")"
+			  ($$ `(ext-fctn-call ,$1 ,$3 '(expr-list))))
+     (ident "(" expression-list ")"
+			  ($$ `(ext-fctn-call ,$1 ,$3)))
+     (ident "(" ")"
+			  ($$ `(ext-fctn-call ,$1 '(expr-list))))
      )
 
     (element-list
@@ -223,10 +229,11 @@
      (element-1)
       )
     (element-1
-     (class-definition)
-     (component-clause)
-     ("replaceable" element-2 constraining-clause comment)
-     ("replaceable" element-2)
+     (element-2)
+     ("replaceable" element-2 constraining-clause comment
+      )
+     ("replaceable" element-2
+      )
      )
     (element-2
      (class-definition)
@@ -252,16 +259,20 @@
 
     ;; B.2.3 Extends
     (extends-clause
-     ("extends" name class-modification annotation)
-     ("extends" name class-modification)
-     ("extends" name annotation)
-     ("extends" name)
-     )
+     ("extends" name class-modification annotation
+      ($$ `(extends ,$2 ,$3)))
+     ("extends" name class-modification
+      ($$ `(extends ,$2 ,$3)))
+     ("extends" name annotation
+      ($$ `(extends ,$2)))
+     ("extends" name
+      ($$ `(extends ,$2))))
 
     (constraining-clause
-     ("constrainedby" name class-modification)
-     ("constrainedby" name)
-     )
+     ("constrainedby" name class-modification
+      ($$ `(constrained-by ,$1 ,$2)))
+     ("constrainedby" name
+      ($$ `(constrained-by ,$1))))
 
     ;; B.2.4 Component Clause
     (component-clause
@@ -293,25 +304,24 @@
     (type-prefix-2 ("discrete") ("parameter") ("constant"))
     (type-prefix-3 ("input") ("output"))
 
-    (type-specifier (name))
+    (type-specifier (name ($$ `(type-spec ,$1))))
 
     (component-list
-     (component-declaration)
-     (component-list "," component-declaration)
-     )
+     (component-list-1 ($$ (tl->list $1))))
+    (component-list-1
+     (component-declaration ($$ (make-tl 'comp-list $1)))
+     (component-list-1 "," component-declaration ($$ (tl-append $1 $3))))
 
     (component-declaration
-     (declaration condition-attribute comment)
-     (declaration comment)
-     )
+     (declaration condition-attribute comment ($$ `(comp-decl ,$1 ,$2)))
+     (declaration comment ($$ $1)))
 
     (condition-attribute
-     ("if" expression)
-     )
+     ("if" expression ($$ `(if ,$2))))
 
     (declaration
-     (ident ($? array-subscripts) ($? modification))
-     )
+     (ident ($? array-subscripts) ($? modification)
+	    ($$ (make-sx 'decl #f $1 $2 $3))))
 
     ;; B.2.5 Modification
     (modification
@@ -322,14 +332,14 @@
      )
 
     (class-modification
-     ("(" argument-list ")")
-     ("(" ")")
-     )
+     ("(" argument-list ")" ($$ $2))
+     ("(" ")" ($$ '(arg-list))))
 
     (argument-list
-     (argument)
-     (argument-list "," argument)
-     )
+     (arg-list-1 ($$ (tl->list $1))))
+    (arg-list-1
+     (argument ($$ (make-tl 'arg-list $1)))
+     (arg-list-1 "," argument ($$ (tl-append $1 $3))))
 
     (argument (element-modification-or-replaceable) (element-redeclaration))
 
@@ -401,7 +411,8 @@
      (equation-list-1 equation ";" ($$ (tl-append $1 $2)))
      )
 
-    (equation (equation-1 comment ($$ (append $1 (list $2)))))
+    (equation
+     (equation-1 comment ($$ $1)))
     (equation-1
      (simple-expression "=" expression ($$ `(equate ,$1 ,$3)))
      (if-equation)
@@ -415,7 +426,8 @@
      (statement ";" ($$ (make-tl 'stmt-list $1)))
      (statement-list statement ";" ($$ (tl-append $1 $2))))
 
-    (statement (statement-1 comment ($$ (append $1 (list $2)))))
+    (statement
+     (statement-1 comment ($$ $1)))
     (statement-1
      (component-reference ":=" expression ($$ `(assign ,$1 ,$3)))
      (component-reference function-call-args ($$ `(call ,$1 ,$2)))
@@ -586,35 +598,39 @@
 
     (term
      (factor)
-     (term mul-op factor)
-     )
+     (term mul-op factor ($$ (list $2 $1 $3))))
     (mul-op ("*" ($$ 'mul)) ("/" ($$ 'div))
 	    (".*" ($$ 'dot-mul)) ("./" ($$ 'dot-div)))
 
     (factor
-     (primary)
-     (factor "^" primary ($$ `(pow ,$1 ,$2)))
-     (factor ".^" primary ($$ `(dot-pow ,$1 ,$2)))
+     (unary-expr)
+     (factor "^" unary-expr ($$ `(pow ,$1 ,$2)))
+     (factor ".^" unary-expr ($$ `(dot-pow ,$1 ,$2)))
      )
+
+    (unary-expr
+     (primary)
+     ("+" primary ($$ `(pos ,$2)))
+     ("-" primary ($$ `(neg ,$2))))
 
     (primary
      (unsigned-number ($$ `(p-expr ,$1)))
      (string ($$ `(p-expr ,$1)))
      ("false" ($$ `(p-expr '(false))))
      ("true" ($$ `(p-expr '(true))))
-     (name function-call-args ($$ `(fctn-call ,$1 ,(tl->list $2))))
+     (name function-call-args ($$ `(fctn-call ,$1 ,$2)))
      ("der" function-call-args ($$ `(der ,$2)))
      ;;("initial" function-call-args)  ; 4 srconf, OK to shift?
      
      ;; from component reference:
-     (name)
+     (name ($$ `(p-expr ,$1)))
      (name array-subscripts ($$ `(array-elt ,$1 ,$2)))
      
-     ("(" output-expression-list ")")
+     ("(" output-expression-list ")" ($$ `(p-expr ,$2)))
      ("[" expression-list-list  "]"
       ($$ `(matrix ,(map (lambda (row) (cons 'row (cdr row)))
 			 (cdr (tl->list $2))))))
-     ("{" function-arguments "}")
+     ("{" function-arguments "}" ($$ `(??? ,$2)))
      ;;("end")			     ; 2 srconf, and WTF is this for?
      )
     (expression-list-list
@@ -663,11 +679,14 @@
     ;;(function-argument-1 ("," function-arguments) ("for" for-indices))
     ;;(named-arguments (named-argument) (named-arguments "," named-argument))
 
-    (named-argument (ident "=" function-argument))
+    (named-argument
+     (ident "=" function-argument ($$ `(named-arg ,$1 ,$3))))
 
     (function-argument
-     ("function" name "(" named-arguments ")")
-     ("function" name "(" ")")
+     ("function" name "(" named-arguments ")"
+      ($$ `(fctn-arg ,$2 ,$4)))
+     ("function" name "(" ")"
+      ($$ `(fctn-arg ,$2)))
      (expression)
      )
 
@@ -678,9 +697,10 @@
      )
 
     (expression-list
-     (expression)
-     (expression-list "," expression)
-     )
+     (expression-list-1 ($$ (tl->list $1))))
+    (expression-list-1
+     (expression ($$ (make-tl 'expr-list $1)))
+     (expression-list-1 "," expression ($$ (tl-append $1 $3))))
 
     (array-subscripts
      ("[" array-subscript-list "]" ($$ (tl->list $2))))
@@ -697,8 +717,7 @@
     (comment
      (string-comment annotation
 		     ($$ (if (pair? $1) `(comment ,$1 ,$2) `(comment ,$2))))
-     (string-comment ($$ (if (pair? $1) `(comment ,$1) '(comment))))
-     )
+     (string-comment ($$ (if (pair? $1) `(comment ,$1) '()))))
 
     (string-comment
      ($empty)
@@ -709,7 +728,7 @@
      (string ($$ (make-tl 'string-comment $1)))
      (string-cat-1 "+" string ($$ (tl-append $1 $3))))
     
-    (opt-annotation () (annotation ";"))
+    (opt-annotation ($empty) (annotation ";"))
     (annotation
      ("annotation" class-modification)
      )
