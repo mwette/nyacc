@@ -83,15 +83,15 @@
       (let loop ((term '()) (acc '()) (st 0) (ch (read-char)))
 	(case st
 	  ((0) ;; skip #define
-	   (if (char=? #\space)
+	   (if (char=? ch #\space)
 	       (loop term acc 1 (read-char))
 	       (loop term acc 0 (read-char))))
 	  ((1) ;; read term
-	   (if (char=? #\space)
+	   (if (char=? ch #\space)
 	       (loop (reverse-list->string acc) '() 2 (read-char))
 	       (loop term (cons ch acc) st (read-char))))
 	  ((2) ;; read rest
-	   (if (char=? #\newline)
+	   (if (or (eof-object? ch) (char=? ch #\newline))
 	       (string-append term "=" (reverse-list->string acc))
 	       (loop term (cons ch acc) st (read-char)))))))))
 
