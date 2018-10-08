@@ -7,6 +7,13 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
+;;; Usage:
+
+;; If you edit mach.scm, you'll want to have the tables in mach.d/
+;; regenerated, and then the parser recompiled.  To do this use:
+
+;; $ guile Umach.scm
+
 ;;; Code:
 
 (use-modules (nyacc lang modelica mach))

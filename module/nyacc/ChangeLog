@@ -1,3 +1,7 @@
+2018-09-28  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/sx-util.scm: added make-sx;
+
 2018-09-23  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lex.scm (make-comm-reader): For comment patterns ending with

@@ -325,11 +325,10 @@
 
     ;; B.2.5 Modification
     (modification
-     (class-modification "=" expression)
-     (class-modification)
-     ("=" expression)
-     (":=" expression)
-     )
+     (class-modification "=" expression ($$ `(class-mod ,$1 ,$3)))
+     (class-modification ($$ `(class-mod ,$1)))
+     ("=" expression ($$ `(eqv-mod ,$2)))
+     (":=" expression ($$ `(def-mod ,$2))))
 
     (class-modification
      ("(" argument-list ")" ($$ $2))
@@ -344,31 +343,29 @@
     (argument (element-modification-or-replaceable) (element-redeclaration))
 
     (element-modification-or-replaceable
-     ("each" "final" elt-mod-or-repl-1)
-     ("each" elt-mod-or-repl-1)
-     ("final" elt-mod-or-repl-1)
-     (elt-mod-or-repl-1)
-     )
+     ("each" "final" elt-mod-or-repl-1 ($$ $3))
+     ("each" elt-mod-or-repl-1 ($$ $2))
+     ("final" elt-mod-or-repl-1 ($$ $2))
+     (elt-mod-or-repl-1 ($$ $1)))
     (elt-mod-or-repl-1 (element-modification) (element-replaceable))
 
-    (element-modification (name ($? modification) string-comment))
+    (element-modification
+     (name ($? modification) string-comment
+	   ($$ (if (pair? $2) `(elt-mod ,$1 ,$2) `(elt-mod ,$1)))))
 
     ;; This looks wierd in the 3.3r1 spec. Like maybe typo.
     (element-redeclaration
-     ("redeclare" ($? "each") ($? "final") elt-redecl-1)
-     )
+     ("redeclare" ($? "each") ($? "final") elt-redecl-1 ($$ $4)))
     (elt-redecl-1
      (short-class-definition)
      (component-clause1)
-     (element-replaceable)
-     )
+     (element-replaceable))
 
     (element-replaceable
-     ("replaceable"
-      short-class-definition component-clause1 constraining-clause)
-     ("replaceable"
-      short-class-definition component-clause1)
-     )
+     ("replaceable" short-class-definition component-clause1 constraining-clause
+      ($$ `(elt-repl $2 $3 $4)))
+     ("replaceable" short-class-definition component-clause1
+      ($$ `(elt-repl $2 $3))))
 
     (component-clause1
      (type-prefix type-specifier declaration comment
@@ -382,26 +379,24 @@
     ;; B.2.6 Equations
     (equation-section
      ("initial" "equation" equation-list
-      ($$ `(init-eqn-section ,$3)))
+      ($$ `(init-eqn-section . ,(cdr $3))))
      ("equation" equation-list
-      ($$ `(eqn-section ,$2)))
+      ($$ `(eqn-section . ,(cdr $2))))
      ("initial" "equation"
-      ($$ `(init-eqn-section (eqn-list))))
+      ($$ `(init-eqn-section)))
      ("equation"
-      ($$ `(eqn-section (eqn-list))))
-     )
+      ($$ `(eqn-section))))
 
     ;; I think they messed this up tool
     (algorithm-section
      ("initial" "algorithm" statement-list
-      ($$ `(init-alg-section ,$3)))
+      ($$ `(init-alg-section . ,(cdr $3))))
      ("algorithm" statement-list
-      ($$ `(alg-section ,$2)))
+      ($$ `(alg-section . ,(cdr $2))))
      ("initial" "algorithm"
-      ($$ `(init-alg-section (stmt-list))))
+      ($$ `(init-alg-section)))
      ("algorithm"
-      ($$ `(alg-section (stmt-list))))
-     )
+      ($$ `(alg-section))))
 
     ;; my addition:
     (equation-list

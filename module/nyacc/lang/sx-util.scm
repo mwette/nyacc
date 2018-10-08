@@ -18,13 +18,13 @@
 ;;; Code:
 
 (define-module (nyacc lang sx-util)
-  #:export (sx-tag
+  #:export (make-sx
 	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
 	    sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
 	    sx-find
 	    sx-split sx-split* sx-join sx-join*
-	    sx-match sx-haz-addr?)
-  #:use-module ((srfi srfi-1) #:select (find fold)))
+	    sx-match)
+  #:use-module ((srfi srfi-1) #:select (find fold fold-right)))
 (cond-expand
   (mes)
   (guile-2)
@@ -38,8 +38,35 @@
 ;; attributea are `invisible'. For example, @code{'(elt (@abc) "d")}
 ;; is an sx of length two: the tag @code{elt} and the payload @code{"d"}.
 
+;; @deffn {Procedure} sx-expr? expr
+;; This predicate checks if @var{expr} looks like a valid SXML form.
+;; It is not exhaustive: @var{expr} is checked to be a list with first
+;; element a symbol.
+;; @end deffn
 (define (sxml-expr? sx)
   (and (pair? sx) (symbol? (car sx)) (list? sx)))
+
+;; @deffn {Procedure} make-sx tag attr . elts
+;; This will build an SXML expression from the symbolic tag, optional
+;; attributes and elements.  The attributes @var{attr} can be of the from
+;; @code{(@ (key "val") ...)} or @code{((key "val") ...)}.  If elements
+;; in @var{elts} are not pairs or strings they are ignored, so elmeents of
+;; @var{elts} of the form @code{#f} and @code{'()} will not end up in the
+;; returned SXML form.
+;; @end deffn
+(define (make-sx tag attr . elts)
+  (let ((tail (fold-right
+	       (lambda (elt sx)
+		 (cond
+		  ((pair? elt) (cons elt sx))
+		  ((string? elt) (cons elt sx))
+		  (else sx)))
+	       '() elts)))
+    (if (pair? attr)
+	(if (eq? '@ (car attr))
+	    (cons* tag attr tail)
+	    (cons* tag `(@ . ,attr) tail))
+	(cons tag tail))))
 
 ;; @deffn {Procedure} sx-length sx => <int>
 ;; Return the length, don't include attributes, but do include tag
@@ -158,7 +185,7 @@
 ;; p to determine if @arg{sx} has attributes.
 ;; @end deffn
 (define (sx-has-attr? sx)
-  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx))))
+  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx)) #t))
 
 ;; @deffn {Procedure} sx-attr sx => '(@ ...)|#f
 ;; @example
@@ -278,8 +305,8 @@
 
 
 ;; sx-haz-attr? val
-(define (sx-haz-attr? sx)
-  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx)) #t))
+;;(define (sx-haz-attr? sx)
+;;  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx)) #t))
 	
 ;; Given that a tag must be ... we define the syntax of SXML as follows:
 ;; SXML is a text format for XML using S-expressions, sexp's whose first
@@ -302,7 +329,7 @@
 ;; Specify attribute list if you want to capture the list of attributes with
 ;; a binding.  Otherwise leave it out.  The only way to test for no attributes
 ;; is to capture the a-list and test with @code{pair?}
-;; 
+;; FIX THIS:
 ;;   (foo (@ . ,<name>) (bar ,abc) ...)
 ;;   (foo (bar ,abc) ...)
 ;;   (foo ... , *)
@@ -340,18 +367,19 @@
     ;; capture attributes
     ((_ v (tag (@ . (unquote al)) . nl) kt kf)
      (sxm-tag (car v) tag
-	      (if (sx-haz-attr? v)
+	      (if (sx-has-attr? v)
 		  (let ((al (cdadr v))) (sxm-tail (cddr v) nl kt kf))
 		  (let ((al '())) (sxm-tail (cdr v) nl kt kf)))
 	      kf))
     ;; ignore attributes; (cadr v) may be an attr node. If so, ignore it.
     ((_ v (tag . nl) kt kf)
      (sxm-tag (car v) tag
-	      (if (sx-haz-attr? v)
+	      (if (sx-has-attr? v)
 		  (sxm-tail (cddr v) nl kt kf)
 		  (sxm-tail (cdr v) nl kt kf))
 	      kf))
     ;; accept anything
+    ;;((_ v (unquote x) kt kf) kt)
     ((_ v else kt kf) kt)))
  
 ;; sxm-tag val pat kt kf
@@ -359,7 +387,7 @@
 (define-syntax sxm-tag
   (syntax-rules ()
     ((_ tv (t0 t1 ...) kt kf)
-     (if (memq? tv '(t0 t1 ...)) kt kf))
+     (if (memq tv '(t0 t1 ...)) kt kf))
     ((_ tv t0 kt kf)
      (if (eqv? tv 't0) kt kf))))
 

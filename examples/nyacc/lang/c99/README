@@ -1,6 +1,6 @@
 lang/c99/
 
-Copyright (C) 2015,2017 Matthew R. Wette
+Copyright (C) 2015,2017-2018 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -26,6 +26,7 @@ The following generates ffi.d/cairo.scm:
 If you have scheme-bytestructure in your GUILE_LOAD_PATH you can try
   $ guile
   scheme@(guile-user)> ,use (cairo)
+
 Currently the above has unresolved reference (which are new bugs)
 
 https://github.com/TaylanUB/scheme-bytestructures
@@ -35,3 +36,10 @@ cairo-demo.scm
 digest.scm*
 doit.scm
 ffi-help.scm
+
+===============================================================================
+
+GRAPHICS w/ gtk2+,gdk,pango,gobject,glib,...
+
+read
+    https://developer.gnome.org/gtk2/2.24/chap-drawing-model.html

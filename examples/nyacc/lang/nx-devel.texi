@@ -114,6 +114,9 @@ Note that if the top-level language is a joint, then the compiler
 will just read expressions, combine them and then send to the compiler
 in one shot.
 
+Note: at the command line the user directory is always passed, not
+the continuation returned from the previous execution.
+
 @subheading Converting Your SXML Tree to Tree-IL
 
 The NX languages use @code{foldts*-values} from @code{(sxml fold)}.
