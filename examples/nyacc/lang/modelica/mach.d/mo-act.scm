@@ -359,13 +359,13 @@
    ;; $P8 => modification
    (lambda ($1 . $rest) $1)
    ;; modification => class-modification "=" expression
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(class-mod ,$1 ,$3))
    ;; modification => class-modification
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(class-mod ,$1))
    ;; modification => "=" expression
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(eqv-mod ,$2))
    ;; modification => ":=" expression
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(def-mod ,$2))
    ;; class-modification => "(" argument-list ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; class-modification => "(" ")"
@@ -381,11 +381,11 @@
    ;; argument => element-redeclaration
    (lambda ($1 . $rest) $1)
    ;; element-modification-or-replaceable => "each" "final" elt-mod-or-repl-1
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) $3)
    ;; element-modification-or-replaceable => "each" elt-mod-or-repl-1
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) $2)
    ;; element-modification-or-replaceable => "final" elt-mod-or-repl-1
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) $2)
    ;; element-modification-or-replaceable => elt-mod-or-repl-1
    (lambda ($1 . $rest) $1)
    ;; elt-mod-or-repl-1 => element-modification
@@ -393,13 +393,14 @@
    ;; elt-mod-or-repl-1 => element-replaceable
    (lambda ($1 . $rest) $1)
    ;; element-modification => name $P9 string-comment
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     (if (pair? $2) `(elt-mod ,$1 ,$2) `(elt-mod ,$1)))
    ;; $P9 => 
    (lambda $rest (list))
    ;; $P9 => modification
    (lambda ($1 . $rest) $1)
    ;; element-redeclaration => "redeclare" $P10 $P11 elt-redecl-1
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest) $4)
    ;; $P10 => 
    (lambda $rest (list))
    ;; $P10 => "each"
@@ -415,9 +416,10 @@
    ;; elt-redecl-1 => element-replaceable
    (lambda ($1 . $rest) $1)
    ;; element-replaceable => "replaceable" short-class-definition component...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(elt-repl $2 $3 $4))
    ;; element-replaceable => "replaceable" short-class-definition component...
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(elt-repl $2 $3))
    ;; component-clause1 => type-prefix type-specifier declaration comment
    (lambda ($4 $3 $2 $1 . $rest)
      (list $1 $2 (append $3 (list $4))))
@@ -426,24 +428,24 @@
      `(short-class-def ,(append $1 (list $2))))
    ;; equation-section => "initial" "equation" equation-list
    (lambda ($3 $2 $1 . $rest)
-     `(init-eqn-section ,$3))
+     `(init-eqn-section unquote (cdr $3)))
    ;; equation-section => "equation" equation-list
-   (lambda ($2 $1 . $rest) `(eqn-section ,$2))
-   ;; equation-section => "initial" "equation"
    (lambda ($2 $1 . $rest)
-     `(init-eqn-section (eqn-list)))
+     `(eqn-section unquote (cdr $2)))
+   ;; equation-section => "initial" "equation"
+   (lambda ($2 $1 . $rest) `(init-eqn-section))
    ;; equation-section => "equation"
-   (lambda ($1 . $rest) `(eqn-section (eqn-list)))
+   (lambda ($1 . $rest) `(eqn-section))
    ;; algorithm-section => "initial" "algorithm" statement-list
    (lambda ($3 $2 $1 . $rest)
-     `(init-alg-section ,$3))
+     `(init-alg-section unquote (cdr $3)))
    ;; algorithm-section => "algorithm" statement-list
-   (lambda ($2 $1 . $rest) `(alg-section ,$2))
-   ;; algorithm-section => "initial" "algorithm"
    (lambda ($2 $1 . $rest)
-     `(init-alg-section (stmt-list)))
+     `(alg-section unquote (cdr $2)))
+   ;; algorithm-section => "initial" "algorithm"
+   (lambda ($2 $1 . $rest) `(init-alg-section))
    ;; algorithm-section => "algorithm"
-   (lambda ($1 . $rest) `(alg-section (stmt-list)))
+   (lambda ($1 . $rest) `(alg-section))
    ;; equation-list => equation-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; equation-list-1 => equation ";"

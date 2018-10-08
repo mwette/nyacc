@@ -27,7 +27,7 @@
 (define-language nx-javascript
   #:title	"nx-javascript"
   #:reader	(lambda (p e) (cond
-			       ((file-port? p) (read-js-file p e))
+			       ;;((file-port? p) (read-js-file p e))
 			       ((interaction-environment) (read-js-stmt p e))
 			       (else (read-js-file p e))))
   #:compilers   `((tree-il . ,compile-tree-il))

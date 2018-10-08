@@ -5,7 +5,7 @@ exec guile $0 $*
 
 (use-modules (nyacc lang modelica parser))
 (use-modules (nyacc lang sx-util))
-(use-modules ((srfi srfi-1) #:select (fold)))
+(use-modules ((srfi srfi-1) #:select (fold fold-right)))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 pretty-print))
 
@@ -58,28 +58,75 @@ exec guile $0 $*
   (let* ((options (parse-args args))
 	 (files (assoc-ref options 'files))
 	 (dict (fold update-dict '() files)))
-      ;;(sf "files=~S\n" files)
-      ;;(sf "dict:\n") (pp dict)
-      (and=> (assq-ref options 'gen)
-	     (lambda (name)
-	       (sf "converting ~S ...\n" name)
-	       (cnvt name dict)
-	       #f))
-      #f))
+    ;;(sf "files=~S\n" files)
+    ;;(sf "dict:\n") (pp dict)
+    (and=> (assq-ref options 'gen)
+	   (lambda (name)
+	     (sf "converting ~S ...\n" name)
+	     (cnvt name dict)
+	     #f))
+    #f))
 
 ;; =============================================================================
 
-(define (expand
+(use-modules (sxml match))
+
+;; pars : parameters
+;; elts : elements
+;; eqns : equations
+;; algs : algorithms
+(define* (mo-expand-comp pars elts eqns algs dict #:key pd)
+  #f)
+
+  ;; pd : param dict name => value
+(define* (mo-expand-decl comp dict #:key pd)
+  (sx-match comp
+    ((component-clause (type-spec (ident ,tname))
+		       (decl (ident ,name) . ,modifier))
+     (let ((ty (assoc-ref dict tname))
+	   )
+       (sf "xdecl:\n") (pp comp)
+       (sf " ~S:\n" tname) (pp ty)
+       `(a b c)))
+    (else
+     comp)))
+			 
+(define (mo-unroll-decl decl seed)
+  (sx-match decl
+    ((component-clause (type-spec ,tspec) (comp-list . ,dtors))
+     (fold-right
+      (lambda (dtor decls)
+	(cons `(component-clause (type-spec ,tspec) ,dtor) decls))
+      seed dtors))
+    (else (error "missed: ~S decl"))))
+
+;; realize a class: convert class decl to instantiation 
+(define (mo-realize decl dict)
+  (sx-match decl
+    (((class model connection) (ident ,name)
+      (composition
+       (element-list . ,elts)
+       (composition-list
+	(eqn-section . ,eqns))))
+     (let ((decls (fold-right mo-unroll-decl '() elts)))
+       ;;(for-each (lambda (decl) (mo-expand-decl decl dict)) decls)
+       (mo-expand-decl (car decls) dict)
+       '()))
+    (else '()))
+  )
 
 (set!
  cnvt
  (lambda (name dict)
-   (let* ((form (assq-ref dict name))
+   (let* ((form (assoc-ref dict name))
 	  )
+     ;;(pp form)
+     (mo-realize form dict)
      #f)))
 
 ;; =============================================================================
 
 (apply convert-nx-file (cdr (program-arguments)))
 
+;; ./nxmoelica -g SimpleCircuit x2.mo
 ;; --- last line ---

@@ -137,7 +137,7 @@
      #f)))
 
 (define (read-oct-file port env)
-  ;;(sferr "<parse file>\n")
+  (sferr "<parse file>\n")
   (with-input-from-port port
     (lambda ()
       (if (eof-object? (peek-char port))
@@ -168,7 +168,7 @@
 (define read-oct-stmt
   (let ((lexer (gen-octave-ia-lexer)))
     (lambda (port env)
-      ;;(sferr "<parse stmt>\n")
+      (sferr "<parse stmt>\n")
       (cond
        ((eof-object? (peek-char port))
 	(read-char port))
