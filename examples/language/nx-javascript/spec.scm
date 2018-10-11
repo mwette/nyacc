@@ -26,10 +26,13 @@
 
 (define-language nx-javascript
   #:title	"nx-javascript"
-  #:reader	(lambda (p e) (cond
-			       ;;((file-port? p) (read-js-file p e))
-			       ((interaction-environment) (read-js-stmt p e))
-			       (else (read-js-file p e))))
+  #:reader	(lambda (p e)
+		  (cond
+		   ((and (file-port? p)
+			 (string? (port-filename p))
+			 (not (string-prefix? "/dev/" (port-filename p))))
+		    (read-js-file p e))
+		   (else (read-js-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-js

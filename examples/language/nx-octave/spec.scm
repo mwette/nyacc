@@ -27,15 +27,12 @@
 (define-language nx-octave
   #:title	"nx-octave"
   #:reader	(lambda (p e)
-		  (simple-format #t "\n  p=~S\n  e=~S\n  i=~S\n"
-				 p e (interaction-environment))
 		  (cond
 		   ((and (file-port? p)
 			 (string? (port-filename p))
 			 (not (string-prefix? "/dev/" (port-filename p))))
 		    (read-oct-file p e))
-		   ((eq? (interaction-environment) e) (read-oct-stmt p e))
-		   (else (read-oct-file p e))))
+		   (else (read-oct-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-ml
