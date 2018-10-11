@@ -270,7 +270,7 @@
        ;;(sferr "for:\n") (pperr tree)
        (let* ((ref (lookup name dict))
 	      (dict (if (and ref (eq? 'lexical (car ref))) dict
-		       (add-lexical name dict)))
+			(add-symbol name dict)))
 	      (dict (push-scope dict))
 	      (dict (add-lexicals "break" "continue" dict)))
 	 (values tree '() dict)))
