@@ -2293,7 +2293,6 @@
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
 		 (*renamer* identity) (*errmsgs* '()) (*prefix* "")
 		 (*mport* #t) (*udict* '()) (*ddict* '()))
-    (sferr "ffi-help: WARNING: the FFI helper is experimental\n")
     ;; if not interactive ...
     (debug-disable 'backtrace)
     (if (not (access? file R_OK))
