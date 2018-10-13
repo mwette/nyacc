@@ -1,4 +1,4 @@
-;; ./mach.d/cpptab.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/cpptab.scm
 
 ;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
