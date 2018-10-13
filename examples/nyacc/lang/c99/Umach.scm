@@ -1,4 +1,4 @@
-;; Tmach.scm - demo C99: CPP and parser
+;; Umach.scm - demo C99: CPP and parser
 ;;
 ;; Copyright (C) 2015,2016,2018 Matthew R. Wette
 ;; 
