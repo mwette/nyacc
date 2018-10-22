@@ -19,9 +19,6 @@
 
 ;; usage: cxp -Ilang/c99/exam.d lang/c99/exam.d/ex1.c
 
-(add-to-load-path (string-append (getcwd) "/.."))
-(add-to-load-path (string-append (getcwd) "/../../module"))
-
 (use-modules (ice-9 pretty-print))
 (use-modules (nyacc lang c99 parser))
 
