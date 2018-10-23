@@ -1,4 +1,4 @@
-;; ffi-exam/cairo01.scm
+;; nyacc/lang/ffi-help/cairo01.scm - simple square
 
 ;; Copyright (C) 2017-2018 Matthew R. Wette
 
