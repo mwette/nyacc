@@ -27,8 +27,8 @@
 
 (define (send-msg conn msg)
   (let ((pending (make-DBusPendingCall*)))
-    (if (eqv? FALSE
-	      (dbus_connection_send_with_reply conn msg (pointer-to pending) -1))
+    (if (eqv? FALSE (dbus_connection_send_with_reply
+		     conn msg (pointer-to pending) -1))
 	(error "*** send_with_reply FAILED\n"))
     (dbus_message_unref msg)
     pending))

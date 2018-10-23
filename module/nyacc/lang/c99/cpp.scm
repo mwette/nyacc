@@ -357,6 +357,9 @@
 	 (iter stl chl nxt rest))
 	(($space . ,rest)
 	 (iter stl (cons #\space chl) nxt rest))
+	((($comm . ,val) . ,rest)
+	 ;; replace comment with extra trailing space
+	 (iter stl chl (string-append "/*" val "*/ ") rest))
 	((,asis . ,rest)
 	 (iter stl chl asis rest))
 	(,otherwise
@@ -400,7 +403,7 @@
 	 (else (iter2 (cons (car chl) res) (cdr chl))))))
      (else (iter (cons ch chl) (read-char))))))
 
-(define (scan-cpp-input defs used end-tok)
+(define* (scan-cpp-input defs used end-tok #:key (keep-comments #t))
   ;; Works like this: scan for tokens (comments, parens, strings, char's, etc).
   ;; Tokens are collected in a (reverse ordered) list (tkl) and merged together
   ;; to a string on return using @code{rtokl->string}.  Keep track of expanded
@@ -433,9 +436,15 @@
       (unread-char ch) (finish rr tkl))
      ((and end-tok (char=? #\) ch) (zero? lv))
       (unread-char ch) (finish rr tkl))
-     ((or (char-set-contains? c:ws ch)	; whitespace
-	  (read-c-comm ch #f))		; comment
+     ((char-set-contains? c:ws ch)	; whitespace
       (iter rr (cons '$space tkl) lv (skip-il-ws (read-char))))
+     ((read-c-comm ch #f) =>		; comment
+      (lambda (comm)
+	;; Normally comments in CPP def's are replaced by a space.  We allow
+	;; comments to get passed through, hoping this does not break code.
+	(if keep-comments
+	    (iter rr (acons '$comm (cdr comm) tkl) lv (skip-il-ws (read-char)))
+	    (iter rr (cons '$space tkl) lv (skip-il-ws (read-char))))))
      ((read-c-ident ch) =>
       (lambda (iden)
 	(cond

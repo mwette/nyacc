@@ -212,8 +212,9 @@
 
 ;; @deffn {Procedure} inc-keeper? tree inc-filter => #f| tree
 ;; This is a helper.  @var{inc-filter} is @code{#t}, @code{#f} or a
-;; precicate procedure, which given the name of the file, determines if
-;; it should be processed.
+;; precicate procedure, which given the name of the file-spec (e.g.,
+;; @code{<foo.h>}) and the path (e.g., @code{"/usr/include/foo.h"}),
+;; determines if the include should be handled.
 ;; @end deffn
 (define (inc-keeper? tree filter)
   (if (and (eqv? (sx-tag tree) 'cpp-stmt)
@@ -254,8 +255,8 @@
 ;; @item
 ;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
 ;; The inc-filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
-;; of one argument, the include path, to indicate whether it should be included
-;; in the dictionary.
+;; of two arguments, the include spec and the include file path, to indicate
+;; whether it should be included in the dictionary. (See @code{inc-keeper?}.)
 ;; @item
 ;; If this routine is called multiple times on the same tree the u-decl's will
 ;; not be @code{eq?} since the top-level lists are generated on the fly.
@@ -1031,7 +1032,7 @@
 
 ;; === enums and defines ===============
 
-;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [#:inc-filter proc]
+;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [options]
 ;; Extract the #defines from a tree as
 ;; @example
 ;;  (define (name "ABC") (repl "repl"))
@@ -1040,9 +1041,9 @@
 ;;  (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
 ;; @end example
 ;; @noindent
-;; The entries appear in reverse order wrt how in file.
-;; @*
-;; New option: #:skip-fdefs to skip function defs
+;; Options are @code{inc-keeper? f} (see @code{c99-trans-unit->udict}) and
+;; @code{#:skip-fdefs #f} to skip function defs.
+;; The entries appear in reverse order wrt how they appear in the input.
 ;; @end deffn
 (define* (c99-trans-unit->ddict tree
 				#:optional (seed '())
@@ -1489,7 +1490,7 @@
 (define (fix-fields flds) (cdr (clean-field-list `(field-list . ,flds))))
 (define declr-is-ptr? pointer-declr?)
 
-;;@deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
+;; @deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
 ;; This is deprecated.
 ;; 1) remove stor-spec
 ;; 2) expand typenames

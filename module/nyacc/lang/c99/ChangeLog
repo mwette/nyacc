@@ -1,3 +1,14 @@
+2018-10-22  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cxeval.scm (eval-sizeof-type): was returning #t, should return
+	the integer size; still needs work on random typedefs
+
+2018-10-12  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cpp.scm (rtokl->string): handle comments from scan-cpp-input
+	(scan-cpp-input): add keyword arg to pass through comments, and
+	now comments are not necessarily ignored
+
 2018-09-05  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* util1.scm (get-gcc-cpp-defs): removed dependence on regex

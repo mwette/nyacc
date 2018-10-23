@@ -19,11 +19,9 @@
 
 ;; usage: cxp -Ilang/c99/exam.d lang/c99/exam.d/ex1.c
 
-(add-to-load-path (string-append (getcwd) "/.."))
-(add-to-load-path (string-append (getcwd) "/../../module"))
-
 (use-modules (ice-9 pretty-print))
 (use-modules (nyacc lang c99 parser))
+(use-modules (nyacc lang c99 util1))
 
 (define (scan-for-flagged flag argl)
   (let iter ((res '()) (argl argl))
@@ -46,7 +44,9 @@
 
 (let* ((argl (cdr (program-arguments)))
        (incs (scan-for-flagged "-I" argl))
+       (incs (append incs (get-gcc-inc-dirs)))
        (defs (map split-def (scan-for-flagged "-D" argl)))
+       (defs (append defs (get-gcc-cpp-defs)))
        (files (scan-for-rest argl)))
   (for-each
    (lambda (file)
