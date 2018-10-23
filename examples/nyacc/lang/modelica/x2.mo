@@ -1,3 +1,5 @@
+type Voltage = Real;
+
 connector Pin
   Voltage v;
   flow Current i;

@@ -358,12 +358,14 @@
     ((_ v (pat exp ...) c1 ...)
      (let ((kf (lambda () (sx-match-1 v c1 ...))))
        (sxm-sexp v pat (begin exp ...) (kf))))
-    ((_ v) (error "sx-match: nothing matches"))))
+    ((_ v) (error "nothing matches"))))
 
 ;; sxm-sexp val pat kt kf
 ;; match sexp
 (define-syntax sxm-sexp
-  (syntax-rules (@ else unquote)
+  (syntax-rules (@ unquote else)
+    ;; accept anything
+    ((_ v (unquote w) kt kf) (let ((w v)) kt))
     ;; capture attributes
     ((_ v (tag (@ . (unquote al)) . nl) kt kf)
      (sxm-tag (car v) tag
@@ -378,9 +380,9 @@
 		  (sxm-tail (cddr v) nl kt kf)
 		  (sxm-tail (cdr v) nl kt kf))
 	      kf))
-    ;; accept anything
-    ;;((_ v (unquote x) kt kf) kt)
-    ((_ v else kt kf) kt)))
+    ;; deprecate `else' syntax?
+    ((_ v else kt kf) kt)
+    ))
  
 ;; sxm-tag val pat kt kf
 ;; match tag
@@ -394,10 +396,9 @@
 ;; sxm-tail val pat kt kf
 ;; match tail of sexp = list of nodes
 (define-syntax sxm-tail
-  (syntax-rules (unquote *)
+  (syntax-rules (unquote)
     ((_ v () kt kf) (if (null? v) kt kf))
-    ((_ v * kt kf) kt)
-    ((_ v (unquote var) kt kf) (let ((var v)) kt))
+    ((_ v (unquote w) kt kf) (let ((w v)) kt))
     ((_ v (hp . tp) kt kf)
      (if (pair? v)
 	 (let ((hv (car v)) (tv (cdr v)))
@@ -408,13 +409,18 @@
 ;; [ht][vp] = [head,tail][value,pattern]
 ;; Can this be set up to match a string constant?
 (define-syntax sxm-node
-  (syntax-rules (unquote *)
-    ((_ v * kt kf) kt)
+  (syntax-rules (unquote)
     ((_ v () kt kf) (if (null? v) kt kf))
-    ((_ v (unquote var) kt kf) (let ((var v)) kt))
-    ((_ v (hp . tp) kt kf)
-     (if (pair? v) (sxm-sexp v (hp . tp) kt kf) kf))
-    ((_ v s) (if (string? v) kt kf))))
+    ((_ v (unquote w) kt kf) (let ((w v)) kt))
+    ((_ v (hp . tp) kt kf) (if (pair? v) (sxm-sexp v (hp . tp) kt kf) kf))
+    ((_ v s kt kf)
+     (begin
+       (unless (string? s) (error "expecting string"))
+       (unless (string? v) (error "expecting string"))
+       (if (string=? s v) kt kf)))
+    ;;((_ v s kt kf) (if (string=? s v) kt kf))
+    ;;^-- If not pair or unquote then must be string, right?
+   ))
 
 ;;; deprecated:
 

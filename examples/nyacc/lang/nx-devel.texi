@@ -62,6 +62,19 @@ to matlab.)
 
 Question: Should associative arrays be indexed by symbols or strings?
 
+Idea: data model:
+@itemize
+@item scalar ints, double, string, (what about chars?)
+@item associative arrays (assoc): no integer indexes
+@item integer 1D (@code{vector}) arrays
+@item no integer 2D arrays (for now)
+@item double 1D and 2D (@code{array F64}) arrays
+@end itemize
+Questions:
+@itemize
+@item Should 1-D arrays be @code{array} or @code{vector}?
+@end itemize
+
 @heading Read, Parse and Compile
 
 A language may have two or three phases to get to lower level.
