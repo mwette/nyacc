@@ -1,3 +1,8 @@
+2018-10-14  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/sx-util.scm (sxm-node): cleaned up sx-match now accepts
+	(,_ ...) to accept all, and supports string matching
+
 2018-09-28  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/sx-util.scm: added make-sx;
