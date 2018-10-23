@@ -1,6 +1,6 @@
-;; ffi-exam/cairo01.scm
+;; nyacc/lang/ffi-help/cairo01.scm - simple square
 
-;; Copyright (C) 2017 Matthew R. Wette
+;; Copyright (C) 2017-2018 Matthew R. Wette
 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -8,8 +8,6 @@
 ;; without any warranty.
 
 (use-modules (ffi cairo))
-(use-modules (system ffi-help-rt))
-(use-modules (system foreign)) ;; string->pointer
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 200 200))
 (define cr (cairo_create srf))

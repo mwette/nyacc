@@ -1,4 +1,4 @@
-;; cairo03.scm -- needs work
+;; cairo03.scm -- cairo matrix
 
 ;; Copyright (C) 2017 Matthew R. Wette
 ;;
