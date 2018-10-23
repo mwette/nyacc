@@ -1,3 +1,8 @@
+2018-10-22  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cxeval.scm (eval-sizeof-type): was returning #t, should return
+	the integer size; still needs work on random typedefs
+
 2018-10-12  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* cpp.scm (rtokl->string): handle comments from scan-cpp-input
