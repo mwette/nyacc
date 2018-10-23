@@ -42,6 +42,7 @@
 
 (define xlib-mod '(nyacc lang tcl xlib))
 (define xlib-module (resolve-module xlib-mod))
+(define (xlib-ref name) `(@@ (nyacc lang tcl xlib) ,name))
 
 ;; scope must be manipulated at execution time
 ;; the @code{proc} command should push-scope
@@ -94,18 +95,25 @@
       )
     (sx-match tree
 
-      (($string ,sval)
+      ((string ,sval)
        (values '() `(const ,sval) dict))
+
+      ((fixed ,sval)
+       (values '() `(const ,(string->number sval)) dict))
+
+      ((float ,sval)
+       (values '() `(const ,(string->number sval)) dict))
 
       ((deref ,name)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
-	 (values '() `(call ,(xlib-ref 'tcl:string<-) ,ref) dict)))
+	 (values '() ref dict)))
 
       ((deref ,name ,expr)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
-	 (values '() `(call ,(xlib-ref 'tcl:string<-) ,ref ,expr) dict)))
+	 ;;(values '() `(call ,(xlib-ref 'tcl:any->) ,ref ,expr) dict)))
+	 (values '() `(call ,(xlib-ref 'tcl:array-ref) ,ref ,expr) dict)))
 
       ;; convert (C) string to number (i.e., 0xf => 15)
       ((number (deref ,name))
@@ -133,19 +141,31 @@
 	      (dict (fold (lambda (a d) (add-lexical (cadr a) d)) dict args))
 	      (args (fold-right ;; replace arg-name with lexical-ref
 		     (lambda (a l)
-		       (cons (cons* (car a) (lookup (cadr a) dict) (cddr a)) l))
+		       (cons (cons* (car a) (lookup (cadr a) dict) (cddr a))
+			     l))
 		     '() args))
 	      (dict (add-lexical "return" dict))
 	      (dict (acons '@F name dict))
 	      )
 	 (values `(proc ,nref (arg-list . ,args) ,body) '() dict)))
+
+      ((incr (string ,var) ,val)
+       (values `(incr ,var ,val) '() dict))
+      ((incr (string ,var))
+       (values `(incr ,var (const 1)) '() dict))
       
-      ((set ($string ,name) ,value)
+      ((set (string ,name) ,value)
        (let* ((dict (add-symbol name dict))
 	      (nref (lookup name dict)))
 	 (values `(set ,nref ,value) '() dict)))
+      ;;((set otherwise could be ugly
 
-      ((command ($string ,name) . ,args)
+      ((set-indexed (string ,name) ,index ,value)
+       (let* ((dict (add-symbol name dict))
+	      (nref (lookup name dict)))
+       (values `(set-indexed ,nref ,index ,value) '() dict)))
+
+      ((command (string ,name) . ,args)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "not defined"))
 	 (values `(command ,ref . ,args) '() dict)))
@@ -166,16 +186,24 @@
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
     (if
-     (null? tree) (values (cons kseed seed) kdict)
+     (null? tree) (if (null? kseed)
+		      (values seed kdict) 
+		      (values (cons kseed seed) kdict))
      
      (case (car tree)
 
        ;; before leaving add a call to make sure all toplevels are defined
        ((*TOP*)
-	(values (car kseed) kdict))
+	(let ((tail (rtail kseed)))
+	  (cond
+	   ((null? tail) (values '(void) kdict)) ; just comments
+	   (else (values (car kseed) kdict)))))
 
        ((command)
 	(values (cons `(call . ,(rtail kseed)) seed) kdict))
+
+       ((comment)
+	(values seed kdict))
 
        ((proc)
 	(let* ((tail (rtail kseed))
@@ -206,6 +234,44 @@
 	  ;;(sferr "proc ~S:\n" name-ref) (pperr tail) (pperr fctn)
 	  (values (cons stmt seed) (pop-scope kdict))))
 
+       ;; others to add: incr foreach while continue break
+       ((incr)
+	(let* ((tail (rtail kseed))
+	       (name (car tail))
+	       (expr (cadr tail))
+	       (vref (lookup (car tail) kdict))
+	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
+	  (values (cons stmt seed) kdict)))
+
+       ((format)
+	(let* ((tail (rtail kseed))
+	       (stmt `(call (@@ (nyacc lang nx-lib) sprintf) . ,tail))
+	       )
+	  (values (cons stmt seed) kdict)))
+
+       ;; for allows continue and break
+       ((for)
+	(sferr "todo: for\n")
+	(values (cons '(void) seed) kdict))
+
+       ;; conditional: elseif and else are translated by the default case
+       ((if)
+	(let* ((tail (rtail kseed))
+	       (cond-expr `(primcall not (primcall zero? ,(list-ref tail 0))))
+	       (then-expr (list-ref tail 1))
+	       (rest-part (list-tail tail 2))
+	       (rest-expr
+		(let loop ((rest-part rest-part))
+		  (match rest-part
+		    ('() '(void))
+		    (`((else ,body)) (block body))
+		    (`((elseif ,cond-part ,body-part) . ,rest)
+		     `(if (primcall not (primcall zero? ,cond-part))
+			  ,body-part
+			  ,(loop (cdr rest-part)))))))
+	       (stmt `(if ,cond-expr ,then-expr ,rest-expr)))
+	  (values (cons stmt seed) kdict)))
+
        ((return)
 	(values
 	 (cons `(abort ,(lookup "return" kdict)
@@ -218,18 +284,44 @@
 	(let* ((value (car kseed))
 	       (nref (cadr kseed))
 	       (toplev? (eq? (car nref) 'toplevel)))
-	  ;;(sferr "set:") (pperr (reverse kseed))
 	  (values
 	   (cons (if toplev?
 		     `(define ,(cadr nref) ,value)
 		     `(set! ,nref ,value))
 		 seed)
 	   kdict)))
+
+       ((set-indexed)
+	;; This only works if the variable appeared as string constant in fD.?
+	(let* ((value (car kseed))
+	       (indx (cadr kseed))
+	       (nref (caddr kseed))
+	       (toplev? (eq? (car nref) 'toplevel)))
+	  (values
+	   (cons
+	   `(seq
+	     ,(if toplev?
+		  (make-defonce (cadr nref) `(call ,(xlib-ref 'tcl:make-array)))
+		  `(set! ,nref (if (call (toplevel hash-table?) ,nref) ,nref
+				  `(call ,(xlib-ref 'tcl:make-array)))))
+	     (call ,(xlib-ref 'tcl:array-set1) ,nref ,indx ,value))
+	   seed) kdict)))
+
+       ((body)
+	(values (cons (block (rtail kseed)) seed) kdict))
        
+       ((void)
+	(values (cons '(void) seed) kdict))
+
        ((expr)
 	;;(sferr "expr: ~S\n" (reverse kseed))
 	(values
 	 (cons `(call ,(xlib-ref 'tcl:expr) . ,(rtail kseed)) seed)
+	 kdict))
+
+       ((word)
+	(values
+	 (cons `(call ,(xlib-ref 'tcl:word) . ,(rtail kseed)) seed)
 	 kdict))
 
        (else
@@ -252,15 +344,6 @@
 (define show-xtil #f)
 (define (show-tcl-xtil v) (set! show-xtil v))
 
-;; @deffn {Procedure} compile-tree-il exp env opts => exp env cenv
-;; On input @var{exp} is the SXML from our reader, @var{env} is ``an
-;; environment'', and @var{opts} is a keyword list of options.  The procedure
-;; return three values: the compiled expressin, the corresponding environment
-;; for the target for the compiled language, and a continuation environment
-;; for the next parsed syntax tree.
-;; @end deffn
-(set! show-sxml #f)
-(set! show-xtil #f)
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))
   ;; Need to make an interp.  All Tcl commands execute in an interp
@@ -279,12 +362,5 @@
      	    )
 	  )
 	(values (parse-tree-il '(void)) env cenv))))
-
-;;; Thoughts:
-
-;; scheme calls need to be
-;; [xcall name [number x] [<type> v] ...]
-
-;; (deref xxx) should always check and convert to string
 
 ;; --- last line ---

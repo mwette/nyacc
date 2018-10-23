@@ -2,6 +2,16 @@
 @setfilename nx-devel.info
 @settitle Developing NYACC Extension Languages
 
+@copying
+Copyright (C) 2018 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as @file{COPYING.DOC}.
+@end copying
+
 @headings off
 @everyfooting @| @thispage @|
 
@@ -9,7 +19,7 @@
 @top Developing NYACC Extension Languages
 @format
 Matt Wette
-July 2018
+September 2018
 @end format
 
 @heading ideas
@@ -104,6 +114,9 @@ Note that if the top-level language is a joint, then the compiler
 will just read expressions, combine them and then send to the compiler
 in one shot.
 
+Note: at the command line the user directory is always passed, not
+the continuation returned from the previous execution.
+
 @subheading Converting Your SXML Tree to Tree-IL
 
 The NX languages use @code{foldts*-values} from @code{(sxml fold)}.
@@ -149,6 +162,114 @@ returns three values: the compiled expression, the corresponding environment
 for the target for the compiled language, and a continuation environment
 for the next source tree.
 @end deffn
+
+@subheading Variable Declarations and Assignment
+
+There are languages (e.g., JavaScript, Tcl) where variables must be
+declared and other languages (e.g., Octave) where variables are
+declared when first used.
+
+In nx-languages the parser will typically emit symbols as a simple
+SXML element, e.g.{} @code{(ident "x")}.  When we see this pattern in
+@code{fD} we replace the symbol with a reference from the dictionary,
+as in @code{(lookup "x")}.
+
+When we see a variable declaration in @code{fD} we add the symbol to
+the dictionary (at the current scope).  If we know this variable has
+lexical scope we use @code{nx-add-lexical} and if toplevel we use
+@code{nx-add-toplevel}.  If the scope is unknown we use
+@code{nx-add-symbol} (which checks the scope for us).  The value added
+to the symbol table is either @code{(lexical @it{name} @it{gensym})}
+or @code{(toplevel @it{name})} depending on the scope.  Note that a
+call to @code{nx-add-lexical} will generate the gensym for us.
+
+When we see a variable reference in @code{fD} we lookup the symbol and
+replace the SXML, say @code{(ident "x")} with the dictionary entry,
+say @code{(lexical x x-123)}.  Since we have now processed the node
+we tell @code{foldts*-values} that we have done this.  Without
+processing the node would be returned as
+@example
+(values '(ident "x") '() dict)
+@end example
+@noindent
+Instead we return 
+@example
+(values '() '(lexical x x-123) dict)
+@end example
+
+@sp 1
+
+When we see a variable assignment in @code{fD} we will replace the
+assignment, which references an identifier with a specialized
+assignment that avoids @code{fD} performing the translation discussed
+above. So, for example, if @code{fD} sees
+@example
+(assn (ident "x") (float "13.5"))
+@end example
+@noindent
+when we morph so something we trap later:
+@example
+(var-assn "x" (float "13.5"))
+@end example
+@noindent
+In the case of assignment to an aggregate we perform a similar morph
+@example
+(assn (member (expr ...) (ident "x")) (float "13.5"))
+  =>
+(mem-assn (expr ...) "x" (float "13.5"))
+@end example
+
+@sp 1
+
+@subheading Function-Local Variables
+
+Most languages that require local variables to be declared before use.
+Our current strategy is to elevate push these to the top of the
+associated scope block.  For example,
+@example
+function foo() {
+  var a;
+  a = bar(1);
+  var b;
+  b = a + baz(2);
+  return b + 3;
+  }
+@end
+We treat this as if the code was written as
+@example
+function foo() {
+  var a, b;
+  a = bar(1);
+  b = a + baz(2);
+  return b + 3;
+  }
+@end
+THIS NEEDS WORK.  Recheck javascript implementation.
+
+In the case of languages which do not require declarations (e.g.,
+Octave), when we roll-up a function definition in @code{fU} we check
+the dictionary (aka symbol table) for the current scope and add a
+Tree-IL @code{let} structure for all of these.
+
+@subheading Top-Level Variables
+
+In the case of languages which do not require declarations (e.g.,
+Octave), when we return a top-level construct -- e.g., during
+interactive use -- we wrap the construct in a Tree-IL @code{seq}
+expression-chain that ensures the assigned variables are defined.  For
+example, the top-level construct was
+@example
+x = 13.5;
+@end example
+@noindent
+then we would effectively generate Tree-IL for the following Scheme
+expression:
+@example
+(begin
+  (define x (if (defined? 'x) x (if #f #f)))
+  (set! x 13.5))
+@end example
+@noindent
 
 @subheading Looping
 
@@ -207,6 +328,5 @@ reader port cenv -> exp
 parser exp -> exp
 compiler 
 @end example
-
 
 @bye

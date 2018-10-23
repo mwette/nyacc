@@ -66,7 +66,7 @@
 
 (define sx-ref list-ref)
 
-(define* (eval-expr tree #:optional (dict '()))
+(define (eval-expr tree)
   (letrec
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (sx-ref tr 1)))
@@ -79,6 +79,8 @@
 	  (case (car tree)
 	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
 	    ((float) (string->number (cnumstr->scm (tx1 tree))))
+	    ((string) (sx-ref tree 1))
+	    ((ident) (sx-ref tree 1))
 	    ((pre-inc post-inc) (1+ (ev1 tree)))
 	    ((pre-dec post-dec) (1- (ev1 tree)))
 	    ((pos) (ev1 tree))
@@ -104,49 +106,90 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ;;((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
-	    ((ident) (or (and=> (assoc-ref dict (tx1 tree))
-				(lambda (s) (string->number (cnumstr->scm s))))
-			 0))
-	    (else (error "incomplete expr implementation"))))))
+	    (else (error "incomplete expr implementation" tree))))))
     (eval-expr tree)))
+
+(define-public (tcl:word . args)
+  (apply string-append (map tcl:any->str args)))
 
 ;; @deffn {Procedure} tcl:expr frags
 ;; @var{frags} is a list of string fragments.  We join, parse and execute.
 ;; @end deffn
-;; Do we need a dictionary argument ?
 (define-public (tcl:expr . frags)
-  (let* ((strs (map (lambda (f) (if (string? f) f (simple-format #t "~S" f)))
-		    frags))
-	 (xarg (string-join strs ""))
+  (let* ((strs (map tcl:any->str frags))
+	 (xarg (apply string-append strs))
 	 (tree (parse-expr-string xarg))
-	 (xval (eval-expr tree))
-	 )
-    ;;(sferr "expr: ~S\n" xarg)
-    ;;(pperr tree)
-    ;;(sferr "  => ~S\n" xval)
-    ;;(eval-expr (parse-expr-string xarg))
+	 (xval (eval-expr tree)))
     xval))
 
-;; @deffn {Procedure} tcl:string<- [value] [index]
+
+;; @deffn {Procedure} tcl:list arg ...
+;; This creates a tcl list.
+;; @end deffn
+(define-public (tcl:list . args)
+  args)
+
+;; === (associative) arrays 
+
+;; arrays are what set abc(foo) mean
+;; they are apparently ordered
+
+;; @deffn {Procedure} tcl:make-array name
+;; Make an array.  In Tcl this actually takes an argument and would add
+;; to the current scope.  To do that this would need to look like
+;; @example
+;; (tcl:make-array dict name)
+;; @end example
+;; @end deffn
+(define-public (tcl:make-array)
+  (make-hash-table))
+
+;; @deffn {Procedure} tcl:array-get name index
+;; Get value from the array.  What if not there?
+;; The argument @var{index} will be converted to a symbol.@*
+;; Note: What if it's an integer (e.g., @code{1}, or then @code{"1"}).
+;; @end deffn
+(define-public (tcl:array-get name index)
+  (let ((key (if (string? index) (string->symbol index) index)))
+    (hashq-ref name key)))
+
+;; @deffn {Procedure} tcl:array-set name index value
+;; @end deffn
+(define-public (tcl:array-set1 name index value)
+  (let ((key (if (string? index) (string->symbol index) index)))
+    (hashq-set! name key value)))
+
+;;(define-public (ztcl:array-set env name value)
+;;  (let ((key (if (string? index) (string->symbol index) index)))
+;;    (hashq-set! name key value)))
+
+;; ===================================
+
+(define (tcl:list->string tcl-list)
+  (map (lambda (elt)
+	 (let ((str (tcl:any->str elt)))
+	   (if (string-any #\space str) (string-append "{" str "}") str)))
+       tcl-list))
+
+;; @deffn {Procedure} tcl:any->str [value] [index]
 ;; Convert value to string.
 ;; @end deffn
-(define-public tcl:string<-
+(define-public tcl:any->str
   (case-lambda
-   ((val)
-    (cond
-     ((string? val) val)
-     ((number? val) (number->string val))
-     ((list? val) (string-join val))
-     ;;((vector? val) ...
-     (else (call-with-output-string (lambda (port) (display val port))))))
-   ((val indx)
-    (error "indexed deref not implemented")
-    )))
+    ((val)
+     (cond
+      ((string? val) val)
+      ((number? val) (number->string val))
+      ((list? val) (tcl:list->string val))
+      ;;((vector? val) ...
+      (else (simple-format #f "~A" val))))
+     ((val index)
+      (error "indexed deref not implemented")
+      )))
 
 (define-public tcl:puts
   (case-lambda
-   ((val) (display val) (newline))
+   ((val) (display (tcl:any->str val)) (newline))
    ((arg0 val)
     (if (string=? arg0 "-nonewline")
 	(display val)
@@ -155,6 +198,7 @@
     (unless (string=? nnl "-nonewline") (throw 'tcl-error "puts: bad arg"))
     "(not implemented)"
     )))
+
 
 ;; === xdict
 

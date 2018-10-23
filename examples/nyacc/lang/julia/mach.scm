@@ -17,7 +17,10 @@
 
 ;;; Notes:
 
-;; Everything in an expression.
+;; Julia has no documented syntax.  We will need to scrounge through 
+;; the manual, example code and the sources to extract something.
+
+;; Everything is an expression.
 
 ;;; Code:
 

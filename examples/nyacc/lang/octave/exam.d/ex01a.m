@@ -1,4 +1,6 @@
-for i = 1:5
-  % increment
-  k = k + 1;
+function j = ex01a(k)
+   j = k;
+   for i = 1:100
+      j = j + 1;
+   end
 end

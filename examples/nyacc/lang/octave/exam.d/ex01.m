@@ -1,4 +1,4 @@
-function osig = pid(state, isig)
+function osig = ex01(state, isig)
 % PID -
 % more docs
 

@@ -1,4 +1,4 @@
-;;; language/nx-tcl/spec.scm - Nyacc eXtension for Tcl
+;;; language/nx-tcl/spec.scm - NYACC extension for Tcl
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -25,9 +25,13 @@
 
 (define-language nx-tcl
   #:title	"nx-tcl"
-  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
-  				  (read-tcl-stmt p e)
-  				  (read-tcl-file p e)))
+  #:reader	(lambda (p e)
+		  (cond
+		   ((and (file-port? p)
+			 (string? (port-filename p))
+			 (not (string-prefix? "/dev/" (port-filename p))))
+		    (read-tcl-file p e))
+		   (else (read-tcl-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	write

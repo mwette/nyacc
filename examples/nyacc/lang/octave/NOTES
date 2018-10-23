@@ -16,3 +16,87 @@ a = zeros(2,3);
 a(1,1) = 1.0;
 (let ((a (make-array 0.0 2 3)))
   (array-set! a 1.0 2 2))
+
+
+guild compile --from=nx-octave simp1.m
+p=#<input: nyacc/lang/octave/simp1.m 13> 
+e=#<module (#{ g325}#) 22f6b40>
+<parse stmt>
+p=#<input: nyacc/lang/octave/simp1.m 13> 
+e=(("simp1" toplevel simp1) (@top . #t) (@M . #<module (#{ g325}#) 22f6b40>) ("struct" @ (nyacc lang octave xlib) oct:make-struct))
+<parse stmt>
+
+
+???
+p=#<input: nyacc/lang/octave/simp1.m 13>
+e=#<module (#{ g329}#) 1b56b40>
+i=#<directory (guile-user) 17d9140>
+<parse file>
+
+
+guile-norl> (load "simp1.m")
+
+p=#<input: nyacc/lang/octave/simp1.m 13>
+e=#<directory (guile-user) 1c04140>
+i=#<directory (guile-user) 1c04140>
+<parse file>
+
+
+guile-w/rl> (load "simp1.m")
+
+p=#<input: nyacc/lang/octave/simp1.m 13>
+e=#<directory (guile-user) 25bb140>
+i=#<directory (guile-user) 25bb140>
+<parse file>
+
+
+octave-w/rl> a = 1.0;
+
+p=#<input: file 10a48c0>
+e=#<directory (guile-user) efd140>
+i=#<directory (guile-user) efd140>
+<parse stmt>
+
+
+octave-norl> a = 1.0;
+
+p=#<input: file /dev/pts/19>
+e=#<directory (guile-user) aff140>
+i=#<directory (guile-user) aff140>
+
+
+
+
+
+
+terminal:
+nx-octave@(guile-user)> a = 1.0;
+  p=#<input: file /dev/pts/19>
+  e=#<directory (guile-user) 1530140>
+  i=#<directory (guile-user) 1530140>
+  <parse stmt>
+nx-octave@(guile-user)> b = 2.0;
+  p=#<input: file /dev/pts/19>
+  e=#<directory (guile-user) 1530140>
+  i=#<directory (guile-user) 1530140>
+  <parse stmt>
+nx-octave@(guile-user)> c = 3.0;
+  p=#<input: file /dev/pts/19>
+  e=#<directory (guile-user) 1530140>
+  i=#<directory (guile-user) 1530140>
+  <parse stmt>
+nx-octave@(guile-user)> 
+
+
+geiser:
+nx-octave@(guile-user)> a = 1.0;
+  p=#<input: file /dev/pts/20>
+  e=#<directory (guile-user) 1fc3140>
+  i=#<directory (guile-user) 1fc3140>
+<parse stmt>
+nx-octave@(guile-user)> b = 2.0;
+  p=#<input: file /dev/pts/20>
+  e=#<directory (guile-user) 1fc3140>
+  i=#<directory (guile-user) 1fc3140>
+<parse stmt>
+nx-octave@(guile-user)> 

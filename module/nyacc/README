@@ -1,55 +1,34 @@
-nyacc/README
+NYACC, for Not Yet Another Compiler Compiler, is set of guile modules for
+generating parsers and lexical analyzers.  It also provides sample parsers
+and pretty-printers using SXML trees as an intermediate representation.
 
-   Copyright (C) 2016 Matthew R. Wette
+    Copyright (C) 2016,2018 Matthew R. Wette
 
-   Copying and distribution of this file, with or without modification,
-   are permitted in any medium without royalty provided the copyright
-   notice and this notice are preserved.  This file is offered as-is,
-   without any warranty.
+    Copying and distribution of this file, with or without modification,
+    are permitted in any medium without royalty provided the copyright
+    notice and this notice are preserved.  This file is offered as-is,
+    without any warranty.
 
+NYAcc provides a decent C parser and a `FFI Helper' tool to help create
+Guile Scheme bindings for C-based libraries.
 
-strategy for generating parsers and other stuff
+It provides (partially implemented) compilers based on above mentioned
+parsers to allow execution with Guile as extension languages.
 
-guile -s mach.scm -c '(@ (nyacc lang c99 mach) gen-mach-files)'
-=> .scm/{actions.scm,tables.scm}
-#guild compile 
+NYACC maturity is beta level.
 
-eval-when?
+NYACC is free software; the full source distribution is available through
 
-use-case: dist mach-files and parser
+* the tarball repository:
+    https://download.savannah.gnu.org/releases/nyacc/
 
-dist:
-	mach.scm
+* the git repository:
+    git://git.savannah.nongnu.org/nyacc.git
 
+home page, project page and user's guide:
+* http://www.nongnu.org/nyacc
+* https://savannah.nongnu.org/projects/nyacc
+* http://www.nongnu.org/nyacc/nyacc-ug.html
 
-===============================================================================
-
-dev-parser.scm: mach.scm pbody.scm mk-parser.scm
-parser.scm: mach.scm pbody.scm mk-parser.scm
-expr-parser.scm: mach.scm pbody.scm mk-parser.scm
-
-$ guile -l cppmach.scm -c '(@ (nyacc lang c99 cppmach) gen-cpp-files)'
-> cppact.scm cpptab.scm
-
-$ guile -l mach.scm -c '(@ (nyacc lang c99 mach) gen-c99-files)'
-> c99act.scm c99tab.scm
-
-$ guile -l mach.scm -c '(@ (nyacc lang c99 mach) gen-c99x-files)'
-> c99xact.scm c99xtab.scm 
-
-===============================================================================
-
-install:
-	cpp.go
-	mach.go
-	parser.go
-	xparser.go
-	pprint.go
-	util1.go
-	munge.go
-	version.go
-
-cpp.scm: cppmach.scm
-
-#cppmach.scm (export-files
-
+For support see:
+    https://savannah.nongnu.org/support/?group=nyacc

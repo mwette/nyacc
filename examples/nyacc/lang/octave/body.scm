@@ -58,8 +58,8 @@
 
 
 (define octave-read-comm
-  (make-comm-reader '(("%" . "\n")
-		      ("#!" . "!#") ("#lang" . "\n"))))
+  (make-comm-reader '(("%" . "\n") ("#" . "\n") ("#{" . "#}")
+		      ("#!" . "!#"))))
 
 ;; elipsis reader "..." whitespace "\n"
 (define (elipsis? ch)
@@ -86,6 +86,8 @@
 ;; use in Octave parsers.  See @code{parse-oct}.
 ;; @end deffn
 (define-public (make-octave-lexer-generator match-table)
+  ;; There is some trickery here to assure that if the last line
+  ;; ends w/o newline then one gets inserted.
   (let* ((read-string octave-read-string)
 	 (read-comm octave-read-comm)
 	 (read-ident read-c$-ident)
@@ -99,19 +101,19 @@
 	 (chrtab (filter-mt char? match-table))	; characters in grammar
 	 (read-chseq (make-chseq-reader chrseq))
 	 (newline-val (assoc-ref chrseq "\n"))
-	 (assc-$ 
-          (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
+	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (if (not newline-val) (error "octave setup error"))
     (lambda ()
       (let ((qms #f) (bol #t))		; qms: quote means string
 	(lambda ()
 	  (let loop ((ch (read-char)))
 	    (cond
-	     ((eof-object? ch) (assc-$ (cons '$end ch)))
+	     ((eof-object? ch)
+	      (if bol (assc-$ (cons '$end ch)) (loop #\newline)))
  	     ((elipsis? ch) (loop (skip-to-next-line)))
 	     ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
 	     ((char-set-contains? space-cs ch) (set! qms #t) (loop (read-char)))
-	     ((read-comm ch bol) => assc-$)
+	     ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
 	     (bol (set! bol #f) (loop ch))
 	     ((read-ident ch) =>
 	      (lambda (s) ;; s is a string

@@ -1,4 +1,4 @@
-;; Nyacc eXtension for octave
+;; language/nx-octave/spec.scm - NYACC extension for Octave
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -26,9 +26,13 @@
 
 (define-language nx-octave
   #:title	"nx-octave"
-  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
-				  (read-oct-stmt p e)
-				  (read-oct-file p e)))
+  #:reader	(lambda (p e)
+		  (cond
+		   ((and (file-port? p)
+			 (string? (port-filename p))
+			 (not (string-prefix? "/dev/" (port-filename p))))
+		    (read-oct-file p e))
+		   (else (read-oct-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-ml

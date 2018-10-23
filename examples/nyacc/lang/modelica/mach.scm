@@ -15,30 +15,47 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-;; ideas:
-;; 1) call it: mozdefica
+;;; Notes:
+
+;; The desire to generate a Modelica parser in Scheme is what 
+;; started my effort to generate NYACC.  - Matt
+
+;; I believe this is based on version 3.4 of the Modelica Specification.
+
+;; Need a better language, methinks.  This is a bit bloated IMO.
+;; So here I ramble - MW
+;;
+;; function ... algorithm ... end
+;; model ... equation ... end
+;; if parameter then need state maybe
+;; and way to designate "manifest" vs "derived" parameters
+;; memcache?
+;; loops with bounds
+;; package
+;; cond
+;; when () => xxx
+;; when () => ...
+;; end cond
+;; mat, vec, int, float, fixed
+;; make word after end optional
+;; I think inner/outer means dynamically the outer is dynamically bound.
+;; maybe use monads?
+
+;;; Code:
 
 (define-module (nyacc lang modelica mach)
   #:export (modelica-spec
 	    modelica-mach
-	    modelica-parser
-	    gen-mod-lexer
-	    parse-mo)
+	    gen-modelica-files)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
-  #:use-module (nyacc lang util)
-  #:use-module (ice-9 pretty-print)
-  )
+  #:use-module (nyacc lang util))
 
-(define (check-ids st nd)
-  (if (not (string=? (cadr st) (cadr nd)))
-      (throw 'mo-error "end name does not match")))
-
-;; based on version 3.4, I believe
 (define modelica-spec
   (lalr-spec
-   (notice (string-append "Copyright 2016-2017 Matthew R. Wette" lang-crn-lic))
+   (notice (string-append "Copyright (c) 2015-2018 Matthew R. Wette"
+			  license-lgpl3+))
    (start stored-definition)
    (grammar
     
@@ -54,10 +71,10 @@
      )
     (stored-definition-2
      ("final" class-definition ";"
-      ($$ (make-tl 'class-defn-list (sx+attr* $2 'final "yes"))))
-     (class-definition ";" ($$ (make-tl 'class-defn-list $1)))
+      ($$ (make-tl 'stored-defn (sx-attr-add $2 'final "yes"))))
+     (class-definition ";" ($$ (make-tl 'stored-defn $1)))
      (stored-definition-2 "final" class-definition ";"
-			  ($$ (tl-append $3 (sx+attr* $3 'final "yes"))))
+			  ($$ (tl-append $3 (sx-attr-add $3 'final "yes"))))
      (stored-definition-2 class-definition ";" ($$ (tl-append $1 $2)))
      )
 
@@ -98,33 +115,37 @@
 
     (long-class-specifier
      (ident string-comment composition "end" ident
-	    ($$ (check-ids $1 $5) (if (pair? $2) (list $1 $2 $3) (list $1 $3))))
+	    ($$ (check-ids $1 $5) (list $1 $3)))
      ("extends" ident class-modification string-comment composition "end" ident
-      ($$ (check-ids $2 $7) (list '(@ extends . "yes") $2 $3 $4 $5)))
+      ($$ (check-ids $1 $5) (list '(@ extends . "yes") $2 $3 $4 $5)))
      ("extends" ident string-comment composition "end" ident
-      ($$ (check-ids $2 $6) (list '(@ extends . "yes") $2 $3 $4)))
+      ($$ (check-ids $1 $5) (list '(@ extends . "yes") $2 $3 $4)))
      )
 
     (short-class-specifier
      (ident "=" base-prefix type-specifier array-subscripts
 	    class-modification comment
-	    ($$ (list $1 `(is ,$3 ,$4 ,$5 ,$6 ,$7))))
-     (ident "=" base-prefix type-specifier array-subscripts comment)
-     
-     (ident "=" base-prefix type-specifier class-modification comment)
-     (ident "=" base-prefix type-specifier comment)
-     (ident "=" "enumeration" "(" enum-list ")" comment)
-     (ident "=" "enumeration" "(" ":" ")" comment)
+	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5 ,$6)))
+     (ident "=" base-prefix type-specifier array-subscripts comment
+	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5)))
+     (ident "=" base-prefix type-specifier class-modification comment
+	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5)))
+     (ident "=" base-prefix type-specifier comment
+	    ($$ `(short-class-spec ,$1 ,$3 ,$4)))
+     (ident "=" "enumeration" "(" enum-list ")" comment
+	    ($$ `(short-class-enum-spec ,$1 ,$5)))
+     (ident "=" "enumeration" "(" ":" ")" comment
+	    ($$ `(short-class-enum-spec ,$1 ,$5)))
      )
 
     (der-class-specifier
      (ident "=" "der" "(" type-specifier "," der-class-specifier-1 ")" comment
-	    ($$ `(der-class-specifier ... (tl->list $7))))
-     )
+	    ($$ `(der-class-specifier ,$1 ,$5 ,$7))))
     (der-class-specifier-1 ;; or ident-colon-list
+      (ident-list-1 ($$ (tl->list $1))))
+    (ident-list-1
      (ident ($$ (make-tl 'ident-list $1)))
-     (der-class-specifier-1 ";" ident ($$ (tl-append $1 $3)))
-     )
+     (ident-list-1 ";" ident ($$ (tl-append $1 $3))))
 
     (base-prefix ("input") ("output"))
 
@@ -133,8 +154,7 @@
      (enum-list "," enumeration-literal ($$ (tl-append $1 $3))))
 
     (enumeration-literal
-     (ident comment)
-     )
+     (ident comment ($$ $1)))
 
     ;; ===================== update to v3.4 stopped here ======================
 
@@ -183,10 +203,14 @@
     (language-specification (string))
 
     (external-function-call
-     (component-reference "=" ident "(" expression-list ")")
-     (component-reference "=" ident "(" ")")
-     (ident "(" expression-list ")")
-     (ident "(" ")")
+     (component-reference "=" ident "(" expression-list ")"
+			  ($$ `(ext-fctn-call ,$1 ,$3 ,$5)))
+     (component-reference "=" ident "(" ")"
+			  ($$ `(ext-fctn-call ,$1 ,$3 '(expr-list))))
+     (ident "(" expression-list ")"
+			  ($$ `(ext-fctn-call ,$1 ,$3)))
+     (ident "(" ")"
+			  ($$ `(ext-fctn-call ,$1 '(expr-list))))
      )
 
     (element-list
@@ -205,10 +229,11 @@
      (element-1)
       )
     (element-1
-     (class-definition)
-     (component-clause)
-     ("replaceable" element-2 constraining-clause comment)
-     ("replaceable" element-2)
+     (element-2)
+     ("replaceable" element-2 constraining-clause comment
+      )
+     ("replaceable" element-2
+      )
      )
     (element-2
      (class-definition)
@@ -234,16 +259,20 @@
 
     ;; B.2.3 Extends
     (extends-clause
-     ("extends" name class-modification annotation)
-     ("extends" name class-modification)
-     ("extends" name annotation)
-     ("extends" name)
-     )
+     ("extends" name class-modification annotation
+      ($$ `(extends ,$2 ,$3)))
+     ("extends" name class-modification
+      ($$ `(extends ,$2 ,$3)))
+     ("extends" name annotation
+      ($$ `(extends ,$2)))
+     ("extends" name
+      ($$ `(extends ,$2))))
 
     (constraining-clause
-     ("constrainedby" name class-modification)
-     ("constrainedby" name)
-     )
+     ("constrainedby" name class-modification
+      ($$ `(constrained-by ,$1 ,$2)))
+     ("constrainedby" name
+      ($$ `(constrained-by ,$1))))
 
     ;; B.2.4 Component Clause
     (component-clause
@@ -275,72 +304,68 @@
     (type-prefix-2 ("discrete") ("parameter") ("constant"))
     (type-prefix-3 ("input") ("output"))
 
-    (type-specifier (name))
+    (type-specifier (name ($$ `(type-spec ,$1))))
 
     (component-list
-     (component-declaration)
-     (component-list "," component-declaration)
-     )
+     (component-list-1 ($$ (tl->list $1))))
+    (component-list-1
+     (component-declaration ($$ (make-tl 'comp-list $1)))
+     (component-list-1 "," component-declaration ($$ (tl-append $1 $3))))
 
     (component-declaration
-     (declaration condition-attribute comment)
-     (declaration comment)
-     )
+     (declaration condition-attribute comment ($$ `(comp-decl ,$1 ,$2)))
+     (declaration comment ($$ $1)))
 
     (condition-attribute
-     ("if" expression)
-     )
+     ("if" expression ($$ `(if ,$2))))
 
     (declaration
-     (ident ($? array-subscripts) ($? modification))
-     )
+     (ident ($? array-subscripts) ($? modification)
+	    ($$ (make-sx 'decl #f $1 $2 $3))))
 
     ;; B.2.5 Modification
     (modification
-     (class-modification "=" expression)
-     (class-modification)
-     ("=" expression)
-     (":=" expression)
-     )
+     (class-modification "=" expression ($$ `(class-mod ,$1 ,$3)))
+     (class-modification ($$ `(class-mod ,$1)))
+     ("=" expression ($$ `(eqv-mod ,$2)))
+     (":=" expression ($$ `(def-mod ,$2))))
 
     (class-modification
-     ("(" argument-list ")")
-     ("(" ")")
-     )
+     ("(" argument-list ")" ($$ $2))
+     ("(" ")" ($$ '(arg-list))))
 
     (argument-list
-     (argument)
-     (argument-list "," argument)
-     )
+     (arg-list-1 ($$ (tl->list $1))))
+    (arg-list-1
+     (argument ($$ (make-tl 'arg-list $1)))
+     (arg-list-1 "," argument ($$ (tl-append $1 $3))))
 
     (argument (element-modification-or-replaceable) (element-redeclaration))
 
     (element-modification-or-replaceable
-     ("each" "final" elt-mod-or-repl-1)
-     ("each" elt-mod-or-repl-1)
-     ("final" elt-mod-or-repl-1)
-     (elt-mod-or-repl-1)
-     )
+     ("each" "final" elt-mod-or-repl-1 ($$ $3))
+     ("each" elt-mod-or-repl-1 ($$ $2))
+     ("final" elt-mod-or-repl-1 ($$ $2))
+     (elt-mod-or-repl-1 ($$ $1)))
     (elt-mod-or-repl-1 (element-modification) (element-replaceable))
 
-    (element-modification (name ($? modification) string-comment))
+    (element-modification
+     (name ($? modification) string-comment
+	   ($$ (if (pair? $2) `(elt-mod ,$1 ,$2) `(elt-mod ,$1)))))
 
     ;; This looks wierd in the 3.3r1 spec. Like maybe typo.
     (element-redeclaration
-     ("redeclare" ($? "each") ($? "final") elt-redecl-1)
-     )
+     ("redeclare" ($? "each") ($? "final") elt-redecl-1 ($$ $4)))
     (elt-redecl-1
      (short-class-definition)
      (component-clause1)
-     (element-replaceable)
-     )
+     (element-replaceable))
 
     (element-replaceable
-     ("replaceable"
-      short-class-definition component-clause1 constraining-clause)
-     ("replaceable"
-      short-class-definition component-clause1)
-     )
+     ("replaceable" short-class-definition component-clause1 constraining-clause
+      ($$ `(elt-repl $2 $3 $4)))
+     ("replaceable" short-class-definition component-clause1
+      ($$ `(elt-repl $2 $3))))
 
     (component-clause1
      (type-prefix type-specifier declaration comment
@@ -354,26 +379,24 @@
     ;; B.2.6 Equations
     (equation-section
      ("initial" "equation" equation-list
-      ($$ `(init-eqn-section ,$3)))
+      ($$ `(init-eqn-section . ,(cdr $3))))
      ("equation" equation-list
-      ($$ `(eqn-section ,$2)))
+      ($$ `(eqn-section . ,(cdr $2))))
      ("initial" "equation"
-      ($$ `(init-eqn-section (eqn-list))))
+      ($$ `(init-eqn-section)))
      ("equation"
-      ($$ `(eqn-section (eqn-list))))
-     )
+      ($$ `(eqn-section))))
 
     ;; I think they messed this up tool
     (algorithm-section
      ("initial" "algorithm" statement-list
-      ($$ `(init-alg-section ,$3)))
+      ($$ `(init-alg-section . ,(cdr $3))))
      ("algorithm" statement-list
-      ($$ `(alg-section ,$2)))
+      ($$ `(alg-section . ,(cdr $2))))
      ("initial" "algorithm"
-      ($$ `(init-alg-section (stmt-list))))
+      ($$ `(init-alg-section)))
      ("algorithm"
-      ($$ `(alg-section (stmt-list))))
-     )
+      ($$ `(alg-section))))
 
     ;; my addition:
     (equation-list
@@ -383,7 +406,8 @@
      (equation-list-1 equation ";" ($$ (tl-append $1 $2)))
      )
 
-    (equation (equation-1 comment ($$ (append $1 (list $2)))))
+    (equation
+     (equation-1 comment ($$ $1)))
     (equation-1
      (simple-expression "=" expression ($$ `(equate ,$1 ,$3)))
      (if-equation)
@@ -397,7 +421,8 @@
      (statement ";" ($$ (make-tl 'stmt-list $1)))
      (statement-list statement ";" ($$ (tl-append $1 $2))))
 
-    (statement (statement-1 comment ($$ (append $1 (list $2)))))
+    (statement
+     (statement-1 comment ($$ $1)))
     (statement-1
      (component-reference ":=" expression ($$ `(assign ,$1 ,$3)))
      (component-reference function-call-args ($$ `(call ,$1 ,$2)))
@@ -494,7 +519,7 @@
       ($$ `(when-eq ,$2 ,$3 ,@(cdr (tl->list $4))))))
     (elsewhen-eq-list
      (elsewhen-eq-part ($$ (make-tl 'l $1)))
-     (elsewhen-eq-list elsewhen-eq-part ($$ (tl->append $1 $2))))
+     (elsewhen-eq-list elsewhen-eq-part ($$ (tl-append $1 $2))))
     (elsewhen-eq-part
      ("elsewhen" expression "then" ($$ `(elsewhen ,$2 (expr-list))))
      ("elsewhen" expression "then" expression-list ($$ `(elsewhen ,$2 ,$4))))
@@ -504,7 +529,7 @@
       ($$ `(when-st ,$2 ,$3 ,@(cdr (tl->list $4))))))
     (elsewhen-st-list
      (elsewhen-st-part ($$ (make-tl 'l $1)))
-     (elsewhen-st-list elsewhen-st-part ($$ (tl->append $1 $2))))
+     (elsewhen-st-list elsewhen-st-part ($$ (tl-append $1 $2))))
     (elsewhen-st-part
      ("elsewhen" expression "then" ($$ `(elsewhen ,$2 (stmt-list))))
      ("elsewhen" expression "then" statement-list ($$ `(elsewhen ,$2 ,$4))))
@@ -568,35 +593,39 @@
 
     (term
      (factor)
-     (term mul-op factor)
-     )
+     (term mul-op factor ($$ (list $2 $1 $3))))
     (mul-op ("*" ($$ 'mul)) ("/" ($$ 'div))
 	    (".*" ($$ 'dot-mul)) ("./" ($$ 'dot-div)))
 
     (factor
-     (primary)
-     (factor "^" primary ($$ `(pow ,$1 ,$2)))
-     (factor ".^" primary ($$ `(dot-pow ,$1 ,$2)))
+     (unary-expr)
+     (factor "^" unary-expr ($$ `(pow ,$1 ,$2)))
+     (factor ".^" unary-expr ($$ `(dot-pow ,$1 ,$2)))
      )
+
+    (unary-expr
+     (primary)
+     ("+" primary ($$ `(pos ,$2)))
+     ("-" primary ($$ `(neg ,$2))))
 
     (primary
      (unsigned-number ($$ `(p-expr ,$1)))
      (string ($$ `(p-expr ,$1)))
      ("false" ($$ `(p-expr '(false))))
      ("true" ($$ `(p-expr '(true))))
-     (name function-call-args ($$ `(fctn-call ,$1 ,(tl->list $2))))
+     (name function-call-args ($$ `(fctn-call ,$1 ,$2)))
      ("der" function-call-args ($$ `(der ,$2)))
      ;;("initial" function-call-args)  ; 4 srconf, OK to shift?
      
      ;; from component reference:
-     (name)
+     (name ($$ `(p-expr ,$1)))
      (name array-subscripts ($$ `(array-elt ,$1 ,$2)))
      
-     ("(" output-expression-list ")")
+     ("(" output-expression-list ")" ($$ `(p-expr ,$2)))
      ("[" expression-list-list  "]"
       ($$ `(matrix ,(map (lambda (row) (cons 'row (cdr row)))
 			 (cdr (tl->list $2))))))
-     ("{" function-arguments "}")
+     ("{" function-arguments "}" ($$ `(??? ,$2)))
      ;;("end")			     ; 2 srconf, and WTF is this for?
      )
     (expression-list-list
@@ -645,11 +674,14 @@
     ;;(function-argument-1 ("," function-arguments) ("for" for-indices))
     ;;(named-arguments (named-argument) (named-arguments "," named-argument))
 
-    (named-argument (ident "=" function-argument))
+    (named-argument
+     (ident "=" function-argument ($$ `(named-arg ,$1 ,$3))))
 
     (function-argument
-     ("function" name "(" named-arguments ")")
-     ("function" name "(" ")")
+     ("function" name "(" named-arguments ")"
+      ($$ `(fctn-arg ,$2 ,$4)))
+     ("function" name "(" ")"
+      ($$ `(fctn-arg ,$2)))
      (expression)
      )
 
@@ -660,9 +692,10 @@
      )
 
     (expression-list
-     (expression)
-     (expression-list "," expression)
-     )
+     (expression-list-1 ($$ (tl->list $1))))
+    (expression-list-1
+     (expression ($$ (make-tl 'expr-list $1)))
+     (expression-list-1 "," expression ($$ (tl-append $1 $3))))
 
     (array-subscripts
      ("[" array-subscript-list "]" ($$ (tl->list $2))))
@@ -679,17 +712,18 @@
     (comment
      (string-comment annotation
 		     ($$ (if (pair? $1) `(comment ,$1 ,$2) `(comment ,$2))))
-     (string-comment ($$ (if (pair? $1) `(comment ,$1) '(comment))))
-     )
+     (string-comment ($$ (if (pair? $1) `(comment ,$1) '()))))
 
     (string-comment
      ($empty)
      (string-cat))
     (string-cat
+     (string-cat-1 ($$ (tl->list $1))))
+    (string-cat-1
      (string ($$ (make-tl 'string-comment $1)))
-     (string-cat "+" string ($$ (tl-append $1 $3))))
+     (string-cat-1 "+" string ($$ (tl-append $1 $3))))
     
-    (opt-annotation () (annotation ";"))
+    (opt-annotation ($empty) (annotation ";"))
     (annotation
      ("annotation" class-modification)
      )
@@ -702,37 +736,21 @@
     (string ($string ($$ `(string ,$1))))
     )))
 
+;; === machines =========================
+
 (define modelica-mach
-  (identity ;; hashify-machine
-   (identity ;; compact-machine
+  (hashify-machine
+   (compact-machine
     (make-lalr-machine modelica-spec))))
-
-;; does not support Q-ident (single quoted identifier)
-(define gen-mod-lexer
-  (make-lexer-generator (lalr-match-table modelica-mach)
-			#:comm-skipper read-c-comm
-			))
-
-(define modelica-parser (make-lalr-parser modelica-mach))
-
-(define (parse-mo) (modelica-parser (gen-mod-lexer)))
 
 ;; === automaton file generator =========
 
-(define (gen-modelica-files . rest)
-  (define (lang-dir path)
-    (if (pair? rest) (string-append (car rest) "/" path) path))
-  (define (xtra-dir path)
-    (lang-dir (string-append "mach.d/" path)))
-
-  (write-lalr-actions modelica-mach (xtra-dir "moact.scm.new"))
-  (write-lalr-tables modelica-mach (xtra-dir "motab.scm.new"))
-  (let ((a (move-if-changed (xtra-dir "moact.scm.new")
-			    (xtra-dir "moact.scm")))
-	(b (move-if-changed (xtra-dir "motab.scm.new")
-			    (xtra-dir "motab.scm"))))
-    (when #f ;;(or a b) 
-      (system (string-append "touch " (lang-dir "parser.scm"))))
+(define* (gen-modelica-files #:optional (path "."))
+  (define (mdir file) (mach-dir path file))
+  (write-lalr-actions modelica-mach (mdir "mo-act.scm.new") #:prefix "mo-")
+  (write-lalr-tables modelica-mach (mdir "mo-tab.scm.new") #:prefix "mo-")
+  (let ((a (move-if-changed (mdir "mo-act.scm.new") (mdir "mo-act.scm")))
+	(b (move-if-changed (mdir "mo-tab.scm.new") (mdir "mo-tab.scm"))))
     (or a b)))
 
 ;; --- last line ---

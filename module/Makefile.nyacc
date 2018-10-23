@@ -77,6 +77,7 @@ install-srcs:
 	  fi; \
 	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
+	@cp nyacc/README $(DESTDIR)$(SITE_SCM_DIR)/nyacc/README
 
 .PHONY: install-bins
 install-bins:

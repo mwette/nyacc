@@ -1,0 +1,41 @@
+#!/bin/sh
+# -*- scheme -*-
+exec guile $0 $*
+!#
+
+(use-modules (nyacc lang TMPL parser))
+(use-modules (srfi srfi-37))
+(use-modules (ice-9 pretty-print))
+
+(define (fail fmt . args)
+  (apply simple-format (current-error-port)
+	 (string-append "nxTMPL: " fmt "\n")
+	 args)
+  (exit 1))
+
+(define options
+  (list))
+
+(define (parse-args args)
+  (args-fold args options
+	     (lambda (opt name arg seed)
+	       (fail "unrecognized option: ~S" name)
+	       (exit 1))
+	     (lambda (file seed)
+	       (if (assq-ref 'file seed)
+		   (fail "only one inupt file can be specified"))
+	       (if (string-suffix? file ".TMPL")
+		   (fail "expecting .TMPL file"))
+	       (acons 'file file seed))
+	     '()))
+
+(define (compile-nx-file . args)
+  (let* ((options (parse-args args))
+	 (file (assoc-ref options 'file)))
+    (let* ((tree (call-with-input-file file
+		   (lambda (port) (read-TMPL-file port (current-module))))))
+      (pretty-print tree))))
+
+(apply compile-nx-file (cdr (program-arguments)))
+
+;; --- last line ---

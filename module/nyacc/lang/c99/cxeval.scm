@@ -35,6 +35,7 @@
   )
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
+(define (sf fmt . args) (apply simple-format #t fmt args))
 
 (define ffi-type-map
   `(("void" . ,void) ("float" . ,float) ("double" . ,double) ("short" . ,short)
@@ -51,7 +52,8 @@
     ("long long" . ,long) ("long long int" . ,long)
     ("signed long long" . ,long) ("signed long long int" . ,long)
     ("unsigned long long" . ,unsigned-long)
-    ("unsigned long long int" . ,unsigned-long) ("_Bool" . ,int8)))
+    ("unsigned long long int" . ,unsigned-long) ("_Bool" . ,int8)
+    ("size_t" . ,size_t)))
 
 (define (sizeof-type name)
   (or (and=> (assoc-ref ffi-type-map name) sizeof)
@@ -92,22 +94,24 @@
 ;; (decl-spec-list 
 ;; (abs-decl
 (define (eval-sizeof-type tree udict)
-  (let* ((type-name (sx-ref tree 1))
-	 (spec-list (sx-ref type-name 1))
-	 (type-spec (assq 'type-spec (sx-tail spec-list 1)))
-	 )
-    ;;(pp type-spec)
-    (sx-match (sx-ref type-spec 1)
-      ((fixed-type ,name)
-       (let* ((ffi-type (assoc-ref ffi-type-map name)))
-	 (sizeof ffi-type)))
-      ((float-type ,name)
-       (let* ((ffi-type (assoc-ref ffi-type-map name)))
-	 (sizeof ffi-type)))
-      (else (pp type-spec))
-      )
-  #t))
-
+  (sx-match (sx-ref tree 1)
+    ((type-name (decl-spec-list (type-spec (typename ,name))))
+     (let* ((ffi-type (assoc-ref ffi-type-map name)))
+       (if ffi-type
+	   (sizeof ffi-type)
+	   (error "eval-sizeof-type: missed typedef (work to go)"))))
+    ((type-name (decl-spec-list (type-spec (fixed-type ,name))))
+     (let* ((ffi-type (assoc-ref ffi-type-map name)))
+       (sizeof ffi-type)))
+    ((type-name (decl-spec-list (type-spec (float-type ,name))))
+     (let* ((ffi-type (assoc-ref ffi-type-map name)))
+       (sizeof ffi-type)))
+    ((type-name (decl-spec-list (type-spec . ,_1)) (abs-declr (pointer)))
+     (sizeof '*))
+    (else
+     (sf "eval-sizeof-type missed:\n") (pp (sx-ref tree 1))
+     (error "can't eval sizeof(type)"))))
+  
 ;; (sizeof unary-expr)
 ;;    (primary-expression			; S 6.5.1
 ;;     (identifier ($$ `(p-expr ,$1)))

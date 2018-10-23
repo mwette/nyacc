@@ -20,29 +20,9 @@
 		(lambda () (dev-parse-oct #:debug #f)))))
     (pretty-print sx0)))
 
-;; To generate the tables which will be included in the "fast" parser.
 (when #t
-  (gen-octave-files)
-  (compile-file "parser.scm")
-  )
-
-;; Geneates a text file showing the grammar and state machine.
-(when #t
-  (with-output-to-file ",file.txt"
-    (lambda ()
-      (pp-lalr-notice octave-spec)
-      (pp-lalr-grammar octave-spec)
-      (pp-lalr-machine octave-mach)))
-  (with-output-to-file ",stmt.txt"
-    (lambda ()
-      (pp-lalr-notice octave-ia-spec)
-      (pp-lalr-grammar octave-ia-spec)
-      (pp-lalr-machine octave-ia-mach))))
-
-(when #f ;; reg parser from parser.scm
-  (let ((sx0 (with-input-from-file "exam.d/ex03b.m"
-	       (lambda () (parse-oct #:debug #f)))))
-    (pretty-print sx0)))
+  (with-input-from-file "dbl"
+    (lambda () (pretty-print (parse-oct #:debug #f)))))
 
 ;; Experimental octave->c converter.
 #|

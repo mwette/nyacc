@@ -571,7 +571,7 @@
 		    (cons tval (lxlsr cl))))
 	       ((null? il) (find-end cl sl (cons (mc-read-char) il) ps px))
 	       ((eof-object? (car il))
-		(if (char=? (string-ref ps px) #\newline) (lxlsr cl)
+		(if (char=? (string-ref ps px) #\newline) (cons tval (lxlsr cl))
 		    (throw 'nyacc-error "open comment")))
 	       ((eqv? (car il) (string-ref ps px))
 		(find-end cl (cons (car il) sl) (cdr il) ps (1+ px)))

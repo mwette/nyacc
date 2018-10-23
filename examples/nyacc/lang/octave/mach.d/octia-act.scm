@@ -10,49 +10,47 @@
 
 (define octia-act-v
   (vector
-   ;; $start => non-comment-statement
+   ;; $start => mlang-item
    (lambda ($1 . $rest) $1)
-   ;; mfile => script-file
-   (lambda ($1 . $rest)
-     (tl->list (add-file-attr $1)))
-   ;; mfile => function-file
-   (lambda ($1 . $rest)
-     (tl->list (add-file-attr $1)))
-   ;; script-file => lone-comment-list non-comment-statement
+   ;; translation-unit => triv-stmt-list nontrivial-statement mlang-item-list
+   (lambda ($3 $2 $1 . $rest)
+     `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3)))
+   ;; translation-unit => triv-stmt-list function-defn mlang-item-list
+   (lambda ($3 $2 $1 . $rest)
+     `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3)))
+   ;; translation-unit => nontrivial-statement mlang-item-list
    (lambda ($2 $1 . $rest)
-     (make-tl 'script-file (tl->list $1)))
-   ;; script-file => non-comment-statement
-   (lambda ($1 . $rest)
-     (if $1
-       (make-tl 'script-file $1)
-       (make-tl 'script-file)))
-   ;; script-file => script-file statement
+     `(script ,$1 ,@(sx-tail $2)))
+   ;; translation-unit => function-defn mlang-item-list
    (lambda ($2 $1 . $rest)
-     (if $2 (tl-append $1 $2) $1))
-   ;; function-file => function-defn
-   (lambda ($1 . $rest) (make-tl 'function-file $1))
-   ;; function-file => function-file function-defn
+     `(function-file ,$1 ,@(sx-tail $2)))
+   ;; mlang-item-list => mlang-item-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; mlang-item-list-1 => 
+   (lambda $rest (make-tl 'mitem-list))
+   ;; mlang-item-list-1 => mlang-item-list-1 mlang-item
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
-   ;; function-defn => function-decl non-comment-statement stmt-list opt-end
+   ;; mlang-item => function-defn
+   (lambda ($1 . $rest) $1)
+   ;; mlang-item => statement
+   (lambda ($1 . $rest) $1)
+   ;; function-defn => function-decl non-comment-statement stmt-list the-end
    (lambda ($4 $3 $2 $1 . $rest)
      `(fctn-defn
         ,$1
         ,(tl->list (if $2 (tl-insert $3 $2) $3))))
-   ;; function-defn => function-decl non-comment-statement opt-end
+   ;; function-defn => function-decl non-comment-statement the-end
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn
         ,$1
         ,(if $2 `(stmt-list ,$2) '(stmt-list))))
-   ;; function-defn => function-decl opt-end
+   ;; function-defn => function-decl the-end
    (lambda ($2 $1 . $rest)
      `(fctn-defn ,$1 (stmt-list)))
-   ;; opt-end => 
-   (lambda $rest (list))
-   ;; opt-end => "end" term-list
+   ;; the-end => "end" term
    (lambda ($2 $1 . $rest) $1)
    ;; function-decl => function-decl-line lone-comment-list
-   (lambda ($2 $1 . $rest)
-     (append $1 (list (tl->list $2))))
+   (lambda ($2 $1 . $rest) (append $1 (list $2)))
    ;; function-decl => function-decl-line
    (lambda ($1 . $rest) $1)
    ;; function-decl-line => "function" "[" ident-list "]" "=" ident "(" ide...
@@ -85,54 +83,67 @@
    ;; stmt-list => stmt-list statement
    (lambda ($2 $1 . $rest)
      (if $2 (tl-append $1 $2) $1))
-   ;; statement => lone-comment
+   ;; triv-stmt-list => triv-stmt-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; triv-stmt-list-1 => trivial-statement
+   (lambda ($1 . $rest)
+     (make-tl 'triv-stmt-list $1))
+   ;; triv-stmt-list-1 => triv-stmt-list-1 trivial-statement
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; statement => trivial-statement
    (lambda ($1 . $rest) $1)
-   ;; statement => non-comment-statement
+   ;; statement => nontrivial-statement
    (lambda ($1 . $rest) $1)
-   ;; non-comment-statement => non-comment-statement-1 term
+   ;; non-comment-statement => term
+   (lambda ($1 . $rest) '(empty-stmt))
+   ;; non-comment-statement => nontrivial-statement
+   (lambda ($1 . $rest) $1)
+   ;; trivial-statement => lone-comment "\n"
+   (lambda ($2 $1 . $rest) $1)
+   ;; trivial-statement => term
+   (lambda ($1 . $rest) '(empty-stmt))
+   ;; nontrivial-statement => nontrivial-statement-1 term
    (lambda ($2 $1 . $rest)
      (sx-attr-add $1 'term $2))
-   ;; non-comment-statement-1 => 
-   (lambda $rest '(empty-stmt))
-   ;; non-comment-statement-1 => expr
+   ;; nontrivial-statement-1 => expr
    (lambda ($1 . $rest) `(expr-stmt ,$1))
-   ;; non-comment-statement-1 => expr "=" expr
+   ;; nontrivial-statement-1 => expr "=" expr
    (lambda ($3 $2 $1 . $rest) `(assn ,$1 ,$3))
-   ;; non-comment-statement-1 => "for" ident "=" expr term stmt-list "end"
+   ;; nontrivial-statement-1 => "for" ident "=" expr term stmt-list "end"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(for ,$2 ,$4 ,(tl->list $6)))
-   ;; non-comment-statement-1 => "while" expr term stmt-list "end"
+   ;; nontrivial-statement-1 => "while" expr term stmt-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$2 ,(tl->list $4)))
-   ;; non-comment-statement-1 => "if" expr term stmt-list elseif-list "else...
+   ;; nontrivial-statement-1 => "if" expr term stmt-list elseif-list "else"...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2
         ,(tl->list $4)
         ,@(cdr (tl->list $5))
         (else ,(tl->list $7))))
-   ;; non-comment-statement-1 => "if" expr term stmt-list elseif-list "end"
+   ;; nontrivial-statement-1 => "if" expr term stmt-list elseif-list "end"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5))))
-   ;; non-comment-statement-1 => "if" expr term stmt-list "else" stmt-list ...
+   ;; nontrivial-statement-1 => "if" expr term stmt-list "else" stmt-list "...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4) (else ,(tl->list $6))))
-   ;; non-comment-statement-1 => "if" expr term stmt-list "end"
+   ;; nontrivial-statement-1 => "if" expr term stmt-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,(tl->list $4)))
-   ;; non-comment-statement-1 => "switch" expr term case-list "otherwise" t...
+   ;; nontrivial-statement-1 => "switch" expr term case-list "otherwise" te...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(switch
         ,$2
         ,@(cdr (tl->list $4))
         (otherwise ,(tl->list $7))))
-   ;; non-comment-statement-1 => "switch" expr term case-list "end"
+   ;; nontrivial-statement-1 => "switch" expr term case-list "end"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(switch ,$2 ,@(cdr (tl->list $4))))
-   ;; non-comment-statement-1 => "return"
+   ;; nontrivial-statement-1 => "return"
    (lambda ($1 . $rest) '(return))
-   ;; non-comment-statement-1 => command arg-list
+   ;; nontrivial-statement-1 => command arg-list
    (lambda ($2 $1 . $rest)
-     `(command ,$1 ,(tl->list $2)))
+     `(command ,$1 ,@(cdr (tl->list $2))))
    ;; command => "global"
    (lambda ($1 . $rest) '(ident "global"))
    ;; command => "clear"
@@ -304,9 +315,11 @@
    (lambda ($1 . $rest) $1)
    ;; term => ","
    (lambda ($1 . $rest) $1)
-   ;; lone-comment-list => lone-comment nl
+   ;; lone-comment-list => lone-comment-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; lone-comment-list-1 => lone-comment nl
    (lambda ($2 $1 . $rest) (make-tl 'comm-list $1))
-   ;; lone-comment-list => lone-comment-list lone-comment nl
+   ;; lone-comment-list-1 => lone-comment-list-1 lone-comment nl
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; ident => '$ident
    (lambda ($1 . $rest) `(ident ,$1))

@@ -1,4 +1,4 @@
-;; Nyacc eXtension for javascript
+;; language/nx-javascript/spec.scm - NYACC extension for JavaScript
 
 ;; Copyright (C) 2015,2017-2018 Matthew R. Wette
 ;;
@@ -26,9 +26,13 @@
 
 (define-language nx-javascript
   #:title	"nx-javascript"
-  #:reader	(lambda (p e) (if (eq? e (interaction-environment))
-  				  (js-stmt-reader p e)
-  				  (js-file-reader p e)))
+  #:reader	(lambda (p e)
+		  (cond
+		   ((and (file-port? p)
+			 (string? (port-filename p))
+			 (not (string-prefix? "/dev/" (port-filename p))))
+		    (read-js-file p e))
+		   (else (read-js-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-js

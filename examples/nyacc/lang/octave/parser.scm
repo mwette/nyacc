@@ -22,6 +22,10 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pperr exp)
+  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
 (include-from-path "nyacc/lang/octave/body.scm")
 
@@ -124,7 +128,7 @@
 
 (define* (parse-oct #:key debug)
   (catch
-   'parse-error
+   'nyacc-error
    (lambda ()
      (apply-octave-statics
       (raw-parser (gen-octave-lexer) #:debug debug)))
@@ -133,6 +137,7 @@
      #f)))
 
 (define (read-oct-file port env)
+  ;;(sferr "<parse file>\n")
   (with-input-from-port port
     (lambda ()
       (if (eof-object? (peek-char port))
@@ -163,6 +168,7 @@
 (define read-oct-stmt
   (let ((lexer (gen-octave-ia-lexer)))
     (lambda (port env)
+      ;;(sferr "<parse stmt>\n")
       (cond
        ((eof-object? (peek-char port))
 	(read-char port))
