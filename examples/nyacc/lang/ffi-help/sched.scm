@@ -1,4 +1,4 @@
-;; scheduler
+;; nyacc/lang/ffi/sched.scm - scheduler for dbus
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;

@@ -30,7 +30,7 @@
 ;; NOTE
 ;;  stripdown no longer deals with typeref expansion
 ;; use
-;;  expand-typerefs, then stripdown, then udecl->mspec
+;;  expand-typerefs, then stripdown, then udecl->mdecl
 ;;
 ;; NOTE
 ;;  unitize-decl is shallow: it only works on init-decl-list.
@@ -42,7 +42,7 @@
 ;;  if fixed/float use `int *x;' etc
 ;;  if function use `void *x;'
 
-;; mspec == munged (unwrapped) declaration
+;; mdecl == munged (unwrapped) declaration
 
 ;; possible pattern for munging:
 ;; (split-<form> form) => (values tag attr|#f ... tail)
@@ -71,7 +71,7 @@
 	    expand-typerefs
 	    stripdown
 	    udecl-rem-type-qual specl-rem-type-qual
-	    udecl->mspec udecl->mspec/comm mspec->udecl
+	    udecl->mdecl udecl->mdecl/comm mdecl->udecl
 
 	    unwrap-decl
 	    canize-enum-def-list
@@ -90,6 +90,7 @@
 	    inc-keeper?
 
 	    ;; deprecated
+	    udecl->mspec udecl->mspec/comm mspec->udecl
 	    tree->udict tree->udict/deep
 	    declr->ident
 	    match-decl match-comp-decl match-param-decl
@@ -199,7 +200,7 @@
 ;; @example
 ;; @end example
 
-;; mspec is
+;; mdecl is
 ;; ("foo" (pointer-to) (array-of 3) (fixed-type "unsigned int"))
 ;; which can be converted to
 ;; ("(*foo) (array-of 3) (fixed-type "unsigned int"))
@@ -212,9 +213,8 @@
 
 ;; @deffn {Procedure} inc-keeper? tree inc-filter => #f| tree
 ;; This is a helper.  @var{inc-filter} is @code{#t}, @code{#f} or a
-;; precicate procedure, which given the name of the file-spec (e.g.,
-;; @code{<foo.h>}) and the path (e.g., @code{"/usr/include/foo.h"}),
-;; determines if the include should be handled.
+;; precicate procedure, which given the name of the file, determines if
+;; it should be processed.
 ;; @end deffn
 (define (inc-keeper? tree filter)
   (if (and (eqv? (sx-tag tree) 'cpp-stmt)
@@ -255,8 +255,8 @@
 ;; @item
 ;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
 ;; The inc-filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
-;; of two arguments, the include spec and the include file path, to indicate
-;; whether it should be included in the dictionary. (See @code{inc-keeper?}.)
+;; of one argument, the include path, to indicate whether it should be included
+;; in the dictionary.
 ;; @item
 ;; If this routine is called multiple times on the same tree the u-decl's will
 ;; not be @code{eq?} since the top-level lists are generated on the fly.
@@ -1032,7 +1032,7 @@
 
 ;; === enums and defines ===============
 
-;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [options]
+;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [#:inc-filter proc]
 ;; Extract the #defines from a tree as
 ;; @example
 ;;  (define (name "ABC") (repl "repl"))
@@ -1041,9 +1041,9 @@
 ;;  (("ABC" . "repl") ("MAX" ("X" "Y") . "(X)...") ...)
 ;; @end example
 ;; @noindent
-;; Options are @code{inc-keeper? f} (see @code{c99-trans-unit->udict}) and
-;; @code{#:skip-fdefs #f} to skip function defs.
-;; The entries appear in reverse order wrt how they appear in the input.
+;; The entries appear in reverse order wrt how in file.
+;; @*
+;; New option: #:skip-fdefs to skip function defs
 ;; @end deffn
 (define* (c99-trans-unit->ddict tree
 				#:optional (seed '())
@@ -1313,8 +1313,8 @@
 
 ;; === munged specification ============
 
-;; @deffn {Procedure} udecl->mspec udecl [#:abs-ident #f]
-;; @deffnx {Procedure} udecl->mspec/comm udecl [#:def-comm ""]
+;; @deffn {Procedure} udecl->mdecl udecl [#:abs-ident #f]
+;; @deffnx {Procedure} udecl->mdecl/comm udecl [#:def-comm ""]
 ;; Turn a stripped-down unit-declaration into an m-spec.  The second version
 ;; include a comment. This assumes decls have been run through
 ;; @code{stripdown}.
@@ -1330,7 +1330,7 @@
 ;; to add for abstract declarators.  If an identifier is not provided, a
 ;; random identifier starting with @code{@} will be provided.
 ;; @end deffn
-(define* (udecl->mspec decl #:key abs-ident)
+(define* (udecl->mdecl decl #:key abs-ident)
 
   ;; Hmm.  We convert array size back to C code (string).  Now that I am working
   ;; on constant expression eval (eval-c99-cx) maybe we should change that.
@@ -1423,7 +1423,7 @@
       (else
        (sferr "munge/unwrap-declr missed:\n")
        (pperr declr)
-       (error "c99/munge: udecl->mspec failed")
+       (error "c99/munge: udecl->mdecl failed")
        #f)))
 
   ;;(sferr "decl:\n") (pperr decl)
@@ -1440,42 +1440,42 @@
 	 (m-decl (reverse (cons m-specl m-declr))))
     ;;(sferr "decl:\n") (pperr decl)
     ;;(sferr "declr:\n") (pperr declr)
-    ;;(sferr "r-mspec: ~S\n" (cons m-specl m-declr))
+    ;;(sferr "r-mdecl: ~S\n" (cons m-specl m-declr))
     m-decl))
 
-(define* (udecl->mspec/comm decl #:key (def-comm ""))
+(define* (udecl->mdecl/comm decl #:key (def-comm ""))
   (let* ((comm (or (and=> (sx-ref decl 3) cadr) def-comm))
-	 (spec (udecl->mspec decl)))
+	 (spec (udecl->mdecl decl)))
     (cons* (car spec) comm (cdr spec))))
 
 
-;; @deffn {Procedure} mspec->udecl mspec xxx
+;; @deffn {Procedure} mdecl->udecl mdecl xxx
 ;; needed for xxx
 ;; @end deffn
-(define* (mspec->udecl mspec)
+(define* (mdecl->udecl mdecl)
 
   (define (make-udecl types declr)
     ;; TODO: w/ attr needed?
     `(udecl (decl-spec-list (type-spec ,types)) (init-declr ,declr)))
 
-  (define (doit declr mspec-tail)
-    (pmatch mspec-tail
-      (((fixed-type ,name)) (make-udecl (car mspec-tail) declr))
-      (((float-type ,name)) (make-udecl (car mspec-tail) declr))
-      (((typename ,name)) (make-udecl (car mspec-tail) declr))
-      (((void)) (make-udecl (car mspec-tail) declr))
+  (define (doit declr mdecl-tail)
+    (pmatch mdecl-tail
+      (((fixed-type ,name)) (make-udecl (car mdecl-tail) declr))
+      (((float-type ,name)) (make-udecl (car mdecl-tail) declr))
+      (((typename ,name)) (make-udecl (car mdecl-tail) declr))
+      (((void)) (make-udecl (car mdecl-tail) declr))
       
       (((pointer-to) . ,rest)
        (doit `(ptr-declr (pointer) ,declr) rest))
       
       (,*
-       (sferr "munge/mspec->udecl missed:\n")
-       (pperr mspec-tail)
-       (error "munge/mspec->udecl failed")
+       (sferr "munge/mdecl->udecl missed:\n")
+       (pperr mdecl-tail)
+       (error "munge/mdecl->udecl failed")
        #f)))
 
-  (let ((name (car mspec))
-	(rest (cdr mspec)))
+  (let ((name (car mdecl))
+	(rest (cdr mdecl)))
     (doit `(ident ,name) rest)))
 
 ;; === deprecated ====================
@@ -1489,8 +1489,11 @@
 (define declr->ident declr-ident)
 (define (fix-fields flds) (cdr (clean-field-list `(field-list . ,flds))))
 (define declr-is-ptr? pointer-declr?)
+(define udecl->mspec udecl->mdecl)
+(define udecl->mspec/comm udecl->mdecl/comm)
+(define mspec->udecl mdecl->udecl)
 
-;; @deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
+;;@deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
 ;; This is deprecated.
 ;; 1) remove stor-spec
 ;; 2) expand typenames
@@ -1529,6 +1532,5 @@
 	 (declr (sx-ref xdecl 2))
 	 (specl1 (foldts fsD fsU fsH '() specl)))
     (list tag specl1 declr)))
-
 
 ;; --- last line ---
