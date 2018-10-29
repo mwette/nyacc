@@ -1,0 +1,14 @@
+;; gtkglext1.ffi			-*- Scheme -*-
+
+(define-ffi-module (ffi gtkglext1)
+  #:use-ffi-module (ffi gdk2)
+  #:use-ffi-module (ffi gtk2)
+  #:pkg-config "gtkglext-1.0"
+  #:include '("gtk/gtkgl.h")
+  #:inc-filter (lambda (f p) (string-contains p "gtkglext-1.0/" 0))
+  )
+
+(define-public gtkgl-symval ffi-gtkglext1-symbol-val)
+
+;; --- last line ---
+
