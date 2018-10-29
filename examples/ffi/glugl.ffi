@@ -1,0 +1,11 @@
+;; glugl.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi glugl)
+  #:include '("GL/gl.h" "GL/glu.h")
+  #:library '("libGLU" "libGL")
+  #:inc-filter (lambda (spec path) (string-contains path "GL/" 0))
+  )
+
+(define-public glugl-symval ffi-glugl-symbol-val)
+
+;; --- last line ---

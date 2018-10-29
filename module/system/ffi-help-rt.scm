@@ -19,12 +19,19 @@
 
 (define-module (system ffi-help-rt)
   #:export (*ffi-help-version*
+
+	    ;; user level routines
 	    fh-type?
 	    fh-object? fh-object-val
 	    fh-object-ref fh-object-set!
 	    pointer-to value-at NULL
 
 	    fh:function fh:cast fh-cast bs-addr
+	    ffi-void*
+
+	    make-fht
+
+	    ;; called from output of the ffi-compiler
 	    define-fh-pointer-type
 	    define-fh-type-alias
 	    define-fh-compound-type
@@ -32,13 +39,16 @@
 	    define-fh-function*-type
 	    ref<->deref! fh-ref<->deref!
 	    make-symtab-function
-
 	    fh-find-symbol-addr
 	    fht-wrap fht-unwrap fh-wrap fh-unwrap
 	    unwrap~fixed unwrap~float
 	    unwrap~pointer unwrap~array
 	    make-fctn-param-unwrapper
-	    fh-link-proc fh-link-bstr ffi-void*)
+	    fh-link-proc fh-link-extern
+	    
+	    ;; deprecated
+	    fh-link-bstr ;; => fh-link-extern
+	    )
   #:use-module (bytestructures guile)
   #:use-module (bytestructures guile ffi)
   #:use-module (rnrs bytevectors)
@@ -687,12 +697,16 @@
   (let ((dfunc (fh-find-symbol-addr name dl-lib-list)))
     (and dfunc (ffi:pointer->procedure return dfunc args))))
 
-;; @deffn {Procedure} fh-link-bstr name desc db-lib-list => bytestructure
+;; @deffn {Procedure} fh-link-extern name desc db-lib-list => bs
 ;; Generate a bytestructure from the bytes in the library at the var addr.
 ;; @end deffn
-(define* (fh-link-bstr name desc dl-lib-list)
+(define* (fh-link-extern name desc dl-lib-list)
   (let* ((addr (fh-find-symbol-addr name dl-lib-list))
 	 (size (bytestructure-descriptor-size desc)))
     (make-bytestructure (ffi:pointer->bytevector addr size) 0 desc)))
+
+;; === deprecated ==============================================================
+
+(define fh-link-bstr fh-link-extern)
 
 ;; --- last line ---

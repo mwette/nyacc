@@ -18,9 +18,9 @@
 ;;; Notes:
 
 ;; @table code
-;; @item mspec->fh-wrapper
+;; @item mdecl->fh-wrapper
 ;; generates code to apply wrapper to objects returned from foreign call
-;; @item mspec->fh-unwrapper
+;; @item mdecl->fh-unwrapper
 ;; generated code to apply un-wrapper to arguments for foreign call
 ;; @end table
 
@@ -400,9 +400,9 @@
 
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
-(define (mtail->bs-desc mspec-tail)
+(define (mtail->bs-desc mdecl-tail)
   (let ((defined (*defined*))) ;; (udict (*udict*)))
-    (pmatch mspec-tail
+    (pmatch mdecl-tail
       ;; expand typeref, use renamer,
       (((typename ,name))
        (or (assoc-ref bs-typemap name)
@@ -490,8 +490,8 @@
        `(bit-field ,(const-expr->number size) ,(mtail->bs-desc rest)))
 
       (,otherwise
-       (sferr "mtail->bs-desc missed mspec:\n")
-       (pperr mspec-tail)
+       (sferr "mtail->bs-desc missed mdecl:\n")
+       (pperr mdecl-tail)
        ;;(error "quit") (quit)
        (fherr "mtail->bs-desc failed")
        )
@@ -614,7 +614,7 @@
 		 (udecl (cdar decls))
 		 ;; fix the following, look at cleanup-udecl
 		 (udecl (udecl-rem-type-qual udecl)) ;; remove "const" "extern"
-		 (spec (udecl->mspec/comm udecl))
+		 (spec (udecl->mdecl/comm udecl))
 		 (tail (cddr spec))
 		 (type (mtail->bs-desc tail)))
 	    (cond
@@ -766,10 +766,10 @@
     (ffi:uint64 . ,uint64) (ffi-void* . *)
     ))
 
-(define (mtail->ffi-desc mspec-tail)
-  ;;(sferr "mspec=~S\n" mspec)
-  (if (and (pair? mspec-tail) (string? (car mspec-tail))) (error "xxx"))
-  (pmatch mspec-tail
+(define (mtail->ffi-desc mdecl-tail)
+  ;;(sferr "mdecl=~S\n" mdecl)
+  (if (and (pair? mdecl-tail) (string? (car mdecl-tail))) (error "xxx"))
+  (pmatch mdecl-tail
     (((pointer-to) . ,rest) 'ffi-void*)
     (((array-of) . ,rest) 'ffi-void*)
     (((array-of ,size) . ,rest) 'ffi-void*)
@@ -792,8 +792,8 @@
 			    (name (caar udict))
 			    (udecl (cdar udict))
 			    (udecl (udecl-rem-type-qual udecl))
-			    (mspec (udecl->mspec udecl)))
-		       (mtail->ffi-desc (cdr mspec))))
+			    (mdecl (udecl->mdecl udecl)))
+		       (mtail->ffi-desc (cdr mdecl))))
 		   fields)))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
@@ -807,8 +807,8 @@
 	   (let* ((udict (unitize-comp-decl (car flds)))
 		  (udecl (cdar udict))
 		  (udecl (udecl-rem-type-qual udecl))
-		  (mspec (udecl->mspec udecl))
-		  (ftype (mtail->ffi-desc (cdr mspec)))
+		  (mdecl (udecl->mdecl udecl))
+		  (ftype (mtail->ffi-desc (cdr mdecl)))
 		  (ftval (assq-ref ffi-symmap ftype))
 		  (fsize (sizeof ftval)))
 	     (if (> fsize size)
@@ -818,21 +818,21 @@
      (mtail->ffi-desc `((union-def ,field-list))))
     
     (,otherwise
-     (sferr "mtail->ffi-desc missed:\n") (pperr mspec-tail) ;;(quit)
-     (error "") (fherr "mtail->ffi-desc missed: ~S" mspec-tail))))
+     (sferr "mtail->ffi-desc missed:\n") (pperr mdecl-tail) ;;(quit)
+     (error "") (fherr "mtail->ffi-desc missed: ~S" mdecl-tail))))
 
-;; Return a mspec for the return type.  The variable is called @code{NAME}.
+;; Return a mdecl for the return type.  The variable is called @code{NAME}.
 (define (gen-decl-return udecl)
   (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
 	 (udecl (udecl-rem-type-qual udecl1))
-	 (mspec (udecl->mspec udecl1)))
-    (mtail->ffi-desc (cdr mspec))))
+	 (mdecl (udecl->mdecl udecl1)))
+    (mtail->ffi-desc (cdr mdecl))))
 
 (define (gen-bs-decl-return udecl)
   (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
 	 (udecl (udecl-rem-type-qual udecl1))
-	 (mspec (udecl->mspec udecl1)))
-    (mtail->bs-desc (cdr mspec))))
+	 (mdecl (udecl->mdecl udecl1)))
+    (mtail->bs-desc (cdr mdecl))))
 
 (define (int->abs-ident ix)
   (simple-format #f "arg-~A" ix))
@@ -849,9 +849,9 @@
       ;;(sferr "\nP: ~S\n" (car params))
       (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
 	     (udecl1 (udecl-rem-type-qual udecl1))
-	     (mspec (udecl->mspec udecl1 #:abs-ident (int->abs-ident ix))))
+	     (mdecl (udecl->mdecl udecl1 #:abs-ident (int->abs-ident ix))))
 	;;(sferr "  ~S\n" udecl1)
-	(cons (mtail->ffi-desc (cdr mspec))
+	(cons (mtail->ffi-desc (cdr mdecl))
 	      (iter (1+ ix) (cdr params))))))))
 
 (define (gen-bs-decl-params params)
@@ -864,18 +864,18 @@
      (else
       (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
 	     (udecl1 (udecl-rem-type-qual udecl1))
-	     (mspec (udecl->mspec udecl1 #:abs-ident (int->abs-ident ix))))
-	(cons (mtail->bs-desc (cdr mspec))
+	     (mdecl (udecl->mdecl udecl1 #:abs-ident (int->abs-ident ix))))
+	(cons (mtail->bs-desc (cdr mdecl))
 	      (iter (1+ ix) (cdr params))))))))
 
 ;; === function calls : unwrap args, call, wrap return
 
-;; given mspec for an exec argument give the unwrapper
-(define (mspec->fh-unwrapper mspec)
-  ;;(sferr "mspec:\n") (pperr mspec)
+;; given mdecl for an exec argument give the unwrapper
+(define (mdecl->fh-unwrapper mdecl)
+  ;;(sferr "mdecl:\n") (pperr mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
     ;; git_reference_foreach_name_cb not preserved
-    (pmatch (cdr mspec)
+    (pmatch (cdr mdecl)
       (((fixed-type ,name)) 'unwrap~fixed)
       (((float-type ,name)) 'unwrap~float)
       (((void)) #f)
@@ -921,12 +921,12 @@
 	(else 'unwrap~pointer)))
 
       (((pointer-to) (function-returning (param-list . ,params)) . ,rest)
-       (let* ((udecl (mspec->udecl (cons "~ret" rest)))
+       (let* ((udecl (mdecl->udecl (cons "~ret" rest)))
 	      (udecl (expand-typerefs udecl (*udict*) ffi-defined))
-	      (mspec (udecl->mspec udecl))
-	      (decl-return (mtail->ffi-desc (cdr mspec)))
+	      (mdecl (udecl->mdecl udecl))
+	      (decl-return (mtail->ffi-desc (cdr mdecl)))
 	      (decl-params (gen-decl-params params)))
-	 ;;(sferr "FIX RET => ~S\n" mspec)
+	 ;;(sferr "FIX RET => ~S\n" mdecl)
 	 (if (and (pair? decl-params) (equal? (last decl-params) '...))
 	     (fherr/once "no varargs (yet)"))
 	 `(make-fctn-param-unwrapper ,decl-return (list ,@decl-params))))
@@ -939,12 +939,12 @@
       (((array-of) . ,rest) 'unwrap~array)
 
       (,otherwise
-       (sferr "mspec->fh-unwrapper missed:\n") (pperr mspec) (quit)
-       (fherr "mspec->fh-unwrapper missed: ~S" mspec)))))
+       (sferr "mdecl->fh-unwrapper missed:\n") (pperr mdecl) (quit)
+       (fherr "mdecl->fh-unwrapper missed: ~S" mdecl)))))
 
-(define (mspec->fh-wrapper mspec)
+(define (mdecl->fh-wrapper mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
-    (pmatch (cdr mspec)
+    (pmatch (cdr mdecl)
       (((fixed-type ,name)) (if (assoc-ref ffi-typemap name) #f
 				(fherr "todo: ffi-wrap fixed")))
       (((float-type ,name)) (if (assoc-ref ffi-typemap name) #f
@@ -992,7 +992,7 @@
       ;;(((pointer-to) . ,otherwise) 'ffi:make-pointer)
       (((pointer-to) . ,otherwise) #f)
 
-      (,otherwise (fherr "mspec->fh-wrapper missed: ~S" mspec)))))
+      (,otherwise (fherr "mdecl->fh-wrapper missed: ~S" mdecl)))))
 
 ;; given list of udecl params generate list of name-unwrap pairs
 (define (gen-exec-params params)
@@ -1006,8 +1006,8 @@
        ;; then we will need to create enum types in cnvt-udecl typedefs.
        (let* ((param-decl (expand-typerefs param-decl (*udict*) (*wrapped*)))
 	      (param-decl (udecl-rem-type-qual param-decl)) ;; ???
-	      (mspec (udecl->mspec param-decl)))
-	 (acons (car mspec) (mspec->fh-unwrapper mspec) seed)))))
+	      (mdecl (udecl->mdecl param-decl)))
+	 (acons (car mdecl) (mdecl->fh-unwrapper mdecl) seed)))))
    '() params))
 
 ;; given list of name-unwrap pairs generate function arg names
@@ -1040,8 +1040,8 @@
 (define (gen-exec-return-wrapper udecl)
   (let* ((udecl (expand-typerefs udecl (*udict*) (*wrapped*)))
 	 (udecl (udecl-rem-type-qual udecl))
-	 (mspec (udecl->mspec udecl)))
-    (mspec->fh-wrapper mspec)))
+	 (mdecl (udecl->mdecl udecl)))
+    (mdecl->fh-wrapper mdecl)))
 
 (define (fix-params param-decls)
 
@@ -1120,8 +1120,8 @@
     (sfscm ";; (~A) => bytestructure\n" name)
     (ppscm
      `(define-public ,(string->symbol name)
-	(let ((bstr-promise (delay (fh-link-bstr ,name ,desc ,(link-libs)))))
-	  (lambda () (force bstr-promise)))))))
+	(let ((x-promise (delay (fh-link-extern ,name ,desc ,(link-libs)))))
+	  (lambda () (force x-promise)))))))
 
 ;; ------------------------------------
 
@@ -1187,7 +1187,7 @@
 ;; Given udecl produce a ffi-spec.
 ;; Return updated (string based) keep-list, which will be modified if the
 ;; declaration is a typedef.  The typelist is the set of keepers used for
-;; @code{udecl->mspec}.
+;; @code{udecl->mdecl}.
 ;; Returns values wrapped, defined.
 ;; @end deffn
 ;; NOT SURE WHAT defined MEANS NOW
@@ -1553,11 +1553,28 @@
       ;; TODO: typedef void* (foo_t)(int x)
 
       ;; typedef foo_t bar_t
+      ;; We retry with expansion of foo_t here.  Using fh-define-alias-type
+      ;; was not working when we had "typedef struct foo foo_t;"
       ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef))
 	 (type-spec (typename ,name)))
 	(init-declr (ident ,typename)))
+       (let ((ndecl (udict-ref udict name)))
+	 (sx-match ndecl
+	   ((udecl ,decl-spec-list (init-declr (ident ,_)) . ,comm)
+	    (let ((ud `(udecl ,decl-spec-list (init-declr (ident ,typename)))))
+	      (cnvt-udecl ud udict wrapped defined)))
+	   (else
+	    (sferr "missing:\n") (pperr ndecl)
+	    (error "missed")))))
+      ;; ^ replaces below
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (typename ,name)))
+	(init-declr (ident ,typename)))
+       (sferr "typedef ~S =>\n" typename) (pperr (udict-ref udict name))
        (cond
 	((member name bs-defined)
 	 (values wrapped defined))
@@ -1698,8 +1715,8 @@
        ;; This needs to have a delay and handler
        (let* ((udecl (expand-typerefs udecl udict (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
-	      (mspec (udecl->mspec udecl)))
-	 (cnvt-extern (car mspec) (cdr mspec)))
+	      (mdecl (udecl->mdecl udecl)))
+	 (cnvt-extern (car mdecl) (cdr mdecl)))
        (values wrapped defined))
 
       ;; non-pointer
@@ -1707,8 +1724,8 @@
 	      ,init-declr . ,rest)
        (let* ((udecl (expand-typerefs udecl udict (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
-	      (mspec (udecl->mspec udecl)))
-	 (cnvt-extern (car mspec) (cdr mspec))
+	      (mdecl (udecl->mdecl udecl)))
+	 (cnvt-extern (car mdecl) (cdr mdecl))
 	 (values wrapped defined)))
 
       ;; === special cases I need to fix =

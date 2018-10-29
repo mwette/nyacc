@@ -1,6 +1,6 @@
-;; gtk2+.ffi				-*- Scheme -*-
+;; gtk2.ffi				-*- Scheme -*-
 
-(define-ffi-module (ffi gtk2+)
+(define-ffi-module (ffi gtk2)
   #:pkg-config "gtk+-2.0"
   #:include '("gtk/gtk.h")
   #:inc-filter (lambda (f p) (string-contains p "gtk/" 0))
@@ -14,13 +14,13 @@
   GtkEnumValue*? make-GtkEnumValue*)
 (export GtkEnumValue* GtkEnumValue*? make-GtkEnumValue*)
 
-(define-public gtk2-sym ffi-gtk2+-symbol-val)
+(define-public gtk-symval ffi-gtk2-symbol-val)
   
 ;; This is the c function.
 (define-public ~gtk_widget_destroy
-  (fh-find-symbol-addr "gtk_widget_destroy" ffi-gtk2+-llibs))
+  (fh-find-symbol-addr "gtk_widget_destroy" ffi-gtk2-llibs))
 
 (define-public ~gtk_main_quit
-  (fh-find-symbol-addr "gtk_main_quit" ffi-gtk2+-llibs))
+  (fh-find-symbol-addr "gtk_main_quit" ffi-gtk2-llibs))
 
 ;; --- last line ---
