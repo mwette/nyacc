@@ -1,6 +1,6 @@
 #!/bin/sh
 # -*- scheme -*-
-exec guile $0 $*
+exec guile $0 "$@"
 !#
 
 (use-modules (nyacc lang modelica parser))

@@ -58,7 +58,7 @@
 
 
 (define octave-read-comm
-  (make-comm-reader '(("%" . "\n") ("#" . "\n") ("#{" . "#}")
+  (make-comm-reader '(("%" . "\n") ("#" . "\n") ("#{" . "#}") ("%{" . "%}")
 		      ("#!" . "!#"))))
 
 ;; elipsis reader "..." whitespace "\n"
