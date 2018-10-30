@@ -232,28 +232,13 @@
 	value-l))
 
       ((comment ,text)
-       ;; Comments will look funny when indent for input and output
-       ;; are different since multi-line comments will get hosed.
-       (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n"))
-		 (string-split (string-append "/*" text "*/") #\newline))
-       ;; TODO: Since parser now removes prefix, I need to add it back in here.
-       ;; needed:
-       ;; 1) (get-col) to get column
-       ;; 2) (indent-to-col col) to do indents for each line
-       #!
-       (let ((col (get-col))
-	     (lines (string-split text #\newline))
-	     (ind (mk-ind-to-col col)))
-	 (sf "/*") (sf (car lines))
-	 (pair-for-each
-	  (lambda (pair)
-	    (sf "\n")
-	    (if (pair? (cdr pair)) (sf ind))
-	    (sf (cdr pair)))
-	  (cdr lines))
-	 (sf "*/"))
-       !#
-       )
+       ;; TODO: check on input/output indent consistency (I think this is fixed.)
+       ;; parser now removes prefix -- so this is working now ???
+       (cond
+	((or (string-any #\newline text) (string-suffix? " " text))
+	 (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n"))
+		   (string-split (string-append "/*" text "*/") #\newline)))
+	(else (sf (string-append "//" text "\n")))))
       
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
       
@@ -525,7 +510,18 @@
        (sf "}")) ;; or " }"
 
       ((compd-stmt (block-item-list . ,items))
-       (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "}\n"))
+       (sf "{\n") (push-il)
+       (pair-for-each
+	(lambda (pair)
+	  (let ((this (car pair)) (next (and (pair? (cdr pair)) (cadr pair))))
+	    (ppx this)
+	    (cond ;; add blank line if next is different or fctn defn
+	     ((not next))
+	     ((eqv? (sx-tag this) (sx-tag next)))
+	     ((eqv? (sx-tag this) 'comment))
+	     ((eqv? (sx-tag next) 'comment) (sf "\n")))))
+	items)
+       (pop-il) (sf "}\n"))
       ((compd-stmt-no-newline (block-item-list . ,items))
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "} "))
       
@@ -616,11 +612,13 @@
       ((trans-unit . ,items)
        (pair-for-each
 	(lambda (pair)
-	  (let ((this (car pair))
-		(next (and (pair? (cdr pair)) (cadr pair))))
+	  (let ((this (car pair)) (next (and (pair? (cdr pair)) (cadr pair))))
 	    (ppx this)
 	    (cond ;; add blank line if next is different or fctn defn
 	     ((not next))
+	     ((eqv? (sx-tag this) (sx-tag next)))
+	     ((eqv? (sx-tag this) 'comment))
+	     ((eqv? (sx-tag next) 'comment) (sf "\n"))
 	     ((not (eqv? (sx-tag this) (sx-tag next))) (sf "\n"))
 	     ((eqv? (sx-tag next) 'fctn-defn) (sf "\n")))))
 	items))
