@@ -103,24 +103,25 @@
 ;;(ppsx inc-dirs)
 ;;(ppsx inc-help)
 (let* ((code (string-append
-	      "typedef int *foo_t;\n"
-	      "typedef double hmm_t[3];\n"
-	      "int baz(foo_t (*baz)(hmm_t y));\n"
+	      "double simp3(double a, double b) {"
+	      " double c; c = a + b; return c; }\n"
 	      ))
        ;;(xdecl (expand-typerefs decl udict))
        ;;(udecl (udict-ref udict "x"))
        ;;(mdecl (udecl->mspec udecl))
        ;;(tree (parse-c99x "((int)'q')"))
-       (tree (parse-file "c99-exam/ex01.c"))
+       ;;(tree (parse-file "c99-exam/ex01.c"))
+       (tree (parse-string code))
        ;;(decl (sx-ref* tree 153)) ;; for zzz.e
        ;;(udecl (unitize-decl decl))
        ;;(udict (c99-trans-unit->udict tree))
        ;;(udecl (udict-struct-ref udict "epoll_event"))
        )
-  ;;(ppsx tree)
+  (ppsx tree)
+  ;;(pp99 tree)
   ;;(ppsx (eval-c99-cx tree))
   ;;(ppsx (get-gcc-inc-dirs))
-  (pp cpp-defs)
+  ;;(pp cpp-defs)
   #t)
 
 ;; --- last line ---
