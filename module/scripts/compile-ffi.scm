@@ -45,6 +45,7 @@
 
 (define options
   ;; specification of command-line options
+  ;; (option (char str) req-arg? opt-arg? proc)
   (list (option '(#\h "help") #f #f
 		(lambda (opt name arg seed) (acons 'help #t seed)))
 	(option '("version") #f #f
@@ -63,6 +64,9 @@
 		(lambda (opt name arg seed)
 		  (acons/seed 'inc-dirs arg seed)))
 
+	(option '(#\d "debug") #t #f
+		(lambda (opt name arg seed)
+		  (acons/seed 'debug arg seed)))
 	(option '(#\X "make-go") #f #f
 		(lambda (opt name arg seed) (acons 'make-go #t seed)))
 	))
@@ -101,10 +105,15 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -L  --load-path=DIR  add DIR to the front of the module load path
   -I  --inc-dir=DIR    add DIR to list of dir's to search for C headers
   -o, --output=OFILE   write output to OFILE
+  -d, --debug=x,y,z    set debug flags (e.g., echo-decl)
 
 Report bugs to https://savannah.nongnu.org/projects/nyacc.\n")
           (exit 0)))
-
+    
+    (unless (access? file R_OK)
+      (simple-format (current-error-port) "compile-ffi: not found: ~S\n" file)
+      (exit 1))
+    
     (let* ((base (string-drop-right file 4))
 	   (dot-scm (string-append base ".scm")))
       (catch 'ffi-help-error

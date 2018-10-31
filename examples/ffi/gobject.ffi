@@ -9,8 +9,6 @@
   #:use-module ((system foreign) #:prefix ffi: #:select(%null-pointer))
   )
 
-(define NULL ffi:%null-pointer)
-
 (define-public (g_signal_connect instance detailed_signal c_handler data)
   (g_signal_connect_data instance detailed_signal c_handler data NULL 0))
 

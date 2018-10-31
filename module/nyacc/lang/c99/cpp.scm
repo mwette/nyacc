@@ -109,17 +109,18 @@
    ((char=? ch #\.) (read-char) (read-char) "...") ; assumes correct syntax
    (else #f)))
 
-;; @deffn {Procedure} find-incl-in-dirl file dirl next => path
+;; @deffn {Procedure} find-incl-in-dirl file dirl [next] => path
 ;; Find path to include file expression, (i.e., @code{<foo.h>} or
 ;; @code{"foo.h"}.  If @code{"foo.h"} form look in current directory first.
-;; If @var{next} is true then remove current directory from search path.
+;; If @var{next} (default false) is true then remove current directory from 
+;; search path.
 ;; @*Refs:
 ;; @itemize
 ;; @item https://gcc.gnu.org/onlinedocs/cpp/Search-Path.html
 ;; @item https://gcc.gnu.org/onlinedocs/cpp/Wrapper-Headers.html
 ;; @end itemize
 ;; @end deffn
-(define (find-incl-in-dirl file dirl next)
+(define* (find-incl-in-dirl file dirl #:optional (next #f))
   (let* ((cid (and=> (port-filename (current-input-port)) dirname))
 	 (file-type (string-ref file 0)) ;; #\< or #\"
 	 (file-name (substring file 1 (1- (string-length file))))
