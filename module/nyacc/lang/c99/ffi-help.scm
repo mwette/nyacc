@@ -1573,37 +1573,6 @@
       ;; We retry with expansion of foo_t here.  Using fh-define-type-alias
       ;; was not working when we had "typedef struct foo foo_t;" But then
       ;; crashing on function types, so imported original type aliasing.
-      ((X-udecl
-	(decl-spec-list
-	 (stor-spec (typedef))
-	 (type-spec (typename ,name)))
-	(init-declr (ident ,typename)))
-       (let ((ndecl (udict-ref udict name)))
-	 (sx-match ndecl
-	   ((udecl ,decl-spec-list (init-declr (ident ,_)) . ,comm)
-	    (let ((ud `(udecl ,decl-spec-list (init-declr (ident ,typename)))))
-	      (cnvt-udecl ud udict wrapped defined)))
-	   (else
-	    (cond
-	     ((member name bs-defined)
-	      (values wrapped defined))
-	     ((member name defined)
-	      (sfscm "(define-public ~A-desc ~A-desc)\n" typename name)
-	      (sfscm "(define-fh-type-alias ~A ~A)\n" typename name)
-	      (sfscm "(export ~A)\n" typename)
-	      (sfscm "(define-public ~A? ~A?)\n" typename name)
-	      (sfscm "(define-public make-~A make-~A)\n" typename name)
-	      (when (member (w/* name) defined)
-		(sfscm "(define-public ~A*-desc ~A*-desc)\n" typename name)
-		(sfscm "(define-fh-type-alias ~A* ~A*)\n" typename name)
-		(sfscm "(export ~A*)\n" typename)
-		(sfscm "(define-public ~A*? ~A*?)\n" typename name)
-		(sfscm "(define-public make-~A* make-~A*)\n" typename name))
-	      (values (cons typename wrapped) (cons typename defined)))
-	     (else
-	      (let ((xdecl (expand-typerefs udecl udict defined)))
-		(cnvt-udecl xdecl udict wrapped defined))))))))
-      ;; ^ replaces below
       ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef))
@@ -1978,25 +1947,25 @@
 		 (stat:mtimensec stat2))))))
 
 ;; given modules spec, determine if any ffi-module dependencies are
-;; outdated 
+;; outdated
 (define (check-deps module-options)
   (let ((ext-modz ;; use filter?
 	 (fold-right
 	  (lambda (opt seed)
 	    (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
 	  '() module-options))
-	(ext-mods (map cdr (filter (lambda (opt) (eq? (car opt) 'use-ffi-module))
-				   module-options)))
-	)
+	(ext-mods (map cdr (filter
+			    (lambda (opt) (eq? (car opt) 'use-ffi-module))
+			    module-options))))
     (for-each
      (lambda (fmod)
        (let* ((base (string-join (map symbol->string fmod) "/"))
 	      (xffi (string-append base ".ffi"))
 	      (xscm (string-append base ".scm")))
 	 (when (not (access? xscm R_OK))
-	   (fherr "compiled dependent ~S not found\n" fmod))
+	   (fherr "compiled dependent ~S not found" fmod))
 	 (when (more-recent? xffi xscm)
-	   (fherr "dependent ~S needs recompile\n" xffi)
+	   (fherr "dependent ~S needs recompile" xffi)
 	   (sleep 2))))
      ext-mods)))
 
@@ -2090,7 +2059,7 @@
 	   (lambda (upath seed)
 	     (unless (resolve-module upath)
 	       (error "module not defined:" upath))
-	     (let* ((modul (resolve-module upath))
+	     (let* ((modul (resolve-module upath #:ensure #f))
 		    (pname (path->name upath))
 		    (vname (string->symbol (string-append pname "-types")))
 		    (var (module-ref modul vname)))
@@ -2340,19 +2309,20 @@
 	(throw 'ffi-help-error "ERROR: not found: ~S" file))
     (call-with-input-file file
       (lambda (iport)
-	(let iter ((oport #f) (exp (read iport)))
-	  (cond
-	   ((eof-object? exp)
-	    (when oport
-	      (display "\n;; --- last line ---\n" oport)
-	      (sferr "wrote `~A'\n" (port-filename oport))
-	      (close-port oport)))
-	   ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
-	    (iter (eval exp (current-module)) (read iport)))
-	   (else
-	    (when oport
-	      (newline oport)
-	      (pretty-print exp oport))
-	    (iter oport (read iport)))))))))
+	(let ((env (make-fresh-user-module)))
+	  (eval '(use-modules (nyacc lang c99 ffi-help)) env)
+	  (let iter ((oport #f) (exp (read iport)))
+	    (cond
+	     ((eof-object? exp)
+	      (when oport
+		(display "\n;; --- last line ---\n" oport)
+		(close-port oport)))
+	     ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
+	      (iter (eval exp env) (read iport)))
+	     (else
+	      (when oport
+		(newline oport)
+		(pretty-print exp oport))
+	      (iter oport (read iport))))))))))
 
 ;; --- last line ---

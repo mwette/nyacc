@@ -7,6 +7,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
+(use-modules (ffi gobject))
 (use-modules (ffi gtk2))
 (use-modules (ffi gtkglext1))
 (use-modules (ffi glugl))
