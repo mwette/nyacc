@@ -194,7 +194,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   (for-each
    (lambda (dep-file)
      (cond
-      (#t ;;(assq-ref options 'no-recurse)
+      ((assq-ref options 'no-recurse)
        (warn "please recompile `~A'" dep-file))
       (else
        (compile-ffi dep-file options))))
@@ -202,10 +202,9 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 ;; -----------------------------------------------------------------------------
 
-(define (compile-ffi ffi-file options)
+(define* (compile-ffi ffi-file options #:key module)
   (let* ((base (string-drop-right ffi-file 4))
-	 (scm-file (string-append base ".scm"))
-	 (go-file (string-append base ".go")))
+	 (scm-file (string-append base ".scm")))
     (ensure-ffi-deps ffi-file options)
     (catch 'ffi-help-error
       (lambda ()
@@ -217,9 +216,11 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	(exit 1)))
     (unless (assq-ref options 'no-exec)
       (sfmt "compiling `~A'" scm-file)
-      (compile-file scm-file
-		    #:from 'scheme #:to 'bytecode
-		    #:opts '((optimizations)))
+      (let ((go-file (compile-file scm-file
+				   #:from 'scheme #:to 'bytecode
+				   #:opts '((optimizations)))))
+	(load-compiled go-file)
+	(sfmt "wrote `~A'" go-file))
       (sleep 1))))
 
 (define (main . args)
