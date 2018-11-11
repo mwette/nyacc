@@ -1,4 +1,5 @@
-;; libevent.ffi				-*- Scheme -*-
+;; clang01.scm  - NOT WORKING
+;;   http://bastian.rieck.ru/blog/posts/2015/baby_steps_libclang_ast/
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -15,11 +16,25 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(define-ffi-module (ffi libevent)
-  ;;#:pkg-config "libevent"
-  #:include '("event2/event.h")
-  #:inc-filter (lambda (file-spec path-spec)
-                (string-contains path-spec "event2/" 0))
-  #:library '(libevent_core))
+(use-modules (ffi clang))
+
+(define file "clang-01a.cc")
+(define astf "clang-01a.ast")
+
+(with-output-to-file file
+  (lambda ()
+    (display "int foo(int bar) { return 0; }\n")
+    ))
+(system (string-append "/usr/lib/llvm-6.0/bin/clang++ -emit-ast " file))
+
+(let* ((index (clang_createIndex 0 1))
+       (tunit (clang_createTranslationUnit index astf))
+       (tcurs (clang_getTranslationUnitCursor tunit))
+       )
+  (clang_disposeTranslationUnit tunit)
+  (clang_disposeIndex index)
+  #f)
+
+(system (string-append "rm -f " file " " astf))
 
 ;; --- last line ---

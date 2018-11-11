@@ -26,9 +26,11 @@
 	    fh-object-ref fh-object-set!
 	    pointer-to value-at NULL
 
-	    fh:function fh:cast fh-cast bs-addr
+	    ;; maybe used outside of modules?
+	    fh:cast fh-cast bs-addr
+	    fh:function
 	    ffi-void*
-
+	    fh-void fh-void? make-fh-void
 	    make-fht
 
 	    ;; called from output of the ffi-compiler
@@ -123,9 +125,9 @@
 
 ;; execute the type method on the object
 (define (fh-unwrap type obj)
-  ((fht-unwrap type)) obj)
+  ((fht-unwrap type) obj))
 (define (fh-wrap type val)
-  ((fht-wrap type)) val)
+  ((fht-wrap type) val))
 
 ;; Right now this returns a ffi pointer.
 ;; TODO: add field option so we can do (pointer-to xstr 'vec)
@@ -608,6 +610,19 @@
 (define (char*->string obj)
   (ffi:pointer->string (ffi:make-pointer (fh-object-ref obj))))
 (export make-char* char*->string)
+
+(define fh-void
+  (make-fht 'void 
+	    (lambda (obj) 'void)
+	    (lambda (val) (make-struct/no-tail fh-void val))
+	    #f #f
+	    (lambda (obj port) (display "#<fh-void>" port))))
+(define fh-void?
+  (lambda (obj) (eq? (struct-vtable obj) fh-void)))
+(define make-fh-void
+  (case-lambda
+    (() (make-struct/no-tail fh-void 'void))
+    ((val) (make-struct/no-tail fh-void 'void))))
 
 (define-syntax make-maker
   (syntax-rules ()

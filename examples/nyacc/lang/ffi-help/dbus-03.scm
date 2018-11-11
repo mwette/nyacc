@@ -1,4 +1,4 @@
-;; dbus03.scm - dbus
+;; dbus-03.scm - dbus
 ;; see http://www.matthew.ath.cx/misc/dbus
 
 ;; Copyright (C) 2018 Matthew R. Wette

@@ -1,4 +1,4 @@
-;; cairo03.scm -- cairo matrix
+;; cairo-03.scm -- cairo matrix
 
 ;; Copyright (C) 2017 Matthew R. Wette
 ;;
@@ -18,7 +18,7 @@
 (cairo_move_to cr 0 0)
 (cairo_line_to cr 5 5)
 
-(cairo_surface_write_to_png srf "cairo03.png")
+(cairo_surface_write_to_png srf "cairo-03.png")
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
 

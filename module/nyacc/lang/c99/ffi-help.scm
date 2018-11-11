@@ -30,6 +30,18 @@
 
 ;; TODO: add renamer
 
+;; Issue:
+;; So issue is when 'typedef struct ref foo_t' has no 'struct def'
+;; we never define a type.  Then later we may see 'typedef foo_t bar_t'
+;; We are using define-ffi-type-alias but that then generates a reference
+;; to an undefined type.  Maybe for the above we should have a void
+;; pseudo-type with
+;; name: void
+;; (unwrap-void obj) => 'void
+;; (wrap 'void) (make-xxx)
+;; (pointer-to obj) => <void* obj>
+;; (value-at void*-object) =. void
+
 ;; For enum typedefs we are not creating types but just using wrappers.
 
 ;;; Code:
@@ -50,7 +62,6 @@
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
-  ;;#:use-module (nyacc lang c99 xparser)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 cxeval)
@@ -129,8 +140,8 @@
 (define *renamer* (make-parameter identity)) ; renamer from ffi-module
 (define *errmsgs* (make-parameter '()))	     ; list of warnings
 ;; what about option to trace
+(define *echo-decls* (make-parameter #f)) ; add echo-decls code for debugging
 
-(define *echo-decls* #f)		; add echo-decls code for debugging
 
 (define (sfscm fmt . args)
   (apply simple-format (*mport*) fmt args))
@@ -322,7 +333,7 @@
      `(define ,(link-libs)
 	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
     ;;(sfscm "(define link-lib (car link-libs))\n")
-    (if *echo-decls* (sfscm "(define echo-decls #t)\n"))))
+    (if (*echo-decls*) (sfscm "(define echo-decls #t)\n"))))
 
 ;; === type conversion ==============
 
@@ -1403,6 +1414,12 @@
 	(else
 	 ;; 3) struct never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
+	 ;; ----- This may be a hack? Write it up! ------------
+	 ;; Added to get glugl GLUnurbsObj to work.
+	 (sfscm "(define-fh-type-alias ~A fh-void)\n" typename)
+	 (sfscm "(define-public ~A? fh-void?)\n" typename)
+	 (sfscm "(define-public make-~A make-fh-void)\n" typename)
+	 ;; --------------------------------------------------
 	 (sfscm "(define-public ~A*-desc (bs:pointer ~A-desc))\n"
 		typename typename)))
        (fhscm-def-pointer (sw/* typename))
@@ -1553,28 +1570,15 @@
       ;; TODO: typedef void* (foo_t)(int x)
 
       ;; typedef foo_t bar_t
-      ;; We retry with expansion of foo_t here.  Using fh-define-alias-type
-      ;; was not working when we had "typedef struct foo foo_t;"
+      ;; We retry with expansion of foo_t here.  Using fh-define-type-alias
+      ;; was not working when we had "typedef struct foo foo_t;" But then
+      ;; crashing on function types, so imported original type aliasing.
       ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef))
 	 (type-spec (typename ,name)))
 	(init-declr (ident ,typename)))
-       (let ((ndecl (udict-ref udict name)))
-	 (sx-match ndecl
-	   ((udecl ,decl-spec-list (init-declr (ident ,_)) . ,comm)
-	    (let ((ud `(udecl ,decl-spec-list (init-declr (ident ,typename)))))
-	      (cnvt-udecl ud udict wrapped defined)))
-	   (else
-	    (sferr "missing:\n") (pperr ndecl)
-	    (error "missed")))))
-      ;; ^ replaces below
-      ((udecl
-	(decl-spec-list
-	 (stor-spec (typedef))
-	 (type-spec (typename ,name)))
-	(init-declr (ident ,typename)))
-       (sferr "typedef ~S =>\n" typename) (pperr (udict-ref udict name))
+       ;;(sferr "typedef ~S =>\n" typename) (pperr (udict-ref udict name))
        (cond
 	((member name bs-defined)
 	 (values wrapped defined))
@@ -1829,7 +1833,6 @@
 			    (with-input-from-string ""
 			      (lambda ()
 				(expand-cpp-macro-ref name cpp-defs)))))))
-	       ;;(if (string=? name "DBUS_TYPE_BOOLEAN") (sferr "~S\n" repl))
 	       ;; TODO: try to reduce all this to the parse-c99x one
 	       (cond
 		((not repl) seed)
@@ -1837,17 +1840,6 @@
 		((zero? (string-length repl)) seed)
 		;;
 		((cintstr->num repl) => (lambda (val) (acons symb val seed)))
-		#|
-		((string=? "\"\0\"" repl) (acons symb repl seed)) ;; hack
-		((eqv? #\" (string-ref repl 0))
-		 ;; This breaks when a string contains #\nul
-		 (acons symb
-			(regexp-substitute/global ;; "abc" "def" => "abcdef"
-			 #f "\"\\s*\""
-			 (substring repl 1 (1- (string-length repl)))
-			 'pre 'post)
-			seed))
-		|#
 		((with-error-to-port (open-output-file "/dev/null")
 		   (lambda ()
 		     (catch 'c99-error
@@ -1955,25 +1947,25 @@
 		 (stat:mtimensec stat2))))))
 
 ;; given modules spec, determine if any ffi-module dependencies are
-;; outdated 
+;; outdated
 (define (check-deps module-options)
   (let ((ext-modz ;; use filter?
 	 (fold-right
 	  (lambda (opt seed)
 	    (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
 	  '() module-options))
-	(ext-mods (map cdr (filter (lambda (opt) (eq? (car opt) 'use-ffi-module))
-				   module-options)))
-	)
+	(ext-mods (map cdr (filter
+			    (lambda (opt) (eq? (car opt) 'use-ffi-module))
+			    module-options))))
     (for-each
      (lambda (fmod)
        (let* ((base (string-join (map symbol->string fmod) "/"))
 	      (xffi (string-append base ".ffi"))
 	      (xscm (string-append base ".scm")))
 	 (when (not (access? xscm R_OK))
-	   (fherr "compiled dependent ~S not found\n" fmod))
+	   (fherr "compiled dependent ~S not found" fmod))
 	 (when (more-recent? xffi xscm)
-	   (fherr "dependent ~S needs recompile\n" xffi)
+	   (fherr "dependent ~S needs recompile" xffi)
 	   (sleep 2))))
      ext-mods)))
 
@@ -1995,7 +1987,7 @@
 			(string=? "*anon*" (cdr name)))))
 	     (let ((udecl (udict-ref udict name)))
 	       (nlscm) (c99scm udecl)
-	       (if *echo-decls*
+	       (if (*echo-decls*)
 		   (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
 	       (cnvt-udecl udecl udict wrapped defined)))
 	    (else (values wrapped defined))))
@@ -2067,7 +2059,7 @@
 	   (lambda (upath seed)
 	     (unless (resolve-module upath)
 	       (error "module not defined:" upath))
-	     (let* ((modul (resolve-module upath))
+	     (let* ((modul (resolve-module upath #:ensure #f))
 		    (pname (path->name upath))
 		    (vname (string->symbol (string-append pname "-types")))
 		    (var (module-ref modul vname)))
@@ -2080,6 +2072,7 @@
     (*mport* mport)
     (*ddict* ddict)
     (*tdefs* (udict->typenames udict))
+    (if (assq-ref script-options 'debug) (*echo-decls* #t))
     ;; renamer?
 
     ;; file and module header
@@ -2307,7 +2300,7 @@
 ;; This procedure will 
 ;; @end deffn
 (define* (compile-ffi-file file #:optional (options '()))
-  (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
+  (parameterize ((*options* options) (*wrapped* '()) (*defined* '())
 		 (*renamer* identity) (*errmsgs* '()) (*prefix* "")
 		 (*mport* #t) (*udict* '()) (*ddict* '()))
     ;; if not interactive ...
@@ -2316,19 +2309,20 @@
 	(throw 'ffi-help-error "ERROR: not found: ~S" file))
     (call-with-input-file file
       (lambda (iport)
-	(let iter ((oport #f) (exp (read iport)))
-	  (cond
-	   ((eof-object? exp)
-	    (when oport
-	      (display "\n;; --- last line ---\n" oport)
-	      (sferr "wrote `~A'\n" (port-filename oport))
-	      (close-port oport)))
-	   ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
-	    (iter (eval exp (current-module)) (read iport)))
-	   (else
-	    (when oport
-	      (newline oport)
-	      (pretty-print exp oport))
-	    (iter oport (read iport)))))))))
+	(let ((env (make-fresh-user-module)))
+	  (eval '(use-modules (nyacc lang c99 ffi-help)) env)
+	  (let iter ((oport #f) (exp (read iport)))
+	    (cond
+	     ((eof-object? exp)
+	      (when oport
+		(display "\n;; --- last line ---\n" oport)
+		(close-port oport)))
+	     ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
+	      (iter (eval exp env) (read iport)))
+	     (else
+	      (when oport
+		(newline oport)
+		(pretty-print exp oport))
+	      (iter oport (read iport))))))))))
 
 ;; --- last line ---

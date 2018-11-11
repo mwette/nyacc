@@ -1,4 +1,4 @@
-;; cairo04.scm - text demo from cairographics.org:
+;; cairo-04.scm - text demo from cairographics.org:
 ;;   https://www.cairographics.org/samples/text_align_center/
 
 ;; Copyright (C) 2017 Matthew R. Wette
@@ -43,7 +43,7 @@
 (cairo_rel_line_to cr 256 0)
 (cairo_stroke cr)
 
-(cairo_surface_write_to_png srf "cairo04.png")
+(cairo_surface_write_to_png srf "cairo-04.png")
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
 

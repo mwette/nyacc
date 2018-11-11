@@ -1,4 +1,4 @@
-;; dbus05.scm - example for mainloop
+;; dbus-05.scm - example for mainloop
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -14,6 +14,8 @@
 ;;
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+(add-to-load-path (getcwd))
 
 (use-modules (dbus00))
 (use-modules (dbusML))
@@ -51,16 +53,24 @@
   (handle-it pending))
 
 ;; ==========================================================================
+;; d-feet is GUI to check dictionary
 
-(define conn (spawn-dbus-mainloop 'session))
+;;(define conn (spawn-dbus-mainloop 'session))
+(define conn (spawn-dbus-mainloop 'system))
 
-(define msg (dbus_message_new_method_call
+(define msg1 (dbus_message_new_method_call
+	      "org.freedesktop.DBus"		; bus name
+	      "/org/freedesktop/DBus"		; object path
+	      "org.freedesktop.DBus.Debug.Stats"	; interface name
+	      "GetStats"))			; method
+
+(define msg2 (dbus_message_new_method_call
 	     "org.freedesktop.DBus"		; bus name
 	     "/org/freedesktop/DBus"		; object path
-	     "org.freedesktop.DBus.Debug.Stats"	; interface name
-	     "GetStats"))			; method
+	     "org.freedesktop.DBus"		; interface name
+	     "GetId"))				; method
 
-(define pending (send-msg conn msg))
+(define pending (send-msg conn msg2))
 
 (let iter ((got-it? (there-yet? pending)))
   (sf "there-yet? => ~S\n" got-it?)

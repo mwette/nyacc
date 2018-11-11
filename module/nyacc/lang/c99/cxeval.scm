@@ -123,9 +123,7 @@
 ;;     )
 ;;
 (define (eval-sizeof-expr tree udict)
-  (let* ((expr (sx-ref tree 1))
-	 )
-    (pp expr)
+  (let* ((expr (sx-ref tree 1)))
     (sx-match expr
       ((p-expr (string ,str))
        (string-length str))
