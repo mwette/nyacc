@@ -125,9 +125,9 @@
 
 ;; execute the type method on the object
 (define (fh-unwrap type obj)
-  ((fht-unwrap type)) obj)
+  ((fht-unwrap type) obj))
 (define (fh-wrap type val)
-  ((fht-wrap type)) val)
+  ((fht-wrap type) val))
 
 ;; Right now this returns a ffi pointer.
 ;; TODO: add field option so we can do (pointer-to xstr 'vec)

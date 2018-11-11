@@ -1,4 +1,4 @@
-;; nyacc/lang/ffi-help/cairo01.scm - simple square
+;; nyacc/lang/ffi-help/cairo-01.scm - simple square
 
 ;; Copyright (C) 2017-2018 Matthew R. Wette
 
@@ -19,7 +19,7 @@
 (cairo_line_to cr 10.0 10.0)
 (cairo_stroke cr)
 
-(cairo_surface_write_to_png srf "cairo01.png")
+(cairo_surface_write_to_png srf "cairo-01.png")
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
 

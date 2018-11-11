@@ -1,4 +1,5 @@
-;; gtkglext1.ffi			-*- Scheme -*-
+;; clang01.scm  - NOT WORKING
+;;   http://bastian.rieck.ru/blog/posts/2015/baby_steps_libclang_ast/
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -15,21 +16,25 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(define-ffi-module (ffi gtkglext1)
-  #:use-ffi-module (ffi gdk2)
-  #:use-ffi-module (ffi gtk2)
-  #:pkg-config "gtkglext-1.0"
-  #:include '("gtk/gtkgl.h")
-  #:inc-filter (lambda (f p) (string-contains p "gtkglext-1.0/" 0)))
+(use-modules (ffi clang))
 
-(define-public gtkgl-symval ffi-gtkglext1-symbol-val)
+(define file "clang-01a.cc")
+(define astf "clang-01a.ast")
 
-(define-public (gtk_widget_get_gl_drawable widget)
-  (make-GdkGLDrawable*
-   (fh-unwrap GdkGLWindow* (gtk_widget_get_gl_window widget))))
+(with-output-to-file file
+  (lambda ()
+    (display "int foo(int bar) { return 0; }\n")
+    ))
+(system (string-append "/usr/lib/llvm-6.0/bin/clang++ -emit-ast " file))
 
-;;#define GDK_TYPE_GL_DRAWABLE              (gdk_gl_drawable_get_type ())
-;;#define GDK_GL_DRAWABLE(inst)             (G_TYPE_CHECK_INSTANCE_CAST ((inst), GDK_TYPE_GL_DRAWABLE, GdkGLDrawable))
-;;#define GDK_GL_DRAWABLE_CLASS(vtable)     (G_TYPE_CHECK_CLASS_CAST ((vtable), GD
+(let* ((index (clang_createIndex 0 1))
+       (tunit (clang_createTranslationUnit index astf))
+       (tcurs (clang_getTranslationUnitCursor tunit))
+       )
+  (clang_disposeTranslationUnit tunit)
+  (clang_disposeIndex index)
+  #f)
+
+(system (string-append "rm -f " file " " astf))
 
 ;; --- last line ---

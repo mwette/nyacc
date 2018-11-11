@@ -1,4 +1,4 @@
-;; exam.d/cairo02.scm - try key
+;; cairo-02.scm - try key
 
 ;; Copyright (C) 2017 Matthew R. Wette
 
@@ -30,7 +30,7 @@
 	 
 (cairo_set_user_data cr (pointer-to k1) (scm->pointer v1) d1)
 
-(cairo_surface_write_to_png srf "cairo02.png")
+(cairo_surface_write_to_png srf "cairo-02.png")
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
 

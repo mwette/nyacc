@@ -21,7 +21,6 @@
 		 (string-contains path-spec "git2/" 0))
   #:library '("libgit2"))
 
-
 (define git_commit**-desc (bs:pointer git_commit*-desc))
 (define-fh-pointer-type git_commit** git_commit**-desc
   git_commit**? make-git_commit**)

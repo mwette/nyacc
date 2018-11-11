@@ -39,7 +39,7 @@
 
 (define (sfmt fmt . args)
   (apply simple-format (current-error-port) fmt args)
-  (newline (current-error-port)))
+  (force-output (current-error-port)))
 
 (define (fail fmt . args)
   (simple-format  (current-error-port) "compile-ffi: error: ")
@@ -208,19 +208,19 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
     (ensure-ffi-deps ffi-file options)
     (catch 'ffi-help-error
       (lambda ()
-	(sfmt "compiling `~A'" ffi-file)
+	(sfmt "compiling `~A' ..." ffi-file)
 	(compile-ffi-file ffi-file options)
-	(sfmt "wrote `~A'" scm-file))
+	(sfmt " wrote `~A'\n" scm-file))
       (lambda (key fmt . args)
 	(apply fail fmt args)
 	(exit 1)))
     (unless (assq-ref options 'no-exec)
-      (sfmt "compiling `~A'" scm-file)
-      (let ((go-file (compile-file scm-file
+      (sfmt "compiling `~A' ..." scm-file)
+       (let ((go-file (compile-file scm-file
 				   #:from 'scheme #:to 'bytecode
 				   #:opts '((optimizations)))))
 	(load-compiled go-file)
-	(sfmt "wrote `~A'" go-file))
+	(sfmt " wrote `~A'\n" go-file))
       (sleep 1))))
 
 (define (main . args)

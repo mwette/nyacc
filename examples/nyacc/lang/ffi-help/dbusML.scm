@@ -106,6 +106,8 @@
 	;;(ff "new ddent@ 0x~x   w/ event ~s\n" (scm->addr ddent) event)
 	ddent)))
 
+;; IIRC "wv" means "watch vector"
+
 (define (find-wv-slot wv)
   (let iter ((i 0) (n (vector-length wv)))
     (cond
@@ -264,7 +266,7 @@
 	 (eventp (pointer-to eventv)))
 
     ;; Set up wakeup, initiated from handlers.
-    (setvbuf woport  'none)
+    (setvbuf woport 'none)
     (set-nonblocking! woport)
     (set-nonblocking! wiport) ;; needed?
     (let ((event (make-struct-epoll_event)))

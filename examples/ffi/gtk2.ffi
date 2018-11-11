@@ -30,6 +30,16 @@
 
 (define-public gtk-symval ffi-gtk2-symbol-val)
   
+;; OK, some gtk programs use (lambda (widget event arg) ...) and Gtk etc does
+;; not provide it so I hacek it here
+(define-public GtkEventCallback-desc
+  (bs:pointer
+   (fh:function
+    'void (list (bs:pointer 'void) (bs:pointer 'void) (bs:pointer 'void)))))
+(define-fh-function*-type GtkEventCallback
+  GtkEventCallback-desc  GtkEventCallback? make-GtkEventCallback)
+(export GtkEventCallback GtkEventCallback? make-GtkEventCallback)
+
 ;; This is the c function.
 (define-public ~gtk_widget_destroy
   (fh-find-symbol-addr "gtk_widget_destroy" ffi-gtk2-llibs))

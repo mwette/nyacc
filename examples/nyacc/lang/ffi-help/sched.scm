@@ -1,4 +1,4 @@
-;; nyacc/lang/ffi/sched.scm - scheduler for dbus
+;; sched.scm - scheduler for dbus
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -16,9 +16,7 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 (define-module (sched)
-  #:export (;;sch-event
-	    ;;sch-sched
-	    make-scheduler
+  #:export (make-scheduler
 	    schedule-event
 	    cancel-events/data
 	    earliest-event-time
