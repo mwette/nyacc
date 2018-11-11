@@ -123,15 +123,19 @@
      )
 
     (short-class-specifier
-     (ident "=" base-prefix type-specifier array-subscripts
-	    class-modification comment
-	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5 ,$6)))
+     (ident "=" base-prefix type-specifier array-subscripts class-modification
+	    comment
+	    ($$ (if (pair? $3)
+		    `(short-class-spec ,$1 ,$3 ,$4 ,$5 ,$6)
+		    `(short-class-spec ,$1 ,$4 ,$5 ,$6))))
      (ident "=" base-prefix type-specifier array-subscripts comment
-	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5)))
+	    ($$ (if (pair? $3)
+		    `(short-class-spec ,$1 ,$3 ,$4 ,$5)
+		    `(short-class-spec ,$1 ,$4 ,$5))))
      (ident "=" base-prefix type-specifier class-modification comment
-	    ($$ `(short-class-spec ,$1 ,$3 ,$4 ,$5)))
-     (ident "=" base-prefix type-specifier comment
-	    ($$ `(short-class-spec ,$1 ,$3 ,$4)))
+	    ($$ (if (pair? $3)
+		    `(short-class-spec ,$1 ,$3 ,$4)
+		    `(short-class-spec ,$1 ,$4))))
      (ident "=" "enumeration" "(" enum-list ")" comment
 	    ($$ `(short-class-enum-spec ,$1 ,$5)))
      (ident "=" "enumeration" "(" ":" ")" comment
@@ -147,7 +151,7 @@
      (ident ($$ (make-tl 'ident-list $1)))
      (ident-list-1 ";" ident ($$ (tl-append $1 $3))))
 
-    (base-prefix ("input") ("output"))
+    (base-prefix ($empty) ("input") ("output"))
 
     (enum-list
      (enumeration-literal ($$ (make-tl 'enum-list $1)))
@@ -314,7 +318,7 @@
 
     (component-declaration
      (declaration condition-attribute comment ($$ `(comp-decl ,$1 ,$2)))
-     (declaration comment ($$ $1)))
+     (declaration comment ($$ `(comp-decl ,$1))))
 
     (condition-attribute
      ("if" expression ($$ `(if ,$2))))

@@ -150,13 +150,12 @@
       ($$ `(switch ,$2 ,@(cdr (tl->list $4)))))
      ("return"
       ($$ '(return)))
-     (command arg-list ($$ `(command ,$1 ,@(cdr (tl->list $2)))))
-     )
+     (command arg-list ($$ `(command ,$1 ,@(cdr (tl->list $2))))))
 
     (command
      ("global" ($$ '(ident "global")))
-     ("clear" ($$ '(ident "clear")))
-     )
+     ("clear" ($$ '(ident "clear"))))
+
     ;; Only ident list type commands are allowed
     (arg-list
      (ident ($$ (make-tl 'arg-list (cons 'arg (cdr $1)))))
@@ -166,8 +165,7 @@
      ("elseif" expr term stmt-list
       ($$ (make-tl 'elseif-list `(elseif ,$2 ,(tl->list $4)))))
      (elseif-list "elseif" expr term stmt-list
-		   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5)))))
-     )
+		   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5))))))
 
     ;; The switch case for this octave only allows case-expr of form
     ;; @code{fixed}, @code{string}, @code{fixed-list} or @code{string-list}.
@@ -188,48 +186,41 @@
      
     (expr-list
      (expr ($$ (make-tl 'expr-list $1)))
-     (expr-list "," expr ($$ (tl-append $1 $3)))
-     )
+     (expr-list "," expr ($$ (tl-append $1 $3))))
 
     (expr
      (or-expr)
      (or-expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
      (or-expr ":" or-expr ":" or-expr ($$ `(colon-expr ,$1 ,$3 ,$5)))
      (or-expr ":" "end" ($$ `(colon-expr ,$1 (end))))
-     (or-expr ":" or-expr ":" "end" ($$ `(colon-expr ,$1 ,$3 (end))))
-     )
+     (or-expr ":" or-expr ":" "end" ($$ `(colon-expr ,$1 ,$3 (end)))))
 
     (or-expr
      (and-expr)
-     (or-expr "|" and-expr ($$ `(or ,$1 ,$3)))
-     )
+     (or-expr "|" and-expr ($$ `(or ,$1 ,$3))))
 
     (and-expr
      (equality-expr)
-     (and-expr "&" equality-expr ($$ `(and ,$1 ,$3)))
-     )
+     (and-expr "&" equality-expr ($$ `(and ,$1 ,$3))))
 
     (equality-expr
      (rel-expr)
      (equality-expr "==" rel-expr ($$ `(eq ,$1 ,$3)))
-     (equality-expr "~=" rel-expr ($$ `(ne ,$1 ,$3)))
-     )
+     (equality-expr "~=" rel-expr ($$ `(ne ,$1 ,$3))))
 
     (rel-expr
      (add-expr)
      (rel-expr "<" add-expr ($$ `(lt ,$1 ,$3)))
      (rel-expr ">" add-expr ($$ `(gt ,$1 ,$3)))
      (rel-expr "<=" add-expr ($$ `(le ,$1 ,$3)))
-     (rel-expr ">=" add-expr ($$ `(ge ,$1 ,$3)))
-     )
+     (rel-expr ">=" add-expr ($$ `(ge ,$1 ,$3))))
 
     (add-expr
      (mul-expr)
      (add-expr "+" mul-expr ($$ `(add ,$1 ,$3)))
      (add-expr "-" mul-expr ($$ `(sub ,$1 ,$3)))
      (add-expr ".+" mul-expr ($$ `(dot-add ,$1 ,$3)))
-     (add-expr ".-" mul-expr ($$ `(dot-sub ,$1 ,$3)))
-     )
+     (add-expr ".-" mul-expr ($$ `(dot-sub ,$1 ,$3))))
 
     (mul-expr
      (unary-expr)
@@ -240,15 +231,13 @@
      (mul-expr ".*" unary-expr ($$ `(dot-mul ,$1 ,$3)))
      (mul-expr "./" unary-expr ($$ `(dot-div ,$1 ,$3)))
      (mul-expr ".\\" unary-expr ($$ `(dot-ldiv ,$1 ,$3)))
-     (mul-expr ".^" unary-expr ($$ `(dot-pow ,$1 ,$3)))
-     )
+     (mul-expr ".^" unary-expr ($$ `(dot-pow ,$1 ,$3))))
 
     (unary-expr
      (postfix-expr)
      ("-" postfix-expr ($$ `(neg ,$2)))
      ("+" postfix-expr ($$ $2))
-     ("~" postfix-expr ($$ `(not ,$2)))
-     )
+     ("~" postfix-expr ($$ `(not ,$2))))
 
     (postfix-expr
      (primary-expr)
@@ -266,13 +255,11 @@
      ("[" "]" ($$ '(matrix)))
      ("[" matrix-row-list "]" ($$ (tl->list $2)))
      ("{" "}" ($$ '(cell-array)))
-     ("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2)))))
-     )
+     ("{" matrix-row-list "}" ($$ (cons 'cell-array (cdr (tl->list $2))))))
 
     (matrix-row-list
      (matrix-row ($$ (make-tl 'matrix (tl->list $1))))
-     (matrix-row-list row-term matrix-row ($$ (tl-append $1 (tl->list $3))))
-     )
+     (matrix-row-list row-term matrix-row ($$ (tl-append $1 (tl->list $3)))))
     (row-term (";") (nl))
 
     (matrix-row

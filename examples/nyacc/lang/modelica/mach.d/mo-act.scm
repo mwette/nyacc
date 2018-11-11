@@ -102,16 +102,19 @@
      (list '(@ extends . "yes") $2 $3 $4))
    ;; short-class-specifier => ident "=" base-prefix type-specifier array-s...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(short-class-spec ,$1 ,$3 ,$4 ,$5 ,$6))
+     (if (pair? $3)
+       `(short-class-spec ,$1 ,$3 ,$4 ,$5 ,$6)
+       `(short-class-spec ,$1 ,$4 ,$5 ,$6)))
    ;; short-class-specifier => ident "=" base-prefix type-specifier array-s...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(short-class-spec ,$1 ,$3 ,$4 ,$5))
+     (if (pair? $3)
+       `(short-class-spec ,$1 ,$3 ,$4 ,$5)
+       `(short-class-spec ,$1 ,$4 ,$5)))
    ;; short-class-specifier => ident "=" base-prefix type-specifier class-m...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(short-class-spec ,$1 ,$3 ,$4 ,$5))
-   ;; short-class-specifier => ident "=" base-prefix type-specifier comment
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(short-class-spec ,$1 ,$3 ,$4))
+     (if (pair? $3)
+       `(short-class-spec ,$1 ,$3 ,$4)
+       `(short-class-spec ,$1 ,$4)))
    ;; short-class-specifier => ident "=" "enumeration" "(" enum-list ")" co...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(short-class-enum-spec ,$1 ,$5))
@@ -127,6 +130,8 @@
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
    ;; ident-list-1 => ident-list-1 ";" ident
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; base-prefix => 
+   (lambda $rest (list))
    ;; base-prefix => "input"
    (lambda ($1 . $rest) $1)
    ;; base-prefix => "output"
@@ -344,7 +349,7 @@
    ;; component-declaration => declaration condition-attribute comment
    (lambda ($3 $2 $1 . $rest) `(comp-decl ,$1 ,$2))
    ;; component-declaration => declaration comment
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(comp-decl ,$1))
    ;; condition-attribute => "if" expression
    (lambda ($2 $1 . $rest) `(if ,$2))
    ;; declaration => ident $P7 $P8

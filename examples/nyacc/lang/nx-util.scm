@@ -131,7 +131,7 @@
 
 (define (nx-lookup-in-env name env)
   (let ((sym (if (string? name) (string->symbol name) name)))
-    (if (module-variable env sym)
+    (if (and env (module-variable env sym))
 	`(@@ ,(module-name env) ,sym)
 	#f)))
 

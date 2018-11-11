@@ -16,14 +16,18 @@
    (use-modules (test-suite lib18))
    (use-modules (nyacc compat18))))
 
+(use-modules (ice-9 pretty-print))
+
 (with-test-prefix "nyacc/sx-match"
 
   (pass-if "basics"
     (and
      (sx-match '(foo (bar)) (else #t))
-     (sx-match '(foo "hello") ((foo *) #t) (else #t))
+     (sx-match '(foo "hello") ((foo ,_) #t) (,_ #f))
+     (sx-match '(foo "hello") ((foo ,_) #t) (else #f))
      (sx-match '(foo (bar (baz))) ((foo (bar (baz))) #t) (else #f))
      (sx-match '(foo (bar)) ((foo ,nd) (equal? '(bar) nd)) (else #f))
+     (sx-match '(foo) ((foo . ,_) #t) (else #f))
      #t))
 
   (pass-if "w/ val attr, w/ pat attr"
@@ -72,22 +76,12 @@
 
   (pass-if "more random tests"
     (and
-     (sx-match '(foo "abc" "def") ((foo (bar . *)) #f) (else #t))
+     ;;(sx-match '(foo "abc" "def") ((foo (bar . *)) #f) (else #t))
      (sx-match '(foo "hi") ((foo ,greet) (string=? greet "hi")) (else #f))
      (sx-match '(foo "hi") ((foo . ,rest) (string=? (car rest) "hi")) (else #f))
+     (sx-match '(foo "hi") ((foo "bar") #f) ((foo "hi") #t) (else #f))
      #t))
-  
-  ;;(pp (sx-match '(foo "hello") ((bar ,text) #f) (else #f)))
 
-  ;;(define sx '(bar (@ (x "1")) "hello"))
-  ;;(define sx '(bar "hello"))
-  ;;(define sx '(bar))
-  ;;(define sx '(bar (@ (x "1"))))
-  ;;(sx-match sx
-  ;;((bar ,text) (sf "match w/ text=~S\n" text) #t)
-  ;;((bar (@ . ,al)) (sf "match singleton/attr\n") #t)
-  ;; ((bar) (sf "match singleton\n") #t)
-  ;;(else #t)
   )
 
 ;;; --- last line ---

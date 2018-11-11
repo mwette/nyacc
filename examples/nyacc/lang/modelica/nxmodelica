@@ -1,6 +1,6 @@
 #!/bin/sh
 # -*- scheme -*-
-exec guile $0 $*
+exec guile $0 "$@"
 !#
 
 (use-modules (nyacc lang modelica parser))
@@ -18,11 +18,17 @@ exec guile $0 $*
 	 args)
   (exit 1))
 
+(define (show-help)
+  (sf "usage: nxmodelica [-h] [-g model] file\n")
+  (sf "       -h --help    print help and exit\n")
+  (sf "       -g model     generate model\n")
+  (sf "       --gen=model  generate model\n")
+  (quit))
+
 (define options
   (list (option '(#\h "help") #f #f
 		(lambda (opt name arg seed)
-		  (sf "hmmm\n")
-		  (acons 'help? #t seed)))
+		  (acons 'help #t seed)))
 	(option '(#\g "gen") #t #f
 		(lambda (opt name arg seed)
 		  (acons 'gen arg seed)))
@@ -48,7 +54,7 @@ exec guile $0 $*
 	 (((class connector) (ident ,name) . ,_)
 	  (acons name defn dict))
 	 (else
-	  (sf "missed\n") (pp defn)
+	  (sf "u missed\n") (pp defn)
 	  dict)))
      dict (sx-tail tree))))
 
@@ -58,6 +64,7 @@ exec guile $0 $*
   (let* ((options (parse-args args))
 	 (files (assoc-ref options 'files))
 	 (dict (fold update-dict '() files)))
+    (if (assq-ref options 'help) (show-help))
     ;;(sf "files=~S\n" files)
     ;;(sf "dict:\n") (pp dict)
     (and=> (assq-ref options 'gen)
@@ -69,13 +76,18 @@ exec guile $0 $*
 
 ;; =============================================================================
 
+(use-modules (srfi srfi-11))
 (use-modules (sxml match))
+(use-modules (sxml fold))		; fold-values
+
+(define keepers '("Real" "Integer" "Boolean" "String"))
 
 ;; pars : parameters
 ;; elts : elements
 ;; eqns : equations
 ;; algs : algorithms
 (define* (mo-expand-comp pars elts eqns algs dict #:key pd)
+  (display "mo-expand-comp\n")
   #f)
 
   ;; pd : param dict name => value
@@ -85,35 +97,88 @@ exec guile $0 $*
 		       (decl (ident ,name) . ,modifier))
      (let ((ty (assoc-ref dict tname))
 	   )
-       (sf "xdecl:\n") (pp comp)
-       (sf " ~S:\n" tname) (pp ty)
+       ;;(sf "xdecl:\n") (pp comp)
+       ;;(sf " ~S:\n" tname) (pp ty)
        `(a b c)))
     (else
      comp)))
-			 
-(define (mo-unroll-decl decl seed)
-  (sx-match decl
-    ((component-clause (type-spec ,tspec) (comp-list . ,dtors))
-     (fold-right
-      (lambda (dtor decls)
-	(cons `(component-clause (type-spec ,tspec) ,dtor) decls))
-      seed dtors))
-    (else (error "missed: ~S decl"))))
 
-;; realize a class: convert class decl to instantiation 
-(define (mo-realize decl dict)
-  (sx-match decl
+;; in a comp-clause with comp-list, unroll the list
+(define (mo-unroll-comp-list cc seed)
+  (unless (eq? (sx-tag cc) 'component-clause)
+    (error "expecing component-clause"))
+  (let loop1 ((head (list (car cc))) (tail (cdr cc)))
+    (if (pair? (cdr tail))
+	(loop1 (cons (car tail) head) (cdr tail))
+	(fold-right
+	 (lambda (dtor seed)
+	   (cons (reverse (cons dtor head)) seed))
+	 seed tail))))
+
+;; expand a class to pars, elts, eqns, and algs
+(define* (mo-realize item dict)
+  (sx-match item
     (((class model connection) (ident ,name)
       (composition
        (element-list . ,elts)
-       (composition-list
-	(eqn-section . ,eqns))))
-     (let ((decls (fold-right mo-unroll-decl '() elts)))
-       ;;(for-each (lambda (decl) (mo-expand-decl decl dict)) decls)
-       (mo-expand-decl (car decls) dict)
-       '()))
-    (else '()))
-  )
+       (composition-list . ,cmps)))
+     (let*-values (((pars elts eqns algs) (mo-break-elt-list elts dict)))
+       (newline)
+       (sf "pars:\n") (pp pars)
+       (sf "elts:\n") (pp elts)
+       (values pars elts eqns algs)))
+    (else
+     (sf "1 missed:\n") (pp item)
+     #f)))
+
+;; assume parameter type never has eqns or algs
+
+;;(define (mo-over 
+
+(define (mo-break-elt-list elt-list dict)
+  (sf "\n elt-list:\n") (pp elt-list) (newline)
+  (fold-values
+   (lambda (elt pars elts eqns algs)
+     (sx-match elt
+       ((extends (ident ,parent))
+	(sf "p=~S\n" parent)
+	(let ((pval (assoc-ref dict parent)))
+	  (unless pval (pp dict) (error "not found"))
+	  (call-with-values
+	      (lambda () (mo-realize pval dict))
+	    (lambda (pas els eqs als)
+	      (sf "\nmo-realize=>\n") (pp pas) (pp els)
+	      (values (append pas pars) (append els elts)
+		      (append eqs eqns) (append als algs))))))
+       ((component-clause (type-spec (ident ,t-name)) (comp-list . ,comp-list))
+	(let ((elts
+	       (fold-right
+		(lambda (comp seed)
+		  (sf "  comp=~S\n" comp)
+		  (sx-match comp
+		    ((decl (ident ,v-name))
+		     (cons `(comp (type ,t-name) (ident ,v-name)) seed))
+		    (else
+		     (sf "v missed ~S\n" comp)
+		     (cons comp seed))))
+		comp-list elts)))
+	  (values pars elts eqns algs)))
+       ((component-clause
+	 (type-prefix "parameter") (type-spec (ident ,t-name))
+	 (comp-list . ,comp-list))
+	(let ((pars
+	       (fold-right
+		(lambda (comp seed)
+		  (sx-match comp
+		    ((decl (ident ,v-name))
+		     (cons `(comp (type ,t-name) (ident ,v-name)) seed))
+		    (else (cons comp seed))))
+		comp-list pars)))
+	  (values pars elts eqns algs)))
+       (else
+	(sf "2 missed:\n") (pp elt)
+	(values pars elts eqns algs))))
+   elt-list '() '() '() '()))
 
 (set!
  cnvt
