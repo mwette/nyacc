@@ -44,9 +44,7 @@
 		(glcontext (gtk_widget_get_gl_context widget))
 		(gldrawable (gtk_widget_get_gl_drawable widget))
 		(qobj #f))
-	   (cond
-	    ((zero? (gdk_gl_drawable_gl_begin gldrawable glcontext)))
-	    (else
+	   (when (zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
 	     (set! qobj (gluNewQuadric))
 	     (gluQuadricDrawStyle qobj 'GLU_FILL)
 	     (glNewList 1 'GL_COMPILE)
@@ -64,14 +62,14 @@
 
 	     (glViewport 0 0
 			 (fh-object-ref widget 'allocation 'width)
-			 (fh-object-ref widget 'allocation 'width))
+			 (fh-object-ref widget 'allocation 'height))
 
 	     (glMatrixMode 'GL_PROJECTION)
 	     (glLoadIdentity)
 	     (gluLookAt 0.0 0.0 3.0 0.0 0.0 0.0 0.0 1.0 0.0)
 	     (glTranslatef 0.0 0.0 -3.0)
 
-	     (gdk_gl_drawable_gl_end gldrawable)))))))))
+	     (gdk_gl_drawable_gl_end gldrawable))))))))
 
 (define configure-event
   (make-GtkEventCallback
@@ -80,13 +78,13 @@
 	   (glcontext (gtk_widget_get_gl_context widget))
 	   (gldrawable (gtk_widget_get_gl_drawable widget)))
        (cond
-	((not (zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))) FALSE)
-	(else
+	((zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
 	 (glViewport 0 0 
 		     (fh-object-ref widget 'allocation 'width)
-		     (fh-object-ref widget 'allocation 'width))
+		     (fh-object-ref widget 'allocation 'height))
 	 (gdk_gl_drawable_gl_end gldrawable)
-	 TRUE))))))
+	 TRUE)
+	(else FALSE))))))
 
 (define expose-event
   (let* ((m '(GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
@@ -96,16 +94,15 @@
        (let ((glcontext (gtk_widget_get_gl_context widget))
 	     (gldrawable (gtk_widget_get_gl_drawable widget)))
 	 (cond
-	  ((not (zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))) FALSE)
-	  (else
+	  ((zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
 	   (glClear n)
 	   (glCallList 1)
 	   (if (not (zero? (gdk_gl_drawable_is_double_buffered gldrawable)))
 	       (gdk_gl_drawable_swap_buffers gldrawable)
 	       (glFlush))
-
 	   (gdk_gl_drawable_gl_end gldrawable)
-	   TRUE)))))))
+	   TRUE)
+	  (else FALSE)))))))
       
 ;; Initialize.
 (define argc (make-int 0))
@@ -117,6 +114,7 @@
   (let* ((m '(GDK_GL_MODE_RGB GDK_GL_MODE_DEPTH GDK_GL_MODE_DOUBLE))
 	 (n (apply logior (map gtkgl-symval m))))
     (gdk_gl_config_new_by_mode n)))
+(sf "glconfig=~S\n" glconfig)
 
 (define window (gtk_window_new 'GTK_WINDOW_TOPLEVEL))
 (gtk_window_set_title window "simple")
