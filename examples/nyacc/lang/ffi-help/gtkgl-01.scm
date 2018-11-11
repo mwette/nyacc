@@ -36,6 +36,7 @@
 (define realize
   (make-GtkCallback
    (lambda (widget data)
+     (sf "realize\n")
      (let ((light-diffuse (make-dvec4 1.0 0.0 0.0 1.0))
 	   (light-position (make-dvec4 1.0 1.0 1.0 0.0)))
        (lambda(widget data)
