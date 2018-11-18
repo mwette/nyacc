@@ -32,7 +32,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37))
 
-(define *ffi-help-version* "0.86.3")
+(define *ffi-help-version* "0.86.4")
 
 (define %summary
   "Compile a ffi-file (C interface spec) to Scheme (or maybe .go).")
