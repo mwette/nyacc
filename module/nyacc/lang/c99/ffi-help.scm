@@ -503,7 +503,7 @@
       (,otherwise
        (sferr "mtail->bs-desc missed mdecl:\n")
        (pperr mdecl-tail)
-       ;;(error "quit") (quit)
+       (error "quit") ;;(quit)
        (fherr "mtail->bs-desc failed")
        )
       )))
@@ -643,8 +643,18 @@
 ;; @end deffn
 
 (define (cnvt-aggr-def aggr-t attr typename aggr-name field-list)
-  ;;(sferr "\nfield-list:\n") (pperr field-list)
+  #;(when (string=? aggr-name "_GFloatIEEE754")
+    (sferr "\nfield-list: 1\n") (pperr field-list)
+    ;;(quit)
+    )
   (let* ((field-list (expand-field-list-typerefs field-list))
+	 #;(zz (when (string=? aggr-name "_GFloatIEEE754")
+	       (sferr "\nfield-list: 2\n") (pperr field-list)))
+	 #;(zz (when (string=? aggr-name "_GFloatIEEE754")
+	       (sferr "\nfield-list: 3\n")
+	       (pperr (clean-field-list field-list))
+	       (pperr (fold-right unitize-comp-decl '() (cdr field-list)))
+	     ))
 	 (sflds (cnvt-field-list field-list))
 	 (aggr-s (symbol->string aggr-t))
 	 (aggrname (and aggr-name (string-append aggr-s "-" aggr-name)))

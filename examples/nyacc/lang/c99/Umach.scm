@@ -1,4 +1,4 @@
-;; Umach.scm - demo C99: CPP and parser
+;; Umach.scm - update C99 machines and parser (after editing mach.scm)
 ;;
 ;; Copyright (C) 2015,2016,2018 Matthew R. Wette
 ;; 
@@ -11,17 +11,8 @@
 
 (use-modules (nyacc lang c99 mach))
 (use-modules (nyacc lang c99 cppmach))
-(use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxmach))
-(use-modules (nyacc lang c99 cxeval))
-(use-modules (nyacc lang c99 pprint))	; pretty-print-c99
-(use-modules (nyacc lang c99 util1))	; remove-inc-trees
-(use-modules (nyacc lang c99 munge))	; tree->udict
-(use-modules (nyacc lang util))		; move-if-changed
 (use-modules (nyacc lalr))
-(use-modules (nyacc util))
-;;(use-modules (nyacc export))
-(use-modules (ice-9 pretty-print))
 
 (when #t
   (if (gen-cpp-files mod-dir)
@@ -49,11 +40,5 @@
       (pp-lalr-grammar c99cx-spec)
       (pp-lalr-machine c99cx-mach)))
   #t)
-
-(when #f
-  (pretty-print
-   (with-input-from-string
-       "int x;\nint inc(int x) { return x + 1; }\n"
-     parse-c99)))
 
 ;; --- last line ---
