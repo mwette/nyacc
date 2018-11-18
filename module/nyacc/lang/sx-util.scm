@@ -160,7 +160,10 @@
 ;; (sx-repl-tail (tag (@ ...) (repl-elt ...)))
 ;; @end example
 (define (sx-repl-tail sexp tail)
-  (sx-cons* (sx-tag sexp) (sx-attr sexp) tail))
+  (let ((tag (sx-tag)) (attr (sx-attr sexp)))
+    (if (pair? attr)
+	(cons* tag `(@ ,attr) tail)
+	(cons tag tail))))
 
 ;; @deffn {Procedure} sx-tail sx [ix] => (list)
 ;; Return the ix-th tail starting after the tag and attribut list, where
@@ -187,21 +190,17 @@
 (define (sx-has-attr? sx)
   (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx)) #t))
 
-;; @deffn {Procedure} sx-attr sx => '(@ ...)|#f
+;; @deffn {Procedure} sx-attr sx => ((k v) ...)
 ;; @example
-;; (sx-attr '(abc (@ (foo "1")) def) 1) => '(@ (foo "1"))
-;; @end example
-;; should change this to
-;; @example
-;; (sx-attr sx) => '((a . 1) (b . 2) ...)
+;; (sx-attr '(abc (@ (foo "1")) def) 1) => ((foo "1"))
 ;; @end example
 ;; @end deffn
 (define (sx-attr sx)
-  (if (and (pair? (cdr sx)) (pair? (cadr sx)))
-      (if (eqv? '@ (caadr sx))
-	  (cadr sx)
-	  #f)
-      #f))
+  (if (and (pair? (cdr sx))
+	   (pair? (cadr sx))
+	   (eqv? '@ (caadr sx)))
+      (cdadr sx)
+      '()))
 
 ;; @deffn {Procedure} sx-attr-ref sx|node|tail key => val
 ;; Return an attribute value given the key, or @code{#f}.
@@ -215,27 +214,29 @@
 			 (else '()))))
     (and=> (assq-ref attr-tail key) car)))
 
-;; @deffn {Procedure} sx-attr-add sx key val
-;; Add attribute to sx.
+;; @deffn {Procedure} sx-attr-add sx key-or-pair [val]
+;; Add attribute to sx, passing either a key-val pair or key and val.
 ;; @end deffn
-(define (sx-attr-add sx key val)
-  (cons
-   (car sx)
-   (if (sx-has-attr? sx)
-       (cons `(@ (,key ,val)
-		 ,@(let iter ((atl (cdr (sx-attr sx))))
-		     (cond ((null? atl) '())
-			   ((eq? key (caar atl)) (iter (cdr atl)))
-			   (else (cons (car atl) (iter (cdr atl)))))))
-	     (cddr sx))
-       (cons `(@ (,key ,val)) (cdr sx)))))
+(define* (sx-attr-add sx key-or-pair #:optional val)
+  (let ((pair (if val (list key-or-pair val) key-or-pair))
+	(key (car pair)) (val (cadr pair)))
+    (cons
+     (sx-tag sx)
+     (if (sx-has-attr? sx)
+	 (cons `(@ pair
+		   ,@(let iter ((atl (sx-attr sx)))
+		       (cond ((null? atl) '())
+			     ((eq? key (caar atl)) (iter (cdr atl)))
+			     (else (cons (car atl) (iter (cdr atl)))))))
+	       (cddr sx))
+	 (cons `(@ ,pair) (cdr sx))))))
 
 ;; @deffn {Procedure} sx-attr-add* sx key val [key val [@dots{} ]] => sx
 ;; Add key-val pairs. @var{key} must be a symbol and @var{val} must be
 ;; a string.  Return a new @emph{sx}.
 ;; @end deffn
 (define (sx-attr-add* sx . rest)
-  (let* ((attrs (if (sx-has-attr? sx) (cdr (sx-attr sx)) '()))
+  (let* ((attrs (sx-attr sx))
 	 (attrs (let iter ((kvl rest))
 		  (if (null? kvl) attrs
 		      (cons (list (car kvl) (cadr kvl)) (iter (cddr kvl)))))))
@@ -272,29 +273,39 @@
    (else
     (error "expecting first arg to be tag or sxpath"))))
 
-;; @deffn {Procedure} sx-split sexp => tag attr|#f tail
-;; @deffnx {Procedure} sx-split* sexp => tag attr|#f exp ...
-;; Split an SXML element into its constituent parts, as a @code{values}.
+;; @deffn {Procedure} sx-split sexp => tag attr tail
+;; @deffnx {Procedure} sx-split* sexp => tag attr exp ...
+;; Split an SXML element into its constituent parts, as a @code{values},
+;; where @var{attr} is list of pairs.  If no attributes exist, @var{attr}
+;; is @code{'()}.
 ;; @end deffn
 (define (sx-split sexp)
   (let ((tag (sx-tag sexp))
-	 (attr (sx-attr sexp))
-	 (tail (sx-tail sexp)))
+	(attr (sx-attr sexp))
+	(tail (sx-tail sexp)))
     (values tag attr tail)))
 (define (sx-split* sexp)
   (let ((tag (sx-tag sexp))
-	 (attr (sx-attr sexp))
-	 (tail (sx-tail sexp)))
+	(attr (sx-attr sexp))
+	(tail (sx-tail sexp)))
     (apply values tag attr tail)))
 
-;; @deffn {Procedure} sx-join tag attr|#f tail => sexp
-;; @deffnx {Procedure} sx-join* tag attr|#f exp ... => sexp
-;; Build an SXML element by its parts.  If @var{ATTR} is @code{#f} skip;
+;; @deffn {Procedure} sx-join tag attr tail => sexp
+;; @deffnx {Procedure} sx-join* tag attr exp ... => sexp
+;; Build an SXML element by its parts.  If @var{ATTR} is @code{'()} skip;
 ;; @end deffn
 (define (sx-join tag attr tail)
-  (if attr (cons* tag attr tail) (cons tag tail)))
+  (if (and attr (pair? attr))
+      (if (pair? (car attr))
+	  (cons* tag `(@ . ,attr) tail)
+	  (cons* tag `(@ ,attr) tail))
+      (cons tag tail)))
 (define (sx-join* tag attr . tail)
-  (if attr (cons* tag attr tail) (cons tag tail)))
+  (if (and attr (pair? attr))
+      (if (pair? (car attr))
+	  (cons* tag `(@ . ,attr) tail)
+	  (cons* tag `(@ ,attr) tail))
+      (cons tag tail)))
 
 ;; ============================================================================
 
@@ -421,17 +432,5 @@
     ;;((_ v s kt kf) (if (string=? s v) kt kf))
     ;;^-- If not pair or unquote then must be string, right?
    ))
-
-;;; deprecated:
-
-(define sx-set-attr! sx-attr-set!)
-
-(define (sx-attr-set* sx . rest)
-  (let iter ((attr (or (and=> (sx-attr sx) cdr) '())) (kvl rest))
-    (cond
-     ((null? kvl) (cons* (sx-tag sx) (cons '@ (reverse attr)) (sx-tail sx 1)))
-     (else (iter (cons (list (car kvl) (cadr kvl)) attr) (cddr kvl))))))
-
-(define sx-set-attr* sx-attr-set*)
 
 ;; --- last line ---

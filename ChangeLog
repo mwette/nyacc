@@ -1,3 +1,7 @@
+2018-11-17  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* update Major overhaul of __attribute__ handling in C99 parser
+
 2018-08-19  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* update merged nx-matlab updates from nxdev branch; added fix

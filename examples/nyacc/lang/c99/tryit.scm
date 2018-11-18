@@ -29,7 +29,8 @@
   (append
    `(,(assq-ref %guile-build-info 'includedir)
      "/usr/include" "c99-exam"
-     "/usr/include/dbus-1.0" "/usr/lib/x86_64-linux-gnu/dbus-1.0/include"
+     "/usr/include/glib-2.0" "/usr/lib/x86_64-linux-gnu/glib-2.0/include"
+     ;;"/usr/include/dbus-1.0" "/usr/lib/x86_64-linux-gnu/dbus-1.0/include"
      )
    (get-gcc-inc-dirs)))
 (define inc-help
@@ -84,6 +85,7 @@
       (parse-c99 #:cpp-defs cpp-defs
 		 #:inc-dirs inc-dirs 
 		 #:inc-help inc-help
+		 #:show-incs #t
 		 #:mode mode #:debug debug
 		 #:xdef? xdef?))))
 
@@ -103,8 +105,21 @@
 ;;(ppsx inc-dirs)
 ;;(ppsx inc-help)
 (let* ((code (string-append
-	      "double simp3(double a, double b) {"
-	      " double c; c = a + b; return c; }\n"
+	      "typedef int gint;\n"
+	      "int x = __extension__ \n"
+	      "({ typedef char _GStaticAssertCompileTimeAssertion_1\n"
+	      "    [(sizeof *(x) == sizeof (gint)) ? 1 : -1] \n"
+	      "    __attribute__((__unused__)); \n"
+	      "(void) (0 ? *(x) ^ (y) : 0); \n"
+	      "(gint) __sync_fetch_and_add ((x), (y)); \n"
+	      "});\n"
+	      "int y = __extension__ \n"
+	      "({ typedef char _GStaticAssertCompileTimeAssertion_1\n"
+	      "    [(sizeof *(x) == sizeof (gint)) ? 1 : -1] \n"
+	      "    __attribute__((__unused__)); \n"
+	      "(void) (0 ? *(x) ^ (y) : 0); \n"
+	      "(gint) __sync_fetch_and_add ((x), (y)); \n"
+	      "});\n"
 	      ))
        ;;(xdecl (expand-typerefs decl udict))
        ;;(udecl (udict-ref udict "x"))
@@ -117,7 +132,8 @@
        ;;(udict (c99-trans-unit->udict tree))
        ;;(udecl (udict-struct-ref udict "epoll_event"))
        )
-  (ppsx tree)
+  ;;(pp (get-gcc-cpp-defs))
+  ;;(ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx (eval-c99-cx tree))
   ;;(ppsx (get-gcc-inc-dirs))

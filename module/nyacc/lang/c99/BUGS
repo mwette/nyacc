@@ -7,10 +7,6 @@ C99-011	10 Mar 2018, M.Wette
 	the code currently does not do this, and ffi-help is breaking
 	gtk/inputdialog.h refers to GDK_AXIS_LAST, enumval in gdk/gdkinput.h
 
-C99-010	27 Oct 2017, M.Wette
-	typename scope is not maintained: this is bad
-	See examples/nyacc/lang/c99/c99-exam/ex13.c
-
 C99-009	18 Mar 2017, M.Wette
 	pprint generates two spaces in declarations e.g.,
 	int foo(int  x);
@@ -56,5 +52,10 @@ C99-002 CPP redesign is not working for ifdef and defined:
 C99-006	06 Aug 2016, M.Wette
         code "val = '\0';" gets pprinted to "val = '^@;';"
 02Mar17	fixed, V0.76.5+c99dev
+
+C99-010	27 Oct 2017, M.Wette
+	typename scope is not maintained: this is bad
+	See examples/nyacc/lang/c99/c99-exam/ex13.c
+	fixed post 0.86.3 - 11 Nov 2018
 
 --- last line ---

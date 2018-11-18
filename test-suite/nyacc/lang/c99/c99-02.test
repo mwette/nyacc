@@ -51,9 +51,17 @@
     (let* ((sx (parse-file "exam.d/ex05.c")))
       (pair? sx)))
 
-  ;; 
+  ;; typedef scoping
+  (pass-if "typedef scoping"
+    (let* ((sx (parse-file "exam.d/ex19.c")))
+      (pair? sx)))
+
+  ;; __attributes_
+  (pass-if "__attribute__ handling"
+    (let* ((sx (parse-file "exam.d/ex20.c")))
+      (pair? sx)))
+
 
   )
-(display "TODO: nyacc/c99-02: test typedef inside function scope\n")
 
 ;; --- last line ---

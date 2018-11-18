@@ -105,10 +105,10 @@
 		 (sval (cdr laval))
 		 (stxl (vector-ref pat-v (car state)))
 		 (stx (or (assq-ref stxl tval) (assq-ref stxl '$default)
-			  (cons '$error #f))))
+			  (cons 'error #f))))
 	    (if debug (dmsg/s (car state) (if nval tval sval) stx))
 	    (cond
-	     ((eq? '$error (car stx))	; error ???
+	     ((eq? 'error (car stx))	; error ???
 	      (if (memq tval skip-if-unexp)
 		  (iter state stack #f #f)
 		  (parse-error state laval)))
