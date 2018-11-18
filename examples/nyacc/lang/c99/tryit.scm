@@ -31,6 +31,10 @@
      "/usr/include" "c99-exam"
      "/usr/include/glib-2.0" "/usr/lib/x86_64-linux-gnu/glib-2.0/include"
      ;;"/usr/include/dbus-1.0" "/usr/lib/x86_64-linux-gnu/dbus-1.0/include"
+     ;;
+     "/usr/include/cairo" "/usr/include/glib-2.0"
+     "/usr/lib/x86_64-linux-gnu/glib-2.0/include"
+     "/usr/include/pixman-1" "/usr/include/freetype2" "/usr/include/libpng12"
      )
    (get-gcc-inc-dirs)))
 (define inc-help
@@ -85,8 +89,8 @@
       (parse-c99 #:cpp-defs cpp-defs
 		 #:inc-dirs inc-dirs 
 		 #:inc-help inc-help
-		 #:show-incs #t
-		 #:mode mode #:debug debug
+		 #:show-incs #f
+		 #:mode mode #:debug #f
 		 #:xdef? xdef?))))
 
 (define (parse-string-list . str-l)
@@ -105,34 +109,46 @@
 ;;(ppsx inc-dirs)
 ;;(ppsx inc-help)
 (let* ((code (string-append
-	      "typedef int gint;\n"
-	      "int x = __extension__ \n"
-	      "({ typedef char _GStaticAssertCompileTimeAssertion_1\n"
-	      "    [(sizeof *(x) == sizeof (gint)) ? 1 : -1] \n"
-	      "    __attribute__((__unused__)); \n"
-	      "(void) (0 ? *(x) ^ (y) : 0); \n"
-	      "(gint) __sync_fetch_and_add ((x), (y)); \n"
-	      "});\n"
-	      "int y = __extension__ \n"
-	      "({ typedef char _GStaticAssertCompileTimeAssertion_1\n"
-	      "    [(sizeof *(x) == sizeof (gint)) ? 1 : -1] \n"
-	      "    __attribute__((__unused__)); \n"
-	      "(void) (0 ? *(x) ^ (y) : 0); \n"
-	      "(gint) __sync_fetch_and_add ((x), (y)); \n"
-	      "});\n"
+	      ;;"struct __packed__ packed_1 { int x; double y; };"
+	      ;;"void (__attribute__((noreturn)) ****f) (void);\n"
+	      ;;"void (****f) (void);\n"
+	      ;;"typedef int t1_t __attribute__ ((__deprecated__));\n"
+	      ;;"int x __attribute__ ((aligned (16))) = 0;\n"
+	      ;;"__attribute__((noreturn)) void d0 (void), "
+	      ;; "__attribute__((format(printf, 1, 2))) d1(const char *, ...), "
+	      ;; "d2 (void);"
+	      ;;"struct S  __attribute__ ((vector_size (16))) foo;"
+	      ;;"typedef struct {"
+	      ;;" long long __max_align_ll"
+	      ;;" __attribute__((__aligned__(__alignof__(long long))));"
+	      ;;"long double __max_align_ld __attribute__(("
+	      ;;"__aligned__(__alignof__(long double))));} max_align_t;"
+	      ;;"typedef int GDateTime; typedef int GTimeSpan;\n"
+	      ;;" extern __attribute__((warn_unused_result))"
+	      ;;" GDateTime * g_date_time_add (GDateTime *datetime,"
+	      ;;" GTimeSpan timespan);"
+	      ;;"struct { int x; /* hello */\n int y; /* world */\n} z;\n"
+	      ;;"typedef struct x x;\n"
+	      ;;"typedef int gint;\ntypedef gint gdate; /* foo */\n"
+	      ;;"struct duart a __attribute__ ((section (\"DUART_A\"))) = { 0 };"
+	      ;;"#include <cairo.h>\nint foo;\n"
+	      "typedef double gfloat; typedef unsigned int guint; "
+	      "union _GFloatIEEE754 { gfloat v_float;\n"
+	      "struct { guint mantissa : 23; guint biased_exponent : 8; "
+	      " guint sign : 1; } mpn; };\n"
 	      ))
-       ;;(xdecl (expand-typerefs decl udict))
-       ;;(udecl (udict-ref udict "x"))
-       ;;(mdecl (udecl->mspec udecl))
-       ;;(tree (parse-c99x "((int)'q')"))
-       ;;(tree (parse-file "c99-exam/ex01.c"))
        (tree (parse-string code))
-       ;;(decl (sx-ref* tree 153)) ;; for zzz.e
+       ;;(tree (parse-file "ex20.c"))
+       
+       (udict (c99-trans-unit->udict/deep tree))
+       (udecl (udict-ref udict "mpn"))
+       ;;(mdecl (udecl->mspec/comm udecl))
+       ;;(xdecl (expand-typerefs udecl udict))
        ;;(udecl (unitize-decl decl))
-       ;;(udict (c99-trans-unit->udict tree))
-       ;;(udecl (udict-struct-ref udict "epoll_event"))
        )
   ;;(pp (get-gcc-cpp-defs))
+  (pp tree)
+  (pp udict)
   ;;(ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx (eval-c99-cx tree))

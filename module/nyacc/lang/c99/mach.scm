@@ -26,7 +26,7 @@
 
 ;; We are not adding attributes to the AST in many places.
 
-;; Consider moving code-comments to an attribute.
+;; moving code-comments to an attribute
 
 ;;; Code:
 
@@ -220,7 +220,8 @@
 
     (declaration			; S 6.7
      (declaration-no-comment ";")
-     (declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
+     ;;(declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
+     (declaration-no-comment ";" code-comment ($$ (append $1 (list $3)))))
     (declaration-no-comment
      (declaration-specifiers
       init-declarator-list
@@ -366,7 +367,8 @@
 
     (struct-declaration			; S 6.7.2.1
      (struct-declaration-no-comment ";")
-     (struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
+     ;;(struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
+     (struct-declaration-no-comment ";" code-comment ($$ (append $1 (list $3)))))
     (struct-declaration-no-comment
      (specifier-qualifier-list
       struct-declarator-list
@@ -430,8 +432,11 @@
     
     ;; Support for __attribute__(( ... )).  See the gcc documentation.
     ;; The documentation does not seem rigourous about defining where the
-    ;; attribute specifier can appear.  This is my best attempt.  MW 04/07/18
-    ;; https://gcc.gnu.org/onlinedocs/gcc-4.7.0/gcc/Attribute-Syntax.html
+    ;; attribute specifier can appear.  This is my best attempt.  MW 2018
+    ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Attribute-Syntax.html
+    ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Type-Attributes.html
+    ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Function-Attributes.html
+    ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Variable-Attributes.html
 
     (attribute-specifiers
      (attribute-specifier ($prec 'reduce-on-attr-spec))

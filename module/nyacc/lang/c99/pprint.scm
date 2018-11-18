@@ -666,7 +666,6 @@
        )))
 
   (if (not (pair? tree)) (error "expecing sxml tree"))
-  (pretty-print tree)
   (ppx tree)
   (if ugly (newline)))
 

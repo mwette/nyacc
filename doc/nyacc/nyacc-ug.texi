@@ -467,6 +467,8 @@ int then(int);
 @noindent
 would produce a syntax error.
 
+@c @code{(prec< 'shift-on-XXX "XXX" 'reduce-on-XXX)}
+
 @subheading Expected Conflicts
 
 There are default rules for handling shift-reduce conflicts.  If you

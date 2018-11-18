@@ -19,10 +19,10 @@
 
 (define-module (nyacc lang sx-util)
   #:export (make-sx
-	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref* sx-cons* sx-list
+	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref*
 	    sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
 	    sx-find
-	    sx-split sx-split* sx-join sx-join*
+	    sx-split sx-split* sx-join sx-join* sx-cons* sx-list
 	    sx-match)
   #:use-module ((srfi srfi-1) #:select (find fold fold-right)))
 (cond-expand
@@ -80,6 +80,12 @@
       ((eq? '@ (caadr sx)) (1- ln))
       (else ln))))
 
+;; @deffn {Procedure} sx-tag sx => tag
+;; Return the tag for a tree
+;; @end deffn
+(define (sx-tag sx)
+  (if (pair? sx) (car sx) #f))
+
 ;; @deffn {Procedure} sx-ref sx ix => item
 ;; Reference the @code{ix}-th element of the list, not counting the optional
 ;; attributes item.  If the list is shorter than the index, return @code{#f}.
@@ -111,60 +117,6 @@
 (define (sx-ref* sx . args)
   (fold (lambda (ix sx) (and (pair? sx) (sx-ref sx ix))) sx args))
 
-;; @deffn {Procedure} sx-tag sx => tag
-;; Return the tag for a tree
-;; @end deffn
-(define (sx-tag sx)
-  (if (pair? sx) (car sx) #f))
-
-;; @deffn {Procedure} sx-cons* tag (attr|#f)? ... => sx
-;; @deffnx {Procedure} sx-list tag (attr|#f)? ... => sx
-;; Generate the tag and the attr list if it exists.  Note that
-;; The following are equivalent:
-;; @example
-;; (sx-cons* tag attr elt1 elt2 '())
-;; (sx-list tag attr elt1 elt2)
-;; @end example
-;; @noindent
-;; NEW IMPLEMENTATION: now any field that is #f will be skipped
-;; @end deffn
-(define (sx-cons* tag . rest)
-  (if (null? rest) (error "expecing tail"))
-  ;;(cond
-  ;; ((null? rest) (list tag))
-  ;; ((not (car rest)) (apply cons* tag (cdr rest)))
-  ;; (else (apply cons* tag rest)))
-  (cons tag
-	(let iter ((items rest))
-	  (if (null? (cdr items)) (car items)
-	      (if (car items)
-		  (cons (car items) (iter (cdr items)))
-		  (iter (cdr items)))))))
-
-(define (sx-list tag . rest)
-  ;;(cond
-  ;; ((null? rest) (list tag))
-  ;; ((not (car rest)) (apply list tag (cdr rest)))
-  ;; (else (apply list tag rest))))
-  (cons tag
-	(let iter ((items rest))
-	  (if (null? items) '()
-	      (if (car items)
-		  (cons (car items) (iter (cdr items)))
-		  (iter (cdr items)))))))
-
-;;. maybe change to case-lambda to accept count
-;; @example
-;; (sx-repl-tail (tag (@ ...) (orig-elt ...)) (repl-elt ...))
-;; => 
-;; (sx-repl-tail (tag (@ ...) (repl-elt ...)))
-;; @end example
-(define (sx-repl-tail sexp tail)
-  (let ((tag (sx-tag)) (attr (sx-attr sexp)))
-    (if (pair? attr)
-	(cons* tag `(@ ,attr) tail)
-	(cons tag tail))))
-
 ;; @deffn {Procedure} sx-tail sx [ix] => (list)
 ;; Return the ix-th tail starting after the tag and attribut list, where
 ;; @var{ix} must be positive.  For example,
@@ -183,6 +135,25 @@
      (else (list-tail sx ix))))
    ((sx)
     (sx-tail sx 1))))
+
+;; @deffn {Procedure} sx-find tag sx => (tag ...)
+;; @deffnx {Procedure} sx-find path sx => (tag ...)
+;; In the first form @var{tag} is a symbolic tag in the first level.
+;; Find the first matching element (in the first level).
+;; In the second form, the argument @var{path} is a pair.  Apply sxpath
+;; and take it's car,
+;; if found, or return @code{#f}, like lxml's @code{tree.find()} method.
+;; @* NOTE: the path version is currently disabled, to remove dependence
+;; on the module @code{(sxml xpath)}.
+;; @end deffn
+(define (sx-find tag-or-path sx)
+  (cond
+   ((symbol? tag-or-path)
+    (find (lambda (node)
+	    (and (pair? node) (eqv? tag-or-path (car node))))
+	  sx))
+   (else
+    (error "expecting first arg to be tag or sxpath"))))
 
 ;; @deffn {Procedure} sx-has-attr? sx
 ;; p to determine if @arg{sx} has attributes.
@@ -218,8 +189,8 @@
 ;; Add attribute to sx, passing either a key-val pair or key and val.
 ;; @end deffn
 (define* (sx-attr-add sx key-or-pair #:optional val)
-  (let ((pair (if val (list key-or-pair val) key-or-pair))
-	(key (car pair)) (val (cadr pair)))
+  (let* ((pair (if val (list key-or-pair val) key-or-pair))
+	 (key (car pair)) (val (cadr pair)))
     (cons
      (sx-tag sx)
      (if (sx-has-attr? sx)
@@ -254,24 +225,41 @@
       (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
   sx)
 
-;; @deffn {Procedure} sx-find tag sx => (tag ...)
-;; @deffnx {Procedure} sx-find path sx => (tag ...)
-;; In the first form @var{tag} is a symbolic tag in the first level.
-;; Find the first matching element (in the first level).
-;; In the second form, the argument @var{path} is a pair.  Apply sxpath
-;; and take it's car,
-;; if found, or return @code{#f}, like lxml's @code{tree.find()} method.
-;; @* NOTE: the path version is currently disabled, to remove dependence
-;; on the module @code{(sxml xpath)}.
+;; @deffn {Procedure} sx-cons* tag attr ... => sx
+;; @deffnx {Procedure} sx-list tag attr ... => sx
+;; Generate the tag and the attr list if it exists.  Note that
+;; The following are equivalent:
+;; @example
+;; (sx-cons* tag attr elt1 elt2 '())
+;; (sx-list tag attr elt1 elt2)
+;; @end example
+;; @noindent
 ;; @end deffn
-(define (sx-find tag-or-path sx)
-  (cond
-   ((symbol? tag-or-path)
-    (find (lambda (node)
-	    (and (pair? node) (eqv? tag-or-path (car node))))
-	  sx))
-   (else
-    (error "expecting first arg to be tag or sxpath"))))
+(define (sx-cons* tag attr . rest)
+  (if (null? rest) (error "expecing tail"))
+  (let ((attr (cond
+	       ((not attr) #f)
+	       ((null? attr) #f)
+	       ((pair? (car attr)) `(@ . ,attr))
+	       (else attr)))
+	(tail (let loop ((items rest))
+		(if (null? (cdr items)) (car items)
+		    (if (car items)
+			(cons (car items) (loop (cdr items)))
+			(loop (cdr items)))))))
+    (if attr (cons* tag attr tail) (cons tag tail))))
+(define (sx-list tag attr . rest)
+  (let ((attr (cond
+	       ((not attr) #f)
+	       ((null? attr) #f)
+	       ((pair? (car attr)) `(@ . ,attr))
+	       (else attr)))
+	(tail (let loop ((items rest))
+		(if (null? items) '()
+		    (if (car items)
+			(cons (car items) (loop (cdr items)))
+			(loop (cdr items)))))))
+    (if attr (cons* tag attr tail) (cons tag tail))))
 
 ;; @deffn {Procedure} sx-split sexp => tag attr tail
 ;; @deffnx {Procedure} sx-split* sexp => tag attr exp ...
@@ -293,6 +281,7 @@
 ;; @deffn {Procedure} sx-join tag attr tail => sexp
 ;; @deffnx {Procedure} sx-join* tag attr exp ... => sexp
 ;; Build an SXML element by its parts.  If @var{ATTR} is @code{'()} skip;
+;; @code{sx-join*} will remove any exp that are @code{#f} or @code{'()}.
 ;; @end deffn
 (define (sx-join tag attr tail)
   (if (and attr (pair? attr))
@@ -301,11 +290,17 @@
 	  (cons* tag `(@ ,attr) tail))
       (cons tag tail)))
 (define (sx-join* tag attr . tail)
-  (if (and attr (pair? attr))
-      (if (pair? (car attr))
-	  (cons* tag `(@ . ,attr) tail)
-	  (cons* tag `(@ ,attr) tail))
-      (cons tag tail)))
+  (let ((tail (let loop ((tail tail))
+		(cond
+		 ((null? tail) '())
+		 ((not tail) (loop (cdr tail)))
+		 ((null? (car tail)) (loop (cdr tail)))
+		 (else (cons (car tail) (loop (cdr tail))))))))
+    (if (and attr (pair? attr))
+	(if (pair? (car attr))
+	    (cons* tag `(@ . ,attr) tail)
+	    (cons* tag `(@ ,attr) tail))
+	(cons tag tail))))
 
 ;; ============================================================================
 
