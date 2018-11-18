@@ -1,3 +1,10 @@
+2018-11-16  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lang/sx-util.scm (sx-join): changed the way sx-split and sx-join
+	work with repect to attributes, the attr returned from sx-split
+	and passed to sx-join are the tails of '(@ (a "1") (b "2"))
+	instead of the entire form.  One can pass '() or #f to sx-join.
+
 2018-10-14  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/sx-util.scm (sxm-node): cleaned up sx-match now accepts

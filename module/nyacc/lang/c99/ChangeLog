@@ -1,3 +1,23 @@
+2018-11-17  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): remove K&R function definition for now: it
+	generates a parser that does not work with attribute-specifiers
+
+2018-11-16  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): major changes to organization of
+	declarations in order to deal with wide usage of __attribute__
+
+2018-11-11  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): in attribute-expr replace ($string)
+	with (string-literal); problem was G_GNUC_DEPRECATED macro in
+	glib/gmacros.h
+
+	* body.scm (make-c99-lexer-generator): changed cpi-push,shift,pop
+	to cpi-push-x,shift-x,pop-x; added cpi-push, cpi-pop and calls to
+	properly scope typedefs; needed to deal with local typedefs in glib.h
+
 2018-10-30  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* pprint.scm (pretty-print-c99): If comments look like they were

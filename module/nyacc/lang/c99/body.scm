@@ -38,6 +38,7 @@
 (use-modules ((srfi srfi-1) #:select (fold-right)))
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules (ice-9 pretty-print))	; for debugging
+(define pp pretty-print)
 
 ;; C parser info (?)
 (define-record-type cpi
@@ -160,15 +161,27 @@
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
 
-(define (cpi-push)	;; on #if
+(define (cpi-push)
+  (let ((cpi (fluid-ref *info*)))
+    (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
+    (set-cpi-ctl! cpi '())
+    #t))
+
+(define (cpi-pop)
+  (let ((cpi (fluid-ref *info*)))
+    (set-cpi-ctl! cpi (car (cpi-ptl cpi)))
+    (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))
+    #t))
+
+(define (cpi-push-x)	;; on #if
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
     (set-cpi-ctl! cpi '())))
 
-(define (cpi-shift)	;; on #elif #else
+(define (cpi-shift-x)	;; on #elif #else
   (set-cpi-ctl! (fluid-ref *info*) '()))
 
-(define (cpi-pop)	;; on #endif
+(define (cpi-pop-x)	;; on #endif
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
@@ -210,9 +223,39 @@
   (for-each add-typename (find-new-typenames decl))
   decl)
 
+;; (string "abc" "def") -> (string "abcdef")
+(define (join-string-literal str-lit)
+  (sx-join 'string (sx-attr str-lit) (string-join (sx-tail str-lit) "")))
+
+;; In the case that declaration-specifiers only returns a list of
+;; attribute-specifiers then this has to be an empty-statemnet with
+;; attributes.  See:
+;;   https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Statement-Attributes.html
+(define (only-attr-specs? specs)
+  (let loop ((specs specs))
+    (cond
+     ((null? specs) #t)
+     ((not (eqv? 'attributes (sx-tag (car specs)))) #f)
+     (else (loop (cdr specs))))))
+
 ;; used in c99-spec actions for attribute-specifiers
 (define (attr-expr-list->string attr-expr-list)
   (string-append "(" (string-join (cdr attr-expr-list) ",") ")"))
+
+;; (attributes (ident "packed") (attribute (ident "aligned" ...)))
+;; => (attributes "packed;aligned(8);...")
+(define (attr-spec->attr attr-spec)
+  (define (spec->str spec)
+    (sx-match spec
+      ((ident ,name) name)
+      ((attribute ,name) (spec->str name))
+      ((attribute ,name ,args)
+       (string-append (spec->str name) "(" (spec->str args) ")"))
+      ((attr-expr-list . ,expr-list)
+       (string-join (map spec->str expr-list) ","))
+      ((fixed ,val) val)
+      (,_ (simple-format #t "c99/body: missed ~S\n" spec) "MISSED")))
+  `(attributes ,(string-join (map spec->str (sx-tail attr-spec)) ";")))
 
 ;; ------------------------------------------------------------------------
 
@@ -492,9 +535,9 @@
 
 	  (define (eval-cpp-stmt/file stmt) ;; => stmt
 	    (case (car stmt)
-	      ((if) (cpi-push) stmt)
-	      ((elif else) (cpi-shift) stmt)
-	      ((endif) (cpi-pop) stmt)
+	      ((if) (cpi-push-x) stmt)
+	      ((elif else) (cpi-shift-x) stmt)
+	      ((endif) (cpi-pop-x) stmt)
 	      ((include) (eval-cpp-incl/tree stmt))
 	      ((define) (add-define stmt) stmt)
 	      ((undef) (rem-define (cadr stmt)) stmt)
@@ -585,10 +628,13 @@
 	       ((read-c-num ch) => assc-$)
 	       ((read-c-string ch) => assc-$)
 	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
-	       ((and (char=? ch #\{)	; ugly tracking of block-lev in lexer
-		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info) #f) #f)
-	       ((and (char=? ch #\})	; ugly tracking of block-lev in lexer
-		     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info) #f) #f)
+	       ;; Keep track of brace level and scope for typedefs.
+	       ((and (char=? ch #\{) (cpi-push)
+		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info)
+		     #f) #f)
+	       ((and (char=? ch #\}) (cpi-pop)
+		     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info)
+		     #f) #f)
 	       ((read-chseq ch) => identity)
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue

@@ -208,7 +208,7 @@
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
 
   ;; TODO: comp-lit
-  (define (ppx-1 tree)
+  (define (ppx tree)
     (sx-match tree
 
       ((p-expr ,expr) (ppx expr))
@@ -660,11 +660,13 @@
       ((extern-begin ,lang) (sf "extern \"~A\" {\n" lang))
       ((extern-end) (sf "}\n"))
 
-      (else (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree)))))
-
-  (define ppx ppx-1)
+      (,_
+       (simple-format #t "\n*** pprint/ppx: NO MATCH: ~S\n" (car tree))
+       (pretty-print tree #:per-line-prefix "  ")
+       )))
 
   (if (not (pair? tree)) (error "expecing sxml tree"))
+  (pretty-print tree)
   (ppx tree)
   (if ugly (newline)))
 

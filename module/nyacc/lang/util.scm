@@ -31,7 +31,6 @@
 	    sferr pperr
 	    mach-dir
 	    ;; deprecated
-	    sx-set-attr! sx-set-attr*
 	    lang-crn-lic
 	    )
   #:use-module ((srfi srfi-1) #:select (find fold))
