@@ -60,9 +60,9 @@
    (prec< 'imp		       ; "implied type" SR-conflict resolution
 	  "char" "short" "int" "long"
 	  "float" "double" "_Complex")
-   (prec< 'shift-on-attr-spec
+   (prec< 'shift-on-attr	  ; "__attribute__" SR-conf resolution
 	  (nonassoc "__attribute__" "__packed__" "__aligned__" "__alignof__")
-	  'reduce-on-attr-spec)
+	  'reduce-on-attr)
    (start translation-unit)
    (grammar
 
@@ -220,8 +220,11 @@
 
     (declaration			; S 6.7
      (declaration-no-comment ";")
-     ;;(declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
-     (declaration-no-comment ";" code-comment ($$ (append $1 (list $3)))))
+     (declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3)))
+     ;;(declaration-no-comment ";" code-comment ($$ (append $1 (list $3))))
+     #;(declaration-no-comment ";" code-comment
+			     ($$ (append (sx-attr-add $1 $3) (list $3))))
+     )
     (declaration-no-comment
      (declaration-specifiers
       init-declarator-list
@@ -234,19 +237,19 @@
     (declaration-specifiers-1
      ;; storage-class-specifiers
      (storage-class-specifier
-      ($prec 'shift-on-attr-spec) ($$ (make-tl 'decl-spec-list $1)))
+      ($prec 'shift-on-attr) ($$ (make-tl 'decl-spec-list $1)))
      (storage-class-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; type-specifiers
      (type-specifier
-      ($prec 'reduce-on-attr-spec) ($$ (make-tl 'decl-spec-list $1)))
+      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
      (type-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; type-qualifiers
      (type-qualifier
-      ($prec 'shift-on-attr-spec) ($$ (make-tl 'decl-spec-list $1)))
+      ($prec 'shift-on-attr) ($$ (make-tl 'decl-spec-list $1)))
      (type-qualifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; function-specifiers
      (function-specifier
-      ($prec 'reduce-on-attr-spec) ($$ (make-tl 'decl-spec-list $1)))
+      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
      (function-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; attributes
      (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
@@ -367,8 +370,11 @@
 
     (struct-declaration			; S 6.7.2.1
      (struct-declaration-no-comment ";")
-     ;;(struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
-     (struct-declaration-no-comment ";" code-comment ($$ (append $1 (list $3)))))
+     (struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3)))
+     ;;(struct-declaration-no-comment ";" code-comment ($$ (append $1 (list $3))))
+     #;(struct-declaration-no-comment ";" code-comment
+				    ($$ (append (sx-attr-add $1 $3) (list $3))))
+     )
     (struct-declaration-no-comment
      (specifier-qualifier-list
       struct-declarator-list
@@ -439,7 +445,7 @@
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Variable-Attributes.html
 
     (attribute-specifiers
-     (attribute-specifier ($prec 'reduce-on-attr-spec))
+     (attribute-specifier ($prec 'reduce-on-attr))
      (attribute-specifiers attribute-specifier ($$ (append $1 (cdr $2)))))
 
     ;; (attributes "static" "aligned(8)" ...)

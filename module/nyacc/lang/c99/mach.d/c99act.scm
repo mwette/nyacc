@@ -192,7 +192,7 @@
    ;; declaration => declaration-no-comment ";"
    (lambda ($2 $1 . $rest) $1)
    ;; declaration => declaration-no-comment ";" code-comment
-   (lambda ($3 $2 $1 . $rest) (append $1 (list $3)))
+   (lambda ($3 $2 $1 . $rest) (sx-attr-add $1 $3))
    ;; declaration-no-comment => declaration-specifiers init-declarator-list
    (lambda ($2 $1 . $rest)
      (save-typenames `(decl ,$1 ,$2)))
@@ -407,7 +407,7 @@
    ;; struct-declaration => struct-declaration-no-comment ";"
    (lambda ($2 $1 . $rest) $1)
    ;; struct-declaration => struct-declaration-no-comment ";" code-comment
-   (lambda ($3 $2 $1 . $rest) (append $1 (list $3)))
+   (lambda ($3 $2 $1 . $rest) (sx-attr-add $1 $3))
    ;; struct-declaration-no-comment => specifier-qualifier-list struct-decl...
    (lambda ($2 $1 . $rest)
      `(comp-decl ,(tl->list $1) ,(tl->list $2)))

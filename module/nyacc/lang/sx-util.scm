@@ -391,9 +391,11 @@
     ))
  
 ;; sxm-tag val pat kt kf
-;; match tag
+;; match tag: foo|(foo bar baz)|,any
 (define-syntax sxm-tag
-  (syntax-rules ()
+  (syntax-rules (unquote)
+    ((_ tv (unquote t0) kt kf)
+     (let ((t0 tv)) kt))
     ((_ tv (t0 t1 ...) kt kf)
      (if (memq tv '(t0 t1 ...)) kt kf))
     ((_ tv t0 kt kf)

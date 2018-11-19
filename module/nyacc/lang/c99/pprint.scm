@@ -330,24 +330,29 @@
 
       ((udecl . ,rest)
        (ppx `(decl . ,rest)))
-      ((decl ,decl-spec-list)
-       (ppx decl-spec-list) (sf ";\n"))
-      ((decl ,decl-spec-list ,init-declr-list)
-       (ppx decl-spec-list) (sf " ") (ppx init-declr-list) (sf ";\n"))
-      ((decl ,decl-spec-list ,init-declr-list ,comment)
+      ((decl (@ . ,attr) ,decl-spec-list)
+       (ppx decl-spec-list) (sf ";")
+       (and=> (assq 'comment attr) ppx) (sf "\n"))
+      ((decl (@ . ,attr) ,decl-spec-list ,init-declr-list)
+       (ppx decl-spec-list) (sf " ") (ppx init-declr-list) (sf ";")
+       (and=> (assq 'comment attr) ppx) (sf "\n"))
+      ((decl ,decl-spec-list ,init-declr-list ,comment) ;; REMOVE
        (ppx decl-spec-list) (sf " ")
        (ppx init-declr-list) (sf "; ") (ppx comment))
       ((decl-no-newline ,decl-spec-list ,init-declr-list) ; for (int i = 0;
        (ppx decl-spec-list) (sf " ") (ppx init-declr-list) (sf ";"))
 
-      ((comp-decl ,spec-qual-list (comp-declr-list . ,rest2))
-       (ppx spec-qual-list) (sf " ") (ppx (sx-ref tree 2)) (sf ";\n"))
-      ((comp-decl ,spec-qual-list ,declr-list (comment ,comment))
+      ((comp-decl (@ . ,attr) ,spec-qual-list (comp-declr-list . ,rest2))
+       (ppx spec-qual-list) (sf " ") (ppx (sx-ref tree 2)) (sf ";")
+       (and=> (assq 'comment attr) ppx) (sf "\n"))
+      ((comp-decl ,spec-qual-list ,declr-list (comment ,comment)) ;; REMOVE
        (ppx spec-qual-list) (sf " ") (ppx declr-list) (sf "; ")
        (ppx (sx-ref tree 3)))
       ;; anon struct or union
-      ((comp-decl ,spec-qual-list) (ppx spec-qual-list) (sf ";\n"))
-      ((comp-decl ,spec-qual-list (comment ,comment))
+      ((comp-decl (@ . ,attr) ,spec-qual-list)
+       (ppx spec-qual-list) (sf ";")
+       (and=> (assq 'comment attr) ppx) (sf "\n"))
+      ((comp-decl ,spec-qual-list (comment ,comment)) ;; REMOVE
        (ppx spec-qual-list) (sf "; ") (ppx (sx-ref tree 2)))
 
       ((decl-spec-list . ,dsl)
@@ -426,14 +431,17 @@
        (for-each ppx defns)
        (pop-il) (sf "}"))
 
-      ((enum-defn (ident ,name) (comment ,comment))
+      ((enum-defn (ident ,name) (comment ,comment)) ;; REMOVE
        (sf "~A, " name) (ppx `(comment ,comment)) (sf "\n"))
-      ((enum-defn (ident ,name) ,expr ,comment)
+      ((enum-defn (ident ,name) ,expr ,comment) ;; REMOVE
        (sf "~A = " name) (ppx expr) (sf ", ") (ppx comment) (sf "\n"))
-      ((enum-defn (ident ,name) ,expr)
-       (sf "~A = " name) (ppx expr) (sf ",\n"))
-      ((enum-defn (ident ,name))
-       (sf "~A,\n" name))
+
+      ((enum-defn (@ . ,attr) (ident ,name) ,expr)
+       (sf "~A = " name) (ppx expr) (sf ",")
+       (and=> (assq 'comment attr) ppx) (sf "\n"))
+      ((enum-defn (@ . ,attr) (ident ,name))
+       (sf "~A," name)
+       (and=> (assq 'comment attr) ppx) (sf "\n"))
 
       ;;((fctn-spec "inline")
       ((fctn-spec ,spec)
@@ -526,9 +534,10 @@
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "} "))
       
       ;; expression-statement
-      ((expr-stmt) (sf ";\n"))
-      ((expr-stmt ,expr) (ppx expr) (sf ";\n"))
-      ((expr-stmt ,expr ,comm) (ppx expr) (sf "; ") (ppx comm))
+      ((expr-stmt) (sf ";\n")) ;; add comment?
+      ((expr-stmt (@ . ,attr) ,expr)
+       (ppx expr) (sf ";") (and=> (assq 'comment attr) ppx) (sf "\n"))
+      ((expr-stmt ,expr ,comm) (ppx expr) (sf "; ") (ppx comm)) ;; REMOVE
       
       ((expr) (sf ""))		; for lone expr-stmt and return-stmt
 

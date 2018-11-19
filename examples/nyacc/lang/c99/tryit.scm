@@ -123,32 +123,30 @@
 	      ;;" __attribute__((__aligned__(__alignof__(long long))));"
 	      ;;"long double __max_align_ld __attribute__(("
 	      ;;"__aligned__(__alignof__(long double))));} max_align_t;"
-	      ;;"typedef int GDateTime; typedef int GTimeSpan;\n"
-	      ;;" extern __attribute__((warn_unused_result))"
-	      ;;" GDateTime * g_date_time_add (GDateTime *datetime,"
-	      ;;" GTimeSpan timespan);"
+
+	      "typedef int GDateTime; typedef int GTimeSpan;\n"
+	      " extern __attribute__((warn_unused_result))"
+	      " GDateTime * g_date_time_add (GDateTime *datetime,"
+	      " GTimeSpan timespan);"
+
 	      ;;"struct { int x; /* hello */\n int y; /* world */\n} z;\n"
-	      ;;"typedef struct x x;\n"
-	      ;;"typedef int gint;\ntypedef gint gdate; /* foo */\n"
-	      ;;"struct duart a __attribute__ ((section (\"DUART_A\"))) = { 0 };"
+	      ;;"int x; /* abc */\n"
 	      ;;"#include <cairo.h>\nint foo;\n"
-	      "typedef double gfloat; typedef unsigned int guint; "
-	      "union _GFloatIEEE754 { gfloat v_float;\n"
-	      "struct { guint mantissa : 23; guint biased_exponent : 8; "
-	      " guint sign : 1; } mpn; };\n"
 	      ))
        (tree (parse-string code))
        ;;(tree (parse-file "ex20.c"))
        
        (udict (c99-trans-unit->udict/deep tree))
-       (udecl (udict-ref udict "mpn"))
-       ;;(mdecl (udecl->mspec/comm udecl))
+       (udecl (udict-ref udict "g_date_time_add"))
+       (mdecl (udecl->mspec/comm udecl))
        ;;(xdecl (expand-typerefs udecl udict))
        ;;(udecl (unitize-decl decl))
        )
   ;;(pp (get-gcc-cpp-defs))
   (pp tree)
   (pp udict)
+  (pp udecl)
+  (pp mdecl)
   ;;(ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx (eval-c99-cx tree))

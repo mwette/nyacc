@@ -52,10 +52,11 @@
 ;;
 ;; or
 ;; (sx-redo form elt-1 elt-2 ... tail?)
-;; == (sx-cons* (sx-tag form) (sx-attr form) elt-1 elt-2 tail?)
+;;  (sx-cons* (sx-tag form) (sx-attr form) elt-1 elt-2 tail?)
 
 ;; Another idea is to make comments attributes and have join be sx-cons*
-;; I think this would simplify a lot.
+;; I think this would simplify a lot.  ... working it ...
+;; * iter-declrs : remove tail
 
 ;;; Code:
 
@@ -79,8 +80,6 @@
 
 	    typedef-decl?
 	    
-	    ;; should be
-	    ;; unitize-decl unitize-comp-decl unitize-param-decl
 	    unitize-decl unitize-comp-decl unitize-param-decl
 	    declr-ident declr-id decl-id
 	    iter-declrs
@@ -280,24 +279,24 @@
 (define (c99-trans-unit->udict/deep tree)
   (c99-trans-unit->udict tree #:inc-filter #t))
 
-;; @deffn {Procedure} iter-declrs tag specl declrs tail seed
+;; @deffn {Procedure} iter-declrs tag specl declrs seed
 ;; @deffnx {Procedure} iter-declrs-right tag specl declrs tail seed
 ;; This is a support procedure for the munge routines.  If no decl'rs
 ;; then @var{declrs} should be #f.
 ;; Since @code{trans-unit->udict} is fold-right, this must be fold-right.
 ;; @end deffn
-(define (iter-declrs tag attr specl declrs tail seed)
+(define (iter-declrs tag attr specl declrs seed)
   (if (pair? declrs)
       (fold-right
        (lambda (declr seed)
-	 (acons (declr-id declr) (sx-cons* tag attr specl declr tail) seed))
+	 (acons (declr-id declr) (sx-list tag attr specl declr) seed))
        seed declrs)
       seed))
 
 ;; @deffn {Procedure} split-decl decl => values
 ;; This routine splits a declaration (or comp-decl or param-decl) into
 ;; its constituent parts.  Attributes are currently not passed.
-;; Get @code{(values tag spec-l declrs tail)}.  If the declrator is
+;; Get @code{(values tag spec-l declrs)}.  If the declrator is
 ;; already unitized you get that, else the list (w/o tag) of declarators.
 ;; @example
 ;;   (split-decl
@@ -316,12 +315,10 @@
 (define (split-decl decl)
   (let* ((tag (sx-tag decl))
 	 (attr (sx-attr decl))
-	 (spec-l (sx-ref decl 1))	; (decl-spec-list ...)
-	 (dclr-l (sx-ref decl 2))	; (init-declr-list ...)
-	 (declrs (if (and dclr-l (not (eq? (sx-tag dclr-l) 'comment)))
-		     (cdr dclr-l) #f))
-	 (tail (sx-tail decl (if declrs 3 2))))
-    (values tag attr spec-l declrs tail)))
+	 (spec-l (sx-ref decl 1))	  ; (decl-spec-list ...)
+	 (dclr-l (sx-ref decl 2))	  ; (init-declr-list (...))
+	 (declrs (and=> dclr-l sx-tail))) ; ((...))
+    (values tag attr spec-l declrs)))
 
 ;; @deffn {Procedure} unitize-decl decl [seed] [#:expand-enums #f] => seed
 ;; This is a fold iterator intended to be used by @code{c99-trans-unit->udict}.
@@ -339,7 +336,6 @@
 ;; ("a" . (udecl (decl-spec-list ...) (init-declr (... "a"))))
 ;; ("b" . (udecl (decl-spec-list ...) (init-declr (... "b"))))
 ;; @end example
-;; The @code{/deep} version will plunge into cpp-includes.
 ;; Here we generate a dictionary of all declared items in a file:
 ;; @example
 ;; (let* ((sx0 (with-input-from-file src-file parse-c))
@@ -353,7 +349,7 @@
 ;; To capture enum values as globals use @code{->ddict}.
 ;; @*
 ;; Notes: Now saving attributes at top level.  Adding attributes for
-;; struct and union (e.g., @code{__packed__}.  The latter is needed
+;; struct and union (e.g., @code{__packed__}).  The latter is needed
 ;; because they appear in files under @file{/usr/include}.
 ;; @end deffn
 
@@ -365,11 +361,11 @@
 	`(udecl (decl-spec-list (type-spec ,(cons type guts))))))
 
   ;; update depends on whether unitize- procedures use fold or fold-right
-  (define (update-left name value tag attr specl declrs tail seed)
-    (acons name value (iter-declrs tag attr specl declrs tail seed)))
+  (define (update-left name value tag attr specl declrs seed)
+    (acons name value (iter-declrs tag attr specl declrs seed)))
 
-  (define (update-right name value tag attr specl declrs tail seed)
-    (iter-declrs tag attr specl declrs tail (acons name value seed)))
+  (define (update-right name value tag attr specl declrs seed)
+    (iter-declrs tag attr specl declrs (acons name value seed)))
 
   (define update update-right)
 
@@ -382,9 +378,10 @@
     (acons (udecl-id decl) decl seed))
    
    ((eqv? (sx-tag decl) 'decl)
-    (let*-values (((tag attr specl declrs tail) (split-decl decl))
+    (let*-values (((tag attr specl declrs) (split-decl decl))
 		  ((tag) (values 'udecl)))
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
+      ;;(sferr "sx-match specl:\n") (pperr specl) (pperr declrs)
       (sx-match specl
 
 	;; struct typedefs 
@@ -393,11 +390,11 @@
 	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(struct . ,name)
 		 (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
-		 tag attr specl declrs tail seed))
+		 tag attr specl declrs seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 (iter-declrs tag attr specl declrs tail seed))
+	 (iter-declrs tag attr specl declrs seed))
 	
 	;; union typedefs 
 	((decl-spec-list
@@ -405,11 +402,11 @@
 	  (type-spec (union-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(union . ,name)
 		 (make-udecl 'union-def aattr `((ident ,name) . ,rest2))
-		 tag attr specl declrs tail seed))
+		 tag attr specl declrs seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (iter-declrs tag attr specl declrs tail seed))
+	 (iter-declrs tag attr specl declrs seed))
 
 	;; enum typedefs 
 	((decl-spec-list
@@ -417,48 +414,48 @@
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(enum . ,name)
 		 (make-udecl 'enum-def #f `((ident ,name) . ,rest2))
-		 tag attr specl declrs tail seed))
+		 tag attr specl declrs seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def . ,rest2) . ,rest1))
-	 (iter-declrs tag #f specl declrs tail
+	 (iter-declrs tag #f specl declrs 
 		      (acons `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 			     seed))
 	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
-		 tag attr specl declrs tail seed))
+		 tag attr specl declrs seed))
 	
 	;; structs
 	((decl-spec-list
 	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(struct . ,name)
 		 (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
-		 tag attr specl declrs tail seed))
+		 tag attr specl declrs seed))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 (iter-declrs tag attr specl declrs tail seed))
+	 (iter-declrs tag attr specl declrs seed))
 
 	;; unions
 	((decl-spec-list
 	  (type-spec (union-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(union . ,name)
 		 (make-udecl 'union-def aattr `((ident ,name) . ,rest2))
-		 tag attr specl declrs tail seed))
+		 tag attr specl declrs seed))
 	((decl-spec-list
 	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (iter-declrs tag attr specl declrs tail seed))
+	 (iter-declrs tag attr specl declrs seed))
 
 	;; enums
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(enum . ,name)
 		 (make-udecl 'enum-def #f `((ident ,name) . ,rest2))
-		 tag attr specl declrs tail seed))
+		 tag attr specl declrs seed))
 	((decl-spec-list
 	  (type-spec (enum-def . ,rest2) . ,rest1))
 	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
-		 tag attr specl declrs tail seed))
+		 tag attr specl declrs seed))
 
-	(else (iter-declrs tag attr specl declrs tail seed)))))
+	(else (iter-declrs tag attr specl declrs seed)))))
    
    ((eqv? (sx-tag decl) 'comp-udecl) (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag decl) 'comp-decl) (unitize-comp-decl decl seed))
@@ -490,8 +487,8 @@
    ((eqv? (sx-tag decl) 'comp-udecl)
     (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag (sx-ref decl 2)) 'comp-declr-list)
-    (let-values (((tag attr spec-l declrs tail) (split-decl decl)))
-      (iter-declrs 'comp-udecl attr spec-l declrs tail seed)))
+    (let-values (((tag attr spec-l declrs) (split-decl decl)))
+      (iter-declrs 'comp-udecl attr spec-l declrs seed)))
    (else
     seed)))
 
@@ -617,13 +614,13 @@
 	   (else (cons item seed))))
    '() decl-spec-list))
 
-;; @deffn {Procedure} split-adecl decl => values
+;; @deffn {Procedure} split-adecl decl => tag attr decl declrs
 ;; This routine splits a declaration (decl, udecl, comp-decl or param-decl)
 ;; into its constituent parts.  Attributes are currently not passed.
 ;; Get @code{(values tag spec-l declrs tail)}.  If the declrator is
 ;; already unitized you get that, else the list (w/o tag) of declarators.
 ;; @example
-;;   (split-udecl
+;;   (split-adecl
 ;;      '(udecl (decl-spec-list (typedef) (fixed-type "int"))
 ;;              (declr (ident "a"))
 ;; =>
@@ -637,10 +634,8 @@
   (let* ((tag (sx-tag adecl))
 	 (attr (sx-attr adecl))
 	 (specl (sx-ref adecl 1))	; (decl-spec-list ...)
-	 (declr (sx-ref adecl 2))	; *-declr|*-declr-list|comment|#f
-	 (declr (if (and declr (not (eq? (sx-tag declr) 'comment))) declr #f))
-	 (tail (sx-tail adecl (if declr 3 2)))) ; '()|((comment ""))
-    (values tag attr specl declr tail)))
+	 (declr (sx-ref adecl 2)))	; *-declr|*-declr-list|#f
+    (values tag attr specl declr)))
 
 ;; @deffn {Procedure} declr-list? declr
 ;; Determine if declr it is a list or not.
@@ -718,7 +713,8 @@
 ;; @end deffn
 (define (tdef-splice-declr-list orig-declr-list tdef-declr)
   (sx-cons*
-   (sx-tag orig-declr-list) (sx-attr orig-declr-list)
+   (sx-tag orig-declr-list)
+   (sx-attr orig-declr-list)
    (fold-right
     (lambda (declr seed)
       (cons (tdef-splice-declr declr tdef-declr) seed))
@@ -740,7 +736,8 @@
 ;; Replace the type-spec in @var{decl-spec-list} with @var{type-spec}.
 (define (replace-type-spec decl-spec-list type-spec)
   (sx-cons*
-   (sx-tag decl-spec-list) (sx-attr decl-spec-list)
+   (sx-tag decl-spec-list)
+   (sx-attr decl-spec-list)
    (map
     (lambda (elt) (if (eq? (sx-tag elt) 'type-spec) type-spec elt))
     (sx-tail decl-spec-list 1))))
@@ -875,30 +872,6 @@
 	  param-list
 	  (sx-cons* (sx-tag param-list) (sx-attr param-list) xtail))))
 
-  (define (OLD-fix-param-list param-list)
-    (sx-cons*
-     (sx-tag param-list) (sx-attr param-list)
-     (fold-right
-      (lambda (param seed)
-	(cons
-	 (case (sx-tag param)
-	   ((param-decl)
-	    ;; should use split-adecl
-	    (let* ((declr1 (sx-ref param 2))
-		   (xparam (expand-typerefs param udict keep))
-		   (declr2 (sx-ref xparam 2)) 
-		   (xdeclr (fix-declr declr2))
-		   (xtag (sx-tag xparam))
-		   (xattr (sx-attr xparam))
-		   (xspecl (sx-ref xparam 1)))
-	      (cond
-	       ((and (eq? xparam param) (eq? xdeclr declr1)) param)
-	       (xdeclr (sx-cons* xtag xattr xspecl xdeclr (sx-tail xparam 3)))
-	       (else (sx-cons* xtag xattr xspecl (sx-tail xparam 2))))))
-	   ((ellipsis) param))
-	 seed))
-      '() (sx-tail param-list 1))))
-
   ;; This will check for function declrs and fix parameters.
   (define (fix-declr declr)
     ;;(sferr "fix-declr:\n") (pperr declr)
@@ -1017,7 +990,7 @@
        
        (else (throw 'util-error "c99/munge: unknown declarator: " declr)))))
 
-  (let*-values (((tag attr orig-specl orig-declr tail)
+  (let*-values (((tag attr orig-specl orig-declr)
 		 (split-adecl adecl))
 		((repl-specl repl-declr)
 		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
@@ -1028,7 +1001,7 @@
       (if (and (eq? orig-specl repl-specl)
 	       (eq? orig-declr repl-declr))
 	  adecl ;; <= unchanged; return original
-	  (sx-cons* tag attr repl-specl repl-declr tail)))))
+	  (sx-list tag attr repl-specl repl-declr)))))
 
 ;; === enums and defines ===============
 
@@ -1132,20 +1105,26 @@
       (sx-cons* (sx-tag enum-def-list) (sx-attr enum-def-list) (reverse rez)))
      (else
       (sx-match (car edl)
-	((enum-defn ,ident)
+	((enum-defn (@ . ,attr) ,ident)
 	 (let ((sval (number->string nxt)))
-	   (iter (cons `(enum-defn ,ident (fixed ,sval)) rez)
+	   (iter (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
 		 (1+ nxt)  (acons (sx-ref ident 1) sval dct) (cdr edl))))
-	((enum-defn ,ident (comment ,comm))
+	((enum-defn ,ident (comment ,comm)) ;; REMOVE
 	 (let ((sval (number->string nxt)))
 	   (iter (cons `(enum-defn ,ident (fixed ,sval) (comment ,comm)) rez)
 		 (1+ nxt) (acons (sx-ref ident 1) sval dct) (cdr edl))))
-	((enum-defn ,ident ,expr . ,rest)
+	((enum-defn (@ . attr) ,ident ,expr)
+	 (let* ((ival (eval-cpp-expr expr dct))
+		(sval (number->string ival)))
+	   (iter (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
+		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl))))
+	((enum-defn ,ident ,expr . ,rest) ;; REMOVE
 	 (let* ((ival (eval-cpp-expr expr dct))
 	 ;;(let* ((ival (eval-c99-cx expr dct))
 		(sval (number->string ival)))
 	   (iter (cons `(enum-defn ,ident (fixed ,sval) . ,rest) rez)
-		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl)))))))))
+		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl))))
+	)))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
 ;; Gets value of enum where @var{enum-def-list} looks like
@@ -1183,10 +1162,10 @@
 	      (enum-defn (ident ,nstr) (p-expr (fixed ,vstr)))))))))
 
 ;; === stripdown =======================
-;; Remove remove @emph{stor-spec} elements from a u-decl.
-;; remove comments and attributes.  what else?
-;; * comments
-;; * attributes
+
+;; Remove remove @emph{stor-spec} elements and attributes from a u-decl.
+;; what all?
+;; * attributes (incl comments)
 ;; * type-specifiers: register, auto
 ;; * declrs: pointer-to type => pointer-to (void)
 ;; (stor-spec "auto") => empty
@@ -1215,9 +1194,15 @@
   (foldts fD fU fH '() declr))
 
 ;; @deffn {Procedure} stripdown udecl => udecl
+;; @deffnx {Procedure} stripdown-declr declr [#:const-ptr #f] => udecl
+;; This routine removes forms from a declaration that are presumably not
+;; required for FFI generation.
 ;; @example
+;; (udecl (
 ;; =>
 ;; @end example
+;; @noindent
+;; The only 
 ;; @end deffn
 (define* (stripdown udecl #:key keep-const-ptr)
   (let* (;;(speclt (sx-tail udecl))	; decl-spec-list tail
@@ -1290,33 +1275,29 @@
 ;; @noindent
 ;; @end deffn
 (define (clean-fields fields)
-  (let iter ((rz '()) (cl '()) (fl fields))
+  (define (str-app-rev strl) (apply string-append (reverse strl)))
+  (let loop ((rz '()) (cl '()) (fl fields))
     (if (null? fl)
 	(reverse rz)
-	(pmatch (car fl)
-	  ((comment ...)
-	   (iter rz (cons (cadar fl) cl) (cdr fl)))
-	  ((,tag ,specl (comment ,comm)) ; anonymous
-	   (iter rz '() (cdr fl)))
-	  ((,tag ,specl)		; anonymous
-	   (iter rz '() (cdr fl)))
-	  ((,tag ,specl ,declr (comment ,comm))
-	   (iter (cons (car fl) rz) '() (cdr fl)))
-	  ((,tag ,specl ,declr)
-	   (let ((cs `(comment ,(apply string-append (reverse cl)))))
-	     (if (null? cl) (iter (cons (car fl) rz) '() (cdr fl))
-		 (iter (cons (append (car fl) (list cs)) rz) '() (cdr fl)))))
-	  (else
-	   (error "munge: clean-field-list" (car fl)))))))
+	(sx-match (car fl)
+	  ((comment ,text)
+	   (loop rz (cons text cl) (cdr fl)))
+	  (((comp-udecl comp-decl) (@ . ,attr) . ,rest)
+	   (let* ((comm (assq-ref attr 'comment))
+		  (decl (car fl))
+		  (decl
+		   (if comm decl (sx-attr-add decl 'comment (str-app-rev cl)))))
+	     (loop (cons decl rz) '() (cdr fl))))
+	  (,_ (error "munge: clean-field-list" (car fl)))))))
 (define (clean-field-list field-list)
   (cons (car field-list) (clean-fields (cdr field-list))))
 
 ;; === munged specification ============
 
-;; @deffn {Procedure} udecl->mdecl udecl [#:abs-ident #f]
+;; @deffn {Procedure} udecl->mdecl udecl [#:add-name #f]
 ;; @deffnx {Procedure} udecl->mdecl/comm udecl [#:def-comm ""]
 ;; Turn a stripped-down unit-declaration into an m-spec.  The second version
-;; include a comment. This assumes decls have been run through
+;; includes the comment. This assumes decls have been run through
 ;; @code{stripdown}.
 ;; @example
 ;; (decl (decl-spec-list (type-spec "double"))
@@ -1326,11 +1307,11 @@
 ;; ("x" "state vector" (array-of 10) (float "double")
 ;; @end example
 ;; @noindent
-;; The optional keyword argument @var{abs-ident} provides a dummy indentifier
+;; The optional keyword argument @var{add-name} provides a dummy indentifier
 ;; to add for abstract declarators.  If an identifier is not provided, a
 ;; random identifier starting with @code{@} will be provided.
 ;; @end deffn
-(define* (udecl->mdecl decl #:key abs-ident)
+(define* (udecl->mdecl decl #:key add-name)
 
   ;; Hmm.  We convert array size back to C code (string).  Now that I am working
   ;; on constant expression eval (eval-c99-cx) maybe we should change that.
@@ -1355,7 +1336,7 @@
        (error "unwrap-pointer"))))
 
   (define (make-abs-dummy) ;; for abstract declarator make a dummy
-    (or abs-ident (symbol->string (gensym "@"))))
+    (or add-name (symbol->string (gensym "@"))))
   (define (make-abs-dummy-tail)
     (list (make-abs-dummy)))
   
@@ -1427,27 +1408,24 @@
        #f)))
 
   ;;(sferr "decl:\n") (pperr decl)
-  (let* (;;(decl-dict (if (pair? rest) (car rest) '()))
-	 (specl (sx-ref decl 1))	; decl-spec-list
-	 (tspec (cadr specl))		; type-spec
-	 (const (and=> (sx-ref specl 2)	; const pointer ???
-		       (lambda (sx) (equal? (sx-ref sx 1) "const"))))
- 	 (declr (or (sx-ref decl 2)	; param-decl -- e.g., f(int)
-		    `(ident ,(make-abs-dummy))))
-	 (comm (sx-ref decl 3))		; comment
-	 (m-specl (unwrap-specl specl))
-	 (m-declr (unwrap-declr declr #:const const))
-	 (m-decl (reverse (cons m-specl m-declr))))
-    ;;(sferr "decl:\n") (pperr decl)
-    ;;(sferr "declr:\n") (pperr declr)
-    ;;(sferr "r-mdecl: ~S\n" (cons m-specl m-declr))
-    m-decl))
+  (let-values (((tag attr specl declr) (split-adecl decl)))
+    (let* ((tspec (sx-ref specl 1))	; type-spec
+	   (const (and=> (sx-ref specl 2)	; const pointer ???
+			 (lambda (sx) (equal? (sx-ref sx 1) "const"))))
+	   (declr (or (sx-ref decl 2)	; param-decl -- e.g., f(int)
+		      `(ident ,(make-abs-dummy))))
+	   (m-specl (unwrap-specl specl))
+	   (m-declr (unwrap-declr declr #:const const))
+	   (m-decl (reverse (cons m-specl m-declr))))
+      ;;(sferr "decl:\n") (pperr decl)
+      ;;(sferr "declr:\n") (pperr declr)
+      ;;(sferr "r-mdecl: ~S\n" (cons m-specl m-declr))
+      m-decl)))
 
 (define* (udecl->mdecl/comm decl #:key (def-comm ""))
-  (let* ((comm (or (and=> (sx-ref decl 3) cadr) def-comm))
+  (let* ((comm (or (and=> (assq 'comment (sx-attr decl)) cadr) def-comm))
 	 (spec (udecl->mdecl decl)))
     (cons* (car spec) comm (cdr spec))))
-
 
 ;; @deffn {Procedure} mdecl->udecl mdecl xxx
 ;; needed for xxx
@@ -1468,7 +1446,7 @@
       (((pointer-to) . ,rest)
        (doit `(ptr-declr (pointer) ,declr) rest))
       
-      (,*
+      (,_
        (sferr "munge/mdecl->udecl missed:\n")
        (pperr mdecl-tail)
        (error "munge/mdecl->udecl failed")

@@ -855,7 +855,7 @@
 	 (mdecl (udecl->mdecl udecl1)))
     (mtail->bs-desc (cdr mdecl))))
 
-(define (int->abs-ident ix)
+(define (int->name ix)
   (simple-format #f "arg-~A" ix))
 
 (define (gen-decl-params params)
@@ -870,7 +870,7 @@
       ;;(sferr "\nP: ~S\n" (car params))
       (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
 	     (udecl1 (udecl-rem-type-qual udecl1))
-	     (mdecl (udecl->mdecl udecl1 #:abs-ident (int->abs-ident ix))))
+	     (mdecl (udecl->mdecl udecl1 #:add-name (int->name ix))))
 	;;(sferr "  ~S\n" udecl1)
 	(cons (mtail->ffi-desc (cdr mdecl))
 	      (iter (1+ ix) (cdr params))))))))
@@ -885,7 +885,7 @@
      (else
       (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
 	     (udecl1 (udecl-rem-type-qual udecl1))
-	     (mdecl (udecl->mdecl udecl1 #:abs-ident (int->abs-ident ix))))
+	     (mdecl (udecl->mdecl udecl1 #:add-name (int->name ix))))
 	(cons (mtail->bs-desc (cdr mdecl))
 	      (iter (1+ ix) (cdr params))))))))
 
@@ -1229,7 +1229,7 @@
   (*wrapped* wrapped)
   (*defined* defined)
 
-  (let*-values (((tag attr specl declr tail) (split-adecl udecl))
+  (let*-values (((tag attr specl declr) (split-adecl udecl))
 		((specl declr) (cleanup-udecl specl declr))
 		((clean-udecl) (values (sx-list tag #f specl declr)))
 		)
