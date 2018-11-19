@@ -57,7 +57,7 @@
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9))
 
-(define *ffi-help-version* "0.86.4")
+(define *ffi-help-version* "0.86.6")
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
