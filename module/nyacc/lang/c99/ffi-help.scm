@@ -85,7 +85,7 @@
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
   #:re-export (*nyacc-version*)
-  #:version (0 83 0)
+  #:version (0 86 6)
   )
 
 (define (fhoo) #t)			; debugging
@@ -1166,9 +1166,7 @@
 
 ;; assume unit-declarator
 ;; TODO (ptr-declr (pointer (type-qual-list (type-qual "const"))))
-;; todo:
-;; 1) remove comments
-;; 2) keep attributes! Used for forward decl's
+;; See also stripdown-specl and stripdown-declr in @file{munge.scm}.
 (define (cleanup-udecl specl declr)
   (let* ((fctn? (pair? ((sxpath '(// ftn-declr)) declr)))
 	 (specl (remove (lambda (node)
@@ -1176,14 +1174,12 @@
 			      (equal? node '(stor-spec (register)))
 			      (equal? node '(stor-spec (static)))
 			      (and (pair? node)
-				   (equal? (car node) 'type-qual))
-			      ))
+				   (equal? (car node) 'type-qual))))
 			specl))
 	 (specl (if fctn?
 		    (remove (lambda (node)
 			      (equal? node '(stor-spec (extern)))) specl)
-		    specl))
-	 )
+		    specl)))
     (values specl declr)))
 
 ;; @deffn {Procecure} back-ref-extend! decl typename
@@ -1229,7 +1225,7 @@
   (*wrapped* wrapped)
   (*defined* defined)
 
-  (let*-values (((tag attr specl declr) (split-adecl udecl))
+  (let*-values (((tag attr specl declr) (split-udecl udecl))
 		((specl declr) (cleanup-udecl specl declr))
 		((clean-udecl) (values (sx-list tag #f specl declr)))
 		)

@@ -97,9 +97,9 @@
   (parse-string (apply string-append str-l)))
 
 ;; The standard says:
-;;   For two qualified types to be compatible, both shall have the identically
+;;  "For two qualified types to be compatible, both shall have the identically
 ;;   qualified version of a compatible type; the order of type qualifiers within
-;;   a list of specifiers or qualifiers does not affect the specified type.
+;;   a list of specifiers or qualifiers does not affect the specified type."
 
 ;;(and=> (parse-file "c99-exam/ex14.c") ppsx)
 ;;(and=> (parse-c99x "(a*b)+c") ppsx)
@@ -108,45 +108,26 @@
 ;;(ppsx cpp-defs)
 ;;(ppsx inc-dirs)
 ;;(ppsx inc-help)
+
 (let* ((code (string-append
-	      ;;"struct __packed__ packed_1 { int x; double y; };"
-	      ;;"void (__attribute__((noreturn)) ****f) (void);\n"
-	      ;;"void (****f) (void);\n"
-	      ;;"typedef int t1_t __attribute__ ((__deprecated__));\n"
-	      ;;"int x __attribute__ ((aligned (16))) = 0;\n"
-	      ;;"__attribute__((noreturn)) void d0 (void), "
-	      ;; "__attribute__((format(printf, 1, 2))) d1(const char *, ...), "
-	      ;; "d2 (void);"
-	      ;;"struct S  __attribute__ ((vector_size (16))) foo;"
-	      ;;"typedef struct {"
-	      ;;" long long __max_align_ll"
-	      ;;" __attribute__((__aligned__(__alignof__(long long))));"
-	      ;;"long double __max_align_ld __attribute__(("
-	      ;;"__aligned__(__alignof__(long double))));} max_align_t;"
-
-	      "typedef int GDateTime; typedef int GTimeSpan;\n"
-	      " extern __attribute__((warn_unused_result))"
-	      " GDateTime * g_date_time_add (GDateTime *datetime,"
-	      " GTimeSpan timespan);"
-
-	      ;;"struct { int x; /* hello */\n int y; /* world */\n} z;\n"
-	      ;;"int x; /* abc */\n"
-	      ;;"#include <cairo.h>\nint foo;\n"
+	      "extern const int * volatile * const * x; /* abc */\n"
 	      ))
        (tree (parse-string code))
        ;;(tree (parse-file "ex20.c"))
        
        (udict (c99-trans-unit->udict/deep tree))
-       (udecl (udict-ref udict "g_date_time_add"))
+       (udecl (udict-ref udict "x"))
+       (udecl (stripdown-udecl udecl))
        (mdecl (udecl->mspec/comm udecl))
        ;;(xdecl (expand-typerefs udecl udict))
        ;;(udecl (unitize-decl decl))
        )
   ;;(pp (get-gcc-cpp-defs))
   (pp tree)
-  (pp udict)
+  ;;(pp udict)
   (pp udecl)
   (pp mdecl)
+  ;;(pp (parse-string "int ***x;"))
   ;;(ppsx tree)
   ;;(pp99 tree)
   ;;(ppsx (eval-c99-cx tree))
