@@ -663,7 +663,7 @@
 	 (ty*-desc (and typename (strings->symbol typename "*-desc")))
 	 (ag-desc (and aggrname (strings->symbol aggrname "-desc")))
 	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc")))
-	 (packed? (and attr (assoc-ref attr "__packed__")))
+	 (packed? (and attr (or (assoc-ref attr "__packed__"))))
 	 (bs-spec (if packed?
 		      (list bs-aggr-t #t `(list ,@sflds))
 		      (list bs-aggr-t `(list ,@sflds))))

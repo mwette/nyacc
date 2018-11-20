@@ -219,10 +219,8 @@
     (declaration-no-comment
      (declaration-specifiers
       init-declarator-list
-      ;; (move-attributes ...)
-      ($$ (save-typenames `(decl ,$1 ,$2))))
-     (declaration-specifiers
-      ;;($$ (if (only-attr-specs? $1) `(expr-stmt) `(decl ,$1)))))
+      ($$ (save-typenames `(decl ,$1 ,$2)))) ;; move-attributes?
+     (declaration-specifiers ;; FIXME: need to trap attributes ???
       ($$ `(decl ,$1))))
 
     (declaration-specifiers		; S 6.7
@@ -246,7 +244,8 @@
      (function-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; attributes
      ;;(attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
-     (attribute-specifier declaration-specifiers-1 ($$ $2)))
+     (attribute-specifier declaration-specifiers-1 ($$ $2))
+     )
 
     (init-declarator-list		; S 6.7
      (init-declarator-list-1 ($$ (tl->list $1))))
@@ -427,9 +426,9 @@
      ("__attribute__" "(" "(" attribute-list ")" ")" ($$ (tl->list $4)))
      (attr-name ($$ `(attributes ,$1))))
     (attr-name
-     ("__packed__" ($$ '(ident "packed")))
-     ("__aligned__" ($$ '(ident "aligned")))
-     ("__alignof__" ($$ '(ident "alignof"))))
+     ("__packed__" ($$ '(ident "__packed__")))
+     ("__aligned__" ($$ '(ident "__aligned__")))
+     ("__alignof__" ($$ '(ident "__alignof__"))))
 
     (attribute-list
      (attribute ($$ (make-tl 'attributes $1)))

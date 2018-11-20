@@ -483,11 +483,11 @@
    ;; attribute-specifier => attr-name
    (lambda ($1 . $rest) `(attributes ,$1))
    ;; attr-name => "__packed__"
-   (lambda ($1 . $rest) '(ident "packed"))
+   (lambda ($1 . $rest) '(ident "__packed__"))
    ;; attr-name => "__aligned__"
-   (lambda ($1 . $rest) '(ident "aligned"))
+   (lambda ($1 . $rest) '(ident "__aligned__"))
    ;; attr-name => "__alignof__"
-   (lambda ($1 . $rest) '(ident "alignof"))
+   (lambda ($1 . $rest) '(ident "__alignof__"))
    ;; attribute-list => attribute
    (lambda ($1 . $rest) (make-tl 'attributes $1))
    ;; attribute-list => attribute-list "," attribute

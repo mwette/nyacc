@@ -1,4 +1,4 @@
-;; gtkgl-01.scm - NOT WORKING
+;; gtkgl-01.scm - works!
 ;;   http://www.ccp4.ac.uk/dist/checkout/gtkglext-1.2.0/examples/simple.c
 
 ;; Copyright (C) 2018 Matthew R. Wette
@@ -27,6 +27,9 @@
 
 (define TRUE 1)
 (define FALSE 0)
+(define (!0 val) (not (zero? val)))
+
+(display "Hey, why not add a user-defined unwrapper for GLenum.\n")
 
 (define make-dvec4
   (let ((dvec4-desc (bs:vector 4 double)))
@@ -38,14 +41,12 @@
 	(light-position (make-dvec4 1.0 1.0 1.0 0.0)))
     (make-GtkCallback
      (lambda(widget data)
-       (sf "realize\n")
        (let* ((widget (make-GtkWidget* widget))
 	      (glcontext (gtk_widget_get_gl_context widget))
 	      (gldrawable (gtk_widget_get_gl_drawable widget))
 	      (qobj #f))
 	 (unless (zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
 	   (set! qobj (gluNewQuadric))
-	   (sf "qobj=~S\n" qobj)
 	   (gluQuadricDrawStyle qobj (glugl-symval 'GLU_FILL))
 	   (glNewList 1 (glugl-symval 'GL_COMPILE))
 	   (gluSphere qobj 1.0 20 20)
@@ -62,16 +63,12 @@
 	   (glClearColor 1.0 1.0 1.0 1.0)
 	   (glClearDepth 1.0)
 
-	   (sf "wid=~A hei=~A\n" 
-	       (fh-object-ref widget 'allocation 'width)
-	       (fh-object-ref widget 'allocation 'height))
 	   (glViewport 0 0
 		       (fh-object-ref widget 'allocation 'width)
 		       (fh-object-ref widget 'allocation 'height))
 
 	   (glMatrixMode (glugl-symval 'GL_PROJECTION))
 	   (glLoadIdentity)
-	   (gluLookAt 0.0 0.0 3.0 0.0 0.0 0.0 0.0 1.0 0.0)
 	   (gluPerspective 40.0 1.0 1.0 10.0)
 
 	   (glMatrixMode (glugl-symval 'GL_MODELVIEW))
@@ -83,11 +80,9 @@
 
 	   (gdk_gl_drawable_gl_end gldrawable)))))))
 
-
 (define configure-event
   (make-GtkEventCallback
    (lambda (widget event data)
-     (sf "configure\n")
      (let ((widget (make-GtkWidget* widget))
 	   (glcontext (gtk_widget_get_gl_context widget))
 	   (gldrawable (gtk_widget_get_gl_drawable widget)))
@@ -106,7 +101,6 @@
 	 (n (apply logior (map glugl-symval m))))
     (make-GtkEventCallback
      (lambda (widget event data)
-       (sf "expose\n")
        (let ((glcontext (gtk_widget_get_gl_context widget))
 	     (gldrawable (gtk_widget_get_gl_drawable widget)))
 	 (cond
@@ -121,10 +115,10 @@
 	   (gdk_gl_drawable_gl_end gldrawable)
 	   TRUE)))))))
 
-(define (!0 val) (not (zero? val)))
-
-(define (print-gl-config-attrib glconfig attrib_str attrib is_boolean)
-  (let ((value (make-int)) (attr (gtkgl-symval attrib)))
+(define (print-gl-config-attrib glconfig attrib is_boolean)
+  (let ((attrib_str (symbol->string attrib))
+	(attr (gtkgl-symval attrib))
+	(value (make-int)))
     (sf "~A = " attrib_str)
     (if (!0 (gdk_gl_config_get_attrib glconfig attr (pointer-to value)))
 	(if (!0 is_boolean)
@@ -150,23 +144,23 @@
   (sf "gdk_gl_config_has_accum_buffer (glconfig) = ~A\n"
       (tf (gdk_gl_config_has_accum_buffer glconfig)))
   (sf "\n")
-  (print-gl-config-attrib glconfig "GDK_GL_USE_GL" 'GDK_GL_USE_GL 1)
-  (print-gl-config-attrib glconfig "GDK_GL_BUFFER_SIZE" 'GDK_GL_BUFFER_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_LEVEL" 'GDK_GL_LEVEL 0)
-  (print-gl-config-attrib glconfig "GDK_GL_RGBA" 'GDK_GL_RGBA 1)
-  (print-gl-config-attrib glconfig "GDK_GL_DOUBLEBUFFER" 'GDK_GL_DOUBLEBUFFER 1)
-  (print-gl-config-attrib glconfig "GDK_GL_STEREO" 'GDK_GL_STEREO 1)
-  (print-gl-config-attrib glconfig "GDK_GL_AUX_BUFFERS" 'GDK_GL_AUX_BUFFERS 0)
-  (print-gl-config-attrib glconfig "GDK_GL_RED_SIZE" 'GDK_GL_RED_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_GREEN_SIZE" 'GDK_GL_GREEN_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_BLUE_SIZE" 'GDK_GL_BLUE_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_ALPHA_SIZE" 'GDK_GL_ALPHA_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_DEPTH_SIZE" 'GDK_GL_DEPTH_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_STENCIL_SIZE" 'GDK_GL_STENCIL_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_ACCUM_RED_SIZE" 'GDK_GL_ACCUM_RED_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_ACCUM_GREEN_SIZE" 'GDK_GL_ACCUM_GREEN_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_ACCUM_BLUE_SIZE" 'GDK_GL_ACCUM_BLUE_SIZE 0)
-  (print-gl-config-attrib glconfig "GDK_GL_ACCUM_ALPHA_SIZE" 'GDK_GL_ACCUM_ALPHA_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_USE_GL 1)
+  (print-gl-config-attrib glconfig 'GDK_GL_BUFFER_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_LEVEL 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_RGBA 1)
+  (print-gl-config-attrib glconfig 'GDK_GL_DOUBLEBUFFER 1)
+  (print-gl-config-attrib glconfig 'GDK_GL_STEREO 1)
+  (print-gl-config-attrib glconfig 'GDK_GL_AUX_BUFFERS 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_RED_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_GREEN_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_BLUE_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_ALPHA_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_DEPTH_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_STENCIL_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_ACCUM_RED_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_ACCUM_GREEN_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_ACCUM_BLUE_SIZE 0)
+  (print-gl-config-attrib glconfig 'GDK_GL_ACCUM_ALPHA_SIZE 0)
   )
   
 ;; Initialize.
@@ -193,7 +187,6 @@
 (gtk_container_set_reallocate_redraws window TRUE)
 
 (g_signal_connect window "delete_event" ~gtk_main_quit NULL)
-;;(g_signal_connect window "destroy" ~gtk_main_quit NULL)
 
 (define vbox (gtk_vbox_new FALSE 0))
 (gtk_container_add window vbox)

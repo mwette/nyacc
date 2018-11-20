@@ -35,7 +35,7 @@
 
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
-(use-modules ((srfi srfi-1) #:select (fold-right)))
+(use-modules ((srfi srfi-1) #:select (fold-right append-reverse)))
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules (ice-9 pretty-print))	; for debugging
 (define pp pretty-print)
@@ -235,21 +235,12 @@
 ;; attribute-specifiers then this has to be an empty-statemnet with
 ;; attributes.  See:
 ;;   https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Statement-Attributes.html
-(define (only-attr-specs? specs)
+(define (XXX-only-attr-specs? specs)
   (let loop ((specs specs))
     (cond
      ((null? specs) #t)
      ((not (eqv? 'attributes (sx-tag (car specs)))) #f)
      (else (loop (cdr specs))))))
-
-;; move attributes to 
-(define (move-attributes decl)
-  (let ((tag (sx-tag decl))
-	(attrs (sx-attr decl))
-	(spec-l (sx-ref decl 1))
-	(declr-l (sx-ref decl 1)))
-    (let loop ((attrs attrs) (specs (sx-tail spec-l)))
-      #f)))
 
 ;; used in c99-spec actions for attribute-specifiers
 (define (attr-expr-list->string attr-expr-list)
@@ -267,8 +258,46 @@
       ((attr-expr-list . ,expr-list)
        (string-join (map spec->str expr-list) ","))
       ((fixed ,val) val)
+      ((string ,val) (string-append "\"" val "\""))
       (,_ (simple-format #t "c99/body: missed ~S\n" spec) "MISSED")))
   `(attributes ,(string-join (map spec->str (sx-tail attr-spec)) ";")))
+
+;; move @code{(attributes ...)} from under @code{decl-spec-list} to
+;; under @code{@}
+;; @example
+;; (decl (decl-spec-list
+;;         (attributes "packed" "aligned")
+;;         (attributes "alignof(8)"))
+;;         (type-spec (fixed-type "int")))
+;;       (declr-init-list ...))
+;;  =>
+;; (decl (@ (attributes "packed;aligned;alignof(8)"))
+;;       (decl-spec-list
+;;         (type-spec (fixed-type "int")))
+;;       (declr-init-list ...))
+;; @end example
+(define (move-attributes decl)
+  (define (comb-attr attl attr)
+    (cons `(attributes
+	    ,(string-join
+	      (let loop ((rz '()) (al attl))
+		(if (null? al) rz (loop (cons (cadar al) rz) (cdr al))))
+	      ";")) attr))
+  (define (make-specl spl)
+    (cons 'decl-spec-list (reverse spl)))
+  (let ((tag (sx-tag decl))
+	(attr (sx-attr decl))
+	(spec-l (sx-ref decl 1))
+	(declr-l (sx-ref decl 2)))
+    (let loop ((attl '()) (spl1 '()) (spl0 (sx-tail spec-l)))
+      (cond
+       ((null? spl0)
+	(if (null? attl) decl
+	    (sx-list tag (comb-attr attl attr) (make-specl spl1) declr-l)))
+       ((eq? 'attributes (sx-tag (car spl0)))
+	(loop (cons (attr-spec->attr (car spl0)) attl) spl1 (cdr spl0)))
+       (else
+	(loop attl (cons (car spl0) spl1) (cdr spl0)))))))
 
 ;; ------------------------------------------------------------------------
 
