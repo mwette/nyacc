@@ -111,23 +111,22 @@
 
 (let* ((code (string-append
 	      "struct foo { int a; double b; };\n"
-	      "struct foo x;\n"
+	      "struct foo x; /* hmmm */ \n"
 	      ))
        (tree (parse-string code))
        ;;(tree (parse-file "zz.c"))
-       
        (udict (c99-trans-unit->udict/deep tree))
        (udecl (udict-ref udict "x"))
-       ;;(udecl (stripdown-udecl udecl))
-       ;;(mdecl (udecl->mspec/comm udecl))
-       (xdecl (expand-typerefs udecl udict))
+       (udecl (stripdown-udecl udecl))
+       ;;(udecl (expand-typerefs udecl udict))
+       (mdecl (udecl->mspec/comm udecl))
        ;;(udecl (unitize-decl decl))
        )
   ;;(pp (get-gcc-cpp-defs))
-  (pp tree)
-  (pp udict)
+  ;;(pp tree)
+  ;;(pp udict)
   ;;(pp udecl)
-  ;;(pp mdecl)
+  (pp mdecl)
   ;;(pp (parse-string "int ***x;"))
   ;;(ppsx udecl)
   ;;(pp99 xdecl)

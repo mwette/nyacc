@@ -649,8 +649,6 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
-	    (if (and (string? (cdr pair)) (string=? (cdr pair) "GLint"))
-		(sferr "~S\n" pair))
 	    ;;(report-error "lx iter=>~S" (list pair))
 	    (case (car ppxs)
 	      ((keep)
