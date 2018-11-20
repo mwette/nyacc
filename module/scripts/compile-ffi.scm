@@ -25,12 +25,12 @@
 ;;; Code:
 
 (define-module (scripts compile-ffi)
-  #:export (define-ffi-module)
   #:use-module (nyacc lang c99 ffi-help)
   #:use-module (system base language)
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-37))
+  #:use-module (srfi srfi-37)
+  #:version (0 86 6))
 
 (define *ffi-help-version* "0.86.6")
 
@@ -176,6 +176,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 (define-syntax-rule (define-ffi-module path-list attr ...)
   (check-ffi-deps (quote path-list) (find-ffi-uses attr ...)))
+(export define-ffi-module)
 
 (define (updated-ffi-deps file options)
   (unless (access? file R_OK)
@@ -228,12 +229,11 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       (lambda () (parse-args args))
     (lambda (opts files)
       (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
-      (for-each (lambda (file) (compile-ffi file opts)) files)))
+      (for-each (lambda (file) (compile-ffi file opts)) (reverse files))))
   (exit 0))
 
 ;;; Todo:
 
 ;; 1) remove output file on error? => generate default output file here
-;; 2) add arg to override default file suffix (i.e., `.ffi'): 'any-suffix
 
 ;; --- last line ---

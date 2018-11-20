@@ -23,6 +23,17 @@
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 util1))
 
+(define inc-help
+  '(("__builtin"
+     "__builtin_va_list=void*"
+     "__inline=" "__inline__="
+     "__restrict="
+     "__THROW="
+     "__asm(X)=" "__asm__(X)="
+     "__has_include(X)=__has_include__(X)"
+     "__extension__="
+     )))
+
 (define (scan-for-flagged flag argl)
   (let iter ((res '()) (argl argl))
     (if (null? argl) (reverse res)
@@ -51,7 +62,9 @@
   (for-each
    (lambda (file)
      (let ((tree (with-input-from-file file
-		   (lambda () (parse-c99 #:cpp-defs defs #:inc-dirs incs)))))
+		   (lambda ()
+		     (parse-c99 #:cpp-defs defs #:inc-dirs incs
+				#:inc-help inc-help)))))
        (simple-format #t "~A:\n" file)
        (pretty-print tree)))
    files)

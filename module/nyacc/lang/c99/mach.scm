@@ -68,8 +68,8 @@
      (constant ($$ `(p-expr ,$1)))
      (string-literal ($$ `(p-expr ,$1)))
      ("(" expression ")" ($$ $2))
-     ("(" "{" block-item-list "}" ")"
-      ($$ `(stmt-expr (@ (extension "GNUC")) ,$3)))
+     ("(" "{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}" ")"
+      ($$ `(stmt-expr (@ (extension "GNUC")) ,$4)))
      )
 
     (postfix-expression			; S 6.5.2
@@ -628,8 +628,8 @@
      ("default" ":" statement ($$ `(default ,$3))))
 
     (compound-statement
-     ("{" block-item-list "}" 
-      ($$ `(compd-stmt ,(tl->list $2))))
+     ("{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}" 
+      ($$ `(compd-stmt ,(tl->list $3))))
      ("{" "}"
       ($$ `(compd-stmt (block-item-list)))))
 
@@ -736,8 +736,9 @@
      (declaration-specifiers
       declarator declaration-list compound-statement
       ($$ `(knr-fctn-defn ,(tl->list $1) ,$2 ,(tl->list $3) ,$4)))
-     (declaration-specifiers declarator compound-statement
-			     ($$ `(fctn-defn ,$1 ,$2 ,$3))))
+     (declaration-specifiers
+      declarator compound-statement
+      ($$ `(fctn-defn ,$1 ,$2 ,$3))))
     
     (declaration-list
      (declaration ($$ (make-tl $1)))

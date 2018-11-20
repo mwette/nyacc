@@ -129,18 +129,6 @@
 
 (define *info* (make-fluid))
 	  
-;; @deffn {Procedure} typename? name
-;; Called by lexer to determine if symbol is a typename.
-;; Check current sibling for each generation.
-;; @end deffn
-(define (typename? name)
-  (let ((cpi (fluid-ref *info*)))
-    (if (member name (cpi-ctl cpi)) #t
-        (let iter ((ptl (cpi-ptl cpi)))
-	  (if (null? ptl) #f
-	      (if (member name (car ptl)) #t
-		  (iter (cdr ptl))))))))
-
 (define cpi-inc-blev!
   (case-lambda
     ((info) (set-cpi-blev! info (1+ (cpi-blev info))))
@@ -154,24 +142,21 @@
     ((info) (zero? (cpi-blev info)))
     (() (cpi-top-blev? (fluid-ref *info*)))))
 
-;; @deffn {Procedure} add-typename name
-;; Helper for @code{save-typenames}.
-;; @end deffn
-(define (add-typename name)
-  (let ((cpi (fluid-ref *info*)))
-    (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
+(define cpi-push
+  (case-lambda
+    ((info) 
+     (set-cpi-ptl! info (cons (cpi-ctl info) (cpi-ptl info)))
+     (set-cpi-ctl! info '())
+     #t)
+    (() (cpi-push (fluid-ref *info*)))))
 
-(define (cpi-push)
-  (let ((cpi (fluid-ref *info*)))
-    (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
-    (set-cpi-ctl! cpi '())
-    #t))
-
-(define (cpi-pop)
-  (let ((cpi (fluid-ref *info*)))
-    (set-cpi-ctl! cpi (car (cpi-ptl cpi)))
-    (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))
-    #t))
+(define cpi-pop
+  (case-lambda
+    ((info)
+     (set-cpi-ctl! info (car (cpi-ptl info)))
+     (set-cpi-ptl! info (cdr (cpi-ptl info)))
+     #t)
+    (() (cpi-pop (fluid-ref *info*)))))
 
 (define (cpi-push-x)	;; on #if
   (let ((cpi (fluid-ref *info*)))
@@ -185,6 +170,25 @@
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
+
+;; @deffn {Procedure} typename? name
+;; Called by lexer to determine if symbol is a typename.
+;; Check current sibling for each generation.
+;; @end deffn
+(define (typename? name)
+  (let ((cpi (fluid-ref *info*)))
+    (if (member name (cpi-ctl cpi)) #t
+        (let iter ((ptl (cpi-ptl cpi)))
+	  (if (null? ptl) #f
+	      (if (member name (car ptl)) #t
+		  (iter (cdr ptl))))))))
+
+;; @deffn {Procedure} add-typename name
+;; Helper for @code{save-typenames}.
+;; @end deffn
+(define (add-typename name)
+  (let ((cpi (fluid-ref *info*)))
+    (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
 
 ;; @deffn {Procedure} find-new-typenames decl
 ;; Helper for @code{save-typenames}.
@@ -225,7 +229,7 @@
 
 ;; (string "abc" "def") -> (string "abcdef")
 (define (join-string-literal str-lit)
-  (sx-join 'string (sx-attr str-lit) (string-join (sx-tail str-lit) "")))
+  (sx-list 'string (sx-attr str-lit) (string-join (sx-tail str-lit) "")))
 
 ;; In the case that declaration-specifiers only returns a list of
 ;; attribute-specifiers then this has to be an empty-statemnet with
@@ -622,17 +626,17 @@
 		      ;;          (assq-ref keytab symb))
 		      => (lambda (t) (cons t name)))
 		     ((typename? name)
-		      (cons (assq-ref symtab 'typename) name))
+		      (cons t-typename name))
 		     (else
-		      (cons (assq-ref symtab '$ident) name))))))
+		      (cons t-ident name))))))
 	       ((read-c-num ch) => assc-$)
 	       ((read-c-string ch) => assc-$)
 	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
 	       ;; Keep track of brace level and scope for typedefs.
-	       ((and (char=? ch #\{) (cpi-push)
+	       ((and (char=? ch #\{)
 		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info)
 		     #f) #f)
-	       ((and (char=? ch #\}) (cpi-pop)
+	       ((and (char=? ch #\})
 		     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info)
 		     #f) #f)
 	       ((read-chseq ch) => identity)
@@ -645,6 +649,8 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let iter ((pair (read-token)))
+	    (if (and (string? (cdr pair)) (string=? (cdr pair) "GLint"))
+		(sferr "~S\n" pair))
 	    ;;(report-error "lx iter=>~S" (list pair))
 	    (case (car ppxs)
 	      ((keep)

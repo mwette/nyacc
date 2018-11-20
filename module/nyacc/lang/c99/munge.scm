@@ -1276,7 +1276,10 @@
 	   (let* ((comm (assq-ref attr 'comment))
 		  (decl (car fl))
 		  (decl
-		   (if comm decl (sx-attr-add decl 'comment (str-app-rev cl)))))
+		   (cond
+		    (comm decl)
+		    ((null? cl) decl)
+		    (else (sx-attr-add decl 'comment (str-app-rev cl))))))
 	     (loop (cons decl rz) '() (cdr fl))))
 	  (,_ (error "munge: clean-field-list" (car fl)))))))
 (define (clean-field-list field-list)

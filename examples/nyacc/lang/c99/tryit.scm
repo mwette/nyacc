@@ -77,7 +77,7 @@
       (parse-c99 #:cpp-defs cpp-defs 
 		 #:inc-dirs inc-dirs
 		 #:inc-help inc-help
-		 #:mode mode #:debug debug
+		 #:mode mode #:debug #f
 		 #:show-incs #f
 		 ;;#:xdef? xdef?
 		 ))))
@@ -110,26 +110,27 @@
 ;;(ppsx inc-help)
 
 (let* ((code (string-append
-	      "extern const int * volatile * const * x; /* abc */\n"
+	      "struct foo { int a; double b; };\n"
+	      "struct foo x;\n"
 	      ))
        (tree (parse-string code))
-       ;;(tree (parse-file "ex20.c"))
+       ;;(tree (parse-file "zz.c"))
        
        (udict (c99-trans-unit->udict/deep tree))
        (udecl (udict-ref udict "x"))
-       (udecl (stripdown-udecl udecl))
-       (mdecl (udecl->mspec/comm udecl))
-       ;;(xdecl (expand-typerefs udecl udict))
+       ;;(udecl (stripdown-udecl udecl))
+       ;;(mdecl (udecl->mspec/comm udecl))
+       (xdecl (expand-typerefs udecl udict))
        ;;(udecl (unitize-decl decl))
        )
   ;;(pp (get-gcc-cpp-defs))
   (pp tree)
-  ;;(pp udict)
-  (pp udecl)
-  (pp mdecl)
+  (pp udict)
+  ;;(pp udecl)
+  ;;(pp mdecl)
   ;;(pp (parse-string "int ***x;"))
-  ;;(ppsx tree)
-  ;;(pp99 tree)
+  ;;(ppsx udecl)
+  ;;(pp99 xdecl)
   ;;(ppsx (eval-c99-cx tree))
   ;;(ppsx (get-gcc-inc-dirs))
   ;;(pp cpp-defs)

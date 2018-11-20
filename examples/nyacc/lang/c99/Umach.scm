@@ -15,10 +15,10 @@
 (use-modules (nyacc lalr))
 
 (when #t
-  (if (gen-cpp-files mod-dir)
-      (compile-file (string-append mod-dir "/cpp.scm")))
-  (if (gen-c99-files mod-dir)
-      (compile-file (string-append mod-dir "/parser.scm"))))
+  (gen-cpp-files mod-dir)
+  (compile-file (string-append mod-dir "/cpp.scm"))
+  (gen-c99-files mod-dir)
+  (compile-file (string-append mod-dir "/parser.scm")))
 
 (when #t
   (with-output-to-file ",file.txt"

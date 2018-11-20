@@ -1,4 +1,4 @@
-;; ./mach.d/c99act.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99act.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
@@ -20,9 +20,13 @@
    (lambda ($1 . $rest) `(p-expr ,$1))
    ;; primary-expression => "(" expression ")"
    (lambda ($3 $2 $1 . $rest) $2)
-   ;; primary-expression => "(" "{" block-item-list "}" ")"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(stmt-expr (@ (extension "GNUC")) ,$3))
+   ;; primary-expression => "(" "{" $P1 block-item-list $P2 "}" ")"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(stmt-expr (@ (extension "GNUC")) ,$4))
+   ;; $P1 => 
+   (lambda ($2 $1 . $rest) (cpi-push))
+   ;; $P2 => 
+   (lambda ($4 $3 $2 $1 . $rest) (cpi-pop))
    ;; postfix-expression => primary-expression
    (lambda ($1 . $rest) $1)
    ;; postfix-expression => postfix-expression "[" expression "]"
@@ -735,12 +739,16 @@
    (lambda ($4 $3 $2 $1 . $rest) `(case ,$2 ,$4))
    ;; labeled-statement => "default" ":" statement
    (lambda ($3 $2 $1 . $rest) `(default ,$3))
-   ;; compound-statement => "{" block-item-list "}"
-   (lambda ($3 $2 $1 . $rest)
-     `(compd-stmt ,(tl->list $2)))
+   ;; compound-statement => "{" $P3 block-item-list $P4 "}"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(compd-stmt ,(tl->list $3)))
    ;; compound-statement => "{" "}"
    (lambda ($2 $1 . $rest)
      `(compd-stmt (block-item-list)))
+   ;; $P3 => 
+   (lambda ($1 . $rest) (cpi-push))
+   ;; $P4 => 
+   (lambda ($3 $2 $1 . $rest) (cpi-pop))
    ;; block-item-list => block-item
    (lambda ($1 . $rest)
      (make-tl 'block-item-list $1))
@@ -869,7 +877,7 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => pragma
    (lambda ($1 . $rest) $1)
-   ;; external-declaration => "extern" '$string "{" $P1 external-declaratio...
+   ;; external-declaration => "extern" '$string "{" $P5 external-declaratio...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(extern-block
         (extern-begin ,$2)
@@ -878,9 +886,9 @@
    ;; external-declaration => ";"
    (lambda ($1 . $rest)
      `(decl (@ (extension "GNUC"))))
-   ;; $P1 => 
+   ;; $P5 => 
    (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
-   ;; $P2 => 
+   ;; $P6 => 
    (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-inc-blev!))
    ;; function-definition => declaration-specifiers declarator declaration-...
    (lambda ($4 $3 $2 $1 . $rest)

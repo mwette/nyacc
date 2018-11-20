@@ -205,6 +205,11 @@
     (pop-il)
     (sf "}"))
 
+  (define (comm+nl attr)
+    (cond
+     ((assq 'comment attr) => (lambda (comm) (sf " ") (ppx comm)))
+     (else (sf "\n"))))
+  
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
 
   ;; TODO: comp-lit
@@ -232,8 +237,6 @@
 	value-l))
 
       ((comment ,text)
-       ;; TODO: check on input/output indent consistency (I think this is fixed.)
-       ;; parser now removes prefix -- so this is working now ???
        (cond
 	((or (string-any #\newline text) (string-suffix? " " text))
 	 (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n"))
@@ -331,29 +334,19 @@
       ((udecl . ,rest)
        (ppx `(decl . ,rest)))
       ((decl (@ . ,attr) ,decl-spec-list)
-       (ppx decl-spec-list) (sf ";")
-       (and=> (assq 'comment attr) ppx) (sf "\n"))
+       (ppx decl-spec-list) (sf ";") (comm+nl attr))
       ((decl (@ . ,attr) ,decl-spec-list ,init-declr-list)
        (ppx decl-spec-list) (sf " ") (ppx init-declr-list) (sf ";")
-       (and=> (assq 'comment attr) ppx) (sf "\n"))
-      ((decl ,decl-spec-list ,init-declr-list ,comment) ;; REMOVE
-       (ppx decl-spec-list) (sf " ")
-       (ppx init-declr-list) (sf "; ") (ppx comment))
+       (comm+nl attr))
       ((decl-no-newline ,decl-spec-list ,init-declr-list) ; for (int i = 0;
        (ppx decl-spec-list) (sf " ") (ppx init-declr-list) (sf ";"))
 
       ((comp-decl (@ . ,attr) ,spec-qual-list (comp-declr-list . ,rest2))
        (ppx spec-qual-list) (sf " ") (ppx (sx-ref tree 2)) (sf ";")
-       (and=> (assq 'comment attr) ppx) (sf "\n"))
-      ((comp-decl ,spec-qual-list ,declr-list (comment ,comment)) ;; REMOVE
-       (ppx spec-qual-list) (sf " ") (ppx declr-list) (sf "; ")
-       (ppx (sx-ref tree 3)))
+       (comm+nl attr))
       ;; anon struct or union
       ((comp-decl (@ . ,attr) ,spec-qual-list)
-       (ppx spec-qual-list) (sf ";")
-       (and=> (assq 'comment attr) ppx) (sf "\n"))
-      ((comp-decl ,spec-qual-list (comment ,comment)) ;; REMOVE
-       (ppx spec-qual-list) (sf "; ") (ppx (sx-ref tree 2)))
+       (ppx spec-qual-list) (sf ";") (comm+nl attr))
 
       ((decl-spec-list . ,dsl)
        (pair-for-each
@@ -431,17 +424,10 @@
        (for-each ppx defns)
        (pop-il) (sf "}"))
 
-      ((enum-defn (ident ,name) (comment ,comment)) ;; REMOVE
-       (sf "~A, " name) (ppx `(comment ,comment)) (sf "\n"))
-      ((enum-defn (ident ,name) ,expr ,comment) ;; REMOVE
-       (sf "~A = " name) (ppx expr) (sf ", ") (ppx comment) (sf "\n"))
-
       ((enum-defn (@ . ,attr) (ident ,name) ,expr)
-       (sf "~A = " name) (ppx expr) (sf ",")
-       (and=> (assq 'comment attr) ppx) (sf "\n"))
+       (sf "~A = " name) (ppx expr) (sf ",") (comm+nl attr))
       ((enum-defn (@ . ,attr) (ident ,name))
-       (sf "~A," name)
-       (and=> (assq 'comment attr) ppx) (sf "\n"))
+       (sf "~A," name) (comm+nl attr))
 
       ;;((fctn-spec "inline")
       ((fctn-spec ,spec)
@@ -535,9 +521,7 @@
       
       ;; expression-statement
       ((expr-stmt) (sf ";\n")) ;; add comment?
-      ((expr-stmt (@ . ,attr) ,expr)
-       (ppx expr) (sf ";") (and=> (assq 'comment attr) ppx) (sf "\n"))
-      ((expr-stmt ,expr ,comm) (ppx expr) (sf "; ") (ppx comm)) ;; REMOVE
+      ((expr-stmt (@ . ,attr) ,expr) (ppx expr) (sf ";") (comm+nl attr))
       
       ((expr) (sf ""))		; for lone expr-stmt and return-stmt
 
