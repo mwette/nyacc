@@ -242,6 +242,15 @@
      ((not (eqv? 'attributes (sx-tag (car specs)))) #f)
      (else (loop (cdr specs))))))
 
+;; move attributes to 
+(define (move-attributes decl)
+  (let ((tag (sx-tag decl))
+	(attrs (sx-attr decl))
+	(spec-l (sx-ref decl 1))
+	(declr-l (sx-ref decl 1)))
+    (let loop ((attrs attrs) (specs (sx-tail spec-l)))
+      #f)))
+
 ;; used in c99-spec actions for attribute-specifiers
 (define (attr-expr-list->string attr-expr-list)
   (string-append "(" (string-join (cdr attr-expr-list) ",") ")"))

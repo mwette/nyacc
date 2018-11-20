@@ -201,10 +201,7 @@
    (lambda ($2 $1 . $rest)
      (save-typenames `(decl ,$1 ,$2)))
    ;; declaration-no-comment => declaration-specifiers
-   (lambda ($1 . $rest)
-     (if (only-attr-specs? $1)
-       `(expr-stmt)
-       `(decl ,$1)))
+   (lambda ($1 . $rest) `(decl ,$1))
    ;; declaration-specifiers => declaration-specifiers-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; declaration-specifiers-1 => storage-class-specifier
@@ -228,7 +225,7 @@
    ;; declaration-specifiers-1 => function-specifier declaration-specifiers-1
    (lambda ($2 $1 . $rest) (tl-insert $2 $1))
    ;; declaration-specifiers-1 => attribute-specifier declaration-specifiers-1
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
+   (lambda ($2 $1 . $rest) $2)
    ;; init-declarator-list => init-declarator-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; init-declarator-list-1 => init-declarator

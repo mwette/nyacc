@@ -219,9 +219,11 @@
     (declaration-no-comment
      (declaration-specifiers
       init-declarator-list
+      ;; (move-attributes ...)
       ($$ (save-typenames `(decl ,$1 ,$2))))
      (declaration-specifiers
-      ($$ (if (only-attr-specs? $1) `(expr-stmt) `(decl ,$1)))))
+      ;;($$ (if (only-attr-specs? $1) `(expr-stmt) `(decl ,$1)))))
+      ($$ `(decl ,$1))))
 
     (declaration-specifiers		; S 6.7
      (declaration-specifiers-1 ($$ (tl->list $1))))
@@ -243,7 +245,8 @@
       ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
      (function-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; attributes
-     (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
+     ;;(attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
+     (attribute-specifier declaration-specifiers-1 ($$ $2)))
 
     (init-declarator-list		; S 6.7
      (init-declarator-list-1 ($$ (tl->list $1))))
