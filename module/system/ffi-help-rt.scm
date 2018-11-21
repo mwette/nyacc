@@ -56,7 +56,7 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (0 86 7)
+  #:version (0 86 7))
 
 (define *ffi-help-version* "0.86.7")
 
