@@ -30,9 +30,9 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37)
-  #:version (0 86 6))
+  #:version (0 86 7)
 
-(define *ffi-help-version* "0.86.6")
+(define *ffi-help-version* "0.86.7")
 
 (define %summary
   "Compile a ffi-file (C interface spec) to Scheme (or maybe .go).")
