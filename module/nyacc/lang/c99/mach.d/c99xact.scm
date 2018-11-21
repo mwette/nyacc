@@ -1,4 +1,4 @@
-;; ./mach.d/c99xact.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99xact.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
@@ -224,33 +224,11 @@
      (make-tl 'decl-spec-list $1))
    ;; declaration-specifiers-1 => function-specifier declaration-specifiers-1
    (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; declaration-specifiers-1 => attribute-specifier declaration-specifiers-1
-   (lambda ($2 $1 . $rest) $2)
-   ;; init-declarator-list => init-declarator-list-1
-   (lambda ($1 . $rest) (tl->list $1))
-   ;; init-declarator-list-1 => init-declarator
+   ;; declaration-specifiers-1 => attribute-specifier
    (lambda ($1 . $rest)
-     (make-tl 'init-declr-list $1))
-   ;; init-declarator-list-1 => init-declarator-list-1 "," init-declarator
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; init-declarator => init-decl-no-attr
-   (lambda ($1 . $rest) $1)
-   ;; init-declarator => attribute-specifiers init-decl-no-attr
-   (lambda ($2 $1 . $rest) $1)
-   ;; init-decl-no-attr => declarator
-   (lambda ($1 . $rest) `(init-declr ,$1))
-   ;; init-decl-no-attr => declarator "=" initializer
-   (lambda ($3 $2 $1 . $rest) `(init-declr ,$1 ,$3))
-   ;; init-decl-no-attr => declarator asm-expression
-   (lambda ($2 $1 . $rest) `(init-declr ,$1))
-   ;; init-decl-no-attr => declarator asm-expression "=" initializer
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(init-declr ,$1 ,$4))
-   ;; init-decl-no-attr => declarator attribute-specifiers
-   (lambda ($2 $1 . $rest) `(init-declr ,$1))
-   ;; init-decl-no-attr => declarator attribute-specifiers "=" initializer
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(init-declr ,$1 ,$4))
+     (make-tl 'decl-spec-list $1))
+   ;; declaration-specifiers-1 => attribute-specifier declaration-specifiers-1
+   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
    ;; storage-class-specifier => "auto"
    (lambda ($1 . $rest) '(stor-spec (auto)))
    ;; storage-class-specifier => "extern"
@@ -481,7 +459,8 @@
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      (tl->list $4))
    ;; attribute-specifier => attr-name
-   (lambda ($1 . $rest) `(attributes ,$1))
+   (lambda ($1 . $rest)
+     `(attribute-list (attribute ,$1)))
    ;; attr-name => "__packed__"
    (lambda ($1 . $rest) '(ident "__packed__"))
    ;; attr-name => "__aligned__"
@@ -489,7 +468,8 @@
    ;; attr-name => "__alignof__"
    (lambda ($1 . $rest) '(ident "__alignof__"))
    ;; attribute-list => attribute
-   (lambda ($1 . $rest) (make-tl 'attributes $1))
+   (lambda ($1 . $rest)
+     (make-tl 'attribute-list $1))
    ;; attribute-list => attribute-list "," attribute
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; attribute-list => attribute-list ","
@@ -520,6 +500,29 @@
    (lambda ($1 . $rest) $1)
    ;; attribute-expr => attr-word "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest) `(ident "FOO"))
+   ;; init-declarator-list => init-declarator-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; init-declarator-list-1 => init-declarator
+   (lambda ($1 . $rest)
+     (make-tl 'init-declr-list $1))
+   ;; init-declarator-list-1 => init-declarator-list-1 "," init-declarator
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; init-declarator-list-1 => init-declarator-list-1 "," attribute-specif...
+   (lambda ($4 $3 $2 $1 . $rest) (tl-append $1 $4))
+   ;; init-declarator => declarator
+   (lambda ($1 . $rest) `(init-declr ,$1))
+   ;; init-declarator => declarator "=" initializer
+   (lambda ($3 $2 $1 . $rest) `(init-declr ,$1 ,$3))
+   ;; init-declarator => declarator asm-expression
+   (lambda ($2 $1 . $rest) `(init-declr ,$1))
+   ;; init-declarator => declarator asm-expression "=" initializer
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(init-declr ,$1 ,$4))
+   ;; init-declarator => declarator attribute-specifiers
+   (lambda ($2 $1 . $rest) `(init-declr ,$1))
+   ;; init-declarator => declarator attribute-specifiers "=" initializer
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(init-declr ,$1 ,$4))
    ;; declarator => pointer direct-declarator
    (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
    ;; declarator => direct-declarator
@@ -565,10 +568,10 @@
      `(array-of ,$1 (var-len)))
    ;; direct-declarator => direct-declarator "(" parameter-type-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(ftn-declr ,$1 ,(tl->list $3)))
+     `(ftn-declr ,$1 ,$3))
    ;; direct-declarator => direct-declarator "(" identifier-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(ftn-declr ,$1 ,(tl->list $3)))
+     `(ftn-declr ,$1 ,$3))
    ;; direct-declarator => direct-declarator "(" ")"
    (lambda ($3 $2 $1 . $rest)
      `(ftn-declr ,$1 (param-list)))
@@ -580,10 +583,10 @@
    ;; type-qualifier-list-1 => type-qualifier-list-1 type-qualifier
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; parameter-type-list => parameter-list
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (tl->list $1))
    ;; parameter-type-list => parameter-list "," "..."
    (lambda ($3 $2 $1 . $rest)
-     (tl-append $1 '(ellipsis)))
+     (tl->list (tl-append $1 '(ellipsis))))
    ;; parameter-list => parameter-declaration
    (lambda ($1 . $rest) (make-tl 'param-list $1))
    ;; parameter-list => parameter-list "," parameter-declaration
@@ -596,9 +599,11 @@
      `(param-decl ,$1 (param-declr ,$2)))
    ;; parameter-declaration => declaration-specifiers
    (lambda ($1 . $rest) `(param-decl ,$1))
-   ;; identifier-list => identifier
+   ;; identifier-list => identifier-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; identifier-list-1 => identifier
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
-   ;; identifier-list => identifier-list "," identifier
+   ;; identifier-list-1 => identifier-list-1 "," identifier
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; type-name => specifier-qualifier-list abstract-declarator
    (lambda ($2 $1 . $rest)
@@ -672,12 +677,11 @@
    (lambda ($3 $2 $1 . $rest) '(declr-star))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" paramete...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(abs-ftn-declr ,$1 ,(tl->list $3)))
+     `(abs-ftn-declr ,$1 ,$3))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" ")"
    (lambda ($3 $2 $1 . $rest) `(abs-ftn-declr ,$1))
    ;; direct-abstract-declarator => "(" parameter-type-list ")"
-   (lambda ($3 $2 $1 . $rest)
-     `(anon-ftn-declr ,(tl->list $2)))
+   (lambda ($3 $2 $1 . $rest) `(anon-ftn-declr ,$2))
    ;; direct-abstract-declarator => "(" ")"
    (lambda ($2 $1 . $rest) '(anon-ftn-declr))
    ;; typedef-name => 'typename
@@ -887,20 +891,9 @@
    (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
    ;; $P6 => 
    (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-inc-blev!))
-   ;; function-definition => declaration-specifiers declarator declaration-...
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(knr-fctn-defn
-        ,(tl->list $1)
-        ,$2
-        ,(tl->list $3)
-        ,$4))
    ;; function-definition => declaration-specifiers declarator compound-sta...
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn ,$1 ,$2 ,$3))
-   ;; declaration-list => declaration
-   (lambda ($1 . $rest) (make-tl $1))
-   ;; declaration-list => declaration-list declaration
-   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; identifier => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
    ;; constant => '$fixed

@@ -58,19 +58,25 @@
 ;;(define conn (spawn-dbus-mainloop 'session))
 (define conn (spawn-dbus-mainloop 'system))
 
-(define msg1 (dbus_message_new_method_call
+(define msg01 (dbus_message_new_method_call
+	     "org.freedesktop.DBus.Peer" ; bus name
+	     "/org/freedesktop/DBus/any" ; object path
+	     "org.freedesktop.DBus.Peer" ; interface name
+	     "Ping"))			 ; method
+
+(define msg04 (dbus_message_new_method_call
 	      "org.freedesktop.DBus"		; bus name
 	      "/org/freedesktop/DBus"		; object path
 	      "org.freedesktop.DBus.Debug.Stats"	; interface name
 	      "GetStats"))			; method
 
-(define msg2 (dbus_message_new_method_call
+(define msg05 (dbus_message_new_method_call
 	     "org.freedesktop.DBus"		; bus name
 	     "/org/freedesktop/DBus"		; object path
 	     "org.freedesktop.DBus"		; interface name
 	     "GetId"))				; method
 
-(define pending (send-msg conn msg2))
+(define pending (send-msg conn msg01))
 
 (let iter ((got-it? (there-yet? pending)))
   (sf "there-yet? => ~S\n" got-it?)

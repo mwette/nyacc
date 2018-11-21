@@ -19,12 +19,19 @@
 
 ;; This is a C parser, based on ISO-C99, with comments and CPP statements.
 
+;; Currentl K&R function definitions are not supported:
+;;   int f(x) int x; { ... } => syntax error
+;; maybe because grammar would generate conflict on
+;;   int f(x) __attribute__((__static__)) int x; { ... } => syntax error
+
 ;; See also C11 in http://www.quut.com/c/ANSI-C-grammar-y.html
 
 ;; but check this:
 ;;   https://gcc.gnu.org/onlinedocs/gcc/C-Extensions.html#C-Extensions
 
 ;; We are not adding attributes to the AST in many places.
+
+;; Does the c expression parser need to handle comments?
 
 ;;; Code:
 
@@ -37,6 +44,8 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-43) #:select (vector-map)))
+
+;;(display "IN c99/mach.scm, restore __packed__ ...\n")
 
 ;; @deffn {Variable} c99-spec
 ;; This variable is the specification a-list for the hacked ISO C99 language.
@@ -51,13 +60,17 @@
   (lalr-spec
    (notice (string-append "Copyright (C) 2016-2018 Matthew R. Wette"
 			  license-lgpl3+))
+
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< 'imp		       ; "implied type" SR-conflict resolution
-	  "char" "short" "int" "long"
-	  "float" "double" "_Complex")
-   (prec< 'shift-on-attr	  ; "__attribute__" SR-conf resolution
+	  (nonassoc "char" "short" "int" "long")
+	  (nonassoc "float" "double" "_Complex"))
+   (prec< 'shift-on-attr		; living on the edge ...
 	  (nonassoc "__attribute__" "__packed__" "__aligned__" "__alignof__")
-	  'reduce-on-attr)
+	  'reduce-on-attr
+	  'reduce-on-semi
+	  (nonassoc "*" "(" '$ident))
+
    (start translation-unit)
    (grammar
 
@@ -69,8 +82,7 @@
      (string-literal ($$ `(p-expr ,$1)))
      ("(" expression ")" ($$ $2))
      ("(" "{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}" ")"
-      ($$ `(stmt-expr (@ (extension "GNUC")) ,$4)))
-     )
+      ($$ `(stmt-expr (@ (extension "GNUC")) ,$4))))
 
     (postfix-expression			; S 6.5.2
      (primary-expression)
@@ -85,8 +97,7 @@
      ("(" type-name ")" "{" initializer-list "}"
       ($$ `(comp-lit ,$2 ,(tl->list $5))))
      ("(" type-name ")" "{" initializer-list "," "}"
-      ($$ `(comp-lit ,$2 ,(tl->list $5))))
-     )
+      ($$ `(comp-lit ,$2 ,(tl->list $5)))))
 
     (argument-expression-list
      (assignment-expression ($$ (make-tl 'expr-list $1)))
@@ -94,8 +105,7 @@
      ;; The following is a hack to deal with using abstract declarations
      ;; as arguments to CPP macros (e.g., see offsetof in <stddef.h>).
      (arg-expr-hack ($$ (make-tl 'expr-list $1)))
-     (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3)))
-     )
+     (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3))))
     (arg-expr-hack
      (declaration-specifiers
       abstract-declarator ($$ `(param-decl ,(tl->list $1) $2)))
@@ -115,86 +125,73 @@
 
     (cast-expression			; S 6.5.4
      (unary-expression)
-     ("(" type-name ")" cast-expression ($$ `(cast ,$2 ,$4)))
-     )
+     ("(" type-name ")" cast-expression ($$ `(cast ,$2 ,$4))))
 
     (multiplicative-expression		; S 6.5.5
      (cast-expression)
      (multiplicative-expression "*" cast-expression ($$ `(mul ,$1 ,$3)))
      (multiplicative-expression "/" cast-expression ($$ `(div ,$1 ,$3)))
-     (multiplicative-expression "%" cast-expression ($$ `(mod ,$1 ,$3)))
-     )
+     (multiplicative-expression "%" cast-expression ($$ `(mod ,$1 ,$3))))
 
     (additive-expression		; S 6.5.6
      (multiplicative-expression)
      (additive-expression "+" multiplicative-expression ($$ `(add ,$1 ,$3)))
-     (additive-expression "-" multiplicative-expression ($$ `(sub ,$1 ,$3)))
-     )
+     (additive-expression "-" multiplicative-expression ($$ `(sub ,$1 ,$3))))
 
     (shift-expression			; S 6.5.7
      (additive-expression)
      (shift-expression "<<" additive-expression ($$ `(lshift ,$1 ,$3)))
-     (shift-expression ">>" additive-expression ($$ `(rshift ,$1 ,$3)))
-     )
+     (shift-expression ">>" additive-expression ($$ `(rshift ,$1 ,$3))))
 
     (relational-expression		; S 6.5.8
      (shift-expression)
      (relational-expression "<" shift-expression ($$ `(lt ,$1 ,$3)))
      (relational-expression ">" shift-expression ($$ `(gt ,$1 ,$3)))
      (relational-expression "<=" shift-expression ($$ `(le ,$1 ,$3)))
-     (relational-expression ">=" shift-expression ($$ `(ge ,$1 ,$3)))
-     )
+     (relational-expression ">=" shift-expression ($$ `(ge ,$1 ,$3))))
     
     (equality-expression		; S 6.5.9
      (relational-expression)
      (equality-expression "==" relational-expression ($$ `(eq ,$1 ,$3)))
-     (equality-expression "!=" relational-expression ($$ `(ne ,$1 ,$3)))
-     )
+     (equality-expression "!=" relational-expression ($$ `(ne ,$1 ,$3))))
 
     ;; called AND-expression
     (bitwise-and-expression		; S 6.5.10
      (equality-expression)
      (bitwise-and-expression "&" equality-expression
-			     ($$ `(bitwise-and ,$1 ,$3)))
-     )
+			     ($$ `(bitwise-and ,$1 ,$3))))
 
     ;; called exclusive-OR-expression
     (bitwise-xor-expression		; S 6.5.11
      (bitwise-and-expression)
      (bitwise-xor-expression "^" bitwise-and-expression
-			     ($$ `(bitwise-xor ,$1 ,$3)))
-     )
+			     ($$ `(bitwise-xor ,$1 ,$3))))
 
     ;; called inclusive-OR-expression
     (bitwise-or-expression		; S 6.5.12
      (bitwise-xor-expression)
      (bitwise-or-expression "|" bitwise-xor-expression
-			    ($$ `(bitwise-or ,$1 ,$3)))
-     )
+			    ($$ `(bitwise-or ,$1 ,$3))))
 
     (logical-and-expression		; S 6.5.13
      (bitwise-or-expression)
      (logical-and-expression "&&" bitwise-or-expression
-			     ($$ `(and ,$1 ,$3)))
-     )
+			     ($$ `(and ,$1 ,$3))))
 
     (logical-or-expression		; 6.5.14
      (logical-and-expression)
      (logical-or-expression "||" logical-and-expression
-			    ($$ `(or ,$1 ,$3)))
-     )
+			    ($$ `(or ,$1 ,$3))))
     
     (conditional-expression
      (logical-or-expression)
      (logical-or-expression "?" expression ":" conditional-expression
-			    ($$ `(cond-expr ,$1 ,$3 ,$5)))
-     )
+			    ($$ `(cond-expr ,$1 ,$3 ,$5))))
 
     (assignment-expression		; S 6.5.16
      (conditional-expression)
      (unary-expression assignment-operator assignment-expression
-		       ($$ `(assn-expr ,$1 (op ,$2) ,$3)))
-     )
+		       ($$ `(assn-expr ,$1 (op ,$2) ,$3))))
     (assignment-operator
      ("=") ("+=") ("-=") ("*=") ("/=") ("%=")
      ("<<=") (">>=") ("&=") ("^=") ("|="))
@@ -204,24 +201,26 @@
      (expression "," assignment-expression
 		 ($$ (if (eqv? 'comma-expr (sx-tag $1))
 			 (append $1 (list $3))
-			 `(comma-expr ,$1 ,$3))))
-     )
+			 `(comma-expr ,$1 ,$3)))))
 
     (constant-expression		; S 6.6
-     (conditional-expression)
-     )
+     (conditional-expression))
 
-    ;; === declarations =======================================================
+    ;; === declarations
 
+    ;; TODO: check if we should move attributes or trap attribute-only spec's
     (declaration			; S 6.7
      (declaration-no-comment ";")
      (declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
+
     (declaration-no-comment
      (declaration-specifiers
       init-declarator-list
-      ($$ (save-typenames `(decl ,$1 ,$2)))) ;; move-attributes?
-     (declaration-specifiers ;; FIXME: need to trap attributes ???
+      ($$ (save-typenames `(decl ,$1 ,$2))))
+     (declaration-specifiers
       ($$ `(decl ,$1))))
+
+    ;; --- declaration specifiers
 
     (declaration-specifiers		; S 6.7
      (declaration-specifiers-1 ($$ (tl->list $1))))
@@ -242,28 +241,11 @@
      (function-specifier
       ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
      (function-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
-     ;; attributes
-     ;;(attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
-     (attribute-specifier declaration-specifiers-1 ($$ $2))
+     ;; attribute-specifiers
+     (attribute-specifier
+      ($prec 'reduce-on-semi) ($$ (make-tl 'decl-spec-list $1)))
+     (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      )
-
-    (init-declarator-list		; S 6.7
-     (init-declarator-list-1 ($$ (tl->list $1))))
-    (init-declarator-list-1
-     (init-declarator ($$ (make-tl 'init-declr-list $1)))
-     (init-declarator-list-1 "," init-declarator ($$ (tl-append $1 $3))))
-
-    (init-declarator			; S 6.7
-     (init-decl-no-attr)
-     (attribute-specifiers init-decl-no-attr))
-    (init-decl-no-attr
-     (declarator ($$ `(init-declr ,$1)))
-     (declarator "=" initializer ($$ `(init-declr ,$1 ,$3)))
-     (declarator asm-expression ($$ `(init-declr ,$1)))
-     (declarator asm-expression "=" initializer ($$ `(init-declr ,$1 ,$4)))
-     (declarator attribute-specifiers ($$ `(init-declr ,$1)))
-     (declarator attribute-specifiers "=" initializer
-		 ($$ `(init-declr ,$1 ,$4))))
 
     (storage-class-specifier		; S 6.7.1
      ("auto" ($$ '(stor-spec (auto))))
@@ -350,8 +332,7 @@
      (struct-declaration-list lone-comment ($$ (tl-append $1 $2)))
      ;; the following added 13 Nov 2017
      (";" ($$ (make-tl 'field-list)))
-     (struct-declaration-list ";" ($$ $1))
-     )
+     (struct-declaration-list ";" ($$ $1)))
 
     (struct-declaration			; S 6.7.2.1
      (struct-declaration-no-comment ";")
@@ -414,24 +395,25 @@
     ;; attribute specifier can appear.  This is my best attempt.  MW 2018
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Attribute-Syntax.html
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Type-Attributes.html
-    ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Function-Attributes.html
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Variable-Attributes.html
-
+    ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Function-Attributes.html
+    ;; sys/epoll.h has packed structures
+    
     (attribute-specifiers
      (attribute-specifier ($prec 'reduce-on-attr))
      (attribute-specifiers attribute-specifier ($$ (append $1 (cdr $2)))))
 
-    ;; (attributes "static" "aligned(8)" ...)
+    ;; (attributes (attribute "__static__") (attribute aligned(8)" ...)
     (attribute-specifier
      ("__attribute__" "(" "(" attribute-list ")" ")" ($$ (tl->list $4)))
-     (attr-name ($$ `(attributes ,$1))))
+     (attr-name ($$ `(attribute-list (attribute ,$1)))))
     (attr-name
      ("__packed__" ($$ '(ident "__packed__")))
      ("__aligned__" ($$ '(ident "__aligned__")))
      ("__alignof__" ($$ '(ident "__alignof__"))))
 
     (attribute-list
-     (attribute ($$ (make-tl 'attributes $1)))
+     (attribute ($$ (make-tl 'attribute-list $1)))
      (attribute-list "," attribute ($$ (tl-append $1 $3)))
      (attribute-list "," ($$ $1)))
 
@@ -455,7 +437,25 @@
      (identifier)
      (attr-word "(" attr-expr-list ")" ($$ `(ident "FOO"))))
 
-    ;; --------------------------------
+    ;; --- declarators
+
+    (init-declarator-list		; S 6.7
+     (init-declarator-list-1 ($$ (tl->list $1))))
+    (init-declarator-list-1
+     (init-declarator ($$ (make-tl 'init-declr-list $1)))
+     (init-declarator-list-1 "," init-declarator ($$ (tl-append $1 $3)))
+     (init-declarator-list-1 "," attribute-specifiers
+			     init-declarator ($$ (tl-append $1 $4))))
+
+    (init-declarator			; S 6.7
+     (declarator ($$ `(init-declr ,$1)))
+     (declarator "=" initializer ($$ `(init-declr ,$1 ,$3)))
+     (declarator asm-expression ($$ `(init-declr ,$1)))
+     (declarator asm-expression "=" initializer ($$ `(init-declr ,$1 ,$4)))
+     (declarator attribute-specifiers ;; ($prec 'reduce-on-semi)
+		 ($$ `(init-declr ,$1)))
+     (declarator attribute-specifiers "=" initializer
+		 ($$ `(init-declr ,$1 ,$4))))
 
     (declarator
      (pointer direct-declarator ($$ `(ptr-declr ,$1 ,$2)))
@@ -475,28 +475,30 @@
      (direct-declarator
       "[" type-qualifier-list assignment-expression "]"
       ($$ `(array-of ,$1 ,$3 ,$4)))
-     (direct-declarator "[" type-qualifier-list "]" ($$ `(array-of ,$1 ,$3)))
-     (direct-declarator "[" assignment-expression "]" ($$ `(array-of ,$1 ,$3)))
-     (direct-declarator "[" "]" ($$ `(array-of ,$1)))
+     (direct-declarator
+      "[" type-qualifier-list "]" ($$ `(array-of ,$1 ,$3)))
+     (direct-declarator
+      "[" assignment-expression "]" ($$ `(array-of ,$1 ,$3)))
+     (direct-declarator
+      "[" "]" ($$ `(array-of ,$1)))
      (direct-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ;; FIXME $4 needs "static" added
-      ($$ `(array-of ,$1 ,$4 ,$5)))
+      ($$ `(array-of ,$1 ,$4 ,$5))) ;; FIXME $4 needs "static" added
      (direct-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ;; FIXME $4 needs "static" added
-      ($$ `(array-of ,$1 ,4 ,$5)))
+      ($$ `(array-of ,$1 ,4 ,$5))) ;; FIXME $4 needs "static" added
      (direct-declarator
       "[" type-qualifier-list "*" "]"	; variable length array
       ($$ `(array-of ,$1 ,$3 (var-len))))
      (direct-declarator
       "[" "*" "]"			; variable length array
       ($$ `(array-of ,$1 (var-len))))
-     (direct-declarator "(" parameter-type-list ")"
-			($$ `(ftn-declr ,$1 ,(tl->list $3))))
-     (direct-declarator "(" identifier-list ")"
-			($$ `(ftn-declr ,$1 ,(tl->list $3))))
-     (direct-declarator "(" ")" ($$ `(ftn-declr ,$1 (param-list)))))
+     (direct-declarator
+      "(" parameter-type-list ")" ($$ `(ftn-declr ,$1 ,$3)))
+     (direct-declarator
+      "(" identifier-list ")" ($$ `(ftn-declr ,$1 ,$3)))
+     (direct-declarator
+      "(" ")" ($$ `(ftn-declr ,$1 (param-list)))))
 
     (type-qualifier-list
      (type-qualifier-list-1 ($$ (tl->list $1))))
@@ -505,8 +507,8 @@
      (type-qualifier-list-1 type-qualifier ($$ (tl-append $1 $2))))
 
     (parameter-type-list
-     (parameter-list ($$ $1))
-     (parameter-list "," "..." ($$ (tl-append $1 '(ellipsis)))))
+     (parameter-list ($$ (tl->list $1)))
+     (parameter-list "," "..." ($$ (tl->list (tl-append $1 '(ellipsis))))))
 
     (parameter-list
      (parameter-declaration ($$ (make-tl 'param-list $1)))
@@ -521,8 +523,10 @@
       ($$ `(param-decl ,$1))))
 
     (identifier-list
+     (identifier-list-1 ($$ (tl->list $1))))
+    (identifier-list-1
      (identifier ($$ (make-tl 'ident-list $1)))
-     (identifier-list "," identifier ($$ (tl-append $1 $3))))
+     (identifier-list-1 "," identifier ($$ (tl-append $1 $3))))
 
     (type-name				; S 6.7.6
      ;; e.g., (foo_t *)
@@ -577,9 +581,9 @@
      (direct-abstract-declarator "[" "*" "]" ($$ `(declr-star ,$1)))
      ("[" "*" "]" ($$ '(declr-star)))
      (direct-abstract-declarator "(" parameter-type-list ")"
-				 ($$ `(abs-ftn-declr ,$1 ,(tl->list $3))))
+				 ($$ `(abs-ftn-declr ,$1 ,$3)))
      (direct-abstract-declarator "(" ")" ($$ `(abs-ftn-declr ,$1)))
-     ("(" parameter-type-list ")" ($$ `(anon-ftn-declr ,(tl->list $2))))
+     ("(" parameter-type-list ")" ($$ `(anon-ftn-declr ,$2)))
      ("(" ")" ($$ '(anon-ftn-declr))))
 
     ;; typedef-name is generated by the lexical analyzer
@@ -729,22 +733,22 @@
      (pragma)
      ("extern" $string "{"
       ($$ (cpi-dec-blev!)) external-declaration-list ($$ (cpi-inc-blev!)) "}"
-      ($$ `(extern-block (extern-begin ,$2)
-			 ,@(sx-tail (tl->list $5) 1)
-			 (extern-end))))
+      ($$ `(extern-block
+	    (extern-begin ,$2) ,@(sx-tail (tl->list $5) 1) (extern-end))))
      (";" ($$ `(decl (@ (extension "GNUC"))))))
     
     (function-definition
-     (declaration-specifiers
+     #;(declaration-specifiers
       declarator declaration-list compound-statement
-      ($$ `(knr-fctn-defn ,(tl->list $1) ,$2 ,(tl->list $3) ,$4)))
+      ($$ `(knr-fctn-defn ,$1 ,$2 ,$3 ,$4)))
      (declaration-specifiers
       declarator compound-statement
       ($$ `(fctn-defn ,$1 ,$2 ,$3))))
     
-    (declaration-list
-     (declaration ($$ (make-tl $1)))
-     (declaration-list declaration ($$ (tl-append $1 $2))))
+    ;;(declaration-list (declaration-list-1 ($$ (tl->list $1))))
+    #;(declaration-list-1
+     (declaration ($$ (make-tl 'decl-list $1)))
+     (declaration-list-1 declaration ($$ (tl-append $1 $2))))
 
     ;; non-terminal leaves
     (identifier ($ident ($$ `(ident ,$1))))
@@ -772,6 +776,8 @@
 ;; due to parsing include files as units for code and decl mode.
 ;; update: This is doable now (see parser.scm) but wait until it's needed.
 
+;;(display "c99/mach.scm: restore c99-mach\n")
+;;(define c99-mach (make-lalr-machine c99-spec))
 (define c99-mach
   (compact-machine
    (hashify-machine
@@ -781,8 +787,7 @@
 
 (define c99x-spec (restart-spec c99-mach 'expression))
 
-;; does the c expression parser need to handle comments?
-
+;;(define c99x-mach c99-mach)
 (define c99x-mach
   (compact-machine
    (hashify-machine

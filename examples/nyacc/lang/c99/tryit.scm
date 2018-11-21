@@ -90,7 +90,7 @@
 		 #:inc-dirs inc-dirs 
 		 #:inc-help inc-help
 		 #:show-incs #f
-		 #:mode mode #:debug #f
+ 		 #:mode mode #:debug #t
 		 #:xdef? xdef?))))
 
 (define (parse-string-list . str-l)
@@ -109,24 +109,38 @@
 ;;(ppsx inc-dirs)
 ;;(ppsx inc-help)
 
+;; see c99-06.test
+(define (expand-typerefs-in-code code indx)
+  (let* ((tree (parse-string code))
+	 (udict (c99-trans-unit->udict tree))
+	 (decl (and=> ((sxpath `((decl ,indx))) tree) car))
+	 (xdecl (expand-typerefs decl udict)))
+    xdecl))
+
 (let* ((code (string-append
-	      "struct foo { int a; double b; };\n"
-	      "struct foo x; /* hmmm */ \n"
+	      ;;"struct event { int events; void *data; }\n"
+	      ;;"  __attribute__ ((__packed__));\n"
+	      
+	      ;;"typedef int case04 __attribute__ ((__deprecated__));\n"
+	      
+	      "typedef int *bla_t[2]; bla_t foo(bla_t (*)(bla_t));\n"
 	      ))
        ;;(tree (parse-string code))
-       (tree (parse-file "zz.c"))
-       (udict (c99-trans-unit->udict/deep tree))
-       (udecl (udict-ref udict "gluSphere"))
+       ;;(tree (parse-file "zz.c"))
+       ;;(udict (c99-trans-unit->udict/deep tree))
+       ;;(udecl (udict-ref udict "gluSphere"))
        ;;(udecl (stripdown-udecl udecl))
        ;;(udecl (expand-typerefs udecl udict))
        ;;(mdecl (udecl->mspec/comm udecl))
        ;;(udecl (unitize-decl decl))
+       ;;(xdecl (expand-typerefs-in-code code 2))
        )
   ;;(pp (get-gcc-cpp-defs))
-  ;;(pp tree)
+  #;(pp tree)
   ;;(pp udict)
-  (pp udecl)
+  ;;(pp udecl)
   ;;(pp mdecl)
+  (pp xdecl)
   ;;(pp (parse-string "int ***x;"))
   ;;(ppsx udecl)
   ;;(pp99 xdecl)
