@@ -1,3 +1,10 @@
+2018-11-21  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* module/nyacc/lang/c99/mach.scm (c99-spec): K&R function
+	definitions have been removed, since conflict with __attribute__,
+	as in: int foo(x) __attribute__ ((__bar__)) int x; { ... };
+	Is attribute associated with declarator or declaration-specifiers?
+
 2018-11-17  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* update Major overhaul of __attribute__ handling in C99 parser

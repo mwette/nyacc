@@ -1,7 +1,7 @@
-;; dbusML.scm - dbus in another thread : sync calls
-;; https://lists.freedesktop.org/archives/dbus/2007-October/008859.html
-;; https://stackoverflow.com/questions/9378593/
-;;         dbuswatch-and-dbustimeout-examples
+;; dbusML.scm - dbus mainloop (in a separate thread)
+;;   https://lists.freedesktop.org/archives/dbus/2007-October/008859.html
+;;   https://stackoverflow.com/questions/9378593/
+;;       dbuswatch-and-dbustimeout-examples
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;

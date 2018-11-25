@@ -19,7 +19,7 @@
 
 (define-module (nyacc lang c99 pprint)
   #:export (pretty-print-c99)
-  #:use-module ((srfi srfi-1) #:select (pair-for-each))
+  #:use-module ((srfi srfi-1) #:select (pair-for-each fold-right))
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
   #:use-module (ice-9 pretty-print)
@@ -181,18 +181,20 @@
 	(ppx/p rval)
 	(ppx rval)))
 
+  ;; now (comment xxx) (attributes "aaa;yyy;zzz"))
   (define (pp-attr attr) ;; attributes
     (string-join
-     (map
-      (lambda (val)
-	;;(simple-format #t "a: ~S\n" val)
-	(cond
-	 ((eq? (car val) 'packed) "__packed__")
-	 (else (symbol->string (car val)))))
-      attr)
+     (fold-right
+      (lambda (pair seed)
+	(if (eqv? 'attributes (car pair))
+	    (append (string-split (cadr pair) ";") seed)
+	    seed))
+      '() attr)
      " "))
 
   (define (struct-union-def struct-or-union attr name fields)
+    (if (pair? attr)
+	(simple-format (current-error-port) "\nPP attr=~S\n" attr))
     (if name
 	(if (pair? attr)
 	    (sf "~A ~A ~A {\n" struct-or-union (pp-attr attr) name)
@@ -378,7 +380,7 @@
       ((comp-declr ,declr) (ppx declr))
       ((param-declr ,declr) (ppx declr))
       ;; This should work with sx-match, to replace above three.
-      ;;(((init-declr comp-declr param-declr) ,declr) (ppx declr))
+      ;;((#(init-declr comp-declr param-declr) ,declr) (ppx declr))
 
       ((bit-field ,ident ,expr)
        (ppx ident) (sf " : ") (ppx expr))
@@ -402,8 +404,10 @@
       ((union-ref (ident ,name)) (sf "union ~A" name))
       
       ((struct-def (@ . ,aattr) (ident ,name) (field-list . ,fields))
+       (sferr "\n3: ~S\n" aattr)
        (struct-union-def 'struct aattr name fields))
       ((struct-def (@ . ,aattr) (field-list . ,fields))
+       (sferr "\n3: ~S\n" aattr)
        (struct-union-def 'struct aattr #f fields))
       ((union-def (@ . ,aattr) (ident ,name) (field-list . ,fields))
        (struct-union-def 'union aattr name fields))

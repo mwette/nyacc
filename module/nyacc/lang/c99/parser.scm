@@ -23,6 +23,7 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
+  #:use-module (nyacc lang c99 util)
   )
 (cond-expand
   (guile-2)

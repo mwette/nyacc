@@ -20,7 +20,7 @@
 
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 munge))
-(use-modules (nyacc lang c99 util1))
+(use-modules (nyacc lang c99 util))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lang sx-match))
 (use-modules (nyacc lex))

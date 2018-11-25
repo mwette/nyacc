@@ -1,0 +1,29 @@
+;; libelf.ffi				-*- Scheme -*-
+
+;; Copyright (C) 2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;; Epoll has a packed structure that should be translated properly to 
+;; bytestructure definition.
+
+(define-ffi-module (ffi libelf)
+  #:pkg-config "libelf"
+  #:include '("libelf.h")
+  #:inc-filter (lambda (file-spec path-spec)
+		 (string-contains file-spec "elf.h" 0)))
+
+(define elf-symval ffi-libelf-symbol-val)
+
+;; --- last line ---

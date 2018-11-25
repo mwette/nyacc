@@ -1,3 +1,8 @@
+2018-11-21  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): knr was restored and then removed;
+	__attributes__ will appear in decl-spec-list now
+
 2018-11-17  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* mach.scm (c99-spec): remove K&R function definition for now: it

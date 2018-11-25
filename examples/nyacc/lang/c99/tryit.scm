@@ -8,9 +8,9 @@
 (use-modules (nyacc lang c99 pprint))
 (use-modules (nyacc lang c99 munge))
 (use-modules (nyacc lang c99 cxeval))
-(use-modules (nyacc lang c99 util1))
-(use-modules (nyacc lang util))
+(use-modules (nyacc lang c99 util))
 (use-modules (nyacc lang sx-util))
+(use-modules (nyacc lang util))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (ice-9 pretty-print))
@@ -65,8 +65,8 @@
       ))))
 
 (define mode 'file)
-(define mode 'code)
 (define mode 'decl)
+(define mode 'code)
 (define debug #f)
 (define xdef? (lambda (name mode) (memq mode '(code decl))))
 
@@ -90,7 +90,7 @@
 		 #:inc-dirs inc-dirs 
 		 #:inc-help inc-help
 		 #:show-incs #f
- 		 #:mode mode #:debug #t
+ 		 #:mode mode #:debug #f
 		 #:xdef? xdef?))))
 
 (define (parse-string-list . str-l)
@@ -118,35 +118,42 @@
     xdecl))
 
 (let* ((code (string-append
-	      ;;"struct event { int events; void *data; }\n"
-	      ;;"  __attribute__ ((__packed__));\n"
+	      "struct event { int events; void *data; }\n"
+	      "  __attribute__ ((__packed__));\n"
 	      
 	      ;;"typedef int case04 __attribute__ ((__deprecated__));\n"
 	      
-	      "typedef int *bla_t[2]; bla_t foo(bla_t (*)(bla_t));\n"
+	      ;;"typedef int *bla_t[2]; bla_t foo(bla_t (*)(bla_t));\n"
+
 	      ))
        ;;(tree (parse-string code))
-       ;;(tree (parse-file "zz.c"))
+       (tree (parse-file "zz.c"))
        ;;(udict (c99-trans-unit->udict/deep tree))
-       ;;(udecl (udict-ref udict "gluSphere"))
+       ;;(decl1 (sx-ref tree 1))
+       ;;(spec1 (sx-ref decl1 1))
+       ;;(udict (unitize-decl decl1 '()))
+       ;;(udecl (udict-struct-ref udict "epoll_event"))
        ;;(udecl (stripdown-udecl udecl))
        ;;(udecl (expand-typerefs udecl udict))
        ;;(mdecl (udecl->mspec/comm udecl))
        ;;(udecl (unitize-decl decl))
        ;;(xdecl (expand-typerefs-in-code code 2))
        )
-  ;;(pp (get-gcc-cpp-defs))
-  #;(pp tree)
+  ;;(pp tree)
+  ;;(pp spec1)
+  #;(call-with-values
+      (lambda () (extract-attr (sx-tail spec1)))
+  (lambda (atl dsl) (pp atl) (pp dsl)))
+  ;;(pp (move-attr spec1))
   ;;(pp udict)
   ;;(pp udecl)
   ;;(pp mdecl)
-  (pp xdecl)
-  ;;(pp (parse-string "int ***x;"))
+  ;;(pp xdecl)
   ;;(ppsx udecl)
   ;;(pp99 xdecl)
   ;;(ppsx (eval-c99-cx tree))
-  ;;(ppsx (get-gcc-inc-dirs))
-  ;;(pp cpp-defs)
+  ;;(pp (get-gcc-cpp-defs))
+  ;;(pp (get-gcc-inc-dirs))
   #t)
 
 ;; --- last line ---

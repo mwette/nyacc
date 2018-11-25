@@ -65,7 +65,7 @@
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 cxeval)
-  #:use-module (nyacc lang c99 util1)
+  #:use-module (nyacc lang c99 util)
   #:use-module (nyacc version)
   #:use-module (nyacc lang sx-util)
   #:use-module ((nyacc lang util) #:select (cintstr->scm))
@@ -667,6 +667,9 @@
 		      (list bs-aggr-t #t `(list ,@sflds))
 		      (list bs-aggr-t `(list ,@sflds))))
 	 )
+    (when (string=? aggr-name "epoll_event")
+      (sferr "\nepoll_event\n  packed?=~S\n" packed?)
+      )
     (cond
      ((and typename aggr-name)
       ;;(sfscm ";; == ~A =>\n" typename)

@@ -11,7 +11,7 @@
 
 (define-module (c99-06)
   #:use-module (nyacc lang c99 parser)
-  #:use-module (nyacc lang c99 util1)
+  #:use-module (nyacc lang c99 util)
   #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 pprint)
   #:use-module ((sxml xpath) #:select (sxpath))

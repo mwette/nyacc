@@ -1,3 +1,7 @@
+2018-11-21  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* lex.scm (make-num-reader): support 0X (cap x) for hex numbers
+
 2018-11-16  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* lang/sx-util.scm (sx-join): changed the way sx-split and sx-join

@@ -329,6 +329,8 @@
 ;; @code{($float . "1.0")}
 ;; This procedure reads C numeric literals.
 ;; Some literals are cleaned: @code{"0"} may be added before or after dot.
+;; This allows use of @code{0b} prefix for binary literals even though that
+;; is not C.
 ;; @end deffn
 (define (make-num-reader)
   ;; This will incorrectly parse 123LUL.  Does not handler hex floats.
@@ -345,10 +347,11 @@
 	  ((char-numeric? ch) (iter chl '$fixed ba 1 ch))
 	  ((char=? #\. ch) (iter (cons ch chl) #f ba 15 (read-char))) 
 	  (else #f)))
-	((10) ;; allow x, b after 0
+	((10) ;; allow x, b (C++14) after 0
 	 (cond
 	  ((eof-object? ch) (iter chl ty ba 5 ch))
 	  ((char=? #\x ch) (iter (cons ch chl) ty 16 1 (read-char)))
+	  ((char=? #\X ch) (iter (cons ch chl) ty 16 1 (read-char)))
 	  ((char=? #\b ch) (iter (cons ch chl) ty 2 1 (read-char)))
 	  (else (iter chl ty ba 1 ch))))
 	((15) ;; got `.' only
@@ -367,7 +370,9 @@
 	   (iter (cons ch chl) ty ba 11 (read-char)))
 	  ((char-set-contains? c:nx ch)
 	   (iter (cons ch chl) '$float ba 3 (read-char)))
-	  ((char-set-contains? c:if ch) (error "lex/num-reader st=1"))
+	  ((char-set-contains? c:if ch)
+	   (sf "\nchl=~S ch=~S ty=~S ba=~S\n" chl ch ty ba)
+	   (error "lex/num-reader st=1"))
 	  (else (iter chl '$fixed ba 5 ch))))
 	((11) ;; got lLuU suffix, look for a second
 	 (cond
@@ -428,6 +433,8 @@
 	(if (char=? #\0 (string-ref str 0))
 	    (cond
 	     ((char=? #\x (string-ref str 1))
+	      (string-append "#x" (trim-rt 2)))
+	     ((char=? #\X (string-ref str 1))
 	      (string-append "#x" (trim-rt 2)))
 	     ((char=? #\b (string-ref str 1))
 	      (string-append "#b" (trim-rt 2)))

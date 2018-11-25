@@ -203,7 +203,8 @@
    ;; declaration-no-comment => declaration-specifiers
    (lambda ($1 . $rest) `(decl ,$1))
    ;; declaration-specifiers => declaration-specifiers-1
-   (lambda ($1 . $rest) (tl->list $1))
+   (lambda ($1 . $rest)
+     (move-specl-attr (tl->list $1)))
    ;; declaration-specifiers-1 => storage-class-specifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list $1))
@@ -456,8 +457,7 @@
    ;; attribute-specifiers => attribute-specifiers attribute-specifier
    (lambda ($2 $1 . $rest) (append $1 (cdr $2)))
    ;; attribute-specifier => "__attribute__" "(" "(" attribute-list ")" ")"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (tl->list $4))
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $4)
    ;; attribute-specifier => attr-name
    (lambda ($1 . $rest)
      `(attribute-list (attribute ,$1)))
@@ -467,12 +467,14 @@
    (lambda ($1 . $rest) '(ident "__aligned__"))
    ;; attr-name => "__alignof__"
    (lambda ($1 . $rest) '(ident "__alignof__"))
-   ;; attribute-list => attribute
+   ;; attribute-list => attribute-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; attribute-list-1 => attribute
    (lambda ($1 . $rest)
      (make-tl 'attribute-list $1))
-   ;; attribute-list => attribute-list "," attribute
+   ;; attribute-list-1 => attribute-list-1 "," attribute
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; attribute-list => attribute-list ","
+   ;; attribute-list-1 => attribute-list-1 ","
    (lambda ($2 $1 . $rest) $1)
    ;; attribute => attr-word
    (lambda ($1 . $rest) `(attribute ,$1))
@@ -495,7 +497,7 @@
    ;; attribute-expr => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
    ;; attribute-expr => string-literal
-   (lambda ($1 . $rest) (join-string-literal $1))
+   (lambda ($1 . $rest) $1)
    ;; attribute-expr => identifier
    (lambda ($1 . $rest) $1)
    ;; attribute-expr => attr-word "(" attr-expr-list ")"

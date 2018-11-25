@@ -33,6 +33,8 @@
 
 ;; Does the c expression parser need to handle comments?
 
+;; Currently, only attributed for declaration-specifiers are captured.
+
 ;;; Code:
 
 (define-module (nyacc lang c99 mach)
@@ -223,7 +225,7 @@
     ;; --- declaration specifiers
 
     (declaration-specifiers		; S 6.7
-     (declaration-specifiers-1 ($$ (tl->list $1))))
+     (declaration-specifiers-1 ($$ (move-specl-attr (tl->list $1)))))
     (declaration-specifiers-1
      ;; storage-class-specifiers
      (storage-class-specifier
@@ -405,17 +407,18 @@
 
     ;; (attributes (attribute "__static__") (attribute aligned(8)" ...)
     (attribute-specifier
-     ("__attribute__" "(" "(" attribute-list ")" ")" ($$ (tl->list $4)))
+     ("__attribute__" "(" "(" attribute-list ")" ")" ($$ $4))
      (attr-name ($$ `(attribute-list (attribute ,$1)))))
     (attr-name
      ("__packed__" ($$ '(ident "__packed__")))
      ("__aligned__" ($$ '(ident "__aligned__")))
      ("__alignof__" ($$ '(ident "__alignof__"))))
 
-    (attribute-list
+    (attribute-list (attribute-list-1 ($$ (tl->list $1))))
+    (attribute-list-1
      (attribute ($$ (make-tl 'attribute-list $1)))
-     (attribute-list "," attribute ($$ (tl-append $1 $3)))
-     (attribute-list "," ($$ $1)))
+     (attribute-list-1 "," attribute ($$ (tl-append $1 $3)))
+     (attribute-list-1 "," ($$ $1)))
 
     (attribute
      (attr-word ($$ `(attribute ,$1)))
@@ -433,7 +436,7 @@
     (attribute-expr
      (type-name)
      ($fixed ($$ `(fixed ,$1)))
-     (string-literal ($$ (join-string-literal $1)))
+     (string-literal)
      (identifier)
      (attr-word "(" attr-expr-list ")" ($$ `(ident "FOO"))))
 
@@ -452,8 +455,7 @@
      (declarator "=" initializer ($$ `(init-declr ,$1 ,$3)))
      (declarator asm-expression ($$ `(init-declr ,$1)))
      (declarator asm-expression "=" initializer ($$ `(init-declr ,$1 ,$4)))
-     (declarator attribute-specifiers ;; ($prec 'reduce-on-semi)
-		 ($$ `(init-declr ,$1)))
+     (declarator attribute-specifiers ($$ `(init-declr ,$1)))
      (declarator attribute-specifiers "=" initializer
 		 ($$ `(init-declr ,$1 ,$4))))
 

@@ -103,6 +103,7 @@
   #:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
   #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 pprint)
+  #:use-module (nyacc lang c99 util)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts foldts*))
@@ -373,10 +374,10 @@
 
 (define* (unitize-decl decl #:optional (seed '()))
   
-  (define* (make-udecl type attr guts #:optional typename)
+  (define* (make-udecl type-tag attr guts #:optional typename)
     (if (and attr (pair? attr))
-	`(udecl (decl-spec-list (type-spec ,(cons* type `(@ ,@attr) guts))))
-	`(udecl (decl-spec-list (type-spec ,(cons type guts))))))
+	`(udecl (decl-spec-list (type-spec ,(cons* type-tag `(@ ,@attr) guts))))
+	`(udecl (decl-spec-list (type-spec ,(cons type-tag guts))))))
 
   ;; update depends on whether unitize- procedures use fold or fold-right
   (define (update-left name value tag attr specl declrs seed)
@@ -388,18 +389,18 @@
   (define update update-right)
 
   ;;(simple-format #t "unitize-decl ~S\n" decl)
-  ;; TODO: add attr
   (cond
    ((not (pair? decl))
     (error "bad arg"))
    ((eqv? (sx-tag decl) 'udecl)
     (acons (udecl-id decl) decl seed))
-   
+
+   ;; MOVE ATTRIBUTES USED HERE
    ((eqv? (sx-tag decl) 'decl)
-    (let*-values (((tag attr specl declrs) (split-decl decl))
+    (let*-values (((tag attr specl declrs) (split-decl (move-attributes decl)))
 		  ((tag) (values 'udecl)))
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
-      ;;(sferr "sx-match specl:\n") (pperr specl) (pperr declrs)
+      ;;(sferr "\nsx-match specl: attr=~S\n" attr) (pperr specl) (pperr declrs)
       (sx-match specl
 
 	;; struct typedefs 
@@ -445,9 +446,11 @@
 	;; structs
 	((decl-spec-list
 	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
-	 (update `(struct . ,name)
-		 (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
-		 tag attr specl declrs seed))
+	 (let* ((atl (assq 'attributes attr))
+		(aattr (if atl (append atl aattr) aattr)))
+	   (update `(struct . ,name)
+		   (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
+		   tag attr specl declrs seed)))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
 	 (iter-declrs tag attr specl declrs seed))

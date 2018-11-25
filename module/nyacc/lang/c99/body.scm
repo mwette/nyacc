@@ -38,6 +38,7 @@
 (use-modules ((srfi srfi-1) #:select (fold-right append-reverse)))
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules (ice-9 pretty-print))	; for debugging
+(define (sf fmt . args) (apply simple-format #t fmt args))
 (define pp pretty-print)
 
 ;; C parser info (?)
@@ -159,14 +160,17 @@
     (() (cpi-pop (fluid-ref *info*)))))
 
 (define (cpi-push-x)	;; on #if
+  ;;(sf "\ncpi-push-x:\n") (pp (fluid-ref *info*))
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
     (set-cpi-ctl! cpi '())))
 
 (define (cpi-shift-x)	;; on #elif #else
+  ;;(sf "\ncpi-shift-x:\n") (pp (fluid-ref *info*))
   (set-cpi-ctl! (fluid-ref *info*) '()))
 
 (define (cpi-pop-x)	;; on #endif
+  ;;(sf "\ncpi-pop-x:\n") (pp (fluid-ref *info*))
   (let ((cpi (fluid-ref *info*)))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
@@ -195,7 +199,6 @@
 ;; Given declaration return a list of new typenames (via @code{typedef}).
 ;; @end deffn
 (define (find-new-typenames decl)
-
   ;; like declr-id in util2.scm
   (define (declr->id-name declr)
     (case (car declr)
@@ -208,13 +211,15 @@
       ((scope) (declr->id-name (sx-ref declr 1)))
       (else (error "coding bug: " declr))))
        
+  ;;(sf "\ndecl:\n") (pp decl)
+
   (let* ((spec (sx-ref decl 1))
 	 (stor (sx-find 'stor-spec spec))
 	 (id-l (sx-ref decl 2)))
     (if (and stor (eqv? 'typedef (caadr stor)))
-	(let iter ((res '()) (idl (cdr id-l)))
+	(let loop ((res '()) (idl (cdr id-l)))
 	  (if (null? idl) res
-	      (iter (cons (declr->id-name (sx-ref (car idl) 1)) res)
+	      (loop (cons (declr->id-name (sx-ref (car idl) 1)) res)
 		    (cdr idl))))
 	'())))
 
@@ -228,9 +233,6 @@
   decl)
 
 ;; (string "abc" "def") -> (string "abcdef")
-(define (join-string-literal str-lit)
-  (sx-list 'string (sx-attr str-lit) (string-join (sx-tail str-lit) "")))
-
 ;; In the case that declaration-specifiers only returns a list of
 ;; attribute-specifiers then this has to be an empty-statemnet with
 ;; attributes.  See:
@@ -241,63 +243,6 @@
      ((null? specs) #t)
      ((not (eqv? 'attributes (sx-tag (car specs)))) #f)
      (else (loop (cdr specs))))))
-
-;; used in c99-spec actions for attribute-specifiers
-(define (attr-expr-list->string attr-expr-list)
-  (string-append "(" (string-join (cdr attr-expr-list) ",") ")"))
-
-;; (attributes (ident "packed") (attribute (ident "aligned" ...)))
-;; => (attributes "packed;aligned(8);...")
-(define (attr-spec->attr attr-spec)
-  (define (spec->str spec)
-    (sx-match spec
-      ((ident ,name) name)
-      ((attribute ,name) (spec->str name))
-      ((attribute ,name ,args)
-       (string-append (spec->str name) "(" (spec->str args) ")"))
-      ((attr-expr-list . ,expr-list)
-       (string-join (map spec->str expr-list) ","))
-      ((fixed ,val) val)
-      ((string ,val) (string-append "\"" val "\""))
-      (,_ (simple-format #t "c99/body: missed ~S\n" spec) "MISSED")))
-  `(attributes ,(string-join (map spec->str (sx-tail attr-spec)) ";")))
-
-;; move @code{(attributes ...)} from under @code{decl-spec-list} to
-;; under @code{@}
-;; @example
-;; (decl (decl-spec-list
-;;         (attributes "packed" "aligned")
-;;         (attributes "alignof(8)"))
-;;         (type-spec (fixed-type "int")))
-;;       (declr-init-list ...))
-;;  =>
-;; (decl (@ (attributes "packed;aligned;alignof(8)"))
-;;       (decl-spec-list
-;;         (type-spec (fixed-type "int")))
-;;       (declr-init-list ...))
-;; @end example
-(define (move-attributes decl)
-  (define (comb-attr attl attr)
-    (cons `(attributes
-	    ,(string-join
-	      (let loop ((rz '()) (al attl))
-		(if (null? al) rz (loop (cons (cadar al) rz) (cdr al))))
-	      ";")) attr))
-  (define (make-specl spl)
-    (cons 'decl-spec-list (reverse spl)))
-  (let ((tag (sx-tag decl))
-	(attr (sx-attr decl))
-	(spec-l (sx-ref decl 1))
-	(declr-l (sx-ref decl 2)))
-    (let loop ((attl '()) (spl1 '()) (spl0 (sx-tail spec-l)))
-      (cond
-       ((null? spl0)
-	(if (null? attl) decl
-	    (sx-list tag (comb-attr attl attr) (make-specl spl1) declr-l)))
-       ((eq? 'attributes (sx-tag (car spl0)))
-	(loop (cons (attr-spec->attr (car spl0)) attl) spl1 (cdr spl0)))
-       (else
-	(loop attl (cons (car spl0) spl1) (cdr spl0)))))))
 
 ;; ------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-;;; lang/c/util1.scm - C parser utilities
+;;; nyacc/lang/c99/util.scm - C parser utilities
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -17,15 +17,16 @@
 
 ;;; Code:
 
-(define-module (nyacc lang c99 util1)
+(define-module (nyacc lang c99 util)
   #:export (c99-std-help
 	    get-gcc-cpp-defs get-gcc-inc-dirs
 	    remove-inc-trees
 	    merge-inc-trees!
+	    move-attributes
 	    elifify)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
-  #:use-module ((srfi srfi-1) #:select (append-reverse))
+  #:use-module ((srfi srfi-1) #:select (append-reverse fold-right))
   #:use-module (srfi srfi-2) ;; and-let*
   #:use-module (sxml fold)
   #:use-module (ice-9 popen)		; gen-gcc-cpp-defs
@@ -213,6 +214,154 @@
   tree)
 
 
+;; --- attributes ----------------------
+
+(define (join-string-literal str-lit)
+  (sx-list 'string (sx-attr str-lit) (string-join (sx-tail str-lit) "")))
+
+;; used in c99-spec actions for attribute-specifiers
+(define (attr-expr-list->string attr-expr-list)
+  (string-append "(" (string-join (cdr attr-expr-list) ",") ")"))
+
+;; (attribute-list (ident "packed") (attribute (ident "aligned" ...)))
+;; => (attributes "packed;aligned(8);...")
+(define (attr-spec->attr attr-spec)
+  (define (spec->str spec)
+    (sx-match spec
+      ((ident ,name) name)
+      ((attribute ,name) (spec->str name))
+      ((attribute ,name ,args)
+       (string-append (spec->str name) "(" (spec->str args) ")"))
+      ((attr-expr-list . ,expr-list)
+       (string-join (map spec->str expr-list) ","))
+      ((fixed ,val) val)
+      ((string ,val) (string-append "\"" val "\""))
+      (,_ (simple-format #t "c99/body: missed ~S\n" spec) "MISSED")))
+  `(attributes ,(string-join (map spec->str (sx-tail attr-spec)) ";")))
+(export attr-spec->attr)
+
+;; move @code{(attributes ...)} from under @code{decl-spec-list} to
+;; under @code{@}
+;; @example
+;; (decl (decl-spec-list
+;;         (attributes "__packed__" "__aligned__")
+;;         (attributes "__alignof__(8)"))
+;;         (type-spec (fixed-type "int")))
+;;       (declr-init-list ...))
+;;  =>
+;; (decl (@ (attributes "__packed__;__aligned__;__alignof__(8)"))
+;;       (decl-spec-list
+;;         (type-spec (fixed-type "int")))
+;;       (declr-init-list ...))
+;; @end example
+(define (XXX-move-attributes decl)
+  (define (comb-attr attl attr)
+    (cons `(attributes
+	    ,(string-join
+	      (let loop ((rz '()) (al attl))
+		(if (null? al) rz (loop (cons (cadar al) rz) (cdr al))))
+	      ";")) attr))
+  (define (make-specl spl)
+    (cons 'decl-spec-list (reverse spl)))
+  (let ((tag (sx-tag decl))
+	(attr (sx-attr decl))
+	(spec-l (sx-ref decl 1))
+	(declr-l (sx-ref decl 2)))
+    (let loop ((attl '()) (spl1 '()) (spl0 (sx-tail spec-l)))
+      (cond
+       ((null? spl0)
+	(if (null? attl) decl
+	    (sx-list tag (comb-attr attl attr) (make-specl spl1) declr-l)))
+       ((eq? 'attribute-list (sx-tag (car spl0)))
+	(loop (cons (attr-spec->attr (car spl0)) attl) spl1 (cdr spl0)))
+       (else
+	(loop attl (cons (car spl0) spl1) (cdr spl0)))))))
+
+;; ((attribute-list ...) (type-spec ...) (attribute-list ...)) =>
+;;   (values (attribute-list ...)  ((type-spec ...) ...))
+;; @deffn extract-attr spec-tail => (values attr-tail spec-tail)
+;; Extract attributes from a decl-spec-list.
+;; @end deffn
+(define (extract-attr decl-spec-tail) ;; => (values attr-tail spec-tail)
+  (let loop ((atl '()) (dst1 '()) (dst0 decl-spec-tail))
+    (cond
+     ((null? dst0)
+      (if (null? atl) (values '() decl-spec-tail) (values atl (reverse dst1))))
+     ((eq? 'attribute-list (sx-tag (car dst0)))
+      (loop (append (sx-tail (car dst0)) atl) dst1 (cdr dst0)))
+     (else
+      (loop atl (cons (car dst0) dst1) (cdr dst0))))))
+;;(export extract-attr)
+
+(define (attr-tail->attr-str attr-tail)
+  (define (spec->str spec)
+    (sx-match spec
+      ((ident ,name) name)
+      ((attribute ,name) (spec->str name))
+      ((attribute ,name ,args)
+       (string-append (spec->str name) "(" (spec->str args) ")"))
+      ((attr-expr-list . ,expr-list)
+       (string-join (map spec->str expr-list) ","))
+      ((fixed ,val) val)
+      ((string ,val) (string-append "\"" val "\""))
+      (,_ (simple-format #t "c99/body: missed ~S\n" spec) "MISSED")))
+  (string-join (map spec->str attr-tail) ";"))
+(export attr-tail->attr-str)
+
+;; rethink this -- assumes no attributes transferred to decl-spec-list
+(define (move-specl-attr decl-spec-list)
+  (let ((tag (sx-tag decl-spec-list))
+	(attr (sx-attr decl-spec-list))
+	(tail (sx-tail decl-spec-list)))
+    (sx-cons*
+     tag
+     attr
+     (call-with-values (lambda () (extract-attr tail))
+       (lambda (attr-tail spec-tail)
+	 (fold-right
+	  (lambda (form tail)
+	    (cons
+	     (sx-match form
+	       ((type-spec ,spec)
+		(sx-match spec
+		  (((struct-ref struct-def) . ,rest)
+		   `(type-spec
+		     ,(sx-cons* (sx-tag spec)
+				`((attributes ,(attr-tail->attr-str attr-tail)))
+				rest)))
+		  (,_ form)))
+	       (,_ form))
+	     tail))
+	  '() spec-tail))))))
+(export move-specl-attr)
+
+(define (move-attributes sx)
+  (sx-match sx
+    ((decl (@ . ,attr) ,specl0 ,dclrl0)
+     (let ((specl1 (move-specl-attr specl0))
+	   ;;(dclr1 (move-dclr-attr dclrl))
+	   (dclrl1 dclrl0))
+       (cond
+	((and (eq? specl1 specl0) (eq? dclrl1 dclrl0)) sx)
+	((eq? dclrl1 dclrl0) (sx-list attr specl1 dclrl0))
+	((eq? specl1 specl0) (sx-list attr specl0 dclrl1))
+	(else (sx-list attr specl1 dclrl1)))))
+    ((decl-spec-list . ,_) (move-specl-attr sx))
+    (else
+     (sferr "move-attributes: missed:\n") (pperr sx)
+     (error "move-attributes"))))
+(export move-attributes)
+
+;; "__packed__;__aligned__;__alignof__(8)"
+;;   =>
+;; (attribute-list (attribute "__packed
+(define (parse-attributes attr-str)
+  (let ((attl (string-split attr-str ";"))
+	)
+    `(attribute-list)))
+
+;; --- random stuff 
+
 ;; @deffn {Procedure} elifify tree => tree
 ;; This procedure will find patterns of
 ;; @example
@@ -239,5 +388,5 @@
        tree))
     )
   (foldt fU identity tree))
-       
+
 ;; --- last line ---
