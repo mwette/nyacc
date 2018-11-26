@@ -397,7 +397,7 @@
 
    ;; MOVE ATTRIBUTES USED HERE
    ((eqv? (sx-tag decl) 'decl)
-    (let*-values (((tag attr specl declrs) (split-decl (move-attributes decl)))
+    (let*-values (((tag attr specl declrs) (split-decl decl))
 		  ((tag) (values 'udecl)))
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
       ;;(sferr "\nsx-match specl: attr=~S\n" attr) (pperr specl) (pperr declrs)

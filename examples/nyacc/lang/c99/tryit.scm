@@ -118,20 +118,24 @@
     xdecl))
 
 (let* ((code (string-append
-	      "struct event { int events; void *data; }\n"
-	      "  __attribute__ ((__packed__));\n"
+	      ;;"struct event { int events; void *data; }\n"
+	      ;;"  __attribute__ ((__packed__));\n"
 	      
 	      ;;"typedef int case04 __attribute__ ((__deprecated__));\n"
 	      
 	      ;;"typedef int *bla_t[2]; bla_t foo(bla_t (*)(bla_t));\n"
 
+	      ;;"struct foo { int a; double b; } __attribute__((__packed__));\n"
+	      "struct foo { int a; double b; }"
+	      ;;" __attribute__ ((__packed__))"
+	      ";\n"
+	      "struct foo x;\n"
 	      ))
-       ;;(tree (parse-string code))
-       (tree (parse-file "zz.c"))
+       (tree (parse-string code))
+       ;;(tree (parse-file "zz.c"))
        ;;(udict (c99-trans-unit->udict/deep tree))
-       ;;(decl1 (sx-ref tree 1))
-       ;;(spec1 (sx-ref decl1 1))
-       ;;(udict (unitize-decl decl1 '()))
+       (decl1 (sx-ref tree 1))
+       (udict (unitize-decl decl1 '()))
        ;;(udecl (udict-struct-ref udict "epoll_event"))
        ;;(udecl (stripdown-udecl udecl))
        ;;(udecl (expand-typerefs udecl udict))
@@ -139,13 +143,8 @@
        ;;(udecl (unitize-decl decl))
        ;;(xdecl (expand-typerefs-in-code code 2))
        )
-  ;;(pp tree)
-  ;;(pp spec1)
-  #;(call-with-values
-      (lambda () (extract-attr (sx-tail spec1)))
-  (lambda (atl dsl) (pp atl) (pp dsl)))
-  ;;(pp (move-attr spec1))
-  ;;(pp udict)
+  (pp tree)
+  (pp udict)
   ;;(pp udecl)
   ;;(pp mdecl)
   ;;(pp xdecl)

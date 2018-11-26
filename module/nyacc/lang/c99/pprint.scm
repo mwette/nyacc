@@ -181,20 +181,19 @@
 	(ppx/p rval)
 	(ppx rval)))
 
-  ;; now (comment xxx) (attributes "aaa;yyy;zzz"))
-  (define (pp-attr attr) ;; attributes
+  ;; now ((comment xxx) (attributes "aaa;yyy;zzz"))
+  (define (pp-attr attr)
     (string-join
      (fold-right
       (lambda (pair seed)
 	(if (eqv? 'attributes (car pair))
-	    (append (string-split (cadr pair) ";") seed)
+	    ;; FIXME: should really parse-attributes, then ppx
+	    (append (string-split (cadr pair) #\;) seed)
 	    seed))
       '() attr)
      " "))
 
   (define (struct-union-def struct-or-union attr name fields)
-    (if (pair? attr)
-	(simple-format (current-error-port) "\nPP attr=~S\n" attr))
     (if name
 	(if (pair? attr)
 	    (sf "~A ~A ~A {\n" struct-or-union (pp-attr attr) name)
@@ -404,10 +403,8 @@
       ((union-ref (ident ,name)) (sf "union ~A" name))
       
       ((struct-def (@ . ,aattr) (ident ,name) (field-list . ,fields))
-       (sferr "\n3: ~S\n" aattr)
        (struct-union-def 'struct aattr name fields))
       ((struct-def (@ . ,aattr) (field-list . ,fields))
-       (sferr "\n3: ~S\n" aattr)
        (struct-union-def 'struct aattr #f fields))
       ((union-def (@ . ,aattr) (ident ,name) (field-list . ,fields))
        (struct-union-def 'union aattr name fields))

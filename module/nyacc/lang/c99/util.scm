@@ -279,21 +279,28 @@
 
 ;; ((attribute-list ...) (type-spec ...) (attribute-list ...)) =>
 ;;   (values (attribute-list ...)  ((type-spec ...) ...))
-;; @deffn extract-attr spec-tail => (values attr-tail spec-tail)
+;; @deffn extract-attr spec-tail => (values attr-tree spec-tail)
 ;; Extract attributes from a decl-spec-list.
 ;; @end deffn
-(define (extract-attr decl-spec-tail) ;; => (values attr-tail spec-tail)
+(define (extract-attr decl-spec-tail) ;; => (values attr-tree spec-tail)
   (let loop ((atl '()) (dst1 '()) (dst0 decl-spec-tail))
     (cond
      ((null? dst0)
-      (if (null? atl) (values '() decl-spec-tail) (values atl (reverse dst1))))
+      (if (null? atl)
+	  (values '() decl-spec-tail)
+	  (values `(attribute-list . ,atl) (reverse dst1))))
      ((eq? 'attribute-list (sx-tag (car dst0)))
       (loop (append (sx-tail (car dst0)) atl) dst1 (cdr dst0)))
      (else
       (loop atl (cons (car dst0) dst1) (cdr dst0))))))
-;;(export extract-attr)
+(export extract-attr)
 
-(define (attr-tail->attr-str attr-tail)
+;; (attribute-list (attribute (ident "__packed__")) ...)
+;;  =>
+;; (attributes "__packed__;...")
+;; OR
+;; () => ()
+(define (attrl->attrs attr-list)
   (define (spec->str spec)
     (sx-match spec
       ((ident ,name) name)
@@ -305,8 +312,9 @@
       ((fixed ,val) val)
       ((string ,val) (string-append "\"" val "\""))
       (,_ (simple-format #t "c99/body: missed ~S\n" spec) "MISSED")))
-  (string-join (map spec->str attr-tail) ";"))
-(export attr-tail->attr-str)
+  (if (null? attr-list) '()
+      `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
+(export attrl->attrs)
 
 ;; rethink this -- assumes no attributes transferred to decl-spec-list
 (define (move-specl-attr decl-spec-list)
@@ -317,7 +325,7 @@
      tag
      attr
      (call-with-values (lambda () (extract-attr tail))
-       (lambda (attr-tail spec-tail)
+       (lambda (attr-list spec-tail)
 	 (fold-right
 	  (lambda (form tail)
 	    (cons
@@ -325,10 +333,11 @@
 	       ((type-spec ,spec)
 		(sx-match spec
 		  (((struct-ref struct-def) . ,rest)
-		   `(type-spec
-		     ,(sx-cons* (sx-tag spec)
-				`((attributes ,(attr-tail->attr-str attr-tail)))
-				rest)))
+		   (let ((attrs (attrl->attrs attr-list)))
+		     `(type-spec
+		       ,(sx-cons* (sx-tag spec)
+				  (if (pair? attrs) (list attrs) '())
+				  rest))))
 		  (,_ form)))
 	       (,_ form))
 	     tail))
@@ -336,16 +345,22 @@
 (export move-specl-attr)
 
 (define (move-attributes sx)
+  (sferr "move-attributes <= sx:\n") (pperr sx)
   (sx-match sx
     ((decl (@ . ,attr) ,specl0 ,dclrl0)
      (let ((specl1 (move-specl-attr specl0))
-	   ;;(dclr1 (move-dclr-attr dclrl))
+	   ;;(dclr1 (move-dclrl-attr dclrl))
 	   (dclrl1 dclrl0))
        (cond
 	((and (eq? specl1 specl0) (eq? dclrl1 dclrl0)) sx)
 	((eq? dclrl1 dclrl0) (sx-list attr specl1 dclrl0))
 	((eq? specl1 specl0) (sx-list attr specl0 dclrl1))
-	(else (sx-list attr specl1 dclrl1)))))
+	(else (sx-list 'decl attr specl1 dclrl1)))))
+    ((decl (@ . ,attr) ,specl0)
+     (let ((specl1 (move-specl-attr specl0)))
+       (cond
+	((eq? specl1 specl0) sx)
+	(else (sx-list 'decl attr specl1)))))
     ((decl-spec-list . ,_) (move-specl-attr sx))
     (else
      (sferr "move-attributes: missed:\n") (pperr sx)

@@ -55,8 +55,8 @@
 ;; ==========================================================================
 ;; d-feet is GUI to check dictionary
 
-;;(define conn (spawn-dbus-mainloop 'session))
-(define conn (spawn-dbus-mainloop 'system))
+(define conn (spawn-dbus-mainloop 'session))
+;;(define conn (spawn-dbus-mainloop 'system))
 
 (define msg01 (dbus_message_new_method_call
 	     "org.freedesktop.DBus.Peer" ; bus name
@@ -76,7 +76,7 @@
 	     "org.freedesktop.DBus"		; interface name
 	     "GetId"))				; method
 
-(define pending (send-msg conn msg01))
+(define pending (send-msg conn msg04))
 
 (let iter ((got-it? (there-yet? pending)))
   (sf "there-yet? => ~S\n" got-it?)
