@@ -24,7 +24,7 @@
 	    fh-type?
 	    fh-object? fh-object-val
 	    fh-object-ref fh-object-set!
-	    pointer-to value-at NULL
+	    pointer-to value-at NULL !0
 
 	    ;; maybe used outside of modules?
 	    fh:cast fh-cast bs-addr
@@ -153,6 +153,9 @@
     (throw 'ffi-help-error "expecting something I can dereference"))))
 
 (define NULL ffi:%null-pointer)
+(define (!0 v) (not (zero? v)))
+;;(define FALSE 0)
+;;(define TRUE 1)
 
 ;; === objects ============
 
@@ -301,7 +304,9 @@
 	      (fht-unwrap type)
 	      (fht-pointer-to type)
 	      (fht-value-at type)
-	      (fht-printer type))))
+	      ;;(fht-printer type)
+	      (make-printer (quote alias))
+	      )))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
 ;; Generates an FY aggregate type based on a bytestructure descriptor.
@@ -624,6 +629,23 @@
   (case-lambda
     (() (make-struct/no-tail fh-void 'void))
     ((val) (make-struct/no-tail fh-void 'void))))
+
+(define fh-void*
+  (make-fht 'void*
+	    (lambda (obj) (struct-ref obj 0))
+	    (lambda (val) (make-struct/no-tail fh-void* val))
+	    #f #f
+	    ;;(lambda (obj port) (display "##fh
+	    (lambda (obj port)
+	      (display "#<fh-void* 0x" port)
+	      (display (number->string (struct-ref obj 0) 16) port)
+	      (display ">" port))))
+(define fh-void?
+  (lambda (obj) (eq? (struct-vtable obj) fh-void*)))
+(define make-fh-void*
+  (case-lambda
+    (() (make-struct/no-tail fh-void* 0))
+    ((val) (make-struct/no-tail fh-void* val))))
 
 (define-syntax make-maker
   (syntax-rules ()

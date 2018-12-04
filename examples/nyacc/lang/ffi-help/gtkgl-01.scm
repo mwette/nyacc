@@ -27,7 +27,6 @@
 
 (define TRUE 1)
 (define FALSE 0)
-(define (!0 val) (not (zero? val)))
 
 (display "Hey, why not add a user-defined unwrapper for GLenum.\n")
 

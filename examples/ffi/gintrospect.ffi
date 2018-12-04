@@ -15,18 +15,29 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-;; undefined GIBaseInfo, but gitypes.h has
+;; This is not working because ...
 ;;   typedef struct _GIBaseInfoStub GIBaseInfo;
+;;     => def GIBaseInfo-desc, but not GIBaseInfo !
+;;     FX def GIBaseInfo fh-void
+;;   typedef GIBaseInfo SomeBaseInfo;
+;;     => ref GIBaseInfo via type-alias
+;;   struct _GIBaseInfoStub { ... };
+;;     => At this point we can assign pointer dereference
+;;     FX def GIBaseInfo ....
+;;   int foo1(SomeBaseInfo *a);
+;;     => ref unwrap-SomeBaseInfo 
 
 
 (define-ffi-module (ffi gintrospect)
   #:pkg-config "gobject-introspection-1.0"
   #:include '("girepository.h")
-  ;;#:inc-filter (lambda (f p) 
-                    ;;(string-contains p "gobject-introspection-1.0/" 0))
-  #:inc-filter (lambda (f p) (string-prefix? "<gi" f))
+  #:inc-filter (lambda (f p) 
+		 (string-contains p "gobject-introspection-1.0/" 0))
+  ;;#:inc-filter (lambda (f p) (string-prefix? "<gi" f))
+  ;;#:decl-filter (lambda (key) (equal? key "GIBaseInfo"))
   #:use-ffi-module (ffi gobject)
   #:use-ffi-module (ffi glib)
   )
+
 
 ;; --- last line ---

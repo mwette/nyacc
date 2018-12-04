@@ -35,6 +35,14 @@
     (dbus_message_unref msg)
     pending))
 
+(define (send-sig conn sig)
+  (let ((serial (make-uint32)))
+    (if (eqv? FALSE (dbus_connection_send
+		     conn sig (pointer-to serial)))
+	(error "*** send FAILED\n"))
+    (dbus_message_unref sig)
+    serial))
+
 (define (there-yet? pending)
   (eqv? TRUE (dbus_pending_call_get_completed pending)))
 
@@ -54,29 +62,41 @@
 
 ;; ==========================================================================
 ;; d-feet is GUI to check dictionary
+;; https://pythonhosted.org/txdbus/dbus_overview.html
+;; http://git.0pointer.net/rtkit.git/tree/README
+(define msg01/all			; fails
+  (dbus_message_new_method_call
+   "org.freedesktop.DBus.Peer"		; bus name
+   "/org/freedesktop/DBus/any"		; object path
+   "org.freedesktop.DBus.Peer"		; interface name
+   "Ping"))				; method
+
+(define msg02/ses			; works
+  (dbus_message_new_method_call
+   "org.freedesktop.DBus"		; bus name
+   "/org/freedesktop/DBus"		; object path
+   "org.freedesktop.DBus.Debug.Stats"	; interface name
+   "GetStats"))				; method
+
+(define msg03/all			; works
+  (dbus_message_new_method_call
+   "org.freedesktop.DBus"		; bus name
+   "/org/freedesktop/DBus"		; object path
+   "org.freedesktop.DBus"		; interface name
+   "GetId"))				; method
+
+(define msg04/sys			; fails
+  (dbus_message_new_method_call
+   "com.dell.RecoveryMedia"		; bus name
+   "/RecoveryMedia"			; object path
+   "org.freedesktop.Dbus.Introspectable" ; interface name
+   "Introspect"))			 ; method
 
 (define conn (spawn-dbus-mainloop 'session))
 ;;(define conn (spawn-dbus-mainloop 'system))
 
-(define msg01 (dbus_message_new_method_call
-	     "org.freedesktop.DBus.Peer" ; bus name
-	     "/org/freedesktop/DBus/any" ; object path
-	     "org.freedesktop.DBus.Peer" ; interface name
-	     "Ping"))			 ; method
-
-(define msg04 (dbus_message_new_method_call
-	      "org.freedesktop.DBus"		; bus name
-	      "/org/freedesktop/DBus"		; object path
-	      "org.freedesktop.DBus.Debug.Stats"	; interface name
-	      "GetStats"))			; method
-
-(define msg05 (dbus_message_new_method_call
-	     "org.freedesktop.DBus"		; bus name
-	     "/org/freedesktop/DBus"		; object path
-	     "org.freedesktop.DBus"		; interface name
-	     "GetId"))				; method
-
-(define pending (send-msg conn msg04))
+;;(define pending (send-msg conn msg02/ses))
+(define pending (send-msg conn msg02/ses))
 
 (let iter ((got-it? (there-yet? pending)))
   (sf "there-yet? => ~S\n" got-it?)

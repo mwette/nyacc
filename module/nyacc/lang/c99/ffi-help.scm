@@ -28,7 +28,9 @@
 ;; bytestructure->descriptor->ffi-descriptor
 ;; bs:pointer->proc
 
-;; TODO: add renamer
+;; TODOs
+;; 1) add renamer
+;; 2) think about cnvt-fctn that generates C code
 
 ;; Issue:
 ;; So issue is when 'typedef struct ref foo_t' has no 'struct def'
@@ -1217,6 +1219,7 @@
 		((specl declr) (cleanup-udecl specl declr))
 		((clean-udecl) (values (sx-list tag #f specl declr)))
 		)
+    ;;(sferr "clean udecl:\n") (pperr clean-udecl)
     (sxml-match clean-udecl
 
       ;; typedef void **ptr_t;
@@ -1395,25 +1398,29 @@
 	;; This case represents three possible uses:
 	((member struct-name defined)
 	 ;; 1) struct defined previously
+	 ;;(sferr " CASE1\n")
 	 (sfscm "(define-public ~A-desc struct-~A-desc)\n" typename struct-name)
 	 (sfscm "(define-public ~A*-desc struct-~A*-desc)\n"
 		typename struct-name))
 	((udict-struct-ref udict struct-name) =>
 	 ;; 2) struct defined later
 	 (lambda (struct-decl)
+	   ;;(sferr " CASE2 (~S)\n" struct-name)
 	   (back-ref-extend! struct-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
+	   (sfscm "(define-public ~A fh-void)\n" typename)
+	   (sfscm "(define-public ~A? fh-void?)\n" typename)
+	   (sfscm "(define-public make-~A make-fh-void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (bs:pointer (delay ~A-desc)))\n"
-		  typename typename)))
+		  typename typename)
+	   ))
 	(else
 	 ;; 3) struct never defined; only used as pointer
+	 ;;(sferr " CASE3\n")
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
-	 ;; ----- This may be a hack? Write it up! ------------
-	 ;; Added to get glugl GLUnurbsObj to work.
 	 (sfscm "(define-fh-type-alias ~A fh-void)\n" typename)
 	 (sfscm "(define-public ~A? fh-void?)\n" typename)
 	 (sfscm "(define-public make-~A make-fh-void)\n" typename)
-	 ;; --------------------------------------------------
 	 (sfscm "(define-public ~A*-desc (bs:pointer ~A-desc))\n"
 		typename typename)))
        (fhscm-def-pointer (sw/* typename))
@@ -1484,6 +1491,9 @@
 	 (lambda (union-decl)
 	   (back-ref-extend! union-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
+	   (sfscm "(define-public ~A fh-void)\n" typename)
+	   (sfscm "(define-public ~A? fh-void?)\n" typename)
+	   (sfscm "(define-public make-~A make-fh-void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (bs:pointer (delay ~A-desc)))\n"
 		  typename typename)))
 	(else
@@ -1590,7 +1600,7 @@
 	   (sfscm "(define-public make-~A* make-~A*)\n" typename name))
 	 (values (cons typename wrapped) (cons typename defined)))
 	(else
-	 (let ((xdecl (expand-typerefs udecl udict defined)))
+	 (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
 	   (cnvt-udecl xdecl udict wrapped defined)))))
 
       ;; === structs and unions ==========
@@ -1604,9 +1614,11 @@
 	 (lambda (name-list)
 	   (cnvt-struct-def attr1 #f struct-name field-list)
 	   (for-each
-	    (lambda (name)
-	      (sfscm "(set! ~A-desc struct-~A-desc)\n" name struct-name)
-	      (fhscm-def-compound name))
+	    (lambda (typename)
+	      (sfscm "(set! ~A-desc struct-~A-desc)\n" typename struct-name)
+	      (fhscm-def-compound typename)
+	      (fhscm-def-pointer (sw/* typename))
+	      (fhscm-ref-deref typename))
 	    name-list)
 	   (values (cons (w/struct struct-name) wrapped)
 		   (cons (w/struct struct-name) defined))))
@@ -1635,9 +1647,11 @@
 	 (lambda (name-list)
 	   (cnvt-union-def #f #f union-name field-list)
 	   (for-each
-	    (lambda (name)
-	      (sfscm "(set! ~A-desc union-~A-desc)\n" name union-name)
-	      (fhscm-def-compound name))
+	    (lambda (typename)
+	      (sfscm "(set! ~A-desc union-~A-desc)\n" typename union-name)
+	      (fhscm-def-compound typename)
+	      (fhscm-def-pointer (sw/* typename))
+	      (fhscm-ref-deref typename))
 	    name-list)
 	   (values (cons (w/union union-name) wrapped)
 		   (cons (w/union union-name) defined))))
@@ -1710,7 +1724,7 @@
       ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
 	      (init-declr (ptr-declr (pointer) (ident ,name))))
        ;; This needs to have a delay and handler
-       (let* ((udecl (expand-typerefs udecl udict (*defined*)))
+       (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mdecl (udecl->mdecl udecl)))
 	 (cnvt-extern (car mdecl) (cdr mdecl)))
@@ -1719,7 +1733,7 @@
       ;; non-pointer
       ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
 	      ,init-declr . ,rest)
-       (let* ((udecl (expand-typerefs udecl udict (*defined*)))
+       (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mdecl (udecl->mdecl udecl)))
 	 (cnvt-extern (car mdecl) (cdr mdecl))
@@ -1965,9 +1979,9 @@
 ;; => (values wrapped defined)
 (define* (process-decls decls udict
 			#:optional (wrapped '()) (defined '())
-			#:key (declf (lambda (n) #t))
+			#:key (declf (lambda (k) #t))
 			)
-  (let* () ;;(declf (if declf declf (lambda (name) #t))))
+  (let* () ;;(declf (if declf declf (lambda (key) #t))))
     (fold-values			  ; from (sxml fold)
      (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
        (catch 'ffi-help-error
@@ -2076,7 +2090,8 @@
 	(lambda ()
 	  ;; We need to have externs in wrapped because function param
 	  ;; type have wrapped types preserved (e.g., enums).
-	  (process-decls ffi-decls udict
+	  ;; swap of udecls with udict failed on glib g???
+	  (process-decls ffi-decls udecls ;; udict <= swap failed 01 Dec 2018
 			 ;; wrapped and defined:
 			 ext-defd (append bs-defined ext-defd)
 			 ;; declaration filter

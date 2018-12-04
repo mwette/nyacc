@@ -1166,6 +1166,8 @@ By definition: wrap is c->scm; unwrap is scm->c.
 @code{define-ffi-module} options:
 @table @code
 @item #:decl-filter proc
+proc is a prodicate taking a key of the form @code{"name"},
+@code{(struct . "name")}, @code{(union . "name")} or @code{(enum . "name")}.
 @item #:inc-filter proc
 @item #:include expr
 expr is string or list or procecure that evaluates to string or list
@@ -1274,6 +1276,25 @@ make install
 @subsubheading Run in Place
 
 xxx
+
+@subheading Notes
+
+@enumerate
+@item
+The following situation is a bit tricky for me.
+@example
+typedef struct foo foo_t;
+typedef foo_t bar_t;
+struct foo { int a; };
+int baz(foo_t *x);
+@end example
+Right now, on the first declaration I assign @code{foo_t} the type
+@code{fh-void}.  The second declaration is handled as a type-alias.
+When I get to the third declaration I define the
+@code{struct foo} compound type, then re-define the @code{foo_t} as
+a compound type, and it's pointer type (missed this first time).
+
+@end enumeate
 
 @subheading Copyright
 

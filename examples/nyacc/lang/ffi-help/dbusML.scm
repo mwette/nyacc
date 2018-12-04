@@ -141,7 +141,7 @@
 	 (flags (dbus_watch_get_flags watch))
 	 (ddent (dbus-lookup-fd muxfd))
 	 (event (dbus-data-ev ddent)))
-    ;;(ff "\nadd-watch  ~s: addfd=~s flags=0x~x...\n" watch addfd flags)
+    (ff "\nadd-watch  ~s: addfd=~s flags=0x~x...\n" watch addfd flags)
 
     (dbus_watch_set_data watch (ffi:scm->pointer ddent) dbus-data-free)
     

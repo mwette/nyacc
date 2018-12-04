@@ -88,7 +88,7 @@ See the file COPYING.LESSER included with the this distribution.")
   (let ((ipstk (fluid-ref *input-stack*)))
     (if (null? ipstk) #f
 	(begin
-	  ;;(sferr "~S <=po\n" (length ipstk))
+	  (close-port (current-input-port))
 	  (set-current-input-port (car ipstk))
 	  (fluid-set! *input-stack* (cdr ipstk))))))
 

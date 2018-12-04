@@ -34,7 +34,8 @@
 
 (define (check-error error)
   (or (zero? (dbus_error_is_set (pointer-to error)))
-      (sf "~A\n" (ffi:pointer->string
+      (simple-format
+       #t "~A\n" (ffi:pointer->string
 		  (ffi:make-pointer (fh-object-ref error 'message))))))
   
 (define (get-bval &iter key)

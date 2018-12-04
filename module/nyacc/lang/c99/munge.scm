@@ -556,7 +556,7 @@
     ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
     ((bit-field ,ident . ,rest) ident)
-    (else (throw 'util-error "c99/munge: unknown declarator: " declr))))
+    (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
 ;; @deffn {Procedure} declr-id decl => "name"
 ;; This extracts the name from the return value of @code{declr-ident}.
@@ -703,7 +703,7 @@
        `(ftn-declr ,(probe-declr dir-declr) . ,rest))
       ((scope ,declr)
        `(scope ,(probe-declr declr)))
-      (else (throw 'util-error "c99/munge: unknown declarator: " declr))))
+      (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
   (probe-declr tdef-declr))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
@@ -752,7 +752,8 @@
     (expand-specl-typerefs specl declr udict keep))
 
   (define (splice-typename specl declr name udict)
-    (let* ((decl (assoc-ref udict name)) ; decl for typename
+    (let* ((decl (or (assoc-ref udict name) ; decl for typename
+		     (throw 'c99-error "typedef not found for: ~S" name)))
 	   (tdef-specl (sx-ref decl 1))	 ; specs for typename
 	   (tdef-declr (sx-ref decl 2))) ; declr for typename
       (values ;; fixdd-specl fixed-declr
@@ -986,7 +987,7 @@
 	      declr
 	      `(comp-declr-list . ,xdeclrs))))
        
-       (else (throw 'util-error "c99/munge: unknown declarator: " declr)))))
+       (else (throw 'c99-error "c99/munge: unknown declarator: " declr)))))
 
   (let*-values (((tag attr orig-specl orig-declr)
 		 (split-udecl adecl))
