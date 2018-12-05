@@ -21,6 +21,10 @@
 	    read-dbus-val
 	    nonzero?
 	    TRUE FALSE
+	    ;;
+	    dbus-message-type
+	    dbus-request-name-reply
+	    make-dbus-string
 	    )
   #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
@@ -88,4 +92,75 @@
     (else
      (error "not defined"))))
 
+(define dbus-message-type
+  (if (and
+       (= 0 (dbus-symval 'DBUS_MESSAGE_TYPE_INVALID))
+       (= 1 (dbus-symval 'DBUS_MESSAGE_TYPE_METHOD_CALL))
+       (= 2 (dbus-symval 'DBUS_MESSAGE_TYPE_METHOD_RETURN))
+       (= 3 (dbus-symval 'DBUS_MESSAGE_TYPE_ERROR))
+       (= 4 (dbus-symval 'DBUS_MESSAGE_TYPE_SIGNAL)))
+      (lambda (ival)
+	(case ival
+	  ((0) 'INVALID)
+	  ((1) 'METHOD_CALL)
+	  ((2) 'METHOD_RETURN)
+	  ((3) 'ERROR)
+	  ((4) 'SIGNAL)
+	  (else #f)))
+      (lambda (ival) ival)))
+
+(define dbus-request-name-reply
+  (if (and
+       (= 1 (dbus-symval 'DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER))
+       (= 2 (dbus-symval 'DBUS_REQUEST_NAME_REPLY_IN_QUEUE))
+       (= 3 (dbus-symval 'DBUS_REQUEST_NAME_REPLY_EXISTS))
+       (= 4 (dbus-symval 'DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER)))
+      (lambda (ival)
+	(case ival
+	  ((1) 'PRIMARY_OWNER)
+	  ((2) 'IN_QUEUE)
+	  ((3) 'REPLY_EXISTS)
+	  ((4) 'ALREADY_OWNER)
+	  (else #f)))
+      (lambda (ival) ival)))
+
+(use-modules ((ice-9 iconv) #:select (string->bytevector)))
+(use-modules (rnrs bytevectors))
+
+;; generate a pointer to pointer to string
+;;   char *str = "hello"; => &str
+(define (make-dbus-string str)
+  (let* ((ptr-size (ffi:sizeof '*))
+	 (addr (ffi:pointer-address (ffi:string->pointer str)))
+	 (bv (make-bytevector ptr-size)))
+    (case ptr-size
+      ((8) (bytevector-u64-native-set! bv 0 addr))
+      ((4) (bytevector-u32-native-set! bv 0 addr))
+      (else (error "bad pointer size")))
+    (ffi:bytevector->pointer bv)))
+
 ;; --- last line ---
+#|
+<node name="/com/example/sample_object0">
+ <interface name="com.example.SampleInterface0">
+  <method name="Frobate">
+   <arg name="foo" type="i" direction="in"/>
+   <arg name="bar" type="s" direction="out"/>
+   <arg name="baz" type="a{us}" direction="out"/>
+   <annotation name="org.freedesktop.DBus.Deprecated" value="true"/>
+  </method>
+  <method name="Bazify">
+   <arg name="bar" type="(iiu)" direction="in"/>
+   <arg name="bar" type="v" direction="out"/>
+  </method>
+  <method name="Mogrify">
+   <arg name="bar" type="(iiav)" direction="in"/>
+  </method>
+  <signal name="Changed">
+   <arg name="new_value" type="b"/>
+  </signal>
+  <property name="Bar" type="y" access="readwrite"/>
+ </interface>
+ <node name="child_of_sample_object"/>
+ <node name="another_child_of_sample_object"/>
+|#
