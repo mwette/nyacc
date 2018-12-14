@@ -30,7 +30,6 @@
 	    fh:cast fh-cast bs-addr
 	    fh:function
 	    ffi-void*
-	    fh-void fh-void? make-fh-void
 	    make-fht
 
 	    ;; called from output of the ffi-compiler
@@ -609,13 +608,35 @@
 (define ffi-void* '*)
 
 (define char*-desc (bs:pointer 'void))
-(define-fh-pointer-type char* char*-desc char*? make-char*)
+(define char*
+  (make-fht 'char*
+	    (lambda (obj) (ffi:pointer->string (fh-object-ref obj)))
+	    (case-lambda
+	      ((val)
+	       (cond
+		((string? val)
+		 (bytestructure
+		  char*-desc (ffi:pointer-address (ffi:string->pointer val))))
+		((ffi:pointer? val)
+		 (bytestructure char*-desc (ffi:pointer-address val)))
+		(else
+		 (bytestructure char*-desc val))))
+	      (() (bytestructure char*-desc 0)))
+	    #f #f
+	    (make-bs-printer 'char*)))
+(define make-char* (fht-wrap char*))
+(define char*? (lambda (obj) (eq? (struct-vtable obj) char*)))
+(export char*-desc char* char*? make-char*)
+
 (define char**-desc (bs:pointer char*-desc))
 (define-fh-pointer-type char** char**-desc char**? make-char**)
+(export char**-desc char** char**? make-char**)
+
 (ref<->deref! char** make-char** char* make-char*)
+
 (define (char*->string obj)
   (ffi:pointer->string (ffi:make-pointer (fh-object-ref obj))))
-(export make-char* char*->string)
+(export char*->string)
 
 (define fh-void
   (make-fht 'void 
@@ -629,23 +650,54 @@
   (case-lambda
     (() (make-struct/no-tail fh-void 'void))
     ((val) (make-struct/no-tail fh-void 'void))))
+(export fh-void fh-void? make-fh-void)
 
-(define fh-void*
+(define void*-desc (bs:pointer 'void))
+(define void*
   (make-fht 'void*
-	    (lambda (obj) (struct-ref obj 0))
-	    (lambda (val) (make-struct/no-tail fh-void* val))
+	    unwrap~pointer
+	    (case-lambda
+	      ((val)
+	       (cond
+		((string? val)
+		 (make-struct/no-tail
+		  void* (bytestructure
+			 void*-desc (ffi:pointer-address
+				     (ffi:string->pointer val)))))
+		((bytestructure? val)
+		 (make-struct/no-tail void* val))
+		(else
+		 (make-struct/no-tail void* (bytestructure void*-desc val)))))
+	      (() (make-struct/no-tail void* (bytestructure void*-desc))))
 	    #f #f
-	    ;;(lambda (obj port) (display "##fh
 	    (lambda (obj port)
-	      (display "#<fh-void* 0x" port)
+	      (display "#<void* 0x" port)
 	      (display (number->string (struct-ref obj 0) 16) port)
 	      (display ">" port))))
-(define fh-void?
-  (lambda (obj) (eq? (struct-vtable obj) fh-void*)))
-(define make-fh-void*
-  (case-lambda
-    (() (make-struct/no-tail fh-void* 0))
-    ((val) (make-struct/no-tail fh-void* val))))
+(define make-void* (fht-wrap void*))
+(define void*? (lambda (obj) (eq? (struct-vtable obj) void*)))
+(ref<->deref! void* make-void* fh-void make-fh-void)
+(export void* void*? make-void*)
+
+(define void**-desc (bs:pointer (bs:pointer 'void)))
+(define void**
+  (make-fht 'void**
+	    unwrap~pointer
+	    (case-lambda
+	      ((val)
+	       (make-struct/no-tail void** (bytestructure void**-desc val)))
+	      (()
+	       (make-struct/no-tail void** (bytestructure void**-desc))))
+	    #f #f
+	    (lambda (obj port)
+	      (display "#<void** 0x" port)
+	      (display (number->string (struct-ref obj 0) 16) port)
+	      (display ">" port))))
+(define make-void** (fht-wrap void**))
+(define void**? (lambda (obj) (eq? (struct-vtable obj) void**)))
+(ref<->deref! void** make-void** void* make-void*)
+(export void** void**? make-void**)
+
 
 (define-syntax make-maker
   (syntax-rules ()

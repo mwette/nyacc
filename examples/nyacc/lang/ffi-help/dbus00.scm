@@ -19,18 +19,27 @@
   #:export (check-error
 	    get-bval
 	    read-dbus-val
+	    get-dbus-message-args
 	    nonzero?
 	    TRUE FALSE
+	    ;;
+	    dbus-version
+	    dbus-bus-get-unique-name
+	    dbus-message-get-sender
+	    make-DBusMessageIter&
 	    ;;
 	    dbus-message-type
 	    dbus-request-name-reply
 	    make-dbus-string
+	    make-dbus-pointer
 	    )
   #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (bytestructures guile)
   #:use-module (ffi dbus)
   )
+(use-modules ((ice-9 iconv) #:select (string->bytevector)))
+(use-modules (rnrs bytevectors))
 
 (define TRUE 1)
 (define FALSE 0)
@@ -48,13 +57,9 @@
     (fh-object-ref bval key)))
 
 (define (read-dbus-val &iter)
-  ;; 0   0 : invalid; y 121 : byte; b  98 : boolean; n 110 : int16;
-  ;; q 113 : uint16; i 105 : int32; u 117 : uint32; x 120 : int64
-  ;; t 116 : uint64; d 100 : double; s 115 : string; o 111 : object path
-  ;; g 103 : signature; h 104 : unix fd; a  97 : array; v 118 : variant
-  ;; r 114 : struct; e 101 : dict entry
   (case (dbus_message_iter_get_arg_type &iter)
-    ((0) (if #f #f)) ;; 0 - invalid
+    ;;((0) (if #f #f))				    ; 0 - invalid
+    ((0) '())					    ; 0 - invalid
     ((121) (get-bval &iter 'byt))		    ; y - byte
     ((98) (not (zero? (get-bval &iter 'bool_val)))) ; b - boolean
     ((110) (get-bval &iter 'i16))		    ; n - int16
@@ -92,6 +97,16 @@
     (else
      (error "not defined"))))
 
+;; Given a message (or message) reply return the list of args.
+(define (get-dbus-message-args msg)
+  (let* ((iter (make-DBusMessageIter))
+	 (&iter (pointer-to iter)))
+    (dbus_message_iter_init msg &iter)
+    (let loop ((arg (read-dbus-val &iter)))
+      (cond ((null? arg) '())
+	    (else (dbus_message_iter_next &iter)
+		  (cons arg (loop (read-dbus-val &iter))))))))
+
 (define dbus-message-type
   (if (and
        (= 0 (dbus-symval 'DBUS_MESSAGE_TYPE_INVALID))
@@ -124,11 +139,34 @@
 	  (else #f)))
       (lambda (ival) ival)))
 
-(use-modules ((ice-9 iconv) #:select (string->bytevector)))
-(use-modules (rnrs bytevectors))
+(define (dbus-version)
+  (let ((maj (make-int)) (min (make-int)) (mic (make-int)))
+    (dbus_get_version (pointer-to maj) (pointer-to min) (pointer-to mic))
+    (simple-format #f "~A.~A.~A"
+		   (fh-object-ref maj)
+		   (fh-object-ref min)
+		   (fh-object-ref mic))))
+
+(define (dbus-bus-get-unique-name conn)
+  (ffi:pointer->string (dbus_bus_get_unique_name conn)))
+
+(define (dbus-message-get-sender conn)
+  (ffi:pointer->string (dbus_message_get_sender conn)))
+
+(define (make-DBusMessageIter&)
+  (pointer-to (make-DBusMessageIter)))
+
+;; When marshalling and de-marshalling strings requires pointer.
+;;   char *str_send = "hello";
+;;   char *str_recv;
+;; dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &str_send);
+;; dbus_message_iter_get_basic(&iter, DBUS_TYPE_STRING, &str_recv);
 
 ;; generate a pointer to pointer to string
 ;;   char *str = "hello"; => &str
+
+;; use make-char* pointer-to char*->string
+#|
 (define (make-dbus-string str)
   (let* ((ptr-size (ffi:sizeof '*))
 	 (addr (ffi:pointer-address (ffi:string->pointer str)))
@@ -138,6 +176,12 @@
       ((4) (bytevector-u32-native-set! bv 0 addr))
       (else (error "bad pointer size")))
     (ffi:bytevector->pointer bv)))
+
+(define (make-dbus-pointer)
+  (let* ((ptr-size (ffi:sizeof '*))
+	 (bv (make-bytevector ptr-size)))
+    (ffi:bytevector->pointer bv)))
+|#
 
 ;; --- last line ---
 #|
