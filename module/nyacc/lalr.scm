@@ -559,7 +559,6 @@
     (make-lalr-core non-terms terminals lhs-v rhs-v
 		    (find-eps non-terms lhs-v rhs-v))))
 
-
 ;; @section Routines
 
 ;; @deffn {Procedure} <? a b po => #t | #f
@@ -1210,45 +1209,7 @@
 ;; where FIRST(de,#) includes #.  See the second paragraph under ``Efficient
 ;; Construction of LALR Parsing Tables'' in DB Sec 4.7.
 ;; @end deffn
-(define (old-reductions kit-v sx)
-  (let iter ((ral '())			  ; result: reduction a-list
-	     (lais (vector-ref kit-v sx)) ; la-item list
-	     (toks '())			  ; kernel la-item LA tokens
-	     (itms '())			  ; all items
-	     (gx #f)			  ; rule reduced by tl
-	     (tl '()))			  ; LA-token list
-    (cond
-     ((pair? tl) ;; add (token . p-rule) to reduction list
-      (let* ((tk (car tl)) (rp (assq tk ral)))
-	(cond
-	 ;; already have this, skip to next token
-	 ((and rp (memq gx (cdr rp)))
-	  (iter ral lais toks itms gx (cdr tl)))
-	 (rp
-	  ;; have token, add prule
-	  (set-cdr! rp (cons gx (cdr rp)))
-	  (iter ral lais toks itms gx (cdr tl)))
-	 (else
-	  ;; add token w/ prule
-	  (iter (cons (list tk gx) ral) lais toks itms gx (cdr tl))))))
-
-     ((pair? itms)
-      (if (last-item? (car itms))
-	  ;; last item, add it 
-	  (iter ral lais toks (cdr itms) (caar itms) toks)
-	  ;; skip to next
-	  (iter ral lais toks (cdr itms) 0 '())))
-
-     ((pair? lais) ;; process next la-item
-      (iter ral (cdr lais) (cdar lais) (expand-k-item (caar lais)) 0 '()))
-
-     (else ral))))
-
-;; I think the above is broken because I'm not including the proper tail
-;; string.  The following just uses closure to do the job.  It works but
-;; may not be very efficient: seems a bit brute force.
-
-(define (new-reductions kit-v sx)
+(define (reductions kit-v sx)
   (let iter ((ral '())			  ; result: reduction a-list
 	     (klais (vector-ref kit-v sx)) ; kernel la-item list
 	     (laits '())		   ; all la-items
@@ -1282,8 +1243,6 @@
 
      (else
       ral))))
-
-(define reductions new-reductions)
 
 ;; Generate parse-action-table from the shift a-list and reduce a-list.
 ;; This is a helper for @code{step4}.  It converts a list of state transitions

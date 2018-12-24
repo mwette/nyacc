@@ -18,15 +18,15 @@
 ;;; Code:
 
 (define-module (nyacc util)
-  #:export (
+  #:export (fixpoint
 	    fmtstr fmtout fmterr fmt
 	    wrap-action
 	    obj->str
-	    fixpoint prune-assoc
+	    prune-assoc
 	    map-attr->vector
 	    x-flip x-comb
 	    write-vec
-	    ugly-print OLD-ugly-print
+	    ugly-print
 	    tzort)
   #:use-module ((srfi srfi-43) #:select (vector-fold)))
 (cond-expand
@@ -159,65 +159,6 @@
 	      (iter (+ col leng) (1+ ix)))))))
     (fmt port ")")))
 
-
-;; @deffn {Procedure} OLD-ugly-print sexp [port] [#:indent 4] [#:extent 78]
-;; This will print in compact form which shows no structure.
-;; @end deffn
-(define* (OLD-ugly-print sexp #:optional port #:key (indent 4) (extent 78))
-
-  (define (obj->str obj)
-    (simple-format #f "~S" obj))
-
-  ;; @deffn {Procedure} make-strout indent extent port
-  ;; This will generate a procedure of signature @code{(proc col str)} which
-  ;; takes a column and string, prints the string and returns updated column.
-  ;; @end deffn
-  (define (make-strout ind ext port)
-    (let ((leader (make-string ind #\space)))
-      (lambda (col str)
-	(let* ((len (string-length str)))
-	  (cond
-	   ((> (+ col len) ext)
-	    (newline port)
-	    (display leader port)
-	    (unless (string-every #\space str) (display str port))
-	    (+ ind len))
-	   (else
-	    (display str port)
-	    (+ col len)))))))
-
-  (letrec* ((out-p (or port (current-output-port)))
-	    (leader (make-string 2 #\space))
-	    (strout (make-strout indent extent out-p))
-
-	    (iter1
-	     (lambda (col sx)
-	       (cond
-		((pair? sx) (strout (iter2 (strout col "(") sx) ")"))
-		((vector? sx)
-		 (strout
-		  (vector-fold
-		   (lambda (ix col elt)
-		     (iter1 (if (zero? ix) col (strout col " ")) elt))
-		   (strout col "#(") sx) ")"))
-		((null? sx) (strout col "'()"))
-		(else (strout col (obj->str sx))))))
-	    
-	    (iter2
-	     (lambda (col sx)
-	       (cond
-		((pair? sx)
-		 (if (null? (cdr sx))
-		     (iter2 (iter1 col (car sx)) (cdr sx))
-		     (iter2 (strout (iter1 col (car sx)) " ") (cdr sx))))
-		((null? sx) col)
-		(else (strout (strout col ". ") (obj->str sx))))))
-	    )
-    ;;(simple-format out-p leader)
-    (iter1 (if (pair? sexp) (strout indent "'") indent) sexp)
-    ;;(iter1 indent sexp)
-    ;;(newline out-p)
-    ))
 
 ;; @deffn {Procedure} ugly-print sexp [port] [options]
 ;; This will print in compact form which shows no structure.  The optional

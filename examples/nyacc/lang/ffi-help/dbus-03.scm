@@ -1,81 +1,152 @@
-;; dbus-03.scm - dbus
-;; see http://www.matthew.ath.cx/misc/dbus
+;; nyacc/lang/ffi-help/dbus-03.scm - simple square
 
 ;; Copyright (C) 2018 Matthew R. Wette
-;;
-;; This library is free software; you can redistribute it and/or
-;; modify it under the terms of the GNU Lesser General Public
-;; License as published by the Free Software Foundation; either
-;; version 3 of the License, or (at your option) any later version.
-;;
-;; This library is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;; Lesser General Public License for more details.
-;;
-;; You should have received a copy of the GNU Lesser General Public License
-;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(use-modules (ice-9 pretty-print))
-(define (sf fmt . args) (apply simple-format #t fmt args))
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
 
-(use-modules (system ffi-help-rt))
-(use-modules ((system foreign) #:prefix ffi:))
-(use-modules (bytestructures guile))
+;;; Notes:
 
-(use-modules (ffi dbus))
+;; In two separate terminals execute:
+;; ---------------------------------
+;; $ guile dbus-03.scm worker
+;; ---------------------------------
+;; $ guile dbus-03.scm monitor
+
+
+;;; Code:
 
 (add-to-load-path (getcwd))
+
 (use-modules (dbus00))
+(use-modules (ffi dbus))
+(use-modules (system ffi-help-rt))
+(use-modules ((system foreign) #:prefix ffi:))
 
-(define (check-error error)
-  (or (zero? (dbus_error_is_set (pointer-to error)))
-      (sf "~A\n" (ffi:pointer->string
-		  (ffi:make-pointer (fh-object-ref error 'message))))))
-  
-;; ====================================
+(define (sf fmt . args) (apply simple-format #t fmt args))
 
-(define error (make-DBusError))
-(dbus_error_init (pointer-to error))
+(define iface "local.Neighbor")
+(define iface-pat "interface='local.Neighbor'")
 
-(define conn (dbus_bus_get 'DBUS_BUS_SESSION (pointer-to error)))
-(check-error error)
-(sf "conn: ~S = ~S\n" conn (ffi:pointer->string (dbus_bus_get_unique_name conn)))
+(define workers '())
+(define monitor #f)
 
-(define msg (dbus_message_new_method_call
-	     "org.freedesktop.DBus"		; bus name (was NULL)
-	     "/org/freedesktop/DBus"		; object path
-	     "org.freedesktop.DBus.Debug.Stats"	; interface name
-	     "GetStats"))			; method
+(define (add-role role name)
+  (cond
+   ((string=? role "worker")
+    (unless (member name workers)
+      (set! workers (cons name workers))))
+   ((string=? role "monitor") (set! monitor name))
+   (else (sf "*** unknown role: ~A\n" role))))
 
-(define pending (make-DBusPendingCall*))
-(or (dbus_connection_send_with_reply conn msg (pointer-to pending) -1)
-    (error "*** send_with_reply FAILED\n"))
-(if (zero? (fh-object-ref pending)) (display "*** pending NULL\n"))
+(define (send-ping conn role)
+  (let* ((&role (pointer-to (make-char* role)))
+	 (sig (dbus_message_new_signal "/" iface "Ping"))
+	 (&iter (make-DBusMessageIter&))
+	 (serial (make-uint32)))
+    (sf "\nsending ping with ~S\n" role)
+    (dbus_message_iter_init_append sig &iter)
+    (dbus_message_iter_append_basic &iter (DBUS 'TYPE_STRING) &role)
+    (dbus_connection_send conn sig (pointer-to serial))
+    serial))
+    
+(define (send-pong conn rem role)
+  (let ((&role (pointer-to (make-char* role)))
+	(loc (make-char* (dbus_bus_get_unique_name conn)))
+	(rpl (dbus_message_new_method_call rem "/" iface "Pong"))
+	(&iter (make-DBusMessageIter&))
+	(serial (make-uint32)))
+    (sf "\nsending pong to ~S with ~S\n" rem role)
+    (dbus_message_iter_init_append rpl &iter)
+    (dbus_message_iter_append_basic &iter (DBUS 'TYPE_STRING) &role)
+    (dbus_connection_send conn rpl (pointer-to serial))
+    serial))
 
-(dbus_connection_flush conn)
-(dbus_message_unref msg)
-(dbus_pending_call_block pending)
+(define (rply-pong conn msg)
+  (let ((rpl (dbus_message_new_method_return msg))
+	(&iter (make-DBusMessageIter&))
+	(bval (make-uint32 (dbus-symval 'TRUE)))
+	(serial (make-uint32)))
+    (dbus_message_iter_init msg &iter)
+    (sf "\nreply OK to pong from ~S, a ~S\n"
+	(dbus-message-get-sender msg)
+	(car (get-dbus-message-args msg)))
+    (dbus_message_iter_init_append rpl &iter)
+    (dbus_message_iter_append_basic &iter (DBUS 'TYPE_BOOLEAN) (pointer-to bval))
+    (dbus_connection_send conn rpl (pointer-to serial))
+    serial))
 
-(set! msg (dbus_pending_call_steal_reply pending))
-(if (zero? (fh-object-ref msg)) (error "*** reply message NULL\n"))
-(sf "msg from reply:~S, serial:~S, type:~A\n" msg (dbus_message_get_serial msg)
-    (let ((msg-type (dbus_message_get_type msg)))
-      (cond
-       ((eq? (DBUS 'MESSAGE_TYPE_INVALID) msg-type) "invalid")
-       ((eq? (DBUS 'MESSAGE_TYPE_METHOD_CALL) msg-type) "method call")
-       ((eq? (DBUS 'MESSAGE_TYPE_METHOD_RETURN) msg-type) "method return")
-       ((eq? (DBUS 'MESSAGE_TYPE_ERROR) msg-type) "error")
-       ((eq? (DBUS 'MESSAGE_TYPE_SIGNAL) msg-type) "signal"))))
+;;;
 
-(define msg-iter (make-DBusMessageIter))
-(dbus_pending_call_unref pending)
+(define (send-update conn data)
+  #f)
 
-(sf "iter_init => ~S\n" (dbus_message_iter_init msg (pointer-to msg-iter)))
-(sf "result:\n")
-(pretty-print (read-dbus-val (pointer-to msg-iter)) #:per-line-prefix "  ")
+(define conn #f)
 
-(dbus_message_unref msg)
-;;(dbus_connection_close conn)
+(define (p2s p)
+  (if (zero? (ffi:pointer-address p)) "" (ffi:pointer->string p)))
+
+(define (show msg)
+  (sf "\n  got message ~S\n" msg)
+  (sf "    type   = ~S\n" (dbus-message-type (dbus_message_get_type msg)))
+  (sf "    path   = ~S\n" (p2s (dbus_message_get_path msg)))
+  (sf "    iface  = ~S\n" (p2s (dbus_message_get_interface msg)))
+  (sf "    member = ~S\n" (p2s (dbus_message_get_member msg))))
+
+;; worker listens for ping, sends pong
+(define (run-peer role)
+  (let ((error (make-DBusError)))
+    (set! conn (dbus_bus_get 'DBUS_BUS_SESSION NULL))
+    (sf "\nbus=~S\n" (dbus-bus-get-unique-name conn))
+    (dbus_bus_add_match conn iface-pat NULL)
+    (send-ping conn role)
+    (let loop ((clk 0))
+      (dbus_connection_read_write conn 0)
+      (let ((msg (dbus_connection_pop_message conn)))
+	(unless (zero? (fh-object-ref msg))
+	  (show msg)
+	  (cond
+
+	   ((= (dbus_message_get_type msg) (DBUS 'MESSAGE_TYPE_ERROR))
+	    (dbus_set_error_from_message (pointer-to error) msg)
+	    (sf "error: ~S\n"
+		(ffi:pointer->string
+		 (ffi:make-pointer
+		  (fh-object-ref error 'message))))
+	    #f)
+
+	   ((and (!0 (dbus_message_has_member msg "Ping"))
+		 (not (string=? (dbus-bus-get-unique-name conn)
+				(dbus-message-get-sender msg))))
+	    (let ((r-name (dbus-message-get-sender msg))
+		  (r-role (list-ref (get-dbus-message-args msg) 0)))
+	      (sf "\nping from ~S, a ~S\n" r-name r-role)
+	      (add-role r-role r-name)
+	      (send-pong conn r-name role)))
+
+	   ((!0 (dbus_message_has_member msg "Pong"))
+	    (let ((r-name (dbus-message-get-sender msg))
+		  (l-name (dbus-bus-get-unique-name conn))
+		  (r-role (list-ref (get-dbus-message-args msg) 0)))
+	      (unless (string=? r-name l-name)
+		(add-role r-role r-name)
+		(rply-pong conn msg))))
+
+	   (else #t))
+	  (sf "\n")
+	  (sf "  workers: ~S\n" workers)
+	  (sf "  monitor: ~S\n" monitor)
+	  (dbus_message_unref msg))
+	(sleep 1)
+	;;(if (zero? (mod clk 10)) (send-update conn role))
+	(loop (1+ clk))))
+    #t))
+
+(let ((args (cdr (program-arguments))))
+  (if (null? args)
+      (run-peer "worker")
+      (run-peer (car args))))
 
 ;; --- last line ---

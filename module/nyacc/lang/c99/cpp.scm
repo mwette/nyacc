@@ -34,14 +34,10 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang sx-util)
-  #:use-module ((nyacc lang util) #:select (report-error))
-  )
-(cond-expand ;; for MES
+  #:use-module ((nyacc lang util) #:select (report-error)))
+(cond-expand
   (guile-2
    (use-modules (rnrs arithmetic bitwise))
-   (use-modules (ice-9 pretty-print))
-   (define pp pretty-print)
-   (define (sf fmt . args) (apply simple-format #t fmt args))
    (use-modules (system base pmatch)))
   (else
    (use-modules (ice-9 optargs))
@@ -536,7 +532,6 @@
 	     (chl '())			; character list
 	     (nxt #f)			; next string after char list
 	     (ch (read-char)))		; next character
-    ;;(sferr "px-1: stl=~S chl=~S nxt=~S ch=~S\n" stl chl nxt ch)
     (cond
      (nxt (iter (cons nxt (ins-chl chl stl)) '() #f ch))
      ((eof-object? ch)

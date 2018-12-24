@@ -21,19 +21,12 @@
 
 ;; Currentl K&R function definitions are not supported:
 ;;   int f(x) int x; { ... } => syntax error
-;; maybe because grammar would generate conflict on
-;;   int f(x) __attribute__((__static__)) int x; { ... } => syntax error
+;; because they lead to an ambiguous grammar, I believe:
+;;   int f(x) __attribute__((__static__)) int x; { ... }
 
-;; See also C11 in http://www.quut.com/c/ANSI-C-grammar-y.html
-
-;; but check this:
+;; See also:
+;;   http://www.quut.com/c/ANSI-C-grammar-y.html - C11 grammar
 ;;   https://gcc.gnu.org/onlinedocs/gcc/C-Extensions.html#C-Extensions
-
-;; We are not adding attributes to the AST in many places.
-
-;; Does the c expression parser need to handle comments?
-
-;; Currently, only attributed for declaration-specifiers are captured.
 
 ;;; Code:
 
@@ -46,8 +39,6 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-43) #:select (vector-map)))
-
-;;(display "IN c99/mach.scm, restore __packed__ ...\n")
 
 ;; @deffn {Variable} c99-spec
 ;; This variable is the specification a-list for the hacked ISO C99 language.

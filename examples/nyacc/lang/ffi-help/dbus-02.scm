@@ -1,4 +1,4 @@
-;; dbus-05.scm - example for mainloop
+;; dbus-02.scm - example for mainloop
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;

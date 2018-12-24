@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 
-;; Copyright (C) 2015-2017 - Matthew R.Wette
+;; Copyright (C) 2015-2018 - Matthew R.Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -53,9 +53,7 @@
 	    c-escape
 	    cnumstr->scm
 	    filter-mt remove-mt map-mt make-ident-like-p
-	    c:ws c:if c:ir
-	    ;; deprecated
-	    make-like-ident-p)
+	    c:ws c:if c:ir)
   #:use-module ((srfi srfi-1) #:select (remove append-reverse)))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -92,7 +90,6 @@
 (define c:bx (string->char-set "pP"))	; binary float suffix
 (define c:cx (string->char-set "LuU"))	; char prefix
 
-;;(define (lxlsr chl) (list->string (reverse chl))) ; used often
 (define lxlsr reverse-list->string)
 
 ;; @deffn {Procedure} eval-reader reader string => result
@@ -689,9 +686,5 @@
 	     (else (cons ch ch))))))))) ; should be error
 
 ;; @end table
-
-;; === deprecated
-
-(define make-like-ident-p make-ident-like-p)
 
 ;; --- last line ---

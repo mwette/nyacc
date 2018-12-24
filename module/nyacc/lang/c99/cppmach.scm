@@ -24,13 +24,12 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)
   #:use-module ((srfi srfi-43) #:select (vector-map))
-  #:use-module (rnrs arithmetic bitwise)
-  )
+  #:use-module (rnrs arithmetic bitwise))
 
 (define cpp-spec
   (lalr-spec
    (notice (string-append "Copyright (C) 2016,2017 Matthew R. Wette"
-			  lang-crn-lic))
+			  license-lgpl3+))
    (expect 0)
    (start conditional-expression)
    (grammar
@@ -130,7 +129,6 @@
 			    (xtra-dir "cppact.scm")))
 	(b (move-if-changed (xtra-dir "cpptab.scm.new")
 			    (xtra-dir "cpptab.scm"))))
-    (when #f ;; (or a b) 
-      (system (string-append "touch " (lang-dir "cpp.scm"))))))
+    (or a b)))
 
 ;; --- last line ---

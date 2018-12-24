@@ -18,9 +18,7 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 cxeval)
-  #:export (parse-c99-cx
-	    eval-c99-cx
-	    )
+  #:export (parse-c99-cx eval-c99-cx)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -30,9 +28,8 @@
   #:use-module (nyacc lang c99 cpp)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
-  #:use-module (system foreign)
-  ;;#:use-module (system base pmatch)
-  )
+  #:use-module (system foreign))
+
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -72,7 +69,6 @@
 	 (cons 'act-v c99cx-act-v))))
 
 (define gen-c99cx-lexer
-  ;;(make-c99-lexer-generator c99x-mtab c99cx-raw-parser))
   (let* ((reader (make-comm-reader '(("/*" . "*/"))))
 	 (comm-skipper (lambda (ch) (reader ch #f))))
     (make-lexer-generator c99cx-mtab
@@ -121,16 +117,12 @@
 ;;     ("(" "{" block-item-list "}" ")"
 ;;      ($$ `(stmt-expr (@ (extension "GNUC")) ,$3)))
 ;;     )
-;;
 (define (eval-sizeof-expr tree udict)
   (let* ((expr (sx-ref tree 1)))
     (sx-match expr
       ((p-expr (string ,str))
        (string-length str))
       (else #f))))
-
-;;(define (expand-c99x-defs tree defs)
-;;  (let ((
 
 (define (eval-ident name udict ddict)
   (cond
@@ -143,12 +135,6 @@
    (else
     ;;(error "missed" name)
     #f)))
-
-#|
-(define (typedef? name udict)
-  (let ((decl (assoc-ref udict name)))
-    (and decl (eq? 'typedef (sx-tag (sx-ref* decl 1 1 1))))))
-|#
 
 (define* (eval-c99-cx tree #:optional udict ddict)
   (letrec

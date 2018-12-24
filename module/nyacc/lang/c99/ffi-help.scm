@@ -60,7 +60,6 @@
 	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
 	    ;; debugging
 	    ;;ffi-symmap
-	    fhoo
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
@@ -82,15 +81,14 @@
   #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-37)
   #:use-module (system base pmatch)
+  #:use-module ((system base compile) #:select (compile-file))
   #:use-module (ice-9 format)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
+  #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
   #:version (0 86 9))
-
-(define (fhoo) #t)			; debugging
-(use-modules (ice-9 pretty-print))
 
 (define fh-cpp-defs
   (cond
@@ -151,8 +149,6 @@
 (define* (upscm tree #:key (per-line-prefix ""))
   (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
 (define (c99scm tree)
-  #;(when (equal? "epoll_event" (sx-ref* tree 1 1 1 1 1))
-    (sferr "c99scm:\n") (pperr tree))
   (pretty-print-c99 tree
 		    (*mport*)
 		    #:per-line-prefix ";; "))
@@ -388,27 +384,6 @@
 	(unless cx (sferr "expr=~S\n" expr))
 	cx))
     (lambda (key . args) (sferr "const-expr->number failed: ~S\n" expr) #f)))
-
-#!
-;; given a union-descriptor geneate a bounding struct-descriptor
-(define (bounding-struct-descriptor union-descriptor)
-  (let ((size (bytestructure-descriptor-size union-descriptor))
-	(align (bytestructure-descriptor-alignment union-descriptor))
-	(diff (- size align)))
-    (if (positive? diff)
-	(case align
-	  ((8) (bs:struct `(x ,double) `(y ,(bs-vector diff uint8))))
-	  ((4) (bs:struct `(x ,uint32) `(y ,(bs-vector diff uint8))))
-	  ((2) (bs:struct `(x ,uint16) `(y ,(bs-vector diff uint8))))
-	  ((1) (bs:struct `(x ,uint8) `(y ,(bs-vector diff uint8))))
-	  (else (error "unknown alignment")))
-	(case align
-	  ((8) (bs:struct `(x ,double)))
-	  ((4) (bs:struct `(x ,uint32)))
-	  ((2) (bs:struct `(x ,uint16)))
-	  ((1) (bs:struct `(x ,uint8)))
-	  (else (error "unknown alignment"))))))
-!#
 
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
@@ -707,8 +682,7 @@
   (sfscm "   ((integer? n) n)\n")
   (sfscm "   (else (error \"bad arg\"))))\n")
   (sfscm "(define-public (wrap-~A v)\n" name)
-  (sfscm "  (assq-ref ~A-enum-vnl v))\n" name)
-  )
+  (sfscm "  (assq-ref ~A-enum-vnl v))\n" name))
 
 (define (cnvt-enum-def typename enum-name enum-def-list)
   (let* ((name-val-l
@@ -761,8 +735,7 @@
     ("signed long long" . ffi:long) ("signed long long int" . ffi:long)
     ("unsigned long long" . ffi:unsigned-long)
     ("unsigned long long int" . ffi:unsigned-long)
-    ("_Bool" . ffi:int8)
-    ))
+    ("_Bool" . ffi:int8)))
 
 (define ffi-defined (map car ffi-typemap))
 
@@ -774,8 +747,7 @@
     (ffi:ssize_t . ,ssize_t) (ffi:ptrdiff_t . ,ptrdiff_t) (ffi:int8 . ,int8)
     (ffi:uint8 . ,uint8) (ffi:int16 . ,int16) (ffi:uint16 . ,uint16)
     (ffi:int32 . ,int32) (ffi:uint32 . ,uint32) (ffi:int64 . ,int64)
-    (ffi:uint64 . ,uint64) (ffi-void* . *)
-    ))
+    (ffi:uint64 . ,uint64) (ffi-void* . *)))
 
 (define (mtail->ffi-desc mdecl-tail)
   ;;(sferr "mdecl=~S\n" mdecl)
@@ -2130,13 +2102,14 @@
 ;; @end example
 ;; @end deffn
 (define (C-fun-decl->scm code)
-  (let* ((tree (with-input-from-string code parse-c99))
-	 (udict (unitize-decl (sx-ref tree 1)))
-	 (name (caar udict)) (udecl (cdar udict))
-	 (gen1 (fh-cnvt-udecl udecl '()))
-	 (gen2 (with-input-from-string gen1 read))
-	 (gen3 (caddr gen2)))
-    gen3))
+  (let ((tree (with-input-from-string code parse-c99)))
+    (if tree
+	(let* ((udict (unitize-decl (sx-ref tree 1)))
+	       (name (caar udict)) (udecl (cdar udict))
+	       (gen1 (fh-cnvt-udecl udecl '()))
+	       (gen2 (with-input-from-string gen1 read))
+	       (gen3 (caddr gen2)))
+	  gen3))))
 
 (define* (fh-cnvt-udecl udecl udict #:key (prefix "fh"))
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
@@ -2205,10 +2178,13 @@
 	   (udict (c99-trans-unit->udict/deep tree))
 	   (udecls (c99-trans-unit->udict tree))
 	   (decls (map car udecls))
-	   (scmfile ".fh_temp.scm") ; ugly hack, need tmpfile w/ .scm ending
+	   (scmport (mkstemp! (string-copy ",_FH_XXXXXX")))
+	   ;;(scmport (tmpfile)) ;; does not work ?
+	   (scmfile (port-filename scmport))
+	   (compile-file (@@ (system base compile) compile-file))
 	   )
       (*prefix* (symbol->string (gensym "fh-")))
-      (*mport* (open-output-file scmfile))
+      (*mport* scmport)
       (*udict* udict)
       (sfscm "(use-modules (system ffi-help-rt))\n")
       (sfscm "(use-modules ((system foreign) #:prefix ffi:))\n")
@@ -2219,8 +2195,8 @@
 			 (pkg-config-libs pkg-config)))))
       (process-decls decls udict '() bs-defined)
       (close (*mport*))
-      (load scmfile)
-      (delete-file scmfile)
+      (simple-format #t "wrote ~S; compile and load: ...\n" scmfile)
+      (load-compiled (compile-file scmfile #:opts '()))
       (if #f #f))))
 
 
