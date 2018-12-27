@@ -10,4 +10,6 @@ lang.zip
 gram.y
 Makefile
 */ffi/*.scm
+examples/nyacc/lang/ffi-help/*.png
+examples/nyacc/lang/ffi-help/xlsxlogo.png
 .DS_Store

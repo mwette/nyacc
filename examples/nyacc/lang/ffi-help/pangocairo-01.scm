@@ -1,10 +1,30 @@
-;; pangocairo demo - this works
-;; https://developer.gnome.org/pango/stable/pango-Cairo-Rendering.html
+;;; examples/nyacc/lang/ffi-help/pangocairo-01.scm - this works
+
+;; Copyright (C) 2018 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
+
+;;; Notes:
+
+;; This demo is translated from the following:
+;;   https://developer.gnome.org/pango/stable/pango-Cairo-Rendering.html
+
+;;; Code:
 
 (use-modules (ffi glib))
 (use-modules (ffi gobject))
 (use-modules (ffi cairo))
-;;(use-modules (ffi pango))
 (use-modules (ffi pangocairo))
 (use-modules (system ffi-help-rt))
 
@@ -52,12 +72,10 @@
   (define surface #f)
   (define cr #f)
   (define status #f)
-  
-  (unless (= 2 (length argv))
-    (display "usage: cairopango FILENAME\n")
-    (quit))
-  
-  (set! filename (list-ref argv 1))
+
+  (if (= 2 (length argv))
+      (set! filename (list-ref argv 1))
+      (set! filename "pangocairo-01.png"))
 
   (set! surface	(cairo_image_surface_create 'CAIRO_FORMAT_ARGB32
 					    (* 2 RADIUS) (* 2 RADIUS)))

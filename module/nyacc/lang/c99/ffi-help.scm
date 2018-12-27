@@ -251,6 +251,8 @@
    '()
    (pkg-config name "--cflags")))
 
+;; TODO:
+;; 1) check if --libs provides -L that is not in ld.so dirs.
 (define (pkg-config-libs name)
   (fold-right
    (lambda (s l)

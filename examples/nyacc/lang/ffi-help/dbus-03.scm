@@ -1,11 +1,19 @@
-;; nyacc/lang/ffi-help/dbus-03.scm - simple square
+;; nyacc/lang/ffi-help/dbus-03.scm - peer-to-peer over the session bus
 
 ;; Copyright (C) 2018 Matthew R. Wette
 
-;; Copying and distribution of this file, with or without modification,
-;; are permitted in any medium without royalty provided the copyright
-;; notice and this notice are preserved.  This file is offered as-is,
-;; without any warranty.
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 ;;; Notes:
 
@@ -31,14 +39,16 @@
 (define iface-pat "interface='local.Neighbor'")
 
 (define workers '())
-(define monitor #f)
+(define monitors '())
 
 (define (add-role role name)
   (cond
    ((string=? role "worker")
     (unless (member name workers)
       (set! workers (cons name workers))))
-   ((string=? role "monitor") (set! monitor name))
+   ((string=? role "monitor")
+    (unless (member name monitors)
+      (set! monitors (cons name monitors))))
    (else (sf "*** unknown role: ~A\n" role))))
 
 (define (send-ping conn role)
@@ -136,11 +146,10 @@
 
 	   (else #t))
 	  (sf "\n")
-	  (sf "  workers: ~S\n" workers)
-	  (sf "  monitor: ~S\n" monitor)
+	  (sf "  workers : ~S\n" workers)
+	  (sf "  monitors: ~S\n" monitors)
 	  (dbus_message_unref msg))
 	(sleep 1)
-	;;(if (zero? (mod clk 10)) (send-update conn role))
 	(loop (1+ clk))))
     #t))
 

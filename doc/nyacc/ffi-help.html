@@ -61,7 +61,7 @@ ul.no-bullet {list-style: none}
 <h1 class="top">FFI Helper for Guile</h1>
 <div class="format">
 <pre class="format">Matt Wette
-February 2018
+December 2018
 With NYACC Version 0.86.9
 </pre></div>
 
@@ -626,13 +626,8 @@ passed by reference as return types.  For example
 <p>Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
 </p></blockquote>
 <p>The message comes from the garbage collector.  It means you&rsquo;ve run out
-of memory.  The recommended fix is to <code>GC_INITIAL_HEAP_SIZE</code> to
-something big:
-</p><div class="example">
-<pre class="example">export GC_INITIAL_HEAP_SIZE=16G
-</pre></div>
-<p>I found that this actually came from a bug in the ff-compiler which
-generated this code:
+of memory.  I found that this actually came from a bug in the ff-compiler 
+which generated this code:
 </p><div class="example">
 <pre class="example">  (bs:struct
     (list ...
@@ -646,7 +641,8 @@ generated this code:
   ...
 };
 </pre></div>
-
+<p>This bug, failure to evaluate <code>7+1</code> to an integer, was fixed.
+</p>
 <a name="Trimming-Things-Down"></a>
 <h4 class="subheading">Trimming Things Down</h4>
 
@@ -656,24 +652,36 @@ generate a guile interface for gtk2+, along with glib, gobject, pango
 and gdk you will end up with over 100k lines of scm code.  This may
 seem bulky.  Instead it may be preferable to generate a small number
 of calls for gtk and work from there.  In order to achieve this you
-could use the (upcoming) <code>#:api-code</code> interface.  This is akin
-to generating a small dot-h file and BLA BLA BLA.
+could use the <code>#:api-code</code> or <code>#:decl-filter</code> options.
 </p>
-<p>For example, if we wanted to just generate code for the gtk hello
-world demo we could geneate
+<p>For example, in the expansion of the GLU/GL FFI module, called
+<samp>glugl.ffi</samp>, I found that a very large number of declarations
+starting with <code>PF</code> were being generated.  I removed these using
+the <code>#:decl-filter</code> option:
+</p><div class="example">
+<pre class="example">(define-ffi-module (ffi glugl)
+  #:include '(&quot;GL/gl.h&quot; &quot;GL/glu.h&quot;)
+  #:library '(&quot;libGLU&quot; &quot;libGL&quot;)
+  #:inc-filter (lambda (spec path) (string-contains path &quot;GL/&quot; 0))
+  #:decl-filter (lambda (n) (not (and (string? n) (string-prefix? &quot;PF&quot; n)))))
+</pre></div>
+<p>Using the option reduced <samp>glugl.scm</samp> from 59,274 lines down to
+15,354 lines. 
+</p>
+<p>As another example, if we wanted to just generate code for the gtk hello
+world demo we could write
 </p><div class="example">
 <pre class="example">(define-ffi-module (hack1)
   #:pkg-config &quot;gtk+-2.0&quot;
   #:api-code &quot;
   #include &lt;gtk2.h&gt;
   void gtk_init(int *argc, char ***argv);
-  g_signal_connect
   void gtk_container_set_border_width(GtkContainer *container,
        guint border_width);
   void gtk_container_add(GtkContainer *container, GtkWidget *widget);
   void gtk_widget_show(GtkWidget *widget);
   void gtk_main(void);
-  &quot;
+  &quot;)
 </pre></div>
 
 <p>Since the above example does not ask the FH to pull in typedef&rsquo;s then
@@ -724,6 +732,9 @@ but not the pointer type.
 <p><code>define-ffi-module</code> options:
 </p><dl compact="compact">
 <dt><code>#:decl-filter proc</code></dt>
+<dd><p>proc is a prodicate taking a key of the form <code>&quot;name&quot;</code>,
+<code>(struct . &quot;name&quot;)</code>, <code>(union . &quot;name&quot;)</code> or <code>(enum . &quot;name&quot;)</code>.
+</p></dd>
 <dt><code>#:inc-filter proc</code></dt>
 <dt><code>#:include expr</code></dt>
 <dd><p>expr is string or list or procecure that evaluates to string or list
@@ -846,10 +857,28 @@ make install
 
 <p>xxx
 </p>
+<a name="Notes"></a>
+<h4 class="subheading">Notes</h4>
+
+<ol>
+<li> The following situation is a bit tricky for me.
+<div class="example">
+<pre class="example">typedef struct foo foo_t;
+typedef foo_t bar_t;
+struct foo { int a; };
+int baz(foo_t *x);
+</pre></div>
+<p>Right now, on the first declaration I assign <code>foo_t</code> the type
+<code>fh-void</code>.  The second declaration is handled as a type-alias.
+When I get to the third declaration I define the
+<code>struct foo</code> compound type, then re-define the <code>foo_t</code> as
+a compound type, and it&rsquo;s pointer type (missed this first time).
+</p></li></ol>
+
 <a name="Copyright"></a>
 <h4 class="subheading">Copyright</h4>
 
-<p>Copyright (C) 2017 &ndash; Matthew R. Wette.
+<p>Copyright (C) 2017-2018 &ndash; Matthew R. Wette.
 </p>
 <p>Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or

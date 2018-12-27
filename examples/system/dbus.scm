@@ -17,34 +17,41 @@
 
 ;;; Notes:
 
+;; This is a work in progress for Guile dbus based on libdbus.
+
+;; See:
 ;;   https://lists.freedesktop.org/archives/dbus/2007-October/008859.html
 ;;   https://stackoverflow.com/questions/9378593/
-;;       dbuswatch-and-dbustimeout-examples
+;;                                     dbuswatch-and-dbustimeout-examples
 
 ;; Marshalling and de-marshalling strings requires pointer.
 ;;   char *str_recv, *str_send = "hello";
 ;;   dbus_message_iter_get_basic(&iter, DBUS_TYPE_STRING, &str_recv);
 ;;   dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &str_send);
 
-;; generate a pointer to pointer to string
-;;   char *str = "hello"; => &str
+;; Variables names starting with `&' represent pointers to allocated
+;; memory as in
+;;   char *str = "hello";
+;;   foo(&str);
 
 ;;; Code:
 
 (define-module (system dbus)
   #:export (spawn-dbus-mainloop
 
-	    ;; dbus00:
-	    check-error
-	    get-bval
+	    TRUE FALSE
+
+	    dbus-version
+	    dbus-bus-get-unique-name
+	    dbus-message-get-sender
+	    dbus-error
+
+	    ;; utils:
 	    read-dbus-val
 	    get-dbus-message-args
 	    nonzero?
 	    TRUE FALSE
 	    ;;
-	    dbus-version
-	    dbus-bus-get-unique-name
-	    dbus-message-get-sender
 	    make-DBusMessageIter&
 	    ;;
 	    dbus-message-type
@@ -52,27 +59,22 @@
 	    make-dbus-string
 	    make-dbus-pointer
 	    )
-  #:use-modules (ffi epoll)
-  #:use-modules (ffi dbus)
+  #:use-module (ffi epoll)
+  #:use-module (ffi dbus)
 
-  #:use-modules (bytestructures guile)
-  #:use-modules (system ffi-help-rt)
-  #:use-modules ((system foreign) #:prefix ffi:)
+  #:use-module (bytestructures guile)
+  #:use-module (system ffi-help-rt)
+  #:use-module ((system foreign) #:prefix ffi:)
 
-  #:use-modules (ice-9 threads)
-  #:use-modules (srfi srfi-1)
-  #:use-modules (srfi srfi-9)
-  #:use-modules (srfi srfi-43)
-
-  ;; dbus00
-  #:use-modules ((ice-9 iconv) #:select (string->bytevector))
-  #:use-modules (rnrs bytevectors)
-
-  ;; sched
   #:use-module (ice-9 threads)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
+  #:use-module (srfi srfi-43)
 
+  ;; dbus00
+  ;;#:use-module ((ice-9 iconv) #:select (string->bytevector))
+  ;;#:use-module (rnrs bytevectors)
 )
 
 (use-modules (ice-9 format))
@@ -82,13 +84,28 @@
 
 (define TRUE 1)
 (define FALSE 0)
-(define (nonzero? val) (not (zero? val)))
 
-(define (check-error error)
-  (or (zero? (dbus_error_is_set (pointer-to error)))
-      (simple-format
-       #t "~A\n" (ffi:pointer->string
-		  (ffi:make-pointer (fh-object-ref error 'message))))))
+(define (dbus-version)
+  (let ((maj (make-int)) (min (make-int)) (mic (make-int)))
+    (dbus_get_version (pointer-to maj) (pointer-to min) (pointer-to mic))
+    (simple-format #f "~A.~A.~A"
+		   (fh-object-ref maj)
+		   (fh-object-ref min)
+		   (fh-object-ref mic))))
+
+(define (dbus-bus-get-unique-name conn)
+  (ffi:pointer->string (dbus_bus_get_unique_name conn)))
+
+(define (dbus-message-get-sender conn)
+  (ffi:pointer->string (dbus_message_get_sender conn)))
+
+;; @deffn {Procedure} dbus-error error => #f|string
+;; If @var{error} (a @code{DBusError} value) represents an error return
+;; the error string.  Otherwise return @code{#f}.
+;; @end deffn
+(define (dbus-error error)
+  (and (!0 (dbus_error_is_set (pointer-to error)))
+       (ffi:pointer->string (ffi:make-pointer (fh-object-ref error 'message)))))
   
 (define (get-bval &iter key)
   (let* ((bval (make-DBusBasicValue)))
@@ -177,20 +194,6 @@
 	  ((4) 'ALREADY_OWNER)
 	  (else #f)))
       (lambda (ival) ival)))
-
-(define (dbus-version)
-  (let ((maj (make-int)) (min (make-int)) (mic (make-int)))
-    (dbus_get_version (pointer-to maj) (pointer-to min) (pointer-to mic))
-    (simple-format #f "~A.~A.~A"
-		   (fh-object-ref maj)
-		   (fh-object-ref min)
-		   (fh-object-ref mic))))
-
-(define (dbus-bus-get-unique-name conn)
-  (ffi:pointer->string (dbus_bus_get_unique_name conn)))
-
-(define (dbus-message-get-sender conn)
-  (ffi:pointer->string (dbus_message_get_sender conn)))
 
 (define (make-DBusMessageIter&)
   (pointer-to (make-DBusMessageIter)))
@@ -488,7 +491,7 @@
     (dbus_watch_set_data watch (ffi:scm->pointer ddent) dbus-data-free)
     
     ;; Set up the indended set of epoll events.
-    (if (nonzero? (dbus_watch_get_enabled watch))
+    (if (!0 (dbus_watch_get_enabled watch))
 	(fh-object-set! event 'events
 			(logior (fh-object-ref event 'events)
 				(dbus-watch-flags->epoll-events flags))))
@@ -672,10 +675,10 @@
 	    error))
 	 (conn
 	  (let ((conn (dbus_bus_get bus-id (pointer-to error))))
-	    (check-error error)
+	    (dbus-error error)
 	    conn)))
     (call-with-new-thread (lambda () (my-main-loop conn)))
-    (sleep 1)				; Am I afraid of race condition?
+    (sleep 1)
     conn))
 
 ;; --- last line ---

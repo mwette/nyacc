@@ -1,4 +1,4 @@
-;; dbus-02.scm - example for mainloop
+;;; examples/nyacc/lang/ffi-help/dbus-02.scm - mainloop example
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -15,16 +15,26 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
+;;; Description:
+
+;; you can do
+;;   $ guile dbus-02.scm
+;; or
+;;   $ guile -l dbus-02.scm
+;; to send more
+
+;;; Code:
+
 (add-to-load-path (getcwd))
 
-(use-modules (dbus00))
-(use-modules (dbusML))
+(use-modules (system dbus))
 (use-modules (ffi dbus))
 (use-modules (system ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
-(use-modules (ice-9 pretty-print))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
+
+(use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 
 (define (send-msg conn msg)
@@ -64,12 +74,6 @@
 ;; d-feet is GUI to check dictionary
 ;; https://pythonhosted.org/txdbus/dbus_overview.html
 ;; http://git.0pointer.net/rtkit.git/tree/README
-(define msg01/all			; fails
-  (dbus_message_new_method_call
-   "org.freedesktop.DBus.Peer"		; bus name
-   "/org/freedesktop/DBus/any"		; object path
-   "org.freedesktop.DBus.Peer"		; interface name
-   "Ping"))				; method
 
 (define msg02/ses			; works
   (dbus_message_new_method_call
@@ -85,25 +89,13 @@
    "org.freedesktop.DBus"		; interface name
    "GetId"))				; method
 
-(define msg04/sys			; fails
-  (dbus_message_new_method_call
-   "com.dell.RecoveryMedia"		; bus name
-   "/RecoveryMedia"			; object path
-   "org.freedesktop.Dbus.Introspectable" ; interface name
-   "Introspect"))			 ; method
-
 (define conn (spawn-dbus-mainloop 'session))
-;;(define conn (spawn-dbus-mainloop 'system))
 
-;;(define pending (send-msg conn msg02/ses))
 (define pending (send-msg conn msg02/ses))
 
-(let iter ((got-it? (there-yet? pending)))
+(let loop ((got-it? (there-yet? pending)))
   (sf "there-yet? => ~S\n" got-it?)
-  (cond
-   (got-it? (handle-it pending))
-   (else
-    (sleep 1)
-    (iter (there-yet? pending)))))
+  (cond (got-it? (handle-it pending))
+	(else (sleep 1) (loop (there-yet? pending)))))
 
 ;; --- last line ---

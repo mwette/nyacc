@@ -19,7 +19,7 @@
   #:include '("GL/gl.h" "GL/glu.h")
   #:library '("libGLU" "libGL")
   #:inc-filter (lambda (spec path) (string-contains path "GL/" 0))
-  #:decl-filter (lambda (n) (not (string-prefix? "PF" n))))
+  #:decl-filter (lambda (n) (not (and (string? n) (string-prefix? "PF" n)))))
 
 (define-public glugl-symval ffi-glugl-symbol-val)
 

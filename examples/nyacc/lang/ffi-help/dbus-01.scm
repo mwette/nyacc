@@ -16,22 +16,19 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(use-modules (ice-9 pretty-print))
-(define (sf fmt . args) (apply simple-format #t fmt args))
-
+(use-modules (system dbus))
+(use-modules (ffi dbus))
 (use-modules (system ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 (use-modules (bytestructures guile))
 
-(use-modules (ffi dbus))
-
-(add-to-load-path (getcwd))
-(use-modules (dbus00))
+(define (sf fmt . args) (apply simple-format #t fmt args))
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
 
 (define (check-error error)
-  (or (zero? (dbus_error_is_set (pointer-to error)))
-      (sf "~A\n" (ffi:pointer->string
-		  (ffi:make-pointer (fh-object-ref error 'message))))))
+  (let ((err (dbus-error error)))
+    (if err (sf "~A\n" err))))
   
 ;; ====================================
 
@@ -59,7 +56,7 @@
 
 (set! msg (dbus_pending_call_steal_reply pending))
 (if (zero? (fh-object-ref msg)) (error "*** reply message NULL\n"))
-(sf "msg from reply:~S, serial:~S, type:~A\n" msg (dbus_message_get_serial msg)
+(sf "msg reply: ~S, serial: ~S, type: ~A\n" msg (dbus_message_get_serial msg)
     (let ((msg-type (dbus_message_get_type msg)))
       (cond
        ((eq? (DBUS 'MESSAGE_TYPE_INVALID) msg-type) "invalid")
@@ -68,14 +65,13 @@
        ((eq? (DBUS 'MESSAGE_TYPE_ERROR) msg-type) "error")
        ((eq? (DBUS 'MESSAGE_TYPE_SIGNAL) msg-type) "signal"))))
 
-(define msg-iter (make-DBusMessageIter))
+(define &iter (make-DBusMessageIter&))
 (dbus_pending_call_unref pending)
 
-(sf "iter_init => ~S\n" (dbus_message_iter_init msg (pointer-to msg-iter)))
+(sf "iter_init => ~S\n" (dbus_message_iter_init msg &iter))
 (sf "result:\n")
-(pretty-print (read-dbus-val (pointer-to msg-iter)) #:per-line-prefix "  ")
+(pp (read-dbus-val &iter) #:per-line-prefix "  ")
 
 (dbus_message_unref msg)
-;;(dbus_connection_close conn)
 
 ;; --- last line ---

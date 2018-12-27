@@ -1,4 +1,4 @@
-;; linear.ffi				-*- Scheme -*-
+;; liblinear.ffi			-*- Scheme -*-
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -16,7 +16,7 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 ;; see https://github.com/cjlin1/liblinear
-(define-ffi-module (ffi linear)
+(define-ffi-module (ffi liblinear)
   #:include '("linear.h")
   #:library '("liblinear")
   #:export (linear-symval))

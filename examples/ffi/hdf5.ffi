@@ -1,4 +1,4 @@
-;; hdf5.ffi				-*- Scheme -*-
+;; hdf5.ffi - 		 		-*- Scheme -*-
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -15,13 +15,23 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-;; This is diverse in declarations.
+;;; Notes:
+
+;; HDF5 is "diverse" in declarations and a challenge to the FH.
+;; On my Ubuntu pkg-config says shared lib is in 
+;;   /usr/lib/x86_64-linux-gnu/hdf5/serial
+;; but there is
+;;   /usr/lib/x86_64-linux-gnu/libhdf5_serial.so
+;; so things are broken unless we add that.
+
+;;; Code:
+
 (define-ffi-module (ffi hdf5)
   #:pkg-config "hdf5"
   #:include '("hdf5.h" "hdf5_hl.h")
   #:inc-filter (lambda (file-spec path-spec)
 		 (string-prefix? "\"H5" file-spec))
-  ;;#:library '("libhdf5")
+  #:library '("libhdf5_serial")		; HDF5 pkg-config broken
   )
 
 ;; --- last line ---
