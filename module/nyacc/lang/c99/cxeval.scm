@@ -26,6 +26,7 @@
   #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang c99 cpp)
+  #:use-module (nyacc lang c99 munge)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (system foreign))
@@ -56,7 +57,8 @@
   (or (and=> (assoc-ref ffi-type-map name) sizeof)
       (throw 'nyacc-error "bad type")))
 
-(define (sizeof-string-const name)
+;; (string "abc" "dev")
+(define (sizeof-string-const value)
   #f)
 
 (include-from-path "nyacc/lang/c99/mach.d/c99cxtab.scm")
@@ -85,6 +87,14 @@
    (lambda (key fmt . args)
      (apply throw 'cpp-error fmt args))))
 
+(define (expand-typename typename udict)
+  (let* ((decl `(udecl (decl-spec-list
+			(type-spec (typename ,typename)))
+		       (declr (ident "_"))))
+	 (xdecl (expand-typerefs decl udict))
+	 (xname (and xdecl (sx-ref* xdecl 1 1 1 1))))
+    xname))
+
 ;; (sizeof type-name)
 ;; (type-name specificer-qualifier-list abstract-declarator)
 ;; (decl-spec-list 
@@ -92,10 +102,12 @@
 (define (eval-sizeof-type tree udict)
   (sx-match (sx-ref tree 1)
     ((type-name (decl-spec-list (type-spec (typename ,name))))
-     (let* ((ffi-type (assoc-ref ffi-type-map name)))
-       (if ffi-type
-	   (sizeof ffi-type)
-	   (error "eval-sizeof-type: missed typedef (work to go)"))))
+     (let* ((xname (expand-typename name udict))
+	    (ffi-type (assoc-ref ffi-type-map xname)))
+       (unless ffi-type
+	 (sf "need to expand ~S\n" name) (pp tree)
+	 (error "eval-sizeof-type: missed typedef (work to go)"))
+       (sizeof ffi-type)))
     ((type-name (decl-spec-list (type-spec (fixed-type ,name))))
      (let* ((ffi-type (assoc-ref ffi-type-map name)))
        (sizeof ffi-type)))
@@ -120,8 +132,9 @@
 (define (eval-sizeof-expr tree udict)
   (let* ((expr (sx-ref tree 1)))
     (sx-match expr
-      ((p-expr (string ,str))
-       (string-length str))
+      ((p-expr (string . ,strl))
+       (let loop ((l 0) (sl strl))
+	 (if (pair? sl) (loop (+ l (string-length (car sl))) (cdr sl)) l)))
       (else #f))))
 
 (define (eval-ident name udict ddict)
@@ -136,14 +149,17 @@
     ;;(error "missed" name)
     #f)))
 
+;; @deffn {Procedure} eval-c99-cx tree [udict [ddict]]
+;; Evaluate the constant expression or return #f
+;; @end deffn
 (define* (eval-c99-cx tree #:optional udict ddict)
   (letrec
       ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
        (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
        (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2
        (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
-       (uop (lambda (op ex) (and ex (op ex))))
-       (bop (lambda (op lt rt) (and lt rt (op lt rt))))
+       (uop (lambda (op ex) (and op ex (op ex))))
+       (bop (lambda (op lt rt) (and op lt rt (op lt rt))))
        (eval-expr
 	(lambda (tree)
 	  (case (car tree)
@@ -173,10 +189,17 @@
 	    ((bitwise-or) (bop logior (ev1 tree) (ev2 tree)))
 	    ((bitwise-xor) (bop logxor (ev1 tree) (ev2 tree)))
 	    ((bitwise-and) (bop logand (ev1 tree) (ev2 tree)))
-	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ;;
-	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
+	    ((or)
+	     (let ((e1 (ev1 tree)) (e2 (ev2 tree)))
+	       (if (and e1 e2) (if (and (zero? e1) (zero? e2)) 0 1) #f)))
+	    ((and)
+	     (let ((e1 (ev1 tree)) (e2 (ev2 tree)))
+	       (if (and e1 e2) (if (or (zero? e1) (zero? e2)) 0 1) #f)))
+	    ((cond-expr)
+	     (let ((e1 (ev1 tree)) (e2 (ev2 tree)) (e3 (ev3 tree)))
+	       (if (and e1 e2 e3) (if (zero? e1) e3 e2) #f)))
+	    ;;
 	    ((sizeof-type) (eval-sizeof-type tree udict))
 	    ((sizeof-expr) (eval-sizeof-expr tree udict))
 	    ((ident) (eval-ident (sx-ref tree 1) udict ddict))
@@ -185,11 +208,14 @@
 	    ((fctn-call) #f)		; assume not constant
 	    ;;
 	    ;; TODO 
+	    ((comma-expr) #f)
 	    ((i-sel) #f)
 	    ((d-sel) #f)
 	    ((array-ref) #f)
 	    ;;
-	    (else (error "eval-c99-cx: missed" (car tree)))))))
+	    (else
+	     (sf "missed:\n") (pp tree)
+	     (error "eval-c99-cx: missed" (car tree)))))))
     (eval-expr tree)))
 
 ;; --- last line ---
