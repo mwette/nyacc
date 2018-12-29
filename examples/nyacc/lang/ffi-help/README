@@ -1,0 +1,49 @@
+examples/nyacc/lang/ffi-help/README
+
+Copyright (C) 2018 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+NOTES:
+
+To play with the ffi-helper you need scheme-bytestructures, from
+
+  https://github.com/TaylanUB/scheme-bytestructures
+
+or ???
+
+  https://github.com/TaylanUB/scheme-bytestructures/releases
+
+
+Then go up three levels from here, in nyacc-0.00.0/examples and execute
+
+  $ cd ../../..
+  $ . env.sh
+
+Then, in the same directory, execute
+
+  $ guild compile-ffi ffi.d/cairo.ffi
+
+Now back in examples/nyacc/lang/ffi-help, execute
+
+  $ guile cairo-01.scm
+  $ guile cairo-02.scm
+  $ guile cairo-03.scm
+  $ guile cairo-04.scm
+
+The above should generate .png files.  Look at the sources.
+
+For more fun, go back to examples and compile all the gtk stuff:
+  $ guild compile-ffi ffi/glib.scm
+  $ guild compile-ffi ffi/gio.scm
+  $ guild compile-ffi ffi/gobject.scm
+  $ guild compile-ffi ffi/pango.scm
+  $ guild compile-ffi ffi/gdk2.scm
+  $ guild compile-ffi ffi/gtk2.scm
+
+Then come back to examples/nyacc/lang/ffi-help and execute
+
+  $ guile gtk-01.scm

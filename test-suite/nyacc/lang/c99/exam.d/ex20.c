@@ -6,7 +6,6 @@ struct __packed__ case02;
 
 typedef struct __packed__ { int *ip; double x; } case03;
 
-#if 0
 typedef int case04 __attribute__ ((__deprecated__));
 
 extern double case05(int x) 
@@ -33,6 +32,5 @@ struct case15 { int x[2] __attribute__ ((aligned (8))); };
 short case16[3] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__)));
 
 struct event { int events; void *data; } __attribute__ ((__packed__));
-#endif
 
 /* --- last line --- */

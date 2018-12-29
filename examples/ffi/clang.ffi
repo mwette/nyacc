@@ -1,0 +1,18 @@
+;; clang.ffi				-*- Scheme -*-
+
+;; Copyright (C) 2018 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-ffi-module (ffi clang)
+  #:inc-dirs '("/usr/lib/llvm-6.0/include")
+  #:include '("clang-c/Index.h")
+  #:inc-filter (lambda (file-spec path-spec)
+                 (string-contains path-spec "clang-c/" 0))
+  #:library '("libclang")
+  )
+
+;; --- last line ---

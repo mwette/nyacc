@@ -7,39 +7,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-The following files are also covered by the above copyright and license:
-  ex1.c
-  inc.h
-
-manifest:
-Tcpp.scm	Run cppgen.scm; generates cppact.scm.new cpptab.scm.new
-Tclang.scm	Run pgen.scm; generates actions.scm.new tables.scm.new
-Tcexpr.scm	Run pgen.scm; generates expract.scm.new expract.scm.new
-
 NOTES:
 
-To play with the ffi-helper you need to
-  $ . env.sh 
-The following generates ffi.d/cairo.scm:
-  $ guild compile-ffi ffi.d/cairo.ffi
+$ cxp file.c
 
-If you have scheme-bytestructure in your GUILE_LOAD_PATH you can try
-  $ guile
-  scheme@(guile-user)> ,use (cairo)
+tryit.scm is a file I use for debugging.  You can run it also.
 
-Currently the above has unresolved reference (which are new bugs)
-
-https://github.com/TaylanUB/scheme-bytestructures
-
-Tmach.scm
-cairo-demo.scm
-digest.scm*
-doit.scm
-ffi-help.scm
-
-===============================================================================
-
-GRAPHICS w/ gtk2+,gdk,pango,gobject,glib,...
-
-read
-    https://developer.gnome.org/gtk2/2.24/chap-drawing-model.html
