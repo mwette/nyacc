@@ -557,7 +557,6 @@
 	  ;; If decl mode, only defines and includes outside {}
 	  ;; @end itemize
 	  (define (pass-cpp-stmt stmt)
-	    (sferr "stmt: ~S\n" stmt)
 	    (case (car stmt)
 	      ((pragma)
 	       (if (eq? mode 'file) `(cpp-stmt ,stmt) `($pragma . ,(cadr stmt))))
