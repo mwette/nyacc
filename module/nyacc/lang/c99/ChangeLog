@@ -1,3 +1,8 @@
+2018-12-30  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* body.scm (make-c99-lexer-generator): pass pragma always, if
+	file mode, then as cpp-stmt, else pass as (pragma "opt-args")
+
 2018-12-28  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* cxeval.scm (eval-sizeof-expr): updated for (string "abc" "def")

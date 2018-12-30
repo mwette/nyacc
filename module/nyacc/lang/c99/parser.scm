@@ -45,7 +45,7 @@
 (define c99-raw-parser
   (make-lalr-parser
    (acons 'act-v c99-act-v c99-tables)
-   #:skip-if-unexp '($lone-comm $code-comm)))
+   #:skip-if-unexp '($lone-comm $code-comm $pragma)))
 	      
 (define gen-c99-lexer
   (make-c99-lexer-generator c99-mtab c99-raw-parser))
@@ -98,7 +98,7 @@
 (define c99x-raw-parser
   (make-lalr-parser
    (acons 'act-v c99x-act-v c99x-tables)
-   #:skip-if-unexp '($lone-comm $code-comm)))
+   #:skip-if-unexp '($lone-comm $code-comm $pragma)))
 
 (define gen-c99x-lexer
   (make-c99-lexer-generator c99x-mtab c99x-raw-parser))

@@ -31,6 +31,7 @@
 ;; TODOs
 ;; 1) add renamer
 ;; 2) think about cnvt-fctn that generates C code
+;; 3) add code for bytestructures' bounding-struct-descriptor
 
 ;; Issue:
 ;; So issue is when 'typedef struct ref foo_t' has no 'struct def'
@@ -572,6 +573,9 @@
 
 ;; --- structs and unions
 
+;; scheme-bytestructures will be adding
+;;   bounding-struct-descriptor union-desc => struct-desc
+
 ;; This routine will munge the fields and then perform typeref expansion.
 ;; `defined' here means has -desc (what?)
 (define (expand-field-list-typerefs field-list)
@@ -786,6 +790,7 @@
     (((union-def (field-list . ,fields)))
      ;; TODO check libffi on how unions are passed and returned.
      ;; I assume here never passed as a floating point.
+     ;; This should use bounding-struct-descriptor from bytestructures
      (let iter ((type #f) (size 0) (flds fields))
        (if (null? flds)
 	   (case type ((double) 'ffi:uint64) ((float) 'ffi:uint32) (else type))

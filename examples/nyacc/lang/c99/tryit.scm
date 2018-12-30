@@ -146,8 +146,6 @@
        ;;(xdecl (expand-typerefs-in-code code 2))
        )
   (pp tree)
-  (pp expr)
-  (pp (eval-c99-cx expr))
   ;;(pp udict)
   ;;(pp udecl)
   ;;(pp mdecl)

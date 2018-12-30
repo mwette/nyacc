@@ -617,6 +617,7 @@
      (iteration-statement)
      (jump-statement)
      (asm-statement)
+     (pragma)
      (cpp-statement))
 
     (labeled-statement
@@ -759,7 +760,9 @@
     (code-comment ($code-comm ($$ `(comment ,$1))))
     (lone-comment ($lone-comm ($$ `(comment ,$1))))
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
-    (pragma ("_Pragma" "(" string-literal ")" ($$ `(pragma ,$3))))
+    (pragma
+     ($pragma ($$ `(pragma ,$1)))
+     ("_Pragma" "(" string-literal ")" ($$ `(pragma ,$3))))
 
     )))
 
@@ -769,24 +772,21 @@
 ;; due to parsing include files as units for code and decl mode.
 ;; update: This is doable now (see parser.scm) but wait until it's needed.
 
-;;(display "c99/mach.scm: restore c99-mach\n")
-;;(define c99-mach (make-lalr-machine c99-spec))
 (define c99-mach
   (compact-machine
    (hashify-machine
     (make-lalr-machine c99-spec))
    #:keep 2
-   #:keepers '($code-comm $lone-comm)))
+   #:keepers '($code-comm $lone-comm $pragma)))
 
 (define c99x-spec (restart-spec c99-mach 'expression))
 
-;;(define c99x-mach c99-mach)
 (define c99x-mach
   (compact-machine
    (hashify-machine
     (make-lalr-machine c99x-spec))
    #:keep 2
-   #:keepers '($code-comm $lone-comm)))
+   #:keepers '($code-comm $lone-comm $pragma)))
 
 ;;; =====================================
 

@@ -556,14 +556,22 @@
 	  ;; If file mode, all except includes between { }
 	  ;; If decl mode, only defines and includes outside {}
 	  ;; @end itemize
-	  (define (pass-cpp-stmt? stmt)
-	    (case mode
-	      ((code) #f)
-	      ((decl) (and (cpi-top-blev? info)
-			   (memq (car stmt) '(include define include-next))))
-	      ((file) (or (cpi-top-blev? info)
-			  (not (memq (car stmt) '(include include-next)))))
-	      (else (error "lang/c99 coding error"))))
+	  (define (pass-cpp-stmt stmt)
+	    (sferr "stmt: ~S\n" stmt)
+	    (case (car stmt)
+	      ((pragma)
+	       (if (eq? mode 'file) `(cpp-stmt ,stmt) `($pragma . ,(cadr stmt))))
+	      (else
+	       (case mode
+		 ((code) #f)
+		 ((decl) (and (cpi-top-blev? info)
+			      (memq (car stmt) '(include define include-next))
+			      `(cpp-stmt . ,stmt)))
+		 ((file) (and
+			  (or (cpi-top-blev? info)
+			      (not (memq (car stmt) '(include include-next))))
+			  `(cpp-stmt . ,stmt)))
+		 (else (error "lang/c99 coding error"))))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
 	  (define (read-cpp-stmt ch)
@@ -585,10 +593,8 @@
  		 ((read-c-comm ch #t #:skip-prefix #t) => assc-$)
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
-		    (let ((stmt (eval-cpp-stmt stmt))) ; eval can add tree
-		      (if (pass-cpp-stmt? stmt)
-			  (assc-$ `(cpp-stmt . ,stmt))
-			  (iter (read-char))))))
+		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) => assc-$)
+			  (else (iter (read-char))))))
 		 (else (iter ch))))
 	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
 	       ((read-c-ident ch) =>

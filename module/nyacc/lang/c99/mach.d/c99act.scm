@@ -1,4 +1,4 @@
-;; ./mach.d/c99act.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99act.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
@@ -730,6 +730,8 @@
    (lambda ($1 . $rest) $1)
    ;; statement => asm-statement
    (lambda ($1 . $rest) $1)
+   ;; statement => pragma
+   (lambda ($1 . $rest) $1)
    ;; statement => cpp-statement
    (lambda ($1 . $rest) $1)
    ;; labeled-statement => identifier ":" statement
@@ -925,6 +927,8 @@
    (lambda ($1 . $rest) `(comment ,$1))
    ;; cpp-statement => 'cpp-stmt
    (lambda ($1 . $rest) `(cpp-stmt ,$1))
+   ;; pragma => '$pragma
+   (lambda ($1 . $rest) `(pragma ,$1))
    ;; pragma => "_Pragma" "(" string-literal ")"
    (lambda ($4 $3 $2 $1 . $rest) `(pragma ,$3))
    ))
