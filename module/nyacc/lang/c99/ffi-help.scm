@@ -88,7 +88,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (0 86 9))
+  #:version (0 90 0))
 
 (define fh-cpp-defs
   (cond
