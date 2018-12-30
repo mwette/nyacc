@@ -21,7 +21,7 @@
 
 (use-modules (ice-9 pretty-print))
 (use-modules (nyacc lang c99 parser))
-(use-modules (nyacc lang c99 util1))
+(use-modules (nyacc lang c99 util))
 
 (define inc-help
   '(("__builtin"
@@ -31,8 +31,7 @@
      "__THROW="
      "__asm(X)=" "__asm__(X)="
      "__has_include(X)=__has_include__(X)"
-     "__extension__="
-     )))
+     "__extension__=")))
 
 (define (scan-for-flagged flag argl)
   (let iter ((res '()) (argl argl))

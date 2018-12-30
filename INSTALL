@@ -7,19 +7,31 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+This package depends on having GNU Guile version 2.0.13 or later. See
+
+  https://www.gnu.org/software/guile/download/#releases
+
+Use of the optional FFI Helper requires scheme-bytestructures.  See
+
+  https://github.com/TaylanUB/scheme-bytestructures/releases
 
 To configure:
+
   $ ./configure
+
 or
   $ ./configure --prefix=/path/to/root
+
 or
   $ ./configure --site_scm_dir=/path/to/dest --site_scm_go_dir=/dummy
 
 There is nothing to make:
+
   $ make
   nothing to make
 
 You can run the tests:
+
   $ make check
     (cd test-suite/nyacc; \
      make -f Makefile.nyacc GUILE=guile check)
@@ -29,23 +41,20 @@ You can run the tests:
     ...
 
 
+To install the parser generator, the c99 parser and the FFI helper
+
+  $ make install
+
+
 To install only sources in /path/to/dest:
   $ ./configure --site_scm_dir=/path/to/dest --site_scm_go_dir=/dummy
   $ make install-srcs
 
 You must specify site_scm_go_dir to avoid use of `guile'.
 
-
-The FFI Helper requires the bytestructures package, from
-  https://github.com/TaylanUB/scheme-bytestructures
-The installer will not compile ffi-helper files if this package 
-is not installed.  (But it will install the helper sources.)
-
-See `info ffi-help' for more detail on the FFI Helper.
-Note: Compiling the ffi-helper output of can take some time, due to size.
-
-
 To install the infant nx-languages (javascript, octave, tcl) type
+
   $ make install-nx-languages
 
 The file HACKING has hints for modifying and trying code.
+

@@ -6,19 +6,25 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-=== To play with example code and try modifications ...
+=== This package can be installed or executed in situ. 
+
+To play with example code and try modifications without installing:
 
   $ cd examples
   $ source env.sh
 
 === Hacking on the C99 parser ====
+
 To play with the C99 code, in place, I recommend the following:
-After sourcing env.sh as above, execute
+After sourcing env.sh in the examples subdirectory, execute
 
   $ cd nyacc/lang/c99
-  $ guile tryit.scm
+  $ ./cxp hello.c
 
-If you modify module/nyacc/lang/c99/mach.scm you will need to rebuild the
+The Guile source program cxp will print out the parse tree for hello.c
+This is based on a C99 parser written with the NYACC parser generator.
+ 
+IF you modify module/nyacc/lang/c99/mach.scm you will need to rebuild the
 files in the subdirectory mach.d.  To do this run, in guile, the following:
   (use-modules (nyacc lang c99 mach))
   (use-modules (nyacc lang c99 cppmach))

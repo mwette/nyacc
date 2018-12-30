@@ -2,33 +2,14 @@ BUGs and TODOs
 
 C99-012	<= next id
 
-C99-011	10 Mar 2018, M.Wette
-	in cxeval, need to resolve enum name to value :(
-	the code currently does not do this, and ffi-help is breaking
-	gtk/inputdialog.h refers to GDK_AXIS_LAST, enumval in gdk/gdkinput.h
-
-C99-009	18 Mar 2017, M.Wette
-	pprint generates two spaces in declarations e.g.,
-	int foo(int  x);
-
-C99-008	02 Mar 2017, M.Wette
-	clean up error traps among raw-parser run-parse and parse-c99[x]
-
 C99-007	16 Feb 2017, M.Wette
 	cpp.scm: does __LINE__ get expanded?
-
-C99-005	26 Jun 2016, M.Wette
-	in util2.scm, tree->udecl needs to return "struct" and "union"
-	entries for stuff like
-		struct foo { int x; };
 
 C99-004	xdef arg to gen-c-lexer may be too simple
 	it is currently a predicate.  Maybe it should return three values
 	#f => don't expand
 	#t => expand
 	string => use string
-
-C99-003 util2.scm/tree->udict should return declarations in order
 
 === RESOLVED ===================
 
@@ -49,6 +30,9 @@ C99-002 CPP redesign is not working for ifdef and defined:
 	      (lambda (iden)
 25Jun16 fixed
 
+C99-003 util2.scm/tree->udict should return declarations in order
+29Dec18	need to check
+
 C99-006	06 Aug 2016, M.Wette
         code "val = '\0';" gets pprinted to "val = '^@;';"
 02Mar17	fixed, V0.76.5+c99dev
@@ -57,5 +41,26 @@ C99-010	27 Oct 2017, M.Wette
 	typename scope is not maintained: this is bad
 	See examples/nyacc/lang/c99/c99-exam/ex13.c
 	fixed post 0.86.3 - 11 Nov 2018
+
+C99-005	26 Jun 2016, M.Wette
+	in util2.scm, tree->udecl needs to return "struct" and "union"
+	entries for stuff like
+		struct foo { int x; };
+29Dec18	Done
+
+C99-008	02 Mar 2017, M.Wette
+	clean up error traps among raw-parser run-parse and parse-c99[x]
+29Dec18	Done
+
+C99-009	18 Mar 2017, M.Wette
+	pprint generates two spaces in declarations e.g.,
+	int foo(int  x);
+29Dec18	This is fixed in 0.89.9.
+
+C99-011	10 Mar 2018, M.Wette
+	in cxeval, need to resolve enum name to value :(
+	the code currently does not do this, and ffi-help is breaking
+	gtk/inputdialog.h refers to GDK_AXIS_LAST, enumval in gdk/gdkinput.h
+29Dec18	I think this is fixed in 0.89.9.
 
 --- last line ---
