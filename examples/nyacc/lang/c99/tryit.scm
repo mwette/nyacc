@@ -38,31 +38,13 @@
      )
    (get-gcc-inc-dirs)))
 (define inc-help
-  (cond
-   ((string-contains %host-type "darwin")
-    '(("__builtin"
-       "__builtin_va_list=void*"
-       ;;"__attribute__(X)="
-       "__extension__="
-       "__inline=" "__inline__="
-       "__restrict="
-       "__THROW="
-       "__asm(X)=" "__asm__(X)="
-       "__has_include(X)=__has_include__(X)"
-       )
-      ))
-   (else
-    '(("__builtin"
-       "__builtin_va_list=void*" 
-       ;;"__attribute__(X)="
-       "__inline=" "__inline__="
-       "__restrict="
-       "__THROW="
-       "__asm(X)=" "__asm__(X)="
-       "__has_include(X)=__has_include__(X)"
-       "__extension__="
-       )
-      ))))
+  '(("__builtin"
+     "__builtin_va_list=void*"
+     "__asm__=asm" "__volatile__=volatile"
+     "__inline=" "__inline__=" "__extension__=" "__restrict=" "__THROW="
+     "__has_include(X)=__has_include__(X)"
+     "__signed=signed"		; macos methinks
+     )))
 
 (define mode 'file)
 (define mode 'decl)
@@ -78,7 +60,7 @@
 		 #:inc-dirs inc-dirs
 		 #:inc-help inc-help
 		 #:mode mode #:debug #f
-		 #:show-incs #f
+		 #:show-incs #t
 		 ;;#:xdef? xdef?
 		 ))))
 
@@ -151,7 +133,7 @@
   ;;(pp mdecl)
   ;;(pp xdecl)
   ;;(ppsx udecl)
-  ;;(pp99 xdecl)
+  ;;(pp99 tree)
   ;;(ppsx (eval-c99-cx tree))
   ;;(pp (get-gcc-cpp-defs))
   ;;(pp (get-gcc-inc-dirs))

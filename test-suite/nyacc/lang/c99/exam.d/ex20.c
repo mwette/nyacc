@@ -33,4 +33,14 @@ short case16[3] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__)));
 
 struct event { int events; void *data; } __attribute__ ((__packed__));
 
+typedef struct {
+  long long __max_align_ll 
+      __attribute__((__aligned__(__alignof__(long long))));
+  long double __max_align_ld 
+      __attribute__((__aligned__(__alignof__(long double))));
+} max_align_t;
+
+int sscanf (const char *__restrict __s, const char *__restrict __format, ...)
+   __asm__ ( "" "__isoc99_sscanf") __attribute__ ((__nothrow__ , __leaf__));
+
 /* --- last line --- */

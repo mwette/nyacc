@@ -73,7 +73,7 @@
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 	(ln (1+ (port-line (current-input-port)))))
     (throw 'nyacc-error
-	   "~A:~A: parse failed at state ~A, on input ~S\n"
+	   "~A:~A: parse failed at state ~A, on input ~S"
 	   fn ln (car state) (cdr laval))))
 
 (define* (make-lalr-parser/sym mach #:key (skip-if-unexp '()) interactive)

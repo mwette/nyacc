@@ -467,9 +467,9 @@
 	       ((apply-helper file) stmt)		 ; use helper
 	       ((not path) (c99-err "not found: ~S" file)) ; file not found
 	       ((with-input-from-file path run-parse) => ; add tree
-	       (lambda (tree)
-		 (for-each add-define (getdefs tree))
-		 (append (sx-attr-add stmt 'path path) (list tree)))))))
+		(lambda (tree)
+		  (for-each add-define (getdefs tree))
+		  (append (sx-attr-add stmt 'path path) (list tree)))))))
 
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
 	    (case (car stmt)
@@ -486,11 +486,12 @@
 		     ((undef) (rem-define (cadr stmt)) stmt)
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((warning) (report-error "warning: ~A" (cdr stmt)))
-		     ((pragma) stmt) ;; ignore for now
+		     ((pragma) stmt)
 		     ((line) stmt)
 		     (else
 		      (sferr "stmt: ~S\n" stmt)
-		      (error "1: bad cpp flow stmt")))))))
+		      (error "1: bad cpp flow stmt")))
+		   stmt))))
 	
 	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
 	    (case (car stmt)
@@ -519,7 +520,7 @@
 		      (sferr "stmt: ~S\n" stmt)
 		      (error "2: bad cpp flow stmt")))
 		   stmt))))
-
+	  
 	  (define (eval-cpp-stmt/file stmt) ;; => stmt
 	    (case (car stmt)
 	      ((if) (cpi-push-x) stmt)
@@ -530,7 +531,7 @@
 	      ((undef) (rem-define (cadr stmt)) stmt)
 	      ((error) stmt)
 	      ((warning) stmt)
-	      ((pragma) stmt) ;; need to work this
+	      ((pragma) stmt)
 	      ((line) stmt)
 	      (else
 	       (sferr "stmt: ~S\n" stmt)
@@ -557,20 +558,20 @@
 	  ;; If decl mode, only defines and includes outside {}
 	  ;; @end itemize
 	  (define (pass-cpp-stmt stmt)
-	    (case (car stmt)
-	      ((pragma)
-	       (if (eq? mode 'file) `(cpp-stmt ,stmt) `($pragma . ,(cadr stmt))))
-	      (else
-	       (case mode
-		 ((code) #f)
-		 ((decl) (and (cpi-top-blev? info)
-			      (memq (car stmt) '(include define include-next))
-			      `(cpp-stmt . ,stmt)))
-		 ((file) (and
-			  (or (cpi-top-blev? info)
-			      (not (memq (car stmt) '(include include-next))))
-			  `(cpp-stmt . ,stmt)))
-		 (else (error "lang/c99 coding error"))))))
+	    (if (eq? 'pragma (car stmt))
+		(if (eq? mode 'file)
+		    `(cpp-stmt ,stmt)
+		    `($pragma . ,(cadr stmt)))
+		(case mode
+		  ((code) #f)
+		  ((decl) (and (cpi-top-blev? info)
+			       (memq (car stmt) '(include define include-next))
+			       `(cpp-stmt . ,stmt)))
+		  ((file) (and
+			   (or (cpi-top-blev? info)
+			       (not (memq (car stmt) '(include include-next))))
+			   `(cpp-stmt . ,stmt)))
+		  (else (error "lang/c99 coding error")))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
 	  (define (read-cpp-stmt ch)
@@ -588,7 +589,7 @@
 	       ((char-set-contains? c:ws ch) (iter (read-char)))
 	       (bol
 		(set! bol #f)
-		(cond ;; things that depend on bol only
+		(cond ;; things that require bol
  		 ((read-c-comm ch #t #:skip-prefix #t) => assc-$)
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)

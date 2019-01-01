@@ -263,6 +263,10 @@
       ((sizeof-expr ,expr) (sf "sizeof(") (ppx expr) (sf ")"))
       ((sizeof-type ,type) (sf "sizeof(") (ppx type) (sf ")"))
 
+      ((pragma ,text)
+       (fmtr 'nlin)
+       (sf "#pragma ~A\n" text))
+
       ((cast ,tn ,ex)
        (sf "(") (ppx tn) (sf ")")
        (if (protect-expr? 'rt 'cast ex)

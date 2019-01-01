@@ -104,25 +104,16 @@
   (append
    `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
    (get-gcc-inc-dirs)))
+
 (define fh-inc-help
-  (cond
-   ((string-contains %host-type "darwin")
-    '(("__builtin"
+  '(("__builtin"
        "__builtin_va_list=void*"
-       "__inline=" "__inline__="
-       "__asm(X)=" "__asm__(X)="
+       "__asm__=asm" "__volatile__=volatile"
        "__has_include(X)=__has_include__(X)"
-       "__extension__=" "__restrict=" "__THROW="
-       "__signed=signed"
+       ;; skip for now
+       "__inline=" "__inline__=" "__extension__=" "__restrict=" "__THROW="
+       "__signed=signed"		; macos methinks
        )))
-   (else
-    '(("__builtin"
-       "__builtin_va_list=void*"
-       "__inline=" "__inline__="
-       "__asm(X)=" "__asm__(X)="
-       "__has_include(X)=__has_include__(X)"
-       "__extension__=" "__restrict=" "__THROW="
-       )))))
 
 ;; DEBUGGING
 (set! fh-inc-dirs (cons "." fh-inc-dirs))
