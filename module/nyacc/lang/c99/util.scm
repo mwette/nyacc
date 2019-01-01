@@ -242,18 +242,6 @@
 
 ;; move @code{(attributes ...)} from under @code{decl-spec-list} to
 ;; under @code{@}
-;; @example
-;; (decl (decl-spec-list
-;;         (attributes "__packed__" "__aligned__")
-;;         (attributes "__alignof__(8)"))
-;;         (type-spec (fixed-type "int")))
-;;       (declr-init-list ...))
-;;  =>
-;; (decl (@ (attributes "__packed__;__aligned__;__alignof__(8)"))
-;;       (decl-spec-list
-;;         (type-spec (fixed-type "int")))
-;;       (declr-init-list ...))
-;; @end example
 (define (XXX-move-attributes decl)
   (define (comb-attr attl attr)
     (cons `(attributes
@@ -279,20 +267,21 @@
 
 ;; ((attribute-list ...) (type-spec ...) (attribute-list ...)) =>
 ;;   (values (attribute-list ...)  ((type-spec ...) ...))
-;; @deffn extract-attr spec-tail => (values attr-tree spec-tail)
-;; Extract attributes from a decl-spec-list.
+
+;; @deffn extract-attr tail => (values attr-tree tail)
+;; Extract attributes from a sexp tail.
 ;; @end deffn
-(define (extract-attr decl-spec-tail) ;; => (values attr-tree spec-tail)
-  (let loop ((atl '()) (dst1 '()) (dst0 decl-spec-tail))
+(define (extract-attr tail) ;; => (values attr-tree tail)
+  (let loop ((atl '()) (tail1 '()) (tail0 tail))
     (cond
-     ((null? dst0)
+     ((null? tail0)
       (if (null? atl)
-	  (values '() decl-spec-tail)
-	  (values `(attribute-list . ,atl) (reverse dst1))))
-     ((eq? 'attribute-list (sx-tag (car dst0)))
-      (loop (append (sx-tail (car dst0)) atl) dst1 (cdr dst0)))
+	  (values '() tail)
+	  (values `(attribute-list . ,atl) (reverse tail1))))
+     ((eq? 'attribute-list (sx-tag (car tail0)))
+      (loop (append (sx-tail (car tail0)) atl) tail1 (cdr tail0)))
      (else
-      (loop atl (cons (car dst0) dst1) (cdr dst0))))))
+      (loop atl (cons (car tail0) tail1) (cdr tail0))))))
 (export extract-attr)
 
 ;; (attribute-list (attribute (ident "__packed__")) ...)
@@ -316,35 +305,35 @@
       `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
 (export attrl->attrs)
 
-;; rethink this -- assumes no attributes transferred to decl-spec-list
-(define (move-specl-attr decl-spec-list)
-  (let ((tag (sx-tag decl-spec-list))
-	(attr (sx-attr decl-spec-list))
-	(tail (sx-tail decl-spec-list)))
-    (sx-cons*
-     tag
-     attr
-     (call-with-values (lambda () (extract-attr tail))
-       (lambda (attr-list spec-tail)
-	 (fold-right
-	  (lambda (form tail)
-	    (cons
-	     (sx-match form
-	       ((type-spec ,spec)
-		(sx-match spec
-		  (((struct-ref struct-def) . ,rest)
-		   (let ((attrs (attrl->attrs attr-list)))
-		     `(type-spec
-		       ,(sx-cons* (sx-tag spec)
-				  (if (pair? attrs) (list attrs) '())
-				  rest))))
-		  (,_ form)))
-	       (,_ form))
-	     tail))
-	  '() spec-tail))))))
-(export move-specl-attr)
+;; @deffn {Procedure} move-attributes sexp
+;; Given a sexpr, combine attribute-list kids and move to attribute ??
+;; @example
+;; (decl (decl-spec-list
+;;         (attributes "__packed__" "__aligned__")
+;;         (attributes "__alignof__(8)"))
+;;         (type-spec (fixed-type "int")))
+;;       (declr-init-list ...))
+;;  =>
+;; (decl (decl-spec-list
+;;         (@ (attributes "__packed__;__aligned__;__alignof__(8)"))
+;;         (type-spec (fixed-type "int")))
+;;       (declr-init-list ...))
+;; @end example
+;; @end deffn
+(define (move-attributes sexp)
+  (let ((tag (sx-tag sexp)) (attr (sx-attr sexp)) (tail (sx-tail sexp)))
+    (call-with-values (lambda () (extract-attr tail))
+      (lambda (attrl stail)
+	(sx-cons*
+	 tag 
+	 (cond
+	  ((null? attrl) attr)
+	  ((null? attr)`(@ ,(attrl->attrs attrl)))
+	  (else (append attr (list (attrl->attrs attrl)))))
+	 stail)))))
+(export move-attributes)
 
-(define (move-attributes sx)
+#;(define (xx-move-attributes sx)
   (sferr "move-attributes <= sx:\n") (pperr sx)
   (sx-match sx
     ((decl (@ . ,attr) ,specl0 ,dclrl0)
@@ -365,7 +354,7 @@
     (else
      (sferr "move-attributes: missed:\n") (pperr sx)
      (error "move-attributes"))))
-(export move-attributes)
+(export xx-move-attributes)
 
 ;; "__packed__;__aligned__;__alignof__(8)"
 ;;   =>

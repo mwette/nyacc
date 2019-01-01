@@ -23,9 +23,9 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
-  #:use-module (nyacc lang c99 util)
-  )
+  #:use-module (nyacc lang c99 util))
 (cond-expand
+  (guile-3)
   (guile-2)
   (guile
    (use-modules (srfi srfi-16))
@@ -37,6 +37,12 @@
 ;; Setting up the parsers is a little
 
 (include-from-path "nyacc/lang/c99/body.scm")
+
+;; Routines to process specifier-lists and declarators, indended
+;; to provide option to convert attribute-specifiers elements into
+;; SXML attributes.  See move-attributes in util.scm.
+(define process-specs identity)
+(define process-declr identity)
 
 ;; === file parser ====================
 (include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")

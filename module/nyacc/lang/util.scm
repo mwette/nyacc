@@ -62,7 +62,9 @@ See the file COPYING.LESSER included with the this distribution.")
   (apply pretty-print exp (current-error-port) kw-args))
 
 ;; @deffn {Procedure} report-error fmt args
-;; Report an error: to stderr, providing file and line num info, and add nl.
+;; Report an error, to stderr, providing file and line num info, and add
+;; newline.  This also reports context of parent files.
+;; @end deffn
 (define (report-error fmt args)
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 	(ln (1+ (port-line (current-input-port)))))
@@ -70,7 +72,7 @@ See the file COPYING.LESSER included with the this distribution.")
 	   (string-append "~A:~A: " fmt "\n") fn ln args)
     (for-each
      (lambda (pair)
-       (simple-format (current-error-port) "  in ~A:~A\n" (car pair) (cdr pair)))
+       (simple-format (current-error-port) "  at ~A:~A\n" (car pair) (cdr pair)))
      (input-stack-portinfo))))
 
 ;; === input stack =====================

@@ -216,7 +216,7 @@
     ;; --- declaration specifiers
 
     (declaration-specifiers		; S 6.7
-     (declaration-specifiers-1 ($$ (move-specl-attr (tl->list $1)))))
+     (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
     (declaration-specifiers-1
      ;; storage-class-specifiers
      (storage-class-specifier
@@ -331,24 +331,26 @@
      (struct-declaration-no-comment ";" code-comment ($$ (sx-attr-add $1 $3))))
     (struct-declaration-no-comment
      (specifier-qualifier-list
-      struct-declarator-list
-      ($$ `(comp-decl ,(tl->list $1) ,(tl->list $2))))
-     (specifier-qualifier-list		; anon' struct or union
-      ($$ `(comp-decl ,(tl->list $1)))))
-     
+      struct-declarator-list ($$ `(comp-decl ,$1 ,(tl->list $2))))
+     (specifier-qualifier-list ($$ `(comp-decl ,$1)))) ;; <= anonymous
+    
     (specifier-qualifier-list		; S 6.7.2.1
+     (specifier-qualifier-list-1 ($$ (process-specs (tl->list $1)))))
+    (specifier-qualifier-list-1
      (type-specifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-specifier specifier-qualifier-list ($$ (tl-insert $2 $1)))
+     (type-specifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1)))
      (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-qualifier specifier-qualifier-list ($$ (tl-insert $2 $1)))
+     (type-qualifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1)))
      (attribute-specifier ($$ (make-tl 'decl-spec-list $1)))
-     (attribute-specifier specifier-qualifier-list ($$ (tl-insert $2 $1))))
+     (attribute-specifier specifier-qualifier-list-1 ($$ (tl-insert $2 $1))))
 
     (specifier-qualifier-list/no-attr
+     (specifier-qualifier-list/no-attr-1 ($$ (tl->list $1))))
+    (specifier-qualifier-list/no-attr-1
      (type-specifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-specifier specifier-qualifier-list ($$ (tl-insert $2 $1)))
+     (type-specifier specifier-qualifier-list/no-attr ($$ (tl-insert $2 $1)))
      (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-qualifier specifier-qualifier-list ($$ (tl-insert $2 $1))))
+     (type-qualifier specifier-qualifier-list/no-attr ($$ (tl-insert $2 $1))))
 
     (struct-declarator-list		; S 6.7.2.1
      (struct-declarator ($$ (make-tl 'comp-declr-list $1)))
@@ -357,6 +359,8 @@
 			     struct-declarator ($$ (tl-append $1 $3 $4))))
 
     (struct-declarator			; S 6.7.2.1
+     (struct-declarator-1 ($$ (process-declr $1))))
+    (struct-declarator-1
      (declarator ($$ `(comp-declr ,$1)))
      (declarator attribute-specifiers ($$ `(comp-declr ,$1 ,$2)))
      (declarator ":" constant-expression
@@ -399,7 +403,6 @@
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Type-Attributes.html
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Variable-Attributes.html
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Function-Attributes.html
-    ;; sys/epoll.h has packed structures
     
     (attribute-specifiers
      (attribute-specifier ($prec 'reduce-on-attr))
@@ -438,7 +441,7 @@
      ($fixed ($$ `(fixed ,$1)))
      (string-literal)
      (identifier)
-     (attr-word "(" attr-expr-list ")" ($$ `(ident "FOO"))))
+     (attr-word "(" attr-expr-list ")" ($$ `(attribute ,$1 ,$3)))) ;; ???
 
     ;; --- declarators
 
@@ -451,6 +454,8 @@
 			     init-declarator ($$ (tl-append $1 $3 $4))))
 
     (init-declarator			; S 6.7
+     (init-declarator-1 ($$ (process-declr $1))))
+    (init-declarator-1
      (declarator ($$ `(init-declr ,$1)))
      (declarator "=" initializer ($$ `(init-declr ,$1 ,$3)))
      (declarator asm-expression ($$ `(init-declr ,$1 ,$2)))
@@ -535,7 +540,7 @@
     (type-name				; S 6.7.6
      ;; e.g., (foo_t *)
      (specifier-qualifier-list/no-attr abstract-declarator
-				       ($$ `(type-name ,(tl->list $1) ,$2)))
+				       ($$ `(type-name ,$1 ,$2)))
      ;; e.g., (int)
      (declaration-specifiers ($$ `(type-name ,$1))))
 
