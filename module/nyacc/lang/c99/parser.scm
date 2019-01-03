@@ -23,7 +23,8 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
-  #:use-module (nyacc lang c99 util))
+  #:use-module (nyacc lang c99 util)
+  #:re-export (c99-def-help c99-std-help))
 (cond-expand
   (guile-3)
   (guile-2)
@@ -34,17 +35,18 @@
    (use-modules (nyacc compat18)))
   (else))
 
-;; Setting up the parsers is a little
-
 (include-from-path "nyacc/lang/c99/body.scm")
 
 ;; Routines to process specifier-lists and declarators, indended
 ;; to provide option to convert attribute-specifiers elements into
 ;; SXML attributes.  See move-attributes in util.scm.
-(define process-specs identity)
-(define process-declr identity)
+;;(define process-specs identity)
+;;(define process-declr identity)
+(define process-specs move-attributes)
+(define process-declr move-attributes)
 
 ;; === file parser ====================
+
 (include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/c99act.scm")
 
@@ -73,9 +75,9 @@
 ;; defines (e.g., using @code{gen-cpp-defs}).
 ;; @end deffn
 (define* (parse-c99 #:key
-		    (cpp-defs '())	; CPP defines
-		    (inc-dirs '())	; include dirs
-		    (inc-help '())	; include helpers
+		    (cpp-defs '())	    ; CPP defines
+		    (inc-dirs '())	    ; include dirs
+		    (inc-help c99-def-help) ; include helpers
 		    (mode 'code)	; mode: 'file, 'code or 'decl
 		    (xdef? #f)		; pred to determine expand
 		    (show-incs #f)	; show include files
@@ -115,10 +117,10 @@
 ;; @end deffn
 (define* (parse-c99x expr-string
 		     #:optional
-		     (tyns '())	; defined typenames
+		     (tyns '())		; defined typenames
 		     #:key
-		     (cpp-defs '())	; CPP defines
-		     (inc-help '())	; include helper
+		     (cpp-defs '())	     ; CPP defines
+		     (inc-help c99-def-help) ; include helper
 		     (xdef? #f)		; pred to determine expand
 		     (debug #f))	; debug?
   (let ((info (make-cpi debug #f cpp-defs '(".") inc-help)))

@@ -371,7 +371,7 @@
    ;; opt-attr-specs => 
    (lambda $rest (list))
    ;; opt-attr-specs => attribute-specifiers
-   (lambda ($1 . $rest) (attr-spec->attr $1))
+   (lambda ($1 . $rest) `(@ ,(attrl->attrs $1)))
    ;; struct-declaration-list => struct-declaration
    (lambda ($1 . $rest) (make-tl 'field-list $1))
    ;; struct-declaration-list => lone-comment
@@ -837,23 +837,23 @@
    (lambda ($2 $1 . $rest) `(return (expr)))
    ;; asm-statement => asm-expression ";"
    (lambda ($2 $1 . $rest) $1)
-   ;; asm-expression => "asm" opt-asm-specifiers "(" string-literal ")"
+   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal ")"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(asm-expr (@ (extension "GNUC")) ,$4))
-   ;; asm-expression => "asm" opt-asm-specifiers "(" string-literal asm-out...
+   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC"))
         ,$4
         ,(tl->list $5)))
-   ;; asm-expression => "asm" opt-asm-specifiers "(" string-literal asm-out...
+   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC"))
         ,$4
         ,(tl->list $5)
         ,(tl->list $6)))
-   ;; asm-expression => "asm" opt-asm-specifiers "(" string-literal asm-out...
+   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC"))

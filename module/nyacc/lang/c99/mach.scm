@@ -299,7 +299,7 @@
      ("long" "double" "_Complex" ($$ '(complex-type "long double _Complex"))))
 
     ;; This one modified: split out struct-or-union = "struct"|"union"
-    (struct-or-union-specifier		; S 6.7.2.1
+    (struct-or-union-specifier
      ("struct" opt-attr-specs ident-like "{" struct-declaration-list "}"
       ($$ (sx-join* 'struct-def $2 $3 (tl->list $5))))
      ("struct" opt-attr-specs "{" struct-declaration-list "}"
@@ -310,11 +310,15 @@
      ("union" opt-attr-specs "{" struct-declaration-list "}"
       ($$ (sx-join* 'union-def $2 (tl->list $4))))
      ("union" opt-attr-specs ident-like ($$ (sx-join* 'union-ref $2 $3))))
+
     ;; because name following struct/union can be identifier or typeref:
-    (ident-like (identifier) (typedef-name ($$ `(ident ,(sx-ref $1 1)))))
+    (ident-like
+     (identifier)
+     (typedef-name ($$ `(ident ,(sx-ref $1 1)))))
+
     (opt-attr-specs
      ($empty)
-     (attribute-specifiers ($$ (attr-spec->attr $1))))
+     (attribute-specifiers ($$ `(@ ,(attrl->attrs $1)))))
 
     ;; Calling this field-list in the parse tree.
     (struct-declaration-list		; S 6.7.2.1
@@ -691,13 +695,13 @@
     (asm-statement
      (asm-expression ";"))
     (asm-expression
-     ("asm" opt-asm-specifiers "(" string-literal ")"
+     ("__asm__" opt-asm-specifiers "(" string-literal ")"
       ($$ `(asm-expr (@ (extension "GNUC")) ,$4)))
-     ("asm" opt-asm-specifiers "(" string-literal asm-outputs ")"
+     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs ")"
       ($$ `(asm-expr (@ (extension "GNUC")) ,$4 ,(tl->list $5))))
-     ("asm" opt-asm-specifiers "(" string-literal asm-outputs asm-inputs ")"
+     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs asm-inputs ")"
       ($$ `(asm-expr (@ (extension "GNUC")) ,$4 ,(tl->list $5) ,(tl->list $6))))
-     ("asm" opt-asm-specifiers "(" string-literal asm-outputs
+     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs
       asm-inputs asm-clobbers ")"
       ($$ `(asm-expr (@ (extension "GNUC"))
 		     ,$4 ,(tl->list $5) ,(tl->list $6) ,(tl->list $7)))))
@@ -755,17 +759,17 @@
      (declaration-specifiers
       declarator compound-statement
       ($$ `(fctn-defn ,$1 ,$2 ,$3)))
-     ;; K&R is not compatible with attribute-specifiers
-     #;(declaration-specifiers
-     declarator declaration-list compound-statement
-     ($$ `(knr-fctn-defn ,$1 ,$2 ,$3 ,$4)))
+     ;; K&R function definitions are not compatible with attribute-specifiers.
+     ;;(declaration-specifiers
+     ;; declarator declaration-list compound-statement
+     ;; ($$ `(knr-fctn-defn ,$1 ,$2 ,$3 ,$4)))
      )
 
-    ;; for K&R function-definition
-    #;(declaration-list (declaration-list-1 ($$ (tl->list $1))))
-    #;(declaration-list-1
-     (declaration ($$ (make-tl 'decl-list $1)))
-     (declaration-list-1 declaration ($$ (tl-append $1 $2))))
+    ;; K&R function-definition parameter list
+    ;;(declaration-list (declaration-list-1 ($$ (tl->list $1))))
+    ;;(declaration-list-1
+    ;; (declaration ($$ (make-tl 'decl-list $1)))
+    ;; (declaration-list-1 declaration ($$ (tl-append $1 $2))))
 
     ;; non-terminal leaves
     (identifier ($ident ($$ `(ident ,$1))))

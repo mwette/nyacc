@@ -625,11 +625,16 @@
 	 (ty*-desc (and typename (strings->symbol typename "*-desc")))
 	 (ag-desc (and aggrname (strings->symbol aggrname "-desc")))
 	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc")))
-	 (packed? (and=> (assoc-ref attr 'attributes)
+	 (cattr (assoc-ref attr 'attributes)) ;; __attributes__
+	 (packed? (and=> cattr
 			 (lambda (l) (string-contains (car l) "__packed__" 0))))
+	 (aligned? (and=> cattr
+			 (lambda (l) (string-contains (car l) "__alignof__" 0))))
 	 (bs-spec (if packed?
 		      (list bs-aggr-t #t `(list ,@sflds))
 		      (list bs-aggr-t `(list ,@sflds)))))
+    (if aligned? (sferr "ffi-help: not processing __aligned__ in ~S\n"
+			(or aggr-t typename)))
     (cond
      ((and typename aggr-name)
       ;;(sfscm ";; == ~A =>\n" typename)

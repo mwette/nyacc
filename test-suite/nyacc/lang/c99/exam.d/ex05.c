@@ -26,5 +26,17 @@ typedef struct zzz {
 
 int foo(int x, int /* hello */);
 
+int foo(char *x) {
+  int j;
+
+  for (int i = 0; i < 32; i++) {
+    j = 1;
+    while (j < 3) {
+      j += i;
+    }
+  }
+  if (i > 2) { return 4; } else { return 9; } 
+}
+
 
 /* --- last line --- */

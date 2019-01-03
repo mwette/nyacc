@@ -37,14 +37,7 @@
      "/usr/include/pixman-1" "/usr/include/freetype2" "/usr/include/libpng12"
      )
    (get-gcc-inc-dirs)))
-(define inc-help
-  '(("__builtin"
-     "__builtin_va_list=void*"
-     "__asm__=asm" "__volatile__=volatile"
-     "__inline=" "__inline__=" "__extension__=" "__restrict=" "__THROW="
-     "__has_include(X)=__has_include__(X)"
-     "__signed=signed"		; macos methinks
-     )))
+(define inc-help c99-def-help)
 
 (define mode 'file)
 (define mode 'decl)
@@ -59,7 +52,7 @@
       (parse-c99 #:cpp-defs cpp-defs 
 		 #:inc-dirs inc-dirs
 		 #:inc-help inc-help
-		 #:mode mode #:debug #f
+		 #:mode mode #:debug debug
 		 #:show-incs #t
 		 ;;#:xdef? xdef?
 		 ))))
@@ -72,7 +65,7 @@
 		 #:inc-dirs inc-dirs 
 		 #:inc-help inc-help
 		 #:show-incs #f
- 		 #:mode mode #:debug #f
+ 		 #:mode mode #:debug debug
 		 #:xdef? xdef?))))
 
 (define (parse-string-list . str-l)
@@ -115,8 +108,8 @@
 	      ))
        (code "int len = sizeof(\"abc\" \"def\");\n")
        (tree (parse-string code))
-       (expr (sx-ref* tree 1 2 1 2 1))
        ;;(tree (parse-file "zz.c"))
+       ;;(expr (sx-ref* tree 1 2 1 2 1)) ;; for sizeof("abc"...) demo
        ;;(udict (c99-trans-unit->udict/deep tree))
        ;;(decl1 (sx-ref tree 1))
        ;;(udict (unitize-decl decl1 '()))

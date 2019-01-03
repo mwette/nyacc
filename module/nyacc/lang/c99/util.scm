@@ -18,11 +18,12 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 util)
-  #:export (c99-std-help
-	    get-gcc-cpp-defs get-gcc-inc-dirs
+  #:export (c99-def-help
+	    c99-std-help
+	    get-gcc-cpp-defs get-gcc-inc-dirs 
 	    remove-inc-trees
 	    merge-inc-trees!
-	    move-attributes
+	    move-attributes attrl->attrs attrs->attrl
 	    elifify)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
@@ -33,41 +34,57 @@
   #:use-module (ice-9 rdelim)		; gen-gcc-cpp-defs
 )
 
+(define c99-def-help
+  '(("__builtin"
+     "__builtin_va_list=void*"
+     "__attribute=__attribute__"
+     "__has_include=__has_include__"
+     "__inline__=inline" "__inline=__inline__"
+     "__restrict__=restrict" "__restrict=__restrict__"
+     "__signed__=signed" "__signed=__signed__"
+     "__volatile__=volatile" "__volatile=__volatile__"
+     ;;"__THROW="
+     "asm=__asm__" "__asm=__asm__"
+     "__extension__=" "__extension=__extension__"
+     )))
+
 ;; include-helper for C99 std
 (define c99-std-help
-  '(("alloca.h")
-    ("complex.h" "complex" "imaginary" "_Imaginary_I=C99_ANY" "I=C99_ANY")
-    ("ctype.h")
-    ("fenv.h" "fenv_t" "fexcept_t")
-    ("float.h" "float_t" "FLT_MAX=C99_ANY" "DBL_MAX=C99_ANY")
-    ("inttypes.h"
-     "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
-     "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
-     "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
-     "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t"
-     "imaxdiv_t")
-    ("limits.h"
-     "INT_MIN=C99_ANY" "INT_MAX=C99_ANY" "LONG_MIN=C99_ANY" "LONG_MAX=C99_ANY")
-    ("math.h" "float_t" "double_t")
-    ("regex.h" "regex_t" "regmatch_t")
-    ("setjmp.h" "jmp_buf")
-    ("signal.h" "sig_atomic_t")
-    ("stdarg.h" "va_list")
-    ("stddef.h" "ptrdiff_t" "size_t" "wchar_t")
-    ("stdint.h"
-     "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
-     "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
-     "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
-     "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t")
-    ("stdio.h" "FILE" "size_t")
-    ("stdlib.h" "div_t" "ldiv_t" "lldiv_t" "wchar_t")
-    ("string.h" "size_t")
-    ("strings.h" "size_t")
-    ("time.h" "time_t" "clock_t" "size_t")
-    ("unistd.h" "size_t" "ssize_t" "div_t" "ldiv_t")
-    ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
-    ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
-    ))
+  (append
+   c99-def-help
+   '(("alloca.h")
+     ("complex.h" "complex" "imaginary" "_Imaginary_I=C99_ANY" "I=C99_ANY")
+     ("ctype.h")
+     ("fenv.h" "fenv_t" "fexcept_t")
+     ("float.h" "float_t" "FLT_MAX=C99_ANY" "DBL_MAX=C99_ANY")
+     ("inttypes.h"
+      "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
+      "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
+      "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
+      "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t"
+      "imaxdiv_t")
+     ("limits.h"
+      "INT_MIN=C99_ANY" "INT_MAX=C99_ANY" "LONG_MIN=C99_ANY" "LONG_MAX=C99_ANY")
+     ("math.h" "float_t" "double_t")
+     ("regex.h" "regex_t" "regmatch_t")
+     ("setjmp.h" "jmp_buf")
+     ("signal.h" "sig_atomic_t")
+     ("stdarg.h" "va_list")
+     ("stddef.h" "ptrdiff_t" "size_t" "wchar_t")
+     ("stdint.h"
+      "int8_t" "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t"
+      "int64_t" "uint64_t" "uintptr_t" "intptr_t" "intmax_t" "uintmax_t"
+      "int_least8_t" "uint_least8_t" "int_least16_t" "uint_least16_t"
+      "int_least32_t" "uint_least32_t" "int_least64_t" "uint_least64_t")
+     ("stdio.h" "FILE" "size_t")
+     ("stdlib.h" "div_t" "ldiv_t" "lldiv_t" "wchar_t")
+     ("string.h" "size_t")
+     ("strings.h" "size_t")
+     ("time.h" "time_t" "clock_t" "size_t")
+     ("unistd.h" "size_t" "ssize_t" "div_t" "ldiv_t")
+     ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
+     ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
+     )))
 
 (define (resolve-CC CC)
   (cond
@@ -223,48 +240,6 @@
 (define (attr-expr-list->string attr-expr-list)
   (string-append "(" (string-join (cdr attr-expr-list) ",") ")"))
 
-;; (attribute-list (ident "packed") (attribute (ident "aligned" ...)))
-;; => (attributes "packed;aligned(8);...")
-(define (attr-spec->attr attr-spec)
-  (define (spec->str spec)
-    (sx-match spec
-      ((ident ,name) name)
-      ((attribute ,name) (spec->str name))
-      ((attribute ,name ,args)
-       (string-append (spec->str name) "(" (spec->str args) ")"))
-      ((attr-expr-list . ,expr-list)
-       (string-join (map spec->str expr-list) ","))
-      ((fixed ,val) val)
-      ((string ,val) (string-append "\"" val "\""))
-      (,_ (simple-format #t "c99/body: missed ~S\n" spec) "MISSED")))
-  `(attributes ,(string-join (map spec->str (sx-tail attr-spec)) ";")))
-(export attr-spec->attr)
-
-;; move @code{(attributes ...)} from under @code{decl-spec-list} to
-;; under @code{@}
-(define (XXX-move-attributes decl)
-  (define (comb-attr attl attr)
-    (cons `(attributes
-	    ,(string-join
-	      (let loop ((rz '()) (al attl))
-		(if (null? al) rz (loop (cons (cadar al) rz) (cdr al))))
-	      ";")) attr))
-  (define (make-specl spl)
-    (cons 'decl-spec-list (reverse spl)))
-  (let ((tag (sx-tag decl))
-	(attr (sx-attr decl))
-	(spec-l (sx-ref decl 1))
-	(declr-l (sx-ref decl 2)))
-    (let loop ((attl '()) (spl1 '()) (spl0 (sx-tail spec-l)))
-      (cond
-       ((null? spl0)
-	(if (null? attl) decl
-	    (sx-list tag (comb-attr attl attr) (make-specl spl1) declr-l)))
-       ((eq? 'attribute-list (sx-tag (car spl0)))
-	(loop (cons (attr-spec->attr (car spl0)) attl) spl1 (cdr spl0)))
-       (else
-	(loop attl (cons (car spl0) spl1) (cdr spl0)))))))
-
 ;; ((attribute-list ...) (type-spec ...) (attribute-list ...)) =>
 ;;   (values (attribute-list ...)  ((type-spec ...) ...))
 
@@ -299,11 +274,62 @@
       ((attr-expr-list . ,expr-list)
        (string-join (map spec->str expr-list) ","))
       ((fixed ,val) val)
+      ((float ,val) val)
+      ((char ,val) val)
       ((string ,val) (string-append "\"" val "\""))
-      (,_ (simple-format #t "c99/body: missed ~S\n" spec) "MISSED")))
+      ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
+      ((fixed-type ,name) name)
+      ((float-type ,name) name)
+      (,_ (simple-format #t "c99/util: missed ~S\n" spec) "MISSED")))
+  ;;(sferr "attr-list:\n") (pperr attr-list)
   (if (null? attr-list) '()
       `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
-(export attrl->attrs)
+
+;; (attributes "__packed__;__aligned__;__alignof__(8)")
+;;   =>
+;; (attribute-list (attribute "__packed
+;; OR
+;; #f => #f
+
+
+(use-modules (nyacc lex))
+
+(define (astng->atree form)
+  (define a-mtab
+    '(("(" . lparen) ((")" . rparen))
+      ("," . comma) ($ident . ident)))
+  (define attlexgen (make-lexer-generator a-mtab))
+  (define attlex (attlexgen))
+
+  (with-input-from-string form
+    (lambda ()
+      (define (p-expr-list lx) ;; see 'lparen
+	(and
+	 (eq? 'lparen (car lx))
+	 (let loop ((args '()) (lx (attlex)))
+	   (case (car lx)
+	     ((rparen) `(attr-expr-list . ,args))
+	     ((comma) (loop args (attlex)))
+	     (else (p-expr lx))))))
+      (define (p-expr lx)
+	#f)
+      (let ((lx (attlex)))
+	(sferr "lx=~S\n" lx)
+	(case (car lx)
+	  ((ident)
+	   (let* ((id (cdr lx)) (lx (attlex)))
+	     (case (car lx)
+	       (($end) `(attribute ,id))
+	       ((lparen) `(attribute ,id ,(p-expr-list lx)))
+	       (else (error "error ~S" lx)))))
+	  (else (error "missed ~S" lx)))))))
+		
+(define (attrs->attrl attr-sexp)
+  (and
+   attr-sexp 
+   (let* ((attrs (cadr attr-sexp))
+	  (attl (string-split attrs #\;)))
+     `(attribute-list ,@(map astng->atree attl)))))
 
 ;; @deffn {Procedure} move-attributes sexp
 ;; Given a sexpr, combine attribute-list kids and move to attribute ??
@@ -331,38 +357,6 @@
 	  ((null? attr)`(@ ,(attrl->attrs attrl)))
 	  (else (append attr (list (attrl->attrs attrl)))))
 	 stail)))))
-(export move-attributes)
-
-#;(define (xx-move-attributes sx)
-  (sferr "move-attributes <= sx:\n") (pperr sx)
-  (sx-match sx
-    ((decl (@ . ,attr) ,specl0 ,dclrl0)
-     (let ((specl1 (move-specl-attr specl0))
-	   ;;(dclr1 (move-dclrl-attr dclrl))
-	   (dclrl1 dclrl0))
-       (cond
-	((and (eq? specl1 specl0) (eq? dclrl1 dclrl0)) sx)
-	((eq? dclrl1 dclrl0) (sx-list attr specl1 dclrl0))
-	((eq? specl1 specl0) (sx-list attr specl0 dclrl1))
-	(else (sx-list 'decl attr specl1 dclrl1)))))
-    ((decl (@ . ,attr) ,specl0)
-     (let ((specl1 (move-specl-attr specl0)))
-       (cond
-	((eq? specl1 specl0) sx)
-	(else (sx-list 'decl attr specl1)))))
-    ((decl-spec-list . ,_) (move-specl-attr sx))
-    (else
-     (sferr "move-attributes: missed:\n") (pperr sx)
-     (error "move-attributes"))))
-(export xx-move-attributes)
-
-;; "__packed__;__aligned__;__alignof__(8)"
-;;   =>
-;; (attribute-list (attribute "__packed
-(define (parse-attributes attr-str)
-  (let ((attl (string-split attr-str ";"))
-	)
-    `(attribute-list)))
 
 ;; --- random stuff 
 
