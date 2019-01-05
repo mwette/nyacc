@@ -243,10 +243,11 @@
 	       ((pair? (car attr)) `(@ . ,attr))
 	       (else attr)))
 	(tail (let loop ((items rest))
-		(if (null? (cdr items)) (car items)
-		    (if (car items)
-			(cons (car items) (loop (cdr items)))
-			(loop (cdr items)))))))
+		(cond
+		 ((null? (cdr items)) (car items))
+		 ((not (car items)) (loop (cdr items)))
+		 ((null? (car items)) (loop (cdr items)))
+		 (else (cons (car items) (loop (cdr items))))))))
     (if attr (cons* tag attr tail) (cons tag tail))))
 (define (sx-list tag attr . rest)
   (let ((attr (cond
@@ -255,10 +256,11 @@
 	       ((pair? (car attr)) `(@ . ,attr))
 	       (else attr)))
 	(tail (let loop ((items rest))
-		(if (null? items) '()
-		    (if (car items)
-			(cons (car items) (loop (cdr items)))
-			(loop (cdr items)))))))
+		(cond
+		 ((null? items) '())
+		 ((not (car items)) (loop (cdr items)))
+		 ((null? (car items)) (loop (cdr items)))
+		 (else (cons (car items) (loop (cdr items))))))))
     (if attr (cons* tag attr tail) (cons tag tail))))
 
 ;; @deffn {Procedure} sx-split sexp => tag attr tail
