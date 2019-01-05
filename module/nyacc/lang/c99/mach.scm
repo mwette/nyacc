@@ -769,8 +769,6 @@
 ;; due to parsing include files as units for code and decl mode.
 ;; update: This is doable now (see parser.scm) but wait until it's needed.
 
-;;(display "c99/mach.scm: restore c99-mach\n")
-;;(define c99-mach (make-lalr-machine c99-spec))
 (define c99-mach
   (compact-machine
    (hashify-machine
@@ -780,7 +778,6 @@
 
 (define c99x-spec (restart-spec c99-mach 'expression))
 
-;;(define c99x-mach c99-mach)
 (define c99x-mach
   (compact-machine
    (hashify-machine
