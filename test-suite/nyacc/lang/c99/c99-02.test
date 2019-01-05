@@ -47,7 +47,7 @@
       (pair? sx)))
 
   ;; try to get all C99 in one file
-  (pass-if "most of C99 in one file"
+  (pass-if "lots of C99 in one file"
     (let* ((sx (parse-file "exam.d/ex05.c")))
       (pair? sx)))
 
@@ -55,9 +55,13 @@
   (pass-if "typedef scoping"
     (pair? (parse-file "exam.d/ex19.c")))
 
-  ;; __attributes_
-  (pass-if "__attribute__ handling"
+  ;; __attributes__
+  (pass-if "__attribute__ parsing"
     (pair? (parse-file "exam.d/ex20.c")))
+
+  ;; __asm__
+  (pass-if "__asm__ parsing"
+    (pair? (parse-file "exam.d/ex21.c")))
 
   )
 

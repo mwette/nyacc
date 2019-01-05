@@ -1,4 +1,4 @@
-;; ./mach.d/c99xact.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99xact.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
@@ -6,7 +6,7 @@
 ;; modify it under the terms of the GNU Lesser General Public
 ;; License as published by the Free Software Foundation; either
 ;; version 3 of the License, or (at your option) any later version.
-;; See the file COPYING.LESSER included with the this distribution.
+;; See the file COPYING included with the this distribution.
 
 (define c99x-act-v
   (vector
@@ -204,7 +204,7 @@
    (lambda ($1 . $rest) `(decl ,$1))
    ;; declaration-specifiers => declaration-specifiers-1
    (lambda ($1 . $rest)
-     (move-specl-attr (tl->list $1)))
+     (process-specs (tl->list $1)))
    ;; declaration-specifiers-1 => storage-class-specifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list $1))
@@ -371,7 +371,7 @@
    ;; opt-attr-specs => 
    (lambda $rest (list))
    ;; opt-attr-specs => attribute-specifiers
-   (lambda ($1 . $rest) (attr-spec->attr $1))
+   (lambda ($1 . $rest) `(@ ,(attrl->attrs $1)))
    ;; struct-declaration-list => struct-declaration
    (lambda ($1 . $rest) (make-tl 'field-list $1))
    ;; struct-declaration-list => lone-comment
@@ -390,32 +390,57 @@
    (lambda ($3 $2 $1 . $rest) (sx-attr-add $1 $3))
    ;; struct-declaration-no-comment => specifier-qualifier-list struct-decl...
    (lambda ($2 $1 . $rest)
-     `(comp-decl ,(tl->list $1) ,(tl->list $2)))
+     `(comp-decl ,$1 ,(tl->list $2)))
    ;; struct-declaration-no-comment => specifier-qualifier-list
-   (lambda ($1 . $rest) `(comp-decl ,(tl->list $1)))
-   ;; specifier-qualifier-list => type-specifier specifier-qualifier-list
-   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; specifier-qualifier-list => type-specifier
+   (lambda ($1 . $rest) `(comp-decl ,$1))
+   ;; specifier-qualifier-list => specifier-qualifier-list-1
+   (lambda ($1 . $rest)
+     (process-specs (tl->list $1)))
+   ;; specifier-qualifier-list-1 => type-specifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list $1))
-   ;; specifier-qualifier-list => type-qualifier specifier-qualifier-list
+   ;; specifier-qualifier-list-1 => type-specifier specifier-qualifier-list-1
    (lambda ($2 $1 . $rest) (tl-insert $2 $1))
-   ;; specifier-qualifier-list => type-qualifier
+   ;; specifier-qualifier-list-1 => type-qualifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list $1))
+   ;; specifier-qualifier-list-1 => type-qualifier specifier-qualifier-list-1
+   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
+   ;; specifier-qualifier-list-1 => attribute-specifier
+   (lambda ($1 . $rest)
+     (make-tl 'decl-spec-list $1))
+   ;; specifier-qualifier-list-1 => attribute-specifier specifier-qualifier...
+   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
+   ;; specifier-qualifier-list/no-attr => specifier-qualifier-list/no-attr-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; specifier-qualifier-list/no-attr-1 => type-specifier
+   (lambda ($1 . $rest)
+     (make-tl 'decl-spec-list $1))
+   ;; specifier-qualifier-list/no-attr-1 => type-specifier specifier-qualif...
+   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
+   ;; specifier-qualifier-list/no-attr-1 => type-qualifier
+   (lambda ($1 . $rest)
+     (make-tl 'decl-spec-list $1))
+   ;; specifier-qualifier-list/no-attr-1 => type-qualifier specifier-qualif...
+   (lambda ($2 $1 . $rest) (tl-insert $2 $1))
    ;; struct-declarator-list => struct-declarator
    (lambda ($1 . $rest)
      (make-tl 'comp-declr-list $1))
    ;; struct-declarator-list => struct-declarator-list "," struct-declarator
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; struct-declarator => declarator
+   ;; struct-declarator-list => struct-declarator-list "," attribute-specif...
+   (lambda ($4 $3 $2 $1 . $rest)
+     (tl-append $1 $3 $4))
+   ;; struct-declarator => struct-declarator-1
+   (lambda ($1 . $rest) (process-declr $1))
+   ;; struct-declarator-1 => declarator
    (lambda ($1 . $rest) `(comp-declr ,$1))
-   ;; struct-declarator => declarator attribute-specifiers
-   (lambda ($2 $1 . $rest) `(comp-declr ,$1))
-   ;; struct-declarator => declarator ":" constant-expression
+   ;; struct-declarator-1 => declarator attribute-specifiers
+   (lambda ($2 $1 . $rest) `(comp-declr ,$1 ,$2))
+   ;; struct-declarator-1 => declarator ":" constant-expression
    (lambda ($3 $2 $1 . $rest)
      `(comp-declr (bit-field ,$1 ,$3)))
-   ;; struct-declarator => ":" constant-expression
+   ;; struct-declarator-1 => ":" constant-expression
    (lambda ($2 $1 . $rest)
      `(comp-declr (bit-field ,$2)))
    ;; enum-specifier => "enum" ident-like "{" enumerator-list "}"
@@ -439,7 +464,7 @@
    ;; enumerator => identifier
    (lambda ($1 . $rest) `(enum-defn ,$1))
    ;; enumerator => identifier attribute-specifiers
-   (lambda ($2 $1 . $rest) `(enum-defn ,$1))
+   (lambda ($2 $1 . $rest) `(enum-defn ,$1 ,$2))
    ;; enumerator => identifier "=" constant-expression
    (lambda ($3 $2 $1 . $rest) `(enum-defn ,$1 ,$3))
    ;; type-qualifier => "const"
@@ -501,7 +526,8 @@
    ;; attribute-expr => identifier
    (lambda ($1 . $rest) $1)
    ;; attribute-expr => attr-word "(" attr-expr-list ")"
-   (lambda ($4 $3 $2 $1 . $rest) `(ident "FOO"))
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(attribute ,$1 ,$3))
    ;; init-declarator-list => init-declarator-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; init-declarator-list-1 => init-declarator
@@ -510,21 +536,27 @@
    ;; init-declarator-list-1 => init-declarator-list-1 "," init-declarator
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; init-declarator-list-1 => init-declarator-list-1 "," attribute-specif...
-   (lambda ($4 $3 $2 $1 . $rest) (tl-append $1 $4))
-   ;; init-declarator => declarator
+   (lambda ($4 $3 $2 $1 . $rest)
+     (tl-append $1 $3 $4))
+   ;; init-declarator => init-declarator-1
+   (lambda ($1 . $rest) (process-declr $1))
+   ;; init-declarator-1 => declarator
    (lambda ($1 . $rest) `(init-declr ,$1))
-   ;; init-declarator => declarator "=" initializer
+   ;; init-declarator-1 => declarator "=" initializer
    (lambda ($3 $2 $1 . $rest) `(init-declr ,$1 ,$3))
-   ;; init-declarator => declarator asm-expression
-   (lambda ($2 $1 . $rest) `(init-declr ,$1))
-   ;; init-declarator => declarator asm-expression "=" initializer
+   ;; init-declarator-1 => declarator asm-expression
+   (lambda ($2 $1 . $rest) `(init-declr ,$1 ,$2))
+   ;; init-declarator-1 => declarator asm-expression "=" initializer
    (lambda ($4 $3 $2 $1 . $rest)
-     `(init-declr ,$1 ,$4))
-   ;; init-declarator => declarator attribute-specifiers
-   (lambda ($2 $1 . $rest) `(init-declr ,$1))
-   ;; init-declarator => declarator attribute-specifiers "=" initializer
+     `(init-declr ,$1 ,$2 ,$4))
+   ;; init-declarator-1 => declarator attribute-specifiers
+   (lambda ($2 $1 . $rest) `(init-declr ,$1 ,$2))
+   ;; init-declarator-1 => declarator attribute-specifiers "=" initializer
    (lambda ($4 $3 $2 $1 . $rest)
-     `(init-declr ,$1 ,$4))
+     `(init-declr ,$1 ,$2 ,$4))
+   ;; init-declarator-1 => declarator asm-expression attribute-specifiers
+   (lambda ($3 $2 $1 . $rest)
+     `(init-declr ,$1 ,$2 ,$3))
    ;; declarator => pointer direct-declarator
    (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
    ;; declarator => direct-declarator
@@ -607,9 +639,8 @@
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
    ;; identifier-list-1 => identifier-list-1 "," identifier
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; type-name => specifier-qualifier-list abstract-declarator
-   (lambda ($2 $1 . $rest)
-     `(type-name ,(tl->list $1) ,$2))
+   ;; type-name => specifier-qualifier-list/no-attr abstract-declarator
+   (lambda ($2 $1 . $rest) `(type-name ,$1 ,$2))
    ;; type-name => declaration-specifiers
    (lambda ($1 . $rest) `(type-name ,$1))
    ;; abstract-declarator => pointer direct-abstract-declarator
@@ -730,6 +761,8 @@
    (lambda ($1 . $rest) $1)
    ;; statement => asm-statement
    (lambda ($1 . $rest) $1)
+   ;; statement => pragma
+   (lambda ($1 . $rest) $1)
    ;; statement => cpp-statement
    (lambda ($1 . $rest) $1)
    ;; labeled-statement => identifier ":" statement
@@ -804,30 +837,34 @@
    (lambda ($2 $1 . $rest) `(return (expr)))
    ;; asm-statement => asm-expression ";"
    (lambda ($2 $1 . $rest) $1)
-   ;; asm-expression => "asm" "(" string-literal ")"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(asm-expr (@ (extension "GNUC")) ,$3))
-   ;; asm-expression => "asm" "(" string-literal asm-outputs ")"
+   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal ")"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(asm-expr
-        (@ (extension "GNUC"))
-        ,$3
-        ,(tl->list $4)))
-   ;; asm-expression => "asm" "(" string-literal asm-outputs asm-inputs ")"
+     `(asm-expr (@ (extension "GNUC")) ,$4))
+   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC"))
-        ,$3
-        ,(tl->list $4)
+        ,$4
         ,(tl->list $5)))
-   ;; asm-expression => "asm" "(" string-literal asm-outputs asm-inputs asm...
+   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC"))
-        ,$3
-        ,(tl->list $4)
+        ,$4
         ,(tl->list $5)
         ,(tl->list $6)))
+   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(asm-expr
+        (@ (extension "GNUC"))
+        ,$4
+        ,(tl->list $5)
+        ,(tl->list $6)
+        ,(tl->list $7)))
+   ;; opt-asm-specifiers => 
+   (lambda $rest (list))
+   ;; opt-asm-specifiers => "volatile"
+   (lambda ($1 . $rest) $1)
    ;; asm-outputs => ":"
    (lambda ($1 . $rest) (make-tl 'asm-outputs))
    ;; asm-outputs => ":" asm-output
@@ -925,6 +962,8 @@
    (lambda ($1 . $rest) `(comment ,$1))
    ;; cpp-statement => 'cpp-stmt
    (lambda ($1 . $rest) `(cpp-stmt ,$1))
+   ;; pragma => '$pragma
+   (lambda ($1 . $rest) `(pragma ,$1))
    ;; pragma => "_Pragma" "(" string-literal ")"
    (lambda ($4 $3 $2 $1 . $rest) `(pragma ,$3))
    ))

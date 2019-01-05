@@ -21,6 +21,8 @@
   #:inc-filter (lambda (file-spec path-spec)
                  (string-contains path-spec "libssh/" 0)))
 
+(define-public libssh-symval ffi-libssh-symbol-val)
+
 (define-public ssh_channel*-desc (bs:pointer  ssh_channel-desc))
 (define-fh-pointer-type ssh_channel* 
   ssh_channel*-desc ssh_channel*? make-ssh_channel*)

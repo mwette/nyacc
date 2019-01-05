@@ -24,8 +24,9 @@
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 util)
-  )
+  #:re-export (c99-def-help c99-std-help))
 (cond-expand
+  (guile-3)
   (guile-2)
   (guile
    (use-modules (srfi srfi-16))
@@ -34,18 +35,25 @@
    (use-modules (nyacc compat18)))
   (else))
 
-;; Setting up the parsers is a little
-
 (include-from-path "nyacc/lang/c99/body.scm")
 
+;; Routines to process specifier-lists and declarators, indended
+;; to provide option to convert attribute-specifiers elements into
+;; SXML attributes.  See move-attributes in util.scm.
+;;(define process-specs identity)
+;;(define process-declr identity)
+(define process-specs move-attributes)
+(define process-declr move-attributes)
+
 ;; === file parser ====================
+
 (include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/c99act.scm")
 
 (define c99-raw-parser
   (make-lalr-parser
    (acons 'act-v c99-act-v c99-tables)
-   #:skip-if-unexp '($lone-comm $code-comm)))
+   #:skip-if-unexp '($lone-comm $code-comm $pragma)))
 	      
 (define gen-c99-lexer
   (make-c99-lexer-generator c99-mtab c99-raw-parser))
@@ -67,9 +75,9 @@
 ;; defines (e.g., using @code{gen-cpp-defs}).
 ;; @end deffn
 (define* (parse-c99 #:key
-		    (cpp-defs '())	; CPP defines
-		    (inc-dirs '())	; include dirs
-		    (inc-help '())	; include helpers
+		    (cpp-defs '())	    ; CPP defines
+		    (inc-dirs '())	    ; include dirs
+		    (inc-help c99-def-help) ; include helpers
 		    (mode 'code)	; mode: 'file, 'code or 'decl
 		    (xdef? #f)		; pred to determine expand
 		    (show-incs #f)	; show include files
@@ -98,7 +106,7 @@
 (define c99x-raw-parser
   (make-lalr-parser
    (acons 'act-v c99x-act-v c99x-tables)
-   #:skip-if-unexp '($lone-comm $code-comm)))
+   #:skip-if-unexp '($lone-comm $code-comm $pragma)))
 
 (define gen-c99x-lexer
   (make-c99-lexer-generator c99x-mtab c99x-raw-parser))
@@ -109,10 +117,10 @@
 ;; @end deffn
 (define* (parse-c99x expr-string
 		     #:optional
-		     (tyns '())	; defined typenames
+		     (tyns '())		; defined typenames
 		     #:key
-		     (cpp-defs '())	; CPP defines
-		     (inc-help '())	; include helper
+		     (cpp-defs '())	     ; CPP defines
+		     (inc-help c99-def-help) ; include helper
 		     (xdef? #f)		; pred to determine expand
 		     (debug #f))	; debug?
   (let ((info (make-cpi debug #f cpp-defs '(".") inc-help)))

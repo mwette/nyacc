@@ -263,6 +263,10 @@
       ((sizeof-expr ,expr) (sf "sizeof(") (ppx expr) (sf ")"))
       ((sizeof-type ,type) (sf "sizeof(") (ppx type) (sf ")"))
 
+      ((pragma ,text)
+       (fmtr 'nlin)
+       (sf "#pragma ~A\n" text))
+
       ((cast ,tn ,ex)
        (sf "(") (ppx tn) (sf ")")
        (if (protect-expr? 'rt 'cast ex)
@@ -374,12 +378,13 @@
 	  (if (pair? (cdr pair)) (sf ", ")))
 	rest))
 
-      ((init-declr ,declr ,initr) (ppx declr) (ppx initr))
+      ((init-declr ,declr ,item2 ,item3) (ppx declr) (ppx item2) (ppx item3))
+      ((init-declr ,declr ,item2) (ppx declr) (ppx item2))
       ((init-declr ,declr) (ppx declr))
+      ((comp-declr ,declr ,item2) (ppx declr) (ppx item2))
       ((comp-declr ,declr) (ppx declr))
+      ((param-declr ,declr ,item2) (ppx declr) (ppx item2))
       ((param-declr ,declr) (ppx declr))
-      ;; This should work with sx-match, to replace above three.
-      ;;((#(init-declr comp-declr param-declr) ,declr) (ppx declr))
 
       ((bit-field ,ident ,expr)
        (ppx ident) (sf " : ") (ppx expr))
@@ -433,6 +438,27 @@
       ;;((fctn-spec "inline")
       ((fctn-spec ,spec)
        (sf "~S " spec))			; SPACE ???
+
+      ((attribute-list . ,attrs)
+       (sf " __attribute__((")
+       (pair-for-each
+	(lambda (pair)
+	  (ppx (car pair))
+	  (if (pair? (cdr pair)) (sf ",")))
+	attrs)
+       (sf "))"))
+
+      ((attribute (ident ,name))
+       (sf "~A" name))
+      ((attribute (ident ,name) ,attr-expr-list)
+       (sf "~A(" name) (ppx attr-expr-list) (sf ")"))
+
+      ((attr-expr-list . ,items)
+       (pair-for-each
+	(lambda (pair)
+	  (ppx (car pair))
+	  (if (pair? (cdr pair)) (sf ",")))
+	items))
 
       ((ptr-declr ,ptr ,dir-declr)
        (ppx ptr) (ppx dir-declr))

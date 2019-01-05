@@ -37,32 +37,7 @@
      "/usr/include/pixman-1" "/usr/include/freetype2" "/usr/include/libpng12"
      )
    (get-gcc-inc-dirs)))
-(define inc-help
-  (cond
-   ((string-contains %host-type "darwin")
-    '(("__builtin"
-       "__builtin_va_list=void*"
-       ;;"__attribute__(X)="
-       "__extension__="
-       "__inline=" "__inline__="
-       "__restrict="
-       "__THROW="
-       "__asm(X)=" "__asm__(X)="
-       "__has_include(X)=__has_include__(X)"
-       )
-      ))
-   (else
-    '(("__builtin"
-       "__builtin_va_list=void*" 
-       ;;"__attribute__(X)="
-       "__inline=" "__inline__="
-       "__restrict="
-       "__THROW="
-       "__asm(X)=" "__asm__(X)="
-       "__has_include(X)=__has_include__(X)"
-       "__extension__="
-       )
-      ))))
+(define inc-help c99-def-help)
 
 (define mode 'file)
 (define mode 'decl)
@@ -77,8 +52,8 @@
       (parse-c99 #:cpp-defs cpp-defs 
 		 #:inc-dirs inc-dirs
 		 #:inc-help inc-help
-		 #:mode mode #:debug #f
-		 #:show-incs #f
+		 #:mode mode #:debug debug
+		 #:show-incs #t
 		 ;;#:xdef? xdef?
 		 ))))
 
@@ -90,7 +65,7 @@
 		 #:inc-dirs inc-dirs 
 		 #:inc-help inc-help
 		 #:show-incs #f
- 		 #:mode mode #:debug #f
+ 		 #:mode mode #:debug debug
 		 #:xdef? xdef?))))
 
 (define (parse-string-list . str-l)
@@ -133,7 +108,11 @@
 	      ))
        (code "int len = sizeof(\"abc\" \"def\");\n")
        (tree (parse-string code))
-       (expr (sx-ref* tree 1 2 1 2 1))
+       ;;(expr (sx-ref* tree 1 2 1 2 1)) ;; for sizeof("abc"...) demo
+
+       ;;(code "((const char *) \"abc\")")
+       ;;(tree (parse-c99x code #:debug #t))
+       
        ;;(tree (parse-file "zz.c"))
        ;;(udict (c99-trans-unit->udict/deep tree))
        ;;(decl1 (sx-ref tree 1))
@@ -146,14 +125,12 @@
        ;;(xdecl (expand-typerefs-in-code code 2))
        )
   (pp tree)
-  (pp expr)
-  (pp (eval-c99-cx expr))
   ;;(pp udict)
   ;;(pp udecl)
   ;;(pp mdecl)
   ;;(pp xdecl)
   ;;(ppsx udecl)
-  ;;(pp99 xdecl)
+  ;;(pp99 tree)
   ;;(ppsx (eval-c99-cx tree))
   ;;(pp (get-gcc-cpp-defs))
   ;;(pp (get-gcc-inc-dirs))

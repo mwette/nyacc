@@ -20,7 +20,8 @@
 (define-module (nyacc lang util)
   #:export (license-lgpl3+
 	    report-error
-	    *input-stack* push-input pop-input reset-input-stack
+	    *input-stack* push-input pop-input
+	    reset-input-stack input-stack-portinfo
 	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
 	    ;; for pretty-printing
@@ -33,13 +34,12 @@
 	    ;; deprecated
 	    lang-crn-lic
 	    )
-  #:use-module ((srfi srfi-1) #:select (find fold))
-  ;; #:use-module ((sxml xpath) #:select (sxpath)) ;; see sx-find below
-  #:use-module (ice-9 pretty-print)
-  )
+  #:use-module ((srfi srfi-1) #:select (find fold fold-right))
+  #:use-module (ice-9 pretty-print))
 (cond-expand
   (mes)
   (guile-2)
+  (guile-3)
   (guile
    (use-modules (ice-9 optargs))
    (use-modules (srfi srfi-16)))
@@ -53,7 +53,7 @@ This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
 version 3 of the License, or (at your option) any later version.
-See the file COPYING.LESSER included with the this distribution.")
+See the file COPYING included with the this distribution.")
 (define lang-crn-lic license-lgpl3+)
 
 (define (sferr fmt . args)
@@ -62,12 +62,18 @@ See the file COPYING.LESSER included with the this distribution.")
   (apply pretty-print exp (current-error-port) kw-args))
 
 ;; @deffn {Procedure} report-error fmt args
-;; Report an error: to stderr, providing file and line num info, and add nl.
+;; Report an error, to stderr, providing file and line num info, and add
+;; newline.  This also reports context of parent files.
+;; @end deffn
 (define (report-error fmt args)
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 	(ln (1+ (port-line (current-input-port)))))
     (apply simple-format (current-error-port)
-	   (string-append "~A:~A: " fmt "\n") fn ln args)))
+	   (string-append "~A:~A: " fmt "\n") fn ln args)
+    (for-each
+     (lambda (pair)
+       (simple-format (current-error-port) "  at ~A:~A\n" (car pair) (cdr pair)))
+     (input-stack-portinfo))))
 
 ;; === input stack =====================
 
@@ -92,6 +98,17 @@ See the file COPYING.LESSER included with the this distribution.")
 	  (set-current-input-port (car ipstk))
 	  (fluid-set! *input-stack* (cdr ipstk))))))
 
+;; @deffn {Procedure} input-stack-portinfo
+;; Return a list of pairs of input stack filename and line number.
+;; @end deffn
+(define (input-stack-portinfo)
+  "- Procedure: input-stack-portinfo
+     Return a list of pairs of input stack filename and line number."
+  (define (port-info port)
+    (cons (or (port-filename port) "(unknown)") (1+ (port-line port))))
+  (fold-right (lambda (port info) (cons (port-info port) info)) '()
+	      (fluid-ref *input-stack*)))
+
 ;; === tl ==============================
 
 ;; @section Tagged Lists
@@ -107,6 +124,8 @@ See the file COPYING.LESSER included with the this distribution.")
 ;; Create a tagged-list structure.
 ;; @end deffn
 (define (make-tl tag . rest)
+  "- Procedure: make-tl tag [item item ...]
+     Create a tagged-list structure."
   (let iter ((tail tag) (l rest))
     (if (null? l) (cons '() tail)
 	(iter (cons (car l) tail) (cdr l)))))
@@ -119,6 +138,11 @@ See the file COPYING.LESSER included with the this distribution.")
 ;; @end example
 ;; @end deffn
 (define (tl->list tl)
+  "- Procedure: tl->list tl
+     Convert a tagged list structure to a list.  This collects added
+     attributes and puts them right after the (leading) tag, resulting
+     in something like
+          (<tag> ( <attr>) <rest>)"
   (let ((heda (car tl))
 	(head (let iter ((head '()) (attr '()) (tl-head (car tl)))
 		(if (null? tl-head)
@@ -137,12 +161,16 @@ See the file COPYING.LESSER included with the this distribution.")
 ;; Insert item at front of tagged list (but after tag).
 ;; @end deffn
 (define (tl-insert tl item)
+  "- Procedure: tl-insert tl item
+     Insert item at front of tagged list (but after tag)."
   (cons (cons item (car tl)) (cdr tl)))
 
 ;; @deffn {Procedure} tl-append tl item ...
 ;; Append items at end of tagged list.
 ;; @end deffn
 (define (tl-append tl . rest)
+  "- Procedure: tl-append tl item ...
+     Append items at end of tagged list."
   (cons (car tl)
 	(let iter ((tail (cdr tl)) (items rest))
 	  (if (null? items) tail
@@ -152,12 +180,16 @@ See the file COPYING.LESSER included with the this distribution.")
 ;; Extend with a list of items.
 ;; @end deffn
 (define (tl-extend tl item-l)
+  "- Procedure: tl-extend tl item-l
+     Extend with a list of items."
   (apply tl-append tl item-l))
 
 ;; @deffn {Procedure} tl-extend! tl item-l
 ;; Extend with a list of items.  Uses @code{set-cdr!}.
 ;; @end deffn
 (define (tl-extend! tl item-l)
+  "- Procedure: tl-extend! tl item-l
+     Extend with a list of items.  Uses 'set-cdr!'."
   (set-cdr! (last-pair tl) item-l)
   tl)
 
@@ -168,6 +200,9 @@ See the file COPYING.LESSER included with the this distribution.")
 ;; @end example
 ;; @end deffn
 (define (tl+attr tl key val)
+  "- Procedure: tl+attr tl key val)
+     Add an attribute to a tagged list.  Return a new tl.
+          (tl+attr tl 'type \"int\")"
   (tl-insert tl (cons '@ (list key val))))
 
 ;; @deffn {Procedure} tl+attr tl key val [key val [@dots{} ...]]) => tl
@@ -177,6 +212,9 @@ See the file COPYING.LESSER included with the this distribution.")
 ;; @end example
 ;; @end deffn
 (define (tl+attr* tl . rest)
+  "- Procedure: tl+attr tl key val [key val [... ...]]) => tl
+     Add multiple attributes to a tagged list.  Return a new tl.
+          (tl+attr tl 'type \"int\")"
   (if (null? rest) tl
       (tl+attr* (tl+attr tl (car rest) (cadr rest)) (cddr rest))))
 

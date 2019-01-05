@@ -1,3 +1,19 @@
+2019-01-02  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* parser.scm: now using c99-def-help from c99/util.scm for default
+	inc-help ; adding this to ffi-help and others
+
+2018-12-31  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* mach.scm (c99-spec): add attribute on declarators in structs;
+	had to add specifier-qualifier-list/no-attr to use for type-name
+	production to remove loop-conflict
+
+2018-12-30  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* body.scm (make-c99-lexer-generator): pass pragma always, if
+	file mode, then as cpp-stmt, else pass as (pragma "opt-args")
+
 2018-12-28  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* cxeval.scm (eval-sizeof-expr): updated for (string "abc" "def")

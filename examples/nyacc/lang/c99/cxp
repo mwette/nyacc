@@ -17,7 +17,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; usage: cxp -Ilang/c99/exam.d lang/c99/exam.d/ex1.c
+;; usage: cxp -Ic99-exam c99-exam/ex1.c
 
 (use-modules (ice-9 pretty-print))
 (use-modules (nyacc lang c99 parser))

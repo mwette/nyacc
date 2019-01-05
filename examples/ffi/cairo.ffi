@@ -18,8 +18,8 @@
 (define-ffi-module (ffi cairo)
   #:pkg-config "cairo"
   #:include '("cairo.h"
-	      ;;"cairo-ft.h"		; /usr/include rat's nest
-	      ;;"cairo-gobject.h"	; /usr/include rat's nest
+	      ;;"cairo-ft.h"
+	      ;;"cairo-gobject.h"
 	      "cairo-pdf.h"
 	      ;;"cairo-ps.h"
 	      ;;"cairo-quartz-image.h"
@@ -28,7 +28,8 @@
 	      ;;"cairo-tee.h"
 	      ;;"cairo-xml.h"
 	      )
-  ;; the following are bent pipe to scm-module
+  ;;#:renamer (lambda (name)
+  ;;            (string-map (lambda (c) (if (char=? c #\_) #\- c)) name))
   #:export (M_PI M_2PI make-cairo-unit-matrix)
   )
 
