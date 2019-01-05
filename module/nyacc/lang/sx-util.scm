@@ -235,8 +235,8 @@
       (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
   sx)
 
-;; @deffn {Procedure} sx-cons* tag attr ... => sx
-;; @deffnx {Procedure} sx-list tag attr ... => sx
+;; @deffn {Procedure} sx-cons* tag attr exp ... tail => sx
+;; @deffnx {Procedure} sx-list tag attr exp ... => sx
 ;; Generate the tag and the attr list if it exists.  Note that
 ;; The following are equivalent:
 ;; @example
@@ -244,6 +244,8 @@
 ;; (sx-list tag attr elt1 elt2)
 ;; @end example
 ;; @noindent
+;; Expressions that are @code{#f} or @code{'()} will be skipped;
+;; they should be strings or pairs.
 ;; @end deffn
 (define (sx-cons* tag attr . rest)
   (if (null? rest) (error "expecing tail"))
@@ -253,10 +255,11 @@
 	       ((pair? (car attr)) `(@ . ,attr))
 	       (else attr)))
 	(tail (let loop ((items rest))
-		(if (null? (cdr items)) (car items)
-		    (if (car items)
-			(cons (car items) (loop (cdr items)))
-			(loop (cdr items)))))))
+		(cond
+		 ((null? (cdr items)) (car items))
+		 ((not (car items)) (loop (cdr items)))
+		 ((null? (car items)) (loop (cdr items)))
+		 (else (cons (car items) (loop (cdr items))))))))
     (if attr (cons* tag attr tail) (cons tag tail))))
 (define (sx-list tag attr . rest)
   (let ((attr (cond
@@ -265,10 +268,11 @@
 	       ((pair? (car attr)) `(@ . ,attr))
 	       (else attr)))
 	(tail (let loop ((items rest))
-		(if (null? items) '()
-		    (if (car items)
-			(cons (car items) (loop (cdr items)))
-			(loop (cdr items)))))))
+		(cond
+		 ((null? items) '())
+		 ((not (car items)) (loop (cdr items)))
+		 ((null? (car items)) (loop (cdr items)))
+		 (else (cons (car items) (loop (cdr items))))))))
     (if attr (cons* tag attr tail) (cons tag tail))))
 
 ;; @deffn {Procedure} sx-split sexp => tag attr tail

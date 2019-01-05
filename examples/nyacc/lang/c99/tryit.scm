@@ -108,8 +108,12 @@
 	      ))
        (code "int len = sizeof(\"abc\" \"def\");\n")
        (tree (parse-string code))
-       ;;(tree (parse-file "zz.c"))
        ;;(expr (sx-ref* tree 1 2 1 2 1)) ;; for sizeof("abc"...) demo
+
+       ;;(code "((const char *) \"abc\")")
+       ;;(tree (parse-c99x code #:debug #t))
+       
+       ;;(tree (parse-file "zz.c"))
        ;;(udict (c99-trans-unit->udict/deep tree))
        ;;(decl1 (sx-ref tree 1))
        ;;(udict (unitize-decl decl1 '()))

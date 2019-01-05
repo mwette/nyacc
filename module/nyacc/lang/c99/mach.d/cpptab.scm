@@ -6,7 +6,7 @@
 ;; modify it under the terms of the GNU Lesser General Public
 ;; License as published by the Free Software Foundation; either
 ;; version 3 of the License, or (at your option) any later version.
-;; See the file COPYING.LESSER included with the this distribution.
+;; See the file COPYING included with the this distribution.
 
 (define cpp-len-v
   #(1 1 5 1 3 1 3 1 3 1 3 1 3 1 3 3 1 3 3 3 3 1 3 3 1 3 3 1 3 3 3 1 2 2 2 2 2

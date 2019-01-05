@@ -72,7 +72,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -L  --load-path=DIR  add DIR to the front of the module load path
   -I  --inc-dir=DIR    add DIR to list of dir's to search for C headers
   -o, --output=OFILE   write output to OFILE
-  -d, --debug=x,y,z    set debug flags (e.g., echo-decl)
+  -d, --debug=x,y      set debug flags: echo-decl, parse
   -X, --no-exec        don't generate .go file(s)
   -R, --no-recurse     don't do recursive compile on dep's
 
@@ -90,7 +90,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	     (show-version) (exit 0)))
    (option '(#\d "debug") #t #f
 	   (lambda (opt name arg opts files)
-	     (values (acons/seed 'debug arg opts) files)))
+	     (values (acons 'debug arg opts) files)))
    (option '(#\o "output") #t #f
 	   (lambda (opt name arg opts files)
 	     (if (assoc-ref opts 'output-file)
@@ -107,10 +107,10 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	     (values (acons 'no-recurse #t opts) files)))
    (option '(#\X "no-exec") #f #f
 	   (lambda (opt name arg opts files)
-	     (values (acons 'no-exec arg opts) files)))
+	     (values (acons 'no-exec #t opts) files)))
    (option '("any-suffix") #f #f
 	   (lambda (opt name arg opts files)
-	     (values (acons 'no-exec arg opts) files)))
+	     (values (acons 'any-sufffix #t opts) files)))
    ))
 
 ;; from scripts/compile.scm
@@ -198,7 +198,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       ((assq-ref options 'no-recurse)
        (warn "please recompile `~A'" dep-file))
       (else
-       (compile-ffi dep-file options))))
+       (compile-ffi dep-file (acons 'no-exec #f options)))))
    (updated-ffi-deps file options)))
 
 ;; -----------------------------------------------------------------------------

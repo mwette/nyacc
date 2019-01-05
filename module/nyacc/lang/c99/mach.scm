@@ -352,9 +352,9 @@
      (specifier-qualifier-list/no-attr-1 ($$ (tl->list $1))))
     (specifier-qualifier-list/no-attr-1
      (type-specifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-specifier specifier-qualifier-list/no-attr ($$ (tl-insert $2 $1)))
+     (type-specifier specifier-qualifier-list/no-attr-1 ($$ (tl-insert $2 $1)))
      (type-qualifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-qualifier specifier-qualifier-list/no-attr ($$ (tl-insert $2 $1))))
+     (type-qualifier specifier-qualifier-list/no-attr-1 ($$ (tl-insert $2 $1))))
 
     (struct-declarator-list		; S 6.7.2.1
      (struct-declarator ($$ (make-tl 'comp-declr-list $1)))

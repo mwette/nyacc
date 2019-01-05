@@ -276,12 +276,11 @@
       ((fixed ,val) val)
       ((float ,val) val)
       ((char ,val) val)
-      ((string ,val) (string-append "\"" val "\""))
+      ((string . ,val) (string-append "\"" (string-join val "") "\""))
       ((type-name (decl-spec-list (type-spec ,spec))) (spec->str spec))
       ((fixed-type ,name) name)
       ((float-type ,name) name)
-      (,_ (simple-format #t "c99/util: missed ~S\n" spec) "MISSED")))
-  ;;(sferr "attr-list:\n") (pperr attr-list)
+      (,_ (sferr "c99/util: missed ~S\n" spec) "MISSED")))
   (if (null? attr-list) '()
       `(attributes ,(string-join (map spec->str (sx-tail attr-list)) ";"))))
 
@@ -290,8 +289,6 @@
 ;; (attribute-list (attribute "__packed
 ;; OR
 ;; #f => #f
-
-
 (use-modules (nyacc lex))
 
 (define (astng->atree form)

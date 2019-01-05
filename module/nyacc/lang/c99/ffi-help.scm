@@ -105,34 +105,27 @@
    `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
    (get-gcc-inc-dirs)))
 
-(define fh-inc-help
-  '(("__builtin"
-       "__builtin_va_list=void*"
-       "__asm__=asm" "__volatile__=volatile"
-       "__has_include(X)=__has_include__(X)"
-       ;; skip for now
-       "__inline=" "__inline__=" "__extension__=" "__restrict=" "__THROW="
-       "__signed=signed"		; macos methinks
-       )))
+(define fh-inc-help c99-def-help)
 
 ;; DEBUGGING
 (set! fh-inc-dirs (cons "." fh-inc-dirs))
 
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))
-(define *prefix* (make-parameter ""))	 ; name prefix (e.g., prefix-syms)
-(define *debug* (make-parameter #f))	 ; parse debug mode
-(define *mport* (make-parameter #t))	 ; output module port
-(define *udict* (make-parameter '()))	 ; udecl dict
-(define *ddict* (make-parameter '()))	 ; cpp-def dict
-(define *tdefs* (make-parameter '()))	 ; typenames
-(define *wrapped* (make-parameter '()))	 ; wrappers for foo_t and foo_t*
-(define *defined* (make-parameter '()))	 ; has wrapper and is bytestructure?
-(define *renamer* (make-parameter identity)) ; renamer from ffi-module
-(define *errmsgs* (make-parameter '()))	     ; list of warnings
-;; what about option to trace
+(define *debug-parse* (make-parameter #f)) ; parse debug mode
 (define *echo-decls* (make-parameter #f)) ; add echo-decls code for debugging
 
+(define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
+(define *renamer* (make-parameter identity)) ; renamer from ffi-module
+
+(define *mport* (make-parameter #t))	   ; output module port
+(define *udict* (make-parameter '()))	   ; udecl dict
+(define *ddict* (make-parameter '()))	   ; cpp-def dict
+(define *tdefs* (make-parameter '()))	   ; typenames
+(define *wrapped* (make-parameter '()))	; wrappers for foo_t and foo_t*
+(define *defined* (make-parameter '()))	; type defined
+
+(define *errmsgs* (make-parameter '()))	; list of warnings
 
 (define (sfscm fmt . args)
   (apply simple-format (*mport*) fmt args))
@@ -292,6 +285,9 @@
 	   seed)))
    '() udict))
 
+(define (rename name)
+  ((*renamer*) name))
+
 ;; === output scheme module header 
 
 (define (ffimod-header path module-opts)
@@ -386,8 +382,9 @@
     (pmatch mdecl-tail
       ;; expand typeref, use renamer,
       (((typename ,name))
-       (or (assoc-ref bs-typemap name)
-	   (string->symbol (string-append name "-desc"))))
+       (let ((name (rename name)))
+	 (or (assoc-ref bs-typemap name)
+	     (string->symbol (string-append name "-desc")))))
 
       (((void)) ''void)
       (((fixed-type "char")) 'int)
@@ -415,15 +412,16 @@
 
       ;; typename use renamers, ... ???
       (((pointer-to) (typename ,name))
-       (cond
-	((assoc-ref bs-typemap name) =>
-	 (lambda (n) `(bs:pointer ,n)))
-	((member (w/* name) defined)
-	 (strings->symbol name "*-desc"))
-	((member name defined)
-	 `(bs:pointer ,(strings->symbol name "-desc")))
-	(else
-	 (strings->symbol name "*-desc"))))
+       (let ((name (rename name)))
+	 (cond
+	  ((assoc-ref bs-typemap name) =>
+	   (lambda (n) `(bs:pointer ,n)))
+	  ((member (w/* name) defined)
+	   (strings->symbol name "*-desc"))
+	  ((member name defined)
+	   `(bs:pointer ,(strings->symbol name "-desc")))
+	  (else
+	   (strings->symbol name "*-desc")))))
 
       (((pointer-to) (void))
        `(bs:pointer 'void))
@@ -474,15 +472,14 @@
        (sferr "mtail->bs-desc missed mdecl:\n")
        (pperr mdecl-tail)
        (error "quit") ;;(quit)
-       (fherr "mtail->bs-desc failed")
-       )
-      )))
+       (fherr "mtail->bs-desc failed")))))
 
 
 ;; --- output routines ---------------
 
 (define (fhscm-export-def name)
-  (let* ((st-name (if (string? name) name (symbol->string name)))
+  (let* ((name (rename name))
+	 (st-name (if (string? name) name (symbol->string name)))
 	 (sy-name (if (string? name) (string->symbol name) name))
 	 (pred (string->symbol (string-append st-name "?")))
 	 (make (string->symbol (string-append "make-" st-name))))
@@ -493,23 +490,28 @@
 ;;  (sfscm "(export ~A* ~A*? make-~A*)\n" name name name))
 
 (define (fhscm-def-alias name orig)
-  (let ((s-name (if (string? name) (string->symbol name) name))
-	(s-orig (if (string? orig) (string->symbol orig) orig)))
+  (let* ((name (rename name))
+	 (s-name (if (string? name) (string->symbol name) name))
+	 (s-orig (if (string? orig) (string->symbol orig) orig)))
     (ppscm `(define-public ,s-name ,s-orig))))
 
 (define (fhscm-def-desc name desc)
-  (let ((s-name (if (string? name) (string->symbol name) name))
-	(s-desc (if (string? desc) (string->symbol desc) desc)))
+  (let* ((name (rename name))
+	 (s-name (if (string? name) (string->symbol name) name))
+	 (s-desc (if (string? desc) (string->symbol desc) desc)))
     (ppscm `(define-public ,s-name ,s-desc))))
 
 (define (fhscm-def-*desc name)
-  (sfscm "(define-public ~A* (bs:pointer ~A-desc))\n" name name))
+  (let ((name (rename name)))
+    (sfscm "(define-public ~A* (bs:pointer ~A-desc))\n" name name)))
 
 (define (fhscm-def-*desc/delay name)
-  (sfscm "(define-public ~A* (bs:pointer (delay ~A-desc)))\n" name name))
+  (let ((name (rename name)))
+    (sfscm "(define-public ~A* (bs:pointer (delay ~A-desc)))\n" name name)))
 
 (define (fhscm-def-compound name)
-  (let* ((st-name (if (string? name) name (symbol->string name)))
+  (let* ((name (rename name))
+	 (st-name (if (string? name) name (symbol->string name)))
 	 (sy-name (if (string? name) (string->symbol name) name))
 	 (desc (string->symbol (string-append st-name "-desc")))
 	 (pred (string->symbol (string-append st-name "?")))
@@ -518,7 +520,8 @@
     (fhscm-export-def name)))
 
 (define (fhscm-def-pointer name)
-  (let* ((st-name (if (string? name) name (symbol->string name)))
+  (let* ((name (rename name))
+	 (st-name (if (string? name) name (symbol->string name)))
 	 (sy-name (if (string? name) (string->symbol name) name))
 	 (desc (string->symbol (string-append st-name "-desc")))
 	 (pred (string->symbol (string-append st-name "?")))
@@ -527,12 +530,14 @@
     (fhscm-export-def name)))
 
 (define (fhscm-def-pointer/delay name)
-  (sfscm "(define-fh-pointer-type ~A* ~A*-desc\n" name)
-  (sfscm "  ~A*? make-~A*)\n" name name)
-  (fhscm-export-def name))
+  (let ((name (rename name)))
+    (sfscm "(define-fh-pointer-type ~A* ~A*-desc\n" name)
+    (sfscm "  ~A*? make-~A*)\n" name name)
+    (fhscm-export-def name)))
 
 (define (fhscm-ref-deref typename)
-  (let* ((type* (strings->symbol typename "*"))
+  (let* ((typename (rename typename))
+	 (type* (strings->symbol typename "*"))
 	 (make* (strings->symbol "make-" typename "*"))
 	 (type (strings->symbol typename))
 	 (make (strings->symbol "make-" typename)))
@@ -1884,7 +1889,7 @@
 		       #:inc-help inc-help
 		       #:mode 'decl
 		       #:show-incs #f
-		       #:debug (*debug*))))
+		       #:debug (*debug-parse*))))
 	(fherr "parse failed"))))
 
 ;; @deffn parse-includes attrs
@@ -1985,11 +1990,10 @@
 ;; was intro-ffi
 (define (expand-ffi-module-spec path module-options)
   (check-deps module-options)
-  ;;(sferr "cpp-defs:\n") (pperr fh-cpp-defs)
-  ;;(sferr "inc-dirs:\n") (pperr fh-inc-dirs)
-  ;;(sferr "inc-help:\n") (pperr fh-inc-help)
   (let* ((script-options (*options*))
-	 ;;(mbase (string-append (string-join (map symbol->string path) "/")))
+	 (dbugl (or (and=> (assq-ref script-options 'debug)
+			   (lambda (v) (map string->symbol (string-split v #\,))))
+		    '()))
 	 (mbase (path->path path))
 	 (dirpath (derive-dirpath (assq-ref script-options 'file) mbase))
 	 (mfile (string-append dirpath mbase ".scm"))
@@ -2000,17 +2004,13 @@
 	 (declf (or (assq-ref attrs 'decl-filter) identity))
 	 (renamer (or (assq-ref attrs 'renamer) identity))
 	 ;;
-	 (tree (cond
-		((assq-ref attrs 'include) (parse-includes attrs))
-		((assq-ref attrs 'api-code) =>
-		 (lambda (code) (parse-code code attrs)))
-		(else (fherr "expecing #:includes or #:api-code"))))
-	 #;(tree (with-input-from-string "#include <sys/epoll.h>\n"
-				(lambda ()
-				  (parse-c99 #:inc-dirs fh-inc-dirs
-					     #:cpp-defs fh-cpp-defs
-					     #:inc-help fh-inc-help
-					     ))))
+	 (tree (begin
+		 (if (memq 'parse dbugl) (*debug-parse* #t))
+		 (cond
+		  ((assq-ref attrs 'include) (parse-includes attrs))
+		  ((assq-ref attrs 'api-code) =>
+		   (lambda (code) (parse-code code attrs)))
+		  (else (fherr "expecing #:includes or #:api-code")))))
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
@@ -2053,9 +2053,9 @@
     (*udict* udict)
     (*mport* mport)
     (*ddict* ddict)
+    (*renamer* renamer)
     (*tdefs* (udict->typenames udict))
-    (if (assq-ref script-options 'debug) (*echo-decls* #t))
-    ;; renamer?
+    (if (memq 'echo-decls dbugl) (*echo-decls* #t))
 
     ;; file and module header
     (ffimod-header path module-options)
