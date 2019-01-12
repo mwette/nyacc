@@ -1,6 +1,6 @@
 nyacc/lang/README
 
-Copyright (C) 2015-2017 Matthew R. Wette
+Copyright (C) 2015-2019 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -9,27 +9,24 @@ without any warranty.
 
 The intention of this directory is to provide parsers for languages.
 The parsers will be built with attributed grammar semantics.  The
-parse tree will be in sxml format.
+parse tree will be in SXML format.
 
 These example should compile with 2.0.13 and later.
-The calc/calc1 demo runs with guile 1.8.
-
-This directory hosts parsers, typically with attributed grammar semantics.
 
 The typical contents are:
 mach.scm	the grammar specification, dev parser and table generator
 mach.d		a directory containing files of actions and tables 
-body.scm	code needed for the development and fast parsers
-		this is included by mach.scm and parser.scm
-parser.scm	the "fast parser" using tables in mach.d/
+		generated from procedures in mach.scm
+body.scm	code included in parser.scm and sometimes mach.scm
+parser.scm	provides the parser procedure, includes mach.d/* and body.scm
 pprint.scm	pretty-printer
-Tmach.scm	test code for the parser
+Umach.scm	code to rerun table generation and generate parsers
 
-The development parsers will generate a machine every time the code is run.
-(I don't totally understand why this happens.  Maybe eval-when could help.)
-The fast parsers use tables that are generated separately, a 'la yacc or bison.
+When Umach.scm is run it may generate:
+,file.txt	file parser output tables, for debugging
+,expr.txt	expression parser output tables, for debugging
 
-The output is typically a tree with sxml syntax.  This has the grammar
+The output is typically an AST with SXML syntax.  This has the grammar
 @example
 sexp => (symbol expr ...)
 expr => sexp | string
@@ -64,3 +61,25 @@ element conventions:
   (id "=" ex) 		-> `(assign ,$1 ,$3)
   (id "+=" ex) 		-> `(add-assign ,$1 ,$3)
 
+MANIFEST:
+README		This file
+TMPL		directory of template files for new parsers
+
+nx-devel.texi	documentation for "NX" languages
+nx-lib.scm	run-time library for nx-languages
+nx-load.scm	
+nx-util.scm	compile-time utilities for nx-languages
+
+c99		demo and test routines for the C99 parser
+ffi-help	demo and test routines for the FFI helper
+
+calc		calc demo parser and interpreter
+
+javascript	parser and partial interpreter
+octave		parser and partial interpreter for Octave (like Matlab)
+tcl		parser and partial interpreter for TCL
+
+ecmascript	immature replacment parser for Guile's emcascript
+julia		partial parser for the Julia langauge
+lua		partial parser for the Lua language
+python		partial parser for python

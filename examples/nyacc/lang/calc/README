@@ -1,11 +1,14 @@
 nyacc/lang/README
 
-Copyright (C) 2017 Matthew R. Wette
+Copyright (C) 2017,2019 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
+
+To run the demos in this directory please navigate up do the examples/
+directory and source the file env.sh.
 
 calc1.scm			batch parser
 calc2.scm			interactive parser
