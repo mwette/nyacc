@@ -1,6 +1,6 @@
-;;; nyacc/lang/calc/spec.scm - NYACC's calculator demo
+;;; language/spec.scm - NYACC's calculator demo
 
-;; Copyright (C) 2015,2018 Matthew R. Wette
+;; Copyright (C) 2015,2018,2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-;; copy to language/calc/spec.scm
+;;; Code:
 
 (define-module (language calc spec)
   #:export (calc)
@@ -23,17 +23,11 @@
   #:use-module (nyacc lang calc parser)
   #:use-module (nyacc lang calc compiler))
 
-(define (calc-reader port env)
-  (let ((iport (current-input-port)))
-    (dynamic-wind
-	(lambda () (set-current-input-port port))
-	(lambda () (calc-parse #:debug #f))
-	(lambda () (set-current-input-port iport)))))
-
 (define-language calc
   #:title	"calc"
-  #:reader	calc-reader
-  #:compilers   `((cps . ,compile-cps))
+  #:reader	read-calc
+  #:compilers   `((tree-il . ,compile-tree-il))
+  ;;#:compilers   `((cps . ,compile-cps))
   #:printer	write)
 
 ;; --- last line ---

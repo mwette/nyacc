@@ -33,6 +33,7 @@
 	    sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
 	    sx-find
 	    sx-split sx-split* sx-join sx-join* sx-cons* sx-list
+	    sx-unitize
 	    sx-match)
   #:use-module ((srfi srfi-1) #:select (find fold fold-right)))
 (cond-expand
@@ -316,6 +317,23 @@
 	    (cons* tag `(@ ,attr) tail))
 	(cons tag tail))))
 
+;; @deffn {Procedure} sx-unitize list-tag form seed
+;; Given a declaration of form @code{(tag ... (elt-list ...) ...)}
+;; fold into the seed broken list of
+;; @code{(tag ... elt1 ...) (tag ... elt2 ...) ... seed}.
+;; Any attributes for the list form are lost.
+;; @end deffn
+(define (sx-unitize list-tag form seed)
+  (let loop ((head '()) (elts '()) (tail '()) (form form))
+    (if (null? elts)
+	(if (and (pair? (car form)) (eq? list-tag (sx-tag (car form))))
+	    (loop head (cdar form) (cdr form) '())
+	    (loop (cons (car form) head) elts tail (cdr form)))
+	(let loop2 ((elts elts))
+	  (if (null? elts) seed
+	      (cons (append-reverse (cons (car elts) head) tail)
+		    (loop2 (cdr elts))))))))
+
 ;; ============================================================================
 
 ;; sx-match: somewhat like sxml-match but hoping to be more usable and more
@@ -417,6 +435,9 @@
     ((_ tv t0 kt kf)
      (if (eqv? tv 't0) kt kf))))
 
+(define (rule-error) (error "rule contains non-SXML element" v))
+(define (expr-error) (error "expression contains not-SXML element" v))
+
 ;; sxm-tail val pat kt kf
 ;; match tail of sexp = list of nodes
 (define-syntax sxm-tail
@@ -439,8 +460,8 @@
     ((_ v (hp . tp) kt kf) (if (pair? v) (sxm-sexp v (hp . tp) kt kf) kf))
     ((_ v s kt kf)
      (begin
-       (unless (string? s) (error "expecting string"))
-       (unless (string? v) (error "expecting string"))
+       (unless (string? s) (rule-error))
+       (unless (string? v) (expr-error))
        (if (string=? s v) kt kf)))
     ;;((_ v s kt kf) (if (string=? s v) kt kf))
     ;;^-- If not pair or unquote then must be string, right?

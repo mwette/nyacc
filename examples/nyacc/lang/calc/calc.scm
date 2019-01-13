@@ -13,6 +13,8 @@
 ;; > 2 + 2
 ;; 4
 
+;; See the NYACC User's Manual for further information.
+
 ;;; Code:
 
 (use-modules (nyacc lalr))
@@ -24,22 +26,30 @@
 (define spec
   (lalr-spec
    (prec< (left "+" "-") (left "*" "/"))
-   (start stmt-list)
+   (start prog)
    (grammar
+    (prog
+     (stmt-list))
     (stmt-list
      (stmt)
      (stmt-list "\n" stmt))
     (stmt
-     (expr ($$ (display $1) (next))))
+     ($empty ($$ (next)))
+     (expr ($$ (display $1) (next)))
+     (assn ($$ (module-define! (current-module) (car $1) (cdr $1))
+	       (display (cdr $1)) (next))))
     (expr
-     ($empty ($$ ""))
      (expr "+" expr ($$ (+ $1 $3)))
      (expr "-" expr ($$ (- $1 $3)))
      (expr "*" expr ($$ (* $1 $3)))
      (expr "/" expr ($$ (/ $1 $3)))
      ($fixed ($$ (string->number $1)))
      ($float ($$ (string->number $1)))
-     ("(" expr ")" ($$ $2))))))
+     ($ident ($$ (module-ref (current-module) (string->symbol $1))))
+     ("(" expr ")" ($$ $2)))
+    (assn
+     ($ident "=" expr ($$ (cons (string->symbol $1) $3)))))))
+
 
 (define mach (make-lalr-machine spec))
 

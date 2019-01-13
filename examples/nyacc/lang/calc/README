@@ -10,16 +10,25 @@ without any warranty.
 To run the demos in this directory please navigate up do the examples/
 directory and source the file env.sh.
 
-calc1.scm			batch parser
-calc2.scm			interactive parser
-cacl3				script to run the calc language
-../../../language/spec.scm	spec guile calc langauge
-  compiler.scm			  compiler for ",L calc"
-  parser.scm			  parser for ",L calc"
+calc.scm		interactive parser, quick and dirty
+			  $ guile calc.scm
+			  > 1 + 2
+			  3
+			  >
 
-calc1.out			output of pp-lalr-grammar, -machine
+mach.scm		spec for parser; tables in mach.d/ created via
+			  $ guile Umach.scm
+			Umach.scm will also generate ,file.txt and ,expr.txt
 
-calc1-act.scm			output of write-lalr-actions
-calc1-tab.scm			output of write-lalr-tables (w/ hash, comp)
+parser.scm		parse-calc (for full language) and
+			read-calc for expressions
 
-calc1.y				output of 
+compiler.scm		compiles output of read-calc to Tree-IL
+			see spec.scm
+  
+../../../language/spec.scm
+			spec file for Guile's language support
+			guile> ,L calc
+
+
+

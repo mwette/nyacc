@@ -1,6 +1,6 @@
 ;;; nyacc/lang/calc/parser
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -16,52 +16,74 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang calc parser)
-  #:export (calc-parse calc-spec calc-mach)
+  #:export (parse-calc read-calc)	; parse full, read stmt
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
-  )
+  #:use-module (nyacc lang util))
 
-(define calc-spec
-  (lalr-spec
-   (prec< (left "+" "-") (left "*" "/"))
-   (start program)
-   (grammar
+;;; Full parser
 
-    (program
-     (stmt-list "\n" ($$ (cons 'program (reverse $1)))))
+;; Include the reduction actions that get called when a production
+;; rule is reduced.  This is a separate file to it could be changed
+;; by hand and place in lexical context with routines called.
+(include-from-path "nyacc/lang/calc/mach.d/calc-full-act.scm")
 
-    (stmt-list
-     (stmt ($$ (list $1)))
-     (stmt-list ";" stmt ($$ (cons $3 $1))))
+;; Include the automaton tables.  These are used by the parser defined
+;; in nyacc/parser.scm.
+(include-from-path "nyacc/lang/calc/mach.d/calc-full-tab.scm")
 
-    (stmt
-     (ident "=" expr ($$ `(assn-stmt ,$1 ,$3)))
-     (expr ($$ `(expr-stmt ,$1)))
-     ($empty ($$ '(empty-stmt))))
+;; Generate a lexer.  Look in nyacc/lex.scm to see how this is formulated.
+;; The object calc-mtab is defined in mach.d/calc-tab.scm.
+(define gen-full-lexer
+  (make-lexer-generator calc-full-mtab #:space-chars " \t"))
 
-    (expr
-     (expr "+" expr ($$ `(add ,$1 ,$3)))
-     (expr "-" expr ($$ `(sub ,$1 ,$3)))
-     (expr "*" expr ($$ `(mul ,$1 ,$3)))
-     (expr "/" expr ($$ `(div ,$1 ,$3)))
-     ($fixed ($$ `(fixed ,$1)))
-     ($float ($$ `(float ,$1)))
-     ("(" expr ")" ($$ $2)))
+;; The raw parser is a procecure that parses (current-input-port)
+;; given a lexical analyzer procedure.  See parse-calc below.
+(define raw-full-parser
+  (make-lalr-parser (acons 'act-v calc-full-act-v calc-full-tables)))
 
-    (ident ($ident ($$ `(ident ,$1))))
+;; This is nominal procedure called by the user.  If called with
+;; @code{#:debug #t} a trace of parser shifts and reductions will
+;; be echoed to (current-error-port).
+(define* (parse-calc #:key debug)
+  (catch 'nyacc-error
+    (lambda () (raw-full-parser (gen-full-lexer) #:debug debug))
+    (lambda (key fmt . args)
+      (apply simple-format (current-error-port) fmt args))))
 
-    )))
+;;; Stmt parser
 
-(define calc-mach
-  (compact-machine
-   (hashify-machine
-     (make-lalr-machine calc-spec))))
+(include-from-path "nyacc/lang/calc/mach.d/calc-stmt-act.scm")
+(include-from-path "nyacc/lang/calc/mach.d/calc-stmt-tab.scm")
 
-(define calc-parse
-  (let ((gen-lexer (make-lexer-generator (assq-ref calc-mach 'mtab)
-					 #:space-chars " \t"))
-	(parser (make-lalr-ia-parser calc-mach)))
-    (lambda* (#:key (debug #f)) (parser (gen-lexer) #:debug debug))))
+(define gen-stmt-lexer
+  (make-lexer-generator calc-stmt-mtab #:space-chars " \t"))
+
+;; This is interactive so that input does not have to end in eof-object.
+(define raw-stmt-parser
+  (make-lalr-parser (acons 'act-v calc-stmt-act-v calc-stmt-tables)
+		    #:interactive #t))
+
+(define (parse-stmt)
+  (catch 'nyacc-error
+    (lambda () (raw-stmt-parser (gen-stmt-lexer) #:debug #t))
+    (lambda (key fmt . args)
+      (apply simple-format (current-error-port) fmt args)
+      (newline (current-error-port))
+      #f)))
+(export parse-stmt)
+
+;; This is defined for use by Guile's extension language facility.
+;; See ../../../language/spec.scm and compiler.scm.
+(define (read-calc port env)
+  (define (flush-input port)
+    (let loop ((ch (read-char port)))
+      (if (char=? #\newline) #f (loop (read-char port)))))
+
+  (if (eof-object? (peek-char port))
+      (read-char port)
+      (let ((elt (with-input-from-port port parse-stmt)))
+	(or elt (flush-input port)))))
 
 ;; --- last line ---
