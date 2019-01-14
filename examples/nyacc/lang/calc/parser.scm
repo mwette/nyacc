@@ -72,7 +72,6 @@
       (apply simple-format (current-error-port) fmt args)
       (newline (current-error-port))
       #f)))
-(export parse-stmt)
 
 ;; This is defined for use by Guile's extension language facility.
 ;; See ../../../language/spec.scm and compiler.scm.

@@ -68,7 +68,7 @@
     (,otherwise (error "missed" tree))))
 
 (define (compile-tree-il exp env opts)
-  (when show-code? (sf "calc SXML:\n") (pp exp))
+  (when show-code? (sf "SXML:\n") (pp exp))
   (let* ((xtil (foldt fup-til identity `(*TOP* ,exp))) ; external Tree-IL
 	 (itil (parse-tree-il xtil)))		       ; internal Tree-IL
     (when show-code? (sf "Tree-IL:\n") (pp xtil))
@@ -77,78 +77,33 @@
 
 ;; === Compile `calc' to CPS. ==================================================
 
+;; To try this fix the #:compiler key in ../../language/calc/spec.scm
+
+;; unfinished work: use of variables doesn't yet work; 1 + 2 does
+
 (use-modules (language cps))
 (use-modules (language cps intmap))
 (use-modules (language cps with-cps))
 (use-modules (language cps utils))	;  counters
 (use-modules (ice-9 match))
 
-;; dcl tracks decls and scope
-;; stk is the continuation stack
-;; cps is the CPS intmap
+;; Thanks to Mark Weaver for helping on some of the concepts here.
 
-;; (program (expr-stmt (add (fixed "2") (fixed "2"))))
-
-(define (show/cps exp kx)
-  ;; (display exp) (newline)
-  #f)
-
-
-(define (x-compile-cps exp env opts)
-
-  (define (fD-cps tree stk cps)
-    (sxml-match tree
-      ((fixed ,val) (values '() stk (build-exp ($const val))))
-      (,otherwise (values tree stk cps))))
-
-  (define (fU-cps tree stk cps)
-    ;;(simple-format #t "~S\n" tree)
-    (sxml-match tree
-      ((num ,nv) `(const ,(string->number nv)))
-      ((ident ,id) `(toplevel ,(string->symbol id)))
-      ((add ,lt ,rt) #f)
-      ((sub ,lt ,rt) `(call (toplevel -) ,lt ,rt))
-      ((mul ,lt ,rt) `(call (toplevel *) ,lt ,rt))
-      ((div ,lt ,rt) `(call (toplevel /) ,lt ,rt))
-      ;;((assn-stmt ,lhs ,rhs) (mkseq `((define ,lhs ,rhs) ,(show lhs))))
-      ;;((expr-stmt ,expr) (show expr))
-      ((empty-stmt) '(void))
-      ((program . ,stmt-list)
-       #f)
-      (,otherwise tree)))
-
-  (define (fH-cps leaf stk cps)
-    (match leaf
-      ('add '())
-      (#t cps)
-      )
-    (values stk cps))
-
-
-  (let* (;;(code (foldts*-values fD-cps fU-cps fH-cps exp '() empty-intmap))
-	 (code empty-intmap)
-	 )
-    (values code env env)))
-
-(define (showit cps)
-  (for-each
-   (lambda (x) (sf "~S\n" x))
-   (intmap-fold-right acons cps '())))
-
-;; Thanks to Mark Weaver for help on this stuff.
-
-;; The parameters label-counter and var-counter are needed by cps, I guess.
-;; compile-cps uses also scope-counter
-;; with-cps the procedure invoked by $ must (values cps val)
+;; The parameters @code{label-counter} and @code{var-counter} are defined
+;; in @code{(cps utils)}; @code{compile-cps} uses also @code{scope-counter}.
+;; Within the form @code{with-cps} procedures invoked by $ must return
+;; @code{(values cps val)}.
 
 ;; sytab (subst in tree-il/compile-cps) is a map of (unique) symbol names
 ;; to cps variable index.  In tree-il the entries are (sym ix boxed?).
 
-;; Convert an expression in the source language to an index
-;; As a side effect add the evaluation to the soup xxx
+;; @deffn {Procedure} cnvt-arg cps exp kc => cps term
+;; Convert an expression in the source language to an index.
+;; As a side effect add the evaluation to the soup. (???)
 ;; The continuation @var{kc} here is a procedure @code{(kc cps vx)} that
 ;; takes the cps and associated variable index for the argument.
-;; (code format swipped from tree-il/compile-cps.scm)
+;; The coding style here is copied from tree-il/compile-cps.scm.
+;; @end deffn
 (define (cnvt-arg cps exp kc)
   (with-cps cps
     (letv arg)
@@ -156,12 +111,13 @@
     (letk karg ($kargs ('arg) (arg) ,body))
     ($ (cnvt exp karg))))
 
-;; Convert a list of expressions in the source language to a list of
-;; (integer) names.  As a side effect, generate a string of continuations
-;; in the cps to evaluate the arguments and assign to the names.  The
-;; continuation @var{kc} is a procedure @code{(kc cps expl}} that takes
-;; ...
-;; (code format swipped from tree-il/compile-cps.scm)
+;; @deffn {Procedure} cnvt-argl cps expl kc => cps term.
+;; Convert a list of expressions in the source language to a list of (integer)
+;; names.  As a side effect, generate a string of continuations in the cps to
+;; evaluate the arguments and assign to the names.  The argument @var{kc} is a
+;; continuation procedure of the form @code{(kc cps expl}} where @code{expl}
+;; is the converted expression list.
+;; @end deffn
 (define (cnvt-argl cps expl kc)
   (match expl
     (() (kc cps '()))
@@ -172,7 +128,8 @@
 	   (lambda (cps namel)
 	     (kc cps (cons name namel)))))))))
 
-(define (mktop sym) (assq-ref '((add . +) (sub . -) (mul . *) (div . /)) sym))
+(define (mktop sym)
+  (assq-ref '((add . +) (sub . -) (mul . *) (div . /)) sym))
 
 (define (mkrecv cps kx)
   (with-cps cps
@@ -180,41 +137,32 @@
     (letk ky ($kreceive (list res) 'rest kx))
     ky))
 
+;; @deffn {Procedure} cnvt cps exp kx
 ;; @var{kx} is the cps-index of the continuation for the expression.
-(define (cnvt cps exp kx) ;; => cps term
-  ;;(sf "cnvt: ") (pp exp)
+;; @end deffn
+(define (cnvt cps exp kx) ;; => (values cps term)
   (match exp
-    (`(program . ,stmts)
-     ;; For now we only eval the first expression in a line and don't display.
-     (cnvt cps (car stmts) kx))
-    (`(expr-stmt ,expr)
-     (case (car expr)
-       ((fixed float)
-	(with-cps cps
-	  (letv val)
-	  (letk kwrap ($kargs ('val) (val) ($continue kx #f ($values (val)))))
-	  ($ (cnvt expr kwrap))))
-       (else
-	(cnvt cps expr kx))))
-    (`(fixed ,value)
+    (`(num ,value)
      (let ((numval (string->number value)))
        ;; Constants are legal expressions in $continue term.
        (values cps (build-term ($continue kx #f ($const numval))))))
     (`(ident ,name)
+     (cnvt cps `(sym ,(string->symbol name)) kx))
+    (`(sym ,sym)
      (with-cps cps
-       ;; Here we create an identifier for name and #t, and then use
+       ;; Here we create an identifier for symbol and #t, and then use
        ;; 'resolve to generate a boxed object for the top-level identifier.
-       ($ (with-cps-constants ((name name) (t #t))
-	      (build-term ($continue kx #f ($primcall 'resolve (name t))))))))
+       ($ (with-cps-constants ((sym sym) (t #t))
+	      (build-term ($continue kx #f ($primcall 'resolve (sym t))))))))
     (`(unbox ,box)			; where box is a top-level var
      (with-cps cps
        (letv bx)			; ident returns var object
        (letk kc ($kargs ('bx) (bx) ($continue kx #f ($primcall 'box-ref (bx)))))
        ($ (cnvt box kc))))		; cnvt id to box and continue
     (((or 'add 'sub 'mul 'div) lt rt)
-     ;; This is basically ripped-off from tree-il/compile-cps.scm.
+     ;; This is basically from tree-il/compile-cps.scm.
      ;; The $call must continue to a $ktail or $kreceive.
-     (cnvt-argl cps (list `(unbox (ident ,(mktop (car exp)))) lt rt)
+     (cnvt-argl cps (list `(unbox (sym ,(mktop (car exp)))) lt rt)
        (match-lambda*
 	 ((cps (proc . args))
 	  (call-with-values
@@ -226,16 +174,16 @@
 	      (with-cps cps
 		(letv res)
 		(build-term ($continue kx #f ($call proc args))))))))))
-    
-    (`(xadd ,lval ,rval)
-     ;; illustrate use of primcall 
-     (with-cps cps
-       (letv lv rv)
-       (let$ opb ($continue kx #f ($primcall 'add lv rv)))
-       (letk opk ($kargs ('lv 'rv) (lv rv) ,opb))
-       (values cps #f)
-       ))
-    (else (error "missed" exp))))
+    (`(assn-stmt (assn (ident ,name) ,expr))
+     (newline)
+     (sf "name:\n") (pp name)
+     (sf "expr:\n") (pp expr)
+     (sleep 1)
+     (newline)
+     (error "not done yet"))
+    (`(expr-stmt ,expr)
+     (cnvt cps expr kx))
+    (_ (error "missed" exp))))
 
 (define (calc->cps exp) ;; => cps
   (parameterize ((label-counter 0) (var-counter 0))
@@ -253,11 +201,15 @@
 	      ;; a persistent cps.  (See wingolog blog post on intmaps.)
 	      (persistent-intmap (intmap-replace! cps kinit init)))))))))
 
+(define (showit cps)
+  (for-each
+   (lambda (x) (sf "  ~S\n" x))
+   (intmap-fold-right acons cps '())))
 
 (define (compile-cps exp env opts)
-  (if show-code? (pp exp))
+  (when show-code? (sf "SXML:\n") (pp exp))
   (let* ((code (calc->cps exp)))
-    (if show-code? (showit code))
+    (when show-code? (sf "CPS:\n") (showit code))
     (values code env env)))
 
 ;; Local Variables:

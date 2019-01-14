@@ -1,2 +1,0 @@
-#!/bin/sh
-guile -L ../../.. -L ../../../../module --language calc

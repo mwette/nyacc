@@ -1,0 +1,277 @@
+0 $start => prog
+1 prog => stmt-list
+2 stmt-list => stmt
+3 stmt-list => stmt-list stmt
+4 stmt => "\n"
+5 stmt => expr "\n"
+6 stmt => assn "\n"
+7 expr => expr "+" expr
+8 expr => expr "-" expr
+9 expr => expr "*" expr
+10 expr => expr "/" expr
+11 expr => '$fixed
+12 expr => '$float
+13 expr => '$ident
+14 expr => "(" expr ")"
+15 assn => '$ident "=" expr
+
+0:	$start => . prog
+	prog => . stmt-list
+	stmt-list => . stmt
+	stmt-list => . stmt-list stmt
+	stmt => . "\n"
+	stmt => . expr "\n"
+	stmt => . assn "\n"
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+	assn => . '$ident "=" expr
+		"(" => shift 1
+		'$ident => shift 2
+		'$float => shift 3
+		'$fixed => shift 4
+		assn => shift 5
+		expr => shift 6
+		"\n" => shift 7
+		stmt => shift 8
+		stmt-list => shift 9
+		prog => shift 10
+
+1:	expr => "(" . expr ")"
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+		"(" => shift 1
+		'$ident => shift 19
+		'$float => shift 3
+		'$fixed => shift 4
+		expr => shift 20
+
+2:	assn => '$ident . "=" expr
+	expr => '$ident .
+		"=" => shift 18
+		$default => reduce 13
+
+3:	expr => '$float .
+		$default => reduce 12
+
+4:	expr => '$fixed .
+		$default => reduce 11
+
+5:	stmt => assn . "\n"
+		"\n" => shift 17
+
+6:	expr => expr . "/" expr
+	expr => expr . "*" expr
+	expr => expr . "-" expr
+	expr => expr . "+" expr
+	stmt => expr . "\n"
+		"\n" => shift 12
+		"+" => shift 13
+		"-" => shift 14
+		"*" => shift 15
+		"/" => shift 16
+
+7:	stmt => "\n" .
+		$default => reduce 4
+
+8:	stmt-list => stmt .
+		$default => reduce 2
+
+9:	stmt-list => stmt-list . stmt
+	stmt => . "\n"
+	stmt => . expr "\n"
+	stmt => . assn "\n"
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+	assn => . '$ident "=" expr
+	prog => stmt-list .
+		"(" => shift 1
+		'$ident => shift 2
+		'$float => shift 3
+		'$fixed => shift 4
+		assn => shift 5
+		expr => shift 6
+		"\n" => shift 7
+		stmt => shift 11
+		$default => reduce 1
+
+10:	$start => prog .
+		'$end => accept 0
+
+11:	stmt-list => stmt-list stmt .
+		$default => reduce 3
+
+12:	stmt => expr "\n" .
+		$default => reduce 5
+
+13:	expr => expr "+" . expr
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+		"(" => shift 1
+		'$ident => shift 19
+		'$float => shift 3
+		'$fixed => shift 4
+		expr => shift 26
+
+14:	expr => expr "-" . expr
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+		"(" => shift 1
+		'$ident => shift 19
+		'$float => shift 3
+		'$fixed => shift 4
+		expr => shift 25
+
+15:	expr => expr "*" . expr
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+		"(" => shift 1
+		'$ident => shift 19
+		'$float => shift 3
+		'$fixed => shift 4
+		expr => shift 24
+
+16:	expr => expr "/" . expr
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+		"(" => shift 1
+		'$ident => shift 19
+		'$float => shift 3
+		'$fixed => shift 4
+		expr => shift 23
+
+17:	stmt => assn "\n" .
+		$default => reduce 6
+
+18:	assn => '$ident "=" . expr
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+		"(" => shift 1
+		'$ident => shift 19
+		'$float => shift 3
+		'$fixed => shift 4
+		expr => shift 22
+
+19:	expr => '$ident .
+		$default => reduce 13
+
+20:	expr => expr . "/" expr
+	expr => expr . "*" expr
+	expr => expr . "-" expr
+	expr => expr . "+" expr
+	expr => "(" expr . ")"
+		")" => shift 21
+		"+" => shift 13
+		"-" => shift 14
+		"*" => shift 15
+		"/" => shift 16
+
+21:	expr => "(" expr ")" .
+		$default => reduce 14
+
+22:	expr => expr . "/" expr
+	expr => expr . "*" expr
+	expr => expr . "-" expr
+	expr => expr . "+" expr
+	assn => '$ident "=" expr .
+		"+" => shift 13
+		"-" => shift 14
+		"*" => shift 15
+		"/" => shift 16
+		$default => reduce 15
+
+23:	expr => expr . "/" expr
+	expr => expr . "*" expr
+	expr => expr . "-" expr
+	expr => expr . "+" expr
+	expr => expr "/" expr .
+		$default => reduce 10
+		["+" => shift 13] REMOVED by precedence
+		["-" => shift 14] REMOVED by precedence
+		["*" => shift 15] REMOVED by associativity
+		["/" => shift 16] REMOVED by associativity
+
+24:	expr => expr . "/" expr
+	expr => expr . "*" expr
+	expr => expr . "-" expr
+	expr => expr . "+" expr
+	expr => expr "*" expr .
+		$default => reduce 9
+		["+" => shift 13] REMOVED by precedence
+		["-" => shift 14] REMOVED by precedence
+		["*" => shift 15] REMOVED by associativity
+		["/" => shift 16] REMOVED by associativity
+
+25:	expr => expr . "/" expr
+	expr => expr . "*" expr
+	expr => expr . "-" expr
+	expr => expr . "+" expr
+	expr => expr "-" expr .
+		"*" => shift 15
+		"/" => shift 16
+		$default => reduce 8
+		["+" => shift 13] REMOVED by associativity
+		["-" => shift 14] REMOVED by associativity
+		["*" => reduce 8] REMOVED by precedence
+		["/" => reduce 8] REMOVED by precedence
+
+26:	expr => expr . "/" expr
+	expr => expr . "*" expr
+	expr => expr . "-" expr
+	expr => expr . "+" expr
+	expr => expr "+" expr .
+		"*" => shift 15
+		"/" => shift 16
+		$default => reduce 7
+		["+" => shift 13] REMOVED by associativity
+		["-" => shift 14] REMOVED by associativity
+		["*" => reduce 7] REMOVED by precedence
+		["/" => reduce 7] REMOVED by precedence
+

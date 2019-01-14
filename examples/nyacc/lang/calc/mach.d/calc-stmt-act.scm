@@ -28,6 +28,8 @@
    (lambda ($1 . $rest) `(num ,$1))
    ;; expr => '$float
    (lambda ($1 . $rest) `(num ,$1))
+   ;; expr => '$ident
+   (lambda ($1 . $rest) `(ident ,$1))
    ;; expr => "(" expr ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; assn => '$ident "=" expr

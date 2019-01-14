@@ -10,6 +10,8 @@ without any warranty.
 To run the demos in this directory please navigate up do the examples/
 directory and source the file env.sh.
 
+# Manifest
+
 calc.scm		interactive parser, quick and dirty
 			  $ guile calc.scm
 			  > 1 + 2
@@ -27,8 +29,24 @@ compiler.scm		compiles output of read-calc to Tree-IL
 			see spec.scm
   
 ../../../language/spec.scm
-			spec file for Guile's language support
-			guile> ,L calc
+			spec file for Guile's language support; see below
+ 			depends on parser.scm and compiler.scm
+
+# Using calc as Guile extension language.
+
+Currently, debug is defined in compiler.scm and parser.scm so that you
+can see the parser and compiler at work.
+
+  scheme@(guile-user)> ,L calc
+  calc@(guile-user)> 1 + 1
+  ...
+  $1 = 2
+  calc@(guile-user)> a = 4 + 4
+  ...
+  $2 = 8
+  calc@(guile-user> ,L scheme
+  scheme@(guile-user)> a
+  $3 = 8
 
 
-
+Enjoy!
