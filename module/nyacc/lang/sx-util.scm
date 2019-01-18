@@ -35,7 +35,7 @@
 	    sx-split sx-split* sx-join sx-join* sx-cons* sx-list
 	    sx-unitize
 	    sx-match)
-  #:use-module ((srfi srfi-1) #:select (find fold fold-right)))
+  #:use-module ((srfi srfi-1) #:select (find fold fold-right append-reverse)))
 (cond-expand
   (mes)
   (guile-2)
@@ -435,8 +435,8 @@
     ((_ tv t0 kt kf)
      (if (eqv? tv 't0) kt kf))))
 
-(define (rule-error) (error "rule contains non-SXML element" v))
-(define (expr-error) (error "expression contains not-SXML element" v))
+(define (rule-error s) (error "rule contains non-SXML element" s))
+(define (expr-error v) (error "expression contains not-SXML element" v))
 
 ;; sxm-tail val pat kt kf
 ;; match tail of sexp = list of nodes
@@ -460,8 +460,8 @@
     ((_ v (hp . tp) kt kf) (if (pair? v) (sxm-sexp v (hp . tp) kt kf) kf))
     ((_ v s kt kf)
      (begin
-       (unless (string? s) (rule-error))
-       (unless (string? v) (expr-error))
+       (unless (string? s) (rule-error s))
+       (unless (string? v) (expr-error v))
        (if (string=? s v) kt kf)))
     ;;((_ v s kt kf) (if (string=? s v) kt kf))
     ;;^-- If not pair or unquote then must be string, right?

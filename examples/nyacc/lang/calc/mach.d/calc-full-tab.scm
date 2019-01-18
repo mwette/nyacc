@@ -1,7 +1,18 @@
 ;; mach.d/calc-full-tab.scm
 
+(define calc-full-mtab
+  '(($start . 20) ("=" . 3) (")" . 4) ("(" . 5) ($ident . 6) ($float . 7) 
+    ($fixed . 8) ("/" . 9) ("*" . 10) ("-" . 11) ("+" . 12) ("\n" . 13) 
+    ($error . 2) ($end . 15)))
+
+(define calc-full-ntab
+  '((16 . assn) (17 . expr) (18 . stmt) (19 . stmt-list) (20 . prog)))
+
 (define calc-full-len-v
   #(1 1 1 2 1 2 2 3 3 3 3 1 1 1 3 3))
+
+(define calc-full-rto-v
+  #(#f 20 19 19 18 18 18 17 17 17 17 17 17 17 17 16))
 
 (define calc-full-pat-v
   #(((5 . 1) (6 . 2) (7 . 3) (8 . 4) (16 . 5) (17 . 6) (13 . 7) (18 . 8) 
@@ -17,19 +28,13 @@
     (10 . 15) (9 . 16) (1 . -15)) ((1 . -10)) ((1 . -9)) ((10 . 15) (9 . 16) 
     (1 . -8)) ((10 . 15) (9 . 16) (1 . -7))))
 
-(define calc-full-rto-v
-  #(#f 20 19 19 18 18 18 17 17 17 17 17 17 17 17 16))
-
-(define calc-full-mtab
-  '(($start . 20) ("=" . 3) (")" . 4) ("(" . 5) ($ident . 6) ($float . 7) 
-    ($fixed . 8) ("/" . 9) ("*" . 10) ("-" . 11) ("+" . 12) ("\n" . 13) 
-    ($error . 2) ($end . 15)))
-
 (define calc-full-tables
   (list
+   (cons 'mtab calc-full-mtab)
+   (cons 'ntab calc-full-ntab)
    (cons 'len-v calc-full-len-v)
-   (cons 'pat-v calc-full-pat-v)
    (cons 'rto-v calc-full-rto-v)
-   (cons 'mtab calc-full-mtab)))
+   (cons 'pat-v calc-full-pat-v)
+   ))
 
 ;;; end tables

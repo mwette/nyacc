@@ -72,21 +72,30 @@ can be found in the Bison manual (see @ref{bison}).
 @c for interactive must have compacted tables (need default reductions!)
 
 An easy way to introduce you to @nyacc{} is to work through a simple
-example.  Consider the following contents of the file @file{calc1.scm}
-in the subdirectory @code{examples/nyacc/lang/calc/} of the source
-distribution.  (If you are looking in the distribution and want to
-execute this demo source the file @file{env.sh} in the sub-directory
-@file{examples}.)
+example.  Consider the following.  A similar example is in the file
+@file{calc.scm} in the subdirectory @code{examples/nyacc/lang/calc/}
+of the source distribution.  (To execute the file you need to source
+the file @file{env.sh} in the top-level sub-directory @file{examples}.)
 @example
 (use-modules (nyacc lalr))
 (use-modules (nyacc lex))
 (use-modules (nyacc parse))
 
+(define (next) (newline) (display "> ") (force-output))
+
 (define spec
   (lalr-spec
    (prec< (left "+" "-") (left "*" "/"))
-   (start expr)
+   (start prog)
    (grammar
+    (prog
+     (stmt-list))
+    (stmt-list
+     (stmt)
+     (stmt-list "\n" stmt))
+    (stmt
+     ($empty ($$ (next)))
+     (expr ($$ (display $1) (next))))
     (expr
      (expr "+" expr ($$ (+ $1 $3)))
      (expr "-" expr ($$ (- $1 $3)))
@@ -94,27 +103,25 @@ execute this demo source the file @file{env.sh} in the sub-directory
      (expr "/" expr ($$ (/ $1 $3)))
      ($fixed ($$ (string->number $1)))
      ($float ($$ (string->number $1)))
+     ($ident ($$ (module-ref (current-module) (string->symbol $1))))
      ("(" expr ")" ($$ $2))))))
 
 (define mach (make-lalr-machine spec))
-(define raw-parser (make-lalr-parser mach))
-(define gen-lexer (make-lexer-generator (lalr-match-table mach)))
+(define mtab (lalr-match-table mach))
+(define gen-lexer (make-lexer-generator mtab))
+(define raw-parse (make-lalr-parser mach))
+(define (parse) (raw-parse (gen-lexer)))
 
-(define (calc1-eval str)
-  (with-input-from-string str
-    (lambda () (raw-parser (gen-lexer)))))
-
-(define (calc1-demo string)
-  (simple-format #t "~A => ~A\n" string (calc1-eval string)))
-
-(calc1-demo "2 + 2")
+(parse)
 @end example
 Here is an explanation of the above code:
 @enumerate
 @item
 The relevent modules are imported using Guile's @code{use-modules} syntax.
 @item
-The syntax form @code{lalr-spec} is used to generate a (canonical)
+The procedure @code{next} is used to generate a prompt to the user.
+@item
+The syntax form @code{lalr-spec} is used to generate a language
 specification from the grammar and options provided in the form.
 @item
 The @code{prec<} directive indicates that 
@@ -140,12 +147,12 @@ Non-terminals are indicated using symbols (e.g., @code{expr}).
 @item
 Terminals are indicated using string literals (e.g.,@code{"+"}),
 character literals (e.g., @code{#\+}), quoted symbols
-(e.g., @code{'+}) or NYACC reserved symbols, which always begin with
+(e.g., @code{'+}) or @nyacc{}reserved symbols, which always begin with
 @code{$}.  Reserved symbols used in this example are @code{$fixed} and
 @code{$float}.   Note that tokens or terminals do not need to be
 declared as in Bison or in the Guile module @code{(system base lalr)}.
 @item
-The reserved symbols @code{$fixed} and @code{$float} indicate an
+The reserved symbols @code{$fixed} and @code{$float} indicate
 unsigned integer and floating point number, respectively.  The 
 @nyacc{} procedures for generating lexical analyzers will emit this token
 when the corresponding numbers are detected in the input.
@@ -161,52 +168,53 @@ The expression returned by @code{lalr-spec} is an association list (a-list);
 you can peek at the internals using typical Scheme procedures for a-lists.
 @end itemize
 @item
-The the automaton (aka machine) is generated using the procedure
-@code{make-lalr-machine}, which returns an association list.  The
-procedure does the bulk of the work to produce what is needed to
-generate a LALR(1) parser.
+The the automaton (aka machine) @code{mach} is defined using the
+procedure @code{make-lalr-machine}, which returns an association list.
+The procedure does the bulk of the work to produce what is needed to
+generate a LALR(1) parser.  Separate procedures can be called to
+further compact tables and hash the automaton. @xref{Hashing and Compacting}
 @item
-Generating a usable parser procedure requires a few steps.  The first is
-to create a raw parser:
-@example
-(define raw-parser (make-lalr-parser mach)))
-@end example
-The generated procedure @code{raw-parser} takes one
-argument, a lexical analyzer procecdure, and optional keyword arguments.
+One item needed is the @emph{match-table} this is the a-list that maps
+input character, sequences to be read by the lexical analyzer, to
+tokens, either symbols or integers, used by the parser.  The variable
+@code{mtab} is defined to be the machine's match-table.
+@item
+Next we generating a raw parser.  The generated procedure
+@code{raw-parser} takes one required argument, a lexical analyzer
+procecdure, and optional keyword arguments.
 @item
 The next task is to create a generator for lexical analyzers.  This is
 performed as follows: 
 @example
-(define gen-lexer (make-lexer-generator (lalr-match-table mach)))
+(define gen-lexer (make-lexer-generator mtab))
 @end example
-Note that the above returns a generator for lexical analyzers: the
-lexical analyzers may require operating on internal state (e.g., line
-number, mode).  The argument to the call is the @dfn{match table}
-provided by the machine.  The procedure @code{make-lexer-generator} is
+Note that the above returns a generator for lexical analyzers: lexical
+analysis for a call to the parser may require maintaining internal
+state (e.g., line number, mode).  (Sorry, we now deviate from being
+purely function.  This could be fixed by using continuation passing
+style, but I digress.)  The procedure @code{make-lexer-generator} is
 imported from the module @code{(nyacc lex)}.  Optional arguments to
 @code{make-lexer-generator} allow the user to specify custom readers
-for identifiers, comments, numbers, etc.  @xref{lex} The match table
-is an associative list mapping input character sequences, or special
-symbols, to symbols or numbers (for hashed machines) used by the
-associated parser.  It is the handshake between the lexical analyzer
-and the parser for encoding tokens.  In this example the match table
-is symbol based, but there is an option to hash these symbols into
-integers.  @xref{Hashing and Compacting}
+for identifiers, comments, numbers, etc.  @xref{lex} 
 @item
 We bring the above items together to provide a usable procedure for
-evaluating strings:
+an interactive calculator.
 @example
-(define (calc1-eval str)
-  (with-input-from-string str
-    (lambda () (raw-parser (gen-lexer)))))
+(next)
+(parse)
 @end example
-The lexical analyzer reads code from @code{(current-input-port)} so we
-set up the environment using @code{with-input-from-string}. 
-@xref{Input and Output,,,guile}  The raw parser is provided a lex'er.
+The lexical analyzer reads code from @code{(current-input-port)}.  If
+we want to run this on a string we would need to use
+@code{with-input-from-string} or equivalent.
+@xref{Input and Output,,,guile} 
 @item 
 And now we can run it:
 @example
-(calc1-eval "2 + 2") => 4
+$ guile calc.scm
+...
+> 1 + 1
+2
+> 
 @end example
 @end enumerate
 
@@ -217,71 +225,17 @@ $ guile calc1.scm
 $
 @end example
 
-
-@section An Interactive Calculator
-
-THIS IS ABOUT one top-level statement or expression at a time
-
-If one sets up the above code to take input from the terminal it will
-not work as expected, requiring keystrokes beyond a RETURN that
-completes an expression.  If you modify the spec a bit and 
-evaluate @code{make-lalr-parser} with
-the optional keyword argument pair @code{#:interactive #t}
-you get an interactive parser, as shown below.  This example appears as
-@file{calc2.scm} in the same directory as the example above.  (Note:
-If you look at the @nyacc{} parse module you will see that the base
-parser is quite a bit cleaner than the ia-parser, hence the motivation
-to provide both, at least for now.)  Note that this example uses
-mid-rule actions and other features not discussed above.
-
-@example
-(use-modules (nyacc lalr))
-(use-modules (nyacc lex))
-(use-modules (nyacc parse))
-
-(define (next) (newline) (display "> ") (force-output))
-
-(define calc2-spec
-  (lalr-spec
-   (prec< (left "+" "-") (left "*" "/"))
-   (start stmt-list)
-   (grammar
-    (stmt-list
-     (stmt)
-     (stmt-list stmt))
-    (stmt
-     (expr ($$ (display $1) (next)) "\n"))
-    (expr
-     ($empty ($$ ""))
-     (expr "+" expr ($$ (+ $1 $3)))
-     (expr "-" expr ($$ (- $1 $3)))
-     (expr "*" expr ($$ (* $1 $3)))
-     (expr "/" expr ($$ (/ $1 $3)))
-     ($fixed ($$ (string->number $1)))
-     ($float ($$ (string->number $1)))
-     ("(" expr ")" ($$ $2))))))
-
-(define calc2-mach (make-lalr-machine calc2-spec))
-(define match-table (assq-ref calc2-mach 'mtab))
-(define parse (make-lalr-ia-parser calc2-mach))
-(define gen-lexer
-  (make-lexer-generator match-table #:space-chars " \t"))
-
-(next)
-(parse (gen-lexer))
-@end example
-
 @section Generating a Language to Run in Guile
 
 One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.   
-The files @file{parser.scm}, @file{compiler.scm} in the
+The files @file{mach.scm}, @file{parser.scm} and @file{compiler.scm} in the
 @file{examples/nyacc/lang/calc} directory and @file{spec.scm} in the
 @file{examples/language/calc} directory implement our calculator within this
-Guile infrastructure.  To demonstrate the calculator try the following
-from the @file{examples} directory.
+Guile infrastructure.  You can run the calculator if you have sourced
+the @file{env.sh} file as described above.
 @example
-$ guile -L ../module -L .
+$ guile
 ...
 scheme@@(guile-user)> ,L calc
 ...
@@ -291,9 +245,10 @@ calc@@(guile-user)> (2 + 2)/(1 + 1)
 calc@@(guile-user)> 
 @end example
 The evaluator uses SXML as the intermediate representation between the
-parser and compiler, which generates to tree-il.  See also the example
+parser and compiler, which generates to Tree-IL.  See also the example
 in the directory @file{examples/language/javascript} and
-@file{examples/nyacc/lang/javascript} directories.
+@file{examples/nyacc/lang/javascript} directories.  For details on the
+Guile backend see 
 
 @section Debugging Output
 
@@ -1063,42 +1018,48 @@ and the newline reader in the lex'er acts as follows:
 @section Parser Tables
 @anchor{Parser Tables}
 
-
 Note that generating a parser requires a machine argument.  It is
 possible to export the machine to a pair of files and later regenerate
 enough info to create a parser from the tables saved in the machine.
 
-For example, Tables can be generated 
+For example, constant tables for a machine can be generated
+using @nyacc{} procedures as follows:
 @example
-(write-lalr-actions calc1-mach "calc1-act.scm")
-(write-lalr-tables calc1-mach "calc1-tab.scm")
+(write-lalr-actions calc-mach "calc-act.scm" #:prefix "calc-")
+(write-lalr-tables calc-mach "calc-tab.scm" #:prefix "calc-")
 @end example
-This saves the variable @code{act-v} to the file @file{calc1-act.scm}
-and the following variables to the file @file{calc1-tab.scm}:
+This saves the variable definition for @code{calc-act-v} to the
+file @file{calc-act.scm} and variable definitions for the following
+to the file @file{calc-tab.scm}:
 @table @code
-@item len-v
-@item pat-v
-@item rto-v
-@item mtab
+@item calc-len-v
+@item calc-pat-v
+@item calc-rto-v
+@item calc-mtab
+@item calc-tables
 @end table
-The variable @code{act-v} is a vector of procedures associated with
+The variable @code{calc-act-v} is a vector of procedures associated with
 each of the production rules, to be executed as the associated
-production ruled is reduced in parsing.
+production ruled is reduced in parsing.  The procedures can be
+modified without editing the grammar file and re-executing
+@code{lalr-spec} and @code{make-lalr-machine}.
 
-Then, without reference to the original specification or need to
-run @code{make-lalr-machine}, you can ...
+To create a parser from the generated tables, one can write the
+following code:
 @example
-(include "calc1-tab.scm")
-... code for parser ...
-(include "calc1-act.scm")
+(include "calc-tab.scm")
+(include "calc-act.scm")
+(define raw-parser (make-lalr-parser (acons 'act-v calc-act-v calc-tables)))
 @end example
-
-Check some of the examples in the @nyacc{} distribution.
+@noindent
+See the example code in @file{examples/nyacc/lang/calc/parser.scm} for
+more detail. 
 
 @section Hashing and Compacting
 @anchor{Hashing and Compacting}
 
-The procedure @code{compact-machine} will compact the parse tables.
+The @nyacc{} procedure @code{compact-machine} will compact the parse
+tables generated by @code{make-lalr-machine}.
 That is, if multiple tokens generate the same transition, then these
 will be combined into a single @emph{default} transition.
 Ordinarily @nyacc{} will expect symbols to be emitted from the lexical
@@ -1114,7 +1075,6 @@ analyzer.  To use integers instead, use the procedure
 @deffn {Procedure} machine-compacted? mach => #t|#f
 Indicate if the machine has been compacted.
 @end deffn
-
      
 @section Exporting Parsers
 @nyacc{} provides routines for exporting @nyacc{} grammar
@@ -1158,7 +1118,7 @@ You can generate text files which provide human-readable forms of
 the grammar specification and resulting automaton, akin to what you
 might get with bison using the `-r' flag.
 @example
-(with-output-to-file "calc1.out"
+(with-output-to-file "calc.out"
   (lambda ()
     (pp-lalr-grammar calc1-mach)
     (pp-lalr-machine calc1-mach)))
@@ -1166,61 +1126,93 @@ might get with bison using the `-r' flag.
 
 The above code will generate something that looks like 
 @example
-0 $start => stmt-list
-1 stmt-list =>
-2 stmt-list => stmt-list $P1 stmt
-3 $P1 =>
+0 $start => prog
+1 prog => stmt-list
+2 stmt-list => stmt
+3 stmt-list => stmt-list stmt
 4 stmt => "\n"
 5 stmt => expr "\n"
-6 expr => expr "+" expr
-7 expr => expr "-" expr
-8 expr => expr "*" expr
-9 expr => expr "/" expr
-10 expr => "*" '$error
+6 stmt => assn "\n"
+7 expr => expr "+" expr
+8 expr => expr "-" expr
+9 expr => expr "*" expr
+10 expr => expr "/" expr
 11 expr => '$fixed
 12 expr => '$float
-13 expr => "(" expr ")"
+13 expr => '$ident
+14 expr => "(" expr ")"
+15 assn => '$ident "=" expr
 
-0:      $start => . stmt-list
-        stmt-list => .
-        stmt-list => . stmt-list $P1 stmt
-                stmt-list => shift 1
-                '$end => reduce 1
-                "(" => reduce 1
-                '$float => reduce 1
-                '$fixed => reduce 1
-                "*" => reduce 1
-                "\n" => reduce 1
-
-1:      stmt-list => stmt-list . $P1 stmt
-        $P1 => .
-        $start => stmt-list .
-                $P1 => shift 2
-                "(" => reduce 3
-                '$float => reduce 3
-                '$fixed => reduce 3
-                "*" => reduce 3
-                "\n" => reduce 3
-                '$end => accept 0
+0:	$start => . prog
+	prog => . stmt-list
+	stmt-list => . stmt
+	stmt-list => . stmt-list stmt
+	stmt => . "\n"
+	stmt => . expr "\n"
+	stmt => . assn "\n"
+	expr => . expr "+" expr
+	expr => . expr "-" expr
+	expr => . expr "*" expr
+	expr => . expr "/" expr
+	expr => . '$fixed
+	expr => . '$float
+	expr => . '$ident
+	expr => . "(" expr ")"
+	assn => . '$ident "=" expr
+		"(" => shift 1
+		'$ident => shift 2
+		'$float => shift 3
+		'$fixed => shift 4
+		assn => shift 5
+		expr => shift 6
+		"\n" => shift 7
+		stmt => shift 8
+		stmt-list => shift 9
+		prog => shift 10
 
 ...
 
-21:     expr => expr . "/" expr
-        expr => expr . "*" expr
-        expr => expr . "-" expr
-        expr => expr . "+" expr
-        expr => expr "+" expr .
-                "+" => reduce 6
-                "-" => reduce 6
-                "*" => shift 13
-                "/" => shift 14
-                "\n" => reduce 6
-                ")" => reduce 6
-                ["+" => shift 11] REMOVED by associativity
-                ["-" => shift 12] REMOVED by associativity
-                ["*" => reduce 6] REMOVED by precedence
-                ["/" => reduce 6] REMOVED by precedence
+26:	expr => expr . "/" expr
+	expr => expr . "*" expr
+	expr => expr . "-" expr
+	expr => expr . "+" expr
+	expr => expr "+" expr .
+		"*" => shift 15
+		"/" => shift 16
+		$default => reduce 7
+		["+" => shift 13] REMOVED by associativity
+		["-" => shift 14] REMOVED by associativity
+		["*" => reduce 7] REMOVED by precedence
+		["/" => reduce 7] REMOVED by precedence
 @end example
+
+@subheading Tracing Parsing at Run-Time
+
+The parsers generted by @nyacc{} accept an optional keyword argument
+@code{#:debug}.  When @code{#t} is passed to this argument then the
+parser will display shift and reduce actions as it executes.  The
+calculator demo under the examples directory has an option (in
+@file{calc.scm}) to do this.  Here is what the output looks like
+(with the displayed result edited out).
+@example
+> 1 + 2
+state 0, token "1"	=> shift, goto 4
+state 4, token "+"	=> reduce 11
+state 0, token expr	=> shift, goto 6
+state 6, token "+"	=> shift, goto 11
+state 11, token "2"	=> shift, goto 4
+state 4, token "\n"	=> reduce 11
+state 11, token expr	=> shift, goto 23
+state 23, token "\n"	=> reduce 7
+state 0, token expr	=> shift, goto 6
+state 6, token "\n"	=> reduce 5
+state 0, token stmt	=> shift, goto 7
+state 7, token "\n"	=> reduce 2
+state 0, token stmt-list	=> shift, goto 8
+state 8, token "\n"	=> shift, goto 10
+@end example
+Currently, when parsers are hashed (using @code{hashify-machine} the
+non-terminals (e.g., @code{expr} above) are reported as integers.
 
 @c ==================================
 @node Translation
@@ -1583,6 +1575,8 @@ Oct. 1982, pp. 615-649.
 @item [RPC]
 R. P. Corbett, ``Static Semantics and Compiler Error Recovery,''
 Ph.D. Thesis, UC Berkeley, 1985.
+@item [VM]
+@url{https://www.gnu.org/software/guile/manual/html_node/Compiling-to-the-Virtual-Machine.html#Compiling-to-the-Virtual-Machine}
 @end table
 
 

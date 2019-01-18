@@ -42,7 +42,7 @@
 (define mode 'file)
 (define mode 'decl)
 (define mode 'code)
-(define debug #f)
+(define debug #t)
 (define xdef? (lambda (name mode) (memq mode '(code decl))))
 
 (define (parse-file file)

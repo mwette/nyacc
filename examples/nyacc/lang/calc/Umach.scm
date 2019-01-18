@@ -13,7 +13,7 @@
 (gen-calc-files)
 (compile-file "parser.scm")
 
-(with-output-to-file "file.txt"
+(with-output-to-file "full.txt"
   (lambda ()
     (pp-lalr-grammar full-spec)
     (pp-lalr-machine full-mach)))

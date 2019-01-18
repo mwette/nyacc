@@ -61,14 +61,12 @@
 (define (sizeof-string-const value)
   #f)
 
-(include-from-path "nyacc/lang/c99/mach.d/c99cxtab.scm")
-(include-from-path "nyacc/lang/c99/mach.d/c99cxact.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99cx-act.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99cx-tab.scm")
 
 (define c99cx-raw-parser
   (make-lalr-parser
-   (list (cons 'len-v c99cx-len-v) (cons 'pat-v c99cx-pat-v)
-	 (cons 'rto-v c99cx-rto-v) (cons 'mtab c99cx-mtab)
-	 (cons 'act-v c99cx-act-v))))
+   (acons 'act-v c99cx-act-v c99cx-tables)))
 
 (define gen-c99cx-lexer
   (let* ((reader (make-comm-reader '(("/*" . "*/"))))

@@ -824,14 +824,14 @@
 ;; @end deffn
 (define* (gen-c99-files #:optional (path "."))
   (define (mdir file) (mach-dir path file))
-  (write-lalr-actions c99-mach (mdir "c99act.scm.new") #:prefix "c99-")
-  (write-lalr-tables c99-mach (mdir "c99tab.scm.new") #:prefix "c99-")
-  (write-lalr-actions c99x-mach (mdir "c99xact.scm.new") #:prefix "c99x-")
-  (write-lalr-tables c99x-mach (mdir "c99xtab.scm.new") #:prefix "c99x-")
-  (let ((a (move-if-changed (mdir "c99act.scm.new") (mdir "c99act.scm")))
-	(b (move-if-changed (mdir "c99tab.scm.new") (mdir "c99tab.scm")))
-	(c (move-if-changed (mdir "c99xact.scm.new") (mdir "c99xact.scm")))
-	(d (move-if-changed (mdir "c99xtab.scm.new") (mdir "c99xtab.scm"))))
+  (write-lalr-actions c99-mach (mdir "c99-act.scm.new") #:prefix "c99-")
+  (write-lalr-tables c99-mach (mdir "c99-tab.scm.new") #:prefix "c99-")
+  (write-lalr-actions c99x-mach (mdir "c99x-act.scm.new") #:prefix "c99x-")
+  (write-lalr-tables c99x-mach (mdir "c99x-tab.scm.new") #:prefix "c99x-")
+  (let ((a (move-if-changed (mdir "c99-act.scm.new") (mdir "c99-act.scm")))
+	(b (move-if-changed (mdir "c99-tab.scm.new") (mdir "c99-tab.scm")))
+	(c (move-if-changed (mdir "c99x-act.scm.new") (mdir "c99x-act.scm")))
+	(d (move-if-changed (mdir "c99x-tab.scm.new") (mdir "c99x-tab.scm"))))
     (or a b c d)))
 
 ;; --- last line ---

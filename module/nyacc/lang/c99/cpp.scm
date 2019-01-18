@@ -212,8 +212,8 @@
 	 (else (error "missing code")))))))
 	    
 
-(include-from-path "nyacc/lang/c99/mach.d/cpptab.scm")
-(include-from-path "nyacc/lang/c99/mach.d/cppact.scm")
+(include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
+(include-from-path "nyacc/lang/c99/mach.d/cpp-act.scm")
 
 (define cpp-raw-parser
   (make-lalr-parser (acons 'act-v cpp-act-v cpp-tables)))

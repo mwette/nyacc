@@ -14,31 +14,30 @@
 (use-modules (nyacc lang c99 cxmach))
 (use-modules (nyacc lalr))
 
-(when #t
-  (gen-cpp-files mod-dir)
-  (compile-file (string-append mod-dir "/cpp.scm"))
-  (gen-c99-files mod-dir)
-  (compile-file (string-append mod-dir "/parser.scm")))
+(gen-cpp-files mod-dir)
+(compile-file (string-append mod-dir "/cpp.scm"))
 
-(when #t
-  (with-output-to-file ",file.txt"
-    (lambda ()
-      (pp-lalr-notice c99-spec)
-      (pp-lalr-grammar c99-spec)
-      (pp-lalr-machine c99-mach)))
-  (with-output-to-file ",expr.txt"
-    (lambda ()
-      (pp-lalr-notice c99x-spec)
-      (pp-lalr-grammar c99x-spec)
-      (pp-lalr-machine c99x-mach)))
-  #t)
+(gen-c99-files mod-dir)
+(compile-file (string-append mod-dir "/parser.scm"))
 
-(when #f
-  (with-output-to-file ",cexp.txt"
-    (lambda ()
-      (pp-lalr-notice c99cx-spec)
-      (pp-lalr-grammar c99cx-spec)
-      (pp-lalr-machine c99cx-mach)))
-  #t)
+(with-output-to-file ",file.txt"
+  (lambda ()
+    (pp-lalr-notice c99-spec)
+    (pp-lalr-grammar c99-spec)
+    (pp-lalr-machine c99-mach)))
+(with-output-to-file ",expr.txt"
+  (lambda ()
+    (pp-lalr-notice c99x-spec)
+    (pp-lalr-grammar c99x-spec)
+    (pp-lalr-machine c99x-mach)))
+
+(gen-c99cx-files mod-dir)
+(compile-file (string-append mod-dir "/cxeval.scm"))
+
+(with-output-to-file ",cexp.txt"
+  (lambda ()
+    (pp-lalr-notice c99cx-spec)
+    (pp-lalr-grammar c99cx-spec)
+    (pp-lalr-machine c99cx-mach)))
 
 ;; --- last line ---

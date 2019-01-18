@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/cpptab.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/cpp-tab.scm
 
 ;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
@@ -128,6 +128,15 @@
     47 47 47 46 46 46 46 45 45 45 45 45 45 45 44 44 44 43 43 43 43 43 43 43 43
     43 43 43 42 42))
 
+(define cpp-ntab
+  '((42 . expression-list) (43 . primary-expression) (44 . postfix-expression)
+    (45 . unary-expression) (46 . multiplicative-expression) (47 . 
+    additive-expression) (48 . shift-expression) (49 . relational-expression) 
+    (50 . equality-expression) (51 . bitwise-and-expression) (52 . 
+    bitwise-xor-expression) (53 . bitwise-or-expression) (54 . 
+    logical-and-expression) (55 . logical-or-expression) (56 . 
+    conditional-expression)))
+
 (define cpp-mtab
   '(($start . 56) ("," . 3) ("__has_include_next__" . 4) ($string . 5) 
     ("__has_include__" . 6) (")" . 7) ("(" . 8) ("defined" . 9) ($chlit/U . 10
@@ -143,6 +152,7 @@
    (cons 'len-v cpp-len-v)
    (cons 'pat-v cpp-pat-v)
    (cons 'rto-v cpp-rto-v)
+   (cons 'ntab cpp-ntab)
    (cons 'mtab cpp-mtab)))
 
 ;;; end tables

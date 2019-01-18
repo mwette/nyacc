@@ -53,20 +53,21 @@
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
-(define (dmsg/n s t a)
-  (cond
-   ((not a) (sferr "state ~S, token ~S\t=> parse error\n" s t))
-   ((positive? a) (sferr "state ~S, token ~S\t=> shift, goto ~S\n" s t a))
-   ((negative? a) (sferr "state ~S, token ~S\t=> reduce ~S\n" s t (- a)))
-   ((zero? a) (sferr "state ~S, token ~S\t=> accept\n" s t))
-   (else (error "coding error in (nyacc parse)"))))
+(define (dmsg/n s t a ntab)
+  (let ((t (or (assq-ref ntab t) t)))
+    (cond
+     ((not a) (sferr "state ~S, token ~S\t=> parse error\n" s t))
+     ((positive? a) (sferr "state ~S, token ~S  => shift, goto ~S\n" s t a))
+     ((negative? a) (sferr "state ~S, token ~S  => reduce ~S\n" s t (- a)))
+     ((zero? a) (sferr "state ~S, token ~S  => accept\n" s t))
+     (else (error "coding error in (nyacc parse)")))))
 
 (define (dmsg/s s t a)
   (case (car a)
-    ((error) (sferr "state ~S, token ~S\t=> parse error\n" s t))
-    ((shift) (sferr "state ~S, token ~S\t=> shift, goto ~S\n" s t (cdr a)))
-    ((reduce) (sferr "state ~S, token ~S\t=> reduce ~S\n" s t (cdr a)))
-    ((accept) (sferr "state ~S, token ~S\t=> accept\n" s t))
+    ((error) (sferr "state ~S, token ~S  => parse error\n" s t))
+    ((shift) (sferr "state ~S, token ~S  => shift, goto ~S\n" s t (cdr a)))
+    ((reduce) (sferr "state ~S, token ~S  => reduce ~S\n" s t (cdr a)))
+    ((accept) (sferr "state ~S, token ~S  => accept\n" s t))
     (else (error "coding error in (nyacc parse)"))))
 
 (define (parse-error state laval)
@@ -128,6 +129,7 @@
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
 	 (xct-v (make-xct (assq-ref mach 'act-v)))
+	 (ntab (assq-ref mach 'ntab))
 	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
     (lambda* (lexr #:key debug)
       (let iter ((state (list 0))	; state stack
@@ -151,7 +153,7 @@
 		 (stx (or (assq-ref stxl tval)
 			  (and (not (memq tval skip-if-unexp))
 			       (assq-ref stxl $default)))))
-	    (if debug (dmsg/n (car state) (if nval tval sval) stx))
+	    (if debug (dmsg/n (car state) (if nval tval sval) stx ntab))
 	    (cond
 	     ((eq? #f stx)		; error
 	      (if (memq tval skip-if-unexp)

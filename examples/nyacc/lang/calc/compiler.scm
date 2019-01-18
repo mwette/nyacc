@@ -128,14 +128,16 @@
 	   (lambda (cps namel)
 	     (kc cps (cons name namel)))))))))
 
-(define (mktop sym)
-  (assq-ref '((add . +) (sub . -) (mul . *) (div . /)) sym))
-
+;; @deffn {Procedure} mkrecv cps kx
+;; @end deffn
 (define (mkrecv cps kx)
   (with-cps cps
     (letv res)
     (letk ky ($kreceive (list res) 'rest kx))
     ky))
+
+(define (mktop sym)
+  (assq-ref '((add . +) (sub . -) (mul . *) (div . /)) sym))
 
 ;; @deffn {Procedure} cnvt cps exp kx
 ;; @var{kx} is the cps-index of the continuation for the expression.

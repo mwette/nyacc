@@ -68,9 +68,14 @@
 
 ;; Procedure to generate actions and tables.
 (define (gen-calc-files)
-  (write-lalr-actions full-mach "mach.d/calc-full-act.scm" #:prefix "calc-full-")
-  (write-lalr-tables full-mach "mach.d/calc-full-tab.scm" #:prefix "calc-full-")
-  (write-lalr-actions stmt-mach "mach.d/calc-stmt-act.scm" #:prefix "calc-stmt-")
-  (write-lalr-tables stmt-mach "mach.d/calc-stmt-tab.scm" #:prefix "calc-stmt-"))
+  (write-lalr-actions 
+   full-mach "mach.d/calc-full-act.scm" #:prefix "calc-full-")
+  (write-lalr-tables 
+   full-mach "mach.d/calc-full-tab.scm" #:prefix "calc-full-")
+  (write-lalr-actions 
+   stmt-mach "mach.d/calc-stmt-act.scm" #:prefix "calc-stmt-")
+  (write-lalr-tables 
+   stmt-mach "mach.d/calc-stmt-tab.scm" #:prefix "calc-stmt-")
+  )
 
 ;; --- last line ---

@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99xtab.scm
+;; ../../../../module/nyacc/lang/c99/mach.d/c99x-tab.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
@@ -1012,6 +1012,53 @@
     121 121 118 118 120 120 120 230 117 117 116 116 116 116 116 116 116 114 
     113 115 229 228 228 228 228 228 228 227 112 112 197 178 131 132 132))
 
+(define c99x-ntab
+  '((112 . string-literal-1) (113 . $P6) (114 . $P5) (115 . 
+    function-definition) (116 . external-declaration) (117 . 
+    external-declaration-list) (118 . asm-input) (119 . asm-output) (120 . 
+    asm-clobbers) (121 . asm-inputs) (122 . asm-outputs) (123 . 
+    opt-asm-specifiers) (124 . opt-expression) (125 . initial-clause) (126 . 
+    declaration) (127 . block-item) (128 . $P4) (129 . $P3) (130 . statement) 
+    (131 . cpp-statement) (132 . pragma) (133 . asm-statement) (134 . 
+    jump-statement) (135 . iteration-statement) (136 . selection-statement) 
+    (137 . expression-statement) (138 . compound-statement) (139 . 
+    labeled-statement) (140 . designator) (141 . designator-list) (142 . 
+    designation) (143 . direct-abstract-declarator) (144 . 
+    specifier-qualifier-list/no-attr) (145 . identifier-list-1) (146 . 
+    parameter-declaration) (147 . parameter-list) (148 . type-qualifier-list-1
+    ) (149 . identifier-list) (150 . parameter-type-list) (151 . 
+    type-qualifier-list) (152 . direct-declarator) (153 . pointer) (154 . 
+    asm-expression) (155 . initializer) (156 . init-declarator-1) (157 . 
+    init-declarator) (158 . init-declarator-list-1) (159 . attribute-expr) 
+    (160 . attr-expr-list-1) (161 . attr-expr-list) (162 . attr-word) (163 . 
+    attribute) (164 . attribute-list-1) (165 . attr-name) (166 . 
+    attribute-list) (167 . enumerator) (168 . enumerator-list) (169 . 
+    constant-expression) (170 . declarator) (171 . struct-declarator-1) 
+    (172 . struct-declarator) (173 . specifier-qualifier-list/no-attr-1) 
+    (174 . specifier-qualifier-list-1) (175 . struct-declarator-list) (176 . 
+    specifier-qualifier-list) (177 . struct-declaration-no-comment) (178 . 
+    lone-comment) (179 . struct-declaration) (180 . attribute-specifiers) 
+    (181 . struct-declaration-list) (182 . ident-like) (183 . opt-attr-specs) 
+    (184 . typedef-name) (185 . enum-specifier) (186 . 
+    struct-or-union-specifier) (187 . complex-type-specifier) (188 . 
+    float-type-specifier) (189 . fixed-type-specifier) (190 . 
+    attribute-specifier) (191 . function-specifier) (192 . type-qualifier) 
+    (193 . type-specifier) (194 . storage-class-specifier) (195 . 
+    declaration-specifiers-1) (196 . init-declarator-list) (197 . code-comment
+    ) (198 . declaration-no-comment) (199 . assignment-operator) (200 . 
+    conditional-expression) (201 . logical-or-expression) (202 . 
+    logical-and-expression) (203 . bitwise-or-expression) (204 . 
+    bitwise-xor-expression) (205 . bitwise-and-expression) (206 . 
+    equality-expression) (207 . relational-expression) (208 . shift-expression
+    ) (209 . additive-expression) (210 . multiplicative-expression) (211 . 
+    cast-expression) (212 . unary-operator) (213 . unary-expression) (214 . 
+    abstract-declarator) (215 . declaration-specifiers) (216 . arg-expr-hack) 
+    (217 . assignment-expression) (218 . initializer-list) (219 . type-name) 
+    (220 . argument-expression-list) (221 . postfix-expression) (222 . 
+    primary-expression) (223 . $P2) (224 . block-item-list) (225 . $P1) 
+    (226 . expression) (227 . string-literal) (228 . constant) (229 . 
+    identifier) (230 . translation-unit)))
+
 (define c99x-mtab
   '(($start . 226) ("_Pragma" . 3) ($pragma . 4) (cpp-stmt . 5) ($lone-comm . 
     6) ($code-comm . 7) ($chlit/U . 8) ($chlit/u . 9) ($chlit/L . 10) ($chlit 
@@ -1041,6 +1088,7 @@
    (cons 'len-v c99x-len-v)
    (cons 'pat-v c99x-pat-v)
    (cons 'rto-v c99x-rto-v)
+   (cons 'ntab c99x-ntab)
    (cons 'mtab c99x-mtab)))
 
 ;;; end tables

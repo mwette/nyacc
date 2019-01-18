@@ -47,8 +47,8 @@
 
 ;; === file parser ====================
 
-(include-from-path "nyacc/lang/c99/mach.d/c99tab.scm")
-(include-from-path "nyacc/lang/c99/mach.d/c99act.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99-act.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99-tab.scm")
 
 (define c99-raw-parser
   (make-lalr-parser
@@ -100,8 +100,8 @@
 
 ;; === expr parser ====================
 
-(include-from-path "nyacc/lang/c99/mach.d/c99xtab.scm")
-(include-from-path "nyacc/lang/c99/mach.d/c99xact.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99x-act.scm")
+(include-from-path "nyacc/lang/c99/mach.d/c99x-tab.scm")
 
 (define c99x-raw-parser
   (make-lalr-parser

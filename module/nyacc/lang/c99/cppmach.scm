@@ -123,12 +123,12 @@
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (write-lalr-actions cpp-mach (xtra-dir "cppact.scm.new") #:prefix "cpp-")
-  (write-lalr-tables cpp-mach (xtra-dir "cpptab.scm.new") #:prefix "cpp-")
-  (let ((a (move-if-changed (xtra-dir "cppact.scm.new")
-			    (xtra-dir "cppact.scm")))
-	(b (move-if-changed (xtra-dir "cpptab.scm.new")
-			    (xtra-dir "cpptab.scm"))))
+  (write-lalr-actions cpp-mach (xtra-dir "cpp-act.scm.new") #:prefix "cpp-")
+  (write-lalr-tables cpp-mach (xtra-dir "cpp-tab.scm.new") #:prefix "cpp-")
+  (let ((a (move-if-changed (xtra-dir "cpp-act.scm.new")
+			    (xtra-dir "cpp-act.scm")))
+	(b (move-if-changed (xtra-dir "cpp-tab.scm.new")
+			    (xtra-dir "cpp-tab.scm"))))
     (or a b)))
 
 ;; --- last line ---

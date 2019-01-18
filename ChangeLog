@@ -1,3 +1,19 @@
+2019-01-18  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* module/nyacc/parse.scm (dmsg/n): added ntab information; so
+	debug is now more informative:
+	OLD:
+	  state 99, token 33 => shift, goto 300
+	NEW:
+	  state 99, token additive-expression => shift, goto 300
+
+	* ffi-help: converting composite literal to constant is no longer
+	a fatal error
+
+2018-11-29  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* released V0.90.0
+
 2018-11-21  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* module/nyacc/lang/c99/mach.scm (c99-spec): K&R function

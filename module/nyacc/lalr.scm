@@ -1,6 +1,6 @@
 ;;; nyacc/lalr.scm
 
-;; Copyright (C) 2014-2018 Matthew R. Wette
+;; Copyright (C) 2014-2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,8 @@
 ;; I need to find way to preserve srconf, rrconf after hashify.
 ;; compact needs to deal with it ...
 
+;; TODO: Revisit error recovery.
+
 ;;; Code:
 
 (define-module (nyacc lalr)
@@ -28,7 +30,7 @@
 	    lalr-start lalr-match-table
 	    restart-spec add-recovery-logic!
 	    pp-lalr-notice pp-lalr-grammar pp-lalr-machine
-	    write-lalr-actions write-lalr-tables
+	    write-lalr-actions write-lalr-tables write-lalr-extras
 	    pp-rule find-terminal gen-match-table) ; used by (nyacc bison)
   #:re-export (*nyacc-version*)
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
@@ -1496,6 +1498,15 @@
 		    (assq-ref mach 'terminals)))
 	 mach))
 
+;; @deffn {Procedure} gen-nterm-table mach => mach
+;; Generate table mapping maybe hash value to symbol value,
+;; of non-terminals, for use in debugging output.
+;; @end deffn 
+(define (gen-nterm-table mach)
+  (acons 'ntab
+	 (map (lambda (non-term) (cons non-term non-term))
+	      (assq-ref mach 'non-terms))
+	 mach))
 
 ;; @deffn {Procedure} add-recovery-logic! mach => mach
 ;; Target of transition from @code{'$error} should have a default rule that
@@ -1567,16 +1578,17 @@
     (dynamic-wind
 	(lambda () (fluid-set! *lalr-core* (make-core/extras spec)))
 	(lambda ()
-	  (let* ((sm1 (step1 spec))
-		 (sm2 (step2 sm1))
-		 (sm3 (step3 sm2))
-		 (sm4 (step4 sm3))
-		 (sm5 (gen-match-table sm4)))
+	  (let* ((sm (step1 spec))
+		 (sm (step2 sm))
+		 (sm (step3 sm))
+		 (sm (step4 sm))
+		 (sm (gen-nterm-table sm))
+		 (sm (gen-match-table sm)))
 	    (cons*
 	     (cons 'len-v (vector-map (lambda (i v) (vector-length v))
-				      (assq-ref sm5 'rhs-v)))
-	     (cons 'rto-v (vector-copy (assq-ref sm5 'lhs-v))) ; "reduce to"
-	     sm5)))
+				      (assq-ref sm 'rhs-v)))
+	     (cons 'rto-v (vector-copy (assq-ref sm 'lhs-v))) ; "reduce to"
+	     sm)))
 	(lambda () (fluid-set! *lalr-core* prev-core)))))
 
 ;; for debugging
@@ -1747,6 +1759,7 @@
   (number? (caar (vector-ref (assq-ref mach 'pat-v) 0))))
 
 ;; @deffn {Procedure} hashify-machine mach => mach
+;; Convert symbol-based tables to integer-based tables.
 ;; @end deffn
 (define (hashify-machine mach)
   (if (machine-hashed? mach) mach
@@ -1754,7 +1767,7 @@
 	     (non-terms (assq-ref mach 'non-terms))
 	     (lhs-v (assq-ref mach 'lhs-v))
 	     (sm ;; = (cons sym->int int->sym)
-	      (let iter ((si (list (cons '$default $default)
+	      (let loop ((si (list (cons '$default $default)
 				   (cons '$error $error)))
 			 (is (list (cons $default '$default)
 				   (cons '$error $error)))
@@ -1764,16 +1777,16 @@
 		    (let* ((s (atomize (if (pair? tl) (car tl) (car nl))))
 			   (tl1 (if (pair? tl) (cdr tl) tl))
 			   (nl1 (if (pair? tl) nl (cdr nl))))
-		      (iter (acons s ix si) (acons ix s is) (1+ ix) tl1 nl1)))))
+		      (loop (acons s ix si) (acons ix s is) (1+ ix) tl1 nl1)))))
 	     (sym->int (lambda (s) (assq-ref (car sm) s)))
 	     ;;
 	     (pat-v0 (assq-ref mach 'pat-v))
 	     (npat (vector-length pat-v0))
 	     (pat-v1 (make-vector npat '())))
 	;; replace symbol/chars with integers
-	(let iter1 ((ix 0))
+	(let loop1 ((ix 0))
 	  (unless (= ix npat)
-	    (let iter2 ((al1 '()) (al0 (vector-ref pat-v0 ix)))
+	    (let loop2 ((al1 '()) (al0 (vector-ref pat-v0 ix)))
 	      (if (null? al0) (vector-set! pat-v1 ix (reverse al1))
 		  (let* ((a0 (car al0))
 			 ;; tk: token; ac: action; ds: destination
@@ -1785,22 +1798,23 @@
 			      ((accept) 0) (else #f))))
 		    ;; If a rule is not used then ??? and then what? 180901
 		    ;;(cond
-		    ;; (t (iter2 (acons t d al1) (cdr al0)))
-		    ;; (else (iter2 (acons 0 0 al1) (cdr al0)))))))
+		    ;; (t (loop2 (acons t d al1) (cdr al0)))
+		    ;; (else (loop2 (acons 0 0 al1) (cdr al0)))))))
 		    (unless t
 		      (fmterr "~S ~S ~S\n" tk ac ds)
 		      (error "expect something"))
-		    (iter2 (acons t d al1) (cdr al0)))))
-	    (iter1 (1+ ix))))
+		    (loop2 (acons t d al1) (cdr al0)))))
+	    (loop1 (1+ ix))))
 	;;
 	(cons*
 	 (cons 'pat-v pat-v1)
 	 (cons 'siis sm) ;; sm = (cons sym->int int->sym)
-	 (cons 'mtab
-	       (let iter ((mt1 '()) (mt0 (assq-ref mach 'mtab)))
-		 (if (null? mt0) (reverse mt1)
-		     (iter (cons (cons (caar mt0) (sym->int (cdar mt0))) mt1)
-			   (cdr mt0)))))
+	 ;; map of terminals to int
+	 (cons 'mtab (map (lambda (p) (cons (car p) (sym->int (cdr p))))
+			  (assq-ref mach 'mtab)))
+	 ;; map of non-terms to int
+	 (cons 'ntab (map (lambda (p) (cons (sym->int (cdr p)) (car p)))
+			  (assq-ref mach 'ntab)))
 	 ;; reduction symbols = lhs:
 	 (cons 'rto-v (vector-map (lambda (i v) (sym->int v)) lhs-v))
 	 mach))))
@@ -1840,10 +1854,10 @@
 	 (rhs-len (vector-length rhs)))
     (apply
      string-append
-     (let iter ((rx 0) (sl (list (fmtstr "~S =>" lhs))))
+     (let loop ((rx 0) (sl (list (fmtstr "~S =>" lhs))))
        (if (= rx rhs-len)
 	   (append sl (if (= -1 (cdr item)) '(" .") '()))
-	   (iter (1+ rx)
+	   (loop (1+ rx)
 		 (append
 		  sl (if (= rx (cdr item)) '(" .") '())
 		  (let ((e (vector-ref rhs rx)))
@@ -1984,6 +1998,15 @@
       (string-drop-right filename 4)
       filename))
 
+(define* (write-table mach name port #:key (prefix ""))
+  (let ((sexp (assq-ref mach name)))
+    (if (pair? sexp)
+	(fmt port "(define ~A~A\n  '" prefix name)
+	(fmt port "(define ~A~A\n  " prefix name))
+    (ugly-print (assq-ref mach name) port
+		#:per-line-prefix "   " #:trim-ends #t)
+    (fmt port ")\n\n")))
+
 ;; @deffn {Procedure} write-lalr-tables mach filename [optons]
 ;; Options are
 ;; @table code
@@ -2002,33 +2025,25 @@
 ;; @end deffn
 (define* (write-lalr-tables mach filename #:key (lang 'scheme) (prefix ""))
 
-  (define (write-table mach name port)
-    (let ((sexp (assq-ref mach name)))
-      (if (pair? sexp)
-	  (fmt port "(define ~A~A\n  '" prefix name)
-	  (fmt port "(define ~A~A\n  " prefix name))
-      (ugly-print (assq-ref mach name) port
-		  #:per-line-prefix "   " #:trim-ends #t)
-      ;;(ugly-print (assq-ref mach name) port)
-      (fmt port ")\n\n")))
-
   (call-with-output-file filename
     (lambda (port)
       (fmt port ";; ~A\n\n" (drop-dot-new filename))
       (write-notice mach port)
-      (write-table mach 'len-v port)
-      (write-table mach 'pat-v port)
-      (write-table mach 'rto-v port)
-      (write-table mach 'mtab port)
+      (write-table mach 'mtab port #:prefix prefix)
+      (write-table mach 'ntab port #:prefix prefix)
+      (write-table mach 'len-v port #:prefix prefix)
+      (write-table mach 'rto-v port #:prefix prefix)
+      (write-table mach 'pat-v port #:prefix prefix)
       ;; generate alist
       (fmt port "(define ~Atables\n  (list\n" prefix)
+      (fmt port "   (cons 'mtab ~Amtab)\n" prefix)
+      (fmt port "   (cons 'ntab ~Antab)\n" prefix)
       (fmt port "   (cons 'len-v ~Alen-v)\n" prefix)
-      (fmt port "   (cons 'pat-v ~Apat-v)\n" prefix)
       (fmt port "   (cons 'rto-v ~Arto-v)\n" prefix)
-      (fmt port "   (cons 'mtab ~Amtab)))\n\n" prefix)
+      (fmt port "   (cons 'pat-v ~Apat-v)\n" prefix)
+      (fmt port "   ))\n\n")
       (display ";;; end tables" port)
       (newline port))))
-
 
 ;; @deffn {Procedure} write-lalr-actions mach filename [#:lang output-lang]
 ;; For example,
@@ -2053,6 +2068,7 @@
       (if (> (string-length line) 72)
 	  (string-append (substring/shared line 0 69) "...")
 	  line)))
+
   (define (NEW-pp-rule/ts gx)
     ;; TBD: use start for zeroth rule
     (let* ((core (fluid-ref *lalr-core*))

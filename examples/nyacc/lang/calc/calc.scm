@@ -60,7 +60,7 @@
 
 (define raw-parse (make-lalr-parser mach))
 
-(define (parse) (raw-parse (gen-lexer)))
+(define (parse) (raw-parse (gen-lexer) #:debug #f))
 
 (next)
 (parse)
