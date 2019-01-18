@@ -208,14 +208,14 @@
 	    ((fctn-call) #f)		; assume not constant
 	    ;;
 	    ;; TODO 
+	    ((comp-lit) #f) ;; return a bytearray
 	    ((comma-expr) #f)
 	    ((i-sel) #f)
 	    ((d-sel) #f)
 	    ((array-ref) #f)
-	    ;;
+	    ;; 
 	    (else
-	     (sf "missed:\n") (pp tree)
-	     (error "eval-c99-cx: missed" (car tree)))))))
+	     (throw 'c99-error "eval-c99-cx: missed ~S" (car tree)))))))
     (eval-expr tree)))
 
 ;; --- last line ---

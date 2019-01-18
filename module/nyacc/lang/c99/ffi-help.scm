@@ -218,7 +218,8 @@
 ;; Run pkg-config
 (define (pkg-config name . args)
   (if name
-      (let* ((cmdstr (string-append "pkg-config" " " (string-join args) " " name))
+      (let* ((cmdstr (string-append "pkg-config" " "
+				    (string-join args) " " name))
 	     (port (open-input-pipe cmdstr))
 	     (ostr (read-line port))
 	     (status (close-pipe port))
@@ -270,7 +271,7 @@
      ((eq? #f val) '())
      ((list? val) val)
      ((string? val) (list val))
-     (else (throw 'fh-error "value does not resolve to list")))))
+     (else (throw 'ffi-help-error "value does not resolve to list")))))
 
 (define (cintstr->num str)
   (and=> (cintstr->scm str) string->number))
@@ -381,11 +382,9 @@
 
 (define (const-expr->number expr)
   (catch 'c99-error
-    (lambda ()
-      (let ((cx (eval-c99-cx expr (*udict*) (*ddict*))))
-	(unless cx (sferr "expr=~S\n" expr))
-	cx))
-    (lambda (key . args) (sferr "const-expr->number failed: ~S\n" expr) #f)))
+    (lambda () (eval-c99-cx expr (*udict*) (*ddict*)))
+    (lambda (key fmt . args)
+      (apply throw 'ffi-help-error fmt args))))
 
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
@@ -455,10 +454,6 @@
        (let () ;; TODO: check for struct-def ???
 	 `(bs:pointer 'void)))
 
-      #;(((pointer-to) (struct-ref (ident ,name)))
-      (let ()
-      #f))
-
       ;; should use this more
       (((pointer-to) . ,rest)
        `(bs:pointer ,(mtail->bs-desc rest)))
@@ -481,10 +476,7 @@
       (,otherwise
        (sferr "mtail->bs-desc missed mdecl:\n")
        (pperr mdecl-tail)
-       (error "quit") ;;(quit)
-       (fherr "mtail->bs-desc failed")
-       )
-      )))
+       (fherr "mtail->bs-desc failed")))))
 
 
 ;; --- output routines ---------------
@@ -619,7 +611,6 @@
 ;; @var{aggr-name} is a string for the struct or union name, or @code{#f},
 ;; and @var{field-list} is the field-list from the C syntax tree.
 ;; @end deffn
-
 (define (cnvt-aggr-def aggr-t attr typename aggr-name field-list)
   (let* ((field-list (expand-field-list-typerefs field-list))
 	 (sflds (cnvt-field-list field-list))
@@ -690,11 +681,12 @@
   (let* ((name-val-l
 	  (map
 	   (lambda (def)
-	     (let ((n (sx-ref (sx-ref def 1) 1)) (x (sx-ref def 2))
-		   )
-	       ;;(sferr "x=~S\n" x)
-	       ;;(cons (string->symbol n) (eval-cpp-expr x '()))))
-	       (cons (string->symbol n) (eval-c99-cx x '()))))
+	     (let* ((n (sx-ref (sx-ref def 1) 1))
+		    (x (sx-ref def 2))
+		    (v (eval-c99-cx x '())))
+	       (unless v
+		 (throw 'ffi-help-error "unable to generate constant for ~S" n))
+	       (cons (string->symbol n) v)))
 	   (cdr (canize-enum-def-list enum-def-list)))))
     (cond
      ((and typename enum-name)
@@ -1191,9 +1183,8 @@
 
   (let*-values (((tag attr specl declr) (split-udecl udecl))
 		((specl declr) (cleanup-udecl specl declr))
-		((clean-udecl) (values (sx-list tag #f specl declr)))
-		)
-    ;;(sferr "clean udecl:\n") (pperr clean-udecl)
+		((clean-udecl) (values (sx-list tag #f specl declr))))
+
     (sxml-match clean-udecl
 
       ;; typedef void **ptr_t;
@@ -1826,9 +1817,12 @@
 		     (catch 'c99-error
 		       (lambda ()
 			 (parse-c99x repl (*tdefs*) #:cpp-defs cpp-defs))
-		       (lambda () #f))))
+		       (lambda args #f))))
 		 => (lambda (val)
 		      (let ((cv (eval-c99-cx val (*udict*) (*ddict*))))
+			(unless cv
+			  (sferr "ffi-help: unable to generate constant for ~S\n"
+				 name))
 			(if cv (acons symb cv seed) seed))))
 		;;
 		(else
@@ -1984,11 +1978,7 @@
 ;; was intro-ffi
 (define (expand-ffi-module-spec path module-options)
   (check-deps module-options)
-  ;;(sferr "cpp-defs:\n") (pperr fh-cpp-defs)
-  ;;(sferr "inc-dirs:\n") (pperr fh-inc-dirs)
-  ;;(sferr "inc-help:\n") (pperr fh-inc-help)
   (let* ((script-options (*options*))
-	 ;;(mbase (string-append (string-join (map symbol->string path) "/")))
 	 (mbase (path->path path))
 	 (dirpath (derive-dirpath (assq-ref script-options 'file) mbase))
 	 (mfile (string-append dirpath mbase ".scm"))
@@ -2004,12 +1994,6 @@
 		((assq-ref attrs 'api-code) =>
 		 (lambda (code) (parse-code code attrs)))
 		(else (fherr "expecing #:includes or #:api-code"))))
-	 #;(tree (with-input-from-string "#include <sys/epoll.h>\n"
-				(lambda ()
-				  (parse-c99 #:inc-dirs fh-inc-dirs
-					     #:cpp-defs fh-cpp-defs
-					     #:inc-help fh-inc-help
-					     ))))
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict

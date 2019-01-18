@@ -1,3 +1,11 @@
+2019-01-15  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* module/nyacc/lang/c99/cxeval.scm (eval-c99-cx): added case for
+	comp-lit; made failure throw c99-error instead of calling error
+
+	* module/nyacc/lang/c99/ffi-help.scm: updated error handling when
+	cannot convert enum or #defined argument to a constant
+
 2018-11-21  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* module/nyacc/lang/c99/mach.scm (c99-spec): K&R function
