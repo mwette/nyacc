@@ -2,12 +2,12 @@
 #
 # configure
 #
-# Copyright (C) 2017-2018 Matthew R. Wette
+# Copyright (C) 2017-2019 Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification
 # is granted.  This file is offered as-is, without any warranty.
 
-nyacc_version=0.90.0
+nyacc_version=0.91.0
 
 help() {
     echo "'configure' sets up the top-level Makefile for your local guile"
