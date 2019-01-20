@@ -89,7 +89,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (0 90 2))
+  #:version (0 91 0))
 
 (define fh-cpp-defs
   (cond
@@ -272,7 +272,7 @@
 (define (w/struct name) (cons 'struct name))
 (define (w/union name) (cons 'union name))
 (define (w/enum name) (cons 'enum name))
-;; pointers needed?
+;; pointers needed
 (define (w/* name) (cons 'pointer name))
 (define (w/struct* name) (cons 'pointer (cons 'struct name)))
 (define (w/union* name) (cons 'pointer (cons 'union name)))
@@ -1336,10 +1336,16 @@
 	 (stor-spec (typedef))
 	 (type-spec (struct-def (@ . ,attr1) (ident ,struct-name) ,field-list)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
-       (cnvt-struct-def attr1 (sw/* typename) struct-name field-list)
+       (cnvt-struct-def attr1 #f struct-name field-list)
+       (sfscm "(define-public ~A-desc struct-~A*-desc)\n" typename struct-name)
+       (fhscm-def-pointer typename)
        (values
-	(cons* (w/* typename) (w/struct struct-name) wrapped)
-	(cons* (w/* typename) (w/struct struct-name) defined)))
+	(cons* typename (w/* typename)
+	       (w/struct struct-name) (w/struct* struct-name)
+	       wrapped)
+	(cons* typename (w/* typename)
+	       (w/struct struct-name) (w/struct* struct-name)
+	       defined)))
 
       ;; typedef struct { ... } foo_t;
       ((udecl
@@ -1988,7 +1994,8 @@
   (check-deps module-options)
   (let* ((script-options (*options*))
 	 (dbugl (or (and=> (assq-ref script-options 'debug)
-			   (lambda (v) (map string->symbol (string-split v #\,))))
+			   (lambda (v) (map string->symbol
+					    (string-split v #\,))))
 		    '()))
 	 (mbase (path->path path))
 	 (dirpath (derive-dirpath (assq-ref script-options 'file) mbase))
@@ -2083,11 +2090,8 @@
     (ugly-print ffimod-defined mport #:per-line-prefix "   " #:trim-ends #t)
     (sfscm ")\n(export ~A-types)\n" (path->name path))
 
-    ;;(sfscm "\n;; TODO: add renamer\n")
-
-    ;; return port so compiler can output remaining code
+    ;; Return the output port so the compiler can output remaining code.
     mport))
-
 
 
 ;; === test compiler ================
