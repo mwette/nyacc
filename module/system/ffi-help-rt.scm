@@ -1,6 +1,6 @@
 ;;; system/ffi-help-rt.scm - NYACC's FFI help runtime
 
-;; Copyright (C) 2016-2018 Matthew R. Wette
+;; Copyright (C) 2016-2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -36,7 +36,7 @@
 	    define-fh-pointer-type
 	    define-fh-type-alias
 	    define-fh-compound-type
-	    define-fh-unsized-vector-type
+	    define-fh-vector&-type
 	    define-fh-function*-type
 	    ref<->deref! fh-ref<->deref!
 	    make-symtab-function
@@ -55,9 +55,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (0 90 2))
+  #:version (0 91 0))
 
-(define *ffi-help-version* "0.90.2")
+(define *ffi-help-version* "0.91.0")
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
@@ -329,44 +329,50 @@
 		   (make-struct/no-tail type (bytestructure desc arg))))
 	(args (make-struct/no-tail type (apply bytestructure desc args)))))))
 
-;; to be documented
-;; used for unsized vectors
-;; need to have should unwrap be to pointer?
-(define-syntax-rule (define-fh-unsized-vector-type type base-desc type? make)
+
+;; == extension to bytestructures ==============================================
+
+;; incomplete vector bytestructure -- double v[];
+;; calling this vector&; has zero size
+;;   (define d (fh:vector-reference double))
+;;   (define b (make-bytevector 80))
+;;   (define bs (make-bytestructure b 0 d))
+;;   (bytestructure-ref bs 0) => 0.0
+(define-record-type <vector&-metadata>
+  (make-vector&-metadata element-descriptor)
+  vector&-metadata?
+  (element-descriptor vector&-metadata-element-descriptor))
+
+(define (fh:vector& descriptor)
+  (define element-size (bytestructure-descriptor-size descriptor))
+  (define size 0)
+  (define alignment (bytestructure-descriptor-alignment descriptor))
+  (define (unwrapper syntax? bytevector offset index)
+    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
+    (values bytevector (+ offset (* index element-size)) descriptor))
+  (define meta (make-vector&-metadata descriptor))
+  (make-bytestructure-descriptor size alignment unwrapper #f #f meta))
+(export fh:vector&)
+
+(define-syntax-rule (define-fh-vector&-type type base-desc type? make)
   (begin
     (define type
-      (make-fht (quote type)
-		(lambda (obj) ;; unwrap => pointer
-		  (ffi:bytevector->pointer (bytestructure-bytevector obj)))
-		#f #f #f
-		(make-bs-printer (quote type))))
-    (define (type? obj)
-      (and (fh-object? obj) (eq? (struct-vtable obj) type)))
-    (define make
-      (case-lambda
-	((size)
-	 (cond
-	  ((number? size)
-	   (make-struct/no-tail
-	    type (bytestructure (bs:vector size base-desc))))
-	  (else (error "ffi-help-rt: bad spec for vector-type"))))
-	((size val)
+      (make-fht
+       (quote type)
+       (lambda (obj) ;; unwrap => pointer
+	 (ffi:bytevector->pointer (bytestructure-bytevector obj)))
+       (lambda (val) ;; wrap == make
 	 (cond
 	  ((bytevector? val)
 	   (make-struct/no-tail
-	    type (bytestructure (bs:vector size base-desc) val)))
-	  
-	  ;; following needed when functions return a pointer and need to
-	  ;; turn that into a vector
-	  #;((ffi:pointer? val)
-	   (make-struct/no-tail
-	    type (bytestructure (bs:vector size base-desc)
-	  (ffi:pointer->bytevector val))))
-	  
-	  (else (error "ffi-help-rt: bad spec for vector-type"))))
-	))))
-
-;; == extension to bytestructures ==============================================
+	    type (make-bytestructure val 0 (fh:vector& base-desc))))
+	  ((ffi:pointer? val) (make (ffi:pointer->bytevector val 0)))
+	  (else (error "ffi-help-rt: bad spec"))))
+       #f #f
+       (make-bs-printer (quote type))))
+    (define (type? obj)
+      (and (fh-object? obj) (eq? (struct-vtable obj) type)))
+    (define make (fht-wrap type))))
 
 ;; @deffn {Procedure} fh:function return-desc param-desc-list
 ;; @deffnx {Syntax} define-fh-function*-type name desc type? make
@@ -401,10 +407,10 @@
      ((pair? arg) (cdr arg))
      (else arg)))
   (define (arg-list->ffi-list param-list arg-list)
-    (let iter ((param-l param-list) (argl arg-list))
+    (let loop ((param-l param-list) (argl arg-list))
       (cond
-       ((pair? param-l) (cons (car param-l) (iter (cdr param-l) (cdr argl))))
-       ((pair? argl) (cons (arg->ffi (car argl)) (iter param-l (cdr argl))))
+       ((pair? param-l) (cons (car param-l) (loop (cdr param-l) (cdr argl))))
+       ((pair? argl) (cons (arg->ffi (car argl)) (loop param-l (cdr argl))))
        (else '()))))
   (lambda args
     (let ((ffi-l (arg-list->ffi-list param-ffi-list args))
@@ -423,43 +429,37 @@
 ;; @end deffn
 (define (fh:function %return-desc %param-desc-list)
   (define (get-return-ffi syntax?)
-    (if syntax?
-	#`%return-desc
-	%return-desc))
+    (when syntax?
+      (throw 'ffi-help-error "fh:function syntax not supported"))
+    %return-desc)
   (define (get-param-ffi-list syntax?)
-    (let iter ((params %param-desc-list))
+    (let loop ((params %param-desc-list))
       (cond
        ((null? params) '())
-       ((pair? (car params)) (cons (cadar params) (iter (cdr params))))
+       ((pair? (car params)) (cons (cadar params) (loop (cdr params))))
        ((eq? '... (car params)) '())
-       (else (cons (car params) (iter (cdr params)))))))
+       (else (cons (car params) (loop (cdr params)))))))
   (define size (ffi:sizeof '*))
   (define alignment size)
   (define attributes
-    (let iter ((param-l %param-desc-list))
+    (let loop ((param-l %param-desc-list))
       (cond ((null? param-l) '())
 	    ((eq? '... (car param-l)) '(varargs))
-	    (else (iter (cdr param-l))))))
+	    (else (loop (cdr param-l))))))
   (define (getter syntax? bytevector offset) ; assumes zero offset!
+    (when syntax?
+      (throw 'ffi-help-error "fh:function syntax not supported"))
+    (unless (zero? offset)
+      (throw 'ffi-help-error "fh:function getter called with non-zero offset"))
     (if (memq 'varargs attributes)
-	(if syntax?
-	    #`(pointer->procedure/varargs
-	       (get-return-ffi #f)
-	       (ffi:bytevector->pointer bytevector)
-	       (get-param-ffi-list #f))
-	    (pointer->procedure/varargs
-	     (get-return-ffi #f)
-	     (ffi:bytevector->pointer bytevector)
-	     (get-param-ffi-list #f)))
-	(if syntax?
-	    #`(ffi:pointer->procedure
-	       #,(get-return-ffi #t)
-	       (ffi:bytevector->pointer #,bytevector)
-	       #,(get-param-ffi-list #t))
-	    (ffi:pointer->procedure
-	     (get-return-ffi #f)
-	     (ffi:bytevector->pointer bytevector)
-	     (get-param-ffi-list #f)))))
+	(pointer->procedure/varargs
+	 (get-return-ffi #f)
+	 (ffi:bytevector->pointer bytevector)
+	 (get-param-ffi-list #f))
+	(ffi:pointer->procedure
+	 (get-return-ffi #f)
+	 (ffi:bytevector->pointer bytevector)
+	 (get-param-ffi-list #f))))
   (define meta
     (make-function-metadata %return-desc %param-desc-list attributes))
   (make-bytestructure-descriptor size alignment #f getter #f meta))
@@ -762,19 +762,19 @@
                    (if (string-prefix? prefix n)
                        (acons (string->symbol (substring n l)) v seed)
                        seed))))
-         (symtab (let iter ((o '()) (i symbol-value-table))
-                   (if (null? i) o (iter (cnvt (car i) o) (cdr i))))))
+         (symtab (let loop ((o '()) (i symbol-value-table))
+                   (if (null? i) o (loop (cnvt (car i) o) (cdr i))))))
     (lambda (key) (assq-ref symtab key))))
 
 
 (define (fh-find-symbol-addr name dl-lib-list)
-  (let iter ((dll (cons (dynamic-link) dl-lib-list)))
+  (let loop ((dll (cons (dynamic-link) dl-lib-list)))
     (cond
      ((null? dll) (throw 'ffi-help-error "function not found"))
      ((catch #t
 	(lambda () (dynamic-func name (car dll)))
 	(lambda args #f)))
-     (else (iter (cdr dll))))))
+     (else (loop (cdr dll))))))
 
 ;; @deffn {Procedure} fh-link-proc return name args dy-lib-list
 ;; Generate Guile procedure from C library. 
