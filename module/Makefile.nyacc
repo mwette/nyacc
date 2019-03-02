@@ -65,15 +65,21 @@ NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
 
 .PHONY: nyacc-bins
 nyacc-bins: $(NYACC_BINS)
-
-.PHONY: nyacc-fh-bins
-nyacc-fh-bins: $(NYACC_FH_BINS)
+	@if $(GUILE) -c '(use-modules (bytestructures guile))' \
+		>/dev/null 2>&1 ; then \
+	  @for binfile in $(NYACC_FH_BINS); do \
+	    srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	    GUILE_LOAD_PATH=$(shell pwd) GUILE_LOAD_COMPILED_PATH=$(shell pwd) \
+	    $(GUILD) compile -o $${binfile} $${srcfile}; \
+	  done; \
+	fi
 
 .PHONY: install
 install:
 	@$(MAKE) -f Makefile.nyacc install-srcs install-fh-srcs install-bins 
-	@if $(GUILE) -c '(use-modules (bytestructures guile))'; then \
-	  $(MAKE) -f Makefile.nyac install-fh-bins; \
+	@if $(GUILE) -c '(use-modules (bytestructures guile))' \
+		>/dev/null 2>&1 ; then \
+	  $(MAKE) -f Makefile.nyacc install-fh-bins; \
 	fi
 
 .PHONY: install-srcs
@@ -118,19 +124,20 @@ install-fh-srcs:
 
 .PHONY: install-fh-bins
 install-fh-bins: $(NYACC_FH_BINS)
-	if test $(GUILE) -c '(use-modules (bytestructures guile))'; then \
+	@if $(GUILE) -c '(use-modules (bytestructures guile))' \
+		>/dev/null 2>&1 ; then \
 	  @mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	  @echo "installing NYACC binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"
+	  @echo "installing FFI Help binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"
 	  @for file in $(NYACC_FH_BINS); do \
 	    if test ! -d $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; then \
 	      mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; \
 	    fi; \
-	    if test -f $${file}; then
+	    if test -f $${file}; then \
 	      cp $${file} $(DESTDIR)$(SITE_SCM_GO_DIR)/$${file}; \
 	    fi; \
 	  done; \
 	else \
-	  echo "FH binaries not installed"; \
+	  echo "FH binaries not installed: no scheme-bytestures."; \
 	fi
 
 .PHONY: clean
