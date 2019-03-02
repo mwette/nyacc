@@ -31,7 +31,7 @@
 ;;; Code:
 
 (define-module (nyacc lang nx-disp)
-  #:export (mat-disp parse-fmt parse-fmt-str fmt->str)
+  #:export (mat-disp vec-disp parse-fmt parse-fmt-str fmt->str)
   )
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -48,11 +48,13 @@
 
 ;; exp for val = [1.0,10.0)x10^exp
 (define (exp-of-10 val)
-  (inexact->exact (floor (log10 (abs val)))))
+  (if (eqv? val 0.0) 0
+      (inexact->exact (floor (log10 (abs val))))))
 
 (define (exp-of-16 val)
   (define (log16 x) (/ (log x) (log 16)))
-  (inexact->exact (floor (log16 (abs val)))))
+  (if (eqv? val 0.0) 0
+      (inexact->exact (floor (log16 (abs val))))))
 
 (define (exp-of-base val base)
   (case base
@@ -67,29 +69,55 @@
 
 ;; (int->str 23 '(#\+) 4 0 #\d) => " +23"
 (define (int->str val type flags width prec)
+  ;;(sf "val  =~S\n" val)
+  ;;(sf "type =~S\n" type)
+  ;;(sf "flags=~S\n" flags)
+  ;;(sf "width=~S\n" width)
+  ;;(sf "prec =~S\n" prec)
   (let* ((base (case type ((#\d) 10) ((#\x) 16) (else (error "bad type"))))
 	 (left (memq #\- flags))
 	 (pad (if (memq #\0 flags) #\0 #\space))
 	 (sign (cond ((negative? val) #\-) ((memq #\+ flags) #\+) (else #f)))
 	 (val (abs val))
-	 (val-wid (+ (exp-of-base val base) 1 (if sign 1 0)))
+	 (val-wid (+ (exp-of-base (* 1.0 val) base) 1 (if sign 1 0)))
 	 (wid (if (zero? width) val-wid width))
 	 (npad (- wid val-wid))
 	 (str (make-string wid (if (negative? npad) #\# pad))))
-    (if (negative? npad) str
-	(let loop ((x (- wid 1 (if (memq #\- flags) npad 0))) (v val))
-	  (cond
-	   ((zero? v)
-	    (if sign (string-set! str x sign))
-	    str)
-	   (else
-	    (string-set! str x (int->numch (remainder v base)))
-	    (loop (1- x) (quotient v base))))))))
+    ;;(sf "base=~S\n" base)
+    ;;(sf "exp-of-base=~S\n" (exp-of-base (* 1.0 val) base))
+    ;;(sf "val-wid=~S\n" val-wid)
+    ;;(sf "wid=~S\n" wid)
+    ;;(sf "npad=~S\n" npad)
+    (if(negative? npad)
+       (make-string wid #\#)
+       ;; This is ugly, need rework.
+       (let ((str (make-string wid pad))
+	     (ix (- wid 1 (if (memq #\- flags) npad 0))))
+	 (let loop ((x ix) (v val))
+	   (cond
+	    ((zero? v)
+	     (if (= ix x) (begin (string-set! str x #\0) (set! x (1- x))))
+	     (if sign (string-set! str x sign))
+	     str)
+	    (else
+	     (string-set! str x (int->numch (remainder v base)))
+	     (loop (1- x) (quotient v base)))))))))
+(export int->str)
+
+;; frexp(double x, int *exp) => double ; result always in [0.5,1.0)
+
+;;(define (frexp val)
+;;  (
 
 ;; (split-float 2.3492e-23) => (2.3492 -23)
 (define (split-float val)
-  (let ((v_expt (exp-of-10 val)))
-    (cons (* val (expt 10 (- v_expt))) v_expt)))
+  (if (eqv? val 0.0)
+      (cons 0.0 0)
+      (let ((sign (if (negative? val) -1.0 +1.0))
+	    (val (abs val))
+	    (v_expt (exp-of-10 val)))
+	(cons (* sign val (expt 10 (- v_expt))) v_expt))))
+(export split-float)
 
 ;; (vch 3.235) => #\3
 (define (vch v) (int->numch (inexact->exact (floor v))))
@@ -131,6 +159,9 @@
 	 (e-str (int->str val-e #\d '(#\+) 0 0))
 	 (m-wid (- width 1 (string-length e-str)))
 	 (m-str (flt->str/f val-m #\f flags m-wid prec)))
+    ;;(sf "val-m=~S\n" val-m)
+    ;;(sf "val-e=~S\n" val-e)
+    ;;(sf "e-str=~S\n" e-str)
     (string-append m-str "e" e-str)))
 
 (define (flt->str val type flags width prec)
@@ -138,6 +169,7 @@
     ((#\e) (flt->str/e val type flags width prec))
     ((#\f) (flt->str/f val type flags width prec))
     (else (error "fmat"))))
+(export flt->str)
 
 (define (disp/fmt val type flags width prec)
   (case type
@@ -187,31 +219,47 @@
   (let ((port (open-input-string str)))
     (parse-fmt (read-char port) port)))
   
-(define (mat-disp/strict port array)
+(define (mat-disp/strict array port format)
   (let* ((type (array-type array))
 	 (dims (array-dimensions array))
 	 (dimz (map (lambda (i) (min i 8)) dims))
-	 (spec (parse-fmt-str "%12.5e")))
+	 (spec (parse-fmt-str format)))
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (do ((j 0 (1+ j))) ((= j (list-ref dimz 1)))
 	(display " " port)
 	(display (apply flt->str (array-ref array i j) spec) port))
       (newline port))))
 
-(define (mat-disp port array)
+(define* (mat-disp array #:optional (port #t) #:key (format "%12.5e"))
   (cond
    ((eq? #f port)
     (let ((strp (open-output-string)))
-      (mat-disp/strict strp array)
+      (mat-disp/strict array strp format)
       (get-output-string strp)))
    ((eq? #t port)
-    (mat-disp/strict (current-output-port) array))
+    (mat-disp/strict array (current-output-port) format))
    (else
-    (mat-disp/strict port array))))
+    (mat-disp/strict array port format))))
 
-;;(use-modules (srfi srfi-27))
-;;(define A
-;;  (list->typed-array
-;;   'f64 2 (map (lambda (x) (map (lambda (x) (random-real)) (iota 3))) (iota 4))))
+(define (vec-disp/strict array port format)
+  (let* ((type (array-type array))
+	 (dims (array-dimensions array))
+	 (dimz (map (lambda (i) (min i 8)) dims))
+	 (spec (parse-fmt-str format)))
+    (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
+      (display " " port)
+      (display (apply flt->str (array-ref array i) spec) port)
+      (newline port))))
+
+(define* (vec-disp array #:optional (port #t) #:key (format "%12.5e"))
+  (cond
+   ((eq? #f port)
+    (let ((strp (open-output-string)))
+      (vec-disp/strict array strp format)
+      (get-output-string strp)))
+   ((eq? #t port)
+    (vec-disp/strict array (current-output-port) format))
+   (else
+    (vec-disp/strict array port format))))
 
 ;; --- last line ---

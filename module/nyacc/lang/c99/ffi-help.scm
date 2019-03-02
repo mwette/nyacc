@@ -1800,6 +1800,15 @@
 ;; replacemnts down to constants (strings, integers, etc)
 (define (gen-lookup-proc keep-defs cpp-defs ext-mods)
 
+  (define err-port (open-output-file "/dev/null"))
+  
+  (define* (try-parse-repl repl)
+    (with-error-to-port err-port
+      (lambda ()
+	(catch 'c99-error
+	  (lambda () (parse-c99x repl (*tdefs*) #:cpp-defs cpp-defs))
+	  (lambda args #f)))))
+
   ;; @var{keep-defs} is list of CPP defs and enum key/val pairs. It is
   ;; possible for an enum symbol to be used as a macro function so we
   ;; need to first check for integer before trying expand-cpp-macro-ref.
@@ -1826,17 +1835,11 @@
 		((zero? (string-length repl)) seed)
 		;;
 		((cintstr->num repl) => (lambda (val) (acons symb val seed)))
-		((with-error-to-port (open-output-file "/dev/null")
-		   (lambda ()
-		     (catch 'c99-error
-		       (lambda ()
-			 (parse-c99x repl (*tdefs*) #:cpp-defs cpp-defs))
-		       (lambda args #f))))
+		((try-parse-repl repl)
 		 => (lambda (val)
 		      (let ((cv (eval-c99-cx val (*udict*) (*ddict*))))
 			(unless cv
-			  (sferr "ffi-help: unable to generate constant for ~S\n"
-				 name))
+			  (sfscm ";; unable to generate constant for ~S\n" name))
 			(if cv (acons symb cv seed) seed))))
 		;;
 		(else
@@ -1862,7 +1865,8 @@
 	 ((symbol? obj) (,sv-name obj))
 	 ((fh-object? obj) (struct-ref obj 0)) ;; ???
 	 (else (error "type mismatch")))))
-    ))
+    
+    (close err-port)))
 
 
 ;; === Parsing the C header(s)

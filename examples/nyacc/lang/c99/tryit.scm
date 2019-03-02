@@ -42,7 +42,7 @@
 (define mode 'file)
 (define mode 'decl)
 (define mode 'code)
-(define debug #t)
+(define debug #f)
 (define xdef? (lambda (name mode) (memq mode '(code decl))))
 
 (define (parse-file file)
@@ -107,6 +107,7 @@
 	      "struct foo x;\n"
 	      ))
        (code "int len = sizeof(\"abc\" \"def\");\n")
+       (code "#include <sys/epoll.h>\n")
        (tree (parse-string code))
        ;;(expr (sx-ref* tree 1 2 1 2 1)) ;; for sizeof("abc"...) demo
 
@@ -123,10 +124,32 @@
        ;;(mdecl (udecl->mspec/comm udecl))
        ;;(udecl (unitize-decl decl))
        ;;(xdecl (expand-typerefs-in-code code 2))
+       (udict (c99-trans-unit->udict/deep tree))
+       ;;(udict (c99-trans-unit->udict tree))
+       (udecl (assoc-ref udict '(struct . "epoll_event")))
+       (rdecl '(decl (decl-spec-list	; raw decl
+		      (@ (attributes "__packed__"))
+		      (type-spec
+		       (struct-def
+			(ident "epoll_event")
+			(field-list
+			 (comp-decl
+			  (@ (comment " Epoll events "))
+			  (decl-spec-list
+			   (type-spec (typename "uint32_t")))
+			  (comp-declr-list (comp-declr (ident "events"))))
+			 (comp-decl
+			  (@ (comment " User data variable "))
+			  (decl-spec-list
+			   (type-spec (typename "epoll_data_t")))
+			  (comp-declr-list (comp-declr (ident "data"))))))))))
+       (udecl (unitize-decl rdecl '()))
        )
-  (pp tree)
+  ;;(pp tree)
   ;;(pp udict)
-  ;;(pp udecl)
+  (pp rdecl)
+  (pp udecl)
+  (pp99 (cdar udecl))
   ;;(pp mdecl)
   ;;(pp xdecl)
   ;;(ppsx udecl)

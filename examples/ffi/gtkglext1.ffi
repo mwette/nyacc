@@ -18,6 +18,7 @@
 (define-ffi-module (ffi gtkglext1)
   #:use-ffi-module (ffi gdk2)
   #:use-ffi-module (ffi gtk2)
+  #:use-ffi-module (ffi glugl)
   #:pkg-config "gtkglext-1.0"
   #:include '("gtk/gtkgl.h")
   #:inc-filter (lambda (f p) (string-contains p "gtkglext-1.0/" 0)))

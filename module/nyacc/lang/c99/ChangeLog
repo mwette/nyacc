@@ -1,3 +1,9 @@
+2019-02-05  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* ffi-help.scm (gen-lookup-proc): in-line open "/dev/null" was
+	generating "too many open files".  Replaced with open/close in
+	gen-lookup-proc and added try-parse-repl
+
 2019-01-18  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* mach.d: changed convention from xxxact.scm, xxxtab.scm to

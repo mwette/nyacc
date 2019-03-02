@@ -30,9 +30,9 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37)
-  #:version (0 90 2))
+  #:version (0 91 0))
 
-(define *ffi-help-version* "0.90.2")
+(define *ffi-help-version* "0.91.0")
 
 (define %summary
   "Compile a ffi-file (C interface spec) to Scheme (or maybe .go).")
@@ -203,25 +203,28 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 ;; -----------------------------------------------------------------------------
 
+(define (cleanup path)
+  (basename path))
+
 (define* (compile-ffi ffi-file options #:key module)
   (let* ((base (string-drop-right ffi-file 4))
 	 (scm-file (string-append base ".scm")))
     (ensure-ffi-deps ffi-file options)
     (catch 'ffi-help-error
       (lambda ()
-	(sfmt "compiling `~A' ..." ffi-file)
+	(sfmt "compiling `~A' ...\n" (cleanup ffi-file))
 	(compile-ffi-file ffi-file options)
-	(sfmt " wrote `~A'\n" scm-file))
+	(sfmt "... wrote `~A'\n" (cleanup scm-file)))
       (lambda (key fmt . args)
 	(apply fail fmt args)
 	(exit 1)))
     (unless (assq-ref options 'no-exec)
-      (sfmt "compiling `~A' ..." scm-file)
+      (sfmt "compiling `~A' ...\n" (cleanup scm-file))
        (let ((go-file (compile-file scm-file
 				   #:from 'scheme #:to 'bytecode
 				   #:opts '())))
 	(load-compiled go-file)
-	(sfmt " wrote `~A'\n" go-file))
+	(sfmt "... wrote `~A'\n" (cleanup go-file)))
       (sleep 1))))
 
 (define (main . args)

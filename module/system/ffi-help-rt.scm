@@ -36,6 +36,7 @@
 	    define-fh-pointer-type
 	    define-fh-type-alias
 	    define-fh-compound-type
+	    define-fh-vector-type
 	    define-fh-vector&-type
 	    define-fh-function*-type
 	    ref<->deref! fh-ref<->deref!
@@ -329,12 +330,37 @@
 		   (make-struct/no-tail type (bytestructure desc arg))))
 	(args (make-struct/no-tail type (apply bytestructure desc args)))))))
 
+(define-syntax-rule (define-fh-vector-type type elt-desc type? make)
+  (begin
+    (define type
+      (make-fht (quote type)
+		(lambda (obj)
+		  (bytestructure-bytevector (struct-ref obj 0)))
+		(lambda (val)
+		  (cond
+		   ((number? val)
+		    (let* ((nelt val) (desc (bs:vector nelt elt-desc)))
+		      (make-struct/no-tail type (bytestructure desc))))
+		   ((bytevector? val)
+		    (let* ((nelt (/ (bytevector-length val)
+				    (bytestructure-size elt-desc)))
+			   (desc (bs:vector nelt elt-desc)))
+		      (make-struct/no-tail type (bytestructure desc))))))
+		#f #f
+		(make-bs-printer (quote type))))
+    (define (type? obj)
+      (and (fh-object? obj) (eq? (struct-vtable obj) type)))
+    (define make (fht-wrap type))))
 
 ;; == extension to bytestructures ==============================================
 
-;; incomplete vector bytestructure -- double v[];
+;; unwrapper
+;; setter
+;; getter
+
+;; variable length vector bytestructure -- double v[];
 ;; calling this vector&; has zero size
-;;   (define d (fh:vector-reference double))
+;;   (define d (fh:vector& double))
 ;;   (define b (make-bytevector 80))
 ;;   (define bs (make-bytestructure b 0 d))
 ;;   (bytestructure-ref bs 0) => 0.0
@@ -361,13 +387,13 @@
        (quote type)
        (lambda (obj) ;; unwrap => pointer
 	 (ffi:bytevector->pointer (bytestructure-bytevector obj)))
-       (lambda (val) ;; wrap == make
+       (lambda* (size #:optional (size 0))
 	 (cond
 	  ((bytevector? val)
 	   (make-struct/no-tail
 	    type (make-bytestructure val 0 (fh:vector& base-desc))))
-	  ((ffi:pointer? val) (make (ffi:pointer->bytevector val 0)))
-	  (else (error "ffi-help-rt: bad spec"))))
+	  ((ffi:pointer? val) (make (ffi:pointer->bytevector val size)))
+	  (else (error "ffi-help-rt: bad spec" val))))
        #f #f
        (make-bs-printer (quote type))))
     (define (type? obj)

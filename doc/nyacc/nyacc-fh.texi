@@ -1,11 +1,11 @@
 \input texinfo.tex
-@setfilename ffi-help.info
+@setfilename nyacc-fh.info
 @settitle FFI Helper for Guile
 
 @clear no-skip
 
 @copying
-Copyright (C) 2017-2018 -- Matthew R. Wette.
+Copyright (C) 2017-2019 -- Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -21,8 +21,8 @@ copy of the license is included with the distribution as COPYING.DOC.
 @top FFI Helper for Guile
 @format
 Matt Wette
-December 2018
-With NYACC Version 0.90.2
+February 2019
+With NYACC Version 0.91.0
 @end format
 
 @c ======================================
@@ -69,8 +69,6 @@ well contain operating system and machine dependencies.   If you copy
 code to a new machine, you should re-run @code{guild compile-ffi}.
 
 You are probably hoping to see an example, so let's try one.
-
-@c @heading Demonstration
 
 This is a small FH example to illustrate its use.  We will
 start with the @uref{cairographics.org,Cairo} package because that is
@@ -997,21 +995,57 @@ How the hell do I deal with varargs?  Skip for now.
 
 @c ======================================
 
-@heading Creating FFI Modules
+@heading Creating FFI Modules with @code{(nyacc lang c99 ffi-help)}
 
-What might go into the Guile Ref Manual needs to include these:
 @example
-#:api-code
-#:cpp-defs
-#:decl-filter
-#:inc-dirs
-#:inc-filter
-#:inc-help
-#:include
-#:library
-#:pkg-config
-#:renamer
-#:use-ffi-module
+(define ffi-module @it{module-name} ...)
+@end example
+
+@table @code
+@item #:pkg-config
+This option take a single string argument which provides the name used
+for the @emph{pkg-config} program.  Try @code{man pkg-config}.
+@item #:include
+This form, with expression argument, indicates the list of include
+files to be processed at the top level.  Without use of the
+@code{#:inc-filter} form, only declarations in these files will be
+output.  To constrain the set of declarations output use the
+@code{#:decl-filter} form.
+@item #:inc-filter
+This form, with predicate procedure argument taking the form
+@code{(proc file-spec path-spec)}, is used to indicate which includes
+beyond the top-level should have processed declarations emitted in the
+output.  The @code{file-spec} argument is a string as parsed from
+@code{#include} statements in the C code, including brackets or double
+quotes (e.g., @code{"<stdio.h>"}, @code{"\"foo.h\""}).  The
+@code{path-spec} is the full path to the file.
+@item #:use-ffi-module
+This form, with literal module-type argument (e.g., @code{(ffi
+glib)}), indicates dependency on declarations from another processed
+ffi module.  For example, the ffi-module for @code{(ffi gobject)}
+includes the form @code{#:use-ffi-module (ffi glib)}.
+@item #:decl-filter
+This form, with a predicate procedure argument, is used to restrict
+which declarations should be processed for output.  The single
+argument is either a string or a pair.  The string form is used for
+simple identifiers and the pair is used for struct, union and enum
+forms from the C code (e.g., @code{(struct . "foo")}).
+@item #:library
+This form, with a list of strings, indicates which (shared object)
+libraries need to be loaded.  The formmat of each string in the list
+should be as provided to the @code{dynamic-link} form in Guile.
+@item #:renamer
+todo
+@item #:cpp-defs
+This form, with a list of strings, provides extra C preprodessor
+definitions to be used in processing the header files.  The defines
+take the form @code{"SYM=}@it{val}@code{"}.
+@item #:inc-dirs
+todo
+@item #:inc-help
+todo
+@item #:api-code
+todo
 @end example
 
 @example
@@ -1226,8 +1260,9 @@ with NYACC's C99 parser.  There is no such thing as a working C standard.
 
 @c ======================================
 
-@heading The Module @code{(system ffi-help-rt)}
+@heading The Run-time Module @code{(system ffi-help-rt)}
 
+Here we provide details of the run-time support module.
 
 
 @c ======================================

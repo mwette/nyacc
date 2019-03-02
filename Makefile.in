@@ -12,10 +12,14 @@ SITE_SCM_DIR=@site_scm_dir@
 SITE_SCM_GO_DIR=@site_scm_go_dir@
 INFODIR=@infodir@
 
-default: all
-
-all:
-	@echo "nothing to make"
+.PHONY: default
+default: 
+	@(cd module; \
+	  make -f Makefile.nyacc \
+		GUILE=$(GUILE) GUILD=$(GUILD) \
+		SITE_SCM_DIR=$(SITE_SCM_DIR) \
+		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
+		DESTDIR=$(DESTDIR))
 
 .PHONY: install
 install:

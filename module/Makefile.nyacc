@@ -10,21 +10,18 @@
 
 GUILE=guile
 GUILD=guild
-
-default:
-	@echo SITE_SCM_DIR = $(SITE_SCM_DIR)
-	@echo SITE_SCM_GO_DIR = $(SITE_SCM_GO_DIR)
-	@echo NYACC_SRCS = $(NYACC_SRCS)
+SITE_SCM_DIR=$(shell $(GUILE) -c '(display (%site-dir))')
+SITE_SCM_GO_DIR=$(shell $(GUILE) -c '(display (%site-ccache-dir))')
 
 NYACC_BASE_BINS =				\
-	nyacc/bison.go				\
+	nyacc/version.go			\
+	nyacc/util.go				\
+	nyacc/lex.go				\
+	nyacc/lalr.go				\
+	nyacc/parse.go				\
 	nyacc/export.go				\
 	nyacc/import.go				\
-	nyacc/lalr.go				\
-	nyacc/lex.go				\
-	nyacc/parse.go				\
-	nyacc/util.go				\
-	nyacc/version.go			\
+	nyacc/bison.go				\
 	nyacc/lang/sx-util.go			\
 	nyacc/lang/util.go
 
@@ -52,10 +49,6 @@ NYACC_C99_SRCS = $(patsubst %.go,%.scm,$(NYACC_C99_BINS)) \
 	nyacc/lang/c99/mach.d/c99cxact.scm	\
 	nyacc/lang/c99/mach.d/c99cxtab.scm
 
-
-NYACC_BINS = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
-NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
-
 NYACC_FH_BINS =					\
 	nyacc/lang/c99/ffi-help.go		\
 	system/ffi-help-rt.go			\
@@ -63,6 +56,18 @@ NYACC_FH_BINS =					\
 
 NYACC_FH_SRCS = $(patsubst %.go,%.scm,$(NYACC_FH_BINS))
 
+NYACC_BINS = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
+NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
+
+%.go: %.scm
+	GUILE_LOAD_PATH=. GUILE_LOAD_COMPILED_PATH=. \
+	  $(GUILD) compile -o $@ $<
+
+.PHONY: nyacc-bins
+nyacc-bins: $(NYACC_BINS)
+
+.PHONY: nyacc-fh-bins
+nyacc-fh-bins: $(NYACC_FH_BINS)
 
 .PHONY: install
 install: install-srcs install-fh-srcs install-bins install-fh-bins
@@ -75,72 +80,54 @@ install-srcs:
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  if test -f $${file}; then
+	    cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  fi; \
 	done
 	@cp nyacc/README $(DESTDIR)$(SITE_SCM_DIR)/nyacc/README
 
 .PHONY: install-bins
-install-bins:
+install-bins: $(NYACC_BINS)
 	@mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	@echo "installing NYACC binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"
-	@for binfile in $(NYACC_BINS); do \
-	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	@for file in $(NYACC_BINS); do \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; \
 	  fi; \
-	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
-		-o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
-		$(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
-	  sleep 1; \
+	  if test -f $${file}; then
+	    cp $${file} $(DESTDIR)$(SITE_SCM_GO_DIR)/$${file}; \
+	  fi; \
 	done
 
 .PHONY: install-fh-srcs
 install-fh-srcs:
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
-	@echo "installing FFI helper sources in $(DESTDIR)$(SITE_SCM_DIR)"
+	@echo "installing FFI Helper sources in $(DESTDIR)$(SITE_SCM_DIR)"
 	@for file in $(NYACC_FH_SRCS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  if test -f $${file}; then \
+	    cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  fi; \
 	done
 
 .PHONY: install-fh-bins
-install-fh-bins:
-	@if GUILE_LOAD_PATH=$(SITE_SCM_DIR) GUILE_AUTO_COMPILE=0 \
-		$(GUILE) -c '(use-modules (bytestructures guile))' \
-			>/dev/null 2>&1; then \
-	  echo "installing FFI helper binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"; \
-	  for binfile in $(NYACC_FH_BINS); do \
-	    if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	      mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+install-bins: $(NYACC_FH_BINS)
+	if test $(GUILE) -c '(use-modules (bytestructures guile))'; then \
+	  @mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
+	  @echo "installing NYACC binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"
+	  @for file in $(NYACC_FH_BINS); do \
+	    if test ! -d $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; then \
+	      mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; \
 	    fi; \
-	    srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	    GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(SITE_SCM_DIR) \
-		$(GUILD) compile -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
-		$(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
-	    sleep 1; \
+	    if test -f $${file}; then
+	      cp $${file} $(DESTDIR)$(SITE_SCM_GO_DIR)/$${file}; \
+	    fi; \
 	  done; \
 	else \
-	  echo "FFI helper binaries not installed: bytestructures needed"; \
+	  echo "FH binaries not installed"; \
 	fi
-
-
-# === files for making source tarballs
-
-nyacc/lang/c99/mach.d/c99act.scm \
-nyacc/lang/c99/mach.d/c99tab.scm \
-nyacc/lang/c99/mach.d/c99xact.scm \
-nyacc/lang/c99/mach.d/c99xtab.scm : nyacc/lang/c99/mach.scm
-	GUILE_LOAD_PATH=`pwd` \
-	$(GUILE) -l $< -c \
-		'((@ (nyacc lang c99 mach) gen-c99-files) "nyacc/lang/c99")'
-
-nyacc/lang/c99/mach.d/cppact.scm \
-nyacc/lang/c99/mach.d/cpptab.scm : nyacc/lang/c99/cppmach.scm
-	GUILE_LOAD_PATH=`pwd` \
-	$(GUILE) -l $< -c \
-		'((@ (nyacc lang c99 cppmach) gen-cpp-files) "nyacc/lang/c99")'
 
 .PHONY: dist-files
 dist-files:

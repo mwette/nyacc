@@ -135,6 +135,13 @@
     ("long long int" "%lld")
     ("unsigned long long int" "%llu")))
 
+;; @deffn {Procedure} attr-append . attr-lists
+;; This is hack for now: it is @code{append}. It needs to be set up to combine
+;; @code{attributes} and @code{comment}.
+;; @end deffn
+;; TODO FIXME
+(define attr-append append)
+
 ;; @deffn {Procedure} pointer-declr? declr
 ;; This predictate indicates if @var{declr} is a pointer.
 ;; Does not handle @code{(*ftn)()}.
@@ -395,9 +402,11 @@
    ((eqv? (sx-tag decl) 'udecl)
     (acons (udecl-id decl) decl seed))
 
-   ;; MOVE ATTRIBUTES USED HERE
+   ;; todo: think more about attributes
+   ;; * specl attributes are merged into structs and unions right now.
+   ;;   any others?
    ((eqv? (sx-tag decl) 'decl)
-    (let*-values (((tag attr specl declrs) (split-decl decl))
+    (let*-values (((tag decl-attr specl declrs) (split-decl decl))
 		  ((tag) (values 'udecl)))
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
       ;;(sferr "\nsx-match specl: attr=~S\n" attr) (pperr specl) (pperr declrs)
@@ -405,35 +414,39 @@
 
 	;; struct typedefs 
 	((decl-spec-list
+	  (@ . ,specl-attr)
 	  (stor-spec (typedef))
-	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (struct-def (@ . ,attr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(struct . ,name)
-		 (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
-		 tag attr specl declrs seed))
+		 (make-udecl 'struct-def (attr-append attr specl-attr)
+			     `((ident ,name) . ,rest2))
+		 tag '() specl declrs seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 (iter-declrs tag attr specl declrs seed))
+	 (iter-declrs tag decl-attr specl declrs seed))
 	
 	;; union typedefs 
 	((decl-spec-list
+	  (@ . ,specl-attr)
 	  (stor-spec (typedef))
-	  (type-spec (union-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
+	  (type-spec (union-def (@ . ,attr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(union . ,name)
-		 (make-udecl 'union-def aattr `((ident ,name) . ,rest2))
-		 tag attr specl declrs seed))
+		 (make-udecl 'union-def (attr-append attr specl-attr)
+			     `((ident ,name) . ,rest2))
+		 tag decl-attr specl declrs seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (iter-declrs tag attr specl declrs seed))
+	 (iter-declrs tag decl-attr specl declrs seed))
 
-	;; enum typedefs 
+	;; enum typedefs  -- todo: handle attributes
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(enum . ,name)
 		 (make-udecl 'enum-def #f `((ident ,name) . ,rest2))
-		 tag attr specl declrs seed))
+		 tag decl-attr specl declrs seed))
 	((decl-spec-list
 	  (stor-spec (typedef))
 	  (type-spec (enum-def . ,rest2) . ,rest1))
@@ -441,42 +454,42 @@
 		      (acons `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 			     seed))
 	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
-		 tag attr specl declrs seed))
+		 tag decl-attr specl declrs seed))
 	
 	;; structs
 	((decl-spec-list
-	  (type-spec (struct-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
-	 (let* ((atl (assq 'attributes attr))
-		(aattr (if atl (append atl aattr) aattr)))
-	   (update `(struct . ,name)
-		   (make-udecl 'struct-def aattr `((ident ,name) . ,rest2))
-		   tag attr specl declrs seed)))
+	  (@ . ,specl-attr)
+	  (type-spec (struct-def (@ . ,attr) (ident ,name) . ,rest2) . ,rest1))
+	 (update `(struct . ,name)
+		 (make-udecl 'struct-def (attr-append attr specl-attr)
+			     `((ident ,name) . ,rest2))
+		 tag decl-attr specl declrs seed))
 	((decl-spec-list
 	  (type-spec (struct-def . ,rest2) . ,rest1))
-	 (iter-declrs tag attr specl declrs seed))
+	 (iter-declrs tag decl-attr specl declrs seed))
 
 	;; unions
 	((decl-spec-list
 	  (type-spec (union-def (@ . ,aattr) (ident ,name) . ,rest2) . ,rest1))
 	 (update `(union . ,name)
 		 (make-udecl 'union-def aattr `((ident ,name) . ,rest2))
-		 tag attr specl declrs seed))
+		 tag decl-attr specl declrs seed))
 	((decl-spec-list
 	  (type-spec (union-def . ,rest2) . ,rest1))
-	 (iter-declrs tag attr specl declrs seed))
+	 (iter-declrs tag decl-attr specl declrs seed))
 
 	;; enums
 	((decl-spec-list
 	  (type-spec (enum-def (ident ,name) . ,rest2) . ,rest1))
 	 (update `(enum . ,name)
 		 (make-udecl 'enum-def #f `((ident ,name) . ,rest2))
-		 tag attr specl declrs seed))
+		 tag decl-attr specl declrs seed))
 	((decl-spec-list
 	  (type-spec (enum-def . ,rest2) . ,rest1))
 	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
-		 tag attr specl declrs seed))
+		 tag decl-attr specl declrs seed))
 
-	(else (iter-declrs tag attr specl declrs seed)))))
+	(else (iter-declrs tag decl-attr specl declrs seed)))))
    
    ((eqv? (sx-tag decl) 'comp-udecl) (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag decl) 'comp-decl) (unitize-comp-decl decl seed))

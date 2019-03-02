@@ -20,7 +20,7 @@
 
 (define-ffi-module (ffi libelf)
   #:pkg-config "libelf"
-  #:include '("libelf.h")
+  #:include '("libelf.h" "gelf.h")
   #:inc-filter (lambda (file-spec path-spec)
 		 (string-contains file-spec "elf.h" 0)))
 
