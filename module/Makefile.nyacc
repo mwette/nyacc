@@ -67,7 +67,7 @@ NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
 nyacc-bins: $(NYACC_BINS)
 	@if $(GUILE) -c '(use-modules (bytestructures guile))' \
 		>/dev/null 2>&1 ; then \
-	  @for binfile in $(NYACC_FH_BINS); do \
+	  for binfile in $(NYACC_FH_BINS); do \
 	    srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
 	    GUILE_LOAD_PATH=$(shell pwd) GUILE_LOAD_COMPILED_PATH=$(shell pwd) \
 	    $(GUILD) compile -o $${binfile} $${srcfile}; \
@@ -126,9 +126,9 @@ install-fh-srcs:
 install-fh-bins: $(NYACC_FH_BINS)
 	@if $(GUILE) -c '(use-modules (bytestructures guile))' \
 		>/dev/null 2>&1 ; then \
-	  @mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	  @echo "installing FFI Help binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"
-	  @for file in $(NYACC_FH_BINS); do \
+	  mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
+	  echo "installing FFI Help binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"
+	  for file in $(NYACC_FH_BINS); do \
 	    if test ! -d $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; then \
 	      mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; \
 	    fi; \
