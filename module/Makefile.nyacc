@@ -60,7 +60,7 @@ NYACC_BINS = $(NYACC_BASE_BINS) $(NYACC_C99_BINS)
 NYACC_SRCS = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS)
 
 %.go: %.scm
-	GUILE_LOAD_PATH=. GUILE_LOAD_COMPILED_PATH=. \
+	GUILE_LOAD_PATH=$(shell pwd) GUILE_LOAD_COMPILED_PATH=$(shell pwd) \
 	  $(GUILD) compile -o $@ $<
 
 .PHONY: nyacc-bins
