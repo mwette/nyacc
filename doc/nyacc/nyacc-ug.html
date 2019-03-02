@@ -7,8 +7,9 @@ under the terms of the GNU Free Documentation License, Version 1.3 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC. -->
-<!-- Created by GNU Texinfo 6.1, http://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 6.5, http://www.gnu.org/software/texinfo/ -->
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>Not Yet Another Compiler Compiler</title>
 
 <meta name="description" content="Not Yet Another Compiler Compiler">
@@ -16,7 +17,6 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <meta name="resource-type" content="document">
 <meta name="distribution" content="global">
 <meta name="Generator" content="texi2any">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link href="#Top" rel="start" title="Top">
 <link href="#SEC_Contents" rel="contents" title="Table of Contents">
 <link href="dir.html#Top" rel="up" title="(dir)">
@@ -93,9 +93,8 @@ Next: <a href="#Demonstration" accesskey="n" rel="next">Demonstration</a>, Previ
   <li><a name="toc-Demonstration-1" href="#Demonstration">1 Demonstration</a>
   <ul class="no-bullet">
     <li><a name="toc-A-Simple-Batch-Calculator" href="#A-Simple-Batch-Calculator">1.1 A Simple Batch Calculator</a></li>
-    <li><a name="toc-An-Interactive-Calculator" href="#An-Interactive-Calculator">1.2 An Interactive Calculator</a></li>
-    <li><a name="toc-Generating-a-Language-to-Run-in-Guile" href="#Generating-a-Language-to-Run-in-Guile">1.3 Generating a Language to Run in Guile</a></li>
-    <li><a name="toc-Debugging-Output" href="#Debugging-Output">1.4 Debugging Output</a></li>
+    <li><a name="toc-Generating-a-Language-to-Run-in-Guile" href="#Generating-a-Language-to-Run-in-Guile">1.2 Generating a Language to Run in Guile</a></li>
+    <li><a name="toc-Debugging-Output" href="#Debugging-Output">1.3 Debugging Output</a></li>
   </ul></li>
   <li><a name="toc-Parsing-1" href="#Parsing">2 Parsing</a>
   <ul class="no-bullet">
@@ -140,31 +139,47 @@ Previous: <a href="#Parsing" accesskey="p" rel="prev">Parsing</a>, Up: <a href="
 <a name="Demonstration-1"></a>
 <h2 class="chapter">1 Demonstration</h2>
 
-<p>This document is a ROUGH DRAFT.
+<p>A LALR(1) parser is a pushdown automata for parsing
+computer languages.  LALR parser generators like <small>NYACC</small> have been
+around since the 1970&rsquo;s.  In <small>NYACC</small> the automata, along with its
+auxiliary parameters (e.g., actions), is called a <em>machine</em>.  The
+grammar is called the <em>specification</em>.  The program that
+processes, driven by the machine, input tokens to generate a final
+output, or error, is the <em>parser</em>.
 </p>
-<p>A LALR(1) parser is a pushdown automata for parsing computer languages.
-In this tool the automata, along with its auxiliary parameters
-(e.g., actions), is called a <em>machine</em>.  The grammar is called 
-the <em>specification</em>.  The program that processes, driven by the 
-machine, input token to generate a final output, or error, is 
-the <em>parser</em>.
+<p>A more detailed explantion of how to use an LALR parser generator
+can be found in the Bison manual (see <a href="#References">References</a>).
 </p>
 <a name="A-Simple-Batch-Calculator"></a>
 <h3 class="section">1.1 A Simple Batch Calculator</h3>
 
-<p>A simplest way to introduce working with <small>NYACC</small> is to work through
-an example.  Consider the following contents of the file <samp>calc1.scm</samp>
-in the distributed directory <code>examples/nyacc/lang/calc/</code>:
+
+
+<p>An easy way to introduce you to <small>NYACC</small> is to work through a simple
+example.  Consider the following.  A similar example is in the file
+<samp>calc.scm</samp> in the subdirectory <code>examples/nyacc/lang/calc/</code>
+of the source distribution.  (To execute the file you need to source
+the file <samp>env.sh</samp> in the top-level sub-directory <samp>examples</samp>.)
 </p><div class="example">
 <pre class="example">(use-modules (nyacc lalr))
 (use-modules (nyacc lex))
 (use-modules (nyacc parse))
 
+(define (next) (newline) (display &quot;&gt; &quot;) (force-output))
+
 (define spec
   (lalr-spec
    (prec&lt; (left &quot;+&quot; &quot;-&quot;) (left &quot;*&quot; &quot;/&quot;))
-   (start expr)
+   (start prog)
    (grammar
+    (prog
+     (stmt-list))
+    (stmt-list
+     (stmt)
+     (stmt-list &quot;\n&quot; stmt))
+    (stmt
+     ($empty ($$ (next)))
+     (expr ($$ (display $1) (next))))
     (expr
      (expr &quot;+&quot; expr ($$ (+ $1 $3)))
      (expr &quot;-&quot; expr ($$ (- $1 $3)))
@@ -172,25 +187,22 @@ in the distributed directory <code>examples/nyacc/lang/calc/</code>:
      (expr &quot;/&quot; expr ($$ (/ $1 $3)))
      ($fixed ($$ (string-&gt;number $1)))
      ($float ($$ (string-&gt;number $1)))
+     ($ident ($$ (module-ref (current-module) (string-&gt;symbol $1))))
      (&quot;(&quot; expr &quot;)&quot; ($$ $2))))))
 
 (define mach (make-lalr-machine spec))
-(define raw-parser (make-lalr-parser mach))
-(define gen-lexer (make-lexer-generator (lalr-match-table mach)))
+(define mtab (lalr-match-table mach))
+(define gen-lexer (make-lexer-generator mtab))
+(define raw-parse (make-lalr-parser mach))
+(define (parse) (raw-parse (gen-lexer)))
 
-(define (calc1-eval str)
-  (with-input-from-string str
-    (lambda () (raw-parser (gen-lexer)))))
-
-(define (calc1-demo string)
-  (simple-format #t &quot;~A =&gt; ~A\n&quot; string (calc1-eval string)))
-
-(calc1-demo &quot;2 + 2&quot;)
+(parse)
 </pre></div>
 <p>Here is an explanation of the above code:
 </p><ol>
 <li> The relevent modules are imported using Guile&rsquo;s <code>use-modules</code> syntax.
-</li><li> The syntax form <code>lalr-spec</code> is used to generate a (canonical)
+</li><li> The procedure <code>next</code> is used to generate a prompt to the user.
+</li><li> The syntax form <code>lalr-spec</code> is used to generate a language
 specification from the grammar and options provided in the form.
 </li><li> The <code>prec&lt;</code> directive indicates that 
 the tokens appearing in the sequence of associativity directives
@@ -210,11 +222,11 @@ Multiple right-hand sides can be written for a single left-hand side.
 </li><li> Non-terminals are indicated using symbols (e.g., <code>expr</code>).
 </li><li> Terminals are indicated using string literals (e.g.,<code>&quot;+&quot;</code>),
 character literals (e.g., <code>#\+</code>), quoted symbols
-(e.g., <code>'+</code>) or NYACC reserved symbols, which always begin with
+(e.g., <code>'+</code>) or <small>NYACC</small>reserved symbols, which always begin with
 <code>$</code>.  Reserved symbols used in this example are <code>$fixed</code> and
 <code>$float</code>.   Note that tokens or terminals do not need to be
-declared as in Bison or the Guile <code>(system base lalr)</code> module.
-</li><li> The reserved symbols <code>$fixed</code> and <code>$float</code> indicate an
+declared as in Bison or in the Guile module <code>(system base lalr)</code>.
+</li><li> The reserved symbols <code>$fixed</code> and <code>$float</code> indicate
 unsigned integer and floating point number, respectively.  The 
 <small>NYACC</small> procedures for generating lexical analyzers will emit this token
 when the corresponding numbers are detected in the input.
@@ -223,51 +235,52 @@ used to specify an action associated with the rule.  Ordinarily, the action
 appears as the last element of a right-hand side, but mid-rule
 actions are possible.  Inside the <code>$$</code> form, the variables
 <code>$1</code>, <code>$2</code>, etc.&nbsp; refer to the symantic value of the
-corresponding item in the right hand side.
+corresponding item in the right hand side of the production rule.
 </li><li> The expression returned by <code>lalr-spec</code> is an association list (a-list);
 you can peek at the internals using typical Scheme procedures for a-lists.
 </li></ul>
-</li><li> The expression comprising the automaton (aka machine) is
-generated using the procedure <code>make-lalr-machine</code>.  This routine
-does the bulk of the processing to produce what is needed to generate
-a LALR(1) parser.  The result is an association list.
-</li><li> Generating a usable parser procedure requires a few steps.  The first is
-to create a raw parser:
-<div class="example">
-<pre class="example">(define raw-parser (make-lalr-parser mach)))
-</pre></div>
-<p>The procedure <code>make-lalr-parser</code> generates a parser (procedure)
-from the machine.  The generated procedure <code>raw-parser</code> takes one
-argument, a lexical analyzer procecdure, and optional keyword arguments.
-</p></li><li> The next task is to create a generator for lexical analyzers.  This is
+</li><li> The the automaton (aka machine) <code>mach</code> is defined using the
+procedure <code>make-lalr-machine</code>, which returns an association list.
+The procedure does the bulk of the work to produce what is needed to
+generate a LALR(1) parser.  Separate procedures can be called to
+further compact tables and hash the automaton. See <a href="#Hashing-and-Compacting">Hashing and Compacting</a>
+</li><li> One item needed is the <em>match-table</em> this is the a-list that maps
+input character, sequences to be read by the lexical analyzer, to
+tokens, either symbols or integers, used by the parser.  The variable
+<code>mtab</code> is defined to be the machine&rsquo;s match-table.
+</li><li> Next we generating a raw parser.  The generated procedure
+<code>raw-parser</code> takes one required argument, a lexical analyzer
+procecdure, and optional keyword arguments.
+</li><li> The next task is to create a generator for lexical analyzers.  This is
 performed as follows: 
 <div class="example">
-<pre class="example">(define gen-lexer (make-lexer-generator (lalr-match-table mach)))
+<pre class="example">(define gen-lexer (make-lexer-generator mtab))
 </pre></div>
-<p>We create a generator here because a lexical analyzer may require
-internal state (e.g., line number, mode).  The generator is
-constructed from the <em>match table</em> provided by the machine.  The
-procedure <code>make-lexer-generator</code> is imported from the module
-<code>(nyacc lex)</code>.  Optional arguments to <code>make-lexer-generator</code>
-allow the user to specify custom readers for identifiers, comments,
-numbers, etc.  See <a href="#lex">lex</a>
-The match table is the handshake between the lexical
-analyzer and the parser for encoding tokens.  In this example the
-match table is symbol based, but there is an option to hash these
-symbols into integers.  See <a href="#Hashing-and-Compacting">Hashing and Compacting</a>
+<p>Note that the above returns a generator for lexical analyzers: lexical
+analysis for a call to the parser may require maintaining internal
+state (e.g., line number, mode).  (Sorry, we now deviate from being
+purely function.  This could be fixed by using continuation passing
+style, but I digress.)  The procedure <code>make-lexer-generator</code> is
+imported from the module <code>(nyacc lex)</code>.  Optional arguments to
+<code>make-lexer-generator</code> allow the user to specify custom readers
+for identifiers, comments, numbers, etc.  See <a href="#lex">lex</a> 
 </p></li><li> We bring the above items together to provide a usable procedure for
-evaluating strings:
+an interactive calculator.
 <div class="example">
-<pre class="example">(define (calc1-eval str)
-  (with-input-from-string str
-    (lambda () (raw-parser (gen-lexer)))))
+<pre class="example">(next)
+(parse)
 </pre></div>
-<p>The lexical analyzer reads code from <code>(current-input-port)</code> so we
-set up the environment using <code>with-input-from-string</code>. 
-See <a href="http://www.gnu.org/software/guile/manual/guile.html#Input-and-Output">(guile)Input and Output</a>  The raw parser is provided a lex&rsquo;er.
+<p>The lexical analyzer reads code from <code>(current-input-port)</code>.  If
+we want to run this on a string we would need to use
+<code>with-input-from-string</code> or equivalent.
+See <a href="http://www.gnu.org/software/guile/manual/guile.html#Input-and-Output">(guile)Input and Output</a> 
 </p></li><li> And now we can run it:
 <div class="example">
-<pre class="example">(calc1-eval &quot;2 + 2&quot;) =&gt; 4
+<pre class="example">$ guile calc.scm
+...
+&gt; 1 + 1
+2
+&gt; 
 </pre></div>
 </li></ol>
 
@@ -278,70 +291,18 @@ See <a href="http://www.gnu.org/software/guile/manual/guile.html#Input-and-Outpu
 $
 </pre></div>
 
-
-<a name="An-Interactive-Calculator"></a>
-<h3 class="section">1.2 An Interactive Calculator</h3>
-
-<p>If one sets up the above code to take input from the terminal it will
-not work as expected, requiring keystrokes beyond a RETURN that
-completes an expression.  If you replace <code>make-lalr-parser</code> with
-<code>make-lalr-ia-parser</code> and motify the code a bit, you can get an
-interactive parser, as shown below.  This example appears as
-<samp>calc2.scm</samp> in the same directory as the example above.  (Note:
-If you look at the <small>NYACC</small> parse module you will see that the base
-parser is quite a bit cleaner than the ia-parser, hence the motivation
-to provide both, at least for now.)  Note that this example uses
-mid-rule actions and other features not discussed above.
-</p>
-<div class="example">
-<pre class="example">(use-modules (nyacc lalr))
-(use-modules (nyacc lex))
-(use-modules (nyacc parse))
-
-(define (next) (newline) (display &quot;&gt; &quot;) (force-output))
-
-(define calc2-spec
-  (lalr-spec
-   (prec&lt; (left &quot;+&quot; &quot;-&quot;) (left &quot;*&quot; &quot;/&quot;))
-   (start stmt-list)
-   (grammar
-    (stmt-list
-     (stmt)
-     (stmt-list stmt))
-    (stmt
-     (expr ($$ (display $1) (next)) &quot;\n&quot;))
-    (expr
-     ($empty ($$ &quot;&quot;))
-     (expr &quot;+&quot; expr ($$ (+ $1 $3)))
-     (expr &quot;-&quot; expr ($$ (- $1 $3)))
-     (expr &quot;*&quot; expr ($$ (* $1 $3)))
-     (expr &quot;/&quot; expr ($$ (/ $1 $3)))
-     ($fixed ($$ (string-&gt;number $1)))
-     ($float ($$ (string-&gt;number $1)))
-     (&quot;(&quot; expr &quot;)&quot; ($$ $2))))))
-
-(define calc2-mach (make-lalr-machine calc2-spec))
-(define match-table (assq-ref calc2-mach 'mtab))
-(define parse (make-lalr-ia-parser calc2-mach))
-(define gen-lexer
-  (make-lexer-generator match-table #:space-chars &quot; \t&quot;))
-
-(next)
-(parse (gen-lexer))
-</pre></div>
-
 <a name="Generating-a-Language-to-Run-in-Guile"></a>
-<h3 class="section">1.3 Generating a Language to Run in Guile</h3>
+<h3 class="section">1.2 Generating a Language to Run in Guile</h3>
 
 <p>One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.   
-The files <samp>parser.scm</samp>, <samp>compiler.scm</samp> in the
+The files <samp>mach.scm</samp>, <samp>parser.scm</samp> and <samp>compiler.scm</samp> in the
 <samp>examples/nyacc/lang/calc</samp> directory and <samp>spec.scm</samp> in the
 <samp>examples/language/calc</samp> directory implement our calculator within this
-Guile infrastructure.  To demonstrate the calculator try the following
-from the <samp>examples</samp> directory.
+Guile infrastructure.  You can run the calculator if you have sourced
+the <samp>env.sh</samp> file as described above.
 </p><div class="example">
-<pre class="example">$ guile -L ../module -L .
+<pre class="example">$ guile
 ...
 scheme@(guile-user)&gt; ,L calc
 ...
@@ -351,12 +312,13 @@ calc@(guile-user)&gt; (2 + 2)/(1 + 1)
 calc@(guile-user)&gt; 
 </pre></div>
 <p>The evaluator uses SXML as the intermediate representation between the
-parser and compiler, which generates to tree-il.  See also the example
+parser and compiler, which generates to Tree-IL.  See also the example
 in the directory <samp>examples/language/javascript</samp> and
-<samp>examples/nyacc/lang/javascript</samp> directories.
+<samp>examples/nyacc/lang/javascript</samp> directories.  For details on the
+Guile backend see 
 </p>
 <a name="Debugging-Output"></a>
-<h3 class="section">1.4 Debugging Output</h3>
+<h3 class="section">1.3 Debugging Output</h3>
 
 <p>The parser can provide debugging output with the appropriate keyword
 argument.  In <samp>calc1.scm</samp> there is a modified version of
@@ -1181,42 +1143,47 @@ next token.
 <a name="Parser-Tables-1"></a>
 <h3 class="section">2.7 Parser Tables</h3>
 <a name="Parser-Tables"></a>
-
 <p>Note that generating a parser requires a machine argument.  It is
 possible to export the machine to a pair of files and later regenerate
 enough info to create a parser from the tables saved in the machine.
 </p>
-<p>For example, Tables can be generated 
+<p>For example, constant tables for a machine can be generated
+using <small>NYACC</small> procedures as follows:
 </p><div class="example">
-<pre class="example">(write-lalr-actions calc1-mach &quot;calc1-act.scm&quot;)
-(write-lalr-tables calc1-mach &quot;calc1-tab.scm&quot;)
+<pre class="example">(write-lalr-actions calc-mach &quot;calc-act.scm&quot; #:prefix &quot;calc-&quot;)
+(write-lalr-tables calc-mach &quot;calc-tab.scm&quot; #:prefix &quot;calc-&quot;)
 </pre></div>
-<p>This saves the variable <code>act-v</code> to the file <samp>calc1-act.scm</samp>
-and the following variables to the file <samp>calc1-tab.scm</samp>:
+<p>This saves the variable definition for <code>calc-act-v</code> to the
+file <samp>calc-act.scm</samp> and variable definitions for the following
+to the file <samp>calc-tab.scm</samp>:
 </p><dl compact="compact">
-<dt><code>len-v</code></dt>
-<dt><code>pat-v</code></dt>
-<dt><code>rto-v</code></dt>
-<dt><code>mtab</code></dt>
+<dt><code>calc-len-v</code></dt>
+<dt><code>calc-pat-v</code></dt>
+<dt><code>calc-rto-v</code></dt>
+<dt><code>calc-mtab</code></dt>
+<dt><code>calc-tables</code></dt>
 </dl>
-<p>The variable <code>act-v</code> is a vector of procedures associated with
+<p>The variable <code>calc-act-v</code> is a vector of procedures associated with
 each of the production rules, to be executed as the associated
-production ruled is reduced in parsing.
+production ruled is reduced in parsing.  The procedures can be
+modified without editing the grammar file and re-executing
+<code>lalr-spec</code> and <code>make-lalr-machine</code>.
 </p>
-<p>Then, without reference to the original specification or need to
-run <code>make-lalr-machine</code>, you can ...
+<p>To create a parser from the generated tables, one can write the
+following code:
 </p><div class="example">
-<pre class="example">(include &quot;calc1-tab.scm&quot;)
-... code for parser ...
-(include &quot;calc1-act.scm&quot;)
+<pre class="example">(include &quot;calc-tab.scm&quot;)
+(include &quot;calc-act.scm&quot;)
+(define raw-parser (make-lalr-parser (acons 'act-v calc-act-v calc-tables)))
 </pre></div>
-
-<p>Check some of the examples in the <small>NYACC</small> distribution.
+<p>See the example code in <samp>examples/nyacc/lang/calc/parser.scm</samp> for
+more detail. 
 </p>
 <a name="Hashing-and-Compacting-1"></a>
 <h3 class="section">2.8 Hashing and Compacting</h3>
 <a name="Hashing-and-Compacting"></a>
-<p>The procedure <code>compact-machine</code> will compact the parse tables.
+<p>The <small>NYACC</small> procedure <code>compact-machine</code> will compact the parse
+tables generated by <code>make-lalr-machine</code>.
 That is, if multiple tokens generate the same transition, then these
 will be combined into a single <em>default</em> transition.
 Ordinarily <small>NYACC</small> will expect symbols to be emitted from the lexical
@@ -1233,7 +1200,6 @@ analyzer.  To use integers instead, use the procedure
 <dt><a name="index-machine_002dcompacted_003f"></a>Procedure: <strong>machine-compacted?</strong> <em>mach =&gt; #t|#f</em></dt>
 <dd><p>Indicate if the machine has been compacted.
 </p></dd></dl>
-
      
 <a name="Exporting-Parsers"></a>
 <h3 class="section">2.9 Exporting Parsers</h3>
@@ -1273,7 +1239,7 @@ are replaced with <code>_</code>.
 the grammar specification and resulting automaton, akin to what you
 might get with bison using the &lsquo;-r&rsquo; flag.
 </p><div class="example">
-<pre class="example">(with-output-to-file &quot;calc1.out&quot;
+<pre class="example">(with-output-to-file &quot;calc.out&quot;
   (lambda ()
     (pp-lalr-grammar calc1-mach)
     (pp-lalr-machine calc1-mach)))
@@ -1281,62 +1247,95 @@ might get with bison using the &lsquo;-r&rsquo; flag.
 
 <p>The above code will generate something that looks like 
 </p><div class="example">
-<pre class="example">0 $start =&gt; stmt-list
-1 stmt-list =&gt;
-2 stmt-list =&gt; stmt-list $P1 stmt
-3 $P1 =&gt;
+<pre class="example">0 $start =&gt; prog
+1 prog =&gt; stmt-list
+2 stmt-list =&gt; stmt
+3 stmt-list =&gt; stmt-list stmt
 4 stmt =&gt; &quot;\n&quot;
 5 stmt =&gt; expr &quot;\n&quot;
-6 expr =&gt; expr &quot;+&quot; expr
-7 expr =&gt; expr &quot;-&quot; expr
-8 expr =&gt; expr &quot;*&quot; expr
-9 expr =&gt; expr &quot;/&quot; expr
-10 expr =&gt; &quot;*&quot; '$error
+6 stmt =&gt; assn &quot;\n&quot;
+7 expr =&gt; expr &quot;+&quot; expr
+8 expr =&gt; expr &quot;-&quot; expr
+9 expr =&gt; expr &quot;*&quot; expr
+10 expr =&gt; expr &quot;/&quot; expr
 11 expr =&gt; '$fixed
 12 expr =&gt; '$float
-13 expr =&gt; &quot;(&quot; expr &quot;)&quot;
+13 expr =&gt; '$ident
+14 expr =&gt; &quot;(&quot; expr &quot;)&quot;
+15 assn =&gt; '$ident &quot;=&quot; expr
 
-0:      $start =&gt; . stmt-list
-        stmt-list =&gt; .
-        stmt-list =&gt; . stmt-list $P1 stmt
-                stmt-list =&gt; shift 1
-                '$end =&gt; reduce 1
-                &quot;(&quot; =&gt; reduce 1
-                '$float =&gt; reduce 1
-                '$fixed =&gt; reduce 1
-                &quot;*&quot; =&gt; reduce 1
-                &quot;\n&quot; =&gt; reduce 1
-
-1:      stmt-list =&gt; stmt-list . $P1 stmt
-        $P1 =&gt; .
-        $start =&gt; stmt-list .
-                $P1 =&gt; shift 2
-                &quot;(&quot; =&gt; reduce 3
-                '$float =&gt; reduce 3
-                '$fixed =&gt; reduce 3
-                &quot;*&quot; =&gt; reduce 3
-                &quot;\n&quot; =&gt; reduce 3
-                '$end =&gt; accept 0
+0:	$start =&gt; . prog
+	prog =&gt; . stmt-list
+	stmt-list =&gt; . stmt
+	stmt-list =&gt; . stmt-list stmt
+	stmt =&gt; . &quot;\n&quot;
+	stmt =&gt; . expr &quot;\n&quot;
+	stmt =&gt; . assn &quot;\n&quot;
+	expr =&gt; . expr &quot;+&quot; expr
+	expr =&gt; . expr &quot;-&quot; expr
+	expr =&gt; . expr &quot;*&quot; expr
+	expr =&gt; . expr &quot;/&quot; expr
+	expr =&gt; . '$fixed
+	expr =&gt; . '$float
+	expr =&gt; . '$ident
+	expr =&gt; . &quot;(&quot; expr &quot;)&quot;
+	assn =&gt; . '$ident &quot;=&quot; expr
+		&quot;(&quot; =&gt; shift 1
+		'$ident =&gt; shift 2
+		'$float =&gt; shift 3
+		'$fixed =&gt; shift 4
+		assn =&gt; shift 5
+		expr =&gt; shift 6
+		&quot;\n&quot; =&gt; shift 7
+		stmt =&gt; shift 8
+		stmt-list =&gt; shift 9
+		prog =&gt; shift 10
 
 ...
 
-21:     expr =&gt; expr . &quot;/&quot; expr
-        expr =&gt; expr . &quot;*&quot; expr
-        expr =&gt; expr . &quot;-&quot; expr
-        expr =&gt; expr . &quot;+&quot; expr
-        expr =&gt; expr &quot;+&quot; expr .
-                &quot;+&quot; =&gt; reduce 6
-                &quot;-&quot; =&gt; reduce 6
-                &quot;*&quot; =&gt; shift 13
-                &quot;/&quot; =&gt; shift 14
-                &quot;\n&quot; =&gt; reduce 6
-                &quot;)&quot; =&gt; reduce 6
-                [&quot;+&quot; =&gt; shift 11] REMOVED by associativity
-                [&quot;-&quot; =&gt; shift 12] REMOVED by associativity
-                [&quot;*&quot; =&gt; reduce 6] REMOVED by precedence
-                [&quot;/&quot; =&gt; reduce 6] REMOVED by precedence
+26:	expr =&gt; expr . &quot;/&quot; expr
+	expr =&gt; expr . &quot;*&quot; expr
+	expr =&gt; expr . &quot;-&quot; expr
+	expr =&gt; expr . &quot;+&quot; expr
+	expr =&gt; expr &quot;+&quot; expr .
+		&quot;*&quot; =&gt; shift 15
+		&quot;/&quot; =&gt; shift 16
+		$default =&gt; reduce 7
+		[&quot;+&quot; =&gt; shift 13] REMOVED by associativity
+		[&quot;-&quot; =&gt; shift 14] REMOVED by associativity
+		[&quot;*&quot; =&gt; reduce 7] REMOVED by precedence
+		[&quot;/&quot; =&gt; reduce 7] REMOVED by precedence
 </pre></div>
 
+<a name="Tracing-Parsing-at-Run_002dTime"></a>
+<h4 class="subheading">Tracing Parsing at Run-Time</h4>
+
+<p>The parsers generted by <small>NYACC</small> accept an optional keyword argument
+<code>#:debug</code>.  When <code>#t</code> is passed to this argument then the
+parser will display shift and reduce actions as it executes.  The
+calculator demo under the examples directory has an option (in
+<samp>calc.scm</samp>) to do this.  Here is what the output looks like
+(with the displayed result edited out).
+</p><div class="example">
+<pre class="example">&gt; 1 + 2
+state 0, token &quot;1&quot;	=&gt; shift, goto 4
+state 4, token &quot;+&quot;	=&gt; reduce 11
+state 0, token expr	=&gt; shift, goto 6
+state 6, token &quot;+&quot;	=&gt; shift, goto 11
+state 11, token &quot;2&quot;	=&gt; shift, goto 4
+state 4, token &quot;\n&quot;	=&gt; reduce 11
+state 11, token expr	=&gt; shift, goto 23
+state 23, token &quot;\n&quot;	=&gt; reduce 7
+state 0, token expr	=&gt; shift, goto 6
+state 6, token &quot;\n&quot;	=&gt; reduce 5
+state 0, token stmt	=&gt; shift, goto 7
+state 7, token &quot;\n&quot;	=&gt; reduce 2
+state 0, token stmt-list	=&gt; shift, goto 8
+state 8, token &quot;\n&quot;	=&gt; shift, goto 10
+</pre></div>
+<p>Currently, when parsers are hashed (using <code>hashify-machine</code> the
+non-terminals (e.g., <code>expr</code> above) are reported as integers.
+</p>
 <hr>
 <a name="Translation"></a>
 <div class="header">
@@ -1739,6 +1738,10 @@ Previous: <a href="#TODOs" accesskey="p" rel="prev">TODOs</a>, Up: <a href="#Top
 <h2 class="chapter">7 References</h2>
 
 <dl compact="compact">
+<dt>[bison]</dt>
+<dd><p>Donnely, C., and Stallman, R., &ldquo;Bison: The Yacc Compatible Parser
+Generator,&rdquo; <a href="https://www.gnu.org/software/bison/manual">https://www.gnu.org/software/bison/manual</a>.
+</p></dd>
 <dt>[DB]</dt>
 <dd><p>Aho, A.V., Sethi, R., and Ullman, J. D., &ldquo;Compilers: Principles,
 Techniques and Tools,&rdquo; Addison-Wesley, 1985 (aka the Dragon Book)
@@ -1751,6 +1754,9 @@ Oct. 1982, pp. 615-649.
 <dt>[RPC]</dt>
 <dd><p>R. P. Corbett, &ldquo;Static Semantics and Compiler Error Recovery,&rdquo;
 Ph.D. Thesis, UC Berkeley, 1985.
+</p></dd>
+<dt>[VM]</dt>
+<dd><p><a href="https://www.gnu.org/software/guile/manual/html_node/Compiling-to-the-Virtual-Machine.html#Compiling-to-the-Virtual-Machine">https://www.gnu.org/software/guile/manual/html_node/Compiling-to-the-Virtual-Machine.html#Compiling-to-the-Virtual-Machine</a>
 </p></dd>
 </dl>
 

@@ -84,7 +84,7 @@ install-srcs:
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  if test -f $${file}; then
+	  if test -f $${file}; then \
 	    cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	  fi; \
 	done
@@ -98,7 +98,7 @@ install-bins: $(NYACC_BINS)
 	  if test ! -d $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; \
 	  fi; \
-	  if test -f $${file}; then
+	  if test -f $${file}; then \
 	    cp $${file} $(DESTDIR)$(SITE_SCM_GO_DIR)/$${file}; \
 	  fi; \
 	done
@@ -117,7 +117,7 @@ install-fh-srcs:
 	done
 
 .PHONY: install-fh-bins
-install-bins: $(NYACC_FH_BINS)
+install-fh-bins: $(NYACC_FH_BINS)
 	if test $(GUILE) -c '(use-modules (bytestructures guile))'; then \
 	  @mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	  @echo "installing NYACC binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"

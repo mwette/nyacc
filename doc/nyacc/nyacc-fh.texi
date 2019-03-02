@@ -998,7 +998,7 @@ How the hell do I deal with varargs?  Skip for now.
 @heading Creating FFI Modules with @code{(nyacc lang c99 ffi-help)}
 
 @example
-(define ffi-module @it{module-name} ...)
+(define ffi-module @var{module-name} ...)
 @end example
 
 @table @code
@@ -1039,14 +1039,14 @@ todo
 @item #:cpp-defs
 This form, with a list of strings, provides extra C preprodessor
 definitions to be used in processing the header files.  The defines
-take the form @code{"SYM=}@it{val}@code{"}.
+take the form @code{"SYM=}@var{val}@code{"}.
 @item #:inc-dirs
 todo
 @item #:inc-help
 todo
 @item #:api-code
 todo
-@end example
+@end table
 
 @example
   #:library '("libcairo" "libmisc")

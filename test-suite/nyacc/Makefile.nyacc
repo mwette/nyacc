@@ -13,7 +13,7 @@ GUILE=guile
 
 TESTS_ENVIRONMENT = \
         GUILE_LOAD_PATH= GUILE_AUTO_COMPILE=0 \
-	$(GUILE) -L `pwd`/../../module -L `pwd`/..
+	$(GUILE) -C `pwd`/../../module -L `pwd`/..
 
 TESTS = \
 	lex-01.test				\

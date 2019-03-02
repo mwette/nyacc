@@ -60,7 +60,7 @@ processes, driven by the machine, input tokens to generate a final
 output, or error, is the @emph{parser}.
 
 A more detailed explantion of how to use an LALR parser generator
-can be found in the Bison manual (see @ref{bison}).
+can be found in the Bison manual (see @ref{References}).
 
 @section A Simple Batch Calculator
 

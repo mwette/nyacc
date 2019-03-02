@@ -1,14 +1,15 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Copyright (C) 2017-2018 - Matthew R. Wette.
+<!-- Copyright (C) 2017-2019 - Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC. -->
-<!-- Created by GNU Texinfo 6.1, http://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 6.5, http://www.gnu.org/software/texinfo/ -->
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>FFI Helper for Guile</title>
 
 <meta name="description" content="FFI Helper for Guile">
@@ -16,7 +17,6 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <meta name="resource-type" content="document">
 <meta name="distribution" content="global">
 <meta name="Generator" content="texi2any">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link href="#Top" rel="start" title="Top">
 <link href="dir.html#Top" rel="up" title="(dir)">
 <style type="text/css">
@@ -61,8 +61,8 @@ ul.no-bullet {list-style: none}
 <h1 class="top">FFI Helper for Guile</h1>
 <div class="format">
 <pre class="format">Matt Wette
-December 2018
-With NYACC Version 0.90.2
+February 2019
+With NYACC Version 0.91.0
 </pre></div>
 
 
@@ -109,7 +109,6 @@ code to a new machine, you should re-run <code>guild compile-ffi</code>.
 </p>
 <p>You are probably hoping to see an example, so let&rsquo;s try one.
 </p>
-
 <p>This is a small FH example to illustrate its use.  We will
 start with the <a href="cairographics.org">Cairo</a> package because that is
 the first one I started with in developing the FFI Helper.  Say you
@@ -553,23 +552,70 @@ passed by reference as return types.  For example
 </p>
 
 
-<a name="Creating-FFI-Modules"></a>
-<h3 class="heading">Creating FFI Modules</h3>
+<a name="Creating-FFI-Modules-with-_0028nyacc-lang-c99-ffi_002dhelp_0029"></a>
+<h3 class="heading">Creating FFI Modules with <code>(nyacc lang c99 ffi-help)</code></h3>
 
-<p>What might go into the Guile Ref Manual needs to include these:
-</p><div class="example">
-<pre class="example">#:api-code
-#:cpp-defs
-#:decl-filter
-#:inc-dirs
-#:inc-filter
-#:inc-help
-#:include
-#:library
-#:pkg-config
-#:renamer
-#:use-ffi-module
+<div class="example">
+<pre class="example">(define ffi-module <var>module-name</var> ...)
 </pre></div>
+
+<dl compact="compact">
+<dt><code>#:pkg-config</code></dt>
+<dd><p>This option take a single string argument which provides the name used
+for the <em>pkg-config</em> program.  Try <code>man pkg-config</code>.
+</p></dd>
+<dt><code>#:include</code></dt>
+<dd><p>This form, with expression argument, indicates the list of include
+files to be processed at the top level.  Without use of the
+<code>#:inc-filter</code> form, only declarations in these files will be
+output.  To constrain the set of declarations output use the
+<code>#:decl-filter</code> form.
+</p></dd>
+<dt><code>#:inc-filter</code></dt>
+<dd><p>This form, with predicate procedure argument taking the form
+<code>(proc file-spec path-spec)</code>, is used to indicate which includes
+beyond the top-level should have processed declarations emitted in the
+output.  The <code>file-spec</code> argument is a string as parsed from
+<code>#include</code> statements in the C code, including brackets or double
+quotes (e.g., <code>&quot;&lt;stdio.h&gt;&quot;</code>, <code>&quot;\&quot;foo.h\&quot;&quot;</code>).  The
+<code>path-spec</code> is the full path to the file.
+</p></dd>
+<dt><code>#:use-ffi-module</code></dt>
+<dd><p>This form, with literal module-type argument (e.g., <code>(ffi
+glib)</code>), indicates dependency on declarations from another processed
+ffi module.  For example, the ffi-module for <code>(ffi gobject)</code>
+includes the form <code>#:use-ffi-module (ffi glib)</code>.
+</p></dd>
+<dt><code>#:decl-filter</code></dt>
+<dd><p>This form, with a predicate procedure argument, is used to restrict
+which declarations should be processed for output.  The single
+argument is either a string or a pair.  The string form is used for
+simple identifiers and the pair is used for struct, union and enum
+forms from the C code (e.g., <code>(struct . &quot;foo&quot;)</code>).
+</p></dd>
+<dt><code>#:library</code></dt>
+<dd><p>This form, with a list of strings, indicates which (shared object)
+libraries need to be loaded.  The formmat of each string in the list
+should be as provided to the <code>dynamic-link</code> form in Guile.
+</p></dd>
+<dt><code>#:renamer</code></dt>
+<dd><p>todo
+</p></dd>
+<dt><code>#:cpp-defs</code></dt>
+<dd><p>This form, with a list of strings, provides extra C preprodessor
+definitions to be used in processing the header files.  The defines
+take the form <code>&quot;SYM=</code><var>val</var><code>&quot;</code>.
+</p></dd>
+<dt><code>#:inc-dirs</code></dt>
+<dd><p>todo
+</p></dd>
+<dt><code>#:inc-help</code></dt>
+<dd><p>todo
+</p></dd>
+<dt><code>#:api-code</code></dt>
+<dd><p>todo
+</p></dd>
+</dl>
 
 <div class="example">
 <pre class="example">  #:library '(&quot;libcairo&quot; &quot;libmisc&quot;)
@@ -786,10 +832,11 @@ with NYACC&rsquo;s C99 parser.  There is no such thing as a working C standard.
 </pre></div>
 
 
-<a name="The-Module-_0028system-ffi_002dhelp_002drt_0029"></a>
-<h3 class="heading">The Module <code>(system ffi-help-rt)</code></h3>
+<a name="The-Run_002dtime-Module-_0028system-ffi_002dhelp_002drt_0029"></a>
+<h3 class="heading">The Run-time Module <code>(system ffi-help-rt)</code></h3>
 
-
+<p>Here we provide details of the run-time support module.
+</p>
 
 
 <a name="Work-to-Go"></a>
