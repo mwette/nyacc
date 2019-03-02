@@ -75,6 +75,11 @@ check:
 	(cd test-suite/nyacc; \
 	 make -f Makefile.nyacc GUILE=$(GUILE) check)
 
+.PHONY: clean
+clean:
+	(cd module; \
+	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) clean)
+
 .PHONY: dist-clean
 dist-clean:
 	rm -f Makefile
