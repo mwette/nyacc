@@ -72,7 +72,7 @@ nyacc-fh-bins: $(NYACC_FH_BINS)
 .PHONY: install
 install:
 	@$(MAKE) -f Makefile.nyacc install-srcs install-fh-srcs install-bins 
-	@if $(GUILE) -d '(use-modules (bytestructures guile))'; then \
+	@if $(GUILE) -c '(use-modules (bytestructures guile))'; then \
 	  $(MAKE) -f Makefile.nyac install-fh-bins; \
 	fi
 
