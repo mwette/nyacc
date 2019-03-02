@@ -71,9 +71,9 @@ nyacc-fh-bins: $(NYACC_FH_BINS)
 
 .PHONY: install
 install:
-	@make install-srcs install-fh-srcs install-bins 
+	@$(MAKE) -f Makefile.nyacc install-srcs install-fh-srcs install-bins 
 	@if test $(GUILE) -d '(use-modules (bytestructures guile))'; then \
-	  make install-fh-bins; \
+	  $(MAKE) -f Makefile.nyac install-fh-bins; \
 	fi
 
 .PHONY: install-srcs
@@ -132,6 +132,12 @@ install-fh-bins: $(NYACC_FH_BINS)
 	else \
 	  echo "FH binaries not installed"; \
 	fi
+
+.PHONY: clean
+clean:
+	(cd nyacc; rm -f *.go)
+	(cd nyacc/lang; rm -f *.go)
+	(cd nyacc/lang/c99; rm -f *.go)
 
 .PHONY: dist-files
 dist-files:
