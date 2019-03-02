@@ -70,7 +70,11 @@ nyacc-bins: $(NYACC_BINS)
 nyacc-fh-bins: $(NYACC_FH_BINS)
 
 .PHONY: install
-install: install-srcs install-fh-srcs install-bins install-fh-bins
+install:
+	@make install-srcs install-fh-srcs install-bins 
+	@if test $(GUILE) -d '(use-modules (bytestructures guile))'; then \
+	  make install-fh-bins; \
+	fi
 
 .PHONY: install-srcs
 install-srcs:
