@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2016-2018 Matthew R. Wette
+;; Copyright (C) 2016-2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -1375,16 +1375,15 @@
 	(init-declr (ident ,typename)))
        (cond
 	;; This case represents three possible uses:
-	((member struct-name defined)
+	((member (w/struct struct-name) defined)
 	 ;; 1) struct defined previously
-	 ;;(sferr " CASE1\n")
 	 (sfscm "(define-public ~A-desc struct-~A-desc)\n" typename struct-name)
 	 (sfscm "(define-public ~A*-desc struct-~A*-desc)\n"
-		typename struct-name))
+		typename struct-name)
+	 (fhscm-def-compound typename))
 	((udict-struct-ref udict struct-name) =>
 	 ;; 2) struct defined later
 	 (lambda (struct-decl)
-	   ;;(sferr " CASE2 (~S)\n" struct-name)
 	   (back-ref-extend! struct-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
 	   (sfscm "(define-public ~A fh-void)\n" typename)
@@ -1395,7 +1394,6 @@
 	   ))
 	(else
 	 ;; 3) struct never defined; only used as pointer
-	 ;;(sferr " CASE3\n")
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
 	 (sfscm "(define-fh-type-alias ~A fh-void)\n" typename)
 	 (sfscm "(define-public ~A? fh-void?)\n" typename)
@@ -1460,11 +1458,12 @@
 	(init-declr (ident ,typename)))
        (cond
 	;; This case represents three possible uses:
-	((member union-name defined)
+	((member (w/union union-name) defined)
 	 ;; 1) union defined previously
 	 (sfscm "(define-public ~A-desc union-~A-desc)\n" typename union-name)
 	 (sfscm "(define-public ~A*-desc union-~A*-desc)\n"
-		typename union-name))
+		typename union-name)
+	 (fhscm-def-compound typename))
 	((udict-union-ref udict union-name) =>
 	 ;; 2) union defined later
 	 (lambda (union-decl)
@@ -1519,11 +1518,8 @@
 	 (ftn-declr
 	  (scope (ptr-declr (pointer) (ident ,typename)))
 	  (param-list . ,params))))
-       ;;(if (string=? typename "git_reference_foreach") (pperr udecl))
        (let* ((ret-decl `(udecl (decl-spec-list . ,rst)
 				(init-declr (ident "_"))))
-	      ;;(decl-return (gen-decl-return ret-decl))
-	      ;;(decl-params (gen-decl-params params))
 	      (decl-return (gen-bs-decl-return ret-decl))
 	      (decl-params (gen-bs-decl-params params))
 	      )
@@ -1561,7 +1557,6 @@
 	 (stor-spec (typedef))
 	 (type-spec (typename ,name)))
 	(init-declr (ident ,typename)))
-       ;;(sferr "typedef ~S =>\n" typename) (pperr (udict-ref udict name))
        (cond
 	((member name bs-defined)
 	 (values wrapped defined))
@@ -1604,8 +1599,8 @@
 	((not (member (w/struct struct-name) defined))
 	 (cnvt-struct-def attr1 #f struct-name field-list)
 	 ;; Hoping don't need w/struct*
-	 (values (cons* (w/struct struct-name) wrapped)
-		 (cons* (w/struct struct-name) defined)))
+	 (values (cons (w/struct struct-name) wrapped)
+		 (cons (w/struct struct-name) defined)))
 	(else
 	 (values wrapped defined))))
 
@@ -1620,10 +1615,11 @@
       ;; union foo { ... }.
       ((udecl
 	(decl-spec-list
-	 (type-spec (union-def (ident ,union-name) ,field-list))))
+	 (type-spec (union-def (@ . ,attr1) (ident ,union-name) ,field-list))))
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
+	   (sferr "  back-ref\n")
 	   (cnvt-union-def #f #f union-name field-list)
 	   (for-each
 	    (lambda (typename)
@@ -1635,7 +1631,7 @@
 	   (values (cons (w/union union-name) wrapped)
 		   (cons (w/union union-name) defined))))
 	((not (member (w/union union-name) defined))
-	 (cnvt-union-def #f #f union-name field-list)
+	 (cnvt-union-def attr1 #f union-name field-list)
 	 (values (cons (w/union union-name) wrapped)
 		 (cons (w/union union-name) defined)))
 	(else
@@ -2017,7 +2013,7 @@
 		  ((assq-ref attrs 'include) (parse-includes attrs))
 		  ((assq-ref attrs 'api-code) =>
 		   (lambda (code) (parse-code code attrs)))
-		  (else (fherr "expecing #:includes or #:api-code")))))
+		  (else (fherr "expecing #:include or #:api-code")))))
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (udict (c99-trans-unit->udict/deep tree))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict

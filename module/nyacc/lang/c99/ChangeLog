@@ -1,3 +1,10 @@
+2019-03-24  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* ffi-help.scm (cnvt-udecl): fixed error in "typedef union foo
+	foo_t;" by adding (fhscm-def-compound typename).  The desc was
+	being defined but not the type.  This was causing (make-foo_t)
+	return a void.  Same issue for "typedef struct foo foo_t".
+
 2019-02-05  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* ffi-help.scm (gen-lookup-proc): in-line open "/dev/null" was
