@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2019-04-02  V0.92.0 devel...
+2019-04-02  V0.92.0 release
 	
 	* The distribution has been converted to using autoconf, but
 	  without automake, which brings in a lot of rubble, IMO.
