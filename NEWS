@@ -10,6 +10,9 @@ without any warranty.
 	* The distribution has been converted to using autoconf, but
 	  without automake, which brings in a lot of rubble, IMO.
 
+	* Fixed bug in the ffi-helper that was genering bad code for
+	  unions.
+
 2019-01-18  V0.91.0 release
 
 	* module/nyacc/parse.scm (dmsg/n): added ntab information; so
