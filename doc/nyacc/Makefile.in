@@ -13,9 +13,12 @@ GUILD = @GUILD@
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
+prefix = @prefix@
+
 SHELL = @SHELL@
+PACKAGE_TARNAME = nyacc
 INFODIR = @infodir@
-DOCDIR = @docdir@/doc/nyacc
+DOCDIR = @docdir@
 
 TOPDIR = @abs_top_builddir@
 MODDIR = $(TOPDIR)/module

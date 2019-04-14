@@ -13,6 +13,8 @@ GUILD = @GUILD@
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
+prefix = @prefix@
+
 SHELL = @SHELL@
 TOPDIR = @abs_top_builddir@
 MODDIR = $(TOPDIR)/module
@@ -63,14 +65,14 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/cxmach.scm		\
 	nyacc/lang/c99/cxeval.scm		\
 	nyacc/lang/c99/body.scm			\
-	nyacc/lang/c99/mach.d/c99act.scm	\
-	nyacc/lang/c99/mach.d/c99tab.scm	\
-	nyacc/lang/c99/mach.d/c99xact.scm	\
-	nyacc/lang/c99/mach.d/c99xtab.scm	\
-	nyacc/lang/c99/mach.d/cppact.scm	\
-	nyacc/lang/c99/mach.d/cpptab.scm	\
-	nyacc/lang/c99/mach.d/c99cxact.scm	\
-	nyacc/lang/c99/mach.d/c99cxtab.scm
+	nyacc/lang/c99/mach.d/cpp-act.scm	\
+	nyacc/lang/c99/mach.d/cpp-tab.scm	\
+	nyacc/lang/c99/mach.d/c99-act.scm	\
+	nyacc/lang/c99/mach.d/c99-tab.scm	\
+	nyacc/lang/c99/mach.d/c99x-act.scm	\
+	nyacc/lang/c99/mach.d/c99x-tab.scm	\
+	nyacc/lang/c99/mach.d/c99cx-act.scm	\
+	nyacc/lang/c99/mach.d/c99cx-tab.scm
 
 NYACC_FH_BINS =					\
 	nyacc/lang/c99/ffi-help.go		\
@@ -91,11 +93,7 @@ SOURCES = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS) $(NYACC_FH_SRCS)
 
 .PHONY: nyacc-bins
 nyacc-bins: $(BINARIES)
-	@for binfile in $(BINARIES); do \
-	    srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	    GUILE_LOAD_PATH=$(MODDIR) GUILE_LOAD_COMPILED_PATH=$(MODDIR) \
-	    $(GUILD) compile -o $${binfile} $${srcfile}; \
-	done
+	@true
 
 .PHONY: install
 install:

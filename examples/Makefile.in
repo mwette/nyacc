@@ -14,6 +14,8 @@ GUILD = @guIlD@
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
+prefix = @prefix@
+
 SHELL = @SHELL@
 TOPDIR = @abs_top_builddir@
 MODDIR = $(TOPDIR)/module
