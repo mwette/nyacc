@@ -13,3 +13,5 @@ Makefile
 examples/nyacc/lang/ffi-help/*.png
 examples/nyacc/lang/ffi-help/xlsxlogo.png
 .DS_Store
+config.status
+etc/autom4te.cache

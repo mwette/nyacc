@@ -14,12 +14,12 @@ SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
 SHELL = @SHELL@
-INFODIR= @infodir@
-DOCDIR= @docdir@/doc/nyacc
+INFODIR = @infodir@
+DOCDIR = @docdir@/doc/nyacc
 
 TOPDIR = @abs_top_builddir@
 MODDIR = $(TOPDIR)/module
-INSTALL=cp
+INSTALL = cp
 
 SCM_FILES_W_TEXI = \
 	../../module/nyacc/lalr.scm \

@@ -2381,7 +2381,7 @@ else
 fi
 
 
-ac_config_files="$ac_config_files Makefile module/Makefile"
+ac_config_files="$ac_config_files Makefile module/Makefile doc/nyacc/Makefile test-suite/nyacc/Makefile test-suite/nyacc/lang/Makefile test-suite/nyacc/lang/c99/Makefile examples/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -3092,6 +3092,11 @@ do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "module/Makefile") CONFIG_FILES="$CONFIG_FILES module/Makefile" ;;
+    "doc/nyacc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/nyacc/Makefile" ;;
+    "test-suite/nyacc/Makefile") CONFIG_FILES="$CONFIG_FILES test-suite/nyacc/Makefile" ;;
+    "test-suite/nyacc/lang/Makefile") CONFIG_FILES="$CONFIG_FILES test-suite/nyacc/lang/Makefile" ;;
+    "test-suite/nyacc/lang/c99/Makefile") CONFIG_FILES="$CONFIG_FILES test-suite/nyacc/lang/c99/Makefile" ;;
+    "examples/Makefile") CONFIG_FILES="$CONFIG_FILES examples/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

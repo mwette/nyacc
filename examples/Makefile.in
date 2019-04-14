@@ -1,6 +1,6 @@
-# examples/Makefile.nyacc		-*- Makefile -*-
+# examples/Makefile.in		-*- Makefile -*-
 #
-# Copyright (C) 2017,2018 -  Matthew R. Wette
+# Copyright (C) 2017-2019 -  Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -8,8 +8,15 @@
 # without any warranty.
 #
 
-GUILE = guile
-GUILD = guild
+GUILE = @GUILE@
+GUILD = @guIlD@
+
+SITE_SCM_DIR = @GUILE_SITE@
+SITE_SCM_GO_DIR = @GUILE_SITE_GO@
+
+SHELL = @SHELL@
+TOPDIR = @abs_top_builddir@
+MODDIR = $(TOPDIR)/module
 
 FH_FFIS = \
 	ffi/cairo.ffi ffi/gdbm.ffi ffi/sqlite3.ffi \
@@ -29,11 +36,11 @@ FFI_GO_FILES = $(FH_FFIS:.ffi=.go)
 
 %.scm: %.ffi
 	@echo "This may take a little time:"
-	guild compile-ffi $< 
+	$(GUILD) compile-ffi $< 
 
 %.go: %.scm
 	@echo "This may take significant tme:"
-	guild compile -o $@ $<
+	$(GUILD) compile -o $@ $<
 
 all: $(FFI_GO_FILES)
 

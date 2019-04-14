@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/c99-tab.scm
+;; ./mach.d/c99-tab.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
@@ -7,6 +7,77 @@
 ;; License as published by the Free Software Foundation; either
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING included with the this distribution.
+
+(define c99-mtab
+  '(($start . 230) ("_Pragma" . 3) ($pragma . 4) (cpp-stmt . 5) ($lone-comm . 
+    6) ($code-comm . 7) ($chlit/U . 8) ($chlit/u . 9) ($chlit/L . 10) ($chlit 
+    . 11) ($float . 12) ($ident . 13) ($string . 14) ("__asm__" . 15) (
+    "return" . 16) ("break" . 17) ("continue" . 18) ("goto" . 19) ("for" . 20)
+    ("do" . 21) ("while" . 22) ("switch" . 23) ("else" . 24) (then . 25) 
+    ("if" . 26) ("default" . 27) ("case" . 28) (typename . 29) ("..." . 30) 
+    ($fixed . 31) ("__alignof__" . 32) ("__aligned__" . 33) ("__packed__" . 34
+    ) ("__attribute__" . 35) ("_Noreturn" . 36) ("inline" . 37) ("restrict" . 
+    38) ("volatile" . 39) ("const" . 40) ("enum" . 41) ("union" . 42) (
+    "struct" . 43) ("_Complex" . 44) ("double" . 45) ("float" . 46) ("char" . 
+    47) ("unsigned" . 48) ("long" . 49) ("signed" . 50) ("int" . 51) (imp . 52
+    ) ("short" . 53) ("_Bool" . 54) ("void" . 55) ("typedef" . 56) ("static" 
+    . 57) ("register" . 58) ("extern" . 59) ("auto" . 60) (reduce-on-semi . 61
+    ) (reduce-on-attr . 62) (shift-on-attr . 63) (";" . 64) ("|=" . 65) 
+    ("^=" . 66) ("&=" . 67) (">>=" . 68) ("<<=" . 69) ("%=" . 70) ("/=" . 71) 
+    ("*=" . 72) ("-=" . 73) ("+=" . 74) ("=" . 75) (":" . 76) ("?" . 77) 
+    ("||" . 78) ("&&" . 79) ("|" . 80) ("^" . 81) ("!=" . 82) ("==" . 83) 
+    (">=" . 84) ("<=" . 85) (">" . 86) ("<" . 87) (">>" . 88) ("<<" . 89) 
+    ("%" . 90) ("/" . 91) ("!" . 92) ("~" . 93) ("-" . 94) ("+" . 95) ("*" . 
+    96) ("&" . 97) ("sizeof" . 98) ("," . 99) ("--" . 100) ("++" . 101) 
+    ("->" . 102) ("." . 103) ("]" . 104) ("[" . 105) ("}" . 106) ("{" . 107) 
+    (")" . 108) ("(" . 109) ($error . 2) ($end . 111)))
+
+(define c99-ntab
+  '((112 . string-literal-1) (113 . $P6) (114 . $P5) (115 . 
+    function-definition) (116 . external-declaration) (117 . 
+    external-declaration-list) (118 . asm-input) (119 . asm-output) (120 . 
+    asm-clobbers) (121 . asm-inputs) (122 . asm-outputs) (123 . 
+    opt-asm-specifiers) (124 . opt-expression) (125 . initial-clause) (126 . 
+    declaration) (127 . block-item) (128 . $P4) (129 . $P3) (130 . statement) 
+    (131 . cpp-statement) (132 . pragma) (133 . asm-statement) (134 . 
+    jump-statement) (135 . iteration-statement) (136 . selection-statement) 
+    (137 . expression-statement) (138 . compound-statement) (139 . 
+    labeled-statement) (140 . designator) (141 . designator-list) (142 . 
+    designation) (143 . direct-abstract-declarator) (144 . 
+    specifier-qualifier-list/no-attr) (145 . identifier-list-1) (146 . 
+    parameter-declaration) (147 . parameter-list) (148 . type-qualifier-list-1
+    ) (149 . identifier-list) (150 . parameter-type-list) (151 . 
+    type-qualifier-list) (152 . direct-declarator) (153 . pointer) (154 . 
+    asm-expression) (155 . initializer) (156 . init-declarator-1) (157 . 
+    init-declarator) (158 . init-declarator-list-1) (159 . attribute-expr) 
+    (160 . attr-expr-list-1) (161 . attr-expr-list) (162 . attr-word) (163 . 
+    attribute) (164 . attribute-list-1) (165 . attr-name) (166 . 
+    attribute-list) (167 . enumerator) (168 . enumerator-list) (169 . 
+    constant-expression) (170 . declarator) (171 . struct-declarator-1) 
+    (172 . struct-declarator) (173 . specifier-qualifier-list/no-attr-1) 
+    (174 . specifier-qualifier-list-1) (175 . struct-declarator-list) (176 . 
+    specifier-qualifier-list) (177 . struct-declaration-no-comment) (178 . 
+    lone-comment) (179 . struct-declaration) (180 . attribute-specifiers) 
+    (181 . struct-declaration-list) (182 . ident-like) (183 . opt-attr-specs) 
+    (184 . typedef-name) (185 . enum-specifier) (186 . 
+    struct-or-union-specifier) (187 . complex-type-specifier) (188 . 
+    float-type-specifier) (189 . fixed-type-specifier) (190 . 
+    attribute-specifier) (191 . function-specifier) (192 . type-qualifier) 
+    (193 . type-specifier) (194 . storage-class-specifier) (195 . 
+    declaration-specifiers-1) (196 . init-declarator-list) (197 . code-comment
+    ) (198 . declaration-no-comment) (199 . assignment-operator) (200 . 
+    conditional-expression) (201 . logical-or-expression) (202 . 
+    logical-and-expression) (203 . bitwise-or-expression) (204 . 
+    bitwise-xor-expression) (205 . bitwise-and-expression) (206 . 
+    equality-expression) (207 . relational-expression) (208 . shift-expression
+    ) (209 . additive-expression) (210 . multiplicative-expression) (211 . 
+    cast-expression) (212 . unary-operator) (213 . unary-expression) (214 . 
+    abstract-declarator) (215 . declaration-specifiers) (216 . arg-expr-hack) 
+    (217 . assignment-expression) (218 . initializer-list) (219 . type-name) 
+    (220 . argument-expression-list) (221 . postfix-expression) (222 . 
+    primary-expression) (223 . $P2) (224 . block-item-list) (225 . $P1) 
+    (226 . expression) (227 . string-literal) (228 . constant) (229 . 
+    identifier) (230 . translation-unit)))
 
 (define c99-len-v
   #(1 1 1 1 3 7 0 0 1 4 4 3 3 3 2 2 6 7 1 3 1 3 2 1 1 2 2 2 2 4 1 1 1 1 1 1 1
@@ -20,6 +91,30 @@
     1 3 4 2 1 4 3 2 1 2 3 2 1 1 1 1 1 1 1 1 1 3 4 4 3 5 2 0 0 1 2 1 1 2 1 5 7 
     5 5 7 8 2 1 1 0 1 3 2 2 3 2 2 5 6 7 8 0 1 1 2 3 4 7 1 2 3 4 7 1 2 3 1 0 2 
     1 1 1 1 1 7 1 0 0 3 1 1 1 1 1 1 1 1 1 2 1 1 1 1 4))
+
+(define c99-rto-v
+  #(#f 222 222 222 222 222 225 223 221 221 221 221 221 221 221 221 221 221 
+    220 220 220 220 216 216 213 213 213 213 213 213 212 212 212 212 212 212 
+    211 211 210 210 210 210 209 209 209 208 208 208 207 207 207 207 207 206 
+    206 206 205 205 204 204 203 203 202 202 201 201 200 200 217 217 199 199 
+    199 199 199 199 199 199 199 199 199 226 226 169 126 126 198 198 215 195 
+    195 195 195 195 195 195 195 195 195 194 194 194 194 194 193 193 193 193 
+    193 193 193 193 189 189 189 189 189 189 189 189 189 189 189 189 189 189 
+    189 189 189 189 189 189 189 189 189 189 189 189 188 188 188 187 187 187 
+    187 186 186 186 186 186 186 182 182 183 183 181 181 181 181 181 181 179 
+    179 177 177 176 174 174 174 174 174 174 144 173 173 173 173 175 175 175 
+    172 171 171 171 171 185 185 185 185 185 168 168 167 167 167 192 192 192 
+    191 191 180 180 190 190 165 165 165 166 164 164 164 163 163 162 162 161 
+    160 160 159 159 159 159 159 196 158 158 158 157 156 156 156 156 156 156 
+    156 170 170 153 153 153 153 153 152 152 152 152 152 152 152 152 152 152 
+    152 152 152 152 151 148 148 150 150 147 147 146 146 146 149 145 145 219 
+    219 214 214 214 143 143 143 143 143 143 143 143 143 143 143 143 143 143 
+    143 143 143 143 143 143 143 184 155 155 155 218 218 218 218 142 141 141 
+    140 140 130 130 130 130 130 130 130 130 130 139 139 139 139 138 138 129 
+    128 224 224 127 127 137 137 136 136 136 135 135 135 125 125 125 124 124 
+    134 134 134 134 134 133 154 154 154 154 123 123 122 122 122 119 119 121 
+    121 121 118 118 120 120 120 230 117 117 116 116 116 116 116 116 116 114 
+    113 115 229 228 228 228 228 228 228 227 112 112 197 178 131 132 132))
 
 (define c99-pat-v
   #(((117 . 1) (230 . 2) (6 . -368) (4 . -368) (1 . -368)) ((29 . 3) (32 . 4)
@@ -1052,107 +1147,13 @@
     (213 . 191) (200 . 192) (217 . 274) (226 . 624)) ((108 . 626) (99 . 416)) 
     ((1 . -358)) ((1 . -363))))
 
-(define c99-rto-v
-  #(#f 222 222 222 222 222 225 223 221 221 221 221 221 221 221 221 221 221 
-    220 220 220 220 216 216 213 213 213 213 213 213 212 212 212 212 212 212 
-    211 211 210 210 210 210 209 209 209 208 208 208 207 207 207 207 207 206 
-    206 206 205 205 204 204 203 203 202 202 201 201 200 200 217 217 199 199 
-    199 199 199 199 199 199 199 199 199 226 226 169 126 126 198 198 215 195 
-    195 195 195 195 195 195 195 195 195 194 194 194 194 194 193 193 193 193 
-    193 193 193 193 189 189 189 189 189 189 189 189 189 189 189 189 189 189 
-    189 189 189 189 189 189 189 189 189 189 189 189 188 188 188 187 187 187 
-    187 186 186 186 186 186 186 182 182 183 183 181 181 181 181 181 181 179 
-    179 177 177 176 174 174 174 174 174 174 144 173 173 173 173 175 175 175 
-    172 171 171 171 171 185 185 185 185 185 168 168 167 167 167 192 192 192 
-    191 191 180 180 190 190 165 165 165 166 164 164 164 163 163 162 162 161 
-    160 160 159 159 159 159 159 196 158 158 158 157 156 156 156 156 156 156 
-    156 170 170 153 153 153 153 153 152 152 152 152 152 152 152 152 152 152 
-    152 152 152 152 151 148 148 150 150 147 147 146 146 146 149 145 145 219 
-    219 214 214 214 143 143 143 143 143 143 143 143 143 143 143 143 143 143 
-    143 143 143 143 143 143 143 184 155 155 155 218 218 218 218 142 141 141 
-    140 140 130 130 130 130 130 130 130 130 130 139 139 139 139 138 138 129 
-    128 224 224 127 127 137 137 136 136 136 135 135 135 125 125 125 124 124 
-    134 134 134 134 134 133 154 154 154 154 123 123 122 122 122 119 119 121 
-    121 121 118 118 120 120 120 230 117 117 116 116 116 116 116 116 116 114 
-    113 115 229 228 228 228 228 228 228 227 112 112 197 178 131 132 132))
-
-(define c99-ntab
-  '((112 . string-literal-1) (113 . $P6) (114 . $P5) (115 . 
-    function-definition) (116 . external-declaration) (117 . 
-    external-declaration-list) (118 . asm-input) (119 . asm-output) (120 . 
-    asm-clobbers) (121 . asm-inputs) (122 . asm-outputs) (123 . 
-    opt-asm-specifiers) (124 . opt-expression) (125 . initial-clause) (126 . 
-    declaration) (127 . block-item) (128 . $P4) (129 . $P3) (130 . statement) 
-    (131 . cpp-statement) (132 . pragma) (133 . asm-statement) (134 . 
-    jump-statement) (135 . iteration-statement) (136 . selection-statement) 
-    (137 . expression-statement) (138 . compound-statement) (139 . 
-    labeled-statement) (140 . designator) (141 . designator-list) (142 . 
-    designation) (143 . direct-abstract-declarator) (144 . 
-    specifier-qualifier-list/no-attr) (145 . identifier-list-1) (146 . 
-    parameter-declaration) (147 . parameter-list) (148 . type-qualifier-list-1
-    ) (149 . identifier-list) (150 . parameter-type-list) (151 . 
-    type-qualifier-list) (152 . direct-declarator) (153 . pointer) (154 . 
-    asm-expression) (155 . initializer) (156 . init-declarator-1) (157 . 
-    init-declarator) (158 . init-declarator-list-1) (159 . attribute-expr) 
-    (160 . attr-expr-list-1) (161 . attr-expr-list) (162 . attr-word) (163 . 
-    attribute) (164 . attribute-list-1) (165 . attr-name) (166 . 
-    attribute-list) (167 . enumerator) (168 . enumerator-list) (169 . 
-    constant-expression) (170 . declarator) (171 . struct-declarator-1) 
-    (172 . struct-declarator) (173 . specifier-qualifier-list/no-attr-1) 
-    (174 . specifier-qualifier-list-1) (175 . struct-declarator-list) (176 . 
-    specifier-qualifier-list) (177 . struct-declaration-no-comment) (178 . 
-    lone-comment) (179 . struct-declaration) (180 . attribute-specifiers) 
-    (181 . struct-declaration-list) (182 . ident-like) (183 . opt-attr-specs) 
-    (184 . typedef-name) (185 . enum-specifier) (186 . 
-    struct-or-union-specifier) (187 . complex-type-specifier) (188 . 
-    float-type-specifier) (189 . fixed-type-specifier) (190 . 
-    attribute-specifier) (191 . function-specifier) (192 . type-qualifier) 
-    (193 . type-specifier) (194 . storage-class-specifier) (195 . 
-    declaration-specifiers-1) (196 . init-declarator-list) (197 . code-comment
-    ) (198 . declaration-no-comment) (199 . assignment-operator) (200 . 
-    conditional-expression) (201 . logical-or-expression) (202 . 
-    logical-and-expression) (203 . bitwise-or-expression) (204 . 
-    bitwise-xor-expression) (205 . bitwise-and-expression) (206 . 
-    equality-expression) (207 . relational-expression) (208 . shift-expression
-    ) (209 . additive-expression) (210 . multiplicative-expression) (211 . 
-    cast-expression) (212 . unary-operator) (213 . unary-expression) (214 . 
-    abstract-declarator) (215 . declaration-specifiers) (216 . arg-expr-hack) 
-    (217 . assignment-expression) (218 . initializer-list) (219 . type-name) 
-    (220 . argument-expression-list) (221 . postfix-expression) (222 . 
-    primary-expression) (223 . $P2) (224 . block-item-list) (225 . $P1) 
-    (226 . expression) (227 . string-literal) (228 . constant) (229 . 
-    identifier) (230 . translation-unit)))
-
-(define c99-mtab
-  '(($start . 230) ("_Pragma" . 3) ($pragma . 4) (cpp-stmt . 5) ($lone-comm . 
-    6) ($code-comm . 7) ($chlit/U . 8) ($chlit/u . 9) ($chlit/L . 10) ($chlit 
-    . 11) ($float . 12) ($ident . 13) ($string . 14) ("__asm__" . 15) (
-    "return" . 16) ("break" . 17) ("continue" . 18) ("goto" . 19) ("for" . 20)
-    ("do" . 21) ("while" . 22) ("switch" . 23) ("else" . 24) (then . 25) 
-    ("if" . 26) ("default" . 27) ("case" . 28) (typename . 29) ("..." . 30) 
-    ($fixed . 31) ("__alignof__" . 32) ("__aligned__" . 33) ("__packed__" . 34
-    ) ("__attribute__" . 35) ("_Noreturn" . 36) ("inline" . 37) ("restrict" . 
-    38) ("volatile" . 39) ("const" . 40) ("enum" . 41) ("union" . 42) (
-    "struct" . 43) ("_Complex" . 44) ("double" . 45) ("float" . 46) ("char" . 
-    47) ("unsigned" . 48) ("long" . 49) ("signed" . 50) ("int" . 51) (imp . 52
-    ) ("short" . 53) ("_Bool" . 54) ("void" . 55) ("typedef" . 56) ("static" 
-    . 57) ("register" . 58) ("extern" . 59) ("auto" . 60) (reduce-on-semi . 61
-    ) (reduce-on-attr . 62) (shift-on-attr . 63) (";" . 64) ("|=" . 65) 
-    ("^=" . 66) ("&=" . 67) (">>=" . 68) ("<<=" . 69) ("%=" . 70) ("/=" . 71) 
-    ("*=" . 72) ("-=" . 73) ("+=" . 74) ("=" . 75) (":" . 76) ("?" . 77) 
-    ("||" . 78) ("&&" . 79) ("|" . 80) ("^" . 81) ("!=" . 82) ("==" . 83) 
-    (">=" . 84) ("<=" . 85) (">" . 86) ("<" . 87) (">>" . 88) ("<<" . 89) 
-    ("%" . 90) ("/" . 91) ("!" . 92) ("~" . 93) ("-" . 94) ("+" . 95) ("*" . 
-    96) ("&" . 97) ("sizeof" . 98) ("," . 99) ("--" . 100) ("++" . 101) 
-    ("->" . 102) ("." . 103) ("]" . 104) ("[" . 105) ("}" . 106) ("{" . 107) 
-    (")" . 108) ("(" . 109) ($error . 2) ($end . 111)))
-
 (define c99-tables
   (list
-   (cons 'len-v c99-len-v)
-   (cons 'pat-v c99-pat-v)
-   (cons 'rto-v c99-rto-v)
+   (cons 'mtab c99-mtab)
    (cons 'ntab c99-ntab)
-   (cons 'mtab c99-mtab)))
+   (cons 'len-v c99-len-v)
+   (cons 'rto-v c99-rto-v)
+   (cons 'pat-v c99-pat-v)
+   ))
 
 ;;; end tables

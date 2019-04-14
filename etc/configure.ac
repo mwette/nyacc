@@ -35,6 +35,7 @@ AC_CONFIG_FILES([Makefile \
 	test-suite/nyacc/Makefile \
 	test-suite/nyacc/lang/Makefile \
 	test-suite/nyacc/lang/c99/Makefile \
+	examples/Makefile \
 ])
 
 AC_OUTPUT

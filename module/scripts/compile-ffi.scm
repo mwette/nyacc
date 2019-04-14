@@ -1,6 +1,6 @@
 ;;; scripts/compile-ffi.scm --- NYACC's command-line FFI compiler
 
-;; Copyright (C) 2017-2018 Matthew R. Wette
+;; Copyright (C) 2017-2019 Matthew R. Wette
 ;;
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -30,9 +30,9 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37)
-  #:version (0 91 0))
+  #:version (0 92 0))
 
-(define *ffi-help-version* "0.91.0")
+(define *ffi-help-version* "0.92.0")
 
 (define %summary
   "Compile a ffi-file (C interface spec) to Scheme (or maybe .go).")

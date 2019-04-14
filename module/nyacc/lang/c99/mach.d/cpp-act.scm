@@ -1,4 +1,4 @@
-;; ../../../../module/nyacc/lang/c99/mach.d/cpp-act.scm
+;; ./mach.d/cpp-act.scm
 
 ;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 
