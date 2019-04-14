@@ -1,0 +1,147 @@
+# module/Makefile.in			-*- Makefile -*-
+#
+# Copyright (C) 2015-2019 -  Matthew R. Wette
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+
+GUILE = @GUILE@
+GUILD = @GUILD@
+
+SITE_SCM_DIR = @GUILE_SITE@
+SITE_SCM_GO_DIR = @GUILE_SITE_GO@
+
+SHELL = @SHELL@
+TOPDIR = @abs_top_builddir@
+MODDIR = $(TOPDIR)/module
+
+NYACC_BASE_BINS =				\
+	nyacc/version.go			\
+	nyacc/util.go				\
+	nyacc/lex.go				\
+	nyacc/lalr.go				\
+	nyacc/parse.go				\
+	nyacc/export.go				\
+	nyacc/import.go				\
+	nyacc/bison.go				\
+	nyacc/lang/sx-util.go			\
+	nyacc/lang/util.go
+
+NYACC_BASE_SRCS =				\
+	nyacc/version.scm			\
+	nyacc/util.scm				\
+	nyacc/lex.scm				\
+	nyacc/lalr.scm				\
+	nyacc/parse.scm				\
+	nyacc/export.scm			\
+	nyacc/import.scm			\
+	nyacc/bison.scm				\
+	nyacc/lang/sx-util.scm			\
+	nyacc/lang/util.scm
+
+NYACC_C99_BINS =				\
+	nyacc/lang/c99/cpp.go			\
+	nyacc/lang/c99/cppmach.go		\
+	nyacc/lang/c99/parser.go		\
+	nyacc/lang/c99/mach.go			\
+	nyacc/lang/c99/pprint.go		\
+	nyacc/lang/c99/util.go			\
+	nyacc/lang/c99/munge.go			\
+	nyacc/lang/c99/cxmach.go		\
+	nyacc/lang/c99/cxeval.go
+
+NYACC_C99_SRCS =				\
+	nyacc/lang/c99/cpp.scm			\
+	nyacc/lang/c99/cppmach.scm		\
+	nyacc/lang/c99/parser.scm		\
+	nyacc/lang/c99/mach.scm			\
+	nyacc/lang/c99/pprint.scm		\
+	nyacc/lang/c99/util.scm			\
+	nyacc/lang/c99/munge.scm		\
+	nyacc/lang/c99/cxmach.scm		\
+	nyacc/lang/c99/cxeval.scm		\
+	nyacc/lang/c99/body.scm			\
+	nyacc/lang/c99/mach.d/c99act.scm	\
+	nyacc/lang/c99/mach.d/c99tab.scm	\
+	nyacc/lang/c99/mach.d/c99xact.scm	\
+	nyacc/lang/c99/mach.d/c99xtab.scm	\
+	nyacc/lang/c99/mach.d/cppact.scm	\
+	nyacc/lang/c99/mach.d/cpptab.scm	\
+	nyacc/lang/c99/mach.d/c99cxact.scm	\
+	nyacc/lang/c99/mach.d/c99cxtab.scm
+
+NYACC_FH_BINS =					\
+	nyacc/lang/c99/ffi-help.go		\
+	system/ffi-help-rt.go			\
+	scripts/compile-ffi.go
+
+NYACC_FH_SRCS = 				\
+	nyacc/lang/c99/ffi-help.scm		\
+	system/ffi-help-rt.scm			\
+	scripts/compile-ffi.scm
+
+BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS) @NYACC_FH_BINS@
+SOURCES = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS) $(NYACC_FH_SRCS)
+
+%.go: %.scm
+	GUILE_LOAD_PATH=$(MODDIR) GUILE_LOAD_COMPILED_PATH=$(MODDIR) \
+	  $(GUILD) compile -o $@ $<
+
+.PHONY: nyacc-bins
+nyacc-bins: $(BINARIES)
+	@for binfile in $(BINARIES); do \
+	    srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	    GUILE_LOAD_PATH=$(MODDIR) GUILE_LOAD_COMPILED_PATH=$(MODDIR) \
+	    $(GUILD) compile -o $${binfile} $${srcfile}; \
+	done
+
+.PHONY: install
+install:
+	@$(MAKE) install-srcs install-bins 
+
+.PHONY: install-srcs
+install-srcs:
+	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
+	@echo "installing NYACC sources in $(DESTDIR)$(SITE_SCM_DIR)"
+	@for file in $(SOURCES); do \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
+	  fi; \
+	  if test -f $${file}; then \
+	    cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  fi; \
+	done
+	@cp nyacc/README $(DESTDIR)$(SITE_SCM_DIR)/nyacc/README
+
+.PHONY: install-bins
+install-bins: $(BINARIES)
+	@mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
+	@echo "installing NYACC binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"
+	@for file in $(BINARIES); do \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; \
+	  fi; \
+	  if test -f $${file}; then \
+	    cp $${file} $(DESTDIR)$(SITE_SCM_GO_DIR)/$${file}; \
+	  fi; \
+	done
+
+.PHONY: clean
+clean:
+	(cd nyacc; rm -f *.go)
+	(cd nyacc/lang; rm -f *.go)
+	(cd nyacc/lang/c99; rm -f *.go)
+
+.PHONY: dist-files
+dist-files:
+	(cd nyacc/lang/c99; \
+	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
+	    -c '(use-modules (nyacc lang c99 cppmach)) (gen-cpp-files ".")'; \
+	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
+	    -c '(use-modules (nyacc lang c99 mach)) (gen-c99-files ".")'; \
+	 GUILE_LOAD_PATH= $(GUILE) --no-auto-compile -L ../../.. \
+	    -c '(use-modules (nyacc lang c99 cxmach)) (gen-c99cx-files ".")')
+
+# --- last line ---

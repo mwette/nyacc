@@ -5,46 +5,57 @@
 # Copying and distribution of this file, with or without modification
 # is granted.  This file is offered as-is, without any warranty.
 
-prefix=@prefix@
-GUILE=@guile@
-GUILD=@guild@
-SITE_SCM_DIR=@site_scm_dir@
-SITE_SCM_GO_DIR=@site_scm_go_dir@
-INFODIR=@infodir@
+GUILE = @GUILE@
+GUILD = @GUILD@
+
+SITE_SCM_DIR = @GUILE_SITE@
+SITE_SCM_GO_DIR = @GUILE_SITE_GO@
+
+SHELL = @SHELL@
+TOPDIR = @abs_top_builddir@
 
 .PHONY: default
 default: 
-	@(cd module; \
-	  make -f Makefile.nyacc \
-		GUILE=$(GUILE) GUILD=$(GUILD) \
-		SITE_SCM_DIR=$(SITE_SCM_DIR) \
-		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
-		DESTDIR=$(DESTDIR))
+	@(cd module; make DESTDIR=$(DESTDIR))
 
 .PHONY: install
 install:
-	@(cd module; \
-	  make -f Makefile.nyacc \
-		GUILE=$(GUILE) GUILD=$(GUILD) \
-		SITE_SCM_DIR=$(SITE_SCM_DIR) \
-		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
-		DESTDIR=$(DESTDIR) install)
-	@(cd doc/nyacc; \
-	  make -f Makefile.nyacc \
-		GUILE=$(GUILE) GUILD=$(GUILD) \
-		INFODIR=$(INFODIR) \
-		DESTDIR=$(DESTDIR) install)
+	@(cd module; make DESTDIR=$(DESTDIR) install)
+	@(cd doc/nyacc; make DESTDIR=$(DESTDIR) install)
+
+.PHONY: uninstall
+uninstall:
+	@echo "not smart enough to uninstall"
 
 .PHONY: install-srcs
 install-srcs:
-	@(cd module; \
-	  make -f Makefile.nyacc \
-		SITE_SCM_DIR=$(SITE_SCM_DIR) \
-		DESTDIR=$(DESTDIR) install-srcs)
+	@(cd module; make DESTDIR=$(DESTDIR) install-srcs)
 
 .PHONY: install-ffi-help
 install-ffi-help:
 	@echo "FFI helper now part of normal distribution"
+
+.PHONY: dist-files
+dist-files:
+	(cd module; make DESTDIR=$(DESTDIR) dist-files)
+	(cd doc/nyacc; make DESTDIR=$(DESTDIR) dist-files)
+	(cd examples; make DESTDIR=$(DESTDIR) dist-files)
+
+.PHONY: check
+check:
+	(cd test-suite/nyacc; make DESTDIR=$(DESTDIR) check)
+
+.PHONY: distcheck
+distcheck:
+	@echo "nothing to distcheck"
+
+.PHONY: clean
+clean:
+	(cd module; make DESTDIR=$(DESTDIR) clean)
+
+.PHONY: dist-clean
+distclean:
+	rm -f Makefile
 
 .PHONY: install-nx-languages \
 	install-nx-javascript \
@@ -60,28 +71,5 @@ install-nx-languages \
 		SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
 		DESTDIR=$(DESTDIR) install-nx-utils $@)
-
-.PHONY: dist-files
-dist-files:
-	(cd module; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) dist-files)
-	(cd doc/nyacc; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) dist-files)
-	(cd examples; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) dist-files)
-
-.PHONY: check
-check:
-	(cd test-suite/nyacc; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) check)
-
-.PHONY: clean
-clean:
-	(cd module; \
-	 make -f Makefile.nyacc GUILE=$(GUILE) GUILD=$(GUILD) clean)
-
-.PHONY: dist-clean
-dist-clean:
-	rm -f Makefile
 
 # --- last line ---

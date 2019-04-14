@@ -1,4 +1,13 @@
-2019-01-18  Matt Wette  <mwette@alumni.caltech.edu>
+Copyright (C) 2017-2019 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.
+
+2019-04-02  V0.92.0 devel...
+
+2019-01-18  V0.91.0 release
 
 	* module/nyacc/parse.scm (dmsg/n): added ntab information; so
 	debug is now more informative:
@@ -10,35 +19,24 @@
 	* ffi-help: converting composite literal to constant is no longer
 	a fatal error
 
-2019-01-15  Matt Wette  <mwette@alumni.caltech.edu>
-
 	* module/nyacc/lang/c99/cxeval.scm (eval-c99-cx): added case for
 	comp-lit; made failure throw c99-error instead of calling error
 
 	* module/nyacc/lang/c99/ffi-help.scm: updated error handling when
 	cannot convert enum or #defined argument to a constant
 
-2018-11-29  Matt Wette  <mwette@alumni.caltech.edu>
-
-	* released V0.90.0
-
-2018-11-21  Matt Wette  <mwette@alumni.caltech.edu>
+2018-11-29  V0.90.0 release
 
 	* module/nyacc/lang/c99/mach.scm (c99-spec): K&R function
 	definitions have been removed, since conflict with __attribute__,
 	as in: int foo(x) __attribute__ ((__bar__)) int x; { ... };
 	Is attribute associated with declarator or declaration-specifiers?
 
-2018-11-17  Matt Wette  <mwette@alumni.caltech.edu>
-
 	* update Major overhaul of __attribute__ handling in C99 parser
-
-2018-08-19  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* update merged nx-matlab updates from nxdev branch; added fix
 	for nyacc/lex.scm to parse #xffff00000
 
-2018-07-29  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* update reworked the nyacc parser.scm file (see nyacc/ChangeLog);
 	instead of separate parsers for interactive and non-interactive
@@ -60,40 +58,3 @@
 	* updated interactive parsers, getting ready to and integrate file
 	and interactive parsers, and overhaul C99 parser setup
 
-2018-07-08  Matt Wette  <mwette@alumni.caltech.edu>
-
-	new release 0.84.2
-	* updated Makefile.in: added DESTDIR=$(DESTDIR) for install targets
-	* updated modules/Makefile.nyacc: added DESTDIR= support
-	* updated doc/nyacc/Makefile.nyacc: removed DESTDIR=
-	* updated modules/nyacc/lalr.scm: cleaned up comments
-
-2018-02-01  Matt Wette  <mwette@alumni.caltech.edu>
-
-	new release 0.83.3
-	* updated modules/Makefile.nyacc: added cxeval.*, cxmach.*
-
-	new release 0.83.2
-	* updated modules/Makefile.nyacc: install-srcs no longer depends
-	on NYACC_SRCS
-
-	* new release 0.83.1
-	* modules/nyacc/lang/c99: added cxmach, cxeval, ach.d/cxact,
-	mach.d/cxtab, .scm; these are for evaluating constant expressions
-	and needed for munge and ffi-help
-
-2017-09-16  Matt Wette  <mwette@alumni.caltech.edu>
-
-	new release 0.82.1
-	* ChangeLog: added at root directory
-	* ffi-help: changed dynamic-func to use library explicitly
-	* examples/nyacc/lang/c99/exam.d/demo-cairo.scm: works on Centos
-	* compile-ffi: fails if suffix of file is not .ffi
-	* ffi-help-rt: added macros for define-fh-fixed ... -float/p
-
-Copyright (C) 2017-2018 Matthew R. Wette
-
-Copying and distribution of this file, with or without modification,
-are permitted in any medium without royalty provided the copyright
-notice and this notice are preserved.  This file is offered as-is,
-without any warranty.

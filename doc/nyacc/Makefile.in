@@ -1,0 +1,84 @@
+# doc/nyacc/Makefile.in
+#
+# Copyright (C) 2015-2019 Matthew R. Wette
+# 
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+
+GUILE = @GUILE@
+GUILD = @GUILD@
+
+SITE_SCM_DIR = @GUILE_SITE@
+SITE_SCM_GO_DIR = @GUILE_SITE_GO@
+
+SHELL = @SHELL@
+INFODIR= @infodir@
+DOCDIR= @docdir@/doc/nyacc
+
+TOPDIR = @abs_top_builddir@
+MODDIR = $(TOPDIR)/module
+INSTALL=cp
+
+SCM_FILES_W_TEXI = \
+	../../module/nyacc/lalr.scm \
+	../../module/nyacc/lex.scm 
+
+.PHONY: all
+all:
+	@true
+
+.PHONY: install
+install: install-info
+
+.PHONY: install-info
+install-info:
+	mkdir -p $(DESTDIR)$(INFODIR)
+	$(INSTALL) nyacc-ug.info $(DESTDIR)$(INFODIR)/nyacc-ug.info
+	$(INSTALL) nyacc-fh.info $(DESTDIR)$(INFODIR)/nyacc-fh.info
+
+.PHONY: install-pdf
+install-pdf:
+	mkdir -p $(DESTDIR)$(DOCDIR)
+	$(INSTALL) nyacc-ug.pdf $(DESTDIR)$(DOCDIR)/nyacc-ug.pdf
+	$(INSTALL) nyacc-fh.pdf $(DESTDIR)$(DOCDIR)/nyacc-fh.pdf
+
+.PHONY: install-html
+install-html:
+	mkdir -p $(DESTDIR)$(DOCDIR)
+	$(INSTALL) nyacc-ug.html $(DESTDIR)$(DOCDIR)/nyacc-ug.html
+	$(INSTALL) nyacc-fh.html $(DESTDIR)$(DOCDIR)/nyacc-fh.html
+
+.PHONY: dist-files
+dist-files: \
+	nyacc-ug.info nyacc-ug.pdf nyacc-ug.html \
+	nyacc-fh.info nyacc-fh.pdf nyacc-fh.html
+
+%_scm.texi: ../../module/nyacc/%.scm
+	./pull-texi.scm $< >$@
+
+%.info: %.texi
+	makeinfo $<
+	rm -f $*.fn $*.fns
+
+%.pdf: %.texi
+	texi2dvi --pdf --batch $<
+	texi2dvi --pdf --batch $<
+	rm -f $*.aux $*.log $*.toc $*.fn $*.fns
+
+%.html: %.texi
+	texi2any --html --no-split $<
+
+COPYING.DOC: fdl.texi
+	makeinfo --plaintext fdl.texi >$@
+
+.PHONY: clean
+clean:
+	rm -f *.aux *.cp *.fn *.fns *.ky *.log *.pg *.toc *.tp *.vr
+
+.PHONY: really-clean
+really-clean:
+	rm -f *.pdf *.info
+
+# --- last line
