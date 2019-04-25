@@ -1,6 +1,6 @@
 ;;; lang/c99/body.scm - parser body, inserted in parser.scm
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -452,10 +452,11 @@
 		   (path (inc-file-spec->path spec next)))
 	      (if show-incs (sferr "include ~A => ~S\n" spec path))
 	      (cond
-	       ((apply-helper file))
-	       ((not path) (c99-err "not found: ~S" file)) ; file not found
-	       (else (set! bol #t) (push-input (open-input-file path))))
-	      (sx-attr-add stmt 'path path)))
+	       ((apply-helper file) stmt)
+	       ((not path) (c99-err "not found: ~S" file))
+	       (else (set! bol #t)
+		     (push-input (open-input-file path))
+		     (sx-attr-add stmt 'path path) stmt))))
 
 	  (define* (eval-cpp-incl/tree stmt #:optional next) ;; => stmt
 	    ;; include file as a new tree
@@ -464,10 +465,10 @@
 		   (path (inc-file-spec->path spec next)))
 	      (if show-incs (sferr "include ~A => ~S\n" spec path))
 	      (cond
-	       ((apply-helper file) stmt)		 ; use helper
-	       ((not path) (c99-err "not found: ~S" file)) ; file not found
-	       ((with-input-from-file path run-parse) => ; add tree
-		(lambda (tree)
+	       ((apply-helper file) stmt)
+	       ((not path) (c99-err "not found: ~S" file))
+	       ((with-input-from-file path run-parse) =>
+		(lambda (tree) ;; add tree
 		  (for-each add-define (getdefs tree))
 		  (append (sx-attr-add stmt 'path path) (list tree)))))))
 

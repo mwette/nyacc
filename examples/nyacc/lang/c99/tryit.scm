@@ -108,7 +108,7 @@
 	      ))
        (code "int len = sizeof(\"abc\" \"def\");\n")
        (code "#include <sys/epoll.h>\n")
-       (tree (parse-string code))
+       ;;(tree (parse-string code))
        ;;(expr (sx-ref* tree 1 2 1 2 1)) ;; for sizeof("abc"...) demo
 
        ;;(code "((const char *) \"abc\")")
@@ -124,9 +124,9 @@
        ;;(mdecl (udecl->mspec/comm udecl))
        ;;(udecl (unitize-decl decl))
        ;;(xdecl (expand-typerefs-in-code code 2))
-       (udict (c99-trans-unit->udict/deep tree))
+       ;;(udict (c99-trans-unit->udict/deep tree))
        ;;(udict (c99-trans-unit->udict tree))
-       (udecl (assoc-ref udict '(struct . "epoll_event")))
+       ;;(udecl (assoc-ref udict '(struct . "epoll_event")))
        (rdecl '(decl (decl-spec-list	; raw decl
 		      (@ (attributes "__packed__"))
 		      (type-spec
@@ -143,13 +143,13 @@
 			  (decl-spec-list
 			   (type-spec (typename "epoll_data_t")))
 			  (comp-declr-list (comp-declr (ident "data"))))))))))
-       (udecl (unitize-decl rdecl '()))
+       ;;(udecl (unitize-decl rdecl '()))
        )
-  ;;(pp tree)
+  (pp tree)
   ;;(pp udict)
-  (pp rdecl)
-  (pp udecl)
-  (pp99 (cdar udecl))
+  ;;(pp rdecl)
+  ;;(pp udecl)
+  ;;(pp99 (cdar udecl))
   ;;(pp mdecl)
   ;;(pp xdecl)
   ;;(ppsx udecl)

@@ -32,6 +32,9 @@
 ;; 1) add renamer
 ;; 2) think about cnvt-fctn that generates C code
 ;; 3) add code for bytestructures' bounding-struct-descriptor
+;; 4) cnvt-udecl needs complete rewrite using udecl->mdecl from c99/munge
+;; 6) generalize: typedef <anything> *foo_t;
+;; 7) generalize: typedef <anything> foo_t[];
 
 ;; Issue:
 ;; So issue is when 'typedef struct ref foo_t' has no 'struct def'
@@ -1764,7 +1767,7 @@
        (let* ((typename "haddr_t")
 	      (size (+ (sizeof '*) 4))
 	      )
-	 (sfscm "(define-public ~A-desc (bs:vector ~A '*))\n" size typename)
+	 (sfscm "(define-public ~A-desc (bs:vector ~A '*))\n" typename size)
 	 ;;(sfscm "(define-fh-compound-type/p ~A ~A-desc)\n" typename typename)
 	 (fhscm-def-compound typename)
 	 (values (cons typename wrapped) (cons typename defined))))
@@ -1777,7 +1780,17 @@
 	       (ptr-declr (pointer) (ident "GtkStock"))))
        (sferr "missed gtk3 decl not expanded\n")
        (values wrapped defined))
-      
+
+      ;; from uuid.h
+      ((udecl (decl-spec-list
+	       (stor-spec (typedef))
+	       (type-spec (fixed-type "unsigned char")))
+	      (init-declr
+	       (array-of (ident ,typename) (p-expr (fixed ,len)))))
+       (sfscm "(define-public ~A-desc (bs:vector ~A uint8))\n" typename len)
+       (fhscm-def-compound typename)
+       (values (cons typename wrapped) (cons typename defined)))
+
       ;; === missed =====================
 
       (,otherwise
