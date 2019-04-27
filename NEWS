@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2019-  -    V0.93.0 release
+	* this CPP feature now works: #define /* hello */ abc 123
+
 2019-04-02  V0.92.0 release
 	
 	* The distribution has been converted to using autoconf, but

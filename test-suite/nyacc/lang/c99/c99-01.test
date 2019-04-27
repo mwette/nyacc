@@ -246,6 +246,18 @@
 		      (p-expr (fixed "0"))
 		      (p-expr (fixed "0xf")))))))))))
 
+  (pass-if "use of comment after #define"
+    (equal?
+     (parse-string-list
+      "#define /* hello */ abc 123\n"
+      "int x = abc;\n")
+     '(trans-unit
+       (decl (decl-spec-list (type-spec (fixed-type "int")))
+	     (init-declr-list
+	      (init-declr
+	       (ident "x")
+	       (initzer (p-expr (fixed "123")))))))))
+
   )
 
 ;; --- last line ---

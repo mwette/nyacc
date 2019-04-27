@@ -153,7 +153,12 @@
 
   (define (p-rest la) (read-rest la))
 
-  (let* ((name (read-c-ident (skip-il-ws (read-char))))
+  (let* ((name (let loop ((ch (skip-il-ws (read-char))))
+		 (cond
+		  ((eof-object? ch) (throw 'cpp-error "bad #define"))
+		  ((read-c-ident ch))
+		  ((cpp-comm-skipper ch) (loop (skip-il-ws (read-char))))
+		  (else (throw 'cpp-error "bad #define")))))
 	 (args (or (p-args (read-char)) '()))
 	 (repl (p-rest (skip-il-ws (read-char)))))
     (if (pair? args)

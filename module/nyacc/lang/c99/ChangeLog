@@ -1,3 +1,8 @@
+2019-04-27  Matt Wette  <mwette@alumni.caltech.edu>
+
+	* cpp.scm (cpp-define): Now accommodates comments in CPP like
+	this: #define /* MAX as macro */ MAX(X,Y) (((X)>(Y))?(X):(Y))
+
 2019-03-24  Matt Wette  <mwette@alumni.caltech.edu>
 
 	* ffi-help.scm (cnvt-udecl): fixed error in "typedef union foo
