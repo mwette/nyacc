@@ -586,10 +586,10 @@
 
 ;; like member but returns first non-declr of type in dict
 (define (non-declr type udict)
-  (let iter ((dict udict))
+  (let loop ((dict udict))
     (cond ((null? dict) '())
 	  ((and (pair? (caar dict)) (eqv? type (caaar dict))) dict)
-	  (else (iter (cdr dict))))))
+	  (else (loop (cdr dict))))))
 
 (define (enum-decl-val enum-udecl name)
   ;; (decl (decl-spec-list (type-sped (enum-def (enum-def-list ...) => "123"
@@ -605,12 +605,12 @@
 ;; @end deffn
 (define (udict-ref udict name)
   (or (assoc-ref udict name)
-      (let iter ((dict (non-declr 'enum udict)))
+      (let loop ((dict (non-declr 'enum udict)))
 	(cond
 	 ((null? dict) #f)
 	 ((enum-decl-val (cdar dict) name) =>
 	  (lambda (val) (gen-enum-udecl name val)))
-	 (else (iter (non-declr 'enum (cdr dict))))))))
+	 (else (loop (non-declr 'enum (cdr dict))))))))
 (define (udict-struct-ref udict name)
   (assoc-ref udict `(struct . ,name)))
 (define (udict-union-ref udict name)
@@ -618,10 +618,10 @@
 (define* (udict-enum-ref udict name)
   (assoc-ref udict `(enum . ,name)))
 (define* (udict-enum-val udict name)
-  (let iter ((dict (non-declr 'enum udict)))
+  (let loop ((dict (non-declr 'enum udict)))
     (cond ((null? dict) #f)
 	  ((enum-decl-val (cdar dict) name))
-	  (else (iter (non-declr 'enum (cdr dict)))))))
+	  (else (loop (non-declr 'enum (cdr dict)))))))
 
 ;; @deffn {Variable} fixed-width-int-names
 ;; This is a list of standard integer names (e.g., @code{"uint8_t"}).
@@ -660,28 +660,28 @@
 ;; allows only one storage specifier besides typedef
 ;; call this (injest-in-specl orig-specl repl-specl)
 (define (tdef-splice-specl orig-specl repl-specl)
-  (let iter ((specl '()) (repll '()) (origl (cdr orig-specl)))
+  (let loop ((specl '()) (repll '()) (origl (cdr orig-specl)))
     (cond
      ((pair? repll)
       (cond
        ((equal? (car repll) '(stor-spec (typedef)))
-	(iter specl (cdr repll) origl))
+	(loop specl (cdr repll) origl))
        ((equal? (car repll) '(stor-spec (const)))
-	(iter (cons (car repll) specl) (cdr repll) origl))
+	(loop (cons (car repll) specl) (cdr repll) origl))
        ((member (car repll) specl)	; don't duplicate other stor-spec's
-	(iter specl (cdr repll) origl))
+	(loop specl (cdr repll) origl))
        (else 
-	(iter (cons (car repll) specl) (cdr repll) origl))))
+	(loop (cons (car repll) specl) (cdr repll) origl))))
      ((pair? origl)
       (cond
        ((pmatch (car origl) ((type-spec (typename ,name)) #t) (,othersize #f))
-	(iter specl (cdr repl-specl) (cdr origl))) ; now insert replacement
+	(loop specl (cdr repl-specl) (cdr origl))) ; now insert replacement
        ((equal? (car origl) '(stor-spec (const)))
-	(iter (cons (car repll) specl) repll (cdr origl)))
+	(loop (cons (car repll) specl) repll (cdr origl)))
        ((member (car origl) specl) ; don't duplicate "auto", "extern"
-	(iter specl repll (cdr origl)))
+	(loop specl repll (cdr origl)))
        (else
-	(iter (cons (car origl) specl) repll (cdr origl)))))
+	(loop (cons (car origl) specl) repll (cdr origl)))))
      (else
       (cons 'decl-spec-list (reverse specl))))))
 
@@ -868,7 +868,7 @@
   (define (fix-param-list param-list)
     (let* ((tail (sx-tail param-list 1))
 	   (xtail
-	    (let iter ((xparams '()) (chg? #f) (params tail))
+	    (let loop ((xparams '()) (chg? #f) (params tail))
 	      (if (null? params)
 		  (if chg? (reverse xparams) tail)
 		  (case (sx-tag (car params))
@@ -876,10 +876,10 @@
 		     (let* ((param (car params))
 			    (xparam (expand-typerefs param udict keep)))
 		       (if (eq? param xparam)
-			   (iter (cons param xparams) chg? (cdr params))
-			   (iter (cons xparam xparams) #t (cdr params)))))
+			   (loop (cons param xparams) chg? (cdr params))
+			   (loop (cons xparam xparams) #t (cdr params)))))
 		    ((ellipsis)
-		     (iter (cons (car params) xparams) chg? (cdr params))))))))
+		     (loop (cons (car params) xparams) chg? (cdr params))))))))
       (if (eq? xtail tail)
 	  param-list
 	  (sx-cons* (sx-tag param-list) (sx-attr param-list) xtail))))
@@ -1111,7 +1111,7 @@
 ;; Note: Does this really need to be @code{(p-expr (fixed "0"))}?
 ;; @end deffn
 (define* (canize-enum-def-list enum-def-list #:optional (ddict '()))
-  (let iter ((rez '()) (nxt 0) (dct ddict) (edl (sx-tail enum-def-list 1)))
+  (let loop ((rez '()) (nxt 0) (dct ddict) (edl (sx-tail enum-def-list 1)))
     (cond
      ((null? edl)
       (sx-cons* (sx-tag enum-def-list) (sx-attr enum-def-list) (reverse rez)))
@@ -1119,21 +1119,21 @@
       (sx-match (car edl)
 	((enum-defn (@ . ,attr) ,ident)
 	 (let ((sval (number->string nxt)))
-	   (iter (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
+	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
 		 (1+ nxt)  (acons (sx-ref ident 1) sval dct) (cdr edl))))
 	((enum-defn ,ident (comment ,comm)) ;; REMOVE
 	 (let ((sval (number->string nxt)))
-	   (iter (cons `(enum-defn ,ident (fixed ,sval) (comment ,comm)) rez)
+	   (loop (cons `(enum-defn ,ident (fixed ,sval) (comment ,comm)) rez)
 		 (1+ nxt) (acons (sx-ref ident 1) sval dct) (cdr edl))))
 	((enum-defn (@ . attr) ,ident ,expr)
 	 (let* ((ival (eval-cpp-expr expr dct))
 		(sval (number->string ival)))
-	   (iter (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
+	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
 		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl))))
 	((enum-defn ,ident ,expr . ,rest) ;; REMOVE
 	 (let* ((ival (eval-cpp-expr expr dct))
 		(sval (number->string ival)))
-	   (iter (cons `(enum-defn ,ident (fixed ,sval) . ,rest) rez)
+	   (loop (cons `(enum-defn ,ident (fixed ,sval) . ,rest) rez)
 		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl))))
 	)))))
 
@@ -1147,12 +1147,12 @@
 ;; (enum-def-list edl "ABC") => "123"
 ;; @end example
 (define (enum-ref enum-def-list name)
-  (let iter ((el (cdr (canize-enum-def-list enum-def-list))))
+  (let loop ((el (cdr (canize-enum-def-list enum-def-list))))
     (cond
      ((null? el) #f)
-     ((not (eqv? 'enum-defn (sx-tag (car el)))) (iter (cdr el)))
+     ((not (eqv? 'enum-defn (sx-tag (car el)))) (loop (cdr el)))
      ((string=? name (sx-ref* (car el) 1 1)) (sx-ref* (car el) 1 2 1))
-     (else (iter (cdr el))))))
+     (else (loop (cdr el))))))
 
 ;; @deffn {Procedure} gen-enum-udecl nstr vstr => (udecl ...)
 ;; @example
@@ -1250,7 +1250,7 @@
 ;; @end deffn
 (define* (strip-decl-spec-tail dsl-tail #:key keep-const?)
   ;;(simple-format #t "spec=tail: ~S\n" dsl-tail)
-  (let iter ((dsl1 '()) (const-seen? #f) (tail dsl-tail))
+  (let loop ((dsl1 '()) (const-seen? #f) (tail dsl-tail))
     (if (null? tail)
 	(reverse (if (and const-seen? keep-const?)
 		     (cons '(type-qual "const") dsl1)
@@ -1258,12 +1258,12 @@
 	(case (caar tail)
 	  ((type-qual)
 	   (if (string=? (cadar tail) "const")
-	       (iter dsl1 #t (cdr tail))
-	       (iter dsl1 const-seen? (cdr tail))))
+	       (loop dsl1 #t (cdr tail))
+	       (loop dsl1 const-seen? (cdr tail))))
 	  ((stor-spec)
-	   (iter dsl1 const-seen? (cdr tail)))
+	   (loop dsl1 const-seen? (cdr tail)))
 	  (else
-	   (iter (cons (car tail) dsl1) const-seen? (cdr tail)))))))
+	   (loop (cons (car tail) dsl1) const-seen? (cdr tail)))))))
 
 ;; @deffn {Procedure} clean-field-list field-list => field-list
 ;; @deffnx {Procedure} clean-fields fields => fields
@@ -1455,6 +1455,8 @@
       
       (((pointer-to) . ,rest)
        (doit `(ptr-declr (pointer) ,declr) rest))
+      (((array-of ,size) . ,rest)
+       (doit `(array-of ,declr ,size) rest))
       
       (,_
        (sferr "munge/mdecl->udecl missed:\n")

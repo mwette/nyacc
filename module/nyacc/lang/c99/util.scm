@@ -135,17 +135,17 @@
 (define* (get-gcc-inc-dirs #:optional (args '()) #:key CC)
   (let ((ip (open-input-pipe (string-append
 			      (resolve-CC CC) " -E -Wp,-v - </dev/null 2>&1"))))
-    (let iter ((dirs '()) (grab #f) (line (read-line ip 'trim)))
+    (let loop ((dirs '()) (grab #f) (line (read-line ip 'trim)))
       (cond
        ((eof-object? line) dirs)
        ((string=? line "#include <...> search starts here:")
-	(iter dirs #t (read-line ip 'trim)))
+	(loop dirs #t (read-line ip 'trim)))
        ((string=? line "End of search list.") dirs)
        (grab
-	(iter (cons (string-trim-both line) dirs)
+	(loop (cons (string-trim-both line) dirs)
 	      grab (read-line ip 'trim)))
        (else
-	(iter dirs grab (read-line ip 'trim)))))))
+	(loop dirs grab (read-line ip 'trim)))))))
 
 ;; @deffn {Procedure} remove-inc-trees tree
 ;; Remove the trees included with cpp-include statements.
@@ -156,16 +156,16 @@
 ;; @end deffn
 (define (remove-inc-trees tree)
   (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
-  (let iter ((rslt (make-tl 'trans-unit))
+  (let loop ((rslt (make-tl 'trans-unit))
 	     ;;(head '(trans-unit)) (tail (cdr tree))
 	     (tree (cdr tree)))
     (cond
      ((null? tree) (tl->list rslt))
      ((and (eqv? 'cpp-stmt (car (car tree)))
 	   (eqv? 'include (caadr (car tree))))
-      (iter (tl-append rslt `(cpp-stmt (include ,(cadadr (car tree)))))
+      (loop (tl-append rslt `(cpp-stmt (include ,(cadadr (car tree)))))
 	    (cdr tree)))
-     (else (iter (tl-append rslt (car tree)) (cdr tree))))))
+     (else (loop (tl-append rslt (car tree)) (cdr tree))))))
 
 ;; @deffn {Procedure} merge-inc-trees tree
 ;; Remove the trees included with cpp-include statements.
@@ -176,13 +176,13 @@
 ;; @end deffn
 #;(define (Xmerge-inc-trees tree)
   (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
-  (let iter ((rslt (make-tl 'trans-unit))
+  (let loop ((rslt (make-tl 'trans-unit))
 	     (tree (cdr tree)))
     (cond
      ((null? tree) (tl->list rslt))
      ((and (eqv? 'cpp-stmt (caar tree)) (eqv? 'include (cadar tree)))
-      (iter (tl-extend rslt (cdr (merge-inc-trees (cdddar tree)))) (cdr tree)))
-     (else (iter (tl-append rslt (car tree)) (cdr tree))))))
+      (loop (tl-extend rslt (cdr (merge-inc-trees (cdddar tree)))) (cdr tree)))
+     (else (loop (tl-append rslt (car tree)) (cdr tree))))))
 
 
 ;; @deffn {Procedure} merge-inc-trees! tree => tree
@@ -206,7 +206,7 @@
      ((null? (cdr tree)) (error "null c99-tree"))
      (else
       (let ((fp tree))			; first pair
-	(let iter ((lp tree)		; last pair
+	(let loop ((lp tree)		; last pair
 		   (np (cdr tree)))	; next pair
 	  (cond
 	   ((null? np) (cons (cdr fp) lp))
@@ -219,10 +219,10 @@
 		       ((pair? rest))
 		       (span (find-span (car rest))))
 		      (set-cdr! lp (car span))
-		      (iter (cdr span) (cdr np))))
+		      (loop (cdr span) (cdr np))))
 	   (else
 	    (set-cdr! lp np)
-	    (iter np (cdr np)))))))))
+	    (loop np (cdr np)))))))))
 
   ;; Use cons to generate a new reference:
   ;; (cons (car tree) (car (find-span tree)))

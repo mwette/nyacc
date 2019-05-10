@@ -51,8 +51,8 @@
 (define (make-arg-list n)
   (let ((mkarg
 	 (lambda (i) (string->symbol (string-append "$" (number->string i))))))
-    (let iter ((r '(. $rest)) (i 1))
-      (if (> i n) r (iter (cons (mkarg i) r) (1+ i))))))
+    (let loop ((r '(. $rest)) (i 1))
+      (if (> i n) r (loop (cons (mkarg i) r) (1+ i))))))
 
 ;; @deffn {Procedure} wrap-action (n . guts) => quoted procedure
 ;; Wrap user-specified action (body, as a quoted list of expressions) with
@@ -76,9 +76,9 @@
 ;; @deffn prune-assoc al
 ;; Prune obsolete entries from an a-list.  This is order n^2.
 (define (prune-assoc al)
-  (let iter ((al1 '()) (al0 al))
+  (let loop ((al1 '()) (al0 al))
     (if (null? al0) al1
-	(iter (if (assoc (caar al0) al1) al1 (cons (car al0) al1)) (cdr al0)))))
+	(loop (if (assoc (caar al0) al1) al1 (cons (car al0) al1)) (cdr al0)))))
 
 ;; @deffn {Procedure} fixpoint proc seed
 ;; This generates the fixpoint for @var{proc} applied to @var{seed},
@@ -102,12 +102,12 @@
 ;; @end example
 ;; @end deffn
 (define (fixpoint proc seed)
-  (let iter ((prev '()) (item seed) (curr seed) (next seed))
+  (let loop ((prev '()) (item seed) (curr seed) (next seed))
     (cond
      ((not (eqv? item prev))
-      (iter prev (cdr item) curr (proc (car item) next)))
+      (loop prev (cdr item) curr (proc (car item) next)))
      ((not (eqv? next curr))
-      (iter curr next next next))
+      (loop curr next next next))
      (else
       curr))))
 
@@ -115,7 +115,7 @@
 ;; (proc vec) => chg (boolean)
 ;; Not used yet (in step3).
 (define (vector-fixpoint proc vec)
-  (let iter ((chg #t))
+  (let loop ((chg #t))
     (if chg (proc vec) vec)))
 
 ;; @deffn map-attr->vector list-of-alists key => vector
@@ -129,23 +129,23 @@
 ;; @deffn flip al => a-list
 ;; change (a 1 2 3) to ((1 . a) (2 . a) (3 . a))
 (define (x-flip al)
-  (let iter ((result '()) (tail (cdr al)))
+  (let loop ((result '()) (tail (cdr al)))
     (if (null? tail) result
-	(iter (acons (car tail) (car al) result) (cdr tail)))))
+	(loop (acons (car tail) (car al) result) (cdr tail)))))
 
 ;; @deffn x-comb (a1 a2 a3) (b1 b2 b3) => (a1 b1) (a1 b2) ...
 ;; The implementation needs work.
 (define (x-comb a b)
-  (let iter ((res '()) (al a) (bl b))
+  (let loop ((res '()) (al a) (bl b))
     (cond
      ((null? al) res)
-     ((pair? bl) (iter (acons (car al) (car bl) res) al (cdr bl)))
-     ((pair? al) (iter res (cdr al) b)))))
+     ((pair? bl) (loop (acons (car al) (car bl) res) al (cdr bl)))
+     ((pair? al) (loop res (cdr al) b)))))
 
 (define (write-vec port vec)
   (let* ((nv (vector-length vec)))
     (fmt port "  #(")
-    (let iter ((col 4) (ix 0))
+    (let loop ((col 4) (ix 0))
       (if (eq? ix nv) #f
 	  (let* ((item (vector-ref vec ix))
 		 (stng (fmt #f "~S " item))
@@ -153,10 +153,10 @@
 	    (cond
 	     ((> (+ col leng) 78)
 	      (fmt port "\n    ~A" stng)
-	      (iter (+ 4 leng) (1+ ix)))
+	      (loop (+ 4 leng) (1+ ix)))
 	     (else
 	      (fmt port "~A" stng)
-	      (iter (+ col leng) (1+ ix)))))))
+	      (loop (+ col leng) (1+ ix)))))))
     (fmt port ")")))
 
 
@@ -197,40 +197,40 @@
       (+ col (string-length str)))))
 
   (letrec*
-      ((iter1
+      ((loop1
 	(lambda (col sx)
 	  (cond
 	   ((pair? sx)
 	    ;;(fmterr "[car sx=~S]" (car sx))
 	    (case (car sx)
-	      ((quote) (iter2 (strout (strout col 3) "'") (cdr sx)))
-	      ((quasiquote) (iter2 (strout (strout col 3) "`") (cdr sx)))
-	      ((unquote) (iter2 (strout (strout col 2) ",") (cdr sx)))
-	      ((unquote-splicing) (iter2 (strout (strout col 3) ",@") (cdr sx)))
-	      ;;(else (strout (iter2 (strout col "(") sx) ")"))))
+	      ((quote) (loop2 (strout (strout col 3) "'") (cdr sx)))
+	      ((quasiquote) (loop2 (strout (strout col 3) "`") (cdr sx)))
+	      ((unquote) (loop2 (strout (strout col 2) ",") (cdr sx)))
+	      ((unquote-splicing) (loop2 (strout (strout col 3) ",@") (cdr sx)))
+	      ;;(else (strout (loop2 (strout col "(") sx) ")"))))
 	      ;; (strout col 8) is kludge to prevent lone `(' at end of line
-	      (else (strout (iter2 (strout (strout col 8) "(") sx) ")"))))
+	      (else (strout (loop2 (strout (strout col 8) "(") sx) ")"))))
 	   ((vector? sx)
 	    (strout
 	     (vector-fold
 	      (lambda (ix col elt)
-		(iter1 (if (zero? ix) col (strout col " ")) elt))
+		(loop1 (if (zero? ix) col (strout col " ")) elt))
 	      (strout col "#(") sx) ")"))
 	   ;;((null? sx) (strout col "'()"))
 	   ((null? sx) (strout col "()"))
 	   (else (strout col (obj->str sx))))))
-       (iter2
+       (loop2
 	(lambda (col sx)
 	  (cond
 	   ((pair? sx)
 	    (if (null? (cdr sx))
-		(iter2 (iter1 col (car sx)) (cdr sx))
-		(iter2 (strout (iter1 col (car sx)) " ") (cdr sx))))
+		(loop2 (loop1 col (car sx)) (cdr sx))
+		(loop2 (strout (loop1 col (car sx)) " ") (cdr sx))))
 	   ((null? sx) col)
 	   (else (strout (strout col ". ") (obj->str sx)))))))
 
     (if (not trim-ends) (strout 0 per-line-prefix))
-    (iter1 plplen sexp)
+    (loop1 plplen sexp)
     (if (not trim-ends) (newline port))
     (if #f #f)))
 
@@ -263,14 +263,14 @@
 	((next-t (let ((t 0)) (lambda () (set! t (+ 1 t)) t)))
 	 (visit (lambda (k)
 		  (vector-set! tv k (cons (next-t) #f))
-		  (let iter ((l (cdr (vector-ref gv k))))
+		  (let loop ((l (cdr (vector-ref gv k))))
 		    (if (not (null? l))
 			(let ((ix (hashq-ref ht (car l))))
 			  (unless (vector-ref tv ix)
 				  (fmtout "set-pv! ~a ~a" ix k)
 				  (vector-set! pv ix k)
 				  (visit ix))
-			  (iter (cdr l)))))
+			  (loop (cdr l)))))
 		  (set! xl (cons k xl))
 		  (set-cdr! (vector-ref tv k) (next-t))
 		  ))
@@ -304,25 +304,25 @@
       (for-each (lambda (n) (incr (hashq-ref ht n)))
 		(cdr (vector-ref nv i))))
     ;; Iterate through nodes until cv all zero.
-    (let iter1 ((ol '()) (uh '())	; ordered list, unordered head 
+    (let loop1 ((ol '()) (uh '())	; ordered list, unordered head 
 		(ut (let r ((l '()) (x 0)) ; unordered tail
 		      (if (= x n) l (r (cons x l) (+ x 1))))))
       (cond
        ((null? ut)
 	(if (null? uh) 
 	    (reverse (map (lambda (e) (car (vector-ref nv e))) ol))
-	    (iter1 ol '() uh)))
+	    (loop1 ol '() uh)))
        (else
 	(let* ((ix (car ut)))
 	  (if (zero? (vector-ref cv ix))
-	      (iter1
-	       (let iter2 ((l (cdr (vector-ref nv ix))))
+	      (loop1
+	       (let loop2 ((l (cdr (vector-ref nv ix))))
 		     (if (null? l) (cons ix ol)
 			 (begin
 			   (decr (hashq-ref ht (car l)))
-			   (iter2 (cdr l)))))
+			   (loop2 (cdr l)))))
 	       uh
 	       (cdr ut))
-	      (iter1 ol (cons ix uh) (cdr ut)))))))))
+	      (loop1 ol (cons ix uh) (cdr ut)))))))))
 
 ;;; --- last line ---

@@ -36,7 +36,7 @@
   ;; match rule index, if no match return @code{-1}
   ;; could be improved by starting with last rule number and wrapping
   (define (match-rule lhs rhs)
-    (let iter ((ix 0))
+    (let loop ((ix 0))
       (if (eqv? ix (vector-length lhs-v)) -1
 	  (if (and (equal? lhs (elt->bison (vector-ref lhs-v ix) terms))
 		   (equal? rhs (vector->list
@@ -44,7 +44,7 @@
 				 (lambda (ix val) (elt->bison val terms))
 				 (vector-ref rhs-v ix)))))
 	      ix
-	      (iter (1+ ix))))))
+	      (loop (1+ ix))))))
 
   ;; this is a fold
   (define (rule->index-al tree seed)
@@ -105,13 +105,13 @@
 
   (let ((xsf (sxpath '(itemset item (@ (rule-number (equal? "0"))
 				       (point (equal? "2")))))))
-    (let iter ((data '()) (xtra #f) (states (cdr tree)))
+    (let loop ((data '()) (xtra #f) (states (cdr tree)))
       (cond
        ((null? states) (cons xtra data))
        ((pair? (xsf (car states)))
-	(iter data (st-numb (car states)) (cdr states)))
+	(loop data (st-numb (car states)) (cdr states)))
        (else
-	(iter (cons (do-state (car states)) data) xtra (cdr states)))))))
+	(loop (cons (do-state (car states)) data) xtra (cdr states)))))))
 
 ;; @deffn atomize symbol => string
 ;; This is copied from the module @code{(nyacc lalr)}.

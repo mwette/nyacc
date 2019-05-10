@@ -93,12 +93,12 @@
 
   (define (split-helper helper)
     (let ((file (car helper)))
-      (let iter ((tyns '()) (defs '()) (ents (cdr helper)))
+      (let loop ((tyns '()) (defs '()) (ents (cdr helper)))
 	(cond
 	 ((null? ents) (values (cons file tyns) (cons file defs)))
 	 ((split-cppdef (car ents)) =>
-	  (lambda (def) (iter tyns (cons def defs) (cdr ents))))
-	 (else (iter (cons (car ents) tyns) defs (cdr ents)))))))
+	  (lambda (def) (loop tyns (cons def defs) (cdr ents))))
+	 (else (loop (cons (car ents) tyns) defs (cdr ents)))))))
 
   (define (split-if-needed def)
     (if (pair? def) def (split-cppdef def)))
@@ -112,7 +112,7 @@
     (set-cpi-ctl! cpi '())		; list of current typenames
     (set-cpi-blev! cpi 0)		; brace/block level
     ;; Break up the helpers into typenames and defines.
-    (let iter ((itynd '()) (idefd '()) (helpers inchelp))
+    (let loop ((itynd '()) (idefd '()) (helpers inchelp))
       (cond ((null? helpers)
 	     (set-cpi-itynd! cpi itynd)
 	     (set-cpi-idefd! cpi idefd))
@@ -120,7 +120,7 @@
 	     (call-with-values
 		 (lambda () (split-helper (car helpers)))
 	       (lambda (ityns idefs)
-		 (iter (cons ityns itynd) (cons idefs idefd) (cdr helpers)))))))
+		 (loop (cons ityns itynd) (cons idefs idefd) (cdr helpers)))))))
     ;; Assign builtins.
     (and=> (assoc-ref (cpi-itynd cpi) "__builtin")
 	   (lambda (tl) (set-cpi-ctl! cpi (append tl (cpi-ctl cpi)))))
@@ -182,10 +182,10 @@
 (define (typename? name)
   (let ((cpi (fluid-ref *info*)))
     (if (member name (cpi-ctl cpi)) #t
-        (let iter ((ptl (cpi-ptl cpi)))
+        (let loop ((ptl (cpi-ptl cpi)))
 	  (if (null? ptl) #f
 	      (if (member name (car ptl)) #t
-		  (iter (cdr ptl))))))))
+		  (loop (cdr ptl))))))))
 
 ;; @deffn {Procedure} add-typename name
 ;; Helper for @code{save-typenames}.
@@ -256,7 +256,7 @@
 ;; @end deffn
 (define (read-cpp-line ch)
   (if (not (eq? ch #\#)) #f
-      (let iter ((cl '()) (ch (read-char)))
+      (let loop ((cl '()) (ch (read-char)))
 	(cond
 	 ;;((eof-object? ch) (throw 'cpp-error "CPP lines must end in newline"))
 	 ((eof-object? ch) (list->string (reverse cl)))
@@ -264,24 +264,24 @@
 	 ((eq? ch #\\)
 	  (let ((c2 (read-char)))
 	    (if (eq? c2 #\newline)
-		(iter cl (read-char))
-		(iter (cons* c2 ch cl) (read-char)))))
+		(loop cl (read-char))
+		(loop (cons* c2 ch cl) (read-char)))))
 	 ((eq? ch #\/) ;; swallow comments, even w/ newlines
 	  (let ((c2 (read-char)))
 	    (cond
 	     ((eqv? c2 #\*)
-	      (let iter2 ((cl2 (cons* #\* #\/ cl)) (ch (read-char)))
+	      (let loop2 ((cl2 (cons* #\* #\/ cl)) (ch (read-char)))
 		(cond
 		 ((eq? ch #\*)
 		  (let ((c2 (read-char)))
 		    (if (eqv? c2 #\/)
-			(iter (cons* #\/ #\* cl2) (read-char)) ;; keep comment
-			(iter2 (cons #\* cl2) c2))))
+			(loop (cons* #\/ #\* cl2) (read-char)) ;; keep comment
+			(loop2 (cons #\* cl2) c2))))
 		 (else
-		  (iter2 (cons ch cl2) (read-char))))))
+		  (loop2 (cons ch cl2) (read-char))))))
 	     (else
-	      (iter (cons #\/ cl) c2)))))
-	 (else (iter (cons ch cl) (read-char)))))))
+	      (loop (cons #\/ cl) c2)))))
+	 (else (loop (cons ch cl) (read-char)))))))
 
 (define (def-xdef? name mode)
   (not (eqv? mode 'file)))
@@ -579,15 +579,15 @@
 	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
 	  (define (read-token)
-	    (let iter ((ch (read-char)))
+	    (let loop ((ch (read-char)))
 	      (cond
 	       ((eof-object? ch)
 		(set! suppress #f)
 		(if (pop-input)
-		    (iter (read-char))
+		    (loop (read-char))
 		    (assc-$ '($end . "#<eof>"))))
-	       ((eq? ch #\newline) (set! bol #t) (iter (read-char)))
-	       ((char-set-contains? c:ws ch) (iter (read-char)))
+	       ((eq? ch #\newline) (set! bol #t) (loop (read-char)))
+	       ((char-set-contains? c:ws ch) (loop (read-char)))
 	       (bol
 		(set! bol #f)
 		(cond ;; things that require bol
@@ -595,8 +595,8 @@
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
 		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) => assc-$)
-			  (else (iter (read-char))))))
-		 (else (iter ch))))
+			  (else (loop (read-char))))))
+		 (else (loop ch))))
 	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
 	       ((read-c-ident ch) =>
 		(lambda (name)
@@ -609,7 +609,7 @@
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
-			   (iter (read-char))))
+			   (loop (read-char))))
 		     ((assq-ref keytab symb)
 		      ;;^minor bug: won't work on #define keyword xxx
 		      ;; try (and (not (assoc-ref name defs))
@@ -633,18 +633,18 @@
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
 		(let ((ch (read-char)))
-		  (cond ((eqv? #\newline ch) (iter (read-char))) ;; extend line
+		  (cond ((eqv? #\newline ch) (loop (read-char))) ;; extend line
 			(else (unread-char ch) (cons #\\ "\\"))))) ;; parse err
 	       (else (cons ch (string ch))))))
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
-	  (let iter ((pair (read-token)))
-	    ;;(report-error "lx iter=>~S" (list pair))
+	  (let loop ((pair (read-token)))
+	    ;;(report-error "lx loop=>~S" (list pair))
 	    (case (car ppxs)
 	      ((keep)
 	       pair)
 	      ((skip-done skip-look skip)
-	       (iter (read-token)))
+	       (loop (read-token)))
 	      (else (error "coding error")))))))
 
     lexer))

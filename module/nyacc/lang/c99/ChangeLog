@@ -2,6 +2,7 @@
 
 	* cpp.scm (cpp-define): Now accommodates comments in CPP like
 	this: #define /* MAX as macro */ MAX(X,Y) (((X)>(Y))?(X):(Y))
+	support item 109657
 
 2019-03-24  Matt Wette  <mwette@alumni.caltech.edu>
 

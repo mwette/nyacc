@@ -594,7 +594,7 @@
   (let* ((field-list (clean-field-list field-list)) ; remove lone comments
 	 (uflds (fold-right unitize-comp-decl '() (cdr field-list))))
     ;;(sferr "field-list:\n") (pperr field-list)
-    (let iter ((decls uflds))
+    (let loop ((decls uflds))
       (if (null? decls) '()
 	  (let* ((name (caar decls))
 		 (udecl (cdar decls))
@@ -605,9 +605,9 @@
 		 (type (mtail->bs-desc tail)))
 	    (cond
 	     ((and (pair? type) (eq? 'bit-field (car type)))
-	      (acons-bfld name type (iter (cdr decls)))) ; bit-field
+	      (acons-bfld name type (loop (cdr decls)))) ; bit-field
 	     (else
-	      (acons-defn name type (iter (cdr decls))))))))))
+	      (acons-defn name type (loop (cdr decls))))))))))
 
 ;; @deffn {Procedure} cnvt-aggr-def aggr-t typename aggr-name field-list
 ;; Output an aggregate definition, where
@@ -789,7 +789,7 @@
      ;; TODO check libffi on how unions are passed and returned.
      ;; I assume here never passed as a floating point.
      ;; This should use bounding-struct-descriptor from bytestructures
-     (let iter ((type #f) (size 0) (flds fields))
+     (let loop ((type #f) (size 0) (flds fields))
        (if (null? flds)
 	   (case type ((double) 'ffi:uint64) ((float) 'ffi:uint32) (else type))
 	   (let* ((udict (unitize-comp-decl (car flds)))
@@ -800,8 +800,8 @@
 		  (ftval (assq-ref ffi-symmap ftype))
 		  (fsize (sizeof ftval)))
 	     (if (> fsize size)
-		 (iter ftype fsize (cdr flds))
-		 (iter type size (cdr flds)))))))
+		 (loop ftype fsize (cdr flds))
+		 (loop type size (cdr flds)))))))
     (((union-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((union-def ,field-list))))
     
@@ -828,7 +828,7 @@
 (define (gen-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
   ;; mtail->ffi-desc needs to convert enum to int or void*
-  (let iter ((ix 0) (params (fix-params params)))
+  (let loop ((ix 0) (params (fix-params params)))
     (cond
      ((null? params) '())
      ;;((equal? (car params) '(ellipsis)) (fherr/once "no varargs (yet)") '...)
@@ -840,12 +840,12 @@
 	     (mdecl (udecl->mdecl udecl1 #:add-name (int->name ix))))
 	;;(sferr "  ~S\n" udecl1)
 	(cons (mtail->ffi-desc (cdr mdecl))
-	      (iter (1+ ix) (cdr params))))))))
+	      (loop (1+ ix) (cdr params))))))))
 
 (define (gen-bs-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
   ;; mtail->ffi-desc needs to convert enum to int or void*
-  (let iter ((ix 0) (params (fix-params params)))
+  (let loop ((ix 0) (params (fix-params params)))
     (cond
      ((null? params) '())
      ((equal? (car params) '(ellipsis)) '())
@@ -854,7 +854,7 @@
 	     (udecl1 (udecl-rem-type-qual udecl1))
 	     (mdecl (udecl->mdecl udecl1 #:add-name (int->name ix))))
 	(cons (mtail->bs-desc (cdr mdecl))
-	      (iter (1+ ix) (cdr params))))))))
+	      (loop (1+ ix) (cdr params))))))))
 
 ;; === function calls : unwrap args, call, wrap return
 
@@ -1047,9 +1047,9 @@
 		    (init-declr (ident ,(simple-format #f "arg-~A" ix)))))
       (,otherwise param-decl)))
 
-  (let iter ((ix 0) (decls (remove-void-param param-decls)))
+  (let loop ((ix 0) (decls (remove-void-param param-decls)))
     (if (null? decls) '()
-	(cons (fix-param (car decls) ix) (iter (1+ ix) (cdr decls))))))
+	(cons (fix-param (car decls) ix) (loop (1+ ix) (cdr decls))))))
 
 ;; @deffn {Procedure} cnvt-fctn name specl params
 ;; name is string
@@ -2090,9 +2090,9 @@
       (lambda (wrapped defined)
 	;; Set ffimod-defined for including, but removed built-in types.
 	(let* ((bity (car bs-defined))	; first built-in type
-	       (defd (let iter ((res '()) (defs defined))
+	       (defd (let loop ((res '()) (defs defined))
 		       (if (eq? (car defs) bity) res
-			   (iter (cons (car defs) res) (cdr defs))))))
+			   (loop (cons (car defs) res) (cdr defs))))))
 	  (set! ffimod-defined defd))))
     
     ;; output global constants (from enum and #define)
@@ -2144,9 +2144,9 @@
   (call-with-input-string str
     (lambda (iport)
       (cons 'begin
-	    (let iter ((exp (read iport)))
+	    (let loop ((exp (read iport)))
 	      (if (eof-object? exp) '()
-		  (cons exp (iter (read iport)))))))))
+		  (cons exp (loop (read iport)))))))))
 
 ;; Convert declaration with @var{name} in string-body of C @var{code}
 ;; to string-body of Scheme code.
@@ -2311,18 +2311,18 @@
       (lambda (iport)
 	(let ((env (make-fresh-user-module)))
 	  (eval '(use-modules (nyacc lang c99 ffi-help)) env)
-	  (let iter ((oport #f) (exp (read iport)))
+	  (let loop ((oport #f) (exp (read iport)))
 	    (cond
 	     ((eof-object? exp)
 	      (when oport
 		(display "\n;; --- last line ---\n" oport)
 		(close-port oport)))
 	     ((and (pair? exp) (eqv? 'define-ffi-module (car exp)))
-	      (iter (eval exp env) (read iport)))
+	      (loop (eval exp env) (read iport)))
 	     (else
 	      (when oport
 		(newline oport)
 		(pretty-print exp oport))
-	      (iter oport (read iport))))))))))
+	      (loop oport (read iport))))))))))
 
 ;; --- last line ---

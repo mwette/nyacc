@@ -1,4 +1,4 @@
-;; ./mach.d/cpp-tab.scm
+;; cpp-tab.scm
 
 ;; Copyright (C) 2016,2017 Matthew R. Wette
 ;; 

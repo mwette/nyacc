@@ -1,4 +1,4 @@
-;; ./mach.d/c99x-tab.scm
+;; c99x-tab.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 

@@ -32,16 +32,16 @@
 
 (define (vector-map proc vec)		; see (srfi srfi-43)
   (let* ((ln (vector-length vec)) (res (make-vector ln)))
-    (let iter ((ix 0))
+    (let loop ((ix 0))
       (unless (= ix ln)
 	(vector-set! res ix (proc ix (vector-ref vec ix)))
-	(iter (1+ ix))))
+	(loop (1+ ix))))
     res))
 
 (define (wrap-action actn)		; see util.scm
   (define (mkarg i) (string->symbol (string-append "$" (number->string i))))
-  (define (make-arg-list n) (let iter ((r '(. $rest)) (i 1))
-			      (if (> i n) r (iter (cons (mkarg i) r) (1+ i)))))
+  (define (make-arg-list n) (let loop ((r '(. $rest)) (i 1))
+			      (if (> i n) r (loop (cons (mkarg i) r) (1+ i)))))
   (cons* 'lambda (make-arg-list (car actn)) (cdr actn)))
 
 (define (make-xct av)
@@ -84,7 +84,7 @@
 	 (xct-v (make-xct (assq-ref mach 'act-v)))
 	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
     (lambda* (lexr #:key debug)
-      (let iter ((state (list 0))	; state stack
+      (let loop ((state (list 0))	; state stack
 		 (stack (list '$@))	; semantic value stack
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'er)
@@ -95,8 +95,8 @@
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? '$default (caar (vector-ref pat-v (car state))))
-	      (iter state stack (cons '$default #f) lval) ; default reduction
-	      (iter state stack nval (lexr))))		  ; reload
+	      (loop state stack (cons '$default #f) lval) ; default reduction
+	      (loop state stack nval (lexr))))		  ; reload
 	 (else
 	  (let* ((laval (or nval lval))
 		 (tval (car laval))
@@ -108,18 +108,18 @@
 	    (cond
 	     ((eq? 'error (car stx))	; error ???
 	      (if (memq tval skip-if-unexp)
-		  (iter state stack #f #f)
+		  (loop state stack #f #f)
 		  (parse-error state laval)))
 	     ((eq? 'reduce (car stx))	; reduce
 	      (let* ((gx (cdr stx))
 		     (gl (vector-ref len-v gx))
 		     ($$ (apply (vector-ref xct-v gx) stack)))
-		(iter (list-tail state gl)
+		(loop (list-tail state gl)
 		      (list-tail stack gl)
 		      (cons (vector-ref rto-v gx) $$)
 		      lval)))
 	     ((eq? 'shift (car stx))	; shift
-	      (iter (cons (cdr stx) state) (cons sval stack)
+	      (loop (cons (cdr stx) state) (cons sval stack)
 		    #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
@@ -132,7 +132,7 @@
 	 (ntab (assq-ref mach 'ntab))
 	 (start (assq-ref (assq-ref mach 'mtab) '$start)))
     (lambda* (lexr #:key debug)
-      (let iter ((state (list 0))	; state stack
+      (let loop ((state (list 0))	; state stack
 		 (stack (list '$@))	; semantic value stack
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'r)
@@ -143,8 +143,8 @@
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? $default (caar (vector-ref pat-v (car state))))
-	      (iter state stack (cons $default #f) lval) ; default reduction
-	      (iter state stack nval (lexr))))		 ; reload
+	      (loop state stack (cons $default #f) lval) ; default reduction
+	      (loop state stack nval (lexr))))		 ; reload
 	 (else
 	  (let* ((laval (or nval lval))
 		 (tval (car laval))
@@ -157,18 +157,18 @@
 	    (cond
 	     ((eq? #f stx)		; error
 	      (if (memq tval skip-if-unexp)
-		  (iter state stack #f #f)
+		  (loop state stack #f #f)
 		  (parse-error state laval)))
 	     ((negative? stx)		; reduce
 	      (let* ((gx (abs stx))
 		     (gl (vector-ref len-v gx))
 		     ($$ (apply (vector-ref xct-v gx) stack)))
-		(iter (list-tail state gl)
+		(loop (list-tail state gl)
 		      (list-tail stack gl)
 		      (cons (vector-ref rto-v gx) $$)
 		      lval)))
 	     ((positive? stx)		; shift
-	      (iter (cons stx state) (cons sval stack) #f (if nval lval #f)))
+	      (loop (cons stx state) (cons sval stack) #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
 

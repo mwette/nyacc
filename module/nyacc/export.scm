@@ -118,17 +118,17 @@
 	 (fmt port "%token ~A\n" (token->bison term))))
      terms)
     ;; Write the associativity and prececences.
-    (let iter ((pl '()) (ppl (assq-ref spec 'prec)))
+    (let loop ((pl '()) (ppl (assq-ref spec 'prec)))
       (cond
        ((pair? pl)
 	(fmt port "%~A" (or (assq-ref assc (caar pl)) "precedence"))
-	(let iter2 ((pl (car pl)))
+	(let loop2 ((pl (car pl)))
 	  (unless (null? pl)
 	    (fmt port " ~A" (elt->bison (car pl) terms))
-	    (iter2 (cdr pl))))
+	    (loop2 (cdr pl))))
 	(fmt port "\n")
-	(iter (cdr pl) ppl))
-       ((pair? ppl) (iter (car ppl) (cdr ppl)))))
+	(loop (cdr pl) ppl))
+       ((pair? ppl) (loop (car ppl) (cdr ppl)))))
     ;; Don't compact tables.
     (fmt port "%define lr.default-reduction accepting\n")
     ;; Provide start symbol.

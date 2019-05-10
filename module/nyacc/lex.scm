@@ -111,10 +111,10 @@
 (define (make-space-skipper chset)
   (lambda (ch)
     (if (char-set-contains? chset ch)
-	(let iter ((ch (read-char)))
+	(let loop ((ch (read-char)))
 	  (cond
 	   ((char-set-contains? chset ch)
-	    (iter (read-char)))
+	    (loop (read-char)))
 	   (else
 	    (unread-char ch)
 	    #t)))
@@ -136,13 +136,13 @@
 (define (make-ident-reader cs-first cs-rest)
   (lambda (ch)
     (if (char-set-contains? cs-first ch)
-	(let iter ((chl (list ch)) (ch (read-char)))
+	(let loop ((chl (list ch)) (ch (read-char)))
 	  (cond
 	   ((eof-object? ch)
 	    (if (null? chl) #f
 		(lxlsr chl)))
 	   ((char-set-contains? cs-rest ch)
-	    (iter (cons ch chl) (read-char)))
+	    (loop (cons ch chl) (read-char)))
 	   (else (unread-char ch)
 		 (lxlsr chl))))
 	#f)))
@@ -189,14 +189,14 @@
 (define (make-string-reader delim) ;; #:xxx
   (lambda (ch)
     (if (eq? ch delim)
-	(let iter ((cl '()) (ch (read-char)))
+	(let loop ((cl '()) (ch (read-char)))
 	  (cond ((eq? ch #\\)
 		 (let ((c1 (read-char)))
 		   (if (eq? c1 #\newline)
-		       (iter cl (read-char))
-		       (iter (cons* c1 cl) (read-char)))))
+		       (loop cl (read-char))
+		       (loop (cons* c1 cl) (read-char)))))
 		((eq? ch delim) (cons '$string (lxlsr cl)))
-		(else (iter (cons ch cl) (read-char)))))
+		(else (loop (cons ch cl) (read-char)))))
 	#f)))
 
 ;; @deffn {Procedure} read-oct => 123|#f
@@ -206,12 +206,12 @@
 (define read-oct
   (let ((cs:oct (string->char-set "01234567")))
     (lambda ()
-      (let iter ((cv 0) (ch (read-char)) (n 0))
+      (let loop ((cv 0) (ch (read-char)) (n 0))
 	(cond
 	 ((eof-object? ch) cv)
 	 ;;((> n 3) (unread-char ch) cv)
 	 ((char-set-contains? cs:oct ch)
-	  (iter (+ (* 8 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
+	  (loop (+ (* 8 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
 	 (else (unread-char ch) cv))))))
 
 ;; @deffn {Procedure} read-hex => 123|#f
@@ -223,16 +223,16 @@
 	(cs:uhx (string->char-set "ABCDEF"))
 	(cs:lhx (string->char-set "abcdef")))
     (lambda ()
-      (let iter ((cv 0) (ch (read-char)) (n 0))
+      (let loop ((cv 0) (ch (read-char)) (n 0))
 	(cond
 	 ((eof-object? ch) cv)
 	 ;;((> n 2) (unread-char ch) cv)
 	 ((char-set-contains? cs:dig ch)
-	  (iter (+ (* 16 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
+	  (loop (+ (* 16 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
 	 ((char-set-contains? cs:uhx ch)
-	  (iter (+ (* 16 cv) (- (char->integer ch) 55)) (read-char) (1+ n)))
+	  (loop (+ (* 16 cv) (- (char->integer ch) 55)) (read-char) (1+ n)))
 	 ((char-set-contains? cs:lhx ch)
-	  (iter (+ (* 16 cv) (- (char->integer ch) 87)) (read-char) (1+ n)))
+	  (loop (+ (* 16 cv) (- (char->integer ch) 87)) (read-char) (1+ n)))
 	 (else (unread-char ch) cv))))))
 
 ;; @deffn {Procedure} c-escape seed
@@ -269,10 +269,10 @@
 ;; @end deffn
 (define (read-c-string ch)
   (if (not (eq? ch #\")) #f
-      (let iter ((cl '()) (ch (read-char)))
-	(cond ((eq? ch #\\) (iter (c-escape cl) (read-char)))
+      (let loop ((cl '()) (ch (read-char)))
+	(cond ((eq? ch #\\) (loop (c-escape cl) (read-char)))
 	      ((eq? ch #\") (cons '$string (lxlsr cl)))
-	      (else (iter (cons ch cl) (read-char)))))))
+	      (else (loop (cons ch cl) (read-char)))))))
 
 ;; @deffn {Procedure} make-chlit-reader
 ;; Generate a reader for character literals. NOT DONE.
@@ -335,77 +335,77 @@
   ;; NO LONGER Removed support for leading '.' to be a number.
   (lambda (ch1)
     ;; chl: char list; ty: '$fixed or '$float; st: state; ch: next ch; ba: base
-    (let iter ((chl '()) (ty #f) (ba 10) (st 0) (ch ch1))
+    (let loop ((chl '()) (ty #f) (ba 10) (st 0) (ch ch1))
       (case st
 	((0)
 	 (cond
-	  ((eof-object? ch) (iter chl ty ba 5 ch))
-	  ((char=? #\0 ch) (iter (cons ch chl) '$fixed 8 10 (read-char))) 
-	  ((char-numeric? ch) (iter chl '$fixed ba 1 ch))
-	  ((char=? #\. ch) (iter (cons ch chl) #f ba 15 (read-char))) 
+	  ((eof-object? ch) (loop chl ty ba 5 ch))
+	  ((char=? #\0 ch) (loop (cons ch chl) '$fixed 8 10 (read-char))) 
+	  ((char-numeric? ch) (loop chl '$fixed ba 1 ch))
+	  ((char=? #\. ch) (loop (cons ch chl) #f ba 15 (read-char))) 
 	  (else #f)))
 	((10) ;; allow x, b (C++14) after 0
 	 (cond
-	  ((eof-object? ch) (iter chl ty ba 5 ch))
-	  ((char=? #\x ch) (iter (cons ch chl) ty 16 1 (read-char)))
-	  ((char=? #\X ch) (iter (cons ch chl) ty 16 1 (read-char)))
-	  ((char=? #\b ch) (iter (cons ch chl) ty 2 1 (read-char)))
-	  (else (iter chl ty ba 1 ch))))
+	  ((eof-object? ch) (loop chl ty ba 5 ch))
+	  ((char=? #\x ch) (loop (cons ch chl) ty 16 1 (read-char)))
+	  ((char=? #\X ch) (loop (cons ch chl) ty 16 1 (read-char)))
+	  ((char=? #\b ch) (loop (cons ch chl) ty 2 1 (read-char)))
+	  (else (loop chl ty ba 1 ch))))
 	((15) ;; got `.' only
 	 (cond
 	  ((eof-object? ch) (unread-char ch) #f)
-	  ((char-numeric? ch) (iter (cons ch chl) '$float ba 2 (read-char)))
+	  ((char-numeric? ch) (loop (cons ch chl) '$float ba 2 (read-char)))
 	  (else (unread-char ch) #f)))
 	((1)
 	 (cond
-	  ((eof-object? ch) (iter chl ty ba 5 ch))
-	  ((char-numeric? ch) (iter (cons ch chl) ty ba 1 (read-char)))
-	  ((char=? #\. ch) (iter (cons #\. chl) '$float ba 2 (read-char)))
+	  ((eof-object? ch) (loop chl ty ba 5 ch))
+	  ((char-numeric? ch) (loop (cons ch chl) ty ba 1 (read-char)))
+	  ((char=? #\. ch) (loop (cons #\. chl) '$float ba 2 (read-char)))
 	  ((and (= ba 16) (char-set-contains? c:hx ch))
-	   (iter (cons ch chl) ty ba 1 (read-char)))
+	   (loop (cons ch chl) ty ba 1 (read-char)))
 	  ((char-set-contains? c:sx ch)
-	   (iter (cons ch chl) ty ba 11 (read-char)))
+	   (loop (cons ch chl) ty ba 11 (read-char)))
 	  ((char-set-contains? c:nx ch)
-	   (iter (cons ch chl) '$float ba 3 (read-char)))
+	   (loop (cons ch chl) '$float ba 3 (read-char)))
 	  ((char-set-contains? c:if ch)
 	   (sf "\nchl=~S ch=~S ty=~S ba=~S\n" chl ch ty ba)
 	   (error "lex/num-reader st=1"))
-	  (else (iter chl '$fixed ba 5 ch))))
+	  (else (loop chl '$fixed ba 5 ch))))
 	((11) ;; got lLuU suffix, look for a second
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
 	  ((char-set-contains? c:sx ch)
-	   (iter (cons ch chl) ty ba 12 (read-char)))
-	  (else (iter chl '$fixed ba 5 ch))))
+	   (loop (cons ch chl) ty ba 12 (read-char)))
+	  (else (loop chl '$fixed ba 5 ch))))
 	((12) ;; got lLuU suffix, look for a third
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
 	  ((char-set-contains? c:sx ch)
-	   (iter (cons ch chl) '$fixed ba 5 (read-char)))
-	  (else (iter chl '$fixed ba 5 ch))))
+	   (loop (cons ch chl) '$fixed ba 5 (read-char)))
+	  (else (loop chl '$fixed ba 5 ch))))
 	((2)
 	 (cond
-	  ((eof-object? ch) (iter chl ty ba 5 ch))
-	  ((char-numeric? ch) (iter (cons ch chl) ty ba 2 (read-char)))
+	  ((eof-object? ch) (loop chl ty ba 5 ch))
+	  ((char-numeric? ch) (loop (cons ch chl) ty ba 2 (read-char)))
 	  ((char-set-contains? c:nx ch)
-	   (iter (cons ch (fix-dot chl)) ty ba 3 (read-char)))
+	   (loop (cons ch (fix-dot chl)) ty ba 3 (read-char)))
 	  ((char-set-contains? c:fx ch)
 	   (cons '$float (lxlsr (cons ch (fix-dot chl)))))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=2"))
-	  (else (iter (fix-dot chl) ty ba 5 ch))))
+	  (else (loop (fix-dot chl) ty ba 5 ch))))
 	((3)
 	 (cond
-	  ((eof-object? ch) (iter chl ty ba 5 ch))
+	  ((eof-object? ch) (loop chl ty ba 5 ch))
 	  ((or (char=? #\+ ch) (char=? #\- ch))
-	   (iter (cons ch chl) ty ba 4 (read-char)))
-	  ((char-numeric? ch) (iter chl ty ba 4 ch))
+	   (loop (cons ch chl) ty ba 4 (read-char)))
+	  ((char-numeric? ch) (loop chl ty ba 4 ch))
 	  (else (error "syntax3"))))
 	((4)
 	 (cond
-	  ((eof-object? ch) (iter chl ty ba 5 ch))
-	  ((char-numeric? ch) (iter (cons ch chl) ty ba 4 (read-char)))
+	  ((eof-object? ch) (loop chl ty ba 5 ch))
+	  ((char-numeric? ch) (loop (cons ch chl) ty ba 4 (read-char)))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=4"))
-	  (else (iter chl ty ba 5 ch))))
+	  (else (loop chl ty ba 5 ch))))
 	((5)
 	 (unless (eof-object? ch) (unread-char ch))
 	 (cons ty (lxlsr chl)))))))
@@ -450,17 +450,17 @@
 ;; This is a helper for make-tree.
 ;; @end deffn
 (define (si-map string-list ix)
-  (let iter ((sal '()) (sl string-list))
+  (let loop ((sal '()) (sl string-list))
     (cond
      ((null? sl) sal)
      ((= ix (string-length (car sl)))
-      (iter (reverse (acons 'else (car sl) sal)) (cdr sl)))
+      (loop (reverse (acons 'else (car sl) sal)) (cdr sl)))
      ((assq (string-ref (car sl) ix) sal) =>
       (lambda (pair)
         (set-cdr! pair (cons (car sl) (cdr pair)))
-        (iter sal (cdr sl))))
+        (loop sal (cdr sl))))
      (else ;; Add (#\? . string) to alist.
-      (iter (cons (cons (string-ref (car sl) ix) (list (car sl))) sal)
+      (loop (cons (cons (string-ref (car sl) ix) (list (car sl))) sal)
             (cdr sl))))))
 
 ;;.@deffn {Procedure} make-tree strtab -> tree
@@ -488,13 +488,13 @@
   ;; in the list of transitions.
   (let ((tree (make-tree strtab)))
     (lambda (ch)
-      (let iter ((cl (list ch)) (node tree))
+      (let loop ((cl (list ch)) (node tree))
 	(cond
 	 ((assq-ref node (car cl)) => ;; accept or shift next character
 	  (lambda (n)
 	    (if (eq? (caar n) 'else) ; if only else, accept, else read on
 		(cons (cdar n) (lxlsr cl))
-		(iter (cons (read-char) cl) n))))
+		(loop (cons (read-char) cl) n))))
 	 ((assq-ref node 'else) => ; else exists, accept
 	  (lambda (tok)
 	    (unless (eof-object? (car cl)) (unread-char (car cl)))
@@ -534,13 +534,13 @@
   ;; (skip-ws-to-col 6 "\tdef" '(#\newline)) => (#\d #\space #\space #\newline)
   ;; @end example
   (define (skip-to-col col il)
-    (let iter ((il il) (cc 0) (ch (read-char)))
-      ;;(simple-format #t " skip-to-col iter il=~S cc=~S ch=~S\n" il cc ch)
+    (let loop ((il il) (cc 0) (ch (read-char)))
+      ;;(simple-format #t " skip-to-col loop il=~S cc=~S ch=~S\n" il cc ch)
       (cond
        ((= cc col) (cons ch il))
-       ((> cc col) (iter (cons ch il) (1- cc) #\space)) ; tab over-run
-       ((char=? ch #\space) (iter il (1+ cc) (read-char)))
-       ((char=? ch #\tab) (iter il (* 8 (quotient (+ cc 9) 8)) (read-char)))
+       ((> cc col) (loop (cons ch il) (1- cc) #\space)) ; tab over-run
+       ((char=? ch #\space) (loop il (1+ cc) (read-char)))
+       ((char=? ch #\tab) (loop il (* 8 (quotient (+ cc 9) 8)) (read-char)))
        (else (cons ch il)))))
 	 
   (let ((tree (make-tree comm-table)))
@@ -664,16 +664,16 @@
     (lambda ()
       (let ((bol #f))
 	(lambda ()
-	  (let iter ((ch (read-char)))
+	  (let loop ((ch (read-char)))
 	    (cond
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
-	     ;;((eq? ch #\newline) (set! bol #t) (iter (read-char)))
+	     ;;((eq? ch #\newline) (set! bol #t) (loop (read-char)))
 	     ((read-extra ch))
-	     ((char-set-contains? space-cs ch) (iter (read-char)))
+	     ((char-set-contains? space-cs ch) (loop (read-char)))
 	     ((and (eqv? ch #\newline) (set! bol #t) #f))
 	     ((read-comm ch bol) =>
 	      (lambda (p) (set! bol #f) (assc-$ p)))
-	     ((skip-comm ch) (iter (read-char)))
+	     ((skip-comm ch) (loop (read-char)))
 	     ((read-num ch) => assc-$)	  ; => $fixed or $float
 	     ((read-string ch) => assc-$) ; => $string
 	     ((read-chlit ch) => assc-$)  ; => $chlit

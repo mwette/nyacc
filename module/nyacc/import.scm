@@ -30,14 +30,14 @@
 	 (start (caadr spec0))
 	 (wrap-symb
 	  (lambda (s) (cons (if (memq s terms) 'terminal 'non-terminal) s))))
-    (let iter ((prl1 '())		; new production rules
+    (let loop ((prl1 '())		; new production rules
 	       (prl0 (cdr spec0))	; old production rules
 	       (lhs #f)			; LHS
 	       (rhs1-l #f)		; new RHS list
 	       (rhs0-l #f))		; old RHS list
       (cond
        ((pair? rhs0-l) ;; convert RHS
-	(iter prl1 prl0 lhs
+	(loop prl1 prl0 lhs
 	      (cons
 	       (fold-right ;; s1 ... : a => (('terminal . s) ... ('$$ . a))
 		(lambda (symb seed) (cons (wrap-symb symb) seed))
@@ -46,9 +46,9 @@
 	       rhs1-l)
 	      (cdr rhs0-l)))
        ((null? rhs0-l) ;; roll up LHS+RHSs to new rule
-	(iter (cons (cons lhs (reverse rhs1-l)) prl1) prl0 #f #f #f))
+	(loop (cons (cons lhs (reverse rhs1-l)) prl1) prl0 #f #f #f))
        ((pair? prl0) ;; next production rule
-	(iter prl1 (cdr prl0) (caar prl0) '() (cdar prl0)))
+	(loop prl1 (cdr prl0) (caar prl0) '() (cdar prl0)))
        (else ;; return spec in preliminary form
 	(list
 	 'lalr-spec

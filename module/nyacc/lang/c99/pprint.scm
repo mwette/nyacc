@@ -82,12 +82,12 @@
 ;; @end deffn
 (define (char->hex-list ch seed)
   (define (itox ival) (string-ref "0123456789ABCDEF" ival))
-  (let iter ((res seed) (ix 8) (val (char->integer ch)))
+  (let loop ((res seed) (ix 8) (val (char->integer ch)))
     (cond
      ((zero? ix) (cons* #\\ #\U res))
      ((and (zero? val) (= ix 4)) (cons* #\\ #\u res))
      (else
-      (iter (cons (itox (remainder val 16)) res) (1- ix) (quotient val 16))))))
+      (loop (cons (itox (remainder val 16)) res) (1- ix) (quotient val 16))))))
 
 (define (esc->ch ch)
   (case ch ((#\nul) #\0) ((#\bel) #\a) ((#\bs) #\b) ((#\ht) #\t)
@@ -558,13 +558,13 @@
 	     (then-part (sx-ref tree 2)))
 	 (sf "if (") (ppx cond-part) (sf ") ")
 	 (ppx then-part)
-	 (let iter ((else-l (sx-tail tree 3)))
+	 (let loop ((else-l (sx-tail tree 3)))
 	   (cond
 	    ((null? else-l) #t)
 	    ((eqv? 'else-if (caar else-l))
 	     (sf "else if (") (ppx (sx-ref (car else-l) 1)) (sf ") ")
 	     (ppx (sx-ref (car else-l) 2))
-	     (iter (cdr else-l)))
+	     (loop (cdr else-l)))
 	    (else
 	     (sf "else ")
 	     (ppx (car else-l)))))))

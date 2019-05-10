@@ -31,42 +31,42 @@
 (define (vector-map proc . vecs)
   (let* ((size (apply min (map vector-length vecs)))
 	 (retv (make-vector size)))
-    (let iter ((ix 0))
+    (let loop ((ix 0))
       (cond
        ((= ix size) retv)
        (else
 	(vector-set! retv ix
 		     (apply proc ix (map (lambda (v) (vector-ref v ix)) vecs)))
-	(iter (1+ ix)))))))
+	(loop (1+ ix)))))))
 
 ;; replacement for same from (srfi srfi-43)
 (define (vector-for-each proc . vecs)
   (let ((size (apply min (map vector-length vecs))))
-    (let iter ((ix 0))
+    (let loop ((ix 0))
       (cond
        ((= ix size) (if #f #f))
        (else
 	(apply proc ix (map (lambda (v) (vector-ref v ix)) vecs))
-	(iter (1+ ix)))))))
+	(loop (1+ ix)))))))
   
 ;; hack to replace same from (srfi srfi-43)
 ;; the real one takes more args
 (define (vector-any pred? vec)
   (let ((size (vector-length vec)))
-    (let iter ((ix 0))
+    (let loop ((ix 0))
       (cond
        ((= ix size) #f)
        ((pred? ix (vector-ref vec ix)) #t)
-       (else (iter (1+ ix)))))))
+       (else (loop (1+ ix)))))))
 
 ;; replacement for same from (srfi srfi-43)
 (define (vector-fold proc seed . vecs)
   (let ((size (apply min (map vector-length vecs))))
-    (let iter ((seed seed) (ix 0))
+    (let loop ((seed seed) (ix 0))
       (cond
        ((= ix size) seed)
        (else
-	(iter
+	(loop
 	 (apply proc ix seed (map (lambda (v) (vector-ref v ix)) vecs))
 	 (1+ ix)))))))
 
@@ -83,14 +83,14 @@
     ((_ c e ...) (if c (begin e ...)))))
 
 (define (bitwise-arithmetic-shift-right ei1 ei2)
-  (let iter ((ei1 ei1) (ei2 ei2))
+  (let loop ((ei1 ei1) (ei2 ei2))
     (if (zero? ei2) ei1
-	(iter (quotient ei2 2) (1- ei1)))))
+	(loop (quotient ei2 2) (1- ei1)))))
 
 (define (bitwise-arithmetic-shift-left ei1 ei2)
-  (let iter ((ei1 ei1) (ei2 ei2))
+  (let loop ((ei1 ei1) (ei2 ei2))
     (if (zero? ei2) ei1
-	(iter (* ei2 2) (1- ei1)))))
+	(loop (* ei2 2) (1- ei1)))))
 
 (define-syntax pmatch
   (syntax-rules ()
@@ -131,11 +131,11 @@
      (let* ((env (current-module))
 	    (path (%search-load-path file))
 	    (port (open-input-file path)))
-       (let iter ((exp (read port)))
+       (let loop ((exp (read port)))
 	 (cond
 	  ((eof-object? exp) (if #f #f))
 	  (else
 	   (eval exp env)
-	   (iter (read port)))))))))
+	   (loop (read port)))))))))
 
 ;;; --- last line ---

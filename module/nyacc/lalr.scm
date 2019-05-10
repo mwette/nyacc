@@ -259,10 +259,10 @@
 ;; Find the terminal in @code{term-l} that is equivalent to @code{symb}.
 ;; @end deffn
 (define (find-terminal symb term-l)
-  (let iter ((tl term-l))
+  (let loop ((tl term-l))
     (if (null? tl) #f
 	(if (eqv-terminal? symb (car tl)) (car tl)
-	    (iter (cdr tl))))))
+	    (loop (cdr tl))))))
   
 ;; @deffn {Procedure} process-spec tree => specification (as a-list)
 ;; Here we sweep through the production rules. We flatten and order the rules
@@ -295,7 +295,7 @@
   ;; @end example
   (define (prec-n-assc tree)
     ;; prec-l; lt-assc-l rt-assc-l non-assc-l pspec
-    (let iter ((pll '()) (pl '()) (la '()) (ra '()) (na '())
+    (let loop ((pll '()) (pl '()) (la '()) (ra '()) (na '())
 	       (spec '()) (tree tree))
       (cond
        ((pair? spec)
@@ -303,17 +303,17 @@
 	(let* ((item (car spec)) (as (car item)) (tl (map atomize (cdr item))))
 	  (case as
 	    ((left)
-	     (iter pll (cons tl pl) (append tl la) ra na (cdr spec) tree))
+	     (loop pll (cons tl pl) (append tl la) ra na (cdr spec) tree))
 	    ((right)
-	     (iter pll (cons tl pl) la (append tl ra) na (cdr spec) tree))
+	     (loop pll (cons tl pl) la (append tl ra) na (cdr spec) tree))
 	    ((nonassoc)
-	     (iter pll (cons tl pl) la ra (append tl na) (cdr spec) tree))
+	     (loop pll (cons tl pl) la ra (append tl na) (cdr spec) tree))
 	    ((undecl)
-	     (iter pll (cons tl pl) la ra na (cdr spec) tree)))))
+	     (loop pll (cons tl pl) la ra na (cdr spec) tree)))))
        ((pair? pl)
-	(iter (cons (reverse pl) pll) '() la ra na spec tree))
+	(loop (cons (reverse pl) pll) '() la ra na spec tree))
        ((pair? tree)
-	(iter pll pl la ra na
+	(loop pll pl la ra na
 	      (if (eqv? 'precedence (caar tree)) (cdar tree) '()) (cdr tree)))
        (else
 	(list
@@ -355,9 +355,9 @@
       (fold
        (lambda (s l) (cons (fmtstr "+++ LHS not used in any RHS: ~A" s) l))
        err-l
-       (let iter ((ull '()) (all ll)) ; unused LHSs, all LHS's
+       (let loop ((ull '()) (all ll)) ; unused LHSs, all LHS's
 	 (if (null? all) ull
-	     (iter (if (or (memq (car all) nl)
+	     (loop (if (or (memq (car all) nl)
 			   (memq (car all) ull)
 			   (memq (car all) alt-start) ; new 02Sep18
 			   (eq? (car all) '$start))
@@ -383,7 +383,7 @@
     ;; up in the match-table.  The parser will skip these if the automoton has
     ;; no associated transitions for these.  This allows users to parse for
     ;; comments in some rules but skip the rest.
-    (let iter ((ll '($start))		; LHS list
+    (let loop ((ll '($start))		; LHS list
 	       (@l (list		; attributes per prod' rule
 		    `((rhs . ,(vector start-symbol))
 		      (ref . all) (act 1 $1))))
@@ -404,29 +404,29 @@
 	;; Capture info on RHS term.
 	(case (caar rhs)
 	  ((terminal)
-	   (iter ll @l (add-el (cdar rhs) tl) nl head prox lhs tail
+	   (loop ll @l (add-el (cdar rhs) tl) nl head prox lhs tail
 		 rhs-l attr (cons (atomize (cdar rhs)) pel) (cdr rhs)))
 	  ((non-terminal)
-	   (iter ll @l tl (add-el (cdar rhs) nl) head prox lhs tail
+	   (loop ll @l tl (add-el (cdar rhs) nl) head prox lhs tail
 		 rhs-l attr (cons (cdar rhs) pel) (cdr rhs)))
 	  ((action)
 	   (if (pair? (cdr rhs))
 	       ;; mid-rule action: generate a proxy (car act is # args)
 	       (let* ((sy (gensy))
 		      (pr (make-mra-proxy sy pel (cdar rhs))))
-		 (iter ll @l tl (cons sy nl) head (cons pr prox)
+		 (loop ll @l tl (cons sy nl) head (cons pr prox)
 		       lhs tail rhs-l attr (cons sy pel) (cdr rhs)))
 	       ;; end-rule action
-	       (iter ll @l tl nl head prox lhs tail
+	       (loop ll @l tl nl head prox lhs tail
 		     rhs-l (acons 'action (cdar rhs) attr) pel (cdr rhs))))
 	  ((proxy)
 	   (let* ((sy (gensy))
 		  (pf (cadar rhs))	; proxy function
 		  (p1 (pf sy (cddar rhs))))
-	     (iter ll @l tl (cons sy nl) head (cons p1 prox) lhs
+	     (loop ll @l tl (cons sy nl) head (cons p1 prox) lhs
 		   tail rhs-l attr (cons sy pel) (cdr rhs))))
 	  ((prec)
-	   (iter ll @l (add-el (cdar rhs) tl) nl head prox lhs tail rhs-l
+	   (loop ll @l (add-el (cdar rhs) tl) nl head prox lhs tail rhs-l
 		 (acons 'prec (atomize (cdar rhs)) attr) pel (cdr rhs)))
 	  (else
 	   (error (fmtstr "bug=~S" (caar rhs))))))
@@ -449,26 +449,26 @@
 		     ((memq '$error pel) '((display "syntax error\n")))
 		     ((zero? nrg) '((list)))
 		     (else '($1)))))
-	  (iter (cons lhs ll)
+	  (loop (cons lhs ll)
 		(cons (cons* (cons 'rhs (list->vector (reverse pel)))
 			     (cons* 'act nrg act) (cons 'ref ref) attr) @l)
 		tl nl head prox lhs tail rhs-l attr pel #f)))
 
        ((pair? rhs-l)
 	;; Work through next RHS.
-	(iter ll @l tl nl head prox lhs tail
+	(loop ll @l tl nl head prox lhs tail
 	      (cdr rhs-l) '() '() (car rhs-l)))
 
        ((pair? tail)
 	;; Check the next CAR of the tail.  If it matches
 	;; the current LHS process it, else skip it.
-	(iter ll @l tl nl head prox lhs (cdr tail) 
+	(loop ll @l tl nl head prox lhs (cdr tail) 
 	      (if (eqv? (caar tail) lhs) (cdar tail) '())
 	      attr pel #f))
 
        ((pair? prox)
 	;; If a proxy then we have ((lhs RHS) (lhs RHS))
-	(iter ll @l tl nl (cons (car prox) head) (cdr prox)
+	(loop ll @l tl nl (cons (car prox) head) (cdr prox)
 	      lhs tail rhs-l attr pel rhs))
 
        ((pair? head)
@@ -478,8 +478,8 @@
 	(let ((lhs (caar head)) (rhs-l (cdar head))
 	      (rest (cdr head)))
 	  (if (memq lhs ll)
-	      (iter ll @l tl nl rest prox #f '() '() attr pel #f)
-	      (iter ll @l tl nl rest prox lhs rest rhs-l attr pel rhs))))
+	      (loop ll @l tl nl rest prox #f '() '() attr pel #f)
+	      (loop ll @l tl nl rest prox lhs rest rhs-l attr pel rhs))))
 
        (else
 	(let* ((al (reverse @l))	; attribute list
@@ -569,12 +569,12 @@
 ;; @end deffn
 (define (<? a b po)
   (if (member (cons a b) po) #t
-      (let iter ((po po))
+      (let loop ((po po))
 	(if (null? po) #f
 	    (if (and (eqv? (caar po) a)
 		     (<? (cdar po) b po))
 		#t
-		(iter (cdr po)))))))
+		(loop (cdr po)))))))
 
 ;; @deffn {Procedure} prece a b po
 ;; Return precedence for @code{a,b} given the partial order @code{po} as
@@ -623,16 +623,16 @@
      ((terminal? lhs) '())
      ((eq? lhs '$epsilon) '())
      (else
-      (let iter-st ((st 0))
+      (let loop-st ((st 0))
 	;; Iterate to find the start index.
 	(if (= st n) '()		; not found
 	    (if (match? st lhs)
 		;; Start found, now iteratate to find end index.
-		(let iter-nd ((nd st))
+		(let loop-nd ((nd st))
 		  (if (= nd n) (cons st nd)
 		      (if (not (match? nd lhs)) (cons st nd)
-			  (iter-nd (1+ nd)))))
-		(iter-st (1+ st)))))))))
+			  (loop-nd (1+ nd)))))
+		(loop-st (1+ st)))))))))
 
 ;; @deffn {Procedure} range-next rng -> rng
 ;; Given a range in the form of @code{(cons start (1+ end))} return the next
@@ -744,7 +744,7 @@
 	 (rhs-v (core-rhs-v core))
 	 (glen (vector-length lhs-v))
 	 (lhs-symb (lambda (gx) (vector-ref lhs-v gx))))
-    (let iter ((rslt '())		; result is set of p-rule indices
+    (let loop ((rslt '())		; result is set of p-rule indices
 	       (done '())		; symbols completed or queued
 	       (next '())		; next round of symbols to process
 	       (curr (list symb))	; this round of symbols to process
@@ -760,13 +760,13 @@
 		 (next1 (cond ((memq rhs1 done) next)
 			      ((terminal? rhs1) next)
 			      (else (cons rhs1 next)))))
-	    (iter rslt1 done1 next1 curr (1+ gx))))
+	    (loop rslt1 done1 next1 curr (1+ gx))))
 	 (else
 	  ;; Nothing to check; process next rule.
-	  (iter rslt done next curr (1+ gx)))))
+	  (loop rslt done next curr (1+ gx)))))
        ((pair? next)
 	;; Start another sweep throught the grammar.
-	(iter rslt done '() next 0))
+	(loop rslt done '() next 0))
        (else
 	;; Done, so return.
 	(reverse rslt))))))
@@ -784,11 +784,11 @@
 ;; Helper for step1
 ;; @end deffn
 (define (its-equal? its-1 its-2)
-  (let iter ((its1 its-1) (its2 its-2)) ; cdr to strip off the ind
+  (let loop ((its1 its-1) (its2 its-2)) ; cdr to strip off the ind
     (if (and (null? its1) (null? its2)) #t ; completed run through => #f
 	(if (or (null? its1) (null? its2)) #f ; lists not equal length => #f
 	    (if (not (member (car its1) its-2)) #f ; mismatch => #f
-		(iter (cdr its1) (cdr its2)))))))
+		(loop (cdr its1) (cdr its2)))))))
 
 ;; @deffn {Procedure} its-member its its-l
 ;; Helper for step1
@@ -796,10 +796,10 @@
 ;; index, else return #f.
 ;; @end deffn
 (define (its-member its its-l)
-  (let iter ((itsl its-l))
+  (let loop ((itsl its-l))
     (if (null? itsl) #f
 	(if (its-equal? its (cdar itsl)) (caar itsl)
-	    (iter (cdr itsl))))))
+	    (loop (cdr itsl))))))
   
 ;; @deffn {Procedure} its-trans itemset => alist of (symb . itemset)
 ;; Compute transitions from an itemset.   Thatis, map a list of kernel
@@ -809,7 +809,7 @@
 ;; @end example
 ;; @end deffn
 (define (its-trans items)
-  (let iter ((rslt '())			; result
+  (let loop ((rslt '())			; result
 	     (k-items items)		; items
 	     (itl '()))			; one k-item w/ added non-kernels
     (cond
@@ -821,19 +821,19 @@
 	(cond
 	 ((eq? sy '$epsilon)
 	  ;; don't transition end-of-rule items
-	  (iter rslt k-items (cdr itl)))
+	  (loop rslt k-items (cdr itl)))
 	 ((not sq)
 	  ;; haven't seen this symbol yet
-	  (iter (acons sy (list nx) rslt) k-items (cdr itl)))
+	  (loop (acons sy (list nx) rslt) k-items (cdr itl)))
 	 ((member nx (cdr sq))
 	  ;; repeat
-	  (iter rslt k-items (cdr itl)))
+	  (loop rslt k-items (cdr itl)))
 	 (else
 	  ;; SY is in RSLT and item not yet in: add it.
 	  (set-cdr! sq (cons nx (cdr sq)))
-	  (iter rslt k-items (cdr itl))))))
+	  (loop rslt k-items (cdr itl))))))
      ((pair? k-items)
-      (iter rslt (cdr k-items) (expand-k-item (car k-items))))
+      (loop rslt (cdr k-items) (expand-k-item (car k-items))))
      (else
       rslt))))
 
@@ -854,7 +854,7 @@
 	 (add-kset (lambda (upd kstz)	; give upd a ks-ix and add to kstz
 		     (acons (1+ (caar kstz)) upd kstz)))
 	 (init '(0 (0 . 0))))
-    (let iter ((ksets (list init))	; w/ index
+    (let loop ((ksets (list init))	; w/ index
 	       (ktrnz '())		; ((symb src dst) (symb src dst) ...)
 	       (next '())		; w/ index
 	       (todo (list init))	; w/ index
@@ -870,13 +870,13 @@
 	       (next1 (if dst-ix next (cons upd next)))
 	       (dsx (if dst-ix dst-ix (car upd))) ; dest state index
 	       (ktrnz1 (cons (list (caar trans) curr dsx) ktrnz)))
-	  (iter ksets1 ktrnz1 next1 todo curr (cdr trans))))
+	  (loop ksets1 ktrnz1 next1 todo curr (cdr trans))))
        ((pair? todo)
 	;; Process the next state (aka itemset).
-	(iter ksets ktrnz next (cdr todo) (caar todo) (its-trans (cdar todo))))
+	(loop ksets ktrnz next (cdr todo) (caar todo) (its-trans (cdar todo))))
        ((pair? next)
 	;; Sweep throught the grammar again.
-	(iter ksets ktrnz '() next curr '()))
+	(loop ksets ktrnz '() next curr '()))
        (else
 	(let* ((nkis (length ksets))	; also (caar ksets)
 	       (kisv (make-vector nkis #f))
@@ -902,19 +902,19 @@
   (let* ((nprod (vector-length lhs-v))
 	 (find-new
 	  (lambda (e l)
-	    (let iter ((ll l) (gx 0) (lhs #f) (rhs #()) (rx 0))
+	    (let loop ((ll l) (gx 0) (lhs #f) (rhs #()) (rx 0))
 	      (cond
 	       ((< rx (vector-length rhs))
 		(if (and (memq (vector-ref rhs rx) nterms) ; non-term
 			 (memq (vector-ref rhs rx) ll))	   ; w/ eps prod
-		    (iter ll gx lhs rhs (1+ rx)) ; yes: check next
-		    (iter ll (1+ gx) #f #() 0))) ; no: next p-rule
+		    (loop ll gx lhs rhs (1+ rx)) ; yes: check next
+		    (loop ll (1+ gx) #f #() 0))) ; no: next p-rule
 	       ((and lhs (= rx (vector-length rhs))) ; we have eps-prod
-		(iter (if (memq lhs ll) ll (cons lhs ll)) (1+ gx) #f #() 0))
+		(loop (if (memq lhs ll) ll (cons lhs ll)) (1+ gx) #f #() 0))
 	       ((< gx nprod)		; check next p-rule if not on list
 		(if (memq (vector-ref lhs-v gx) ll)
-		    (iter ll (1+ gx) #f #() 0)
-		    (iter ll gx (vector-ref lhs-v gx) (vector-ref rhs-v gx) 0)))
+		    (loop ll (1+ gx) #f #() 0)
+		    (loop ll gx (vector-ref lhs-v gx) (vector-ref rhs-v gx) 0)))
 	       (else ll))))))
     (fixpoint find-new (find-new #f '()))))
 
@@ -941,7 +941,7 @@
     ;; This loop strips off the leading symbol from stng and then adds to
     ;; todo list, which results in range of p-rules getting checked for
     ;; terminals.
-    (let iter ((rslt '())		; terminals collected
+    (let loop ((rslt '())		; terminals collected
 	       (stng symbol-list)	; what's left of input string
 	       (hzeps #t)		; if eps-prod so far
 	       (done '())		; non-terminals checked
@@ -953,33 +953,33 @@
 	(let ((sym (looking-at item)))
 	  (cond
 	   ((eq? sym '$epsilon)		; at end of rule, go next
-	    (iter rslt stng hzeps done todo p-range '()))
+	    (loop rslt stng hzeps done todo p-range '()))
 	   ((terminal? sym)		; terminal, log it
-	    (iter (merge1 sym rslt) stng hzeps done todo p-range '()))
+	    (loop (merge1 sym rslt) stng hzeps done todo p-range '()))
 	   ((memq sym eps-l)		; symbol has eps prod
-	    (iter rslt stng hzeps (merge1 sym done) (merge2 sym todo done)
+	    (loop rslt stng hzeps (merge1 sym done) (merge2 sym todo done)
 		  p-range (next-item item)))
 	   (else ;; non-terminal, add to todo/done, goto next
-	    (iter rslt stng hzeps
+	    (loop rslt stng hzeps
 		  (merge1 sym done) (merge2 sym todo done) p-range '())))))
        
        ((pair? p-range)			; next one to do
 	;; run through next rule
-	(iter rslt stng hzeps done todo
+	(loop rslt stng hzeps done todo
 	      (range-next p-range) (first-item (car p-range))))
 
        ((pair? todo)
-	(iter rslt stng hzeps done (cdr todo) (prule-range (car todo)) '()))
+	(loop rslt stng hzeps done (cdr todo) (prule-range (car todo)) '()))
 
        ((and hzeps (pair? stng))
 	;; Last pass saw an $epsilon so check the next input symbol,
 	;; with saweps reset to #f.
 	(let* ((symb (car stng)) (stng1 (cdr stng)) (symbl (list symb)))
 	  (if (terminal? symb)
-	      (iter (cons symb rslt) stng1
+	      (loop (cons symb rslt) stng1
 		    (and hzeps (memq symb eps-l))
 		    done todo p-range '())
-	      (iter rslt stng1
+	      (loop rslt stng1
 		    (or (eq? symb '$epsilon) (memq symb eps-l))
 		    symbl symbl '() '()))))
        (hzeps
@@ -1003,9 +1003,9 @@
       (let* ((core (fluid-ref *lalr-core*))
 	     (rhs-v (core-rhs-v core))
 	     (rhs (vector-ref rhs-v (car item))))
-	(let iter ((res '()) (ix (1- (vector-length rhs))))
+	(let loop ((res '()) (ix (1- (vector-length rhs))))
 	  (if (< ix (cdr item)) res
-	      (iter (cons (vector-ref rhs ix) res) (1- ix)))))))
+	      (loop (cons (vector-ref rhs ix) res) (1- ix)))))))
 
 ;; add (item . toks) to (front of) la-item-l
 ;; i.e., la-item-l is unmodified
@@ -1013,9 +1013,9 @@
   (let* ((pair (assoc item la-item-l))
 	 (tokl (if (pair? pair) (cdr pair) '()))
 	 (allt ;; union of toks and la-item-l toks
-	  (let iter ((tl tokl) (ts toks))
+	  (let loop ((tl tokl) (ts toks))
 	    (if (null? ts) tl
-		(iter (if (memq (car ts) tl) tl (cons (car ts) tl))
+		(loop (if (memq (car ts) tl) tl (cons (car ts) tl))
 		      (cdr ts))))))
     (if (not pair) (acons item allt la-item-l)
 	(if (eqv? tokl allt) la-item-l
@@ -1048,11 +1048,11 @@
 	 ((last-item? (car la-item)) seed)
 	 ((terminal? (looking-at (car la-item))) seed)
 	 (else
-	  (let iter ((seed seed) (pr (prule-range symb)))
+	  (let loop ((seed seed) (pr (prule-range symb)))
 	    (cond
 	     ((null? pr) seed)
 	     (else
-	      (iter (merge-la-item seed (first-item (car pr))
+	      (loop (merge-la-item seed (first-item (car pr))
 				   (first-following item toks))
 		    (range-next pr)))))))))
     la-item-l)))
@@ -1111,7 +1111,7 @@
 	 ;; kernel-itemset propagations
 	 (kip-v (make-vector nkset '()))) ; sx0 => ((ita (sx1a . it1a) (sx2a
     (vector-set! kit-v 0 (closure (list (list '(0 . 0) '$end))))
-    (let iter ((kx -1) (kset '()))
+    (let loop ((kx -1) (kset '()))
       (cond
        ((pair? kset)
 	(for-each
@@ -1128,10 +1128,10 @@
 	 (remove ;; todo: check this remove
 	  (lambda (li) (last-item? (car li)))
 	  (closure (list (cons (car kset) '($@))))))
-	(iter kx (cdr kset)))
+	(loop kx (cdr kset)))
 
        ((< (1+ kx) nkset)
-	(iter (1+ kx)
+	(loop (1+ kx)
 	      ;; End-items don't shift, so don't propagate.
 	      (remove last-item? (vector-ref kis-v (1+ kx)))))))
     (cons* (cons 'kit-v kit-v) (cons 'kip-v kip-v) p-mach)))
@@ -1165,7 +1165,7 @@
   (let* ((kit-v (assq-ref p-mach 'kit-v))
 	 (kip-v (assq-ref p-mach 'kip-v))
 	 (nkset (vector-length kit-v)))
-    (let iter ((upd #t)			; token propagated?
+    (let loop ((upd #t)			; token propagated?
 	       (kx -1)			; current index
 	       (ktal '())		; (item . LA) list for kx
 	       (toks '())		; LA tokens being propagated
@@ -1175,21 +1175,21 @@
        ((pair? prop)
 	;; Propagate lookaheads.
 	(let* ((sx1 (caar prop)) (it1 (cdar prop)))
-	  (iter (or (kit-add kit-v toks sx1 it1) upd)
+	  (loop (or (kit-add kit-v toks sx1 it1) upd)
 		kx ktal toks item (cdr prop))))
 
        ((pair? ktal)
 	;; Process the next (item . tokl) in the alist ktal.
-	(iter upd kx (cdr ktal) (cdar ktal) (caar ktal)
+	(loop upd kx (cdr ktal) (cdar ktal) (caar ktal)
 	      (assoc-ref (vector-ref kip-v kx) (caar ktal))))
 
        ((< (1+ kx) nkset)
 	;; Process the next itemset.
-	(iter upd (1+ kx) (vector-ref kit-v (1+ kx)) '() '() '()))
+	(loop upd (1+ kx) (vector-ref kit-v (1+ kx)) '() '() '()))
 
        (upd
 	;; Have updates, rerun.
-	(iter #f 0 '() '() '() '()))))
+	(loop #f 0 '() '() '() '()))))
     p-mach))
 
 ;; @deffn {Procedure} reductions kit-v sx => ((tokA gxA1 ...) ...)
@@ -1212,7 +1212,7 @@
 ;; Construction of LALR Parsing Tables'' in DB Sec 4.7.
 ;; @end deffn
 (define (reductions kit-v sx)
-  (let iter ((ral '())			  ; result: reduction a-list
+  (let loop ((ral '())			  ; result: reduction a-list
 	     (klais (vector-ref kit-v sx)) ; kernel la-item list
 	     (laits '())		   ; all la-items
 	     (gx #f)			   ; rule reduced by tl
@@ -1223,25 +1223,25 @@
 	(cond
 	 ((and rp (memq gx (cdr rp)))
 	  ;; already have this, skip to next token
-	  (iter ral klais laits gx (cdr tl)))
+	  (loop ral klais laits gx (cdr tl)))
 	 (rp
 	  ;; have token, add prule
 	  (set-cdr! rp (cons gx (cdr rp)))
-	  (iter ral klais laits gx (cdr tl)))
+	  (loop ral klais laits gx (cdr tl)))
 	 (else
 	  ;; add token w/ prule
-	  (iter (cons (list tk gx) ral) klais laits gx (cdr tl))))))
+	  (loop (cons (list tk gx) ral) klais laits gx (cdr tl))))))
 
      ((pair? laits) ;; process a la-itemset
       (if (last-item? (caar laits))
 	  ;; last item, add it 
-	  (iter ral klais (cdr laits) (caaar laits) (cdar laits))
+	  (loop ral klais (cdr laits) (caaar laits) (cdar laits))
 	  ;; else skip to next
-	  (iter ral klais (cdr laits) 0 '())))
+	  (loop ral klais (cdr laits) 0 '())))
 
      ((pair? klais) ;; expand next kernel la-item
       ;; There is a cheaper way than closure to do this but for now ...
-      (iter ral (cdr klais) (closure (list (car klais))) 0 '()))
+      (loop ral (cdr klais) (closure (list (car klais))) 0 '()))
 
      (else
       ral))))
@@ -1260,7 +1260,7 @@
 ;; @end example
 ;; If a shift has multiple reduce conflicts we report only one reduction.
 (define (gen-pat sft-al red-al)
-  (let iter ((res '()) (sal sft-al) (ral red-al))
+  (let loop ((res '()) (sal sft-al) (ral red-al))
     (cond
      ((pair? sal)
       (let* ((term (caar sal))		 ; terminal 
@@ -1272,24 +1272,24 @@
 	 ((and redl (pair? (cdr redl)))
 	  ;; This means we have a shift-reduce and reduce-reduce conflicts.
 	  ;; We record only one shift-reduce and keep the reduce-reduce.
-	  (iter (cons (cons* term 'srconf goto (car redl)) res)
+	  (loop (cons (cons* term 'srconf goto (car redl)) res)
 		(cdr sal) ral))
 	 (redl
 	  ;; The terminal (aka token) signals a single reduction.  This means
 	  ;; we have one shift-reduce conflict.  We have a chance to repair
 	  ;; the parser using precedence/associativity rules so we remove the
 	  ;; reduction from the reduction-list.
-	  (iter (cons (cons* term 'srconf goto (car redl)) res)
+	  (loop (cons (cons* term 'srconf goto (car redl)) res)
 		(cdr sal) (delete redp ral)))
 	 (else
 	  ;; The terminal (aka token) signals a shift only.
-	  (iter (cons (cons* term 'shift goto) res)
+	  (loop (cons (cons* term 'shift goto) res)
 		(cdr sal) ral)))))
      ((pair? ral)
       (let ((term (caar ral)) (rest (cdar ral)))
 	;; We keep 'accept as explict action.  Another option is to reduce and
 	;; have 0-th p-rule action generate return from parser (via prompt?).
-	(iter
+	(loop
 	 (cons (cons term
 		     (cond ;; => action and arg(s)
 		      ((zero? (car rest)) (cons 'accept 0))
@@ -1320,14 +1320,14 @@
 	    (append (x-flip al) seed)) '() assc))
 
   (define (setup-prec prec)
-    (let iter ((res '()) (rl '()) (hd '()) (pl '()) (pll prec))
+    (let loop ((res '()) (rl '()) (hd '()) (pl '()) (pll prec))
       (cond
        ((pair? pl)
 	(let* ((p (car pl)) (hdp (x-comb hd p))
 	       (pp (remove (lambda (p) (eqv? (car p) (cdr p))) (x-comb p p))))
-	  (iter res (append rl hdp pp) (car pl) (cdr pl) pll)))
-       ((pair? rl) (iter (append res rl) '() hd pl pll))
-       ((pair? pll) (iter res rl '() (car pll) (cdr pll)))
+	  (loop res (append rl hdp pp) (car pl) (cdr pl) pll)))
+       ((pair? rl) (loop (append res rl) '() hd pl pll))
+       ((pair? pll) (loop res rl '() (car pll) (cdr pll)))
        (else res))))
 
   (define (prev-sym act its)
@@ -1340,15 +1340,15 @@
       psy))
 
   (define (uniqmax-prec prl rpl prec)
-    (let iter ((tie #f)
+    (let loop ((tie #f)
 	       (gx (car prl)) (mx (car rpl))
 	       (prl (cdr prl)) (rpl (cdr rpl)))
       (if (null? prl) (and (not tie) gx)
 	  (let ((cmp (prece mx (car rpl) prec)))
 	    (case cmp
-	      ((lt) (iter #f (car prl) (car rpl) (cdr prl) (cdr rpl)))
-	      ((gt) (iter tie gx mx (cdr prl) (cdr rpl)))
-	      ((eq) (iter #t gx mx (cdr prl) (cdr rpl)))
+	      ((lt) (loop #f (car prl) (car rpl) (cdr prl) (cdr rpl)))
+	      ((gt) (loop tie gx mx (cdr prl) (cdr rpl)))
+	      ((eq) (loop #t gx mx (cdr prl) (cdr rpl)))
 	      ((#f) #f))))))
 
   (let* ((kis-v (assq-ref p-mach 'kis-v)) ; states
@@ -1373,7 +1373,7 @@
     ;; Q: should '$end be edited out of shifts?
     ;; kit-v is vec of a-lists of form ((item tok1 tok2 ...) ...)
     ;; turn to (tok1 item1 item2 ...)
-    (let iter ((ix 0)		; state index
+    (let loop ((ix 0)		; state index
 	       (pat '())	; parse-action table
 	       (rat '())	; removed-action table
 	       (wrn '())	; warnings on unsolicited removals
@@ -1383,7 +1383,7 @@
        ((pair? actl)
 	(case (cadar actl)
 	  ((shift reduce accept)
-	   (iter ix (cons (car actl) pat) rat wrn ftl (cdr actl)))
+	   (loop ix (cons (car actl) pat) rat wrn ftl (cdr actl)))
 	  ((srconf)
 	   (let* ((act (car actl))
 		  (tok (car act)) (sft (caddr act)) (red (cdddr act))
@@ -1414,7 +1414,7 @@
 		     (else ;; Or default, which is shift.
 		      (values sft-a (cons red-a 'def) (cons ix act) #f))))
 	       (lambda (a r w f)
-		 (iter ix
+		 (loop ix
 		       (if a (cons a pat) pat)
 		       (if r (cons r rat) rat)
 		       (if w (cons w wrn) wrn)
@@ -1427,19 +1427,19 @@
 		  (rpl (map (lambda (pr) (vector-ref prp-v pr)) prl)) ; prec's
 		  (uniq (uniqmax-prec prl rpl prec))) ; unique rule to use
 	     (if uniq
-		 (iter ix (cons (cons* (caar actl) 'reduce uniq) pat)
+		 (loop ix (cons (cons* (caar actl) 'reduce uniq) pat)
 		       rat ;; need to update by filtering out uniq
 		       wrn ftl (cdr actl))
-		 (iter ix (cons (car actl) pat) rat wrn
+		 (loop ix (cons (car actl) pat) rat wrn
 		       (cons (cons ix (car actl)) ftl) (cdr actl)))))
 	  (else
 	   (error "PROBLEM"))))
        ((null? actl)
 	(vector-set! pat-v ix pat)
 	(vector-set! rat-v ix rat)
-	(iter ix pat rat wrn ftl #f))
+	(loop ix pat rat wrn ftl #f))
        ((< (1+ ix) nst)
-	(iter (1+ ix) '() '() wrn ftl (gen-pat-ix (1+ ix))))
+	(loop (1+ ix) '() '() wrn ftl (gen-pat-ix (1+ ix))))
        (else
 	(let* ((attr (assq-ref p-mach 'attr))
 	       (expect (assq-ref attr 'expect))) ; expected # srconf
@@ -1665,22 +1665,22 @@
 		       (cons '$error keepers))))
 
     ;; Keep an a-list mapping reduction prod-rule => count.
-    (let iter ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))
+    (let loop ((sx nst) (trn-l #f) (cnt-al '()) (p-max '(0 . 0)))
       (cond
        ((pair? trn-l)
 	(cond
 	((not (reduce? (cdar trn-l)))
 	 ;; A shift, so not a candidate for default reduction.
-	 (iter sx (cdr trn-l) cnt-al p-max))
+	 (loop sx (cdr trn-l) cnt-al p-max))
 	((memq (caar trn-l) keepers)
 	 ;; Don't consider keepers because these will not be included.
-	 (iter sx (cdr trn-l) cnt-al p-max))
+	 (loop sx (cdr trn-l) cnt-al p-max))
 	(else
 	 ;; A reduction, so update the count for reducing this prod-rule.
 	 (let* ((ix (reduce-pr (cdar trn-l)))
 		(cnt (1+ (or (assq-ref cnt-al ix) 0)))
 		(cnt-p (cons ix cnt)))
-	   (iter sx (cdr trn-l) (cons cnt-p cnt-al)
+	   (loop sx (cdr trn-l) (cons cnt-p cnt-al)
 		 (if (> cnt (cdr p-max)) cnt-p p-max))))))
 	      
        ((null? trn-l)
@@ -1699,9 +1699,9 @@
 		    (cons trn pat)))
 	      (list (mk-default (car p-max))) ;; default is last
 	      (vector-ref pat-v sx))))
-	(iter sx #f #f #f))
+	(loop sx #f #f #f))
        ((positive? sx) ;; next state
-	(iter (1- sx) (vector-ref pat-v (1- sx)) '() '(0 . 0)))))
+	(loop (1- sx) (vector-ref pat-v (1- sx)) '() '(0 . 0)))))
     mach))
 
 ;;.@section Using hash tables
@@ -2027,7 +2027,7 @@
 
   (call-with-output-file filename
     (lambda (port)
-      (fmt port ";; ~A\n\n" (drop-dot-new filename))
+      (fmt port ";; ~A\n\n" (drop-dot-new (basename filename)))
       (write-notice mach port)
       (write-table mach 'mtab port #:prefix prefix)
       (write-table mach 'ntab port #:prefix prefix)
@@ -2099,7 +2099,7 @@
 
   (call-with-output-file filename
     (lambda (port)
-      (fmt port ";; ~A\n\n" (drop-dot-new filename))
+      (fmt port ";; ~A\n\n" (drop-dot-new (basename filename)))
       (write-notice mach port)
       (write-actions mach port)
       (display ";;; end tables" port)

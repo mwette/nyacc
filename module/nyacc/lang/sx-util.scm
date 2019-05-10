@@ -206,10 +206,10 @@
      (sx-tag sx)
      (if (sx-has-attr? sx)
 	 (cons `(@ pair
-		   ,@(let iter ((atl (sx-attr sx)))
+		   ,@(let loop ((atl (sx-attr sx)))
 		       (cond ((null? atl) '())
-			     ((eq? key (caar atl)) (iter (cdr atl)))
-			     (else (cons (car atl) (iter (cdr atl)))))))
+			     ((eq? key (caar atl)) (loop (cdr atl)))
+			     (else (cons (car atl) (loop (cdr atl)))))))
 	       (cddr sx))
 	 (cons `(@ ,pair) (cdr sx))))))
 
@@ -219,9 +219,9 @@
 ;; @end deffn
 (define (sx-attr-add* sx . rest)
   (let* ((attrs (sx-attr sx))
-	 (attrs (let iter ((kvl rest))
+	 (attrs (let loop ((kvl rest))
 		  (if (null? kvl) attrs
-		      (cons (list (car kvl) (cadr kvl)) (iter (cddr kvl)))))))
+		      (cons (list (car kvl) (cadr kvl)) (loop (cddr kvl)))))))
     (cons* (sx-tag sx) (cons '@ attrs)
 	   (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
 

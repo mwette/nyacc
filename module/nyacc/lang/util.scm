@@ -126,9 +126,9 @@ See the file COPYING included with the this distribution.")
 (define (make-tl tag . rest)
   "- Procedure: make-tl tag [item item ...]
      Create a tagged-list structure."
-  (let iter ((tail tag) (l rest))
+  (let loop ((tail tag) (l rest))
     (if (null? l) (cons '() tail)
-	(iter (cons (car l) tail) (cdr l)))))
+	(loop (cons (car l) tail) (cdr l)))))
 
 ;; @deffn {Procedure} tl->list tl
 ;; Convert a tagged list structure to a list.  This collects added attributes
@@ -144,17 +144,17 @@ See the file COPYING included with the this distribution.")
      in something like
           (<tag> ( <attr>) <rest>)"
   (let ((heda (car tl))
-	(head (let iter ((head '()) (attr '()) (tl-head (car tl)))
+	(head (let loop ((head '()) (attr '()) (tl-head (car tl)))
 		(if (null? tl-head)
 		    (if (pair? attr)
 			(cons (cons '@ attr) (reverse head))
 			(reverse head))
 		    (if (and (pair? (car tl-head)) (eq? '@ (caar tl-head)))
-			(iter head (cons (cdar tl-head) attr) (cdr tl-head))
-			(iter (cons (car tl-head) head) attr (cdr tl-head)))))))
-    (let iter ((tail '()) (tl-tail (cdr tl)))
+			(loop head (cons (cdar tl-head) attr) (cdr tl-head))
+			(loop (cons (car tl-head) head) attr (cdr tl-head)))))))
+    (let loop ((tail '()) (tl-tail (cdr tl)))
       (if (pair? tl-tail)
-	  (iter (cons (car tl-tail) tail) (cdr tl-tail))
+	  (loop (cons (car tl-tail) tail) (cdr tl-tail))
 	  (cons tl-tail (append head tail))))))
 
 ;; @deffn {Procedure} tl-insert tl item
@@ -172,9 +172,9 @@ See the file COPYING included with the this distribution.")
   "- Procedure: tl-append tl item ...
      Append items at end of tagged list."
   (cons (car tl)
-	(let iter ((tail (cdr tl)) (items rest))
+	(let loop ((tail (cdr tl)) (items rest))
 	  (if (null? items) tail
-	      (iter (cons (car items) tail) (cdr items))))))
+	      (loop (cons (car items) tail) (cdr items))))))
 
 ;; @deffn {Procedure} tl-extend tl item-l
 ;; Extend with a list of items.
@@ -258,19 +258,19 @@ See the file COPYING included with the this distribution.")
   ;; @code{<}, @code{>}, @code{=} or @code{#f} (no relation).
   ;; @end deffn
   (define (prec a b)
-    (let iter ((ag #f) (bg #f) (opg op-prec)) ;; a-group, b-group
+    (let loop ((ag #f) (bg #f) (opg op-prec)) ;; a-group, b-group
       (cond
        ((null? opg) #f)			; indeterminate
        ((memq a (car opg))
 	(if bg '<
 	    (if (memq b (car opg)) '=
-		(iter #t bg (cdr opg)))))
+		(loop #t bg (cdr opg)))))
        ((memq b (car opg))
 	(if ag '>
 	    (if (memq a (car opg)) '=
-		(iter ag #t (cdr opg)))))
+		(loop ag #t (cdr opg)))))
        (else
-	(iter ag bg (cdr opg))))))
+	(loop ag bg (cdr opg))))))
 
   (lambda (side op expr)
     (let ((assc? (case side
@@ -290,26 +290,26 @@ See the file COPYING included with the this distribution.")
 (define* (expand-tabs str #:optional (col 0))
 
   (define (fill-tab col chl)
-    (let iter ((chl (if (zero? col) (cons #\space chl) chl))
+    (let loop ((chl (if (zero? col) (cons #\space chl) chl))
 	       (col (if (zero? col) (1+ col) col)))
       (if (zero? (modulo col 8)) chl
-	  (iter (cons #\space chl) (1+ col)))))
+	  (loop (cons #\space chl) (1+ col)))))
 
   (define (next-tab-col col) ;; TEST THIS !!!
     ;;(* 8 (quotient (+ 9 col) 8))) ???
     (* 8 (quotient col 8)))
 
   (let ((strlen (string-length str)))
-    (let iter ((chl '()) (col col) (ix 0))
+    (let loop ((chl '()) (col col) (ix 0))
       (if (= ix strlen) (list->string (reverse chl))
 	  (let ((ch (string-ref str ix)))
 	    (case ch
 	      ((#\newline)
-	       (iter (cons ch chl) 0 (1+ ix)))
+	       (loop (cons ch chl) 0 (1+ ix)))
 	      ((#\tab)
-	       (iter (fill-tab col chl) (next-tab-col col) (1+ ix)))
+	       (loop (fill-tab col chl) (next-tab-col col) (1+ ix)))
 	      (else
-	       (iter (cons ch chl) (1+ col) (1+ ix)))))))))
+	       (loop (cons ch chl) (1+ col) (1+ ix)))))))))
 
 ;; @deffn {Procedure} make-pp-formatter [port] <[options> => fmtr
 ;; Options
@@ -491,20 +491,20 @@ See the file COPYING included with the this distribution.")
   ;; 2: "0"-"9"->(cons ch dl), else->3:
   ;; 3: "L","l","U","u"->3, eof->(cleanup) else->#f
   (let ((ln (string-length str)))
-    (let iter ((dl '()) (bx "") (cs cs:dig) (st 0) (ix 0))
+    (let loop ((dl '()) (bx "") (cs cs:dig) (st 0) (ix 0))
       (if (= ix ln)
 	  (if (null? dl) #f (string-append bx (list->string (reverse dl))))
 	  (case st
-	    ((0) (iter (cons (string-ref str ix) dl) bx cs
+	    ((0) (loop (cons (string-ref str ix) dl) bx cs
 		       (if (char=? #\0 (string-ref str ix)) 1 2)
 		       (1+ ix)))
 	    ((1) (if (char=? #\x (string-ref str ix))
-		     (iter '() "#x" cs:hex 2 (1+ ix))
-		     (iter '() "#o" cs:oct 2 ix)))
+		     (loop '() "#x" cs:hex 2 (1+ ix))
+		     (loop '() "#o" cs:oct 2 ix)))
 	    ((2) (if (char-set-contains? cs (string-ref str ix))
-		     (iter (cons (string-ref str ix) dl) bx cs st (1+ ix))
+		     (loop (cons (string-ref str ix) dl) bx cs st (1+ ix))
 		     (if (char-set-contains? cs:long (string-ref str ix))
-			 (iter dl bx cs 3 (1+ ix))
+			 (loop dl bx cs 3 (1+ ix))
 			 #f)))
 	    ((3) #f))))))
 

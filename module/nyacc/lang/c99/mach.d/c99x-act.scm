@@ -1,4 +1,4 @@
-;; ./mach.d/c99x-act.scm
+;; c99x-act.scm
 
 ;; Copyright (C) 2016-2018 Matthew R. Wette
 ;; 
