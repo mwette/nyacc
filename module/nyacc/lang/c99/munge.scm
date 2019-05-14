@@ -17,46 +17,17 @@
 
 ;;; Notes:
 
-;; KEEPING STRUCTS ENUMS etc
-;; if have typename and want to keep it, then change
-;;   (typename "foo_t")
-;; to
-;;   (typename (@ (base "struct")) "foo_t")
-
-;; ALSO
-;;  (make-proxy comp-decl) => udecl
-;;  (revert-proxy decl) => comp-decl
-
-;; NOTE
-;;  stripdown no longer deals with typeref expansion
-;; use
-;;  expand-typerefs, then stripdown-udecl, then udecl->mdecl
-;;
-;; NOTE
-;;  unitize-decl is shallow: it only works on init-decl-list.
-;;  You may need to rerun if ...
-
-;; TODO
-;;   in expand-typerefs if need to expand `foo_t *x' then change to
-;;  if struct use `struct foo *x;'
-;;  if fixed/float use `int *x;' etc
-;;  if function use `void *x;'
-
-;; mdecl == munged (unwrapped) declaration
-
-;; possible pattern for munging:
-;; (split-<form> form) => (values tag attr|#f ... tail)
-;; (join-<form> tag attr|#f ... tail)
-;; I would have to go through c99/mach.scm to find all forms to do:
-;; decl enum-def
-;;
-;; or
-;; (sx-redo form elt-1 elt-2 ... tail?)
-;;  (sx-cons* (sx-tag form) (sx-attr form) elt-1 elt-2 tail?)
-
-;; Another idea is to make comments attributes and have join be sx-cons*
-;; I think this would simplify a lot.  ... working it ...
-;; * iter-declrs : remove tail
+;; Todo:
+;; 1) mdecl == munged (unwrapped) declaration
+;; 2) I want a way to keep named enums in expand-typerefs.
+;;    Currently, they are expanded to int.
+;; 3) Usual sequence is: expand-typerefs, stripdown-udecl, udecl->mdecl.
+;; 4) Unitize-decl is shallow.  It does not dive into structs and unitize.
+;; 5) In expand-typerefs if need to expand `foo_t *x' then change to
+;;    a) if struct use `struct foo *x;'
+;;    b) if fixed/float use `int *x;' etc
+;;    c> if function use `void *x;'
+;; 6) Check use of comments as attributes.
 
 ;;; Code:
 
@@ -859,6 +830,7 @@
 ;; idea: if we have a pointer to an undefined type, then use void*
 ;; @*BUG HERE? if we run into a struct then the struct members have not
 ;; been munged into udecls.  The behavior is actually NOT DEFINED.
+;; @end deffn
 (define* (expand-typerefs adecl udict #:optional (keep '()))
   ;; In the process of expanding typerefs it is crutial that routines which
   ;; expand parts return the original if no change made.  That is, if there
