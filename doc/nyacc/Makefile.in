@@ -13,16 +13,14 @@ GUILD = @GUILD@
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
-prefix = @prefix@
-
 SHELL = @SHELL@
 PACKAGE_TARNAME = nyacc
-INFODIR = @infodir@
-DOCDIR = @docdir@
+INFODIR = @GUILE_DATADIR@/info
+DOCDIR = @GUILE_DATADIR@/doc/$(PACKAGE_TARNAME)
 
 TOPDIR = @abs_top_builddir@
 MODDIR = $(TOPDIR)/module
-INSTALL = cp
+INSTALL = $(TOPDIR)/etc/install-sh -m 644
 
 SCM_FILES_W_TEXI = \
 	../../module/nyacc/lalr.scm \
@@ -33,7 +31,7 @@ all:
 	@true
 
 .PHONY: install
-install: install-info
+install: install-info install-pdf
 
 .PHONY: install-info
 install-info:

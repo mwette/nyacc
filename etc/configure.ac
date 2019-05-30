@@ -21,6 +21,9 @@ GUILE_PROGS
 GUILE_SITE_DIR
 GUILE_SITE_GO_DIR
 
+GUILE_DATADIR=`$GUILE -c "(display (assq-ref %guile-build-info 'datadir))"`
+AC_SUBST([GUILE_DATADIR])
+
 GUILE_MODULE_AVAILABLE([have_bytestructures],[(bytestructures guile)])
 if test $have_bytestructures = "yes"; then
   NYACC_FH_BINS='$(NYACC_FH_BINS)'
