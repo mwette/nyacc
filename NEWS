@@ -5,8 +5,12 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2019-05-    V0.93.0 release
+2019-05-30  V0.93.0 release
+	* reworked configure and Makefile.in files to detect doc
+	  install dirs;
+  
 	* this CPP feature now works: #define /* hello */ abc 123
+
 	* fixed issue in c99/eval-cpp-incl where #f was ending up in
 	  output if no include file found
 
