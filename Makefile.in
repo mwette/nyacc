@@ -37,6 +37,7 @@ install-ffi-help:
 
 .PHONY: dist-files
 dist-files:
+	(cd etc; autoconf -o ../configure)
 	(cd module; make DESTDIR=$(DESTDIR) dist-files)
 	(cd doc/nyacc; make DESTDIR=$(DESTDIR) dist-files)
 	(cd examples; make DESTDIR=$(DESTDIR) dist-files)
