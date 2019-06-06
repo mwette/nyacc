@@ -20,10 +20,11 @@
 (define-module (nyacc lang c99 util)
   #:export (c99-def-help
 	    c99-std-help
-	    get-gcc-cpp-defs get-gcc-inc-dirs 
+	    get-gcc-cpp-defs
+	    get-gcc-inc-dirs 
 	    remove-inc-trees
 	    merge-inc-trees!
-	    move-attributes attrl->attrs attrs->attrl
+	    move-attributes attrl->attrs attrs->attrl extract-attr
 	    elifify)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
@@ -257,7 +258,6 @@
       (loop (append (sx-tail (car tail0)) atl) tail1 (cdr tail0)))
      (else
       (loop atl (cons (car tail0) tail1) (cdr tail0))))))
-(export extract-attr)
 
 ;; (attribute-list (attribute (ident "__packed__")) ...)
 ;;  =>
