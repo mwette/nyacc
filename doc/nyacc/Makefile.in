@@ -54,6 +54,7 @@ install-html:
 .PHONY: dist-files
 dist-files: \
 	nyacc-ug.info nyacc-ug.pdf nyacc-ug.html \
+	nyacc-c99-ug.info nyacc-c99-ug.pdf nyacc-c99-ug.html \
 	nyacc-fh.info nyacc-fh.pdf nyacc-fh.html
 
 %_scm.texi: ../../module/nyacc/%.scm

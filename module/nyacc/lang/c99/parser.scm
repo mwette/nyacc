@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -58,11 +58,24 @@
 (define gen-c99-lexer
   (make-c99-lexer-generator c99-mtab c99-raw-parser))
 
-;; @deffn {Procedure} parse-c99 [#:cpp-defs def-a-list] [#:inc-dirs dir-list] \
-;;               [#:mode ('code|'file|'decl)] [#:debug bool]
-;; This needs to be explained in some detail.
-;; tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
-;; Default mode is @code{'code}.
+;; @deffn {Procedure} parse-c99 [options]
+;; where options are
+;; @table code
+;; @item #:cpp-defs @i{defs-list}
+;; @i{defs-list} is a list of strings where each string is of the form
+;; @i{NAME} or @i{NAME=VALUE}.
+;; @item #:inc-dirs @i{dir-list}
+;; @{dir-list} is a list of strings of paths to look for directories.
+;; @item #:inc-help @i{helpers}
+;; @i{helpers} is an a-list where keys are include files (e.g.,
+;; @code{"stdint.h"}) and the value is a list of type aliases or CPP define
+;; (e.g., @code{"foo_t" "FOO_MAX=3"}).
+;; @item #:mode @i{mode}
+;; @i{mode} is one literal @code{'code}, @code{'file}, or @code{'decl}.
+;; The default mode is @code{'code}.
+;; @item #:debug @i{bool}
+;; a boolean which if true prints states from the parser
+;; @end table
 ;; @example
 ;; (with-input-from-file "abc.c"
 ;;   (parse-c #:cpp-defs '("ABC=123"))
@@ -111,7 +124,18 @@
 (define gen-c99x-lexer
   (make-c99-lexer-generator c99x-mtab c99x-raw-parser))
   
-;; @deffn {Procedure} parse-c99x [#:cpp-defs defs] [#:debug bool] [tyns]
+;; @deffn {Procedure} parse-c99x string [typenames] [options]
+;; where @var{string} is a string C expression, @var{typenames}
+;; is a list of strings to be treated as typenames
+;; and @var{options} may be any of
+;; @table
+;; @item cpp-defs
+;; a list of strings to be treated as preprocessor definitions
+;; @item xdef?
+;; this argument can be a boolean a predicate taking a string argument
+;; @item debug
+;; a boolean which if true prints states from the parser
+;; @end table
 ;; This needs to be explained in some detail.
 ;; [tyns '("foo_t")]
 ;; @end deffn
@@ -119,11 +143,10 @@
 		     #:optional
 		     (tyns '())		; defined typenames
 		     #:key
-		     (cpp-defs '())	     ; CPP defines
-		     (inc-help c99-def-help) ; include helper
+		     (cpp-defs '())	; CPP defines
 		     (xdef? #f)		; pred to determine expand
 		     (debug #f))	; debug?
-  (let ((info (make-cpi debug #f cpp-defs '(".") inc-help)))
+  (let ((info (make-cpi debug #f cpp-defs '(".") '())))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
     (with-fluids ((*info* info)
 		  (*input-stack* '()))

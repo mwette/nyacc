@@ -17,16 +17,21 @@ copy of the license is included with the distribution as COPYING.DOC.
 @headings off
 @everyfooting @| @thispage @|
 
-@node Top
-@top FFI Helper for Guile
 @format
 Matt Wette
 February 2019
 With NYACC Version 0.94.0
 @end format
 
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top NYACC FFI Helper Guide
+This is a user guide for the NYACC FFI Helper.
+@end ifnottex
+
 @c ======================================
 
+@node Introduction
 @heading Introduction
 
 The acronym FFI stands for ``Foreign Function Interface''.  It refers

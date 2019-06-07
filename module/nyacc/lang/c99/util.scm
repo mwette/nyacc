@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/util.scm - C parser utilities
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public

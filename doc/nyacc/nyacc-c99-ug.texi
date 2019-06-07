@@ -1,16 +1,11 @@
 \input texinfo.tex
-@setfilename nyacc-c99-hg.info
+@setfilename nyacc-c99-ug.info
 @settitle C99 User's Guide
 
-@include ../../memodefs.texi
-
-@ifnottex
-@node Top, Introduction, (dir), (dir)
-@top Introduction
-@end ifnottex
+@clear no-skip
 
 @copying
-Copyright (C) 2017 -- Matthew R. Wette.
+Copyright (C) 2017,2019 -- Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -19,37 +14,27 @@ Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC.
 @end copying
 
-@c reset page header/footer then just page
 @headings off
 @everyfooting @| @thispage @|
 
-@c @node Top
-@c @top C99 Parser User's Guide
-@c @format
-@c Matt Wette
-@c April 14, 2017
-@c @end format
-@title C99 Parser User's Guide
-@subtitle rough and incomplete
-@author Matt Wette
-@vskip 5pt
-@quotation
-Copyright @copyright{} 2017 -- Matthew R. Wette.
-Permissions regarding this document are provided in the ``Copying'' section.
-@end quotation
-@vskip 5pt
+@format
+Matt Wette
+June 2019
+With NYACC Version 0.94.0
+@end format
+
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top NYACC C99 User Guide
+This is a user guide for the NYACC C99 parser.
+@end ifnottex
 
 @menu
 * Introduction ::
 @end menu
 
-The C99 parsers can use ``include helpers''.  This allows files to be
-parsed without reading full include files.  The user provides
-typenames (types defined using @code{typedef}) and defines.  The
-syntax for the include-helper optional argument to the parsers is
-
 @node Introduction
-@section Introduction
+@heading Introduction
 
 This is a manual for ...
 
@@ -57,7 +42,41 @@ Note on CPP replacement text: IIRC, C99 will remove comments from CPP
 statements before processing.  I preserve this and remove inside the
 CPP parser.
 
-@subsection Include Helpers
+@deffn {Procedure} parse-c99 [options]
+where options are
+@table code
+@item #:cpp-defs @i{defs-list}
+@i{defs-list} is a list of strings where each string is of the form
+@i{NAME} or @i{NAME=VALUE}.
+@item #:inc-dirs @i{dir-list}
+@{dir-list} is a list of strings of paths to look for directories.
+@item #:inc-help @i{helpers}
+@i{helpers} is an a-list where keys are include files (e.g.,
+@code{"stdint.h"}) and the value is a list of type aliases or CPP define
+(e.g., @code{"foo_t" "FOO_MAX=3"}).
+@item #:mode @i{mode}
+@i{mode} is one literal @code{'code}, @code{'file}, or @code{'decl}.
+The default mode is @code{'code}.
+@item #:debug @i{bool}
+If @i{bool} evaluates to true, print productions as they are reduced.
+@end table
+This needs to be explained in some detail.
+tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
+Default mode is @code{'code}.
+@example
+(with-input-from-file "abc.c"
+  (parse-c #:cpp-defs '("ABC=123"))
+           #:inc-dirs '(("." "./incs" "/usr/include"))
+           #:inc-help (append '("myinc.h" "foo_t" "bar_t") c99-std-help)
+           #:mode 'file))
+@end example
+Note: for @code{file} mode user still needs to make sure CPP conditional
+expressions can be fully evaluated, which may mean adding compiler generated
+defines (e.g., using @code{gen-cpp-defs}).
+@end deffn
+
+
+@subheading Include Helpers
 
 The C99 parsers can use ``include helpers''.  This allows files to be
 parsed without reading full include files.  The user provides
@@ -100,12 +119,12 @@ defines for many standard includes (e.g., @file{alloca.h},
 @file{limits.h}).  See the source @file{nyacc/lang/c99/util.scm} for
 more detail.
 
-@subsection Misc Items
+@subheading Misc Items
 
 The special symbol @code{C99_ANY} can be used for symbols which you
 don't want to define.  In the parser will handle this as XXX
 
-@section The Unit Parser
+@heading The Unit Parser
 
 TALK ABOUT @code{fixed-width-int-names}
 
@@ -121,7 +140,7 @@ Default mode is @code{'code}.
 @end example
 @end deffn
 
-@subsection Modes
+@subheading Modes
 There are several modes for parsing which affect the way the C
 preprocessor statements are handled, and how the parse tree is
 generated.  The following list explains the intent behind these
@@ -148,7 +167,6 @@ if-then have to be resolved.
 @end itemize
 
 Options are as follows
-@iffalse
 @table @code
 @item #:cpp-defs
 This is a list of define strings (e.g., @code{'("ABC=123")}.
@@ -164,7 +182,6 @@ This is the mode: @code{'code}, @code{'decl} or @code{'file}.  The default is
 This is a predicate function to determine whether to expand a
 definition (used in file mode).  See below.
 @end table
-@fi
 
 Note: The user needs to define 
 @code{"__has_include(X)=__has_include__(X)"} to enable has-include;
@@ -177,12 +194,12 @@ should expand using CPP defines.  The default is
 @code{(lambda(name mode) (eqv? mode 'code))}.
 @end deffn
 
-@section Expression Parser
+@heading Expression Parser
 
-stuff
+To be documented.
 
 
-@section Copying
+@heading Copying
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
