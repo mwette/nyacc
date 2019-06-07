@@ -97,9 +97,7 @@
 (define fh-cpp-defs
   (cond
    ((string-contains %host-type "darwin")
-    ;;'("__GNUC__=6" "__signed=signed")
-    (remove (lambda (s)
-	      (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
+    (remove (lambda (s) (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
 	    (get-gcc-cpp-defs)))
    (else (get-gcc-cpp-defs))))
     
@@ -1622,7 +1620,7 @@
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
-	   (sferr "  back-ref\n")
+	   ;;(sferr "  back-ref\n")
 	   (cnvt-union-def #f #f union-name field-list)
 	   (for-each
 	    (lambda (typename)
