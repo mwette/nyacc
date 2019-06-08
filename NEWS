@@ -5,6 +5,13 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2019-05-30  V0.94.0 release
+	* removed export statment from c99/util.scm
+
+	* started C99 documentation
+
+	* fixed some version number errors
+
 2019-05-30  V0.93.0 release
 	* reworked configure and Makefile.in files to detect doc
 	  install dirs;
