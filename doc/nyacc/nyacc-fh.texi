@@ -20,7 +20,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 @format
 Matt Wette
 February 2019
-With NYACC Version 0.94.0
+With NYACC Version 0.95.0
 @end format
 
 @ifnottex
