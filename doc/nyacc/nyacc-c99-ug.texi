@@ -36,7 +36,11 @@ This is a user guide for the NYACC C99 parser.
 @node Introduction
 @heading Introduction
 
-This is a manual for ...
+This is a manual for the C99 parser provides with NYACC.  While the
+parser could be used
+
+It is used as parser in a full Scheme-based C compiler
+(see @url{https://www.gnu.org/software/mes/}).
 
 Note on CPP replacement text: IIRC, C99 will remove comments from CPP
 statements before processing.  I preserve this and remove inside the
@@ -44,12 +48,12 @@ CPP parser.
 
 @deffn {Procedure} parse-c99 [options]
 where options are
-@table code
+@table @code
 @item #:cpp-defs @i{defs-list}
 @i{defs-list} is a list of strings where each string is of the form
 @i{NAME} or @i{NAME=VALUE}.
 @item #:inc-dirs @i{dir-list}
-@{dir-list} is a list of strings of paths to look for directories.
+@i{dir-list} is a list of strings of paths to look for directories.
 @item #:inc-help @i{helpers}
 @i{helpers} is an a-list where keys are include files (e.g.,
 @code{"stdint.h"}) and the value is a list of type aliases or CPP define
@@ -60,6 +64,9 @@ The default mode is @code{'code}.
 @item #:debug @i{bool}
 If @i{bool} evaluates to true, print productions as they are reduced.
 @end table
+This will parse the content taken from the current input port until
+end if input is reached.   A parse tree in the form of an SXML
+expression is returned.  See below for the syntax.
 This needs to be explained in some detail.
 tdd = typedef dict: (("<time>" time_t) ... ("<unistd.h>" ...))
 Default mode is @code{'code}.
