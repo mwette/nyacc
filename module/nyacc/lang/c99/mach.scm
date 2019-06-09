@@ -56,7 +56,7 @@
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
    (prec< 'imp		       ; "implied type" SR-conflict resolution
-	  (nonassoc "char" "short" "int" "long")
+	  (nonassoc "char" "short" "int" "long" "_Fract" "_Accum" "_Sat")
 	  (nonassoc "float" "double" "_Complex"))
    (prec< 'shift-on-attr		; living on the edge ...
 	  (nonassoc "__attribute__" "__packed__" "__aligned__" "__alignof__")
@@ -252,6 +252,7 @@
      ("void" ($$ '(type-spec (void))))
      (fixed-type-specifier ($$ `(type-spec ,$1)))
      (float-type-specifier ($$ `(type-spec ,$1)))
+     (fixpt-type-specifier ($$ `(type-spec ,$1)))
      ("_Bool" ($$/ref 's5.1.5-01 '(type-spec (fixed-type "_Bool"))))
      (complex-type-specifier ($$ `(type-spec ,$1)))
      (struct-or-union-specifier ($$ `(type-spec ,$1)))
@@ -288,15 +289,64 @@
      ("char" ($$ '(fixed-type "char")))
      ("signed" "char" ($$ '(fixed-type "signed char")))
      ("unsigned" "char" ($$ '(fixed-type "unsigned char"))))
+
     (float-type-specifier
      ("float" ($prec 'imp) ($$ '(float-type "float")))
      ("double" ($prec 'imp) ($$ '(float-type "double")))
      ("long" "double" ($$ '(float-type "long double"))))
+
     (complex-type-specifier
      ("_Complex" ($$ '(complex-type "_Complex")))
      ("float" "_Complex" ($$ '(complex-type "float _Complex")))
      ("double" "_Complex" ($$ '(complex-type "double _Complex")))
      ("long" "double" "_Complex" ($$ '(complex-type "long double _Complex"))))
+
+    (fixpt-type-specifier
+     ;; http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2001/n1290.pdf
+     ("short" "_Fract" ($$ '(fixpt-type "short _Fract")))
+     ("_Fract" ($$ '(fixpt-type "_Fract")))
+     ("long" "_Fract" ($$ '(fixpt-type "long _Fract")))
+     ("signed" "short" "_Fract" ($$ '(fixpt-type "signd short _Fract")))
+     ("signed" "_Fract" ($$ '(fixpt-type "signed _Fract")))
+     ("signed" "long _Fract" ($$ '(fixpt-type "signed long _Fract")))
+     ("unsigned" "short" "_Fract" ($$ '(fixpt-type "unsigned short _Fract")))
+     ("unsigned" "_Fract" ($$ '(fixpt-type "unsigned _Fract")))
+     ("unsigned" "long _Fract" ($$ '(fixpt-type "unsigned long _Fract")))
+     ("short" "_Accum" ($$ '(fixpt-type "short _Accum")))
+     ("_Accum" ($$ '(fixpt-type "_Accum")))
+     ("long _Accum" ($$ '(fixpt-type "long _Accum")))
+     ("signed" "short" "_Accum" ($$ '(fixpt-type "signd short _Accum")))
+     ("signed" "_Accum" ($$ '(fixpt-type "signed _Accum")))
+     ("signed" "long" "_Accum" ($$ '(fixpt-type "signed long _Accum")))
+     ("unsigned" "short" "_Accum" ($$ '(fixpt-type "unsigned short _Accum")))
+     ("unsigned" "_Accum" ($$ '(fixpt-type "unsigned _Accum")))
+     ("unsigned" "long" "_Accum" ($$ '(fixpt-type "unsigned long _Accum")))
+     ("_Sat" "short" "_Fract" ($$ '(fixpt-type "_Sat short _Fract")))
+     ("_Sat" "_Fract" ($$ '(fixpt-type "_Sat _Fract")))
+     ("_Sat" "long" "_Fract" ($$ '(fixpt-type "_Sat long _Fract")))
+     ("_Sat" "signed" "short" "_Fract"
+      ($$ '(fixpt-type "_Sat signd short _Fract")))
+     ("_Sat" "signed" "_Fract" ($$ '(fixpt-type "_Sat signed _Fract")))
+     ("_Sat" "signed" "long _Fract"
+      ($$ '(fixpt-type "_Sat signed long _Fract")))
+     ("_Sat" "unsigned" "short" "_Fract"
+      ($$ '(fixpt-type "_Sat unsigned short _Fract")))
+     ("_Sat" "unsigned" "_Fract" ($$ '(fixpt-type "_Sat unsigned _Fract")))
+     ("_Sat" "unsigned" "long" "_Fract"
+      ($$ '(fixpt-type "_Sat unsigned long _Fract")))
+     ("_Sat" "short" "_Accum" ($$ '(fixpt-type "_Sat short _Accum")))
+     ("_Sat" "_Accum" ($$ '(fixpt-type "_Sat _Accum")))
+     ("_Sat" "long" "_Accum" ($$ '(fixpt-type "_Sat long _Accum")))
+     ("_Sat" "signed" "short" "_Accum"
+      ($$ '(fixpt-type "_Sat signd short _Accum")))
+     ("_Sat" "signed" "_Accum" ($$ '(fixpt-type "_Sat signed _Accum")))
+     ("_Sat" "signed" "long" "_Accum"
+      ($$ '(fixpt-type "_Sat signed long _Accum")))
+     ("_Sat" "unsigned" "short" "_Accum"
+      ($$ '(fixpt-type "_Sat unsigned short _Accum")))
+     ("_Sat" "unsigned" "_Accum" ($$ '(fixpt-type "_Sat unsigned _Accum")))
+     ("_Sat" "unsigned" "long" "_Accum"
+      ($$ '(fixpt-type "_Sat unsigned long _Accum"))))
 
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier

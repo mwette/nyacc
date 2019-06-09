@@ -1,5 +1,5 @@
 \input texinfo.tex
-@setfilename nyacc-fh.info
+@setfilename nyacc-fh-ug.info
 @settitle FFI Helper for Guile
 
 @clear no-skip

@@ -31,31 +31,34 @@ all:
 	@true
 
 .PHONY: install
-install: install-info install-pdf
+install: install-info install-pdf install-html
 
 .PHONY: install-info
 install-info:
 	mkdir -p $(DESTDIR)$(INFODIR)
 	$(INSTALL) nyacc-ug.info $(DESTDIR)$(INFODIR)/nyacc-ug.info
-	$(INSTALL) nyacc-fh.info $(DESTDIR)$(INFODIR)/nyacc-fh.info
+	$(INSTALL) nyacc-c99-ug.info $(DESTDIR)$(INFODIR)/nyacc-c99-ug.info
+	$(INSTALL) nyacc-fh-ug.info $(DESTDIR)$(INFODIR)/nyacc-fh-ug.info
 
 .PHONY: install-pdf
 install-pdf:
 	mkdir -p $(DESTDIR)$(DOCDIR)
 	$(INSTALL) nyacc-ug.pdf $(DESTDIR)$(DOCDIR)/nyacc-ug.pdf
-	$(INSTALL) nyacc-fh.pdf $(DESTDIR)$(DOCDIR)/nyacc-fh.pdf
+	$(INSTALL) nyacc-c99-ug.pdf $(DESTDIR)$(DOCDIR)/nyacc-c99-ug.pdf
+	$(INSTALL) nyacc-fh-ug.pdf $(DESTDIR)$(DOCDIR)/nyacc-fh-ug.pdf
 
 .PHONY: install-html
 install-html:
 	mkdir -p $(DESTDIR)$(DOCDIR)
 	$(INSTALL) nyacc-ug.html $(DESTDIR)$(DOCDIR)/nyacc-ug.html
-	$(INSTALL) nyacc-fh.html $(DESTDIR)$(DOCDIR)/nyacc-fh.html
+	$(INSTALL) nyacc-c99-ug.html $(DESTDIR)$(DOCDIR)/nyacc-c99-ug.html
+	$(INSTALL) nyacc-fh-ug.html $(DESTDIR)$(DOCDIR)/nyacc-fh-ug.html
 
 .PHONY: dist-files
 dist-files: \
 	nyacc-ug.info nyacc-ug.pdf nyacc-ug.html \
 	nyacc-c99-ug.info nyacc-c99-ug.pdf nyacc-c99-ug.html \
-	nyacc-fh.info nyacc-fh.pdf nyacc-fh.html
+	nyacc-fh-ug.info nyacc-fh-ug.pdf nyacc-fh-ug.html
 
 %_scm.texi: ../../module/nyacc/%.scm
 	./pull-texi.scm $< >$@

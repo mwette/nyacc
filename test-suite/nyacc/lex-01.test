@@ -1,6 +1,6 @@
 ;; nyacc/lex-01.test			-*- scheme -*-
 ;;
-;; Copyright (C) 2015,2017 Matthew R. Wette
+;; Copyright (C) 2015,2017,2019 Matthew R. Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -45,16 +45,45 @@
      '(("'\\177'" . "\x7f")
        )))
 
-  (pass-if "C numeric literals"
+  (pass-if "C integer literals"
     (fold
      (lambda (pair pass)
        (and pass
-	    (string=?
-	     (with-input-from-string (car pair)
-	       (lambda () (or (and=> (read-c-num (read-char)) cdr) "")))
-	     (cdr pair))))
+	    (with-input-from-string (car pair)
+	      (lambda ()
+		(let* ((p (read-c-num (read-char)))
+		       (t (and=> p car)) (r (and=> p cdr)))
+		  (and p (eq? t '$fixed) (string=? r (cdr pair))))))))
      #t
      '(("0b11" . "0b11")
+       )))
+
+  (pass-if "C floating-point literals"
+    (fold
+     (lambda (pair pass)
+       (and pass
+	    (with-input-from-string (car pair)
+	      (lambda ()
+		(let* ((p (read-c-num (read-char)))
+		       (t (and=> p car)) (r (and=> p cdr)))
+		  (and p (eq? t '$float) (string=? r (cdr pair))))))))
+     #t
+     '(("12.34" . "12.34")
+       ("12.34e56" . "12.34e56")
+       )))
+
+  (pass-if "C fixed-point literals"
+    (fold
+     (lambda (pair pass)
+       (and pass
+	    (with-input-from-string (car pair)
+	      (lambda ()
+		(let* ((p (read-c-num (read-char)))
+		       (t (and=> p car)) (r (and=> p cdr)))
+		  (and p (eq? t '$fixpt) (string=? r (cdr pair))))))))
+     #t
+     '(("0.25r" . "0.25r")
+       ("0.0078125HR" . "0.0078125HR")
        )))
 
   (pass-if "C strings"

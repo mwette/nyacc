@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 
-;; Copyright (C) 2015-2018 - Matthew R.Wette
+;; Copyright (C) 2015-2019 - Matthew R.Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -87,6 +87,7 @@
 (define c:hx (string->char-set "abcdefABCDEF"))
 (define c:sx (string->char-set "lLuU")) ; fixed suffix
 (define c:fx (string->char-set "fFlL")) ; float suffix
+(define c:px (string->char-set "rRhHkK")) ; fixed-point suffix
 (define c:bx (string->char-set "pP"))	; binary float suffix
 (define c:cx (string->char-set "LuU"))	; char prefix
 
@@ -324,15 +325,15 @@
 ;; @deffn {Procedure} make-num-reader => (proc ch) => #f|fixed|float
 ;; Where @emph{fixed} is @code{($fixed . "1")} and @emph{float} is
 ;; @code{($float . "1.0")}
-;; This procedure reads C numeric literals.
+;; This procedure reads C numeric literals (included fixed-point types).
 ;; Some literals are cleaned: @code{"0"} may be added before or after dot.
 ;; This allows use of @code{0b} prefix for binary literals even though that
 ;; is not C.
 ;; @end deffn
 (define (make-num-reader)
-  ;; This will incorrectly parse 123LUL.  Does not handler hex floats.
+  ;; This will incorrectly parse 123LUL.  Does not handle hex floats.
   ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
-  ;; NO LONGER Removed support for leading '.' to be a number.
+  ;; Now handles fixed-point (returning '$fixpt)
   (lambda (ch1)
     ;; chl: char list; ty: '$fixed or '$float; st: state; ch: next ch; ba: base
     (let loop ((chl '()) (ty #f) (ba 10) (st 0) (ch ch1))
@@ -365,6 +366,8 @@
 	   (loop (cons ch chl) ty ba 1 (read-char)))
 	  ((char-set-contains? c:sx ch)
 	   (loop (cons ch chl) ty ba 11 (read-char)))
+	  ((char-set-contains? c:px ch)
+	   (loop (cons ch chl) '$fixpt ba 11 (read-char)))
 	  ((char-set-contains? c:nx ch)
 	   (loop (cons ch chl) '$float ba 3 (read-char)))
 	  ((char-set-contains? c:if ch)
@@ -389,6 +392,8 @@
 	  ((char-numeric? ch) (loop (cons ch chl) ty ba 2 (read-char)))
 	  ((char-set-contains? c:nx ch)
 	   (loop (cons ch (fix-dot chl)) ty ba 3 (read-char)))
+	  ((char-set-contains? c:px ch)
+	   (loop (cons ch chl) '$fixpt ba st (read-char)))
 	  ((char-set-contains? c:fx ch)
 	   (cons '$float (lxlsr (cons ch (fix-dot chl)))))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=2"))
@@ -399,7 +404,7 @@
 	  ((or (char=? #\+ ch) (char=? #\- ch))
 	   (loop (cons ch chl) ty ba 4 (read-char)))
 	  ((char-numeric? ch) (loop chl ty ba 4 ch))
-	  (else (error "syntax3"))))
+	  (else (error "lex/num-reader st=3"))))
 	((4)
 	 (cond
 	  ((eof-object? ch) (loop chl ty ba 5 ch))
