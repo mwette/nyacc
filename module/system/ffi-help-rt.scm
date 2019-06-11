@@ -585,7 +585,7 @@
 	     ((string? expr) (ffi:string->pointer expr))
 	     ;;((bytestructure? expr)  ...
 	     (else
-	      (display "ffi-help-rt: WARNING: bizzare cast\n")
+	      (display "ffi-help-rt: WARNING: bizarre cast\n")
 	      expr)))
 	   (else expr))))
     (cons r-type r-expr)))
