@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2019-00-00  V0.95.0 release
+2019-07-20  V0.99.0 release
 	* added fixed-point types to C99 parser
 	  http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2001/n1290.pdf
 	  make-num-reader accepts 0.25hr uhr r ur lr ulr hk uhk k uk lk ulk
