@@ -1,5 +1,5 @@
-This is nyacc-fh.info, produced by makeinfo version 6.5 from
-nyacc-fh.texi.
+This is nyacc-fh-ug.info, produced by makeinfo version 6.5 from
+nyacc-fh-ug.texi.
 
 Copyright (C) 2017-2019 - Matthew R. Wette.
 
@@ -9,12 +9,13 @@ any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC.
 
+FFI Helper User Guide
 Matt Wette
-February 2019
-With NYACC Version 0.94.0
+July 2019
+With NYACC Version 0.99.0
 
 
-File: nyacc-fh.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
+File: nyacc-fh-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 
 NYACC FFI Helper Guide
 **********************
@@ -22,7 +23,7 @@ NYACC FFI Helper Guide
 This is a user guide for the NYACC FFI Helper.
 
 
-File: nyacc-fh.info,  Node: Introduction
+File: nyacc-fh-ug.info,  Node: Introduction
 
 Introduction
 ============
@@ -715,10 +716,13 @@ Installation
      ./configure --prefix=xxx
      make install
 
-Run in Place
-............
+Reporting Bugs
+--------------
 
-xxx
+Please report bugs by navigating with your browser to
+'https://savannah.nongnu.org/projects/nyacc' and select the "Submit New"
+item under the "Bugs" menu.  Alternatively, ask on the Guile user's
+mailing list <guile-user@gnu.org>.
 
 Notes
 -----
@@ -737,7 +741,7 @@ Notes
 Copyright
 ---------
 
-Copyright (C) 2017-2018 - Matthew R. Wette.
+Copyright (C) 2017-2019 - Matthew R. Wette.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -748,7 +752,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 
 
 Tag Table:
-Node: Top527
-Node: Introduction704
+Node: Top551
+Node: Introduction731
 
 End Tag Table

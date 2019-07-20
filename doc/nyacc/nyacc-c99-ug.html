@@ -57,9 +57,10 @@ ul.no-bullet {list-style: none}
 
 
 <div class="format">
-<pre class="format">Matt Wette
+<pre class="format">C99 Parser User Guide
+Matt Wette
 June 2019
-With NYACC Version 0.94.0
+With NYACC Version 0.99.0
 </pre></div>
 
 <a name="Top"></a>
@@ -86,15 +87,15 @@ Up: <a href="#Top" accesskey="u" rel="up">Top</a> &nbsp; </p>
 <a name="Introduction-1"></a>
 <h3 class="heading">Introduction</h3>
 
-<p>This is a manual for the C99 parser provides with NYACC.  While the
-parser could be used
-</p>
-<p>It is used as parser in a full Scheme-based C compiler
-(see <a href="https://www.gnu.org/software/mes/">https://www.gnu.org/software/mes/</a>).
-</p>
-<p>Note on CPP replacement text: IIRC, C99 will remove comments from CPP
-statements before processing.  I preserve this and remove inside the
-CPP parser.
+<p>This is a manual for the C99 parser provided with NYACC.  It is a
+LALR(1) based parser written in Scheme as implemented in Guile.  The
+grammar can be examined by looking at the source code in the file
+<samp>nyacc/lang/c99/mach.scm</samp>.  The parser has been used to generate
+object code (see <a href="https://www.gnu.org/software/mes/">https://www.gnu.org/software/mes/</a>) but it has
+options to make it useful for processing C code in other ways.  For
+example, the FFI Helper included with NYACC uses the parser to
+generate FFI (foreign function interface) code for many C libraries.
+It does this by parsing the associated C header files.  
 </p>
 <dl>
 <dt><a name="index-parse_002dc99"></a>Procedure: <strong>parse-c99</strong> <em>[options]</em></dt>
@@ -137,7 +138,6 @@ Default mode is <code>'code</code>.
 expressions can be fully evaluated, which may mean adding compiler generated
 defines (e.g., using <code>gen-cpp-defs</code>).
 </p></dd></dl>
-
 
 <a name="Include-Helpers"></a>
 <h4 class="subheading">Include Helpers</h4>
@@ -186,6 +186,13 @@ more detail.
 
 <p>The special symbol <code>C99_ANY</code> can be used for symbols which you
 don&rsquo;t want to define.  In the parser will handle this as XXX
+</p>
+<a name="Stuff"></a>
+<h3 class="heading">Stuff</h3>
+
+<p>Note on CPP replacement text: IIRC, C99 will remove comments from CPP
+statements before processing.  I preserve this and remove inside the
+CPP parser.
 </p>
 <a name="The-Unit-Parser"></a>
 <h3 class="heading">The Unit Parser</h3>

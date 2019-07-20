@@ -1,7 +1,7 @@
 This is nyacc-ug.info, produced by makeinfo version 6.5 from
 nyacc-ug.texi.
 
-Copyright (C) 2015-2017 - Matthew R. Wette.
+Copyright (C) 2015-2019 - Matthew R. Wette.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -391,11 +391,15 @@ special meaning: All symbols starting with '$' are reserved.  Unused
 reserved symbols will likely not signal an error.  The following
 reserved symbols are in use:
 '$prec'
-     TO BE DOCUMENTED
+     This symbol is used in the right hand side of a production rule to
+     indicate precedence (e.g., '($prec 'foo)').
 '$error'
-     TO BE DOCUMENTED
+     This symbol is used in the right hand side of a production rule to
+     indicate the rule is an error.  The associated parser will abort on
+     this rule.
 '$empty'
-     TO BE DOCUMENTED
+     This symbol can be used in the right hand side of a production to
+     indicate it has no terms.
 '$ident'
      This is emitted by the lexical analyzer to indicate an identifier.
 '$fixed'
@@ -441,8 +445,8 @@ reserved symbols are in use:
    In addition, the following reserved symbols may appear in output
 files:
 '$chlit'
-     ???  This is emitted by the lexical analyzer to indicate a
-     character constant.
+     This is emitted by the lexical analyzer to indicate a character
+     literal.
 '$start'
      This is used in the machine specification to indicate the
      production rule for starting the grammar.
@@ -519,43 +523,49 @@ using 'restart-spec':
 Using Hashed Tables
 -------------------
 
-The lexical analyzer will generate tokens.  The parser generates state
-transitions based on these tokens.  When we build a lexical analyzer
-(via 'make-lexer') we provide a list of strings to detect along with
-associated tokens to return to the parser.  By default the tokens
+The lexical analyzer returns tokens to the parser.  The parser executes
+state transitions based on these tokens.  When we build a lexical
+analyzer (via 'make-lexer') we provide a list of strings to detect along
+with associated tokens to return to the parser.  By default the tokens
 returned are symbols or characters.  But these could as well be
 integers.  Also, the parser uses symbols to represent non-terminals,
 which are also used to trigger state transitions.  We could use integers
-instead of symbols and characters by mapping via a hash table.  We will
-bla bla bla.  There are also standard tokens we need to worry about.
-These are
+instead of symbols and characters by mapping the tokens to integers.
+This makes the parser more efficient.  The tokens we are talking about
+include
   1. the '$end' marker
   2. identifiers (using the symbolic token '$ident'
   3. non-negative integers (using the symbolic token '$fixed')
   4. non-negative floats (using the symbolic token '$float')
-  5. '$default' => 0
-   And action
-  1. positive => shift
-  2. negative => reduce
-  3. zero => accept
-   However, if these are used they should appear in the spec's terminal
-list.  For the hash table we use positive integers for terminals and
-negative integers for non-terminals.  To apply such a hash table we need
-to:
-  1. from the spec's list of terminals (aka tokens), generate a list of
-     terminal to integer pairs (and vice versa)
-  2. from the spec's list of non-terminals generate a list of symbols to
+  5. '$accept'
+  6. '$default'
+  7. '$error'
+
+   For the hash table we use positive integers for terminals and
+negative integers for non-terminals.  To apply such a hash table we
+perform the following:
+  1. From the spec's list of terminals (aka tokens), generate a list of
+     terminal to integer pairs (and vice versa).
+  2. From the spec's list of non-terminals generate a list of symbols to
      integers and vice versa.
   3. Go through the parser-action table and convert symbols and
-     characters to integers
-  4. Go through the XXX list passed to the lexical analyizer and replace
-     symbols and characters with integers.
-   One issue we need to deal with is separating out the identifier-like
-terminals (aka keywords) from those that are not identifier-like.  I
-guess this should be done as part of 'make-lexer', by filtering the
-token list through the ident-reader.  NOTE: The parser is hardcoded to
-assume that the phony token for the default (reduce) action is
-''$default' for unhashed machine or '-1' for a hashed machine.
+     characters to integers.
+  4. Go through the token list passed to the lexical analyzer and
+     replace symbols and characters with integers.
+
+   Note that the parser is hardcoded to assume that the phony token for
+the default (reduce) action is ''$default' for unhashed machine or '1'
+for a hashed machine.
+
+   The actions that the parser executes based on these are shift, reduce
+and accept.  When a shift occurs, the parser must transition to a new
+state.  We can encode the parser transitions using integers.
+  1. If positive, shift and go to the integer state.
+  2. If negative, reduce by the additive inverse of the integer action.
+  3. If zero, accept and return.
+
+   The NYACC procedure to convert a machine to a hashed-machine is
+'hashify-machine'.
 
  -- Procedure: hashify-machine mach => mach
      Convert machine to use integers instead of symbols.  The match
@@ -593,8 +603,7 @@ terminals are detected in the grammar as non-identifiers: strings (e.g.,
 '"for"'), symbols (e.g., ''$ident') or characters (e.g., '#\+').  The
 machine generation phase of the parser generates a match table which is
 an a-list of these objects along with the token code.  These codes are
-what the lexical analyzer should return.  BLA Bla bla.  So in the end we
-have
+what the lexical analyzer should return.  In the end we have
    * The user specifies the grammar with terminals in natural form
      (e.g., '"for"').
    * The parser generator internalizes these to symbols or integers, and
@@ -613,8 +622,8 @@ have
      form, internal form) and returns pairs of the form (internal form,
      natural form).
 
-   Now one item need to be dealt with and that is the token value for
-the default.  It should be '-1' or ''$default'.  WORK ON THIS.
+   The symbol for the default transition is ''$default'.  For hashified
+machines this is translated to the integer '1'.
 
 2.5 Constructing Lexical Analyzers
 ==================================
@@ -897,9 +906,8 @@ other LALR parser generators.
    * Terminals expressed as symbols are converted as-is but '$' and '-'
      are replaced with '_'.
 
-   TODO: Export to Bison xml format.
-
-   The Guile exporter uses the following rules: TBD.
+   This functionality has not been worked for a while so I suspect there
+is a chance it does not work anymore.
 
 2.10 Debugging
 ==============
@@ -1243,9 +1251,10 @@ If Guile is not installed it is possible to install source only:
 5.2 Reporting Bugs
 ==================
 
-Please report bugs to the support site
-'https://savannah.nongnu.org/support/?group=nyacc' or to the Guile
-user's mailing list <guile-user@gnu.org>.
+Please report bugs by navigating with your browser to
+'https://savannah.nongnu.org/projects/nyacc' and select the "Submit New"
+item under the "Bugs" menu.  Alternatively, ask on the Guile user's
+mailing list <guile-user@gnu.org>.
 
 5.3 The Free Documentation License
 ==================================
@@ -1313,23 +1322,23 @@ Node: Top622
 Node: Demonstration877
 Node: Parsing9755
 Ref: Specification10203
-Ref: Recovery from Syntax Errors18764
-Ref: sublanguage19646
-Ref: Parser19967
-Ref: match table23711
-Ref: lex25514
-Ref: parser-lexer32622
-Ref: Parser Tables34192
-Ref: Hashing and Compacting35504
-Ref: Debugging37193
-Ref: Human Readable Output37304
-Node: Translation40341
-Ref: Tagged Lists42791
-Ref: SXML Parse Trees44737
-Node: Coding to the Compiler Tower46654
-Ref: Pretty Print47882
-Node: Administrative48078
-Node: TODOs49097
-Node: References50118
+Ref: Recovery from Syntax Errors19076
+Ref: sublanguage19958
+Ref: Parser20279
+Ref: match table24122
+Ref: lex25895
+Ref: parser-lexer33003
+Ref: Parser Tables34573
+Ref: Hashing and Compacting35885
+Ref: Debugging37594
+Ref: Human Readable Output37705
+Node: Translation40742
+Ref: Tagged Lists43192
+Ref: SXML Parse Trees45138
+Node: Coding to the Compiler Tower47055
+Ref: Pretty Print48283
+Node: Administrative48479
+Node: TODOs49580
+Node: References50601
 
 End Tag Table

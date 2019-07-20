@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Copyright (C) 2015-2017 - Matthew R. Wette.
+<!-- Copyright (C) 2015-2019 - Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -152,8 +152,6 @@ can be found in the Bison manual (see <a href="#References">References</a>).
 </p>
 <a name="A-Simple-Batch-Calculator"></a>
 <h3 class="section">1.1 A Simple Batch Calculator</h3>
-
-
 
 <p>An easy way to introduce you to <small>NYACC</small> is to work through a simple
 example.  Consider the following.  A similar example is in the file
@@ -563,13 +561,17 @@ All symbols starting with <code>$</code> are reserved.  Unused reserved symbols
 will likely not signal an error.  The following reserved symbols are in use:
 </p><dl compact="compact">
 <dt><code>$prec</code></dt>
-<dd><p>TO BE DOCUMENTED
+<dd><p>This symbol is used in the right hand side of a production rule to
+indicate precedence (e.g., <code>($prec 'foo)</code>).
 </p></dd>
 <dt><code>$error</code></dt>
-<dd><p>TO BE DOCUMENTED
+<dd><p>This symbol is used in the right hand side of a production rule to
+indicate the rule is an error.  The associated parser will abort on
+this rule.
 </p></dd>
 <dt><code>$empty</code></dt>
-<dd><p>TO BE DOCUMENTED
+<dd><p>This symbol can be used in the right hand side of a production to
+indicate it has no terms.
 </p></dd>
 <dt><code>$ident</code></dt>
 <dd><p>This is emitted by the lexical analyzer to indicate an identifier.
@@ -630,7 +632,8 @@ in current form, unattractive for practical use.
 <p>In addition, the following reserved symbols may appear in output files:
 </p><dl compact="compact">
 <dt><code>$chlit</code></dt>
-<dd><p>??? This is emitted by the lexical analyzer to indicate a character constant.
+<dd><p>This is emitted by the lexical analyzer to indicate a character
+literal.
 </p></dd>
 <dt><code>$start</code></dt>
 <dd><p>This is used in the machine specification to indicate the production
@@ -733,48 +736,55 @@ parser generated with, for example, <code>make-lalr-parser</code>.
 <a name="Using-Hashed-Tables"></a>
 <h4 class="subheading">Using Hashed Tables</h4>
 
-<p>The lexical analyzer will generate tokens.  The parser generates state
-transitions based on these tokens.  When we build a lexical analyzer
-(via <code>make-lexer</code>) we provide a list of strings to detect along with
-associated tokens to return to the parser.  By default the tokens returned
-are symbols or characters.  But these could as well be integers.  Also,
-the parser uses symbols to represent non-terminals, which are also used
-to trigger state transitions.  We could use integers instead of symbols
-and characters by mapping via a hash table.   We will bla bla bla.
-There are also standard tokens we need to worry about.  These are
+<p>The lexical analyzer returns tokens to the parser.  The parser
+executes state transitions based on these tokens.  When we build a
+lexical analyzer (via <code>make-lexer</code>) we provide a list of strings
+to detect along with associated tokens to return to the parser.  By
+default the tokens returned are symbols or characters.  But these
+could as well be integers.  Also, the parser uses symbols to represent
+non-terminals, which are also used to trigger state transitions.  We
+could use integers instead of symbols and characters by mapping the
+tokens to integers.  This makes the parser more efficient.  The tokens
+we are talking about include
 </p><ol>
 <li> the <code>$end</code> marker
 </li><li> identifiers (using the symbolic token <code>$ident</code>
 </li><li> non-negative integers (using the symbolic token <code>$fixed</code>)
 </li><li> non-negative floats (using the symbolic token <code>$float</code>)
-</li><li> <code>$default</code> =&gt; 0
+</li><li> <code>$accept</code>
+</li><li> <code>$default</code>
+</li><li> <code>$error</code>
 </li></ol>
-<p>And action
+
+<p>For the hash table we use positive integers for terminals and negative
+integers for non-terminals.  To apply such a hash table we perform the
+following: 
 </p><ol>
-<li> positive =&gt; shift
-</li><li> negative =&gt; reduce
-</li><li> zero =&gt; accept
-</li></ol>
-<p>However, if these are used they should appear in the spec&rsquo;s terminal list.
-For the hash table we use positive integers for terminals and negative
-integers for non-terminals.  To apply such a hash table we need to:
-</p><ol>
-<li> from the spec&rsquo;s list of terminals (aka tokens), generate a list of
-terminal to integer pairs (and vice versa)
-</li><li> from the spec&rsquo;s list of non-terminals generate a list of symbols
+<li> From the spec&rsquo;s list of terminals (aka tokens), generate a list of
+terminal to integer pairs (and vice versa).
+</li><li> From the spec&rsquo;s list of non-terminals generate a list of symbols
 to integers and vice versa.
 </li><li> Go through the parser-action table and convert symbols and characters
-to integers
-</li><li> Go through the XXX list passed to the lexical analyizer and replace
+to integers.
+</li><li> Go through the token list passed to the lexical analyzer and replace
 symbols and characters with integers.
 </li></ol>
-<p>One issue we need to deal with is separating out the identifier-like
-terminals (aka keywords) from those that are not identifier-like.  I guess
-this should be done as part of <code>make-lexer</code>, by filtering the token
-list through the ident-reader.
-NOTE: The parser is hardcoded to assume that the phony token for the
+
+<p>Note that the parser is hardcoded to assume that the phony token for the
 default (reduce) action is <code>'$default</code> for unhashed machine or
-<code>-1</code> for a hashed machine.
+<code>1</code> for a hashed machine.
+</p>
+<p>The actions that the parser executes based on these are <i>shift</i>, <i>reduce</i>
+and <i>accept</i>.  When a shift occurs, the parser must transition to a
+new state.  We can encode the parser transitions using integers.
+</p><ol>
+<li> If positive, shift and go to the integer state.
+</li><li> If negative, reduce by the additive inverse of the integer action.
+</li><li> If zero, accept and return.
+</li></ol>
+
+<p>The <small>NYACC</small> procedure to convert a machine to a hashed-machine is
+<code>hashify-machine</code>.
 </p>
 <dl>
 <dt><a name="index-hashify_002dmachine"></a>Procedure: <strong>hashify-machine</strong> <em>mach =&gt; mach</em></dt>
@@ -828,7 +838,7 @@ terminals are detected in the grammar as non-identifiers: strings
 (e.g., <code>#\+</code>).   The machine generation phase of the parser 
 generates a match table which is an a-list of these objects along with
 the token code.  These codes are what the lexical analyzer should return.
-BLA Bla bla.  So in the end we have
+In the end we have
 </p><ul>
 <li> The user specifies the grammar with terminals in natural form
 (e.g., <code>&quot;for&quot;</code>).
@@ -847,8 +857,8 @@ was built with pairs of the form (natural form, internal form) and returns
 pairs of the form (internal form, natural form).
 </li></ul>
 
-<p>Now one item need to be dealt with and that is the token value for the 
-default.  It should be <code>-1</code> or <code>'$default</code>. WORK ON THIS.
+<p>The symbol for the default transition is <code>'$default</code>.  For
+hashified machines this is translated to the integer <code>1</code>.
 </p>
 <a name="Constructing-Lexical-Analyzers"></a>
 <h3 class="section">2.5 Constructing Lexical Analyzers</h3>
@@ -1223,9 +1233,8 @@ code.  For example <code>&quot;+=&quot;</code> is converted to <code>ChSeq_43_61
 are replaced with <code>_</code>.
 </li></ul>
 
-<p>TODO: Export to Bison xml format.
-</p>
-<p>The Guile exporter uses the following rules: TBD.
+<p>This functionality has not been worked for a while so I suspect there
+is a chance it does not work anymore.
 </p>
 <a name="Debugging-1"></a>
 <h3 class="section">2.10 Debugging</h3>
@@ -1672,9 +1681,10 @@ $ make install-srcs
 
 <a name="Reporting-Bugs"></a>
 <h3 class="section">5.2 Reporting Bugs</h3>
-<p>Please report bugs to the support site
-&lsquo;<code>https://savannah.nongnu.org/support/?group=nyacc</code>&rsquo; or to
-the Guile user&rsquo;s mailing list <a href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
+<p>Please report bugs by navigating with your browser to
+&lsquo;<code>https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
+the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively, 
+ask on the Guile user&rsquo;s mailing list <a href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
 </p>
 <a name="The-Free-Documentation-License"></a>
 <h3 class="section">5.3 The Free Documentation License</h3>

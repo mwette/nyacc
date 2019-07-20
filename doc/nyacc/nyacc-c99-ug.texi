@@ -18,9 +18,10 @@ copy of the license is included with the distribution as COPYING.DOC.
 @everyfooting @| @thispage @|
 
 @format
+C99 Parser User Guide
 Matt Wette
 June 2019
-With NYACC Version 0.94.0
+With NYACC Version 0.99.0
 @end format
 
 @ifnottex
@@ -36,15 +37,15 @@ This is a user guide for the NYACC C99 parser.
 @node Introduction
 @heading Introduction
 
-This is a manual for the C99 parser provides with NYACC.  While the
-parser could be used
-
-It is used as parser in a full Scheme-based C compiler
-(see @url{https://www.gnu.org/software/mes/}).
-
-Note on CPP replacement text: IIRC, C99 will remove comments from CPP
-statements before processing.  I preserve this and remove inside the
-CPP parser.
+This is a manual for the C99 parser provided with NYACC.  It is a
+LALR(1) based parser written in Scheme as implemented in Guile.  The
+grammar can be examined by looking at the source code in the file
+@file{nyacc/lang/c99/mach.scm}.  The parser has been used to generate
+object code (see @url{https://www.gnu.org/software/mes/}) but it has
+options to make it useful for processing C code in other ways.  For
+example, the FFI Helper included with NYACC uses the parser to
+generate FFI (foreign function interface) code for many C libraries.
+It does this by parsing the associated C header files.  
 
 @deffn {Procedure} parse-c99 [options]
 where options are
@@ -81,7 +82,6 @@ Note: for @code{file} mode user still needs to make sure CPP conditional
 expressions can be fully evaluated, which may mean adding compiler generated
 defines (e.g., using @code{gen-cpp-defs}).
 @end deffn
-
 
 @subheading Include Helpers
 
@@ -130,6 +130,12 @@ more detail.
 
 The special symbol @code{C99_ANY} can be used for symbols which you
 don't want to define.  In the parser will handle this as XXX
+
+@heading Stuff
+
+Note on CPP replacement text: IIRC, C99 will remove comments from CPP
+statements before processing.  I preserve this and remove inside the
+CPP parser.
 
 @heading The Unit Parser
 

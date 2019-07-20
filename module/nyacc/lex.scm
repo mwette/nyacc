@@ -87,7 +87,7 @@
 (define c:hx (string->char-set "abcdefABCDEF"))
 (define c:sx (string->char-set "lLuU")) ; fixed suffix
 (define c:fx (string->char-set "fFlL")) ; float suffix
-(define c:px (string->char-set "rRhHkK")) ; fixed-point suffix
+(define c:px (string->char-set "rRhHkKlLuU")) ; fixed-point suffix
 (define c:bx (string->char-set "pP"))	; binary float suffix
 (define c:cx (string->char-set "LuU"))	; char prefix
 
@@ -365,22 +365,24 @@
 	  ((and (= ba 16) (char-set-contains? c:hx ch))
 	   (loop (cons ch chl) ty ba 1 (read-char)))
 	  ((char-set-contains? c:sx ch)
-	   (loop (cons ch chl) ty ba 11 (read-char)))
-	  ((char-set-contains? c:px ch)
-	   (loop (cons ch chl) '$fixpt ba 11 (read-char)))
+	   (loop (cons ch chl) '$fixed ba 11 (read-char)))
 	  ((char-set-contains? c:nx ch)
 	   (loop (cons ch chl) '$float ba 3 (read-char)))
+	  ((char-set-contains? c:px ch)
+	   (loop (cons ch chl) '$fixpt ba 11 (read-char)))
 	  ((char-set-contains? c:if ch)
 	   (sf "\nchl=~S ch=~S ty=~S ba=~S\n" chl ch ty ba)
 	   (error "lex/num-reader st=1"))
 	  (else (loop chl '$fixed ba 5 ch))))
 	((11) ;; got lLuU suffix, look for a second
 	 (cond
-	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
+	  ((eof-object? ch) (cons ty (lxlsr chl)))
 	  ((char-set-contains? c:sx ch)
-	   (loop (cons ch chl) ty ba 12 (read-char)))
-	  (else (loop chl '$fixed ba 5 ch))))
-	((12) ;; got lLuU suffix, look for a third
+	   (loop (cons ch chl) ty ba st (read-char)))
+	  ((char-set-contains? c:px ch)
+	   (loop (cons ch chl) '$fixpt ba st (read-char)))
+	  (else (loop chl ty ba 5 ch))))
+	#;((12) ;; got lLuU suffix, look for a third
 	 (cond
 	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
 	  ((char-set-contains? c:sx ch)

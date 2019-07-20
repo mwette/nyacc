@@ -3,7 +3,7 @@
 @settitle Not Yet Another Compiler Compiler
 
 @copying
-Copyright (C) 2015-2017 -- Matthew R. Wette.
+Copyright (C) 2015-2019 -- Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -27,7 +27,7 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @titlepage
 @title Not Yet Another Compiler-Compiler
 @subtitle A LALR(1) Parser Generator Implemented in Guile
-@subtitle User's manual for NYACC version 0.95.0
+@subtitle User's manual for NYACC version 0.99.0
 @author Matt Wette
 @end titlepage
 
@@ -63,13 +63,6 @@ A more detailed explantion of how to use an LALR parser generator
 can be found in the Bison manual (see @ref{References}).
 
 @section A Simple Batch Calculator
-
-@c https://www.gnu.org/software/bison/manual/
-
-@c grammar change from ``simple'' version to ``,L'' version:
-@c in former need rule reduced when ``\n'' is a lookahead
-@c in latter need ``\n'' in stmt
-@c for interactive must have compacted tables (need default reductions!)
 
 An easy way to introduce you to @nyacc{} is to work through a simple
 example.  Consider the following.  A similar example is in the file
@@ -485,11 +478,15 @@ All symbols starting with @code{$} are reserved.  Unused reserved symbols
 will likely not signal an error.  The following reserved symbols are in use:
 @table @code
 @item $prec
-TO BE DOCUMENTED
+This symbol is used in the right hand side of a production rule to
+indicate precedence (e.g., @code{($prec 'foo)}).
 @item $error
-TO BE DOCUMENTED
+This symbol is used in the right hand side of a production rule to
+indicate the rule is an error.  The associated parser will abort on
+this rule.
 @item $empty
-TO BE DOCUMENTED
+This symbol can be used in the right hand side of a production to
+indicate it has no terms.
 @item $ident
 This is emitted by the lexical analyzer to indicate an identifier.
 @item $fixed
@@ -543,7 +540,8 @@ in current form, unattractive for practical use.
 In addition, the following reserved symbols may appear in output files:
 @table @code
 @item $chlit
-??? This is emitted by the lexical analyzer to indicate a character constant.
+This is emitted by the lexical analyzer to indicate a character
+literal.
 @item $start
 This is used in the machine specification to indicate the production
 rule for starting the grammar.
@@ -636,48 +634,62 @@ a vector of itemsets
 
 @subheading Using Hashed Tables
 
-The lexical analyzer will generate tokens.  The parser generates state
-transitions based on these tokens.  When we build a lexical analyzer
-(via @code{make-lexer}) we provide a list of strings to detect along with
-associated tokens to return to the parser.  By default the tokens returned
-are symbols or characters.  But these could as well be integers.  Also,
-the parser uses symbols to represent non-terminals, which are also used
-to trigger state transitions.  We could use integers instead of symbols
-and characters by mapping via a hash table.   We will bla bla bla.
-There are also standard tokens we need to worry about.  These are
+The lexical analyzer returns tokens to the parser.  The parser
+executes state transitions based on these tokens.  When we build a
+lexical analyzer (via @code{make-lexer}) we provide a list of strings
+to detect along with associated tokens to return to the parser.  By
+default the tokens returned are symbols or characters.  But these
+could as well be integers.  Also, the parser uses symbols to represent
+non-terminals, which are also used to trigger state transitions.  We
+could use integers instead of symbols and characters by mapping the
+tokens to integers.  This makes the parser more efficient.  The tokens
+we are talking about include
 @enumerate
 @item the @code{$end} marker
 @item identifiers (using the symbolic token @code{$ident}
 @item non-negative integers (using the symbolic token @code{$fixed})
 @item non-negative floats (using the symbolic token @code{$float})
-@item @code{$default} => 0
+@item @code{$accept}
+@item @code{$default}
+@item @code{$error}
 @end enumerate
-And action
-@enumerate
-@item positive => shift
-@item negative => reduce
-@item zero => accept
-@end enumerate
-However, if these are used they should appear in the spec's terminal list.
+
 For the hash table we use positive integers for terminals and negative
-integers for non-terminals.  To apply such a hash table we need to:
+integers for non-terminals.  To apply such a hash table we perform the
+following: 
 @enumerate
-@item from the spec's list of terminals (aka tokens), generate a list of
-terminal to integer pairs (and vice versa)
-@item from the spec's list of non-terminals generate a list of symbols
+@item
+From the spec's list of terminals (aka tokens), generate a list of
+terminal to integer pairs (and vice versa).
+@item
+From the spec's list of non-terminals generate a list of symbols
 to integers and vice versa.
-@item Go through the parser-action table and convert symbols and characters
-to integers
-@item Go through the XXX list passed to the lexical analyizer and replace
+@item
+Go through the parser-action table and convert symbols and characters
+to integers.
+@item
+Go through the token list passed to the lexical analyzer and replace
 symbols and characters with integers.
 @end enumerate
-One issue we need to deal with is separating out the identifier-like
-terminals (aka keywords) from those that are not identifier-like.  I guess
-this should be done as part of @code{make-lexer}, by filtering the token
-list through the ident-reader.
-NOTE: The parser is hardcoded to assume that the phony token for the
+
+Note that the parser is hardcoded to assume that the phony token for the
 default (reduce) action is @code{'$default} for unhashed machine or
-@code{-1} for a hashed machine.
+@code{1} for a hashed machine.
+
+The actions that the parser executes based on these are @i{shift}, @i{reduce}
+and @i{accept}.  When a shift occurs, the parser must transition to a
+new state.  We can encode the parser transitions using integers.
+@enumerate
+@item
+If positive, shift and go to the integer state.
+@item
+If negative, reduce by the additive inverse of the integer action.
+@item
+If zero, accept and return.
+@end enumerate
+
+The @nyacc{} procedure to convert a machine to a hashed-machine is
+@code{hashify-machine}.
 
 @deffn {Procedure} hashify-machine mach => mach
 Convert machine to use integers instead of symbols.  The match table
@@ -730,7 +742,7 @@ terminals are detected in the grammar as non-identifiers: strings
 (e.g., @code{#\+}).   The machine generation phase of the parser 
 generates a match table which is an a-list of these objects along with
 the token code.  These codes are what the lexical analyzer should return.
-BLA Bla bla.  So in the end we have
+In the end we have
 @itemize
 @item
 The user specifies the grammar with terminals in natural form
@@ -754,8 +766,8 @@ was built with pairs of the form (natural form, internal form) and returns
 pairs of the form (internal form, natural form).
 @end itemize
 
-Now one item need to be dealt with and that is the token value for the 
-default.  It should be @code{-1} or @code{'$default}. WORK ON THIS.
+The symbol for the default transition is @code{'$default}.  For
+hashified machines this is translated to the integer @code{1}.
 
 @section Constructing Lexical Analyzers
 @anchor{lex}
@@ -1102,9 +1114,8 @@ Terminals expressed as symbols are converted as-is but @code{$} and @code{-}
 are replaced with @code{_}.
 @end itemize
 
-TODO: Export to Bison xml format.
-
-The Guile exporter uses the following rules: TBD.
+This functionality has not been worked for a while so I suspect there
+is a chance it does not work anymore.
 
 @section Debugging
 @anchor {Debugging}
@@ -1517,9 +1528,10 @@ $ make install-srcs
 @end example
 
 @section Reporting Bugs
-Please report bugs to the support site
-@indicateurl{https://savannah.nongnu.org/support/?group=nyacc} or to
-the Guile user's mailing list @email{guile-user@@gnu.org}.
+Please report bugs by navigating with your browser to
+@indicateurl{https://savannah.nongnu.org/projects/nyacc} and select
+the ``Submit New'' item under the ``Bugs'' menu.  Alternatively, 
+ask on the Guile user's mailing list @email{guile-user@@gnu.org}.
 
 @section The Free Documentation License
 The Free Documentation License is included in the Guile Reference
