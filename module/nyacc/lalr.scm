@@ -39,8 +39,7 @@
   #:use-module (srfi srfi-43)
   #:use-module (nyacc util)
   #:use-module (nyacc version)
-  #:use-module (ice-9 pretty-print)
-  )
+  #:use-module (ice-9 pretty-print))
 
 
 ;; token values for default reduction and erro, sync with parser.scm
@@ -489,8 +488,7 @@
 	       ;; non-terminal's w/o production rule:
 	       (err-l (gram-check-3 ll nl err-l))
 	       ;; TODO: which don't appear in OTHER RHS, e.g., (foo (foo))
-	       (err-l (gram-check-4 ll nl err-l))
-	       )
+	       (err-l (gram-check-4 ll nl err-l)))
 	  (for-each (lambda (e) (fmterr "~A\n" e)) err-l)
 	  (if (pair? (filter (lambda (s) (char=? #\* (string-ref s 0))) err-l))
 	      #f

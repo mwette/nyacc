@@ -364,8 +364,7 @@
     ;; hacks:
     ("char" . int8) ("signed char" . int8) ("unsigned char" . uint8)
     ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
-    ("_Bool" . int8)
-    ))
+    ("_Bool" . int8)))
 
 (define bs-defined (map car bs-typemap))
 
@@ -550,8 +549,7 @@
     (ppscm `(define-fh-function*-type ,sy-name
 	      ,(string->symbol (string-append name "-desc"))
 	      ,(string->symbol (string-append name "?"))
-	      ,(string->symbol (string-append "make-" name))
-	      ))
+	      ,(string->symbol (string-append "make-" name))))
     (fhscm-export-def name)))
 
 (define* (fhscm-def-fixed name)
@@ -700,8 +698,7 @@
      ((and typename enum-name)
       (fhscm-def-enum typename name-val-l)
       (sfscm "(define-public unwrap-enum-~A unwrap-~A)\n" enum-name typename)
-      (sfscm "(define-public wrap-enum-~A wrap-~A)\n" enum-name typename)
-      )
+      (sfscm "(define-public wrap-enum-~A wrap-~A)\n" enum-name typename))
      (typename
       (fhscm-def-enum typename name-val-l))
      (enum-name
@@ -1066,8 +1063,7 @@
 	 ;;(call `(,~name ,@(gen-exec-call-args exec-params)))
 	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
 			  (map cdr ~rest)))
-	 (call `((force ,~name) ,@(gen-exec-call-args exec-params)))
-	 )
+	 (call `((force ,~name) ,@(gen-exec-call-args exec-params))))
     (cond
      (varargs?
       (sfscm ";; to be used with fh-cast\n")
@@ -1095,8 +1091,7 @@
 				      ,(link-libs)))))
 	    (lambda ,(gen-exec-arg-names exec-params)
 	      (let ,(gen-exec-unwrappers exec-params)
-		,(if exec-return (list exec-return call) call))))))
-      ))
+		,(if exec-return (list exec-return call) call))))))))
     (sfscm "(export ~A)\n" name)))
 
 ;; === externs ========================
@@ -1391,8 +1386,7 @@
 	   (sfscm "(define-public ~A? fh-void?)\n" typename)
 	   (sfscm "(define-public make-~A make-fh-void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (bs:pointer (delay ~A-desc)))\n"
-		  typename typename)
-	   ))
+		  typename typename)))
 	(else
 	 ;; 3) struct never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
@@ -1522,8 +1516,7 @@
        (let* ((ret-decl `(udecl (decl-spec-list . ,rst)
 				(init-declr (ident "_"))))
 	      (decl-return (gen-bs-decl-return ret-decl))
-	      (decl-params (gen-bs-decl-params params))
-	      )
+	      (decl-params (gen-bs-decl-params params)))
 	 (fhscm-def-function* typename decl-return decl-params))
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1541,8 +1534,7 @@
 	      ;;(decl-return (gen-decl-return ret-decl))
 	      ;;(decl-params (gen-decl-params params))
 	      (decl-return (gen-decl-return ret-decl))
-	      (decl-params (gen-decl-params params))
-	      )
+	      (decl-params (gen-decl-params params)))
 	 (fhscm-def-function* typename decl-return decl-params))
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1763,8 +1755,7 @@
 		 (decl-spec-list (type-spec (typename "haddr_t")))))
 	       (p-expr (fixed "4"))))))
        (let* ((typename "haddr_t")
-	      (size (+ (sizeof '*) 4))
-	      )
+	      (size (+ (sizeof '*) 4)))
 	 (sfscm "(define-public ~A-desc (bs:vector ~A '*))\n" typename size)
 	 ;;(sfscm "(define-fh-compound-type/p ~A ~A-desc)\n" typename typename)
 	 (fhscm-def-compound typename)
@@ -2060,8 +2051,7 @@
 		    (vname (string->symbol (string-append pname "-types")))
 		    (var (module-ref modul vname)))
 	       (append var seed)))
-	   '() ext-mods))
-	 )
+	   '() ext-mods)))
     ;; set globals
     (*prefix* (path->name path))
     (*udict* udict)
@@ -2195,8 +2185,7 @@
 	   (scmport (mkstemp! (string-copy ",_FH_XXXXXX")))
 	   ;;(scmport (tmpfile)) ;; does not work ?
 	   (scmfile (port-filename scmport))
-	   (compile-file (@@ (system base compile) compile-file))
-	   )
+	   (compile-file (@@ (system base compile) compile-file)))
       (*prefix* (symbol->string (gensym "fh-")))
       (*mport* scmport)
       (*udict* udict)

@@ -272,9 +272,7 @@
 				  (visit ix))
 			  (loop (cdr l)))))
 		  (set! xl (cons k xl))
-		  (set-cdr! (vector-ref tv k) (next-t))
-		  ))
-	   )
+		  (set-cdr! (vector-ref tv k) (next-t)))))
       ;; Set up hash of vertex to index.
       (do ((i 0 (+ i 1)) (l graph (cdr l))) ((= i n))
 	(vector-set! gv i (car l)) ; (vector-ref gv i) = (list-ref graph i)

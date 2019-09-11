@@ -69,8 +69,7 @@
 	    ;; debugging
 	    stripdown-1
 	    tdef-splice-specl
-	    tdef-splice-declr
-	    )
+	    tdef-splice-declr)
   #:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
   #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 pprint)
@@ -85,8 +84,7 @@
   #:use-module (system base pmatch)
   ;; debugging:
   #:use-module (system vm trace)
-  #:use-module (ice-9 pretty-print)
-  )
+  #:use-module (ice-9 pretty-print))
 ;; undocumented Guile builtins: or-map
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
@@ -1014,8 +1012,7 @@
   (define (cpp-def? tree)
     (if (and (eq? 'cpp-stmt (sx-tag tree))
 	     (eq? 'define (sx-tag (sx-ref tree 1)))
-	     (not (and skip-fdefs (assq 'args (sx-tail (sx-ref tree 1) 1))))
-	     )
+	     (not (and skip-fdefs (assq 'args (sx-tail (sx-ref tree 1) 1)))))
 	(can-def-stmt (sx-ref tree 1))
 	#f))
   (if (pair? tree)
@@ -1299,8 +1296,7 @@
   ;; on constant expression eval (eval-c99-cx) maybe we should change that.
   (define (cnvt-size-expr size-spec)
     ;;(with-output-to-string (lambda () (pretty-print-c99 size-spec)))
-    size-spec
-    )
+    size-spec)
 
   (define (unwrap-specl specl)
     (and=> (assq-ref (sx-tail specl) 'type-spec) car))

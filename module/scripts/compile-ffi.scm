@@ -110,8 +110,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	     (values (acons 'no-exec #t opts) files)))
    (option '("any-suffix") #f #f
 	   (lambda (opt name arg opts files)
-	     (values (acons 'any-sufffix #t opts) files)))
-   ))
+	     (values (acons 'any-sufffix #t opts) files)))))
 
 ;; from scripts/compile.scm
 (define (parse-args args)

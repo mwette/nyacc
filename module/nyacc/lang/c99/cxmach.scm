@@ -123,8 +123,7 @@
      ($chlit/U ($$ `(char (@ (type "char32_t")) ,$1))))
     (string-literal
      ($string ($$ (make-tl 'string $1))) ; string-constant
-     (string-literal $string ($$ (tl-append $1 $2))))
-    )))
+     (string-literal $string ($$ (tl-append $1 $2)))))))
 
 (define c99cx-mach
   (compact-machine

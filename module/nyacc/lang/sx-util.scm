@@ -419,8 +419,7 @@
 		  (sxm-tail (cdr v) nl kt kf))
 	      kf))
     ;; deprecate `else' syntax?
-    ((_ v else kt kf) kt)
-    ))
+    ((_ v else kt kf) kt)))
  
 ;; sxm-tag val pat kt kf
 ;; match tag: foo|#(foo bar baz)|,any

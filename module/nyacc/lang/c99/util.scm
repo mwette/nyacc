@@ -46,8 +46,7 @@
      "__volatile__=volatile" "__volatile=__volatile__"
      ;;"__THROW="
      "asm=__asm__" "__asm=__asm__"
-     "__extension__=" "__extension=__extension__"
-     )))
+     "__extension__=" "__extension=__extension__")))
 
 ;; include-helper for C99 std
 (define c99-std-help
@@ -84,8 +83,7 @@
      ("time.h" "time_t" "clock_t" "size_t")
      ("unistd.h" "size_t" "ssize_t" "div_t" "ldiv_t")
      ("wchar.h" "wchar_t" "wint_t" "mbstate_t" "size_t")
-     ("wctype.h" "wctrans_t" "wctype_t" "wint_t")
-     )))
+     ("wctype.h" "wctrans_t" "wctype_t" "wint_t"))))
 
 (define (resolve-CC CC)
   (cond
@@ -380,8 +378,7 @@
       ((if ,x1 ,t1 (if ,x2 ,t2 . ,rest))
        `(if ,x1 ,t1 (else-if ,x2 ,t2) . ,rest))
       (else
-       tree))
-    )
+       tree)))
   (foldt fU identity tree))
 
 ;; --- last line ---

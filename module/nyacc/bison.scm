@@ -26,8 +26,7 @@
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module ((srfi srfi-43) #:select (vector-for-each vector-map))
   #:use-module (nyacc export)
-  #:use-module (nyacc lalr)		; gen-match-table
-  )
+  #:use-module (nyacc lalr))		; gen-match-table
 
 ;; @deffn chew-on-grammar tree lhs-v rhs-v terms => a-list
 ;; Generate a-list that maps bison rule index to NYACC rule index.
@@ -96,8 +95,7 @@
 			 ((reduction (@ (symbol ,symb) (rule ,rule)))
 			  (cons* (bs->ns symb) 'reduce
 				 (assq-ref gx-al (string->number rule))))
-			 (,otherwise (error "broken redx" tree)))) b-redxs))
-	   )
+			 (,otherwise (error "broken redx" tree)))) b-redxs)))
       (list
        (st-numb state)
        (cons 'kis n-items)
@@ -190,8 +188,7 @@
 	 (xs (car pA))
 	 (ns (caadr pA))
 	 (pat-v (make-vector ns #f))
-	 (kis-v (make-vector ns #f))
-	 )
+	 (kis-v (make-vector ns #f)))
     ;;(pretty-print sA)
     (for-each
      (lambda (state)

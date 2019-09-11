@@ -32,8 +32,7 @@
 	    sferr pperr
 	    mach-dir
 	    ;; deprecated
-	    lang-crn-lic
-	    )
+	    lang-crn-lic)
   #:use-module ((srfi srfi-1) #:select (find fold fold-right))
   #:use-module (ice-9 pretty-print))
 (cond-expand
@@ -222,8 +221,7 @@ See the file COPYING included with the this distribution.")
 ;; Merge guts of phony-tl @code{tl1} into @code{tl}.
 ;; @end deffn
 (define (tl-merge tl tl1)
-  (error "not implemented (yet)")
-  )
+  (error "not implemented (yet)"))
 
 ;;; === misc ========================
 
@@ -366,10 +364,8 @@ See the file COPYING included with the this distribution.")
 			      (sferr "expand-tabs (pfxlen=~S)\n" pfxlen)
 			      (sferr "~A\n" str)
 			      (sferr "~A~A\n\n" per-line-prefix
-				     (expand-tabs str pfxlen))
-			      )
-			    (expand-tabs str pfxlen)
-			    )
+				     (expand-tabs str pfxlen)))
+			    (expand-tabs str pfxlen))
 			  str))
 		 (len (string-length str)))
 	    (cond
@@ -396,8 +392,7 @@ See the file COPYING included with the this distribution.")
        ((eqv? 'pop arg0) (pop-il))
        ((eqv? 'nlin arg0) ;; newline if needed
         (cond ((positive? column) (newline) (set! column 0))))
-       (else (error "pp-formatter: bad args"))
-       ))))
+       (else (error "pp-formatter: bad args"))))))
 
 ;; @deffn {Procedure} make-pp-formatter/ugly => fmtr
 ;; Makes a @code{fmtr} like @code{make-pp-formatter} but no indentation
