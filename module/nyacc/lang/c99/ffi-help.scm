@@ -245,6 +245,7 @@
    (lambda (s l)
      (cond 
       ((< (string-length s) 3) l)
+      ((string=? "-lm" s) l) ;; workaround for ubuntu libm issue
       ((string=? "-l" (substring/shared s 0 2))
        (cons (string-append "lib" (substring/shared s 2)) l))
       (else l)))
@@ -298,7 +299,8 @@
 	 (libraries (resolve-attr-val (assq-ref attrs 'library)))
 	 (libraries (append
 		     (if pkg-config (pkg-config-libs pkg-config) '())
-		     libraries)))
+		     libraries))
+ 	 (libraries (delete "libm" libraries))) ;; workaround for ubuntu
     (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n" (path->path path))
     (nlscm)
     (sfscm "(define-module ~S\n" path)
@@ -321,7 +323,6 @@
     (ppscm
      `(define ,(link-libs)
 	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
-    ;;(sfscm "(define link-lib (car link-libs))\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n"))))
 
 ;; === type conversion ==============
