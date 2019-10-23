@@ -245,6 +245,7 @@
    (lambda (s l)
      (cond 
       ((< (string-length s) 3) l)
+      ((string=? "-lm" s) l) ;; workaround for ubuntu libm issue
       ((string=? "-l" (substring/shared s 0 2))
        (cons (string-append "lib" (substring/shared s 2)) l))
       (else l)))

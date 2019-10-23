@@ -44,7 +44,7 @@
      "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
      "__attribute(X)=__attribute__(X)"
      "__volatile__=volatile" "__volatile=__volatile__"
-     "__extension__(X)=" "__extension(X)=__extension__(X)"
+     "__extension__=" "__extension=__extension__"
      )))
 
 ;; include-helper for C99 std
