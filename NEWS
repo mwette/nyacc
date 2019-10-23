@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2019-10-23  V0.99.2 release
+	* 0.99.1 fix broke things: __extension__ is not function macro
+	* ffi-help does not load libm now (ubuntu bug?)
 2019-10-19  V0.99.1 release
 	* fixed nyacc/lang/c99/util.scm: in c99-def-help function macro
 	  aliases changed from "__foo=__foo__" to "__foo(X)=__foo__(X)"
