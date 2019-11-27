@@ -29,24 +29,23 @@
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((srfi srfi-1) #:select (append-reverse fold-right))
-  #:use-module (srfi srfi-2) ;; and-let*
+  #:use-module (srfi srfi-2)		; and-let*
   #:use-module (sxml fold)
   #:use-module (ice-9 popen)		; gen-gcc-cpp-defs
   #:use-module (ice-9 rdelim)		; gen-gcc-cpp-defs
-)
+  )
 
 (define c99-def-help
   '(("__builtin"
      "__builtin_va_list=void*"
-     "__attribute=__attribute__"
-     "__has_include=__has_include__"
      "__inline__=inline" "__inline=__inline__"
      "__restrict__=restrict" "__restrict=__restrict__"
      "__signed__=signed" "__signed=__signed__"
      "__volatile__=volatile" "__volatile=__volatile__"
-     ;;"__THROW="
+     "__extension__=" "__extension=__extension__"
      "asm=__asm__" "__asm=__asm__"
-     "__extension__=" "__extension=__extension__")))
+     "__attribute(X)=__attribute__(X)"
+     )))
 
 ;; include-helper for C99 std
 (define c99-std-help
@@ -154,7 +153,8 @@
 ;; @end example
 ;; @end deffn
 (define (remove-inc-trees tree)
-  (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
+  (if (not (eqv? 'trans-unit (car tree)))
+      (throw 'nyacc-error "expecting c-tree"))
   (let loop ((rslt (make-tl 'trans-unit))
 	     ;;(head '(trans-unit)) (tail (cdr tree))
 	     (tree (cdr tree)))
@@ -165,24 +165,6 @@
       (loop (tl-append rslt `(cpp-stmt (include ,(cadadr (car tree)))))
 	    (cdr tree)))
      (else (loop (tl-append rslt (car tree)) (cdr tree))))))
-
-;; @deffn {Procedure} merge-inc-trees tree
-;; Remove the trees included with cpp-include statements.
-;; @example
-;; '(... (cpp-stmt (include "<foo.h>" (trans-unit (stmt ...))) ...)
-;; => '(... (stmt...) ...)
-;; @end example
-;; @end deffn
-#;(define (Xmerge-inc-trees tree)
-  (if (not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
-  (let loop ((rslt (make-tl 'trans-unit))
-	     (tree (cdr tree)))
-    (cond
-     ((null? tree) (tl->list rslt))
-     ((and (eqv? 'cpp-stmt (caar tree)) (eqv? 'include (cadar tree)))
-      (loop (tl-extend rslt (cdr (merge-inc-trees (cdddar tree)))) (cdr tree)))
-     (else (loop (tl-append rslt (car tree)) (cdr tree))))))
-
 
 ;; @deffn {Procedure} merge-inc-trees! tree => tree
 ;; This will (recursively) merge code from cpp-includes into the tree.
@@ -201,8 +183,8 @@
   (define (find-span tree)
     (cond
      ((not (pair? tree)) '())		; maybe parse failed
-     ((not (eqv? 'trans-unit (car tree))) (error "expecting c-tree"))
-     ((null? (cdr tree)) (error "null c99-tree"))
+     ((not (eqv? 'trans-unit (car tree))) (throw 'c99-error "expecting c-tree"))
+     ((null? (cdr tree)) (throw 'c99-error "null c99-tree"))
      (else
       (let ((fp tree))			; first pair
 	(let loop ((lp tree)		; last pair
@@ -316,8 +298,8 @@
 	     (case (car lx)
 	       (($end) `(attribute ,id))
 	       ((lparen) `(attribute ,id ,(p-expr-list lx)))
-	       (else (error "error ~S" lx)))))
-	  (else (error "missed ~S" lx)))))))
+	       (else (throw 'nyacc-error "error ~S" lx)))))
+	  (else (throw 'nyacc-error "missed ~S" lx)))))))
 		
 (define (attrs->attrl attr-sexp)
   (and

@@ -479,9 +479,12 @@
 
     (attribute
      (attr-word ($$ `(attribute ,$1)))
-     (attr-word "(" attr-expr-list ")" ($$ `(attribute ,$1 ,$3))))
+     (attr-word "(" attr-expr-list ")" ($$ `(attribute ,$1 ,$3)))
+     ("const" ($$ `(attribute (ident "const")))))
 
-    (attr-word (attr-name) (identifier))
+    (attr-word
+     (attr-name)
+     (identifier))
 
     (attr-expr-list
      (attr-expr-list-1 ($$ (tl->list $1))))
@@ -533,6 +536,7 @@
 
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
+     ;;(ident-like ($$ $1))
      ("(" declarator ")" ($$ `(scope ,$2)))
      ("(" attribute-specifier declarator ")" ($$ `(scope ,$2)))
      (direct-declarator

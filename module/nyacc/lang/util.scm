@@ -221,7 +221,7 @@ See the file COPYING included with the this distribution.")
 ;; Merge guts of phony-tl @code{tl1} into @code{tl}.
 ;; @end deffn
 (define (tl-merge tl tl1)
-  (error "not implemented (yet)"))
+  (error "tl-merge: not implemented (yet)"))
 
 ;;; === misc ========================
 
@@ -392,7 +392,7 @@ See the file COPYING included with the this distribution.")
        ((eqv? 'pop arg0) (pop-il))
        ((eqv? 'nlin arg0) ;; newline if needed
         (cond ((positive? column) (newline) (set! column 0))))
-       (else (error "pp-formatter: bad args"))))))
+       (else (throw 'nyacc-error "pp-formatter: bad args"))))))
 
 ;; @deffn {Procedure} make-pp-formatter/ugly => fmtr
 ;; Makes a @code{fmtr} like @code{make-pp-formatter} but no indentation
@@ -435,7 +435,7 @@ See the file COPYING included with the this distribution.")
         (cond ((positive? column) (newline) (set! column 0))))
        ((eqv? 'push arg0) #f)
        ((eqv? 'pop arg0) #f)
-       (else (error "pp-formatter/ugly: bad args"))))))
+       (else (throw 'nyacc-error "pp-formatter/ugly: bad args"))))))
   
 ;; @deffn {Procedure} move-if-changed src-file dst-file [sav-file]
 ;; Return @code{#t} if changed.

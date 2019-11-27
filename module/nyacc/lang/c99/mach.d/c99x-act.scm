@@ -613,6 +613,9 @@
    ;; attribute => attr-word "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(attribute ,$1 ,$3))
+   ;; attribute => "const"
+   (lambda ($1 . $rest)
+     `(attribute (ident "const")))
    ;; attr-word => attr-name
    (lambda ($1 . $rest) $1)
    ;; attr-word => identifier
@@ -680,6 +683,8 @@
    (lambda ($1 . $rest) '(pointer))
    ;; direct-declarator => identifier
    (lambda ($1 . $rest) $1)
+   ;; direct-declarator => typedef-name
+   (lambda ($1 . $rest) `(ident ,(sx-ref $1 1)))
    ;; direct-declarator => "(" declarator ")"
    (lambda ($3 $2 $1 . $rest) `(scope ,$2))
    ;; direct-declarator => "(" attribute-specifier declarator ")"

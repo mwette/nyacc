@@ -5,6 +5,16 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+STILL BREAKS ON
+	int foo(void) __attribute__ ((const)); // in macos headers
+	typedef int t; int foo(t *t);          // in libxlsxwriter
+
+2019-13-13  V1.00.0 release
+	* in ffi-help.scm, filter "libm" from being added to dynamic-link:
+	  on Ubuntu libm.so is a text file which referneces another libm.so;
+	  dlopen() does not follow the reference, so just filter out since it
+	  is already linked into guile
+
 2019-07-20  V0.99.0 release
 	* added fixed-point types to C99 parser
 	  http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2001/n1290.pdf

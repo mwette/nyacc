@@ -367,7 +367,7 @@
   ;;(simple-format #t "unitize-decl ~S\n" decl)
   (cond
    ((not (pair? decl))
-    (error "bad arg"))
+    (throw 'nyacc-error "unitize-decl: bad arg: ~S" decl))
    ((eqv? (sx-tag decl) 'udecl)
     (acons (udecl-id decl) decl seed))
 
@@ -486,7 +486,7 @@
 (define* (unitize-comp-decl decl #:optional (seed '()))
   (cond
    ((not (pair? decl))
-    (error "bad arg"))
+    (throw 'nyacc-error "unitize-decl: bad arg: ~S" decl))
    ((eqv? (sx-tag decl) 'comp-udecl)
     (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag (sx-ref decl 2)) 'comp-declr-list)
@@ -1057,7 +1057,8 @@
 	 ;; (enum . ,name) ...
 	 (let* ((specl (sx-ref (cdr pair) 1))
 		(tspec (car (assq-ref specl 'type-spec))))
-	   (if (not (eq? 'enum-def (car tspec))) (error "expecting enum-def"))
+	   (if (not (eq? 'enum-def (car tspec)))
+	       (throw 'nyacc-error "udict-enums->ddict: expecting enum-def"))
 	   (gen-nvl (assq 'enum-def-list (cdr tspec)) seed))
 	 ;; else ...
 	 seed))
@@ -1204,7 +1205,8 @@
 (define (specl-tail-rem-type-qual specl-tail)
   (remove (lambda (elt) (eq? 'type-qual (car elt))) specl-tail))
 (define (specl-rem-type-qual specl)
-  (if (not (eq? (sx-tag specl) 'decl-spec-list)) (error "expecting specl"))
+  (if (not (eq? (sx-tag specl) 'decl-spec-list))
+      (throw 'nyacc-error "expecting specl"))
   (sx-cons* (sx-tag specl) (sx-attr specl)
 	    (specl-tail-rem-type-qual (sx-tail specl 1))))
 (define (udecl-rem-type-qual udecl)
@@ -1267,7 +1269,8 @@
 		    ((null? cl) decl)
 		    (else (sx-attr-add decl 'comment (str-app-rev cl))))))
 	     (loop (cons decl rz) '() (cdr fl))))
-	  (,_ (error "munge: clean-field-list" (car fl)))))))
+	  (,_ (throw 'nyacc-error "clean-field-list: ~S" (car fl)))))))
+
 (define (clean-field-list field-list)
   (cons (car field-list) (clean-fields (cdr field-list))))
 
@@ -1311,7 +1314,7 @@
       ((pointer) '((pointer-to)))
       (else
        (sferr "unwrap-pointer failed on:\n") (pperr pointer)
-       (error "unwrap-pointer"))))
+       (throw 'nyacc-error "unwrap-pointer"))))
 
   (define (make-abs-dummy) ;; for abstract declarator make a dummy
     (or add-name (symbol->string (gensym "@"))))
@@ -1382,7 +1385,7 @@
       (else
        (sferr "munge/unwrap-declr missed:\n")
        (pperr declr)
-       (error "c99/munge: udecl->mdecl failed")
+       (throw 'nyacc-error "c99/munge: udecl->mdecl failed")
        #f)))
 
   ;;(sferr "decl:\n") (pperr decl)
@@ -1429,7 +1432,7 @@
       (,_
        (sferr "munge/mdecl->udecl missed:\n")
        (pperr mdecl-tail)
-       (error "munge/mdecl->udecl failed")
+       (throw 'nyacc-error "munge/mdecl->udecl failed")
        #f)))
 
   (let ((name (car mdecl))
