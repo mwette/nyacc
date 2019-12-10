@@ -2070,7 +2070,7 @@ $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
-  _guile_versions_to_search="2.2 2.0"
+  _guile_versions_to_search="3.2 3.0 2.95 2.2 2.0"
   if test -n "$GUILE_EFFECTIVE_VERSION"; then
     _guile_tmp=""
     for v in $_guile_versions_to_search; do
@@ -2157,7 +2157,7 @@ $as_echo "no" >&6; }
 fi
 
 
-  _guile_required_version="$GUILE_EFFECTIVE_VERSION"
+  _guile_required_version="3.2 3.0 2.95 2.2 2.0"
   if test -z "$_guile_required_version"; then
     _guile_required_version=2.0
   fi
