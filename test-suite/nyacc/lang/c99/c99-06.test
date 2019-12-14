@@ -1,6 +1,6 @@
 ;; nyacc/lang/c99/c99-06.test		-*- scheme -*-
 ;;
-;; Copyright (C) 2017 Matthew R. Wette
+;; Copyright (C) 2017,2019 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -16,6 +16,8 @@
   #:use-module (nyacc lang c99 pprint)
   #:use-module ((sxml xpath) #:select (sxpath))
   #:use-module (test-suite lib))
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
 
 (define incs '("exam.d"))
 
@@ -86,10 +88,23 @@
      2
      "int *foo(int *(*)(int)[2])[2];\n"))
 
+		
   ;; canize-enum-def-list NO NO fix udict->enums->ddict
   ;; This will not work.  Need to work on providing all enum defs.
   ;; (code "typedef enum { LOC = 1, REM, ALL = LOC | REM } foo_t;\n")
-  ;; should produce LOC = 1, REM = 2, ALL = 3 
+  ;; should produce LOC = 1, REM = 2, ALL = 3
+  ;; updated
+  (pass-if "canize-enum-def-list"
+    (let* ((code "enum { FOO = 1, }; enum { BAR = 1 + FOO };")
+	   (tree (parse-string code))
+	   (udict (c99-trans-unit->udict tree))
+	   (ddict (c99-trans-unit->ddict tree))
+	   (ddict (udict-enums->ddict udict ddict)))
+      (newline)
+      (pp tree)
+      (pp ddict)
+      (and (string= "1" (or (assoc-ref ddict "FOO") "9"))
+	   (string= "2" (or (assoc-ref ddict "BAR") "9")))))
 
   #;(pass-if "knarly expand-typeref case"
     (let ((code (string-append

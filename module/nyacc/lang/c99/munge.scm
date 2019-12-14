@@ -1001,7 +1001,7 @@
 ;; New option: #:skip-fdefs to skip function defs
 ;; @end deffn
 (define* (c99-trans-unit->ddict tree
-				#:optional (seed '())
+				#:optional (ddict '())
 				#:key inc-filter skip-fdefs)
   (define (can-def-stmt defn)
     (let* ((tail (sx-tail defn 1))
@@ -1017,20 +1017,20 @@
 	#f))
   (if (pair? tree)
       (fold
-       (lambda (tree seed)
+       (lambda (tree ddict)
 	 (cond
 	  ((cpp-def? tree) =>
 	   (lambda (def-stmt)
-	     (cons def-stmt seed)))
+	     (cons def-stmt ddict)))
 	  ((inc-keeper? tree inc-filter) =>
 	   (lambda (tree)
-	     (c99-trans-unit->ddict tree seed #:inc-filter inc-filter)))
-	  (else seed)))
-       seed
+	     (c99-trans-unit->ddict tree ddict #:inc-filter inc-filter)))
+	  (else ddict)))
+       ddict
        (cdr tree))
-      seed))
+      ddict))
 
-;; @deffn {Procedure} udict-enums->ddict [seed] => defs
+;; @deffn {Procedure} udict-enums->ddict udict [ddict] => defs
 ;; Given a udict this generates a list that looke like the internal
 ;; CPP define structure.  That is,
 ;; @example
@@ -1041,33 +1041,32 @@
 ;; @example
 ;; (("ABC" . "0") ...)
 ;; @end example
-;; This procedure expects @var{udict} to be in reverse order wrt the source
-;; input (i.e., as output from @code{c99-trans-unit->udecl}) and generate
-;; symbols in revers order wrt the output;
 ;; @end deffn
-(define* (udict-enums->ddict udict #:optional (seed '()))
-  (define (gen-nvl enum-def-list seed)
-    (fold
-     (lambda (edef seed) ;; (enum-def (ident ,name) (fixed ,val) ...
-       (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) seed))
-     seed (cdr (canize-enum-def-list enum-def-list seed))))
-  (fold-right
-   (lambda (pair seed)
+(define* (udict-enums->ddict udict #:optional (ddict '()))
+  (define (gen-nvl enum-def-list ddict)
+    (let ((def-list (and=> (canize-enum-def-list enum-def-list ddict udict)
+			   cdr)))
+    (fold (lambda (edef ddict) ;; (enum-def (ident ,name) (fixed ,val) ...
+	    (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) ddict))
+	  ddict def-list)))
+  (fold
+   (lambda (pair ddict)
      (if (and (pair? (car pair)) (eq? 'enum (caar pair)))
 	 ;; (enum . ,name) ...
 	 (let* ((specl (sx-ref (cdr pair) 1))
 		(tspec (car (assq-ref specl 'type-spec))))
 	   (if (not (eq? 'enum-def (car tspec)))
 	       (throw 'nyacc-error "udict-enums->ddict: expecting enum-def"))
-	   (gen-nvl (assq 'enum-def-list (cdr tspec)) seed))
+	   (gen-nvl (assq 'enum-def-list (cdr tspec)) ddict))
 	 ;; else ...
-	 seed))
-   seed udict))
+	 ddict))
+   ddict udict))
 
 
 ;; === enum handling ===================
 
-;; @deffn {Procedure} canize-enum-def-list enum-def-list [defs] => enum-def-list
+;; @deffn {Procedure} canize-enum-def-list enum-def-list [ddict] [udict] \
+;;      => enum-def-list
 ;; Fill in constants for all entries of an enum list.
 ;; Expects @code{(enum-def-list (...))} (i.e., not the tail).
 ;; All enum-defs will have the form like @code{(fixed "1")}.
@@ -1078,33 +1077,42 @@
 ;; (enum-def-list (enum-def (ident "FOO") (fixed "0") ...))
 ;; @end example
 ;; @noindent
-;; Note: Does this really need to be @code{(p-expr (fixed "0"))}?
 ;; @end deffn
-(define* (canize-enum-def-list enum-def-list #:optional (ddict '()))
-  (let loop ((rez '()) (nxt 0) (dct ddict) (edl (sx-tail enum-def-list 1)))
+(define* (canize-enum-def-list enum-def-list #:optional (ddict '()) (udict '()))
+  (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
     (cond
      ((null? edl)
       (sx-cons* (sx-tag enum-def-list) (sx-attr enum-def-list) (reverse rez)))
      (else
+      (simple-format #t "\n~S\n" (car edl)) (pretty-print ddict) 
       (sx-match (car edl)
 	((enum-defn (@ . ,attr) ,ident)
 	 (let ((sval (number->string nxt)))
 	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		 (1+ nxt)  (acons (sx-ref ident 1) sval dct) (cdr edl))))
-	((enum-defn ,ident (comment ,comm)) ;; REMOVE
+		 (1+ nxt)  (acons (sx-ref ident 1) sval ddict) (cdr edl))))
+	((enum-defn ,ident)
 	 (let ((sval (number->string nxt)))
-	   (loop (cons `(enum-defn ,ident (fixed ,sval) (comment ,comm)) rez)
-		 (1+ nxt) (acons (sx-ref ident 1) sval dct) (cdr edl))))
+	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
+		 (1+ nxt)  (acons (sx-ref ident 1) sval ddict) (cdr edl))))
+	#;((enum-defn ,ident (comment ,comm)) ;; REMOVE
+	(let ((sval (number->string nxt)))
+	(loop (cons `(enum-defn ,ident (fixed ,sval) (comment ,comm)) rez)
+	(1+ nxt) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
 	((enum-defn (@ . attr) ,ident ,expr)
-	 (let* ((ival (eval-cpp-expr expr dct))
-		(sval (number->string ival)))
+	 (let* ((ival (or (eval-c99-cx expr udict ddict) nxt))
+		(sval (number->string iv)))
 	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl))))
-	((enum-defn ,ident ,expr . ,rest) ;; REMOVE
-	 (let* ((ival (eval-cpp-expr expr dct))
+		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
+	((enum-defn ,ident ,expr)
+	 (let* ((ival (or (eval-c99-cx expr udict ddict) nxt))
 		(sval (number->string ival)))
-	   (loop (cons `(enum-defn ,ident (fixed ,sval) . ,rest) rez)
-		 (1+ ival) (acons (sx-ref ident 1) sval dct) (cdr edl))))
+	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
+		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
+	#;((enum-defn ,ident ,expr . ,rest) ;; REMOVE
+	(let* ((ival (eval-cpp-expr expr ddict))
+	(sval (number->string ival)))
+	(loop (cons `(enum-defn ,ident (fixed ,sval) . ,rest) rez)
+	(1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
 	)))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string

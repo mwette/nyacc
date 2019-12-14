@@ -151,6 +151,9 @@
 ;; Evaluate the constant expression or return #f
 ;; @end deffn
 (define* (eval-c99-cx tree #:optional udict ddict)
+  (define (fail)
+    (simple-format (current-error-port) "cxeval failed to parse ~S\n" tree)
+    #f)
   (letrec
       ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
        (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
@@ -206,14 +209,13 @@
 	    ((fctn-call) #f)		; assume not constant
 	    ;;
 	    ;; TODO 
-	    ((comp-lit) #f) ;; return a bytearray
-	    ((comma-expr) #f)
-	    ((i-sel) #f)
-	    ((d-sel) #f)
-	    ((array-ref) #f)
+	    ((comp-lit) (fail))		; return a bytearray
+	    ((comma-expr) (fail))
+	    ((i-sel) (fail))
+	    ((d-sel) (fail))
+	    ((array-ref) (fail))
 	    ;; 
-	    (else
-	     (throw 'c99-error "eval-c99-cx: missed ~S" (car tree)))))))
+	    (else (fail))))))
     (eval-expr tree)))
 
 ;; --- last line ---
