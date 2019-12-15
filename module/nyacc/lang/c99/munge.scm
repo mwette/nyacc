@@ -1079,6 +1079,8 @@
 ;; @noindent
 ;; @end deffn
 (define* (canize-enum-def-list enum-def-list #:optional (ddict '()) (udict '()))
+  (define (fail ident)
+    (sferr "*** failed to convert enum ~S to constant" (sx-ref ident 1)) #f)
   (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
     (cond
      ((null? edl)
@@ -1094,12 +1096,12 @@
 	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
 		 (1+ nxt)  (acons (sx-ref ident 1) sval ddict) (cdr edl))))
 	((enum-defn (@ . attr) ,ident ,expr)
-	 (let* ((ival (or (eval-c99-cx expr udict ddict) nxt))
+	 (let* ((ival (or (eval-c99-cx expr udict ddict) (fail ident) nxt))
 		(sval (number->string iv)))
 	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
 		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
 	((enum-defn ,ident ,expr)
-	 (let* ((ival (or (eval-c99-cx expr udict ddict) nxt))
+	 (let* ((ival (or (eval-c99-cx expr udict ddict) (fail ident) nxt))
 		(sval (number->string ival)))
 	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
 		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl)))))))))

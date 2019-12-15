@@ -151,9 +151,7 @@
 ;; Evaluate the constant expression or return #f
 ;; @end deffn
 (define* (eval-c99-cx tree #:optional udict ddict)
-  (define (fail)
-    (simple-format (current-error-port) "cxeval failed to parse ~S\n" tree)
-    #f)
+  (define (fail) #f)
   (letrec
       ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
        (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
