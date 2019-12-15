@@ -88,23 +88,15 @@
      2
      "int *foo(int *(*)(int)[2])[2];\n"))
 
-		
-  ;; canize-enum-def-list NO NO fix udict->enums->ddict
-  ;; This will not work.  Need to work on providing all enum defs.
-  ;; (code "typedef enum { LOC = 1, REM, ALL = LOC | REM } foo_t;\n")
-  ;; should produce LOC = 1, REM = 2, ALL = 3
-  ;; updated
   (pass-if "canize-enum-def-list"
     (let* ((code "enum { FOO = 1, }; enum { BAR = 1 + FOO };")
+	   (code "enum { FOO = sizeof(int), }; enum { BAR = 1 + FOO };")
 	   (tree (parse-string code))
 	   (udict (c99-trans-unit->udict tree))
 	   (ddict (c99-trans-unit->ddict tree))
 	   (ddict (udict-enums->ddict udict ddict)))
-      (newline)
-      (pp tree)
-      (pp ddict)
-      (and (string= "1" (or (assoc-ref ddict "FOO") "9"))
-	   (string= "2" (or (assoc-ref ddict "BAR") "9")))))
+      (and (string= "1" (or (assoc-ref ddict "FOO") "X"))
+	   (string= "2" (or (assoc-ref ddict "BAR") "X")))))
 
   #;(pass-if "knarly expand-typeref case"
     (let ((code (string-append
