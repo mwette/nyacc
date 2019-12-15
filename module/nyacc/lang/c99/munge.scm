@@ -1093,10 +1093,6 @@
 	 (let ((sval (number->string nxt)))
 	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
 		 (1+ nxt)  (acons (sx-ref ident 1) sval ddict) (cdr edl))))
-	#;((enum-defn ,ident (comment ,comm)) ;; REMOVE
-	(let ((sval (number->string nxt)))
-	(loop (cons `(enum-defn ,ident (fixed ,sval) (comment ,comm)) rez)
-	(1+ nxt) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
 	((enum-defn (@ . attr) ,ident ,expr)
 	 (let* ((ival (or (eval-c99-cx expr udict ddict) nxt))
 		(sval (number->string iv)))
@@ -1106,13 +1102,7 @@
 	 (let* ((ival (or (eval-c99-cx expr udict ddict) nxt))
 		(sval (number->string ival)))
 	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
-		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
-	#;((enum-defn ,ident ,expr . ,rest) ;; REMOVE
-	(let* ((ival (eval-cpp-expr expr ddict))
-	(sval (number->string ival)))
-	(loop (cons `(enum-defn ,ident (fixed ,sval) . ,rest) rez)
-	(1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
-	)))))
+		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl)))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
 ;; Gets value of enum where @var{enum-def-list} looks like
