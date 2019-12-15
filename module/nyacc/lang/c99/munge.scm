@@ -1084,7 +1084,6 @@
      ((null? edl)
       (sx-cons* (sx-tag enum-def-list) (sx-attr enum-def-list) (reverse rez)))
      (else
-      (simple-format #t "\n~S\n" (car edl)) (pretty-print ddict) 
       (sx-match (car edl)
 	((enum-defn (@ . ,attr) ,ident)
 	 (let ((sval (number->string nxt)))
