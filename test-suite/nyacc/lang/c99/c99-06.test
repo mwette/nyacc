@@ -90,7 +90,6 @@
 
   (pass-if "canize-enum-def-list"
     (let* ((code "enum { FOO = 1, }; enum { BAR = 1 + FOO };")
-	   (code "enum { FOO = sizeof(int), }; enum { BAR = 1 + FOO };")
 	   (tree (parse-string code))
 	   (udict (c99-trans-unit->udict tree))
 	   (ddict (c99-trans-unit->ddict tree))
