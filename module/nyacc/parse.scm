@@ -193,7 +193,7 @@
 ;; This is a list of tokens to skip if not expected.  It is used
 ;; to allow comments to be skipped.  The default is @code{'()}.
 ;; @item #:interactive
-;; If @code{#t}, this tells the parserthat this is being called
+;; If @code{#t}, this tells the parser that this is being called
 ;; interactively, so that the token @code{$end} is not expected.
 ;; The default value is @code{#f}.
 ;; @end table
@@ -214,7 +214,7 @@
           This is a list of tokens to skip if not expected.  It is used
           to allow comments to be skipped.  The default is ''()'.
      '#:interactive'
-          If '#t', this tells the parserthat this is being called
+          If '#t', this tells the parser that this is being called
           interactively, so that the token '$end' is not expected.  The
           default value is '#f'."
   (let* ((mtab (assq-ref mach 'mtab))

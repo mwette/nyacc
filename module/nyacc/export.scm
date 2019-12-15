@@ -20,15 +20,13 @@
 (define-module (nyacc export)
   #:export (lalr->bison
 	    lalr->guile
-	    c-char token->bison elt->bison
-	    )
+	    c-char token->bison elt->bison)
   #:use-module ((nyacc lalr) #:select (find-terminal pp-rule lalr-start))
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module ((srfi srfi-43) #:select (vector-for-each))
-  #:use-module (ice-9 regex)
-  )
+  #:use-module (ice-9 regex))
 
 ;; The code below, for exporting to guile and bison, should be moved to
 ;; an "export" module.
@@ -189,8 +187,7 @@
 		   (cond
 		    ((equal? #\; e) (fmtstr "C-semi"))
 		    ((char? e) (fmtstr "C-~A" e))
-		    (else e)))
-		  ))
+		    (else e)))))
 	      (fmt port ") ")
 	      (fmt port ": ~S" `(begin ,@(vector-ref act-v i)))
 	      (fmt port "\n")

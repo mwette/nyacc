@@ -34,6 +34,6 @@ check: check-TESTS
 
 check-TESTS: $(TESTS)
 	@for test in $(TESTS); do $(TESTS_ENVIRONMENT) $${test}; done
-	@for dir in $(SUBDIRS); do (cd $$dir; make check); done
+	@for dir in $(SUBDIRS); do (cd $$dir; $(MAKE) check); done
 
 # --- last line ---

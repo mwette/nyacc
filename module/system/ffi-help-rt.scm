@@ -56,9 +56,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (0 99 2))
+  #:version (0 99 3))
 
-(define *ffi-help-version* "0.99.2")
+(define *ffi-help-version* "0.99.3")
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
@@ -97,8 +97,7 @@
 					     (fh-object-val obj)))))
 	      ;;(or value-at (lambda (obj) (error "no value-at")))
 	      (or value-at (lambda (obj) (bytestructure-ref
-					  (fh-object-val obj) '*)))
-	      ))
+					  (fh-object-val obj) '*)))))
 	 (vt (struct-vtable ty)))
     (set-struct-vtable-name! vt name)
     ty))
@@ -305,8 +304,7 @@
 	      (fht-pointer-to type)
 	      (fht-value-at type)
 	      ;;(fht-printer type)
-	      (make-printer (quote alias))
-	      )))
+	      (make-printer (quote alias)))))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
 ;; Generates an FY aggregate type based on a bytestructure descriptor.

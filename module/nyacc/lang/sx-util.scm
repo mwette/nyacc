@@ -164,7 +164,7 @@
 	    (and (pair? node) (eqv? tag-or-path (car node))))
 	  sx))
    (else
-    (error "expecting first arg to be tag or sxpath"))))
+    (error "sx-find: expecting first arg to be tag or sxpath"))))
 
 ;; @deffn {Procedure} sx-has-attr? sx
 ;; p to determine if @arg{sx} has attributes.
@@ -249,7 +249,7 @@
 ;; they should be strings or pairs.
 ;; @end deffn
 (define (sx-cons* tag attr . rest)
-  (if (null? rest) (error "expecing tail"))
+  (if (null? rest) (error "sx-cons: expecing tail"))
   (let ((attr (cond
 	       ((not attr) #f)
 	       ((null? attr) #f)
@@ -396,7 +396,7 @@
     ((_ v (pat exp ...) c1 ...)
      (let ((kf (lambda () (sx-match-1 v c1 ...))))
        (sxm-sexp v pat (begin exp ...) (kf))))
-    ((_ v) (error "nothing matches"))))
+    ((_ v) (error "sx-match: nothing matches"))))
 
 ;; sxm-sexp val pat kt kf
 ;; match sexp
@@ -419,8 +419,7 @@
 		  (sxm-tail (cdr v) nl kt kf))
 	      kf))
     ;; deprecate `else' syntax?
-    ((_ v else kt kf) kt)
-    ))
+    ((_ v else kt kf) kt)))
  
 ;; sxm-tag val pat kt kf
 ;; match tag: foo|#(foo bar baz)|,any
@@ -435,8 +434,8 @@
     ((_ tv t0 kt kf)
      (if (eqv? tv 't0) kt kf))))
 
-(define (rule-error s) (error "rule contains non-SXML element" s))
-(define (expr-error v) (error "expression contains not-SXML element" v))
+(define (rule-error s) (error "sx-match: rule element is not SXML" s))
+(define (expr-error v) (error "sx-match: expr element is not SXML" v))
 
 ;; sxm-tail val pat kt kf
 ;; match tail of sexp = list of nodes

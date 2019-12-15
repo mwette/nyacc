@@ -666,8 +666,7 @@
 	 (chrtab (filter-mt char? match-table))	  ; characters in grammar
 	 ;;
 	 (read-chseq (make-chseq-reader chrseq))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair))))
-	 )
+	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (lambda ()
       (let ((bol #f))
 	(lambda ()

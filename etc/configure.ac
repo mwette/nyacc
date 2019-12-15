@@ -7,7 +7,7 @@ dnl are permitted in any medium without royalty provided the copyright
 dnl notice and this notice are preserved.  This file is offered as-is,
 dnl without any warranty.
 
-AC_INIT([nyacc], [0.99.2], [], [], [https://savannah.nongnu.org/project/nyacc])
+AC_INIT([nyacc], [0.99.3], [], [], [https://savannah.nongnu.org/project/nyacc])
 AC_CONFIG_SRCDIR(module/nyacc)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
@@ -16,8 +16,8 @@ m4_include([./pkg.m4])
 m4_include([./guile.m4])
 m4_include([./nyacc.m4])
 
-GUILE_PKG([2.2 2.0])
-GUILE_PROGS
+GUILE_PKG([3.2 3.0 2.95 2.2 2.0])
+GUILE_PROGS([3.2 3.0 2.95 2.2 2.0])
 GUILE_SITE_DIR
 GUILE_SITE_GO_DIR
 

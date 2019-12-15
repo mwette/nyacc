@@ -5,14 +5,26 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2019-12-15  V0.99.3
+	* in ffi-help.scm, filter "libm" from being added to dynamic-link:
+	  on Ubuntu libm.so is a text file which referneces another libm.so;
+	  dlopen() does not follow the reference, so just filter out since it
+	  is already linked into guile
+	* the C parser still breaks where typedefs are used otherwise, like
+	    typedef int t; int foo(t *t);  // in libxlsxwriter
+	* updated canize-enum-defs to use c99-eval-cx instead of cpp-eval
+	  which was a hack; also cleaned up canize to work with comments
+	  as attributes instead of elements; added test case
+
 2019-10-23  V0.99.2 release
 	* 0.99.1 fix broke things: __extension__ is not function macro
 	* ffi-help does not load libm now (ubuntu bug?)
+
 2019-10-19  V0.99.1 release
 	* fixed nyacc/lang/c99/util.scm: in c99-def-help function macro
 	  aliases changed from "__foo=__foo__" to "__foo(X)=__foo__(X)"
 
-2019-00-00  V0.95.0 release
+2019-07-20  V0.99.0 release
 	* added fixed-point types to C99 parser
 	  http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2001/n1290.pdf
 	  make-num-reader accepts 0.25hr uhr r ur lr ulr hk uhk k uk lk ulk

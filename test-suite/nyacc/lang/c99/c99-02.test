@@ -51,13 +51,19 @@
     (let* ((sx (parse-file "exam.d/ex05.c")))
       (pair? sx)))
 
+  ;; appears in libxlsxwriter
+  #;(pass-if "typedef name is parameter"
+    (pair? (parse-string "typedef int t; int foo(t *t);")))
+
   ;; typedef scoping
   (pass-if "typedef scoping"
     (pair? (parse-file "exam.d/ex19.c")))
 
   ;; __attributes__
   (pass-if "__attribute__ parsing"
-    (pair? (parse-file "exam.d/ex20.c")))
+    (and
+     (pair? (parse-string "int foo(void) __attribute__((const));"))
+     (pair? (parse-file "exam.d/ex20.c"))))
 
   ;; __asm__
   (pass-if "__asm__ parsing"

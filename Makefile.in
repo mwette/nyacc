@@ -16,12 +16,12 @@ TOPDIR = @abs_top_builddir@
 
 .PHONY: default
 default: 
-	@(cd module; make DESTDIR=$(DESTDIR))
+	@(cd module; $(MAKE) DESTDIR=$(DESTDIR))
 
 .PHONY: install
 install:
-	@(cd module; make DESTDIR=$(DESTDIR) install)
-	@(cd doc/nyacc; make DESTDIR=$(DESTDIR) install)
+	@(cd module; $(MAKE) DESTDIR=$(DESTDIR) install)
+	@(cd doc/nyacc; $(MAKE) DESTDIR=$(DESTDIR) install)
 
 .PHONY: uninstall
 uninstall:
@@ -29,7 +29,7 @@ uninstall:
 
 .PHONY: install-srcs
 install-srcs:
-	@(cd module; make DESTDIR=$(DESTDIR) install-srcs)
+	@(cd module; $(MAKE) DESTDIR=$(DESTDIR) install-srcs)
 
 .PHONY: install-ffi-help
 install-ffi-help:
@@ -38,13 +38,13 @@ install-ffi-help:
 .PHONY: dist-files
 dist-files:
 	(cd etc; autoconf -o ../configure)
-	(cd module; make DESTDIR=$(DESTDIR) dist-files)
-	(cd doc/nyacc; make DESTDIR=$(DESTDIR) dist-files)
-	(cd examples; make DESTDIR=$(DESTDIR) dist-files)
+	(cd module; $(MAKE) DESTDIR=$(DESTDIR) dist-files)
+	(cd doc/nyacc; $(MAKE) DESTDIR=$(DESTDIR) dist-files)
+	(cd examples; $(MAKE) DESTDIR=$(DESTDIR) dist-files)
 
 .PHONY: check
 check:
-	(cd test-suite/nyacc; make DESTDIR=$(DESTDIR) check)
+	(cd test-suite/nyacc; $(MAKE) DESTDIR=$(DESTDIR) check)
 
 .PHONY: distcheck
 distcheck:
@@ -52,7 +52,7 @@ distcheck:
 
 .PHONY: clean
 clean:
-	(cd module; make DESTDIR=$(DESTDIR) clean)
+	(cd module; $(MAKE) DESTDIR=$(DESTDIR) clean)
 
 .PHONY: dist-clean
 distclean:
@@ -72,7 +72,7 @@ install-nx-languages \
 	install-nx-tcl \
 	:
 	@(cd examples; \
-	  make -f Makefile.nyacc \
+	  $(MAKE) -f Makefile.nyacc \
 		SITE_SCM_DIR=$(SITE_SCM_DIR) \
 		SITE_SCM_GO_DIR=$(SITE_SCM_GO_DIR) \
 		DESTDIR=$(DESTDIR) install-nx-utils $@)

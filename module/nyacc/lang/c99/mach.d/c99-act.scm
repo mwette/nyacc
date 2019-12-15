@@ -613,6 +613,9 @@
    ;; attribute => attr-word "(" attr-expr-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(attribute ,$1 ,$3))
+   ;; attribute => "const"
+   (lambda ($1 . $rest)
+     `(attribute (ident "const")))
    ;; attr-word => attr-name
    (lambda ($1 . $rest) $1)
    ;; attr-word => identifier

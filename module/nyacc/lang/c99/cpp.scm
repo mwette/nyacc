@@ -1,6 +1,6 @@
 ;;; lang/c/cpp.scm - C preprocessor
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2019 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -170,7 +170,7 @@
 ;; Parse CPP include statement.
 (define (cpp-include)
   (define (loop cl ch end-ch)
-    (if (eq? ch end-ch)  (list->string (reverse (cons ch cl)))
+    (if (eq? ch end-ch)  (reverse-list->string (cons ch cl))
 	(loop (cons ch cl) (read-char) end-ch)))
    (let ((ch (skip-il-ws (read-char))))
      (cond
@@ -214,7 +214,7 @@
 		(else
 		 (list 'warning (simple-format #f "unknown CPP: ~S" line)))))))
 	 ((read-c-num ch) => (lambda (num) `(line ,num ,(rd-rest))))
-	 (else (error "missing code")))))))
+	 (else (error "nyacc cpp-line->stmt: missing code")))))))
 	    
 
 (include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
@@ -311,7 +311,7 @@
 	    ((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
-	    (else (error "incomplete eval-cpp-expr implementation"))))))
+	    (else (error "nyacc eval-cpp-expr: incomplete implementation"))))))
     (eval-expr tree)))
 
 ;;.@deffn {Procedure} rtokl->string reverse-token-list => string
@@ -323,7 +323,6 @@
   (define (add-chl chl stl)
     (if (null? chl) stl (cons (list->string chl) stl)))
 
-  ;;(sferr "\nrtokl->string=~S\n" tokl)
   ;; Works like this: Scan through the list of tokens (key-val pairs or
   ;; lone characters).  Lone characters are collected in a list (@code{chl});
   ;; pairs are converted into strings and combined with list of characters
@@ -365,7 +364,7 @@
 	((,asis . ,rest)
 	 (loop stl chl asis rest))
 	(,otherwise
-	 (error "no match" tkl)))))))
+	 (error "nyacc cpp rtokl->string, no match" tkl)))))))
 
 ;; We just scanned "defined", now need to scan the arg to inhibit expansion.
 ;; For example, we have scanned "defined"; we now scan "(FOO)" or "FOO", and
@@ -384,7 +383,7 @@
 	(unread-char ch)
 	(list->string (cons #\space (reverse chl))))
        ((char=? #\) (skip-il-ws ch))
-	(list->string (reverse (cons #\) chl))))
+	(reverse-list->string (cons #\) chl)))
        (else
 	(cpp-err "illegal argument to  `defined'"))))))
 
@@ -392,7 +391,8 @@
 (define (scan-arg-literal)
   (let ((ch (read-char)))
     ;; if exit, then did not defined __has_include(X)=__has_include__(X)
-    (if (or (eof-object? ch) (not (char=? #\( ch))) (error "expedcting `('")))
+    (if (or (eof-object? ch) (not (char=? #\( ch)))
+	(throw 'cpp-error "expedcting `('")))
   (let loop ((chl '()) (ch (skip-il-ws (read-char))))
     (cond
      ((eof-object? ch) (cpp-err "illegal argument"))
@@ -419,19 +419,16 @@
 	  tkl))
 
   (define (finish rr tkl)
-    ;;(sferr "finish ~S ~S\n" rr tkl)
     (let* ((tkl (if end-tok (trim-spaces tkl) tkl))
 	   (repl (rtokl->string tkl)))
       (if (pair? rr)
 	  (cpp-expand-text repl defs (append rr used)) ;; re-run
 	  repl)))
      
-  ;;(sferr "scan-cpp-input end-tok=~S\n" end-tok)
   (let loop ((rr '())			; list symbols resolved
 	     (tkl '())			; token list of
 	     (lv 0)			; level
 	     (ch (skip-il-ws (read-char)))) ; next character
-    ;;(unless end-tok (sferr "tkl=~S ch=~S\n" tkl ch))
     (cond
      ((eof-object? ch) (finish rr tkl))
      ((and (eqv? end-tok ch) (zero? lv))
@@ -481,9 +478,7 @@
 ;; one @code{#\space} is re-inserted.
 ;; @end deffn
 (define (collect-args argl defs used)
-  ;;(sferr "collect-args\n")
   (let loop1 ((sp #f) (ch (read-char)))
-    ;;(sferr "collect-args iter: ch=~S\n" ch)
     (cond
      ((eof-object? ch) (if sp (unread-char #\space)) #f)
      ((char-set-contains? inline-whitespace ch) (loop1 #t (read-char)))
@@ -499,7 +494,7 @@
 	  (let* ((val (scan-cpp-input defs used #\,)))
 	    (loop2 (cdr argl) (acons (car argl) val argv) (read-char))))
 	 (else
-	  (error "cpp.scm, collect-args: coding error")))))
+	  (error "nyacc cpp.scm: collect-args coding error")))))
      (else (unread-char ch) (if sp (unread-char #\space)) #f))))
 
 ;; @deffn {Procedure} px-cpp-ftn-repl argd repl => string
@@ -515,14 +510,13 @@
 (define (px-cpp-ftn argd repl)
   (with-input-from-string repl
     (lambda ()
-      ;;(sferr "px-cpp-ftn argd=~S repl=~S\n" argd repl)
       (px-cpp-ftn-1 argd))))
 
 (define (px-cpp-ftn-1 argd)
 
   ;; Turn reverse chl into a string and insert it into the token stream.
   (define (ins-chl chl stl)
-    (if (null? chl) stl (cons (list->string (reverse chl)) stl)))
+    (if (null? chl) stl (cons (reverse-list->string chl) stl)))
 
   (define (rem-space chl)
     (let loop ((chl chl))

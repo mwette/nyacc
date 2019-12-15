@@ -30,9 +30,9 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37)
-  #:version (0 99 2))
+  #:version (0 99 3))
 
-(define *ffi-help-version* "0.99.2")
+(define *ffi-help-version* "0.99.3")
 
 (define %summary
   "Compile a ffi-file (C interface spec) to Scheme (or maybe .go).")
@@ -110,8 +110,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	     (values (acons 'no-exec #t opts) files)))
    (option '("any-suffix") #f #f
 	   (lambda (opt name arg opts files)
-	     (values (acons 'any-sufffix #t opts) files)))
-   ))
+	     (values (acons 'any-sufffix #t opts) files)))))
 
 ;; from scripts/compile.scm
 (define (parse-args args)

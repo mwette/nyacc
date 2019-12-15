@@ -259,8 +259,8 @@
       (let loop ((cl '()) (ch (read-char)))
 	(cond
 	 ;;((eof-object? ch) (throw 'cpp-error "CPP lines must end in newline"))
-	 ((eof-object? ch) (list->string (reverse cl)))
-	 ((eq? ch #\newline) (unread-char ch) (list->string (reverse cl)))
+	 ((eof-object? ch) (reverse-list->string cl))
+	 ((eq? ch #\newline) (unread-char ch) (reverse-list->string cl))
 	 ((eq? ch #\\)
 	  (let ((c2 (read-char)))
 	    (if (eq? c2 #\newline)
@@ -492,7 +492,7 @@
 		     ((line) stmt)
 		     (else
 		      (sferr "stmt: ~S\n" stmt)
-		      (error "1: bad cpp flow stmt")))
+		      (error "nyacc eval-cpp-stmt/code: bad cpp flow stmt")))
 		   stmt))))
 	
 	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
@@ -520,7 +520,7 @@
 		     ((line) stmt)
 		     (else
 		      (sferr "stmt: ~S\n" stmt)
-		      (error "2: bad cpp flow stmt")))
+		      (error "eval-cpp-stmt/decl: bad cpp flow stmt")))
 		   stmt))))
 	  
 	  (define (eval-cpp-stmt/file stmt) ;; => stmt
@@ -537,7 +537,7 @@
 	      ((line) stmt)
 	      (else
 	       (sferr "stmt: ~S\n" stmt)
-	       (error "3: bad cpp flow stmt"))))
+	       (error "eval-cpp-stmt/file: bad cpp flow stmt"))))
 
 	  ;; Maybe evaluate the CPP statement.
 	  (define (eval-cpp-stmt stmt)
@@ -548,7 +548,7 @@
 		  ((code) (eval-cpp-stmt/code stmt))
 		  ((decl) (eval-cpp-stmt/decl stmt))
 		  ((file) (eval-cpp-stmt/file stmt))
-		  (else (error "lang/c99 coding error"))))
+		  (else (error "nyacc eval-cpp-stmt: coding error"))))
 	      (lambda (key fmt . rest)
 		(report-error fmt rest)
 		(throw 'c99-error "CPP error"))))
@@ -573,7 +573,7 @@
 			   (or (cpi-top-blev? info)
 			       (not (memq (car stmt) '(include include-next))))
 			   `(cpp-stmt . ,stmt)))
-		  (else (error "lang/c99 coding error")))))
+		  (else (error "nyacc pass-cpp-stmt: coding error")))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
 	  (define (read-cpp-stmt ch)
@@ -646,7 +646,7 @@
 	       pair)
 	      ((skip-done skip-look skip)
 	       (loop (read-token)))
-	      (else (error "coding error")))))))
+	      (else (error "make-c99-lexer-generator: coding error")))))))
 
     lexer))
 

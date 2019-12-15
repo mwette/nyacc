@@ -152,7 +152,7 @@
       ((else) (sf "#else\n"))
       ((endif ,text) (sf "#endif ~A\n" text))
       ((endif) (sf "#endif\n"))
-      ((include ,file . *) (sf "#include ~A\n" file))
+      ((include ,file . ,rest) (sf "#include ~A\n" file))
       ((error ,text) (sf "#error ~A\n" text))
       ((pragma ,text) (sf "#pragma ~A\n" text))
       (else (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
