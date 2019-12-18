@@ -1044,7 +1044,7 @@
 ;; @end deffn
 (define* (udict-enums->ddict udict #:optional (ddict '()))
   (define (gen-nvl enum-def-list ddict)
-    (let ((def-list (and=> (canize-enum-def-list enum-def-list ddict udict)
+    (let ((def-list (and=> (canize-enum-def-list enum-def-list udict ddict)
 			   cdr)))
     (fold (lambda (edef ddict) ;; (enum-def (ident ,name) (fixed ,val) ...
 	    (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) ddict))
@@ -1065,7 +1065,7 @@
 
 ;; === enum handling ===================
 
-;; @deffn {Procedure} canize-enum-def-list enum-def-list [ddict] [udict] \
+;; @deffn {Procedure} canize-enum-def-list enum-def-list [udict [ddict]] \
 ;;      => enum-def-list
 ;; Fill in constants for all entries of an enum list.
 ;; Expects @code{(enum-def-list (...))} (i.e., not the tail).
@@ -1078,7 +1078,7 @@
 ;; @end example
 ;; @noindent
 ;; @end deffn
-(define* (canize-enum-def-list enum-def-list #:optional (ddict '()) (udict '()))
+(define* (canize-enum-def-list enum-def-list #:optional (udict '()) (ddict '()))
   (define (fail ident)
     (sferr "*** failed to convert enum ~S to constant\n" (sx-ref ident 1)) #f)
   (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
