@@ -58,7 +58,8 @@ where options are
 @item #:inc-help @i{helpers}
 @i{helpers} is an a-list where keys are include files (e.g.,
 @code{"stdint.h"}) and the value is a list of type aliases or CPP define
-(e.g., @code{"foo_t" "FOO_MAX=3"}).
+(e.g., @code{"foo_t" "FOO_MAX=3"}).  The default helper is @code{c99-def-help} 
+(see below).
 @item #:mode @i{mode}
 @i{mode} is one literal @code{'code}, @code{'file}, or @code{'decl}.
 The default mode is @code{'code}.
@@ -109,15 +110,15 @@ which is defined (in the module @code{(nyacc lang c99 util)}) as
 (define c99-def-help
   '(("__builtin"
      "__builtin_va_list=void*"
-     "__attribute=__attribute__"
-     "__has_include=__has_include__"
      "__inline__=inline" "__inline=__inline__"
      "__restrict__=restrict" "__restrict=__restrict__"
      "__signed__=signed" "__signed=__signed__"
+     "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
+     "__attribute(X)=__attribute__(X)"
      "__volatile__=volatile" "__volatile=__volatile__"
-     "asm=__asm__" "__asm=__asm__"
      "__extension__=" "__extension=__extension__"
-     )))
+     "asm=__asm__" "__asm=__asm__"
+     "__attribute(X)=__attribute__(X)")))
 @end example
 @noindent
 The module @code{(nyacc lang c99 util)} also defines
