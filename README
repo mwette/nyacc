@@ -21,18 +21,3 @@ There are a number of (incomplete) manuals under doc/nyacc, including:
 
 This package can be installed or executed in situ. 
 
-As a quick example, try the following:
-
-  $ cd examples
-  $ source env.sh
-  $ cd nyacc/lang/c99
-  $ ./cxp hello.c
-
-The Guile source program cxp will print out the parse tree for hello.c.
-This is based on a C99 parser written with the NYACC parser generator.
-The source code for the C99 parser spec' is in the file
-
-  module/nyacc/lang/c99/mach.scm
-
-There is more documentation in the directory doc/nyacc.
-
