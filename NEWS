@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2019-12-?? pre V1.00.0
+2019-12-23  V1.00.0
 	* Makefiles now use "$(MAKE)" instead of "make"
 	* changed order of udict, ddict arguments to canize-enum-def-list
 	* removed hacks from eval-cpp-expr prev used by canize-enum-def-list

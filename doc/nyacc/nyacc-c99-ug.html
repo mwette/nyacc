@@ -60,7 +60,7 @@ ul.no-bullet {list-style: none}
 <pre class="format">C99 Parser User Guide
 Matt Wette
 June 2019
-With NYACC Version 0.99.3
+With NYACC Version 1.00.0
 </pre></div>
 
 <a name="Top"></a>
@@ -111,7 +111,8 @@ It does this by parsing the associated C header files.
 <dt><code>#:inc-help <i>helpers</i></code></dt>
 <dd><p><i>helpers</i> is an a-list where keys are include files (e.g.,
 <code>&quot;stdint.h&quot;</code>) and the value is a list of type aliases or CPP define
-(e.g., <code>&quot;foo_t&quot; &quot;FOO_MAX=3&quot;</code>).
+(e.g., <code>&quot;foo_t&quot; &quot;FOO_MAX=3&quot;</code>).  The default helper is <code>c99-def-help</code> 
+(see below).
 </p></dd>
 <dt><code>#:mode <i>mode</i></code></dt>
 <dd><p><i>mode</i> is one literal <code>'code</code>, <code>'file</code>, or <code>'decl</code>.
@@ -165,15 +166,15 @@ which is defined (in the module <code>(nyacc lang c99 util)</code>) as
 <pre class="example">(define c99-def-help
   '((&quot;__builtin&quot;
      &quot;__builtin_va_list=void*&quot;
-     &quot;__attribute=__attribute__&quot;
-     &quot;__has_include=__has_include__&quot;
      &quot;__inline__=inline&quot; &quot;__inline=__inline__&quot;
      &quot;__restrict__=restrict&quot; &quot;__restrict=__restrict__&quot;
      &quot;__signed__=signed&quot; &quot;__signed=__signed__&quot;
+     &quot;asm(X)=__asm__(X)&quot; &quot;__asm(X)=__asm__(X)&quot;
+     &quot;__attribute(X)=__attribute__(X)&quot;
      &quot;__volatile__=volatile&quot; &quot;__volatile=__volatile__&quot;
-     &quot;asm=__asm__&quot; &quot;__asm=__asm__&quot;
      &quot;__extension__=&quot; &quot;__extension=__extension__&quot;
-     )))
+     &quot;asm=__asm__&quot; &quot;__asm=__asm__&quot;
+     &quot;__attribute(X)=__attribute__(X)&quot;)))
 </pre></div>
 <p>The module <code>(nyacc lang c99 util)</code> also defines
 <code>c99-std-help</code>, which includes the above and typedefs and CPP

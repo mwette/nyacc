@@ -12,7 +12,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 C99 Parser User Guide
 Matt Wette
 June 2019
-With NYACC Version 0.99.3
+With NYACC Version 1.00.0
 
 
 File: nyacc-c99-ug.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
@@ -53,7 +53,8 @@ the associated C header files.
      '#:inc-help helpers'
           helpers is an a-list where keys are include files (e.g.,
           '"stdint.h"') and the value is a list of type aliases or CPP
-          define (e.g., '"foo_t" "FOO_MAX=3"').
+          define (e.g., '"foo_t" "FOO_MAX=3"').  The default helper is
+          'c99-def-help' (see below).
      '#:mode mode'
           mode is one literal ''code', ''file', or ''decl'.  The default
           mode is ''code'.
@@ -95,15 +96,15 @@ defined (in the module '(nyacc lang c99 util)') as
      (define c99-def-help
        '(("__builtin"
           "__builtin_va_list=void*"
-          "__attribute=__attribute__"
-          "__has_include=__has_include__"
           "__inline__=inline" "__inline=__inline__"
           "__restrict__=restrict" "__restrict=__restrict__"
           "__signed__=signed" "__signed=__signed__"
+          "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
+          "__attribute(X)=__attribute__(X)"
           "__volatile__=volatile" "__volatile=__volatile__"
-          "asm=__asm__" "__asm=__asm__"
           "__extension__=" "__extension=__extension__"
-          )))
+          "asm=__asm__" "__asm=__asm__"
+          "__attribute(X)=__attribute__(X)")))
 The module '(nyacc lang c99 util)' also defines 'c99-std-help', which
 includes the above and typedefs and CPP defines for many standard
 includes (e.g., 'alloca.h', 'limits.h').  See the source
