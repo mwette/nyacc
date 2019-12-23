@@ -9,6 +9,7 @@ without any warranty.
 	* Makefiles now use "$(MAKE)" instead of "make"
 	* changed order of udict, ddict arguments to canize-enum-def-list
 	* removed hacks from eval-cpp-expr prev used by canize-enum-def-list
+	* cleaned up cxeval failures
 
 2019-12-15  V0.99.3
 	* in ffi-help.scm, filter "libm" from being added to dynamic-link:
