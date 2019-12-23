@@ -1080,7 +1080,8 @@
 ;; @end deffn
 (define* (canize-enum-def-list enum-def-list #:optional (udict '()) (ddict '()))
   (define (fail ident)
-    (sferr "*** failed to convert enum ~S to constant\n" (sx-ref ident 1)) #f)
+    (sferr "*** munge: failed to convert enum ~S to constant\n" (sx-ref ident 1))
+    #f)
   (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
     (cond
      ((null? edl)

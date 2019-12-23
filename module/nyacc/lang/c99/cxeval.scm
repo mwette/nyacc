@@ -32,8 +32,9 @@
   #:use-module (system foreign))
 
 (use-modules (ice-9 pretty-print))
-(define pp pretty-print)
-(define (sf fmt . args) (apply simple-format #t fmt args))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (pperr exp)
+  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
 (define ffi-type-map
   `(("void" . ,void) ("float" . ,float) ("double" . ,double) ("short" . ,short)
@@ -102,9 +103,8 @@
     ((type-name (decl-spec-list (type-spec (typename ,name))))
      (let* ((xname (expand-typename name udict))
 	    (ffi-type (assoc-ref ffi-type-map xname)))
-       (unless ffi-type
-	 (sf "need to expand ~S\n" name) (pp tree)
-	 (error "eval-sizeof-type: missed typedef (work to go)"))
+       (unless ffi-type ;; work to go
+	 (throw 'c99-error "cxeval: failed to expand \"sizeof(~A)\"" name))
        (sizeof ffi-type)))
     ((type-name (decl-spec-list (type-spec (fixed-type ,name))))
      (let* ((ffi-type (assoc-ref ffi-type-map name)))
@@ -115,8 +115,7 @@
     ((type-name (decl-spec-list (type-spec . ,_1)) (abs-declr (pointer)))
      (sizeof '*))
     (else
-     (sf "eval-sizeof-type missed:\n") (pp (sx-ref tree 1))
-     (error "can't eval sizeof(type)"))))
+     (throw 'c99-error "failed to expand sizeof type ~S" (sx-ref tree 1)))))
   
 ;; (sizeof unary-expr)
 ;;    (primary-expression			; S 6.5.1
@@ -133,7 +132,8 @@
       ((p-expr (string . ,strl))
        (let loop ((l 0) (sl strl))
 	 (if (pair? sl) (loop (+ l (string-length (car sl))) (cdr sl)) l)))
-      (else #f))))
+      (else
+       (throw 'c99-error "failed to expand sizeof expr ~S" expr)))))
 
 (define (eval-ident name udict ddict)
   (cond
@@ -199,8 +199,18 @@
 	     (let ((e1 (ev1 tree)) (e2 (ev2 tree)) (e3 (ev3 tree)))
 	       (if (and e1 e2 e3) (if (zero? e1) e3 e2) #f)))
 	    ;;
-	    ((sizeof-type) (eval-sizeof-type tree udict))
-	    ((sizeof-expr) (eval-sizeof-expr tree udict))
+	    ((sizeof-type)
+	     (catch 'c99-error
+	       (lambda () (eval-sizeof-type tree udict))
+	       (lambda (key fmt . args)
+		 (sferr "eval-c99-cx: ") (apply sferr fmt args) (newline)
+		 #f)))
+	    ((sizeof-expr)
+	     (catch 'c99-error
+	       (lambda () (eval-sizeof-expr tree udict))
+	       (lambda (key fmt . args)
+		 (sferr "eval-c99-cx: ") (apply sferr fmt args) (newline)
+		 #f)))
 	    ((ident) (eval-ident (sx-ref tree 1) udict ddict))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
