@@ -17,7 +17,7 @@ m4_include([./guile.m4])
 m4_include([./nyacc.m4])
 
 GUILE_PKG([3.2 3.0 2.9 2.2 2.0])
-dnl GUILE_PROGS([3.2 3.0 2.9 2.2 2.0])
+GUILE_PROGS
 GUILE_SITE_DIR
 GUILE_SITE_GO_DIR
 
