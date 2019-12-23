@@ -25,25 +25,25 @@ or
 or
   $ ./configure --site_scm_dir=/path/to/dest --site_scm_go_dir=/dummy
 
-There is nothing to make:
+Build .go files:
 
   $ make
-  nothing to make
+  ...
+
 
 You can run the tests:
 
   $ make check
-    (cd test-suite/nyacc; \
-     make -f Makefile.nyacc GUILE=guile check)
-    make[1]: Entering directory ...
-    PASS: nyacc/lex-01: C char literals
-    PASS: nyacc/lex-01: C strings
-    ...
+  ...
+  PASS: nyacc/lex-01: C char literals
+  PASS: nyacc/lex-01: C strings
+  ...
 
 
 To install the parser generator, the c99 parser and the FFI helper
 
   $ make install
+  ...
 
 
 To install only sources in /path/to/dest:
