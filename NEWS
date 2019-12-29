@@ -5,6 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2019-12-23  pending V1.00.1
+	* updated all Makefile.in for autoconf conventions, using
+	  abs_top_builddir and abs_top_srcdir
+	* added test-suite/Makefile.in to replace lower level versions
+
 2019-12-23  V1.00.0
 	* Makefiles now use "$(MAKE)" instead of "make"
 	* changed order of udict, ddict arguments to canize-enum-def-list

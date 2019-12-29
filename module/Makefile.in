@@ -1,4 +1,5 @@
-# module/Makefile.in			-*- Makefile -*-
+# @configure_input@
+# -*- Makefile -*-
 #
 # Copyright (C) 2015-2019 -  Matthew R. Wette
 #
@@ -8,14 +9,16 @@
 # without any warranty.
 
 GUILE = @GUILE@
-GUILD = @GUILD@
+GUILD = @abs_top_builddir@/etc/guild
 
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
 SHELL = @SHELL@
-TOPDIR = @abs_top_builddir@
-MODDIR = $(TOPDIR)/module
+VPATH = @abs_top_srcdir@/module
+TOPDIR = @abs_top_srcdir@
+SCMDIR = @abs_top_srcdir@/module
+GODIR = @abs_top_builddir@/module
 
 NYACC_BASE_BINS =				\
 	nyacc/version.go			\
@@ -83,10 +86,11 @@ NYACC_FH_SRCS = 				\
 	scripts/compile-ffi.scm
 
 BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS) @NYACC_FH_BINS@
+
 SOURCES = $(NYACC_BASE_SRCS) $(NYACC_C99_SRCS) $(NYACC_FH_SRCS)
 
 %.go: %.scm
-	GUILE_LOAD_PATH=$(MODDIR) GUILE_LOAD_COMPILED_PATH=$(MODDIR) \
+	GUILE_LOAD_PATH=$(SCMDIR) GUILE_LOAD_COMPILED_PATH=$(GODIR) \
 	  $(GUILD) compile -o $@ $<
 
 .PHONY: nyacc-bins
@@ -105,11 +109,11 @@ install-srcs:
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  if test -f $${file}; then \
-	    cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  if test -f $(SCMDIR)/$${file}; then \
+	    cp $(SCMDIR)/$${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	  fi; \
 	done
-	@cp ../README $(DESTDIR)$(SITE_SCM_DIR)/nyacc/README
+	@cp $(TOPDIR)/README $(DESTDIR)$(SITE_SCM_DIR)/nyacc/README
 
 .PHONY: install-bins
 install-bins: $(BINARIES)
@@ -119,8 +123,8 @@ install-bins: $(BINARIES)
 	  if test ! -d $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; \
 	  fi; \
-	  if test -f $${file}; then \
-	    cp $${file} $(DESTDIR)$(SITE_SCM_GO_DIR)/$${file}; \
+	  if test -f $(GODIR)/$${file}; then \
+	    cp $(GODIR)/$${file} $(DESTDIR)$(SITE_SCM_GO_DIR)/$${file}; \
 	  fi; \
 	done
 

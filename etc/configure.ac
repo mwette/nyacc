@@ -32,14 +32,16 @@ else
 fi
 AC_SUBST([NYACC_FH_BINS])
 
+dnl needed by etc/guild:
+AC_SUBST([installed_guile],$GUILE)
+
 AC_CONFIG_FILES([Makefile \
 	module/Makefile \
 	doc/nyacc/Makefile \
-	test-suite/nyacc/Makefile \
-	test-suite/nyacc/lang/Makefile \
-	test-suite/nyacc/lang/c99/Makefile \
+	test-suite/Makefile \
 	examples/Makefile \
 ])
+AC_CONFIG_FILES([etc/guild],[chmod +x etc/guild])
 
 AC_OUTPUT
 

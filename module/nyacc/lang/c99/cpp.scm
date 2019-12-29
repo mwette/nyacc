@@ -305,13 +305,10 @@
 	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
 	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    ;; hacks for use in util2.scm:canize-enum-def-list:
-	    ;; If ident is defined then it should have already been expanded.
-	    ;; So then only enum defs remain which should be valid expressions.
-	    ;; I think no longer needed since we use cxeval now.
-	    ;;((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
-	    ;;((p-expr) (ev1 tree))
-	    ;;((cast) (ev2 tree))
+	    ;; in CPP if ident is not defined it should be zero
+	    ((ident) (or (and=> (assoc-ref dict (tx1 tree)) string->number) 0))
+	    ((p-expr) (ev1 tree))
+	    ((cast) (ev2 tree))
 	    (else (error "nyacc eval-cpp-expr: incomplete implementation"))))))
     (eval-expr tree)))
 

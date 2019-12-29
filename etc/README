@@ -10,3 +10,4 @@ without any warranty.
 To rebuild `configure':
 	$ autoconf -o ../configure
 
+The files guile.m4 and guild.in are from guile-2.9.7.

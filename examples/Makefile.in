@@ -1,4 +1,5 @@
-# examples/Makefile.in		-*- Makefile -*-
+# @configure_input@
+# -*- Makefile -*-
 #
 # Copyright (C) 2017-2019 -  Matthew R. Wette
 #
@@ -9,7 +10,7 @@
 #
 
 GUILE = @GUILE@
-GUILD = @guIlD@
+GUILD = @abs_top_builddir@/etc/guild
 
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
@@ -17,8 +18,6 @@ SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 prefix = @prefix@
 
 SHELL = @SHELL@
-TOPDIR = @abs_top_builddir@
-MODDIR = $(TOPDIR)/module
 
 FH_FFIS = \
 	ffi/cairo.ffi ffi/gdbm.ffi ffi/sqlite3.ffi \

@@ -1,4 +1,5 @@
-# doc/nyacc/Makefile.in
+# @configure_input@
+# -*- Makefile -*-
 #
 # Copyright (C) 2015-2019 Matthew R. Wette
 # 
@@ -8,18 +9,17 @@
 # without any warranty.
 
 GUILE = @GUILE@
-GUILD = @GUILD@
+GUILD = @abs_top_builddir@/etc/guild
 
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
 SHELL = @SHELL@
-PACKAGE_TARNAME = nyacc
 INFODIR = @GUILE_DATADIR@/info
-DOCDIR = @GUILE_DATADIR@/doc/$(PACKAGE_TARNAME)
+DOCDIR = @GUILE_DATADIR@/doc/nyacc
+HTMLDIR = @htmldir@
 
-TOPDIR = @abs_top_builddir@
-MODDIR = $(TOPDIR)/module
+TOPDIR = @abs_top_srcdir@
 INSTALL = $(TOPDIR)/etc/install-sh -m 644
 
 SCM_FILES_W_TEXI = \
@@ -36,23 +36,23 @@ install: install-info install-pdf install-html
 .PHONY: install-info
 install-info:
 	mkdir -p $(DESTDIR)$(INFODIR)
-	$(INSTALL) nyacc-ug.info $(DESTDIR)$(INFODIR)/nyacc-ug.info
-	$(INSTALL) nyacc-c99-ug.info $(DESTDIR)$(INFODIR)/nyacc-c99-ug.info
-	$(INSTALL) nyacc-fh-ug.info $(DESTDIR)$(INFODIR)/nyacc-fh-ug.info
+	for file in nyacc-ug.info nyacc-c99-ug.info nyacc-fh-ug.info; do \
+		$(INSTALL) $(TOPDIR)/doc/nyacc/$${file} $(DESTDIR)$(INFODIR); \
+	done
 
 .PHONY: install-pdf
 install-pdf:
 	mkdir -p $(DESTDIR)$(DOCDIR)
-	$(INSTALL) nyacc-ug.pdf $(DESTDIR)$(DOCDIR)/nyacc-ug.pdf
-	$(INSTALL) nyacc-c99-ug.pdf $(DESTDIR)$(DOCDIR)/nyacc-c99-ug.pdf
-	$(INSTALL) nyacc-fh-ug.pdf $(DESTDIR)$(DOCDIR)/nyacc-fh-ug.pdf
+	for file in nyacc-ug.pdf nyacc-c99-ug.pdf nyacc-fh-ug.pdf; do \
+		$(INSTALL) $(TOPDIR)/doc/nyacc/$${file} $(DESTDIR)$(DOCDIR); \
+	done
 
 .PHONY: install-html
 install-html:
 	mkdir -p $(DESTDIR)$(DOCDIR)
-	$(INSTALL) nyacc-ug.html $(DESTDIR)$(DOCDIR)/nyacc-ug.html
-	$(INSTALL) nyacc-c99-ug.html $(DESTDIR)$(DOCDIR)/nyacc-c99-ug.html
-	$(INSTALL) nyacc-fh-ug.html $(DESTDIR)$(DOCDIR)/nyacc-fh-ug.html
+	for file in nyacc-ug.html nyacc-c99-ug.html nyacc-fh-ug.html; do \
+		$(INSTALL) $(TOPDIR)/doc/nyacc/$${file} $(DESTDIR)$(DOCDIR); \
+	done
 
 .PHONY: dist-files
 dist-files: \
