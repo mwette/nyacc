@@ -5,7 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2019-12-23  pending V1.00.1
+2019-12-23  V1.00.1
+	* in nyacc/util.scm, changed a letrec* to letrec
+	* in nyacc/lang/util.scm, changed a letrec* to let*
 	* updated all Makefile.in for autoconf conventions, using
 	  abs_top_builddir and abs_top_srcdir
 	* added test-suite/Makefile.in to replace lower level versions

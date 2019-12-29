@@ -56,11 +56,9 @@ clean:
 
 .PHONY: dist-clean
 distclean:
-	rm -f Makefile config.log config.status
-	rm -f module/Makefile doc/nyacc/Makefile examples/Makefile
-	rm -f test-suite/nyacc/Makefile
-	rm -f test-suite/nyacc/lang/Makefile
-	rm -f test-suite/nyacc/lang/c99/Makefile
+	rm -f Makefile config.log config.status etc/guild
+	rm -f module/Makefile doc/nyacc/Makefile
+	rm -f test-suite/Makefile examples/Makefile
 
 .PHONY: install-nx-languages \
 	install-nx-javascript \

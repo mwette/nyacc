@@ -325,7 +325,7 @@ See the file COPYING included with the this distribution.")
 ;; @end deffn
 (define* (make-pp-formatter #:optional (port (current-output-port))
 			    #:key per-line-prefix (width 79) (basic-offset 2))
-  (letrec*
+  (let*
       ((pfxlen (string-length (expand-tabs (or per-line-prefix ""))))
        (maxcol (- width (if per-line-prefix pfxlen 0)))
        (maxind 36)
