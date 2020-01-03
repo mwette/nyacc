@@ -35,6 +35,18 @@ GUILE_SITE_DIR
 GUILE_SITE_GO_DIR
 GUILE_DATA_DIR
 
+AC_ARG_WITH(site-dir, [  --with-site-dir=PATH    where to put .scm files],
+            ,with_site_dir=unspecified)
+if test "_$with_site_dir" != "_unspecified"; then
+  GUILE_SITE=$with_site_dir
+endif
+
+AC_ARG_WITH(site-go-dir, [  --with-site-go-dir=PATH where to put .go files],
+            ,with_site_go_dir=unspecified)
+if test "_$with_site_go_dir" != "_unspecified"; then
+  GUILE_SITE_GO=$with_site_go_dir
+endif
+
 GUILE_MODULE_AVAILABLE([have_bytestructures],[(bytestructures guile)])
 if test $have_bytestructures = "yes"; then
   NYACC_FH_BINS='$(NYACC_FH_BINS)'

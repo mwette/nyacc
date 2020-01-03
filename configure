@@ -642,6 +642,8 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_guile
+with_site_dir
+with_site_go_dir
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1269,6 +1271,8 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-guile=PATH       path to guile binary
+  --with-site-dir=PATH    where to put .scm files
+  --with-site-go-dir=PATH where to put .go files
 
 Some influential environment variables:
   PKG_CONFIG  path to pkg-config utility
@@ -2588,6 +2592,30 @@ See \`config.log' for more details" "$LINENO" 5; }
   fi
 
 
+
+
+# Check whether --with-site-dir was given.
+if test "${with_site_dir+set}" = set; then :
+  withval=$with_site_dir;
+else
+  with_site_dir=unspecified
+fi
+
+if test "_$with_site_dir" != "_unspecified"; then
+  GUILE_SITE=$with_site_dir
+endif
+
+
+# Check whether --with-site-go-dir was given.
+if test "${with_site_go_dir+set}" = set; then :
+  withval=$with_site_go_dir;
+else
+  with_site_go_dir=unspecified
+fi
+
+if test "_$with_site_go_dir" != "_unspecified"; then
+  GUILE_SITE_GO=$with_site_go_dir
+endif
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if (bytestructures guile) is available" >&5
 $as_echo_n "checking if (bytestructures guile) is available... " >&6; }

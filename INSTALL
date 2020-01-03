@@ -17,21 +17,18 @@ Use of the optional FFI Helper requires scheme-bytestructures.  See
 
 To configure:
 
+  $ cd nyacc-0.00.0
   $ ./configure
 
 or
   $ ./configure --prefix=/path/to/root
-
-or
-  $ ./configure --site_scm_dir=/path/to/dest --site_scm_go_dir=/dummy
-
 or
   $ ./configure --with-guile=/path/to/guile
 
 
 To build in a separate directory:
 
-  $ cd ..; mkdir build; cd build
+  $ mkdir build; cd build
   $ ../nyacc-0.00.0/configure [options]
 
 
