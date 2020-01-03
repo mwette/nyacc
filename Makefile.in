@@ -56,7 +56,8 @@ clean:
 
 .PHONY: dist-clean
 distclean:
-	rm -f Makefile config.log config.status etc/guild
+	rm -f Makefile config.log config.status
+	rm -rf etc/autom4te.cache etc/guild
 	rm -f module/Makefile doc/nyacc/Makefile
 	rm -f test-suite/Makefile examples/Makefile
 
