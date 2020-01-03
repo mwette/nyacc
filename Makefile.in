@@ -1,4 +1,5 @@
-# Makefile.in for nyacc
+# @configure_input@
+# -*- Makefile -*-
 #
 # Copyright (C) 2017-2019 Matthew R. Wette
 #
@@ -6,13 +7,12 @@
 # is granted.  This file is offered as-is, without any warranty.
 
 GUILE = @GUILE@
-GUILD = @GUILD@
+GUILD = @abs_top_builddir@/etc/guild
 
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
 SHELL = @SHELL@
-TOPDIR = @abs_top_builddir@
 
 .PHONY: default
 default: 
@@ -44,7 +44,7 @@ dist-files:
 
 .PHONY: check
 check:
-	(cd test-suite/nyacc; $(MAKE) DESTDIR=$(DESTDIR) check)
+	(cd test-suite; $(MAKE) DESTDIR=$(DESTDIR) check)
 
 .PHONY: distcheck
 distcheck:
@@ -56,11 +56,9 @@ clean:
 
 .PHONY: dist-clean
 distclean:
-	rm -f Makefile config.log config.status
-	rm -f module/Makefile doc/nyacc/Makefile examples/Makefile
-	rm -f test-suite/nyacc/Makefile
-	rm -f test-suite/nyacc/lang/Makefile
-	rm -f test-suite/nyacc/lang/c99/Makefile
+	rm -f Makefile config.log config.status etc/guild
+	rm -f module/Makefile doc/nyacc/Makefile
+	rm -f test-suite/Makefile examples/Makefile
 
 .PHONY: install-nx-languages \
 	install-nx-javascript \

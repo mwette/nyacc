@@ -196,7 +196,7 @@
       (display str port)
       (+ col (string-length str)))))
 
-  (letrec*
+  (letrec
       ((loop1
 	(lambda (col sx)
 	  (cond

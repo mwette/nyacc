@@ -7,7 +7,7 @@ dnl are permitted in any medium without royalty provided the copyright
 dnl notice and this notice are preserved.  This file is offered as-is,
 dnl without any warranty.
 
-AC_INIT([nyacc], [1.00.0], [], [], [https://savannah.nongnu.org/project/nyacc])
+AC_INIT([nyacc], [1.00.1], [], [], [https://savannah.nongnu.org/project/nyacc])
 AC_CONFIG_SRCDIR(module/nyacc)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
@@ -32,14 +32,16 @@ else
 fi
 AC_SUBST([NYACC_FH_BINS])
 
+dnl needed by etc/guild:
+AC_SUBST([installed_guile],$GUILE)
+
 AC_CONFIG_FILES([Makefile \
 	module/Makefile \
 	doc/nyacc/Makefile \
-	test-suite/nyacc/Makefile \
-	test-suite/nyacc/lang/Makefile \
-	test-suite/nyacc/lang/c99/Makefile \
+	test-suite/Makefile \
 	examples/Makefile \
 ])
+AC_CONFIG_FILES([etc/guild],[chmod +x etc/guild])
 
 AC_OUTPUT
 
