@@ -203,14 +203,14 @@
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-type tree udict))
 	       (lambda (key fmt . args)
-		 (sferr "eval-c99-cx: ") (apply sferr fmt args) (newline)
-		 #f)))
+		 (sferr "eval-c99-cx: ") (apply sferr fmt args)
+		 (newline (current-error-port) #f)))
 	    ((sizeof-expr)
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-expr tree udict))
 	       (lambda (key fmt . args)
-		 (sferr "eval-c99-cx: ") (apply sferr fmt args) (newline)
-		 #f)))
+		 (sferr "eval-c99-cx: ") (apply sferr fmt args)
+		 (newline (current-error-port) #f)))
 	    ((ident) (eval-ident (sx-ref tree 1) udict ddict))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
