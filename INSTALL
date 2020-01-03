@@ -18,13 +18,11 @@ Use of the optional FFI Helper requires scheme-bytestructures.  See
 To configure:
 
   $ cd nyacc-0.00.0
-  $ ./configure
+  $ ./configure [options]
 
-or
-  $ ./configure --prefix=/path/to/root
-or
-  $ ./configure --with-guile=/path/to/guile
-
+Type ./configure --help to see the options.  Common options are
+  --prefix=/path/to/root
+  GUILE=/path/to/guile
 
 To build in a separate directory:
 

@@ -594,11 +594,11 @@ GUILE_SITE
 GUILE_TOOLS
 GUILE_CONFIG
 GUILD
-GUILE
 GUILE_EFFECTIVE_VERSION
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
+GUILE
 target_alias
 host_alias
 build_alias
@@ -641,13 +641,11 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-with_guile
-with_site_dir
-with_site_go_dir
 '
       ac_precious_vars='build_alias
 host_alias
 target_alias
+GUILE
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR'
@@ -1267,14 +1265,8 @@ if test -n "$ac_init_help"; then
    esac
   cat <<\_ACEOF
 
-Optional Packages:
-  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
-  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-guile=PATH       path to guile binary
-  --with-site-dir=PATH    where to put .scm files
-  --with-site-go-dir=PATH where to put .go files
-
 Some influential environment variables:
+  GUILE       path to guile binary
   PKG_CONFIG  path to pkg-config utility
   PKG_CONFIG_PATH
               directories to add to pkg-config's search path
@@ -1981,16 +1973,7 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 
-# Check whether --with-guile was given.
-if test "${with_guile+set}" = set; then :
-  withval=$with_guile;
-else
-  with_guile=unspecified
-fi
-
-
-if test "_$with_guile" != "_unspecified"; then
-  GUILE=$with_guile
+if test "x$ac_env_GUILE_set" = "xset"; then
   GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
   guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
 
@@ -2566,6 +2549,7 @@ $as_echo "$as_me: WARNING: extensiondir not found" >&2;}
   fi
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Guile site directory" >&5
 $as_echo_n "checking for Guile site directory... " >&6; }
   GUILE_SITE_GO=`$GUILE -c '(display (%site-ccache-dir))'`
@@ -2577,6 +2561,7 @@ $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "sitedir not found
 See \`config.log' for more details" "$LINENO" 5; }
   fi
+
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Guile data directory" >&5
@@ -2594,28 +2579,6 @@ See \`config.log' for more details" "$LINENO" 5; }
 
 
 
-# Check whether --with-site-dir was given.
-if test "${with_site_dir+set}" = set; then :
-  withval=$with_site_dir;
-else
-  with_site_dir=unspecified
-fi
-
-if test "_$with_site_dir" != "_unspecified"; then
-  GUILE_SITE=$with_site_dir
-endif
-
-
-# Check whether --with-site-go-dir was given.
-if test "${with_site_go_dir+set}" = set; then :
-  withval=$with_site_go_dir;
-else
-  with_site_go_dir=unspecified
-fi
-
-if test "_$with_site_go_dir" != "_unspecified"; then
-  GUILE_SITE_GO=$with_site_go_dir
-endif
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if (bytestructures guile) is available" >&5
 $as_echo_n "checking if (bytestructures guile) is available... " >&6; }
@@ -2635,10 +2598,10 @@ else
 fi
 
 
-installed_guile=$GUILE
-
-
 ac_config_files="$ac_config_files Makefile module/Makefile doc/nyacc/Makefile test-suite/Makefile examples/Makefile"
+
+
+installed_guile=$GUILE
 
 ac_config_files="$ac_config_files etc/guild"
 

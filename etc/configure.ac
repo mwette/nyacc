@@ -16,11 +16,8 @@ m4_include([./pkg.m4])
 m4_include([./guile.m4])
 m4_include([./nyacc.m4])
 
-AC_ARG_WITH(guile, [  --with-guile=PATH       path to guile binary],
-            ,with_guile=unspecified)
-
-if test "_$with_guile" != "_unspecified"; then
-  GUILE=$with_guile
+AC_ARG_VAR([GUILE],[path to guile binary])
+if test "x$ac_env_GUILE_set" = "xset"; then
   GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
   guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
   PKG_PROG_PKG_CONFIG
@@ -31,21 +28,25 @@ else
   GUILE_PROGS
 fi
 
+dnl AC_ARG_VAR([GUILE_SITE],[path to site sources])
 GUILE_SITE_DIR
+
+dnl AC_ARG_VAR([GUILE_SITE_CCACHE],[path to site binaries])
 GUILE_SITE_GO_DIR
+
 GUILE_DATA_DIR
 
-AC_ARG_WITH(site-dir, [  --with-site-dir=PATH    where to put .scm files],
-            ,with_site_dir=unspecified)
-if test "_$with_site_dir" != "_unspecified"; then
-  GUILE_SITE=$with_site_dir
-endif
+dnl AC_ARG_WITH(site-dir, [  --with-site-dir=PATH    where to put .scm files],
+dnl             ,with_site_dir=unspecified)
+dnl if test "_$with_site_dir" != "_unspecified"; then
+dnl   GUILE_SITE=$with_site_dir
+dnl endif
 
-AC_ARG_WITH(site-go-dir, [  --with-site-go-dir=PATH where to put .go files],
-            ,with_site_go_dir=unspecified)
-if test "_$with_site_go_dir" != "_unspecified"; then
-  GUILE_SITE_GO=$with_site_go_dir
-endif
+dnl AC_ARG_WITH(site-go-dir, [  --with-site-go-dir=PATH where to put .go files],
+dnl             ,with_site_go_dir=unspecified)
+dnl if test "_$with_site_go_dir" != "_unspecified"; then
+dnl   GUILE_SITE_GO=$with_site_go_dir
+dnl endif
 
 GUILE_MODULE_AVAILABLE([have_bytestructures],[(bytestructures guile)])
 if test $have_bytestructures = "yes"; then
@@ -55,15 +56,14 @@ else
 fi
 AC_SUBST([NYACC_FH_BINS])
 
-dnl needed by etc/guild:
-AC_SUBST([installed_guile],$GUILE)
-
 AC_CONFIG_FILES([Makefile \
 	module/Makefile \
 	doc/nyacc/Makefile \
 	test-suite/Makefile \
 	examples/Makefile \
 ])
+
+AC_SUBST([installed_guile],$GUILE)
 AC_CONFIG_FILES([etc/guild],[chmod +x etc/guild])
 
 AC_OUTPUT
