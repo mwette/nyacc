@@ -1,7 +1,7 @@
 # @configure_input@
 # -*- Makefile -*-
 #
-# Copyright (C) 2017-2019 Matthew R. Wette
+# Copyright (C) 2017-2020 Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification
 # is granted.  This file is offered as-is, without any warranty.
