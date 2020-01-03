@@ -17,7 +17,6 @@ SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 SHELL = @SHELL@
 INFODIR = @GUILE_DATA@/info
 DOCDIR = @GUILE_DATA@/doc/nyacc
-HTMLDIR = @htmldir@
 
 TOPDIR = @abs_top_srcdir@
 INSTALL = $(TOPDIR)/etc/install-sh -m 644

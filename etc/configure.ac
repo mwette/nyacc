@@ -23,11 +23,11 @@ if test "_$with_guile" != "_unspecified"; then
   GUILE=$with_guile
   GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
   guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
+  PKG_PROG_PKG_CONFIG
   PKG_CONFIG_LIBDIR=$guile_libdir/pkgconfig
-  PKG_CONFIG=pkg-config
   export PKG_CONFIG_LIBDIR
 else
-  GUILE_PKG([3.2 3.0 2.9 2.2 2.0])
+  GUILE_PKG([3.0 2.9 2.2 2.0])
   GUILE_PROGS
 fi
 

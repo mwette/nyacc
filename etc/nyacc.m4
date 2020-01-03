@@ -1,6 +1,6 @@
 dnl nyacc.m4
 dnl
-dnl Copyright (C) 2019 Matthew R. Wette
+dnl Copyright (C) 2019-2020 Matthew R. Wette
 dnl
 dnl Copying and distribution of this file, with or without modification,
 dnl are permitted in any medium without royalty provided the copyright
