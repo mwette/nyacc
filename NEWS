@@ -5,6 +5,15 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2020-01-00  pending V1.00.2
+	* updated configure scripts to handle 2.0.14 via
+	  --with-guile=/path/to/guile
+
+2019-12-29  forgot to add for V1.00.1
+	* restored code that was commented-out in 1.00.0, so now
+	  #if FOO
+	  works again when FOO i
+
 2019-12-29  V1.00.1
 	* in nyacc/util.scm, changed a letrec* to letrec
 	* in nyacc/lang/util.scm, changed a letrec* to let*
