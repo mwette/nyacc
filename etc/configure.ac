@@ -16,7 +16,7 @@ m4_include([./pkg.m4])
 m4_include([./guile.m4])
 m4_include([./nyacc.m4])
 
-AC_ARG_WITH(guile, [    --with-guile            path to binary],
+AC_ARG_WITH(guile, [  --with-guile=PATH       path to guile binary],
             ,with_guile=unspecified)
 
 if test "_$with_guile" != "_unspecified"; then

@@ -25,13 +25,23 @@ or
 or
   $ ./configure --site_scm_dir=/path/to/dest --site_scm_go_dir=/dummy
 
-Build .go files:
+or
+  $ ./configure --with-guile=/path/to/guile
+
+
+To build in a separate directory:
+
+  $ cd ..; mkdir build; cd build
+  $ ../nyacc-0.00.0/configure [options]
+
+
+Build the binaries:
 
   $ make
   ...
 
 
-You can run the tests:
+Run the tests:
 
   $ make check
   ...
@@ -43,6 +53,10 @@ You can run the tests:
 To install the parser generator, the c99 parser and the FFI helper
 
   $ make install
+  ...
+
+or
+  $ make DESTDIR=/path/to/tmpdir install
   ...
 
 
