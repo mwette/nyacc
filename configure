@@ -586,7 +586,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 installed_guile
 NYACC_FH_BINS
-GUILE_DATADIR
+GUILE_DATA
 GUILE_SITE_GO
 GUILE_EXTENSION
 GUILE_SITE_CCACHE
@@ -641,6 +641,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_guile
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1263,6 +1264,11 @@ if test -n "$ac_init_help"; then
      short | recursive ) echo "Configuration of nyacc 1.00.1:";;
    esac
   cat <<\_ACEOF
+
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+    --with-guile            path to binary
 
 Some influential environment variables:
   PKG_CONFIG  path to pkg-config utility
@@ -1964,9 +1970,29 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
 
 
+
+
+
 # --- last line ---
 
 
+
+# Check whether --with-guile was given.
+if test "${with_guile+set}" = set; then :
+  withval=$with_guile;
+else
+  with_guile=unspecified
+fi
+
+
+if test "_$with_guile" != "_unspecified"; then
+  GUILE=$with_guile
+  GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
+  guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
+  PKG_CONFIG_LIBDIR=$guile_libdir/pkgconfig
+  PKG_CONFIG=pkg-config
+  export PKG_CONFIG_LIBDIR
+else
 
 
 
@@ -2134,7 +2160,7 @@ to adjust your PKG_CONFIG_PATH; see the pkg-config man page for more.
 $as_echo "$as_me: found guile $GUILE_EFFECTIVE_VERSION" >&6;}
 
 
-_guile_required_version="$GUILE_EFFECTIVE_VERSION"
+  _guile_required_version="$GUILE_EFFECTIVE_VERSION"
   if test -z "$_guile_required_version"; then
     _guile_required_version=2.2
   fi
@@ -2369,6 +2395,8 @@ fi
   fi
 
 
+fi
+
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Guile site directory" >&5
@@ -2415,13 +2443,12 @@ $as_echo "$as_me: WARNING: extensiondir not found" >&2;}
   fi
 
 
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Guile site directory" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Guile site directory" >&5
 $as_echo_n "checking for Guile site directory... " >&6; }
-  GUILE_SITE_GO=`$PKG_CONFIG --print-errors --variable=siteccachedir guile-$GUILE_EFFECTIVE_VERSION`
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GUILE_SITE" >&5
-$as_echo "$GUILE_SITE" >&6; }
-  if test "$GUILE_SITE" = ""; then
+  GUILE_SITE_GO=`$GUILE -c '(display (%site-ccache-dir))'`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GUILE_SITE_GO" >&5
+$as_echo "$GUILE_SITE_GO" >&6; }
+  if test "$GUILE_SITE_GO" = ""; then
      { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "sitedir not found
@@ -2429,8 +2456,18 @@ See \`config.log' for more details" "$LINENO" 5; }
   fi
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Guile data directory" >&5
+$as_echo_n "checking for Guile data directory... " >&6; }
+  GUILE_DATA=`$GUILE -c "(display (assq-ref %guile-build-info 'datadir))"`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GUILE_DATA" >&5
+$as_echo "$GUILE_DATA" >&6; }
+  if test "$GUILE_DATA" = ""; then
+     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "datadir not found
+See \`config.log' for more details" "$LINENO" 5; }
+  fi
 
-GUILE_DATADIR=`$GUILE -c "(display (assq-ref %guile-build-info 'datadir))"`
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if (bytestructures guile) is available" >&5
