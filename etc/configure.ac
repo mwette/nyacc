@@ -16,13 +16,24 @@ m4_include([./pkg.m4])
 m4_include([./guile.m4])
 m4_include([./nyacc.m4])
 
-GUILE_PKG([3.2 3.0 2.9 2.2 2.0])
-GUILE_PROGS
+AC_ARG_WITH(guile, [    --with-guile            path to binary],
+            ,with_guile=unspecified)
+
+if test "_$with_guile" != "_unspecified"; then
+  GUILE=$with_guile
+  GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
+  guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
+  PKG_CONFIG_LIBDIR=$guile_libdir/pkgconfig
+  PKG_CONFIG=pkg-config
+  export PKG_CONFIG_LIBDIR
+else
+  GUILE_PKG([3.2 3.0 2.9 2.2 2.0])
+  GUILE_PROGS
+fi
+
 GUILE_SITE_DIR
 GUILE_SITE_GO_DIR
-
-GUILE_DATADIR=`$GUILE -c "(display (assq-ref %guile-build-info 'datadir))"`
-AC_SUBST([GUILE_DATADIR])
+GUILE_DATA_DIR
 
 GUILE_MODULE_AVAILABLE([have_bytestructures],[(bytestructures guile)])
 if test $have_bytestructures = "yes"; then
