@@ -1,7 +1,7 @@
 # @configure_input@
 # -*- Makefile -*-
 #
-# Copyright (C) 2017-2019 -  Matthew R. Wette
+# Copyright (C) 2017-2020 -  Matthew R. Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -18,6 +18,9 @@ SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 prefix = @prefix@
 
 SHELL = @SHELL@
+VPATH = @abs_top_srcdir@
+SCMDIR = @abs_top_srcdir@/examples
+GODIR = @abs_top_builddir@/examples
 
 FH_FFIS = \
 	ffi/cairo.ffi ffi/gdbm.ffi ffi/sqlite3.ffi \
@@ -40,7 +43,7 @@ FFI_GO_FILES = $(FH_FFIS:.ffi=.go)
 	$(GUILD) compile-ffi $< 
 
 %.go: %.scm
-	@echo "This may take significant tme:"
+	@echo "This may take a little time:"
 	$(GUILD) compile -o $@ $<
 
 all: $(FFI_GO_FILES)
@@ -71,7 +74,7 @@ install-nx-utils:
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  cp $(SCMDIR)/$${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	@echo "installing nx utility binaries in $(SITE_SCM_GO_DIR)"
@@ -107,7 +110,7 @@ install-nx-javascript:
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  cp $(SCMDIR)/$${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	@echo "installing nx-javascript binaries in $(SITE_SCM_GO_DIR)"
@@ -143,7 +146,7 @@ install-nx-octave:
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  cp $(SCMDIR)/$${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	@echo "installing nx-octave binaries in $(SITE_SCM_GO_DIR)"
@@ -177,7 +180,7 @@ install-nx-tcl:
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
-	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	  cp $(SCMDIR)/$${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
 	@echo "installing nx-tcl binaries in $(SITE_SCM_GO_DIR)"
@@ -197,7 +200,7 @@ install-nx-tcl:
 
 examples:
 	mkdir -p $(DESTIR)/$prefix/share/doc/nyacc/examples
-	tar cf - ffi | \
+	tar cf - $(SCMDIR)/ffi | \
 	  (cd $(DESTDIR)/$prefix/share/doc/nyacc/examples; tar xf -)
 
 
