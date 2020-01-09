@@ -71,7 +71,7 @@
 ;; The C-based (child) types will add a slot for the object value.
 (define ffi-helper-type
   (make-vtable
-   (string-append standard-vtable-fields "pwpwpwpw")
+   (string-append standard-vtable-fields "uwuwuwuw")
    (lambda (v p)
      (display "#<ffi-helper-type>" p))))
 (define unwrap-ix 0)
