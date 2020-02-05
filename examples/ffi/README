@@ -1,0 +1,30 @@
+
+`guild compile-ffi' can be used to compile .ffi files to .scm and .go:
+
+  $ guild compile-ffi ffi/cairo.ffi
+  compiling `cairo.ffi' ...
+  ... wrote `cairo.scm'
+  compiling `cairo.scm' ...
+  ... wrote `cairo.scm.go'
+
+
+MISSING:
+1) some types used in C:
+   long long, unsigned long long, intptr_t, uintptr_t, long double
+2) patterns for in/out semantics; see http://www.swig.org/article_cpp.html
+
+BROKEN: (still?)
+1) struct { char *name; }  =>  (bs:struct `((name (bs:pointer int))))
+                           vs  (bs:struct `((name (bs:pointer uint8))))
+
+TODO:
+2) move enum comments to ffi.scm comments (currently removed)
+3) recheck (pointer-to x) <=> (object-at y)
+
+
+Copyright (C) 2018 Matthew R. Wette
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without any warranty.

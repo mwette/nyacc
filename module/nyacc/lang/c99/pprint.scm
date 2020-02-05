@@ -155,7 +155,7 @@
       ((include ,file . ,rest) (sf "#include ~A\n" file))
       ((error ,text) (sf "#error ~A\n" text))
       ((pragma ,text) (sf "#pragma ~A\n" text))
-      (else (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
+      (,_ (simple-format #t "\n*** pprint/cpp-ppx: NO MATCH: ~S\n" tree)))
     (fmtr 'nlin))
 
   (define protect-expr? (make-protect-expr op-prec op-assc))
