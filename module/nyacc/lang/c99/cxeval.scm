@@ -147,10 +147,12 @@
     ;;(error "missed" name)
     #f)))
 
-;; @deffn {Procedure} eval-c99-cx tree [udict [ddict]]
+;; @deffn {Procedure} eval-c99-cx tree [udict [ddict]] [#:fail-proc fail-proc]
 ;; Evaluate the constant expression or return #f
+;; If @code{fail-proc} is provided it is called with the tree that could not
+;; be parsed.
 ;; @end deffn
-(define* (eval-c99-cx tree #:optional udict ddict)
+(define* (eval-c99-cx tree #:optional udict ddict #:key fail-proc)
   (define (fail) #f)
   (letrec
       ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
@@ -203,14 +205,20 @@
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-type tree udict))
 	       (lambda (key fmt . args)
-		 (sferr "eval-c99-cx: ") (apply sferr fmt args)
-		 (newline (current-error-port)) #f)))
+		 (cond
+		  (fail-proc (fail-proc tree fmt args))
+		  (else 
+		   (sferr "eval-c99-cx: ") (apply sferr fmt args)
+		   (newline (current-error-port)) #f)))))
 	    ((sizeof-expr)
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-expr tree udict))
 	       (lambda (key fmt . args)
-		 (sferr "eval-c99-cx: ") (apply sferr fmt args)
-		 (newline (current-error-port)) #f)))
+		 (cond
+		  (fail-proc (fail-proc tree fmt args))
+		  (else 
+		   (sferr "eval-c99-cx: ") (apply sferr fmt args)
+		   (newline (current-error-port)) #f)))))
 	    ((ident) (eval-ident (sx-ref tree 1) udict ddict))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
