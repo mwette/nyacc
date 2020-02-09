@@ -26,7 +26,7 @@
   #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang c99 cpp)
-  #:use-module (nyacc lang c99 munge)
+  #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (system foreign))

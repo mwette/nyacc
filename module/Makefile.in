@@ -54,6 +54,7 @@ NYACC_C99_BINS =				\
 	nyacc/lang/c99/mach.go			\
 	nyacc/lang/c99/pprint.go		\
 	nyacc/lang/c99/util.go			\
+	nyacc/lang/c99/munge-base.go		\
 	nyacc/lang/c99/munge.go			\
 	nyacc/lang/c99/cxmach.go		\
 	nyacc/lang/c99/cxeval.go
@@ -65,6 +66,7 @@ NYACC_C99_SRCS =				\
 	nyacc/lang/c99/mach.scm			\
 	nyacc/lang/c99/pprint.scm		\
 	nyacc/lang/c99/util.scm			\
+	nyacc/lang/c99/munge-base.scm		\
 	nyacc/lang/c99/munge.scm		\
 	nyacc/lang/c99/cxmach.scm		\
 	nyacc/lang/c99/cxeval.scm		\
