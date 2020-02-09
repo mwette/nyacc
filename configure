@@ -581,11 +581,13 @@ PACKAGE_STRING='nyacc 1.00.1'
 PACKAGE_BUGREPORT=''
 PACKAGE_URL='https://savannah.nongnu.org/project/nyacc'
 
-ac_unique_file="module/nyacc"
+ac_unique_file="module/nyacc/version.scm"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 installed_guile
 NYACC_FH_BINS
+GUILE_LOAD_COMPILED_PATH
+GUILE_LOAD_PATH
 GUILE_DATA
 GUILE_SITE_GO
 GUILE_EXTENSION
@@ -2467,6 +2469,9 @@ $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "datadir not found
 See \`config.log' for more details" "$LINENO" 5; }
   fi
+
+
+
 
 
 

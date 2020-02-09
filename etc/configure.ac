@@ -35,6 +35,9 @@ GUILE_SITE_DIR
 GUILE_SITE_GO_DIR
 GUILE_DATA_DIR
 
+AC_SUBST([GUILE_LOAD_PATH])
+AC_SUBST([GUILE_LOAD_COMPILED_PATH])
+
 GUILE_MODULE_AVAILABLE([have_bytestructures],[(bytestructures guile)])
 if test $have_bytestructures = "yes"; then
   NYACC_FH_BINS='$(NYACC_FH_BINS)'

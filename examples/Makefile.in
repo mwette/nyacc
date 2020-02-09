@@ -12,6 +12,9 @@
 GUILE = @GUILE@
 GUILD = @abs_top_builddir@/etc/guild
 
+GUILE_LOAD_PATH=@GUILE_LOAD_PATH@
+GUILE_LOAD_COMPILED_PATH=@GUILE_LOAD_COMPILED_PATH@
+
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
@@ -80,7 +83,8 @@ install-nx-utils:
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
+		$(GUILD) compile \
                 -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
                 $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
           sleep 1; \
@@ -116,7 +120,8 @@ install-nx-javascript:
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
+		$(GUILD) compile \
                 -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
                 $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
           sleep 1; \
@@ -152,7 +157,8 @@ install-nx-octave:
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
+		$(GUILD) compile \
                 -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
                 $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
           sleep 1; \
@@ -186,7 +192,8 @@ install-nx-tcl:
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
-	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR) $(GUILD) compile \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
+		$(GUILD) compile \
                 -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
                 $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
           sleep 1; \
