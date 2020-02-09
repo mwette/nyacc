@@ -59,14 +59,6 @@
 	    clean-field-list clean-fields
 	    inc-keeper?
 
-	    ;; deprecated
-	    ;; udecl->mspec udecl->mspec/comm mspec->udecl
-	    ;; tree->udict tree->udict/deep
-	    ;; declr->ident
-	    ;; match-decl match-comp-decl match-param-decl
-	    ;; expand-decl-typerefs
-	    ;; fix-fields
-	    
 	    ;; debugging
 	    stripdown-1
 	    tdef-splice-specl
@@ -955,78 +947,4 @@
 
 ;; === deprecated ====================
 
-#|
-(define tree->udict c99-trans-unit->udict)
-(define tree->udict/deep c99-trans-unit->udict/deep)
-(define unwrap-decl unitize-decl)
-(define match-comp-decl unitize-comp-decl)
-(define match-param-decl unitize-param-decl)
-(define expand-decl-typerefs expand-typerefs)
-(define declr->ident declr-ident)
-(define (fix-fields flds) (cdr (clean-field-list `(field-list . ,flds))))
-(define declr-is-ptr? pointer-declr?)
-(define udecl->mspec udecl->mdecl)
-(define udecl->mspec/comm udecl->mdecl/comm)
-(define mspec->udecl mdecl->udecl)
-
-;;@deffn {Procedure} stripdown-1 udecl decl-dict [options]=> decl
-;; This is deprecated.
-;; 1) remove stor-spec
-;; 2) expand typenames
-;; @example
-;; typedef int *x_t;
-;; x_t a[10];
-;; (spec (typename x_t)) (init-declr (array-of 10 (ident a)))
-;; (spec (typedef) (fixed-type "int")) (init-declr (pointer) (ident "x_t"))
-;; =>
-;; (udecl (decl-spec-list (type-spec ...) ... (type-qual "const"))
-;;        (init-declr (ptr-declr (pointer ...)
-;; @end example
-;; @end deffn
-(define* (stripdown-1 udecl decl-dict #:key (keep '()))
-
-  ;;(define strip-list '(stor-spec type-qual comment))
-  (define strip-list '(stor-spec type-qual))
-
-  (define (fsD seed tree)
-    '())
-
-  (define (fsU seed kseed tree)
-    (cond
-     ((eqv? (sx-tag tree) 'stor-spec) seed)
-     ((eqv? (sx-tag tree) 'type-qual) seed)
-     ((null? seed) (reverse kseed))
-     (else (cons (reverse kseed) seed))))
-  
-  (define (fsH seed tree)
-    (cons tree seed))
-
-  (let* ((xdecl (expand-decl-typerefs udecl decl-dict keep))
-	 (tag (sx-tag xdecl))
-	 (attr (sx-attr xdecl))
-	 (specl (sx-ref xdecl 1))
-	 (declr (sx-ref xdecl 2))
-	 (specl1 (foldts fsD fsU fsH '() specl)))
-    (list tag specl1 declr)))
-
-(define* (stripdown udecl #:key keep-const-ptr)
-  (let* (;;(speclt (sx-tail udecl))	; decl-spec-list tail
-	 (xdecl udecl)
-	 (tag (sx-tag xdecl))
-	 (attr (sx-attr xdecl))
-	 (specl (sx-ref xdecl 1))
-	 (declr (sx-ref xdecl 2))
-	 (s-declr (stripdown-declr declr))
-	 (is-ptr? (declr-is-ptr? declr))
-	 ;;
-	 (s-tag (sx-tag specl))
-	 (s-attr (sx-attr specl))
-	 (s-tail (strip-decl-spec-tail
-		  (sx-tail specl)
-		  #:keep-const? (and keep-const-ptr is-ptr?)))
-	 (specl (sx-cons* s-tag s-attr s-tail)))
-    ;;(pretty-print declr)
-    ;;(pretty-print s-declr)
-    (sx-list tag attr specl s-declr)))
-|#
 ;; --- last line ---
