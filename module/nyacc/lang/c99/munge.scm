@@ -41,7 +41,6 @@
 	    c99-trans-unit->ddict udict-enums->ddict
 
 	    ;; munging
-	    expand-typerefs
 	    stripdown-udecl
 	    udecl-rem-type-qual specl-rem-type-qual
 	    udecl->mdecl udecl->mdecl/comm mdecl->udecl
@@ -72,6 +71,7 @@
 	    stripdown-1
 	    tdef-splice-specl
 	    tdef-splice-declr)
+  #:re-export (expand-typerefs)
   #:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
   #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 munge-base)
