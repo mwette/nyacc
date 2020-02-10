@@ -54,16 +54,15 @@
 	    unitize-decl unitize-comp-decl unitize-param-decl
 	    declr-ident declr-id decl-id
 	    iter-declrs
-	    split-decl split-udecl
+	    split-decl 
 
-	    clean-field-list clean-fields
 	    inc-keeper?
 
 	    ;; debugging
 	    stripdown-1
 	    tdef-splice-specl
 	    tdef-splice-declr)
-  #:re-export (expand-typerefs)
+  #:re-export (expand-typerefs clean-field-list clean-fields split-udecl)
   #:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
   #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 munge-base)

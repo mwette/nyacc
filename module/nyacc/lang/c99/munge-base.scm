@@ -32,7 +32,7 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 munge-base)
-  #:export (expand-typerefs)
+  #:export (expand-typerefs clean-field-list clean-fields split-udecl)
   ;;#:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
   ;;#:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   ;;#:use-module (nyacc lang c99 pprint)
