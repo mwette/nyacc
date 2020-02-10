@@ -1,6 +1,7 @@
 #!/bin/sh
 # -*- scheme -*-
-exec ${GUILE:-@installed_guile@} $GUILE_FLAGS -e '(@@ (guild) main)' -s "$0" "$@"
+# --no-auto-compile needed for guix (?)
+exec ${GUILE:-@installed_guile@} $GUILE_FLAGS --no-auto-compile -e '(@@ (guild) main)' -s "$0" "$@"
 !#
 
 ;;;; guild --- running scripts bundled with Guile
