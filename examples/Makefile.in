@@ -53,12 +53,12 @@ all: $(FFI_GO_FILES)
 .PHONY:	install-nx-languages \
 	install-nx-utils \
 	install-nx-javascript \
-	install-nx-octave \
+	install-nx-mlang \
 	install-nx-tcl
 install-nx-languages: \
 	install-nx-utils \
 	install-nx-javascript \
-	install-nx-octave \
+	install-nx-mlang \
 	install-nx-tcl
 	@true
 
@@ -127,23 +127,23 @@ install-nx-javascript:
           sleep 1; \
         done
 
-MLDIR=nyacc/lang/octave
+MLDIR=nyacc/lang/mlang
 
-NYACC_OCTAVE_SRCS= language/nx-octave/spec.scm \
+NYACC_OCTAVE_SRCS= language/nx-mlang/spec.scm \
 	$(MLDIR)/body.scm $(MLDIR)/compile-tree-il.scm $(MLDIR)/mach.scm \
 	$(MLDIR)/parser.scm $(MLDIR)/pprint.scm $(MLDIR)/util.scm \
 	$(MLDIR)/xlib.scm \
 	$(MLDIR)/mach.d/oct-act.scm $(MLDIR)/mach.d/oct-tab.scm \
 	$(MLDIR)/mach.d/octia-act.scm $(MLDIR)/mach.d/octia-tab.scm
 
-NYACC_OCTAVE_BINS = language/nx-octave/spec.go \
+NYACC_OCTAVE_BINS = language/nx-mlang/spec.go \
 	$(MLDIR)/compile-tree-il.go $(MLDIR)/parser.go $(MLDIR)/pprint.go \
 	$(MLDIR)/util.go $(MLDIR)/xlib.go
 
-.PHONY: install-nx-octave
-install-nx-octave:
+.PHONY: install-nx-mlang
+install-nx-mlang:
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
-	@echo "installing nx-octave sources in $(SITE_SCM_DIR)"
+	@echo "installing nx-mlang sources in $(SITE_SCM_DIR)"
 	@for file in $(NYACC_OCTAVE_SRCS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
@@ -151,7 +151,7 @@ install-nx-octave:
 	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
 	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	@echo "installing nx-octave binaries in $(SITE_SCM_GO_DIR)"
+	@echo "installing nx-mlang binaries in $(SITE_SCM_GO_DIR)"
 	@for binfile in $(NYACC_OCTAVE_BINS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \

@@ -1,4 +1,4 @@
-;; language/nx-octave/spec.scm - NYACC extension for Octave
+;; language/nx-mlang/spec.scm - NYACC extension for Octave
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -17,15 +17,15 @@
 
 ;;; Code:
 
-(define-module (language nx-octave spec)
-  #:export (nx-octave)
-  #:use-module (nyacc lang octave parser)
-  #:use-module (nyacc lang octave compile-tree-il)
-  #:use-module (nyacc lang octave pprint)
+(define-module (language nx-mlang spec)
+  #:export (nx-mlang)
+  #:use-module (nyacc lang mlang parser)
+  #:use-module (nyacc lang mlang compile-tree-il)
+  #:use-module (nyacc lang mlang pprint)
   #:use-module (system base language))
 
-(define-language nx-octave
-  #:title	"nx-octave"
+(define-language nx-mlang
+  #:title	"nx-mlang"
   #:reader	(lambda (p e)
 		  (cond
 		   ((and (file-port? p)

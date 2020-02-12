@@ -1,4 +1,4 @@
-;;; nyacc/lang/octave/compile-tree-il.scm compile octave sxml to tree-il
+;;; nyacc/lang/mlang/compile-tree-il.scm compile mlang sxml to tree-il
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -24,9 +24,9 @@
 
 ;;; Code:
 
-(define-module (nyacc lang octave compile-tree-il)
-  #:export (compile-tree-il show-octave-sxml show-octave-xtil)
-  #:use-module (nyacc lang octave xlib)
+(define-module (nyacc lang mlang compile-tree-il)
+  #:export (compile-tree-il show-mlang-sxml show-mlang-xtil)
+  #:use-module (nyacc lang mlang xlib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
   ;;#:use-module (nyacc lang util)
@@ -44,11 +44,11 @@
   ;;(pretty-print tree (current-error-port) #:per-line-prefix "  " #:width 130))
   (pretty-print tree (current-output-port) #:per-line-prefix "  " #:width 130))
 
-(define xlib-mod '(nyacc lang octave xlib))
+(define xlib-mod '(nyacc lang mlang xlib))
 (define xlib-module (resolve-module xlib-mod))
-(define (xlib-ref name) `(@@ (nyacc lang octave xlib) ,name))
+(define (xlib-ref name) `(@@ (nyacc lang mlang xlib) ,name))
 		       
-;;(define undefined '(@@ (nyacc lang octave xlib) oct:undefined))
+;;(define undefined '(@@ (nyacc lang mlang xlib) oct:undefined))
 ;;(define undefined `(const ,(if #f #f)))
 (define undefined nx-undefined-xtil)	; from nx-util.scm
 
@@ -89,7 +89,7 @@
 (define (maybe-add-symbol name dict)
   (if (lookup name dict) dict (add-symbol name dict)))
 
-;; In octave, variables are not declared so this will add to either the
+;; In mlang, variables are not declared so this will add to either the
 ;; containting function or toplevel.
 (define add-symbol nx-add-symbol)
 #;(define (add-symbol name dict)
@@ -459,7 +459,7 @@
 			(loop (cons n nl) (cons l ll) (cons v vl) (cdr vs))))))
 	       ;; default value is undefined
 	       (fctn
-		`(set! ,n-ref (lambda ((name . ,name) (language . nx-octave))
+		`(set! ,n-ref (lambda ((name . ,name) (language . nx-mlang))
 				(lambda-case
 				 ((() ,(map cadr iargs) #f #f
 				   ,(map (lambda (v) undefined) iargs)
@@ -537,7 +537,7 @@
 	  (values (cons body seed) kdict)))
 
        ;; looping
-       ;; 1) octave does have break statement, and continue I think
+       ;; 1) mlang does have break statement, and continue I think
        ;; 2) for needs index and should call oct:iter-first oct:iter-next
        ;; 3) BUG top-levels can be introduced here, but we pop scope
        ;;    so these need to be moved to function or global scope
@@ -704,9 +704,9 @@
   )
 
 (define show-sxml #f)
-(define (show-octave-sxml v) (set! show-sxml v))
+(define (show-mlang-sxml v) (set! show-sxml v))
 (define show-xtil #f)
-(define (show-octave-xtil v) (set! show-xtil v))
+(define (show-mlang-xtil v) (set! show-xtil v))
 
 (define (compile-tree-il exp env opts)
   (when show-sxml (sferr "sxml:\n") (pperr exp))

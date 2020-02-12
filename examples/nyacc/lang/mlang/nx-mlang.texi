@@ -1,5 +1,5 @@
 \input texinfo.tex
-@setfilename nx-octave.info
+@setfilename nx-mlang.info
 @settitle Notes on NX-Octave
 
 @copying

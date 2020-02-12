@@ -1,4 +1,4 @@
-;;; nyacc/lang/octave/parser.scm - parsing 
+;;; nyacc/lang/mlang/parser.scm - parsing 
 
 ;; Copyright (C) 2016,2018 Matthew R. Wette
 ;;
@@ -17,7 +17,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang octave parser)
+(define-module (nyacc lang mlang parser)
   #:export (parse-oct read-oct-stmt read-oct-file)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
@@ -27,7 +27,7 @@
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
-(include-from-path "nyacc/lang/octave/body.scm")
+(include-from-path "nyacc/lang/mlang/body.scm")
 
 ;; === static semantics
 
@@ -92,14 +92,14 @@
      ((float-mat? mat) `(float-matrix . ,(cdr mat)))
      (else mat))))
 
-;; @deffn {Procedure} apply-octave-statics tree => tree
+;; @deffn {Procedure} apply-mlang-statics tree => tree
 ;; Apply static semantics for Octave.  Currently, this includes
 ;; @itemize
 ;; @item Change @code{assn} with matrix expression on LHS to a
 ;; multiple value assignment (@code{multi-assn}).
 ;; @end itemize
 ;; @end deffn
-(define (apply-octave-statics tree)
+(define (apply-mlang-statics tree)
 
   (define (fU tree)
     (sx-match tree
@@ -117,10 +117,10 @@
 
 ;; === file parser 
 
-(include-from-path "nyacc/lang/octave/mach.d/oct-tab.scm")
-(include-from-path "nyacc/lang/octave/mach.d/oct-act.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/oct-tab.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/oct-act.scm")
 
-(define gen-octave-lexer (make-octave-lexer-generator oct-mtab))
+(define gen-mlang-lexer (make-mlang-lexer-generator oct-mtab))
 
 ;; Parse given a token generator.
 (define raw-parser
@@ -130,8 +130,8 @@
   (catch
    'nyacc-error
    (lambda ()
-     (apply-octave-statics
-      (raw-parser (gen-octave-lexer) #:debug debug)))
+     (apply-mlang-statics
+      (raw-parser (gen-mlang-lexer) #:debug debug)))
    (lambda (key fmt . args)
      (apply simple-format (current-error-port) fmt args)
      #f)))
@@ -146,8 +146,8 @@
 
 ;; === interactive parser
 
-(include-from-path "nyacc/lang/octave/mach.d/octia-tab.scm")
-(include-from-path "nyacc/lang/octave/mach.d/octia-act.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/octia-tab.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/octia-act.scm")
 
 (define raw-ia-parser
   (make-lalr-parser
@@ -157,16 +157,16 @@
 (define (parse-oct-stmt lexer)
   (catch 'nyacc-error
     (lambda ()
-      (apply-octave-statics
+      (apply-mlang-statics
        (raw-ia-parser lexer #:debug #f)))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port) fmt args)
       #f)))
 
-(define gen-octave-ia-lexer (make-octave-lexer-generator octia-mtab))
+(define gen-mlang-ia-lexer (make-mlang-lexer-generator octia-mtab))
 
 (define read-oct-stmt
-  (let ((lexer (gen-octave-ia-lexer)))
+  (let ((lexer (gen-mlang-ia-lexer)))
     (lambda (port env)
       ;;(sferr "<parse stmt>\n")
       (cond
@@ -175,7 +175,7 @@
        (else
 	(let* ((stmt (with-input-from-port port
 		      (lambda () (parse-oct-stmt lexer))))
-	       (stmt (apply-octave-statics stmt)))
+	       (stmt (apply-mlang-statics stmt)))
 	  ;;(sferr "stmt=~S\n" stmt)
 	  (cond
 	   ((equal? stmt '(empty-stmt)) #f)

@@ -1,4 +1,4 @@
-;; lang/octave/mach.scm
+;; lang/mlang/mach.scm
 
 ;; Copyright (C) 2015-2018 Matthew R. Wette
 ;;
@@ -17,7 +17,7 @@
 
 ;;; Description:
 
-;; octave parser
+;; mlang parser
 ;; 1) does NOT support non-comma rows [ 1 2 ] => syntax error
 
 ;; TODO:
@@ -28,13 +28,13 @@
 
 ;;; Code:
 
-(define-module (nyacc lang octave mach)
-  #:export (octave-spec
-	    octave-mach
-	    octave-ia-spec
-	    octave-ia-mach
+(define-module (nyacc lang mlang mach)
+  #:export (mlang-spec
+	    mlang-mach
+	    mlang-ia-spec
+	    mlang-ia-mach
 	    dev-parse-oct
-	    gen-octave-files)
+	    gen-mlang-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
@@ -42,7 +42,7 @@
   #:use-module (ice-9 pretty-print)
   )
 
-(define octave-spec
+(define mlang-spec
   (lalr-spec
    (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
 			  license-lgpl3+))
@@ -167,7 +167,7 @@
      (elseif-list "elseif" expr term stmt-list
 		   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5))))))
 
-    ;; The switch case for this octave only allows case-expr of form
+    ;; The switch case for this mlang only allows case-expr of form
     ;; @code{fixed}, @code{string}, @code{fixed-list} or @code{string-list}.
     (case-list
      ($empty ($$ (make-tl 'case-list)))
@@ -288,18 +288,18 @@
 
 ;; === parsers ==========================
 
-(define octave-mach
+(define mlang-mach
   (hashify-machine
    (compact-machine
-    (make-lalr-machine octave-spec))))
+    (make-lalr-machine mlang-spec))))
 
-(include-from-path "nyacc/lang/octave/body.scm")
+(include-from-path "nyacc/lang/mlang/body.scm")
 
 
-(define octave-ia-spec (restart-spec octave-spec 'mlang-item))
+(define mlang-ia-spec (restart-spec mlang-spec 'mlang-item))
 
-(define octave-ia-mach
-  (let* ((mach (make-lalr-machine octave-ia-spec))
+(define mlang-ia-mach
+  (let* ((mach (make-lalr-machine mlang-ia-spec))
 	 (mach (compact-machine mach #:keep 0 #:keepers '()))
 	 (mach (hashify-machine mach))
 	 )
@@ -307,28 +307,28 @@
 
 ;; === automaton file generators =========
 
-(define (gen-octave-files . rest)
+(define (gen-mlang-files . rest)
   (define (lang-dir path)
     (if (pair? rest) (string-append (car rest) "/" path) path))
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
 
-  (write-lalr-actions octave-mach (xtra-dir "oct-act.scm.new")
-		      #:prefix "oct-")
-  (write-lalr-tables octave-mach (xtra-dir "oct-tab.scm.new")
-		     #:prefix "oct-")
-  (write-lalr-actions octave-ia-mach (xtra-dir "octia-act.scm.new")
-		      #:prefix "octia-")
-  (write-lalr-tables octave-ia-mach (xtra-dir "octia-tab.scm.new")
-		     #:prefix "octia-")
-  (let ((a (move-if-changed (xtra-dir "oct-act.scm.new")
-			    (xtra-dir "oct-act.scm")))
-	(b (move-if-changed (xtra-dir "oct-tab.scm.new")
-			    (xtra-dir "oct-tab.scm")))
-	(c (move-if-changed (xtra-dir "octia-act.scm.new")
-			    (xtra-dir "octia-act.scm")))
-	(d (move-if-changed (xtra-dir "octia-tab.scm.new")
-			    (xtra-dir "octia-tab.scm"))))
+  (write-lalr-actions mlang-mach (xtra-dir "mlang-act.scm.new")
+		      #:prefix "mlang-")
+  (write-lalr-tables mlang-mach (xtra-dir "mlang-tab.scm.new")
+		     #:prefix "mlang-")
+  (write-lalr-actions mlang-ia-mach (xtra-dir "mlangia-act.scm.new")
+		      #:prefix "mlangia-")
+  (write-lalr-tables mlang-ia-mach (xtra-dir "mlangia-tab.scm.new")
+		     #:prefix "mlangia-")
+  (let ((a (move-if-changed (xtra-dir "mlang-act.scm.new")
+			    (xtra-dir "mlang-act.scm")))
+	(b (move-if-changed (xtra-dir "mlang-tab.scm.new")
+			    (xtra-dir "mlang-tab.scm")))
+	(c (move-if-changed (xtra-dir "mlangia-act.scm.new")
+			    (xtra-dir "mlangia-act.scm")))
+	(d (move-if-changed (xtra-dir "mlangia-tab.scm.new")
+			    (xtra-dir "mlangia-tab.scm"))))
     (or a b c d)))
 
 ;; --- last line ---

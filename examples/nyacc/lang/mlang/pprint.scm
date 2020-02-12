@@ -1,4 +1,4 @@
-;;; nyacc/lang/octave/pprint.scm
+;;; nyacc/lang/mlang/pprint.scm
 
 ;; Copyright (C) 2016,2018 Matthew R. Wette
 ;;
@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-(define-module (nyacc lang octave pprint)
+(define-module (nyacc lang mlang pprint)
   #:export (pretty-print-ml)
   #:use-module ((srfi srfi-1) #:select (pair-for-each fold-right))
   #:use-module (nyacc lang util)
@@ -91,7 +91,7 @@
 	(ppx/p rval)
 	(ppx rval)))
 
-  (define (string->octave st)
+  (define (string->mlang st)
     (if (string-any #\' st)
 	(reverse-list->string
 	 (string-fold
@@ -234,14 +234,14 @@
 
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
-      ((string ,value) (sf "'~A'" (string->octave value)))
+      ((string ,value) (sf "'~A'" (string->mlang value)))
       
       (else (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
 
   (ppx tree))
 
 
-#;(use-modules (nyacc lang octave parser))
+#;(use-modules (nyacc lang mlang parser))
 #;(let ((sx (with-input-from-file "exam.d/ex02.m" parse-ml))
       )
   (pretty-print sx)

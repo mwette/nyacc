@@ -29,7 +29,7 @@ ffi-help	| demo and test routines for the FFI helper
 calc		| calc demo parser and interpreter
 		|
 javascript	| parser and partial interpreter
-octave		| parser and partial interpreter for Octave (like Matlab)
+mlang		| parser and partial interpreter for Octave / Matlab
 tcl		| parser and partial interpreter for TCL
 		|
 ecmascript	| immature replacment parser for Guile's emcascript

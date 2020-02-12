@@ -1,4 +1,4 @@
-;;; lang/octave/body.scm - common lexical generator code for octave
+;;; lang/mlang/body.scm - common lexical generator code for mlang
 
 ;; Copyright (C) 2015,2018 Matthew R. Wette
 ;;
@@ -20,7 +20,7 @@
 ;; @deffn add-file-attr tl => tl
 ;; Given a tagged-list this routine adds an attribute @code{(file basename)}
 ;; which is the basename (with @code{.m} removed) of the current input.
-;; This is used for the top-level node of the octave parse tree to indicate
+;; This is used for the top-level node of the mlang parse tree to indicate
 ;; from which file the script or function file originated.  For example,
 ;; @example
 ;; (function-file (@ (file "myftn")) (fctn-defn (ident "myftn") ...
@@ -31,11 +31,11 @@
 
 ;;; === lexical analyzer
 
-;; @deffn {Procedure} octave-read-string ch
+;; @deffn {Procedure} mlang-read-string ch
 ;; Read string and return @code{($string . "string")}.  If @var{ch} is
 ;; not @code{"} or @code{'} the return value is @code{#f}.
 ;; @end deffn
-(define (octave-read-string ch)
+(define (mlang-read-string ch)
   (case ch
     ((#\")
      (read-c-string ch))
@@ -57,7 +57,7 @@
     (else #f)))
 
 
-(define octave-read-comm
+(define mlang-read-comm
   (make-comm-reader '(("%" . "\n") ("#" . "\n") ("#{" . "#}") ("%{" . "%}")
 		      ("#!" . "!#"))))
 
@@ -80,16 +80,16 @@
      ((eqv? ch #\newline) (read-char))
      (else (loop (read-char))))))
 
-;; @deffn {Procedure} make-octave-lexer-generator match-table
+;; @deffn {Procedure} make-mlang-lexer-generator match-table
 ;; This function, given the @var{match-table} from a lalr-generated
 ;; machine, generates a procedure that returns lexical analyzers for
 ;; use in Octave parsers.  See @code{parse-oct}.
 ;; @end deffn
-(define-public (make-octave-lexer-generator match-table)
+(define-public (make-mlang-lexer-generator match-table)
   ;; There is some trickery here to assure that if the last line
   ;; ends w/o newline then one gets inserted.
-  (let* ((read-string octave-read-string)
-	 (read-comm octave-read-comm)
+  (let* ((read-string mlang-read-string)
+	 (read-comm mlang-read-comm)
 	 (read-ident read-c$-ident)
 	 (space-cs (string->char-set " \t\r\f"))
 	 ;;
@@ -102,7 +102,7 @@
 	 (read-chseq (make-chseq-reader chrseq))
 	 (newline-val (assoc-ref chrseq "\n"))
 	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
-    (if (not newline-val) (error "octave setup error"))
+    (if (not newline-val) (error "mlang setup error"))
     (lambda ()
       (let ((qms #f) (bol #t))		; qms: quote means string
 	(lambda ()

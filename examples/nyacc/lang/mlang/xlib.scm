@@ -1,4 +1,4 @@
-;; nyacc/lang/octave/xlib.scm - extension library for the m-language
+;; nyacc/lang/mlang/xlib.scm - extension library for the m-language
 
 ;; Copyright (C) 2018 Matthew R. Wette
 ;;
@@ -21,7 +21,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang octave xlib)
+(define-module (nyacc lang mlang xlib)
   #:export (xdict)
   #:use-module (srfi srfi-9)
   )
@@ -96,7 +96,7 @@
   ;;(sferr "arg=~S\n" arg)
   (cond
    ((integer? arg) (vector-ref vec (1- arg)))
-   (else (error "octave: expecing vector arg of integer, range or array"))))
+   (else (error "mlang: expecing vector arg of integer, range or array"))))
 
 ;; ===
 
@@ -123,7 +123,7 @@
 	)
     (cond
      ((integer? arg) (array-ref vec (1- arg)))
-     (else (error "octave: expecting array args of integer, range or array")))))
+     (else (error "mlang: expecting array args of integer, range or array")))))
 
 (define-public (oct:array-set-row! ary ix row)
   (let loop ((jx 0) (elts row))
@@ -137,7 +137,7 @@
     (apply proc-or-array args))
    ((vector? proc-or-array)
     (unless (= 1 (length args))
-      (error "octave: vector ref requires 1 int arg"))
+      (error "mlang: vector ref requires 1 int arg"))
     (oct:vector-ref proc-or-array (car args)))
    ((array? proc-or-array)
     (apply oct:array-ref proc-or-array args))
@@ -176,7 +176,7 @@
 
 (define xdict
  `(
-   ("struct" . (@ (nyacc lang octave xlib) oct:make-struct))
+   ("struct" . (@ (nyacc lang mlang xlib) oct:make-struct))
     ))
 
 ;; --- last line ---
