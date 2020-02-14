@@ -2509,7 +2509,7 @@ fi
 installed_guile=$GUILE
 
 
-ac_config_files="$ac_config_files Makefile module/Makefile doc/nyacc/Makefile test-suite/Makefile examples/Makefile"
+ac_config_files="$ac_config_files Makefile module/Makefile doc/Makefile test-suite/Makefile examples/Makefile"
 
 ac_config_files="$ac_config_files etc/guild"
 
@@ -3222,7 +3222,7 @@ do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "module/Makefile") CONFIG_FILES="$CONFIG_FILES module/Makefile" ;;
-    "doc/nyacc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/nyacc/Makefile" ;;
+    "doc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
     "test-suite/Makefile") CONFIG_FILES="$CONFIG_FILES test-suite/Makefile" ;;
     "examples/Makefile") CONFIG_FILES="$CONFIG_FILES examples/Makefile" ;;
     "etc/guild") CONFIG_FILES="$CONFIG_FILES etc/guild" ;;

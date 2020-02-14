@@ -64,7 +64,7 @@ AC_SUBST([installed_guile],$GUILE)
 
 AC_CONFIG_FILES([Makefile \
 	module/Makefile \
-	doc/nyacc/Makefile \
+	doc/Makefile \
 	test-suite/Makefile \
 	examples/Makefile \
 ])
