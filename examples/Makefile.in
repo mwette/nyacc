@@ -18,6 +18,9 @@ GUILE_LOAD_COMPILED_PATH=@GUILE_LOAD_COMPILED_PATH@
 SITE_SCM_DIR = @GUILE_SITE@
 SITE_SCM_GO_DIR = @GUILE_SITE_GO@
 
+XDSTDIR = @GUILE_DATA@/nyacc/examples
+XSRCDIR = @abs_top_srcdir@/examples
+
 prefix = @prefix@
 
 SHELL = @SHELL@
@@ -202,11 +205,13 @@ install-nx-tcl:
 
 # -------------------------------------
 
-examples:
-	mkdir -p $(DESTIR)/$prefix/share/doc/nyacc/examples
-	tar cf - ffi | \
-	  (cd $(DESTDIR)/$prefix/share/doc/nyacc/examples; tar xf -)
-
+install-examples:
+	mkdir -p $(DESTIR)$(XDSTDIR)
+	cp $(XSRCDIR)/env.sh $(DESTDIR)$(XDSTDIR)/env.sh
+	(cd $(XSRCDIR); tar cf - ffi | (cd $(DESTDIR)$(XDSTDIR); tar xf -)
+	(cd $(XSRCDIR); tar cf - language | (cd $(DESTDIR)$(XDSTDIR); tar xf -)
+	(cd $(XSRCDIR); tar cf - nyacc | (cd $(DESTDIR)$(XDSTDIR); tar xf -)
+	(cd $(XSRCDIR); tar cf - system | (cd $(DESTDIR)$(XDSTDIR); tar xf -)
 
 # -------------------------------------
 
@@ -218,10 +223,6 @@ dist-files:
 	   zip lang.zip lang.txt; \
 	   rm lang.txt) \
 	fi
-
-ffi/gobject.scm: ffi/glib.scm
-ffi/gio.scm: ffi/glib.scm
-ffi/librsvg.scm: ffi/gobject.scm
 
 .PHONY: install-bytestructures
 install-bytestructures:

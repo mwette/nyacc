@@ -5,6 +5,18 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2020-00-00  pre V1.01.0 release
+	* read-only struct-vable fields in ffi-helper changed to writable:
+	  guile 3.0 deprecates read-only fields
+	* Split expand-typerefs from c99/munge.scm into c99/munge-base.scm.
+	  This should exliminate the warning about undefined expand-typerefs.
+	* Eliminated deprecated symbols from c99/munge.scm: udecl->mspec
+	  udecl->mspec/comm mspec->udecl tree->udict tree->udict/deep
+	  declr->ident match-decl match-comp-decl match-param-decl
+	  expand-decl-typerefs fix-fields.
+	* now installing examples in $(DATADIR)/nyacc/examples
+	* updated configure.ac to be guix-compatible
+
 2019-12-29  V1.00.1
 	* in nyacc/util.scm, changed a letrec* to letrec
 	* in nyacc/lang/util.scm, changed a letrec* to let*
