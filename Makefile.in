@@ -21,7 +21,7 @@ default:
 .PHONY: install
 install:
 	@(cd module; $(MAKE) DESTDIR=$(DESTDIR) install)
-	@(cd nyacc; $(MAKE) DESTDIR=$(DESTDIR) install)
+	@(cd doc; $(MAKE) DESTDIR=$(DESTDIR) install)
 	@(cd examples; $(MAKE) DESTDIR=$(DESTDIR) install)
 
 .PHONY: uninstall
@@ -40,7 +40,7 @@ install-ffi-help:
 dist-files:
 	(cd etc; autoconf -o ../configure)
 	(cd module; $(MAKE) DESTDIR=$(DESTDIR) dist-files)
-	(cd nyacc; $(MAKE) DESTDIR=$(DESTDIR) dist-files)
+	(cd doc; $(MAKE) DESTDIR=$(DESTDIR) dist-files)
 	(cd examples; $(MAKE) DESTDIR=$(DESTDIR) dist-files)
 
 .PHONY: check
