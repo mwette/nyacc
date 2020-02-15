@@ -1,6 +1,8 @@
 ;; examples/nyacc/lang/c99/tryit.scm
 ;;(debug-set! stack 750)
 
+(add-to-load-path (getcwd))
+
 (use-modules (srfi srfi-1))
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxeval))
@@ -84,82 +86,155 @@
 ;;(ppsx inc-dirs)
 ;;(ppsx inc-help)
 
-;; see c99-06.test
-(define (expand-typerefs-in-code code indx)
-  (let* ((tree (parse-string code))
-	 (udict (c99-trans-unit->udict tree))
-	 (decl (and=> ((sxpath `((decl ,indx))) tree) car))
-	 (xdecl (expand-typerefs decl udict)))
-    xdecl))
+;;(use-modules ((system foreign) #:prefix ffi:))
+(use-modules (system foreign))
+;;(use-modules (system base pmatch))
+(use-modules (ice-9 match))
 
-(let* ((code (string-append
-	      ;;"struct event { int events; void *data; }\n"
-	      ;;"  __attribute__ ((__packed__));\n"
-	      
-	      ;;"typedef int case04 __attribute__ ((__deprecated__));\n"
-	      
-	      ;;"typedef int *bla_t[2]; bla_t foo(bla_t (*)(bla_t));\n"
+(use-modules (arch-info))
 
-	      ;;"struct foo { int a; double b; } __attribute__((__packed__));\n"
-	      "struct foo { int a; double b; }"
-	      ;;" __attribute__ ((__packed__))"
-	      ";\n"
-	      "struct foo x;\n"
-	      ))
+(define ffi-type-map
+  `(("void" . ,void) ("float" . ,float) ("double" . ,double) ("short" . ,short)
+    ("short int" . ,short) ("signed short" . ,short)
+    ("signed short int" . ,short) ("int" . ,int) ("signed" . ,int)
+    ("signed int" . ,int) ("long" . ,long) ("long int" . ,long)
+    ("signed long" . ,long) ("signed long int" . ,long)
+    ("unsigned short int" . ,unsigned-short)
+    ("unsigned short" . ,unsigned-short)
+    ("unsigned int" . ,unsigned-int) ("unsigned" . ,unsigned-int)
+    ("unsigned long int" . ,unsigned-long) ("unsigned long" . ,unsigned-long)
+    ("char" . ,int8) ("signed char" . ,int8) ("unsigned char" . ,uint8)
+    ("wchar_t" . ,int) ("char16_t" . ,int16) ("char32_t" . ,int32)
+    ("long long" . ,long) ("long long int" . ,long)
+    ("signed long long" . ,long) ("signed long long int" . ,long)
+    ("unsigned long long" . ,unsigned-long)
+    ("unsigned long long int" . ,unsigned-long) ("_Bool" . ,int8)
+    ("size_t" . ,size_t) ("ssize_t" . ,ssize_t) ("ptrdiff_t" . ,ptrdiff_t)
+    ;;
+    ("int8_t" . int8) ("uint8_t" . uint8) 
+    ("int16_t" . int16) ("uint16_t" . uint16) 
+    ("int32_t" . int32) ("uint32_t" . uint32) 
+    ("int64_t" . int64) ("uint64_t" . uint64)
+    ("intptr_t" . long) ("uintptr_t" . unsigned-long)
+    ("char" . int8) ("signed char" . int8) ("unsigned char" . uint8)
+    ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
+    ;; FIXME:
+    ("long long" . long) ("long long int" . long)
+    ("signed long long" . long) ("signed long long int" . long)
+    ("unsigned long long" . unsigned-long)
+    ("unsigned long long int" . unsigned-long)
+    ("_Bool" . int8)))
+
+;; return (values sizeof alignof)
+(define soao-pointer (values (sizeof '*) (alignof '*)))
+
+;; sizeof alignof type mdecl tail
+(define* (soaotmt expr udict #:optional (ddict '()))
+  ;;(if (and (pair? mdecl-tail) (string? (car mdecl-tail))) (error "xxx"))
+  (match expr
+    (`((pointer-to) . ,rest)
+     (values (sizeof '*) (alignof '*)))
+    (`((array-of) . ,rest) 'ffi-void*)
+    (`((array-of ,size) . ,rest) 'ffi-void*)
+    (`((fixed ,name))
+     (cond
+      ((assoc-ref ffi-type-map name)
+       => (lambda (t) (values (sizeof t) (alignof t))))
+      (else (sf "no FFI type for ~A" name))))
+    (`((float-type ,name))
+     (cond
+      ((assoc-ref ffi-type-map name)
+       => (lambda (t) (values (sizeof t) (alignof t))))
+      (else (sf "no FFI type for ~A" name))))
+    (`((typename ,name))
+     (cond
+      ((assoc-ref ffi-type-map name)
+       => (lambda (t) (values (sizeof t) (alignof t))))
+      (else (sf "no FFI type for ~A" name))))
+    ;;(((void)) 'void)
+    (`((enum-def . ,rest2))
+     (values (sizeof int) (alignof int)))
+    (`((enum-ref . ,rest2) . ,rest1)
+     (values (sizeof int) (alignof int)))
+    (`((struct-def (field-list . ,fields)))
+     (let loop ((sol '()) (aol '()) (ma 0) (flds fields))
+       (cond
+	((null? flds)
+	 ;; compute layout
+	 #f)
+	(else
+	 (let* ((udict (unitize-comp-decl (car flds)))
+		(name (caar udict))
+		(udecl (cdar udict))
+		(udecl (udecl-rem-type-qual udecl))
+		(mdecl (udecl->mdecl udecl)))
+	   (call-with-values
+	       (lambda () (soaotmt (cdr mdecl) udict ddict))
+	     (lambda (so ao)
+	       (loop (cons so sol) (cons ao aol) (max ao ma) (cdr flds)))))))))
+
+    (`((struct-def (ident ,name) ,field-list))
+     (soaotmt `((struct-def ,field-list)) udict ddict))
+    
+    #;(((union-def (field-list . ,fields)))
+     ;; TODO check libffi on how unions are passed and returned.
+     ;; I assume here never passed as a floating point.
+     ;; This should use bounding-struct-descriptor from bytestructures
+     (let loop ((type #f) (size 0) (flds fields))
+       (if (null? flds)
+	   (case type ((double) 'uint64) ((float) 'uint32) (else type))
+	   (let* ((udict (unitize-comp-decl (car flds)))
+		  (udecl (cdar udict))
+		  (udecl (udecl-rem-type-qual udecl))
+		  (mdecl (udecl->mdecl udecl))
+		  (ftype (mtail->ffi-desc (cdr mdecl)))
+		  ;;(ftval (assq-ref ffi-symmap ftype))
+		  (fsize (sizeof ftype)))
+	     (if (> fsize size)
+		 (loop ftype fsize (cdr flds))
+		 (loop type size (cdr flds)))))))
+    #;(`((union-def (ident ,name) ,field-list))
+     (soaotmt `((union-def ,field-list))))
+
+    (_
+     (sf "soaotmt:\n") (pp expr) (quit)
+     (error "") (sf "soaotmt missed: ~S" expr))))
+
+(define* (eval-sizeof-type tree udict #:optional (ddict '()))
+  (sx-match (sx-ref tree 1)
+    #;((type-name (decl-spec-list (type-spec (typename ,name))))
+     (let* ((xname (expand-typename name udict))
+	    (ffi-type (assoc-ref ffi-type-map xname)))
+       (unless ffi-type ;; work to go
+	 (throw 'c99-error "cxeval: failed to expand \"sizeof(~A)\"" name))
+       (sizeof ffi-type)))
+    ((type-name (decl-spec-list (type-spec (fixed-type ,name))))
+     (values (sizeof-basename name) (alignof-basename name)))
+    ((type-name (decl-spec-list (type-spec (float-type ,name))))
+     (values (sizeof-basename name) (alignof-basename name)))
+    ((type-name (decl-spec-list (type-spec . ,_1)) (abs-declr (pointer)))
+     (values (sizeof-basename '*) (alignof-basename '*)))
+    (else
+     (pp tree)
+     (throw 'c99-error "failed to expand sizeof type ~S" (sx-ref tree 1)))))
+
+(let* (
        (code "int len = sizeof(\"abc\" \"def\");\n")
        (code "#include <sys/epoll.h>\n")
        (code "int foo[10];")
+       (code (string-append
+	      "typedef struct { int x; double z; void *p; } foo_t;\n"
+	      "int x = sizeof(float);"))
        (tree (parse-string code))
-       ;;(expr (sx-ref* tree 1 2 1 2 1)) ;; for sizeof("abc"...) demo
-
-       ;;(tree (parse-c99x code #:debug #t))
-       
-       ;;(tree (parse-file "zz.c"))
-       ;;(udict (c99-trans-unit->udict/deep tree))
-       ;;(udict (unitize-decl decl1 '()))
-       ;;(udecl (udict-struct-ref udict "epoll_event"))
-       ;;(udecl (stripdown-udecl udecl))
-       ;;(udecl (expand-typerefs udecl udict))
-       ;;(mdecl (udecl->mspec/comm udecl))
-       ;;(udecl (unitize-decl decl))
-       ;;(xdecl (expand-typerefs-in-code code 2))
-       ;;(udict (c99-trans-unit->udict/deep tree))
-       ;;(udict (c99-trans-unit->udict tree))
-       ;;(udecl (assoc-ref udict '(struct . "epoll_event")))
-       (rdecl '(decl (decl-spec-list	; raw decl
-		      (@ (attributes "__packed__"))
-		      (type-spec
-		       (struct-def
-			(ident "epoll_event")
-			(field-list
-			 (comp-decl
-			  (@ (comment " Epoll events "))
-			  (decl-spec-list
-			   (type-spec (typename "uint32_t")))
-			  (comp-declr-list (comp-declr (ident "events"))))
-			 (comp-decl
-			  (@ (comment " User data variable "))
-			  (decl-spec-list
-			   (type-spec (typename "epoll_data_t")))
-			  (comp-declr-list (comp-declr (ident "data"))))))))))
-       ;;(udecl (unitize-decl rdecl '()))
-       (udecl (cdar (unitize-decl (sx-ref tree 1) '())))
-       (mdecl (udecl->mdecl udecl))
+       (udict (c99-trans-unit->udict tree))
+       (udecl (assoc-ref udict "x"))
+       (sot-x (sx-ref* udecl 2 2 1))
        )
-  (pp tree)
-  ;;(pp udict)
-  ;;(pp rdecl)
-  ;;(pp udecl)
-  ;;(pp mdecl)
-  ;;(pp (mdecl->udecl mdecl))
-  ;;(pp99 (cdar udecl))
-  ;;(pp mdecl)
-  ;;(pp xdecl)
-  ;;(ppsx udecl)
-  ;;(pp99 tree)
-  ;;(ppsx (eval-c99-cx tree))
-  ;;(pp (get-gcc-cpp-defs))
-  ;;(pp (get-gcc-inc-dirs))
+  (pp udecl)
+  (pp sot-x)
+  (call-with-values
+      (lambda () (eval-sizeof-type sot-x udict))
+    (lambda (so ao) (sf "so=~S  ao=~S\n" so ao)))
   #t)
 
 ;; --- last line ---
