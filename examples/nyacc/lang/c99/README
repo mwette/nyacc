@@ -1,6 +1,6 @@
 lang/c99/
 
-Copyright (C) 2015,2017-2018 Matthew R. Wette
+Copyright (C) 2015,2017-2018,2020 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -9,7 +9,7 @@ without any warranty.
 
 NOTES:
 
-$ cxp file.c
+$ cxp hello.c
 
 tryit.scm is a file I use for debugging.  You can run it also.
 
