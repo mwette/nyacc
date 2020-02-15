@@ -58,7 +58,7 @@ install:
 	@$(MAKE) install-examples
 
 install-examples:
-	mkdir -p $(DESTIR)$(XDSTDIR)
+	mkdir -p $(DESTDIR)$(XDSTDIR)
 	cp $(XSRCDIR)/env.sh $(DESTDIR)$(XDSTDIR)/env.sh
 	(cd $(XSRCDIR); tar cf - ffi | (cd $(DESTDIR)$(XDSTDIR); tar xf -))
 	(cd $(XSRCDIR); tar cf - language | (cd $(DESTDIR)$(XDSTDIR); tar xf -))
