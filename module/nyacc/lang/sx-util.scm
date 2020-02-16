@@ -34,7 +34,7 @@
 	    sx-find
 	    sx-split sx-split* sx-join sx-join* sx-cons* sx-list
 	    sx-unitize
-	    sx-match)
+	    sx-match sx-match-tail)
   #:use-module ((srfi srfi-1) #:select (find fold fold-right append-reverse)))
 (cond-expand
   (mes)
@@ -397,6 +397,18 @@
      (let ((kf (lambda () (sx-match-1 v c1 ...))))
        (sxm-sexp v pat (begin exp ...) (kf))))
     ((_ v) (error "sx-match: nothing matches"))))
+
+(define-syntax sx-match-tail
+  (syntax-rules ()
+    ((_ e c ...)
+     (let ((v e)) (sx-match-tail v c ...)))))
+
+(define-syntax sx-match-1-tail
+  (syntax-rules ()
+    ((_ v (pat exp ...) c1 ...)
+     (let ((kf (lambda () (sx-match-1-tail v c1 ...))))
+       (sxm-tail v pat (begin exp ...) (kf))))
+    ((_ v) (error "sx-match-tail: nothing matches"))))
 
 ;; sxm-sexp val pat kt kf
 ;; match sexp
