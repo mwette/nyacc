@@ -82,6 +82,11 @@
      (sx-match '(foo "hi") ((foo "bar") #f) ((foo "hi") #t) (else #f))
      #t))
 
+  (pass-if "sx-match-tail"
+    (and
+     (sx-match-tail '((foo "hi") "there") (((foo "hi") . ,_) #t) (else #f))
+     #t))
+	
   )
 
 ;;; --- last line ---
