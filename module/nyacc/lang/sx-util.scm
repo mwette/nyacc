@@ -401,7 +401,7 @@
 (define-syntax sx-match-tail
   (syntax-rules ()
     ((_ e c ...)
-     (let ((v e)) (sx-match-tail v c ...)))))
+     (let ((v e)) (sx-match-1-tail v c ...)))))
 
 (define-syntax sx-match-1-tail
   (syntax-rules ()
