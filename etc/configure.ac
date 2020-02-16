@@ -12,49 +12,44 @@ AC_CONFIG_SRCDIR(module/nyacc/version.scm)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
 
-m4_include([./pkg.m4])
-m4_include([./guile.m4])
-m4_include([./nyacc.m4])
-
 AC_ARG_WITH(guile, [    --with-guile            path to binary],
             ,with_guile=unspecified)
 
 if test "_$with_guile" != "_unspecified"; then
   GUILE=$with_guile
-  GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
-  guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
-  PKG_CONFIG_LIBDIR=$guile_libdir/pkgconfig
-  PKG_CONFIG=pkg-config
-  export PKG_CONFIG_LIBDIR
 else
-  GUILE_PKG([3.2 3.0 2.9 2.2 2.0])
-  GUILE_PROGS
+  AC_PATH_PROGS(GUILE,[guile guile-3.0 guile-2.2 guile-2.0])
+  if test -z "$GUILE"; then
+    AC_MSG_ERROR([guile required but not found])
+  fi
 fi
+GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
+guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
+guile_prefix=`$GUILE -c "(display (assq-ref %guile-build-info 'prefix))"`
 
-guile_build_prefix=`$GUILE -c "(display (assq-ref %guile-build-info 'prefix))"`
-
-if test "$guile_build_prefix" == "$prefix"; then
+if test "$guile_prefix" == "$prefix"; then
   echo "using paths for installed guile"
-  GUILE_SITE_DIR
-  GUILE_SITE_GO_DIR
-  GUILE_DATA_DIR
+  GUILE_GLOBAL_SITE=`$GUILE -c '(display (%global-site-dir))'`
+  GUILE_SITE_CCACHE=`$GUILE -c '(display (%site-ccache-dir))'`
+  GUILE_DATA=`$GUILE -c "(display (assq-ref %guile-build-info 'datadir))"`
 else
   echo "using default paths for guile"
-  GUILE_SITE=$prefix/share/guile/site/$GUILE_EFFECTIVE_VERSION
-  GUILE_SITE_GO=$prefix/lib/guile/$GUILE_EFFECTIVE_VERSION/site-ccache
+  GUILE_GLOBAL_SITE=$prefix/share/guile/site
+  GUILE_SITE_CCACHE=$prefix/lib/guile/$GUILE_EFFECTIVE_VERSION/site-ccache
   GUILE_DATA=$prefix/share
-  AC_SUBST([GUILE_SITE])
-  AC_SUBST([GUILE_SITE_GO])
-  AC_SUBST([GUILE_DATA])
 fi
+AC_SUBST([GUILE_GLOBAL_SITE])
+AC_SUBST([GUILE_SITE_CCACHE])
+AC_SUBST([GUILE_DATA])
 
 AC_SUBST([GUILE_LOAD_PATH])
 AC_SUBST([GUILE_LOAD_COMPILED_PATH])
 
-GUILE_MODULE_AVAILABLE([have_bytestructures],[(bytestructures guile)])
-if test $have_bytestructures = "yes"; then
+if $GUILE -c "(use-modules (bytestructures guile)) (exit 0)"; then
+  echo "(bytestructure guile) exists: ffi-help will be installed/compiled"
   NYACC_FH_BINS='$(NYACC_FH_BINS)'
 else
+  echo "(bytestructure guile) does not exist: ffi-help will be installed"
   NYACC_FH_BINS=''
 fi
 AC_SUBST([NYACC_FH_BINS])

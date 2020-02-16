@@ -16,6 +16,7 @@ without any warranty.
 	  expand-decl-typerefs fix-fields.
 	* now installing examples in $(DATADIR)/nyacc/examples
 	* updated configure.ac to be guix-compatible
+	* changed configure : removed guile.m4 pkg.m4 nyacc.m4
 
 2019-12-29  V1.00.1
 	* in nyacc/util.scm, changed a letrec* to letrec

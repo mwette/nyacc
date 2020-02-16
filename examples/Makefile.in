@@ -15,11 +15,11 @@ GUILD = @abs_top_builddir@/etc/guild
 GUILE_LOAD_PATH=@GUILE_LOAD_PATH@
 GUILE_LOAD_COMPILED_PATH=@GUILE_LOAD_COMPILED_PATH@
 
-SITE_SCM_DIR = @GUILE_SITE@
-SITE_SCM_GO_DIR = @GUILE_SITE_GO@
+SITE_SCM_DIR = @GUILE_GLOBAL_SITE@
+SITE_GO_DIR = @GUILE_SITE_CCACHE@
 
-XDSTDIR = @GUILE_DATA@/doc/nyacc/examples
 XSRCDIR = @abs_top_srcdir@/examples
+XDSTDIR = @GUILE_DATA@/doc/nyacc/examples
 
 prefix = @prefix@
 
@@ -93,16 +93,16 @@ install-nx-utils:
 	  fi; \
 	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
-	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	@echo "installing nx utility binaries in $(SITE_SCM_GO_DIR)"
+	mkdir -p $(DESTDIR)$(SITE_GO_DIR)
+	@echo "installing nx utility binaries in $(SITE_GO_DIR)"
 	@for binfile in $(NYACC_NXUTIL_BINS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	    mkdir -p $(DESTDIR)$(SITE_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
 	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
 		$(GUILD) compile \
-                -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+                -o $(DESTDIR)$(SITE_GO_DIR)/$${binfile} \
                 $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
           sleep 1; \
         done
@@ -130,16 +130,16 @@ install-nx-javascript:
 	  fi; \
 	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
-	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	@echo "installing nx-javascript binaries in $(SITE_SCM_GO_DIR)"
+	mkdir -p $(DESTDIR)$(SITE_GO_DIR)
+	@echo "installing nx-javascript binaries in $(SITE_GO_DIR)"
 	@for binfile in $(NYACC_JAVASCRIPT_BINS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	    mkdir -p $(DESTDIR)$(SITE_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
 	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
 		$(GUILD) compile \
-                -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+                -o $(DESTDIR)$(SITE_GO_DIR)/$${binfile} \
                 $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
           sleep 1; \
         done
@@ -167,16 +167,16 @@ install-nx-mlang:
 	  fi; \
 	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
-	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	@echo "installing nx-mlang binaries in $(SITE_SCM_GO_DIR)"
+	mkdir -p $(DESTDIR)$(SITE_GO_DIR)
+	@echo "installing nx-mlang binaries in $(SITE_GO_DIR)"
 	@for binfile in $(NYACC_OCTAVE_BINS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	    mkdir -p $(DESTDIR)$(SITE_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
 	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
 		$(GUILD) compile \
-                -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+                -o $(DESTDIR)$(SITE_GO_DIR)/$${binfile} \
                 $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
           sleep 1; \
         done
@@ -202,16 +202,16 @@ install-nx-tcl:
 	  fi; \
 	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
 	done
-	mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	@echo "installing nx-tcl binaries in $(SITE_SCM_GO_DIR)"
+	mkdir -p $(DESTDIR)$(SITE_GO_DIR)
+	@echo "installing nx-tcl binaries in $(SITE_GO_DIR)"
 	@for binfile in $(NYACC_TCL_BINS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
-	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${binfile}`; \
+	    mkdir -p $(DESTDIR)$(SITE_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
 	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
 	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
 		$(GUILD) compile \
-                -o $(DESTDIR)$(SITE_SCM_GO_DIR)/$${binfile} \
+                -o $(DESTDIR)$(SITE_GO_DIR)/$${binfile} \
                 $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
           sleep 1; \
         done

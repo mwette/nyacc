@@ -14,8 +14,8 @@ GUILD = @abs_top_builddir@/etc/guild
 GUILE_LOAD_PATH=@GUILE_LOAD_PATH@
 GUILE_LOAD_COMPILED_PATH=@GUILE_LOAD_COMPILED_PATH@
 
-SITE_SCM_DIR = @GUILE_SITE@
-SITE_SCM_GO_DIR = @GUILE_SITE_GO@
+SITE_SCM_DIR = @GUILE_GLOBAL_SITE@
+SITE_GO_DIR = @GUILE_SITE_CCACHE@
 
 SHELL = @SHELL@
 VPATH = @abs_top_srcdir@/module
@@ -123,14 +123,14 @@ install-srcs:
 
 .PHONY: install-bins
 install-bins: $(BINARIES)
-	@mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)
-	@echo "installing NYACC binaries in $(DESTDIR)$(SITE_SCM_GO_DIR)"
+	@mkdir -p $(DESTDIR)$(SITE_GO_DIR)
+	@echo "installing NYACC binaries in $(DESTDIR)$(SITE_GO_DIR)"
 	@for file in $(BINARIES); do \
-	  if test ! -d $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; then \
-	    mkdir -p $(DESTDIR)$(SITE_SCM_GO_DIR)/`dirname $${file}`; \
+	  if test ! -d $(DESTDIR)$(SITE_GO_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_GO_DIR)/`dirname $${file}`; \
 	  fi; \
 	  if test -f $(GODIR)/$${file}; then \
-	    cp $(GODIR)/$${file} $(DESTDIR)$(SITE_SCM_GO_DIR)/$${file}; \
+	    cp $(GODIR)/$${file} $(DESTDIR)$(SITE_GO_DIR)/$${file}; \
 	  fi; \
 	done
 
