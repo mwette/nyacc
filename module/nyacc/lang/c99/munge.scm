@@ -781,7 +781,9 @@
 
 ;; === munged specification ============
 
-;; @deffn {Procedure} udecl->mdecl udecl [#:add-name #f]
+(define (def-namer) (symbol->string (gensym "@")))
+
+;; @deffn {Procedure} udecl->mdecl udecl [#:namer def-namer]
 ;; @deffnx {Procedure} udecl->mdecl/comm udecl [#:def-comm ""]
 ;; Turn a stripped-down unit-declaration into an m-spec.  The second version
 ;; includes the comment. This assumes decls have been run through
@@ -794,11 +796,11 @@
 ;; ("x" "state vector" (array-of 10) (float "double")
 ;; @end example
 ;; @noindent
-;; The optional keyword argument @var{add-name} provides a dummy indentifier
+;; The optional keyword argument @var{namer} is a procdedure returning a string
 ;; to add for abstract declarators.  If an identifier is not provided, a
 ;; random identifier starting with @code{@} will be provided.
 ;; @end deffn
-(define* (udecl->mdecl decl #:key add-name)
+(define* (udecl->mdecl decl #:key (namer def-namer))
 
   ;; Hmm.  We convert array size back to C code (string).  Now that I am working
   ;; on constant expression eval (eval-c99-cx) maybe we should change that.
@@ -822,7 +824,7 @@
        (throw 'nyacc-error "unwrap-pointer"))))
 
   (define (make-abs-dummy) ;; for abstract declarator make a dummy
-    (or add-name (symbol->string (gensym "@"))))
+    (namer))
   (define (make-abs-dummy-tail)
     (list (make-abs-dummy)))
   

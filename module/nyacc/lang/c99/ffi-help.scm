@@ -818,8 +818,8 @@
 	 (mdecl (udecl->mdecl udecl1)))
     (mtail->bs-desc (cdr mdecl))))
 
-(define (int->name ix)
-  (simple-format #f "arg-~A" ix))
+(define (int->namer ix)
+  (lambda () (simple-format #f "arg-~A" ix)))
 
 (define (gen-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
@@ -833,7 +833,7 @@
       ;;(sferr "\nP: ~S\n" (car params))
       (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
 	     (udecl1 (udecl-rem-type-qual udecl1))
-	     (mdecl (udecl->mdecl udecl1 #:add-name (int->name ix))))
+	     (mdecl (udecl->mdecl udecl1 #:namer (int->namer ix))))
 	;;(sferr "  ~S\n" udecl1)
 	(cons (mtail->ffi-desc (cdr mdecl))
 	      (loop (1+ ix) (cdr params))))))))
@@ -848,7 +848,7 @@
      (else
       (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
 	     (udecl1 (udecl-rem-type-qual udecl1))
-	     (mdecl (udecl->mdecl udecl1 #:add-name (int->name ix))))
+	     (mdecl (udecl->mdecl udecl1 #:namer (int->namer ix))))
 	(cons (mtail->bs-desc (cdr mdecl))
 	      (loop (1+ ix) (cdr params))))))))
 
