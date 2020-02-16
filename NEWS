@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-00-00  pre V1.01.0 release
+2020-02-xx  V1.01.0 release
 	* read-only struct-vable fields in ffi-helper changed to writable:
 	  guile 3.0 deprecates read-only fields
 	* Split expand-typerefs from c99/munge.scm into c99/munge-base.scm.
