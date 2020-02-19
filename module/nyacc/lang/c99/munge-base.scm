@@ -58,7 +58,8 @@
 ;; Often declr can be xxxx-declr-list or xxxx-declr.
 ;; @end deffn
 (define (declr-list? declr)
-  (member (sx-tag declr) '(init-declr-list comp-declr-list)))
+  (and (pair? declr)
+       (member (sx-tag declr) '(init-declr-list comp-declr-list))))
 
 ;; @deffn {Procedure} clean-field-list field-list => field-list
 ;; @deffnx {Procedure} clean-fields fields => fields
@@ -114,7 +115,7 @@
      ((param-declr ,declr) (pointer-declr? declr))
      ;;
      ((ptr-declr ,pointer ,dir-declr) #t)
-     ((array-of . ,rest) #t)
+     ((ary-declr . ,rest) #t)
      ((ftn-declr . ,rest) #t)
      ((abs-declr (pointer . ,r1) . ,r2) #t)
      ;;
@@ -138,7 +139,7 @@
      ((param-declr ,declr) (pointer-declr? declr))
      ;;
      ((ptr-declr ,pointer ,dir-declr) #t)
-     ((array-of . ,rest) #t)
+     ((ary-declr . ,rest) #t)
      ((ftn-declr . ,rest) #t)
      ((abs-declr (pointer . ,r1) . ,r2) #t)
      ;;
@@ -221,29 +222,84 @@
 ;; @example
 ;; bla[3] => *(bla[3])
 ;; @end example
+
+
+;; @deffn {Procedure} abs-declr? declr
+;; This is a p to determine if the declarator is abstract.
+;; @end deffn
+(define (abs-declr? declr)
+  (cond
+   ((not declr) #t)
+   ((member (sx-tag declr) '(abs-ptr-declr abs-ary-declr abs-ftn-declr)) #t)
+   (else #f)))
+
 (define (tdef-splice-declr orig-declr tdef-declr)
-  (define (probe-declr declr)
+
+  ;; convert direct to direct
+  (define (probe-declr/dir declr)
     (sx-match declr
       ((ident ,name)
        (sx-ref orig-declr 1))
-      ((init-declr ,declr . ,rest)
-       `(init-declr ,(probe-declr declr) . ,rest))
-      ((comp-declr ,declr)
-       `(comp-declr ,(probe-declr declr)))
-      ((param-declr ,declr)
-       `(param-declr ,(probe-declr declr)))
-      ((array-of ,dir-declr ,array-spec)
-       `(array-of ,(probe-declr dir-declr) ,array-spec))
-      ((array-of ,dir-declr)
-       `(array-of ,(probe-declr dir-declr)))
-      ((ptr-declr ,pointer ,dir-declr)
-       `(ptr-declr ,pointer ,(probe-declr dir-declr)))
-      ((ftn-declr ,dir-declr . ,rest)
-       `(ftn-declr ,(probe-declr dir-declr) . ,rest))
-      ((scope ,declr)
-       `(scope ,(probe-declr declr)))
+      ((init-declr ,dcl . ,rest)
+       `(init-declr ,(probe-declr/dir dcl) . ,rest))
+      ((comp-declr ,dcl)
+       `(comp-declr ,(probe-declr/dir dcl)))
+      ((param-declr ,dcl)
+       `(param-declr ,(probe-declr/dir dcl)))
+      ((ptr-declr ,pointer ,dcl)
+       `(ptr-declr ,pointer ,(probe-declr/dir dcl)))
+      ((ary-declr ,dcl . ,rest)
+       `(ary-declr ,(probe-declr/dir dcl) . ,rest))
+      ((ftn-declr ,dcl . ,rest)
+       `(ftn-declr ,(probe-declr/dir dcl) . ,rest))
+      ((scope ,dcl)
+       `(scope ,(probe-declr/dir dcl)))
       (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
-  (probe-declr tdef-declr))
+
+  ;; convert direct to abstract
+  (define (probe-declr/abs declr)
+    (sx-match declr
+      ((ident ,name) #f)
+      ((init-declr ,dcl . ,rest)
+       `(init-declr ,(probe-declr/abs dcl) . ,rest))
+      ((comp-declr ,dcl)
+       `(comp-declr ,(probe-declr/abs dcl)))
+      ((param-declr ,dcl)
+       `(param-declr ,(probe-declr/abs dcl)))
+      ((comp-declr ,dcl)
+       `(comp-declr ,(probe-declr/abs dcl)))
+      ((param-declr ,dcl)
+       `(param-declr ,(probe-declr/abs dcl)))
+      ((ptr-declr ,ptr ,dcl)
+       (let ((dcl (probe-declr/abs dcl)))
+	 (if dcl `(abs-ptr-declr ,ptr ,dcl) `(abs-ptr-declr ,ptr))))
+      ((ary-declr ,dcl . ,rest)
+       (let ((dcl (probe-declr/abs dcl)))
+	 (if dcl `(abs-ary-declr ,dcl . ,rest) `(abs-ary-declr . ,rest))))
+      ((ftn-declr ,dcl . ,rest)
+       (let ((dcl (probe-declr/abs dcl)))
+	 (if dcl `(abs-ftn-declr ,dcl . ,rest) `(abs-ftn-declr . ,rest))))
+      ((scope ,dcl)
+       `(scope ,(probe-declr/abs dcl)))
+      (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
+
+  (define (x-probe-declr/abs declr)
+    (sx-match declr
+      ((param-declr ,abs-declr)
+       `(param-declr ,(probe-declr/dir abs-declr)))
+      ((abs-ptr-declr ,pointer ,abs-declr)
+       `(abs-ptr-declr ,pointer ,(probe-declr/abs abs-declr)))
+      ((abs-ary-declr ,abs-declr . ,rest)
+       `(abs-ary-declr ,(probe-declr/abs abs-declr) . ,rest))
+      ((abs-ftn-declr ,abs-declr . ,rest)
+       `(ftn-declr ,(probe-declr/abs abs-declr) . ,rest))
+      ((scope ,abs-declr)
+       `(scope ,(probe-declr/abs abs-declr)))
+      (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
+
+  (if (abs-declr? orig-declr)
+      (probe-declr/abs tdef-declr)
+      (probe-declr/dir tdef-declr)))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
 ;; iterate tdef-splice-declr over a declr-init-list (or equiv)
@@ -294,10 +350,9 @@
 		     (throw 'c99-error "typedef not found for: ~S" name)))
 	   (tdef-specl (sx-ref decl 1))	 ; specs for typename
 	   (tdef-declr (sx-ref decl 2))) ; declr for typename
-      (values ;; fixdd-specl fixed-declr
+      (values
        (tdef-splice-specl specl tdef-specl)
-       (cond ;; #f, init-declr-list, init-declr|comp-declr
-	((not declr) declr)
+       (cond
 	((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
 	(else (tdef-splice-declr declr tdef-declr))))))
 
@@ -320,7 +375,10 @@
 	(else				; expand
 	 (call-with-values
 	     (lambda () (splice-typename specl declr name udict))
-	   (lambda (specl declr) (re-expand specl declr))))))
+	   (lambda (specl declr)
+	     (sferr "splice-typename => specl, declr\n")
+	     (pperr specl) (pperr declr)
+	     (re-expand specl declr))))))
       ((struct-def union-def)
        (let* ((tag (sx-tag tspec))
 	      (attr (sx-attr tspec))
@@ -428,19 +486,27 @@
        ((param-declr ,declr1)
 	(let ((xdeclr (fix-declr declr1)))
 	  (if (eq? xdeclr declr1) declr `(param-declr ,xdeclr))))
-       ((array-of ,declr1 ,array-spec)
+       ((ary-declr ,declr1 ,array-spec)
 	(let ((xdeclr (fix-declr declr1)))
-	  (if (eq? xdeclr declr1) declr `(array-of ,xdeclr ,array-spec))))
-       ((array-of ,dir-declr)
+	  (if (eq? xdeclr declr1) declr `(ary-declr ,xdeclr ,array-spec))))
+       ((ary-declr ,dir-declr)
 	(let ((xdeclr (fix-declr dir-declr)))
-	  (if (eq? xdeclr dir-declr) declr `(array-of ,xdeclr))))
+	  (if (eq? xdeclr dir-declr) declr `(ary-declr ,xdeclr))))
        ((ptr-declr ,pointer ,dir-declr)
 	(let ((xdeclr (fix-declr dir-declr)))
 	  (if (eq? xdeclr dir-declr) declr `(ptr-declr ,pointer ,xdeclr))))
+       ((abs-ptr-declr ,pointer ,abs-declr)
+	(let ((xdeclr (fix-declr abs-declr)))
+	  (if (eq? xdeclr abs-declr) declr `(abs-ptr-declr ,pointer ,xdeclr))))
+       ((abs-ptr-declr ,pointer)
+	declr)
 
        ((scope ,declr1)
 	(let ((xdeclr (fix-declr declr1)))
 	  (if (eq? xdeclr declr1) declr `(scope ,xdeclr))))
+       ((abs-scope ,declr1)
+	(let ((xdeclr (fix-declr declr1)))
+	  (if (eq? xdeclr declr1) declr `(abs-scope ,xdeclr))))
 
        ;; abstract declarator and direct abstract declarator
        ((abs-declr ,pointer ,dir-abs-declr)
@@ -501,12 +567,10 @@
 	  (if (and (eq? xdeclr dir-declr) (eq? xparam-list param-list)) declr
 	      `(ftn-declr ,xdeclr ,xparam-list))))
        
-       ((abs-ftn-declr ,dir-declr ,param-list)
-	(let ((xdeclr (fix-declr dir-declr))
-	      (xparam-list (if (eq? 'param-list (sx-tag param-list))
-			       (fix-param-list param-list)
-			       param-list)))
-	  (if (and (eq? xdeclr dir-declr) (eq? xparam-list param-list)) declr
+       ((abs-ftn-declr ,abs-declr ,param-list)
+	(let ((xdeclr (fix-declr abs-declr))
+	      (xparam-list (fix-param-list param-list)))
+	  (if (and (eq? xdeclr abs-declr) (eq? xparam-list param-list)) declr
 	      `(abs-ftn-declr ,xdeclr ,xparam-list))))
        ((anon-ftn-declr ,param-list)
 	(let ((xparam-list (fix-param-list param-list)))
@@ -532,9 +596,9 @@
 		 (split-udecl adecl))
 		((repl-specl repl-declr)
 		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
-    ;;(sferr "orig-specl, orig-declr, repl-specl, repl-declr\n")
-    ;;(pperr orig-specl) (pperr orig-declr)
-    ;;(pperr repl-specl) (pperr repl-declr)
+    (sferr "orig-specl, orig-declr, repl-specl, repl-declr\n")
+    (pperr orig-specl) (pperr orig-declr)
+    (pperr repl-specl) (pperr repl-declr)
     (let ((repl-declr (fix-declr repl-declr)))
       (if (and (eq? orig-specl repl-specl)
 	       (eq? orig-declr repl-declr))

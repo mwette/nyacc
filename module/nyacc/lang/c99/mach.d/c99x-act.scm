@@ -689,27 +689,27 @@
    (lambda ($4 $3 $2 $1 . $rest) `(scope ,$2))
    ;; direct-declarator => direct-declarator "[" type-qualifier-list assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(array-of ,$1 ,$3 ,$4))
+     `(ary-declr ,$1 ,$3 ,$4))
    ;; direct-declarator => direct-declarator "[" type-qualifier-list "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(array-of ,$1 ,$3))
+     `(ary-declr ,$1 ,$3))
    ;; direct-declarator => direct-declarator "[" assignment-expression "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(array-of ,$1 ,$3))
+     `(ary-declr ,$1 ,$3))
    ;; direct-declarator => direct-declarator "[" "]"
-   (lambda ($3 $2 $1 . $rest) `(array-of ,$1))
+   (lambda ($3 $2 $1 . $rest) `(ary-declr ,$1))
    ;; direct-declarator => direct-declarator "[" "static" type-qualifier-li...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(array-of ,$1 ,$4 ,$5))
+     `(ary-declr ,$1 ,$4 ,$5))
    ;; direct-declarator => direct-declarator "[" type-qualifier-list "stati...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(array-of ,$1 ,4 ,$5))
+     `(ary-declr ,$1 ,4 ,$5))
    ;; direct-declarator => direct-declarator "[" type-qualifier-list "*" "]"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(array-of ,$1 ,$3 (var-len)))
+     `(ary-declr ,$1 ,$3 (var-len)))
    ;; direct-declarator => direct-declarator "[" "*" "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(array-of ,$1 (var-len)))
+     `(ary-declr ,$1 (var-len)))
    ;; direct-declarator => direct-declarator "(" parameter-type-list ")"
    (lambda ($4 $3 $2 $1 . $rest)
      `(ftn-declr ,$1 ,$3))
@@ -754,79 +754,80 @@
    ;; type-name => declaration-specifiers
    (lambda ($1 . $rest) `(type-name ,$1))
    ;; abstract-declarator => pointer direct-abstract-declarator
-   (lambda ($2 $1 . $rest) `(abs-declr ,$1 ,$2))
+   (lambda ($2 $1 . $rest) `(abs-ptr-declr ,$1 ,$2))
    ;; abstract-declarator => pointer
-   (lambda ($1 . $rest) `(abs-declr ,$1))
+   (lambda ($1 . $rest) `(abs-ptr-declr ,$1))
    ;; abstract-declarator => direct-abstract-declarator
-   (lambda ($1 . $rest) `(abs-declr ,$1))
+   (lambda ($1 . $rest) $1)
    ;; direct-abstract-declarator => "(" abstract-declarator ")"
-   (lambda ($3 $2 $1 . $rest) `(declr-scope ,$2))
+   (lambda ($3 $2 $1 . $rest) `(scope ,$2))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(declr-array ,$1 ,$3 ,$4))
+     `(abs-ary-declr ,$1 ,$3 ,$4))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(declr-array ,$1 ,$3))
+     `(abs-ary-declr ,$1 ,$3))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" assignme...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(declr-array ,$1 ,$3))
+     `(abs-ary-declr ,$1 ,$3))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "]"
-   (lambda ($3 $2 $1 . $rest) `(declr-array ,$1))
+   (lambda ($3 $2 $1 . $rest) `(abs-ary-declr ,$1))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "static"...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(declr-array
+     `(abs-ary-declr
         ,$1
         ,(tl->list (tl-insert $4 '(stor-spec "static")))
         ,$5))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "static"...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(declr-array
+     `(abs-ary-declr
         ,$1
         ,(tl->list (tl-insert $4 '(stor-spec "static")))))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(declr-array
+     `(abs-ary-declr
         ,$1
         ,(tl->list (tl-insert $3 '(stor-spec "static")))
         ,$5))
    ;; direct-abstract-declarator => "[" type-qualifier-list assignment-expr...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(declr-anon-array ,$2 ,$3))
+     `(abs-ary-declr ,$2 ,$3))
    ;; direct-abstract-declarator => "[" type-qualifier-list "]"
-   (lambda ($3 $2 $1 . $rest)
-     `(declr-anon-array ,$2))
+   (lambda ($3 $2 $1 . $rest) `(abs-ary-declr ,$2))
    ;; direct-abstract-declarator => "[" assignment-expression "]"
-   (lambda ($3 $2 $1 . $rest)
-     `(declr-anon-array ,$2))
+   (lambda ($3 $2 $1 . $rest) `(abs-ary-declr ,$2))
    ;; direct-abstract-declarator => "[" "]"
-   (lambda ($2 $1 . $rest) `(declr-anon-array))
+   (lambda ($2 $1 . $rest) `(abs-ary-declr))
    ;; direct-abstract-declarator => "[" "static" type-qualifier-list assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(declr-anon-array
+     `(abs-ary-declr
         ,(tl->list (tl-insert $3 '(stor-spec "static")))
         ,$4))
    ;; direct-abstract-declarator => "[" "static" type-qualifier-list "]"
    (lambda ($4 $3 $2 $1 . $rest)
-     `(declr-anon-array
+     `(abs-ary-declr
         ,(tl->list (tl-insert $3 '(stor-spec "static")))))
    ;; direct-abstract-declarator => "[" type-qualifier-list "static" assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(declr-anon-array
+     `(abs-ary-declr
         ,(tl->list (tl-insert $2 '(stor-spec "static")))
         ,$4))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "*" "]"
-   (lambda ($4 $3 $2 $1 . $rest) `(declr-star ,$1))
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(star-ary-declr ,$1))
    ;; direct-abstract-declarator => "[" "*" "]"
-   (lambda ($3 $2 $1 . $rest) '(declr-star))
+   (lambda ($3 $2 $1 . $rest) '(abs-star-ary-declr))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" paramete...
    (lambda ($4 $3 $2 $1 . $rest)
      `(abs-ftn-declr ,$1 ,$3))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" ")"
-   (lambda ($3 $2 $1 . $rest) `(abs-ftn-declr ,$1))
+   (lambda ($3 $2 $1 . $rest)
+     `(abs-ftn-declr ,$1 (param-list)))
    ;; direct-abstract-declarator => "(" parameter-type-list ")"
-   (lambda ($3 $2 $1 . $rest) `(anon-ftn-declr ,$2))
+   (lambda ($3 $2 $1 . $rest) `(abs-ftn-declr ,$2))
    ;; direct-abstract-declarator => "(" ")"
-   (lambda ($2 $1 . $rest) '(anon-ftn-declr))
+   (lambda ($2 $1 . $rest)
+     '(abs-ftn-declr (param-list)))
    ;; typedef-name => 'typename
    (lambda ($1 . $rest) `(typename ,$1))
    ;; initializer => assignment-expression

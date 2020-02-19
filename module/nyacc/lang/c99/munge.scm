@@ -118,9 +118,9 @@
 ;; @end example
 
 ;; mdecl is
-;; ("foo" (pointer-to) (array-of 3) (fixed-type "unsigned int"))
+;; ("foo" (pointer-to) (ary-declr 3) (fixed-type "unsigned int"))
 ;; which can be converted to
-;; ("(*foo) (array-of 3) (fixed-type "unsigned int"))
+;; ("(*foo) (ary-declr 3) (fixed-type "unsigned int"))
 ;; which can be converted to
 ;; (("((*foo)[0])" (fixed-type "unsigned int"))
 ;;  ("((*foo)[1])" (fixed-type "unsigned int"))
@@ -454,8 +454,8 @@
     ((init-declr ,declr . ,rest) (declr-ident declr))
     ((comp-declr ,declr) (declr-ident declr))
     ((param-declr ,declr) (declr-ident declr))
-    ((array-of ,dir-declr ,array-spec) (declr-ident dir-declr))
-    ((array-of ,dir-declr) (declr-ident dir-declr))
+    ((ary-declr ,dir-declr ,array-spec) (declr-ident dir-declr))
+    ((ary-declr ,dir-declr) (declr-ident dir-declr))
     ((ptr-declr ,pointer ,dir-declr) (declr-ident dir-declr))
     ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
@@ -790,8 +790,8 @@
 ;; @code{stripdown}.
 ;; @example
 ;; (decl (decl-spec-list (type-spec "double"))
-;;       (init-declr-list (
-;;       (comment "state vector")
+;;       (init-declr-list (...))
+;;       (comment "state vector"))
 ;; =>
 ;; ("x" "state vector" (array-of 10) (float "double")
 ;; @end example
@@ -836,9 +836,9 @@
       ((init-declr ,item)
        (unwrap-declr item #:const const))
 
-      ((array-of ,dir-declr ,size)
+      ((ary-declr ,dir-declr ,size)
        (cons `(array-of ,(cnvt-size-expr size)) (unwrap-declr dir-declr)))
-      ((array-of ,dir-declr)
+      ((ary-declr ,dir-declr)
        (cons `(array-of) (unwrap-declr dir-declr)))
 
       ((ftn-declr ,dir-declr ,param-list)
@@ -934,7 +934,7 @@
       (((pointer-to) . ,rest)
        (doit `(ptr-declr (pointer) ,declr) rest))
       (((array-of ,size) . ,rest)
-       (doit `(array-of ,declr ,size) rest))
+       (doit `(ary-declr ,declr ,size) rest))
       
       (,_
        (sferr "munge/mdecl->udecl missed:\n")

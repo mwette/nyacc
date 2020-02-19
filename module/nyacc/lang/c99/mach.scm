@@ -541,25 +541,25 @@
      ("(" attribute-specifier declarator ")" ($$ `(scope ,$2)))
      (direct-declarator
       "[" type-qualifier-list assignment-expression "]"
-      ($$ `(array-of ,$1 ,$3 ,$4)))
+      ($$ `(ary-declr ,$1 ,$3 ,$4)))
      (direct-declarator
-      "[" type-qualifier-list "]" ($$ `(array-of ,$1 ,$3)))
+      "[" type-qualifier-list "]" ($$ `(ary-declr ,$1 ,$3)))
      (direct-declarator
-      "[" assignment-expression "]" ($$ `(array-of ,$1 ,$3)))
+      "[" assignment-expression "]" ($$ `(ary-declr ,$1 ,$3)))
      (direct-declarator
-      "[" "]" ($$ `(array-of ,$1)))
+      "[" "]" ($$ `(ary-declr ,$1)))
      (direct-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(array-of ,$1 ,$4 ,$5))) ;; FIXME $4 needs "static" added
+      ($$ `(ary-declr ,$1 ,$4 ,$5))) ;; FIXME $4 needs "static" added
      (direct-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(array-of ,$1 ,4 ,$5))) ;; FIXME $4 needs "static" added
+      ($$ `(ary-declr ,$1 ,4 ,$5))) ;; FIXME $4 needs "static" added
      (direct-declarator
       "[" type-qualifier-list "*" "]"	; variable length array
-      ($$ `(array-of ,$1 ,$3 (var-len))))
+      ($$ `(ary-declr ,$1 ,$3 (var-len))))
      (direct-declarator
       "[" "*" "]"			; variable length array
-      ($$ `(array-of ,$1 (var-len))))
+      ($$ `(ary-declr ,$1 (var-len))))
      (direct-declarator
       "(" parameter-type-list ")" ($$ `(ftn-declr ,$1 ,$3)))
      (direct-declarator
@@ -603,55 +603,53 @@
      (declaration-specifiers ($$ `(type-name ,$1))))
 
     (abstract-declarator		; S 6.7.6
-     (pointer direct-abstract-declarator ($$ `(abs-declr ,$1 ,$2)))
-     (pointer ($$ `(abs-declr ,$1)))
-     (direct-abstract-declarator ($$ `(abs-declr ,$1))))
+     (pointer direct-abstract-declarator ($$ `(abs-ptr-declr ,$1 ,$2)))
+     (pointer ($$ `(abs-ptr-declr ,$1)))
+     (direct-abstract-declarator))
 
     (direct-abstract-declarator
-     ("(" abstract-declarator ")" ($$ `(declr-scope ,$2)))
+     ("(" abstract-declarator ")" ($$ `(scope ,$2)))
      (direct-abstract-declarator
       "[" type-qualifier-list assignment-expression "]"
-      ($$ `(declr-array ,$1 ,$3 ,$4)))
+      ($$ `(abs-ary-declr ,$1 ,$3 ,$4)))
      (direct-abstract-declarator
       "[" type-qualifier-list "]"
-      ($$ `(declr-array ,$1 ,$3)))
+      ($$ `(abs-ary-declr ,$1 ,$3)))
      (direct-abstract-declarator
       "[" assignment-expression "]"
-      ($$ `(declr-array ,$1 ,$3)))
+      ($$ `(abs-ary-declr ,$1 ,$3)))
      (direct-abstract-declarator
-      "[" "]" ($$ `(declr-array ,$1)))
+      "[" "]" ($$ `(abs-ary-declr ,$1)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(declr-array
-	    ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))) ,$5)))
+      ($$ `(abs-ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static")))
+			  ,$5)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list "]"
-      ($$ `(declr-array ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))))))
+      ($$ `(abs-ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))))))
      (direct-abstract-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(declr-array
-	    ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static"))) ,$5)))
+      ($$ `(abs-ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static")))
+			  ,$5)))
      ;;
      ("[" type-qualifier-list assignment-expression "]"
-      ($$ `(declr-anon-array ,$2 ,$3)))
-     ("[" type-qualifier-list "]" ($$ `(declr-anon-array ,$2)))
-     ("[" assignment-expression "]" ($$ `(declr-anon-array ,$2)))
-     ("[" "]" ($$ `(declr-anon-array)))
+      ($$ `(abs-ary-declr ,$2 ,$3)))
+     ("[" type-qualifier-list "]" ($$ `(abs-ary-declr ,$2)))
+     ("[" assignment-expression "]" ($$ `(abs-ary-declr ,$2)))
+     ("[" "]" ($$ `(abs-ary-declr)))
      ("[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(declr-anon-array
-	    ,(tl->list (tl-insert $3 '(stor-spec "static"))) ,$4)))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static"))) ,$4)))
      ("[" "static" type-qualifier-list "]"
-      ($$ `(declr-anon-array ,(tl->list (tl-insert $3 '(stor-spec "static"))))))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static"))))))
      ("[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(declr-anon-array
-	    ,(tl->list (tl-insert $2 '(stor-spec "static"))) ,$4)))
-     (direct-abstract-declarator "[" "*" "]" ($$ `(declr-star ,$1)))
-     ("[" "*" "]" ($$ '(declr-star)))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec "static"))) ,$4)))
+     (direct-abstract-declarator "[" "*" "]" ($$ `(star-ary-declr ,$1)))
+     ("[" "*" "]" ($$ '(abs-star-ary-declr)))
      (direct-abstract-declarator "(" parameter-type-list ")"
 				 ($$ `(abs-ftn-declr ,$1 ,$3)))
-     (direct-abstract-declarator "(" ")" ($$ `(abs-ftn-declr ,$1)))
-     ("(" parameter-type-list ")" ($$ `(anon-ftn-declr ,$2)))
-     ("(" ")" ($$ '(anon-ftn-declr))))
+     (direct-abstract-declarator "(" ")" ($$ `(abs-ftn-declr ,$1 (param-list))))
+     ("(" parameter-type-list ")" ($$ `(abs-ftn-declr ,$2)))
+     ("(" ")" ($$ '(abs-ftn-declr (param-list)))))
 
     ;; typedef-name is generated by the lexical analyzer
     (typedef-name ('typename ($$ `(typename ,$1))))

@@ -205,11 +205,13 @@
       ((ident) (sx-ref declr 1))
       ((init-declr) (declr->id-name (sx-ref declr 1)))
       ((comp-declr) (declr->id-name (sx-ref declr 1)))
-      ((array-of) (declr->id-name (sx-ref declr 1)))
+      ((ary-declr) (declr->id-name (sx-ref declr 1)))
       ((ptr-declr) (declr->id-name (sx-ref declr 2)))
       ((ftn-declr) (declr->id-name (sx-ref declr 1)))
       ((scope) (declr->id-name (sx-ref declr 1)))
-      (else (error "coding bug: " declr))))
+      (else
+       (pp (car declr))
+       (error "coding bug: " declr))))
        
   ;;(sf "\ndecl:\n") (pp decl)
 

@@ -476,11 +476,18 @@
 	  (if (pair? (cdr dsl)) (sf " ")))
 	tql))
 
-      ((array-of ,dir-declr ,arg)
-       (ppx dir-declr) (sf "[") (ppx arg) (sf "]"))
-      ((array-of ,dir-declr)
-       (ppx dir-declr) (sf "[]"))
+      ((ary-declr ,declr ,arg)
+       (ppx declr) (sf "[") (ppx arg) (sf "]"))
+      ((ary-declr ,declr)
+       (ppx declr) (sf "[]"))
       ;; MORE TO GO
+
+      ((abs-ary-declr ,declr ,arg)
+       (ppx declr) (sf "[") (ppx arg) (sf "]"))
+      ((abs-ary-declr ,arg)
+       (sf "[") (ppx arg) (sf "]"))
+      ((abs-ary-declr)
+       (sf "[]"))
       
       ((ftn-declr ,dir-declr ,param-list)
        (ppx dir-declr) (sf "(") (ppx param-list) (sf ")"))
@@ -653,12 +660,23 @@
 	 (sf " ")
 	 (ppx compd-stmt)))
 
-      ((ptr-declr . ,rest)
-       (ppx (sx-ref tree 1)) (ppx (sx-ref tree 2)))
+      ((ptr-declr ,ptr ,dcl)
+       (ppx ptr) (ppx dcl))
       
-      ((ftn-declr . ,rest)
-       (ppx (sx-ref tree 1))	; direct-declarator
-       (sf "(") (ppx (sx-ref tree 2)) (sf ")"))
+      ((abs-ptr-declr ,ptr)
+       (ppx ptr))
+       
+      ((abs-ptr-declr ,ptr ,dcl)
+       (ppx ptr) (ppx dcl))
+      
+      ((ftn-declr ,dcl ,params)
+       (ppx dcl) (sf "(") (ppx params) (sf ")"))
+
+      ((abs-ftn-declr ,dcl ,params)
+       (ppx dcl) (sf "(") (ppx params) (sf ")"))
+
+      ((abs-ftn-declr ,params)
+       (sf "(") (ppx params) (sf ")"))
 
       ((param-list . ,params)
        (pair-for-each
