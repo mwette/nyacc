@@ -9,8 +9,11 @@
 
 (define-module (lex-01)
   #:use-module (nyacc lex)
-  #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (test-suite lib))
+
+(define (fold p s l)
+  (let loop ((s s) (l l))
+    (if (null? l) s (loop (p (car l) s) (cdr l)))))
 
 ;; not used
 (define mt
