@@ -196,23 +196,53 @@
 ;; int, int*, int*[], int **, int(), int(float), int*(float),
 ;; int*(float)[3]
 
+(define (fold p s l)
+  (let loop ((s s) (l l))
+    (if (null? l) s (loop (p (car l) s) (cdr l)))))
+
+(define cases
+  '(
+    ;;("typedef int foo_t; foo_t bar;" . "int bar;")
+    ;;("typedef int *foo_t; foo_t bar;" . "int *bar;")
+    ("typedef int *foo_t; foo_t *bar;" . "int **bar;") ;; do this for abs also
+    ;;("typedef int *foo_t[2]; foo_t bar;" . "int *bar[2];")
+    ))
+
 (when #t
+  (fold
+   (lambda (pair status)
+     (let* ((ltree (parse-string (car pair)))
+	    (rtree (parse-string (cdr pair)))
+	    (ldict (c99-trans-unit->udict ltree))
+	    (ldecl (assoc-ref ldict "bar"))
+	    (rdict (c99-trans-unit->udict rtree))
+	    (rdecl (assoc-ref rdict "bar"))
+	    (xdecl (expand-typerefs ldecl ldict)))
+       (sf "expected:\n")
+       (ppsx rdecl) (sf "  ~A\n" (cdr pair))
+       (sf "expanded:\n")
+       (ppsx xdecl) (pp99 xdecl)
+       (newline)
+       (and status (equal? rdecl xdecl))))
+   #t cases)
+  )
+
+(when #f
   (let* ((code (string-append
 		;;"typedef int bar_t[2];\n"
-		"typedef int *bar_t;\n"
+		"typedef int bar_t;\n"
 		;;"bar_t foo(bar_t (*)(bar_t));\n" ;; <= param-list broken
 		"int foo(bar_t);\n" ;; <= param-list broken
 		))
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
 	 (udecl (assoc-ref udict "foo"))
-	 ;;(xdecl (expand-typerefs udecl udict))
+	 (xdecl (expand-typerefs udecl udict))
 	 )
     (pp udecl)
-    (pp (expand-typerefs udecl udict))
-    ;;(pp xdecl)
-    ;;(pp99 udecl)
-    ;;(pp99 xdecl)
+    (pp xdecl)
+    (pp99 udecl)
+    (pp99 xdecl)
     #t))
 
 (when #f
