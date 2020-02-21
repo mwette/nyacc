@@ -114,7 +114,7 @@
        (sizeof ffi-type)))
     ((type-name (decl-spec-list (type-spec . ,_1)) (abs-declr (pointer)))
      (sizeof '*))
-    (else
+    (,_
      (throw 'c99-error "failed to expand sizeof type ~S" (sx-ref tree 1)))))
   
 ;; (sizeof unary-expr)

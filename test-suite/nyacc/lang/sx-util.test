@@ -22,69 +22,69 @@
 
   (pass-if "basics"
     (and
-     (sx-match '(foo (bar)) (else #t))
+     (sx-match '(foo (bar)) (,_ #t))
      (sx-match '(foo "hello") ((foo ,_) #t) (,_ #f))
-     (sx-match '(foo "hello") ((foo ,_) #t) (else #f))
-     (sx-match '(foo (bar (baz))) ((foo (bar (baz))) #t) (else #f))
-     (sx-match '(foo (bar)) ((foo ,nd) (equal? '(bar) nd)) (else #f))
-     (sx-match '(foo) ((foo . ,_) #t) (else #f))
+     (sx-match '(foo "hello") ((foo ,_) #t) (,_ #f))
+     (sx-match '(foo (bar (baz))) ((foo (bar (baz))) #t) (,_ #f))
+     (sx-match '(foo (bar)) ((foo ,nd) (equal? '(bar) nd)) (,_ #f))
+     (sx-match '(foo) ((foo . ,_) #t) (,_ #f))
      #t))
 
   (pass-if "w/ val attr, w/ pat attr"
     (and
      (sx-match '(foo (@ (a "1") (b "2")))
        ((foo (@ . ,al)) #t)
-       (else #f))
+       (,_ #f))
      (sx-match '(foo (@ (a "1")) "hello")
        ((foo (@ . ,al) . ,rest) #t)
-       (else #f))
+       (,_ #f))
      (sx-match '(foo (@) (bar "baz") "hello")
        ((foo (bar (@ . ,al) . ,text) . ,rest) #t)
-       (else #f))
+       (,_ #f))
      (sx-match '(foo (bar (@ (a "1")) "baz") "hello")
        ((foo (@ . ,al) (bar . ,text) . ,rest) #t)
-       (else #f))
+       (,_ #f))
      #t))
 
   (pass-if "no val attr, w/ pat attr"
     (and
-     (sx-match '(foo) ((foo (@ . ,al)) #t) (else #f))
-     (sx-match '(foo "hello") ((foo (@ . ,al) . ,rest) #t) (else #f))
+     (sx-match '(foo) ((foo (@ . ,al)) #t) (,_ #f))
+     (sx-match '(foo "hello") ((foo (@ . ,al) . ,rest) #t) (,_ #f))
      (sx-match '(foo (bar "baz") "hello")
-       ((foo (bar (@ . ,al) . ,text) . ,rest) #t) (else #f))
+       ((foo (bar (@ . ,al) . ,text) . ,rest) #t) (,_ #f))
      (sx-match '(foo (bar "baz") "hello")
-       ((foo (@ . ,al) (bar . ,text) . ,rest) #t) (else #f))
+       ((foo (@ . ,al) (bar . ,text) . ,rest) #t) (,_ #f))
      #t))
 
   (pass-if "w/ val attr, no pat attr"
     (and
-     (sx-match '(foo (@ (a "1") (b "2"))) ((foo) #t) (else #f))
-     (sx-match '(foo (@ (a "1")) "hello") ((foo . ,rest) #t) (else #f))
+     (sx-match '(foo (@ (a "1") (b "2"))) ((foo) #t) (,_ #f))
+     (sx-match '(foo (@ (a "1")) "hello") ((foo . ,rest) #t) (,_ #f))
      (sx-match '(foo (@) (bar "baz") "hello")
-       ((foo (bar . ,text) . ,rest) #t) (else #f))
+       ((foo (bar . ,text) . ,rest) #t) (,_ #f))
      (sx-match '(foo (bar (@ (a "1")) "baz") "hello")
-       ((foo (bar . ,text) . ,rest) #t) (else #f))
+       ((foo (bar . ,text) . ,rest) #t) (,_ #f))
      #t))
 
   (pass-if "no val attr, no pat attr"
     (and
-     (sx-match '(foo) ((foo) #t) (else #f))
-     (sx-match '(foo "hello") ((foo . ,rest) #t) (else #f))
+     (sx-match '(foo) ((foo) #t) (,_ #f))
+     (sx-match '(foo "hello") ((foo . ,rest) #t) (,_ #f))
      (sx-match '(foo (bar "baz") "hello")
-       ((foo (bar . ,text) . ,rest) #t) (else #f))
+       ((foo (bar . ,text) . ,rest) #t) (,_ #f))
      #t))
 
   (pass-if "more random tests"
     (and
-     ;;(sx-match '(foo "abc" "def") ((foo (bar . *)) #f) (else #t))
-     (sx-match '(foo "hi") ((foo ,greet) (string=? greet "hi")) (else #f))
-     (sx-match '(foo "hi") ((foo . ,rest) (string=? (car rest) "hi")) (else #f))
-     (sx-match '(foo "hi") ((foo "bar") #f) ((foo "hi") #t) (else #f))
+     ;;(sx-match '(foo "abc" "def") ((foo (bar . *)) #f) (,_ #t))
+     (sx-match '(foo "hi") ((foo ,greet) (string=? greet "hi")) (,_ #f))
+     (sx-match '(foo "hi") ((foo . ,rest) (string=? (car rest) "hi")) (,_ #f))
+     (sx-match '(foo "hi") ((foo "bar") #f) ((foo "hi") #t) (,_ #f))
      #t))
 
   (pass-if "sx-match-tail"
     (and
-     (sx-match-tail '((foo "hi") "there") (((foo "hi") . ,_) #t) (else #f))
+     (sx-match-tail '((foo "hi") "there") (((foo "hi") . ,_) #t) (,_ #f))
      #t))
 	
   )

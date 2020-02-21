@@ -380,7 +380,7 @@
 	 (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
 		 tag decl-attr specl declrs seed))
 
-	(else (iter-declrs tag decl-attr specl declrs seed)))))
+	(,_ (iter-declrs tag decl-attr specl declrs seed)))))
    
    ((eqv? (sx-tag decl) 'comp-udecl) (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag decl) 'comp-decl) (unitize-comp-decl decl seed))
@@ -460,7 +460,7 @@
     ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
     ((bit-field ,ident . ,rest) ident)
-    (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
+    (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
 ;; @deffn {Procedure} declr-id decl => "name"
 ;; This extracts the name from the return value of @code{declr-ident}.
@@ -526,7 +526,7 @@
 (define (typedef-decl? decl)
   (sx-match decl
     ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
-    (else #f)))
+    (,_ #f)))
 
 ;; === enums and defines ===============
 
@@ -819,7 +819,7 @@
       ((pointer (type-qual-list . ,type-qual)) '((pointer-to)))
       ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
       ((pointer) '((pointer-to)))
-      (else
+      (,_
        (sferr "unwrap-pointer failed on:\n") (pperr pointer)
        (throw 'nyacc-error "unwrap-pointer"))))
 
@@ -889,7 +889,7 @@
       ((comp-declr ,item) (unwrap-declr item))
       ((param-declr ,item) (unwrap-declr item))
 
-      (else
+      (,_
        (sferr "munge/unwrap-declr missed:\n")
        (pperr declr)
        (throw 'nyacc-error "c99/munge: udecl->mdecl failed")

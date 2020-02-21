@@ -124,7 +124,7 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (else #f))))
+     (,_ #f))))
 
 ;; @deffn {Procedure} pointer-pass-declr? declr => #t|#f
 ;; This predicate determines if the declarator is implemented as a pointer.
@@ -148,7 +148,7 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (else #f))))
+     (,_ #f))))
 
 ;; @deffn {Procedure} repl-typespec decl-spec-list repl-type-spec
 ;; In the decl-spec-list replace the type-specifier.
@@ -231,12 +231,14 @@
   (cond
    ((not declr) #t)
    ((member (sx-tag declr) '(abs-ptr-declr abs-ary-declr abs-ftn-declr)) #t)
+   ((param-declr) (abs-declr? (sx-ref declr 1)))
    (else #f)))
 
 (define (tdef-splice-declr orig-declr tdef-declr)
 
   ;; convert direct to direct
   (define (probe-declr/dir declr)
+    (sferr "probe/dir:\n") (pperr declr)
     (sx-match declr
       ((ident ,name)
        (sx-ref orig-declr 1))
@@ -251,16 +253,20 @@
 	 (sx-match dcl
 	   ((ptr-declr ,ptr1 ,dcl1) `(ptr-declr (pointer ,ptr1) ,dcl1))
 	   (,_ `(ptr-declr ,ptr ,(probe-declr/dir dcl))))))
+
       ((ary-declr ,dcl . ,rest)
        `(ary-declr ,(probe-declr/dir dcl) . ,rest))
+
       ((ftn-declr ,dcl . ,rest)
        `(ftn-declr ,(probe-declr/dir dcl) . ,rest))
+
       ((scope ,dcl)
        `(scope ,(probe-declr/dir dcl)))
-      (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
+      (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
   ;; convert direct to abstract
   (define (probe-declr/abs declr)
+    (sferr "probe/abs:\n") (pperr declr)
     (sx-match declr
       ((ident ,name) #f)
       ((init-declr ,dcl . ,rest)
@@ -275,7 +281,11 @@
        `(param-declr ,(probe-declr/abs dcl)))
       ((ptr-declr ,ptr ,dcl)
        (let ((dcl (probe-declr/abs dcl)))
-	 (if dcl `(abs-ptr-declr ,ptr ,dcl) `(abs-ptr-declr ,ptr))))
+	 (if dcl
+	     (sx-match dcl
+	       ((ptr-declr ,ptr1 ,dcl1) `(abs-ptr-declr (pointer ,ptr1) ,dcl1))
+	       (,_ `(abs-ptr-declr ,ptr ,dcl)))
+	     `(abs-ptr-declr ,ptr))))
       ((ary-declr ,dcl . ,rest)
        (let ((dcl (probe-declr/abs dcl)))
 	 (if dcl `(abs-ary-declr ,dcl . ,rest) `(abs-ary-declr . ,rest))))
@@ -284,7 +294,7 @@
 	 (if dcl `(abs-ftn-declr ,dcl . ,rest) `(abs-ftn-declr . ,rest))))
       ((scope ,dcl)
        `(scope ,(probe-declr/abs dcl)))
-      (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
+      (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
   (if (abs-declr? orig-declr)
       (probe-declr/abs tdef-declr)
@@ -579,13 +589,13 @@
 	      declr
 	      `(comp-declr-list . ,xdeclrs))))
        
-       (else (throw 'c99-error "c99/munge: unknown declarator: " declr)))))
+       (,_ (throw 'c99-error "c99/munge: unknown declarator: " declr)))))
 
   (let*-values (((tag attr orig-specl orig-declr)
 		 (split-udecl adecl))
 		((repl-specl repl-declr)
 		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
-    (when #t
+    (when #f
       (sferr "orig-specl, orig-declr\n")
       (pperr orig-specl) (pperr orig-declr)
       (sferr "\n")
