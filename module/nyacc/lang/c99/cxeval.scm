@@ -114,7 +114,7 @@
        (sizeof ffi-type)))
     ((type-name (decl-spec-list (type-spec . ,_1)) (abs-declr (pointer)))
      (sizeof '*))
-    (else
+    (,_
      (throw 'c99-error "failed to expand sizeof type ~S" (sx-ref tree 1)))))
   
 ;; (sizeof unary-expr)
@@ -132,7 +132,7 @@
       ((p-expr (string . ,strl))
        (let loop ((l 0) (sl strl))
 	 (if (pair? sl) (loop (+ l (string-length (car sl))) (cdr sl)) l)))
-      (else
+      (,_
        (throw 'c99-error "failed to expand sizeof expr ~S" expr)))))
 
 (define (eval-ident name udict ddict)

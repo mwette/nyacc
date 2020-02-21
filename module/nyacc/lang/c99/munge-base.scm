@@ -123,7 +123,7 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (else #f))))
+     (,_ #f))))
 
 ;; @deffn {Procedure} pointer-pass-declr? declr => #t|#f
 ;; This predicate determines if the declarator is implemented as a pointer.
@@ -147,7 +147,7 @@
      ((comp-declr-list . ,declrs)
       (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
      ;;
-     (else #f))))
+     (,_ #f))))
 
 ;; @deffn {Procedure} repl-typespec decl-spec-list repl-type-spec
 ;; In the decl-spec-list replace the type-specifier.
@@ -242,7 +242,7 @@
        `(ftn-declr ,(probe-declr dir-declr) . ,rest))
       ((scope ,declr)
        `(scope ,(probe-declr declr)))
-      (else (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
+      (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
   (probe-declr tdef-declr))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
@@ -526,7 +526,7 @@
 	      declr
 	      `(comp-declr-list . ,xdeclrs))))
        
-       (else (throw 'c99-error "c99/munge: unknown declarator: " declr)))))
+       (,_ (throw 'c99-error "c99/munge: unknown declarator: " declr)))))
 
   (let*-values (((tag attr orig-specl orig-declr)
 		 (split-udecl adecl))
