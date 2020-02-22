@@ -45,13 +45,16 @@ AC_SUBST([GUILE_DATA])
 AC_SUBST([GUILE_LOAD_PATH])
 AC_SUBST([GUILE_LOAD_COMPILED_PATH])
 
-if $GUILE -c "(use-modules (bytestructures guile)) (exit 0)"; then
-  echo "(bytestructure guile) exists: ffi-help will be installed/compiled"
+AC_MSG_CHECKING([if (bytestructures guile) is available])
+if $GUILE -c "(use-modules (bytestructures guile)) (exit ((lambda () 0)))" \
+	>/dev/null 2>&1; then
+  res=yes;
   NYACC_FH_BINS='$(NYACC_FH_BINS)'
 else
-  echo "(bytestructure guile) does not exist: ffi-help will be installed"
+  res=no;
   NYACC_FH_BINS=''
 fi
+AC_MSG_RESULT($res)
 AC_SUBST([NYACC_FH_BINS])
 
 dnl needed by etc/guild:

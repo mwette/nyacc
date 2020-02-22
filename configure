@@ -1804,13 +1804,18 @@ fi
 
 
 
-if $GUILE -c "(use-modules (bytestructures guile)) (exit 0)"; then
-  echo "(bytestructure guile) exists: ffi-help will be installed/compiled"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if (bytestructures guile) is available" >&5
+$as_echo_n "checking if (bytestructures guile) is available... " >&6; }
+if $GUILE -c "(use-modules (bytestructures guile)) (exit ((lambda () 0)))" \
+	>/dev/null 2>&1; then
+  res=yes;
   NYACC_FH_BINS='$(NYACC_FH_BINS)'
 else
-  echo "(bytestructure guile) does not exist: ffi-help will be installed"
+  res=no;
   NYACC_FH_BINS=''
 fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $res" >&5
+$as_echo "$res" >&6; }
 
 
 installed_guile=$GUILE

@@ -413,7 +413,7 @@
 ;; sxm-sexp val pat kt kf
 ;; match sexp
 (define-syntax sxm-sexp
-  (syntax-rules (@ unquote else)
+  (syntax-rules (@ unquote)
     ;; accept anything
     ((_ v (unquote w) kt kf) (let ((w v)) kt))
     ;; capture attributes
@@ -429,9 +429,7 @@
 	      (if (sx-has-attr? v)
 		  (sxm-tail (cddr v) nl kt kf)
 		  (sxm-tail (cdr v) nl kt kf))
-	      kf))
-    ;; deprecate `else' syntax?
-    ((_ v else kt kf) kt)))
+	      kf))))
  
 ;; sxm-tag val pat kt kf
 ;; match tag: foo|#(foo bar baz)|,any
