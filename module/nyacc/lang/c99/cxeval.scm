@@ -132,7 +132,7 @@
       ((p-expr (string . ,strl))
        (let loop ((l 0) (sl strl))
 	 (if (pair? sl) (loop (+ l (string-length (car sl))) (cdr sl)) l)))
-      (else
+      (,_
        (throw 'c99-error "failed to expand sizeof expr ~S" expr)))))
 
 (define (eval-ident name udict ddict)

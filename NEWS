@@ -1,11 +1,11 @@
-Copyright (C) 2017-2019 Matthew R. Wette
+Copyright (C) 2017-2020 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-02-16  V1.01.0 release
+2020-02-22  V1.01.1 (V1.01.0 not released)
 	* read-only struct-vable fields in ffi-helper changed to writable:
 	  guile 3.0 deprecates read-only fields
 	* Split expand-typerefs from c99/munge.scm into c99/munge-base.scm.
@@ -17,6 +17,10 @@ without any warranty.
 	* now installing examples in $(DATADIR)/nyacc/examples
 	* updated configure.ac to be guix-compatible
 	* changed configure : removed guile.m4 pkg.m4 nyacc.m4
+
+2020-01-07  V1.00.2
+	* updated configure scripts to handle 2.0.14 via
+	  --with-guile=/path/to/guile
 
 2019-12-29  V1.00.1
 	* in nyacc/util.scm, changed a letrec* to letrec

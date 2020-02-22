@@ -361,7 +361,7 @@
        `(if ,x1 ,t1 (else-if ,x2 ,t2) (else-if ,x3 ,t3) . ,rest))
       ((if ,x1 ,t1 (if ,x2 ,t2 . ,rest))
        `(if ,x1 ,t1 (else-if ,x2 ,t2) . ,rest))
-      (else
+      (,_
        tree)))
   (foldt fU identity tree))
 

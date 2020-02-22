@@ -333,7 +333,7 @@
      (lambda (stmt seed)
        ;;(sx-match stmt
        ;;  ((cpp-stmt (define . ,rest)) (cons (sx-ref stmt 1) seed))
-       ;;  (else seed)))
+       ;;  (,_ seed)))
        (if (and (eqv? 'cpp-stmt (sx-tag stmt))
 		(eqv? 'define (sx-tag (sx-ref stmt 1))))
 	   (cons (sx-ref stmt 1) seed)
