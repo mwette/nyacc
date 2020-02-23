@@ -106,7 +106,6 @@
 ;; in which case all elements need to be pointers.
 ;; @end deffn
 (define (pointer-declr? declr)
-  ;;(sferr "pointer-declr? ~S\n" declr)
   (and
    declr
    (sx-match declr
@@ -226,7 +225,6 @@
 (define (tdef-splice-declr orig-declr tdef-declr)
 
   (define (probe-declr declr)
-    ;;(sferr "probe-decl:\n") (pperr declr)
     (sx-match declr
       ((ident ,name)
        (sx-ref orig-declr 1))
@@ -331,8 +329,6 @@
 	 (call-with-values
 	     (lambda () (splice-typename specl declr name udict))
 	   (lambda (specl declr)
-	     ;;(sferr "splice-typename => specl, declr\n")
-	     ;;(pperr specl) (pperr declr)
 	     (re-expand specl declr))))))
       ((struct-def union-def)
        (let* ((tag (sx-tag tspec))
@@ -425,7 +421,6 @@
 
   ;; This will check for function declrs and fix parameters.
   (define (fix-declr declr)
-    ;;(sferr "fix-declr:\n") (pperr declr)
     (and
      declr
      (sx-match declr
@@ -450,7 +445,7 @@
        ((ptr-declr ,pointer ,dir-declr)
 	(let ((xdeclr (fix-declr dir-declr)))
 	  (if (eq? xdeclr dir-declr) declr `(ptr-declr ,pointer ,xdeclr))))
-       ((abs-ptr-declr ,pointer ,abs-declr)
+       #;((abs-ptr-declr ,pointer ,abs-declr)
 	(let ((xdeclr (fix-declr abs-declr)))
 	  (if (eq? xdeclr abs-declr) declr `(abs-ptr-declr ,pointer ,xdeclr))))
        ((abs-ptr-declr ,pointer)
@@ -540,7 +535,6 @@
 	      `(init-declr-list . ,xdeclrs))))
        ((comp-declr-list . ,declrs)
 	(let ((xdeclrs (map fix-declr declrs)))
-	  ;;(sferr "    declrs, xdeclrs:\n") (pperr declrs) (pperr xdeclrs)
 	  (if (fold (lambda (l r seed) (and (eq? l r) seed)) #t xdeclrs declrs)
 	      declr
 	      `(comp-declr-list . ,xdeclrs))))

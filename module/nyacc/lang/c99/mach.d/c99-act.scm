@@ -761,6 +761,16 @@
    (lambda ($1 . $rest) $1)
    ;; direct-abstract-declarator => "(" abstract-declarator ")"
    (lambda ($3 $2 $1 . $rest) $2)
+   ;; direct-abstract-declarator => direct-abstract-declarator "(" paramete...
+   (lambda ($4 $3 $2 $1 . $rest)
+     (let ((dcl (if #f `(scope ,$1) $1)))
+       `(ftn-declr ,dcl ,$3)))
+   ;; direct-abstract-declarator => direct-abstract-declarator "(" ")"
+   (lambda ($3 $2 $1 . $rest)
+     (let ((dcl (if (memq (sx-tag $1) '(ptr-declr abs-ptr-declr))
+                  `(scope ,$1)
+                  $1)))
+       `(ftn-declr ,dcl (param-list))))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 ,$4))
@@ -789,6 +799,14 @@
         ,$1
         ,(tl->list (tl-insert $3 '(stor-spec "static")))
         ,$5))
+   ;; direct-abstract-declarator => direct-abstract-declarator "[" "*" "]"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(star-ary-declr ,$1))
+   ;; direct-abstract-declarator => "(" parameter-type-list ")"
+   (lambda ($3 $2 $1 . $rest) `(abs-ftn-declr ,$2))
+   ;; direct-abstract-declarator => "(" ")"
+   (lambda ($2 $1 . $rest)
+     '(abs-ftn-declr (param-list)))
    ;; direct-abstract-declarator => "[" type-qualifier-list assignment-expr...
    (lambda ($4 $3 $2 $1 . $rest)
      `(abs-ary-declr ,$2 ,$3))
@@ -812,22 +830,8 @@
      `(abs-ary-declr
         ,(tl->list (tl-insert $2 '(stor-spec "static")))
         ,$4))
-   ;; direct-abstract-declarator => direct-abstract-declarator "[" "*" "]"
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(star-ary-declr ,$1))
    ;; direct-abstract-declarator => "[" "*" "]"
    (lambda ($3 $2 $1 . $rest) '(abs-star-ary-declr))
-   ;; direct-abstract-declarator => direct-abstract-declarator "(" paramete...
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(abs-ftn-declr ,$1 ,$3))
-   ;; direct-abstract-declarator => direct-abstract-declarator "(" ")"
-   (lambda ($3 $2 $1 . $rest)
-     `(abs-ftn-declr ,$1 (param-list)))
-   ;; direct-abstract-declarator => "(" parameter-type-list ")"
-   (lambda ($3 $2 $1 . $rest) `(abs-ftn-declr ,$2))
-   ;; direct-abstract-declarator => "(" ")"
-   (lambda ($2 $1 . $rest)
-     '(abs-ftn-declr (param-list)))
    ;; typedef-name => 'typename
    (lambda ($1 . $rest) `(typename ,$1))
    ;; initializer => assignment-expression
