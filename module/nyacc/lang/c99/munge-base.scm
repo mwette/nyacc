@@ -212,7 +212,7 @@
      (else
       (cons 'decl-spec-list (reverse specl))))))
 
-;; Consider
+;; @deffn {Procedure} tdef-splice-declr orig-declr tdef-declr
 ;; @example
 ;; typedef int *foo_t;
 ;; foo_t bla[3];
@@ -222,83 +222,39 @@
 ;; @example
 ;; bla[3] => *(bla[3])
 ;; @end example
-
-
-;; @deffn {Procedure} abs-declr? declr
-;; This is a p to determine if the declarator is abstract.
 ;; @end deffn
-(define (abs-declr? declr)
-  (cond
-   ((not declr) #t)
-   ((member (sx-tag declr) '(abs-ptr-declr abs-ary-declr abs-ftn-declr)) #t)
-   ((param-declr) (abs-declr? (sx-ref declr 1)))
-   (else #f)))
-
 (define (tdef-splice-declr orig-declr tdef-declr)
 
-  ;; convert direct to direct
-  (define (probe-declr/dir declr)
-    (sferr "probe/dir:\n") (pperr declr)
+  (define (probe-declr declr)
+    ;;(sferr "probe-decl:\n") (pperr declr)
     (sx-match declr
       ((ident ,name)
        (sx-ref orig-declr 1))
-      ((init-declr ,dcl . ,rest)
-       `(init-declr ,(probe-declr/dir dcl) . ,rest))
+      ((init-declr ,dcl)
+       `(init-declr ,(probe-declr dcl)))
       ((comp-declr ,dcl)
-       `(comp-declr ,(probe-declr/dir dcl)))
+       `(comp-declr ,(probe-declr dcl)))
       ((param-declr ,dcl)
-       `(param-declr ,(probe-declr/dir dcl)))
+       `(param-declr ,(probe-declr dcl)))
       ((ptr-declr ,ptr ,dcl)
-       (let ((dcl (probe-declr/dir dcl)))
-	 (sx-match dcl
-	   ((ptr-declr ,ptr1 ,dcl1) `(ptr-declr (pointer ,ptr1) ,dcl1))
-	   (,_ `(ptr-declr ,ptr ,(probe-declr/dir dcl))))))
-
-      ((ary-declr ,dcl . ,rest)
-       `(ary-declr ,(probe-declr/dir dcl) . ,rest))
-
-      ((ftn-declr ,dcl . ,rest)
-       `(ftn-declr ,(probe-declr/dir dcl) . ,rest))
-
-      ((scope ,dcl)
-       `(scope ,(probe-declr/dir dcl)))
-      (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
-
-  ;; convert direct to abstract
-  (define (probe-declr/abs declr)
-    (sferr "probe/abs:\n") (pperr declr)
-    (sx-match declr
-      ((ident ,name) #f)
-      ((init-declr ,dcl . ,rest)
-       (and orig-declr `(init-declr ,(probe-declr/abs dcl) . ,rest)))
-      ((comp-declr ,dcl)
-       `(comp-declr ,(probe-declr/abs dcl)))
-      ((param-declr ,dcl)
-       `(param-declr ,(probe-declr/abs dcl)))
-      ((comp-declr ,dcl)
-       `(comp-declr ,(probe-declr/abs dcl)))
-      ((param-declr ,dcl)
-       `(param-declr ,(probe-declr/abs dcl)))
-      ((ptr-declr ,ptr ,dcl)
-       (let ((dcl (probe-declr/abs dcl)))
+       (let ((dcl (probe-declr dcl)))
 	 (if dcl
 	     (sx-match dcl
-	       ((ptr-declr ,ptr1 ,dcl1) `(abs-ptr-declr (pointer ,ptr1) ,dcl1))
-	       (,_ `(abs-ptr-declr ,ptr ,dcl)))
+	       ((ptr-declr ,ptr1 ,dcl1) `(ptr-declr (pointer ,ptr1) ,dcl1))
+	       ((abs-ptr-declr ,ptr1) `(abs-ptr-declr (pointer ,ptr1)))
+	       (,_ `(ptr-declr ,ptr ,dcl)))
 	     `(abs-ptr-declr ,ptr))))
       ((ary-declr ,dcl . ,rest)
-       (let ((dcl (probe-declr/abs dcl)))
-	 (if dcl `(abs-ary-declr ,dcl . ,rest) `(abs-ary-declr . ,rest))))
+       (let ((dcl (probe-declr dcl)))
+	 (if dcl `(ary-declr ,dcl . ,rest) `(abs-ary-decl . ,rest))))
       ((ftn-declr ,dcl . ,rest)
-       (let ((dcl (probe-declr/abs dcl)))
-	 (if dcl `(abs-ftn-declr ,dcl . ,rest) `(abs-ftn-declr . ,rest))))
+       (let ((dcl (probe-declr dcl)))
+	 (if dcl `(ftn-declr ,dcl . ,rest) `(abs-ftn-declr . ,rest))))
       ((scope ,dcl)
-       `(scope ,(probe-declr/abs dcl)))
+       `(scope ,(probe-declr dcl)))
       (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
-  (if (abs-declr? orig-declr)
-      (probe-declr/abs tdef-declr)
-      (probe-declr/dir tdef-declr)))
+  (probe-declr (cons (sx-tag orig-declr) (sx-tail tdef-declr))))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
 ;; iterate tdef-splice-declr over a declr-init-list (or equiv)

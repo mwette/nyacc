@@ -684,9 +684,9 @@
    ;; direct-declarator => identifier
    (lambda ($1 . $rest) $1)
    ;; direct-declarator => "(" declarator ")"
-   (lambda ($3 $2 $1 . $rest) `(scope ,$2))
+   (lambda ($3 $2 $1 . $rest) $2)
    ;; direct-declarator => "(" attribute-specifier declarator ")"
-   (lambda ($4 $3 $2 $1 . $rest) `(scope ,$2))
+   (lambda ($4 $3 $2 $1 . $rest) $2)
    ;; direct-declarator => direct-declarator "[" type-qualifier-list assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 ,$4))
@@ -754,38 +754,38 @@
    ;; type-name => declaration-specifiers
    (lambda ($1 . $rest) `(type-name ,$1))
    ;; abstract-declarator => pointer direct-abstract-declarator
-   (lambda ($2 $1 . $rest) `(abs-ptr-declr ,$1 ,$2))
+   (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
    ;; abstract-declarator => pointer
    (lambda ($1 . $rest) `(abs-ptr-declr ,$1))
    ;; abstract-declarator => direct-abstract-declarator
    (lambda ($1 . $rest) $1)
    ;; direct-abstract-declarator => "(" abstract-declarator ")"
-   (lambda ($3 $2 $1 . $rest) `(scope ,$2))
+   (lambda ($3 $2 $1 . $rest) $2)
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(abs-ary-declr ,$1 ,$3 ,$4))
+     `(ary-declr ,$1 ,$3 ,$4))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(abs-ary-declr ,$1 ,$3))
+     `(ary-declr ,$1 ,$3))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" assignme...
    (lambda ($4 $3 $2 $1 . $rest)
-     `(abs-ary-declr ,$1 ,$3))
+     `(ary-declr ,$1 ,$3))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "]"
-   (lambda ($3 $2 $1 . $rest) `(abs-ary-declr ,$1))
+   (lambda ($3 $2 $1 . $rest) `(ary-declr ,$1))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "static"...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(abs-ary-declr
+     `(ary-declr
         ,$1
         ,(tl->list (tl-insert $4 '(stor-spec "static")))
         ,$5))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "static"...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(abs-ary-declr
+     `(ary-declr
         ,$1
         ,(tl->list (tl-insert $4 '(stor-spec "static")))))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(abs-ary-declr
+     `(ary-declr
         ,$1
         ,(tl->list (tl-insert $3 '(stor-spec "static")))
         ,$5))

@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm - C parser grammer
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2020 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -510,6 +510,7 @@
      (init-declarator-list-1 "," attribute-specifiers
 			     init-declarator ($$ (tl-append $1 $3 $4))))
 
+    ;; todo: move asm-expression to attribute
     (init-declarator			; S 6.7
      (init-declarator-1 ($$ (process-declr $1))))
     (init-declarator-1
@@ -537,8 +538,10 @@
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
      ;;(ident-like ($$ $1))
-     ("(" declarator ")" ($$ `(scope ,$2)))
-     ("(" attribute-specifier declarator ")" ($$ `(scope ,$2)))
+     ;;("(" declarator ")" ($$ `(scope ,$2)))
+     ("(" declarator ")" ($$ $2))
+     ;;("(" attribute-specifier declarator ")" ($$ `(scope ,$2)))
+     ("(" attribute-specifier declarator ")" ($$ $2))
      (direct-declarator
       "[" type-qualifier-list assignment-expression "]"
       ($$ `(ary-declr ,$1 ,$3 ,$4)))
@@ -603,34 +606,33 @@
      (declaration-specifiers ($$ `(type-name ,$1))))
 
     (abstract-declarator		; S 6.7.6
-     (pointer direct-abstract-declarator ($$ `(abs-ptr-declr ,$1 ,$2)))
+     (pointer direct-abstract-declarator ($$ `(ptr-declr ,$1 ,$2)))
      (pointer ($$ `(abs-ptr-declr ,$1)))
      (direct-abstract-declarator))
 
     (direct-abstract-declarator
-     ("(" abstract-declarator ")" ($$ `(scope ,$2)))
+     ;;("(" abstract-declarator ")" ($$ `(scope ,$2)))
+     ("(" abstract-declarator ")" ($$ $2))
      (direct-abstract-declarator
       "[" type-qualifier-list assignment-expression "]"
-      ($$ `(abs-ary-declr ,$1 ,$3 ,$4)))
+      ($$ `(ary-declr ,$1 ,$3 ,$4)))
      (direct-abstract-declarator
       "[" type-qualifier-list "]"
-      ($$ `(abs-ary-declr ,$1 ,$3)))
+      ($$ `(ary-declr ,$1 ,$3)))
      (direct-abstract-declarator
       "[" assignment-expression "]"
-      ($$ `(abs-ary-declr ,$1 ,$3)))
+      ($$ `(ary-declr ,$1 ,$3)))
      (direct-abstract-declarator
-      "[" "]" ($$ `(abs-ary-declr ,$1)))
+      "[" "]" ($$ `(ary-declr ,$1)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(abs-ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static")))
-			  ,$5)))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))) ,$5)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list "]"
-      ($$ `(abs-ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))))))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))))))
      (direct-abstract-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(abs-ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static")))
-			  ,$5)))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static"))) ,$5)))
      ;;
      ("[" type-qualifier-list assignment-expression "]"
       ($$ `(abs-ary-declr ,$2 ,$3)))

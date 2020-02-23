@@ -181,6 +181,14 @@
 	(ppx/p rval)
 	(ppx rval)))
 
+  (define (ptr-declr? sx)
+    (memq (sx-tag sx) '(ptr-declr abs-ptr-declr)))
+
+  (define (protect-ptr declr)
+    (if (ptr-declr? declr) (sf "("))
+    (ppx declr)
+    (if (ptr-declr? declr) (sf ")")))
+
   ;; now ((comment xxx) (attributes "aaa;yyy;zzz"))
   (define (pp-attr attr)
     (string-join
@@ -477,20 +485,20 @@
 	tql))
 
       ((ary-declr ,declr ,arg)
-       (ppx declr) (sf "[") (ppx arg) (sf "]"))
+       (protect-ptr declr) (sf "[") (ppx arg) (sf "]"))
       ((ary-declr ,declr)
-       (ppx declr) (sf "[]"))
+       (protect-ptr declr) (sf "[]"))
       ;; MORE TO GO
 
-      ((abs-ary-declr ,declr ,arg)
-       (ppx declr) (sf "[") (ppx arg) (sf "]"))
-      ((abs-ary-declr ,arg)
-       (sf "[") (ppx arg) (sf "]"))
+      ((abs-ary-declr ,arg1)
+       (sf "[") (ppx arg1) (sf "]"))
+      ((abs-ary-declr ,arg1 ,arg2)
+       (sf "[") (ppx arg1) (ppx arg2) (sf "]"))
       ((abs-ary-declr)
        (sf "[]"))
       
-      ((ftn-declr ,dir-declr ,param-list)
-       (ppx dir-declr) (sf "(") (ppx param-list) (sf ")"))
+      ((ftn-declr ,declr ,param-list)
+       (protect-ptr declr) (sf "(") (ppx param-list) (sf ")"))
 
       ((type-name ,spec-qual-list ,abs-declr)
        (ppx spec-qual-list) (ppx abs-declr))
@@ -666,13 +674,7 @@
       ((abs-ptr-declr ,ptr)
        (ppx ptr))
        
-      ((abs-ptr-declr ,ptr ,dcl)
-       (ppx ptr) (ppx dcl))
-      
       ((ftn-declr ,dcl ,params)
-       (ppx dcl) (sf "(") (ppx params) (sf ")"))
-
-      ((abs-ftn-declr ,dcl ,params)
        (ppx dcl) (sf "(") (ppx params) (sf ")"))
 
       ((abs-ftn-declr ,params)

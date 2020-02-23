@@ -95,7 +95,7 @@
      (if (sizeof-basetype name)
 	 (values (sizeof-basetype name) (alignof-basetype name))
 	 (error "fixme")))
-    (else
+    (,_
      (throw 'c99-error "failed to expand sizeof type ~S" (sx-ref tree 1)))))
 
 
@@ -204,35 +204,51 @@
   '(
     ;;("typedef int foo_t; foo_t bar;" . "int bar;")
     ;;("typedef int *foo_t; foo_t bar;" . "int *bar;")
-    ("typedef int *foo_t; foo_t *bar;" . "int **bar;") ;; do this for abs also
+    ;;("typedef int *foo_t; foo_t *bar;" . "int **bar;")
+    ;;("typedef int *foo_t; int bar(foo_t*);" . "int bar(int **);")
     ;;("typedef int *foo_t[2]; foo_t bar;" . "int *bar[2];")
+    ("typedef int *foo_t[2]; foo_t *bar;" . "int **bar[2];")
+    ;;("typedef int *foo_t[2]; int (*bar)(foo_t*x);" . "int (*bar)(int **x[2]);")
+    ;;("typedef int *foo_t[2]; int (*bar)(foo_t*);" . "int (*bar)(int **[2]);")
     ))
 
-(when #t
+(when #f
   (fold
    (lambda (pair status)
      (let* ((ltree (parse-string (car pair)))
 	    (rtree (parse-string (cdr pair)))
 	    (ldict (c99-trans-unit->udict ltree))
+	    (tdecl (assoc-ref ldict "foo_t"))
 	    (ldecl (assoc-ref ldict "bar"))
 	    (rdict (c99-trans-unit->udict rtree))
 	    (rdecl (assoc-ref rdict "bar"))
-	    (xdecl (expand-typerefs ldecl ldict)))
-       (sf "expected:\n")
-       (ppsx rdecl) (sf "  ~A\n" (cdr pair))
-       (sf "expanded:\n")
-       (ppsx xdecl) (pp99 xdecl)
-       (newline)
-       (and status (equal? rdecl xdecl))))
+	    )
+       (sf "original:\n") (ppsx tdecl) (ppsx ldecl) (sf "  ~S\n" (car pair))
+       (sf "expected:\n") (ppsx rdecl) (sf "  ~A\n" (cdr pair))
+       (let ((xdecl (expand-typerefs ldecl ldict)))
+	 (sf "expanded:\n") (ppsx xdecl) (pp99 xdecl)
+	 (newline)
+	 (and status (equal? rdecl xdecl))
+	 #f)
+       ))
    #t cases)
   )
+
+(when #t
+  (let* ((code "int (*foo)[2];")
+	 (tree (or (parse-string code) (error "parse failed")))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "foo")))
+    (pp udecl)
+    (sf "orig:  ~A\n" code)
+    (sf "   =>") (pp99 udecl)))
 
 (when #f
   (let* ((code (string-append
 		;;"typedef int bar_t[2];\n"
-		"typedef int bar_t;\n"
-		;;"bar_t foo(bar_t (*)(bar_t));\n" ;; <= param-list broken
-		"int foo(bar_t);\n" ;; <= param-list broken
+		;;"typedef int bar_t;\n"
+		"bar_t foo(bar_t (*)(bar_t));\n" ;; <= param-list broken
+		"int foo(bar_t);\n"
 		))
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
