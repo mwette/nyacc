@@ -47,6 +47,9 @@
 	    unwrap~pointer unwrap~array
 	    make-fctn-param-unwrapper
 	    fh-link-proc fh-link-extern
+
+	    ;; commonly used libc functions
+	    fopen fclose
 	    
 	    ;; deprecated
 	    fh-link-bstr ;; => fh-link-extern
@@ -385,7 +388,7 @@
        (quote type)
        (lambda (obj) ;; unwrap => pointer
 	 (ffi:bytevector->pointer (bytestructure-bytevector obj)))
-       (lambda* (size #:optional (size 0))
+       (lambda* (#:optional (size 0))
 	 (cond
 	  ((bytevector? val)
 	   (make-struct/no-tail
@@ -818,6 +821,28 @@
   (let* ((addr (fh-find-symbol-addr name dl-lib-list))
 	 (size (bytestructure-descriptor-size desc)))
     (make-bytestructure (ffi:pointer->bytevector addr size) 0 desc)))
+
+
+;; === common c functions called
+
+;; @deffn {Procedure} fopen filename mode
+;; Call the C fucntion fopen and return a scheme @code{<pointer>} type.
+;; @end deffn
+(define fopen
+  (let ((~fopen (ffi:pointer->procedure
+		 '* (dynamic-func "fopen") (list '* '*))))
+    (lambda (filename mode)
+      (~fopen (ffi:string->pointer filename) (ffi:string->pointer mode)))))
+
+;; @deffn {Procedure} fopen file
+;; Call the C fucntion fclose on @var<file>, a @code{<pointer>} type generated
+;; by @code{fopen}.
+;; @end deffn
+(define fclose
+  (let ((~fclose (ffi:pointer->procedure
+		 ffi:int (dynamic-func "fclose" (dynamic-link)) (list '*))))
+    (lambda (file)
+      (~fclose file))))
 
 ;; === deprecated ==============================================================
 
