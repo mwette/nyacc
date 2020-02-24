@@ -388,7 +388,7 @@
        (quote type)
        (lambda (obj) ;; unwrap => pointer
 	 (ffi:bytevector->pointer (bytestructure-bytevector obj)))
-       (lambda* (#:optional (size 0))
+       (lambda* (val #:optional (size 0))
 	 (cond
 	  ((bytevector? val)
 	   (make-struct/no-tail
