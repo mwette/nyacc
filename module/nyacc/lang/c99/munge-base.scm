@@ -32,24 +32,16 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 munge-base)
-  #:export (expand-typerefs clean-field-list clean-fields split-udecl)
-  ;;#:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
-  ;;#:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
-  ;;#:use-module (nyacc lang c99 pprint)
-  ;;#:use-module (nyacc lang c99 util)
-  ;;#:use-module (nyacc lang util)
+  #:export (expand-typerefs reify-declr split-udecl
+			    clean-field-list clean-fields)
   #:use-module (nyacc lang sx-util)
-  ;;#:use-module ((sxml fold) #:select (foldts foldts*))
-  ;;#:use-module (sxml match)
   #:use-module (srfi srfi-11)		; let-values
-  ;;#:use-module (srfi srfi-2)
   #:use-module (srfi srfi-1)
-  #:use-module (system base pmatch)
-  ;; debugging:
-  #:use-module (ice-9 pretty-print)
-  )
+  #:use-module (system base pmatch))
 
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
@@ -557,5 +549,31 @@
 	       (eq? orig-declr repl-declr))
 	  adecl ;; <= unchanged; return original
 	  (sx-list tag attr repl-specl repl-declr)))))
+
+(define (def-namer) "@")
+
+;; @deffn {Procedure} reify-declr declr [#:namer proc]
+;; This procedure turns tails of abstract declarations into init-declr's.
+;; This is useful for sending through @code{udecl->mdecl} for the purpose
+;; of processing with munge tools.
+;; @end deffn
+(define* (reify-declr declr #:optional (namer def-namer))
+
+  (define (probe-declr declr)
+    (sx-match declr
+      ((ident ,name) declr)
+      ((init-declr ,dcl) `(init-declr ,(probe-declr dcl)))
+      ((comp-declr ,dcl) `(comp-declr ,(probe-declr dcl)))
+      ((param-declr ,dcl) `(param-declr ,(probe-declr dcl)))
+      ((ptr-declr ,ptr ,dcl) `(ptr-declr ,ptr ,(probe-declr dcl)))
+      ((ary-declr ,dcl . ,rest) `(ary-declr ,(probe-declr dcl) . ,rest))
+      ((ftn-declr ,dcl . ,rest) `(ftn-declr ,(probe-declr dcl) . ,rest))
+      ((scope ,dcl) `(scope ,(probe-declr dcl)))
+      ((abs-ptr-declr ,ptr) `(ptr-declr ,ptr (ident ,(namer))))
+      ((abs-ary-declr . ,rest) `(ary-declr (ident ,(namer)) . ,rest))
+      ((abs-ftn-declr . ,rest) `(ftn-declr (ident ,(namer)) . ,rest))
+      (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
+
+  (if declr (probe-declr declr) `(init-declr ,(namer))))
 
 ;; --- last line ---

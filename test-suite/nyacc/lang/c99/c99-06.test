@@ -88,6 +88,27 @@
      2
      "int *foo(int *(*)(int)[2])[2];\n"))
 
+  (pass-if "misc expand-typerefs"
+    (fold
+     (lambda (pair status)
+       (let* ((ltree (parse-string (car pair)))
+	      (rtree (parse-string (cdr pair)))
+	      (ldict (c99-trans-unit->udict ltree))
+	      (ldecl (assoc-ref ldict "bar"))
+	      (rdict (c99-trans-unit->udict rtree))
+	      (rdecl (assoc-ref rdict "bar"))
+	      (xdecl (expand-typerefs ldecl ldict)))
+	 (and status (equal? rdecl xdecl))))
+     #t
+     '(("typedef int foo; foo bar;" . "int bar;")
+       ("typedef int *foo; foo bar;" . "int *bar;")
+       ("typedef int *foo; foo *bar;" . "int **bar;")
+       ("typedef int *foo; int bar(foo*);" . "int bar(int **);")
+       ("typedef int *foo[2]; foo bar;" . "int *bar[2];")
+       ("typedef int *foo[2]; foo *bar;" . "int *(*bar)[2];")
+       ("typedef int *foo[2]; int (*bar)(foo*x);" . "int (*bar)(int *(*x)[2]);")
+       ("typedef int *foo[2]; int (*bar)(foo*);" . "int (*bar)(int *(*)[2]);"))))
+
   (pass-if "canize-enum-def-list"
     (let* ((code "enum { FOO = 1, }; enum { BAR = 1 + FOO };")
 	   (tree (parse-string code))
@@ -96,18 +117,6 @@
 	   (ddict (udict-enums->ddict udict ddict)))
       (and (string= "1" (or (assoc-ref ddict "FOO") "X"))
 	   (string= "2" (or (assoc-ref ddict "BAR") "X")))))
-
-  #;(pass-if "knarly expand-typeref case"
-    (let ((code (string-append
-	      "typedef struct foo foo_t;\n"
-	      "struct foo {\n"
-	      "int (*bar)(foo_t*);"
-	      "};\n"
-	      "int baz(foo_t*);"
-	      ))
-	   (udict (c100-trans-unit->udict tree))
-           (udecl (udict-ref udict "baz")))
-       (pair? (expand-typerefs udecl udict '(foo_t)))))
 
   )
 

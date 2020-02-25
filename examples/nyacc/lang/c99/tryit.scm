@@ -81,23 +81,23 @@
 (use-modules (arch-info))
 (use-modules (system foreign))
 
-;;(define (def-namer) (symbol->string (gensym "@")))
-(define (def-namer) "@")
-
+;; @deffn {Procedure} eval-sizeof-type tree [udict ddict]
 ;; => (values sizeof-val align-of)
-(define* (eval-sizeof-type tree #:optional (udict '()) (ddict '()))
-  (sx-match (sx-ref tree 1)
-    ((type-name (decl-spec-list (type-spec (fixed-type ,name))))
-     (values (sizeof-basetype name) (alignof-basetype name)))
-    ((type-name (decl-spec-list (type-spec (float-type ,name))))
-     (values (sizeof-basetype name) (alignof-basetype name)))
-    ((type-name (decl-spec-list (type-spec (typename ,name))))
-     (if (sizeof-basetype name)
-	 (values (sizeof-basetype name) (alignof-basetype name))
-	 (error "fixme")))
-    (,_
-     (throw 'c99-error "failed to expand sizeof type ~S" (sx-ref tree 1)))))
+;; @end deffn
 
+(define* (eval-sizeof-type tree #:optional (udict '()) (ddict '()))
+  (unless (eq? 'sizeof-type (sx-tag tree)) (error "bad tree"))
+  (let* ((type-name (sx-ref tree 1))
+	 (specl (sx-ref type-name 1))
+	 (declr (reify-declr (sx-ref type-name 2)))
+	 (udecl `(udecl ,specl ,declr))
+	 ;;(xdecl (expand-typerefs udecl udict ddict))
+	 (mdecl (udecl->mdecl udecl))
+	 )
+    (ppsx udecl)
+    (pp99 udecl)
+    (pp mdecl)
+    #f))
 
 ;; === from cxeval.scm:
 (define (expand-typename typename udict)
@@ -109,90 +109,6 @@
     xname))
 ;; ===
 
-
-#;(define* (udecl->ify-decl-tail decl-tail #:optional (udict '()) (ddict '()))
-    (sx-match decl-tail
-    (((pointer-to) . ,rest) 'ffi-void*)
-    (((array-of) . ,rest) 'ffi-void*)
-    (((array-of ,size) . ,rest) 'ffi-void*)
-    (((fixed-type ,name))
-     (or (assoc-ref ffi-typemap name)
-	 (fherr/once "no FFI type for ~A" name)))
-    (((float-type ,name))
-     (or (assoc-ref ffi-typemap name)
-	 (fherr/once "no FFI type for ~S" name)))
-    (((typename ,name) . ,rest)
-     (or (assoc-ref ffi-typemap name)
-	 (fherr "no FFI type for ~S" name)))
-    (((void)) 'ffi:void)
-    (((enum-def . ,rest2) . ,rest1) 'ffi:int)
-    (((enum-ref . ,rest2) . ,rest1) 'ffi:int)
-
-    (((struct-def (field-list . ,fields)))
-     `(list ,@(map (lambda (fld)
-		     (let* ((udict (unitize-comp-decl fld))
-			    (name (caar udict))
-			    (udecl (cdar udict))
-			    (udecl (udecl-rem-type-qual udecl))
-			    (mdecl (udecl->mdecl udecl)))
-		       (mtail->ffi-desc (cdr mdecl))))
-		   fields)))
-    (((struct-def (ident ,name) ,field-list))
-     (mtail->ffi-desc `((struct-def ,field-list))))
-    
-    (((union-def (field-list . ,fields)))
-     ;; TODO check libffi on how unions are passed and returned.
-     ;; I assume here never passed as a floating point.
-     ;; This should use bounding-struct-descriptor from bytestructures
-     (let loop ((type #f) (size 0) (flds fields))
-       (if (null? flds)
-	   (case type ((double) 'ffi:uint64) ((float) 'ffi:uint32) (else type))
-	   (let* ((udict (unitize-comp-decl (car flds)))
-		  (udecl (cdar udict))
-		  (udecl (udecl-rem-type-qual udecl))
-		  (mdecl (udecl->mdecl udecl))
-		  (ftype (mtail->ffi-desc (cdr mdecl)))
-		  (ftval (assq-ref ffi-symmap ftype))
-		  (fsize (sizeof ftval)))
-	     (if (> fsize size)
-		 (loop ftype fsize (cdr flds))
-		 (loop type size (cdr flds)))))))
-    (((union-def (ident ,name) ,field-list))
-     (mtail->ffi-desc `((union-def ,field-list))))
-    
-    (,otherwise
-     (sferr "mtail->ffi-desc missed:\n") (pperr mdecl-tail) ;;(quit)
-     (error "") (fherr "mtail->ffi-desc missed: ~S" mdecl-tail))))
-
-
-;; @deffn {Procedure} reify-decl-tail decl-tail [udict ddict #:namer proc]
-;; This procedure turns tails of abstract declarations into init-declr's.
-;; This is useful for sending through @code{udecl->mdecl} for the purpose
-;; of processing with munge tools.
-;; @end deffn
-(define* (reify-decl-tail decl-tail  ;; to udecl-tail
-			  #:optional (udict '()) (ddict '())
-			  #:key (namer def-namer))
-
-  (define (reify-ad declr)
-    (sx-match declr
-      ((abs-ptr-declr ,ptr) `(abs-ptr-declr ,ptr (ident ,(namer))))
-      ((abs-ptr-declr ,ptr ,dcl) `(abs-ptr-declr ,ptr ,(reify-ad dcl)))
-      ((abs-ary-declr) `(ary-declr (ident ,(namer))))
-      ((abs-ary-declr ,arg) `(ary-declr (ident ,(namer)) ,arg))
-      ((abs-ary-declr ,dad ,arg) `(ary-declr ,(reify-ad dad) ,arg))
-      ((abs-ftn-declr ,pms) `(ftn-declr (ident ,(namer)) ,pms))
-      ((abs-ftn-declr ,dad ,pms) `(ftn-declr ,(reify-ad dad) ,pms))
-      ((scope ,dad) `(scope ,(reify-ad dad)))
-      (,_ (pp declr) (error "coding error: reify-ad"))))
-  
-  (sx-match-tail decl-tail
-    (((decl-spec-list . ,stail))
-     `((decl-spec-list . ,stail) (init-declr (ident ,(namer)))))
-    (((decl-spec-list . ,specl-tail) ,declr)
-     `((decl-spec-list . ,specl-tail) (init-declr ,(reify-ad declr))))
-    ((,_) (pp decl-tail) (error "coding error: reify-decl-tail"))))
-
 ;; int, int*, int*[], int **, int(), int(float), int*(float),
 ;; int*(float)[3]
 
@@ -200,48 +116,38 @@
   (let loop ((s s) (l l))
     (if (null? l) s (loop (p (car l) s) (cdr l)))))
 
-(define cases
-  '(
-    ;;("typedef int foo_t; foo_t bar;" . "int bar;")
-    ;;("typedef int *foo_t; foo_t bar;" . "int *bar;")
-    ;;("typedef int *foo_t; foo_t *bar;" . "int **bar;")
-    ;;("typedef int *foo_t; int bar(foo_t*);" . "int bar(int **);")
-    ;;("typedef int *foo_t[2]; foo_t bar;" . "int *bar[2];")
-    ("typedef int *foo_t[2]; foo_t *bar;" . "int **bar[2];")
-    ;;("typedef int *foo_t[2]; int (*bar)(foo_t*x);" . "int (*bar)(int **x[2]);")
-    ;;("typedef int *foo_t[2]; int (*bar)(foo_t*);" . "int (*bar)(int **[2]);")
-    ))
 
 (when #f
-  (fold
-   (lambda (pair status)
-     (let* ((ltree (parse-string (car pair)))
-	    (rtree (parse-string (cdr pair)))
-	    (ldict (c99-trans-unit->udict ltree))
-	    (tdecl (assoc-ref ldict "foo_t"))
-	    (ldecl (assoc-ref ldict "bar"))
-	    (rdict (c99-trans-unit->udict rtree))
-	    (rdecl (assoc-ref rdict "bar"))
-	    )
-       (sf "original:\n") (ppsx tdecl) (ppsx ldecl) (sf "  ~S\n" (car pair))
-       (sf "expected:\n") (ppsx rdecl) (sf "  ~A\n" (cdr pair))
-       (let ((xdecl (expand-typerefs ldecl ldict)))
-	 (sf "expanded:\n") (ppsx xdecl) (pp99 xdecl)
-	 (newline)
-	 (and status (equal? rdecl xdecl))
-	 #f)
-       ))
-   #t cases)
-  )
-
-(when #t
-  (let* ((code "int (*foo)[2];")
+  (let* ((code "int foo = sizeof(int(*)());")
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
 	 (udecl (assoc-ref udict "foo")))
     (pp udecl)
     (sf "orig:  ~A\n" code)
     (sf "   =>") (pp99 udecl)))
+
+(when #t
+  (pp
+  (fold
+   (lambda (pair status)
+     (let* ((tree (parse-string (car pair)))
+	    (udict (c99-trans-unit->udict tree))
+	    (udecl (assoc-ref udict "foo"))
+	    (namer (lambda () "@"))
+	    (mdecl (udecl->mdecl udecl #:namer namer)))
+       (unless (equal? mdecl (cdr pair))
+	 (sf "code: ~S\n" (car pair))
+	 (sf "expected:\n") (ppsx (cdr pair))
+	 (sf "expanded:\n") (ppsx mdecl)
+	 (newline))
+       (and status (equal? mdecl (cdr pair)))
+       ))
+   #t '(("int foo;" . ("foo" (fixed-type "int")))
+	("int foo();" . ("foo" (function-returning (param-list))
+			 (fixed-type "int")))
+	("int *();" . ("@" (function-returning (param-list))
+		       (pointer-to) (fixed-type "int")))
+	))))
 
 (when #f
   (let* ((code (string-append
@@ -271,21 +177,12 @@
 	 (udict (c99-trans-unit->udict tree))
 	 (udecl (assoc-ref udict "x"))
 	 (sot-x (sx-ref* udecl 2 2 1))
-	 (tail (sx-tail (sx-ref sot-x 1)))
-	 (ctail (sx-tail (assoc-ref udict "y")))
+	 ;;(declr (sx-ref (sx-ref sot-x 1) 2)
+	 ;;(ctail (sx-tail (assoc-ref udict "y")))
 	 )
     (newline)
-    (sf "abstract tail:\n")
-    (ppsx tail)
-    (pp99 udecl)
-    (sf "vs concrete tail:\n")
-    (ppsx ctail)
-    (pp99 `(udecl . ,ctail))
-    (sf "=> concrete tail:\n")
-    (let ((rtail (reify-decl-tail tail udict)))
-      (ppsx rtail)
-      (pp99 `(udecl . ,rtail)))
-
+    (ppsx sot-x)
+    (eval-sizeof-type sot-x udict)
     #t))
 
 ;; --- last line ---

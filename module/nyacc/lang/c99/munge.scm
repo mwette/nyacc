@@ -62,7 +62,7 @@
 	    stripdown-1
 	    tdef-splice-specl
 	    tdef-splice-declr)
-  #:re-export (expand-typerefs clean-field-list clean-fields split-udecl)
+  #:re-export (expand-typerefs reify-declr split-udecl clean-field-list)
   #:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
   #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 munge-base)
@@ -802,15 +802,6 @@
 ;; @end deffn
 (define* (udecl->mdecl decl #:key (namer def-namer))
 
-  ;; Hmm.  We convert array size back to C code (string).  Now that I am working
-  ;; on constant expression eval (eval-c99-cx) maybe we should change that.
-  (define (cnvt-size-expr size-spec)
-    ;;(with-output-to-string (lambda () (pretty-print-c99 size-spec)))
-    size-spec)
-
-  (define (unwrap-specl specl)
-    (and=> (assq-ref (sx-tail specl) 'type-spec) car))
-
   (define (unwrap-pointer pointer)  ;; =>list IGNORES TYPE QUALIFIERS
     ;;(sferr "unwrap-pointer ~S\n" pointer)
     (sx-match pointer
@@ -819,75 +810,37 @@
       ((pointer (type-qual-list . ,type-qual)) '((pointer-to)))
       ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
       ((pointer) '((pointer-to)))
-      (,_
-       (sferr "unwrap-pointer failed on:\n") (pperr pointer)
-       (throw 'nyacc-error "unwrap-pointer"))))
+      (,_ (sferr "unwrap-pointer failed on:\n") (pperr pointer)
+	  (throw 'nyacc-error "unwrap-pointer"))))
 
-  (define (make-abs-dummy) ;; for abstract declarator make a dummy
-    (namer))
-  (define (make-abs-dummy-tail)
-    (list (make-abs-dummy)))
-  
-  (define* (unwrap-declr declr #:key (const #f))
-    ;;(sferr "unwrap-declr:\n") (pperr declr #:per-line-prefix "  ")
+  (define (unwrap-declr declr)
     (sx-match declr
-      ((ident ,name)
-       (list name))
-      ((init-declr ,item)
-       (unwrap-declr item #:const const))
+      ((init-declr ,item) (unwrap-declr item))
+      ((comp-declr ,item) (unwrap-declr item))
+      ((param-declr ,item) (unwrap-declr item))
+      ((ident ,name) (list name))
 
-      ((ary-declr ,dir-declr ,size)
-       (cons `(array-of ,(cnvt-size-expr size)) (unwrap-declr dir-declr)))
-      ((ary-declr ,dir-declr)
-       (cons `(array-of) (unwrap-declr dir-declr)))
+      ((ptr-declr ,ptr ,dcl)
+       (cons (unwrap-pointer ptr) (unwrap-declr dcl)))
+      ((abs-ptr-declr ,ptr) (cons '(pointer-to) (list (namer))))
 
-      ((ftn-declr ,dir-declr ,param-list)
-       (cons `(function-returning ,param-list) (unwrap-declr dir-declr)))
-      ((abs-ftn-declr ,dir-abs-declr)
-       (cons `(function-returning) (unwrap-declr dir-abs-declr)))
-      ((abs-ftn-declr ,dir-abs-declr ,param-list)
-       (cons `(function-returning ,param-list) (unwrap-declr dir-abs-declr)))
-      ;;((anon-ftn-declr ,param-list) ???
+      ((ary-declr ,dcl (type-qual . ,rest) . ,rest)
+       (unwrap-declr `(ary-declr ,dcl . ,rest)))
+      ((ary-declr ,dcl ,size)
+       (cons `(array-of ,size) (unwrap-declr dcl)))
+      ((ary-declr ,dcl) (cons `(array-of "") (unwrap-declr dcl)))
+      ((abs-ary-declr ,size)
+       (cons `(array-of ,size) (list (namer))))
+
+      ((ftn-declr ,dcl ,param-list)
+       (cons `(function-returning ,param-list) (unwrap-declr dcl)))
+      ((abs-ftn-declr ,param-list)
+       (cons `(function-returning ,param-list) (list (namer))))
 
       ((scope ,expr) (unwrap-declr expr))
 
-      ((ptr-declr ,pointer ,dir-declr)
-       (let ((res (append (unwrap-pointer pointer) (unwrap-declr dir-declr))))
-	 (if const (cons '(const) res) res)))
-
-      ;; abstract declarator and direct abstract declarator
-      ((abs-declr ,pointer ,dir-abs-declr)
-       (append (unwrap-pointer pointer) (unwrap-declr dir-abs-declr)))
-      ((abs-declr (pointer))
-       (append (unwrap-pointer (sx-ref declr 1)) (make-abs-dummy-tail)))
-      ((abs-declr (pointer ,pointer-val))
-       (cons* '(pointer-to) (make-abs-dummy-tail)))
-      ((abs-declr ,dir-abs-declr)
-       (unwrap-declr dir-abs-declr))
-
-      ;; declr-scope
-      ;; declr-array dir-abs-declr
-      ;; declr-array dir-abs-declr assn-expr
-      ;; declr-array dir-abs-declr type-qual-list
-      ;; declr-array dir-abs-declr type-qual-list assn-expr
-      ((declr-scope ,abs-declr)		; ( abs-declr )
-       (unwrap-declr abs-declr))
-      ((declr-array ,dir-abs-declr)	; []
-       (cons '(array-of "") (make-abs-dummy-tail))) ;; ???
-      ((declr-array ,dir-abs-declr (type-qual-list . ,type-quals))
-       ;; TODO: deal with "const" type-qualifier
-       (cons '(array-of "") (make-abs-dummy-tail)))
-      ((declr-array ,dir-abs-declr ,assn-expr)
-       (cons `(array-of ,assn-expr) (unwrap-declr dir-abs-declr)))
-      ((declr-array ,dir-abs-declr ,type-qual-list ,assn-expr)
-       ;; TODO: deal with "const" type-qualifier
-       (cons `(array-of ,assn-expr) (unwrap-declr dir-abs-declr)))
-
       ((bit-field (ident ,name) ,size)
-       (list `(bit-field ,(cnvt-size-expr size)) name))
-
-      ((comp-declr ,item) (unwrap-declr item))
-      ((param-declr ,item) (unwrap-declr item))
+       (list `(bit-field ,size) name))
 
       (,_
        (sferr "munge/unwrap-declr missed:\n")
@@ -895,20 +848,16 @@
        (throw 'nyacc-error "c99/munge: udecl->mdecl failed")
        #f)))
 
-  ;;(sferr "decl:\n") (pperr decl)
   (let-values (((tag attr specl declr) (split-udecl decl)))
-    (let* ((tspec (sx-ref specl 1))	; type-spec
-	   (const (and=> (sx-ref specl 2)	; const pointer ???
-			 (lambda (sx) (equal? (sx-ref sx 1) "const"))))
-	   (declr (or (sx-ref decl 2)	; param-decl -- e.g., f(int)
-		      `(ident ,(make-abs-dummy))))
-	   (m-specl (unwrap-specl specl))
-	   (m-declr (unwrap-declr declr #:const const))
-	   (m-decl (reverse (cons m-specl m-declr))))
-      ;;(sferr "decl:\n") (pperr decl)
-      ;;(sferr "declr:\n") (pperr declr)
-      ;;(sferr "r-mdecl: ~S\n" (cons m-specl m-declr))
-      m-decl)))
+    (let* ((declr (or declr `(ident ,(namer))))
+	   (stor-spec (and=> (sx-find 'stor-spec specl)
+			     (lambda (sx) (sx-ref sx 1))))
+	   (type-spec (and=> (sx-find 'type-spec specl) sx-tail))
+	   (m-declr (reverse (unwrap-declr declr)))
+	   (m-declr (if (and (equal? stor-spec '(extern))
+			     (not (equal? 'function-returning (caadr m-declr))))
+			(cons* (car m-declr) '(extern) (cdr m-declr)) m-declr)))
+      (append m-declr type-spec))))
 
 (define* (udecl->mdecl/comm decl #:key (def-comm ""))
   (let* ((comm (or (and=> (assq 'comment (sx-attr decl)) cadr) def-comm))
