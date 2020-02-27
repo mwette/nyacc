@@ -19,7 +19,7 @@
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define pp pretty-print)
-(define ppsx (lambda (sx) (pretty-print sx #:per-line-prefix "  ")))
+(define ppin (lambda (sx) (pretty-print sx #:per-line-prefix "  ")))
 (define pp99 (lambda (sx) (pretty-print-c99 sx #:per-line-prefix "  ")))
 
 (define cpp-defs
@@ -75,8 +75,8 @@
 ;;   qualified version of a compatible type; the order of type qualifiers within
 ;;   a list of specifiers or qualifiers does not affect the specified type."
 
-;;(and=> (parse-file "c99-exam/ex14.c") ppsx)
-;;(and=> (parse-c99x "(a*b)+c") ppsx)
+;;(and=> (parse-file "c99-exam/ex14.c") ppin)
+;;(and=> (parse-c99x "(a*b)+c") ppin)
 
 (use-modules (arch-info))
 (use-modules (system foreign))
@@ -94,7 +94,7 @@
 	 ;;(xdecl (expand-typerefs udecl udict ddict))
 	 (mdecl (udecl->mdecl udecl))
 	 )
-    (ppsx udecl)
+    (ppin udecl)
     (pp99 udecl)
     (pp mdecl)
     #f))
@@ -126,27 +126,59 @@
     (sf "orig:  ~A\n" code)
     (sf "   =>") (pp99 udecl)))
 
-(when #t
+;; direct-declarators
+(when #f
   (pp
   (fold
    (lambda (pair status)
      (let* ((tree (parse-string (car pair)))
 	    (udict (c99-trans-unit->udict tree))
 	    (udecl (assoc-ref udict "foo"))
-	    (namer (lambda () "@"))
-	    (mdecl (udecl->mdecl udecl #:namer namer)))
+	    (mdecl (udecl->mdecl udecl)))
        (unless (equal? mdecl (cdr pair))
 	 (sf "code: ~S\n" (car pair))
-	 (sf "expected:\n") (ppsx (cdr pair))
-	 (sf "expanded:\n") (ppsx mdecl)
+	 (sf "expected:\n") (ppin (cdr pair))
+	 (sf "expanded:\n") (ppin mdecl)
 	 (newline))
        (and status (equal? mdecl (cdr pair)))
        ))
    #t '(("int foo;" . ("foo" (fixed-type "int")))
 	("int foo();" . ("foo" (function-returning (param-list))
-			 (fixed-type "int")))
-	("int *();" . ("@" (function-returning (param-list))
-		       (pointer-to) (fixed-type "int")))
+			 (fixed-type "int")))))
+  ))
+
+
+(define (mx-ref* mx . args)
+  (fold (lambda (i l) (list-ref l i)) mx args))
+   
+;; abstract declarators
+(define (arg1-decl udecl)
+  (sx-ref* udecl 2 1 2 1))
+
+(when #t
+  (pp
+  (fold
+   (lambda (spec status)
+     (let* ((namer (lambda () "@"))
+	    (tree (parse-string (list-ref spec 0)))
+	    (udict (c99-trans-unit->udict tree))
+	    (udecl (assoc-ref udict "foo"))
+	    (udecl ((list-ref spec 1) udecl))
+	    (mdecl (udecl->mdecl udecl #:namer namer)))
+       (unless (equal? mdecl (list-ref spec 2))
+	 (sf "code: ~S\n" (list-ref spec 0))
+	 (sf "expected:\n") (ppin (list-ref spec 2))
+	 (sf "expanded:\n") (ppin mdecl)
+	 (newline))
+       (and status (equal? mdecl (list-ref spec 2)))
+       ))
+   #t `(;;("int foo;" ,(lambda (sx) sx) ("foo" (fixed-type "int")))
+	;;("int foo(int);" ,arg1-decl ("@" (fixed-type "int")))
+	;;("int foo(int*);" ,arg1-decl ("@" (pointer-to) (fixed-type "int")))
+	("int foo(int*[]);" ,arg1-decl
+	 ("@" (array-of) (pointer-to) (fixed-type "int")))
+	#;("int foo(int*([]));" ,arg1-decl
+	 ("@" (pointer-to) (array-of) (fixed-type "int")))
 	))))
 
 (when #f
@@ -181,7 +213,7 @@
 	 ;;(ctail (sx-tail (assoc-ref udict "y")))
 	 )
     (newline)
-    (ppsx sot-x)
+    (ppin sot-x)
     (eval-sizeof-type sot-x udict)
     #t))
 

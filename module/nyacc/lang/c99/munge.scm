@@ -814,6 +814,7 @@
 	  (throw 'nyacc-error "unwrap-pointer"))))
 
   (define (unwrap-declr declr)
+    ;;(pperr "declr ...\n") (pperr declr)
     (sx-match declr
       ((init-declr ,item) (unwrap-declr item))
       ((comp-declr ,item) (unwrap-declr item))
@@ -821,7 +822,7 @@
       ((ident ,name) (list name))
 
       ((ptr-declr ,ptr ,dcl)
-       (cons (unwrap-pointer ptr) (unwrap-declr dcl)))
+       (append (unwrap-pointer ptr) (unwrap-declr dcl)))
       ((abs-ptr-declr ,ptr) (cons '(pointer-to) (list (namer))))
 
       ((ary-declr ,dcl (type-qual . ,rest) . ,rest)
@@ -831,6 +832,8 @@
       ((ary-declr ,dcl) (cons `(array-of "") (unwrap-declr dcl)))
       ((abs-ary-declr ,size)
        (cons `(array-of ,size) (list (namer))))
+      ((abs-ary-declr)
+       (cons `(array-of) (list (namer))))
 
       ((ftn-declr ,dcl ,param-list)
        (cons `(function-returning ,param-list) (unwrap-declr dcl)))
@@ -854,9 +857,13 @@
 			     (lambda (sx) (sx-ref sx 1))))
 	   (type-spec (and=> (sx-find 'type-spec specl) sx-tail))
 	   (m-declr (reverse (unwrap-declr declr)))
+	   (m-declr0 m-declr)
 	   (m-declr (if (and (equal? stor-spec '(extern))
 			     (not (equal? 'function-returning (caadr m-declr))))
 			(cons* (car m-declr) '(extern) (cdr m-declr)) m-declr)))
+      ;;(sferr "m-declr0:\n") (pperr m-declr0)
+      ;;(sferr "m-declr:\n") (pperr m-declr)
+      ;;(sferr "type-spec:\n") (pperr type-spec)
       (append m-declr type-spec))))
 
 (define* (udecl->mdecl/comm decl #:key (def-comm ""))
