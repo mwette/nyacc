@@ -531,8 +531,9 @@
     (pointer				; S 6.7.6
      ("*" type-qualifier-list pointer ($$ `(pointer ,$2 ,$3)))
      ("*" type-qualifier-list ($$ `(pointer ,$2)))
-     ("*" pointer ($$ `(pointer ,$2)))
      ("*" attribute-specifiers pointer ($$ `(pointer ,$3)))
+     ("*" attribute-specifiers ($$ `(pointer)))
+     ("*" pointer ($$ `(pointer ,$2)))
      ("*" ($$ '(pointer))))
 
     (direct-declarator			; S 6.7.6
@@ -540,7 +541,7 @@
      ;;(ident-like ($$ $1))
      ;;("(" declarator ")" ($$ `(scope ,$2)))
      ("(" declarator ")" ($$ $2))
-     ("(" attribute-specifier declarator ")" ($$ $2))
+     ("(" attribute-specifier declarator ")" ($$ $3))
      (direct-declarator
       "[" type-qualifier-list assignment-expression "]"
       ($$ `(ary-declr ,$1 ,$3 ,$4)))
@@ -589,7 +590,7 @@
      (declaration-specifiers
       abstract-declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
      (declaration-specifiers
-      ($$ `(param-decl ,$1))))
+      ($$ `(param-decl ,$1 (param-declr)))))
 
     (identifier-list
      (identifier-list-1 ($$ (tl->list $1))))
@@ -612,7 +613,7 @@
     (direct-abstract-declarator
      ("(" abstract-declarator ")" ($$ $2))
      (direct-abstract-declarator "(" parameter-type-list ")"
-				 `(ftn-declr ,$1 ,$3))
+				 ($$ `(ftn-declr ,$1 ,$3)))
      (direct-abstract-declarator "(" ")" ($$ `(ftn-declr ,$1 (param-list))))
      (direct-abstract-declarator
       "[" type-qualifier-list assignment-expression "]"
@@ -679,7 +680,6 @@
     (designator
      ("[" constant-expression "]" ($$ `(array-dsgr ,$2)))
      ("." identifier ($$ `(sel-dsgr ,$2))))
-
     ;; === statements =========================================================
 
     (statement

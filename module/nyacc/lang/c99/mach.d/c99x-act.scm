@@ -675,10 +675,12 @@
    (lambda ($3 $2 $1 . $rest) `(pointer ,$2 ,$3))
    ;; pointer => "*" type-qualifier-list
    (lambda ($2 $1 . $rest) `(pointer ,$2))
-   ;; pointer => "*" pointer
-   (lambda ($2 $1 . $rest) `(pointer ,$2))
    ;; pointer => "*" attribute-specifiers pointer
    (lambda ($3 $2 $1 . $rest) `(pointer ,$3))
+   ;; pointer => "*" attribute-specifiers
+   (lambda ($2 $1 . $rest) `(pointer))
+   ;; pointer => "*" pointer
+   (lambda ($2 $1 . $rest) `(pointer ,$2))
    ;; pointer => "*"
    (lambda ($1 . $rest) '(pointer))
    ;; direct-declarator => identifier
@@ -686,7 +688,7 @@
    ;; direct-declarator => "(" declarator ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; direct-declarator => "(" attribute-specifier declarator ")"
-   (lambda ($4 $3 $2 $1 . $rest) $2)
+   (lambda ($4 $3 $2 $1 . $rest) $3)
    ;; direct-declarator => direct-declarator "[" type-qualifier-list assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 ,$4))
@@ -742,7 +744,8 @@
    (lambda ($2 $1 . $rest)
      `(param-decl ,$1 (param-declr ,$2)))
    ;; parameter-declaration => declaration-specifiers
-   (lambda ($1 . $rest) `(param-decl ,$1))
+   (lambda ($1 . $rest)
+     `(param-decl ,$1 (param-declr)))
    ;; identifier-list => identifier-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; identifier-list-1 => identifier
@@ -763,14 +766,10 @@
    (lambda ($3 $2 $1 . $rest) $2)
    ;; direct-abstract-declarator => direct-abstract-declarator "(" paramete...
    (lambda ($4 $3 $2 $1 . $rest)
-     (let ((dcl (if #f `(scope ,$1) $1)))
-       `(ftn-declr ,dcl ,$3)))
+     `(ftn-declr ,$1 ,$3))
    ;; direct-abstract-declarator => direct-abstract-declarator "(" ")"
    (lambda ($3 $2 $1 . $rest)
-     (let ((dcl (if (memq (sx-tag $1) '(ptr-declr abs-ptr-declr))
-                  `(scope ,$1)
-                  $1)))
-       `(ftn-declr ,dcl (param-list))))
+     `(ftn-declr ,$1 (param-list)))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 ,$4))

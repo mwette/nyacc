@@ -32,8 +32,10 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 munge-base)
-  #:export (expand-typerefs reify-declr split-udecl
-			    clean-field-list clean-fields)
+  #:export (expand-typerefs
+	    reify-declr udecl->mdecl
+	    split-udecl
+	    clean-field-list clean-fields)
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)		; let-values
   #:use-module (srfi srfi-1)
@@ -219,17 +221,18 @@
   (define (probe-declr declr)
     (sx-match declr
       ((ident ,name)
-       (sx-ref orig-declr 1))
+       (sx-ref orig-declr 1))		; returns #f if abstract
       ((init-declr ,dcl)
        `(init-declr ,(probe-declr dcl)))
       ((comp-declr ,dcl)
        `(comp-declr ,(probe-declr dcl)))
       ((param-declr ,dcl)
-       `(param-declr ,(probe-declr dcl)))
+       (let ((dcl (probe-declr dcl)))
+	 (if dcl `(param-declr ,dcl) `(param-declr))))
       ((ptr-declr ,ptr ,dcl)
        (let ((dcl (probe-declr dcl)))
 	 (if dcl
-	     (sx-match dcl
+	     (sx-match dcl		; chaining of pointers
 	       ((ptr-declr ,ptr1 ,dcl1) `(ptr-declr (pointer ,ptr1) ,dcl1))
 	       ((abs-ptr-declr ,ptr1) `(abs-ptr-declr (pointer ,ptr1)))
 	       (,_ `(ptr-declr ,ptr ,dcl)))
@@ -279,9 +282,12 @@
    (map
     (lambda (elt) (if (eq? (sx-tag elt) 'type-spec) type-spec elt))
     (sx-tail decl-spec-list 1))))
+
 ;; declr can be xxxx-declr-list or xxxx-declr
 ;; This needs to be able to accept @code{#f} @var{declr}. <= done, methinks
+
 (define (expand-specl-typerefs specl declr udict keep)
+
   ;; In the process of expanding typerefs it is crutial that routines which
   ;; expand parts return the original if no change made.  That is, if there
   ;; are no changes then @code{(eq? (expand-typerefs expr) expr)} is true.
@@ -387,6 +393,7 @@
 ;; been munged into udecls.  The behavior is actually NOT DEFINED.
 ;; @end deffn
 (define* (expand-typerefs adecl udict #:optional (keep '()))
+
   ;; In the process of expanding typerefs it is crutial that routines which
   ;; expand parts return the original if no change made.  That is, if there
   ;; are no changes then @code{(eq? (expand-typerefs expr) expr)} is true.
@@ -428,6 +435,8 @@
        ((param-declr ,declr1)
 	(let ((xdeclr (fix-declr declr1)))
 	  (if (eq? xdeclr declr1) declr `(param-declr ,xdeclr))))
+       ((param-declr)
+	declr)
        ((ary-declr ,declr1 ,array-spec)
 	(let ((xdeclr (fix-declr declr1)))
 	  (if (eq? xdeclr declr1) declr `(ary-declr ,xdeclr ,array-spec))))
@@ -550,6 +559,9 @@
 	  adecl ;; <= unchanged; return original
 	  (sx-list tag attr repl-specl repl-declr)))))
 
+
+;; === reify abstract declaration =====
+
 (define (def-namer) "@")
 
 ;; @deffn {Procedure} reify-declr declr [#:namer proc]
@@ -575,5 +587,78 @@
       (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
   (if declr (probe-declr declr) `(init-declr ,(namer))))
+
+;; === munged specification ============
+
+;; @deffn {Procedure} udecl->mdecl udecl [#:namer def-namer]
+;; @deffnx {Procedure} udecl->mdecl/comm udecl [#:def-comm ""]
+;; Turn a stripped-down unit-declaration into an m-spec.  The second version
+;; includes the comment. This assumes decls have been run through
+;; @code{stripdown}.
+;; @example
+;; (decl (decl-spec-list (type-spec "double"))
+;;       (init-declr-list (...))
+;;       (comment "state vector"))
+;; =>
+;; ("x" "state vector" (array-of 10) (float "double")
+;; @end example
+;; @noindent
+;; The optional keyword argument @var{namer} is a procdedure returning a string
+;; to add for abstract declarators.  If an identifier is not provided, a
+;; random identifier starting with @code{@} will be provided.
+;; @end deffn
+(define* (udecl->mdecl decl #:key (namer def-namer))
+
+  (define (unwrap-pointer pointer tail)
+    (sx-match pointer
+      ((pointer (type-qual-list . ,type-qual) ,pointer)
+       (unwrap-pointer pointer (cons '(pointer-to)  tail)))
+      ((pointer (type-qual-list . ,type-qual)) (cons '(pointer-to) tail))
+      ((pointer ,pointer) (unwrap-pointer pointer (cons '(pointer-to) tail)))
+      ((pointer) (cons '(pointer-to) tail))
+      (,_ (sferr "unwrap-pointer failed on:\n") (pperr pointer)
+	  (throw 'nyacc-error "unwrap-pointer"))))
+
+  (define* (unwrap-declr declr #:optional (tail '()))
+    ;;(sferr "unwrap-declr  ~S  ~S\n" declr tail)
+    (sx-match declr
+      ((init-declr ,item) (unwrap-declr item tail))
+      ((comp-declr ,item) (unwrap-declr item tail))
+      ((param-declr ,item) (unwrap-declr item tail))
+      ((ident ,name) (cons name tail))
+      ((ptr-declr ,ptr ,dcl)
+       (unwrap-declr dcl (unwrap-pointer ptr tail)))
+      ((abs-ptr-declr ,ptr) (cons* (namer) (unwrap-pointer ptr tail)))
+      ((ary-declr ,dcl (type-qual . ,rest) . ,rest)
+       (unwrap-declr `(ary-declr ,dcl . ,rest) tail))
+      ((ary-declr ,dcl ,size) (unwrap-declr dcl (cons `(array-of ,size) tail)))
+      ((ary-declr ,dcl) (unwrap-declr dcl (cons `(array-of) tail)))
+      ((abs-ary-declr ,size) (cons* (namer) `(array-of ,size) tail))
+      ((abs-ary-declr) (cons* (namer) `(array-of) tail))
+      ((ftn-declr ,dcl ,param-list)
+       (unwrap-declr dcl (cons `(function-returning ,param-list) tail)))
+      ((abs-ftn-declr ,param-list)
+       (cons* (namer) `(function-returning ,param-list) tail))
+      ((scope ,expr) (unwrap-declr expr tail))
+      ((bit-field (ident ,name) ,size) (cons* name `(bit-field ,size) tail))
+      (,_
+       (sferr "munge/unwrap-declr missed:\n")
+       (pperr declr)
+       (throw 'nyacc-error "c99/munge: udecl->mdecl failed")
+       #f)))
+
+  (let-values (((tag attr specl declr) (split-udecl decl)))
+    (let* ((declr (or declr `(ident ,(namer))))
+	   (stor-spec (and=> (sx-find 'stor-spec specl)
+			     (lambda (sx) (sx-ref sx 1))))
+	   (type-spec (and=> (sx-find 'type-spec specl) sx-tail))
+	   (m-declr (unwrap-declr declr type-spec))
+	   (m-declr (if (and (equal? stor-spec '(extern))
+			     (not (equal? 'function-returning (caadr m-declr))))
+	   (cons* (car m-declr) '(extern) (cdr m-declr)) m-declr)))
+      ;;(pperr decl)
+      ;;(sferr "m-declr:\n") (pperr m-declr)
+      ;;(sferr "type-spec:\n") (pperr type-spec)      
+      m-declr)))
 
 ;; --- last line ---
