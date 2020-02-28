@@ -391,6 +391,7 @@
 	   (make-struct/no-tail
 	    type (make-bytestructure val 0 (fh:vector& base-desc))))
 	  ((ffi:pointer? val) (make (ffi:pointer->bytevector val size)))
+	  ((integer? val) (make (ffi:make-pointer val) size))
 	  (else (error "ffi-help-rt: bad spec" val))))
        #f #f
        (make-bs-printer (quote type))))
