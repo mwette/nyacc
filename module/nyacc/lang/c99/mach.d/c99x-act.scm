@@ -675,10 +675,12 @@
    (lambda ($3 $2 $1 . $rest) `(pointer ,$2 ,$3))
    ;; pointer => "*" type-qualifier-list
    (lambda ($2 $1 . $rest) `(pointer ,$2))
-   ;; pointer => "*" pointer
-   (lambda ($2 $1 . $rest) `(pointer ,$2))
    ;; pointer => "*" attribute-specifiers pointer
    (lambda ($3 $2 $1 . $rest) `(pointer ,$3))
+   ;; pointer => "*" attribute-specifiers
+   (lambda ($2 $1 . $rest) '(pointer))
+   ;; pointer => "*" pointer
+   (lambda ($2 $1 . $rest) `(pointer ,$2))
    ;; pointer => "*"
    (lambda ($1 . $rest) '(pointer))
    ;; direct-declarator => identifier

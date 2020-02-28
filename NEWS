@@ -5,6 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2020-99-99  road to V1.01.2
+	* fixed bug #57911, compile-ffi fails to parse function attributes 
+	  preceded by *; added production rule to pointer:
+	   ("*" attribute-specifiers ($$ '(pointer)))
+
 2020-02-22  V1.01.1 (V1.01.0 not released)
 	* read-only struct-vable fields in ffi-helper changed to writable:
 	  guile 3.0 deprecates read-only fields

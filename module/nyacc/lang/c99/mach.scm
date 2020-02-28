@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm - C parser grammer
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2020 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -530,8 +530,9 @@
     (pointer				; S 6.7.6
      ("*" type-qualifier-list pointer ($$ `(pointer ,$2 ,$3)))
      ("*" type-qualifier-list ($$ `(pointer ,$2)))
-     ("*" pointer ($$ `(pointer ,$2)))
      ("*" attribute-specifiers pointer ($$ `(pointer ,$3)))
+     ("*" attribute-specifiers ($$ '(pointer)))
+     ("*" pointer ($$ `(pointer ,$2)))
      ("*" ($$ '(pointer))))
 
     (direct-declarator			; S 6.7.6
