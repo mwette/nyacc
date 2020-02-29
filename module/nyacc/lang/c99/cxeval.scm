@@ -18,18 +18,20 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 cxeval)
-  #:export (parse-c99-cx eval-c99-cx)
+  #:export (parse-c99-cx eval-c99-cx eval-sizeof-type)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))
   #:use-module (nyacc lang sx-util)
+  #:use-module (nyacc lang arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
-  #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
-  #:use-module (system foreign))
+  ;;#:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
+  #:use-module (system foreign)
+  #:use-module (ice-9 match))
 
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
@@ -98,6 +100,7 @@
 ;; (type-name specificer-qualifier-list abstract-declarator)
 ;; (decl-spec-list 
 ;; (abs-decl
+#|
 (define (eval-sizeof-type tree udict)
   (sx-match (sx-ref tree 1)
     ((type-name (decl-spec-list (type-spec (typename ,name))))
@@ -116,7 +119,96 @@
      (sizeof '*))
     (,_
      (throw 'c99-error "failed to expand sizeof type ~S" (sx-ref tree 1)))))
+|#  
+
+;; @deffn {Procedure} eval-sizeof-type tree [udict ddict]
+;; => (values sizeof-val align-of)
+;; @end deffn
+(define* (eval-sizeof-type tree #:optional (udict '()) (ddict '()))
+
+  (unless (eq? 'sizeof-type (sx-tag tree)) (error "bad tree"))
+
+  ;; (decl attr specl (declr-list declr1 declr2 ...))
+  ;; => ((decl attr specl declr1) (decl attr specl declr2) ...)
+  (define (splitup-decl decl)
+    (let ((tag (sx-tag decl)) (attr (sx-attr decl))
+	  (specl (sx-ref decl 1)) (dclrl (sx-ref decl 2)))
+      (map (lambda (declr) (sx-list tag attr specl declr)) (sx-tail dclrl))))
+
+  ;; Update running struct size (rs) given new item s and a.
+  (define (incr-size s a rs)
+    (+ s (* a (quotient (+ rs (1- a)) a))))
+
+  ;; Update running union size (rs) given new item s and a.
+  ;; CHECK THIS
+  (define (maxi-size s a rs)
+    (max s rs))
+
+  (define (exec/udecl-list udecls size base-align update)
+    (let loop ((size size) (base-align base-align) (udecls udecls))
+      (if (null? udecls)
+	  (values size base-align)
+	  (call-with-values
+	      (lambda () (sizeof-mtail (cdr (udecl->mdecl (car udecls)))))
+	    (lambda (elt-size elt-align)
+	      (loop (update elt-size elt-align size)
+		    (max elt-align base-align) (cdr udecls)))))))
+
+  (define (incr/udecl-list udecls size base-align)
+    (exec/udecl-list udecls size base-align incr-size))
   
+  (define (maxi/udecl-list udecls size base-align)
+    (exec/udecl-list udecls size base-align maxi-size))
+
+  (define (sizeof-mtail mtail)
+    (match mtail
+      (`((pointer-to) . ,rest)
+       (values (sizeof-basetype '*) (alignof-basetype '*)))
+      (`((fixed-type ,name))
+       (values (sizeof-basetype name) (alignof-basetype name)))
+      (`((float-type ,name))
+       (values (sizeof-basetype name) (alignof-basetype name)))
+      (`((array-of ,size) . ,rest)
+       (let ((mult (eval-c99-cx size)))
+	 (call-with-values
+	     (lambda () (sizeof-mtail rest))
+	   (lambda (size align)
+	     (values (* mult size) align)))))
+
+      (`((struct-def (field-list . ,fields)))
+       (let loop ((size 0) (align 0) (flds fields))
+	 (if (null? flds)
+	     (values (incr-size 0 align size) align)
+	     (call-with-values
+		 (lambda ()
+		   (incr/udecl-list (splitup-decl (car flds)) size align))
+	       (lambda (size align)
+		 (loop size align (cdr flds)))))))
+
+      (`((union-def (field-list . ,fields)))
+       (let loop ((size 0) (align 0) (flds fields))
+	 (if (null? flds)
+	     (values (incr-size 0 align size) align)
+	     (call-with-values
+		 (lambda ()
+		   (maxi/udecl-list (splitup-decl (car flds)) size align))
+	       (lambda (size align)
+		 (loop size align (cdr flds)))))))
+
+      (_ (sferr "c99/eval-sizeof-type: missed\n") (pperr mtail)
+	 (quit)
+	 (throw 'nyacc-error "coding error"))))
+
+  (let* ((type-name (sx-ref tree 1))
+	 (specl (sx-ref type-name 1))
+	 (declr (or (sx-ref type-name 2) '(param-declr)))
+	 ;;(declr (reify-declr declr))	; not needed, as ->mdecl will do this
+	 (udecl `(udecl ,specl ,declr))
+	 (xdecl (expand-typerefs udecl udict ddict))
+	 (mdecl (udecl->mdecl xdecl)))
+    (sizeof-mtail (cdr mdecl))))
+
+
 ;; (sizeof unary-expr)
 ;;    (primary-expression			; S 6.5.1
 ;;     (identifier ($$ `(p-expr ,$1)))

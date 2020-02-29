@@ -32,6 +32,7 @@ NYACC_BASE_BINS =				\
 	nyacc/export.go				\
 	nyacc/import.go				\
 	nyacc/bison.go				\
+	nyacc/lang/arch-info.go			\
 	nyacc/lang/sx-util.go			\
 	nyacc/lang/util.go
 
@@ -44,6 +45,7 @@ NYACC_BASE_SRCS =				\
 	nyacc/export.scm			\
 	nyacc/import.scm			\
 	nyacc/bison.scm				\
+	nyacc/lang/arch-info.scm		\
 	nyacc/lang/sx-util.scm			\
 	nyacc/lang/util.scm
 

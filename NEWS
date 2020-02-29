@@ -6,11 +6,14 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2020-99-99  pending V1.02.0
+	* made changes to C99 AST, munger and ffi helper, as follows:
 	* updated C99 tree tags (e.g., array-of => ary-declr), and
-	  added reify-decl-tail to turn direct-abstract-declarators
-	  into direct-declarators.  This will help pave path for 
-	  better type analysis to implement sizeof(<type>) and maybe
-	  rework the ffi-helper translator to be more robust.
+	  and narrowed use of abs-...-declr to lowest level. 
+	* Updated udecl->mdecl to use above, made more robust, I hope,
+ 	  and it now generates (extern) tag for non-functions, to be
+	  used in new implementation of the ffi helper.
+	* added reify-decl to make abstract C99 declarations concrete.
+	* working eval-c99-cx for sizeof(type)
 
 2020-02-22  V1.01.1 (V1.01.0 not released)
 	* read-only struct-vable fields in ffi-helper changed to writable:

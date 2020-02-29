@@ -1,6 +1,6 @@
 ;; nyacc/lang/c99/c99-06.test		-*- scheme -*-
 ;;
-;; Copyright (C) 2017,2019 Matthew R. Wette
+;; Copyright (C) 2017,2019,2020 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -14,10 +14,16 @@
   #:use-module (nyacc lang c99 util)
   #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 pprint)
+  #:use-module (nyacc lang c99 cxeval)
+  #:use-module (nyacc lang sx-util)
   #:use-module ((sxml xpath) #:select (sxpath))
   #:use-module (test-suite lib))
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
+
+(define (fold p s l)
+  (let loop ((s s) (l l))
+    (if (null? l) s (loop (p (car l) s) (cdr l)))))
 
 (define incs '("exam.d"))
 
@@ -117,6 +123,67 @@
 	   (ddict (udict-enums->ddict udict ddict)))
       (and (string= "1" (or (assoc-ref ddict "FOO") "X"))
 	   (string= "2" (or (assoc-ref ddict "BAR") "X")))))
+
+  (pass-if "udecl->mdecl/concrete"
+    (fold
+     (lambda (pair status)
+       (let* ((tree (parse-string (car pair)))
+	      (udict (c99-trans-unit->udict tree))
+	      (udecl (assoc-ref udict "foo"))
+	      (mdecl (udecl->mdecl udecl)))
+	 (and status (equal? mdecl (cdr pair)))))
+     #t
+     '(("int foo;" . ("foo" (fixed-type "int")))
+       ("int **foo;" . ("foo" (pointer-to) (pointer-to) (fixed-type "int")))
+       ("int foo();" . ("foo" (function-returning (param-list))
+			(fixed-type "int"))))))
+
+  (pass-if "udecl->mdecl/abstract"
+    (fold
+     (lambda (spec status)
+       (let* ((namer (lambda () "@"))
+	      (tree (parse-string (car spec)))
+	      (udict (c99-trans-unit->udict tree))
+	      (udecl (assoc-ref udict "foo"))
+	      (udecl (sx-ref* udecl 2 1 2 1))
+	      (mdecl (udecl->mdecl udecl #:namer namer)))
+	 (and status (equal? mdecl (cdr spec)))))
+     #t
+     `(("int foo(int);" . ("@" (fixed-type "int")))
+       ("int foo(int*);" . ("@" (pointer-to) (fixed-type "int")))
+       ("int foo(int**);" . ("@" (pointer-to) (pointer-to) (fixed-type "int")))
+       ("int foo(int[]);" . ("@" (array-of) (fixed-type "int")))
+       ("int foo(int*[]);" . ("@" (array-of) (pointer-to) (fixed-type "int")))
+       ("int foo(int(*)()[]);" . ("@" (pointer-to)  ;; ???
+				  (function-returning (param-list))
+				  (array-of) (fixed-type "int"))))))
+
+  (pass-if "evaluate sizeof(type)"
+    (fold
+     (lambda (case status)
+       (let* ((code (string-append (car case) " int x = sizeof(foo_t);"))
+	      (tree (parse-string code))
+	      (udict (c99-trans-unit->udict tree))
+	      (udecl (assoc-ref udict "x"))
+	      (sotex (sx-ref* udecl 2 2 1))) ; (sizeof-type ...)
+	 (call-with-values
+	     (lambda () (eval-sizeof-type sotex udict))
+	   (lambda (size align)
+	     (and status (= size (cadr case)) (= align (cddr case)))))))
+     #t
+     '(("typedef int foo_t;" . (4 . 4))
+       ("typedef long foo_t;" . (8 . 8))
+       ("typedef int foo_t[5];" . (20 . 4))
+       ("typedef struct { int x; } foo_t;" . (4 . 4))
+       ("typedef struct { int x,y; } foo_t;" . (8 . 4))
+       ("typedef struct { int x; double y; } foo_t;" . (16 . 8))
+       ("typedef struct { double x; int y; } foo_t;" . (16 . 8))
+       ("typedef struct { int x,y; double z; } foo_t;" . (16 . 8))
+       ("typedef struct { int x; double z; void *p; } foo_t;" . (24 . 8))
+       ("typedef union { double x; int y; } foo_t;" . (8 . 8))
+       ("typedef union { double x; int y[3]; } foo_t;" . (16 . 8))
+       ("typedef enum { FOO=1, BAR=2 } foo_t;" . (4 . 4))
+       )))
 
   )
 

@@ -155,7 +155,7 @@
 	   (else (cons item seed))))
    '() decl-spec-list))
 
-;; @deffn {Procedure} split-udecl decl => tag attr decl declr
+;; @deffn {Procedure} split-udecl decl => tag attr specl declr
 ;; This routine splits a unitized declaration into its constituent parts.
 ;; Get @code{(values tag attr spec-l declrs tail)}.
 ;; @example
@@ -240,7 +240,7 @@
 	     `(abs-ptr-declr ,ptr))))
       ((ary-declr ,dcl . ,rest)
        (let ((dcl (probe-declr dcl)))
-	 (if dcl `(ary-declr ,dcl . ,rest) `(abs-ary-decl . ,rest))))
+	 (if dcl `(ary-declr ,dcl . ,rest) `(abs-ary-declr . ,rest))))
       ((ftn-declr ,dcl . ,rest)
        (let ((dcl (probe-declr dcl)))
 	 (if dcl `(ftn-declr ,dcl . ,rest) `(abs-ftn-declr . ,rest))))
@@ -438,12 +438,11 @@
 	  (if (eq? xdeclr declr1) declr `(param-declr ,xdeclr))))
        ((param-declr)
 	declr)
-       ((ary-declr ,declr1 ,array-spec)
+       
+       ((scope ,declr1)
 	(let ((xdeclr (fix-declr declr1)))
-	  (if (eq? xdeclr declr1) declr `(ary-declr ,xdeclr ,array-spec))))
-       ((ary-declr ,dir-declr)
-	(let ((xdeclr (fix-declr dir-declr)))
-	  (if (eq? xdeclr dir-declr) declr `(ary-declr ,xdeclr))))
+	  (if (eq? xdeclr declr1) declr `(scope ,xdeclr))))
+
        ((ptr-declr ,pointer ,dir-declr)
 	(let ((xdeclr (fix-declr dir-declr)))
 	  (if (eq? xdeclr dir-declr) declr `(ptr-declr ,pointer ,xdeclr))))
@@ -453,81 +452,30 @@
        ((abs-ptr-declr ,pointer)
 	declr)
 
-       ((scope ,declr1)
-	(let ((xdeclr (fix-declr declr1)))
-	  (if (eq? xdeclr declr1) declr `(scope ,xdeclr))))
-       ((abs-scope ,declr1)
-	(let ((xdeclr (fix-declr declr1)))
-	  (if (eq? xdeclr declr1) declr `(abs-scope ,xdeclr))))
-
-       ;; abstract declarator and direct abstract declarator
-       ((abs-declr ,pointer ,dir-abs-declr)
-	(let ((xdeclr (fix-declr dir-abs-declr)))
-	  (if (eq? xdeclr dir-abs-declr) declr `(abs-declr ,pointer ,xdeclr))))
-       ((abs-declr (pointer))
-	declr)
-       ((abs-declr (pointer ,pointer-val))
-	declr)
-       ((abs-declr ,dir-abs-declr)
-	(let ((xdeclr (fix-declr dir-abs-declr)))
-	  (if (eq? xdeclr dir-abs-declr) declr `(abs-declr ,xdeclr))))
-
-       ;; declr-scope
-       ;; declr-array dir-abs-declr
-       ;; declr-array dir-abs-declr assn-expr
-       ;; declr-array dir-abs-declr type-qual-list
-       ;; declr-array dir-abs-declr type-qual-list assn-expr
-       ((declr-scope ,abs-declr)		; ( abs-declr )
-	(let ((xdeclr (fix-declr abs-declr)))
-	  (if (eq? xdeclr abs-declr) declr `(declr-scope ,xdeclr))))
-       ((declr-array ,dir-abs-declr)	; []
-	(let ((xdeclr (fix-declr dir-abs-declr)))
-	  (if (eq? xdeclr dir-abs-declr) declr `(declr-array ,xdeclr))))
-       ((declr-array ,dir-abs-declr (type-qual-list . ,type-quals))
-	(let ((xdeclr (fix-declr dir-abs-declr)))
-	  (if (eq? xdeclr dir-abs-declr) declr
-	      `(declr-array ,xdeclr (type-qual-list . ,type-quals)))))
-       ((declr-array ,dir-abs-declr ,assn-expr)
-	(let ((xdeclr (fix-declr dir-abs-declr)))
-	  (if (eq? xdeclr dir-abs-declr) declr
-	      `(declr-array ,xdeclr ,assn-expr))))
-       ((declr-array ,dir-abs-declr ,type-qual-list ,assn-expr)
-	(let ((xdeclr (fix-declr dir-abs-declr)))
-	  (if (eq? xdeclr dir-abs-declr) declr
-	      `(declr-array ,xdeclr ,type-qual-list ,assn-expr))))
-       
-       ;; declr-anon-array type-qual-list assn-expr
-       ((declr-anon-array ,type-qual-list ,assn-expr) declr)
-       ;; declr-anon-array type-qual-list 
-       ((declr-anon-array (type-qual-list ,type-qual-tail)) declr)
-       ;; ???? declr-anon-array assn-expr
-       ((declr-anon-array ,assn-expr) declr)
-       ;; declr-anon-array
-       ((declr-anon-array) declr)
-       ;; declr-star dir-abs-decl
-       ((declr-star ,dir-abs-declr)
-	(let ((xdeclr (fix-declr dir-abs-declr)))
-	  (if (eq? xdeclr dir-abs-declr) declr
-	      `(declr-star ,xdeclr))))
-       ;; declr-star
-       ((declr-star) declr)
-
        ;; ftn-declr
        ((ftn-declr ,dir-declr ,param-list)
 	(let ((xdeclr (fix-declr dir-declr))
 	      (xparam-list (fix-param-list param-list)))
 	  (if (and (eq? xdeclr dir-declr) (eq? xparam-list param-list)) declr
 	      `(ftn-declr ,xdeclr ,xparam-list))))
-       
        ((abs-ftn-declr ,abs-declr ,param-list)
 	(let ((xdeclr (fix-declr abs-declr))
 	      (xparam-list (fix-param-list param-list)))
 	  (if (and (eq? xdeclr abs-declr) (eq? xparam-list param-list)) declr
 	      `(abs-ftn-declr ,xdeclr ,xparam-list))))
-       ((anon-ftn-declr ,param-list)
-	(let ((xparam-list (fix-param-list param-list)))
-	  (if (eq? xparam-list param-list) declr
-	      `(anon-ftn-declr ,xparam-list))))
+
+       ((ary-declr ,declr1 ,array-spec)
+	(let ((xdeclr (fix-declr declr1)))
+	  (if (eq? xdeclr declr1) declr `(ary-declr ,xdeclr ,array-spec))))
+       ((ary-declr ,dir-declr)
+	(let ((xdeclr (fix-declr dir-declr)))
+	  (if (eq? xdeclr dir-declr) declr `(ary-declr ,xdeclr))))
+       ((abs-ary-declr . ,rest) declr)
+
+       ((star-ary-declr ,declr1)
+	(let ((xdeclr (fix-declr declr1)))
+	  (if (eq? xdeclr declr1) declr `(star-ary-declr ,xdeclr))))
+       ((abs-star-ary-declr) declr)
 
        ;; declr-lists too
        ((init-declr-list . ,declrs)
@@ -559,6 +507,8 @@
 	       (eq? orig-declr repl-declr))
 	  adecl ;; <= unchanged; return original
 	  (sx-list tag attr repl-specl repl-declr)))))
+
+;; === unitize decl ===================
 
 
 ;; === reify abstract declaration =====

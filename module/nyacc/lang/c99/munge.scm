@@ -62,10 +62,11 @@
 	    stripdown-1
 	    tdef-splice-specl
 	    tdef-splice-declr)
-  #:re-export (expand-typerefs reify-declr reify-decl udecl->mdecl split-udecl
-			       clean-field-list)
-  ;;#:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
-  #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
+  #:re-export (expand-typerefs
+	       reify-declr reify-decl
+	       udecl->mdecl split-udecl
+	       clean-field-list)
+  #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 util)
