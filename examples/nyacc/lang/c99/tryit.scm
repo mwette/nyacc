@@ -4,6 +4,7 @@
 (add-to-load-path (getcwd))
 
 (use-modules (srfi srfi-1))
+(use-modules (srfi srfi-11)) ;; let*-values
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxeval))
 (use-modules (nyacc lang c99 pprint))
@@ -21,6 +22,8 @@
 (define pp pretty-print)
 (define ppin (lambda (sx) (pretty-print sx #:per-line-prefix "  ")))
 (define pp99 (lambda (sx) (pretty-print-c99 sx #:per-line-prefix "  ")))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (pperr sx) (pretty-print sx (current-error-port) #:per-line-prefix "  "))
 
 (define cpp-defs
   (cond
@@ -57,7 +60,6 @@
 		 ))))
 
 (define (parse-string str)
-  ;;(simple-format #t "~S => \n" str)
   (with-input-from-string str
     (lambda ()
       (parse-c99 #:cpp-defs cpp-defs
@@ -80,6 +82,7 @@
 
 (use-modules (arch-info))
 (use-modules (system foreign))
+(use-modules (ice-9 match))
 
 ;; @deffn {Procedure} eval-sizeof-type tree [udict ddict]
 ;; => (values sizeof-val align-of)
@@ -87,17 +90,70 @@
 
 (define* (eval-sizeof-type tree #:optional (udict '()) (ddict '()))
   (unless (eq? 'sizeof-type (sx-tag tree)) (error "bad tree"))
+
+  ;; Update size with var of size @var{s}, alignment @var{a}, on size @var{rs}.
+  (define (update-size s a rs)
+    (+ s (* a (quotient (+ rs (1- a)) a))))
+
+  ;; update running size, base alignment
+  (define (incr/udecl-list udecls size base-align)
+    (let loop ((size size) (base-align base-align) (udecls udecls))
+      (if (null? udecls)
+	  (values size base-align)
+	  (call-with-values
+	      (lambda () (sizeof-mtail (cdr (udecl->mdecl (cdar udecls)))))
+	    (lambda (elt-size elt-align)
+	      (loop (update-size elt-size elt-align size)
+		    (max elt-align base-align) (cdr udecls)))))))
+
+  (define (sizeof-mtail mtail)
+    (match mtail
+      (`((pointer-to) . ,rest)
+       (values (sizeof-basetype '*) (alignof-basetype '*)))
+      (`((fixed-type ,name))
+       (values (sizeof-basetype name) (alignof-basetype name)))
+      (`((float-type ,name))
+       (values (sizeof-basetype name) (alignof-basetype name)))
+      (`((array-of ,size) . ,rest)
+       (let ((mult (eval-c99-cx size)))
+	 (call-with-values
+	     (lambda () (sizeof-mtail rest))
+	   (lambda (size align)
+	     (values (* mult size) align)))))
+
+      (`((struct-def (field-list . ,fields)))
+       (let loop ((size 0) (align 0) (flds fields))
+	 (cond
+	  ((null? flds)
+	   (values (update-size 0 align size) align))
+	  (else
+	   (call-with-values
+	       (lambda ()
+		 (let ((udecls (unitize-decl (car flds))))
+		   (incr/udecl-list udecls size align)))
+ 	     (lambda (size align)
+	       (loop size align (cdr flds))))))))
+
+      (_ (sferr "c99/eval-sizeof-type: missed\n") (pperr mtail)
+	 (quit)
+	 (throw 'nyacc-error "coding error"))))
+
   (let* ((type-name (sx-ref tree 1))
 	 (specl (sx-ref type-name 1))
-	 (declr (reify-declr (sx-ref type-name 2)))
+	 (declr (or (sx-ref type-name 2) '(param-declr)))
+	 ;;(x (begin (sf "1:\n") (ppin specl)))
+	 ;;(x (begin (sf "2:\n") (ppin declr)))
+	 (declr (reify-declr declr))	; not needed, as ->mdecl will do this
+	 ;;(x (begin (sf "3:\n") (ppin declr)))
 	 (udecl `(udecl ,specl ,declr))
-	 ;;(xdecl (expand-typerefs udecl udict ddict))
-	 (mdecl (udecl->mdecl udecl))
+	 ;;(x (begin (sf "4:\n") (ppin udecl)))
+	 (xdecl (expand-typerefs udecl udict ddict))
+	 ;;(x (begin (sf "5:\n") (ppin xdecl)))
+	 (mdecl (udecl->mdecl xdecl))
+	 ;;(x (begin (sf "6:\n") (ppin mdecl)))
 	 )
-    (ppin udecl)
-    (pp99 udecl)
-    (pp mdecl)
-    #f))
+    (sizeof-mtail (cdr mdecl))))
+
 
 ;; === from cxeval.scm:
 (define (expand-typename typename udict)
@@ -126,66 +182,10 @@
     (sf "orig:  ~A\n" code)
     (sf "   =>") (pp99 udecl)))
 
-;; direct-declarators
-(when #f
-  (pp
-  (fold
-   (lambda (pair status)
-     (let* ((tree (parse-string (car pair)))
-	    (udict (c99-trans-unit->udict tree))
-	    (udecl (assoc-ref udict "foo"))
-	    (mdecl (udecl->mdecl udecl)))
-       (unless (equal? mdecl (cdr pair))
-	 (sf "code: ~S\n" (car pair))
-	 (sf "expected:\n") (ppin (cdr pair))
-	 (sf "expanded:\n") (ppin mdecl)
-	 (newline))
-       (and status (equal? mdecl (cdr pair)))
-       ))
-   #t '(("int foo;" . ("foo" (fixed-type "int")))
-	("int foo();" . ("foo" (function-returning (param-list))
-			 (fixed-type "int")))))
-  ))
-
-
-(define (mx-ref* mx . args)
-  (fold (lambda (i l) (list-ref l i)) mx args))
-   
-;; abstract declarators
-(define (arg1-decl udecl)
-  (sx-ref* udecl 2 1 2 1))
-
-(when #t
-  (pp
-  (fold
-   (lambda (spec status)
-     (let* ((namer (lambda () "@"))
-	    (tree (parse-string (list-ref spec 0)))
-	    (udict (c99-trans-unit->udict tree))
-	    (udecl (assoc-ref udict "foo"))
-	    (udecl ((list-ref spec 1) udecl))
-	    (mdecl (udecl->mdecl udecl #:namer namer)))
-       (unless (equal? mdecl (list-ref spec 2))
-	 (sf "code: ~S\n" (list-ref spec 0))
-	 (sf "expected:\n") (ppin (list-ref spec 2))
-	 (sf "expanded:\n") (ppin mdecl)
-	 (newline))
-       (and status (equal? mdecl (list-ref spec 2)))
-       ))
-   #t `(;;("int foo;" ,(lambda (sx) sx) ("foo" (fixed-type "int")))
-	;;("int foo(int);" ,arg1-decl ("@" (fixed-type "int")))
-	;;("int foo(int*);" ,arg1-decl ("@" (pointer-to) (fixed-type "int")))
-	("int foo(int*[]);" ,arg1-decl
-	 ("@" (array-of) (pointer-to) (fixed-type "int")))
-	#;("int foo(int*([]));" ,arg1-decl
-	 ("@" (pointer-to) (array-of) (fixed-type "int")))
-	))))
-
 (when #f
   (let* ((code (string-append
-		;;"typedef int bar_t[2];\n"
-		;;"typedef int bar_t;\n"
-		"bar_t foo(bar_t (*)(bar_t));\n" ;; <= param-list broken
+		"typedef int *bar_t;\n"
+		;;"bar_t foo(bar_t (*)(bar_t));\n" ;; <= param-list broken
 		"int foo(bar_t);\n"
 		))
 	 (tree (or (parse-string code) (error "parse failed")))
@@ -195,26 +195,37 @@
 	 )
     (pp udecl)
     (pp xdecl)
-    (pp99 udecl)
-    (pp99 xdecl)
+    ;;(pp99 udecl)
+    ;;(pp99 xdecl)
     #t))
 
-(when #f
+(when #t
   (let* ((code (string-append
-		"typedef struct { int x; double z; void *p; } foo_t;\n"
-		"int x = sizeof(int*(*)(int));\n"
-		"int *(*y)(int);\n"
+		;;"int x = sizeof(int*(*)(int));\n"
+		;;"typedef struct { int x; double z; void *p; } foo_t;\n" ;;24,8
+		;;"typedef struct { int x,y; } foo_t;\n" ;; 8,4
+		;;"typedef struct { int x; double y; } foo_t;\n"  ;; 16,8
+		;;"typedef struct { int x,y; double z; } foo_t;\n" ;; 16,8
+		"typedef struct { double x; int y; } foo_t;\n"  ;; 16,8
+		;;"typedef int foo_t;\n" ;; 4,4
+		;;"typedef long foo_t;\n" ;; 8,8
+		;;"typedef int foo_t[5];\n" ;; 20,4
+		"int x = sizeof(foo_t);\n"
 		))
 	 (tree (parse-string code))
 	 (udict (c99-trans-unit->udict tree))
 	 (udecl (assoc-ref udict "x"))
 	 (sot-x (sx-ref* udecl 2 2 1))
-	 ;;(declr (sx-ref (sx-ref sot-x 1) 2)
+	 ;;(declr (sx-ref (sx-ref sot-x 1) 2))
 	 ;;(ctail (sx-tail (assoc-ref udict "y")))
 	 )
     (newline)
-    (ppin sot-x)
-    (eval-sizeof-type sot-x udict)
+    ;;(ppin sot-x)
+    (call-with-values
+	(lambda () (eval-sizeof-type sot-x udict))
+      (lambda (size align)
+	(sf "  sizeof(above)=~S alignof(above)=~S\n" size align)))
+    (newline)
     #t))
 
 ;; --- last line ---

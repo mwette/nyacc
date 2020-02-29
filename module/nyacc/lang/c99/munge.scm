@@ -43,7 +43,7 @@
 	    ;; munging
 	    stripdown-udecl
 	    udecl-rem-type-qual specl-rem-type-qual
-	    udecl->mdecl udecl->mdecl/comm mdecl->udecl
+	    udecl->mdecl/comm mdecl->udecl
 
 	    unwrap-decl
 	    canize-enum-def-list
@@ -54,7 +54,7 @@
 	    unitize-decl unitize-comp-decl unitize-param-decl
 	    declr-ident declr-id decl-id
 	    iter-declrs
-	    split-decl 
+	    split-decl
 
 	    inc-keeper?
 
@@ -62,8 +62,9 @@
 	    stripdown-1
 	    tdef-splice-specl
 	    tdef-splice-declr)
-  #:re-export (expand-typerefs reify-declr split-udecl clean-field-list)
-  #:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
+  #:re-export (expand-typerefs reify-declr reify-decl udecl->mdecl split-udecl
+			       clean-field-list)
+  ;;#:use-module ((nyacc lang c99 cpp) #:select (eval-cpp-expr))
   #:use-module (nyacc lang c99 cxeval) ;; eval-c99-cx
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (nyacc lang c99 pprint)
@@ -781,91 +782,6 @@
 
 ;; === munged specification ============
 
-(define (def-namer) (symbol->string (gensym "@")))
-
-;; @deffn {Procedure} udecl->mdecl udecl [#:namer def-namer]
-;; @deffnx {Procedure} udecl->mdecl/comm udecl [#:def-comm ""]
-;; Turn a stripped-down unit-declaration into an m-spec.  The second version
-;; includes the comment. This assumes decls have been run through
-;; @code{stripdown}.
-;; @example
-;; (decl (decl-spec-list (type-spec "double"))
-;;       (init-declr-list (...))
-;;       (comment "state vector"))
-;; =>
-;; ("x" "state vector" (array-of 10) (float "double")
-;; @end example
-;; @noindent
-;; The optional keyword argument @var{namer} is a procdedure returning a string
-;; to add for abstract declarators.  If an identifier is not provided, a
-;; random identifier starting with @code{@} will be provided.
-;; @end deffn
-(define* (udecl->mdecl decl #:key (namer def-namer))
-
-  (define (unwrap-pointer pointer)  ;; =>list IGNORES TYPE QUALIFIERS
-    ;;(sferr "unwrap-pointer ~S\n" pointer)
-    (sx-match pointer
-      ((pointer (type-qual-list . ,type-qual) ,pointer)
-       (cons '(pointer-to) (unwrap-pointer pointer)))
-      ((pointer (type-qual-list . ,type-qual)) '((pointer-to)))
-      ((pointer ,pointer) (cons '(pointer-to) (unwrap-pointer pointer)))
-      ((pointer) '((pointer-to)))
-      (,_ (sferr "unwrap-pointer failed on:\n") (pperr pointer)
-	  (throw 'nyacc-error "unwrap-pointer"))))
-
-  (define (unwrap-declr declr)
-    ;;(pperr "declr ...\n") (pperr declr)
-    (sx-match declr
-      ((init-declr ,item) (unwrap-declr item))
-      ((comp-declr ,item) (unwrap-declr item))
-      ((param-declr ,item) (unwrap-declr item))
-      ((ident ,name) (list name))
-
-      ((ptr-declr ,ptr ,dcl)
-       (append (unwrap-pointer ptr) (unwrap-declr dcl)))
-      ((abs-ptr-declr ,ptr) (cons '(pointer-to) (list (namer))))
-
-      ((ary-declr ,dcl (type-qual . ,rest) . ,rest)
-       (unwrap-declr `(ary-declr ,dcl . ,rest)))
-      ((ary-declr ,dcl ,size)
-       (cons `(array-of ,size) (unwrap-declr dcl)))
-      ((ary-declr ,dcl) (cons `(array-of "") (unwrap-declr dcl)))
-      ((abs-ary-declr ,size)
-       (cons `(array-of ,size) (list (namer))))
-      ((abs-ary-declr)
-       (cons `(array-of) (list (namer))))
-
-      ((ftn-declr ,dcl ,param-list)
-       (cons `(function-returning ,param-list) (unwrap-declr dcl)))
-      ((abs-ftn-declr ,param-list)
-       (cons `(function-returning ,param-list) (list (namer))))
-
-      ((scope ,expr) (unwrap-declr expr))
-
-      ((bit-field (ident ,name) ,size)
-       (list `(bit-field ,size) name))
-
-      (,_
-       (sferr "munge/unwrap-declr missed:\n")
-       (pperr declr)
-       (throw 'nyacc-error "c99/munge: udecl->mdecl failed")
-       #f)))
-
-  (let-values (((tag attr specl declr) (split-udecl decl)))
-    (let* ((declr (or declr `(ident ,(namer))))
-	   (stor-spec (and=> (sx-find 'stor-spec specl)
-			     (lambda (sx) (sx-ref sx 1))))
-	   (type-spec (and=> (sx-find 'type-spec specl) sx-tail))
-	   (m-declr (reverse (unwrap-declr declr)))
-	   (m-declr0 m-declr)
-	   (m-declr (if (and (equal? stor-spec '(extern))
-			     (not (equal? 'function-returning (caadr m-declr))))
-			(cons* (car m-declr) '(extern) (cdr m-declr)) m-declr)))
-      ;;(sferr "m-declr0:\n") (pperr m-declr0)
-      ;;(sferr "m-declr:\n") (pperr m-declr)
-      ;;(sferr "type-spec:\n") (pperr type-spec)
-      (append m-declr type-spec))))
-
 (define* (udecl->mdecl/comm decl #:key (def-comm ""))
   (let* ((comm (or (and=> (assq 'comment (sx-attr decl)) cadr) def-comm))
 	 (spec (udecl->mdecl decl)))
@@ -902,6 +818,5 @@
 	(rest (cdr mdecl)))
     (doit `(ident ,name) rest)))
 
-;; === deprecated ====================
 
 ;; --- last line ---

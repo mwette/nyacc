@@ -33,7 +33,8 @@
 
 (define-module (nyacc lang c99 munge-base)
   #:export (expand-typerefs
-	    reify-declr udecl->mdecl
+	    udecl->mdecl
+	    reify-declr reify-decl
 	    split-udecl
 	    clean-field-list clean-fields)
   #:use-module (nyacc lang sx-util)
@@ -562,7 +563,7 @@
 
 ;; === reify abstract declaration =====
 
-(define (def-namer) "@")
+(define (def-namer) "_")
 
 ;; @deffn {Procedure} reify-declr declr [#:namer proc]
 ;; This procedure turns tails of abstract declarations into init-declr's.
@@ -577,17 +578,44 @@
       ((init-declr ,dcl) `(init-declr ,(probe-declr dcl)))
       ((comp-declr ,dcl) `(comp-declr ,(probe-declr dcl)))
       ((param-declr ,dcl) `(param-declr ,(probe-declr dcl)))
+      ((param-declr) `(param-declr (ident ,(namer))))
       ((ptr-declr ,ptr ,dcl) `(ptr-declr ,ptr ,(probe-declr dcl)))
       ((ary-declr ,dcl . ,rest) `(ary-declr ,(probe-declr dcl) . ,rest))
-      ((ftn-declr ,dcl . ,rest) `(ftn-declr ,(probe-declr dcl) . ,rest))
+      ((ftn-declr ,dcl ,pl) `(ftn-declr ,(probe-declr dcl) ,pl))
       ((scope ,dcl) `(scope ,(probe-declr dcl)))
       ((abs-ptr-declr ,ptr) `(ptr-declr ,ptr (ident ,(namer))))
       ((abs-ary-declr . ,rest) `(ary-declr (ident ,(namer)) . ,rest))
-      ((abs-ftn-declr . ,rest) `(ftn-declr (ident ,(namer)) . ,rest))
+      ((abs-ftn-declr ,pl) `(ftn-declr (ident ,(namer)) ,pl))
+      ;; Don't dive into function param lists
+      #;((ftn-declr ,dcl ,pl)
+       (let ((param-list
+	      (sx-list (sx-tag pl) (sx-attr pl)
+		       (map (lambda (d) (reify-decl d namer)) (sx-tail pl)))))
+	 `(ftn-declr ,(probe-declr dcl) ,param-list)))
+      #;((abs-ftn-declr ,pl)
+       (let ((param-list
+	      (sx-list (sx-tag pl) (sx-attr pl)
+		       (map (lambda (d) (reify-decl d namer)) (sx-tail pl)))))
+	 `(ftn-declr (ident ,(namer)) ,param-list)))
       (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
-  (if declr (probe-declr declr) `(init-declr ,(namer))))
+  ;;(if declr (probe-declr declr) `(init-declr ,(namer))))
+  (probe-declr declr))
 
+(define* (reify-decl udecl #:optional (namer def-namer))
+  (call-with-values
+      (lambda () (split-udecl udecl))
+    (lambda (tag attr specl declr)
+      (let ((declr
+	     (sx-match declr
+	       ((init-declr-list . ,declrs)
+		(sx-list
+		 (sx-tag declr) (sx-attr declr)
+		 (map (lambda (d) (reify-declr d namer)) (sx-tail declr))))
+	       (,_ (reify-declr declr namer)))))
+      (sx-list tag attr specl declr)))))
+
+	   
 ;; === munged specification ============
 
 ;; @deffn {Procedure} udecl->mdecl udecl [#:namer def-namer]
@@ -625,6 +653,7 @@
       ((init-declr ,item) (unwrap-declr item tail))
       ((comp-declr ,item) (unwrap-declr item tail))
       ((param-declr ,item) (unwrap-declr item tail))
+      ((param-declr) (cons (namer) tail))
       ((ident ,name) (cons name tail))
       ((ptr-declr ,ptr ,dcl)
        (unwrap-declr dcl (unwrap-pointer ptr tail)))
