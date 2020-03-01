@@ -81,12 +81,12 @@
 
 (define (parse-c99cx text)
   (with-throw-handler
-   'nyacc-error
-   (lambda ()
-     (with-input-from-string text
-       (lambda () (c99cx-raw-parser (gen-c99cx-lexer)))))
-   (lambda (key fmt . args)
-     (apply throw 'cpp-error fmt args))))
+      'nyacc-error
+    (lambda ()
+      (with-input-from-string text
+	(lambda () (c99cx-raw-parser (gen-c99cx-lexer)))))
+    (lambda (key fmt . args)
+      (apply throw 'cpp-error fmt args))))
 
 (define (expand-typename typename udict)
   (let* ((decl `(udecl (decl-spec-list
@@ -96,37 +96,7 @@
 	 (xname (and xdecl (sx-ref* xdecl 1 1 1 1))))
     xname))
 
-;; (sizeof type-name)
-;; (type-name specificer-qualifier-list abstract-declarator)
-;; (decl-spec-list 
-;; (abs-decl
-#|
-(define (eval-sizeof-type tree udict)
-  (sx-match (sx-ref tree 1)
-    ((type-name (decl-spec-list (type-spec (typename ,name))))
-     (let* ((xname (expand-typename name udict))
-	    (ffi-type (assoc-ref ffi-type-map xname)))
-       (unless ffi-type ;; work to go
-	 (throw 'c99-error "cxeval: failed to expand \"sizeof(~A)\"" name))
-       (sizeof ffi-type)))
-    ((type-name (decl-spec-list (type-spec (fixed-type ,name))))
-     (let* ((ffi-type (assoc-ref ffi-type-map name)))
-       (sizeof ffi-type)))
-    ((type-name (decl-spec-list (type-spec (float-type ,name))))
-     (let* ((ffi-type (assoc-ref ffi-type-map name)))
-       (sizeof ffi-type)))
-    ((type-name (decl-spec-list (type-spec . ,_1)) (abs-declr (pointer)))
-     (sizeof '*))
-    (,_
-     (throw 'c99-error "failed to expand sizeof type ~S" (sx-ref tree 1)))))
-|#  
-
-;; @deffn {Procedure} eval-sizeof-type tree [udict ddict]
-;; => (values sizeof-val align-of)
-;; @end deffn
-(define* (eval-sizeof-type tree #:optional (udict '()) (ddict '()))
-
-  (unless (eq? 'sizeof-type (sx-tag tree)) (error "bad tree"))
+(define* (sizeof-specdec specl declr #:optional (udict '()) (ddict '()))
 
   ;; (decl attr specl (declr-list declr1 declr2 ...))
   ;; => ((decl attr specl declr1) (decl attr specl declr2) ...)
@@ -140,25 +110,29 @@
     (+ s (* a (quotient (+ rs (1- a)) a))))
 
   ;; Update running union size (rs) given new item s and a.
-  ;; CHECK THIS
   (define (maxi-size s a rs)
     (max s rs))
 
-  (define (exec/udecl-list udecls size base-align update)
-    (let loop ((size size) (base-align base-align) (udecls udecls))
-      (if (null? udecls)
-	  (values size base-align)
-	  (call-with-values
-	      (lambda () (sizeof-mtail (cdr (udecl->mdecl (car udecls)))))
-	    (lambda (elt-size elt-align)
-	      (loop (update elt-size elt-align size)
-		    (max elt-align base-align) (cdr udecls)))))))
+  (define (exec/decl decl size base-align update)
+    (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
+	  (declrs (sx-tail (sx-ref decl 2))))
+      (let loop ((size size) (base-align base-align) (declrs declrs))
+	(if (null? declrs)
+	    (values size base-align)
+	    (call-with-values
+		(lambda ()
+		  (sizeof-mtail
+		   ;;(cdr (udecl->mdecl `(decl ,specl ,(car declrs))))))
+		   (cdr (m-unwrap-declr (car declrs) mtail))))
+	      (lambda (elt-size elt-align)
+		(loop (update elt-size elt-align size)
+		      (max elt-align base-align) (cdr declrs))))))))
 
-  (define (incr/udecl-list udecls size base-align)
-    (exec/udecl-list udecls size base-align incr-size))
+  (define (incr/decl decl size base-align)
+    (exec/decl decl size base-align incr-size))
   
-  (define (maxi/udecl-list udecls size base-align)
-    (exec/udecl-list udecls size base-align maxi-size))
+  (define (maxi/decl decl size base-align)
+    (exec/decl decl size base-align maxi-size))
 
   (define (sizeof-mtail mtail)
     (match mtail
@@ -180,8 +154,7 @@
 	 (if (null? flds)
 	     (values (incr-size 0 align size) align)
 	     (call-with-values
-		 (lambda ()
-		   (incr/udecl-list (splitup-decl (car flds)) size align))
+		 (lambda () (incr/decl (car flds) size align))
 	       (lambda (size align)
 		 (loop size align (cdr flds)))))))
 
@@ -190,8 +163,7 @@
 	 (if (null? flds)
 	     (values (incr-size 0 align size) align)
 	     (call-with-values
-		 (lambda ()
-		   (maxi/udecl-list (splitup-decl (car flds)) size align))
+		 (lambda () (maxi/decl (car flds) size align))
 	       (lambda (size align)
 		 (loop size align (cdr flds)))))))
 
@@ -199,16 +171,21 @@
 	 (quit)
 	 (throw 'nyacc-error "coding error"))))
 
-  (let* ((type-name (sx-ref tree 1))
-	 (specl (sx-ref type-name 1))
-	 (declr (or (sx-ref type-name 2) '(param-declr)))
-	 ;;(declr (reify-declr declr))	; not needed, as ->mdecl will do this
-	 (udecl `(udecl ,specl ,declr))
+  (let* ((udecl `(udecl ,specl ,declr))
 	 (xdecl (expand-typerefs udecl udict ddict))
 	 (mdecl (udecl->mdecl xdecl)))
     (sizeof-mtail (cdr mdecl))))
 
+;; @deffn {Procedure} eval-sizeof-type tree [udict ddict]
+;; => (values sizeof-val align-of)
+;; @end deffn
+(define* (eval-sizeof-type tree #:optional (udict '()) (ddict '()))
+  (let* ((type-name (sx-ref tree 1))
+	 (specl (sx-ref type-name 1))
+	 (declr (or (sx-ref type-name 2) '(param-declr))))
+    (sizeof-specdec specl declr udict ddict)))
 
+;; need to map expression to type, then sizeof type
 ;; (sizeof unary-expr)
 ;;    (primary-expression			; S 6.5.1
 ;;     (identifier ($$ `(p-expr ,$1)))
@@ -228,16 +205,13 @@
        (throw 'c99-error "failed to expand sizeof expr ~S" expr)))))
 
 (define (eval-ident name udict ddict)
-  (cond
-   ((assoc-ref ddict name) =>
-    (lambda (hit)
-      ;; This should actually go through the cpp-expander first methinks.
-      (and (string? hit)
-	   (let ((expr (parse-cpp-expr hit)))
-	     (eval-c99-cx expr udict ddict)))))
-   (else
-    ;;(error "missed" name)
-    #f)))
+  (and=>
+   (assoc-ref ddict name)
+   (lambda (hit)
+     ;; This should actually go through the cpp-expander first methinks.
+     (and (string? hit)
+	  (let ((expr (parse-cpp-expr hit)))
+	    (eval-c99-cx expr udict ddict))))))
 
 ;; @deffn {Procedure} eval-c99-cx tree [udict [ddict]] [#:fail-proc fail-proc]
 ;; Evaluate the constant expression or return #f
@@ -325,5 +299,5 @@
 	    ;; 
 	    (else (fail))))))
     (eval-expr tree)))
-
+ 
 ;; --- last line ---

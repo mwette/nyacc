@@ -1,0 +1,7 @@
+#!/bin/sh
+exec guile $0
+!#
+(use-modules (nyacc lang c99 mach))
+(gen-c99-files)
+(system "touch parser.scm")
+;;; --- last line ---

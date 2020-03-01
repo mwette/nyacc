@@ -33,7 +33,7 @@
 
 (define-module (nyacc lang c99 munge-base)
   #:export (expand-typerefs
-	    udecl->mdecl
+	    udecl->mdecl m-unwrap-declr
 	    reify-declr reify-decl
 	    split-udecl
 	    clean-field-list clean-fields)
@@ -517,8 +517,6 @@
 
 ;; @deffn {Procedure} reify-declr declr [#:namer proc]
 ;; This procedure turns tails of abstract declarations into init-declr's.
-;; This is useful for sending through @code{udecl->mdecl} for the purpose
-;; of processing with munge tools.
 ;; @end deffn
 (define* (reify-declr declr #:optional (namer def-namer))
 
@@ -568,6 +566,47 @@
 	   
 ;; === munged specification ============
 
+(define* (m-unwrap-declr declr tail #:optional (namer def-namer))
+  
+  (define (unwrap-pointer pointer tail)
+    (sx-match pointer
+      ((pointer (type-qual-list . ,type-qual) ,pointer)
+       (unwrap-pointer pointer (cons '(pointer-to)  tail)))
+      ((pointer (type-qual-list . ,type-qual)) (cons '(pointer-to) tail))
+      ((pointer ,pointer) (unwrap-pointer pointer (cons '(pointer-to) tail)))
+      ((pointer) (cons '(pointer-to) tail))
+      (,_ (sferr "unwrap-pointer failed on:\n") (pperr pointer)
+	  (throw 'nyacc-error "munge-base/unwrap-pointer"))))
+  
+  (define (unwrap-declr declr tail)
+    (sx-match declr
+      ((init-declr ,item) (m-unwrap-declr item tail))
+      ((comp-declr ,item) (m-unwrap-declr item tail))
+      ((param-declr ,item) (m-unwrap-declr item tail))
+      ((param-declr) (cons (namer) tail))
+      ((ident ,name) (cons name tail))
+      ((ptr-declr ,ptr ,dcl)
+       (m-unwrap-declr dcl (unwrap-pointer ptr tail)))
+      ((abs-ptr-declr ,ptr) (cons* (namer) (unwrap-pointer ptr tail)))
+      ((ary-declr ,dcl (type-qual . ,rest) . ,rest)
+       (m-unwrap-declr `(ary-declr ,dcl . ,rest) tail))
+      ((ary-declr ,dcl ,size) (m-unwrap-declr dcl (cons `(array-of ,size) tail)))
+      ((ary-declr ,dcl) (m-unwrap-declr dcl (cons `(array-of) tail)))
+      ((abs-ary-declr ,size) (cons* (namer) `(array-of ,size) tail))
+      ((abs-ary-declr) (cons* (namer) `(array-of) tail))
+      ((ftn-declr ,dcl ,param-list)
+       (m-unwrap-declr dcl (cons `(function-returning ,param-list) tail)))
+      ((abs-ftn-declr ,param-list)
+       (cons* (namer) `(function-returning ,param-list) tail))
+      ((scope ,expr) (m-unwrap-declr expr tail))
+      ((bit-field (ident ,name) ,size) (cons* name `(bit-field ,size) tail))
+      (,_
+       (sferr "munge-base/unwrap-declr missed:\n") (pperr declr)
+       (throw 'nyacc-error "munge-base/unwrap-declr failed")
+       #f)))
+
+  (unwrap-declr declr tail))
+
 ;; @deffn {Procedure} udecl->mdecl udecl [#:namer def-namer]
 ;; @deffnx {Procedure} udecl->mdecl/comm udecl [#:def-comm ""]
 ;; Turn a stripped-down unit-declaration into an m-spec.  The second version
@@ -586,58 +625,15 @@
 ;; random identifier starting with @code{@} will be provided.
 ;; @end deffn
 (define* (udecl->mdecl decl #:key (namer def-namer))
-
-  (define (unwrap-pointer pointer tail)
-    (sx-match pointer
-      ((pointer (type-qual-list . ,type-qual) ,pointer)
-       (unwrap-pointer pointer (cons '(pointer-to)  tail)))
-      ((pointer (type-qual-list . ,type-qual)) (cons '(pointer-to) tail))
-      ((pointer ,pointer) (unwrap-pointer pointer (cons '(pointer-to) tail)))
-      ((pointer) (cons '(pointer-to) tail))
-      (,_ (sferr "unwrap-pointer failed on:\n") (pperr pointer)
-	  (throw 'nyacc-error "unwrap-pointer"))))
-
-  (define* (unwrap-declr declr #:optional (tail '()))
-    ;;(sferr "unwrap-declr  ~S  ~S\n" declr tail)
-    (sx-match declr
-      ((init-declr ,item) (unwrap-declr item tail))
-      ((comp-declr ,item) (unwrap-declr item tail))
-      ((param-declr ,item) (unwrap-declr item tail))
-      ((param-declr) (cons (namer) tail))
-      ((ident ,name) (cons name tail))
-      ((ptr-declr ,ptr ,dcl)
-       (unwrap-declr dcl (unwrap-pointer ptr tail)))
-      ((abs-ptr-declr ,ptr) (cons* (namer) (unwrap-pointer ptr tail)))
-      ((ary-declr ,dcl (type-qual . ,rest) . ,rest)
-       (unwrap-declr `(ary-declr ,dcl . ,rest) tail))
-      ((ary-declr ,dcl ,size) (unwrap-declr dcl (cons `(array-of ,size) tail)))
-      ((ary-declr ,dcl) (unwrap-declr dcl (cons `(array-of) tail)))
-      ((abs-ary-declr ,size) (cons* (namer) `(array-of ,size) tail))
-      ((abs-ary-declr) (cons* (namer) `(array-of) tail))
-      ((ftn-declr ,dcl ,param-list)
-       (unwrap-declr dcl (cons `(function-returning ,param-list) tail)))
-      ((abs-ftn-declr ,param-list)
-       (cons* (namer) `(function-returning ,param-list) tail))
-      ((scope ,expr) (unwrap-declr expr tail))
-      ((bit-field (ident ,name) ,size) (cons* name `(bit-field ,size) tail))
-      (,_
-       (sferr "munge/unwrap-declr missed:\n")
-       (pperr declr)
-       (throw 'nyacc-error "c99/munge: udecl->mdecl failed")
-       #f)))
-
-  (let-values (((tag attr specl declr) (split-udecl decl)))
-    (let* ((declr (or declr `(ident ,(namer))))
-	   (stor-spec (and=> (sx-find 'stor-spec specl)
-			     (lambda (sx) (sx-ref sx 1))))
-	   (type-spec (and=> (sx-find 'type-spec specl) sx-tail))
-	   (m-declr (unwrap-declr declr type-spec))
-	   (m-declr (if (and (equal? stor-spec '(extern))
-			     (not (equal? 'function-returning (caadr m-declr))))
-	   (cons* (car m-declr) '(extern) (cdr m-declr)) m-declr)))
-      ;;(pperr decl)
-      ;;(sferr "m-declr:\n") (pperr m-declr)
-      ;;(sferr "type-spec:\n") (pperr type-spec)      
-      m-declr)))
-
+  (let* ((specl (sx-ref decl 1))
+	 (declr (or (sx-ref decl 2) `(ident ,(namer))))
+	 (stor-spec (and=> (sx-find 'stor-spec specl)
+			   (lambda (sx) (sx-ref sx 1))))
+	 (mtail (and=> (sx-find 'type-spec specl) sx-tail))
+	 (m-declr (m-unwrap-declr declr mtail namer))
+	 (m-declr (if (and (equal? stor-spec '(extern))
+			   (not (equal? 'function-returning (caadr m-declr))))
+		      (cons* (car m-declr) '(extern) (cdr m-declr)) m-declr)))
+    m-declr))
+  
 ;; --- last line ---

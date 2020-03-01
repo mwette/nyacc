@@ -115,15 +115,6 @@
        ("typedef int *foo[2]; int (*bar)(foo*x);" . "int (*bar)(int *(*x)[2]);")
        ("typedef int *foo[2]; int (*bar)(foo*);" . "int (*bar)(int *(*)[2]);"))))
 
-  (pass-if "canize-enum-def-list"
-    (let* ((code "enum { FOO = 1, }; enum { BAR = 1 + FOO };")
-	   (tree (parse-string code))
-	   (udict (c99-trans-unit->udict tree))
-	   (ddict (c99-trans-unit->ddict tree))
-	   (ddict (udict-enums->ddict udict ddict)))
-      (and (string= "1" (or (assoc-ref ddict "FOO") "X"))
-	   (string= "2" (or (assoc-ref ddict "BAR") "X")))))
-
   (pass-if "udecl->mdecl/concrete"
     (fold
      (lambda (pair status)
@@ -165,7 +156,7 @@
 	      (tree (parse-string code))
 	      (udict (c99-trans-unit->udict tree))
 	      (udecl (assoc-ref udict "x"))
-	      (sotex (sx-ref* udecl 2 2 1))) ; (sizeof-type ...)
+	      (sotex (sx-ref* udecl 2 2 1))) ; (sizeof-type (type-name ...))
 	 (call-with-values
 	     (lambda () (eval-sizeof-type sotex udict))
 	   (lambda (size align)
@@ -184,6 +175,15 @@
        ("typedef union { double x; int y[3]; } foo_t;" . (16 . 8))
        ("typedef enum { FOO=1, BAR=2 } foo_t;" . (4 . 4))
        )))
+
+  (pass-if "canize-enum-def-list"
+    (let* ((code "enum { FOO = 1, }; enum { BAR = 1 + FOO };")
+	   (tree (parse-string code))
+	   (udict (c99-trans-unit->udict tree))
+	   (ddict (c99-trans-unit->ddict tree))
+	   (ddict (udict-enums->ddict udict ddict)))
+      (and (string= "1" (or (assoc-ref ddict "FOO") "X"))
+	   (string= "2" (or (assoc-ref ddict "BAR") "X")))))
 
   )
 

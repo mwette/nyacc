@@ -48,3 +48,10 @@ mach.d/
   c99cx-act.scm	constant expression parser actions, generated from cxmach.scm
   c99cx-tab.scm	constant expression parser tables, generated from cxmach.scm
 
+NOTES:
+
+The standard says:
+ "For two qualified types to be compatible, both shall have the identically
+  qualified version of a compatible type; the order of type qualifiers within
+  a list of specifiers or qualifiers does not affect the specified type."
+
