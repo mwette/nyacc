@@ -407,7 +407,7 @@
   (syntax-rules ()
     ((_ v (pat exp ...) c1 ...)
      (let ((kf (lambda () (sx-match-1-tail v c1 ...))))
-       (sxm-tail v pat (begin exp ...) (kf))))
+       (sxm-tail v pat (begin (if #f #f) exp ...) (kf))))
     ((_ v) (error "sx-match-tail: nothing matches"))))
 
 ;; sxm-sexp val pat kt kf
