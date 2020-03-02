@@ -393,6 +393,7 @@
       ((comp-declr ,declr) (ppx declr))
       ((param-declr ,declr ,item2) (ppx declr) (ppx item2))
       ((param-declr ,declr) (ppx declr))
+      ((param-declr))
 
       ((bit-field ,ident ,expr)
        (ppx ident) (sf " : ") (ppx expr))

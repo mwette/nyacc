@@ -395,7 +395,7 @@
   (syntax-rules ()
     ((_ v (pat exp ...) c1 ...)
      (let ((kf (lambda () (sx-match-1 v c1 ...))))
-       (sxm-sexp v pat (begin exp ...) (kf))))
+       (sxm-sexp v pat (begin (if #f #f) exp ...) (kf))))
     ((_ v) (error "sx-match: nothing matches"))))
 
 (define-syntax sx-match-tail

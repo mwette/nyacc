@@ -464,6 +464,8 @@
       (((bit-field ,size) . ,rest)
        `(bit-field ,(const-expr->number size) ,(mtail->bs-desc rest)))
 
+      (((extern) . ,rest) (mtail->bs-desc rest))
+      
       (,otherwise
        (sferr "mtail->bs-desc missed mdecl:\n")
        (pperr mdecl-tail)
@@ -1512,7 +1514,7 @@
 	(decl-spec-list (stor-spec (typedef)) . ,rst)
 	(init-declr
 	 (ftn-declr
-	  (scope (ptr-declr (pointer) (ident ,typename)))
+	  (ptr-declr (pointer) (ident ,typename))
 	  (param-list . ,params))))
        (let* ((ret-decl `(udecl (decl-spec-list . ,rst)
 				(init-declr (ident "_"))))
@@ -1528,7 +1530,7 @@
 	 (ptr-declr
 	  (pointer)
 	  (ftn-declr
-	   (scope (ptr-declr (pointer) (ident ,typename)))
+	   (ptr-declr (pointer) (ident ,typename))
 	   (param-list . ,params)))))
        (let* ((ret-decl `(udecl (decl-spec-list . ,rst)
 				(init-declr (ptr-declr (pointer) (ident "_")))))
@@ -1676,13 +1678,12 @@
        (values wrapped defined))
       ((udecl ,specl
 	      (init-declr
-	       (ftn-declr (scope (ident ,name)) (param-list . ,params))))
+	       (ftn-declr (ident ,name) (param-list . ,params))))
        (cnvt-fctn name (non-ptr-decl specl) params)
        (values wrapped defined))
       ((udecl ,specl
 	      (init-declr
-	       (ftn-declr (scope (ptr-declr (pointer . ,rest)
-					    (ident ,name)))
+	       (ftn-declr (ptr-declr (pointer . ,rest) (ident ,name))
 			  (param-list . ,params))))
        (cnvt-fctn name (ptr-decl specl) params)
        (values wrapped defined))
@@ -1715,8 +1716,7 @@
 	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
 	(init-declr
 	 (ptr-declr (pointer (pointer))
-		    (scope (ftn-declr (scope (ptr-declr) (ident ,typename))
-				      ,param-list)))))
+		    (ftn-declr (ptr-declr) (ident ,typename)) ,param-list)))
        (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
@@ -1724,8 +1724,8 @@
 	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
 	(init-declr
 	 (ptr-declr (pointer (pointer))
-		    (ftn-declr (scope (ptr-declr (pointer) (ident ,typename)))
-			       ,param-list))))
+		    (ftn-declr (ptr-declr (pointer) (ident ,typename)))
+			       ,param-list)))
        (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
@@ -1784,12 +1784,10 @@
       ;; === missed =====================
 
       (,otherwise
-       (sferr "see below:\n")
+       (sferr "ffi-help/cnvt-udecl misssed:\n")
+       (pretty-print-c99 udecl)
        (pperr udecl)
-       ;;(sferr "-\n")
-       ;;(pperr `(udecl ,specl ,declr))
-       (error "cnvt-udecl")
-       (fherr "cnvt-udecl missed --^")
+       (quit)
        (values wrapped defined)))))
 
 

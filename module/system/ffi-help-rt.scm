@@ -378,6 +378,12 @@
     (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
     (values bytevector (+ offset (* index element-size)) descriptor))
   (define meta (make-vector&-metadata descriptor))
+  (define (getter syntax? bytevector offset)
+    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
+    )
+  (define (setter syntax? bytevector offset)
+    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
+    )
   (make-bytestructure-descriptor size alignment unwrapper #f #f meta))
 (export fh:vector&)
 
@@ -830,7 +836,7 @@
 ;; @end deffn
 (define fopen
   (let ((~fopen (ffi:pointer->procedure
-		 '* (dynamic-func "fopen") (list '* '*))))
+		 '* (dynamic-func "fopen" (dynamic-link)) (list '* '*))))
     (lambda (filename mode)
       (~fopen (ffi:string->pointer filename) (ffi:string->pointer mode)))))
 

@@ -1,5 +1,11 @@
 ;; examples/nyacc/lang/c99/tryit.scm
-;;(debug-set! stack 750)
+
+;; Copyright (C) 2020 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
 
 (add-to-load-path (getcwd))
 
@@ -93,33 +99,32 @@
     ;;(pp99 xdecl)
     #t))
 
-(when #t
-    (pass-if "evaluate sizeof(type)"
-    (fold
-     (lambda (case status)
-       (let* ((code (string-append (car case) " int x = sizeof(foo_t);"))
-	      (tree (parse-string code))
-	      (udict (c99-trans-unit->udict tree))
-	      (udecl (assoc-ref udict "x"))
-	      (sotex (sx-ref* udecl 2 2 1))) ; (sizeof-type (type-name ...))
-	 (call-with-values
-	     (lambda () (eval-sizeof-type sotex udict))
-	   (lambda (size align)
-	     (and status (= size (cadr case)) (= align (cddr case)))))))
-     #t
-     '(("typedef int foo_t;" . (4 . 4))
-       ("typedef long foo_t;" . (8 . 8))
-       ("typedef int foo_t[5];" . (20 . 4))
-       ("typedef struct { int x; } foo_t;" . (4 . 4))
-       ("typedef struct { int x,y; } foo_t;" . (8 . 4))
-       ("typedef struct { int x; double y; } foo_t;" . (16 . 8))
-       ("typedef struct { double x; int y; } foo_t;" . (16 . 8))
-       ("typedef struct { int x,y; double z; } foo_t;" . (16 . 8))
-       ("typedef struct { int x; double z; void *p; } foo_t;" . (24 . 8))
-       ("typedef union { double x; int y; } foo_t;" . (8 . 8))
-       ("typedef union { double x; int y[3]; } foo_t;" . (16 . 8))
-       ("typedef enum { FOO=1, BAR=2 } foo_t;" . (4 . 4))
-       )))
-)
+(use-modules (bytestructures guile))
+(use-modules ((system foreign) #:prefix ffi:))
+(use-modules (rnrs bytevectors))
+
+(define-record-type <vector&-metadata>
+  (make-vector&-metadata element-descriptor)
+  vector&-metadata?
+  (element-descriptor vector&-metadata-element-descriptor))
+
+(define (fh:vector& descriptor)
+  (define element-size (bytestructure-descriptor-size descriptor))
+  (define size 0)
+  (define alignment (bytestructure-descriptor-alignment descriptor))
+  (define (unwrapper syntax? bytevector offset index)
+    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
+    (values bytevector (+ offset (* index element-size)) descriptor))
+  (define meta (make-vector&-metadata descriptor))
+  (define (getter syntax? bytevector offset)
+    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
+    )
+  (define (setter syntax? bytevector offset)
+    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
+    )
+  (make-bytestructure-descriptor size alignment unwrapper #f #f meta))
+
+
+(define bs1 #u16(1 2 3 4 5 6 7 8))
 
 ;; --- last line ---

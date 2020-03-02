@@ -102,6 +102,9 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
    (option '(#\I "inc-dir") #t #f
 	   (lambda (opt name arg opts files)
 	     (values (acons/seed 'inc-dirs arg opts) files)))
+   (option '(#\D "list dependencies and quit") #f #f
+	   (lambda (opt name arg opts files)
+	     (values (acons 'list-deps #t (acons 'no-recurse #t opts)) files)))
    (option '(#\R "dont-recurse") #f #f
 	   (lambda (opt name arg opts files)
 	     (values (acons 'no-recurse #t opts) files)))
@@ -157,7 +160,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
      (let* ((base (string-join (map symbol->string fmod) "/"))
 	    (xffi (find-in-path (string-append base ".ffi")))
 	    (xscm (find-in-path (string-append base ".scm"))))
-       (unless xffi (fail "compiled dependent ~S not found" fmod))
+       (unless xffi (fail "dependent ~S not found" fmod))
        (cond
 	((not xscm) (cons xffi seed))
 	((more-recent? xffi xscm) (cons xffi seed))
@@ -177,7 +180,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   (check-ffi-deps (quote path-list) (find-ffi-uses attr ...)))
 (export define-ffi-module)
 
-(define (updated-ffi-deps file options)
+(define (outdated-ffi-deps file)
   (unless (access? file R_OK)
     (fail "not found: ~S" file))
   (call-with-input-file file
@@ -190,36 +193,54 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	   ((and (pair? exp) (eqv? 'define-ffi-module (car exp))) (eval exp env))
 	   (else (loop (read iport)))))))))
 
+(define (gen-ffi-deps file)
+  (let loop ((odeps '()) (next '()) (prev (outdated-ffi-deps file)))
+    (cond
+     ((pair? prev)
+      (loop (cons (car prev) odeps)
+	    (if (member (car prev) odeps) next (cons (car prev) next))
+	    (cdr prev)))
+     ((pair? next)
+      (loop odeps '() next))
+     (else
+      (let loop ((deps '()) (odeps odeps))
+	(if (null? odeps) deps
+	    (if (member (car odeps) deps)
+		(loop deps (cdr odeps))
+		(loop (cons (car odeps) deps) (cdr odeps)))))))))
+
 (define (ensure-ffi-deps file options)
-  (for-each
-   (lambda (dep-file)
-     (cond
-      ((assq-ref options 'no-recurse)
-       (warn "please recompile `~A'" dep-file))
-      (else
-       (compile-ffi dep-file (acons 'no-exec #f options)))))
-   (updated-ffi-deps file options)))
+  (let ((options `((no-recurse . #t) (no-exec . #f) . ,options))
+	(ffi-deps (gen-ffi-deps file)))
+    (for-each
+     (lambda (dep-file) (compile-ffi dep-file options))
+     ffi-deps)))
 
 ;; -----------------------------------------------------------------------------
 
 (define (cleanup path)
   (basename path))
 
-(define* (compile-ffi ffi-file options #:key module)
+(define (compile-ffi ffi-file options)
   (let* ((base (string-drop-right ffi-file 4))
 	 (scm-file (string-append base ".scm")))
-    (ensure-ffi-deps ffi-file options)
+    (unless (assq-ref options 'no-recurse)
+      (ensure-ffi-deps ffi-file options))
+    (when (assq-ref options 'list-deps)
+      (for-each (lambda (f) (sfmt "~A\n" f)) (gen-ffi-deps ffi-file))
+      (exit 0))
     (catch 'ffi-help-error
       (lambda ()
 	(sfmt "compiling `~A' ...\n" (cleanup ffi-file))
 	(compile-ffi-file ffi-file options)
 	(sfmt "... wrote `~A'\n" (cleanup scm-file)))
       (lambda (key fmt . args)
+	(if (access? scm-file W_OK) (delete-file scm-file))
 	(apply fail fmt args)
 	(exit 1)))
     (unless (assq-ref options 'no-exec)
       (sfmt "compiling `~A' ...\n" (cleanup scm-file))
-       (let ((go-file (compile-file scm-file
+      (let ((go-file (compile-file scm-file
 				   #:from 'scheme #:to 'bytecode
 				   #:opts '())))
 	(load-compiled go-file)
