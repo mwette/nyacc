@@ -17,10 +17,6 @@
 
 ;;; Notes:
 
-;; limitations:
-;; 1) variables cannot be introduced by lhs expression:
-;;    i.e., a = 1 is OK, but a(1) = 1 is not
-
 ;;; Code:
 
 (define-module (nyacc lang tcl compile-tree-il)
@@ -173,7 +169,7 @@
       ((command)
        (values '() '(void) dict))
       
-      (else
+      (,_
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict

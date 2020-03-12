@@ -621,7 +621,7 @@
       ((ProgramElements . ,elts) ;; a list of top-level statements
        (values tree '() dict))
 
-      (else
+      (,_
        ;;(sferr "fD: otherwise\n") (pperr tree)
        (values tree '() dict))
       ))

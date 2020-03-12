@@ -17,7 +17,7 @@ exec guile $0 $*
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(use-modules (nyacc lang octave parser))
+(use-modules (nyacc lang mlang parser))
 (use-modules ((srfi srfi-1) #:select (last fold fold-right)))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 pretty-print))
@@ -452,7 +452,7 @@ exec guile $0 $*
 		 ((sel (ident ,name) ,expr)
 		  (loop (cons `(mem-assn ,expr ,name ,rv) lvxl)
 			dict (cdr elts) (1+ ix)))
-		 (else (throw 'nyacc-error "bad lhs syntax")))))))
+		 (,_ (throw 'nyacc-error "bad lhs syntax")))))))
       ((multi-assn . ,rest) (throw 'nyacc-error "syntax error: multi-assn"))
 
       ((stmt-list . ,stmts)
@@ -493,7 +493,7 @@ exec guile $0 $*
 		    ((fctn-defn (fctn-decl (ident ,name) . ,_1) . ,_2)
 		     (if(top-level? dict) (push-scope (add-toplevel name dict))
 			(set-type! name "static" (add-lexical name dict))))
-		    (else dict)))
+		    (,_ dict)))
 		dict tail)))
 
       ((comm ,comment)
@@ -510,7 +510,7 @@ exec guile $0 $*
 	     (values '() c-tree dict))))
 	(else (values tree '() dict))))
        
-      (else
+      (,_
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict

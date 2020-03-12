@@ -48,7 +48,7 @@
   (sx-match expr
     ((colon-expr (fixed ,s) (fixed ,e)) #t)
     ((colon-expr (fixed ,s) (fixed ,i) (fixed ,e)) #t)
-    (else #f)))
+    (,_ #f)))
 
 (define (fixed-expr? expr)
   (define (fixed-primary-expr? expr)
@@ -57,7 +57,7 @@
       ((add ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
       ((sub ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
       ((mul ,lt ,rt) (and (fixed-expr? lt) (fixed-expr? rt)))
-      (else #f)))
+      (,_ #f)))
   (or (fixed-primary-expr? expr)
       (eq? 'fixed-colon-expr (sx-tag expr))))
 
@@ -69,7 +69,7 @@
       ((sub ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
       ((mul ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
       ((div ,lt ,rt) (and (float-expr? lt) (float-expr? rt)))
-      (else #f)))
+      (,_ #f)))
   (float-primary-expr? expr))
 
 (define (fixed-vec? row)
@@ -109,7 +109,7 @@
        (if (fixed-colon-expr? tree) `(fixed-colon-expr . ,(cdr tree)) tree))
       ((matrix . ,rest)
        (check-matrix tree))
-      (else tree)))
+      (,_ tree)))
   
   (define (fH tree) tree)
   
@@ -117,8 +117,8 @@
 
 ;; === file parser 
 
-(include-from-path "nyacc/lang/mlang/mach.d/oct-tab.scm")
-(include-from-path "nyacc/lang/mlang/mach.d/oct-act.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/mlang-tab.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/mlang-act.scm")
 
 (define gen-mlang-lexer (make-mlang-lexer-generator oct-mtab))
 
@@ -146,8 +146,8 @@
 
 ;; === interactive parser
 
-(include-from-path "nyacc/lang/mlang/mach.d/octia-tab.scm")
-(include-from-path "nyacc/lang/mlang/mach.d/octia-act.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/mlangia-tab.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/mlangia-act.scm")
 
 (define raw-ia-parser
   (make-lalr-parser

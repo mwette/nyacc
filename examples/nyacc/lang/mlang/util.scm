@@ -103,7 +103,7 @@
      (case disp
        ((struct) (lval->ident lval disp))
        (else (lval->ident lval 'array))))
-    (else (throw 'util-error "unknown lval: ~S" lval))))
+    (,_ (throw 'util-error "unknown lval: ~S" lval))))
 
 (define (binary-rank lval rval)
   (and lval rval (max lval rval)))
@@ -189,7 +189,7 @@
        ;;(values tree '() (d-add-rank dict name (length (sx-tail lval 1)))))
        (values tree '() dict))
 
-      (else (values tree '() dict))))
+      (,_ (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => (values seed dict)
     ;;(when (pair? tree) (simple-format #t "cartree=~S\n" (car tree)))

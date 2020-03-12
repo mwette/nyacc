@@ -317,7 +317,7 @@
 		 ((sel (ident ,name) ,expr)
 		  (loop (cons `(mem-assn ,expr ,name ,rv) lvxl)
 			dict (cdr elts) (1+ ix)))
-		 (else (throw 'nyacc-error "bad lhs syntax")))))))
+		 (,_ (throw 'nyacc-error "bad lhs syntax")))))))
       ((multi-assn . ,rest) (throw 'nyacc-error "syntax error: multi-assn"))
 
       ((stmt-list . ,stmts)
@@ -365,10 +365,10 @@
 		       (sx-match tree
 			 ((fctn-defn (fctn-decl (ident ,name) . ,_1) . ,_2)
 			  (add-lexical name dict))
-			 (else dict)))
+			 (,_ dict)))
 		     (push-scope dict) tail)))
 
-      (else
+      (,_
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
