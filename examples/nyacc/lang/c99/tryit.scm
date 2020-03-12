@@ -85,18 +85,12 @@
 ;;(ppsx inc-help)
 
 (let* (
-       (code "int len = sizeof(\"abc\" \"def\");\n")
-       (code "#include <sys/epoll.h>\n")
-       (code "int foo[10];")
-       (code (string-append
-	      "typedef struct { int x; double z; void *p; } foo_t;\n"
-	      "int x = sizeof(float);"))
+       (code "void ** __attribute__((sysv_abi)) foo(void);")
        (tree (parse-string code))
-       (udict (c99-trans-unit->udict tree))
-       (udecl (assoc-ref udict "x"))
-       (sot-x (sx-ref* udecl 2 2 1))
+       ;;(udict (c99-trans-unit->udict tree))
+       ;;(udecl (assoc-ref udict "foo"))
        )
-  (pp udecl)
+  (pp tree)
   #t)
 
 ;; --- last line ---
