@@ -136,17 +136,19 @@
 ;; @end deffn
 (define (make-ident-reader cs-first cs-rest)
   (lambda (ch)
-    (if (char-set-contains? cs-first ch)
-	(let loop ((chl (list ch)) (ch (read-char)))
-	  (cond
-	   ((eof-object? ch)
-	    (if (null? chl) #f
-		(lxlsr chl)))
-	   ((char-set-contains? cs-rest ch)
-	    (loop (cons ch chl) (read-char)))
-	   (else (unread-char ch)
-		 (lxlsr chl))))
-	#f)))
+    (cond
+     ((eof-object? ch) #f)
+     ((char-set-contains? cs-first ch)
+      (let loop ((chl (list ch)) (ch (read-char)))
+	(cond
+	 ((eof-object? ch)
+	  (if (null? chl) #f
+	      (lxlsr chl)))
+	 ((char-set-contains? cs-rest ch)
+	  (loop (cons ch chl) (read-char)))
+	 (else (unread-char ch)
+	       (lxlsr chl)))))
+     (else #f))))
 
 ;; @deffn {Procedure} make-ident-like-p ident-reader
 ;; Generate a predicate, from a reader, that determines if a string qualifies
