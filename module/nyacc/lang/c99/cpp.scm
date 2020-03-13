@@ -214,7 +214,7 @@
 		(else
 		 (list 'warning (simple-format #f "unknown CPP: ~S" line)))))))
 	 ((read-c-num ch) => (lambda (num) `(line ,num ,(rd-rest))))
-	 (else (error "nyacc cpp-line->stmt: missing code")))))))
+	 (else '(null)))))))
 	    
 
 (include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
