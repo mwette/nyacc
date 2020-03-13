@@ -105,7 +105,7 @@
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
 	 (values '() ref dict)))
 
-      ((deref ,name ,expr)
+      ((deref-indexed ,name ,expr)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
 	 ;;(values '() `(call ,(xlib-ref 'tcl:any->) ,ref ,expr) dict)))
@@ -277,15 +277,15 @@
 	 kdict))
 
        ((set)
-	(let* ((value (car kseed))
-	       (nref (cadr kseed))
-	       (toplev? (eq? (car nref) 'toplevel)))
-	  (values
+	(values
+	 (let* ((value (car kseed))
+		(nref (cadr kseed))
+		(toplev? (eq? (car nref) 'toplevel)))
 	   (cons (if toplev?
 		     `(define ,(cadr nref) ,value)
 		     `(set! ,nref ,value))
-		 seed)
-	   kdict)))
+		 seed))
+	   kdict))
 
        ((set-indexed)
 	;; This only works if the variable appeared as string constant in fD.?
