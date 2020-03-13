@@ -136,16 +136,13 @@
 ;; it should be processed.
 ;; @end deffn
 (define (inc-keeper? tree filter)
-  (if (and (eqv? (sx-tag tree) 'cpp-stmt)
-	   (eqv? (sx-tag (sx-ref tree 1)) 'include)
-	   (pair? (sx-ref* tree 1 2))
-	   (if (procedure? filter)
-	       (let ((incl (sx-ref* tree 1 1))
-		     (path (sx-attr-ref (sx-ref tree 1) 'path)))
-		 (filter incl path))
-	       filter))
-      (sx-ref* tree 1 2)
-      #f))
+  (sx-match tree
+    ((cpp-stmt (include (@ (path ,path)) ,spec ,tree))
+     (and (if (procedure? filter) (filter spec path) filter) tree))
+    ((cpp-stmt (include-next (@ (path ,path)) ,spec ,tree))
+     (and (if (procedure? filter) (filter spec path) filter) tree))
+    ((cpp-stmt . ,rest) #f)
+    (,_ #f)))
 
 ;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:inc-filter f]
 ;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]
@@ -196,6 +193,7 @@
        seed
        (cdr tree))
       seed))
+
 (define (c99-trans-unit->udict/deep tree)
   (c99-trans-unit->udict tree #:inc-filter #t))
 
@@ -532,8 +530,10 @@
 
 ;; === enums and defines ===============
 
-;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [#:inc-filter proc]
+;; @deffn {Procedure} c99-trans-unit->ddict tree [seed] [#:key ...]
 ;; Extract the #defines from a tree as
+;; @*
+;; Example:
 ;; @example
 ;;  (define (name "ABC") (repl "repl"))
 ;;  (define (name "MAX") (args "X" "Y") (repl "(X)..."))
@@ -548,31 +548,25 @@
 (define* (c99-trans-unit->ddict tree
 				#:optional (ddict '())
 				#:key inc-filter skip-fdefs)
-  (define (can-def-stmt defn)
-    (let* ((tail (sx-tail defn 1))
-	   (name (car (assq-ref tail 'name)))
-	   (args (assq-ref tail 'args))
-	   (repl (car (assq-ref tail 'repl))))
-      (cons name (if args (cons args repl) repl))))
-  (define (cpp-def? tree)
-    (if (and (eq? 'cpp-stmt (sx-tag tree))
-	     (eq? 'define (sx-tag (sx-ref tree 1)))
-	     (not (and skip-fdefs (assq 'args (sx-tail (sx-ref tree 1) 1)))))
-	(can-def-stmt (sx-ref tree 1))
-	#f))
+  (define (can-def-stmt tree)
+    (sx-match tree
+      ((cpp-stmt (define (name ,name) (repl ,repl)))
+       (cons name repl))
+      ((cpp-stmt (define (name ,name) (args . ,args) (repl ,repl)))
+       (cons name (cons args repl)))
+      (,_ #f)))
+
   (if (pair? tree)
       (fold
        (lambda (tree ddict)
 	 (cond
-	  ((cpp-def? tree) =>
-	   (lambda (def-stmt)
-	     (cons def-stmt ddict)))
+	  ((can-def-stmt tree) => (lambda (def) (cons def ddict)))
 	  ((inc-keeper? tree inc-filter) =>
 	   (lambda (tree)
 	     (c99-trans-unit->ddict tree ddict #:inc-filter inc-filter)))
-	  (else ddict)))
-       ddict
-       (cdr tree))
+	  (else
+	   ddict)))
+       ddict (sx-tail tree))
       ddict))
 
 ;; @deffn {Procedure} udict-enums->ddict udict [ddict] => defs
