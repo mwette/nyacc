@@ -26,7 +26,7 @@
 
 ;; also have in (bytestructures guile ffi)
 ;; bytestructure->descriptor->ffi-descriptor
-;; bs:pointer->proc
+;; fh:pointer->proc
 
 ;; TODOs
 ;; 1) add renamer
@@ -98,13 +98,13 @@
   (cond
    ((string-contains %host-type "darwin")
     (remove (lambda (s) (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-	    (get-gcc-cpp-defs)))
-   (else (get-gcc-cpp-defs))))
+	    (get-sys-cpp-defs)))
+   (else (get-sys-cpp-defs))))
     
 (define fh-inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
-   (get-gcc-inc-dirs)))
+   (get-sys-inc-dirs)))
 
 (define fh-inc-help c99-def-help)
 
@@ -121,7 +121,7 @@
 
 (define *mport* (make-parameter #t))	   ; output module port
 (define *udict* (make-parameter '()))	   ; udecl dict
-(define *ddict* (make-parameter '()))	   ; cpp-def dict
+(define *ddict* (make-parameter '()))	   ; cpp-def based dict
 (define *tdefs* (make-parameter '()))	   ; typenames
 (define *wrapped* (make-parameter '()))	; wrappers for foo_t and foo_t*
 (define *defined* (make-parameter '()))	; type defined
@@ -146,7 +146,8 @@
   (pretty-print tree #:per-line-prefix "    "))
 (define (nlout) (newline))
 (define (sferr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
+  (apply simple-format (current-error-port) fmt args)
+  (force-output (current-error-port)))
 (define (pperr tree)
   (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
@@ -340,7 +341,7 @@
 
 ;; determine if type is an "alias", that is same
 ;; typedef int foo_t => int
-;; but use (define foo_t (bs:pointer int))
+;; but use (define foo_t (fh:pointer int))
 
 (define bs-typemap
   '(("void" . 'void) ("float" . float) ("double" . double)
@@ -415,39 +416,39 @@
        (let ((name (rename name)))
 	 (cond
 	  ((assoc-ref bs-typemap name) =>
-	   (lambda (n) `(bs:pointer ,n)))
+	   (lambda (n) `(fh:pointer ,n)))
 	  ((member (w/* name) defined)
 	   (strings->symbol name "*-desc"))
 	  ((member name defined)
-	   `(bs:pointer ,(strings->symbol name "-desc")))
+	   `(fh:pointer ,(strings->symbol name "-desc")))
 	  (else
 	   (strings->symbol name "*-desc")))))
 
       (((pointer-to) (void))
-       `(bs:pointer 'void))
+       `(fh:pointer 'void))
 
       (((pointer-to) (fixed-type "char"))
-       `(bs:pointer int8))
+       `(fh:pointer int8))
       (((pointer-to) (fixed-type ,fx-name))
-       `(bs:pointer ,(assoc-ref bs-typemap fx-name)))
+       `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
       (((pointer-to) (float-type ,fx-name))
-       `(bs:pointer ,(assoc-ref bs-typemap fx-name)))
+       `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
 
       ;; bs does not support function pointers
       (((function-returning . ,rest) . ,rest)
-       `(bs:pointer 'void))
+       `(fh:pointer 'void))
       (((pointer-to) (function-returning . ,rest) . ,rest)
-       `(bs:pointer 'void))
+       `(fh:pointer 'void))
       (((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
-       `(bs:pointer 'void))
+       `(fh:pointer 'void))
 
       (((pointer-to) (struct-ref . ,rest))
        (let () ;; TODO: check for struct-def ???
-	 `(bs:pointer 'void)))
+	 `(fh:pointer 'void)))
 
       ;; should use this more
       (((pointer-to) . ,rest)
-       `(bs:pointer ,(mtail->bs-desc rest)))
+       `(fh:pointer ,(mtail->bs-desc rest)))
 
       ;; In C99 array parameters are interpreted as pointers.
       (((array-of ,n) (fixed-type ,name))
@@ -459,7 +460,7 @@
       (((array-of ,n) . ,rest)
        `(bs:vector ,(const-expr->number n) ,(mtail->bs-desc rest)))
       (((array-of) . ,rest)
-       `(bs:pointer ,(mtail->bs-desc rest)))
+       `(fh:pointer ,(mtail->bs-desc rest)))
 
       (((bit-field ,size) . ,rest)
        `(bit-field ,(const-expr->number size) ,(mtail->bs-desc rest)))
@@ -500,11 +501,11 @@
 
 (define (fhscm-def-*desc name)
   (let ((name (rename name)))
-    (sfscm "(define-public ~A* (bs:pointer ~A-desc))\n" name name)))
+    (sfscm "(define-public ~A* (fh:pointer ~A-desc))\n" name name)))
 
 (define (fhscm-def-*desc/delay name)
   (let ((name (rename name)))
-    (sfscm "(define-public ~A* (bs:pointer (delay ~A-desc)))\n" name name)))
+    (sfscm "(define-public ~A* (fh:pointer (delay ~A-desc)))\n" name name)))
 
 (define (fhscm-def-compound name)
   (let* ((name (rename name))
@@ -546,7 +547,7 @@
 	 (wrap (string->symbol (string-append "fh-wrap-" st-name)))
 	 (unwrap (string->symbol (string-append "unwrap-" st-name))))
     (sfscm "(define-public ~A-desc\n" name)
-    (ppscm `(bs:pointer (delay (fh:function ,return (list ,@params))))
+    (ppscm `(fh:pointer (delay (fh:function ,return (list ,@params))))
 	   #:per-line-prefix "  ")
     (sfscm "  )\n")
     (ppscm `(define-fh-function*-type ,sy-name
@@ -640,7 +641,7 @@
       ;;(sfscm ";; == ~A =>\n" typename)
       (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
-      (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
+      (ppscm `(define-public ,ty*-desc (fh:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
       (fhscm-ref-deref typename)
       ;;(sfscm ";; == ~A =>\n" aggrname)
@@ -652,13 +653,13 @@
      (typename
       (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
-      (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
+      (ppscm `(define-public ,ty*-desc (fh:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
       (fhscm-ref-deref typename))
      (aggr-name
       (ppscm `(define-public ,ag-desc ,bs-spec))
       (fhscm-def-compound aggrname)
-      (ppscm `(define-public ,ag*-desc (bs:pointer ,ag-desc)))
+      (ppscm `(define-public ,ag*-desc (fh:pointer ,ag-desc)))
       (fhscm-def-pointer (sw/* aggrname))
       (fhscm-ref-deref aggrname)))))
 
@@ -692,7 +693,7 @@
 	   (lambda (def)
 	     (let* ((n (sx-ref (sx-ref def 1) 1))
 		    (x (sx-ref def 2))
-		    (v (eval-c99-cx x '())))
+		    (v (eval-c99-cx x (*udict*) (*ddict*)))) 
 	       (unless v
 		 (throw 'ffi-help-error "unable to generate constant for ~S" n))
 	       (cons (string->symbol n) v)))
@@ -1200,7 +1201,7 @@
 	 (stor-spec (typedef)) (type-spec (void)))
 	(init-declr (ptr-declr (pointer (pointer)) (ident ,typename))))
        ;; FIX
-       (sfscm "(define-public ~A-desc (bs:pointer (bs:pointer 'void)))\n"
+       (sfscm "(define-public ~A-desc (fh:pointer (fh:pointer 'void)))\n"
 	      typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
@@ -1211,7 +1212,7 @@
 	 (stor-spec (typedef)) (type-spec (void)))
 	(init-declr (ptr-declr (pointer) (ident ,typename))))
        ;; FIX
-       (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
+       (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
       
@@ -1223,7 +1224,7 @@
 	(init-declr (ident ,typename)))
        ;; FIX
        (sfscm "(define-public ~A-desc 'void)\n" typename)
-       (sfscm "(define-public ~A*-desc (bs:pointer ~A-desc))\n"
+       (sfscm "(define-public ~A*-desc (fh:pointer ~A-desc))\n"
 	      typename typename)
        (fhscm-def-pointer (sw/* typename))
        (values (cons* typename (w/* typename) wrapped)
@@ -1259,11 +1260,11 @@
        (cond
 	((member name defined)
 	 ;; FIX
-	 (sfscm "(define-public ~A-desc (bs:pointer ~A-desc))\n" typename name)
+	 (sfscm "(define-public ~A-desc (fh:pointer ~A-desc))\n" typename name)
 	 (fhscm-def-pointer typename))
 	(else
 	 ;; FIX
-	 (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
+	 (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)
 	 (fhscm-def-pointer typename)))
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1271,7 +1272,7 @@
       ((udecl
 	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
 	(init-declr (ptr-declr (pointer (pointer)) (ident ,typename))))
-       (sfscm "(define-public ~A-desc (bs:pointer (bs:pointer ~A-desc)))\n"
+       (sfscm "(define-public ~A-desc (fh:pointer (fh:pointer ~A-desc)))\n"
 	      typename name)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
@@ -1388,7 +1389,7 @@
 	   (sfscm "(define-public ~A fh-void)\n" typename)
 	   (sfscm "(define-public ~A? fh-void?)\n" typename)
 	   (sfscm "(define-public make-~A make-fh-void)\n" typename)
-	   (sfscm "(define-public ~A*-desc (bs:pointer (delay ~A-desc)))\n"
+	   (sfscm "(define-public ~A*-desc (fh:pointer (delay ~A-desc)))\n"
 		  typename typename)))
 	(else
 	 ;; 3) struct never defined; only used as pointer
@@ -1396,7 +1397,7 @@
 	 (sfscm "(define-fh-type-alias ~A fh-void)\n" typename)
 	 (sfscm "(define-public ~A? fh-void?)\n" typename)
 	 (sfscm "(define-public make-~A make-fh-void)\n" typename)
-	 (sfscm "(define-public ~A*-desc (bs:pointer ~A-desc))\n"
+	 (sfscm "(define-public ~A*-desc (fh:pointer ~A-desc))\n"
 		typename typename)))
        (fhscm-def-pointer (sw/* typename))
        (values (cons* typename (w/* typename) wrapped)
@@ -1419,11 +1420,11 @@
 	 (lambda (struct-decl)
 	   (back-ref-extend! struct-decl (sw/& typename))
 	   (sfscm "(define-public ~A&-desc 'void)\n" typename)
-	   (sfscm "(define-public ~A-desc (bs:pointer (delay ~A&-desc)))\n"
+	   (sfscm "(define-public ~A-desc (fh:pointer (delay ~A&-desc)))\n"
 		  typename typename)))
 	(else
 	 ;; 3) struct never defined; only used as pointer
-	 (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)))
+	 (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)))
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1470,12 +1471,12 @@
 	   (sfscm "(define-public ~A fh-void)\n" typename)
 	   (sfscm "(define-public ~A? fh-void?)\n" typename)
 	   (sfscm "(define-public make-~A make-fh-void)\n" typename)
-	   (sfscm "(define-public ~A*-desc (bs:pointer (delay ~A-desc)))\n"
+	   (sfscm "(define-public ~A*-desc (fh:pointer (delay ~A-desc)))\n"
 		  typename typename)))
 	(else
 	 ;; 3) union never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
-	 (sfscm "(define-public ~A*-desc (bs:pointer ~A-desc))\n"
+	 (sfscm "(define-public ~A*-desc (fh:pointer ~A-desc))\n"
 		typename typename)))
        (fhscm-def-pointer (sw/* typename))
        (values (cons* typename (w/* typename) wrapped)
@@ -1499,11 +1500,11 @@
 	 (lambda (union-decl)
 	   (back-ref-extend! union-decl (sw/& typename))
 	   (sfscm "(define-public ~A&-desc 'void)\n" typename)
-	   (sfscm "(define-public ~A-desc (bs:pointer (delay ~A&-desc)))\n"
+	   (sfscm "(define-public ~A-desc (fh:pointer (delay ~A&-desc)))\n"
 		  typename typename)))
 	(else
 	 ;; 3) union never defined; only used as pointer
-	 (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)))
+	 (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)))
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1717,7 +1718,7 @@
 	(init-declr
 	 (ptr-declr (pointer (pointer))
 		    (ftn-declr (ptr-declr) (ident ,typename)) ,param-list)))
-       (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
+       (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
       ((udecl
@@ -1726,7 +1727,7 @@
 	 (ptr-declr (pointer (pointer))
 		    (ftn-declr (ptr-declr (pointer) (ident ,typename)))
 			       ,param-list)))
-       (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
+       (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1739,7 +1740,7 @@
 	 (ptr-declr
 	  (pointer (type-qual-list . ,rest))
 	  (ident ,name))))
-       (sfscm "(define-public ~A-desc (bs:pointer 'void))\n" typename)
+       (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
 
@@ -1799,7 +1800,7 @@
 
   (define err-port (open-output-file "/dev/null"))
   
-  (define* (try-parse-repl repl)
+  #;(define* (try-parse-repl repl)
     (with-error-to-port err-port
       (lambda ()
 	(catch 'c99-error
@@ -1814,22 +1815,28 @@
 	(sv-name (string->symbol (string-append (*prefix*) "-symbol-val")))
 	(defs
 	  (fold
-	   (lambda (def seed)
-	     (let* ((name (car def)) (val (cdr def))
+	   (lambda (defn seed)
+	     (let* ((name (car defn)) (val (cdr defn))
+		    (x (sferr "adding ~S\n" name))
 		    (symb (string->symbol name))
 		    (repl (cond
 			   ((pair? val) #f)
-			   ((string->number (cdr def)) (cdr def))
+			   ((string->number (cdr defn)) (cdr defn))
 			   (else
 			    ;; or maybe should export/use cpp-expand-text
 			    (with-input-from-string ""
 			      (lambda ()
-				(expand-cpp-macro-ref name cpp-defs)))))))
+				(expand-cpp-macro-ref name cpp-dict)))))))
+	       (sferr "  w/ repl ~S\n" repl)
+	       #;(when (string=? name "stderr")
+		 (pperr cpp-defs)
+		 (quit))
 	       ;; TODO: try to reduce all this to the parse-c99x one
 	       (cond
 		((not repl) seed)
 		((not (string? repl)) (sferr "not string: ~S\n" repl))
 		((zero? (string-length repl)) seed)
+		((string=? name repl) seed) ; after cpp expansion need to filter
 		;;
 		((cintstr->num repl) => (lambda (val) (acons symb val seed)))
 		((try-parse-repl repl)
@@ -1967,6 +1974,7 @@
   (let* () ;;(declf (if declf declf (lambda (key) #t))))
     (fold-values			  ; from (sxml fold)
      (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
+       (sferr "processing ~S ...\n" name)
        (catch 'ffi-help-error
 	 (lambda ()
 	   (cond
@@ -2008,6 +2016,7 @@
 	 (declf (or (assq-ref attrs 'decl-filter) identity))
 	 (renamer (or (assq-ref attrs 'renamer) identity))
 	 ;;
+	 (x (sferr "1\n"))
 	 (tree (begin
 		 (if (memq 'parse dbugl) (*debug-parse* #t))
 		 (cond
@@ -2015,22 +2024,31 @@
 		  ((assq-ref attrs 'api-code) =>
 		   (lambda (code) (parse-code code attrs)))
 		  (else (fherr "expecing #:include or #:api-code")))))
-	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
+	 (x (sferr "2\n"))
 	 (udict (c99-trans-unit->udict/deep tree))
+	 (x (sferr "3\n"))
+	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
+	 (x (sferr "4\n"))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
+	 (x (sferr "5\n"))
 
 	 ;; OK, I think this is fixed now.  Was ...
 	 ;; 1. If udict, then exported symbols looks good, but ref's don't work
 	 ;; 2. If udecls, refs work but bloated symval struct.
 	 ;; The conflict is in
-	 ;; const-expr->number VS call to gen-lookup-proc 1st arg ffi-defs
-	 (ffi-enu-defs (udict-enums->ddict udecls))
-	 (ffi-defs (c99-trans-unit->ddict tree ffi-enu-defs #:inc-filter incf))
-	 (cpp-defs (c99-trans-unit->ddict tree #:inc-filter #t))
-	 (all-enu-defs (udict-enums->ddict udict))
-	 (all-defs (c99-trans-unit->ddict
-		    tree all-enu-defs #:inc-filter #t #:skip-fdefs #t))
-	 (ddict all-defs)
+	 ;; const-expr->number VS call to gen-lookup-proc 1st arg ffi-ddict
+	 (cpp-ddict (c99-trans-unit->ddict tree #:inc-filter #t))
+	 (x (sferr "6\n"))
+	 (ddict (udict-enums->ddict udict))
+	 (x (sferr "7\n"))
+	 (ddict (c99-trans-unit->ddict tree ddict
+				       #:inc-filter #t #:skip-fdefs #t))
+	 (x (sferr "8\n"))
+	 ;;(ffi-enu-defs (udict-enums->ddict udecls ddict))
+	 ;;(ffi-ddict (c99-trans-unit->ddict tree ffi-enu-defs #:inc-filter incf))
+	 (ffi-ddict (c99-trans-unit->ddict tree ddict #:inc-filter incf))
+	 (x (sferr "9\n"))
+
 	 ;; the list of typedefs we will generate (later):
 	 (ffimod-defined #f)
 	 ;; ext modules [from #:use-modules (ffi cairo)]
@@ -2051,6 +2069,7 @@
 		    (var (module-ref modul vname)))
 	       (append var seed)))
 	   '() ext-mods)))
+    (sferr "9b\n")
     ;; set globals
     (*prefix* (path->name path))
     (*udict* udict)
@@ -2059,9 +2078,14 @@
     (*renamer* renamer)
     (*tdefs* (udict->typenames udict))
     (if (memq 'echo-decls dbugl) (*echo-decls* #t))
+    (sferr "9c\n")
+    (sferr "cpp-ddict:\n") (pperr cpp-ddict)
+    (sferr "dict:\n") (pperr ddict)
+    (quit)
 
     ;; file and module header
     (ffimod-header path module-options)
+    (sferr "9d\n")
 
     ;; Convert and output foreign declarations.
     (call-with-values
@@ -2083,7 +2107,9 @@
 	  (set! ffimod-defined defd))))
     
     ;; output global constants (from enum and #define)
-    (gen-lookup-proc ffi-defs cpp-defs ext-mods)
+    (sferr "10\n")
+    (gen-lookup-proc ffi-ddict cpp-ddict ext-mods)
+    (sferr "11\n")
 
     ;; output list of defined types
     (sfscm "\n(define ~A-types\n  '" (path->name path))

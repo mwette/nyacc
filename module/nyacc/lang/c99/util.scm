@@ -20,8 +20,8 @@
 (define-module (nyacc lang c99 util)
   #:export (c99-def-help
 	    c99-std-help
-	    get-gcc-cpp-defs
-	    get-gcc-inc-dirs 
+	    get-sys-cpp-defs get-sys-inc-dirs split-cpp-defs 
+	    get-gcc-cpp-defs get-gcc-inc-dirs ;; <= deprecated
 	    remove-inc-trees
 	    merge-inc-trees!
 	    move-attributes attrl->attrs attrs->attrl extract-attr
@@ -113,12 +113,12 @@
 	       (string-append term "=" (reverse-list->string acc))
 	       (loop term (cons ch acc) st (read-char)))))))))
 
-;; @deffn {Procedure} get-gcc-cpp-defs [args] [#:CC "gcc"] => '("ABC=123" ...)
+;; @deffn {Procedure} get-sys-cpp-defs [args] [#:CC "gcc"] => '("ABC=123" ...)
 ;; Generate a list of default defines produced by gcc (or other comiler).
 ;; If keyword arg @arg{CC} is not provided this procedure looks for environment
 ;; variable @code{"CC"}, else it defaults to @code{"gcc"}.
 ;; @end deffn
-(define* (get-gcc-cpp-defs #:optional (args '()) #:key CC)
+(define* (get-sys-cpp-defs #:optional (args '()) #:key CC)
   ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
   ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
   (let* ((cmd (string-append (resolve-CC CC) " -dM -E - </dev/null"))
@@ -127,12 +127,14 @@
       (if (eof-object? line) '()
 	  (cons (convert-line line) (loop (read-line ip 'trim)))))))
 
-;; @deffn {Procedure} get-gcc-inc-dirs [args] [#:CC "gcc"] =>
-;; Generate a list of compiler-internal include directories (for gcc).  If
+(define get-gcc-cpp-defs get-sys-cpp-defs)
+
+;; @deffn {Procedure} get-sys-inc-dirs [args] [#:CC "gcc"] =>
+;; Generate a list of compiler-internal include directories (for cc).  If
 ;; keyword arg @arg{CC} is not provided this procedure looks for environment
 ;; variable @code{"CC"}, else it defaults to @code{"gcc"}.
 ;; @end deffn
-(define* (get-gcc-inc-dirs #:optional (args '()) #:key CC)
+(define* (get-sys-inc-dirs #:optional (args '()) #:key CC)
   (let ((ip (open-input-pipe (string-append
 			      (resolve-CC CC) " -E -Wp,-v - </dev/null 2>&1"))))
     (let loop ((dirs '()) (grab #f) (line (read-line ip 'trim)))
@@ -147,6 +149,24 @@
        (else
 	(loop dirs grab (read-line ip 'trim)))))))
 
+(define get-gcc-inc-dirs get-sys-inc-dirs)
+
+(define (add-cppdef def dict)
+  (let ((x2st (string-index def #\())
+	(x3 (string-index def #\=)))
+    (cond
+     (x2st dict)
+     (x3 (acons (substring def 0 x3) (substring def (1+ x3)) dict))
+     (else dict))))
+
+;; @deffn {Procedure} split-cpp-defs defs [dict]
+;; Given list of defs as returned by @code{get-sys-cpp-defs} (e.g.,
+;; @code{"ABC=123", ...}) return list of pairs (e.g.,
+;; @code{(("ABC" . "123") ...)}).
+;; @end deffn
+(define* (split-cpp-defs defs #:optional (dict '()))
+  (fold-right add-cppdef dict defs))
+      
 ;; @deffn {Procedure} remove-inc-trees tree
 ;; Remove the trees included with cpp-include statements.
 ;; @example

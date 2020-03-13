@@ -25,12 +25,15 @@
 (define-module (nyacc lang c99 cpp)
   #:export (
 	    cpp-line->stmt
+	    find-incl-in-dirl
 	    eval-cpp-cond-text
 	    expand-cpp-macro-ref
+	    ;;
+	    expand-cpp-name
 	    parse-cpp-expr
-	    find-incl-in-dirl
+	    eval-cpp-expr
 	    scan-arg-literal
-	    eval-cpp-expr)
+	    )
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang sx-util)
@@ -284,6 +287,7 @@
 	    ((pre-dec post-dec) (1- (ev1 tree)))
 	    ((pos) (ev1 tree))
 	    ((neg) (- (ev1 tree)))
+
 	    ((not) (if (zero? (ev1 tree)) 1 0))
 	    ((mul) (* (ev1 tree) (ev2 tree)))
 	    ((div) (/ (ev1 tree) (ev2 tree)))
@@ -591,7 +595,7 @@
 ;; @end example
 ;; @noindent
 ;; Note that this routine will look in the current-input so if you want to
-;; expand text, 
+;; expand text, BE CAREFUL AND USE (with-input-from-string "" ...)
 ;; @end deffn
 (define* (expand-cpp-macro-ref ident defs #:optional (used '()))
   (let ((rval (assoc-ref defs ident)))
@@ -617,5 +621,13 @@
 		     repl)))))
      ((c99-std-val ident) => identity)
      (else #f))))
+
+;; @deffn {Procedure} expand-cpp-macro-ref ident defs [used] => repl|#f
+;; Calls @code{expand-cpp-macro-ref} with null input string (w/o further
+;; input).
+;; @end deffn
+(define (expand-cpp-name name defs)
+  (with-input-from-string ""
+    (lambda () (expand-cpp-macro-ref name defs))))
 
 ;;; --- last line ---

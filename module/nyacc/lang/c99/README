@@ -1,6 +1,6 @@
 nyacc/lang/c99/
 
-Copyright (C) 2015,2016,2019 Matthew R. Wette
+Copyright (C) 2015,2016,2019,2020 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -32,6 +32,8 @@ pprint.scm	C pretty printer, from SXML output of above parsers
 util.scm	utilities merge, remove trees from included files
 
 munge.scm	utilities to process information in trees
+
+munge-base.scm	workhorse for munge, typeref expansion, udecl->mdecl
 
 ffi-help.scm	generate FFI api code from C headers
 

@@ -27,6 +27,7 @@
   #:use-module (nyacc lang sx-util)
   #:use-module (nyacc lang arch-info)
   #:use-module (nyacc lang c99 cpp)
+  #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
   ;;#:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
@@ -34,7 +35,8 @@
   #:use-module (ice-9 match))
 
 (use-modules (ice-9 pretty-print))
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
@@ -205,13 +207,22 @@
        (throw 'c99-error "failed to expand sizeof expr ~S" expr)))))
 
 (define (eval-ident name udict ddict)
-  (and=>
-   (assoc-ref ddict name)
-   (lambda (hit)
-     ;; This should actually go through the cpp-expander first methinks.
-     (and (string? hit)
-	  (let ((expr (parse-cpp-expr hit)))
-	    (eval-c99-cx expr udict ddict))))))
+  (sferr "eval-ident ~S in ddict => ~S\n" name (assoc-ref ddict name))
+  (cond
+   ((expand-cpp-name name ddict) =>
+    (lambda (code)
+      (eval-c99-cx (parse-c99x code) udict ddict)))
+   ((assoc-ref udict name) => ;; must be const expression
+    (lambda (hit)
+      (sferr "cxeval: can't (yet) eval ~S defined in udict\n" name)
+      #f))
+   (else
+    #f)))
+
+;; @deffn {Procedure} parse-c99-cx expr-string)
+;; This is just an alias for @code{parse-c99x}.
+;; @end deffn
+(define parse-c99-cx parse-c99x)
 
 ;; @deffn {Procedure} eval-c99-cx tree [udict [ddict]] [#:fail-proc fail-proc]
 ;; Evaluate the constant expression or return #f
