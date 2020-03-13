@@ -18,12 +18,16 @@
 ;;; Code:
 
 (define-module (nyacc lang mlang parser)
-  #:export (parse-oct read-oct-stmt read-oct-file)
+  #:export (parse-mlang read-mlang-stmt read-mlang-file)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
-  #:use-module (nyacc lang util))
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+  #:use-module (nyacc lang util)
+  #:use-module (nyacc lang sx-util)
+  #:use-module (sxml fold)
+  #:use-module ((srfi srfi-1) #:select (fold)))
+
 (use-modules (ice-9 pretty-print))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
@@ -35,14 +39,6 @@
 ;; 2) matrix: "[ int, int, int ]" => ivec
 ;; 3) matrix: "[ ... (fixed) ... ]" => error
 ;; .) colon-expr => fixed-colon-expr
-
-(use-modules (nyacc lang sx-util))
-(use-modules (sxml fold))
-(use-modules ((srfi srfi-1) #:select (fold)))
-(use-modules (ice-9 pretty-print))
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
-(define (pperr exp)
-  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
 (define (fixed-colon-expr? expr)
   (sx-match expr
@@ -120,13 +116,13 @@
 (include-from-path "nyacc/lang/mlang/mach.d/mlang-tab.scm")
 (include-from-path "nyacc/lang/mlang/mach.d/mlang-act.scm")
 
-(define gen-mlang-lexer (make-mlang-lexer-generator oct-mtab))
+(define gen-mlang-lexer (make-mlang-lexer-generator mlang-mtab))
 
 ;; Parse given a token generator.
 (define raw-parser
-  (make-lalr-parser (acons 'act-v oct-act-v oct-tables)))
+  (make-lalr-parser (acons 'act-v mlang-act-v mlang-tables)))
 
-(define* (parse-oct #:key debug)
+(define* (parse-mlang #:key debug)
   (catch
    'nyacc-error
    (lambda ()
@@ -136,13 +132,13 @@
      (apply simple-format (current-error-port) fmt args)
      #f)))
 
-(define (read-oct-file port env)
+(define (read-mlang-file port env)
   ;;(sferr "<parse file>\n")
   (with-input-from-port port
     (lambda ()
       (if (eof-object? (peek-char port))
 	  (read-char port)
-	  (parse-oct #:debug #f)))))
+	  (parse-mlang #:debug #f)))))
 
 ;; === interactive parser
 
@@ -151,10 +147,10 @@
 
 (define raw-ia-parser
   (make-lalr-parser
-   (acons 'act-v octia-act-v octia-tables)
+   (acons 'act-v mlangia-act-v mlangia-tables)
    #:interactive #t))
 
-(define (parse-oct-stmt lexer)
+(define (parse-mlang-stmt lexer)
   (catch 'nyacc-error
     (lambda ()
       (apply-mlang-statics
@@ -163,9 +159,9 @@
       (apply simple-format (current-error-port) fmt args)
       #f)))
 
-(define gen-mlang-ia-lexer (make-mlang-lexer-generator octia-mtab))
+(define gen-mlang-ia-lexer (make-mlang-lexer-generator mlangia-mtab))
 
-(define read-oct-stmt
+(define read-mlang-stmt
   (let ((lexer (gen-mlang-ia-lexer)))
     (lambda (port env)
       ;;(sferr "<parse stmt>\n")
@@ -174,7 +170,7 @@
 	(read-char port))
        (else
 	(let* ((stmt (with-input-from-port port
-		      (lambda () (parse-oct-stmt lexer))))
+		      (lambda () (parse-mlang-stmt lexer))))
 	       (stmt (apply-mlang-statics stmt)))
 	  ;;(sferr "stmt=~S\n" stmt)
 	  (cond

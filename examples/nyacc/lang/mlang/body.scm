@@ -83,7 +83,7 @@
 ;; @deffn {Procedure} make-mlang-lexer-generator match-table
 ;; This function, given the @var{match-table} from a lalr-generated
 ;; machine, generates a procedure that returns lexical analyzers for
-;; use in Octave parsers.  See @code{parse-oct}.
+;; use in Octave parsers. 
 ;; @end deffn
 (define-public (make-mlang-lexer-generator match-table)
   ;; There is some trickery here to assure that if the last line

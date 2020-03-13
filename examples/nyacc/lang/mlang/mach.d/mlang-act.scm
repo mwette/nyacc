@@ -1,4 +1,4 @@
-;; mach.d/oct-act.scm
+;; mlang-act.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 
@@ -6,9 +6,9 @@
 ;; modify it under the terms of the GNU Lesser General Public
 ;; License as published by the Free Software Foundation; either
 ;; version 3 of the License, or (at your option) any later version.
-;; See the file COPYING.LESSER included with the this distribution.
+;; See the file COPYING included with the this distribution.
 
-(define oct-act-v
+(define mlang-act-v
   (vector
    ;; $start => translation-unit
    (lambda ($1 . $rest) $1)
