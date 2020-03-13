@@ -184,12 +184,14 @@
       (cdadr sx)
       '()))
 
-;; @deffn {Procedure} sx-attr-ref sx|node|tail key => val
+;; @deffn {Procedure} sx-attr-ref sx|node|tail|#f key => val
 ;; Return an attribute value given the key, or @code{#f}.
-;; Also works if passed the attribute node @code{(@ ...)} or its tail.
+;; Also works if passed the attribute node @code{(@ ...)}, or its tail,
+;; or @code{#f}.
 ;; @end deffn
 (define (sx-attr-ref sx key)
-  (let ((attr-tail (cond ((null? sx) sx)
+  (let ((attr-tail (cond ((not sx) '())
+			 ((null? sx) sx)
 			 ((pair? (car sx)) sx)
 			 ((eqv? '@ (car sx)) (car sx))
 			 ((sx-attr sx))
@@ -416,21 +418,35 @@
   (syntax-rules (@ unquote)
     ;; accept anything
     ((_ v (unquote w) kt kf) (let ((w v)) kt))
-    ;; capture attributes
-    ((_ v (tag (@ . (unquote al)) . nl) kt kf)
+    ;; capture attributes by name
+    ((_ v (tag (@ (ky vl) p1 ...) . nl) kt kf)
      (sxm-tag (car v) tag
-	      (if (sx-has-attr? v)
-		  (let ((al (cdadr v))) (sxm-tail (cddr v) nl kt kf))
-		  (let ((al '())) (sxm-tail (cdr v) nl kt kf)))
+	      (let ((va (sx-attr v)) (vt (sx-tail v)))
+		(sxm-attr-tail va vt ((ky vl) p1 ...) nl kt kf))
+	      kf))
+    ;; capture attributes as dict
+    ((_ v (tag (@ . (unquote va)) . nl) kt kf)
+     (sxm-tag (car v) tag
+	      (let ((va (sx-attr v)) (vt (sx-tail v)))
+		(sxm-tail vt nl kt kf))
 	      kf))
     ;; ignore attributes; (cadr v) may be an attr node. If so, ignore it.
     ((_ v (tag . nl) kt kf)
      (sxm-tag (car v) tag
-	      (if (sx-has-attr? v)
-		  (sxm-tail (cddr v) nl kt kf)
-		  (sxm-tail (cdr v) nl kt kf))
-	      kf))))
+	      (let ((vt (sx-tail v)))
+		(sxm-tail vt nl kt kf))
+	      kf))
+    ))
  
+;; sxml-attr-tail va vt (@ (k v) ...) nl kt kf
+(define-syntax sxm-attr-tail
+  (syntax-rules (unquote)
+    ((_ va vt () nl kt kf)
+     (sxm-tail vt nl kt kf))
+    ((_ va vt ((key (unquote val)) p1 ...) tl kt kf)
+     (let ((val (sx-attr-ref va 'key)))
+       (sxm-attr-tail va vt (p1 ...) tl kt kf)))))
+
 ;; sxm-tag val pat kt kf
 ;; match tag: foo|#(foo bar baz)|,any
 (define-syntax sxm-tag

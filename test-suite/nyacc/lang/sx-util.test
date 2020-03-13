@@ -74,6 +74,22 @@
        ((foo (bar . ,text) . ,rest) #t) (,_ #f))
      #t))
 
+  (pass-if "attr entries"
+    (and
+     (sx-match '(foo (@ (a "1") (b "2")))
+       ((foo (@ (a ,a) (b ,b))) (and (equal? a "1") (equal? b "2")))
+       (,_ #f))
+     (sx-match '(foo (@ (a "1")) "hello")
+       ((foo (@ (a ,a) (b ,b)) . ,rest) (and (equal? a "1") (eq? b #f)))
+       (,_ #f))
+     (sx-match '(foo (@) (bar "baz") "hello")
+       ((foo (bar (@ (a ,a) (b ,b)) . ,t) . ,r) (and (eq? a #f) (eq? b #f)))
+       (,_ #f))
+     (sx-match '(foo (bar (@ (a "1")) "baz") "hello")
+       ((foo (@ . ,al) (bar . ,text) . ,rest) #t)
+       (,_ #f))
+     #t))
+
   (pass-if "more random tests"
     (and
      ;;(sx-match '(foo "abc" "def") ((foo (bar . *)) #f) (,_ #t))
