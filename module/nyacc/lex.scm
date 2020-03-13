@@ -411,6 +411,7 @@
 	 (cond
 	  ((eof-object? ch) (loop chl ty ba 5 ch))
 	  ((char-numeric? ch) (loop (cons ch chl) ty ba 4 (read-char)))
+	  ((char-set-contains? c:fx ch) (loop (cons ch chl) ty ba 4 (read-char)))
 	  ((char-set-contains? c:if ch) (error "lex/num-reader st=4"))
 	  (else (loop chl ty ba 5 ch))))
 	((5)
