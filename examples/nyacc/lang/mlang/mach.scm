@@ -33,7 +33,7 @@
 	    mlang-mach
 	    mlang-ia-spec
 	    mlang-ia-mach
-	    dev-parse-oct
+	    dev-parse-ml
 	    gen-mlang-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)

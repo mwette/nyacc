@@ -678,7 +678,7 @@
    ;; pointer => "*" attribute-specifiers pointer
    (lambda ($3 $2 $1 . $rest) `(pointer ,$3))
    ;; pointer => "*" attribute-specifiers
-   (lambda ($2 $1 . $rest) `(pointer))
+   (lambda ($2 $1 . $rest) '(pointer))
    ;; pointer => "*" pointer
    (lambda ($2 $1 . $rest) `(pointer ,$2))
    ;; pointer => "*"

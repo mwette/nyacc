@@ -15,6 +15,14 @@ without any warranty.
 	* added reify-decl to make abstract C99 declarations concrete.
 	* working eval-c99-cx for sizeof(type)
 
+2020-03-13  V1.01.2
+	* fixed bug #57911, compile-ffi fails to parse function attributes 
+	  preceded by *; added production rule to pointer:
+	   ("*" attribute-specifiers ($$ '(pointer)))
+	* updated example tcl and mlang code
+	* fixed lex to accept F in 1.0e-3F;
+	* c99 cpp now handles blank #-line
+
 2020-02-22  V1.01.1 (V1.01.0 not released)
 	* read-only struct-vable fields in ffi-helper changed to writable:
 	  guile 3.0 deprecates read-only fields

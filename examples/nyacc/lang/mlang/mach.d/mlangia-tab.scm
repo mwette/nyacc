@@ -1,4 +1,4 @@
-;; mach.d/octia-tab.scm
+;; mlangia-tab.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 
@@ -6,15 +6,52 @@
 ;; modify it under the terms of the GNU Lesser General Public
 ;; License as published by the Free Software Foundation; either
 ;; version 3 of the License, or (at your option) any later version.
-;; See the file COPYING.LESSER included with the this distribution.
+;; See the file COPYING included with the this distribution.
 
-(define octia-len-v
+(define mlangia-mtab
+  '(($start . 100) ($lone-comm . 3) ($string . 4) ($float . 5) ($fixed . 6) 
+    ($ident . 7) (";" . 8) ("." . 9) (".'" . 10) ("'" . 11) ("~" . 12) 
+    (".^" . 13) (".\\" . 14) ("./" . 15) (".*" . 16) ("^" . 17) ("\\" . 18) 
+    ("/" . 19) ("*" . 20) (".-" . 21) (".+" . 22) ("-" . 23) ("+" . 24) 
+    (">=" . 25) ("<=" . 26) (">" . 27) ("<" . 28) ("~=" . 29) ("==" . 30) 
+    ("&" . 31) ("|" . 32) (":" . 33) ("}" . 34) ("{" . 35) ("case" . 36) 
+    ("elseif" . 37) ("clear" . 38) ("global" . 39) ("return" . 40) (
+    "otherwise" . 41) ("switch" . 42) ("else" . 43) ("if" . 44) ("while" . 45)
+    ("for" . 46) ("\n" . 47) ("," . 48) (")" . 49) ("(" . 50) ("=" . 51) 
+    ("]" . 52) ("[" . 53) ("function" . 54) ("end" . 55) ($error . 2) ($end . 
+    57)))
+
+(define mlangia-ntab
+  '((58 . float) (59 . lone-comment-list-1) (60 . term-list) (61 . nl) 
+    (62 . row-term) (63 . matrix-row) (64 . matrix-row-list) (65 . number) 
+    (66 . primary-expr) (67 . postfix-expr) (68 . unary-expr) (69 . mul-expr) 
+    (70 . add-expr) (71 . rel-expr) (72 . equality-expr) (73 . and-expr) 
+    (74 . or-expr) (75 . expr-list) (76 . string-list) (77 . fixed-list) 
+    (78 . string) (79 . fixed) (80 . case-expr) (81 . arg-list) (82 . command)
+    (83 . case-list) (84 . elseif-list) (85 . expr) (86 . 
+    nontrivial-statement-1) (87 . lone-comment) (88 . trivial-statement) 
+    (89 . triv-stmt-list-1) (90 . ident) (91 . ident-list) (92 . 
+    lone-comment-list) (93 . function-decl-line) (94 . term) (95 . the-end) 
+    (96 . stmt-list) (97 . non-comment-statement) (98 . function-decl) 
+    (99 . statement) (100 . mlang-item) (101 . mlang-item-list-1) (102 . 
+    function-defn) (103 . mlang-item-list) (104 . nontrivial-statement) 
+    (105 . triv-stmt-list) (106 . translation-unit)))
+
+(define mlangia-len-v
   #(1 3 3 2 2 1 0 2 1 1 4 3 2 2 2 1 10 9 8 7 6 5 1 3 1 2 1 1 2 1 1 1 1 2 1 2 
     1 3 7 5 8 6 7 5 8 5 1 2 1 1 1 2 4 5 0 5 1 1 3 3 1 2 1 2 1 3 1 3 5 3 5 1 3 
     1 3 1 3 3 1 3 3 3 3 1 3 3 3 3 1 3 3 3 3 3 3 3 3 1 2 2 2 1 2 2 4 3 3 1 1 1 
     3 2 3 2 3 1 3 1 1 1 3 1 2 1 1 1 1 2 3 1 1 1 1 1 1 1 1))
 
-(define octia-pat-v
+(define mlangia-rto-v
+  #(#f 106 106 106 106 103 101 101 100 100 102 102 102 95 98 98 93 93 93 93 
+    93 93 91 91 96 96 105 89 89 99 99 97 97 88 88 104 86 86 86 86 86 86 86 86 
+    86 86 86 86 82 82 81 81 84 84 83 83 80 80 80 80 77 77 76 76 75 75 85 85 85
+    85 85 74 74 73 73 72 72 72 71 71 71 71 71 70 70 70 70 70 69 69 69 69 69 69
+    69 69 69 68 68 68 68 67 67 67 67 67 67 66 66 66 66 66 66 66 66 64 64 62 62
+    63 63 60 60 94 94 94 92 59 59 90 79 58 65 65 78 87 61))
+
+(define mlangia-pat-v
   #(((5 . 1) (6 . 2) (4 . 3) (58 . 4) (79 . 5) (7 . 6) (35 . 7) (53 . 8) 
     (50 . 9) (78 . 10) (65 . 11) (90 . 12) (66 . 13) (12 . 14) (24 . 15) 
     (23 . 16) (67 . 17) (68 . 18) (69 . 19) (70 . 20) (71 . 21) (72 . 22) 
@@ -330,32 +367,13 @@
     (104 . 44) (88 . 45) (99 . 154) (1 . -53)) ((1 . -17)) ((47 . 24) (48 . 29
     ) (8 . 30) (61 . 31) (94 . 231)) ((1 . -16))))
 
-(define octia-rto-v
-  #(#f 106 106 106 106 103 101 101 100 100 102 102 102 95 98 98 93 93 93 93 
-    93 93 91 91 96 96 105 89 89 99 99 97 97 88 88 104 86 86 86 86 86 86 86 86 
-    86 86 86 86 82 82 81 81 84 84 83 83 80 80 80 80 77 77 76 76 75 75 85 85 85
-    85 85 74 74 73 73 72 72 72 71 71 71 71 71 70 70 70 70 70 69 69 69 69 69 69
-    69 69 69 68 68 68 68 67 67 67 67 67 67 66 66 66 66 66 66 66 66 64 64 62 62
-    63 63 60 60 94 94 94 92 59 59 90 79 58 65 65 78 87 61))
-
-(define octia-mtab
-  '(($start . 100) ($lone-comm . 3) ($string . 4) ($float . 5) ($fixed . 6) 
-    ($ident . 7) (";" . 8) ("." . 9) (".'" . 10) ("'" . 11) ("~" . 12) 
-    (".^" . 13) (".\\" . 14) ("./" . 15) (".*" . 16) ("^" . 17) ("\\" . 18) 
-    ("/" . 19) ("*" . 20) (".-" . 21) (".+" . 22) ("-" . 23) ("+" . 24) 
-    (">=" . 25) ("<=" . 26) (">" . 27) ("<" . 28) ("~=" . 29) ("==" . 30) 
-    ("&" . 31) ("|" . 32) (":" . 33) ("}" . 34) ("{" . 35) ("case" . 36) 
-    ("elseif" . 37) ("clear" . 38) ("global" . 39) ("return" . 40) (
-    "otherwise" . 41) ("switch" . 42) ("else" . 43) ("if" . 44) ("while" . 45)
-    ("for" . 46) ("\n" . 47) ("," . 48) (")" . 49) ("(" . 50) ("=" . 51) 
-    ("]" . 52) ("[" . 53) ("function" . 54) ("end" . 55) ($error . 2) ($end . 
-    57)))
-
-(define octia-tables
+(define mlangia-tables
   (list
-   (cons 'len-v octia-len-v)
-   (cons 'pat-v octia-pat-v)
-   (cons 'rto-v octia-rto-v)
-   (cons 'mtab octia-mtab)))
+   (cons 'mtab mlangia-mtab)
+   (cons 'ntab mlangia-ntab)
+   (cons 'len-v mlangia-len-v)
+   (cons 'rto-v mlangia-rto-v)
+   (cons 'pat-v mlangia-pat-v)
+   ))
 
 ;;; end tables

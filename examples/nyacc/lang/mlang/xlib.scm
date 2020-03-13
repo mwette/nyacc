@@ -40,58 +40,59 @@
   (delta ml-range-delta)
   (end ml-range-end))
 ;; above generates syntax; we need procedures
-(define-public (make-oct:range start delta end) (make-ml-range start delta end))
-(define-public (oct:range? obj) (ml-range? obj))
-(define-public (oct:range-start rng) (ml-range-start rng))
-(define-public (oct:range-delta rng) (ml-range-delta rng))
-(define-public (oct:range-end rng) (ml-range-end rng))
+(define-public (make-mlang:range start delta end)
+  (make-ml-range start delta end))
+(define-public (ml:range? obj) (ml-range? obj))
+(define-public (ml:range-start rng) (ml-range-start rng))
+(define-public (ml:range-delta rng) (ml-range-delta rng))
+(define-public (ml:range-end rng) (ml-range-end rng))
 
-;; @deffn {Procedure} oct:range-next rng index
+;; @deffn {Procedure} ml:range-next rng index
 ;; Given an index in a range, generate the next index, or @code{#f} if
 ;; there is no next index.
 ;; @end deffn
-(define-public (oct:range-next rng index)
-  (xassert (oct:range? rng))
-  (let ((nx (+ index (oct:range-delta rng))))
-    (if (positive? (oct:range-delta rng))
-	(if (> nx (oct:range-end rng)) #f nx)
-	(if (< nx (oct:range-end rng)) #f nx))))
+(define-public (ml:range-next rng index)
+  (xassert (ml:range? rng))
+  (let ((nx (+ index (ml:range-delta rng))))
+    (if (positive? (ml:range-delta rng))
+	(if (> nx (ml:range-end rng)) #f nx)
+	(if (< nx (ml:range-end rng)) #f nx))))
 
 ;; for 1-d array do the same
-(define-public (oct:array-next ary index)
+(define-public (ml:array-next ary index)
   (xassert (array? ary))
   (let* ((ub (cadr (car (array-shape ary))))
 	 (nx (1+ index)))
     (if (> nx ub) #f nx)))
 
-(define-public (oct:iter-first obj)
+(define-public (ml:iter-first obj)
   (cond
-   ((oct:range? obj) (oct:range-start obj))
+   ((ml:range? obj) (ml:range-start obj))
    ((array? obj)
     (xassert (= 1 (array-rank obj)) "expecting array to be 1-d")
     (array-ref obj (caar (array-shape obj))))
    (else (xassert #f "expecting range or array"))))
 
-(define-public (oct:iter-next obj index)
+(define-public (ml:iter-next obj index)
   (cond
-   ((oct:range? obj) (oct:range-next obj index))
-   ((array? obj) (oct:array-next obj index))
+   ((ml:range? obj) (ml:range-next obj index))
+   ((array? obj) (ml:array-next obj index))
    (else (xassert #f "expecting range or array"))))
 
-(define-public (oct:or a b) (if (and (zero? a) (zero? b)) 0 1))
-(define-public (oct:and a b) (if (or (zero? a) (zero? b)) 0 1))
-(define-public (oct:eq a b) (if (equal? a b) 1 0))
-(define-public (oct:ne a b) (- 1 (oct:eq a b)))
-(define-public (oct:lt a b) (if (< a b) 1 0))
-(define-public (oct:gt a b) (if (> a b) 1 0))
-(define-public (oct:le a b) (if (<= a b) 1 0))
-(define-public (oct:ge a b) (if (>= a b) 1 0))
-(define-public (oct:+ a b) (+ a b))
-(define-public (oct:- a b) (- a b))
-(define-public (oct:* a b) (* a b))
-(define-public (oct:/ a b) (/ a b))
+(define-public (ml:or a b) (if (and (zero? a) (zero? b)) 0 1))
+(define-public (ml:and a b) (if (or (zero? a) (zero? b)) 0 1))
+(define-public (ml:eq a b) (if (equal? a b) 1 0))
+(define-public (ml:ne a b) (- 1 (ml:eq a b)))
+(define-public (ml:lt a b) (if (< a b) 1 0))
+(define-public (ml:gt a b) (if (> a b) 1 0))
+(define-public (ml:le a b) (if (<= a b) 1 0))
+(define-public (ml:ge a b) (if (>= a b) 1 0))
+(define-public (ml:+ a b) (+ a b))
+(define-public (ml:- a b) (- a b))
+(define-public (ml:* a b) (* a b))
+(define-public (ml:/ a b) (/ a b))
 
-(define-public (oct:vector-ref vec arg)
+(define-public (ml:vector-ref vec arg)
   ;; arg can be a positive integer, a range, or an array
   ;;(sferr "arg=~S\n" arg)
   (cond
@@ -101,7 +102,7 @@
 ;; ===
 
 ;; inargs and outargs are initialized to 
-(define-public (oct:narg . args)
+(define-public (ml:narg . args)
   (let loop ((args args))
     (if (null? args) 0
 	(if (eq? (car args) undefined)
@@ -117,7 +118,7 @@
 ;; cell array: untyped array
 ;; struct: hashv table
 
-(define-public (oct:array-ref vec . args)
+(define-public (ml:array-ref vec . args)
   ;; args can be positive integer, a range, or an array
   (let ((arg (car args))
 	)
@@ -125,48 +126,48 @@
      ((integer? arg) (array-ref vec (1- arg)))
      (else (error "mlang: expecting array args of integer, range or array")))))
 
-(define-public (oct:array-set-row! ary ix row)
+(define-public (ml:array-set-row! ary ix row)
   (let loop ((jx 0) (elts row))
     (unless (null? elts)
       (array-set! ary (car elts) ix jx)
       (loop (1+ jx) (cdr elts)))))
 
-(define-public (oct:aref-or-call proc-or-array . args)
+(define-public (ml:aref-or-call proc-or-array . args)
   (cond
    ((procedure? proc-or-array)
     (apply proc-or-array args))
    ((vector? proc-or-array)
     (unless (= 1 (length args))
       (error "mlang: vector ref requires 1 int arg"))
-    (oct:vector-ref proc-or-array (car args)))
+    (ml:vector-ref proc-or-array (car args)))
    ((array? proc-or-array)
-    (apply oct:array-ref proc-or-array args))
+    (apply ml:array-ref proc-or-array args))
    (else
     (error "expecting function or array"))))
 
-(define-public (oct:assn-elt arry expl value)
+(define-public (ml:assn-elt arry expl value)
   #f)
       
-;; @deffn {Procedure} oct:make-struct [args]
+;; @deffn {Procedure} ml:make-struct [args]
 ;; Generate a struct.  Currently no args are processed.
 ;; The hash size is 31.
 ;; @end deffn
-(define-public (oct:make-struct . args)
+(define-public (ml:make-struct . args)
   (make-hash-table 31))
 
-;; @deffn {Procedure} oct:struct-set! expr name
+;; @deffn {Procedure} ml:struct-set! expr name
 ;; Get @code{expr.name}.  @var{name} is assumed to be a symbol.
 ;; @end deffn
-(define-public (oct:struct-ref expr name)
+(define-public (ml:struct-ref expr name)
   (unless (hash-table? expr) (error "expecting hash table"))
   (hashq-ref expr name))
 
-;; @deffn {Procedure} oct:struct-set! expr name value
+;; @deffn {Procedure} ml:struct-set! expr name value
 ;; Set @code{expr.name = value}.  The struct member @var{name}
 ;; does not need to exist.  @var{name} is assumed to be a
 ;; symbol.
 ;; @end deffn
-(define-public (oct:struct-set! expr name value)
+(define-public (ml:struct-set! expr name value)
   (unless (hash-table? expr) (error "expecting hash table"))
   (hashq-set! expr name value)
   (if #f #f))
@@ -176,7 +177,7 @@
 
 (define xdict
  `(
-   ("struct" . (@ (nyacc lang mlang xlib) oct:make-struct))
+   ("struct" . (@ (nyacc lang mlang xlib) ml:make-struct))
     ))
 
 ;; --- last line ---

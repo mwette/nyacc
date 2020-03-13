@@ -236,7 +236,7 @@
       ((float ,value) (sf "~A" value))
       ((string ,value) (sf "'~A'" (string->mlang value)))
       
-      (else (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
+      (,_ (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
 
   (ppx tree))
 

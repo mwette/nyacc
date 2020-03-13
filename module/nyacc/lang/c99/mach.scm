@@ -532,7 +532,7 @@
      ("*" type-qualifier-list pointer ($$ `(pointer ,$2 ,$3)))
      ("*" type-qualifier-list ($$ `(pointer ,$2)))
      ("*" attribute-specifiers pointer ($$ `(pointer ,$3)))
-     ("*" attribute-specifiers ($$ `(pointer)))
+     ("*" attribute-specifiers ($$ '(pointer)))
      ("*" pointer ($$ `(pointer ,$2)))
      ("*" ($$ '(pointer))))
 

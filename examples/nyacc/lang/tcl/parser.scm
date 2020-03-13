@@ -476,9 +476,13 @@
      . ,(lambda (tree)
 	  (sxml-match tree
 	    ((command (string "set") (string ,name) . ,rest)
-	     `(set . ,(sx-tail tree 2)))
+	     (if (pair? rest)
+		 `(set . ,(sx-tail tree 2))
+		 `(deref ,name)))
 	    ((command (string "set") (word (string ,name) (index ,indx)) . ,rest)
-	     `(set-indexed (string ,name) (word ,indx) . ,rest))
+	     (if (pair? rest)
+		 `(set-indexed (string ,name) (word ,indx) . ,rest)
+		 `(deref-indexed ,name (word ,indx))))
 	    ;;(,_ (report-error "can't handle this yet")))))
 	    (,_ `(set . ,(sx-tail tree 2))))))
     ("while"

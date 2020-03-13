@@ -17,10 +17,6 @@
 
 ;;; Notes:
 
-;; limitations:
-;; 1) variables cannot be introduced by lhs expression:
-;;    i.e., a = 1 is OK, but a(1) = 1 is not
-
 ;;; Code:
 
 (define-module (nyacc lang tcl compile-tree-il)
@@ -109,7 +105,7 @@
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
 	 (values '() ref dict)))
 
-      ((deref ,name ,expr)
+      ((deref-indexed ,name ,expr)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
 	 ;;(values '() `(call ,(xlib-ref 'tcl:any->) ,ref ,expr) dict)))
@@ -173,7 +169,7 @@
       ((command)
        (values '() '(void) dict))
       
-      (else
+      (,_
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
@@ -281,15 +277,15 @@
 	 kdict))
 
        ((set)
-	(let* ((value (car kseed))
-	       (nref (cadr kseed))
-	       (toplev? (eq? (car nref) 'toplevel)))
-	  (values
+	(values
+	 (let* ((value (car kseed))
+		(nref (cadr kseed))
+		(toplev? (eq? (car nref) 'toplevel)))
 	   (cons (if toplev?
 		     `(define ,(cadr nref) ,value)
 		     `(set! ,nref ,value))
-		 seed)
-	   kdict)))
+		 seed))
+	   kdict))
 
        ((set-indexed)
 	;; This only works if the variable appeared as string constant in fD.?
