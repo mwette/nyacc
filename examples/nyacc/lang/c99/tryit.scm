@@ -141,7 +141,7 @@
 	 (tree (remove-comments tree))
 	 (udict (c99-trans-unit->udict tree))
 	 (ddict (split-cpp-defs (get-gcc-cpp-defs)))
-	 (ddict (x99-trans-unit->ddict tree ddict #:inc-filter #t))
+	 (ddict (c99-trans-unit->ddict tree ddict #:inc-filter #t))
 	 )
     (newline)
     (sf "ABC=~S\n" (assoc-ref ddict "ABC"))

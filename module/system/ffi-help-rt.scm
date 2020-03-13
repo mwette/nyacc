@@ -29,6 +29,7 @@
 	    ;; maybe used outside of modules?
 	    fh:cast fh-cast bs-addr
 	    fh:function
+	    fh:pointer
 	    ffi-void*
 	    make-fht
 
@@ -354,6 +355,94 @@
     (define make (fht-wrap type))))
 
 ;; == extension to bytestructures ==============================================
+
+;; adopted from code at  https://github.com/TaylanUB covered by GPL3+ and
+;; Copyright (C) 2015 Taylan Ulrich BayirliKammer <taylanbayirli@gmail.com>
+
+(define-record-type <pointer-metadata>
+  (make-pointer-metadata content-descriptor)
+  pointer-metadata?
+  (content-descriptor pointer-metadata-content-descriptor))
+
+(define (fh:pointer %descriptor)
+  (define pointer-size (ffi:sizeof '*))
+  (define bytevector-address-ref
+    (case pointer-size
+      ((1) bytevector-u8-ref)
+      ((2) bytevector-u16-native-ref)
+      ((4) bytevector-u32-native-ref)
+      ((8) bytevector-u64-native-ref)))
+  (define bytevector-address-set!
+    (case pointer-size
+      ((1) bytevector-u8-set!)
+      ((2) bytevector-u16-native-set!)
+      ((4) bytevector-u32-native-set!)
+      ((8) bytevector-u64-native-set!)))
+  (define (pointer-ref bytevector offset content-size)
+    (let ((address (bytevector-address-ref bytevector offset)))
+      (if (zero? address)
+	  (error "Tried to dereference null-pointer.")
+	  (ffi:pointer->bytevector (ffi:make-pointer address) content-size))))
+  (define (pointer-idx-ref bytevector offset index content-size)
+    (let* ((base-address (bytevector-address-ref bytevector offset))
+	   (address (+ base-address (* index content-size))))
+      (if (zero? base-address)
+	  (error "Tried to dereference null-pointer.")
+	  (ffi:pointer->bytevector (ffi:make-pointer address) content-size))))
+  (define (pointer-set! bytevector offset value)
+    (cond
+     ((exact-integer? value)
+      (bytevector-address-set! bytevector offset value))
+     ((bytevector? value)
+      (bytevector-address-set! bytevector offset
+			       (ffi:bytevector->pointer value)))
+     ((bytestructure? value)
+      (bytevector-address-set! bytevector offset
+			       (ffi:bytevector->pointer
+				(bytestructure-bytevector value))))))
+  (define (get-descriptor)
+    (if (promise? %descriptor)
+        (force %descriptor)
+        %descriptor))
+  (define size pointer-size)
+  (define alignment size)
+  (define (unwrapper syntax? bytevector offset index)
+    (define (syntax-list id . elements)
+      (datum->syntax id (map syntax->datum elements)))
+    (let ((descriptor (get-descriptor)))
+      (when (eq? 'void descriptor)
+        (error "Tried to follow void pointer."))
+      (let* ((size (bytestructure-descriptor-size descriptor))
+             (index-datum (if syntax? (syntax->datum index) index)))
+        (cond
+	 ((eq? '* index-datum)
+	  (if syntax?
+	      (values #`(pointer-ref #,bytevector #,offset #,size) 0 descriptor)
+	      (values (pointer-ref bytevector offset size) 0 descriptor)))
+	 ((integer? index-datum)
+	  (if syntax?
+	      (values #`(pointer-idx-ref #,bytevector #,offset ,index #,size)
+		      0 descriptor)
+	      (values (pointer-idx-ref bytevector offset index-datum size)
+		      0 descriptor)))
+	 (else
+	  (if syntax?
+	      (let ((bytevector* #`(pointer-ref #,bytevector #,offset #,size)))
+                (bytestructure-unwrap/syntax
+                 bytevector* 0 descriptor (syntax-list index index)))
+	      (let ((bytevector* (pointer-ref bytevector offset size)))
+                (bytestructure-unwrap*
+                 bytevector* 0 descriptor index))))))))
+  (define (getter syntax? bytevector offset)
+    (if syntax?
+        #`(bytevector-address-ref #,bytevector #,offset)
+        (bytevector-address-ref bytevector offset)))
+  (define (setter syntax? bytevector offset value)
+    (if syntax?
+        #`(pointer-set! #,bytevector #,offset #,value)
+        (pointer-set! bytevector offset value)))
+  (define meta (make-pointer-metadata %descriptor))
+  (make-bytestructure-descriptor size alignment unwrapper getter setter meta))
 
 ;; unwrapper
 ;; setter
