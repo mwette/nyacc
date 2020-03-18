@@ -98,8 +98,7 @@
 	 (xname (and xdecl (sx-ref* xdecl 1 1 1 1))))
     xname))
 
-(define* (sizeof-specdec specl declr #:optional (udict '()) (ddict '()))
-
+(define (sizeof-mtail mtail)
   ;; (decl attr specl (declr-list declr1 declr2 ...))
   ;; => ((decl attr specl declr1) (decl attr specl declr2) ...)
   (define (splitup-decl decl)
@@ -136,101 +135,108 @@
   (define (maxi/decl decl size base-align)
     (exec/decl decl size base-align maxi-size))
 
-  (define (sizeof-mtail mtail)
-    (match mtail
-      (`((pointer-to) . ,rest)
-       (values (sizeof-basetype '*) (alignof-basetype '*)))
-      (`((fixed-type ,name))
-       (values (sizeof-basetype name) (alignof-basetype name)))
-      (`((float-type ,name))
-       (values (sizeof-basetype name) (alignof-basetype name)))
-      (`((array-of ,size) . ,rest)
-       (let ((mult (eval-c99-cx size)))
-	 (call-with-values
-	     (lambda () (sizeof-mtail rest))
-	   (lambda (size align)
-	     (values (* mult size) align)))))
+  (match mtail
+    (`((pointer-to) . ,rest)
+     (values (sizeof-basetype '*) (alignof-basetype '*)))
+    (`((fixed-type ,name))
+     (values (sizeof-basetype name) (alignof-basetype name)))
+    (`((float-type ,name))
+     (values (sizeof-basetype name) (alignof-basetype name)))
+    (`((array-of ,size) . ,rest)
+     (let ((mult (eval-c99-cx size)))
+       (call-with-values
+	   (lambda () (sizeof-mtail rest))
+	 (lambda (size align)
+	   (values (* mult size) align)))))
 
-      (`((struct-def (field-list . ,fields)))
-       (let loop ((size 0) (align 0) (flds fields))
-	 (if (null? flds)
-	     (values (incr-size 0 align size) align)
-	     (call-with-values
-		 (lambda () (incr/decl (car flds) size align))
-	       (lambda (size align)
-		 (loop size align (cdr flds)))))))
+    (`((struct-def (field-list . ,fields)))
+     (let loop ((size 0) (align 0) (flds fields))
+       (if (null? flds)
+	   (values (incr-size 0 align size) align)
+	   (call-with-values
+	       (lambda () (incr/decl (car flds) size align))
+	     (lambda (size align)
+	       (loop size align (cdr flds)))))))
 
-      (`((union-def (field-list . ,fields)))
-       (let loop ((size 0) (align 0) (flds fields))
-	 (if (null? flds)
-	     (values (incr-size 0 align size) align)
-	     (call-with-values
-		 (lambda () (maxi/decl (car flds) size align))
-	       (lambda (size align)
-		 (loop size align (cdr flds)))))))
+    (`((union-def (field-list . ,fields)))
+     (let loop ((size 0) (align 0) (flds fields))
+       (if (null? flds)
+	   (values (incr-size 0 align size) align)
+	   (call-with-values
+	       (lambda () (maxi/decl (car flds) size align))
+	     (lambda (size align)
+	       (loop size align (cdr flds)))))))
 
-      (_ (sferr "c99/eval-sizeof-type: missed\n") (pperr mtail)
-	 (quit)
-	 (throw 'nyacc-error "coding error"))))
+    (_ (sferr "c99/eval-sizeof-type: missed\n") (pperr mtail)
+       (quit)
+       (throw 'nyacc-error "coding error"))))
 
+(define* (sizeof-specl/declr specl declr #:optional (udict '()))
   (let* ((udecl `(udecl ,specl ,declr))
-	 (xdecl (expand-typerefs udecl udict ddict))
+	 (xdecl (expand-typerefs udecl udict))
 	 (mdecl (udecl->mdecl xdecl)))
     (sizeof-mtail (cdr mdecl))))
 
-;; @deffn {Procedure} eval-sizeof-type tree [udict ddict]
+;; @deffn {Procedure} eval-sizeof-type tree [udict]
 ;; => (values sizeof-val align-of)
 ;; @end deffn
-(define* (eval-sizeof-type tree #:optional (udict '()) (ddict '()))
+(define* (eval-sizeof-type tree #:optional (udict '()))
   (let* ((type-name (sx-ref tree 1))
 	 (specl (sx-ref type-name 1))
 	 (declr (or (sx-ref type-name 2) '(param-declr))))
-    (sizeof-specdec specl declr udict ddict)))
+    (sizeof-specl/declr specl declr udict)))
 
-;; need to map expression to type, then sizeof type
-;; (sizeof unary-expr)
-;;    (primary-expression			; S 6.5.1
-;;     (identifier ($$ `(p-expr ,$1)))
-;;     (constant ($$ `(p-expr ,$1)))
-;;     (string-literal ($$ `(p-expr ,(tl->list $1))))
-;;     ("(" expression ")" ($$ $2))
-;;     ("(" "{" block-item-list "}" ")"
-;;      ($$ `(stmt-expr (@ (extension "GNUC")) ,$3)))
-;;     )
-(define (eval-sizeof-expr tree udict)
-  (let* ((expr (sx-ref tree 1)))
-    (sx-match expr
-      ((p-expr (string . ,strl))
-       (let loop ((l 0) (sl strl))
-	 (if (pair? sl) (loop (+ l (string-length (car sl))) (cdr sl)) l)))
-      (,_
-       (throw 'c99-error "failed to expand sizeof expr ~S" expr)))))
-
-(define (eval-ident name udict ddict)
-  (sferr "eval-ident ~S in ddict => ~S\n" name (assoc-ref ddict name))
-  (cond
-   ((expand-cpp-name name ddict) =>
-    (lambda (code)
-      (eval-c99-cx (parse-c99x code) udict ddict)))
-   ((assoc-ref udict name) => ;; must be const expression
-    (lambda (hit)
-      (sferr "cxeval: can't (yet) eval ~S defined in udict\n" name)
-      #f))
-   (else
-    #f)))
-
-;; @deffn {Procedure} parse-c99-cx expr-string)
-;; This is just an alias for @code{parse-c99x}.
+;; @deffn {Procedure} eval-sizeof-expr tree [udict]
+;; => (values sizeof-val align-of)
 ;; @end deffn
-(define parse-c99-cx parse-c99x)
+(define* (eval-sizeof-expr tree #:optional (udict '()))
 
-;; @deffn {Procedure} eval-c99-cx tree [udict [ddict]] [#:fail-proc fail-proc]
+  (define (gen-mtail tree)
+    (sx-match tree
+      ((sizeof-expr ,expr) (gen-mtail expr))
+      ((p-expr ,expr) (gen-mtail expr))
+      ((ident ,name)
+       (let* ((udecl (assoc-ref udict name))
+	      (xdecl (and udecl (expand-typerefs udecl udict)))
+	      (mdecl (and xdecl (udecl->mdecl xdecl))))
+	 (if (not mdecl) (throw 'nyacc-error "not found: ~S" name))
+	 ;;(sferr "xdecl:\n") (pperr xdecl)
+	 (cdr mdecl)))
+      ((array-ref ,elt ,expr)
+       (let ((mtail (gen-mtail expr)))
+	 ;;(sferr "a: mtail = ~S\n" mtail)
+	 (match mtail
+	   (`((array-of ,size) . ,rest) rest)
+	   (_ (throw 'nyacc-error "cxeval: can't ref array")))))
+      ((de-ref ,expr)
+       (let ((mtail (gen-mtail expr)))
+	 (match mtail
+	   (`((pointer-to) . ,rest) rest)
+	   (_ (throw 'nyacc-error "cxeval: can't de-ref")))))
+      (,_ #f)))
+
+  ;;(sferr "tree:\n") (pperr tree)
+  ;;(sferr "tail:\n") (pperr (gen-mtail tree))
+  (sizeof-mtail (gen-mtail tree)))
+      
+
+;; @deffn {Procedure} eval-c99-cx tree [udict] [#:fail-proc fail-proc]
 ;; Evaluate the constant expression or return #f
 ;; If @code{fail-proc} is provided it is called with the tree that could not
 ;; be parsed.
+;; THIS CAN ONLY WORK IF TREE IS ALREADY RESOLVED WRT CPP DEFINES.
 ;; @end deffn
-(define* (eval-c99-cx tree #:optional udict ddict #:key fail-proc)
-  (define (fail) #f)
+(define* (eval-c99-cx tree #:optional udict #:key fail-proc)
+
+  (define (fail fmt args)
+    (if fail-proc
+	(fail-proc fmt args)
+	(let ((port (current-error-port)))
+	  (simple-format port "eval-c99-cx: ")
+	  (apply simple-format port fmt args)
+	  (newline port)
+	  #f)))
+  
   (letrec
       ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
        (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
@@ -238,9 +244,19 @@
        (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
        (uop (lambda (op ex) (and op ex (op ex))))
        (bop (lambda (op lt rt) (and op lt rt (op lt rt))))
+       (eval-ident
+	(lambda (sx udict)
+	  (let* ((name (sx-ref sx 1)) (udecl (assoc-ref udict name)))
+	    (sferr "udecl=~S\n" udecl)
+	    (sx-match udecl
+	      ((udecl
+		(decl-spec-list (type-qual ,tqual) (type-spec ,tspec))
+		(init-declr (ident ,name) (initzer ,expr)))
+	       (eval-expr expr))
+	      (,_ #f)))))
        (eval-expr
 	(lambda (tree)
-	  (case (car tree)
+	  (case (sx-tag tree)
 	    ((fixed) (string->number (cnumstr->scm (sx-ref tree 1))))
 	    ((float) (string->number (cnumstr->scm (sx-ref tree 1))))
 	    ((char) (char->integer (string-ref (sx-ref tree 1) 0)))
@@ -281,34 +297,25 @@
 	    ((sizeof-type)
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-type tree udict))
-	       (lambda (key fmt . args)
-		 (cond
-		  (fail-proc (fail-proc tree fmt args))
-		  (else 
-		   (sferr "eval-c99-cx: ") (apply sferr fmt args)
-		   (newline (current-error-port)) #f)))))
+	       (lambda (key fmt . args) (fail fmt args))))
 	    ((sizeof-expr)
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-expr tree udict))
-	       (lambda (key fmt . args)
-		 (cond
-		  (fail-proc (fail-proc tree fmt args))
-		  (else 
-		   (sferr "eval-c99-cx: ") (apply sferr fmt args)
-		   (newline (current-error-port)) #f)))))
-	    ((ident) (eval-ident (sx-ref tree 1) udict ddict))
+	       (lambda (key fmt . args) (fail fmt args))))
+	    ((ident) (or (eval-ident tree udict)
+			 (fail "cannot resolve identifier ~S" (sx-tail tree))))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
 	    ((fctn-call) #f)		; assume not constant
 	    ;;
 	    ;; TODO 
-	    ((comp-lit) (fail))		; return a bytearray
-	    ((comma-expr) (fail))
-	    ((i-sel) (fail))
-	    ((d-sel) (fail))
-	    ((array-ref) (fail))
+	    ((comp-lit) (fail "cxeval: not implemented" '()))
+	    ((comma-expr) (fail "cxeval: not implemented" '()))
+	    ((i-sel) (fail "cxeval: not implemented" '()))
+	    ((d-sel) (fail "cxeval: not implemented" '()))
+	    ((array-ref) (fail "cxeval: not implemented" '()))
 	    ;; 
-	    (else (fail))))))
+	    (else (fail "cxeval: code error" '()))))))
     (eval-expr tree)))
  
 ;; --- last line ---

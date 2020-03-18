@@ -566,6 +566,8 @@
 	   
 ;; === munged specification ============
 
+;; TODO: what to do with initializers ???
+
 (define* (m-unwrap-declr declr tail #:optional (namer def-namer))
   
   (define (unwrap-pointer pointer tail)
@@ -581,6 +583,9 @@
   (define (unwrap-declr declr tail)
     (sx-match declr
       ((init-declr ,item) (m-unwrap-declr item tail))
+      ((init-declr ,item (initzer . ,vals))
+       (sferr "udecl->mdecl tossing initializer\n")
+       (m-unwrap-declr item tail)) ;; ?
       ((comp-declr ,item) (m-unwrap-declr item tail))
       ((param-declr ,item) (m-unwrap-declr item tail))
       ((param-declr) (cons (namer) tail))

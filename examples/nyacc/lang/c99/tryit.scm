@@ -95,75 +95,30 @@
   (define (fH seed node) (cons node seed))
   (foldts fD fU fH '() tree))
 
-(define (ink-keeper? tree filter)
-  (sx-match tree
-    ((cpp-stmt (include (@ (path ,path)) ,spec ,tree))
-     (and (if (procedure? filter) (filter spec path) filter) tree))
-    ((cpp-stmt (include-next (@ (path ,path)) ,spec ,tree))
-     (and (if (procedure? filter) (filter spec path) filter) tree))
-    ((cpp-stmt . ,rest) #f)
-    (,_ #f)))
-
-(define* (x99-trans-unit->ddict tree
-				#:optional (ddict '())
-				#:key inc-filter skip-fdefs)
-  (define (can-def-stmt tree)
-    (sx-match tree
-      ((cpp-stmt (define (name ,name) (repl ,repl)))
-       (cons name repl))
-      ((cpp-stmt (define (name ,name) (args . ,args) (repl ,repl)))
-       (cons name (cons args repl)))
-      (,_ #f)))
-
-  (if (pair? tree)
-      (fold
-       (lambda (tree ddict)
-	 (cond
-	  ((can-def-stmt tree) => (lambda (def) (cons def ddict)))
-	  ((ink-keeper? tree inc-filter) =>
-	   (lambda (tree)
-	     (x99-trans-unit->ddict tree ddict #:inc-filter inc-filter)))
-	  (else
-	   ddict)))
-       ddict (sx-tail tree))
-      ddict))
-
 ;; def of form "ABC=123" ; rejects function types
 
 (when #t
   (let* ((code (string-append
-		"#include <limits.h>\n"
-		"#define ABC ULONG_MAX\n"
-		"#define FOO(X) 1\n"
-		"int x = 1;\n"
+		"typedef struct { double d; char c; } foo_t;\n"
+		"const int y[3] = { 1, 2, 3 };\n"
+		"const int x = sizeof(y[0]);\n"
+		;;"const foo_t *y;\n"
+		;;"const int x = sizeof(*y);\n"
+		;;"enum bar { A = 2, B, C = sizeof(foo_t), D };\n"
 		))
 	 (tree (or (parse-string code #:mode 'decl) (error "parse failed")))
-	 (tree (remove-comments tree))
+	 ;;(tree (remove-comments tree))
 	 (udict (c99-trans-unit->udict tree))
 	 (ddict (split-cpp-defs (get-gcc-cpp-defs)))
-	 (ddict (c99-trans-unit->ddict tree ddict #:inc-filter #t))
+	 (ddict '())
+	 (udecl (assoc-ref udict "x"))
+	 (szof (sx-ref* udecl 2 2 1))
 	 )
-    (newline)
-    (sf "ABC=~S\n" (assoc-ref ddict "ABC"))
-    ;;(sf "   =~S\n" (eval-c99-cx '(ident "ABC")))
-    (sf "   =~S\n" (assoc-ref ddict "ULONG_MAX"))
-    (sf "   =~S\n" (assoc-ref ddict "LONG_MAX"))
-    (sf "   =~S\n" (assoc-ref ddict "__LONG_MAX__"))
-    ;;(pp (get-gcc-cpp-defs))
-    (sf "(expand-cpp-name \"ABC\") => ~S\n" (expand-cpp-name "ABC" ddict))
-    (sf "(eval-c99-cx \"ABC\") => ~S\n" (eval-c99-cx '(ident "ABC") udict ddict))
-    (newline)
-    ;;(pp ddict)
-    (sf "lesson: GOTTA ADD GCC DEFS to dicts\n")
+    ;;(pp udecl)
+    ;;(sf "expr:\n") (pp szof)
+    ;;(sf "sizeof(*y) = ~S\n" (eval-c99-cx szof udict))
+    (pp (eval-c99-cx szof udict))
+    ;;(sf "~S\n" (eval-c99-cx `(ident "x") udict))
     #t))
-
-(when #f
-  (let* ((tree '(a (@ (path "abc")) "d" (e "f")))
-	 )
-    (sx-match tree
-      ((a (@ (path ,path)) ,text ,tree)
-       (sf "got it path=~S text=~S\n" path text))
-      (,_
-       (sf "missed\n")))))
 
 ;; --- last line ---

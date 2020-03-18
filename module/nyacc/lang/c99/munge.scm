@@ -29,6 +29,7 @@
 ;;    b) if fixed/float use `int *x;' etc
 ;;    c> if function use `void *x;'
 ;; 6) Check use of comments as attributes.
+;; 7) maybe move to munge-base: typedef-decl? udict->typedef-names
 
 ;;; Code:
 
@@ -521,12 +522,20 @@
   '("int8_t" "uint8_t" "int16_t" "uint16_t"
     "int32_t" "uint32_t" "int64_t" "uint64_t"))
 
+;; === enums and defines ===============
+
 ;; @deffn {Procedure} typedef-decl? decl)
 ;; @end deffn
 (define (typedef-decl? decl)
   (sx-match decl
     ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
     (,_ #f)))
+
+(define* (udict->typedef-names udict #:optional (names '()))
+  (fold (lambda (pair defs)
+	  (if (typedef-decl? (cdr pair)) (cons (car pair) names) names))
+	names udict))
+(export udict->typedef-names)
 
 ;; === enums and defines ===============
 
@@ -636,19 +645,12 @@
 	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
 		 (1+ nxt)  (acons (sx-ref ident 1) sval ddict) (cdr edl))))
 	((enum-defn (@ . attr) ,ident ,expr)
-	 (let* ((ival (or (eval-c99-cx expr udict ddict)
-			  (pperr dict) (error "x") (fail ident) nxt))
-		(if (not (number? ival)) (sferr "??1=~S\n" ival))
+	 (let* ((ival (or (eval-c99-cx expr udict) (fail ident) nxt))
 		(sval (number->string iv)))
 	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
 		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
 	((enum-defn ,ident ,expr)
-	 (let* ((ival (or (eval-c99-cx expr udict ddict) (fail ident) nxt))
-		(x (when (not (number? ival))
-		     (sferr "??2: ~S ~S ~S\n" ident expr ival)
-		     (sferr "ddict:\n") (pperr ddict)
-		     (quit)
-		     ))
+	 (let* ((ival (or (eval-c99-cx expr udict) (fail ident) nxt))
 		(sval (number->string ival)))
 	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
 		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl)))))))))
