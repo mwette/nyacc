@@ -591,23 +591,16 @@
 ;; @end example
 ;; @end deffn
 (define* (udict-enums->ddict udict #:optional (ddict '()))
-  (define (gen-nvl enum-def-list ddict)
-    (let ((def-list (and=> (canize-enum-def-list enum-def-list udict ddict)
-			   cdr)))
-    (fold (lambda (edef ddict) ;; (enum-def (ident ,name) (fixed ,val) ...
-	    (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) ddict))
-	  ddict def-list)))
+  (define (gen-nvl edef-list ddict)
+    (let ((def-list (and=> (canize-enum-def-list edef-list udict ddict) cdr)))
+      (fold (lambda (edef dd) (acons (sx-ref* edef 1 1) (sx-ref* edef 2 1) dd))
+	    ddict def-list)))
   (fold
    (lambda (pair ddict)
-     (if (and (pair? (car pair)) (eq? 'enum (caar pair)))
-	 ;; (enum . ,name) ...
-	 (let* ((specl (sx-ref (cdr pair) 1))
-		(tspec (car (assq-ref specl 'type-spec))))
-	   (if (not (eq? 'enum-def (car tspec)))
-	       (throw 'nyacc-error "udict-enums->ddict: expecting enum-def"))
-	   (gen-nvl (assq 'enum-def-list (cdr tspec)) ddict))
-	 ;; else ...
-	 ddict))
+     (let* ((specs (sx-ref (cdr pair) 1)) (tspec (sx-find 'type-spec specs)))
+       (if (eq? 'enum-def (sx-tag (sx-ref tspec 1)))
+	   (gen-nvl (sx-ref* tspec 1 1) ddict)
+	   ddict)))
    ddict udict))
 
 
@@ -626,11 +619,25 @@
 ;; @end example
 ;; @noindent
 ;; @end deffn
-(define* (canize-enum-def-list enum-def-list #:optional (udict '()) (ddict '()))
-  (define (fail ident)
-    (sferr "*** munge: failed to convert enum ~S to constant\n" (sx-ref ident 1))
+(define* (canize-enum-def-list enum-def-list
+			       #:optional (udict '()) (ddict '())
+			       #:key fail-proc)
+  (define (fail name)
+    (if fail-proc
+	(fail-proc "failed to convert enum ~S to constant" (list name))
+	(sferr "*** munge: failed to convert enum ~S to constant\n" name))
     #f)
+
+  (sferr "first=~S\n" (sx-ref* enum-def-list 1 1))
+  (when (string=? (sx-ref* enum-def-list 1 1 1) "G_TRAVERSE_ALL")
+    (pperr enum-def-list)
+    )
   (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
+    (when (and (pair?  edl)
+ 	       (string=? (sx-ref* (car edl) 1 1) "G_TRAVERSE_ALL"))
+      (sferr "munge.633: G_TRAVERSE_ALL:\n") (pperr (car edl))
+      (pperr (filter (lambda (p) (string-contains (car p) "G_TRAV")) ddict))
+      )
     (cond
      ((null? edl)
       (sx-cons* (sx-tag enum-def-list) (sx-attr enum-def-list) (reverse rez)))
@@ -640,20 +647,26 @@
 	 (let ((sval (number->string nxt)))
 	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
 		 (1+ nxt)  (acons (sx-ref ident 1) sval ddict) (cdr edl))))
-	((enum-defn ,ident)
-	 (let ((sval (number->string nxt)))
-	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
-		 (1+ nxt)  (acons (sx-ref ident 1) sval ddict) (cdr edl))))
-	((enum-defn (@ . attr) ,ident ,expr)
-	 (let* ((ival (or (eval-c99-cx expr udict) (fail ident) nxt))
-		(sval (number->string iv)))
-	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
-	((enum-defn ,ident ,expr)
-	 (let* ((ival (or (eval-c99-cx expr udict) (fail ident) nxt))
-		(sval (number->string ival)))
-	   (loop (cons (sx-list 'enum-defn #f ident `(fixed ,sval)) rez)
-		 (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl)))))))))
+	((enum-defn (@ . ,attr) ,ident ,expr)
+	 (when (string=? (sx-ref ident 1) "G_TRAVERSE_LEAVES")
+	   (sferr "LEAVES => expr=~S\n" expr)
+	   (pperr (filter (lambda (p) (string-contains (car p) "G_TRAV")) ddict))
+	   )
+	 (let* ((ival (eval-c99-cx expr udict ddict))
+		(sval (and (number? ival) (number->string ival))))
+	 (when (string=? (sx-ref ident 1) "G_TRAVERSE_LEAVES")
+	   (sferr "     => ival=~S  sval=~S\n" ival sval)
+	   (pperr (car ddict))
+	   )
+	   (if sval
+	       (loop
+		(cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
+		(1+ ival)
+		(acons (sx-ref ident 1) sval ddict)
+		(cdr edl))
+	       (begin
+		 (fail (sx-ref ident 1))
+		 (loop rez nxt ddict (cdr edl)))))) )))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
 ;; Gets value of enum where @var{enum-def-list} looks like

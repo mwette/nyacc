@@ -163,6 +163,12 @@
     (find (lambda (node)
 	    (and (pair? node) (eqv? tag-or-path (car node))))
 	  sx))
+   ((pair? tag-or-path)
+    (let ((sym (car tag-or-path)))
+      (and=> (sx-find (car tag-or-path) sx)
+	     (lambda (sub-sx) (sx-find (cdr tag-or-path) sub-sx)))))
+   ((null? tag-or-path)
+    sx)
    (else
     (error "sx-find: expecting first arg to be tag or sxpath"))))
 

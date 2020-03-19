@@ -177,6 +177,13 @@
 	 (mdecl (udecl->mdecl xdecl)))
     (sizeof-mtail (cdr mdecl))))
 
+(define (trim-mtail mtail)
+  (case (caar mtail)
+    ((extern) (trim-mtail (cdr mtail)))
+    ((comment) (trim-mtail (cdr mtail)))
+    ((initzer) (trim-mtail (cdr mtail)))
+    (else mtail)))
+
 ;; @deffn {Procedure} eval-sizeof-type tree [udict]
 ;; => (values sizeof-val align-of)
 ;; @end deffn
@@ -201,7 +208,7 @@
 	      (mdecl (and xdecl (udecl->mdecl xdecl))))
 	 (if (not mdecl) (throw 'nyacc-error "not found: ~S" name))
 	 ;;(sferr "xdecl:\n") (pperr xdecl)
-	 (cdr mdecl)))
+	 (trim-mtail (cdr mdecl))))
       ((array-ref ,elt ,expr)
        (let ((mtail (gen-mtail expr)))
 	 ;;(sferr "a: mtail = ~S\n" mtail)
@@ -224,9 +231,9 @@
 ;; Evaluate the constant expression or return #f
 ;; If @code{fail-proc} is provided it is called with the tree that could not
 ;; be parsed.
-;; THIS CAN ONLY WORK IF TREE IS ALREADY RESOLVED WRT CPP DEFINES.
+;; Potentially ddict only needs to be the enums
 ;; @end deffn
-(define* (eval-c99-cx tree #:optional udict #:key fail-proc)
+(define* (eval-c99-cx tree #:optional udict ddict #:key fail-proc)
 
   (define (fail fmt args)
     (if fail-proc
@@ -236,6 +243,18 @@
 	  (apply simple-format port fmt args)
 	  (newline port)
 	  #f)))
+
+  (define (ddict-lookup name)
+    (let ((repl (assoc-ref ddict name)))
+      (cond
+       ((not repl)
+	(sferr "repl not found for ~S\n" name)
+	#f)
+       ((pair? repl) #f)
+       ((string=? name repl)
+	(sferr "dup repl: ~S\n" repl)
+	#f)
+       (else (parse-c99x repl)))))
   
   (letrec
       ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
@@ -245,15 +264,25 @@
        (uop (lambda (op ex) (and op ex (op ex))))
        (bop (lambda (op lt rt) (and op lt rt (op lt rt))))
        (eval-ident
-	(lambda (sx udict)
-	  (let* ((name (sx-ref sx 1)) (udecl (assoc-ref udict name)))
-	    (sferr "udecl=~S\n" udecl)
-	    (sx-match udecl
-	      ((udecl
-		(decl-spec-list (type-qual ,tqual) (type-spec ,tspec))
-		(init-declr (ident ,name) (initzer ,expr)))
-	       (eval-expr expr))
-	      (,_ #f)))))
+	(lambda (sx)
+	  (let* ((name (sx-ref sx 1))
+		 (udecl (assoc-ref udict name))
+		 (udecl (or udecl (and=> (ddict-lookup name)
+					 (lambda (ns) `(fixed ,ns))))))
+	    (when (string=? name "G_TRAVERSE_LEAVES")
+	      (sferr "name=~S\n" name)
+	      (sferr " lkup in udict => ~S\n" (assoc-ref udict name))
+	      (sferr " lkup in ddict => ~S\n" (ddict-lookup name))
+	      (quit)
+	      )
+	    (if udecl
+		(sx-match udecl
+		  ((udecl
+		    (decl-spec-list (type-qual ,tqual) (type-spec ,tspec))
+		    (init-declr (ident ,name) (initzer ,expr)))
+		   (eval-expr expr))
+		  (,_ #f))
+		#f))))
        (eval-expr
 	(lambda (tree)
 	  (case (sx-tag tree)
@@ -280,7 +309,10 @@
 	    ((eq) (if (bop = (ev1 tree) (ev2 tree)) 1 0))
 	    ((ne) (if (bop = (ev1 tree) (ev2 tree)) 0 1))
 	    ((bitwise-not) (uop lognot (ev1 tree)))
-	    ((bitwise-or) (bop logior (ev1 tree) (ev2 tree)))
+  	    ((bitwise-or)
+	     (sferr "bitwise-or:\n") (pperr tree)
+	     (pperr (ev1 tree)) (pperr (ev2 tree))
+	     (bop logior (ev1 tree) (ev2 tree)))
 	    ((bitwise-xor) (bop logxor (ev1 tree) (ev2 tree)))
 	    ((bitwise-and) (bop logand (ev1 tree) (ev2 tree)))
 	    ;;
@@ -302,7 +334,7 @@
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-expr tree udict))
 	       (lambda (key fmt . args) (fail fmt args))))
-	    ((ident) (or (eval-ident tree udict)
+	    ((ident) (or (eval-ident tree)
 			 (fail "cannot resolve identifier ~S" (sx-tail tree))))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
@@ -315,7 +347,14 @@
 	    ((d-sel) (fail "cxeval: not implemented" '()))
 	    ((array-ref) (fail "cxeval: not implemented" '()))
 	    ;; 
-	    (else (fail "cxeval: code error" '()))))))
+	    (else
+	     (force-output (current-output-port))
+	     (force-output (current-error-port))
+	     (display "\n")
+	     (sferr "tree:\n")
+	     (pperr tree)
+	     (error "code error")
+	     (fail "cxeval: code error ~S" (list (sx-tag tree))))))))
     (eval-expr tree)))
  
 ;; --- last line ---

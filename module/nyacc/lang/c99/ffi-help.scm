@@ -114,6 +114,7 @@
 ;; maybe change to a record-type
 (define *options* (make-parameter '()))
 (define *debug-parse* (make-parameter #f)) ; parse debug mode
+(define *show-incs* (make-parameter #f))   ; show include directories
 (define *echo-decls* (make-parameter #f)) ; add echo-decls code for debugging
 
 (define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
@@ -693,7 +694,7 @@
 	   (lambda (def)
 	     (let* ((n (sx-ref (sx-ref def 1) 1))
 		    (x (sx-ref def 2))
-		    (v (eval-c99-cx x (*udict*) (*ddict*)))) 
+		    (v (eval-c99-cx x (*udict*) (*ddict*))))
 	       (unless v
 		 (throw 'ffi-help-error "unable to generate constant for ~S" n))
 	       (cons (string->symbol n) v)))
@@ -1796,18 +1797,19 @@
 
 ;; given keeper-defs (k-defs) and cpp defs (c-defs) expand the keeper
 ;; replacemnts down to constants (strings, integers, etc)
-(define (gen-lookup-proc keep-defs cpp-defs ext-mods)
+(define (gen-lookup-proc mod-ddict udict ddict ext-mods)
 
   (define err-port (open-output-file "/dev/null"))
-  
-  #;(define* (try-parse-repl repl)
-    (with-error-to-port err-port
-      (lambda ()
-	(catch 'c99-error
-	  (lambda () (parse-c99x repl (*tdefs*) #:cpp-defs cpp-defs))
-	  (lambda args #f)))))
 
-  ;; @var{keep-defs} is list of CPP defs and enum key/val pairs. It is
+  (define typerefs (udict->typedef-names udict))
+
+  (define (eval-code-string code)
+    (let* ((tree (with-error-to-port err-port
+		   (lambda () (parse-c99x code typerefs))))
+	   (value (and tree (eval-c99-cx tree udict ddict))))
+      value))
+  
+  ;; @var{mod-dict} is list of CPP defs and enum key/val pairs. It is
   ;; possible for an enum symbol to be used as a macro function so we
   ;; need to first check for integer before trying expand-cpp-macro-ref.
   (sfscm "\n;; access to enum symbols and #define'd constants:\n")
@@ -1816,41 +1818,13 @@
 	(defs
 	  (fold
 	   (lambda (defn seed)
-	     (let* ((name (car defn)) (val (cdr defn))
-		    (x (sferr "adding ~S\n" name))
-		    (symb (string->symbol name))
-		    (repl (cond
-			   ((pair? val) #f)
-			   ((string->number (cdr defn)) (cdr defn))
-			   (else
-			    ;; or maybe should export/use cpp-expand-text
-			    (with-input-from-string ""
-			      (lambda ()
-				(expand-cpp-macro-ref name cpp-dict)))))))
-	       (sferr "  w/ repl ~S\n" repl)
-	       #;(when (string=? name "stderr")
-		 (pperr cpp-defs)
-		 (quit))
-	       ;; TODO: try to reduce all this to the parse-c99x one
-	       (cond
-		((not repl) seed)
-		((not (string? repl)) (sferr "not string: ~S\n" repl))
-		((zero? (string-length repl)) seed)
-		((string=? name repl) seed) ; after cpp expansion need to filter
-		;;
-		((cintstr->num repl) => (lambda (val) (acons symb val seed)))
-		((try-parse-repl repl)
-		 => (lambda (val)
-		      (let ((cv (eval-c99-cx val (*udict*) (*ddict*))))
-			(unless cv
-			  (sfscm ";; unable to generate constant for ~S\n" name))
-			(if cv (acons symb cv seed) seed))))
-		;;
-		(else
-		 ;;(sferr "gen-lookup-proc misssed ~A ~S\n" name repl)
-		 seed))))
-	   '()
-	   keep-defs))
+	     (let* ((name (car defn))
+		    (repl (expand-cpp-name name ddict)) ;; cpp-expand
+		    (val (and (string? repl) (eval-code-string repl))))
+	       (if #f ;;repl
+		   (sferr "  name ~S w/ repl ~S => ~S\n" name (cdr defn) repl))
+	       (if repl (acons (string->symbol name) val seed) seed)))
+	   '() mod-ddict))
 	(ext-ftns			; lookup in use-ffi-modules
 	 (map
 	  (lambda (mod)
@@ -1898,7 +1872,8 @@
 		       #:inc-dirs inc-dirs
 		       #:inc-help inc-help
 		       #:mode 'decl
-		       #:show-incs #f
+		       #:xdef? #t	; expand CPP-defines (dev-1.02)
+		       #:show-incs (*show-incs*)
 		       #:debug (*debug-parse*))))
 	(fherr "parse failed"))))
 
@@ -1974,7 +1949,7 @@
   (let* () ;;(declf (if declf declf (lambda (key) #t))))
     (fold-values			  ; from (sxml fold)
      (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
-       (sferr "processing ~S ...\n" name)
+       ;;(sferr "processing ~S ...\n" name)
        (catch 'ffi-help-error
 	 (lambda ()
 	   (cond
@@ -2016,7 +1991,6 @@
 	 (declf (or (assq-ref attrs 'decl-filter) identity))
 	 (renamer (or (assq-ref attrs 'renamer) identity))
 	 ;;
-	 (x (sferr "1\n"))
 	 (tree (begin
 		 (if (memq 'parse dbugl) (*debug-parse* #t))
 		 (cond
@@ -2024,29 +1998,29 @@
 		  ((assq-ref attrs 'api-code) =>
 		   (lambda (code) (parse-code code attrs)))
 		  (else (fherr "expecing #:include or #:api-code")))))
-	 (x (sferr "2\n"))
 	 (udict (c99-trans-unit->udict/deep tree))
-	 (x (sferr "3\n"))
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
-	 (x (sferr "4\n"))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
-	 (x (sferr "5\n"))
 
 	 ;; OK, I think this is fixed now.  Was ...
 	 ;; 1. If udict, then exported symbols looks good, but ref's don't work
 	 ;; 2. If udecls, refs work but bloated symval struct.
 	 ;; The conflict is in
 	 ;; const-expr->number VS call to gen-lookup-proc 1st arg ffi-ddict
-	 (cpp-ddict (c99-trans-unit->ddict tree #:inc-filter #t))
-	 (x (sferr "6\n"))
-	 (ddict (udict-enums->ddict udict))
-	 (x (sferr "7\n"))
+	 (mod-ddict (c99-trans-unit->ddict tree #:inc-filter incf))
+	 (ddict (split-cpp-defs (get-gcc-cpp-defs)))
 	 (ddict (c99-trans-unit->ddict tree ddict
 				       #:inc-filter #t #:skip-fdefs #t))
+	 (x (when #f
+	      (force-output (current-output-port))
+	      (force-output (current-error-port))
+	      (sferr "ddict pre enums\n")
+	      (pperr ddict)
+	      (sferr "7\n")))
+	 (ddict (udict-enums->ddict udict ddict))
 	 (x (sferr "8\n"))
-	 ;;(ffi-enu-defs (udict-enums->ddict udecls ddict))
-	 ;;(ffi-ddict (c99-trans-unit->ddict tree ffi-enu-defs #:inc-filter incf))
-	 (ffi-ddict (c99-trans-unit->ddict tree ddict #:inc-filter incf))
+ 	 (x (begin (display "QUITTING\n") (quit)))
+
 	 (x (sferr "9\n"))
 
 	 ;; the list of typedefs we will generate (later):
@@ -2079,9 +2053,10 @@
     (*tdefs* (udict->typenames udict))
     (if (memq 'echo-decls dbugl) (*echo-decls* #t))
     (sferr "9c\n")
-    (sferr "cpp-ddict:\n") (pperr cpp-ddict)
-    (sferr "dict:\n") (pperr ddict)
-    (quit)
+    (when #f
+      (sferr "mod-ddict:\n") (pperr mod-ddict)
+      (sferr "dict:\n") (pperr ddict)
+      (quit))
 
     ;; file and module header
     (ffimod-header path module-options)
@@ -2108,7 +2083,7 @@
     
     ;; output global constants (from enum and #define)
     (sferr "10\n")
-    (gen-lookup-proc ffi-ddict cpp-ddict ext-mods)
+    (gen-lookup-proc mod-ddict udict ddict ext-mods)
     (sferr "11\n")
 
     ;; output list of defined types

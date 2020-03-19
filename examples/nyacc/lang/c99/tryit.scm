@@ -97,7 +97,7 @@
 
 ;; def of form "ABC=123" ; rejects function types
 
-(when #t
+(when #f
   (let* ((code (string-append
 		"typedef struct { double d; char c; } foo_t;\n"
 		"const int y[3] = { 1, 2, 3 };\n"
@@ -120,5 +120,10 @@
     (pp (eval-c99-cx szof udict))
     ;;(sf "~S\n" (eval-c99-cx `(ident "x") udict))
     #t))
+
+(when #t
+  (let ((sx '(decl-list (stor-spec "foo") (type-spec "bar"))))
+    (pp (sx-find 'type-spec sx))
+    ))
 
 ;; --- last line ---
