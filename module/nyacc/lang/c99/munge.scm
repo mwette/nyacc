@@ -57,6 +57,7 @@
 	    iter-declrs
 	    split-decl
 
+	    udict->typedef-names
 	    inc-keeper?
 
 	    ;; debugging
@@ -527,15 +528,13 @@
 ;; @deffn {Procedure} typedef-decl? decl)
 ;; @end deffn
 (define (typedef-decl? decl)
-  (sx-match decl
-    ((decl (decl-spec-list (stor-spec (typedef)) . ,r1) . ,r2) #t)
-    (,_ #f)))
+  (eq? 'typedef (and=> (sx-ref* decl 1 1 1) sx-tag)))
 
 (define* (udict->typedef-names udict #:optional (names '()))
-  (fold (lambda (pair defs)
-	  (if (typedef-decl? (cdr pair)) (cons (car pair) names) names))
+  (fold (lambda (pair names)
+	  (let ((name (car pair)) (decl (cdr pair)))
+	    (if (typedef-decl? decl) (cons name names) names)))
 	names udict))
-(export udict->typedef-names)
 
 ;; === enums and defines ===============
 
@@ -562,7 +561,7 @@
       ((cpp-stmt (define (name ,name) (repl ,repl)))
        (cons name repl))
       ((cpp-stmt (define (name ,name) (args . ,args) (repl ,repl)))
-       (cons name (cons args repl)))
+       (if skip-fdefs #f (cons name (cons args repl))))
       (,_ #f)))
 
   (if (pair? tree)
@@ -572,9 +571,10 @@
 	  ((can-def-stmt tree) => (lambda (def) (cons def ddict)))
 	  ((inc-keeper? tree inc-filter) =>
 	   (lambda (tree)
-	     (c99-trans-unit->ddict tree ddict #:inc-filter inc-filter)))
-	  (else
-	   ddict)))
+	     (c99-trans-unit->ddict tree ddict
+				    #:inc-filter inc-filter
+				    #:skip-fdefs skip-fdefs)))
+	  (else ddict)))
        ddict (sx-tail tree))
       ddict))
 
@@ -597,10 +597,15 @@
 	    ddict def-list)))
   (fold
    (lambda (pair ddict)
-     (let* ((specs (sx-ref (cdr pair) 1)) (tspec (sx-find 'type-spec specs)))
-       (if (eq? 'enum-def (sx-tag (sx-ref tspec 1)))
-	   (gen-nvl (sx-ref* tspec 1 1) ddict)
-	   ddict)))
+     (let* ((specs (sx-ref (cdr pair) 1))
+	    (tspec (sx-ref (sx-find 'type-spec specs) 1)))
+       (sx-match tspec
+	 ((enum-def (ident ,name) (enum-def-list . ,defs))
+	  (gen-nvl (sx-ref tspec 2) ddict))
+	 ((enum-def (enum-def-list . ,defs))
+	  (gen-nvl (sx-ref tspec 1) ddict))
+	 (,_
+	  ddict))))
    ddict udict))
 
 
@@ -622,22 +627,20 @@
 (define* (canize-enum-def-list enum-def-list
 			       #:optional (udict '()) (ddict '())
 			       #:key fail-proc)
+  (when (string? (last enum-def-list))
+    (sferr "enum-def-list with string:\n")
+    (pperr enum-def-list)
+    (error "yikes")
+    (sferr "quitting\n")
+    (quit)
+    )
   (define (fail name)
     (if fail-proc
 	(fail-proc "failed to convert enum ~S to constant" (list name))
 	(sferr "*** munge: failed to convert enum ~S to constant\n" name))
     #f)
 
-  (sferr "first=~S\n" (sx-ref* enum-def-list 1 1))
-  (when (string=? (sx-ref* enum-def-list 1 1 1) "G_TRAVERSE_ALL")
-    (pperr enum-def-list)
-    )
   (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
-    (when (and (pair?  edl)
- 	       (string=? (sx-ref* (car edl) 1 1) "G_TRAVERSE_ALL"))
-      (sferr "munge.633: G_TRAVERSE_ALL:\n") (pperr (car edl))
-      (pperr (filter (lambda (p) (string-contains (car p) "G_TRAV")) ddict))
-      )
     (cond
      ((null? edl)
       (sx-cons* (sx-tag enum-def-list) (sx-attr enum-def-list) (reverse rez)))
@@ -646,27 +649,24 @@
 	((enum-defn (@ . ,attr) ,ident)
 	 (let ((sval (number->string nxt)))
 	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		 (1+ nxt)  (acons (sx-ref ident 1) sval ddict) (cdr edl))))
+		 (1+ nxt)
+		 (acons (sx-ref ident 1) sval ddict)
+		 (cdr edl))))
 	((enum-defn (@ . ,attr) ,ident ,expr)
-	 (when (string=? (sx-ref ident 1) "G_TRAVERSE_LEAVES")
-	   (sferr "LEAVES => expr=~S\n" expr)
-	   (pperr (filter (lambda (p) (string-contains (car p) "G_TRAV")) ddict))
-	   )
 	 (let* ((ival (eval-c99-cx expr udict ddict))
 		(sval (and (number? ival) (number->string ival))))
-	 (when (string=? (sx-ref ident 1) "G_TRAVERSE_LEAVES")
-	   (sferr "     => ival=~S  sval=~S\n" ival sval)
-	   (pperr (car ddict))
-	   )
-	   (if sval
-	       (loop
-		(cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		(1+ ival)
-		(acons (sx-ref ident 1) sval ddict)
-		(cdr edl))
-	       (begin
-		 (fail (sx-ref ident 1))
-		 (loop rez nxt ddict (cdr edl)))))) )))))
+	   (cond
+	    (sval
+	     (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
+		   (1+ ival)
+		   (acons (sx-ref ident 1) sval ddict)
+		   (cdr edl)))
+	    (else
+	     (fail (sx-ref ident 1))
+	     (loop rez
+		   nxt
+		   ddict
+		   (cdr edl)))))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
 ;; Gets value of enum where @var{enum-def-list} looks like

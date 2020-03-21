@@ -207,11 +207,9 @@
 	      (xdecl (and udecl (expand-typerefs udecl udict)))
 	      (mdecl (and xdecl (udecl->mdecl xdecl))))
 	 (if (not mdecl) (throw 'nyacc-error "not found: ~S" name))
-	 ;;(sferr "xdecl:\n") (pperr xdecl)
 	 (trim-mtail (cdr mdecl))))
       ((array-ref ,elt ,expr)
        (let ((mtail (gen-mtail expr)))
-	 ;;(sferr "a: mtail = ~S\n" mtail)
 	 (match mtail
 	   (`((array-of ,size) . ,rest) rest)
 	   (_ (throw 'nyacc-error "cxeval: can't ref array")))))
@@ -222,67 +220,43 @@
 	   (_ (throw 'nyacc-error "cxeval: can't de-ref")))))
       (,_ #f)))
 
-  ;;(sferr "tree:\n") (pperr tree)
-  ;;(sferr "tail:\n") (pperr (gen-mtail tree))
   (sizeof-mtail (gen-mtail tree)))
       
 
 ;; @deffn {Procedure} eval-c99-cx tree [udict] [#:fail-proc fail-proc]
 ;; Evaluate the constant expression or return #f
 ;; If @code{fail-proc} is provided it is called with the tree that could not
-;; be parsed.
-;; Potentially ddict only needs to be the enums
+;; be parsed.  If provided, it should return @code{#f} or throw an exception.
 ;; @end deffn
 (define* (eval-c99-cx tree #:optional udict ddict #:key fail-proc)
 
   (define (fail fmt args)
-    (if fail-proc
-	(fail-proc fmt args)
-	(let ((port (current-error-port)))
-	  (simple-format port "eval-c99-cx: ")
-	  (apply simple-format port fmt args)
-	  (newline port)
-	  #f)))
+    (and fail-proc (fail-proc fmt args)))
 
   (define (ddict-lookup name)
     (let ((repl (assoc-ref ddict name)))
       (cond
-       ((not repl)
-	(sferr "repl not found for ~S\n" name)
-	#f)
+       ((not repl) #f)
        ((pair? repl) #f)
-       ((string=? name repl)
-	(sferr "dup repl: ~S\n" repl)
-	#f)
-       (else (parse-c99x repl)))))
+       ((string=? name repl) #f)
+       (else repl))))
   
+  (define (eval-ident sx)
+    (let* ((name (sx-ref sx 1)) (repl (ddict-lookup name)))
+      (and (string? repl) (string->number repl))))
+  
+  (define (uop op ex)
+    (and op ex (op ex)))
+  
+  (define (bop op lt rt)
+    (and op lt rt (op lt rt)))
+
   (letrec
       ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
        (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
        (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2
        (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
-       (uop (lambda (op ex) (and op ex (op ex))))
-       (bop (lambda (op lt rt) (and op lt rt (op lt rt))))
-       (eval-ident
-	(lambda (sx)
-	  (let* ((name (sx-ref sx 1))
-		 (udecl (assoc-ref udict name))
-		 (udecl (or udecl (and=> (ddict-lookup name)
-					 (lambda (ns) `(fixed ,ns))))))
-	    (when (string=? name "G_TRAVERSE_LEAVES")
-	      (sferr "name=~S\n" name)
-	      (sferr " lkup in udict => ~S\n" (assoc-ref udict name))
-	      (sferr " lkup in ddict => ~S\n" (ddict-lookup name))
-	      (quit)
-	      )
-	    (if udecl
-		(sx-match udecl
-		  ((udecl
-		    (decl-spec-list (type-qual ,tqual) (type-spec ,tspec))
-		    (init-declr (ident ,name) (initzer ,expr)))
-		   (eval-expr expr))
-		  (,_ #f))
-		#f))))
+
        (eval-expr
 	(lambda (tree)
 	  (case (sx-tag tree)
@@ -309,10 +283,7 @@
 	    ((eq) (if (bop = (ev1 tree) (ev2 tree)) 1 0))
 	    ((ne) (if (bop = (ev1 tree) (ev2 tree)) 0 1))
 	    ((bitwise-not) (uop lognot (ev1 tree)))
-  	    ((bitwise-or)
-	     (sferr "bitwise-or:\n") (pperr tree)
-	     (pperr (ev1 tree)) (pperr (ev2 tree))
-	     (bop logior (ev1 tree) (ev2 tree)))
+  	    ((bitwise-or) (bop logior (ev1 tree) (ev2 tree)))
 	    ((bitwise-xor) (bop logxor (ev1 tree) (ev2 tree)))
 	    ((bitwise-and) (bop logand (ev1 tree) (ev2 tree)))
 	    ;;
@@ -341,20 +312,16 @@
 	    ((fctn-call) #f)		; assume not constant
 	    ;;
 	    ;; TODO 
-	    ((comp-lit) (fail "cxeval: not implemented" '()))
-	    ((comma-expr) (fail "cxeval: not implemented" '()))
-	    ((i-sel) (fail "cxeval: not implemented" '()))
-	    ((d-sel) (fail "cxeval: not implemented" '()))
-	    ((array-ref) (fail "cxeval: not implemented" '()))
+	    ((comp-lit) (fail "cxeval: comp-lit not implemented" '()))
+	    ((comma-expr) (fail "cxeval: comma-expr not implemented" '()))
+	    ((i-sel) (fail "cxeval: i-sel not implemented" '()))
+	    ((d-sel) (fail "cxeval: d-sel not implemented" '()))
+	    ((array-ref) (fail "cxeval: array-ref not implemented" '()))
 	    ;; 
 	    (else
-	     (force-output (current-output-port))
-	     (force-output (current-error-port))
-	     (display "\n")
-	     (sferr "tree:\n")
-	     (pperr tree)
-	     (error "code error")
-	     (fail "cxeval: code error ~S" (list (sx-tag tree))))))))
+	     (sferr "eval-c99-cx:") (pperr tree)
+	     (throw 'c99-error "eval-c99-cx: coding error"))))))
+
     (eval-expr tree)))
  
 ;; --- last line ---

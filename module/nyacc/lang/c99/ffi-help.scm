@@ -123,7 +123,6 @@
 (define *mport* (make-parameter #t))	   ; output module port
 (define *udict* (make-parameter '()))	   ; udecl dict
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
-(define *tdefs* (make-parameter '()))	   ; typenames
 (define *wrapped* (make-parameter '()))	; wrappers for foo_t and foo_t*
 (define *defined* (make-parameter '()))	; type defined
 
@@ -280,15 +279,6 @@
 (define (w/* name) (cons 'pointer name))
 (define (w/struct* name) (cons 'pointer (cons 'struct name)))
 (define (w/union* name) (cons 'pointer (cons 'union name)))
-
-(define (udict->typenames udict)
-  (fold
-   (lambda (pair seed)
-     (let ((name (car pair)) (decl (cdr pair)))
-       (if (eq? 'typedef (and=> (sx-ref* decl 1 1 1) sx-tag))
-	   (cons name seed)
-	   seed)))
-   '() udict))
 
 (define (rename name)
   ((*renamer*) name))
@@ -991,7 +981,7 @@
       ((equal? param-decl '(ellipsis)) seed)
       (else
        ;; Changed to (*wrapped*) to include enum types.  If we need (*defined*)
-       ;; then we will need to create enum types in cnvt-udecl typedefs.
+
        (let* ((param-decl (expand-typerefs param-decl (*udict*) (*wrapped*)))
 	      (param-decl (udecl-rem-type-qual param-decl)) ;; ???
 	      (mdecl (udecl->mdecl param-decl)))
@@ -1383,13 +1373,13 @@
 		typename struct-name)
 	 (fhscm-def-compound typename))
 	((udict-struct-ref udict struct-name) =>
-	 ;; 2) struct defined later
+	 ;; 2) struct defined later, so only the pointer type
 	 (lambda (struct-decl)
 	   (back-ref-extend! struct-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
-	   (sfscm "(define-public ~A fh-void)\n" typename)
-	   (sfscm "(define-public ~A? fh-void?)\n" typename)
-	   (sfscm "(define-public make-~A make-fh-void)\n" typename)
+	   ;;(sfscm "(define-public ~A fh-void)\n" typename)
+	   ;;(sfscm "(define-public ~A? fh-void?)\n" typename)
+	   ;;(sfscm "(define-public make-~A make-fh-void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (fh:pointer (delay ~A-desc)))\n"
 		  typename typename)))
 	(else
@@ -1469,9 +1459,9 @@
 	 (lambda (union-decl)
 	   (back-ref-extend! union-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
-	   (sfscm "(define-public ~A fh-void)\n" typename)
-	   (sfscm "(define-public ~A? fh-void?)\n" typename)
-	   (sfscm "(define-public make-~A make-fh-void)\n" typename)
+	   ;;(sfscm "(define-public ~A fh-void)\n" typename)
+	   ;;(sfscm "(define-public ~A? fh-void?)\n" typename)
+	   ;;(sfscm "(define-public make-~A make-fh-void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (fh:pointer (delay ~A-desc)))\n"
 		  typename typename)))
 	(else
@@ -1589,12 +1579,14 @@
 	    (lambda (typename)
 	      (sfscm "(set! ~A-desc struct-~A-desc)\n" typename struct-name)
 	      (fhscm-def-compound typename)
-	      (fhscm-def-pointer (sw/* typename))
+	      ;;(fhscm-def-pointer (sw/* typename)) ;; done earlier
 	      (fhscm-ref-deref typename))
 	    name-list)
 	   (values (cons (w/struct struct-name) wrapped)
 		   (cons (w/struct struct-name) defined))))
+	
 	((not (member (w/struct struct-name) defined))
+	 (sfscm ";; NOT defined earlier\n") ;; FIXME
 	 (cnvt-struct-def attr1 #f struct-name field-list)
 	 ;; Hoping don't need w/struct*
 	 (values (cons (w/struct struct-name) wrapped)
@@ -1623,7 +1615,7 @@
 	    (lambda (typename)
 	      (sfscm "(set! ~A-desc union-~A-desc)\n" typename union-name)
 	      (fhscm-def-compound typename)
-	      (fhscm-def-pointer (sw/* typename))
+	      ;;(fhscm-def-pointer (sw/* typename))
 	      (fhscm-ref-deref typename))
 	    name-list)
 	   (values (cons (w/union union-name) wrapped)
@@ -1808,7 +1800,7 @@
 		   (lambda () (parse-c99x code typerefs))))
 	   (value (and tree (eval-c99-cx tree udict ddict))))
       value))
-  
+
   ;; @var{mod-dict} is list of CPP defs and enum key/val pairs. It is
   ;; possible for an enum symbol to be used as a macro function so we
   ;; need to first check for integer before trying expand-cpp-macro-ref.
@@ -1819,11 +1811,12 @@
 	  (fold
 	   (lambda (defn seed)
 	     (let* ((name (car defn))
-		    (repl (expand-cpp-name name ddict)) ;; cpp-expand
+		    (not-ftn (not (pair? (cdr defn))))
+		    (repl (and not-ftn (expand-cpp-name name ddict)))
 		    (val (and (string? repl) (eval-code-string repl))))
-	       (if #f ;;repl
-		   (sferr "  name ~S w/ repl ~S => ~S\n" name (cdr defn) repl))
-	       (if repl (acons (string->symbol name) val seed) seed)))
+	       (if repl
+		   (acons (string->symbol name) val seed)
+		   (acons (string->symbol name) #f seed))))
 	   '() mod-ddict))
 	(ext-ftns			; lookup in use-ffi-modules
 	 (map
@@ -2002,26 +1995,11 @@
 	 (udecls (c99-trans-unit->udict tree #:inc-filter incf))
 	 (ffi-decls (map car udecls))	; just the names, get decls from udict
 
-	 ;; OK, I think this is fixed now.  Was ...
-	 ;; 1. If udict, then exported symbols looks good, but ref's don't work
-	 ;; 2. If udecls, refs work but bloated symval struct.
-	 ;; The conflict is in
-	 ;; const-expr->number VS call to gen-lookup-proc 1st arg ffi-ddict
-	 (mod-ddict (c99-trans-unit->ddict tree #:inc-filter incf))
+	 ;; Generate a name (a string) to code (a string) of CPP and enum
+	 ;; definitions.  CPP functions.
 	 (ddict (split-cpp-defs (get-gcc-cpp-defs)))
-	 (ddict (c99-trans-unit->ddict tree ddict
-				       #:inc-filter #t #:skip-fdefs #t))
-	 (x (when #f
-	      (force-output (current-output-port))
-	      (force-output (current-error-port))
-	      (sferr "ddict pre enums\n")
-	      (pperr ddict)
-	      (sferr "7\n")))
+	 (ddict (c99-trans-unit->ddict tree ddict #:inc-filter #t))
 	 (ddict (udict-enums->ddict udict ddict))
-	 (x (sferr "8\n"))
- 	 (x (begin (display "QUITTING\n") (quit)))
-
-	 (x (sferr "9\n"))
 
 	 ;; the list of typedefs we will generate (later):
 	 (ffimod-defined #f)
@@ -2043,24 +2021,19 @@
 		    (var (module-ref modul vname)))
 	       (append var seed)))
 	   '() ext-mods)))
-    (sferr "9b\n")
     ;; set globals
     (*prefix* (path->name path))
     (*udict* udict)
     (*mport* mport)
     (*ddict* ddict)
     (*renamer* renamer)
-    (*tdefs* (udict->typenames udict))
     (if (memq 'echo-decls dbugl) (*echo-decls* #t))
-    (sferr "9c\n")
-    (when #f
-      (sferr "mod-ddict:\n") (pperr mod-ddict)
-      (sferr "dict:\n") (pperr ddict)
-      (quit))
+
+    ;;(sferr "just ffi-decls:\n")
+    ;;(pperr ffi-decls) (quit)
 
     ;; file and module header
     (ffimod-header path module-options)
-    (sferr "9d\n")
 
     ;; Convert and output foreign declarations.
     (call-with-values
@@ -2082,9 +2055,9 @@
 	  (set! ffimod-defined defd))))
     
     ;; output global constants (from enum and #define)
-    (sferr "10\n")
-    (gen-lookup-proc mod-ddict udict ddict ext-mods)
-    (sferr "11\n")
+    (let ((mod-ddict
+	   (c99-trans-unit->ddict tree #:inc-filter incf #:skip-fdefs #t)))
+      (gen-lookup-proc mod-ddict udict ddict ext-mods))
 
     ;; output list of defined types
     (sfscm "\n(define ~A-types\n  '" (path->name path))
