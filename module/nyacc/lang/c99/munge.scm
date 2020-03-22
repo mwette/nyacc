@@ -627,18 +627,8 @@
 (define* (canize-enum-def-list enum-def-list
 			       #:optional (udict '()) (ddict '())
 			       #:key fail-proc)
-  (when (string? (last enum-def-list))
-    (sferr "enum-def-list with string:\n")
-    (pperr enum-def-list)
-    (error "yikes")
-    (sferr "quitting\n")
-    (quit)
-    )
-  (define (fail name)
-    (if fail-proc
-	(fail-proc "failed to convert enum ~S to constant" (list name))
-	(sferr "*** munge: failed to convert enum ~S to constant\n" name))
-    #f)
+  (define (fail fmt . args)
+    (and fail-proc (apply fail-proc fmt args)))
 
   (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
     (cond
@@ -649,24 +639,17 @@
 	((enum-defn (@ . ,attr) ,ident)
 	 (let ((sval (number->string nxt)))
 	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		 (1+ nxt)
-		 (acons (sx-ref ident 1) sval ddict)
-		 (cdr edl))))
+		 (1+ nxt) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
 	((enum-defn (@ . ,attr) ,ident ,expr)
 	 (let* ((ival (eval-c99-cx expr udict ddict))
 		(sval (and (number? ival) (number->string ival))))
 	   (cond
 	    (sval
 	     (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		   (1+ ival)
-		   (acons (sx-ref ident 1) sval ddict)
-		   (cdr edl)))
+		   (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl)))
 	    (else
-	     (fail (sx-ref ident 1))
-	     (loop rez
-		   nxt
-		   ddict
-		   (cdr edl)))))))))))
+	     (fail "munge/canize-enum-def-list: can't expand ~S"(sx-ref ident 1))
+	     (loop rez nxt ddict (cdr edl)))))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
 ;; Gets value of enum where @var{enum-def-list} looks like

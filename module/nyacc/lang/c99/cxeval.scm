@@ -230,8 +230,8 @@
 ;; @end deffn
 (define* (eval-c99-cx tree #:optional udict ddict #:key fail-proc)
 
-  (define (fail fmt args)
-    (and fail-proc (fail-proc fmt args)))
+  (define (fail fmt . args)
+    (and fail-proc (apply fail-proc fmt args)))
 
   (define (ddict-lookup name)
     (let ((repl (assoc-ref ddict name)))
@@ -300,23 +300,23 @@
 	    ((sizeof-type)
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-type tree udict))
-	       (lambda (key fmt . args) (fail fmt args))))
+	       (lambda (key fmt . args) (apply fail fmt args))))
 	    ((sizeof-expr)
 	     (catch 'c99-error
 	       (lambda () (eval-sizeof-expr tree udict))
-	       (lambda (key fmt . args) (fail fmt args))))
+	       (lambda (key fmt . args) (apply fail fmt args))))
 	    ((ident) (or (eval-ident tree)
-			 (fail "cannot resolve identifier ~S" (sx-tail tree))))
+			 (fail "cannot resolve identifier ~S" (sx-ref tree 1))))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
 	    ((fctn-call) #f)		; assume not constant
 	    ;;
 	    ;; TODO 
-	    ((comp-lit) (fail "cxeval: comp-lit not implemented" '()))
-	    ((comma-expr) (fail "cxeval: comma-expr not implemented" '()))
-	    ((i-sel) (fail "cxeval: i-sel not implemented" '()))
-	    ((d-sel) (fail "cxeval: d-sel not implemented" '()))
-	    ((array-ref) (fail "cxeval: array-ref not implemented" '()))
+	    ((comp-lit) (fail "cxeval: comp-lit not implemented"))
+	    ((comma-expr) (fail "cxeval: comma-expr not implemented"))
+	    ((i-sel) (fail "cxeval: i-sel not implemented"))
+	    ((d-sel) (fail "cxeval: d-sel not implemented"))
+	    ((array-ref) (fail "cxeval: array-ref not implemented"))
 	    ;; 
 	    (else
 	     (sferr "eval-c99-cx:") (pperr tree)

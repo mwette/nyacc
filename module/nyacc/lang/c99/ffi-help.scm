@@ -679,16 +679,18 @@
   (sfscm "  (assq-ref ~A-enum-vnl v))\n" name))
 
 (define (cnvt-enum-def typename enum-name enum-def-list)
-  (let* ((name-val-l
+  (let* ((udict (*udict*))
+	 (ddict (*ddict*))
+	 (name-val-l
 	  (map
 	   (lambda (def)
 	     (let* ((n (sx-ref (sx-ref def 1) 1))
 		    (x (sx-ref def 2))
-		    (v (eval-c99-cx x (*udict*) (*ddict*))))
+		    (v (eval-c99-cx x udict ddict)))
 	       (unless v
 		 (throw 'ffi-help-error "unable to generate constant for ~S" n))
 	       (cons (string->symbol n) v)))
-	   (cdr (canize-enum-def-list enum-def-list)))))
+	   (cdr (canize-enum-def-list enum-def-list udict ddict)))))
     (cond
      ((and typename enum-name)
       (fhscm-def-enum typename name-val-l)
