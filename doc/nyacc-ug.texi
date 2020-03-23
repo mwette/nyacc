@@ -156,6 +156,7 @@ appears as the last element of a right-hand side, but mid-rule
 actions are possible.  Inside the @code{$$} form, the variables
 @code{$1}, @code{$2}, etc.@  refer to the symantic value of the
 corresponding item in the right hand side of the production rule.
+See @ref{Actions} for more details on how those actions are evaluated.
 @item
 The expression returned by @code{lalr-spec} is an association list (a-list);
 you can peek at the internals using typical Scheme procedures for a-lists.
@@ -511,6 +512,10 @@ have the forms
 ($$/ref 'rule12 @emph{body})
 @end example
 @noindent
+In an action, @emph{body} is a Scheme expression, which can refer to
+the semantic values via the special variables @code{$1}, @code{$2},
+@dots{}  See @ref{Actions} for more details on how @emph{body} is evaluated.
+@noindent
 The @code{ref} forms are used to provide references for future use to
 support other (non-Scheme) languages, where the parser will be
 equipped to execute reduce-actions by reference (e.g. an associative array).
@@ -565,6 +570,23 @@ will result in the internal p-rules
 This is used in the generated parser to indicate a default action.
 @end table
 @c $error
+
+@subheading Acions
+@anchor{Actions}
+A grammar rule's right-hand side can contain @emph{actions}:
+@example
+  ($$ @emph{body})
+@end example
+@emph{body} is a Scheme expression which can refer to the values
+matched by the rule's right-hand side via the variables (@code{$1},
+@code{$2}, @dots{}).  This expression is evaluates in the top-level
+environment of the module from which 'make-lalr-parser' is called, so
+it will ``see'' the bindings defined there.
+
+When actions appear within a production rule (known as mid-rule
+actions) they count as right-hand side items and thus the results of
+their evaluation is bound to the corresponding @code{$@i{n}} variable
+available for the end-of-rule action.
 
 @subheading Recovery from Syntax Errors
 @anchor{Recovery from Syntax Errors}
