@@ -122,8 +122,9 @@
     #t))
 
 (when #t
-  (let ((sx '(decl-list (stor-spec "foo") (type-spec "bar"))))
-    (pp (sx-find 'type-spec sx))
-    ))
+  (let ((code "typedef int int8;\n")
+	)
+    ;;(pp (sx-find 'type-spec sx))
+    #t))
 
 ;; --- last line ---

@@ -108,27 +108,27 @@
 (define alignof-map/avr
   (map (lambda (pair) (cons (car pair) 1)) sizeof-map/avr))
 
-
 (define arch-info-host
   (eval-when (expand eval compile)
     (and=> (string-split %host-type #\-) car)))
 
 (define sizeof-map/native-arch
   (eval-when (expand eval compile)
-    (assoc-ref arch-sizeof-map %host-arch)))
+    (assoc-ref arch-sizeof-map arch-info-host)))
 	 
 (define alignof-map/native-arch
   (eval-when (expand eval compile)
-    (assoc-ref arch-alignof-map (and=> (string-split %host-type #\-) car))))
+    (assoc-ref arch-alignof-map arch-info-host)))
 
 (use-modules (system foreign))
 
-(define (alignof-map/native-buildin type)
-  `((* . ,(sizeof foreign))
+(define (sizeof-map/native-builtin type)
+  `((* . ,(sizeof '*))
     ("char" . 1) ("short" . ,(sizeof short)) ("int" . ,(sizeof int))
     ("long" . ,(sizeof long)) ("float" . ,(sizeof float))
     ("double" . ,(sizeof double)) ("unsigned short" . ,(sizeof unsigned-short))
-    ("unsigned" . ,(sizeof unsigned)) ("unsigned long" . ,(sizeof unsigned-long))
+    ("unsigned" . ,(sizeof unsigned-int))
+    ("unsigned long" . ,(sizeof unsigned-long))
     ;;
     ("size_t" . ,(sizeof size_t)) ("ssize_t" . ,(sizeof ssize_t))
     ("ptrdiff_t" . ,(sizeof ptrdiff_t))
@@ -153,11 +153,12 @@
     ("unsigned long long int" . 8)))
 
 (define (alignof-map/native-builtin type)
-  `((* . ,(alignof foreign))
+  `((* . ,(alignof '*))
     ("char" . 1) ("short" . ,(alignof short)) ("int" . ,(alignof int))
     ("long" . ,(alignof long)) ("float" . ,(alignof float))
     ("double" . ,(alignof double)) ("unsigned short" . ,(alignof unsigned-short))
-    ("unsigned" . ,(alignof unsigned)) ("unsigned long" . ,(alignof unsigned-long))
+    ("unsigned" . ,(alignof unsigned-int))
+    ("unsigned long" . ,(alignof unsigned-long))
     ;;
     ("size_t" . ,(alignof size_t)) ("ssize_t" . ,(alignof ssize_t))
     ("ptrdiff_t" . ,(alignof ptrdiff_t))

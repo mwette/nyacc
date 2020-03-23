@@ -472,11 +472,7 @@
 	 (sy-name (if (string? name) (string->symbol name) name))
 	 (pred (string->symbol (string-append st-name "?")))
 	 (make (string->symbol (string-append "make-" st-name))))
-    ;;(sfscm "(export ~A ~A? make-~A)\n" name name name)
     (upscm `(export ,sy-name ,pred ,make))))
-
-;;(define (fhscm-export-pdef name)
-;;  (sfscm "(export ~A* ~A*? make-~A*)\n" name name name))
 
 (define (fhscm-def-alias name orig)
   (let* ((name (rename name))
@@ -536,7 +532,8 @@
   (let* ((st-name (if (string? name) name (symbol->string name)))
 	 (sy-name (if (string? name) (string->symbol name) name))
 	 (wrap (string->symbol (string-append "fh-wrap-" st-name)))
-	 (unwrap (string->symbol (string-append "unwrap-" st-name))))
+	 (unwrap (string->symbol (string-append "unwrap-" st-name)))
+	 (params (if (equal? params '('void)) '() params)))
     (sfscm "(define-public ~A-desc\n" name)
     (ppscm `(fh:pointer (delay (fh:function ,return (list ,@params))))
 	   #:per-line-prefix "  ")
@@ -581,10 +578,8 @@
       (cons (eval-string
 	     (simple-format #f "(quote `(~A ,~S ~A))" name type size)) seed)))
 
-  ;;(sferr "\nfield-list:\n") (pperr field-list)
   (let* ((field-list (clean-field-list field-list)) ; remove lone comments
 	 (uflds (fold-right unitize-comp-decl '() (cdr field-list))))
-    ;;(sferr "field-list:\n") (pperr field-list)
     (let loop ((decls uflds))
       (if (null? decls) '()
 	  (let* ((name (caar decls))
@@ -629,13 +624,11 @@
 			(or aggr-t typename)))
     (cond
      ((and typename aggr-name)
-      ;;(sfscm ";; == ~A =>\n" typename)
       (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
       (ppscm `(define-public ,ty*-desc (fh:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
       (fhscm-ref-deref typename)
-      ;;(sfscm ";; == ~A =>\n" aggrname)
       (ppscm `(define-public ,ag-desc ,ty-desc))
       (fhscm-def-compound aggrname)
       (ppscm `(define-public ,ag*-desc ,ty*-desc))
@@ -746,7 +739,6 @@
     (ffi:uint64 . ,uint64) (ffi-void* . *)))
 
 (define (mtail->ffi-desc mdecl-tail)
-  ;;(sferr "mdecl=~S\n" mdecl)
   (if (and (pair? mdecl-tail) (string? (car mdecl-tail))) (error "xxx"))
   (pmatch mdecl-tail
     (((pointer-to) . ,rest) 'ffi-void*)
@@ -798,7 +790,7 @@
      (mtail->ffi-desc `((union-def ,field-list))))
     
     (,otherwise
-     (sferr "mtail->ffi-desc missed:\n") (pperr mdecl-tail) ;;(quit)
+     (sferr "mtail->ffi-desc missed:\n") (pperr mdecl-tail)
      (error "") (fherr "mtail->ffi-desc missed: ~S" mdecl-tail))))
 
 ;; Return a mdecl for the return type.  The variable is called @code{NAME}.
@@ -823,14 +815,11 @@
   (let loop ((ix 0) (params (fix-params params)))
     (cond
      ((null? params) '())
-     ;;((equal? (car params) '(ellipsis)) (fherr/once "no varargs (yet)") '...)
      ((equal? (car params) '(ellipsis)) '())
      (else
-      ;;(sferr "\nP: ~S\n" (car params))
       (let* ((udecl1 (expand-typerefs (car params) (*udict*) ffi-defined))
 	     (udecl1 (udecl-rem-type-qual udecl1))
 	     (mdecl (udecl->mdecl udecl1 #:namer (int->namer ix))))
-	;;(sferr "  ~S\n" udecl1)
 	(cons (mtail->ffi-desc (cdr mdecl))
 	      (loop (1+ ix) (cdr params))))))))
 
@@ -852,7 +841,6 @@
 
 ;; given mdecl for an exec argument give the unwrapper
 (define (mdecl->fh-unwrapper mdecl)
-  ;;(sferr "mdecl:\n") (pperr mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
     ;; git_reference_foreach_name_cb not preserved
     (pmatch (cdr mdecl)
@@ -881,7 +869,6 @@
 
       (((pointer-to) (typename ,typename))
        (cond
-	;;((member typename ffi-defined) 'unwrap~pointer)
 	((member (w/* typename) defined)
 	 `(fht-unwrap ,(string->symbol (sw/* typename))))
 	((member (w/* typename) wrapped)
@@ -906,7 +893,6 @@
 	      (mdecl (udecl->mdecl udecl))
 	      (decl-return (mtail->ffi-desc (cdr mdecl)))
 	      (decl-params (gen-decl-params params)))
-	 ;;(sferr "FIX RET => ~S\n" mdecl)
 	 (if (and (pair? decl-params) (equal? (last decl-params) '...))
 	     (fherr/once "no varargs (yet)"))
 	 `(make-fctn-param-unwrapper ,decl-return (list ,@decl-params))))
@@ -969,7 +955,6 @@
 	 `(fht-wrap ,(string->symbol (sw/union* union-name))))
 	(else #f)))
 
-      ;;(((pointer-to) . ,otherwise) 'ffi:make-pointer)
       (((pointer-to) . ,otherwise) #f)
 
       (,otherwise (fherr "mdecl->fh-wrapper missed: ~S" mdecl)))))
@@ -979,7 +964,6 @@
   (fold-right
    (lambda (param-decl seed)
      (cond
-      ;;((equal? (car params) '(ellipsis)) (fherr/once "no varargs (yet)") '...)
       ((equal? param-decl '(ellipsis)) seed)
       (else
        ;; Changed to (*wrapped*) to include enum types.  If we need (*defined*)
@@ -1025,11 +1009,12 @@
 
 (define (fix-params param-decls)
 
+  ;; ((param-decl (decl-spec-list (type-spec (void))) (param-declr))) => '()
   (define (remove-void-param params)
     (if (and (pair? params) (null? (cdr params))
-	     (equal? (car params)
-		     '(param-decl (decl-spec-list (type-spec (void))))))
-	'() params))
+	     (equal? (sx-ref* (car params) 1 1) '(type-spec (void))))
+	'()
+	params))
   
   (define (fix-param param-decl ix)
     ;; should this fix param names? -- above code should deal with it
@@ -1154,7 +1139,6 @@
   (let ((aval (sx-attr-ref decl 'typedef)))
     (if aval (string-split aval #\,) '())))
 
-;;(display "TODO: struct xyz { }; followed by typedef struct xyz *xyz_t\n")
 ;;^-- instead have user run (ref<->deref! ...
 
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
@@ -1379,9 +1363,6 @@
 	 (lambda (struct-decl)
 	   (back-ref-extend! struct-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
-	   ;;(sfscm "(define-public ~A fh-void)\n" typename)
-	   ;;(sfscm "(define-public ~A? fh-void?)\n" typename)
-	   ;;(sfscm "(define-public make-~A make-fh-void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (fh:pointer (delay ~A-desc)))\n"
 		  typename typename)))
 	(else
@@ -1461,9 +1442,6 @@
 	 (lambda (union-decl)
 	   (back-ref-extend! union-decl typename)
 	   (sfscm "(define-public ~A-desc 'void)\n" typename)
-	   ;;(sfscm "(define-public ~A fh-void)\n" typename)
-	   ;;(sfscm "(define-public ~A? fh-void?)\n" typename)
-	   ;;(sfscm "(define-public make-~A make-fh-void)\n" typename)
 	   (sfscm "(define-public ~A*-desc (fh:pointer (delay ~A-desc)))\n"
 		  typename typename)))
 	(else
@@ -1528,8 +1506,6 @@
 	   (param-list . ,params)))))
        (let* ((ret-decl `(udecl (decl-spec-list . ,rst)
 				(init-declr (ptr-declr (pointer) (ident "_")))))
-	      ;;(decl-return (gen-decl-return ret-decl))
-	      ;;(decl-params (gen-decl-params params))
 	      (decl-return (gen-decl-return ret-decl))
 	      (decl-params (gen-decl-params params)))
 	 (fhscm-def-function* typename decl-return decl-params))
@@ -1581,7 +1557,6 @@
 	    (lambda (typename)
 	      (sfscm "(set! ~A-desc struct-~A-desc)\n" typename struct-name)
 	      (fhscm-def-compound typename)
-	      ;;(fhscm-def-pointer (sw/* typename)) ;; done earlier
 	      (fhscm-ref-deref typename))
 	    name-list)
 	   (values (cons (w/struct struct-name) wrapped)
@@ -1611,13 +1586,11 @@
        (cond
 	((back-ref-getall udecl) =>
 	 (lambda (name-list)
-	   ;;(sferr "  back-ref\n")
 	   (cnvt-union-def #f #f union-name field-list)
 	   (for-each
 	    (lambda (typename)
 	      (sfscm "(set! ~A-desc union-~A-desc)\n" typename union-name)
 	      (fhscm-def-compound typename)
-	      ;;(fhscm-def-pointer (sw/* typename))
 	      (fhscm-ref-deref typename))
 	    name-list)
 	   (values (cons (w/union union-name) wrapped)
@@ -1754,7 +1727,6 @@
        (let* ((typename "haddr_t")
 	      (size (+ (sizeof '*) 4)))
 	 (sfscm "(define-public ~A-desc (bs:vector ~A '*))\n" typename size)
-	 ;;(sfscm "(define-fh-compound-type/p ~A ~A-desc)\n" typename typename)
 	 (fhscm-def-compound typename)
 	 (values (cons typename wrapped) (cons typename defined))))
 
@@ -1939,33 +1911,30 @@
 ;; => (values wrapped defined)
 (define* (process-decls decls udict
 			#:optional (wrapped '()) (defined '())
-			#:key (declf (lambda (k) #t))
-			)
-  (let* () ;;(declf (if declf declf (lambda (key) #t))))
-    (fold-values			  ; from (sxml fold)
-     (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
-       ;;(sferr "processing ~S ...\n" name)
-       (catch 'ffi-help-error
-	 (lambda ()
-	   (cond
-	    ((and ;; Process the declaration if all conditions met:
-	      (declf name)		  ; 1) user wants it
-	      (not (member name defined)) ; 2) not already defined
-	      (not (and (pair? name)	  ; 3) not anonymous
-			(string=? "*anon*" (cdr name)))))
-	     (let ((udecl (udict-ref udict name)))
-	       (nlscm) (c99scm udecl)
-	       (if (*echo-decls*)
-		   (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
-	       (cnvt-udecl udecl udict wrapped defined)))
-	    (else (values wrapped defined))))
-	 ;; exception handler:
-	 (lambda (key fmt . args)
-	   (if fmt (apply simple-format (current-error-port)
-			  (string-append "ffi-help: " fmt "\n") args))
-	   (sfscm ";; ... failed.\n")
-	   (values wrapped defined))))
-     decls wrapped defined)))
+			#:key (declf (lambda (k) #t)))
+  (fold-values			  ; from (sxml fold)
+   (lambda (name wrapped defined) ; name: "foo_t" or (enum . "foo")
+     (catch 'ffi-help-error
+       (lambda ()
+	 (cond
+	  ((and ;; Process the declaration if all conditions met:
+	    (declf name)		  ; 1) user wants it
+	    (not (member name defined)) ; 2) not already defined
+	    (not (and (pair? name)	  ; 3) not anonymous
+		      (string=? "*anon*" (cdr name)))))
+	   (let ((udecl (udict-ref udict name)))
+	     (nlscm) (c99scm udecl)
+	     (if (*echo-decls*)
+		 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
+	     (cnvt-udecl udecl udict wrapped defined)))
+	  (else (values wrapped defined))))
+       ;; exception handler:
+       (lambda (key fmt . args)
+	 (if fmt (apply simple-format (current-error-port)
+			(string-append "ffi-help: " fmt "\n") args))
+	 (sfscm ";; ... failed.\n")
+	 (values wrapped defined))))
+   decls wrapped defined))
 
 ;; process define-ffi-module expression
 ;; was intro-ffi
@@ -2030,9 +1999,6 @@
     (*ddict* ddict)
     (*renamer* renamer)
     (if (memq 'echo-decls dbugl) (*echo-decls* #t))
-
-    ;;(sferr "just ffi-decls:\n")
-    ;;(pperr ffi-decls) (quit)
 
     ;; file and module header
     (ffimod-header path module-options)

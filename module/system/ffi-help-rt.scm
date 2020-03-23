@@ -38,7 +38,6 @@
 	    define-fh-type-alias
 	    define-fh-compound-type
 	    define-fh-vector-type
-	    define-fh-vector&-type
 	    define-fh-function*-type
 	    ref<->deref! fh-ref<->deref!
 	    make-symtab-function
@@ -88,18 +87,15 @@
 ;; We should check with struct-vtable?
 ;; name as symbol
 (define* (make-fht name unwrap wrap pointer-to value-at printer)
-  ;;(simple-format #t "make-fht: ~S\n" name)
   (let* ((ty (make-struct/no-tail
 	      ffi-helper-type
 	      (make-struct-layout "pw") ;; 1 slot for value
 	      printer
 	      (or unwrap (lambda (obj) (error "no unwrapper")))
 	      (or wrap (lambda (obj) (error "no wrapper")))
-	      ;;(or pointer-to (lambda (obj) (error "no pointer-to")))
 	      (or pointer-to (lambda (obj) (ffi:bytevector->pointer
 					    (bytestructure-bytevector
 					     (fh-object-val obj)))))
-	      ;;(or value-at (lambda (obj) (error "no value-at")))
 	      (or value-at (lambda (obj) (bytestructure-ref
 					  (fh-object-val obj) '*)))))
 	 (vt (struct-vtable ty)))
@@ -359,10 +355,8 @@
 ;; adopted from code at  https://github.com/TaylanUB covered by GPL3+ and
 ;; Copyright (C) 2015 Taylan Ulrich BayirliKammer <taylanbayirli@gmail.com>
 
-(define-record-type <pointer-metadata>
-  (make-pointer-metadata content-descriptor)
-  pointer-metadata?
-  (content-descriptor pointer-metadata-content-descriptor))
+(define make-pointer-metadata
+  (@@ (bytestructures guile pointer) make-pointer-metadata))
 
 (define (fh:pointer %descriptor)
   (define pointer-size (ffi:sizeof '*))
@@ -444,59 +438,6 @@
   (define meta (make-pointer-metadata %descriptor))
   (make-bytestructure-descriptor size alignment unwrapper getter setter meta))
 
-;; unwrapper
-;; setter
-;; getter
-
-;; variable length vector bytestructure -- double v[];
-;; calling this vector&; has zero size
-;;   (define d (fh:vector& double))
-;;   (define b (make-bytevector 80))
-;;   (define bs (make-bytestructure b 0 d))
-;;   (bytestructure-ref bs 0) => 0.0
-(define-record-type <vector&-metadata>
-  (make-vector&-metadata element-descriptor)
-  vector&-metadata?
-  (element-descriptor vector&-metadata-element-descriptor))
-
-(define (fh:vector& descriptor)
-  (define element-size (bytestructure-descriptor-size descriptor))
-  (define size 0)
-  (define alignment (bytestructure-descriptor-alignment descriptor))
-  (define (unwrapper syntax? bytevector offset index)
-    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
-    (values bytevector (+ offset (* index element-size)) descriptor))
-  (define meta (make-vector&-metadata descriptor))
-  (define (getter syntax? bytevector offset)
-    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
-    )
-  (define (setter syntax? bytevector offset)
-    (if syntax? (throw 'ffi-help-error "fh:vector& syntax not supported"))
-    )
-  (make-bytestructure-descriptor size alignment unwrapper #f #f meta))
-(export fh:vector&)
-
-(define-syntax-rule (define-fh-vector&-type type base-desc type? make)
-  (begin
-    (define type
-      (make-fht
-       (quote type)
-       (lambda (obj) ;; unwrap => pointer
-	 (ffi:bytevector->pointer (bytestructure-bytevector obj)))
-       (lambda* (val #:optional (size 0))
-	 (cond
-	  ((bytevector? val)
-	   (make-struct/no-tail
-	    type (make-bytestructure val 0 (fh:vector& base-desc))))
-	  ((ffi:pointer? val) (make (ffi:pointer->bytevector val size)))
-	  ((integer? val) (make (ffi:make-pointer val) size))
-	  (else (error "ffi-help-rt: bad spec" val))))
-       #f #f
-       (make-bs-printer (quote type))))
-    (define (type? obj)
-      (and (fh-object? obj) (eq? (struct-vtable obj) type)))
-    (define make (fht-wrap type))))
-
 ;; @deffn {Procedure} fh:function return-desc param-desc-list
 ;; @deffnx {Syntax} define-fh-function*-type name desc type? make
 ;; Generate a descriptor for a function pseudo-type, and then the associated
@@ -511,6 +452,9 @@
   (return-descriptor function-metadata-return-descriptor)
   (param-descriptor-list function-metadata-param-descriptor-list)
   (attributes function-metadata-attributes))
+(export function-metadata?
+	function-metadata-return-descriptor
+	function-metadata-param-descriptor-list)
 
 (define (pointer->procedure/varargs return-ffi pointer param-ffi-list)
   (define (arg->ffi arg)
@@ -596,8 +540,8 @@
    ((eq? bs-desc 'void) ffi:void)
    (else (error "missed type"))))
 
-;; given a fs:function return pair: (return-type . arg-list)
-(define (fs-function*-signature desc)
+;; given a fh:function return pair: (return-type . arg-list)
+(define (fh-function*-signature desc)
   (let* ((meta (bytestructure-descriptor-metadata desc))
 	 (desc (pointer-metadata-content-descriptor meta))
 	 (desc (if (promise? desc) (force desc) desc))
@@ -607,6 +551,7 @@
 	 (bs-al (function-metadata-param-descriptor-list meta))
 	 (ffi-bs-al (map bs-desc->ffi-desc bs-al)))
     (cons ffi-rt ffi-bs-al)))
+(define fs-function*-signature fh-function*-signature)
 
 ;; @deffn {Syntax} define-fh-function*-type type desc type? make
 ;; document this
@@ -622,7 +567,7 @@
 	  (lambda (obj)
 	    (cond
 	     ((procedure? obj)		; a lambda
-	      (let* ((sig (fs-function*-signature desc)))
+	      (let* ((sig (fh-function*-signature desc)))
 		(ffi:procedure->pointer (car sig) obj (cdr sig))))
 	     ((and (pair? obj) (fh-type? (car obj))) ; fh-cast
 	      (unwrap~pointer (cdr obj)))
@@ -644,7 +589,7 @@
 	     ((number? val) (bytestructure desc val))
 	     ((ffi:pointer? val) (bytestructure desc (ffi:pointer-address val)))
 	     ((procedure? val) ;; special case, proceadure not pointer
-	      (let* ((sig (fs-function*-signature desc)))
+	      (let* ((sig (fh-function*-signature desc)))
 		(bytestructure
 		 desc
 		 (ffi:pointer-address
