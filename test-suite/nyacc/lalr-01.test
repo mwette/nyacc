@@ -28,8 +28,13 @@
 
 (define calc-mach (make-lalr-machine calc-spec))
 
+(define abc 123)
+
 (define input-1 "1 + 4 / 2 * 3 - 5")
 (define output-1 2)
+
+(define (parse-string raw-parser lexer-gen str)
+  (with-input-from-string str (lambda () (raw-parser (lexer-gen) #:debug #f))))
 
 (with-test-prefix "nyacc/lalr-01"
 
@@ -78,15 +83,31 @@
   ;;  ((wrong-type-arg "car" "Wrong type argument in position ~A (expecting ~A):
   ;;           ~S" (1 "pair" 0) (0)))
   #;(expect-fail "parse-error"
-    (let* ((mach calc-mach)
-	   (raw-parser (make-lalr-parser mach))
-	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
-	   (parse (lambda ()
-		    (catch
-		     'parse-error
-		     (lambda () (raw-parser (gen-lxr)))
-		     (lambda () #f)))))
-      (with-input-from-string "a = 1" parse)))
+  (let* ((mach calc-mach)
+  (raw-parser (make-lalr-parser mach))
+  (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+  (parse (lambda ()
+  (catch
+  'parse-error
+  (lambda () (raw-parser (gen-lxr)))
+  (lambda () #f)))))
+  (with-input-from-string "a = 1" parse)))
+
+  ;; note from above: (define abc 123)
+  (pass-if "action environment"
+    (let* ((spec (lalr-spec
+		  (start expr)
+		  (grammar (expr ($fixed ($$ abc))))))
+	   (mach (make-lalr-machine spec))
+	   (lxrg (make-lexer-generator (lalr-match-table mach)))
+	   (raw-loc (make-lalr-parser mach))
+	   (mod (let ((m (make-fresh-user-module)))
+		  (module-add! m 'abc (make-variable 456))
+		  m))
+	   (raw-mod (make-lalr-parser mach #:env mod))
+	   )
+      (and (eq? 123 (parse-string raw-loc lxrg "1"))
+	   (eq? 456 (parse-string raw-mod lxrg "1")))))
 
   )
 
