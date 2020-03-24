@@ -1616,9 +1616,12 @@
       ((udecl
 	(decl-spec-list
 	 (type-spec (enum-def (ident ,enum-name) ,enum-def-list . ,rest))))
-       (cnvt-enum-def #f enum-name enum-def-list)
-       ;; probably never use this as arg to function
-       (values (cons (w/enum enum-name) wrapped) defined))
+       (cond
+	((member (w/enum enum-name) wrapped)
+	 (values wrapped defined))
+	(else
+	 (cnvt-enum-def #f enum-name enum-def-list)
+	 (values (cons (w/enum enum-name) wrapped) defined))))
       
       ;; enum { ... };
       ((udecl
