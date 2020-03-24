@@ -121,7 +121,7 @@
     ;;(sf "~S\n" (eval-c99-cx `(ident "x") udict))
     #t))
 
-(when #t
+(when #f
   (let ((case '("typedef int foo_t;" . (4 . 4))) (status #t))
     (let* ((code (string-append (car case) " int x = sizeof(foo_t);"))
 	   (tree (parse-string code))
