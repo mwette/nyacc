@@ -122,7 +122,7 @@
 
 (use-modules (system foreign))
 
-(define (sizeof-map/native-builtin type)
+(define sizeof-map/native-builtin
   `((* . ,(sizeof '*))
     ("char" . 1) ("short" . ,(sizeof short)) ("int" . ,(sizeof int))
     ("long" . ,(sizeof long)) ("float" . ,(sizeof float))
@@ -152,7 +152,7 @@
     ("signed long long int" . 8) ("unsigned long long" . 8)
     ("unsigned long long int" . 8)))
 
-(define (alignof-map/native-builtin type)
+(define alignof-map/native-builtin
   `((* . ,(alignof '*))
     ("char" . 1) ("short" . ,(alignof short)) ("int" . ,(alignof int))
     ("long" . ,(alignof long)) ("float" . ,(alignof float))

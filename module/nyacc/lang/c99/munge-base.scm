@@ -35,6 +35,7 @@
   #:export (expand-typerefs
 	    udecl->mdecl m-unwrap-declr
 	    reify-declr reify-decl
+	    def-namer
 	    split-udecl
 	    clean-field-list clean-fields)
   #:use-module (nyacc lang sx-util)
@@ -582,28 +583,28 @@
   
   (define (unwrap-declr declr tail)
     (sx-match declr
-      ((init-declr ,item) (m-unwrap-declr item tail))
+      ((init-declr ,item) (unwrap-declr item tail))
       ((init-declr ,item (initzer . ,vals))
        (sferr "udecl->mdecl tossing initializer\n")
-       (m-unwrap-declr item tail)) ;; ?
-      ((comp-declr ,item) (m-unwrap-declr item tail))
-      ((param-declr ,item) (m-unwrap-declr item tail))
+       (unwrap-declr item tail)) ;; ?
+      ((comp-declr ,item) (unwrap-declr item tail))
+      ((param-declr ,item) (unwrap-declr item tail))
       ((param-declr) (cons (namer) tail))
       ((ident ,name) (cons name tail))
       ((ptr-declr ,ptr ,dcl)
-       (m-unwrap-declr dcl (unwrap-pointer ptr tail)))
+       (unwrap-declr dcl (unwrap-pointer ptr tail)))
       ((abs-ptr-declr ,ptr) (cons* (namer) (unwrap-pointer ptr tail)))
       ((ary-declr ,dcl (type-qual . ,rest) . ,rest)
-       (m-unwrap-declr `(ary-declr ,dcl . ,rest) tail))
-      ((ary-declr ,dcl ,size) (m-unwrap-declr dcl (cons `(array-of ,size) tail)))
-      ((ary-declr ,dcl) (m-unwrap-declr dcl (cons `(array-of) tail)))
+       (unwrap-declr `(ary-declr ,dcl . ,rest) tail))
+      ((ary-declr ,dcl ,size) (unwrap-declr dcl (cons `(array-of ,size) tail)))
+      ((ary-declr ,dcl) (unwrap-declr dcl (cons `(array-of) tail)))
       ((abs-ary-declr ,size) (cons* (namer) `(array-of ,size) tail))
       ((abs-ary-declr) (cons* (namer) `(array-of) tail))
       ((ftn-declr ,dcl ,param-list)
-       (m-unwrap-declr dcl (cons `(function-returning ,param-list) tail)))
+       (unwrap-declr dcl (cons `(function-returning ,param-list) tail)))
       ((abs-ftn-declr ,param-list)
        (cons* (namer) `(function-returning ,param-list) tail))
-      ((scope ,expr) (m-unwrap-declr expr tail))
+      ((scope ,expr) (unwrap-declr expr tail))
       ((bit-field (ident ,name) ,size) (cons* name `(bit-field ,size) tail))
       (,_
        (sferr "munge-base/unwrap-declr missed:\n") (pperr declr)

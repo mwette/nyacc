@@ -90,10 +90,10 @@
     (lambda (key fmt . args)
       (apply throw 'cpp-error fmt args))))
 
-(define (expand-typename typename udict)
+(define* (expand-typename typename udict #:key (namer def-namer))
   (let* ((decl `(udecl (decl-spec-list
 			(type-spec (typename ,typename)))
-		       (declr (ident "_"))))
+		       (declr (ident (namer)))))
 	 (xdecl (expand-typerefs decl udict))
 	 (xname (and xdecl (sx-ref* xdecl 1 1 1 1))))
     xname))
@@ -167,7 +167,7 @@
 	     (lambda (size align)
 	       (loop size align (cdr flds)))))))
 
-    (_ (sferr "c99/eval-sizeof-type: missed\n") (pperr mtail)
+    (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
        (quit)
        (throw 'nyacc-error "coding error"))))
 

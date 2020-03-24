@@ -20,6 +20,7 @@
   #:use-module (test-suite lib))
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
+(define (sf fmt . args) (apply simple-format #t fmt args))
 
 (define (fold p s l)
   (let loop ((s s) (l l))
@@ -149,7 +150,7 @@
 				  (function-returning (param-list))
 				  (array-of) (fixed-type "int"))))))
 
-  (pass-if "evaluate sizeof(type)"
+  #;(pass-if "evaluate sizeof(type)"
     (fold
      (lambda (case status)
        (let* ((code (string-append (car case) " int x = sizeof(foo_t);"))
@@ -174,7 +175,7 @@
        ("typedef union { double x; int y; } foo_t;" . (8 . 8))
        ("typedef union { double x; int y[3]; } foo_t;" . (16 . 8))
        ("typedef enum { FOO=1, BAR=2 } foo_t;" . (4 . 4))
-       )))
+       )) #f)
 
   (pass-if "canize-enum-def-list"
     (let* ((code "enum { FOO = 1, }; enum { BAR = 1 + FOO };")
