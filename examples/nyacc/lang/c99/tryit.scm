@@ -122,9 +122,19 @@
     #t))
 
 (when #t
-  (let ((code "typedef int int8;\n")
-	)
-    ;;(pp (sx-find 'type-spec sx))
-    #t))
+  (let ((case '("typedef int foo_t;" . (4 . 4))) (status #t))
+    (let* ((code (string-append (car case) " int x = sizeof(foo_t);"))
+	   (tree (parse-string code))
+	   (udict (c99-trans-unit->udict tree))
+	   (udecl (assoc-ref udict "x"))
+	   (sotex (sx-ref* udecl 2 2 1))) ; (sizeof-type (type-name ...))
+      (pp case)
+      (pp udecl)
+      (pp sotex)
+      (call-with-values
+	  (lambda () (eval-sizeof-type sotex udict))
+	(lambda (size align)
+	  (and status (= size (cadr case)) (= align (cddr case)))
+	  )))))
 
 ;; --- last line ---
