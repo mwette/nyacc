@@ -222,8 +222,15 @@
           to allow comments to be skipped.  The default is ''()'.
      '#:interactive'
           If '#t', this tells the parser that this is being called
+          interactively, so that the token '$end' is not expected.  The
+          default value is '#f'.
      '#:env'
-          Use the passed environment to host the action."
+          Use the passed environment to the parser actions provided in
+          the specification.  This can be a module (e.g.,
+          '(current-module)' or an environment (e.g.,
+          '(interaction-environment)').  The default is to use
+          '(current-module)'; that is, the module in which this
+          procedure is being executed."
   (let* ((mtab (assq-ref mach 'mtab))
 	 (siu (map (lambda (n) (assoc-ref mtab n)) skip-if-unexp))
 	 (iact interactive))
