@@ -39,7 +39,7 @@
 	    define-fh-compound-type
 	    define-fh-vector-type
 	    define-fh-function*-type
-	    ref<->deref! fh-ref<->deref!
+	    fh-ref<=>deref! ref<->deref!
 	    make-symtab-function
 	    fh-find-symbol-addr
 	    fht-wrap fht-unwrap fh-wrap fh-unwrap
@@ -280,18 +280,18 @@
 	  (else (make-struct/no-tail type val))))
 	(() (make 0))))))
 
-;; @deffn {Syntax} ref<->deref! p-type p-make type make
+;; @deffn {Syntax} fh-ref<=>deref! p-type p-make type make
 ;; This procedure will ``connect'' the two types so that the procedures
 ;; @code{pointer-to} and @code{value-at} work.
 ;; @end deffn
-(define (ref<->deref! p-type p-make type make)
+(define (fh-ref<=>deref! p-type p-make type make)
   (if p-make
       (struct-set! type (+ vtable-offset-user 2) ; pointer-to
 		   (lambda (obj) (p-make (bs-addr (fh-object-val obj))))))
   (if make
       (struct-set! p-type (+ vtable-offset-user 3) ; value-at
 		   (lambda (obj) (make (fh-object-ref obj '*))))))
-(define fh-ref<->deref! ref<->deref!)
+(define ref<->deref! fh-ref<=>deref!)
 
 ;; @deffn {Syntax} define-fh-type-alias alias type
 ;; set up type alias.  Caller needs to match type? and make
