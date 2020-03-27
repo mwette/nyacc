@@ -590,7 +590,10 @@
      (declaration-specifiers
       abstract-declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
      (declaration-specifiers
-      ($$ `(param-decl ,$1 (param-declr)))))
+      ($$ `(param-decl ,$1 (param-declr))))
+     ;; adding attribute specifiers:
+     (declaration-specifiers
+      declarator attribute-specifiers ($$ `(param-decl ,$1 (param-declr ,$2)))))
 
     (identifier-list
      (identifier-list-1 ($$ (tl->list $1))))

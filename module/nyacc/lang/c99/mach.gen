@@ -1,7 +1,14 @@
 #!/bin/sh
+# -*- scheme -*-
 exec guile $0
 !#
 (use-modules (nyacc lang c99 mach))
-(gen-c99-files)
-(system "touch parser.scm")
+(use-modules (nyacc lalr))
+
+(when (gen-c99-files)
+  (system "touch parser.scm")
+  (with-output-to-file ",gram.txt"
+    (lambda ()
+      (pp-lalr-grammar c99-spec)
+      (pp-lalr-machine c99-mach))))
 ;;; --- last line ---

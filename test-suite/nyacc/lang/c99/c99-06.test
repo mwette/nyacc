@@ -95,7 +95,7 @@
      2
      "int *foo(int *(*)(int)[2])[2];\n"))
 
-  (pass-if "misc expand-typerefs"
+  (pass-if "misc expand-typerefs cases"
     (fold
      (lambda (pair status)
        (let* ((ltree (parse-string (car pair)))
@@ -114,7 +114,9 @@
        ("typedef int *foo[2]; foo bar;" . "int *bar[2];")
        ("typedef int *foo[2]; foo *bar;" . "int *(*bar)[2];")
        ("typedef int *foo[2]; int (*bar)(foo*x);" . "int (*bar)(int *(*x)[2]);")
-       ("typedef int *foo[2]; int (*bar)(foo*);" . "int (*bar)(int *(*)[2]);"))))
+       ("typedef int *foo[2]; int (*bar)(foo*);" . "int (*bar)(int *(*)[2]);")
+       ("typedef const int foo_t; const foo_t x;" . "const int x;")
+       )))
 
   (pass-if "udecl->mdecl/concrete"
     (fold

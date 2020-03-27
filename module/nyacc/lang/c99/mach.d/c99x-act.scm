@@ -746,6 +746,9 @@
    ;; parameter-declaration => declaration-specifiers
    (lambda ($1 . $rest)
      `(param-decl ,$1 (param-declr)))
+   ;; parameter-declaration => declaration-specifiers declarator attribute-...
+   (lambda ($3 $2 $1 . $rest)
+     `(param-decl ,$1 (param-declr ,$2)))
    ;; identifier-list => identifier-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; identifier-list-1 => identifier
