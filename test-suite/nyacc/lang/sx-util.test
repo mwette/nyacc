@@ -18,6 +18,57 @@
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
+(define (sf fmt . args) (apply simple-format #t fmt args))
+
+(define (fold p s l)
+  (let loop ((s s) (l l))
+    (if (null? l) s (loop (p (car l) s) (cdr l)))))
+
+(with-test-prefix "nyacc/sx-util"
+
+  (pass-if "sx-cons"
+    (fold
+     (lambda (pair status)
+       ;;(sf "~S vs ~S\n" (apply sx-cons (car pair)) (cdr pair))
+       (and status (equal? (apply sx-cons (car pair)) (cdr pair))))
+     #t
+     '(((a #f ((b "c") (d "e"))) . (a (b "c") (d "e")))
+       ((a () ((b "c"))) . (a (b "c")))
+       ((a (@) ((b "c"))) . (a (b "c")))
+       ((a (@ (p "P") (q "Q")) ((b "c"))) . (a (@ (p "P") (q "Q")) (b "c")))
+       ((a ((p "P") (q "Q")) ((b "c"))) . (a (@ (p "P") (q "Q")) (b "c"))))))
+
+  (pass-if "sx-cons*"
+    (fold
+     (lambda (pair status)
+       ;;(sf "~S vs ~S\n" (apply sx-cons* (car pair)) (cdr pair))
+       (and status (equal? (apply sx-cons* (car pair)) (cdr pair))))
+     #t
+     '(((a #f ((b "c") (d "e"))) . (a (b "c") (d "e")))
+       ((a #f (b "c") ((d "e"))) . (a (b "c") (d "e")))
+       ((a #f #f ((d "e"))) . (a (d "e")))
+       ((a #f () ((d "e"))) . (a (d "e")))
+       ((a () ((b "c"))) . (a (b "c")))
+       ((a (@) ((b "c"))) . (a (b "c")))
+       ((a (@ (p "P") (q "Q")) ((b "c"))) . (a (@ (p "P") (q "Q")) (b "c")))
+       ((a ((p "P") (q "Q")) ((b "c"))) . (a (@ (p "P") (q "Q")) (b "c"))))))
+
+  (pass-if "sx-list"
+    (fold
+     (lambda (pair status)
+       ;;(sf "~S vs ~S\n" (apply sx-list (car pair)) (cdr pair))
+       (and status (equal? (apply sx-list (car pair)) (cdr pair))))
+     #t
+     '(((a #f (b "c") (d "e")) . (a (b "c") (d "e")))
+       ((a #f (b "c") (d "e")) . (a (b "c") (d "e")))
+       ((a #f #f (d "e")) . (a (d "e")))
+       ((a #f () (d "e")) . (a (d "e")))
+       ((a () (b "c")) . (a (b "c")))
+       ((a (@) (b "c")) . (a (b "c")))
+       ((a (@ (p "P") (q "Q")) (b "c")) . (a (@ (p "P") (q "Q")) (b "c")))
+       ((a ((p "P") (q "Q")) (b "c")) . (a (@ (p "P") (q "Q")) (b "c"))))))
+
+  )
 
 (with-test-prefix "nyacc/sx-find"
 
@@ -26,6 +77,7 @@
      (sx-find 'c '(a "b" (c "d" (e "f"))))
      (sx-find '(c e) '(a "b" (c "d" (e "f"))))
      #t))
+  
   )
   
 #;(with-test-prefix "nyacc/sx-match"

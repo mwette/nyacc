@@ -455,22 +455,22 @@
      '(fixpt-type "_Sat unsigned long _Accum"))
    ;; struct-or-union-specifier => "struct" opt-attr-specs ident-like "{" s...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (sx-join* 'struct-def $2 $3 (tl->list $5)))
+     (sx-list 'struct-def $2 $3 (tl->list $5)))
    ;; struct-or-union-specifier => "struct" opt-attr-specs "{" struct-decla...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (sx-join* 'struct-def $2 (tl->list $4)))
+     (sx-list 'struct-def $2 (tl->list $4)))
    ;; struct-or-union-specifier => "struct" opt-attr-specs ident-like
    (lambda ($3 $2 $1 . $rest)
-     (sx-join* 'struct-ref $1 $3))
+     (sx-list 'struct-ref $1 $3))
    ;; struct-or-union-specifier => "union" opt-attr-specs ident-like "{" st...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (sx-join* 'union-def $2 $3 (tl->list $5)))
+     (sx-list 'union-def $2 $3 (tl->list $5)))
    ;; struct-or-union-specifier => "union" opt-attr-specs "{" struct-declar...
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (sx-join* 'union-def $2 (tl->list $4)))
+     (sx-list 'union-def $2 (tl->list $4)))
    ;; struct-or-union-specifier => "union" opt-attr-specs ident-like
    (lambda ($3 $2 $1 . $rest)
-     (sx-join* 'union-ref $2 $3))
+     (sx-list 'union-ref $2 $3))
    ;; ident-like => identifier
    (lambda ($1 . $rest) $1)
    ;; ident-like => typedef-name

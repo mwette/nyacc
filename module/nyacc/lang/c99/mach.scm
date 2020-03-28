@@ -351,15 +351,15 @@
     ;; This one modified: split out struct-or-union = "struct"|"union"
     (struct-or-union-specifier
      ("struct" opt-attr-specs ident-like "{" struct-declaration-list "}"
-      ($$ (sx-join* 'struct-def $2 $3 (tl->list $5))))
+      ($$ (sx-list 'struct-def $2 $3 (tl->list $5))))
      ("struct" opt-attr-specs "{" struct-declaration-list "}"
-      ($$ (sx-join* 'struct-def $2 (tl->list $4))))
-     ("struct" opt-attr-specs ident-like ($$ (sx-join* 'struct-ref $1 $3)))
+      ($$ (sx-list 'struct-def $2 (tl->list $4))))
+     ("struct" opt-attr-specs ident-like ($$ (sx-list 'struct-ref $1 $3)))
      ("union" opt-attr-specs ident-like "{" struct-declaration-list "}"
-      ($$ (sx-join* 'union-def $2 $3 (tl->list $5))))
+      ($$ (sx-list 'union-def $2 $3 (tl->list $5))))
      ("union" opt-attr-specs "{" struct-declaration-list "}"
-      ($$ (sx-join* 'union-def $2 (tl->list $4))))
-     ("union" opt-attr-specs ident-like ($$ (sx-join* 'union-ref $2 $3))))
+      ($$ (sx-list 'union-def $2 (tl->list $4))))
+     ("union" opt-attr-specs ident-like ($$ (sx-list 'union-ref $2 $3))))
 
     ;; because name following struct/union can be identifier or typeref:
     (ident-like

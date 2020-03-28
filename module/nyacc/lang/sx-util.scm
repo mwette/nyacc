@@ -32,9 +32,12 @@
 	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref*
 	    sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
 	    sx-find
-	    sx-split sx-split* sx-join sx-join* sx-cons* sx-list
+	    sx-split sx-split* sx-join sx-join* sx-cons sx-cons* sx-list
 	    sx-unitize
-	    sx-match sx-match-tail)
+	    sx-match sx-match-tail
+	    ;; deprecated:
+	    sx-join sx-join*
+	    )
   #:use-module ((srfi srfi-1) #:select (find fold fold-right append-reverse)))
 (cond-expand
   (mes)
@@ -204,6 +207,14 @@
 			 (else '()))))
     (and=> (assq-ref attr-tail key) car)))
 
+;; map to #f or '(@ ...)
+(define (encode-attr attr)
+  (cond
+   ((not attr) #f)
+   ((null? attr) #f)
+   ((eq? '@ (car attr)) (if (null? (cdr attr)) #f attr))
+   (else (cons '@ attr))))
+
 ;; @deffn {Procedure} sx-attr-add sx key-or-pair [val]
 ;; Add attribute to sx, passing either a key-val pair or key and val.
 ;; @end deffn
@@ -244,45 +255,35 @@
       (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
   sx)
 
-;; @deffn {Procedure} sx-cons* tag attr exp ... tail => sx
-;; @deffnx {Procedure} sx-list tag attr exp ... => sx
-;; Generate the tag and the attr list if it exists.  Note that
-;; The following are equivalent:
-;; @example
-;; (sx-cons* tag attr elt1 elt2 '())
-;; (sx-list tag attr elt1 elt2)
-;; @end example
-;; @noindent
-;; Expressions that are @code{#f} or @code{'()} will be skipped;
-;; they should be strings or pairs.
+;; @deffn {Procedure} sx-cons tag attr tail => sexp
+;; @deffnx {Procedure} sx-cons* tag attr exp ... tail => sexp
+;; @deffnx {Procedure} sx-list tag attr exp ... => sexp
+;; Build an SXML element by its parts.  If @var{ATTR} is @code{#f},
+;; @code{'()} or @code{(@)} it will not be included. 
+;; @code{sx-cons*} and @code{sx-list} will remove any expressions @var{exp}
+;; that are @code{#f} or @code{'()}.
 ;; @end deffn
+(define (sx-cons tag attr tail)
+  (let ((attr (encode-attr attr)))
+    (if attr (cons* tag attr tail) (cons tag tail))))
 (define (sx-cons* tag attr . rest)
-  (if (null? rest) (error "sx-cons: expecing tail"))
-  (let ((attr (cond
-	       ((not attr) #f)
-	       ((null? attr) #f)
-	       ((pair? (car attr)) `(@ . ,attr))
-	       (else attr)))
-	(tail (let loop ((items rest))
+  (let ((tail (let loop ((tail rest))
 		(cond
-		 ((null? (cdr items)) (car items))
-		 ((not (car items)) (loop (cdr items)))
-		 ((null? (car items)) (loop (cdr items)))
-		 (else (cons (car items) (loop (cdr items))))))))
-    (if attr (cons* tag attr tail) (cons tag tail))))
+                 ((null? (cdr tail)) (car tail))
+                 ((not (car tail)) (loop (cdr tail)))
+                 ((null? (car tail)) (loop (cdr tail)))
+                 (else (cons (car tail) (loop (cdr tail))))))))
+    (sx-cons tag attr tail)))
 (define (sx-list tag attr . rest)
-  (let ((attr (cond
-	       ((not attr) #f)
-	       ((null? attr) #f)
-	       ((pair? (car attr)) `(@ . ,attr))
-	       (else attr)))
-	(tail (let loop ((items rest))
-		(cond
-		 ((null? items) '())
-		 ((not (car items)) (loop (cdr items)))
-		 ((null? (car items)) (loop (cdr items)))
-		 (else (cons (car items) (loop (cdr items))))))))
-    (if attr (cons* tag attr tail) (cons tag tail))))
+  (let ((tail (let loop ((tail rest))
+                (cond
+                 ((null? tail) '())
+                 ((not (car tail)) (loop (cdr tail)))
+                 ((null? (car tail)) (loop (cdr tail)))
+                 (else (cons (car tail) (loop (cdr tail))))))))
+    (sx-cons tag attr tail)))
+(define sx-join sx-cons)
+(define sx-join* sx-list)
 
 ;; @deffn {Procedure} sx-split sexp => tag attr tail
 ;; @deffnx {Procedure} sx-split* sexp => tag attr exp ...
@@ -300,30 +301,6 @@
 	(attr (sx-attr sexp))
 	(tail (sx-tail sexp)))
     (apply values tag attr tail)))
-
-;; @deffn {Procedure} sx-join tag attr tail => sexp
-;; @deffnx {Procedure} sx-join* tag attr exp ... => sexp
-;; Build an SXML element by its parts.  If @var{ATTR} is @code{'()} skip;
-;; @code{sx-join*} will remove any exp that are @code{#f} or @code{'()}.
-;; @end deffn
-(define (sx-join tag attr tail)
-  (if (and attr (pair? attr))
-      (if (pair? (car attr))
-	  (cons* tag `(@ . ,attr) tail)
-	  (cons* tag `(@ ,attr) tail))
-      (cons tag tail)))
-(define (sx-join* tag attr . tail)
-  (let ((tail (let loop ((tail tail))
-		(cond
-		 ((null? tail) '())
-		 ((not tail) (loop (cdr tail)))
-		 ((null? (car tail)) (loop (cdr tail)))
-		 (else (cons (car tail) (loop (cdr tail))))))))
-    (if (and attr (pair? attr))
-	(if (pair? (car attr))
-	    (cons* tag `(@ . ,attr) tail)
-	    (cons* tag `(@ ,attr) tail))
-	(cons tag tail))))
 
 ;; @deffn {Procedure} sx-unitize list-tag form seed
 ;; Given a declaration of form @code{(tag ... (elt-list ...) ...)}
