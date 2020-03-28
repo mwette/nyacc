@@ -12,8 +12,11 @@
 (define-module (c99-05)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 pprint)
-  #:use-module (srfi srfi-1)		; fold
   #:use-module (test-suite lib))
+
+(define (fold p s l)
+  (let loop ((s s) (l l))
+    (if (null? l) s (loop (p (car l) s) (cdr l)))))
 
 ;; io-list is list of input/output pairs where we expect
 ;; (pp-c99 (parsex input)) == output
