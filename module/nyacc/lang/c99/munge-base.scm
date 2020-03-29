@@ -41,6 +41,7 @@
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)		; let-values
   #:use-module (srfi srfi-1)
+  #:use-module (ice-9 match)
   #:use-module (system base pmatch))
 
 (use-modules (ice-9 pretty-print))
@@ -179,16 +180,58 @@
 
 ;; === typedef expansion ===============
 
-;; allows only one storage specifier besides typedef
-;; call this (injest-in-specl orig-specl repl-specl)
-(define (tdef-splice-specl orig-specl repl-specl)
+;; @deffn replace-type-spec specl type-spec
+;; Replace the type-spec in decl-spec-list @var{specl} with @var{type-spec}.
+;; @end deffn
+(define (replace-type-spec specl type-spec)
+  (let ((tag (sx-tag specl))
+	(attr (sx-attr specl))
+	(tail (map (lambda (elt)
+		     (if (eq? (sx-tag elt) 'type-spec) type-spec elt))
+		   (sx-tail specl))))
+    (sx-cons* tag attr tail)))
+
+;; @deffn splice-type-spec orig-specl repl-specl
+;; splice type repl-specl into orig-specl
+;; @end deffn
+(define (splice-type-spec orig-specl repl-specl)
+  ;; todo preserve attributes
+  (let loop ((specl '()) (repll '()) (origl (cdr orig-specl)))
+    ;;(sferr "\nloop:\n") (pperr specl) (pperr repll) (pperr origl)
+    (cond
+     ((pair? repll)
+      (match (car repll)
+	('(stor-spec (typedef))
+	 (loop specl (cdr repll) origl))
+	((? (lambda (x) (member x specl)))
+	 (loop specl (cdr repll) origl))
+	(`(type-spec (struct-def (ident ,name) . ,rest))
+	 (loop (cons `(type-spec (struct-def . ,rest)) specl) (cdr repll) origl))
+	(`(type-spec (union-def (ident ,name) . ,rest))
+	 (loop (cons `(type-spec (union-def . ,rest)) specl) (cdr repll) origl))
+	(_
+	 (loop (cons (car repll) specl) (cdr repll) origl))))
+     ((pair? origl)
+      (match (car origl)
+	(`(type-spec . ,rest)
+	 (loop specl (cdr repl-specl) (cdr origl)))
+	((? (lambda (x) (member x specl)))
+	 (loop specl repll (cdr origl)))
+	(_
+	 (loop (cons (car origl) specl) repll (cdr origl)))))
+     (else
+      (cons 'decl-spec-list (reverse specl))))))
+(export splice-type-spec)
+
+;;(define tdef-splice-specl splice-type-spec)
+(define (OLD-tdef-splice-specl orig-specl repl-specl)
   (let loop ((specl '()) (repll '()) (origl (cdr orig-specl)))
     (cond
      ((pair? repll)
       (cond
        ((equal? (car repll) '(stor-spec (typedef)))
 	(loop specl (cdr repll) origl))
-       ((equal? (car repll) '(stor-spec (const)))
+       #;((equal? (car repll) '(stor-spec (const)))
 	(loop (cons (car repll) specl) (cdr repll) origl))
        ((member (car repll) specl)	; don't duplicate type-qual's
         (loop specl (cdr repll) origl))
@@ -196,9 +239,9 @@
 	(loop (cons (car repll) specl) (cdr repll) origl))))
      ((pair? origl)
       (cond
-       ((pmatch (car origl) ((type-spec (typename ,name)) #t) (,othersize #f))
+       ((pmatch (car origl) ((type-spec (typename ,name)) #t) (,otherwise #f))
 	(loop specl (cdr repl-specl) (cdr origl))) ; insert replacement
-       ((equal? (car origl) '(stor-spec (const)))
+       #;((equal? (car origl) '(stor-spec (const)))
 	(loop (cons (car repll) specl) repll (cdr origl)))
        ((member (car origl) specl)	; don't duplicate type-qual's
 	(loop specl repll (cdr origl)))
@@ -263,30 +306,33 @@
       (cons (tdef-splice-declr declr tdef-declr) seed))
     '() (sx-tail orig-declr-list 1))))
 
-;; @deffn {Procedure} compound-key type-spec-tag name
-;; type-spec-tag is struct/union-ref/def
-;; @example
-;; (compound-key 'struct-ref) => struct
-;; (compount-key 'union-ref "_foo") => (union . "_foo")
-;; @end example
-;; @end deffn
-(define* (compound-key type-spec-tag #:optional name)
-  (let ((key (case type-spec-tag
-	       ((struct-ref struct-def) 'struct)
-	       ((union-ref union-def) 'union))))
-    (if name (cons key name) key)))
-
-;; Replace the type-spec in @var{decl-spec-list} with @var{type-spec}.
-(define (replace-type-spec decl-spec-list type-spec)
-  (sx-cons*
-   (sx-tag decl-spec-list)
-   (sx-attr decl-spec-list)
-   (map
-    (lambda (elt) (if (eq? (sx-tag elt) 'type-spec) type-spec elt))
-    (sx-tail decl-spec-list 1))))
-
 ;; declr can be xxxx-declr-list or xxxx-declr
 ;; This needs to be able to accept @code{#f} @var{declr}. <= done, methinks
+
+;; also appears in ffi-help.scm:
+(define (w/struct name) (cons 'struct name))
+(define (w/union name) (cons 'union name))
+(define (w/enum name) (cons 'enum name))
+(define (w/* name) (cons 'pointer name))
+(define (w/struct* name) (cons 'pointer (cons 'struct name)))
+(define (w/union* name) (cons 'pointer (cons 'union name)))
+
+;; qualified match
+;; (qual-match '(pointer struct) "foo" (pointer struct . "foo")) => #t
+(define (qual-match qual name term)
+  (let loop ((qual qual) (term term))
+    (cond
+     ((null? qual)
+      (and (string? term) (string=? name term)))
+     ((pair? term)
+      (and (eq? (car qual) (car term))
+	   (loop (cdr qual) (cdr term))))
+     (else #f))))
+
+(define (keeper? qualifier name keepers)
+  (if (null? keepers) #f
+      (or (qual-match qualifier name (car keepers))
+	  (keeper? qualifier name (cdr keepers)))))
 
 (define (expand-specl-typerefs specl declr udict keep)
 
@@ -304,79 +350,87 @@
 	   (tdef-specl (sx-ref decl 1))	 ; specs for typename
 	   (tdef-declr (sx-ref decl 2))) ; declr for typename
       (values
-       (tdef-splice-specl specl tdef-specl)
+       (splice-type-spec specl tdef-specl)
        (cond
 	((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
 	(else (tdef-splice-declr declr tdef-declr))))))
 
-  (let* ((tspec (and=> (sx-find 'type-spec specl) cadr))
-	 (class (sx-tag tspec))		; e.g., typename, fixed-type
-	 (name (sx-ref tspec 1)))	; e.g., "foo_t"
-    (case class
-      ((typename)
+  (define (splice-aggregate specl name key)
+    ;; turn "struct ref abc" into "struct { ... }"
+    (let* ((udecl (assoc-ref udict key))
+	   (repll (and udecl (sx-ref udecl 1))))
+      (and repll (splice-type-spec specl repll))))
+
+  (define (expand-aggregate tag attr name fields)
+    (let* ((fields (map (lambda (fld) (if (eq? (sx-tag fld) 'comment) fld
+					  (expand-typerefs fld udict keep)))
+			fields))
+	   (ident (and name `(ident ,name)))
+	   (field-list `(field-list . ,fields)))
+      (if ident
+	  (sx-list tag attr ident field-list)
+	  (sx-list tag attr field-list))))
+      
+  (let* ((sx1 (sx-ref specl 1))
+	 (tspec (if (eq? 'type-spec (sx-tag sx1)) sx1 (sx-ref specl 2))))
+    ;;(sferr "sx1  =~S\n" sx1)
+    ;;(sferr "tspec=~S\n" tspec)
+    (sx-match (sx-ref tspec 1)
+
+      ((typename ,name)
        (cond
-	((member name keep)		; keeper; don't expand
+	((keeper? '() name keep)	; keeper; don't expand
 	 (values specl declr))
-	((and #t ;; (pointer-declr? declr)
-	      (member (cons 'pointer name) keep))
+	((and (pointer-declr? declr)
+	      (keeper? '(pointer) name keep))
 	 (values specl declr))
-	(#f ;;(pointer-declr? name)		; replace with void*
-	 (let ((specl (replace-type-spec specl '(type-spec (void)))))
-	   (call-with-values
-	       (lambda () (splice-typename specl declr name udict))
-	     (lambda (specl declr) (re-expand specl declr)))))
 	(else				; expand
 	 (call-with-values
 	     (lambda () (splice-typename specl declr name udict))
 	   (lambda (specl declr)
 	     (re-expand specl declr))))))
-      ((struct-ref union-ref) ;; compound reference; replace unless pointer
-       (let* ((c-name (and=> (sx-find 'ident tspec)
-			     (lambda (id) (sx-ref id 1))))
-	      (c-key (compound-key class c-name)) ;; e.g., (struct . "foo")
-	      (c-decl (and c-key (assoc-ref udict c-key)))
-	      (t-spec (and c-decl (sx-find 'type-spec (sx-ref c-decl 1)))))
-	 (if (or (and c-key
-		      (or (member c-key keep)
-			  (member (cons 'pointer c-key) keep)))
-		 (not c-decl)
-		 (pointer-declr? declr))
+
+      ((struct-ref (ident ,name))
+       (cond
+	((keeper? '(struct) name keep)
+	 (values specl declr))
+	((pointer-declr? declr)
+	 (if (keeper? '(pointer struct) name keep)
 	     (values specl declr)
-	     (let ((r-specl (replace-type-spec specl t-spec)))
-	       (re-expand r-specl declr)))))
-      ((struct-def union-def)
-       (let* ((tag (sx-tag tspec))
-	      (attr (sx-attr tspec))
-	      (fld1 (sx-ref tspec 1))
-	      (ident (if (eq? 'ident (sx-tag fld1)) fld1 #f))
-	      (field-list (if ident (sx-ref tspec 2) fld1))
-	      ;;(field-list (clean-field-list field-list)) ; why remove comments?
-	      (orig-flds (sx-tail field-list 1))
-	      (fixd-flds
-	       (map
-		(lambda (fld)
-		  (if (memq (sx-tag fld) '(decl udecl comp-decl param-decl))
-		      (expand-typerefs fld udict keep)
-		      fld)) orig-flds))
-	      (fixd-field-list `(field-list ,@fixd-flds))
-	      (fixd-struct (if ident
-			       (sx-list tag attr ident fixd-field-list)
-			       (sx-list tag attr fixd-field-list)))
-	      (fixd-tspec `(type-spec ,fixd-struct))
-	      (fixd-specl (replace-type-spec specl fixd-tspec)))
-	 (values fixd-specl declr)))
-      ((enum-ref enum-def)
-       ;; If not keeper, then replace enum with int.
-       (let* ((type (sx-ref (sx-find 'type-spec specl) 1))
-	      (name (and=> (sx-find 'ident type) cadr)))
-	 (cond
-	  ((and name (member `(enum . ,name) keep))
-	   (values specl declr))
-	  (else
-	   (values
-	    (repl-typespec specl `(type-spec (fixed-type "int")))
-	    declr)))))
-      (else (values specl declr)))))
+	     (values (replace-type-spec specl '(type-spec (void))) declr)))
+	(else
+	 (values (splice-aggregate specl name (w/struct name)) declr))))
+
+      ((union-ref (ident ,name))
+       (cond
+	((keeper? '(union) name keep)
+	 (values specl declr))
+	((pointer-declr? declr)
+	 (if (keeper? '(pointer union) name keep)
+	     (values specl declr)
+	     (values (replace-type-spec specl '(type-spec (void))) declr)))
+	(else
+	 (values (splice-aggregate specl name (w/union name)) declr))))
+
+      ((struct-def (@attr . ,attr) (ident ,name) (field-list ,fields))
+       (let ((tspec (expand-aggregate 'struct attr name fields)))
+	 (values (replace-type-spec specl tspec) declr)))
+				  
+      ((union-def (@attr . ,attr) (ident ,name) (field-list ,fields))
+       (let ((tspec (expand-aggregate 'struct attr name fields)))
+	 (values (replace-type-spec specl tspec) declr)))
+
+      ((enum-ref (ident ,name))
+       (if (member (w/enum name) keep)
+	   (values specl declr)
+	   (let ((tspec '(type-spec (fixed-type "int"))))
+	     (values (replace-type-spec specl tspec) declr))))
+
+      ((enum-def . ,rest)
+       ;; could have option to remove enum-defs
+       (values specl declr))
+      
+      (,_ (values specl declr)))))
 
 ;; @deffn {Procedure} expand-typerefs adecl udict [keep]
 ;; Given a declaration or component-declaration, return a udecl with all
