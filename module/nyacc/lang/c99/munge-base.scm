@@ -197,7 +197,6 @@
 (define (splice-type-spec orig-specl repl-specl)
   ;; todo preserve attributes
   (let loop ((specl '()) (repll '()) (origl (cdr orig-specl)))
-    ;;(sferr "\nloop:\n") (pperr specl) (pperr repll) (pperr origl)
     (cond
      ((pair? repll)
       (match (car repll)
@@ -219,34 +218,6 @@
 	 (loop specl repll (cdr origl)))
 	(_
 	 (loop (cons (car origl) specl) repll (cdr origl)))))
-     (else
-      (cons 'decl-spec-list (reverse specl))))))
-(export splice-type-spec)
-
-;;(define tdef-splice-specl splice-type-spec)
-(define (OLD-tdef-splice-specl orig-specl repl-specl)
-  (let loop ((specl '()) (repll '()) (origl (cdr orig-specl)))
-    (cond
-     ((pair? repll)
-      (cond
-       ((equal? (car repll) '(stor-spec (typedef)))
-	(loop specl (cdr repll) origl))
-       #;((equal? (car repll) '(stor-spec (const)))
-	(loop (cons (car repll) specl) (cdr repll) origl))
-       ((member (car repll) specl)	; don't duplicate type-qual's
-        (loop specl (cdr repll) origl))
-       (else 
-	(loop (cons (car repll) specl) (cdr repll) origl))))
-     ((pair? origl)
-      (cond
-       ((pmatch (car origl) ((type-spec (typename ,name)) #t) (,otherwise #f))
-	(loop specl (cdr repl-specl) (cdr origl))) ; insert replacement
-       #;((equal? (car origl) '(stor-spec (const)))
-	(loop (cons (car repll) specl) repll (cdr origl)))
-       ((member (car origl) specl)	; don't duplicate type-qual's
-	(loop specl repll (cdr origl)))
-       (else
-	(loop (cons (car origl) specl) repll (cdr origl)))))
      (else
       (cons 'decl-spec-list (reverse specl))))))
 
@@ -371,10 +342,8 @@
 	  (sx-list tag attr ident field-list)
 	  (sx-list tag attr field-list))))
       
-  (let* ((sx1 (sx-ref specl 1))
-	 (tspec (if (eq? 'type-spec (sx-tag sx1)) sx1 (sx-ref specl 2))))
-    ;;(sferr "sx1  =~S\n" sx1)
-    ;;(sferr "tspec=~S\n" tspec)
+  (let* ((tspec (sx-find 'type-spec specl)))
+
     (sx-match (sx-ref tspec 1)
 
       ((typename ,name)
@@ -451,8 +420,6 @@
 ;; @*BUG HERE? if we run into a struct then the struct members have not
 ;; been munged into udecls.  The behavior is actually NOT DEFINED.
 ;; @end deffn
-(define cnt 0)
-(define cnt-max 4)
 (define* (expand-typerefs adecl udict #:optional (keep '()))
 
   ;; In the process of expanding typerefs it is crutial that routines which
@@ -556,8 +523,6 @@
 	  adecl ;; <= unchanged; return original
 	  (sx-list tag attr repl-specl repl-declr)))))
 
-;; === unitize decl ===================
-
 
 ;; === reify abstract declaration =====
 
@@ -582,20 +547,9 @@
       ((abs-ptr-declr ,ptr) `(ptr-declr ,ptr (ident ,(namer))))
       ((abs-ary-declr . ,rest) `(ary-declr (ident ,(namer)) . ,rest))
       ((abs-ftn-declr ,pl) `(ftn-declr (ident ,(namer)) ,pl))
-      ;; Don't dive into function param lists
-      #;((ftn-declr ,dcl ,pl)
-       (let ((param-list
-	      (sx-list (sx-tag pl) (sx-attr pl)
-		       (map (lambda (d) (reify-decl d namer)) (sx-tail pl)))))
-	 `(ftn-declr ,(probe-declr dcl) ,param-list)))
-      #;((abs-ftn-declr ,pl)
-       (let ((param-list
-	      (sx-list (sx-tag pl) (sx-attr pl)
-		       (map (lambda (d) (reify-decl d namer)) (sx-tail pl)))))
-	 `(ftn-declr (ident ,(namer)) ,param-list)))
+      ;; Don't dive into function param lists: ftn-declr and abs-ftn-declr.
       (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
-  ;;(if declr (probe-declr declr) `(init-declr ,(namer))))
   (probe-declr declr))
 
 (define* (reify-decl udecl #:optional (namer def-namer))
