@@ -61,6 +61,8 @@
 ;; @deffn {Procedure} parse-c99 [options]
 ;; where options are
 ;; @table code
+;; @item typename-list
+;; a list of typenames (as strings)
 ;; @item #:cpp-defs @i{defs-list}
 ;; @i{defs-list} is a list of strings where each string is of the form
 ;; @i{NAME} or @i{NAME=VALUE}.
@@ -87,7 +89,8 @@
 ;; expressions can be fully evaluated, which may mean adding compiler generated
 ;; defines (e.g., using @code{gen-cpp-defs}).
 ;; @end deffn
-(define* (parse-c99 #:key
+(define* (parse-c99 #:optional (tyns '())
+		    #:key
 		    (cpp-defs '())	    ; CPP defines
 		    (inc-dirs '())	    ; include dirs
 		    (inc-help c99-def-help) ; include helpers
@@ -96,6 +99,7 @@
 		    (show-incs #f)	; show include files
 		    (debug #f))		; debug
   (let ((info (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
+    (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
     (with-fluids ((*info* info)
 		  (*input-stack* '()))
       (catch 'c99-error
