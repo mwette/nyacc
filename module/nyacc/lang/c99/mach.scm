@@ -354,12 +354,14 @@
       ($$ (sx-list 'struct-def $2 $3 (tl->list $5))))
      ("struct" opt-attr-specs "{" struct-declaration-list "}"
       ($$ (sx-list 'struct-def $2 (tl->list $4))))
-     ("struct" opt-attr-specs ident-like ($$ (sx-list 'struct-ref $1 $3)))
+     ("struct" opt-attr-specs ident-like
+      ($$ (sx-list 'struct-ref $2 $3)))
      ("union" opt-attr-specs ident-like "{" struct-declaration-list "}"
       ($$ (sx-list 'union-def $2 $3 (tl->list $5))))
      ("union" opt-attr-specs "{" struct-declaration-list "}"
       ($$ (sx-list 'union-def $2 (tl->list $4))))
-     ("union" opt-attr-specs ident-like ($$ (sx-list 'union-ref $2 $3))))
+     ("union" opt-attr-specs ident-like
+      ($$ (sx-list 'union-ref $2 $3))))
 
     ;; because name following struct/union can be identifier or typeref:
     (ident-like
