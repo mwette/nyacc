@@ -461,7 +461,7 @@
      (sx-list 'struct-def $2 (tl->list $4)))
    ;; struct-or-union-specifier => "struct" opt-attr-specs ident-like
    (lambda ($3 $2 $1 . $rest)
-     (sx-list 'struct-ref $1 $3))
+     (sx-list 'struct-ref $2 $3))
    ;; struct-or-union-specifier => "union" opt-attr-specs ident-like "{" st...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      (sx-list 'union-def $2 $3 (tl->list $5)))
