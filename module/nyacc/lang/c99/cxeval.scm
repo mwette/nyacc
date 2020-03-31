@@ -313,6 +313,7 @@
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
 	    ((fctn-call) #f)		; assume not constant
+	    ((ref-to) #f)		; assume address not useful
 	    ;;
 	    ;; TODO 
 	    ((comp-lit) (fail "cxeval: comp-lit not implemented"))
