@@ -404,9 +404,16 @@
 	   (let ((tspec '(type-spec (fixed-type "int"))))
 	     (values (replace-type-spec specl tspec) declr))))
 
-      ((enum-def . ,rest)
-       ;; could have option to remove enum-defs
-       (values specl declr))
+      ((enum-def (ident ,name) ,rest)
+       ;; replacing with int could be an error : should gen warning
+       (if (member (w/enum name) keep)
+	   (values specl declr)
+	   (let ((tspec '(type-spec (fixed-type "int"))))
+	     (values (replace-type-spec specl tspec) declr))))
+      
+      ((enum-def ,rest)
+       (let ((tspec '(type-spec (fixed-type "int"))))
+	 (values (replace-type-spec specl tspec) declr)))
       
       (,_ (values specl declr)))))
 

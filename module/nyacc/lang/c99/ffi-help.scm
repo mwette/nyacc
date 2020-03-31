@@ -858,7 +858,8 @@
 	 ((equal? param '(param-decl (decl-spec-list (type-spec (void)))
 				     (param-declr))) seed)
 	 (else
-	  (let* ((param (expand-typerefs param (*udict*) (*wrapped*)))
+	  (let* ((px param)
+		 (param (expand-typerefs param (*udict*) (*wrapped*)))
 		 (param (udecl-rem-type-qual param))
 		 (mdecl (udecl->mdecl param #:namer namer)))
 	    (acons (car mdecl) (mdecl->fh-unwrapper mdecl) seed)))))
@@ -934,7 +935,8 @@
       (((array-of) . ,rest) 'unwrap~array)
 
       (,otherwise
-       (sferr "mdecl->fh-unwrapper missed:\n") (pperr mdecl) (quit)
+       (sferr "mdecl->fh-unwrapper missed:\n") (pperr mdecl)
+       (error "MDECL-FH-UNWRAPPER")
        (fherr "mdecl->fh-unwrapper missed: ~S" mdecl)))))
 
 (define (mdecl->fh-wrapper mdecl)
