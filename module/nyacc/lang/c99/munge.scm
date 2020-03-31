@@ -807,10 +807,16 @@
        (doit `(ptr-declr (pointer) ,declr) rest))
       (((array-of ,size) . ,rest)
        (doit `(ary-declr ,declr ,size) rest))
-      
+
+      (((struct-ref (ident ,name))) (make-udecl (car mdecl-tail) declr))
+      (((union-ref (ident ,name))) (make-udecl (car mdecl-tail) declr))
+     (((struct-def (ident ,name))) (make-udecl (car mdecl-tail) declr))
+      (((union-def (ident ,name))) (make-udecl (car mdecl-tail) declr))
+
       (,_
        (sferr "munge/mdecl->udecl missed:\n")
        (pperr mdecl-tail)
+       (error "failed")
        (throw 'nyacc-error "munge/mdecl->udecl failed")
        #f)))
 

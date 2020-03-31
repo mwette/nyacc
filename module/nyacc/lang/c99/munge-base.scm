@@ -91,7 +91,7 @@
 		    ((null? cl) decl)
 		    (else (sx-attr-add decl 'comment (str-app-rev cl))))))
 	     (loop (cons decl rz) '() (cdr fl))))
-	  (,_ (throw 'nyacc-error "clean-field-list: ~S" (car fl)))))))
+	  (,_ (throw 'c99-error "clean-field-list: ~S" (car fl)))))))
 
 (define (clean-field-list field-list)
   (cons (car field-list) (clean-fields (cdr field-list))))
@@ -326,11 +326,12 @@
 	((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
 	(else (tdef-splice-declr declr tdef-declr))))))
 
-  (define (splice-aggregate specl name key)
-    ;; turn "struct ref abc" into "struct { ... }"
+  (define (replace-aggr-ref specl name key)
+    ;; turn ref "struct abc" into def "struct ref { ... }"
     (let* ((udecl (assoc-ref udict key))
 	   (repll (and udecl (sx-ref udecl 1))))
-      (and repll (splice-type-spec specl repll))))
+      (unless udecl (throw 'c99-error "no struct/union defined for ~S" name))
+      (splice-type-spec specl repll)))
 
   (define (expand-aggregate tag attr name fields)
     (let* ((fields (map (lambda (fld) (if (eq? (sx-tag fld) 'comment) fld
@@ -338,9 +339,9 @@
 			fields))
 	   (ident (and name `(ident ,name)))
 	   (field-list `(field-list . ,fields)))
-      (if ident
-	  (sx-list tag attr ident field-list)
-	  (sx-list tag attr field-list))))
+      `(type-spec ,(if ident
+		       (sx-list tag attr ident field-list)
+		       (sx-list tag attr field-list)))))
       
   (let* ((tspec (sx-find 'type-spec specl)))
 
@@ -368,7 +369,7 @@
 	     (values specl declr)
 	     (values (replace-type-spec specl '(type-spec (void))) declr)))
 	(else
-	 (values (splice-aggregate specl name (w/struct name)) declr))))
+	 (re-expand (replace-aggr-ref specl name (w/struct name)) declr))))
 
       ((union-ref (ident ,name))
        (cond
@@ -379,14 +380,22 @@
 	     (values specl declr)
 	     (values (replace-type-spec specl '(type-spec (void))) declr)))
 	(else
-	 (values (splice-aggregate specl name (w/union name)) declr))))
+	 (re-expand (replace-aggr-ref specl name (w/union name)) declr))))
 
-      ((struct-def (@attr . ,attr) (ident ,name) (field-list ,fields))
-       (let ((tspec (expand-aggregate 'struct attr name fields)))
+      ((struct-def (@ . ,attr) (ident ,name) (field-list . ,fields))
+       (let ((tspec (expand-aggregate 'struct-def attr name fields)))
 	 (values (replace-type-spec specl tspec) declr)))
 				  
-      ((union-def (@attr . ,attr) (ident ,name) (field-list ,fields))
-       (let ((tspec (expand-aggregate 'struct attr name fields)))
+      ((struct-def (@ . ,attr) (field-list . ,fields))
+       (let ((tspec (expand-aggregate 'struct-def attr #f fields)))
+	 (values (replace-type-spec specl tspec) declr)))
+				  
+      ((union-def (@ . ,attr) (ident ,name) (field-list . ,fields))
+       (let ((tspec (expand-aggregate 'union-def attr name fields)))
+	 (values (replace-type-spec specl tspec) declr)))
+
+      ((union-def (@ . ,attr) (field-list . ,fields))
+       (let ((tspec (expand-aggregate 'union-def attr #f fields)))
 	 (values (replace-type-spec specl tspec) declr)))
 
       ((enum-ref (ident ,name))
@@ -580,7 +589,7 @@
       ((pointer ,pointer) (unwrap-pointer pointer (cons '(pointer-to) tail)))
       ((pointer) (cons '(pointer-to) tail))
       (,_ (sferr "unwrap-pointer failed on:\n") (pperr pointer)
-	  (throw 'nyacc-error "munge-base/unwrap-pointer"))))
+	  (throw 'c99-error "munge-base/unwrap-pointer"))))
   
   (define (unwrap-declr declr tail)
     (sx-match declr
@@ -609,7 +618,7 @@
       ((bit-field (ident ,name) ,size) (cons* name `(bit-field ,size) tail))
       (,_
        (sferr "munge-base/unwrap-declr missed:\n") (pperr declr)
-       (throw 'nyacc-error "munge-base/unwrap-declr failed")
+       (throw 'c99-error "munge-base/unwrap-declr failed")
        #f)))
 
   (unwrap-declr declr tail))

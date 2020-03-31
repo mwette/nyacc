@@ -284,7 +284,6 @@
 (define (w/struct name) (cons 'struct name))
 (define (w/union name) (cons 'union name))
 (define (w/enum name) (cons 'enum name))
-;; pointers needed
 (define (w/* name) (cons 'pointer name))
 (define (w/struct* name) (cons 'pointer (cons 'struct name)))
 (define (w/union* name) (cons 'pointer (cons 'union name)))
@@ -535,7 +534,7 @@
 	 (make* (strings->symbol "make-" typename "*"))
 	 (type (strings->symbol typename))
 	 (make (strings->symbol "make-" typename)))
-    (ppscm `(ref<=>deref! ,type* ,make* ,type ,make))))
+    (ppscm `(fh-ref<=>deref! ,type* ,make* ,type ,make))))
 
 (define (fhscm-def-function* name return params)
   (let* ((st-name (if (string? name) name (symbol->string name)))
@@ -809,12 +808,6 @@
 	 (mdecl (udecl->mdecl udecl1)))
     (mtail->ffi-desc (cdr mdecl))))
 
-(define (gen-bs-decl-return udecl)
-  (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
-	 (udecl (udecl-rem-type-qual udecl1))
-	 (mdecl (udecl->mdecl udecl1)))
-    (mtail->bs-desc (cdr mdecl))))
-
 (define (gen-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
   ;; mtail->ffi-desc needs to convert enum to int or void*
@@ -822,17 +815,22 @@
     (reverse
      (fold
       (lambda (param seed)
-	(sferr "param:\n") (pperr param)
-	(if (equal? param '(ellipsis))
-	    '()
-	    (let* ((udecl1 (expand-typerefs param (*udict*) ffi-defined))
-		   (y (sferr "A\n"))
-		   (udecl1 (udecl-rem-type-qual udecl1))
-		   (y (sferr "B\n"))
-		   (mdecl (udecl->mdecl udecl1 #:namer namer)))
-	      (sferr "calling mtail->ffi-desc on ~S\n" (cdr mdecl))
-	      (cons (mtail->ffi-desc (cdr mdecl)) seed))))
+	(cond
+	 ((equal? param '(ellipsis)) seed)
+	 ((equal? param '(param-decl (decl-spec-list (type-spec (void)))
+				     (param-declr))) seed)
+	 (else
+	  (let* ((udecl1 (expand-typerefs param (*udict*) ffi-defined))
+		 (udecl1 (udecl-rem-type-qual udecl1))
+		 (mdecl (udecl->mdecl udecl1 #:namer namer)))
+	    (cons (mtail->ffi-desc (cdr mdecl)) seed)))))
       '() params))))
+
+(define (gen-bs-decl-return udecl)
+  (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
+	 (udecl (udecl-rem-type-qual udecl1))
+	 (mdecl (udecl->mdecl udecl1)))
+    (mtail->bs-desc (cdr mdecl))))
 
 (define (gen-bs-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
@@ -849,16 +847,35 @@
 	      (cons (mtail->bs-desc (cdr mdecl)) seed))))
       '() params))))
 
+;; given list of udecl params generate list of name-unwrap pairs
+(define (gen-exec-params params)
+  (let ((namer (make-arg-namer)))
+    (reverse
+     (fold
+      (lambda (param seed)
+	(cond
+	 ((equal? param '(ellipsis)) seed)
+	 ((equal? param '(param-decl (decl-spec-list (type-spec (void)))
+				     (param-declr))) seed)
+	 (else
+	  (let* ((param (expand-typerefs param (*udict*) (*wrapped*)))
+		 (param (udecl-rem-type-qual param))
+		 (mdecl (udecl->mdecl param #:namer namer)))
+	    (acons (car mdecl) (mdecl->fh-unwrapper mdecl) seed)))))
+      '() params))))
+
 ;; === function calls : unwrap args, call, wrap return
 
 ;; given mdecl for an exec argument give the unwrapper
 (define (mdecl->fh-unwrapper mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
+
     ;; git_reference_foreach_name_cb not preserved
     (pmatch (cdr mdecl)
       (((fixed-type ,name)) 'unwrap~fixed)
       (((float-type ,name)) 'unwrap~float)
       (((void)) #f)
+
       (((typename ,name))
        (cond ;; bit of a hack
 	((member name '("float" "double")) 'unwrap~float)
@@ -971,22 +988,6 @@
 
       (,otherwise (fherr "mdecl->fh-wrapper missed: ~S" mdecl)))))
 
-;; given list of udecl params generate list of name-unwrap pairs
-(define (gen-exec-params params)
-  (let ((namer (make-arg-namer)))
-    (reverse
-     (fold
-      (lambda (param-decl seed)
-	(cond
-	 ((equal? param-decl '(ellipsis)) seed)
-	 (else
-	  ;; Changed to (*wrapped*) to include enum types. If we need (*defined*)
-	  (let* ((param-decl (expand-typerefs param-decl (*udict*) (*wrapped*)))
-		 (param-decl (udecl-rem-type-qual param-decl))
-		 (mdecl (udecl->mdecl param-decl #:namer namer)))
-	    (acons (car mdecl) (mdecl->fh-unwrapper mdecl) seed)))))
-      '() params))))
-
 ;; given list of name-unwrap pairs generate function arg names
 (define (gen-exec-arg-names params)
   (map (lambda (s) (string->symbol (car s))) params))
@@ -1027,26 +1028,18 @@
 ;; params is list of param-decl trees (i.e., cdr of param-list tree)
 ;; @end deffn
 (define (cnvt-fctn name rdecl params)
-  (sferr "cnvt-fctn: ~S ret=~S params=...\n" name rdecl) (pperr params)
+  ;;(sferr "cnvt-fctn: ~S ret=~S params=...\n" name rdecl) (pperr params)
   (let* ((varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
-	 (x (sferr "1\n"))
 	 (decl-return (gen-decl-return rdecl))
-	 (x (sferr "2\n"))
 	 (decl-params (gen-decl-params params))
-	 (x (sferr "3\n"))
 	 (exec-return (gen-exec-return-wrapper rdecl))
-	 (x (sferr "4\n"))
 	 (exec-params (gen-exec-params params))
-	 (x (sferr "5\n"))
 	 (sname (string->symbol name))
-	 (x (sferr "6\n"))
 	 (~name (string->symbol (string-append "~" name)))
-	 (x (sferr "7\n"))
 	 ;;(call `(,~name ,@(gen-exec-call-args exec-params)))
 	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
 			  (map cdr ~rest)))
 	 (call `((force ,~name) ,@(gen-exec-call-args exec-params))))
-    (sferr "10\n")
     (cond
      (varargs?
       (sfscm ";; to be used with fh-cast\n")
@@ -1067,7 +1060,6 @@
 	  (let ,(gen-exec-unwrappers exec-params)
 	    ,(if exec-return (list exec-return call) call)))))
      (else ;; combined ~name and name defines
-      (sferr "11\n")
       (ppscm
        `(define ,sname
 	  (let ((,~name
@@ -1082,11 +1074,15 @@
 
 (define (cnvt-extern name ms-tail)
   (let ((desc (mtail->bs-desc ms-tail)))
-    (sfscm ";; (~A) => bytestructure\n" name)
+    (sfscm ";; usage: ???\n")
+    (sfscm ";;   (~A) => bytestructure-ref\n" name)
+    (sfscm ";;   (~A val) => bytestructure-set!\n" name)
     (ppscm
      `(define-public ,(string->symbol name)
-	(let ((x-promise (delay (fh-link-extern ,name ,desc ,(link-libs)))))
-	  (lambda () (force x-promise)))))))
+	(let ((x-var (delay (fh-link-extern ,name ,desc ,(link-libs)))))
+	  (case-lambda
+	    (() (bytestructure-ref (force x-var)))
+	    ((var) (bytestructure-set! (force x-var) var))))))))
 
 ;; ------------------------------------
 
@@ -1169,12 +1165,9 @@
   (*defined* defined)
 
   (let*-values (((tag attr specl declr) (split-udecl udecl))
-		((x) (sferr "cleaning ...\n"))
 		((specl declr) (cleanup-udecl specl declr))
-		((x) (sferr "... clean\n"))
 		((clean-udecl) (values (sx-list tag #f specl declr))))
 
-    (pperr clean-udecl)
     (sxml-match clean-udecl
 
       ;; typedef void **ptr_t;
@@ -1568,8 +1561,8 @@
       ((udecl
 	(decl-spec-list
 	 (type-spec (struct-def ,field-list))))
-       (sferr "bug in munge? unnamed struct-def\n")
        (pperr udecl)
+       (sferr "bug in munge? unnamed struct-def\n")
        (values wrapped defined))
 
       ;; union foo { ... }.
@@ -1672,7 +1665,7 @@
       ;; non-pointer
       ((udecl (decl-spec-list (stor-spec (extern)) ,type-spec)
 	      ,init-declr . ,rest)
-       (sferr "NON_POINTER_CASE\n")
+       ;;(sferr "NON_POINTER_CASE\n")
        (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mdecl (udecl->mdecl udecl)))
@@ -1924,7 +1917,7 @@
 	    (not (and (pair? name)	  ; 3) not anonymous
 		      (string=? "*anon*" (cdr name)))))
 	   (let ((udecl (udict-ref udict name)))
-	     (sferr "processing ~S\n" name)
+	     ;;(sferr "processing ~S\n" name)
 	     (nlscm) (c99scm udecl)
 	     (if (*echo-decls*)
 		 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
