@@ -573,7 +573,7 @@
 ;; @code{pointer-to} cast for function args.  See @code{epoll_wait} below.
 (define-fh-vector-type struct-epoll_event-vec struct-epoll_event-desc
   struct-epoll_event-vec? make-struct-epoll_event-vec)
-(fh-ref<->deref! struct-epoll_event* make-struct-epoll_event*
+(fh-ref<=>deref! struct-epoll_event* make-struct-epoll_event*
 		 struct-epoll_event-vec make-struct-epoll_event-vec)
 (export make-struct-epoll_event-vec)
 
