@@ -1,6 +1,6 @@
 ;; nyacc/lang/ffi-help/dbus-03.scm - peer-to-peer over the session bus
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2020 Matthew R. Wette
 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,7 @@
 (use-modules ((system foreign) #:prefix ffi:))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
 (define iface "local.Neighbor")
 (define iface-pat "interface='local.Neighbor'")
@@ -154,8 +155,9 @@
     #t))
 
 (let ((args (cdr (program-arguments))))
-  (if (null? args)
-      (run-peer "worker")
-      (run-peer (car args))))
+  (when (null? args)
+    (sferr "usage: guile dbus-03.scm (worker|monitor)\n")
+    (error "quitting"))
+  (run-peer (car args)))
 
 ;; --- last line ---
