@@ -2,6 +2,16 @@
 @setfilename nyacc-c99-munge.info
 @settitle NYACC C99 Munge Module
 
+@copying
+Copyright (C) 2017,2020 -- Matthew R. Wette.
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as @file{COPYING.DOC}.
+@end copying
+
 @headings off
 @everyfooting @| @thispage @|
 
@@ -9,8 +19,10 @@
 @top NYACC C99 Munge Module
 @format
 Matt Wette
-March 2017
+April 2020
 @end format
+
+This document is a work in progress: read rough draft.
 
 @heading Introduction
 
@@ -70,7 +82,73 @@ extern const char *cmds[10];
 Since the NYACC C99 parser captures some comments, these can be preserved
 in the above procedure.
 
-@section The Util2 (or Munge) Module
+@heading expand-typerefs
+
+The process of generating hooks to access C-source libraries via
+the associated C headers usually requires some sort of expansion of
+defined types, aka typedefs.  For example, if one wants to provide
+a Guile module associated with a library whose API is exposed in
+@file{coolness.h} it may be preferrable to preserve the types defined
+in that header but expand typedefs generated in dependent headers.
+For example, say @file{coolness.h} is as follows:
+@example
+#include <tdefs.h>
+
+typedef struct { td_int a; double b; } cool_t;
+
+int doit(cool_t);
+@end example
+where @file{tdefs.h} looks like:
+@example
+typedef int *td_int;
+@end example
+Now as mentions, we want to preserve @code{cool_t} but expand
+@code{td_int}.  That is, we expect the parse tree to reflect the
+following:
+@example
+typedef struct { int *a; double b; } cool_t;
+
+int doit(cool_t);
+@end example
+Notice that the typedef @code{td_int} has been replace with it's
+equivalent declaration.  This is what the @nyacc{} function
+@code{expand-typerefs} does. It transforms a C declartion to a C
+declaration.  The function takes an additional argument @code{keep}
+that is a list of declarations to keep in the expansion.  Thus, the
+above would have been called with @code{("cool_t")}.  The result is
+that @code{td_int a} is expanded to @code{int *a}, but @code{cool_t}
+is retained.  The @emph{keep} list can include the forms
+@code{(pointer . @i{name})}, @code{(struct . @i{name})}, 
+@code{(union . @i{name})}, @code{(enum . @i{name})} and
+@code{(pointer . @i{keeper-form}}.
+
+If you call @code{expand-typerefs} on a declaration that includes
+structs or unions it will dive into those and expand.   In addition
+@table @code
+@item foo_t x
+Declarations of this form will be preserved if in the keep-list,
+otherwise they are expanded. 
+@item foo_t *x
+Declarations of this form will be preserved if @code{"foo_t"} or
+@code{(pointer . "foo_t"} are in the keep-list, otherwise they are
+expanded to @code{void *x}.
+@item struct foo x
+Declarations of this form (along with corresponding union forms) will
+be preserved if @code{(struct . "foo")} is in the keep-list.
+Otherwise, they are expanded to the associated definition (without the
+optional identifier identifier).
+@item struct foo *x
+Declarations of this form (along with corresponding union forms) will
+be preserved if @code{struct . "foo")} or @code{(pointer struct
+. "foo")} are in the keep-list.
+@item struct { ... }
+Structs and union definition forms are recursively checked.
+@item enum foo x
+Declarations of this form are preserved if @code{(enum . "foo")} are
+in the keep-list.  Otherwise they are expanded to @code{int x}.
+@end itemize
+
+@heading Other
 
 Declarations must have one of
 @itemize
@@ -103,10 +181,6 @@ Lookup @code{union name}.
 @item udict-enum-ref udict name
 Lookup @code{enum name}.
 @end table
-
-@section From Util2
-
-@c @include munge_scm.texi
 
 
 @bye
