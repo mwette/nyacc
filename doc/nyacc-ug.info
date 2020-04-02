@@ -128,7 +128,8 @@ in the top-level sub-directory 'examples'.)
           right-hand side, but mid-rule actions are possible.  Inside
           the '$$' form, the variables '$1', '$2', etc.   refer to the
           symantic value of the corresponding item in the right hand
-          side of the production rule.
+          side of the production rule.  See *note Actions:: for more
+          details on how those actions are evaluated.
         * The expression returned by 'lalr-spec' is an association list
           (a-list); you can peek at the internals using typical Scheme
           procedures for a-lists.
@@ -422,10 +423,12 @@ reserved symbols are in use:
           ($$ _body_)
           ($$-ref 'rule12)
           ($$/ref 'rule12 _body_)
-     The 'ref' forms are used to provide references for future use to
-     support other (non-Scheme) languages, where the parser will be
-     equipped to execute reduce-actions by reference (e.g.  an
-     associative array).
+     In an action, _body_ is a Scheme expression, which can refer to the
+     semantic values via the special variables '$1', '$2', ... See *note
+     Actions:: for more details on how _body_ is evaluated.  The 'ref'
+     forms are used to provide references for future use to support
+     other (non-Scheme) languages, where the parser will be equipped to
+     execute reduce-actions by reference (e.g.  an associative array).
 '$1, $2, ...'
      These appear as arguments to user-supplied actions and will appear
      in the _body_ shown above.  The variables reference the symantic
@@ -463,6 +466,22 @@ files:
           ($P1 ($empty ($$ (gen-x))))
 '$default'
      This is used in the generated parser to indicate a default action.
+
+Acions
+------
+
+A grammar rule's right-hand side can contain _actions_:
+       ($$ _body_)
+   _body_ is a Scheme expression which can refer to the values matched
+by the rule's right-hand side via the variables ('$1', '$2', ...).  This
+expression is evaluates in the top-level environment of the module from
+which 'make-lalr-parser' is called, so it will "see" the bindings
+defined there.
+
+   When actions appear within a production rule (known as mid-rule
+actions) they count as right-hand side items and thus the results of
+their evaluation is bound to the corresponding '$n' variable available
+for the end-of-rule action.
 
 Recovery from Syntax Errors
 ---------------------------
@@ -1320,25 +1339,26 @@ File: nyacc-ug.info,  Node: References,  Prev: TODOs,  Up: Top
 Tag Table:
 Node: Top622
 Node: Demonstration877
-Node: Parsing9755
-Ref: Specification10203
-Ref: Recovery from Syntax Errors19076
-Ref: sublanguage19958
-Ref: Parser20279
-Ref: match table24122
-Ref: lex25895
-Ref: parser-lexer33003
-Ref: Parser Tables34573
-Ref: Hashing and Compacting35885
-Ref: Debugging37594
-Ref: Human Readable Output37705
-Node: Translation40742
-Ref: Tagged Lists43192
-Ref: SXML Parse Trees45138
-Node: Coding to the Compiler Tower47055
-Ref: Pretty Print48283
-Node: Administrative48479
-Node: TODOs49580
-Node: References50601
+Node: Parsing9839
+Ref: Specification10287
+Ref: Actions19320
+Ref: Recovery from Syntax Errors19986
+Ref: sublanguage20868
+Ref: Parser21189
+Ref: match table25032
+Ref: lex26805
+Ref: parser-lexer33913
+Ref: Parser Tables35483
+Ref: Hashing and Compacting36795
+Ref: Debugging38504
+Ref: Human Readable Output38615
+Node: Translation41652
+Ref: Tagged Lists44102
+Ref: SXML Parse Trees46048
+Node: Coding to the Compiler Tower47965
+Ref: Pretty Print49193
+Node: Administrative49389
+Node: TODOs50490
+Node: References51511
 
 End Tag Table

@@ -234,6 +234,7 @@ appears as the last element of a right-hand side, but mid-rule
 actions are possible.  Inside the <code>$$</code> form, the variables
 <code>$1</code>, <code>$2</code>, etc.&nbsp; refer to the symantic value of the
 corresponding item in the right hand side of the production rule.
+See <a href="#Actions">Actions</a> for more details on how those actions are evaluated.
 </li><li> The expression returned by <code>lalr-spec</code> is an association list (a-list);
 you can peek at the internals using typical Scheme procedures for a-lists.
 </li></ul>
@@ -602,7 +603,10 @@ have the forms
 ($$-ref 'rule12)
 ($$/ref 'rule12 <em>body</em>)
 </pre></div>
-<p>The <code>ref</code> forms are used to provide references for future use to
+<p>In an action, <em>body</em> is a Scheme expression, which can refer to
+the semantic values via the special variables <code>$1</code>, <code>$2</code>,
+&hellip;  See <a href="#Actions">Actions</a> for more details on how <em>body</em> is evaluated.
+The <code>ref</code> forms are used to provide references for future use to
 support other (non-Scheme) languages, where the parser will be
 equipped to execute reduce-actions by reference (e.g. an associative array).
 </p></dd>
@@ -661,6 +665,23 @@ production rule
 </p></dd>
 </dl>
 
+<a name="Acions"></a>
+<h4 class="subheading">Acions</h4>
+<a name="Actions"></a><p>A grammar rule&rsquo;s right-hand side can contain <em>actions</em>:
+</p><div class="example">
+<pre class="example">  ($$ <em>body</em>)
+</pre></div>
+<p><em>body</em> is a Scheme expression which can refer to the values
+matched by the rule&rsquo;s right-hand side via the variables (<code>$1</code>,
+<code>$2</code>, &hellip;).  This expression is evaluates in the top-level
+environment of the module from which &rsquo;make-lalr-parser&rsquo; is called, so
+it will &ldquo;see&rdquo; the bindings defined there.
+</p>
+<p>When actions appear within a production rule (known as mid-rule
+actions) they count as right-hand side items and thus the results of
+their evaluation is bound to the corresponding <code>$<i>n</i></code> variable
+available for the end-of-rule action.
+</p>
 <a name="Recovery-from-Syntax-Errors-1"></a>
 <h4 class="subheading">Recovery from Syntax Errors</h4>
 <a name="Recovery-from-Syntax-Errors"></a>
