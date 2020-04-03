@@ -317,20 +317,22 @@
     ;;
     (sfscm "  #:use-module (system ffi-help-rt)\n")
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
-    (sfscm "  #:use-module (bytestructures guile)\n")
-    (sfscm "  )\n")
+    (sfscm "  #:use-module (bytestructures guile))\n")
+    (sfscm "\n")
     ;;
     (ppscm
      `(define ,(link-libs)
 	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
-    (if (*echo-decls*) (sfscm "(define echo-decls #t)\n"))
+    (sfscm "\n")
+    (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))
     ;;
     (ppscm
      '(cond-expand
        (guile-2.2)
        (guile-2
 	(define intptr_t long)
-	(define uintptr_t unsigned-long))))))
+	(define uintptr_t unsigned-long))))
+    (sfscm "\n")))
 
 ;; === type conversion ==============
 
