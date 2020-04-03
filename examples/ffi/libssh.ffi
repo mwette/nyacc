@@ -27,24 +27,24 @@
 (define-fh-pointer-type ssh_channel* 
   ssh_channel*-desc ssh_channel*? make-ssh_channel*)
 (export ssh_channel* ssh_channel*? make-ssh_channel*)
-(ref<->deref! ssh_channel* make-ssh_channel* ssh_channel make-ssh_channel)
+(fh-ref<=>deref! ssh_channel* make-ssh_channel* ssh_channel make-ssh_channel)
 
 (define-public ssh_key*-desc (bs:pointer  ssh_key-desc))
 (define-fh-pointer-type ssh_key* ssh_key*-desc ssh_key*? make-ssh_key*)
 (export ssh_key* ssh_key*? make-ssh_key*)
-(ref<->deref! ssh_key* make-ssh_key* ssh_key make-ssh_key)
+(fh-ref<=>deref! ssh_key* make-ssh_key* ssh_key make-ssh_key)
 
 (define-public ssh_session*-desc (bs:pointer  ssh_session-desc))
 (define-fh-pointer-type ssh_session* 
   ssh_session*-desc ssh_session*? make-ssh_session*)
 (export ssh_session* ssh_session*? make-ssh_session*)
-(ref<->deref! ssh_session* make-ssh_session* ssh_session make-ssh_session)
+(fh-ref<=>deref! ssh_session* make-ssh_session* ssh_session make-ssh_session)
 
 (define-public ssh_string*-desc (bs:pointer  ssh_string-desc))
 (define-fh-pointer-type ssh_string* 
   ssh_string*-desc ssh_string*? make-ssh_string*)
 (export ssh_string* ssh_string*? make-ssh_string*)
-(ref<->deref! ssh_string* make-ssh_string* ssh_string make-ssh_string)
+(fh-ref<=>deref! ssh_string* make-ssh_string* ssh_string make-ssh_string)
 
 
 ;; --- last line ---

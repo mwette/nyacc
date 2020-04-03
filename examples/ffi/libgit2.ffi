@@ -24,13 +24,13 @@
 (define git_commit**-desc (bs:pointer git_commit*-desc))
 (define-fh-pointer-type git_commit** git_commit**-desc
   git_commit**? make-git_commit**)
-(ref<->deref! git_commit** make-git_commit**
+(fh-ref<=>deref! git_commit** make-git_commit**
 	      git_commit* make-git_commit*)
 
 (define git_repository**-desc (bs:pointer git_repository*-desc))
 (define-fh-pointer-type git_repository** git_repository**-desc
   git_repository**? make-git_repository**)
-(ref<->deref! git_repository** make-git_repository**
+(fh-ref<=>deref! git_repository** make-git_repository**
 	      git_repository* make-git_repository*)
 
 (define unwrap-git_branch_t* (fht-unwrap int*))

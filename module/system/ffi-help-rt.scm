@@ -700,7 +700,7 @@
 (define-fh-pointer-type char** char**-desc char**? make-char**)
 (export char**-desc char** char**? make-char**)
 
-(ref<->deref! char** make-char** char* make-char*)
+(fh-ref<=>deref! char** make-char** char* make-char*)
 
 (define (char*->string obj)
   (ffi:pointer->string (ffi:make-pointer (fh-object-ref obj))))
@@ -744,7 +744,7 @@
 	      (display ">" port))))
 (define make-void* (fht-wrap void*))
 (define void*? (lambda (obj) (eq? (struct-vtable obj) void*)))
-(ref<->deref! void* make-void* fh-void make-fh-void)
+(fh-ref<=>deref! void* make-void* fh-void make-fh-void)
 (export void* void*? make-void*)
 
 (define void**-desc (bs:pointer (bs:pointer 'void)))
@@ -763,7 +763,7 @@
 	      (display ">" port))))
 (define make-void** (fht-wrap void**))
 (define void**? (lambda (obj) (eq? (struct-vtable obj) void**)))
-(ref<->deref! void** make-void** void* make-void*)
+(fh-ref<=>deref! void** make-void** void* make-void*)
 (export void** void**? make-void**)
 
 

@@ -42,7 +42,7 @@
 (export cairo_raster_source_acquire_func_t*
 	cairo_raster_source_acquire_func_t*?
 	make-cairo_raster_source_acquire_func_t*)
-(ref<->deref! cairo_raster_source_acquire_func_t*
+(fh-ref<=>deref! cairo_raster_source_acquire_func_t*
 	      make-cairo_raster_source_acquire_func_t*
 	      cairo_raster_source_acquire_func_t
 	      make-cairo_raster_source_acquire_func_t)
@@ -56,7 +56,7 @@
 (export cairo_raster_source_release_func_t*
 	cairo_raster_source_release_func_t*?
 	make-cairo_raster_source_release_func_t*)
-(ref<->deref! cairo_raster_source_release_func_t*
+(ref<=>deref! cairo_raster_source_release_func_t*
 	      make-cairo_raster_source_release_func_t*
 	      cairo_raster_source_release_func_t
 	      make-cairo_raster_source_release_func_t)

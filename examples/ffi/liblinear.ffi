@@ -26,7 +26,7 @@
   (bs:pointer struct-feature_node*-desc))
 (define-fh-pointer-type struct-feature_node** struct-feature_node**-desc
   struct-feature_node**? make-struct-feature_node**)
-(ref<->deref! struct-feature_node** make-struct-feature_node**
+(fh-ref<=>deref! struct-feature_node** make-struct-feature_node**
 	      struct-feature_node* make-struct-feature_node*)
 
 ;;(define linear-INF +inf.0)
