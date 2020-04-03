@@ -5,15 +5,26 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-99-99  pending V1.02.0
-	* made changes to C99 AST, munger and ffi helper, as follows:
-	* updated C99 tree tags (e.g., array-of => ary-declr), and
+2020-04-99  pending V1.02.0
+	* The C99 AST, munger and ffi helper, were updated.
+	  updated C99 tree tags (e.g., array-of => ary-declr), and
 	  and narrowed use of abs-...-declr to lowest level. 
-	* Updated udecl->mdecl to use above, made more robust, I hope,
+	* udecl->mdecl was upated to use above updates: it's more robust,
  	  and it now generates (extern) tag for non-functions, to be
-	  used in new implementation of the ffi helper.
-	* added reify-decl to make abstract C99 declarations concrete.
-	* working eval-c99-cx for sizeof(type)
+	  used in a new implementation of the ffi helper (1.03?)
+	* reify-decl was added to make abstract C99 declarations concrete
+	* added arch-info: sizeof, alignof for multiple targets
+	* eval-c99-cx now works for sizeof(type)!
+	* expand-typerefs has been cleaned up: it seems more robust;
+	  many new test cases were added in c99-06.test.
+	* cleaned up ffi-helper ; no more warning on redefined symbols
+	  from guile 3.0; more enum/defines handled now that code to
+	  evaluate constant expressions is more capable
+	* module/nyacc/lalr.scm (make-lalr-parser): added another keyword
+	  argument `env' to specify the enviornment for generating
+	  the parser actions (default, @code{(current-module))})
+	* Added #:env keyword option to make-lalr-parser.  This is where
+	  the quoted actions are evaluated.
 
 2020-03-13  V1.01.2
 	* fixed bug #57911, compile-ffi fails to parse function attributes 
