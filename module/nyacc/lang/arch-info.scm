@@ -108,19 +108,14 @@
 (define alignof-map/avr
   (map (lambda (pair) (cons (car pair) 1)) sizeof-map/avr))
 
-(define arch-info-host
-  (eval-when (expand eval compile)
-    (and=> (string-split %host-type #\-) car)))
-
-(define sizeof-map/native-arch
-  (eval-when (expand eval compile)
-    (assoc-ref arch-sizeof-map arch-info-host)))
-	 
-(define alignof-map/native-arch
-  (eval-when (expand eval compile)
-    (assoc-ref arch-alignof-map arch-info-host)))
-
 (use-modules (system foreign))
+
+(cond-expand
+ (guile-2.2)
+ (guile-2
+  (define intptr_t long)
+  (define uintptr_t unsigned-long)
+  ))
 
 (define sizeof-map/native-builtin
   `((* . ,(sizeof '*))
@@ -194,6 +189,16 @@
   `(("native" . ,alignof-map/native)
     ("x86_64" . ,alignof-map/x86_64)
     ("avr" . ,alignof-map/avr)))
+
+(define arch-info-host
+  (eval-when (expand eval compile)
+    (and=> (string-split %host-type #\-) car)))
+
+(define sizeof-map/native-arch
+  (assoc-ref arch-sizeof-map arch-info-host))
+	 
+(define alignof-map/native-arch
+  (assoc-ref arch-alignof-map arch-info-host))
 
 ;; @deffn {Procedure} alignof-basetype type [arch]
 ;; Return the size in bytes of the basetype @var{type}.

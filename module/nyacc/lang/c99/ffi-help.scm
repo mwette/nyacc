@@ -323,7 +323,14 @@
     (ppscm
      `(define ,(link-libs)
 	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
-    (if (*echo-decls*) (sfscm "(define echo-decls #t)\n"))))
+    (if (*echo-decls*) (sfscm "(define echo-decls #t)\n"))
+    ;;
+    (ppscm
+     '(cond-expand
+       (guile-2.2)
+       (guile-2
+	(define intptr_t long)
+	(define uintptr_t unsigned-long))))))
 
 ;; === type conversion ==============
 
