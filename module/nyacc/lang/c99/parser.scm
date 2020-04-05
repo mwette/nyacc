@@ -53,7 +53,9 @@
 (define c99-raw-parser
   (make-lalr-parser
    (acons 'act-v c99-act-v c99-tables)
-   #:skip-if-unexp '($lone-comm $code-comm $pragma)))
+   ;; These must also appear in #:keepers arg to hashify in mach.scm.
+   #:skip-if-unexp '($lone-comm $code-comm $pragma cpp-stmt)))
+
 	      
 (define gen-c99-lexer
   (make-c99-lexer-generator c99-mtab c99-raw-parser))
@@ -75,6 +77,8 @@
 ;; @item #:mode @i{mode}
 ;; @i{mode} is one literal @code{'code}, @code{'file}, or @code{'decl}.
 ;; The default mode is @code{'code}.
+;; @item #:return-defs @i{bool}
+;; Return two values: the parse tree and the list of CPP definitions.
 ;; @item #:debug @i{bool}
 ;; a boolean which if true prints states from the parser
 ;; @end table
@@ -97,6 +101,7 @@
 		    (mode 'code)	; mode: 'file, 'code or 'decl
 		    (xdef? #f)		; pred to determine expand
 		    (show-incs #f)	; show include files
+		    (return-defs #f)	; return (values tree defs)
 		    (debug #f))		; debug
   (let ((info (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
@@ -105,11 +110,12 @@
       (catch 'c99-error
 	(lambda ()
 	  (catch 'nyacc-error
-	    (lambda () (c99-raw-parser
-			(gen-c99-lexer #:mode mode
-				       #:xdef? xdef?
-				       #:show-incs show-incs)
-			#:debug debug))
+	    (lambda () (let ((sx (c99-raw-parser
+				  (gen-c99-lexer #:mode mode
+						 #:xdef? xdef?
+						 #:show-incs show-incs)
+				  #:debug debug)))
+			 (if return-defs (values sx (cpi-defs info)) sx)))
 	    (lambda (key fmt . args) (apply throw 'c99-error fmt args))))
 	(lambda (key fmt . args)
 	  (report-error fmt args)
