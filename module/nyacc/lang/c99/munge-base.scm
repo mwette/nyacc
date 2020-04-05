@@ -82,6 +82,8 @@
 	(sx-match (car fl)
 	  ((comment ,text)
 	   (loop rz (cons text cl) (cdr fl)))
+	  ((cpp-stmt . ,rest)
+	   (loop rz cl (cdr fl)))
 	  (((comp-udecl comp-decl) (@ . ,attr) . ,rest)
 	   (let* ((comm (assq-ref attr 'comment))
 		  (decl (car fl))
@@ -334,8 +336,10 @@
       (splice-type-spec specl repll)))
 
   (define (expand-aggregate tag attr name fields)
-    (let* ((fields (map (lambda (fld) (if (eq? (sx-tag fld) 'comment) fld
-					  (expand-typerefs fld udict keep)))
+    (let* ((fields (map (lambda (fld)
+			  (case (sx-tag fld)
+			    ((comment cpp-stmt) fld)
+			    (else (expand-typerefs fld udict keep))))
 			fields))
 	   (ident (and name `(ident ,name)))
 	   (field-list `(field-list . ,fields)))
