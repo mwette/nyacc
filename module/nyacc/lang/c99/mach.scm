@@ -376,8 +376,10 @@
     (struct-declaration-list		; S 6.7.2.1
      (struct-declaration ($$ (make-tl 'field-list $1)))
      (lone-comment ($$ (make-tl 'field-list $1)))
+     ;;(cpp-statement ($$ (make-tl 'field-list $1)))
      (struct-declaration-list struct-declaration ($$ (tl-append $1 $2)))
      (struct-declaration-list lone-comment ($$ (tl-append $1 $2)))
+     ;;(struct-declaration-list cpp-statement ($$ (tl-append $1 $2)))
      ;; Not in C99, but allowed by GNU, I believe:
      (";" ($$ (make-tl 'field-list)))
      (struct-declaration-list ";" ($$ $1)))
@@ -862,7 +864,7 @@
    (hashify-machine
     (make-lalr-machine c99-spec))
    #:keep 2
-   #:keepers '($code-comm $lone-comm $pragma)))
+   #:keepers '($code-comm $lone-comm $pragma cpp-stmt)))
 
 (define c99x-spec (restart-spec c99-spec 'expression))
 
@@ -871,7 +873,8 @@
    (hashify-machine
     (make-lalr-machine c99x-spec))
    #:keep 2
-   #:keepers '($code-comm $lone-comm $pragma)))
+   ;; Sync w/ #:skip-if-unexp arg to make-lalr-parser in parser.scm.
+   #:keepers '($code-comm $lone-comm $pragma cpp-stmt)))
 
 ;;; =====================================
 
