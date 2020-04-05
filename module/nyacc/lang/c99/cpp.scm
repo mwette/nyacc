@@ -622,9 +622,9 @@
      ((c99-std-val ident) => identity)
      (else #f))))
 
-;; @deffn {Procedure} expand-cpp-macro-ref ident defs [used] => repl|#f
+;; @deffn {Procedure} expand-cpp-name name defs => repl|#f
 ;; Calls @code{expand-cpp-macro-ref} with null input string (w/o further
-;; input).
+;; input).  If @var{name} is has a function definition @code{#f} is returned.
 ;; @end deffn
 (define (expand-cpp-name name defs)
   (with-input-from-string ""

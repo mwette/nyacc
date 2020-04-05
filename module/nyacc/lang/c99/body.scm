@@ -331,9 +331,6 @@
   (define (getdefs stmts)		; extract defines
     (fold-right
      (lambda (stmt seed)
-       ;;(sx-match stmt
-       ;;  ((cpp-stmt (define . ,rest)) (cons (sx-ref stmt 1) seed))
-       ;;  (,_ seed)))
        (if (and (eqv? 'cpp-stmt (sx-tag stmt))
 		(eqv? 'define (sx-tag (sx-ref stmt 1))))
 	   (cons (sx-ref stmt 1) seed)
@@ -568,13 +565,14 @@
 		    `($pragma . ,(cadr stmt)))
 		(case mode
 		  ((code) #f)
-		  ((decl) (and (cpi-top-blev? info)
-			       (memq (car stmt) '(include define include-next))
-			       `(cpp-stmt . ,stmt)))
-		  ((file) (and
-			   (or (cpi-top-blev? info)
-			       (not (memq (car stmt) '(include include-next))))
-			   `(cpp-stmt . ,stmt)))
+		  ((decl)
+		   (and (cpi-top-blev? info)
+			(memq (car stmt) '(include include-next define))
+			`(cpp-stmt . ,stmt)))
+		  ((file)
+		   (and (or (cpi-top-blev? info)
+			    (not (memq (car stmt) '(include include-next))))
+			`(cpp-stmt . ,stmt)))
 		  (else (error "nyacc pass-cpp-stmt: coding error")))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.

@@ -302,7 +302,6 @@
     (let*-values (((tag decl-attr specl declrs) (split-decl decl))
 		  ((tag) (values 'udecl)))
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
-      ;;(sferr "\nsx-match specl: attr=~S\n" attr) (pperr specl) (pperr declrs)
       (sx-match specl
 
 	;; struct typedefs 
@@ -764,7 +763,6 @@
 ;; Remove cruft from declaration-specifiers (tail). ??
 ;; @end deffn
 (define* (strip-decl-spec-tail dsl-tail #:key keep-const?)
-  ;;(simple-format #t "spec=tail: ~S\n" dsl-tail)
   (let loop ((dsl1 '()) (const-seen? #f) (tail dsl-tail))
     (if (null? tail)
 	(reverse (if (and const-seen? keep-const?)
