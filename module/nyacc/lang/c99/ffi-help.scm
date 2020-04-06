@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2016-2019 Matthew R. Wette
+;; Copyright (C) 2016-2020 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -1920,21 +1920,6 @@
 	 (sfscm ";; ... failed.\n")
 	 (values wrapped defined))))
    decls wrapped defined))
-
-(sferr "ffi-help.scm: remove fix-tree\n")
-(define (fix-tree tree)
-  (define (fD seed tree) '())
-  (define (fU seed kseed tree)
-    (case (car tree)
-      ((include)
-       (let ((t (reverse (cdr kseed))))
-	 (if (pair? seed) (cons t seed) t)))
-      ((comment) seed)
-      (else
-       (let ((t (reverse kseed)))
-	 (if (pair? seed) (cons t seed) t)))))
-  (define (fH seed node) (cons node seed))
-  (foldts fD fU fH '() tree))
 
 ;; process define-ffi-module expression
 ;; was intro-ffi
