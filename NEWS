@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-04-03  candidate V1.02.0
+2020-04-08  candidate V1.02.0
 	* The C99 AST, munger and ffi helper, were updated.
 	  updated C99 tree tags (e.g., array-of => ary-declr), and
 	  and narrowed use of abs-...-declr to lowest level. 
@@ -26,6 +26,7 @@ without any warranty.
 	* Added #:env keyword option to make-lalr-parser.  This is where
 	  the quoted actions are evaluated.
 	* Added FH uintptr_t intptr_t defines for use w/ guile-2.0.
+	* compile-ffi does not now produce .scm file on failure or ^C
 
 2020-03-13  V1.01.2
 	* fixed bug #57911, compile-ffi fails to parse function attributes 
