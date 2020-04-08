@@ -1,7 +1,7 @@
 # @configure_input@
 # -*- Makefile -*-
 #
-# Copyright (C) 2015-2019 Matthew R. Wette
+# Copyright (C) 2015-2020 Matthew R. Wette
 # 
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -11,8 +11,8 @@
 GUILE = @GUILE@
 GUILD = @abs_top_builddir@/etc/guild
 
-SITE_SCM_DIR = @GUILE_SITE@
-SITE_SCM_GO_DIR = @GUILE_SITE_GO@
+SITE_SCM_DIR = @GUILE_GLOBAL_SITE@
+SITE_SCM_GO_DIR = @GUILE_SITE_CCACHE@
 
 SHELL = @SHELL@
 INFODIR = @GUILE_DATA@/info
