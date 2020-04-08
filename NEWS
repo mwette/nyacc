@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-04-08  candidate V1.02.0
+2020-04-08  V1.02.0
 	* The C99 AST, munger and ffi helper, were updated.
 	  updated C99 tree tags (e.g., array-of => ary-declr), and
 	  and narrowed use of abs-...-declr to lowest level. 
