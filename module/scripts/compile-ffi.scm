@@ -1,6 +1,6 @@
 ;;; scripts/compile-ffi.scm --- NYACC's command-line FFI compiler
 
-;; Copyright (C) 2017-2019 Matthew R. Wette
+;; Copyright (C) 2017-2020 Matthew R. Wette
 ;;
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,6 @@
 ;;; Author: Matt Wette <mwette@alumni.caltech.edu>
 
 ;;; Commentary:
-
 ;; Usage: compile-ffi [ARGS]
 ;; Type `compile-ffi --help' for help.
 
@@ -73,6 +72,7 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -I  --inc-dir=DIR    add DIR to list of dir's to search for C headers
   -o, --output=OFILE   write output to OFILE
   -d, --debug=x,y      set debug flags: echo-decl, parse
+  -D, --list-deps      list dependencies and quit
   -X, --no-exec        don't generate .go file(s)
   -R, --no-recurse     don't do recursive compile on dep's
 
@@ -102,7 +102,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
    (option '(#\I "inc-dir") #t #f
 	   (lambda (opt name arg opts files)
 	     (values (acons/seed 'inc-dirs arg opts) files)))
-   (option '(#\D "list dependencies and quit") #f #f
+   (option '(#\D "list-deps") #f #f
 	   (lambda (opt name arg opts files)
 	     (values (acons 'list-deps #t (acons 'no-recurse #t opts)) files)))
    (option '(#\R "dont-recurse") #f #f
@@ -203,11 +203,10 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
      ((pair? next)
       (loop odeps '() next))
      (else
-      (let loop ((deps '()) (odeps odeps))
-	(if (null? odeps) deps
-	    (if (member (car odeps) deps)
-		(loop deps (cdr odeps))
-		(loop (cons (car odeps) deps) (cdr odeps)))))))))
+      (reverse
+       (fold
+	(lambda (odep deps) (if (member odep deps) deps (cons odep deps)))
+	'() odeps))))))
 
 (define (ensure-ffi-deps file options)
   (let ((options `((no-recurse . #t) (no-exec . #f) . ,options))
@@ -218,8 +217,11 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 
 ;; -----------------------------------------------------------------------------
 
-(define (cleanup path)
-  (basename path))
+(define (fix-path path)
+  (let* ((cwd (getcwd)))
+    (if (string-contains path cwd)
+	(substring/shared path (1+ (string-length cwd)))
+	path)))
 
 (define (compile-ffi ffi-file options)
   (let* ((base (string-drop-right ffi-file 4))
@@ -227,24 +229,24 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
     (unless (assq-ref options 'no-recurse)
       (ensure-ffi-deps ffi-file options))
     (when (assq-ref options 'list-deps)
-      (for-each (lambda (f) (sfmt "~A\n" f)) (gen-ffi-deps ffi-file))
+      (for-each (lambda (f) (sfmt "~A\n" (fix-path f))) (gen-ffi-deps ffi-file))
       (exit 0))
     (catch 'ffi-help-error
       (lambda ()
-	(sfmt "compiling `~A' ...\n" (cleanup ffi-file))
+	(sfmt "compiling `~A' ...\n" (fix-path ffi-file))
 	(compile-ffi-file ffi-file options)
-	(sfmt "... wrote `~A'\n" (cleanup scm-file)))
+	(sfmt "... wrote `~A'\n" (fix-path scm-file)))
       (lambda (key fmt . args)
 	(if (access? scm-file W_OK) (delete-file scm-file))
 	(apply fail fmt args)
 	(exit 1)))
     (unless (assq-ref options 'no-exec)
-      (sfmt "compiling `~A' ...\n" (cleanup scm-file))
+      (sfmt "compiling `~A' ...\n" (fix-path scm-file))
       (let ((go-file (compile-file scm-file
 				   #:from 'scheme #:to 'bytecode
 				   #:opts '())))
 	(load-compiled go-file)
-	(sfmt "... wrote `~A'\n" (cleanup go-file)))
+	(sfmt "... wrote `~A'\n" (basename go-file)))
       (sleep 1))))
 
 (define (main . args)

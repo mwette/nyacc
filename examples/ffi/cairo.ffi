@@ -34,7 +34,7 @@
   )
 
 (define-public cairo_raster_source_acquire_func_t*-desc
-  (bs:pointer  cairo_raster_source_acquire_func_t-desc))
+  (fh:pointer  cairo_raster_source_acquire_func_t-desc))
 (define-fh-pointer-type cairo_raster_source_acquire_func_t*
   cairo_raster_source_acquire_func_t*-desc
   cairo_raster_source_acquire_func_t*?
@@ -48,7 +48,7 @@
 	      make-cairo_raster_source_acquire_func_t)
 
 (define-public cairo_raster_source_release_func_t*-desc
-  (bs:pointer  cairo_raster_source_release_func_t-desc))
+  (fh:pointer  cairo_raster_source_release_func_t-desc))
 (define-fh-pointer-type cairo_raster_source_release_func_t*
   cairo_raster_source_release_func_t*-desc
   cairo_raster_source_release_func_t*?

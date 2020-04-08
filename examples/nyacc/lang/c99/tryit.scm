@@ -20,8 +20,8 @@
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
+(use-modules (sxml fold))
 (use-modules (ice-9 pretty-print))
-
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define pp pretty-print)
@@ -82,17 +82,6 @@
     (newline)
     (pp expr)))
 
-(when #f
-  (let* ((code "int foo = sizeof(int(*)());")
-	 (tree (or (parse-string code) (error "parse failed")))
-	 (udict (c99-trans-unit->udict tree))
-	 (udecl (assoc-ref udict "foo")))
-    (pp udecl)
-    (sf "orig:  ~A\n" code)
-    (sf "   =>") (pp99 udecl)))
-
-(use-modules (sxml fold))
-
 (define (remove-comments tree)
   (define (fD seed tree) '())
   (define (fU seed kseed tree)
@@ -102,18 +91,29 @@
   (define (fH seed node) (cons node seed))
   (foldts fD fU fH '() tree))
 
+(define (fix-tree tree)
+  (define (fD seed tree) '())
+  (define (fU seed kseed tree)
+    (case (car tree)
+      ((include)
+       (let ((t (reverse (cdr kseed))))
+	 (if (pair? seed) (cons t seed) t)))
+      ((comment) seed)
+      (else
+       (let ((t (reverse kseed)))
+	 (if (pair? seed) (cons t seed) t)))))
+  (define (fH seed node) (cons node seed))
+  (foldts fD fU fH '() tree))
+
 (when #t
-  (let* ((code "typedef void *gpointer; union { gpointer a; } x;")
+  (let* ((code "int foo = sizeof(int(*)());")
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
-	 (udecl (assoc-ref udict "x"))
-	 (xdecl (expand-typerefs udecl udict '()))
-	 )
-    (sferr "\noriginal tree:\n") (pperr udecl)
-    (sferr "\nexpanded tree:\n") (pperr xdecl)
-    (sferr "\ncooresponding code change:\n")
-    (ppe99 udecl) (sferr "=>\n") (ppe99 xdecl)))
-  
+	 (udecl (assoc-ref udict "foo")))
+    (pp udecl)
+    (sf "orig:  ~A\n" code)
+    (sf "   =>") (pp99 udecl)))
+
 ;; ffi-help patterns:
 ;; Figure out how to have ffi-help print message when new pattern shows up.
 ;;
@@ -136,27 +136,4 @@
 ;;                          struct-foo? make-struct-foo)
 ;; (fh-ref-deref! bar_t* make-bar_t* struct-foo make-struct-foo)
 
-(use-modules (nyacc lang c99 ffi-help))
-(when #f
-  (let* ((code "#include <bfd.h>\nbfd_vma x;\n")
-	 (tree (parse-string code))
-	 (udict (c99-trans-unit->udict tree))
-	 (udecl (assoc-ref udict "x"))
-	 ;;(udecl (assoc-ref udict "bfd_sprintf_vma"))
-	 ;;(xdecl (expand-typerefs udecl udict))
-	 (pdecl '(param-decl (decl-spec-list (type-spec (typename "bfd")))
-			     (param-declr (abs-ptr-declr (pointer)))))
-	 ;;(pdecl (reify-decl pdecl))
-	 )
-    (sferr "pdecl:\n")
-    (pperr pdecl)
-    ;;(pp (assoc-ref udict "bfd"))
-    (let ((xdecl (expand-typerefs pdecl udict)))
-      (sferr "xdecl:\n")
-      (pperr xdecl)
-      (ppe99 xdecl) (newline (cep))
-      #t)
-    (and=> (fh-cnvt-udecl udecl udict) pp)
-    ))
-  
 ;; --- last line ---
