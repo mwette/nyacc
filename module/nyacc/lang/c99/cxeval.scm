@@ -151,27 +151,30 @@
 
     (`((struct-def (field-list . ,fields)))
      (let loop ((size 0) (align 0) (flds fields))
-       (if (null? flds)
-	   (values (incr-size 0 align size) align)
-	   (call-with-values
-	       (lambda () (incr/decl (car flds) size align))
-	     (lambda (size align)
-	       (loop size align (cdr flds)))))))
+       (cond
+	((null? flds) (values (incr-size 0 align size) align))
+	((eq? 'comp-decl (sx-tag (car flds)))
+	 (call-with-values
+	     (lambda () (incr/decl (car flds) size align))
+	   (lambda (size align)
+	     (loop size align (cdr flds)))))
+	(else (loop size align (cdr flds))))))
 
     (`((union-def (field-list . ,fields)))
      (let loop ((size 0) (align 0) (flds fields))
-       (if (null? flds)
-	   (values (incr-size 0 align size) align)
-	   (call-with-values
-	       (lambda () (maxi/decl (car flds) size align))
-	     (lambda (size align)
-	       (loop size align (cdr flds)))))))
+       (cond
+	((null? flds) (values (incr-size 0 align size) align))
+	((eq? 'comp-decl (sx-tag (car flds)))
+	 (call-with-values
+	     (lambda () (maxi/decl (car flds) size align))
+	   (lambda (size align)
+	     (loop size align (cdr flds)))))
+	(else (loop size align (cdr flds))))))
 
     (`((,(or 'enum-ref 'enum-def) . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int")))
 
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
-       (quit)
        (throw 'nyacc-error "coding error"))))
 
 (define* (sizeof-specl/declr specl declr #:optional (udict '()))
