@@ -109,10 +109,15 @@
   (let* ((code "int foo = sizeof(int(*)());")
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
-	 (udecl (assoc-ref udict "foo")))
+	 (udecl (assoc-ref udict "foo"))
+	 (expr (sx-ref* udecl 2 2 1))
+	 )
+    (sf "declaration::\n")
     (pp udecl)
-    (sf "orig:  ~A\n" code)
-    (sf "   =>") (pp99 udecl)))
+    (sf "extract initializer expression:\n")
+    (pp expr)
+    (sf "evaluate:\n")
+    (sf "x = ~S\n" (eval-c99-cx expr))))
 
 ;; ffi-help patterns:
 ;; Figure out how to have ffi-help print message when new pattern shows up.
