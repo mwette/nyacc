@@ -5,6 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2020-04-10  V1.02.0
+	* fixed critical bug in cxeval.scm(sizeof-mtail): case
+	  to filter out comments from struct-def and union-def
+	  was swapped (processing comments, skipping comp-decls)
+
 2020-04-08  V1.02.0
 	* The C99 AST, munger and ffi helper, were updated.
 	  updated C99 tree tags (e.g., array-of => ary-declr), and
