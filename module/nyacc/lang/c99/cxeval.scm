@@ -175,7 +175,6 @@
      (values (sizeof-basetype "int") (alignof-basetype "int")))
 
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
-       (quit)
        (throw 'nyacc-error "coding error"))))
 
 (define* (sizeof-specl/declr specl declr #:optional (udict '()))
