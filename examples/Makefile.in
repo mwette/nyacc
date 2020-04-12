@@ -59,7 +59,6 @@ install:
 
 install-examples:
 	mkdir -p $(DESTDIR)$(XDSTDIR)
-	cp $(XSRCDIR)/env.sh $(DESTDIR)$(XDSTDIR)/env.sh
 	(cd $(XSRCDIR); tar cf - ffi | (cd $(DESTDIR)$(XDSTDIR); tar xf -))
 	(cd $(XSRCDIR); tar cf - language | (cd $(DESTDIR)$(XDSTDIR); tar xf -))
 	(cd $(XSRCDIR); tar cf - nyacc | (cd $(DESTDIR)$(XDSTDIR); tar xf -))
