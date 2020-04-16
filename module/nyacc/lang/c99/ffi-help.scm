@@ -81,7 +81,7 @@
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
 		#:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
-  #:use-module (srfi srfi-1)
+  #:use-module ((srfi srfi-1) #:select (fold fold-right remove last))
   #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-37)
   #:use-module (system base pmatch)

@@ -78,7 +78,7 @@
   #:use-module (sxml match)
   #:use-module (srfi srfi-11)		; let-values
   #:use-module (srfi srfi-2)
-  #:use-module (srfi srfi-1)
+  #:use-module ((srfi srfi-1) #:select (fold fold-right remove))
   #:use-module (system base pmatch)
   ;; debugging:
   #:use-module (system vm trace)

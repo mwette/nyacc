@@ -40,7 +40,7 @@
 	    clean-field-list clean-fields)
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)		; let-values
-  #:use-module (srfi srfi-1)
+  #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (ice-9 match)
   #:use-module (system base pmatch))
 

@@ -67,7 +67,6 @@
   #:use-module ((system foreign) #:prefix ffi:)
 
   #:use-module (ice-9 threads)
-  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (srfi srfi-43)

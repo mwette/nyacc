@@ -27,7 +27,7 @@
   #:use-module (nyacc lang c99 ffi-help)
   #:use-module (system base language)
   #:use-module ((system base compile) #:select (compile-file))
-  #:use-module (srfi srfi-1)
+  #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (srfi srfi-37)
   #:version (1 02 0))
 
