@@ -541,8 +541,6 @@
     (if #f #f)))
 
 
-(use-modules (sched))
-
 (define *dbus-sched* (make-scheduler))
 
 (define (dbus-timeout-handler sch timeout)
