@@ -362,8 +362,8 @@
    ;; fixpt-type-specifier => "signed" "_Fract"
    (lambda ($2 $1 . $rest)
      '(fixpt-type "signed _Fract"))
-   ;; fixpt-type-specifier => "signed" "long _Fract"
-   (lambda ($2 $1 . $rest)
+   ;; fixpt-type-specifier => "signed" "long" "_Fract"
+   (lambda ($3 $2 $1 . $rest)
      '(fixpt-type "signed long _Fract"))
    ;; fixpt-type-specifier => "unsigned" "short" "_Fract"
    (lambda ($3 $2 $1 . $rest)
@@ -371,16 +371,17 @@
    ;; fixpt-type-specifier => "unsigned" "_Fract"
    (lambda ($2 $1 . $rest)
      '(fixpt-type "unsigned _Fract"))
-   ;; fixpt-type-specifier => "unsigned" "long _Fract"
-   (lambda ($2 $1 . $rest)
+   ;; fixpt-type-specifier => "unsigned" "long" "_Fract"
+   (lambda ($3 $2 $1 . $rest)
      '(fixpt-type "unsigned long _Fract"))
    ;; fixpt-type-specifier => "short" "_Accum"
    (lambda ($2 $1 . $rest)
      '(fixpt-type "short _Accum"))
    ;; fixpt-type-specifier => "_Accum"
    (lambda ($1 . $rest) '(fixpt-type "_Accum"))
-   ;; fixpt-type-specifier => "long _Accum"
-   (lambda ($1 . $rest) '(fixpt-type "long _Accum"))
+   ;; fixpt-type-specifier => "long" "_Accum"
+   (lambda ($2 $1 . $rest)
+     '(fixpt-type "long _Accum"))
    ;; fixpt-type-specifier => "signed" "short" "_Accum"
    (lambda ($3 $2 $1 . $rest)
      '(fixpt-type "signd short _Accum"))
@@ -414,8 +415,8 @@
    ;; fixpt-type-specifier => "_Sat" "signed" "_Fract"
    (lambda ($3 $2 $1 . $rest)
      '(fixpt-type "_Sat signed _Fract"))
-   ;; fixpt-type-specifier => "_Sat" "signed" "long _Fract"
-   (lambda ($3 $2 $1 . $rest)
+   ;; fixpt-type-specifier => "_Sat" "signed" "long" "_Fract"
+   (lambda ($4 $3 $2 $1 . $rest)
      '(fixpt-type "_Sat signed long _Fract"))
    ;; fixpt-type-specifier => "_Sat" "unsigned" "short" "_Fract"
    (lambda ($4 $3 $2 $1 . $rest)

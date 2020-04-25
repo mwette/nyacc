@@ -308,13 +308,13 @@
      ("long" "_Fract" ($$ '(fixpt-type "long _Fract")))
      ("signed" "short" "_Fract" ($$ '(fixpt-type "signd short _Fract")))
      ("signed" "_Fract" ($$ '(fixpt-type "signed _Fract")))
-     ("signed" "long _Fract" ($$ '(fixpt-type "signed long _Fract")))
+     ("signed" "long" "_Fract" ($$ '(fixpt-type "signed long _Fract")))
      ("unsigned" "short" "_Fract" ($$ '(fixpt-type "unsigned short _Fract")))
      ("unsigned" "_Fract" ($$ '(fixpt-type "unsigned _Fract")))
-     ("unsigned" "long _Fract" ($$ '(fixpt-type "unsigned long _Fract")))
+     ("unsigned" "long" "_Fract" ($$ '(fixpt-type "unsigned long _Fract")))
      ("short" "_Accum" ($$ '(fixpt-type "short _Accum")))
      ("_Accum" ($$ '(fixpt-type "_Accum")))
-     ("long _Accum" ($$ '(fixpt-type "long _Accum")))
+     ("long" "_Accum" ($$ '(fixpt-type "long _Accum")))
      ("signed" "short" "_Accum" ($$ '(fixpt-type "signd short _Accum")))
      ("signed" "_Accum" ($$ '(fixpt-type "signed _Accum")))
      ("signed" "long" "_Accum" ($$ '(fixpt-type "signed long _Accum")))
@@ -327,7 +327,7 @@
      ("_Sat" "signed" "short" "_Fract"
       ($$ '(fixpt-type "_Sat signd short _Fract")))
      ("_Sat" "signed" "_Fract" ($$ '(fixpt-type "_Sat signed _Fract")))
-     ("_Sat" "signed" "long _Fract"
+     ("_Sat" "signed" "long" "_Fract"
       ($$ '(fixpt-type "_Sat signed long _Fract")))
      ("_Sat" "unsigned" "short" "_Fract"
       ($$ '(fixpt-type "_Sat unsigned short _Fract")))
