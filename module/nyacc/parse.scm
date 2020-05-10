@@ -106,7 +106,7 @@
 		 (stx (or (assq-ref stxl tval)
 			  (and (not (memq tval skip-if-unexp))
 			       (assq-ref stxl '$default))
-			  (cons error #f))))
+			  (cons 'error #f))))
 	    (if debug (dmsg/s (car state) (if nval tval sval) stx))
 	    (cond
 	     ((eq? 'error (car stx))	; error ???
