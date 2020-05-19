@@ -318,6 +318,7 @@
    ((char-set-contains? c:cx ch)
     (let ((c1 (read-char)))
       (cond
+       ((eof-object? c1) #f)
        ((char=? c1 #\') (cons (wchar ch) (cdr (read-c-chlit c1))))
        (else (unread-char c1) #f))))
    (else #f)))
