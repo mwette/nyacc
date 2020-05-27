@@ -357,7 +357,7 @@
 	  (else (loop chl ty ba 1 ch))))
 	((15) ;; got `.' only
 	 (cond
-	  ((eof-object? ch) (unread-char ch) #f)
+	  ((eof-object? ch) #f)
 	  ((char-numeric? ch) (loop (cons ch chl) '$float ba 2 (read-char)))
 	  (else (unread-char ch) #f)))
 	((1)
