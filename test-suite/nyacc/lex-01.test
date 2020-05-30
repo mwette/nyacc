@@ -11,6 +11,8 @@
   #:use-module (nyacc lex)
   #:use-module (test-suite lib))
 
+(define (sf fmt . args) (apply simple-format #t fmt args))
+
 (define (fold p s l)
   (let loop ((s s) (l l))
     (if (null? l) s (loop (p (car l) s) (cdr l)))))
@@ -33,9 +35,32 @@
 
 (define read-comm-1 (make-comm-reader '(("/*" . "*/") ("//" . "\n"))))
 
+(define (check-num pair) ;; pair = ("123" . $fixed)
+  (let* ((str (car pair)) (end (1- (string-length str))) (tok (cdr pair)))
+    (call-with-values
+	(lambda ()
+	  (catch 'nyacc-error
+	    (lambda ()
+	      (with-input-from-string str
+		(lambda ()
+		  (let* ((val (read-c-num (read-char)))
+			 (nch (read-char)))
+		    (values val nch)))))
+	    (lambda (key fmt . args)
+	      (values '$error (string-ref str end)))))
+      (lambda (val nch)
+	;;(sf "~S => ~S ~S\n" str val nch)
+	(if val
+	    (if (pair? val)
+		(and (eq? tok (car val))
+		     (string=? (substring str 0 end) (cdr val))
+		     (char=? (string-ref str end) nch))
+		(eq? val tok))
+	    (not tok))))))
+	    
 (with-test-prefix "nyacc/lex-01"
 
-  ;; escape character 
+  ;; escape character
   (pass-if "C char literals"
     (fold
      (lambda (pair pass)
@@ -48,51 +73,48 @@
      '(("'\\177'" . "\x7f")
        )))
 
-  (pass-if "C integer literals"
+  (pass-if "C numeric literals"
     (fold
      (lambda (pair pass)
-       (and pass
-	    (with-input-from-string (car pair)
-	      (lambda ()
-		(let* ((p (read-c-num (read-char)))
-		       (t (and=> p car)) (r (and=> p cdr)))
-		  (and p (eq? t '$fixed) (string=? r (cdr pair))))))))
+       (and pass (check-num pair)))
      #t
-     '(("123" . "123") ("1l" . "1l")  ("23u" . "23u") ("34ull" . "34ull")
-       ("0b11" . "0b11")
-       )))
-
-  (pass-if "C floating-point literals"
-    (fold
-     (lambda (pair pass)
-       (and pass
-	    (with-input-from-string (car pair)
-	      (lambda ()
-		(let* ((p (read-c-num (read-char)))
-		       (t (and=> p car)) (r (and=> p cdr)))
-		  (and p (eq? t '$float) (string=? r (cdr pair))))))))
-     #t
-     '(("12.34" . "12.34") ("12.34e56" . "12.34e56") ("12.34E56" . "12.34E56")
-       ("12.34e+56" . "12.34e+56") ("12.34d-6" . "12.34d-6")
-       ("12.34D-6" . "12.34D-6") ("1." . "1.") (".1" . ".1") (".1e0" . ".1e0")
-       ("1.0e-34F" . "1.0e-34F")
-       )))
-
-  (pass-if "C fixed-point literals"
-    (fold
-     (lambda (pair pass)
-       (and pass
-	    (with-input-from-string (car pair)
-	      (lambda ()
-		(let* ((p (read-c-num (read-char)))
-		       (t (and=> p car)) (r (and=> p cdr)))
-		  (and p (eq? t '$fixpt) (string=? r (cdr pair))))))))
-     #t
-     '(("0.25r" . "0.25r")
-       ("0.25ur" . "0.25ur")
-       ;;("0.25lr" . "0.25lr")
-       ;;("0.0078125HR" . "0.0078125HR")
-       ;;("1r" . "1r")
+     ;; fixed aka integers
+     '(;; fixed
+       ("0-" . $fixed) ("0l-" . $fixed) ("0ll-" . $fixed)
+       ("0ull-" . $fixed) ("0llu-" . $fixed)
+       ("1234-" . $fixed) ("123l-" . $fixed) ("12ll-" . $fixed)
+       ("1llu-" . $fixed) ("123u-" . $fixed) ("12ul-" . $fixed)
+       ("1ull-" . $fixed) ("123L-" . $fixed) ("12LL-" . $fixed)
+       ("1LLU-" . $fixed) ("123U-" . $fixed) ("12Ul-" . $fixed)
+       ("1ULl-" . $fixed)
+       ("0xbead-" . $fixed) ("0XBEAD-" . $fixed) 
+       ("01-" . $fixed) ("0b11-" . $fixed)
+       ;; float
+       ("12.34-" . $float) ("12.34e56-" . $float) ("12.34E56-" . $float)
+       ("12.34e+56-" . $float) ("1.-" . $float) (".1-" . $float)
+       (".1e0-" . $float) ("1.0e-34F-" . $float) ("12.l-" . $float)
+       (".1l-" . $float) ("12.34l-" . $float) ("1.0e-34l-" . $float)
+       ("1.0e-34f-" . $float) ("1.0e+34f-" . $float) ("0x7f.ffp0-" . $float)
+       ;; fixed point
+       ("0.25r-" . $fixpt) ("0.25ur-" . $fixpt) ("0.25lr-" . $fixpt) 
+       ("0.25ulr-" . $fixpt) ("0.25R-" . $fixpt) ("0.25UR-" . $fixpt)
+       ("0.25LR-" . $fixpt) ("0.25ULR-" . $fixpt) ("1.25k-" . $fixpt)
+       ("1.25uk-" . $fixpt) ("1.25lk-" . $fixpt) ("1.25ulk-" . $fixpt)
+       ("1.25K-" . $fixpt) ("1.25UK-" . $fixpt) ("1.25LK-" . $fixpt)
+       ("1.25ULK-" . $fixpt) ("0.25e-1r-" . $fixpt) ("0.25e-1ur-" . $fixpt)
+       ("0.25e-1lr-" . $fixpt) ("0.25e-1ulr-" . $fixpt) ("0.25R-" . $fixpt)
+       ("0.25UR-" . $fixpt) ("0.25LR-" . $fixpt) ("0.25ULR-" . $fixpt)
+       ("1r-" . $fixpt)
+       ;; decimal float
+       ("0.12dd-" . $decfl) ("0.12df-" . $decfl) ("0.12dl-" . $decfl)
+       ("0.12DD-" . $decfl) ("0.12DF-" . $decfl) ("0.12DL-" . $decfl)
+       ("3.4e3dd-" . $decfl) ("0.34e3dd-" . $decfl)
+       ;; bizarro float
+       ("1.23e45F128-" . $float)
+       ("1.23e45F32x-" . $float)
+       ;; errors and #f
+       ("08-" . $error) ("0b12-" . $error) ("3f-" . $error)
+       ("3dd-" . $error) (".-" . #f) ("." . #f)
        )))
 
   (pass-if "C strings"
