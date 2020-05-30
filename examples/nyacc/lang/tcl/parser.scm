@@ -1,6 +1,6 @@
 ;;; nyacc/lang/tcl/parser.scm - parse tcl code
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2020 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -40,7 +40,7 @@
 	    splice-xtail
 	    tclme
 	    )
-  #:use-module ((nyacc lex) #:select (read-c-num cnumstr->scm))
+  #:use-module ((nyacc lex) #:select (read-c-num cnumstr->scm c:ir))
   #:use-module (nyacc lang sx-util)
   #:use-module (sxml match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
@@ -50,11 +50,22 @@
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 (define (sf fmt . args) (apply simple-format #t fmt args))
-(define (db fmt . args) #f)
+(define (zf fmt . args) #f)
+(define db zf)
 
 (define (echo obj)
   (sf " ~S\n" obj)
   obj)
+
+(define char-hex?
+  (let ((cs (string->char-set "0123456789abcdefABCDEF")))
+    (lambda (ch)
+      (char-set-contains? cs ch))))
+
+(define char-oct? 
+  (let ((cs (string->char-set "01234567")))
+    (lambda (ch)
+      (char-set-contains? cs ch))))
 
 (define (rls chl) (reverse-list->string chl))
 
@@ -85,7 +96,8 @@
 (define cs:dquote (string->char-set "\""))
 
 ;; variable terminator
-(define cs:vt (string->char-set "()+-*/%&|!^<>?" cs:ct+ws))
+;;(define cs:vt (string->char-set "()+-*/%&|!^<>?" cs:ct+ws))
+(define cs:vt (string->char-set "()+-*/%&|!^<>?\"" cs:ct+ws))
 
 (define (report-error fmt . args)
   (let* ((port (current-input-port))
@@ -93,6 +105,8 @@
 	 (ln (1+ (port-line port))))
     (apply simple-format (current-error-port) fmt args))
   (throw 'tcl-error))
+
+(define noop-command '(command (string "NOOP")))
 
 (define (read-command port)
   ;; This is a bit of a hack job.
@@ -144,7 +158,7 @@
 	      (db "C: done\n")
 	      (if (pair? wordl)
 		  `(command ,@(reverse wordl))
-		  '(command (string "NOOP"))))
+		  noop-command))
 	     
 	     ((char-set-contains? cs:ws ch)
 	      (read-char port)
@@ -152,6 +166,7 @@
 
 	     ((char=? #\" ch)
 	      (read-char port)
+	      (db "C: \" .. reading word\n")
 	      (let ((word (read-word cs:dquote)))
 		(db "C: \" .. word=~S lach=~S\n" word (peek-char port))
 		(read-char port) ;; "
@@ -249,13 +264,14 @@
        
        (read-frag
 	(lambda (end-cs)
-	  ;;(sf "\n")
+	  (db "\n== read frag ~S\n" end-cs)
 	  (let loop ((tag #f)		     ; tag: string etc
 		     (chl '())		     ; list of chars read
 		     (bl (init-blev end-cs)) ; brace level
 		     (ch (read-char port))) ; next char
-	    (db "F:     tag=~S ch=~S chl=~S bl=~S end-cs=~S\n"
-		tag ch chl bl end-cs)
+	    (db "F:     tag=~S ch=~S chl=~S bl=~S\n" tag ch chl bl)
+	    ;;(db "F:     tag=~S ch=~S chl=~S bl=~S end-cs=~S\n"
+		;;tag ch chl bl end-cs)
 	    (cond
 	     ((eof-object? ch)
 	      (if (positive? bl) (error "missing end-brace"))
@@ -266,21 +282,23 @@
 		  (finish tag chl ch)
 		  (begin (unread-char ch port) end-cs)))
 	     ((and (char=? ch #\\) (zero? bl))
-	      (loop tag (cons (read-escape) chl) bl (read-char port)))
+	      (let ((ch (read-escape)))
+		(loop (or tag 'string) (cons ch chl) bl (read-char port))))
 	     ((char=? ch #\$)
-	      (if tag (finish tag chl ch) (read-vref)))
+ 	      (if tag (finish tag chl ch) (read-vref)))
 	     ((char=? ch #\{)
 	      (read-brace))
 	     ((char=? ch #\()
 	      (if tag (finish tag chl ch) (read-index)))
 	     ((char=? ch #\[)
-	      (if tag (finish tag chl ch)) (swallow (read-cmmd cs:rs)))
+	      (if tag (finish tag chl ch))
+	      (swallow (read-cmmd cs:rs)))
 	     ((char=? ch #\")
-	      (swallow (read-frag cs:dquote)))
-	     ((not tag)
-	      (loop 'string (cons ch chl) bl (read-char port)))
+	      ;;(swallow (read-frag cs:dquote))
+	      (loop 'string chl bl (read-char port))
+	      )
 	     (else
-	      (loop tag (cons ch chl) bl (read-char port)))))))
+	      (loop (or tag 'string) (cons ch chl) bl (read-char port)))))))
        )
 
     ;; wrap w/ catch
@@ -308,6 +326,7 @@
 	 (cond
 	  ((eof-object? cmd) '())
 	  ((null? (cdr cmd)) (loop (read-command port)))
+	  ((eq? cmd noop-command) (loop (read-command port)))
 	  (else (cons cmd (loop (read-command port))))))))))
 
 (define (fix-expr-string xstr)
@@ -392,25 +411,115 @@
 	  (else (let ((argval (read-non-ws ch)))
 		  (cons `(arg ,argval) (loop (read-char)))))))))))
 
+;; vanilla num reader
+(define (read-num ch)
+  (define (unread-chl chl)
+    (let lp ((chl chl))
+      (unless (null? chl) (unread-char (car chl)) (lp (cdr chl)))))
+  (let loop ((chl '()) (ty #f) (st 10) (ch ch))
+    (case st
+      ((10) ;; entry
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
+	((char-numeric? ch) (loop chl '$fixed 20 ch))
+	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
+	((char=? #\- ch) (loop (cons ch chl) ty 13 (read-char)))
+	(else #f)))
+      ((11) ;; got 0/fixed, allow x, b
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
+	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
+	((memq ch '(#\B #\b)) (loop (cons ch chl) ty 22 (read-char)))
+	((char-oct? ch) (loop (cons ch chl) ty 23 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((12) ;; got `.' only
+       (cond
+	((eof-object? ch) #f)
+	((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
+	(else (unread-char ch) #f)))
+      ((13) ;; got '-'
+       (cond
+	((eof-object? ch) (unread-char #\-) #f)
+	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char)))
+	((char-numeric? ch) (loop chl '$fixed 20 ch))
+	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
+	(else (loop (cons ch chl) ty 73 ch))))
+      ((20) ;; parse decimal integer part
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 20 (read-char)))
+	((char=? ch #\.) (loop (cons #\. chl) '$float 30 (read-char)))
+	((memq ch '(#\E #\e)) (loop (cons ch chl) '$float 40 (read-char)))
+	(else (loop chl '$fixed 70 ch))))
+      ((21) ;; parse fixed hex
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-hex? ch) (loop (cons ch chl) ty 21 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((22) ;; parse fixed octal	      
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((23) ;; parse fixed binary 
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 11 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((30) ;; parse float fractional part
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 30 (read-char)))
+	((memq ch '(#\E #\e)) (loop (cons ch chl) ty 40 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((40) ;; have float e|p, look for sign
+       (cond
+	((eof-object? ch) (loop chl ty 73 ch))
+	((memq ch '(#\+ #\-)) (loop (cons ch chl) ty 50 (read-char)))
+	(else (loop chl ty 50 ch))))
+      ((50) ;; parse rest of exponent
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((70) ;; check char
+       (cond
+	((eof-object? ch) (cons ty (rls chl)))
+	;;((char-set-contains? c:ir ch) (loop (cons ch chl) ty 73 ch))
+	;;(else (loop chl ty 71 ch))))
+	(else #f)))
+      ((71) ;; pushback char
+       (unread-char ch) (cons ty (rls chl)))
+      ((72) ;; return
+       (cons ty (rls chl)))
+      ((73) ;; unread and #f
+       (unread-chl chl) #f)
+      (else
+       (error "coding error")))))
+
 ;; @deffn {Procedure} num-string cstr
-;; Given a string return a numeric sxml elment like @code{(fixed "123")}
+;; Given a string return a numeric sxml element like @code{(fixed "123")}
 ;; or @code{(float "4.56")} or return @code{#f} if not a number.
 ;; @end deffn
 (define (num-string cstr)
-  ;; includes ugliness to add sign
-  (let* ((neg? (char=? #\- (string-ref cstr 0)))
-	 (cstr (if neg? (substring/shared cstr 1) cstr)))
-    (define (addsign s) (if neg? (string-append "-" s) s))
-    (and=> 
-     (with-input-from-string cstr
-       (lambda ()
-	 (let ((val (read-c-num (read-char))))
-	   (and (eof-object? (peek-char)) val))))
-     (lambda (p)
-       (case (car p)
-	 (($fixed) `(fixed ,(addsign (cnumstr->scm (cdr p)))))
-	 (($float) `(float ,(addsign (cdr p))))
-	 (else (error "coding error")))))))
+  (and=> 
+   (with-input-from-string cstr (lambda () (read-num (read-char))))
+   (lambda (p)
+     (and p (list (case (car p) (($fixed) 'fixed) (($float) 'float))
+		  (cdr p))))))
+
+;; @deffn {Procedure} vec-string str
+;; Given a string return an array of numeric elements like
+;; @code{(float-vec "123.0" "456.0")} or @code{#f} if not.
+;; @end deffn
+;; needs regex impl
+(define (vec-string cstr)
+  (fold-right
+   (lambda (str seed) (and seed (cons (num-string str) seed)))
+   '()
+   (string-split cstr #\space)))
 
 ;; ((string "elseif") cond-part body-part . rest)
 ;; ((string "else") body-part)
@@ -420,11 +529,18 @@
     ('() '())
     (`((string "else") (string ,body-part))
      `((else ,(split-body body-part))))
+    (`((string "elseif") (string ,cnd) (string "then")
+       (string ,body-part) . ,rest)
+     (cons
+      `(elseif ,(fix-expr-string cnd) ,(split-body body-part))
+      (cnvt-cond-tail (list-tail ctail 3))))
     (`((string "elseif") (string ,cnd) (string ,body-part) . ,rest)
      (cons
       `(elseif ,(fix-expr-string cnd) ,(split-body body-part))
       (cnvt-cond-tail (list-tail ctail 3))))
     (_
+     ;;(sf "ctail: @ ~S\n" (port-line (current-input-port)))
+     ;;(pp ctail) (quit)
      (throw 'tcl-error "syntax error"))))
     
 
@@ -454,11 +570,21 @@
      . ,(lambda (tree) `(format . ,(sx-tail tree 2))))
     ("if"
      . ,(lambda (tree)
-	  (sxml-match tree ;; TODO : deal with "elseif" 
+	  ;;(sf "tree:\n") (pp tree) ;;(quit)
+	  ;;(sf "============\n")
+	  ;;(pp
+	  (sxml-match tree
+	    ((command (string "if") (string ,cnd) (string "then")
+		      (string ,bdy) . ,rest)
+	     ;;(sf "GOT IT\n") (quit)
+	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
+		  . ,(cnvt-cond-tail rest)))
 	    ((command (string "if") (string ,cnd) (string ,bdy) . ,rest)
 	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
 		  . ,(cnvt-cond-tail rest)))
-	    (,_ (report-error "usage: if cond then else")))))
+	    (,_ (report-error "usage: if cond then else")))
+	  ;;) (quit)
+	  ))
     ("incr"
      . ,(lambda (tree) `(incr ,@(sx-tail tree 2))))
     ("proc"
