@@ -146,13 +146,14 @@
 		  ch))
 
 	     ((char=? ch #\#)
+	      (read-char port)
 	      `(comment
 		,(reverse-list->string
-		  (let loop2 ((chl '()) (ch (read-char port)))
+		  (let lp ((chl '()) (ch (read-char port)))
 		    (cond
 		     ((eof-object? ch) chl)
 		     ((char=? ch #\newline) (unread-char ch port) chl)
-		     (else (loop2 (cons ch chl) (read-char port))))))))
+		     (else (lp (cons ch chl) (read-char port))))))))
 
 	     ((char-set-contains? end-cs ch)
 	      (db "C: done\n")
@@ -412,47 +413,46 @@
 		  (cons `(arg ,argval) (loop (read-char)))))))))))
 
 ;; vanilla num reader
-(define (read-num ch)
+(define (read-num)
   (define (unread-chl chl)
-    (let lp ((chl chl))
-      (unless (null? chl) (unread-char (car chl)) (lp (cdr chl)))))
-  (let loop ((chl '()) (ty #f) (st 10) (ch ch))
+    (let lp ((l chl)) (unless (null? l) (unread-char (car l)) (lp (cdr l)))))
+  (let loop ((chl '()) (ty #f) (st 10) (ch (read-char)))
     (case st
       ((10) ;; entry
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
-	((char-numeric? ch) (loop chl '$fixed 20 ch))
+	((char=? #\0 ch) (loop (cons ch chl) 'fixed 11 (read-char))) 
+	((char-numeric? ch) (loop chl 'fixed 20 ch))
 	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
 	((char=? #\- ch) (loop (cons ch chl) ty 13 (read-char)))
 	(else #f)))
       ((11) ;; got 0/fixed, allow x, b
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
+	((char=? ch #\.) (loop (cons ch chl) 'float 30 (read-char)))
 	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
 	((memq ch '(#\B #\b)) (loop (cons ch chl) ty 22 (read-char)))
 	((char-oct? ch) (loop (cons ch chl) ty 23 (read-char)))
 	(else (loop chl ty 70 ch))))
-      ((12) ;; got `.' only
+      ((12) ;; got `.'
        (cond
 	((eof-object? ch) #f)
-	((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
+	((char-numeric? ch) (loop (cons ch chl) 'float 30 (read-char)))
 	(else (unread-char ch) #f)))
       ((13) ;; got '-'
        (cond
 	((eof-object? ch) (unread-char #\-) #f)
-	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char)))
-	((char-numeric? ch) (loop chl '$fixed 20 ch))
+	((char=? #\0 ch) (loop (cons ch chl) 'fixed 11 (read-char)))
+	((char-numeric? ch) (loop chl 'fixed 20 ch))
 	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
 	(else (loop (cons ch chl) ty 73 ch))))
       ((20) ;; parse decimal integer part
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
 	((char-numeric? ch) (loop (cons ch chl) ty 20 (read-char)))
-	((char=? ch #\.) (loop (cons #\. chl) '$float 30 (read-char)))
-	((memq ch '(#\E #\e)) (loop (cons ch chl) '$float 40 (read-char)))
-	(else (loop chl '$fixed 70 ch))))
+	((char=? ch #\.) (loop (cons #\. chl) 'float 30 (read-char)))
+	((memq ch '(#\E #\e)) (loop (cons ch chl) 'float 40 (read-char)))
+	(else (loop chl 'fixed 70 ch))))
       ((21) ;; parse fixed hex
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
@@ -484,31 +484,17 @@
 	((eof-object? ch) (loop chl ty 72 ch))
 	((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
 	(else (loop chl ty 70 ch))))
-      ((70) ;; check char
-       (cond
-	((eof-object? ch) (cons ty (rls chl)))
-	;;((char-set-contains? c:ir ch) (loop (cons ch chl) ty 73 ch))
-	;;(else (loop chl ty 71 ch))))
-	(else #f)))
-      ((71) ;; pushback char
-       (unread-char ch) (cons ty (rls chl)))
-      ((72) ;; return
-       (cons ty (rls chl)))
-      ((73) ;; unread and #f
-       (unread-chl chl) #f)
-      (else
-       (error "coding error")))))
+      ((70) (cond ((eof-object? ch) (cons ty (rls chl))) (else #f)))
+      ((71) (unread-char ch) (list ty (rls chl)))
+      ((72) (list ty (rls chl)))
+      ((73) (unread-chl chl) #f)
+      (else (error "coding error")))))
 
 ;; @deffn {Procedure} num-string cstr
 ;; Given a string return a numeric sxml element like @code{(fixed "123")}
 ;; or @code{(float "4.56")} or return @code{#f} if not a number.
 ;; @end deffn
-(define (num-string cstr)
-  (and=> 
-   (with-input-from-string cstr (lambda () (read-num (read-char))))
-   (lambda (p)
-     (and p (list (case (car p) (($fixed) 'fixed) (($float) 'float))
-		  (cdr p))))))
+(define (num-string cstr) (with-input-from-string cstr read-num))
 
 ;; @deffn {Procedure} vec-string str
 ;; Given a string return an array of numeric elements like
