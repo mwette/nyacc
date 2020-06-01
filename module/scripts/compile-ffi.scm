@@ -29,9 +29,9 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37)
-  #:version (1 02 1))
+  #:version (1 02 2))
 
-(define *ffi-help-version* "1.02.1")
+(define *ffi-help-version* "1.02.2")
 
 (define %summary
   "Compile a ffi-file (C interface spec) to Scheme (or maybe .go).")
@@ -129,11 +129,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	       (values opts (cons file files)))
 	     '() '()))
 
-;; --- new code to check dependencies -------------------------------------------
-
-;; may not work yet due to 
-;; ... https://debbugs.gnu.org/cgi/bugreport.cgi?bug=15602
-
+;; --- check dependencies -------------------------------------------
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 
@@ -213,7 +209,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	(ffi-deps (gen-ffi-deps file)))
     (for-each
      (lambda (dep-file) (compile-ffi dep-file options))
-     ffi-deps)))
+     (reverse ffi-deps))))
 
 ;; -----------------------------------------------------------------------------
 
@@ -256,9 +252,5 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       (when (or (assq-ref options 'help) (null? files)) (show-usage) (exit 0))
       (for-each (lambda (file) (compile-ffi file opts)) (reverse files))))
   (exit 0))
-
-;;; Todo:
-
-;; 1) remove output file on error? => generate default output file here
 
 ;; --- last line ---
