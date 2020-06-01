@@ -5,10 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-06-XX  V1.02.2
+2020-06-01  V1.02.2
 	* nyacc/lex.scm(read-c-chlit): add eof-object case for L prefix
 	* nyexx/lex.scm(make-num-reader): complete rewrite: C specific
 	* examples/../tcl/parser.scm: cleaned up minor errors
+	* scripts/compile-ffi.scm: corrected order of dependent compiles
 
 2020-04-10  V1.02.1
 	* fixed critical bug in cxeval.scm(sizeof-mtail): case
