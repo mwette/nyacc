@@ -69,7 +69,7 @@
 	(x2nd (string-index defstr #\))) ; end of args
 	(x3 (string-index defstr #\=)))  ; start of replacement
     (cond
-     ((not x3) #f)
+     ((not x3) (cons defstr ""))
      ((and x2st x3)
       ;;(if (not (eq? (1+ x2nd) x3)) (c99-err "bad CPP def: ~S" defstr))
       (cons* (substring defstr 0 x2st)
@@ -96,8 +96,8 @@
       (let loop ((tyns '()) (defs '()) (ents (cdr helper)))
 	(cond
 	 ((null? ents) (values (cons file tyns) (cons file defs)))
-	 ((split-cppdef (car ents)) =>
-	  (lambda (def) (loop tyns (cons def defs) (cdr ents))))
+	 ((string-contains (car ents) "=")
+	  (loop tyns (cons (split-cppdef (car ents)) defs) (cdr ents)))
 	 (else (loop (cons (car ents) tyns) defs (cdr ents)))))))
 
   (define (split-if-needed def)
