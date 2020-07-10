@@ -51,13 +51,13 @@
 ;; @end deffn
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2016-2018 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2016-2020 Matthew R. Wette"
 			  license-lgpl3+))
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
-   (prec< 'imp		       ; "implied type" SR-conflict resolution
-	  (nonassoc "char" "short" "int" "long" "_Fract" "_Accum" "_Sat")
-	  (nonassoc "float" "double" "_Complex"))
+   (prec< (left 'imp)	       ; "implied type" SR-conflict resolution
+	  (left "char" "short" "int" "long" "_Fract" "_Accum" "_Sat")
+	  (left "float" "double" "_Complex"))
    (prec< 'shift-on-attr		; living on the edge ...
 	  (nonassoc "__attribute__" "__packed__" "__aligned__" "__alignof__")
 	  'reduce-on-attr
