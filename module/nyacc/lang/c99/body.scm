@@ -598,6 +598,8 @@
 		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) => assc-$)
 			  (else (loop (read-char))))))
 		 (else (loop ch))))
+	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
+	       ((not (eq? (car ppxs) 'keep)) (loop (read-char))) ;; speedup
 	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
 	       ((read-c-ident ch) =>
 		(lambda (name)
@@ -622,7 +624,6 @@
 		      (cons t-ident name))))))
 	       ((read-c-num ch) => assc-$)
 	       ((read-c-string ch) => assc-$)
-	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
 	       ;; Keep track of brace level and scope for typedefs.
 	       ((and (char=? ch #\{)
 		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info)
@@ -639,14 +640,16 @@
 	       (else (cons ch (string ch))))))
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
-	  (let loop ((pair (read-token)))
+	  #;(let loop ((pair (read-token)))
 	    ;;(report-error "lx loop=>~S" (list pair))
 	    (case (car ppxs)
 	      ((keep)
 	       pair)
 	      ((skip-done skip-look skip)
 	       (loop (read-token)))
-	      (else (error "make-c99-lexer-generator: coding error")))))))
+	  (else (error "make-c99-lexer-generator: coding error"))))
+	  (read-token)
+	  )))
 
     lexer))
 
