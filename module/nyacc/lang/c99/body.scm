@@ -640,16 +640,11 @@
 	       (else (cons ch (string ch))))))
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
-	  #;(let loop ((pair (read-token)))
-	    ;;(report-error "lx loop=>~S" (list pair))
+	  (let loop ((pair (read-token)))
 	    (case (car ppxs)
-	      ((keep)
-	       pair)
-	      ((skip-done skip-look skip)
-	       (loop (read-token)))
-	  (else (error "make-c99-lexer-generator: coding error"))))
-	  (read-token)
-	  )))
+	      ((keep) pair)
+	      ((skip-done skip-look skip) (loop (read-token)))
+	      (else (error "coding error")))))))
 
     lexer))
 
