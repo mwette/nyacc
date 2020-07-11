@@ -40,7 +40,7 @@
 	    splice-xtail
 	    tclme
 	    )
-  #:use-module ((nyacc lex) #:select (read-c-num cnumstr->scm c:ir))
+  #:use-module ((nyacc lex) #:select (simple-read-num cnumstr->scm c:ir))
   #:use-module (nyacc lang sx-util)
   #:use-module (sxml match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
@@ -412,89 +412,11 @@
 	  (else (let ((argval (read-non-ws ch)))
 		  (cons `(arg ,argval) (loop (read-char)))))))))))
 
-;; vanilla num reader
-(define (read-num)
-  (define (unread-chl chl)
-    (let lp ((l chl)) (unless (null? l) (unread-char (car l)) (lp (cdr l)))))
-  (let loop ((chl '()) (ty #f) (st 10) (ch (read-char)))
-    (case st
-      ((10) ;; entry
-       (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? #\0 ch) (loop (cons ch chl) 'fixed 11 (read-char))) 
-	((char-numeric? ch) (loop chl 'fixed 20 ch))
-	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
-	((char=? #\- ch) (loop (cons ch chl) ty 13 (read-char)))
-	(else #f)))
-      ((11) ;; got 0/fixed, allow x, b
-       (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? ch #\.) (loop (cons ch chl) 'float 30 (read-char)))
-	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
-	((memq ch '(#\B #\b)) (loop (cons ch chl) ty 22 (read-char)))
-	((char-oct? ch) (loop (cons ch chl) ty 23 (read-char)))
-	(else (loop chl ty 70 ch))))
-      ((12) ;; got `.'
-       (cond
-	((eof-object? ch) #f)
-	((char-numeric? ch) (loop (cons ch chl) 'float 30 (read-char)))
-	(else (unread-char ch) #f)))
-      ((13) ;; got '-'
-       (cond
-	((eof-object? ch) (unread-char #\-) #f)
-	((char=? #\0 ch) (loop (cons ch chl) 'fixed 11 (read-char)))
-	((char-numeric? ch) (loop chl 'fixed 20 ch))
-	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
-	(else (loop (cons ch chl) ty 73 ch))))
-      ((20) ;; parse decimal integer part
-       (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 20 (read-char)))
-	((char=? ch #\.) (loop (cons #\. chl) 'float 30 (read-char)))
-	((memq ch '(#\E #\e)) (loop (cons ch chl) 'float 40 (read-char)))
-	(else (loop chl 'fixed 70 ch))))
-      ((21) ;; parse fixed hex
-       (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-hex? ch) (loop (cons ch chl) ty 21 (read-char)))
-	(else (loop chl ty 70 ch))))
-      ((22) ;; parse fixed octal	      
-       (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
-	(else (loop chl ty 70 ch))))
-      ((23) ;; parse fixed binary 
-       (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 11 (read-char)))
-	(else (loop chl ty 70 ch))))
-      ((30) ;; parse float fractional part
-       (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 30 (read-char)))
-	((memq ch '(#\E #\e)) (loop (cons ch chl) ty 40 (read-char)))
-	(else (loop chl ty 70 ch))))
-      ((40) ;; have float e|p, look for sign
-       (cond
-	((eof-object? ch) (loop chl ty 73 ch))
-	((memq ch '(#\+ #\-)) (loop (cons ch chl) ty 50 (read-char)))
-	(else (loop chl ty 50 ch))))
-      ((50) ;; parse rest of exponent
-       (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
-	(else (loop chl ty 70 ch))))
-      ((70) (cond ((eof-object? ch) (cons ty (rls chl))) (else #f)))
-      ((71) (unread-char ch) (list ty (rls chl)))
-      ((72) (list ty (rls chl)))
-      ((73) (unread-chl chl) #f)
-      (else (error "coding error")))))
-
 ;; @deffn {Procedure} num-string cstr
 ;; Given a string return a numeric sxml element like @code{(fixed "123")}
 ;; or @code{(float "4.56")} or return @code{#f} if not a number.
 ;; @end deffn
-(define (num-string cstr) (with-input-from-string cstr read-num))
+(define (num-string cstr) (with-input-from-string cstr simple-read-num))
 
 ;; @deffn {Procedure} vec-string str
 ;; Given a string return an array of numeric elements like
