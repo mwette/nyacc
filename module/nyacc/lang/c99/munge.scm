@@ -647,7 +647,7 @@
 	     (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
 		   (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl)))
 	    (else
-	     (fail "munge/canize-enum-def-list: can't expand ~S"(sx-ref ident 1))
+	     (fail "canize-enum-def-list: can't expand ~S" (sx-ref ident 1))
 	     (loop rez nxt ddict (cdr edl)))))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
