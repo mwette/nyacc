@@ -599,7 +599,9 @@
 			  (else (loop (read-char))))))
 		 (else (loop ch))))
 	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
-	       ((not (eq? (car ppxs) 'keep)) (loop (read-char))) ;; speedup
+	       ((and (not (eq? (car ppxs) 'keep))
+		     (eq? mode 'code))
+		(loop (read-char)))
 	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
 	       ((read-c-ident ch) =>
 		(lambda (name)
