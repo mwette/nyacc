@@ -41,8 +41,8 @@
 	    make-comm-reader
 	    make-string-reader
 	    make-chseq-reader
-	    make-num-reader
 	    eval-reader
+	    read-basic-num
  	    read-c-ident read-c$-ident
  	    read-c-comm
 	    read-c-string
@@ -336,30 +336,33 @@
 
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
 
-;; @deffn {Procedure} simple-read-num ch => #f|pair
+;; @deffn {Procedure} read-basic-num ch [#:signed #t] => #f|pair
 ;; Reader for numbers in most C-like languages.  The @var{pair} returned
 ;; is one of @code{($fixed . "1")} or @code{($float . "1.0")}.
 ;; The @code{fixed} form include decimal, hexidecimal (starting with "0x"),
 ;; and binary (starting with "0b") integers.  The @code{float} form is
-;; floating point.  This will not generate exceptions.
+;; floating point.  This will not generate exceptions.  Normally this
+;; reads unsigned numbers; with the @code{#:signed #t} option, leading
+;; @code{-} is allowed.
 ;; @end deffn
-(define-public (simple-read-num)
+(define* (read-basic-num ch #:key signed)
   (define (unread-chl chl)
     (let lp ((l chl)) (unless (null? l) (unread-char (car l)) (lp (cdr l)))))
-  (let loop ((chl '()) (ty #f) (st 10) (ch (read-char)))
+  (let loop ((chl '()) (ty #f) (st 10) (ch ch))
+    ;;(sf "lp: ch=~S st=~S ty=~S chl=~S\n" ch st ty chl)
     (case st
       ((10) ;; entry
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? #\0 ch) (loop (cons ch chl) 'fixed 11 (read-char))) 
-	((char-numeric? ch) (loop chl 'fixed 20 ch))
+	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
+	((char-numeric? ch) (loop chl '$fixed 20 ch))
 	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
-	((char=? #\- ch) (loop (cons ch chl) ty 13 (read-char)))
+	((and signed (char=? #\- ch)) (loop (cons ch chl) ty 13 (read-char)))
 	(else #f)))
       ((11) ;; got 0/fixed, allow x, b
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? ch #\.) (loop (cons ch chl) 'float 30 (read-char)))
+	((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
 	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
 	((memq ch '(#\B #\b)) (loop (cons ch chl) ty 22 (read-char)))
 	((char-oct? ch) (loop (cons ch chl) ty 23 (read-char)))
@@ -367,22 +370,22 @@
       ((12) ;; got `.'
        (cond
 	((eof-object? ch) #f)
-	((char-numeric? ch) (loop (cons ch chl) 'float 30 (read-char)))
+	((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
 	(else (unread-char ch) #f)))
       ((13) ;; got '-'
        (cond
 	((eof-object? ch) (unread-char #\-) #f)
-	((char=? #\0 ch) (loop (cons ch chl) 'fixed 11 (read-char)))
-	((char-numeric? ch) (loop chl 'fixed 20 ch))
+	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char)))
+	((char-numeric? ch) (loop chl '$fixed 20 ch))
 	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
 	(else (loop (cons ch chl) ty 73 ch))))
       ((20) ;; parse decimal integer part
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
 	((char-numeric? ch) (loop (cons ch chl) ty 20 (read-char)))
-	((char=? ch #\.) (loop (cons #\. chl) 'float 30 (read-char)))
-	((memq ch '(#\E #\e)) (loop (cons ch chl) 'float 40 (read-char)))
-	(else (loop chl 'fixed 70 ch))))
+	((char=? ch #\.) (loop (cons #\. chl) '$float 30 (read-char)))
+	((memq ch '(#\E #\e)) (loop (cons ch chl) '$float 40 (read-char)))
+	(else (loop chl '$fixed 70 ch))))
       ((21) ;; parse fixed hex
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
@@ -414,9 +417,12 @@
 	((eof-object? ch) (loop chl ty 72 ch))
 	((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
 	(else (loop chl ty 70 ch))))
-      ((70) (cond ((eof-object? ch) (cons ty (rls chl))) (else #f)))
-      ((71) (unread-char ch) (list ty (rls chl)))
-      ((72) (list ty (rls chl)))
+      ((70)
+       (cond
+	((eof-object? ch) (cons ty (rls chl)))
+	(else (loop chl ty 71 ch))))
+      ((71) (unread-char ch) (cons ty (rls chl)))
+      ((72) (cons ty (rls chl)))
       ((73) (unread-chl chl) #f)
       (else (error "coding error")))))
 
@@ -854,7 +860,7 @@
 			       comm-reader comm-skipper
 			       space-chars extra-reader)
   (let* ((read-ident (or ident-reader (make-ident-reader c:if c:ir)))
-	 (read-num (or num-reader (make-num-reader)))
+	 (read-num (or num-reader read-basic-num))
 	 (read-string (or string-reader (make-string-reader #\")))
 	 (read-chlit (or chlit-reader (lambda (ch) #f)))
 	 (read-comm (or comm-reader (lambda (ch bol) #f)))
