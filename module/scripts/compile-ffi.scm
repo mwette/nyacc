@@ -34,7 +34,7 @@
 (define *ffi-help-version* "1.02.2")
 
 (define %summary
-  "Compile a ffi-file (C interface spec) to Scheme (or maybe .go).")
+  "Compile a ffi-file to .scm and maybe .go.")
 
 (define (sfmt fmt . args)
   (apply simple-format (current-error-port) fmt args)
