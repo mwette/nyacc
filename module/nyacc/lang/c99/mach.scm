@@ -101,8 +101,8 @@
      (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3))))
     (arg-expr-hack
      (declaration-specifiers
-      abstract-declarator ($$ `(param-decl ,(tl->list $1) $2)))
-     (declaration-specifiers ($$ `(param-decl ,(tl->list $1)))))
+      abstract-declarator ($$ `(param-decl ,1 ,$2)))
+     (declaration-specifiers ($$ `(param-decl ,$1))))
 
     (unary-expression
      (postfix-expression)		; S 6.5.3
