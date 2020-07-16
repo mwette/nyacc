@@ -439,7 +439,6 @@
 ;; prefix.
 ;; @end deffn
 (define (read-c-num ch)
-  ;; gcctodo: F128, F32x
   (define (unread-chl chl)
     (let lp ((chl chl))
       (unless (null? (cdr chl)) (unread-char (car chl)) (lp (cdr chl)))))
