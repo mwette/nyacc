@@ -40,7 +40,7 @@
 	    splice-xtail
 	    tclme
 	    )
-  #:use-module ((nyacc lex) #:select (simple-read-num cnumstr->scm c:ir))
+  #:use-module ((nyacc lex) #:select (read-basic-num cnumstr->scm c:ir))
   #:use-module (nyacc lang sx-util)
   #:use-module (sxml match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
@@ -412,11 +412,15 @@
 	  (else (let ((argval (read-non-ws ch)))
 		  (cons `(arg ,argval) (loop (read-char)))))))))))
 
-;; @deffn {Procedure} num-string cstr
-;; Given a string return a numeric sxml element like @code{(fixed "123")}
-;; or @code{(float "4.56")} or return @code{#f} if not a number.
+;; @deffn {Procedure} num-string cstr => #f|(number ,value)
+;; Given a string return a numeric sxml element like @code{(number "123")}
+;; @code{#f} if not a number.  Leading sign is accepted.
 ;; @end deffn
-(define (num-string cstr) (with-input-from-string cstr simple-read-num))
+(define (num-string cstr)
+  (and=>
+   (with-input-from-string cstr
+     (lambda () (read-basic-num (read-char) #:signed #t)))
+   (lambda (pair) `(number ,(cdr pair)))))
 
 ;; @deffn {Procedure} vec-string str
 ;; Given a string return an array of numeric elements like
