@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-XX-XX  V1.03.0
+2020-07-19  V1.03.0
 	* nyacc/lang/c99/body.scm: don't tokenize input that would be
 	  unused when #ifdef'd out. Hope this makes parsing a bit faster.
 	  e.g., guild compile-ffi ffi/glib speedup from 12.0 s to 6.7 s.
