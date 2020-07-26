@@ -883,7 +883,7 @@
 	 (read-chseq (make-chseq-reader chrseq))
 	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (lambda ()
-      (let ((bol #f))
+      (let ((bol #t))
 	(lambda ()
 	  (let loop ((ch (read-char)))
 	    (cond
