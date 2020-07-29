@@ -105,7 +105,7 @@
   (define (fH seed node) (cons node seed))
   (foldts fD fU fH '() tree))
 
-(when #t
+(when #f
   (let* ((code "int foo = sizeof(int(*)());")
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
@@ -118,6 +118,21 @@
     (pp expr)
     (sf "evaluate:\n")
     (sf "x = ~S\n" (eval-c99-cx expr))))
+
+(when #t
+  (let* ((code
+	  (string-append
+	   "void foo() {\n"
+	   "__asm__(\"mov r0,r1\" : [reg] \"=&d\" (reg)"
+	   " : [mcu] \"I\" (123), [ssr] \"X\" (456)"
+	   " : \"foo\", \"bar\" );\n"
+	   "}\n"))
+	 (tree (or (parse-string code) (error "parse failed")))
+	 )
+    (sf "~A\n" code)
+    (ppin tree)
+    (pp99 tree)
+    ))
 
 ;; ffi-help patterns:
 ;; Figure out how to have ffi-help print message when new pattern shows up.

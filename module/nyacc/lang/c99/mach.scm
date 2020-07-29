@@ -753,41 +753,48 @@
      ("return" ";" ($$ `(return (expr)))))
 
     (asm-statement
-     (asm-expression ";"))
+     (asm-expression ";" ($$ `(expr-stmt ,$1))))
     (asm-expression
      ("__asm__" opt-asm-specifiers "(" string-literal ")"
-      ($$ `(asm-expr (@ (extension "GNUC")) ,$4)))
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4)))
      ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs ")"
-      ($$ `(asm-expr (@ (extension "GNUC")) ,$4 ,(tl->list $5))))
-     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs asm-inputs ")"
-      ($$ `(asm-expr (@ (extension "GNUC")) ,$4 ,(tl->list $5) ,(tl->list $6))))
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5)))
+     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs
+      asm-inputs ")"
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5 ,$6)))
      ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs
       asm-inputs asm-clobbers ")"
-      ($$ `(asm-expr (@ (extension "GNUC"))
-		     ,$4 ,(tl->list $5) ,(tl->list $6) ,(tl->list $7)))))
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5 ,$6 ,$7))))
     (opt-asm-specifiers
      ($empty)
-     ("volatile"))
+     ("volatile" ($$ (list '(volatile "true")))))
     (asm-outputs
+     (asm-outputs-1 ($$ (tl->list $1))))
+    (asm-outputs-1
      (":" ($$ (make-tl 'asm-outputs)))
      (":" asm-output ($$ (make-tl 'asm-outputs $2)))
-     (asm-outputs "," asm-output ($$ (tl-append $1 $3))))
+     (asm-outputs-1 "," asm-output ($$ (tl-append $1 $3))))
+
     (asm-output
      (string-literal "(" identifier ")" ($$ `(asm-operand ,$1 ,$3)))
      ("[" identifier "]" string-literal "(" identifier ")"
       ($$ `(asm-operand ,$2 ,$4 ,$6))))
     (asm-inputs
+     (asm-inputs-1 ($$ (tl->list $1))))
+    (asm-inputs-1
      (":" ($$ (make-tl 'asm-inputs)))
      (":" asm-input ($$ (make-tl 'asm-inputs $2)))
-     (asm-inputs "," asm-input ($$ (tl-append $1 $3))))
+     (asm-inputs-1 "," asm-input ($$ (tl-append $1 $3))))
     (asm-input
      (string-literal "(" expression ")" ($$ `(asm-operand ,$1 ,$3)))
      ("[" identifier "]" string-literal "(" expression ")"
       ($$ `(asm-operand ,$2 ,$4 ,$6))))
     (asm-clobbers
+     (asm-clobbers-1 ($$ (tl->list $1))))
+    (asm-clobbers-1
      (":" ($$ (make-tl 'asm-clobbers)))
-     (":" string-literal ($$ (tl-extend (make-tl 'asm-clobbers) $2)))
-     (asm-clobbers "," string-literal ($$ (tl-extend $1 (cdr $3)))))
+     (":" string-literal ($$ (make-tl 'asm-clobbers $2)))
+     (asm-clobbers-1 "," string-literal ($$ (tl-append $1 $3))))
 
     ;; === top-level forms ====================================================
 

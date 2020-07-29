@@ -633,6 +633,39 @@
        (ppx expr1) (sf "; ") (ppx expr2) (sf "; ") (ppx expr3)
        (sf ") ") (ppx stmt))
 
+      ;; asm - parser does not preserve specifiers
+      ((asm-expr (@ . ,attr) ,pat ,outs ,ins ,clobs)
+       (if (assq-ref attr 'volatile) (sf "asm volatile (") (sf "asm ("))
+       (ppx pat) (ppx outs) (ppx ins) (ppx clobs) (sf ")"))
+      ((asm-expr (@ . ,attr) ,pat ,outs ,ins)
+       (if (assq-ref attr 'volatile) (sf "asm volatile (") (sf "asm ("))
+       (ppx pat) (ppx outs) (ppx ins) (sf ")"))
+      ((asm-expr (@ . ,attr) ,pat ,outs)
+       (if (assq-ref attr 'volatile) (sf "asm volatile (") (sf "asm ("))
+       (ppx pat) (ppx outs) (sf ")"))
+      ((asm-expr (@ . ,attr) ,pat)
+       (if (assq-ref attr 'volatile) (sf "asm volatile (") (sf "asm ("))
+       (ppx pat) (sf ")"))
+      ((asm-outputs . ,elts)
+       (sf ": ")
+       (pair-for-each
+	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+	elts))
+      ((asm-inputs . ,elts)
+       (sf ": ")
+       (pair-for-each
+	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+	elts))
+      ((asm-clobbers . ,elts)
+       (sf ": ")
+       (pair-for-each
+	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+	elts))
+      ((asm-operand (ident ,name) ,str ,arg)
+       (sf "[~A] " name) (ppx str) (sf " (") (ppx arg) (sf ")"))
+      ((asm-operand ,str ,arg)
+       (ppx str) (sf " (") (ppx arg) (sf ")"))
+       
       ;; jump-statement
       ((goto ,where)
        (pop-il)			; unindent
