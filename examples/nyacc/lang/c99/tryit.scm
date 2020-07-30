@@ -123,9 +123,9 @@
   (let* ((code
 	  (string-append
 	   "void foo() {\n"
-	   "__asm__(\"mov r0,r1\" : [reg] \"=&d\" (reg)"
+	   "__asm__ goto (\"mov r0,r1\" : "
 	   " : [mcu] \"I\" (123), [ssr] \"X\" (456)"
-	   " : \"foo\", \"bar\" );\n"
+	   " : \"foo\", \"bar\" : error );\n"
 	   "}\n"))
 	 (tree (or (parse-string code) (error "parse failed")))
 	 )

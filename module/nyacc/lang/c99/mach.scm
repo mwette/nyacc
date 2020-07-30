@@ -755,26 +755,30 @@
     (asm-statement
      (asm-expression ";" ($$ `(expr-stmt ,$1))))
     (asm-expression
-     ("__asm__" opt-asm-specifiers "(" string-literal ")"
+     ("__asm__" opt-asm-qualifiers "(" string-literal ")"
       ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4)))
-     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs ")"
+     ("__asm__" opt-asm-qualifiers "(" string-literal asm-outputs ")"
       ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5)))
-     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs
+     ("__asm__" opt-asm-qualifiers "(" string-literal asm-outputs
       asm-inputs ")"
       ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5 ,$6)))
-     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs
+     ("__asm__" opt-asm-qualifiers "(" string-literal asm-outputs
       asm-inputs asm-clobbers ")"
-      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5 ,$6 ,$7))))
-    (opt-asm-specifiers
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5 ,$6 ,$7)))
+     ("__asm__" opt-asm-qualifiers "(" string-literal asm-outputs
+      asm-inputs asm-clobbers asm-gotos ")"
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 (asm-outputs)
+		     ,$6 ,$7 ,$8))))
+    (opt-asm-qualifiers
      ($empty)
-     ("volatile" ($$ (list '(volatile "true")))))
+     ("volatile" ($$ (list '(volatile "true"))))
+     ("goto" ($$ (list '(goto "true")))))
     (asm-outputs
      (asm-outputs-1 ($$ (tl->list $1))))
     (asm-outputs-1
      (":" ($$ (make-tl 'asm-outputs)))
      (":" asm-output ($$ (make-tl 'asm-outputs $2)))
      (asm-outputs-1 "," asm-output ($$ (tl-append $1 $3))))
-
     (asm-output
      (string-literal "(" identifier ")" ($$ `(asm-operand ,$1 ,$3)))
      ("[" identifier "]" string-literal "(" identifier ")"
@@ -795,6 +799,12 @@
      (":" ($$ (make-tl 'asm-clobbers)))
      (":" string-literal ($$ (make-tl 'asm-clobbers $2)))
      (asm-clobbers-1 "," string-literal ($$ (tl-append $1 $3))))
+    (asm-gotos
+     (asm-gotos-1 ($$ (tl->list $1))))
+    (asm-gotos-1
+     (":" ($$ (make-tl 'asm-gotos)))
+     (":" identifier ($$ (make-tl 'asm-gotos $2)))
+     (asm-gotos-1 "," identifier ($$ (tl-append $1 $3))))
 
     ;; === top-level forms ====================================================
 

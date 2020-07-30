@@ -634,6 +634,9 @@
        (sf ") ") (ppx stmt))
 
       ;; asm - parser does not preserve specifiers
+      ((asm-expr (@ . ,attr) ,pat ,outs ,ins ,clobs ,gotos)
+       (if (assq-ref attr 'goto) (sf "asm goto (") (sf "asm ("))
+       (ppx pat) (ppx outs) (ppx ins) (ppx clobs) (ppx gotos) (sf ")"))
       ((asm-expr (@ . ,attr) ,pat ,outs ,ins ,clobs)
        (if (assq-ref attr 'volatile) (sf "asm volatile (") (sf "asm ("))
        (ppx pat) (ppx outs) (ppx ins) (ppx clobs) (sf ")"))
@@ -665,6 +668,11 @@
        (sf "[~A] " name) (ppx str) (sf " (") (ppx arg) (sf ")"))
       ((asm-operand ,str ,arg)
        (ppx str) (sf " (") (ppx arg) (sf ")"))
+      ((asm-gotos . ,elts)
+       (sf ": ")
+       (pair-for-each
+	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+	elts))
        
       ;; jump-statement
       ((goto ,where)

@@ -953,20 +953,20 @@
    (lambda ($2 $1 . $rest) `(return (expr)))
    ;; asm-statement => asm-expression ";"
    (lambda ($2 $1 . $rest) `(expr-stmt ,$1))
-   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal ")"
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal ")"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(asm-expr (@ (extension "GNUC") ,@$2) ,$4))
-   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5))
-   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC") ,@$2)
         ,$4
         ,$5
         ,$6))
-   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
         (@ (extension "GNUC") ,@$2)
@@ -974,10 +974,21 @@
         ,$5
         ,$6
         ,$7))
-   ;; opt-asm-specifiers => 
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
+   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(asm-expr
+        (@ (extension "GNUC") ,@$2)
+        ,$4
+        (asm-outputs)
+        ,$6
+        ,$7
+        ,$8))
+   ;; opt-asm-qualifiers => 
    (lambda $rest (list))
-   ;; opt-asm-specifiers => "volatile"
+   ;; opt-asm-qualifiers => "volatile"
    (lambda ($1 . $rest) (list '(volatile "true")))
+   ;; opt-asm-qualifiers => "goto"
+   (lambda ($1 . $rest) (list '(goto "true")))
    ;; asm-outputs => asm-outputs-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; asm-outputs-1 => ":"
@@ -1015,6 +1026,14 @@
    (lambda ($2 $1 . $rest)
      (make-tl 'asm-clobbers $2))
    ;; asm-clobbers-1 => asm-clobbers-1 "," string-literal
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; asm-gotos => asm-gotos-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; asm-gotos-1 => ":"
+   (lambda ($1 . $rest) (make-tl 'asm-gotos))
+   ;; asm-gotos-1 => ":" identifier
+   (lambda ($2 $1 . $rest) (make-tl 'asm-gotos $2))
+   ;; asm-gotos-1 => asm-gotos-1 "," identifier
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; translation-unit => external-declaration-list
    (lambda ($1 . $rest) (tl->list $1))
