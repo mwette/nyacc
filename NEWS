@@ -5,6 +5,15 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2020-99-99  V1.03.1 in work
+	* Support was added for handling asm expressions in pretty-print-c99.
+	  This uses the GNU form and will add volatile option.
+	* Handling of asm in the c99 parser (c99/mach.scm) was updated to
+	  clean up the output syntax trees.
+	* nyacc/lang/util.scm init input-stack to '() (was #f)
+	* TODO: make-lalr-parser will build parser for mach's with 
+	  rrconf actions.
+
 2020-07-19  V1.03.0
 	* nyacc/lang/c99/body.scm: don't tokenize input that would be
 	  unused when #ifdef'd out. Hope this makes parsing a bit faster.

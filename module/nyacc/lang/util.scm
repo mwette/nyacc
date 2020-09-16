@@ -76,7 +76,7 @@ See the file COPYING included with the this distribution.")
 
 ;; === input stack =====================
 
-(define *input-stack* (make-fluid))
+(define *input-stack* (make-fluid '()))
 
 (define (reset-input-stack)
   (fluid-set! *input-stack* '()))
