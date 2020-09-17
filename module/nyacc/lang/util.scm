@@ -359,13 +359,7 @@ See the file COPYING included with the this distribution.")
 	(lambda (fmt . args)
 	  (let* ((str (apply simple-format #f fmt args))
 		 (str (if (and (zero? column) per-line-prefix)
-			  (begin
-			    (when #f ;;(char=? #\tab (string-ref str 0))
-			      (sferr "expand-tabs (pfxlen=~S)\n" pfxlen)
-			      (sferr "~A\n" str)
-			      (sferr "~A~A\n\n" per-line-prefix
-				     (expand-tabs str pfxlen)))
-			    (expand-tabs str pfxlen))
+			  (expand-tabs str pfxlen)
 			  str))
 		 (len (string-length str)))
 	    (cond
