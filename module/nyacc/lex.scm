@@ -842,7 +842,7 @@
 ;; chrtab = characters
 ;; comm-reader : if parser does not deal with comments must return #f
 ;;               but problem with character ..
-;; extra-reader: insert an user-defined reader
+;; extra-reader: insert an user-defined reader, (lambda (ch loop) ...)
 ;; match-table:
 ;; @enumerate
 ;; symbol -> (string . symbol)
@@ -869,7 +869,7 @@
 			 ((list? spaces) (list->char-set spaces))
 			 ((char-set? spaces) spaces)
 			 (else (error "expecting string list or char-set"))))
-	 (read-extra (or extra-reader (lambda (ch) #f)))
+	 (read-extra (or extra-reader (lambda (ch lp) #f)))
 	 ;;
 	 (ident-like? (make-ident-like-p read-ident))
 	 ;;
@@ -889,7 +889,7 @@
 	    (cond
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
 	     ;;((eq? ch #\newline) (set! bol #t) (loop (read-char)))
-	     ((read-extra ch))
+	     ((read-extra ch loop))
 	     ((char-set-contains? space-cs ch) (loop (read-char)))
 	     ((and (eqv? ch #\newline) (set! bol #t) #f))
 	     ((read-comm ch bol) =>
