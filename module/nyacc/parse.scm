@@ -234,6 +234,9 @@
           '(interaction-environment)').  The default is to use
           '(current-module)'; that is, the module in which this
           procedure is being executed."
+
+  ;; BUG: this should fail if rrconf exists.
+
   (let* ((mtab (assq-ref mach 'mtab))
 	 (siu (map (lambda (n) (assoc-ref mtab n)) skip-if-unexp))
 	 (iact interactive))
