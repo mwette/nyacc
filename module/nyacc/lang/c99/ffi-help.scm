@@ -322,7 +322,8 @@
     ;;
     (ppscm
      `(define ,(link-libs)
-	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
+	(delay
+	  (list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries))))))
     (sfscm "\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))
     ;;
@@ -1058,13 +1059,13 @@
 	  (let ((,~name (fh-link-proc
 			 ,decl-return ,name
 			 (append (list ,@decl-params) (map car ~rest))
-			 ,(link-libs)))
+			 (force ,(link-libs))))
 		,@(gen-exec-unwrappers exec-params))
 	    ,(if exec-return (list exec-return va-call) va-call)))))
      (#f ;; separate ~name and name defines
       (ppscm `(define ,~name
 		(delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
-				     ,(link-libs)))))
+				     (force ,(link-libs))))))
       (ppscm
        `(define (,sname ,@(gen-exec-arg-names exec-params))
 	  (let ,(gen-exec-unwrappers exec-params)
@@ -1074,7 +1075,7 @@
        `(define ,sname
 	  (let ((,~name
 		 (delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
-				      ,(link-libs)))))
+				      (force ,(link-libs))))))
 	    (lambda ,(gen-exec-arg-names exec-params)
 	      (let ,(gen-exec-unwrappers exec-params)
 		,(if exec-return (list exec-return call) call))))))))
@@ -1087,7 +1088,7 @@
     (sfscm ";;   (~A val) => bytestructure-set!\n" name)
     (ppscm
      `(define-public ,(string->symbol name)
-	(let ((x-var (delay (fh-link-extern ,name ,desc ,(link-libs)))))
+	(let ((x-var (delay (fh-link-extern ,name ,desc (force ,(link-libs))))))
 	  (case-lambda
 	    (() (bytestructure-ref (force x-var)))
 	    ((var) (bytestructure-set! (force x-var) var))))))))
