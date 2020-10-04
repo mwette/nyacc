@@ -722,7 +722,8 @@
 		    (show-incs #f)	; show include files
 		    (return-defs #f)	; return (values tree defs)
 		    (debug #f))		; debug
-  (let ((info (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
+  (let ((info
+	 (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
     (with-fluids ((*info* info)
 		  (*input-stack* '()))
@@ -738,7 +739,7 @@
 	    (lambda (key fmt . args) (apply throw 'c99-error fmt args))))
 	(lambda (key fmt . args)
 	  (report-error fmt args)
-	  #f)))))
+	  (if return-defs (values #f '()) #f))))))
 
 ;; === expr parser ====================
 
