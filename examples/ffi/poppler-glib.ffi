@@ -1,0 +1,20 @@
+;; poppler-glib.ffi			-*- Scheme -*-
+
+;; Copyright (C) 2020 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-ffi-module (ffi TMPL)
+  #:pkg-config "poppler-glib"
+  #:include '("poppler.h")
+  #:inc-filter (lambda (file-spec path-spec)
+                 (string-contains path-spec "poppler/glib/" 0))
+  #:use-ffi-module (ffi glib)
+  #:use-ffi-module (ffi cairo)
+  ;; more use-ffi-module dependencies I think
+  )
+
+;; --- last line ---
