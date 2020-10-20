@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-10-XX  V1.03.1
+2020-10-20  V1.03.1
 	* Support was added for handling asm expressions in pretty-print-c99.
 	  This uses the GNU form and will add volatile option.
 	* Handling of asm in the c99 parser (c99/mach.scm) was updated to
