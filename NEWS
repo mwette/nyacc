@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-99-99  V1.03.1 in work
+2020-10-XX  V1.03.1
 	* Support was added for handling asm expressions in pretty-print-c99.
 	  This uses the GNU form and will add volatile option.
 	* Handling of asm in the c99 parser (c99/mach.scm) was updated to
@@ -13,6 +13,13 @@ without any warranty.
 	* nyacc/lang/util.scm init input-stack to '() (was #f)
 	* TODO: make-lalr-parser will build parser for mach's with 
 	  rrconf actions.
+	* ffi-helper generated scm files now use a promise to avoid 
+	  dynamic linking at compile time.
+	* added make-cstr-array to ffi-help-rt (thanks rekado!);
+	  updated uwrap~pointer to deal with bytevectors; previously
+	  undefined unwrap~array now defined to unwrap~pointer.
+	* ffi-helper generates fht-unwrap call for functions taking
+	  struct-ref: see bug 59307
 
 2020-07-19  V1.03.0
 	* nyacc/lang/c99/body.scm: don't tokenize input that would be
