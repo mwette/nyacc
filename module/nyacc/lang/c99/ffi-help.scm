@@ -907,6 +907,18 @@
 	 (string->symbol (string-append "unwrap-enum-" name)))
 	(else 'unwrap-enum)))
 
+      (((struct-ref (ident ,name)))
+       (cond
+	((member (w/struct name) wrapped)
+	 `(fht-unwrap ,(string->symbol (sw/struct name))))
+	(else #f)))
+
+      (((union-ref (ident ,name)))
+       (cond
+	((member (w/union name) wrapped)
+	 `(fht-unwrap ,(string->symbol (sw/union name))))
+	(else #f)))
+
       (((pointer-to) (typename ,typename))
        (cond
 	((member (w/* typename) defined)
@@ -925,6 +937,15 @@
 	 `(fht-unwrap ,(strings->symbol "struct-" struct-name "*")))
 	((member (w/struct struct-name) defined)
 	 `(fht-unwrap ,(strings->symbol "struct-" struct-name "*")))
+	(else 'unwrap~pointer)))
+
+      ;; use this?
+      #;(((pointer-to) (union-ref (ident ,union-name) . ,rest))
+       (cond
+	((member (w/union* union-name) defined)
+	 `(fht-unwrap ,(strings->symbol "union-" union-name "*")))
+	((member (w/union union-name) defined)
+	 `(fht-unwrap ,(strings->symbol "union-" union-name "*")))
 	(else 'unwrap~pointer)))
 
       (((pointer-to) (function-returning (param-list . ,params)) . ,rest)
