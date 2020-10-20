@@ -119,7 +119,7 @@
     (sf "evaluate:\n")
     (sf "x = ~S\n" (eval-c99-cx expr))))
 
-(when #t
+(when #f
   (let* ((code "int intx;\n")
 	 (tree (or (parse-string code) (error "parse failed")))
 	 )
@@ -127,6 +127,44 @@
     (ppin tree)
     (pp99 tree)
     ))
+
+(when #t
+  (let* ((code 
+	  "if (((Rd & 0x08) && (Rr & 0x08)) ||
+              ((Rr & 0x08) && (~Ru & 0x08)) ||
+              ((~Ru & 0x08) && (Rd & 0x08))) {
+            sreg = SREG_SET_H(sreg);
+          } else {
+            sreg = SREG_CLR_H(sreg);
+          }
+        
+          if (((Rd & 0x80) && (Rr & 0x80) && (~Ru & 0x80)) ||
+              ((~Rd & 0x80) && (~Rr & 0x80) && (Ru & 0x80))) {
+            sreg = SREG_SET_V(sreg);
+          } else {
+            sreg = SREG_CLR_V(sreg);
+          }
+        
+          sreg = set_N(sreg, Ru);
+          sreg = set_S(sreg);
+          sreg = set_Z(sreg, Ru);
+        
+          if (((Rd & 0x80) && (Rr & 0x80)) ||
+              ((Rr & 0x80) && (~Ru & 0x80)) ||
+              ((~Ru & 0x80) && (Rd & 0x80))) {
+            sreg = SREG_SET_C(sreg);
+          } else {
+            sreg = SREG_CLR_C(sreg);
+          }")
+	 (code (string-append "void foo() {\n" code "}\n"))
+	 (tree (or (parse-string code) (error "parse failed")))
+	 (tree (sx-ref* tree 1 3 1))
+	 )
+    (sf "~A\n" code)
+    (ppin tree)
+    ;;(pp99 tree)
+    ))
+
 
 ;; ffi-help patterns:
 ;; Figure out how to have ffi-help print message when new pattern shows up.
