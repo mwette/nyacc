@@ -67,7 +67,7 @@
   #:re-export (expand-typerefs
 	       reify-declr reify-decl
 	       udecl->mdecl split-udecl
-	       clean-field-list)
+	       clean-field-list clean-fields)
   #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (nyacc lang c99 pprint)

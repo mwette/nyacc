@@ -783,7 +783,7 @@
 			    (udecl (udecl-rem-type-qual udecl))
 			    (mdecl (udecl->mdecl udecl)))
 		       (mtail->ffi-desc (cdr mdecl))))
-		   fields)))
+		   (clean-fields fields))))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
     
