@@ -15,7 +15,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-;; https://docs.oracle.com/javase/specs/jls/se7/html/
+;; ref: https://docs.oracle.com/javase/specs/jls/se7/html/
 
 (define-module (nyacc lang java mach)
   #:export (java-spec java-mach gen-java-files)
@@ -26,6 +26,19 @@
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
+
+;; tough reduce-reduce conflict:
+;; in (BlockStatement ...
+;;   (Type Identifier ...)
+;; vs
+;;   (StatmentExpression) [starting with QualifiedIdentier]
+;; What makes it worse is that Type can take the form
+;;   Identifier "<" ...
+;; so there is conflict between type def and expression.
+;; See "HACK" in production rules for Type.
+;; ...
+;; But Identifier "<" ... will never be a statement in reality, so
+;; statement expressions can be narrowed!
 
 (define java-spec
   (lalr-spec
@@ -69,12 +82,10 @@
      (TypeDeclaration-list TypeDeclaration))
     
     (ImportDeclaration
-     ;;("import" ["static"] Identifier { "." Identifier } ["." "*"] ";"))
      ("import" "static" QualifiedIdentifier "." "*" ";")
      ("import" "static" QualifiedIdentifier ";")
      ("import" QualifiedIdentifier "." "*" ";")
-     ("import" QualifiedIdentifier ";")
-     )
+     ("import" QualifiedIdentifier ";"))
 
     (TypeDeclaration 
      (ClassOrInterfaceDeclaration ";"))
@@ -93,16 +104,19 @@
      )
 
     (NormalClassDeclaration
-     ("class" Identifier opt-TypeParameters "extends" Type
-      "implements" TypeList ClassBody)
-     ("class" Identifier opt-TypeParameters "extends" Type  ClassBody)
-     ("class" Identifier opt-TypeParameters "implements" TypeList ClassBody)
-     ("class" Identifier opt-TypeParameters ClassBody)
-     )
+     ("class" Identifier
+      opt-TypeParameters opt-extends opt-implements
+      ClassBody))
 
     (opt-TypeParameters
      ($empty)
      (TypeParameters))
+    (opt-extends
+     ($empty)
+     ("extends" Type))
+    (opt-implements
+     ($empty)
+     ("implements" TypeList))
 
     (EnumDeclaration
      ("enum" Identifier EnumBody)
@@ -120,8 +134,13 @@
     (Type
      (BasicType)
      (BasicType arrays)
-     (ReferenceType)
-     (ReferenceType arrays)
+     ;; HACK:
+     ;; Replace ReferenceType with QualifiedIdentifier to eliminate
+     ;; reduce-reduce conflict for decl's w/ parameterized types.
+     ;;(ReferenceType)
+     ;;(ReferenceType arrays)
+     (QualifiedIdentifier)
+     (QualifiedIdentifier arrays)
      )
 
     (opt-arrays ($empty) (arrays))
@@ -145,6 +164,7 @@
      (ReferenceType "." Identifier)
      (ReferenceType "." Identifier TypeArguments))
 
+    ;; fix: shift-reduce on "<"
     (TypeArguments
      ("<" TypeArgument-list ">"))
     (TypeArgument-list
@@ -195,26 +215,28 @@
      ("private")
      ("static ")
      ("abstract")
-     ;;("final") ;; CONFLICT
+     ("final") ;; CONFLICT
      ("native")
      ("synchronized")
      ("transient")
      ("volatile")
      ("strictfp"))
 
-    #;(Annotations
+    #|
+    (Annotations
      (Annotation)
      (Annotations Annotation))
 
-    #;(Annotation
+    (Annotation
      ("@" QualifiedIdentifier)
      ;;("@" QualifiedIdentifier "(" ")")
      ;;("@" QualifiedIdentifier "(" AnnotationElement ")")
      )
 
-    #;(AnnotationElement
+    (AnnotationElement
      (ElementValuePairs)
      (ElementValue))
+    |#
 
     (ElementValuePairs
      (ElementValuePair)
@@ -252,7 +274,8 @@
      (Block))
 
     (MemberDecl
-     (MethodOrFieldDecl)
+     (Type Identifier FieldDeclaratorsRest)
+     (Type Identifier MethodDeclaratorRest)
      ("void" Identifier VoidMethodDeclaratorRest)
      (Identifier ConstructorDeclaratorRest)
      (GenericMethodOrConstructorDecl)
@@ -260,11 +283,11 @@
      (InterfaceDeclaration)
      )
 
-    (MethodOrFieldDecl
-     (Type Identifier MethodOrFieldRest))
-
-    (MethodOrFieldRest
-     (FieldDeclaratorsRest ";")
+    #;(MethodOrFieldDecl
+     (Type Identifier MethodOrFieldDeclRest))
+    
+    #;(MethodOrFieldDeclRest
+     (FieldDeclaratorsRest)
      (MethodDeclaratorRest))
 
     (FieldDeclaratorsRest
@@ -308,7 +331,9 @@
 
     (InterfaceBodyDeclaration
      (";")
-     (Modifier-list InterfaceMemberDecl))
+     (Modifier-list InterfaceMemberDecl)
+     (InterfaceMemberDecl)
+     )
     (Modifier-list
      (Modifier)
      (Modifier-list Modifier))
@@ -361,9 +386,6 @@
      (VariableModifier-list Type FormalParameterDeclsRest)
      )
 
-    #;(opt-VariableModifier-list
-     ($empty)
-     (VariableModifier-list))
     (VariableModifier-list
      (VariableModifier)
      (VariableModifier-list VariableModifier))
@@ -379,21 +401,26 @@
      ("..." VariableDeclaratorId))
 
     (VariableDeclaratorId
-     ;;(Identifier opt-arrays)
      (Identifier)
+     (Identifier arrays)
      )
 
     (VariableDeclarators
      (VariableDeclarator)
      (VariableDeclarators "," VariableDeclarator))
 
+    (VariableDeclarators-tail
+     ("," VariableDeclarator)
+     (VariableDeclarators-tail "," VariableDeclarator))
+
     (VariableDeclarator
      (Identifier VariableDeclaratorRest))
 
     (VariableDeclaratorRest
-     (opt-arrays)
-     (opt-arrays "=" VariableInitializer)
-     )
+     ($empty)
+     ("=" VariableInitializer)
+     (arrays)
+     (arrays "=" VariableInitializer))
 
     (VariableInitializer
      (ArrayInitializer)
@@ -419,24 +446,26 @@
     (BlockStatement
      (LocalVariableDeclarationStatement)
      (ClassOrInterfaceDeclaration)
-     ;;(Identifier ":" Statement) <= mistake , I think
      (Statement))
 
     (LocalVariableDeclarationStatement
-     (VariableModifier-list Type VariableDeclarators ";"))
+     (BasicType VariableDeclarators ";")
+     ;;^ relace to debug (Type VariableDeclarators ";")
+     ;;(VariableModifier-list Type VariableDeclarators ";")
+     )
 
     (Statement
      (Block)
      (";")
      (Identifier ":" Statement)
      (StatementExpression ";")
-     ("if" ParExpression Statement ($prec 'then))
-     ("if" ParExpression Statement "else" Statement)
+     ("if" "(" Expression ")" Statement ($prec 'then))
+     ("if" "(" Expression ")" Statement "else" Statement)
      ("assert" Expression ";")
      ("assert" Expression ":" Expression ";")
-     ("switch" ParExpression "{" SwitchBlockStatementGroups "}" )
-     ("while" ParExpression Statement)
-     ("do" Statement "while" ParExpression ";")
+     ("switch" "(" Expression ")" "{" SwitchBlockStatementGroups "}" )
+     ("while" "(" Expression ")" Statement)
+     ("do" Statement "while" "(" Expression ")" ";")
      ("for" "(" ForControl ")" Statement)
      ("break" ";")
      ("break" Identifier ";")
@@ -445,7 +474,7 @@
      ("return" Expression ";")
      ("return" ";")
      ("throw" Expression ";")
-     ("synchronized" ParExpression Block)
+     ("synchronized" "(" Expression ")" Block)
      ("try" Block Catches Finally)
      ("try" Block Catches)
      ("try" Block Finally)
@@ -455,14 +484,24 @@
      )
 
     (StatementExpression
-     (Expression))
+     ;;(Expression)
+     (QualifiedIdentifier Arguments)
+     (QualifiedIdentifier IdentifierSuffix Arguments)
+     (QualifiedIdentifier AssignmentOperator Expression1)
+     (QualifiedIdentifier IdentifierSuffix AssignmentOperator Expression1)
+     ;; ^ may need to sub ReferenceType and sub back later via ...
+     ;;  `(QualifiedIdentifier ,(cdr $1))
+     )
 
     (Catches
      (CatchClause)
      (Catches CatchClause))
 
+    ;; check
     (CatchClause
-     ("catch" "(" VariableModifier-list CatchType Identifier ")" Block))
+     ("catch" "(" VariableModifier-list CatchType Identifier ")" Block)
+     ("catch" "(" CatchType Identifier ")" Block)
+     )
 
     (CatchType
      (QualifiedIdentifier)
@@ -480,9 +519,8 @@
      (Resources ";" Resource))
 
     (Resource
-     ;;(VariableModifier-list ReferenceType VariableDeclaratorId "=" Expression)
-     (ReferenceType VariableDeclaratorId "=" Expression)
-     )
+     (VariableModifier-list ReferenceType VariableDeclaratorId "=" Expression)
+     (ReferenceType VariableDeclaratorId "=" Expression))
 
     (SwitchBlockStatementGroups
      (SwitchBlockStatementGroup)
@@ -566,14 +604,8 @@
 
     (Expression2
      (Expression3)
-     (Expression3 Expression2Rest))
-
-    (Expression2Rest
-     (infix-expr-list)
-     ("instanceof" Type))
-    (infix-expr-list
-     (InfixOp Expression3)
-     (infix-expr-list InfixOp Expression3))
+     (Expression3 "instanceof" Type)
+     (Expression2 InfixOp Expression3))
 
     (InfixOp
      ("||")
@@ -624,16 +656,16 @@
 
     (Primary
      (Literal)
-     (ParExpression)
+     ("(" Expression ")")
      ("this")
      ("this" Arguments)
      ("super" SuperSuffix)
      ("new" Creator)
-     (NonWildcardTypeArguments ExplicitGenericInvocationSuffix)
-     (NonWildcardTypeArguments "this" Arguments)
-     ;;(Identifier { . Identifier } [IdentifierSuffix])
+     ;;(NonWildcardTypeArguments ExplicitGenericInvocationSuffix)
+     ;;(NonWildcardTypeArguments "this" Arguments)
      (QualifiedIdentifier)
      (QualifiedIdentifier IdentifierSuffix)
+     (QualifiedIdentifier Arguments)
      (BasicType opt-arrays "." "class")
      ("void" "." "class"))
 
@@ -644,9 +676,6 @@
      (StringLiteral)
      (BooleanLiteral)
      (NullLiteral))
-
-    (ParExpression
-     ("(" Expression ")"))
 
     (Arguments
      ("(" Expression-list ")")
@@ -666,7 +695,7 @@
      (Identifier Arguments))
 
     (Creator
-     (NonWildcardTypeArguments CreatedName ClassCreatorRest)
+     ;;(NonWildcardTypeArguments CreatedName ClassCreatorRest)
      (CreatedName ClassCreatorRest)
      (CreatedName ArrayCreatorRest))
 
@@ -674,13 +703,15 @@
      (Identifier)
      (Identifier TypeArgumentsOrDiamond)
      (CreatedName "." Identifier)
-     (CreatedName "." Identifier TypeArgumentsOrDiamond))
+     (CreatedName "." Identifier TypeArgumentsOrDiamond)
+     )
 
     (ClassCreatorRest
+     (Arguments)
      (Arguments ClassBody)
-     (Arguments))
+     )
 
-    ;; needs work
+    ;; TODO: needs work
     (ArrayCreatorRest
      ;;[ (] {[]} ArrayInitializer  |  Expression ] {"[" Expression "]"} {[]})
      (array-expr-list opt-arrays)
@@ -691,21 +722,24 @@
      (array-expr-list "[" Expression "]"))
 
     (IdentifierSuffix
-     ;;[ ({[]} . class | Expression) ]
-     (Arguments)
+     ("[" "." "class" "]")
+     ("[" arrays "." "class" "]")
+     ("[" Expression "]")
      ("." "class")
-     ("." ExplicitGenericInvocation)
+     ;;("." ExplicitGenericInvocation)
      ("." "this")
      ("." "super" Arguments)
-     ("new" InnerCreator)
-     ("new" NonWildcardTypeArguments InnerCreator))
+     ("." "new" InnerCreator)
+     ("." "new" NonWildcardTypeArguments InnerCreator)
+     )
 
     (ExplicitGenericInvocation
      (NonWildcardTypeArguments ExplicitGenericInvocationSuffix))
 
     (InnerCreator
      (Identifier ClassCreatorRest)
-     (Identifier NonWildcardTypeArgumentsOrDiamond ClassCreatorRest))
+     (Identifier NonWildcardTypeArgumentsOrDiamond ClassCreatorRest)
+     )
 
     (Selector
      ("." Identifier)
@@ -714,8 +748,9 @@
      ("." "this")
      ("." "super" SuperSuffix)
      ("." "new" InnerCreator)
-     ("." "new" NonWildcardTypeArguments InnerCreator)
-     (Expression))
+     ;;("." "new" NonWildcardTypeArguments InnerCreator)
+     ("[" Expression "]")		; ??? check
+     )
 
     ;; check
     (EnumBody
@@ -788,9 +823,10 @@
 ;; === parsers ==========================
 
 (define java-mach
-  (hashify-machine
-   (compact-machine
-    (make-lalr-machine java-spec))))
+  (and java-spec
+       (hashify-machine
+	(compact-machine
+	 (make-lalr-machine java-spec)))))
 
 ;; === automaton file generators =========
 
