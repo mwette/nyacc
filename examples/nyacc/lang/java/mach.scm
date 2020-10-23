@@ -87,13 +87,15 @@
      ("import" QualifiedIdentifier "." "*" ";")
      ("import" QualifiedIdentifier ";"))
 
-    (TypeDeclaration 
+    (TypeDeclaration
+     ;; maybe put optional Modifier-list here
+     (Modifier-list ClassOrInterfaceDeclaration ";")
      (ClassOrInterfaceDeclaration ";"))
 
     (ClassOrInterfaceDeclaration 
-     (Modifier-list ClassDeclaration)
-     (Modifier-list InterfaceDeclaration))
-
+     (ClassDeclaration)
+     (InterfaceDeclaration))
+    
     (ClassDeclaration
      (NormalClassDeclaration)
      (EnumDeclaration))
@@ -191,6 +193,7 @@
      ("<" ">")
      (NonWildcardTypeArguments))
 
+    ;; "<" shift-reduce conflict: reduce Expression2 looking at "<"
     (TypeParameters
      ("<" TypeParameter-list ">"))
     (TypeParameter-list
@@ -209,13 +212,12 @@
      (ReferenceType-list "&" ReferenceType))
 
     (Modifier
-     ;;(Annotation)
      ("public")
      ("protected")
      ("private")
      ("static ")
      ("abstract")
-     ("final") ;; CONFLICT
+     ("final")
      ("native")
      ("synchronized")
      ("transient")
@@ -273,8 +275,10 @@
      ("static" Block)
      (Block))
 
+    ;; Potential conflict on "<" here between Type and
+    ;; TypeParameters (within GenericMethodOrConstructorDecl)
     (MemberDecl
-     (Type Identifier FieldDeclaratorsRest)
+     (Type Identifier FieldDeclaratorsRest ";")
      (Type Identifier MethodDeclaratorRest)
      ("void" Identifier VoidMethodDeclaratorRest)
      (Identifier ConstructorDeclaratorRest)
@@ -319,7 +323,8 @@
     (GenericMethodOrConstructorRest
      (Type Identifier MethodDeclaratorRest)
      ("void" Identifier MethodDeclaratorRest)
-     (Identifier ConstructorDeclaratorRest))
+     (Identifier ConstructorDeclaratorRest)
+     )
 
     (InterfaceBody
      ("{" InterfaceBodyDeclaration-list "}")
@@ -382,18 +387,7 @@
      ("(" ")"))
 
     (FormalParameterDecls
-     (Type FormalParameterDeclsRest)
-     (VariableModifier-list Type FormalParameterDeclsRest)
-     )
-
-    (VariableModifier-list
-     (VariableModifier)
-     (VariableModifier-list VariableModifier))
-
-    (VariableModifier
-     ("final")
-     ;;(Annotation)
-     )
+     (Type FormalParameterDeclsRest))
 
     (FormalParameterDeclsRest
      (VariableDeclaratorId)
@@ -443,15 +437,13 @@
      (BlockStatement)
      (BlockStatements BlockStatement))
 
+    ;; TODO: add opt-Annotations to front of "final" items
     (BlockStatement
-     (LocalVariableDeclarationStatement)
+     (Type VariableDeclarators ";")
+     ("final" Type VariableDeclarators ";")
      (ClassOrInterfaceDeclaration)
-     (Statement))
-
-    (LocalVariableDeclarationStatement
-     (BasicType VariableDeclarators ";")
-     ;;^ relace to debug (Type VariableDeclarators ";")
-     ;;(VariableModifier-list Type VariableDeclarators ";")
+     (Modifier-list ClassOrInterfaceDeclaration)
+     (Statement)
      )
 
     (Statement
@@ -489,8 +481,12 @@
      (QualifiedIdentifier IdentifierSuffix Arguments)
      (QualifiedIdentifier AssignmentOperator Expression1)
      (QualifiedIdentifier IdentifierSuffix AssignmentOperator Expression1)
+     ;;(QualifiedIdentifier "++")
+     ;;(QualifiedIdentifier "--")
      ;; ^ may need to sub ReferenceType and sub back later via ...
      ;;  `(QualifiedIdentifier ,(cdr $1))
+     ;;("++" QualifiedIdentifier)
+     ;;("--" QualifiedIdentifier)
      )
 
     (Catches
@@ -499,9 +495,7 @@
 
     ;; check
     (CatchClause
-     ("catch" "(" VariableModifier-list CatchType Identifier ")" Block)
-     ("catch" "(" CatchType Identifier ")" Block)
-     )
+     ("catch" "(" CatchType Identifier ")" Block))
 
     (CatchType
      (QualifiedIdentifier)
@@ -519,7 +513,8 @@
      (Resources ";" Resource))
 
     (Resource
-     (VariableModifier-list ReferenceType VariableDeclaratorId "=" Expression)
+     ;; first form missing opt-Annotations
+     ("final" ReferenceType VariableDeclaratorId "=" Expression)
      (ReferenceType VariableDeclaratorId "=" Expression))
 
     (SwitchBlockStatementGroups
@@ -553,7 +548,8 @@
      (ForUpdate))
 
     (ForVarControl
-     (VariableModifier-list Type VariableDeclaratorId  ForVarControlRest))
+     ;; add opt-Annotations
+     (Type VariableDeclaratorId  ForVarControlRest))
 
     (ForVarControlRest
      (ForVariableDeclaratorsRest ";" opt-Expression ";" opt-ForUpdate)
