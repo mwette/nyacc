@@ -38,7 +38,7 @@
 ;; See "HACK" in production rules for Type.
 ;; ...
 ;; But Identifier "<" ... will never be a statement in reality, so
-;; statement expressions can be narrowed!
+;; statement expressions can be narrowed, so try that.
 
 (define java-spec
   (lalr-spec
@@ -54,42 +54,58 @@
 	  (left "+" "-")
 	  (left "*" "/")
 	  )
+   ;;(expect 1)
    (grammar
     (Identifier
      ($ident ($$ `(Identifier $1))))
 
     (QualifiedIdentifier
-     (Identifier)
-     (QualifiedIdentifier "." Identifier))
+     (QualifiedIdentifier-1 ($$ (tl->list $1))))
+    ;; curious that adding this layer generates a shift-reduce conflict
+    (QualifiedIdentifier-1
+     (Identifier ($$ (make-tl 'QualifiedIdentifier $1)))
+     (QualifiedIdentifier-1 "." Identifier ($$ ($tl-append $1 $3))))
     
     (QualifiedIdentifierList
-     (QualifiedIdentifier)
-     (QualifiedIdentifierList "," QualifiedIdentifier))
+     (QualifiedIdentifierList-1 ($$ (tl->list $1))))
+    (QualifiedIdentifierList-1
+     (QualifiedIdentifier ($$ (make-tl 'QualifiedIdentifierList $1)))
+     (QualifiedIdentifierList-1 "," QualifiedIdentifier ($$ (tl-append $1 $3))))
 
     (CompliationUnit
-     (ImportDeclaration-list TypeDeclaration-list)
+     (ImportDeclaration-list TypeDeclaration-list ($$ `(ComplilationUnit $1 $2)))
      ("package" QualifiedIdentifier ";"
-      ImportDeclaration-list TypeDeclaration-list)
-     #;(Annotations "package" QualifiedIdentifier ";"
-      ImportDeclaration-list TypeDeclaration-list)
-     )
+      ImportDeclaration-list TypeDeclaration-list
+      ($$ `(CompilationUnit (Package ,$2 ,@(cdr $4) ,@(cdr $5)))))
+     (Annotations
+      "package" QualifiedIdentifier ";"
+      ImportDeclaration-list TypeDeclaration-list
+      ($$ `(CompilationUnit (Package ,$3 $1 ,@(cdr $5) ,@(cdr $6))))))
 
     (ImportDeclaration-list
-     ($empty)
-     (ImportDeclaration-list ImportDeclaration))
+     (ImportDeclaration-list-1 ($$ (tl->list $1))))
+    (ImportDeclaration-list-1
+     ($empty ($$ (make-tl 'ImportDeclaration-list)))
+     (ImportDeclaration-list-1 ImportDeclaration ($$ (tl-append $1 $2))))
     (TypeDeclaration-list
-     ($empty)
-     (TypeDeclaration-list TypeDeclaration))
+     (TypeDeclaration-list-1 ($$ (tl->list $1))))
+    (TypeDeclaration-list-1
+     ($empty ($$ (make-tl 'TypeDeclaration-list)))
+     (TypeDeclaration-list-1 TypeDeclaration ($$ (tl-append $1 $2))))
     
     (ImportDeclaration
-     ("import" "static" QualifiedIdentifier "." "*" ";")
-     ("import" "static" QualifiedIdentifier ";")
-     ("import" QualifiedIdentifier "." "*" ";")
-     ("import" QualifiedIdentifier ";"))
+     ("import" "static" QualifiedIdentifier "." "*" ";"
+      ($$ `(ImportDeclaration (Modifier "static") ,(append $3 '(glob "*")))))
+     ("import" "static" QualifiedIdentifier ";"
+      ($$ `(ImportDeclaration (Modifier "static") ,$3)))
+     ("import" QualifiedIdentifier "." "*" ";"
+      ($$ `(ImportDeclaration ,(append $3 '(glob "*")))))
+     ("import" QualifiedIdentifier ";" ($$ `(ImportDeclaration ,$3))))
 
     (TypeDeclaration
-     ;; maybe put optional Modifier-list here
-     (Modifier-list ClassOrInterfaceDeclaration ";")
+     (Modifier-list
+      ClassOrInterfaceDeclaration ";"
+      ($$ (sx-cons* (sx-tag $1) (sx-attr $1) (append $1 (sx-tail $2)))))
      (ClassOrInterfaceDeclaration ";"))
 
     (ClassOrInterfaceDeclaration 
@@ -102,40 +118,48 @@
 
     (InterfaceDeclaration
      (NormalInterfaceDeclaration)
-     ;;(AnnotationTypeDeclaration)
+     ;;(AnnotationTypeDeclaration) ;; CONFLICTs
      )
 
     (NormalClassDeclaration
      ("class" Identifier
       opt-TypeParameters opt-extends opt-implements
-      ClassBody))
+      ClassBody
+      ($$ (let* ((tail (list $6))
+		 (tail (if (pair? $5) (cons $5 tail) tail))
+		 (tail (if (pair? $4) (cons $4 tail) tail))
+		 (tail (if (pair? $3) (cons $3 tail) tail)))
+	    `(NormalClassDeclaration ,$1 ,@tail)))))
 
     (opt-TypeParameters
      ($empty)
      (TypeParameters))
     (opt-extends
      ($empty)
-     ("extends" Type))
+     ("extends" Type ($$ `(extends ,$2))))
     (opt-implements
      ($empty)
-     ("implements" TypeList))
+     ("implements" TypeList ($$ `(implements ,$2))))
 
     (EnumDeclaration
-     ("enum" Identifier EnumBody)
-     ("enum" Identifier "implements" TypeList EnumBody)
-     )
+     ("enum" Identifier EnumBody
+      ($$ `(EnumDeclaration ,$2 ,$3)))
+     ("enum" Identifier "implements" TypeList EnumBody
+      ($$ `(EnumDeclaration ,$2 (implements ,$4) ,$5))))
 
     (NormalInterfaceDeclaration
-     ("interface" Identifier opt-TypeParameters "extends" TypeList InterfaceBody)
-     ("interface" Identifier opt-TypeParameters InterfaceBody)
-     )
-
-    #;(AnnotationTypeDeclaration
-     ("@" "interface" Identifier AnnotationTypeBody))
+     ("interface" Identifier opt-TypeParameters "extends" TypeList InterfaceBody
+      ($$ (if (pair? $3)
+	      `(NormalInterfaceDeclaration ,$2 ,$3 (extends ,$5) ,$6)
+	      `(NormalInterfaceDeclaration ,$2 (extends ,$5) ,$6))))
+     ("interface" Identifier opt-TypeParameters InterfaceBody
+      ($$ (if (pair? $3)
+	      `(NormalInterfaceDeclaration ,$2 ,$3 ,$4)
+	      `(NormalInterfaceDeclaration ,$2 ,$4)))))
 
     (Type
      (BasicType)
-     (BasicType arrays)
+     (BasicType arrays ($$ (append $1 (list $2))))
      ;; HACK:
      ;; Replace ReferenceType with QualifiedIdentifier to eliminate
      ;; reduce-reduce conflict for decl's w/ parameterized types.
@@ -144,15 +168,21 @@
      (ReferenceType arrays)
      |#
      (QualifiedIdentifier)
-     (QualifiedIdentifier arrays)
+     (QualifiedIdentifier arrays ($$ (append $1 (list $2))))
      )
 
-    (opt-arrays ($empty) (arrays))
+    (opt-arrays
+     ($empty)
+     (arrays))
     (arrays
-     ("[" "]")
-     (arrays "[" "]"))
+     (arrays-1 ($$ (tl->list $1))))
+    (arrays-1
+     ("[" "]" ($$ (make-tl 'arrays (array "[]"))))
+     (arrays-1 "[" "]" ($$ (tl-append $1 (array "[]")))))
 
     (BasicType
+     (BasicType-1 ($$ `(BasicType ,$1))))
+    (BasicType-1
      ("byte")
      ("short")
      ("char")
@@ -163,10 +193,12 @@
      ("boolean"))
 
     (ReferenceType
-     (Identifier)
-     (Identifier TypeArguments)
-     (ReferenceType "." Identifier)
-     (ReferenceType "." Identifier TypeArguments))
+     (ReferenceType-1 ($$ (tl->list $1))))
+    (ReferenceType-1
+     (Identifier ($$ (make-tl 'ReferenceType $1)))
+     (Identifier TypeArguments ($$ (make-tl 'ReferenceType $1 $2)))
+     (ReferenceType-1 "." Identifier ($$ (tl-append $1 $3)))
+     (ReferenceType-1 "." Identifier TypeArguments ($$ (tl-append $1 $3))))
 
     ;; fix: shift-reduce on "<"
     (TypeArguments
@@ -225,22 +257,6 @@
      ("transient")
      ("volatile")
      ("strictfp"))
-
-    #|
-    (Annotations
-     (Annotation)
-     (Annotations Annotation))
-
-    (Annotation
-     ("@" QualifiedIdentifier)
-     ;;("@" QualifiedIdentifier "(" ")")
-     ;;("@" QualifiedIdentifier "(" AnnotationElement ")")
-     )
-
-    (AnnotationElement
-     (ElementValuePairs)
-     (ElementValue))
-    |#
 
     (ElementValuePairs
      (ElementValuePair)
@@ -781,33 +797,6 @@
      (";" ClassBodyDeclaration)
      (EnumBodyDeclarations ClassBodyDeclaration))
 
-    #;(AnnotationTypeBody
-     ("{" "}")
-     ("{" AnnotationTypeElementDeclarations "}"))
-
-    #;(AnnotationTypeElementDeclarations
-     (AnnotationTypeElementDeclaration)
-     (AnnotationTypeElementDeclarations AnnotationTypeElementDeclaration))
-
-    #;(AnnotationTypeElementDeclaration
-     (Modifier-list AnnotationTypeElementRest))
-
-    #;(AnnotationTypeElementRest
-     (Type Identifier AnnotationMethodOrConstantRest ";")
-     (ClassDeclaration)
-     (InterfaceDeclaration)
-     (EnumDeclaration)
-     (AnnotationTypeDeclaration)
-     )
-
-    #;(AnnotationMethodOrConstantRest
-     (AnnotationMethodRest)
-     (ConstantDeclaratorsRest))
-
-    #;(AnnotationMethodRest
-     ("(" ")" opt-arrays)
-     ("(" ")" opt-arrays "default" ElementValue))
-
     (IntegerLiteral ($fixed ($$ `(IntegerLiteral ,$1))))
     (FloatingPointLiteral ($float ($$ `(FloatingPointLiteral ,$1))))
     (CharacterLiteral ($chlit ($$ `(CharacterLiteral ,$1))))
@@ -816,6 +805,49 @@
      ("true" ($$ `(BooleanLiteral ,$1)))
      ("false" ($$ `(BooleanLiteral ,$1))))
     (NullLiteral ("null" ($$ `(NullLiteral ,$1))))
+
+    (Annotations
+     (Annotation)
+     (Annotations Annotation))
+
+    (Annotation
+     ("@" QualifiedIdentifier)
+     ("@" QualifiedIdentifier "(" ")")
+     ("@" QualifiedIdentifier "(" AnnotationElement ")"))
+
+    (AnnotationElement
+     (ElementValuePairs)
+     (ElementValue))
+
+    (AnnotationTypeDeclaration
+     ("@" "interface" Identifier AnnotationTypeBody))
+
+    (AnnotationTypeBody
+     ("{" "}")
+     ("{" AnnotationTypeElementDeclarations "}"))
+
+    (AnnotationTypeElementDeclarations
+     (AnnotationTypeElementDeclaration)
+     (AnnotationTypeElementDeclarations AnnotationTypeElementDeclaration))
+
+    (AnnotationTypeElementDeclaration
+     (Modifier-list AnnotationTypeElementRest))
+
+    (AnnotationTypeElementRest
+     (Type Identifier AnnotationMethodOrConstantRest ";")
+     (ClassDeclaration)
+     (InterfaceDeclaration)
+     (EnumDeclaration)
+     (AnnotationTypeDeclaration)
+     )
+
+    (AnnotationMethodOrConstantRest
+     (AnnotationMethodRest)
+     (ConstantDeclaratorsRest))
+
+    (AnnotationMethodRest
+     ("(" ")" opt-arrays)
+     ("(" ")" opt-arrays "default" ElementValue))
 
     )))
 
