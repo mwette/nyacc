@@ -34,30 +34,34 @@
    (lambda ($5 $4 $3 $2 $1 . $rest) $1)
    ;; ImportDeclaration => "import" QualifiedIdentifier ";"
    (lambda ($3 $2 $1 . $rest) $1)
+   ;; TypeDeclaration => Modifier-list ClassOrInterfaceDeclaration ";"
+   (lambda ($3 $2 $1 . $rest) $1)
    ;; TypeDeclaration => ClassOrInterfaceDeclaration ";"
    (lambda ($2 $1 . $rest) $1)
-   ;; ClassOrInterfaceDeclaration => Modifier-list ClassDeclaration
-   (lambda ($2 $1 . $rest) $1)
-   ;; ClassOrInterfaceDeclaration => Modifier-list InterfaceDeclaration
-   (lambda ($2 $1 . $rest) $1)
+   ;; ClassOrInterfaceDeclaration => ClassDeclaration
+   (lambda ($1 . $rest) $1)
+   ;; ClassOrInterfaceDeclaration => InterfaceDeclaration
+   (lambda ($1 . $rest) $1)
    ;; ClassDeclaration => NormalClassDeclaration
    (lambda ($1 . $rest) $1)
    ;; ClassDeclaration => EnumDeclaration
    (lambda ($1 . $rest) $1)
    ;; InterfaceDeclaration => NormalInterfaceDeclaration
    (lambda ($1 . $rest) $1)
-   ;; NormalClassDeclaration => "class" Identifier opt-TypeParameters "exte...
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; NormalClassDeclaration => "class" Identifier opt-TypeParameters "exte...
+   ;; NormalClassDeclaration => "class" Identifier opt-TypeParameters opt-e...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; NormalClassDeclaration => "class" Identifier opt-TypeParameters "impl...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
-   ;; NormalClassDeclaration => "class" Identifier opt-TypeParameters Class...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; opt-TypeParameters => 
    (lambda $rest (list))
    ;; opt-TypeParameters => TypeParameters
    (lambda ($1 . $rest) $1)
+   ;; opt-extends => 
+   (lambda $rest (list))
+   ;; opt-extends => "extends" Type
+   (lambda ($2 $1 . $rest) $1)
+   ;; opt-implements => 
+   (lambda $rest (list))
+   ;; opt-implements => "implements" TypeList
+   (lambda ($2 $1 . $rest) $1)
    ;; EnumDeclaration => "enum" Identifier EnumBody
    (lambda ($3 $2 $1 . $rest) $1)
    ;; EnumDeclaration => "enum" Identifier "implements" TypeList EnumBody
@@ -70,9 +74,9 @@
    (lambda ($1 . $rest) $1)
    ;; Type => BasicType arrays
    (lambda ($2 $1 . $rest) $1)
-   ;; Type => ReferenceType
+   ;; Type => QualifiedIdentifier
    (lambda ($1 . $rest) $1)
-   ;; Type => ReferenceType arrays
+   ;; Type => QualifiedIdentifier arrays
    (lambda ($2 $1 . $rest) $1)
    ;; opt-arrays => 
    (lambda $rest (list))
@@ -206,8 +210,10 @@
    (lambda ($2 $1 . $rest) $1)
    ;; ClassBodyDeclaration => Block
    (lambda ($1 . $rest) $1)
-   ;; MemberDecl => MethodOrFieldDecl
-   (lambda ($1 . $rest) $1)
+   ;; MemberDecl => Type Identifier FieldDeclaratorsRest ";"
+   (lambda ($4 $3 $2 $1 . $rest) $1)
+   ;; MemberDecl => Type Identifier MethodDeclaratorRest
+   (lambda ($3 $2 $1 . $rest) $1)
    ;; MemberDecl => "void" Identifier VoidMethodDeclaratorRest
    (lambda ($3 $2 $1 . $rest) $1)
    ;; MemberDecl => Identifier ConstructorDeclaratorRest
@@ -217,12 +223,6 @@
    ;; MemberDecl => ClassDeclaration
    (lambda ($1 . $rest) $1)
    ;; MemberDecl => InterfaceDeclaration
-   (lambda ($1 . $rest) $1)
-   ;; MethodOrFieldDecl => Type Identifier MethodOrFieldRest
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; MethodOrFieldRest => FieldDeclaratorsRest ";"
-   (lambda ($2 $1 . $rest) $1)
-   ;; MethodOrFieldRest => MethodDeclaratorRest
    (lambda ($1 . $rest) $1)
    ;; FieldDeclaratorsRest => VariableDeclaratorRest
    (lambda ($1 . $rest) $1)
@@ -268,6 +268,8 @@
    (lambda ($1 . $rest) $1)
    ;; InterfaceBodyDeclaration => Modifier-list InterfaceMemberDecl
    (lambda ($2 $1 . $rest) $1)
+   ;; InterfaceBodyDeclaration => InterfaceMemberDecl
+   (lambda ($1 . $rest) $1)
    ;; Modifier-list => Modifier
    (lambda ($1 . $rest) $1)
    ;; Modifier-list => Modifier-list Modifier
@@ -316,14 +318,6 @@
    (lambda ($2 $1 . $rest) $1)
    ;; FormalParameterDecls => Type FormalParameterDeclsRest
    (lambda ($2 $1 . $rest) $1)
-   ;; FormalParameterDecls => VariableModifier-list Type FormalParameterDec...
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; VariableModifier-list => VariableModifier
-   (lambda ($1 . $rest) $1)
-   ;; VariableModifier-list => VariableModifier-list VariableModifier
-   (lambda ($2 $1 . $rest) $1)
-   ;; VariableModifier => "final"
-   (lambda ($1 . $rest) $1)
    ;; FormalParameterDeclsRest => VariableDeclaratorId
    (lambda ($1 . $rest) $1)
    ;; FormalParameterDeclsRest => VariableDeclaratorId "," FormalParameterD...
@@ -332,15 +326,25 @@
    (lambda ($2 $1 . $rest) $1)
    ;; VariableDeclaratorId => Identifier
    (lambda ($1 . $rest) $1)
+   ;; VariableDeclaratorId => Identifier arrays
+   (lambda ($2 $1 . $rest) $1)
    ;; VariableDeclarators => VariableDeclarator
    (lambda ($1 . $rest) $1)
    ;; VariableDeclarators => VariableDeclarators "," VariableDeclarator
    (lambda ($3 $2 $1 . $rest) $1)
+   ;; VariableDeclarators-tail => "," VariableDeclarator
+   (lambda ($2 $1 . $rest) $1)
+   ;; VariableDeclarators-tail => VariableDeclarators-tail "," VariableDecl...
+   (lambda ($3 $2 $1 . $rest) $1)
    ;; VariableDeclarator => Identifier VariableDeclaratorRest
    (lambda ($2 $1 . $rest) $1)
-   ;; VariableDeclaratorRest => opt-arrays
+   ;; VariableDeclaratorRest => 
+   (lambda $rest (list))
+   ;; VariableDeclaratorRest => "=" VariableInitializer
+   (lambda ($2 $1 . $rest) $1)
+   ;; VariableDeclaratorRest => arrays
    (lambda ($1 . $rest) $1)
-   ;; VariableDeclaratorRest => opt-arrays "=" VariableInitializer
+   ;; VariableDeclaratorRest => arrays "=" VariableInitializer
    (lambda ($3 $2 $1 . $rest) $1)
    ;; VariableInitializer => ArrayInitializer
    (lambda ($1 . $rest) $1)
@@ -364,14 +368,16 @@
    (lambda ($1 . $rest) $1)
    ;; BlockStatements => BlockStatements BlockStatement
    (lambda ($2 $1 . $rest) $1)
-   ;; BlockStatement => LocalVariableDeclarationStatement
-   (lambda ($1 . $rest) $1)
+   ;; BlockStatement => Type VariableDeclarators ";"
+   (lambda ($3 $2 $1 . $rest) $1)
+   ;; BlockStatement => "final" Type VariableDeclarators ";"
+   (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; BlockStatement => ClassOrInterfaceDeclaration
    (lambda ($1 . $rest) $1)
+   ;; BlockStatement => Modifier-list ClassOrInterfaceDeclaration
+   (lambda ($2 $1 . $rest) $1)
    ;; BlockStatement => Statement
    (lambda ($1 . $rest) $1)
-   ;; LocalVariableDeclarationStatement => VariableModifier-list Type Varia...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; Statement => Block
    (lambda ($1 . $rest) $1)
    ;; Statement => ";"
@@ -380,20 +386,20 @@
    (lambda ($3 $2 $1 . $rest) $1)
    ;; Statement => StatementExpression ";"
    (lambda ($2 $1 . $rest) $1)
-   ;; Statement => "if" ParExpression Statement
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; Statement => "if" ParExpression Statement "else" Statement
+   ;; Statement => "if" "(" Expression ")" Statement
    (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   ;; Statement => "if" "(" Expression ")" Statement "else" Statement
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
    ;; Statement => "assert" Expression ";"
    (lambda ($3 $2 $1 . $rest) $1)
    ;; Statement => "assert" Expression ":" Expression ";"
    (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; Statement => "switch" ParExpression "{" SwitchBlockStatementGroups "}"
+   ;; Statement => "switch" "(" Expression ")" "{" SwitchBlockStatementGrou...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   ;; Statement => "while" "(" Expression ")" Statement
    (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; Statement => "while" ParExpression Statement
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; Statement => "do" Statement "while" ParExpression ";"
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   ;; Statement => "do" Statement "while" "(" Expression ")" ";"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
    ;; Statement => "for" "(" ForControl ")" Statement
    (lambda ($5 $4 $3 $2 $1 . $rest) $1)
    ;; Statement => "break" ";"
@@ -410,8 +416,8 @@
    (lambda ($2 $1 . $rest) $1)
    ;; Statement => "throw" Expression ";"
    (lambda ($3 $2 $1 . $rest) $1)
-   ;; Statement => "synchronized" ParExpression Block
-   (lambda ($3 $2 $1 . $rest) $1)
+   ;; Statement => "synchronized" "(" Expression ")" Block
+   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
    ;; Statement => "try" Block Catches Finally
    (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; Statement => "try" Block Catches
@@ -424,14 +430,28 @@
    (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; Statement => "try" ResourceSpecification Block Finally
    (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; StatementExpression => Expression
-   (lambda ($1 . $rest) $1)
+   ;; StatementExpression => QualifiedIdentifier Arguments
+   (lambda ($2 $1 . $rest) $1)
+   ;; StatementExpression => QualifiedIdentifier IdentifierSuffix Arguments
+   (lambda ($3 $2 $1 . $rest) $1)
+   ;; StatementExpression => QualifiedIdentifier AssignmentOperator Express...
+   (lambda ($3 $2 $1 . $rest) $1)
+   ;; StatementExpression => QualifiedIdentifier IdentifierSuffix Assignmen...
+   (lambda ($4 $3 $2 $1 . $rest) $1)
+   ;; StatementExpression => QualifiedIdentifier "++"
+   (lambda ($2 $1 . $rest) $1)
+   ;; StatementExpression => QualifiedIdentifier "--"
+   (lambda ($2 $1 . $rest) $1)
+   ;; StatementExpression => "++" QualifiedIdentifier
+   (lambda ($2 $1 . $rest) $1)
+   ;; StatementExpression => "--" QualifiedIdentifier
+   (lambda ($2 $1 . $rest) $1)
    ;; Catches => CatchClause
    (lambda ($1 . $rest) $1)
    ;; Catches => Catches CatchClause
    (lambda ($2 $1 . $rest) $1)
-   ;; CatchClause => "catch" "(" VariableModifier-list CatchType Identifier...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   ;; CatchClause => "catch" "(" CatchType Identifier ")" Block
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
    ;; CatchType => QualifiedIdentifier
    (lambda ($1 . $rest) $1)
    ;; CatchType => CatchType "|" QualifiedIdentifier
@@ -446,6 +466,8 @@
    (lambda ($1 . $rest) $1)
    ;; Resources => Resources ";" Resource
    (lambda ($3 $2 $1 . $rest) $1)
+   ;; Resource => "final" ReferenceType VariableDeclaratorId "=" Expression
+   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
    ;; Resource => ReferenceType VariableDeclaratorId "=" Expression
    (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; SwitchBlockStatementGroups => SwitchBlockStatementGroup
@@ -474,8 +496,8 @@
    (lambda $rest (list))
    ;; opt-ForUpdate => ForUpdate
    (lambda ($1 . $rest) $1)
-   ;; ForVarControl => VariableModifier-list Type VariableDeclaratorId ForV...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   ;; ForVarControl => Type VariableDeclaratorId ForVarControlRest
+   (lambda ($3 $2 $1 . $rest) $1)
    ;; ForVarControlRest => ForVariableDeclaratorsRest ";" opt-Expression ";...
    (lambda ($5 $4 $3 $2 $1 . $rest) $1)
    ;; ForVarControlRest => ":" Expression
@@ -534,15 +556,9 @@
    (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; Expression2 => Expression3
    (lambda ($1 . $rest) $1)
-   ;; Expression2 => Expression3 Expression2Rest
-   (lambda ($2 $1 . $rest) $1)
-   ;; Expression2Rest => infix-expr-list
-   (lambda ($1 . $rest) $1)
-   ;; Expression2Rest => "instanceof" Type
-   (lambda ($2 $1 . $rest) $1)
-   ;; infix-expr-list => InfixOp Expression3
-   (lambda ($2 $1 . $rest) $1)
-   ;; infix-expr-list => infix-expr-list InfixOp Expression3
+   ;; Expression2 => Expression3 "instanceof" Type
+   (lambda ($3 $2 $1 . $rest) $1)
+   ;; Expression2 => Expression2 InfixOp Expression3
    (lambda ($3 $2 $1 . $rest) $1)
    ;; InfixOp => "||"
    (lambda ($1 . $rest) $1)
@@ -610,8 +626,8 @@
    (lambda ($1 . $rest) $1)
    ;; Primary => Literal
    (lambda ($1 . $rest) $1)
-   ;; Primary => ParExpression
-   (lambda ($1 . $rest) $1)
+   ;; Primary => "(" Expression ")"
+   (lambda ($3 $2 $1 . $rest) $1)
    ;; Primary => "this"
    (lambda ($1 . $rest) $1)
    ;; Primary => "this" Arguments
@@ -620,13 +636,11 @@
    (lambda ($2 $1 . $rest) $1)
    ;; Primary => "new" Creator
    (lambda ($2 $1 . $rest) $1)
-   ;; Primary => NonWildcardTypeArguments ExplicitGenericInvocationSuffix
-   (lambda ($2 $1 . $rest) $1)
-   ;; Primary => NonWildcardTypeArguments "this" Arguments
-   (lambda ($3 $2 $1 . $rest) $1)
    ;; Primary => QualifiedIdentifier
    (lambda ($1 . $rest) $1)
    ;; Primary => QualifiedIdentifier IdentifierSuffix
+   (lambda ($2 $1 . $rest) $1)
+   ;; Primary => QualifiedIdentifier Arguments
    (lambda ($2 $1 . $rest) $1)
    ;; Primary => BasicType opt-arrays "." "class"
    (lambda ($4 $3 $2 $1 . $rest) $1)
@@ -644,8 +658,6 @@
    (lambda ($1 . $rest) $1)
    ;; Literal => NullLiteral
    (lambda ($1 . $rest) $1)
-   ;; ParExpression => "(" Expression ")"
-   (lambda ($3 $2 $1 . $rest) $1)
    ;; Arguments => "(" Expression-list ")"
    (lambda ($3 $2 $1 . $rest) $1)
    ;; Arguments => "(" ")"
@@ -664,8 +676,6 @@
    (lambda ($2 $1 . $rest) $1)
    ;; ExplicitGenericInvocationSuffix => Identifier Arguments
    (lambda ($2 $1 . $rest) $1)
-   ;; Creator => NonWildcardTypeArguments CreatedName ClassCreatorRest
-   (lambda ($3 $2 $1 . $rest) $1)
    ;; Creator => CreatedName ClassCreatorRest
    (lambda ($2 $1 . $rest) $1)
    ;; Creator => CreatedName ArrayCreatorRest
@@ -678,10 +688,10 @@
    (lambda ($3 $2 $1 . $rest) $1)
    ;; CreatedName => CreatedName "." Identifier TypeArgumentsOrDiamond
    (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; ClassCreatorRest => Arguments ClassBody
-   (lambda ($2 $1 . $rest) $1)
    ;; ClassCreatorRest => Arguments
    (lambda ($1 . $rest) $1)
+   ;; ClassCreatorRest => Arguments ClassBody
+   (lambda ($2 $1 . $rest) $1)
    ;; ArrayCreatorRest => array-expr-list opt-arrays
    (lambda ($2 $1 . $rest) $1)
    ;; ArrayCreatorRest => arrays
@@ -690,20 +700,22 @@
    (lambda ($3 $2 $1 . $rest) $1)
    ;; array-expr-list => array-expr-list "[" Expression "]"
    (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; IdentifierSuffix => Arguments
-   (lambda ($1 . $rest) $1)
+   ;; IdentifierSuffix => "[" "." "class" "]"
+   (lambda ($4 $3 $2 $1 . $rest) $1)
+   ;; IdentifierSuffix => "[" arrays "." "class" "]"
+   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   ;; IdentifierSuffix => "[" Expression "]"
+   (lambda ($3 $2 $1 . $rest) $1)
    ;; IdentifierSuffix => "." "class"
-   (lambda ($2 $1 . $rest) $1)
-   ;; IdentifierSuffix => "." ExplicitGenericInvocation
    (lambda ($2 $1 . $rest) $1)
    ;; IdentifierSuffix => "." "this"
    (lambda ($2 $1 . $rest) $1)
    ;; IdentifierSuffix => "." "super" Arguments
    (lambda ($3 $2 $1 . $rest) $1)
-   ;; IdentifierSuffix => "new" InnerCreator
-   (lambda ($2 $1 . $rest) $1)
-   ;; IdentifierSuffix => "new" NonWildcardTypeArguments InnerCreator
+   ;; IdentifierSuffix => "." "new" InnerCreator
    (lambda ($3 $2 $1 . $rest) $1)
+   ;; IdentifierSuffix => "." "new" NonWildcardTypeArguments InnerCreator
+   (lambda ($4 $3 $2 $1 . $rest) $1)
    ;; ExplicitGenericInvocation => NonWildcardTypeArguments ExplicitGeneric...
    (lambda ($2 $1 . $rest) $1)
    ;; InnerCreator => Identifier ClassCreatorRest
@@ -722,10 +734,8 @@
    (lambda ($3 $2 $1 . $rest) $1)
    ;; Selector => "." "new" InnerCreator
    (lambda ($3 $2 $1 . $rest) $1)
-   ;; Selector => "." "new" NonWildcardTypeArguments InnerCreator
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; Selector => Expression
-   (lambda ($1 . $rest) $1)
+   ;; Selector => "[" Expression "]"
+   (lambda ($3 $2 $1 . $rest) $1)
    ;; EnumBody => "{" "}"
    (lambda ($2 $1 . $rest) $1)
    ;; EnumBody => "{" EnumConstants "}"

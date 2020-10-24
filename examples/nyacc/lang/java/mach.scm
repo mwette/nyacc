@@ -139,8 +139,10 @@
      ;; HACK:
      ;; Replace ReferenceType with QualifiedIdentifier to eliminate
      ;; reduce-reduce conflict for decl's w/ parameterized types.
-     ;;(ReferenceType)
-     ;;(ReferenceType arrays)
+     #|
+     (ReferenceType)
+     (ReferenceType arrays)
+     |#
      (QualifiedIdentifier)
      (QualifiedIdentifier arrays)
      )
@@ -286,13 +288,6 @@
      (ClassDeclaration)
      (InterfaceDeclaration)
      )
-
-    #;(MethodOrFieldDecl
-     (Type Identifier MethodOrFieldDeclRest))
-    
-    #;(MethodOrFieldDeclRest
-     (FieldDeclaratorsRest)
-     (MethodDeclaratorRest))
 
     (FieldDeclaratorsRest
      (VariableDeclaratorRest)
@@ -476,17 +471,25 @@
      )
 
     (StatementExpression
-     ;;(Expression)
+     #|
+     (ReferenceType Arguments)
+     (ReferenceType IdentifierSuffix Arguments)
+     (ReferenceType AssignmentOperator Expression1)
+     (ReferenceType IdentifierSuffix AssignmentOperator Expression1)
+     (ReferenceType "++")
+     (ReferenceType "--")
+     |#
      (QualifiedIdentifier Arguments)
      (QualifiedIdentifier IdentifierSuffix Arguments)
      (QualifiedIdentifier AssignmentOperator Expression1)
      (QualifiedIdentifier IdentifierSuffix AssignmentOperator Expression1)
-     ;;(QualifiedIdentifier "++")
-     ;;(QualifiedIdentifier "--")
+     (QualifiedIdentifier "++")
+     (QualifiedIdentifier "--")
      ;; ^ may need to sub ReferenceType and sub back later via ...
      ;;  `(QualifiedIdentifier ,(cdr $1))
-     ;;("++" QualifiedIdentifier)
-     ;;("--" QualifiedIdentifier)
+
+     ("++" QualifiedIdentifier)
+     ("--" QualifiedIdentifier)
      )
 
     (Catches

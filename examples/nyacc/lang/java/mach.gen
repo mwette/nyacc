@@ -5,7 +5,7 @@ exec guile $0
 (use-modules (nyacc lang java mach))
 (use-modules (nyacc lalr))
 
-(when (gen-java-files)
+(when (and java-mach (gen-java-files))
   (system "touch parser.scm")
   (with-output-to-file ",gram.txt"
     (lambda ()
