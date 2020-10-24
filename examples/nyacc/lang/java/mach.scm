@@ -64,7 +64,7 @@
     ;; curious that adding this layer generates a shift-reduce conflict
     (QualifiedIdentifier-1
      (Identifier ($$ (make-tl 'QualifiedIdentifier $1)))
-     (QualifiedIdentifier-1 "." Identifier ($$ ($tl-append $1 $3))))
+     (QualifiedIdentifier-1 "." Identifier ($$ (tl-append $1 $3))))
     
     (QualifiedIdentifierList
      (QualifiedIdentifierList-1 ($$ (tl->list $1))))
@@ -118,7 +118,7 @@
 
     (InterfaceDeclaration
      (NormalInterfaceDeclaration)
-     ;;(AnnotationTypeDeclaration) ;; CONFLICTs
+     ;;(AnnotationTypeDeclaration) ;; CONFLICTs w/ Modifiers ("protected" ...)
      )
 
     (NormalClassDeclaration
@@ -177,8 +177,8 @@
     (arrays
      (arrays-1 ($$ (tl->list $1))))
     (arrays-1
-     ("[" "]" ($$ (make-tl 'arrays (array "[]"))))
-     (arrays-1 "[" "]" ($$ (tl-append $1 (array "[]")))))
+     ("[" "]" ($$ (make-tl 'arrays `(array "[]"))))
+     (arrays-1 "[" "]" ($$ (tl-append $1 `(array "[]")))))
 
     (BasicType
      (BasicType-1 ($$ `(BasicType ,$1))))
@@ -200,52 +200,56 @@
      (ReferenceType-1 "." Identifier ($$ (tl-append $1 $3)))
      (ReferenceType-1 "." Identifier TypeArguments ($$ (tl-append $1 $3))))
 
-    ;; fix: shift-reduce on "<"
     (TypeArguments
-     ("<" TypeArgument-list ">"))
+     ("<" TypeArgument-list ">" ($$ (tl->list $2))))
     (TypeArgument-list
-     (TypeArgument)
-     (TypeArgument-list "," TypeArgument))
+     (TypeArgument ($$ (make-tl 'TypeArguments $1)))
+     (TypeArgument-list "," TypeArgument ($$ (tl-append $1 $3))))
 
     (TypeArgument
-     (ReferenceType "?")
-     (ReferenceType "?" "extends" ReferenceType)
-     (ReferenceType "?" "super" ReferenceType))
+     (ReferenceType "?" ($$ `(TypeArument ,$1)))
+     (ReferenceType "?" "extends" ReferenceType
+		    ($$ `(TypeArument ,$1 (extends ,$4))))
+     (ReferenceType "?" "super" ReferenceType
+		    ($$ `(TypeArument ,$1 (super ,$4)))))
 
     (NonWildcardTypeArguments
-     ("<" TypeList ">"))
+     ("<" TypeList ">" ($$ `(TypeArguments ,(sx-tail $2)))))
 
     (TypeList
-     (ReferenceType)
-     (TypeList "," ReferenceType))
+     (TypeList-1 ($$ (tl->list $1))))
+    (TypeList-1
+     (ReferenceType ($$ (make-tl 'TypeList $1)))
+     (TypeList "," ReferenceType ($$ (tl-append $1 $3))))
 
     (TypeArgumentsOrDiamond
-     ("<" ">")
+     ("<" ">" ($$ '(Diamond "<>")))
      (TypeArguments))
 
     (NonWildcardTypeArgumentsOrDiamond
-     ("<" ">")
+     ("<" ">" ($$ '(Diamond "<>")))
      (NonWildcardTypeArguments))
 
     ;; "<" shift-reduce conflict: reduce Expression2 looking at "<"
     (TypeParameters
-     ("<" TypeParameter-list ">"))
+     ("<" TypeParameter-list ">" ($$ (tl->list $2))))
     (TypeParameter-list
-     (TypeParameter)
-     (TypeParameter-list "," TypeParameter))
+     (TypeParameter ($$ (make-tl 'TypeParameters $1)))
+     (TypeParameter-list "," TypeParameter ($$ (tl-append $1 $3))))
 
     (TypeParameter
-     (Identifier)
-     (Identifier "extends" Bound)
-     )
+     (Identifier ($$ `(TypeParameter ,$1)))
+     (Identifier "extends" Bound ($$ `(TypeParameter ,$1 (extends ,$3)))))
 
     (Bound
-     (ReferenceType-list))
+     (ReferenceType-list ($$ (tl->list $1))))
     (ReferenceType-list
-     (ReferenceType)
-     (ReferenceType-list "&" ReferenceType))
+     (ReferenceType ($$ (make-tl 'Bound $1)))
+     (ReferenceType-list "&" ReferenceType ($$ (tl-append $1 $3))))
 
     (Modifier
+     (Modifier-1 ($$ `(Modifier ,$1))))
+    (Modifier-1
      ("public")
      ("protected")
      ("private")
@@ -259,11 +263,13 @@
      ("strictfp"))
 
     (ElementValuePairs
-     (ElementValuePair)
-     (ElementValuePairs "," ElementValuePair))
+     (ElementValuePairs-1 ($$ (tl->list $1))))
+    (ElementValuePairs-1
+     (ElementValuePair ($$ (make-tl 'ElementValuePair $1)))
+     (ElementValuePairs-1 "," ElementValuePair ($$ (tl-append $1 $3))))
 
     (ElementValuePair
-     (Identifier "=" ElementValue))
+     (Identifier "=" ElementValue ($$ `(ElementValuePair ,$1 ,$3))))
     
     (ElementValue
      ;;(Annotation)
@@ -271,23 +277,24 @@
      (ElementValueArrayInitializer))
 
     (ElementValueArrayInitializer
-     ("{" "}")
-     ("{" ElementValues "}")
-     ("{" ElementValues "," "}")
-     )
+     ("{" "}" ($$ `(ElementValueArrayInitializer (ElementValues))))
+     ("{" ElementValues "}" ($$ `(ElementValueArrayInitializer ,$2)))
+     ("{" ElementValues "," "}" ($$ `(ElementValueArrayInitializer ,$2))))
 
     (ElementValues
-     (ElementValue)
-     (ElementValues "," ElementValue))
+     (ElementValues-1 ($$ (tl->list $1))))
+    (ElementValues-1
+     (ElementValue ($$ (make-tl 'ElementValues $1)))
+     (ElementValues "," ElementValue ($$ (tl-append $1 $3))))
 
     (ClassBody
-     ("{" ClassBodyDeclaration-list "}"))
+     ("{" ClassBodyDeclaration-list "}" ($$ `(ClassBody ,(cdr (reverse $2))))))
     (ClassBodyDeclaration-list
-     (ClassBodyDeclaration)
-     (ClassBodyDeclaration-list ClassBodyDeclaration))
+     (ClassBodyDeclaration ($$ (list $1)))
+     (ClassBodyDeclaration-list ClassBodyDeclaration ($$ (cons $2 $1))))
 
     (ClassBodyDeclaration
-     (";")
+     (";" ($$ '(MemberDecl)))
      (MemberDecl)
      (Modifier MemberDecl)
      ("static" Block)
@@ -623,25 +630,25 @@
      (Expression2 InfixOp Expression3))
 
     (InfixOp
-     ("||")
-     ("&&")
-     ("|")
-     ("^")
-     ("&")
-     ("==")
-     ("!=")
-     ("<")
-     (">")
-     ("<=")
-     (">=")
-     ("<<")
-     (">>")
-     (">>>")
-     ("+")
-     ("-")
-     ("*")
-     ("/")
-     ("%"))
+     ("||" ($$ `(or ,$1)))
+     ("&&" ($$ `(x ,$1)))
+     ("|" ($$ `(x ,$1)))
+     ("^" ($$ `(x ,$1)))
+     ("&" ($$ `(x ,$1)))
+     ("==" ($$ `(x ,$1)))
+     ("!=" ($$ `(x ,$1)))
+     ("<" ($$ `(x ,$1)))
+     (">" ($$ `(x ,$1)))
+     ("<=" ($$ `(x ,$1)))
+     (">=" ($$ `(x ,$1)))
+     ("<<" ($$ `(x ,$1)))
+     (">>" ($$ `(x ,$1)))
+     (">>>" ($$ `(x ,$1)))
+     ("+" ($$ `(x ,$1)))
+     ("-" ($$ `(x ,$1)))
+     ("*" ($$ `(x ,$1)))
+     ("/" ($$ `(x ,$1)))
+     ("%" ($$ `(x ,$1))))
 
     (Expression3
      (PrefixOp Expression3)

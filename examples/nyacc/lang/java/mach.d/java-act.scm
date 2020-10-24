@@ -6,36 +6,63 @@
    (lambda ($1 . $rest) $1)
    ;; Identifier => '$ident
    (lambda ($1 . $rest) `(Identifier $1))
-   ;; QualifiedIdentifier => Identifier
-   (lambda ($1 . $rest) $1)
-   ;; QualifiedIdentifier => QualifiedIdentifier "." Identifier
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; QualifiedIdentifierList => QualifiedIdentifier
-   (lambda ($1 . $rest) $1)
-   ;; QualifiedIdentifierList => QualifiedIdentifierList "," QualifiedIdent...
-   (lambda ($3 $2 $1 . $rest) $1)
+   ;; QualifiedIdentifier => QualifiedIdentifier-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; QualifiedIdentifier-1 => Identifier
+   (lambda ($1 . $rest)
+     (make-tl 'QualifiedIdentifier $1))
+   ;; QualifiedIdentifier-1 => QualifiedIdentifier-1 "." Identifier
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; QualifiedIdentifierList => QualifiedIdentifierList-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; QualifiedIdentifierList-1 => QualifiedIdentifier
+   (lambda ($1 . $rest)
+     (make-tl 'QualifiedIdentifierList $1))
+   ;; QualifiedIdentifierList-1 => QualifiedIdentifierList-1 "," QualifiedI...
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; CompliationUnit => ImportDeclaration-list TypeDeclaration-list
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest)
+     `(ComplilationUnit $1 $2))
    ;; CompliationUnit => "package" QualifiedIdentifier ";" ImportDeclaratio...
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
-   ;; ImportDeclaration-list => 
-   (lambda $rest (list))
-   ;; ImportDeclaration-list => ImportDeclaration-list ImportDeclaration
-   (lambda ($2 $1 . $rest) $1)
-   ;; TypeDeclaration-list => 
-   (lambda $rest (list))
-   ;; TypeDeclaration-list => TypeDeclaration-list TypeDeclaration
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(CompilationUnit
+        (Package ,$2 ,@(cdr $4) ,@(cdr $5))))
+   ;; CompliationUnit => Annotations "package" QualifiedIdentifier ";" Impo...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(CompilationUnit
+        (Package ,$3 $1 ,@(cdr $5) ,@(cdr $6))))
+   ;; ImportDeclaration-list => ImportDeclaration-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; ImportDeclaration-list-1 => 
+   (lambda $rest (make-tl 'ImportDeclaration-list))
+   ;; ImportDeclaration-list-1 => ImportDeclaration-list-1 ImportDeclaration
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; TypeDeclaration-list => TypeDeclaration-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; TypeDeclaration-list-1 => 
+   (lambda $rest (make-tl 'TypeDeclaration-list))
+   ;; TypeDeclaration-list-1 => TypeDeclaration-list-1 TypeDeclaration
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; ImportDeclaration => "import" "static" QualifiedIdentifier "." "*" ";"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(ImportDeclaration
+        (Modifier "static")
+        ,(append $3 '(glob "*"))))
    ;; ImportDeclaration => "import" "static" QualifiedIdentifier ";"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(ImportDeclaration (Modifier "static") ,$3))
    ;; ImportDeclaration => "import" QualifiedIdentifier "." "*" ";"
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(ImportDeclaration ,(append $3 '(glob "*"))))
    ;; ImportDeclaration => "import" QualifiedIdentifier ";"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(ImportDeclaration ,$3))
    ;; TypeDeclaration => Modifier-list ClassOrInterfaceDeclaration ";"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     (sx-cons*
+       (sx-tag $1)
+       (sx-attr $1)
+       (append $1 (sx-tail $2))))
    ;; TypeDeclaration => ClassOrInterfaceDeclaration ";"
    (lambda ($2 $1 . $rest) $1)
    ;; ClassOrInterfaceDeclaration => ClassDeclaration
@@ -49,7 +76,12 @@
    ;; InterfaceDeclaration => NormalInterfaceDeclaration
    (lambda ($1 . $rest) $1)
    ;; NormalClassDeclaration => "class" Identifier opt-TypeParameters opt-e...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     (let* ((tail (list $6))
+            (tail (if (pair? $5) (cons $5 tail) tail))
+            (tail (if (pair? $4) (cons $4 tail) tail))
+            (tail (if (pair? $3) (cons $3 tail) tail)))
+       `(NormalClassDeclaration ,$1 ,@tail)))
    ;; opt-TypeParameters => 
    (lambda $rest (list))
    ;; opt-TypeParameters => TypeParameters
@@ -57,151 +89,194 @@
    ;; opt-extends => 
    (lambda $rest (list))
    ;; opt-extends => "extends" Type
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(extends ,$2))
    ;; opt-implements => 
    (lambda $rest (list))
    ;; opt-implements => "implements" TypeList
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(implements ,$2))
    ;; EnumDeclaration => "enum" Identifier EnumBody
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(EnumDeclaration ,$2 ,$3))
    ;; EnumDeclaration => "enum" Identifier "implements" TypeList EnumBody
-   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(EnumDeclaration ,$2 (implements ,$4) ,$5))
    ;; NormalInterfaceDeclaration => "interface" Identifier opt-TypeParamete...
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest) $1)
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     (if (pair? $3)
+       `(NormalInterfaceDeclaration
+          ,$2
+          ,$3
+          (extends ,$5)
+          ,$6)
+       `(NormalInterfaceDeclaration
+          ,$2
+          (extends ,$5)
+          ,$6)))
    ;; NormalInterfaceDeclaration => "interface" Identifier opt-TypeParamete...
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     (if (pair? $3)
+       `(NormalInterfaceDeclaration ,$2 ,$3 ,$4)
+       `(NormalInterfaceDeclaration ,$2 ,$4)))
    ;; Type => BasicType
    (lambda ($1 . $rest) $1)
    ;; Type => BasicType arrays
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) (append $1 (list $2)))
    ;; Type => QualifiedIdentifier
    (lambda ($1 . $rest) $1)
    ;; Type => QualifiedIdentifier arrays
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) (append $1 (list $2)))
    ;; opt-arrays => 
    (lambda $rest (list))
    ;; opt-arrays => arrays
    (lambda ($1 . $rest) $1)
-   ;; arrays => "[" "]"
-   (lambda ($2 $1 . $rest) $1)
-   ;; arrays => arrays "[" "]"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; BasicType => "byte"
+   ;; arrays => arrays-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; arrays-1 => "[" "]"
+   (lambda ($2 $1 . $rest)
+     (make-tl 'arrays `(array "[]")))
+   ;; arrays-1 => arrays-1 "[" "]"
+   (lambda ($3 $2 $1 . $rest)
+     (tl-append $1 `(array "[]")))
+   ;; BasicType => BasicType-1
+   (lambda ($1 . $rest) `(BasicType ,$1))
+   ;; BasicType-1 => "byte"
    (lambda ($1 . $rest) $1)
-   ;; BasicType => "short"
+   ;; BasicType-1 => "short"
    (lambda ($1 . $rest) $1)
-   ;; BasicType => "char"
+   ;; BasicType-1 => "char"
    (lambda ($1 . $rest) $1)
-   ;; BasicType => "int"
+   ;; BasicType-1 => "int"
    (lambda ($1 . $rest) $1)
-   ;; BasicType => "long"
+   ;; BasicType-1 => "long"
    (lambda ($1 . $rest) $1)
-   ;; BasicType => "float"
+   ;; BasicType-1 => "float"
    (lambda ($1 . $rest) $1)
-   ;; BasicType => "double"
+   ;; BasicType-1 => "double"
    (lambda ($1 . $rest) $1)
-   ;; BasicType => "boolean"
+   ;; BasicType-1 => "boolean"
    (lambda ($1 . $rest) $1)
-   ;; ReferenceType => Identifier
-   (lambda ($1 . $rest) $1)
-   ;; ReferenceType => Identifier TypeArguments
-   (lambda ($2 $1 . $rest) $1)
-   ;; ReferenceType => ReferenceType "." Identifier
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; ReferenceType => ReferenceType "." Identifier TypeArguments
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   ;; ReferenceType => ReferenceType-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; ReferenceType-1 => Identifier
+   (lambda ($1 . $rest) (make-tl 'ReferenceType $1))
+   ;; ReferenceType-1 => Identifier TypeArguments
+   (lambda ($2 $1 . $rest)
+     (make-tl 'ReferenceType $1 $2))
+   ;; ReferenceType-1 => ReferenceType-1 "." Identifier
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; ReferenceType-1 => ReferenceType-1 "." Identifier TypeArguments
+   (lambda ($4 $3 $2 $1 . $rest) (tl-append $1 $3))
    ;; TypeArguments => "<" TypeArgument-list ">"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
    ;; TypeArgument-list => TypeArgument
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (make-tl 'TypeArguments $1))
    ;; TypeArgument-list => TypeArgument-list "," TypeArgument
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; TypeArgument => ReferenceType "?"
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(TypeArument ,$1))
    ;; TypeArgument => ReferenceType "?" "extends" ReferenceType
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(TypeArument ,$1 (extends ,$4)))
    ;; TypeArgument => ReferenceType "?" "super" ReferenceType
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(TypeArument ,$1 (super ,$4)))
    ;; NonWildcardTypeArguments => "<" TypeList ">"
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; TypeList => ReferenceType
-   (lambda ($1 . $rest) $1)
-   ;; TypeList => TypeList "," ReferenceType
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(TypeArguments ,(sx-tail $2)))
+   ;; TypeList => TypeList-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; TypeList-1 => ReferenceType
+   (lambda ($1 . $rest) (make-tl 'TypeList $1))
+   ;; TypeList-1 => TypeList "," ReferenceType
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; TypeArgumentsOrDiamond => "<" ">"
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) '(Diamond "<>"))
    ;; TypeArgumentsOrDiamond => TypeArguments
    (lambda ($1 . $rest) $1)
    ;; NonWildcardTypeArgumentsOrDiamond => "<" ">"
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) '(Diamond "<>"))
    ;; NonWildcardTypeArgumentsOrDiamond => NonWildcardTypeArguments
    (lambda ($1 . $rest) $1)
    ;; TypeParameters => "<" TypeParameter-list ">"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) (tl->list $2))
    ;; TypeParameter-list => TypeParameter
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest)
+     (make-tl 'TypeParameters $1))
    ;; TypeParameter-list => TypeParameter-list "," TypeParameter
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; TypeParameter => Identifier
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(TypeParameter ,$1))
    ;; TypeParameter => Identifier "extends" Bound
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(TypeParameter ,$1 (extends ,$3)))
    ;; Bound => ReferenceType-list
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (tl->list $1))
    ;; ReferenceType-list => ReferenceType
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (make-tl 'Bound $1))
    ;; ReferenceType-list => ReferenceType-list "&" ReferenceType
-   (lambda ($3 $2 $1 . $rest) $1)
-   ;; Modifier => "public"
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; Modifier => Modifier-1
+   (lambda ($1 . $rest) `(Modifier ,$1))
+   ;; Modifier-1 => "public"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "protected"
+   ;; Modifier-1 => "protected"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "private"
+   ;; Modifier-1 => "private"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "static "
+   ;; Modifier-1 => "static "
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "abstract"
+   ;; Modifier-1 => "abstract"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "final"
+   ;; Modifier-1 => "final"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "native"
+   ;; Modifier-1 => "native"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "synchronized"
+   ;; Modifier-1 => "synchronized"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "transient"
+   ;; Modifier-1 => "transient"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "volatile"
+   ;; Modifier-1 => "volatile"
    (lambda ($1 . $rest) $1)
-   ;; Modifier => "strictfp"
+   ;; Modifier-1 => "strictfp"
    (lambda ($1 . $rest) $1)
-   ;; ElementValuePairs => ElementValuePair
-   (lambda ($1 . $rest) $1)
-   ;; ElementValuePairs => ElementValuePairs "," ElementValuePair
-   (lambda ($3 $2 $1 . $rest) $1)
+   ;; ElementValuePairs => ElementValuePairs-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; ElementValuePairs-1 => ElementValuePair
+   (lambda ($1 . $rest)
+     (make-tl 'ElementValuePair $1))
+   ;; ElementValuePairs-1 => ElementValuePairs-1 "," ElementValuePair
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; ElementValuePair => Identifier "=" ElementValue
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(ElementValuePair ,$1 ,$3))
    ;; ElementValue => Expression1
    (lambda ($1 . $rest) $1)
    ;; ElementValue => ElementValueArrayInitializer
    (lambda ($1 . $rest) $1)
    ;; ElementValueArrayInitializer => "{" "}"
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest)
+     `(ElementValueArrayInitializer (ElementValues)))
    ;; ElementValueArrayInitializer => "{" ElementValues "}"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(ElementValueArrayInitializer ,$2))
    ;; ElementValueArrayInitializer => "{" ElementValues "," "}"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
-   ;; ElementValues => ElementValue
-   (lambda ($1 . $rest) $1)
-   ;; ElementValues => ElementValues "," ElementValue
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(ElementValueArrayInitializer ,$2))
+   ;; ElementValues => ElementValues-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; ElementValues-1 => ElementValue
+   (lambda ($1 . $rest) (make-tl 'ElementValues $1))
+   ;; ElementValues-1 => ElementValues "," ElementValue
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; ClassBody => "{" ClassBodyDeclaration-list "}"
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(ClassBody ,(cdr (reverse $2))))
    ;; ClassBodyDeclaration-list => ClassBodyDeclaration
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (list $1))
    ;; ClassBodyDeclaration-list => ClassBodyDeclaration-list ClassBodyDecla...
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) (cons $2 $1))
    ;; ClassBodyDeclaration => ";"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) '(MemberDecl))
    ;; ClassBodyDeclaration => MemberDecl
    (lambda ($1 . $rest) $1)
    ;; ClassBodyDeclaration => Modifier MemberDecl
@@ -561,43 +636,43 @@
    ;; Expression2 => Expression2 InfixOp Expression3
    (lambda ($3 $2 $1 . $rest) $1)
    ;; InfixOp => "||"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(or ,$1))
    ;; InfixOp => "&&"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "|"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "^"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "&"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "=="
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "!="
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "<"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => ">"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "<="
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => ">="
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "<<"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => ">>"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => ">>>"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "+"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "-"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "*"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "/"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; InfixOp => "%"
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(x ,$1))
    ;; Expression3 => PrefixOp Expression3
    (lambda ($2 $1 . $rest) $1)
    ;; Expression3 => Primary
@@ -776,6 +851,50 @@
    (lambda ($1 . $rest) `(BooleanLiteral ,$1))
    ;; NullLiteral => "null"
    (lambda ($1 . $rest) `(NullLiteral ,$1))
+   ;; Annotations => Annotation
+   (lambda ($1 . $rest) $1)
+   ;; Annotations => Annotations Annotation
+   (lambda ($2 $1 . $rest) $1)
+   ;; Annotation => "@" QualifiedIdentifier
+   (lambda ($2 $1 . $rest) $1)
+   ;; Annotation => "@" QualifiedIdentifier "(" ")"
+   (lambda ($4 $3 $2 $1 . $rest) $1)
+   ;; Annotation => "@" QualifiedIdentifier "(" AnnotationElement ")"
+   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
+   ;; AnnotationElement => ElementValuePairs
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationElement => ElementValue
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationTypeDeclaration => "@" "interface" Identifier AnnotationTyp...
+   (lambda ($4 $3 $2 $1 . $rest) $1)
+   ;; AnnotationTypeBody => "{" "}"
+   (lambda ($2 $1 . $rest) $1)
+   ;; AnnotationTypeBody => "{" AnnotationTypeElementDeclarations "}"
+   (lambda ($3 $2 $1 . $rest) $1)
+   ;; AnnotationTypeElementDeclarations => AnnotationTypeElementDeclaration
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationTypeElementDeclarations => AnnotationTypeElementDeclaration...
+   (lambda ($2 $1 . $rest) $1)
+   ;; AnnotationTypeElementDeclaration => Modifier-list AnnotationTypeEleme...
+   (lambda ($2 $1 . $rest) $1)
+   ;; AnnotationTypeElementRest => Type Identifier AnnotationMethodOrConsta...
+   (lambda ($4 $3 $2 $1 . $rest) $1)
+   ;; AnnotationTypeElementRest => ClassDeclaration
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationTypeElementRest => InterfaceDeclaration
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationTypeElementRest => EnumDeclaration
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationTypeElementRest => AnnotationTypeDeclaration
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationMethodOrConstantRest => AnnotationMethodRest
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationMethodOrConstantRest => ConstantDeclaratorsRest
+   (lambda ($1 . $rest) $1)
+   ;; AnnotationMethodRest => "(" ")" opt-arrays
+   (lambda ($3 $2 $1 . $rest) $1)
+   ;; AnnotationMethodRest => "(" ")" opt-arrays "default" ElementValue
+   (lambda ($5 $4 $3 $2 $1 . $rest) $1)
    ))
 
 ;;; end tables
