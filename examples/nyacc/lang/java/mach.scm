@@ -296,31 +296,37 @@
     (ClassBodyDeclaration
      (";" ($$ '(MemberDecl)))
      (MemberDecl)
-     (Modifier MemberDecl)
-     ("static" Block)
+     (Modifier MemberDecl ($$ `(Modified ,$2 ,$1)))
+     ("static" Block ($$ `(Modified ,$2 (Modifier "static"))))
      (Block))
 
     ;; Potential conflict on "<" here between Type and
     ;; TypeParameters (within GenericMethodOrConstructorDecl)
     (MemberDecl
-     (Type Identifier FieldDeclaratorsRest ";")
-     (Type Identifier MethodDeclaratorRest)
-     ("void" Identifier VoidMethodDeclaratorRest)
-     (Identifier ConstructorDeclaratorRest)
+     (Type Identifier FieldDeclaratorsRest ";" ($$ `(MemberDecl ,$1 ,$2 ,$3)))
+     (Type Identifier MethodDeclaratorRest ($$ `(MemberDecl ,$1 ,$2 ,$3)))
+     ("void" Identifier VoidMethodDeclaratorRest
+      ($$ `(MemberDecl (void-type "void") ,$2 ,$3)))
+     (Identifier ConstructorDeclaratorRest ($$ `(MemberDecl ,$1 ,@(cdr $2))))
      (GenericMethodOrConstructorDecl)
      (ClassDeclaration)
-     (InterfaceDeclaration)
-     )
+     (InterfaceDeclaration))
 
     (FieldDeclaratorsRest
-     (VariableDeclaratorRest)
-     (FieldDeclaratorsRest "," VariableDeclarator))
+     (FieldDeclaratorsRest-1))
+    (FieldDeclaratorsRest-1
+     (VariableDeclaratorRest ($$ (make-tl 'list $1)))
+     (FieldDeclaratorsRest-1 "," VariableDeclarator ($$ (tl-append $1 $3))))
 
     (MethodDeclaratorRest
-     (FormalParameters opt-arrays Block)
-     (FormalParameters opt-arrays "throws" QualifiedIdentifierList Block)
-     (FormalParameters opt-arrays ";")
-     (FormalParameters opt-arrays "throws" QualifiedIdentifierList ";")
+     (FormalParameters
+      opt-arrays Block)
+     (FormalParameters
+      opt-arrays "throws" QualifiedIdentifierList Block)
+     (FormalParameters
+      opt-arrays ";")
+     (FormalParameters
+      opt-arrays "throws" QualifiedIdentifierList ";")
      )
 
     (VoidMethodDeclaratorRest

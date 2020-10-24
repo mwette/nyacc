@@ -280,29 +280,36 @@
    ;; ClassBodyDeclaration => MemberDecl
    (lambda ($1 . $rest) $1)
    ;; ClassBodyDeclaration => Modifier MemberDecl
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest) `(Modified ,$2 ,$1))
    ;; ClassBodyDeclaration => "static" Block
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest)
+     `(Modified ,$2 (Modifier "static")))
    ;; ClassBodyDeclaration => Block
    (lambda ($1 . $rest) $1)
    ;; MemberDecl => Type Identifier FieldDeclaratorsRest ";"
-   (lambda ($4 $3 $2 $1 . $rest) $1)
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(MemberDecl ,$1 ,$2 ,$3))
    ;; MemberDecl => Type Identifier MethodDeclaratorRest
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(MemberDecl ,$1 ,$2 ,$3))
    ;; MemberDecl => "void" Identifier VoidMethodDeclaratorRest
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest)
+     `(MemberDecl (void-type "void") ,$2 ,$3))
    ;; MemberDecl => Identifier ConstructorDeclaratorRest
-   (lambda ($2 $1 . $rest) $1)
+   (lambda ($2 $1 . $rest)
+     `(MemberDecl ,$1 ,@(cdr $2)))
    ;; MemberDecl => GenericMethodOrConstructorDecl
    (lambda ($1 . $rest) $1)
    ;; MemberDecl => ClassDeclaration
    (lambda ($1 . $rest) $1)
    ;; MemberDecl => InterfaceDeclaration
    (lambda ($1 . $rest) $1)
-   ;; FieldDeclaratorsRest => VariableDeclaratorRest
+   ;; FieldDeclaratorsRest => FieldDeclaratorsRest-1
    (lambda ($1 . $rest) $1)
-   ;; FieldDeclaratorsRest => FieldDeclaratorsRest "," VariableDeclarator
-   (lambda ($3 $2 $1 . $rest) $1)
+   ;; FieldDeclaratorsRest-1 => VariableDeclaratorRest
+   (lambda ($1 . $rest) (make-tl 'list $1))
+   ;; FieldDeclaratorsRest-1 => FieldDeclaratorsRest-1 "," VariableDeclarator
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; MethodDeclaratorRest => FormalParameters opt-arrays Block
    (lambda ($3 $2 $1 . $rest) $1)
    ;; MethodDeclaratorRest => FormalParameters opt-arrays "throws" Qualifie...
