@@ -15,17 +15,12 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
+;;; Notes
+
+;; heavily modified from
 ;; ref: https://docs.oracle.com/javase/specs/jls/se7/html/
 
-(define-module (nyacc lang java mach)
-  #:export (java-spec java-mach gen-java-files)
-  #:use-module (nyacc lang util)
-  #:use-module (nyacc lalr)
-  #:use-module (nyacc lex)
-  #:use-module (nyacc parse))
-
-(use-modules (ice-9 pretty-print))
-(define pp pretty-print)
+;; DimExprs is DimExpr ... Dim ...
 
 ;; tough reduce-reduce conflict:
 ;; in (BlockStatement ...
@@ -39,6 +34,22 @@
 ;; ...
 ;; But Identifier "<" ... will never be a statement in reality, so
 ;; statement expressions can be narrowed, so try that.
+
+;; dealing with TypeParameters is hmmm
+
+;; changed: 
+
+;;; Code:
+
+(define-module (nyacc lang java mach)
+  #:export (java-spec java-mach gen-java-files)
+  #:use-module (nyacc lang util)
+  #:use-module (nyacc lalr)
+  #:use-module (nyacc lex)
+  #:use-module (nyacc parse))
+
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
 
 (define java-spec
   (lalr-spec
@@ -72,6 +83,26 @@
      (QualifiedIdentifier ($$ (make-tl 'QualifiedIdentifierList $1)))
      (QualifiedIdentifierList-1 "," QualifiedIdentifier ($$ (tl-append $1 $3))))
 
+    (QualifiedIdentifierMaybeGlob
+     (QualifiedIdentifierMaybeGlob-1 ($$ (tl->list $1))))
+    (QualifiedIdentifierMaybeGlob-1
+     (Identifier ($$ (make-tl 'ExtendedIdentifier $1)))
+     (QualifiedIdentifierMaybeGlob-1 "." Identifier ($$ (tl-append $1 $3)))
+     (QualifiedIdentifierMaybeGlob-1 "." "*" ($$ (tl-append $1 (glob)))))
+    
+    #;(QualifiedIdentifierMaybeSuffix
+     (QI+suffix-1 ($$ (tl->list $1))))
+    #;(QI+suffix-1
+     (Identifier ($$ (make-tl 'ExtendedIdentifier $1)))
+     (QI+suffix-1 "." Identifier ($$ (tl-append $1 $3)))
+     ;; IdentifierSuffix:
+     (QI+suffix-1 "." "this" ($$ (tl-append $1 `(this))))
+     (QI+suffix-1 "." "super" Arguments ($$ (tl-append $1 `(super ,$4))))
+     (QI+suffix-1 "." "new" InnerCreator ($$ (tl-append $1 `(new ,$4))))
+     (QI+suffix-1 "." "new" NonWildcardTypeArguments InnerCreator
+		  ($$ (tl-append $1 `(new ,$4 ,$5))))
+     )
+     
     (CompliationUnit
      (ImportDeclaration-list TypeDeclaration-list ($$ `(ComplilationUnit $1 $2)))
      ("package" QualifiedIdentifier ";"
@@ -94,13 +125,9 @@
      (TypeDeclaration-list-1 TypeDeclaration ($$ (tl-append $1 $2))))
     
     (ImportDeclaration
-     ("import" "static" QualifiedIdentifier "." "*" ";"
-      ($$ `(ImportDeclaration (Modifier "static") ,(append $3 '(glob "*")))))
-     ("import" "static" QualifiedIdentifier ";"
+     ("import" "static" QualifiedIdentifierMaybeGlob ";"
       ($$ `(ImportDeclaration (Modifier "static") ,$3)))
-     ("import" QualifiedIdentifier "." "*" ";"
-      ($$ `(ImportDeclaration ,(append $3 '(glob "*")))))
-     ("import" QualifiedIdentifier ";" ($$ `(ImportDeclaration ,$3))))
+     ("import" QualifiedIdentifierMaybeGlob ";" ($$ `(ImportDeclaration ,$3))))
 
     (TypeDeclaration
      (Modifier-list
@@ -159,26 +186,26 @@
 
     (Type
      (BasicType)
-     (BasicType arrays ($$ (append $1 (list $2))))
+     (BasicType Dims ($$ (append $1 (list $2))))
      ;; HACK:
      ;; Replace ReferenceType with QualifiedIdentifier to eliminate
      ;; reduce-reduce conflict for decl's w/ parameterized types.
      #|
      (ReferenceType)
-     (ReferenceType arrays)
+     (ReferenceType Dims)
      |#
      (QualifiedIdentifier)
-     (QualifiedIdentifier arrays ($$ (append $1 (list $2))))
+     (QualifiedIdentifier Dims ($$ (append $1 (list $2))))
      )
 
-    (opt-arrays
+    (opt-Dims
      ($empty)
-     (arrays))
-    (arrays
-     (arrays-1 ($$ (tl->list $1))))
-    (arrays-1
-     ("[" "]" ($$ (make-tl 'arrays `(array "[]"))))
-     (arrays-1 "[" "]" ($$ (tl-append $1 `(array "[]")))))
+     (Dims))
+    (Dims
+     (Dims-1 ($$ (tl->list $1))))
+    (Dims-1
+     ("[" "]" ($$ (make-tl 'Dims `(Dim "[]"))))
+     (Dims-1 "[" "]" ($$ (tl-append $1 `(Dim "[]")))))
 
     (BasicType
      (BasicType-1 ($$ `(BasicType ,$1))))
@@ -303,8 +330,10 @@
     ;; Potential conflict on "<" here between Type and
     ;; TypeParameters (within GenericMethodOrConstructorDecl)
     (MemberDecl
-     (Type Identifier FieldDeclaratorsRest ";" ($$ `(MemberDecl ,$1 ,$2 ,$3)))
-     (Type Identifier MethodDeclaratorRest ($$ `(MemberDecl ,$1 ,$2 ,$3)))
+     ;;(Type Identifier FieldDeclaratorsRest ";"
+     (Type VariableDeclarators ";"
+	   ($$ `(MemberDecl ,$1 ,$2)))
+     (Type Identifier MethodDeclaratorRest ($$ `(MemberDecl ,$1 ,$2 ,@$3)))
      ("void" Identifier VoidMethodDeclaratorRest
       ($$ `(MemberDecl (void-type "void") ,$2 ,$3)))
      (Identifier ConstructorDeclaratorRest ($$ `(MemberDecl ,$1 ,@(cdr $2))))
@@ -312,89 +341,118 @@
      (ClassDeclaration)
      (InterfaceDeclaration))
 
-    (FieldDeclaratorsRest
-     (FieldDeclaratorsRest-1))
-    (FieldDeclaratorsRest-1
+    #;(FieldDeclaratorsRest
+     (FieldDeclaratorsRest-1 ($$ (cdr (tl->list $1)))))
+    #;(FieldDeclaratorsRest-1
      (VariableDeclaratorRest ($$ (make-tl 'list $1)))
      (FieldDeclaratorsRest-1 "," VariableDeclarator ($$ (tl-append $1 $3))))
 
     (MethodDeclaratorRest
      (FormalParameters
-      opt-arrays Block)
+      opt-Dims Block
+      ($$ (if (pair? $2)
+	      (list $1 $2 $3)
+	      (list $1 $3))))
      (FormalParameters
-      opt-arrays "throws" QualifiedIdentifierList Block)
+      opt-Dims "throws" QualifiedIdentifierList Block
+      ($$ (if (pair? $2)
+	      (list $1 $2 $5 `(throws $4))
+	      (list $1 $5 `(throws $4)))))
      (FormalParameters
-      opt-arrays ";")
+      opt-Dims ";" ($$ (if (pair? $2) (list $1 $2) (list $1))))
      (FormalParameters
-      opt-arrays "throws" QualifiedIdentifierList ";")
+      opt-Dims "throws" QualifiedIdentifierList ";"
+      ($$ (if (pair? $2)
+	      (list $1 $2 `(throws $4))
+	      (list $1 (throws $4)))))
      )
 
     (VoidMethodDeclaratorRest
-     (FormalParameters Block)
-     (FormalParameters "throws" QualifiedIdentifierList Block)
-     (FormalParameters ";")
-     (FormalParameters "throws" QualifiedIdentifierList ";")
-     )
+     (FormalParameters
+      Block ($$ (list $1 $2)))
+     (FormalParameters
+      "throws" QualifiedIdentifierList Block
+      ($$ (list $1 $4 `(throws ,$3))))
+     (FormalParameters ";" ($$ (list $1)))
+     (FormalParameters
+      "throws" QualifiedIdentifierList ";"
+      ($$ (list $1 `(throws ,$3)))))
 
     (ConstructorDeclaratorRest
-     (FormalParameters Block)
-     (FormalParameters "throws" QualifiedIdentifierList Block)
-     )
+     (FormalParameters Block ($$ (list $1 $2)))
+     (FormalParameters "throws" QualifiedIdentifierList Block
+		       ($$ (list $1 $4 `(throws ,$3)))))
 
     (GenericMethodOrConstructorDecl
-     (TypeParameters GenericMethodOrConstructorRest))
+     (TypeParameters
+      GenericMethodOrConstructorRest
+      ($$ (let loop ((out '()) (in $2))
+	    (if (member (sx-tag (car out)) '(Identifier QualifiedIdentifier))
+		(cons* (resverse out) $1 in)
+		(loop (cons (car in) out) (cdr in)))))))
 
     (GenericMethodOrConstructorRest
-     (Type Identifier MethodDeclaratorRest)
-     ("void" Identifier MethodDeclaratorRest)
-     (Identifier ConstructorDeclaratorRest)
-     )
+     (Type Identifier MethodDeclaratorRest ($$ `(Method $1 $2 ,@$3)))
+     ("void" Identifier MethodDeclaratorRest
+      ($$ `(Method (void "void") $2 ,@$3)))
+     (Identifier ConstructorDeclaratorRest ($$ `(Constructor $2 ,@$2))))
 
     (InterfaceBody
-     ("{" InterfaceBodyDeclaration-list "}")
-     ("{" "}")
-     )
+     ("{" InterfaceBodyDeclaration-list "}" ($$ `(Body ,@(sx-tail $2))))
+     ("{" "}" ($$ `(Body))))
     (InterfaceBodyDeclaration-list
-     (InterfaceBodyDeclaration)
-     (InterfaceBodyDeclaration-list InterfaceBodyDeclaration))
+     (InterfaceBodyDeclaration-list-1 ($$ (tl->list $1))))
+    (InterfaceBodyDeclaration-list-1
+     (InterfaceBodyDeclaration ($$ (make-tl 'ibl $1)))
+     (InterfaceBodyDeclaration-list-1 InterfaceBodyDeclaration
+				      ($$ (tl-append $1 $2))))
 
     (InterfaceBodyDeclaration
-     (";")
-     (Modifier-list InterfaceMemberDecl)
-     (InterfaceMemberDecl)
-     )
+     (";" ($$ `(InterfaceDecl)))
+     (Modifier-list InterfaceMemberDecl ($$ `(Modified ,$1 ,$2)))
+     (InterfaceMemberDecl))
+
     (Modifier-list
-     (Modifier)
-     (Modifier-list Modifier))
+     (Modifier-list-1 ($$ (tl->list $1))))
+    (Modifier-list-1
+     (Modifier ($$ (make-tl 'Modifiers $1)))
+     (Modifier-list Modifier ($$ (tl-append $1 $2))))
      
     (InterfaceMemberDecl
-     (InterfaceMethodOrFieldDecl)
-     ("void" Identifier VoidInterfaceMethodDeclaratorRest)
+     ;;(InterfaceMethodOrFieldDecl)
+     (Type Identifier ConstantDeclaratorRest ";"
+	   ($$ `(Decl $1 $2 ,@$3)))
+     (Type Identifier InterfaceMethodDeclaratorRest
+	   ($$ `(Decl $1 $2 ,@$3)))
+     ("void" Identifier VoidInterfaceMethodDeclaratorRest
+      ($$ `(MethodDecl (void "void") $2 ,@$3)))
      (InterfaceGenericMethodDecl)
      (ClassDeclaration)
      (InterfaceDeclaration))
 
-    (InterfaceMethodOrFieldDecl
+    #;(InterfaceMethodOrFieldDecl
      (Type Identifier InterfaceMethodOrFieldRest))
 
-    (InterfaceMethodOrFieldRest
+    #;(InterfaceMethodOrFieldRest
      (ConstantDeclaratorsRest ";")
      (InterfaceMethodDeclaratorRest))
 
     (ConstantDeclaratorsRest
-     (ConstantDeclaratorRest)
-     (ConstantDeclaratorsRest "," ConstantDeclarator))
+     (ConstantDeclaratorsRest-1 ($$ (sx-tail (tl->list $1)))))
+    (ConstantDeclaratorsRest-1
+     (ConstantDeclaratorRest ($$ (make-tl 'rest $1)))
+     (ConstantDeclaratorsRest-1 "," ConstantDeclarator ($$ (tl->append $1 $3))))
 
     (ConstantDeclaratorRest
      ("=" VariableInitializer)
-     (arrays "=" VariableInitializer))
+     (Dims "=" VariableInitializer))
 
     (ConstantDeclarator
      (Identifier ConstantDeclaratorRest))
 
     (InterfaceMethodDeclaratorRest
-     (FormalParameters opt-arrays ";")
-     (FormalParameters opt-arrays "throws" QualifiedIdentifierList ";")
+     (FormalParameters opt-Dims ";")
+     (FormalParameters opt-Dims "throws" QualifiedIdentifierList ";")
      )
 
     (VoidInterfaceMethodDeclaratorRest
@@ -407,38 +465,44 @@
      (TypeParameters "void" Identifier InterfaceMethodDeclaratorRest))
 
     (FormalParameters
-     ("(" FormalParameterDecls ")")
-     ("(" ")"))
+     ("(" FormalParameterDecls ")" ($$ `(FormalParameters (tl->list $1))))
+     ("(" ")" ($$ `(FormalParameters))))
 
     (FormalParameterDecls
-     (Type FormalParameterDeclsRest))
+     (Type VariableDeclaratorId ($$ `(make-tl 'FPDs `(param ,$1 ,$2))))
+     (Type VariableDeclaratorId "," FormalParameterDecls
+	   ($$ (tl-insert $3 `(param ,$1 ,$2))))
+     (Type "..." VariableDeclaratorId
+	   ($$ `(make-tl 'FPDs `(xxx-param ,$1 ,$3)))))
 
-    (FormalParameterDeclsRest
+   #;(FormalParameterDeclsRest
      (VariableDeclaratorId)
      (VariableDeclaratorId "," FormalParameterDecls)
      ("..." VariableDeclaratorId))
 
     (VariableDeclaratorId
      (Identifier)
-     (Identifier arrays)
-     )
+     (Identifier Dims ($$ `(array-decl-id ,$1 ,$2))))
 
     (VariableDeclarators
-     (VariableDeclarator)
-     (VariableDeclarators "," VariableDeclarator))
-
-    (VariableDeclarators-tail
-     ("," VariableDeclarator)
-     (VariableDeclarators-tail "," VariableDeclarator))
+     (VariableDeclarators-1 ($$ (tl->list $1))))
+    (VariableDeclarators-1
+     (VariableDeclarator ($$ (make-tl 'VariableDeclartors $1)))
+     (VariableDeclarators-1 "," VariableDeclarator ($$ (tl-append $1 $3))))
 
     (VariableDeclarator
-     (Identifier VariableDeclaratorRest))
+     ;;(Identifier VariableDeclaratorRest)
+     (Identifier)
+     (Identifier "=" VariableInitializer)
+     (Identifier Dims)
+     (Identifier Dims "=" VariableInitializer)
+     )
 
-    (VariableDeclaratorRest
+   #;(VariableDeclaratorRest
      ($empty)
      ("=" VariableInitializer)
-     (arrays)
-     (arrays "=" VariableInitializer))
+     (Dims)
+     (Dims "=" VariableInitializer))
 
     (VariableInitializer
      (ArrayInitializer)
@@ -472,31 +536,35 @@
 
     (Statement
      (Block)
-     (";")
-     (Identifier ":" Statement)
-     (StatementExpression ";")
-     ("if" "(" Expression ")" Statement ($prec 'then))
-     ("if" "(" Expression ")" Statement "else" Statement)
-     ("assert" Expression ";")
-     ("assert" Expression ":" Expression ";")
-     ("switch" "(" Expression ")" "{" SwitchBlockStatementGroups "}" )
-     ("while" "(" Expression ")" Statement)
-     ("do" Statement "while" "(" Expression ")" ";")
-     ("for" "(" ForControl ")" Statement)
-     ("break" ";")
-     ("break" Identifier ";")
-     ("continue" ";")
-     ("continue" Identifier ";")
-     ("return" Expression ";")
-     ("return" ";")
-     ("throw" Expression ";")
-     ("synchronized" "(" Expression ")" Block)
-     ("try" Block Catches Finally)
-     ("try" Block Catches)
-     ("try" Block Finally)
-     ("try" ResourceSpecification Block Catches Finally)
-     ("try" ResourceSpecification Block Catches)
-     ("try" ResourceSpecification Block Finally)
+     (";" ($$ `(Statement)))
+     (Identifier ":" Statement ($$ `(LabelledStatement ,$ ,$3)))
+     (StatementExpression ";" ($$ `(StatementExpression ,$1)))
+     ("if" "(" Expression ")" Statement ($prec 'then) ($$ `(if ,$3 ,$5)))
+     ("if" "(" Expression ")" Statement "else" Statement ($$ `(if ,$3 ,$5 ,$7)))
+     ("assert" Expression ";" ($$ `(Assert ,$2)))
+     ("assert" Expression ":" Expression ";" ($$ `(Assert ,$2 ,$5)))
+     ("switch" "(" Expression ")" "{" SwitchBlockStatementGroups "}"
+      ($$ `(Switch ,$3 ,$6)))
+     ("while" "(" Expression ")" Statement ($$ `(While ,$3 ,$5)))
+     ("do" Statement "while" "(" Expression ")" ";" ($$ `(Do ,$2 ,$5)))
+     ("for" "(" ForControl ")" Statement
+      ;; todo
+      )
+     ("break" ";" ($$ `(Break)))
+     ("break" Identifier ";" ($$ `(Break ,$2)))
+     ("continue" ";" ($$ `(Continue)))
+     ("continue" Identifier ";" ($$ `(Continue ,$2)))
+     ("return" Expression ";" ($$ `(Return ,$2)))
+     ("return" ";" ($$ `(Return)))
+     ("throw" Expression ";" ($$ `(Throw ,$2)))
+     ("synchronized" "(" Expression ")" Block ($$ `(Synchronized ,$3 ,$5)))
+     ("try" Block Catches Finally ($$ `(Try ,$2 ,$3 ,$4)))
+     ("try" Block Catches ($$ `(Try ,$2 ,$3)))
+     ("try" Block Finally ($$ `(Try ,$2 ,$3)))
+     ("try" ResourceSpecification Block Catches Finally
+      ($$ `(Try ,$2 ,$3 ,$4 ,$5)))
+     ("try" ResourceSpecification Block Catches ($$ `(Try ,$2 ,$3 ,$4)))
+     ("try" ResourceSpecification Block Finally ($$ `(Try ,$2 ,$3 ,$4)))
      )
 
     (StatementExpression
@@ -516,7 +584,6 @@
      (QualifiedIdentifier "--")
      ;; ^ may need to sub ReferenceType and sub back later via ...
      ;;  `(QualifiedIdentifier ,(cdr $1))
-
      ("++" QualifiedIdentifier)
      ("--" QualifiedIdentifier)
      )
@@ -625,45 +692,42 @@
 
     (Expression1 
      (Expression2)
-     (Expression2 Expression1Rest))
-
-    (Expression1Rest
-     ("?" Expression ":" Expression1))
+     (Expression2 "?" Expression ":" Expression1
+		  ($$ `(cond-expr ,$1 ,$3 ,$5))))
 
     (Expression2
      (Expression3)
-     (Expression3 "instanceof" Type)
-     (Expression2 InfixOp Expression3))
+     (Expression3 "instanceof" Type ($$ `(instanceof ,$1 ,$3)))
+     (Expression2 InfixOp Expression3 ($$ (list $2 $1 $3))))
 
     (InfixOp
-     ("||" ($$ `(or ,$1)))
-     ("&&" ($$ `(x ,$1)))
-     ("|" ($$ `(x ,$1)))
-     ("^" ($$ `(x ,$1)))
-     ("&" ($$ `(x ,$1)))
-     ("==" ($$ `(x ,$1)))
-     ("!=" ($$ `(x ,$1)))
-     ("<" ($$ `(x ,$1)))
-     (">" ($$ `(x ,$1)))
-     ("<=" ($$ `(x ,$1)))
-     (">=" ($$ `(x ,$1)))
-     ("<<" ($$ `(x ,$1)))
-     (">>" ($$ `(x ,$1)))
-     (">>>" ($$ `(x ,$1)))
-     ("+" ($$ `(x ,$1)))
-     ("-" ($$ `(x ,$1)))
-     ("*" ($$ `(x ,$1)))
-     ("/" ($$ `(x ,$1)))
-     ("%" ($$ `(x ,$1))))
+     ("||" ($$ 'or))
+     ("&&" ($$ 'and))
+     ("|" ($$ 'bitwise-or))
+     ("^" ($$ 'bitwise-xor))
+     ("&" ($$ 'bitwise-and))
+     ("==" ($$ 'eq))
+     ("!=" ($$ 'ne))
+     ("<" ($$ 'lt))
+     (">" ($$ 'gt))
+     ("<=" ($$ 'le))
+     (">=" ($$ 'ge))
+     ("<<" ($$ 'lshift))
+     (">>" ($$ 'rshift))
+     (">>>" ($$ 'rrshift))
+     ("+" ($$ 'add))
+     ("-" ($$ 'sub))
+     ("*" ($$ 'mul))
+     ("/" ($$ 'div))
+     ("%" ($$ 'mod)))
 
     (Expression3
      (PrefixOp Expression3)
-     ;;("(" Expression ")" Expression3) CONFLICT
-     ;;("(" Type ")" Expression3) CONFLICT
-     ;; (Primary { Selector } { PostfixOp }) => (check?)
+     ;;("(" Expression ")" Expression3) ;; sr-conf . ++ -- + -
+     ;;("(" Type ")" Expression3) ;; rr-conf ")" 
      (Primary)
-     ;;(Primary Selector-list)
      (Primary PostfixOp)
+     ;;(Primary Selector-list) ;; sr-conf . [
      ;;(Primary Selector-list PostfixOp)
      )
     (Selector-list
@@ -671,30 +735,32 @@
      (Selector-list Selector))
       
     (PrefixOp
-     ("++")
-     ("--")
-     ("!")
-     ("~")
-     ("+")
-     ("-"))
+     ("++" ($$ 'pre-inc))
+     ("--" ($$ 'pre-dec))
+     ("!" ($$ 'not))
+     ("~" ($$ 'bitwise-not))
+     ("+" ($$ 'pos))
+     ("-" ($$ 'neg)))
 
     (PostfixOp
-     ("++")
-     ("--"))
+     ("++" ($$ 'post-inc))
+     ("--" ($$ 'post-dec)))
 
     (Primary
      (Literal)
-     ("(" Expression ")")
-     ("this")
-     ("this" Arguments)
-     ("super" SuperSuffix)
-     ("new" Creator)
-     ;;(NonWildcardTypeArguments ExplicitGenericInvocationSuffix)
-     ;;(NonWildcardTypeArguments "this" Arguments)
+     ("(" Expression ")" ($$ $2))
+     ("this" ($$ '(this)))
+     ("this" Arguments ($$ `(this ,$2)))
+     ("super" SuperSuffix ($$ `(super ,$2)))
+     ("new" Creator ($$ `(new ,$2)))
+     (NonWildcardTypeArguments "this" Arguments)
+     (NonWildcardTypeArguments "super" SuperSuffix)
+     (NonWildcardTypeArguments Identifier Arguments)
+     ;;(QualifiedIdentifierMaybeSuffix)
      (QualifiedIdentifier)
      (QualifiedIdentifier IdentifierSuffix)
      (QualifiedIdentifier Arguments)
-     (BasicType opt-arrays "." "class")
+     (BasicType opt-Dims "." "class")
      ("void" "." "class"))
 
     (Literal
@@ -718,14 +784,15 @@
      ("." Identifier Arguments)
      ("." Identifier))
 
-    (ExplicitGenericInvocationSuffix
-     ("super" SuperSuffix)
-     (Identifier Arguments))
-
     (Creator
-     ;;(NonWildcardTypeArguments CreatedName ClassCreatorRest)
-     (CreatedName ClassCreatorRest)
-     (CreatedName ArrayCreatorRest))
+     (NonWildcardTypeArguments CreatedName Arguments)
+     (NonWildcardTypeArguments CreatedName Arguments ClassBody)
+     (CreatedName Arguments)
+     (CreatedName Arguments ClassBody)
+     (CreatedName DimExprs)
+     (CreatedName Dims)
+     (CreatedName Dims ArrayInitializer)
+     )
 
     (CreatedName
      (Identifier)
@@ -734,27 +801,22 @@
      (CreatedName "." Identifier TypeArgumentsOrDiamond)
      )
 
-    (ClassCreatorRest
-     (Arguments)
-     (Arguments ClassBody)
+    (DimExprs
+     (DimExprs-1 ($$ (tl->list $1))))
+    (DimExprs-1
+     ("[" Expression "]" ($$ (make-tl 'DimExprs `(DimExpr ,$2))))
+     (DimExprs-1 "[" Expression "]" ($$ (tl-append $1 `(DimExpr ,$3))))
+     (DimExprs-1 "[" "]" ($$ (tl-append $1 `(Dim "[]"))))
      )
-
-    ;; TODO: needs work
-    (ArrayCreatorRest
-     ;;[ (] {[]} ArrayInitializer  |  Expression ] {"[" Expression "]"} {[]})
-     (array-expr-list opt-arrays)
-     (arrays)
-     )
-    (array-expr-list
-     ("[" Expression "]")
-     (array-expr-list "[" Expression "]"))
 
     (IdentifierSuffix
-     ("[" "." "class" "]")
-     ("[" arrays "." "class" "]")
-     ("[" Expression "]")
+     ;; ???
+     ;; example: a[(a=b)[3]]
+     ;;("." "class")
+     ;;("[" Dims "." "class" "]")
+     ;;("[" Expression "]")
      ("." "class")
-     ;;("." ExplicitGenericInvocation)
+     ;;("." ExplicitGenericInvocation) ;; sr-conf (
      ("." "this")
      ("." "super" Arguments)
      ("." "new" InnerCreator)
@@ -762,11 +824,14 @@
      )
 
     (ExplicitGenericInvocation
-     (NonWildcardTypeArguments ExplicitGenericInvocationSuffix))
+     (NonWildcardTypeArguments "super" SuperSuffix)
+     (NonWildcardTypeArguments Identifier Arguments))
 
     (InnerCreator
-     (Identifier ClassCreatorRest)
-     (Identifier NonWildcardTypeArgumentsOrDiamond ClassCreatorRest)
+     (Identifier Arguments)
+     (Identifier Arguments ClassBody)
+     (Identifier NonWildcardTypeArgumentsOrDiamond Arguments)
+     (Identifier NonWildcardTypeArgumentsOrDiamond Arguments ClassBody)
      )
 
     (Selector
@@ -859,8 +924,8 @@
      (ConstantDeclaratorsRest))
 
     (AnnotationMethodRest
-     ("(" ")" opt-arrays)
-     ("(" ")" opt-arrays "default" ElementValue))
+     ("(" ")" opt-Dims)
+     ("(" ")" opt-Dims "default" ElementValue))
 
     )))
 
