@@ -126,7 +126,7 @@
     
     (ImportDeclaration
      ("import" "static" QualifiedIdentifierMaybeGlob ";"
-      ($$ `(ImportDeclaration (Modifier "static") ,$3)))
+      ($$ `(ImportDeclaration (Modified "static" ,$3))))
      ("import" QualifiedIdentifierMaybeGlob ";" ($$ `(ImportDeclaration ,$3))))
 
     (TypeDeclaration
@@ -323,8 +323,8 @@
     (ClassBodyDeclaration
      (";" ($$ '(MemberDecl)))
      (MemberDecl)
-     (Modifier MemberDecl ($$ `(Modified ,$2 ,$1)))
-     ("static" Block ($$ `(Modified ,$2 (Modifier "static"))))
+     (Modifier MemberDecl ($$ `(Modified ,$1 ,$2)))
+     ("static" Block ($$ `(Modified (Modifier "static") ,$2)))
      (Block))
 
     ;; Potential conflict on "<" here between Type and
@@ -492,11 +492,11 @@
 
     (VariableDeclarator
      ;;(Identifier VariableDeclaratorRest)
-     (Identifier)
-     (Identifier "=" VariableInitializer)
-     (Identifier Dims)
-     (Identifier Dims "=" VariableInitializer)
-     )
+     (Identifier ($$ `(Declr ,$1)))
+     (Identifier "=" VariableInitializer ($$ `(Declr ,$1) ,$2))
+     (Identifier Dims ($$ `(Declr (Dimmed ,$1 ,$2))))
+     (Identifier Dims "=" VariableInitializer
+		 ($$ `(Declr (Dimmed ,$1 ,$2) ,$3))))
 
    #;(VariableDeclaratorRest
      ($empty)
@@ -509,35 +509,40 @@
      (Expression))
 
     (ArrayInitializer
-     ("{" VariableInitializer-list "}")
-     ("{" VariableInitializer-list "," "}")
-     ("{" "}"))
+     ("{" VariableInitializer-list "}" ($$ `(ArrayInitializer ,$2)))
+     ("{" VariableInitializer-list "," "}" ($$ `(ArrayInitializer ,$2)))
+     ("{" "}" ($$ `(ArrayInitializer (VariableInitializers)))))
     
     (VariableInitializer-list
-     (VariableInitializer)
-     (VariableInitializer-list "," VariableInitializer))
+     (VariableInitializer-list-1 ($$ (tl->list $1))))
+    (VariableInitializer-list-1
+     (VariableInitializer ($$ (make-tl 'VariableInitializers $1)))
+     (VariableInitializer-list-1 "," VariableInitializer ($$ (tl-append $1 $3))))
 
     (Block
-     ("{" BlockStatements "}")
-     ("{" "}"))
+     ("{" BlockStatements "}" ($$ `(Block ,(cdr $2))))
+     ("{" "}" ($$ '(Block))))
 
     (BlockStatements
-     (BlockStatement)
-     (BlockStatements BlockStatement))
+     (BlockStatements-1 ($$ (tl->list $1))))
+    (BlockStatements-1
+     (BlockStatement ($$ (make-tl 'BlockStatements $1)))
+     (BlockStatements-1 BlockStatement ($$ (tl-append $1 $2))))
 
     ;; TODO: add opt-Annotations to front of "final" items
     (BlockStatement
-     (Type VariableDeclarators ";")
-     ("final" Type VariableDeclarators ";")
+     (Type VariableDeclarators ";"
+	   ($$ `(Decl ,$1 ,$2)))
+     ("final" Type VariableDeclarators ";"
+      ($$ `(Modified (Modifier "final") (Decl ,$2 ,$3))))
      (ClassOrInterfaceDeclaration)
-     (Modifier-list ClassOrInterfaceDeclaration)
-     (Statement)
-     )
+     (Modifier-list ClassOrInterfaceDeclaration ($$ `(Modified ,$1 ,$2)))
+     (Statement))
 
     (Statement
      (Block)
      (";" ($$ `(Statement)))
-     (Identifier ":" Statement ($$ `(LabelledStatement ,$ ,$3)))
+     (Identifier ":" Statement ($$ `(LabelledStatement ,$1 ,$3)))
      (StatementExpression ";" ($$ `(StatementExpression ,$1)))
      ("if" "(" Expression ")" Statement ($prec 'then) ($$ `(if ,$3 ,$5)))
      ("if" "(" Expression ")" Statement "else" Statement ($$ `(if ,$3 ,$5 ,$7)))
@@ -576,61 +581,78 @@
      (ReferenceType "++")
      (ReferenceType "--")
      |#
-     (QualifiedIdentifier Arguments)
-     (QualifiedIdentifier IdentifierSuffix Arguments)
-     (QualifiedIdentifier AssignmentOperator Expression1)
-     (QualifiedIdentifier IdentifierSuffix AssignmentOperator Expression1)
-     (QualifiedIdentifier "++")
-     (QualifiedIdentifier "--")
+     (QualifiedIdentifier Arguments ($$ `(CallStmt ,$1 ,$2)))
+     (QualifiedIdentifier IdentifierSuffix Arguments
+			  ($$ `(CallStmt ,$1 ,$2 ,$3)))
+     (QualifiedIdentifier AssignmentOperator Expression1
+			  ($$ `(AssnStmt ,$1 ,$2 ,$3)))
+     (QualifiedIdentifier IdentifierSuffix AssignmentOperator Expression1
+			  ($$ `(AssnStmt ,$1 ,$2 ,$3 ,$4)))
+     (QualifiedIdentifier "++" ($$ `(PostIncrStmt ,$1)))
+     (QualifiedIdentifier "--" ($$ `(PostDecrStmt ,$1)))
      ;; ^ may need to sub ReferenceType and sub back later via ...
      ;;  `(QualifiedIdentifier ,(cdr $1))
-     ("++" QualifiedIdentifier)
-     ("--" QualifiedIdentifier)
+     ("++" QualifiedIdentifier ($$ `(PreIncrStmt ,$1)))
+     ("--" QualifiedIdentifier ($$ `(PreDecrStmt ,$1)))
      )
 
     (Catches
-     (CatchClause)
-     (Catches CatchClause))
+     (Catches-1 ($$ (tl->list $1))))
+    (Catches-1
+     (CatchClause ($$ (make-tl 'Catches $1)))
+     (Catches-1 CatchClause ($$ (tl-append $1 $2))))
 
     ;; check
     (CatchClause
-     ("catch" "(" CatchType Identifier ")" Block))
+     ("catch" "(" CatchType Identifier ")" Block
+      ($$ `(CatchClause ,$3 ,$4 ,$6))))
 
     (CatchType
-     (QualifiedIdentifier)
-     (CatchType "|" QualifiedIdentifier))
+     (CatchType-1 ($$ (tl->list $1))))
+    (CatchType-1
+     (QualifiedIdentifier ($$ (make-tl 'CatchType $1)))
+     (CatchType-1 "|" QualifiedIdentifier ($$ (tl-append $1 $3))))
 
     (Finally
-     ("finally" Block))
+     ("finally" Block ($$ `(Finally ,$2))))
 
     (ResourceSpecification
-     ("(" Resources ")")
-     ("(" Resources ";" ")"))
+     ("(" Resources ")" ($$ $2))
+     ("(" Resources ";" ")" ($$ $2)))
     
     (Resources
-     (Resource)
-     (Resources ";" Resource))
+     (Resources-1 ($$ (tl->list $1))))
+    (Resources-1
+     (Resource ($$ (make-tl 'Resources $1)))
+     (Resources-1 ";" Resource ($$ (tl-append $1 $3))))
 
     (Resource
      ;; first form missing opt-Annotations
-     ("final" ReferenceType VariableDeclaratorId "=" Expression)
-     (ReferenceType VariableDeclaratorId "=" Expression))
+     ("final" ReferenceType VariableDeclaratorId "=" Expression
+      ($$ `(Modified "final" (Resource ,$2 ,$3 ,$5))))
+     (ReferenceType VariableDeclaratorId "=" Expression
+		    ($$ `(Resource ,$2 ,$3 ,$5))))
 
     (SwitchBlockStatementGroups
-     (SwitchBlockStatementGroup)
-     (SwitchBlockStatementGroups SwitchBlockStatementGroup))
+     (SwitchBlockStatementGroups-1 ($$ (tl->list $1))))
+    (SwitchBlockStatementGroups-1
+     (SwitchBlockStatementGroup ($$ (make-tl 'SwitchBlockStatementGroups $1)))
+     (SwitchBlockStatementGroups-1 SwitchBlockStatementGroup
+				   ($$ (tl-append $1 $2))))
 
     (SwitchBlockStatementGroup
-     (SwitchLabels BlockStatements))
+     (SwitchLabels BlockStatements ($$ `(SwitchBlockStatementGroup ,$1 ,$2))))
 
     (SwitchLabels
-     (SwitchLabel)
-     (SwitchLabels SwitchLabel))
+     (SwitchLabels-1 ($$ (tl->list $1))))
+    (SwitchLabels-1
+     (SwitchLabel ($$ (make-tl 'SwitchLabels $1)))
+     (SwitchLabels-1 SwitchLabel ($$ (tl->append $1 $2))))
 
     (SwitchLabel
-     ("case" Expression ":")
+     ("case" Expression ":" ($$ `(SwitchLabel ,$2)))
      ;;("case" EnumConstantName ":") CONFLICT
-     ("default" ":"))
+     ("default" ":" ($$ `(SwitchLabel (default)))))
 
     #;(EnumConstantName
      (Identifier))
@@ -673,8 +695,8 @@
 
     (Expression
      (Expression1)
-     (Expression1 AssignmentOperator Expression1)
-     )
+     (Expression1 AssignmentOperator Expression1
+		  ($$ `(assn-expr $1 (op ,$2) $3))))
 
     (AssignmentOperator
      ("=")
@@ -722,11 +744,11 @@
      ("%" ($$ 'mod)))
 
     (Expression3
-     (PrefixOp Expression3)
+     (PrefixOp Expression3 ($$ (list $1 $2)))
      ;;("(" Expression ")" Expression3) ;; sr-conf . ++ -- + -
      ;;("(" Type ")" Expression3) ;; rr-conf ")" 
      (Primary)
-     (Primary PostfixOp)
+     (Primary PostfixOp ($$ (list $2 $1)))
      ;;(Primary Selector-list) ;; sr-conf . [
      ;;(Primary Selector-list PostfixOp)
      )
@@ -847,19 +869,25 @@
 
     ;; check
     (EnumBody
-     ("{" "}")
-     ("{" EnumConstants "}")
-     ("{" EnumConstants "," EnumBodyDeclarations "}")
-     ("{" EnumBodyDeclarations "}")
+     ("{" "}" ($$ `(EnumBody)))
+     ("{" EnumConstants "}" ($$ `(EnumBody ,$2)))
+     ("{" EnumConstants "," EnumBodyDeclarations "}" ($$ `(EnumBody ,$2 ,$3)))
+     ("{" EnumBodyDeclarations "}" ($$ `(EnumBody ,$2)))
      )
 
     (EnumConstants
-     (EnumConstant)
-     (EnumConstants "," EnumConstant))
+     (EnumConstants-1 ($$ (tl->list $1))))
+    (EnumConstants-1
+     (EnumConstant ($$ (make-tl 'EnumConstants $1)))
+     (EnumConstants-1 "," EnumConstant ($$ (tl-append $1 $3))))
 
     (EnumConstant
      ;;(opt-Annotations Identifier opt-Arguments opt-ClassBody)
-     (Identifier opt-Arguments opt-ClassBody)
+     (Identifier
+      opt-Arguments opt-ClassBody
+      ($$ (let* ((tail (if (pair? opt-ClassBody) (list opt-ClassBody) '()))
+		 (tail (if (pair? opt-Arguments) (append opt-Arguments tail))))
+	    `(EnumConstant ,$1 . ,tail))))
      )
     #;(opt-Annotations
      ($empty)
@@ -872,8 +900,10 @@
      (ClassBody))
 
     (EnumBodyDeclarations
-     (";" ClassBodyDeclaration)
-     (EnumBodyDeclarations ClassBodyDeclaration))
+     (EnumBodyDeclarations-1 ($$ (tl->list $1))))
+    (EnumBodyDeclarations-1
+     (";" ClassBodyDeclaration ($$ (make-tl 'EnumBodyDeclarations $2)))
+     (EnumBodyDeclarations-1 ClassBodyDeclaration ($$ (tl-append $1 $2))))
 
     (IntegerLiteral ($fixed ($$ `(IntegerLiteral ,$1))))
     (FloatingPointLiteral ($float ($$ `(FloatingPointLiteral ,$1))))
