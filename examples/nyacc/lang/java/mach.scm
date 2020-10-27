@@ -867,12 +867,14 @@
      ("[" Expression "]")		; ??? check
      )
 
-    ;; check
     (EnumBody
      ("{" "}" ($$ `(EnumBody)))
      ("{" EnumConstants "}" ($$ `(EnumBody ,$2)))
-     ("{" EnumConstants "," EnumBodyDeclarations "}" ($$ `(EnumBody ,$2 ,$3)))
-     ("{" EnumBodyDeclarations "}" ($$ `(EnumBody ,$2)))
+     ("{" EnumConstants "," "}" ($$ `(EnumBody ,$2)))
+     ("{" EnumConstants ";" EnumBodyDeclarations "}" ($$ `(EnumBody ,$2 ,$4)))
+     ("{" EnumConstants "," ";" EnumBodyDeclarations "}"
+      ($$ `(EnumBody ,$2 ,$5)))
+     ("{" ";" EnumBodyDeclarations "}" ($$ `(EnumBody ,$3)))
      )
 
     (EnumConstants
@@ -880,6 +882,12 @@
     (EnumConstants-1
      (EnumConstant ($$ (make-tl 'EnumConstants $1)))
      (EnumConstants-1 "," EnumConstant ($$ (tl-append $1 $3))))
+
+    (EnumBodyDeclarations
+     (EnumBodyDeclarations-1 ($$ (tl->list $1))))
+    (EnumBodyDeclarations-1
+     (ClassBodyDeclaration ($$ (make-tl 'EnumBodyDeclarations $1)))
+     (EnumBodyDeclarations-1 ClassBodyDeclaration ($$ (tl-append $1 $2))))
 
     (EnumConstant
      ;;(opt-Annotations Identifier opt-Arguments opt-ClassBody)
@@ -898,12 +906,6 @@
     (opt-ClassBody
      ($empty)
      (ClassBody))
-
-    (EnumBodyDeclarations
-     (EnumBodyDeclarations-1 ($$ (tl->list $1))))
-    (EnumBodyDeclarations-1
-     (";" ClassBodyDeclaration ($$ (make-tl 'EnumBodyDeclarations $2)))
-     (EnumBodyDeclarations-1 ClassBodyDeclaration ($$ (tl-append $1 $2))))
 
     (IntegerLiteral ($fixed ($$ `(IntegerLiteral ,$1))))
     (FloatingPointLiteral ($float ($$ `(FloatingPointLiteral ,$1))))

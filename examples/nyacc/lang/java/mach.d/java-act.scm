@@ -887,17 +887,29 @@
    (lambda ($2 $1 . $rest) `(EnumBody))
    ;; EnumBody => "{" EnumConstants "}"
    (lambda ($3 $2 $1 . $rest) `(EnumBody ,$2))
-   ;; EnumBody => "{" EnumConstants "," EnumBodyDeclarations "}"
+   ;; EnumBody => "{" EnumConstants "," "}"
+   (lambda ($4 $3 $2 $1 . $rest) `(EnumBody ,$2))
+   ;; EnumBody => "{" EnumConstants ";" EnumBodyDeclarations "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(EnumBody ,$2 ,$3))
-   ;; EnumBody => "{" EnumBodyDeclarations "}"
-   (lambda ($3 $2 $1 . $rest) `(EnumBody ,$2))
+     `(EnumBody ,$2 ,$4))
+   ;; EnumBody => "{" EnumConstants "," ";" EnumBodyDeclarations "}"
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(EnumBody ,$2 ,$5))
+   ;; EnumBody => "{" ";" EnumBodyDeclarations "}"
+   (lambda ($4 $3 $2 $1 . $rest) `(EnumBody ,$3))
    ;; EnumConstants => EnumConstants-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; EnumConstants-1 => EnumConstant
    (lambda ($1 . $rest) (make-tl 'EnumConstants $1))
    ;; EnumConstants-1 => EnumConstants-1 "," EnumConstant
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; EnumBodyDeclarations => EnumBodyDeclarations-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; EnumBodyDeclarations-1 => ClassBodyDeclaration
+   (lambda ($1 . $rest)
+     (make-tl 'EnumBodyDeclarations $1))
+   ;; EnumBodyDeclarations-1 => EnumBodyDeclarations-1 ClassBodyDeclaration
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; EnumConstant => Identifier opt-Arguments opt-ClassBody
    (lambda ($3 $2 $1 . $rest)
      (let* ((tail (if (pair? opt-ClassBody)
@@ -914,13 +926,6 @@
    (lambda $rest (list))
    ;; opt-ClassBody => ClassBody
    (lambda ($1 . $rest) $1)
-   ;; EnumBodyDeclarations => EnumBodyDeclarations-1
-   (lambda ($1 . $rest) (tl->list $1))
-   ;; EnumBodyDeclarations-1 => ";" ClassBodyDeclaration
-   (lambda ($2 $1 . $rest)
-     (make-tl 'EnumBodyDeclarations $2))
-   ;; EnumBodyDeclarations-1 => EnumBodyDeclarations-1 ClassBodyDeclaration
-   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; IntegerLiteral => '$fixed
    (lambda ($1 . $rest) `(IntegerLiteral ,$1))
    ;; FloatingPointLiteral => '$float
