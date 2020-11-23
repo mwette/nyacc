@@ -73,9 +73,9 @@
 	  (block-item-list
 	   (expr-stmt
             (asm-expr (@ (extension "GNUC"))
-	     (string "mov r0,r1")
-	     (asm-outputs
-	      (asm-operand (ident "reg") (string "=&d") (ident "reg"))))))))))
+		      (string "mov r0,r1")
+		      (asm-outputs
+		       (asm-operand (ident "reg") (string "=&d") (ident "reg"))))))))))
      (equal?
       (parse-string
        (string-append
@@ -88,7 +88,8 @@
 	 (compd-stmt
 	  (block-item-list
 	   (expr-stmt
-            (asm-expr (@ (extension "GNUC"))
+            (asm-expr
+	     (@ (extension "GNUC"))
 	     (string "mov r0,r1")
 	     (asm-outputs
 	      (asm-operand (ident "reg") (string "=&d") (ident "reg")))
@@ -109,15 +110,15 @@
 	  (block-item-list
 	   (expr-stmt
             (asm-expr (@ (extension "GNUC"))
-	     (string "mov r0,r1")
-	     (asm-outputs
-	      (asm-operand (ident "reg") (string "=&d") (ident "reg")))
-	     (asm-inputs
-	      (asm-operand (ident "mcu") (string "I")
-	       (p-expr (fixed "123")))
-	      (asm-operand (ident "ssr") (string "X")
-	       (p-expr (fixed "456"))))
-	     (asm-clobbers (string "foo") (string "bar")))))))))
+		      (string "mov r0,r1")
+		      (asm-outputs
+		       (asm-operand (ident "reg") (string "=&d") (ident "reg")))
+		      (asm-inputs
+		       (asm-operand (ident "mcu") (string "I")
+				    (p-expr (fixed "123")))
+		       (asm-operand (ident "ssr") (string "X")
+				    (p-expr (fixed "456"))))
+		      (asm-clobbers (string "foo") (string "bar")))))))))
      
      (equal?
       (parse-string
@@ -125,26 +126,21 @@
 	"void foo() { __asm__ goto (\"mov r0,r1\" : "
 	": [mcu] \"I\" (123), [ssr] \"X\" (456) "
 	" : \"foo\", \"bar\" : error ); }"))
-      '(fctn-defn
-	(decl-spec-list (type-spec (void)))
-	(ftn-declr (ident "foo") (param-list))
-	(compd-stmt
-	 (block-item-list
-	  (expr-stmt
-	   (asm-expr
-	    (@ (extension "GNUC") (goto "true"))
-	    (string "mov r0,r1")
-	    (asm-outputs)
-	    (asm-inputs
-	     (asm-operand (ident "mcu") (string "I") (p-expr (fixed "123")))
-	     (asm-operand (ident "ssr") (string "X") (p-expr (fixed "456"))))
-	    (asm-clobbers (string "foo") (string "bar"))
-	    (asm-gotos (ident "error"))))))))))
-
-  )
-
-  
-
+      '(trans-unit
+	(fctn-defn
+	 (decl-spec-list (type-spec (void)))
+	 (ftn-declr (ident "foo") (param-list))
+	 (compd-stmt
+	  (block-item-list
+	   (expr-stmt
+	    (asm-expr
+	     (@ (extension "GNUC") (goto "true"))
+	     (string "mov r0,r1")
+	     (asm-outputs)
+	     (asm-inputs
+	      (asm-operand (ident "mcu") (string "I") (p-expr (fixed "123")))
+	      (asm-operand (ident "ssr") (string "X") (p-expr (fixed "456"))))
+	     (asm-clobbers (string "foo") (string "bar"))
+	     (asm-gotos (ident "error"))))))))))))
     
-
 ;; --- last line ---
