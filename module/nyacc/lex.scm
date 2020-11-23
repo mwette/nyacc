@@ -507,15 +507,15 @@
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
 	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 60 (read-char)))
 	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
 	(else (loop chl ty 70 ch))))
       ((23) ;; parse fixed binary 
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
 	((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 23 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 60 (read-char)))
 	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
 	(else (loop chl ty 70 ch))))
       ((30) ;; parse float fractional part
        (cond
