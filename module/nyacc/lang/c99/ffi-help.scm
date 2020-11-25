@@ -1262,6 +1262,26 @@
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
 
+      ;; typedef foo_t foo_array_t[123];
+      ((udecl
+	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
+	(init-declr (ary-declr (ident ,typename) (p-expr (fixed ,size)))))
+       (sferr "ffi-help/cnvt-udecl in-work: typedef type array\n")
+       ;;(pretty-print-c99 udecl)
+       ;;(pperr udecl)
+       (let* ((eltname (rename name))
+	      (name (rename typename))
+	      (st-name (if (string? name) name (symbol->string name)))
+	      (sy-name (if (string? name) (string->symbol name) name))
+	      (elt-desc (string->symbol (string-append eltname "-desc")))
+	      (pred (string->symbol (string-append st-name "?")))
+	      (make (string->symbol (string-append "make-" st-name))))
+	 (sfscm "(define-public ~A-desc (bs:vector ~A-desc ~A))\n"
+		name eltname size)
+	 (upscm `(define-fh-vector-type ,sy-name ,elt-desc ,pred ,make))
+	 (fhscm-export-def name))
+       (values (cons typename wrapped) (cons typename defined)))
+
       ;; typedef enum foo { ... } foo_t;
       ((udecl
 	(decl-spec-list
@@ -1757,7 +1777,7 @@
        (sferr "ffi-help/cnvt-udecl misssed:\n")
        (pretty-print-c99 udecl)
        (pperr udecl)
-       (quit)
+       ;;(quit)
        (values wrapped defined)))))
 
 
