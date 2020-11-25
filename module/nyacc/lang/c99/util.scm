@@ -139,7 +139,7 @@
 			      (resolve-CC CC) " -E -Wp,-v - </dev/null 2>&1"))))
     (let loop ((dirs '()) (grab #f) (line (read-line ip 'trim)))
       (cond
-       ((eof-object? line) dirs)
+       ((eof-object? line) (reverse dirs))
        ((string=? line "#include <...> search starts here:")
 	(loop dirs #t (read-line ip 'trim)))
        ((string=? line "End of search list.") dirs)
