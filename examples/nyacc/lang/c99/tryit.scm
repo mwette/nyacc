@@ -267,13 +267,35 @@
     (pp field-list)
     #f))
 
-(when #t
+(when #f
   (let* ((code
 	  (string-append
 	   "void foo() { __asm__ goto (\"mov r0,r1\" : "
 	   ": [mcu] \"I\" (123), [ssr] \"X\" (456) "
 	   " : \"foo\", \"bar\" : error ); }"))
 	 (tree (parse-string code #:mode 'decl))
+ 	 )
+    (pp tree)
+    #t))
+
+(when #t
+  (let* ((code0
+	  (string-append
+	   "#define ISR(vector, ...) "
+	   "void vector (void) __attribute__ ((__signal__,__INTR_ATTRS)) "
+	   " __VA_ARGS__; "
+	   "void vector (void)\n"
+	   "ISR(__vector__12__, 1) { }\n"))
+	 (code1
+	  (string-append
+	   "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
+	   "ISR(__vector__12__) { x = 1; }\n"))
+	 (code2
+	  (string-append
+	   "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
+	   "ISR(__vector__12__, int c) { x = c; }\n"))
+	 (code code1)
+	 (tree (parse-string code #:mode 'code))
  	 )
     (pp tree)
     #t))
