@@ -278,7 +278,7 @@
     (pp tree)
     #t))
 
-(when #t
+(when #f
   (let* ((code
 	  (string-append
 	   "#define sei() __asm__ __volatile__ (\"sei\" ::: \"memory\")\n"
@@ -288,6 +288,18 @@
  	 )
     (pp tree)
     #t))
+
+(when #t
+  (let* ((code
+	  (string-append
+	   "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
+	   "ISR(__vector__12__) { int x; }\n"))
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)
+    (pp99 tree)
+    #t))
+
+(if #f (pp (parse-file "/tmp/exam.d/ex08.c" #:mode 'code)))
 
 (when #f
   (let* ((code 

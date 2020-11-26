@@ -45,7 +45,7 @@
   (else
    (use-modules (ice-9 optargs))
    (use-modules (nyacc compat18))))
-(define (sf fmt . args)
+(define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 
 (define c99-std-defs
@@ -487,20 +487,19 @@
      ((eof-object? ch) (if sp (unread-char #\space)) #f)
      ((char-set-contains? inline-whitespace ch) (loop1 #t (read-char)))
      ((char=? #\( ch)
-      (let loop2 ((argl argl) (argv '()) (ch (read-char)))
+      (let loop2 ((argl argl) (argv '()) (ch ch))
 	(cond
-	 ((eqv? ch #\))
-	  (reverse
-	   (if (and (pair? argl) (null? (cdr argl)) (string=? (car argl) "..."))
-	       (acons "__VA_ARGS__" "" argv)
-	       argv)))
-	 ;;((null? argl) (cpp-err "arg count"))
-	 ((and (null? (cdr argl)) (string=? (car argl) "..."))
+	 ((eof-object? ch) (throw 'cpp-error "EOF reading args"))
+	 ((char=? ch #\))
+	  (reverse (if (and (pair? argl) (string=? (car argl) "..."))
+		       (acons "__VA_ARGS__" "" argv)
+		       argv)))
+	 ((and (pair? argl) (string=? (car argl) "..."))
 	  (let ((val (scan-cpp-input defs used #\))))
-	    (loop2 (cdr argl) (acons "__VA_ARGS__" val argv) ch)))
+	    (loop2 '() (acons "__VA_ARGS__" val argv) (read-char))))
 	 ((or (char=? ch #\() (char=? ch #\,))
 	  (let* ((val (scan-cpp-input defs used #\,)))
-	    (loop2 (cdr argl) (acons (car argl) val argv) ch)))
+	    (loop2 (cdr argl) (acons (car argl) val argv) (read-char))))
 	 (else
 	  (error "nyacc cpp.scm: collect-args coding error")))))
      (else (unread-char ch) (if sp (unread-char #\space)) #f))))
