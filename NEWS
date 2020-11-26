@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2020-XX-XX  V1.03.2 in work
+2020-11-26  V1.03.2
 	* Added examples/nyacc/lang/java, with grammar and parser.
 	  There are limitations: parameterized types and annotations
 	  are not (fully) supported.  Generation of the sxml output
