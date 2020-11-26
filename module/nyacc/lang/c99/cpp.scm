@@ -499,7 +499,12 @@
 	    (loop2 '() (acons "__VA_ARGS__" val argv) (read-char))))
 	 ((or (char=? ch #\() (char=? ch #\,))
 	  (let* ((val (scan-cpp-input defs used #\,)))
-	    (loop2 (cdr argl) (acons (car argl) val argv) (read-char))))
+	    (cond
+	     ((pair? argl)
+	      (loop2 (cdr argl) (acons (car argl) val argv) (read-char)))
+	     ((string=? "" val)
+	      (loop2 argl argv (read-char)))
+	     (else (throw 'cpp-error "function macro arg mismatch")))))
 	 (else
 	  (error "nyacc cpp.scm: collect-args coding error")))))
      (else (unread-char ch) (if sp (unread-char #\space)) #f))))
