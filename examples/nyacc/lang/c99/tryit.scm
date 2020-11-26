@@ -279,22 +279,11 @@
     #t))
 
 (when #t
-  (let* ((code0
+  (let* ((code
 	  (string-append
-	   "#define ISR(vector, ...) "
-	   "void vector (void) __attribute__ ((__signal__,__INTR_ATTRS)) "
-	   " __VA_ARGS__; "
-	   "void vector (void)\n"
-	   "ISR(__vector__12__, 1) { }\n"))
-	 (code1
-	  (string-append
-	   "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
-	   "ISR(__vector__12__) { x = 1; }\n"))
-	 (code2
-	  (string-append
-	   "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
-	   "ISR(__vector__12__, int c) { x = c; }\n"))
-	 (code code1)
+	   "#define sei() __asm__ __volatile__ (\"sei\" ::: \"memory\")\n"
+	   "int foo() { sei(); }\n"
+	   ))
 	 (tree (parse-string code #:mode 'code))
  	 )
     (pp tree)

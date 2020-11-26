@@ -164,9 +164,9 @@
 		  ((read-c-ident ch))
 		  ((cpp-comm-skipper ch) (loop (skip-il-ws (read-char))))
 		  (else (throw 'cpp-error "bad #define")))))
-	 (args (or (p-args (read-char)) '()))
+	 (args (p-args (read-char)))
 	 (repl (p-rest (skip-il-ws (read-char)))))
-    (if (pair? args)
+    (if args
 	`(define (name ,name) (args . ,args) (repl ,repl))
 	`(define (name ,name) (repl ,repl)))))
 	
@@ -487,20 +487,20 @@
      ((eof-object? ch) (if sp (unread-char #\space)) #f)
      ((char-set-contains? inline-whitespace ch) (loop1 #t (read-char)))
      ((char=? #\( ch)
-      (let loop2 ((argl argl) (argv '()) (ch ch))
+      (let loop2 ((argl argl) (argv '()) (ch (read-char)))
 	(cond
 	 ((eqv? ch #\))
 	  (reverse
 	   (if (and (pair? argl) (null? (cdr argl)) (string=? (car argl) "..."))
 	       (acons "__VA_ARGS__" "" argv)
 	       argv)))
-	 ((null? argl) (cpp-err "arg count"))
+	 ;;((null? argl) (cpp-err "arg count"))
 	 ((and (null? (cdr argl)) (string=? (car argl) "..."))
 	  (let ((val (scan-cpp-input defs used #\))))
-	    (loop2 (cdr argl) (acons "__VA_ARGS__" val argv) (read-char))))
+	    (loop2 (cdr argl) (acons "__VA_ARGS__" val argv) ch)))
 	 ((or (char=? ch #\() (char=? ch #\,))
 	  (let* ((val (scan-cpp-input defs used #\,)))
-	    (loop2 (cdr argl) (acons (car argl) val argv) (read-char))))
+	    (loop2 (cdr argl) (acons (car argl) val argv) ch)))
 	 (else
 	  (error "nyacc cpp.scm: collect-args coding error")))))
      (else (unread-char ch) (if sp (unread-char #\space)) #f))))
