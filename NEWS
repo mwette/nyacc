@@ -5,6 +5,15 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2020-XX-XX  V1.03.2 in work
+	* Added examples/nyacc/lang/java, with grammar and parser.
+	  There are limitations: parameterized types and annotations
+	  are not (fully) supported.  Generation of the sxml output
+	  AST is partially complete.
+	* lex.scm: parse C99 octals better
+	* cpp.scm: variadic arg ftn w/o args sets __VA_ARGS__ to ""
+	* cpp.scm: reworked collect-args for empty CPP function macros
+
 2020-10-20  V1.03.1
 	* Support was added for handling asm expressions in pretty-print-c99.
 	  This uses the GNU form and will add volatile option.
