@@ -985,6 +985,10 @@
         ,$8))
    ;; opt-asm-qualifiers => 
    (lambda $rest (list))
+   ;; opt-asm-qualifiers => "__volatile__"
+   (lambda ($1 . $rest) (list '(volatile "true")))
+   ;; opt-asm-qualifiers => "__goto__"
+   (lambda ($1 . $rest) (list '(goto "true")))
    ;; opt-asm-qualifiers => "volatile"
    (lambda ($1 . $rest) (list '(volatile "true")))
    ;; opt-asm-qualifiers => "goto"

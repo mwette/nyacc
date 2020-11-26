@@ -771,6 +771,8 @@
 		     ,$6 ,$7 ,$8))))
     (opt-asm-qualifiers
      ($empty)
+     ("__volatile__" ($$ (list '(volatile "true"))))
+     ("__goto__" ($$ (list '(goto "true"))))
      ("volatile" ($$ (list '(volatile "true"))))
      ("goto" ($$ (list '(goto "true")))))
     (asm-outputs
