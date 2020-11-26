@@ -45,6 +45,8 @@
   (else
    (use-modules (ice-9 optargs))
    (use-modules (nyacc compat18))))
+(define (sf fmt . args)
+  (apply simple-format (current-error-port) fmt args))
 
 (define c99-std-defs
   '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
@@ -487,7 +489,11 @@
      ((char=? #\( ch)
       (let loop2 ((argl argl) (argv '()) (ch ch))
 	(cond
-	 ((eqv? ch #\)) (reverse argv))
+	 ((eqv? ch #\))
+	  (reverse
+	   (if (and (pair? argl) (null? (cdr argl)) (string=? (car argl) "..."))
+	       (acons "__VA_ARGS__" "" argv)
+	       argv)))
 	 ((null? argl) (cpp-err "arg count"))
 	 ((and (null? (cdr argl)) (string=? (car argl) "..."))
 	  (let ((val (scan-cpp-input defs used #\))))
