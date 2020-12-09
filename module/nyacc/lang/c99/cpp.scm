@@ -47,6 +47,10 @@
    (use-modules (nyacc compat18))))
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pperr exp)
+  (pretty-print exp (current-error-port)))
+
 
 (define c99-std-defs
   '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
