@@ -606,7 +606,8 @@
     (sx-match declr
       ((init-declr ,item) (unwrap-declr item tail))
       ((init-declr ,item (initzer . ,vals))
-       (sferr "udecl->mdecl tossing initializer\n")
+       ;;(sferr "udecl->mdecl tossing initializer\n")
+       ;; FIXME this is bad for: double d[] = { 1.0, 2.0, 3.0 };
        (unwrap-declr item tail)) ;; ?
       ((comp-declr ,item) (unwrap-declr item tail))
       ((param-declr ,item) (unwrap-declr item tail))
