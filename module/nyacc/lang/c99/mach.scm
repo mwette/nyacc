@@ -75,7 +75,7 @@
      (string-literal ($$ `(p-expr ,$1)))
      ("(" expression ")" ($$ $2))
      ("(" "{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}" ")"
-      ($$ `(stmt-expr (@ (extension "GNUC")) ,$4))))
+      ($$ `(stmt-expr (@ (extension "GNUC")) ,(tl->list $4)))))
 
     (postfix-expression			; S 6.5.2
      (primary-expression)

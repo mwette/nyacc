@@ -22,7 +22,7 @@
    (lambda ($3 $2 $1 . $rest) $2)
    ;; primary-expression => "(" "{" $P1 block-item-list $P2 "}" ")"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(stmt-expr (@ (extension "GNUC")) ,$4))
+     `(stmt-expr (@ (extension "GNUC")) ,(tl->list $4)))
    ;; $P1 => 
    (lambda ($2 $1 . $rest) (cpi-push))
    ;; $P2 => 
