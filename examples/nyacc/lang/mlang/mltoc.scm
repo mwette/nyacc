@@ -701,6 +701,7 @@
 	 (dstfile (string-append (basename srcfile ".m") "_m.c"))
 	 (tree (call-with-input-file srcfile
 		 (lambda (iport) (read-mlang-file iport '())))))
+    (pperr tree)
     (unless tree (error "compile failed"))
     (let ((ct (ml->c99 tree opts)))
       (call-with-output-file dstfile

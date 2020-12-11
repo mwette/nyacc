@@ -92,7 +92,7 @@
 (define (skip-to-next-line)
   (let loop ((ch (read-char)))
     (cond
-x     ((eof-object? ch) ch)
+     ((eof-object? ch) ch)
      ((eqv? ch #\newline) (read-char))
      (else (loop (read-char))))))
 
@@ -154,6 +154,7 @@ x     ((eof-object? ch) ch)
 
 (define (fixed-colon-expr? expr)
   (sx-match expr
+    ((colon-expr) #t)
     ((colon-expr (fixed ,s) (fixed ,e)) #t)
     ((colon-expr (fixed ,s) (fixed ,i) (fixed ,e)) #t)
     (,_ #f)))
