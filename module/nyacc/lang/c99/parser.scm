@@ -364,7 +364,7 @@
 
       (define (run-parse)
 	(let ((info (fluid-ref *info*)))
-	  (raw-parser (lexer #:mode 'decl #:show-incs (cpi-shinc info))
+	  (raw-parser (lexer #:mode 'code #:show-incs (cpi-shinc info))
 		      #:debug (cpi-debug info))))
       
       (let ((bol #t)		 ; begin-of-line condition

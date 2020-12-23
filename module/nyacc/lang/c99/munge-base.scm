@@ -537,7 +537,7 @@
 		 (split-udecl adecl))
 		((repl-specl repl-declr)
 		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
-    (let ((repl-declr (fix-declr repl-declr)))
+    (let ((repl-declr (and repl-declr (fix-declr repl-declr))))
       (if (and (eq? orig-specl repl-specl)
 	       (eq? orig-declr repl-declr))
 	  adecl ;; <= unchanged; return original

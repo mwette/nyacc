@@ -443,7 +443,9 @@
     (enumerator				; S 6.7.2.2
      (identifier ($$ `(enum-defn ,$1)))
      (identifier attribute-specifiers ($$ `(enum-defn ,$1 ,$2)))
-     (identifier "=" constant-expression ($$ `(enum-defn ,$1 ,$3))))
+     (identifier "=" constant-expression ($$ `(enum-defn ,$1 ,$3)))
+     (identifier attribute-specifiers "=" constant-expression
+		 ($$ `(enum-defn ,$1 ,$2 ,$4))))
 
     (type-qualifier
      ("const" ($$ `(type-qual ,$1)))

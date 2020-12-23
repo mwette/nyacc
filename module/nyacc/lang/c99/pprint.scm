@@ -440,6 +440,11 @@
        (for-each ppx defns)
        (pop-il) (sf "}"))
 
+      ((enum-defn (@ . ,attr) (ident ,name) (attribute-list . ,attrs) ,expr)
+       (sf "~A " name) (ppx (sx-ref tree 2))
+       (sf " = ") (ppx expr) (sf ",") (comm+nl attr))
+      ((enum-defn (@ . ,attr) (ident ,name) (attribute-list . ,attrs))
+       (sf "~A " name) (ppx (sx-ref tree 2)) (sf ",") (comm+nl attr))
       ((enum-defn (@ . ,attr) (ident ,name) ,expr)
        (sf "~A = " name) (ppx expr) (sf ",") (comm+nl attr))
       ((enum-defn (@ . ,attr) (ident ,name))

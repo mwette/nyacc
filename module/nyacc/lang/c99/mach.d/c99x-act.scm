@@ -573,6 +573,9 @@
    (lambda ($2 $1 . $rest) `(enum-defn ,$1 ,$2))
    ;; enumerator => identifier "=" constant-expression
    (lambda ($3 $2 $1 . $rest) `(enum-defn ,$1 ,$3))
+   ;; enumerator => identifier attribute-specifiers "=" constant-expression
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(enum-defn ,$1 ,$2 ,$4))
    ;; type-qualifier => "const"
    (lambda ($1 . $rest) `(type-qual ,$1))
    ;; type-qualifier => "volatile"
