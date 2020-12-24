@@ -580,6 +580,20 @@
   (with-input-from-string text
     (lambda () (scan-cpp-input defs used #f))))
 
+;; This of bit of a kludge to deal with _Pragma in odd places.  The parser
+;; can't reject the full deal so we parse here and return as ($pragma . str)
+;; which the parser can ignore.  (Should the make-lalr-parser have a hoook
+;; for language pramgas?
+(define (finish-pragma)
+  (define (sk-ws ch)
+    (if (char-whitespace? ch) (sk-ws (read-char)) ch))
+  (unless (char=? #\( (sk-ws (read-char))) (throw 'c99-error "_Pragma: 1"))
+  (let ((str (read-c-string (sk-ws (read-char)))))
+    (unless str (throw 'c99-error "_Pragma: 2"))
+    (unless (char=? #\) (sk-ws (read-char))) (throw 'c99-error "_Pragma: 3"))
+    (cons '$pragma (cdr str))))
+(export finish-pragma)
+
 ;; === exports =======================
 
 ;; @deffn {Procedure} eval-cpp-cond-text text [defs] => string
@@ -634,6 +648,8 @@
 		     (or (expand-cpp-macro-ref repl defs used) repl)
 		     repl)))))
      ((c99-std-val ident) => identity)
+     ;;((string=? ident "_Pragma") (finish-pragma))
+     ;;^ does not work here: move here when cpp is token-based
      (else #f))))
 
 ;; @deffn {Procedure} expand-cpp-name name defs => repl|#f

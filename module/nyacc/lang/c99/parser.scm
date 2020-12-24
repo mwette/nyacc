@@ -626,6 +626,8 @@
 		      => (lambda (t) (cons t name)))
 		     ((typename? name)
 		      (cons t-typename name))
+		     ((string=? name "_Pragma")
+		      (finish-pragma))
 		     (else
 		      (cons t-ident name))))))
 	       ((read-c-num ch) => assc-$)
