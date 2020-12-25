@@ -345,8 +345,13 @@
 	   (else (ppx (car pair)))))
 	expr-list))
 
+      ((stmt-expr (block-item-list . ,items))
+       (sf "({\n") (push-il) (for-each ppx items) (pop-il) (sf "})"))
+
       ((udecl . ,rest)
        (ppx `(decl . ,rest)))
+      ((decl (@ . ,attr))		; GNU extension
+       (sf ";"))
       ((decl (@ . ,attr) ,decl-spec-list)
        (ppx decl-spec-list) (sf ";") (comm+nl attr))
       ((decl (@ . ,attr) ,decl-spec-list ,init-declr-list)
@@ -370,6 +375,8 @@
 	    ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
 	    ((fctn-spec) (sf "~A" (sx-ref (car dsl) 1)))
 	    ((type-spec) (ppx (car dsl)))
+	    ((typeof-expr typeof-type)
+	     (sf "typeof(") (ppx (sx-ref (car dsl) 1)) (sf ") "))
 	    (else (sf "[?:~S]" (car dsl))))
 	  (if (pair? (cdr dsl)) (sf " ")))
 	dsl))
@@ -487,6 +494,8 @@
 	(lambda (dsl)
 	  (case (sx-tag (car dsl))
 	    ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
+	    ((typeof-expr typeof-type)
+	     (sf "typeof(") (ppx (sx-ref (car dsl) 1)) (sf ") "))
 	    (else (sf "[?:~S]" (car dsl))))
 	  (if (pair? (cdr dsl)) (sf " ")))
 	tql))
