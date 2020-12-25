@@ -704,15 +704,16 @@
       ((trans-unit . ,items)
        (pair-for-each
 	(lambda (pair)
-	  (let ((this (car pair)) (next (and (pair? (cdr pair)) (cadr pair))))
+	  (let ((this (car pair)) (this-tag (caar pair))
+		(next-tag (and (pair? (cdr pair)) (caadr pair))))
 	    (ppx this)
-	    (cond ;; add blank line if next is different or fctn defn
-	     ((not next))
-	     ((eqv? (sx-tag this) (sx-tag next)))
-	     ((eqv? (sx-tag this) 'comment))
-	     ((eqv? (sx-tag next) 'comment) (sf "\n"))
-	     ((not (eqv? (sx-tag this) (sx-tag next))) (sf "\n"))
-	     ((eqv? (sx-tag next) 'fctn-defn) (sf "\n")))))
+	    (cond ;; heuristics for adding blank lines:
+	     ((not next-tag))
+	     ((eqv? this-tag 'comment))
+	     ((eqv? next-tag 'fctn-defn) (sf "\n"))
+	     ((eqv? this-tag next-tag))
+	     ((eqv? next-tag 'comment) (sf "\n"))
+	     (else (sf "\n")))))
 	items))
 
       ((fctn-defn . ,rest) ;; but not yet (knr-fctn-defn)
