@@ -1,6 +1,6 @@
 ;;; nyacc/parse.scm
 
-;; Copyright (C) 2014-2018 Matthew R. Wette
+;; Copyright (C) 2014-2020 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -30,6 +30,12 @@
 (define $default 1)			; sync w/ lalr.scm
 (define $error 2)			; sync w/ lalr.scm
 
+(use-modules (ice-9 pretty-print))
+(define (pperr exp)
+  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
+
 (define (vector-map proc vec)		; see (srfi srfi-43)
   (let* ((ln (vector-length vec)) (res (make-vector ln)))
     (let loop ((ix 0))
@@ -50,9 +56,6 @@
       (vector-map (lambda (ix f)
 		    (eval f (or env (current-module))))
 		  (vector-map (lambda (ix actn) (wrap-action actn)) av))))
-
-(define (sferr fmt . args)
-  (apply simple-format (current-error-port) fmt args))
 
 (define (dmsg/n s t a ntab)
   (let ((t (or (assq-ref ntab t) t)))
