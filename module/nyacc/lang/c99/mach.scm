@@ -110,8 +110,8 @@
      ("--" unary-expression ($$ `(pre-dec ,$2)))
      (unary-operator cast-expression ($$ (list $1 $2)))
      ("sizeof" unary-expression ($$ `(sizeof-expr ,$2)))
-     ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3)))
-     )
+     ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3))))
+    
     (unary-operator ("&" ($$ 'ref-to)) ("*" ($$ 'de-ref))
 		    ("+" ($$ 'pos)) ("-" ($$ 'neg))
 		    ("~" ($$ 'bitwise-not)) ("!" ($$ 'not)))
@@ -257,7 +257,13 @@
      (complex-type-specifier ($$ `(type-spec ,$1)))
      (struct-or-union-specifier ($$ `(type-spec ,$1)))
      (enum-specifier ($$ `(type-spec ,$1)))
-     (typedef-name ($$ `(type-spec ,$1))))
+     (typedef-name ($$ `(type-spec ,$1)))
+     ("typeof" "(" unary-expression ")" ($$ `(typeof-expr ,$3)))
+     ("typeof" "(" type-name ")" ($$ `(typeof-type ,$3)))
+     ("__typeof" "(" unary-expression ")" ($$ `(typeof-expr ,$3)))
+     ("__typeof" "(" type-name ")" ($$ `(typeof-type ,$3)))
+     ("__typeof__" "(" unary-expression ")" ($$ `(typeof-expr ,$3)))
+     ("__typeof__" "(" type-name ")" ($$ `(typeof-type ,$3))))
 
     (fixed-type-specifier
      ("short" ($prec 'imp) ($$ '(fixed-type "short")))
@@ -637,13 +643,15 @@
       "[" "]" ($$ `(ary-declr ,$1)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))) ,$5)))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static")))
+		      ,$5)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list "]"
       ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))))))
      (direct-abstract-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static"))) ,$5)))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static")))
+		      ,$5)))
      (direct-abstract-declarator "[" "*" "]" ($$ `(star-ary-declr ,$1)))
      ;;
      ("(" parameter-type-list ")" ($$ `(abs-ftn-declr ,$2)))
@@ -654,11 +662,13 @@
      ("[" assignment-expression "]" ($$ `(abs-ary-declr ,$2)))
      ("[" "]" ($$ `(abs-ary-declr)))
      ("[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static"))) ,$4)))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static")))
+			  ,$4)))
      ("[" "static" type-qualifier-list "]"
       ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static"))))))
      ("[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec "static"))) ,$4)))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec "static")))
+			  ,$4)))
      ("[" "*" "]" ($$ '(abs-star-ary-declr)))
      )
 
@@ -689,6 +699,7 @@
     (designator
      ("[" constant-expression "]" ($$ `(array-dsgr ,$2)))
      ("." identifier ($$ `(sel-dsgr ,$2))))
+
     ;; === statements =========================================================
 
     (statement
@@ -870,7 +881,8 @@
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
     (pragma
      ($pragma ($$ `(pragma ,$1)))
-     ("_Pragma" "(" string-literal ")" ($$ `(pragma ,$3))))
+     ;;("_Pragma" "(" string-literal ")" ($$ `(pragma ,$3)))
+     )
 
     )))
 

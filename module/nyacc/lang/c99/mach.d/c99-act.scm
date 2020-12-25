@@ -257,6 +257,18 @@
    (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => typedef-name
    (lambda ($1 . $rest) `(type-spec ,$1))
+   ;; type-specifier => "typeof" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "typeof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
+   ;; type-specifier => "__typeof" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "__typeof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
+   ;; type-specifier => "__typeof__" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "__typeof__" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
    ;; fixed-type-specifier => "short"
    (lambda ($1 . $rest) '(fixed-type "short"))
    ;; fixed-type-specifier => "short" "int"
@@ -1108,8 +1120,6 @@
    (lambda ($1 . $rest) `(cpp-stmt ,$1))
    ;; pragma => '$pragma
    (lambda ($1 . $rest) `(pragma ,$1))
-   ;; pragma => "_Pragma" "(" string-literal ")"
-   (lambda ($4 $3 $2 $1 . $rest) `(pragma ,$3))
    ))
 
 ;;; end tables
