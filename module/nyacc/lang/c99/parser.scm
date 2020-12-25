@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; Copyright (C) 2015-2019 Matthew R. Wette
+;; Copyright (C) 2015-2020 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -371,7 +371,6 @@
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
 	    (info (fluid-ref *info*))	; info shared w/ parser
-	    ;;(brlev 0)			; brace level
 	    (x-def? (cond ((procedure? xdef?) xdef?)
 			  ((eq? xdef? #t) (lambda (n m) #t))
 			  (else def-xdef?))))
@@ -627,7 +626,7 @@
 		     ((typename? name)
 		      (cons t-typename name))
 		     ((string=? name "_Pragma")
-		      (finish-pragma))
+		      (assc-$ (finish-pragma)))
 		     (else
 		      (cons t-ident name))))))
 	       ((read-c-num ch) => assc-$)
