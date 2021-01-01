@@ -284,23 +284,30 @@
 	   "#define sei() __asm__ __volatile__ (\"sei\" ::: \"memory\")\n"
 	   "int foo() { sei(); }\n"
 	   ))
-	 (tree (parse-string code #:mode 'code))
- 	 )
-    (pp tree)
-    #t))
-
-(when #t
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)))
+(when #f
   (let* ((code
 	  (string-append
 	   "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
 	   "ISR(__vector__12__) { int x; }\n"))
 	 (tree (parse-string code #:mode 'code)))
     (pp tree)
-    (pp99 tree)
-    #t))
+    (pp99 tree)))
 
 (if #f (pp (parse-file "/tmp/exam.d/ex08.c" #:mode 'code)))
 
+(when #f
+  (let* ((code "struct foo { char fill[3]; } z;\n")
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)))
+
+(when #t
+  (with-input-from-string " (  \"who da foo\" )"
+    (lambda ()
+      (sf "~S\n" (read-pragma-arg))
+      )))
+ 
 (when #f
   (let* ((code 
 	  "if (((Rd & 0x08) && (Rr & 0x08)) ||
