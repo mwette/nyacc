@@ -583,16 +583,35 @@
 	  (define (read-cpp-stmt ch)
 	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
+	  ;; not used -- need to explore more about source-properties
+	  (define (make-loc-info)
+	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
+		  (ln (1+ (port-line (current-input-port))))
+		  (cl (port-column (current-input-port))))
+	      (list cl ln fn)))
+
+	  ;; not used -- need to explore more about source-properties
+	  (define (update-loc-info loc-info)
+	    (let ((ln (1+ (port-line (current-input-port))))
+		  (cl (port-column (current-input-port))))
+	      (cons* cl ln loc-info)))
+
 	  (define (read-token)
-	    (let loop ((ch (read-char)))
+	    (let loop ((ch (read-char)) ss)
 	      (cond
+	       ;;((and #f (not ss)) (loop ch (make-loc-info)))
+	       #;((not ch)
+		(if #f
+		    (loop (read-char) ss)
+		    (let ((ss (make-loc-info)))
+		      (loop (read-char ss)))))
 	       ((eof-object? ch)
 		(set! suppress #f)
 		(if (pop-input)
-		    (loop (read-char))
+		    (loop (read-char) ss)
 		    (assc-$ '($end . "#<eof>"))))
-	       ((eq? ch #\newline) (set! bol #t) (loop (read-char)))
-	       ((char-set-contains? c:ws ch) (loop (read-char)))
+	       ((eq? ch #\newline) (set! bol #t) (loop (read-char) ss))
+	       ((char-set-contains? c:ws ch) (loop (read-char) ss))
 	       (bol
 		(set! bol #f)
 		(cond ;; things that require bol
@@ -600,12 +619,12 @@
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
 		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) => assc-$)
-			  (else (loop (read-char))))))
-		 (else (loop ch))))
+			  (else (loop (read-char) ss)))))
+		 (else (loop ch ss))))
 	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
 	       ((and (not (eq? (car ppxs) 'keep))
 		     (eq? mode 'code))
-		(loop (read-char)))
+		(loop (read-char) ss))
 	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
 	       ((read-c-ident ch) =>
 		(lambda (name)
@@ -618,7 +637,7 @@
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
-			   (loop (read-char))))
+			   (loop (read-char) ss)))
 		     ((assq-ref keytab symb)
 		      ;;^minor bug: won't work on #define keyword xxx
 		      ;; try (and (not (assoc-ref name defs))
@@ -641,7 +660,7 @@
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
 		(let ((ch (read-char)))
-		  (cond ((eqv? #\newline ch) (loop (read-char))) ;; extend line
+		  (cond ((eqv? #\newline ch) (loop (read-char) ss)) ;; extend
 			(else (unread-char ch) (cons #\\ "\\"))))) ;; parse err
 	       (else (cons ch (string ch))))))
 

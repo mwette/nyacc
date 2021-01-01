@@ -338,6 +338,18 @@
     ;;(pp99 tree)
     ))
 
+(when #t
+  (let* ((code "typedef enum { A, B=3, C } foo;")
+	 (tree (or (parse-string code) (error "parse failed")))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "foo"))
+	 (edl (sx-ref* udecl 1 2 1 1))
+	 (xxx (canize-enum-def-list edl))
+	 )
+    (pp udecl)
+    (pp edl)
+    (pp xxx)
+    ))
 
 ;; ffi-help patterns:
 ;; Figure out how to have ffi-help print message when new pattern shows up.
