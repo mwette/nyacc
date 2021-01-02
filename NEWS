@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-01-XX  V1.03.4
+2021-01-02  V1.03.4
 	* c99/parser.scm: in decl mode, included files are parsed in 
 	  'code mode instead of 'decl mode.  This should not affect app's
 	  but deals with #if/#else where macro and function have different
