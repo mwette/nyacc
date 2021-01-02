@@ -92,20 +92,6 @@
   (define (fH seed node) (cons node seed))
   (foldts fD fU fH '() tree))
 
-(define (fix-tree tree)
-  (define (fD seed tree) '())
-  (define (fU seed kseed tree)
-    (case (car tree)
-      ((include)
-       (let ((t (reverse (cdr kseed))))
-	 (if (pair? seed) (cons t seed) t)))
-      ((comment) seed)
-      (else
-       (let ((t (reverse kseed)))
-	 (if (pair? seed) (cons t seed) t)))))
-  (define (fH seed node) (cons node seed))
-  (foldts fD fU fH '() tree))
-
 (when #f
   (let* ((code "int foo = sizeof(int(*)());")
 	 (tree (or (parse-string code) (error "parse failed")))
@@ -128,145 +114,11 @@
     (ppin tree)
     (pp99 tree)
     ))
-
 (when #f
   (let* ((code "*(x->y->z)")
-	 (tree (parse-c99x code))
- 	 )
-    (pp code)
-    (pp tree)
-    (pp99 tree)
-    (newline)
+	 (tree (parse-c99x code)))
+    (pp code) (pp tree) (pp99 tree) (newline)
     ))
-
-(define (sxpath->proc path)
-  (match path
-    (()
-     '())
-    (`(// . ,rest)
-     `(node-join (node-or
-		  (node-self (node-typeof? '*any*))
-		  (node-closure (node-typeof? '*any*)))
-		 ,(sxpath->proc rest)))
-    (`((equal? ,x) . ,rest)
-     `(node-join (select-kids (node-equal? ,x))
-		 ,(sxpath->proc rest)))
-    (`((eq? ,x) . ,rest)
-     `(node-join (select-kids (node-eq? ,x))
-		 ,(sxpath->proc rest)))
-    (((? symbol? symb) . rest)
-     `(node-join (select-kids (node-typeof? (quote ,symb)))
-		 ,(sxpath->proc rest)))
-    #;(((? procedure? proc) . rest)
-    `(node-join ,proc
-    ,(sxpath->proc rest)))
-    (((? number? numb) . rest)
-     `(node-join (node-pos ,numb)
-		 ,(sxpath->proc rest)))
-    (_
-     (error "don't grok" path))))
-
-(when #f
-  (let* (;;(p1 (sxpath->proc '(// struct-def)))
-	 #;(p1 '(node-join
-	       (node-or
-		(node-self (node-typeof? '*any*))
-		(node-closure (node-typeof? '*any*)))
-	       (node-join
-		(select-kids (node-typeof? 'struct-def))
-		node-join)))
-	 ;;(f1 (eval p1 (current-module)))
-	 (p1 '(node-join
-		(node-or
-		 (node-self (node-typeof? '*any*))
-		 (node-closure (node-typeof? '*any*)))
-		(node-join
-		 (select-kids (node-typeof? 'struct-def))
-		 node-join)))
-	 (f1 (node-join
-		(node-or
-		 (node-self (node-typeof? '*any*))
-		 (node-closure (node-typeof? '*any*)))
-		(node-join
-		 (select-kids (node-typeof? 'struct-def))
-		 )))
-	 (f2 (node-join
-		(node-or
-		 (node-self (node-typeof? '*any*))
-		 (node-closure (node-typeof? '*any*)))
-		(node-join
-		 (select-kids (node-typeof? 'struct-def))
-		 (node-or
-		  (node-join
-		   (select-kids (node-typeof? 'ident))
-		   (select-kids (node-typeof? 'field-list)))
-		  (node-join
-		   (select-kids (node-typeof? 'field-list))))
-		 )
-		))
-	 (t1 `(udecl (decl-spec-list
-		      (stor-spec (typedef))
-		      (type-spec
-		       (struct-def
-			(ident "foo")
-			(field-list
-			 (comp-decl
-			  (decl-spec-list (type-spec (fixed-type "int")))
-			  (comp-declr-list (comp-declr (ident "comp")))))))
-		      (init-declr (ident "foo_t")))))
-	 )
-    ;;(pp p1)
-    ;;(pp f1)
-    ;;(pp t1)
-    ;;(pp (f1 t1))
-    (pp (f2 t1))
-    #f))
-
-(define sel-struct
-  (let ((sel (node-join
-	      (node-or
-	       (node-self (node-typeof? '*any*))
-	       (node-closure (node-typeof? '*any*)))
-	      (node-join
-	       (select-kids (node-typeof? 'struct-def))))))
-    (lambda (node)
-      (let ((res (sel node)))
-	(and (pair? res) (car res))))))
-  
-(define sel-fields
-  (let ((sel (node-or
-	      (node-join
-	       (select-kids (node-typeof? 'ident))
-	       (select-kids (node-typeof? 'field-list)))
-	      (node-join
-	       (select-kids (node-typeof? 'field-list))))))
-  (lambda (node)
-    (let ((res (sel (list node))))
-      (and (pair? res) (car res))))))
-
-(define sel-type-specs
-  (let ((sel (node-join
-	      (select-kids (node-typeof? 'comp-decl))
-	      (select-kids (node-typeof? 'decl-spec-list))
-	      (select-kids (node-typeof? 'type-spec)))))
-    (lambda (nodeset)
-      (sel nodeset))))
-
-(define sel-declrs
-  (let ((sel (node-join
-	      (select-kids (node-typeof? 'comp-decl))
-	      (select-kids (node-typeof? 'comp-declr-list))
-	      (select-kids (node-typeof? 'comp-declr)))))
-    (lambda (nodeset)
-      (sel nodeset))))
-
-;; given struct-def and elt, return elt's type-spec
-(define (probe1 struct path)
-  (let* ((field-list (sel-fields struct))
-	 )
-    (pp field-list)
-    #f))
-
 (when #f
   (let* ((code
 	  (string-append
@@ -276,16 +128,12 @@
 	 (tree (parse-string code #:mode 'decl))
  	 )
     (pp tree)
-    #t))
-
-(when #f
-  (let* ((code
-	  (string-append
-	   "#define sei() __asm__ __volatile__ (\"sei\" ::: \"memory\")\n"
-	   "int foo() { sei(); }\n"
-	   ))
+    ))
+(when #t
+  (let* ((code "int foo() { return bar(1, 2, 3); }\n")
 	 (tree (parse-string code #:mode 'code)))
-    (pp tree)))
+    (pp tree)
+    ))
 (when #f
   (let* ((code
 	  (string-append
@@ -293,79 +141,7 @@
 	   "ISR(__vector__12__) { int x; }\n"))
 	 (tree (parse-string code #:mode 'code)))
     (pp tree)
-    (pp99 tree)))
-
-(if #f (pp (parse-file "/tmp/exam.d/ex08.c" #:mode 'code)))
-
-(when #f
-  (let* ((code "struct foo { char fill[3]; } z;\n")
-	 (tree (parse-string code #:mode 'code)))
-    (pp tree)))
-
-(when #t
-  (with-input-from-string " (  \"who da foo\" )"
-    (lambda ()
-      (sf "~S\n" (read-pragma-arg))
-      )))
- 
-(when #f
-  (let* ((code 
-	  "if (((Rd & 0x08) && (Rr & 0x08)) ||
-              ((Rr & 0x08) && (~Ru & 0x08)) ||
-              ((~Ru & 0x08) && (Rd & 0x08))) {
-            sreg = SREG_SET_H(sreg);
-          } else {
-            sreg = SREG_CLR_H(sreg);
-          }
-        
-          if (((Rd & 0x80) && (Rr & 0x80) && (~Ru & 0x80)) ||
-              ((~Rd & 0x80) && (~Rr & 0x80) && (Ru & 0x80))) {
-            sreg = SREG_SET_V(sreg);
-          } else {
-            sreg = SREG_CLR_V(sreg);
-          }
-        
-          sreg = set_N(sreg, Ru);
-          sreg = set_S(sreg);
-          sreg = set_Z(sreg, Ru);
-        
-          if (((Rd & 0x80) && (Rr & 0x80)) ||
-              ((Rr & 0x80) && (~Ru & 0x80)) ||
-              ((~Ru & 0x80) && (Rd & 0x80))) {
-            sreg = SREG_SET_C(sreg);
-          } else {
-            sreg = SREG_CLR_C(sreg);
-          }")
-	 (code (string-append "void foo() {\n" code "}\n"))
-	 (tree (or (parse-string code) (error "parse failed")))
-	 (tree (sx-ref* tree 1 3 1))
-	 )
-    (sf "~A\n" code)
-    (ppin tree)
-    ;;(pp99 tree)
+    (pp99 tree)
     ))
-
-
-;; ffi-help patterns:
-;; Figure out how to have ffi-help print message when new pattern shows up.
-;;
-;; typedef struct foo *bar_t;
-;; struct foo; typedef struct foo *bar_t; stuct foo { int a; };
-;; typedef struct foo bar_t; struct foo { int a; }; typedef bar_t *baz_t;
-;; struct foo { int a; }; typedef struct foo bar_t;
-;; struct foo { int a; }; typedef struct foo *bar_t;
-
-;; struct foo; int baz(struct foo*); 
-
-;; case 1
-;; typedef struct foo *bar_t; struct foo { int a; }; =>
-;; (define struct-foo-desc 'void)
-;; (define bar_t (fh:pointer (delay struct-foo-desc)))
-;; (define-ffi-pointer-type bar_t struct-foo-desc bar_t? make-bar_t)
-;;
-;; (set! struct-foo-desc (bs:struct (list `(a ,int))))
-;; (define-fh-compound-type struct-foo struct-foo-desc
-;;                          struct-foo? make-struct-foo)
-;; (fh-ref-deref! bar_t* make-bar_t* struct-foo make-struct-foo)
 
 ;; --- last line ---
