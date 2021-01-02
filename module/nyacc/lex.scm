@@ -195,12 +195,7 @@
 ;; @end deffn
 (define like-c$-ident? (make-ident-like-p read-c$-ident))
 
-;; @deffn {Procedure} make-string-reader delim
-;; Generate a reader that uses @code{delim} as delimiter for strings.
-;; TODO: need to handle matlab-type strings.
-;; TODO: need to handle multiple delim's (like python)
-;; @end deffn
-(define (make-string-reader delim) ;; #:xxx
+(define (old-make-string-reader delim) ;; #:xxx
   (lambda (ch)
     (if (eq? ch delim)
 	(let loop ((cl '()) (ch (read-char)))
@@ -212,6 +207,34 @@
 		((eq? ch delim) (cons '$string (lxlsr cl)))
 		(else (loop (cons ch cl) (read-char)))))
 	#f)))
+;; @deffn {Procedure} make-string-reader delim
+;; Generate a reader for strings for delimiter.  @var{delim} can be a char
+;; or a list.  Closing quote escaped with @code{\} is skipped.
+;; @example
+;; (make-string-reader '((#\" . #\") (#\{ #\})))
+;; @end example
+;; Pretty printers should be set up to stuff things back.
+;; @end deffn
+(define (make-string-reader delim)
+  (define (fail) (throw 'nyacc-error "eof reading string"))
+  (define (doit nd)
+    (let loop ((cl '()) (ch (read-char)))
+      (cond ((eof-object? ch) (fail))
+	    ((char=? ch #\\)
+	     (let ((c1 (read-char)))
+	       (cond
+		((eof-object? c1) fail)
+		;;((char=? c1 #\t) (loop (cons #\tab cl) (read-char)))
+		;;((char=? c1 #\n) (loop (cons #\newline cl) (read-char)))
+		;;((char=? c1 #\r) (loop (cons #\return cl) (read-char)))
+		(else (loop (cons* c1 #\\ cl) (read-char))))))
+	    ((char=? ch nd) (cons '$string (lxlsr cl)))
+	    (else (loop (cons ch cl) (read-char))))))
+  (if (char? delim)
+      (lambda (ch) (and (char=? ch delim) (doit ch)))
+      (lambda (ch) (and=> (assq-ref delim ch) doit))))
+;;(export new-make-string-reader)
+;; string-literal -> parser -> pretty-print => string-literal
 
 ;; @deffn {Procedure} read-oct => 123|#f
 ;; Read octal number, assuming @code{\0} have already been read.
@@ -507,15 +530,15 @@
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
 	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 60 (read-char)))
 	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
 	(else (loop chl ty 70 ch))))
       ((23) ;; parse fixed binary 
        (cond
 	((eof-object? ch) (loop chl ty 72 ch))
 	((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 23 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 60 (read-char)))
 	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
 	(else (loop chl ty 70 ch))))
       ((30) ;; parse float fractional part
        (cond
@@ -883,7 +906,7 @@
 	 (read-chseq (make-chseq-reader chrseq))
 	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (lambda ()
-      (let ((bol #f))
+      (let ((bol #t))
 	(lambda ()
 	  (let loop ((ch (read-char)))
 	    (cond

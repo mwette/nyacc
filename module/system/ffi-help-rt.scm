@@ -59,9 +59,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (1 03 0))
+  #:version (1 03 4))
 
-(define *ffi-help-version* "1.03.0")
+(define *ffi-help-version* "1.03.4")
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
@@ -354,6 +354,40 @@
 
 ;; adopted from code at  https://github.com/TaylanUB covered by GPL3+ and
 ;; Copyright (C) 2015 Taylan Ulrich BayirliKammer <taylanbayirli@gmail.com>
+
+#;(define make-vector-metadata
+  (@@ (bytestructures body vector) make-vector-metadata))
+
+#;(define (fh:vector length descriptor)
+  (define element-size (bytestructure-descriptor-size descriptor))
+  (define size (* length element-size))
+  (define alignment (bytestructure-descriptor-alignment descriptor))
+  (define (unwrapper syntax? bytevector offset index)
+    (values bytevector
+            (if syntax?
+                (quasisyntax
+                 (+ (unsyntax offset)
+                    (* (unsyntax index) (unsyntax element-size))))
+                (+ offset (* index element-size)))
+            descriptor))
+  (define (setter syntax? bytevector offset value)
+    (when syntax?
+      (error "Writing into vector not supported with macro API."))
+    (cond
+     ((bytevector? value)
+      (if (zero? size)
+	  (bytevector-copy! bytevector offset value 0 (bytevector-length value))
+	  (bytevector-copy! bytevector offset value 0 size)))
+     ((vector? value)
+      (do ((i 0 (+ i 1))
+           (offset offset (+ offset element-size)))
+          ((= i (vector-length value)))
+        (bytestructure-set!*
+         bytevector offset descriptor (vector-ref value i))))
+     (else
+      (error "Invalid value for writing into vector." value))))
+  (define meta (make-vector-metadata length descriptor))
+  (make-bytestructure-descriptor size alignment unwrapper #f setter meta))
 
 (define make-pointer-metadata
   (@@ (bytestructures guile pointer) make-pointer-metadata))
@@ -653,11 +687,14 @@
    ((ffi:pointer? obj) obj)
    ((string? obj) (ffi:string->pointer obj))
    ((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
+   ((bytevector? obj) (ffi:bytevector->pointer obj))
    ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
    ;; TODO: work out casting pointer types
    ;;((and (pair? obj)
    ;;(or (fh-type? (car obj)) (bytestructure-descriptor? (car obj))))
    (else (error "expecting pointer type"))))
+
+(define unwrap~array unwrap~pointer)
 
 ;; @deffn {Procedure} make-fctn-param-unwrapper ret-t args-t => lambda
 ;; This procedure will convert an argument, 
@@ -863,6 +900,32 @@
 	 (size (bytestructure-descriptor-size desc)))
     (make-bytestructure (ffi:pointer->bytevector addr size) 0 desc)))
 
+
+#|
+;; @deffn {Procedure} make-cstr-array str-list => bv
+;; For C functions that take an argument of the form @code{const char *names[]}, 
+;; this routine will convert a scheme list of strings into an appropriate
+;; bytevector which can be passed via @code{unwrap~pointer}.
+;; @end deffn
+(define (make-cstr-array str-list)
+  "- Procedure: make-cstr-array str-list => bv
+     For C functions that take an argument of the form 'const char
+     *names[]', this routine will convert a scheme list of strings into
+     an appropriate bytevector which can be passed via 'unwrap~pointer'."
+  (let* ((n (length string-list))
+         (addresses (map (compose pointer-address
+                                  string->pointer)
+                         string-list))
+	     (bv (make-bytevector (* n (sizeof '*))))
+	     (bv-set! (case (sizeof '*)
+		            ((4) bytevector-u32-native-set!)
+		            ((8) bytevector-u64-native-set!))))
+    (for-each (lambda (address index)
+                (bv-set! bv (* (sizeof '*) index) address))
+              addresses (iota n))
+    bv))
+(export make-cstr-array)
+|#
 
 ;; === common c functions called
 

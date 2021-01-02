@@ -22,7 +22,7 @@
    (lambda ($3 $2 $1 . $rest) $2)
    ;; primary-expression => "(" "{" $P1 block-item-list $P2 "}" ")"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(stmt-expr (@ (extension "GNUC")) ,$4))
+     `(stmt-expr (@ (extension "GNUC")) ,(tl->list $4)))
    ;; $P1 => 
    (lambda ($2 $1 . $rest) (cpi-push))
    ;; $P2 => 
@@ -257,6 +257,18 @@
    (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => typedef-name
    (lambda ($1 . $rest) `(type-spec ,$1))
+   ;; type-specifier => "typeof" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "typeof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
+   ;; type-specifier => "__typeof" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "__typeof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
+   ;; type-specifier => "__typeof__" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "__typeof__" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
    ;; fixed-type-specifier => "short"
    (lambda ($1 . $rest) '(fixed-type "short"))
    ;; fixed-type-specifier => "short" "int"
@@ -573,6 +585,9 @@
    (lambda ($2 $1 . $rest) `(enum-defn ,$1 ,$2))
    ;; enumerator => identifier "=" constant-expression
    (lambda ($3 $2 $1 . $rest) `(enum-defn ,$1 ,$3))
+   ;; enumerator => identifier attribute-specifiers "=" constant-expression
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(enum-defn ,$1 ,$2 ,$4))
    ;; type-qualifier => "const"
    (lambda ($1 . $rest) `(type-qual ,$1))
    ;; type-qualifier => "volatile"
@@ -952,41 +967,55 @@
    ;; jump-statement => "return" ";"
    (lambda ($2 $1 . $rest) `(return (expr)))
    ;; asm-statement => asm-expression ";"
-   (lambda ($2 $1 . $rest) $1)
-   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal ")"
+   (lambda ($2 $1 . $rest) `(expr-stmt ,$1))
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal ")"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(asm-expr (@ (extension "GNUC")) ,$4))
-   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
+     `(asm-expr (@ (extension "GNUC") ,@$2) ,$4))
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(asm-expr
-        (@ (extension "GNUC"))
-        ,$4
-        ,(tl->list $5)))
-   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
+     `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5))
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
-        (@ (extension "GNUC"))
+        (@ (extension "GNUC") ,@$2)
         ,$4
-        ,(tl->list $5)
-        ,(tl->list $6)))
-   ;; asm-expression => "__asm__" opt-asm-specifiers "(" string-literal asm...
+        ,$5
+        ,$6))
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-expr
-        (@ (extension "GNUC"))
+        (@ (extension "GNUC") ,@$2)
         ,$4
-        ,(tl->list $5)
-        ,(tl->list $6)
-        ,(tl->list $7)))
-   ;; opt-asm-specifiers => 
+        ,$5
+        ,$6
+        ,$7))
+   ;; asm-expression => "__asm__" opt-asm-qualifiers "(" string-literal asm...
+   (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(asm-expr
+        (@ (extension "GNUC") ,@$2)
+        ,$4
+        (asm-outputs)
+        ,$6
+        ,$7
+        ,$8))
+   ;; opt-asm-qualifiers => 
    (lambda $rest (list))
-   ;; opt-asm-specifiers => "volatile"
-   (lambda ($1 . $rest) $1)
-   ;; asm-outputs => ":"
+   ;; opt-asm-qualifiers => "__volatile__"
+   (lambda ($1 . $rest) (list '(volatile "true")))
+   ;; opt-asm-qualifiers => "__goto__"
+   (lambda ($1 . $rest) (list '(goto "true")))
+   ;; opt-asm-qualifiers => "volatile"
+   (lambda ($1 . $rest) (list '(volatile "true")))
+   ;; opt-asm-qualifiers => "goto"
+   (lambda ($1 . $rest) (list '(goto "true")))
+   ;; asm-outputs => asm-outputs-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; asm-outputs-1 => ":"
    (lambda ($1 . $rest) (make-tl 'asm-outputs))
-   ;; asm-outputs => ":" asm-output
+   ;; asm-outputs-1 => ":" asm-output
    (lambda ($2 $1 . $rest)
      (make-tl 'asm-outputs $2))
-   ;; asm-outputs => asm-outputs "," asm-output
+   ;; asm-outputs-1 => asm-outputs-1 "," asm-output
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; asm-output => string-literal "(" identifier ")"
    (lambda ($4 $3 $2 $1 . $rest)
@@ -994,11 +1023,13 @@
    ;; asm-output => "[" identifier "]" string-literal "(" identifier ")"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-operand ,$2 ,$4 ,$6))
-   ;; asm-inputs => ":"
+   ;; asm-inputs => asm-inputs-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; asm-inputs-1 => ":"
    (lambda ($1 . $rest) (make-tl 'asm-inputs))
-   ;; asm-inputs => ":" asm-input
+   ;; asm-inputs-1 => ":" asm-input
    (lambda ($2 $1 . $rest) (make-tl 'asm-inputs $2))
-   ;; asm-inputs => asm-inputs "," asm-input
+   ;; asm-inputs-1 => asm-inputs-1 "," asm-input
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; asm-input => string-literal "(" expression ")"
    (lambda ($4 $3 $2 $1 . $rest)
@@ -1006,14 +1037,23 @@
    ;; asm-input => "[" identifier "]" string-literal "(" expression ")"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(asm-operand ,$2 ,$4 ,$6))
-   ;; asm-clobbers => ":"
+   ;; asm-clobbers => asm-clobbers-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; asm-clobbers-1 => ":"
    (lambda ($1 . $rest) (make-tl 'asm-clobbers))
-   ;; asm-clobbers => ":" string-literal
+   ;; asm-clobbers-1 => ":" string-literal
    (lambda ($2 $1 . $rest)
-     (tl-extend (make-tl 'asm-clobbers) $2))
-   ;; asm-clobbers => asm-clobbers "," string-literal
-   (lambda ($3 $2 $1 . $rest)
-     (tl-extend $1 (cdr $3)))
+     (make-tl 'asm-clobbers $2))
+   ;; asm-clobbers-1 => asm-clobbers-1 "," string-literal
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; asm-gotos => asm-gotos-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; asm-gotos-1 => ":"
+   (lambda ($1 . $rest) (make-tl 'asm-gotos))
+   ;; asm-gotos-1 => ":" identifier
+   (lambda ($2 $1 . $rest) (make-tl 'asm-gotos $2))
+   ;; asm-gotos-1 => asm-gotos-1 "," identifier
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; translation-unit => external-declaration-list
    (lambda ($1 . $rest) (tl->list $1))
    ;; external-declaration-list => 
@@ -1080,8 +1120,6 @@
    (lambda ($1 . $rest) `(cpp-stmt ,$1))
    ;; pragma => '$pragma
    (lambda ($1 . $rest) `(pragma ,$1))
-   ;; pragma => "_Pragma" "(" string-literal ")"
-   (lambda ($4 $3 $2 $1 . $rest) `(pragma ,$3))
    ))
 
 ;;; end tables

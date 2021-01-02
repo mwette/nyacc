@@ -1,9 +1,54 @@
-Copyright (C) 2017-2020 Matthew R. Wette
+Copyright (C) 2017-2021 Matthew R. Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
+
+2021-01-02  V1.03.4
+	* c99/parser.scm: in decl mode, included files are parsed in 
+	  'code mode instead of 'decl mode.  This should not affect app's
+	  but deals with #if/#else where macro and function have different
+	  signatures: glib's #define g_abort() vs g_abort(void).
+	* c99/mach.scm: added missing case in enumerator:
+	    identifier attribute-specifiers "=" constant-expression
+	  used in glib/gspawn.h GSpawnError.
+	* c99/munge.scm: re-worked canize-enum-def-list to deal with 
+	  attributes
+	* c99/ffi-help.scm: added case for 'typedef foo_t *int;'
+	* c99/munge-base.scm: expand-typerefs, allow #f for declr, which
+	  occurs in anonymous structs/unions.
+	* lang/arch-info.scm: added lookup-arch => (sizeof-map . alignof-map)
+	* c99/parser.scm: added support for _Prama() in odd places.
+	* c99/mach.scm: added typeof as type specifier
+
+2020-11-26  V1.03.3
+	* cpp.scm: oops, fix not quiet right for no args -- hope this works
+
+2020-11-26  V1.03.2
+	* Added examples/nyacc/lang/java, with grammar and parser.
+	  There are limitations: parameterized types and annotations
+	  are not (fully) supported.  Generation of the sxml output
+	  AST is partially complete.
+	* lex.scm: parse C99 octals better
+	* cpp.scm: variadic arg ftn w/o args sets __VA_ARGS__ to ""
+	* cpp.scm: reworked collect-args for empty CPP function macros
+
+2020-10-20  V1.03.1
+	* Support was added for handling asm expressions in pretty-print-c99.
+	  This uses the GNU form and will add volatile option.
+	* Handling of asm in the c99 parser (c99/mach.scm) was updated to
+	  clean up the output syntax trees.
+	* nyacc/lang/util.scm init input-stack to '() (was #f)
+	* TODO: make-lalr-parser will build parser for mach's with 
+	  rrconf actions.
+	* ffi-helper generated scm files now use a promise to avoid 
+	  dynamic linking at compile time.
+	* added make-cstr-array to ffi-help-rt (thanks rekado!);
+	  updated uwrap~pointer to deal with bytevectors; previously
+	  undefined unwrap~array now defined to unwrap~pointer.
+	* ffi-helper generates fht-unwrap call for functions taking
+	  struct-ref: see bug 59307
 
 2020-07-19  V1.03.0
 	* nyacc/lang/c99/body.scm: don't tokenize input that would be

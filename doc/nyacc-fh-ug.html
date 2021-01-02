@@ -7,7 +7,7 @@ under the terms of the GNU Free Documentation License, Version 1.3 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC. -->
-<!-- Created by GNU Texinfo 6.5, http://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>FFI Helper&rsquo;s Guide</title>
@@ -23,23 +23,14 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <!--
 a.summary-letter {text-decoration: none}
 blockquote.indentedblock {margin-right: 0em}
-blockquote.smallindentedblock {margin-right: 0em; font-size: smaller}
-blockquote.smallquotation {font-size: smaller}
 div.display {margin-left: 3.2em}
 div.example {margin-left: 3.2em}
 div.lisp {margin-left: 3.2em}
-div.smalldisplay {margin-left: 3.2em}
-div.smallexample {margin-left: 3.2em}
-div.smalllisp {margin-left: 3.2em}
 kbd {font-style: oblique}
 pre.display {font-family: inherit}
 pre.format {font-family: inherit}
 pre.menu-comment {font-family: serif}
 pre.menu-preformatted {font-family: serif}
-pre.smalldisplay {font-family: inherit; font-size: smaller}
-pre.smallexample {font-size: smaller}
-pre.smallformat {font-family: inherit; font-size: smaller}
-pre.smalllisp {font-size: smaller}
 span.nolinebreak {white-space: nowrap}
 span.roman {font-family: initial; font-weight: normal}
 span.sansserif {font-family: sans-serif; font-weight: normal}
@@ -60,28 +51,24 @@ ul.no-bullet {list-style: none}
 <pre class="format">FFI Helper User Guide
 Matt Wette
 July 2019
-With NYACC Version 1.03.0
+With NYACC Version 1.03.4
 </pre></div>
 
-<a name="Top"></a>
-<div class="header">
+<span id="Top"></span><div class="header">
 <p>
 Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
 </div>
-<a name="NYACC-FFI-Helper-Guide"></a>
-<h1 class="top">NYACC FFI Helper Guide</h1>
+<span id="NYACC-FFI-Helper-Guide"></span><h1 class="top">NYACC FFI Helper Guide</h1>
 <p>This is a user guide for the NYACC FFI Helper.
 </p>
 
 <hr>
-<a name="Introduction"></a>
-<div class="header">
+<span id="Introduction"></span><div class="header">
 <p>
  &nbsp; </p>
 </div>
 <h4 class="node-heading">Introduction</h4>
-<a name="Introduction-1"></a>
-<h3 class="heading">Introduction</h3>
+<span id="Introduction-1"></span><h3 class="heading">Introduction</h3>
 
 <p>The acronym FFI stands for &ldquo;Foreign Function Interface&rdquo;.  It refers
 to the Guile facility for binding functions and variables from C source
@@ -305,8 +292,7 @@ $9 = 1.0
 
 
 
-<a name="The-Guile-Foreign-Function-Interface"></a>
-<h3 class="heading">The Guile Foreign Function Interface</h3>
+<span id="The-Guile-Foreign-Function-Interface"></span><h3 class="heading">The Guile Foreign Function Interface</h3>
 
 <p>Guile has an API, called the Foreign Function Interface, which allows
 one to avoid writing and compiling C wrapper code in order to access C
@@ -396,8 +382,7 @@ library handles defined by a ffi module to acquire object pointers.
 </p>
 
 
-<a name="The-FFI-Helper-Design"></a>
-<h3 class="heading">The FFI Helper Design</h3>
+<span id="The-FFI-Helper-Design"></span><h3 class="heading">The FFI Helper Design</h3>
 
 
 <p>In this section we hope to provide some insight into the FH works.
@@ -566,8 +551,7 @@ passed by reference as return types.  For example
 </p>
 
 
-<a name="Creating-FFI-Modules-with-_0028nyacc-lang-c99-ffi_002dhelp_0029"></a>
-<h3 class="heading">Creating FFI Modules with <code>(nyacc lang c99 ffi-help)</code></h3>
+<span id="Creating-FFI-Modules-with-_0028nyacc-lang-c99-ffi_002dhelp_0029"></span><h3 class="heading">Creating FFI Modules with <code>(nyacc lang c99 ffi-help)</code></h3>
 
 <div class="example">
 <pre class="example">(define ffi-module <var>module-name</var> ...)
@@ -666,8 +650,7 @@ take the form <code>&quot;SYM=</code><var>val</var><code>&quot;</code>.
 
 
 
-<a name="Tuning-and-Debugging"></a>
-<h3 class="heading">Tuning and Debugging</h3>
+<span id="Tuning-and-Debugging"></span><h3 class="heading">Tuning and Debugging</h3>
 
 <p>Since this is not all straightforward you will get errors.
 </p>
@@ -678,8 +661,7 @@ take the form <code>&quot;SYM=</code><var>val</var><code>&quot;</code>.
 </li><li> guile -c &rsquo;(use-modules (ffi mymod))&rsquo;
 </li></ol>
 
-<a name="MAX_005fHEAP_005fSECTS"></a>
-<h4 class="subheading"><code>MAX_HEAP_SECTS</code></h4>
+<span id="MAX_005fHEAP_005fSECTS"></span><h4 class="subheading"><code>MAX_HEAP_SECTS</code></h4>
 
 <p>The message is
 </p><blockquote>
@@ -703,8 +685,7 @@ which generated this code:
 </pre></div>
 <p>This bug, failure to evaluate <code>7+1</code> to an integer, was fixed.
 </p>
-<a name="Trimming-Things-Down"></a>
-<h4 class="subheading">Trimming Things Down</h4>
+<span id="Trimming-Things-Down"></span><h4 class="subheading">Trimming Things Down</h4>
 
 <p>After using the FFI Helper to provide code for some packages you may
 notice that the quantity of code produced is large.  For example, to
@@ -752,11 +733,10 @@ own types or echo the typedefs from the package headers
 
 </pre></div>
                    
-<a name="Warning_003a-Possibly-Unbound-Variable"></a>
-<h4 class="subheading">Warning: Possibly Unbound Variable</h4>
+<span id="Warning_003a-Possibly-Unbound-Variable"></span><h4 class="subheading">Warning: Possibly Unbound Variable</h4>
 
-<div class="smallexample">
-<pre class="smallexample">;;; ffi/gtk2+.scm:3564:5: warning:
+<div class="example">
+<pre class="example">;;; ffi/gtk2+.scm:3564:5: warning:
     possibly unbound variable `GtkEnumValue*'
 ;;; ffi/gtk2+.scm:3581:5: warning:
     possibly unbound variable `GtkFlagValue*'
@@ -782,8 +762,7 @@ but not the pointer type.
 </p></dd>
 </dl>
 
-<a name="Other"></a>
-<h4 class="subheading">Other</h4>
+<span id="Other"></span><h4 class="subheading">Other</h4>
 
 <p>User is responsible for calling string-&gt;pointer and pointer-&gt;string.
 </p>
@@ -846,15 +825,13 @@ with NYACC&rsquo;s C99 parser.  There is no such thing as a working C standard.
 </pre></div>
 
 
-<a name="The-Run_002dtime-Module-_0028system-ffi_002dhelp_002drt_0029"></a>
-<h3 class="heading">The Run-time Module <code>(system ffi-help-rt)</code></h3>
+<span id="The-Run_002dtime-Module-_0028system-ffi_002dhelp_002drt_0029"></span><h3 class="heading">The Run-time Module <code>(system ffi-help-rt)</code></h3>
 
 <p>Here we provide details of the run-time support module.
 </p>
 
 
-<a name="Work-to-Go"></a>
-<h3 class="heading">Work to Go</h3>
+<span id="Work-to-Go"></span><h3 class="heading">Work to Go</h3>
 
 <dl compact="compact">
 <dt>02</dt>
@@ -890,8 +867,7 @@ arg?
 </dd>
 </dl>
 
-<a name="Completed"></a>
-<h4 class="subheading">Completed</h4>
+<span id="Completed"></span><h4 class="subheading">Completed</h4>
 <dl compact="compact">
 <dt>01</dt>
 <dd><div class="example">
@@ -902,26 +878,22 @@ enum-unwrap 'CAIRO_STATUS_SUCCESS =&gt; 0
 </dl>
 
 
-<a name="Administrative-Items"></a>
-<h3 class="heading">Administrative Items</h3>
+<span id="Administrative-Items"></span><h3 class="heading">Administrative Items</h3>
 
-<a name="Installation"></a>
-<h4 class="subheading">Installation</h4>
+<span id="Installation"></span><h4 class="subheading">Installation</h4>
 
 <div class="example">
 <pre class="example">./configure --prefix=xxx
 make install
 </pre></div>
 
-<a name="Reporting-Bugs"></a>
-<h4 class="subheading">Reporting Bugs</h4>
+<span id="Reporting-Bugs"></span><h4 class="subheading">Reporting Bugs</h4>
 <p>Please report bugs by navigating with your browser to
 &lsquo;<code>https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
 the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively, 
 ask on the Guile user&rsquo;s mailing list <a href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
 </p>
-<a name="Notes"></a>
-<h4 class="subheading">Notes</h4>
+<span id="Notes"></span><h4 class="subheading">Notes</h4>
 
 <ol>
 <li> The following situation is a bit tricky for me.
@@ -938,8 +910,7 @@ When I get to the third declaration I define the
 a compound type, and it&rsquo;s pointer type (missed this first time).
 </p></li></ol>
 
-<a name="Copyright"></a>
-<h4 class="subheading">Copyright</h4>
+<span id="Copyright"></span><h4 class="subheading">Copyright</h4>
 
 <p>Copyright (C) 2017-2019 &ndash; Matthew R. Wette.
 </p>

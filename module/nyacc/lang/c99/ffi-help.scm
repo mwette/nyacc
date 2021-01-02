@@ -92,7 +92,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 03 0))
+  #:version (1 03 4))
 
 (define fh-cpp-defs
   (cond
@@ -322,7 +322,8 @@
     ;;
     (ppscm
      `(define ,(link-libs)
-	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
+	(delay
+	  (list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries))))))
     (sfscm "\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))
     ;;
@@ -782,7 +783,7 @@
 			    (udecl (udecl-rem-type-qual udecl))
 			    (mdecl (udecl->mdecl udecl)))
 		       (mtail->ffi-desc (cdr mdecl))))
-		   fields)))
+		   (clean-fields fields))))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
     
@@ -906,6 +907,18 @@
 	 (string->symbol (string-append "unwrap-enum-" name)))
 	(else 'unwrap-enum)))
 
+      (((struct-ref (ident ,name)))
+       (cond
+	((member (w/struct name) wrapped)
+	 `(fht-unwrap ,(string->symbol (sw/struct name))))
+	(else #f)))
+
+      (((union-ref (ident ,name)))
+       (cond
+	((member (w/union name) wrapped)
+	 `(fht-unwrap ,(string->symbol (sw/union name))))
+	(else #f)))
+
       (((pointer-to) (typename ,typename))
        (cond
 	((member (w/* typename) defined)
@@ -924,6 +937,15 @@
 	 `(fht-unwrap ,(strings->symbol "struct-" struct-name "*")))
 	((member (w/struct struct-name) defined)
 	 `(fht-unwrap ,(strings->symbol "struct-" struct-name "*")))
+	(else 'unwrap~pointer)))
+
+      ;; use this?
+      #;(((pointer-to) (union-ref (ident ,union-name) . ,rest))
+       (cond
+	((member (w/union* union-name) defined)
+	 `(fht-unwrap ,(strings->symbol "union-" union-name "*")))
+	((member (w/union union-name) defined)
+	 `(fht-unwrap ,(strings->symbol "union-" union-name "*")))
 	(else 'unwrap~pointer)))
 
       (((pointer-to) (function-returning (param-list . ,params)) . ,rest)
@@ -1058,13 +1080,13 @@
 	  (let ((,~name (fh-link-proc
 			 ,decl-return ,name
 			 (append (list ,@decl-params) (map car ~rest))
-			 ,(link-libs)))
+			 (force ,(link-libs))))
 		,@(gen-exec-unwrappers exec-params))
 	    ,(if exec-return (list exec-return va-call) va-call)))))
      (#f ;; separate ~name and name defines
       (ppscm `(define ,~name
 		(delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
-				     ,(link-libs)))))
+				     (force ,(link-libs))))))
       (ppscm
        `(define (,sname ,@(gen-exec-arg-names exec-params))
 	  (let ,(gen-exec-unwrappers exec-params)
@@ -1074,7 +1096,7 @@
        `(define ,sname
 	  (let ((,~name
 		 (delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
-				      ,(link-libs)))))
+				      (force ,(link-libs))))))
 	    (lambda ,(gen-exec-arg-names exec-params)
 	      (let ,(gen-exec-unwrappers exec-params)
 		,(if exec-return (list exec-return call) call))))))))
@@ -1087,7 +1109,7 @@
     (sfscm ";;   (~A val) => bytestructure-set!\n" name)
     (ppscm
      `(define-public ,(string->symbol name)
-	(let ((x-var (delay (fh-link-extern ,name ,desc ,(link-libs)))))
+	(let ((x-var (delay (fh-link-extern ,name ,desc (force ,(link-libs))))))
 	  (case-lambda
 	    (() (bytestructure-ref (force x-var)))
 	    ((var) (bytestructure-set! (force x-var) var))))))))
@@ -1126,6 +1148,9 @@
     (if aval (string-split aval #\,) '())))
 
 ;;^-- instead have user run (ref<=>deref! ...
+
+;; This needs a total overhaul:
+;; I should be processing mdecl's instead of udecl's.
 
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
@@ -1199,9 +1224,19 @@
 	 (stor-spec (typedef))
 	 (type-spec (fixed-type ,name)))
 	(init-declr (ident ,typename)))
-       ;; FIX
        (sfscm "(define-public ~A-desc ~A)\n"
 	      typename (assoc-ref bs-typemap name))
+       (values wrapped defined))
+
+      ;; typedef int *foo_t;
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (fixed-type ,name)))
+	(init-declr (ptr-declr (pointer) (ident ,typename))))
+       (sfscm "(define-public ~A-desc (fh:pointer ~A))\n"
+	      typename (assoc-ref bs-typemap name))
+       (fhscm-def-pointer typename)
        (values wrapped defined))
 
       ;; typedef double foo_t;
@@ -1238,6 +1273,26 @@
        (sfscm "(define-public ~A-desc (fh:pointer (fh:pointer ~A-desc)))\n"
 	      typename name)
        (fhscm-def-pointer typename)
+       (values (cons typename wrapped) (cons typename defined)))
+
+      ;; typedef foo_t foo_array_t[123];
+      ((udecl
+	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
+	(init-declr (ary-declr (ident ,typename) (p-expr (fixed ,size)))))
+       (sferr "ffi-help/cnvt-udecl in-work: typedef type array\n")
+       ;;(pretty-print-c99 udecl)
+       ;;(pperr udecl)
+       (let* ((eltname (rename name))
+	      (name (rename typename))
+	      (st-name (if (string? name) name (symbol->string name)))
+	      (sy-name (if (string? name) (string->symbol name) name))
+	      (elt-desc (string->symbol (string-append eltname "-desc")))
+	      (pred (string->symbol (string-append st-name "?")))
+	      (make (string->symbol (string-append "make-" st-name))))
+	 (sfscm "(define-public ~A-desc (bs:vector ~A-desc ~A))\n"
+		name eltname size)
+	 (upscm `(define-fh-vector-type ,sy-name ,elt-desc ,pred ,make))
+	 (fhscm-export-def name))
        (values (cons typename wrapped) (cons typename defined)))
 
       ;; typedef enum foo { ... } foo_t;
@@ -1732,10 +1787,10 @@
       ;; === missed =====================
 
       (,otherwise
-       (sferr "ffi-help/cnvt-udecl misssed:\n")
+       (sferr "ffi-help/cnvt-udecl missed:\n")
        (pretty-print-c99 udecl)
        (pperr udecl)
-       (quit)
+       ;;(quit)
        (values wrapped defined)))))
 
 

@@ -18,7 +18,11 @@
 ;;; Code:
 
 (define-module (nyacc lang c99 cxeval)
-  #:export (parse-c99-cx eval-c99-cx eval-sizeof-type)
+  #:export (parse-c99-cx
+	    eval-c99-cx
+	    eval-sizeof-type
+	    sizeof-mtail
+	    )
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -98,7 +102,7 @@
 	 (xname (and xdecl (sx-ref* xdecl 1 1 1 1))))
     xname))
 
-(define (sizeof-mtail mtail)
+(define (sizeof-mtail mtail arch)
   ;; (decl attr specl (declr-list declr1 declr2 ...))
   ;; => ((decl attr specl declr1) (decl attr specl declr2) ...)
   (define (splitup-decl decl)
@@ -123,8 +127,7 @@
 	    (call-with-values
 		(lambda ()
 		  (sizeof-mtail
-		   ;;(cdr (udecl->mdecl `(decl ,specl ,(car declrs))))))
-		   (cdr (m-unwrap-declr (car declrs) mtail))))
+		   (cdr (m-unwrap-declr (car declrs) mtail)) arch))
 	      (lambda (elt-size elt-align)
 		(loop (update elt-size elt-align size)
 		      (max elt-align base-align) (cdr declrs))))))))
@@ -137,15 +140,15 @@
 
   (match mtail
     (`((pointer-to) . ,rest)
-     (values (sizeof-basetype '*) (alignof-basetype '*)))
+     (values (sizeof-basetype '* arch) (alignof-basetype '* arch)))
     (`((fixed-type ,name))
-     (values (sizeof-basetype name) (alignof-basetype name)))
+     (values (sizeof-basetype name arch) (alignof-basetype name arch)))
     (`((float-type ,name))
-     (values (sizeof-basetype name) (alignof-basetype name)))
+     (values (sizeof-basetype name arch) (alignof-basetype name arch)))
     (`((array-of ,size) . ,rest)
      (let ((mult (eval-c99-cx size)))
        (call-with-values
-	   (lambda () (sizeof-mtail rest))
+	   (lambda () (sizeof-mtail rest arch))
 	 (lambda (size align)
 	   (values (* mult size) align)))))
 
@@ -172,16 +175,16 @@
 	(else (loop size align (cdr flds))))))
 
     (`((,(or 'enum-ref 'enum-def) . ,rest))
-     (values (sizeof-basetype "int") (alignof-basetype "int")))
+     (values (sizeof-basetype "int" arch) (alignof-basetype "int" arch)))
 
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
        (throw 'nyacc-error "coding error"))))
 
-(define* (sizeof-specl/declr specl declr #:optional (udict '()))
+(define* (sizeof-specl/declr specl declr #:optional (udict '()) #:key arch)
   (let* ((udecl `(udecl ,specl ,declr))
 	 (xdecl (expand-typerefs udecl udict))
 	 (mdecl (udecl->mdecl xdecl)))
-    (sizeof-mtail (cdr mdecl))))
+    (sizeof-mtail (cdr mdecl) arch)))
 
 (define (trim-mtail mtail)
   (case (caar mtail)
@@ -193,16 +196,16 @@
 ;; @deffn {Procedure} eval-sizeof-type tree [udict]
 ;; => (values sizeof-val align-of)
 ;; @end deffn
-(define* (eval-sizeof-type tree #:optional (udict '()))
+(define* (eval-sizeof-type tree #:optional (udict '()) #:key arch)
   (let* ((type-name (sx-ref tree 1))
 	 (specl (sx-ref type-name 1))
 	 (declr (or (sx-ref type-name 2) '(param-declr))))
-    (sizeof-specl/declr specl declr udict)))
+    (sizeof-specl/declr specl declr udict #:arch arch)))
 
 ;; @deffn {Procedure} eval-sizeof-expr tree [udict]
 ;; => (values sizeof-val align-of)
 ;; @end deffn
-(define* (eval-sizeof-expr tree #:optional (udict '()))
+(define* (eval-sizeof-expr tree #:optional (udict '()) #:key arch)
 
   (define (gen-mtail tree)
     (sx-match tree
@@ -226,7 +229,7 @@
 	   (_ (throw 'nyacc-error "cxeval: can't de-ref")))))
       (,_ #f)))
 
-  (sizeof-mtail (gen-mtail tree)))
+  (sizeof-mtail (gen-mtail tree) arch))
       
 
 ;; @deffn {Procedure} eval-c99-cx tree [udict] [#:fail-proc fail-proc]

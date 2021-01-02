@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; Copyright (C) 2015-2019 Matthew R. Wette
+;; Copyright (C) 2015-2020 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -364,14 +364,13 @@
 
       (define (run-parse)
 	(let ((info (fluid-ref *info*)))
-	  (raw-parser (lexer #:mode 'decl #:show-incs (cpi-shinc info))
+	  (raw-parser (lexer #:mode 'code #:show-incs (cpi-shinc info))
 		      #:debug (cpi-debug info))))
       
       (let ((bol #t)		 ; begin-of-line condition
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
 	    (info (fluid-ref *info*))	; info shared w/ parser
-	    ;;(brlev 0)			; brace level
 	    (x-def? (cond ((procedure? xdef?) xdef?)
 			  ((eq? xdef? #t) (lambda (n m) #t))
 			  (else def-xdef?))))
@@ -583,16 +582,35 @@
 	  (define (read-cpp-stmt ch)
 	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
+	  ;; not used -- need to explore more about source-properties
+	  (define (make-loc-info)
+	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
+		  (ln (1+ (port-line (current-input-port))))
+		  (cl (port-column (current-input-port))))
+	      (list cl ln fn)))
+
+	  ;; not used -- need to explore more about source-properties
+	  (define (update-loc-info loc-info)
+	    (let ((ln (1+ (port-line (current-input-port))))
+		  (cl (port-column (current-input-port))))
+	      (cons* cl ln loc-info)))
+
 	  (define (read-token)
-	    (let loop ((ch (read-char)))
+	    (let loop ((ch (read-char)) ss)
 	      (cond
+	       ;;((and #f (not ss)) (loop ch (make-loc-info)))
+	       #;((not ch)
+		(if #f
+		    (loop (read-char) ss)
+		    (let ((ss (make-loc-info)))
+		      (loop (read-char ss)))))
 	       ((eof-object? ch)
 		(set! suppress #f)
 		(if (pop-input)
-		    (loop (read-char))
+		    (loop (read-char) ss)
 		    (assc-$ '($end . "#<eof>"))))
-	       ((eq? ch #\newline) (set! bol #t) (loop (read-char)))
-	       ((char-set-contains? c:ws ch) (loop (read-char)))
+	       ((eq? ch #\newline) (set! bol #t) (loop (read-char) ss))
+	       ((char-set-contains? c:ws ch) (loop (read-char) ss))
 	       (bol
 		(set! bol #f)
 		(cond ;; things that require bol
@@ -600,12 +618,12 @@
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
 		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) => assc-$)
-			  (else (loop (read-char))))))
-		 (else (loop ch))))
+			  (else (loop (read-char) ss)))))
+		 (else (loop ch ss))))
 	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
 	       ((and (not (eq? (car ppxs) 'keep))
 		     (eq? mode 'code))
-		(loop (read-char)))
+		(loop (read-char) ss))
 	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
 	       ((read-c-ident ch) =>
 		(lambda (name)
@@ -618,7 +636,7 @@
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
-			   (loop (read-char))))
+			   (loop (read-char) ss)))
 		     ((assq-ref keytab symb)
 		      ;;^minor bug: won't work on #define keyword xxx
 		      ;; try (and (not (assoc-ref name defs))
@@ -626,6 +644,8 @@
 		      => (lambda (t) (cons t name)))
 		     ((typename? name)
 		      (cons t-typename name))
+		     ((string=? name "_Pragma")
+		      (assc-$ (finish-pragma)))
 		     (else
 		      (cons t-ident name))))))
 	       ((read-c-num ch) => assc-$)
@@ -641,7 +661,7 @@
 	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
 		(let ((ch (read-char)))
-		  (cond ((eqv? #\newline ch) (loop (read-char))) ;; extend line
+		  (cond ((eqv? #\newline ch) (loop (read-char) ss)) ;; extend
 			(else (unread-char ch) (cons #\\ "\\"))))) ;; parse err
 	       (else (cons ch (string ch))))))
 
@@ -722,7 +742,8 @@
 		    (show-incs #f)	; show include files
 		    (return-defs #f)	; return (values tree defs)
 		    (debug #f))		; debug
-  (let ((info (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
+  (let ((info
+	 (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
     (with-fluids ((*info* info)
 		  (*input-stack* '()))
@@ -738,7 +759,7 @@
 	    (lambda (key fmt . args) (apply throw 'c99-error fmt args))))
 	(lambda (key fmt . args)
 	  (report-error fmt args)
-	  #f)))))
+	  (if return-defs (values #f '()) #f))))))
 
 ;; === expr parser ====================
 

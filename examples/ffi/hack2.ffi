@@ -1,0 +1,43 @@
+;; hack2.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi hack2)
+  #:pkg-config "gtk+-2.0"
+  #|
+  #:api-code "
+  #include <gtk/gtk.h>
+  void gtk_init(int *argc, char ***argv);
+  gulong g_signal_connect_data(gpointer instance, 
+                               const gchar *detailed_signal,
+                               GCallback c_handler, gpointer data, 
+                               GClosureNotify destroy_data, 
+                               GConnectFlags connect_flags);
+  void gtk_container_set_border_width(GtkContainer *container,
+				      guint border_width);
+  void gtk_container_add(GtkContainer *container, GtkWidget *widget);
+  void gtk_widget_show(GtkWidget *widget);
+  void gtk_widget_destroy(GtkWidget *widget);
+  void gtk_main(void);
+  void gtk_main_quit(void);
+  "
+  |#
+  #:include '("gtk/gtk.h" "glib-object.h")
+  #:inc-filter (lambda (file-spec path-spec)
+		 (or (string=? file-spec "<glibconfig.h>")
+		     (string-contains path-spec "glib/" 0)
+		     (string-contains path-spec "gobject/" 0)
+		     ;;(string-contains path-spec "pango/" 0)
+		     ;;(string-contains path-spec "gdk/" 0)
+		     (string-contains path-spec "gtk/" 0)
+		     ))
+  #:decl-filter (lambda (name)
+		  (member name '("gtk_init" "gtk_main" "gtk_main_quit"
+				 "g_signal_connect_data"
+				 "gtk_container_add" "gtk_container_set_border"
+				 "gtk_widget_show" "gtk_widget_destroy"
+				 )))
+  )
+
+(define-public (g_signal_connect instance detailed_signal c_handler data)
+  (g_signal_connect_data instance detailed_signal c_handler data NULL 0))
+
+;; --- last line ---

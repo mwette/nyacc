@@ -21,6 +21,7 @@
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (sxml fold))
+(use-modules (sxml xpath))
 (use-modules (ice-9 pretty-print))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -91,21 +92,7 @@
   (define (fH seed node) (cons node seed))
   (foldts fD fU fH '() tree))
 
-(define (fix-tree tree)
-  (define (fD seed tree) '())
-  (define (fU seed kseed tree)
-    (case (car tree)
-      ((include)
-       (let ((t (reverse (cdr kseed))))
-	 (if (pair? seed) (cons t seed) t)))
-      ((comment) seed)
-      (else
-       (let ((t (reverse kseed)))
-	 (if (pair? seed) (cons t seed) t)))))
-  (define (fH seed node) (cons node seed))
-  (foldts fD fU fH '() tree))
-
-(when #t
+(when #f
   (let* ((code "int foo = sizeof(int(*)());")
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
@@ -119,26 +106,55 @@
     (sf "evaluate:\n")
     (sf "x = ~S\n" (eval-c99-cx expr))))
 
-;; ffi-help patterns:
-;; Figure out how to have ffi-help print message when new pattern shows up.
-;;
-;; typedef struct foo *bar_t;
-;; struct foo; typedef struct foo *bar_t; stuct foo { int a; };
-;; typedef struct foo bar_t; struct foo { int a; }; typedef bar_t *baz_t;
-;; struct foo { int a; }; typedef struct foo bar_t;
-;; struct foo { int a; }; typedef struct foo *bar_t;
+(when #f
+  (let* ((code "int intx;\n")
+	 (tree (or (parse-string code) (error "parse failed")))
+	 )
+    (sf "~A\n" code)
+    (ppin tree)
+    (pp99 tree)
+    ))
+(when #f
+  (let* ((code "*(x->y->z)")
+	 (tree (parse-c99x code)))
+    (pp code) (pp tree) (pp99 tree) (newline)
+    ))
+(when #f
+  (let* ((code
+	  (string-append
+	   "void foo() { __asm__ goto (\"mov r0,r1\" : "
+	   ": [mcu] \"I\" (123), [ssr] \"X\" (456) "
+	   " : \"foo\", \"bar\" : error ); }"))
+	 (tree (parse-string code #:mode 'decl))
+ 	 )
+    (pp tree)
+    ))
+(when #t
+  (let* ((code "int foo() { return bar(1, 2, 3); }\n")
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)
+    ))
+(when #f
+  (let* ((code
+	  (string-append
+	   "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
+	   "ISR(__vector__12__) { int x; }\n"))
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)
+    (pp99 tree)
+    ))
 
-;; struct foo; int baz(struct foo*); 
-
-;; case 1
-;; typedef struct foo *bar_t; struct foo { int a; }; =>
-;; (define struct-foo-desc 'void)
-;; (define bar_t (fh:pointer (delay struct-foo-desc)))
-;; (define-ffi-pointer-type bar_t struct-foo-desc bar_t? make-bar_t)
-;;
-;; (set! struct-foo-desc (bs:struct (list `(a ,int))))
-;; (define-fh-compound-type struct-foo struct-foo-desc
-;;                          struct-foo? make-struct-foo)
-;; (fh-ref-deref! bar_t* make-bar_t* struct-foo make-struct-foo)
+(when #t
+  (let* ((code "typedef enum { A, B=3, C } foo;")
+	 (tree (or (parse-string code) (error "parse failed")))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "foo"))
+	 (edl (sx-ref* udecl 1 2 1 1))
+	 (xxx (canize-enum-def-list edl))
+	 )
+    (pp udecl)
+    (pp edl)
+    (pp xxx)
+    ))
 
 ;; --- last line ---

@@ -808,7 +808,7 @@
        ((var-AssignmentExpression)
 	(let* ((tail (rtail kseed))
 	       )
-	  (sferr "obj-Ass\n") (pperr (reverse kseed)) ;;(pperr tail)
+	  ;;(sferr "obj-Ass\n") (pperr (reverse kseed)) ;;(pperr tail)
 	  (values (cons (op-assn kseed) seed) kdict)))
 
        ((obj-AssignmentExpression)
