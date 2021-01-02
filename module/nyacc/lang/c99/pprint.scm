@@ -345,8 +345,13 @@
 	   (else (ppx (car pair)))))
 	expr-list))
 
+      ((stmt-expr (block-item-list . ,items))
+       (sf "({\n") (push-il) (for-each ppx items) (pop-il) (sf "})"))
+
       ((udecl . ,rest)
        (ppx `(decl . ,rest)))
+      ((decl (@ . ,attr))		; GNU extension
+       (sf ";"))
       ((decl (@ . ,attr) ,decl-spec-list)
        (ppx decl-spec-list) (sf ";") (comm+nl attr))
       ((decl (@ . ,attr) ,decl-spec-list ,init-declr-list)
@@ -370,6 +375,8 @@
 	    ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
 	    ((fctn-spec) (sf "~A" (sx-ref (car dsl) 1)))
 	    ((type-spec) (ppx (car dsl)))
+	    ((typeof-expr typeof-type)
+	     (sf "typeof(") (ppx (sx-ref (car dsl) 1)) (sf ") "))
 	    (else (sf "[?:~S]" (car dsl))))
 	  (if (pair? (cdr dsl)) (sf " ")))
 	dsl))
@@ -440,6 +447,11 @@
        (for-each ppx defns)
        (pop-il) (sf "}"))
 
+      ((enum-defn (@ . ,attr) (ident ,name) (attribute-list . ,attrs) ,expr)
+       (sf "~A " name) (ppx (sx-ref tree 2))
+       (sf " = ") (ppx expr) (sf ",") (comm+nl attr))
+      ((enum-defn (@ . ,attr) (ident ,name) (attribute-list . ,attrs))
+       (sf "~A " name) (ppx (sx-ref tree 2)) (sf ",") (comm+nl attr))
       ((enum-defn (@ . ,attr) (ident ,name) ,expr)
        (sf "~A = " name) (ppx expr) (sf ",") (comm+nl attr))
       ((enum-defn (@ . ,attr) (ident ,name))
@@ -482,6 +494,8 @@
 	(lambda (dsl)
 	  (case (sx-tag (car dsl))
 	    ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
+	    ((typeof-expr typeof-type)
+	     (sf "typeof(") (ppx (sx-ref (car dsl) 1)) (sf ") "))
 	    (else (sf "[?:~S]" (car dsl))))
 	  (if (pair? (cdr dsl)) (sf " ")))
 	tql))
@@ -690,15 +704,16 @@
       ((trans-unit . ,items)
        (pair-for-each
 	(lambda (pair)
-	  (let ((this (car pair)) (next (and (pair? (cdr pair)) (cadr pair))))
+	  (let ((this (car pair)) (this-tag (caar pair))
+		(next-tag (and (pair? (cdr pair)) (caadr pair))))
 	    (ppx this)
-	    (cond ;; add blank line if next is different or fctn defn
-	     ((not next))
-	     ((eqv? (sx-tag this) (sx-tag next)))
-	     ((eqv? (sx-tag this) 'comment))
-	     ((eqv? (sx-tag next) 'comment) (sf "\n"))
-	     ((not (eqv? (sx-tag this) (sx-tag next))) (sf "\n"))
-	     ((eqv? (sx-tag next) 'fctn-defn) (sf "\n")))))
+	    (cond ;; heuristics for adding blank lines:
+	     ((not next-tag))
+	     ((eqv? this-tag 'comment))
+	     ((eqv? next-tag 'fctn-defn) (sf "\n"))
+	     ((eqv? this-tag next-tag))
+	     ((eqv? next-tag 'comment) (sf "\n"))
+	     (else (sf "\n")))))
 	items))
 
       ((fctn-defn . ,rest) ;; but not yet (knr-fctn-defn)

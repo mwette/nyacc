@@ -379,6 +379,9 @@
 
       ;; check lhs for input arg
       ((assn (@ . ,attr) (ident ,name) ,rhsx)	; assign variable
+       (sferr "assn, rhsx=~S\n" rhsx)
+       ;; if rhsx == (aref-or-call (ident ,n) (expr-list (fixed-colon-expr)))
+       ;; then array copy
        (values `(var-assn (ident ,name) ,rhsx) '() (maybe-add-symbol name dict)))
       ((assn (@ . ,attr) (aref-or-call ,aexp ,expl) ,rhsx) ; assign element
        (values `(elt-assn ,aexp ,expl ,rhsx) '() dict))
@@ -404,7 +407,7 @@
 	     (let* ((n (string-append "arg" (number->string ix)))
 		    (s (string->symbol n)) (g (genxsym n))
 		    (rv `(lexical ,s ,g)))
-	       (sx-match (car elts)
+n	       (sx-match (car elts)
 		 ((ident ,name)
 		  (loop (cons `(var-assn (ident ,name) ,rv) lvxl)
 			(maybe-add-symbol name dict) (cdr elts) (1+ ix)))
@@ -424,6 +427,7 @@
 	(fctn-decl (ident ,name) (ident-list . ,inargs) (ident-list . ,outargs)
 		   . ,rest)
 	,stmt-list)
+       ;;(sferr "name=~S, udict:\n" name) (pperr *udict*) (quit)
        (let* ((dict (if (top-level? dict) (add-symbol name dict) dict))
 	      (dict (push-scope dict))
 	      (udecl (udict-ref *udict* name))
@@ -463,7 +467,7 @@
 	((comm-c-code comment) =>
 	 (lambda (code)
 	   (let* ((c-tree (or (parse-c99-string code)
-			      (throw 'mltoc-error "error")))
+			      (throw 'mltoc-error "could not parse")))
 		  ;; remove comment just used to signal mltoc
 		  (c-tree `(trans-unit . ,(sx-tail c-tree 2)))
 		  (udict (c99-trans-unit->udict c-tree)))
@@ -557,12 +561,12 @@
 
        ;; Assignment needs to deal with all left hand expressions.
        ((var-assn) ;; variable assignment
-	;;(sferr "var-assn:\n") (pperr (reverse kseed))
+	(sferr "var-assn (+quit):\n") (pperr (reverse kseed)) (quit)
 	(let* ((tail (rtail kseed))
 	       (lhs (car tail)) (lt (tree-type lhs kdict))
 	       (rhs (cadr tail)) (rt (tree-type rhs kdict))
 	       )
-	  ;;(sferr "  lt=~S\n" lt) (sferr "  rt=~S\n" rt)
+	  (sferr "  lt=~S\n" lt) (sferr "  rt=~S\n" rt)
 	  (cond
 	   ((not lt) (set-type! (sx-ref lhs 1) rt kdict))
 	   ((equal? lt rt))
@@ -574,12 +578,15 @@
 	    seed) kdict)))
 
        ((elt-assn) ;; element assignment
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed kdict))
 
        ((mem-assn) ;; member assignment
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed kdict))
 
        ((multi-assn)
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed kdict))
 
        ;; looping
@@ -591,17 +598,21 @@
        
        ;; ("for" ident "=" expr term stmt-list "end"
        ((for) ;; TODO
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed (pop-scope kdict)))
        
        ((while)
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed kdict))
 
        ;; @code{if} converted to @code{xif} in fD
        ((xif)
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed kdict))
        
        ;; converted in @code{fD} from switch, case-list, case, otherwise
        ((xswitch)
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed kdict))
 
        ((return)
@@ -613,12 +624,14 @@
 	  (values (cons ret seed) kdict)))
 
        ((command) ;; TODO
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed kdict))
 
        ((expr-list)
-	(values seed kdict))
+	(values (cons kseed seed) kdict))
 
        ((colon-expr fixed-colon-expr)
+	(sferr "not implemented: ~S, so I quit\n" (car tree)) (quit)
 	(values seed kdict))
 
        ((and or) (make-opcall1 kseed seed kdict))
@@ -701,6 +714,7 @@
 	 (dstfile (string-append (basename srcfile ".m") "_m.c"))
 	 (tree (call-with-input-file srcfile
 		 (lambda (iport) (read-mlang-file iport '())))))
+    (pperr tree)
     (unless tree (error "compile failed"))
     (let ((ct (ml->c99 tree opts)))
       (call-with-output-file dstfile

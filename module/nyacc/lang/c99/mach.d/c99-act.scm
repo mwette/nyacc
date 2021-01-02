@@ -22,7 +22,7 @@
    (lambda ($3 $2 $1 . $rest) $2)
    ;; primary-expression => "(" "{" $P1 block-item-list $P2 "}" ")"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(stmt-expr (@ (extension "GNUC")) ,$4))
+     `(stmt-expr (@ (extension "GNUC")) ,(tl->list $4)))
    ;; $P1 => 
    (lambda ($2 $1 . $rest) (cpi-push))
    ;; $P2 => 
@@ -257,6 +257,18 @@
    (lambda ($1 . $rest) `(type-spec ,$1))
    ;; type-specifier => typedef-name
    (lambda ($1 . $rest) `(type-spec ,$1))
+   ;; type-specifier => "typeof" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "typeof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
+   ;; type-specifier => "__typeof" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "__typeof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
+   ;; type-specifier => "__typeof__" "(" unary-expression ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-expr ,$3))
+   ;; type-specifier => "__typeof__" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest) `(typeof-type ,$3))
    ;; fixed-type-specifier => "short"
    (lambda ($1 . $rest) '(fixed-type "short"))
    ;; fixed-type-specifier => "short" "int"
@@ -573,6 +585,9 @@
    (lambda ($2 $1 . $rest) `(enum-defn ,$1 ,$2))
    ;; enumerator => identifier "=" constant-expression
    (lambda ($3 $2 $1 . $rest) `(enum-defn ,$1 ,$3))
+   ;; enumerator => identifier attribute-specifiers "=" constant-expression
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(enum-defn ,$1 ,$2 ,$4))
    ;; type-qualifier => "const"
    (lambda ($1 . $rest) `(type-qual ,$1))
    ;; type-qualifier => "volatile"
@@ -1105,8 +1120,6 @@
    (lambda ($1 . $rest) `(cpp-stmt ,$1))
    ;; pragma => '$pragma
    (lambda ($1 . $rest) `(pragma ,$1))
-   ;; pragma => "_Pragma" "(" string-literal ")"
-   (lambda ($4 $3 $2 $1 . $rest) `(pragma ,$3))
    ))
 
 ;;; end tables

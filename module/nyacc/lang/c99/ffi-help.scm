@@ -92,7 +92,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 03 3))
+  #:version (1 03 4))
 
 (define fh-cpp-defs
   (cond
@@ -1149,6 +1149,9 @@
 
 ;;^-- instead have user run (ref<=>deref! ...
 
+;; This needs a total overhaul:
+;; I should be processing mdecl's instead of udecl's.
+
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
 ;; Return updated (string based) keep-list, which will be modified if the
@@ -1221,9 +1224,19 @@
 	 (stor-spec (typedef))
 	 (type-spec (fixed-type ,name)))
 	(init-declr (ident ,typename)))
-       ;; FIX
        (sfscm "(define-public ~A-desc ~A)\n"
 	      typename (assoc-ref bs-typemap name))
+       (values wrapped defined))
+
+      ;; typedef int *foo_t;
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (fixed-type ,name)))
+	(init-declr (ptr-declr (pointer) (ident ,typename))))
+       (sfscm "(define-public ~A-desc (fh:pointer ~A))\n"
+	      typename (assoc-ref bs-typemap name))
+       (fhscm-def-pointer typename)
        (values wrapped defined))
 
       ;; typedef double foo_t;
@@ -1774,7 +1787,7 @@
       ;; === missed =====================
 
       (,otherwise
-       (sferr "ffi-help/cnvt-udecl misssed:\n")
+       (sferr "ffi-help/cnvt-udecl missed:\n")
        (pretty-print-c99 udecl)
        (pperr udecl)
        ;;(quit)

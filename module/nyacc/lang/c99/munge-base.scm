@@ -537,7 +537,7 @@
 		 (split-udecl adecl))
 		((repl-specl repl-declr)
 		 (expand-specl-typerefs orig-specl orig-declr udict keep)))
-    (let ((repl-declr (fix-declr repl-declr)))
+    (let ((repl-declr (and repl-declr (fix-declr repl-declr))))
       (if (and (eq? orig-specl repl-specl)
 	       (eq? orig-declr repl-declr))
 	  adecl ;; <= unchanged; return original
@@ -606,7 +606,8 @@
     (sx-match declr
       ((init-declr ,item) (unwrap-declr item tail))
       ((init-declr ,item (initzer . ,vals))
-       (sferr "udecl->mdecl tossing initializer\n")
+       ;;(sferr "udecl->mdecl tossing initializer\n")
+       ;; FIXME this is bad for: double d[] = { 1.0, 2.0, 3.0 };
        (unwrap-declr item tail)) ;; ?
       ((comp-declr ,item) (unwrap-declr item tail))
       ((param-declr ,item) (unwrap-declr item tail))
