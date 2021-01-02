@@ -215,8 +215,13 @@
 
     ;; --- declaration specifiers
 
+    (tdn-hack ($empty ($$ 'enable)))
+
     (declaration-specifiers		; S 6.7
-     (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
+     ;;(declaration-specifiers-1 ($$ (process-specs (tl->list $1))))
+     (tdn-hack declaration-specifiers-1
+      ($$ 'disable (process-specs (tl->list $2))))
+     )
     (declaration-specifiers-1
      ;; storage-class-specifiers
      (storage-class-specifier
@@ -237,7 +242,8 @@
      ;; attribute-specifiers
      (attribute-specifier
       ($prec 'reduce-on-semi) ($$ (make-tl 'decl-spec-list $1)))
-     (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
+     (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
+     )
 
     (storage-class-specifier		; S 6.7.1
      ("auto" ($$ '(stor-spec (auto))))
@@ -550,7 +556,7 @@
 
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
-     ;;(ident-like ($$ $1))
+     ;;(ident-like ($$ $1)) ;; generates many SR RR conflicts
      ;;("(" declarator ")" ($$ `(scope ,$2)))
      ("(" declarator ")" ($$ $2))
      ("(" attribute-specifier declarator ")" ($$ $3))
@@ -614,11 +620,11 @@
      (identifier-list-1 "," identifier ($$ (tl-append $1 $3))))
 
     (type-name				; S 6.7.6
-     ;; e.g., (foo_t *)
      (specifier-qualifier-list/no-attr abstract-declarator
 				       ($$ `(type-name ,$1 ,$2)))
-     ;; e.g., (int)
-     (declaration-specifiers ($$ `(type-name ,$1))))
+     (specifier-qualifier-list/no-attr ($$ `(type-name ,$1)))
+     ;;(declaration-specifiers ($$ `(type-name ,$1))) ; why did I have this?
+     )
 
     (abstract-declarator		; S 6.7.6
      (pointer direct-abstract-declarator ($$ `(ptr-declr ,$1 ,$2)))
@@ -841,7 +847,7 @@
      (lone-comment)
      (cpp-statement)
      (pragma)
-     ("extern" $string "{"
+     (tdn-hack "extern" $string "{"
       ($$ (cpi-dec-blev!)) external-declaration-list ($$ (cpi-inc-blev!)) "}"
       ($$ `(extern-block
 	    (extern-begin ,$2) ,@(sx-tail (tl->list $5) 1) (extern-end))))
@@ -892,12 +898,16 @@
 ;; due to parsing include files as units for code and decl mode.
 ;; update: This is doable now (see parser.scm) but wait until it's needed.
 
-(define c99-mach
+#;(define c99-mach
   (compact-machine
    (hashify-machine
     (make-lalr-machine c99-spec))
    #:keep 2
    #:keepers '($code-comm $lone-comm $pragma cpp-stmt)))
+(display "no-compact\n")
+(define c99-mach
+  (hashify-machine
+   (make-lalr-machine c99-spec)))
 
 (define c99x-spec (restart-spec c99-spec 'expression))
 

@@ -200,9 +200,12 @@
      (save-typenames `(decl ,$1 ,$2)))
    ;; declaration-no-comment => declaration-specifiers
    (lambda ($1 . $rest) `(decl ,$1))
-   ;; declaration-specifiers => declaration-specifiers-1
-   (lambda ($1 . $rest)
-     (process-specs (tl->list $1)))
+   ;; tdn-hack => 
+   (lambda $rest 'enable)
+   ;; declaration-specifiers => tdn-hack declaration-specifiers-1
+   (lambda ($2 $1 . $rest)
+     'disable
+     (process-specs (tl->list $2)))
    ;; declaration-specifiers-1 => storage-class-specifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list $1))
@@ -771,7 +774,7 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; type-name => specifier-qualifier-list/no-attr abstract-declarator
    (lambda ($2 $1 . $rest) `(type-name ,$1 ,$2))
-   ;; type-name => declaration-specifiers
+   ;; type-name => specifier-qualifier-list/no-attr
    (lambda ($1 . $rest) `(type-name ,$1))
    ;; abstract-declarator => pointer direct-abstract-declarator
    (lambda ($2 $1 . $rest) `(ptr-declr ,$1 ,$2))
@@ -1073,8 +1076,8 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => pragma
    (lambda ($1 . $rest) $1)
-   ;; external-declaration => "extern" '$string "{" $P5 external-declaratio...
-   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; external-declaration => tdn-hack "extern" '$string "{" $P5 external-d...
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(extern-block
         (extern-begin ,$2)
         ,@(sx-tail (tl->list $5) 1)
@@ -1083,9 +1086,10 @@
    (lambda ($1 . $rest)
      `(decl (@ (extension "GNUC"))))
    ;; $P5 => 
-   (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
+   (lambda ($4 $3 $2 $1 . $rest) (cpi-dec-blev!))
    ;; $P6 => 
-   (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-inc-blev!))
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     (cpi-inc-blev!))
    ;; function-definition => declaration-specifiers declarator compound-sta...
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn ,$1 ,$2 ,$3))

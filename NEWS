@@ -5,6 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+NEW
+	* in nyacc/lex.scm, changed signature of lex-generator to
+	  (ch loop) from (ch), so that user-supplied routine can
+	  loop [ performance hit? ]
+
 2021-01-02  V1.03.4
 	* c99/parser.scm: in decl mode, included files are parsed in 
 	  'code mode instead of 'decl mode.  This should not affect app's

@@ -128,12 +128,19 @@
 	 (tree (parse-string code #:mode 'decl))
  	 )
     (pp tree)
-    ))
-(when #t
-  (let* ((code "int foo() { return bar(1, 2, 3); }\n")
-	 (tree (parse-string code #:mode 'code)))
+    #t))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   "#define sei() __asm__ __volatile__ (\"sei\" ::: \"memory\")\n"
+	   "int foo() { sei(); }\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+ 	 )
     (pp tree)
-    ))
+    #t))
+
 (when #f
   (let* ((code
 	  (string-append
@@ -144,7 +151,7 @@
     (pp99 tree)
     ))
 
-(when #t
+(when #f
   (let* ((code "typedef enum { A, B=3, C } foo;")
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
@@ -156,5 +163,27 @@
     (pp edl)
     (pp xxx)
     ))
+
+(when #t
+  (let* ((code
+	  (string-append
+	   #|
+	   "int foo() {\n"
+	   "  typedef int foo_t;\n"
+	   "  {\n"
+	   "    typedef int foo_t[3];\n"
+	   "    1;\n"
+	   "  }\n"
+	   "}\n"
+	   |#
+	   "typedef int foo_t;\n"
+	   "int foo() {\n"
+	   "  typedef int foo_t[3];\n"
+	   "  1;\n"
+	   "}\n"
+	   ))
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)))
+
 
 ;; --- last line ---

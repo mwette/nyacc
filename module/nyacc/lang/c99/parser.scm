@@ -596,7 +596,7 @@
 	      (cons* cl ln loc-info)))
 
 	  (define (read-token)
-	    (let loop ((ch (read-char)) ss)
+	    (let loop ((ch (read-char)) (ss #f)) ;; ss is source loc
 	      (cond
 	       ;;((and #f (not ss)) (loop ch (make-loc-info)))
 	       #;((not ch)

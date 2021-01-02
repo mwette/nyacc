@@ -262,13 +262,13 @@
 	(make-lalr-parser/num mach
 			      #:skip-if-unexp siu
 			      #:interactive interactive
-			      #:track-src-loc trace-src-loc
+			      #:track-src-loc track-src-loc
 			      #:env env)
 	;; not hashed:
 	(make-lalr-parser/sym mach
 			      #:skip-if-unexp siu
 			      #:interactive interactive
-			      #:track-src-loc trace-src-loc
+			      #:track-src-loc track-src-loc
 			      #:env env))))
 
 ;;; --- last line ---
