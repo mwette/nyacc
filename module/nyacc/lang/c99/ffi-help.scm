@@ -1114,23 +1114,34 @@
 	    (() (bytestructure-ref (force x-var)))
 	    ((var) (bytestructure-set! (force x-var) var))))))))
 
+(define (node-not-typeof? crit)
+  (let ((pred (node-typeof? crit)))
+    (lambda (node) (not (pred node)))))
+
 ;; assume unit-declarator
 ;; TODO (ptr-declr (pointer (type-qual-list (type-qual "const"))))
 ;; See also stripdown-specl and stripdown-declr in @file{munge.scm}.
-(define (cleanup-udecl specl declr)
-  (let* ((fctn? (pair? ((sxpath '(// ftn-declr)) declr)))
-	 (specl (remove (lambda (node)
-			  (or (equal? node '(stor-spec (auto)))
-			      (equal? node '(stor-spec (register)))
-			      (equal? node '(stor-spec (static)))
-			      (and (pair? node)
-				   (equal? (car node) 'type-qual))))
+(define cleanup-udecl
+  (let* ((ftn-sel (node-closure (node-typeof? 'ftn-declr)))
+	 (fctn? (lambda (n) (pair? (ftn-sel n))))
+	 (cruft (node-self (node-not-typeof? 'type-qual)))
+	)
+      (let* (
+	     (specl (remove (lambda (node)
+			      (or (equal? node '(stor-spec (auto)))
+				  (equal? node '(stor-spec (register)))
+				  (equal? node '(stor-spec (static)))
+				  (and (pair? node)
+				       (equal? (car node) 'type-qual))))
+			    specl))
+	     (specl (if fctn?
+			(remove (lambda (node)
+				  (equal? node '(stor-spec (extern)))) specl)
 			specl))
-	 (specl (if fctn?
-		    (remove (lambda (node)
-			      (equal? node '(stor-spec (extern)))) specl)
-		    specl)))
-    (values specl declr)))
+	     ;; remove cruft like attributes and asm's
+	     (declr (and declr (sx-ref declr 1))))
+	(values specl declr)))))
+(export cleanup-udecl)
 
 ;; @deffn {Procecure} back-ref-extend! decl typename
 ;; @deffnx {Procecure} back-ref-getall decl typename
