@@ -1,6 +1,6 @@
 ;; examples/nyacc/lang/c99/tryit.scm
 
-;; Copyright (C) 2020 Matthew R. Wette
+;; Copyright (C) 2020-2021 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -105,7 +105,6 @@
     (pp expr)
     (sf "evaluate:\n")
     (sf "x = ~S\n" (eval-c99-cx expr))))
-
 (when #f
   (let* ((code "int intx;\n")
 	 (tree (or (parse-string code) (error "parse failed")))
@@ -113,6 +112,12 @@
     (sf "~A\n" code)
     (ppin tree)
     (pp99 tree)
+    ))
+(when #t
+  (let* ((code "int foo(int x) asm(\"foo\");")
+	 ;;(code "int foo(int x);")
+	 (tree (parse-string code)))
+    (pp code) (pp tree) (pp99 tree) (newline)
     ))
 (when #f
   (let* ((code "*(x->y->z)")
@@ -129,8 +134,8 @@
  	 )
     (pp tree)
     ))
-(when #t
-  (let* ((code "int foo() { return bar(1, 2, 3); }\n")
+(when #f
+  (let* ((code "int foo() { spice->meas[1].pin = &mega->portD.pin[0]; }\n")
 	 (tree (parse-string code #:mode 'code)))
     (pp tree)
     ))
