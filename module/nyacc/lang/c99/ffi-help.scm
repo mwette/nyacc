@@ -1124,10 +1124,9 @@
 (define cleanup-udecl
   (let* ((ftn-sel (node-closure (node-typeof? 'ftn-declr)))
 	 (fctn? (lambda (n) (pair? (ftn-sel n))))
-	 (cruft (node-self (node-not-typeof? 'type-qual)))
-	)
-      (let* (
-	     (specl (remove (lambda (node)
+	 (cruft (node-self (node-not-typeof? 'type-qual))))
+    (lambda (specl declr)
+      (let* ((specl (remove (lambda (node)
 			      (or (equal? node '(stor-spec (auto)))
 				  (equal? node '(stor-spec (register)))
 				  (equal? node '(stor-spec (static)))
@@ -1139,7 +1138,7 @@
 				  (equal? node '(stor-spec (extern)))) specl)
 			specl))
 	     ;; remove cruft like attributes and asm's
-	     (declr (and declr (sx-ref declr 1))))
+	     (declr (and declr (sx-list (sx-tag declr) #f (sx-ref declr 1)))))
 	(values specl declr)))))
 (export cleanup-udecl)
 
