@@ -30,6 +30,15 @@
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (srfi srfi-37)
   #:version (1 03 4))
+(cond-expand
+ (guile-3
+  (define (compile-scm file)
+    (compile-file file #:from 'scheme #:to 'bytecode
+		  #:optimization-level 0 #:opts '())))
+ (guile-2
+  (define (compile-scm file)
+    (compile-file file #:from 'scheme #:to 'bytecode
+		  #:opts '()))))
 
 (define *ffi-help-version* "1.03.4")
 
@@ -238,9 +247,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	(exit 1)))
     (unless (assq-ref options 'no-exec)
       (sfmt "compiling `~A' ...\n" (fix-path scm-file))
-      (let ((go-file (compile-file scm-file
-				   #:from 'scheme #:to 'bytecode
-				   #:optimization-level 0 #:opts '())))
+      (let ((go-file (compile-scm scm-file)))
 	(load-compiled go-file)
 	(sfmt "... wrote `~A'\n" (basename go-file)))
       (sleep 1))))
