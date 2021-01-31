@@ -240,7 +240,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       (sfmt "compiling `~A' ...\n" (fix-path scm-file))
       (let ((go-file (compile-file scm-file
 				   #:from 'scheme #:to 'bytecode
-				   #:opts '())))
+				   #:optimization-level 0 #:opts '())))
 	(load-compiled go-file)
 	(sfmt "... wrote `~A'\n" (basename go-file)))
       (sleep 1))))
