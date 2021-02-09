@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-XX-XX  V1.03.5
+2021-02-09  V1.03.5
 	* script/compile-ffi.scm: use cond-expand to catch changes to
 	  compile-file between guile2 and guile3.  GUile-3 requires use
 	  of new keyword arg #:optimization-level in order to get -O0.
