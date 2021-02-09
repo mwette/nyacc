@@ -215,7 +215,7 @@
       ((scope) (declr->id-name (sx-ref declr 1)))
       (else
        (pp (car declr))
-       (error "coding bug: " declr))))
+       (throw 'c99-error "parser.scm: find-new-typenames: ~S" declr))))
        
   ;;(sf "\ndecl:\n") (pp decl)
 
@@ -292,7 +292,7 @@
 (define (def-xdef? name mode)
   (not (eqv? mode 'file)))
 
-  
+
 ;; @deffn {Procedure} make-c99-lexer-generator match-table raw-parser => proc
 ;; This generates a procedure which has the signature
 ;; @example
@@ -364,7 +364,7 @@
 
       (define (run-parse)
 	(let ((info (fluid-ref *info*)))
-	  (raw-parser (lexer #:mode 'code #:show-incs (cpi-shinc info))
+	  (raw-parser (lexer #:mode 'decl #:show-incs (cpi-shinc info))
 		      #:debug (cpi-debug info))))
       
       (let ((bol #t)		 ; begin-of-line condition
@@ -476,6 +476,7 @@
 			  (list tree)))))))
 
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
+	    ;;(sf "eval-cpp-stmt/code ~S\n" stmt)
 	    (case (car stmt)
 	      ((if) (code-if stmt))
 	      ((elif) (code-elif stmt))
@@ -493,11 +494,11 @@
 		     ((pragma) stmt)
 		     ((line) stmt)
 		     (else
-		      (sferr "stmt: ~S\n" stmt)
-		      (error "nyacc eval-cpp-stmt/code: bad cpp flow stmt")))
+		      (throw 'c99-error "eval-cpp-stmt/code: ~S" stmt)))
 		   stmt))))
 	
 	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
+	    ;;(sf "eval-cpp-stmt/decl ~S\n" stmt)
 	    (case (car stmt)
 	      ((if) (code-if stmt))
 	      ((elif) (code-elif stmt))
@@ -521,11 +522,11 @@
 		     ((pragma) stmt) ;; ignore for now
 		     ((line) stmt)
 		     (else
-		      (sferr "stmt: ~S\n" stmt)
-		      (error "eval-cpp-stmt/decl: bad cpp flow stmt")))
+		      (throw 'c99-error "eval-cpp-stmt/decl: ~S" stmt)))
 		   stmt))))
 	  
 	  (define (eval-cpp-stmt/file stmt) ;; => stmt
+	    ;;(sf "eval-cpp-stmt/file ~S\n" stmt)
 	    (case (car stmt)
 	      ((if) (cpi-push-x) stmt)
 	      ((elif else) (cpi-shift-x) stmt)
@@ -538,8 +539,7 @@
 	      ((pragma) stmt)
 	      ((line) stmt)
 	      (else
-	       (sferr "stmt: ~S\n" stmt)
-	       (error "eval-cpp-stmt/file: bad cpp flow stmt"))))
+	       (throw 'c99-error "eval-cpp-stmt/file: ~S" stmt))))
 
 	  ;; Maybe evaluate the CPP statement.
 	  (define (eval-cpp-stmt stmt)
@@ -550,7 +550,7 @@
 		  ((code) (eval-cpp-stmt/code stmt))
 		  ((decl) (eval-cpp-stmt/decl stmt))
 		  ((file) (eval-cpp-stmt/file stmt))
-		  (else (error "nyacc eval-cpp-stmt: coding error"))))
+		  (else (throw 'c99-error "eval-cpp-stmt: coding error"))))
 	      (lambda (key fmt . rest)
 		(report-error fmt rest)
 		(throw 'c99-error "CPP error"))))
@@ -570,13 +570,13 @@
 		  ((code) #f)
 		  ((decl)
 		   (and (cpi-top-blev? info)
-			(memq (car stmt) '(include include-next define))
-			`(cpp-stmt . ,stmt)))
+			(memq (car stmt) '(include include-next))
+		    `(cpp-stmt . ,stmt)))
 		  ((file)
 		   (and (or (cpi-top-blev? info)
 			    (not (memq (car stmt) '(include include-next))))
 			`(cpp-stmt . ,stmt)))
-		  (else (error "nyacc pass-cpp-stmt: coding error")))))
+		  (else (throw 'c99-error "pass-cpp-stmt: coding error")))))
 
 	  ;; Composition of @code{read-cpp-line} and @code{eval-cpp-line}.
 	  (define (read-cpp-stmt ch)
@@ -613,6 +613,7 @@
 		    (cond
 		     ((and (not suppress)
 			   (x-def? name mode)
+			   (not (member (car ppxs) '(skip skip-look skip-done)))
 			   (expand-cpp-macro-ref name defs))
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan
@@ -651,7 +652,7 @@
 	    (case (car ppxs)
 	      ((keep) pair)
 	      ((skip-done skip-look skip) (loop (read-token)))
-	      (else (error "coding error")))))))
+	      (else (throw 'c99-error "parser.scm: coding error")))))))
 
     lexer))
 
