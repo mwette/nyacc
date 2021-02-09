@@ -5,6 +5,16 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2021-XX-XX  V1.03.5
+	* script/compile-ffi.scm: use cond-expand to catch changes to
+	  compile-file between guile2 and guile3.  GUile-3 requires use
+	  of new keyword arg #:optimization-level in order to get -O0.
+	* the change in 1.03.4 to use 'code vs 'decl breaks the ffi-helper
+	  so reversed
+	* c99, in decl mode, no longer passes cpp-defines to nyacc/parser
+	* ffi/glib.ffi may return 'bad c literal' because 
+	  gobject/glib-types.h uses GLIB_DEPRECATED_FOR('G_TYPE_VARIANT')
+
 2021-01-02  V1.03.4
 	* c99/parser.scm: in decl mode, included files are parsed in 
 	  'code mode instead of 'decl mode.  This should not affect app's
