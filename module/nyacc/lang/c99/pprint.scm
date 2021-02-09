@@ -549,7 +549,7 @@
 
       ;; initializer
       ((initzer ,expr)
-       (sf " = ") (ppx expr))
+       (sf "= ") (ppx expr))
       
       ;; initializer-list
       ((initzer-list . ,items)
@@ -763,7 +763,7 @@
        (pretty-print tree #:per-line-prefix "  ")
        )))
 
-  (if (not (pair? tree)) (throw 'c99-error "pprint: expecing sxml tree"))
+  (if (not (pair? tree)) (throw 'c99-error "pprint: expecting sxml tree"))
   (ppx tree)
   (if ugly (newline)))
 
