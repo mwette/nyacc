@@ -47,7 +47,6 @@
      "__volatile__=volatile" "__volatile=__volatile__"
      "__extension__=" "__extension=__extension__"
      "asm=__asm__" "__asm=__asm__"
-     "__attribute(X)=__attribute__(X)"
      )))
 
 ;; include-helper for C99 std
