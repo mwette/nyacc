@@ -113,7 +113,7 @@
     (ppin tree)
     (pp99 tree)
     ))
-(when #t
+(when #f
   (let* ((code "int foo(int x) asm(\"foo\");")
 	 ;;(code "int foo(int x);")
 	 (tree (parse-string code)))
@@ -148,5 +148,19 @@
     (pp tree)
     (pp99 tree)
     ))
+
+(when #f
+  (let* ((code
+	  (string-append
+           "#if 1\n"
+           "#define g_abort() abort ()\n"
+           "#else\n"
+           "void g_abort (void);\n"
+           "#endif\n"
+           "int x;\n"))
+	   (tree (parse-string code #:mode 'decl)))
+	  (pp tree)
+    ))
+
 
 ;; --- last line ---
