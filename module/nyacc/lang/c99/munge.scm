@@ -824,9 +824,7 @@
       (,_
        (sferr "munge/mdecl->udecl missed:\n")
        (pperr mdecl-tail)
-       (error "failed")
-       (throw 'nyacc-error "munge/mdecl->udecl failed")
-       #f)))
+       (throw 'nyacc-error "munge/mdecl->udecl failed"))))
 
   (let ((name (car mdecl))
 	(rest (cdr mdecl)))

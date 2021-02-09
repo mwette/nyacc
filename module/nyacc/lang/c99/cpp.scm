@@ -510,7 +510,7 @@
 	      (loop2 argl argv (read-char)))
 	     (else (throw 'cpp-error "function macro arg mismatch")))))
 	 (else
-	  (error "nyacc cpp.scm: collect-args coding error")))))
+	  (throw 'cpp-error "cpp.scm: collect-args coding error")))))
      (else (unread-char ch) (if sp (unread-char #\space)) #f))))
 
 ;; @deffn {Procedure} px-cpp-ftn-repl argd repl => string

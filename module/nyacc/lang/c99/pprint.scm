@@ -419,7 +419,7 @@
 	 ((enum-def) (ppx arg))
 	 ((typename) (sf "~A" (sx-ref arg 1)))
 	 ((void) (sf "void"))
-	 (else (error "missing " arg))))
+	 (else (throw 'nyacc-error "pprint: type-spec: ~S" arg))))
 
       ((struct-ref (ident ,name)) (sf "struct ~A" name))
       ((union-ref (ident ,name)) (sf "union ~A" name))
@@ -763,7 +763,7 @@
        (pretty-print tree #:per-line-prefix "  ")
        )))
 
-  (if (not (pair? tree)) (error "expecing sxml tree"))
+  (if (not (pair? tree)) (throw 'c99-error "pprint: expecing sxml tree"))
   (ppx tree)
   (if ugly (newline)))
 
