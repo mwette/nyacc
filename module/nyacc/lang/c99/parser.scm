@@ -611,9 +611,10 @@
 		  (let ((symb (string->symbol name))
 			(defs (cpi-defs info)))
 		    (cond
-		     ((and (not suppress)
-			   (x-def? name mode)
-			   (not (member (car ppxs) '(skip skip-look skip-done)))
+		     ((memq (car ppxs) '(skip skip-look skip-done))
+		      (skip-cpp-macro-ref name defs)
+		      (loop (read-char)))
+		     ((and (not suppress) (x-def? name mode)
 			   (expand-cpp-macro-ref name defs))
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan

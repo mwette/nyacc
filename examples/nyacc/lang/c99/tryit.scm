@@ -152,6 +152,15 @@
 (when #f
   (let* ((code
 	  (string-append
+	   "#define bar(X) #X\n"
+	   "#define foo(X) bar(X)\n"
+	   "char *s = foo('abc');\n"))
+	 (tree (parse-string code #:mode 'decl)))
+    (pp tree)))
+
+(when #f
+  (let* ((code
+	  (string-append
            "#if 1\n"
            "#define g_abort() abort ()\n"
            "#else\n"

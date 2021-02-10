@@ -28,6 +28,7 @@
 	    find-incl-in-dirl
 	    eval-cpp-cond-text
 	    expand-cpp-macro-ref
+	    skip-cpp-macro-ref
 	    ;;
 	    expand-cpp-name
 	    parse-cpp-expr
@@ -48,9 +49,8 @@
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
-(define (pperr exp)
-  (pretty-print exp (current-error-port)))
-
+(define* (pperr exp #:optional (plp ""))
+  (pretty-print exp (current-error-port) #:per-line-prefix plp))
 
 (define c99-std-defs
   '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
@@ -400,7 +400,7 @@
   (let ((ch (read-char)))
     ;; if exit, then did not defined __has_include(X)=__has_include__(X)
     (if (or (eof-object? ch) (not (char=? #\( ch)))
-	(throw 'cpp-error "expedcting `('")))
+	(throw 'cpp-error "expecting `('")))
   (let loop ((chl '()) (ch (skip-il-ws (read-char))))
     (cond
      ((eof-object? ch) (cpp-err "illegal argument"))
@@ -432,7 +432,7 @@
       (if (pair? rr)
 	  (cpp-expand-text repl defs (append rr used)) ;; re-run
 	  repl)))
-     
+
   (let loop ((rr '())			; list symbols resolved
 	     (tkl '())			; token list of
 	     (lv 0)			; level
@@ -651,6 +651,22 @@
      ;;((string=? ident "_Pragma") (finish-pragma))
      ;;^ does not work here: move here when cpp is token-based
      (else #f))))
+
+;; may not catch strings w/ non-matching parens
+(define (skip-cpp-macro-ref name defs)
+  (let ((rval (assoc-ref defs name)))
+    (and
+     (pair? rval)
+     (let loop ((ch (read-char)))
+       (cond ((eof-object? ch) (throw 'c99-error "eof when expecting `('"))
+	     ((char-whitespace? ch) (loop (read-char)))
+	     ((char=? ch #\() #t)
+	     (else (unread-char ch) #f)))
+     (let loop ((lv 0) (ch (read-char)))
+       (cond ((eof-object? ch) (throw 'c99-error "expecting `)'"))
+	     ((char=? #\( ch) (loop (1+ lv) (read-char)))
+	     ((char=? #\) ch) (if (zero? lv) #f (loop (1- lv) (read-char))))
+	     (else (loop lv (read-char))))))))
 
 ;; @deffn {Procedure} expand-cpp-name name defs => repl|#f
 ;; Calls @code{expand-cpp-macro-ref} with null input string (w/o further
