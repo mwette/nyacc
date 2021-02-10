@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-02-XX  V1.03.6
+2021-02-10  V1.03.6
 	* in c99, changed how identifiers are evaluated in in dead code
 	  sections (via #ifdef) are handled.  Now using skip-macro so
 	  that dead macros are not evalated in case like
