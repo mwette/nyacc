@@ -5,6 +5,16 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2021-02-XX  V1.03.6
+	* in c99, changed how identifiers are evaluated in in dead code
+	  sections (via #ifdef) are handled.  Now using skip-macro so
+	  that dead macros are not evalated in case like
+	    #if FOO
+	    #define g_abort() abort()
+	    #else
+	    g_abort(void);
+	    #endif
+
 2021-02-09  V1.03.5
 	* script/compile-ffi.scm: use cond-expand to catch changes to
 	  compile-file between guile2 and guile3.  GUile-3 requires use
