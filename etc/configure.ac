@@ -12,8 +12,12 @@ AC_CONFIG_SRCDIR(module/nyacc/version.scm)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
 
-AC_ARG_WITH(guile, [    --with-guile            path to binary],
+AC_ARG_WITH(guile, [  --with-guile            path to binary],
             ,with_guile=unspecified)
+AC_ARG_WITH(guile, [  --target                guild target flag],
+            ,target=unspecified)
+AC_ARG_WITH(guile, [  --debug                 build for debugging in guile],
+            ,debug=unspecified)
 
 if test "_$with_guile" != "_unspecified"; then
   GUILE=$with_guile
@@ -38,6 +42,20 @@ else
   GUILE_SITE_CCACHE=$prefix/lib/guile/$GUILE_EFFECTIVE_VERSION/site-ccache
   GUILE_DATA=$prefix/share
 fi
+
+if test "_$target" != "_unspecified"; then
+  GUILE_TARGET=$target
+else
+  GUILE_TARGET=
+fi
+if test "_$debug" != "_unspecified"; then
+  GUILE_DEBUG=-O0
+else
+  GUILE_DEBUG=
+fi
+AC_SUBST([GUILE_TARGET])
+AC_SUBST([GUILE_DEBUG])
+
 AC_SUBST([GUILE_GLOBAL_SITE])
 AC_SUBST([GUILE_SITE_CCACHE])
 AC_SUBST([GUILE_DATA])

@@ -591,6 +591,8 @@ GUILE_LOAD_PATH
 GUILE_DATA
 GUILE_SITE_CCACHE
 GUILE_GLOBAL_SITE
+GUILE_DEBUG
+GUILE_TARGET
 GUILE
 target_alias
 host_alias
@@ -1258,7 +1260,9 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-    --with-guile            path to binary
+  --with-guile            path to binary
+  --target                guild target flag
+  --debug                 build for debugging in guile
 
 Report bugs to the package provider.
 nyacc home page: <https://savannah.nongnu.org/project/nyacc>.
@@ -1730,6 +1734,22 @@ else
 fi
 
 
+# Check whether --with-guile was given.
+if test "${with_guile+set}" = set; then :
+  withval=$with_guile;
+else
+  target=unspecified
+fi
+
+
+# Check whether --with-guile was given.
+if test "${with_guile+set}" = set; then :
+  withval=$with_guile;
+else
+  debug=unspecified
+fi
+
+
 if test "_$with_guile" != "_unspecified"; then
   GUILE=$with_guile
 else
@@ -1797,6 +1817,20 @@ else
   GUILE_SITE_CCACHE=$prefix/lib/guile/$GUILE_EFFECTIVE_VERSION/site-ccache
   GUILE_DATA=$prefix/share
 fi
+
+if test "_$target" != "_unspecified"; then
+  GUILE_TARGET=$target
+else
+  GUILE_TARGET=
+fi
+if test "_$debug" != "_unspecified"; then
+  GUILE_DEBUG=-O0
+else
+  GUILE_DEBUG=
+fi
+
+
+
 
 
 
