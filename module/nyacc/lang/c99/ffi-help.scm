@@ -92,7 +92,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 03 4))
+  #:version (1 03 6))
 
 (define fh-cpp-defs
   (cond
@@ -757,7 +757,7 @@
     (ffi:uint64 . ,uint64) (ffi-void* . *)))
 
 (define (mtail->ffi-desc mdecl-tail)
-  (if (and (pair? mdecl-tail) (string? (car mdecl-tail))) (error "xxx"))
+  ;;(if (and (pair? mdecl-tail) (string? (car mdecl-tail))) (error "xxx"))
   (pmatch mdecl-tail
     (((pointer-to) . ,rest) 'ffi-void*)
     (((array-of) . ,rest) 'ffi-void*)
@@ -809,7 +809,7 @@
     
     (,otherwise
      (sferr "mtail->ffi-desc missed:\n") (pperr mdecl-tail)
-     (error "") (fherr "mtail->ffi-desc missed: ~S" mdecl-tail))))
+     (fherr "mtail->ffi-desc missed: ~S" mdecl-tail))))
 
 ;; Return a mdecl for the return type.  The variable is called @code{NAME}.
 (define (gen-decl-return udecl)
@@ -967,7 +967,6 @@
 
       (,otherwise
        (sferr "mdecl->fh-unwrapper missed:\n") (pperr mdecl)
-       (error "MDECL-FH-UNWRAPPER")
        (fherr "mdecl->fh-unwrapper missed: ~S" mdecl)))))
 
 (define (mdecl->fh-wrapper mdecl)
@@ -1114,23 +1113,34 @@
 	    (() (bytestructure-ref (force x-var)))
 	    ((var) (bytestructure-set! (force x-var) var))))))))
 
+(define (node-not-typeof? crit)
+  (let ((pred (node-typeof? crit)))
+    (lambda (node) (not (pred node)))))
+
 ;; assume unit-declarator
 ;; TODO (ptr-declr (pointer (type-qual-list (type-qual "const"))))
 ;; See also stripdown-specl and stripdown-declr in @file{munge.scm}.
-(define (cleanup-udecl specl declr)
-  (let* ((fctn? (pair? ((sxpath '(// ftn-declr)) declr)))
-	 (specl (remove (lambda (node)
-			  (or (equal? node '(stor-spec (auto)))
-			      (equal? node '(stor-spec (register)))
-			      (equal? node '(stor-spec (static)))
-			      (and (pair? node)
-				   (equal? (car node) 'type-qual))))
+;; and make this more efficient
+(define cleanup-udecl
+  (let* ((ftn-sel (node-closure (node-typeof? 'ftn-declr)))
+	 (fctn? (lambda (n) (pair? (ftn-sel n))))
+	 (cruft (node-self (node-not-typeof? 'type-qual))))
+    (lambda (specl declr)
+      (let* ((specl (remove (lambda (node)
+			      (or (equal? node '(stor-spec (auto)))
+				  (equal? node '(stor-spec (register)))
+				  (equal? node '(stor-spec (static)))
+				  (and (pair? node)
+				       (equal? (car node) 'type-qual))))
+			    specl))
+	     (specl (if (fctn? declr)
+			(remove (lambda (node)
+				  (equal? node '(stor-spec (extern)))) specl)
 			specl))
-	 (specl (if fctn?
-		    (remove (lambda (node)
-			      (equal? node '(stor-spec (extern)))) specl)
-		    specl)))
-    (values specl declr)))
+	     ;; remove cruft like attributes and asms and initizers)
+	     (declr (and declr (sx-list (sx-tag declr) #f (sx-ref declr 1)))))
+	(values specl declr)))))
+(export cleanup-udecl)
 
 ;; @deffn {Procecure} back-ref-extend! decl typename
 ;; @deffnx {Procecure} back-ref-getall decl typename
@@ -1164,6 +1174,8 @@
 ;; for any type we also declare a poitner type
 ;; TODO: decls need to be broken out into one of the forms:
 ;; function typedef struct-ref/def union-ref/def enum variable
+;; TODO: should I just remove "extern" altogether and assume
+;; variables are extern anyhow?
 (define (cnvt-udecl udecl udict wrapped defined)
   ;; This is a bit sloppy in that we have to know if the converters are
   ;; creating wrappers and/or (type) defines.
@@ -1788,9 +1800,8 @@
 
       (,otherwise
        (sferr "ffi-help/cnvt-udecl missed:\n")
-       (pretty-print-c99 udecl)
-       (pperr udecl)
-       ;;(quit)
+       (pretty-print-c99 clean-udecl)
+       (pperr clean-udecl)
        (values wrapped defined)))))
 
 
@@ -1972,13 +1983,16 @@
 	  (fold
 	   (lambda (upath seed)
 	     (unless (resolve-module upath)
-	       (error "module not defined:" upath))
+	       (fherr "module not defined: ~S" upath))
 	     (let* ((modul (resolve-module upath #:ensure #f))
 		    (pname (m-path->name upath))
 		    (vname (string->symbol (string-append pname "-types")))
 		    (var (module-ref modul vname)))
 	       (append var seed)))
 	   '() ext-mods)))
+
+    ;;(sferr "ffi-decls:\n") (pperr ffi-decls)
+    ;;(sferr "QUIT\n") (quit)
 
     ;; set globals
     (*prefix* (m-path->name path))
@@ -2228,7 +2242,7 @@
 		 (*renamer* identity) (*errmsgs* '()) (*prefix* "")
 		 (*mport* #t) (*udict* '()) (*ddict* '()))
     (if (not (access? filename R_OK))
-	(throw 'ffi-help-error "ERROR: not found: ~S" filename))
+	(fherr "ERROR: not found: ~S" filename))
     (call-with-input-file filename
       (lambda (iport)
 	(let ((output (or (assq-ref 'output options)

@@ -21,6 +21,7 @@
   #:export (parse-c99-cx
 	    eval-c99-cx
 	    eval-sizeof-type
+	    eval-sizeof-expr
 	    sizeof-mtail
 	    )
   #:use-module (nyacc lalr)
@@ -64,7 +65,7 @@
 
 (define (sizeof-type name)
   (or (and=> (assoc-ref ffi-type-map name) sizeof)
-      (throw 'nyacc-error "bad type")))
+      (throw 'c99-error "bad type")))
 
 ;; (string "abc" "dev")
 (define (sizeof-string-const value)
@@ -87,7 +88,7 @@
 
 (define (parse-c99cx text)
   (with-throw-handler
-      'nyacc-error
+      'c99-error
     (lambda ()
       (with-input-from-string text
 	(lambda () (c99cx-raw-parser (gen-c99cx-lexer)))))
@@ -178,7 +179,7 @@
      (values (sizeof-basetype "int" arch) (alignof-basetype "int" arch)))
 
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
-       (throw 'nyacc-error "coding error"))))
+       (throw 'c99-error "coding error"))))
 
 (define* (sizeof-specl/declr specl declr #:optional (udict '()) #:key arch)
   (let* ((udecl `(udecl ,specl ,declr))
@@ -207,6 +208,17 @@
 ;; @end deffn
 (define* (eval-sizeof-expr tree #:optional (udict '()) #:key arch)
 
+  (define (sizeof-literal tree)
+    (sx-match tree
+      ((p-expr ,expr) (sizeof-literal expr))
+      ((string . ,string-list)
+       (values
+	(let loop ((sl string-list))
+	  (if (null? sl) 0
+	      (+ (string-length (car sl)) (loop (cdr sl)))))
+	1))
+      (,_ #f)))
+
   (define (gen-mtail tree)
     (sx-match tree
       ((sizeof-expr ,expr) (gen-mtail expr))
@@ -215,21 +227,23 @@
        (let* ((udecl (assoc-ref udict name))
 	      (xdecl (and udecl (expand-typerefs udecl udict)))
 	      (mdecl (and xdecl (udecl->mdecl xdecl))))
-	 (if (not mdecl) (throw 'nyacc-error "not found: ~S" name))
+	 (if (not mdecl) (throw 'c99-error "not found: ~S" name))
 	 (trim-mtail (cdr mdecl))))
       ((array-ref ,elt ,expr)
        (let ((mtail (gen-mtail expr)))
 	 (match mtail
 	   (`((array-of ,size) . ,rest) rest)
-	   (_ (throw 'nyacc-error "cxeval: can't ref array")))))
+	   (_ (throw 'c99-error "cxeval: can't ref array")))))
       ((de-ref ,expr)
        (let ((mtail (gen-mtail expr)))
 	 (match mtail
 	   (`((pointer-to) . ,rest) rest)
-	   (_ (throw 'nyacc-error "cxeval: can't de-ref")))))
-      (,_ #f)))
+	   (_ (throw 'c99-error "cxeval: can't de-ref")))))
+      (,_ (throw 'c99-error "cxeval: can't sizeof ~S" (list tree)))))
 
-  (sizeof-mtail (gen-mtail tree) arch))
+  (or
+   (sizeof-literal tree)
+   (sizeof-mtail (gen-mtail tree) arch)))
       
 
 ;; @deffn {Procedure} eval-c99-cx tree [udict] [#:fail-proc fail-proc]
@@ -308,11 +322,15 @@
 	    ;;
 	    ((sizeof-type)
 	     (catch 'c99-error
-	       (lambda () (eval-sizeof-type tree udict))
+	       (lambda ()
+		 (call-with-values (lambda () (eval-sizeof-type tree udict))
+		   (lambda (size align) size)))
 	       (lambda (key fmt . args) (apply fail fmt args))))
 	    ((sizeof-expr)
 	     (catch 'c99-error
-	       (lambda () (eval-sizeof-expr tree udict))
+	       (lambda ()
+		 (call-with-values (lambda () (eval-sizeof-expr tree udict))
+		   (lambda (size align) size)))
 	       (lambda (key fmt . args) (apply fail fmt args))))
 	    ((ident) (or (eval-ident tree)
 			 (fail "cannot resolve identifier ~S" (sx-ref tree 1))))

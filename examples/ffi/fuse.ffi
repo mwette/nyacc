@@ -1,0 +1,17 @@
+;; fuse.ffi				-*- Scheme -*-
+
+;; Copyright (C) 2021 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-ffi-module (ffi fuse)
+  #:pkg-config "fuse"
+  #:include '("fuse.h")
+  #:inc-filter (lambda (file-spec path-spec)
+                 (string-contains path-spec "fuse/" 0))
+  )
+
+;; --- last line ---

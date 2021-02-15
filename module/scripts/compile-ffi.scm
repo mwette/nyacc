@@ -1,6 +1,6 @@
 ;;; scripts/compile-ffi.scm --- NYACC's command-line FFI compiler
 
-;; Copyright (C) 2017-2020 Matthew R. Wette
+;; Copyright (C) 2017-2021 Matthew R. Wette
 ;;
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -29,9 +29,18 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (srfi srfi-37)
-  #:version (1 03 4))
+  #:version (1 03 6))
+(cond-expand
+ (guile-3
+  (define (compile-scm file)
+    (compile-file file #:from 'scheme #:to 'bytecode
+		  #:optimization-level 0 #:opts '())))
+ (guile-2
+  (define (compile-scm file)
+    (compile-file file #:from 'scheme #:to 'bytecode
+		  #:opts '()))))
 
-(define *ffi-help-version* "1.03.4")
+(define *ffi-help-version* "1.03.6")
 
 (define %summary
   "Compile a ffi-file to .scm and maybe .go.")
@@ -238,9 +247,7 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	(exit 1)))
     (unless (assq-ref options 'no-exec)
       (sfmt "compiling `~A' ...\n" (fix-path scm-file))
-      (let ((go-file (compile-file scm-file
-				   #:from 'scheme #:to 'bytecode
-				   #:opts '())))
+      (let ((go-file (compile-scm scm-file)))
 	(load-compiled go-file)
 	(sfmt "... wrote `~A'\n" (basename go-file)))
       (sleep 1))))
