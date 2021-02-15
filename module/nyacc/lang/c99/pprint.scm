@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/pprint.scm - C pretty-printer
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2018,2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -395,11 +395,11 @@
 	rest))
 
       ((init-declr ,declr ,item2 ,item3) (ppx declr) (ppx item2) (ppx item3))
-      ((init-declr ,declr ,item2) (ppx declr) (ppx item2))
+      ((init-declr ,declr ,item2) (ppx declr) (sf " ") (ppx item2))
       ((init-declr ,declr) (ppx declr))
-      ((comp-declr ,declr ,item2) (ppx declr) (ppx item2))
+      ((comp-declr ,declr ,item2) (ppx declr) (sf " ") (ppx item2))
       ((comp-declr ,declr) (ppx declr))
-      ((param-declr ,declr ,item2) (ppx declr) (ppx item2))
+      ((param-declr ,declr ,item2) (ppx declr) (sf " ") (ppx item2))
       ((param-declr ,declr) (ppx declr))
       ((param-declr))
 
@@ -419,7 +419,7 @@
 	 ((enum-def) (ppx arg))
 	 ((typename) (sf "~A" (sx-ref arg 1)))
 	 ((void) (sf "void"))
-	 (else (error "missing " arg))))
+	 (else (throw 'nyacc-error "pprint: type-spec: ~S" arg))))
 
       ((struct-ref (ident ,name)) (sf "struct ~A" name))
       ((union-ref (ident ,name)) (sf "union ~A" name))
@@ -549,7 +549,7 @@
 
       ;; initializer
       ((initzer ,expr)
-       (sf " = ") (ppx expr))
+       (sf "= ") (ppx expr))
       
       ;; initializer-list
       ((initzer-list . ,items)
@@ -763,7 +763,7 @@
        (pretty-print tree #:per-line-prefix "  ")
        )))
 
-  (if (not (pair? tree)) (error "expecing sxml tree"))
+  (if (not (pair? tree)) (throw 'c99-error "pprint: expecting sxml tree"))
   (ppx tree)
   (if ugly (newline)))
 
