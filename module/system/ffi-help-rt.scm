@@ -65,6 +65,13 @@
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 
+(cond-expand
+ (guile-2.2)
+ (guile-2
+  (define-public intptr_t long)
+  (define-public uintptr_t unsigned-long))
+ (guile))
+
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:
 ;; 0 unwrap	: convert helper-type object to ffi argument
