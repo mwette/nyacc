@@ -211,7 +211,7 @@
        (lambda (declr seed)
 	 (acons (declr-id declr) (sx-list tag attr specl declr) seed))
        seed declrs)
-      seed))
+      (acons "" (sx-list tag attr specl) seed)))
 
 ;; @deffn {Procedure} split-decl decl => values
 ;; This routine splits a declaration (or comp-decl or param-decl) into
@@ -271,7 +271,6 @@
 ;; struct and union (e.g., @code{__packed__}).  The latter is needed
 ;; because they appear in files under @file{/usr/include}.
 ;; @end deffn
-
 (define* (unitize-decl decl #:optional (seed '()))
   
   (define* (make-udecl type-tag attr guts #:optional typename)
