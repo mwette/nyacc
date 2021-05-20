@@ -22,7 +22,7 @@
 	    report-error
 	    *input-stack* push-input pop-input
 	    reset-input-stack input-stack-portinfo
-	    make-tl tl->list ;; rename?? to tl->sx for sxml-expr
+	    make-tl tl->list tl->tail ;; rename?? to tl->sx for sxml-expr
 	    tl-append tl-insert tl-extend tl+attr tl+attr*
 	    ;; for pretty-printing
 	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
@@ -133,7 +133,7 @@ See the file COPYING included with the this distribution.")
 ;; Convert a tagged list structure to a list.  This collects added attributes
 ;; and puts them right after the (leading) tag, resulting in something like
 ;; @example
-;; (<tag> (@ <attr>) <rest>)
+;; (<tag> (@@ <attr>) <rest>)
 ;; @end example
 ;; @end deffn
 (define (tl->list tl)
@@ -141,9 +141,8 @@ See the file COPYING included with the this distribution.")
      Convert a tagged list structure to a list.  This collects added
      attributes and puts them right after the (leading) tag, resulting
      in something like
-          (<tag> ( <attr>) <rest>)"
-  (let ((heda (car tl))
-	(head (let loop ((head '()) (attr '()) (tl-head (car tl)))
+          (<tag> (@ <attr>) <rest>)"
+  (let ((head (let loop ((head '()) (attr '()) (tl-head (car tl)))
 		(if (null? tl-head)
 		    (if (pair? attr)
 			(cons (cons '@ attr) (reverse head))
@@ -155,6 +154,9 @@ See the file COPYING included with the this distribution.")
       (if (pair? tl-tail)
 	  (loop (cons (car tl-tail) tail) (cdr tl-tail))
 	  (cons tl-tail (append head tail))))))
+
+(define (tl->tail tl)
+  (cdr (tl->list tl)))
 
 ;; @deffn {Procedure} tl-insert tl item
 ;; Insert item at front of tagged list (but after tag).
