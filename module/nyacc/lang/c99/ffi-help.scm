@@ -1130,8 +1130,8 @@
 			      (or (equal? node '(stor-spec (auto)))
 				  (equal? node '(stor-spec (register)))
 				  (equal? node '(stor-spec (static)))
-				  (and (pair? node)
-				       (equal? (car node) 'type-qual))))
+				  (equal? node '(type-qual "volatile"))
+				  (equal? node '(type-qual "restrict"))))
 			    specl))
 	     (specl (if (fctn? declr)
 			(remove (lambda (node)
@@ -1140,7 +1140,6 @@
 	     ;; remove cruft like attributes and asms and initizers)
 	     (declr (and declr (sx-list (sx-tag declr) #f (sx-ref declr 1)))))
 	(values specl declr)))))
-(export cleanup-udecl)
 
 ;; @deffn {Procecure} back-ref-extend! decl typename
 ;; @deffnx {Procecure} back-ref-getall decl typename

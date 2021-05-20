@@ -16,6 +16,7 @@
 (use-modules (nyacc lang c99 munge-base))
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 util))
+(use-modules (nyacc lang c99 ffi-help))
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
@@ -171,5 +172,22 @@
 	  (pp tree)
     ))
 
+
+(when #f				; bug #60474
+  (let* ((code
+	  (string-append
+	   "const int x = 1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "x"))
+	 (specl (sx-ref udecl 1))
+	 (declr (sx-ref udecl 2))
+	 )
+    (pp udecl)
+    (call-with-values (lambda () (cleanup-udecl specl declr))
+      (lambda (specl declr)
+	(pp `(udecl ,specl ,declr))))
+    ))
 
 ;; --- last line ---
