@@ -281,9 +281,9 @@
 (define (sw/*-desc name) (string-append name "*-desc"))
 (define (sw/& name) (string-append name "&"))
 (define (sw/struct name) (string-append "struct-" name))
-(define (sw/union name) (string-append "struct-" name))
+(define (sw/union name) (string-append "union-" name))
 (define (sw/struct* name) (string-append "struct-" name "*"))
-(define (sw/union* name) (string-append "struct-" name "*"))
+(define (sw/union* name) (string-append "union-" name "*"))
 
 ;; I was using (pointer . name) in *defined* but this has issues
 ;; because expand-typerefs does not recognize it.  Is a change needed?
@@ -1159,6 +1159,7 @@
 ;; assume unit-declarator
 ;; See also stripdown-specl and stripdown-declr in @file{munge.scm}.
 ;; and make this more efficient
+(export cleanup-udecl)
 (define cleanup-udecl
   (let* ((ftn-sel (node-closure (node-typeof? 'ftn-declr)))
 	 (fctn? (lambda (n) (pair? (ftn-sel n))))
@@ -1178,7 +1179,6 @@
 	     ;; remove cruft like attributes and asms and initizers)
 	     (declr (and declr (sx-list (sx-tag declr) #f (sx-ref declr 1)))))
 	(values specl declr)))))
-(export cleanup-udecl)
 
 ;; @deffn {Procecure} back-ref-extend! decl typename
 ;; @deffnx {Procecure} back-ref-getall decl typename
