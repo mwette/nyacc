@@ -632,7 +632,7 @@
 		    (cond
 		     ((memq (car ppxs) '(skip skip-look skip-done))
 		      (skip-cpp-macro-ref name defs)
-		      (loop (read-char)))
+		      (loop (read-char) ss))
 		     ((and (not suppress) (x-def? name mode)
 			   (expand-cpp-macro-ref name defs))
 		      => (lambda (repl)

@@ -387,7 +387,7 @@
    ((eqv? (sx-tag decl) 'param-decl) (unitize-param-decl decl seed))
    (else seed)))
 
-;; @deffn {Procedure} unitize-comp-decl decl [seed]
+;; @deffn {Procedure} unitize-comp-decl decl [seed] [#:namer namer]
 ;; This will turn
 ;; @example
 ;; (comp-decl (decl-spec-list (type-spec "int"))
@@ -405,7 +405,7 @@
 ;; functions @code{struct} and @code{union} field lists.  The result needs
 ;; to be reversed.
 ;; @end deffn
-(define* (unitize-comp-decl decl #:optional (seed '()))
+(define* (unitize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
   (cond
    ((not (pair? decl))
     (throw 'nyacc-error "unitize-decl: bad arg: ~S" decl))
@@ -415,7 +415,7 @@
     (let-values (((tag attr spec-l declrs) (split-decl decl)))
       (iter-declrs 'comp-udecl attr spec-l declrs seed)))
    (else
-    seed)))
+    (acons (namer) decl seed))))
 
 ;; @deffn {Procedure} unitize-param-decl param-decl [seed] [#:expand-enums #f]
 ;; This will turn
@@ -775,11 +775,11 @@
   (let loop ((dsl1 '()) (const-seen? #f) (tail dsl-tail))
     (if (null? tail)
 	(reverse (if (and const-seen? keep-const?)
-		     (cons '(type-qual "const") dsl1)
+		     (cons '(type-qual (const)) dsl1)
 		     dsl1))
 	(case (caar tail)
 	  ((type-qual)
-	   (if (string=? (cadar tail) "const")
+	   (if (equal? (cadar tail) '(const))
 	       (loop dsl1 #t (cdr tail))
 	       (loop dsl1 const-seen? (cdr tail))))
 	  ((stor-spec)

@@ -357,15 +357,26 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make (fht-wrap type))))
 
-;; == extension to bytestructures ==============================================
+;; == bytestructures extensions/workarounds ====================================
 
 ;; adopted from code at  https://github.com/TaylanUB covered by GPL3+ and
 ;; Copyright (C) 2015 Taylan Ulrich BayirliKammer <taylanbayirli@gmail.com>
 
-#;(define make-vector-metadata
-  (@@ (bytestructures body vector) make-vector-metadata))
+;;(define-syntax-rule (bytestructure-ref <bytestructure> <index> ...)
+;;  (let-values (((bytevector offset descriptor)
+;;                (bytestructure-unwrap <bytestructure> <index> ...)))
+;;    (bytestructure-primitive-ref bytevector offset descriptor)))
 
-#;(define (fh:vector length descriptor)
+;;(define (reify-bytestructure-ref desc bv 
+
+#|
+(define-record-type <vector-metadata>
+  (make-vector-metadata length element-descriptor)
+  vector-metadata?
+  (length             vector-metadata-length)
+  (element-descriptor vector-metadata-element-descriptor))
+
+(define (fh:vector length descriptor)
   (define element-size (bytestructure-descriptor-size descriptor))
   (define size (* length element-size))
   (define alignment (bytestructure-descriptor-alignment descriptor))
@@ -382,9 +393,7 @@
       (error "Writing into vector not supported with macro API."))
     (cond
      ((bytevector? value)
-      (if (zero? size)
-	  (bytevector-copy! bytevector offset value 0 (bytevector-length value))
-	  (bytevector-copy! bytevector offset value 0 size)))
+      (bytevector-copy! bytevector offset value 0 size))
      ((vector? value)
       (do ((i 0 (+ i 1))
            (offset offset (+ offset element-size)))
@@ -395,6 +404,7 @@
       (error "Invalid value for writing into vector." value))))
   (define meta (make-vector-metadata length descriptor))
   (make-bytestructure-descriptor size alignment unwrapper #f setter meta))
+|#
 
 (define make-pointer-metadata
   (@@ (bytestructures guile pointer) make-pointer-metadata))

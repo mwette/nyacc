@@ -215,13 +215,8 @@
 
     ;; --- declaration specifiers
 
-    (tdn-hack ($empty ($$ 'enable)))
-
     (declaration-specifiers		; S 6.7
-     ;;(declaration-specifiers-1 ($$ (process-specs (tl->list $1))))
-     (tdn-hack declaration-specifiers-1
-      ($$ 'disable (process-specs (tl->list $2))))
-     )
+     (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
     (declaration-specifiers-1
      ;; storage-class-specifiers
      (storage-class-specifier
@@ -242,8 +237,7 @@
      ;; attribute-specifiers
      (attribute-specifier
       ($prec 'reduce-on-semi) ($$ (make-tl 'decl-spec-list $1)))
-     (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
-     )
+     (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
 
     (storage-class-specifier		; S 6.7.1
      ("auto" ($$ '(stor-spec (auto))))
@@ -460,9 +454,9 @@
 		 ($$ `(enum-defn ,$1 ,$2 ,$4))))
 
     (type-qualifier
-     ("const" ($$ `(type-qual ,$1)))
-     ("volatile" ($$ `(type-qual ,$1)))
-     ("restrict" ($$ `(type-qual ,$1))))
+     ("const" ($$ `(type-qual (const))))
+     ("volatile" ($$ `(type-qual (volatile))))
+     ("restrict" ($$ `(type-qual (restrict)))))
 
     (function-specifier
      ("inline" ($$ `(fctn-spec ,$1)))
@@ -574,7 +568,7 @@
       ($$ `(ary-declr ,$1 ,$4 ,$5))) ;; FIXME $4 needs "static" added
      (direct-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,4 ,$5))) ;; FIXME $4 needs "static" added
+      ($$ `(ary-declr ,$1 (static) ,$5))) ;; FIXME $4 needs "static" added
      (direct-declarator
       "[" type-qualifier-list "*" "]"	; variable length array
       ($$ `(ary-declr ,$1 ,$3 (var-len))))
@@ -649,14 +643,14 @@
       "[" "]" ($$ `(ary-declr ,$1)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static")))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec (static))))
 		      ,$5)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))))))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec (static)))))))
      (direct-abstract-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static")))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec (static))))
 		      ,$5)))
      (direct-abstract-declarator "[" "*" "]" ($$ `(star-ary-declr ,$1)))
      ;;
@@ -668,12 +662,12 @@
      ("[" assignment-expression "]" ($$ `(abs-ary-declr ,$2)))
      ("[" "]" ($$ `(abs-ary-declr)))
      ("[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static")))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec (static))))
 			  ,$4)))
      ("[" "static" type-qualifier-list "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static"))))))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec (static)))))))
      ("[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec "static")))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec (static))))
 			  ,$4)))
      ("[" "*" "]" ($$ '(abs-star-ary-declr)))
      )
@@ -847,7 +841,7 @@
      (lone-comment)
      (cpp-statement)
      (pragma)
-     (tdn-hack "extern" $string "{"
+     ("extern" $string "{"
       ($$ (cpi-dec-blev!)) external-declaration-list ($$ (cpi-inc-blev!)) "}"
       ($$ `(extern-block
 	    (extern-begin ,$2) ,@(sx-tail (tl->list $5) 1) (extern-end))))
@@ -898,16 +892,12 @@
 ;; due to parsing include files as units for code and decl mode.
 ;; update: This is doable now (see parser.scm) but wait until it's needed.
 
-#;(define c99-mach
+(define c99-mach
   (compact-machine
    (hashify-machine
     (make-lalr-machine c99-spec))
    #:keep 2
    #:keepers '($code-comm $lone-comm $pragma cpp-stmt)))
-(display "no-compact\n")
-(define c99-mach
-  (hashify-machine
-   (make-lalr-machine c99-spec)))
 
 (define c99x-spec (restart-spec c99-spec 'expression))
 

@@ -572,6 +572,12 @@
 
   (probe-declr declr))
 
+;; @deffn {Procedure} reify-decl decl [#:namer proc]
+;; This procedure turns an abstract declaration into a concrete one,
+;; using the optional namer, a procedure that generates a string name.
+;; The default namer is "_", but this may not work in contexts where
+;; multiple distinct names are required.
+;; @end deffn
 (define* (reify-decl udecl #:optional (namer def-namer))
   (call-with-values
       (lambda () (split-udecl udecl))

@@ -9,6 +9,16 @@ NEW
 	* in nyacc/lex.scm, changed signature of lex-generator to
 	  (ch loop) from (ch), so that user-supplied routine can
 	  loop [ performance hit? ]
+	* nyacc/lang/c99/munge.scm(iter-declrs): if no declrs,
+	  still add the decl; this fixes bug that was dropping
+	  anon structs and unions
+	* nyacc/lang/c99/ffi-help.scm: clean up and added support
+	  for unions and anonymous arrays in structs.  This needs
+	  testing
+
+2021-05-20  V1.03.7 RC1
+	* in ffi-help.scm: preserve (type-qual "const"), which is later
+	  used to generate constant.  Fix for bug #60474
 
 2021-02-10  V1.03.6
 	* in c99, changed how identifiers are evaluated in in dead code

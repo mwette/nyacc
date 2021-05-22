@@ -200,12 +200,9 @@
      (save-typenames `(decl ,$1 ,$2)))
    ;; declaration-no-comment => declaration-specifiers
    (lambda ($1 . $rest) `(decl ,$1))
-   ;; tdn-hack => 
-   (lambda $rest 'enable)
-   ;; declaration-specifiers => tdn-hack declaration-specifiers-1
-   (lambda ($2 $1 . $rest)
-     'disable
-     (process-specs (tl->list $2)))
+   ;; declaration-specifiers => declaration-specifiers-1
+   (lambda ($1 . $rest)
+     (process-specs (tl->list $1)))
    ;; declaration-specifiers-1 => storage-class-specifier
    (lambda ($1 . $rest)
      (make-tl 'decl-spec-list $1))
@@ -592,11 +589,11 @@
    (lambda ($4 $3 $2 $1 . $rest)
      `(enum-defn ,$1 ,$2 ,$4))
    ;; type-qualifier => "const"
-   (lambda ($1 . $rest) `(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual (const)))
    ;; type-qualifier => "volatile"
-   (lambda ($1 . $rest) `(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual (volatile)))
    ;; type-qualifier => "restrict"
-   (lambda ($1 . $rest) `(type-qual ,$1))
+   (lambda ($1 . $rest) `(type-qual (restrict)))
    ;; function-specifier => "inline"
    (lambda ($1 . $rest) `(fctn-spec ,$1))
    ;; function-specifier => "_Noreturn"
@@ -722,7 +719,7 @@
      `(ary-declr ,$1 ,$4 ,$5))
    ;; direct-declarator => direct-declarator "[" type-qualifier-list "stati...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(ary-declr ,$1 ,4 ,$5))
+     `(ary-declr ,$1 (static) ,$5))
    ;; direct-declarator => direct-declarator "[" type-qualifier-list "*" "]"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 (var-len)))
@@ -805,18 +802,18 @@
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(ary-declr
         ,$1
-        ,(tl->list (tl-insert $4 '(stor-spec "static")))
+        ,(tl->list (tl-insert $4 '(stor-spec (static))))
         ,$5))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "static"...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr
         ,$1
-        ,(tl->list (tl-insert $4 '(stor-spec "static")))))
+        ,(tl->list (tl-insert $4 '(stor-spec (static))))))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" type-qua...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(ary-declr
         ,$1
-        ,(tl->list (tl-insert $3 '(stor-spec "static")))
+        ,(tl->list (tl-insert $3 '(stor-spec (static))))
         ,$5))
    ;; direct-abstract-declarator => direct-abstract-declarator "[" "*" "]"
    (lambda ($4 $3 $2 $1 . $rest)
@@ -838,16 +835,16 @@
    ;; direct-abstract-declarator => "[" "static" type-qualifier-list assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(abs-ary-declr
-        ,(tl->list (tl-insert $3 '(stor-spec "static")))
+        ,(tl->list (tl-insert $3 '(stor-spec (static))))
         ,$4))
    ;; direct-abstract-declarator => "[" "static" type-qualifier-list "]"
    (lambda ($4 $3 $2 $1 . $rest)
      `(abs-ary-declr
-        ,(tl->list (tl-insert $3 '(stor-spec "static")))))
+        ,(tl->list (tl-insert $3 '(stor-spec (static))))))
    ;; direct-abstract-declarator => "[" type-qualifier-list "static" assign...
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(abs-ary-declr
-        ,(tl->list (tl-insert $2 '(stor-spec "static")))
+        ,(tl->list (tl-insert $2 '(stor-spec (static))))
         ,$4))
    ;; direct-abstract-declarator => "[" "*" "]"
    (lambda ($3 $2 $1 . $rest) '(abs-star-ary-declr))
@@ -1076,8 +1073,8 @@
    (lambda ($1 . $rest) $1)
    ;; external-declaration => pragma
    (lambda ($1 . $rest) $1)
-   ;; external-declaration => tdn-hack "extern" '$string "{" $P5 external-d...
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+   ;; external-declaration => "extern" '$string "{" $P5 external-declaratio...
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(extern-block
         (extern-begin ,$2)
         ,@(sx-tail (tl->list $5) 1)
@@ -1086,10 +1083,9 @@
    (lambda ($1 . $rest)
      `(decl (@ (extension "GNUC"))))
    ;; $P5 => 
-   (lambda ($4 $3 $2 $1 . $rest) (cpi-dec-blev!))
+   (lambda ($3 $2 $1 . $rest) (cpi-dec-blev!))
    ;; $P6 => 
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     (cpi-inc-blev!))
+   (lambda ($5 $4 $3 $2 $1 . $rest) (cpi-inc-blev!))
    ;; function-definition => declaration-specifiers declarator compound-sta...
    (lambda ($3 $2 $1 . $rest)
      `(fctn-defn ,$1 ,$2 ,$3))
