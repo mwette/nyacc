@@ -12,11 +12,11 @@ AC_CONFIG_SRCDIR(module/nyacc/version.scm)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
 
-AC_ARG_WITH(guile, [  --with-guile            path to binary],
+AC_ARG_WITH(guile,  [  --with-guile            path to binary],
             ,with_guile=unspecified)
-AC_ARG_WITH(guile, [  --target                guild target flag],
+AC_ARG_WITH(target, [  --with-target           guild target flag],
             ,target=unspecified)
-AC_ARG_WITH(guile, [  --debug                 build for debugging in guile],
+AC_ARG_ENABLE(debug,[  --enable-debug          build for debugging in guile],
             ,debug=unspecified)
 
 if test "_$with_guile" != "_unspecified"; then

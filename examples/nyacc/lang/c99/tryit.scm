@@ -16,12 +16,14 @@
 (use-modules (nyacc lang c99 munge-base))
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 util))
+(use-modules (nyacc lang c99 ffi-help))
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (sxml fold))
 (use-modules (sxml xpath))
+(use-modules ((srfi srfi-1) #:select (fold-right)))
 (use-modules (ice-9 pretty-print))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -133,7 +135,6 @@
 	 (tree (parse-string code #:mode 'decl))
  	 )
     (pp tree)
-<<<<<<< HEAD
     #t))
 
 (when #f
@@ -144,12 +145,10 @@
 	   ))
 	 (tree (parse-string code #:mode 'code))
  	 )
-=======
-    ))
+    #t))
 (when #f
   (let* ((code "int foo() { spice->meas[1].pin = &mega->portD.pin[0]; }\n")
 	 (tree (parse-string code #:mode 'code)))
->>>>>>> master
     (pp tree)
     #t))
 
@@ -176,7 +175,7 @@
     (pp xxx)
     ))
 
-(when #t
+(when #f
   (let* ((code
 	  (string-append
 	   #|
@@ -196,6 +195,23 @@
 	   ))
 	 (tree (parse-string code #:mode 'code)))
     (pp tree)))
+
+(when #f                               ; bug #60474
+  (let* ((code
+	  (string-append
+	   "const int x = 1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "x"))
+	 (specl (sx-ref udecl 1))
+	 (declr (sx-ref udecl 2))
+	 )
+    (pp udecl)
+    (call-with-values (lambda () (cleanup-udecl specl declr))
+      (lambda (specl declr)
+	(pp `(udecl ,specl ,declr))))
+    ))
 
 (when #f
   (let* ((code
@@ -217,6 +233,59 @@
            "int x;\n"))
 	   (tree (parse-string code #:mode 'decl)))
 	  (pp tree)
+	  ))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   "typedef struct { int x; double y; } foo_t;\n"
+	   ;;"void bar(foo_t);\n"
+	   "int x = sizeof(foo_t);\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 )
+    (pp tree)
+    ))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   "const int x = 1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "x"))
+	 (specl (sx-ref udecl 1))
+	 (declr (sx-ref udecl 2))
+	 )
+    (pp udecl)
+    (pp (cleanup-udecl specl declr))
+    ))
+
+(when #t
+  (let* ((code
+	  (string-append
+	   "typedef struct {\n"
+	   " int x;\n"
+	   " union { int a; int b; };\n"
+	   " int y;\n"
+	   " union { int c[3]; double d; };\n"
+	   ;;" int z;\n"
+	   "} foo_t;\n"
+	   "foo_t s1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "s1"))
+	 (udecl (expand-typerefs udecl udict))
+	 (mdecl (udecl->mdecl udecl))
+	 (mtail (cdr mdecl))
+	 )
+    ;;(pp tree)
+    ;;(pp udecl)
+    ;;(pp mdecl)
+    ;;(pp (mtail->bs-desc mtail))
+    (pp (mtail->ffi-desc mtail))
     ))
 
 ;; --- last line ---
