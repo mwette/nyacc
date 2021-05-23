@@ -288,4 +288,21 @@
     (pp (mtail->ffi-desc mtail))
     ))
 
+(when #f				; bug #60474
+  (let* ((code
+	  (string-append
+	   "const int x = 1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "x"))
+	 (specl (sx-ref udecl 1))
+	 (declr (sx-ref udecl 2))
+	 )
+    (pp udecl)
+    (call-with-values (lambda () (cleanup-udecl specl declr))
+      (lambda (specl declr)
+	(pp `(udecl ,specl ,declr))))
+    ))
+
 ;; --- last line ---

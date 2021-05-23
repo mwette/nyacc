@@ -19,7 +19,7 @@ NEW
 	  Considering bug #60410 closed.  Anonymous structs unions
 	  are being augmented with stubbed identifiers _1 ... _N.
 
-2021-05-20  V1.03.7 RC1
+2021-02-10  V1.03.7
 	* in ffi-help.scm: preserve (type-qual "const"), which is later
 	  used to generate constant.  Fix for bug #60474
 
