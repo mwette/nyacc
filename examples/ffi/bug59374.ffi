@@ -1,0 +1,8 @@
+(define-ffi-module (ffi buf59374)
+  #:api-code "
+typedef struct {
+  int narg;
+  void *args[];
+} SignatureBlob;
+")
+ 
