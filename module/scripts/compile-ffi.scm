@@ -29,7 +29,7 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (srfi srfi-37)
-  #:version (1 03 6))
+  #:version (1 03 7))
 (cond-expand
  (guile-3
   (define (compile-scm file)
@@ -40,7 +40,7 @@
     (compile-file file #:from 'scheme #:to 'bytecode
 		  #:opts '()))))
 
-(define *ffi-help-version* "1.03.6")
+(define *ffi-help-version* "1.03.7")
 
 (define %summary
   "Compile a ffi-file to .scm and maybe .go.")
