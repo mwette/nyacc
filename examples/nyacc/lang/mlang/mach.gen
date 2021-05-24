@@ -1,0 +1,14 @@
+#!/bin/sh
+# -*- scheme -*-
+exec guile $0
+!#
+(use-modules (nyacc lang mlang mach))
+(use-modules (nyacc lalr))
+
+(when (gen-mlang-files)
+  (system "touch parser.scm")
+  (with-output-to-file ",gram.txt"
+    (lambda ()
+      (pp-lalr-grammar mlang-spec)
+      (pp-lalr-machine mlang-mach))))
+;;; --- last line ---

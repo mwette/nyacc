@@ -293,9 +293,6 @@
    (compact-machine
     (make-lalr-machine mlang-spec))))
 
-(include-from-path "nyacc/lang/mlang/body.scm")
-
-
 (define mlang-ia-spec (restart-spec mlang-spec 'mlang-item))
 
 (define mlang-ia-mach

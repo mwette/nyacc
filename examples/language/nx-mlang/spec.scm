@@ -31,8 +31,8 @@
 		   ((and (file-port? p)
 			 (string? (port-filename p))
 			 (not (string-prefix? "/dev/" (port-filename p))))
-		    (read-oct-file p e))
-		   (else (read-oct-stmt p e))))
+		    (read-mlang-file p e))
+		   (else (read-mlang-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
   #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	pretty-print-ml
