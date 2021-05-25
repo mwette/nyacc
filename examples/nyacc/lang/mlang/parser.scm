@@ -31,7 +31,6 @@
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
-;; ============================================================================
 
 ;; @deffn add-file-attr tl => tl
 ;; Given a tagged-list this routine adds an attribute @code{(file basename)}
@@ -145,8 +144,6 @@
 	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
 	     (else (cons ch (string ch))))))))))
 
-;; ============================================================================
-
 ;; === static semantics
 
 ;; 1) assn: "[ ... ] = expr" => multi-assign
@@ -156,6 +153,7 @@
 
 (define (fixed-colon-expr? expr)
   (sx-match expr
+    ((colon-expr) #t)
     ((colon-expr (fixed ,s) (fixed ,e)) #t)
     ((colon-expr (fixed ,s) (fixed ,i) (fixed ,e)) #t)
     (,_ #f)))
@@ -244,6 +242,7 @@
       (raw-parser (gen-mlang-lexer) #:debug debug)))
    (lambda (key fmt . args)
      (apply simple-format (current-error-port) fmt args)
+     (newline (current-error-port))
      #f)))
 
 (define (read-mlang-file port env)

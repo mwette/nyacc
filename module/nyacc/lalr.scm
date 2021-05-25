@@ -1264,7 +1264,6 @@
       (let* ((term (caar sal))		 ; terminal 
 	     (goto (cdar sal))		 ; target state
 	     (redp (assq term ral))	 ; a-list entry, may be removed
-	     ;;(redl (if redp (cdr redp) #f))) ; reductions on terminal
 	     (redl (and=> redp cdr)))	; reductions on terminal
 	(cond
 	 ((and redl (pair? (cdr redl)))

@@ -94,10 +94,7 @@
       ((string ,sval)
        (values '() `(const ,sval) dict))
 
-      ((fixed ,sval)
-       (values '() `(const ,(string->number sval)) dict))
-
-      ((float ,sval)
+      ((number ,sval)
        (values '() `(const ,(string->number sval)) dict))
 
       ((deref ,name)

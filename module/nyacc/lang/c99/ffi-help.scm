@@ -81,7 +81,7 @@
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
 		#:renamer (lambda (s) (if (eq? s 'filter) 'sxml:filter s)))
-  #:use-module (srfi srfi-1)
+  #:use-module ((srfi srfi-1) #:select (fold fold-right remove last))
   #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-37)
   #:use-module (system base pmatch)
@@ -92,7 +92,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 02 1))
+  #:version (1 03 7))
 
 (define fh-cpp-defs
   (cond
@@ -322,7 +322,8 @@
     ;;
     (ppscm
      `(define ,(link-libs)
-	(list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries)))))
+	(delay
+	  (list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries))))))
     (sfscm "\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))
     ;;
@@ -756,7 +757,7 @@
     (ffi:uint64 . ,uint64) (ffi-void* . *)))
 
 (define (mtail->ffi-desc mdecl-tail)
-  (if (and (pair? mdecl-tail) (string? (car mdecl-tail))) (error "xxx"))
+  ;;(if (and (pair? mdecl-tail) (string? (car mdecl-tail))) (error "xxx"))
   (pmatch mdecl-tail
     (((pointer-to) . ,rest) 'ffi-void*)
     (((array-of) . ,rest) 'ffi-void*)
@@ -782,7 +783,7 @@
 			    (udecl (udecl-rem-type-qual udecl))
 			    (mdecl (udecl->mdecl udecl)))
 		       (mtail->ffi-desc (cdr mdecl))))
-		   fields)))
+		   (clean-fields fields))))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
     
@@ -808,7 +809,7 @@
     
     (,otherwise
      (sferr "mtail->ffi-desc missed:\n") (pperr mdecl-tail)
-     (error "") (fherr "mtail->ffi-desc missed: ~S" mdecl-tail))))
+     (fherr "mtail->ffi-desc missed: ~S" mdecl-tail))))
 
 ;; Return a mdecl for the return type.  The variable is called @code{NAME}.
 (define (gen-decl-return udecl)
@@ -906,6 +907,18 @@
 	 (string->symbol (string-append "unwrap-enum-" name)))
 	(else 'unwrap-enum)))
 
+      (((struct-ref (ident ,name)))
+       (cond
+	((member (w/struct name) wrapped)
+	 `(fht-unwrap ,(string->symbol (sw/struct name))))
+	(else #f)))
+
+      (((union-ref (ident ,name)))
+       (cond
+	((member (w/union name) wrapped)
+	 `(fht-unwrap ,(string->symbol (sw/union name))))
+	(else #f)))
+
       (((pointer-to) (typename ,typename))
        (cond
 	((member (w/* typename) defined)
@@ -924,6 +937,15 @@
 	 `(fht-unwrap ,(strings->symbol "struct-" struct-name "*")))
 	((member (w/struct struct-name) defined)
 	 `(fht-unwrap ,(strings->symbol "struct-" struct-name "*")))
+	(else 'unwrap~pointer)))
+
+      ;; use this?
+      #;(((pointer-to) (union-ref (ident ,union-name) . ,rest))
+       (cond
+	((member (w/union* union-name) defined)
+	 `(fht-unwrap ,(strings->symbol "union-" union-name "*")))
+	((member (w/union union-name) defined)
+	 `(fht-unwrap ,(strings->symbol "union-" union-name "*")))
 	(else 'unwrap~pointer)))
 
       (((pointer-to) (function-returning (param-list . ,params)) . ,rest)
@@ -945,7 +967,6 @@
 
       (,otherwise
        (sferr "mdecl->fh-unwrapper missed:\n") (pperr mdecl)
-       (error "MDECL-FH-UNWRAPPER")
        (fherr "mdecl->fh-unwrapper missed: ~S" mdecl)))))
 
 (define (mdecl->fh-wrapper mdecl)
@@ -1058,13 +1079,13 @@
 	  (let ((,~name (fh-link-proc
 			 ,decl-return ,name
 			 (append (list ,@decl-params) (map car ~rest))
-			 ,(link-libs)))
+			 (force ,(link-libs))))
 		,@(gen-exec-unwrappers exec-params))
 	    ,(if exec-return (list exec-return va-call) va-call)))))
      (#f ;; separate ~name and name defines
       (ppscm `(define ,~name
 		(delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
-				     ,(link-libs)))))
+				     (force ,(link-libs))))))
       (ppscm
        `(define (,sname ,@(gen-exec-arg-names exec-params))
 	  (let ,(gen-exec-unwrappers exec-params)
@@ -1074,7 +1095,7 @@
        `(define ,sname
 	  (let ((,~name
 		 (delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
-				      ,(link-libs)))))
+				      (force ,(link-libs))))))
 	    (lambda ,(gen-exec-arg-names exec-params)
 	      (let ,(gen-exec-unwrappers exec-params)
 		,(if exec-return (list exec-return call) call))))))))
@@ -1087,28 +1108,38 @@
     (sfscm ";;   (~A val) => bytestructure-set!\n" name)
     (ppscm
      `(define-public ,(string->symbol name)
-	(let ((x-var (delay (fh-link-extern ,name ,desc ,(link-libs)))))
+	(let ((x-var (delay (fh-link-extern ,name ,desc (force ,(link-libs))))))
 	  (case-lambda
 	    (() (bytestructure-ref (force x-var)))
 	    ((var) (bytestructure-set! (force x-var) var))))))))
 
+(define (node-not-typeof? crit)
+  (let ((pred (node-typeof? crit)))
+    (lambda (node) (not (pred node)))))
+
 ;; assume unit-declarator
 ;; TODO (ptr-declr (pointer (type-qual-list (type-qual "const"))))
 ;; See also stripdown-specl and stripdown-declr in @file{munge.scm}.
-(define (cleanup-udecl specl declr)
-  (let* ((fctn? (pair? ((sxpath '(// ftn-declr)) declr)))
-	 (specl (remove (lambda (node)
-			  (or (equal? node '(stor-spec (auto)))
-			      (equal? node '(stor-spec (register)))
-			      (equal? node '(stor-spec (static)))
-			      (and (pair? node)
-				   (equal? (car node) 'type-qual))))
+;; and make this more efficient
+(define cleanup-udecl
+  (let* ((ftn-sel (node-closure (node-typeof? 'ftn-declr)))
+	 (fctn? (lambda (n) (pair? (ftn-sel n))))
+	 (cruft (node-self (node-not-typeof? 'type-qual))))
+    (lambda (specl declr)
+      (let* ((specl (remove (lambda (node)
+			      (or (equal? node '(stor-spec (auto)))
+				  (equal? node '(stor-spec (register)))
+				  (equal? node '(stor-spec (static)))
+				  (equal? node '(type-qual "volatile"))
+				  (equal? node '(type-qual "restrict"))))
+			    specl))
+	     (specl (if (fctn? declr)
+			(remove (lambda (node)
+				  (equal? node '(stor-spec (extern)))) specl)
 			specl))
-	 (specl (if fctn?
-		    (remove (lambda (node)
-			      (equal? node '(stor-spec (extern)))) specl)
-		    specl)))
-    (values specl declr)))
+	     ;; remove cruft like attributes and asms and initizers)
+	     (declr (and declr (sx-list (sx-tag declr) #f (sx-ref declr 1)))))
+	(values specl declr)))))
 
 ;; @deffn {Procecure} back-ref-extend! decl typename
 ;; @deffnx {Procecure} back-ref-getall decl typename
@@ -1127,6 +1158,9 @@
 
 ;;^-- instead have user run (ref<=>deref! ...
 
+;; This needs a total overhaul:
+;; I should be processing mdecl's instead of udecl's.
+
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
 ;; Return updated (string based) keep-list, which will be modified if the
@@ -1139,6 +1173,8 @@
 ;; for any type we also declare a poitner type
 ;; TODO: decls need to be broken out into one of the forms:
 ;; function typedef struct-ref/def union-ref/def enum variable
+;; TODO: should I just remove "extern" altogether and assume
+;; variables are extern anyhow?
 (define (cnvt-udecl udecl udict wrapped defined)
   ;; This is a bit sloppy in that we have to know if the converters are
   ;; creating wrappers and/or (type) defines.
@@ -1199,9 +1235,19 @@
 	 (stor-spec (typedef))
 	 (type-spec (fixed-type ,name)))
 	(init-declr (ident ,typename)))
-       ;; FIX
        (sfscm "(define-public ~A-desc ~A)\n"
 	      typename (assoc-ref bs-typemap name))
+       (values wrapped defined))
+
+      ;; typedef int *foo_t;
+      ((udecl
+	(decl-spec-list
+	 (stor-spec (typedef))
+	 (type-spec (fixed-type ,name)))
+	(init-declr (ptr-declr (pointer) (ident ,typename))))
+       (sfscm "(define-public ~A-desc (fh:pointer ~A))\n"
+	      typename (assoc-ref bs-typemap name))
+       (fhscm-def-pointer typename)
        (values wrapped defined))
 
       ;; typedef double foo_t;
@@ -1238,6 +1284,26 @@
        (sfscm "(define-public ~A-desc (fh:pointer (fh:pointer ~A-desc)))\n"
 	      typename name)
        (fhscm-def-pointer typename)
+       (values (cons typename wrapped) (cons typename defined)))
+
+      ;; typedef foo_t foo_array_t[123];
+      ((udecl
+	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
+	(init-declr (ary-declr (ident ,typename) (p-expr (fixed ,size)))))
+       (sferr "ffi-help/cnvt-udecl in-work: typedef type array\n")
+       ;;(pretty-print-c99 udecl)
+       ;;(pperr udecl)
+       (let* ((eltname (rename name))
+	      (name (rename typename))
+	      (st-name (if (string? name) name (symbol->string name)))
+	      (sy-name (if (string? name) (string->symbol name) name))
+	      (elt-desc (string->symbol (string-append eltname "-desc")))
+	      (pred (string->symbol (string-append st-name "?")))
+	      (make (string->symbol (string-append "make-" st-name))))
+	 (sfscm "(define-public ~A-desc (bs:vector ~A-desc ~A))\n"
+		name eltname size)
+	 (upscm `(define-fh-vector-type ,sy-name ,elt-desc ,pred ,make))
+	 (fhscm-export-def name))
        (values (cons typename wrapped) (cons typename defined)))
 
       ;; typedef enum foo { ... } foo_t;
@@ -1732,10 +1798,9 @@
       ;; === missed =====================
 
       (,otherwise
-       (sferr "ffi-help/cnvt-udecl misssed:\n")
-       (pretty-print-c99 udecl)
-       (pperr udecl)
-       (quit)
+       (sferr "ffi-help/cnvt-udecl missed:\n")
+       (pretty-print-c99 clean-udecl)
+       (pperr clean-udecl)
        (values wrapped defined)))))
 
 
@@ -1917,13 +1982,16 @@
 	  (fold
 	   (lambda (upath seed)
 	     (unless (resolve-module upath)
-	       (error "module not defined:" upath))
+	       (fherr "module not defined: ~S" upath))
 	     (let* ((modul (resolve-module upath #:ensure #f))
 		    (pname (m-path->name upath))
 		    (vname (string->symbol (string-append pname "-types")))
 		    (var (module-ref modul vname)))
 	       (append var seed)))
 	   '() ext-mods)))
+
+    ;;(sferr "ffi-decls:\n") (pperr ffi-decls)
+    ;;(sferr "QUIT\n") (quit)
 
     ;; set globals
     (*prefix* (m-path->name path))
@@ -2173,7 +2241,7 @@
 		 (*renamer* identity) (*errmsgs* '()) (*prefix* "")
 		 (*mport* #t) (*udict* '()) (*ddict* '()))
     (if (not (access? filename R_OK))
-	(throw 'ffi-help-error "ERROR: not found: ~S" filename))
+	(fherr "ERROR: not found: ~S" filename))
     (call-with-input-file filename
       (lambda (iport)
 	(let ((output (or (assq-ref 'output options)

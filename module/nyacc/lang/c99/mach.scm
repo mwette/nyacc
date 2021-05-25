@@ -51,13 +51,13 @@
 ;; @end deffn
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2016-2018 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2016-2020 Matthew R. Wette"
 			  license-lgpl3+))
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
-   (prec< 'imp		       ; "implied type" SR-conflict resolution
-	  (nonassoc "char" "short" "int" "long" "_Fract" "_Accum" "_Sat")
-	  (nonassoc "float" "double" "_Complex"))
+   (prec< (left 'imp)	       ; "implied type" SR-conflict resolution
+	  (left "char" "short" "int" "long" "_Fract" "_Accum" "_Sat")
+	  (left "float" "double" "_Complex"))
    (prec< 'shift-on-attr		; living on the edge ...
 	  (nonassoc "__attribute__" "__packed__" "__aligned__" "__alignof__")
 	  'reduce-on-attr
@@ -75,7 +75,7 @@
      (string-literal ($$ `(p-expr ,$1)))
      ("(" expression ")" ($$ $2))
      ("(" "{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}" ")"
-      ($$ `(stmt-expr (@ (extension "GNUC")) ,$4))))
+      ($$ `(stmt-expr (@ (extension "GNUC")) ,(tl->list $4)))))
 
     (postfix-expression			; S 6.5.2
      (primary-expression)
@@ -101,8 +101,8 @@
      (argument-expression-list "," arg-expr-hack ($$ (tl-append $1 $3))))
     (arg-expr-hack
      (declaration-specifiers
-      abstract-declarator ($$ `(param-decl ,(tl->list $1) $2)))
-     (declaration-specifiers ($$ `(param-decl ,(tl->list $1)))))
+      abstract-declarator ($$ `(param-decl ,1 ,$2)))
+     (declaration-specifiers ($$ `(param-decl ,$1))))
 
     (unary-expression
      (postfix-expression)		; S 6.5.3
@@ -110,8 +110,8 @@
      ("--" unary-expression ($$ `(pre-dec ,$2)))
      (unary-operator cast-expression ($$ (list $1 $2)))
      ("sizeof" unary-expression ($$ `(sizeof-expr ,$2)))
-     ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3)))
-     )
+     ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3))))
+    
     (unary-operator ("&" ($$ 'ref-to)) ("*" ($$ 'de-ref))
 		    ("+" ($$ 'pos)) ("-" ($$ 'neg))
 		    ("~" ($$ 'bitwise-not)) ("!" ($$ 'not)))
@@ -257,7 +257,13 @@
      (complex-type-specifier ($$ `(type-spec ,$1)))
      (struct-or-union-specifier ($$ `(type-spec ,$1)))
      (enum-specifier ($$ `(type-spec ,$1)))
-     (typedef-name ($$ `(type-spec ,$1))))
+     (typedef-name ($$ `(type-spec ,$1)))
+     ("typeof" "(" unary-expression ")" ($$ `(typeof-expr ,$3)))
+     ("typeof" "(" type-name ")" ($$ `(typeof-type ,$3)))
+     ("__typeof" "(" unary-expression ")" ($$ `(typeof-expr ,$3)))
+     ("__typeof" "(" type-name ")" ($$ `(typeof-type ,$3)))
+     ("__typeof__" "(" unary-expression ")" ($$ `(typeof-expr ,$3)))
+     ("__typeof__" "(" type-name ")" ($$ `(typeof-type ,$3))))
 
     (fixed-type-specifier
      ("short" ($prec 'imp) ($$ '(fixed-type "short")))
@@ -308,13 +314,13 @@
      ("long" "_Fract" ($$ '(fixpt-type "long _Fract")))
      ("signed" "short" "_Fract" ($$ '(fixpt-type "signd short _Fract")))
      ("signed" "_Fract" ($$ '(fixpt-type "signed _Fract")))
-     ("signed" "long _Fract" ($$ '(fixpt-type "signed long _Fract")))
+     ("signed" "long" "_Fract" ($$ '(fixpt-type "signed long _Fract")))
      ("unsigned" "short" "_Fract" ($$ '(fixpt-type "unsigned short _Fract")))
      ("unsigned" "_Fract" ($$ '(fixpt-type "unsigned _Fract")))
-     ("unsigned" "long _Fract" ($$ '(fixpt-type "unsigned long _Fract")))
+     ("unsigned" "long" "_Fract" ($$ '(fixpt-type "unsigned long _Fract")))
      ("short" "_Accum" ($$ '(fixpt-type "short _Accum")))
      ("_Accum" ($$ '(fixpt-type "_Accum")))
-     ("long _Accum" ($$ '(fixpt-type "long _Accum")))
+     ("long" "_Accum" ($$ '(fixpt-type "long _Accum")))
      ("signed" "short" "_Accum" ($$ '(fixpt-type "signd short _Accum")))
      ("signed" "_Accum" ($$ '(fixpt-type "signed _Accum")))
      ("signed" "long" "_Accum" ($$ '(fixpt-type "signed long _Accum")))
@@ -327,7 +333,7 @@
      ("_Sat" "signed" "short" "_Fract"
       ($$ '(fixpt-type "_Sat signd short _Fract")))
      ("_Sat" "signed" "_Fract" ($$ '(fixpt-type "_Sat signed _Fract")))
-     ("_Sat" "signed" "long _Fract"
+     ("_Sat" "signed" "long" "_Fract"
       ($$ '(fixpt-type "_Sat signed long _Fract")))
      ("_Sat" "unsigned" "short" "_Fract"
       ($$ '(fixpt-type "_Sat unsigned short _Fract")))
@@ -443,7 +449,9 @@
     (enumerator				; S 6.7.2.2
      (identifier ($$ `(enum-defn ,$1)))
      (identifier attribute-specifiers ($$ `(enum-defn ,$1 ,$2)))
-     (identifier "=" constant-expression ($$ `(enum-defn ,$1 ,$3))))
+     (identifier "=" constant-expression ($$ `(enum-defn ,$1 ,$3)))
+     (identifier attribute-specifiers "=" constant-expression
+		 ($$ `(enum-defn ,$1 ,$2 ,$4))))
 
     (type-qualifier
      ("const" ($$ `(type-qual ,$1)))
@@ -635,13 +643,15 @@
       "[" "]" ($$ `(ary-declr ,$1)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))) ,$5)))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static")))
+		      ,$5)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list "]"
       ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))))))
      (direct-abstract-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static"))) ,$5)))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static")))
+		      ,$5)))
      (direct-abstract-declarator "[" "*" "]" ($$ `(star-ary-declr ,$1)))
      ;;
      ("(" parameter-type-list ")" ($$ `(abs-ftn-declr ,$2)))
@@ -652,11 +662,13 @@
      ("[" assignment-expression "]" ($$ `(abs-ary-declr ,$2)))
      ("[" "]" ($$ `(abs-ary-declr)))
      ("[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static"))) ,$4)))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static")))
+			  ,$4)))
      ("[" "static" type-qualifier-list "]"
       ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static"))))))
      ("[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec "static"))) ,$4)))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec "static")))
+			  ,$4)))
      ("[" "*" "]" ($$ '(abs-star-ary-declr)))
      )
 
@@ -687,6 +699,7 @@
     (designator
      ("[" constant-expression "]" ($$ `(array-dsgr ,$2)))
      ("." identifier ($$ `(sel-dsgr ,$2))))
+
     ;; === statements =========================================================
 
     (statement
@@ -753,41 +766,60 @@
      ("return" ";" ($$ `(return (expr)))))
 
     (asm-statement
-     (asm-expression ";"))
+     (asm-expression ";" ($$ `(expr-stmt ,$1))))
     (asm-expression
-     ("__asm__" opt-asm-specifiers "(" string-literal ")"
-      ($$ `(asm-expr (@ (extension "GNUC")) ,$4)))
-     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs ")"
-      ($$ `(asm-expr (@ (extension "GNUC")) ,$4 ,(tl->list $5))))
-     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs asm-inputs ")"
-      ($$ `(asm-expr (@ (extension "GNUC")) ,$4 ,(tl->list $5) ,(tl->list $6))))
-     ("__asm__" opt-asm-specifiers "(" string-literal asm-outputs
+     ("__asm__" opt-asm-qualifiers "(" string-literal ")"
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4)))
+     ("__asm__" opt-asm-qualifiers "(" string-literal asm-outputs ")"
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5)))
+     ("__asm__" opt-asm-qualifiers "(" string-literal asm-outputs
+      asm-inputs ")"
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5 ,$6)))
+     ("__asm__" opt-asm-qualifiers "(" string-literal asm-outputs
       asm-inputs asm-clobbers ")"
-      ($$ `(asm-expr (@ (extension "GNUC"))
-		     ,$4 ,(tl->list $5) ,(tl->list $6) ,(tl->list $7)))))
-    (opt-asm-specifiers
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 ,$5 ,$6 ,$7)))
+     ("__asm__" opt-asm-qualifiers "(" string-literal asm-outputs
+      asm-inputs asm-clobbers asm-gotos ")"
+      ($$ `(asm-expr (@ (extension "GNUC") ,@$2) ,$4 (asm-outputs)
+		     ,$6 ,$7 ,$8))))
+    (opt-asm-qualifiers
      ($empty)
-     ("volatile"))
+     ("__volatile__" ($$ (list '(volatile "true"))))
+     ("__goto__" ($$ (list '(goto "true"))))
+     ("volatile" ($$ (list '(volatile "true"))))
+     ("goto" ($$ (list '(goto "true")))))
     (asm-outputs
+     (asm-outputs-1 ($$ (tl->list $1))))
+    (asm-outputs-1
      (":" ($$ (make-tl 'asm-outputs)))
      (":" asm-output ($$ (make-tl 'asm-outputs $2)))
-     (asm-outputs "," asm-output ($$ (tl-append $1 $3))))
+     (asm-outputs-1 "," asm-output ($$ (tl-append $1 $3))))
     (asm-output
      (string-literal "(" identifier ")" ($$ `(asm-operand ,$1 ,$3)))
      ("[" identifier "]" string-literal "(" identifier ")"
       ($$ `(asm-operand ,$2 ,$4 ,$6))))
     (asm-inputs
+     (asm-inputs-1 ($$ (tl->list $1))))
+    (asm-inputs-1
      (":" ($$ (make-tl 'asm-inputs)))
      (":" asm-input ($$ (make-tl 'asm-inputs $2)))
-     (asm-inputs "," asm-input ($$ (tl-append $1 $3))))
+     (asm-inputs-1 "," asm-input ($$ (tl-append $1 $3))))
     (asm-input
      (string-literal "(" expression ")" ($$ `(asm-operand ,$1 ,$3)))
      ("[" identifier "]" string-literal "(" expression ")"
       ($$ `(asm-operand ,$2 ,$4 ,$6))))
     (asm-clobbers
+     (asm-clobbers-1 ($$ (tl->list $1))))
+    (asm-clobbers-1
      (":" ($$ (make-tl 'asm-clobbers)))
-     (":" string-literal ($$ (tl-extend (make-tl 'asm-clobbers) $2)))
-     (asm-clobbers "," string-literal ($$ (tl-extend $1 (cdr $3)))))
+     (":" string-literal ($$ (make-tl 'asm-clobbers $2)))
+     (asm-clobbers-1 "," string-literal ($$ (tl-append $1 $3))))
+    (asm-gotos
+     (asm-gotos-1 ($$ (tl->list $1))))
+    (asm-gotos-1
+     (":" ($$ (make-tl 'asm-gotos)))
+     (":" identifier ($$ (make-tl 'asm-gotos $2)))
+     (asm-gotos-1 "," identifier ($$ (tl-append $1 $3))))
 
     ;; === top-level forms ====================================================
 
@@ -849,7 +881,8 @@
     (cpp-statement ('cpp-stmt ($$ `(cpp-stmt ,$1))))
     (pragma
      ($pragma ($$ `(pragma ,$1)))
-     ("_Pragma" "(" string-literal ")" ($$ `(pragma ,$3))))
+     ;;("_Pragma" "(" string-literal ")" ($$ `(pragma ,$3)))
+     )
 
     )))
 

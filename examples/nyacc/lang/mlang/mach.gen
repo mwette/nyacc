@@ -7,8 +7,13 @@ exec guile $0
 
 (when (gen-mlang-files)
   (system "touch parser.scm")
-  (with-output-to-file ",gram.txt"
+  (with-output-to-file ",file.txt"
     (lambda ()
       (pp-lalr-grammar mlang-spec)
-      (pp-lalr-machine mlang-mach))))
+      (pp-lalr-machine mlang-mach)))
+  (with-output-to-file ",gram.txt"
+    (lambda ()
+      (pp-lalr-grammar mlang-ia-spec)
+      (pp-lalr-machine mlang-ia-mach))))
+
 ;;; --- last line ---

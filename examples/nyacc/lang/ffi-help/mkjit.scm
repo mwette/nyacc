@@ -22,10 +22,9 @@
 (use-modules (nyacc lang c99 munge))
 (use-modules (nyacc lang c99 util))
 (use-modules (nyacc lang util))
-(use-modules (nyacc lang sx-match))
+(use-modules (nyacc lang sx-util))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
-(use-modules (srfi srfi-1))
 (use-modules (ice-9 pretty-print))
 (use-modules ((sxml xpath) #:select (sxpath)))
 
@@ -70,7 +69,7 @@
     ((le ,l ,r) `(<= ,(c99->scm l) ,(c99->scm r)))
     ((ge ,l ,r) `(>= ,(c99->scm l) ,(c99->scm r)))
     ((bitwise-and ,l ,r) `(logand ,(c99->scm l) ,(c99->scm r)))
-    (* (sferr "can't handle this:\n") (pperr expr))))
+    (,_ (sferr "can't handle this:\n") (pperr expr))))
 
 (define (cnvt)
   (define (cnvt-cpp-ftn-def defn)

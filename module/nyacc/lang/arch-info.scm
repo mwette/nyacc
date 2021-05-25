@@ -22,7 +22,8 @@
 ;;; Code:
 
 (define-module (nyacc lang arch-info)
-  #:export (arch-info-host
+  #:export (lookup-arch
+	    arch-info-host
 	    sizeof-basetype alignof-basetype
 	    sizeof-map/native ))
 
@@ -190,6 +191,11 @@
     ("x86_64" . ,alignof-map/x86_64)
     ("avr" . ,alignof-map/avr)))
 
+(define (lookup-arch name)
+  (let ((sizeof-dict (assoc-ref arch-sizeof-map name))
+	(alignof-dict (assoc-ref arch-sizeof-map name)))
+    (and sizeof-dict alignof-dict (cons sizeof-dict alignof-dict))))
+
 (define arch-info-host
   (eval-when (expand eval compile)
     (and=> (string-split %host-type #\-) car)))
@@ -200,27 +206,35 @@
 (define alignof-map/native-arch
   (assoc-ref arch-alignof-map arch-info-host))
 
-;; @deffn {Procedure} alignof-basetype type [arch]
-;; Return the size in bytes of the basetype @var{type}.
-;; The argument @var{arch}, if provided, can be an a-list mapping
-;; symbol for type to integer or a procedure which accepts @var{type}.
+;; @deffn {Procedure} sizeof-basetype type [arch]
+;; Return the size in bytes of the basetype @var{type}, a string.
+;; The argument @var{arch}, if provided, must be a pair.   If the car
+;; is an a pair, it must be an a-list mapping strint to integer for
+;; the size.  If the car is a procedure, the procedure must take @var{type}
+;; and return an integer.
 ;; @end deffn
 (define* (sizeof-basetype type #:optional arch)
   (cond
    ((not arch) (assoc-ref sizeof-map/native type))
-   ((pair? arch) (assoc-ref arch type))
-   ((procedure? arch) (arch type))))
+   ((pair? arch)
+    (cond
+     ((pair? (car arch)) (assoc-ref (car arch) type))
+     ((procedure? (car arch)) ((car arch) type))))))
 
 ;; @deffn {Procedure} alignof-basetype type [arch]
-;; Return the alignment of the basetype @var{type}.
-;; The argument @var{arch}, if provided, can be an a-list mapping
-;; symbol for type to integer or a procedure which accepts @var{type}.
+;; Return the alignment of the basetype @var{type}, a string.
+;; The argument @var{arch}, if provided, must be a pair.   If the car
+;; is an a pair, it must be an a-list mapping strint to integer for
+;; the size.  If the car is a procedure, the procedure must take @var{type}
+;; and return an integer.
 ;; @end deffn
 (define* (alignof-basetype type #:optional arch)
   (cond
    ((not arch) (assoc-ref alignof-map/native type))
-   ((pair? arch) (assoc-ref arch type))
-   ((procedure? arch) (arch type))))
+   ((pair? arch)
+    (cond
+     ((pair? (cdr arch)) (assoc-ref (cdr arch) type))
+     ((procedure? (cdr arch)) ((cdr arch) type))))))
 
 ;; defs __SIZEOF_ + + __
 ;; FLOAT80 INT POINTER LONG LONG_DOUBLE SIZE_T WINT_T PTRDIFF_T FLOAT FLOAT128

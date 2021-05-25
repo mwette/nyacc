@@ -1,0 +1,10 @@
+(define-ffi-module (ffi bug60410)
+  #:api-code "
+union foo {
+  int bar;
+  double baz;
+};
+
+void qaz(union foo zaq);
+")
+

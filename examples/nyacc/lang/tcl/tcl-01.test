@@ -22,6 +22,7 @@
   (pass-if "read-command"
     (fold
      (lambda (pair ok?)
+       ;;(pp (call-with-input-string (car pair) read-command))
        (and ok?
 	    (equal? (call-with-input-string (car pair) read-command)
 		    (cdr pair))))
@@ -53,6 +54,9 @@
        ("abc ${def}(ghi)"
 	. (command (string "abc")
 		   (deref-indexed "def" (string "ghi"))))
+       ("c \"\\[$a y\\] z\""
+	. (command (string "c")
+		   (word (string "[") (deref "a") (string " y] z"))))
        ))))
 
 

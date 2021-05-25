@@ -67,7 +67,7 @@
   #:use-module ((system foreign) #:prefix ffi:)
 
   #:use-module (ice-9 threads)
-  #:use-module (srfi srfi-1)
+  #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (srfi srfi-43)
@@ -540,8 +540,6 @@
       (sf "  enabled: ~S\n" (dbus_watch_get_enabled watch)))
     (if #f #f)))
 
-
-(use-modules (sched))
 
 (define *dbus-sched* (make-scheduler))
 

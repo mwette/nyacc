@@ -1,4 +1,4 @@
-This is nyacc-ug.info, produced by makeinfo version 6.5 from
+This is nyacc-ug.info, produced by makeinfo version 6.7 from
 nyacc-ug.texi.
 
 Copyright (C) 2015-2019 - Matthew R. Wette.
@@ -1362,3 +1362,8 @@ Node: TODOs50490
 Node: References51511
 
 End Tag Table
+
+
+Local Variables:
+coding: utf-8
+End:

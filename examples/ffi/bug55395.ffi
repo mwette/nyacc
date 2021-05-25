@@ -1,0 +1,11 @@
+(define-ffi-module (ffi buf55395)
+  #:api-code "
+struct foo
+{
+        // comment
+        int bar;
+        int baz;
+};
+
+void qaz(struct foo zaq);
+")

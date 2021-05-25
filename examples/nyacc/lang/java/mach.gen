@@ -1,0 +1,14 @@
+#!/bin/sh
+# -*- scheme -*-
+exec guile $0
+!#
+(use-modules (nyacc lang java mach))
+(use-modules (nyacc lalr))
+
+(when (and java-mach (gen-java-files))
+  (system "touch parser.scm")
+  (with-output-to-file ",gram.txt"
+    (lambda ()
+      (pp-lalr-grammar java-spec)
+      (pp-lalr-machine java-mach))))
+;;; --- last line ---
