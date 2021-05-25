@@ -1,6 +1,6 @@
 ;;; nyacc/bison.scm - export bison
 
-;; Copyright (C) 2016,2018 Matthew R. Wette
+;; Copyright (C) 2016,2018,2020 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -154,10 +154,9 @@
 ;; Write bison-converted @var{spec} to file, run bison on it, and load
 ;; the bison-generated automaton as a SXML tree using the @code{-x} option.
 (define (spec->mach-sxml spec)
-  (let* ((basename (tmpnam))
-	 (bisname (string-append basename ".y"))
-	 (xmlname (string-append basename ".xml"))
-	 (tabname (string-append basename ".tab.c")))
+  (let* ((bisname (mkstemp! (string-copy "/tmp/nyacc-XXXXXX.y")))
+	 (xmlname (mkstemp! (string-copy "/tmp/nyacc-XXXXXX.xml")))
+	 (tabname (mkstemp! (string-copy "/tmp/nyacc-XXXXXX.tab.c"))))
     (with-output-to-file bisname
       (lambda () (lalr->bison spec)))
     (system (string-append "bison" " --xml=" xmlname " --output=" tabname

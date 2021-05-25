@@ -28,6 +28,7 @@
 	    find-incl-in-dirl
 	    eval-cpp-cond-text
 	    expand-cpp-macro-ref
+	    skip-cpp-macro-ref
 	    ;;
 	    expand-cpp-name
 	    parse-cpp-expr
@@ -45,6 +46,11 @@
   (else
    (use-modules (ice-9 optargs))
    (use-modules (nyacc compat18))))
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define* (pperr exp #:optional (plp ""))
+  (pretty-print exp (current-error-port) #:per-line-prefix plp))
 
 (define c99-std-defs
   '("__DATE__" "__FILE__" "__LINE__" "__STDC__" "__STDC_HOSTED__"
@@ -162,9 +168,9 @@
 		  ((read-c-ident ch))
 		  ((cpp-comm-skipper ch) (loop (skip-il-ws (read-char))))
 		  (else (throw 'cpp-error "bad #define")))))
-	 (args (or (p-args (read-char)) '()))
+	 (args (p-args (read-char)))
 	 (repl (p-rest (skip-il-ws (read-char)))))
-    (if (pair? args)
+    (if args
 	`(define (name ,name) (args . ,args) (repl ,repl))
 	`(define (name ,name) (repl ,repl)))))
 	
@@ -394,7 +400,7 @@
   (let ((ch (read-char)))
     ;; if exit, then did not defined __has_include(X)=__has_include__(X)
     (if (or (eof-object? ch) (not (char=? #\( ch)))
-	(throw 'cpp-error "expedcting `('")))
+	(throw 'cpp-error "expecting `('")))
   (let loop ((chl '()) (ch (skip-il-ws (read-char))))
     (cond
      ((eof-object? ch) (cpp-err "illegal argument"))
@@ -426,7 +432,7 @@
       (if (pair? rr)
 	  (cpp-expand-text repl defs (append rr used)) ;; re-run
 	  repl)))
-     
+
   (let loop ((rr '())			; list symbols resolved
 	     (tkl '())			; token list of
 	     (lv 0)			; level
@@ -487,16 +493,24 @@
      ((char=? #\( ch)
       (let loop2 ((argl argl) (argv '()) (ch ch))
 	(cond
-	 ((eqv? ch #\)) (reverse argv))
-	 ((null? argl) (cpp-err "arg count"))
-	 ((and (null? (cdr argl)) (string=? (car argl) "..."))
+	 ((eof-object? ch) (throw 'cpp-error "EOF reading args"))
+	 ((char=? ch #\))
+	  (reverse (if (and (pair? argl) (string=? (car argl) "..."))
+		       (acons "__VA_ARGS__" "" argv)
+		       argv)))
+	 ((and (pair? argl) (string=? (car argl) "..."))
 	  (let ((val (scan-cpp-input defs used #\))))
-	    (loop2 (cdr argl) (acons "__VA_ARGS__" val argv) (read-char))))
+	    (loop2 '() (acons "__VA_ARGS__" val argv) (read-char))))
 	 ((or (char=? ch #\() (char=? ch #\,))
 	  (let* ((val (scan-cpp-input defs used #\,)))
-	    (loop2 (cdr argl) (acons (car argl) val argv) (read-char))))
+	    (cond
+	     ((pair? argl)
+	      (loop2 (cdr argl) (acons (car argl) val argv) (read-char)))
+	     ((string=? "" val)
+	      (loop2 argl argv (read-char)))
+	     (else (throw 'cpp-error "function macro arg mismatch")))))
 	 (else
-	  (error "nyacc cpp.scm: collect-args coding error")))))
+	  (throw 'cpp-error "cpp.scm: collect-args coding error")))))
      (else (unread-char ch) (if sp (unread-char #\space)) #f))))
 
 ;; @deffn {Procedure} px-cpp-ftn-repl argd repl => string
@@ -566,6 +580,20 @@
   (with-input-from-string text
     (lambda () (scan-cpp-input defs used #f))))
 
+;; This of bit of a kludge to deal with _Pragma in odd places.  The parser
+;; can't reject the full deal so we parse here and return as ($pragma . str)
+;; which the parser can ignore.  (Should the make-lalr-parser have a hoook
+;; for language pramgas?
+(define (finish-pragma)
+  (define (sk-ws ch)
+    (if (char-whitespace? ch) (sk-ws (read-char)) ch))
+  (unless (char=? #\( (sk-ws (read-char))) (throw 'c99-error "_Pragma: 1"))
+  (let ((str (read-c-string (sk-ws (read-char)))))
+    (unless str (throw 'c99-error "_Pragma: 2"))
+    (unless (char=? #\) (sk-ws (read-char))) (throw 'c99-error "_Pragma: 3"))
+    (cons '$pragma (cdr str))))
+(export finish-pragma)
+
 ;; === exports =======================
 
 ;; @deffn {Procedure} eval-cpp-cond-text text [defs] => string
@@ -620,7 +648,25 @@
 		     (or (expand-cpp-macro-ref repl defs used) repl)
 		     repl)))))
      ((c99-std-val ident) => identity)
+     ;;((string=? ident "_Pragma") (finish-pragma))
+     ;;^ does not work here: move here when cpp is token-based
      (else #f))))
+
+;; may not catch strings w/ non-matching parens
+(define (skip-cpp-macro-ref name defs)
+  (let ((rval (assoc-ref defs name)))
+    (and
+     (pair? rval)
+     (let loop ((ch (read-char)))
+       (cond ((eof-object? ch) (throw 'c99-error "eof when expecting `('"))
+	     ((char-whitespace? ch) (loop (read-char)))
+	     ((char=? ch #\() #t)
+	     (else (unread-char ch) #f)))
+     (let loop ((lv 0) (ch (read-char)))
+       (cond ((eof-object? ch) (throw 'c99-error "expecting `)'"))
+	     ((char=? #\( ch) (loop (1+ lv) (read-char)))
+	     ((char=? #\) ch) (if (zero? lv) #f (loop (1- lv) (read-char))))
+	     (else (loop lv (read-char))))))))
 
 ;; @deffn {Procedure} expand-cpp-name name defs => repl|#f
 ;; Calls @code{expand-cpp-macro-ref} with null input string (w/o further

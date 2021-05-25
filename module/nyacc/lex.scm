@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 
-;; Copyright (C) 2015-2019 - Matthew R.Wette
+;; Copyright (C) 2015-2020 - Matthew R.Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -41,8 +41,8 @@
 	    make-comm-reader
 	    make-string-reader
 	    make-chseq-reader
-	    make-num-reader
 	    eval-reader
+	    read-basic-num
  	    read-c-ident read-c$-ident
  	    read-c-comm
 	    read-c-string
@@ -83,7 +83,7 @@
 	       (string->char-set! ucase cs)
 	       (string->char-set! lcase cs)))
 (define c:ir (string->char-set digit c:if)) ; ident, rest chars
-(define c:nx (string->char-set "eEdD"))	    ; number exponent
+(define c:nx (string->char-set "eE"))	    ; number exponent
 (define c:hx (string->char-set "abcdefABCDEF"))
 (define c:sx (string->char-set "lLuU")) ; fixed suffix
 (define c:fx (string->char-set "fFlL")) ; float suffix
@@ -91,7 +91,18 @@
 (define c:bx (string->char-set "pP"))	; binary float suffix
 (define c:cx (string->char-set "LuU"))	; char prefix
 
+(define char-hex?
+  (let ((cs (string->char-set "0123456789abcdefABCDEF")))
+    (lambda (ch)
+      (char-set-contains? cs ch))))
+
+(define char-oct? 
+  (let ((cs (string->char-set "01234567")))
+    (lambda (ch)
+      (char-set-contains? cs ch))))
+
 (define lxlsr reverse-list->string)
+(define rls reverse-list->string)	; reverse-list->string
 
 ;; @deffn {Procedure} eval-reader reader string => result
 ;; For test and debug, this procedure will evaluate a reader on a string.
@@ -313,112 +324,319 @@
    ((char=? ch #\')
     (let* ((c1 (read-char))
 	   (sc (if (eqv? c1 #\\) (read-esc-char) (string c1))))
-      (if (not (char=? #\' (read-char))) (error "bad char lit"))
+      (if (not (char=? #\' (read-char)))
+	  (throw 'nyacc-error "read-c-chlit: bad char literal"))
       (cons '$chlit sc)))
    ((char-set-contains? c:cx ch)
     (let ((c1 (read-char)))
       (cond
+       ((eof-object? c1) #f)
        ((char=? c1 #\') (cons (wchar ch) (cdr (read-c-chlit c1))))
        (else (unread-char c1) #f))))
    (else #f)))
 
 (define (fix-dot l) (if (char=? #\. (car l)) (cons #\0 l) l))
 
-;; @deffn {Procedure} make-num-reader => (proc ch) => #f|fixed|float
-;; Where @emph{fixed} is @code{($fixed . "1")} and @emph{float} is
-;; @code{($float . "1.0")}
-;; This procedure reads C numeric literals (included fixed-point types).
-;; Some literals are cleaned: @code{"0"} may be added before or after dot.
-;; This allows use of @code{0b} prefix for binary literals even though that
-;; is not C.
+;; @deffn {Procedure} read-basic-num ch [#:signed #t] => #f|pair
+;; Reader for numbers in most C-like languages.  The @var{pair} returned
+;; is one of @code{($fixed . "1")} or @code{($float . "1.0")}.
+;; The @code{fixed} form include decimal, hexidecimal (starting with "0x"),
+;; and binary (starting with "0b") integers.  The @code{float} form is
+;; floating point.  This will not generate exceptions.  Normally this
+;; reads unsigned numbers; with the @code{#:signed #t} option, leading
+;; @code{-} is allowed.
 ;; @end deffn
-(define (make-num-reader)
-  ;; This will incorrectly parse 123LUL.  Does not handle hex floats.
-  ;; 0: start; 1: p-i; 2: p-f; 3: p-e-sign; 4: p-e-d; 5: packup
-  ;; Now handles fixed-point (returning '$fixpt)
-  (lambda (ch1)
-    ;; chl: char list; ty: '$fixed or '$float; st: state; ch: next ch; ba: base
-    (let loop ((chl '()) (ty #f) (ba 10) (st 0) (ch ch1))
-      (case st
-	((0)
-	 (cond
-	  ((eof-object? ch) (loop chl ty ba 5 ch))
-	  ((char=? #\0 ch) (loop (cons ch chl) '$fixed 8 10 (read-char))) 
-	  ((char-numeric? ch) (loop chl '$fixed ba 1 ch))
-	  ((char=? #\. ch) (loop (cons ch chl) #f ba 15 (read-char))) 
-	  (else #f)))
-	((10) ;; allow x, b (C++14) after 0
-	 (cond
-	  ((eof-object? ch) (loop chl ty ba 5 ch))
-	  ((char=? #\x ch) (loop (cons ch chl) ty 16 1 (read-char)))
-	  ((char=? #\X ch) (loop (cons ch chl) ty 16 1 (read-char)))
-	  ((char=? #\b ch) (loop (cons ch chl) ty 2 1 (read-char)))
-	  (else (loop chl ty ba 1 ch))))
-	((15) ;; got `.' only
-	 (cond
-	  ((eof-object? ch) (unread-char ch) #f)
-	  ((char-numeric? ch) (loop (cons ch chl) '$float ba 2 (read-char)))
-	  (else (unread-char ch) #f)))
-	((1)
-	 (cond
-	  ((eof-object? ch) (loop chl ty ba 5 ch))
-	  ((char-numeric? ch) (loop (cons ch chl) ty ba 1 (read-char)))
-	  ((char=? #\. ch) (loop (cons #\. chl) '$float ba 2 (read-char)))
-	  ((and (= ba 16) (char-set-contains? c:hx ch))
-	   (loop (cons ch chl) ty ba 1 (read-char)))
-	  ((char-set-contains? c:sx ch)
-	   (loop (cons ch chl) '$fixed ba 11 (read-char)))
-	  ((char-set-contains? c:nx ch)
-	   (loop (cons ch chl) '$float ba 3 (read-char)))
-	  ((char-set-contains? c:px ch)
-	   (loop (cons ch chl) '$fixpt ba 11 (read-char)))
-	  ((char-set-contains? c:if ch)
-	   (sf "\nchl=~S ch=~S ty=~S ba=~S\n" chl ch ty ba)
-	   (error "lex/num-reader st=1"))
-	  (else (loop chl '$fixed ba 5 ch))))
-	((11) ;; got lLuU suffix, look for a second
-	 (cond
-	  ((eof-object? ch) (cons ty (lxlsr chl)))
-	  ((char-set-contains? c:sx ch)
-	   (loop (cons ch chl) ty ba st (read-char)))
-	  ((char-set-contains? c:px ch)
-	   (loop (cons ch chl) '$fixpt ba st (read-char)))
-	  (else (loop chl ty ba 5 ch))))
-	#;((12) ;; got lLuU suffix, look for a third
-	 (cond
-	  ((eof-object? ch) (cons '$fixed (lxlsr chl)))
-	  ((char-set-contains? c:sx ch)
-	   (loop (cons ch chl) '$fixed ba 5 (read-char)))
-	  (else (loop chl '$fixed ba 5 ch))))
-	((2)
-	 (cond
-	  ((eof-object? ch) (loop chl ty ba 5 ch))
-	  ((char-numeric? ch) (loop (cons ch chl) ty ba 2 (read-char)))
-	  ((char-set-contains? c:nx ch)
-	   (loop (cons ch (fix-dot chl)) ty ba 3 (read-char)))
-	  ((char-set-contains? c:px ch)
-	   (loop (cons ch chl) '$fixpt ba st (read-char)))
-	  ((char-set-contains? c:fx ch)
-	   (cons '$float (lxlsr (cons ch (fix-dot chl)))))
-	  ((char-set-contains? c:if ch) (error "lex/num-reader st=2"))
-	  (else (loop (fix-dot chl) ty ba 5 ch))))
-	((3)
-	 (cond
-	  ((eof-object? ch) (loop chl ty ba 5 ch))
-	  ((or (char=? #\+ ch) (char=? #\- ch))
-	   (loop (cons ch chl) ty ba 4 (read-char)))
-	  ((char-numeric? ch) (loop chl ty ba 4 ch))
-	  (else (error "lex/num-reader st=3"))))
-	((4)
-	 (cond
-	  ((eof-object? ch) (loop chl ty ba 5 ch))
-	  ((char-numeric? ch) (loop (cons ch chl) ty ba 4 (read-char)))
-	  ((char-set-contains? c:fx ch) (loop (cons ch chl) ty ba 4 (read-char)))
-	  ((char-set-contains? c:if ch) (error "lex/num-reader st=4"))
-	  (else (loop chl ty ba 5 ch))))
-	((5)
-	 (unless (eof-object? ch) (unread-char ch))
-	 (cons ty (lxlsr chl)))))))
+(define* (read-basic-num ch #:key signed)
+  (define (unread-chl chl)
+    (let lp ((l chl)) (unless (null? l) (unread-char (car l)) (lp (cdr l)))))
+  (let loop ((chl '()) (ty #f) (st 10) (ch ch))
+    ;;(sf "lp: ch=~S st=~S ty=~S chl=~S\n" ch st ty chl)
+    (case st
+      ((10) ;; entry
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
+	((char-numeric? ch) (loop chl '$fixed 20 ch))
+	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
+	((and signed (char=? #\- ch)) (loop (cons ch chl) ty 13 (read-char)))
+	(else #f)))
+      ((11) ;; got 0/fixed, allow x, b
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
+	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
+	((memq ch '(#\B #\b)) (loop (cons ch chl) ty 22 (read-char)))
+	((char-oct? ch) (loop (cons ch chl) ty 23 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((12) ;; got `.'
+       (cond
+	((eof-object? ch) #f)
+	((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
+	(else (unread-char ch) #f)))
+      ((13) ;; got '-'
+       (cond
+	((eof-object? ch) (unread-char #\-) #f)
+	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char)))
+	((char-numeric? ch) (loop chl '$fixed 20 ch))
+	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
+	(else (loop (cons ch chl) ty 73 ch))))
+      ((20) ;; parse decimal integer part
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 20 (read-char)))
+	((char=? ch #\.) (loop (cons #\. chl) '$float 30 (read-char)))
+	((memq ch '(#\E #\e)) (loop (cons ch chl) '$float 40 (read-char)))
+	(else (loop chl '$fixed 70 ch))))
+      ((21) ;; parse fixed hex
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-hex? ch) (loop (cons ch chl) ty 21 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((22) ;; parse fixed octal	      
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((23) ;; parse fixed binary 
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 11 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((30) ;; parse float fractional part
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 30 (read-char)))
+	((memq ch '(#\E #\e)) (loop (cons ch chl) ty 40 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((40) ;; have float e|p, look for sign
+       (cond
+	((eof-object? ch) (loop chl ty 73 ch))
+	((memq ch '(#\+ #\-)) (loop (cons ch chl) ty 50 (read-char)))
+	(else (loop chl ty 50 ch))))
+      ((50) ;; parse rest of exponent
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((70)
+       (cond
+	((eof-object? ch) (cons ty (rls chl)))
+	(else (loop chl ty 71 ch))))
+      ((71) (unread-char ch) (cons ty (rls chl)))
+      ((72) (cons ty (rls chl)))
+      ((73) (unread-chl chl) #f)
+      (else (error "coding error")))))
+
+;; @deffn {Procedure} read-c-num ch => #f|pair
+;; Reader for numbers in C. Here @evar{pair} is of the form
+;; @code{($fixed . "1")}, @code{($float . "1.0")},
+;; @code{($fixpt . "1.0r")} or @code{($decfl . "1.0DD")}.
+;; The above coorespond to integers (including decimal, hexidecimal,
+;; octal and binary), fixed-point, floating point (including the
+;; C hex format) and decimal floating point.
+;; Binary format integers, with prefix @code{0b}, are not part of
+;; C, but commonly supported by compilers.  This routine will generate
+;; the exception @code{nyacc-error} for some read errors, e.g., bad
+;; prefix.
+;; @end deffn
+(define (read-c-num ch)
+  (define (unread-chl chl)
+    (let lp ((chl chl))
+      (unless (null? (cdr chl)) (unread-char (car chl)) (lp (cdr chl)))))
+  (define (bad-sfx chl)
+    (let ((num (rls chl)))
+      (unread-chl chl)
+      (throw 'nyacc-error "bad suffix on number: ~S" num)))
+  (define (bad-xfl chl)
+    (let ((num (rls chl)))
+      (unread-chl chl)
+      (throw 'nyacc-error "hex float requires exponent: ~S" num)))
+
+  ;; chl: char list; ty: type; st: state; ch: next char
+  ;; st= 10=beg; 20=int; 30=frac; 40=sgn; 50=exp; 60=sfx 70=end
+  (let loop ((chl '()) (ty #f) (st 10) (ch ch))
+    ;;(sf "loop st=~S ch=~S ty=~S\n" st ch ty)
+    (case st
+      ((10) ;; entry
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
+	((char-numeric? ch) (loop chl '$fixed 20 ch))
+	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char))) 
+	(else #f)))
+      ((11) ;; got 0/fixed, allow x, b
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
+	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
+	((memq ch '(#\B #\b)) (loop (cons ch chl) ty 23 (read-char)))
+	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
+	((memq ch '(#\U #\u)) (loop (cons ch chl) ty 61 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) ty 63 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((12) ;; got `.' only
+       (cond
+	((eof-object? ch) #f)
+	((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
+	(else (unread-char ch) #f)))
+      ((20) ;; parse decimal integer part
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch)
+	 (loop (cons ch chl) ty 20 (read-char)))
+	((char=? ch #\.)
+	 (loop (cons #\. chl) '$float 30 (read-char)))
+	((memq ch '(#\E #\e)) ;; float exponent
+	 (loop (cons ch chl) '$float 40 (read-char)))
+	((memq ch '(#\U #\u)) ;; fixed suffix start
+	 (loop (cons ch chl) '$fixed 61 (read-char)))
+	((memq ch '(#\L #\l)) ;; fixed suffix start
+	 (loop (cons ch chl) '$fixed 63 (read-char)))
+	((memq ch '(#\K #\R #\k #\r)) ;; fixpt suffix
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	(else (loop chl '$fixed 70 ch))))
+      ((21) ;; parse hex, fixed or float
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-hex? ch) (loop (cons ch chl) ty 21 (read-char)))
+	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
+	((char=? ch #\.) (loop (cons ch chl) '$float 35 (read-char)))
+	((memq ch '(#\P #\p)) (loop (cons ch chl) '$float 40 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((22) ;; parse fixed octal	      
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
+	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((23) ;; parse fixed binary 
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 23 (read-char)))
+	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((30) ;; parse float fractional part
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 30 (read-char)))
+	((memq ch '(#\E #\e))
+	 (loop (cons ch chl) ty 40 (read-char)))
+	((memq ch '(#\F #\f))
+	 (loop (cons ch chl) ty 69 (read-char)))
+	((memq ch '(#\L #\l))
+	 (loop (cons ch chl) ty 31 (read-char)))
+	((memq ch '(#\U #\u))
+	 (loop (cons ch chl) '$fixpt 66 (read-char)))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	((memq ch '(#\D #\d)) ;; decfl
+	 (loop (cons ch chl) ty 68 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((31) ;; got l/float, check for fixpt
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((35) ;; parse float hex fraction, requires exponent
+       (cond
+	((eof-object? ch) (throw 'nyacc-error "hex float requires exponent"))
+	((char-hex? ch) (loop (cons ch chl) ty 35 (read-char)))
+	((memq ch '(#\P #\p)) (loop (cons ch chl) ty 40 (read-char)))
+	(else (bad-xfl chl))))
+      ((40) ;; have float e|p, look for sign
+       (cond
+	((eof-object? ch) (bad-sfx chl))
+	((memq ch '(#\+ #\-)) (loop (cons ch chl) ty 50 (read-char)))
+	(else (loop chl ty 50 ch))))
+      ((50) ;; parse rest of exponent
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
+	((memq ch '(#\F #\f)) (loop (cons ch chl) ty 69 (read-char)))
+	((memq ch '(#\L #\l)) (loop (cons ch chl) ty 65 (read-char)))
+	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixpt 66 (read-char)))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	((memq ch '(#\D #\d)) (loop (cons ch chl) '$decfl 68 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ;; suffixes
+      ((61) ;; fixed/u
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((memq ch '(#\L #\l))
+	 (loop (cons ch chl) ty 62 (read-char)))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((62) ;; fixed/ul
+       (cond
+	((eof-object? ch) (loop chl '$fixed 72 ch))
+	((memq ch '(#\L #\l))
+	 (loop (cons ch chl) '$fixed 70 (read-char)))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((63) ;; fixed/l
+       (cond
+	((eof-object? ch) (loop chl '$fixed 72 ch))
+	((memq ch '(#\L #\l))
+	 (loop (cons ch chl) ty 64 (read-char)))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	(else (loop chl '$fixed 70 ch))))
+      ((64) ;; fixed/ll
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((memq ch '(#\U #\u)) (loop (cons ch chl) ty 70 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((65) ;; float/l
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ((66) ;; fixpt/u
+       (cond
+	((eof-object? ch) (bad-sfx chl))
+	((memq ch '(#\L #\l))
+	 (loop (cons ch chl) '$fixpt 67 (read-char)))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	(else (bad-sfx chl))))
+      ((67) ;; fixpt/ul
+       (cond
+	((eof-object? ch) (bad-sfx chl))
+	((memq ch '(#\K #\R #\k #\r))
+	 (loop (cons ch chl) '$fixpt 70 (read-char)))
+	(else (bad-sfx chl))))
+      ((68) ;; got (d|D), look for dDfFlL
+       (cond
+	((eof-object? ch) (bad-sfx chl))
+	((memq ch '(#\D #\F #\L #\d #\f #\l))
+	 (loop (cons ch chl) '$decfl 72 ch))
+	(else (bad-sfx chl))))
+      ((69) ;; bizarre gcc float suffixes: F128 F32x
+       (cond
+	((eof-object? ch) (loop chl ty 72 ch))
+	((char-numeric? ch) (loop (cons ch chl) ty 69 (read-char)))
+	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 70 (read-char)))
+	(else (loop chl ty 70 ch))))
+      ;; exit
+      ((70) ;; check char
+       (cond
+	((eof-object? ch) (cons ty (rls chl)))
+	((char-set-contains? c:ir ch) (bad-sfx (cons ch chl)))
+	(else (loop chl ty 71 ch))))
+      ((71) ;; pushback 1 char
+       (unread-char ch) (cons ty (rls chl)))
+      ((72) ;; return
+       (cons ty (rls chl)))
+      (else
+       (unread-chl chl) (error "coding error")))))
 
 ;; @deffn {Procedure} cnumstr->scm C99-str => scm-str
 ;; Convert C number-string (e.g, @code{0x123LL}) to Scheme numbers-string
@@ -449,11 +667,6 @@
 	      (string-append "#o" (trim-rt 1)))
 	     (else (trim-rt 0)))
 	    (trim-rt 0)))))
-
-;; @deffn {Procedure} read-c-num ch => #f|string
-;; Reader for unsigned numbers as used in C (or close to it).
-;; @end deffn
-(define read-c-num (make-num-reader))
 
 ;;.@deffn {Procedure} si-map string-list ix => a-list
 ;; Convert list of strings to alist of char at ix and strings.
@@ -647,7 +860,7 @@
 			       comm-reader comm-skipper
 			       space-chars extra-reader)
   (let* ((read-ident (or ident-reader (make-ident-reader c:if c:ir)))
-	 (read-num (or num-reader (make-num-reader)))
+	 (read-num (or num-reader read-basic-num))
 	 (read-string (or string-reader (make-string-reader #\")))
 	 (read-chlit (or chlit-reader (lambda (ch) #f)))
 	 (read-comm (or comm-reader (lambda (ch bol) #f)))
@@ -671,7 +884,7 @@
 	 (read-chseq (make-chseq-reader chrseq))
 	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (lambda ()
-      (let ((bol #f))
+      (let ((bol #t))
 	(lambda ()
 	  (let loop ((ch (read-char)))
 	    (cond

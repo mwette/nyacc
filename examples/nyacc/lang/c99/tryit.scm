@@ -1,6 +1,6 @@
 ;; examples/nyacc/lang/c99/tryit.scm
 
-;; Copyright (C) 2020 Matthew R. Wette
+;; Copyright (C) 2020-2021 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -16,11 +16,13 @@
 (use-modules (nyacc lang c99 munge-base))
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 util))
+(use-modules (nyacc lang c99 ffi-help))
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (sxml fold))
+(use-modules (sxml xpath))
 (use-modules (ice-9 pretty-print))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -91,21 +93,7 @@
   (define (fH seed node) (cons node seed))
   (foldts fD fU fH '() tree))
 
-(define (fix-tree tree)
-  (define (fD seed tree) '())
-  (define (fU seed kseed tree)
-    (case (car tree)
-      ((include)
-       (let ((t (reverse (cdr kseed))))
-	 (if (pair? seed) (cons t seed) t)))
-      ((comment) seed)
-      (else
-       (let ((t (reverse kseed)))
-	 (if (pair? seed) (cons t seed) t)))))
-  (define (fH seed node) (cons node seed))
-  (foldts fD fU fH '() tree))
-
-(when #t
+(when #f
   (let* ((code "int foo = sizeof(int(*)());")
 	 (tree (or (parse-string code) (error "parse failed")))
 	 (udict (c99-trans-unit->udict tree))
@@ -118,27 +106,88 @@
     (pp expr)
     (sf "evaluate:\n")
     (sf "x = ~S\n" (eval-c99-cx expr))))
+(when #f
+  (let* ((code "int intx;\n")
+	 (tree (or (parse-string code) (error "parse failed")))
+	 )
+    (sf "~A\n" code)
+    (ppin tree)
+    (pp99 tree)
+    ))
+(when #f
+  (let* ((code "int foo(int x) asm(\"foo\");")
+	 ;;(code "int foo(int x);")
+	 (tree (parse-string code)))
+    (pp code) (pp tree) (pp99 tree) (newline)
+    ))
+(when #f
+  (let* ((code "*(x->y->z)")
+	 (tree (parse-c99x code)))
+    (pp code) (pp tree) (pp99 tree) (newline)
+    ))
+(when #f
+  (let* ((code
+	  (string-append
+	   "void foo() { __asm__ goto (\"mov r0,r1\" : "
+	   ": [mcu] \"I\" (123), [ssr] \"X\" (456) "
+	   " : \"foo\", \"bar\" : error ); }"))
+	 (tree (parse-string code #:mode 'decl))
+ 	 )
+    (pp tree)
+    ))
+(when #f
+  (let* ((code "int foo() { spice->meas[1].pin = &mega->portD.pin[0]; }\n")
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)
+    ))
+(when #f
+  (let* ((code
+	  (string-append
+	   "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
+	   "ISR(__vector__12__) { int x; }\n"))
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)
+    (pp99 tree)
+    ))
 
-;; ffi-help patterns:
-;; Figure out how to have ffi-help print message when new pattern shows up.
-;;
-;; typedef struct foo *bar_t;
-;; struct foo; typedef struct foo *bar_t; stuct foo { int a; };
-;; typedef struct foo bar_t; struct foo { int a; }; typedef bar_t *baz_t;
-;; struct foo { int a; }; typedef struct foo bar_t;
-;; struct foo { int a; }; typedef struct foo *bar_t;
+(when #f
+  (let* ((code
+	  (string-append
+	   "#define bar(X) #X\n"
+	   "#define foo(X) bar(X)\n"
+	   "char *s = foo('abc');\n"))
+	 (tree (parse-string code #:mode 'decl)))
+    (pp tree)))
 
-;; struct foo; int baz(struct foo*); 
+(when #f
+  (let* ((code
+	  (string-append
+           "#if 1\n"
+           "#define g_abort() abort ()\n"
+           "#else\n"
+           "void g_abort (void);\n"
+           "#endif\n"
+           "int x;\n"))
+	   (tree (parse-string code #:mode 'decl)))
+	  (pp tree)
+    ))
 
-;; case 1
-;; typedef struct foo *bar_t; struct foo { int a; }; =>
-;; (define struct-foo-desc 'void)
-;; (define bar_t (fh:pointer (delay struct-foo-desc)))
-;; (define-ffi-pointer-type bar_t struct-foo-desc bar_t? make-bar_t)
-;;
-;; (set! struct-foo-desc (bs:struct (list `(a ,int))))
-;; (define-fh-compound-type struct-foo struct-foo-desc
-;;                          struct-foo? make-struct-foo)
-;; (fh-ref-deref! bar_t* make-bar_t* struct-foo make-struct-foo)
+
+(when #f				; bug #60474
+  (let* ((code
+	  (string-append
+	   "const int x = 1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "x"))
+	 (specl (sx-ref udecl 1))
+	 (declr (sx-ref udecl 2))
+	 )
+    (pp udecl)
+    (call-with-values (lambda () (cleanup-udecl specl declr))
+      (lambda (specl declr)
+	(pp `(udecl ,specl ,declr))))
+    ))
 
 ;; --- last line ---

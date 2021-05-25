@@ -103,6 +103,39 @@
 	      (init-declr
 	       (ident "z") (initzer (p-expr (ident "ex12_abc2")))))))))
 
+  (pass-if "__VA_ARGS__ w/ arg"
+    (equal?
+     (parse-string-list
+      "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
+      "ISR(__vector__12__, int c) { int x; }\n")
+     '(trans-unit
+       (fctn-defn
+	(decl-spec-list (type-spec (void)))
+	(ftn-declr
+	 (ident "__vector__12__")
+	 (param-list
+	  (param-decl
+	   (decl-spec-list (type-spec (fixed-type "int")))
+	   (param-declr (ident "c")))))
+	(compd-stmt
+	 (block-item-list
+	  (decl (decl-spec-list (type-spec (fixed-type "int")))
+		(init-declr-list (init-declr (ident "x"))))))))))
+
+  (pass-if "__VA_ARGS__ w/o arg"
+    (equal?
+     (parse-string-list
+      "#define ISR(vector, ...) void vector (__VA_ARGS__) \n"
+      "ISR(__vector__12__) { int x; }\n")
+     '(trans-unit
+       (fctn-defn
+	(decl-spec-list (type-spec (void)))
+	(ftn-declr (ident "__vector__12__") (param-list))
+	(compd-stmt
+	 (block-item-list
+	  (decl (decl-spec-list (type-spec (fixed-type "int")))
+		(init-declr-list (init-declr (ident "x"))))))))))
+      
   (pass-if "spacing in tokenization"
     (let ((sx1 (parse-string "#define foo(X) # X\nchar *s = foo(abc def);\n"))
 	  (sx2 (parse-string "#define foo(X) # X\nchar *s = foo(abc  def);\n")))

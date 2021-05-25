@@ -190,6 +190,7 @@
 
     (expr
      (or-expr)
+     (":" ($$ `(colon-expr)))
      (or-expr ":" or-expr ($$ `(colon-expr ,$1 ,$3)))
      (or-expr ":" or-expr ":" or-expr ($$ `(colon-expr ,$1 ,$3 ,$5)))
      (or-expr ":" "end" ($$ `(colon-expr ,$1 (end))))

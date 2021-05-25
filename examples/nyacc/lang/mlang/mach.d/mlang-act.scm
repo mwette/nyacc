@@ -189,6 +189,8 @@
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; expr => or-expr
    (lambda ($1 . $rest) $1)
+   ;; expr => ":"
+   (lambda ($1 . $rest) `(colon-expr))
    ;; expr => or-expr ":" or-expr
    (lambda ($3 $2 $1 . $rest) `(colon-expr ,$1 ,$3))
    ;; expr => or-expr ":" or-expr ":" or-expr

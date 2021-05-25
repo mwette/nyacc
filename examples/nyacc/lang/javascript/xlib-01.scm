@@ -67,8 +67,6 @@
   (or lt rt))
 (define (js:and lt rt)			; FIX
   (and	 lt rt))
-(define (js:or lt rt)			; FIX
-  (or lt rt))
 (define (js:eq lt rt)			; FIX
   (equal? lt rt))
 (define (js:neq lt rt)			; FIX

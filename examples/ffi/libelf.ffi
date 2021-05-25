@@ -15,9 +15,6 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-;; Epoll has a packed structure that should be translated properly to 
-;; bytestructure definition.
-
 (define-ffi-module (ffi libelf)
   #:pkg-config "libelf"
   #:include '("libelf.h" "gelf.h")

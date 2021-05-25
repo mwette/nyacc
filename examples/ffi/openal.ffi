@@ -1,0 +1,18 @@
+;; openal.ffi				-*- Scheme -*-
+
+;; Copyright (C) 2020 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-ffi-module (ffi openal)
+  #:pkg-config "openal"
+  ;; ("al.h" "alc.h" "alext.h" "efx-creative.h" "efx-presets.h" "efx.h")
+  #:include '("efx.h")
+  #:inc-filter (lambda (file-spec path-spec)
+                 (string-contains path-spec "AL/" 0))
+  )
+
+;; --- last line ---

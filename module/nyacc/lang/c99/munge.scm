@@ -67,7 +67,7 @@
   #:re-export (expand-typerefs
 	       reify-declr reify-decl
 	       udecl->mdecl split-udecl
-	       clean-field-list)
+	       clean-field-list clean-fields)
   #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (nyacc lang c99 pprint)
@@ -78,7 +78,7 @@
   #:use-module (sxml match)
   #:use-module (srfi srfi-11)		; let-values
   #:use-module (srfi srfi-2)
-  #:use-module (srfi srfi-1)
+  #:use-module ((srfi srfi-1) #:select (fold fold-right remove))
   #:use-module (system base pmatch)
   ;; debugging:
   #:use-module (system vm trace)
@@ -627,7 +627,13 @@
 			       #:optional (udict '()) (ddict '())
 			       #:key fail-proc)
   (define (fail fmt . args)
-    (and fail-proc (apply fail-proc fmt args)))
+    (and fail-proc (apply fail-proc fmt args) #f))
+
+  (define (enum-cons attr id val enums)
+    (cons (sx-list 'enum-defn attr id `(fixed ,(number->string val))) enums))
+
+  (define (idcons ident ival ddict)
+    (acons (sx-ref ident 1) (number->string ival) ddict))
 
   (let loop ((rez '()) (nxt 0) (ddict ddict) (edl (sx-tail enum-def-list 1)))
     (cond
@@ -636,19 +642,23 @@
      (else
       (sx-match (car edl)
 	((enum-defn (@ . ,attr) ,ident)
-	 (let ((sval (number->string nxt)))
-	   (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		 (1+ nxt) (acons (sx-ref ident 1) sval ddict) (cdr edl))))
+	 (loop (enum-cons attr ident nxt rez) (1+ nxt)
+	       (idcons ident nxt ddict) (cdr edl)))
+	((enum-defn (@ . ,attr) ,ident (attribute-list . ,attrs))
+	 (loop (enum-cons attr ident nxt rez) (1+ nxt)
+	       (idcons ident nxt ddict) (cdr edl)))
 	((enum-defn (@ . ,attr) ,ident ,expr)
-	 (let* ((ival (eval-c99-cx expr udict ddict))
-		(sval (and (number? ival) (number->string ival))))
-	   (cond
-	    (sval
-	     (loop (cons (sx-list 'enum-defn attr ident `(fixed ,sval)) rez)
-		   (1+ ival) (acons (sx-ref ident 1) sval ddict) (cdr edl)))
-	    (else
-	     (fail "canize-enum-def-list: can't expand ~S" (sx-ref ident 1))
-	     (loop rez nxt ddict (cdr edl)))))))))))
+	 (let ((ival (or (eval-c99-cx expr udict ddict)
+			 (fail "munge: can't expand ~S" (sx-ref ident 1))
+			 nxt)))
+	   (loop (enum-cons attr ident ival rez) (1+ (max nxt ival))
+		 (idcons ident ival ddict) (cdr edl))))
+	((enum-defn (@ . ,attr) ,ident (attribute-list . ,attrs) ,expr)
+	 (let ((ival (or (eval-c99-cx expr udict ddict)
+			 (fail "munge: can't expand ~S" (sx-ref ident 1))
+			 nxt)))
+	   (loop (enum-cons attr ident ival rez) (1+ (max nxt ival))
+		 (idcons ident ival ddict) (cdr edl)))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
 ;; Gets value of enum where @var{enum-def-list} looks like
@@ -814,9 +824,7 @@
       (,_
        (sferr "munge/mdecl->udecl missed:\n")
        (pperr mdecl-tail)
-       (error "failed")
-       (throw 'nyacc-error "munge/mdecl->udecl failed")
-       #f)))
+       (throw 'nyacc-error "munge/mdecl->udecl failed"))))
 
   (let ((name (car mdecl))
 	(rest (cdr mdecl)))
