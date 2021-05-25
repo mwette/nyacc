@@ -32,7 +32,6 @@
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
 ;; ============================================================================
-;; (include-from-path "nyacc/lang/mlang/body.scm")
 
 ;; @deffn add-file-attr tl => tl
 ;; Given a tagged-list this routine adds an attribute @code{(file basename)}
