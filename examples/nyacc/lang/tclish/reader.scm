@@ -26,6 +26,14 @@
     ;;($fixed . float)
     ))
 
+(define (make-ident-keyword-reader ident-reader match-table)
+  (let ((ident-like? (make-ident-like-p ident-reader)))
+    (let loop ((kt '()) (mt match-table))
+      (if (null? mt)
+	  (lambda (ch)
+	    (and=> (ident-reader ch)
+		   (lambda (s) (cons (or (assoc-ref kt s) '$ident) s))))
+	  (loop (if (ident-like? (caar mt)) (cons (car mt) mt) mt) (cdr mt))))))
 	 
 (define (make-lexer-generator match-table)
   (let* ((space-cs (string->char-set " \t\r\f"))
@@ -37,6 +45,7 @@
 	 (chrtab (filter-mt char? match-table))	; characters in grammar
 	 (read-chseq (make-chseq-reader chrseq))
 	 (nl-val (assoc-ref chrseq "\n"))
+	 (id-or-kw? (make-ident-keyword-reader read-c-ident match-table))
 	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair))))
 	 )
     (lambda ()
@@ -57,7 +66,7 @@
 		((char=? #\newline ch) (cons nl-val "\n"))
 		((char=? #\( ch) (set! plev (1+ plev)) (cons 'lparen "("))
 		((char=? #\) ch) (set! plev (1- plev)) (cons 'rparen ")"))
-		((read-c-ident ch))
+		((id-or-kw? ch))
 		((read-chseq ch))
 		(else (cons ch (string ch))))))))))))
 
