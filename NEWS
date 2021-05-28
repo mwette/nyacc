@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-05-00  V1.04.0
+2021-05-28  V1.04.0
 	* in nyacc/lex.scm, changed signature of lex-generator extra-reader
 	  to (ch loop) from (ch), so that user-supplied routine can loop 
 	* nyacc/lang/c99/ffi-help.scm: clean up and added support for unions
