@@ -76,6 +76,7 @@
 Generate a Guile Scheme file from the source FFI file FILE.
 
   -h, --help           print this help message
+  --version            print version number
 
   -L  --load-path=DIR  add DIR to the front of the module load path
   -I  --inc-dir=DIR    add DIR to list of dir's to search for C headers
