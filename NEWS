@@ -5,6 +5,11 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2021-XX-XX  V1.04.1 
+	* in c99/mach.scm: added _Float128 type, as absense was causing
+	  ffi-helper runs to crash on #include <math.h>
+	* 
+
 2021-05-28  V1.04.0 
 	* in nyacc/lex.scm, changed signature of lex-generator extra-reader
 	  to (ch loop) from (ch), so that user-supplied routine can loop 
