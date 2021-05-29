@@ -321,7 +321,8 @@
     (define type
       (make-fht (quote type)
 		(lambda (obj)
-		  (bytestructure-bytevector (struct-ref obj 0)))
+		  (ffi:bytevector->pointer
+		   (bytestructure-bytevector (struct-ref obj 0))))
 		(lambda (val)
 		  (make-struct/no-tail type (bytestructure desc val)))
 		#f #f
