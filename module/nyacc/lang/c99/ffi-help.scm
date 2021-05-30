@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2016-2020 Matthew R. Wette
+;; Copyright (C) 2016-2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -92,7 +92,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 04 0))
+  #:version (1 04 1))
 
 (define fh-cpp-defs
   (cond
@@ -834,7 +834,7 @@
 			    (udecl (udecl-rem-type-qual udecl))
 			    (mdecl (udecl->mdecl udecl)))
 		       (mtail->ffi-desc (cdr mdecl) #t)))
-		   (clean-fields fields))))
+		   (clean-and-unitize-fields fields))))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
     

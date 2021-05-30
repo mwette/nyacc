@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm - C parser grammer
 
-;; Copyright (C) 2015-2020 Matthew R. Wette
+;; Copyright (C) 2015-2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -299,7 +299,8 @@
     (float-type-specifier
      ("float" ($prec 'imp) ($$ '(float-type "float")))
      ("double" ($prec 'imp) ($$ '(float-type "double")))
-     ("long" "double" ($$ '(float-type "long double"))))
+     ("long" "double" ($$ '(float-type "long double")))
+     ("_Float128" ($$ '(float-type "_Float128"))))
 
     (complex-type-specifier
      ("_Complex" ($$ '(complex-type "_Complex")))

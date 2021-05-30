@@ -37,7 +37,7 @@
 
 (define-module (nyacc lex)
   #:export (make-lexer-generator
-	    make-ident-reader
+	    make-ident-reader make-ident-keyword-reader
 	    make-comm-reader
 	    make-string-reader
 	    make-chseq-reader
@@ -172,6 +172,21 @@
 		   (eval-reader reader s)
 		   #t)))
 
+
+;; @deffn {Procedure} make-ident-keyword-reader ident-reader match-table
+;; Generate a procedure from an ident reader and a parser match-table
+;; that takes a character and returns @code{#f} or a pair for the parser.
+;; The pairs are of the form @code{($ident . "abc")} or @code{(if . "if")}.
+;; @end deffn
+(define (make-ident-keyword-reader ident-reader match-table)
+  (let ((ident-like? (make-ident-like-p ident-reader)))
+    (let loop ((kt '()) (mt match-table))
+      (if (null? mt)
+	  (lambda (ch)
+	    (and=> (ident-reader ch)
+		   (lambda (s) (cons (or (assoc-ref kt s) '$ident) s))))
+	  (loop (if (ident-like? (caar mt)) (cons (car mt) mt) mt) (cdr mt))))))
+	 
 ;; @deffn {Procedure} read-c-ident ch => #f|string
 ;; If ident pointer at following char, else (if #f) ch still last-read.
 ;; @end deffn
