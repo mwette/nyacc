@@ -4,6 +4,7 @@ exec guile $0 $*
 !#
 
 (use-modules (nyacc lang tcl parser))
+(use-modules (nyacc lang tcl pprint))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 pretty-print))
 
@@ -36,6 +37,7 @@ exec guile $0 $*
 		   (lambda (port) (read-tcl-file port (current-module))))))
       (pretty-print tree)
       (display "--------------------------------------\n")
+      (pretty-print-tcl tree)
       (if #f #f))))
 
 (apply compile-nx-file (cdr (program-arguments)))

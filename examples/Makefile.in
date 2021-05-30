@@ -15,6 +15,9 @@ GUILD = @abs_top_builddir@/etc/guild
 GUILE_LOAD_PATH=@GUILE_LOAD_PATH@
 GUILE_LOAD_COMPILED_PATH=@GUILE_LOAD_COMPILED_PATH@
 
+GUILE_TARGET ?= @GUILE_TARGET@
+GUILE_DEBUG ?= @GUILE_DEBUG@
+
 SITE_SCM_DIR = @GUILE_GLOBAL_SITE@
 SITE_GO_DIR = @GUILE_SITE_CCACHE@
 
@@ -47,7 +50,7 @@ FFI_GO_FILES = $(FH_FFIS:.ffi=.go)
 
 %.go: %.scm
 	@echo "This may take significant tme:"
-	$(GUILD) compile -o $@ $<
+	$(GUILD) compile $(GUILE_TARGET) $(GUILE_DEBUG) -o $@ $<
 
 all: $(FFI_GO_FILES)
 

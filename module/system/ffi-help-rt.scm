@@ -59,11 +59,18 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (1 03 7))
+  #:version (1 04 1))
 
-(define *ffi-help-version* "1.03.7")
+(define *ffi-help-version* "1.04.1")
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+
+(cond-expand
+ (guile-2.2)
+ (guile-2
+  (define-public intptr_t long)
+  (define-public uintptr_t unsigned-long))
+ (guile))
 
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:
@@ -314,7 +321,8 @@
     (define type
       (make-fht (quote type)
 		(lambda (obj)
-		  (bytestructure-bytevector (struct-ref obj 0)))
+		  (ffi:bytevector->pointer
+		   (bytestructure-bytevector (struct-ref obj 0))))
 		(lambda (val)
 		  (make-struct/no-tail type (bytestructure desc val)))
 		#f #f
@@ -350,10 +358,54 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make (fht-wrap type))))
 
-;; == extension to bytestructures ==============================================
+;; == bytestructures extensions/workarounds ====================================
 
 ;; adopted from code at  https://github.com/TaylanUB covered by GPL3+ and
 ;; Copyright (C) 2015 Taylan Ulrich BayirliKammer <taylanbayirli@gmail.com>
+
+;;(define-syntax-rule (bytestructure-ref <bytestructure> <index> ...)
+;;  (let-values (((bytevector offset descriptor)
+;;                (bytestructure-unwrap <bytestructure> <index> ...)))
+;;    (bytestructure-primitive-ref bytevector offset descriptor)))
+
+;;(define (reify-bytestructure-ref desc bv 
+
+#|
+(define-record-type <vector-metadata>
+  (make-vector-metadata length element-descriptor)
+  vector-metadata?
+  (length             vector-metadata-length)
+  (element-descriptor vector-metadata-element-descriptor))
+
+(define (fh:vector length descriptor)
+  (define element-size (bytestructure-descriptor-size descriptor))
+  (define size (* length element-size))
+  (define alignment (bytestructure-descriptor-alignment descriptor))
+  (define (unwrapper syntax? bytevector offset index)
+    (values bytevector
+            (if syntax?
+                (quasisyntax
+                 (+ (unsyntax offset)
+                    (* (unsyntax index) (unsyntax element-size))))
+                (+ offset (* index element-size)))
+            descriptor))
+  (define (setter syntax? bytevector offset value)
+    (when syntax?
+      (error "Writing into vector not supported with macro API."))
+    (cond
+     ((bytevector? value)
+      (bytevector-copy! bytevector offset value 0 size))
+     ((vector? value)
+      (do ((i 0 (+ i 1))
+           (offset offset (+ offset element-size)))
+          ((= i (vector-length value)))
+        (bytestructure-set!*
+         bytevector offset descriptor (vector-ref value i))))
+     (else
+      (error "Invalid value for writing into vector." value))))
+  (define meta (make-vector-metadata length descriptor))
+  (make-bytestructure-descriptor size alignment unwrapper #f setter meta))
+|#
 
 (define make-pointer-metadata
   (@@ (bytestructures guile pointer) make-pointer-metadata))

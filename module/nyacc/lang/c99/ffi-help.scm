@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2016-2020 Matthew R. Wette
+;; Copyright (C) 2016-2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -92,7 +92,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 03 7))
+  #:version (1 04 1))
 
 (define fh-cpp-defs
   (cond
@@ -127,6 +127,12 @@
 (define *defined* (make-parameter '()))	; type defined
 
 (define *errmsgs* (make-parameter '()))	; list of warnings
+
+(define dev/null
+  (let ((port #f))
+    (lambda ()
+      (unless port (set! port (open-output-file "/dev/null")))
+      port)))
 
 (define (sfscm fmt . args)
   (apply simple-format (*mport*) fmt args))
@@ -275,9 +281,9 @@
 (define (sw/*-desc name) (string-append name "*-desc"))
 (define (sw/& name) (string-append name "&"))
 (define (sw/struct name) (string-append "struct-" name))
-(define (sw/union name) (string-append "struct-" name))
+(define (sw/union name) (string-append "union-" name))
 (define (sw/struct* name) (string-append "struct-" name "*"))
-(define (sw/union* name) (string-append "struct-" name "*"))
+(define (sw/union* name) (string-append "union-" name "*"))
 
 ;; I was using (pointer . name) in *defined* but this has issues
 ;; because expand-typerefs does not recognize it.  Is a change needed?
@@ -301,7 +307,8 @@
 		     (if pkg-config (pkg-config-libs pkg-config) '())
 		     libraries))
  	 (libraries (delete "libm" libraries))) ;; workaround for ubuntu
-    (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n" (m-path->f-path path))
+    (sfscm ";; generated with `guild compile-ffi ~A.ffi'\n"
+	   (m-path->f-path path))
     (nlscm)
     (sfscm "(define-module ~S\n" path)
     (for-each
@@ -387,7 +394,8 @@
 
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
-(define (mtail->bs-desc mdecl-tail)
+;;(define (mtail->bs-desc mdecl-tail)
+(define-public (mtail->bs-desc mdecl-tail)
   (let ((defined (*defined*))) ;; (udict (*udict*)))
     (pmatch mdecl-tail
       ;; expand typeref, use renamer,
@@ -469,7 +477,7 @@
       (((array-of ,n) . ,rest)
        `(bs:vector ,(const-expr->number n) ,(mtail->bs-desc rest)))
       (((array-of) . ,rest)
-       `(fh:pointer ,(mtail->bs-desc rest)))
+       `(bs:vector 0 ,(mtail->bs-desc rest)))
 
       (((bit-field ,size) . ,rest)
        `(bit-field ,(const-expr->number size) ,(mtail->bs-desc rest)))
@@ -572,9 +580,6 @@
 
 ;; --- structs and unions
 
-;; scheme-bytestructures will be adding
-;;   bounding-struct-descriptor union-desc => struct-desc
-
 ;; This routine will munge the fields and then perform typeref expansion.
 ;; `defined' here means has -desc (what?)
 (define (expand-field-list-typerefs field-list)
@@ -582,11 +587,12 @@
     (cons 'field-list
 	  (fold-right
 	   (lambda (pair seed)
-	     (cons (expand-typerefs (cdr pair) udict defined) seed))
-	   '() (fold-right unitize-comp-decl '() (cdr field-list))))))
+	     (cons (expand-typerefs pair udict defined) seed))
+	   '() (clean-and-unitize-fields (cdr field-list))))))
 
 ;; field-list is (field-list . ,fields)
-(define (cnvt-field-list field-list)
+;;(define (cnvt-field-list field-list)
+(define-public (cnvt-field-list field-list)
 
   (define (acons-defn name type seed)
     (cons (eval-string (simple-format #f "(quote `(~A ,~S))" name type)) seed))
@@ -596,8 +602,17 @@
       (cons (eval-string
 	     (simple-format #f "(quote `(~A ,~S ~A))" name type size)) seed)))
 
-  (let* ((field-list (clean-field-list field-list)) ; remove lone comments
-	 (uflds (fold-right unitize-comp-decl '() (cdr field-list))))
+  (define anon-namer
+    (let ((ix 0))
+      (lambda ()
+	(set! ix (1+ ix))
+	(string-append "_" (number->string ix)))))
+
+  (define (unitize decl seed)
+    (unitize-comp-decl decl seed #:namer anon-namer))
+
+  (let* ((fields (clean-fields (cdr field-list)))
+	 (uflds (reverse (fold unitize '() fields))))
     (let loop ((decls uflds))
       (if (null? decls) '()
 	  (let* ((name (caar decls))
@@ -756,12 +771,40 @@
     (ffi:int32 . ,int32) (ffi:uint32 . ,uint32) (ffi:int64 . ,int64)
     (ffi:uint64 . ,uint64) (ffi-void* . *)))
 
-(define (mtail->ffi-desc mdecl-tail)
+(define (make-compound-stub size align)
+  (case align
+    ((1) `(make-list ,(/ size 1) ffi:uint8))
+    ((2) `(make-list ,(/ size 2) ffi:uint16))
+    ((4) `(make-list ,(/ size 4) ffi:uint32))
+    ((8) `(make-list ,(/ size 8) ffi:uint64))
+    (else (fherr "can't deal with this alignment: ~S" align))))
+
+;; assumes fields are unitized
+(define (bounding-mtail-for-union-fields fields)
+  (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
+    (if (null? flds) btail
+	(let ((mtail (cdr (udecl->mdecl (car flds)))))
+	  (call-with-values (lambda () (sizeof-mtail mtail #f)) ;; #f is arch
+	    (lambda (sz al)
+	      (if (> sz mxsz)
+		  (loop mtail sz (max al mxal) (cdr flds))
+		  (loop btail mxsz (max al mxal) (cdr flds)))))))))
+
+;;(else (fherr "can't deal with this alignment: ~S" align))))
+
+(define (clean-and-unitize-fields fields)
+  (map cdr (fold-right unitize-decl '() (clean-fields fields))))
+
+;;(define* (mtail->ffi-desc mdecl-tail #:optional in-compound)
+(export mtail->ffi-desc)
+(define* (mtail->ffi-desc mdecl-tail #:optional in-compound)
+
+  (define (eval-dim dim) ;; may want to catch errors
+    (eval-c99-cx dim (*udict*) (*ddict*)))
+
   ;;(if (and (pair? mdecl-tail) (string? (car mdecl-tail))) (error "xxx"))
   (pmatch mdecl-tail
     (((pointer-to) . ,rest) 'ffi-void*)
-    (((array-of) . ,rest) 'ffi-void*)
-    (((array-of ,size) . ,rest) 'ffi-void*)
     (((fixed-type ,name))
      (or (assoc-ref ffi-typemap name)
 	 (fherr/once "no FFI type for ~A" name)))
@@ -775,6 +818,14 @@
     (((enum-def . ,rest2) . ,rest1) 'ffi:int)
     (((enum-ref . ,rest2) . ,rest1) 'ffi:int)
 
+    (((array-of ,dim) . ,rest)
+     (if in-compound
+	 (let ((dim (eval-dim dim)))
+	   `(make-list ,dim ,(mtail->ffi-desc rest)))
+	 'ffi-void*))
+    (((array-of) . ,rest)
+     (mtail->ffi-desc `((array-of "0") . ,rest) in-compound))
+    
     (((struct-def (field-list . ,fields)))
      `(list ,@(map (lambda (fld)
 		     (let* ((udict (unitize-comp-decl fld))
@@ -782,28 +833,16 @@
 			    (udecl (cdar udict))
 			    (udecl (udecl-rem-type-qual udecl))
 			    (mdecl (udecl->mdecl udecl)))
-		       (mtail->ffi-desc (cdr mdecl))))
-		   (clean-fields fields))))
+		       (mtail->ffi-desc (cdr mdecl) #t)))
+		   (clean-and-unitize-fields fields))))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
     
     (((union-def (field-list . ,fields)))
-     ;; TODO check libffi on how unions are passed and returned.
-     ;; I assume here never passed as a floating point.
-     ;; This should use bounding-struct-descriptor from bytestructures
-     (let loop ((type #f) (size 0) (flds fields))
-       (if (null? flds)
-	   (case type ((double) 'ffi:uint64) ((float) 'ffi:uint32) (else type))
-	   (let* ((udict (unitize-comp-decl (car flds)))
-		  (udecl (cdar udict))
-		  (udecl (udecl-rem-type-qual udecl))
-		  (mdecl (udecl->mdecl udecl))
-		  (ftype (mtail->ffi-desc (cdr mdecl)))
-		  (ftval (assq-ref ffi-symmap ftype))
-		  (fsize (sizeof ftval)))
-	     (if (> fsize size)
-		 (loop ftype fsize (cdr flds))
-		 (loop type size (cdr flds)))))))
+     (mtail->ffi-desc
+      (bounding-mtail-for-union-fields
+       (clean-and-unitize-fields fields))
+      #t))
     (((union-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((union-def ,field-list))))
     
@@ -1118,9 +1157,9 @@
     (lambda (node) (not (pred node)))))
 
 ;; assume unit-declarator
-;; TODO (ptr-declr (pointer (type-qual-list (type-qual "const"))))
 ;; See also stripdown-specl and stripdown-declr in @file{munge.scm}.
 ;; and make this more efficient
+(export cleanup-udecl)
 (define cleanup-udecl
   (let* ((ftn-sel (node-closure (node-typeof? 'ftn-declr)))
 	 (fctn? (lambda (n) (pair? (ftn-sel n))))
@@ -1130,8 +1169,8 @@
 			      (or (equal? node '(stor-spec (auto)))
 				  (equal? node '(stor-spec (register)))
 				  (equal? node '(stor-spec (static)))
-				  (equal? node '(type-qual "volatile"))
-				  (equal? node '(type-qual "restrict"))))
+				  (equal? node '(type-qual (volatile)))
+				  (equal? node '(type-qual (restrict)))))
 			    specl))
 	     (specl (if (fctn? declr)
 			(remove (lambda (node)
@@ -1810,12 +1849,10 @@
 ;; replacemnts down to constants (strings, integers, etc)
 (define (gen-lookup-proc mod-def-names udict ddict ext-mods)
 
-  (define err-port (open-output-file "/dev/null"))
-
   (define typerefs (udict->typedef-names udict))
 
   (define (eval-code-string code)
-    (let* ((tree (with-error-to-port err-port
+    (let* ((tree (with-error-to-port (dev/null)
 		   (lambda () (parse-c99x code typerefs))))
 	   (value (and tree (eval-c99-cx tree udict ddict))))
       value))
@@ -1854,9 +1891,7 @@
 	 ((number? obj) obj)
 	 ((symbol? obj) (,sv-name obj))
 	 ((fh-object? obj) (struct-ref obj 0)) ;; ???
-	 (else (error "type mismatch")))))
-    
-    (close err-port)))
+	 (else (error "type mismatch")))))))
 
 
 ;; === Parsing the C header(s)

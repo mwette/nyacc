@@ -23,6 +23,7 @@
 (use-modules (nyacc util))
 (use-modules (sxml fold))
 (use-modules (sxml xpath))
+(use-modules ((srfi srfi-1) #:select (fold-right)))
 (use-modules (ice-9 pretty-print))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -134,12 +135,23 @@
 	 (tree (parse-string code #:mode 'decl))
  	 )
     (pp tree)
-    ))
+    #t))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   "#define sei() __asm__ __volatile__ (\"sei\" ::: \"memory\")\n"
+	   "int foo() { sei(); }\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+ 	 )
+    #t))
 (when #f
   (let* ((code "int foo() { spice->meas[1].pin = &mega->portD.pin[0]; }\n")
 	 (tree (parse-string code #:mode 'code)))
     (pp tree)
-    ))
+    #t))
+
 (when #f
   (let* ((code
 	  (string-append
@@ -148,6 +160,57 @@
 	 (tree (parse-string code #:mode 'code)))
     (pp tree)
     (pp99 tree)
+    ))
+
+(when #f
+  (let* ((code "typedef enum { A, B=3, C } foo;")
+	 (tree (or (parse-string code) (error "parse failed")))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "foo"))
+	 (edl (sx-ref* udecl 1 2 1 1))
+	 (xxx (canize-enum-def-list edl))
+	 )
+    (pp udecl)
+    (pp edl)
+    (pp xxx)
+    ))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   #|
+	   "int foo() {\n"
+	   "  typedef int foo_t;\n"
+	   "  {\n"
+	   "    typedef int foo_t[3];\n"
+	   "    1;\n"
+	   "  }\n"
+	   "}\n"
+	   |#
+	   "typedef int foo_t;\n"
+	   "int foo() {\n"
+	   "  typedef int foo_t[3];\n"
+	   "  1;\n"
+	   "}\n"
+	   ))
+	 (tree (parse-string code #:mode 'code)))
+    (pp tree)))
+
+(when #f                               ; bug #60474
+  (let* ((code
+	  (string-append
+	   "const int x = 1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "x"))
+	 (specl (sx-ref udecl 1))
+	 (declr (sx-ref udecl 2))
+	 )
+    (pp udecl)
+    (call-with-values (lambda () (cleanup-udecl specl declr))
+      (lambda (specl declr)
+	(pp `(udecl ,specl ,declr))))
     ))
 
 (when #f
@@ -170,8 +233,60 @@
            "int x;\n"))
 	   (tree (parse-string code #:mode 'decl)))
 	  (pp tree)
+	  ))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   "typedef struct { int x; double y; } foo_t;\n"
+	   ;;"void bar(foo_t);\n"
+	   "int x = sizeof(foo_t);\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 )
+    (pp tree)
     ))
 
+(when #f
+  (let* ((code
+	  (string-append
+	   "const int x = 1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "x"))
+	 (specl (sx-ref udecl 1))
+	 (declr (sx-ref udecl 2))
+	 )
+    (pp udecl)
+    (pp (cleanup-udecl specl declr))
+    ))
+
+(when #t
+  (let* ((code
+	  (string-append
+	   "typedef struct {\n"
+	   " int x;\n"
+	   " union { int a; int b; };\n"
+	   " int y;\n"
+	   " union { int c[3]; double d; };\n"
+	   ;;" int z;\n"
+	   "} foo_t;\n"
+	   "foo_t s1;\n"
+	   ))
+	 (tree (parse-string code #:mode 'code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "s1"))
+	 (udecl (expand-typerefs udecl udict))
+	 (mdecl (udecl->mdecl udecl))
+	 (mtail (cdr mdecl))
+	 )
+    ;;(pp tree)
+    ;;(pp udecl)
+    ;;(pp mdecl)
+    ;;(pp (mtail->bs-desc mtail))
+    (pp (mtail->ffi-desc mtail))
+    ))
 
 (when #f				; bug #60474
   (let* ((code

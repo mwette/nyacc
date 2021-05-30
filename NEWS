@@ -5,7 +5,28 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-05-20  V1.03.7
+2021-05-30  V1.04.1 
+	* c99/mach.scm: added _Float128 type, as absense was causing
+	  ffi-helper runs to crash on #include <math.h>
+	* system/ffi-help-rt.scm: change unwrap for compound type
+	  to return pointer (was bytevector), so it is compatible w/
+	  expected arg to procedures returned from pointer->procedure
+	* c99/ffi-help.scm: change mtail->ffi-desc handle for structs
+	  to unitize struct fields (via clean-and-unitize-fields)
+	* above two updates closes bug #60697
+ 	* nyacc/lex.scm: add make-ident-keyword-reader
+
+2021-05-28  V1.04.0 
+	* in nyacc/lex.scm, changed signature of lex-generator extra-reader
+	  to (ch loop) from (ch), so that user-supplied routine can loop 
+	* nyacc/lang/c99/ffi-help.scm: clean up and added support for unions
+	  and anonymous arrays in structs.  This needs testing.  Considering 
+	  bug #60410 closed.  Anonymous structs unions are being augmented 
+	  with stubbed identifiers _1 ... _N (for now).
+	* Changed C99 emitted type-qual elements to use subelements instead
+	  of strings: (type-qual "restrict") -> (type-qual (restrict))
+
+2021-02-10  V1.03.7
 	* in ffi-help.scm: preserve (type-qual "const"), which is later
 	  used to generate constant.  Fix for bug #60474
 

@@ -29,7 +29,7 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (srfi srfi-37)
-  #:version (1 03 7))
+  #:version (1 04 1))
 (cond-expand
  (guile-3
   (define (compile-scm file)
@@ -40,7 +40,7 @@
     (compile-file file #:from 'scheme #:to 'bytecode
 		  #:opts '()))))
 
-(define *ffi-help-version* "1.03.7")
+(define *ffi-help-version* "1.04.1")
 
 (define %summary
   "Compile a ffi-file to .scm and maybe .go.")
@@ -76,6 +76,7 @@
 Generate a Guile Scheme file from the source FFI file FILE.
 
   -h, --help           print this help message
+  --version            print version number
 
   -L  --load-path=DIR  add DIR to the front of the module load path
   -I  --inc-dir=DIR    add DIR to list of dir's to search for C headers

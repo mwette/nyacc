@@ -17,11 +17,12 @@
   (guile-2 #t)
   (else
    (use-modules (nyacc compat18))))
+;;(use-modules (ice-9 pretty-print)) (define pp pretty-print)
 
 (with-test-prefix "nyacc/util"
 
   ;; The input-stack used to pull in input from include files.
-  (pass-if "input-stack/1"
+  (pass-if "input-stack /1"
     (equal?
      "hello world!"
      (with-output-to-string
@@ -39,26 +40,29 @@
 	     ))))))
 
   ;; Should return #t if something there and #f if done.
-  (pass-if "input-stack/2"
+  (pass-if "input-stack /2"
     (let ((sp (open-input-string "abc")))
       (reset-input-stack) ;; maybe with-dynamic-extent
       (push-input sp)
       (and (pop-input) (not (pop-input)))))
 
-  #!
-  (pass-if "test1"
-    (let* ((tl0 (make-tl 'abc 1))
-	   (tl1 (tl-append tl0 2))
-	   (tl2 (tl-insert tl1 'a))
-	   (tl3 (tl+attr tl2 'x "true"))
-	   (tl4 (tl-append tl3 20 25))
-	   (tl5 (tl-insert tl4 'z))
-	   (tlx tl5))
-      (equal? (tl->list tlx) '(abc (@ (x "true")) z a 1 2 20 25))))
-  !#
+  (pass-if "tl ops /1"
+    (let* ((tl (make-tl 'abc 1)) (tl (tl-append tl 2))
+	   (tl (tl-insert tl 'b)) (tl (tl-insert tl 'a)))
+      (equal? (tl->list tl) '(abc a b 1 2))))
+
+  (pass-if "tl ops /2"
+    (let* ((tl (make-tl 'abc 1)) 
+	   (tl (tl+attr tl 'x "X")) 
+           (tl (tl-append tl 2))
+	   (tl (tl+attr tl 'y "Y")) 
+           (tl (tl-insert tl 'b))
+	   (tl (tl+attr tl 'z "Z")) 
+           (tl (tl-insert tl 'a)))
+      (equal? (tl->list tl) '(abc (@ (x "X") (y "Y") (z "Z")) a b 1 2))))
 
   #!
-  (pass-if "test2"
+  (pass-if "test3"
     (let* ((tl (make-tl 'abc 1)))
       (set! tl (tl-append tl 2))
       (set! tl (tl-insert tl 'a))

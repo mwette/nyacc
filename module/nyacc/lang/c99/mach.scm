@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm - C parser grammer
 
-;; Copyright (C) 2015-2020 Matthew R. Wette
+;; Copyright (C) 2015-2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -299,7 +299,8 @@
     (float-type-specifier
      ("float" ($prec 'imp) ($$ '(float-type "float")))
      ("double" ($prec 'imp) ($$ '(float-type "double")))
-     ("long" "double" ($$ '(float-type "long double"))))
+     ("long" "double" ($$ '(float-type "long double")))
+     ("_Float128" ($$ '(float-type "_Float128"))))
 
     (complex-type-specifier
      ("_Complex" ($$ '(complex-type "_Complex")))
@@ -454,9 +455,9 @@
 		 ($$ `(enum-defn ,$1 ,$2 ,$4))))
 
     (type-qualifier
-     ("const" ($$ `(type-qual ,$1)))
-     ("volatile" ($$ `(type-qual ,$1)))
-     ("restrict" ($$ `(type-qual ,$1))))
+     ("const" ($$ `(type-qual (const))))
+     ("volatile" ($$ `(type-qual (volatile))))
+     ("restrict" ($$ `(type-qual (restrict)))))
 
     (function-specifier
      ("inline" ($$ `(fctn-spec ,$1)))
@@ -550,7 +551,7 @@
 
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
-     ;;(ident-like ($$ $1))
+     ;;(ident-like ($$ $1)) ;; generates many SR RR conflicts
      ;;("(" declarator ")" ($$ `(scope ,$2)))
      ("(" declarator ")" ($$ $2))
      ("(" attribute-specifier declarator ")" ($$ $3))
@@ -568,7 +569,7 @@
       ($$ `(ary-declr ,$1 ,$4 ,$5))) ;; FIXME $4 needs "static" added
      (direct-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,4 ,$5))) ;; FIXME $4 needs "static" added
+      ($$ `(ary-declr ,$1 (static) ,$5))) ;; FIXME $4 needs "static" added
      (direct-declarator
       "[" type-qualifier-list "*" "]"	; variable length array
       ($$ `(ary-declr ,$1 ,$3 (var-len))))
@@ -614,11 +615,11 @@
      (identifier-list-1 "," identifier ($$ (tl-append $1 $3))))
 
     (type-name				; S 6.7.6
-     ;; e.g., (foo_t *)
      (specifier-qualifier-list/no-attr abstract-declarator
 				       ($$ `(type-name ,$1 ,$2)))
-     ;; e.g., (int)
-     (declaration-specifiers ($$ `(type-name ,$1))))
+     (specifier-qualifier-list/no-attr ($$ `(type-name ,$1)))
+     ;;(declaration-specifiers ($$ `(type-name ,$1))) ; why did I have this?
+     )
 
     (abstract-declarator		; S 6.7.6
      (pointer direct-abstract-declarator ($$ `(ptr-declr ,$1 ,$2)))
@@ -643,14 +644,14 @@
       "[" "]" ($$ `(ary-declr ,$1)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static")))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec (static))))
 		      ,$5)))
      (direct-abstract-declarator
       "[" "static" type-qualifier-list "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec "static"))))))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $4 '(stor-spec (static)))))))
      (direct-abstract-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec "static")))
+      ($$ `(ary-declr ,$1 ,(tl->list (tl-insert $3 '(stor-spec (static))))
 		      ,$5)))
      (direct-abstract-declarator "[" "*" "]" ($$ `(star-ary-declr ,$1)))
      ;;
@@ -662,12 +663,12 @@
      ("[" assignment-expression "]" ($$ `(abs-ary-declr ,$2)))
      ("[" "]" ($$ `(abs-ary-declr)))
      ("[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static")))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec (static))))
 			  ,$4)))
      ("[" "static" type-qualifier-list "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec "static"))))))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $3 '(stor-spec (static)))))))
      ("[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec "static")))
+      ($$ `(abs-ary-declr ,(tl->list (tl-insert $2 '(stor-spec (static))))
 			  ,$4)))
      ("[" "*" "]" ($$ '(abs-star-ary-declr)))
      )
