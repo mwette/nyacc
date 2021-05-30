@@ -26,7 +26,7 @@
     ;;($fixed . float)
     ))
 
-(define (make-ident-keyword-reader ident-reader match-table)
+#;(define (make-ident-keyword-reader ident-reader match-table)
   (let ((ident-like? (make-ident-like-p ident-reader)))
     (let loop ((kt '()) (mt match-table))
       (if (null? mt)
@@ -68,25 +68,9 @@
 		((char=? #\) ch) (set! plev (1- plev)) (cons 'rparen ")"))
 		((id-or-kw? ch))
 		((read-chseq ch))
-		(else (cons ch (string ch))))))))))))
+		(else (cons ch (string ch)))))
+	      )))))))
 
-
-#|
-(define (tsh-parse-code tok state stack)
-  #f)
-
-(define (tsh-parse-expr tok state)
-  #f)
-
-(define (tsh-read state)
-  (let loop ((ch (read-char)))
-    (cond
-     ((eof-object? ch) (tsh-parse (cons $end ch)))
-     ((char=? #\newline ch) #f)
-     ((char=? #\( ch) (tsh-read-expr state))
-     ((read-c-ident ch) => (lambda (tk) (tsh-parse tk state)))
-     (else (error "xxx")))))
-|#
 
 (let* ((file "demo01.tsh")
       (make-lexer (make-lexer-generator mt))
