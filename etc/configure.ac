@@ -7,13 +7,17 @@ dnl are permitted in any medium without royalty provided the copyright
 dnl notice and this notice are preserved.  This file is offered as-is,
 dnl without any warranty.
 
-AC_INIT([nyacc], [1.03.7], [], [], [https://savannah.nongnu.org/project/nyacc])
+AC_INIT([nyacc], [1.04.1], [], [], [https://savannah.nongnu.org/project/nyacc])
 AC_CONFIG_SRCDIR(module/nyacc/version.scm)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
 
-AC_ARG_WITH(guile, [    --with-guile            path to binary],
+AC_ARG_WITH(guile,  [  --with-guile            path to binary],
             ,with_guile=unspecified)
+AC_ARG_WITH(target, [  --with-target           guild target flag],
+            ,target=unspecified)
+AC_ARG_ENABLE(debug,[  --enable-debug          build for debugging in guile],
+            ,debug=unspecified)
 
 if test "_$with_guile" != "_unspecified"; then
   GUILE=$with_guile
@@ -38,6 +42,20 @@ else
   GUILE_SITE_CCACHE=$prefix/lib/guile/$GUILE_EFFECTIVE_VERSION/site-ccache
   GUILE_DATA=$prefix/share
 fi
+
+if test "_$target" != "_unspecified"; then
+  GUILE_TARGET=$target
+else
+  GUILE_TARGET=
+fi
+if test "_$debug" != "_unspecified"; then
+  GUILE_DEBUG=-O0
+else
+  GUILE_DEBUG=
+fi
+AC_SUBST([GUILE_TARGET])
+AC_SUBST([GUILE_DEBUG])
+
 AC_SUBST([GUILE_GLOBAL_SITE])
 AC_SUBST([GUILE_SITE_CCACHE])
 AC_SUBST([GUILE_DATA])

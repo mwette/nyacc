@@ -37,7 +37,7 @@
 
 (define-module (nyacc lex)
   #:export (make-lexer-generator
-	    make-ident-reader
+	    make-ident-reader make-ident-keyword-reader
 	    make-comm-reader
 	    make-string-reader
 	    make-chseq-reader
@@ -172,6 +172,21 @@
 		   (eval-reader reader s)
 		   #t)))
 
+
+;; @deffn {Procedure} make-ident-keyword-reader ident-reader match-table
+;; Generate a procedure from an ident reader and a parser match-table
+;; that takes a character and returns @code{#f} or a pair for the parser.
+;; The pairs are of the form @code{($ident . "abc")} or @code{(if . "if")}.
+;; @end deffn
+(define (make-ident-keyword-reader ident-reader match-table)
+  (let ((ident-like? (make-ident-like-p ident-reader)))
+    (let loop ((kt '()) (mt match-table))
+      (if (null? mt)
+	  (lambda (ch)
+	    (and=> (ident-reader ch)
+		   (lambda (s) (cons (or (assoc-ref kt s) '$ident) s))))
+	  (loop (if (ident-like? (caar mt)) (cons (car mt) mt) mt) (cdr mt))))))
+	 
 ;; @deffn {Procedure} read-c-ident ch => #f|string
 ;; If ident pointer at following char, else (if #f) ch still last-read.
 ;; @end deffn
@@ -195,12 +210,7 @@
 ;; @end deffn
 (define like-c$-ident? (make-ident-like-p read-c$-ident))
 
-;; @deffn {Procedure} make-string-reader delim
-;; Generate a reader that uses @code{delim} as delimiter for strings.
-;; TODO: need to handle matlab-type strings.
-;; TODO: need to handle multiple delim's (like python)
-;; @end deffn
-(define (make-string-reader delim) ;; #:xxx
+(define (old-make-string-reader delim) ;; #:xxx
   (lambda (ch)
     (if (eq? ch delim)
 	(let loop ((cl '()) (ch (read-char)))
@@ -212,6 +222,34 @@
 		((eq? ch delim) (cons '$string (lxlsr cl)))
 		(else (loop (cons ch cl) (read-char)))))
 	#f)))
+;; @deffn {Procedure} make-string-reader delim
+;; Generate a reader for strings for delimiter.  @var{delim} can be a char
+;; or a list.  Closing quote escaped with @code{\} is skipped.
+;; @example
+;; (make-string-reader '((#\" . #\") (#\{ #\})))
+;; @end example
+;; Pretty printers should be set up to stuff things back.
+;; @end deffn
+(define (make-string-reader delim)
+  (define (fail) (throw 'nyacc-error "eof reading string"))
+  (define (doit nd)
+    (let loop ((cl '()) (ch (read-char)))
+      (cond ((eof-object? ch) (fail))
+	    ((char=? ch #\\)
+	     (let ((c1 (read-char)))
+	       (cond
+		((eof-object? c1) fail)
+		;;((char=? c1 #\t) (loop (cons #\tab cl) (read-char)))
+		;;((char=? c1 #\n) (loop (cons #\newline cl) (read-char)))
+		;;((char=? c1 #\r) (loop (cons #\return cl) (read-char)))
+		(else (loop (cons* c1 #\\ cl) (read-char))))))
+	    ((char=? ch nd) (cons '$string (lxlsr cl)))
+	    (else (loop (cons ch cl) (read-char))))))
+  (if (char? delim)
+      (lambda (ch) (and (char=? ch delim) (doit ch)))
+      (lambda (ch) (and=> (assq-ref delim ch) doit))))
+;;(export new-make-string-reader)
+;; string-literal -> parser -> pretty-print => string-literal
 
 ;; @deffn {Procedure} read-oct => 123|#f
 ;; Read octal number, assuming @code{\0} have already been read.
@@ -843,7 +881,7 @@
 ;; chrtab = characters
 ;; comm-reader : if parser does not deal with comments must return #f
 ;;               but problem with character ..
-;; extra-reader: insert an user-defined reader
+;; extra-reader: insert an user-defined reader, (lambda (ch loop) ...)
 ;; match-table:
 ;; @enumerate
 ;; symbol -> (string . symbol)
@@ -870,7 +908,7 @@
 			 ((list? spaces) (list->char-set spaces))
 			 ((char-set? spaces) spaces)
 			 (else (error "expecting string list or char-set"))))
-	 (read-extra (or extra-reader (lambda (ch) #f)))
+	 (read-extra (or extra-reader (lambda (ch lp) #f)))
 	 ;;
 	 (ident-like? (make-ident-like-p read-ident))
 	 ;;
@@ -890,7 +928,7 @@
 	    (cond
 	     ((eof-object? ch) (assc-$ (cons '$end ch)))
 	     ;;((eq? ch #\newline) (set! bol #t) (loop (read-char)))
-	     ((read-extra ch))
+	     ((read-extra ch loop))
 	     ((char-set-contains? space-cs ch) (loop (read-char)))
 	     ((and (eqv? ch #\newline) (set! bol #t) #f))
 	     ((read-comm ch bol) =>

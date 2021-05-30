@@ -623,7 +623,7 @@
   (if (eof-object? (peek-char port))
       (read-char port)
       (cons
-       'body
+       'unit
        (let loop ((cmd (read-command port)))
 	 (if (eof-object? cmd) '()
 	     (let ((cmd1 cmd) (cmd2 (cnvt-tree cmd)))
