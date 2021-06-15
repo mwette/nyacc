@@ -37,17 +37,17 @@
   )
 
 (define c99-def-help
-  (let (base
-	'(("__builtin"
-	   "__builtin_va_list=void*"
-	   "__inline__=inline" "__inline=__inline__"
-	   "__restrict__=restrict" "__restrict=__restrict__"
-	   "__signed__=signed" "__signed=__signed__"
-	   "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
-	   "__attribute(X)=__attribute__(X)"
-	   "__volatile__=volatile" "__volatile=__volatile__"
-	   "__extension__=" "__extension=__extension__"
-	   "asm=__asm__" "__asm=__asm__")))
+  (let ((base
+	 '(("__builtin"
+	    "__builtin_va_list=void*"
+	    "__inline__=inline" "__inline=__inline__"
+	    "__restrict__=restrict" "__restrict=__restrict__"
+	    "__signed__=signed" "__signed=__signed__"
+	    "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
+	    "__attribute(X)=__attribute__(X)"
+	    "__volatile__=volatile" "__volatile=__volatile__"
+	    "__extension__=" "__extension=__extension__"
+	    "asm=__asm__" "__asm=__asm__")))
     (cond
      ((string-contains %host-type "apple-darwin")
       (cons
