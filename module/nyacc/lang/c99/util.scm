@@ -47,7 +47,7 @@
 	    "__attribute(X)=__attribute__(X)"
 	    "__volatile__=volatile" "__volatile=__volatile__"
 	    "__extension__=" "__extension=__extension__"
-	    "asm=__asm__" "__asm=__asm__")))
+	    "asm=__asm__" "__asm=__asm__"))))
     (cond
      ((string-contains %host-type "apple-darwin")
       (cons
