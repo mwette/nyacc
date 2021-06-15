@@ -37,17 +37,31 @@
   )
 
 (define c99-def-help
-  '(("__builtin"
-     "__builtin_va_list=void*"
-     "__inline__=inline" "__inline=__inline__"
-     "__restrict__=restrict" "__restrict=__restrict__"
-     "__signed__=signed" "__signed=__signed__"
-     "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
-     "__attribute(X)=__attribute__(X)"
-     "__volatile__=volatile" "__volatile=__volatile__"
-     "__extension__=" "__extension=__extension__"
-     "asm=__asm__" "__asm=__asm__"
-     )))
+  (let (base
+	'(("__builtin"
+	   "__builtin_va_list=void*"
+	   "__inline__=inline" "__inline=__inline__"
+	   "__restrict__=restrict" "__restrict=__restrict__"
+	   "__signed__=signed" "__signed=__signed__"
+	   "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
+	   "__attribute(X)=__attribute__(X)"
+	   "__volatile__=volatile" "__volatile=__volatile__"
+	   "__extension__=" "__extension=__extension__"
+	   "asm=__asm__" "__asm=__asm__")))
+    (cond
+     ((string-contains %host-type "apple-darwin")
+      (cons
+       '("<Availability.h>"
+	 "__API_AVAILABLE(X,...)=" "__API_UNAVAILABLE(X,...)="
+	 "__API_DEPRECATED(X,Y)=" "__API_DEPRECATED_WITH_REPLACEMENT(X,Y)="
+	 "__IOS_AVAILABLE(X,...)=" "__IOS_DEPRECATED(X,Y)=" "__IOS_PROHIBITED="
+	 "__OSX_AVAILABLE(X,...)=" "__OSX_AVAILABLE_STARTING(X,...)="
+	 "__OSX_UNAVAILABLE=" "__OSX_AVAILABLE_BUT_DEPRECATED(X,...)="
+	 "__OS_AVAILABILITY_MSG(X,...)="
+	 "__TVOS_AVAILABLE(X)=" "__TVOS_DEPRECATED(X,...)=" "__TVOS_PROHIBITED="
+	 "__WATCHOS_AVAILABLE(X)=" "__WATCHOS_DEPRECATED(X)="
+	 "__WATCHOS_PROHIBITED=") base))
+     (else base))))
 
 ;; include-helper for C99 std
 (define c99-std-help
