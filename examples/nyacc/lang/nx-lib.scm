@@ -223,7 +223,8 @@
           scheme@(guile-user)> (define b #<ecmascript: a + 10; >#)
           scheme@(guile-user)> b
           $1 = 11"
-  (read-hash-extend #\< read-inline-code))
+  (read-hash-extend #\< read-inline-code)
+  (if #f #f))
 
 ;; @deffn {Procedure} uninstall-inline-language-evaluator
 ;; Clear the reader macro @code{#<}.  
@@ -231,6 +232,7 @@
 (define (uninstall-inline-language-evaluator)
   "- Procedure: uninstall-inline-language-evaluator
      Clear the reader macro '#<'."
-  (read-hash-extend #\< #f))
+  (read-hash-extend #\< #f)
+  (if #f #f))
 
 ;; --- last line ---
