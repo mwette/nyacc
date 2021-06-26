@@ -150,7 +150,7 @@
 
 ;; @deffn {Procedure} read-inline-code read-char port
 ;; @example
-;; scheme@(guile-user)> (define x #<nx-octave: [1, 2]; >#)
+;; scheme@(guile-user)> (define x #<nx-mlang: [1, 2]; >#)
 ;; @end example
 ;; @noindent
 ;; This executes code like it was written on the command line.
