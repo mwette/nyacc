@@ -269,9 +269,14 @@
 	 ((eq? ch #\newline) (unread-char ch) (reverse-list->string cl))
 	 ((eq? ch #\\)
 	  (let ((c2 (read-char)))
-	    (if (eq? c2 #\newline)
-		(loop cl (read-char))
-		(loop (cons* c2 ch cl) (read-char)))))
+	    (if (eq? c2 #\return)
+		(let ((c3 (read-char)))
+		  (if (eq? c3 #\newline)
+		      (loop cl (read-char))
+		      (loop (cons* c3 c2 ch cl) (read-char))))
+		(if (eq? c2 #\newline)
+		    (loop cl (read-char))
+		    (loop (cons* c2 ch cl) (read-char))))))
 	 ((eq? ch #\/) ;; swallow comments, even w/ newlines
 	  (let ((c2 (read-char)))
 	    (cond
