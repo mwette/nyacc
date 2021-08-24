@@ -57,7 +57,7 @@
 	    define-ffi-module
 	    compile-ffi-file
 	    load-include-file
-	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl-str fh-scm-str->scm-exp
+	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl->str fh-scm-str->scm-exp
 	    string-member-proc string-renamer
 	    ;;
 	    C-fun-decl->scm
@@ -2132,7 +2132,7 @@
 			     
 ;; === repl compiler ================
 
-;; @deffn {Procedure} load-include-file filename [pkg-config]
+;; @deffn {Procedure} load-include-file filename [#pkg-config pkg]
 ;; This is the functionality that Ludo was asking for: to be at guile
 ;; prompt and be able to issue
 ;; @example
@@ -2144,13 +2144,17 @@
 ;;   our code generates strings and not lists.
 ;; + and=> with-output-to-string  eval
 ;; + first need to cut up intro-ffi
-
 ;; options:
 ;;   api-code cpp-defs decl-filter
 ;;   inc-dirs inc-filter inc-help include
 ;;   library pkg-config renamer
 (define* (load-include-file filename
 			    #:key pkg-config)
+  "- Procedure: load-include-file filename [#:pkg-config pkg]
+     This is the functionality that Ludo was asking for: to be at guile
+     prompt and be able to issue
+          (use-modules (nyacc lang c99 ffi-help))
+          (load-include-file \"cairo.h\" #:pkg-config \"cairo\")"
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
 		 (*renamer* identity) (*errmsgs* '())
 		 (*prefix* "") (*mport* #t) (*udict* '()))
