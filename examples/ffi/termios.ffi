@@ -10,6 +10,6 @@
 (define-ffi-module (ffi termios)
   #:include '("termios.h")
   #:inc-filter (lambda (file-spec path-spec)
-		 (string-contains path-spec "termios.h")))
+		 (string-contains path-spec "termios")))
 
 ;; --- last line ---
