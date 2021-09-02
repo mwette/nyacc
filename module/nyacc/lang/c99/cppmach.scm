@@ -23,7 +23,6 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)
-  #:use-module ((srfi srfi-43) #:select (vector-map))
   #:use-module (rnrs arithmetic bitwise))
 
 (define cpp-spec

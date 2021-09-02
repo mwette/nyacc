@@ -25,7 +25,6 @@
   #:use-module (nyacc util)
   #:use-module (nyacc lang util)
   #:use-module (rnrs arithmetic bitwise)
-  #:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (system foreign))
 
 (define c99cx-spec

@@ -3,9 +3,11 @@
 exec guile $0
 !#
 (use-modules (nyacc lang c99 mach))
+(use-modules (nyacc lang c99 cppmach))
 (use-modules (nyacc lalr))
 
-(when (gen-c99-files)
+(when (and (gen-cpp-files) (gen-c99-files))
+  (system "touch cpp.scm")
   (system "touch parser.scm")
   (with-output-to-file ",gram.txt"
     (lambda ()

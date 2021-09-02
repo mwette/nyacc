@@ -37,8 +37,7 @@
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (nyacc util)
-  #:use-module ((srfi srfi-43) #:select (vector-map)))
+  #:use-module (nyacc util))
 
 ;; @deffn {Variable} c99-spec
 ;; This variable is the specification a-list for the hacked ISO C99 language.

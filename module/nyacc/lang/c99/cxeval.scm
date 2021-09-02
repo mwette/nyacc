@@ -35,7 +35,6 @@
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
-  ;;#:use-module ((srfi srfi-43) #:select (vector-map vector-for-each))
   #:use-module (system foreign)
   #:use-module (ice-9 match))
 
