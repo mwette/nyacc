@@ -36,7 +36,6 @@
   #:use-module ((srfi srfi-1) #:select (fold fold-right remove lset-union
 					     lset-intersection lset-difference))
   #:use-module ((srfi srfi-9) #:select (define-record-type))
-  #:use-module (srfi srfi-43)
   #:use-module (nyacc util)
   #:use-module (nyacc version)
   #:use-module (ice-9 pretty-print))

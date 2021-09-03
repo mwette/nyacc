@@ -1,6 +1,6 @@
 ;;; nyacc/export.scm
 
-;; Copyright (C) 2015,2017-2018 Matthew R. Wette
+;; Copyright (C) 2015,2017-2018,2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -25,7 +25,6 @@
   #:use-module (nyacc lex)
   #:use-module (nyacc util)
   #:use-module ((srfi srfi-1) #:select (fold))
-  #:use-module ((srfi srfi-43) #:select (vector-for-each))
   #:use-module (ice-9 regex))
 
 ;; The code below, for exporting to guile and bison, should be moved to

@@ -1,6 +1,6 @@
 ;;; nyacc/util.scm
 
-;; Copyright (C) 2014-2017 Matthew R. Wette
+;; Copyright (C) 2014-2017,2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -27,8 +27,8 @@
 	    x-flip x-comb
 	    write-vec
 	    ugly-print
-	    tzort)
-  #:use-module ((srfi srfi-43) #:select (vector-fold)))
+	    tzort
+	    vector-map vector-for-each vector-any vector-fold))
 (cond-expand
   (mes)
   (guile-2)
@@ -44,6 +44,49 @@
 (define (fmterr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (define fmt simple-format)
+
+;; replacement for same from (srfi srfi-43)
+(define (vector-map proc . vecs)
+  (let* ((size (apply min (map vector-length vecs)))
+	 (retv (make-vector size)))
+    (let loop ((ix 0))
+      (cond
+       ((= ix size) retv)
+       (else
+	(vector-set! retv ix
+		     (apply proc ix (map (lambda (v) (vector-ref v ix)) vecs)))
+	(loop (1+ ix)))))))
+
+;; replacement for same from (srfi srfi-43)
+(define (vector-for-each proc . vecs)
+  (let ((size (apply min (map vector-length vecs))))
+    (let loop ((ix 0))
+      (cond
+       ((= ix size) (if #f #f))
+       (else
+	(apply proc ix (map (lambda (v) (vector-ref v ix)) vecs))
+	(loop (1+ ix)))))))
+  
+;; hack to replace same from (srfi srfi-43)
+;; the real one takes more args
+(define (vector-any pred? vec)
+  (let ((size (vector-length vec)))
+    (let loop ((ix 0))
+      (cond
+       ((= ix size) #f)
+       ((pred? ix (vector-ref vec ix)) #t)
+       (else (loop (1+ ix)))))))
+
+;; replacement for same from (srfi srfi-43)
+(define (vector-fold proc seed . vecs)
+  (let ((size (apply min (map vector-length vecs))))
+    (let loop ((seed seed) (ix 0))
+      (cond
+       ((= ix size) seed)
+       (else
+	(loop
+	 (apply proc ix seed (map (lambda (v) (vector-ref v ix)) vecs))
+	 (1+ ix)))))))
 
 ;; @deffn {Procedure} make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
 ;; This is a helper for @code{mkact}.

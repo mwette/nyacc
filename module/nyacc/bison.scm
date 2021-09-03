@@ -1,6 +1,6 @@
 ;;; nyacc/bison.scm - export bison
 
-;; Copyright (C) 2016,2018,2020 Matthew R. Wette
+;; Copyright (C) 2016,2018,2020,2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -24,9 +24,9 @@
   #:use-module (sxml xpath)
   #:use-module (ice-9 pretty-print)
   #:use-module ((srfi srfi-1) #:select (fold))
-  #:use-module ((srfi srfi-43) #:select (vector-for-each vector-map))
   #:use-module (nyacc export)
-  #:use-module (nyacc lalr))		; gen-match-table
+  #:use-module (nyacc lalr)		; gen-match-table
+  #:use-module (nyacc util))
 
 ;; @deffn chew-on-grammar tree lhs-v rhs-v terms => a-list
 ;; Generate a-list that maps bison rule index to NYACC rule index.

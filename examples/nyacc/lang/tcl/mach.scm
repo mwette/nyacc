@@ -1,6 +1,6 @@
 ;;; lang/tcl/mach.scm
 ;;;
-;;; Copyright (C) 2018 Matthew R. Wette
+;;; Copyright (C) 2018,2021 Matthew R. Wette
 ;;;
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Lesser General Public
@@ -21,9 +21,7 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang util)
-  #:use-module ((srfi srfi-43) #:select (vector-map))
-  #:use-module (rnrs arithmetic bitwise)
-  )
+  #:use-module (rnrs arithmetic bitwise))
 
 (define tcl-expr-spec
   (lalr-spec

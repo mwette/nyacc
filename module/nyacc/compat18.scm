@@ -1,6 +1,6 @@
 ;;; nyacc/compat18.scm - V18 compatibility, used by some for debugging
 
-;; Copyright (C) 2017 Matthew R. Wette
+;; Copyright (C) 2017,2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -18,57 +18,11 @@
 ;;; Code:
 
 (define-module (nyacc compat18)
-  #:export (vector-map
-	    vector-for-each vector-any vector-fold
-	    syntax->datum datum->syntax
+  #:export (syntax->datum datum->syntax
 	    bitwise-arithmetic-shift-left
-	    bitwise-arithmetic-shift-right
-	    )
+	    bitwise-arithmetic-shift-right)
   #:export-syntax (unless when pmatch include-from-path)
   #:use-syntax (ice-9 syncase))
-
-;; replacement for same from (srfi srfi-43)
-(define (vector-map proc . vecs)
-  (let* ((size (apply min (map vector-length vecs)))
-	 (retv (make-vector size)))
-    (let loop ((ix 0))
-      (cond
-       ((= ix size) retv)
-       (else
-	(vector-set! retv ix
-		     (apply proc ix (map (lambda (v) (vector-ref v ix)) vecs)))
-	(loop (1+ ix)))))))
-
-;; replacement for same from (srfi srfi-43)
-(define (vector-for-each proc . vecs)
-  (let ((size (apply min (map vector-length vecs))))
-    (let loop ((ix 0))
-      (cond
-       ((= ix size) (if #f #f))
-       (else
-	(apply proc ix (map (lambda (v) (vector-ref v ix)) vecs))
-	(loop (1+ ix)))))))
-  
-;; hack to replace same from (srfi srfi-43)
-;; the real one takes more args
-(define (vector-any pred? vec)
-  (let ((size (vector-length vec)))
-    (let loop ((ix 0))
-      (cond
-       ((= ix size) #f)
-       ((pred? ix (vector-ref vec ix)) #t)
-       (else (loop (1+ ix)))))))
-
-;; replacement for same from (srfi srfi-43)
-(define (vector-fold proc seed . vecs)
-  (let ((size (apply min (map vector-length vecs))))
-    (let loop ((seed seed) (ix 0))
-      (cond
-       ((= ix size) seed)
-       (else
-	(loop
-	 (apply proc ix seed (map (lambda (v) (vector-ref v ix)) vecs))
-	 (1+ ix)))))))
 
 ;; change in syntax-case names
 (define datum->syntax datum->syntax-object)

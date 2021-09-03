@@ -1,6 +1,6 @@
 ;;; lang/javascript/mach.scm
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2018,2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -26,8 +26,7 @@
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
-  #:use-module (nyacc util)
-  #:use-module ((srfi srfi-43) #:select (vector-map)))
+  #:use-module (nyacc util))
 
 ;; This was started with EcmaScript v3 sped.
 ;; Some v5 2011 items are added as comments.
