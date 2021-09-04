@@ -66,7 +66,7 @@
        (else
 	(apply proc ix (map (lambda (v) (vector-ref v ix)) vecs))
 	(loop (1+ ix)))))))
-  
+
 ;; hack to replace same from (srfi srfi-43)
 ;; the real one takes more args
 (define (vector-any pred? vec)
