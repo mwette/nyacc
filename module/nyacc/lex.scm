@@ -210,18 +210,6 @@
 ;; @end deffn
 (define like-c$-ident? (make-ident-like-p read-c$-ident))
 
-(define (old-make-string-reader delim) ;; #:xxx
-  (lambda (ch)
-    (if (eq? ch delim)
-	(let loop ((cl '()) (ch (read-char)))
-	  (cond ((eq? ch #\\)
-		 (let ((c1 (read-char)))
-		   (if (eq? c1 #\newline)
-		       (loop cl (read-char))
-		       (loop (cons* c1 cl) (read-char)))))
-		((eq? ch delim) (cons '$string (lxlsr cl)))
-		(else (loop (cons ch cl) (read-char)))))
-	#f)))
 ;; @deffn {Procedure} make-string-reader delim
 ;; Generate a reader for strings for delimiter.  @var{delim} can be a char
 ;; or a list.  Closing quote escaped with @code{\} is skipped.
