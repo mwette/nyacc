@@ -19,8 +19,8 @@
 
 (define-module (nyacc version)
   #:export (*nyacc-version*)
-  #:version (1 04 1))
+  #:version (1 05 0))
 
-(define *nyacc-version* "1.04.1")
+(define *nyacc-version* "1.05.0")
 
 ;; --- last line ---
