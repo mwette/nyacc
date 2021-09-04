@@ -10,6 +10,23 @@
 (define-ffi-module (ffi termios)
   #:include '("termios.h")
   #:inc-filter (lambda (file-spec path-spec)
-		 (string-contains path-spec "termios.h")))
+		 (string-contains path-spec "termios"))
+  #:def-keepers '("IGNBRK" "BRKINT" "IGNPAR" "PARMRK" "INPCK" "ISTRIP" "INLCR"
+		  "IGNCR" "ICRNL" "IUCLC" "IXON" "IXANY" "IXOFF" "IMAXBEL"
+		  "IUTF8" "OPOST" "OLCUC" "ONLCR" "OCRNL" "ONOCR" "ONLRET"
+		  "OFILL" "OFDEL" "NLDLY" "CRDLY" "TABDLY" "BSDLY" "VTDLY"
+		  "FFDLY" "CBAUD" "CBAUDEX" "CSIZE" "CSTOPB" "CREAD" "PARENB"
+		  "PARODD" "HUPCL" "CLOCAL" "LOBLK" "CIBAUD" "CMPAR" "CRTSCTS"
+		  "ISIG" "ICANON" "XCASE" "ECHO" "ECHOE" "ECHOK" "ECHONL"
+		  "ECHOCTL" "ECHOPRT" "ECHOKE" "DEFECHO" "FLUSHO" "NOFLSH"
+		  "TOSTOP" "PENDING" "IEXTEN" "VDISCARD" "VDSUSP" "VEOF" "VEOL"
+		  "VEOL2" "VERASE" "VINTR" "VKILL" "VLNEXT" "VMIN" "VQUIT"
+		  "VREPRINT" "VSTART" "VSTATUS" "VSTOP" "VSUSP" "VSUSP" "VSWTCH"
+		  "VTIME" "VWERASE" "TCSANOW" "TCSADRAIN" "TCSAFLUSH" "TCIFLUSH"
+		  "TCOFLUSH" "TCIOFLUSH" "TCOOFF" "TCOON" "TCIOFF" "TCION" "B0"
+		  "B50" "B75" "B110" "B134" "B150" "B200" "B300" "B600" "B1200"
+		  "B1800" "B2400" "B4800" "B9600" "B19200" "B38400" "B57600"
+		  "B115200" "B230400"))
+
 
 ;; --- last line ---

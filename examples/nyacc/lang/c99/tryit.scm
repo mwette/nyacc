@@ -262,7 +262,7 @@
     (pp (cleanup-udecl specl declr))
     ))
 
-(when #t
+(when #f
   (let* ((code
 	  (string-append
 	   "typedef struct {\n"
@@ -303,6 +303,18 @@
     (call-with-values (lambda () (cleanup-udecl specl declr))
       (lambda (specl declr)
 	(pp `(udecl ,specl ,declr))))
+    ))
+
+(when #f
+  (let* ((code "typedef int foo_t; foo_t foo[] = { 1, 2, 3, 4 };" )
+	 (tree (parse-string code #:mode 'decl))
+	 (udict (c99-trans-unit->udict tree))
+	 ;;(udecl (assoc-ref udict "x"))
+	 ;;(specl (sx-ref udecl 1))
+	 ;;(declr (sx-ref udecl 2))
+	 )
+    (pp tree)
+    (pp udict)
     ))
 
 ;; --- last line ---
