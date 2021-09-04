@@ -419,9 +419,7 @@
 (define (num-string cstr)
   (and=>
    (with-input-from-string cstr
-     (lambda ()
-       (let ((val (read-basic-num (read-char) #:signed #t)))
-        (and (eof-object? (read-char)) val))))
+     (lambda () (read-basic-num (read-char) #:signed #t)))
    (lambda (pair) `(number ,(cdr pair)))))
 
 ;; @deffn {Procedure} vec-string str

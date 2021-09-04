@@ -57,7 +57,7 @@
 	    define-ffi-module
 	    compile-ffi-file
 	    load-include-file
-	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl->str fh-scm-str->scm-exp
+	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl-str fh-scm-str->scm-exp
 	    string-member-proc string-renamer
 	    ;;
 	    C-fun-decl->scm
