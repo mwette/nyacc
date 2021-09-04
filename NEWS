@@ -5,6 +5,21 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2021-09-XX  V1.05.0
+	* remove dependence on srfi-43, vector operations; this was
+	  causing issues with some Guile versions 2.0.X
+	* cleaned up c99-error exception messages in compile-ffi
+	* examples/ffi/termios.ffi: added def-keepers
+	* in following, $ENL = examples/nyacc/lang
+	* removed $ENL/ecmascript
+	* $ENL/javascript: merged body.scm into parser.scm
+	* install/uninstall read-line-code now returns #<unspecified>
+	* $ENL/tcl/parser.scm: fixed reading array index as number;
+	  (1,2,3) was read as number, now as string
+	* scripts/compile-ffi: add option -s to show includes being read
+	* c99 parser def-help now adds apple dependencies
+	* worked on ffi-helper per-decl usage (i.e. C-decl syntax)
+
 2021-05-30  V1.04.1 
 	* c99/mach.scm: added _Float128 type, as absense was causing
 	  ffi-helper runs to crash on #include <math.h>
