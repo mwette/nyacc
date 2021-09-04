@@ -78,10 +78,11 @@ Generate a Guile Scheme file from the source FFI file FILE.
   -h, --help           print this help message
   --version            print version number
 
-  -L  --load-path=DIR  add DIR to the front of the module load path
-  -I  --inc-dir=DIR    add DIR to list of dir's to search for C headers
+  -L, --load-path=DIR  add DIR to the front of the module load path
+  -I, --inc-dir=DIR    add DIR to list of dir's to search for C headers
   -o, --output=OFILE   write output to OFILE
   -d, --debug=x,y      set debug flags: echo-decl, parse
+  -s, --show-incs      show includes during parsing
   -D, --list-deps      list dependencies and quit
   -X, --no-exec        don't generate .go file(s)
   -R, --no-recurse     don't do recursive compile on dep's
@@ -106,6 +107,9 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 	     (if (assoc-ref opts 'output-file)
 		 (fail "`-o' option cannot be specified more than once"))
 	     (values (acons 'output arg opts) files)))
+   (option '(#\s "show-incs") #f #f
+	   (lambda (opt name arg opts files)
+	     (values (acons 'show-incs #t opts) files)))
    (option '(#\L "load-path") #f #f
 	   (lambda (opt name arg opts files)
 	     (values (acons/seed 'load-path arg opts) files)))
@@ -239,10 +243,14 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       (exit 0))
     (catch 'ffi-help-error
       (lambda ()
-	(sfmt "compiling `~A' ...\n" (fix-path ffi-file))
-	(compile-ffi-file ffi-file options)
-	(sfmt "... wrote `~A'\n" (fix-path scm-file)))
-      (lambda (key fmt . args)
+	(catch 'c99-error
+	  (lambda ()
+	    (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
+	    (compile-ffi-file ffi-file options)
+	    (sfmt "... wrote `~A'\n" (fix-path scm-file)))
+	  (lambda (key fmt . args)
+	    (throw 'ffi-help-error fmt args))))
+      (lambda (key fmt args)
 	(if (access? scm-file W_OK) (delete-file scm-file))
 	(apply fail fmt args)
 	(exit 1)))
