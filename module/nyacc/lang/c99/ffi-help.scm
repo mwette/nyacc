@@ -60,10 +60,12 @@
 	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl->str fh-scm-str->scm-exp
 	    string-member-proc string-renamer
 	    ;;
-	    C-fun-decl->scm
+	    C-decl->scm C-decl fh-llibs
 	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
-	    ;; debugging
-	    ;;ffi-symmap
+
+	    ;;ffi-symmap  		; <= debugging
+
+	    C-fun-decl->scm		; deprecated
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
@@ -1925,7 +1927,8 @@
 			     #:return-defs #t
 			     #:show-incs (*show-incs*)
 			     #:debug (*debug-parse*)))
-	      (lambda (tree defs) (*ddict* defs) tree))))
+	      (lambda (tree defs)
+		(*ddict* defs) tree))))
 	(fherr "parse failed"))))
 
 ;; @deffn parse-includes attrs
@@ -1996,6 +1999,7 @@
 	 ;;
 	 (tree (begin
 		 (if (memq 'parse dbugl) (*debug-parse* #t))
+		 (and (assq-ref script-options 'show-incs) (*show-incs* #t))
 		 (cond
 		  ((assq-ref attrs 'include) (parse-includes attrs))
 		  ((assq-ref attrs 'api-code) =>
@@ -2024,9 +2028,6 @@
 		    (var (module-ref modul vname)))
 	       (append var seed)))
 	   '() ext-mods)))
-
-    ;;(sferr "ffi-decls:\n") (pperr ffi-decls)
-    ;;(sferr "QUIT\n") (quit)
 
     ;; set globals
     (*prefix* (m-path->name path))
@@ -2075,7 +2076,9 @@
 
 ;; === test compiler ================
 
-;; @deffn {Procedure} C-fun-decl->scm code
+(define fh-llibs (delay '()))
+
+;; @deffn {Procedure} C-decl->scm code-string => sexp
 ;; Generate a symbolic expression that evals to a Guile procedure.
 ;; @example
 ;; (define fmod-exp (C-fun-decl->proc "double dmod(double, double);"))
@@ -2083,7 +2086,7 @@
 ;; (fmod 2.3 0.5)
 ;; @end example
 ;; @end deffn
-(define (C-fun-decl->scm code)
+(define (C-decl->scm code)
   (let ((tree (with-input-from-string code parse-c99)))
     (if tree
 	(let* ((udict (unitize-decl (sx-ref tree 1)))
@@ -2092,6 +2095,10 @@
 	       (gen2 (with-input-from-string gen1 read))
 	       (gen3 (caddr gen2)))
 	  gen3))))
+(define C-fun-decl->scm C-decl->scm)
+
+(define-syntax-rule (C-decl c-code-string)
+  (eval (C-decl->scm c-code-string) (current-module)))
 
 (define* (fh-cnvt-udecl udecl udict #:key (prefix "fh"))
   (parameterize ((*options* '()) (*wrapped* '()) (*defined* '())
