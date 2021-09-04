@@ -2086,15 +2086,16 @@
 ;; (fmod 2.3 0.5)
 ;; @end example
 ;; @end deffn
-(define (C-decl->scm code)
+(define* (C-decl->scm code #:key expand)
   (let ((tree (with-input-from-string code parse-c99)))
-    (if tree
-	(let* ((udict (unitize-decl (sx-ref tree 1)))
-	       (name (caar udict)) (udecl (cdar udict))
-	       (gen1 (fh-cnvt-udecl udecl '()))
-	       (gen2 (with-input-from-string gen1 read))
-	       (gen3 (caddr gen2)))
-	  gen3))))
+    (and tree
+	 (let* ((udict (c99-trans-unit->udict tree))
+		(udecl (cdr (last udict)))
+		(udecl (if expand (expand-typerefs udecl udict) udecl))
+		(str-decl (fh-cnvt-udecl udecl udict)) 
+		(scm-decl (with-input-from-string str-decl read))
+		(scm-value (sx-ref scm-decl 2)))
+	   scm-value))))
 (define C-fun-decl->scm C-decl->scm)
 
 (define-syntax-rule (C-decl c-code-string)

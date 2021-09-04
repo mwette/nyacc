@@ -263,6 +263,44 @@ guile> (fh-object-ref m 'xx)
 $9 = 1.0
 @end example
 
+But the FFI helper can also be used on a per declaration basis, but
+you must first import the proper modules and libraries.  This
+functionality is still under development.
+
+The following example shows how to convert to scheme code using
+the procedure @code{C-decl->scm}:
+
+@example
+guile> (use-modules (nyacc lang c99 ffi-help))
+guile> (define struct-foo-desc (C-decl->scm "struct foo { int x; double y; };"))
+guile> ,pp struct-foo-desc
+$1 = (bs:struct (list `(x ,int) `(y ,double)))
+@end example
+
+If we import more modules we can use the syntax @code{C-decl} to
+complete definitions:
+
+@example
+guile> (use-modules (system ffi-help-rt))
+guile> (use-modules (bytestructures guile))
+guile> (use-modules ((system foreign) #:prefix ffi:))
+guile> (define ffi-libs '()) ;; hack for now
+
+guile> (define my-sqrt "double sqrt(double);")
+guile> (my-sqrt 4.0)
+@end example
+
+Note that for functions like the above to work any dependent libraries
+must be loaded first, via @code(dynamic-link).
+
+Note: currently the above defines a bytestructure, but not a FH type.
+We could define a FH type as follows:
+
+@example
+guile> (define-fh-compound-type struct-foo
+        struct-foo-desc struct-foo? make-struct-foo)
+@end example
+
 @c ======================================
 
 
@@ -1047,11 +1085,15 @@ This form, with a list of strings, provides extra C preprodessor
 definitions to be used in processing the header files.  The defines
 take the form @code{"SYM=}@var{val}@code{"}.
 @item #:inc-dirs
-todo
+This form, with a list of strings, provides extra directories
+in which to search for include files.
 @item #:inc-help
 todo
 @item #:api-code
 todo
+@item #:def-keepers
+This form, with a list of strings, provides extra (non-function) C
+preprocessor macro definitions that should be included in the output.
 @end table
 
 @example
@@ -1085,6 +1127,27 @@ Another decl-filter, useful for debugging.
 				)) #t)
                    ((equal? k '(union . "union-_cairo_glyph_t")) #t)
                    (else #f)))
+@end example
+
+
+@heading Direct Usage
+
+Work to go here:
+
+@deffn {Procedure} load-include-file filename [#pkg-config pkg]
+This is the functionality that Ludo was asking for: to be at guile
+prompt and be able to issue
+@example
+(use-modules (nyacc lang c99 ffi-help))
+(load-include-file "cairo.h" #:pkg-config "cairo")
+@end example
+@end deffn
+
+@example
+guile> ,use (nyacc lang c99 ffi-help)
+guile> (load-include-file "cairo.h" #:pkg-config "cairo")
+;; wait a while
+guile> ...
 @end example
 
 
