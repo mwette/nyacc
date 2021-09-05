@@ -103,6 +103,13 @@
 	(else (cons ch chl))))
     '() str)))
 
+(define (unesc-c-str str)
+  (list->string
+   (string-fold-right
+    (lambda (ch chl)
+      (if (char=? ch #\\) chl (cons ch chl)))
+    '() str)))
+
 (define ident-like? (make-ident-like-p read-c-ident))
 
 ;; @deffn {Procedure} read-ellipsis ch
@@ -286,14 +293,13 @@
 	    ((char) (char->integer (string-ref (tx1 tree) 0)))
 	    ((defined) (if (assoc-ref dict (tx1 tree)) 1 0))
 	    ((has-include)
-	     (if (find-incl-in-dirl (tx1 tree) inc-dirs #f) 1 0))
+	     (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #f) 1 0))
 	    ((has-include-next)
-	     (if (find-incl-in-dirl (tx1 tree) inc-dirs #t) 1 0))
+	     (if (find-incl-in-dirl (unesc-c-str (tx1 tree)) inc-dirs #t) 1 0))
 	    ((pre-inc post-inc) (1+ (ev1 tree)))
 	    ((pre-dec post-dec) (1- (ev1 tree)))
 	    ((pos) (ev1 tree))
 	    ((neg) (- (ev1 tree)))
-
 	    ((not) (if (zero? (ev1 tree)) 1 0))
 	    ((mul) (* (ev1 tree) (ev2 tree)))
 	    ((div) (/ (ev1 tree) (ev2 tree)))
