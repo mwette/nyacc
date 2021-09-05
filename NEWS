@@ -19,6 +19,7 @@ without any warranty.
 	* scripts/compile-ffi: add option -s to show includes being read
 	* c99 parser def-help now adds apple dependencies
 	* worked on ffi-helper per-decl usage (i.e. C-decl syntax)
+	* updated "make check" to provide overall sucess/fail message
 
 2021-05-30  V1.04.1 
 	* c99/mach.scm: added _Float128 type, as absense was causing
