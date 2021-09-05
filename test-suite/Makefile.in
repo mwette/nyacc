@@ -21,7 +21,7 @@ SHELL = @SHELL@
 SCMDIR = @abs_top_srcdir@/test-suite
 GODIR = @abs_top_builddir@/module
 
-TESTENV = GUILE_LOAD_PATH= GUILE_AUTO_COMPILE=0 $(GUILE) -L $(SCMDIR) -C $(GODIR)
+TESTENV = GUILE_LOAD_PATH= GUILE_AUTO_COMPILE=0 $(GUILE) -L $(SCMDIR) -C $(GODIR) 2>/dev/null
 
 TESTS = \
 	nyacc/lex-01.test				\
@@ -37,8 +37,10 @@ TESTS = \
 
 .PHONY: check
 check:
-	@for test in $(TESTS); do \
-	  (cd $(SCMDIR)/`dirname $${test}`; $(TESTENV) `basename $${test}`); \
-	done
+	@(RES="ALL PASS"; export RES; \
+	  for test in $(TESTS); do \
+	   (cd $(SCMDIR)/`dirname $${test}`; $(TESTENV) `basename $${test}`); \
+	   if test $$? -ne 0; then RES="SOMETHING FAILED"; fi; \
+	  done; echo $$RES)
 
 # --- last line ---

@@ -31,6 +31,10 @@
 (define (parse-string-list . str-l)
   (parse-string (apply string-append str-l)))
    
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 ;; parser test
 (with-test-prefix "nyacc/c99-01, CPP"
 
@@ -293,4 +297,5 @@
 
   )
 
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---

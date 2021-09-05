@@ -32,6 +32,10 @@
    #t
    io-list))
 
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 ;; pretty-printer, parser test
 ;; We generate a tree, send it to the pretty-printer, then through the parser.
 ;; This should be a unit function, methinks.
@@ -75,4 +79,5 @@
 	 ("*(p->q)" . "*p->q")))))
   )
 
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---

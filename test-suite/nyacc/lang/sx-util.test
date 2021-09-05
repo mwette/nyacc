@@ -24,6 +24,10 @@
   (let loop ((s s) (l l))
     (if (null? l) s (loop (p (car l) s) (cdr l)))))
 
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 (with-test-prefix "nyacc/sx-util"
 
   (pass-if "sx-cons"
@@ -167,4 +171,5 @@
 	
   )
 
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;;; --- last line ---

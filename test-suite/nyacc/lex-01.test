@@ -57,7 +57,11 @@
 		     (char=? (string-ref str end) nch))
 		(eq? val tok))
 	    (not tok))))))
-	    
+   
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 (with-test-prefix "nyacc/lex-01"
 
   ;; escape character
@@ -150,4 +154,5 @@
 
   )
 
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---

@@ -26,6 +26,10 @@
     (lambda ()
       (parse-c99 #:inc-dirs incs #:mode 'file))))
 
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 ;; parser test
 (with-test-prefix "nyacc/c99-03, file mode"
 
@@ -43,4 +47,5 @@
 
   )
 
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---

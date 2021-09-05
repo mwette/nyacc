@@ -36,6 +36,10 @@
 (define (parse-string raw-parser lexer-gen str)
   (with-input-from-string str (lambda () (raw-parser (lexer-gen) #:debug #f))))
 
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 (with-test-prefix "nyacc/lalr-01"
 
   (pass-if "calc-plain"
@@ -112,4 +116,5 @@
   )
 
 
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---

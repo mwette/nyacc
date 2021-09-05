@@ -19,6 +19,10 @@
    (use-modules (nyacc compat18))))
 ;;(use-modules (ice-9 pretty-print)) (define pp pretty-print)
 
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 (with-test-prefix "nyacc/util"
 
   ;; The input-stack used to pull in input from include files.
@@ -82,4 +86,5 @@
 
   )
 
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;;; --- last line ---

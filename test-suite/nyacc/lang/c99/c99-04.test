@@ -27,6 +27,10 @@
     (lambda ()
       (parse-c99 #:inc-dirs incs #:mode 'decl))))
 
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 ;; parser test
 (with-test-prefix "nyacc/c99-04, decl mode"
 
@@ -144,4 +148,5 @@
 	     (asm-clobbers (string "foo") (string "bar"))
 	     (asm-gotos (ident "error"))))))))))))
     
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---

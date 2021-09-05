@@ -74,6 +74,10 @@
     (equal? tdecl xdecl)))
 
 
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
 (with-test-prefix "nyacc/c99-06, munging"
 
   (pass-if "expand-typerefs set 1"
@@ -220,4 +224,5 @@
 	   (string= "2" (or (assoc-ref ddict "BAR") "X")))))
   )
 
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---
