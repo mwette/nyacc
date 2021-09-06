@@ -13,7 +13,7 @@
 (define pp pretty-print)
 (define (sf fmt . args) (apply simple-format #t fmt args))
 
-;; core types: c8 u32 i32 f64 f64x3 f64x6 symbol
+;; core types: i8 u8 i32 u32 i64 u64 f64 f64x3 f64x6 symbol
 ;; ref types: vector string dict(symbols only)
 ;; symbols stored w/ (997) hash
 
@@ -26,7 +26,20 @@
     ;;($fixed . float)
     ))
 
-#;(define (make-ident-keyword-reader ident-reader match-table)
+# variable is foo or foo(x,y,z)
+(define tsh-ident-reader
+  (let* ((ikr (make-ident-keyword-reader read-c-ident match-table))
+	 )
+    (lambda (ch)
+      (let ((p (ikr ch)))
+	(if p
+	    (let ((ch (read-char)))
+	      (cond
+	       ((eof-object? ch) p)
+	       ((char=? ch #\() (unread-char ch) (
+						  #f))
+	       )))))))
+(define x
   (let ((ident-like? (make-ident-like-p ident-reader)))
     (let loop ((kt '()) (mt match-table))
       (if (null? mt)
@@ -34,19 +47,13 @@
 	    (and=> (ident-reader ch)
 		   (lambda (s) (cons (or (assoc-ref kt s) '$ident) s))))
 	  (loop (if (ident-like? (caar mt)) (cons (car mt) mt) mt) (cdr mt))))))
-	 
+		     
 (define (make-lexer-generator match-table)
   (let* ((space-cs (string->char-set " \t\r\f"))
-	 (strtab (filter-mt string? match-table)) ; strings in grammar
-	 (kwstab (filter-mt like-c$-ident? strtab)) ; keyword strings =>
-	 (keytab (map-mt string->symbol kwstab)) ; keywords in grammar
-	 (chrseq (remove-mt like-c-ident? strtab)) ; character sequences
-	 (symtab (filter-mt symbol? match-table)) ; symbols in grammar
-	 (chrtab (filter-mt char? match-table))	; characters in grammar
+	 (chrseq (remove-mt like-c-ident? match-table)) ; character sequences
 	 (read-chseq (make-chseq-reader chrseq))
+	 (read-comm (make-comm-reader '(("#" . "\n")) #:eat-newline #f))
 	 (nl-val (assoc-ref chrseq "\n"))
-	 (id-or-kw? (make-ident-keyword-reader read-c-ident match-table))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair))))
 	 )
     (lambda ()
       (let ((mode 'code)
@@ -61,6 +68,7 @@
 		((eof-object? ch) (cons '$end ch))
 		((eqv? ch #\newline) (set! bol #t) (cons nl-val "\n"))
 		;;((read-c-num ch) => (lambda (p) (assc-$ p)))
+		((read-comm ch bol))
 		((read-c-num ch))
 		((char-set-contains? space-cs ch) (loop (read-char)))
 		((char=? #\newline ch) (cons nl-val "\n"))

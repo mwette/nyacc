@@ -1,1 +1,8 @@
-set foo 1
+# demo1.tsh
+# -*- tcl -*-
+set! foo 1
+set! bar(a,b) b
+set! baz (1 + 2)
+set! baz (1+2)
+set! baz ((3+4)/(1+2))
+set! baz [if ($foo==1) { return 1 } else { return 2 }]
