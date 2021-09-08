@@ -279,9 +279,9 @@ state 4, token #<eof>   => (accept . 0)
 Most of the syntax and procecures for generating skelton parsers
 exported from the module @code{(nyacc lalr)}.  Other modules include
 @table @code
-@item (lalr lex)
+@item (nyacc lex)
 This module provides procedures for generating lexical analyzers.
-@item (lalr util)
+@item (nyacc util)
 This module provides utilities used by the other modules.
 @end table
 
