@@ -181,12 +181,13 @@
 ;; The pairs are of the form @code{($ident . "abc")} or @code{(if . "if")}.
 ;; @end deffn
 (define (make-ident-keyword-reader ident-reader match-table)
-  (let ((ident-like? (make-ident-like-p ident-reader)))
+  (let ((ident-like? (make-ident-like-p ident-reader))
+	(ident-id (assoc-ref match-table '$ident)))
     (let loop ((kt '()) (mt match-table))
       (if (null? mt)
 	  (lambda (ch)
 	    (and=> (ident-reader ch)
-		   (lambda (s) (cons (or (assoc-ref kt s) '$ident) s))))
+		   (lambda (s) (cons (or (assoc-ref kt s) ident-id) s))))
 	  (loop (if (ident-like? (caar mt)) (cons (car mt) kt) kt) (cdr mt))))))
 	 
 ;; @deffn {Procedure} read-c-ident ch => #f|string
