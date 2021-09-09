@@ -56,6 +56,8 @@
 	    c:ws c:if c:ir)
   #:use-module ((srfi srfi-1) #:select (remove append-reverse)))
 
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
 (define (sf fmt . args) (apply simple-format #t fmt args))
   
 ;; @section Constructing Lexical Analyzers
@@ -185,7 +187,7 @@
 	  (lambda (ch)
 	    (and=> (ident-reader ch)
 		   (lambda (s) (cons (or (assoc-ref kt s) '$ident) s))))
-	  (loop (if (ident-like? (caar mt)) (cons (car mt) mt) mt) (cdr mt))))))
+	  (loop (if (ident-like? (caar mt)) (cons (car mt) kt) kt) (cdr mt))))))
 	 
 ;; @deffn {Procedure} read-c-ident ch => #f|string
 ;; If ident pointer at following char, else (if #f) ch still last-read.
