@@ -16,10 +16,10 @@
    (lambda ($1 . $rest) $1)
    ;; item-list => item-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; item-list-1 => 
-   (lambda $rest (make-tl 'item-list))
-   ;; item-list-1 => item-list-1 term item
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; item-list-1 => item term
+   (lambda ($2 $1 . $rest) (make-tl 'item-list $1))
+   ;; item-list-1 => item-list-1 item term
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; item => "proc" ident "{" arg-list "}" "{" stmt-list "}"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest) $1)
    ;; item => stmt
@@ -36,22 +36,27 @@
      (tl-append $1 `(arg ,$3 ,$4)))
    ;; stmt-list => stmt-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; stmt-list-1 => 
-   (lambda $rest (make-tl 'stmt-list))
+   ;; stmt-list-1 => stmt
+   (lambda ($1 . $rest) (make-tl 'stmt-list $1))
    ;; stmt-list-1 => stmt-list-1 term stmt
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; stmt => 
+   (lambda $rest `(empty))
    ;; stmt => '$lone-comm
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(comment ,$1))
    ;; stmt => "{" stmt-list "}"
    (lambda ($3 $2 $1 . $rest) $1)
    ;; stmt => "set" ident expr
-   (lambda ($3 $2 $1 . $rest) $1)
+   (lambda ($3 $2 $1 . $rest) `(set ,$2 ,$3))
+   ;; stmt => "set" ident/ix expression-list expr
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(set/ix ,$2 ,$3 ,$4))
    ;; stmt => if-stmt
    (lambda ($1 . $rest) $1)
    ;; if-stmt => "if" expr "{" stmt-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest) $1)
    ;; expr => primary-expression
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) `(expr ,$1))
    ;; expression => logical-or-expression
    (lambda ($1 . $rest) $1)
    ;; logical-or-expression => logical-and-expression
@@ -132,21 +137,30 @@
    (lambda ($2 $1 . $rest) `(post-inc ,$1))
    ;; postfix-expression => postfix-expression "--"
    (lambda ($2 $1 . $rest) `(post-dec ,$1))
-   ;; primary-expression => ident
-   (lambda ($1 . $rest) $1)
+   ;; primary-expression => "$" '$ident
+   (lambda ($2 $1 . $rest) `(de-ref ,$2))
+   ;; primary-expression => "$" '$ident/ix "(" expression-list ")"
+   (lambda ($5 $4 $3 $2 $1 . $rest) `(de-ref ,$2))
    ;; primary-expression => fixed
    (lambda ($1 . $rest) $1)
    ;; primary-expression => float
+   (lambda ($1 . $rest) $1)
+   ;; primary-expression => string
+   (lambda ($1 . $rest) $1)
+   ;; primary-expression => symbol
    (lambda ($1 . $rest) $1)
    ;; primary-expression => "(" expression-list ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; primary-expression => "[" ident expr-seq "]"
    (lambda ($4 $3 $2 $1 . $rest) `(call $2 $3))
-   ;; expression-list => expression-list-1
-   (lambda ($1 . $rest) (tl->list $1))
-   ;; expression-list-1 => expression
-   (lambda ($1 . $rest) (make-tl 'expr-list $1))
-   ;; expression-list-1 => expression-list-1 "," expression
+   ;; expression-list => expression expression-list-tail
+   (lambda ($2 $1 . $rest)
+     (tl->list (tl-insert $2 $1)))
+   ;; expression-list => expression
+   (lambda ($1 . $rest) $1)
+   ;; expression-list-tail => "," expression
+   (lambda ($2 $1 . $rest) (make-tl 'expr-list $2))
+   ;; expression-list-tail => expression-list-tail "," expression
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; expr-seq => expr-seq-1
    (lambda ($1 . $rest) (tl->list $1))
@@ -156,10 +170,16 @@
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; ident => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
+   ;; ident/ix => '$ident/ix
+   (lambda ($1 . $rest) `(ident/ix ,$1))
    ;; fixed => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
    ;; float => '$float
    (lambda ($1 . $rest) `(float ,$1))
+   ;; string => '$string
+   (lambda ($1 . $rest) `(string ,$1))
+   ;; symbol => '$symbol
+   (lambda ($1 . $rest) `(symbol ,$1))
    ;; term => ";"
    (lambda ($1 . $rest) $1)
    ;; term => "\n"

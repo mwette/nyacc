@@ -35,16 +35,17 @@
    (notice (string-append "Copyright (C) 2021 Matthew R. Wette"
 			  license-lgpl3+))
    ;;(expect 0)
+   ;;(reserve '$code-comm)
    (start top)
    (grammar
+
     (top
-     (item-list)
-     )
+     (item-list))
 
     (item-list (item-list-1 ($$ (tl->list $1))))
     (item-list-1
-     ($empty ($$ (make-tl 'item-list)))
-     (item-list-1 term item ($$ (tl-append $1 $3))))
+     (item term ($$ (make-tl 'item-list $1)))
+     (item-list-1 item term ($$ (tl-append $1 $2))))
 
     (item
      ("proc" ident "{" arg-list "}" "{" stmt-list "}")
@@ -59,13 +60,15 @@
 
     (stmt-list (stmt-list-1 ($$ (tl->list $1))))
     (stmt-list-1
-     ($empty ($$ (make-tl 'stmt-list)))
+     (stmt ($$ (make-tl 'stmt-list $1)))
      (stmt-list-1 term stmt ($$ (tl-append $1 $3))))
     
     (stmt
-     ($lone-comm)
+     ($empty ($$ `(empty-stmt)))
+     ($lone-comm ($$ `(comment ,$1)))
      ("{" stmt-list "}")
-     ("set" ident expr)
+     ("set" ident expr ($$ `(set ,$2 ,$3)))
+     ("set" ident/ix expression-list expr ($$ `(set/ix ,$2 ,$3 ,$4)))
      (if-stmt)
      ;;(ident 
      ;;("while" expr "{" stmt-list "}")
@@ -76,7 +79,7 @@
      )
 
     (expr
-     (primary-expression))
+     (primary-expression ($$ `(expr ,$1))))
 
     (expression
      (logical-or-expression))
@@ -124,6 +127,7 @@
      (multiplicative-expression "%" unary-expression ($$ `(mod ,$1 ,$3))))
     (unary-expression
      (postfix-expression)
+     ;;("$" unary-expression ($$ `(de-ref ,$1)))
      ("-" unary-expression ($$ `(neg ,$2)))
      ("+" unary-expression ($$ `(pos ,$2)))
      ("!" unary-expression ($$ `(not ,$2)))
@@ -135,18 +139,28 @@
      (postfix-expression "++" ($$ `(post-inc ,$1)))
      (postfix-expression "--" ($$ `(post-dec ,$1))))
     (primary-expression
-     (ident)
+     ("$" '$ident ($$ `(de-ref ,$2)))
+     ("$" '$ident/ix "(" expression-list ")" ($$ `(de-ref ,$2)))
      (fixed)
      (float)
+     (string)
+     (symbol)
      ;;($chlit ($$ `(char ,$1)))
      ("(" expression-list ")" ($$ $2))
-     ("[" ident expr-seq "]" ($$ `(call $2 $3)))
-     )
+     ;;("(" expression-list ")" ($$ (if (sx-ref $2 2) $2 (sx-ref $2 1))))
+     ("[" ident expr-seq "]" ($$ `(call $2 $3))))
+
     (expression-list
-     (expression-list-1 ($$ (tl->list $1))))
-    (expression-list-1
+     (expression expression-list-tail ($$ (tl->list (tl-insert $2 $1))))
+     ;;(expression ($$ `(expr ,$1))))
+     (expression))
+    #;(expression-list-1
      (expression ($$ (make-tl 'expr-list $1)))
      (expression-list-1 "," expression ($$ (tl-append $1 $3))))
+    (expression-list-tail
+     ("," expression ($$ (make-tl 'expr-list $2)))
+     (expression-list-tail "," expression ($$ (tl-append $1 $3))))
+
     (expr-seq
      (expr-seq-1 ($$ (tl->list $1))))
     (expr-seq-1
@@ -154,16 +168,19 @@
      (expr-seq-1 primary-expression ($$ (tl-append $1 $2))))
 
     (ident ($ident ($$ `(ident ,$1))))
+    (ident/ix ($ident/ix ($$ `(ident/ix ,$1))))
     (fixed ($fixed ($$ `(fixed ,$1))))
     (float ($float ($$ `(float ,$1))))
-    (term (";") ("\n"))
-    
-    )))
+    (string ($string ($$ `(string ,$1))))
+    (symbol ($symbol ($$ `(symbol ,$1))))
+    (term (";") ("\n")))))
 
 (define tsh-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine tsh-spec))))
+    (make-lalr-machine tsh-spec))
+   #:keep 2
+   #:keepers '($code-comm $lone-comm "\n")))
 
 ;;; =====================================
 
