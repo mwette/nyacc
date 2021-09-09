@@ -1,0 +1,13 @@
+#!/bin/sh
+# -*- scheme -*-
+exec guile $0
+!#
+(use-modules (nyacc lang tclish mach))
+(use-modules (nyacc lalr))
+
+(when (gen-tsh-files)
+  (with-output-to-file ",mach.txt"
+    (lambda ()
+      (pp-lalr-grammar tcl-spec)
+      (pp-lalr-machine tcl-mach))))
+;;; --- last line ---
