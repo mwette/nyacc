@@ -181,13 +181,14 @@
 ;; @end deffn
 (define* (make-ident-keyword-reader ident-reader match-table
 				    #:optional (tval '$ident))
-  (let ((ident-like? (make-ident-like-p ident-reader)))
+  (let ((ident-like? (make-ident-like-p ident-reader))
+	(ident-id (assoc-ref match-table tval)))
     (let loop ((kt '()) (mt match-table))
       (if (null? mt)
 	  (lambda (ch)
 	    (and=> (ident-reader ch)
-		   (lambda (s) (cons (or (assoc-ref kt s) tval) s))))
-	  (loop (if (ident-like? (caar mt)) (cons (car mt) mt) mt) (cdr mt))))))
+		   (lambda (s) (cons (or (assoc-ref kt s) ident-id) s))))
+	  (loop (if (ident-like? (caar mt)) (cons (car mt) kt) kt) (cdr mt))))))
 	 
 ;; @deffn {Procedure} read-c-ident ch => #f|string
 ;; If ident pointer at following char, else (if #f) ch still last-read.
@@ -313,7 +314,7 @@
   (if (not (eq? ch #\")) #f
       (let loop ((cl '()) (ch (read-char)))
 	(cond ((eq? ch #\\) (loop (c-escape cl) (read-char)))
-	      ((eq? ch #\") (if tval (cons tval (rsl cl)) (rsl cl)))
+	      ((eq? ch #\") (if tval (cons tval (rls cl)) (rls cl)))
 	      (else (loop (cons ch cl) (read-char)))))))
 
 ;; @deffn {Procedure} make-chlit-reader
