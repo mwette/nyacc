@@ -4,9 +4,10 @@ exec guile $0 $*
 !#
 
 (use-modules (nyacc lang tclish parser))
-(use-modules (nyacc lang tclish pprint))
+;;(use-modules (nyacc lang tclish pprint))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 pretty-print))
+(define pp pretty-print)
 
 (define (fail fmt . args)
   (apply simple-format (current-error-port)
@@ -32,11 +33,11 @@ exec guile $0 $*
 
 (define (compile-nx-file . args)
   (let* ((options (parse-args args))
-	 (file (assoc-ref options 'file)))
-    (let* ((tree (call-with-input-file file
-		   (lambda (port) (read-tsh-file port (current-module))))))
+	 (file (assoc-ref options 'file))
+	 (tree (with-input-from-file file
+		 (lambda () (parse-tsh)))))
       (pretty-print tree)
-      (if #f #f))))
+      (if #f #f)))
 
 (apply compile-nx-file (cdr (program-arguments)))
 

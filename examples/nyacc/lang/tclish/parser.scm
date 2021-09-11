@@ -22,21 +22,27 @@
 ;; core types: i8 u8 i32 u32 i64 u64 f64 f64x3 f64x6 symbol
 ;; ref types: vector string dict(symbols only)
 ;; symbols stored w/ (997) hash
+;; expr-list: ( ... )
+;; expr-arry: @( ... )
 
 ;; symbol: 'abc'
 ;; ident : abc
 ;; expr-list '(' abc , def ')'
+
 
 ;; variable is foo or foo(x,y,z)
 (define read-tsh-id-kw
   (let ((id-kw-rdr (make-ident-keyword-reader read-c-ident tsh-mtab))
 	(ident/ix (assq-ref tsh-mtab '$ident/ix)))
     (lambda (ch)
-      (let* ((pair (id-kw-rdr ch)) (ch (read-char)))
-	(cond
-	 ((eof-object? ch) pair)
-	 ((char=? ch #\() (unread-char ch) (cons ident/ix (cdr pair)))
-	 (else (unread-char ch) pair))))))
+      (let ((pair (id-kw-rdr ch)))
+	(and
+	 pair
+	 (let ((ch (read-char)))
+	   (cond
+	    ((eof-object? ch) pair)
+	    ((char=? ch #\() (unread-char ch) (cons ident/ix (cdr pair)))
+	    (else (unread-char ch) pair))))))))
 
 (define make-tsh-lexer
   (let* ((space-cs (string->char-set " \t\r\f"))
