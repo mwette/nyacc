@@ -25,7 +25,7 @@ exec guile $0 $*
 	     (lambda (file seed)
 	       (if (assq-ref 'file seed)
 		   (fail "only one inupt file can be specified"))
-	       (if (string-suffix? file ".tcl")
+	       (if (string-suffix? ".tcl" file)
 		   (fail "expecting .tcl file"))
 	       (acons 'file file seed))
 	     '()))
