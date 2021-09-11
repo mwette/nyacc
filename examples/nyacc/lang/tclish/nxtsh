@@ -26,8 +26,8 @@ exec guile $0 $*
 	     (lambda (file seed)
 	       (if (assq-ref 'file seed)
 		   (fail "only one inupt file can be specified"))
-	       (if (string-suffix? file ".tcl")
-		   (fail "expecting .tcl file"))
+	       (unless (string-suffix? ".tsh" file)
+		 (fail "expecting .tsh file"))
 	       (acons 'file file seed))
 	     '()))
 
@@ -35,9 +35,11 @@ exec guile $0 $*
   (let* ((options (parse-args args))
 	 (file (assoc-ref options 'file))
 	 (tree (with-input-from-file file
-		 (lambda () (parse-tsh)))))
-      (pretty-print tree)
-      (if #f #f)))
+		 (lambda () (parse-tsh))))
+	 (xtil (compile-tree-il tree (current-module)))
+	 )
+    ;;(pretty-print tree)
+    (if #f #f)))
 
 (apply compile-nx-file (cdr (program-arguments)))
 

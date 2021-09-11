@@ -5,17 +5,23 @@
 
 ;; syntax cond {else}
 ;;  {{cond {(expr) body ...} {(expr) body ...} ... {else 
-;; 
+;;
 
-(use-modules (nyacc lex))
-(use-modules (nyacc lalr))
-(use-modules (nyacc parse))
-(use-modules (nyacc lang sx-util))
-(use-modules (nyacc lang util))
+(define-module (nyacc lang tclish parser)
+  #:export (parse-tsh
+	    read-tsh-stmt
+	    read-tsh-file
+	    )
+  #:use-module (nyacc lex)
+  #:use-module (nyacc lalr)
+  #:use-module (nyacc parse)
+  #:use-module (nyacc lang sx-util)
+  #:use-module (nyacc lang util))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 (define (sf fmt . args) (apply simple-format #t fmt args))
+
 
 (include-from-path "nyacc/lang/tclish/mach.d/tsh-tab.scm")
 
@@ -52,8 +58,8 @@
 	 ;;(x (begin (pp chrseq) (quit)))
 	 (symtab (filter-mt symbol? tsh-mtab))
 	 ;;
-	 (rd-str (make-string-reader #\" #:token (assq-ref tsh-mtab '$string)))
-	 (rd-sym (make-string-reader #\' #:token (assq-ref tsh-mtab '$symbol)))
+	 (rd-str (make-string-reader #\" (assq-ref tsh-mtab '$string)))
+	 (rd-sym (make-string-reader #\' (assq-ref tsh-mtab '$symbol)))
 	 (read-comm (make-comm-reader '(("#" . "\n")) #:eat-newline #f))
 	 (nl-val (assoc-ref chrseq "\n"))
 	 (lparen (assoc-ref chrseq "("))
@@ -80,13 +86,18 @@
 	      ((read-chseq ch))
 	      (else (cons ch (string ch)))))))))))
 
-
 (include-from-path "nyacc/lang/tclish/mach.d/tsh-act.scm")
 
 (define raw-parser
   (make-lalr-parser (acons 'act-v tsh-act-v tsh-tables)
 		    ;; #:skip-if-unexp '($lone-comm $code-comm "\n")
 		    ))
+
+(define raw-ia-parser
+  (make-lalr-parser
+   (acons 'act-v tsh-act-v tsh-tables)
+   #:skip-if-unexp '($lone-comm $code-comm "\n")
+   #:interactive #t))
 
 (define* (parse-tsh #:key debug)
   (catch 'nyacc-error
@@ -95,29 +106,40 @@
       (apply simple-format (current-error-port) fmt args)
       (newline (current-error-port))
       #f)))
+
+;; @deffn {Procedure} read-tsh-file port env
+;; Read a TCLish file.  Return a SXML tree;
+;; @end deffn
+(define* (read-tsh-file port env)
+  (let ((prev (current-input-port)))
+    (dynamic-wind
+      (lambda () (set-current-input-port port))
+      (lambda () (parse-tsh #:debug #f))
+      (lambda () (set-current-input-port prev)))))
   
-(define raw-ia-parser
-  (make-lalr-parser
-   (acons 'act-v tsh-act-v tsh-tables)
-   #:skip-if-unexp '($lone-comm $code-comm "\n")
-   #:interactive #t))
+;; @deffn {Procedure} read-tsh-stmt port env
+;; Read a TCLish item.  Return a SXML tree;
+;; @end deffn
+(define read-tsh-stmt
+  (let ((lexer (make-tsh-lexer)))
+    (lambda (port env)
+      (let ((prev (current-input-port)))
+	(dynamic-wind
+	  (lambda () (set-current-input-port port))
+	  (lambda ()
+	    (catch 'nyacc-error
+	      (lambda () (raw-ia-parser lexer #:debug #f))
+	      (lambda (key fmt . args)
+		(apply simple-format (current-error-port) fmt args)
+		#f)))
+	  (lambda () (set-current-input-port prev)))))))
 
-(define (parse-tsh-stmt lexer)
-  (catch 'nyacc-error
-    (lambda () (raw-ia-parser lexer #:debug #f))
-    (lambda (key fmt . args)
-      (apply simple-format (current-error-port) fmt args)
-      #f)))
-
-(define (show-toks lxr)
+(define (show-tokens lxr)
   (let loop ((tok (lxr)))
     (cond
      ((and (pair? tok) (eq? '$end (car tok))))
      (else
       (pp tok)
       (loop (lxr))))))
-
-(with-input-from-file "demo01.tsh"
-  (lambda () (pp (parse-tsh #:debug #f))))
 
 ;; --- last line ---
