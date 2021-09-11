@@ -1,6 +1,6 @@
 ;;; nyacc/lex.scm
 
-;; Copyright (C) 2015-2020 - Matthew R.Wette
+;; Copyright (C) 2015-2021 - Matthew R.Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -175,14 +175,16 @@
 		   #t)))
 
 
-;; @deffn {Procedure} make-ident-keyword-reader ident-reader match-table
+;; @deffn {Procedure} make-ident-keyword-reader ident-reader match-table [tval]
 ;; Generate a procedure from an ident reader and a parser match-table
 ;; that takes a character and returns @code{#f} or a pair for the parser.
 ;; The pairs are of the form @code{($ident . "abc")} or @code{(if . "if")}.
+;; The optional @var{tval} is @code{'$ident}
 ;; @end deffn
-(define (make-ident-keyword-reader ident-reader match-table)
+(define* (make-ident-keyword-reader ident-reader match-table
+				    #:optional (tval '$ident))
   (let ((ident-like? (make-ident-like-p ident-reader))
-	(ident-id (assoc-ref match-table '$ident)))
+	(ident-id (assoc-ref match-table tval)))
     (let loop ((kt '()) (mt match-table))
       (if (null? mt)
 	  (lambda (ch)
@@ -233,7 +235,7 @@
 ;; @end example
 ;; Pretty printers should be set up to stuff things back.
 ;; @end deffn
-(define (make-string-reader delim)
+(define* (make-string-reader delim #:optional (tval '$string))
   (define (fail) (throw 'nyacc-error "eof reading string"))
   (define (doit nd)
     (let loop ((cl '()) (ch (read-char)))
@@ -246,7 +248,7 @@
 		;;((char=? c1 #\n) (loop (cons #\newline cl) (read-char)))
 		;;((char=? c1 #\r) (loop (cons #\return cl) (read-char)))
 		(else (loop (cons* c1 #\\ cl) (read-char))))))
-	    ((char=? ch nd) (cons '$string (lxlsr cl)))
+	    ((char=? ch nd) (if tval (cons tval (rls cl)) (rls cl)))
 	    (else (loop (cons ch cl) (read-char))))))
   (if (char? delim)
       (lambda (ch) (and (char=? ch delim) (doit ch)))
@@ -322,11 +324,11 @@
 ;; ??=->#, ??/->\, ??'->^, ??(->[, ??)->], ??~->|, ??<->{, ??>->}, ??-->~
 ;; and digraphs <:->[, :>->], <%->{ %>->} %:->#
 ;; @end deffn
-(define (read-c-string ch)
+(define* (read-c-string ch #:optional (tval '$string))
   (if (not (eq? ch #\")) #f
       (let loop ((cl '()) (ch (read-char)))
 	(cond ((eq? ch #\\) (loop (c-escape cl) (read-char)))
-	      ((eq? ch #\") (cons '$string (lxlsr cl)))
+	      ((eq? ch #\") (if tval (cons tval (rls cl)) (rls cl)))
 	      (else (loop (cons ch cl) (read-char)))))))
 
 ;; @deffn {Procedure} make-chlit-reader
