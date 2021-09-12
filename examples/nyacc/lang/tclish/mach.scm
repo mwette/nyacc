@@ -94,6 +94,7 @@
      (if-stmt)
      (ident expr-seq ($$ `(call ,$1 ,@(cdr $2))))
      ;;("lambda "{" arg-list "}" "{" stmt-list "}"
+     ("format" expr-seq ($$ `(format . ,(cdr $2))))
      ("return" ($$ `(return)))
      ("return" unit-expr ($$ `(return ,$2)))
      ("incr" ident ($$ `(incr TODO)))

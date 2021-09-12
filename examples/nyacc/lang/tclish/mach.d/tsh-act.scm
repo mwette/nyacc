@@ -59,6 +59,9 @@
    (lambda ($1 . $rest) $1)
    ;; exec-stmt => ident expr-seq
    (lambda ($2 $1 . $rest) `(call ,$1 ,@(cdr $2)))
+   ;; exec-stmt => "format" expr-seq
+   (lambda ($2 $1 . $rest)
+     `(format unquote (cdr $2)))
    ;; exec-stmt => "return"
    (lambda ($1 . $rest) `(return))
    ;; exec-stmt => "return" unit-expr

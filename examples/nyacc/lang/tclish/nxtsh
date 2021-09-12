@@ -4,6 +4,7 @@ exec guile $0 $*
 !#
 
 (use-modules (nyacc lang tclish parser))
+(use-modules (nyacc lang tclish compile-tree-il))
 ;;(use-modules (nyacc lang tclish pprint))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 pretty-print))
@@ -36,7 +37,7 @@ exec guile $0 $*
 	 (file (assoc-ref options 'file))
 	 (tree (with-input-from-file file
 		 (lambda () (parse-tsh))))
-	 (xtil (compile-tree-il tree (current-module)))
+	 (xtil (compile-tree-il tree (current-module) '()))
 	 )
     ;;(pretty-print tree)
     (if #f #f)))
