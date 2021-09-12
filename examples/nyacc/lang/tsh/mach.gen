@@ -3,7 +3,7 @@
 exec guile $0
 !#
 
-(use-modules (nyacc lang tclish mach))
+(use-modules (nyacc lang tsh mach))
 (use-modules (nyacc lalr))
 
 (when (gen-tsh-files)

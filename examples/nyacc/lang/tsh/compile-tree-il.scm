@@ -1,4 +1,4 @@
-;;; nyacc/lang/tclish/compile-tree-il.scm - compile tclish sxml to tree-il
+;;; nyacc/lang/tsh/compile-tree-il.scm - compile tclish sxml to tree-il
 
 ;; Copyright (C) 2018,2021 Matthew R. Wette
 ;;
@@ -21,9 +21,9 @@
 
 ;;; Code:
 
-(define-module (nyacc lang tclish compile-tree-il)
+(define-module (nyacc lang tsh compile-tree-il)
   #:export (compile-tree-il show-tsh-sxml show-tsh-xtil)
-  #:use-module (nyacc lang tclish xlib)
+  #:use-module (nyacc lang tsh xlib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts*-values))
@@ -38,9 +38,9 @@
 (define (pperr tree)
   (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
-(define xlib-mod '(nyacc lang tclish xlib))
+(define xlib-mod '(nyacc lang tsh xlib))
 (define xlib-module (resolve-module xlib-mod))
-(define (xlib-ref name) `(@@ (nyacc lang tclish xlib) ,name))
+(define (xlib-ref name) `(@@ (nyacc lang tsh xlib) ,name))
 
 ;; scope must be manipulated at execution time
 ;; the @code{proc} command should push-scope

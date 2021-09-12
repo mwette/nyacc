@@ -1,4 +1,4 @@
-;;; lang/tclish/mach.scm - code and expr grammars
+;;; lang/tsh/mach.scm - code and expr grammars
 
 ;; Copyright (C) 2021 Matthew R. Wette
 ;;
@@ -23,7 +23,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang tclish mach)
+(define-module (nyacc lang tsh mach)
   #:export (gen-tsh-files
 	    tsh-spec tsh-mach 
 	    ;;tsh-code-spec tsh-code-mach 

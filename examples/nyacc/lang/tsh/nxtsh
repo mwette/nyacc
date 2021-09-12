@@ -3,9 +3,9 @@
 exec guile $0 $*
 !#
 
-(use-modules (nyacc lang tclish parser))
-(use-modules (nyacc lang tclish compile-tree-il))
-;;(use-modules (nyacc lang tclish pprint))
+(use-modules (nyacc lang tsh parser))
+(use-modules (nyacc lang tsh compile-tree-il))
+;;(use-modules (nyacc lang tsh pprint))
 (use-modules (srfi srfi-37))
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
