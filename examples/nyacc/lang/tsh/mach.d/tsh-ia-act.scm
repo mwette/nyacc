@@ -24,6 +24,8 @@
    (lambda ($2 $1 . $rest) $1)
    ;; item => stmt term
    (lambda ($2 $1 . $rest) $1)
+   ;; topl-decl => "source" string
+   (lambda ($2 $1 . $rest) `(source ,$2))
    ;; topl-decl => "proc" ident "{" arg-list "}" "{" stmt-list "}"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest) $1)
    ;; arg-list => arg-list-1

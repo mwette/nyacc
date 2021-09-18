@@ -1,4 +1,19 @@
-;; (tclish reader)
+;; nyacc/lang/tsh/parser.scm
+
+;; Copyright (C) 2021 Matthew R. Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 ;; proc foo {{x 1} {y 2}} {
 ;; }
@@ -120,7 +135,6 @@
 (define raw-ia-parser
   (make-lalr-parser
    (acons 'act-v tsh-ia-act-v tsh-ia-tables)
-   #:skip-if-unexp '($lone-comm $code-comm "\n")
    #:interactive #t))
 
 ;; @deffn {Procedure} read-tsh-stmt port env
@@ -130,7 +144,6 @@
   (let* ((make-tsh-lexer (make-tsh-lexer-generator tsh-ia-mtab))
 	 (lexer (make-tsh-lexer)))
     (lambda (port env)
-      (sferr "read-tsh-stmt\n")
       (let ((prev (current-input-port)))
 	(dynamic-wind
 	  (lambda () (set-current-input-port port))
@@ -139,6 +152,7 @@
 	      (lambda () (raw-ia-parser lexer #:debug #f))
 	      (lambda (key fmt . args)
 		(apply simple-format (current-error-port) fmt args)
+		(newline (current-error-port))
 		#f)))
 	  (lambda () (set-current-input-port prev)))))))
 

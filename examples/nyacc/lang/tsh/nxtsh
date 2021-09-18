@@ -35,11 +35,13 @@ exec guile $0 $*
 (define (compile-nx-file . args)
   (let* ((options (parse-args args))
 	 (file (assoc-ref options 'file))
-	 (tree (with-input-from-file file
-		 (lambda () (parse-tsh))))
+	 ;;(tree (with-input-from-file file (lambda () (parse-tsh))))
+	 (tree (call-with-input-file file
+		 (lambda (port) (read-tsh-file port (current-module)))))
 	 (xtil (compile-tree-il tree (current-module) '()))
 	 )
     ;;(pretty-print tree)
+    (primitive-eval exp)
     (if #f #f)))
 
 (apply compile-nx-file (cdr (program-arguments)))

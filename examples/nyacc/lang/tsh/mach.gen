@@ -7,9 +7,13 @@ exec guile $0
 (use-modules (nyacc lalr))
 
 (when (gen-tsh-files)
-  (with-output-to-file ",mach.txt"
+  (with-output-to-file ",file.txt"
     (lambda ()
       (pp-lalr-grammar tsh-spec)
-      (pp-lalr-machine tsh-mach))))
+      (pp-lalr-machine tsh-mach)))
+  (with-output-to-file ",line.txt"
+    (lambda ()
+      (pp-lalr-grammar tsh-ia-spec)
+      (pp-lalr-machine tsh-ia-mach))))
 
 ;;; --- last line ---

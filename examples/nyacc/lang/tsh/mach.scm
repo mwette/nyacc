@@ -26,9 +26,7 @@
 (define-module (nyacc lang tsh mach)
   #:export (gen-tsh-files
 	    tsh-spec tsh-mach 
-	    ;;tsh-code-spec tsh-code-mach 
-	    ;;tsh-expr-spec tsh-expr-mach 
-	    )
+	    tsh-ia-spec tsh-ia-mach)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -60,6 +58,7 @@
      (stmt term))
 
     (topl-decl
+     ("source" string ($$ `(source ,$2)))
      ("proc" ident "{" arg-list "}" "{" stmt-list "}")
      ;;^ syntax sugar for: set foo [lambda { x y z } { ($x + $y + $z) }
      )
@@ -218,7 +217,7 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine tsh-spec))
-   #:keep 2
+   #:keep 0
    #:keepers '($code-comm $lone-comm "\n")))
 
 (define tsh-ia-spec
@@ -228,8 +227,7 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine tsh-ia-spec))
-   #:keep 2
-   #:keepers '($code-comm $lone-comm "\n")))
+   #:keep 0 #:keepers '()))
 
 ;;; =====================================
 

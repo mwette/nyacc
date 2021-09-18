@@ -114,7 +114,7 @@
       ((symbol ,sval)
        (values '() `(const ,(string->symbol sval)) dict))
       #;((ident ,sval)
-       (values '() `(const ,(string->symbol sval)) dict))
+      (values '() `(const ,(string->symbol sval)) dict))
 
       ((deref ,name)
        (let ((ref (lookup name dict)))
@@ -156,7 +156,7 @@
       ((set-indexed (ident ,name) ,index ,value)
        (let* (;;(dict (add-symbol name dict))
 	      (nref (lookup name dict)))
-       (values `(set-ix ,nref ,index ,value) '() dict)))
+	 (values `(set-ix ,nref ,index ,value) '() dict)))
 
       ((call (ident ,name) . ,args)
        (let ((ref (lookup name dict)))
@@ -202,9 +202,6 @@
 
        ((item-list)
 	(values (cons (block (rtail kseed)) seed) kdict))
-
-       ((call)
-	(values (cons `(call . ,(rtail kseed)) seed) kdict))
 
        ((comment)
 	(values seed kdict))
@@ -278,7 +275,7 @@
 		     `(define ,(cadr nref) ,value)
 		     `(set! ,nref ,value))
 		 seed))
-	   kdict))
+	 kdict))
 
        ((set-indexed)
 	;; This only works if the variable appeared as string constant in fD.?
@@ -288,13 +285,25 @@
 	       (toplev? (eq? (car nref) 'toplevel)))
 	  (values
 	   (cons
-	   `(seq
-	     ,(if toplev?
-		  (make-defonce (cadr nref) `(call ,(xlib-ref 'tsh:make-array)))
-		  `(set! ,nref (if (call (toplevel hash-table?) ,nref) ,nref
-				  `(call ,(xlib-ref 'tsh:make-array)))))
-	     (call ,(xlib-ref 'tsh:array-set1) ,nref ,indx ,value))
-	   seed) kdict)))
+	    `(seq
+	      ,(if toplev?
+		   (make-defonce (cadr nref) `(call ,(xlib-ref 'tsh:make-array)))
+		   `(set! ,nref (if (call (toplevel hash-table?) ,nref) ,nref
+				    `(call ,(xlib-ref 'tsh:make-array)))))
+	      (call ,(xlib-ref 'tsh:array-set1) ,nref ,indx ,value))
+	    seed) kdict)))
+
+       ((body)
+	(values (cons (block (rtail kseed)) seed) kdict))
+       
+       ((call)
+	(values (cons `(call . ,(rtail kseed)) seed) kdict))
+
+       ((eval)
+ 	(values (cons (car kseed) seed) kdict))
+
+       ((void)
+	(values (cons '(void) seed) kdict))
 
        ;; others to add: incr foreach while continue break
        ((incr)
@@ -305,23 +314,21 @@
 	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
 	  (values (cons stmt seed) kdict)))
 
+       ((source)
+	(let ((stmt `(call (@@ (nyacc lang tsh xlib) tsh:source)
+			   ,(car kseed)
+			   ;;(call (toplevel current-module))
+			   )))
+	  (values (cons stmt seed) kdict)))
+
        ((format)
 	(let* ((tail (rtail kseed))
 	       (stmt `(call (@@ (nyacc lang nx-lib) sprintf) . ,tail)))
 	  (values (cons stmt seed) kdict)))
 
-       ((body)
-	(values (cons (block (rtail kseed)) seed) kdict))
-       
-       ((eval)
- 	(values (cons (car kseed) seed) kdict))
-
-       ((void)
-	(values (cons '(void) seed) kdict))
-
        ((expr)
 	;;(sferr "expr:~S\n" kseed)
- 	(values (cons (car kseed) seed) kdict))
+	(values (cons (car kseed) seed) kdict))
 
        ;; pos neg ~ not
        ((pos) (opcall-node 'tsh:pos seed kseed kdict))
@@ -370,7 +377,7 @@
 (define (show-tsh-xtil v) (set! show-xtil v))
 
 (define (compile-tree-il exp env opts)
-  (when show-sxml (sferr "sxml:\n") (pperr exp))
+  (when show-sxml (sferr "sxml:\n") (pperr exp) (unless exp (quit)))
   ;; Need to make an interp.  All TCLish commands execute in an interp
   ;; so need (interp-lookup at turntime)
   (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
@@ -382,8 +389,8 @@
 	      )
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    ;;(values (parse-tree-il exp) env cenv)
-	    (values (parse-tree-il '(const "[hello]")) env cenv)
+	    (values (parse-tree-il exp) env cenv)
+	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
      	    )
 	  )
 	(values (parse-tree-il '(void)) env cenv))))
