@@ -200,7 +200,7 @@
 	   ((null? tail) (values '(void) kdict)) ; just comments
 	   (else (values (car kseed) kdict)))))
 
-       ((item-list)
+       ((item-list stmt-list)
 	(values (cons (block (rtail kseed)) seed) kdict))
 
        ((comment)
@@ -257,6 +257,9 @@
 			  ,(loop (cdr rest-part)))))))
 	       (stmt `(if ,cond-expr ,then-expr ,rest-expr)))
 	  (values (cons stmt seed) kdict)))
+       ((elseif else)
+	(values (cons (reverse kseed) seed) kdict))
+
 
        ((return)
 	(values
@@ -346,7 +349,6 @@
        ;; lshift rshift rrshift
        ((lshift) (opcall-node 'tsh:lshift seed kseed kdict))
        ((rshift) (opcall-node 'tsh:rshift seed kseed kdict))
-       ((rrshift) (opcall-node 'tsh:rrshift seed kseed kdict))
 
        ;; lt gt le ge
        ((lt) (values (cons (op-call 'tsh:lt kseed) seed) kdict))
