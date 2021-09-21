@@ -1,4 +1,4 @@
-;; mlangia-tab.scm
+;; mlang-ia-tab.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 
@@ -8,7 +8,7 @@
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING included with the this distribution.
 
-(define mlangia-mtab
+(define mlang-ia-mtab
   '(($start . 100) ($lone-comm . 3) ($string . 4) ($float . 5) ($fixed . 6) 
     ($ident . 7) (";" . 8) ("." . 9) (".'" . 10) ("'" . 11) ("~" . 12) 
     (".^" . 13) (".\\" . 14) ("./" . 15) (".*" . 16) ("^" . 17) ("\\" . 18) 
@@ -21,7 +21,7 @@
     ("]" . 52) ("[" . 53) ("function" . 54) ("end" . 55) ($error . 2) ($end . 
     57)))
 
-(define mlangia-ntab
+(define mlang-ia-ntab
   '((58 . float) (59 . lone-comment-list-1) (60 . term-list) (61 . nl) 
     (62 . row-term) (63 . matrix-row) (64 . matrix-row-list) (65 . number) 
     (66 . primary-expr) (67 . postfix-expr) (68 . unary-expr) (69 . mul-expr) 
@@ -37,13 +37,13 @@
     function-defn) (103 . mlang-item-list) (104 . nontrivial-statement) 
     (105 . triv-stmt-list) (106 . translation-unit)))
 
-(define mlangia-len-v
+(define mlang-ia-len-v
   #(1 3 3 2 2 1 0 2 1 1 4 3 2 2 2 1 10 9 8 7 6 5 1 3 1 2 1 1 2 1 1 1 1 2 1 2 
     1 3 7 5 8 6 7 5 8 5 1 2 1 1 1 2 4 5 0 5 1 1 3 3 1 2 1 2 1 3 1 1 3 5 3 5 1 
     3 1 3 1 3 3 1 3 3 3 3 1 3 3 3 3 1 3 3 3 3 3 3 3 3 1 2 2 2 1 2 2 4 3 3 1 1 
     1 3 2 3 2 3 1 3 1 1 1 3 1 2 1 1 1 1 2 3 1 1 1 1 1 1 1 1))
 
-(define mlangia-rto-v
+(define mlang-ia-rto-v
   #(#f 106 106 106 106 103 101 101 100 100 102 102 102 95 98 98 93 93 93 93 
     93 93 91 91 96 96 105 89 89 99 99 97 97 88 88 104 86 86 86 86 86 86 86 86 
     86 86 86 86 82 82 81 81 84 84 83 83 80 80 80 80 77 77 76 76 75 75 85 85 85
@@ -51,7 +51,7 @@
     69 69 69 69 68 68 68 68 67 67 67 67 67 67 66 66 66 66 66 66 66 66 64 64 62
     62 63 63 60 60 94 94 94 92 59 59 90 79 58 65 65 78 87 61))
 
-(define mlangia-pat-v
+(define mlang-ia-pat-v
   #(((5 . 1) (6 . 2) (4 . 3) (58 . 4) (79 . 5) (7 . 6) (35 . 7) (53 . 8) 
     (50 . 9) (78 . 10) (65 . 11) (90 . 12) (66 . 13) (12 . 14) (24 . 15) 
     (23 . 16) (67 . 17) (68 . 18) (69 . 19) (70 . 20) (71 . 21) (72 . 22) 
@@ -372,13 +372,13 @@
     (88 . 46) (99 . 155) (1 . -53)) ((1 . -17)) ((47 . 24) (48 . 30) (8 . 31) 
     (61 . 32) (94 . 232)) ((1 . -16))))
 
-(define mlangia-tables
+(define mlang-ia-tables
   (list
-   (cons 'mtab mlangia-mtab)
-   (cons 'ntab mlangia-ntab)
-   (cons 'len-v mlangia-len-v)
-   (cons 'rto-v mlangia-rto-v)
-   (cons 'pat-v mlangia-pat-v)
+   (cons 'mtab mlang-ia-mtab)
+   (cons 'ntab mlang-ia-ntab)
+   (cons 'len-v mlang-ia-len-v)
+   (cons 'rto-v mlang-ia-rto-v)
+   (cons 'pat-v mlang-ia-pat-v)
    ))
 
 ;;; end tables

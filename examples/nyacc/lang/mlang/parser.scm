@@ -255,12 +255,12 @@
 
 ;; === interactive parser
 
-(include-from-path "nyacc/lang/mlang/mach.d/mlangia-tab.scm")
-(include-from-path "nyacc/lang/mlang/mach.d/mlangia-act.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/mlang-ia-tab.scm")
+(include-from-path "nyacc/lang/mlang/mach.d/mlang-ia-act.scm")
 
 (define raw-ia-parser
   (make-lalr-parser
-   (acons 'act-v mlangia-act-v mlangia-tables)
+   (acons 'act-v mlang-ia-act-v mlang-ia-tables)
    #:interactive #t))
 
 (define (parse-mlang-stmt lexer)
@@ -272,7 +272,7 @@
       (apply simple-format (current-error-port) fmt args)
       #f)))
 
-(define gen-mlang-ia-lexer (make-mlang-lexer-generator mlangia-mtab))
+(define gen-mlang-ia-lexer (make-mlang-lexer-generator mlang-ia-mtab))
 
 (define read-mlang-stmt
   (let ((lexer (gen-mlang-ia-lexer)))

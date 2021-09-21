@@ -11,7 +11,7 @@ exec guile $0
     (lambda ()
       (pp-lalr-grammar mlang-spec)
       (pp-lalr-machine mlang-mach)))
-  (with-output-to-file ",gram.txt"
+  (with-output-to-file ",stmt.txt"
     (lambda ()
       (pp-lalr-grammar mlang-ia-spec)
       (pp-lalr-machine mlang-ia-mach))))

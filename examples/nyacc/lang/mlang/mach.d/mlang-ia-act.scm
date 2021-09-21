@@ -1,4 +1,4 @@
-;; mlangia-act.scm
+;; mlang-ia-act.scm
 
 ;; Copyright 2015-2018 Matthew R. Wette
 ;; 
@@ -8,7 +8,7 @@
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING included with the this distribution.
 
-(define mlangia-act-v
+(define mlang-ia-act-v
   (vector
    ;; $start => mlang-item
    (lambda ($1 . $rest) $1)
