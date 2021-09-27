@@ -21,6 +21,11 @@
 ;;    set d [make-array (10, 10)]  # 10 x 10 array
 ;;    set d [make-vector f64 (10, 10)]  # 10 x 10 matrix
 
+;; 2) symbol is just a lone identifier, not single-quoted (e.g, 'foo')
+
+;; 3) need special consts: void = (), true, false,
+;;     $true = 1, $false = 0, () = (void) = void
+
 ;;; Code:
 
 (define-module (nyacc lang tsh mach)
@@ -40,17 +45,18 @@
    (notice (string-append "Copyright (C) 2021 Matthew R. Wette"
 			  license-lgpl3+))
    ;;(expect 0)
+
    ;;(reserve '$code-comm)
    (start top)
    (grammar
 
     (top
-     (item-list))
+     (script))
 
-    (item-list (item-list-1 ($$ (tl->list $1))))
-    (item-list-1
-     (item ($$ (make-tl 'item-list $1)))
-     (item-list-1 item ($$ (tl-append $1 $2))))
+    (script (script-1 ($$ (tl->list $1))))
+    (script-1
+     (item ($$ (make-tl 'script $1)))
+     (script-1 item ($$ (tl-append $1 $2))))
 
     ;; item: top-level declaration or decl-stmt or exec-stmt
     (item
@@ -59,7 +65,7 @@
 
     (topl-decl
      ("source" string ($$ `(source ,$2)))
-     ("proc" ident "{" arg-list "}" "{" stmt-list "}")
+     ("proc" ident "{" arg-list "}" "{" stmt "}" ($$ `(proc ,$2 ,$4 ,$7)))
      ;;^ syntax sugar for: set foo [lambda { x y z } { ($x + $y + $z) }
      )
 
@@ -68,13 +74,16 @@
     (arg-list-1
      ($empty ($$ (make-tl 'arg-list)))
      (arg-list-1 ident ($$ (tl-append $1 `(arg ,$2))))
-     (arg-list-1 "{" ident unit-expr "}"  ($$ (tl-append $1 `(arg ,$3 ,$4)))))
+     (arg-list-1 "{" ident unit-expr "}" ($$ (tl-append $1 `(opt-arg ,$3 ,$4))))
+     (arg-list-1 "args" ($$ (tl-append $1 `(rest-arg (ident "args"))))))
 
+    ;; stmt list uses term as statement separators
     (stmt-list
      (stmt-list-1 ($$ (tl->list $1))))
     (stmt-list-1
      (stmt ($$ (make-tl 'stmt-list $1)))
-     (stmt-list-1 term stmt ($$ (tl-append $1 $3))))
+     ;;(stmt-list-1 term stmt ($$ (tl-append $1 $3))))
+     (stmt term stmt-list-1 ($$ (tl-insert $3 $1))))
     
     (stmt
      (decl-stmt)
@@ -88,10 +97,11 @@
      )
 
     (exec-stmt
-     ;;("{" stmt-list "}")
-     ;;("while" unit-expr "{" stmt-list "}")
-     (if-stmt)
      (ident expr-seq ($$ `(call ,$1 ,@(cdr $2))))
+     ("{" stmt-list "}" ($$ $2))
+     (if-stmt)
+     ("switch" unit-expr "{" case-list "}" ($$ `(switch ,$2 ,@(cdr $4))))
+     ("while" unit-expr "{" stmt-list "}" ($$ `(while ,$2 ,$4)))
      ;;("lambda "{" arg-list "}" "{" stmt-list "}"
      ("format" expr-seq ($$ `(format . ,(cdr $2))))
      ("return" ($$ `(return)))
@@ -119,6 +129,20 @@
      (elseif-list-1
       "elseif" unit-expr "{" stmt-list "}"
       ($$ (tl-append $1 'elseif-list `(elseif ,$2 ,$4)))))
+
+    (case-list
+     (case-list-1 ($$ (tl->list $1)))
+     (case-list-1 default-case-expr ($$ (append (tl->list $1) (list $2)))))
+    (case-list-1
+     (case-expr ($$ (make-tl 'case-list $1)))
+     (term ($$ (make-tl 'case-list)))
+     (case-list-1 case-expr ($$ (tl-append $1 $2)))
+     (case-list-1 term ($$ $1)))
+    (case-expr
+     (unit-expr unit-expr ($$ `(case ,$1 ,$2)))
+     (unit-expr "{" stmt-list "}" ($$ `(case ,$1 ,$3))))
+    (default-case-expr
+     ("default" unit-expr ($$ `(case (default) ,$2))))
     
     (unit-expr
      (primary-expression ($$ `(expr ,$1))))
@@ -188,7 +212,6 @@
      (symbol)
      ;;($chlit ($$ `(char ,$1)))
      ("(" expr-list ")" ($$ $2))
-     ;;("[" ident expr-seq "]" ($$ `(call $2 $3)))
      ("[" exec-stmt "]" ($$ `(eval ,$2)))
      )
 
@@ -210,7 +233,8 @@
     (fixed ($fixed ($$ `(fixed ,$1))))
     (float ($float ($$ `(float ,$1))))
     (string ($string ($$ `(string ,$1))))
-    (symbol ($symbol ($$ `(symbol ,$1))))
+    ;;(symbol ($symbol ($$ `(symbol ,$1)))) ;; symbol is 'asdadfa'
+    (symbol (ident))
     (term (";") ("\n")))))
 
 (define tsh-mach
@@ -227,7 +251,9 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine tsh-ia-spec))
-   #:keep 0 #:keepers '()))
+   ;;#:keep 0 #:keepers '("\n") ;; OPTION-1
+   #:keep 0 #:keepers '()
+   ))
 
 ;;; =====================================
 

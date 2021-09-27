@@ -1,6 +1,6 @@
 ;;; nyacc/lang/tsh/compile-tree-il.scm - compile tclish sxml to tree-il
 
-;; Copyright (C) 2018,2021 Matthew R. Wette
+;; Copyright (C) 2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -17,7 +17,11 @@
 
 ;;; Notes:
 
-;; Derived from tcl/compile-tree-il.scm.
+;; 1) Derived from tcl/compile-tree-il.scm.
+
+;;; Todo:
+
+;; 1) clean up fD handling of set
 
 ;;; Code:
 
@@ -50,7 +54,7 @@
 (define add-toplevel nx-add-toplevel)
 (define add-lexical nx-add-lexical)
 (define add-lexicals nx-add-lexicals)
-(define add-symbol nx-add-symbol)
+(define add-variable nx-add-variable)
 (define (lookup name dict)
   (or (nx-lookup name dict)
       (nx-lookup-in-env name xlib-module)))
@@ -60,7 +64,7 @@
 ;; @deffn {Procedure} make-arity args
 ;; This procedure generates a tree-il arity part of a lambda-case.
 ;; @end deffn
-(define (make-arity args)
+(define (X-make-arity args)
   (let loop ((req '()) (opt '()) (rest #f) (inits '()) (gsyms '()) (args args))
     (if (null? args)
 	(list (reverse req) (reverse opt) rest #f
@@ -111,11 +115,14 @@
       ((fixed ,sval)
        (values '() `(const ,(string->number sval)) dict))
 
-      ((symbol ,sval)
+      #;((symbol ,sval)
        (values '() `(const ,(string->symbol sval)) dict))
-      #;((ident ,sval)
+      ((ident ,sval)
       (values '() `(const ,(string->symbol sval)) dict))
 
+      ((eval . ,stmts)
+       (values tree '() (add-lexical "return" (push-scope dict))))
+      
       ((deref ,name)
        (let ((ref (lookup name dict)))
 	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
@@ -126,20 +133,22 @@
 	 (unless ref (throw 'tsh-error "undefined variable: ~A" name))
 	 (values '() `(call ,(xlib-ref 'tsh:array-ref) ,ref ,expr-list) dict)))
 
-      ((proc ,name (arg-list . ,args) ,body)
+      ((switch . ,stmts)
+       (values tree '() (add-lexicals "swx~val" "break" (push-scope dict))))
+      
+      ((proc (ident ,name) (arg-list . ,args) ,body)
        ;; replace each name with (lexical name gsym)
-       (let* ((dict (add-symbol name dict))
+       (let* ((dict (add-variable name dict))
 	      (nref (lookup name dict))
 	      (dict (push-scope dict))
-	      (dict (fold (lambda (a d) (add-lexical (cadr a) d)) dict args))
+	      ;; clean this up
+	      (dict (fold (lambda (a d) (add-lexical (cadadr a) d)) dict args))
 	      (args (fold-right ;; replace arg-name with lexical-ref
 		     (lambda (a l)
-		       (cons (cons* (car a) (lookup (cadr a) dict) (cddr a))
-			     l))
-		     '() args))
+		       (cons (cons* (car a) (lookup (cadadr a) dict) (cddr a))
+			     l)) '() args))
 	      (dict (add-lexical "return" dict))
-	      (dict (acons '@F name dict))
-	      )
+	      (dict (acons '@F name dict)))
 	 (values `(proc ,nref (arg-list . ,args) ,body) '() dict)))
 
       ((incr (ident ,var) ,val)
@@ -148,13 +157,16 @@
        (values `(incr ,var (const 1)) '() dict))
       
       ((set (ident ,name) ,value)
-       (let* ((dict (add-symbol name dict))
-	      (nref (lookup name dict)))
+       ;; todo-1: clean this up  NOT RIGHT, frame?
+       (let* ((nref (lookup name dict))
+	      (dict (if nref dict (or (nx-ensure-in-frame name dict)
+				      (add-variable name dict))))
+	      (nref (or nref (lookup name dict))))
 	 (values `(set ,nref ,value) '() dict)))
       ;;((set otherwise could be ugly
 
       ((set-indexed (ident ,name) ,index ,value)
-       (let* (;;(dict (add-symbol name dict))
+       (let* (;;(dict (add-variable name dict))
 	      (nref (lookup name dict)))
 	 (values `(set-ix ,nref ,index ,value) '() dict)))
 
@@ -163,6 +175,9 @@
 	 (unless ref (throw 'tsh-error "not defined"))
 	 (values `(call ,ref . ,args) '() dict)))
 
+      ((script . ,stmts)
+       (values tree '() (add-lexical "return" (push-scope dict))))
+      
       ;; don't process resolved references
       ((@@ ,module ,symbol)
        (values '() tree dict))
@@ -200,19 +215,23 @@
 	   ((null? tail) (values '(void) kdict)) ; just comments
 	   (else (values (car kseed) kdict)))))
 
-       ((item-list stmt-list)
+       ((script)
+	(values (cons (block (rtail kseed)) seed) kdict))
+
+       ((stmt-list)
 	(values (cons (block (rtail kseed)) seed) kdict))
 
        ((comment)
 	(values seed kdict))
 
        ((proc)
+	(sferr "proc (reverse kseed):\n") (pperr (reverse kseed))
 	(let* ((tail (rtail kseed))
 	       (name-ref (list-ref tail 0))
-	       (ptag (lookup "return" kdict))
 	       (argl (list-ref tail 1))
-	       (body (block (cdr (list-ref tail 2))))
-	       (arity (make-arity (cdr argl)))
+	       (body (block (list-tail tail 2)))
+	       (ptag (lookup "return" kdict))
+	       (arity (make-arity argl))
 	       ;; add lexicals : CLEAN THIS UP -- used in nx-octave also
 	       (lvars (let loop ((ldict kdict))
 			(if (eq? '@F (caar ldict)) '()
@@ -235,10 +254,15 @@
 	  ;;(sferr "proc ~S:\n" name-ref) (pperr tail) (pperr fctn)
 	  (values (cons stmt seed) (pop-scope kdict))))
 
-       ;; for allows continue and break
-       ((for)
-	(sferr "todo: for\n")
-	(values (cons '(void) seed) kdict))
+       ((return)
+	(let ((ret `(abort ,(lookup "return" kdict)
+			   (,(if (> (length kseed) 1) (car kseed) '(void)))
+			   (const ()))))
+	  (values (cons ret seed) kdict)))
+
+       ((X-arg-list)
+	(sferr "arg-list:\n") (pperr (reverse kseed)) (quit)
+	)
 
        ;; conditional: elseif and else are translated by the default case
        ((if)
@@ -260,14 +284,35 @@
        ((elseif else)
 	(values (cons (reverse kseed) seed) kdict))
 
-
-       ((return)
+       ((switch)
+	(let ((val (lookup "swx~val" kdict)))
+	  (values
+	   (cons
+	    (identity ;; pk
+	     (if (eq? (caar kseed) 'default)
+		 (make-switch val (cdr kseed) (car kseed))
+		 (make-switch val kseed '(void)))
+	     )
+	    seed)
+	   (pop-scope kdict))))
+       
+       ((case)
 	(values
-	 (cons `(abort ,(lookup "return" kdict)
-		       (,(if (> (length kseed) 1) (car kseed) '(void)))
-		       (const ()))
-	       seed)
+	 (if (and (pair? seed) (eq? (caar seed) 'default))
+	     (cons* (car seed) (reverse kseed) (cdr seed)) ; default in front
+	     (cons (reverse kseed) seed))
 	 kdict))
+	
+       ;; for allows continue and break
+       ((for)
+	(sferr "todo: for\n")
+	(values (cons '(void) seed) kdict))
+
+       ((while)
+	(let* ((cond-expr `(primcall not (primcall zero? ,(list-ref kseed 1))))
+	       (body-part (list-ref kseed 0))
+	       (while-exp (make-while cond-expr body-part kdict)))
+	  (values (cons while-exp seed) kdict)))
 
        ((set)
 	(values
@@ -296,14 +341,15 @@
 	      (call ,(xlib-ref 'tsh:array-set1) ,nref ,indx ,value))
 	    seed) kdict)))
 
-       ((body)
+       #;((body)
 	(values (cons (block (rtail kseed)) seed) kdict))
        
        ((call)
 	(values (cons `(call . ,(rtail kseed)) seed) kdict))
 
        ((eval)
- 	(values (cons (car kseed) seed) kdict))
+	(let ((body (with-escape/arg (lookup "return" kdict) (car kseed))))
+ 	  (values (cons body seed) (pop-scope kdict))))
 
        ((void)
 	(values (cons '(void) seed) kdict))
@@ -351,13 +397,16 @@
        ((rshift) (opcall-node 'tsh:rshift seed kseed kdict))
 
        ;; lt gt le ge
+       ((eq) (values (cons (op-call 'tsh:eq kseed) seed) kdict))
+       ((ne) (values (cons (op-call 'tsh:ne kseed) seed) kdict))
        ((lt) (values (cons (op-call 'tsh:lt kseed) seed) kdict))
        ((gt) (values (cons (op-call 'tsh:gt kseed) seed) kdict))
        ((le) (values (cons (op-call 'tsh:le kseed) seed) kdict))
        ((ge) (values (cons (op-call 'tsh:ge kseed) seed) kdict))
 
        (else
-	(unless (member (car tree) '(@@ toplevel))
+	(unless (member (car tree)
+			'(@@ toplevel lexical abort arg-list arg rest-arg))
 	  (sferr "MISSED: ~S\n" (car tree)))
 	(cond
 	 ((null? seed) (values (reverse kseed) kdict))

@@ -12,13 +12,13 @@
   (vector
    ;; $start => item
    (lambda ($1 . $rest) $1)
-   ;; top => item-list
+   ;; top => script
    (lambda ($1 . $rest) $1)
-   ;; item-list => item-list-1
+   ;; script => script-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; item-list-1 => item
-   (lambda ($1 . $rest) (make-tl 'item-list $1))
-   ;; item-list-1 => item-list-1 item
+   ;; script-1 => item
+   (lambda ($1 . $rest) (make-tl 'script $1))
+   ;; script-1 => script-1 item
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; item => topl-decl term
    (lambda ($2 $1 . $rest) $1)
@@ -26,8 +26,9 @@
    (lambda ($2 $1 . $rest) $1)
    ;; topl-decl => "source" string
    (lambda ($2 $1 . $rest) `(source ,$2))
-   ;; topl-decl => "proc" ident "{" arg-list "}" "{" stmt-list "}"
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest) $1)
+   ;; topl-decl => "proc" ident "{" arg-list "}" "{" stmt "}"
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(proc ,$2 ,$4 ,$7))
    ;; arg-list => arg-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; arg-list-1 => 
@@ -37,13 +38,16 @@
      (tl-append $1 `(arg ,$2)))
    ;; arg-list-1 => arg-list-1 "{" ident unit-expr "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
-     (tl-append $1 `(arg ,$3 ,$4)))
+     (tl-append $1 `(opt-arg ,$3 ,$4)))
+   ;; arg-list-1 => arg-list-1 "args"
+   (lambda ($2 $1 . $rest)
+     (tl-append $1 `(rest-arg (ident "args"))))
    ;; stmt-list => stmt-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; stmt-list-1 => stmt
    (lambda ($1 . $rest) (make-tl 'stmt-list $1))
-   ;; stmt-list-1 => stmt-list-1 term stmt
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; stmt-list-1 => stmt term stmt-list-1
+   (lambda ($3 $2 $1 . $rest) (tl-insert $3 $1))
    ;; stmt => decl-stmt
    (lambda ($1 . $rest) $1)
    ;; stmt => exec-stmt
@@ -57,10 +61,18 @@
    ;; decl-stmt => "set" ident/ix expr-list unit-expr
    (lambda ($4 $3 $2 $1 . $rest)
      `(set-ix ,$2 ,$3 ,$4))
-   ;; exec-stmt => if-stmt
-   (lambda ($1 . $rest) $1)
    ;; exec-stmt => ident expr-seq
    (lambda ($2 $1 . $rest) `(call ,$1 ,@(cdr $2)))
+   ;; exec-stmt => "{" stmt-list "}"
+   (lambda ($3 $2 $1 . $rest) $2)
+   ;; exec-stmt => if-stmt
+   (lambda ($1 . $rest) $1)
+   ;; exec-stmt => "switch" unit-expr "{" case-list "}"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(switch ,$2 ,@(cdr $4)))
+   ;; exec-stmt => "while" unit-expr "{" stmt-list "}"
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(while ,$2 ,$4))
    ;; exec-stmt => "format" expr-seq
    (lambda ($2 $1 . $rest)
      `(format unquote (cdr $2)))
@@ -95,6 +107,25 @@
    ;; elseif-list-1 => elseif-list-1 "elseif" unit-expr "{" stmt-list "}"
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      (tl-append $1 'elseif-list `(elseif ,$2 ,$4)))
+   ;; case-list => case-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; case-list => case-list-1 default-case-expr
+   (lambda ($2 $1 . $rest)
+     (append (tl->list $1) (list $2)))
+   ;; case-list-1 => case-expr
+   (lambda ($1 . $rest) (make-tl 'case-list $1))
+   ;; case-list-1 => term
+   (lambda ($1 . $rest) (make-tl 'case-list))
+   ;; case-list-1 => case-list-1 case-expr
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
+   ;; case-list-1 => case-list-1 term
+   (lambda ($2 $1 . $rest) $1)
+   ;; case-expr => unit-expr unit-expr
+   (lambda ($2 $1 . $rest) `(case ,$1 ,$2))
+   ;; case-expr => unit-expr "{" stmt-list "}"
+   (lambda ($4 $3 $2 $1 . $rest) `(case ,$1 ,$3))
+   ;; default-case-expr => "default" unit-expr
+   (lambda ($2 $1 . $rest) `(case (default) ,$2))
    ;; unit-expr => primary-expression
    (lambda ($1 . $rest) `(expr ,$1))
    ;; expression => logical-or-expression
@@ -219,8 +250,8 @@
    (lambda ($1 . $rest) `(float ,$1))
    ;; string => '$string
    (lambda ($1 . $rest) `(string ,$1))
-   ;; symbol => '$symbol
-   (lambda ($1 . $rest) `(symbol ,$1))
+   ;; symbol => ident
+   (lambda ($1 . $rest) $1)
    ;; term => ";"
    (lambda ($1 . $rest) $1)
    ;; term => "\n"

@@ -1,6 +1,6 @@
 ;;; nyacc/lang/nx-util.scm - utilities for Guile extension languages
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -18,47 +18,87 @@
 ;;; Notes:
 
 ;; 1) should make a (make-return expr)
+;; 2) The dict is an alist of symbols with scope levels.  Within each scope
+;;    The key @code{@P} points to the parent scope.   If a scope has a key
+;;    @code{F} then it is a frame????
+;;    Some scope levels can be frames.  If a variable is defined it should
+;;    be placed in the current frame.  
+;;    @code{@P} points to the parent scope
+;;    @code{@F} denotes a frame ????
+;;    If code to define a variable it should be put in the current frame.
+;; 3) routines that return dict's should return '() if not found
+;;    e.g. nx-parent dict => '()
+;; 4) stanard prompt tags: return break (exit ?)
 
+
+;;    entries are of the form
+;;      ("foo" . '(lexical foo foo-123))
+;;    or
+;;      ("foo" . '(toplevel foo foo-123))
+;;            
+;;                   ((b . a~1) (@F . "foo") (a . b~1) (@P . ^))
+;;  ((c . c~1) (@P . ^))
+;;
+;;  If a scope includes a @F symbol then it is a frame.
+;;  Sometimes new symbols must be inserted into a "frame" a scope associated
+;;  with a procedure, for example.   The symbols after '@F are the calling
+;;  arguments or special arguments, so xxx
+;; 
 ;;; Code:
 
 (define-module (nyacc lang nx-util)
   #:export (genxsym
 	    nx-undefined-xtil
 	    nx-push-scope nx-pop-scope nx-top-level?
-	    nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-symbol
+	    nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-variable
+	    nx-ensure-in-frame
+	    nx-lookup-in-frame
 	    nx-lookup-in-env nx-lookup
+	    lookup-gensym
+	    
 	    rtail singleton?
-	    make-and make-or make-thunk make-defonce
-	    with-escape/handler with-escape/arg with-escape/expr with-escape
 	    rev/repl
+	    
+	    with-escape/handler with-escape/arg with-escape/expr with-escape
 	    make-handler
+	    
 	    opcall-generator
+	    
 	    block vblock
-	    make-loop make-do-while make-while lookup-gensym
-	    )
-  )
+	    make-arity
+	    make-and make-or make-thunk make-defonce
+	    make-switch make-loop make-do-while make-while
+	    ;; deprecated
+	    nx-add-symbol))
+
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pperr exp) (pretty-print exp #:per-line-prefix "  "))
 
 (define (genxsym name)
   (gensym (string-append (if (string? name) name (symbol->string name)) "-")))
 
+;; @deffn {Procedure} x_y->x-y a_string => a-string
+;; Convert a C-like name to a Scheme-like name.
+;; @end deffn
+(define (x_y->x-y name)
+  (string-map (lambda (ch) (if (char=? ch #\_) #\- ch)) name))
+
+;; @deffn {XTIL} nx-undefined-xtil
+;; @end deffn
 (define nx-undefined-xtil `(const ,(if #f #f)))
 
 ;; @deffn {Procedure} nx-push-scope dict
 ;; Push scope level of dict, returning new dict.
 ;; @end deffn
 (define (nx-push-scope dict)
-  "- Procedure: nx-push-scope dict
-     Push scope level of dict, returning new dict."
   (list (cons '@P dict)))
 
-;; @deffn {Procedure} nx-push-scope dict
+;; @deffn {Procedure} nx-pop-scope dict
 ;; Pop scope level of dictionary @var{dict}, returning dictionary
 ;; for popped scope.
 ;; @end deffn
 (define (nx-pop-scope dict)
-  "- Procedure: nx-push-scope dict
-     Pop scope level of dictionary DICT, returning dictionary for popped
-     scope."
   (or (assq-ref dict '@P) (error "coding error: too many pops")))
 
 ;; @deffn {Procedure} nx-top-level? dict
@@ -66,9 +106,6 @@
 ;; for popped scope.
 ;; @end deffn
 (define (nx-top-level? dict)
-  "- Procedure: nx-top-level? dict
-     This is a predicate to indicate if DICT's scope top-level.  for
-     popped scope."
   (assoc-ref dict '@top))
 
 ;; @deffn {Procedure} nx-add-toplevel name dict
@@ -82,12 +119,6 @@
 ;; @end example
 ;; @end deffn
 (define (nx-add-toplevel name dict)
-  "- Procedure: nx-add-toplevel name dict
-     Given a string NAME and dictionary DICT return a new dictionary
-     with a top-level reference for name added.  This can be retrieved
-     with 'nx-lookup name dict' where 'dict' is the return value.
-          (let ((dict (nx-add-toplevel \"foo\" dict)))
-             (nx-lookup \"foo\" dict)) => (toplevel foo)"
   (acons name `(toplevel ,(string->symbol name)) dict))
 
 ;; @deffn {Procedure} nx-add-lexical name dict
@@ -101,12 +132,6 @@
 ;; @end example
 ;; @end deffn
 (define (nx-add-lexical name dict)
-  "- Procedure: nx-add-lexical name dict
-     Given a string NAME and dictionary DICT return a new dictionary
-     with a lexical reference added.  The reference can be retrieved
-     with 'nx-lookup name dict' where 'dict' is the return value.
-          (let ((dict (nx-add-lexical \"foo\" dict)))
-             (nx-lookup \"foo\" dict)) => (lexical foo foo-123)"
   (acons name `(lexical ,(string->symbol name) ,(genxsym name)) dict))
 
 ;; @deffn {Procedure} nx-add-lexicals name1 ... nameN dict
@@ -116,31 +141,24 @@
 ;; @end example
 ;; @end deffn
 (define (nx-add-lexicals . args)
-  "- Procedure: nx-add-lexicals name1 ... nameN dict
-     A fold-right with 'nx-add-lexical', equivalent to
-          (fold-right nx-add-lexical dict (name1 ... nameN))"
   (let iter ((args args))
     (if (null? (cddr args)) (nx-add-lexical (car args) (cadr args))
 	(nx-add-lexical (car args) (iter (cdr args))))))
 
-;; Add lexical or toplevel based on level.
-(define (nx-add-symbol name dict)
+;; @deffn {Procedure} nx-add-variable name dict
+;; Add lexical or toplevel based on level.  This will
+;; call @code{ns-add-toplevel} if in top-level frame, else
+;; @code{nx-add-lexical}.
+;; @end deffn
+(define (nx-add-variable name dict)
   (if (nx-top-level? dict)
       (nx-add-toplevel name dict)
       (nx-add-lexical name dict)))
+(define nx-add-symbol nx-add-variable)
 
-(define (nx-lookup-in-env name env)
-  (let ((sym (if (string? name) (string->symbol name) name)))
-    (if (and env (module-variable env sym))
-	`(@@ ,(module-name env) ,sym)
-	#f)))
-
-;; @deffn {Procedure} x_y->x-y a_string => a-string
-;; Convert a C-like name to a Scheme-like name.
+;; @deffn {Procedure} nx-lookup name dict
+;; Lookup in the current frame.  If not there then look
 ;; @end deffn
-(define (x_y->x-y name)
-  (string-map (lambda (ch) (if (char=? ch #\_) #\- ch)) name))
-
 (define (nx-lookup name dict)
     (cond
    ((not dict) #f)
@@ -152,24 +170,76 @@
    ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
    (else #f)))
 
+;; @deffn {Procedure} nx-lookup-gensym name dict [label] => gensym
+;; Lookup up nearest parent lexical and return associated gensym.
+;; @lisp
+;; (nx-lookup-gensym "foo" dict) => JS~1234
+;; (nx-lookup-gensym "foo" dict #:label "oloop") => JS~432
+;; @end lisp
+;; @end deffn
+(define* (nx-lookup-gensym name dict #:key label)
+  (if label
+      (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
+	(if (not pdict) #f
+	    (if (and (assoc-ref pdict label)
+		     (assoc-ref "~exit" cdict))
+		(assoc-ref name cdict)
+		(iter pdict (assoc-ref pdict '@P)))))
+      (let* ((sym (nx-lookup name dict)))
+	(if (not sym) (error "javascript: not found:" name))
+	(caddr sym))))
+
+;; @deffn {Procedure} nx-lookup-in-env name env
+;; @end deffn
+(define (nx-lookup-in-env name env)
+  (let ((sym (if (string? name) (string->symbol name) name)))
+    (if (and env (module-variable env sym))
+	`(@@ ,(module-name env) ,sym)
+	#f)))
+
+;; @deffn nx-ensure-in-frame name dict => dict
+;; Ensure deffn is in frame, starting from current scope dict.
+;; A modified dict may be returned, or a modified parent.
+;; @end deffn
+(define (nx-ensure-in-frame name dict)
+  (if (assq-ref dict '@F)
+      (if (assoc-ref dict name) dict (nx-add-lexical name dict))
+      (let loop ((@P (assq '@P dict)))
+	(cond
+	 ((not @P) #f)
+	 ((assq-ref (cdr @P) '@F)
+	  (unless (assoc-ref (cdr @P) name)
+	    (set-cdr! @P (nx-add-lexical name (cdr @P))))
+	  dict)
+	 (else (loop (assq '@P (cdr @P))))))))
+
+;; @deffn {Procedure} rtail kseed
+;; This is used often in the up-phase of converting sxml trees to
+;; Tree-IL trees.
+;; @end deffn
 (define (rtail kseed)
   (cdr (reverse kseed)))
 
 (define (singleton? expr)
   (and (pair? expr) (null? (cdr expr))))
 
+;; @deffn {Procedure} make-and . args
 ;; (and a b c) => (if a (if b (if c #t #f) #f) #f)
+;; @end deffn
 (define (make-and . args)
   (let iter ((args args))
     (if (null? args) '(const #t)
 	`(if ,(car args) ,(iter (cdr args)) (const #f)))))
 
+;; @deffn {Procedure} make-or . args
 ;; (or a b c) => (if a #t (if b #t (if c #t #f)))
+;; @end deffn
 (define (make-or . args)
   (let iter ((args args))
     (if (null? args) '(const #f)
 	`(if ,(car args) (const #t) ,(iter (cdr args))))))
 
+;; @deffn {Procedure} rev/repl arg0 list
 ;; reverse list but replace new head with @code{head}
 ;; @example
 ;; (rev/repl 'a '(4 3 2 1)) => '(a 2 3 4)
@@ -223,12 +293,11 @@
 ;; Generate an escape @code{lambda} for a prompt.  The continuation arg
 ;; is not used.  @var{args} is a list of lexical references and @var{body}
 ;; is an expression that may reference the args.
+;; @example
+;;   NEED EXAMPLE
+;; @end example
 ;; @end deffn
 (define (make-handler args body)
-  "- Procedure: make-handler args body
-     Generate an escape 'lambda' for a prompt.  The continuation arg is
-     not used.  ARGS is a list of lexical references and BODY is an
-     expression that may reference the args."
   (call-with-values
       (lambda ()
 	(let iter ((names '()) (gsyms '()) (args args))
@@ -271,6 +340,46 @@
 (define (with-escape tag-ref body)
   (with-escape/expr tag-ref body '(void)))
 
+
+;; @deffn {Procedure} make-arity arg-list
+;; This procedure generates a tree-il arity part of a lambda-case.
+;; @list
+;;  (arg-list (arg (lexical a a-1)) (opt-arg (lexical b b-1) (const 1))
+;;      (key-arg (lexical c c-1) (const 1)))
+;;  (req opt rest kw inits gensyms)
+;; @end lisp
+;; @end deffn
+(define (make-arity arg-list)
+  (let loop ((req '())
+	     (opt '())
+	     (rest #f)
+	     (kw '())
+	     (inits '())
+	     (gsyms '())
+	     (args (cdr arg-list)))
+    (if (null? args)
+	(list (reverse req) (reverse opt) rest
+	      (if (null? kw) #f (reverse kw))
+	      (reverse inits) (reverse gsyms))
+	(let* ((rg (car args)) (lx (cadr rg)) (var (cadr lx)) (sym (caddr lx)))
+	  (case (car rg)
+	    ((arg)
+	     (loop (cons var req) opt rest kw inits
+		   (cons sym gsyms) (cdr args)))
+	    ((opt-arg)
+	     (loop req (cons var opt) rest kw (cons (caddr rg) inits)
+		   (cons sym gsyms) (cdr args)))
+	    ((key-arg) 
+	     (loop req opt rest (cons var kw) (cons (caddr rg) inits)
+		   (cons sym gsyms) (cdr args)))
+	    ((rest-arg)
+	     (loop req opt var kw inits (cons sym gsyms) (cdr args)))
+	    (else (error "coding error")))))))
+
+
+;; Terms:
+;; expr-or-expr-list: ((...) ...) or (tag ...)
+
 ;; @deffn {Procedure} block expr-or-expr-list => expr | (seq ex1 (seq ... exN))
 ;; Return an expression or build a seq-train returning last expression.
 ;; @end deffn
@@ -286,32 +395,39 @@
 ;; Return an expression or build a seq-train returning undefined.
 ;; @end deffn
 (define (vblock expr-list)
-  "- Procedure: vblock expr-list => (seq ex1 (seq ... (void)))
-     Return an expression or build a seq-train returning undefined."
   (let iter ((xl expr-list))
     (if (null? xl) '(void)
 	`(seq ,(car xl) ,(iter (cdr xl))))))
 
-;; @deffn {Procedure} lookup-gensym name dict [label] => gensym
-;; lookup up nearest parent lexical and return gensym
-;; (lookup-gensym "foo" dict) => JS~1234
-;; (lookup-gensym "foo" dict #:label "oloop") => JS~432
+;; @deffn {Procecure} make-switch swx-var kseed default
+;; options: mem (membership), equ (equality)
+;; where @var{swx-var} is the switch case variable used to bind the
+;; switch expression.  @var{kseed} is the reverse list from the translator
+;; where the end looks like @code{exp} @code{'switch}.
+;; @exmaple
+;; ((default) (case const-or-list seq) ... expr 'switch)
+;; @end example
+;; @example
+;; switch expr case ...
+;; case: expr-or-expr-list stmt-list
+;; @end example
+;; where cases are in reverse order and may end in a tag
+;; @example
+;; var-name: lexical for defined expr-arg to switch
+;; cases : list of (tag [til-const | til-list] seq)
+;; @end example
+;; Note: As switch cases are handled in the translater one could work
+;; to keep the default case at the head of the list.
 ;; @end deffn
-(define* (lookup-gensym name dict #:key label)
-  "- Procedure: lookup-gensym name dict [label] => gensym
-     lookup up nearest parent lexical and return gensym (lookup-gensym
-     \"foo\" dict) => JS~1234 (lookup-gensym \"foo\" dict #:label \"oloop\")
-     => JS~432"
-  (if label
-      (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
-	(if (not pdict) #f
-	    (if (and (assoc-ref pdict label)
-		     (assoc-ref "~exit" cdict))
-		(assoc-ref name cdict)
-		(iter pdict (assoc-ref pdict '@P)))))
-      (let* ((sym (nx-lookup name dict)))
-	(if (not sym) (error "javascript: not found:" name))
-	(caddr sym))))
+(define* (make-switch var kseed def #:key (mem 'member) (equ 'equal?))
+  ;; sc : switch case : (case ,key ,val)
+  (let loop ((nxt-case def) (nxt-seed (car kseed)) (ks kseed))
+    (if (symbol? (car ks)) ;; == 'switch
+	`(let ,(list (cadr var)) ,(list (caddr var)) ,(list nxt-seed) ,nxt-case)
+	(let* ((key (cadr nxt-seed)) (seq (caddr nxt-seed))
+	       (op (if (eq? 'const (car key)) equ mem)))
+	  (loop `(if (call (primitive ,op) ,var ,key) ,seq ,nxt-case)
+		(car ks) (cdr ks))))))
 
 ;; @deffn {Procedure} make-loop expr body dict ilsym tbody
 ;; This is a helper procedure for building loops like the following:
@@ -346,29 +462,6 @@
 ;; @end deffn
 ;; TODO #:key (break "break") (continue "continue")
 (define* (make-loop expr body dict ilsym tbody)
-  "- Procedure: make-loop expr body dict ilsym tbody
-     This is a helper procedure for building loops like the following:
-          \"do\" body \"where\" expr
-          \"while\" body \"do\" expr
-          \"for\" i \"in\" range \"do\" body
-     The argument EXPR is the conditional, BODY is the code to execute,
-     which may contain 'abort-to-prompt' given by 'break' or 'continue'.
-     The code generated is based on the following pattern:
-          (let ((break! (make-prompt-tag 'break))
-                (continue! (make-prompt-tag 'continue)))
-             (letrec ((iloop (lambda () (body) (if (expr) (iloop))))
-                      (oloop
-                       (lambda ()
-                        (call-with-prompt continue!
-                           thunk
-                           (lambda (k) (if (expr) (oloop)))))))
-               (call-with-prompt break!
-                 oloop
-                 (lambda (k) (if #f #f))))))
-     where 'break!' and 'continue!' are lexicals generated for the code
-     and 'thunk' is
-     '(lambda () (iloop))' for do-while and
-     '(lambda () (if (expr) (iloop)))' for while-do."
   (let* ((olsym (genxsym "oloop"))
 	 (bsym (lookup-gensym "break" dict))
 	 (csym (lookup-gensym "continue" dict))
@@ -394,10 +487,6 @@
 ;; which must contain the labels for @code{break} and @code{continue}.
 ;; @end deffn
 (define (make-do-while expr body dict)
-  "- Procedure: make-do-while expr body dict
-     This generates code for do-while loops where EXPR is the condtional
-     expression, BODY is the body, DICT is the scope dictionary which
-     must contain the labels for 'break' and 'continue'."
   (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym `(call (lexical iloop ,ilsym)))))
 
@@ -408,11 +497,6 @@
 ;; @code{break} and @code{continue}.
 ;; @end deffn
 (define (make-while expr body dict)
-  "- Procedure: make-while expr body dict
-     This generates code for the following source: where EXPR is the
-     condtional expression, BODY is the body, and is the scope
-     dictionary which must contain the labels for 'break' and
-     'continue'."
   (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym
 		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))

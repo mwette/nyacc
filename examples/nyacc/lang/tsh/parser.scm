@@ -74,7 +74,7 @@
 	 (symtab (filter-mt symbol? tsh-mtab))
 	 ;;
 	 (rd-str (make-string-reader #\" (assq-ref tsh-mtab '$string)))
-	 (rd-sym (make-string-reader #\' (assq-ref tsh-mtab '$symbol)))
+ 	 (rd-sym (make-string-reader #\' (assq-ref tsh-mtab '$symbol)))
 	 (read-comm (make-comm-reader '(("#" . "\n")) #:eat-newline #f))
 	 (read-tsh-id-kw (make-tsh-id-kw-reader match-table))
 	 (nl-val (assoc-ref chrseq "\n"))
@@ -135,6 +135,8 @@
 (define raw-ia-parser
   (make-lalr-parser
    (acons 'act-v tsh-ia-act-v tsh-ia-tables)
+   ;;#:skip-if-unexp '($lone-comm $code-comm "\n") ; OPTION-0
+   ;;#:skip-if-unexp '("\n") ; OPTION-1
    #:interactive #t))
 
 ;; @deffn {Procedure} read-tsh-stmt port env
