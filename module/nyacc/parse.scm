@@ -81,6 +81,11 @@
 	   "~A:~A: parse failed at state ~A, on input ~S"
 	   fn ln (car state) (cdr laval))))
 
+(define (attach-src-prop form subs nsub)
+  (let* (($1 (list-ref subs (1- nsub))))
+    (set-source-properties! form (source-properties $1))
+    form))
+
 (define* (make-lalr-parser/sym mach
 			       #:key (skip-if-unexp '()) interactive
 			       track-src-loc env)
@@ -121,7 +126,8 @@
 	     ((eq? 'reduce (car stx))	; reduce
 	      (let* ((gx (cdr stx))
 		     (gl (vector-ref len-v gx))
-		     ($$ (apply (vector-ref xct-v gx) stack)))
+		     ($$ (apply (vector-ref xct-v gx) stack))
+		     ($$ (if track-src-loc (attach-src-prop $$ stack gl) $$)))
 		(loop (list-tail state gl)
 		      (list-tail stack gl)
 		      (cons (vector-ref rto-v gx) $$)
@@ -173,7 +179,8 @@
 	     ((negative? stx)		; reduce
 	      (let* ((gx (abs stx))
 		     (gl (vector-ref len-v gx))
-		     ($$ (apply (vector-ref xct-v gx) stack)))
+		     ($$ (apply (vector-ref xct-v gx) stack))
+		     ($$ (if track-src-loc (attach-src-prop $$ stack gl) $$)))
 		(loop (list-tail state gl)
 		      (list-tail stack gl)
 		      (cons (vector-ref rto-v gx) $$)
