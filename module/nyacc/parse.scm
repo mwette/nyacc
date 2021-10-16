@@ -81,14 +81,7 @@
 	   "~A:~A: parse failed at state ~A, on input ~S"
 	   fn ln (car state) (cdr laval))))
 
-(define (attach-src-prop form subs nsub)
-  (let* (($1 (list-ref subs (1- nsub))))
-    (set-source-properties! form (source-properties $1))
-    form))
-
-(define* (make-lalr-parser/sym mach
-			       #:key (skip-if-unexp '()) interactive
-			       track-src-loc env)
+(define* (make-lalr-parser/sym mach #:key (skip-if-unexp '()) interactive env)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
@@ -106,7 +99,7 @@
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? '$default (caar (vector-ref pat-v (car state))))
-	      (loop state stack (cons '$default #f) lval) ; default reduction
+	      (loop state stack (cons-source stack '$default #f) lval)
 	      (loop state stack nval (lexr))))		  ; reload
 	 (else
 	  (let* ((laval (or nval lval))
@@ -127,20 +120,30 @@
 	      (let* ((gx (cdr stx))
 		     (gl (vector-ref len-v gx))
 		     ($$ (apply (vector-ref xct-v gx) stack))
-		     ($$ (if track-src-loc (attach-src-prop $$ stack gl) $$)))
-		(loop (list-tail state gl)
-		      (list-tail stack gl)
-		      (cons (vector-ref rto-v gx) $$)
-		      lval)))
+		     (pobj (if (zero? gl) laval (list-tail stack (1- gl))))
+		     (pval (source-properties pobj))
+		     (tval (cons-source pobj (vector-ref rto-v gx) $$)))
+		(if (supports-source-properties? $$)
+		    (set-source-properties! $$ pval))
+		(loop (list-tail state gl) (list-tail stack gl) tval lval)))
 	     ((eq? 'shift (car stx))	; shift
-	      (loop (cons (cdr stx) state) (cons sval stack)
+	      (loop (cons (cdr stx) state) (cons laval sval stack)
 		    #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
 
-(define* (make-lalr-parser/num mach
-			       #:key (skip-if-unexp '())
-			       interactive track-src-loc env)
+;; source property strategy:
+;; lexemes (i.e., token-value pairs) have source properties
+;; as the values are shifted onto @var{stack} the source properties
+;; are attached to the cons cells connecting the elements.
+;; when a reduction occurs, the srcprop for the left-most reduced
+;; value is attached to the return so
+;;    $n $n-1 ... $1 $0 $-1 $-2 ...
+;; red
+;;    $$ | $0 $-1 $-2 ...
+;; (src-prop $1) applied to $$
+
+(define* (make-lalr-parser/num mach #:key (skip-if-unexp '()) interactive env)
   (let* ((len-v (assq-ref mach 'len-v))
 	 (rto-v (assq-ref mach 'rto-v))
 	 (pat-v (assq-ref mach 'pat-v))
@@ -159,7 +162,7 @@
 	  (cdr nval))
 	 ((not (or nval lval))
 	  (if (eqv? $default (caar (vector-ref pat-v (car state))))
-	      (loop state stack (cons $default #f) lval) ; default reduction
+	      (loop state stack (cons-source stack $default #f) lval)
 	      (loop state stack nval (lexr))))		 ; reload
 	 (else
 	  (let* ((laval (or nval lval))
@@ -180,13 +183,15 @@
 	      (let* ((gx (abs stx))
 		     (gl (vector-ref len-v gx))
 		     ($$ (apply (vector-ref xct-v gx) stack))
-		     ($$ (if track-src-loc (attach-src-prop $$ stack gl) $$)))
-		(loop (list-tail state gl)
-		      (list-tail stack gl)
-		      (cons (vector-ref rto-v gx) $$)
-		      lval)))
+		     (pobj (if (zero? gl) laval (list-tail stack (1- gl))))
+		     (pval (source-properties pobj))
+		     (tval (cons-source pobj (vector-ref rto-v gx) $$)))
+		(if (supports-source-properties? $$)
+		    (set-source-properties! $$ pval))
+		(loop (list-tail state gl) (list-tail stack gl) tval lval)))
 	     ((positive? stx)		; shift
-	      (loop (cons stx state) (cons sval stack) #f (if nval lval #f)))
+	      (loop (cons stx state) (cons-source laval sval stack) 
+		    #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
 
@@ -214,9 +219,6 @@
 ;; If @code{#t}, this tells the parser that this is being called
 ;; interactively, so that the token @code{$end} is not expected.
 ;; The default value is @code{#f}.
-;; @item #:track-src-loc 
-;; If @code{#t}, propagate source location information.  This requires
-;; that the lexer execute [to be documented].
 ;; @item #:env
 ;; Use the passed environment to the parser actions provided in the
 ;; specification.  This can be a module (e.g., @code{(current-module)}
@@ -230,7 +232,6 @@
 			   #:key
 			   (skip-if-unexp '())
 			   interactive
-			   track-src-loc
 			   env)
   "- Procedure: make-lalr-parser mach [options] => parser
      Generate a procedure for parsing a language, where MACH is a
@@ -249,9 +250,6 @@
           If '#t', this tells the parser that this is being called
           interactively, so that the token '$end' is not expected.  The
           default value is '#f'.
-     '#:track-src-loc'
-          If '#t', propagate source location information.  This requires
-          that the lexer execute [to be documented].
      '#:env'
           Use the passed environment to the parser actions provided in
           the specification.  This can be a module (e.g.,
@@ -269,13 +267,11 @@
 	(make-lalr-parser/num mach
 			      #:skip-if-unexp siu
 			      #:interactive interactive
-			      #:track-src-loc track-src-loc
 			      #:env env)
 	;; not hashed:
 	(make-lalr-parser/sym mach
 			      #:skip-if-unexp siu
 			      #:interactive interactive
-			      #:track-src-loc track-src-loc
 			      #:env env))))
 
 ;;; --- last line ---
