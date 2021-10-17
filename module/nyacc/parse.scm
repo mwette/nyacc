@@ -127,7 +127,7 @@
 		    (set-source-properties! $$ pval))
 		(loop (list-tail state gl) (list-tail stack gl) tval lval)))
 	     ((eq? 'shift (car stx))	; shift
-	      (loop (cons (cdr stx) state) (cons laval sval stack)
+	      (loop (cons (cdr stx) state) (cons-source laval sval stack)
 		    #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
