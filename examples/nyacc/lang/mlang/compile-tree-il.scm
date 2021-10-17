@@ -418,7 +418,7 @@
 	       (nref (lookup name xdict))
 	       (body `(set! ,nref ,lrec)))
 	  (values (cons body seed) xdict)))
-	
+
        ;; For functions, need to check kdict for lexicals and add them.
        ((fctn-defn)
 	(let* ((tail (rtail kseed))
@@ -582,7 +582,8 @@
 	 kdict))
 
        ((command) ;; TODO
-	(values (cons '(void) kseed) kdict))
+	(let ((args (rtail kseed)))
+	  (values (cons `(call (xlib-ref 'ml:command) ,@args) seed) kdict)))
 
        ((expr-list)
 	(values (cons (reverse kseed) seed) kdict))
