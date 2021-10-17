@@ -24,9 +24,15 @@
 (define-module (nyacc lang mlang xlib)
   #:export (xdict)
   #:use-module (srfi srfi-9)
+  #:use-module (nyacc lang mlang parser)
+  #:use-module (nyacc lang mlang compile-tree-il)
+  #:use-module (system base compile)
   )
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pperr exp)
+  (pretty-print exp (current-error-port)))
 
 (define undefined (if #f #f))
 
@@ -172,12 +178,41 @@
   (hashq-set! expr name value)
   (if #f #f))
 
+;; ===
+
+(define-public (ml:command name . args)
+  (cond
+   ((string=? name "load")
+    (let* ((env (current-module))
+	   (file (car args))
+	   )
+      #f))
+   (else
+    (throw 'mlang-error "unknown command: ~S" name)))
+  (if #f #f))
+
+(define-public (ml:source file)
+  (show-mlang-sxml #t)
+  (show-mlang-xtil #t)
+  (let* ((env (current-module))
+	 (tree (and (string? file) (access? file R_OK)
+		    (call-with-input-file file
+		      (lambda (port) (read-mlang-file port env)))))
+	 (itil (compile-tree-il tree env '()))
+	 (base (basename file ".m"))
+	 (var (module-variable env (string->symbol base)))
+	 )
+    (compile itil #:from 'tree-il #:to 'value #:env env)
+    ;;(sferr "env=~S\n" env)
+    ;;(sferr "var=~S\n" var)
+    ;;(pperr var)
+    ;;(quit)
+    (if #f #f)))
 
 ;; ===
 
 (define xdict
- `(
-   ("struct" . (@ (nyacc lang mlang xlib) ml:make-struct))
-    ))
+ `(("struct" . (@ (nyacc lang mlang xlib) ml:make-struct))
+   ("source" . (@ (nyacc lang mlang xlib) ml:source))))
 
 ;; --- last line ---

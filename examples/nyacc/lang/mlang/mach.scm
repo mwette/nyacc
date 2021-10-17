@@ -153,8 +153,9 @@
      (command arg-list ($$ `(command ,$1 ,@(cdr (tl->list $2))))))
 
     (command
-     ("global" ($$ '(ident "global")))
-     ("clear" ($$ '(ident "clear"))))
+     ("clear" ($$ '(command "clear")))
+     ("global" ($$ '(command "global")))
+     ("load" ($$ '(command "load"))))
 
     ;; Only ident list type commands are allowed
     (arg-list
@@ -293,9 +294,6 @@
   (hashify-machine
    (compact-machine
     (make-lalr-machine mlang-spec))))
-
-(include-from-path "nyacc/lang/mlang/body.scm")
-
 
 (define mlang-ia-spec (restart-spec mlang-spec 'mlang-item))
 

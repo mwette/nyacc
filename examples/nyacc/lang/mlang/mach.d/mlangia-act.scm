@@ -144,10 +144,12 @@
    ;; nontrivial-statement-1 => command arg-list
    (lambda ($2 $1 . $rest)
      `(command ,$1 ,@(cdr (tl->list $2))))
-   ;; command => "global"
-   (lambda ($1 . $rest) '(ident "global"))
    ;; command => "clear"
-   (lambda ($1 . $rest) '(ident "clear"))
+   (lambda ($1 . $rest) '(command "clear"))
+   ;; command => "global"
+   (lambda ($1 . $rest) '(command "global"))
+   ;; command => "load"
+   (lambda ($1 . $rest) '(command "load"))
    ;; arg-list => ident
    (lambda ($1 . $rest)
      (make-tl 'arg-list (cons 'arg (cdr $1))))

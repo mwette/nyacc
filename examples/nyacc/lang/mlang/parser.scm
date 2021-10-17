@@ -47,6 +47,9 @@
 
 ;;; === lexical analyzer
 
+(define *src-file* (make-parameter #f))
+(define *src-line* (make-parameter #f))
+
 ;; @deffn {Procedure} mlang-read-string ch
 ;; Read string and return @code{($string . "string")}.  If @var{ch} is
 ;; not @code{"} or @code{'} the return value is @code{#f}.
@@ -120,30 +123,38 @@
 	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (if (not newline-val) (error "mlang setup error"))
     (lambda ()
-      (let ((qms #f) (bol #t))		; qms: quote means string
-	(lambda ()
-	  (let loop ((ch (read-char)))
-	    (cond
-	     ((eof-object? ch)
-	      (if bol (assc-$ (cons '$end ch)) (loop #\newline)))
- 	     ((elipsis? ch) (loop (skip-to-next-line)))
-	     ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
-	     ((char-set-contains? space-cs ch) (set! qms #t) (loop (read-char)))
-	     ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
-	     (bol (set! bol #f) (loop ch))
-	     ((read-ident ch) =>
-	      (lambda (s) ;; s is a string
-		(set! qms #f)
-		(or (and=> (assq-ref keytab (string->symbol s))
-			   (lambda (tval) (cons tval s)))
-		    (assc-$ (cons '$ident s)))))
-	     ((read-c-num ch) => (lambda (p) (set! qms #f) (assc-$ p)))
-	     ((char=? ch #\") (assc-$ (read-string ch)))
-	     ((char=? ch #\') (if qms (assc-$ (read-string ch)) (read-chseq ch)))
-	     ((read-chseq ch) =>
-	      (lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
-	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-	     (else (cons ch (string ch))))))))))
+      (let ((qms #f) (bol #t) (line 0))	; qms: quote means string
+	(define (loop ch)
+	  (cond
+	   ((eof-object? ch)
+	    (if bol (assc-$ (cons '$end ch)) (loop #\newline)))
+ 	   ((elipsis? ch) (loop (skip-to-next-line)))
+	   ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
+	   ((char-set-contains? space-cs ch) (set! qms #t) (loop (read-char)))
+	   ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
+	   (bol (set! bol #f) (set! line (1+ line)) (loop ch))
+	   ((read-ident ch) =>
+	    (lambda (s) ;; s is a string
+	      (set! qms #f)
+	      (or (and=> (assq-ref keytab (string->symbol s))
+			 (lambda (tval) (cons tval s)))
+		  (assc-$ (cons '$ident s)))))
+	   ((read-c-num ch) => (lambda (p) (set! qms #f) (assc-$ p)))
+	   ((char=? ch #\") (assc-$ (read-string ch)))
+	   ((char=? ch #\') (if qms (assc-$ (read-string ch)) (read-chseq ch)))
+	   ((read-chseq ch) =>
+	    (lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
+	   ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+	   (else (cons ch (string ch)))))
+	(if #t 			; read properties
+	    (lambda ()
+	      (let* ((lxm (loop (read-char)))
+		     (port (current-input-port))
+		     (file (port-filename port))
+		     (props `((filename ,file) (line ,line) (column ,0))))
+		(set-source-properties! lxm props)
+		lxm))
+	    (lambda () (loop (read-char))))))))
 
 ;; === static semantics
 
@@ -197,8 +208,10 @@
 	 (row1 (if (positive? nrow) (car rows) #f)))
     (cond
      ((zero? nrow) mat)
-     ((and (= 1 nrow) (fixed-vec? row1)) `(fixed-vector . ,(cdr row1)))
-     ((float-mat? mat) `(float-matrix . ,(cdr mat)))
+     ((and (= 1 nrow) (fixed-vec? row1))
+      (cons-source row1 'fixed-vector (cdr row1)))
+     ((float-mat? mat)
+      (cons-source mat 'float-matrix (cdr mat)))
      (else mat))))
 
 ;; @deffn {Procedure} apply-mlang-statics tree => tree
@@ -213,9 +226,11 @@
   (define (fU tree)
     (sx-match tree
       ((assn (@ . ,attr) (matrix (row . ,elts)) ,rhs)
-       `(multi-assn (@ . ,attr) (lval-list . ,elts) ,rhs))
+       (cons-source tree 'multi-assn `((@ . ,attr) (lval-list . ,elts) ,rhs)))
       ((colon-expr . ,rest)
-       (if (fixed-colon-expr? tree) `(fixed-colon-expr . ,(cdr tree)) tree))
+       (if (fixed-colon-expr? tree)
+	   (cons-source tree 'fixed-colon-expr (cdr tree))
+	   tree))
       ((matrix . ,rest)
        (check-matrix tree))
       (,_ tree)))
@@ -233,7 +248,9 @@
 
 ;; Parse given a token generator.
 (define raw-parser
-  (make-lalr-parser (acons 'act-v mlang-act-v mlang-tables)))
+  (make-lalr-parser
+   (acons 'act-v mlang-act-v mlang-tables)
+   #:track-src-loc #t))
 
 (define* (parse-mlang #:key debug)
   (catch
@@ -262,15 +279,20 @@
 (define raw-ia-parser
   (make-lalr-parser
    (acons 'act-v mlangia-act-v mlangia-tables)
+   #:track-src-loc #t
    #:interactive #t))
 
 (define (parse-mlang-stmt lexer)
   (catch 'nyacc-error
     (lambda ()
       (apply-mlang-statics
-       (raw-ia-parser lexer #:debug #f)))
+       (let ((res (raw-ia-parser lexer #:debug #f)))
+	 (pperr res)
+	 (pperr (source-properties res))
+	 res)))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port) fmt args)
+      (newline (current-error-port))
       #f)))
 
 (define gen-mlang-ia-lexer (make-mlang-lexer-generator mlangia-mtab))
