@@ -249,8 +249,7 @@
 ;; Parse given a token generator.
 (define raw-parser
   (make-lalr-parser
-   (acons 'act-v mlang-act-v mlang-tables)
-   #:track-src-loc #t))
+   (acons 'act-v mlang-act-v mlang-tables)))
 
 (define* (parse-mlang #:key debug)
   (catch
@@ -279,17 +278,12 @@
 (define raw-ia-parser
   (make-lalr-parser
    (acons 'act-v mlangia-act-v mlangia-tables)
-   #:track-src-loc #t
    #:interactive #t))
 
 (define (parse-mlang-stmt lexer)
   (catch 'nyacc-error
     (lambda ()
-      (apply-mlang-statics
-       (let ((res (raw-ia-parser lexer #:debug #f)))
-	 (pperr res)
-	 (pperr (source-properties res))
-	 res)))
+      (apply-mlang-statics (raw-ia-parser lexer #:debug #f)))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port) fmt args)
       (newline (current-error-port))

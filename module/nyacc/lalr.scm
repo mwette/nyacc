@@ -225,15 +225,7 @@
     ((_ <expr> ...)
      (process-spec (lalr-spec-1 <expr> ...)))))
 
-;; @deffn {Procedure} atomize terminal => object
-;; Generate an atomic object for a terminal.   Expected terminals are strings,
-;; characters and symbols.  This will convert the strings @code{s} to symbols
-;; of the form @code{'$:s}.
-;; @end deffn
-(define (atomize terminal)
-  (if (string? terminal)
-      (string->symbol (string-append "$:" terminal))
-      terminal))
+(define atomize atomize-terminal)
 
 ;; @deffn {Procedure} normize terminal => char|symbol
 ;; Normalize a token. This routine will normalize tokens in order to check

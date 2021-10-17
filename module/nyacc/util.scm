@@ -20,6 +20,7 @@
 (define-module (nyacc util)
   #:export (fixpoint
 	    fmtstr fmtout fmterr fmt
+	    atomize-terminal
 	    wrap-action
 	    obj->str
 	    prune-assoc
@@ -87,6 +88,16 @@
 	(loop
 	 (apply proc ix seed (map (lambda (v) (vector-ref v ix)) vecs))
 	 (1+ ix)))))))
+
+;; @deffn {Procedure} atomize-terminal terminal => object
+;; Generate an atomic object for a terminal.   Expected terminals are strings,
+;; characters and symbols.  This will convert the strings @code{s} to symbols
+;; of the form @code{'$:s}.
+;; @end deffn
+(define (atomize-terminal terminal)
+  (if (string? terminal)
+      (string->symbol (string-append "$:" terminal))
+      terminal))
 
 ;; @deffn {Procedure} make-arg-list N => '($N $Nm1 $Nm2 ... $1 . $rest)
 ;; This is a helper for @code{mkact}.
