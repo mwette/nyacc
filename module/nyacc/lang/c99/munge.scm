@@ -19,7 +19,8 @@
 
 ;; 1) mdecl == munged (unwrapped) declaration
 ;; 2) Usual sequence is: expand-typerefs, stripdown-udecl, udecl->mdecl.
-;; 3) Unitize-decl is shallow.  It does not dive into structs and unitize.
+;; 3) unitize-decl is shallow.  It does not dive into structs and unitize.
+;; 4) expand-typerefs is shallow?  It does not dive into structs and unitize.
 
 ;; Todo:
 ;; 2) I want a way to keep named enums in expand-typerefs.
