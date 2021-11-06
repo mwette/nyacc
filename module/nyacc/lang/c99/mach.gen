@@ -10,7 +10,7 @@ exec guile $0
 (when (gen-cpp-files)
   (system "touch cpp.scm"))
 
-(when (gen-cpp-files)
+(when (gen-c99-files)
   (system "touch parser.scm")
   (with-output-to-file ",gram.txt"
     (lambda ()
