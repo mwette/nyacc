@@ -21,7 +21,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 FFI Helper User Guide
 Matt Wette
 Sepember 2021
-With NYACC Version 1.05.0
+With NYACC Version 1.05.1
 @end format
 
 @ifnottex
@@ -272,7 +272,7 @@ the procedure @code{C-decl->scm}:
 
 @example
 guile> (use-modules (nyacc lang c99 ffi-help))
-guile> (define struct-foo-desc (C-decl->scm "struct foo { int x; double y; };"))
+guile> (define struct-foo-desc (C-decl->scm "struct foo @{ int x; double y; @};"))
 guile> ,pp struct-foo-desc
 $1 = (bs:struct (list `(x ,int) `(y ,double)))
 @end example
@@ -291,7 +291,7 @@ guile> (my-sqrt 4.0)
 @end example
 
 Note that for functions like the above to work any dependent libraries
-must be loaded first, via @code(dynamic-link).
+must be loaded first, via @code{(dynamic-link)}.
 
 Note: currently the above defines a bytestructure, but not a FH type.
 We could define a FH type as follows:

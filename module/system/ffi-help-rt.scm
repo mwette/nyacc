@@ -59,9 +59,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (1 05 0))
+  #:version (1 05 1))
 
-(define *ffi-help-version* "1.05.0")
+(define *ffi-help-version* "1.05.1")
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 

@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-11-XX  V1.05.1
+2021-11-24  V1.05.1
 	* In ffi-helper, don't process udecls with zero-length name.
 	  This fixes the crash reported in guile-libyaml issue #3.
 

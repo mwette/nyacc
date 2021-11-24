@@ -234,9 +234,9 @@ File: nyacc-ug.info,  Node: Parsing,  Next: Translation,  Prev: Demonstration,  
 
 Most of the syntax and procecures for generating skelton parsers
 exported from the module '(nyacc lalr)'.  Other modules include
-'(lalr lex)'
+'(nyacc lex)'
      This module provides procedures for generating lexical analyzers.
-'(lalr util)'
+'(nyacc util)'
      This module provides utilities used by the other modules.
 
 2.1 The Specification
@@ -1340,26 +1340,26 @@ Tag Table:
 Node: Top622
 Node: Demonstration877
 Node: Parsing9839
-Ref: Specification10287
-Ref: Actions19320
-Ref: Recovery from Syntax Errors19986
-Ref: sublanguage20868
-Ref: Parser21189
-Ref: match table25032
-Ref: lex26805
-Ref: parser-lexer33913
-Ref: Parser Tables35483
-Ref: Hashing and Compacting36795
-Ref: Debugging38504
-Ref: Human Readable Output38615
-Node: Translation41652
-Ref: Tagged Lists44102
-Ref: SXML Parse Trees46048
-Node: Coding to the Compiler Tower47965
-Ref: Pretty Print49193
-Node: Administrative49389
-Node: TODOs50490
-Node: References51511
+Ref: Specification10289
+Ref: Actions19322
+Ref: Recovery from Syntax Errors19988
+Ref: sublanguage20870
+Ref: Parser21191
+Ref: match table25034
+Ref: lex26807
+Ref: parser-lexer33915
+Ref: Parser Tables35485
+Ref: Hashing and Compacting36797
+Ref: Debugging38506
+Ref: Human Readable Output38617
+Node: Translation41654
+Ref: Tagged Lists44104
+Ref: SXML Parse Trees46050
+Node: Coding to the Compiler Tower47967
+Ref: Pretty Print49195
+Node: Administrative49391
+Node: TODOs50492
+Node: References51513
 
 End Tag Table
 
