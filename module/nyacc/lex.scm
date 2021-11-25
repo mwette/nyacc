@@ -213,7 +213,7 @@
 ;; @end deffn
 (define like-c$-ident? (make-ident-like-p read-c$-ident))
 
-;; @deffn {Procedure} make-string-reader delim
+;; @deffn {Procedure} make-string-reader delim [tval]
 ;; Generate a reader for strings for delimiter.  @var{delim} can be a char
 ;; or a list.  Closing quote escaped with @code{\} is skipped.
 ;; @example
