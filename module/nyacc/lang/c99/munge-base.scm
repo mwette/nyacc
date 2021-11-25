@@ -37,6 +37,7 @@
 	    reify-declr reify-decl
 	    def-namer
 	    split-udecl
+	    declr-ident declr-name
 	    clean-field-list clean-fields)
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)		; let-values
@@ -49,6 +50,30 @@
   (apply simple-format (current-error-port) fmt args))
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
+
+;; @deffn {Procedure} declr-ident declr => (ident "name")
+;; Given a declarator, aka @code{init-declr}, return the identifier.
+;; This is used by @code{trans-unit->udict}.
+;; @end deffn
+(define (declr-ident declr)
+  (sx-match declr
+    ((ident ,name) declr)
+    ((init-declr ,declr . ,rest) (declr-ident declr))
+    ((comp-declr ,declr) (declr-ident declr))
+    ((param-declr ,declr) (declr-ident declr))
+    ((ary-declr ,dir-declr ,array-spec) (declr-ident dir-declr))
+    ((ary-declr ,dir-declr) (declr-ident dir-declr))
+    ((ptr-declr ,pointer ,dir-declr) (declr-ident dir-declr))
+    ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
+    ((scope ,declr) (declr-ident declr))
+    ((bit-field ,ident . ,rest) ident)
+    (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
+
+;; @deffn {Procedure} declr-name declr => "name"
+;; This extracts the name from the return value of @code{declr-ident}.
+;; @end deffn
+(define (declr-name declr)
+  (and=> (declr-ident declr) cadr))
 
 ;; @deffn {Procedure} declr-list? declr
 ;; Determine if declr it is a list or not.

@@ -109,6 +109,33 @@
 (define alignof-map/avr
   (map (lambda (pair) (cons (car pair) 1)) sizeof-map/avr))
 
+(define sizeof-map/ppc
+  '((* . 4)
+    ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 8)
+    ("float" . 4) ("double" . 8)
+    ("unsigned short" . 2) ("unsigned" . 4) ("unsigned long" . 8)
+    ;;
+    ("size_t" . 8) ("ssize_t" . 8) ("ptrdiff_t" . 8)
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
+    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
+    ;;
+    ("signed char" . 1) ("unsigned char" . 1)
+    ("short int" . 2) ("signed short" . 2) ("signed short int" . 2)
+    ("signed" . 4) ("signed int" . 4)
+    ("long int" . 8) ("signed long" . 8) ("signed long int" . 8)
+    ("unsigned short int" . 2) ("unsigned int" . 4) ("unsigned long int" . 8)
+    ;;
+    ("_Bool" . 1)
+    ("intptr_t" . 4) ("uintptr_t" . 4)
+    ("wchar_t" . 4) ("char16_t" . 2) ("char32_t" . 4)
+    ;;
+    ("long double" . 16)
+    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
+    ("signed long long int" . 8) ("unsigned long long" . 8)
+    ("unsigned long long int" . 8)))
+
+(define alignof-map/ppc sizeof-map/ppc)
+
 (use-modules (system foreign))
 
 (cond-expand

@@ -54,7 +54,7 @@
 	    typedef-decl?
 	    
 	    unitize-decl unitize-comp-decl unitize-param-decl
-	    declr-ident declr-id decl-id
+	    decl-id
 	    iter-declrs
 	    split-decl
 
@@ -68,6 +68,7 @@
   #:re-export (expand-typerefs
 	       reify-declr reify-decl
 	       udecl->mdecl split-udecl
+	       declr-ident declr-name
 	       clean-field-list clean-fields)
   #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 munge-base)
@@ -210,7 +211,7 @@
   (if (pair? declrs)
       (fold-right
        (lambda (declr seed)
-	 (acons (declr-id declr) (sx-list tag attr specl declr) seed))
+	 (acons (declr-name declr) (sx-list tag attr specl declr) seed))
        seed declrs)
       (acons "" (sx-list tag attr specl) seed)))
 
@@ -445,36 +446,12 @@
 	     (name (cadr ident)))
 	(acons name decl seed))))
 
-;; @deffn {Procedure} declr-ident declr => (ident "name")
-;; Given a declarator, aka @code{init-declr}, return the identifier.
-;; This is used by @code{trans-unit->udict}.
-;; @end deffn
-(define (declr-ident declr)
-  (sx-match declr
-    ((ident ,name) declr)
-    ((init-declr ,declr . ,rest) (declr-ident declr))
-    ((comp-declr ,declr) (declr-ident declr))
-    ((param-declr ,declr) (declr-ident declr))
-    ((ary-declr ,dir-declr ,array-spec) (declr-ident dir-declr))
-    ((ary-declr ,dir-declr) (declr-ident dir-declr))
-    ((ptr-declr ,pointer ,dir-declr) (declr-ident dir-declr))
-    ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
-    ((scope ,declr) (declr-ident declr))
-    ((bit-field ,ident . ,rest) ident)
-    (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
-
-;; @deffn {Procedure} declr-id decl => "name"
-;; This extracts the name from the return value of @code{declr-ident}.
-;; @end deffn
-(define (declr-id declr)
-  (and=> (declr-ident declr) cadr))
-
 ;; @deffn {Procedure} udecl-id udecl => string
 ;; generate the name 
 ;; @end deffn
 (define (udecl-id udecl)
   ;; must be udecl w/ name
-  (declr-id (sx-ref udecl 2)))
+  (declr-name (sx-ref udecl 2)))
 
 ;; like member but returns first non-declr of type in dict
 (define (non-declr type udict)

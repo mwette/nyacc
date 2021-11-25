@@ -203,7 +203,6 @@
 ;; Given declaration return a list of new typenames (via @code{typedef}).
 ;; @end deffn
 (define (find-new-typenames decl)
-  ;; like declr-id in util2.scm
   (define (declr->id-name declr)
     (case (car declr)
       ((ident) (sx-ref declr 1))
