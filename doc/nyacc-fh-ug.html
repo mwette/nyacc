@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<!-- Copyright (C) 2017-2019 - Matthew R. Wette.
+<!-- Copyright (C) 2017-2021 - Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -50,8 +50,8 @@ ul.no-bullet {list-style: none}
 <div class="format">
 <pre class="format">FFI Helper User Guide
 Matt Wette
-July 2019
-With NYACC Version 1.04.1
+Sepember 2021
+With NYACC Version 1.05.1
 </pre></div>
 
 <span id="Top"></span><div class="header">
@@ -288,6 +288,44 @@ a solution:
 <pre class="example">guile&gt; (cairo_get_matrix cr (pointer-to m))
 guile&gt; (fh-object-ref m 'xx)
 $9 = 1.0
+</pre></div>
+
+<p>But the FFI helper can also be used on a per declaration basis, but
+you must first import the proper modules and libraries.  This
+functionality is still under development.
+</p>
+<p>The following example shows how to convert to scheme code using
+the procedure <code>C-decl-&gt;scm</code>:
+</p>
+<div class="example">
+<pre class="example">guile&gt; (use-modules (nyacc lang c99 ffi-help))
+guile&gt; (define struct-foo-desc (C-decl-&gt;scm &quot;struct foo { int x; double y; };&quot;))
+guile&gt; ,pp struct-foo-desc
+$1 = (bs:struct (list `(x ,int) `(y ,double)))
+</pre></div>
+
+<p>If we import more modules we can use the syntax <code>C-decl</code> to
+complete definitions:
+</p>
+<div class="example">
+<pre class="example">guile&gt; (use-modules (system ffi-help-rt))
+guile&gt; (use-modules (bytestructures guile))
+guile&gt; (use-modules ((system foreign) #:prefix ffi:))
+guile&gt; (define ffi-libs '()) ;; hack for now
+
+guile&gt; (define my-sqrt &quot;double sqrt(double);&quot;)
+guile&gt; (my-sqrt 4.0)
+</pre></div>
+
+<p>Note that for functions like the above to work any dependent libraries
+must be loaded first, via <code>(dynamic-link)</code>.
+</p>
+<p>Note: currently the above defines a bytestructure, but not a FH type.
+We could define a FH type as follows:
+</p>
+<div class="example">
+<pre class="example">guile&gt; (define-fh-compound-type struct-foo
+        struct-foo-desc struct-foo? make-struct-foo)
 </pre></div>
 
 
@@ -605,13 +643,18 @@ definitions to be used in processing the header files.  The defines
 take the form <code>&quot;SYM=</code><var>val</var><code>&quot;</code>.
 </p></dd>
 <dt><code>#:inc-dirs</code></dt>
-<dd><p>todo
+<dd><p>This form, with a list of strings, provides extra directories
+in which to search for include files.
 </p></dd>
 <dt><code>#:inc-help</code></dt>
 <dd><p>todo
 </p></dd>
 <dt><code>#:api-code</code></dt>
 <dd><p>todo
+</p></dd>
+<dt><code>#:def-keepers</code></dt>
+<dd><p>This form, with a list of strings, provides extra (non-function) C
+preprocessor macro definitions that should be included in the output.
 </p></dd>
 </dl>
 
@@ -646,6 +689,28 @@ take the form <code>&quot;SYM=</code><var>val</var><code>&quot;</code>.
 				)) #t)
                    ((equal? k '(union . &quot;union-_cairo_glyph_t&quot;)) #t)
                    (else #f)))
+</pre></div>
+
+
+<span id="Direct-Usage"></span><h3 class="heading">Direct Usage</h3>
+
+<p>Work to go here:
+</p>
+<dl>
+<dt id="index-load_002dinclude_002dfile">Procedure: <strong>load-include-file</strong> <em>filename [#pkg-config pkg]</em></dt>
+<dd><p>This is the functionality that Ludo was asking for: to be at guile
+prompt and be able to issue
+</p><div class="example">
+<pre class="example">(use-modules (nyacc lang c99 ffi-help))
+(load-include-file &quot;cairo.h&quot; #:pkg-config &quot;cairo&quot;)
+</pre></div>
+</dd></dl>
+
+<div class="example">
+<pre class="example">guile&gt; ,use (nyacc lang c99 ffi-help)
+guile&gt; (load-include-file &quot;cairo.h&quot; #:pkg-config &quot;cairo&quot;)
+;; wait a while
+guile&gt; ...
 </pre></div>
 
 

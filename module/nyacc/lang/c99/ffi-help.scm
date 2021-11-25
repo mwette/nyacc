@@ -94,7 +94,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 05 0))
+  #:version (1 05 1))
 
 (define fh-cpp-defs
   (cond
@@ -1965,11 +1965,11 @@
 	 (cond
 	  ((and ;; Process the declaration if all conditions met:
 	    (declf name)		  ; 1) user wants it
-	    (not (member name defined)) ; 2) not already defined
-	    (not (and (pair? name)	  ; 3) not anonymous
-		      (string=? "*anon*" (cdr name)))))
+	    (not (member name defined))	  ; 2) not already defined
+	    (not (if (pair? name)	  ; 3) not anonymous 
+		     (string=? "*anon*" (cdr name))
+		     (string=? "" name))))
 	   (let ((udecl (udict-ref udict name)))
-	     ;;(sferr "processing ~S\n" name)
 	     (nlscm) (c99scm udecl)
 	     (if (*echo-decls*)
 		 (sfscm "(if echo-decls (display \"~A\\n\"))\n" name))
