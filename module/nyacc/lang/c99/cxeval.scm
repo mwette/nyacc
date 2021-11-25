@@ -115,7 +115,7 @@
   ;; update is incr-size or maxi-size
   (define (exec/decl decl size base-align update)
     (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
-	  (declrs (sx-tail (sx-ref decl 2))))
+	  (declrs (sx-tail (or (sx-ref decl 2) '((ident "_"))))))
       (let loop ((size size) (base-align base-align) (declrs declrs))
 	(if (null? declrs)
 	    (values size base-align)
@@ -193,7 +193,7 @@
   (define (exec/decl decl size base-align offs update)
     ;; => values size align offs
     (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
-	  (declrs (sx-tail (sx-ref decl 2))))
+	  (declrs (sx-tail (or (sx-ref decl 2) '((ident "x"))))))
       (let loop ((size size) (base-align base-align) (offs '()) (declrs declrs))
 	(if (null? declrs)
 	    (values size base-align (reverse offs))
@@ -215,11 +215,11 @@
 
   (match mtail  ;; w/ offs
     (`((pointer-to) . ,rest)
-     (values (sizeof-basetype '* arch) (alignof-basetype '* arch)) 0)
+     (values (sizeof-basetype '* arch) (alignof-basetype '* arch) 0))
     (`((fixed-type ,name))
-     (values (sizeof-basetype name arch) (alignof-basetype name arch)) 0)
+     (values (sizeof-basetype name arch) (alignof-basetype name arch) 0))
     (`((float-type ,name))
-     (values (sizeof-basetype name arch) (alignof-basetype name arch)) 0)
+     (values (sizeof-basetype name arch) (alignof-basetype name arch) 0))
     (`((array-of ,size) . ,rest)
      (let ((mult (eval-c99-cx size)))
        (call-with-values
@@ -250,7 +250,7 @@
 	(else (loop size align offs (cdr flds))))))
 
     (`((,(or 'enum-ref 'enum-def) . ,rest))
-     (values (sizeof-basetype "int" arch) (alignof-basetype "int" arch)) 0)
+     (values (sizeof-basetype "int" arch) (alignof-basetype "int" arch) 0))
 
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
@@ -259,8 +259,9 @@
   (let* ((udecl `(udecl ,specl ,declr))
 	 (xdecl (expand-typerefs udecl udict))
 	 (mdecl (udecl->mdecl xdecl)))
-    ;;(sizeof-mtail (cdr mdecl) arch)))
-    (sizeof-mtail/offs (cdr mdecl) arch)))
+    ;;(sizeof-mtail (cdr mdecl) arch)
+    (sizeof-mtail/offs (cdr mdecl) arch)
+    ))
 
 (define (trim-mtail mtail)
   (case (caar mtail)
@@ -269,8 +270,10 @@
     ((initzer) (trim-mtail (cdr mtail)))
     (else mtail)))
 
-;; @deffn {Procedure} eval-sizeof-type tree [udict]
-;; => (values sizeof-val align-of)
+;; @deffn {Procedure} eval-sizeof-type sizeof-type-sx [udict]
+;; @example
+;; (eval-sizeof-type (sizeof-type (ident "foo_t"))) => (values 4 2)
+;; @end example
 ;; @end deffn
 (define* (eval-sizeof-type tree #:optional (udict '()) #:key arch)
   (let* ((type-name (sx-ref tree 1))

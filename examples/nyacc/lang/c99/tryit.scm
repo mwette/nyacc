@@ -322,22 +322,33 @@
 	  (string-append
 	   "typedef struct {\n"
 	   " int x;\n"
-	   " struct { int x1; int x2; };\n"
+	   " struct { int x1; int x2; } xx;\n"
 	   " int y;\n"
-	   " struct { int y1; double y2; };\n"
+	   " struct { int y1; double y2; } yy;\n"
 	   "} foo_t;\n"
-	   "foo_t s1;\n"
+	   "int sz  = sizeof(foo_t);\n"
 	   ))
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
 	 (udecl (assoc-ref udict "foo_t"))
 	 )
-    ;;(pp tree)
+    ;;(pp tree) (quit)
     ;;(pp udecl)
     (call-with-values
-	(lambda () (eval-sizeof-type '(ident "foo_t")))
-      (lambda (size align offs)
-	(pp offs)))
+	(lambda ()
+	  (eval-sizeof-type
+	   '(sizeof-type
+	     (type-name
+	      (decl-spec-list
+	       (type-spec
+		(typename "foo_t")))))
+	   udict))
+      (lambda* (size align #:optional offs)
+	(sf "size=~S align=~S\n" size align)
+	(when offs
+	  (pp offs)
+	  )
+	))
     ))
 
 ;; --- last line ---
