@@ -109,7 +109,10 @@
      ("--" unary-expression ($$ `(pre-dec ,$2)))
      (unary-operator cast-expression ($$ (list $1 $2)))
      ("sizeof" unary-expression ($$ `(sizeof-expr ,$2)))
-     ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3))))
+     ("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3)))
+     ("_Alignof" "(" type-name ")" ($$ `(alignof-type ,$3)))
+     ("__builtin_offsetof" "(" type-name "," constant-expression ")"
+      ($$ `(offsetof-type ,$3 ,$5))))
     
     (unary-operator ("&" ($$ 'ref-to)) ("*" ($$ 'de-ref))
 		    ("+" ($$ 'pos)) ("-" ($$ 'neg))

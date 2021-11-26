@@ -321,12 +321,13 @@
   (let* ((code
 	  (string-append
 	   "typedef struct {\n"
-	   " int x;\n"
-	   " struct { int x1; int x2; } xx;\n"
-	   " int y;\n"
-	   " struct { int y1; double y2; } yy;\n"
+	   ;;" int x1, x2;\n"
+	   " struct { int x1, x2; } xx;\n"
+	   ;;" int y;\n"
+	   ;;" struct { int y1; double y2; } yy;\n"
 	   "} foo_t;\n"
 	   "int sz  = sizeof(foo_t);\n"
+	   "int os  = __builtin_offsetof(foo_t, xx.x1);\n"
 	   ))
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
@@ -334,21 +335,23 @@
 	 )
     ;;(pp tree) (quit)
     ;;(pp udecl)
-    (call-with-values
-	(lambda ()
-	  (eval-sizeof-type
-	   '(sizeof-type
-	     (type-name
-	      (decl-spec-list
-	       (type-spec
-		(typename "foo_t")))))
-	   udict))
-      (lambda* (size align #:optional offs)
-	(sf "size=~S align=~S\n" size align)
-	(when offs
-	  (pp offs)
-	  )
-	))
-    ))
+    (display code) (newline)
+    (let* ((type-name
+	    '(type-name
+		     (decl-spec-list
+		      (type-spec
+		       (typename "foo_t")))))
+	   (size (eval-sizeof-type `(sizeof-type ,type-name) udict))
+	   (align (eval-alignof-type `(alignof-type ,type-name) udict))
+	   (offset-expr
+	    `(offsetof-type
+              (type-name
+               (decl-spec-list (type-spec (typename "foo_t"))))
+              (d-sel (ident "x1") (p-expr (ident "xx")))))
+	   ;;(offset (eval-offsetof offset-expr udict))
+	   )
+      (sf "size=~S\n" size)
+      (sf "align=~S\n" align)
+      )))
 
 ;; --- last line ---

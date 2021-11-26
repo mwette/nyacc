@@ -76,6 +76,12 @@
    (lambda ($2 $1 . $rest) `(sizeof-expr ,$2))
    ;; unary-expression => "sizeof" "(" type-name ")"
    (lambda ($4 $3 $2 $1 . $rest) `(sizeof-type ,$3))
+   ;; unary-expression => "_Alignof" "(" type-name ")"
+   (lambda ($4 $3 $2 $1 . $rest)
+     `(alignof-type ,$3))
+   ;; unary-expression => "__builtin_offsetof" "(" type-name "," constant-e...
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(offsetof-type ,$3 ,$5))
    ;; unary-operator => "&"
    (lambda ($1 . $rest) 'ref-to)
    ;; unary-operator => "*"
