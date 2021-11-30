@@ -29,8 +29,15 @@
 	    sizeof-map/native
 	    alignof-map/native
 	    *arch*
-	    with-arch
-	    ))
+	    with-arch)
+  #:use-module (srfi srfi-9))
+
+(define-record-type <arch-info>
+  (make-arch-info endianness sizeof-dict alignof-dict)
+  arch-info?
+  (endianness arch-endianness)
+  (sizeof-dict arch-sizeof-dict)
+  (alignof-dict arch-alignof-dict))
 
 (define sizeof-map/avr
   '((* . 2)
@@ -277,7 +284,7 @@
 (define *arch* (make-parameter (cons sizeof-map/native alignof-map/native)))
 
 (define-syntax-rule (with-arch arch body ...)
-  (parameterize ((*arch* (if ((string? arch) (lookup-arch arch) arch))))
+  (parameterize ((*arch* (if (string? arch) (lookup-arch arch) arch)))
     body ...))
 
 ;; @deffn {Procedure} sizeof-basetype type
