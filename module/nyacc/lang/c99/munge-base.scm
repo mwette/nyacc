@@ -466,6 +466,7 @@
 ;; been munged into udecls.  The behavior is actually NOT DEFINED.
 ;; @end deffn
 (define* (expand-typerefs adecl udict #:optional (keep '()))
+  ;; TODO: replace typeof() with type
 
   ;; In the process of expanding typerefs it is crutial that routines which
   ;; expand parts return the original if no change made.  That is, if there
