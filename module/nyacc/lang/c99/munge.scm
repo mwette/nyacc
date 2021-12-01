@@ -31,6 +31,9 @@
 ;;    c> if function use `void *x;'
 ;; 6) Check use of comments as attributes.
 ;; 7) maybe move to munge-base: typedef-decl? udict->typedef-names
+;; 8) split up unitize and dictize:
+;;    a) unitize: (int (x y)) -> ((int x) (int y))
+;;    b) dictize: (int (x y)) -> (("x" . (int x)) ("y" . (int y)))
 
 ;;; Code:
 
@@ -54,6 +57,7 @@
 	    typedef-decl?
 	    
 	    unitize-decl unitize-comp-decl unitize-param-decl
+	    dictize-decl dictize-comp-decl dictize-param-decl
 	    decl-id
 	    iter-declrs
 	    split-decl
@@ -189,7 +193,7 @@
        (lambda (tree seed)
 	 (cond
 	  ((eqv? (sx-tag tree) 'decl)
-	   (unitize-decl tree seed))
+	   (dictize-decl tree seed))
 	  ((inc-keeper? tree inc-filter) =>
 	   (lambda (inc-tree)
 	     (c99-trans-unit->udict inc-tree seed #:inc-filter inc-filter)))
@@ -273,6 +277,7 @@
 ;; struct and union (e.g., @code{__packed__}).  The latter is needed
 ;; because they appear in files under @file{/usr/include}.
 ;; @end deffn
+(define dictize-decl unitize-decl)
 (define* (unitize-decl decl #:optional (seed '()))
   
   (define* (make-udecl type-tag attr guts #:optional typename)
@@ -407,6 +412,7 @@
 ;; functions @code{struct} and @code{union} field lists.  The result needs
 ;; to be reversed.
 ;; @end deffn
+(define dictize-comp-decl unitize-comp-decl)
 (define* (unitize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
   (cond
    ((not (pair? decl))
@@ -436,6 +442,7 @@
 ;; @*
 ;; TODO: What about abstract declarators?  Should use "*anon*".
 ;; @end deffn
+(define dictize-param-decl unitize-param-decl)
 (define* (unitize-param-decl decl #:optional (seed '()) #:key (expand-enums #f))
   (if (not (eqv? 'param-decl (car decl))) seed
       (let* ((tag (sx-ref decl 0))
