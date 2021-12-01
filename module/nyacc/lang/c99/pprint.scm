@@ -371,8 +371,8 @@
        (pair-for-each
 	(lambda (dsl)
 	  (case (sx-tag (car dsl))
-	    ((stor-spec) (sf "~A" (car (sx-ref (car dsl) 1))))
-	    ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
+	    ((stor-spec) (sf "~A" (sx-tag (sx-ref (car dsl) 1))))
+	    ((type-qual) (sf "~A" (sx-tag (sx-ref (car dsl) 1))))
 	    ((fctn-spec) (sf "~A" (sx-ref (car dsl) 1)))
 	    ((type-spec) (ppx (car dsl)))
 	    ((typeof-expr typeof-type)
