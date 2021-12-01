@@ -786,7 +786,7 @@
   (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
     (if (null? flds) btail
 	(let ((mtail (cdr (udecl->mdecl (car flds)))))
-	  (call-with-values (lambda () (sizeof-mtail mtail #f)) ;; #f is arch
+	  (call-with-values (lambda () (sizeof-mtail mtail))
 	    (lambda (sz al)
 	      (if (> sz mxsz)
 		  (loop mtail sz (max al mxal) (cdr flds))
@@ -1171,9 +1171,11 @@
 			      (or (equal? node '(stor-spec (auto)))
 				  (equal? node '(stor-spec (register)))
 				  (equal? node '(stor-spec (static)))
+				  (equal? node '(type-qual (const)))
 				  (equal? node '(type-qual (volatile)))
 				  (equal? node '(type-qual (restrict)))))
 			    specl))
+
 	     (specl (if (fctn? declr)
 			(remove (lambda (node)
 				  (equal? node '(stor-spec (extern)))) specl)
