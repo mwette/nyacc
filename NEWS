@@ -5,9 +5,12 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-XX-XX  V1.06.0
+202X-XX-XX  V1.06.0
 	* Added location tracking to parser.
- 	* Added offsetof.
+	* In lang, added support for multiple archirectures: with-arch.
+	  This is not yet documented.
+ 	* In c99, added partial __builtin_offsetof operator.
+	* Started splitting c99/munge/unitize.
 
 2021-11-24  V1.05.1
 	* In ffi-helper, don't process udecls with zero-length name.
