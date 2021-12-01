@@ -20,12 +20,14 @@
 (define-module (nyacc lang c99 cxeval)
   #:export (parse-c99-cx
 	    eval-c99-cx
+	    size-and-align-of-type
 	    eval-sizeof-type
-	    eval-sizeof-expr
 	    eval-alignof-type
+	    eval-sizeof-expr
 	    eval-offsetof
 	    sizeof-mtail
-	    )
+	    cx-incr-size
+	    cx-maxi-size)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -35,6 +37,7 @@
   #:use-module (nyacc lang arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (system foreign)
@@ -82,13 +85,16 @@
 	 (xname (and xdecl (sx-ref* xdecl 1 1 1 1))))
     xname))
 
-;; Update running struct size (rs) given new item s and a.
-(define (incr-size s a rs)
+;; Update struct running-size (rs) given new item size (s) and align't (a).
+(define (cx-incr-size s a rs)
   (+ s (* a (quotient (+ rs (1- a)) a))))
 
 ;; Update running union size (rs) given new item s and a.
-(define (maxi-size s a rs)
+(define (cx-maxi-size s a rs)
   (max s rs))
+
+(define incr-size cx-incr-size)
+(define maxi-size cx-maxi-size)
 
 (define (sizeof-mtail mtail)
 
@@ -158,12 +164,16 @@
     ((initzer) (trim-mtail (cdr mtail)))
     (else mtail)))
 
-;; @deffn {Procedure} eval-sizeof-type sizeof-type-sx [udict]
+;; @deffn {Procedure} size-and-align-of-type tree [udict]
+;; @deffx {Procedure} eval-sizeof-type tree [udict]
+;; @deffx {Procedure} eval-alignof-type tree [udict]
 ;; @example
-;; (eval-sizeof-type (sizeof-type (ident "foo_t"))) => (values 4 2)
+;; (size-and-align-of-type '(sizeof-type (ident "foo_t"))) => (values 4 2)
+;; (eval-sizeof-type '(sizeof-type (ident "foo_t"))) => 4
+;; (eval-alignof-type '(alignof-type (ident "foo_t"))) => 2
 ;; @end example
 ;; @end deffn
-(define* (size-or-align-of-type tree #:optional (udict '()))
+(define* (size-and-align-of-type tree #:optional (udict '()))
   (let* ((type-name (sx-ref tree 1))
 	 (specl (sx-ref type-name 1))
 	 (declr (or (sx-ref type-name 2) '(param-declr))))
@@ -171,12 +181,12 @@
 
 (define* (eval-sizeof-type tree #:optional (udict '()))
   (call-with-values
-      (lambda () (size-or-align-of-type tree udict))
+      (lambda () (size-and-align-of-type tree udict))
     (lambda (size align) size)))
 
 (define* (eval-alignof-type tree #:optional (udict '()))
   (call-with-values
-      (lambda () (size-or-align-of-type tree udict))
+      (lambda () (size-and-align-of-type tree udict))
     (lambda (size align) align)))
 
 ;; @deffn {Procedure} size-or-align-of-expr tree [udict]
@@ -229,11 +239,7 @@
 
 ;; =============================================================================
 
-(define* (offsetof-mtail mtail desig #:optional (base 0))
-  (display "offsetof not implemented (yet)\n" (current-error-port))
-  0)
-#|
-;; @deffn {Procedure} offsetof-mtail mtail desig [base]
+;; @deffn {Procedure} offsetof-mtail mtail desig [base] => offset alignment
 ;; @end deffn
 (define* (offsetof-mtail mtail desig #:optional (base 0))
 
@@ -257,6 +263,7 @@
 		    (max elt-align align)
 		    (cdr declrs)))))))))
 
+  ;;(sferr "offsetof-mtail desig=~S  base=~S\n" desig base)
   (match mtail
 
     (`((array-of ,size) . ,rest)
@@ -267,44 +274,62 @@
     
     (`((struct-def (field-list . ,fields)))
      (unless (equal? 'ident (caar desig))
-       (throw 'c99-error "cxeval.scm: desig ~S does not fit struct" (car desig)))
-     (let loop ((size 0) (align 0) (decls '()) (flds fields))
+       (throw 'c99-error "cxeval: desig ~S not for struct" (car desig)))
+     (let loop ((offs base) (aln 0) (dsg (cadar desig))
+		(decls '()) (flds fields))
        (cond
 	((pair? decls)
-	 (let* ((mdecl (m-unwrap-declr (car decls) mtail))
-		(name (car mdecl)))
+	 (let* ((mdecl (udecl->mdecl (car decls)))
+		(name (car mdecl))
+		(mtail (cdr mdecl)))
 	   (call-with-values
-	       (lambda () #f)
-	     (lambda (esz eal)
-	       #f))))
+	       (lambda () (sizeof-mtail mtail))
+	     (lambda (elt-sz elt-al)
+	       (cond
+		((string=? name dsg)
+		 (let* ((xoffs (incr-size 0 elt-al offs)))
+		   (if (null? (cdr desig)) xoffs
+		       (offsetof-mtail mtail (cdr desig) xoffs))))
+		(else
+		 (loop (incr-size elt-sz elt-al offs) (max elt-al aln)
+		       dsg (cdr decls) flds)))))))
 	((pair? flds)
-	 (if (eq? 'comp-decl (sx-tag (car flds)))
-	 (let ((decls (unitize-decl (car flds)))) 
+	 (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
+	     (loop offs aln dsg
+		   (map cdr (unitize-comp-decl (car flds))) (cdr flds))
+	     (loop offs aln dsg decls (cdr flds))))
+	(else (values offs aln)))))
 	   
-    #;(`((struct-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (flds fields))
-       (cond
-	((null? flds) #f) ;; failed to find field
-	((eq? 'comp-decl (sx-tag (car flds)))
-	 (call-with-values
-	     (lambda () (exec/decl (car flds) size align incr-size))
-	   (lambda (nsize nalign)
-	     (if align (loop nsize nalign (cdr flds)) nsize))))
-	(else (loop size align (cdr flds))))))
     (`((union-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (flds fields))
+     (unless (equal? 'ident (caar desig))
+       (throw 'c99-error "cxeval: desig ~S not for union" (car desig)))
+     (let loop ((offs base) (aln 0) (dsg (cadar desig))
+		(decls '()) (flds fields))
        (cond
-	((null? flds) (incr-size 0 align size))
-	((eq? 'comp-decl (sx-tag (car flds)))
-	 (call-with-values
-	     (lambda () (exec/decl (car flds) size align maxi-size))
-	   (lambda (nsize nalign)
-	     (loop nsize nalign (cdr flds)))))
-	(else (loop size align (cdr flds))))))
+	((pair? decls)
+	 (let* ((mdecl (udecl->mdecl (car decls)))
+		(name (car mdecl))
+		(mtail (cdr mdecl)))
+	   (call-with-values
+	       (lambda () (sizeof-mtail mtail))
+	     (lambda (elt-sz elt-al)
+	       (cond
+		((string=? name dsg)
+		 (let* ((xoffs (maxi-size 0 elt-al offs)))
+		   (if (null? (cdr desig)) xoffs
+		       (offsetof-mtail mtail (cdr desig) xoffs))))
+		(else
+		 (loop (maxi-size 0 elt-al offs) (max elt-al aln)
+		       dsg (cdr decls) flds)))))))
+	((pair? flds)
+	 (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
+	     (loop offs aln dsg
+		   (map cdr (unitize-comp-decl (car flds))) (cdr flds))
+	     (loop offs aln dsg decls (cdr flds))))
+	(else (values offs aln)))))
 
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
-|#
 
 (define* (unwrap-designator expr udict #:optional (seed '()))
   (sx-match expr

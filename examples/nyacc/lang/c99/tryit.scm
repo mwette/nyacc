@@ -320,7 +320,8 @@
     ))
 
 
-(when #t
+;; with-arch from (nyacc lang arch-info)
+(when #f
   (let* ((code
 	  (string-append
 	   "typedef struct {\n"
@@ -335,15 +336,19 @@
 	 )
     (display code) (newline)
     (with-arch "native"
-      (sf "native:\n")
-      (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
-      (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
+	       (sf "native:\n")
+	       (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
+	       (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
     (with-arch "ppc"
-      (sf "ppc:\n")
-      (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
-      (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
+	       (sf "ppc:\n")
+	       (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
+	       (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
+    (with-arch "avr"
+	       (sf "avr:\n")
+	       (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
+	       (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
     ))
-	 
+
 ;; symbol could have init-zer so need
 ;; (initzer->data
 
@@ -483,20 +488,21 @@
 
     (eval-expr expr)))
  
-(when #f
+(when #t
   (let* ((code
 	  (string-append
 	   "typedef struct {\n"
-	   " int x1, x2;\n"
-	   " struct { int x1, x2; } xx;\n"
+	   ;;"  int x1, x2;\n"
+	   ;;"  struct { int x1, x2; } xx;\n"
 	   " int y;\n"
-	   " struct { int y1; double y2; } yy[3];\n"
-	   " struct { int z1; double z2; };\n"
+	   ;;"  struct { int y1; void *y2; } yy[3];\n"
+	   " struct { int y1; void *y2; } yy;\n"
+	   ;;"  struct { int z1; void *z2; };\n"
 	   "} foo_t;\n"
-	   "int sz  = sizeof(foo_t);\n"
-	   "int os  = &(((foo_t*)0)->yy.y1);\n"
-	   "int of1  = __builtin_offsetof(foo_t, xx.x2);\n"
-	   "int of2  = __builtin_offsetof(foo_t, yy[1].y2);\n"
+	   ;;"int sz = sizeof(foo_t);\n"
+	   ;;"int os = &(((foo_t*)0)->yy.y1);\n"
+	   ;;"int of1 = __builtin_offsetof(foo_t, xx.x2);\n"
+	   ;;"int of2 = __builtin_offsetof(foo_t, yy[1].y2);\n"
 	   ))
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
@@ -514,29 +520,45 @@
 		    (p-expr (fixed "0")))))))
 	 (of (udict-ref udict "of1"))
 	 (dsg (sx-ref* of 2 2 1 2))
+	 ;;
+	 (type-name
+	  '(type-name
+	    (decl-spec-list
+	     (type-spec
+	      (typename "foo_t")))))
+	 (mkdsg (lambda (str)
+		  (let loop ((res '()) (elts (string-split str #\.)))
+		    (cond
+		     ((null? res)
+		      (loop `(p-expr (ident ,(car elts))) (cdr elts)))
+		     ((pair? elts)
+		      (loop `(d-sel (ident ,(car elts)) ,res) (cdr elts)))
+		     (else res)))))
+	 (desig "yy.y2")
+	 (offset-expr `(offsetof-type ,type-name ,desig))
 	 )
     (display code) (newline)
     ;;(pp of) (pp dsg)
-    ;;(pp (unwrap-designator dsg udict))
+    ;;(pp (mkdsg desig))
+    ;;(pp (unwrap-designator (mkdsg desig) udict))
     ;;(quit)
     ;;(pp udecl)
-    (let* ((type-name
-	    '(type-name
-		     (decl-spec-list
-		      (type-spec
-		       (typename "foo_t")))))
-	   (desig `(d-sel (ident "x2") (p-expr (ident "xx"))))
-	   (offset-expr
-	    `(offsetof-type
-              (type-name
-               (decl-spec-list (type-spec (typename "foo_t"))))
-              (d-sel (ident "x2") (p-expr (ident "xx")))))
-	   ;;(offset (eval-offsetof offset-expr udict))
-	   )
-      (sf "size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
-      (sf "align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict))
-      (sf "offset=~S (for xx.x2)\n" (eval-alignof-type
-			 `(offsetof-type ,type-name ,desig) udict))
-      )))
+    (with-arch "native"
+      (sf "native:\n")
+      (sf "  size = ~S\n"
+	  (eval-sizeof-type `(sizeof-type ,type-name) udict))
+      (sf "  align = ~S\n"
+	  (eval-alignof-type `(alignof-type ,type-name) udict))
+      (sf "  offset(~S) = ~S\n" desig
+	  (eval-offsetof `(offsetof-type ,type-name ,(mkdsg desig)) udict)))
+    #;(with-arch "ppc"
+      (sf "ppc:\n")
+      (sf "  size=~S\n"
+	  (eval-sizeof-type `(sizeof-type ,type-name) udict))
+      (sf "  align=~S\n"
+	  (eval-alignof-type `(alignof-type ,type-name) udict))
+      (sf "  offset=~S (for yy.y2)\n"
+	  (eval-offsetof `(offsetof-type ,type-name ,desig) udict)))
+    ))
 
 ;; --- last line ---
