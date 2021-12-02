@@ -336,18 +336,29 @@
 	 )
     (display code) (newline)
     (with-arch "native"
-	       (sf "native:\n")
-	       (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
-	       (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
+      (sf "native:\n")
+      (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
+      (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
     (with-arch "ppc"
-	       (sf "ppc:\n")
-	       (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
-	       (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
+      (sf "ppc:\n")
+      (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
+      (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
     (with-arch "avr"
-	       (sf "avr:\n")
-	       (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
-	       (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
+      (sf "avr:\n")
+      (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
+      (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
     ))
+
+(when #f
+  ;; bad printout: typedef (const) void *gconstpointer;
+  ;; fixed
+  (let* ((tree  '(udecl (decl-spec-list
+			 (stor-spec (typedef))
+			 (type-qual (const))
+			 (type-spec (void)))
+			(init-declr
+			 (ptr-declr (pointer) (ident "gconstpointer"))))))
+    (pretty-print-c99 tree)))
 
 ;; symbol could have init-zer so need
 ;; (initzer->data
@@ -488,7 +499,7 @@
 
     (eval-expr expr)))
  
-(when #t
+(when #f
   (let* ((code
 	  (string-append
 	   "typedef struct {\n"
