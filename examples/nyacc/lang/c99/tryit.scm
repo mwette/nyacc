@@ -572,4 +572,43 @@
 	  (eval-offsetof `(offsetof-type ,type-name ,desig) udict)))
     ))
 
+
+(define (find-offsets mtail)
+  (match mtail
+    (`(struct-def (field-list . ,flds))
+     (let loop ((siz base) (aln 0) (offs '()) (decls '()) (flds fields))
+       (cond
+	((pair? decls)
+	 (let* ((mdecl (udecl->mdecl (car decls)))
+		(name (car mdecl))
+		(mtail (cdr mdecl)))
+	   (call-with-values
+	       (lambda () (sizeof-mtail mtail))
+	     (lambda (elt-sz elt-al)
+	       (loop (cx-incr-size elt-sz elt-al siz)
+		     (max aln elt-al)
+		     (acons name (cx-incr-size 0 elt-al siz))
+		     (cdr decls)
+		     flds))))))))
+	((pair? flds)
+	 (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
+	     (loop offs aln dsg
+		   (map cdr (unitize-comp-decl (car flds))) (cdr flds))
+	     (loop offs aln dsg decls (cdr flds))))
+	(else (values offs aln)))))
+  #f)
+
+(when #t
+  (let* ((file "zz.h")
+	 (tree (parse-file file))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (udict-ref udict "foo_t"))
+	 (xdecl (expand-typerefs udecl udict))
+	 (mdecl (udecl->mdecl xdecl))
+	 (mtail (cdr mdecl))
+	 )
+    ;;(pp mdecl)
+    (find-offsets mtail)
+    ))
+
 ;; --- last line ---
