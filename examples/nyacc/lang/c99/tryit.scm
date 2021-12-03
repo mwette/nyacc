@@ -572,22 +572,43 @@
 	  (eval-offsetof `(offsetof-type ,type-name ,desig) udict)))
     ))
 
+(define (mt-al mtail)
+  (call-with-values
+      (lambda () (sizeof-mtail mtail))
+    (lambda (sz al) al)))
 
 (define* (x-find-offsets mtail #:optional (base 0))
   (match mtail
-    (`(struct-def (field-list . ,flds))
-     (let loop ((siz base) (aln 0) (offs '()) (decls '()) (flds flds))
+    (`((pointer-to) . ,rest)
+     (values (sizeof-basetype '*) (alignof-basetype '*) base))
+    (`((fixed-type ,name))
+     (values (sizeof-basetype name) (alignof-basetype name) base))
+    (`((float-type ,name))
+     (values (sizeof-basetype name) (alignof-basetype name) base))
+    (`((array-of ,size) . ,rest)
+     (let ((mult (eval-c99-cx size)))
+       (call-with-values
+	   (lambda () (find-offsets rest))
+	 (lambda (size align offs)
+	   (values (* mult size) align base)))))
+
+    (`((struct-def (field-list . ,flds)) . ,rest)
+     (let loop ((siz 0) (aln 0) (offs '()) (decls '()) (flds flds))
        (cond
 	((pair? decls)
 	 (let* ((mdecl (udecl->mdecl (car decls)))
 		(name (car mdecl))
 		(mtail (cdr mdecl)))
 	   (call-with-values
-	       (lambda () (sizeof-mtail mtail))
-	     (lambda (elt-sz elt-al)
+	       (lambda () (x-find-offsets mtail siz))
+	     (lambda (elt-sz elt-al elt-offs)
 	       (loop (cx-incr-size elt-sz elt-al siz)
 		     (max aln elt-al)
-		     (acons name (cx-incr-size 0 elt-al siz) offs)
+		     (acons name
+			    (if (pair? elt-offs)
+				elt-offs
+				(cx-incr-size 0 elt-al siz))
+			    offs)
 		     (cdr decls)
 		     flds)))))
 	((pair? flds)
@@ -596,68 +617,63 @@
 		   (map cdr (unitize-comp-decl (car flds))) (cdr flds))
 	     (loop offs aln offs decls (cdr flds))))
 	(else (values siz aln (reverse offs))))))
-    (_ #f)))
 
-(define (find-offsets mtail) 
+    (`((,(or 'enum-ref 'enum-def) . ,rest))
+     (values (sizeof-basetype "int") (alignof-basetype "int") base))
+    
+    (_ (pp mtail) (error "missed something") #f)))
 
-  (define (exec/decl decl size align offs update)
-    ;; => values size align offs
-    (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
-	  (declrs (sx-tail (or (sx-ref decl 2) '((ident "_"))))))
-      (let loop ((size size) (align align) (offs offs) (declrs declrs))
-	(if (null? declrs)
-	    (values size align offs)
-	    (call-with-values
-		(lambda ()
-		  (find-offsets
-		   (cdr (m-unwrap-declr (car declrs) mtail))))
-	      (lambda (elt-size elt-align elt-offs)
-		(loop (update elt-size elt-align size)
-		      (max elt-align align)
-		      (acons (declr-name (car declrs))
-			     (if (pair? elt-offs)
-				 elt-offs
-				 (update 0 elt-align size))
-			     offs)
-		      (cdr declrs))))))))
-
+(define* (z-find-offsets mtail #:optional (base 0))
   (match mtail
     (`((pointer-to) . ,rest)
-     (values (sizeof-basetype '*) (alignof-basetype '*) 0))
+     (values (sizeof-basetype '*) (alignof-basetype '*) base))
     (`((fixed-type ,name))
-     (values (sizeof-basetype name) (alignof-basetype name) 0))
+     (values (sizeof-basetype name) (alignof-basetype name) base))
     (`((float-type ,name))
-     (values (sizeof-basetype name) (alignof-basetype name) 0))
+     (values (sizeof-basetype name) (alignof-basetype name) base))
     (`((array-of ,size) . ,rest)
      (let ((mult (eval-c99-cx size)))
        (call-with-values
 	   (lambda () (find-offsets rest))
 	 (lambda (size align offs)
-	   (values (* mult size) align size)))))
-    (`((struct-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (offs '()) (flds fields))
-       (cond
-	((null? flds) (values (cx-incr-size 0 align size) align (reverse offs)))
-	((eq? 'comp-decl (sx-tag (car flds)))
-	 (call-with-values
-	     (lambda () (exec/decl (car flds) size align offs cx-incr-size))
-	   (lambda (nsize nalign noffs)
-	     (loop nsize nalign noffs (cdr flds)))))
-	(else (loop size align offs (cdr flds))))))
-    (`((union-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (offs 0) (flds fields))
-       (cond
-	((null? flds) (values (cx-incr-size 0 align size) align (reverse offs)))
-	((eq? 'comp-decl (sx-tag (car flds)))
-	 (call-with-values
-	     (lambda () (exec/decl (car flds) size align offs cx-maxi-size))
-	   (lambda (nsize nalign noffs)
-	     (loop nsize nalign noffs (cdr flds)))))
-	(else (loop size align offs (cdr flds))))))
+	   (values (* mult size) align base)))))
+
+    (`((struct-def (field-list . ,flds)) . ,rest)
+     (let* ((aln (mt-al mtail))
+	    (siz (cx-incr-size 0 aln base)))
+       (let loop ((siz siz) (aln aln) (offs '()) (decls '()) (flds flds))
+	 (cond
+	  ((pair? decls)
+	   (let* ((mdecl (udecl->mdecl (car decls)))
+		  (name (car mdecl))
+		  (mtail (cdr mdecl)))
+	     (call-with-values
+		 (lambda () (z-find-offsets mtail siz))
+	       (lambda (elt-sz elt-al elt-offs)
+		 (let ()
+		   (loop (cx-incr-size elt-sz elt-al siz)
+			 (max aln elt-al)
+			 (acons name
+				(if (pair? elt-offs)
+				    elt-offs
+				    (cx-incr-size 0 elt-al siz))
+				offs)
+			 (cdr decls)
+			 flds))))))
+	  ((pair? flds)
+	   (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
+	       (loop siz aln offs
+		     (map cdr (unitize-comp-decl (car flds))) (cdr flds))
+	       (loop offs aln offs decls (cdr flds))))
+	  (else (values siz aln (reverse offs)))))))
+
     (`((,(or 'enum-ref 'enum-def) . ,rest))
-     (values (sizeof-basetype "int") (alignof-basetype "int") 0))
-    (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
-       (throw 'c99-error "coding error"))))
+     (values (sizeof-basetype "int") (alignof-basetype "int") base))
+    
+    (_ (pp mtail) (error "missed something") #f)))
+
+  
+(define find-offsets z-find-offsets)
 
 (when #t
   (let* ((file "zz.h")
