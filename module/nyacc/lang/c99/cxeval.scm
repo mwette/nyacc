@@ -240,7 +240,7 @@
 
 ;; =============================================================================
 
-(define* (find-offsets mtail #:optional (base 0))
+(define* (gen-offsets mtail #:optional (base 0))
 
   (define (mt-al mtail)
     (call-with-values (lambda () (sizeof-mtail mtail))
@@ -253,7 +253,7 @@
 	 ((pair? decls)
 	  (let* ((mdecl (udecl->mdecl (car decls)))
 		 (name (car mdecl)) (mtail (cdr mdecl)))
-	    (call-with-values (lambda () (find-offsets mtail (+ base siz)))
+	    (call-with-values (lambda () (gen-offsets mtail (+ base siz)))
 	      (lambda (el-sz el-al el-os)
 		;;(sferr "sizeof(~S)=~S\n" name el-sz)
 		(let ((oval (if (pair? el-os) el-os
@@ -278,7 +278,7 @@
      (let ((sz (sizeof-basetype name)) (al (alignof-basetype name)))
        (values sz al (incr-size 0 al base))))
     (`((array-of ,dim) . ,rest)
-     (call-with-values (lambda () (find-offsets rest base))
+     (call-with-values (lambda () (gen-offsets rest base))
        (lambda (el-sz el-al el-of)
 	 (let ((base (incr-size 0 el-al base)))
 	   (let ((dim (eval-c99-cx dim)))
@@ -289,9 +289,15 @@
      (do-aggr flds maxi-size))
     (`((,(or 'enum-ref 'enum-def) . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int") base))
-    (_ (sferr "c99/find-offsets: missed\n") (pperr mtail)
+    (_ (sferr "c99/gen-offsets: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
 
+(define (find-offsets mtail)
+  (call-with-values
+      (lambda () (gen-offsets mtail))
+    (lambda (size align offsets)
+      offsets)))
+  
 ;; @deffn {Procedure} offsetof-mtail mtail desig [base] => offset alignment
 ;; @end deffn
 (define* (offsetof-mtail mtail desig #:optional (base 0))

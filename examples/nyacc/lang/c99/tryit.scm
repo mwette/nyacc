@@ -339,10 +339,6 @@
       (sf "native:\n")
       (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
       (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
-    (with-arch "ppc"
-      (sf "ppc:\n")
-      (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
-      (sf "  align=~S\n" (eval-alignof-type `(alignof-type ,type-name) udict)))
     (with-arch "avr"
       (sf "avr:\n")
       (sf "  size=~S\n" (eval-sizeof-type `(sizeof-type ,type-name) udict))
@@ -562,8 +558,8 @@
 	  (eval-alignof-type `(alignof-type ,type-name) udict))
       (sf "  offset(~S) = ~S\n" desig
 	  (eval-offsetof `(offsetof-type ,type-name ,(mkdsg desig)) udict)))
-    #;(with-arch "ppc"
-      (sf "ppc:\n")
+    (with-arch "avr"
+      (sf "avr:\n")
       (sf "  size=~S\n"
 	  (eval-sizeof-type `(sizeof-type ,type-name) udict))
       (sf "  align=~S\n"
@@ -572,57 +568,15 @@
 	  (eval-offsetof `(offsetof-type ,type-name ,desig) udict)))
     ))
 
-(define* (find-offsets mtail #:optional (base 0))
-
-  (define (mt-al mtail)
-    (call-with-values (lambda () (sizeof-mtail mtail))
-      (lambda (sz al) al)))
-
-  (define (do-aggr flds update)
-    (let* ((aln (mt-al mtail)) (siz (cx-incr-size 0 aln base)))
-      (let loop ((siz siz) (aln aln) (offs '()) (decls '()) (flds flds))
-	(cond
-	 ((pair? decls)
-	  (let* ((mdecl (udecl->mdecl (car decls)))
-		 (name (car mdecl)) (mtail (cdr mdecl)))
-	    (call-with-values (lambda () (find-offsets mtail siz))
-	      (lambda (el-sz el-al el-os)
-		(let ((oval (if (pair? el-os) el-os (cx-incr-size 0 el-al siz))))
-		  (loop (update el-sz el-al siz) (max aln el-al)
-			(acons name oval offs) (cdr decls) flds))))))
-	 ((pair? flds)
-	  (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
-	      (loop siz aln offs
-		    (map cdr (unitize-comp-decl (car flds))) (cdr flds))
-	      (loop offs aln offs decls (cdr flds))))
-	 (else (values siz aln (reverse offs)))))))
-
-  (match mtail
-    (`((pointer-to) . ,rest)
-     (let ((sz (sizeof-basetype '*)) (al (alignof-basetype '*)))
-       (values (sizeof-basetype '*) (alignof-basetype '*) base)))
-    (`((fixed-type ,name))
-     (let ((sz (sizeof-basetype name)) (al (alignof-basetype name)))
-       (values sz al (cx-incr-size 0 al base))))
-    (`((float-type ,name))
-     (let ((sz (sizeof-basetype name)) (al (alignof-basetype name)))
-       (values sz al (cx-incr-size 0 al base))))
-    (`((array-of ,dim) . ,rest)
-     (call-with-values (lambda () (find-offsets rest base))
-       (lambda (el-sz el-al el-of)
-	 (let ((dim (eval-c99-cx dim)))
-	   (values (* dim el-sz) el-al (cons (cons dim el-sz) el-of))))))
-    (`((struct-def (field-list . ,flds)) . ,rest)
-     (do-aggr flds cx-incr-size))
-    (`((union-def (field-list . ,flds)) . ,rest)
-     (do-aggr flds cx-maxi-size))
-    (`((,(or 'enum-ref 'enum-def) . ,rest))
-     (values (sizeof-basetype "int") (alignof-basetype "int") base))
-    (_ (pp mtail) (error "missed something") #f)))
-
 (when #t
-  (let* ((file "zz.h")
-	 (tree (parse-file file))
+  (let* ((code
+	  (string-append
+	   "typedef struct { int m; double b[2]; } bar_t;\n"
+	   "typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
+	   "typedef struct { int r; double c[2]; } foo2_t;\n"
+	   "typedef struct { int s; double d[5]; } foo3_t;\n"
+	   "typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[2]; } foo_t;\n"))
+	 (tree (parse-string code))
 	 (udict (c99-trans-unit->udict tree))
 	 (udecl (udict-ref udict "foo_t"))
 	 (xdecl (expand-typerefs udecl udict))
@@ -630,11 +584,7 @@
 	 (mtail (cdr mdecl))
 	 )
     ;;(pp mdecl)
-    (call-with-values
-	(lambda () (find-offsets mtail))
-      (lambda (sz al of)
-	(pp of)
-	))
+    (pp (find-offsets mtail))
     ))
 
 ;; --- last line ---
