@@ -573,7 +573,7 @@
     ))
 
 
-(define* (find-offsets mtail #:optional (base 0))
+(define* (x-find-offsets mtail #:optional (base 0))
   (match mtail
     (`(struct-def (field-list . ,flds))
      (let loop ((siz base) (aln 0) (offs '()) (decls '()) (flds flds))
@@ -598,6 +598,66 @@
 	(else (values siz aln (reverse offs))))))
     (_ #f)))
 
+(define (find-offsets mtail) 
+
+  (define (exec/decl decl size align offs update)
+    ;; => values size align offs
+    (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
+	  (declrs (sx-tail (or (sx-ref decl 2) '((ident "_"))))))
+      (let loop ((size size) (align align) (offs offs) (declrs declrs))
+	(if (null? declrs)
+	    (values size align offs)
+	    (call-with-values
+		(lambda ()
+		  (find-offsets
+		   (cdr (m-unwrap-declr (car declrs) mtail))))
+	      (lambda (elt-size elt-align elt-offs)
+		(loop (update elt-size elt-align size)
+		      (max elt-align align)
+		      (acons (declr-name (car declrs))
+			     (if (pair? elt-offs)
+				 elt-offs
+				 (update 0 elt-align size))
+			     offs)
+		      (cdr declrs))))))))
+
+  (match mtail
+    (`((pointer-to) . ,rest)
+     (values (sizeof-basetype '*) (alignof-basetype '*) 0))
+    (`((fixed-type ,name))
+     (values (sizeof-basetype name) (alignof-basetype name) 0))
+    (`((float-type ,name))
+     (values (sizeof-basetype name) (alignof-basetype name) 0))
+    (`((array-of ,size) . ,rest)
+     (let ((mult (eval-c99-cx size)))
+       (call-with-values
+	   (lambda () (find-offsets rest))
+	 (lambda (size align offs)
+	   (values (* mult size) align size)))))
+    (`((struct-def (field-list . ,fields)))
+     (let loop ((size 0) (align 0) (offs '()) (flds fields))
+       (cond
+	((null? flds) (values (cx-incr-size 0 align size) align (reverse offs)))
+	((eq? 'comp-decl (sx-tag (car flds)))
+	 (call-with-values
+	     (lambda () (exec/decl (car flds) size align offs cx-incr-size))
+	   (lambda (nsize nalign noffs)
+	     (loop nsize nalign noffs (cdr flds)))))
+	(else (loop size align offs (cdr flds))))))
+    (`((union-def (field-list . ,fields)))
+     (let loop ((size 0) (align 0) (offs 0) (flds fields))
+       (cond
+	((null? flds) (values (cx-incr-size 0 align size) align (reverse offs)))
+	((eq? 'comp-decl (sx-tag (car flds)))
+	 (call-with-values
+	     (lambda () (exec/decl (car flds) size align offs cx-maxi-size))
+	   (lambda (nsize nalign noffs)
+	     (loop nsize nalign noffs (cdr flds)))))
+	(else (loop size align offs (cdr flds))))))
+    (`((,(or 'enum-ref 'enum-def) . ,rest))
+     (values (sizeof-basetype "int") (alignof-basetype "int") 0))
+    (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
+       (throw 'c99-error "coding error"))))
 
 (when #t
   (let* ((file "zz.h")
@@ -609,7 +669,11 @@
 	 (mtail (cdr mdecl))
 	 )
     ;;(pp mdecl)
-    (find-offsets mtail)
+    (call-with-values
+	(lambda () (find-offsets mtail))
+      (lambda (sz al of)
+	(pp of)
+	))
     ))
 
 ;; --- last line ---
