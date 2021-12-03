@@ -611,7 +611,7 @@
 	(string-append "_" (number->string ix)))))
 
   (define (unitize decl seed)
-    (unitize-comp-decl decl seed #:namer anon-namer))
+    (dictize-comp-decl decl seed #:namer anon-namer))
 
   (let* ((fields (clean-fields (cdr field-list)))
 	 (uflds (reverse (fold unitize '() fields))))
@@ -792,12 +792,9 @@
 		  (loop mtail sz (max al mxal) (cdr flds))
 		  (loop btail mxsz (max al mxal) (cdr flds)))))))))
 
-;;(else (fherr "can't deal with this alignment: ~S" align))))
-
 (define (clean-and-unitize-fields fields)
-  (map cdr (fold-right unitize-decl '() (clean-fields fields))))
+  (fold-right unitize-decl '() (clean-fields fields)))
 
-;;(define* (mtail->ffi-desc mdecl-tail #:optional in-compound)
 (export mtail->ffi-desc)
 (define* (mtail->ffi-desc mdecl-tail #:optional in-compound)
 
@@ -830,7 +827,7 @@
     
     (((struct-def (field-list . ,fields)))
      `(list ,@(map (lambda (fld)
-		     (let* ((udict (unitize-comp-decl fld))
+		     (let* ((udict (dictize-comp-decl fld))
 			    (name (caar udict))
 			    (udecl (cdar udict))
 			    (udecl (udecl-rem-type-qual udecl))

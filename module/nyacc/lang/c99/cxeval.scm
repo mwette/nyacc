@@ -263,7 +263,7 @@
 	 ((pair? flds)
 	  (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
 	      (loop siz aln offs
-		    (map cdr (unitize-comp-decl (car flds))) (cdr flds))
+		    (map cdr (dictize-comp-decl (car flds))) (cdr flds))
 	      (loop siz aln offs decls (cdr flds))))
 	 (else (values siz aln (reverse offs)))))))
 
@@ -355,7 +355,7 @@
 	((pair? flds)
 	 (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
 	     (loop offs aln dsg
-		   (map cdr (unitize-comp-decl (car flds))) (cdr flds))
+		   (map cdr (dictize-comp-decl (car flds))) (cdr flds))
 	     (loop offs aln dsg decls (cdr flds))))
 	(else (values offs aln)))))
 	   
@@ -383,7 +383,7 @@
 	((pair? flds)
 	 (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
 	     (loop offs aln dsg
-		   (map cdr (unitize-comp-decl (car flds))) (cdr flds))
+		   (map cdr (dictize-comp-decl (car flds))) (cdr flds))
 	     (loop offs aln dsg decls (cdr flds))))
 	(else (values offs aln)))))
 

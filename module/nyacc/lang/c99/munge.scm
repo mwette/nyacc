@@ -18,9 +18,14 @@
 ;;; Notes:
 
 ;; 1) mdecl == munged (unwrapped) declaration
+;;    udecl : unitzied decl (not declr-list and one init-declr, etc
+;;    utent : (name . udecl) where name is string or pair (struct . "foo")
 ;; 2) Usual sequence is: expand-typerefs, stripdown-udecl, udecl->mdecl.
 ;; 3) unitize-decl is shallow.  It does not dive into structs and unitize.
 ;; 4) expand-typerefs is shallow?  It does not dive into structs and unitize.
+;; 5) dictize replaces old unitize, w/ unitize making more sense now
+;;    a) unitize: (int (x y)) -> ((int x) (int y))
+;;    b) dictize: (int (x y)) -> (("x" . (int x)) ("y" . (int y)))
 
 ;; Todo:
 ;; 2) I want a way to keep named enums in expand-typerefs.
@@ -31,9 +36,6 @@
 ;;    c> if function use `void *x;'
 ;; 6) Check use of comments as attributes.
 ;; 7) maybe move to munge-base: typedef-decl? udict->typedef-names
-;; 8) split up unitize and dictize:
-;;    a) unitize: (int (x y)) -> ((int x) (int y))
-;;    b) dictize: (int (x y)) -> (("x" . (int x)) ("y" . (int y)))
 
 ;;; Code:
 
@@ -245,7 +247,7 @@
 	 (declrs (and=> dclr-l sx-tail))) ; ((...))
     (values tag attr spec-l declrs)))
 
-;; @deffn {Procedure} unitize-decl decl [seed] [#:expand-enums #f] => seed
+;; @deffn {Procedure} dictize-decl decl [seed] [#:expand-enums #f] => seed
 ;; This is a fold iterator intended to be used by @code{c99-trans-unit->udict}.
 ;; It converts the multiple @code{init-declr} items in an @code{init-declr-list}
 ;; of a @code{decl} into an a-list of multiple pairs of name and @code{udecl}
@@ -277,27 +279,19 @@
 ;; struct and union (e.g., @code{__packed__}).  The latter is needed
 ;; because they appear in files under @file{/usr/include}.
 ;; @end deffn
-(define dictize-decl unitize-decl)
-(define* (unitize-decl decl #:optional (seed '()))
+(define* (dictize-decl decl #:optional (seed '()))
   
   (define* (make-udecl type-tag attr guts #:optional typename)
     (if (and attr (pair? attr))
 	`(udecl (decl-spec-list (type-spec ,(cons* type-tag `(@ ,@attr) guts))))
 	`(udecl (decl-spec-list (type-spec ,(cons type-tag guts))))))
 
-  ;; update depends on whether unitize- procedures use fold or fold-right
-  (define (update-left name value tag attr specl declrs seed)
-    (acons name value (iter-declrs tag attr specl declrs seed)))
-
-  (define (update-right name value tag attr specl declrs seed)
+  (define (update name value tag attr specl declrs seed)
     (iter-declrs tag attr specl declrs (acons name value seed)))
 
-  (define update update-right)
-
-  ;;(simple-format #t "unitize-decl ~S\n" decl)
   (cond
    ((not (pair? decl))
-    (throw 'nyacc-error "unitize-decl: bad arg: ~S" decl))
+    (throw 'nyacc-error "dictize-decl: bad arg: ~S" decl))
    ((eqv? (sx-tag decl) 'udecl)
     (acons (udecl-id decl) decl seed))
 
@@ -390,11 +384,19 @@
 	(,_ (iter-declrs tag decl-attr specl declrs seed)))))
    
    ((eqv? (sx-tag decl) 'comp-udecl) (acons (udecl-id decl) decl seed))
-   ((eqv? (sx-tag decl) 'comp-decl) (unitize-comp-decl decl seed))
-   ((eqv? (sx-tag decl) 'param-decl) (unitize-param-decl decl seed))
+   ((eqv? (sx-tag decl) 'comp-decl) (dictize-comp-decl decl seed))
+   ((eqv? (sx-tag decl) 'param-decl) (dictize-param-decl decl seed))
    (else seed)))
 
-;; @deffn {Procedure} unitize-comp-decl decl [seed] [#:namer namer]
+(define* (unitize-decl decl #:optional (seed '()))
+  (fold-right
+   (lambda (ud-entry seed)
+     ;;(sferr "ue: ~S\n" (car ud-entry)) (pperr (cdr ud-entry))
+     ;;(pperr ud-entry)
+     (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
+   seed (dictize-decl decl)))
+
+;; @deffn {Procedure} dictize-comp-decl decl [seed] [#:namer namer]
 ;; This will turn
 ;; @example
 ;; (comp-decl (decl-spec-list (type-spec "int"))
@@ -412,11 +414,10 @@
 ;; functions @code{struct} and @code{union} field lists.  The result needs
 ;; to be reversed.
 ;; @end deffn
-(define dictize-comp-decl unitize-comp-decl)
-(define* (unitize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
+(define* (dictize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
   (cond
    ((not (pair? decl))
-    (throw 'nyacc-error "unitize-decl: bad arg: ~S" decl))
+    (throw 'nyacc-error "dictize-decl: bad arg: ~S" decl))
    ((eqv? (sx-tag decl) 'comp-udecl)
     (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag (sx-ref decl 2)) 'comp-declr-list)
@@ -425,7 +426,13 @@
    (else
     (acons (namer) decl seed))))
 
-;; @deffn {Procedure} unitize-param-decl param-decl [seed] [#:expand-enums #f]
+(define* (unitize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
+  (fold-right
+   (lambda (ud-entry seed)
+     (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
+   seed (dictize-comp-decl decl #:namer namer)))
+
+;; @deffn {Procedure} dictize-param-decl param-decl [seed] [#:expand-enums #f]
 ;; This will turn
 ;; @example
 ;; (param-decl (decl-spec-list (type-spec "int"))
@@ -442,8 +449,7 @@
 ;; @*
 ;; TODO: What about abstract declarators?  Should use "*anon*".
 ;; @end deffn
-(define dictize-param-decl unitize-param-decl)
-(define* (unitize-param-decl decl #:optional (seed '()) #:key (expand-enums #f))
+(define* (dictize-param-decl decl #:optional (seed '()))
   (if (not (eqv? 'param-decl (car decl))) seed
       (let* ((tag (sx-ref decl 0))
 	     (attr (sx-attr decl))
@@ -452,6 +458,12 @@
 	     (ident (declr-ident declr))
 	     (name (cadr ident)))
 	(acons name decl seed))))
+
+(define* (unitize-param-decl decl #:optional (seed '()))
+  (fold-right
+   (lambda (ud-entry seed)
+     (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
+   seed (dictize-param-decl decl)))
 
 ;; @deffn {Procedure} udecl-id udecl => string
 ;; generate the name 
