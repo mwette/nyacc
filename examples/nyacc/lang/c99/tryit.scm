@@ -573,10 +573,10 @@
     ))
 
 
-(define (find-offsets mtail)
+(define* (find-offsets mtail #:optional (base 0))
   (match mtail
     (`(struct-def (field-list . ,flds))
-     (let loop ((siz base) (aln 0) (offs '()) (decls '()) (flds fields))
+     (let loop ((siz base) (aln 0) (offs '()) (decls '()) (flds flds))
        (cond
 	((pair? decls)
 	 (let* ((mdecl (udecl->mdecl (car decls)))
@@ -587,16 +587,17 @@
 	     (lambda (elt-sz elt-al)
 	       (loop (cx-incr-size elt-sz elt-al siz)
 		     (max aln elt-al)
-		     (acons name (cx-incr-size 0 elt-al siz))
+		     (acons name (cx-incr-size 0 elt-al siz) offs)
 		     (cdr decls)
-		     flds))))))))
+		     flds)))))
 	((pair? flds)
 	 (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
-	     (loop offs aln dsg
+	     (loop siz aln offs
 		   (map cdr (unitize-comp-decl (car flds))) (cdr flds))
-	     (loop offs aln dsg decls (cdr flds))))
-	(else (values offs aln)))))
-  #f)
+	     (loop offs aln offs decls (cdr flds))))
+	(else (values siz aln (reverse offs))))))
+    (_ #f)))
+
 
 (when #t
   (let* ((file "zz.h")
