@@ -498,11 +498,12 @@
 (when #f
   (let* ((code
 	  (string-append
+	   "enum {  FOO = sizeof(int), BAR = sizeof(double) }; \n"
 	   "typedef struct {\n"
 	   ;;"  int x1, x2;\n"
 	   ;;"  struct { int x1, x2; } xx;\n"
 	   " int y;\n"
-	   ;;"  struct { int y1; void *y2; } yy[3];\n"
+	   "  struct { int y1; void *y2; } yy[FOO];\n"
 	   " struct { int y1; void *y2; } yy;\n"
 	   ;;"  struct { int z1; void *z2; };\n"
 	   "} foo_t;\n"
@@ -513,6 +514,7 @@
 	   ))
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
+	 (udict (udict-add-enums udict))
 	 (udecl (assoc-ref udict "foo_t"))
 	 (const
 	  `(ref-to
@@ -542,13 +544,17 @@
 		      (loop `(d-sel (ident ,(car elts)) ,res) (cdr elts)))
 		     (else res)))))
 	 (desig "yy.y2")
-	 (offset-expr `(offsetof-type ,type-name ,desig))
+	 (offset-expr `(offsetof-type ,type-name ,(mkdsg desig)))
 	 )
     (display code) (newline)
     ;;(pp of) (pp dsg)
     ;;(pp (mkdsg desig))
     ;;(pp (unwrap-designator (mkdsg desig) udict))
-    ;;(quit)
+    ;;(pp offset-expr)
+    ;;(pp udict)
+    ;;(newline)
+    ;;(pp ddict)
+    (quit)
     ;;(pp udecl)
     (with-arch "native"
       (sf "native:\n")
@@ -571,6 +577,7 @@
 (when #t
   (let* ((code
 	  (string-append
+	   "enum { NN = sizeof(int), MM = sizeof(long) };\n"
 	   "typedef struct { int m; double b[2]; } bar_t;\n"
 	   "typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
 	   "typedef struct { int r; double c[2]; } foo2_t;\n"
@@ -578,13 +585,15 @@
 	   "typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[2]; } foo_t;\n"))
 	 (tree (parse-string code))
 	 (udict (c99-trans-unit->udict tree))
+	 (udict (udict-add-enums udict))
 	 (udecl (udict-ref udict "foo_t"))
 	 (xdecl (expand-typerefs udecl udict))
 	 (mdecl (udecl->mdecl xdecl))
 	 (mtail (cdr mdecl))
 	 )
+    (sf "~A\n" code)
     ;;(pp mdecl)
-    (pp (find-offsets mtail))
+    (pp (find-offsets mtail udict))
     ))
 
 ;; --- last line ---

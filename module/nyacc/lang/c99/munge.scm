@@ -45,7 +45,7 @@
 	    udict-ref udict-struct-ref udict-union-ref udict-enum-ref
 
 	    ;; generating def's dict
-	    c99-trans-unit->ddict udict-enums->ddict
+	    c99-trans-unit->ddict udict-enums->ddict udict-add-enums
 
 	    ;; munging
 	    stripdown-udecl
@@ -592,16 +592,41 @@
 	    ddict def-list)))
   (fold
    (lambda (pair ddict)
-     (let* ((specs (sx-ref (cdr pair) 1))
-	    (tspec (sx-ref (sx-find 'type-spec specs) 1)))
-       (sx-match tspec
-	 ((enum-def (ident ,name) (enum-def-list . ,defs))
-	  (gen-nvl (sx-ref tspec 2) ddict))
-	 ((enum-def (enum-def-list . ,defs))
-	  (gen-nvl (sx-ref tspec 1) ddict))
-	 (,_
-	  ddict))))
+     (if (or (pair? (car pair)) (positive? (string-length (car pair))))
+	 (let* ((specs (sx-ref (cdr pair) 1))
+		(tspec (sx-ref (sx-find 'type-spec specs) 1)))
+	   (sx-match tspec
+	     ((enum-def (ident ,name) (enum-def-list . ,defs))
+	      (gen-nvl (sx-ref tspec 2) ddict))
+	     ((enum-def (enum-def-list . ,defs))
+	      (gen-nvl (sx-ref tspec 1) ddict))
+	     (,_
+	      ddict)))
+	 ddict))
    ddict udict))
+
+;; add enum symbols to dict as @code{(fixed "1")}
+(define* (udict-add-enums udict #:optional (ddict '()))
+  (define (gen-nvl edef-list ddict)
+    (let ((def-list (and=> (canize-enum-def-list edef-list udict ddict) cdr)))
+      (fold
+       (lambda (edef dd)
+	 (acons (sx-ref* edef 1 1) (sx-ref* edef 2) dd))
+       ddict def-list)))
+  (fold
+   (lambda (pair udict)
+     (if (or (pair? (car pair)) (positive? (string-length (car pair))))
+	 (let* ((specs (sx-ref (cdr pair) 1))
+		(tspec (sx-ref (sx-find 'type-spec specs) 1)))
+	   (sx-match tspec
+	     ((enum-def (ident ,name) (enum-def-list . ,defs))
+	      (gen-nvl (sx-ref tspec 2) udict))
+	     ((enum-def (enum-def-list . ,defs))
+	      (gen-nvl (sx-ref tspec 1) udict))
+	     (,_
+	      udict)))
+	 udict))
+   udict udict))
 
 
 ;; === enum handling ===================

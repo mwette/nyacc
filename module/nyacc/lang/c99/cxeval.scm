@@ -97,7 +97,7 @@
 (define incr-size cx-incr-size)
 (define maxi-size cx-maxi-size)
 
-(define (sizeof-mtail mtail)
+(define (sizeof-mtail mtail udict)
 
   (define (exec/decl decl size base-align update)
     (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
@@ -108,7 +108,7 @@
 	    (call-with-values
 		(lambda ()
 		  (sizeof-mtail
-		   (cdr (m-unwrap-declr (car declrs) mtail))))
+		   (cdr (m-unwrap-declr (car declrs) mtail)) udict))
 	      (lambda (elt-size elt-align)
 		(loop (update elt-size elt-align size)
 		      (max elt-align base-align) (cdr declrs))))))))
@@ -121,9 +121,9 @@
     (`((float-type ,name))
      (values (sizeof-basetype name) (alignof-basetype name)))
     (`((array-of ,size) . ,rest)
-     (let ((mult (eval-c99-cx size)))
+     (let ((mult (eval-c99-cx size udict)))
        (call-with-values
-	   (lambda () (sizeof-mtail rest))
+	   (lambda () (sizeof-mtail rest udict))
 	 (lambda (size align)
 	   (values (* mult size) align)))))
     (`((struct-def (field-list . ,fields)))
@@ -132,7 +132,6 @@
 	((null? flds) (values (incr-size 0 align size) align))
 	((eq? 'comp-decl (sx-tag (car flds)))
 	 (call-with-values
-	     ;;(lambda () (incr/decl (car flds) size align))
 	     (lambda () (exec/decl (car flds) size align incr-size))
 	   (lambda (size align)
 	     (loop size align (cdr flds)))))
@@ -156,7 +155,7 @@
   (let* ((udecl `(udecl ,specl ,declr))
 	 (xdecl (expand-typerefs udecl udict))
 	 (mdecl (udecl->mdecl xdecl)))
-    (sizeof-mtail (cdr mdecl))))
+    (sizeof-mtail (cdr mdecl) udict)))
 
 (define (trim-mtail mtail)
   (case (caar mtail)
@@ -190,10 +189,10 @@
       (lambda () (size-and-align-of-type tree udict))
     (lambda (size align) align)))
 
-;; @deffn {Procedure} size-or-align-of-expr tree [udict]
+;; @deffn {Procedure} size-and-align-of-expr tree [udict]
 ;; => (values sizeof-val align-of)
 ;; @end deffn
-(define* (size-or-align-of-expr tree #:optional (udict '()))
+(define* (size-and-align-of-expr tree #:optional (udict '()))
 
   (define (sizeof-literal tree)
     (sx-match tree
@@ -230,20 +229,20 @@
 
   (or
    (sizeof-literal tree)
-   (sizeof-mtail (gen-mtail tree))))
+   (sizeof-mtail (gen-mtail tree) udict)))
 
 (define* (eval-sizeof-expr tree #:optional (udict '()))
   (call-with-values
-      (lambda () (size-or-align-of-expr tree udict))
+      (lambda () (size-and-align-of-expr tree udict))
     (lambda (size align) size)))
 
 
 ;; =============================================================================
 
-(define* (gen-offsets mtail #:optional (base 0))
+(define (gen-offsets mtail base udict)
 
   (define (mt-al mtail)
-    (call-with-values (lambda () (sizeof-mtail mtail))
+    (call-with-values (lambda () (sizeof-mtail mtail udict))
       (lambda (sz al) al)))
 
   (define (do-aggr flds update)
@@ -253,7 +252,7 @@
 	 ((pair? decls)
 	  (let* ((mdecl (udecl->mdecl (car decls)))
 		 (name (car mdecl)) (mtail (cdr mdecl)))
-	    (call-with-values (lambda () (gen-offsets mtail (+ base siz)))
+	    (call-with-values (lambda () (gen-offsets mtail (+ base siz) udict))
 	      (lambda (el-sz el-al el-os)
 		;;(sferr "sizeof(~S)=~S\n" name el-sz)
 		(let ((oval (if (pair? el-os) el-os
@@ -278,10 +277,10 @@
      (let ((sz (sizeof-basetype name)) (al (alignof-basetype name)))
        (values sz al (incr-size 0 al base))))
     (`((array-of ,dim) . ,rest)
-     (call-with-values (lambda () (gen-offsets rest base))
+     (call-with-values (lambda () (gen-offsets rest base udict))
        (lambda (el-sz el-al el-of)
 	 (let ((base (incr-size 0 el-al base)))
-	   (let ((dim (eval-c99-cx dim)))
+	   (let ((dim (eval-c99-cx dim udict)))
 	     (values (* dim el-sz) el-al (cons (cons dim el-sz) el-of)))))))
     (`((struct-def (field-list . ,flds)) . ,rest)
      (do-aggr flds incr-size))
@@ -292,43 +291,22 @@
     (_ (sferr "c99/gen-offsets: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
 
-(define (find-offsets mtail)
+(define (find-offsets mtail udict)
   (call-with-values
-      (lambda () (gen-offsets mtail))
+      (lambda () (gen-offsets mtail 0 udict))
     (lambda (size align offsets)
       offsets)))
   
-;; @deffn {Procedure} offsetof-mtail mtail desig [base] => offset alignment
+;; @deffn {Procedure} offsetof-mtail mtail desig base udict => offset alignment
 ;; @end deffn
-(define* (offsetof-mtail mtail desig #:optional (base 0))
+(define (offsetof-mtail mtail desig base udict)
 
-  (define (exec/decl decl size align update)
-    ;; => values size align offs
-    (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
-	  (declrs (or (and=> (sx-ref decl 2) sx-tail) '((ident "_")))))
-      (let loop ((size size) (align align) (declrs declrs))
-	(cond
-	 ((null? declrs) (values size align))
-	 ((null? desig) (error "failed"))
-	 ((equal? (declr-ident (car declrs)) (car desig))
-	  (values (incr-size 0 align size) #f))
-	 (else
-	  (call-with-values
-	      (lambda ()
-		(let ((mdecl (m-unwrap-declr (car declrs) mtail)))
-		  (offsetof-mtail (cdr mdecl) desig base)))
-	    (lambda (elt-size elt-align)
-	      (loop (update elt-size elt-align size)
-		    (max elt-align align)
-		    (cdr declrs)))))))))
-
-  ;;(sferr "offsetof-mtail desig=~S  base=~S\n" desig base)
   (match mtail
 
-    (`((array-of ,size) . ,rest)
-     (let ((mult (eval-c99-cx size)))
+    (`((array-of ,dim) . ,rest)
+     (let ((mult (eval-c99-cx dim udict)))
        (call-with-values
-	   (lambda () (offsetof-mtail rest base))
+	   (lambda () (offsetof-mtail rest (cdr desig) base udict))
 	 (lambda (size align offs) offs))))
     
     (`((struct-def (field-list . ,fields)))
@@ -342,13 +320,13 @@
 		(name (car mdecl))
 		(mtail (cdr mdecl)))
 	   (call-with-values
-	       (lambda () (sizeof-mtail mtail))
+	       (lambda () (sizeof-mtail mtail udict))
 	     (lambda (elt-sz elt-al)
 	       (cond
 		((string=? name dsg)
 		 (let* ((xoffs (incr-size 0 elt-al offs)))
 		   (if (null? (cdr desig)) xoffs
-		       (offsetof-mtail mtail (cdr desig) xoffs))))
+		       (offsetof-mtail mtail (cdr desig) xoffs udict))))
 		(else
 		 (loop (incr-size elt-sz elt-al offs) (max elt-al aln)
 		       dsg (cdr decls) flds)))))))
@@ -370,13 +348,13 @@
 		(name (car mdecl))
 		(mtail (cdr mdecl)))
 	   (call-with-values
-	       (lambda () (sizeof-mtail mtail))
+	       (lambda () (sizeof-mtail mtail udict))
 	     (lambda (elt-sz elt-al)
 	       (cond
 		((string=? name dsg)
 		 (let* ((xoffs (maxi-size 0 elt-al offs)))
 		   (if (null? (cdr desig)) xoffs
-		       (offsetof-mtail mtail (cdr desig) xoffs))))
+		       (offsetof-mtail mtail (cdr desig) xoffs udict))))
 		(else
 		 (loop (maxi-size 0 elt-al offs) (max elt-al aln)
 		       dsg (cdr decls) flds)))))))
@@ -420,7 +398,7 @@
 	    (xdecl (expand-typerefs udecl udict))
 	    (mdecl (udecl->mdecl xdecl))
 	    (desig (unwrap-designator expr udict)))
-       (offsetof-mtail (cdr mdecl) desig)))
+       (offsetof-mtail (cdr mdecl) desig udict 0)))
     (,_ #f)))
 
 
@@ -479,6 +457,7 @@
 	    ((neg) (uop - (ev1 tree)))
 	    ((not) (and tree (if (equal? 0 (ev1 tree)) 1 0)))
 
+	    ((mul) (bop * (ev1 tree) (ev2 tree)))
 	    ((div) (bop / (ev1 tree) (ev2 tree)))
 	    ((mod) (bop modulo (ev1 tree) (ev2 tree)))
 	    ((add) (bop + (ev1 tree) (ev2 tree)))
