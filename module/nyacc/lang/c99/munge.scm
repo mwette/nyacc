@@ -154,59 +154,6 @@
     ((cpp-stmt . ,rest) #f)
     (,_ #f)))
 
-;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:inc-filter f]
-;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]
-;; Convert a C parse tree into a assoc-list of global names and definitions.
-;; This will unwrap @code{init-declr-list} into list of decls w/
-;; @code{init-declr}.
-;; The declarations come reversed from order in file!
-;; @example
-;; BUG: need to add struct and union defn's: struct foo { int x; };
-;; how to deal with this
-;; lookup '(struct . "foo"), "struct foo", ???
-;; wanted "struct" -> dict but that is not great
-;; solution: unitize-decl => '(struct . "foo") then filter to generate
-;; ("struct" ("foo" . decl) ("bar" . decl) ...)
-;; ("union" ("bar" . decl) ("bar" . decl) ...)
-;; ("enum" ("" . decl) ("foo" . decl) ("bar" . decl) ...)
-;; @end example
-;; So globals could be in udict, udefs or anon-enum.
-;; @example
-;; What about anonymous enums?  And enums in general?
-;; Anonmous enum should be expaneded into 
-;; @end example
-;; @noindent
-;; Notes:
-;; @itemize
-;; @item
-;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
-;; The inc-filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
-;; of one argument, the include path, to indicate whether it should be included
-;; in the dictionary.
-;; @item
-;; If this routine is called multiple times on the same tree the u-decl's will
-;; not be @code{eq?} since the top-level lists are generated on the fly.
-;; (See @code{unitize-decl}.)
-;; @end itemize
-;; @end deffn
-(define* (c99-trans-unit->udict tree #:optional (seed '()) #:key inc-filter)
-  (if (pair? tree)
-      (fold-right
-       (lambda (tree seed)
-	 (cond
-	  ((eqv? (sx-tag tree) 'decl)
-	   (dictize-decl tree seed))
-	  ((inc-keeper? tree inc-filter) =>
-	   (lambda (inc-tree)
-	     (c99-trans-unit->udict inc-tree seed #:inc-filter inc-filter)))
-	  (else seed)))
-       seed
-       (cdr tree))
-      seed))
-
-(define (c99-trans-unit->udict/deep tree)
-  (c99-trans-unit->udict tree #:inc-filter #t))
-
 ;; @deffn {Procedure} iter-declrs tag specl declrs seed
 ;; @deffnx {Procedure} iter-declrs-right tag specl declrs tail seed
 ;; This is a support procedure for the munge routines.  If no decl'rs
@@ -246,6 +193,75 @@
 	 (dclr-l (sx-ref decl 2))	  ; (init-declr-list (...))
 	 (declrs (and=> dclr-l sx-tail))) ; ((...))
     (values tag attr spec-l declrs)))
+
+;; @deffn {Procedure} dictize-comp-decl decl [seed] [#:namer namer]
+;; This will turn
+;; @example
+;; (comp-decl (decl-spec-list (type-spec "int"))
+;;            (comp-decl-list
+;;             (comp-declr (ident "a")) (comp-declr (ident "b"))))
+;; @end example
+;; @noindent
+;; into
+;; @example
+;; ("a" . (comp-udecl (decl-spec-list ...) (comp-declr (ident "a"))))
+;; ("b" . (comp-udecl (decl-spec-list ...) (comp-declr (ident "b"))))
+;; @end example
+;; @noindent
+;; This is coded to be used with fold to be consistent with other unitize
+;; functions @code{struct} and @code{union} field lists.  The result needs
+;; to be reversed.
+;; @end deffn
+(define* (dictize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
+  (cond
+   ((not (pair? decl))
+    (throw 'nyacc-error "dictize-decl: bad arg: ~S" decl))
+   ((eqv? (sx-tag decl) 'comp-udecl)
+    (acons (udecl-id decl) decl seed))
+   ((eqv? (sx-tag (sx-ref decl 2)) 'comp-declr-list)
+    (let-values (((tag attr spec-l declrs) (split-decl decl)))
+      (iter-declrs 'comp-udecl attr spec-l declrs seed)))
+   (else
+    (acons (namer) decl seed))))
+
+(define* (unitize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
+  (fold-right
+   (lambda (ud-entry seed)
+     (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
+   seed (dictize-comp-decl decl #:namer namer)))
+
+;; @deffn {Procedure} dictize-param-decl param-decl [seed] [#:expand-enums #f]
+;; This will turn
+;; @example
+;; (param-decl (decl-spec-list (type-spec "int"))
+;;             (param-declr (ident "a")))
+;; @end example
+;; @noindent
+;; into
+;; @example
+;; ("a" . (param-decl (decl-spec-list ...) (param-declr (ident "a"))))
+;; @end example
+;; @noindent
+;; This is coded to be used with fold-right in order to preserve order
+;; in @code{struct} and @code{union} field lists.
+;; @*
+;; TODO: What about abstract declarators?  Should use "*anon*".
+;; @end deffn
+(define* (dictize-param-decl decl #:optional (seed '()))
+  (if (not (eqv? 'param-decl (car decl))) seed
+      (let* ((tag (sx-ref decl 0))
+	     (attr (sx-attr decl))
+	     (spec (sx-ref decl 1))	; (type-spec ...)
+	     (declr (sx-ref decl 2))	; (param-declr ...)
+	     (ident (declr-ident declr))
+	     (name (cadr ident)))
+	(acons name decl seed))))
+
+(define* (unitize-param-decl decl #:optional (seed '()))
+  (fold-right
+   (lambda (ud-entry seed)
+     (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
+   seed (dictize-param-decl decl)))
 
 ;; @deffn {Procedure} dictize-decl decl [seed] [#:expand-enums #f] => seed
 ;; This is a fold iterator intended to be used by @code{c99-trans-unit->udict}.
@@ -396,74 +412,58 @@
      (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
    seed (dictize-decl decl)))
 
-;; @deffn {Procedure} dictize-comp-decl decl [seed] [#:namer namer]
-;; This will turn
+;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:inc-filter f]
+;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]
+;; Convert a C parse tree into a assoc-list of global names and definitions.
+;; This will unwrap @code{init-declr-list} into list of decls w/
+;; @code{init-declr}.
+;; The declarations come reversed from order in file!
 ;; @example
-;; (comp-decl (decl-spec-list (type-spec "int"))
-;;            (comp-decl-list
-;;             (comp-declr (ident "a")) (comp-declr (ident "b"))))
+;; BUG: need to add struct and union defn's: struct foo { int x; };
+;; how to deal with this
+;; lookup '(struct . "foo"), "struct foo", ???
+;; wanted "struct" -> dict but that is not great
+;; solution: unitize-decl => '(struct . "foo") then filter to generate
+;; ("struct" ("foo" . decl) ("bar" . decl) ...)
+;; ("union" ("bar" . decl) ("bar" . decl) ...)
+;; ("enum" ("" . decl) ("foo" . decl) ("bar" . decl) ...)
+;; @end example
+;; So globals could be in udict, udefs or anon-enum.
+;; @example
+;; What about anonymous enums?  And enums in general?
+;; Anonmous enum should be expaneded into 
 ;; @end example
 ;; @noindent
-;; into
-;; @example
-;; ("a" . (comp-udecl (decl-spec-list ...) (comp-declr (ident "a"))))
-;; ("b" . (comp-udecl (decl-spec-list ...) (comp-declr (ident "b"))))
-;; @end example
-;; @noindent
-;; This is coded to be used with fold to be consistent with other unitize
-;; functions @code{struct} and @code{union} field lists.  The result needs
-;; to be reversed.
+;; Notes:
+;; @itemize
+;; @item
+;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
+;; The inc-filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
+;; of one argument, the include path, to indicate whether it should be included
+;; in the dictionary.
+;; @item
+;; If this routine is called multiple times on the same tree the u-decl's will
+;; not be @code{eq?} since the top-level lists are generated on the fly.
+;; (See @code{unitize-decl}.)
+;; @end itemize
 ;; @end deffn
-(define* (dictize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
-  (cond
-   ((not (pair? decl))
-    (throw 'nyacc-error "dictize-decl: bad arg: ~S" decl))
-   ((eqv? (sx-tag decl) 'comp-udecl)
-    (acons (udecl-id decl) decl seed))
-   ((eqv? (sx-tag (sx-ref decl 2)) 'comp-declr-list)
-    (let-values (((tag attr spec-l declrs) (split-decl decl)))
-      (iter-declrs 'comp-udecl attr spec-l declrs seed)))
-   (else
-    (acons (namer) decl seed))))
+(define* (c99-trans-unit->udict tree #:optional (seed '()) #:key inc-filter)
+  (if (pair? tree)
+      (fold-right
+       (lambda (tree seed)
+	 (cond
+	  ((eqv? (sx-tag tree) 'decl)
+	   (dictize-decl tree seed))
+	  ((inc-keeper? tree inc-filter) =>
+	   (lambda (inc-tree)
+	     (c99-trans-unit->udict inc-tree seed #:inc-filter inc-filter)))
+	  (else seed)))
+       seed
+       (cdr tree))
+      seed))
 
-(define* (unitize-comp-decl decl #:optional (seed '()) #:key (namer def-namer))
-  (fold-right
-   (lambda (ud-entry seed)
-     (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
-   seed (dictize-comp-decl decl #:namer namer)))
-
-;; @deffn {Procedure} dictize-param-decl param-decl [seed] [#:expand-enums #f]
-;; This will turn
-;; @example
-;; (param-decl (decl-spec-list (type-spec "int"))
-;;             (param-declr (ident "a")))
-;; @end example
-;; @noindent
-;; into
-;; @example
-;; ("a" . (param-decl (decl-spec-list ...) (param-declr (ident "a"))))
-;; @end example
-;; @noindent
-;; This is coded to be used with fold-right in order to preserve order
-;; in @code{struct} and @code{union} field lists.
-;; @*
-;; TODO: What about abstract declarators?  Should use "*anon*".
-;; @end deffn
-(define* (dictize-param-decl decl #:optional (seed '()))
-  (if (not (eqv? 'param-decl (car decl))) seed
-      (let* ((tag (sx-ref decl 0))
-	     (attr (sx-attr decl))
-	     (spec (sx-ref decl 1))	; (type-spec ...)
-	     (declr (sx-ref decl 2))	; (param-declr ...)
-	     (ident (declr-ident declr))
-	     (name (cadr ident)))
-	(acons name decl seed))))
-
-(define* (unitize-param-decl decl #:optional (seed '()))
-  (fold-right
-   (lambda (ud-entry seed)
-     (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
-   seed (dictize-param-decl decl)))
+(define (c99-trans-unit->udict/deep tree)
+  (c99-trans-unit->udict tree #:inc-filter #t))
 
 ;; @deffn {Procedure} udecl-id udecl => string
 ;; generate the name 

@@ -786,7 +786,7 @@
   (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
     (if (null? flds) btail
 	(let ((mtail (cdr (udecl->mdecl (car flds)))))
-	  (call-with-values (lambda () (sizeof-mtail mtail))
+	  (call-with-values (lambda () (sizeof-mtail mtail (*udict*)))
 	    (lambda (sz al)
 	      (if (> sz mxsz)
 		  (loop mtail sz (max al mxal) (cdr flds))

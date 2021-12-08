@@ -38,7 +38,6 @@
   #:use-module (nyacc lang arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
-  #:use-module (nyacc lang c99 munge)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (system foreign)
@@ -96,6 +95,9 @@
 
 (define incr-size cx-incr-size)
 (define maxi-size cx-maxi-size)
+
+(define (mkcdl specl declrs)
+	  (map (lambda (declr) `(comp-declr-list ,specl ,declr)) declrs))
 
 (define (sizeof-mtail mtail udict)
 
@@ -260,10 +262,13 @@
 		  (loop (update el-sz el-al siz) (max aln el-al)
 			(acons name oval offs) (cdr decls) flds))))))
 	 ((pair? flds)
-	  (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
-	      (loop siz aln offs
-		    (map cdr (dictize-comp-decl (car flds))) (cdr flds))
-	      (loop siz aln offs decls (cdr flds))))
+	  (sx-match (car flds)
+	    ((comp-decl ,specl (comp-declr-list . ,declrs))
+	     (loop siz aln offs (mkcdl specl declrs) (cdr flds)))
+	    ((comp-udecl ,specl ,declr)
+	     (loop siz aln offs (list declr) (cdr flds)))
+	    (,_
+	     (loop siz aln offs decls (cdr flds)))))
 	 (else (values siz aln (reverse offs)))))))
 
   (match mtail
@@ -331,10 +336,12 @@
 		 (loop (incr-size elt-sz elt-al offs) (max elt-al aln)
 		       dsg (cdr decls) flds)))))))
 	((pair? flds)
-	 (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
-	     (loop offs aln dsg
-		   (map cdr (dictize-comp-decl (car flds))) (cdr flds))
-	     (loop offs aln dsg decls (cdr flds))))
+	  (sx-match (car flds)
+	    ((comp-decl ,specl (comp-declr-list . ,declrs))
+	     (loop offs aln dsg (mkcdl specl declrs) (cdr flds)))
+	    ((comp-udecl ,specl ,declr)
+	     (loop offs aln dsg (mkcdl specl (list declr)) (cdr flds)))
+	    (,_ (loop offs aln dsg decls (cdr flds)))))
 	(else (values offs aln)))))
 	   
     (`((union-def (field-list . ,fields)))
@@ -359,10 +366,12 @@
 		 (loop (maxi-size 0 elt-al offs) (max elt-al aln)
 		       dsg (cdr decls) flds)))))))
 	((pair? flds)
-	 (if (memq (sx-tag (car flds)) '(comp-decl comp-udecl))
-	     (loop offs aln dsg
-		   (map cdr (dictize-comp-decl (car flds))) (cdr flds))
-	     (loop offs aln dsg decls (cdr flds))))
+	  (sx-match (car flds)
+	    ((comp-decl ,specl (comp-declr-list . ,declrs))
+	     (loop offs aln dsg (mkcdl specl declrs) (cdr flds)))
+	    ((comp-udecl ,specl ,declr)
+	     (loop offs aln dsg (mkcdl specl (list declr)) (cdr flds)))
+	    (,_ (loop offs aln dsg decls (cdr flds)))))
 	(else (values offs aln)))))
 
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
