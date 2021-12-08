@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-12-0X  V1.06.1
+2021-12-06  V1.06.1
 	* fixed issues in cxeval wrt offsetof operator
 	  This includes removal of munge import.
 
