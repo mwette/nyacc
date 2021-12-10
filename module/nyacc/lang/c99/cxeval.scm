@@ -122,10 +122,11 @@
      (values (sizeof-basetype name) (alignof-basetype name)))
     (`((float-type ,name))
      (values (sizeof-basetype name) (alignof-basetype name)))
-    (`((array-of ,size) . ,rest)
-     (let ((mult (eval-c99-cx size udict)))
+    (`((array-of ,dim) . ,rest)
+     (let ((mult (eval-c99-cx dim udict)))
        (call-with-values
-	   (lambda () (sizeof-mtail rest udict))
+	   (lambda ()
+	     (sizeof-mtail rest udict))
 	 (lambda (size align)
 	   (values (* mult size) align)))))
     (`((struct-def (field-list . ,fields)))
@@ -220,7 +221,7 @@
       ((array-ref ,elt ,expr)
        (let ((mtail (gen-mtail expr)))
 	 (match mtail
-	   (`((array-of ,size) . ,rest) rest)
+	   (`((array-of ,dim) . ,rest) rest)
 	   (_ (throw 'c99-error "cxeval: can't ref array")))))
       ((de-ref ,expr)
        (let ((mtail (gen-mtail expr)))
@@ -437,10 +438,6 @@
        ((string=? name repl) #f)
        (else repl))))
   
-  (define (eval-ident sx)
-    (let* ((name (sx-ref sx 1)) (repl (ddict-lookup name)))
-      (and (string? repl) (string->number repl))))
-  
   (define (uop op ex)
     (and op ex (op ex)))
   
@@ -510,8 +507,12 @@
 	     (catch 'c99-error
 	       (lambda () (eval-offsetof tree udict))
 	       (lambda (key fmt . args) (apply fail fmt args))))
-	    ((ident) (or (eval-ident tree)
-			 (fail "cannot resolve identifier ~S" (sx-ref tree 1))))
+	    ((ident)
+	     (let ((name (cadr tree)))
+	       (cond
+		((assoc-ref udict name) => eval-expr)
+		((ddict-lookup name) => string->number)
+		(else (fail "cannot resolve identifier ~S" (sx-ref tree 1))))))
 	    ((p-expr) (ev1 tree))
 	    ((cast) (ev2 tree))
 	    ((fctn-call) #f)		; assume not constant

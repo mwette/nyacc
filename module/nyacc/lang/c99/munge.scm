@@ -609,11 +609,12 @@
 (define* (udict-add-enums udict #:optional (ddict '()))
   (define (gen-nvl edef-list ddict)
     (let ((def-list (and=> (canize-enum-def-list edef-list udict ddict) cdr)))
-      (fold
+      (fold-right
        (lambda (edef dd)
-	 (acons (sx-ref* edef 1 1) (sx-ref* edef 2) dd))
+	 (let ((name (sx-ref* edef 1 1)))
+	   (if (member name dd) dd (acons name (sx-ref* edef 2) dd))))
        ddict def-list)))
-  (fold
+  (fold-right
    (lambda (pair udict)
      (if (or (pair? (car pair)) (positive? (string-length (car pair))))
 	 (let* ((specs (sx-ref (cdr pair) 1))

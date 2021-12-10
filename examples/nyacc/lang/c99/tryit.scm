@@ -574,26 +574,30 @@
 	  (eval-offsetof `(offsetof-type ,type-name ,desig) udict)))
     ))
 
-(when #t
+(when #f
   (let* ((code
 	  (string-append
-	   "enum { NN = sizeof(int), MM = sizeof(long) };\n"
-	   "typedef struct { int m; double b[2]; } bar_t;\n"
-	   "typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
-	   "typedef struct { int r; double c[2]; } foo2_t;\n"
-	   "typedef struct { int s; double d[5]; } foo3_t;\n"
-	   "typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[2]; } foo_t;\n"))
+	   ;;"enum { NN = sizeof(int), MM = sizeof(long) };\n"
+	   "typedef enum { N1 = 1, N2 = 2 } num_t;\n"
+	   "typedef struct { int m; double b[N2]; } bar_t;\n"
+	   ;;"typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
+	   ;;"typedef struct { int r; double c[2]; } foo2_t;\n"
+	   ;;"typedef struct { int s; double d[5]; } foo3_t;\n"
+	   ;;"typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[N]; } foo_t;\n"
+	   ))
 	 (tree (parse-string code))
 	 (udict (c99-trans-unit->udict tree))
 	 (udict (udict-add-enums udict))
-	 (udecl (udict-ref udict "foo_t"))
+	 ;;(udecl (udict-ref udict "foo_t"))
+	 (udecl (udict-ref udict "bar_t"))
 	 (xdecl (expand-typerefs udecl udict))
 	 (mdecl (udecl->mdecl xdecl))
 	 (mtail (cdr mdecl))
 	 )
-    (sf "~A\n" code)
-    ;;(pp mdecl)
+    ;;(sf "~A\n" code)
+    ;;(pp udict)
+    (pp (sizeof-mtail mtail udict))
     (pp (find-offsets mtail udict))
-    ))
+    0))
 
 ;; --- last line ---
