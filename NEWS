@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2021-12-XX  V1.06.2
+2021-12-10  V1.06.2
 	* in eval-c99-cx, look for idents in udict
 
 2021-12-06  V1.06.1
