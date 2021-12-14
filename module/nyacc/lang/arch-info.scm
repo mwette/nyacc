@@ -267,7 +267,7 @@
 
 (define (lookup-arch name)
   (let ((sizeof-dict (assoc-ref arch-sizeof-map name))
-	(alignof-dict (assoc-ref arch-sizeof-map name)))
+	(alignof-dict (assoc-ref arch-alignof-map name)))
     (and sizeof-dict alignof-dict (cons sizeof-dict alignof-dict))))
 
 
