@@ -7,7 +7,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (getcwd))
+;;(add-to-load-path (getcwd))
 
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxeval))
@@ -494,85 +494,54 @@
 	     (throw 'c99-error "eval-c99-cx: coding error"))))))
 
     (eval-expr expr)))
- 
-(when #f
+
+(define (mkdsg str)
+  (let loop ((res '()) (elts (string-split str #\.)))
+    (cond
+     ((null? res)
+      (loop `(p-expr (ident ,(car elts))) (cdr elts)))
+     ((pair? elts)
+      (loop `(d-sel (ident ,(car elts)) ,res) (cdr elts)))
+     (else res))))
+
+(when #t
   (let* ((code
 	  (string-append
 	   "enum {  FOO = sizeof(int), BAR = sizeof(double) }; \n"
 	   "typedef struct {\n"
-	   ;;"  int x1, x2;\n"
-	   ;;"  struct { int x1, x2; } xx;\n"
-	   " int y;\n"
+	   "  int x1, x2;\n"
+	   "  struct { int x1, x2; } xx;\n"
+	   "  int y;\n"
 	   "  struct { int y1; void *y2; } yy[FOO];\n"
-	   " struct { int y1; void *y2; } yy;\n"
+	   ;;"  struct { int y1; void *y2; } yy;\n"
 	   ;;"  struct { int z1; void *z2; };\n"
 	   "} foo_t;\n"
-	   ;;"int sz = sizeof(foo_t);\n"
-	   ;;"int os = &(((foo_t*)0)->yy.y1);\n"
-	   ;;"int of1 = __builtin_offsetof(foo_t, xx.x2);\n"
-	   ;;"int of2 = __builtin_offsetof(foo_t, yy[1].y2);\n"
+	   "int sz = sizeof(foo_t);\n"
+	   "int al = _Alignof(foo_t);\n"
+	   "int os = __builtin_offsetof(foo_t, xx.x2);\n"
 	   ))
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
 	 (udict (udict-add-enums udict))
-	 (udecl (assoc-ref udict "foo_t"))
-	 (const
-	  `(ref-to
-            (d-sel
-	     (ident "y1")
-	     (i-sel
-	      (ident "yy")
-	      (cast (type-name
-		     (decl-spec-list
-		      (type-spec (typename "foo_t")))
-		     (abs-ptr-declr (pointer)))
-		    (p-expr (fixed "0")))))))
-	 (of (udict-ref udict "of1"))
-	 (dsg (sx-ref* of 2 2 1 2))
-	 ;;
-	 (type-name
-	  '(type-name
-	    (decl-spec-list
-	     (type-spec
-	      (typename "foo_t")))))
-	 (mkdsg (lambda (str)
-		  (let loop ((res '()) (elts (string-split str #\.)))
-		    (cond
-		     ((null? res)
-		      (loop `(p-expr (ident ,(car elts))) (cdr elts)))
-		     ((pair? elts)
-		      (loop `(d-sel (ident ,(car elts)) ,res) (cdr elts)))
-		     (else res)))))
-	 (desig "yy.y2")
-	 (offset-expr `(offsetof-type ,type-name ,(mkdsg desig)))
-	 )
+	 (sz (udict-ref udict "sz"))
+	 (sz-of-ty (sx-ref* sz 2 2 1))
+	 (al (udict-ref udict "al"))
+	 (al-of-ty (sx-ref* al 2 2 1))
+	 (os (udict-ref udict "os"))
+	 (os-of-ty (sx-ref* os 2 2 1)))
     (display code) (newline)
-    ;;(pp of) (pp dsg)
-    ;;(pp (mkdsg desig))
-    ;;(pp (unwrap-designator (mkdsg desig) udict))
-    ;;(pp offset-expr)
-    ;;(pp udict)
-    ;;(newline)
-    ;;(pp ddict)
-    (quit)
-    ;;(pp udecl)
+    (sf "/*\n")
     (with-arch "native"
       (sf "native:\n")
-      (sf "  size = ~S\n"
-	  (eval-sizeof-type `(sizeof-type ,type-name) udict))
-      (sf "  align = ~S\n"
-	  (eval-alignof-type `(alignof-type ,type-name) udict))
-      (sf "  offset(~S) = ~S\n" desig
-	  (eval-offsetof `(offsetof-type ,type-name ,(mkdsg desig)) udict)))
+      (sf "  size = ~S\n" (eval-sizeof-type sz-of-ty udict))
+      (sf "  align = ~S\n" (eval-alignof-type al-of-ty udict))
+      (sf "  offset = ~S\n" (eval-offsetof os-of-ty udict)))
     (with-arch "avr"
       (sf "avr:\n")
-      (sf "  size=~S\n"
-	  (eval-sizeof-type `(sizeof-type ,type-name) udict))
-      (sf "  align=~S\n"
-	  (eval-alignof-type `(alignof-type ,type-name) udict))
-      (sf "  offset=~S (for yy.y2)\n"
-	  (eval-offsetof `(offsetof-type ,type-name ,desig) udict)))
-    ))
+      (sf "  size = ~S\n" (eval-sizeof-type sz-of-ty udict))
+      (sf "  align = ~S\n" (eval-alignof-type al-of-ty udict))
+      (sf "  offset = ~S\n" (eval-offsetof os-of-ty udict)))
+    (sf "*/\n")))
 
 (when #f
   (let* ((code
@@ -598,6 +567,24 @@
     ;;(pp udict)
     (pp (sizeof-mtail mtail udict))
     (pp (find-offsets mtail udict))
+    0))
+
+(use-modules (nyacc lang c99 udict))
+(when #f
+  (let* ((udict my-udict)
+	 (udict (udict-add-enums udict))
+	 ;;(key "ImuMgrGyroMdpSet")
+	 (key "acs_ctl_mode_impl")
+	 (udecl (assoc-ref udict key))
+	 (type-name `(type-name ,(sx-ref udecl 1) ,(sx-ref udecl 2)))
+	 (desig (mkdsg "acsCtlData.param"))
+	 (p-off (eval-offsetof `(offsetof-type ,type-name ,desig) udict))
+	 )
+    ;;(pp udict)
+    ;;(pp udecl)
+    (sf "param-offset: ~S\n" p-off)
+    ;;(pp type-name)
+    ;;(pp desig)
     0))
 
 ;; --- last line ---

@@ -622,6 +622,13 @@
 
 ;; TODO: what to do with initializers ???
 
+#;(define* (m-extract-tspec specl)
+  (let ((tspec (and=> (sx-find 'type-spec specl) sx-tail)))
+    (sx-match tspec
+      (((struct-def (ident ,name) ,fields) `((struct-def ,fields))))
+      (((union-def (ident ,name) ,fields) `((union-def ,fields))))
+      (,_ tspec))))
+
 (define* (m-unwrap-declr declr tail #:optional (namer def-namer))
   
   (define (unwrap-pointer pointer tail)
@@ -690,6 +697,7 @@
 	 (stor-spec (and=> (sx-find 'stor-spec specl)
 			   (lambda (sx) (sx-ref sx 1))))
 	 (mtail (and=> (sx-find 'type-spec specl) sx-tail))
+	 ;;(mtail (m-extract-tspec specl))
 	 (m-declr (m-unwrap-declr declr mtail namer))
 	 (m-declr (if (and (equal? stor-spec '(extern))
 			   (not (equal? 'function-returning (caadr m-declr))))
