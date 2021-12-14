@@ -518,8 +518,16 @@
 	   "} foo_t;\n"
 	   "int sz = sizeof(foo_t);\n"
 	   "int al = _Alignof(foo_t);\n"
-	   "int os = __builtin_offsetof(foo_t, xx.x3);\n"
-	   ))
+	   ;;"int os = __builtin_offsetof(foo_t, xx.x3);\n"
+	   "int os = __builtin_offsetof(foo_t, yy[2].y2);\n"))
+	 (main
+	  (string-append
+	   "#include <stdio.h>\n"
+	   "int main() {\n"
+	   " printf(\"sz=%d\\n\", sz);\n"
+	   " printf(\"al=%d\\n\", al);\n"
+	   " printf(\"os=%d\\n\", os);\n"
+	   "}\n"))
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
 	 (udict (udict-add-enums udict))
@@ -529,7 +537,7 @@
 	 (al-of-ty (sx-ref* al 2 2 1))
 	 (os (udict-ref udict "os"))
 	 (os-of-ty (sx-ref* os 2 2 1)))
-    (display code) (newline)
+    (display code) (display main)
     (sf "/*\n")
     (with-arch "native"
       (sf "native:\n")

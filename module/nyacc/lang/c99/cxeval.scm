@@ -111,9 +111,9 @@
 		(lambda ()
 		  (sizeof-mtail
 		   (cdr (m-unwrap-declr (car declrs) mtail)) udict))
-	      (lambda (elt-size elt-align)
-		(loop (update elt-size elt-align size)
-		      (max elt-align base-align) (cdr declrs))))))))
+	      (lambda (elt-sz elt-al)
+		(loop (update elt-sz elt-al size)
+		      (max elt-al base-align) (cdr declrs))))))))
 
   (match mtail
     (`((pointer-to) . ,rest)
@@ -308,15 +308,15 @@
 
 (define (find-offsets type-name udict)
   (sx-match type-name
-    ((type-name ,decl-spec-list ,declr)
-     (let* ((udecl `(udecl ,decl-spec-list ,declr))
+    ((type-name ,spec-list ,declr)
+     (let* ((udecl `(udecl ,spec-list ,declr))
 	    (xdecl (expand-typerefs udecl udict))
 	    (mdecl (udecl->mdecl xdecl)))
        (call-with-values
 	   (lambda () (gen-offsets (cdr mdecl) 0 udict))
 	 (lambda (size align offsets) offsets))))
-    ((type-name ,decl-spec-list)
-     (find-offsets `(type-name ,decl-spec-list (param-declr (ident "_"))) udict))
+    ((type-name ,spec-list)
+     (find-offsets `(type-name ,spec-list (param-declr (ident "_"))) udict))
     (,_ #f)))
   
 ;; @deffn {Procedure} offsetof-mtail mtail desig base udict => offset
@@ -338,9 +338,9 @@
 	    (lambda (elt-sz elt-al)
 	      (cond
 	       ((string=? name dsg)
-		(let* ((xoffs (update 0 elt-al offs)))
-		  (if (null? (cdr desig)) xoffs
-		      (offsetof-mtail mtail (cdr desig) xoffs udict))))
+		(let* ((offs (update 0 elt-al offs)))
+		  (if (null? (cdr desig)) offs
+		      (offsetof-mtail mtail (cdr desig) offs udict))))
 	       (else
 		(loop (update elt-sz elt-al offs) (max elt-al aln)
 		      dsg (cdr decls) flds)))))))
@@ -354,11 +354,14 @@
        (else #f))))  ;; not found
 
   (match mtail
-
     (`((array-of ,dim) . ,rest)
-     (let ((mult (eval-c99-cx dim udict)))
-       (offsetof-mtail rest (cdr desig) base udict)))
-    
+     (unless (number? (cadar desig)) (throw 'c99-error "bad designator"))
+     (call-with-values
+	 (lambda ()(sizeof-mtail rest udict))
+       (lambda (elt-sz elt-al)
+	 (let* ((offs (incr-size 0 elt-al base)) ; adjust for alignment
+		(offs (+ offs (* (cadar desig) elt-sz))))
+	   (offsetof-mtail rest (cdr desig) offs udict)))))
     (`((struct-def (field-list . ,fields)))
      (do-aggr base fields incr-size))
     (`((struct-def (ident ,name) (field-list . ,fields)))
@@ -378,7 +381,7 @@
     ((array-ref ,ix ,expr)
      (let ((ixval (eval-c99-cx ix udict)))
        (unwrap-designator expr udict (cons `(ary-ref ,ixval) seed))))
-    (,_ (sferr "missed ~S\n" expr))))
+    (,_ (throw 'c99-error "cxeval: missed ~S\n" (list expr)))))
 (export unwrap-designator)
 
 ;; @deffn {Procedure} eval-offsetof tree [udict]
@@ -395,26 +398,24 @@
 ;; @end deffn
 (define* (eval-offsetof tree #:optional (udict '()))
   (sx-match tree
-    ((offsetof-type (type-name ,decl-spec-list ,declr) ,expr)
-     (let* ((udecl `(udecl ,decl-spec-list ,declr))
+    ((offsetof-type (type-name ,spec-list ,declr) ,expr)
+     (let* ((udecl `(udecl ,spec-list ,declr))
 	    (xdecl (expand-typerefs udecl udict))
 	    (mdecl (udecl->mdecl xdecl))
 	    (desig (unwrap-designator expr udict)))
        (offsetof-mtail (cdr mdecl) desig 0 udict)))
-    ((offsetof-type (type-name ,decl-spec-list) ,expr)
-     (let* ((udecl `(udecl ,decl-spec-list (param-declr (ident "_"))))
-	    (xdecl (expand-typerefs udecl udict))
-	    (mdecl (udecl->mdecl xdecl))
-	    (desig (unwrap-designator expr udict)))
-       (offsetof-mtail (cdr mdecl) desig 0 udict)))
+    ((offsetof-type (type-name ,spec-list) ,expr)
+     (eval-offsetof
+      `(offsetof-type (type-name ,spec-list (param-declr (ident "_"))) ,expr)
+      udict))
     (,_ #f)))
 
 
 ;; =============================================================================
 
-;; (define (eval-typeof-type type-name)
-
-;; (define (eval-typeof-expr expr)
+;; TODO:
+;;   (define (eval-typeof-type type-name desig) ...)
+;;   (define (eval-typeof-expr expr) ...)
 
 ;; =============================================================================
 
