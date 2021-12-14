@@ -328,9 +328,12 @@
      (else #f))))
 
 (define (keeper? qualifier name keepers)
-  (if (null? keepers) #f
-      (or (qual-match qualifier name (car keepers))
-	  (keeper? qualifier name (cdr keepers)))))
+  (cond
+   ((pair? keepers)
+    (or (qual-match qualifier name (car keepers))
+	(keeper? qualifier name (cdr keepers))))
+   ((eq? #t keepers) #t)
+   (else #f)))
 
 (define (expand-specl-typerefs specl declr udict keep)
 
@@ -428,14 +431,16 @@
 	 (values (replace-type-spec specl tspec) declr)))
 
       ((enum-ref (ident ,name))
-       (if (member (w/enum name) keep)
+       ;;(if (member (w/enum name) keep)
+       (if (keeper? '(enum) name keep)
 	   (values specl declr)
 	   (let ((tspec '(type-spec (fixed-type "int"))))
 	     (values (replace-type-spec specl tspec) declr))))
 
       ((enum-def (ident ,name) ,rest)
        ;; replacing with int could be an error : should gen warning
-       (if (member (w/enum name) keep)
+       ;;(if (member (w/enum name) keep)
+       (if (keeper? '(enum) name keep)
 	   (values specl declr)
 	   (let ((tspec '(type-spec (fixed-type "int"))))
 	     (values (replace-type-spec specl tspec) declr))))
