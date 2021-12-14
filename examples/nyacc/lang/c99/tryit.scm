@@ -504,7 +504,7 @@
       (loop `(d-sel (ident ,(car elts)) ,res) (cdr elts)))
      (else res))))
 
-(when #t
+(when #f
   (let* ((code
 	  (string-append
 	   "enum {  FOO = sizeof(int), BAR = sizeof(double) }; \n"
@@ -518,7 +518,7 @@
 	   "} foo_t;\n"
 	   "int sz = sizeof(foo_t);\n"
 	   "int al = _Alignof(foo_t);\n"
-	   "int os = __builtin_offsetof(foo_t, xx.x2);\n"
+	   "int os = __builtin_offsetof(foo_t, xx.x3);\n"
 	   ))
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
@@ -567,24 +567,6 @@
     ;;(pp udict)
     (pp (sizeof-mtail mtail udict))
     (pp (find-offsets mtail udict))
-    0))
-
-(use-modules (nyacc lang c99 udict))
-(when #f
-  (let* ((udict my-udict)
-	 (udict (udict-add-enums udict))
-	 ;;(key "ImuMgrGyroMdpSet")
-	 (key "acs_ctl_mode_impl")
-	 (udecl (assoc-ref udict key))
-	 (type-name `(type-name ,(sx-ref udecl 1) ,(sx-ref udecl 2)))
-	 (desig (mkdsg "acsCtlData.param"))
-	 (p-off (eval-offsetof `(offsetof-type ,type-name ,desig) udict))
-	 )
-    ;;(pp udict)
-    ;;(pp udecl)
-    (sf "param-offset: ~S\n" p-off)
-    ;;(pp type-name)
-    ;;(pp desig)
     0))
 
 ;; --- last line ---

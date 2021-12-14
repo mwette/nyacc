@@ -306,11 +306,18 @@
     (_ (sferr "c99/gen-offsets: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
 
-(define (find-offsets mtail udict)
-  (call-with-values
-      (lambda () (gen-offsets mtail 0 udict))
-    (lambda (size align offsets)
-      offsets)))
+(define (find-offsets type-name udict)
+  (sx-match type-name
+    ((type-name ,decl-spec-list ,declr)
+     (let* ((udecl `(udecl ,decl-spec-list ,declr))
+	    (xdecl (expand-typerefs udecl udict))
+	    (mdecl (udecl->mdecl xdecl)))
+       (call-with-values
+	   (lambda () (gen-offsets (cdr mdecl) 0 udict))
+	 (lambda (size align offsets) offsets))))
+    ((type-name ,decl-spec-list)
+     (find-offsets `(type-name ,decl-spec-list (param-declr (ident "_"))) udict))
+    (,_ #f)))
   
 ;; @deffn {Procedure} offsetof-mtail mtail desig base udict => offset
 ;; @end deffn
@@ -344,7 +351,7 @@
 	  ((comp-udecl ,specl ,declr)
 	   (loop offs aln dsg (mkcdl specl (list declr)) (cdr flds)))
 	  (,_ (loop offs aln dsg decls (cdr flds)))))
-       (else offs))))
+       (else #f))))  ;; not found
 
   (match mtail
 
@@ -353,71 +360,13 @@
        (offsetof-mtail rest (cdr desig) base udict)))
     
     (`((struct-def (field-list . ,fields)))
-     (do-aggr base fields incr-size)
-     #;(let loop ((offs base) (aln 0) (dsg (cadar desig))
-		(decls '()) (flds fields))
-       (cond
-	((pair? decls)
-	 (let* ((mdecl (udecl->mdecl (car decls)))
-		(name (car mdecl))
-		(mtail (cdr mdecl)))
-	   (call-with-values
-	       (lambda () (sizeof-mtail mtail udict))
-	     (lambda (elt-sz elt-al)
-	       (cond
-		((string=? name dsg)
-		 (let* ((xoffs (incr-size 0 elt-al offs)))
-		   (if (null? (cdr desig)) xoffs
-		       (offsetof-mtail mtail (cdr desig) xoffs udict))))
-		(else
-		 (loop (incr-size elt-sz elt-al offs) (max elt-al aln)
-		       dsg (cdr decls) flds)))))))
-	((pair? flds)
-	  (sx-match (car flds)
-	    ((comp-decl ,specl (comp-declr-list . ,declrs))
-	     (loop offs aln dsg (mkcdl specl declrs) (cdr flds)))
-	    ((comp-udecl ,specl ,declr)
-	     (loop offs aln dsg (mkcdl specl (list declr)) (cdr flds)))
-	    (,_ (loop offs aln dsg decls (cdr flds)))))
-	(else
-	 (sferr "not found? ~S\n" desig)
-    offs)))
-    )
+     (do-aggr base fields incr-size))
     (`((struct-def (ident ,name) (field-list . ,fields)))
-     (offsetof-mtail `((struct-def (field-list . ,fields))) desig base udict))
-	   
+     (do-aggr base fields incr-size))
     (`((union-def (field-list . ,fields)))
-     (unless (equal? 'ident (caar desig))
-       (throw 'c99-error "cxeval: desig ~S not for union" (car desig)))
-     (let loop ((offs base) (aln 0) (dsg (cadar desig))
-		(decls '()) (flds fields))
-       (cond
-	((pair? decls)
-	 (let* ((mdecl (udecl->mdecl (car decls)))
-		(name (car mdecl))
-		(mtail (cdr mdecl)))
-	   (call-with-values
-	       (lambda () (sizeof-mtail mtail udict))
-	     (lambda (elt-sz elt-al)
-	       (cond
-		((string=? name dsg)
-		 (let* ((xoffs (maxi-size 0 elt-al offs)))
-		   (if (null? (cdr desig)) xoffs
-		       (offsetof-mtail mtail (cdr desig) xoffs udict))))
-		(else
-		 (loop (maxi-size 0 elt-al offs) (max elt-al aln)
-		       dsg (cdr decls) flds)))))))
-	((pair? flds)
-	  (sx-match (car flds)
-	    ((comp-decl ,specl (comp-declr-list . ,declrs))
-	     (loop offs aln dsg (mkcdl specl declrs) (cdr flds)))
-	    ((comp-udecl ,specl ,declr)
-	     (loop offs aln dsg (mkcdl specl (list declr)) (cdr flds)))
-	    (,_ (loop offs aln dsg decls (cdr flds)))))
-	(else offs))))
+     (do-aggr base fields maxi-size))
     (`((union-def (ident ,name) (field-list . ,fields)))
-     (offsetof-mtail `((union-def (field-list . ,fields))) desig base udict))
-
+     (do-aggr base fields maxi-size))
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
 
@@ -458,10 +407,7 @@
 	    (mdecl (udecl->mdecl xdecl))
 	    (desig (unwrap-designator expr udict)))
        (offsetof-mtail (cdr mdecl) desig 0 udict)))
-    (,_
-     (sferr "missed pattern\n")
-     ;;(pperr tree)
-     #f)))
+    (,_ #f)))
 
 
 ;; =============================================================================
