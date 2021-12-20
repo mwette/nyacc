@@ -537,7 +537,8 @@
 	 (al-of-ty (sx-ref* al 2 2 1))
 	 (os (udict-ref udict "os"))
 	 (os-of-ty (sx-ref* os 2 2 1)))
-    (display code) (display main)
+    ;;(display code) (display main)
+    (pp os-of-ty) (quit)
     (sf "/*\n")
     (with-arch "native"
       (sf "native:\n")
@@ -575,6 +576,24 @@
     ;;(pp udict)
     (pp (sizeof-mtail mtail udict))
     (pp (find-offsets mtail udict))
+    0))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   "typedef struct { int m; double b[N2]; } bar_t;\n"
+	   "typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
+	   "typedef struct { int r; double c[2]; } foo2_t;\n"
+	   "typedef struct { int s; double d[5]; } foo3_t;\n"
+	   "typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[N]; } foo_t;\n"
+	   "foo_t f;\n"
+	   ))
+	 (tree (parse-string code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (udict-ref udict "f"))
+	 (t-exp `(typeof-expr (d-sel (ident "f1") (ident "f"))))
+	 )
+    (pp (eval-typeof-expr t-exp udict))
     0))
 
 ;; --- last line ---

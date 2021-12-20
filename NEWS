@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2021-12-XX  V1.06.4
+	* update c99/munge to handle more cases for "keepers"
+
 2021-12-14  V1.06.3
 	* fix eval-offsetof
 	* in arch-info.scm:lookup-arch, use alignof-map for alignof-dict
