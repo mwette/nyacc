@@ -328,9 +328,12 @@
      (else #f))))
 
 (define (keeper? qualifier name keepers)
-  (if (null? keepers) #f
-      (or (qual-match qualifier name (car keepers))
-	  (keeper? qualifier name (cdr keepers)))))
+  (cond
+   ((pair? keepers)
+    (or (qual-match qualifier name (car keepers))
+	(keeper? qualifier name (cdr keepers))))
+   ((eq? #t keepers) #t)
+   (else #f)))
 
 (define (expand-specl-typerefs specl declr udict keep)
 
@@ -428,14 +431,16 @@
 	 (values (replace-type-spec specl tspec) declr)))
 
       ((enum-ref (ident ,name))
-       (if (member (w/enum name) keep)
+       ;;(if (member (w/enum name) keep)
+       (if (keeper? '(enum) name keep)
 	   (values specl declr)
 	   (let ((tspec '(type-spec (fixed-type "int"))))
 	     (values (replace-type-spec specl tspec) declr))))
 
       ((enum-def (ident ,name) ,rest)
        ;; replacing with int could be an error : should gen warning
-       (if (member (w/enum name) keep)
+       ;;(if (member (w/enum name) keep)
+       (if (keeper? '(enum) name keep)
 	   (values specl declr)
 	   (let ((tspec '(type-spec (fixed-type "int"))))
 	     (values (replace-type-spec specl tspec) declr))))
@@ -622,6 +627,13 @@
 
 ;; TODO: what to do with initializers ???
 
+#;(define* (m-extract-tspec specl)
+  (let ((tspec (and=> (sx-find 'type-spec specl) sx-tail)))
+    (sx-match tspec
+      (((struct-def (ident ,name) ,fields) `((struct-def ,fields))))
+      (((union-def (ident ,name) ,fields) `((union-def ,fields))))
+      (,_ tspec))))
+
 (define* (m-unwrap-declr declr tail #:optional (namer def-namer))
   
   (define (unwrap-pointer pointer tail)
@@ -690,6 +702,7 @@
 	 (stor-spec (and=> (sx-find 'stor-spec specl)
 			   (lambda (sx) (sx-ref sx 1))))
 	 (mtail (and=> (sx-find 'type-spec specl) sx-tail))
+	 ;;(mtail (m-extract-tspec specl))
 	 (m-declr (m-unwrap-declr declr mtail namer))
 	 (m-declr (if (and (equal? stor-spec '(extern))
 			   (not (equal? 'function-returning (caadr m-declr))))

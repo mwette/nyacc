@@ -8,6 +8,20 @@ without any warranty.
 202X-XX-XX  V1.07.0
 	* 
 
+2021-12-20  V1.06.4
+	* update c99/munge to handle more cases for "keepers"
+
+2021-12-14  V1.06.3
+	* fix eval-offsetof
+	* in arch-info.scm:lookup-arch, use alignof-map for alignof-dict
+
+2021-12-10  V1.06.2
+	* in eval-c99-cx, look for idents in udict
+
+2021-12-06  V1.06.1
+	* fixed issues in cxeval wrt offsetof operator
+	  This includes removal of munge import.
+
 2021-12-03  V1.06.0
 	* Added location tracking to parser.
 	* In lang, added support for multiple archirectures using with-arch:

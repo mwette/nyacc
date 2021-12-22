@@ -7,7 +7,7 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(add-to-load-path (getcwd))
+;;(add-to-load-path (getcwd))
 
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxeval))
@@ -494,97 +494,106 @@
 	     (throw 'c99-error "eval-c99-cx: coding error"))))))
 
     (eval-expr expr)))
- 
+
+(define (mkdsg str)
+  (let loop ((res '()) (elts (string-split str #\.)))
+    (cond
+     ((null? res)
+      (loop `(p-expr (ident ,(car elts))) (cdr elts)))
+     ((pair? elts)
+      (loop `(d-sel (ident ,(car elts)) ,res) (cdr elts)))
+     (else res))))
+
 (when #f
   (let* ((code
 	  (string-append
+	   "enum {  FOO = sizeof(int), BAR = sizeof(double) }; \n"
 	   "typedef struct {\n"
-	   ;;"  int x1, x2;\n"
-	   ;;"  struct { int x1, x2; } xx;\n"
-	   " int y;\n"
-	   ;;"  struct { int y1; void *y2; } yy[3];\n"
-	   " struct { int y1; void *y2; } yy;\n"
+	   "  int x1, x2;\n"
+	   "  struct { int x1, x2; } xx;\n"
+	   "  int y;\n"
+	   "  struct { int y1; void *y2; } yy[FOO];\n"
+	   ;;"  struct { int y1; void *y2; } yy;\n"
 	   ;;"  struct { int z1; void *z2; };\n"
 	   "} foo_t;\n"
-	   ;;"int sz = sizeof(foo_t);\n"
-	   ;;"int os = &(((foo_t*)0)->yy.y1);\n"
-	   ;;"int of1 = __builtin_offsetof(foo_t, xx.x2);\n"
-	   ;;"int of2 = __builtin_offsetof(foo_t, yy[1].y2);\n"
-	   ))
+	   "int sz = sizeof(foo_t);\n"
+	   "int al = _Alignof(foo_t);\n"
+	   ;;"int os = __builtin_offsetof(foo_t, xx.x3);\n"
+	   "int os = __builtin_offsetof(foo_t, yy[2].y2);\n"))
+	 (main
+	  (string-append
+	   "#include <stdio.h>\n"
+	   "int main() {\n"
+	   " printf(\"sz=%d\\n\", sz);\n"
+	   " printf(\"al=%d\\n\", al);\n"
+	   " printf(\"os=%d\\n\", os);\n"
+	   "}\n"))
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
-	 (udecl (assoc-ref udict "foo_t"))
-	 (const
-	  `(ref-to
-            (d-sel
-	     (ident "y1")
-	     (i-sel
-	      (ident "yy")
-	      (cast (type-name
-		     (decl-spec-list
-		      (type-spec (typename "foo_t")))
-		     (abs-ptr-declr (pointer)))
-		    (p-expr (fixed "0")))))))
-	 (of (udict-ref udict "of1"))
-	 (dsg (sx-ref* of 2 2 1 2))
-	 ;;
-	 (type-name
-	  '(type-name
-	    (decl-spec-list
-	     (type-spec
-	      (typename "foo_t")))))
-	 (mkdsg (lambda (str)
-		  (let loop ((res '()) (elts (string-split str #\.)))
-		    (cond
-		     ((null? res)
-		      (loop `(p-expr (ident ,(car elts))) (cdr elts)))
-		     ((pair? elts)
-		      (loop `(d-sel (ident ,(car elts)) ,res) (cdr elts)))
-		     (else res)))))
-	 (desig "yy.y2")
-	 (offset-expr `(offsetof-type ,type-name ,desig))
-	 )
-    (display code) (newline)
-    ;;(pp of) (pp dsg)
-    ;;(pp (mkdsg desig))
-    ;;(pp (unwrap-designator (mkdsg desig) udict))
-    ;;(quit)
-    ;;(pp udecl)
+	 (udict (udict-add-enums udict))
+	 (sz (udict-ref udict "sz"))
+	 (sz-of-ty (sx-ref* sz 2 2 1))
+	 (al (udict-ref udict "al"))
+	 (al-of-ty (sx-ref* al 2 2 1))
+	 (os (udict-ref udict "os"))
+	 (os-of-ty (sx-ref* os 2 2 1)))
+    ;;(display code) (display main)
+    (pp os-of-ty) (quit)
+    (sf "/*\n")
     (with-arch "native"
       (sf "native:\n")
-      (sf "  size = ~S\n"
-	  (eval-sizeof-type `(sizeof-type ,type-name) udict))
-      (sf "  align = ~S\n"
-	  (eval-alignof-type `(alignof-type ,type-name) udict))
-      (sf "  offset(~S) = ~S\n" desig
-	  (eval-offsetof `(offsetof-type ,type-name ,(mkdsg desig)) udict)))
+      (sf "  size = ~S\n" (eval-sizeof-type sz-of-ty udict))
+      (sf "  align = ~S\n" (eval-alignof-type al-of-ty udict))
+      (sf "  offset = ~S\n" (eval-offsetof os-of-ty udict)))
     (with-arch "avr"
       (sf "avr:\n")
-      (sf "  size=~S\n"
-	  (eval-sizeof-type `(sizeof-type ,type-name) udict))
-      (sf "  align=~S\n"
-	  (eval-alignof-type `(alignof-type ,type-name) udict))
-      (sf "  offset=~S (for yy.y2)\n"
-	  (eval-offsetof `(offsetof-type ,type-name ,desig) udict)))
-    ))
+      (sf "  size = ~S\n" (eval-sizeof-type sz-of-ty udict))
+      (sf "  align = ~S\n" (eval-alignof-type al-of-ty udict))
+      (sf "  offset = ~S\n" (eval-offsetof os-of-ty udict)))
+    (sf "*/\n")))
 
-(when #t
+(when #f
   (let* ((code
 	  (string-append
-	   "typedef struct { int m; double b[2]; } bar_t;\n"
-	   "typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
-	   "typedef struct { int r; double c[2]; } foo2_t;\n"
-	   "typedef struct { int s; double d[5]; } foo3_t;\n"
-	   "typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[2]; } foo_t;\n"))
+	   ;;"enum { NN = sizeof(int), MM = sizeof(long) };\n"
+	   "typedef enum { N1 = 1, N2 = 2 } num_t;\n"
+	   "typedef struct { int m; double b[N2]; } bar_t;\n"
+	   ;;"typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
+	   ;;"typedef struct { int r; double c[2]; } foo2_t;\n"
+	   ;;"typedef struct { int s; double d[5]; } foo3_t;\n"
+	   ;;"typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[N]; } foo_t;\n"
+	   ))
 	 (tree (parse-string code))
 	 (udict (c99-trans-unit->udict tree))
-	 (udecl (udict-ref udict "foo_t"))
+	 (udict (udict-add-enums udict))
+	 ;;(udecl (udict-ref udict "foo_t"))
+	 (udecl (udict-ref udict "bar_t"))
 	 (xdecl (expand-typerefs udecl udict))
 	 (mdecl (udecl->mdecl xdecl))
 	 (mtail (cdr mdecl))
 	 )
-    ;;(pp mdecl)
-    (pp (find-offsets mtail))
-    ))
+    ;;(sf "~A\n" code)
+    ;;(pp udict)
+    (pp (sizeof-mtail mtail udict))
+    (pp (find-offsets mtail udict))
+    0))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   "typedef struct { int m; double b[N2]; } bar_t;\n"
+	   "typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
+	   "typedef struct { int r; double c[2]; } foo2_t;\n"
+	   "typedef struct { int s; double d[5]; } foo3_t;\n"
+	   "typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[N]; } foo_t;\n"
+	   "foo_t f;\n"
+	   ))
+	 (tree (parse-string code))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (udict-ref udict "f"))
+	 (t-exp `(typeof-expr (d-sel (ident "f1") (ident "f"))))
+	 )
+    (pp (eval-typeof-expr t-exp udict))
+    0))
 
 ;; --- last line ---
