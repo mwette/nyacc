@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/util.scm - C parser utilities
 
-;; Copyright (C) 2015-2019 Matthew R. Wette
+;; Copyright (C) 2015-2019,2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -24,9 +24,12 @@
 	    get-gcc-cpp-defs get-gcc-inc-dirs ;; <= deprecated
 	    remove-comments
 	    remove-inc-trees
-	    merge-inc-trees!
+	    merge-includes!
 	    move-attributes attrl->attrs attrs->attrl extract-attr
-	    elifify)
+	    elifify
+	    ;; deprecated
+	    merge-inc-trees!
+	    )
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((srfi srfi-1) #:select (append-reverse fold-right))
@@ -202,7 +205,7 @@
 	    (cdr tree)))
      (else (loop (tl-append rslt (car tree)) (cdr tree))))))
 
-;; @deffn {Procedure} merge-inc-trees! tree => tree
+;; @deffn {Procedure} merge-includes! tree => tree
 ;; This will (recursively) merge code from cpp-includes into the tree.
 ;; @example
 ;; (trans-unit
@@ -213,40 +216,22 @@
 ;; (trans-unit (decl (a)) (decl (b)) (decl (c)))
 ;; @end example
 ;; @end deffn
-(define (merge-inc-trees! tree)
-
-  ;; @item find-span (trans-unit a b c) => ((a . +->) . (c . '())
-  (define (find-span tree)
+(define (merge-includes! tree)
+  (define (merge-tail pl tl)
     (cond
-     ((not (pair? tree)) '())		; maybe parse failed
-     ((not (eqv? 'trans-unit (car tree))) (throw 'c99-error "expecting c-tree"))
-     ((null? (cdr tree)) (throw 'c99-error "null c99-tree"))
-     (else
-      (let ((fp tree))			; first pair
-	(let loop ((lp tree)		; last pair
-		   (np (cdr tree)))	; next pair
-	  (cond
-	   ((null? np) (cons (cdr fp) lp))
-	   ;; The following is an ugly hack to find cpp-include
-	   ;; with trans-unit attached.
-	   ((and-let* ((expr (car np))
-		       ((eqv? 'cpp-stmt (car expr)))
-		       ((eqv? 'include (caadr expr)))
-		       (rest (cddadr expr))
-		       ((pair? rest))
-		       (span (find-span (car rest))))
-		      (set-cdr! lp (car span))
-		      (loop (cdr span) (cdr np))))
-	   (else
-	    (set-cdr! lp np)
-	    (loop np (cdr np)))))))))
+     ((null? tl) pl)
+     ((sx-match (car tl)
+	((cpp-stmt (include ,file (trans-unit . ,kids))) kids)
+	(,_ #f)) =>
+	(lambda (kids)
+	  (set-cdr! pl kids)
+	  (let ((pn (merge-tail pl kids)))
+	    (set-cdr! pn (cdr tl))
+	    (merge-tail pn (cdr tl)))))
+     (else (merge-tail tl (cdr tl)))))
 
-  ;; Use cons to generate a new reference:
-  ;; (cons (car tree) (car (find-span tree)))
-  ;; or not:
-  (find-span tree)
+  (merge-tail tree (cdr tree))
   tree)
-
 
 ;; --- attributes ----------------------
 
@@ -415,5 +400,43 @@
       (,_
        tree)))
   (foldt fU identity tree))
+
+
+;; === deprecated =============================================================
+
+(define (merge-inc-trees! tree)
+
+  ;; @item find-span (trans-unit a b c) => ((a . +->) . (c . '())
+  (define (find-span tree)
+    (cond
+     ((not (pair? tree)) '())		; maybe parse failed
+     ((not (eqv? 'trans-unit (car tree))) (throw 'c99-error "expecting c-tree"))
+     ((null? (cdr tree)) (throw 'c99-error "null c99-tree"))
+     (else
+      (let ((fp tree))			; first pair
+	(let loop ((lp tree)		; last pair
+		   (np (cdr tree)))	; next pair
+	  (cond
+	   ((null? np) (cons (cdr fp) lp))
+	   ;; The following is an ugly hack to find cpp-include
+	   ;; with trans-unit attached.
+	   ((and-let* ((expr (car np))
+		       ((eqv? 'cpp-stmt (car expr)))
+		       ((eqv? 'include (caadr expr)))
+		       (rest (cddadr expr))
+		       ((pair? rest))
+		       (span (find-span (car rest))))
+	      (set-cdr! lp (car span))
+	      (loop (cdr span) (cdr np))))
+	   (else
+	    (set-cdr! lp np)
+	    (loop np (cdr np)))))))))
+
+  ;; Use cons to generate a new reference:
+  ;; (cons (car tree) (car (find-span tree)))
+  ;; or not:
+  (find-span tree)
+  tree)
+
 
 ;; --- last line ---
