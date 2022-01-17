@@ -452,7 +452,7 @@
       (fold-right
        (lambda (tree seed)
 	 (cond
-	  ((eqv? (sx-tag tree) 'decl)
+	  ((and (eqv? (sx-tag tree) 'decl) (pair? sx-tail tree))
 	   (dictize-decl tree seed))
 	  ((inc-keeper? tree inc-filter) =>
 	   (lambda (inc-tree)
