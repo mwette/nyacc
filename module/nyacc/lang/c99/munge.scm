@@ -314,7 +314,7 @@
    ;; todo: think more about attributes
    ;; * specl attributes are merged into structs and unions right now.
    ;;   any others?
-   ((eqv? (sx-tag decl) 'decl)
+   ((and (eqv? (sx-tag decl) 'decl) (pair? sx-tail decl))
     (let*-values (((tag decl-attr specl declrs) (split-decl decl))
 		  ((tag) (values 'udecl)))
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
