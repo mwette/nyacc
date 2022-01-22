@@ -574,7 +574,7 @@
 		  ((code) #f)
 		  ((decl)
 		   (and (cpi-top-blev? info)
-			(memq (car stmt) '(include include-next))
+			(memq (car stmt) '(include include-next define))
 		    `(cpp-stmt . ,stmt)))
 		  ((file)
 		   (and (or (cpi-top-blev? info)

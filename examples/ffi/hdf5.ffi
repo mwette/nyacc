@@ -1,6 +1,6 @@
 ;; hdf5.ffi - 		 		-*- Scheme -*-
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -33,5 +33,15 @@
 		 (string-prefix? "\"H5" file-spec))
   #:library '("libhdf5_serial")		; HDF5 pkg-config broken
   )
+
+(define H5D_append_cb_t* H5D_append_cb_t)
+(define H5E_auto1_t* H5E_auto1_t)
+(define H5E_auto2_t* H5E_auto2_t)
+(define H5F_flush_cb_t* H5F_flush_cb_t)
+(define H5MM_allocate_t* H5MM_allocate_t)
+(define H5MM_free_t* H5MM_free_t)
+(define H5T_conv_except_func_t* H5T_conv_except_func_t)
+(define H5L_elink_traverse_t* H5L_elink_traverse_t)
+(define H5O_mcdt_search_cb_t* H5O_mcdt_search_cb_t)
 
 ;; --- last line ---
