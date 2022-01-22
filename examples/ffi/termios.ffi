@@ -1,11 +1,13 @@
 ;; termios.ffi				-*- Scheme -*-
 
-;; Copyright (C) 2020 Matthew R. Wette
+;; Copyright (C) 2020,2022 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
+
+;; provides (getpass) OR (getpass "pw: ") to get pw from terminal
 
 (define-ffi-module (ffi termios)
   #:include '("termios.h")
@@ -27,6 +29,31 @@
 		  "B50" "B75" "B110" "B134" "B150" "B200" "B300" "B600" "B1200"
 		  "B1800" "B2400" "B4800" "B9600" "B19200" "B38400" "B57600"
 		  "B115200" "B230400"))
+
+;; you can get username from (getlogin)
+(define* (get-passwd #:optional (prompt "password: "))
+  (let* ((pt (open "/dev/tty" (logior O_RDWR O_NOCTTY)))
+	 (fd (port->fdes pt)) ;; or (fileno pt)
+	 (old (make-struct-termios))
+	 (new (make-struct-termios))
+	 (TCSANOW (ffi-termios-symbol-val 'TCSANOW)))
+    (dynamic-wind
+      (lambda ()
+	(tcgetattr fd (pointer-to old))
+	(tcgetattr fd (pointer-to new))
+	(let* ((ECHO (ffi-termios-symbol-val 'ECHO))
+	       (old_flag (fh-object-ref new 'c_lflag))
+	       (new_flag (logand old_flag (lognot ECHO))))
+	  (fh-object-set! new 'c_lflag new_flag)
+	  (tcsetattr fd TCSANOW (pointer-to new))))
+      (lambda ()
+	(display prompt pt) (force-output pt)
+	(let ((pw (read-line pt)))
+	  (newline)
+	  pw))
+      (lambda ()
+	(tcsetattr fd TCSANOW (pointer-to old))))))
+(export getpass)
 
 
 ;; --- last line ---
