@@ -439,7 +439,8 @@
 ;; @item
 ;; If @var{tree} is not a pair then @var{seed} -- or @code{'()} -- is returned.
 ;; The inc-filter @var{f} is either @code{#t}, @code{#f} or predicate procedure
-;; of one argument, the include path, to indicate whether it should be included
+;; of two arguments, the include spec (e.g., @code{<foo.h>} and the real file
+;; path (e.g., @file{/a/b/c/foo.h}), to indicate whether it should be included
 ;; in the dictionary.
 ;; @item
 ;; If this routine is called multiple times on the same tree the u-decl's will
