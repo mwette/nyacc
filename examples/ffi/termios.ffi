@@ -31,6 +31,7 @@
 		  "B115200" "B230400"))
 
 ;; you can get username from (getlogin)
+(use-modules (ice-9 rdelim))
 (define* (get-passwd #:optional (prompt "password: "))
   (let* ((pt (open "/dev/tty" (logior O_RDWR O_NOCTTY)))
 	 (fd (port->fdes pt)) ;; or (fileno pt)
