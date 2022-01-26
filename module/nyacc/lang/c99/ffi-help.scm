@@ -1803,18 +1803,11 @@
 	(decl-spec-list
 	 (stor-spec (typedef))
 	 (type-spec (fixed-type "unsigned char")))
-	(init-declr
-	 (array-of
-	  (ident "hdset_reg_ref_t")
-	  (add (sizeof-type
-		(type-name
-		 (decl-spec-list (type-spec (typename "haddr_t")))))
-	       (p-expr (fixed "4"))))))
-       (let* ((typename "haddr_t")
-	      (size (+ (sizeof '*) 4)))
-	 (sfscm "(define-public ~A-desc (bs:vector ~A '*))\n" typename size)
-	 (fhscm-def-compound typename)
-	 (values (cons typename wrapped) (cons typename defined))))
+	(init-declr (ary-declr (ident ,typename) ,dim)))
+       (let* ((sz (eval-c99-cx dim (*udict*))))
+	(sfscm "(define-public ~A-desc (bs:vector ~A int8))\n" typename sz)
+	(fhscm-def-compound typename)
+	(values (cons typename wrapped) (cons typename defined))))
 
       ;; from gtk+-3.0/gtk/gtk.h
       ((udecl (decl-spec-list
