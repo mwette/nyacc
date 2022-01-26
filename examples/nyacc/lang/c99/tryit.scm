@@ -596,4 +596,23 @@
     (pp (eval-typeof-expr t-exp udict))
     0))
 
+(when #f
+  (let* ((code
+	  (string-append
+	   "typedef struct { double d; char c; } foo_t[3];\n"
+	   "int x = sizeof(foo_t);\n"
+	   ))
+	 (tree (parse-string code))
+	 (udict (c99-trans-unit->udict tree))
+	 ;;(udecl (udict-ref udict "x"))
+	 (foo-t '(type-name
+		  (decl-spec-list (type-spec (typename "foo_t")))))
+	 (sz-exp `(sizeof-type ,foo-t))
+	 )
+    (sf "Expect (3 . 16), get:\n")
+    (pp (find-offsets foo-t udict))
+    (pp (find-sizes foo-t udict))
+    (sf "\ntotal size = ~A\n" (eval-sizeof-type sz-exp udict))
+    0))
+
 ;; --- last line ---

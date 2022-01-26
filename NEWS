@@ -8,6 +8,10 @@ without any warranty.
 202X-XX-XX  V1.07.0
 	* 
 
+2022-01-11  V1.06.5
+	* Updated c99/util.scm merge-inc-files! and renamed to merge-includes!
+	* Align struct sizes to alignment in c99/cxeval.scm:  find-offsets.
+
 2021-12-20  V1.06.4
 	* update c99/munge to handle more cases for "keepers"
 

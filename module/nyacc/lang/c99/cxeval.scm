@@ -526,7 +526,7 @@
 	     (loop siz aln offs (list declr) (cdr flds)))
 	    (,_
 	     (loop siz aln offs decls (cdr flds)))))
-	 (else (values siz aln (reverse offs)))))))
+	 (else (values (incr-size 0 aln siz) aln (reverse offs)))))))
 
   (match mtail
     (`((pointer-to) . ,rest)
