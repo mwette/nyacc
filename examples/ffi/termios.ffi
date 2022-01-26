@@ -54,7 +54,7 @@
 	  pw))
       (lambda ()
 	(tcsetattr fd TCSANOW (pointer-to old))))))
-(export getpass)
+(export get-passwd)
 
 
 ;; --- last line ---
