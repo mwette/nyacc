@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2022-01-XX  V1.06.6
+2022-01-26  V1.06.6
 	* ffi-help.scm: add define to cpp-stmts forwarded to parser.
 	* cxeval.scm: eval-c99-cx should return #f on non-expr tree
 
