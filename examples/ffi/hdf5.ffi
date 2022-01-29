@@ -33,9 +33,15 @@
   ;; #:library '("libhdf5_serial")		; HDF5 pkg-config broken
   )
 
-(define H5S_UNLIMITED
+;; In several areas functions take -1 but really want (unsigned)(-1)
+(define-public H5S_UNLIMITED
   (case (bytestructure-descriptor-size hsize_t-desc)
     ((8) #xffffffffffffffff) ((4) #xffffffff)))
+(define-public H5T_VARIABLE
+  (case (bytestructure-descriptor-size hsize_t-desc)
+    ((8) #xffffffffffffffff) ((4) #xffffffff)))
+
+(define-public (H5 sym) (ffi-hdf5-symbol-val sym))
 
 (define-public H5Acreate H5Acreate2)
 (define-public H5Dcreate H5Dcreate2)
