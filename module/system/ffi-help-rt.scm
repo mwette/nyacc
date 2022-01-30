@@ -439,6 +439,10 @@
     (cond
      ((exact-integer? value)
       (bytevector-address-set! bytevector offset value))
+     ((string? value)
+      (bytevector-address-set! bytevector offset
+			       (ffi:pointer-address
+				(ffi:string->pointer value))))
      ((bytevector? value)
       (bytevector-address-set! bytevector offset
 			       (ffi:bytevector->pointer value)))
