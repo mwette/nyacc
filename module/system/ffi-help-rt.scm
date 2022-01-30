@@ -23,7 +23,7 @@
 	    ;; user level routines
 	    fh-type?
 	    fh-object? fh-object-val
-	    fh-object-ref fh-object-set!
+	    fh-object-ref fh-object-set! fh-object-addr
 	    pointer-to value-at NULL !0
 
 	    ;; maybe used outside of modules?
@@ -63,7 +63,11 @@
 
 (define *ffi-help-version* "1.06.5")
 
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (sferr fmt . args)
+  (apply simple-format (current-error-port) fmt args))
+(define (pperr exp)
+  (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
 (cond-expand
  (guile-2.2)
@@ -71,6 +75,9 @@
   (define-public intptr_t long)
   (define-public uintptr_t unsigned-long))
  (guile))
+
+(define (fherr fmt . args)
+  (apply throw 'ffi-help-error fmt args))
 
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:
@@ -98,8 +105,8 @@
 	      ffi-helper-type
 	      (make-struct-layout "pw") ;; 1 slot for value
 	      printer
-	      (or unwrap (lambda (obj) (error "no unwrapper")))
-	      (or wrap (lambda (obj) (error "no wrapper")))
+	      (or unwrap (lambda (obj) (fherr "no unwrapper")))
+	      (or wrap (lambda (obj) (fherr "no wrapper")))
 	      (or pointer-to (lambda (obj) (ffi:bytevector->pointer
 					    (bytestructure-bytevector
 					     (fh-object-val obj)))))
@@ -147,7 +154,7 @@
    ((bytevector? obj)
     (ffi:bytevector->pointer obj))
    (else
-    (error "expecting something I can point to"))))
+    (fherr "pointer-to: unknown arg type for ~S" obj))))
 
 (define (value-at obj)
   (cond
@@ -156,7 +163,7 @@
    ((bytestructure? obj)
     (bytestructure-ref obj '*))
    (else
-    (throw 'ffi-help-error "expecting something I can dereference"))))
+    (fherr "value-at: unknwn arg type for ~S" obj))))
 
 (define NULL ffi:%null-pointer)
 (define (!0 v) (not (zero? v)))
@@ -182,7 +189,7 @@
 ;; return the object type
 ;; @end deffn
 (define (fh-object-type obj)
-  (or (fh-object? obj) (error "expecting ffi-help type"))
+  (or (fh-object? obj) (fherr "fh-object-type: expecting fh-object arg"))
   (struct-vtable obj))
 
 ;; @deffn {Procedure} fh-object-val obj
@@ -193,13 +200,19 @@
   (cond
    ((fh-object? obj) (struct-ref obj 0))
    ((bytestructure? obj) obj)
-   (else (error "expecting ffi-help object or bytestructure"))))
+   (else (fherr "fh-object-val: unknown arg type for ~S" obj))))
 
 (define-syntax-rule (fh-object-ref obj arg ...)
   (bytestructure-ref (fh-object-val obj) arg ...))
 
 (define-syntax-rule (fh-object-set! obj arg ...)
   (bytestructure-set! (fh-object-val obj) arg ...))
+
+(define-syntax-rule (fh-object-addr obj arg ...)
+  (call-with-values
+      (lambda () (bytestructure-unwrap (fh-object-val obj) arg ...))
+    (lambda (bv offs desc)
+      (+ (ffi:pointer-address (ffi:bytevector->pointer bv)) offs))))
 
 (eval-when (expand load eval)
   (define (gen-id tmpl-id . args)
@@ -427,29 +440,33 @@
   (define (pointer-ref bytevector offset content-size)
     (let ((address (bytevector-address-ref bytevector offset)))
       (if (zero? address)
-	  (error "Tried to dereference null-pointer.")
+	  (fherr "fh:pointer: tried to dereference null-pointer")
 	  (ffi:pointer->bytevector (ffi:make-pointer address) content-size))))
   (define (pointer-idx-ref bytevector offset index content-size)
     (let* ((base-address (bytevector-address-ref bytevector offset))
 	   (address (+ base-address (* index content-size))))
       (if (zero? base-address)
-	  (error "Tried to dereference null-pointer.")
+	  (fherr "fh:pointer: tried to dereference null-pointer")
 	  (ffi:pointer->bytevector (ffi:make-pointer address) content-size))))
   (define (pointer-set! bytevector offset value)
     (cond
      ((exact-integer? value)
       (bytevector-address-set! bytevector offset value))
+     ((ffi:pointer? value)
+      (bytevector-address-set! bytevector offset (ffi:pointer-address value)))
      ((string? value)
       (bytevector-address-set! bytevector offset
 			       (ffi:pointer-address
 				(ffi:string->pointer value))))
      ((bytevector? value)
       (bytevector-address-set! bytevector offset
-			       (ffi:bytevector->pointer value)))
+			       (ffi:pointer-address
+				(ffi:bytevector->pointer value))))
      ((bytestructure? value)
       (bytevector-address-set! bytevector offset
-			       (ffi:bytevector->pointer
-				(bytestructure-bytevector value))))))
+			       (ffi:pointer-address
+				(ffi:bytevector->pointer
+				 (bytestructure-bytevector value)))))))
   (define (get-descriptor)
     (if (promise? %descriptor)
         (force %descriptor)
@@ -461,7 +478,7 @@
       (datum->syntax id (map syntax->datum elements)))
     (let ((descriptor (get-descriptor)))
       (when (eq? 'void descriptor)
-        (error "Tried to follow void pointer."))
+        (fherr "fh:pointer: tried to follow void pointer"))
       (let* ((size (bytestructure-descriptor-size descriptor))
              (index-datum (if syntax? (syntax->datum index) index)))
         (cond
@@ -521,7 +538,7 @@
      ((and (pair? arg) (bytestructure-descriptor? (car arg)))
       (bytestructure-descriptor->ffi-descriptor (car arg)))
      ((pair? arg) (car arg))
-     (else (error "can't interpret argument"))))
+     (else (fherr "poniter->procedure/varargs: unknown arg type for ~S" arg))))
   (define (arg->val arg)
     (cond
      ((bytestructure? arg) (bytestructure-ref arg))
@@ -538,7 +555,7 @@
   (lambda args
     (let ((ffi-l (arg-list->ffi-list param-ffi-list args))
 	  (arg-l (map arg->val args)))
-      (sferr "return=~S  params=~S\n" return-ffi ffi-l)
+      ;;(sferr "return=~S  params=~S\n" return-ffi ffi-l)
       (apply (ffi:pointer->procedure return-ffi pointer ffi-l) arg-l))))
 
 ;; @deffn {Procedure} fh:function return-desc param-desc-list
@@ -594,7 +611,7 @@
    ((bytestructure-descriptor? bs-desc)
     (bytestructure-descriptor->ffi-descriptor bs-desc))
    ((eq? bs-desc 'void) ffi:void)
-   (else (error "missed type"))))
+   (else (fherr "bs-desc->ffi-desc: unknown type for ~S" bs-desc))))
 
 ;; given a fh:function return pair: (return-type . arg-list)
 (define (fh-function*-signature desc)
@@ -650,7 +667,7 @@
 		 desc
 		 (ffi:pointer-address
 		  (ffi:procedure->pointer (car sig) val (cdr sig))))))
-	     (else (error "bad argument type"))))
+	     (else (fherr "make-function: unknown argument type"))))
 	   (() (make-struct/no-tail type (bytestructure desc)))))
        (export type type? make)))))
 
@@ -697,7 +714,7 @@
    ((number? obj) obj)
    ((bytestructure? obj) (bytestructure-ref obj))
    ((fh-object? obj) (struct-ref obj 0))
-   (else (error "type mismatch"))))
+   (else (fherr "unwrap~fixed: type mismatch"))))
 
 (define unwrap~float unwrap~fixed)
 
@@ -711,10 +728,8 @@
    ((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
    ((bytevector? obj) (ffi:bytevector->pointer obj))
    ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
-   ;; TODO: work out casting pointer types
-   ;;((and (pair? obj)
-   ;;(or (fh-type? (car obj)) (bytestructure-descriptor? (car obj))))
-   (else (error "expecting pointer type"))))
+   ((exact-integer? obj) (ffi:make-pointer obj))
+   (else (fherr "unwrap~pointer: unknown arg type"))))
 
 (define unwrap~array unwrap~pointer)
 
@@ -726,7 +741,7 @@
     (cond
      ((ffi:pointer? obj) obj)
      ((procedure? obj) (ffi:procedure->pointer ret-t obj args-t))
-     (else (error "expecting pointer or procedure")))))
+     (else (fherr "make-fctn-param-unwrapper: unknown type for ~S")))))
 
 ;; --- types ---------------------------
 
