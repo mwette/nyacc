@@ -1,6 +1,6 @@
 ;;; system/ffi-help-rt.scm - NYACC's FFI help runtime
 
-;; Copyright (C) 2016-2019 Matthew R. Wette
+;; Copyright (C) 2016-2019,2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
