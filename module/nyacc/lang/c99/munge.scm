@@ -674,13 +674,13 @@
 	 (let ((ival (or (eval-c99-cx expr udict ddict)
 			 (fail "munge: can't expand ~S" (sx-ref ident 1))
 			 nxt)))
-	   (loop (enum-cons attr ident ival rez) (1+ (max nxt ival))
+	   (loop (enum-cons attr ident ival rez) (1+ ival)
 		 (idcons ident ival ddict) (cdr edl))))
 	((enum-defn (@ . ,attr) ,ident (attribute-list . ,attrs) ,expr)
 	 (let ((ival (or (eval-c99-cx expr udict ddict)
 			 (fail "munge: can't expand ~S" (sx-ref ident 1))
 			 nxt)))
-	   (loop (enum-cons attr ident ival rez) (1+ (max nxt ival))
+	   (loop (enum-cons attr ident ival rez) (1+ ival)
 		 (idcons ident ival ddict) (cdr edl)))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
