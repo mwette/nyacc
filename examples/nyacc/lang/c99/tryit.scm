@@ -615,4 +615,15 @@
     (sf "\ntotal size = ~A\n" (eval-sizeof-type sz-exp udict))
     0))
 
+(when #f
+  (let* ((code "int foo = sizeof(\"$ABCDEF\")*2;")
+	 (tree (or (parse-string code) (error "parse failed")))
+	 (udict (c99-trans-unit->udict tree))
+	 (udecl (assoc-ref udict "foo"))
+	 (expr (sx-ref* udecl 2 2 1))
+	 )
+    (sf "declaration::\n")
+    (pp udecl)
+    (sf "evaluate:\n")
+    (sf "x = ~S\n" (eval-c99-cx expr))))
 ;; --- last line ---
