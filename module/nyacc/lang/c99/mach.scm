@@ -50,7 +50,7 @@
 ;; @end deffn
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2016-2020 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2015-2021 Matthew R. Wette"
 			  license-lgpl3+))
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution

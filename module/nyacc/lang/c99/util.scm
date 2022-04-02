@@ -21,14 +21,12 @@
   #:export (c99-def-help
 	    c99-std-help
 	    get-sys-cpp-defs get-sys-inc-dirs split-cpp-defs 
-	    get-gcc-cpp-defs get-gcc-inc-dirs ;; <= deprecated
-	    remove-comments
-	    remove-inc-trees
-	    merge-includes!
+	    remove-comments remove-comments!
+	    remove-inc-trees merge-includes!
 	    move-attributes attrl->attrs attrs->attrl extract-attr
 	    elifify
-	    ;; deprecated
-	    merge-inc-trees!
+	    ;; deprecated:
+	    merge-inc-trees! get-gcc-cpp-defs get-gcc-inc-dirs
 	    )
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
@@ -37,7 +35,7 @@
   #:use-module (sxml fold)
   #:use-module (ice-9 popen)		; gen-gcc-cpp-defs
   #:use-module (ice-9 rdelim)		; gen-gcc-cpp-defs
-  )
+  #:use-module (ice-9 match))
 
 (define c99-def-help
   (let ((base
@@ -144,7 +142,6 @@
       (if (eof-object? line) '()
 	  (cons (convert-line line) (loop (read-line ip 'trim)))))))
 
-(define get-gcc-cpp-defs get-sys-cpp-defs)
 
 ;; @deffn {Procedure} get-sys-inc-dirs [args] [#:CC "gcc"] =>
 ;; Generate a list of compiler-internal include directories (for cc).  If
@@ -165,8 +162,6 @@
 	      grab (read-line ip 'trim)))
        (else
 	(loop dirs grab (read-line ip 'trim)))))))
-
-(define get-gcc-inc-dirs get-sys-inc-dirs)
 
 (define (add-cppdef def dict)
   (let ((x2st (string-index def #\())
@@ -375,6 +370,26 @@
 	      (else
 	       (cons (remove-comments (car tail)) (loop (cdr tail)))))))))
 
+(define (remove-comments! sx0)
+  (define (merge-tail pl tl)
+    (match tl
+     ('() pl)
+     (`((comment . ,_) . ,tail)
+      (set-cdr! pl tail)
+      (merge-tail pl tail))
+     (`((@ (comment . ,_)) . ,tail)
+      (set-cdr! pl tail)
+      (merge-tail pl tail))
+     (`((@ . ,attr) . ,tail)
+      (set-car! tl `(@ . ,(assq-remove! attr 'comment)))
+      (merge-tail tl (cdr tl)))
+     (((h . t) . tail)
+      (merge-tail (car tl) t)
+      (merge-tail tl tail))
+     ((_ . tail) (merge-tail tl (cdr tl)))))
+  (merge-tail sx0 (cdr sx0))
+  sx0)
+
 ;; @deffn {Procedure} elifify tree => tree
 ;; This procedure will find patterns of
 ;; @example
@@ -403,6 +418,9 @@
 
 
 ;; === deprecated =============================================================
+
+(define get-gcc-cpp-defs get-sys-cpp-defs)
+(define get-gcc-inc-dirs get-sys-inc-dirs)
 
 (define (merge-inc-trees! tree)
 

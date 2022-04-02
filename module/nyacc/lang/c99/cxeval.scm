@@ -207,11 +207,12 @@
 
   (define (sizeof-literal tree)
     (sx-match tree
+      ((sizeof-expr ,expr) (sizeof-literal expr))
       ((p-expr ,expr) (sizeof-literal expr))
       ((string . ,string-list)
-       (values
+       (cons
 	(let loop ((sl string-list))
-	  (if (null? sl) 0
+	  (if (null? sl) 1
 	      (+ (string-length (car sl)) (loop (cdr sl)))))
 	1))
       (,_ #f)))
@@ -238,9 +239,10 @@
 	   (_ (throw 'c99-error "cxeval: can't de-ref")))))
       (,_ (throw 'c99-error "cxeval: can't sizeof ~S" (list tree)))))
 
-  (or
-   (sizeof-literal tree)
-   (sizeof-mtail (gen-mtail tree) udict)))
+  (let ((res (sizeof-literal tree)))
+    (if res
+	(values (car res) (cdr res))
+	(sizeof-mtail (gen-mtail tree) udict))))
 
 (define* (eval-sizeof-expr tree #:optional (udict '()))
   (call-with-values

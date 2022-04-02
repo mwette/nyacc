@@ -8,6 +8,16 @@ without any warranty.
 202X-XX-XX  V1.07.0
 	* 
 
+2022-04-02  V1.06.8
+	* munge.scm: fix canize-enum-def-list
+
+2022-01-30  V1.06.7
+	* munge.scm: fix canize-enum-def-list
+
+2022-01-26  V1.06.6
+	* ffi-help.scm: add define to cpp-stmts forwarded to parser.
+	* cxeval.scm: eval-c99-cx should return #f on non-expr tree
+
 2022-01-11  V1.06.5
 	* Updated c99/util.scm merge-inc-files! and renamed to merge-includes!
 	* Align struct sizes to alignment in c99/cxeval.scm:  find-offsets.
