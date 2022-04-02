@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/c99eval.scm - evaluate constant expressions
 
-;; Copyright (C) 2018-2021 Matthew R. Wette
+;; Copyright (C) 2018-2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -207,11 +207,12 @@
 
   (define (sizeof-literal tree)
     (sx-match tree
+      ((sizeof-expr ,expr) (sizeof-literal expr))
       ((p-expr ,expr) (sizeof-literal expr))
       ((string . ,string-list)
-       (values
+       (cons
 	(let loop ((sl string-list))
-	  (if (null? sl) 0
+	  (if (null? sl) 1
 	      (+ (string-length (car sl)) (loop (cdr sl)))))
 	1))
       (,_ #f)))
@@ -238,9 +239,10 @@
 	   (_ (throw 'c99-error "cxeval: can't de-ref")))))
       (,_ (throw 'c99-error "cxeval: can't sizeof ~S" (list tree)))))
 
-  (or
-   (sizeof-literal tree)
-   (sizeof-mtail (gen-mtail tree) udict)))
+  (let ((res (sizeof-literal tree)))
+    (if res
+	(values (car res) (cdr res))
+	(sizeof-mtail (gen-mtail tree) udict))))
 
 (define* (eval-sizeof-expr tree #:optional (udict '()))
   (call-with-values
@@ -385,9 +387,10 @@
 ;; =============================================================================
 
 ;; @deffn {Procedure} eval-c99-cx tree [udict] [#:fail-proc fail-proc]
-;; Evaluate the constant expression or return #f
-;; If @code{fail-proc} is provided it is called with the tree that could not
-;; be parsed.  If provided, it should return @code{#f} or throw an exception.
+;; Evaluate the constant expression or return #f (for unimplemented or
+;; non-expressions). If @code{fail-proc} is provided it is called with
+;; the tree that could not be parsed.  If provided, it should return
+;; @code{#f} or throw an exception. 
 ;; @end deffn
 (define* (eval-c99-cx tree #:optional udict ddict #:key fail-proc)
 
@@ -489,9 +492,10 @@
 	    ((d-sel) (fail "cxeval: d-sel not implemented"))
 	    ((array-ref) (fail "cxeval: array-ref not implemented"))
 	    ;; 
-	    (else
+	    ((c99x-deprecated)
 	     (sferr "eval-c99-cx:") (pperr tree)
-	     (throw 'c99-error "eval-c99-cx: coding error"))))))
+	     (throw 'c99-error "eval-c99-cx: coding error"))
+	    (else (fail "cxeval: non-expression"))))))
 
     (eval-expr tree)))
  

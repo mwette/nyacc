@@ -314,7 +314,7 @@
    ;; todo: think more about attributes
    ;; * specl attributes are merged into structs and unions right now.
    ;;   any others?
-   ((eqv? (sx-tag decl) 'decl)
+   ((and (eqv? (sx-tag decl) 'decl) (pair? (sx-tail decl)))
     (let*-values (((tag decl-attr specl declrs) (split-decl decl))
 		  ((tag) (values 'udecl)))
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
@@ -452,7 +452,7 @@
       (fold-right
        (lambda (tree seed)
 	 (cond
-	  ((eqv? (sx-tag tree) 'decl)
+	  ((and (eqv? (sx-tag tree) 'decl) (pair? (sx-tail tree)))
 	   (dictize-decl tree seed))
 	  ((inc-keeper? tree inc-filter) =>
 	   (lambda (inc-tree)
@@ -674,13 +674,13 @@
 	 (let ((ival (or (eval-c99-cx expr udict ddict)
 			 (fail "munge: can't expand ~S" (sx-ref ident 1))
 			 nxt)))
-	   (loop (enum-cons attr ident ival rez) (1+ (max nxt ival))
+	   (loop (enum-cons attr ident ival rez) (1+ ival)
 		 (idcons ident ival ddict) (cdr edl))))
 	((enum-defn (@ . ,attr) ,ident (attribute-list . ,attrs) ,expr)
 	 (let ((ival (or (eval-c99-cx expr udict ddict)
 			 (fail "munge: can't expand ~S" (sx-ref ident 1))
 			 nxt)))
-	   (loop (enum-cons attr ident ival rez) (1+ (max nxt ival))
+	   (loop (enum-cons attr ident ival rez) (1+ ival)
 		 (idcons ident ival ddict) (cdr edl)))))))))
 
 ;; @deffn {Procecure} enum-ref enum-def-list name => string
