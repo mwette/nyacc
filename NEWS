@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2022-04-02  V1.06.8
+	* munge.scm: fix canize-enum-def-list
+
 2022-01-30  V1.06.7
 	* munge.scm: fix canize-enum-def-list
 
