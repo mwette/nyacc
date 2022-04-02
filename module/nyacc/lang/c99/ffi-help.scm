@@ -341,7 +341,8 @@
        (guile-2.2)
        (guile-2
 	(define intptr_t long)
-	(define uintptr_t unsigned-long))))
+	(define uintptr_t unsigned-long))
+       (guile)))
     (sfscm "\n")))
 
 ;; === type conversion ==============
@@ -367,13 +368,13 @@
     ("signed short int" . short) ("int" . int) ("signed" . int)
     ("signed int" . int) ("long" . long) ("long int" . long)
     ("signed long" . long) ("signed long int" . long) ("long long" . long)
-    ("long long int" . long) ("signed long long" . long)
+    ("long long int" . long-long) ("signed long long" . long-long)
     ("signed long long int" . long)
     ("unsigned short int" . unsigned-short) ("unsigned short" . unsigned-short)
     ("unsigned int" . unsigned-int) ("unsigned" . unsigned-int)
     ("unsigned long int" . unsigned-long) ("unsigned long" . unsigned-long)
-    ("unsigned long long int" . unsigned-long)
-    ("unsigned long long" . unsigned-long)
+    ("unsigned long long int" . unsigned-long-long)
+    ("unsigned long long" . unsigned-long-long)
     ("intptr_t" . intptr_t) ("uintptr_t" . uintptr_t) ("size_t" . size_t)
     ("ssize_t" . ssize_t) ("ptrdiff_t" . ptrdiff_t)
     ("int8_t" . int8) ("uint8_t" . uint8) 
@@ -731,9 +732,52 @@
 
 ;; === function declarations : signatures for pointer->procedure
 
+(define fh-cpp-dict
+  (map (lambda (ent)
+	 (let ((elts (string-split ent #\=)))
+	   (cons (car elts) (if (null? (cdr elts)) "" (cadr elts)))))
+       fh-cpp-defs))
+
+(define ffi-long-long #f)
+(define ffi-unsigned-long-long #f)
+
+;;(pperr fh-cpp-dict) 
+(case (and=> (assoc-ref fh-cpp-dict "__LONG_LONG_WIDTH__") string->number)
+  ((64)
+   (set! ffi-long-long 'ffi:int64)
+   (set! ffi-unsigned-long-long 'ffi:uint64))
+  ((32)
+   (set! ffi-long-long 'ffi:int32)
+   (set! ffi-unsigned-long-long 'ffi:uint32))
+  (else
+   (sferr "ffi-help: warning: unknown ffi type: long-long")
+   (set! ffi-long-long 'ffi:long)
+   (set! ffi-unsigned-long-long 'ffi:unsigned-long)))
+
+(define ffi-intptr_t #f)
+(define ffi-uintptr_t #f)
+
+(cond-expand
+ ((or guile-3 guile-2.2)
+  (set! ffi-intptr_t 'ffi:intptr_t)
+  (set! ffi-uintptr_t 'ffi:uintptr_t))
+ (guile-2
+  (case (and=> (assoc-ref fh-cpp-dict "__INTPTR_WIDTH__") string->number)
+    ((64)
+     (set! ffi-intptr_t 'ffi:int64_t)
+     (set! ffi-uintptr_t 'ffi:uint64_t))
+    ((32)
+     (set! ffi-intptr_t 'ffi:int32_t)
+     (set! ffi-uintptr_t 'ffi:uint32_t))
+    (else
+     (sferr "ffi-help: warning: unknown ffi type: intptr_t\n")
+     (set! ffi-intptr_t 'ffi:long)
+     (set! ffi-uintptr_t 'ffi:unsigned-long))))
+ (guile))
+ 
 (define ffi-typemap
   ;; see system/foreign.scm
-  '(("void" . ffi:void) ("float" . ffi:float) ("double" . ffi:double)
+  `(("void" . ffi:void) ("float" . ffi:float) ("double" . ffi:double)
     ;;
     ("short" . ffi:short) ("short int" . ffi:short) ("signed short" . ffi:short)
     ("signed short int" . ffi:short) ("int" . ffi:int) ("signed" . ffi:int)
@@ -752,13 +796,14 @@
     ("int32_t" . ffi:int32) ("uint32_t" . ffi:uint32) 
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
     ;; hacks
-    ("intptr_t" . ffi:long) ("uintptr_t" . ffi:unsigned-long)
+    ("intptr_t" . ,ffi-intptr_t) ("uintptr_t" . ,ffi-uintptr_t)
     ("char" . ffi:int8) ("signed char" . ffi:int8) ("unsigned char" . ffi:uint8)
     ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
-    ("long long" . ffi:long) ("long long int" . ffi:long)
-    ("signed long long" . ffi:long) ("signed long long int" . ffi:long)
-    ("unsigned long long" . ffi:unsigned-long)
-    ("unsigned long long int" . ffi:unsigned-long)
+    ("long long" . ,ffi-long-long) ("long long int" . ,ffi-long-long)
+    ("signed long long" . ,ffi-long-long)
+    ("signed long long int" . ,ffi-long-long)
+    ("unsigned long long" . ,ffi-unsigned-long-long)
+    ("unsigned long long int" . ,ffi-unsigned-long-long)
     ("_Bool" . ffi:int8)))
 
 (define ffi-defined (map car ffi-typemap))

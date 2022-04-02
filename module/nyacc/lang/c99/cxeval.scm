@@ -349,8 +349,9 @@
 ;; TODO:
 ;;   (define (eval-typeof-type type-name desig) ...)
 
-(define (lookup-aggr-field fields name)
+(define (find-field fields name)
   (let loop ((specl #f) (declrs '()) (fields fields))
+    ;;(pperr (and (pair? fields) (car fields)))
     (cond
      ((pair? declrs)
       (sferr "checking ~S\n" (car declrs))
@@ -358,30 +359,56 @@
 	  `(type-name ,specl (car declrs))
 	  (loop specl (cdr declrs) fields)))
      ((pair? fields)
-      (loop (sx-ref (car fields) 1) (sx-tail (car fields) 2) (cdr fields)))
+      ;;(sferr "field:\n") (pperr (car fields)) (quit)
+      (sx-match (car fields)
+	((comp-decl ,specl (comp-decl-list . ,declrs))
+	 (loop specl declrs (cdr fields)))
+	((comp-decl ,specl ,declr)
+	 (loop specl (list declr) (cdr fields)))
+	(,_ (sferr "missed in cxeval,find-fields") #f)))
      (else #f))))
 
+(define (lookup-type-field udecl name)
+  (sx-match udecl
+    ((type-name (decl-spec-list (type-spec (struct-def ,field-list))) ,declr)
+     (let* ((field-list (clean-field-list field-list)))
+       (find-field (sx-tail field-list) name)))
+    ((type-name (decl-spec-list (type-spec (union-def ,field-list))) ,declr)
+     'xxx)
+    (,_ #f)))
+
 (define* (eval-typeof-expr expr #:optional (udict '()))
-  (sferr "eval-typeof-expr :\n") (pperr expr)
+
+  (define (typeof-expr expr)
+    (sferr "typeof-expr :\n") (pperr expr)
+    (sx-match expr
+      ((ident ,name)
+       (let* ((udecl (assoc-ref udict name))
+	      (specl (sx-ref udecl 1))
+	      (declr (sx-ref udecl 2)))
+	 `(type-name ,specl ,declr)))
+      ((d-sel (ident ,name) ,expr)
+       (let* ((udecl (typeof-expr expr)) ;; must be aggr
+	      (xdecl (expand-typerefs udecl udict))
+	      ;;(udecl (lookup-aggr-field flds name))
+	      ;;(flds (sx-match xdecl
+	      (fld (lookup-type-field xdecl name))
+	      )
+	 (sferr "eval-type-expr:\n") (pperr fld) (quit)
+	 #f))
+      ((i-sel (ident ,name) ,expr)
+       (let* ((type (eval-typeof-expr expr udict)) ;; must be aggr
+	      (flds (sx-find 'fields type))
+	      )
+	 #f))
+      (,_ #f)))
+
   (unless (eq? (sx-tag expr) 'typeof-expr)
     (throw 'c99-error "eval-typeof-expr: bad arg: ~S" (list expr)))
-  (sx-match (sx-ref expr 1)
-    ((ident ,name)
-     (let* ((udecl (assoc-ref udict name))
-	    (specl (sx-ref udecl 1))
-	    (declr (sx-ref udecl 2)))
-       `(type-name ,specl ,declr)))
-    ((d-sel (ident ,name) ,expr)
-     (let* ((type (eval-typeof-expr expr udict)) ;; must be aggr
-	    (flds (sx-find 'fields type))
-	    )
-       #f))
-    ((i-sel (ident ,name) ,expr)
-     (let* ((type (eval-typeof-expr expr udict)) ;; must be aggr
-	    (flds (sx-find 'fields type))
-	    )
-       #f))
-    (,_ #f)))
+  (let ((res (typeof-expr (sx-ref expr 1))))
+    (sferr "res:\n") (pperr res)
+    res)
+  )
 (export eval-typeof-expr)
 
 ;; =============================================================================

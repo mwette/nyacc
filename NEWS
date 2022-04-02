@@ -6,7 +6,11 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 202X-XX-XX  V1.07.0
-	* 
+	* updated examples/ffi/hdf5.ffi
+	* created examples/ffi/wayland-client.ffi
+	* ffi-help.scm: set ffi:long-long based on __LONG_LONG_WIDTH__
+	* ffi-help-rt.scm,fh:pointer: set! arg can be pointer or string also
+	* ffi-help-rt.scm: added fh-object-addr to return address
 
 2022-04-02  V1.06.8
 	* munge.scm: fix canize-enum-def-list

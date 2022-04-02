@@ -578,7 +578,7 @@
     (pp (find-offsets mtail udict))
     0))
 
-(when #f
+(when #t
   (let* ((code
 	  (string-append
 	   "typedef struct { int m; double b[N2]; } bar_t;\n"
@@ -626,4 +626,20 @@
     (pp udecl)
     (sf "evaluate:\n")
     (sf "x = ~S\n" (eval-c99-cx expr))))
+
+(when #f
+  (let* ((code
+	  (string-append
+	   "typedef enum let { A = 1, B = 2 } let_t;\n"
+	   "typedef struct { double x; let_t y; } foo_t;\n"
+	   ;;"int res = sizeof(foo_t);\n"
+	   ))
+	 (tree (parse-string code))
+	 (udict (c99-trans-unit->udict tree))
+	 (foo-t '(type-name
+		  (decl-spec-list (type-spec (typename "foo_t")))))
+	 )
+    (pp (find-types foo-t udict '("let_t")))
+    0))
+
 ;; --- last line ---
