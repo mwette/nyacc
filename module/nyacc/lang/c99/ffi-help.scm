@@ -455,7 +455,7 @@
        `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
 
       ;; bs does not support function pointers, but fh does now
-      (((function-returning . (param-list . ,params) . ,tail)
+      (((function-returning (param-list . ,params)) . ,tail)
        `(fh:function ,(mtail->bs-desc tail)
 		     (list ,@(gen-bs-decl-params params))))
       (((pointer-to) (function-returning (param-list . ,params)) . ,tail)
