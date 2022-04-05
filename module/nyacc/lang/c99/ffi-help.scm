@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2016-2021 Matthew R. Wette
+;; Copyright (C) 2016-2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -454,11 +454,13 @@
       (((pointer-to) (float-type ,fx-name))
        `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
 
-      ;; bs does not support function pointers
-      (((function-returning . ,rest) . ,rest)
-       `(fh:pointer 'void))
-      (((pointer-to) (function-returning . ,rest) . ,rest)
-       `(fh:pointer 'void))
+      ;; bs does not support function pointers, but fh does now
+      (((function-returning . (param-list . ,params) . ,tail)
+       `(fh:function ,(mtail->bs-desc tail)
+		     (list ,@(gen-bs-decl-params params))))
+      (((pointer-to) (function-returning (param-list . ,params)) . ,tail)
+       `(fh:function ,(mtail->bs-desc tail)
+		     (list ,@(gen-bs-decl-params params))))
       (((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
        `(fh:pointer 'void))
 
