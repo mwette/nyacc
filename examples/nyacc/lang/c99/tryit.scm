@@ -645,39 +645,29 @@
 (when #f
   (let* ((code "
 typedef struct _GObjectClass {
-/*
-  struct { unsigned long g_type; } g_type_class;
- */
   void *construct_properties;
   void *(*constructor)(unsigned long type, unsigned int n_construct_properties
       , void *construct_properties);
-/*
-  void (*set_property)(void *object, unsigned int property_id, const void *
-      value, void *pspec);
-  void (*get_property)(void *object, unsigned int property_id, void *value, 
-      void *pspec);
-  void (*dispose)(void *object);
-  void (*finalize)(void *object);
-  void (*dispatch_properties_changed)(void *object, unsigned int n_pspecs, void
-       **pspecs);
-  void (*notify)(void *object, void *pspec);
-  void (*constructed)(void *object);
-  unsigned long flags;
-  void *pdummy[6];
- */
 } GObjectClass;
+")
+	 (code "
+struct foo
+{
+        void bar(void);
+};
 ")
 	 (tree (parse-string code))
 	 (tree (remove-comments tree))
 	 (udict (c99-trans-unit->udict tree))
 	 ;;(udecl (assoc-ref udict "GObjectClass"))
-	 (udecl (assoc-ref udict '(struct . "_GObjectClass")))
+	 ;;(udecl (assoc-ref udict '(struct . "_GObjectClass")))
+	 (udecl (assoc-ref udict '(struct . "foo")))
 	 (fdecl (fh-cnvt-udecl udecl udict))
 	 (sdecl (with-input-from-string fdecl read))
 	 )
     ;;(pp udecl)
-    ;;(display fdecl)
-    (pp sdecl)
+    (display fdecl)
+    ;;(pp sdecl)
     0))
 
 ;; --- last line ---
