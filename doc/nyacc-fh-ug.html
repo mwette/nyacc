@@ -1,5 +1,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
+<!-- Created by GNU Texinfo 6.8, https://www.gnu.org/software/texinfo/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!-- Copyright (C) 2017-2021 - Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
@@ -7,9 +10,6 @@ under the terms of the GNU Free Documentation License, Version 1.3 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC. -->
-<!-- Created by GNU Texinfo 6.7, http://www.gnu.org/software/texinfo/ -->
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>FFI Helper&rsquo;s Guide</title>
 
 <meta name="description" content="FFI Helper&rsquo;s Guide">
@@ -17,15 +17,19 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <meta name="resource-type" content="document">
 <meta name="distribution" content="global">
 <meta name="Generator" content="texi2any">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
 <link href="#Top" rel="start" title="Top">
 <link href="dir.html#Top" rel="up" title="(dir)">
+<link href="#Introduction" rel="next" title="Introduction">
+<link href="dir.html#Top" rel="prev" title="(dir)">
 <style type="text/css">
 <!--
+a.copiable-anchor {visibility: hidden; text-decoration: none; line-height: 0em}
 a.summary-letter {text-decoration: none}
 blockquote.indentedblock {margin-right: 0em}
 div.display {margin-left: 3.2em}
 div.example {margin-left: 3.2em}
-div.lisp {margin-left: 3.2em}
 kbd {font-style: oblique}
 pre.display {font-family: inherit}
 pre.format {font-family: inherit}
@@ -34,6 +38,7 @@ pre.menu-preformatted {font-family: serif}
 span.nolinebreak {white-space: nowrap}
 span.roman {font-family: initial; font-weight: normal}
 span.sansserif {font-family: sans-serif; font-weight: normal}
+span:hover a.copiable-anchor {visibility: visible}
 ul.no-bullet {list-style: none}
 -->
 </style>
@@ -51,10 +56,11 @@ ul.no-bullet {list-style: none}
 <pre class="format">FFI Helper User Guide
 Matt Wette
 Sepember 2021
-With NYACC Version 1.06.8
+With NYACC Version 1.07.0
 </pre></div>
 
-<span id="Top"></span><div class="header">
+<div class="top" id="Top">
+<div class="header">
 <p>
 Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
 </div>
@@ -342,16 +348,16 @@ Reference Manual.  For more info on libffi internals visit
 </p>
 <p>The relevant procedures used by the FH are
 </p><dl compact="compact">
-<dt><code>dynamic-link</code></dt>
+<dt><span><code>dynamic-link</code></span></dt>
 <dd><p>links libraries into Guile session
 </p></dd>
-<dt><code>dynamic-func</code></dt>
+<dt><span><code>dynamic-func</code></span></dt>
 <dd><p>generated Scheme-level pointer to a C function
 </p></dd>
-<dt><code>pointer-&gt;procedure</code></dt>
+<dt><span><code>pointer-&gt;procedure</code></span></dt>
 <dd><p>geneates a Scheme lambda given C function signature
 </p></dd>
-<dt><code>dynamic-pointer</code></dt>
+<dt><span><code>dynamic-pointer</code></span></dt>
 <dd><p>provides access to global C variables
 </p></dd>
 </dl>
@@ -522,36 +528,36 @@ information on this datatype.
 <p>The following routines are user-level procedures provided by the
 runtime module <code>(system ffi-help-rt)</code>:
 </p><dl compact="compact">
-<dt><code>fh-type?</code></dt>
+<dt><span><code>fh-type?</code></span></dt>
 <dd><p>a predicate to indicate whether an object is a FH type
 </p></dd>
-<dt><code>fh-object?</code></dt>
+<dt><span><code>fh-object?</code></span></dt>
 <dd><p>a predicate to indicate whether an object is a FH object
 </p></dd>
-<dt><code>fh-object-val</code></dt>
+<dt><span><code>fh-object-val</code></span></dt>
 <dd><p>the underlying bytestructure value
 </p></dd>
-<dt><code>fh-object-ref</code></dt>
+<dt><span><code>fh-object-ref</code></span></dt>
 <dd><p>a procedure that works like <code>bytestructure-ref</code> on the underlying
 object
 </p></dd>
-<dt><code>fh-object-set!</code></dt>
+<dt><span><code>fh-object-set!</code></span></dt>
 <dd><p>a procedure that works like <code>bytestructure-set!</code> on the underlying
 object
 </p></dd>
-<dt><code>pointer-to</code></dt>
+<dt><span><code>pointer-to</code></span></dt>
 <dd><p>a procedure, given a FH object, or a bytestructure, that returns an
 associated pointer object (i.e., a pointer type whose object value is
 the address of the underlying argument); this may be a FH type or a
 bytestructure
 </p></dd>
-<dt><code>value-at</code></dt>
+<dt><span><code>value-at</code></span></dt>
 <dd><p>a procedure to dereference an object
 </p></dd>
-<dt><code>fh-cast</code></dt>
+<dt><span><code>fh-cast</code></span></dt>
 <dd><p>a procedure to cast arguments for varaidic C functions
 </p></dd>
-<dt><code>make-<i>type</i></code></dt>
+<dt><span><code>make-<i>type</i></code></span></dt>
 <dd><p>make base type, as listed below; also used to make bytestructure
 objects for base types (e.g., <code>(make-double)</code> for <code>double</code>)
 </p></dd>
@@ -568,7 +574,7 @@ objects for base types (e.g., <code>(make-double)</code> for <code>double</code>
 </table>
 <p>These types are useful for cases where the corresponding types are
 passed by reference as return types.  For example
-</p><div class="lisp">
+</p><div class="example lisp">
 <pre class="lisp">(let ((name (make-char*)))
   (some_function (pointer-to name))
   (display &quot;name: &quot;) (display (char*-&gt;string name)) (newline))
@@ -596,18 +602,18 @@ passed by reference as return types.  For example
 </pre></div>
 
 <dl compact="compact">
-<dt><code>#:pkg-config</code></dt>
+<dt><span><code>#:pkg-config</code></span></dt>
 <dd><p>This option take a single string argument which provides the name used
 for the <em>pkg-config</em> program.  Try <code>man pkg-config</code>.
 </p></dd>
-<dt><code>#:include</code></dt>
+<dt><span><code>#:include</code></span></dt>
 <dd><p>This form, with expression argument, indicates the list of include
 files to be processed at the top level.  Without use of the
 <code>#:inc-filter</code> form, only declarations in these files will be
 output.  To constrain the set of declarations output use the
 <code>#:decl-filter</code> form.
 </p></dd>
-<dt><code>#:inc-filter</code></dt>
+<dt><span><code>#:inc-filter</code></span></dt>
 <dd><p>This form, with predicate procedure argument taking the form
 <code>(proc file-spec path-spec)</code>, is used to indicate which includes
 beyond the top-level should have processed declarations emitted in the
@@ -616,43 +622,43 @@ output.  The <code>file-spec</code> argument is a string as parsed from
 quotes (e.g., <code>&quot;&lt;stdio.h&gt;&quot;</code>, <code>&quot;\&quot;foo.h\&quot;&quot;</code>).  The
 <code>path-spec</code> is the full path to the file.
 </p></dd>
-<dt><code>#:use-ffi-module</code></dt>
+<dt><span><code>#:use-ffi-module</code></span></dt>
 <dd><p>This form, with literal module-type argument (e.g., <code>(ffi
 glib)</code>), indicates dependency on declarations from another processed
 ffi module.  For example, the ffi-module for <code>(ffi gobject)</code>
 includes the form <code>#:use-ffi-module (ffi glib)</code>.
 </p></dd>
-<dt><code>#:decl-filter</code></dt>
+<dt><span><code>#:decl-filter</code></span></dt>
 <dd><p>This form, with a predicate procedure argument, is used to restrict
 which declarations should be processed for output.  The single
 argument is either a string or a pair.  The string form is used for
 simple identifiers and the pair is used for struct, union and enum
 forms from the C code (e.g., <code>(struct . &quot;foo&quot;)</code>).
 </p></dd>
-<dt><code>#:library</code></dt>
+<dt><span><code>#:library</code></span></dt>
 <dd><p>This form, with a list of strings, indicates which (shared object)
 libraries need to be loaded.  The formmat of each string in the list
 should be as provided to the <code>dynamic-link</code> form in Guile.
 </p></dd>
-<dt><code>#:renamer</code></dt>
+<dt><span><code>#:renamer</code></span></dt>
 <dd><p>todo
 </p></dd>
-<dt><code>#:cpp-defs</code></dt>
+<dt><span><code>#:cpp-defs</code></span></dt>
 <dd><p>This form, with a list of strings, provides extra C preprodessor
 definitions to be used in processing the header files.  The defines
 take the form <code>&quot;SYM=</code><var>val</var><code>&quot;</code>.
 </p></dd>
-<dt><code>#:inc-dirs</code></dt>
+<dt><span><code>#:inc-dirs</code></span></dt>
 <dd><p>This form, with a list of strings, provides extra directories
 in which to search for include files.
 </p></dd>
-<dt><code>#:inc-help</code></dt>
+<dt><span><code>#:inc-help</code></span></dt>
 <dd><p>todo
 </p></dd>
-<dt><code>#:api-code</code></dt>
+<dt><span><code>#:api-code</code></span></dt>
 <dd><p>todo
 </p></dd>
-<dt><code>#:def-keepers</code></dt>
+<dt><span><code>#:def-keepers</code></span></dt>
 <dd><p>This form, with a list of strings, provides extra (non-function) C
 preprocessor macro definitions that should be included in the output.
 </p></dd>
@@ -696,8 +702,8 @@ preprocessor macro definitions that should be included in the output.
 
 <p>Work to go here:
 </p>
-<dl>
-<dt id="index-load_002dinclude_002dfile">Procedure: <strong>load-include-file</strong> <em>filename [#pkg-config pkg]</em></dt>
+<dl class="def">
+<dt id="index-load_002dinclude_002dfile"><span class="category">Procedure: </span><span><strong>load-include-file</strong> <em>filename [#pkg-config pkg]</em><a href='#index-load_002dinclude_002dfile' class='copiable-anchor'> &para;</a></span></dt>
 <dd><p>This is the functionality that Ludo was asking for: to be at guile
 prompt and be able to issue
 </p><div class="example">
@@ -821,7 +827,7 @@ own types or echo the typedefs from the package headers
 
 <p>When I see this I check the scm file and see one of many things
 </p><dl compact="compact">
-<dt><code>(fht-unwrap GtkAllocation*)</code></dt>
+<dt><span><code>(fht-unwrap GtkAllocation*)</code></span></dt>
 <dd><p>This usually means that <code>GtkAllocation</code> was somehow defined
 but not the pointer type.
 </p></dd>
@@ -835,19 +841,19 @@ but not the pointer type.
 </p> 
 <p><code>define-ffi-module</code> options:
 </p><dl compact="compact">
-<dt><code>#:decl-filter proc</code></dt>
+<dt><span><code>#:decl-filter proc</code></span></dt>
 <dd><p>proc is a prodicate taking a key of the form <code>&quot;name&quot;</code>,
 <code>(struct . &quot;name&quot;)</code>, <code>(union . &quot;name&quot;)</code> or <code>(enum . &quot;name&quot;)</code>.
 </p></dd>
-<dt><code>#:inc-filter proc</code></dt>
-<dt><code>#:include expr</code></dt>
+<dt><span><code>#:inc-filter proc</code></span></dt>
+<dt><span><code>#:include expr</code></span></dt>
 <dd><p>expr is string or list or procecure that evaluates to string or list
 </p></dd>
-<dt><code>#:library expr</code></dt>
+<dt><span><code>#:library expr</code></span></dt>
 <dd><p>expr is string or list or procecure that evaluates to string or list
 </p></dd>
-<dt><code>#:pkg-config string</code></dt>
-<dt><code>#:renamer proc</code></dt>
+<dt><span><code>#:pkg-config string</code></span></dt>
+<dt><span><code>#:renamer proc</code></span></dt>
 <dd><p>procdure
 </p></dd>
 </dl>
@@ -899,14 +905,14 @@ with NYACC&rsquo;s C99 parser.  There is no such thing as a working C standard.
 <span id="Work-to-Go"></span><h3 class="heading">Work to Go</h3>
 
 <dl compact="compact">
-<dt>02</dt>
+<dt><span>02</span></dt>
 <dd><p>if need foo_t pointer then I gen wrapper for foo_t* but add
 foo_t to *wrappers* so if I later run into need for foo_t may be prob
 </p></dd>
-<dt>03</dt>
+<dt><span>03</span></dt>
 <dd><p>allow user to specify #:renamer (lambda (n) &quot;make_goo&quot; =&gt; &quot;make-goo&quot;)
 </p></dd>
-<dt>04</dt>
+<dt><span>04</span></dt>
 <dd><p>Now the hard part if we want to reference other ffi-modules for types
 or other c-routines.  Say ffi-module foo defines foo_t
 now in ffi-module bar we want to reference, but redefine, foo_t
@@ -915,15 +921,15 @@ now in ffi-module bar we want to reference, but redefine, foo_t
 (define-ffi-module (cairo cairo-svg) #:use-ffi-module (cairo cairo)
 </pre></div>
 </dd>
-<dt>05</dt>
+<dt><span>05</span></dt>
 <dd><p>Should setters for <code>bs:struct</code> enum fields check for symbolic
 arg?
 </p></dd>
-<dt>06</dt>
+<dt><span>06</span></dt>
 <dd><p>Use guardians for <code>cairo_destroy</code> and
 <code>cairo_surface_destroy</code>?
 </p></dd>
-<dt>07</dt>
+<dt><span>07</span></dt>
 <dd><p>What about vectors? If <code>foo(foo_t x[]</code>,
 </p><ol>
 <li> user must make vector of foo_t
@@ -934,7 +940,7 @@ arg?
 
 <span id="Completed"></span><h4 class="subheading">Completed</h4>
 <dl compact="compact">
-<dt>01</dt>
+<dt><span>01</span></dt>
 <dd><div class="example">
 <pre class="example">enum-wrap 0 =&gt; 'CAIRO_STATUS_SUCCESS
 enum-unwrap 'CAIRO_STATUS_SUCCESS =&gt; 0
@@ -985,7 +991,7 @@ any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC.
 </p>
-<hr>
+</div>
 
 
 
