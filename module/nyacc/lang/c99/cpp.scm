@@ -160,6 +160,7 @@
 	(let loop ((args '()) (la (skip-il-ws (read-char))))
 	  (cond
 	   ((eq? la #\)) (reverse args))
+           ((read-c-comm la) (loop args (skip-il-ws (read-char))))
 	   ((read-c-ident la) =>
 	    (lambda (arg) (loop (cons arg args) (skip-il-ws (read-char)))))
 	   ((read-ellipsis la) =>
