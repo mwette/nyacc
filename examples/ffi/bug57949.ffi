@@ -1,0 +1,7 @@
+(define-ffi-module (ffi bug57949)
+  #:api-code "
+struct foo {
+  void bar(void);
+};
+")
+ 
