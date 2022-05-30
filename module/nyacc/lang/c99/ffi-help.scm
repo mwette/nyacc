@@ -114,6 +114,7 @@
 (set! fh-inc-dirs (cons "." fh-inc-dirs))
 
 ;; maybe change to a record-type
+(define *BS-version* 1)
 (define *options* (make-parameter '()))
 (define *debug-parse* (make-parameter #f)) ; parse debug mode
 (define *show-incs* (make-parameter #f))   ; show include directories
@@ -172,6 +173,9 @@
       (apply throw 'ffi-help-error fmt args)))))
 
 ;; === utilities
+
+(define (sfstr fmt . args)
+  (apply simple-format #f fmt args))
 
 (define (make-arg-namer)
   (let ((ix 0))
@@ -335,15 +339,15 @@
 	  (list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries))))))
     (sfscm "\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))
-    ;;
-    (ppscm
+    ;; moved to (system ffi-help-rt)
+    #;(ppscm
      '(cond-expand
        (guile-2.2)
        (guile-2
 	(define intptr_t long)
 	(define uintptr_t unsigned-long))
        (guile)))
-    (sfscm "\n")))
+    #;(sfscm "\n")))
 
 ;; === type conversion ==============
 
@@ -595,23 +599,38 @@
 	     (cons (expand-typerefs pair udict defined) seed))
 	   '() (clean-and-unitize-fields (cdr field-list))))))
 
+;; Convert field list for bytestructures
 ;; field-list is (field-list . ,fields)
-;;(define (cnvt-field-list field-list)
 (define-public (cnvt-field-list field-list)
 
+  (define (x-acons-defn name type seed)
+    (cons (eval-string (sfstr "(quote `(~A ,~S))" name type)) seed))
+
   (define (acons-defn name type seed)
-    (cons (eval-string (simple-format #f "(quote `(~A ,~S))" name type)) seed))
+    (cons
+     (eval-string
+      (if (string=? name "@")           ; dirty sol'n for BS v2 anon unions
+          (sfstr "(quote `(~S ,~S))"
+                 (case (car type) ((bs:struct) 'struct) ((bs:union) 'union))
+                 (cadr type))
+          (sfstr "(quote `(~A ,~S))" name type)))
+     seed))
 
   (define (acons-bfld name type seed)	; bit-field
     (let ((size (list-ref type 1)) (type (list-ref type 2)))
-      (cons (eval-string
-	     (simple-format #f "(quote `(~A ,~S ~A))" name type size)) seed)))
+      (cons (eval-string (sfstr "(quote `(~A ,~S ~A))" name type size)) seed)))
 
-  (define anon-namer
+  (define anon-namer-1                  ; for BS v1 (a workaround)
     (let ((ix 0))
       (lambda ()
 	(set! ix (1+ ix))
 	(string-append "_" (number->string ix)))))
+
+  (define anon-namer-2                  ; for BS v2 (see BS issue #43)
+    (lambda () "@"))
+
+  (define anon-namer
+    (case *BS-version* ((1) anon-namer-1) ((2) anon-namer-2)))
 
   (define (unitize decl seed)
     (dictize-comp-decl decl seed #:namer anon-namer))

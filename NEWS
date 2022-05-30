@@ -16,6 +16,8 @@ without any warranty.
 	* 62546: c99 parser handles comments in function macro arg list
 	* 59374: FH structs with anon array, see examples/ffi/bug59374.ffi
 	* 59949: FH structs with functions: translate to functions
+	* 62120: bytestructures 2.0 syntax for anon-structs and unions
+	  (requires *BS-version* set to 2 in nyacc/lang/c99/ffi-help.scm)
 
 2022-04-02  V1.06.8
 	* munge.scm: fix canize-enum-def-list

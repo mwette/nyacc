@@ -1,0 +1,16 @@
+(define-ffi-module (ffi bug62120)
+  #:api-code "
+struct foo {
+   int a;
+   union {
+     int b;
+     int c;
+   };
+   union {
+     int d;
+     int e;
+   };
+   int f;
+};
+")
+ 
