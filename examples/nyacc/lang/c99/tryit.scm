@@ -1,6 +1,6 @@
 ;; examples/nyacc/lang/c99/tryit.scm
 
-;; Copyright (C) 2020-2021 Matthew R. Wette
+;; Copyright (C) 2020-2022 Matthew R. Wette
 ;; 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -642,20 +642,14 @@
     (pp (find-types foo-t udict '("let_t")))
     0))
 
+;; bug 57949
 (when #f
   (let* ((code "
 typedef struct _GObjectClass {
   void *construct_properties;
   void *(*constructor)(unsigned long type, unsigned int n_construct_properties
-      , void *construct_properties);
-} GObjectClass;
-")
-	 (code "
-struct foo
-{
-        void bar(void);
-};
-")
+      , void *construct_properties); } GObjectClass;\n")
+	 (code "struct foo { void bar(void); };\n")
 	 (tree (parse-string code))
 	 (tree (remove-comments tree))
 	 (udict (c99-trans-unit->udict tree))
@@ -668,6 +662,13 @@ struct foo
     ;;(pp udecl)
     (display fdecl)
     ;;(pp sdecl)
+    0))
+
+;; bug 62546
+(when #f
+  (let* ((code "#define FOO(/*hello*/X) (X)\nint x = FOO(1);\n")
+	 (tree (parse-string code)))
+    (pp tree)
     0))
 
 ;; --- last line ---
