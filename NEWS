@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-202X-XX-XX  V1.07.0
+2022-05-30  V1.07.0
 	* updated examples/ffi/hdf5.ffi
 	* created examples/ffi/wayland-client.ffi
 	* created examples/ffi/pty.ffi
