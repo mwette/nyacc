@@ -7,6 +7,8 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
+;; libgumbo is a HTML5 parser.  see github.com/google/gumbo
+
 (define-ffi-module (ffi gumbo)
   #:pkg-config "gumbo"
   #:include '("gumbo.h"))

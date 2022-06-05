@@ -22,10 +22,14 @@
 	      ;;"cairo-gobject.h"
 	      "cairo-pdf.h"
 	      ;;"cairo-ps.h"
-	      ;;"cairo-quartz-image.h"
 	      ;;"cairo-quartz.h"
+	      ;;"cairo-quartz-image.h"
+	      ;;"cairo-script.h"
+	      ;;"cairo-script-interpreter.h"
 	      "cairo-svg.h"
 	      ;;"cairo-tee.h"
+	      ;;"cairo-xcb.h"
+	      ;;"cairo-xlib.h"
 	      ;;"cairo-xml.h"
 	      )
   ;;#:renamer (lambda (name)
