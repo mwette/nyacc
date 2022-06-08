@@ -177,6 +177,11 @@
 (define (sfstr fmt . args)
   (apply simple-format #f fmt args))
 
+(define (ppstr exp)
+  (call-with-output-string
+    (lambda (port)
+      (pretty-print exp port #:per-line-prefix "  "))))
+
 (define (make-arg-namer)
   (let ((ix 0))
     (lambda ()
@@ -494,9 +499,8 @@
       (((extern) . ,rest) (mtail->bs-desc rest))
       
       (,otherwise
-       (sferr "mtail->bs-desc missed mdecl:\n")
-       (pperr mdecl-tail)
-       (fherr "mtail->bs-desc failed")))))
+       (fherr "mtail->bs-desc missed:\n~A" (ppstr mdecl-tail))))))
+
 
 
 ;; --- output routines ---------------
@@ -723,7 +727,7 @@
   (sfscm "  (cond\n")
   (sfscm "   ((symbol? n)\n")
   (sfscm "    (or (assq-ref ~A-enum-nvl n)\n" name)
-  (sfscm "        (throw 'ffi-help-error \"bad arg: ~A\" n)))\n")
+  (sfscm "        (throw 'ffi-help-error \"bad arg: ~~A\" n)))\n")
   (sfscm "   ((integer? n) n)\n")
   (sfscm "   (else (error \"bad arg\"))))\n")
   (sfscm "(define-public (wrap-~A v)\n" name)
@@ -913,8 +917,7 @@
      (mtail->ffi-desc `((union-def ,field-list))))
     
     (,otherwise
-     (sferr "mtail->ffi-desc missed:\n") (pperr mdecl-tail)
-     (fherr "mtail->ffi-desc missed: ~S" mdecl-tail))))
+     (fherr "mtail->ffi-desc missed:\n~A" (ppstr mdecl-tail)))))
 
 ;; Return a mdecl for the return type.  The variable is called @code{NAME}.
 (define (gen-decl-return udecl)
@@ -1071,8 +1074,8 @@
       (((array-of) . ,rest) 'unwrap~array)
 
       (,otherwise
-       (sferr "mdecl->fh-unwrapper missed:\n") (pperr mdecl)
-       (fherr "mdecl->fh-unwrapper missed: ~S" mdecl)))))
+       (fherr "mdecl->fh-unwrapper missed:\n~A" (ppstr (cdr mdecl)))))))
+
 
 (define (mdecl->fh-wrapper mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
@@ -1123,7 +1126,9 @@
 
       (((pointer-to) . ,otherwise) #f)
 
-      (,otherwise (fherr "mdecl->fh-wrapper missed: ~S" mdecl)))))
+      (,otherwise
+       (fherr "mdecl->fh-wrapper missed:\n~A" (ppstr (cdr mdecl)))))))
+
 
 ;; given list of name-unwrap pairs generate function arg names
 (define (gen-exec-arg-names params)
@@ -1898,9 +1903,7 @@
       ;; === missed =====================
 
       (,otherwise
-       (sferr "ffi-help/cnvt-udecl missed:\n")
-       (pretty-print-c99 clean-udecl)
-       (pperr clean-udecl)
+       (fherr "ffi-help/cnvt-udecl missed:\n~A" (ppstr clean-udecl))
        (values wrapped defined)))))
 
 
