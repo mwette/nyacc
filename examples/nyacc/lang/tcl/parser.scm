@@ -45,6 +45,7 @@
   #:use-module (sxml match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
   #:use-module (ice-9 match))
+(use-modules (jtd))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
@@ -116,7 +117,9 @@
 (define (read-command port)
   ;; This is a bit of a hack job.
   (letrec
-      ((error
+      ((srcf (port-filename port))
+
+       (error
 	(lambda (fmt . args)
 	  (with-input-from-port port
 	    (lambda () (apply report-error port fmt args)))))
@@ -140,6 +143,7 @@
 
        (read-cmmd
 	(lambda (end-cs)
+          ;;(define srcprop ((source-line (skip-ws port)))
 	  (db "C: read-cmmd end-cs=~S\n" end-cs)
 	  (let loop ((wordl '()) (ch (skip-ws port)))
 	    (db "C: wordl=~S ch=~S\n" wordl ch)
@@ -202,7 +206,10 @@
 	    (cond
 	     ((eq? frag end-cs)
 	      (db "W:   done\n")
-	      (cons 'word (reverse fragl)))
+              (let* ((tail (reverse fragl)) (word (cons 'word tail)))
+                (when (pair? tail)
+                  (set-source-properties! word (source-properties (car tail))))
+                word))
 	     (else
 	      (loop (cons frag fragl) (read-frag end-cs)))))))
 
@@ -256,20 +263,30 @@
        (read-vref
 	(lambda ()
 	  (let* ((frag (read-frag cs:vt))
-		 (frag (sx-ref frag 1)) ; extract string value
+		 (iden (sx-ref frag 1)) ; extract string value
 		 (ch1 (peek-char port))
 		 (indx (cond ((eof-object? ch1) #f)
 			     ((char=? ch1 #\() #t)
-			     (else #f))))
-	    (db "$frag=~S ch1=~S\n" frag ch1)
-	    (if indx
-		      `(deref-indexed ,frag ,(cadr (read-index)))
-		      `(deref ,frag)))))
+			     (else #f)))
+                 (res (if indx
+		          `(deref-indexed ,iden ,(cadr (read-index)))
+		          `(deref ,iden))))
+	    (db "$frag ~S ch1=~S\n" iden ch1)
+            ;;(set-source-properties! res (source-properties frag))
+            res)))
 
        (init-blev			; initial brace level
 	(lambda (end-cs) (if (eq? end-cs cs:rcurly) 1 0)))
-       
+
        (read-frag
+        (lambda (end-cs)
+          (let* ((srcl (port-line port))
+                 (frag (read-frag-1 end-cs)))
+            (unless (eq? end-cs frag)
+              (set-source-properties! frag `((line . ,srcl) (filename . ,srcf))))
+            frag)))
+        
+       (read-frag-1
 	(lambda (end-cs)
 	  (db "\n== read frag, until ~S\n" end-cs)
 	  (let loop ((tag #f)		     ; tag: string etc
@@ -313,6 +330,8 @@
       (cond
        ((eof-object? nxt))
        ((char-set-contains? cs:ct nxt) (read-char port)))
+      (unless (eof-object? cmd)
+        (set-source-properties! cmd (source-properties (cadr cmd))))
       cmd)
     ;; or (swallow (read-cmmd cs:ct))
     ))
