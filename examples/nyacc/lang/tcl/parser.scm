@@ -44,15 +44,13 @@
   #:use-module (nyacc lang sx-util)
   #:use-module (sxml match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
-  #:use-module (ice-9 match)
-  )
-(use-modules (jtd))
+  #:use-module (ice-9 match))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define (zf fmt . args) #f)
-(define db sf)
+(define db zf)
 
 (define (echo obj)
   (sf " ~S\n" obj)
@@ -242,10 +240,6 @@
 	  (if (char=? (peek-char port) #\() (read-char port))
 	  (let ((word (read-word cs:rparen)))
 	    (db "index word=~S\n" word)
-            (if (eof-object? (peek-char port))
-                (let ((fi (port-filename port))
-                      (li (port-line port)))
-                  (jump-to-debugger)))
 	    (if (not (char=? #\) (read-char port))) (error "coding error"))
 	    `(index . ,(foldin word '())))))
        
