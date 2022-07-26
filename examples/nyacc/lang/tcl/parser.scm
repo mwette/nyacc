@@ -17,7 +17,7 @@
 
 ;;; Notes:
 
-;; TODO: be more agressive to parse 123 as fixed and 567.0 as float.
+;; TODO: be more aggressive to parse 123 as fixed and 567.0 as float.
 ;; We can convert to string later.
 
 ;; args string => (arg-list (arg "abc") (opt-arg "def" "123") (rest "args"))
@@ -46,12 +46,13 @@
   #:use-module ((srfi srfi-1) #:select (fold-right))
   #:use-module (ice-9 match)
   )
+(use-modules (jtd))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define (zf fmt . args) #f)
-(define db zf)
+(define db sf)
 
 (define (echo obj)
   (sf " ~S\n" obj)
@@ -107,6 +108,12 @@
   (throw 'tcl-error))
 
 (define noop-command '(command (string "NOOP")))
+
+;; A command is a sequence of words.
+;; A word is a sequence of fragments.
+
+;; BUG in read-frag? if ending found two levels deep need to pop two levels ??
+;; in read-frag: maybe tagged as string when should not be
 
 (define (read-command port)
   ;; This is a bit of a hack job.
@@ -211,7 +218,8 @@
        (swallow
 	(lambda (val)
 	  (db "swallow ")
-	  (read-char port) val))
+	  (read-char port)
+          val))
 
        (read-brace
 	(lambda ()
@@ -233,7 +241,11 @@
 	  ;;(if (not (char=? #\( (read-char port))) (error "coding error"))
 	  (if (char=? (peek-char port) #\() (read-char port))
 	  (let ((word (read-word cs:rparen)))
-	    ;;(sf "index word=~S\n" word)
+	    (db "index word=~S\n" word)
+            (if (eof-object? (peek-char port))
+                (let ((fi (port-filename port))
+                      (li (port-line port)))
+                  (jump-to-debugger)))
 	    (if (not (char=? #\) (read-char port))) (error "coding error"))
 	    `(index . ,(foldin word '())))))
        
@@ -265,14 +277,12 @@
        
        (read-frag
 	(lambda (end-cs)
-	  (db "\n== read frag ~S\n" end-cs)
+	  (db "\n== read frag, until ~S\n" end-cs)
 	  (let loop ((tag #f)		     ; tag: string etc
 		     (chl '())		     ; list of chars read
 		     (bl (init-blev end-cs)) ; brace level
 		     (ch (read-char port))) ; next char
 	    (db "F:     tag=~S ch=~S chl=~S bl=~S\n" tag ch chl bl)
-	    ;;(db "F:     tag=~S ch=~S chl=~S bl=~S end-cs=~S\n"
-		;;tag ch chl bl end-cs)
 	    (cond
 	     ((eof-object? ch)
 	      (if (positive? bl) (error "missing end-brace"))
@@ -289,15 +299,15 @@
  	      (if tag (finish tag chl ch) (read-vref)))
 	     ((char=? ch #\{)
 	      (read-brace))
-	     ((char=? ch #\()
+	     #;((char=? ch #\()
 	      (if tag (finish tag chl ch) (read-index)))
 	     ((char=? ch #\[)
-	      (if tag (finish tag chl ch))
-	      (swallow (read-cmmd cs:rs)))
+	      (if tag (finish tag chl ch)
+	          (swallow (read-cmmd cs:rs)))
+              )
 	     ((char=? ch #\")
 	      ;;(swallow (read-frag cs:dquote))
-	      (loop 'string chl bl (read-char port))
-	      )
+	      (loop 'string chl bl (read-char port)))
 	     (else
 	      (loop (or tag 'string) (cons ch chl) bl (read-char port)))))))
        )
@@ -324,6 +334,7 @@
    (call-with-input-string body
      (lambda (port)
        (let loop ((cmd (read-command port)))
+         ;;(pp cmd)
 	 (cond
 	  ((eof-object? cmd) '())
 	  ((null? (cdr cmd)) (loop (read-command port)))
@@ -486,11 +497,12 @@
      . ,(lambda (tree)
 	  ;;(sf "tree:\n") (pp tree) ;;(quit)
 	  ;;(sf "============\n")
-	  ;;(pp
 	  (sxml-match tree
 	    ((command (string "if") (string ,cnd) (string "then")
 		      (string ,bdy) . ,rest)
-	     ;;(sf "GOT IT\n") (quit)
+	     (sf "GOT IT\n")
+             (sf "~S\n" (fix-expr-string cnd))
+             (quit)
 	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
 		  . ,(cnvt-cond-tail rest)))
 	    ((command (string "if") (string ,cnd) (string ,bdy) . ,rest)
@@ -511,7 +523,7 @@
 	    (,_ (report-error "usage: proc name args body")))))
     ("return"
      . ,(lambda (tree)
-	  `(return ,(sx-ref tree 2))))
+	  `(return ,(or (sx-ref tree 2) ""))))
     ("set"
      . ,(lambda (tree)
 	  (sxml-match tree
