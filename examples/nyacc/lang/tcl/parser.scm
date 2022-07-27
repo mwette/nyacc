@@ -45,7 +45,6 @@
   #:use-module (sxml match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
   #:use-module (ice-9 match))
-(use-modules (jtd))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
@@ -103,7 +102,6 @@
   (let* ((port (current-input-port))
 	 (fn (or (port-filename port) "(unknown)"))
 	 (ln (1+ (port-line port))))
-    (jump-to-debugger)
     (apply simple-format (current-error-port) fmt args))
   (throw 'tcl-error))
 
@@ -144,7 +142,6 @@
 
        (read-cmmd
 	(lambda (end-cs)
-          ;;(define srcprop ((source-line (skip-ws port)))
 	  (db "C: read-cmmd end-cs=~S\n" end-cs)
 	  (let loop ((wordl '()) (ch (skip-ws port)))
 	    (db "C: wordl=~S ch=~S\n" wordl ch)
@@ -188,9 +185,7 @@
 	      (read-char port) ;; {
 	      (loop (cons (read-brace) wordl) (peek-char port)))
 
-	     ;;((eq? end-cs cs:nl)
 	     ((eq? end-cs cs:ct)
-	      ;;(let ((word (read-word cs:nl+ws)))
 	      (let ((word (read-word cs:ct+ws)))
 		(loop (foldin word wordl) (peek-char port))))
 	     
@@ -218,7 +213,6 @@
 	(lambda (tag chl ch)
 	  (db "F:     finish ~S ~S ~S\n" tag chl ch)
 	  (unless (eof-object? ch) (unread-char ch port))
-	  ;;(case tag ((string) (rls chl)) (else (list tag (rls chl))))))
 	  (list tag (rls chl))))
 
        (swallow
@@ -244,7 +238,6 @@
        
        (read-index
 	(lambda ()
-	  ;;(if (not (char=? #\( (read-char port))) (error "coding error"))
 	  (if (char=? (peek-char port) #\() (read-char port))
 	  (let ((word (read-word cs:rparen)))
 	    (db "index word=~S\n" word)
@@ -273,7 +266,7 @@
 		          `(deref-indexed ,iden ,(cadr (read-index)))
 		          `(deref ,iden))))
 	    (db "$frag ~S ch1=~S\n" iden ch1)
-            ;;(set-source-properties! res (source-properties frag))
+            (set-source-properties! res (source-properties frag))
             res)))
 
        (init-blev			; initial brace level
@@ -365,8 +358,6 @@
 
 ;; convert all words in an expr command to a single list of frags
 (define (splice-xtail tail)
-  ;;(sf "splice-xtail ~S\n" tail)
-  (if (null? tail) (jump-to-debugger))
   (let* ((blank `(string " "))
 	 (terms (fold-right
 		 (lambda (word terms)
@@ -382,7 +373,6 @@
 			  (cons term toks)
 			  (cons term toks))))
 		'() (cdr terms))))
-    ;;(sf "sxt ~S => ~S\n" tail toks)
     toks))
 
 ;; @deffn {Procedure} cnvt-args astr
@@ -589,7 +579,6 @@
 ;; (cnvt-tcl '(command (string "expr") ...)) => (expr ...)
 ;; @end example
 (define (cnvt-tree tree)
-  ;;(sf "tree=~S\n" tree)
   (letrec
       ((cnvt-elt
 	(lambda (tree)
@@ -612,16 +601,12 @@
 		 (let* ((tag (sx-tag tree))
 			(tail0 (sx-tail tree))
 			(tail1 (cnvt-tail tail0)))
-		   ;;(sf "cnvt _ tag=~S\n" tag)
-		   ;;(sf "     tail0=~S tail1=~S\n" tail0 tail1)
 		   (if (eq? tail1 tail0) tree (cons tag tail1))))))))
        (cnvt-tail
 	(lambda (tail)
 	  (if (null? tail) tail
 	      (let* ((head0 (car tail)) (head1 (cnvt-elt head0))
 		     (tail0 (cdr tail)) (tail1 (cnvt-tail tail0)))
-		;;(sf "cnvt-tail ~S ~S\n" head0 tail0)
-		;;(sf "cnvt-tail ~S ~S\n" head1 tail1)
 		(if (eq? head1 head0)
 		    (if (eq? tail1 tail0)
 			tail
@@ -639,8 +624,6 @@
      Guile extension language routine to read a single statement."
   (let* ((cmmd0 (read-command port))
 	 (cmmd1 (cnvt-tree cmmd0)))
-    ;;(sf "s:cmd1:\n ") (pp cmmd0)
-    ;;(sf "s:cmd2:\n ") (pp cmmd1)
     cmmd1))
 
 ;; @deffn {Procedure} read-tcl-file port env
@@ -656,10 +639,6 @@
        (let loop ((cmd (read-command port)))
 	 (if (eof-object? cmd) '()
 	     (let ((cmd1 cmd) (cmd2 (cnvt-tree cmd)))
-	       ;;(sf "cmd1:\n") (pp cmd1)
-	       ;;(sf "cmd2::n") (pp cmd2)
-	       (cons (cnvt-tree cmd) (loop (read-command port))))))))
-  )
-
+	       (cons (cnvt-tree cmd) (loop (read-command port)))))))))
 
 ;; --- last line ---
