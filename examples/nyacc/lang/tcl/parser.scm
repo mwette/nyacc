@@ -103,6 +103,7 @@
   (let* ((port (current-input-port))
 	 (fn (or (port-filename port) "(unknown)"))
 	 (ln (1+ (port-line port))))
+    (jump-to-debugger)
     (apply simple-format (current-error-port) fmt args))
   (throw 'tcl-error))
 
@@ -355,7 +356,8 @@
 	  (else (cons cmd (loop (read-command port))))))))))
 
 (define (fix-expr-string xstr)
-  (let* ((cmmd (call-with-input-string (string-append "expr " xstr)
+  (let* ((xstr (string-trim xstr char-set:whitespace))
+         (cmmd (call-with-input-string (string-append "expr " xstr)
 		(lambda (port) (read-command port))))
 	 (tail (sx-tail cmmd 2))
 	 (tail (splice-xtail tail)))
@@ -363,6 +365,8 @@
 
 ;; convert all words in an expr command to a single list of frags
 (define (splice-xtail tail)
+  ;;(sf "splice-xtail ~S\n" tail)
+  (if (null? tail) (jump-to-debugger))
   (let* ((blank `(string " "))
 	 (terms (fold-right
 		 (lambda (word terms)
@@ -471,14 +475,12 @@
        (string ,body-part) . ,rest)
      (cons
       `(elseif ,(fix-expr-string cnd) ,(split-body body-part))
-      (cnvt-cond-tail (list-tail ctail 3))))
+      (cnvt-cond-tail (list-tail ctail 4))))
     (`((string "elseif") (string ,cnd) (string ,body-part) . ,rest)
      (cons
       `(elseif ,(fix-expr-string cnd) ,(split-body body-part))
       (cnvt-cond-tail (list-tail ctail 3))))
     (_
-     ;;(sf "ctail: @ ~S\n" (port-line (current-input-port)))
-     ;;(pp ctail) (quit)
      (throw 'tcl-error "syntax error"))))
     
 
@@ -513,9 +515,6 @@
 	  (sxml-match tree
 	    ((command (string "if") (string ,cnd) (string "then")
 		      (string ,bdy) . ,rest)
-	     (sf "GOT IT\n")
-             (sf "~S\n" (fix-expr-string cnd))
-             (quit)
 	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
 		  . ,(cnvt-cond-tail rest)))
 	    ((command (string "if") (string ,cnd) (string ,bdy) . ,rest)
@@ -533,7 +532,10 @@
 	    ((command (string "proc") (string ,name) (string ,args)
 		      (string ,body))
 	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
-	    (,_ (report-error "usage: proc name args body")))))
+            ;;((command (string "proc") (word x) (string ,args) (string ,body))
+	    ;;(,_ (report-error "usage: proc name args body"))
+            (,_ #f)
+            )))
     ("return"
      . ,(lambda (tree)
 	  `(return ,(or (sx-ref tree 2) ""))))
