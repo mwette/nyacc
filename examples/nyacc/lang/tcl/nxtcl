@@ -1,6 +1,6 @@
 #!/bin/sh
 # -*- scheme -*-
-exec guile $0 $*
+exec guile --debug $0 "$@"
 !#
 
 (use-modules (nyacc lang tcl parser))
@@ -36,8 +36,8 @@ exec guile $0 $*
     (let* ((tree (call-with-input-file file
 		   (lambda (port) (read-tcl-file port (current-module))))))
       (pretty-print tree)
-      (display "--------------------------------------\n")
-      (pretty-print-tcl tree)
+      ;;(display "--------------------------------------\n")
+      ;;(pretty-print-tcl tree)
       (if #f #f))))
 
 (apply compile-nx-file (cdr (program-arguments)))
