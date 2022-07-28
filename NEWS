@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2022-07-XX  V1.07.1
+2022-07-27  V1.07.1
 	* worked on examples/nyacc/lang/tcl/parser.scm a bit
 
 2022-05-30  V1.07.0
