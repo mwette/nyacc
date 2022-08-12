@@ -31,15 +31,20 @@
 
 (define-module (nyacc lang tcl parser)
   #:export (read-command
-	    read-tcl-stmt
-	    read-tcl-file
-	    ;; debugging:
-	    split-body
-	    cnvt-tree
-	    cnvt-args
-	    splice-xtail
-	    tclme
-	    )
+            read-tcl-stmt
+            read-tcl-file
+            ;; debugging:
+            split-body
+            fix-expr-string
+            splice-xtail
+            cnvt-args
+            num-string
+            vec-string
+            cnvt-cond-tail
+            tcl-res-cmds
+            nxify-command
+            cnvt-tree
+            *trace-tcl-parsing*)
   #:use-module ((nyacc lex) #:select (read-basic-num cnumstr->scm c:ir))
   #:use-module (nyacc lang sx-util)
   #:use-module (sxml match)
@@ -48,13 +53,11 @@
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
-(define (sf fmt . args) (apply simple-format #t fmt args))
-(define (zf fmt . args) #f)
-(define db zf)
 
-(define (echo obj)
-  (sf " ~S\n" obj)
-  obj)
+(define *trace-tcl-parsing* (make-parameter #f))
+(define (db fmt . args)
+  (when (*trace-tcl-parsing*)
+    (apply simple-format #t fmt args)))
 
 (define char-hex?
   (let ((cs (string->char-set "0123456789abcdefABCDEF")))
@@ -171,6 +174,16 @@
 	     ((char-set-contains? cs:ws ch)
 	      (read-char port)
 	      (loop wordl (peek-char port)))
+
+             ((char=? #\\ ch)           ; maybe escaped newline
+              (read-char port)
+              (let ((c2 (peek-char port)))
+                (cond
+                 ((char=? #\newline c2)
+                  (read-char port)
+                  (loop wordl (peek-char port)))
+                 (else
+                  (unread-char (read-escape) port)))))
 
 	     ((char=? #\" ch)
 	      (read-char port)
@@ -572,7 +585,6 @@
 		     (lambda (proc) (proc tree)))))
     (if (and (pair? repl) (eq? 'command (car repl))) (error "coding error"))
     repl))
-(export nxify-command)
 
  ;; convert special commands and words into nx-tcl syntax
 ;; @example
