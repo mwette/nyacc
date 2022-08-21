@@ -183,7 +183,8 @@
                   (read-char port)
                   (loop wordl (peek-char port)))
                  (else
-                  (unread-char (read-escape) port)))))
+                  (unread-char (read-escape) port)
+                  (loop wordl (peek-char port))))))
 
 	     ((char=? #\" ch)
 	      (read-char port)
