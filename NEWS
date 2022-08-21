@@ -5,6 +5,10 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2022-08-XX  V1.07.2
+	* examples/nyacc/lang/tcl/parser.scm read-cmmd escape fix
+	* added kludge for CPP __LINENO__
+
 2022-07-27  V1.07.1
 	* worked on examples/nyacc/lang/tcl/parser.scm a bit
 
