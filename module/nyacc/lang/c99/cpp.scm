@@ -67,7 +67,8 @@
   (cond
    ((string=? str "__DATE__") "M01 01 2001")
    ((string=? str "__FILE__") "(unknown)")
-   ((string=? str "__LINE__") "0")
+   ;;((string=? str "__LINE__") "0")
+   ((string=? str "__LINE__") (number->string (random 10000)))
    ((string=? str "__STDC__") "1")
    ((string=? str "__STDC_HOSTED__") "0")
    ((string=? str "__STDC_VERSION__") "201701")
