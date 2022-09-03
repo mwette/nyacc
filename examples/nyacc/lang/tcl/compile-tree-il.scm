@@ -80,6 +80,11 @@
 	 (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case (,arity ,body)))))
 
+#| using while instead
+(define (make-for init test next body dict)
+  `(seq ,init ,(make-while test `(seq ,body ,next) dict)))
+|#
+                                    
 ;; @deffn {Procedure} sxml->xtil exp env opts
 ;; Compile SXML tree to external Tree-IL representation.
 ;; @end deffn
@@ -148,8 +153,11 @@
        (values `(incr ,var (const 1)) '() dict))
       
       ((set (string ,name) ,value)
-       (let* ((dict (add-symbol name dict))
-	      (nref (lookup name dict)))
+       (let* (;;(dict (add-symbol name dict)) -- removed 09/03/22
+              (ref (lookup name dict))
+              (dict (if (and ref (eq? 'lexical (car ref))) dict
+                        (add-symbol name dict)))
+              (nref (lookup name dict)))
 	 (values `(set ,nref ,value) '() dict)))
       ;;((set otherwise could be ugly
 
@@ -165,15 +173,29 @@
 
       ((command)
        (values '() '(void) dict))
+
+      #|
+      ((for ,init ,test ,next ,body)
+       (let* ((test `(expr ,test))
+              (form `(for ,init ,test ,next ,body)))
+         (values form '() (add-lexicals "break" "continue" (push-scope dict)))))
+      |#
+      ;; This is necessary to get the init evaluated outside the lexical
+      ;; scope needed for the body.
+      ((for ,init ,test ,next ,body)
+       (values `(body ,init (while ,test (body ,body ,next))) '() dict))
+
+      ((while ,test ,body)
+       (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
       
       (,_
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
     (when #f
-      (sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
+      (sferr "\nfU: ~S\n" (if (pair? tree) (car tree) tree))
       (sferr "    kseed=~S\n    seed=~S\n" kseed seed)
-      ;;(pperr tree)
+      (pperr kdict)
       )
     ;; This routine rolls up processes leaves into the current branch.
     ;; We have to be careful about returning kdict vs dict.
@@ -191,6 +213,9 @@
 	  (cond
 	   ((null? tail) (values '(void) kdict)) ; just comments
 	   (else (values (car kseed) kdict)))))
+
+       ((unit)
+        (values (cons (block (rtail kseed)) seed) kdict))
 
        ((command)
 	(values (cons `(call . ,(rtail kseed)) seed) kdict))
@@ -243,9 +268,21 @@
 	  (values (cons stmt seed) kdict)))
 
        ;; for allows continue and break
+       #| replace by while: see fU
        ((for)
-	(sferr "todo: for\n")
-	(values (cons '(void) seed) kdict))
+        (let* ((tail (rtail kseed))
+               (init (list-ref tail 0)) (test (list-ref tail 1))
+               (next (list-ref tail 2)) (body (list-ref tail 3)))
+	  (values
+           (cons (make-for init test next body kdict) seed)
+           (pop-scope kdict))))
+       |#
+
+       ((while)
+        (let* ((test (cadr kseed)) (body (car kseed))
+               (test `(primcall not (primcall zero? ,(cadr kseed)))))
+	  (values (cons (make-while test body kdict) seed)
+                  (pop-scope kdict))))
 
        ;; conditional: elseif and else are translated by the default case
        ((if)

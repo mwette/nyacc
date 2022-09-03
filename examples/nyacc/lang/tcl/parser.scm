@@ -344,6 +344,10 @@
     ;; or (swallow (read-cmmd cs:ct))
     ))
 
+(define (read-tcl-string str)
+  (call-with-input-string str
+    (lambda (port) (read-tcl-stmt port (current-module)))))
+
 ;; @deffn {Procedure} split-body body
 ;; For the string @var{body} which is known to be interpreted as a sequence
 ;; of commands, split the string into a sequence of commands inside a
@@ -525,7 +529,6 @@
 	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
 		  . ,(cnvt-cond-tail rest)))
 	    (,_ (report-error "usage: if cond then else")))
-	  ;;) (quit)
 	  ))
     ("incr"
      . ,(lambda (tree) `(incr ,@(sx-tail tree 2))))
@@ -563,6 +566,16 @@
 	     `(while (expr . ,(splice-xtail (list cond)))
 		,(split-body body)))
 	    (,_ (report-error "usage: while cond body")))))
+    ("for"
+     . ,(lambda (tree)
+	  (sxml-match tree
+	    ((command (string "for") (string ,init) (string ,cond)
+                      (string ,next) (string ,body))
+             ;;(pp (read-tcl-string (string-append "expr " cond)))
+	     `(for  ,(read-tcl-string init)
+                    ,(read-tcl-string (string-append "expr " cond))
+                    ,(read-tcl-string next) ,(split-body body)))
+	    (,_ (report-error "usage: for init cond next body")))))
     ;;("array" . #f)
     ;;("list" . #f)
     ;; === string-> Scheme for calling Scheme functions

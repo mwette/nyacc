@@ -24,7 +24,7 @@
 (define-module (nyacc lang nx-util)
   #:export (genxsym
 	    nx-undefined-xtil
-	    nx-push-scope nx-pop-scope nx-top-level?
+	    nx-push-scope nx-pop-scope nx-top-level? nx-lexical?
 	    nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-symbol
 	    nx-lookup-in-env nx-lookup
 	    rtail singleton?
@@ -89,6 +89,13 @@
           (let ((dict (nx-add-toplevel \"foo\" dict)))
              (nx-lookup \"foo\" dict)) => (toplevel foo)"
   (acons name `(toplevel ,(string->symbol name)) dict))
+
+;; @deffn {Procedure} nx-lexical-symbol? name dict
+;; This is a predicate to indicate if @var{name} is a lexical symbol.
+;; @end deffn
+(define (nx-lexical-symbol? name dict)
+  (let ((ref (nx-lookup name dict)))
+    (and ref (eq 'lexical (car ref)))))
 
 ;; @deffn {Procedure} nx-add-lexical name dict
 ;; Given a string @var{name} and dictionary @var{dict} return a new
@@ -310,7 +317,7 @@
 		(assoc-ref name cdict)
 		(iter pdict (assoc-ref pdict '@P)))))
       (let* ((sym (nx-lookup name dict)))
-	(if (not sym) (error "javascript: not found:" name))
+	(if (not sym) (error "nx-util(lookup-gensym): not found:" name))
 	(caddr sym))))
 
 ;; @deffn {Procedure} make-loop expr body dict ilsym tbody
@@ -416,5 +423,12 @@
   (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym
 		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
+
+#|
+(define (make-for init test next body dict)
+  (let ((ilsym (genxsym "iloop")))
+    (make-loop expr body dict ilsym
+		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
+|#
 
 ;; --- last line ---
