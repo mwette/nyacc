@@ -47,6 +47,7 @@
             *trace-tcl-parsing*)
   #:use-module ((nyacc lex) #:select (read-basic-num cnumstr->scm c:ir))
   #:use-module (nyacc lang sx-util)
+  #:use-module (nyacc lang util)
   #:use-module (sxml match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
   #:use-module (ice-9 match))
@@ -116,6 +117,7 @@
 ;; BUG in read-frag? if ending found two levels deep need to pop two levels ??
 ;; in read-frag: maybe tagged as string when should not be
 
+;; return '() on EOF
 (define (read-command port)
   ;; This is a bit of a hack job.
   (letrec
@@ -124,7 +126,7 @@
        (error
 	(lambda (fmt . args)
 	  (with-input-from-port port
-	    (lambda () (apply report-error port fmt args)))))
+	    (lambda () (apply report-error fmt args)))))
        
        (foldin
 	(lambda (word word-list)
@@ -340,10 +342,8 @@
        ((char-set-contains? cs:ct nxt) (read-char port)))
       (unless (eof-object? cmd)
         (set-source-properties! cmd (source-properties (cadr cmd))))
-      cmd)
-    ;; or (swallow (read-cmmd cs:ct))
-    ))
-
+      (if (eof-object? cmd) '() cmd))))
+  
 (define (read-tcl-string str)
   (call-with-input-string str
     (lambda (port) (read-tcl-stmt port (current-module)))))
@@ -514,6 +514,16 @@
      . ,(lambda (tree) `(continue)))
     ("expr"
      . ,(lambda (tree) `(expr . ,(splice-xtail (sx-tail tree 2)))))
+    ("for"
+     . ,(lambda (tree)
+	  (sxml-match tree
+	    ((command (string "for") (string ,init) (string ,cond)
+                      (string ,next) (string ,body))
+             ;;(pp (read-tcl-string (string-append "expr " cond)))
+	     `(for  ,(read-tcl-string init)
+                    ,(read-tcl-string (string-append "expr " cond))
+                    ,(read-tcl-string next) ,(split-body body)))
+	    (,_ (report-error "usage: for init cond next body")))))
     ("format"
      . ,(lambda (tree) `(format . ,(sx-tail tree 2))))
     ("if"
@@ -559,6 +569,9 @@
 		 `(deref-indexed ,name (word ,indx))))
 	    ;;(,_ (report-error "can't handle this yet")))))
 	    (,_ `(set . ,(sx-tail tree 2))))))
+    ("source"
+     . ,(lambda (tree)
+          `(source ,(sx-ref tree 2))))
     ("while"
      . ,(lambda (tree)
 	  (sxml-match tree
@@ -566,16 +579,6 @@
 	     `(while (expr . ,(splice-xtail (list cond)))
 		,(split-body body)))
 	    (,_ (report-error "usage: while cond body")))))
-    ("for"
-     . ,(lambda (tree)
-	  (sxml-match tree
-	    ((command (string "for") (string ,init) (string ,cond)
-                      (string ,next) (string ,body))
-             ;;(pp (read-tcl-string (string-append "expr " cond)))
-	     `(for  ,(read-tcl-string init)
-                    ,(read-tcl-string (string-append "expr " cond))
-                    ,(read-tcl-string next) ,(split-body body)))
-	    (,_ (report-error "usage: for init cond next body")))))
     ;;("array" . #f)
     ;;("list" . #f)
     ;; === string-> Scheme for calling Scheme functions
@@ -608,26 +611,29 @@
   (letrec
       ((cnvt-elt
 	(lambda (tree)
-	  (if (string? tree) tree
-	      (sxml-match tree
-		((command . ,rest)
-		 (or (and=> (nxify-command tree) cnvt-tree)
-		     (let* ((tail0 (sx-tail tree))
-			    (tail1 (cnvt-tail tail0)))
-		       (if (eq? tail1 tail0) tree `(command . ,tail1)))))
-		((string ,val)
-		 (or (num-string val) tree))
-		((word (string ,val))
-		 (cnvt-tree (sx-ref tree 1)))
-		((word . ,rest)
-		 (let* ((tail0 (sx-tail tree))
-			(tail1 (cnvt-tail tail0)))
-		   (if (eq? tail1 tail0) tree `(word . ,tail1))))
-		(,_
-		 (let* ((tag (sx-tag tree))
-			(tail0 (sx-tail tree))
-			(tail1 (cnvt-tail tail0)))
-		   (if (eq? tail1 tail0) tree (cons tag tail1))))))))
+          (cond
+           ((null? tree) tree)
+           ((string? tree) tree)
+           (else
+	    (sxml-match tree
+	      ((command . ,rest)
+	       (or (and=> (nxify-command tree) cnvt-tree)
+		   (let* ((tail0 (sx-tail tree))
+			  (tail1 (cnvt-tail tail0)))
+		     (if (eq? tail1 tail0) tree `(command . ,tail1)))))
+	      ((string ,val)
+	       (or (num-string val) tree))
+	      ((word (string ,val))
+	       (cnvt-tree (sx-ref tree 1)))
+	      ((word . ,rest)
+	       (let* ((tail0 (sx-tail tree))
+		      (tail1 (cnvt-tail tail0)))
+		 (if (eq? tail1 tail0) tree `(word . ,tail1))))
+	      (,_
+	       (let* ((tag (sx-tag tree))
+		      (tail0 (sx-tail tree))
+		      (tail1 (cnvt-tail tail0)))
+		 (if (eq? tail1 tail0) tree (cons tag tail1)))))))))
        (cnvt-tail
 	(lambda (tail)
 	  (if (null? tail) tail
@@ -641,6 +647,9 @@
 			(cons head1 tail0)
 			(cons head1 tail1))))))))
     (cnvt-elt tree)))
+
+(define (read-n-cnvt-cmmd port)
+  (cnvt-tree (read-command port)))
 
 ;; @deffn {Procedure} read-tcl-stmt port env
 ;; Guile extension language routine to read a single statement.
@@ -658,13 +667,17 @@
 (define (read-tcl-file port env)
   "- Procedure: read-tcl-file port env
      Read a Tcl file.  Return a SXML tree."
-  (if (eof-object? (peek-char port))
-      (read-char port)
-      (cons
-       'unit
-       (let loop ((cmd (read-command port)))
-	 (if (eof-object? cmd) '()
-	     (let ((cmd1 cmd) (cmd2 (cnvt-tree cmd)))
-	       (cons (cnvt-tree cmd) (loop (read-command port)))))))))
+  (cons 'unit
+        (let loop ((cmd (read-n-cnvt-cmmd port)))
+          (if (null? cmd) '()
+              (cons
+               (sx-match cmd
+                 ((source (string ,name))
+                  (dynamic-wind
+                    (lambda () (push-input (open-input-file name)))
+                    (lambda () (read-tcl-file (current-input-port) env))
+                    (lambda () (pop-input))))
+                 (,_ cmd))
+               (loop (read-n-cnvt-cmmd port)))))))
 
 ;; --- last line ---
