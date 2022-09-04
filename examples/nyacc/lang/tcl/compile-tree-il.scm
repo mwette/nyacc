@@ -1,6 +1,6 @@
 ;;; nyacc/lang/tcl/compile-tree-il.scm - compile tcl sxml to tree-il
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -168,18 +168,12 @@
 
       ((command (string ,name) . ,args)
        (let ((ref (lookup name dict)))
-	 (unless ref (throw 'tcl-error "not defined"))
+	 (unless ref (throw 'tcl-error "not defined: ~S" name))
 	 (values `(command ,ref . ,args) '() dict)))
 
       ((command)
        (values '() '(void) dict))
 
-      #|
-      ((for ,init ,test ,next ,body)
-       (let* ((test `(expr ,test))
-              (form `(for ,init ,test ,next ,body)))
-         (values form '() (add-lexicals "break" "continue" (push-scope dict)))))
-      |#
       ;; This is necessary to get the init evaluated outside the lexical
       ;; scope needed for the body.
       ((for ,init ,test ,next ,body)
@@ -266,17 +260,6 @@
 	       (stmt `(call (@@ (nyacc lang nx-lib) sprintf) . ,tail))
 	       )
 	  (values (cons stmt seed) kdict)))
-
-       ;; for allows continue and break
-       #| replace by while: see fU
-       ((for)
-        (let* ((tail (rtail kseed))
-               (init (list-ref tail 0)) (test (list-ref tail 1))
-               (next (list-ref tail 2)) (body (list-ref tail 3)))
-	  (values
-           (cons (make-for init test next body kdict) seed)
-           (pop-scope kdict))))
-       |#
 
        ((while)
         (let* ((test (cadr kseed)) (body (car kseed))
@@ -366,7 +349,7 @@
     (lambda () (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port)
-	     (string-append "*** tcl: " fmt "\n") args)
+	     (string-append "*** nx-tcl: " fmt "\n") args)
       (values '(void) env))))
 
 (define show-sxml #f)
@@ -380,17 +363,10 @@
   ;; so need (interp-lookup at turntime)
   (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
     (if exp 
-	(call-with-values
-	    (lambda ()
-	      (sxml->xtil exp cenv opts)
-	      ;;(values #f cenv)
-	      )
+	(call-with-values (lambda () (sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
-     	    )
-	  )
+	    (values (parse-tree-il exp) env cenv)))
 	(values (parse-tree-il '(void)) env cenv))))
 
 ;; --- last line ---

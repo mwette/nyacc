@@ -1,0 +1,126 @@
+#!/bin/sh
+# -*- scheme -*-
+# xltcl - translate
+exec guile --debug $0 "$@"
+!#
+
+(use-modules (nyacc lang tcl parser))
+(use-modules (nyacc lang tcl compile-tree-il))
+(use-modules (nyacc lang sx-util))
+(use-modules (sxml fold) (sxml xpath))
+(use-modules ((srfi srfi-1) #:select (fold fold-right pair-for-each)))
+(use-modules (ice-9 pretty-print))
+
+(define pp pretty-print)
+(define (sf fmt . args) (apply simple-format #t fmt args))
+(define (ss fmt . args) (apply simple-format #f fmt args))
+
+(define (read-tcl-string str)
+  (call-with-input-string str
+    (lambda (port)
+      (read-tcl-stmt port (current-module)))))
+
+(define (echo . args)
+  (pair-for-each
+   (lambda (pair)
+     (let ((arg (car pair)))
+       (cond
+        ((and (string? arg) (string-any #\space arg))
+         (display #\") (display arg) (display #\"))
+        (else (display arg))))
+     (if (pair? (cdr pair)) (display #\space)))
+   args)
+  (newline))
+
+(define (fix-tree tree)
+  (define (qt str)
+    (if (string-any #\space str) (string-append "\"" str "\"") str))
+  (define (sp fl)
+    (let lp ((fl fl))
+      (cond
+       ((null? fl) '())
+       ((pair? (cdr fl))
+        (cons* `(word (string "\"") ,(car fl) (string "\""))
+               `(string " ") (lp (cdr fl))))
+       (else
+        (cons* `(word (string "\"") ,(car fl)(string "\""))
+               (lp (cdr fl)))))))
+  (sx-match tree
+    ((unit . ,stmts) `(unit . ,(map fix-tree stmts)))
+    ((body . ,stmts) `(body . ,(map fix-tree stmts)))
+    ((for ,init ,test ,next ,body) `(for ,init ,test ,next ,(fix-tree body)))
+    ((if ,test ,body . ,tl) `(if ,test ,(fix-tree body) . ,(map fix-tree tl)))
+    ((elseif ,test ,body) `(elseif ,test ,(fix-tree body)))
+    ((else ,body) `(else ,(fix-tree body)))
+    ((set ,var ,val) `(set ,var ,(fix-tree val)))
+    ((command . ,terms) `(command (string "echo") . ,(map fix-tree terms)))
+    ((unit . ,stmts) `(unit . ,(map fix-tree stmts)))
+    (,_ tree)))
+
+(define (gxtcl-env)
+  (let* ((env (make-fresh-user-module)))
+    (module-define! env 'current-reader (make-fluid))
+    (module-define! env 'echo echo)
+    env))
+
+
+;; =============================================================================
+
+(use-modules (srfi srfi-37))
+
+(define (fail fmt . args)
+  (apply simple-format (current-error-port)
+	 (string-append "nxtcl: " fmt "\n")
+	 args)
+  (exit 1))
+
+(define options
+  (list))
+
+(define (parse-args args)
+  (args-fold args options
+	     (lambda (opt name arg seed)
+	       (fail "unrecognized option: ~S" name)
+	       (exit 1))
+	     (lambda (file seed)
+	       (if (assq-ref 'file seed)
+		   (fail "only one inupt file can be specified"))
+	       (unless (string-suffix? ".tcl" file)
+		 (fail "expecting .tcl file"))
+	       (acons 'file file seed))
+	     '()))
+
+(define (expand-tcl-file . args)
+  ;;(show-tcl-sxml #t) (show-tcl-xtil #t)
+  (let* ((options (parse-args args))
+	 (file (assoc-ref options 'file))
+         (env (gxtcl-env))
+         (tree (call-with-input-file file
+                 (lambda (port) (read-tcl-file port env))))
+         (haha (fix-tree tree))
+         )
+    ;;(pp tree)
+    (pp haha)
+    (compile haha #:from 'nx-tcl #:env env)
+    (if #f #f)))
+
+(define (read-n-cnvt-cmmd port)
+  (cnvt-tree (read-command port)))
+
+(define (expand-tcl-file . args)
+  ;;(show-tcl-sxml #t) (show-tcl-xtil #t)
+  (let* ((options (parse-args args))
+	 (file (assoc-ref options 'file))
+         (env (gxtcl-env))
+         (tree (call-with-input-file file
+                 (lambda (port) (read-tcl-file port env))))
+         (haha (fix-tree tree))
+         )
+    ;;(pp tree)
+    (pp haha)
+    (compile haha #:from 'nx-tcl #:env env)
+    (if #f #f)))
+
+(apply expand-tcl-file (cdr (program-arguments)))
+
+;; --- last line ---

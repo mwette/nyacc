@@ -1,6 +1,6 @@
 ;;; nyacc/lang/tcl/parser.scm - parse tcl code
 
-;; Copyright (C) 2018,2020 Matthew R. Wette
+;; Copyright (C) 2018,2020,2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -359,9 +359,8 @@
    (call-with-input-string body
      (lambda (port)
        (let loop ((cmd (read-command port)))
-         ;;(pp cmd)
 	 (cond
-	  ((eof-object? cmd) '())
+	  ((null? cmd) '())
 	  ((null? (cdr cmd)) (loop (read-command port)))
 	  ((eq? cmd noop-command) (loop (read-command port)))
 	  (else (cons cmd (loop (read-command port))))))))))
@@ -528,8 +527,6 @@
      . ,(lambda (tree) `(format . ,(sx-tail tree 2))))
     ("if"
      . ,(lambda (tree)
-	  ;;(sf "tree:\n") (pp tree) ;;(quit)
-	  ;;(sf "============\n")
 	  (sxml-match tree
 	    ((command (string "if") (string ,cnd) (string "then")
 		      (string ,bdy) . ,rest)
@@ -538,8 +535,7 @@
 	    ((command (string "if") (string ,cnd) (string ,bdy) . ,rest)
 	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
 		  . ,(cnvt-cond-tail rest)))
-	    (,_ (report-error "usage: if cond then else")))
-	  ))
+	    (,_ (report-error "usage: if cond then else")))))
     ("incr"
      . ,(lambda (tree) `(incr ,@(sx-tail tree 2))))
     ("proc"
@@ -549,10 +545,7 @@
 	    ((command (string "proc") (string ,name) (string ,args)
 		      (string ,body))
 	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
-            ;;((command (string "proc") (word x) (string ,args) (string ,body))
-	    ;;(,_ (report-error "usage: proc name args body"))
-            (,_ #f)
-            )))
+            (,_ #f))))
     ("return"
      . ,(lambda (tree)
 	  `(return ,(or (sx-ref tree 2) ""))))
@@ -567,7 +560,6 @@
 	     (if (pair? rest)
 		 `(set-indexed (string ,name) (word ,indx) . ,rest)
 		 `(deref-indexed ,name (word ,indx))))
-	    ;;(,_ (report-error "can't handle this yet")))))
 	    (,_ `(set . ,(sx-tail tree 2))))))
     ("source"
      . ,(lambda (tree)
@@ -677,6 +669,9 @@
                     (lambda () (push-input (open-input-file name)))
                     (lambda () (read-tcl-file (current-input-port) env))
                     (lambda () (pop-input))))
+                 ((source (command . ,args))
+                  (sferr "nx-tcl parser: can't handle complex source")
+                  (pperr args) (quit))
                  (,_ cmd))
                (loop (read-n-cnvt-cmmd port)))))))
 
