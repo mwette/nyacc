@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2022-09-XX  V1.07.2
+2022-09-04  V1.07.2
 	* added kludge for CPP __LINENO__
 	* updates to examples/nyacc/lang/tcl/
 
