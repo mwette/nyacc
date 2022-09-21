@@ -465,12 +465,15 @@
 
       ;; bs does not support function pointers, but fh does now
       (((function-returning (param-list . ,params)) . ,tail)
+       ;;(sferr "\n--FUNCTION->bs-desc:\n")
        `(fh:function ,(mtail->bs-desc tail)
 		     (list ,@(gen-bs-decl-params params))))
       (((pointer-to) (function-returning (param-list . ,params)) . ,tail)
+       ;;(sferr "\np2FUNCTION->bs-desc:\n")
        `(fh:function ,(mtail->bs-desc tail)
 		     (list ,@(gen-bs-decl-params params))))
       (((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
+       ;;(sferr "\np2FUNCTION->bs-desc:\n")
        `(fh:pointer 'void))
 
       (((pointer-to) (struct-ref . ,rest))
@@ -962,6 +965,10 @@
 	    (let* ((udecl1 (expand-typerefs param (*udict*) ffi-defined))
 		   (udecl1 (udecl-rem-type-qual udecl1))
 		   (mdecl (udecl->mdecl udecl1 #:namer namer)))
+              ;;(sferr "gen-bs-decl-params:\n") (pperr param)
+              ;;(sferr "  ffi: ~S\n" ffi-defined)
+              ;;(sferr "  def: ~S\n" (*defined*))
+              ;;(sferr "  wrp: ~S\n" (*wrapped*))
 	      (cons (mtail->bs-desc (cdr mdecl)) seed))))
       '() params))))
 
@@ -1074,7 +1081,7 @@
       (((array-of) . ,rest) 'unwrap~array)
 
       (,otherwise
-       (fherr "mdecl->fh-unwrapper missed:\n~A" (ppstr (cdr mdecl)))))))
+       (fherr "mdecl->fh-unwrapper missed:\n~A" (ppstr (cadr mdecl)))))))
 
 
 (define (mdecl->fh-wrapper mdecl)
@@ -1127,7 +1134,7 @@
       (((pointer-to) . ,otherwise) #f)
 
       (,otherwise
-       (fherr "mdecl->fh-wrapper missed:\n~A" (ppstr (cdr mdecl)))))))
+       (fherr "mdecl->fh-wrapper missed:\n~A" (ppstr (cadr mdecl)))))))
 
 
 ;; given list of name-unwrap pairs generate function arg names

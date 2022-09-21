@@ -44,6 +44,7 @@
 (use-modules (ice-9 pretty-print))	; for debugging
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define pp pretty-print)
+(define (pp2 x) (pretty-print x #:per-line-prefix "  "))
 
 ;; C parser info (?)
 (define-record-type cpi
@@ -586,49 +587,42 @@
 	  (define (read-cpp-stmt ch)
 	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
-	  ;; not used -- need to explore more about source-properties
 	  (define (make-loc-info)
 	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		  (ln (1+ (port-line (current-input-port))))
-		  (cl (port-column (current-input-port))))
-	      (list cl ln fn)))
+		  (ln (1+ (port-line (current-input-port)))))
+	      `((line . ,ln) (filename . ,fn))))
 
-	  ;; not used -- need to explore more about source-properties
-	  (define (update-loc-info loc-info)
-	    (let ((ln (1+ (port-line (current-input-port))))
-		  (cl (port-column (current-input-port))))
-	      (cons* cl ln loc-info)))
-
+          (define (w/ ss res) (set-source-properties! res ss) res)
+          
 	  (define (read-token)
 	    (let loop ((ch (read-char)) (ss #f)) ;; ss is source loc
 	      (cond
-	       ;;((and #f (not ss)) (loop ch (make-loc-info)))
-	       #;((not ch)
-		(if #f
-		    (loop (read-char) ss)
-		    (let ((ss (make-loc-info)))
-		      (loop (read-char ss)))))
+	       ((not ss) (loop ch (make-loc-info)))
 	       ((eof-object? ch)
 		(set! suppress #f)
 		(if (pop-input)
 		    (loop (read-char) ss)
-		    (assc-$ '($end . "#<eof>"))))
-	       ((eq? ch #\newline) (set! bol #t) (loop (read-char) ss))
-	       ((char-set-contains? c:ws ch) (loop (read-char) ss))
+		    (w/ ss (assc-$ '($end . "#<eof>")))))
+	       ((eq? ch #\newline) (set! bol #t) (loop (read-char) #f))
+	       ((char-set-contains? c:ws ch) (loop (read-char) #f))
 	       (bol
 		(set! bol #f)
 		(cond ;; things that require bol
- 		 ((read-c-comm ch #t #:skip-prefix #t) => assc-$)
+ 		 ((read-c-comm ch #t #:skip-prefix #t) =>
+                  (lambda (p) (w/ ss (assc-$ p))))
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
-		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) => assc-$)
+		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) =>
+                           (lambda (p) (w/ ss (assc-$ p))))
 			  (else (loop (read-char) ss)))))
 		 (else (loop ch ss))))
-	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
+	       ((read-c-comm ch #f #:skip-prefix #t) =>
+                (lambda (p) (w/ ss (assc-$ p))))
 	       ((and (not (eq? (car ppxs) 'keep))
 		     (eq? mode 'code))
 		(loop (read-char) ss))
-	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
+	       ((read-c-chlit ch) => ; before ident for [ULl]'c'
+                (lambda (p) (w/ ss (assc-$ p))))
 	       ((read-c-ident ch) =>
 		(lambda (name)
 		  (let ((symb (string->symbol name))
@@ -647,15 +641,15 @@
 		      ;;^minor bug: won't work on #define keyword xxx
 		      ;; try (and (not (assoc-ref name defs))
 		      ;;          (assq-ref keytab symb))
-		      => (lambda (t) (cons t name)))
-		     ((typename? name)
-		      (cons t-typename name))
+		      => (lambda (t) (w/ ss (cons t name))))
+		     ((typename? name)  ; move this
+		      (w/ ss (cons t-typename name)))
 		     ((string=? name "_Pragma")
-		      (assc-$ (finish-pragma)))
+		      (w/ ss (assc-$ (finish-pragma))))
 		     (else
-		      (cons t-ident name))))))
-	       ((read-c-num ch) => assc-$)
-	       ((read-c-string ch) => assc-$)
+		      (w/ ss (cons t-ident name)))))))
+	       ((read-c-num ch) => (lambda (p) (w/ ss (assc-$ p))))
+	       ((read-c-string ch) => (lambda (p) (w/ ss (assc-$ p))))
 	       ;; Keep track of brace level and scope for typedefs.
 	       ((and (char=? ch #\{)
 		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info)
@@ -663,16 +657,20 @@
 	       ((and (char=? ch #\})
 		     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info)
 		     #f) #f)
-	       ((read-chseq ch) => identity)
-	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+	       ((read-chseq ch) => (lambda (p) (w/ ss p)))
+	       ((assq-ref chrtab ch) =>
+                (lambda (t) (w/ ss (cons t (string ch)))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
 		(let ((ch (read-char)))
-		  (cond ((eqv? #\newline ch) (loop (read-char) ss)) ;; extend
-			(else (unread-char ch) (cons #\\ "\\"))))) ;; parse err
-	       (else (cons ch (string ch))))))
+		  (cond
+                   ((eqv? #\newline ch) (loop (read-char) ss)) ;; extend
+		   (else (unread-char ch) (w/ ss (cons #\\ "\\")))))) ;; error
+	       (else (w/ ss (cons ch (string ch)))))))
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let loop ((pair (read-token)))
+            (pp pair)
+            (pp2 (source-properties pair))
 	    (case (car ppxs)
 	      ((keep) pair)
 	      ((skip-done skip-look skip) (loop (read-token)))
