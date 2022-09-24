@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm - C parser grammer
 
-;; Copyright (C) 2015-2021 Matthew R. Wette
+;; Copyright (C) 2015-2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -50,7 +50,7 @@
 ;; @end deffn
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2015-2021 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2015-2022 Matthew R. Wette"
 			  license-lgpl3+))
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
@@ -61,7 +61,8 @@
 	  (nonassoc "__attribute__" "__packed__" "__aligned__" "__alignof__")
 	  'reduce-on-attr
 	  'reduce-on-semi
-	  (nonassoc "*" "(" '$ident))
+	  (nonassoc "*" "(" '$ident 'typedef))
+   ;;(expect 0)
 
    (start translation-unit)
    (grammar
@@ -203,6 +204,12 @@
 
     ;; === declarations
 
+    ;; Following breaks:
+    ;;   typedef struct foo foo_t;
+    ;;   typedef struct foo { int x; } foo_t;
+    ;; 1st: you get ds with double type-specifier
+    ;; 2nd: you get error on "foo_t" in second form.
+
     ;; TODO: check if we should move attributes or trap attribute-only spec's
     (declaration			; S 6.7
      (declaration-no-comment ";")
@@ -217,6 +224,10 @@
 
     ;; --- declaration specifiers
 
+    #;(declaration-specifiers		; S 6.7
+     (($$ (set-cpi-tnv! (*info*) #t))
+      declaration-specifiers-X
+      ($$ $2)))
     (declaration-specifiers		; S 6.7
      (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
     (declaration-specifiers-1
@@ -226,7 +237,9 @@
      (storage-class-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; type-specifiers
      (type-specifier
-      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
+      ($prec 'reduce-on-attr) ($$
+                               ;;(set-cpi-tnv! (*info*) #f)
+                               (make-tl 'decl-spec-list $1)))
      (type-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; type-qualifiers
      (type-qualifier
@@ -302,6 +315,7 @@
      ("float" ($prec 'imp) ($$ '(float-type "float")))
      ("double" ($prec 'imp) ($$ '(float-type "double")))
      ("long" "double" ($$ '(float-type "long double")))
+     ("_Float16" ($$ '(float-type "__Float16")))
      ("_Float128" ($$ '(float-type "_Float128"))))
 
     (complex-type-specifier
@@ -518,7 +532,14 @@
     ;; --- declarators
 
     (init-declarator-list		; S 6.7
-     (init-declarator-list-1 ($$ (tl->list $1))))
+     (
+      ;;($$ (set-cpi-tnv! (*info*) #f))
+      init-declarator-list-1
+      ($$
+       ;;(set-cpi-tnv! (*info*) #f)
+       (tl->list $1)
+       ;;(tl->list $2)
+       )))
     (init-declarator-list-1
      (init-declarator ($$ (make-tl 'init-declr-list $1)))
      (init-declarator-list-1 "," init-declarator ($$ (tl-append $1 $3)))
@@ -553,8 +574,7 @@
 
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
-     ;;(ident-like ($$ $1)) ;; generates many SR RR conflicts
-     ;;("(" declarator ")" ($$ `(scope ,$2)))
+     ('typedef ($$ $1))
      ("(" declarator ")" ($$ $2))
      ("(" attribute-specifier declarator ")" ($$ $3))
      (direct-declarator
