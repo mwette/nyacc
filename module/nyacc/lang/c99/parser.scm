@@ -405,7 +405,7 @@
 	  (define (inc-stmt->file-spec stmt) ;; retain <> or ""
 	    (let* ((arg (cadr stmt)))
 	      (if (ident-like? arg) ;; #include MYFILE
-		  (expand-cpp-macro-ref arg (cpi-defs info))
+		  (expand-cpp-macro-ref arg (cpi-defs info) '())
 		  arg)))
 
 	  (define (file-spec->file spec)
@@ -632,7 +632,7 @@
 		      (skip-cpp-macro-ref name defs)
 		      (loop (read-char) ss))
 		     ((and (not suppress) (x-def? name mode)
-			   (expand-cpp-macro-ref name defs))
+			   (expand-cpp-macro-ref name defs ss))
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
@@ -669,8 +669,7 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let loop ((pair (read-token)))
-            (pp pair)
-            (pp2 (source-properties pair))
+            ;;(pp pair) (pp2 (source-properties pair))
 	    (case (car ppxs)
 	      ((keep) pair)
 	      ((skip-done skip-look skip) (loop (read-token)))

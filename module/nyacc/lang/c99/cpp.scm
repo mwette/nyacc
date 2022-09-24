@@ -63,11 +63,11 @@
      ((string=? (car defs) str) #t)
      (else (loop (cdr defs))))))
 
-(define (c99-std-val str)
+(define (c99-std-val str sl)
   (cond
    ((string=? str "__DATE__") "M01 01 2001")
-   ((string=? str "__FILE__") "(unknown)")
-   ((string=? str "__LINE__") "0")
+   ((string=? str "__FILE__") (or (assq-ref sl 'filename) "(unknown)"))
+   ((string=? str "__LINE__") (number->string (or (assq-ref sl 'line) 0)))
    ((string=? str "__STDC__") "1")
    ((string=? str "__STDC_HOSTED__") "0")
    ((string=? str "__STDC_VERSION__") "201701")
@@ -632,7 +632,7 @@
 ;; Note that this routine will look in the current-input so if you want to
 ;; expand text, BE CAREFUL AND USE (with-input-from-string "" ...)
 ;; @end deffn
-(define* (expand-cpp-macro-ref ident defs #:optional (used '()))
+(define* (expand-cpp-macro-ref ident defs sl #:optional (used '()))
   (let ((rval (assoc-ref defs ident)))
     (cond
      ((member ident used) #f)
@@ -640,7 +640,7 @@
       (let* ((used (cons ident used))
 	     (repl (cpp-expand-text rval defs used)))
 	(if (ident-like? repl)
-	    (or (expand-cpp-macro-ref repl defs used) repl)
+	    (or (expand-cpp-macro-ref repl defs sl used) repl)
 	    repl)))
      ((pair? rval)
       ;; GNU CPP manual: "A function-like macro is only expanded if its name
@@ -652,9 +652,9 @@
 		      (prep (px-cpp-ftn argd (cdr rval)))
 		      (repl (cpp-expand-text prep defs used)))
 		 (if (ident-like? repl)
-		     (or (expand-cpp-macro-ref repl defs used) repl)
+		     (or (expand-cpp-macro-ref repl defs sl used) repl)
 		     repl)))))
-     ((c99-std-val ident) => identity)
+     ((c99-std-val ident sl) => identity)
      ;;((string=? ident "_Pragma") (finish-pragma))
      ;;^ does not work here: move here when cpp is token-based
      (else #f))))
@@ -679,8 +679,8 @@
 ;; Calls @code{expand-cpp-macro-ref} with null input string (w/o further
 ;; input).  If @var{name} is has a function definition @code{#f} is returned.
 ;; @end deffn
-(define (expand-cpp-name name defs)
+(define (expand-cpp-name name defs sl)
   (with-input-from-string ""
-    (lambda () (expand-cpp-macro-ref name defs))))
+    (lambda () (expand-cpp-macro-ref name defs sl))))
 
 ;;; --- last line ---
