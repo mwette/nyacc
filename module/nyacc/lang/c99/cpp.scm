@@ -475,7 +475,7 @@
 	   (else 
 	    (loop rr (acons '$ident iden tkl) lv (read-char)))))
 	 (else
-	  (let ((rval (expand-cpp-macro-ref iden defs used)))
+	  (let ((rval (expand-cpp-macro-ref iden defs '() used)))
 	    (if rval
 		(loop #t (cons rval tkl) lv (read-char))
 		(loop rr (acons '$ident iden tkl) lv (read-char))))))))
@@ -618,7 +618,7 @@
      (report-error fmt args)
      (throw 'c99-error "CPP error"))))
 
-;; @deffn {Procedure} expand-cpp-macro-ref ident defs [used] => repl|#f
+;; @deffn {Procedure} expand-cpp-macro-ref ident defs sl [used] => repl|#f
 ;; Given an identifier seen in the current input, this checks for associated
 ;; definition in @var{defs} (generated from CPP defines).  If found as simple
 ;; macro, the expansion is returned as a string.  If @var{ident} refers
@@ -631,6 +631,7 @@
 ;; @noindent
 ;; Note that this routine will look in the current-input so if you want to
 ;; expand text, BE CAREFUL AND USE (with-input-from-string "" ...)
+;; The argument @var{sl} is source location info.
 ;; @end deffn
 (define* (expand-cpp-macro-ref ident defs sl #:optional (used '()))
   (let ((rval (assoc-ref defs ident)))
