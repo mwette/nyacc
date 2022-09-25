@@ -669,7 +669,6 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let loop ((pair (read-token)))
-            ;;(pp pair) (pp2 (source-properties pair))
 	    (case (car ppxs)
 	      ((keep) pair)
 	      ((skip-done skip-look skip) (loop (read-token)))

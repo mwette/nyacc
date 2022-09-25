@@ -204,12 +204,6 @@
 
     ;; === declarations
 
-    ;; Following breaks:
-    ;;   typedef struct foo foo_t;
-    ;;   typedef struct foo { int x; } foo_t;
-    ;; 1st: you get ds with double type-specifier
-    ;; 2nd: you get error on "foo_t" in second form.
-
     ;; TODO: check if we should move attributes or trap attribute-only spec's
     (declaration			; S 6.7
      (declaration-no-comment ";")
@@ -224,10 +218,6 @@
 
     ;; --- declaration specifiers
 
-    #;(declaration-specifiers		; S 6.7
-     (($$ (set-cpi-tnv! (*info*) #t))
-      declaration-specifiers-X
-      ($$ $2)))
     (declaration-specifiers		; S 6.7
      (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
     (declaration-specifiers-1
@@ -237,9 +227,7 @@
      (storage-class-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; type-specifiers
      (type-specifier
-      ($prec 'reduce-on-attr) ($$
-                               ;;(set-cpi-tnv! (*info*) #f)
-                               (make-tl 'decl-spec-list $1)))
+      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
      (type-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1)))
      ;; type-qualifiers
      (type-qualifier
@@ -532,14 +520,8 @@
     ;; --- declarators
 
     (init-declarator-list		; S 6.7
-     (
-      ;;($$ (set-cpi-tnv! (*info*) #f))
-      init-declarator-list-1
-      ($$
-       ;;(set-cpi-tnv! (*info*) #f)
-       (tl->list $1)
-       ;;(tl->list $2)
-       )))
+     (init-declarator-list-1
+      ($$ (tl->list $1) )))
     (init-declarator-list-1
      (init-declarator ($$ (make-tl 'init-declr-list $1)))
      (init-declarator-list-1 "," init-declarator ($$ (tl-append $1 $3)))
@@ -574,7 +556,7 @@
 
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
-     ('typedef ($$ $1))
+     ;;('typename ($$ `(ident ,$1)))
      ("(" declarator ")" ($$ $2))
      ("(" attribute-specifier declarator ")" ($$ $3))
      (direct-declarator
@@ -601,7 +583,7 @@
      (direct-declarator
       "(" parameter-type-list ")" ($$ `(ftn-declr ,$1 ,$3)))
      (direct-declarator
-      "(" identifier-list ")" ($$ `(ftn-declr ,$1 ,$3)))
+     "(" identifier-list ")" ($$ `(ftn-declr ,$1 ,$3)))
      (direct-declarator
       "(" ")" ($$ `(ftn-declr ,$1 (param-list)))))
 
