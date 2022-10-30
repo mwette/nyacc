@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2022-10-3x  V1.07.5
+	* address bug 63284: c99 parser hangs on unterminated #if
+
 2022-09-06  V1.07.4
 	* bump version
 
