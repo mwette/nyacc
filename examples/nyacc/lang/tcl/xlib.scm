@@ -24,6 +24,7 @@
 (define-module (nyacc lang tcl xlib)
   #:export (xdict xlib-ref tcl-eval)
   #:use-module (rnrs arithmetic bitwise)
+  #:use-module (ice-9 match)
   )
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
@@ -122,12 +123,29 @@
 	 (xval (eval-expr tree)))
     xval))
 
-
 ;; @deffn {Procedure} tcl:list arg ...
 ;; This creates a tcl list.
 ;; @end deffn
 (define-public (tcl:list . args)
   args)
+
+;; NOT WORKING
+(define-public (X-tcl:info . args)
+  (match args
+    ('("script")
+     (string-append (getcwd) "/" (port-filename (current-input-port))))
+    (_ (#f))))
+
+(define-public (tcl:ref name)
+  (let* ((env (current-module))
+         (var (module-variable env name)))
+    (variable-ref var)))
+
+(define-public (tcl:set name value)
+  (let* ((env (current-module))
+         (var (or (module-variable env name)
+                  (module-add! env name (make-undefined-variable)))))
+    (variable-set! var value)))
 
 ;; === (associative) arrays 
 
@@ -198,7 +216,6 @@
     (unless (string=? nnl "-nonewline") (throw 'tcl-error "puts: bad arg"))
     "(not implemented)"
     )))
-
 
 ;; === xdict
 

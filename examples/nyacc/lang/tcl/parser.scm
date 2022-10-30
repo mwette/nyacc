@@ -1,6 +1,6 @@
 ;;; nyacc/lang/tcl/parser.scm - parse tcl code
 
-;; Copyright (C) 2018,2020 Matthew R. Wette
+;; Copyright (C) 2018,2020,2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -17,7 +17,7 @@
 
 ;;; Notes:
 
-;; TODO: be more agressive to parse 123 as fixed and 567.0 as float.
+;; TODO: be more aggressive to parse 123 as fixed and 567.0 as float.
 ;; We can convert to string later.
 
 ;; args string => (arg-list (arg "abc") (opt-arg "def" "123") (rest "args"))
@@ -31,31 +31,34 @@
 
 (define-module (nyacc lang tcl parser)
   #:export (read-command
-	    read-tcl-stmt
-	    read-tcl-file
-	    ;; debugging:
-	    split-body
-	    cnvt-tree
-	    cnvt-args
-	    splice-xtail
-	    tclme
-	    )
+            read-tcl-stmt
+            read-tcl-file
+            ;; debugging:
+            split-body
+            fix-expr-string
+            splice-xtail
+            cnvt-args
+            num-string
+            vec-string
+            cnvt-cond-tail
+            tcl-res-cmds
+            nxify-command
+            cnvt-tree
+            *trace-tcl-parsing*)
   #:use-module ((nyacc lex) #:select (read-basic-num cnumstr->scm c:ir))
   #:use-module (nyacc lang sx-util)
+  #:use-module (nyacc lang util)
   #:use-module (sxml match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
-  #:use-module (ice-9 match)
-  )
+  #:use-module (ice-9 match))
 
 (use-modules (ice-9 pretty-print))
 (define pp pretty-print)
-(define (sf fmt . args) (apply simple-format #t fmt args))
-(define (zf fmt . args) #f)
-(define db zf)
 
-(define (echo obj)
-  (sf " ~S\n" obj)
-  obj)
+(define *trace-tcl-parsing* (make-parameter #f))
+(define (db fmt . args)
+  (when (*trace-tcl-parsing*)
+    (apply simple-format #t fmt args)))
 
 (define char-hex?
   (let ((cs (string->char-set "0123456789abcdefABCDEF")))
@@ -108,13 +111,22 @@
 
 (define noop-command '(command (string "NOOP")))
 
+;; A command is a sequence of words.
+;; A word is a sequence of fragments.
+
+;; BUG in read-frag? if ending found two levels deep need to pop two levels ??
+;; in read-frag: maybe tagged as string when should not be
+
+;; return '() on EOF
 (define (read-command port)
   ;; This is a bit of a hack job.
   (letrec
-      ((error
+      ((srcf (port-filename port))
+
+       (error
 	(lambda (fmt . args)
 	  (with-input-from-port port
-	    (lambda () (apply report-error port fmt args)))))
+	    (lambda () (apply report-error fmt args)))))
        
        (foldin
 	(lambda (word word-list)
@@ -165,6 +177,17 @@
 	      (read-char port)
 	      (loop wordl (peek-char port)))
 
+             ((char=? #\\ ch)           ; maybe escaped newline
+              (read-char port)
+              (let ((c2 (peek-char port)))
+                (cond
+                 ((char=? #\newline c2)
+                  (read-char port)
+                  (loop wordl (peek-char port)))
+                 (else
+                  (unread-char (read-escape) port)
+                  (loop wordl (peek-char port))))))
+
 	     ((char=? #\" ch)
 	      (read-char port)
 	      (db "C: \" .. reading word\n")
@@ -178,9 +201,7 @@
 	      (read-char port) ;; {
 	      (loop (cons (read-brace) wordl) (peek-char port)))
 
-	     ;;((eq? end-cs cs:nl)
 	     ((eq? end-cs cs:ct)
-	      ;;(let ((word (read-word cs:nl+ws)))
 	      (let ((word (read-word cs:ct+ws)))
 		(loop (foldin word wordl) (peek-char port))))
 	     
@@ -197,7 +218,10 @@
 	    (cond
 	     ((eq? frag end-cs)
 	      (db "W:   done\n")
-	      (cons 'word (reverse fragl)))
+              (let* ((tail (reverse fragl)) (word (cons 'word tail)))
+                (when (pair? tail)
+                  (set-source-properties! word (source-properties (car tail))))
+                word))
 	     (else
 	      (loop (cons frag fragl) (read-frag end-cs)))))))
 
@@ -205,13 +229,13 @@
 	(lambda (tag chl ch)
 	  (db "F:     finish ~S ~S ~S\n" tag chl ch)
 	  (unless (eof-object? ch) (unread-char ch port))
-	  ;;(case tag ((string) (rls chl)) (else (list tag (rls chl))))))
 	  (list tag (rls chl))))
 
        (swallow
 	(lambda (val)
 	  (db "swallow ")
-	  (read-char port) val))
+	  (read-char port)
+          val))
 
        (read-brace
 	(lambda ()
@@ -230,10 +254,9 @@
        
        (read-index
 	(lambda ()
-	  ;;(if (not (char=? #\( (read-char port))) (error "coding error"))
 	  (if (char=? (peek-char port) #\() (read-char port))
 	  (let ((word (read-word cs:rparen)))
-	    ;;(sf "index word=~S\n" word)
+	    (db "index word=~S\n" word)
 	    (if (not (char=? #\) (read-char port))) (error "coding error"))
 	    `(index . ,(foldin word '())))))
        
@@ -250,29 +273,37 @@
        (read-vref
 	(lambda ()
 	  (let* ((frag (read-frag cs:vt))
-		 (frag (sx-ref frag 1)) ; extract string value
+		 (iden (sx-ref frag 1)) ; extract string value
 		 (ch1 (peek-char port))
 		 (indx (cond ((eof-object? ch1) #f)
 			     ((char=? ch1 #\() #t)
-			     (else #f))))
-	    (db "$frag=~S ch1=~S\n" frag ch1)
-	    (if indx
-		      `(deref-indexed ,frag ,(cadr (read-index)))
-		      `(deref ,frag)))))
+			     (else #f)))
+                 (res (if indx
+		          `(deref-indexed ,iden ,(cadr (read-index)))
+		          `(deref ,iden))))
+	    (db "$frag ~S ch1=~S\n" iden ch1)
+            (set-source-properties! res (source-properties frag))
+            res)))
 
        (init-blev			; initial brace level
 	(lambda (end-cs) (if (eq? end-cs cs:rcurly) 1 0)))
-       
+
        (read-frag
+        (lambda (end-cs)
+          (let* ((srcl (port-line port))
+                 (frag (read-frag-1 end-cs)))
+            (unless (eq? end-cs frag)
+              (set-source-properties! frag `((line . ,srcl) (filename . ,srcf))))
+            frag)))
+        
+       (read-frag-1
 	(lambda (end-cs)
-	  (db "\n== read frag ~S\n" end-cs)
+	  (db "\n== read frag, until ~S\n" end-cs)
 	  (let loop ((tag #f)		     ; tag: string etc
 		     (chl '())		     ; list of chars read
 		     (bl (init-blev end-cs)) ; brace level
 		     (ch (read-char port))) ; next char
 	    (db "F:     tag=~S ch=~S chl=~S bl=~S\n" tag ch chl bl)
-	    ;;(db "F:     tag=~S ch=~S chl=~S bl=~S end-cs=~S\n"
-		;;tag ch chl bl end-cs)
 	    (cond
 	     ((eof-object? ch)
 	      (if (positive? bl) (error "missing end-brace"))
@@ -289,15 +320,15 @@
  	      (if tag (finish tag chl ch) (read-vref)))
 	     ((char=? ch #\{)
 	      (read-brace))
-	     ((char=? ch #\()
+	     #;((char=? ch #\()
 	      (if tag (finish tag chl ch) (read-index)))
 	     ((char=? ch #\[)
-	      (if tag (finish tag chl ch))
-	      (swallow (read-cmmd cs:rs)))
+	      (if tag (finish tag chl ch)
+	          (swallow (read-cmmd cs:rs)))
+              )
 	     ((char=? ch #\")
 	      ;;(swallow (read-frag cs:dquote))
-	      (loop 'string chl bl (read-char port))
-	      )
+	      (loop 'string chl bl (read-char port)))
 	     (else
 	      (loop (or tag 'string) (cons ch chl) bl (read-char port)))))))
        )
@@ -309,9 +340,13 @@
       (cond
        ((eof-object? nxt))
        ((char-set-contains? cs:ct nxt) (read-char port)))
-      cmd)
-    ;; or (swallow (read-cmmd cs:ct))
-    ))
+      (unless (eof-object? cmd)
+        (set-source-properties! cmd (source-properties (cadr cmd))))
+      (if (eof-object? cmd) '() cmd))))
+  
+(define (read-tcl-string str)
+  (call-with-input-string str
+    (lambda (port) (read-tcl-stmt port (current-module)))))
 
 ;; @deffn {Procedure} split-body body
 ;; For the string @var{body} which is known to be interpreted as a sequence
@@ -325,13 +360,14 @@
      (lambda (port)
        (let loop ((cmd (read-command port)))
 	 (cond
-	  ((eof-object? cmd) '())
+	  ((null? cmd) '())
 	  ((null? (cdr cmd)) (loop (read-command port)))
 	  ((eq? cmd noop-command) (loop (read-command port)))
 	  (else (cons cmd (loop (read-command port))))))))))
 
 (define (fix-expr-string xstr)
-  (let* ((cmmd (call-with-input-string (string-append "expr " xstr)
+  (let* ((xstr (string-trim xstr char-set:whitespace))
+         (cmmd (call-with-input-string (string-append "expr " xstr)
 		(lambda (port) (read-command port))))
 	 (tail (sx-tail cmmd 2))
 	 (tail (splice-xtail tail)))
@@ -354,7 +390,6 @@
 			  (cons term toks)
 			  (cons term toks))))
 		'() (cdr terms))))
-    ;;(sf "sxt ~S => ~S\n" tail toks)
     toks))
 
 ;; @deffn {Procedure} cnvt-args astr
@@ -447,14 +482,12 @@
        (string ,body-part) . ,rest)
      (cons
       `(elseif ,(fix-expr-string cnd) ,(split-body body-part))
-      (cnvt-cond-tail (list-tail ctail 3))))
+      (cnvt-cond-tail (list-tail ctail 4))))
     (`((string "elseif") (string ,cnd) (string ,body-part) . ,rest)
      (cons
       `(elseif ,(fix-expr-string cnd) ,(split-body body-part))
       (cnvt-cond-tail (list-tail ctail 3))))
     (_
-     ;;(sf "ctail: @ ~S\n" (port-line (current-input-port)))
-     ;;(pp ctail) (quit)
      (throw 'tcl-error "syntax error"))))
     
 
@@ -480,25 +513,29 @@
      . ,(lambda (tree) `(continue)))
     ("expr"
      . ,(lambda (tree) `(expr . ,(splice-xtail (sx-tail tree 2)))))
+    ("for"
+     . ,(lambda (tree)
+	  (sxml-match tree
+	    ((command (string "for") (string ,init) (string ,cond)
+                      (string ,next) (string ,body))
+             ;;(pp (read-tcl-string (string-append "expr " cond)))
+	     `(for  ,(read-tcl-string init)
+                    ,(read-tcl-string (string-append "expr " cond))
+                    ,(read-tcl-string next) ,(split-body body)))
+	    (,_ (report-error "usage: for init cond next body")))))
     ("format"
      . ,(lambda (tree) `(format . ,(sx-tail tree 2))))
     ("if"
      . ,(lambda (tree)
-	  ;;(sf "tree:\n") (pp tree) ;;(quit)
-	  ;;(sf "============\n")
-	  ;;(pp
 	  (sxml-match tree
 	    ((command (string "if") (string ,cnd) (string "then")
 		      (string ,bdy) . ,rest)
-	     ;;(sf "GOT IT\n") (quit)
 	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
 		  . ,(cnvt-cond-tail rest)))
 	    ((command (string "if") (string ,cnd) (string ,bdy) . ,rest)
 	     `(if ,(fix-expr-string cnd) ,(split-body bdy)
 		  . ,(cnvt-cond-tail rest)))
-	    (,_ (report-error "usage: if cond then else")))
-	  ;;) (quit)
-	  ))
+	    (,_ (report-error "usage: if cond then else")))))
     ("incr"
      . ,(lambda (tree) `(incr ,@(sx-tail tree 2))))
     ("proc"
@@ -508,10 +545,10 @@
 	    ((command (string "proc") (string ,name) (string ,args)
 		      (string ,body))
 	     `(proc ,name ,(cnvt-args args) ,(split-body body)))
-	    (,_ (report-error "usage: proc name args body")))))
+            (,_ #f))))
     ("return"
      . ,(lambda (tree)
-	  `(return ,(sx-ref tree 2))))
+	  `(return ,(or (sx-ref tree 2) ""))))
     ("set"
      . ,(lambda (tree)
 	  (sxml-match tree
@@ -523,8 +560,10 @@
 	     (if (pair? rest)
 		 `(set-indexed (string ,name) (word ,indx) . ,rest)
 		 `(deref-indexed ,name (word ,indx))))
-	    ;;(,_ (report-error "can't handle this yet")))))
 	    (,_ `(set . ,(sx-tail tree 2))))))
+    ("source"
+     . ,(lambda (tree)
+          `(source ,(sx-ref tree 2))))
     ("while"
      . ,(lambda (tree)
 	  (sxml-match tree
@@ -555,46 +594,43 @@
 		     (lambda (proc) (proc tree)))))
     (if (and (pair? repl) (eq? 'command (car repl))) (error "coding error"))
     repl))
-(export nxify-command)
 
  ;; convert special commands and words into nx-tcl syntax
 ;; @example
 ;; (cnvt-tcl '(command (string "expr") ...)) => (expr ...)
 ;; @end example
 (define (cnvt-tree tree)
-  ;;(sf "tree=~S\n" tree)
   (letrec
       ((cnvt-elt
 	(lambda (tree)
-	  (if (string? tree) tree
-	      (sxml-match tree
-		((command . ,rest)
-		 (or (and=> (nxify-command tree) cnvt-tree)
-		     (let* ((tail0 (sx-tail tree))
-			    (tail1 (cnvt-tail tail0)))
-		       (if (eq? tail1 tail0) tree `(command . ,tail1)))))
-		((string ,val)
-		 (or (num-string val) tree))
-		((word (string ,val))
-		 (cnvt-tree (sx-ref tree 1)))
-		((word . ,rest)
-		 (let* ((tail0 (sx-tail tree))
-			(tail1 (cnvt-tail tail0)))
-		   (if (eq? tail1 tail0) tree `(word . ,tail1))))
-		(,_
-		 (let* ((tag (sx-tag tree))
-			(tail0 (sx-tail tree))
-			(tail1 (cnvt-tail tail0)))
-		   ;;(sf "cnvt _ tag=~S\n" tag)
-		   ;;(sf "     tail0=~S tail1=~S\n" tail0 tail1)
-		   (if (eq? tail1 tail0) tree (cons tag tail1))))))))
+          (cond
+           ((null? tree) tree)
+           ((string? tree) tree)
+           (else
+	    (sxml-match tree
+	      ((command . ,rest)
+	       (or (and=> (nxify-command tree) cnvt-tree)
+		   (let* ((tail0 (sx-tail tree))
+			  (tail1 (cnvt-tail tail0)))
+		     (if (eq? tail1 tail0) tree `(command . ,tail1)))))
+	      ((string ,val)
+	       (or (num-string val) tree))
+	      ((word (string ,val))
+	       (cnvt-tree (sx-ref tree 1)))
+	      ((word . ,rest)
+	       (let* ((tail0 (sx-tail tree))
+		      (tail1 (cnvt-tail tail0)))
+		 (if (eq? tail1 tail0) tree `(word . ,tail1))))
+	      (,_
+	       (let* ((tag (sx-tag tree))
+		      (tail0 (sx-tail tree))
+		      (tail1 (cnvt-tail tail0)))
+		 (if (eq? tail1 tail0) tree (cons tag tail1)))))))))
        (cnvt-tail
 	(lambda (tail)
 	  (if (null? tail) tail
 	      (let* ((head0 (car tail)) (head1 (cnvt-elt head0))
 		     (tail0 (cdr tail)) (tail1 (cnvt-tail tail0)))
-		;;(sf "cnvt-tail ~S ~S\n" head0 tail0)
-		;;(sf "cnvt-tail ~S ~S\n" head1 tail1)
 		(if (eq? head1 head0)
 		    (if (eq? tail1 tail0)
 			tail
@@ -604,6 +640,9 @@
 			(cons head1 tail1))))))))
     (cnvt-elt tree)))
 
+(define (read-n-cnvt-cmmd port)
+  (cnvt-tree (read-command port)))
+
 ;; @deffn {Procedure} read-tcl-stmt port env
 ;; Guile extension language routine to read a single statement.
 ;; @end deffn
@@ -612,8 +651,6 @@
      Guile extension language routine to read a single statement."
   (let* ((cmmd0 (read-command port))
 	 (cmmd1 (cnvt-tree cmmd0)))
-    ;;(sf "s:cmd1:\n ") (pp cmmd0)
-    ;;(sf "s:cmd2:\n ") (pp cmmd1)
     cmmd1))
 
 ;; @deffn {Procedure} read-tcl-file port env
@@ -622,17 +659,20 @@
 (define (read-tcl-file port env)
   "- Procedure: read-tcl-file port env
      Read a Tcl file.  Return a SXML tree."
-  (if (eof-object? (peek-char port))
-      (read-char port)
-      (cons
-       'unit
-       (let loop ((cmd (read-command port)))
-	 (if (eof-object? cmd) '()
-	     (let ((cmd1 cmd) (cmd2 (cnvt-tree cmd)))
-	       ;;(sf "cmd1:\n") (pp cmd1)
-	       ;;(sf "cmd2::n") (pp cmd2)
-	       (cons (cnvt-tree cmd) (loop (read-command port))))))))
-  )
-
+  (cons 'unit
+        (let loop ((cmd (read-n-cnvt-cmmd port)))
+          (if (null? cmd) '()
+              (cons
+               (sx-match cmd
+                 ((source (string ,name))
+                  (dynamic-wind
+                    (lambda () (push-input (open-input-file name)))
+                    (lambda () (read-tcl-file (current-input-port) env))
+                    (lambda () (pop-input))))
+                 ((source (command . ,args))
+                  (sferr "nx-tcl parser: can't handle complex source")
+                  (pperr args) (quit))
+                 (,_ cmd))
+               (loop (read-n-cnvt-cmmd port)))))))
 
 ;; --- last line ---

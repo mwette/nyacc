@@ -24,7 +24,7 @@
 (use-modules (nyacc util))
 (use-modules (sxml fold))
 (use-modules (sxml xpath))
-(use-modules ((srfi srfi-1) #:select (fold-right)))
+(use-modules ((srfi srfi-1) #:select (last fold-right)))
 (use-modules (srfi srfi-11))		; let-values
 (use-modules (rnrs arithmetic bitwise))
 (use-modules ((system foreign) #:prefix ffi:))
@@ -671,4 +671,21 @@ typedef struct _GObjectClass {
     (pp tree)
     0))
 
+(when #f
+  (*debug* #t)
+  ;;(pperr (parse-string "int (foo);"))
+  ;;(pperr (parse-string "int (bar)();"))
+  (pperr (parse-string "int foo(foo_t);"))
+  (newline (current-error-port))
+  (pperr (parse-string "typedef int foo_t; int foo(foo_t x);"))
+  )
+
+(when #t
+  (let* ((tree (parse-file "zz.c"))
+         (stmt (last tree))
+         (sngl `(trans-unit ,stmt))
+         )
+    (pp sngl)
+    (pp99 sngl)
+    0))
 ;; --- last line ---
