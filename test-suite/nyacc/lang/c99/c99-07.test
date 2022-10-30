@@ -1,0 +1,53 @@
+;; nyacc/lang/c99/c99-07.test		-*- scheme -*-
+;;
+;; Copyright (C) 2022 Matthew Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+;; misc bugs
+
+(define-module (c99-03)
+  #:use-module (nyacc lang c99 parser)
+  #:use-module (nyacc lang c99 util)
+  #:use-module (test-suite lib))
+
+(define incs '("exam.d"))
+
+(define (parse-string str)
+  (with-input-from-string str
+    (lambda ()
+      (parse-c99 #:inc-dirs incs #:mode 'file #:inc-help c99-std-help))))
+
+(define (parse-file file)
+  (with-input-from-file file
+    (lambda ()
+      (parse-c99 #:inc-dirs incs #:mode 'file))))
+
+(define ctr
+  (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
+(register-reporter full-reporter)
+
+;; parser test
+(with-test-prefix "nyacc/c99-07, fixed bugs"
+
+  ;; parse with include file
+  (pass-if "unterminated #if (bug a63283)"
+    (not
+     (catch 'c99-error
+       (lambda ()
+         (with-error-to-port (%make-void-port "w")
+           (lambda ()
+             (with-input-from-file "exam.d/ex22.c"
+	       (lambda () (parse-c99 #:inc-dirs incs #:mode 'code))))))
+       (lambda args #f))))
+
+  )
+
+;;(with-input-from-file "exam.d/ex22.c"
+;;  (lambda () (parse-c99 #:inc-dirs incs #:mode 'code)))
+
+(exit (if (positive? (assq-ref ctr 'fail)) 1 0))
+;; --- last line ---

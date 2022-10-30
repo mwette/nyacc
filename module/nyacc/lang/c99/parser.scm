@@ -75,7 +75,6 @@
     (cond
      ((not x3) (cons defstr ""))
      ((and x2st x3)
-      ;;(if (not (eq? (1+ x2nd) x3)) (c99-err "bad CPP def: ~S" defstr))
       (cons* (substring defstr 0 x2st)
 	     (string-split
 	      (string-delete #\space (substring defstr (1+ x2st) x2nd))
@@ -358,6 +357,7 @@
 	 (assc-$ (lambda (pair)
 		   (cons (assq-ref symtab (car pair)) (cdr pair))))
 	 ;;
+	 (t-end (assq-ref symtab '$end))
 	 (t-ident (assq-ref symtab '$ident))
 	 (t-typename (assq-ref symtab 'typename)))
 
@@ -500,7 +500,7 @@
 		     (else
 		      (throw 'c99-error "eval-cpp-stmt/code: ~S" stmt)))
 		   stmt))))
-	
+
 	  (define (eval-cpp-stmt/decl stmt) ;; => stmt
 	    ;;(sf "eval-cpp-stmt/decl ~S\n" stmt)
 	    (case (car stmt)
@@ -575,7 +575,7 @@
 		  ((decl)
 		   (and (cpi-top-blev? info)
 			(memq (car stmt) '(include include-next define))
-		    `(cpp-stmt . ,stmt)))
+		        `(cpp-stmt . ,stmt)))
 		  ((file)
 		   (and (or (cpi-top-blev? info)
 			    (not (memq (car stmt) '(include include-next))))
@@ -602,12 +602,6 @@
 	  (define (read-token)
 	    (let loop ((ch (read-char)) (ss #f)) ;; ss is source loc
 	      (cond
-	       ;;((and #f (not ss)) (loop ch (make-loc-info)))
-	       #;((not ch)
-		(if #f
-		    (loop (read-char) ss)
-		    (let ((ss (make-loc-info)))
-		      (loop (read-char ss)))))
 	       ((eof-object? ch)
 		(set! suppress #f)
 		(if (pop-input)
@@ -673,10 +667,16 @@
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let loop ((pair (read-token)))
-	    (case (car ppxs)
-	      ((keep) pair)
-	      ((skip-done skip-look skip) (loop (read-token)))
-	      (else (throw 'c99-error "parser.scm: coding error")))))))
+            (cond
+             ((eq? t-end (car pair))
+              (if (pair? (cdr ppxs))
+                  (c99-err "unterminated #if")
+                  pair))
+             (else
+	      (case (car ppxs)
+	        ((keep) pair)
+	        ((skip-done skip-look skip) (loop (read-token)))
+	        (else (throw 'c99-error "parser.scm: coding error")))))))))
 
     lexer))
 
