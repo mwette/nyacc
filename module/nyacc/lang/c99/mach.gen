@@ -11,13 +11,14 @@ exec guile $0
   (system "touch cpp.scm"))
 
 (when (gen-c99-files)
-  (system "touch parser.scm")
-  (with-output-to-file ",gram.txt"
-    (lambda ()
-      (pp-lalr-grammar c99-spec)
-      (pp-lalr-machine c99-mach))))
+    (system "touch parser.scm"))
 
 (when (gen-c99cx-files)
   (system "touch cxeval.scm"))
+
+(with-output-to-file ",gram.txt"
+  (lambda ()
+    (and c99-spec (pp-lalr-grammar c99-spec))
+    (and c99-mach (pp-lalr-machine c99-mach))))
 
 ;;; --- last line ---

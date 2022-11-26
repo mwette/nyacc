@@ -65,10 +65,16 @@ See the file COPYING included with the this distribution.")
 ;; newline.  This also reports context of parent files.
 ;; @end deffn
 (define (report-error fmt args)
+  (apply simple-format (current-error-port) (string-append fmt "\n") args)
+  (for-each
+   (lambda (pair)
+     (simple-format (current-error-port) "  at ~A:~A\n" (car pair) (cdr pair)))
+   (input-stack-portinfo)))
+(define (old-report-error fmt args)
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
 	(ln (1+ (port-line (current-input-port)))))
     (apply simple-format (current-error-port)
-	   (string-append "~A:~A: " fmt "\n") fn ln args)
+           (string-append "~A:~A: " fmt "\n") fn ln args)
     (for-each
      (lambda (pair)
        (simple-format (current-error-port) "  at ~A:~A\n" (car pair) (cdr pair)))

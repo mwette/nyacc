@@ -24,6 +24,8 @@
 (use-modules (ffi wayland-client))
 ;;(use-modules (ffi wayland-server))
 
+;; FORMAT_ARGB_
+
 (define socket
   (let ((dir (getenv "XDG_RUNTIME_DIR"))
 	(dpy (getenv "WAYLAND_DISPLAY")))

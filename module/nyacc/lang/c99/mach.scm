@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm - C parser grammer
 
-;; Copyright (C) 2015-2022 Matthew R. Wette
+;; Copyright (C) 2015-2021 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -30,8 +30,6 @@
 
 ;;; Code:
 
-(display "mach.scm: WORKING ON declearatino-specifiers \n")
-
 (define-module (nyacc lang c99 mach)
   #:export (c99-spec c99-mach c99x-spec c99x-mach gen-c99-files)
   #:use-module (nyacc lang c99 cpp)
@@ -52,7 +50,7 @@
 ;; @end deffn
 (define c99-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2015-2022 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2015-2021 Matthew R. Wette"
 			  license-lgpl3+))
 
    (prec< 'then "else")	       ; "then/else" SR-conflict resolution
@@ -64,7 +62,6 @@
 	  'reduce-on-attr
 	  'reduce-on-semi
 	  (nonassoc "*" "(" '$ident))
-   ;;(expect 0)
 
    (start translation-unit)
    (grammar
@@ -220,7 +217,6 @@
 
     ;; --- declaration specifiers
 
-    #|
     (declaration-specifiers		; S 6.7
      (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
     (declaration-specifiers-1
@@ -244,36 +240,7 @@
      (attribute-specifier
       ($prec 'reduce-on-semi) ($$ (make-tl 'decl-spec-list $1)))
      (attribute-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
-    |#
 
-    ;; function specifier: inline noreturn
-    (declaration-specifiers		; S 6.7
-     (declaration-specifiers-1 ($$ (process-specs (tl->list $1)))))
-
-    (declaration-specifiers-1
-     ;; storage-class-specifiers
-     (declaration-specifiers-2)
-     (storage-class-specifier
-      ($prec 'shift-on-attr) ($$ (make-tl 'decl-spec-list $1)))
-     (storage-class-specifier declaration-specifiers-1 ($$ (tl-insert $2 $1))))
-
-    (declaration-specifiers-2
-     (type-specifier ($$ (make-tl 'decl-spec-list $1)))
-     (type-specifier declaration-specifiers-3 ($$ (tl-insert $2 $1))))
-
-    (declaration-specifiers-3
-     (function-specifier
-      ($prec 'reduce-on-attr) ($$ (make-tl 'decl-spec-list $1)))
-     (function-specifier declaration-specifiers-3 ($$ (tl-insert $2 $1)))
-     ;; attribute-specifiers
-     (attribute-specifier
-      ($prec 'reduce-on-semi) ($$ (make-tl 'decl-spec-list $1)))
-     (attribute-specifier declaration-specifiers-3 ($$ (tl-insert $2 $1)))
-     #| 
-     |#
-     )
-
-    
     (storage-class-specifier		; S 6.7.1
      ("auto" ($$ '(stor-spec (auto))))
      ("extern" ($$ '(stor-spec (extern))))
@@ -335,7 +302,6 @@
      ("float" ($prec 'imp) ($$ '(float-type "float")))
      ("double" ($prec 'imp) ($$ '(float-type "double")))
      ("long" "double" ($$ '(float-type "long double")))
-     ("_Float16" ($$ '(float-type "__Float16")))
      ("_Float128" ($$ '(float-type "_Float128"))))
 
     (complex-type-specifier
@@ -552,7 +518,7 @@
     ;; --- declarators
 
     (init-declarator-list		; S 6.7
-     (init-declarator-list-1 ($$ (tl->list $1) )))
+     (init-declarator-list-1 ($$ (tl->list $1))))
     (init-declarator-list-1
      (init-declarator ($$ (make-tl 'init-declr-list $1)))
      (init-declarator-list-1 "," init-declarator ($$ (tl-append $1 $3)))
@@ -587,7 +553,8 @@
 
     (direct-declarator			; S 6.7.6
      (identifier ($$ $1))
-     ('typename ($$ `(ident ,$1)))
+     ;;(ident-like ($$ $1)) ;; generates many SR RR conflicts
+     ;;("(" declarator ")" ($$ `(scope ,$2)))
      ("(" declarator ")" ($$ $2))
      ("(" attribute-specifier declarator ")" ($$ $3))
      (direct-declarator

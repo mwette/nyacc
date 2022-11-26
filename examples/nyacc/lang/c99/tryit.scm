@@ -264,61 +264,25 @@
     (pp (cleanup-udecl specl declr))
     ))
 
+;; bug #60474
 (when #f
-  (let* ((code
-	  (string-append
-	   "typedef struct {\n"
-	   " int x;\n"
-	   " union { int a; int b; };\n"
-	   " int y;\n"
-	   " union { int c[3]; double d; };\n"
-	   ;;" int z;\n"
-	   "} foo_t;\n"
-	   "foo_t s1;\n"
-	   ))
-	 (tree (parse-string code #:mode 'code))
-	 (udict (c99-trans-unit->udict tree))
-	 (udecl (assoc-ref udict "s1"))
-	 (udecl (expand-typerefs udecl udict))
-	 (mdecl (udecl->mdecl udecl))
-	 (mtail (cdr mdecl))
-	 )
-    ;;(pp tree)
-    ;;(pp udecl)
-    ;;(pp mdecl)
-    ;;(pp (mtail->bs-desc mtail))
-    (pp (mtail->ffi-desc mtail))
-    ))
-
-(when #f				; bug #60474
-  (let* ((code
-	  (string-append
-	   "const int x = 1;\n"
-	   ))
+  (let* ((code "const int x = 1;\n")
 	 (tree (parse-string code #:mode 'code))
 	 (udict (c99-trans-unit->udict tree))
 	 (udecl (assoc-ref udict "x"))
 	 (specl (sx-ref udecl 1))
-	 (declr (sx-ref udecl 2))
-	 )
+	 (declr (sx-ref udecl 2)))
     (pp udecl)
     (call-with-values (lambda () (cleanup-udecl specl declr))
       (lambda (specl declr)
-	(pp `(udecl ,specl ,declr))))
-    ))
+	(pp `(udecl ,specl ,declr))))))
 
 (when #f
   (let* ((code "typedef int foo_t; foo_t foo[] = { 1, 2, 3, 4 };" )
 	 (tree (parse-string code #:mode 'decl))
-	 (udict (c99-trans-unit->udict tree))
-	 ;;(udecl (assoc-ref udict "x"))
-	 ;;(specl (sx-ref udecl 1))
-	 ;;(declr (sx-ref udecl 2))
-	 )
+	 (udict (c99-trans-unit->udict tree)))
     (pp tree)
-    (pp udict)
-    ))
-
+    (pp udict)))
 
 ;; with-arch from (nyacc lang arch-info)
 (when #f
@@ -380,177 +344,6 @@
   (match lit
     (`(fixed-type ,sval) `(fixed-type "int"))
     ))
-
-(define* (eval-cx expr #:optional udict ddict #:key fail-proc)
-
-  (define (fail fmt . args)
-    (and fail-proc (apply fail-proc fmt args)))
-
-  (define (ddict-lookup name)
-    (let ((repl (assoc-ref ddict name)))
-      (cond
-       ((not repl) #f)
-       ((pair? repl) #f)
-       ((string=? name repl) #f)
-       (else repl))))
-  
-  (define (eval-ident sx)
-    (let* ((name (sx-ref sx 1)) (repl (ddict-lookup name)))
-      (and (string? repl) (string->number repl))))
-  
-  (define (uop op ex)
-    (and op ex (op ex)))
-  
-  (define (bop op lt rt)
-    (and op lt rt (op lt rt)))
-
-  (letrec
-      ((ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
-       (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
-       (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2
-       (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
-
-       (eval-expr ;; expr type-spec declr => expr type-spec declr
-	(lambda* (expr #:optional type)
-	  (case (sx-tag expr)
-	    ((fixed)
-	     (values
-	      (string->number (cnumstr->scm (sx-ref expr 1)))
-	      (if type type (literal-type-spec expr))))
-	    ((float) (string->number (cnumstr->scm (sx-ref expr 1))))
-	    ((char) (char->integer (string-ref (sx-ref expr 1) 0)))
-	    ((string) (string-join (sx-tail expr 1) ""))
-	    ((pre-inc post-inc) (uop 1+ (ev1 expr)))
-	    ((pre-dec post-dec) (uop 1- (ev1 expr)))
-	    ((pos) (and expr (ev1 expr)))
-	    ((neg) (uop - (ev1 expr)))
-	    ((not) (and expr (if (equal? 0 (ev1 expr)) 1 0)))
-
-	    ((div) (bop / (ev1 expr) (ev2 expr)))
-	    ((mod) (bop modulo (ev1 expr) (ev2 expr)))
-	    ((add) (bop + (ev1 expr) (ev2 expr)))
-	    ((sub) (bop - (ev1 expr) (ev2 expr)))
-	    ((lshift) (bop bitwise-arithmetic-shift-left (ev1 expr) (ev2 expr)))
-	    ((rshift) (bop bitwise-arithmetic-shift-right (ev1 expr) (ev2 expr)))
-	    ((lt) (if (bop < (ev1 expr) (ev2 expr)) 1 0))
-	    ((le) (if (bop <= (ev1 expr) (ev2 expr)) 1 0))
-	    ((gt) (if (bop > (ev1 expr) (ev2 expr)) 1 0))
-	    ((ge) (if (bop >= (ev1 expr) (ev2 expr)) 1 0))
-	    ((eq) (if (bop = (ev1 expr) (ev2 expr)) 1 0))
-	    ((ne) (if (bop = (ev1 expr) (ev2 expr)) 0 1))
-	    ((bitwise-not) (uop lognot (ev1 expr)))
-  	    ((bitwise-or) (bop logior (ev1 expr) (ev2 expr)))
-	    ((bitwise-xor) (bop logxor (ev1 expr) (ev2 expr)))
-	    ((bitwise-and) (bop logand (ev1 expr) (ev2 expr)))
-	    ;;
-	    ((or)
-	     (let ((e1 (ev1 expr)) (e2 (ev2 expr)))
-	       (if (and e1 e2) (if (and (zero? e1) (zero? e2)) 0 1) #f)))
-	    ((and)
-	     (let ((e1 (ev1 expr)) (e2 (ev2 expr)))
-	       (if (and e1 e2) (if (or (zero? e1) (zero? e2)) 0 1) #f)))
-	    ((cond-expr)
-	     (let ((e1 (ev1 expr)) (e2 (ev2 expr)) (e3 (ev3 expr)))
-	       (if (and e1 e2 e3) (if (zero? e1) e3 e2) #f)))
-	    ;;
-	    ((sizeof-type)
-	     (catch 'c99-error
-	       (lambda () (eval-sizeof-type expr udict))
-	       (lambda (key fmt . args) (apply fail fmt args))))
-	    ((sizeof-expr)
-	     (catch 'c99-error
-	       (lambda () (eval-sizeof-expr expr udict))
-	       (lambda (key fmt . args) (apply fail fmt args))))
-	    ((alignof)
-	     (catch 'c99-error
-	       (lambda () (eval-alignof-type expr udict))
-	       (lambda (key fmt . args) (apply fail fmt args))))
-	    ((offsetof)
-	     (catch 'c99-error
-	       (lambda () (eval-offsetof expr udict))
-	       (lambda (key fmt . args) (apply fail fmt args))))
-	    ((ident) (or (eval-ident expr)
-			 (fail "cannot resolve identifier ~S" (sx-ref expr 1))))
-	    ((p-expr) (ev1 expr))
-	    ((cast) (ev2 expr))
-
-	    ((ref-to)
-	     (let*-values (((x1 t1) (ev1 expr)))
-	       (pp x1)
-	       (pp t1)
-	       (values x1 t1)))
-
-	    ((fctn-call) #f)		; assume not constant
-	    ;;
-	    ;; TODO 
-	    ((comp-lit) (fail "cxeval: comp-lit not implemented"))
-	    ((comma-expr) (fail "cxeval: comma-expr not implemented"))
-	    ((i-sel) (fail "cxeval: i-sel not implemented"))
-	    ((d-sel) (fail "cxeval: d-sel not implemented"))
-	    ((array-ref) (fail "cxeval: array-ref not implemented"))
-	    ;; 
-	    (else
-	     (sferr "eval-c99-cx:") (pperr expr)
-	     (throw 'c99-error "eval-c99-cx: coding error"))))))
-
-    (eval-expr expr)))
-
-(define (mkdsg str)
-  (let loop ((res '()) (elts (string-split str #\.)))
-    (cond
-     ((null? res)
-      (loop `(p-expr (ident ,(car elts))) (cdr elts)))
-     ((pair? elts)
-      (loop `(d-sel (ident ,(car elts)) ,res) (cdr elts)))
-     (else res))))
-
-(when #f
-  (let* ((code
-	  (string-append
-	   "enum {  FOO = sizeof(int), BAR = sizeof(double) }; \n"
-	   "typedef struct {\n"
-	   "  int x1, x2;\n"
-	   "  struct { int x1, x2; } xx;\n"
-	   "  int y;\n"
-	   "  struct { int y1; void *y2; } yy[FOO];\n"
-	   ;;"  struct { int y1; void *y2; } yy;\n"
-	   ;;"  struct { int z1; void *z2; };\n"
-	   "} foo_t;\n"
-	   "int sz = sizeof(foo_t);\n"
-	   "int al = _Alignof(foo_t);\n"
-	   ;;"int os = __builtin_offsetof(foo_t, xx.x3);\n"
-	   "int os = __builtin_offsetof(foo_t, yy[2].y2);\n"))
-	 (main
-	  (string-append
-	   "#include <stdio.h>\n"
-	   "int main() {\n"
-	   " printf(\"sz=%d\\n\", sz);\n"
-	   " printf(\"al=%d\\n\", al);\n"
-	   " printf(\"os=%d\\n\", os);\n"
-	   "}\n"))
-	 (tree (parse-string code #:mode 'code))
-	 (udict (c99-trans-unit->udict tree))
-	 (udict (udict-add-enums udict))
-	 (sz (udict-ref udict "sz"))
-	 (sz-of-ty (sx-ref* sz 2 2 1))
-	 (al (udict-ref udict "al"))
-	 (al-of-ty (sx-ref* al 2 2 1))
-	 (os (udict-ref udict "os"))
-	 (os-of-ty (sx-ref* os 2 2 1)))
-    ;;(display code) (display main)
-    (pp os-of-ty) (quit)
-    (sf "/*\n")
-    (with-arch "native"
-      (sf "native:\n")
-      (sf "  size = ~S\n" (eval-sizeof-type sz-of-ty udict))
-      (sf "  align = ~S\n" (eval-alignof-type al-of-ty udict))
-      (sf "  offset = ~S\n" (eval-offsetof os-of-ty udict)))
-    (with-arch "avr"
-      (sf "avr:\n")
-      (sf "  size = ~S\n" (eval-sizeof-type sz-of-ty udict))
-      (sf "  align = ~S\n" (eval-alignof-type al-of-ty udict))
-      (sf "  offset = ~S\n" (eval-offsetof os-of-ty udict)))
-    (sf "*/\n")))
 
 (when #f
   (let* ((code
@@ -688,4 +481,38 @@ typedef struct _GObjectClass {
     (pp sngl)
     (pp99 sngl)
     0))
+
+;; source-properties
+(when #f
+  (let* ((tree (parse-file "test1.c"))
+         (node (and tree (sx-ref* tree 1)) )
+         )
+    (pp node)
+    ;;(sf "(source-properties node) => ~S\n" (source-properties node))
+    ;;(pp99 tree)
+    #t))
+
+(when #f
+  (let* ((code
+          (string-append
+           "typedef struct foo foo_t;\n"
+           "typedef struct foo { int x; } foo_t;\n"
+           ;;"int bar(foo_t *foo_t);\n"
+           "int bar(foo_t foo_t);\n"    ; works
+           ))
+         (tree (parse-string code))
+         )
+    (pp tree)))
+
+
+(when #t
+  (let* ((code
+          (string-append
+           "int (*foo)();\n"
+           ;;"int (*bar);\n"
+           ))
+         (tree (parse-string code))
+         )
+    (pp tree)))
+
 ;; --- last line ---

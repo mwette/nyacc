@@ -3,7 +3,7 @@
 <!-- Created by GNU Texinfo 6.8, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!-- Copyright (C) 2017-2021 - Matthew R. Wette.
+<!-- Copyright (C) 2017-2022 - Matthew R. Wette.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -55,7 +55,7 @@ ul.no-bullet {list-style: none}
 <div class="format">
 <pre class="format">FFI Helper User Guide
 Matt Wette
-Sepember 2021
+October 2022
 With NYACC Version 1.07.5
 </pre></div>
 
@@ -91,14 +91,19 @@ file of Guile Scheme code.
 wrote `ffi/cairo.scm'
 </pre></div>
 <p>The FH does not generate C code.  The hooks to access functions in the
-Cairo library are provided in 100% Guile Scheme via <code>(system foreign)</code>.
+Cairo library are provided in 100% Guile Scheme via <code>(system
+foreign)</code>.   
+</p>
+<p>To generate Guile Scheme for smaller C code units one can
+write a ffi-module with the <code>#:api-code</code> or import the
+<code>ffi-help</code> module an use the functions <code>load-include-file</code>,
+<code>C-decl-&gt;scm</code> or <code>C-fun-decl-&gt;scm</code>.   The latter functions
+are not well tested, though.
 </p>
 <p>The compiler for the FFI Helper (FH) is based on the C parser and utilities
 which are included in the <a href="https://www.nongnu.org/nyacc"><small>NYACC</small></a>
-package.  Development for the FH is currently being performed in the
-<code>c99dev</code> branch of the associated git repository.  Within the
-<small>NYACC</small> distribution, the relevant modules can be found under the
-directory <samp>examples/</samp>.
+package.  Within the <small>NYACC</small> distribution, there are a number of
+example dot-ffi files in the directory <samp>examples/ffi</samp>.
 </p>
 <p>Use of the FFI-helper module depends on the
 <em>scheme-bytestructure</em> package available from

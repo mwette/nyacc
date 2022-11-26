@@ -22,4 +22,6 @@
                  (string-contains path-spec "wayland-client" 0))
   #:use-ffi-module (ffi wayland-util))
 
+(define WL wayland-client-symbol-val)
+
 ;; --- last line ---
