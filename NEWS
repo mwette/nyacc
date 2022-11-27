@@ -1,9 +1,19 @@
-Copyright (C) 2017-2021 Matthew Wette
+Copyright (C) 2017-2022 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
+
+2022-11-XX  V1.08.0
+	* updated c99/cpp,parser to handle source properties better;
+	  (For CPP expansion will set filename to location of use.)
+	  The lexical analyzer uses set-source-properties! before return.
+	* lang/util.scm,c99/parser.scm: replace fluid w/ parameter
+	* nyacc/parse.scm: update parse-error to use source properties
+	* expanded tabs in most Scheme code files (todo: c99/cpp.scm
+	  c99/parser.scm c99/mach.scm, nyacc/parse.scm)
+	* bug 62730: ffi-helper on typedef void (foo)(int);
 
 2022-10-30  V1.07.5
 	* address bug 63284: c99 parser hangs on unterminated #if
