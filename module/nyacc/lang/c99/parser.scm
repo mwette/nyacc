@@ -131,20 +131,20 @@
 	   (lambda (tl) (set-cpi-defs! cpi (append tl (cpi-defs cpi)))))
     cpi))
 
-(define *info* (make-fluid))
+(define *info* (make-parameter #f))
 	  
 (define cpi-inc-blev!
   (case-lambda
     ((info) (set-cpi-blev! info (1+ (cpi-blev info))))
-    (() (cpi-inc-blev! (fluid-ref *info*)))))
+    (() (cpi-inc-blev! (*info*)))))
 (define cpi-dec-blev!
   (case-lambda
     ((info) (set-cpi-blev! info (1- (cpi-blev info))))
-    (() (cpi-dec-blev! (fluid-ref *info*)))))
+    (() (cpi-dec-blev! (*info*)))))
 (define cpi-top-blev?
   (case-lambda
     ((info) (zero? (cpi-blev info)))
-    (() (cpi-top-blev? (fluid-ref *info*)))))
+    (() (cpi-top-blev? (*info*)))))
 
 (define cpi-push
   (case-lambda
@@ -152,7 +152,7 @@
      (set-cpi-ptl! info (cons (cpi-ctl info) (cpi-ptl info)))
      (set-cpi-ctl! info '())
      #t)
-    (() (cpi-push (fluid-ref *info*)))))
+    (() (cpi-push (*info*)))))
 
 (define cpi-pop
   (case-lambda
@@ -160,21 +160,21 @@
      (set-cpi-ctl! info (car (cpi-ptl info)))
      (set-cpi-ptl! info (cdr (cpi-ptl info)))
      #t)
-    (() (cpi-pop (fluid-ref *info*)))))
+    (() (cpi-pop (*info*)))))
 
 (define (cpi-push-x)	;; on #if
-  ;;(sf "\ncpi-push-x:\n") (pp (fluid-ref *info*))
-  (let ((cpi (fluid-ref *info*)))
+  ;;(sf "\ncpi-push-x:\n") (pp (*info*))
+  (let ((cpi (*info*)))
     (set-cpi-ptl! cpi (cons (cpi-ctl cpi) (cpi-ptl cpi)))
     (set-cpi-ctl! cpi '())))
 
 (define (cpi-shift-x)	;; on #elif #else
-  ;;(sf "\ncpi-shift-x:\n") (pp (fluid-ref *info*))
-  (set-cpi-ctl! (fluid-ref *info*) '()))
+  ;;(sf "\ncpi-shift-x:\n") (pp (*info*))
+  (set-cpi-ctl! (*info*) '()))
 
 (define (cpi-pop-x)	;; on #endif
-  ;;(sf "\ncpi-pop-x:\n") (pp (fluid-ref *info*))
-  (let ((cpi (fluid-ref *info*)))
+  ;;(sf "\ncpi-pop-x:\n") (pp (*info*))
+  (let ((cpi (*info*)))
     (set-cpi-ctl! cpi (append (cpi-ctl cpi) (car (cpi-ptl cpi))))
     (set-cpi-ptl! cpi (cdr (cpi-ptl cpi)))))
 
@@ -183,7 +183,7 @@
 ;; Check current sibling for each generation.
 ;; @end deffn
 (define (typename? name)
-  (let ((cpi (fluid-ref *info*)))
+  (let ((cpi (*info*)))
     (if (member name (cpi-ctl cpi)) #t
         (let loop ((ptl (cpi-ptl cpi)))
 	  (if (null? ptl) #f
@@ -194,7 +194,7 @@
 ;; Helper for @code{save-typenames}.
 ;; @end deffn
 (define (add-typename name)
-  (let ((cpi (fluid-ref *info*)))
+  (let ((cpi (*info*)))
     (set-cpi-ctl! cpi (cons name (cpi-ctl cpi)))))
 
 ;; @deffn {Procedure} find-new-typenames decl
@@ -367,14 +367,14 @@
     (define* (lexer #:key (mode 'code) xdef? show-incs)
 
       (define (run-parse)
-	(let ((info (fluid-ref *info*)))
+	(let ((info (*info*)))
 	  (raw-parser (lexer #:mode 'decl #:show-incs (cpi-shinc info))
 		      #:debug (cpi-debug info))))
       
       (let ((bol #t)		 ; begin-of-line condition
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
-	    (info (fluid-ref *info*))	; info shared w/ parser
+	    (info (*info*))	; info shared w/ parser
 	    (x-def? (cond ((procedure? xdef?) xdef?)
 			  ((eq? xdef? #t) (lambda (n m) #t))
 			  (else def-xdef?))))
@@ -480,7 +480,7 @@
 			  (list tree)))))))
 
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
-	    ;;(sf "eval-cpp-stmt/code ~S\n" stmt)
+ 	    ;;(sf "eval-cpp-stmt/code ~S\n" stmt)
 	    (case (car stmt)
 	      ((if) (code-if stmt))
 	      ((elif) (code-elif stmt))
@@ -586,43 +586,42 @@
 	  (define (read-cpp-stmt ch)
 	    (and=> (read-cpp-line ch) cpp-line->stmt))
 
-	  ;; not used -- need to explore more about source-properties
 	  (define (make-loc-info)
 	    (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-		  (ln (1+ (port-line (current-input-port))))
-		  (cl (port-column (current-input-port))))
-	      (list cl ln fn)))
+		  (ln (1+ (port-line (current-input-port)))))
+              `((line . ,ln) (filename . ,fn))))
 
-	  ;; not used -- need to explore more about source-properties
-	  (define (update-loc-info loc-info)
-	    (let ((ln (1+ (port-line (current-input-port))))
-		  (cl (port-column (current-input-port))))
-	      (cons* cl ln loc-info)))
+          (define (w/ ss res) (set-source-properties! res ss) res)
 
 	  (define (read-token)
 	    (let loop ((ch (read-char)) (ss #f)) ;; ss is source loc
 	      (cond
+               ((not ss) (loop ch (make-loc-info)))
 	       ((eof-object? ch)
 		(set! suppress #f)
 		(if (pop-input)
 		    (loop (read-char) ss)
-		    (assc-$ '($end . "#<eof>"))))
-	       ((eq? ch #\newline) (set! bol #t) (loop (read-char) ss))
-	       ((char-set-contains? c:ws ch) (loop (read-char) ss))
+		    (w/ ss (assc-$ '($end . "#<eof>")))))
+	       ((eq? ch #\newline) (set! bol #t) (loop (read-char) #f))
+	       ((char-set-contains? c:ws ch) (loop (read-char) #f))
 	       (bol
 		(set! bol #f)
 		(cond ;; things that require bol
- 		 ((read-c-comm ch #t #:skip-prefix #t) => assc-$)
+ 		 ((read-c-comm ch #t #:skip-prefix #t) =>
+                  (lambda (p) (w/ ss (assc-$ p))))
 		 ((read-cpp-stmt ch) =>
 		  (lambda (stmt)
-		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) => assc-$)
+		    (cond ((pass-cpp-stmt (eval-cpp-stmt stmt)) =>
+                           (lambda (p) (w/ ss (assc-$ p))))
 			  (else (loop (read-char) ss)))))
 		 (else (loop ch ss))))
-	       ((read-c-comm ch #f #:skip-prefix #t) => assc-$)
+	       ((read-c-comm ch #f #:skip-prefix #t) =>
+                (lambda (p) (w/ ss (assc-$ p))))
 	       ((and (not (eq? (car ppxs) 'keep))
 		     (eq? mode 'code))
 		(loop (read-char) ss))
-	       ((read-c-chlit ch) => assc-$) ; before ident for [ULl]'c'
+	       ((read-c-chlit ch) =>    ; before ident for [ULl]'c'
+                (lambda (p) (w/ ss (assc-$ p))))
 	       ((read-c-ident ch) =>
 		(lambda (name)
 		  (let ((symb (string->symbol name))
@@ -632,24 +631,26 @@
 		      (skip-cpp-macro-ref name defs)
 		      (loop (read-char) ss))
 		     ((and (not suppress) (x-def? name mode)
-			   (expand-cpp-macro-ref name defs '()))
+			   (expand-cpp-macro-ref name defs ss))
 		      => (lambda (repl)
 			   (set! suppress #t) ; don't rescan
 			   (push-input (open-input-string repl))
+                           (set-port-filename! (current-input-port)
+                                               (assq-ref ss 'filename))
 			   (loop (read-char) ss)))
 		     ((assq-ref keytab symb)
 		      ;;^minor bug: won't work on #define keyword xxx
 		      ;; try (and (not (assoc-ref name defs))
 		      ;;          (assq-ref keytab symb))
-		      => (lambda (t) (cons t name)))
-		     ((typename? name)
-		      (cons t-typename name))
+		      => (lambda (t) (w/ ss (cons t name))))
+		     ((typename? name)  ; move this
+		      (w/ ss (cons t-typename name)))
 		     ((string=? name "_Pragma")
-		      (assc-$ (finish-pragma)))
+		      (w/ ss (assc-$ (finish-pragma))))
 		     (else
-		      (cons t-ident name))))))
-	       ((read-c-num ch) => assc-$)
-	       ((read-c-string ch) => assc-$)
+		      (w/ ss (cons t-ident name)))))))
+	       ((read-c-num ch) => (lambda (p) (w/ ss (assc-$ p))))
+	       ((read-c-string ch) => (lambda (p) (w/ ss (assc-$ p))))
 	       ;; Keep track of brace level and scope for typedefs.
 	       ((and (char=? ch #\{)
 		     (eqv? 'keep (car ppxs)) (cpi-inc-blev! info)
@@ -657,13 +658,15 @@
 	       ((and (char=? ch #\})
 		     (eqv? 'keep (car ppxs)) (cpi-dec-blev! info)
 		     #f) #f)
-	       ((read-chseq ch) => identity)
-	       ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+	       ((read-chseq ch) => (lambda (p) (w/ ss p)))
+	       ((assq-ref chrtab ch) =>
+                (lambda (t) (w/ ss (cons t (string ch)))))
 	       ((eqv? ch #\\) ;; C allows \ at end of line to continue
 		(let ((ch (read-char)))
-		  (cond ((eqv? #\newline ch) (loop (read-char) ss)) ;; extend
-			(else (unread-char ch) (cons #\\ "\\"))))) ;; parse err
-	       (else (cons ch (string ch))))))
+		  (cond
+                   ((eqv? #\newline ch) (loop (read-char) ss)) ;; extend
+		   (else (unread-char ch) (w/ ss (cons #\\ "\\")))))) ;; error
+	       (else (w/ ss (cons ch (string ch)))))))
 
 	  ;; Loop between reading tokens and skipping tokens via CPP logic.
 	  (let loop ((pair (read-token)))
@@ -751,8 +754,8 @@
   (let ((info
 	 (make-cpi debug show-incs cpp-defs (cons "." inc-dirs) inc-help)))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
-    (with-fluids ((*info* info)
-		  (*input-stack* '()))
+    (parameterize ((*info* info)
+		   (*input-stack* '()))
       (catch 'c99-error
 	(lambda ()
 	  (catch 'nyacc-error
@@ -804,8 +807,8 @@
 		     (debug #f))	; debug?
   (let ((info (make-cpi debug #f cpp-defs '(".") '())))
     (set-cpi-ptl! info (cons tyns (cpi-ptl info)))
-    (with-fluids ((*info* info)
-		  (*input-stack* '()))
+    (parameterize ((*info* info)
+		   (*input-stack* '()))
       (with-input-from-string expr-string
 	(lambda ()
 	  (catch 'c99-error

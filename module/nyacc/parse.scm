@@ -75,9 +75,11 @@
     (else (error "coding error in (nyacc parse)"))))
 
 (define (parse-error state laval)
-  (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-	(ln (1+ (port-line (current-input-port)))))
-    (sferr "parse.scm(parse-error): ") (pperr (source-properties laval))
+  (let* ((sp (source-properties laval))
+         (fn (or (assq-ref sp 'filename)
+                 (port-filename (current-input-port))
+                 "(unknown)"))
+	 (ln (1+ (or (assq-ref sp 'line) (port-line (current-input-port))))))
     (throw 'nyacc-error
 	   "~A:~A: parse failed at state ~A, on input ~S"
 	   fn ln (car state) (cdr laval))))

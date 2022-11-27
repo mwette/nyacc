@@ -88,9 +88,10 @@
 ;; This reads the rest of the input, with ch and returns a string;
 ;; Replaces get-string-all from (ice-9 textual-ports).
 (define (read-rest ch)
-  (list->string (let loop ((ch ch))
-		  (if (eof-object? ch) '()
-		      (cons ch (loop (read-char)))))))
+  (reverse-list->string
+   (let loop ((res '())(ch ch))
+     (if (eof-object? ch) res
+         (loop (cons ch res) (read-char))))))
 
 ;; Not sure about this. We want to turn a list of tokens into a string
 ;; with proper escapes.

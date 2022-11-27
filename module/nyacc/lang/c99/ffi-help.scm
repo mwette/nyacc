@@ -1937,7 +1937,7 @@
 	(defs
 	  (fold
 	   (lambda (name seed)
-	     (let* ((repl (expand-cpp-name name ddict))
+	     (let* ((repl (expand-cpp-name name ddict '()))
 		    (val (and (string? repl) (eval-code-string repl))))
 	       (if val
 		   (acons (string->symbol name) val seed)
