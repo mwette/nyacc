@@ -19,49 +19,49 @@
 
 (define-module (nyacc lang c99 util)
   #:export (c99-def-help
-	    c99-std-help
-	    get-sys-cpp-defs get-sys-inc-dirs split-cpp-defs 
-	    remove-comments remove-comments!
-	    remove-inc-trees merge-includes!
-	    move-attributes attrl->attrs attrs->attrl extract-attr
-	    elifify
-	    ;; deprecated:
-	    merge-inc-trees! get-gcc-cpp-defs get-gcc-inc-dirs
-	    )
+            c99-std-help
+            get-sys-cpp-defs get-sys-inc-dirs split-cpp-defs 
+            remove-comments remove-comments!
+            remove-inc-trees merge-includes!
+            move-attributes attrl->attrs attrs->attrl extract-attr
+            elifify
+            ;; deprecated:
+            merge-inc-trees! get-gcc-cpp-defs get-gcc-inc-dirs
+            )
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((srfi srfi-1) #:select (append-reverse fold-right))
-  #:use-module (srfi srfi-2)		; and-let*
+  #:use-module (srfi srfi-2)            ; and-let*
   #:use-module (sxml fold)
-  #:use-module (ice-9 popen)		; gen-gcc-cpp-defs
-  #:use-module (ice-9 rdelim)		; gen-gcc-cpp-defs
+  #:use-module (ice-9 popen)            ; gen-gcc-cpp-defs
+  #:use-module (ice-9 rdelim)           ; gen-gcc-cpp-defs
   #:use-module (ice-9 match))
 
 (define c99-def-help
   (let ((base
-	 '(("__builtin"
-	    "__builtin_va_list=void*"
-	    "__inline__=inline" "__inline=__inline__"
-	    "__restrict__=restrict" "__restrict=__restrict__"
-	    "__signed__=signed" "__signed=__signed__"
-	    "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
-	    "__attribute(X)=__attribute__(X)"
-	    "__volatile__=volatile" "__volatile=__volatile__"
-	    "__extension__=" "__extension=__extension__"
-	    "asm=__asm__" "__asm=__asm__"))))
+         '(("__builtin"
+            "__builtin_va_list=void*"
+            "__inline__=inline" "__inline=__inline__"
+            "__restrict__=restrict" "__restrict=__restrict__"
+            "__signed__=signed" "__signed=__signed__"
+            "asm(X)=__asm__(X)" "__asm(X)=__asm__(X)"
+            "__attribute(X)=__attribute__(X)"
+            "__volatile__=volatile" "__volatile=__volatile__"
+            "__extension__=" "__extension=__extension__"
+            "asm=__asm__" "__asm=__asm__"))))
     (cond
      ((string-contains %host-type "apple-darwin")
       (cons
        '("<Availability.h>"
-	 "__API_AVAILABLE(X,...)=" "__API_UNAVAILABLE(X,...)="
-	 "__API_DEPRECATED(X,Y)=" "__API_DEPRECATED_WITH_REPLACEMENT(X,Y)="
-	 "__IOS_AVAILABLE(X,...)=" "__IOS_DEPRECATED(X,Y)=" "__IOS_PROHIBITED="
-	 "__OSX_AVAILABLE(X,...)=" "__OSX_AVAILABLE_STARTING(X,...)="
-	 "__OSX_UNAVAILABLE=" "__OSX_AVAILABLE_BUT_DEPRECATED(X,...)="
-	 "__OS_AVAILABILITY_MSG(X,...)="
-	 "__TVOS_AVAILABLE(X)=" "__TVOS_DEPRECATED(X,...)=" "__TVOS_PROHIBITED="
-	 "__WATCHOS_AVAILABLE(X)=" "__WATCHOS_DEPRECATED(X)="
-	 "__WATCHOS_PROHIBITED=") base))
+         "__API_AVAILABLE(X,...)=" "__API_UNAVAILABLE(X,...)="
+         "__API_DEPRECATED(X,Y)=" "__API_DEPRECATED_WITH_REPLACEMENT(X,Y)="
+         "__IOS_AVAILABLE(X,...)=" "__IOS_DEPRECATED(X,Y)=" "__IOS_PROHIBITED="
+         "__OSX_AVAILABLE(X,...)=" "__OSX_AVAILABLE_STARTING(X,...)="
+         "__OSX_UNAVAILABLE=" "__OSX_AVAILABLE_BUT_DEPRECATED(X,...)="
+         "__OS_AVAILABILITY_MSG(X,...)="
+         "__TVOS_AVAILABLE(X)=" "__TVOS_DEPRECATED(X,...)=" "__TVOS_PROHIBITED="
+         "__WATCHOS_AVAILABLE(X)=" "__WATCHOS_DEPRECATED(X)="
+         "__WATCHOS_PROHIBITED=") base))
      (else base))))
 
 ;; include-helper for C99 std
@@ -114,19 +114,19 @@
   (with-input-from-string line
     (lambda ()
       (let loop ((term '()) (acc '()) (st 0) (ch (read-char)))
-	(case st
-	  ((0) ;; skip #define
-	   (if (char=? ch #\space)
-	       (loop term acc 1 (read-char))
-	       (loop term acc 0 (read-char))))
-	  ((1) ;; read term
-	   (if (char=? ch #\space)
-	       (loop (reverse-list->string acc) '() 2 (read-char))
-	       (loop term (cons ch acc) st (read-char))))
-	  ((2) ;; read rest
-	   (if (or (eof-object? ch) (char=? ch #\newline))
-	       (string-append term "=" (reverse-list->string acc))
-	       (loop term (cons ch acc) st (read-char)))))))))
+        (case st
+          ((0) ;; skip #define
+           (if (char=? ch #\space)
+               (loop term acc 1 (read-char))
+               (loop term acc 0 (read-char))))
+          ((1) ;; read term
+           (if (char=? ch #\space)
+               (loop (reverse-list->string acc) '() 2 (read-char))
+               (loop term (cons ch acc) st (read-char))))
+          ((2) ;; read rest
+           (if (or (eof-object? ch) (char=? ch #\newline))
+               (string-append term "=" (reverse-list->string acc))
+               (loop term (cons ch acc) st (read-char)))))))))
 
 ;; @deffn {Procedure} get-sys-cpp-defs [args] [#:CC "gcc"] => '("ABC=123" ...)
 ;; Generate a list of default defines produced by gcc (or other comiler).
@@ -137,10 +137,10 @@
   ;; @code{"gcc -dM -E"} will generate lines like @code{"#define ABC 123"}.
   ;; We generate and return a list like @code{'(("ABC" . "123") ...)}.
   (let* ((cmd (string-append (resolve-CC CC) " -dM -E - </dev/null"))
-	 (ip (open-input-pipe cmd)))
+         (ip (open-input-pipe cmd)))
     (let loop ((line (read-line ip 'trim)))
       (if (eof-object? line) '()
-	  (cons (convert-line line) (loop (read-line ip 'trim)))))))
+          (cons (convert-line line) (loop (read-line ip 'trim)))))))
 
 
 ;; @deffn {Procedure} get-sys-inc-dirs [args] [#:CC "gcc"] =>
@@ -150,22 +150,22 @@
 ;; @end deffn
 (define* (get-sys-inc-dirs #:optional (args '()) #:key CC)
   (let ((ip (open-input-pipe (string-append
-			      (resolve-CC CC) " -E -Wp,-v - </dev/null 2>&1"))))
+                              (resolve-CC CC) " -E -Wp,-v - </dev/null 2>&1"))))
     (let loop ((dirs '()) (grab #f) (line (read-line ip 'trim)))
       (cond
        ((eof-object? line) (reverse dirs))
        ((string=? line "#include <...> search starts here:")
-	(loop dirs #t (read-line ip 'trim)))
+        (loop dirs #t (read-line ip 'trim)))
        ((string=? line "End of search list.") dirs)
        (grab
-	(loop (cons (string-trim-both line) dirs)
-	      grab (read-line ip 'trim)))
+        (loop (cons (string-trim-both line) dirs)
+              grab (read-line ip 'trim)))
        (else
-	(loop dirs grab (read-line ip 'trim)))))))
+        (loop dirs grab (read-line ip 'trim)))))))
 
 (define (add-cppdef def dict)
   (let ((x2st (string-index def #\())
-	(x3 (string-index def #\=)))
+        (x3 (string-index def #\=)))
     (cond
      (x2st dict)
      (x3 (acons (substring def 0 x3) (substring def (1+ x3)) dict))
@@ -190,14 +190,14 @@
   (if (not (eqv? 'trans-unit (car tree)))
       (throw 'nyacc-error "expecting c-tree"))
   (let loop ((rslt (make-tl 'trans-unit))
-	     ;;(head '(trans-unit)) (tail (cdr tree))
-	     (tree (cdr tree)))
+             ;;(head '(trans-unit)) (tail (cdr tree))
+             (tree (cdr tree)))
     (cond
      ((null? tree) (tl->list rslt))
      ((and (eqv? 'cpp-stmt (car (car tree)))
-	   (eqv? 'include (caadr (car tree))))
+           (eqv? 'include (caadr (car tree))))
       (loop (tl-append rslt `(cpp-stmt (include ,(cadadr (car tree)))))
-	    (cdr tree)))
+            (cdr tree)))
      (else (loop (tl-append rslt (car tree)) (cdr tree))))))
 
 ;; @deffn {Procedure} merge-includes! tree => tree
@@ -216,13 +216,13 @@
     (cond
      ((null? tl) pl)
      ((sx-match (car tl)
-	((cpp-stmt (include ,file (trans-unit . ,kids))) kids)
-	(,_ #f)) =>
-	(lambda (kids)
-	  (set-cdr! pl kids)
-	  (let ((pn (merge-tail pl kids)))
-	    (set-cdr! pn (cdr tl))
-	    (merge-tail pn (cdr tl)))))
+        ((cpp-stmt (include ,file (trans-unit . ,kids))) kids)
+        (,_ #f)) =>
+        (lambda (kids)
+          (set-cdr! pl kids)
+          (let ((pn (merge-tail pl kids)))
+            (set-cdr! pn (cdr tl))
+            (merge-tail pn (cdr tl)))))
      (else (merge-tail tl (cdr tl)))))
 
   (merge-tail tree (cdr tree))
@@ -248,8 +248,8 @@
     (cond
      ((null? tail0)
       (if (null? atl)
-	  (values '() tail)
-	  (values `(attribute-list . ,atl) (reverse tail1))))
+          (values '() tail)
+          (values `(attribute-list . ,atl) (reverse tail1))))
      ((eq? 'attribute-list (sx-tag (car tail0)))
       (loop (append (sx-tail (car tail0)) atl) tail1 (cdr tail0)))
      (else
@@ -297,31 +297,31 @@
   (with-input-from-string form
     (lambda ()
       (define (p-expr-list lx) ;; see 'lparen
-	(and
-	 (eq? 'lparen (car lx))
-	 (let loop ((args '()) (lx (attlex)))
-	   (case (car lx)
-	     ((rparen) `(attr-expr-list . ,args))
-	     ((comma) (loop args (attlex)))
-	     (else (p-expr lx))))))
+        (and
+         (eq? 'lparen (car lx))
+         (let loop ((args '()) (lx (attlex)))
+           (case (car lx)
+             ((rparen) `(attr-expr-list . ,args))
+             ((comma) (loop args (attlex)))
+             (else (p-expr lx))))))
       (define (p-expr lx)
-	#f)
+        #f)
       (let ((lx (attlex)))
-	(sferr "lx=~S\n" lx)
-	(case (car lx)
-	  ((ident)
-	   (let* ((id (cdr lx)) (lx (attlex)))
-	     (case (car lx)
-	       (($end) `(attribute ,id))
-	       ((lparen) `(attribute ,id ,(p-expr-list lx)))
-	       (else (throw 'nyacc-error "error ~S" lx)))))
-	  (else (throw 'nyacc-error "missed ~S" lx)))))))
-		
+        (sferr "lx=~S\n" lx)
+        (case (car lx)
+          ((ident)
+           (let* ((id (cdr lx)) (lx (attlex)))
+             (case (car lx)
+               (($end) `(attribute ,id))
+               ((lparen) `(attribute ,id ,(p-expr-list lx)))
+               (else (throw 'nyacc-error "error ~S" lx)))))
+          (else (throw 'nyacc-error "missed ~S" lx)))))))
+                
 (define (attrs->attrl attr-sexp)
   (and
    attr-sexp 
    (let* ((attrs (cadr attr-sexp))
-	  (attl (string-split attrs #\;)))
+          (attl (string-split attrs #\;)))
      `(attribute-list ,@(map astng->atree attl)))))
 
 ;; @deffn {Procedure} move-attributes sexp
@@ -343,13 +343,13 @@
   (let ((tag (sx-tag sexp)) (attr (sx-attr sexp)) (tail (sx-tail sexp)))
     (call-with-values (lambda () (extract-attr tail))
       (lambda (attrl stail)
-	(sx-cons*
-	 tag 
-	 (cond
-	  ((null? attrl) attr)
-	  ((null? attr)`(@ ,(attrl->attrs attrl)))
-	  (else (append attr (list (attrl->attrs attrl)))))
-	 stail)))))
+        (sx-cons*
+         tag 
+         (cond
+          ((null? attrl) attr)
+          ((null? attr)`(@ ,(attrl->attrs attrl)))
+          (else (append attr (list (attrl->attrs attrl)))))
+         stail)))))
 
 ;; --- random stuff 
 
@@ -359,16 +359,16 @@
 (define (remove-comments sx0)
   (if(not (pair? sx0)) sx0
      (cons (car sx0)
-	   (let loop ((tail (cdr sx0)))
-	     (cond
-	      ((null? tail)
-	       '())
-	      ((not (pair? (car tail)))
-	       (cons (car tail) (remove-comments (cdr tail))))
-	      ((eq? 'comment (caar tail))
-	       (loop (cdr tail)))
-	      (else
-	       (cons (remove-comments (car tail)) (loop (cdr tail)))))))))
+           (let loop ((tail (cdr sx0)))
+             (cond
+              ((null? tail)
+               '())
+              ((not (pair? (car tail)))
+               (cons (car tail) (remove-comments (cdr tail))))
+              ((eq? 'comment (caar tail))
+               (loop (cdr tail)))
+              (else
+               (cons (remove-comments (car tail)) (loop (cdr tail)))))))))
 
 (define (remove-comments! sx0)
   (define (merge-tail pl tl)
@@ -427,28 +427,28 @@
   ;; @item find-span (trans-unit a b c) => ((a . +->) . (c . '())
   (define (find-span tree)
     (cond
-     ((not (pair? tree)) '())		; maybe parse failed
+     ((not (pair? tree)) '())           ; maybe parse failed
      ((not (eqv? 'trans-unit (car tree))) (throw 'c99-error "expecting c-tree"))
      ((null? (cdr tree)) (throw 'c99-error "null c99-tree"))
      (else
-      (let ((fp tree))			; first pair
-	(let loop ((lp tree)		; last pair
-		   (np (cdr tree)))	; next pair
-	  (cond
-	   ((null? np) (cons (cdr fp) lp))
-	   ;; The following is an ugly hack to find cpp-include
-	   ;; with trans-unit attached.
-	   ((and-let* ((expr (car np))
-		       ((eqv? 'cpp-stmt (car expr)))
-		       ((eqv? 'include (caadr expr)))
-		       (rest (cddadr expr))
-		       ((pair? rest))
-		       (span (find-span (car rest))))
-	      (set-cdr! lp (car span))
-	      (loop (cdr span) (cdr np))))
-	   (else
-	    (set-cdr! lp np)
-	    (loop np (cdr np)))))))))
+      (let ((fp tree))                  ; first pair
+        (let loop ((lp tree)            ; last pair
+                   (np (cdr tree)))     ; next pair
+          (cond
+           ((null? np) (cons (cdr fp) lp))
+           ;; The following is an ugly hack to find cpp-include
+           ;; with trans-unit attached.
+           ((and-let* ((expr (car np))
+                       ((eqv? 'cpp-stmt (car expr)))
+                       ((eqv? 'include (caadr expr)))
+                       (rest (cddadr expr))
+                       ((pair? rest))
+                       (span (find-span (car rest))))
+              (set-cdr! lp (car span))
+              (loop (cdr span) (cdr np))))
+           (else
+            (set-cdr! lp np)
+            (loop np (cdr np)))))))))
 
   ;; Use cons to generate a new reference:
   ;; (cons (car tree) (car (find-span tree)))

@@ -46,7 +46,7 @@
      (postfix-expression "++" ($$ `(post-inc ,$1)))
      (postfix-expression "--" ($$ `(post-dec ,$1))))
     (unary-expression
-     (postfix-expression)		; S 6.5.3
+     (postfix-expression)               ; S 6.5.3
      ("++" unary-expression ($$ `(pre-inc ,$2)))
      ("--" unary-expression ($$ `(pre-dec ,$2)))
      (unary-operator cast-expression ($$ (list $1 $2)))
@@ -54,8 +54,8 @@
      ;;("sizeof" "(" type-name ")" ($$ `(sizeof-type ,$3)))
      )
     (unary-operator ("&" ($$ 'ref-to)) ("*" ($$ 'de-ref))
-		    ("+" ($$ 'pos)) ("-" ($$ 'neg))
-		    ("~" ($$ 'bitwise-not)) ("!" ($$ 'not)))
+                    ("+" ($$ 'pos)) ("-" ($$ 'neg))
+                    ("~" ($$ 'bitwise-not)) ("!" ($$ 'not)))
     (cast-expression
      (unary-expression)
      ;;("(" type-name ")" cast-expression ($$ `(cast ,$2 ,$4)))
@@ -114,9 +114,9 @@
     (identifier
      ($ident ($$ `(ident ,$1))))
     (constant
-     ($fixed ($$ `(fixed ,$1)))		; integer literal
-     ($float ($$ `(float ,$1)))		; floating literal
-     ($chlit ($$ `(char ,$1)))		; char literal
+     ($fixed ($$ `(fixed ,$1)))         ; integer literal
+     ($float ($$ `(float ,$1)))         ; floating literal
+     ($chlit ($$ `(char ,$1)))          ; char literal
      ($chlit/L ($$ `(char (@ (type "wchar_t")) ,$1)))
      ($chlit/u ($$ `(char (@ (type "char16_t")) ,$1)))
      ($chlit/U ($$ `(char (@ (type "char32_t")) ,$1))))
@@ -139,7 +139,7 @@
   (write-lalr-actions c99cx-mach (mdir "c99cx-act.scm.new") #:prefix "c99cx-")
   (write-lalr-tables c99cx-mach (mdir "c99cx-tab.scm.new") #:prefix "c99cx-")
   (let ((a (move-if-changed (mdir "c99cx-act.scm.new") (mdir "c99cx-act.scm")))
-	(b (move-if-changed (mdir "c99cx-tab.scm.new") (mdir "c99cx-tab.scm"))))
+        (b (move-if-changed (mdir "c99cx-tab.scm.new") (mdir "c99cx-tab.scm"))))
     (or a b)))
 
 ;; --- last line ---

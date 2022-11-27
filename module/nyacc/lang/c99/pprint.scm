@@ -31,8 +31,8 @@
 
 (define op-sym
   (let ((ot '(("=" . eq) ("+=" . pl-eq) ("-=" . mi-eq) ("*=" . ti-eq)
-	      ("/=" . di-eq) ("%=" . mo-eq) ("<<=" . ls-eq) (">>=" . rs-eq)
-	      ("&=" . ba-eq) ("^=" . bx-eq) ("|=" bo-eq))))
+              ("/=" . di-eq) ("%=" . mo-eq) ("<<=" . ls-eq) (">>=" . rs-eq)
+              ("&=" . ba-eq) ("^=" . bx-eq) ("|=" bo-eq))))
     (lambda (name)
       (assoc-ref ot name))))
 
@@ -58,9 +58,9 @@
 
 (define op-assc
   '((left array-ref d-sel i-sel post-inc post-dec comp-lit mul div mod add sub
-	  lshift rshift lt gt le ge bitwise-and bitwise-xor bitwise-or and or)
+          lshift rshift lt gt le ge bitwise-and bitwise-xor bitwise-or and or)
     (right pre-inc pre-dec sizeof bitwise-not not pos neg ref-to de-ref cast
-	   cond assn-expr)
+           cond assn-expr)
     (nonassoc)))
 
 ;; @deffn {Procedure} scmchs->c scm-chr-str => c-chr-str
@@ -91,7 +91,7 @@
 
 (define (esc->ch ch)
   (case ch ((#\nul) #\0) ((#\bel) #\a) ((#\bs) #\b) ((#\ht) #\t)
-	((#\nl) #\n) ((#\vt) #\v) ((#\np) #\f) ((#\cr) #\r)))
+        ((#\nl) #\n) ((#\vt) #\v) ((#\np) #\f) ((#\cr) #\r)))
    
 ;; @deffn {Procedure} scmstr->c str
 ;; to be documented
@@ -104,7 +104,7 @@
        ((char-set-contains? char-set:printing ch) (cons ch chl))
        ((char=? ch #\space) (cons #\space chl))
        ((memq ch '(#\nul #\bel #\bs #\ht #\nl #\vt #\np #\cr))
-	(cons* #\\ (esc->ch ch) chl))
+        (cons* #\\ (esc->ch ch) chl))
        (else (char->hex-list ch chl))))
     '() str)))
     
@@ -124,8 +124,8 @@
 ;; @end table
 ;; @end deffn
 (define* (pretty-print-c99 tree
-			   #:optional (port (current-output-port))
-			   #:key ugly per-line-prefix (basic-offset 2))
+                           #:optional (port (current-output-port))
+                           #:key ugly per-line-prefix (basic-offset 2))
 
   (define fmtr
     ((if ugly make-pp-formatter/ugly make-pp-formatter)
@@ -141,8 +141,8 @@
       ((define (name ,name) (args . ,args) (repl ,repl))
        (sf "#define ~A(" name)
        (pair-for-each
-	(lambda (pair) (sf "~A" (car pair)) (if (pair? (cdr pair)) (sf ",")))
-	args)
+        (lambda (pair) (sf "~A" (car pair)) (if (pair? (cdr pair)) (sf ",")))
+        args)
        (sf ") ~A\n" repl))
       ((define (name ,name) (repl ,repl))
        (sf "#define ~A ~A\n" name repl))
@@ -164,23 +164,23 @@
   (define (unary/l op rep rval)
     (sf rep)
     (if (protect-expr? 'rt op rval)
-	(ppx/p rval)
-	(ppx rval)))
+        (ppx/p rval)
+        (ppx rval)))
   
   (define (unary/r op rep lval)
     (if (protect-expr? 'lt op lval)
-	(ppx/p lval)
-	(ppx lval))
+        (ppx/p lval)
+        (ppx lval))
     (sf rep))
   
   (define (binary op rep lval rval)
     (if (protect-expr? 'lt op lval)
-	(ppx/p lval)
-	(ppx lval))
+        (ppx/p lval)
+        (ppx lval))
     (sf rep)
     (if (protect-expr? 'rt op rval)
-	(ppx/p rval)
-	(ppx rval)))
+        (ppx/p rval)
+        (ppx rval)))
 
   (define (ptr-declr? sx)
     (memq (sx-tag sx) '(ptr-declr abs-ptr-declr)))
@@ -195,21 +195,21 @@
     (string-join
      (fold-right
       (lambda (pair seed)
-	(if (eqv? 'attributes (car pair))
-	    ;; FIXME: should really parse-attributes, then ppx
-	    (append (string-split (cadr pair) #\;) seed)
-	    seed))
+        (if (eqv? 'attributes (car pair))
+            ;; FIXME: should really parse-attributes, then ppx
+            (append (string-split (cadr pair) #\;) seed)
+            seed))
       '() attr)
      " "))
 
   (define (struct-union-def struct-or-union attr name fields)
     (if name
-	(if (pair? attr)
-	    (sf "~A ~A ~A {\n" struct-or-union (pp-attr attr) name)
-	    (sf "~A ~A {\n" struct-or-union name))
-	(if (pair? attr)
-	    (sf "~A ~A {\n" struct-or-union (pp-attr attr))
-	    (sf "~A {\n" struct-or-union)))
+        (if (pair? attr)
+            (sf "~A ~A ~A {\n" struct-or-union (pp-attr attr) name)
+            (sf "~A ~A {\n" struct-or-union name))
+        (if (pair? attr)
+            (sf "~A ~A {\n" struct-or-union (pp-attr attr))
+            (sf "~A {\n" struct-or-union)))
     (push-il)
     (for-each ppx fields)
     (pop-il)
@@ -230,28 +230,28 @@
       ((ident ,name) (sf "~A" name))
       ((char (@ . ,al) ,value)
        (let ((type (sx-attr-ref al 'type)))
-	 (cond
-	  ((not type) (sf "'~A'" (scmchs->c value)))
-	  ((string=? type "wchar_t") (sf "L'~A'" (scmchs->c value)))
-	  ((string=? type "char16_t") (sf "u'~A'" (scmchs->c value)))
-	  ((string=? type "char32_t") (sf "U'~A'" (scmchs->c value)))
-	  (else (throw 'c99-error "bad type")))))
+         (cond
+          ((not type) (sf "'~A'" (scmchs->c value)))
+          ((string=? type "wchar_t") (sf "L'~A'" (scmchs->c value)))
+          ((string=? type "char16_t") (sf "u'~A'" (scmchs->c value)))
+          ((string=? type "char32_t") (sf "U'~A'" (scmchs->c value)))
+          (else (throw 'c99-error "bad type")))))
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
 
       ((string . ,value-l)
        (pair-for-each
-	(lambda (pair)
-	  (sf "\"~A\"" (scmstr->c (car pair)))
-	  (if (pair? (cdr pair)) (sf " ")))
-	value-l))
+        (lambda (pair)
+          (sf "\"~A\"" (scmstr->c (car pair)))
+          (if (pair? (cdr pair)) (sf " ")))
+        value-l))
 
       ((comment ,text)
        (cond
-	((or (string-any #\newline text) (string-suffix? " " text))
-	 (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n"))
-		   (string-split (string-append "/*" text "*/") #\newline)))
-	(else (sf (string-append "//" text "\n")))))
+        ((or (string-any #\newline text) (string-suffix? " " text))
+         (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n"))
+                   (string-split (string-append "/*" text "*/") #\newline)))
+        (else (sf (string-append "//" text "\n")))))
       
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
       
@@ -279,8 +279,8 @@
       ((cast ,tn ,ex)
        (sf "(") (ppx tn) (sf ")")
        (if (protect-expr? 'rt 'cast ex)
-	   (ppx/p ex)
-	   (ppx ex)))
+           (ppx/p ex)
+           (ppx ex)))
 
       ((add ,lval ,rval) (binary 'add " + " lval rval))
       ((sub ,lval ,rval) (binary 'sub " - " lval rval))
@@ -316,18 +316,18 @@
       ;; TODO: check protection 
       ((fctn-call ,expr ,arg-list)
        (if (protect-expr? 'rt 'fctn-call expr)
-	   (ppx/p expr)
-	   (ppx expr))
+           (ppx/p expr)
+           (ppx expr))
        (sf "(")
        (ppx arg-list)
        (sf ")"))
 
       ((expr-list . ,expr-l)
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf ", ")))
-	expr-l))
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf ", ")))
+        expr-l))
       
       ((assn-expr ,lval ,op ,rval)
        (binary (car op) (simple-format #f " ~A " (cadr op)) lval rval))
@@ -335,22 +335,22 @@
       ;; TODO: check protection
       ((comma-expr . ,expr-list)
        (pair-for-each
-	(lambda (pair)
-	  (cond
-	   ((pair? (cdr pair))
-	    (if (protect-expr? 'rt 'comma-expr (car pair))
-		(ppx/p (car pair))
-		(ppx (car pair)))
-	    (sf ", "))
-	   (else (ppx (car pair)))))
-	expr-list))
+        (lambda (pair)
+          (cond
+           ((pair? (cdr pair))
+            (if (protect-expr? 'rt 'comma-expr (car pair))
+                (ppx/p (car pair))
+                (ppx (car pair)))
+            (sf ", "))
+           (else (ppx (car pair)))))
+        expr-list))
 
       ((stmt-expr (block-item-list . ,items))
        (sf "({\n") (push-il) (for-each ppx items) (pop-il) (sf "})"))
 
       ((udecl . ,rest)
        (ppx `(decl . ,rest)))
-      ((decl (@ . ,attr))		; GNU extension
+      ((decl (@ . ,attr))               ; GNU extension
        (sf ";"))
       ((decl (@ . ,attr) ,decl-spec-list)
        (ppx decl-spec-list) (sf ";") (comm+nl attr))
@@ -369,30 +369,30 @@
 
       ((decl-spec-list . ,dsl)
        (pair-for-each
-	(lambda (dsl)
-	  (case (sx-tag (car dsl))
-	    ((stor-spec) (sf "~A" (sx-tag (sx-ref (car dsl) 1))))
-	    ((type-qual) (sf "~A" (sx-tag (sx-ref (car dsl) 1))))
-	    ((fctn-spec) (sf "~A" (sx-ref (car dsl) 1)))
-	    ((type-spec) (ppx (car dsl)))
-	    ((typeof-expr typeof-type)
-	     (sf "typeof(") (ppx (sx-ref (car dsl) 1)) (sf ") "))
-	    (else (sf "[?:~S]" (car dsl))))
-	  (if (pair? (cdr dsl)) (sf " ")))
-	dsl))
+        (lambda (dsl)
+          (case (sx-tag (car dsl))
+            ((stor-spec) (sf "~A" (sx-tag (sx-ref (car dsl) 1))))
+            ((type-qual) (sf "~A" (sx-tag (sx-ref (car dsl) 1))))
+            ((fctn-spec) (sf "~A" (sx-ref (car dsl) 1)))
+            ((type-spec) (ppx (car dsl)))
+            ((typeof-expr typeof-type)
+             (sf "typeof(") (ppx (sx-ref (car dsl) 1)) (sf ") "))
+            (else (sf "[?:~S]" (car dsl))))
+          (if (pair? (cdr dsl)) (sf " ")))
+        dsl))
 
       ((init-declr-list . ,rest)
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf ", ")))
-	rest))
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf ", ")))
+        rest))
       ((comp-declr-list . ,rest)
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf ", ")))
-	rest))
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf ", ")))
+        rest))
 
       ((init-declr ,declr ,item2 ,item3) (ppx declr) (ppx item2) (ppx item3))
       ((init-declr ,declr ,item2) (ppx declr) (sf " ") (ppx item2))
@@ -409,17 +409,17 @@
       ;;((type-spec ,arg)
       ((type-spec (@ . ,aattr) ,arg)
        (case (sx-tag arg)
-	 ((fixed-type) (sf "~A" (sx-ref arg 1)))
-	 ((float-type) (sf "~A" (sx-ref arg 1)))
-	 ((struct-ref) (ppx arg))
-	 ((struct-def) (if (pair? aattr) (sf " ~S" (pp-attr aattr))) (ppx arg))
-	 ((union-ref) (ppx arg))
-	 ((union-def) (if (pair? aattr) (sf " ~S" (pp-attr aattr))) (ppx arg))
-	 ((enum-ref) (ppx arg))
-	 ((enum-def) (ppx arg))
-	 ((typename) (sf "~A" (sx-ref arg 1)))
-	 ((void) (sf "void"))
-	 (else (throw 'nyacc-error "pprint: type-spec: ~S" arg))))
+         ((fixed-type) (sf "~A" (sx-ref arg 1)))
+         ((float-type) (sf "~A" (sx-ref arg 1)))
+         ((struct-ref) (ppx arg))
+         ((struct-def) (if (pair? aattr) (sf " ~S" (pp-attr aattr))) (ppx arg))
+         ((union-ref) (ppx arg))
+         ((union-def) (if (pair? aattr) (sf " ~S" (pp-attr aattr))) (ppx arg))
+         ((enum-ref) (ppx arg))
+         ((enum-def) (ppx arg))
+         ((typename) (sf "~A" (sx-ref arg 1)))
+         ((void) (sf "void"))
+         (else (throw 'nyacc-error "pprint: type-spec: ~S" arg))))
 
       ((struct-ref (ident ,name)) (sf "struct ~A" name))
       ((union-ref (ident ,name)) (sf "union ~A" name))
@@ -459,15 +459,15 @@
 
       ;;((fctn-spec "inline")
       ((fctn-spec ,spec)
-       (sf "~S " spec))			; SPACE ???
+       (sf "~S " spec))                 ; SPACE ???
 
       ((attribute-list . ,attrs)
        (sf " __attribute__((")
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf ",")))
-	attrs)
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf ",")))
+        attrs)
        (sf "))"))
 
       ((attribute (ident ,name))
@@ -477,10 +477,10 @@
 
       ((attr-expr-list . ,items)
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf ",")))
-	items))
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf ",")))
+        items))
 
       ((ptr-declr ,ptr ,dir-declr)
        (ppx ptr) (ppx dir-declr))
@@ -489,16 +489,16 @@
       ((pointer ,one) (sf "*") (ppx one))
       ((pointer ,one ,two) (sf "*") (ppx one) (ppx two))
 
-      ((type-qual-list . ,tql)		; see decl-spec-list
+      ((type-qual-list . ,tql)          ; see decl-spec-list
        (pair-for-each
-	(lambda (dsl)
-	  (case (sx-tag (car dsl))
-	    ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
-	    ((typeof-expr typeof-type)
-	     (sf "typeof(") (ppx (sx-ref (car dsl) 1)) (sf ") "))
-	    (else (sf "[?:~S]" (car dsl))))
-	  (if (pair? (cdr dsl)) (sf " ")))
-	tql))
+        (lambda (dsl)
+          (case (sx-tag (car dsl))
+            ((type-qual) (sf "~A" (sx-ref (car dsl) 1)))
+            ((typeof-expr typeof-type)
+             (sf "typeof(") (ppx (sx-ref (car dsl) 1)) (sf ") "))
+            (else (sf "[?:~S]" (car dsl))))
+          (if (pair? (cdr dsl)) (sf " ")))
+        tql))
 
       ((ary-declr ,declr ,arg)
        (protect-ptr declr) (sf "[") (ppx arg) (sf "]"))
@@ -527,7 +527,7 @@
       ;; declr-scope
       ((declr-scope ,abs-declr)
        (sf "(") (ppx abs-declr) (sf ")"))
-	
+        
       ;; declr-array dir-abs-declr
       ;; declr-array dir-abs-declr assn-expr
       ;; declr-array dir-abs-declr type-qual-list
@@ -538,7 +538,7 @@
        (ppx dir-abs-declr) (sf "[") (ppx arg2) (sf "]"))
       ((declr-array ,dir-abs-declr ,arg2 ,arg3)
        (ppx dir-abs-declr) (sf "[") (ppx arg2) (sf " ") (ppx arg3) (sf "]"))
-	
+        
       ;; declr-anon-array
       ;; declr-STAR
 
@@ -555,24 +555,24 @@
       ((initzer-list . ,items)
        (sf "{") ;; or "{ "
        (pair-for-each
-	(lambda (pair)
-	  (ppx (sx-ref (car pair) 1))
-	  (if (pair? (cdr pair)) (sf ", ")))
-	items)
+        (lambda (pair)
+          (ppx (sx-ref (car pair) 1))
+          (if (pair? (cdr pair)) (sf ", ")))
+        items)
        (sf "}")) ;; or " }"
 
       ((compd-stmt (block-item-list . ,items))
        (sf "{\n") (push-il)
        (pair-for-each
-	(lambda (pair)
-	  (let ((this (car pair)) (next (and (pair? (cdr pair)) (cadr pair))))
-	    (ppx this)
-	    (cond ;; add blank line if next is different or fctn defn
-	     ((not next))
-	     ((eqv? (sx-tag this) (sx-tag next)))
-	     ((eqv? (sx-tag this) 'comment))
-	     ((eqv? (sx-tag next) 'comment) (sf "\n")))))
-	items)
+        (lambda (pair)
+          (let ((this (car pair)) (next (and (pair? (cdr pair)) (cadr pair))))
+            (ppx this)
+            (cond ;; add blank line if next is different or fctn defn
+             ((not next))
+             ((eqv? (sx-tag this) (sx-tag next)))
+             ((eqv? (sx-tag this) 'comment))
+             ((eqv? (sx-tag next) 'comment) (sf "\n")))))
+        items)
        (pop-il) (sf "}\n"))
       ((compd-stmt-no-newline (block-item-list . ,items))
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "} "))
@@ -581,33 +581,33 @@
       ((expr-stmt) (sf ";\n")) ;; add comment?
       ((expr-stmt (@ . ,attr) ,expr) (ppx expr) (sf ";") (comm+nl attr))
       
-      ((expr) (sf ""))		; for lone expr-stmt and return-stmt
+      ((expr) (sf ""))          ; for lone expr-stmt and return-stmt
 
       ;; selection-statement
       ((if . ,rest)
        (let ((cond-part (sx-ref tree 1))
-	     (then-part (sx-ref tree 2)))
-	 (sf "if (") (ppx cond-part) (sf ") ")
-	 (ppx then-part)
-	 (let loop ((else-l (sx-tail tree 3)))
-	   (cond
-	    ((null? else-l) #t)
-	    ((eqv? 'else-if (caar else-l))
-	     (sf "else if (") (ppx (sx-ref (car else-l) 1)) (sf ") ")
-	     (ppx (sx-ref (car else-l) 2))
-	     (loop (cdr else-l)))
-	    (else
-	     (sf "else ")
-	     (ppx (car else-l)))))))
+             (then-part (sx-ref tree 2)))
+         (sf "if (") (ppx cond-part) (sf ") ")
+         (ppx then-part)
+         (let loop ((else-l (sx-tail tree 3)))
+           (cond
+            ((null? else-l) #t)
+            ((eqv? 'else-if (caar else-l))
+             (sf "else if (") (ppx (sx-ref (car else-l) 1)) (sf ") ")
+             (ppx (sx-ref (car else-l) 2))
+             (loop (cdr else-l)))
+            (else
+             (sf "else ")
+             (ppx (car else-l)))))))
 
       ((switch ,expr (compd-stmt (block-item-list . ,items)))
        (sf "switch (") (ppx expr) (sf ") {\n")
        (for-each
-	(lambda (item)
-	  (unless (memq (car item) '(case default)) (push-il))
-	  (ppx item)
-	  (unless (memq (car item) '(case default)) (pop-il)))
-	items)
+        (lambda (item)
+          (unless (memq (car item) '(case default)) (push-il))
+          (ppx item)
+          (unless (memq (car item) '(case default)) (pop-il)))
+        items)
        (sf "}\n"))
 
       ;; labeled-statement
@@ -628,8 +628,8 @@
       ((do-while ,stmt ,expr)
        (sf "do ")
        (if (eqv? 'compd-stmt (sx-tag stmt)) 
-	   (ppx `(compd-stmt-no-newline ,(sx-ref stmt 1)))
-	   (ppx stmt))
+           (ppx `(compd-stmt-no-newline ,(sx-ref stmt 1)))
+           (ppx stmt))
        (sf "while (") (ppx expr) (sf ");\n"))
       
       ;; for
@@ -666,18 +666,18 @@
       ((asm-outputs . ,elts)
        (sf ": ")
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
-	elts))
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+        elts))
       ((asm-inputs . ,elts)
        (sf ": ")
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
-	elts))
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+        elts))
       ((asm-clobbers . ,elts)
        (sf ": ")
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
-	elts))
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+        elts))
       ((asm-operand (ident ,name) ,str ,arg)
        (sf "[~A] " name) (ppx str) (sf " (") (ppx arg) (sf ")"))
       ((asm-operand ,str ,arg)
@@ -685,16 +685,16 @@
       ((asm-gotos . ,elts)
        (sf ": ")
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
-	elts))
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+        elts))
        
       ;; jump-statement
       ((goto ,where)
-       (pop-il)			; unindent
+       (pop-il)                 ; unindent
        (sf "goto ~A;" (sx-ref where 1))
        ;; comment?
        (sf "\n")
-       (push-il))			; re-indent
+       (push-il))                       ; re-indent
 
       ((continue) (sf "continue;\n"))
       ((break) (sf "break;\n"))
@@ -703,28 +703,28 @@
 
       ((trans-unit . ,items)
        (pair-for-each
-	(lambda (pair)
-	  (let ((this (car pair)) (this-tag (caar pair))
-		(next-tag (and (pair? (cdr pair)) (caadr pair))))
-	    (ppx this)
-	    (cond ;; heuristics for adding blank lines:
-	     ((not next-tag))
-	     ((eqv? this-tag 'comment))
-	     ((eqv? next-tag 'fctn-defn) (sf "\n"))
-	     ((eqv? this-tag next-tag))
-	     ((eqv? next-tag 'comment) (sf "\n"))
-	     (else (sf "\n")))))
-	items))
+        (lambda (pair)
+          (let ((this (car pair)) (this-tag (caar pair))
+                (next-tag (and (pair? (cdr pair)) (caadr pair))))
+            (ppx this)
+            (cond ;; heuristics for adding blank lines:
+             ((not next-tag))
+             ((eqv? this-tag 'comment))
+             ((eqv? next-tag 'fctn-defn) (sf "\n"))
+             ((eqv? this-tag next-tag))
+             ((eqv? next-tag 'comment) (sf "\n"))
+             (else (sf "\n")))))
+        items))
 
       ((fctn-defn . ,rest) ;; but not yet (knr-fctn-defn)
        (let* ((decl-spec-list (sx-ref tree 1))
-	      (declr (sx-ref tree 2))
-	      (compd-stmt (sx-ref tree 3)))
-	 (ppx decl-spec-list)
-	 (sf " ")
-	 (ppx declr)
-	 (sf " ")
-	 (ppx compd-stmt)))
+              (declr (sx-ref tree 2))
+              (compd-stmt (sx-ref tree 3)))
+         (ppx decl-spec-list)
+         (sf " ")
+         (ppx declr)
+         (sf " ")
+         (ppx compd-stmt)))
 
       ((ptr-declr ,ptr ,dcl)
        (ppx ptr) (ppx dcl))
@@ -740,10 +740,10 @@
 
       ((param-list . ,params)
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
-	params))
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+        params))
 
-      ((ellipsis)	;; should work
+      ((ellipsis)       ;; should work
        (sf "..."))
 
       ((param-decl ,decl-spec-list ,param-declr)
