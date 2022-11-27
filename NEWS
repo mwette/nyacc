@@ -5,7 +5,7 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2022-11-XX  V1.08.0
+2022-11-27  V1.08.0
 	* updated c99/cpp,parser to handle source properties better;
 	  (For CPP expansion will set filename to location of use.)
 	  The lexical analyzer uses set-source-properties! before return.
