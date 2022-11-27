@@ -1,4 +1,4 @@
-;; nyacc/lex-01.test			-*- scheme -*-
+;; nyacc/lex-01.test                    -*- scheme -*-
 ;;
 ;; Copyright (C) 2015,2017,2019 Matthew R. Wette
 ;;
@@ -38,25 +38,25 @@
 (define (check-num pair) ;; pair = ("123" . $fixed)
   (let* ((str (car pair)) (end (1- (string-length str))) (tok (cdr pair)))
     (call-with-values
-	(lambda ()
-	  (catch 'nyacc-error
-	    (lambda ()
-	      (with-input-from-string str
-		(lambda ()
-		  (let* ((val (read-c-num (read-char)))
-			 (nch (read-char)))
-		    (values val nch)))))
-	    (lambda (key fmt . args)
-	      (values '$error (string-ref str end)))))
+        (lambda ()
+          (catch 'nyacc-error
+            (lambda ()
+              (with-input-from-string str
+                (lambda ()
+                  (let* ((val (read-c-num (read-char)))
+                         (nch (read-char)))
+                    (values val nch)))))
+            (lambda (key fmt . args)
+              (values '$error (string-ref str end)))))
       (lambda (val nch)
-	;;(sf "~S => ~S ~S\n" str val nch)
-	(if val
-	    (if (pair? val)
-		(and (eq? tok (car val))
-		     (string=? (substring str 0 end) (cdr val))
-		     (char=? (string-ref str end) nch))
-		(eq? val tok))
-	    (not tok))))))
+        ;;(sf "~S => ~S ~S\n" str val nch)
+        (if val
+            (if (pair? val)
+                (and (eq? tok (car val))
+                     (string=? (substring str 0 end) (cdr val))
+                     (char=? (string-ref str end) nch))
+                (eq? val tok))
+            (not tok))))))
    
 (define ctr
   (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
@@ -72,7 +72,7 @@
             (string=?
              (with-input-from-string (car pair)
                (lambda () (or (and=> (read-c-chlit (read-char)) cdr) "")))
-	     (cdr pair))))
+             (cdr pair))))
      #t
      '(("'\\177'" . "\x7f")
        )))
@@ -128,7 +128,7 @@
             (string=?
              (with-input-from-string (car pair)
                (lambda () (or (and=> (read-c-string (read-char)) cdr) "")))
-	     (cdr pair))))
+             (cdr pair))))
      #t
      '(("\"\\177\"" . "\x7f")
        )))
@@ -137,10 +137,10 @@
   (pass-if "C comments"
     (with-input-from-string "//abc\ndef"
       (lambda ()
-	(let* ((tp (read-comm-1 (read-char) #f))
-	       (ch (read-char)))
-	  (and (equal? tp '($code-comm . "abc"))
-	       (equal? ch #\newline))))))
+        (let* ((tp (read-comm-1 (read-char) #f))
+               (ch (read-char)))
+          (and (equal? tp '($code-comm . "abc"))
+               (equal? ch #\newline))))))
 
   ;; C99 number string to Scheme number string (which works w/ string->number)
   (pass-if "C num to Scheme num (as strings)"

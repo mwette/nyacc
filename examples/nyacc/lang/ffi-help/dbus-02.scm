@@ -40,16 +40,16 @@
 (define (send-msg conn msg)
   (let ((pending (make-DBusPendingCall*)))
     (if (eqv? FALSE (dbus_connection_send_with_reply
-		     conn msg (pointer-to pending) -1))
-	(error "*** send_with_reply FAILED\n"))
+                     conn msg (pointer-to pending) -1))
+        (error "*** send_with_reply FAILED\n"))
     (dbus_message_unref msg)
     pending))
 
 (define (send-sig conn sig)
   (let ((serial (make-uint32)))
     (if (eqv? FALSE (dbus_connection_send
-		     conn sig (pointer-to serial)))
-	(error "*** send FAILED\n"))
+                     conn sig (pointer-to serial)))
+        (error "*** send FAILED\n"))
     (dbus_message_unref sig)
     serial))
 
@@ -58,7 +58,7 @@
 
 (define (handle-it pending)
   (let ((msg (dbus_pending_call_steal_reply pending))
-	(msg-iter (make-DBusMessageIter)))
+        (msg-iter (make-DBusMessageIter)))
     (if (zero? (fh-object-ref msg)) (error "*** reply message NULL\n"))
     (dbus_pending_call_unref pending)
     (dbus_message_iter_init msg (pointer-to msg-iter))
@@ -75,19 +75,19 @@
 ;; https://pythonhosted.org/txdbus/dbus_overview.html
 ;; http://git.0pointer.net/rtkit.git/tree/README
 
-(define msg02/ses			; works
+(define msg02/ses                       ; works
   (dbus_message_new_method_call
-   "org.freedesktop.DBus"		; bus name
-   "/org/freedesktop/DBus"		; object path
-   "org.freedesktop.DBus.Debug.Stats"	; interface name
-   "GetStats"))				; method
+   "org.freedesktop.DBus"               ; bus name
+   "/org/freedesktop/DBus"              ; object path
+   "org.freedesktop.DBus.Debug.Stats"   ; interface name
+   "GetStats"))                         ; method
 
-(define msg03/all			; works
+(define msg03/all                       ; works
   (dbus_message_new_method_call
-   "org.freedesktop.DBus"		; bus name
-   "/org/freedesktop/DBus"		; object path
-   "org.freedesktop.DBus"		; interface name
-   "GetId"))				; method
+   "org.freedesktop.DBus"               ; bus name
+   "/org/freedesktop/DBus"              ; object path
+   "org.freedesktop.DBus"               ; interface name
+   "GetId"))                            ; method
 
 (define conn (spawn-dbus-mainloop 'session))
 
@@ -96,6 +96,6 @@
 (let loop ((got-it? (there-yet? pending)))
   (sf "there-yet? => ~S\n" got-it?)
   (cond (got-it? (handle-it pending))
-	(else (sleep 1) (loop (there-yet? pending)))))
+        (else (sleep 1) (loop (there-yet? pending)))))
 
 ;; --- last line ---

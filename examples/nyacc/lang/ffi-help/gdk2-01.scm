@@ -16,7 +16,7 @@
 (define win
   (let ((attr (make-GdkWindowAttr)))
     (fh-object-set! attr 'event_mask
-		    (apply logior (map gdk-symval '(GDK_EXPOSE))))
+                    (apply logior (map gdk-symval '(GDK_EXPOSE))))
     (fh-object-set! attr 'width 400)
     (fh-object-set! attr 'height 300)
     (fh-object-set! attr 'wclass (gdk-symval 'GDK_INPUT_OUTPUT))

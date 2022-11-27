@@ -19,9 +19,9 @@
 
 (define-module (nyacc lang javascript xlib)
   #:export (JSdict
-	    js:undefined
-	    js:null
-	    )
+            js:undefined
+            js:null
+            )
   )
 
 (define (obj-toString obj)
@@ -55,9 +55,9 @@
 
 (define Object (make-hash-table 31))
 (hashq-set! Object 'constructor
-	    (case-lambda
-	     (() (make-hash-table 31))
-	     ((value) (make-hash-table 31))))
+            (case-lambda
+             (() (make-hash-table 31))
+             ((value) (make-hash-table 31))))
 (hashq-set! Object 'prototype Object)
 ;; hasOwnProperty (lambda () ...)
 ;; isPrototypeOf (lambda () ...)
@@ -102,8 +102,8 @@
   (let ((obj (make-hash-table)))
     (let loop ((pairs rest))
       (when (pair? pairs)
-	(hashq-set! obj (car pairs) (cadr pairs))
-	(loop (cddr pairs))))
+        (hashq-set! obj (car pairs) (cadr pairs))
+        (loop (cddr pairs))))
     obj))
 (define mkobj js-make-object)
 

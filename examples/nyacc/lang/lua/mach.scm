@@ -17,7 +17,7 @@
 
 (define-module (nyacc lang lua mach)
   #:export (lua-spec
-	    )
+            )
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   )

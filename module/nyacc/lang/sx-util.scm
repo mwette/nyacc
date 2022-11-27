@@ -29,15 +29,15 @@
 
 (define-module (nyacc lang sx-util)
   #:export (make-sx
-	    sx-tag sx-attr sx-tail sx-length sx-ref sx-ref*
-	    sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
-	    sx-find
-	    sx-split sx-split* sx-join sx-join* sx-cons sx-cons* sx-list
-	    sx-unitize
-	    sx-match sx-match-tail
-	    ;; deprecated:
-	    sx-join sx-join*
-	    )
+            sx-tag sx-attr sx-tail sx-length sx-ref sx-ref*
+            sx-has-attr? sx-attr-ref sx-attr-add sx-attr-add* sx-attr-set!
+            sx-find
+            sx-split sx-split* sx-join sx-join* sx-cons sx-cons* sx-list
+            sx-unitize
+            sx-match sx-match-tail
+            ;; deprecated:
+            sx-join sx-join*
+            )
   #:use-module ((srfi srfi-1) #:select (find fold fold-right append-reverse)))
 (cond-expand
   (mes)
@@ -70,17 +70,17 @@
 ;; @end deffn
 (define (make-sx tag attr . elts)
   (let ((tail (fold-right
-	       (lambda (elt sx)
-		 (cond
-		  ((pair? elt) (cons elt sx))
-		  ((string? elt) (cons elt sx))
-		  (else sx)))
-	       '() elts)))
+               (lambda (elt sx)
+                 (cond
+                  ((pair? elt) (cons elt sx))
+                  ((string? elt) (cons elt sx))
+                  (else sx)))
+               '() elts)))
     (if (pair? attr)
-	(if (eq? '@ (car attr))
-	    (cons* tag attr tail)
-	    (cons* tag `(@ . ,attr) tail))
-	(cons tag tail))))
+        (if (eq? '@ (car attr))
+            (cons* tag attr tail)
+            (cons* tag `(@ . ,attr) tail))
+        (cons tag tail))))
 
 ;; @deffn {Procedure} sx-length sx => <int>
 ;; Return the length, don't include attributes, but do include tag
@@ -164,12 +164,12 @@
   (cond
    ((symbol? tag-or-path)
     (find (lambda (node)
-	    (and (pair? node) (eqv? tag-or-path (car node))))
-	  sx))
+            (and (pair? node) (eqv? tag-or-path (car node))))
+          sx))
    ((pair? tag-or-path)
     (let ((sym (car tag-or-path)))
       (and=> (sx-find (car tag-or-path) sx)
-	     (lambda (sub-sx) (sx-find (cdr tag-or-path) sub-sx)))))
+             (lambda (sub-sx) (sx-find (cdr tag-or-path) sub-sx)))))
    ((null? tag-or-path)
     sx)
    (else
@@ -188,8 +188,8 @@
 ;; @end deffn
 (define (sx-attr sx)
   (if (and (pair? (cdr sx))
-	   (pair? (cadr sx))
-	   (eqv? '@ (caadr sx)))
+           (pair? (cadr sx))
+           (eqv? '@ (caadr sx)))
       (cdadr sx)
       '()))
 
@@ -200,11 +200,11 @@
 ;; @end deffn
 (define (sx-attr-ref sx key)
   (let ((attr-tail (cond ((not sx) '())
-			 ((null? sx) sx)
-			 ((pair? (car sx)) sx)
-			 ((eqv? '@ (car sx)) (car sx))
-			 ((sx-attr sx))
-			 (else '()))))
+                         ((null? sx) sx)
+                         ((pair? (car sx)) sx)
+                         ((eqv? '@ (car sx)) (car sx))
+                         ((sx-attr sx))
+                         (else '()))))
     (and=> (assq-ref attr-tail key) car)))
 
 ;; map to #f or '(@ ...)
@@ -220,17 +220,17 @@
 ;; @end deffn
 (define* (sx-attr-add sx key-or-pair #:optional val)
   (let* ((pair (if val (list key-or-pair val) key-or-pair))
-	 (key (car pair)) (val (cadr pair)))
+         (key (car pair)) (val (cadr pair)))
     (cons
      (sx-tag sx)
      (if (sx-has-attr? sx)
-	 (cons `(@ pair
-		   ,@(let loop ((atl (sx-attr sx)))
-		       (cond ((null? atl) '())
-			     ((eq? key (caar atl)) (loop (cdr atl)))
-			     (else (cons (car atl) (loop (cdr atl)))))))
-	       (cddr sx))
-	 (cons `(@ ,pair) (cdr sx))))))
+         (cons `(@ pair
+                   ,@(let loop ((atl (sx-attr sx)))
+                       (cond ((null? atl) '())
+                             ((eq? key (caar atl)) (loop (cdr atl)))
+                             (else (cons (car atl) (loop (cdr atl)))))))
+               (cddr sx))
+         (cons `(@ ,pair) (cdr sx))))))
 
 ;; @deffn {Procedure} sx-attr-add* sx key val [key val [@dots{} ]] => sx
 ;; Add key-val pairs. @var{key} must be a symbol and @var{val} must be
@@ -238,11 +238,11 @@
 ;; @end deffn
 (define (sx-attr-add* sx . rest)
   (let* ((attrs (sx-attr sx))
-	 (attrs (let loop ((kvl rest))
-		  (if (null? kvl) attrs
-		      (cons (list (car kvl) (cadr kvl)) (loop (cddr kvl)))))))
+         (attrs (let loop ((kvl rest))
+                  (if (null? kvl) attrs
+                      (cons (list (car kvl) (cadr kvl)) (loop (cddr kvl)))))))
     (cons* (sx-tag sx) (cons '@ attrs)
-	   (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
+           (if (sx-has-attr? sx) (cddr sx) (cdr sx)))))
 
 ;; @deffn {Procedure} sx-attr-set! sx key val
 ;; Set attribute for sx.  If no attributes exist, if key does not exist,
@@ -251,7 +251,7 @@
 (define (sx-attr-set! sx key val)
   (if (sx-has-attr? sx)
       (let ((attr (cadr sx)))
-	(set-cdr! attr (assoc-set! (cdr attr) key (list val))))
+        (set-cdr! attr (assoc-set! (cdr attr) key (list val))))
       (set-cdr! sx (cons `(@ (,key ,val)) (cdr sx))))
   sx)
 
@@ -268,7 +268,7 @@
     (if attr (cons* tag attr tail) (cons tag tail))))
 (define (sx-cons* tag attr . rest)
   (let ((tail (let loop ((tail rest))
-		(cond
+                (cond
                  ((null? (cdr tail)) (car tail))
                  ((not (car tail)) (loop (cdr tail)))
                  ((null? (car tail)) (loop (cdr tail)))
@@ -293,13 +293,13 @@
 ;; @end deffn
 (define (sx-split sexp)
   (let ((tag (sx-tag sexp))
-	(attr (sx-attr sexp))
-	(tail (sx-tail sexp)))
+        (attr (sx-attr sexp))
+        (tail (sx-tail sexp)))
     (values tag attr tail)))
 (define (sx-split* sexp)
   (let ((tag (sx-tag sexp))
-	(attr (sx-attr sexp))
-	(tail (sx-tail sexp)))
+        (attr (sx-attr sexp))
+        (tail (sx-tail sexp)))
     (apply values tag attr tail)))
 
 ;; @deffn {Procedure} sx-unitize list-tag form seed
@@ -311,13 +311,13 @@
 (define (sx-unitize list-tag form seed)
   (let loop ((head '()) (elts '()) (tail '()) (form form))
     (if (null? elts)
-	(if (and (pair? (car form)) (eq? list-tag (sx-tag (car form))))
-	    (loop head (cdar form) (cdr form) '())
-	    (loop (cons (car form) head) elts tail (cdr form)))
-	(let loop2 ((elts elts))
-	  (if (null? elts) seed
-	      (cons (append-reverse (cons (car elts) head) tail)
-		    (loop2 (cdr elts))))))))
+        (if (and (pair? (car form)) (eq? list-tag (sx-tag (car form))))
+            (loop head (cdar form) (cdr form) '())
+            (loop (cons (car form) head) elts tail (cdr form)))
+        (let loop2 ((elts elts))
+          (if (null? elts) seed
+              (cons (append-reverse (cons (car elts) head) tail)
+                    (loop2 (cdr elts))))))))
 
 ;; ============================================================================
 
@@ -330,7 +330,7 @@
 ;; sx-haz-attr? val
 ;;(define (sx-haz-attr? sx)
 ;;  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx)) #t))
-	
+        
 ;; Given that a tag must be ... we define the syntax of SXML as follows:
 ;; SXML is a text format for XML using S-expressions, sexp's whose first
 ;; element is a symbol for a legal XML tag.  The syntax is:
@@ -356,8 +356,8 @@
 ;;   (foo (@ . ,<name>) (bar ,abc) ...)
 ;;   (foo (bar ,abc) ...)
 ;;   (foo ... , *)
-;;   (* ...)			any sexp
-;;   *				any node (i.e., sexp or text)
+;;   (* ...)                    any sexp
+;;   *                          any node (i.e., sexp or text)
 ;; or use `*any*'
 ;; need don't care: (foo a b c . ?) (foo a b ? c)
 ;; if expect text, must use , or ?
@@ -404,21 +404,21 @@
     ;; capture attributes by name
     ((_ v (tag (@ (ky vl) p1 ...) . nl) kt kf)
      (sxm-tag (car v) tag
-	      (let ((va (sx-attr v)) (vt (sx-tail v)))
-		(sxm-attr-tail va vt ((ky vl) p1 ...) nl kt kf))
-	      kf))
+              (let ((va (sx-attr v)) (vt (sx-tail v)))
+                (sxm-attr-tail va vt ((ky vl) p1 ...) nl kt kf))
+              kf))
     ;; capture attributes as dict
     ((_ v (tag (@ . (unquote va)) . nl) kt kf)
      (sxm-tag (car v) tag
-	      (let ((va (sx-attr v)) (vt (sx-tail v)))
-		(sxm-tail vt nl kt kf))
-	      kf))
+              (let ((va (sx-attr v)) (vt (sx-tail v)))
+                (sxm-tail vt nl kt kf))
+              kf))
     ;; ignore attributes; (cadr v) may be an attr node. If so, ignore it.
     ((_ v (tag . nl) kt kf)
      (sxm-tag (car v) tag
-	      (let ((vt (sx-tail v)))
-		(sxm-tail vt nl kt kf))
-	      kf))
+              (let ((vt (sx-tail v)))
+                (sxm-tail vt nl kt kf))
+              kf))
     ))
  
 ;; sxml-attr-tail va vt (@ (k v) ...) nl kt kf
@@ -454,9 +454,9 @@
     ((_ v (unquote w) kt kf) (let ((w v)) kt))
     ((_ v (hp . tp) kt kf)
      (if (pair? v)
-	 (let ((hv (car v)) (tv (cdr v)))
-	   (sxm-node hv hp (sxm-tail tv tp kt kf) kf))
-	 kf))
+         (let ((hv (car v)) (tv (cdr v)))
+           (sxm-node hv hp (sxm-tail tv tp kt kf) kf))
+         kf))
     ((_ v p kt kf) kf)))
 
 ;; [ht][vp] = [head,tail][value,pattern]

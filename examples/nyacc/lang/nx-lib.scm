@@ -56,12 +56,12 @@
 
 (define-module (nyacc lang nx-lib)
   #:export (nx-get-method
-	    ;;
-	    make-nx-hash-table nx-hash-ref nx-hash-set!
-	    nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
-	    ;;
-	    install-inline-language-evaluator
-	    uninstall-inline-language-evaluator)
+            ;;
+            make-nx-hash-table nx-hash-ref nx-hash-set!
+            nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
+            ;;
+            install-inline-language-evaluator
+            uninstall-inline-language-evaluator)
   )
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
@@ -125,22 +125,22 @@
   (with-input-from-string fmt
     (lambda ()
       (let loop ((stl '()) (chl '()) (ch (read-char)) (args args))
-	;;(sf "ch=~S\n" ch)
-	(cond
-	 ((eof-object? ch)
-	  (apply string-append (reverse (cons (rls chl) stl))))
-	 ((char=? ch #\%)
-	  (let ((ch1 (read-char)))
-	    (case ch1
-	      ((#\\) (loop stl (cons (escape ch1) chl) (read-char) args))
-	      ((#\%) (loop stl (cons ch1 chl) (read-char) args))
-	      ((#\s) (loop (cons* (car args) (rls chl) stl) '()
-			   (read-char) (cdr args)))
-	      ((#\d #\f) (loop (cons* (numstr->string (car args)) (rls chl) stl)
-			       '() (read-char) (cdr args)))
-	      (else (error "sprintf: unknown % char")))))
-	 (else
-	  (loop stl (cons ch chl) (read-char) args)))))))
+        ;;(sf "ch=~S\n" ch)
+        (cond
+         ((eof-object? ch)
+          (apply string-append (reverse (cons (rls chl) stl))))
+         ((char=? ch #\%)
+          (let ((ch1 (read-char)))
+            (case ch1
+              ((#\\) (loop stl (cons (escape ch1) chl) (read-char) args))
+              ((#\%) (loop stl (cons ch1 chl) (read-char) args))
+              ((#\s) (loop (cons* (car args) (rls chl) stl) '()
+                           (read-char) (cdr args)))
+              ((#\d #\f) (loop (cons* (numstr->string (car args)) (rls chl) stl)
+                               '() (read-char) (cdr args)))
+              (else (error "sprintf: unknown % char")))))
+         (else
+          (loop stl (cons ch chl) (read-char) args)))))))
 
 ;;; === in-line reading =========================================================
 
@@ -165,40 +165,40 @@
 ;; @end deffn
 (define (read-inline-code reader-char port)
   (let* ((str-port (open-output-string))
-	 (name (let loop ((chl '()) (ch (read-char port)))
-		 (cond
-		  ((eof-object? ch) ch)
-		  ((char=? ch #\:) (reverse-list->string chl))
-		  (else (loop (cons ch chl) (read-char port))))))
-	 (code (let loop ((ch (read-char port)))
-		 (cond
-		  ((eof-object? ch) (error "oops"))
-		  ((char=? ch #\>)
-		   (let ((ch1 (read-char port)))
-		     (cond
-		      ((eof-object? ch) (error "oops"))
-		      ((char=? ch1 #\#)
-		       (display "\n" str-port)
-		       (get-output-string str-port))
-		      (else (display ch str-port) (loop ch1)))))
-		  (else
-		   (display ch str-port)
-		   (loop (read-char port))))))
-	 ;;
-	 (lang (lookup-language (string->symbol name)))
-	 (lread (and lang (language-reader lang)))
-	 (lcomp (and lang (assq-ref (language-compilers lang) 'tree-il)))
-	 ;;
-	 (sxml (and lread
-		    (call-with-input-string code
-		      (lambda (port) (lread port (current-module))))))
-	 (itil (and lcomp
-		    (call-with-values
-			(lambda () (lcomp sxml (current-module) '()))
-		      (lambda (exp env cenv) exp))))
-	 (xtil (unparse-tree-il itil))
-	 (scm (decompile itil))
-	 )
+         (name (let loop ((chl '()) (ch (read-char port)))
+                 (cond
+                  ((eof-object? ch) ch)
+                  ((char=? ch #\:) (reverse-list->string chl))
+                  (else (loop (cons ch chl) (read-char port))))))
+         (code (let loop ((ch (read-char port)))
+                 (cond
+                  ((eof-object? ch) (error "oops"))
+                  ((char=? ch #\>)
+                   (let ((ch1 (read-char port)))
+                     (cond
+                      ((eof-object? ch) (error "oops"))
+                      ((char=? ch1 #\#)
+                       (display "\n" str-port)
+                       (get-output-string str-port))
+                      (else (display ch str-port) (loop ch1)))))
+                  (else
+                   (display ch str-port)
+                   (loop (read-char port))))))
+         ;;
+         (lang (lookup-language (string->symbol name)))
+         (lread (and lang (language-reader lang)))
+         (lcomp (and lang (assq-ref (language-compilers lang) 'tree-il)))
+         ;;
+         (sxml (and lread
+                    (call-with-input-string code
+                      (lambda (port) (lread port (current-module))))))
+         (itil (and lcomp
+                    (call-with-values
+                        (lambda () (lcomp sxml (current-module) '()))
+                      (lambda (exp env cenv) exp))))
+         (xtil (unparse-tree-il itil))
+         (scm (decompile itil))
+         )
     (unless lang (error "no such language:" name))
     scm))
 

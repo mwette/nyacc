@@ -57,14 +57,14 @@
    (prec< 'then "else")
    ;;(prec< 'expr 'stmt)
    (prec< (right "=")
-	  (left "||") (left "&&")
-	  (left "|") (left "^") (left "&")
-	  (left "==" "!=")
-	  (left "<" ">" "<=" ">=")
-	  (left "<<" ">>")
-	  (left "+" "-")
-	  (left "*" "/")
-	  )
+          (left "||") (left "&&")
+          (left "|") (left "^") (left "&")
+          (left "==" "!=")
+          (left "<" ">" "<=" ">=")
+          (left "<<" ">>")
+          (left "+" "-")
+          (left "*" "/")
+          )
    ;;(expect 1)
    (grammar
     (Identifier
@@ -100,7 +100,7 @@
      (QI+suffix-1 "." "super" Arguments ($$ (tl-append $1 `(super ,$4))))
      (QI+suffix-1 "." "new" InnerCreator ($$ (tl-append $1 `(new ,$4))))
      (QI+suffix-1 "." "new" NonWildcardTypeArguments InnerCreator
-		  ($$ (tl-append $1 `(new ,$4 ,$5))))
+                  ($$ (tl-append $1 `(new ,$4 ,$5))))
      )
      
     (CompliationUnit
@@ -153,10 +153,10 @@
       opt-TypeParameters opt-extends opt-implements
       ClassBody
       ($$ (let* ((tail (list $6))
-		 (tail (if (pair? $5) (cons $5 tail) tail))
-		 (tail (if (pair? $4) (cons $4 tail) tail))
-		 (tail (if (pair? $3) (cons $3 tail) tail)))
-	    `(NormalClassDeclaration ,$1 ,@tail)))))
+                 (tail (if (pair? $5) (cons $5 tail) tail))
+                 (tail (if (pair? $4) (cons $4 tail) tail))
+                 (tail (if (pair? $3) (cons $3 tail) tail)))
+            `(NormalClassDeclaration ,$1 ,@tail)))))
 
     (opt-TypeParameters
      ($empty)
@@ -177,12 +177,12 @@
     (NormalInterfaceDeclaration
      ("interface" Identifier opt-TypeParameters "extends" TypeList InterfaceBody
       ($$ (if (pair? $3)
-	      `(NormalInterfaceDeclaration ,$2 ,$3 (extends ,$5) ,$6)
-	      `(NormalInterfaceDeclaration ,$2 (extends ,$5) ,$6))))
+              `(NormalInterfaceDeclaration ,$2 ,$3 (extends ,$5) ,$6)
+              `(NormalInterfaceDeclaration ,$2 (extends ,$5) ,$6))))
      ("interface" Identifier opt-TypeParameters InterfaceBody
       ($$ (if (pair? $3)
-	      `(NormalInterfaceDeclaration ,$2 ,$3 ,$4)
-	      `(NormalInterfaceDeclaration ,$2 ,$4)))))
+              `(NormalInterfaceDeclaration ,$2 ,$3 ,$4)
+              `(NormalInterfaceDeclaration ,$2 ,$4)))))
 
     (Type
      (BasicType)
@@ -236,9 +236,9 @@
     (TypeArgument
      (ReferenceType "?" ($$ `(TypeArument ,$1)))
      (ReferenceType "?" "extends" ReferenceType
-		    ($$ `(TypeArument ,$1 (extends ,$4))))
+                    ($$ `(TypeArument ,$1 (extends ,$4))))
      (ReferenceType "?" "super" ReferenceType
-		    ($$ `(TypeArument ,$1 (super ,$4)))))
+                    ($$ `(TypeArument ,$1 (super ,$4)))))
 
     (NonWildcardTypeArguments
      ("<" TypeList ">" ($$ `(TypeArguments ,(sx-tail $2)))))
@@ -332,7 +332,7 @@
     (MemberDecl
      ;;(Type Identifier FieldDeclaratorsRest ";"
      (Type VariableDeclarators ";"
-	   ($$ `(MemberDecl ,$1 ,$2)))
+           ($$ `(MemberDecl ,$1 ,$2)))
      (Type Identifier MethodDeclaratorRest ($$ `(MemberDecl ,$1 ,$2 ,@$3)))
      ("void" Identifier VoidMethodDeclaratorRest
       ($$ `(MemberDecl (void-type "void") ,$2 ,$3)))
@@ -351,20 +351,20 @@
      (FormalParameters
       opt-Dims Block
       ($$ (if (pair? $2)
-	      (list $1 $2 $3)
-	      (list $1 $3))))
+              (list $1 $2 $3)
+              (list $1 $3))))
      (FormalParameters
       opt-Dims "throws" QualifiedIdentifierList Block
       ($$ (if (pair? $2)
-	      (list $1 $2 $5 `(throws $4))
-	      (list $1 $5 `(throws $4)))))
+              (list $1 $2 $5 `(throws $4))
+              (list $1 $5 `(throws $4)))))
      (FormalParameters
       opt-Dims ";" ($$ (if (pair? $2) (list $1 $2) (list $1))))
      (FormalParameters
       opt-Dims "throws" QualifiedIdentifierList ";"
       ($$ (if (pair? $2)
-	      (list $1 $2 `(throws $4))
-	      (list $1 (throws $4)))))
+              (list $1 $2 `(throws $4))
+              (list $1 (throws $4)))))
      )
 
     (VoidMethodDeclaratorRest
@@ -381,15 +381,15 @@
     (ConstructorDeclaratorRest
      (FormalParameters Block ($$ (list $1 $2)))
      (FormalParameters "throws" QualifiedIdentifierList Block
-		       ($$ (list $1 $4 `(throws ,$3)))))
+                       ($$ (list $1 $4 `(throws ,$3)))))
 
     (GenericMethodOrConstructorDecl
      (TypeParameters
       GenericMethodOrConstructorRest
       ($$ (let loop ((out '()) (in $2))
-	    (if (member (sx-tag (car out)) '(Identifier QualifiedIdentifier))
-		(cons* (resverse out) $1 in)
-		(loop (cons (car in) out) (cdr in)))))))
+            (if (member (sx-tag (car out)) '(Identifier QualifiedIdentifier))
+                (cons* (resverse out) $1 in)
+                (loop (cons (car in) out) (cdr in)))))))
 
     (GenericMethodOrConstructorRest
      (Type Identifier MethodDeclaratorRest ($$ `(Method $1 $2 ,@$3)))
@@ -405,7 +405,7 @@
     (InterfaceBodyDeclaration-list-1
      (InterfaceBodyDeclaration ($$ (make-tl 'ibl $1)))
      (InterfaceBodyDeclaration-list-1 InterfaceBodyDeclaration
-				      ($$ (tl-append $1 $2))))
+                                      ($$ (tl-append $1 $2))))
 
     (InterfaceBodyDeclaration
      (";" ($$ `(InterfaceDecl)))
@@ -421,9 +421,9 @@
     (InterfaceMemberDecl
      ;;(InterfaceMethodOrFieldDecl)
      (Type Identifier ConstantDeclaratorRest ";"
-	   ($$ `(Decl $1 $2 ,@$3)))
+           ($$ `(Decl $1 $2 ,@$3)))
      (Type Identifier InterfaceMethodDeclaratorRest
-	   ($$ `(Decl $1 $2 ,@$3)))
+           ($$ `(Decl $1 $2 ,@$3)))
      ("void" Identifier VoidInterfaceMethodDeclaratorRest
       ($$ `(MethodDecl (void "void") $2 ,@$3)))
      (InterfaceGenericMethodDecl)
@@ -471,9 +471,9 @@
     (FormalParameterDecls
      (Type VariableDeclaratorId ($$ `(make-tl 'FPDs `(param ,$1 ,$2))))
      (Type VariableDeclaratorId "," FormalParameterDecls
-	   ($$ (tl-insert $3 `(param ,$1 ,$2))))
+           ($$ (tl-insert $3 `(param ,$1 ,$2))))
      (Type "..." VariableDeclaratorId
-	   ($$ `(make-tl 'FPDs `(xxx-param ,$1 ,$3)))))
+           ($$ `(make-tl 'FPDs `(xxx-param ,$1 ,$3)))))
 
    #;(FormalParameterDeclsRest
      (VariableDeclaratorId)
@@ -496,7 +496,7 @@
      (Identifier "=" VariableInitializer ($$ `(Declr ,$1) ,$2))
      (Identifier Dims ($$ `(Declr (Dimmed ,$1 ,$2))))
      (Identifier Dims "=" VariableInitializer
-		 ($$ `(Declr (Dimmed ,$1 ,$2) ,$3))))
+                 ($$ `(Declr (Dimmed ,$1 ,$2) ,$3))))
 
    #;(VariableDeclaratorRest
      ($empty)
@@ -532,7 +532,7 @@
     ;; TODO: add opt-Annotations to front of "final" items
     (BlockStatement
      (Type VariableDeclarators ";"
-	   ($$ `(Decl ,$1 ,$2)))
+           ($$ `(Decl ,$1 ,$2)))
      ("final" Type VariableDeclarators ";"
       ($$ `(Modified (Modifier "final") (Decl ,$2 ,$3))))
      (ClassOrInterfaceDeclaration)
@@ -583,11 +583,11 @@
      |#
      (QualifiedIdentifier Arguments ($$ `(CallStmt ,$1 ,$2)))
      (QualifiedIdentifier IdentifierSuffix Arguments
-			  ($$ `(CallStmt ,$1 ,$2 ,$3)))
+                          ($$ `(CallStmt ,$1 ,$2 ,$3)))
      (QualifiedIdentifier AssignmentOperator Expression1
-			  ($$ `(AssnStmt ,$1 ,$2 ,$3)))
+                          ($$ `(AssnStmt ,$1 ,$2 ,$3)))
      (QualifiedIdentifier IdentifierSuffix AssignmentOperator Expression1
-			  ($$ `(AssnStmt ,$1 ,$2 ,$3 ,$4)))
+                          ($$ `(AssnStmt ,$1 ,$2 ,$3 ,$4)))
      (QualifiedIdentifier "++" ($$ `(PostIncrStmt ,$1)))
      (QualifiedIdentifier "--" ($$ `(PostDecrStmt ,$1)))
      ;; ^ may need to sub ReferenceType and sub back later via ...
@@ -631,14 +631,14 @@
      ("final" ReferenceType VariableDeclaratorId "=" Expression
       ($$ `(Modified "final" (Resource ,$2 ,$3 ,$5))))
      (ReferenceType VariableDeclaratorId "=" Expression
-		    ($$ `(Resource ,$2 ,$3 ,$5))))
+                    ($$ `(Resource ,$2 ,$3 ,$5))))
 
     (SwitchBlockStatementGroups
      (SwitchBlockStatementGroups-1 ($$ (tl->list $1))))
     (SwitchBlockStatementGroups-1
      (SwitchBlockStatementGroup ($$ (make-tl 'SwitchBlockStatementGroups $1)))
      (SwitchBlockStatementGroups-1 SwitchBlockStatementGroup
-				   ($$ (tl-append $1 $2))))
+                                   ($$ (tl-append $1 $2))))
 
     (SwitchBlockStatementGroup
      (SwitchLabels BlockStatements ($$ `(SwitchBlockStatementGroup ,$1 ,$2))))
@@ -696,7 +696,7 @@
     (Expression
      (Expression1)
      (Expression1 AssignmentOperator Expression1
-		  ($$ `(assn-expr $1 (op ,$2) $3))))
+                  ($$ `(assn-expr $1 (op ,$2) $3))))
 
     (AssignmentOperator
      ("=")
@@ -715,7 +715,7 @@
     (Expression1 
      (Expression2)
      (Expression2 "?" Expression ":" Expression1
-		  ($$ `(cond-expr ,$1 ,$3 ,$5))))
+                  ($$ `(cond-expr ,$1 ,$3 ,$5))))
 
     (Expression2
      (Expression3)
@@ -864,7 +864,7 @@
      ("." "super" SuperSuffix)
      ("." "new" InnerCreator)
      ;;("." "new" NonWildcardTypeArguments InnerCreator)
-     ("[" Expression "]")		; ??? check
+     ("[" Expression "]")               ; ??? check
      )
 
     (EnumBody
@@ -894,8 +894,8 @@
      (Identifier
       opt-Arguments opt-ClassBody
       ($$ (let* ((tail (if (pair? opt-ClassBody) (list opt-ClassBody) '()))
-		 (tail (if (pair? opt-Arguments) (append opt-Arguments tail))))
-	    `(EnumConstant ,$1 . ,tail))))
+                 (tail (if (pair? opt-Arguments) (append opt-Arguments tail))))
+            `(EnumConstant ,$1 . ,tail))))
      )
     #;(opt-Annotations
      ($empty)
@@ -966,8 +966,8 @@
 (define java-mach
   (and java-spec
        (hashify-machine
-	(compact-machine
-	 (make-lalr-machine java-spec)))))
+        (compact-machine
+         (make-lalr-machine java-spec)))))
 
 ;; === automaton file generators =========
 
@@ -980,9 +980,9 @@
   (write-lalr-actions java-mach (xtra-dir "java-act.scm.new") #:prefix "java-")
   (write-lalr-tables java-mach (xtra-dir "java-tab.scm.new") #:prefix "java-")
   (let ((a (move-if-changed (xtra-dir "java-act.scm.new")
-			    (xtra-dir "java-act.scm")))
-	(b (move-if-changed (xtra-dir "java-tab.scm.new")
-			    (xtra-dir "java-tab.scm"))))
+                            (xtra-dir "java-act.scm")))
+        (b (move-if-changed (xtra-dir "java-tab.scm.new")
+                            (xtra-dir "java-tab.scm"))))
     (or a b)))
 
 ;; --- last line ---

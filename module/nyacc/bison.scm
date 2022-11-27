@@ -25,7 +25,7 @@
   #:use-module (ice-9 pretty-print)
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (nyacc export)
-  #:use-module (nyacc lalr)		; gen-match-table
+  #:use-module (nyacc lalr)             ; gen-match-table
   #:use-module (nyacc util))
 
 ;; @deffn chew-on-grammar tree lhs-v rhs-v terms => a-list
@@ -37,13 +37,13 @@
   (define (match-rule lhs rhs)
     (let loop ((ix 0))
       (if (eqv? ix (vector-length lhs-v)) -1
-	  (if (and (equal? lhs (elt->bison (vector-ref lhs-v ix) terms))
-		   (equal? rhs (vector->list
-				(vector-map
-				 (lambda (ix val) (elt->bison val terms))
-				 (vector-ref rhs-v ix)))))
-	      ix
-	      (loop (1+ ix))))))
+          (if (and (equal? lhs (elt->bison (vector-ref lhs-v ix) terms))
+                   (equal? rhs (vector->list
+                                (vector-map
+                                 (lambda (ix val) (elt->bison val terms))
+                                 (vector-ref rhs-v ix)))))
+              ix
+              (loop (1+ ix))))))
 
   ;; this is a fold
   (define (rule->index-al tree seed)
@@ -66,54 +66,54 @@
   (define st-numb
     (let ((xsnum (sxpath '(@ number *text*))))
       (lambda (state)
-	(string->number (car (xsnum state))))))
+        (string->number (car (xsnum state))))))
 
   (define (do-state state)
     (let* ((b-items ((sxpath '(// item)) state))
-	   (n-items (fold
-		     (lambda (tree seed)
-		       (sxml-match tree
-			 ((item (@ (rule-number ,rns) (point ,pts)) . ,rest)
-			  (let ((rn (string->number rns))
-				(pt (string->number pts)))
-			    (if (and (positive? rn) (zero? pt)) seed
-				(acons (assq-ref gx-al rn) pt seed))))
-			 (,otherwise (error "broken item")))) '() b-items))
-	   (b-trans ((sxpath '(// transition)) state))
-	   (n-trans (map
-		     (lambda (tree)
-		       (sxml-match tree
-			 ((transition (@ (symbol ,symb) (state ,dest)))
-			  (cons* (bs->ns symb) 'shift (string->number dest)))
-			 (,otherwise (error "broken tran")))) b-trans))
-	   (b-redxs ((sxpath '(// reduction)) state))
-	   (n-redxs (map
-		     (lambda (tree)
-		       (sxml-match tree
-			 ((reduction (@ (symbol ,symb) (rule "accept")))
-			  (cons* (bs->ns symb) 'accept 0))
-			 ((reduction (@ (symbol ,symb) (rule ,rule)))
-			  (cons* (bs->ns symb) 'reduce
-				 (assq-ref gx-al (string->number rule))))
-			 (,otherwise (error "broken redx" tree)))) b-redxs)))
+           (n-items (fold
+                     (lambda (tree seed)
+                       (sxml-match tree
+                         ((item (@ (rule-number ,rns) (point ,pts)) . ,rest)
+                          (let ((rn (string->number rns))
+                                (pt (string->number pts)))
+                            (if (and (positive? rn) (zero? pt)) seed
+                                (acons (assq-ref gx-al rn) pt seed))))
+                         (,otherwise (error "broken item")))) '() b-items))
+           (b-trans ((sxpath '(// transition)) state))
+           (n-trans (map
+                     (lambda (tree)
+                       (sxml-match tree
+                         ((transition (@ (symbol ,symb) (state ,dest)))
+                          (cons* (bs->ns symb) 'shift (string->number dest)))
+                         (,otherwise (error "broken tran")))) b-trans))
+           (b-redxs ((sxpath '(// reduction)) state))
+           (n-redxs (map
+                     (lambda (tree)
+                       (sxml-match tree
+                         ((reduction (@ (symbol ,symb) (rule "accept")))
+                          (cons* (bs->ns symb) 'accept 0))
+                         ((reduction (@ (symbol ,symb) (rule ,rule)))
+                          (cons* (bs->ns symb) 'reduce
+                                 (assq-ref gx-al (string->number rule))))
+                         (,otherwise (error "broken redx" tree)))) b-redxs)))
       (list
        (st-numb state)
        (cons 'kis n-items)
        (cons 'pat (append n-trans n-redxs)))))
 
   (let ((xsf (sxpath '(itemset item (@ (rule-number (equal? "0"))
-				       (point (equal? "2")))))))
+                                       (point (equal? "2")))))))
     (let loop ((data '()) (xtra #f) (states (cdr tree)))
       (cond
        ((null? states) (cons xtra data))
        ((pair? (xsf (car states)))
-	(loop data (st-numb (car states)) (cdr states)))
+        (loop data (st-numb (car states)) (cdr states)))
        (else
-	(loop (cons (do-state (car states)) data) xtra (cdr states)))))))
+        (loop (cons (do-state (car states)) data) xtra (cdr states)))))))
 
 ;; @deffn atomize symbol => string
 ;; This is copied from the module @code{(nyacc lalr)}.
-(define (atomize terminal)		; from lalr.scm
+(define (atomize terminal)              ; from lalr.scm
   (if (string? terminal)
       (string->symbol (string-append "$:" terminal))
       terminal))
@@ -123,11 +123,11 @@
 ;; NYACC @code{lalr->bison} procedure, (back) to nyacc symbols names.
 (define (make-bison->nyacc-symbol-mapper terms non-ts)
   (let ((bs->ns-al
-	 (cons*
-	  '("$default" . $default)
-	  '("$end" . $end)
-	  (map (lambda (symb) (cons (elt->bison symb terms) symb))
-	       (append (map atomize terms) non-ts)))))
+         (cons*
+          '("$default" . $default)
+          '("$end" . $end)
+          (map (lambda (symb) (cons (elt->bison symb terms) symb))
+               (append (map atomize terms) non-ts)))))
     (lambda (name) (assoc-ref bs->ns-al name))))
 
 ;; fix-pa
@@ -135,10 +135,10 @@
 (define (fix-pa pa xs)
   (cond
    ((and (eqv? 'shift (cadr pa))
-	 (> (cddr pa) xs))
+         (> (cddr pa) xs))
     (cons* (car pa) (cadr pa) (1- (cddr pa))))
    ((and (eqv? 'shift (cadr pa))
-	 (= (cddr pa) xs))
+         (= (cddr pa) xs))
     (cons* (car pa) 'accept 0))
    (else pa)))
 
@@ -146,8 +146,8 @@
 ;; Convert xxx
 (define (fix-is is xs rhs-v)
   (let* ((gx (car is))
-	 (rx (cdr is))
-	 (gl (vector-length (vector-ref rhs-v gx))))
+         (rx (cdr is))
+         (gl (vector-length (vector-ref rhs-v gx))))
     (if (= rx gl) (cons gx -1) is)))
 
 ;; @deffn spec->mac-sxml spec
@@ -155,14 +155,14 @@
 ;; the bison-generated automaton as a SXML tree using the @code{-x} option.
 (define (spec->mach-sxml spec)
   (let* ((bisname (mkstemp! (string-copy "/tmp/nyacc-XXXXXX.y")))
-	 (xmlname (mkstemp! (string-copy "/tmp/nyacc-XXXXXX.xml")))
-	 (tabname (mkstemp! (string-copy "/tmp/nyacc-XXXXXX.tab.c"))))
+         (xmlname (mkstemp! (string-copy "/tmp/nyacc-XXXXXX.xml")))
+         (tabname (mkstemp! (string-copy "/tmp/nyacc-XXXXXX.tab.c"))))
     (with-output-to-file bisname
       (lambda () (lalr->bison spec)))
     (system (string-append "bison" " --xml=" xmlname " --output=" tabname
-			   " " bisname))
+                           " " bisname))
     (let ((sx (call-with-input-file xmlname
-		(lambda (p) (xml->sxml p #:trim-whitespace? #t)))))
+                (lambda (p) (xml->sxml p #:trim-whitespace? #t)))))
       (delete-file bisname)
       (delete-file xmlname)
       (delete-file tabname)
@@ -173,32 +173,32 @@
 ;; using external @code{bison} program.
 (define (make-lalr-machine/bison spec)
   (let* ((terminals (assq-ref spec 'terminals))
-	 (non-terms (assq-ref spec 'non-terms))
-	 (lhs-v (assq-ref spec 'lhs-v))
-	 (rhs-v (assq-ref spec 'rhs-v))
-	 (s0 (spec->mach-sxml spec))
-	 (sG ((sxpath '(bison-xml-report grammar)) s0))
-	 (sG (if (pair? sG) (car sG) sG))
-	 (sA ((sxpath '(bison-xml-report automaton)) s0))
-	 (sA (if (pair? sA) (car sA) sA))
-	 (pG (chew-on-grammar sG lhs-v rhs-v terminals))
-	 (bsym->nsym (make-bison->nyacc-symbol-mapper terminals non-terms))
-	 (pA (chew-on-automaton sA pG bsym->nsym))
-	 (xs (car pA))
-	 (ns (caadr pA))
-	 (pat-v (make-vector ns #f))
-	 (kis-v (make-vector ns #f)))
+         (non-terms (assq-ref spec 'non-terms))
+         (lhs-v (assq-ref spec 'lhs-v))
+         (rhs-v (assq-ref spec 'rhs-v))
+         (s0 (spec->mach-sxml spec))
+         (sG ((sxpath '(bison-xml-report grammar)) s0))
+         (sG (if (pair? sG) (car sG) sG))
+         (sA ((sxpath '(bison-xml-report automaton)) s0))
+         (sA (if (pair? sA) (car sA) sA))
+         (pG (chew-on-grammar sG lhs-v rhs-v terminals))
+         (bsym->nsym (make-bison->nyacc-symbol-mapper terminals non-terms))
+         (pA (chew-on-automaton sA pG bsym->nsym))
+         (xs (car pA))
+         (ns (caadr pA))
+         (pat-v (make-vector ns #f))
+         (kis-v (make-vector ns #f)))
     ;;(pretty-print sA)
     (for-each
      (lambda (state)
        (let* ((sx (car state))
-	      (sx (if (>= sx xs) (1- sx) sx))
-	      (pat (assq-ref (cdr state) 'pat))
-	      (pat (map (lambda (pa) (fix-pa pa xs)) pat))
-	      (kis (assq-ref (cdr state) 'kis))
-	      (kis (map (lambda (is) (fix-is is xs rhs-v)) kis)))
-	 (vector-set! pat-v sx pat)
-	 (vector-set! kis-v sx kis)))
+              (sx (if (>= sx xs) (1- sx) sx))
+              (pat (assq-ref (cdr state) 'pat))
+              (pat (map (lambda (pa) (fix-pa pa xs)) pat))
+              (kis (assq-ref (cdr state) 'kis))
+              (kis (map (lambda (is) (fix-is is xs rhs-v)) kis)))
+         (vector-set! pat-v sx pat)
+         (vector-set! kis-v sx kis)))
      (cdr pA))
     (gen-match-table
      (cons*

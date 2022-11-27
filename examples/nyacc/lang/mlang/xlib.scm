@@ -61,14 +61,14 @@
   (xassert (ml:range? rng))
   (let ((nx (+ index (ml:range-delta rng))))
     (if (positive? (ml:range-delta rng))
-	(if (> nx (ml:range-end rng)) #f nx)
-	(if (< nx (ml:range-end rng)) #f nx))))
+        (if (> nx (ml:range-end rng)) #f nx)
+        (if (< nx (ml:range-end rng)) #f nx))))
 
 ;; for 1-d array do the same
 (define-public (ml:array-next ary index)
   (xassert (array? ary))
   (let* ((ub (cadr (car (array-shape ary))))
-	 (nx (1+ index)))
+         (nx (1+ index)))
     (if (> nx ub) #f nx)))
 
 (define-public (ml:iter-first obj)
@@ -111,9 +111,9 @@
 (define-public (ml:narg . args)
   (let loop ((args args))
     (if (null? args) 0
-	(if (eq? (car args) undefined)
-	    (loop (cdr args))
-	    (1+ (loop (cdr args)))))))
+        (if (eq? (car args) undefined)
+            (loop (cdr args))
+            (1+ (loop (cdr args)))))))
 
 ;; Note:
 ;; We use row-major order, whereas MATLAB used column major order,
@@ -127,7 +127,7 @@
 (define-public (ml:array-ref vec . args)
   ;; args can be positive integer, a range, or an array
   (let ((arg (car args))
-	)
+        )
     (cond
      ((integer? arg) (array-ref vec (1- arg)))
      (else (error "mlang: expecting array args of integer, range or array")))))
@@ -184,8 +184,8 @@
   (cond
    ((string=? name "load")
     (let* ((env (current-module))
-	   (file (car args))
-	   )
+           (file (car args))
+           )
       #f))
    (else
     (throw 'mlang-error "unknown command: ~S" name)))
@@ -195,13 +195,13 @@
   (show-mlang-sxml #t)
   (show-mlang-xtil #t)
   (let* ((env (current-module))
-	 (tree (and (string? file) (access? file R_OK)
-		    (call-with-input-file file
-		      (lambda (port) (read-mlang-file port env)))))
-	 (itil (compile-tree-il tree env '()))
-	 (base (basename file ".m"))
-	 (var (module-variable env (string->symbol base)))
-	 )
+         (tree (and (string? file) (access? file R_OK)
+                    (call-with-input-file file
+                      (lambda (port) (read-mlang-file port env)))))
+         (itil (compile-tree-il tree env '()))
+         (base (basename file ".m"))
+         (var (module-variable env (string->symbol base)))
+         )
     (compile itil #:from 'tree-il #:to 'value #:env env)
     ;;(sferr "env=~S\n" env)
     ;;(sferr "var=~S\n" var)

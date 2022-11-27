@@ -19,9 +19,9 @@
 
 (define-module (nyacc lang nx-load)
   #:export (nx-load
-	    nx-compile-file
-	    nx-compile-and-load
-	    )
+            nx-compile-file
+            nx-compile-and-load
+            )
   #:use-module (system base language)
   #:use-module (system base message)
   #:use-module (ice-9 receive)
@@ -51,27 +51,27 @@
     (cond
      ((null? (cdr chl)) (car chl))
      (else (unread-char (car chl) port)
-	   (loop (cdr chl))))))
+           (loop (cdr chl))))))
 
 (define (unread-chars chl port)
   (let loop ((chl chl))
     (cond
      ((null? chl))
      (else (unread-char (car chl) port)
-	   (loop (cdr chl))))))
+           (loop (cdr chl))))))
 
 (define (make-keyword-reader keyword)
   (let ((n (string-length keyword)))
     (lambda (port)
       (simple-format (current-error-port) "slurp-lang? ~S n=~S\n" port n)
       (let loop ((ix 0) (chl '()) (ch (read-char port)))
-	(simple-format (current-error-port) " loop ~S ~S\n" ch ix)
-	(cond
-	 ((eof-object? ch) (unread-chars-1 chl port) #f)
-	 ((= ix n) (unread-char ch port) #t)
-	 ((char=? ch (string-ref keyword ix))
-	  (loop (1+ ix) (cons ch chl) (read-char port)))
-	 (else (unread-chars chl port) #f))))))
+        (simple-format (current-error-port) " loop ~S ~S\n" ch ix)
+        (cond
+         ((eof-object? ch) (unread-chars-1 chl port) #f)
+         ((= ix n) (unread-char ch port) #t)
+         ((char=? ch (string-ref keyword ix))
+          (loop (1+ ix) (cons ch chl) (read-char port)))
+         (else (unread-chars chl port) #f))))))
 
 (define slurp-lang? (make-keyword-reader "#lang"))
 
@@ -82,10 +82,10 @@
     (let ((lang (next-word port)))
       (simple-format #t "lang=~S\n" lang)
       (let skip-line ((ch (read-char port)))
-	(cond
-	 ((eof-object? ch))
-	 ((char=? #\newline ch))
-	 (else (skip-line (read-char)))))
+        (cond
+         ((eof-object? ch))
+         ((char=? #\newline ch))
+         (else (skip-line (read-char)))))
       (string->symbol lang)))
    (else #f)))
 
@@ -98,7 +98,7 @@
 
 (define* (lang-from-file file)
   (let* ((ix (string-rindex file #\.))
-	(ext (and ix (substring file (1+ ix)))))
+        (ext (and ix (substring file (1+ ix)))))
     (and ext (assoc-ref %file-extension-map ext))))
 
 ;; === compile.scm ================
@@ -118,12 +118,12 @@
   (@@ (system base compile) compiled-file-name))
 
 (define* (compile-file file #:key
-			(output-file #f)
-			(from #f)
-			(to 'bytecode)
-			(env #f)
-			(opts '())
-			(canonicalization 'relative))
+                        (output-file #f)
+                        (from #f)
+                        (to 'bytecode)
+                        (env #f)
+                        (opts '())
+                        (canonicalization 'relative))
   (simple-format (current-error-port) "comile-file\n")
   (with-fluids ((%file-port-name-canonicalization canonicalization))
     (let* ((comp (or output-file (compiled-file-name file)
@@ -136,18 +136,18 @@
 
       (ensure-directory (dirname comp))
       (call-with-output-file/atomic comp
-	(lambda (port)
-	  (let* ((from (or from
-			   (lang-from-port in)
-			   (lang-from-file file)
-			   (current-language)))
-		 (env (or env (default-environment from))))
-	    ((language-printer (ensure-language to))
-	     (read-and-compile in #:env env #:from from #:to to #:opts
-			       (cons* #:to-file? #t opts))
-	     port)))
-	  file)
-	comp)))
+        (lambda (port)
+          (let* ((from (or from
+                           (lang-from-port in)
+                           (lang-from-file file)
+                           (current-language)))
+                 (env (or env (default-environment from))))
+            ((language-printer (ensure-language to))
+             (read-and-compile in #:env env #:from from #:to to #:opts
+                               (cons* #:to-file? #t opts))
+             port)))
+          file)
+        comp)))
 
 (define* (compile-and-load file #:key (from (current-language)) (to 'value)
                            (env (current-module)) (opts '())

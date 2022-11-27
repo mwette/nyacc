@@ -28,12 +28,12 @@
 
 (define socket
   (let ((dir (getenv "XDG_RUNTIME_DIR"))
-	(dpy (getenv "WAYLAND_DISPLAY")))
+        (dpy (getenv "WAYLAND_DISPLAY")))
     (and dir dpy (string-append dir "/" dpy))))
 
 (define (main)
   (let* ((display (wl_display_connect NULL))
-	 )
+         )
     (sf "display = ~S\n" display)
     (sf "socket = ~S\n" socket)
 

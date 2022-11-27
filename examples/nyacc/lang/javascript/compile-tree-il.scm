@@ -161,13 +161,13 @@
 ;;  (string-map (lambda (ch) (if (char=? ch #\_) #\- ch)) name))
 
 (define xlib-module (resolve-module '(nyacc lang javascript xlib)))
-		       
+                       
 #;(define (x-lookup name dict)
   (cond
    ((not dict) #f)
    ((null? dict) #f)
-   ((assoc-ref dict name))		; => value
-   ((assoc-ref dict '@P) =>		; parent level
+   ((assoc-ref dict name))              ; => value
+   ((assoc-ref dict '@P) =>             ; parent level
     (lambda (dict) (lookup name dict)))
    ((find-in-env name (assoc-ref dict '@M)))
    ((find-in-env (c-name->guile name) (assoc-ref dict '@M)))
@@ -199,11 +199,11 @@
 (define (make-let bindings exprs)
   (let loop ((names '()) (gsyms '()) (vals '()) (bindings bindings))
     (if (null? bindings)
-	`(let ,(reverse names) ,(reverse gsyms) ,(reverse vals) ,(block exprs))
-	(loop (cons (list-ref (car bindings) 1) names)
-	      (cons (list-ref (car bindings) 2) gsyms)
-	      (cons (list-ref (car bindings) 3) vals)
-	      (cdr bindings)))))
+        `(let ,(reverse names) ,(reverse gsyms) ,(reverse vals) ,(block exprs))
+        (loop (cons (list-ref (car bindings) 1) names)
+              (cons (list-ref (car bindings) 2) gsyms)
+              (cons (list-ref (car bindings) 3) vals)
+              (cdr bindings)))))
 
 ;; @deffn {Procedure} wrap-bindings body => body
 ;; @example
@@ -226,14 +226,14 @@
       (_
        ;;(sferr "  bindings, rest:\n") (pperr bindings) (pperr rest)
        (if (null? bindings)
-	   body
-	   (let loop2 ((names '()) (gsyms '()) (inits '()) (binds bindings))
-	     (if (null? binds)
-		 `(letrec* ,names ,gsyms ,inits ,rest)
-		 (loop2 (cons (list-ref (car binds) 1) names)
-			(cons (list-ref (car binds) 2) gsyms)
-			(cons (list-ref (car binds) 3) inits)
-			(cdr binds)))))))))
+           body
+           (let loop2 ((names '()) (gsyms '()) (inits '()) (binds bindings))
+             (if (null? binds)
+                 `(letrec* ,names ,gsyms ,inits ,rest)
+                 (loop2 (cons (list-ref (car binds) 1) names)
+                        (cons (list-ref (car binds) 2) gsyms)
+                        (cons (list-ref (car binds) 3) inits)
+                        (cdr binds)))))))))
 
 ;; @deffn {Procedure} make-function name this args body
 ;; Pass arguments as optional and add @code{this} keyword argument.@*
@@ -242,15 +242,15 @@
 (define (make-function name this args body)
   (unless args (error "no args"))
   (let* ((meta '((language . nx-javascript)))
-	 (meta (if name (cons `(name . ,name) meta) meta)))
+         (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta
-       (lambda-case ((()			; req
-		      ,(map car args)	; opt
-		      #f			; rest
-		      (#f (#:this this ,this)) ; kw
-		      (,@(map (lambda (v) undefined) args) ,undefined) ; inits
-		      (,@(map cadr args) ,this)) ; syms
-		     ,body)))))
+       (lambda-case ((()                        ; req
+                      ,(map car args)   ; opt
+                      #f                        ; rest
+                      (#f (#:this this ,this)) ; kw
+                      (,@(map (lambda (v) undefined) args) ,undefined) ; inits
+                      (,@(map cadr args) ,this)) ; syms
+                     ,body)))))
 
 ;; used in fU for switch cases
 ;; (let ((key (if key #t (equal? case-key val))))
@@ -264,10 +264,10 @@
 ;;     next))
 (define (make-case val sym psym kseed next)
   `(let (~key) (,sym)
-	((if (lexical ~key ,psym) (const #t)
-	    (prim-call equal? ,val ,(cadr kseed))))
-	(seq (if (lexical ~key ,sym) ,(car kseed) (void))
-	       ,next)))
+        ((if (lexical ~key ,psym) (const #t)
+            (prim-call equal? ,val ,(cadr kseed))))
+        (seq (if (lexical ~key ,sym) ,(car kseed) (void))
+               ,next)))
 
 ;; NOT USED -- NOT NEEDED
 ;; @deffn {Procedure} resolve-ref ref => exp
@@ -279,8 +279,8 @@
 (define (resolve-ref ref)
   (let ((tag (car ref)))
     (if (or (vector? tag) (hash-table? tag))
-	`(call ,(xlib-ref 'js-ooa-get) ,ref)
-	ref)))
+        `(call ,(xlib-ref 'js-ooa-get) ,ref)
+        ref)))
 
 ;; @deffn {Procedure} op-on-ref ref op ord => `(let ...)
 ;; This routine generates code for @code{ref++}, etc where @var{ref} is
@@ -290,16 +290,16 @@
 ;; @end deffn
 (define (op-on-ref ref op ord)
   (let* ((sym (jsym))
-	 (val (case (car ref)
-		((toplevel) ref)
-		((lexical) ref)
-		(else `(call ,(xlib-ref 'js-ooa-get) ,ref))))
-	 (loc `(lexical ~ref ,sym))
-	 (sum `(call ,(xlib-ref op) (const 1) ,loc))
-	 (set (case (car ref)
-		((toplevel lexical) `(set! ,ref ,sum))
-		(else `(call ,(xlib-ref 'js-ooa-put) ,ref ,sum))))
-	 (rval (case ord ((pre) val) ((post) loc))))
+         (val (case (car ref)
+                ((toplevel) ref)
+                ((lexical) ref)
+                (else `(call ,(xlib-ref 'js-ooa-get) ,ref))))
+         (loc `(lexical ~ref ,sym))
+         (sum `(call ,(xlib-ref op) (const 1) ,loc))
+         (set (case (car ref)
+                ((toplevel lexical) `(set! ,ref ,sum))
+                (else `(call ,(xlib-ref 'js-ooa-put) ,ref ,sum))))
+         (rval (case ord ((pre) val) ((post) loc))))
     `(let (~ref) (,sym) (,val) (seq ,set (seq ,rval (void))))))
 
 ;; for lt + rt, etc
@@ -313,25 +313,25 @@
 ;; @end deffn
 (define op-assn
   (let ((opmap
-	 '((mul-assign . js:*) (div-assign . js:/) (mod-assign . js:%)
-	   (add-assign . js:+) (sub-assign . js:-) (lshift-assign . js:lshift)
-	   (rshift-assign . js:rshift) (rrshift-assign . js:rrshift)
-	   (and-assign . js:and) (xor-assign . js:xor) (or-assign . js:or)
-	   (assign . #f))))
+         '((mul-assign . js:*) (div-assign . js:/) (mod-assign . js:%)
+           (add-assign . js:+) (sub-assign . js:-) (lshift-assign . js:lshift)
+           (rshift-assign . js:rshift) (rrshift-assign . js:rrshift)
+           (and-assign . js:and) (xor-assign . js:xor) (or-assign . js:or)
+           (assign . #f))))
     (lambda (kseed)
       (let ((lhs (caddr kseed))
-	    (op (assq-ref opmap (caadr kseed)))
-	    (rhs (car kseed)))
-	(if op
-	    `(set! ,lhs (call (@@ ,xlib-mod ,op) lhs rhs))
-	    `(set! ,lhs ,rhs))))))
+            (op (assq-ref opmap (caadr kseed)))
+            (rhs (car kseed)))
+        (if op
+            `(set! ,lhs (call (@@ ,xlib-mod ,op) lhs rhs))
+            `(set! ,lhs ,rhs))))))
 
 (define (opcall-node op seed kseed kdict)
   (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict))
 (define make-opcall xlib-mod)
   
 ;; ====================================
-	 
+         
 ;; @deffn {Procedure} xlang-sxml->xtil exp env opts
 ;; Compile extension SXML tree to external Tree-IL representation.
 ;; This one is public because it's needed for debugging the compiler.
@@ -348,10 +348,10 @@
   (define (remove-empties elements)
     (let loop ((elts elements))
       (if (null? elts) '()
-	  (let ((elt (car elts)) (rest (cdr elts)))
-	    (if (eq? (car elt) 'EmptyStatement)
-		(loop rest)
-		(cons elt (loop rest)))))))
+          (let ((elt (car elts)) (rest (cdr elts)))
+            (if (eq? (car elt) 'EmptyStatement)
+                (loop rest)
+                (cons elt (loop rest)))))))
 
   ;; @deffn {Procedure} labelable-stmt? stmt => #f|stmt
   ;; This predicate determines if the statement can have a preceeding label.
@@ -375,28 +375,28 @@
   (define (cleanup-labels src-elts-tail)
     (let loop ((src src-elts-tail))
       (if (null? src) '()
-	  (if (eq? (caar src) 'LabelledStatement)
-	      (call-with-values
-		  (lambda ()
-		    (let* ((elt (car src)) (rest (cdr src))
-			   (id (cadr elt)) (stmt (caddr elt)))
-		      (if (eqv? 'EmptyStatement (car stmt))
-			  (if (and (pair? rest) (labelable-stmt? (car rest)))
-			      (values id (car rest) (cdr rest))
-			      (values id stmt rest))
-			  (if (labelable-stmt? stmt)
-			      (values id stmt rest)
-			      (values id '(EmptyStatement)
-				      (cons stmt rest))))))
-		(lambda (id stmt rest)
-		  (if (eqv? 'EmptyStatement (car stmt))
-		      (begin
-			(simple-format (current-error-port)
-				       "removing misplaced label: ~A\n"
-				       (cadr id))
-			(loop rest))
-		      (cons `(LabelledStatement ,id ,stmt) (loop rest)))))
-	      (cons (car src) (loop (cdr src)))))))
+          (if (eq? (caar src) 'LabelledStatement)
+              (call-with-values
+                  (lambda ()
+                    (let* ((elt (car src)) (rest (cdr src))
+                           (id (cadr elt)) (stmt (caddr elt)))
+                      (if (eqv? 'EmptyStatement (car stmt))
+                          (if (and (pair? rest) (labelable-stmt? (car rest)))
+                              (values id (car rest) (cdr rest))
+                              (values id stmt rest))
+                          (if (labelable-stmt? stmt)
+                              (values id stmt rest)
+                              (values id '(EmptyStatement)
+                                      (cons stmt rest))))))
+                (lambda (id stmt rest)
+                  (if (eqv? 'EmptyStatement (car stmt))
+                      (begin
+                        (simple-format (current-error-port)
+                                       "removing misplaced label: ~A\n"
+                                       (cadr id))
+                        (loop rest))
+                      (cons `(LabelledStatement ,id ,stmt) (loop rest)))))
+              (cons (car src) (loop (cdr src)))))))
 
   ;; @deffn {Procedure} hoist-decls elements => elements
   ;; Move all variable declarations to front and replace old ones with
@@ -408,42 +408,42 @@
     ;; to decls as assignment statements
     (let loop ((hdecls '()) (rest rest) (decls (cdadr dstmt)))
       (if (null? decls)
-	  (values (cons `(,(car dstmt) (DeclarationList ,hdecls)) hoisted)
-		  rest)
-	  (let* ((decl (car decls))
-		 (init (if (= 3 (length decl)) (caddr decl) #f))
-		 (decl (if init (list (car decl) (cadr decl)) decl)))
-	    (loop (cons decl hdecls)
-		  (if init
-		      (cons `(ExpressionStatement
-			      (AssignmentExpression
-			       (PrimaryExpression ,(cadr decl))
-			       (assign "=") ,(cadr init)))
-			    rest)
-		      rest)
-		  (cdr decls))))))
+          (values (cons `(,(car dstmt) (DeclarationList ,hdecls)) hoisted)
+                  rest)
+          (let* ((decl (car decls))
+                 (init (if (= 3 (length decl)) (caddr decl) #f))
+                 (decl (if init (list (car decl) (cadr decl)) decl)))
+            (loop (cons decl hdecls)
+                  (if init
+                      (cons `(ExpressionStatement
+                              (AssignmentExpression
+                               (PrimaryExpression ,(cadr decl))
+                               (assign "=") ,(cadr init)))
+                            rest)
+                      rest)
+                  (cdr decls))))))
   (define (hoist-decls elements)
     (let ((tail (let loop ((elts elements)) ; tail after Let/VarStatements
-		  (cond
-		   ((null? elts) elts)
-		   ((not (memq (caar elts) hoist-stmts)) elts)
-		   (loop (cdr elts))))))
+                  (cond
+                   ((null? elts) elts)
+                   ((not (memq (caar elts) hoist-stmts)) elts)
+                   (loop (cdr elts))))))
       (let loop ((hoisted '()) (rest '()) (elts tail))
-	(cond
-	 ((null? elts)
-	  (if (null? hoisted)
-	      elements			   ; nothing hoisted
-	      (let loop2 ((elts elements)) ; rebuild statement list
-		(if (eq? elts tail) (append-reverse hoisted (reverse rest))
-		    (cons (car elts) (loop2 (cdr elts)))))))
-	 ((memq (caar elts) hoist-stmts)
-	  (call-with-values		; decl=>hoisted init=>rest
-	      (lambda () (split-dstmt (car elts) hoisted rest))
-	    (lambda (hoisted rest)
-	      (loop hoisted rest (cdr elts)))))
-	 (else
-	  (loop hoisted (cons (car elts) rest) (cdr elts)))))))
-	  
+        (cond
+         ((null? elts)
+          (if (null? hoisted)
+              elements                     ; nothing hoisted
+              (let loop2 ((elts elements)) ; rebuild statement list
+                (if (eq? elts tail) (append-reverse hoisted (reverse rest))
+                    (cons (car elts) (loop2 (cdr elts)))))))
+         ((memq (caar elts) hoist-stmts)
+          (call-with-values             ; decl=>hoisted init=>rest
+              (lambda () (split-dstmt (car elts) hoisted rest))
+            (lambda (hoisted rest)
+              (loop hoisted rest (cdr elts)))))
+         (else
+          (loop hoisted (cons (car elts) rest) (cdr elts)))))))
+          
   
   ;; @deffn {Procedure} fold-in-blocks elts-tail => elts-tail
   ;; NOTE: THIS IS NOT CORRECT.  JS DOES NOT SCOPE BLOCKS.@*
@@ -462,10 +462,10 @@
   (define (x-fold-in-blocks src-elts-tail)
     (let loop ((src  src-elts-tail))
       (if (null? src) '()
-	  (let ((elt (car src)) (rest (cdr src)))
-	    (if (eq? (car elt) 'VariableStatement)
-		(list (cons* 'Block (cadr elt) (loop rest)))
-		(cons elt (loop rest)))))))
+          (let ((elt (car src)) (rest (cdr src)))
+            (if (eq? (car elt) 'VariableStatement)
+                (list (cons* 'Block (cadr elt) (loop rest)))
+                (cons elt (loop rest)))))))
 
   ;; @deffn {Procedure} check-scoping elements
   ;; Check blocks to make sure @code{var} is only used in blocks at entry
@@ -473,7 +473,7 @@
   ;; @end deffn
   (define (check-scoping elements)
     elements)
-		     
+                     
   (define (fD tree seed dict) ;; => tree seed dict
     ;; This handles branches as we go down the tree.  We do two things here:
     ;; @enumerate
@@ -488,18 +488,18 @@
 
       ((Identifier ,name)
        (let ((ref (lookup name dict)))
-	 (cond
-	  (ref
-	   (values '() ref dict))
-	  (else
-	   ;; maybe not defined, assume toplevel
-	   (sferr "javascript: maybe undefined: ~A\n" name)
-	   (values '() `(toplevel ,(string->symbol name)) dict)))))
+         (cond
+          (ref
+           (values '() ref dict))
+          (else
+           ;; maybe not defined, assume toplevel
+           (sferr "javascript: maybe undefined: ~A\n" name)
+           (values '() `(toplevel ,(string->symbol name)) dict)))))
 
       ((PrimaryExpression (this))
        (let ((ref (lookup "this" dict)))
-	 (if (not ref) (error "javascript: not found: \"this\""))
-	 (values '() ref dict)))
+         (if (not ref) (error "javascript: not found: \"this\""))
+         (values '() ref dict)))
       
       ((PrimaryExpression (NullLiteral ,null))
        (values '() '(const js:null) dict))
@@ -514,7 +514,7 @@
        (values '() `(const ,str) dict))
 
       ((CallExpression
-	(obj-ref ,expr (PrimaryExpression (Identifier ,name))) ,arg-list)
+        (obj-ref ,expr (PrimaryExpression (Identifier ,name))) ,arg-list)
        (sferr "1\n")
        (values `(obj-CallExpression ,expr ,name ,arg-list) '() dict))
       ((CallExpression (obj-ref ,expr (Identifier ,name)) ,arg-list)
@@ -531,8 +531,8 @@
 
       ((Block . ,elts) ;; see comments on FunctionElements below
        (let* ((elts (remove-empties elts))
-	      (elts (cleanup-labels elts)))
-	 (values tree '() dict)))
+              (elts (cleanup-labels elts)))
+         (values tree '() dict)))
 
       ;; Convert AssignmentExpression to:
       ;; 1) var-AssignmentExpression => ... (set! ...)
@@ -540,28 +540,28 @@
       ;; 3) ooa-AssignmentExpression => ... (vector-set! ...)|(hash-set! ...)
       ;; TODO: check LeftHandSideExpression
       ((AssignmentExpression
-	(@ . ,attr) (PrimaryExpression (Identifier ,name)) ,assn ,rhs)
+        (@ . ,attr) (PrimaryExpression (Identifier ,name)) ,assn ,rhs)
        (values `(var-AssignmentExpression . ,(cdr tree)) '() dict))
       ((AssignmentExpression
-	(@ . ,attr) (obj-ref ,expr (Identifier ,name)) ,assn ,rhs)
+        (@ . ,attr) (obj-ref ,expr (Identifier ,name)) ,assn ,rhs)
        (values
-	`(obj-AssignmentExpression (@ . ,attr) ,expr ,name ,assn ,rhs)
-	'() dict))
+        `(obj-AssignmentExpression (@ . ,attr) ,expr ,name ,assn ,rhs)
+        '() dict))
       ((AssignmentExpression (@ . ,attr) (ooa-ref ,expr ,expr) ,rhs)
        (values
-	`(ooa-AssignmentExpression (@ . ,attr) ,expr ,expr ,rhs)
-	'() dict))
+        `(ooa-AssignmentExpression (@ . ,attr) ,expr ,expr ,rhs)
+        '() dict))
       
       ((StatementList . ,stmts)
        (let* ((stmts (remove-empties stmts))
-	      (stmts (check-scoping stmts)))
-	 (values tree '() dict)))
+              (stmts (check-scoping stmts)))
+         (values tree '() dict)))
       
       ((VariableDeclaration (Identifier ,name) . ,rest)
        (let* ((dict1 (add-symbol name dict))
-	      (tree1 (lookup name dict1)))
-	 (if (not tree1) (error "javascript coding error"))
-	 (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
+              (tree1 (lookup name dict1)))
+         (if (not tree1) (error "javascript coding error"))
+         (values `(VariableDeclaration ,tree1 . ,rest) '() dict1)))
 
       ((do . ,rest)
        (values tree '() (add-lexicals "break" "continue" (push-scope dict))))
@@ -589,23 +589,23 @@
       
       ((FunctionDeclaration (Identifier ,name) . ,rest)
        (values
-	tree '()
-	(add-lexicals "this" "return" (push-scope (add-symbol name dict)))))
+        tree '()
+        (add-lexicals "this" "return" (push-scope (add-symbol name dict)))))
       
       ((FunctionExpression (Identifier ,name) . ,rest)
        (values tree '() (add-lexicals "this" "return" name (push-scope dict))))
 
       ((FunctionExpression . ,rest)
        (values tree '()
-	       (add-lexicals "this" "return"
-			     (push-scope (add-symbol "*anon*" dict)))))
+               (add-lexicals "this" "return"
+                             (push-scope (add-symbol "*anon*" dict)))))
       
       ((FormalParameterList . ,idlist)
        (values
-	tree '()
-	(acons 'arguments-used? #f
-	       (add-lexical "arguments"
-			    (fold add-lexical dict (map cadr idlist))))))
+        tree '()
+        (acons 'arguments-used? #f
+               (add-lexical "arguments"
+                            (fold add-lexical dict (map cadr idlist))))))
       
       ((FunctionElements . ,elts)
        ;; Fix up list of function elements:
@@ -614,9 +614,9 @@
        ;;    do, while, for or switch.  Otherwise remove.
        ;; 3) Make to DeclList always followed by a Block to end of Elements.???
        (let* ((elts (remove-empties elts))
-	      (elts (hoist-decls elts))
-	      (elts (cleanup-labels elts)))
-	 (values `(FunctionElements . ,elts) '() dict)))
+              (elts (hoist-decls elts))
+              (elts (cleanup-labels elts)))
+         (values `(FunctionElements . ,elts) '() dict)))
 
       ((ProgramElements . ,elts) ;; a list of top-level statements
        (values tree '() dict))
@@ -641,105 +641,105 @@
      (case (car tree)
        
        ((*TOP*)
-	(values (car kseed) kdict))
+        (values (car kseed) kdict))
 
        ;; Identifier: handled in fD above
 
        ;; PrimaryExpression (w/ ArrayLiteral or ObjectLiteral only)
        ((PrimaryExpression)
-	(values (cons (car kseed) seed) kdict))
+        (values (cons (car kseed) seed) kdict))
 
        ;; ArrayLiteral
        ;; mkary is just primitive vector
        ((ArrayLiteral)
-	(let ((exp `(call (@@ ,xlib-mod mkary) (car kseed))))
-	  (values (cons exp seed) kdict)))
+        (let ((exp `(call (@@ ,xlib-mod mkary) (car kseed))))
+          (values (cons exp seed) kdict)))
        
        ;; ElementList
        ((ElementList)
-	(values (cons (rtail kseed) seed) kdict))
+        (values (cons (rtail kseed) seed) kdict))
 
        ;; Elision: convert to list of js:undefined
        ((Elision)
-	(let* ((len (string->number (car kseed)))
-	       (avals (make-list len '(void))))
-	  (values (append avals seed) kdict)))
+        (let* ((len (string->number (car kseed)))
+               (avals (make-list len '(void))))
+          (values (append avals seed) kdict)))
 
        ;; ObjectLiteral
        ((ObjectLiteral)
-	(let* ((tail (rtail kseed)))
-	  (values
-	   (cons
-	    (if (null? tail) `(call (toplevel make-hash-table)) (car tail))
-	    seed)
-	   kdict)))
+        (let* ((tail (rtail kseed)))
+          (values
+           (cons
+            (if (null? tail) `(call (toplevel make-hash-table)) (car tail))
+            seed)
+           kdict)))
        
        ;; PropertyNameAndValueList
        ((PropertyNameAndValueList)
-	(sferr "prop list\n") (pperr (reverse kseed))
-	(values
-	 (cons `(call (@@ ,xlib-mod mkobj) ,@(rtail kseed)) seed)
-	 kdict))
+        (sferr "prop list\n") (pperr (reverse kseed))
+        (values
+         (cons `(call (@@ ,xlib-mod mkobj) ,@(rtail kseed)) seed)
+         kdict))
 
        ;; PropertyNameAndValue
        ((PropertyNameAndValue)
-	(values (cons* (car kseed) (cadr kseed) seed) kdict))
+        (values (cons* (car kseed) (cadr kseed) seed) kdict))
 
        ;; PropertyName
        ((PropertyName)
-	(values (cons `(const ,(string->symbol (car kseed))) seed) kdict))
+        (values (cons `(const ,(string->symbol (car kseed))) seed) kdict))
 
        ;; ooa-ref (object-or-array ref), a cons cell: (dict name)
        ;; obj-ref: converted to ooa-ref in fD
        ;; => (cons <expr> <name>)
        ;; a bit ugly now ???
        ((ooa-ref)
-	(sferr "ooaref:\n") (pperr (rtail kseed))
-	(let* ((expr `(primcall cons
-				 (call ,(xlib-ref 'js-resolve) ,(cadr kseed))
-				 ,(car kseed)))
-	       (tail (rtail kseed))
-	       (ooa (list-ref tail 0))
-	       (arg `(const ,(string->symbol (list-ref tail 1))))
-	       (expr `(call ,(xlib-ref 'js:ooa-ref) ,ooa ,arg))
-	       )
-	  (pperr expr)
-	  (values (cons expr seed) kdict)))
+        (sferr "ooaref:\n") (pperr (rtail kseed))
+        (let* ((expr `(primcall cons
+                                 (call ,(xlib-ref 'js-resolve) ,(cadr kseed))
+                                 ,(car kseed)))
+               (tail (rtail kseed))
+               (ooa (list-ref tail 0))
+               (arg `(const ,(string->symbol (list-ref tail 1))))
+               (expr `(call ,(xlib-ref 'js:ooa-ref) ,ooa ,arg))
+               )
+          (pperr expr)
+          (values (cons expr seed) kdict)))
 
        ;; new
        ((new)
-	(let* ((tail (rtail kseed))
-	       (expr `(call ,(car tail) ,@(cadr tail) (const #:this)
-			    (call (toplevel make-hash-table)))))
-	  (values (cons expr seed) kdict)))
+        (let* ((tail (rtail kseed))
+               (expr `(call ,(car tail) ,@(cadr tail) (const #:this)
+                            (call (toplevel make-hash-table)))))
+          (values (cons expr seed) kdict)))
        
         ;; obj-CallExpression obj name args : add args #:this obj
        ((obj-CallExpression)
-	(let* ((tail (rtail kseed))
-	       (obj (list-ref tail 0))
-	       (mem `(const ,(string->symbol (list-ref tail 1))))
-	       (args (list-ref tail 2))
-	       (args (append args (list `(const #:this) obj)))
-	       (expr `(call (call ,(xlib-ref 'js:ooa-ref) ,obj ,mem) . ,args)))
-	  ;;(sferr "obj-C\n") (pperr tail)
-	  (values (cons expr seed) kdict)))
+        (let* ((tail (rtail kseed))
+               (obj (list-ref tail 0))
+               (mem `(const ,(string->symbol (list-ref tail 1))))
+               (args (list-ref tail 2))
+               (args (append args (list `(const #:this) obj)))
+               (expr `(call (call ,(xlib-ref 'js:ooa-ref) ,obj ,mem) . ,args)))
+          ;;(sferr "obj-C\n") (pperr tail)
+          (values (cons expr seed) kdict)))
        
        ;; CallExpression
        ((CallExpression)
-	;;(pperr (cons* 'apply (cadr kseed) (car kseed)))
-	(values (cons (cons* 'call (cadr kseed) (car kseed)) seed) kdict))
+        ;;(pperr (cons* 'apply (cadr kseed) (car kseed)))
+        (values (cons (cons* 'call (cadr kseed) (car kseed)) seed) kdict))
 
        ;; ArgumentList
        ((ArgumentList) ;; append-reverse-car ??? 
-	(values (cons (rtail kseed) seed) kdict))
+        (values (cons (rtail kseed) seed) kdict))
 
        ;; post-inc
        ((post-inc)
-	(values (cons (op-on-ref (car kseed) 'js:+ 'post) seed) kdict))
+        (values (cons (op-on-ref (car kseed) 'js:+ 'post) seed) kdict))
        
        ;; post-dec
        ((post-dec)
-	(values (cons (op-on-ref (car kseed) 'js:- 'post) seed) kdict))
+        (values (cons (op-on-ref (car kseed) 'js:- 'post) seed) kdict))
 
        ;; delete
        ;; void
@@ -747,11 +747,11 @@
 
        ;; pre-inc
        ((pre-inc)
-	(values (cons (op-on-ref (car kseed) 'js:+ 'pre) seed) kdict))
+        (values (cons (op-on-ref (car kseed) 'js:+ 'pre) seed) kdict))
 
        ;; pre-dec
        ((pre-dec)
-	(values (cons (op-on-ref (car kseed) 'js:- 'pre) seed) kdict))
+        (values (cons (op-on-ref (car kseed) 'js:- 'pre) seed) kdict))
 
        ;; pos neg ~ not
        ((pos) (opcall-node 'js:pos seed kseed kdict))
@@ -797,8 +797,8 @@
 
        ;; ConditionalExpression => (if expr a b)
        ((ConditionalExpression)
-	(values
-	 (cons `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)) seed) kdict))
+        (values
+         (cons `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)) seed) kdict))
 
        ;; AssignmentExpression
        ;; assign mul-assign div-assign od-assign add-assign sub-assign
@@ -806,72 +806,72 @@
        ;; xor-assign or-assign
        ;; Note that assignment needs to return the value always
        ((var-AssignmentExpression)
-	(let* ((tail (rtail kseed))
-	       )
-	  ;;(sferr "obj-Ass\n") (pperr (reverse kseed)) ;;(pperr tail)
-	  (values (cons (op-assn kseed) seed) kdict)))
+        (let* ((tail (rtail kseed))
+               )
+          ;;(sferr "obj-Ass\n") (pperr (reverse kseed)) ;;(pperr tail)
+          (values (cons (op-assn kseed) seed) kdict)))
 
        ((obj-AssignmentExpression)
-	(let* ((tail (rtail kseed)))
-	  (values (cons '(void) seed) dict)))
+        (let* ((tail (rtail kseed)))
+          (values (cons '(void) seed) dict)))
        
        ;; expr-list
 
        ;; Block : has same elements as StatementList
        ;; except decl's will be let (by static semantics)
        ((Block)
-	(values (cons (wrap-bindings (block (rtail kseed))) seed) kdict))
+        (values (cons (wrap-bindings (block (rtail kseed))) seed) kdict))
 
        ((StatementList)
-	(values (cons (block (rtail kseed)) seed) kdict))
+        (values (cons (block (rtail kseed)) seed) kdict))
 
        ;; LetStatement
        ((LetStatement)
-	(values (cons (car kseed) seed) kdict))
+        (values (cons (car kseed) seed) kdict))
 
        ;; VariableStatement
        ((VariableStatement)
-	(values (cons (car kseed) seed) kdict))
+        (values (cons (car kseed) seed) kdict))
 
        ;; DeclarationList
        ((DeclarationList)
-	(values
-	 (acons (if (top-level? dict) 'begin 'bindings) (rtail kseed) seed)
-	 kdict))
+        (values
+         (acons (if (top-level? dict) 'begin 'bindings) (rtail kseed) seed)
+         kdict))
        
        ;; VariableDeclaration
        ((VariableDeclaration)
-	(let* ((tail (rtail kseed))
-	       (name (cadar tail))
-	       (gsym (if (eq? 'lexical (caar tail)) (caddar tail) #f))
-	       (init (if (null? (cdr tail)) '(void) (cadr tail))))
-	  ;;(sferr "vdef: name=~S init=~S gsym=~S\n" name init gsym)
-	  (values
-	   (cons
-	    (if (top-level? dict)
-		`(define ,name ,init)
-		`(bind ,name ,gsym ,init))
-	    seed)
-	   kdict)))
+        (let* ((tail (rtail kseed))
+               (name (cadar tail))
+               (gsym (if (eq? 'lexical (caar tail)) (caddar tail) #f))
+               (init (if (null? (cdr tail)) '(void) (cadr tail))))
+          ;;(sferr "vdef: name=~S init=~S gsym=~S\n" name init gsym)
+          (values
+           (cons
+            (if (top-level? dict)
+                `(define ,name ,init)
+                `(bind ,name ,gsym ,init))
+            seed)
+           kdict)))
        
        ;; Initializer
-       ((Initializer)		       ; just grab the single argument
-	(values (cons (car kseed) seed) kdict))
+       ((Initializer)                  ; just grab the single argument
+        (values (cons (car kseed) seed) kdict))
 
        ;; EmptyStatement
-       ((EmptyStatement)		; ignore
-	(values seed dict))
+       ((EmptyStatement)                ; ignore
+        (values seed dict))
 
        ;; ExpressionStatement
-       ((ExpressionStatement)	       ; just grab the single argument
-	(values (cons (car kseed) seed) kdict))
+       ((ExpressionStatement)          ; just grab the single argument
+        (values (cons (car kseed) seed) kdict))
 
        ;; IfStatement
        ((IfStatement)
-	(values (cons (if (= 3 (length kseed))
-			  `(if ,(cadr kseed) ,(car kseed) (void))
-			  `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)))
-		      seed) kdict))
+        (values (cons (if (= 3 (length kseed))
+                          `(if ,(cadr kseed) ,(car kseed) (void))
+                          `(if ,(caddr kseed) ,(cadr kseed) ,(car kseed)))
+                      seed) kdict))
 
        ;; =====================================================================
        ;; @subheading Iteration with @code{do}, @code{while} and @code{for}
@@ -883,47 +883,47 @@
 
        ;; do: "do" stmt "while" expr ;
        ((do)
-	(let* ((expr (car kseed)) (body (cadr kseed)))
-	  (values (cons (make-do-while expr body kdict) seed)
-		  (pop-scope kdict))))
+        (let* ((expr (car kseed)) (body (cadr kseed)))
+          (values (cons (make-do-while expr body kdict) seed)
+                  (pop-scope kdict))))
 
        ;; while: while expr stmt
        ((while)
-	(let* ((expr (cadr kseed)) (body (car kseed)))
-	  (values (cons (make-while expr body kdict) seed)
-		  (pop-scope kdict))))
+        (let* ((expr (cadr kseed)) (body (car kseed)))
+          (values (cons (make-while expr body kdict) seed)
+                  (pop-scope kdict))))
 
        ;; for    : pop-scope needed
        ;; for-in : pop-scope needed
 
        ;; NoExpression (used by for and for-in)
        ((NoExpression)
-	(values (cons '(void) seed) kdict))
+        (values (cons '(void) seed) kdict))
        
        ;; ContinueStatement: abort w/ zero args
        ((ContinueStatement)
-	(if (> (length kseed) 1)
-	    (throw 'js-error "unsupported: break <label>"))
-	(values
-	 (cons `(abort ,(lookup "continue" kdict) () (const ())) seed)
-	 kdict))
+        (if (> (length kseed) 1)
+            (throw 'js-error "unsupported: break <label>"))
+        (values
+         (cons `(abort ,(lookup "continue" kdict) () (const ())) seed)
+         kdict))
 
        ;; BreakStatement: abort w/ zero args
        ((BreakStatement)
-	(if (> (length kseed) 1)
-	    (throw 'js-error "unsupported: break <label>"))
-	(values
-	 (cons `(abort ,(lookup "break" kdict) () (const ())) seed)
-	 kdict))
+        (if (> (length kseed) 1)
+            (throw 'js-error "unsupported: break <label>"))
+        (values
+         (cons `(abort ,(lookup "break" kdict) () (const ())) seed)
+         kdict))
 
        ;; ReturnStatement: abort w/ one arg
        ((ReturnStatement)
-	(values
-	 (cons `(abort ,(lookup "return" kdict)
-		       (,(if (> (length kseed) 1) (car kseed) undefined))
-		       (const ()))
-	       seed)
-	 kdict))
+        (values
+         (cons `(abort ,(lookup "return" kdict)
+                       (,(if (> (length kseed) 1) (car kseed) undefined))
+                       (const ()))
+               seed)
+         kdict))
 
        ;; WithStatement
 
@@ -964,47 +964,47 @@
        ;; SwitchStatement: pop-scope needed
        ;; CaseBlock CaseClauses CaseClause DefaultClause
        ((SwitchStatement)
-	(let* ((expr (cadr kseed))
-	       (body (match (car kseed)
-		       (`((let . ,A-clz) (seq . ,def) (let . ,B-clz))
-			(block (cons* `(let . ,A-clz) `(let . ,B-clz) def)))
-		       (`((let . ,A-clz) (seq . ,def))
-			(block (cons `(let . ,A-clz) def)))
-		       (`((seq . ,def) (let . ,B-clz))
-			(block (cons `(let . ,B-clz) def)))
-		       (`((let . ,A-clz)) `(let . ,A-clz))))
-	       (vsym (lookup-gensym "swx~val" kdict))
-	       (body `(let (swx~val) (,vsym) (,expr) ,body))
-	       (body (with-escape (lookup "break" kdict) body)))
-	  (values (cons body seed) (pop-scope kdict))))
+        (let* ((expr (cadr kseed))
+               (body (match (car kseed)
+                       (`((let . ,A-clz) (seq . ,def) (let . ,B-clz))
+                        (block (cons* `(let . ,A-clz) `(let . ,B-clz) def)))
+                       (`((let . ,A-clz) (seq . ,def))
+                        (block (cons `(let . ,A-clz) def)))
+                       (`((seq . ,def) (let . ,B-clz))
+                        (block (cons `(let . ,B-clz) def)))
+                       (`((let . ,A-clz)) `(let . ,A-clz))))
+               (vsym (lookup-gensym "swx~val" kdict))
+               (body `(let (swx~val) (,vsym) (,expr) ,body))
+               (body (with-escape (lookup "break" kdict) body)))
+          (values (cons body seed) (pop-scope kdict))))
 
        ((CaseBlock)
-	(values (cons (rtail kseed) seed) kdict))
+        (values (cons (rtail kseed) seed) kdict))
        
        ((CaseClauses)
-	(values
-	 (cons 
-	  (let ((val (lookup "swx~val" kdict)))
-	    (let loop ((next '(void)) (sym (jsym)) (ks kseed))
-	      (if (eq? (car ks) 'CaseClauses)
-		  `(let (~key) (,sym) ((const #f)) ,next)
-		  (let ((psym (jsym)))
-		    (loop (make-case val sym psym (car ks) next)
-			  psym (cdr ks))))))
-	  seed)
-	 kdict))
+        (values
+         (cons 
+          (let ((val (lookup "swx~val" kdict)))
+            (let loop ((next '(void)) (sym (jsym)) (ks kseed))
+              (if (eq? (car ks) 'CaseClauses)
+                  `(let (~key) (,sym) ((const #f)) ,next)
+                  (let ((psym (jsym)))
+                    (loop (make-case val sym psym (car ks) next)
+                          psym (cdr ks))))))
+          seed)
+         kdict))
        
        ((CaseClause)
-	(values (cons kseed seed) kdict))
+        (values (cons kseed seed) kdict))
 
        ((DefaultClause)
-	(values
-	 (if (eqv? 1 (length kseed)) seed (cons (car kseed) seed))
-	 kdict))
+        (values
+         (if (eqv? 1 (length kseed)) seed (cons (car kseed) seed))
+         kdict))
        
        ;; LabelledStatement
        ((LabelledStatement)
-	(values (cons (car kseed) seed) kdict))
+        (values (cons (car kseed) seed) kdict))
 
        ;; ====================================================================
        ;; @subheading Exceptions
@@ -1027,98 +1027,98 @@
        
        ;; ThrowStatement throw expression
        ((ThrowStatement)
-	(values (cons `(abort ,(lookup "catch" kdict)
-			      (,(car kseed)) (const '())) seed) kdict))
+        (values (cons `(abort ,(lookup "catch" kdict)
+                              (,(car kseed)) (const '())) seed) kdict))
        
        ;; TryStatement, Catch, Finally
        ((TryStatement)
-	(let* ((rseed (rtail kseed))
-	       (try-stmts (car rseed))
-	       (ctag (lookup-gensym "catch" kdict))
-	       (catch (match (cdr rseed)
-			((`(catch ,hdlr) . rest) hdlr)
-			(otherwise (make-handler '() '(void)))))
-	       (finally (match (cdr rseed)
-			  (`((catch ,hdlr) (finally . ,stmts)) stmts)
-			  (`((finally . ,stmts)) stmts)
-			  (otherwise '(void))))
-	       (body
-		`(let (catch) (,ctag)
-		      ((primcall make-prompt-tag (const catch)))
-		      (seq
-		       (prompt #t (lexical catch ,ctag) ,try-stmts ,catch)
-		       ,finally))))
-	  (values (cons body seed) (pop-scope kdict))))
+        (let* ((rseed (rtail kseed))
+               (try-stmts (car rseed))
+               (ctag (lookup-gensym "catch" kdict))
+               (catch (match (cdr rseed)
+                        ((`(catch ,hdlr) . rest) hdlr)
+                        (otherwise (make-handler '() '(void)))))
+               (finally (match (cdr rseed)
+                          (`((catch ,hdlr) (finally . ,stmts)) stmts)
+                          (`((finally . ,stmts)) stmts)
+                          (otherwise '(void))))
+               (body
+                `(let (catch) (,ctag)
+                      ((primcall make-prompt-tag (const catch)))
+                      (seq
+                       (prompt #t (lexical catch ,ctag) ,try-stmts ,catch)
+                       ,finally))))
+          (values (cons body seed) (pop-scope kdict))))
        
        ((Catch)
-	(let* ((arg-name (cadr (cadr tree)))	 ; arg name as string
-	       (a-sym (string->symbol arg-name)) ; as symbol
-	       (a-gsym (lookup-gensym arg-name kdict)) ; its gensym
-	       (jcatch `(lambda ()
-			  (lambda-case (((k ,a-sym) #f #f #f ()
-					 (,(jsym) ,a-gsym)) ,(car kseed))))))
-	  (values (acons 'catch jcatch seed) kdict)))
+        (let* ((arg-name (cadr (cadr tree)))     ; arg name as string
+               (a-sym (string->symbol arg-name)) ; as symbol
+               (a-gsym (lookup-gensym arg-name kdict)) ; its gensym
+               (jcatch `(lambda ()
+                          (lambda-case (((k ,a-sym) #f #f #f ()
+                                         (,(jsym) ,a-gsym)) ,(car kseed))))))
+          (values (acons 'catch jcatch seed) kdict)))
 
        ((Finally)
-	(values (acons 'finally (car kseed) seed) kdict))
+        (values (acons 'finally (car kseed) seed) kdict))
 
        ;; ====================================================================
 
        ;; FunctionDeclaration (see also fD above)
        ;; If the body starts with (bindings ...) then make a let.
        ((FunctionDeclaration)
-	;; TODO: check for arguments-used?
-	(let* ((name (let ((n (caddr kseed)))
-		       (if (memq (car n) '(@ @@)) (caddr n) (cadr n))))
-	       (this (caddr (lookup "this" kdict)))
-	       (args (map cdr (cdadr kseed))) ;; '((x JS-123) (y JS-124))
-	       (ptag (lookup "return" kdict))
-	       (body (wrap-bindings (car kseed)))
-	       (body (with-escape/arg ptag (block body)))
-	       (fctn (make-function name this args body)))
-	  (if (assq-ref kdict 'arguments-used?)
-	      (throw 'javascript-error
-		     "function `arguments' not supported yet"))
-	  (values (cons `(define ,name ,fctn) seed) (pop-scope kdict))))
+        ;; TODO: check for arguments-used?
+        (let* ((name (let ((n (caddr kseed)))
+                       (if (memq (car n) '(@ @@)) (caddr n) (cadr n))))
+               (this (caddr (lookup "this" kdict)))
+               (args (map cdr (cdadr kseed))) ;; '((x JS-123) (y JS-124))
+               (ptag (lookup "return" kdict))
+               (body (wrap-bindings (car kseed)))
+               (body (with-escape/arg ptag (block body)))
+               (fctn (make-function name this args body)))
+          (if (assq-ref kdict 'arguments-used?)
+              (throw 'javascript-error
+                     "function `arguments' not supported yet"))
+          (values (cons `(define ,name ,fctn) seed) (pop-scope kdict))))
 
        ;; FunctionExpression
        ;; If the function has a name then wrap in a let so it can recurse.
        ((FunctionExpression)
-	(let* ((lref (if (pair? (caddr kseed)) (caddr kseed) #f))
-	       (name (if lref (cadr lref) #f))
-	       (gsym (if lref (caddr lref) #f))
-	       (this (caddr (lookup "this" kdict)))
-	       (args (map cdr (cdadr kseed))) ;; '((x JS-123) (y JS-124))
-	       (ptag (lookup "return" kdict))
- 	       (body (wrap-bindings (car kseed)))
-	       (body (with-escape/arg ptag (block body)))
-	       (fctn (make-function name this args body))
-	       (fctn (if lref `(let (,name) (,gsym) (,fctn) ,lref))))
-	  (if (assq-ref kdict 'arguments-used?)
-	      (throw 'javascript-error
-		     "function `arguments' not supported yet"))
-	  (values (cons fctn seed) (pop-scope kdict))))
+        (let* ((lref (if (pair? (caddr kseed)) (caddr kseed) #f))
+               (name (if lref (cadr lref) #f))
+               (gsym (if lref (caddr lref) #f))
+               (this (caddr (lookup "this" kdict)))
+               (args (map cdr (cdadr kseed))) ;; '((x JS-123) (y JS-124))
+               (ptag (lookup "return" kdict))
+               (body (wrap-bindings (car kseed)))
+               (body (with-escape/arg ptag (block body)))
+               (fctn (make-function name this args body))
+               (fctn (if lref `(let (,name) (,gsym) (,fctn) ,lref))))
+          (if (assq-ref kdict 'arguments-used?)
+              (throw 'javascript-error
+                     "function `arguments' not supported yet"))
+          (values (cons fctn seed) (pop-scope kdict))))
 
        ;; FormalParameterList
        ((FormalParameterList)
-	(values (cons (reverse kseed) seed) kdict))
+        (values (cons (reverse kseed) seed) kdict))
 
        ;; FunctionElements
        ((FunctionElements)
-	(values (cons (block (rtail kseed)) seed) kdict))
+        (values (cons (block (rtail kseed)) seed) kdict))
 
        ;; Program
        ((Program)
-	(values (cons (car kseed) seed) kdict))
+        (values (cons (car kseed) seed) kdict))
        
        ;; ProgramElements
        ((ProgramElements)
-	(values (cons (block (rtail kseed)) seed) kdict))
+        (values (cons (block (rtail kseed)) seed) kdict))
 
        (else
-	(cond
-	 ((null? seed) (values (reverse kseed) kdict))
-	 (else (values (cons (reverse kseed) seed) kdict)))))))
+        (cond
+         ((null? seed) (values (reverse kseed) kdict))
+         (else (values (cons (reverse kseed) seed) kdict)))))))
 
   (define (fH leaf seed dict)
     (values (cons leaf seed) dict))
@@ -1136,20 +1136,20 @@
   (when show-sxml (sferr "sxml:\n") (pperr exp))
   (let ((cenv (if (module? env) (acons '@top #t (acons '@M env JSdict)) env)))
     (if exp 
-	(call-with-values
-	    (lambda () (xlang-sxml->xtil exp cenv opts))
-	  (lambda (exp cenv)
-	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
-     	    ))
-	(values (parse-tree-il '(void)) env cenv))))
+        (call-with-values
+            (lambda () (xlang-sxml->xtil exp cenv opts))
+          (lambda (exp cenv)
+            (when show-xtil (sferr "tree-il:\n") (pperr exp))
+            (values (parse-tree-il exp) env cenv)
+            ;;(values (parse-tree-il '(const "[hello]")) env cenv)
+            ))
+        (values (parse-tree-il '(void)) env cenv))))
 
 #|
 (use-modules (nyacc lang javascript ia-parser))
 (define-public (test-1)
   (let* ((prog "function f(x) { var a,b=1; a = 1; var c,d=4; return a+d; }")
-	 (tree (with-input-from-string prog parse-js-elt)))
+         (tree (with-input-from-string prog parse-js-elt)))
     (compile-tree-il tree (current-module) '())))
 |#
 ;; --- last line ---

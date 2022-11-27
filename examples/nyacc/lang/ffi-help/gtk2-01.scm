@@ -19,9 +19,9 @@
 (use-modules (system ffi-help-rt))
 (use-modules (bytestructures guile))
 
-(use-modules (ffi glib))		; ffi:31 scm:31889
-(use-modules (ffi gobject))		; ffi:26 scm:12044
-(use-modules (ffi gtk2))		; ffi:26 scm:92964
+(use-modules (ffi glib))                ; ffi:31 scm:31889
+(use-modules (ffi gobject))             ; ffi:26 scm:12044
+(use-modules (ffi gtk2))                ; ffi:26 scm:92964
 
 ;; This will generate a FFI code wrapper around the lambda.  Then below
 ;; we use (fh-cast GCallback hello) to match the argument signature.

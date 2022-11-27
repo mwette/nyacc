@@ -26,8 +26,8 @@
 ;; TODO;; this is C
 (define op-sym 
   (let ((ot '(("=" . eq) ("+=" . pl-eq) ("-=" . mi-eq) ("*=" . ti-eq)
-	      ("/=" . di-eq) ("%=" . mo-eq) ("<<=" . ls-eq) (">>=" . rs-eq)
-	      ("&=" . ba-eq) ("^=" . bx-eq) ("|=" bo-eq))))
+              ("/=" . di-eq) ("%=" . mo-eq) ("<<=" . ls-eq) (">>=" . rs-eq)
+              ("&=" . ba-eq) ("^=" . bx-eq) ("|=" bo-eq))))
     (lambda (name)
       (assoc-ref ot name))))
 
@@ -55,9 +55,9 @@
 ;; TODO
 (define op-assc ;; this is C
   '((left array-ref sel post-inc post-dec comp-lit mul div ldiv mod add sub
-	  lshift rshift lt gt le ge bitwise-and bitwise-xor bitwise-or and or)
+          lshift rshift lt gt le ge bitwise-and bitwise-xor bitwise-or and or)
     (right pre-inc pre-dec sizeof bitwise-not not pos neg ref-to de-ref cast
-	   cond assn-expr)
+           cond assn-expr)
     (nonassoc)))
 
 (define protect-expr? (make-protect-expr op-prec op-assc))
@@ -73,32 +73,32 @@
   (define (unary/l op rep rval)
     (sf rep)
     (if (protect-expr? 'rt op rval)
-	(ppx/p rval)
-	(ppx rval)))
+        (ppx/p rval)
+        (ppx rval)))
   
   (define (unary/r op rep lval)
     (sf rep)
     (if (protect-expr? 'lt op lval)
-	(ppx/p lval)
-	(ppx lval)))
+        (ppx/p lval)
+        (ppx lval)))
   
   (define (binary op rep lval rval)
     (if (protect-expr? 'lt op lval)
-	(ppx/p lval)
-	(ppx lval))
+        (ppx/p lval)
+        (ppx lval))
     (sf rep)
     (if (protect-expr? 'rt op rval)
-	(ppx/p rval)
-	(ppx rval)))
+        (ppx/p rval)
+        (ppx rval)))
 
   (define (string->mlang st)
     (if (string-any #\' st)
-	(reverse-list->string
-	 (string-fold
-	  (lambda (ch seed)
-	    (if (char=? #\' ch) (cons* #\' ch seed) (cons ch seed)))
-	  '() st))
-	st))
+        (reverse-list->string
+         (string-fold
+          (lambda (ch seed)
+            (if (char=? #\' ch) (cons* #\' ch seed) (cons ch seed)))
+          '() st))
+        st))
 
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
   
@@ -126,10 +126,10 @@
 
       ((ident-list . ,rest)
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf ", ")))
-	rest))
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf ", ")))
+        rest))
 
       ((ident ,ident)
        (sf "~A" ident))
@@ -140,15 +140,15 @@
       ((call-stmt ,name . ,args)
        (ppx name) (sf "(")
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) ", "))
-	args)
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) ", "))
+        args)
        (sf ");"))
 
       ((aref-or-call ,name . ,args)
        (ppx name) (sf "(")
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) ", "))
-	args)
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) ", "))
+        args)
        (sf ")"))
 
       ((assn ,lhs ,rhs)
@@ -158,8 +158,8 @@
        (sf "[") (for-each ppx lvals) (sf "] = ")
        (ppx name) (sf "(")
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
-	args)
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
+        args)
        (sf ");\n"))
 
       ((for . ,rest)
@@ -184,20 +184,20 @@
       ((matrix . ,rows)
        (sf "[")
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf "; "))
-	  ;; newline?
-	  )
-	rows)
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf "; "))
+          ;; newline?
+          )
+        rows)
        (sf "]"))
 
       ((row . ,expr-list)
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf ", ")))
-	expr-list))
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf ", ")))
+        expr-list))
 
       ((xpose ,expr) (ppx expr) (sf "'"))
       
@@ -205,14 +205,14 @@
        (ppx ident) (sf "(") (ppx expr-list) (sf ")"))
 
       ((expr-list . ,items)
-       (fold-right			; seed is "need comma"
-	(lambda (item seed)
-	  (if seed (sf ", "))
-	  (cond
-	   ((eqv? 'colon-expr (sx-tag item)) (sf ":") #f)
-	   (else (ppx item) #t)))
-	#f
-	items))
+       (fold-right                      ; seed is "need comma"
+        (lambda (item seed)
+          (if seed (sf ", "))
+          (cond
+           ((eqv? 'colon-expr (sx-tag item)) (sf ":") #f)
+           (else (ppx item) #t)))
+        #f
+        items))
       
       ((pos ,expr) (unary/l 'pos "+" expr))
       ((neg ,expr) (unary/l 'neg "-" expr))

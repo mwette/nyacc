@@ -26,7 +26,7 @@
 
 (define-module (nyacc lang julia mach)
   #:export (julia-spec
-	    )
+            )
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)

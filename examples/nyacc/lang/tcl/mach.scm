@@ -26,15 +26,15 @@
 (define tcl-expr-spec
   (lalr-spec
    (notice (string-append "Copyright (C) 2018 Matthew R. Wette"
-			  license-lgpl3+))
+                          license-lgpl3+))
    ;;(expect 0)
    (start conditional-expression)
    (grammar
     (conditional-expression
      (logical-or-expression)
      (logical-or-expression "?" logical-or-expression
-			    ":" conditional-expression
-			    ($$ `(cond-expr ,$1 ,$3 ,$5))))
+                            ":" conditional-expression
+                            ($$ `(cond-expr ,$1 ,$3 ,$5))))
     (logical-or-expression
      (logical-and-expression)
      (logical-or-expression "||" logical-and-expression ($$ `(or ,$1 ,$3))))
@@ -44,15 +44,15 @@
     (bitwise-or-expression
      (bitwise-xor-expression)
      (bitwise-or-expression "|" bitwise-xor-expression
-			    ($$ `(bitwise-or ,$1 ,$3))))
+                            ($$ `(bitwise-or ,$1 ,$3))))
     (bitwise-xor-expression
      (bitwise-and-expression)
      (bitwise-xor-expression "^" bitwise-and-expression
-			     ($$ `(bitwise-xor ,$1 ,$3))))
+                             ($$ `(bitwise-xor ,$1 ,$3))))
     (bitwise-and-expression
      (equality-expression)
      (bitwise-and-expression "&" equality-expression
-			     ($$ `(bitwise-and ,$1 ,$3))))
+                             ($$ `(bitwise-and ,$1 ,$3))))
     (equality-expression
      (relational-expression)
      (equality-expression "==" relational-expression ($$ `(eq ,$1 ,$3)))
@@ -90,9 +90,9 @@
      (postfix-expression "--" ($$ `(post-dec ,$1))))
     (primary-expression
      ($ident ($$ `(ident ,$1)))
-     ($fixed ($$ `(fixed ,$1)))		; integer literal
-     ($float ($$ `(float ,$1)))		; float literal
-     ($chlit ($$ `(char ,$1)))		; char literal
+     ($fixed ($$ `(fixed ,$1)))         ; integer literal
+     ($float ($$ `(float ,$1)))         ; float literal
+     ($chlit ($$ `(char ,$1)))          ; char literal
      ;;($chlit/L ($$ `(char (@ (type "wchar_t")) ,$1)))
      ;;($chlit/u ($$ `(char (@ (type "char16_t")) ,$1)))
      ;;($chlit/U ($$ `(char (@ (type "char32_t")) ,$1)))
@@ -121,9 +121,9 @@
   (write-lalr-tables tcl-expr-mach (xtra-dir "expr-tab.scm.new")
     #:prefix "tcl-expr-")
   (let ((a (move-if-changed (xtra-dir "expr-act.scm.new")
-			    (xtra-dir "expr-act.scm")))
-	(b (move-if-changed (xtra-dir "expr-tab.scm.new")
-			    (xtra-dir "expr-tab.scm"))))
+                            (xtra-dir "expr-act.scm")))
+        (b (move-if-changed (xtra-dir "expr-tab.scm.new")
+                            (xtra-dir "expr-tab.scm"))))
     (or a b)))
 
 ;; --- last line ---

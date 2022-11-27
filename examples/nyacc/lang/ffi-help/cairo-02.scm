@@ -7,9 +7,9 @@
 ;; notice and this notice are preserved.  This file is offered as-is,
 ;; without any warranty.
 
-(use-modules (ffi cairo))		; auto-generated from cairo.h etc
-(use-modules (system ffi-help-rt))	; pointer-to
-(use-modules (system foreign))		; pointer<->scm
+(use-modules (ffi cairo))               ; auto-generated from cairo.h etc
+(use-modules (system ffi-help-rt))      ; pointer-to
+(use-modules (system foreign))          ; pointer<->scm
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 200 200))
 (define cr (cairo_create srf))
@@ -24,10 +24,10 @@
 ;;      *key, void *user_data, cairo_destroy_func_t destroy);
 
 (define k1 (make-cairo_user_data_key_t)) ; make a key
-(define v1 '((abc . 123) (def . 456)))	 ; make some data
-(define (d1 data)			 ; callback
+(define v1 '((abc . 123) (def . 456)))   ; make some data
+(define (d1 data)                        ; callback
   (simple-format #t "d1 called with ~S\n" (pointer->scm data)))
-	 
+         
 (cairo_set_user_data cr (pointer-to k1) (scm->pointer v1) d1)
 
 (cairo_surface_write_to_png srf "cairo-02.png")

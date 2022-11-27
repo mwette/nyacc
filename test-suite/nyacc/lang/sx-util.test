@@ -1,4 +1,4 @@
-;;; nyacc/lang/sx-util.test		-*- scheme -*-
+;;; nyacc/lang/sx-util.test             -*- scheme -*-
 ;;; 
 ;;; Copyright (C) 2017-2018 Matthew R. Wette
 ;;; 
@@ -168,7 +168,7 @@
     (and
      (sx-match-tail '((foo "hi") "there") (((foo "hi") . ,_) #t) (,_ #f))
      #t))
-	
+        
   )
 
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))

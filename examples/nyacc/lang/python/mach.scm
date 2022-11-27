@@ -95,9 +95,9 @@
 ;;  for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
 ;;  try_stmt: ('try' ':' suite
 ;;             ((except_clause ':' suite)+
-;;  	    ['else' ':' suite]
-;;  	    ['finally' ':' suite] |
-;;  	   'finally' ':' suite))
+;;          ['else' ':' suite]
+;;          ['finally' ':' suite] |
+;;         'finally' ':' suite))
 ;;  with_stmt: 'with' with_item (',' with_item)*  ':' suite
 ;;  with_item: test ['as' expr]
 ;;  with_var: 'as' expr

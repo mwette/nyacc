@@ -74,25 +74,25 @@
 (define (cnvt)
   (define (cnvt-cpp-ftn-def defn)
     (let* ((name (car defn)) (argl (cadr defn)) (repl (cddr defn))
-	   (expr (parse-c99x repl))
-	   (name (string->symbol name)) (argl (map string->symbol argl)))
+           (expr (parse-c99x repl))
+           (name (string->symbol name)) (argl (map string->symbol argl)))
       ;;(sferr "~S:\n" name)  (pperr expr)
       (sferr "\n")
       (pperr `(define (,name ,@argl) ,(c99->scm expr)))))
   (define (inc-filter file-spec path-spec)
     (string-contains path-spec "lightning"))
   (let* ((tree (with-input-from-string "#include <lightning.h>\n"
-		 (lambda ()
-		   (parse-c99 #:cpp-defs cpp-defs
-			      #:inc-dirs inc-dirs
-			      #:inc-help inc-help
-			      #:mode 'decl))))
-	 (ddict (c99-trans-unit->ddict tree #:inc-filter inc-filter)))
+                 (lambda ()
+                   (parse-c99 #:cpp-defs cpp-defs
+                              #:inc-dirs inc-dirs
+                              #:inc-help inc-help
+                              #:mode 'decl))))
+         (ddict (c99-trans-unit->ddict tree #:inc-filter inc-filter)))
     (for-each
      (lambda (defn)
        (cond
-	((string=? (car defn) "offsetof") #f)
-	((pair? (cdr defn)) (cnvt-cpp-ftn-def defn))))
+        ((string=? (car defn) "offsetof") #f)
+        ((pair? (cdr defn)) (cnvt-cpp-ftn-def defn))))
      ddict)))
 
 (cnvt)

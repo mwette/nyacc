@@ -1,4 +1,4 @@
-;;; nyacc/lang/util.test		-*- scheme -*-
+;;; nyacc/lang/util.test                -*- scheme -*-
 ;;; 
 ;;; Copyright (C) 2015,2016 Matthew R. Wette
 ;;; 
@@ -31,17 +31,17 @@
      "hello world!"
      (with-output-to-string
        (lambda ()
-	 (with-input-from-string "hello X!"
-	   (lambda ()
-	     (let iter ((ch (read-char)))
-	       (unless (eq? ch #\X) (write-char ch) (iter (read-char))))
-	     (push-input (open-input-string "world"))
-	     (let iter ((ch (read-char)))
-	       (unless (eof-object? ch) (write-char ch) (iter (read-char))))
-	     (pop-input)
-	     (let iter ((ch (read-char)))
-	       (unless (eof-object? ch) (write-char ch) (iter (read-char))))
-	     ))))))
+         (with-input-from-string "hello X!"
+           (lambda ()
+             (let iter ((ch (read-char)))
+               (unless (eq? ch #\X) (write-char ch) (iter (read-char))))
+             (push-input (open-input-string "world"))
+             (let iter ((ch (read-char)))
+               (unless (eof-object? ch) (write-char ch) (iter (read-char))))
+             (pop-input)
+             (let iter ((ch (read-char)))
+               (unless (eof-object? ch) (write-char ch) (iter (read-char))))
+             ))))))
 
   ;; Should return #t if something there and #f if done.
   (pass-if "input-stack /2"
@@ -52,16 +52,16 @@
 
   (pass-if "tl ops /1"
     (let* ((tl (make-tl 'abc 1)) (tl (tl-append tl 2))
-	   (tl (tl-insert tl 'b)) (tl (tl-insert tl 'a)))
+           (tl (tl-insert tl 'b)) (tl (tl-insert tl 'a)))
       (equal? (tl->list tl) '(abc a b 1 2))))
 
   (pass-if "tl ops /2"
     (let* ((tl (make-tl 'abc 1)) 
-	   (tl (tl+attr tl 'x "X")) 
+           (tl (tl+attr tl 'x "X")) 
            (tl (tl-append tl 2))
-	   (tl (tl+attr tl 'y "Y")) 
+           (tl (tl+attr tl 'y "Y")) 
            (tl (tl-insert tl 'b))
-	   (tl (tl+attr tl 'z "Z")) 
+           (tl (tl+attr tl 'z "Z")) 
            (tl (tl-insert tl 'a)))
       (equal? (tl->list tl) '(abc (@ (x "X") (y "Y") (z "Z")) a b 1 2))))
 
@@ -80,8 +80,8 @@
       (set! tl (tl-insert tl 'YYY))
       (set! tl (tl-append tl 'ZZZ))
       (equal? (tl->list tl)
-	      '(abc (@ (x "true") (y "true") (z "true"))
-		    YYY a 1 2 20 30 40 a b c ZZZ))))
+              '(abc (@ (x "true") (y "true") (z "true"))
+                    YYY a 1 2 20 30 40 a b c ZZZ))))
   !#
 
   )

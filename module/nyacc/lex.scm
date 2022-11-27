@@ -37,23 +37,23 @@
 
 (define-module (nyacc lex)
   #:export (make-lexer-generator
-	    make-ident-reader make-ident-keyword-reader
-	    make-comm-reader
-	    make-string-reader
-	    make-chseq-reader
-	    eval-reader
-	    read-basic-num
- 	    read-c-ident read-c$-ident
- 	    read-c-comm
-	    read-c-string
-	    read-c-chlit
-	    read-c-num
-	    read-oct read-hex
-	    like-c-ident? like-c$-ident?
-	    c-escape
-	    cnumstr->scm
-	    filter-mt remove-mt map-mt make-ident-like-p
-	    c:ws c:if c:ir)
+            make-ident-reader make-ident-keyword-reader
+            make-comm-reader
+            make-string-reader
+            make-chseq-reader
+            eval-reader
+            read-basic-num
+            read-c-ident read-c$-ident
+            read-c-comm
+            read-c-string
+            read-c-chlit
+            read-c-num
+            read-oct read-hex
+            like-c-ident? like-c$-ident?
+            c-escape
+            cnumstr->scm
+            filter-mt remove-mt map-mt make-ident-like-p
+            c:ws c:if c:ir)
   #:use-module ((srfi srfi-1) #:select (remove append-reverse)))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -79,17 +79,17 @@
 ;; C lexemes are popular so include those.
 ;;(define c:ws (list->char-set '(#\space #\tab #\newline #\return )))
 (define c:ws char-set:whitespace)
-(define c:if (let ((cs (char-set #\_)))	; ident, first char
-	       (string->char-set! ucase cs)
-	       (string->char-set! lcase cs)))
+(define c:if (let ((cs (char-set #\_))) ; ident, first char
+               (string->char-set! ucase cs)
+               (string->char-set! lcase cs)))
 (define c:ir (string->char-set digit c:if)) ; ident, rest chars
-(define c:nx (string->char-set "eE"))	    ; number exponent
+(define c:nx (string->char-set "eE"))       ; number exponent
 (define c:hx (string->char-set "abcdefABCDEF"))
 (define c:sx (string->char-set "lLuU")) ; fixed suffix
 (define c:fx (string->char-set "fFlL")) ; float suffix
 (define c:px (string->char-set "rRhHkKlLuU")) ; fixed-point suffix
-(define c:bx (string->char-set "pP"))	; binary float suffix
-(define c:cx (string->char-set "LuU"))	; char prefix
+(define c:bx (string->char-set "pP"))   ; binary float suffix
+(define c:cx (string->char-set "LuU"))  ; char prefix
 
 (define char-hex?
   (let ((cs (string->char-set "0123456789abcdefABCDEF")))
@@ -102,7 +102,7 @@
       (char-set-contains? cs ch))))
 
 (define lxlsr reverse-list->string)
-(define rls reverse-list->string)	; reverse-list->string
+(define rls reverse-list->string)       ; reverse-list->string
 
 ;; @deffn {Procedure} eval-reader reader string => result
 ;; For test and debug, this procedure will evaluate a reader on a string.
@@ -123,15 +123,15 @@
 (define (make-space-skipper chset)
   (lambda (ch)
     (if (char-set-contains? chset ch)
-	(let loop ((ch (read-char)))
-	  (cond
-	   ((char-set-contains? chset ch)
-	    (loop (read-char)))
-	   (else
-	    (unread-char ch)
-	    #t)))
-	#f)))
-	 
+        (let loop ((ch (read-char)))
+          (cond
+           ((char-set-contains? chset ch)
+            (loop (read-char)))
+           (else
+            (unread-char ch)
+            #t)))
+        #f)))
+         
 ;; @deffn {Procedure} skip-c-space ch => #f|#t
 ;; If @code{ch} is space, skip all spaces, then return @code{#t}, else
 ;; return @code{#f}.
@@ -151,14 +151,14 @@
      ((eof-object? ch) #f)
      ((char-set-contains? cs-first ch)
       (let loop ((chl (list ch)) (ch (read-char)))
-	(cond
-	 ((eof-object? ch)
-	  (if (null? chl) #f
-	      (lxlsr chl)))
-	 ((char-set-contains? cs-rest ch)
-	  (loop (cons ch chl) (read-char)))
-	 (else (unread-char ch)
-	       (lxlsr chl)))))
+        (cond
+         ((eof-object? ch)
+          (if (null? chl) #f
+              (lxlsr chl)))
+         ((char-set-contains? cs-rest ch)
+          (loop (cons ch chl) (read-char)))
+         (else (unread-char ch)
+               (lxlsr chl)))))
      (else #f))))
 
 ;; @deffn {Procedure} make-ident-like-p ident-reader
@@ -168,9 +168,9 @@
 ;; Implementation may not be very efficient.
 (define (make-ident-like-p reader)
   (lambda (s) (and (string? s)
-		   (positive? (string-length s))
-		   (eval-reader reader s)
-		   #t)))
+                   (positive? (string-length s))
+                   (eval-reader reader s)
+                   #t)))
 
 
 ;; @deffn {Procedure} make-ident-keyword-reader ident-reader match-table [tval]
@@ -180,16 +180,16 @@
 ;; The optional token is @code{'$ident}.
 ;; @end deffn
 (define* (make-ident-keyword-reader ident-reader match-table
-				    #:optional (tval '$ident))
+                                    #:optional (tval '$ident))
   (let ((ident-like? (make-ident-like-p ident-reader))
-	(ident-id (assoc-ref match-table tval)))
+        (ident-id (assoc-ref match-table tval)))
     (let loop ((kt '()) (mt match-table))
       (if (null? mt)
-	  (lambda (ch)
-	    (and=> (ident-reader ch)
-		   (lambda (s) (cons (or (assoc-ref kt s) ident-id) s))))
-	  (loop (if (ident-like? (caar mt)) (cons (car mt) kt) kt) (cdr mt))))))
-	 
+          (lambda (ch)
+            (and=> (ident-reader ch)
+                   (lambda (s) (cons (or (assoc-ref kt s) ident-id) s))))
+          (loop (if (ident-like? (caar mt)) (cons (car mt) kt) kt) (cdr mt))))))
+         
 ;; @deffn {Procedure} read-c-ident ch => #f|string
 ;; If ident pointer at following char, else (if #f) ch still last-read.
 ;; @end deffn
@@ -226,16 +226,16 @@
   (define (doit nd)
     (let loop ((cl '()) (ch (read-char)))
       (cond ((eof-object? ch) (fail))
-	    ((char=? ch #\\)
-	     (let ((c1 (read-char)))
-	       (cond
-		((eof-object? c1) fail)
-		;;((char=? c1 #\t) (loop (cons #\tab cl) (read-char)))
-		;;((char=? c1 #\n) (loop (cons #\newline cl) (read-char)))
-		;;((char=? c1 #\r) (loop (cons #\return cl) (read-char)))
-		(else (loop (cons* c1 #\\ cl) (read-char))))))
-	    ((char=? ch nd) (if tval (cons tval (rls cl)) (rls cl)))
-	    (else (loop (cons ch cl) (read-char))))))
+            ((char=? ch #\\)
+             (let ((c1 (read-char)))
+               (cond
+                ((eof-object? c1) fail)
+                ;;((char=? c1 #\t) (loop (cons #\tab cl) (read-char)))
+                ;;((char=? c1 #\n) (loop (cons #\newline cl) (read-char)))
+                ;;((char=? c1 #\r) (loop (cons #\return cl) (read-char)))
+                (else (loop (cons* c1 #\\ cl) (read-char))))))
+            ((char=? ch nd) (if tval (cons tval (rls cl)) (rls cl)))
+            (else (loop (cons ch cl) (read-char))))))
   (if (char? delim)
       (lambda (ch) (and (char=? ch delim) (doit ch)))
       (lambda (ch) (and=> (assq-ref delim ch) doit))))
@@ -250,12 +250,12 @@
   (let ((cs:oct (string->char-set "01234567")))
     (lambda ()
       (let loop ((cv 0) (ch (read-char)) (n 0))
-	(cond
-	 ((eof-object? ch) cv)
-	 ;;((> n 3) (unread-char ch) cv)
-	 ((char-set-contains? cs:oct ch)
-	  (loop (+ (* 8 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
-	 (else (unread-char ch) cv))))))
+        (cond
+         ((eof-object? ch) cv)
+         ;;((> n 3) (unread-char ch) cv)
+         ((char-set-contains? cs:oct ch)
+          (loop (+ (* 8 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
+         (else (unread-char ch) cv))))))
 
 ;; @deffn {Procedure} read-hex => 123|#f
 ;; Read hex number.  Assumes prefix (e.g., "0x" has already been read).
@@ -263,20 +263,20 @@
 ;; @end deffn
 (define read-hex
   (let ((cs:dig (string->char-set "0123456789"))
-	(cs:uhx (string->char-set "ABCDEF"))
-	(cs:lhx (string->char-set "abcdef")))
+        (cs:uhx (string->char-set "ABCDEF"))
+        (cs:lhx (string->char-set "abcdef")))
     (lambda ()
       (let loop ((cv 0) (ch (read-char)) (n 0))
-	(cond
-	 ((eof-object? ch) cv)
-	 ;;((> n 2) (unread-char ch) cv)
-	 ((char-set-contains? cs:dig ch)
-	  (loop (+ (* 16 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
-	 ((char-set-contains? cs:uhx ch)
-	  (loop (+ (* 16 cv) (- (char->integer ch) 55)) (read-char) (1+ n)))
-	 ((char-set-contains? cs:lhx ch)
-	  (loop (+ (* 16 cv) (- (char->integer ch) 87)) (read-char) (1+ n)))
-	 (else (unread-char ch) cv))))))
+        (cond
+         ((eof-object? ch) cv)
+         ;;((> n 2) (unread-char ch) cv)
+         ((char-set-contains? cs:dig ch)
+          (loop (+ (* 16 cv) (- (char->integer ch) 48)) (read-char) (1+ n)))
+         ((char-set-contains? cs:uhx ch)
+          (loop (+ (* 16 cv) (- (char->integer ch) 55)) (read-char) (1+ n)))
+         ((char-set-contains? cs:lhx ch)
+          (loop (+ (* 16 cv) (- (char->integer ch) 87)) (read-char) (1+ n)))
+         (else (unread-char ch) cv))))))
 
 ;; @deffn {Procedure} c-escape seed
 ;; After @code{\\} in a C string, read the rest of the sequence and cons
@@ -295,8 +295,8 @@
       ((#\b) (cons #\bs seed))
       ((#\t) (cons #\tab seed))
       ((#\f) (cons #\page seed))
-      ((#\a) (cons #\bel seed))	      ; guile 1.8 doesn't know #\alarm
-      ((#\v) (cons #\vt seed))	      ; guile 1.8 doesn't know #\vtab
+      ((#\a) (cons #\bel seed))       ; guile 1.8 doesn't know #\alarm
+      ((#\v) (cons #\vt seed))        ; guile 1.8 doesn't know #\vtab
       ((#\0) (cons (integer->char (read-oct)) seed))
       ((#\1 #\2 #\3 #\4 #\5 #\6 #\7)
        (unread-char ch) (cons (integer->char (read-oct)) seed))
@@ -313,9 +313,9 @@
 (define* (read-c-string ch #:optional (tval '$string))
   (if (not (eq? ch #\")) #f
       (let loop ((cl '()) (ch (read-char)))
-	(cond ((eq? ch #\\) (loop (c-escape cl) (read-char)))
-	      ((eq? ch #\") (if tval (cons tval (rls cl)) (rls cl)))
-	      (else (loop (cons ch cl) (read-char)))))))
+        (cond ((eq? ch #\\) (loop (c-escape cl) (read-char)))
+              ((eq? ch #\") (if tval (cons tval (rls cl)) (rls cl)))
+              (else (loop (cons ch cl) (read-char)))))))
 
 ;; @deffn {Procedure} make-chlit-reader
 ;; Generate a reader for character literals. NOT DONE.
@@ -334,27 +334,27 @@
   (define (read-esc-char)
     (let ((c2 (read-char)))
       (case c2
-	((#\t) "\t")		   ; horizontal tab U+0009
-	((#\n) "\n")		   ; newline U+000A
-	((#\v) "\v")		   ; verticle tab U+000B
-	((#\f) "\f")		   ; formfeed U+000C
-	((#\r) "\r")		   ; return U+000D
-	((#\a) "\x07")		   ; alert U+0007
-	((#\b) "\x08")		   ; backspace U+0008 not in guile 1.8
-	((#\0) (string (integer->char (read-oct)))) ; octal
-	((#\1 #\2 #\3 #\4 #\5 #\6 #\7)		    ; octal
-	 (unread-char c2) (string (integer->char (read-oct))))
-	((#\x) (string (integer->char (read-hex)))) ; hex
-	((#\\ #\' #\" #\? #\|) (string c2))
-	(else (error "bad escape sequence" c2)))))
+        ((#\t) "\t")               ; horizontal tab U+0009
+        ((#\n) "\n")               ; newline U+000A
+        ((#\v) "\v")               ; verticle tab U+000B
+        ((#\f) "\f")               ; formfeed U+000C
+        ((#\r) "\r")               ; return U+000D
+        ((#\a) "\x07")             ; alert U+0007
+        ((#\b) "\x08")             ; backspace U+0008 not in guile 1.8
+        ((#\0) (string (integer->char (read-oct)))) ; octal
+        ((#\1 #\2 #\3 #\4 #\5 #\6 #\7)              ; octal
+         (unread-char c2) (string (integer->char (read-oct))))
+        ((#\x) (string (integer->char (read-hex)))) ; hex
+        ((#\\ #\' #\" #\? #\|) (string c2))
+        (else (error "bad escape sequence" c2)))))
   (define (wchar t)
     (case t ((#\L) '$chlit/L) ((#\u) '$chlit/u) ((#\U) '$chlit/U)))
   (cond
    ((char=? ch #\')
     (let* ((c1 (read-char))
-	   (sc (if (eqv? c1 #\\) (read-esc-char) (string c1))))
+           (sc (if (eqv? c1 #\\) (read-esc-char) (string c1))))
       (if (not (char=? #\' (read-char)))
-	  (throw 'nyacc-error "read-c-chlit: bad char literal"))
+          (throw 'nyacc-error "read-c-chlit: bad char literal"))
       (cons '$chlit sc)))
    ((char-set-contains? c:cx ch)
     (let ((c1 (read-char)))
@@ -383,74 +383,74 @@
     (case st
       ((10) ;; entry
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
-	((char-numeric? ch) (loop chl '$fixed 20 ch))
-	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
-	((and signed (char=? #\- ch)) (loop (cons ch chl) ty 13 (read-char)))
-	(else #f)))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
+        ((char-numeric? ch) (loop chl '$fixed 20 ch))
+        ((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
+        ((and signed (char=? #\- ch)) (loop (cons ch chl) ty 13 (read-char)))
+        (else #f)))
       ((11) ;; got 0/fixed, allow x, b
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
-	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
-	((memq ch '(#\B #\b)) (loop (cons ch chl) ty 22 (read-char)))
-	((char-oct? ch) (loop (cons ch chl) ty 23 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
+        ((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
+        ((memq ch '(#\B #\b)) (loop (cons ch chl) ty 22 (read-char)))
+        ((char-oct? ch) (loop (cons ch chl) ty 23 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((12) ;; got `.'
        (cond
-	((eof-object? ch) #f)
-	((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
-	(else (unread-char ch) #f)))
+        ((eof-object? ch) #f)
+        ((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
+        (else (unread-char ch) #f)))
       ((13) ;; got '-'
        (cond
-	((eof-object? ch) (unread-char #\-) #f)
-	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char)))
-	((char-numeric? ch) (loop chl '$fixed 20 ch))
-	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
-	(else (loop (cons ch chl) ty 73 ch))))
+        ((eof-object? ch) (unread-char #\-) #f)
+        ((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char)))
+        ((char-numeric? ch) (loop chl '$fixed 20 ch))
+        ((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char)))
+        (else (loop (cons ch chl) ty 73 ch))))
       ((20) ;; parse decimal integer part
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 20 (read-char)))
-	((char=? ch #\.) (loop (cons #\. chl) '$float 30 (read-char)))
-	((memq ch '(#\E #\e)) (loop (cons ch chl) '$float 40 (read-char)))
-	(else (loop chl '$fixed 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-numeric? ch) (loop (cons ch chl) ty 20 (read-char)))
+        ((char=? ch #\.) (loop (cons #\. chl) '$float 30 (read-char)))
+        ((memq ch '(#\E #\e)) (loop (cons ch chl) '$float 40 (read-char)))
+        (else (loop chl '$fixed 70 ch))))
       ((21) ;; parse fixed hex
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-hex? ch) (loop (cons ch chl) ty 21 (read-char)))
-	(else (loop chl ty 70 ch))))
-      ((22) ;; parse fixed octal	      
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-hex? ch) (loop (cons ch chl) ty 21 (read-char)))
+        (else (loop chl ty 70 ch))))
+      ((22) ;; parse fixed octal              
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((23) ;; parse fixed binary 
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 11 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 11 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((30) ;; parse float fractional part
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 30 (read-char)))
-	((memq ch '(#\E #\e)) (loop (cons ch chl) ty 40 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-numeric? ch) (loop (cons ch chl) ty 30 (read-char)))
+        ((memq ch '(#\E #\e)) (loop (cons ch chl) ty 40 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((40) ;; have float e|p, look for sign
        (cond
-	((eof-object? ch) (loop chl ty 73 ch))
-	((memq ch '(#\+ #\-)) (loop (cons ch chl) ty 50 (read-char)))
-	(else (loop chl ty 50 ch))))
+        ((eof-object? ch) (loop chl ty 73 ch))
+        ((memq ch '(#\+ #\-)) (loop (cons ch chl) ty 50 (read-char)))
+        (else (loop chl ty 50 ch))))
       ((50) ;; parse rest of exponent
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((70)
        (cond
-	((eof-object? ch) (cons ty (rls chl)))
-	(else (loop chl ty 71 ch))))
+        ((eof-object? ch) (cons ty (rls chl)))
+        (else (loop chl ty 71 ch))))
       ((71) (unread-char ch) (cons ty (rls chl)))
       ((72) (cons ty (rls chl)))
       ((73) (unread-chl chl) #f)
@@ -488,178 +488,178 @@
     (case st
       ((10) ;; entry
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
-	((char-numeric? ch) (loop chl '$fixed 20 ch))
-	((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char))) 
-	(else #f)))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char=? #\0 ch) (loop (cons ch chl) '$fixed 11 (read-char))) 
+        ((char-numeric? ch) (loop chl '$fixed 20 ch))
+        ((char=? #\. ch) (loop (cons ch chl) ty 12 (read-char))) 
+        (else #f)))
       ((11) ;; got 0/fixed, allow x, b
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
-	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
-	((memq ch '(#\B #\b)) (loop (cons ch chl) ty 23 (read-char)))
-	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
-	((memq ch '(#\U #\u)) (loop (cons ch chl) ty 61 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) ty 63 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char=? ch #\.) (loop (cons ch chl) '$float 30 (read-char)))
+        ((memq ch '(#\X #\x)) (loop (cons ch chl) ty 21 (read-char)))
+        ((memq ch '(#\B #\b)) (loop (cons ch chl) ty 23 (read-char)))
+        ((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
+        ((memq ch '(#\U #\u)) (loop (cons ch chl) ty 61 (read-char)))
+        ((memq ch '(#\L #\l)) (loop (cons ch chl) ty 63 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((12) ;; got `.' only
        (cond
-	((eof-object? ch) #f)
-	((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
-	(else (unread-char ch) #f)))
+        ((eof-object? ch) #f)
+        ((char-numeric? ch) (loop (cons ch chl) '$float 30 (read-char)))
+        (else (unread-char ch) #f)))
       ((20) ;; parse decimal integer part
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch)
-	 (loop (cons ch chl) ty 20 (read-char)))
-	((char=? ch #\.)
-	 (loop (cons #\. chl) '$float 30 (read-char)))
-	((memq ch '(#\E #\e)) ;; float exponent
-	 (loop (cons ch chl) '$float 40 (read-char)))
-	((memq ch '(#\U #\u)) ;; fixed suffix start
-	 (loop (cons ch chl) '$fixed 61 (read-char)))
-	((memq ch '(#\L #\l)) ;; fixed suffix start
-	 (loop (cons ch chl) '$fixed 63 (read-char)))
-	((memq ch '(#\K #\R #\k #\r)) ;; fixpt suffix
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	(else (loop chl '$fixed 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-numeric? ch)
+         (loop (cons ch chl) ty 20 (read-char)))
+        ((char=? ch #\.)
+         (loop (cons #\. chl) '$float 30 (read-char)))
+        ((memq ch '(#\E #\e)) ;; float exponent
+         (loop (cons ch chl) '$float 40 (read-char)))
+        ((memq ch '(#\U #\u)) ;; fixed suffix start
+         (loop (cons ch chl) '$fixed 61 (read-char)))
+        ((memq ch '(#\L #\l)) ;; fixed suffix start
+         (loop (cons ch chl) '$fixed 63 (read-char)))
+        ((memq ch '(#\K #\R #\k #\r)) ;; fixpt suffix
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        (else (loop chl '$fixed 70 ch))))
       ((21) ;; parse hex, fixed or float
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-hex? ch) (loop (cons ch chl) ty 21 (read-char)))
-	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
-	((char=? ch #\.) (loop (cons ch chl) '$float 35 (read-char)))
-	((memq ch '(#\P #\p)) (loop (cons ch chl) '$float 40 (read-char)))
-	(else (loop chl ty 70 ch))))
-      ((22) ;; parse fixed octal	      
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-hex? ch) (loop (cons ch chl) ty 21 (read-char)))
+        ((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+        ((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
+        ((char=? ch #\.) (loop (cons ch chl) '$float 35 (read-char)))
+        ((memq ch '(#\P #\p)) (loop (cons ch chl) '$float 40 (read-char)))
+        (else (loop chl ty 70 ch))))
+      ((22) ;; parse fixed octal              
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
-	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-oct? ch) (loop (cons ch chl) ty 22 (read-char)))
+        ((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+        ((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((23) ;; parse fixed binary 
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 23 (read-char)))
-	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((memq ch '(#\0 #\1)) (loop (cons ch chl) ty 23 (read-char)))
+        ((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixed 61 (read-char)))
+        ((memq ch '(#\L #\l)) (loop (cons ch chl) '$fixed 63 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((30) ;; parse float fractional part
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 30 (read-char)))
-	((memq ch '(#\E #\e))
-	 (loop (cons ch chl) ty 40 (read-char)))
-	((memq ch '(#\F #\f))
-	 (loop (cons ch chl) ty 69 (read-char)))
-	((memq ch '(#\L #\l))
-	 (loop (cons ch chl) ty 31 (read-char)))
-	((memq ch '(#\U #\u))
-	 (loop (cons ch chl) '$fixpt 66 (read-char)))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	((memq ch '(#\D #\d)) ;; decfl
-	 (loop (cons ch chl) ty 68 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-numeric? ch) (loop (cons ch chl) ty 30 (read-char)))
+        ((memq ch '(#\E #\e))
+         (loop (cons ch chl) ty 40 (read-char)))
+        ((memq ch '(#\F #\f))
+         (loop (cons ch chl) ty 69 (read-char)))
+        ((memq ch '(#\L #\l))
+         (loop (cons ch chl) ty 31 (read-char)))
+        ((memq ch '(#\U #\u))
+         (loop (cons ch chl) '$fixpt 66 (read-char)))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        ((memq ch '(#\D #\d)) ;; decfl
+         (loop (cons ch chl) ty 68 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((31) ;; got l/float, check for fixpt
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((35) ;; parse float hex fraction, requires exponent
        (cond
-	((eof-object? ch) (throw 'nyacc-error "hex float requires exponent"))
-	((char-hex? ch) (loop (cons ch chl) ty 35 (read-char)))
-	((memq ch '(#\P #\p)) (loop (cons ch chl) ty 40 (read-char)))
-	(else (bad-xfl chl))))
+        ((eof-object? ch) (throw 'nyacc-error "hex float requires exponent"))
+        ((char-hex? ch) (loop (cons ch chl) ty 35 (read-char)))
+        ((memq ch '(#\P #\p)) (loop (cons ch chl) ty 40 (read-char)))
+        (else (bad-xfl chl))))
       ((40) ;; have float e|p, look for sign
        (cond
-	((eof-object? ch) (bad-sfx chl))
-	((memq ch '(#\+ #\-)) (loop (cons ch chl) ty 50 (read-char)))
-	(else (loop chl ty 50 ch))))
+        ((eof-object? ch) (bad-sfx chl))
+        ((memq ch '(#\+ #\-)) (loop (cons ch chl) ty 50 (read-char)))
+        (else (loop chl ty 50 ch))))
       ((50) ;; parse rest of exponent
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
-	((memq ch '(#\F #\f)) (loop (cons ch chl) ty 69 (read-char)))
-	((memq ch '(#\L #\l)) (loop (cons ch chl) ty 65 (read-char)))
-	((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixpt 66 (read-char)))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	((memq ch '(#\D #\d)) (loop (cons ch chl) '$decfl 68 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-numeric? ch) (loop (cons ch chl) ty 50 (read-char)))
+        ((memq ch '(#\F #\f)) (loop (cons ch chl) ty 69 (read-char)))
+        ((memq ch '(#\L #\l)) (loop (cons ch chl) ty 65 (read-char)))
+        ((memq ch '(#\U #\u)) (loop (cons ch chl) '$fixpt 66 (read-char)))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        ((memq ch '(#\D #\d)) (loop (cons ch chl) '$decfl 68 (read-char)))
+        (else (loop chl ty 70 ch))))
       ;; suffixes
       ((61) ;; fixed/u
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((memq ch '(#\L #\l))
-	 (loop (cons ch chl) ty 62 (read-char)))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((memq ch '(#\L #\l))
+         (loop (cons ch chl) ty 62 (read-char)))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((62) ;; fixed/ul
        (cond
-	((eof-object? ch) (loop chl '$fixed 72 ch))
-	((memq ch '(#\L #\l))
-	 (loop (cons ch chl) '$fixed 70 (read-char)))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl '$fixed 72 ch))
+        ((memq ch '(#\L #\l))
+         (loop (cons ch chl) '$fixed 70 (read-char)))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((63) ;; fixed/l
        (cond
-	((eof-object? ch) (loop chl '$fixed 72 ch))
-	((memq ch '(#\L #\l))
-	 (loop (cons ch chl) ty 64 (read-char)))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	(else (loop chl '$fixed 70 ch))))
+        ((eof-object? ch) (loop chl '$fixed 72 ch))
+        ((memq ch '(#\L #\l))
+         (loop (cons ch chl) ty 64 (read-char)))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        (else (loop chl '$fixed 70 ch))))
       ((64) ;; fixed/ll
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((memq ch '(#\U #\u)) (loop (cons ch chl) ty 70 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((memq ch '(#\U #\u)) (loop (cons ch chl) ty 70 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((65) ;; float/l
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        (else (loop chl ty 70 ch))))
       ((66) ;; fixpt/u
        (cond
-	((eof-object? ch) (bad-sfx chl))
-	((memq ch '(#\L #\l))
-	 (loop (cons ch chl) '$fixpt 67 (read-char)))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	(else (bad-sfx chl))))
+        ((eof-object? ch) (bad-sfx chl))
+        ((memq ch '(#\L #\l))
+         (loop (cons ch chl) '$fixpt 67 (read-char)))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        (else (bad-sfx chl))))
       ((67) ;; fixpt/ul
        (cond
-	((eof-object? ch) (bad-sfx chl))
-	((memq ch '(#\K #\R #\k #\r))
-	 (loop (cons ch chl) '$fixpt 70 (read-char)))
-	(else (bad-sfx chl))))
+        ((eof-object? ch) (bad-sfx chl))
+        ((memq ch '(#\K #\R #\k #\r))
+         (loop (cons ch chl) '$fixpt 70 (read-char)))
+        (else (bad-sfx chl))))
       ((68) ;; got (d|D), look for dDfFlL
        (cond
-	((eof-object? ch) (bad-sfx chl))
-	((memq ch '(#\D #\F #\L #\d #\f #\l))
-	 (loop (cons ch chl) '$decfl 72 ch))
-	(else (bad-sfx chl))))
+        ((eof-object? ch) (bad-sfx chl))
+        ((memq ch '(#\D #\F #\L #\d #\f #\l))
+         (loop (cons ch chl) '$decfl 72 ch))
+        (else (bad-sfx chl))))
       ((69) ;; bizarre gcc float suffixes: F128 F32x
        (cond
-	((eof-object? ch) (loop chl ty 72 ch))
-	((char-numeric? ch) (loop (cons ch chl) ty 69 (read-char)))
-	((memq ch '(#\X #\x)) (loop (cons ch chl) ty 70 (read-char)))
-	(else (loop chl ty 70 ch))))
+        ((eof-object? ch) (loop chl ty 72 ch))
+        ((char-numeric? ch) (loop (cons ch chl) ty 69 (read-char)))
+        ((memq ch '(#\X #\x)) (loop (cons ch chl) ty 70 (read-char)))
+        (else (loop chl ty 70 ch))))
       ;; exit
       ((70) ;; check char
        (cond
-	((eof-object? ch) (cons ty (rls chl)))
-	((char-set-contains? c:ir ch) (bad-sfx (cons ch chl)))
-	(else (loop chl ty 71 ch))))
+        ((eof-object? ch) (cons ty (rls chl)))
+        ((char-set-contains? c:ir ch) (bad-sfx (cons ch chl)))
+        (else (loop chl ty 71 ch))))
       ((71) ;; pushback 1 char
        (unread-char ch) (cons ty (rls chl)))
       ((72) ;; return
@@ -677,25 +677,25 @@
   (let* ((nd (string-length str)))
     (define (trim-rt st) ;; trim U, UL, ULL (and lowercase) from right
       (if (char-set-contains? c:sx (string-ref str (1- nd)))
-	  (if (char-set-contains? c:sx (string-ref str (2- nd)))
-	      (if (char-set-contains? c:sx (string-ref str (3- nd)))
-		  (substring str st (3- nd))
-		  (substring str st (2- nd)))
-	      (substring str st (1- nd)))
-	  (substring str st nd)))
+          (if (char-set-contains? c:sx (string-ref str (2- nd)))
+              (if (char-set-contains? c:sx (string-ref str (3- nd)))
+                  (substring str st (3- nd))
+                  (substring str st (2- nd)))
+              (substring str st (1- nd)))
+          (substring str st nd)))
     (if (< nd 2) str
-	(if (char=? #\0 (string-ref str 0))
-	    (cond
-	     ((char=? #\x (string-ref str 1))
-	      (string-append "#x" (trim-rt 2)))
-	     ((char=? #\X (string-ref str 1))
-	      (string-append "#x" (trim-rt 2)))
-	     ((char=? #\b (string-ref str 1))
-	      (string-append "#b" (trim-rt 2)))
-	     ((char-numeric? (string-ref str 1))
-	      (string-append "#o" (trim-rt 1)))
-	     (else (trim-rt 0)))
-	    (trim-rt 0)))))
+        (if (char=? #\0 (string-ref str 0))
+            (cond
+             ((char=? #\x (string-ref str 1))
+              (string-append "#x" (trim-rt 2)))
+             ((char=? #\X (string-ref str 1))
+              (string-append "#x" (trim-rt 2)))
+             ((char=? #\b (string-ref str 1))
+              (string-append "#b" (trim-rt 2)))
+             ((char-numeric? (string-ref str 1))
+              (string-append "#o" (trim-rt 1)))
+             (else (trim-rt 0)))
+            (trim-rt 0)))))
 
 ;;.@deffn {Procedure} si-map string-list ix => a-list
 ;; Convert list of strings to alist of char at ix and strings.
@@ -725,10 +725,10 @@
 (define (make-tree strtab)
   (define (si-cnvt string-list ix)
     (map (lambda (pair)
-	   (if (pair? (cdr pair))
-	       (cons (car pair) (si-cnvt (cdr pair) (1+ ix)))
-	       (cons (car pair) (assq-ref strtab (cdr pair)))))
-	 (si-map string-list ix)))
+           (if (pair? (cdr pair))
+               (cons (car pair) (si-cnvt (cdr pair) (1+ ix)))
+               (cons (car pair) (assq-ref strtab (cdr pair)))))
+         (si-map string-list ix)))
   (si-cnvt (map car strtab) 0))
 
 ;; @deffn {Procedure} make-chseq-reader strtab
@@ -741,22 +741,22 @@
   (let ((tree (make-tree strtab)))
     (lambda (ch)
       (let loop ((cl (list ch)) (node tree))
-	(cond
-	 ((assq-ref node (car cl)) => ;; accept or shift next character
-	  (lambda (n)
-	    (if (eq? (caar n) 'else) ; if only else, accept, else read on
-		(cons (cdar n) (lxlsr cl))
-		(loop (cons (read-char) cl) n))))
-	 ((assq-ref node 'else) => ; else exists, accept
-	  (lambda (tok)
-	    (unless (eof-object? (car cl)) (unread-char (car cl)))
-	    (cons tok (lxlsr (cdr cl)))))
-	 (else ;; reject
-	  (let pushback ((cl cl))
-	    (unless (null? (cdr cl))
-	      (unless (eof-object? (car cl)) (unread-char (car cl)))
-	      (pushback (cdr cl))))
-	  #f))))))
+        (cond
+         ((assq-ref node (car cl)) => ;; accept or shift next character
+          (lambda (n)
+            (if (eq? (caar n) 'else) ; if only else, accept, else read on
+                (cons (cdar n) (lxlsr cl))
+                (loop (cons (read-char) cl) n))))
+         ((assq-ref node 'else) => ; else exists, accept
+          (lambda (tok)
+            (unless (eof-object? (car cl)) (unread-char (car cl)))
+            (cons tok (lxlsr (cdr cl)))))
+         (else ;; reject
+          (let pushback ((cl cl))
+            (unless (null? (cdr cl))
+              (unless (eof-object? (car cl)) (unread-char (car cl)))
+              (pushback (cdr cl))))
+          #f))))))
 
 ;; @deffn {Procedure} make-comm-reader comm-table [#:eat-newline #t] => \
 ;;   ch bol -> ('$code-comm "..")|('$lone-comm "..")|#f
@@ -774,11 +774,11 @@
   (define (mc-read-char) ;; CHECK THIS
     (let ((ch (read-char)))
       (if (eqv? ch #\\)
-	  (let ((ch (read-char)))
-	    (if (eqv? ch #\newline)
-		(read-char)
-		(begin (unread-char ch) #\\)))
-	  ch)))
+          (let ((ch (read-char)))
+            (if (eqv? ch #\newline)
+                (read-char)
+                (begin (unread-char ch) #\\)))
+          ch)))
 
   ;; Skip whitespace upto columm @var{col}, and fill in partial tab, if needed.
   ;; @example
@@ -794,53 +794,53 @@
        ((char=? ch #\space) (loop il (1+ cc) (read-char)))
        ((char=? ch #\tab) (loop il (* 8 (quotient (+ cc 9) 8)) (read-char)))
        (else (cons ch il)))))
-	 
+         
   (let ((tree (make-tree comm-table)))
     (lambda* (ch #:optional bol #:key skip-prefix)
       (letrec
-	  ((scol (1- (port-column (current-input-port)))) ;; 1- since ch read
-	   (tval (if bol '$lone-comm '$code-comm))
-	   (match-beg ;; match start of comment, return end-string
-	    (lambda (cl node)
-	      (cond
-	       ((assq-ref node (car cl)) => ;; shift next character
-		(lambda (n) (match-beg (cons (mc-read-char) cl) n)))
-	       ((assq-ref node 'else) =>
-		(lambda (res) (unread-char (car cl)) res)) ; yuck?
-	       (else
-		(let pushback ((cl cl))
-		  (unless (null? (cdr cl))
-		    (unread-char (car cl))
-		    (pushback (cdr cl))))
-		#f))))
-	   (find-end ;; find end of comment, return comment
-	    ;; cl: comm char list (cleared from ps);
-	    ;; sl: shift list (matched from ps); il: input list;
-	    ;; ps: pattern string (e.g., "*/") ; px: pattern index;
-	    (lambda (cl sl il ps px)
-	      (cond
-	       ((eq? px (string-length ps)) ; can Guile optimize this?
-		(if (and (not eat-newline) (eq? #\newline (car sl)))
-		    (unread-char #\newline))
-		(if (and (pair? cl) (eqv? (car cl) #\cr))
-		    (cons tval (lxlsr (cdr cl))) ; remove trailing \r 
-		    (cons tval (lxlsr cl))))
-	       ((null? il) (find-end cl sl (cons (mc-read-char) il) ps px))
-	       ((eof-object? (car il))
-		(if (char=? (string-ref ps px) #\newline) (cons tval (lxlsr cl))
-		    (throw 'nyacc-error "open comment")))
-	       ((eqv? (car il) (string-ref ps px))
-		(find-end cl (cons (car il) sl) (cdr il) ps (1+ px)))
-	       ((and (char=? (car il) #\newline) skip-prefix)
-		;; assumes newline can only be end of ps
-		;;(simple-format #t "cl=~S sl=~S il=~S\n" cl sl il)
-		(find-end (cons #\newline (append sl cl)) '()
-			  (skip-to-col scol (cdr il)) ps 0))
-	       (else
-		(let ((il1 (append-reverse sl il)))
-		  (find-end (cons (car il1) cl) '() (cdr il1) ps 0)))))))
-	(let ((ep (match-beg (list ch) tree))) ;; ep=end pattern (e.g., "*/")
-	  (if ep (find-end '() '() (list (mc-read-char)) ep 0) #f))))))
+          ((scol (1- (port-column (current-input-port)))) ;; 1- since ch read
+           (tval (if bol '$lone-comm '$code-comm))
+           (match-beg ;; match start of comment, return end-string
+            (lambda (cl node)
+              (cond
+               ((assq-ref node (car cl)) => ;; shift next character
+                (lambda (n) (match-beg (cons (mc-read-char) cl) n)))
+               ((assq-ref node 'else) =>
+                (lambda (res) (unread-char (car cl)) res)) ; yuck?
+               (else
+                (let pushback ((cl cl))
+                  (unless (null? (cdr cl))
+                    (unread-char (car cl))
+                    (pushback (cdr cl))))
+                #f))))
+           (find-end ;; find end of comment, return comment
+            ;; cl: comm char list (cleared from ps);
+            ;; sl: shift list (matched from ps); il: input list;
+            ;; ps: pattern string (e.g., "*/") ; px: pattern index;
+            (lambda (cl sl il ps px)
+              (cond
+               ((eq? px (string-length ps)) ; can Guile optimize this?
+                (if (and (not eat-newline) (eq? #\newline (car sl)))
+                    (unread-char #\newline))
+                (if (and (pair? cl) (eqv? (car cl) #\cr))
+                    (cons tval (lxlsr (cdr cl))) ; remove trailing \r 
+                    (cons tval (lxlsr cl))))
+               ((null? il) (find-end cl sl (cons (mc-read-char) il) ps px))
+               ((eof-object? (car il))
+                (if (char=? (string-ref ps px) #\newline) (cons tval (lxlsr cl))
+                    (throw 'nyacc-error "open comment")))
+               ((eqv? (car il) (string-ref ps px))
+                (find-end cl (cons (car il) sl) (cdr il) ps (1+ px)))
+               ((and (char=? (car il) #\newline) skip-prefix)
+                ;; assumes newline can only be end of ps
+                ;;(simple-format #t "cl=~S sl=~S il=~S\n" cl sl il)
+                (find-end (cons #\newline (append sl cl)) '()
+                          (skip-to-col scol (cdr il)) ps 0))
+               (else
+                (let ((il1 (append-reverse sl il)))
+                  (find-end (cons (car il1) cl) '() (cdr il1) ps 0)))))))
+        (let ((ep (match-beg (list ch) tree))) ;; ep=end pattern (e.g., "*/")
+          (if ep (find-end '() '() (list (mc-read-char)) ep 0) #f))))))
 
 (define read-c-comm (make-comm-reader '(("/*" . "*/") ("//" . "\n"))))
 
@@ -883,58 +883,58 @@
 ;; todo: maybe separate reading of keywords from identifiers: (keywd ch) =>
 ;; @end deffn
 (define* (make-lexer-generator match-table
-			       #:key
-			       ident-reader num-reader
-			       string-reader chlit-reader
-			       comm-reader comm-skipper
-			       space-chars extra-reader)
+                               #:key
+                               ident-reader num-reader
+                               string-reader chlit-reader
+                               comm-reader comm-skipper
+                               space-chars extra-reader)
   (let* ((read-ident (or ident-reader (make-ident-reader c:if c:ir)))
-	 (read-num (or num-reader read-basic-num))
-	 (read-string (or string-reader (make-string-reader #\")))
-	 (read-chlit (or chlit-reader (lambda (ch) #f)))
-	 (read-comm (or comm-reader (lambda (ch bol) #f)))
-	 (skip-comm (or comm-skipper (lambda (ch) #f)))
-	 (spaces (or space-chars " \t\r\n"))
-	 (space-cs (cond ((string? spaces) (string->char-set spaces))
-			 ((list? spaces) (list->char-set spaces))
-			 ((char-set? spaces) spaces)
-			 (else (error "expecting string list or char-set"))))
-	 (read-extra (or extra-reader (lambda (ch lp) #f)))
-	 ;;
-	 (ident-like? (make-ident-like-p read-ident))
-	 ;;
-	 (strtab (filter-mt string? match-table)) ; strings in grammar
-	 (kwstab (filter-mt ident-like? strtab))  ; keyword strings =>
-	 (keytab (map-mt string->symbol kwstab))  ; keywords in grammar
-	 (chrseq (remove-mt ident-like? strtab))  ; character sequences
-	 (symtab (filter-mt symbol? match-table)) ; symbols in grammar
-	 (chrtab (filter-mt char? match-table))	  ; characters in grammar
-	 ;;
-	 (read-chseq (make-chseq-reader chrseq))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
+         (read-num (or num-reader read-basic-num))
+         (read-string (or string-reader (make-string-reader #\")))
+         (read-chlit (or chlit-reader (lambda (ch) #f)))
+         (read-comm (or comm-reader (lambda (ch bol) #f)))
+         (skip-comm (or comm-skipper (lambda (ch) #f)))
+         (spaces (or space-chars " \t\r\n"))
+         (space-cs (cond ((string? spaces) (string->char-set spaces))
+                         ((list? spaces) (list->char-set spaces))
+                         ((char-set? spaces) spaces)
+                         (else (error "expecting string list or char-set"))))
+         (read-extra (or extra-reader (lambda (ch lp) #f)))
+         ;;
+         (ident-like? (make-ident-like-p read-ident))
+         ;;
+         (strtab (filter-mt string? match-table)) ; strings in grammar
+         (kwstab (filter-mt ident-like? strtab))  ; keyword strings =>
+         (keytab (map-mt string->symbol kwstab))  ; keywords in grammar
+         (chrseq (remove-mt ident-like? strtab))  ; character sequences
+         (symtab (filter-mt symbol? match-table)) ; symbols in grammar
+         (chrtab (filter-mt char? match-table))   ; characters in grammar
+         ;;
+         (read-chseq (make-chseq-reader chrseq))
+         (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (lambda ()
       (let ((bol #t))
-	(lambda ()
-	  (let loop ((ch (read-char)))
-	    (cond
-	     ((eof-object? ch) (assc-$ (cons '$end ch)))
-	     ;;((eq? ch #\newline) (set! bol #t) (loop (read-char)))
-	     ((read-extra ch loop))
-	     ((char-set-contains? space-cs ch) (loop (read-char)))
-	     ((and (eqv? ch #\newline) (set! bol #t) #f))
-	     ((read-comm ch bol) =>
-	      (lambda (p) (set! bol #f) (assc-$ p)))
-	     ((skip-comm ch) (loop (read-char)))
-	     ((read-num ch) => assc-$)	  ; => $fixed or $float
-	     ((read-string ch) => assc-$) ; => $string
-	     ((read-chlit ch) => assc-$)  ; => $chlit
-	     ((read-ident ch) =>
-	      (lambda (s) (or (and=> (assq-ref keytab (string->symbol s))
-				     (lambda (tval) (cons tval s)))
-			      (assc-$ (cons '$ident s)))))
-	     ((read-chseq ch) => identity)
-	     ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-	     (else (cons ch ch))))))))) ; should be error
+        (lambda ()
+          (let loop ((ch (read-char)))
+            (cond
+             ((eof-object? ch) (assc-$ (cons '$end ch)))
+             ;;((eq? ch #\newline) (set! bol #t) (loop (read-char)))
+             ((read-extra ch loop))
+             ((char-set-contains? space-cs ch) (loop (read-char)))
+             ((and (eqv? ch #\newline) (set! bol #t) #f))
+             ((read-comm ch bol) =>
+              (lambda (p) (set! bol #f) (assc-$ p)))
+             ((skip-comm ch) (loop (read-char)))
+             ((read-num ch) => assc-$)    ; => $fixed or $float
+             ((read-string ch) => assc-$) ; => $string
+             ((read-chlit ch) => assc-$)  ; => $chlit
+             ((read-ident ch) =>
+              (lambda (s) (or (and=> (assq-ref keytab (string->symbol s))
+                                     (lambda (tval) (cons tval s)))
+                              (assc-$ (cons '$ident s)))))
+             ((read-chseq ch) => identity)
+             ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+             (else (cons ch ch))))))))) ; should be error
 
 ;; @end table
 

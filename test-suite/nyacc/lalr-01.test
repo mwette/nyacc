@@ -1,4 +1,4 @@
-;; nyacc/lalr-01.test			-*- scheme -*-
+;; nyacc/lalr-01.test                   -*- scheme -*-
 ;;
 ;; Copyright (C) 2015,2016 Matthew R. Wette
 ;;
@@ -44,42 +44,42 @@
 
   (pass-if "calc-plain"
     (let* ((mach calc-mach)
-	   (raw-parser (make-lalr-parser mach))
-	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
-	   (parse (lambda () (raw-parser (gen-lxr))))
-	   (res (with-input-from-string input-1 parse)))
+           (raw-parser (make-lalr-parser mach))
+           (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+           (parse (lambda () (raw-parser (gen-lxr))))
+           (res (with-input-from-string input-1 parse)))
       (equal? res output-1)))
 
   (pass-if "calc-hashify"
     (let* ((mach (hashify-machine calc-mach))
-	   (raw-parser (make-lalr-parser mach))
-	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
-	   (parse (lambda () (raw-parser (gen-lxr))))
-	   (res (with-input-from-string input-1 parse)))
+           (raw-parser (make-lalr-parser mach))
+           (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+           (parse (lambda () (raw-parser (gen-lxr))))
+           (res (with-input-from-string input-1 parse)))
       (equal? res output-1)))
 
   (pass-if "calc-compact"
     (let* ((mach (compact-machine calc-mach))
-	   (raw-parser (make-lalr-parser mach))
-	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
-	   (parse (lambda () (raw-parser (gen-lxr))))
-	   (res (with-input-from-string input-1 parse)))
+           (raw-parser (make-lalr-parser mach))
+           (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+           (parse (lambda () (raw-parser (gen-lxr))))
+           (res (with-input-from-string input-1 parse)))
       (equal? res output-1)))
 
   (pass-if "calc-compact-hashify"
     (let* ((mach (compact-machine (hashify-machine calc-mach)))
-	   (raw-parser (make-lalr-parser mach))
-	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
-	   (parse (lambda () (raw-parser (gen-lxr))))
-	   (res (with-input-from-string input-1 parse)))
+           (raw-parser (make-lalr-parser mach))
+           (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+           (parse (lambda () (raw-parser (gen-lxr))))
+           (res (with-input-from-string input-1 parse)))
       (equal? res output-1)))
 
   (pass-if "calc-hashify-compact"
     (let* ((mach (hashify-machine (compact-machine calc-mach)))
-	   (raw-parser (make-lalr-parser mach))
-	   (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
-	   (parse (lambda () (raw-parser (gen-lxr))))
-	   (res (with-input-from-string input-1 parse)))
+           (raw-parser (make-lalr-parser mach))
+           (gen-lxr (make-lexer-generator (assq-ref mach 'mtab)))
+           (parse (lambda () (raw-parser (gen-lxr))))
+           (res (with-input-from-string input-1 parse)))
       (equal? res output-1)))
 
   ;; not working:
@@ -100,18 +100,18 @@
   ;; note from above: (define abc 123)
   (pass-if "action environment"
     (let* ((spec (lalr-spec
-		  (start expr)
-		  (grammar (expr ($fixed ($$ abc))))))
-	   (mach (make-lalr-machine spec))
-	   (lxrg (make-lexer-generator (lalr-match-table mach)))
-	   (raw-loc (make-lalr-parser mach))
-	   (mod (let ((m (make-fresh-user-module)))
-		  (module-add! m 'abc (make-variable 456))
-		  m))
-	   (raw-mod (make-lalr-parser mach #:env mod))
-	   )
+                  (start expr)
+                  (grammar (expr ($fixed ($$ abc))))))
+           (mach (make-lalr-machine spec))
+           (lxrg (make-lexer-generator (lalr-match-table mach)))
+           (raw-loc (make-lalr-parser mach))
+           (mod (let ((m (make-fresh-user-module)))
+                  (module-add! m 'abc (make-variable 456))
+                  m))
+           (raw-mod (make-lalr-parser mach #:env mod))
+           )
       (and (eq? 123 (parse-string raw-loc lxrg "1"))
-	   (eq? 456 (parse-string raw-mod lxrg "1")))))
+           (eq? 456 (parse-string raw-mod lxrg "1")))))
 
   )
 

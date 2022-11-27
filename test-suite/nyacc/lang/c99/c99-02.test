@@ -1,4 +1,4 @@
-;; nyacc/lang/c99/c99-02.test		-*- scheme -*-
+;; nyacc/lang/c99/c99-02.test           -*- scheme -*-
 ;;
 ;; Copyright (C) 2016-2017 Matthew R. Wette
 ;; 
@@ -36,9 +36,9 @@
   (pass-if "simple"
     (let ((sx (parse-string "int x;")))
       (equal? sx
-	      '(trans-unit
-		(decl (decl-spec-list (type-spec (fixed-type "int")))
-		      (init-declr-list (init-declr (ident "x"))))))))
+              '(trans-unit
+                (decl (decl-spec-list (type-spec (fixed-type "int")))
+                      (init-declr-list (init-declr (ident "x"))))))))
 
   ;; parse with include file ;; needs work ?
   (pass-if "include, code mode"

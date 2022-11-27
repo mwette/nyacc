@@ -1,4 +1,4 @@
-;; nyacc/lang/c99/c99-01.test		-*- scheme -*-
+;; nyacc/lang/c99/c99-01.test           -*- scheme -*-
 ;;
 ;; Copyright (C) 2017 Matthew R. Wette
 ;; 
@@ -46,66 +46,66 @@
      (parse-file "exam.d/ex07.c")
      '(trans-unit
        (fctn-defn
-	(decl-spec-list (type-spec (fixed-type "int")))
-	(ftn-declr (ident "foo") (param-list))
-	(compd-stmt
-	 (block-item-list
-	  (decl (decl-spec-list (type-spec (fixed-type "int")))
-		(init-declr-list
-		 (init-declr
+        (decl-spec-list (type-spec (fixed-type "int")))
+        (ftn-declr (ident "foo") (param-list))
+        (compd-stmt
+         (block-item-list
+          (decl (decl-spec-list (type-spec (fixed-type "int")))
+                (init-declr-list
+                 (init-declr
                   (ident "r")
                   (initzer (p-expr (fixed "1"))))))
-	  (expr-stmt
-	   (assn-expr
+          (expr-stmt
+           (assn-expr
             (p-expr (ident "r"))
             (op "=")
             (add (p-expr (ident "r")) (p-expr (fixed "1")))))
-	  (return (p-expr (ident "r")))))))))
+          (return (p-expr (ident "r")))))))))
   
   (pass-if "skip space and #"
     (equal?
      (parse-file "exam.d/ex08.c")
      '(trans-unit
        (fctn-defn
-	(decl-spec-list (type-spec (fixed-type "int")))
-	(ftn-declr (ident "foo") (param-list))
-	(compd-stmt
-	 (block-item-list
-	  (expr-stmt
-	   (cond-expr
+        (decl-spec-list (type-spec (fixed-type "int")))
+        (ftn-declr (ident "foo") (param-list))
+        (compd-stmt
+         (block-item-list
+          (expr-stmt
+           (cond-expr
             (p-expr (ident "boo"))
             (cast (type-name (decl-spec-list (type-spec (void))))
                   (p-expr (fixed "0")))
             (fctn-call
-	     (p-expr (ident "assert_fail"))
-	     (expr-list (p-expr (string "boo"))))))))))))
+             (p-expr (ident "assert_fail"))
+             (expr-list (p-expr (string "boo"))))))))))))
 
   (pass-if "#, ##, __VA_ARGS__"
     (equal?
      (parse-file "exam.d/ex12.c")
      '(trans-unit
        (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list
-	      (init-declr
-	       (ident "x")
-	       (initzer
-		(add (mul (p-expr (fixed "1")) (p-expr (fixed "2")))
-		     (fctn-call
-		      (p-expr (ident "bar"))
-		      (expr-list (p-expr (fixed "0")) (p-expr (fixed "1"))
-				 (p-expr (fixed "2")) (p-expr (fixed "3"))
-				 (p-expr (fixed "4"))
-				 (mul (p-expr (fixed "2"))
-				      (p-expr (fixed "3"))))))))))
+             (init-declr-list
+              (init-declr
+               (ident "x")
+               (initzer
+                (add (mul (p-expr (fixed "1")) (p-expr (fixed "2")))
+                     (fctn-call
+                      (p-expr (ident "bar"))
+                      (expr-list (p-expr (fixed "0")) (p-expr (fixed "1"))
+                                 (p-expr (fixed "2")) (p-expr (fixed "3"))
+                                 (p-expr (fixed "4"))
+                                 (mul (p-expr (fixed "2"))
+                                      (p-expr (fixed "3"))))))))))
        (decl (decl-spec-list
-	      (stor-spec (static)) (type-spec (fixed-type "char")))
-	     (init-declr-list
-	      (init-declr (ptr-declr (pointer) (ident "y"))
-			  (initzer (p-expr (string "bar"))))))
+              (stor-spec (static)) (type-spec (fixed-type "char")))
+             (init-declr-list
+              (init-declr (ptr-declr (pointer) (ident "y"))
+                          (initzer (p-expr (string "bar"))))))
        (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list
-	      (init-declr
-	       (ident "z") (initzer (p-expr (ident "ex12_abc2")))))))))
+             (init-declr-list
+              (init-declr
+               (ident "z") (initzer (p-expr (ident "ex12_abc2")))))))))
 
   (pass-if "__VA_ARGS__ w/ arg"
     (equal?
@@ -114,17 +114,17 @@
       "ISR(__vector__12__, int c) { int x; }\n")
      '(trans-unit
        (fctn-defn
-	(decl-spec-list (type-spec (void)))
-	(ftn-declr
-	 (ident "__vector__12__")
-	 (param-list
-	  (param-decl
-	   (decl-spec-list (type-spec (fixed-type "int")))
-	   (param-declr (ident "c")))))
-	(compd-stmt
-	 (block-item-list
-	  (decl (decl-spec-list (type-spec (fixed-type "int")))
-		(init-declr-list (init-declr (ident "x"))))))))))
+        (decl-spec-list (type-spec (void)))
+        (ftn-declr
+         (ident "__vector__12__")
+         (param-list
+          (param-decl
+           (decl-spec-list (type-spec (fixed-type "int")))
+           (param-declr (ident "c")))))
+        (compd-stmt
+         (block-item-list
+          (decl (decl-spec-list (type-spec (fixed-type "int")))
+                (init-declr-list (init-declr (ident "x"))))))))))
 
   (pass-if "__VA_ARGS__ w/o arg"
     (equal?
@@ -133,16 +133,16 @@
       "ISR(__vector__12__) { int x; }\n")
      '(trans-unit
        (fctn-defn
-	(decl-spec-list (type-spec (void)))
-	(ftn-declr (ident "__vector__12__") (param-list))
-	(compd-stmt
-	 (block-item-list
-	  (decl (decl-spec-list (type-spec (fixed-type "int")))
-		(init-declr-list (init-declr (ident "x"))))))))))
+        (decl-spec-list (type-spec (void)))
+        (ftn-declr (ident "__vector__12__") (param-list))
+        (compd-stmt
+         (block-item-list
+          (decl (decl-spec-list (type-spec (fixed-type "int")))
+                (init-declr-list (init-declr (ident "x"))))))))))
       
   (pass-if "spacing in tokenization"
     (let ((sx1 (parse-string "#define foo(X) # X\nchar *s = foo(abc def);\n"))
-	  (sx2 (parse-string "#define foo(X) # X\nchar *s = foo(abc  def);\n")))
+          (sx2 (parse-string "#define foo(X) # X\nchar *s = foo(abc  def);\n")))
       (equal? sx1 sx2)))
 
   (pass-if "def-def-ref"
@@ -157,7 +157,7 @@
       "#endif\n")
      '(trans-unit
        (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list (init-declr (ident "x")))))))
+             (init-declr-list (init-declr (ident "x")))))))
 
   (pass-if "repeat in arg"
     (equal?
@@ -168,16 +168,16 @@
       "int x = FOO(FOO(1,2),3);\n")
      '(trans-unit
        (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list
-	      (init-declr
-	       (ident "x")
-	       (initzer
-		(fctn-call
-		 (p-expr (ident "foo"))
-		 (expr-list
+             (init-declr-list
+              (init-declr
+               (ident "x")
+               (initzer
+                (fctn-call
+                 (p-expr (ident "foo"))
+                 (expr-list
                   (fctn-call
-		   (p-expr (ident "foo"))
-		   (expr-list (p-expr (fixed "1")) (p-expr (fixed "2"))))
+                   (p-expr (ident "foo"))
+                   (expr-list (p-expr (fixed "1")) (p-expr (fixed "2"))))
                   (p-expr (fixed "3")))))))))))
 
   (pass-if "multiple"
@@ -187,25 +187,25 @@
       (parse-string "#define inc(X) X++ + 1\nint x = inc(a);")
       '(trans-unit
        (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list
-	      (init-declr
-	       (ident "x")
-	       (initzer
-		(add (post-inc (p-expr (ident "a")))
-		     (p-expr (fixed "1")))))))))
+             (init-declr-list
+              (init-declr
+               (ident "x")
+               (initzer
+                (add (post-inc (p-expr (ident "a")))
+                     (p-expr (fixed "1")))))))))
 
      (equal?
       (parse-string "#define sqrt(X) sqrt(X)\ndouble x = sqrt(2.0);\n")
       '(trans-unit
-	(decl (decl-spec-list
-	       (type-spec (float-type "double")))
-	      (init-declr-list
-	       (init-declr
-		(ident "x")
-		(initzer
-		 (fctn-call
-		  (p-expr (ident "sqrt"))
-		  (expr-list (p-expr (float "2.0"))))))))))
+        (decl (decl-spec-list
+               (type-spec (float-type "double")))
+              (init-declr-list
+               (init-declr
+                (ident "x")
+                (initzer
+                 (fctn-call
+                  (p-expr (ident "sqrt"))
+                  (expr-list (p-expr (float "2.0"))))))))))
 
      #t))
 
@@ -214,8 +214,8 @@
      (parse-string "#if X539101Z\nint x;\n#else\ndouble x;\n#endif\n")
      '(trans-unit
       (decl (decl-spec-list
-	     (type-spec (float-type "double")))
-	    (init-declr-list (init-declr (ident "x")))))))
+             (type-spec (float-type "double")))
+            (init-declr-list (init-declr (ident "x")))))))
     
   (pass-if "include w/ #defined arg "
     (pair? (parse-file "exam.d/ex15.c")))
@@ -224,9 +224,9 @@
   ;; possible escapes.  See esc-str in cpp.c.
   (pass-if "CPP string building"
     (if (parse-string-list
-	 "int x;\n"
-	 "#define XYZ \"bar \\\"-baz\\\"\"\n"
-	 "char *s = XYZ;\n") #t #f))
+         "int x;\n"
+         "#define XYZ \"bar \\\"-baz\\\"\"\n"
+         "char *s = XYZ;\n") #t #f))
 
   ;; User needs to #define __has_include __has_include__
   (pass-if "__has_include"
@@ -239,8 +239,8 @@
        "char x;\n"
        "#endif\n")
       '(trans-unit
-	(decl (decl-spec-list (type-spec (fixed-type "int")))
-	      (init-declr-list (init-declr (ident "x"))))))
+        (decl (decl-spec-list (type-spec (fixed-type "int")))
+              (init-declr-list (init-declr (ident "x"))))))
      (equal?
       (parse-string-list
        "#if __has_include__(\"xxxx.d/inc.h\")\n"
@@ -249,8 +249,8 @@
        "char x;\n"
        "#endif\n")
       '(trans-unit
-	(decl (decl-spec-list (type-spec (fixed-type "char")))
-	      (init-declr-list (init-declr (ident "x"))))))
+        (decl (decl-spec-list (type-spec (fixed-type "char")))
+              (init-declr-list (init-declr (ident "x"))))))
      ))
 
   (pass-if "Jan's macro-name redef test"
@@ -260,28 +260,28 @@
        (comment " provided by Jan Nieuwenhuizen")
        (comment " worked in 0.80.4, broken in 0.82.1")
        (decl (decl-spec-list
-	      (type-spec
-	       (enum-def
+              (type-spec
+               (enum-def
                 (ident "tcc_token")
                 (enum-def-list
-		 (enum-defn (ident "TOK_LAST"))
-		 (enum-defn (ident "TOK_ASM_mov"))))))))))
+                 (enum-defn (ident "TOK_LAST"))
+                 (enum-defn (ident "TOK_ASM_mov"))))))))))
 
   (pass-if "Jan's ELF32_ST_INFO macro test"
     (equal?
      (parse-file "exam.d/ex18.c")
      '(trans-unit
        (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list
-	      (init-declr
-	       (ident "x")
-	       (initzer
+             (init-declr-list
+              (init-declr
+               (ident "x")
+               (initzer
                 (add (lshift
-		      (p-expr (fixed "1"))
-		      (p-expr (fixed "4")))
+                      (p-expr (fixed "1"))
+                      (p-expr (fixed "4")))
                      (bitwise-and
-		      (p-expr (fixed "0"))
-		      (p-expr (fixed "0xf")))))))))))
+                      (p-expr (fixed "0"))
+                      (p-expr (fixed "0xf")))))))))))
 
   (pass-if "use of comment after #define"
     (equal?
@@ -290,10 +290,10 @@
       "int x = abc;\n")
      '(trans-unit
        (decl (decl-spec-list (type-spec (fixed-type "int")))
-	     (init-declr-list
-	      (init-declr
-	       (ident "x")
-	       (initzer (p-expr (fixed "123")))))))))
+             (init-declr-list
+              (init-declr
+               (ident "x")
+               (initzer (p-expr (fixed "123")))))))))
 
   )
 

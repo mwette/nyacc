@@ -34,11 +34,11 @@
  (guile-3
   (define (compile-scm file)
     (compile-file file #:from 'scheme #:to 'bytecode
-		  #:optimization-level 0 #:opts '())))
+                  #:optimization-level 0 #:opts '())))
  (guile-2
   (define (compile-scm file)
     (compile-file file #:from 'scheme #:to 'bytecode
-		  #:opts '()))))
+                  #:opts '()))))
 
 (define *ffi-help-version* "1.07.5")
 
@@ -94,54 +94,54 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   ;; (option (char str) req-arg? opt-arg? proc)
   (list
    (option '(#\h "help") #f #f
-	   (lambda (opt name arg opts files)
-	     (values (acons 'help #t opts) files)))
+           (lambda (opt name arg opts files)
+             (values (acons 'help #t opts) files)))
    (option '("version") #f #f
-	   (lambda (opt name arg opts files)
-	     (show-version) (exit 0)))
+           (lambda (opt name arg opts files)
+             (show-version) (exit 0)))
    (option '(#\d "debug") #t #f
-	   (lambda (opt name arg opts files)
-	     (values (acons 'debug arg opts) files)))
+           (lambda (opt name arg opts files)
+             (values (acons 'debug arg opts) files)))
    (option '(#\o "output") #t #f
-	   (lambda (opt name arg opts files)
-	     (if (assoc-ref opts 'output-file)
-		 (fail "`-o' option cannot be specified more than once"))
-	     (values (acons 'output arg opts) files)))
+           (lambda (opt name arg opts files)
+             (if (assoc-ref opts 'output-file)
+                 (fail "`-o' option cannot be specified more than once"))
+             (values (acons 'output arg opts) files)))
    (option '(#\s "show-incs") #f #f
-	   (lambda (opt name arg opts files)
-	     (values (acons 'show-incs #t opts) files)))
+           (lambda (opt name arg opts files)
+             (values (acons 'show-incs #t opts) files)))
    (option '(#\L "load-path") #f #f
-	   (lambda (opt name arg opts files)
-	     (values (acons/seed 'load-path arg opts) files)))
+           (lambda (opt name arg opts files)
+             (values (acons/seed 'load-path arg opts) files)))
    (option '(#\I "inc-dir") #t #f
-	   (lambda (opt name arg opts files)
-	     (values (acons/seed 'inc-dirs arg opts) files)))
+           (lambda (opt name arg opts files)
+             (values (acons/seed 'inc-dirs arg opts) files)))
    (option '(#\D "list-deps") #f #f
-	   (lambda (opt name arg opts files)
-	     (values (acons 'list-deps #t (acons 'no-recurse #t opts)) files)))
+           (lambda (opt name arg opts files)
+             (values (acons 'list-deps #t (acons 'no-recurse #t opts)) files)))
    (option '(#\R "dont-recurse") #f #f
-	   (lambda (opt name arg opts files)
-	     (values (acons 'no-recurse #t opts) files)))
+           (lambda (opt name arg opts files)
+             (values (acons 'no-recurse #t opts) files)))
    (option '(#\X "no-exec") #f #f
-	   (lambda (opt name arg opts files)
-	     (values (acons 'no-exec #t opts) files)))
+           (lambda (opt name arg opts files)
+             (values (acons 'no-exec #t opts) files)))
    (option '("any-suffix") #f #f
-	   (lambda (opt name arg opts files)
-	     (values (acons 'any-sufffix #t opts) files)))))
+           (lambda (opt name arg opts files)
+             (values (acons 'any-sufffix #t opts) files)))))
 
 ;; from scripts/compile.scm
 (define (parse-args args)
   (args-fold args
-	     options
+             options
              (lambda (opt name arg files opts)
                (fail "unrecognized option: ~S" name)
                (exit 1))
              (lambda (file opts files)
-	       (or (assq-ref opts 'any-suffix)
-		   (string-suffix? ".ffi" file)
-		   (fail "expecting .ffi suffix"))
-	       (values opts (cons file files)))
-	     '() '()))
+               (or (assq-ref opts 'any-suffix)
+                   (string-suffix? ".ffi" file)
+                   (fail "expecting .ffi suffix"))
+               (values opts (cons file files)))
+             '() '()))
 
 ;; --- check dependencies -------------------------------------------
 
@@ -151,16 +151,16 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   ;; copied from ice-9/boot-9.scm
   (let ((stat1 (stat ffi-file)) (stat2 (stat scm-file)))
     (or (> (stat:mtime stat1) (stat:mtime stat2))
-	(and (= (stat:mtime stat1) (stat:mtime stat2))
-	     (>= (stat:mtimensec stat1)
-		 (stat:mtimensec stat2))))))
+        (and (= (stat:mtime stat1) (stat:mtime stat2))
+             (>= (stat:mtimensec stat1)
+                 (stat:mtimensec stat2))))))
 
 (define (find-in-path file)
   (let loop ((pathl %load-path))
     (if (null? pathl) #f
-	(let ((path (string-append (car pathl) "/" file)))
-	  (if (access? path R_OK) path
-	      (loop (cdr pathl)))))))
+        (let ((path (string-append (car pathl) "/" file)))
+          (if (access? path R_OK) path
+              (loop (cdr pathl)))))))
 
 ;; Given module spec and list of dep's, return list of out-of-date dep's.
 ;; This routine assumes the scm file is in the same dir as the ffi file.
@@ -168,13 +168,13 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   (fold-right
    (lambda (fmod seed)
      (let* ((base (string-join (map symbol->string fmod) "/"))
-	    (xffi (find-in-path (string-append base ".ffi")))
-	    (xscm (find-in-path (string-append base ".scm"))))
+            (xffi (find-in-path (string-append base ".ffi")))
+            (xscm (find-in-path (string-append base ".scm"))))
        (unless xffi (fail "dependent ~S not found" fmod))
        (cond
-	((not xscm) (cons xffi seed))
-	((more-recent? xffi xscm) (cons xffi seed))
-	(else seed))))
+        ((not xscm) (cons xffi seed))
+        ((more-recent? xffi xscm) (cons xffi seed))
+        (else seed))))
    '() uses))
 
 (define-syntax find-ffi-uses
@@ -196,31 +196,31 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
   (call-with-input-file file
     (lambda (iport)
       (let ((env (make-fresh-user-module)))
-	(eval '(use-modules (scripts compile-ffi)) env)
-	(let loop ((exp (read iport)))
-	  (cond
-	   ((eof-object? exp) (fail "no `define-ffi-module' in ~S" file))
-	   ((and (pair? exp) (eqv? 'define-ffi-module (car exp))) (eval exp env))
-	   (else (loop (read iport)))))))))
+        (eval '(use-modules (scripts compile-ffi)) env)
+        (let loop ((exp (read iport)))
+          (cond
+           ((eof-object? exp) (fail "no `define-ffi-module' in ~S" file))
+           ((and (pair? exp) (eqv? 'define-ffi-module (car exp))) (eval exp env))
+           (else (loop (read iport)))))))))
 
 (define (gen-ffi-deps file)
   (let loop ((odeps '()) (next '()) (prev (outdated-ffi-deps file)))
     (cond
      ((pair? prev)
       (loop (cons (car prev) odeps)
-	    (if (member (car prev) odeps) next (cons (car prev) next))
-	    (cdr prev)))
+            (if (member (car prev) odeps) next (cons (car prev) next))
+            (cdr prev)))
      ((pair? next)
       (loop odeps '() next))
      (else
       (reverse
        (fold
-	(lambda (odep deps) (if (member odep deps) deps (cons odep deps)))
-	'() odeps))))))
+        (lambda (odep deps) (if (member odep deps) deps (cons odep deps)))
+        '() odeps))))))
 
 (define (ensure-ffi-deps file options)
   (let ((options `((no-recurse . #t) (no-exec . #f) . ,options))
-	(ffi-deps (gen-ffi-deps file)))
+        (ffi-deps (gen-ffi-deps file)))
     (for-each
      (lambda (dep-file) (compile-ffi dep-file options))
      (reverse ffi-deps))))
@@ -230,12 +230,12 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
 (define (fix-path path)
   (let* ((cwd (getcwd)))
     (if (string-contains path cwd)
-	(substring/shared path (1+ (string-length cwd)))
-	path)))
+        (substring/shared path (1+ (string-length cwd)))
+        path)))
 
 (define (compile-ffi ffi-file options)
   (let* ((base (string-drop-right ffi-file 4))
-	 (scm-file (string-append base ".scm")))
+         (scm-file (string-append base ".scm")))
     (unless (assq-ref options 'no-recurse)
       (ensure-ffi-deps ffi-file options))
     (when (assq-ref options 'list-deps)
@@ -243,22 +243,22 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
       (exit 0))
     (catch 'ffi-help-error
       (lambda ()
-	(catch 'c99-error
-	  (lambda ()
-	    (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
-	    (compile-ffi-file ffi-file options)
-	    (sfmt "... wrote `~A'\n" (fix-path scm-file)))
-	  (lambda (key fmt . args)
-	    (throw 'ffi-help-error fmt args))))
+        (catch 'c99-error
+          (lambda ()
+            (sfmt "compiling `~A' ...\n" (fix-path ffi-file))
+            (compile-ffi-file ffi-file options)
+            (sfmt "... wrote `~A'\n" (fix-path scm-file)))
+          (lambda (key fmt . args)
+            (throw 'ffi-help-error fmt args))))
       (lambda (key fmt args)
-	(if (access? scm-file W_OK) (delete-file scm-file))
-	(apply fail fmt args)
-	(exit 1)))
+        (if (access? scm-file W_OK) (delete-file scm-file))
+        (apply fail fmt args)
+        (exit 1)))
     (unless (assq-ref options 'no-exec)
       (sfmt "compiling `~A' ...\n" (fix-path scm-file))
       (let ((go-file (compile-scm scm-file)))
-	(load-compiled go-file)
-	(sfmt "... wrote `~A'\n" (basename go-file)))
+        (load-compiled go-file)
+        (sfmt "... wrote `~A'\n" (basename go-file)))
       (sleep 1))))
 
 (define (main . args)

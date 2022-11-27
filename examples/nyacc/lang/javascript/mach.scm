@@ -17,11 +17,11 @@
 
 (define-module (nyacc lang javascript mach)
   #:export (javascript-spec
-	    javascript-mach
-	    javascript-ia-spec
-	    javascript-ia-mach
-	    dev-parse-js
-	    gen-javascript-files)
+            javascript-mach
+            javascript-ia-spec
+            javascript-ia-mach
+            dev-parse-js
+            gen-javascript-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
@@ -49,15 +49,15 @@
 (define javascript-spec
   (lalr-spec
    (notice (string-append "Copyright (c) 2015-2018 Matthew R. Wette"
-			  license-lgpl3+))
+                          license-lgpl3+))
    (reserve "abstract" "boolean" "byte" "char" "class" "const" "debugger"
-	    "double" "enum" "export" "extends" "final" "float" "goto"
-	    "implements" "import" "int" "interface" "long" "native" 
-	    "package" "private" "protected" "public" "short" "static"
-	    "super" "synchronized" "throws" "transient" "volatile")
+            "double" "enum" "export" "extends" "final" "float" "goto"
+            "implements" "import" "int" "interface" "long" "native" 
+            "package" "private" "protected" "public" "short" "static"
+            "super" "synchronized" "throws" "transient" "volatile")
    (prec< 'then "else")
    (prec< 'expr 'stmt)
-   (expect 1)				; shift-reduce on ":"
+   (expect 1)                           ; shift-reduce on ":"
    (start Program)
    (grammar
 
@@ -103,10 +103,10 @@
 
     (ElementList
      (Elision AssignmentExpression
-	      ($$ (make-tl 'ElementList `(Elision ,(number->string $2)))))
+              ($$ (make-tl 'ElementList `(Elision ,(number->string $2)))))
      (AssignmentExpression ($$ (make-tl 'ElementList $1)))
      (ElementList "," Elision AssignmentExpression
-		  ($$ (tl-append $1 `(Elision ,(number->string $3)) $4)))
+                  ($$ (tl-append $1 `(Elision ,(number->string $3)) $4)))
      (ElementList "," AssignmentExpression ($$ (tl-append $1 $3)))
      )
 
@@ -125,8 +125,8 @@
 
     (PropertyNameAndValueList
      (PropertyName ":" AssignmentExpression
-		   ($$ (make-tl `PropertyNameAndValueList
-				`(PropertyNameAndValue ,$1 ,$3))))
+                   ($$ (make-tl `PropertyNameAndValueList
+                                `(PropertyNameAndValue ,$1 ,$3))))
      (PropertyNameAndValueList
       "," PropertyName ":" AssignmentExpression
       ($$ (tl-append $1 `(PropertyNameAndValue ,$3 ,$5))))
@@ -204,159 +204,159 @@
     (MultiplicativeExpression
      (UnaryExpression)
      (MultiplicativeExpression "*" UnaryExpression
-			       ($$ `(mul ,$1 ,$3)))
+                               ($$ `(mul ,$1 ,$3)))
      (MultiplicativeExpression "/" UnaryExpression
-			       ($$ `(div ,$1 ,$3)))
+                               ($$ `(div ,$1 ,$3)))
      (MultiplicativeExpression "%" UnaryExpression
-			       ($$ `(mod ,$1 ,$3)))
+                               ($$ `(mod ,$1 ,$3)))
      )
 
     (AdditiveExpression
      (MultiplicativeExpression)
      (AdditiveExpression "+" MultiplicativeExpression
-			 ($$ `(add ,$1 ,$3)))
+                         ($$ `(add ,$1 ,$3)))
      (AdditiveExpression "-" MultiplicativeExpression
-			 ($$ `(sub ,$1 ,$3)))
+                         ($$ `(sub ,$1 ,$3)))
      )
 
     (ShiftExpression
      (AdditiveExpression)
      (ShiftExpression "<<" AdditiveExpression
-		      ($$ `(lshift ,$1 ,$3)))
+                      ($$ `(lshift ,$1 ,$3)))
      (ShiftExpression ">>" AdditiveExpression
-		      ($$ `(rshift ,$1 ,$3)))
+                      ($$ `(rshift ,$1 ,$3)))
      (ShiftExpression ">>>" AdditiveExpression
-		      ($$ `(rrshift ,$1 ,$3)))
+                      ($$ `(rrshift ,$1 ,$3)))
      )
 
     (RelationalExpression
      (ShiftExpression)
      (RelationalExpression "<" ShiftExpression
-			   ($$ `(lt ,$1 ,$3)))
+                           ($$ `(lt ,$1 ,$3)))
      (RelationalExpression ">" ShiftExpression
-			   ($$ `(gt ,$1 ,$3)))
+                           ($$ `(gt ,$1 ,$3)))
      (RelationalExpression "<=" ShiftExpression
-			   ($$ `(le ,$1 ,$3)))
+                           ($$ `(le ,$1 ,$3)))
      (RelationalExpression ">=" ShiftExpression
-			   ($$ `(ge ,$1 ,$3)))
+                           ($$ `(ge ,$1 ,$3)))
      (RelationalExpression "instanceof" ShiftExpression
-			   ($$ `(instanceof ,$1 ,$3)))
+                           ($$ `(instanceof ,$1 ,$3)))
      (RelationalExpression "in" ShiftExpression
-			   ($$ `(in ,$1 ,$3)))
+                           ($$ `(in ,$1 ,$3)))
      )
     (RelationalExpressionNoIn
      (ShiftExpression)
      (RelationalExpressionNoIn "<" ShiftExpression
-			       ($$ `(lt ,$1 ,$3)))
+                               ($$ `(lt ,$1 ,$3)))
      (RelationalExpressionNoIn ">" ShiftExpression
-			       ($$ `(gt ,$1 ,$3)))
+                               ($$ `(gt ,$1 ,$3)))
      (RelationalExpressionNoIn "<=" ShiftExpression
-			       ($$ `(le ,$1 ,$3)))
+                               ($$ `(le ,$1 ,$3)))
      (RelationalExpressionNoIn ">=" ShiftExpression
-			       ($$ `(ge ,$1 ,$3)))
+                               ($$ `(ge ,$1 ,$3)))
      (RelationalExpressionNoIn "instanceof" ShiftExpression
-			       ($$ `(instanceof ,$1 ,$3)))
+                               ($$ `(instanceof ,$1 ,$3)))
      )
     
     (EqualityExpression
      (RelationalExpression)
      (EqualityExpression "==" RelationalExpression
-			 ($$ `(eq ,$1 ,$3)))
+                         ($$ `(eq ,$1 ,$3)))
      (EqualityExpression "!=" RelationalExpression
-			 ($$ `(neq ,$1 ,$3)))
+                         ($$ `(neq ,$1 ,$3)))
      (EqualityExpression "===" RelationalExpression
-			 ($$ `(eq-eq ,$1 ,$3)))
+                         ($$ `(eq-eq ,$1 ,$3)))
      (EqualityExpression "!==" RelationalExpression
-			 ($$ `(neq-eq ,$1 ,$3)))
+                         ($$ `(neq-eq ,$1 ,$3)))
      )
     (EqualityExpressionNoIn
      (RelationalExpressionNoIn)
      (EqualityExpressionNoIn "==" RelationalExpressionNoIn
-			     ($$ `(eq ,$1 ,$3)))
+                             ($$ `(eq ,$1 ,$3)))
      (EqualityExpressionNoIn "!=" RelationalExpressionNoIn
-			     ($$ `(neq ,$1 ,$3)))
+                             ($$ `(neq ,$1 ,$3)))
      (EqualityExpressionNoIn "===" RelationalExpressionNoIn
-			     ($$ `(eq-eq ,$1 ,$3)))
+                             ($$ `(eq-eq ,$1 ,$3)))
      (EqualityExpressionNoIn "!==" RelationalExpressionNoIn
-			     ($$ `(neq-eq ,$1 ,$3)))
+                             ($$ `(neq-eq ,$1 ,$3)))
      )
 
     (BitwiseANDExpression
      (EqualityExpression)
      (BitwiseANDExpression "&" EqualityExpression
-			   ($$ `(bit-and ,$1 ,$3)))
+                           ($$ `(bit-and ,$1 ,$3)))
      )
     (BitwiseANDExpressionNoIn
      (EqualityExpressionNoIn)
      (BitwiseANDExpressionNoIn "&" EqualityExpressionNoIn
-			   ($$ `(bit-and ,$1 ,$3)))
+                           ($$ `(bit-and ,$1 ,$3)))
      )
 
     (BitwiseXORExpression
      (BitwiseANDExpression)
      (BitwiseXORExpression "^" BitwiseANDExpression
-			   ($$ `(bit-xor ,$1 ,$3)))
+                           ($$ `(bit-xor ,$1 ,$3)))
      )
     (BitwiseXORExpressionNoIn
      (BitwiseANDExpressionNoIn)
      (BitwiseXORExpressionNoIn "^" BitwiseANDExpressionNoIn
-			       ($$ `(bit-xor ,$1 ,$3)))
+                               ($$ `(bit-xor ,$1 ,$3)))
      )
 
     (BitwiseORExpression
      (BitwiseXORExpression)
      (BitwiseORExpression "|" BitwiseXORExpression
-			  ($$ `(bit-or ,$1 ,$3)))
+                          ($$ `(bit-or ,$1 ,$3)))
      )
     (BitwiseORExpressionNoIn
      (BitwiseXORExpressionNoIn)
      (BitwiseORExpressionNoIn "|" BitwiseXORExpressionNoIn
-			      ($$ `(bit-or ,$1 ,$3)))
+                              ($$ `(bit-or ,$1 ,$3)))
      )
 
     (LogicalANDExpression
      (BitwiseORExpression)
      (LogicalANDExpression "&&" BitwiseORExpression
-			   ($$ `(and ,$1 ,$3)))
+                           ($$ `(and ,$1 ,$3)))
      )
     (LogicalANDExpressionNoIn
      (BitwiseORExpressionNoIn)
      (LogicalANDExpressionNoIn "&&" BitwiseORExpressionNoIn
-			       ($$ `(and ,$1 ,$3)))
+                               ($$ `(and ,$1 ,$3)))
      )
 
     (LogicalORExpression
      (LogicalANDExpression)
      (LogicalORExpression "||" LogicalANDExpression
-			  ($$ `(or ,$1 ,$3)))
+                          ($$ `(or ,$1 ,$3)))
      )
     (LogicalORExpressionNoIn
      (LogicalANDExpressionNoIn)
      (LogicalORExpressionNoIn "||" LogicalANDExpressionNoIn
-			  ($$ `(or ,$1 ,$3)))
+                          ($$ `(or ,$1 ,$3)))
      )
 
     (ConditionalExpression
      (LogicalORExpression)
      (LogicalORExpression "?" AssignmentExpression ":" AssignmentExpression
-			  ($$ `(ConditionalExpression ,$1 ,$3 ,$5)))
+                          ($$ `(ConditionalExpression ,$1 ,$3 ,$5)))
      )
     (ConditionalExpressionNoIn
      (LogicalORExpressionNoIn)
      (LogicalORExpressionNoIn "?" AssignmentExpression
-			      ":" AssignmentExpressionNoIn
-			  ($$ `(ConditionalExpression ,$1 ,$3 ,$5)))
+                              ":" AssignmentExpressionNoIn
+                          ($$ `(ConditionalExpression ,$1 ,$3 ,$5)))
      )
     
     (AssignmentExpression
      (ConditionalExpression)
      (LeftHandSideExpression AssignmentOperator AssignmentExpression
-			     ($$ `(AssignmentExpression ,$1 ,$2 ,$3)))
+                             ($$ `(AssignmentExpression ,$1 ,$2 ,$3)))
      )
     (AssignmentExpressionNoIn
      (ConditionalExpressionNoIn)
      (LeftHandSideExpression AssignmentOperator AssignmentExpressionNoIn
-			     ($$ `(AssignmentExpression ,$1 ,$2 ,$3)))
+                             ($$ `(AssignmentExpression ,$1 ,$2 ,$3)))
      )
 
     (AssignmentOperator
@@ -378,16 +378,16 @@
      (Expression
       "," AssignmentExpression
       ($$ (if (and (pair? (car $1)) (eqv? 'expr-list (caar $1)))
-	      (tl-append $1 $3)
-	      (make-tl 'expr-list $1 $3)))))
+              (tl-append $1 $3)
+              (make-tl 'expr-list $1 $3)))))
     (ExpressionNoIn
      (AssignmentExpressionNoIn)
      (ExpressionNoIn
       "," AssignmentExpressionNoIn
       ($$ (if (and (pair? (car $1)) (eqv? 'expr-list (caar $1)))
-	      (tl-append $1 $3)
-	      (make-tl 'expr-list $1 $3)))))
-	    
+              (tl-append $1 $3)
+              (make-tl 'expr-list $1 $3)))))
+            
     ;; A.4
     (Statement
      (Block)
@@ -414,7 +414,7 @@
      ;;("{" StatementList "}" ($prec 'stmt) ($$ `(Block . ,(cdr (tl->list $2)))))
      ("{" LetStatementList StatementList "}" ($prec 'stmt)
       ($$ `(Block . ,(append (sx-tail (tl->list $2))
-			     (sx-tail (tl->list $3))))))
+                             (sx-tail (tl->list $3))))))
      ("{" StatementList "}" ($prec 'stmt)
       ($$ `(Block . ,(sx-tail (tl->list $2)))))
      ("{" "}" ($prec 'stmt) ($$ '(Block)))
@@ -442,7 +442,7 @@
     (DeclarationListNoIn
      (VariableDeclarationNoIn ($$ (make-tl 'DeclarationList $1)))
      (DeclarationListNoIn "," VariableDeclarationNoIn
-				  ($$ (tl-append $1 $3))))
+                                  ($$ (tl-append $1 $3))))
 
     (VariableDeclaration
      (Identifier Initializer ($$ `(VariableDeclaration ,$1 ,$2)))
@@ -484,11 +484,11 @@
       ($$ `(for $3 $4 $5 $6)))
      ("for" "(" "var" DeclarationListNoIn ";" OptExprStmt
       OptExprClose Statement
-      ($$ `(for $4 $6 $7 $8)))		; ???
+      ($$ `(for $4 $6 $7 $8)))          ; ???
      ("for" "(" LeftHandSideExpression "in" Expression ")" Statement
-      ($$ `(for-in $3 $5 $7)))		; ???
+      ($$ `(for-in $3 $5 $7)))          ; ???
      ("for" "(" "var" VariableDeclarationNoIn "in" Expression ")" Statement
-      ($$ `(for-in $4 $6 $8)))		; ???
+      ($$ `(for-in $4 $6 $8)))          ; ???
      )
     (OptExprStmtNoIn
      (":" ($$ '(NoExpression)))
@@ -560,7 +560,7 @@
 
     (LabelledStatement
      (Identifier ":" Statement
-		 ($$ `(LabelledStatement ,$1 ,$3)))
+                 ($$ `(LabelledStatement ,$1 ,$3)))
      )
 
     (ThrowStatement
@@ -682,13 +682,13 @@
   (write-lalr-actions javascript-mach (mdir "js-act.scm.new") #:prefix "js-")
   (write-lalr-tables javascript-mach (mdir "js-tab.scm.new") #:prefix "js-")
   (write-lalr-actions javascript-ia-mach
-		      (mdir "ia-js-act.scm.new") #:prefix "ia-js-")
+                      (mdir "ia-js-act.scm.new") #:prefix "ia-js-")
   (write-lalr-tables javascript-ia-mach
-		     (mdir "ia-js-tab.scm.new") #:prefix "ia-js-")
+                     (mdir "ia-js-tab.scm.new") #:prefix "ia-js-")
   (let ((a (move-if-changed (mdir "js-act.scm.new") (mdir "js-act.scm")))
-	(b (move-if-changed (mdir "js-tab.scm.new") (mdir "js-tab.scm")))
-	(c (move-if-changed (mdir "ia-js-act.scm.new") (mdir "ia-js-act.scm")))
-	(d (move-if-changed (mdir "ia-js-tab.scm.new") (mdir "ia-js-tab.scm"))))
+        (b (move-if-changed (mdir "js-tab.scm.new") (mdir "js-tab.scm")))
+        (c (move-if-changed (mdir "ia-js-act.scm.new") (mdir "ia-js-act.scm")))
+        (d (move-if-changed (mdir "ia-js-tab.scm.new") (mdir "ia-js-tab.scm"))))
     (or a b c d)))
 
 ;;; --- last line ---

@@ -61,35 +61,35 @@
     ((#\')
      (let loop ((cl '()) (ch (read-char)))
        (cond ((eq? ch #\\)
-	      (let ((c1 (read-char)))
-		(if (eq? c1 #\newline)
-		    (loop cl (read-char))
-		    (loop (cons c1 cl) (read-char)))))
-	     ((eq? ch #\')
-	      (let ((nextch (read-char)))
-		(if (eq? #\' nextch)
-		    (loop (cons ch cl) (read-char))
-		    (begin
-		      (unread-char nextch)
-		      (cons '$string (list->string (reverse cl)))))))
-	     (else (loop (cons ch cl) (read-char))))))
+              (let ((c1 (read-char)))
+                (if (eq? c1 #\newline)
+                    (loop cl (read-char))
+                    (loop (cons c1 cl) (read-char)))))
+             ((eq? ch #\')
+              (let ((nextch (read-char)))
+                (if (eq? #\' nextch)
+                    (loop (cons ch cl) (read-char))
+                    (begin
+                      (unread-char nextch)
+                      (cons '$string (list->string (reverse cl)))))))
+             (else (loop (cons ch cl) (read-char))))))
     (else #f)))
 
 
 (define mlang-read-comm
   (make-comm-reader '(("%" . "\n") ("#" . "\n") ("#{" . "#}") ("%{" . "%}")
-		      ("#!" . "!#"))))
+                      ("#!" . "!#"))))
 
 ;; elipsis reader "..." whitespace "\n"
 (define (elipsis? ch)
   (if (eqv? ch #\.)
       (let ((c1 (read-char)))
-	(if (eqv? c1 #\.)
-	    (let ((c2 (read-char)))
-	      (if (eqv? c2 #\.)
-		  (cons (string->symbol "...") "...")
-		  (begin (unread-char c2) (unread-char c1) #f)))
-	    (begin (unread-char c1) #f)))
+        (if (eqv? c1 #\.)
+            (let ((c2 (read-char)))
+              (if (eqv? c2 #\.)
+                  (cons (string->symbol "...") "...")
+                  (begin (unread-char c2) (unread-char c1) #f)))
+            (begin (unread-char c1) #f)))
       #f))
 
 (define (skip-to-next-line)
@@ -108,53 +108,53 @@
   ;; There is some trickery here to assure that if the last line
   ;; ends w/o newline then one gets inserted.
   (let* ((read-string mlang-read-string)
-	 (read-comm mlang-read-comm)
-	 (read-ident read-c$-ident)
-	 (space-cs (string->char-set " \t\r\f"))
-	 ;;
-	 (strtab (filter-mt string? match-table)) ; strings in grammar
-	 (kwstab (filter-mt like-c$-ident? strtab)) ; keyword strings =>
-	 (keytab (map-mt string->symbol kwstab)) ; keywords in grammar
-	 (chrseq (remove-mt like-c-ident? strtab)) ; character sequences
-	 (symtab (filter-mt symbol? match-table)) ; symbols in grammar
-	 (chrtab (filter-mt char? match-table))	; characters in grammar
-	 (read-chseq (make-chseq-reader chrseq))
-	 (newline-val (assoc-ref chrseq "\n"))
-	 (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
+         (read-comm mlang-read-comm)
+         (read-ident read-c$-ident)
+         (space-cs (string->char-set " \t\r\f"))
+         ;;
+         (strtab (filter-mt string? match-table)) ; strings in grammar
+         (kwstab (filter-mt like-c$-ident? strtab)) ; keyword strings =>
+         (keytab (map-mt string->symbol kwstab)) ; keywords in grammar
+         (chrseq (remove-mt like-c-ident? strtab)) ; character sequences
+         (symtab (filter-mt symbol? match-table)) ; symbols in grammar
+         (chrtab (filter-mt char? match-table)) ; characters in grammar
+         (read-chseq (make-chseq-reader chrseq))
+         (newline-val (assoc-ref chrseq "\n"))
+         (assc-$ (lambda (pair) (cons (assq-ref symtab (car pair)) (cdr pair)))))
     (if (not newline-val) (error "mlang setup error"))
     (lambda ()
-      (let ((qms #f) (bol #t) (line 0))	; qms: quote means string
-	(define (loop ch)
-	  (cond
-	   ((eof-object? ch)
-	    (if bol (assc-$ (cons '$end ch)) (loop #\newline)))
- 	   ((elipsis? ch) (loop (skip-to-next-line)))
-	   ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
-	   ((char-set-contains? space-cs ch) (set! qms #t) (loop (read-char)))
-	   ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
-	   (bol (set! bol #f) (set! line (1+ line)) (loop ch))
-	   ((read-ident ch) =>
-	    (lambda (s) ;; s is a string
-	      (set! qms #f)
-	      (or (and=> (assq-ref keytab (string->symbol s))
-			 (lambda (tval) (cons tval s)))
-		  (assc-$ (cons '$ident s)))))
-	   ((read-c-num ch) => (lambda (p) (set! qms #f) (assc-$ p)))
-	   ((char=? ch #\") (assc-$ (read-string ch)))
-	   ((char=? ch #\') (if qms (assc-$ (read-string ch)) (read-chseq ch)))
-	   ((read-chseq ch) =>
-	    (lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
-	   ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
-	   (else (cons ch (string ch)))))
-	(if #t 			; read properties
-	    (lambda ()
-	      (let* ((lxm (loop (read-char)))
-		     (port (current-input-port))
-		     (file (port-filename port))
-		     (props `((filename ,file) (line ,line) (column ,0))))
-		(set-source-properties! lxm props)
-		lxm))
-	    (lambda () (loop (read-char))))))))
+      (let ((qms #f) (bol #t) (line 0)) ; qms: quote means string
+        (define (loop ch)
+          (cond
+           ((eof-object? ch)
+            (if bol (assc-$ (cons '$end ch)) (loop #\newline)))
+           ((elipsis? ch) (loop (skip-to-next-line)))
+           ((eqv? ch #\newline) (set! bol #t) (cons newline-val "\n"))
+           ((char-set-contains? space-cs ch) (set! qms #t) (loop (read-char)))
+           ((read-comm ch bol) => (lambda (p) (set! bol #f) (assc-$ p)))
+           (bol (set! bol #f) (set! line (1+ line)) (loop ch))
+           ((read-ident ch) =>
+            (lambda (s) ;; s is a string
+              (set! qms #f)
+              (or (and=> (assq-ref keytab (string->symbol s))
+                         (lambda (tval) (cons tval s)))
+                  (assc-$ (cons '$ident s)))))
+           ((read-c-num ch) => (lambda (p) (set! qms #f) (assc-$ p)))
+           ((char=? ch #\") (assc-$ (read-string ch)))
+           ((char=? ch #\') (if qms (assc-$ (read-string ch)) (read-chseq ch)))
+           ((read-chseq ch) =>
+            (lambda (p) (set! qms (and (memq ch '(#\= #\, #\()) #t)) p))
+           ((assq-ref chrtab ch) => (lambda (t) (cons t (string ch))))
+           (else (cons ch (string ch)))))
+        (if #t                  ; read properties
+            (lambda ()
+              (let* ((lxm (loop (read-char)))
+                     (port (current-input-port))
+                     (file (port-filename port))
+                     (props `((filename ,file) (line ,line) (column ,0))))
+                (set-source-properties! lxm props)
+                lxm))
+            (lambda () (loop (read-char))))))))
 
 ;; === static semantics
 
@@ -200,12 +200,12 @@
 
 (define (float-mat? mat)
   (fold (lambda (row fx) (and fx (float-vec? row))) #t
-	(map sx-tail (sx-tail mat))))
+        (map sx-tail (sx-tail mat))))
 
 (define (check-matrix mat)
   (let* ((rows (sx-tail mat))
-	 (nrow (length rows))
-	 (row1 (if (positive? nrow) (car rows) #f)))
+         (nrow (length rows))
+         (row1 (if (positive? nrow) (car rows) #f)))
     (cond
      ((zero? nrow) mat)
      ((and (= 1 nrow) (fixed-vec? row1))
@@ -229,8 +229,8 @@
        (cons-source tree 'multi-assn `((@ . ,attr) (lval-list . ,elts) ,rhs)))
       ((colon-expr . ,rest)
        (if (fixed-colon-expr? tree)
-	   (cons-source tree 'fixed-colon-expr (cdr tree))
-	   tree))
+           (cons-source tree 'fixed-colon-expr (cdr tree))
+           tree))
       ((matrix . ,rest)
        (check-matrix tree))
       (,_ tree)))
@@ -267,8 +267,8 @@
   (with-input-from-port port
     (lambda ()
       (if (eof-object? (peek-char port))
-	  (read-char port)
-	  (parse-mlang #:debug #f)))))
+          (read-char port)
+          (parse-mlang #:debug #f)))))
 
 ;; === interactive parser
 
@@ -297,16 +297,16 @@
       ;;(sferr "<parse stmt>\n")
       (cond
        ((eof-object? (peek-char port))
-	(read-char port))
+        (read-char port))
        (else
-	(let* ((stmt (with-input-from-port port
-		      (lambda () (parse-mlang-stmt lexer))))
-	       (stmt (apply-mlang-statics stmt)))
-	  ;;(sferr "stmt=~S\n" stmt)
-	  (cond
-	   ((equal? stmt '(empty-stmt)) #f)
-	   (stmt)
-	   ;;(else (flush-input-after-error port) #f)
-	   )))))))
+        (let* ((stmt (with-input-from-port port
+                      (lambda () (parse-mlang-stmt lexer))))
+               (stmt (apply-mlang-statics stmt)))
+          ;;(sferr "stmt=~S\n" stmt)
+          (cond
+           ((equal? stmt '(empty-stmt)) #f)
+           (stmt)
+           ;;(else (flush-input-after-error port) #f)
+           )))))))
 
 ;; --- last line ---

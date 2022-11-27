@@ -61,23 +61,23 @@
 (define (make-arity args)
   (let loop ((req '()) (opt '()) (rest #f) (inits '()) (gsyms '()) (args args))
     (if (null? args)
-	(list (reverse req) (reverse opt) rest #f
-	      (reverse inits) (reverse gsyms))
-	(let* ((arg (car args))
-	       (lref (cadr arg)) (var (cadr lref)) (sym (caddr lref)))
-	  (case (car arg)
-	    ((arg)
-	     (loop (cons var req) opt rest inits (cons sym gsyms) (cdr args)))
-	    ((opt-arg)
-	     (loop req (cons var opt) rest (cons (caddr arg) inits)
-		   (cons sym gsyms) (cdr args)))
-	    ((rest)
-	     (loop req opt var inits (cons sym gsyms) (cdr args)))
-	    (else (error "coding error")))))))
+        (list (reverse req) (reverse opt) rest #f
+              (reverse inits) (reverse gsyms))
+        (let* ((arg (car args))
+               (lref (cadr arg)) (var (cadr lref)) (sym (caddr lref)))
+          (case (car arg)
+            ((arg)
+             (loop (cons var req) opt rest inits (cons sym gsyms) (cdr args)))
+            ((opt-arg)
+             (loop req (cons var opt) rest (cons (caddr arg) inits)
+                   (cons sym gsyms) (cdr args)))
+            ((rest)
+             (loop req opt var inits (cons sym gsyms) (cdr args)))
+            (else (error "coding error")))))))
 
 (define (make-function name arity body)
   (let* ((meta '((language . nx-tcl)))
-	 (meta (if name (cons `(name . ,name) meta) meta)))
+         (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case (,arity ,body)))))
 
 #| using while instead
@@ -104,14 +104,14 @@
 
       ((deref ,name)
        (let ((ref (lookup name dict)))
-	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
-	 (values '() ref dict)))
+         (unless ref (throw 'tcl-error "undefined variable: ~A" name))
+         (values '() ref dict)))
 
       ((deref-indexed ,name ,expr)
        (let ((ref (lookup name dict)))
-	 (unless ref (throw 'tcl-error "undefined variable: ~A" name))
-	 ;;(values '() `(call ,(xlib-ref 'tcl:any->) ,ref ,expr) dict)))
-	 (values '() `(call ,(xlib-ref 'tcl:array-ref) ,ref ,expr) dict)))
+         (unless ref (throw 'tcl-error "undefined variable: ~A" name))
+         ;;(values '() `(call ,(xlib-ref 'tcl:any->) ,ref ,expr) dict)))
+         (values '() `(call ,(xlib-ref 'tcl:array-ref) ,ref ,expr) dict)))
 
       ;; convert (C) string to number (i.e., 0xf => 15)
       ((number (deref ,name))
@@ -134,18 +134,18 @@
       ((proc ,name (arg-list . ,args) ,body)
        ;; replace each name with (lexical name gsym)
        (let* ((dict (add-symbol name dict))
-	      (nref (lookup name dict))
-	      (dict (push-scope dict))
-	      (dict (fold (lambda (a d) (add-lexical (cadr a) d)) dict args))
-	      (args (fold-right ;; replace arg-name with lexical-ref
-		     (lambda (a l)
-		       (cons (cons* (car a) (lookup (cadr a) dict) (cddr a))
-			     l))
-		     '() args))
-	      (dict (add-lexical "return" dict))
-	      (dict (acons '@F name dict))
-	      )
-	 (values `(proc ,nref (arg-list . ,args) ,body) '() dict)))
+              (nref (lookup name dict))
+              (dict (push-scope dict))
+              (dict (fold (lambda (a d) (add-lexical (cadr a) d)) dict args))
+              (args (fold-right ;; replace arg-name with lexical-ref
+                     (lambda (a l)
+                       (cons (cons* (car a) (lookup (cadr a) dict) (cddr a))
+                             l))
+                     '() args))
+              (dict (add-lexical "return" dict))
+              (dict (acons '@F name dict))
+              )
+         (values `(proc ,nref (arg-list . ,args) ,body) '() dict)))
 
       ((incr (string ,var) ,val)
        (values `(incr ,var ,val) '() dict))
@@ -158,18 +158,18 @@
               (dict (if (and ref (eq? 'lexical (car ref))) dict
                         (add-symbol name dict)))
               (nref (lookup name dict)))
-	 (values `(set ,nref ,value) '() dict)))
+         (values `(set ,nref ,value) '() dict)))
       ;;((set otherwise could be ugly
 
       ((set-indexed (string ,name) ,index ,value)
        (let* ((dict (add-symbol name dict))
-	      (nref (lookup name dict)))
+              (nref (lookup name dict)))
        (values `(set-indexed ,nref ,index ,value) '() dict)))
 
       ((command (string ,name) . ,args)
        (let ((ref (lookup name dict)))
-	 (unless ref (throw 'tcl-error "not defined: ~S" name))
-	 (values `(command ,ref . ,args) '() dict)))
+         (unless ref (throw 'tcl-error "not defined: ~S" name))
+         (values `(command ,ref . ,args) '() dict)))
 
       ((command)
        (values '() '(void) dict))
@@ -196,151 +196,151 @@
     ;; Approach: always return kdict or (pop-scope kdict)
     (if
      (null? tree) (if (null? kseed)
-		      (values seed kdict) 
-		      (values (cons kseed seed) kdict))
+                      (values seed kdict) 
+                      (values (cons kseed seed) kdict))
      
      (case (car tree)
 
        ;; before leaving add a call to make sure all toplevels are defined
        ((*TOP*)
-	(let ((tail (rtail kseed)))
-	  (cond
-	   ((null? tail) (values '(void) kdict)) ; just comments
-	   (else (values (car kseed) kdict)))))
+        (let ((tail (rtail kseed)))
+          (cond
+           ((null? tail) (values '(void) kdict)) ; just comments
+           (else (values (car kseed) kdict)))))
 
        ((unit)
         (values (cons (block (rtail kseed)) seed) kdict))
 
        ((command)
-	(values (cons `(call . ,(rtail kseed)) seed) kdict))
+        (values (cons `(call . ,(rtail kseed)) seed) kdict))
 
        ((comment)
-	(values seed kdict))
+        (values seed kdict))
 
        ((proc)
-	(let* ((tail (rtail kseed))
-	       (name-ref (list-ref tail 0))
-	       (ptag (lookup "return" kdict))
-	       (argl (list-ref tail 1))
-	       (body (block (cdr (list-ref tail 2))))
-	       (arity (make-arity (cdr argl)))
-	       ;; add lexicals : CLEAN THIS UP -- used in nx-octave also
-	       (lvars (let loop ((ldict kdict))
-			(if (eq? '@F (caar ldict)) '()
-			    (cons (cdar ldict) (loop (cdr ldict))))))
-	       (body (let loop ((nl '()) (ll '()) (vl '()) (vs lvars))
-		       (if (null? vs)
-			   `(let ,nl ,ll ,vl ,body)
-			   (loop
-			    (cons (list-ref (car vs) 1) nl)
-			    (cons (list-ref (car vs) 2) ll)
-			    (cons '(void) vl)
-			    (cdr vs)))))
-	       ;;
-	       (body (with-escape/arg ptag body))
-	       (fctn (make-function (cadr name-ref) arity body))
-	       (stmt (if (eq? 'toplevel (car name-ref))
-			 `(define ,(cadr name-ref) ,fctn)
-			 `(set! ,name-ref ,fctn))) ;; never used methinks
-	       )
-	  ;;(sferr "proc ~S:\n" name-ref) (pperr tail) (pperr fctn)
-	  (values (cons stmt seed) (pop-scope kdict))))
+        (let* ((tail (rtail kseed))
+               (name-ref (list-ref tail 0))
+               (ptag (lookup "return" kdict))
+               (argl (list-ref tail 1))
+               (body (block (cdr (list-ref tail 2))))
+               (arity (make-arity (cdr argl)))
+               ;; add lexicals : CLEAN THIS UP -- used in nx-octave also
+               (lvars (let loop ((ldict kdict))
+                        (if (eq? '@F (caar ldict)) '()
+                            (cons (cdar ldict) (loop (cdr ldict))))))
+               (body (let loop ((nl '()) (ll '()) (vl '()) (vs lvars))
+                       (if (null? vs)
+                           `(let ,nl ,ll ,vl ,body)
+                           (loop
+                            (cons (list-ref (car vs) 1) nl)
+                            (cons (list-ref (car vs) 2) ll)
+                            (cons '(void) vl)
+                            (cdr vs)))))
+               ;;
+               (body (with-escape/arg ptag body))
+               (fctn (make-function (cadr name-ref) arity body))
+               (stmt (if (eq? 'toplevel (car name-ref))
+                         `(define ,(cadr name-ref) ,fctn)
+                         `(set! ,name-ref ,fctn))) ;; never used methinks
+               )
+          ;;(sferr "proc ~S:\n" name-ref) (pperr tail) (pperr fctn)
+          (values (cons stmt seed) (pop-scope kdict))))
 
        ;; others to add: incr foreach while continue break
        ((incr)
-	(let* ((tail (rtail kseed))
-	       (name (car tail))
-	       (expr (cadr tail))
-	       (vref (lookup (car tail) kdict))
-	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
-	  (values (cons stmt seed) kdict)))
+        (let* ((tail (rtail kseed))
+               (name (car tail))
+               (expr (cadr tail))
+               (vref (lookup (car tail) kdict))
+               (stmt `(set! ,vref (primcall + ,vref ,expr))))
+          (values (cons stmt seed) kdict)))
 
        ((format)
-	(let* ((tail (rtail kseed))
-	       (stmt `(call (@@ (nyacc lang nx-lib) sprintf) . ,tail))
-	       )
-	  (values (cons stmt seed) kdict)))
+        (let* ((tail (rtail kseed))
+               (stmt `(call (@@ (nyacc lang nx-lib) sprintf) . ,tail))
+               )
+          (values (cons stmt seed) kdict)))
 
        ((while)
         (let* ((test (cadr kseed)) (body (car kseed))
                (test `(primcall not (primcall zero? ,(cadr kseed)))))
-	  (values (cons (make-while test body kdict) seed)
+          (values (cons (make-while test body kdict) seed)
                   (pop-scope kdict))))
 
        ;; conditional: elseif and else are translated by the default case
        ((if)
-	(let* ((tail (rtail kseed))
-	       (cond-expr `(primcall not (primcall zero? ,(list-ref tail 0))))
-	       (then-expr (list-ref tail 1))
-	       (rest-part (list-tail tail 2))
-	       (rest-expr
-		(let loop ((rest-part rest-part))
-		  (match rest-part
-		    ('() '(void))
-		    (`((else ,body)) (block body))
-		    (`((elseif ,cond-part ,body-part) . ,rest)
-		     `(if (primcall not (primcall zero? ,cond-part))
-			  ,body-part
-			  ,(loop (cdr rest-part)))))))
-	       (stmt `(if ,cond-expr ,then-expr ,rest-expr)))
-	  (values (cons stmt seed) kdict)))
+        (let* ((tail (rtail kseed))
+               (cond-expr `(primcall not (primcall zero? ,(list-ref tail 0))))
+               (then-expr (list-ref tail 1))
+               (rest-part (list-tail tail 2))
+               (rest-expr
+                (let loop ((rest-part rest-part))
+                  (match rest-part
+                    ('() '(void))
+                    (`((else ,body)) (block body))
+                    (`((elseif ,cond-part ,body-part) . ,rest)
+                     `(if (primcall not (primcall zero? ,cond-part))
+                          ,body-part
+                          ,(loop (cdr rest-part)))))))
+               (stmt `(if ,cond-expr ,then-expr ,rest-expr)))
+          (values (cons stmt seed) kdict)))
 
        ((return)
-	(values
-	 (cons `(abort ,(lookup "return" kdict)
-		       (,(if (> (length kseed) 1) (car kseed) '(void)))
-		       (const ()))
-	       seed)
-	 kdict))
+        (values
+         (cons `(abort ,(lookup "return" kdict)
+                       (,(if (> (length kseed) 1) (car kseed) '(void)))
+                       (const ()))
+               seed)
+         kdict))
 
        ((set)
-	(values
-	 (let* ((value (car kseed))
-		(nref (cadr kseed))
-		(toplev? (eq? (car nref) 'toplevel)))
-	   (cons (if toplev?
-		     `(define ,(cadr nref) ,value)
-		     `(set! ,nref ,value))
-		 seed))
-	   kdict))
+        (values
+         (let* ((value (car kseed))
+                (nref (cadr kseed))
+                (toplev? (eq? (car nref) 'toplevel)))
+           (cons (if toplev?
+                     `(define ,(cadr nref) ,value)
+                     `(set! ,nref ,value))
+                 seed))
+           kdict))
 
        ((set-indexed)
-	;; This only works if the variable appeared as string constant in fD.?
-	(let* ((value (car kseed))
-	       (indx (cadr kseed))
-	       (nref (caddr kseed))
-	       (toplev? (eq? (car nref) 'toplevel)))
-	  (values
-	   (cons
-	   `(seq
-	     ,(if toplev?
-		  (make-defonce (cadr nref) `(call ,(xlib-ref 'tcl:make-array)))
-		  `(set! ,nref (if (call (toplevel hash-table?) ,nref) ,nref
-				  `(call ,(xlib-ref 'tcl:make-array)))))
-	     (call ,(xlib-ref 'tcl:array-set1) ,nref ,indx ,value))
-	   seed) kdict)))
+        ;; This only works if the variable appeared as string constant in fD.?
+        (let* ((value (car kseed))
+               (indx (cadr kseed))
+               (nref (caddr kseed))
+               (toplev? (eq? (car nref) 'toplevel)))
+          (values
+           (cons
+           `(seq
+             ,(if toplev?
+                  (make-defonce (cadr nref) `(call ,(xlib-ref 'tcl:make-array)))
+                  `(set! ,nref (if (call (toplevel hash-table?) ,nref) ,nref
+                                  `(call ,(xlib-ref 'tcl:make-array)))))
+             (call ,(xlib-ref 'tcl:array-set1) ,nref ,indx ,value))
+           seed) kdict)))
 
        ((body)
-	(values (cons (block (rtail kseed)) seed) kdict))
+        (values (cons (block (rtail kseed)) seed) kdict))
        
        ((void)
-	(values (cons '(void) seed) kdict))
+        (values (cons '(void) seed) kdict))
 
        ((expr)
-	;;(sferr "expr: ~S\n" (reverse kseed))
-	(values
-	 (cons `(call ,(xlib-ref 'tcl:expr) . ,(rtail kseed)) seed)
-	 kdict))
+        ;;(sferr "expr: ~S\n" (reverse kseed))
+        (values
+         (cons `(call ,(xlib-ref 'tcl:expr) . ,(rtail kseed)) seed)
+         kdict))
 
        ((word)
-	(values
-	 (cons `(call ,(xlib-ref 'tcl:word) . ,(rtail kseed)) seed)
-	 kdict))
+        (values
+         (cons `(call ,(xlib-ref 'tcl:word) . ,(rtail kseed)) seed)
+         kdict))
 
        (else
-	(cond
-	 ((null? seed) (values (reverse kseed) kdict))
-	 (else (values (cons (reverse kseed) seed) kdict)))))))
+        (cond
+         ((null? seed) (values (reverse kseed) kdict))
+         (else (values (cons (reverse kseed) seed) kdict)))))))
 
   (define (fH leaf seed dict)
     (values (cons leaf seed) dict))
@@ -349,7 +349,7 @@
     (lambda () (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port)
-	     (string-append "*** nx-tcl: " fmt "\n") args)
+             (string-append "*** nx-tcl: " fmt "\n") args)
       (values '(void) env))))
 
 (define show-sxml #f)
@@ -363,10 +363,10 @@
   ;; so need (interp-lookup at turntime)
   (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
     (if exp 
-	(call-with-values (lambda () (sxml->xtil exp cenv opts))
-	  (lambda (exp cenv)
-	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    (values (parse-tree-il exp) env cenv)))
-	(values (parse-tree-il '(void)) env cenv))))
+        (call-with-values (lambda () (sxml->xtil exp cenv opts))
+          (lambda (exp cenv)
+            (when show-xtil (sferr "tree-il:\n") (pperr exp))
+            (values (parse-tree-il exp) env cenv)))
+        (values (parse-tree-il '(void)) env cenv))))
 
 ;; --- last line ---

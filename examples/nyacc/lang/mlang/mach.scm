@@ -30,11 +30,11 @@
 
 (define-module (nyacc lang mlang mach)
   #:export (mlang-spec
-	    mlang-mach
-	    mlang-ia-spec
-	    mlang-ia-mach
-	    dev-parse-ml
-	    gen-mlang-files)
+            mlang-mach
+            mlang-ia-spec
+            mlang-ia-mach
+            dev-parse-ml
+            gen-mlang-files)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
@@ -45,19 +45,19 @@
 (define mlang-spec
   (lalr-spec
    (notice (string-append "Copyright 2015-2018 Matthew R. Wette"
-			  license-lgpl3+))
+                          license-lgpl3+))
    (start translation-unit)
    (grammar
     
     (translation-unit
      (triv-stmt-list nontrivial-statement mlang-item-list
-		     ($$ `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
+                     ($$ `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (triv-stmt-list function-defn mlang-item-list
-		     ($$ `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
+                     ($$ `(function-file ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
      (nontrivial-statement mlang-item-list
-			    ($$ `(script ,$1 ,@(sx-tail $2))))
+                            ($$ `(script ,$1 ,@(sx-tail $2))))
      (function-defn mlang-item-list
-			    ($$ `(function-file ,$1 ,@(sx-tail $2)))))
+                            ($$ `(function-file ,$1 ,@(sx-tail $2)))))
 
     (mlang-item-list
      (mlang-item-list-1 ($$ (tl->list $1))))
@@ -136,8 +136,8 @@
       ($$ `(while ,$2 ,(tl->list $4))))
      ("if" expr term stmt-list elseif-list "else" stmt-list "end"
       ($$ `(if ,$2 ,(tl->list $4)
-	       ,@(cdr (tl->list $5))
-	       (else ,(tl->list $7)))))
+               ,@(cdr (tl->list $5))
+               (else ,(tl->list $7)))))
      ("if" expr term stmt-list elseif-list "end"
       ($$ `(if ,$2 ,(tl->list $4) ,@(cdr (tl->list $5)))))
      ("if" expr term stmt-list "else" stmt-list "end"
@@ -166,14 +166,14 @@
      ("elseif" expr term stmt-list
       ($$ (make-tl 'elseif-list `(elseif ,$2 ,(tl->list $4)))))
      (elseif-list "elseif" expr term stmt-list
-		   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5))))))
+                   ($$ (tl-append $1 `(elseif ,$3 ,(tl->list $5))))))
 
     ;; The switch case for this mlang only allows case-expr of form
     ;; @code{fixed}, @code{string}, @code{fixed-list} or @code{string-list}.
     (case-list
      ($empty ($$ (make-tl 'case-list)))
      (case-list "case" case-expr term stmt-list
-		($$ (tl-append $1 `(case ,$3 ,(tl->list $5))))))
+                ($$ (tl-append $1 `(case ,$3 ,(tl->list $5))))))
     (case-expr
      (fixed) (string)
      ("{" fixed-list "}" ($$ (tl->list $2)))
@@ -299,9 +299,9 @@
 
 (define mlang-ia-mach
   (let* ((mach (make-lalr-machine mlang-ia-spec))
-	 (mach (compact-machine mach #:keep 0 #:keepers '()))
-	 (mach (hashify-machine mach))
-	 )
+         (mach (compact-machine mach #:keep 0 #:keepers '()))
+         (mach (hashify-machine mach))
+         )
     mach))
 
 ;; === automaton file generators =========
@@ -313,21 +313,21 @@
     (lang-dir (string-append "mach.d/" path)))
 
   (write-lalr-actions mlang-mach (xtra-dir "mlang-act.scm.new")
-		      #:prefix "mlang-")
+                      #:prefix "mlang-")
   (write-lalr-tables mlang-mach (xtra-dir "mlang-tab.scm.new")
-		     #:prefix "mlang-")
+                     #:prefix "mlang-")
   (write-lalr-actions mlang-ia-mach (xtra-dir "mlangia-act.scm.new")
-		      #:prefix "mlangia-")
+                      #:prefix "mlangia-")
   (write-lalr-tables mlang-ia-mach (xtra-dir "mlangia-tab.scm.new")
-		     #:prefix "mlangia-")
+                     #:prefix "mlangia-")
   (let ((a (move-if-changed (xtra-dir "mlang-act.scm.new")
-			    (xtra-dir "mlang-act.scm")))
-	(b (move-if-changed (xtra-dir "mlang-tab.scm.new")
-			    (xtra-dir "mlang-tab.scm")))
-	(c (move-if-changed (xtra-dir "mlangia-act.scm.new")
-			    (xtra-dir "mlangia-act.scm")))
-	(d (move-if-changed (xtra-dir "mlangia-tab.scm.new")
-			    (xtra-dir "mlangia-tab.scm"))))
+                            (xtra-dir "mlang-act.scm")))
+        (b (move-if-changed (xtra-dir "mlang-tab.scm.new")
+                            (xtra-dir "mlang-tab.scm")))
+        (c (move-if-changed (xtra-dir "mlangia-act.scm.new")
+                            (xtra-dir "mlangia-act.scm")))
+        (d (move-if-changed (xtra-dir "mlangia-tab.scm.new")
+                            (xtra-dir "mlangia-tab.scm"))))
     (or a b c d)))
 
 ;; --- last line ---

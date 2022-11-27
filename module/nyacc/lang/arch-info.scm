@@ -24,12 +24,12 @@
 
 (define-module (nyacc lang arch-info)
   #:export (lookup-arch
-	    arch-info-host
-	    sizeof-basetype alignof-basetype
-	    sizeof-map/native
-	    alignof-map/native
-	    *arch*
-	    with-arch)
+            arch-info-host
+            sizeof-basetype alignof-basetype
+            sizeof-map/native
+            alignof-map/native
+            *arch*
+            with-arch)
   #:use-module (srfi srfi-9))
 
 (define-record-type <arch-info>
@@ -267,7 +267,7 @@
 
 (define (lookup-arch name)
   (let ((sizeof-dict (assoc-ref arch-sizeof-map name))
-	(alignof-dict (assoc-ref arch-alignof-map name)))
+        (alignof-dict (assoc-ref arch-alignof-map name)))
     (and sizeof-dict alignof-dict (cons sizeof-dict alignof-dict))))
 
 
@@ -277,7 +277,7 @@
 
 (define sizeof-map/native-arch
   (assoc-ref arch-sizeof-map arch-info-host))
-	 
+         
 (define alignof-map/native-arch
   (assoc-ref arch-alignof-map arch-info-host))
 

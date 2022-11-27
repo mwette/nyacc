@@ -64,7 +64,7 @@
 ;; (int->numch 3) => #\3
 (define int->numch
   (let ((cv (vector #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9
-		    #\A #\B #\C #\D #\E #\F)))
+                    #\A #\B #\C #\D #\E #\F)))
     (lambda (iv) (vector-ref cv iv))))
 
 ;; (int->str 23 '(#\+) 4 0 #\d) => " +23"
@@ -75,14 +75,14 @@
   ;;(sf "width=~S\n" width)
   ;;(sf "prec =~S\n" prec)
   (let* ((base (case type ((#\d) 10) ((#\x) 16) (else (error "bad type"))))
-	 (left (memq #\- flags))
-	 (pad (if (memq #\0 flags) #\0 #\space))
-	 (sign (cond ((negative? val) #\-) ((memq #\+ flags) #\+) (else #f)))
-	 (val (abs val))
-	 (val-wid (+ (exp-of-base (* 1.0 val) base) 1 (if sign 1 0)))
-	 (wid (if (zero? width) val-wid width))
-	 (npad (- wid val-wid))
-	 (str (make-string wid (if (negative? npad) #\# pad))))
+         (left (memq #\- flags))
+         (pad (if (memq #\0 flags) #\0 #\space))
+         (sign (cond ((negative? val) #\-) ((memq #\+ flags) #\+) (else #f)))
+         (val (abs val))
+         (val-wid (+ (exp-of-base (* 1.0 val) base) 1 (if sign 1 0)))
+         (wid (if (zero? width) val-wid width))
+         (npad (- wid val-wid))
+         (str (make-string wid (if (negative? npad) #\# pad))))
     ;;(sf "base=~S\n" base)
     ;;(sf "exp-of-base=~S\n" (exp-of-base (* 1.0 val) base))
     ;;(sf "val-wid=~S\n" val-wid)
@@ -92,16 +92,16 @@
        (make-string wid #\#)
        ;; This is ugly, need rework.
        (let ((str (make-string wid pad))
-	     (ix (- wid 1 (if (memq #\- flags) npad 0))))
-	 (let loop ((x ix) (v val))
-	   (cond
-	    ((zero? v)
-	     (if (= ix x) (begin (string-set! str x #\0) (set! x (1- x))))
-	     (if sign (string-set! str x sign))
-	     str)
-	    (else
-	     (string-set! str x (int->numch (remainder v base)))
-	     (loop (1- x) (quotient v base)))))))))
+             (ix (- wid 1 (if (memq #\- flags) npad 0))))
+         (let loop ((x ix) (v val))
+           (cond
+            ((zero? v)
+             (if (= ix x) (begin (string-set! str x #\0) (set! x (1- x))))
+             (if sign (string-set! str x sign))
+             str)
+            (else
+             (string-set! str x (int->numch (remainder v base)))
+             (loop (1- x) (quotient v base)))))))))
 (export int->str)
 
 ;; frexp(double x, int *exp) => double ; result always in [0.5,1.0)
@@ -114,9 +114,9 @@
   (if (eqv? val 0.0)
       (cons 0.0 0)
       (let ((sign (if (negative? val) -1.0 +1.0))
-	    (val (abs val))
-	    (v_expt (exp-of-10 val)))
-	(cons (* sign val (expt 10 (- v_expt))) v_expt))))
+            (val (abs val))
+            (v_expt (exp-of-10 val)))
+        (cons (* sign val (expt 10 (- v_expt))) v_expt))))
 (export split-float)
 
 ;; (vch 3.235) => #\3
@@ -128,17 +128,17 @@
 ;; (flt->str/f 3.456 '() 8 4) => "  3.4560"
 (define (flt->str/f val type flags width prec)
   (let* ((base 10)
-	 (left (memq #\- flags))
-	 (pad (if (memq #\0 flags) #\0 #\space))
-	 (sign (cond ((negative? val) #\-) ((memq #\+ flags) #\+) (else #f)))
-	 (val (abs val))
-	 (v-p (split-float val)) (val-m (car v-p)) (val-e (cdr v-p))
-	 (val-wid (min 6 (+ (- (abs val-e) 2) (if sign 1 0))))
-	 (wid (if (zero? width) val-wid width))
-	 (wid (if sign (1- wid) wid))
-	 (chl (if sign (list sign) '()))
-	 (wid (if (negative? val-e) (- wid 2) wid))
-	 (chl (if (negative? val-e) (cons* #\. #\0 chl) chl)))
+         (left (memq #\- flags))
+         (pad (if (memq #\0 flags) #\0 #\space))
+         (sign (cond ((negative? val) #\-) ((memq #\+ flags) #\+) (else #f)))
+         (val (abs val))
+         (v-p (split-float val)) (val-m (car v-p)) (val-e (cdr v-p))
+         (val-wid (min 6 (+ (- (abs val-e) 2) (if sign 1 0))))
+         (wid (if (zero? width) val-wid width))
+         (wid (if sign (1- wid) wid))
+         (chl (if sign (list sign) '()))
+         (wid (if (negative? val-e) (- wid 2) wid))
+         (chl (if (negative? val-e) (cons* #\. #\0 chl) chl)))
     ;;(if (negative? wid val-wid) (make-string wid #\#))
     (let loop ((chl chl) (nl wid) (v val-m) (e (1+ val-e)))
       (cond
@@ -151,14 +151,14 @@
 ;; (flt->str/e -12.34e-22 '() 12 5) => "-1.23400e-21"
 (define (flt->str/e val type flags width prec)
   (let* ((base 10)
-	 (left (memq #\- flags))
-	 (pad (if (memq #\0 flags) #\0 #\space))
-	 (val-pair (split-float val))
-	 (val-m (car val-pair))
-	 (val-e (cdr val-pair))
-	 (e-str (int->str val-e #\d '(#\+) 0 0))
-	 (m-wid (- width 1 (string-length e-str)))
-	 (m-str (flt->str/f val-m #\f flags m-wid prec)))
+         (left (memq #\- flags))
+         (pad (if (memq #\0 flags) #\0 #\space))
+         (val-pair (split-float val))
+         (val-m (car val-pair))
+         (val-e (cdr val-pair))
+         (e-str (int->str val-e #\d '(#\+) 0 0))
+         (m-wid (- width 1 (string-length e-str)))
+         (m-str (flt->str/f val-m #\f flags m-wid prec)))
     ;;(sf "val-m=~S\n" val-m)
     ;;(sf "val-e=~S\n" val-e)
     ;;(sf "e-str=~S\n" e-str)
@@ -189,28 +189,28 @@
     (case st
       ((0) ;; looking for %
        (case ch
-	 ((#\%) (loop fl wd pc ty 1 (rd-ch)))
-	 (else #f)))
+         ((#\%) (loop fl wd pc ty 1 (rd-ch)))
+         (else #f)))
       ((1) ;; read flags
        (case ch
-	 ((#\- #\+ #\0 #\space) (loop (cons ch fl) wd pc ty st (rd-ch)))
-	 (else (loop fl wd pc ty 2 ch))))
+         ((#\- #\+ #\0 #\space) (loop (cons ch fl) wd pc ty st (rd-ch)))
+         (else (loop fl wd pc ty 2 ch))))
       ((2) ;; read width
        (cond
-	((char-numeric? ch) (loop fl (ch-add ch wd) pc ty st (rd-ch)))
-	((char=? #\. ch) (loop fl wd pc ty 3 (rd-ch)))
-	(else (loop fl wd pc ty 4 ch))))
+        ((char-numeric? ch) (loop fl (ch-add ch wd) pc ty st (rd-ch)))
+        ((char=? #\. ch) (loop fl wd pc ty 3 (rd-ch)))
+        (else (loop fl wd pc ty 4 ch))))
       ((3) ;; read precision
        (cond
-	((char-numeric? ch) (loop fl wd (ch-add ch pc) ty st (rd-ch)))
-	(else (loop fl wd pc ty 4 ch))))
+        ((char-numeric? ch) (loop fl wd (ch-add ch pc) ty st (rd-ch)))
+        (else (loop fl wd pc ty 4 ch))))
       ((4) ;; read type
        (case ch
-	 ((#\%) #\%)
-	 ((#\d #\i #\u) (loop fl wd pc #\d 5 ch))
-	 ((#\x #\X) (loop fl wd pc #\x 5 ch))
-	 ((#\e #\E #\g #\G) (loop fl wd pc #\e 5 ch))
-	 ((#\f #\F) (list fl wd pc #\f 5 ch))))
+         ((#\%) #\%)
+         ((#\d #\i #\u) (loop fl wd pc #\d 5 ch))
+         ((#\x #\X) (loop fl wd pc #\x 5 ch))
+         ((#\e #\E #\g #\G) (loop fl wd pc #\e 5 ch))
+         ((#\f #\F) (list fl wd pc #\f 5 ch))))
       ((5) (list ty fl wd pc)))))
 
 ;; (parse-fmt-str spec-str) => (flags width prec type) | #\%
@@ -221,13 +221,13 @@
   
 (define (mat-disp/strict array port format)
   (let* ((type (array-type array))
-	 (dims (array-dimensions array))
-	 (dimz (map (lambda (i) (min i 8)) dims))
-	 (spec (parse-fmt-str format)))
+         (dims (array-dimensions array))
+         (dimz (map (lambda (i) (min i 8)) dims))
+         (spec (parse-fmt-str format)))
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (do ((j 0 (1+ j))) ((= j (list-ref dimz 1)))
-	(display " " port)
-	(display (apply flt->str (array-ref array i j) spec) port))
+        (display " " port)
+        (display (apply flt->str (array-ref array i j) spec) port))
       (newline port))))
 
 (define* (mat-disp array #:optional (port #t) #:key (format "%12.5e"))
@@ -243,9 +243,9 @@
 
 (define (vec-disp/strict array port format)
   (let* ((type (array-type array))
-	 (dims (array-dimensions array))
-	 (dimz (map (lambda (i) (min i 8)) dims))
-	 (spec (parse-fmt-str format)))
+         (dims (array-dimensions array))
+         (dimz (map (lambda (i) (min i 8)) dims))
+         (spec (parse-fmt-str format)))
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (display " " port)
       (display (apply flt->str (array-ref array i) spec) port)

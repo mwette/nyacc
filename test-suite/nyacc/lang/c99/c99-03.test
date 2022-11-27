@@ -1,4 +1,4 @@
-;; nyacc/lang/c99/c99-03.test		-*- scheme -*-
+;; nyacc/lang/c99/c99-03.test           -*- scheme -*-
 ;;
 ;; Copyright (C) 2016-2017 Matthew R. Wette
 ;; 
@@ -36,13 +36,13 @@
   ;; parse with include file
   (pass-if "included files"
     (let* ((sx (with-input-from-file "exam.d/ex01.c"
-		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
+                 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
       (pair? sx)))
 
   ;; parse massive comments file
   (pass-if "comments, wanted and unwanted"
     (let* ((sx (with-input-from-file "exam.d/ex02.c"
-		 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
+                 (lambda () (parse-c99 #:inc-dirs incs #:mode 'file)))))
       (pair? sx)))
 
   )

@@ -24,22 +24,22 @@
   #:use-module (system base language))
 
 (define-language nx-tcl
-  #:title	"nx-tcl"
-  #:reader	(lambda (p e)
-		  (cond
-		   ((and (file-port? p)
-			 (string? (port-filename p))
-			 (not (string-prefix? "/dev/" (port-filename p))))
-		    (read-tcl-file p e))
-		   (else (read-tcl-stmt p e))))
+  #:title       "nx-tcl"
+  #:reader      (lambda (p e)
+                  (cond
+                   ((and (file-port? p)
+                         (string? (port-filename p))
+                         (not (string-prefix? "/dev/" (port-filename p))))
+                    (read-tcl-file p e))
+                   (else (read-tcl-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
-  #:evaluator	(lambda (exp mod) (primitive-eval exp))
-  #:printer	write
+  #:evaluator   (lambda (exp mod) (primitive-eval exp))
+  #:printer     write
   #:make-default-environment
-		(lambda ()
-		  (let ((env (make-fresh-user-module)))
-		    (module-define! env 'current-reader (make-fluid))
-		    env))
+                (lambda ()
+                  (let ((env (make-fresh-user-module)))
+                    (module-define! env 'current-reader (make-fluid))
+                    env))
   )
 
 ;; --- last line ---

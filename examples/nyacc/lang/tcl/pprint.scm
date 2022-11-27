@@ -43,7 +43,7 @@
       ((comment ,text)
        (sf "# ~A" text))
 
-      ((deref ,arg)			; check string protect
+      ((deref ,arg)                     ; check string protect
        (sf "$~A" arg))
 
       ((word . ,forms)
@@ -54,10 +54,10 @@
       ((expr . ,forms)
        (sf "expr ")
        (pair-for-each
-	(lambda (pair)
-	  (ppx (car pair))
-	  (if (pair? (cdr pair)) (sf " ")))
-	forms))
+        (lambda (pair)
+          (ppx (car pair))
+          (if (pair? (cdr pair)) (sf " ")))
+        forms))
 
       ((set ,var ,val)
        (sf "set ") (ppx var) (sf " ") (ppx val))
@@ -65,22 +65,22 @@
       ((if ,cndx ,body . ,rest)
        (sf "if ") (ppx cndx) (sf " ") (ppx body)
        (for-each
-	(lambda (form)
-	  (case (sx-tag form)
-	    ((else)
-	     (sf " else ") (ppx (sx-ref form 1)))
-	    ((elseif)
-	     (sf " elseif ") (ppx (sx-ref form 1)) (sf " ")
-	     (ppx (sx-ref form 2)))
-	    (else (error "yuck"))))
-	rest))
+        (lambda (form)
+          (case (sx-tag form)
+            ((else)
+             (sf " else ") (ppx (sx-ref form 1)))
+            ((elseif)
+             (sf " elseif ") (ppx (sx-ref form 1)) (sf " ")
+             (ppx (sx-ref form 2)))
+            (else (error "yuck"))))
+        rest))
 
       ((arg-list . ,args)
        (pair-for-each
-	(lambda (pair)
-	  (sf "~A" (cadar pair))
-	  (if (pair? (cdr pair)) (sf " ")))
-	args))
+        (lambda (pair)
+          (sf "~A" (cadar pair))
+          (if (pair? (cdr pair)) (sf " ")))
+        args))
 
       ((return) (sf "return"))
       ((return ,arg) (sf "return ") (ppx arg))
@@ -91,8 +91,8 @@
       ((body . ,forms)
        (push-il) (sf "{\n")
        (pair-for-each
-	(lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf "\n")))
-	forms)
+        (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf "\n")))
+        forms)
        (pop-il) (sf "\n}"))
       
       ((unit . ,forms)

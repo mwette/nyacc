@@ -40,10 +40,10 @@
 (sf "conn: ~S = ~S\n" conn (ffi:pointer->string (dbus_bus_get_unique_name conn)))
 
 (define msg (dbus_message_new_method_call
-	     "org.freedesktop.DBus"		; bus name (was NULL)
-	     "/org/freedesktop/DBus"		; object path
-	     "org.freedesktop.DBus.Debug.Stats"	; interface name
-	     "GetStats"))			; method
+             "org.freedesktop.DBus"             ; bus name (was NULL)
+             "/org/freedesktop/DBus"            ; object path
+             "org.freedesktop.DBus.Debug.Stats" ; interface name
+             "GetStats"))                       ; method
 
 (define pending (make-DBusPendingCall*))
 (or (dbus_connection_send_with_reply conn msg (pointer-to pending) -1)

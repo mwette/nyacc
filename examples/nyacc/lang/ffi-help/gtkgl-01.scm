@@ -37,93 +37,93 @@
 
 (define realize
   (let ((light-diffuse (make-dvec4 1.0 0.0 0.0 1.0))
-	(light-position (make-dvec4 1.0 1.0 1.0 0.0)))
+        (light-position (make-dvec4 1.0 1.0 1.0 0.0)))
     (make-GtkCallback
      (lambda(widget data)
        (let* ((widget (make-GtkWidget* widget))
-	      (glcontext (gtk_widget_get_gl_context widget))
-	      (gldrawable (gtk_widget_get_gl_drawable widget))
-	      (qobj #f))
-	 (unless (zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
-	   (set! qobj (gluNewQuadric))
-	   (gluQuadricDrawStyle qobj (glugl-symval 'GLU_FILL))
-	   (glNewList 1 (glugl-symval 'GL_COMPILE))
-	   (gluSphere qobj 1.0 20 20)
-	   (glEndList)
+              (glcontext (gtk_widget_get_gl_context widget))
+              (gldrawable (gtk_widget_get_gl_drawable widget))
+              (qobj #f))
+         (unless (zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
+           (set! qobj (gluNewQuadric))
+           (gluQuadricDrawStyle qobj (glugl-symval 'GLU_FILL))
+           (glNewList 1 (glugl-symval 'GL_COMPILE))
+           (gluSphere qobj 1.0 20 20)
+           (glEndList)
 
-	   (glLightfv (glugl-symval 'GL_LIGHT0) (glugl-symval 'GL_DIFFUSE)
-		      (pointer-to light-diffuse))
-	   (glLightfv (glugl-symval 'GL_LIGHT0) (glugl-symval 'GL_POSITION)
-		      (pointer-to light-position))
-	   (glEnable (glugl-symval 'GL_LIGHTING))
-	   (glEnable (glugl-symval 'GL_LIGHT0))
-	   (glEnable (glugl-symval 'GL_DEPTH_TEST))
+           (glLightfv (glugl-symval 'GL_LIGHT0) (glugl-symval 'GL_DIFFUSE)
+                      (pointer-to light-diffuse))
+           (glLightfv (glugl-symval 'GL_LIGHT0) (glugl-symval 'GL_POSITION)
+                      (pointer-to light-position))
+           (glEnable (glugl-symval 'GL_LIGHTING))
+           (glEnable (glugl-symval 'GL_LIGHT0))
+           (glEnable (glugl-symval 'GL_DEPTH_TEST))
 
-	   (glClearColor 1.0 1.0 1.0 1.0)
-	   (glClearDepth 1.0)
+           (glClearColor 1.0 1.0 1.0 1.0)
+           (glClearDepth 1.0)
 
-	   (glViewport 0 0
-		       (fh-object-ref widget 'allocation 'width)
-		       (fh-object-ref widget 'allocation 'height))
+           (glViewport 0 0
+                       (fh-object-ref widget 'allocation 'width)
+                       (fh-object-ref widget 'allocation 'height))
 
-	   (glMatrixMode (glugl-symval 'GL_PROJECTION))
-	   (glLoadIdentity)
-	   (gluPerspective 40.0 1.0 1.0 10.0)
+           (glMatrixMode (glugl-symval 'GL_PROJECTION))
+           (glLoadIdentity)
+           (gluPerspective 40.0 1.0 1.0 10.0)
 
-	   (glMatrixMode (glugl-symval 'GL_MODELVIEW))
-	   (glLoadIdentity)
-	   (gluLookAt 0.0 0.0 3.0
-		      0.0 0.0 0.0
-		      0.0 1.0 0.0)
-	   (glTranslatef 0.0 0.0 -3.0)
+           (glMatrixMode (glugl-symval 'GL_MODELVIEW))
+           (glLoadIdentity)
+           (gluLookAt 0.0 0.0 3.0
+                      0.0 0.0 0.0
+                      0.0 1.0 0.0)
+           (glTranslatef 0.0 0.0 -3.0)
 
-	   (gdk_gl_drawable_gl_end gldrawable)))))))
+           (gdk_gl_drawable_gl_end gldrawable)))))))
 
 (define configure-event
   (make-GtkEventCallback
    (lambda (widget event data)
      (let ((widget (make-GtkWidget* widget))
-	   (glcontext (gtk_widget_get_gl_context widget))
-	   (gldrawable (gtk_widget_get_gl_drawable widget)))
+           (glcontext (gtk_widget_get_gl_context widget))
+           (gldrawable (gtk_widget_get_gl_drawable widget)))
        (cond
-	((zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
-	 FALSE)
-	(else
-	 (glViewport 0 0 
-		     (fh-object-ref widget 'allocation 'width)
-		     (fh-object-ref widget 'allocation 'height))
-	 (gdk_gl_drawable_gl_end gldrawable)
-	 TRUE))))))
+        ((zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
+         FALSE)
+        (else
+         (glViewport 0 0 
+                     (fh-object-ref widget 'allocation 'width)
+                     (fh-object-ref widget 'allocation 'height))
+         (gdk_gl_drawable_gl_end gldrawable)
+         TRUE))))))
 
 (define expose-event
   (let* ((m '(GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-	 (n (apply logior (map glugl-symval m))))
+         (n (apply logior (map glugl-symval m))))
     (make-GtkEventCallback
      (lambda (widget event data)
        (let ((glcontext (gtk_widget_get_gl_context widget))
-	     (gldrawable (gtk_widget_get_gl_drawable widget)))
-	 (cond
-	  ((zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
-	   FALSE)
-	  (else
-	   (glClear n)
-	   (glCallList 1)
-	   (if (!0 (gdk_gl_drawable_is_double_buffered gldrawable))
-	       (gdk_gl_drawable_swap_buffers gldrawable)
-	       (glFlush))
-	   (gdk_gl_drawable_gl_end gldrawable)
-	   TRUE)))))))
+             (gldrawable (gtk_widget_get_gl_drawable widget)))
+         (cond
+          ((zero? (gdk_gl_drawable_gl_begin gldrawable glcontext))
+           FALSE)
+          (else
+           (glClear n)
+           (glCallList 1)
+           (if (!0 (gdk_gl_drawable_is_double_buffered gldrawable))
+               (gdk_gl_drawable_swap_buffers gldrawable)
+               (glFlush))
+           (gdk_gl_drawable_gl_end gldrawable)
+           TRUE)))))))
 
 (define (print-gl-config-attrib glconfig attrib is_boolean)
   (let ((attrib_str (symbol->string attrib))
-	(attr (gtkgl-symval attrib))
-	(value (make-int)))
+        (attr (gtkgl-symval attrib))
+        (value (make-int)))
     (sf "~A = " attrib_str)
     (if (!0 (gdk_gl_config_get_attrib glconfig attr (pointer-to value)))
-	(if (!0 is_boolean)
-	    (sf "~A\n" (if (eqv? (fh-object-ref value) TRUE) "TRUE" "FALSE"))
-	    (sf "~A\n" (fh-object-ref value)))
-	(sf "*** cannot get attributes\n"))))
+        (if (!0 is_boolean)
+            (sf "~A\n" (if (eqv? (fh-object-ref value) TRUE) "TRUE" "FALSE"))
+            (sf "~A\n" (fh-object-ref value)))
+        (sf "*** cannot get attributes\n"))))
 
 (define (examine_gl_config_attrib glconfig)
   (define (tf x) (if (zero? x) "FALSE" "TRUE"))
@@ -175,7 +175,7 @@
 ;; double-buffered visual
 (define glconfig
   (let* ((m '(GDK_GL_MODE_RGB GDK_GL_MODE_DEPTH GDK_GL_MODE_DOUBLE))
-	 (n (apply logior (map gtkgl-symval m))))
+         (n (apply logior (map gtkgl-symval m))))
     (gdk_gl_config_new_by_mode n)))
 
 (examine_gl_config_attrib glconfig)
@@ -195,13 +195,13 @@
 (gtk_widget_set_size_request drawing-area 200 200)
 
 (gtk_widget_set_gl_capability drawing-area glconfig NULL TRUE
-			      (gtkgl-symval 'GDK_GL_RGBA_TYPE))
+                              (gtkgl-symval 'GDK_GL_RGBA_TYPE))
 
 (g_signal_connect_after drawing-area "realize" (fh-cast GCallback realize) NULL)
 (g_signal_connect drawing-area
-		  "configure_event" (fh-cast GCallback configure-event) NULL)
+                  "configure_event" (fh-cast GCallback configure-event) NULL)
 (g_signal_connect drawing-area
-		  "expose_event" (fh-cast GCallback expose-event) NULL)
+                  "expose_event" (fh-cast GCallback expose-event) NULL)
 
 (gtk_box_pack_start vbox drawing-area TRUE TRUE 0)
 

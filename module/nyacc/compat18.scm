@@ -19,8 +19,8 @@
 
 (define-module (nyacc compat18)
   #:export (syntax->datum datum->syntax
-	    bitwise-arithmetic-shift-left
-	    bitwise-arithmetic-shift-right)
+            bitwise-arithmetic-shift-left
+            bitwise-arithmetic-shift-right)
   #:export-syntax (unless when pmatch include-from-path)
   #:use-syntax (ice-9 syncase))
 
@@ -39,12 +39,12 @@
 (define (bitwise-arithmetic-shift-right ei1 ei2)
   (let loop ((ei1 ei1) (ei2 ei2))
     (if (zero? ei2) ei1
-	(loop (quotient ei2 2) (1- ei1)))))
+        (loop (quotient ei2 2) (1- ei1)))))
 
 (define (bitwise-arithmetic-shift-left ei1 ei2)
   (let loop ((ei1 ei1) (ei2 ei2))
     (if (zero? ei2) ei1
-	(loop (* ei2 2) (1- ei1)))))
+        (loop (* ei2 2) (1- ei1)))))
 
 (define-syntax pmatch
   (syntax-rules ()
@@ -83,13 +83,13 @@
   (syntax-rules ()
     ((_ file)
      (let* ((env (current-module))
-	    (path (%search-load-path file))
-	    (port (open-input-file path)))
+            (path (%search-load-path file))
+            (port (open-input-file path)))
        (let loop ((exp (read port)))
-	 (cond
-	  ((eof-object? exp) (if #f #f))
-	  (else
-	   (eval exp env)
-	   (loop (read port)))))))))
+         (cond
+          ((eof-object? exp) (if #f #f))
+          (else
+           (eval exp env)
+           (loop (read port)))))))))
 
 ;;; --- last line ---

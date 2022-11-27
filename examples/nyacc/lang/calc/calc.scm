@@ -37,7 +37,7 @@
      ($empty ($$ (next)))
      (expr ($$ (display $1) (next)))
      (assn ($$ (module-define! (current-module) (car $1) (cdr $1))
-	       (display (cdr $1)) (next))))
+               (display (cdr $1)) (next))))
     (expr
      (expr "+" expr ($$ (+ $1 $3)))
      (expr "-" expr ($$ (- $1 $3)))

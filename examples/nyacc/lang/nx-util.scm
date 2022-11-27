@@ -23,19 +23,19 @@
 
 (define-module (nyacc lang nx-util)
   #:export (genxsym
-	    nx-undefined-xtil
-	    nx-push-scope nx-pop-scope nx-top-level? nx-lexical?
-	    nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-symbol
-	    nx-lookup-in-env nx-lookup
-	    rtail singleton?
-	    make-and make-or make-thunk make-defonce
-	    with-escape/handler with-escape/arg with-escape/expr with-escape
-	    rev/repl
-	    make-handler
-	    opcall-generator
-	    block vblock
-	    make-loop make-do-while make-while lookup-gensym
-	    )
+            nx-undefined-xtil
+            nx-push-scope nx-pop-scope nx-top-level? nx-lexical?
+            nx-add-toplevel nx-add-lexical nx-add-lexicals nx-add-symbol
+            nx-lookup-in-env nx-lookup
+            rtail singleton?
+            make-and make-or make-thunk make-defonce
+            with-escape/handler with-escape/arg with-escape/expr with-escape
+            rev/repl
+            make-handler
+            opcall-generator
+            block vblock
+            make-loop make-do-while make-while lookup-gensym
+            )
   )
 
 (define (genxsym name)
@@ -128,7 +128,7 @@
           (fold-right nx-add-lexical dict (name1 ... nameN))"
   (let iter ((args args))
     (if (null? (cddr args)) (nx-add-lexical (car args) (cadr args))
-	(nx-add-lexical (car args) (iter (cdr args))))))
+        (nx-add-lexical (car args) (iter (cdr args))))))
 
 ;; Add lexical or toplevel based on level.
 (define (nx-add-symbol name dict)
@@ -139,8 +139,8 @@
 (define (nx-lookup-in-env name env)
   (let ((sym (if (string? name) (string->symbol name) name)))
     (if (and env (module-variable env sym))
-	`(@@ ,(module-name env) ,sym)
-	#f)))
+        `(@@ ,(module-name env) ,sym)
+        #f)))
 
 ;; @deffn {Procedure} x_y->x-y a_string => a-string
 ;; Convert a C-like name to a Scheme-like name.
@@ -152,8 +152,8 @@
     (cond
    ((not dict) #f)
    ((null? dict) #f)
-   ((assoc-ref dict name))		; => value
-   ((assoc-ref dict '@P) =>		; parent level
+   ((assoc-ref dict name))              ; => value
+   ((assoc-ref dict '@P) =>             ; parent level
     (lambda (dict) (nx-lookup name dict)))
    ((nx-lookup-in-env name (assoc-ref dict '@M)))
    ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
@@ -169,13 +169,13 @@
 (define (make-and . args)
   (let iter ((args args))
     (if (null? args) '(const #t)
-	`(if ,(car args) ,(iter (cdr args)) (const #f)))))
+        `(if ,(car args) ,(iter (cdr args)) (const #f)))))
 
 ;; (or a b c) => (if a #t (if b #t (if c #t #f)))
 (define (make-or . args)
   (let iter ((args args))
     (if (null? args) '(const #f)
-	`(if ,(car args) (const #t) ,(iter (cdr args))))))
+        `(if ,(car args) (const #t) ,(iter (cdr args))))))
 
 ;; reverse list but replace new head with @code{head}
 ;; @example
@@ -203,8 +203,8 @@
 ;; @end deffn
 (define* (make-thunk expr #:key name lang)
   (let* ((meta '())
-	 (meta (if lang (cons `(language . ,lang) meta) meta))
-	 (meta (if name (cons `(name . ,name) meta) meta)))
+         (meta (if lang (cons `(language . ,lang) meta) meta))
+         (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case ((() #f #f #f () ()) ,expr)))))
 
 ;; @deffn {Procedure} make-defonce name value
@@ -218,11 +218,11 @@
 ;; @end deffn
 (define (make-defonce symbol value)
   `(define ,symbol
-	 (if (call (toplevel module-variable)
-		   (call (toplevel current-module))
-		   (const ,symbol))
-	     (toplevel ,symbol)
-	     ,value)))
+         (if (call (toplevel module-variable)
+                   (call (toplevel current-module))
+                   (const ,symbol))
+             (toplevel ,symbol)
+             ,value)))
 
 ;; === Using Prompts 
 
@@ -238,17 +238,17 @@
      expression that may reference the args."
   (call-with-values
       (lambda ()
-	(let iter ((names '()) (gsyms '()) (args args))
-	  (if (null? args)
-	      (values (reverse names) (reverse gsyms))
-	      (iter (cons (cadar args) names)
-		    (cons (caddar args) gsyms)
-		    (cdr args)))))
+        (let iter ((names '()) (gsyms '()) (args args))
+          (if (null? args)
+              (values (reverse names) (reverse gsyms))
+              (iter (cons (cadar args) names)
+                    (cons (caddar args) gsyms)
+                    (cdr args)))))
     (lambda (names gsyms)
       `(lambda ()
-	 (lambda-case ((,(cons 'k names) #f #f #f () ,(cons (genxsym "k") gsyms))
-		       ,body))))))
-	 
+         (lambda-case ((,(cons 'k names) #f #f #f () ,(cons (genxsym "k") gsyms))
+                       ,body))))))
+         
 ;; @deffn {Procedure} with-escape tag-ref body
 ;; @deffnx {Procedure} with-escape/arg tag-ref body
 ;; @deffnx {Procedure} with-escape/expr tag-ref body
@@ -258,17 +258,17 @@
 ;; @end deffn
 (define (with-escape/handler tag-ref body hdlr)
   (let ((tag-name (cadr tag-ref))
-	(tag-gsym (caddr tag-ref)))
+        (tag-gsym (caddr tag-ref)))
     `(let (,tag-name) (,tag-gsym) ((primcall make-prompt-tag (const ,tag-name)))
-	  (prompt #t ,tag-ref ,body ,hdlr))))
+          (prompt #t ,tag-ref ,body ,hdlr))))
   
 (define (with-escape/arg tag-ref body)
   (let ((arg-gsym (genxsym "arg")))
     (with-escape/handler
      tag-ref body
      `(lambda ()
-	(lambda-case (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
-		      (lexical arg ,arg-gsym)))))))
+        (lambda-case (((k arg) #f #f #f () (,(genxsym "k") ,arg-gsym))
+                      (lexical arg ,arg-gsym)))))))
 
 (define (with-escape/expr tag-ref body expr)
   (with-escape/handler
@@ -285,8 +285,8 @@
   (if (pair? (car expr-or-expr-list))
       ;; expr list
       (let iter ((xl expr-or-expr-list))
-	(if (null? (cdr xl)) (car xl)
-	    `(seq ,(car xl) ,(iter (cdr xl)))))
+        (if (null? (cdr xl)) (car xl)
+            `(seq ,(car xl) ,(iter (cdr xl)))))
       expr-or-expr-list))
 
 ;; @deffn {Procedure} vblock expr-list => (seq ex1 (seq ... (void)))
@@ -297,7 +297,7 @@
      Return an expression or build a seq-train returning undefined."
   (let iter ((xl expr-list))
     (if (null? xl) '(void)
-	`(seq ,(car xl) ,(iter (cdr xl))))))
+        `(seq ,(car xl) ,(iter (cdr xl))))))
 
 ;; @deffn {Procedure} lookup-gensym name dict [label] => gensym
 ;; lookup up nearest parent lexical and return gensym
@@ -311,14 +311,14 @@
      => JS~432"
   (if label
       (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
-	(if (not pdict) #f
-	    (if (and (assoc-ref pdict label)
-		     (assoc-ref "~exit" cdict))
-		(assoc-ref name cdict)
-		(iter pdict (assoc-ref pdict '@P)))))
+        (if (not pdict) #f
+            (if (and (assoc-ref pdict label)
+                     (assoc-ref "~exit" cdict))
+                (assoc-ref name cdict)
+                (iter pdict (assoc-ref pdict '@P)))))
       (let* ((sym (nx-lookup name dict)))
-	(if (not sym) (error "nx-util(lookup-gensym): not found:" name))
-	(caddr sym))))
+        (if (not sym) (error "nx-util(lookup-gensym): not found:" name))
+        (caddr sym))))
 
 ;; @deffn {Procedure} make-loop expr body dict ilsym tbody
 ;; This is a helper procedure for building loops like the following:
@@ -377,23 +377,23 @@
      '(lambda () (iloop))' for do-while and
      '(lambda () (if (expr) (iloop)))' for while-do."
   (let* ((olsym (genxsym "oloop"))
-	 (bsym (lookup-gensym "break" dict))
-	 (csym (lookup-gensym "continue" dict))
-	 (icall `(call (lexical iloop ,ilsym)))
-	 (ocall `(call (lexical oloop ,olsym)))
-	 (iloop (make-thunk `(seq ,body (if ,expr ,icall (void))) #:name 'iloop))
-  	 (ohdlr `(lambda ()
-		   (lambda-case (((k) #f #f #f () (,(genxsym "k")))
-				 (if ,expr ,ocall (void))))))
-	 (oloop (make-thunk `(prompt #t (lexical continue ,csym) ,tbody ,ohdlr)
-			    #:name 'oloop))
- 	 (hdlr `(lambda ()
-		  (lambda-case (((k) #f #f #f () (,(genxsym "k"))) (void))))))
+         (bsym (lookup-gensym "break" dict))
+         (csym (lookup-gensym "continue" dict))
+         (icall `(call (lexical iloop ,ilsym)))
+         (ocall `(call (lexical oloop ,olsym)))
+         (iloop (make-thunk `(seq ,body (if ,expr ,icall (void))) #:name 'iloop))
+         (ohdlr `(lambda ()
+                   (lambda-case (((k) #f #f #f () (,(genxsym "k")))
+                                 (if ,expr ,ocall (void))))))
+         (oloop (make-thunk `(prompt #t (lexical continue ,csym) ,tbody ,ohdlr)
+                            #:name 'oloop))
+         (hdlr `(lambda ()
+                  (lambda-case (((k) #f #f #f () (,(genxsym "k"))) (void))))))
     `(let (break continue) (,bsym ,csym)
-	  ((primcall make-prompt-tag (const break))
-	   (primcall make-prompt-tag (const continue)))
-	  (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
-		  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
+          ((primcall make-prompt-tag (const break))
+           (primcall make-prompt-tag (const continue)))
+          (letrec (iloop oloop) (,ilsym ,olsym) (,iloop ,oloop)
+                  (prompt #t (lexical break ,bsym) ,ocall ,hdlr)))))
 
 ;; @deffn {Procedure} make-do-while expr body dict
 ;; This generates code for do-while loops where @var{expr} is the condtional
@@ -422,13 +422,13 @@
      'continue'."
   (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym
-		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
+                    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
 
 #|
 (define (make-for init test next body dict)
   (let ((ilsym (genxsym "iloop")))
     (make-loop expr body dict ilsym
-		    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
+                    `(if ,expr (call (lexical iloop ,ilsym)) (void)))))
 |#
 
 ;; --- last line ---

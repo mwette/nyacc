@@ -16,7 +16,7 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
 (define-module (nyacc lang calc parser)
-  #:export (parse-calc read-calc)	; parse full, read stmt
+  #:export (parse-calc read-calc)       ; parse full, read stmt
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse)
@@ -63,7 +63,7 @@
 ;; This is interactive so that input does not have to end in eof-object.
 (define raw-stmt-parser
   (make-lalr-parser (acons 'act-v calc-stmt-act-v calc-stmt-tables)
-		    #:interactive #t))
+                    #:interactive #t))
 
 (define (parse-stmt)
   (catch 'nyacc-error
@@ -83,6 +83,6 @@
   (if (eof-object? (peek-char port))
       (read-char port)
       (let ((elt (with-input-from-port port parse-stmt)))
-	(or elt (flush-input port)))))
+        (or elt (flush-input port)))))
 
 ;; --- last line ---

@@ -9,8 +9,8 @@
 ;; "s" => GVariantType*
 (define (make-gv-base-type str)
   (let* ((code (string-copy str))
-	 (ptr (ffi:string->pointer code))
-	 (addr (ffi:pointer-address ptr)))
+         (ptr (ffi:string->pointer code))
+         (addr (ffi:pointer-address ptr)))
     (glib-guardian code)
     (make-GVariantType* addr)))
 
@@ -53,8 +53,8 @@
 ;; GVariant* => scm
 (define (gv->scm variant)
   (let* ((type (g_variant_get_type_string variant))
-	 (type (ffi:pointer->string type))
-	 )
+         (type (ffi:pointer->string type))
+         )
     (cond
      ((< 1 (string-length type))
       ;; compound type
@@ -76,20 +76,20 @@
   (let ((gviter (g_variant_iter_new coll)))
     (let iter ()
       (let ((gv (g_variant_iter_next_value gviter)))
-	(unless (gv-null? gv)
-	  ;; we should pass a scheme value maybe
-	  (proc gv)
-	  (iter))))))
+        (unless (gv-null? gv)
+          ;; we should pass a scheme value maybe
+          (proc gv)
+          (iter))))))
 
 (define (for-each-gv-dict-entry proc coll)
   (for-each-variant
    (lambda (elt)
      ;; should get {sv}
      (let* ((~key (g_variant_get_child_value elt 0))
-	    (~val (g_variant_get_child_value elt 1))
-	    (key (ffi:pointer->string (g_variant_get_string ~key NULL)))
-	    (val ~val)
-	    )
+            (~val (g_variant_get_child_value elt 1))
+            (key (ffi:pointer->string (g_variant_get_string ~key NULL)))
+            (val ~val)
+            )
        (proc key val)))
    coll))
 
@@ -104,51 +104,51 @@
 
 (define return-type (g_variant_type_new "(a{sv})"))
 
-(define (check-rez rez)			; rez: GVariant*
+(define (check-rez rez)                 ; rez: GVariant*
   (let* ((type (ffi:pointer->string (g_variant_get_type_string rez)))
-	 (elt0 (g_variant_get_child_value rez 0))
-	 )
+         (elt0 (g_variant_get_child_value rez 0))
+         )
     ;; needs work
     (glib-guardian elt0)
     (for-each-gv-dict-entry
      (lambda (key val)
        (let* ((vv (g_variant_get_variant val))
-	      (vt (g_variant_get_type_string vv))
-	      (v (g_variant_get_uint32 vv))
-	      )
-	 ;;(sf "~S:\n" key)
-	 ;;(sf " ~S: ~S\n" (ffi:pointer->string vt) v)
-	 (sf "~A: ~S\n" key (gv->scm vv))
-	 ))
+              (vt (g_variant_get_type_string vv))
+              (v (g_variant_get_uint32 vv))
+              )
+         ;;(sf "~S:\n" key)
+         ;;(sf " ~S: ~S\n" (ffi:pointer->string vt) v)
+         (sf "~A: ~S\n" key (gv->scm vv))
+         ))
      elt0)))
 
 (define callback
   (make-GAsyncReadyCallback
    (lambda (~src ~res user_data)
      (let* ((src (make-GObject* ~src))
-	    (res (make-GAsyncResult* ~res))
-	    (err (make-GError*))
-	    (rez (g_dbus_connection_call_finish conn res (pointer-to err)))
-	    )
+            (res (make-GAsyncResult* ~res))
+            (err (make-GError*))
+            (rez (g_dbus_connection_call_finish conn res (pointer-to err)))
+            )
        (if (got-error? err)
-	   (sf "~A\n" (g-error-message err))
-	   (check-rez rez))
+           (sf "~A\n" (g-error-message err))
+           (check-rez rez))
        (g_main_loop_quit loop)
        (if #f #f)))))
 
 (g_dbus_connection_call
- conn					; connection
- "org.freedesktop.DBus"			; bus name (was NULL)
- "/org/freedesktop/DBus"		; object path
- "org.freedesktop.DBus.Debug.Stats"	; interface name
- "GetStats"				; method
- NULL					; parameters
- return-type				; GVariantType*
- 'G_DBUS_CALL_FLAGS_NONE		; GDBusCallFlags
- 1000					; timeout_msec
- NULL					; GCancellable*
- callback				; GAsyncReadyCallback
- NULL					; user_data
+ conn                                   ; connection
+ "org.freedesktop.DBus"                 ; bus name (was NULL)
+ "/org/freedesktop/DBus"                ; object path
+ "org.freedesktop.DBus.Debug.Stats"     ; interface name
+ "GetStats"                             ; method
+ NULL                                   ; parameters
+ return-type                            ; GVariantType*
+ 'G_DBUS_CALL_FLAGS_NONE                ; GDBusCallFlags
+ 1000                                   ; timeout_msec
+ NULL                                   ; GCancellable*
+ callback                               ; GAsyncReadyCallback
+ NULL                                   ; user_data
  )
 
 (g_variant_type_free return-type)

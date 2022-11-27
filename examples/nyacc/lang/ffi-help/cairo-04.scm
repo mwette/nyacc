@@ -19,15 +19,15 @@
 (define text "cairo")
 
 (cairo_select_font_face cr "Sans"
-			'CAIRO_FONT_SLANT_NORMAL
-			'CAIRO_FONT_WEIGHT_NORMAL)
+                        'CAIRO_FONT_SLANT_NORMAL
+                        'CAIRO_FONT_WEIGHT_NORMAL)
 
 (cairo_set_font_size cr 52.0)
 (cairo_text_extents cr text (pointer-to extents))
 (define x (- 128.0 (+ (/ (fh-object-ref extents 'width) 2.0)
-		      (fh-object-ref extents 'x_bearing))))
+                      (fh-object-ref extents 'x_bearing))))
 (define y (- 128.0 (+ (/ (fh-object-ref extents 'height) 2.0)
-		      (fh-object-ref extents 'y_bearing))))
+                      (fh-object-ref extents 'y_bearing))))
 
 (cairo_move_to cr x y)
 (cairo_show_text cr text)

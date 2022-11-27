@@ -42,9 +42,9 @@
   (catch 'java-error
     (lambda ()
       (catch 'nyacc-error
-	(lambda () (java-raw-parser (gen-java-lexer) #:debug debug))
-	(lambda (key fmt . args)
-	  (apply throw 'java-error fmt args))))
+        (lambda () (java-raw-parser (gen-java-lexer) #:debug debug))
+        (lambda (key fmt . args)
+          (apply throw 'java-error fmt args))))
     (lambda (key fmt . args)
       (report-error fmt args)
       #f)))

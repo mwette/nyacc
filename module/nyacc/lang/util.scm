@@ -19,20 +19,20 @@
 
 (define-module (nyacc lang util)
   #:export (license-lgpl3+
-	    report-error
-	    *input-stack* push-input pop-input
-	    reset-input-stack input-stack-portinfo
-	    make-tl tl->list tl->tail ;; rename?? to tl->sx for sxml-expr
-	    tl-append tl-insert tl-extend tl+attr tl+attr*
-	    ;; for pretty-printing
-	    make-protect-expr make-pp-formatter make-pp-formatter/ugly
-	    ;; for ???
-	    move-if-changed
-	    cintstr->scm
-	    sferr pperr
-	    mach-dir
-	    ;; deprecated
-	    lang-crn-lic)
+            report-error
+            *input-stack* push-input pop-input
+            reset-input-stack input-stack-portinfo
+            make-tl tl->list tl->tail ;; rename?? to tl->sx for sxml-expr
+            tl-append tl-insert tl-extend tl+attr tl+attr*
+            ;; for pretty-printing
+            make-protect-expr make-pp-formatter make-pp-formatter/ugly
+            ;; for ???
+            move-if-changed
+            cintstr->scm
+            sferr pperr
+            mach-dir
+            ;; deprecated
+            lang-crn-lic)
   #:use-module ((srfi srfi-1) #:select (find fold fold-right))
   #:use-module (ice-9 pretty-print))
 (cond-expand
@@ -72,7 +72,7 @@ See the file COPYING included with the this distribution.")
    (input-stack-portinfo)))
 (define (old-report-error fmt args)
   (let ((fn (or (port-filename (current-input-port)) "(unknown)"))
-	(ln (1+ (port-line (current-input-port)))))
+        (ln (1+ (port-line (current-input-port)))))
     (apply simple-format (current-error-port)
            (string-append "~A:~A: " fmt "\n") fn ln args)
     (for-each
@@ -82,26 +82,25 @@ See the file COPYING included with the this distribution.")
 
 ;; === input stack =====================
 
-(define *input-stack* (make-fluid '()))
+(define *input-stack* (make-parameter '()))
 
 (define (reset-input-stack)
-  (fluid-set! *input-stack* '()))
+  (*input-stack* '()))
 
 (define (push-input port)
   (let ((curr (current-input-port))
-	(ipstk (fluid-ref *input-stack*)))
-    (fluid-set! *input-stack* (cons curr ipstk))
-    ;;(sferr "~S pu=>\n" (length ipstk))
+        (ipstk (*input-stack*)))
+    (*input-stack* (cons curr ipstk))
     (set-current-input-port port)))
 
 ;; Return #f if empty
 (define (pop-input)
-  (let ((ipstk (fluid-ref *input-stack*)))
+  (let ((ipstk (*input-stack*)))
     (if (null? ipstk) #f
-	(begin
-	  (close-port (current-input-port))
-	  (set-current-input-port (car ipstk))
-	  (fluid-set! *input-stack* (cdr ipstk))))))
+        (begin
+          (close-port (current-input-port))
+          (set-current-input-port (car ipstk))
+          (*input-stack* (cdr ipstk))))))
 
 ;; @deffn {Procedure} input-stack-portinfo
 ;; Return a list of pairs of input stack filename and line number.
@@ -112,7 +111,7 @@ See the file COPYING included with the this distribution.")
   (define (port-info port)
     (cons (or (port-filename port) "(unknown)") (1+ (port-line port))))
   (fold-right (lambda (port info) (cons (port-info port) info)) '()
-	      (fluid-ref *input-stack*)))
+              (*input-stack*)))
 
 ;; === tl ==============================
 
@@ -133,7 +132,7 @@ See the file COPYING included with the this distribution.")
      Create a tagged-list structure."
   (let loop ((tail tag) (l rest))
     (if (null? l) (cons '() tail)
-	(loop (cons (car l) tail) (cdr l)))))
+        (loop (cons (car l) tail) (cdr l)))))
 
 ;; @deffn {Procedure} tl->list tl
 ;; Convert a tagged list structure to a list.  This collects added attributes
@@ -149,17 +148,17 @@ See the file COPYING included with the this distribution.")
      in something like
           (<tag> (@ <attr>) <rest>)"
   (let ((head (let loop ((head '()) (attr '()) (tl-head (car tl)))
-		(if (null? tl-head)
-		    (if (pair? attr)
-			(cons (cons '@ attr) (reverse head))
-			(reverse head))
-		    (if (and (pair? (car tl-head)) (eq? '@ (caar tl-head)))
-			(loop head (cons (cdar tl-head) attr) (cdr tl-head))
-			(loop (cons (car tl-head) head) attr (cdr tl-head)))))))
+                (if (null? tl-head)
+                    (if (pair? attr)
+                        (cons (cons '@ attr) (reverse head))
+                        (reverse head))
+                    (if (and (pair? (car tl-head)) (eq? '@ (caar tl-head)))
+                        (loop head (cons (cdar tl-head) attr) (cdr tl-head))
+                        (loop (cons (car tl-head) head) attr (cdr tl-head)))))))
     (let loop ((tail '()) (tl-tail (cdr tl)))
       (if (pair? tl-tail)
-	  (loop (cons (car tl-tail) tail) (cdr tl-tail))
-	  (cons tl-tail (append head tail))))))
+          (loop (cons (car tl-tail) tail) (cdr tl-tail))
+          (cons tl-tail (append head tail))))))
 
 (define (tl->tail tl)
   (cdr (tl->list tl)))
@@ -179,9 +178,9 @@ See the file COPYING included with the this distribution.")
   "- Procedure: tl-append tl item ...
      Append items at end of tagged list."
   (cons (car tl)
-	(let loop ((tail (cdr tl)) (items rest))
-	  (if (null? items) tail
-	      (loop (cons (car items) tail) (cdr items))))))
+        (let loop ((tail (cdr tl)) (items rest))
+          (if (null? items) tail
+              (loop (cons (car items) tail) (cdr items))))))
 
 ;; @deffn {Procedure} tl-extend tl item-l
 ;; Extend with a list of items.
@@ -266,28 +265,28 @@ See the file COPYING included with the this distribution.")
   (define (prec a b)
     (let loop ((ag #f) (bg #f) (opg op-prec)) ;; a-group, b-group
       (cond
-       ((null? opg) #f)			; indeterminate
+       ((null? opg) #f)                 ; indeterminate
        ((memq a (car opg))
-	(if bg '<
-	    (if (memq b (car opg)) '=
-		(loop #t bg (cdr opg)))))
+        (if bg '<
+            (if (memq b (car opg)) '=
+                (loop #t bg (cdr opg)))))
        ((memq b (car opg))
-	(if ag '>
-	    (if (memq a (car opg)) '=
-		(loop ag #t (cdr opg)))))
+        (if ag '>
+            (if (memq a (car opg)) '=
+                (loop ag #t (cdr opg)))))
        (else
-	(loop ag bg (cdr opg))))))
+        (loop ag bg (cdr opg))))))
 
   (lambda (side op expr)
     (let ((assc? (case side
-		   ((lt lval left) assc-rt?)
-		   ((rt rval right) assc-lt?)))
-	  (vtag (car expr)))
+                   ((lt lval left) assc-rt?)
+                   ((rt rval right) assc-lt?)))
+          (vtag (car expr)))
       (case (prec op vtag)
-	((>) #t)
-	((<) #f)
-	((=) (assc? op))
-	(else #f)))))
+        ((>) #t)
+        ((<) #f)
+        ((=) (assc? op))
+        (else #f)))))
 
 ;; @deffn {Procedure} expand-tabs str [col]
 ;; Expand tabs where the string @var{str} starts in column @var{col}
@@ -297,9 +296,9 @@ See the file COPYING included with the this distribution.")
 
   (define (fill-tab col chl)
     (let loop ((chl (if (zero? col) (cons #\space chl) chl))
-	       (col (if (zero? col) (1+ col) col)))
+               (col (if (zero? col) (1+ col) col)))
       (if (zero? (modulo col 8)) chl
-	  (loop (cons #\space chl) (1+ col)))))
+          (loop (cons #\space chl) (1+ col)))))
 
   (define (next-tab-col col) ;; TEST THIS !!!
     ;;(* 8 (quotient (+ 9 col) 8))) ???
@@ -308,14 +307,14 @@ See the file COPYING included with the this distribution.")
   (let ((strlen (string-length str)))
     (let loop ((chl '()) (col col) (ix 0))
       (if (= ix strlen) (list->string (reverse chl))
-	  (let ((ch (string-ref str ix)))
-	    (case ch
-	      ((#\newline)
-	       (loop (cons ch chl) 0 (1+ ix)))
-	      ((#\tab)
-	       (loop (fill-tab col chl) (next-tab-col col) (1+ ix)))
-	      (else
-	       (loop (cons ch chl) (1+ col) (1+ ix)))))))))
+          (let ((ch (string-ref str ix)))
+            (case ch
+              ((#\newline)
+               (loop (cons ch chl) 0 (1+ ix)))
+              ((#\tab)
+               (loop (fill-tab col chl) (next-tab-col col) (1+ ix)))
+              (else
+               (loop (cons ch chl) (1+ col) (1+ ix)))))))))
 
 ;; @deffn {Procedure} make-pp-formatter [port] <[options> => fmtr
 ;; Options
@@ -332,7 +331,7 @@ See the file COPYING included with the this distribution.")
 ;; @end example
 ;; @end deffn
 (define* (make-pp-formatter #:optional (port (current-output-port))
-			    #:key per-line-prefix (width 79) (basic-offset 2))
+                            #:key per-line-prefix (width 79) (basic-offset 2))
   (let*
       ((pfxlen (string-length (expand-tabs (or per-line-prefix ""))))
        (maxcol (- width (if per-line-prefix pfxlen 0)))
@@ -346,45 +345,45 @@ See the file COPYING included with the this distribution.")
        ;;(sf-nl (lambda () (newline) (set! column 0)))
 
        (push-il
-	(lambda ()
-	  (set! ind-lev (min maxind (1+ ind-lev)))
-	  (set! ind-len (* basic-offset ind-lev))))
+        (lambda ()
+          (set! ind-lev (min maxind (1+ ind-lev)))
+          (set! ind-len (* basic-offset ind-lev))))
 
        (pop-il
-	(lambda ()
-	  (set! ind-lev (max 0 (1- ind-lev)))
-	  (set! ind-len (* basic-offset ind-lev))))
+        (lambda ()
+          (set! ind-lev (max 0 (1- ind-lev)))
+          (set! ind-len (* basic-offset ind-lev))))
 
        (inc-column!
-	(lambda (inc)
-	  (set! column (+ column inc))))
+        (lambda (inc)
+          (set! column (+ column inc))))
 
        (set-column!
-	(lambda (val)
-	  (set! column val)))
+        (lambda (val)
+          (set! column val)))
        
        (sf
-	(lambda (fmt . args)
-	  (let* ((str (apply simple-format #f fmt args))
-		 (str (if (and (zero? column) per-line-prefix)
-			  (expand-tabs str pfxlen)
-			  str))
-		 (len (string-length str)))
-	    (cond
-	     ((zero? column)
-	      (if per-line-prefix (display per-line-prefix port))
-	      (display (ind-str) port)
-	      (inc-column! ind-len))
-	     ((> (+ column len) maxcol)
-	      (newline port)
-	      (if per-line-prefix (display per-line-prefix port))
-	      (display (cnt-str) port)
-	      (set-column! (+ ind-len 4))))
-	    (display str port)
-	    (inc-column! len)
-	    (when (and (positive? len)
-		       (eqv? #\newline (string-ref str (1- len))))
-	      (set! column 0))))))
+        (lambda (fmt . args)
+          (let* ((str (apply simple-format #f fmt args))
+                 (str (if (and (zero? column) per-line-prefix)
+                          (expand-tabs str pfxlen)
+                          str))
+                 (len (string-length str)))
+            (cond
+             ((zero? column)
+              (if per-line-prefix (display per-line-prefix port))
+              (display (ind-str) port)
+              (inc-column! ind-len))
+             ((> (+ column len) maxcol)
+              (newline port)
+              (if per-line-prefix (display per-line-prefix port))
+              (display (cnt-str) port)
+              (set-column! (+ ind-len 4))))
+            (display str port)
+            (inc-column! len)
+            (when (and (positive? len)
+                       (eqv? #\newline (string-ref str (1- len))))
+              (set! column 0))))))
 
     (lambda (arg0 . rest)
       (cond
@@ -406,29 +405,29 @@ See the file COPYING included with the this distribution.")
       ((maxcol 78)
        (column 0)
        (sf (lambda (fmt . args)
-	     (let* ((str (apply simple-format #f fmt args))
-		    (len (string-length str)))
-	       (if (and (positive? len)
-			(char=? #\newline (string-ref str (1- len))))
-		   (string-set! str (1- len) #\space))
-	       (cond
-		((zero? len) #t)	; we reference str[0] next
-		((and (equal? len 1) (char=? #\newline (string-ref str 0))) #t)
-		((char=? #\# (string-ref str 0)) ; CPP-stmt: force newline
-		 (when (positive? column) (newline))
-		 (display str)		; str always ends in \n
-		 (set! column		; if ends \n then col= 0 else len
-		       (if (char=? #\newline (string-ref str (1- len)))
-			   0 len)))
-		((zero? column)
-		 (display str)
-		 (set! column len))
-		(else
-		 (when (> (+ column len) maxcol)
-		   (newline)
-		   (set! column 0))
-		 (display str)
-		 (set! column (+ column len))))))))
+             (let* ((str (apply simple-format #f fmt args))
+                    (len (string-length str)))
+               (if (and (positive? len)
+                        (char=? #\newline (string-ref str (1- len))))
+                   (string-set! str (1- len) #\space))
+               (cond
+                ((zero? len) #t)        ; we reference str[0] next
+                ((and (equal? len 1) (char=? #\newline (string-ref str 0))) #t)
+                ((char=? #\# (string-ref str 0)) ; CPP-stmt: force newline
+                 (when (positive? column) (newline))
+                 (display str)          ; str always ends in \n
+                 (set! column           ; if ends \n then col= 0 else len
+                       (if (char=? #\newline (string-ref str (1- len)))
+                           0 len)))
+                ((zero? column)
+                 (display str)
+                 (set! column len))
+                (else
+                 (when (> (+ column len) maxcol)
+                   (newline)
+                   (set! column 0))
+                 (display str)
+                 (set! column (+ column len))))))))
 
     (lambda (arg0 . rest)
       (cond
@@ -447,7 +446,7 @@ See the file COPYING included with the this distribution.")
   (define (doit)
     (let ((sav-file (if (pair? rest) (car rest) #f)))
       (if (and sav-file (access? sav-file W_OK))
-	  (system (simple-format #f "mv ~A ~A" dst-file sav-file)))
+          (system (simple-format #f "mv ~A ~A" dst-file sav-file)))
       (system (simple-format #f "mv ~A ~A" src-file dst-file))
       #t))
     
@@ -461,7 +460,7 @@ See the file COPYING included with the this distribution.")
 
    ;; both exist, but no changes
    ((zero? (system
-	    (simple-format #f "cmp ~A ~A >/dev/null" src-file dst-file)))
+            (simple-format #f "cmp ~A ~A >/dev/null" src-file dst-file)))
     (system (simple-format #f "rm ~A" src-file)) #f)
 
    ;; both exist, update
@@ -490,19 +489,19 @@ See the file COPYING included with the this distribution.")
   (let ((ln (string-length str)))
     (let loop ((dl '()) (bx "") (cs cs:dig) (st 0) (ix 0))
       (if (= ix ln)
-	  (if (null? dl) #f (string-append bx (list->string (reverse dl))))
-	  (case st
-	    ((0) (loop (cons (string-ref str ix) dl) bx cs
-		       (if (char=? #\0 (string-ref str ix)) 1 2)
-		       (1+ ix)))
-	    ((1) (if (char=? #\x (string-ref str ix))
-		     (loop '() "#x" cs:hex 2 (1+ ix))
-		     (loop '() "#o" cs:oct 2 ix)))
-	    ((2) (if (char-set-contains? cs (string-ref str ix))
-		     (loop (cons (string-ref str ix) dl) bx cs st (1+ ix))
-		     (if (char-set-contains? cs:long (string-ref str ix))
-			 (loop dl bx cs 3 (1+ ix))
-			 #f)))
-	    ((3) #f))))))
+          (if (null? dl) #f (string-append bx (list->string (reverse dl))))
+          (case st
+            ((0) (loop (cons (string-ref str ix) dl) bx cs
+                       (if (char=? #\0 (string-ref str ix)) 1 2)
+                       (1+ ix)))
+            ((1) (if (char=? #\x (string-ref str ix))
+                     (loop '() "#x" cs:hex 2 (1+ ix))
+                     (loop '() "#o" cs:oct 2 ix)))
+            ((2) (if (char-set-contains? cs (string-ref str ix))
+                     (loop (cons (string-ref str ix) dl) bx cs st (1+ ix))
+                     (if (char-set-contains? cs:long (string-ref str ix))
+                         (loop dl bx cs 3 (1+ ix))
+                         #f)))
+            ((3) #f))))))
 
 ;;; --- last line ---

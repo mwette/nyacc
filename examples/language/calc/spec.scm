@@ -24,10 +24,10 @@
   #:use-module (nyacc lang calc compiler))
 
 (define-language calc
-  #:title	"calc"
-  #:reader	read-calc
+  #:title       "calc"
+  #:reader      read-calc
   #:compilers   `((tree-il . ,compile-tree-il))
   ;;#:compilers   `((cps . ,compile-cps))
-  #:printer	write)
+  #:printer     write)
 
 ;; --- last line ---

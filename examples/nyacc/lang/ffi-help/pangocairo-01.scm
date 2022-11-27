@@ -49,9 +49,9 @@
 
   (do ((i 0 (1+ i))) ((= i N_WORDS))
     (let ((width (make-int))
-	  (height (make-int))
-	  (angle (/ (* 360.0 i) N_WORDS))
-	  (red 0.0))
+          (height (make-int))
+          (angle (/ (* 360.0 i) N_WORDS))
+          (red 0.0))
       (cairo_save cr)
       (set! red (/ (1+ (cos (/ (* (- angle 60.0) G_PI) 180.0))) 2.0))
       (cairo_set_source_rgb cr red 0.0 (- 1.0 red))
@@ -77,8 +77,8 @@
       (set! filename (list-ref argv 1))
       (set! filename "pangocairo-01.png"))
 
-  (set! surface	(cairo_image_surface_create 'CAIRO_FORMAT_ARGB32
-					    (* 2 RADIUS) (* 2 RADIUS)))
+  (set! surface (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32
+                                            (* 2 RADIUS) (* 2 RADIUS)))
   (set! cr (cairo_create surface))
 
   (cairo_set_source_rgb cr 1.0 1.0 1.0)

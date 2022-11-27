@@ -30,7 +30,7 @@
 
 (use-modules (sxml match))
 
-(define show-code? #t)			; to show intermediate code in output
+(define show-code? #t)                  ; to show intermediate code in output
 
 (use-modules (ice-9 pretty-print))
 (define (pp exp) (pretty-print exp #:per-line-prefix "  "))
@@ -46,7 +46,7 @@
 (define (mkseq expr-list)
   (let loop ((xl expr-list))
     (if (null? xl) '((void))
-	(cons* 'seq (car expr-list) (loop (cdr expr-list))))))
+        (cons* 'seq (car expr-list) (loop (cdr expr-list))))))
 
 (define (show/til expr)
   `(seq (call (toplevel display) ,expr) (seq (call (toplevel newline)) (void))))
@@ -70,7 +70,7 @@
 (define (compile-tree-il exp env opts)
   (when show-code? (sf "SXML:\n") (pp exp))
   (let* ((xtil (foldt fup-til identity `(*TOP* ,exp))) ; external Tree-IL
-	 (itil (parse-tree-il xtil)))		       ; internal Tree-IL
+         (itil (parse-tree-il xtil)))                  ; internal Tree-IL
     (when show-code? (sf "Tree-IL:\n") (pp xtil))
     (values itil env env)))
 
@@ -84,7 +84,7 @@
 (use-modules (language cps))
 (use-modules (language cps intmap))
 (use-modules (language cps with-cps))
-(use-modules (language cps utils))	;  counters
+(use-modules (language cps utils))      ;  counters
 (use-modules (ice-9 match))
 
 ;; Thanks to Mark Weaver for helping on some of the concepts here.
@@ -124,9 +124,9 @@
     ((exp . expl)
      (cnvt-arg cps exp
        (lambda (cps name)
-	 (cnvt-argl cps expl
-	   (lambda (cps namel)
-	     (kc cps (cons name namel)))))))))
+         (cnvt-argl cps expl
+           (lambda (cps namel)
+             (kc cps (cons name namel)))))))))
 
 ;; @deffn {Procedure} mkrecv cps kx
 ;; @end deffn
@@ -155,27 +155,27 @@
        ;; Here we create an identifier for symbol and #t, and then use
        ;; 'resolve to generate a boxed object for the top-level identifier.
        ($ (with-cps-constants ((sym sym) (t #t))
-	      (build-term ($continue kx #f ($primcall 'resolve (sym t))))))))
-    (`(unbox ,box)			; where box is a top-level var
+              (build-term ($continue kx #f ($primcall 'resolve (sym t))))))))
+    (`(unbox ,box)                      ; where box is a top-level var
      (with-cps cps
-       (letv bx)			; ident returns var object
+       (letv bx)                        ; ident returns var object
        (letk kc ($kargs ('bx) (bx) ($continue kx #f ($primcall 'box-ref (bx)))))
-       ($ (cnvt box kc))))		; cnvt id to box and continue
+       ($ (cnvt box kc))))              ; cnvt id to box and continue
     (((or 'add 'sub 'mul 'div) lt rt)
      ;; This is basically from tree-il/compile-cps.scm.
      ;; The $call must continue to a $ktail or $kreceive.
      (cnvt-argl cps (list `(unbox (sym ,(mktop (car exp)))) lt rt)
        (match-lambda*
-	 ((cps (proc . args))
-	  (call-with-values
-	      (lambda () ;; If not a $ktail, then wrap in a $kreceive.
-		(match (intmap-ref cps kx)
-		  (($ $ktail) (values cps kx))
-		  (else (mkrecv cps kx))))
-	    (lambda (cps kx)
-	      (with-cps cps
-		(letv res)
-		(build-term ($continue kx #f ($call proc args))))))))))
+         ((cps (proc . args))
+          (call-with-values
+              (lambda () ;; If not a $ktail, then wrap in a $kreceive.
+                (match (intmap-ref cps kx)
+                  (($ $ktail) (values cps kx))
+                  (else (mkrecv cps kx))))
+            (lambda (cps kx)
+              (with-cps cps
+                (letv res)
+                (build-term ($continue kx #f ($call proc args))))))))))
     (`(assn-stmt (assn (ident ,name) ,expr))
      (newline)
      (sf "name:\n") (pp name)
@@ -190,18 +190,18 @@
 (define (calc->cps exp) ;; => cps
   (parameterize ((label-counter 0) (var-counter 0))
     (with-cps empty-intmap
-      (letv init)			; variable for closure (???)
-      (letk kinit ,#f)			; reserve ix 0 for program start
-      (letk ktail ($ktail))		; like halt in Kennedy paper ?
-      (let$ body (cnvt exp ktail))	; term for @var{exp}
-      (letk kbody ($kargs () () ,body))	; it's corresponding continuation
-      (letk kclause			; thunk clause for program
-	    ($kclause ('() '() #f '() #f) kbody #f))
+      (letv init)                       ; variable for closure (???)
+      (letk kinit ,#f)                  ; reserve ix 0 for program start
+      (letk ktail ($ktail))             ; like halt in Kennedy paper ?
+      (let$ body (cnvt exp ktail))      ; term for @var{exp}
+      (letk kbody ($kargs () () ,body)) ; it's corresponding continuation
+      (letk kclause                     ; thunk clause for program
+            ($kclause ('() '() #f '() #f) kbody #f))
       ($ ((lambda (cps)
-	    (let ((init (build-cont ($kfun #f '() init ktail kclause))))
-	      ;; Set the initial thunk-continuation at index 0 and return
-	      ;; a persistent cps.  (See wingolog blog post on intmaps.)
-	      (persistent-intmap (intmap-replace! cps kinit init)))))))))
+            (let ((init (build-cont ($kfun #f '() init ktail kclause))))
+              ;; Set the initial thunk-continuation at index 0 and return
+              ;; a persistent cps.  (See wingolog blog post on intmaps.)
+              (persistent-intmap (intmap-replace! cps kinit init)))))))))
 
 (define (showit cps)
   (for-each

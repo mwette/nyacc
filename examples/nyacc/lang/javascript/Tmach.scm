@@ -33,9 +33,9 @@
 (when redo
   (with-output-to-file ",stmt.txt"
     (lambda ()
-	;;(pp-lalr-notice javascript-ia-spec)
-	(pp-lalr-grammar javascript-ia-spec)
-	(pp-lalr-machine javascript-ia-mach))))
+        ;;(pp-lalr-notice javascript-ia-spec)
+        (pp-lalr-grammar javascript-ia-spec)
+        (pp-lalr-machine javascript-ia-mach))))
 
 (when #f
   (with-output-to-file "gram.y.new"
@@ -43,14 +43,14 @@
 
 (when #f
   (let* ((xargs (cdr (program-arguments)))
-	 (file (if (pair? xargs) (car xargs) ",ex1.js"))
-	 (res (with-input-from-file file dev-parse-js)))
+         (file (if (pair? xargs) (car xargs) ",ex1.js"))
+         (res (with-input-from-file file dev-parse-js)))
     (let ((til (compile-tree-il res (current-module) '())))
       (let ((val (compile til
-			  #:env (current-module)
-			  #:from 'tree-il
-			  #:to 'value)))
-	(simple-format #t "~S\n" val)
-	#t))))
+                          #:env (current-module)
+                          #:from 'tree-il
+                          #:to 'value)))
+        (simple-format #t "~S\n" val)
+        #t))))
 
 ;; --- last line ---

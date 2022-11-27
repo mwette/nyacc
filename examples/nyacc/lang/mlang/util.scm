@@ -19,10 +19,10 @@
 
 (define-module (nyacc lang mlang util)
   #:export (
-	    apply-ml-sem ;; apply static semantics
-	    declify-ffile declify-script
-	    name-expr->decl
-	    )
+            apply-ml-sem ;; apply static semantics
+            declify-ffile declify-script
+            name-expr->decl
+            )
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
   #:use-module (ice-9 pretty-print)
@@ -49,7 +49,7 @@
 ;; varargs
 (define (apply-ml-sem tree . rest)
   (let* ((ml-dict (if (pair? rest) (car rest) '()))
-	 )
+         )
     tree))
 
 ;; decl
@@ -137,13 +137,13 @@
   (let ((rx1 (make-regexp "^~\\s*([0-9A-Za-z]+)\\s*:\\s*([0-9A-Za-z]+)")))
     (lambda (str seed)
       (let ((m (regexp-exec rx1 str)))
-	(if m
-	    (acons (match:substring m 1) (match:substring m 2) seed)
-	    seed)))))
+        (if m
+            (acons (match:substring m 1) (match:substring m 2) seed)
+            seed)))))
 
 ;; matrix: oset rstr cstr flag double *
 ;; vector: double *
-	     
+             
 (define (parse-type-decls stmts)
   (let loop ((out '()) (stmts stmts))
     (cond
@@ -166,20 +166,20 @@
     (sx-match tree
       ((function-file (@ (file ,name)) . ,rest)
        (values tree '()
-	       (cons*
-		(cons name (cons 'fctn #t))
-		(cons "file" name)
-		dict)))
+               (cons*
+                (cons name (cons 'fctn #t))
+                (cons "file" name)
+                dict)))
 
       ((fctn-defn (fctn-decl . ,decl) (stmt-list . ,stmts))
        (let ((tdecls (parse-type-decls stmts))
-	     )
-	 (values tree '() dict)))
+             )
+         (values tree '() dict)))
 
       ((fctn-decl (ident ,name) . ,rest)
        (let ((scope (if (equal? name (assoc-ref dict "file")) "pub" "prv"))
-	     )
-	 (values (sx-attr-add* tree 'scope scope) '() dict)))
+             )
+         (values (sx-attr-add* tree 'scope scope) '() dict)))
 
       ((assn (aref-or-call ,expr ,ex-l) . ,rval)
        (values `(assn (array-ref ,expr ,ex-l)) '() dict))
@@ -200,9 +200,9 @@
        ((function-file) (values (reverse kseed) dict))
 
        ((float fixed)
-	(values
-	 (cons (sx-set-attr! (reverse kseed) 'rank "0") seed)
-	 dict))
+        (values
+         (cons (sx-set-attr! (reverse kseed) 'rank "0") seed)
+         dict))
        
        #;((fctn-decl)
        (values
@@ -210,7 +210,7 @@
        (d-pop kdict)))
        
        (else
-	(values (cons (reverse kseed) seed) dict)))))
+        (values (cons (reverse kseed) seed) dict)))))
 
   (define (fH tree seed dict) ;; => (values seed dict)
     (values (cons tree seed) dict))
@@ -233,22 +233,22 @@
     (sxml-match tree
       ((script-file (@ . ,attr) . ,rest)
        (values tree '()
-	       (cons*
-		(cons "file" (assq-ref attr "file"))
-		dict)))
+               (cons*
+                (cons "file" (assq-ref attr "file"))
+                dict)))
 
       ((assn (aref-or-call ,expr ,ex-l) . ,rval)
        (values `(assn (array-ref ,expr ,ex-l)) '() dict))
       
       #;((assn (ident ,name) (aref-or-call (ident "struct") ,ex-l))
        (let ((kvl (let loop ((kvl '()) (al (sx-tail ex-l 1)))
-		    (if (null? al) (reverse kvl)
-			(loop (cons (list (cadar al) (cadr al))
-				    kvl) (cddr al)))))
-	     )
-	 (fout "struct ~S: ~S\n" name (map car kvl))
-	 ;;(pretty-print kvl)
-	 (values tree '() dict)))
+                    (if (null? al) (reverse kvl)
+                        (loop (cons (list (cadar al) (cadr al))
+                                    kvl) (cddr al)))))
+             )
+         (fout "struct ~S: ~S\n" name (map car kvl))
+         ;;(pretty-print kvl)
+         (values tree '() dict)))
        
       ((assn ,lval ,rval)
        ;;(fout "lval->ident=>~S\n" (lval->ident lval))
@@ -263,26 +263,26 @@
       ((script-file) (values (reverse kseed) dict))
       ((assn)
        (let* ((assn (reverse kseed))
-	      (lval (sx-ref assn 1)) (rval (sx-ref assn 2))
-	      (ltyp (sx-attr-ref lval 'type))
-	      (rtype (sx-attr-ref rval 'type))
-	      (rrank (and=> (sx-attr-ref rval 'rank) string->number))
-	      )
-	 ;;(fout "rval=~S type=~S rank=~S\n" rval rtype rrank)
-	 (values (cons (reverse kseed) seed) dict)))
+              (lval (sx-ref assn 1)) (rval (sx-ref assn 2))
+              (ltyp (sx-attr-ref lval 'type))
+              (rtype (sx-attr-ref rval 'type))
+              (rrank (and=> (sx-attr-ref rval 'rank) string->number))
+              )
+         ;;(fout "rval=~S type=~S rank=~S\n" rval rtype rrank)
+         (values (cons (reverse kseed) seed) dict)))
       ((add sub mul div ldiv mod)
        (let ()
-	 (values
-	  (cons (reverse kseed) seed)
-	  dict)))
+         (values
+          (cons (reverse kseed) seed)
+          dict)))
       ((fixed)
        (values
-	(cons (sx-set-attr* (reverse kseed) 'type "fixed" 'rank "0") seed)
-	dict))
+        (cons (sx-set-attr* (reverse kseed) 'type "fixed" 'rank "0") seed)
+        dict))
       ((float)
        (values
-	(cons (sx-set-attr* (reverse kseed) 'type "float" 'rank "0") seed)
-	dict))
+        (cons (sx-set-attr* (reverse kseed) 'type "float" 'rank "0") seed)
+        dict))
       (else
        (values (cons (reverse kseed) seed) dict))))
 

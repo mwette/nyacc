@@ -4,76 +4,76 @@
      '())
     (`(// . ,rest)
      `(node-join (node-or
-		  (node-self (node-typeof? '*any*))
-		  (node-closure (node-typeof? '*any*)))
-		 ,(sxpath->proc rest)))
+                  (node-self (node-typeof? '*any*))
+                  (node-closure (node-typeof? '*any*)))
+                 ,(sxpath->proc rest)))
     (`((equal? ,x) . ,rest)
      `(node-join (select-kids (node-equal? ,x))
-		 ,(sxpath->proc rest)))
+                 ,(sxpath->proc rest)))
     (`((eq? ,x) . ,rest)
      `(node-join (select-kids (node-eq? ,x))
-		 ,(sxpath->proc rest)))
+                 ,(sxpath->proc rest)))
     (((? symbol? symb) . rest)
      `(node-join (select-kids (node-typeof? (quote ,symb)))
-		 ,(sxpath->proc rest)))
+                 ,(sxpath->proc rest)))
     #;(((? procedure? proc) . rest)
     `(node-join ,proc
     ,(sxpath->proc rest)))
     (((? number? numb) . rest)
      `(node-join (node-pos ,numb)
-		 ,(sxpath->proc rest)))
+                 ,(sxpath->proc rest)))
     (_
      (error "don't grok" path))))
 
 (when #f
   (let* (;;(p1 (sxpath->proc '(// struct-def)))
-	 #;(p1 '(node-join
-	       (node-or
-		(node-self (node-typeof? '*any*))
-		(node-closure (node-typeof? '*any*)))
-	       (node-join
-		(select-kids (node-typeof? 'struct-def))
-		node-join)))
-	 ;;(f1 (eval p1 (current-module)))
-	 (p1 '(node-join
-		(node-or
-		 (node-self (node-typeof? '*any*))
-		 (node-closure (node-typeof? '*any*)))
-		(node-join
-		 (select-kids (node-typeof? 'struct-def))
-		 node-join)))
-	 (f1 (node-join
-		(node-or
-		 (node-self (node-typeof? '*any*))
-		 (node-closure (node-typeof? '*any*)))
-		(node-join
-		 (select-kids (node-typeof? 'struct-def))
-		 )))
-	 (f2 (node-join
-		(node-or
-		 (node-self (node-typeof? '*any*))
-		 (node-closure (node-typeof? '*any*)))
-		(node-join
-		 (select-kids (node-typeof? 'struct-def))
-		 (node-or
-		  (node-join
-		   (select-kids (node-typeof? 'ident))
-		   (select-kids (node-typeof? 'field-list)))
-		  (node-join
-		   (select-kids (node-typeof? 'field-list))))
-		 )
-		))
-	 (t1 `(udecl (decl-spec-list
-		      (stor-spec (typedef))
-		      (type-spec
-		       (struct-def
-			(ident "foo")
-			(field-list
-			 (comp-decl
-			  (decl-spec-list (type-spec (fixed-type "int")))
-			  (comp-declr-list (comp-declr (ident "comp")))))))
-		      (init-declr (ident "foo_t")))))
-	 )
+         #;(p1 '(node-join
+               (node-or
+                (node-self (node-typeof? '*any*))
+                (node-closure (node-typeof? '*any*)))
+               (node-join
+                (select-kids (node-typeof? 'struct-def))
+                node-join)))
+         ;;(f1 (eval p1 (current-module)))
+         (p1 '(node-join
+                (node-or
+                 (node-self (node-typeof? '*any*))
+                 (node-closure (node-typeof? '*any*)))
+                (node-join
+                 (select-kids (node-typeof? 'struct-def))
+                 node-join)))
+         (f1 (node-join
+                (node-or
+                 (node-self (node-typeof? '*any*))
+                 (node-closure (node-typeof? '*any*)))
+                (node-join
+                 (select-kids (node-typeof? 'struct-def))
+                 )))
+         (f2 (node-join
+                (node-or
+                 (node-self (node-typeof? '*any*))
+                 (node-closure (node-typeof? '*any*)))
+                (node-join
+                 (select-kids (node-typeof? 'struct-def))
+                 (node-or
+                  (node-join
+                   (select-kids (node-typeof? 'ident))
+                   (select-kids (node-typeof? 'field-list)))
+                  (node-join
+                   (select-kids (node-typeof? 'field-list))))
+                 )
+                ))
+         (t1 `(udecl (decl-spec-list
+                      (stor-spec (typedef))
+                      (type-spec
+                       (struct-def
+                        (ident "foo")
+                        (field-list
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "comp")))))))
+                      (init-declr (ident "foo_t")))))
+         )
     ;;(pp p1)
     ;;(pp f1)
     ;;(pp t1)
@@ -83,46 +83,46 @@
 
 (define sel-struct
   (let ((sel (node-join
-	      (node-or
-	       (node-self (node-typeof? '*any*))
-	       (node-closure (node-typeof? '*any*)))
-	      (node-join
-	       (select-kids (node-typeof? 'struct-def))))))
+              (node-or
+               (node-self (node-typeof? '*any*))
+               (node-closure (node-typeof? '*any*)))
+              (node-join
+               (select-kids (node-typeof? 'struct-def))))))
     (lambda (node)
       (let ((res (sel node)))
-	(and (pair? res) (car res))))))
+        (and (pair? res) (car res))))))
   
 (define sel-fields
   (let ((sel (node-or
-	      (node-join
-	       (select-kids (node-typeof? 'ident))
-	       (select-kids (node-typeof? 'field-list)))
-	      (node-join
-	       (select-kids (node-typeof? 'field-list))))))
+              (node-join
+               (select-kids (node-typeof? 'ident))
+               (select-kids (node-typeof? 'field-list)))
+              (node-join
+               (select-kids (node-typeof? 'field-list))))))
   (lambda (node)
     (let ((res (sel (list node))))
       (and (pair? res) (car res))))))
 
 (define sel-type-specs
   (let ((sel (node-join
-	      (select-kids (node-typeof? 'comp-decl))
-	      (select-kids (node-typeof? 'decl-spec-list))
-	      (select-kids (node-typeof? 'type-spec)))))
+              (select-kids (node-typeof? 'comp-decl))
+              (select-kids (node-typeof? 'decl-spec-list))
+              (select-kids (node-typeof? 'type-spec)))))
     (lambda (nodeset)
       (sel nodeset))))
 
 (define sel-declrs
   (let ((sel (node-join
-	      (select-kids (node-typeof? 'comp-decl))
-	      (select-kids (node-typeof? 'comp-declr-list))
-	      (select-kids (node-typeof? 'comp-declr)))))
+              (select-kids (node-typeof? 'comp-decl))
+              (select-kids (node-typeof? 'comp-declr-list))
+              (select-kids (node-typeof? 'comp-declr)))))
     (lambda (nodeset)
       (sel nodeset))))
 
 ;; given struct-def and elt, return elt's type-spec
 (define (probe1 struct path)
   (let* ((field-list (sel-fields struct))
-	 )
+         )
     (pp field-list)
     #f))
 
@@ -155,11 +155,11 @@
     (case (car tree)
       ((include)
        (let ((t (reverse (cdr kseed))))
-	 (if (pair? seed) (cons t seed) t)))
+         (if (pair? seed) (cons t seed) t)))
       ((comment) seed)
       (else
        (let ((t (reverse kseed)))
-	 (if (pair? seed) (cons t seed) t)))))
+         (if (pair? seed) (cons t seed) t)))))
   (define (fH seed node) (cons node seed))
   (foldts fD fU fH '() tree))
 

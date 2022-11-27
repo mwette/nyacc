@@ -25,22 +25,22 @@
   #:use-module (system base language))
 
 (define-language nx-mlang
-  #:title	"nx-mlang"
-  #:reader	(lambda (p e)
-		  (cond
-		   ((and (file-port? p)
-			 (string? (port-filename p))
-			 (not (string-prefix? "/dev/" (port-filename p))))
-		    (read-mlang-file p e))
-		   (else (read-mlang-stmt p e))))
+  #:title       "nx-mlang"
+  #:reader      (lambda (p e)
+                  (cond
+                   ((and (file-port? p)
+                         (string? (port-filename p))
+                         (not (string-prefix? "/dev/" (port-filename p))))
+                    (read-mlang-file p e))
+                   (else (read-mlang-stmt p e))))
   #:compilers   `((tree-il . ,compile-tree-il))
-  #:evaluator	(lambda (exp mod) (primitive-eval exp))
-  #:printer	pretty-print-ml
+  #:evaluator   (lambda (exp mod) (primitive-eval exp))
+  #:printer     pretty-print-ml
   #:make-default-environment
-		(lambda ()
-		  (let ((env (make-fresh-user-module)))
-		    (module-define! env 'current-reader (make-fluid))
-		    env))
+                (lambda ()
+                  (let ((env (make-fresh-user-module)))
+                    (module-define! env 'current-reader (make-fluid))
+                    env))
   )
 
 ;; --- last line ---

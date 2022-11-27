@@ -52,18 +52,18 @@
 (define raw-parser
   (make-lalr-parser
    (list (cons 'act-v tcl-expr-act-v) (cons 'len-v tcl-expr-len-v)
-	 (cons 'pat-v tcl-expr-pat-v) (cons 'rto-v tcl-expr-rto-v)
-	 (cons 'mtab tcl-expr-mtab))))
+         (cons 'pat-v tcl-expr-pat-v) (cons 'rto-v tcl-expr-rto-v)
+         (cons 'mtab tcl-expr-mtab))))
 
 (define (parse-expr-string str)
   (with-input-from-string str
     (lambda ()
       (catch 'nyacc-error
-	(lambda ()
-	  (raw-parser expr-lexr #:debug #f))
-	(lambda (key fmt . args)
-	  (apply simple-format (current-error-port) fmt args))
-	#f))))
+        (lambda ()
+          (raw-parser expr-lexr #:debug #f))
+        (lambda (key fmt . args)
+          (apply simple-format (current-error-port) fmt args))
+        #f))))
 
 (define sx-ref list-ref)
 
@@ -72,42 +72,42 @@
       ((tx (lambda (tr ix) (sx-ref tr ix)))
        (tx1 (lambda (tr) (sx-ref tr 1)))
        (ev (lambda (ex ix) (eval-expr (sx-ref ex ix))))
-       (ev1 (lambda (ex) (ev ex 1)))	; eval expr in arg 1
-       (ev2 (lambda (ex) (ev ex 2)))	; eval expr in arg 2
-       (ev3 (lambda (ex) (ev ex 3)))	; eval expr in arg 3
+       (ev1 (lambda (ex) (ev ex 1)))    ; eval expr in arg 1
+       (ev2 (lambda (ex) (ev ex 2)))    ; eval expr in arg 2
+       (ev3 (lambda (ex) (ev ex 3)))    ; eval expr in arg 3
        (eval-expr
-	(lambda (tree)
-	  (case (car tree)
-	    ((fixed) (string->number (cnumstr->scm (tx1 tree))))
-	    ((float) (string->number (cnumstr->scm (tx1 tree))))
-	    ((string) (sx-ref tree 1))
-	    ((ident) (sx-ref tree 1))
-	    ((pre-inc post-inc) (1+ (ev1 tree)))
-	    ((pre-dec post-dec) (1- (ev1 tree)))
-	    ((pos) (ev1 tree))
-	    ((neg) (- (ev1 tree)))
-	    ((not) (if (zero? (ev1 tree)) 1 0))
-	    ((mul) (* (ev1 tree) (ev2 tree)))
-	    ((div) (/ (ev1 tree) (ev2 tree)))
-	    ((mod) (modulo (ev1 tree) (ev2 tree)))
-	    ((add) (+ (ev1 tree) (ev2 tree)))
-	    ((sub) (- (ev1 tree) (ev2 tree)))
-	    ((lshift) (bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
-	    ((rshift) (bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
-	    ((lt) (if (< (ev1 tree) (ev2 tree)) 1 0))
-	    ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
-	    ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
-	    ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
-	    ((eq) (if (= (ev1 tree) (ev2 tree)) 1 0))
-	    ((ne) (if (= (ev1 tree) (ev2 tree)) 0 1))
-	    ((bitwise-not) (lognot (ev1 tree)))
-	    ((bitwise-or) (logior (ev1 tree) (ev2 tree)))
-	    ((bitwise-xor) (logxor (ev1 tree) (ev2 tree)))
-	    ((bitwise-and) (logand (ev1 tree) (ev2 tree)))
-	    ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
-	    ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
-	    (else (error "incomplete expr implementation" tree))))))
+        (lambda (tree)
+          (case (car tree)
+            ((fixed) (string->number (cnumstr->scm (tx1 tree))))
+            ((float) (string->number (cnumstr->scm (tx1 tree))))
+            ((string) (sx-ref tree 1))
+            ((ident) (sx-ref tree 1))
+            ((pre-inc post-inc) (1+ (ev1 tree)))
+            ((pre-dec post-dec) (1- (ev1 tree)))
+            ((pos) (ev1 tree))
+            ((neg) (- (ev1 tree)))
+            ((not) (if (zero? (ev1 tree)) 1 0))
+            ((mul) (* (ev1 tree) (ev2 tree)))
+            ((div) (/ (ev1 tree) (ev2 tree)))
+            ((mod) (modulo (ev1 tree) (ev2 tree)))
+            ((add) (+ (ev1 tree) (ev2 tree)))
+            ((sub) (- (ev1 tree) (ev2 tree)))
+            ((lshift) (bitwise-arithmetic-shift-left (ev1 tree) (ev2 tree)))
+            ((rshift) (bitwise-arithmetic-shift-right (ev1 tree) (ev2 tree)))
+            ((lt) (if (< (ev1 tree) (ev2 tree)) 1 0))
+            ((le) (if (<= (ev1 tree) (ev2 tree)) 1 0))
+            ((gt) (if (> (ev1 tree) (ev2 tree)) 1 0))
+            ((ge) (if (>= (ev1 tree) (ev2 tree)) 1 0))
+            ((eq) (if (= (ev1 tree) (ev2 tree)) 1 0))
+            ((ne) (if (= (ev1 tree) (ev2 tree)) 0 1))
+            ((bitwise-not) (lognot (ev1 tree)))
+            ((bitwise-or) (logior (ev1 tree) (ev2 tree)))
+            ((bitwise-xor) (logxor (ev1 tree) (ev2 tree)))
+            ((bitwise-and) (logand (ev1 tree) (ev2 tree)))
+            ((or) (if (and (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
+            ((and) (if (or (zero? (ev1 tree)) (zero? (ev2 tree))) 0 1))
+            ((cond-expr) (if (zero? (ev1 tree)) (ev3 tree) (ev2 tree)))
+            (else (error "incomplete expr implementation" tree))))))
     (eval-expr tree)))
 
 (define-public (tcl:word . args)
@@ -118,9 +118,9 @@
 ;; @end deffn
 (define-public (tcl:expr . frags)
   (let* ((strs (map tcl:any->str frags))
-	 (xarg (apply string-append strs))
-	 (tree (parse-expr-string xarg))
-	 (xval (eval-expr tree)))
+         (xarg (apply string-append strs))
+         (tree (parse-expr-string xarg))
+         (xval (eval-expr tree)))
     xval))
 
 ;; @deffn {Procedure} tcl:list arg ...
@@ -185,8 +185,8 @@
 
 (define (tcl:list->string tcl-list)
   (map (lambda (elt)
-	 (let ((str (tcl:any->str elt)))
-	   (if (string-any #\space str) (string-append "{" str "}") str)))
+         (let ((str (tcl:any->str elt)))
+           (if (string-any #\space str) (string-append "{" str "}") str)))
        tcl-list))
 
 ;; @deffn {Procedure} tcl:any->str [value] [index]
@@ -210,8 +210,8 @@
    ((val) (display (tcl:any->str val)) (newline))
    ((arg0 val)
     (if (string=? arg0 "-nonewline")
-	(display val)
-	(display val arg0)))		; broken need arg0 => port
+        (display val)
+        (display val arg0)))            ; broken need arg0 => port
    ((nnl chid val)
     (unless (string=? nnl "-nonewline") (throw 'tcl-error "puts: bad arg"))
     "(not implemented)"

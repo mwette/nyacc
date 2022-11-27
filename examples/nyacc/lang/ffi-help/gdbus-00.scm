@@ -22,20 +22,20 @@
 
 (define (g-error-message error)
   (let* ((eval (fh-object-ref error '* 'message))
-	 (pval (ffi:make-pointer eval))
-	 (sval (ffi:pointer->string pval)))
+         (pval (ffi:make-pointer eval))
+         (sval (ffi:pointer->string pval)))
     sval))
 
 (define glib-guardian (make-guardian))
 
-(define gv-string-singleton-type	; gen. variant type "(s)"
+(define gv-string-singleton-type        ; gen. variant type "(s)"
   (let* ((code "s")
-	 (cptr (ffi:string->pointer code)) ; GVariantType* for "s"
-	 (cadr (ffi:pointer-address cptr))
-	 (cvec (bytestructure (bs:vector 1 (bs:pointer int8)) (vector cadr)))
-	 (cptr (ffi:make-pointer (bs-addr cvec)))
-	 (gvar (g_variant_type_new_tuple cptr 1)))
-    (glib-guardian code)		; guard "s" from collection
+         (cptr (ffi:string->pointer code)) ; GVariantType* for "s"
+         (cadr (ffi:pointer-address cptr))
+         (cvec (bytestructure (bs:vector 1 (bs:pointer int8)) (vector cadr)))
+         (cptr (ffi:make-pointer (bs-addr cvec)))
+         (gvar (g_variant_type_new_tuple cptr 1)))
+    (glib-guardian code)                ; guard "s" from collection
     gvar))
 
 ;; y uint8
