@@ -483,7 +483,7 @@ typedef struct _GObjectClass {
     0))
 
 ;; source-properties
-(when #t
+(when #f
   (let* ((tree (parse-file "test1.c"))
          (node (and tree (sx-ref* tree 1)) )
          )
@@ -514,5 +514,15 @@ typedef struct _GObjectClass {
          (tree (parse-string code))
          )
     (pp tree)))
+
+;; bug #63604
+(when #f
+  ;;(*debug* #t)
+  (let* ((code "int foo(const float color[static 4]);")
+         ;;(code "float color[static 4];")
+         (tree (parse-string code))
+         )
+    (pp tree)
+    ))
 
 ;; --- last line ---

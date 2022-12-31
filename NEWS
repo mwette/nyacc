@@ -5,6 +5,12 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2022-12-3X  V1.08.1
+	* fixed bug #63604: static keyword in array declaration
+          This was missing rule in the C99 grammar file mach.scm.
+	* Added (@ (storage "static")) to AST for static keyword
+	  in (direct) array declarations.
+
 2022-11-XX  V1.08.0
 	* updated c99/cpp,parser to handle source properties better;
 	  (For CPP expansion will set filename to location of use.)
