@@ -2156,7 +2156,9 @@
 ;; @end example
 ;; @end deffn
 (define* (C-decl->scm code #:key expand)
-  (let ((tree (with-input-from-string code parse-c99)))
+  (let ((tree (with-input-from-string code
+                (lambda () (parse-c99 #:cpp-defs (get-sys-cpp-defs)
+                                      #:inc-dirs (get-sys-inc-dirs))))))
     (and tree
 	 (let* ((udict (c99-trans-unit->udict tree))
 		(udecl (cdr (last udict)))
