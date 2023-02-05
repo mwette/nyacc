@@ -1,4 +1,4 @@
-;;; system/ffi-help-rt.scm - NYACC's FFI help runtime
+;;; ffi/ffi-help-rt.scm - NYACC's FFI help runtime
 
 ;; Copyright (C) 2016-2019,2022 Matthew R. Wette
 ;;
@@ -17,7 +17,7 @@
 
 ;;; Code:
 
-(define-module (system ffi-help-rt)
+(define-module (ffi ffi-help-rt)
   #:export (*ffi-help-version*
 
             ;; user level routines
@@ -328,6 +328,10 @@
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
 ;; Generates an FY aggregate type based on a bytestructure descriptor.
+;; Create data with bytestructure syntax:
+;; @example
+;; (make-foo_t '((x 1) (y 2)))
+;; @end example
 ;; @end deffn
 (define-syntax-rule (define-fh-compound-type type desc type? make)
   (begin
@@ -344,10 +348,11 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make
       (case-lambda
-        ((arg) (if (bytestructure? arg)
-                   (make-struct/no-tail type arg)
-                   (make-struct/no-tail type (bytestructure desc arg))))
-        (args (make-struct/no-tail type (apply bytestructure desc args)))))))
+        (() (make-struct/no-tail type (bytestructure desc)))
+        ((arg)
+         (if (bytestructure? arg)
+             (make-struct/no-tail type arg)
+             (make-struct/no-tail type (bytestructure desc arg))))))))
 
 (define-syntax-rule (define-fh-vector-type type elt-desc type? make)
   (begin

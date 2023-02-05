@@ -333,7 +333,7 @@
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
      (opts->mopts module-opts))
     ;;
-    (sfscm "  #:use-module (system ffi-help-rt)\n")
+    (sfscm "  #:use-module (ffi ffi-help-rt)\n")
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (bytestructures guile))\n")
     (sfscm "\n")
@@ -344,7 +344,7 @@
 	  (list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries))))))
     (sfscm "\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))
-    ;; moved to (system ffi-help-rt)
+    ;; moved to (ffi ffi-help-rt)
     #;(ppscm
      '(cond-expand
        (guile-2.2)
@@ -2247,7 +2247,7 @@
       (*prefix* (symbol->string (gensym "fh-")))
       (*mport* scmport)
       (*udict* udict)
-      (sfscm "(use-modules (system ffi-help-rt))\n")
+      (sfscm "(use-modules (ffi ffi-help-rt))\n")
       (sfscm "(use-modules ((system foreign) #:prefix ffi:))\n")
       (sfscm "(use-modules (bytestructures guile))\n")
       (ppscm `(define ,(link-libs)

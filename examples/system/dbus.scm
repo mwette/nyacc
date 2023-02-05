@@ -59,11 +59,11 @@
             make-dbus-string
             make-dbus-pointer
             )
+  #:use-module (ffi ffi-help-rt)
   #:use-module (ffi epoll)
   #:use-module (ffi dbus)
 
   #:use-module (bytestructures guile)
-  #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
 
   #:use-module (ice-9 threads)

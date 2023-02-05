@@ -86,12 +86,12 @@ NYACC_C99_SRCS =				\
 
 NYACC_FH_BINS =					\
 	nyacc/lang/c99/ffi-help.go		\
-	system/ffi-help-rt.go			\
+	ffi/ffi-help-rt.go			\
 	scripts/compile-ffi.go
 
 NYACC_FH_SRCS = 				\
 	nyacc/lang/c99/ffi-help.scm		\
-	system/ffi-help-rt.scm			\
+	ffi/ffi-help-rt.scm			\
 	scripts/compile-ffi.scm
 
 BINARIES = $(NYACC_BASE_BINS) $(NYACC_C99_BINS) @NYACC_FH_BINS@
