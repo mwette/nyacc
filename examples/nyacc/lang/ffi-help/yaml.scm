@@ -20,7 +20,7 @@
 (define-module (yaml)
   #:export (read-yaml-file cnvt-tree)
   #:use-module (ffi libyaml)
-  #:use-module (system ffi-help-rt)
+  #:use-module (ffi ffi-help-rt)
   #:use-module (bytestructures guile)
   #:use-module ((system foreign) #:prefix ffi:))
 

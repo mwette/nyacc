@@ -2,7 +2,7 @@
 ;; https://github.com/jmcnamara/xlsxwriter/Readme.md
 
 (use-modules (ffi xlsxwriter))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 
 (define workbook (workbook_new "xlsxdemo.xlsx"))
 (define worksheet (workbook_add_worksheet workbook NULL))

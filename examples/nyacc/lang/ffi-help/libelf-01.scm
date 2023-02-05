@@ -3,7 +3,7 @@
 ;;                downloads/libelf-by-example.pdf
 
 (use-modules (ffi libelf))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 ;;(use-modules (bytestructures guile))
 (use-modules ((system foreign) #:prefix ffi:))
 

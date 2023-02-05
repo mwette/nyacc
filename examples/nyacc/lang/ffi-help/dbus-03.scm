@@ -30,7 +30,7 @@
 
 (use-modules (dbus00))
 (use-modules (ffi dbus))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))

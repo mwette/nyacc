@@ -1,7 +1,7 @@
 ;;
 
 (use-modules (ffi lightning))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 
 (define _jit (make-jit_state_t*))
 

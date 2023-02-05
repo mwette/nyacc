@@ -16,7 +16,7 @@
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
 (use-modules (ffi gdk2))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 (use-modules (bytestructures guile))
 

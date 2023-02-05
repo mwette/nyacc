@@ -18,7 +18,7 @@
 (define repo-path "/home/mwette/repo/github.com/pycparser")
 
 (use-modules (ffi libgit2))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))

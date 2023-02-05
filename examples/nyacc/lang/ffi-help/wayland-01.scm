@@ -18,7 +18,7 @@
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 (use-modules (bytestructures guile))
 
 (use-modules (ffi wayland-client))

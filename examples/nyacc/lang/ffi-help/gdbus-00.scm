@@ -1,6 +1,6 @@
 ;; dbus00.scm -- common items
 
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
 (use-modules (bytestructures guile))
 

@@ -20,7 +20,7 @@
 (use-modules (ffi gtk2))
 (use-modules (ffi gtkglext1))
 (use-modules (ffi glugl))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 (use-modules (bytestructures guile))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))

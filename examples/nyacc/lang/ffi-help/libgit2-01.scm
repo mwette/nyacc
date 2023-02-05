@@ -18,7 +18,7 @@
 (define repo-path "/home/mwette/repo/github.com/pycparser")
 
 (use-modules (ffi libgit2))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 
 ;; Must initialize, then shutdown after use.
 (git_libgit2_init)

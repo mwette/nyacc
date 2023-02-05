@@ -26,7 +26,7 @@
 ;;; Code:
 
 (use-modules (ffi libssh))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 (use-modules (rnrs bytevectors))
 (use-modules ((system foreign) #:prefix ffi:))
 

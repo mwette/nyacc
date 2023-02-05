@@ -8,7 +8,7 @@
 ;; without any warranty.
 
 (use-modules (ffi gdk2))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 
 ;; Initialize.
 (gdk_init NULL NULL)

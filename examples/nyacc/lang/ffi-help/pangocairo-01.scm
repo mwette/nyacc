@@ -26,7 +26,7 @@
 (use-modules (ffi gobject))
 (use-modules (ffi cairo))
 (use-modules (ffi pangocairo))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 
 (define PANGO_SCALE (ffi-pangocairo-symbol-val 'PANGO_SCALE))
 

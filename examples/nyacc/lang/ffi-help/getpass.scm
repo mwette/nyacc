@@ -8,7 +8,7 @@
 ;; without any warranty.
 
 (use-modules (ffi termios))
-(use-modules (system ffi-help-rt))
+(use-modules (ffi ffi-help-rt))
 (use-modules (ice-9 rdelim))
 
 (define* (get-passwd #:optional (prompt "password: "))
