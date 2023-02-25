@@ -101,10 +101,10 @@
    (string-fold-right
     (lambda (ch chl)
       (cond
-       ((char-set-contains? char-set:printing ch) (cons ch chl))
-       ((char=? ch #\space) (cons #\space chl))
        ((memq ch '(#\nul #\bel #\bs #\ht #\nl #\vt #\np #\cr))
         (cons* #\\ (esc->ch ch) chl))
+       ((char-set-contains? char-set:printing ch) (cons ch chl))
+       ((char=? ch #\space) (cons #\space chl))
        (else (char->hex-list ch chl))))
     '() str)))
     
