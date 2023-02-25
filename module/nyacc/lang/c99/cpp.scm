@@ -497,7 +497,6 @@
   (let loop1 ((sp #f) (ch (read-char)))
     (cond
      ((eof-object? ch) (if sp (unread-char #\space)) #f)
-     ;;((char-set-contains? inline-whitespace ch) (loop1 #t (read-char)))
      ((char-set-contains? c:ws ch) (loop1 #t (read-char)))
      ((char=? #\( ch)
       (let loop2 ((argl argl) (argv '()) (ch ch))
