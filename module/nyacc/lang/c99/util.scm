@@ -30,7 +30,7 @@
             )
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
-  #:use-module ((srfi srfi-1) #:select (append-reverse fold-right))
+  #:use-module ((srfi srfi-1) #:select (append-reverse fold fold-right))
   #:use-module (srfi srfi-2)            ; and-let*
   #:use-module (sxml fold)
   #:use-module (ice-9 popen)            ; gen-gcc-cpp-defs
@@ -189,16 +189,14 @@
 (define (remove-inc-trees tree)
   (if (not (eqv? 'trans-unit (car tree)))
       (throw 'nyacc-error "expecting c-tree"))
-  (let loop ((rslt (make-tl 'trans-unit))
-             ;;(head '(trans-unit)) (tail (cdr tree))
-             (tree (cdr tree)))
-    (cond
-     ((null? tree) (tl->list rslt))
-     ((and (eqv? 'cpp-stmt (car (car tree)))
-           (eqv? 'include (caadr (car tree))))
-      (loop (tl-append rslt `(cpp-stmt (include ,(cadadr (car tree)))))
-            (cdr tree)))
-     (else (loop (tl-append rslt (car tree)) (cdr tree))))))
+  (tl->list
+   (fold
+    (lambda (elt res)
+      (tl-append res (if (and (eqv? 'cpp-stmt (sx-tag elt))
+                              (eqv? 'include (sx-tag (sx-ref elt 1))))
+                         `(cpp-stmt (include ,(sx-ref* elt 1 1)))
+                         elt)))
+    (make-tl 'trans-unit) (sx-tail tree))))
 
 ;; @deffn {Procedure} merge-includes! tree => tree
 ;; This will (recursively) merge code from cpp-includes into the tree.
