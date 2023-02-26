@@ -91,7 +91,7 @@
 
 (define (esc->ch ch)
   (case ch ((#\nul) #\0) ((#\bel) #\a) ((#\bs) #\b) ((#\ht) #\t)
-        ((#\nl) #\n) ((#\vt) #\v) ((#\np) #\f) ((#\cr) #\r)))
+        ((#\nl) #\n) ((#\vt) #\v) ((#\np) #\f) ((#\cr) #\r) (else ch)))
    
 ;; @deffn {Procedure} scmstr->c str
 ;; to be documented
@@ -101,7 +101,7 @@
    (string-fold-right
     (lambda (ch chl)
       (cond
-       ((memq ch '(#\nul #\bel #\bs #\ht #\nl #\vt #\np #\cr))
+       ((memq ch '(#\\ #\" #\nul #\bel #\bs #\ht #\nl #\vt #\np #\cr))
         (cons* #\\ (esc->ch ch) chl))
        ((char-set-contains? char-set:printing ch) (cons ch chl))
        ((char=? ch #\space) (cons #\space chl))

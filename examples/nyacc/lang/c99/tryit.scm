@@ -525,4 +525,12 @@ typedef struct _GObjectClass {
     (pp tree)
     ))
 
+(when #f
+  (let* ((code "char *f = \"hello\\n\\\"world\\\"\";")
+         (tree (parse-string code))
+         )
+    (pp tree)
+    (pp99 tree)
+    ))
+
 ;; --- last line ---
