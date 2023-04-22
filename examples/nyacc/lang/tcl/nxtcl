@@ -31,13 +31,15 @@ exec guile --debug $0 "$@"
 	     '()))
 
 (define (compile-nx-file . args)
+  ;;(show-tcl-sxml #t)
+  ;;(show-tcl-xtil #t)
   (let* ((options (parse-args args))
 	 (file (assoc-ref options 'file)))
     (let* ((tree (call-with-input-file file
 		   (lambda (port) (read-tcl-file port (current-module))))))
-      (pretty-print tree)
+      ;;(pretty-print tree)
       ;;(display "--------------------------------------\n")
-      ;;(pretty-print-tcl tree)
+      (pretty-print-tcl tree)
       (if #f #f))))
 
 (apply compile-nx-file (cdr (program-arguments)))

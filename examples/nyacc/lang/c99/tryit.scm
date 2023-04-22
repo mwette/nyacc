@@ -483,7 +483,7 @@ typedef struct _GObjectClass {
     0))
 
 ;; source-properties
-(when #t
+(when #f
   (let* ((tree (parse-file "test1.c"))
          (node (and tree (sx-ref* tree 1)) )
          )
@@ -510,6 +510,19 @@ typedef struct _GObjectClass {
           (string-append
            "int (*foo)();\n"
            ;;"int (*bar);\n"
+           ))
+         (tree (parse-string code))
+         )
+    (pp tree)))
+
+(when #f
+  (let* ((code
+          (string-append
+           "typedef struct _Boo Boo;\n"
+           "struct _Boo { int up; };\n"
+           "typedef struct _Foo Foo;\n"
+           "struct _Foo { Boo up; };\n"
+           "typedef Foo *Foo_ptr;\n"
            ))
          (tree (parse-string code))
          )

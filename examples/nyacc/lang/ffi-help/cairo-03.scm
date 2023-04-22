@@ -8,7 +8,7 @@
 ;; without any warranty.
 
 (use-modules (ffi cairo))               ; auto-generated from cairo.h etc
-(use-modules (system ffi-help-rt))      ; pointer-to
+(use-modules (ffi ffi-help-rt))      ; pointer-to
 
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 120 120))
 (define cr (cairo_create srf))
