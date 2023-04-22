@@ -1,7 +1,7 @@
 # @configure_input@
 # -*- Makefile -*-
 #
-# Copyright (C) 2017-2020 -  Matthew R. Wette
+# Copyright (C) 2017-2020,2023 -  Matthew Wette
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -73,12 +73,14 @@ install-examples:
 	install-nx-utils \
 	install-nx-javascript \
 	install-nx-mlang \
-	install-nx-tcl
+	install-nx-tcl \
+	install-nx-tsh
 install-nx-languages: \
 	install-nx-utils \
 	install-nx-javascript \
 	install-nx-mlang \
-	install-nx-tcl
+	install-nx-tcl \
+	install-nx-tsh
 	@true
 
 UTDIR=nyacc/lang
@@ -148,14 +150,14 @@ install-nx-javascript:
 
 MLDIR=nyacc/lang/mlang
 
-NYACC_OCTAVE_SRCS= language/nx-mlang/spec.scm \
+NYACC_MLANG_SRCS= language/nx-mlang/spec.scm \
 	$(MLDIR)/body.scm $(MLDIR)/compile-tree-il.scm $(MLDIR)/mach.scm \
 	$(MLDIR)/parser.scm $(MLDIR)/pprint.scm $(MLDIR)/util.scm \
 	$(MLDIR)/xlib.scm \
 	$(MLDIR)/mach.d/oct-act.scm $(MLDIR)/mach.d/oct-tab.scm \
 	$(MLDIR)/mach.d/octia-act.scm $(MLDIR)/mach.d/octia-tab.scm
 
-NYACC_OCTAVE_BINS = language/nx-mlang/spec.go \
+NYACC_MLANG_BINS = language/nx-mlang/spec.go \
 	$(MLDIR)/compile-tree-il.go $(MLDIR)/parser.go $(MLDIR)/pprint.go \
 	$(MLDIR)/util.go $(MLDIR)/xlib.go
 
@@ -163,7 +165,7 @@ NYACC_OCTAVE_BINS = language/nx-mlang/spec.go \
 install-nx-mlang:
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
 	@echo "installing nx-mlang sources in $(SITE_SCM_DIR)"
-	@for file in $(NYACC_OCTAVE_SRCS); do \
+	@for file in $(NYACC_MLANG_SRCS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
 	  fi; \
@@ -171,7 +173,7 @@ install-nx-mlang:
 	done
 	mkdir -p $(DESTDIR)$(SITE_GO_DIR)
 	@echo "installing nx-mlang binaries in $(SITE_GO_DIR)"
-	@for binfile in $(NYACC_OCTAVE_BINS); do \
+	@for binfile in $(NYACC_MLANG_BINS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_GO_DIR)/`dirname $${binfile}`; \
 	  fi; \
@@ -206,6 +208,40 @@ install-nx-tcl:
 	done
 	mkdir -p $(DESTDIR)$(SITE_GO_DIR)
 	@echo "installing nx-tcl binaries in $(SITE_GO_DIR)"
+	@for binfile in $(NYACC_TCL_BINS); do \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_GO_DIR)/`dirname $${binfile}`; \
+	  fi; \
+	  srcfile=`echo $${binfile} | sed -e 's/\.go$$/.scm/'`; \
+	  GUILE_LOAD_PATH=$(DESTDIR)$(SITE_SCM_DIR):$(GUILE_LOAD_PATH) \
+		$(GUILD) compile \
+                -o $(DESTDIR)$(SITE_GO_DIR)/$${binfile} \
+                $(DESTDIR)$(SITE_SCM_DIR)/$${srcfile}; \
+          sleep 1; \
+        done
+
+TSHDIR=nyacc/lang/tsh
+
+NYACC_TSH_SRCS= language/nx-tsh/spec.scm \
+	$(TSHDIR)/compile-tree-il.scm $(TSHDIR)/mach.scm \
+	$(TSHDIR)/parser.scm $(TSHDIR)/xlib.scm
+
+NYACC_TSH_BINS = language/nx-tsh/spec.go \
+	$(TSHDIR)/compile-tree-il.go $(TSHDIR)/mach.go \
+	$(TSHDIR)/parser.go $(TSHDIR)/xlib.go
+
+.PHONY: install-nx-tsh
+install-nx-tsh:
+	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
+	@echo "installing nx-tsh sources in $(SITE_SCM_DIR)"
+	@for file in $(NYACC_TSH_SRCS); do \
+	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; then \
+	    mkdir -p $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${file}`; \
+	  fi; \
+	  cp $${file} $(DESTDIR)$(SITE_SCM_DIR)/$${file}; \
+	done
+	mkdir -p $(DESTDIR)$(SITE_GO_DIR)
+	@echo "installing nx-tsh binaries in $(SITE_GO_DIR)"
 	@for binfile in $(NYACC_TCL_BINS); do \
 	  if test ! -d $(DESTDIR)$(SITE_SCM_DIR)/`dirname $${binfile}`; then \
 	    mkdir -p $(DESTDIR)$(SITE_GO_DIR)/`dirname $${binfile}`; \

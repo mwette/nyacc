@@ -66,7 +66,7 @@
 (define (c99-std-val str sl)
   (cond
    ((string=? str "__DATE__") "M01 01 2001")
-   ((string=? str "__FILE__") (or (assq-ref sl 'filename) "(unknown)"))
+   ((string=? str "__FILE__") (or (assq-ref sl 'filename) "\"(unknown)\""))
    ((string=? str "__LINE__") (number->string (or (assq-ref sl 'line) 0)))
    ((string=? str "__STDC__") "1")
    ((string=? str "__STDC_HOSTED__") "0")
