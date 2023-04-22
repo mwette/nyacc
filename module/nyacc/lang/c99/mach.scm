@@ -1,6 +1,6 @@
 ;;; lang/c99/mach.scm - C parser grammer
 
-;; Copyright (C) 2015-2021 Matthew R. Wette
+;; Copyright (C) 2015-2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -568,10 +568,13 @@
       "[" "]" ($$ `(ary-declr ,$1)))
      (direct-declarator
       "[" "static" type-qualifier-list assignment-expression "]"
-      ($$ `(ary-declr ,$1 ,$4 ,$5))) ;; FIXME $4 needs "static" added
+      ($$ `(ary-declr (@ (storage "static")) ,$1 ,$4 ,$5)))
+     (direct-declarator
+      "[" "static" assignment-expression "]"
+      ($$ `(ary-declr (@ (storage "static")) ,$1 ,$4)))
      (direct-declarator
       "[" type-qualifier-list "static" assignment-expression "]"
-      ($$ `(ary-declr ,$1 (static) ,$5))) ;; FIXME $4 needs "static" added
+      ($$ `(ary-declr (@ (storage "static")) ,$1 ,$3 ,$5)))
      (direct-declarator
       "[" type-qualifier-list "*" "]"	; variable length array
       ($$ `(ary-declr ,$1 ,$3 (var-len))))

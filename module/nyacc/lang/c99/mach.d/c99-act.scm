@@ -724,10 +724,13 @@
    (lambda ($3 $2 $1 . $rest) `(ary-declr ,$1))
    ;; direct-declarator => direct-declarator "[" "static" type-qualifier-li...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(ary-declr ,$1 ,$4 ,$5))
+     `(ary-declr (@ (storage "static")) ,$1 ,$4 ,$5))
+   ;; direct-declarator => direct-declarator "[" "static" assignment-expres...
+   (lambda ($5 $4 $3 $2 $1 . $rest)
+     `(ary-declr (@ (storage "static")) ,$1 ,$4))
    ;; direct-declarator => direct-declarator "[" type-qualifier-list "stati...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(ary-declr ,$1 (static) ,$5))
+     `(ary-declr (@ (storage "static")) ,$1 ,$3 ,$5))
    ;; direct-declarator => direct-declarator "[" type-qualifier-list "*" "]"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(ary-declr ,$1 ,$3 (var-len)))

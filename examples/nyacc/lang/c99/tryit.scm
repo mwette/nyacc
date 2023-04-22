@@ -515,17 +515,14 @@ typedef struct _GObjectClass {
          )
     (pp tree)))
 
+;; bug #63604
 (when #f
-  (let* ((code
-          (string-append
-           "typedef struct _Boo Boo;\n"
-           "struct _Boo { int up; };\n"
-           "typedef struct _Foo Foo;\n"
-           "struct _Foo { Boo up; };\n"
-           "typedef Foo *Foo_ptr;\n"
-           ))
+  ;;(*debug* #t)
+  (let* ((code "int foo(const float color[static 4]);")
+         ;;(code "float color[static 4];")
          (tree (parse-string code))
          )
-    (pp tree)))
+    (pp tree)
+    ))
 
 ;; --- last line ---
