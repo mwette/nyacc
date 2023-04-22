@@ -334,6 +334,7 @@
 
       ;; TODO: check protection
       ((comma-expr . ,expr-list)
+       (sf "(")
        (pair-for-each
         (lambda (pair)
           (cond
@@ -343,7 +344,8 @@
                 (ppx (car pair)))
             (sf ", "))
            (else (ppx (car pair)))))
-        expr-list))
+        expr-list)
+       (sf ")"))
 
       ((stmt-expr (block-item-list . ,items))
        (sf "({\n") (push-il) (for-each ppx items) (pop-il) (sf "})"))
