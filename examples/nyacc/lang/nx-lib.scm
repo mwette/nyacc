@@ -59,6 +59,7 @@
             ;;
             make-nx-hash-table nx-hash-ref nx-hash-set!
             nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
+            nx-use-module
             ;;
             install-inline-language-evaluator
             uninstall-inline-language-evaluator)
@@ -142,7 +143,12 @@
          (else
           (loop stl (cons ch chl) (read-char) args)))))))
 
-;;; === in-line reading =========================================================
+;;; === call this something ====================================================
+
+(define (nx-use-module path)
+  (module-use! (current-module) (resolve-interface path)))
+
+;;; === in-line reading ========================================================
 
 (use-modules (system base language))
 (use-modules (system base compile))

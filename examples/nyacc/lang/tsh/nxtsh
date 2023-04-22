@@ -1,0 +1,67 @@
+#!/bin/sh
+# -*- scheme -*-
+#exec gdb --args guile $0 $*
+exec guile $0 $*
+!#
+
+(use-modules (nyacc lang tsh parser))
+(use-modules (nyacc lang tsh compile-tree-il))
+;;(use-modules (nyacc lang tsh pprint))
+(use-modules (srfi srfi-37))
+(use-modules (ice-9 pretty-print))
+(define pp pretty-print)
+(define (sf fmt . args) (apply simple-format #t fmt args))
+
+(define show-sxml #f)
+(define show-xtil #f)
+(define debug #f)
+
+(define (fail fmt . args)
+  (apply simple-format (current-error-port)
+	 (string-append "nxtcl: " fmt "\n")
+	 args)
+  (exit 1))
+
+(define options
+  (list
+   (option '(#\d "debug") #f #f
+           (lambda (opt name arg opts) (acons 'debug #t opts)))
+   (option '(#\s "sxml") #f #f 
+           (lambda (opt name arg opts) (acons 'sxml #t opts)))
+   (option '(#\t "xtil") #f #f 
+           (lambda (opt name arg opts) (acons 'xtil #t opts)))))
+
+(define (parse-args args)
+  (args-fold args options
+	     (lambda (opt name arg seed)
+	       (fail "unrecognized option: ~S" name)
+	       (exit 1))
+	     (lambda (file seed)
+	       (if (assq-ref 'file seed)
+		   (fail "only one inupt file can be specified"))
+	       (unless (string-suffix? ".tsh" file)
+		 (fail "expecting .tsh file"))
+	       (acons 'file file seed))
+             '()))
+
+(define (compile-nx-file . args)
+  (let* ((options (let ((opts (parse-args args)))
+                    (show-tsh-sxml (assq-ref opts 'sxml))
+                    (show-tsh-xtil (assq-ref opts 'xtil))
+                    opts))
+	 (file (assoc-ref options 'file))
+	 (tree (call-with-input-file file
+		 (lambda (port)
+                   (read-tsh-file port (current-module)
+                                  #:debug (assq-ref options 'debug)))))
+	 (xtil (compile-tree-il tree (current-module) '()))
+         (res (compile xtil #:from 'tree-il #:to 'value))
+	 )
+    (unless (unspecified? res) (sf "res = ~S\n" res))
+    ;; core dump:
+    ;;(eval xtil (current-module))
+    (if #f #f)))
+
+(apply compile-nx-file (cdr (program-arguments)))
+
+;; --- last line ---
