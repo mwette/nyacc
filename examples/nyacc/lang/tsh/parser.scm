@@ -54,8 +54,9 @@
 (define (make-tsh-symbol-reader match-table)
   (let* ((tsh-mtab match-table)
 	 (id-kw-rdr (make-ident-keyword-reader read-c-ident tsh-mtab))
-	 (ident/ix (assq-ref tsh-mtab '$ident/ix))
-	 (ident/:: (assq-ref tsh-mtab '$ident/::)))
+	 ;;(ident/ix (assq-ref tsh-mtab '$ident/ix))
+	 ;;(ident/:: (assq-ref tsh-mtab '$ident/::))
+         )
    (lambda (ch)
       (let ((pair (id-kw-rdr ch)))
 	(and
@@ -63,8 +64,8 @@
 	 (let ((ch (read-char)))
 	   (cond
 	    ((eof-object? ch) pair)
-	    ((char=? ch #\() (unread-char ch) (cons ident/ix (cdr pair)))
-	    ((char=? ch #\:)
+	    ;;((char=? ch #\() (unread-char ch) (cons ident/ix (cdr pair)))
+	    #;((char=? ch #\:)
              (let ((ch (read-char)))
                (if (char=? ch #\:)
                    (cons ident/:: (cdr pair))
@@ -135,14 +136,21 @@
 	(set-source-properties! pair srcp)
 	pair))
     (lambda ()
-      (let ((plev 0) (blev 0) (bol #t))
+      (let ((plev 0) (blev 0) (nws #f) (bol #t))
+        ;; (-level, [-level, no-ws seen, begin-of-line
+        ;; first token should be OK w/ ws
 	(lambda ()
 	  (add-src-prop
 	   (let loop ((ch (read-char)))
 	     (cond
 	      ((eof-object? ch) (assc-$ (cons '$end ch)))
 	      ((eqv? ch #\newline) (set! bol #t) (cons nl-val "\n"))
-	      ((char-set-contains? space-cs ch) (loop (read-char)))
+	      ((char-set-contains? space-cs ch)
+               (set! nws #f) (loop (read-char)))
+              #;((and bol (not wss) (char=? ch #\%)) ;; %if 0 ... %endif
+              (preprocessor-insn))
+              (nws (unread-char ch) (set! nws #f) (assc-$ `(no-ws . "")))
+              ((begin (set! nws #t) #f))
 	      ((read-comm ch bol) => assc-$)
               ((and (or (zero? plev) (> blev plev)) (read-key ch)) => assc-$)
 	      ((read-c-num ch) => (lambda (p) (assc-$ p)))
@@ -163,7 +171,7 @@
 
 (define raw-parser
   (make-lalr-parser (acons 'act-v tsh-act-v tsh-tables)
-		    #:skip-if-unexp '($lone-comm $code-comm "\n")))
+		    #:skip-if-unexp '($lone-comm $code-comm "\n" no-ws)))
 
 (define parse-tsh
   (let ((make-tsh-lexer (make-tsh-lexer-generator tsh-mtab)))
@@ -189,11 +197,8 @@
 (include-from-path "nyacc/lang/tsh/mach.d/tsh-ia-act.scm")
 
 (define raw-ia-parser
-  (make-lalr-parser
-   (acons 'act-v tsh-ia-act-v tsh-ia-tables)
-   ;;#:skip-if-unexp '($lone-comm $code-comm "\n") ; OPTION-0
-   ;;#:skip-if-unexp '("\n") ; OPTION-1
-   #:interactive #t))
+  (make-lalr-parser (acons 'act-v tsh-ia-act-v tsh-ia-tables)
+                    #:skip-if-unexp '(no-ws) #:interactive #t))
 
 ;; @deffn {Procedure} read-tsh-stmt port env
 ;; Read a TCLish item.  Return a SXML tree;

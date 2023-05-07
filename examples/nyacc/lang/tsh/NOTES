@@ -9,14 +9,18 @@ $ is the unbox operator
 --<letter>+ is a keyword (except in expression lexical context)
 --<letter>+=<nonspace>* is a keypair (except in expression lexical context)
 
+booleans are 0 false, else true
+
 vectors [flt 1.0 2.0 ]  or [int 1 2 3]
-  how about [any 1.0 2 abc] ??
+  how about [any 1.0 2 abc] ?? NEED for rest-args
   how about [sym a b c]
 make-flt-vec 32 0.0
 make-int-ved 32 0
 add bytevectors
 
-booleans are 0 false, else true
+foo(abc) : dict
+bar(1) : array
+bar(1,2) : array
 
 [struct a 1 b 2 c 0] OR? [assoc a 1 b 2 c 3]
 
@@ -27,6 +31,28 @@ files end in .tsh (Tcl-iSH)
 add: global ports use
 
 path: abc::def::ghi      # note: use stmt is read specially so ice-9 works
+
+===============================================================================
+
+struct/array refs:
+
+NO $$abc => $($abc)
+NO $$abc(1) => $($abc(1)) or $($abc)(1)  [prefer second]
+NO ambiguity: $$abc(1) : is this $($abc(1))
+   check var-expr in mach.scm
+NO $($a(1))(2)
+
+only syntax is:
+  set expr val
+  set $expr(x) val
+That is, indexed are always derefed.  The only way to make an array or
+struct is via the struct and array functions.
+
+shared arrays?  array slices? ...   Better for ca
+
+set mat [f64mat (1.0, 2.0) (3.0, 4.0)]
+set xyz [i32mat (1, 2) (3, 4)]
+So could do $mat(1:3,0:end)
 
 ===============================================================================
 

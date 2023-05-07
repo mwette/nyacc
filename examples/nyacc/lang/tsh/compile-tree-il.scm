@@ -175,8 +175,9 @@
               (nref (lookup name dict)))
 	 (values (+SP `(set ,nref ,value)) '() dict)))
 
-      ((set-indexed (ident ,name) ,index ,value)
-       (let ((nref (lookup name (nx-ensure-variable name dict))))
+      ((set-ix (ident ,name) ,index ,value)
+       (let ((nref (lookup name dict)))
+	 (unless nref (throw 'tsh-error "not defined: ~S" name))
 	 (values (+SP `(set-ix ,nref ,index ,value)) '() dict)))
 
       ((call (ident ,name) . ,args)
@@ -347,19 +348,11 @@
 			`(set! ,nref ,value))))
 	  (values (cons (+SP val) seed) kdict)))
 
-       ((set-indexed)
-	;; This only works if the variable appeared as string constant in fD.?
+       ((set-ix)
 	(let* ((value (car kseed))
 	       (indx (cadr kseed))
 	       (nref (caddr kseed))
-	       (toplev? (eq? (car nref) 'toplevel))
-	       (top (make-defonce (cadr nref)
-				  `(call ,(xlib-ref 'tsh:make-array))))
-	       (bot `(set! ,nref (if (call (toplevel hash-table?) ,nref) ,nref
-				     `(call ,(xlib-ref 'tsh:make-array)))))
-	       (val `(seq
-		      ,(if toplev? top bot)
-		      (call ,(xlib-ref 'tsh:array-set1) ,nref ,indx ,value))))
+	       (val `(call ,(xlib-ref 'tsh:indexed-set!) ,nref ,indx ,value)))
 	  (values (cons (+SP val) seed) kdict)))
 
        #;((body)
@@ -376,6 +369,7 @@
 	(values seed kdict))
 
        ;; others to add: incr foreach while continue break
+       ;; need incr-indexed
        ((incr)
 	(let* ((tail (rtail kseed))
 	       (name (car tail))
@@ -395,6 +389,9 @@
 	(let* ((tail (rtail kseed))
 	       (stmt `(call (@@ (nyacc lang nx-lib) sprintf) . ,tail)))
 	  (values (cons (+SP stmt) seed) kdict)))
+
+       ((expr-list)
+        (values (cons (+SP `(primcall list ,@(rtail kseed))) seed) kdict))
 
        ((expr)
 	;;(sferr "expr:~S\n" kseed)
@@ -436,7 +433,7 @@
                (name (car tail))
                (ref (lookup name kdict))
                (args (cdr tail))
-               (proc (xlib-ref 'tsh:array-ref)))
+               (proc (xlib-ref 'tsh:indexed-ref)))
 	  (unless ref (throw 'tsh-error "undefined variable: ~A" name))
 	  (values (+SP (cons `(call ,proc ,ref ,@args) seed)) kdict)))
 

@@ -60,9 +60,9 @@
    (lambda ($1 . $rest) `(use ,@$1))
    ;; exec-stmt => "set" ident unit-expr
    (lambda ($3 $2 $1 . $rest) `(set ,$2 ,$3))
-   ;; exec-stmt => "set" ident/ix expr-list unit-expr
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(set-ix ,$2 ,$3 ,$4))
+   ;; exec-stmt => "set" "$" 'no-ws ident "(" expr-list ")" unit-expr
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(set-ix ,$4 ,$6 ,$8))
    ;; exec-stmt => ident expr-seq
    (lambda ($2 $1 . $rest) `(call ,$1 ,@(cdr $2)))
    ;; exec-stmt => "(" expr-list ")"
@@ -105,11 +105,12 @@
    (lambda ($2 $1 . $rest) `(incr ,$2))
    ;; exec-stmt => "incr" ident unit-expr
    (lambda ($3 $2 $1 . $rest) `(incr ,$2 ,$3))
-   ;; exec-stmt => "incr" ident/ix expr-list
-   (lambda ($3 $2 $1 . $rest) `(incr/ix ,$2 ,$3))
-   ;; exec-stmt => "incr" ident/ix expr-list unit-expr
-   (lambda ($4 $3 $2 $1 . $rest)
-     `(incr/ix ,$2 ,$3 ,$4))
+   ;; exec-stmt => "incr" ident 'no-ws "(" expr-list ")"
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(incr/ix ,$2 ,$5))
+   ;; exec-stmt => "incr" ident 'no-ws "(" expr-list ")" unit-expr
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(incr/ix ,$2 ,$5 ,$7))
    ;; if-stmt => "if" unit-expr "{" stmt-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest) `(if ,$2 ,$4))
    ;; if-stmt => "if" unit-expr "{" stmt-list "}" "else" "{" stmt-list "}"
@@ -220,11 +221,11 @@
    (lambda ($2 $1 . $rest) `(not ,$2))
    ;; unary-expression => "~" unary-expression
    (lambda ($2 $1 . $rest) `(bitwise-not ,$2))
-   ;; primary-expression => "$" '$ident
-   (lambda ($2 $1 . $rest) `(deref ,$2))
-   ;; primary-expression => "$" '$ident/ix "(" expr-list ")"
-   (lambda ($5 $4 $3 $2 $1 . $rest)
-     `(deref-indexed ,$2 ,$4))
+   ;; primary-expression => "$" 'no-ws '$ident
+   (lambda ($3 $2 $1 . $rest) `(deref ,$3))
+   ;; primary-expression => "$" 'no-ws '$ident 'no-ws "(" expr-list ")"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(deref-indexed ,$3 ,$6))
    ;; primary-expression => fixed
    (lambda ($1 . $rest) $1)
    ;; primary-expression => float
@@ -241,14 +242,11 @@
    (lambda ($3 $2 $1 . $rest) $2)
    ;; primary-expression => "[" exec-stmt "]"
    (lambda ($3 $2 $1 . $rest) `(eval ,$2))
-   ;; expr-list => expression expr-list-tail
-   (lambda ($2 $1 . $rest)
-     (tl->list (tl-insert $2 $1)))
-   ;; expr-list => expression
-   (lambda ($1 . $rest) $1)
-   ;; expr-list-tail => "," expression
-   (lambda ($2 $1 . $rest) (make-tl 'expr-list $2))
-   ;; expr-list-tail => expr-list-tail "," expression
+   ;; expr-list => expr-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; expr-list-1 => expression
+   (lambda ($1 . $rest) (make-tl 'expr-list $1))
+   ;; expr-list-1 => expr-list-1 "," expression
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; expr-seq => expr-seq-1
    (lambda ($1 . $rest) (tl->list $1))
@@ -258,8 +256,6 @@
    (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; ident => '$ident
    (lambda ($1 . $rest) `(ident ,$1))
-   ;; ident/ix => '$ident/ix
-   (lambda ($1 . $rest) `(ident/ix ,$1))
    ;; fixed => '$fixed
    (lambda ($1 . $rest) `(fixed ,$1))
    ;; float => '$float

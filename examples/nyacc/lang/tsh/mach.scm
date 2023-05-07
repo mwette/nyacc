@@ -101,7 +101,8 @@
 
     (exec-stmt
      ("set" ident unit-expr ($$ `(set ,$2 ,$3)))
-     ("set" ident/ix expr-list unit-expr ($$ `(set-ix ,$2 ,$3 ,$4)))
+     ("set" "$" 'no-ws ident "(" expr-list ")" unit-expr
+      ($$ `(set-ix ,$4 ,$6 ,$8)))
      (ident expr-seq ($$ `(call ,$1 ,@(cdr $2))))
      ("(" expr-list ")" ($$ $2))
      ("{" stmt-list "}" ($$ $2))
@@ -116,9 +117,9 @@
      ("return" unit-expr ($$ `(return ,$2)))
      ("incr" ident ($$ `(incr ,$2)))
      ("incr" ident unit-expr ($$ `(incr ,$2 ,$3)))
-     ("incr" ident/ix expr-list ($$ `(incr/ix ,$2 ,$3)))
-     ("incr" ident/ix expr-list unit-expr ($$ `(incr/ix ,$2 ,$3 ,$4)))
-     )
+     ("incr" ident 'no-ws "(" expr-list ")" ($$ `(incr/ix ,$2 ,$5)))
+     ("incr" ident 'no-ws "(" expr-list ")" unit-expr
+      ($$ `(incr/ix ,$2 ,$5 ,$7))))
 
     (if-stmt
      ("if" unit-expr "{" stmt-list "}"
@@ -206,8 +207,8 @@
      ("!" unary-expression ($$ `(not ,$2)))
      ("~" unary-expression ($$ `(bitwise-not ,$2))))
     (primary-expression
-     ("$" '$ident ($$ `(deref ,$2)))
-     ("$" '$ident/ix "(" expr-list ")" ($$ `(deref-indexed ,$2 ,$4)))
+     ("$" 'no-ws $ident ($$ `(deref ,$3)))
+     ("$" 'no-ws $ident 'no-ws "(" expr-list ")" ($$ `(deref-indexed ,$3 ,$6)))
      (fixed)
      (float)
      (string)
@@ -220,11 +221,10 @@
      )
 
     (expr-list
-     (expression expr-list-tail ($$ (tl->list (tl-insert $2 $1))))
-     (expression))
-    (expr-list-tail
-     ("," expression ($$ (make-tl 'expr-list $2)))
-     (expr-list-tail "," expression ($$ (tl-append $1 $3))))
+     (expr-list-1 ($$ (tl->list $1))))
+    (expr-list-1
+     (expression ($$ (make-tl 'expr-list $1)))
+     (expr-list-1 "," expression ($$ (tl-append $1 $3))))
 
     (expr-seq
      (expr-seq-1 ($$ (tl->list $1))))
@@ -243,7 +243,7 @@
     |#
 
     (ident ($ident ($$ `(ident ,$1))))
-    (ident/ix ($ident/ix ($$ `(ident/ix ,$1))))
+    ;;(ident/ix ($ident/ix ($$ `(ident/ix ,$1))))
     (fixed ($fixed ($$ `(fixed ,$1))))
     (float ($float ($$ `(float ,$1))))
     (string ($string ($$ `(string ,$1))))
@@ -256,8 +256,7 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine tsh-spec))
-   #:keep 0
-   #:keepers '($code-comm $lone-comm "\n")))
+   #:keep 0 #:keepers '($code-comm $lone-comm "\n" 'no-ws)))
 
 (define tsh-ia-spec
   (restart-spec tsh-mach 'item))
@@ -266,9 +265,7 @@
   (compact-machine
    (hashify-machine
     (make-lalr-machine tsh-ia-spec))
-   ;;#:keep 0 #:keepers '("\n") ;; OPTION-1
-   #:keep 0 #:keepers '()
-   ))
+   #:keep 0 #:keepers '(no-ws)))
 
 ;;; =====================================
 
