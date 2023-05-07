@@ -175,10 +175,10 @@
               (nref (lookup name dict)))
 	 (values (+SP `(set ,nref ,value)) '() dict)))
 
-      ((set-ix (ident ,name) ,index ,value)
+      ((set-indexed (ident ,name) ,index ,value)
        (let ((nref (lookup name dict)))
 	 (unless nref (throw 'tsh-error "not defined: ~S" name))
-	 (values (+SP `(set-ix ,nref ,index ,value)) '() dict)))
+	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
       ((call (ident ,name) . ,args)
        (let ((ref (lookup name dict)))
@@ -348,7 +348,7 @@
 			`(set! ,nref ,value))))
 	  (values (cons (+SP val) seed) kdict)))
 
-       ((set-ix)
+       ((set-indexed)
 	(let* ((value (car kseed))
 	       (indx (cadr kseed))
 	       (nref (caddr kseed))
@@ -387,12 +387,17 @@
 
        ((format)
 	(let* ((tail (rtail kseed))
-	       (stmt `(call (@@ (nyacc lang nx-lib) sprintf) . ,tail)))
+	       (stmt `(call ,(xlib-ref 'sprintf) . ,tail)))
 	  (values (cons (+SP stmt) seed) kdict)))
 
        ((expr-list)
         (values (cons (+SP `(primcall list ,@(rtail kseed))) seed) kdict))
 
+       ((last)
+        (values
+         (cons (+SP `(call ,(xlib-ref 'last) . ,(rtail kseed))) seed)
+         kdict))
+        
        ((expr)
 	;;(sferr "expr:~S\n" kseed)
 	(values (cons (+SP (car kseed)) seed) kdict))

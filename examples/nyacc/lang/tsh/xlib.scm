@@ -26,7 +26,7 @@
   #:use-module (nyacc lang tsh parser)
   #:use-module (nyacc lang tsh compile-tree-il)
   #:use-module (nyacc lang nx-util)
-  #:use-module ((srfi srfi-1) #:select (split-at))
+  #:use-module ((srfi srfi-1) #:select (split-at last))
   #:use-module (system base compile)
   #:use-module (ice-9 hash-table)
   ;;#:use-module (rnrs arithmetic bitwise)
@@ -92,6 +92,8 @@
       (throw 'tsh-error "puts: bad arg"))
     "(not implemented)"
     )))
+
+(define-public tsh:last last)
 
 ;; f64 unit-expr or maybe  use the array i/f
 (define (list->typed-vec type elts)

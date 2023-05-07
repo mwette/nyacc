@@ -49,29 +49,6 @@
 ;; keysym: -abc               ($ident/key ) ???
 ;; indexed-symbol: abc(...)   ($ident/ix ...)
 
-
-;; symbol is foo or foo(x,y,z) 
-(define (make-tsh-symbol-reader match-table)
-  (let* ((tsh-mtab match-table)
-	 (id-kw-rdr (make-ident-keyword-reader read-c-ident tsh-mtab))
-	 ;;(ident/ix (assq-ref tsh-mtab '$ident/ix))
-	 ;;(ident/:: (assq-ref tsh-mtab '$ident/::))
-         )
-   (lambda (ch)
-      (let ((pair (id-kw-rdr ch)))
-	(and
-	 pair
-	 (let ((ch (read-char)))
-	   (cond
-	    ((eof-object? ch) pair)
-	    ;;((char=? ch #\() (unread-char ch) (cons ident/ix (cdr pair)))
-	    #;((char=? ch #\:)
-             (let ((ch (read-char)))
-               (if (char=? ch #\:)
-                   (cons ident/:: (cdr pair))
-                   (begin (unread-char ch) (unread-char #\:) pair))))
-	    (else (unread-char ch) pair))))))))
-
 (define cs:keyword (char-set-adjoin char-set:letter+digit #\_))
 
 (define (read-key ch)
@@ -88,6 +65,7 @@
          (let ((ch (read-char)))
            `($keychar . ,(string ch)))))))
 
+#|
 (define (read-path)
   (define (return path chl)
     (reverse (if (pair? chl) (cons (rls chl) path) path)))
@@ -109,6 +87,23 @@
         ((char=? #\return ch) (return path chl))
         ((char=? #\: ch) (loop (cons (rls chl) path) '() 1 (read-char)))
         (else (loop path (cons ch chl) 1 ch)))))))
+|#
+
+(define (read-$-form ch)
+  (and
+   (char=? ch #\$)
+   (let loop ((chl '()) (st 0) (ch (read-char)))
+     (case st
+       ((0)
+        (cond
+         ((char-set-contains? c:if ch) (loop (cons ch chl) 1 (read-char)))
+         (else (error "bad ident")))) ;; FIXME
+       ((1)
+        (cond
+         ((eof-object? ch) (cons '$deref (rls chl)))
+         ((char-set-contains? c:ir ch) (loop (cons ch chl) st (read-char)))
+         ((char=? ch #\() (unread-char ch) (cons '$deref/ix (rls chl)))
+         (else (unread-char ch) (cons '$deref (rls chl)))))))))
 
 (define (make-tsh-lexer-generator match-table)
   (let* ((tsh-mtab match-table)
@@ -121,8 +116,8 @@
 	 (rd-str (make-string-reader #\" (assq-ref tsh-mtab '$string)))
  	 (rd-sym (make-string-reader #\' (assq-ref tsh-mtab '$symbol)))
 	 (read-comm (make-comm-reader '(("#" . "\n")) #:eat-newline #f))
-	 (read-tsh-symbol (make-tsh-symbol-reader match-table))
-	 (nl-val (assoc-ref chrseq "\n"))
+	 (read-tsh-symbol (make-ident-keyword-reader read-c-ident match-table))
+         (nl-val (assoc-ref chrseq "\n"))
 	 (lparen (assoc-ref chrseq "("))
 	 (rparen (assoc-ref chrseq ")"))
 	 (lbrack (assoc-ref chrseq "["))
@@ -152,11 +147,10 @@
               (nws (unread-char ch) (set! nws #f) (assc-$ `(no-ws . "")))
               ((begin (set! nws #t) #f))
 	      ((read-comm ch bol) => assc-$)
+              ((read-$-form ch) => assc-$)
               ((and (or (zero? plev) (> blev plev)) (read-key ch)) => assc-$)
 	      ((read-c-num ch) => (lambda (p) (assc-$ p)))
-	      ((read-tsh-symbol ch) =>
-               (lambda (pair)
-                 (if (eq? (car pair) use) (cons use (read-path)) pair)))
+	      ((read-tsh-symbol ch))
 	      ((char=? #\( ch) (set! plev (1+ plev)) (cons lparen "("))
 	      ((char=? #\) ch) (set! plev (1- plev)) (cons rparen ")"))
 	      ((char=? #\( ch) (set! blev (1+ blev)) (cons lbrack "["))

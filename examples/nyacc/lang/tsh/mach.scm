@@ -94,15 +94,13 @@
      ($lone-comm ($$ `(comment ,$1))))
      
     (decl-stmt
-     ;;("use" path ($$ `(use ,@(cdr $2))))
-     ("use" ($$ `(use ,@$1)))
-     ;;("upvar" ident-list) ;; like global or upvar
+     ("use" path ($$ `(use ,@(cdr $2))))
      )
 
     (exec-stmt
      ("set" ident unit-expr ($$ `(set ,$2 ,$3)))
-     ("set" "$" 'no-ws ident "(" expr-list ")" unit-expr
-      ($$ `(set-ix ,$4 ,$6 ,$8)))
+     ("set" $deref/ix "(" expr-list ")" unit-expr
+      ($$ `(set-indexed (deref (ident ,$2)) ,$4 ,$6)))
      (ident expr-seq ($$ `(call ,$1 ,@(cdr $2))))
      ("(" expr-list ")" ($$ $2))
      ("{" stmt-list "}" ($$ $2))
@@ -117,9 +115,10 @@
      ("return" unit-expr ($$ `(return ,$2)))
      ("incr" ident ($$ `(incr ,$2)))
      ("incr" ident unit-expr ($$ `(incr ,$2 ,$3)))
-     ("incr" ident 'no-ws "(" expr-list ")" ($$ `(incr/ix ,$2 ,$5)))
-     ("incr" ident 'no-ws "(" expr-list ")" unit-expr
-      ($$ `(incr/ix ,$2 ,$5 ,$7))))
+     ;;("incr" ident 'no-ws "(" expr-list ")" ($$ `(incr/ix ,$2 ,$5)))
+     #;("incr" ident 'no-ws "(" expr-list ")" unit-expr
+     ($$ `(incr/ix ,$2 ,$5 ,$7)))
+     )
 
     (if-stmt
      ("if" unit-expr "{" stmt-list "}"
@@ -207,8 +206,10 @@
      ("!" unary-expression ($$ `(not ,$2)))
      ("~" unary-expression ($$ `(bitwise-not ,$2))))
     (primary-expression
-     ("$" 'no-ws $ident ($$ `(deref ,$3)))
-     ("$" 'no-ws $ident 'no-ws "(" expr-list ")" ($$ `(deref-indexed ,$3 ,$6)))
+     ;;("$" 'no-ws $ident ($$ `(deref ,$3)))
+     ;;("$" 'no-ws $ident 'no-ws "(" expr-list ")" ($$ `(deref-indexed ,$3 ,$6)))
+     ($deref ($$ `(deref ,$1)))
+     ($deref/ix "(" expr-list ")" ($$ `(deref-indexed ,$1 ,$3)))
      (fixed)
      (float)
      (string)
@@ -216,7 +217,7 @@
      (keychar)
      (keyword)
      ;;($chlit ($$ `(char ,$1)))
-     ("(" expr-list ")" ($$ $2))
+     ("(" expr-list ")" ($$ `(last ,$2)))
      ("[" exec-stmt "]" ($$ `(eval ,$2)))
      )
 
@@ -232,18 +233,15 @@
      ($empty ($$ (make-tl 'seq-list)))
      (expr-seq-1 primary-expression ($$ (tl-append $1 $2))))
 
-    #|
     (path
      (path-1 ($$ (tl->list $1))))
     (path-1
      ($ident ($$ (make-tl 'path $1)))
-     ($ident/:: path-1 ($$ (tl-insert $2 $1)))
      ($string ($$ (make-tl 'path $1)))
-     ($string "::" path-1 ($$ (tl-insert $3 $1))))
-    |#
+     (path-1 'no-ws "::" 'no-ws $ident ($$ (tl-append $1 $5)))
+     (path-1 'no-ws "::" 'no-ws $string ($$ (tl-append $1 $5))))
 
     (ident ($ident ($$ `(ident ,$1))))
-    ;;(ident/ix ($ident/ix ($$ `(ident/ix ,$1))))
     (fixed ($fixed ($$ `(fixed ,$1))))
     (float ($float ($$ `(float ,$1))))
     (string ($string ($$ `(string ,$1))))

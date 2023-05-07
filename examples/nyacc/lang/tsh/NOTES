@@ -47,6 +47,9 @@ only syntax is:
   set $expr(x) val
 That is, indexed are always derefed.  The only way to make an array or
 struct is via the struct and array functions.
+Usng no-ws (no-whitespace) doesn't work: return [foo $abc]
+So, need to go back to parse-$-form $abc( and return (deref-ident "abc")
+Now, for paths, which I just fixed : keep as is?
 
 shared arrays?  array slices? ...   Better for ca
 
