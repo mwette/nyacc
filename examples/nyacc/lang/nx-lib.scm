@@ -63,6 +63,7 @@
             ;;
             install-inline-language-evaluator
             uninstall-inline-language-evaluator)
+  #:use-module (ice-9 exceptions)
   )
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))

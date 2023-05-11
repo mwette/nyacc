@@ -29,6 +29,7 @@
   #:use-module ((srfi srfi-1) #:select (split-at last))
   #:use-module (system base compile)
   #:use-module (ice-9 hash-table)
+  #:use-module (ice-9 exceptions)
   ;;#:use-module (rnrs arithmetic bitwise)
   )
 (use-modules (ice-9 pretty-print))
@@ -36,7 +37,9 @@
 (define (pperr exp) (pretty-print exp (current-error-port)))
 
 (define (tsh-error fmt . args)
-  (apply throw 'misc-error fmt args))
+  (raise-exception
+   (make-exception-with-message
+    (apply simple-format #f fmt args))))
 
 (define (xlib-ref name) `(@@ (nyacc lang tsh xlib) ,name))
 
@@ -81,17 +84,10 @@
 ;; puts -nonewline object
 ;; puts -nonewline <port> object
 (define-public tsh:puts
-  (case-lambda
+  (case-lambda ;; maybe match for keywords
    ((val) (display val) (newline))
-   ((arg0 val)
-    (if (and (keyword? arg0) (equal? arg0 #:no_newline))
-	(display val)
-	(display val arg0)))		; broken need arg0 => port
-   ((nnl chid val)
-    (unless (and (keyword? nnl) (equal? nnl #:nonewline))
-      (throw 'tsh-error "puts: bad arg"))
-    "(not implemented)"
-    )))
+   ((port val) (display val port) (newline))
+   ))
 
 (define-public tsh:last last)
 
@@ -119,7 +115,7 @@
           (call-with-values
               (lambda () (split-at indx rk))
             (lambda (indx rest)
-              (lambda () (tsh:indexed-ref (apply array-ref obj indx) rest))))))
+              (tsh:indexed-ref (apply array-ref obj indx) rest)))))
        (else (tsh-error "indexed-ref on non-array, non-struct")))))
   
 (define-public (tsh:indexed-set! obj indx val)
