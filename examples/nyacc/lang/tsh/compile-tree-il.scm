@@ -102,6 +102,11 @@
       )
     (sx-match tree
 
+      ;; optimizations
+      ((last (expr-list ,unit))
+       (values unit '() dict))
+      ;; ---
+
       ((keychar ,sval)
        (values '() (+SP `(const ,(string->keyword sval))) dict))
 
