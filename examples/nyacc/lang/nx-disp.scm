@@ -54,7 +54,9 @@
   #:export (mat-disp vec-disp parse-fmt parse-fmt-str fmt->str)
   )
 
-(define (sf fmt . args) (apply simple-format #t fmt args))
+(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
+(define (pperr x) (pretty-print x (current-error-port) #:per-line-prefix "  "))
 
 ;; For a value tell me how many digits it will have, or equiv pow-10 exponent.
 ;; 35 => 2
@@ -66,13 +68,14 @@
 ;;   width - min wid or 0 for any
 ;;   type - #\d #\x
 
-;; (parse-fmt ch port) => (type flags width prec) | #\%
+;; (parse-fmt ch port) => (type width prec flags) | #\%
+;; maybe change to (type width prec . flags)
 (define* (parse-fmt ch #:optional (port (current-input-port)))
   (define (rd-ch) (read-char port))
   (define ch0 (char->integer #\0))
   (define (ch-add ch val) (+ (- (char->integer ch) ch0) (* 10 val)))
   
-  (let loop ((fl '()) (wd 0) (pc 0) (ty #f) (st 0) (ch ch))
+  (let loop ((fl '()) (wd #f) (pc #f) (ty #f) (st 0) (ch ch))
     ;; flags width precision type state char
     (case st
       ((0) ;; looking for %
@@ -85,10 +88,19 @@
          (else (loop fl wd pc ty 2 ch))))
       ((2) ;; read width
        (cond
+        ((char-numeric? ch) (loop fl (ch-add ch 0) pc ty 21 (rd-ch)))
+        ((char=? #\. ch) (loop fl wd pc ty 3 (rd-ch)))
+        (else (loop fl wd pc ty 4 ch))))
+      ((21)
+       (cond
         ((char-numeric? ch) (loop fl (ch-add ch wd) pc ty st (rd-ch)))
         ((char=? #\. ch) (loop fl wd pc ty 3 (rd-ch)))
         (else (loop fl wd pc ty 4 ch))))
       ((3) ;; read precision
+       (cond
+        ((char-numeric? ch) (loop fl wd (ch-add ch 0) ty 31 (rd-ch)))
+        (else (loop fl wd pc ty 4 ch))))
+      ((31)
        (cond
         ((char-numeric? ch) (loop fl wd (ch-add ch pc) ty st (rd-ch)))
         (else (loop fl wd pc ty 4 ch))))
@@ -102,7 +114,7 @@
          ;;((#\s)
          ;;((#\o)
          ))
-      ((5) (list ty fl wd pc)))))
+      ((5) (list ty wd pc fl)))))
 
 ;; exp for val = [1.0,10.0)x10^exp
 
@@ -139,30 +151,45 @@
       (vector-ref (if upper uc lc) v))))
 
 ;; (int->str 23 #\d '(#\+) 4 0) => " +23"
-(define (int->str val type flags width prec)
-  (let* ((base (case type ((#\d) 10) ((#\x) 16) (else (error "bad type"))))
+(define (int->str val type width prec flags)
+  (let* ((base (case type ((#\d) 10) ((#\x) 16) ((#\o) 8)
+                     (else (error "bad type"))))
          (left (memq #\- flags))
-         (sign (cond ((negative? val) #\-) ((memq #\+ flags) #\+) (else #f)))
+         (sign (cond ((negative? val) #\-)
+                     ((memq #\+ flags) #\+)
+                     (else #f)))
          (val (abs val))
-         (valw (+ (exp-of-base (* 1.0 val) base) 1 (if sign 1 0)))
-         (wid (cond ((zero? width) valw) ((> valw width) valw) (else width)))
+         (exb (exp-of-base (* 1.0 val) base))
+         (valw (1+ (if sign (1+ exb) exb)))
+         (wid (cond ((not width) valw)
+                    ((zero? width) valw)
+                    ((> valw width) valw)
+                    (else width)))
          (npad (let ((n (if (> valw wid) 0 (- wid valw)))) (if left (- n) n)))
-         (pad (cond ((zero? npad) #f) ((memq #\0 flags) #\0) (else #\space)))
+         (pad (cond ((zero? npad) #f) (left #\space)
+                    ((memq #\0 flags) #\0) (else #\space)))
          (sign-first (and (positive? npad) (char=? pad #\0)))
-         (upper (char-upper-case? type))
-         )
+         (upper (char-upper-case? type)))
     (with-output-to-string
       (lambda ()
         (if (and sign sign-first) (write-char sign))
         (let loop ((n npad)) (when (> n 0) (write-char pad) (loop (1- n))))
         (if (and sign (not sign-first)) (write-char sign))
-        (let loop ((v val))
+        (let loop ((v val) (m (expt base exb)))
           (when (positive? v)
-            (write-char (digit->char (remainder v base) type))
-            (loop (quotient v base))))
-        (let loop ((n npad)) (when (< n 0) (write-char pad) (loop (1+ n))))))))
+            (write-char (digit->char (quotient v m) type))
+            (loop (remainder v m) (quotient m base))))
+        (let loop ((n npad))
+          (when (< n 0) (write-char pad) (loop (1+ n))))))))
 
-;; (split-float 2.3492e-23) => (2.3492 -23)
+(define-public (test-int->str)
+  (define (doit fmt val)
+    (sferr "~S ~S => ~S\n" fmt val (apply int->str val (parse-fmt-str fmt))))
+  (doit "%d" 1)
+  (doit "%-04x" 1)
+  )
+
+;; (split-float 2.3492e-23) => (2.3492 . -23)
 (define (split-float val)
   (if (eqv? val 0.0)
       (cons 0.0 0)
@@ -172,37 +199,57 @@
         (cons (* sign val (expt 10 (- v_expt))) v_expt))))
 (export split-float)
 
-;; (vch 3.235) => #\3
-(define (vch v) (int->numch (inexact->exact (floor v))))
+(define vch
+  (let ((dv #(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)))
+    (lambda (v) (vector-ref dv (inexact->exact (floor v))))))
 
-;; (vnx 3.235) => 2.35
 (define (vnx v) (* 10 (- v (inexact->exact (floor v)))))
-
-;; (flt->fstr 3.456 '() 8 4) => "  3.4560"
-(define (flt->fstr val type flags width prec)
+  
+;; (flt->fstr 3.456 %f '() 8 4) => "  3.4560"
+;; maybe change to . flags)
+(define (flt->fstr val type width prec flags)
   (let* ((base 10)
          (left (memq #\- flags))
-         (pad (if (memq #\0 flags) #\0 #\space))
          (sign (cond ((negative? val) #\-) ((memq #\+ flags) #\+) (else #f)))
          (val (abs val))
-         (v-p (split-float val)) (val-m (car v-p)) (val-e (cdr v-p))
-         (val-wid (min 6 (+ (- (abs val-e) 2) (if sign 1 0))))
-         (wid (if (zero? width) val-wid width))
-         (wid (if sign (1- wid) wid))
-         (chl (if sign (list sign) '()))
-         (wid (if (negative? val-e) (- wid 2) wid))
-         (chl (if (negative? val-e) (cons* #\. #\0 chl) chl)))
-    ;;(if (negative? wid val-wid) (make-string wid #\#))
+         (v:me (split-float val)) (val-m (car v:me)) (val-e (cdr v:me))
+         (valw (+ (if sign 1 0)
+                  (if (positive? prec) (+ 1 prec) 0)
+                  (if (positive? val-e) val-e 0)))
+         (prec (if prec prec (max (- width valw) 0)))
+         (wid (cond ((zero? width) valw) ((> valw width) valw) (else width)))
+         (npad (let ((n (if (> valw width) 0 (- wid valw)))) (if left (- n) n)))
+         (pad (cond ((zero? npad) #f) (left #\space)
+                    ((memq #\0 flags) #\0) (else #\space)))
+         (sign-first (and (positive? npad) (char=? pad #\0)))
+         (upper (char-upper-case? type))
+         )
+    (with-output-to-string
+      (lambda ()
+        (if (and sign sign-first) (write-char sign))
+        (let loop ((n npad)) (when (> n 0) (write-char pad) (loop (1- n))))
+        (if (and sign (not sign-first)) (write-char sign))
+        (if (negative? val-e)
+            (write-char #\0)
+            (let loop ((v val-m))
+              (when (> v 1.0)
+                (write-char (digit->char (remainder v base) type))
+                )))
+        (let loop ((n npad)) (when (< n 0) (write-char pad) (loop (1+ n))))))
+    ;;(if (negative? wid valw) (make-string wid #\#))
+    #|
     (let loop ((chl chl) (nl wid) (v val-m) (e (1+ val-e)))
       (cond
        ((negative? e) (loop (cons #\0 chl) (1- nl) v (1+ e)))
        ((= 1 e) (loop (cons* #\. (vch v) chl) (- nl 2) (vnx v) (1- e)))
        ((positive? e) (loop (cons (vch v) chl) (1- nl) (vnx v) (1- e)))
        ((positive? nl) (loop (cons (vch v) chl) (1- nl) (vnx v) e))
-       (else (reverse-list->string chl))))))
+       (else (reverse-list->string chl))))
+    |#
+    ))
 
 ;; (flt->estr -12.34e-22 '() 12 5) => "-1.23400e-21"
-(define (flt->estr val type flags width prec)
+(define (flt->estr val type width prec flags)
   (let* ((base 10)
          (left (memq #\- flags))
          (pad (if (memq #\0 flags) #\0 #\space))
@@ -212,9 +259,9 @@
          (e-str (int->str val-e #\d '(#\+) 0 0))
          (m-wid (- width 1 (string-length e-str)))
          (m-str (flt->fstr val-m #\f flags m-wid prec)))
-    ;;(sf "val-m=~S\n" val-m)
-    ;;(sf "val-e=~S\n" val-e)
-    ;;(sf "e-str=~S\n" e-str)
+    ;;(sferr "val-m=~S\n" val-m)
+    ;;(sferr "val-e=~S\n" val-e)
+    ;;(sferr "e-str=~S\n" e-str)
     (string-append m-str "e" e-str)))
 
 (export int->str)
@@ -226,9 +273,9 @@
   (case (car fmt) ;; ty
     ((#\d) (unless (integer? val) (error "yuck")) (apply int->str val fmt))
     ((#\x) (unless (integer? val) (error "yuck")) (apply int->str val fmt))
-    ((#\e) (unless (real? val) (error "yuck")) (apply flt->estr val fmt))
-    ((#\f) (unless (real? val) (error "yuck")) (apply flt->fstr val fmt))
-    ;;((#\g) (unless (real? val) (error "yuck")) (apply flt->gstr val fmt))
+    ((#\e) (unless (inexact? val) (error "yuck")) (apply flt->estr val fmt))
+    ((#\f) (unless (inexact? val) (error "yuck")) (apply flt->fstr val fmt))
+    ;;((#\g) (unless (inexact? val) (error "yuck")) (apply flt->gstr val fmt))
     ))
 
 ;; === sprintf 
@@ -239,7 +286,7 @@
   (with-input-from-string fmt
     (lambda ()
       (let loop ((stl '()) (chl '()) (ch (read-char)) (args args))
-        ;;(sf "ch=~S\n" ch)
+        ;;(sferr "ch=~S\n" ch)
         (cond
          ((eof-object? ch)
           (apply string-append (reverse (cons (rls chl) stl))))
