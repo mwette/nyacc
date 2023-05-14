@@ -34,6 +34,8 @@ add: global ports use
 
 path: abc::def::ghi      # note: use stmt is read specially so ice-9 works
 
+pass by reference: set a [box 1]; setbox $a 2; isbox $a; set b [unbox $a]
+
 ===============================================================================
 
 struct/array refs:

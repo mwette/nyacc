@@ -1,6 +1,6 @@
 ;;; nyacc/lang/tsh/xlib.scm
 
-;; Copyright (C) 2018,2021 Matthew R. Wette
+;; Copyright (C) 2018,2021,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -25,21 +25,15 @@
   #:export (xdict xlib-ref tsh:source tsh:puts)
   #:use-module (nyacc lang tsh parser)
   #:use-module (nyacc lang tsh compile-tree-il)
-  #:use-module (nyacc lang nx-util)
+  #:use-module (nyacc lang nx-lib)
   #:use-module ((srfi srfi-1) #:select (split-at last))
+  #:use-module (srfi srfi-111)          ; boxes
   #:use-module (system base compile)
-  #:use-module (ice-9 hash-table)
-  #:use-module (ice-9 exceptions)
-  ;;#:use-module (rnrs arithmetic bitwise)
-  )
+  #:use-module (ice-9 hash-table))
+
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (define (pperr exp) (pretty-print exp (current-error-port)))
-
-(define (tsh-error fmt . args)
-  (raise-exception
-   (make-exception-with-message
-    (apply simple-format #f fmt args))))
 
 (define (xlib-ref name) `(@@ (nyacc lang tsh xlib) ,name))
 
@@ -88,6 +82,9 @@
    ((val) (display val) (newline))
    ((port val) (display val port) (newline))
    ))
+
+;;(define-public tsh:format sprintf)
+(display "lib TODO: sprintf: see nx-lib and nx-disp\n")
 
 (define-public tsh:last last)
 
@@ -143,12 +140,20 @@
       ((#t) 'any))))
 
 (define-public (tsh:struct . args)
+  (throw 'nx-error "foo bar" '())
   (let loop ((sal '()) (rgl args))
     (cond
      ((null? rgl) (alist->hashq-table sal))
-     ((null? (cdr rgl)) (error "expecting even number"))
+     ((null? (cdr rgl)) (nx-error "expecting even number"))
      ((symbol? (car rgl)) (loop (acons (car rgl) (cadr rgl) sal) (cddr rgl)))
      (else (error "expecting symbol")))))
+
+(define-public tsh:isstruct (nx-C-predicate hash-table?))
+
+(define-public tsh:box box)
+(define-public tsh:unbox unbox)
+(define-public tsh:isbox (nx-C-predicate box?))
+(define-public tsh:setbox set-box!)
 
 ;; ====
 
@@ -166,13 +171,20 @@
 (define xdict
   `(
     ("puts" . ,(xlib-ref 'tsh:puts))
+    ("format" . ,(xlib-ref 'tsh:format))
     ;;
     ("avec" . ,(xlib-ref 'tsh:avec))
     ("fvec" . ,(xlib-ref 'tsh:fvec))
     ("ivec" . ,(xlib-ref 'tsh:ivec))
-    ("struct" . ,(xlib-ref 'tsh:struct))
     ("vlen" . ,(xlib-ref 'tsh:vlen))
     ("vtype" . ,(xlib-ref 'tsh:vtype))
+    ;;
+    ("struct" . ,(xlib-ref 'tsh:struct))
+    ("isstruct" . ,(xlib-ref 'tsh:isstruct))
+    ("box" . ,(xlib-ref 'tsh:box))
+    ("unbox" . ,(xlib-ref 'tsh:unbox))
+    ("isbox" . ,(xlib-ref 'tsh:isbox))
+    ("setbox" . ,(xlib-ref 'tsh:setbox))
     ;; 
     ("show_sxml" . ,(xlib-ref 'tsh:show_sxml))
     ("hide_sxml" . ,(xlib-ref 'tsh:hide_sxml))

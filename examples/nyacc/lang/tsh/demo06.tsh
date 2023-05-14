@@ -6,7 +6,10 @@ proc addem {aax aay} {
 
 set aax [struct foo 2]
 set aay [struct foo 3]
-
 puts [addem $aax $aay]
+
+# generate error
+set aaz [struct bar 4]
+addem $aax $aaz
 
 # --- last line ---

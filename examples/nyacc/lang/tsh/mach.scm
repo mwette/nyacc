@@ -1,6 +1,6 @@
 ;;; lang/tsh/mach.scm - code and expr grammars
 
-;; Copyright (C) 2021-2023 Matthew R. Wette
+;; Copyright (C) 2021-2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -44,7 +44,7 @@
 
 (define tsh-spec
   (lalr-spec
-   (notice (string-append "Copyright (C) 2021 Matthew R. Wette"
+   (notice (string-append "Copyright (C) 2021-2023 Matthew R. Wette"
 			  license-lgpl3+))
    ;;(expect 0)
 
@@ -68,8 +68,8 @@
     (topl-decl
      ("source" string ($$ `(source ,$2)))
      ("proc" ident "{" arg-list "}" "{" stmt-list "}" ($$ `(proc ,$2 ,$4 ,$7)))
-     ;;^ syntax sugar for: set foo [lambda { x y z } { ($x + $y + $z) }
-     )
+     ("proc" ident symbol "{" stmt-list "}"
+      ($$ `(proc ,$2 (arg-list (arg ,$3)) ,$5))))
 
     (arg-list
      (arg-list-1 ($$ (tl->list $1))))

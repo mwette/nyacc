@@ -1,6 +1,6 @@
 ;; tsh-ia-act.scm
 
-;; Copyright (C) 2021 Matthew R. Wette
+;; Copyright (C) 2021-2023 Matthew R. Wette
 ;; 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,9 @@
    ;; topl-decl => "proc" ident "{" arg-list "}" "{" stmt-list "}"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(proc ,$2 ,$4 ,$7))
+   ;; topl-decl => "proc" ident symbol "{" stmt-list "}"
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(proc ,$2 (arg-list (arg ,$3)) ,$5))
    ;; arg-list => arg-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; arg-list-1 => 
