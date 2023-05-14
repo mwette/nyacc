@@ -56,15 +56,16 @@
 
 (define-module (nyacc lang nx-lib)
   #:export (nx-get-method
+            nx-use-module
+            nx-C-predicate
+            nx-error
             ;;
             make-nx-hash-table nx-hash-ref nx-hash-set!
             nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
-            nx-use-module
             ;;
             install-inline-language-evaluator
             uninstall-inline-language-evaluator)
-  #:use-module (ice-9 exceptions)
-  )
+  #:use-module (ice-9 exceptions))
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
 (define (pperr exp)
@@ -115,36 +116,38 @@
 (define (nx-hash-set! htab key val)
   (hashq-set! htab key val))
 
-(define (sprintf fmt . args)
-  (define rls reverse-list->string)
-  (define (numstr->string val)
-    (if (string? val) val (number->string val)))
-  (define (escape ch)
-    (case ch
-      ((#\\) #\\)
-      ((#\n) #\newline)
-      (else ch)))
-  (with-input-from-string fmt
-    (lambda ()
-      (let loop ((stl '()) (chl '()) (ch (read-char)) (args args))
-        ;;(sf "ch=~S\n" ch)
-        (cond
-         ((eof-object? ch)
-          (apply string-append (reverse (cons (rls chl) stl))))
-         ((char=? ch #\%)
-          (let ((ch1 (read-char)))
-            (case ch1
-              ((#\\) (loop stl (cons (escape ch1) chl) (read-char) args))
-              ((#\%) (loop stl (cons ch1 chl) (read-char) args))
-              ((#\s) (loop (cons* (car args) (rls chl) stl) '()
-                           (read-char) (cdr args)))
-              ((#\d #\f) (loop (cons* (numstr->string (car args)) (rls chl) stl)
-                               '() (read-char) (cdr args)))
-              (else (error "sprintf: unknown % char")))))
-         (else
-          (loop stl (cons ch chl) (read-char) args)))))))
+;; ====================================
+;; code to be organized
 
-;;; === call this something ====================================================
+;; routine to make a single arg predicate into a zero? predcate
+
+;; ???
+(define (nx-C-predicate proc)
+  (lambda (arg)
+    (let ((res (proc arg)))
+      (if res 1 0))))
+
+(use-modules (ice-9 match))
+(define (add-src-prop-attr sx)
+  (define (p2l pair) (list (car pair) (cdr pair)))
+  (define (ins-src-prop sx attr)
+    (cons (map p2l (source-properties sx)) attr))
+  (match sx
+    (`(,tag (@ . ,attr) . ,rest)
+     `(tag (@ . ,(ins-src-prop sx attr)) . ,(map add-src-prop-attr rest)))
+    (`(,tag . ,rest)
+     (let ((src-prop (source-properties sx)))
+       (if (pair? src-prop)
+	   `(,tag (@ . ,(map p2l src-prop)) . ,(map add-src-prop-attr rest))
+	   `(,tag . ,(map add-src-prop-attr rest)))))
+    (_ sx)))
+(export add-src-prop-attr)
+
+(define (nx-error fmt . args)
+  (raise-exception
+   (make-exception-with-message
+    (apply simple-format #f fmt args))))
+
 
 (define (nx-use-module path)
   (module-use! (current-module) (resolve-interface path)))

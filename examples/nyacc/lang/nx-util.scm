@@ -1,6 +1,6 @@
 ;;; nyacc/lang/nx-util.scm - utilities for Guile extension languages
 
-;; Copyright (C) 2018,2021,2023 Matthew R. Wette
+;; Copyright (C) 2018,2021,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
@@ -67,8 +67,9 @@
 	    
 	    with-escape/handler with-escape/arg with-escape/expr with-escape
 	    make-handler
-	    
-	    opcall-generator
+
+	    make-+SP
+	    ;;opcall-generator
 	    
 	    block vblock
 	    make-arity
@@ -91,6 +92,7 @@
   (string-map (lambda (ch) (if (char=? ch #\_) #\- ch)) name))
 
 ;; @deffn {XTIL} nx-undefined-xtil
+;; as to @code{nx-undefined} in @path{nx-lib}
 ;; @end deffn
 (define nx-undefined-xtil `(const ,(if #f #f)))
 
@@ -286,11 +288,6 @@
       (if (null? (cdr inp)) (cons* arg0 arg1 res)
           (iter (cons (car inp) res) (cdr inp)))))
    ))
-
-(define (opcall-generator xlib)
-  (define (xlib-ref name) `(@@ ,xlib ,name))
-  (lambda (op seed kseed kdict)
-    (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict)))
 
 ;; @deffn {Procedure} make-thunk expr [#:name name] [#:lang lang]
 ;; Generate a thunk @code{`(lambda ...)}.
@@ -544,20 +541,21 @@
           ,(make-loop test body dict ilsym
                       `(if ,test (call (lexical iloop ,ilsym)) (void))))))
 
-(use-modules (ice-9 match))
-(define (add-src-prop-attr sx)
-  (define (p2l pair) (list (car pair) (cdr pair)))
-  (define (ins-src-prop sx attr)
-    (cons (map p2l (source-properties sx)) attr))
-  (match sx
-    (`(,tag (@ . ,attr) . ,rest)
-     `(tag (@ . ,(ins-src-prop sx attr)) . ,(map add-src-prop-attr rest)))
-    (`(,tag . ,rest)
-     (let ((src-prop (source-properties sx)))
-       (if (pair? src-prop)
-	   `(,tag (@ . ,(map p2l src-prop)) . ,(map add-src-prop-attr rest))
-	   `(,tag . ,(map add-src-prop-attr rest)))))
-    (_ sx)))
-(export add-src-prop-attr)
+;; -- to be organized into above
+
+;; @deffn make-+SP tree
+;; @end deffn
+(define (make-+SP tree)
+  (lambda (obj)
+    (set-source-properties! obj (source-properties tree))
+    obj))
+
+;; -- to be deprecated
+
+;; deprecate
+(define (opcall-generator xlib)
+  (define (xlib-ref name) `(@@ ,xlib ,name))
+  (lambda (op seed kseed kdict)
+    (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict)))
 
 ;; --- last line ---

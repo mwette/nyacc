@@ -1,6 +1,6 @@
 ;;; nyacc/lang/mlang/compile-tree-il.scm compile mlang sxml to tree-il
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -29,36 +29,24 @@
   #:use-module (nyacc lang mlang xlib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
-  ;;#:use-module (nyacc lang util)
   #:use-module ((sxml fold) #:select (foldts*-values))
   #:use-module ((srfi srfi-1) #:select (fold fold-right append-reverse last))
   #:use-module (language tree-il)
-  #:use-module (ice-9 match)
-  ;;#:use-module (system base compile)
-  )
-(use-modules (ice-9 pretty-print))
+  #:use-module (ice-9 match))
+
 (define (sferr fmt . args)
-  ;;(apply simple-format (current-error-port) fmt args))
-  (apply simple-format (current-output-port) fmt args))
+  (apply simple-format (current-error-port) fmt args))
+(use-modules (ice-9 pretty-print))
 (define (pperr tree)
-  ;;(pretty-print tree (current-error-port) #:per-line-prefix "  " #:width 130))
-  (pretty-print tree (current-output-port) #:per-line-prefix "  " #:width 130))
+  (pretty-print tree (current-error-port) #:per-line-prefix "  " #:width 130))
 
 (define xlib-mod '(nyacc lang mlang xlib))
 (define xlib-module (resolve-module xlib-mod))
 (define (xlib-ref name) `(@@ (nyacc lang mlang xlib) ,name))
-                       
-;;(define undefined '(@@ (nyacc lang mlang xlib) ml:undefined))
-;;(define undefined `(const ,(if #f #f)))
-(define undefined nx-undefined-xtil)    ; from nx-util.scm
 
-(define push-scope nx-push-scope)
-;;(define pop-scope nx-pop-scope)
-(define top-level? nx-top-level?)
-(define add-toplevel nx-add-toplevel)
-(define add-lexical nx-add-lexical)
-(define add-lexicals nx-add-lexicals)
-;;(define add-symbol nx-add-symbol)
+(define (op-call op kseed)
+  (rev/repl 'call (xlib-ref op) kseed))
+
 (define (lookup name dict)
   (or (nx-lookup name dict)
       (nx-lookup-in-env name xlib-module)))
@@ -67,7 +55,6 @@
 (define (pop-scope dict)
   (let ((pdict (nx-pop-scope dict)))
     (let loop ((prev #f) (next dict))
-      ;;(sferr "pop next=~S\n" next)
       (cond
        ((eq? '@L (caar next)) (cond (prev (set-cdr! next pdict) dict)
                                     (else pdict)))
@@ -85,18 +72,9 @@
      ((assq '@F dict) #t)
      (else (loop (nx-pop-scope dict))))))
 
-
 (define (maybe-add-symbol name dict)
-  (if (lookup name dict) dict (add-symbol name dict)))
+  (if (lookup name dict) dict (nx-add-symbol name dict)))
 
-;; In mlang, variables are not declared so this will add to either the
-;; containting function or toplevel.
-(define add-symbol nx-add-symbol)
-#;(define (add-symbol name dict)
-  (if (function-scope? dict)
-      (nx-add-lexical name dict)
-      (nx-add-toplevel name dict)))
-                   
 ;; Add toplevel def's from dict before evaluating expression.  This puts
 ;; @var{expr} at the end of a chain of @code{seq}'s that execution
 ;; conditional defines to a void.  See @code{make-toplevel-defcheck}.
@@ -113,8 +91,6 @@
             `(seq (define ,(string->symbol name) (void)) ,(loop (cdr refs))))))
      ((eq? '@top (caar refs)) expr)
      (else (loop (cdr refs))))))
-
-(define make-opcall (opcall-generator xlib-mod))
 
 ;; @deffn {Procedure} display-result? tree
 ;; Predicate that looks at @code{term} attribute to determine if user wants
@@ -146,8 +122,8 @@
          (next `(call ,(xlib-ref 'ml:iter-next) ,rval ,ivar)) ; ???
          (ilsym (genxsym "iloop"))
          (olsym (genxsym "oloop"))
-         (bsym (lookup-gensym "break" dict))
-         (csym (lookup-gensym "continue" dict))
+         (bsym (nx-lookup-gensym "break" dict))
+         (csym (nx-lookup-gensym "continue" dict))
          (inext `(call (lexical iloop ,ilsym) ,next))
          (ifrst `(call (lexical iloop ,ilsym) ,frst))
          (ocall `(call (lexical oloop ,olsym)))
@@ -203,11 +179,13 @@
     (filter (lambda (item) (not (eq? 'empty-stmt (sx-tag item)))) stmts))
   
   (define (fD tree seed dict) ;; => tree seed dict
+    (define +SP (make-+SP tree))
+
     (sx-match tree
 
       ((ident ,name)
        (if (member name '("nargsin" "nargsout"))
-           (let ((dict (add-lexicals "nargsin" "nargsout" dict)))
+           (let ((dict (nx-add-lexicals "nargsin" "nargsout" dict)))
              (values '() (lookup name dict) dict))
            (values '() (lookup name dict) dict)))
 
@@ -238,10 +216,10 @@
                       ((eq? 'case (sx-tag (car tail)))
                        `(xif (eq (ident "swx-val") ,(sx-ref (car tail) 1))
                              ,(sx-ref (car tail) 2) ,(loop (cdr tail))))
-                      (else (error "unsupported case-expr")))))
+                      (else (nx-error "unsupported case-expr")))))
         '()
         (acons '@L "switch"
-               (add-lexicals "swx-val" "break" (push-scope dict)))))
+               (nx-add-lexicals "swx-val" "break" (nx-push-scope dict)))))
 
       ((if ,expr ,stmts . ,rest)
        ;; Convert
@@ -258,23 +236,23 @@
                    `(xif ,(sx-ref (car tail) 1) ; cond
                          ,(sx-ref (car tail) 2) ; then
                          ,(loop (cdr tail))))   ; else
-                  (else (error "oops")))))
+                  (else (nx-error "oops")))))
         '() dict))
 
       ((while . ,rest)
        (values tree '()
                (acons '@L "while"
-                      (add-lexicals "break" "continue" (push-scope dict)))))
+                      (nx-add-lexicals "break" "continue" (nx-push-scope dict)))))
 
       ((for (ident ,name) . ,rest)
        ;;(sferr "for:\n") (pperr tree)
        (let* ((ref (lookup name dict))
               (dict (if (and ref (eq? 'lexical (car ref))) dict
-                        (add-symbol name dict)))
-              (dict (push-scope dict))
-              (dict (add-lexicals "break" "continue" dict)))
+                        (nx-add-symbol name dict)))
+              (dict (nx-push-scope dict))
+              (dict (nx-add-lexicals "break" "continue" dict)))
          (values tree '() dict)))
-      ((for . ,rest) (throw 'nyacc-error "syntax error: for"))
+      ((for . ,rest) (nx-error "syntax error: for"))
 
       ;; (assn (ident ,name) ,rhs))=> (var-assn (ident ,name) ,rhs)
       ;; (assn (aref-or-call ,aexp ,expl)) => (elt-assn ,aexp ,expl ,rhs)
@@ -288,7 +266,7 @@
       ((assn (@ . ,attr) (sel (ident ,name) ,expr) ,rhsx) ; assign member
        (values `(mem-assn (@ . ,attr) ,expr ,name ,rhsx) '() dict))
       
-      ((assn . ,other) (throw 'nyacc-error "syntax error: assn"))
+      ((assn . ,other) (nx-error "syntax error: assn"))
 
       ;; This is like
       ;; @example
@@ -317,8 +295,8 @@
                  ((sel (ident ,name) ,expr)
                   (loop (cons `(mem-assn ,expr ,name ,rv) lvxl)
                         dict (cdr elts) (1+ ix)))
-                 (,_ (throw 'nyacc-error "bad lhs syntax")))))))
-      ((multi-assn . ,rest) (throw 'nyacc-error "syntax error: multi-assn"))
+                 (,_ (nx-error "bad lhs syntax")))))))
+      ((multi-assn . ,rest) (nx-error "syntax error: multi-assn"))
 
       ((stmt-list . ,stmts)
        (values `(stmt-list . ,(rem-empties stmts)) '() dict))
@@ -333,13 +311,13 @@
                              (ident-list . ,outargs)
                              . ,comms)
                   ,stmt-list)
-       (let* ((dict (if (top-level? dict) (add-symbol name dict) dict))
-              (dict (push-scope dict))
-              (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
+       (let* ((dict (if (nx-top-level? dict) (nx-add-symbol name dict) dict))
+              (dict (nx-push-scope dict))
+              (dict (fold (lambda (sx dt) (nx-add-lexical (sx-ref sx 1) dt))
                           dict inargs))
-              (dict (fold (lambda (sx dt) (add-lexical (sx-ref sx 1) dt))
+              (dict (fold (lambda (sx dt) (nx-add-lexical (sx-ref sx 1) dt))
                           dict outargs))
-              (dict (add-lexical "return" dict))
+              (dict (nx-add-lexical "return" dict))
               (dict (acons '@F name dict))
               (dstr (if (null? comms) ""
                         (string-join (map cadr (cdr comms)) "\n"))))
@@ -350,13 +328,15 @@
                                  (ident-list . ,outargs) (string ,dstr))
                       ,stmt-list)
           '() dict)))
-      ((fctn-defn . ,rest) (throw 'nyacc-error "syntax error: function def"))
+      ((fctn-defn . ,rest) (nx-error "syntax error: function def"))
 
       ((command (ident ,cname) . ,args)
-       (unless (string=? cname "global") (error "bad command: ~S" cname))
+       (unless (string=? cname "global") (nx-error "bad command: ~S" cname))
        (values
         '() '()
-        (fold (lambda (arg dict) (add-toplevel (sx-ref arg 1) dict)) dict args)))
+        (fold
+         (lambda (arg dict) (nx-add-toplevel (sx-ref arg 1) dict))
+         dict args)))
 
       ((function-file . ,tail)
        ;; Here we add provide ability for forward refs to all functions.
@@ -364,14 +344,16 @@
                (fold (lambda (tree dict)
                        (sx-match tree
                          ((fctn-defn (fctn-decl (ident ,name) . ,_1) . ,_2)
-                          (add-lexical name dict))
+                          (nx-add-lexical name dict))
                          (,_ dict)))
-                     (push-scope dict) tail)))
+                     (nx-push-scope dict) tail)))
 
       (,_
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
+    (define +SP (make-+SP tree))
+    
     ;; This routine rolls up processes leaves into the current branch.
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
@@ -414,7 +396,7 @@
                (rest (cdr tail))
                (lrec (funcs->letrec main rest))
                (name (symbol->string (cadadr main)))
-               (xdict (add-toplevel name (pop-scope kdict)))
+               (xdict (nx-add-toplevel name (pop-scope kdict)))
                (nref (lookup name xdict))
                (body `(set! ,nref ,lrec)))
           (values (cons body seed) xdict)))
@@ -440,7 +422,7 @@
                (body (with-escape ptag body))
                ;; The tail expression is return value(s).
                (rval (case (length oargs)
-                       ((0) undefined)
+                       ((0) nx-undefined-xtil)
                        ((1) (car oargs))
                        (else `(primcall values ,@oargs))))
                (body `(seq ,body ,rval))
@@ -455,14 +437,14 @@
                                   `(call ,(xlib-ref 'ml:narg) . ,iargs))
                                  ((eq? n 'nargsout)
                                   `(call ,(xlib-ref 'ml:narg) . ,oargs))
-                                 (else undefined))))
+                                 (else nx-undefined-xtil))))
                         (loop (cons n nl) (cons l ll) (cons v vl) (cdr vs))))))
-               ;; default value is undefined
+               ;; default value is nx-undefined
                (fctn
                 `(set! ,n-ref (lambda ((name . ,name) (language . nx-mlang))
                                 (lambda-case
                                  ((() ,(map cadr iargs) #f #f
-                                   ,(map (lambda (v) undefined) iargs)
+                                   ,(map (lambda (v) nx-undefined-xtil) iargs)
                                    ,(map caddr iargs)) ,body))))))
           (values (cons fctn seed) (pop-scope kdict))))
 
@@ -596,33 +578,34 @@
           (values (cons `(call ,(xlib-ref 'make-ml:range) ,lb ,inc ,ub) seed)
                   kdict)))
 
-       ((or) (make-opcall 'ml:or seed kseed kdict))
-       ((and) (make-opcall 'ml:and seed kseed kdict))
-       ((eq) (make-opcall 'ml:eq seed kseed kdict))
-       ((ne) (make-opcall 'ml:ne seed kseed kdict))
-       ((lt) (make-opcall 'ml:lt seed kseed kdict))
-       ((gt) (make-opcall 'ml:gt seed kseed kdict))
-       ((le) (make-opcall 'ml:le seed kseed kdict))
-       ((ge) (make-opcall 'ml:ge seed kseed kdict))
+       ((or) (values (+SP (cons (op-call 'ml:or kseed) seed)) kdict))
+       ((and) (values (+SP (cons (op-call 'ml:and kseed) seed)) kdict))
+       ((eq) (values (+SP (cons (op-call 'ml:eq kseed) seed)) kdict))
+       ((ne) (values (+SP (cons (op-call 'ml:ne kseed) seed)) kdict))
+       ((lt) (values (+SP (cons (op-call 'ml:lt kseed) seed)) kdict))
+       ((gt) (values (+SP (cons (op-call 'ml:gt kseed) seed)) kdict))
+       ((le) (values (+SP (cons (op-call 'ml:le kseed) seed)) kdict))
+       ((ge) (values (+SP (cons (op-call 'ml:ge kseed) seed)) kdict))
        
-       ((add) (make-opcall 'ml:+ seed kseed kdict))
-       ((sub) (make-opcall 'ml:- seed kseed kdict))
-       ((dot-add) (make-opcall 'ml:.+ seed kseed kdict))
-       ((dot-sub) (make-opcall 'ml:.- seed kseed kdict))
-       ((mul) (make-opcall 'ml:* seed kseed kdict))
-       ((div) (make-opcall 'ml:/ seed kseed kdict))
-       ((ldiv) (make-opcall 'ml:\ seed kseed kdict))
-       ((pow) (make-opcall 'ml:^ seed kseed kdict))
-       ((dot-mul) (make-opcall 'ml:.* seed kseed kdict))
-       ((dot-div) (make-opcall 'ml:./ seed kseed kdict))
-       ((dot-pow) (make-opcall 'ml:.^ seed kseed kdict))
+       ((add) (values (+SP (cons (op-call 'ml:+ kseed) seed)) kdict))
+       ((sub) (values (+SP (cons (op-call 'ml:- kseed) seed)) kdict))
+       ((dot-add) (values (+SP (cons (op-call 'ml:.+ kseed) seed)) kdict))
+       ((dot-sub) (values (+SP (cons (op-call 'ml:.- kseed) seed)) kdict))
+       ((mul) (values (+SP (cons (op-call 'ml:* kseed) seed)) kdict))
+       ((div) (values (+SP (cons (op-call 'ml:/ kseed) seed)) kdict))
+       ((ldiv) (values (+SP (cons (op-call 'ml:\ kseed) seed)) kdict))
+       ((pow) (values (+SP (cons (op-call 'ml:^ kseed) seed)) kdict))
+       ((dot-mul) (values (+SP (cons (op-call 'ml:.* kseed) seed)) kdict))
+       ((dot-div) (values (+SP (cons (op-call 'ml:./ kseed) seed)) kdict))
+       ((dot-pow) (values (+SP (cons (op-call 'ml:.^ kseed) seed)) kdict))
        
-       ((neg) (make-opcall 'ml:neg seed kseed kdict))
-       ((pos) (make-opcall 'ml:pos seed kseed kdict))
-       ((not) (make-opcall 'ml:not seed kseed kdict))
+       ((neg) (values (+SP (cons (op-call 'ml:neg kseed) seed)) kdict))
+       ((pos) (values (+SP (cons (op-call 'ml:pos kseed) seed)) kdict))
+       ((not) (values (+SP (cons (op-call 'ml:not kseed) seed)) kdict))
        
-       ((transpose) (make-opcall 'ml:xpose seed kseed kdict))
-       ((conj-transpose) (make-opcall 'ml:cj-xpose seed kseed kdict))
+       ((transpose) (values (+SP (cons (op-call 'ml:xpose kseed) seed)) kdict))
+       ((conj-transpose)
+        (values (+SP (cons (op-call 'ml:cj-xpose kseed) seed)) kdict))
 
        ;; aref-or-call
        ((aref-or-call)

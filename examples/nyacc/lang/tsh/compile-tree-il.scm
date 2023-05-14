@@ -1,6 +1,6 @@
 ;;; nyacc/lang/tsh/compile-tree-il.scm - compile tclish sxml to tree-il
 
-;; Copyright (C) 2021 Matthew R. Wette
+;; Copyright (C) 2021,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,7 @@
 (define-module (nyacc lang tsh compile-tree-il)
   #:export (compile-tree-il show-tsh-sxml show-tsh-xtil)
   #:use-module (nyacc lang tsh xlib)
+  #:use-module (nyacc lang nx-lib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts*-values))
@@ -45,49 +46,36 @@
 
 (define xlib-mod '(nyacc lang tsh xlib))
 (define xlib-module (resolve-module xlib-mod))
-(define (xlib-ref name) `(@@ (nyacc lang tsh xlib) ,name))
+(define (xlib-ref name) `(@@ ,xlib-mod ,name))
 
-;; scope must be manipulated at execution time
-;; the @code{proc} command should push-scope
-(define push-scope nx-push-scope)
-(define pop-scope nx-pop-scope)
-(define (Xpush-scope dict)
-  (let ((child (nx-push-scope dict)))
-    (sferr "push:\n") (pperr child)
-    child))
-(define (X-pop-scope dict)
-  (let ((parent (nx-pop-scope dict)))
-    (sferr "pop:\n") (pperr parent)
-    parent))
-(define top-level? nx-top-level?)
-(define add-toplevel nx-add-toplevel)
-(define add-lexical nx-add-lexical)
-(define add-lexicals nx-add-lexicals)
-(define add-variable nx-add-variable)
 (define (lookup name dict)
   (or (nx-lookup name dict)
       (nx-lookup-in-env name xlib-module)))
 
-(define make-opcall (opcall-generator xlib-mod))
-
-(define (opcall-node op seed kseed kdict)
-  (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict))
-
-;; for lt + rt, etc
 (define (op-call op kseed)
   (rev/repl 'call (xlib-ref op) kseed))
+
 (define (op-call/prim op kseed)
-  (rev/repl 'prim-call op kseed))
+  (rev/repl 'primcall op kseed))
 
 (define (make-function name arity body)
   (let* ((meta '((language . nx-tsh)))
 	 (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case (,arity ,body)))))
 
-(define (make-+SP tree)
+#|
+(define make-opcall (opcall-generator xlib-mod))
+
+(define (opcall-node op seed kseed kdict)
+  (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict))
+
+;; for lt + rt, etc
+
+#;(define (make-+SP tree)
   (lambda (obj)
     (set-source-properties! obj (source-properties tree))
     obj))
+|#
 
 ;; @deffn {Procedure} sxml->xtil exp env opts
 ;; Compile SXML tree to external Tree-IL representation.
@@ -128,40 +116,44 @@
        (values '() (+SP `(const ,(string->symbol sval))) dict))
 
       ((eval . ,stmts)
-       (values tree '() (add-lexical "return" (push-scope dict))))
+       (values tree '() (nx-add-lexical "return" (nx-push-scope dict))))
       
       #;((deref ,name)
        (let ((ref (lookup name dict)))
-	 (unless ref (throw 'tsh-error "undefined variable: ~S" name))
+	 (unless ref (nx-error "undefined variable: ~S" name))
  	 (values '() (+SP ref) dict)))
 
       #;((deref-indexed ,name ,expr-list)
        (let ((ref (lookup name dict)) (proc (xlib-ref 'tsh:array-ref)))
-	 (unless ref (throw 'tsh-error "undefined variable: ~A" name))
+	 (unless ref (nx-error "undefined variable: ~A" name))
 	 (values '() (+SP `(call ,proc ,ref ,expr-list)) dict)))
 
       ((switch . ,stmts)
-       (values tree '() (add-lexicals "swx~val" "break" (push-scope dict))))
+       (values tree '()
+               (nx-add-lexicals "swx~val" "break" (nx-push-scope dict))))
 
       ((for . ,stmts)
-       (values tree '() (add-lexicals "continue" "break" (push-scope dict))))
+       (values tree '()
+               (nx-add-lexicals "continue" "break" (nx-push-scope dict))))
       
       ((while . ,stmts)
-       (values tree '() (add-lexicals "continue" "break" (push-scope dict))))
+       (values tree '()
+               (nx-add-lexicals "continue" "break" (nx-push-scope dict))))
       
       ((proc (ident ,name) (arg-list . ,args) ,body)
        ;; replace each name with (lexical name gsym)
        ;;(sferr "proc dict:\n") (pperr dict)
-       (let* ((dict (add-variable name dict))
+       (let* ((dict (nx-add-variable name dict))
 	      (nref (lookup name dict))
-	      (dict (push-scope dict))
+	      (dict (nx-push-scope dict))
 	      ;; clean this up
-	      (dict (fold (lambda (a d) (add-lexical (cadadr a) d)) dict args))
+	      (dict (fold
+                     (lambda (a d) (nx-add-lexical (cadadr a) d)) dict args))
 	      (args (fold-right ;; replace arg-name with lexical-ref
 		     (lambda (a l)
 		       (cons (cons* (car a) (lookup (cadadr a) dict) (cddr a))
 			     l)) '() args))
-	      (dict (add-lexical "return" dict))
+	      (dict (nx-add-lexical "return" dict))
 	      (dict (acons '@F name dict))
               (proc `(proc ,nref (arg-list . ,args) ,body)))
 	 (values (+SP proc) '() dict)))
@@ -182,12 +174,12 @@
 
       ((set-indexed (ident ,name) ,index ,value)
        (let ((nref (lookup name dict)))
-	 (unless nref (throw 'tsh-error "not defined: ~S" name))
+	 (unless nref (nx-error "not defined: ~S" name))
 	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
       ((call (ident ,name) . ,args)
        (let ((ref (lookup name dict)))
-	 (unless ref (throw 'tsh-error "not defined: ~S" name))
+	 (unless ref (nx-error "not defined: ~S" name))
 	 (values (+SP `(call ,ref . ,args)) '() dict)))
 
       ((use . ,strpath)
@@ -201,7 +193,7 @@
          (values '() (+SP stmt) dict)))
 
       ((script . ,stmts)
-       (values tree '() (add-lexical "return" (push-scope dict))))
+       (values tree '() (nx-add-lexical "return" (nx-push-scope dict))))
 
       ;; don't process resolved references
       ((@@ ,module ,symbol)
@@ -213,6 +205,7 @@
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
     (define +SP (make-+SP tree))
+    
     (when #f
       ;;(sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
       ;;(sferr "    kseed=~S\n    seed=~S\n" kseed seed)
@@ -239,7 +232,7 @@
 	   (else (values (car kseed) kdict)))))
 
        ((script)
-	(values (cons (block (rtail kseed)) seed) (pop-scope kdict)))
+	(values (cons (block (rtail kseed)) seed) (nx-pop-scope kdict)))
 
        ((stmt-list)
         (let* ((stmtl (rtail kseed))
@@ -281,7 +274,7 @@
 			 `(set! ,name-ref ,fctn))) ;; never used methinks
 	       )
 	  ;;(sferr "proc ~S:\n" name-ref) (pperr tail) (pperr fctn)
-	  (values (cons stmt seed) (pop-scope kdict))))
+	  (values (cons stmt seed) (nx-pop-scope kdict))))
 
        ((return)
 	(let ((ret `(abort ,(lookup "return" kdict)
@@ -318,7 +311,7 @@
 	       (sw (if (eq? (caar kseed) 'default)
 		       (make-switch val (cdr kseed) (car kseed))
 		       (make-switch val kseed '(void)))))
-	  (values (cons (+SP sw) seed) (pop-scope kdict))))
+	  (values (cons (+SP sw) seed) (nx-pop-scope kdict))))
 
        
        ((case)
@@ -336,13 +329,13 @@
                (test `(primcall not (primcall zero? ,(list-ref kseed 2))))
                (init (list-ref kseed 3))
                (form (make-for init test next body kdict)))
-	(values (cons (+SP form) seed) (pop-scope kdict))))
+	(values (cons (+SP form) seed) (nx-pop-scope kdict))))
 
        ((while)
 	(let* ((test `(primcall not (primcall zero? ,(list-ref kseed 1))))
 	       (body (list-ref kseed 0))
 	       (form (make-while test body kdict)))
-	  (values (cons (+SP form) seed) (pop-scope kdict))))
+	  (values (cons (+SP form) seed) (nx-pop-scope kdict))))
 
        ((set)
 	(let* ((value (car kseed))
@@ -368,7 +361,7 @@
 
        ((eval)
 	(let ((body (with-escape/arg (lookup "return" kdict) (car kseed))))
- 	  (values (cons (+SP body) seed) (pop-scope kdict))))
+ 	  (values (cons (+SP body) seed) (nx-pop-scope kdict))))
 
        ((empty-stmt)
 	(values seed kdict))
@@ -402,7 +395,7 @@
         (values
          (cons (+SP `(call ,(xlib-ref 'last) . ,(rtail kseed))) seed)
          kdict))
-        
+
        ((expr)
 	;;(sferr "expr:~S\n" kseed)
 	(values (cons (+SP (car kseed)) seed) kdict))
@@ -435,7 +428,7 @@
        ((deref)
         (let* ((name (car kseed))
                (ref (lookup name kdict)))
-	  (unless ref (throw 'tsh-error "undefined variable: ~S" name))
+	  (unless ref (nx-error "undefined variable: ~S" name))
           (values (+SP (cons ref seed)) kdict)))
 
        ((deref-indexed)
@@ -444,7 +437,7 @@
                (ref (lookup name kdict))
                (args (cdr tail))
                (proc (xlib-ref 'tsh:indexed-ref)))
-	  (unless ref (throw 'tsh-error "undefined variable: ~A" name))
+	  (unless ref (nx-error "undefined variable: ~A" name))
 	  (values (+SP (cons `(call ,proc ,ref ,@args) seed)) kdict)))
 
        ((const)
@@ -452,7 +445,8 @@
 
        (else
 	(unless (member (car tree)
-			'(@@ toplevel lexical abort arg-list arg rest-arg))
+                        '(@@ toplevel lexical abort
+                                      arg-list arg opt-arg rest-arg))
 	  (sferr "MISSED: ~S\n" (car tree)))
 	(cond
 	 ((null? seed) (values (reverse kseed) kdict))
@@ -483,19 +477,10 @@
   (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
     (if exp 
 	(call-with-values
-	    (lambda ()
-	      (when #f
-		(sferr "sxml src prop:\n")
-		(pperr (add-src-prop-attr exp)))
-	      (sxml->xtil exp cenv opts)
-	      ;;(values #f cenv)
-	      )
+	    (lambda () (sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
 	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
-	    (values (parse-tree-il exp) env cenv)
-	    ;;(values (parse-tree-il '(const "[hello]")) env cenv)
-     	    )
-	  )
+	    (values (parse-tree-il exp) env cenv)))
 	(values (parse-tree-il '(void)) env cenv))))
 
 ;; --- last line ---

@@ -1,6 +1,6 @@
 ;;; language/nx-tsh/spec.scm - NYACC extension for Tclish
 
-;; Copyright (C) 2021 Matthew R. Wette
+;; Copyright (C) 2021,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,8 @@
   #:export (nx-tsh)
   #:use-module (nyacc lang tsh parser)
   #:use-module (nyacc lang tsh compile-tree-il)
-  #:use-module (system base language))
+  #:use-module (system base language)
+  #:use-module (ice-9 exceptions))
 
 (define-language nx-tsh
   #:title	"nx-tsh"
@@ -32,7 +33,7 @@
 		      (read-tsh-file p e)
 		      (read-tsh-stmt p e)))
   #:compilers   `((tree-il . ,compile-tree-il))
-  #:evaluator	(lambda (exp mod) (primitive-eval exp))
+  #:evaluator	(lambda (exp mod) (primitive-eval exp)))
   #:printer	write
   #:make-default-environment
 		(lambda ()
