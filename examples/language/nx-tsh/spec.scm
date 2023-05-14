@@ -33,7 +33,7 @@
 		      (read-tsh-file p e)
 		      (read-tsh-stmt p e)))
   #:compilers   `((tree-il . ,compile-tree-il))
-  #:evaluator	(lambda (exp mod) (primitive-eval exp)))
+  #:evaluator	(lambda (exp mod) (primitive-eval exp))
   #:printer	write
   #:make-default-environment
 		(lambda ()
