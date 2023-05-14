@@ -17,7 +17,7 @@ fi
 function trans () {
     src=$srcdir/$1
     dst=$dstdir/$1
-    sed -e "s/@x@/$x/g" -e "s/@nx@/$nx/g" -e "s/@S@/$X/g" < $src > $dst
+    sed -e "s/@x@/$x/g" -e "s/@X@/$X/g" < $src > $dst
 }
 
 if [ ! -f $dstdir/compile-tree-il.scm ]; then
@@ -35,7 +35,7 @@ fi
 if [ ! -f dstdir/nx$x ]; then
     src=$srcdir/nxtmpl
     dst=$dstdir/nx$x
-    sed -e "s/@x@/$x/g" -e "s/@nx@/$nx/g" -e "s/@S@/$X/g" < $src > $dst
+    sed -e "s/@x@/$x/g" -e "s/@X@/$X/g" < $src > $dst
 else
     echo "$dstdir/nx$x exists already"
 fi

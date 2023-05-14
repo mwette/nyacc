@@ -1,0 +1,3 @@
+(define-ffi-module (demo01)
+  #:api-code "int foo(double d);"
+  )

@@ -1,0 +1,13 @@
+#!/bin/bash
+# -*- scheme -*-
+exec guile $0 "$@"
+!#
+
+(use-modules (nyacc lang c99 ffi-next))
+
+(let* (;;(file (cadr (program-arguments)))
+       (file "demo01.ffi")
+       )
+  (compile-ffi-file file))
+
+;; --- last line ---
