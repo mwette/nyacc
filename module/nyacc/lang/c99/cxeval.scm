@@ -166,7 +166,7 @@
   (let* ((udecl `(udecl ,specl ,declr))
          (xdecl (expand-typerefs udecl udict))
          (mdecl (udecl->mdecl xdecl)))
-    (sizeof-mtail (cdr mdecl) udict)))
+    (sizeof-mtail (md-tail mdecl) udict)))
 
 (define (trim-mtail mtail)
   (case (caar mtail)
@@ -226,7 +226,7 @@
               (xdecl (and udecl (expand-typerefs udecl udict)))
               (mdecl (and xdecl (udecl->mdecl xdecl))))
          (if (not mdecl) (throw 'c99-error "not found: ~S" name))
-         (trim-mtail (cdr mdecl))))
+         (trim-mtail (md-tail mdecl))))
       ((array-ref ,elt ,expr)
        (let ((mtail (gen-mtail expr)))
          (match mtail
@@ -265,7 +265,7 @@
        ((pair? decls)
         (let* ((mdecl (udecl->mdecl (car decls)))
                (name (car mdecl))
-               (mtail (cdr mdecl)))
+               (mtail (md-tail mdecl)))
           (call-with-values
               (lambda () (sizeof-mtail mtail udict))
             (lambda (elt-sz elt-al)
@@ -336,7 +336,7 @@
             (xdecl (expand-typerefs udecl udict))
             (mdecl (udecl->mdecl xdecl))
             (desig (unwrap-designator expr udict)))
-       (offsetof-mtail (cdr mdecl) desig 0 udict)))
+       (offsetof-mtail (md-tail mdecl) desig 0 udict)))
     ((offsetof-type (type-name ,spec-list) ,expr)
      (eval-offsetof
       `(offsetof-type (type-name ,spec-list (param-declr (ident "_"))) ,expr)
@@ -540,7 +540,7 @@
         (cond
          ((pair? decls)
           (let* ((mdecl (udecl->mdecl (car decls)))
-                 (name (car mdecl)) (mtail (cdr mdecl)))
+                 (name (car mdecl)) (mtail (md-tail mdecl)))
             (call-with-values (lambda () (gen-offsets mtail (+ base siz) udict))
               (lambda (el-sz el-al el-os)
                 (let ((oval (if (pair? el-os) el-os
@@ -593,7 +593,7 @@
             (xdecl (expand-typerefs udecl udict))
             (mdecl (udecl->mdecl xdecl)))
        (call-with-values
-           (lambda () (gen-offsets (cdr mdecl) 0 udict))
+           (lambda () (gen-offsets (md-tail mdecl) 0 udict))
          (lambda (size align offsets) offsets))))
     ((type-name ,spec-list)
      (find-offsets `(type-name ,spec-list (param-declr (ident "_"))) udict))
@@ -610,7 +610,7 @@
         (cond
          ((pair? decls)
           (let* ((mdecl (udecl->mdecl (car decls)))
-                 (name (car mdecl)) (mtail (cdr mdecl)))
+                 (name (car mdecl)) (mtail (md-tail mdecl)))
             (loop (acons name (gen-sizes mtail udict) sizes)
                   (cdr decls) flds)))
          ((pair? flds)
@@ -644,7 +644,7 @@
      (let* ((udecl `(udecl ,spec-list ,declr))
             (xdecl (expand-typerefs udecl udict))
             (mdecl (udecl->mdecl xdecl)))
-       (gen-sizes (cdr mdecl) udict)))
+       (gen-sizes (md-tail mdecl) udict)))
     ((type-name ,spec-list)
      (find-sizes `(type-name ,spec-list (param-declr (ident "_"))) udict))
     (,_ #f)))
@@ -659,7 +659,7 @@
         (cond
          ((pair? decls)
           (let* ((mdecl (udecl->mdecl (car decls)))
-                 (name (car mdecl)) (mtail (cdr mdecl)))
+                 (name (car mdecl)) (mtail (md-tail mdecl)))
             (loop (acons name (gen-types mtail udict) types)
                   (cdr decls) flds)))
          ((pair? flds)
@@ -694,7 +694,7 @@
      (let* ((udecl `(udecl ,spec-list ,declr))
             (xdecl (expand-typerefs udecl udict keep))
             (mdecl (udecl->mdecl xdecl)))
-       (gen-types (cdr mdecl) udict)))
+       (gen-types (md-tail mdecl) udict)))
     ((type-name ,spec-list)
      (find-types `(type-name ,spec-list (param-declr (ident "_"))) udict keep))
     (,_ #f)))

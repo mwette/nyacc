@@ -33,7 +33,7 @@
 
 (define-module (nyacc lang c99 munge-base)
   #:export (expand-typerefs
-            udecl->mdecl m-unwrap-declr
+            udecl->mdecl m-unwrap-declr md-tail
             reify-declr reify-decl
             def-namer
             split-udecl
@@ -697,16 +697,26 @@
 ;; random identifier starting with @code{@} will be provided.
 ;; @end deffn
 (define* (udecl->mdecl decl #:key (namer def-namer))
-  (let* ((specl (sx-ref decl 1))
+  (let* ((comm (and=> 'comment (sx-attr decl) cadr))
+         (specl (sx-ref decl 1))
          (declr (or (sx-ref decl 2) `(ident ,(namer))))
          (stor-spec (and=> (sx-find 'stor-spec specl)
                            (lambda (sx) (sx-ref sx 1))))
          (mtail (and=> (sx-find 'type-spec specl) sx-tail))
          ;;(mtail (m-extract-tspec specl))
+         (attr (let* ((av '())
+                      (av (if comm (cons `(comm . ,comm) av)))
+                      (av (if init (cons `(init . ,init) av))))
+                 (and (pair? av) `(@ . ,av))))
          (m-declr (m-unwrap-declr declr mtail namer))
          (m-declr (if (and (equal? stor-spec '(extern))
                            (not (equal? 'function-returning (caadr m-declr))))
                       (cons* (car m-declr) '(extern) (cdr m-declr)) m-declr)))
     m-declr))
+
+(define (md-tail mdecl)
+  (if (and (pair? (cdr mdecl)) (pair? (cadr mdecl)) (eq? '@ (caadr mdecl)))
+      (cddr mdecl)
+      (cdr mdecl)))
   
 ;; --- last line ---

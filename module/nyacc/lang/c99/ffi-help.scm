@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2016-2022 Matthew R. Wette
+;; Copyright (C) 2016-2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -59,13 +59,6 @@
 	    load-include-file
 	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl->str fh-scm-str->scm-exp
 	    string-member-proc string-renamer
-	    ;;
-	    C-decl->scm C-decl fh-llibs
-	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
-
-	    ;;ffi-symmap  		; <= debugging
-
-	    C-fun-decl->scm		; deprecated
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
@@ -75,8 +68,6 @@
   #:use-module (nyacc lang c99 util)
   #:use-module (nyacc version)
   #:use-module (nyacc lang sx-util)
-  #:use-module ((nyacc lang util) #:select (cintstr->scm))
-  #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:use-module (system foreign)
   #:use-module (sxml fold)
@@ -284,9 +275,6 @@
      ((list? val) val)
      ((string? val) (list val))
      (else (throw 'ffi-help-error "value does not resolve to list")))))
-
-(define (cintstr->num str)
-  (and=> (cintstr->scm str) string->number))
 
 (define (sw/* name) (string-append name "*"))
 (define (sw/*-desc name) (string-append name "*-desc"))
@@ -650,8 +638,8 @@
 		 (udecl (cdar decls))
 		 ;; fix the following, look at cleanup-udecl
 		 (udecl (udecl-rem-type-qual udecl)) ;; remove "const" "extern"
-		 (spec (udecl->mdecl/comm udecl))
-		 (tail (cddr spec))
+		 (spec (udecl->mdecl udecl))
+		 (tail (md-tail spec))
 		 (type (mtail->bs-desc tail)))
 	    (cond
 	     ((and (pair? type) (eq? 'bit-field (car type)))
@@ -859,7 +847,7 @@
 (define (bounding-mtail-for-union-fields fields)
   (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
     (if (null? flds) btail
-	(let ((mtail (cdr (udecl->mdecl (car flds)))))
+	(let ((mtail (md-tail (udecl->mdecl (car flds)))))
 	  (call-with-values (lambda () (sizeof-mtail mtail (*udict*)))
 	    (lambda (sz al)
 	      (if (> sz mxsz)
@@ -906,7 +894,7 @@
 			    (udecl (cdar udict))
 			    (udecl (udecl-rem-type-qual udecl))
 			    (mdecl (udecl->mdecl udecl)))
-		       (mtail->ffi-desc (cdr mdecl) #t)))
+		       (mtail->ffi-desc (md-tail mdecl) #t)))
 		   (clean-and-unitize-fields fields))))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
@@ -927,7 +915,7 @@
   (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
 	 (udecl (udecl-rem-type-qual udecl1))
 	 (mdecl (udecl->mdecl udecl1)))
-    (mtail->ffi-desc (cdr mdecl))))
+    (mtail->ffi-desc (md-tail mdecl))))
 
 (define (gen-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
@@ -944,14 +932,14 @@
 	  (let* ((udecl1 (expand-typerefs param (*udict*) ffi-defined))
 		 (udecl1 (udecl-rem-type-qual udecl1))
 		 (mdecl (udecl->mdecl udecl1 #:namer namer)))
-	    (cons (mtail->ffi-desc (cdr mdecl)) seed)))))
+	    (cons (mtail->ffi-desc (md-tail mdecl)) seed)))))
       '() params))))
 
 (define (gen-bs-decl-return udecl)
   (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
 	 (udecl (udecl-rem-type-qual udecl1))
 	 (mdecl (udecl->mdecl udecl1)))
-    (mtail->bs-desc (cdr mdecl))))
+    (mtail->bs-desc (md-tail mdecl))))
 
 (define (gen-bs-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
@@ -965,11 +953,7 @@
 	    (let* ((udecl1 (expand-typerefs param (*udict*) ffi-defined))
 		   (udecl1 (udecl-rem-type-qual udecl1))
 		   (mdecl (udecl->mdecl udecl1 #:namer namer)))
-              ;;(sferr "gen-bs-decl-params:\n") (pperr param)
-              ;;(sferr "  ffi: ~S\n" ffi-defined)
-              ;;(sferr "  def: ~S\n" (*defined*))
-              ;;(sferr "  wrp: ~S\n" (*wrapped*))
-	      (cons (mtail->bs-desc (cdr mdecl)) seed))))
+	      (cons (mtail->bs-desc (md-tail mdecl)) seed))))
       '() params))))
 
 ;; given list of udecl params generate list of name-unwrap pairs
@@ -997,7 +981,7 @@
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
 
     ;; git_reference_foreach_name_cb not preserved
-    (pmatch (cdr mdecl)
+    (pmatch (md-tail mdecl)
       (((fixed-type ,name)) 'unwrap~fixed)
       (((float-type ,name)) 'unwrap~float)
       (((void)) #f)
@@ -1067,7 +1051,7 @@
        (let* ((udecl (mdecl->udecl (cons "~ret" rest)))
 	      (udecl (expand-typerefs udecl (*udict*) ffi-defined))
 	      (mdecl (udecl->mdecl udecl))
-	      (decl-return (mtail->ffi-desc (cdr mdecl)))
+	      (decl-return (mtail->ffi-desc (md-tail mdecl)))
 	      (decl-params (gen-decl-params params)))
 	 (if (and (pair? decl-params) (equal? (last decl-params) '...))
 	     (fherr/once "no varargs (yet)"))
@@ -1086,7 +1070,7 @@
 
 (define (mdecl->fh-wrapper mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
-    (pmatch (cdr mdecl)
+    (pmatch (md-tail mdecl)
       (((fixed-type ,name)) (if (assoc-ref ffi-typemap name) #f
 				(fherr "todo: ffi-wrap fixed")))
       (((float-type ,name)) (if (assoc-ref ffi-typemap name) #f
@@ -1830,7 +1814,7 @@
        (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mdecl (udecl->mdecl udecl)))
-	 (cnvt-extern (car mdecl) (cdr mdecl)))
+	 (cnvt-extern (car mdecl) (md-tail mdecl)))
        (values wrapped defined))
 
       ;; non-pointer
@@ -1840,7 +1824,7 @@
        (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mdecl (udecl->mdecl udecl)))
-	 (cnvt-extern (car mdecl) (cdr mdecl))
+	 (cnvt-extern (car mdecl) (md-tail mdecl))
 	 (values wrapped defined)))
 
       ;; === special cases I need to fix =
