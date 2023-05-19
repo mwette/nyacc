@@ -58,8 +58,9 @@
 (define (op-call/prim op kseed)
   (rev/repl 'primcall op kseed))
 
-(define (make-function name arity body)
-  (let* ((meta '((language . nx-tsh)))
+(define (make-function name lang arity body)
+  (let* ((meta '())
+         (meta (if lang (cons `(language . ,lang) meta) meta))
 	 (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case (,arity ,body)))))
 
@@ -140,23 +141,42 @@
        (values tree '()
                (nx-add-lexicals "continue" "break" (nx-push-scope dict))))
       
+      #|
       ((proc (ident ,name) (arg-list . ,args) ,body)
-       ;; replace each name with (lexical name gsym)
-       ;;(sferr "proc dict:\n") (pperr dict)
-       (let* ((dict (nx-add-variable name dict))
+       (let* ((arg-name (lambda (x) (cadadr x)))
+              (dict (nx-add-variable name dict))
 	      (nref (lookup name dict))
 	      (dict (nx-push-scope dict))
-	      ;; clean this up
-	      (dict (fold
-                     (lambda (a d) (nx-add-lexical (cadadr a) d)) dict args))
-	      (args (fold-right ;; replace arg-name with lexical-ref
-		     (lambda (a l)
-		       (cons (cons* (car a) (lookup (cadadr a) dict) (cddr a))
-			     l)) '() args))
 	      (dict (nx-add-lexical "return" dict))
-	      (dict (acons '@F name dict))
-              (proc `(proc ,nref (arg-list . ,args) ,body)))
-	 (values (+SP proc) '() dict)))
+              (dict (fold               ; add args to local scope
+                     (lambda (a d) (nx-add-lexical (arg-name a) d))
+                     dict args))
+	      (args (fold-right         ; ident -> lexical 
+		     (lambda (a l)
+                       (let ((ref (lookup (arg-name a) dict)))
+		         (cons (cons* (car a) ref (cddr a)) l)))
+                     '() args))
+              (form `(proc ,nref (arg-list . ,args) ,body)))
+	 (values (+SP form) '() (acons '@F name dict))))
+      |#
+      ((proc (ident ,name) ,args ,body)
+       (let ((form `(set (ident ,name) (lambda (@ (name ,name)) ,args ,body))))
+         (fD (+SP form) '() dict)))
+
+      ((lambda (arg-list . ,args) ,body)
+       (let* ((arg-name (lambda (x) (cadadr x)))
+              (dict (nx-push-scope dict))
+	      (dict (nx-add-lexical "return" dict))
+              (dict (fold               ; add args to local scope
+                     (lambda (a d) (nx-add-lexical (arg-name a) d))
+                     dict args))
+	      (args (fold-right         ; ident -> lexical 
+		     (lambda (a l)
+                       (let ((ref (lookup (arg-name a) dict)))
+		         (cons (cons* (car a) ref (cddr a)) l)))
+                     '() args))
+              (form `(lambda (arg-list . ,args) ,body)))
+	 (values (+SP form) '() (acons '@F "*anon*" dict))))
 
       ((incr (ident ,var) ,val)
        (values (+SP `(incr ,var ,val)) '() dict))
@@ -195,8 +215,10 @@
       ((script . ,stmts)
        (values tree '() (nx-add-lexical "return" (nx-push-scope dict))))
 
-      ;; don't process resolved references
-      ((@@ ,module ,symbol)
+      ((@@ ,module ,symbol)             ; don't process resolved references
+       (values '() tree dict))
+
+      ((@ . _)                          ; don't process attributes
        (values '() tree dict))
 
       (,_
@@ -244,37 +266,33 @@
 	(values seed kdict))
 
        ((proc)
-	;;(sferr "proc (reverse kseed):\n") (pperr (reverse kseed))
+        ;; if change to lambda (as we should) need way to set name of lambda
 	(let* ((tail (rtail kseed))
 	       (name-ref (list-ref tail 0))
 	       (argl (list-ref tail 1))
 	       (body (block (list-tail tail 2)))
 	       (ptag (lookup "return" kdict))
 	       (arity (make-arity argl))
-	       ;; add locals : CLEAN THIS UP -- used in nx-octave also
-	       (lvars (let loop ((ldict kdict))
-			(if (eq? '@F (caar ldict)) '()
-			    (cons (cdar ldict) (loop (cdr ldict))))))
-               ;;(xxx (begin (sferr "loop\n") (pperr lvars) (quit)))
-	       (body (let loop ((nl '()) (ll '()) (vl '()) (vs lvars))
-                       ;; ^ this is wrap-bindings in javascript
-		       (if (null? vs)
-			   `(let ,nl ,ll ,vl ,body)
-			   (loop
-			    (cons (list-ref (car vs) 1) nl)
-			    (cons (list-ref (car vs) 2) ll)
-			    (cons '(void) vl)
-			    (cdr vs)))))
-	       ;;
+               (body (wrap-locals body kdict))
 	       (body (with-escape/arg ptag body))
-	       (fctn (make-function (cadr name-ref) arity body))
+	       (fctn (make-function (cadr name-ref) 'nx-tsh arity body))
 	       (fctn (+SP fctn))
-	       (stmt (if (eq? 'toplevel (car name-ref))
+	       (form (if (eq? 'toplevel (car name-ref))
 			 `(define ,(cadr name-ref) ,fctn)
-			 `(set! ,name-ref ,fctn))) ;; never used methinks
-	       )
-	  ;;(sferr "proc ~S:\n" name-ref) (pperr tail) (pperr fctn)
-	  (values (cons stmt seed) (nx-pop-scope kdict))))
+			 `(set! ,name-ref ,fctn)))) ;; never used methinks
+	  (values (cons form seed) (nx-pop-scope kdict))))
+       ((lambda)
+	(let* ((tail (rtail kseed))
+               (attr (and (pair? (car tail)) (eq? '@ (caar tail)) (car tail)))
+	       (argl (list-ref tail (if attr 1 0)))
+	       (body (block (list-tail tail (if attr 2 1))))
+	       (ptag (lookup "return" kdict))
+	       (arity (make-arity argl))
+               (body (wrap-locals body kdict))
+	       (body (with-escape/arg ptag body))
+               (name (and attr (assq-ref (cdr attr) 'name)))
+	       (form (make-function name 'nx-tsh arity body)))
+	  (values (cons form seed) (nx-pop-scope kdict))))
 
        ((return)
 	(let ((ret `(abort ,(lookup "return" kdict)

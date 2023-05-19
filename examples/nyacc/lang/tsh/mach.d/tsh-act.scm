@@ -26,12 +26,8 @@
    (lambda ($2 $1 . $rest) $1)
    ;; topl-decl => "source" string
    (lambda ($2 $1 . $rest) `(source ,$2))
-   ;; topl-decl => "proc" ident "{" arg-list "}" "{" stmt-list "}"
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(proc ,$2 ,$4 ,$7))
-   ;; topl-decl => "proc" ident symbol "{" stmt-list "}"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(proc ,$2 (arg-list (arg ,$3)) ,$5))
+   ;; topl-decl => "use" path
+   (lambda ($2 $1 . $rest) `(use ,@(cdr $2)))
    ;; arg-list => arg-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; arg-list-1 => 
@@ -59,8 +55,12 @@
    (lambda $rest `(empty-stmt))
    ;; stmt => '$lone-comm
    (lambda ($1 . $rest) `(comment ,$1))
-   ;; decl-stmt => "use" path
-   (lambda ($2 $1 . $rest) `(use ,@(cdr $2)))
+   ;; decl-stmt => "proc" ident "{" arg-list "}" "{" stmt-list "}"
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(proc ,$2 ,$4 ,$7))
+   ;; decl-stmt => "proc" ident symbol "{" stmt-list "}"
+   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
+     `(proc ,$2 (arg-list (arg ,$3)) ,$5))
    ;; exec-stmt => "set" ident unit-expr
    (lambda ($3 $2 $1 . $rest) `(set ,$2 ,$3))
    ;; exec-stmt => "set" '$deref/ix "(" expr-list ")" unit-expr
@@ -68,6 +68,9 @@
      `(set-indexed (deref (ident ,$2)) ,$4 ,$6))
    ;; exec-stmt => ident expr-seq
    (lambda ($2 $1 . $rest) `(call ,$1 ,@(cdr $2)))
+   ;; exec-stmt => "lambda" "{" arg-list "}" "{" stmt-list "}"
+   (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(lambda ,$3 ,$6))
    ;; exec-stmt => "(" expr-list ")"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; exec-stmt => "{" stmt-list "}"

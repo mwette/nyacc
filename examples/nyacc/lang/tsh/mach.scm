@@ -67,9 +67,7 @@
 
     (topl-decl
      ("source" string ($$ `(source ,$2)))
-     ("proc" ident "{" arg-list "}" "{" stmt-list "}" ($$ `(proc ,$2 ,$4 ,$7)))
-     ("proc" ident symbol "{" stmt-list "}"
-      ($$ `(proc ,$2 (arg-list (arg ,$3)) ,$5))))
+     ("use" path ($$ `(use ,@(cdr $2)))))
 
     (arg-list
      (arg-list-1 ($$ (tl->list $1))))
@@ -94,14 +92,16 @@
      ($lone-comm ($$ `(comment ,$1))))
      
     (decl-stmt
-     ("use" path ($$ `(use ,@(cdr $2))))
-     )
+     ("proc" ident "{" arg-list "}" "{" stmt-list "}" ($$ `(proc ,$2 ,$4 ,$7)))
+     ("proc" ident symbol "{" stmt-list "}"
+      ($$ `(proc ,$2 (arg-list (arg ,$3)) ,$5))))
 
     (exec-stmt
      ("set" ident unit-expr ($$ `(set ,$2 ,$3)))
      ("set" $deref/ix "(" expr-list ")" unit-expr
       ($$ `(set-indexed (deref (ident ,$2)) ,$4 ,$6)))
      (ident expr-seq ($$ `(call ,$1 ,@(cdr $2))))
+     ("lambda" "{" arg-list "}" "{" stmt-list "}" ($$ `(lambda ,$3 ,$6)))
      ("(" expr-list ")" ($$ $2))
      ("{" stmt-list "}" ($$ $2))
      (if-stmt)
@@ -206,8 +206,10 @@
      ("!" unary-expression ($$ `(not ,$2)))
      ("~" unary-expression ($$ `(bitwise-not ,$2))))
     (primary-expression
-     ;;("$" 'no-ws $ident ($$ `(deref ,$3)))
-     ;;("$" 'no-ws $ident 'no-ws "(" expr-list ")" ($$ `(deref-indexed ,$3 ,$6)))
+     #|
+     ("$" 'no-ws $ident ($$ `(deref ,$3)))
+     ("$" 'no-ws $ident 'no-ws "(" expr-list ")" ($$ `(deref-indexed ,$3 ,$6)))
+     |#
      ($deref ($$ `(deref ,$1)))
      ($deref/ix "(" expr-list ")" ($$ `(deref-indexed ,$1 ,$3)))
      (fixed)

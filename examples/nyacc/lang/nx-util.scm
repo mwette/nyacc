@@ -70,7 +70,8 @@
 
 	    make-+SP
 	    ;;opcall-generator
-	    
+
+	    wrap-locals
 	    block vblock
 	    make-arity
 	    make-and make-or make-thunk make-defonce
@@ -549,6 +550,22 @@
   (lambda (obj)
     (set-source-properties! obj (source-properties tree))
     obj))
+
+;; @deffn wrap-locals body kdict
+;; Given @var{body}, a tree-il, executing in lexical env given by dict
+;; @var{kdict} generate a tree-il lex form containing the locals.
+;; @end deffn
+(define (wrap-locals body kdict)
+  (let loop ((nl '()) (ll '()) (vl '())
+             (vs (let loop ((kd kdict))
+		   (if (eq? '@F (caar kd)) '()
+                       (cons (cdar kd) (loop (cdr kd)))))))
+    (if (null? vs)
+        `(let ,nl ,ll ,vl ,body)
+	(loop (cons (list-ref (car vs) 1) nl)
+	      (cons (list-ref (car vs) 2) ll)
+	      (cons '(void) vl)
+	      (cdr vs)))))
 
 ;; -- to be deprecated
 
