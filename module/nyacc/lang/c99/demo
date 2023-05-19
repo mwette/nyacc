@@ -5,9 +5,7 @@ exec guile $0 "$@"
 
 (use-modules (nyacc lang c99 ffi-next))
 
-(let* (;;(file (cadr (program-arguments)))
-       (file "demo01.ffi")
-       )
+(let* ((file (cadr (program-arguments))))
   (compile-ffi-file file))
 
 ;; --- last line ---

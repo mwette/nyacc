@@ -33,7 +33,8 @@
 
 (define-module (nyacc lang c99 munge-base)
   #:export (expand-typerefs
-            udecl->mdecl m-unwrap-declr md-tail
+            udecl->mdecl m-unwrap-declr
+            md-attr md-tail
             reify-declr reify-decl
             def-namer
             split-udecl
@@ -685,11 +686,13 @@
 ;; includes the comment. This assumes decls have been run through
 ;; @code{stripdown}.
 ;; @example
-;; (decl (decl-spec-list (type-spec "double"))
-;;       (init-declr-list (...))
-;;       (comment "state vector"))
+;; (decl (@ (comment "state vector"))
+;;       (decl-spec-list (type-spec "double"))
+;;       (ary-declr (ident "x") (p-expr (fixed "10"))
+;;       (initzer (initzer-list (initzer ...)))))
 ;; =>
-;; ("x" "state vector" (array-of 10) (float "double")
+;; ("x" (@ (comment . "state vector") (initzer . (
+;;      (array-of 10) (float "double")
 ;; @end example
 ;; @noindent
 ;; The optional keyword argument @var{namer} is a procdedure returning a string
@@ -697,22 +700,27 @@
 ;; random identifier starting with @code{@} will be provided.
 ;; @end deffn
 (define* (udecl->mdecl decl #:key (namer def-namer))
-  (let* ((comm (and=> 'comment (sx-attr decl) cadr))
-         (specl (sx-ref decl 1))
+  (let* ((specl (sx-ref decl 1))
          (declr (or (sx-ref decl 2) `(ident ,(namer))))
-         (stor-spec (and=> (sx-find 'stor-spec specl)
-                           (lambda (sx) (sx-ref sx 1))))
          (mtail (and=> (sx-find 'type-spec specl) sx-tail))
-         ;;(mtail (m-extract-tspec specl))
-         (attr (let* ((av '())
-                      (av (if comm (cons `(comm . ,comm) av)))
-                      (av (if init (cons `(init . ,init) av))))
-                 (and (pair? av) `(@ . ,av))))
          (m-declr (m-unwrap-declr declr mtail namer))
-         (m-declr (if (and (equal? stor-spec '(extern))
-                           (not (equal? 'function-returning (caadr m-declr))))
-                      (cons* (car m-declr) '(extern) (cdr m-declr)) m-declr)))
-    m-declr))
+         ;;
+         (init (sx-ref* decl 2 2 1))
+         (comm (and=> (assq 'comment (sx-attr decl)) cadr))
+         (xtrn (let ((ss (sx-find 'stor-spec specl)))
+                 (and ss (equal? (sx-ref ss 1) '(extern))
+                      (not (equal? 'function-returning (caadr m-declr))))))
+         (attr (let* ((av '())
+                      (av (if comm (cons `(comment . ,comm) av) av))
+                      (av (if xtrn (cons `(extern . #t) av) av))
+                      (av (if init (cons `(initzer . ,init) av) av)))
+                 (and (pair? av) `(@ . ,av)))))
+    (if attr (cons* (car m-declr) attr (cdr m-declr)) m-declr)))
+
+(define (md-attr mdecl)
+  (if (and (pair? (cdr mdecl)) (pair? (cadr mdecl)) (eq? '@ (caadr mdecl)))
+      (cdadr mdecl)
+      '()))
 
 (define (md-tail mdecl)
   (if (and (pair? (cdr mdecl)) (pair? (cadr mdecl)) (eq? '@ (caadr mdecl)))

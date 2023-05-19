@@ -1,3 +1,3 @@
 (define-ffi-module (demo01)
-  #:api-code "int foo(double d);"
+  #:api-code "extern double x[10] = {1.0, 2.0}; /* hello */ \n"
   )

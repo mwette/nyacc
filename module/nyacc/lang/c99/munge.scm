@@ -74,6 +74,7 @@
   #:re-export (expand-typerefs
                reify-declr reify-decl
                udecl->mdecl split-udecl
+               md-attr md-tail
                declr-ident declr-name
                clean-field-list clean-fields)
   #:use-module (nyacc lang c99 cxeval)
