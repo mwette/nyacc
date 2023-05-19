@@ -51,7 +51,7 @@
   (rev/repl 'primcall op kseed))
 
 (define (make-function name arity body)
-  (let* ((meta '((language . @nx@)))
+  (let* ((meta '((language . nx-@x@)))
 	 (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case (,arity ,body)))))
 
@@ -261,7 +261,7 @@
     (lambda () (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port)
-	     (string-append "*** @nx@: " fmt "\n") args)
+	     (string-append "*** nx-@x@: " fmt "\n") args)
       (values '(void) env))))
 
 (define show-sxml #f)

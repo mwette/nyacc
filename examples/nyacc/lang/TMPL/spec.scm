@@ -1,4 +1,4 @@
-;;; language/@nx@/spec.scm - NYACC extension for $X$
+;;; language/nx-@x@/spec.scm - NYACC extension for $X$
 
 ;; Copyright (C) 2023 Matthew Wette
 ;;
@@ -17,8 +17,8 @@
 
 ;;; Code:
 
-(define-module (language $nx$ spec)
-  #:export (@nx@)
+(define-module (language nx-@x@ spec)
+  #:export (nx-@x@)
   #:use-module (nyacc lang @x@ parser)
   #:use-module (nyacc lang @x@ compile-tree-il)
   #:use-module (system base language)
