@@ -1,4 +1,4 @@
-;; tsh-ia-tab.scm
+;; tsh-user-tab.scm
 
 ;; Copyright (C) 2021-2023 Matthew R. Wette
 ;; 
@@ -8,7 +8,7 @@
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING included with the this distribution.
 
-(define tsh-ia-mtab
+(define tsh-user-mtab
   '(($start . 104) ("\n" . 3) (";" . 4) ($keyword . 5) ($keychar . 6) ($float 
     . 7) ($fixed . 8) ("::" . 9) (no-ws . 10) ($string . 11) ($ident . 12) 
     ("," . 13) ("]" . 14) ("[" . 15) ($deref . 16) ("~" . 17) ("!" . 18) 
@@ -21,7 +21,7 @@
     ("proc" . 52) ($lone-comm . 53) ("args" . 54) ("}" . 55) ("{" . 56) 
     ("use" . 57) ("source" . 58) ($error . 2) ($end . 60)))
 
-(define tsh-ia-ntab
+(define tsh-user-ntab
   '((61 . path-1) (62 . expr-seq-1) (63 . expression) (64 . expr-list-1) 
     (65 . keyword) (66 . keychar) (67 . float) (68 . fixed) (69 . 
     unary-expression) (70 . multiplicative-expression) (71 . 
@@ -37,13 +37,13 @@
     (100 . string) (101 . stmt) (102 . term) (103 . topl-decl) (104 . item) 
     (105 . script-1) (106 . script) (107 . top)))
 
-(define tsh-ia-len-v
+(define tsh-user-len-v
   #(1 1 1 1 2 2 2 2 2 1 0 2 5 2 1 1 3 1 1 0 1 8 6 3 6 2 7 3 3 1 5 5 13 2 1 2 
     2 3 5 9 6 10 1 5 6 1 2 1 1 2 2 2 4 2 1 1 1 3 1 3 1 3 1 3 1 3 1 3 3 1 3 3 3
     3 1 3 3 1 3 3 1 3 3 3 1 2 2 2 2 1 4 1 1 1 1 1 1 3 3 1 1 3 1 0 2 1 1 1 5 5 
     1 1 1 1 1 1 1 1 1))
 
-(define tsh-ia-rto-v
+(define tsh-user-rto-v
   #(#f 107 106 105 105 104 104 103 103 92 98 98 98 98 91 95 95 101 101 101 
     101 94 94 93 93 93 93 93 93 93 93 93 93 93 93 93 93 93 87 87 87 87 85 84 
     84 86 86 83 83 83 83 81 81 82 96 63 79 79 78 78 77 77 76 76 75 75 74 74 74
@@ -51,7 +51,7 @@
     80 80 80 80 80 89 64 64 88 62 62 99 61 61 61 61 97 68 67 100 90 66 65 102 
     102))
 
-(define tsh-ia-pat-v
+(define tsh-user-pat-v
   #(((12 . 1) (40 . 2) (41 . 3) (42 . 4) (43 . 5) (44 . 6) (45 . 7) (46 . 8) 
     (87 . 9) (56 . 10) (49 . 11) (47 . 12) (97 . 13) (51 . 14) (52 . 15) 
     (53 . 16) (93 . 17) (94 . 18) (57 . 19) (58 . 20) (101 . 21) (103 . 22) 
@@ -296,13 +296,13 @@
     ) (51 . 14) (52 . 15) (53 . 16) (93 . 17) (94 . 18) (101 . 74) (95 . 75) 
     (91 . 223) (1 . -19)) ((55 . 224)) ((1 . -32))))
 
-(define tsh-ia-tables
+(define tsh-user-tables
   (list
-   (cons 'mtab tsh-ia-mtab)
-   (cons 'ntab tsh-ia-ntab)
-   (cons 'len-v tsh-ia-len-v)
-   (cons 'rto-v tsh-ia-rto-v)
-   (cons 'pat-v tsh-ia-pat-v)
+   (cons 'mtab tsh-user-mtab)
+   (cons 'ntab tsh-user-ntab)
+   (cons 'len-v tsh-user-len-v)
+   (cons 'rto-v tsh-user-rto-v)
+   (cons 'pat-v tsh-user-pat-v)
    ))
 
 ;;; end tables

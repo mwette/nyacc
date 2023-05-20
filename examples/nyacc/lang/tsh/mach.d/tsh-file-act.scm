@@ -1,4 +1,4 @@
-;; tsh-ia-act.scm
+;; tsh-file-act.scm
 
 ;; Copyright (C) 2021-2023 Matthew R. Wette
 ;; 
@@ -8,9 +8,9 @@
 ;; version 3 of the License, or (at your option) any later version.
 ;; See the file COPYING included with the this distribution.
 
-(define tsh-ia-act-v
+(define tsh-file-act-v
   (vector
-   ;; $start => item
+   ;; $start => top
    (lambda ($1 . $rest) $1)
    ;; top => script
    (lambda ($1 . $rest) $1)

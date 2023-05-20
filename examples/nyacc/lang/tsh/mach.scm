@@ -32,8 +32,8 @@
 
 (define-module (nyacc lang tsh mach)
   #:export (gen-tsh-files
-	    tsh-spec tsh-mach 
-	    tsh-ia-spec tsh-ia-mach)
+	    tsh-file-spec tsh-file-mach 
+	    tsh-user-spec tsh-user-mach)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -42,7 +42,7 @@
 
 ;; need #<unspecified>
 
-(define tsh-spec
+(define tsh-file-spec
   (lalr-spec
    (notice (string-append "Copyright (C) 2021-2023 Matthew R. Wette"
 			  license-lgpl3+))
@@ -252,19 +252,19 @@
     (keyword ($keyword ($$ `(keyword ,$1))))
     (term (";") ("\n")))))
 
-(define tsh-mach
+(define tsh-file-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine tsh-spec))
+    (make-lalr-machine tsh-file-spec))
    #:keep 0 #:keepers '($code-comm $lone-comm "\n" 'no-ws)))
 
-(define tsh-ia-spec
-  (restart-spec tsh-mach 'item))
+(define tsh-user-spec
+  (restart-spec tsh-file-spec 'item))
 
-(define tsh-ia-mach
+(define tsh-user-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine tsh-ia-spec))
+    (make-lalr-machine tsh-user-spec))
    #:keep 0 #:keepers '(no-ws)))
 
 ;;; =====================================
@@ -278,22 +278,22 @@
     (if (pair? rest) (string-append (car rest) "/" path) path))
   (define (xtra-dir path)
     (lang-dir (string-append "mach.d/" path)))
-  (write-lalr-actions tsh-mach (xtra-dir "tsh-act.scm.new")
-		      #:prefix "tsh-")
-  (write-lalr-tables tsh-mach (xtra-dir "tsh-tab.scm.new")
-		     #:prefix "tsh-")
-  (write-lalr-actions tsh-ia-mach (xtra-dir "tsh-ia-act.scm.new")
-		      #:prefix "tsh-ia-")
-  (write-lalr-tables tsh-ia-mach (xtra-dir "tsh-ia-tab.scm.new")
-		     #:prefix "tsh-ia-")
-  (let ((a (move-if-changed (xtra-dir "tsh-act.scm.new")
-			    (xtra-dir "tsh-act.scm")))
-	(b (move-if-changed (xtra-dir "tsh-tab.scm.new")
-			    (xtra-dir "tsh-tab.scm")))
-	(c (move-if-changed (xtra-dir "tsh-ia-act.scm.new")
-			    (xtra-dir "tsh-ia-act.scm")))
-	(d (move-if-changed (xtra-dir "tsh-ia-tab.scm.new")
-			    (xtra-dir "tsh-ia-tab.scm"))))
+  (write-lalr-actions
+   tsh-file-mach (xtra-dir "tsh-file-act.scm.new") #:prefix "tsh-file-")
+  (write-lalr-tables
+   tsh-file-mach (xtra-dir "tsh-file-tab.scm.new") #:prefix "tsh-file-")
+  (write-lalr-actions
+   tsh-user-mach (xtra-dir "tsh-user-act.scm.new") #:prefix "tsh-user-")
+  (write-lalr-tables
+   tsh-user-mach (xtra-dir "tsh-user-tab.scm.new") #:prefix "tsh-user-")
+  (let ((a (move-if-changed (xtra-dir "tsh-file-act.scm.new")
+			    (xtra-dir "tsh-file-act.scm")))
+	(b (move-if-changed (xtra-dir "tsh-file-tab.scm.new")
+			    (xtra-dir "tsh-file-tab.scm")))
+	(c (move-if-changed (xtra-dir "tsh-user-act.scm.new")
+			    (xtra-dir "tsh-user-act.scm")))
+	(d (move-if-changed (xtra-dir "tsh-user-tab.scm.new")
+			    (xtra-dir "tsh-user-tab.scm"))))
     (or a b c d)))
 
 ;; --- last line ---

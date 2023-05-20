@@ -160,15 +160,15 @@
 	      ((read-chseq ch))
 	      (else (cons ch (string ch)))))))))))
 
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-tab.scm")
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-act.scm")
+(include-from-path "nyacc/lang/tsh/mach.d/tsh-file-tab.scm")
+(include-from-path "nyacc/lang/tsh/mach.d/tsh-file-act.scm")
 
 (define raw-parser
-  (make-lalr-parser (acons 'act-v tsh-act-v tsh-tables)
+  (make-lalr-parser (acons 'act-v tsh-file-act-v tsh-file-tables)
 		    #:skip-if-unexp '($lone-comm $code-comm "\n" no-ws)))
 
 (define parse-tsh
-  (let ((make-tsh-lexer (make-tsh-lexer-generator tsh-mtab)))
+  (let ((make-tsh-lexer (make-tsh-lexer-generator tsh-file-mtab)))
     (lambda* (#:key debug)
       (catch 'nyacc-error
 	(lambda () (raw-parser (make-tsh-lexer) #:debug debug))
@@ -187,18 +187,18 @@
       (lambda () (parse-tsh #:debug debug))
       (lambda () (set-current-input-port prev)))))
   
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-ia-tab.scm")
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-ia-act.scm")
+(include-from-path "nyacc/lang/tsh/mach.d/tsh-user-tab.scm")
+(include-from-path "nyacc/lang/tsh/mach.d/tsh-user-act.scm")
 
 (define raw-ia-parser
-  (make-lalr-parser (acons 'act-v tsh-ia-act-v tsh-ia-tables)
+  (make-lalr-parser (acons 'act-v tsh-user-act-v tsh-user-tables)
                     #:skip-if-unexp '(no-ws) #:interactive #t))
 
 ;; @deffn {Procedure} read-tsh-stmt port env
 ;; Read a TCLish item.  Return a SXML tree;
 ;; @end deffn
 (define read-tsh-stmt
-  (let* ((make-tsh-lexer (make-tsh-lexer-generator tsh-ia-mtab))
+  (let* ((make-tsh-lexer (make-tsh-lexer-generator tsh-user-mtab))
 	 (lexer (make-tsh-lexer)))
     (lambda (port env)
       (let ((prev (current-input-port)))
