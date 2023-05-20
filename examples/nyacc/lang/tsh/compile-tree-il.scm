@@ -111,24 +111,12 @@
       ((fixed ,sval)
        (values '() (+SP `(const ,(string->number sval))) dict))
 
-      #;((symbol ,sval)
-      (values '() `(const ,(string->symbol sval)) dict))
       ((ident ,sval)
        (values '() (+SP `(const ,(string->symbol sval))) dict))
 
       ((eval . ,stmts)
        (values tree '() (nx-add-lexical "return" (nx-push-scope dict))))
       
-      #;((deref ,name)
-       (let ((ref (lookup name dict)))
-	 (unless ref (nx-error "undefined variable: ~S" name))
- 	 (values '() (+SP ref) dict)))
-
-      #;((deref-indexed ,name ,expr-list)
-       (let ((ref (lookup name dict)) (proc (xlib-ref 'tsh:array-ref)))
-	 (unless ref (nx-error "undefined variable: ~A" name))
-	 (values '() (+SP `(call ,proc ,ref ,expr-list)) dict)))
-
       ((switch . ,stmts)
        (values tree '()
                (nx-add-lexicals "swx~val" "break" (nx-push-scope dict))))
@@ -141,24 +129,6 @@
        (values tree '()
                (nx-add-lexicals "continue" "break" (nx-push-scope dict))))
       
-      #|
-      ((proc (ident ,name) (arg-list . ,args) ,body)
-       (let* ((arg-name (lambda (x) (cadadr x)))
-              (dict (nx-add-variable name dict))
-	      (nref (lookup name dict))
-	      (dict (nx-push-scope dict))
-	      (dict (nx-add-lexical "return" dict))
-              (dict (fold               ; add args to local scope
-                     (lambda (a d) (nx-add-lexical (arg-name a) d))
-                     dict args))
-	      (args (fold-right         ; ident -> lexical 
-		     (lambda (a l)
-                       (let ((ref (lookup (arg-name a) dict)))
-		         (cons (cons* (car a) ref (cddr a)) l)))
-                     '() args))
-              (form `(proc ,nref (arg-list . ,args) ,body)))
-	 (values (+SP form) '() (acons '@F name dict))))
-      |#
       ((proc (ident ,name) ,args ,body)
        (let ((form `(set (ident ,name) (lambda (@ (name ,name)) ,args ,body))))
          (fD (+SP form) '() dict)))
@@ -265,22 +235,6 @@
        ((comment)
 	(values seed kdict))
 
-       ((proc)
-        ;; if change to lambda (as we should) need way to set name of lambda
-	(let* ((tail (rtail kseed))
-	       (name-ref (list-ref tail 0))
-	       (argl (list-ref tail 1))
-	       (body (block (list-tail tail 2)))
-	       (ptag (lookup "return" kdict))
-	       (arity (make-arity argl))
-               (body (wrap-locals body kdict))
-	       (body (with-escape/arg ptag body))
-	       (fctn (make-function (cadr name-ref) 'nx-tsh arity body))
-	       (fctn (+SP fctn))
-	       (form (if (eq? 'toplevel (car name-ref))
-			 `(define ,(cadr name-ref) ,fctn)
-			 `(set! ,name-ref ,fctn)))) ;; never used methinks
-	  (values (cons form seed) (nx-pop-scope kdict))))
        ((lambda)
 	(let* ((tail (rtail kseed))
                (attr (and (pair? (car tail)) (eq? '@ (caar tail)) (car tail)))
@@ -299,10 +253,6 @@
 			   (,(if (> (length kseed) 1) (car kseed) '(void)))
 			   (const ()))))
 	  (values (cons (+SP ret) seed) kdict)))
-
-       ((X-arg-list)
-	(sferr "arg-list:\n") (pperr (reverse kseed)) (quit)
-	)
 
        ;; conditional: elseif and else are translated by the default case
        ((if)
@@ -330,8 +280,6 @@
 		       (make-switch val (cdr kseed) (car kseed))
 		       (make-switch val kseed '(void)))))
 	  (values (cons (+SP sw) seed) (nx-pop-scope kdict))))
-
-       
        ((case)
 	(let ((val (+SP (reverse kseed))))
 	  (values 
@@ -347,7 +295,9 @@
                (test `(primcall not (primcall zero? ,(list-ref kseed 2))))
                (init (list-ref kseed 3))
                (form (make-for init test next body kdict)))
-	(values (cons (+SP form) seed) (nx-pop-scope kdict))))
+	  (values (cons (+SP form) seed) (nx-pop-scope kdict))))
+       ;; continue
+       ;; break
 
        ((while)
 	(let* ((test `(primcall not (primcall zero? ,(list-ref kseed 1))))
@@ -371,9 +321,6 @@
 	       (val `(call ,(xlib-ref 'tsh:indexed-set!) ,nref ,indx ,value)))
 	  (values (cons (+SP val) seed) kdict)))
 
-       #;((body)
-	(values (cons (block (rtail kseed)) seed) kdict))
-       
        ((call)
 	(values (cons (+SP `(call . ,(rtail kseed))) seed) kdict))
 
@@ -384,8 +331,6 @@
        ((empty-stmt)
 	(values seed kdict))
 
-       ;; others to add: incr foreach while continue break
-       ;; need incr-indexed
        ((incr)
 	(let* ((tail (rtail kseed))
 	       (name (car tail))
@@ -473,7 +418,7 @@
   (define (fH leaf seed dict)
     (values (cons leaf seed) dict))
 
-  (catch 'tsh-error
+  (catch 'nx-error
     (lambda () (foldts*-values fD fU fH `(*TOP* ,exp) '() env))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port)

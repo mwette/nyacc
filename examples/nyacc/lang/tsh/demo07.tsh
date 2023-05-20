@@ -1,0 +1,9 @@
+set a 10
+
+proc foo {x y} {
+    set a 100
+    proc bar {z} {
+        return ($a + $z)
+    }
+    return [bar ($x + $y)]
+}
