@@ -1,0 +1,19 @@
+#!/bin/sh
+# -*- scheme -*-
+exec guile $0
+!#
+
+(use-modules (nyacc lang @x@ mach))
+(use-modules (nyacc lalr))
+
+(when (gen-@x@-files)
+  (with-output-to-file ",file.txt"
+    (lambda ()
+      (pp-lalr-grammar @x@-file-spec)
+      (pp-lalr-machine @x@-file-mach)))
+  (with-output-to-file ",stmt.txt"
+    (lambda ()
+      (pp-lalr-grammar @x@-user-spec)
+      (pp-lalr-machine @x@-user-mach))))
+
+;;; --- last line ---

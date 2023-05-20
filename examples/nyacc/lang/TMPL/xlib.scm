@@ -36,11 +36,11 @@
 
 (define (@x@:show_sxml)
   (set! (@@ (nyacc lang @x@ compile-tree-il) show-sxml) #t))
-(define (tsh:hide_sxml)
+(define (@x@:hide_sxml)
   (set! (@@ (nyacc lang @x@ compile-tree-il) show-sxml) #f))
-(define (tsh:show_xtil)
+(define (@x@:show_xtil)
   (set! (@@ (nyacc lang @x@ compile-tree-il) show-xtil) #t))
-(define (tsh:hide_xtil)
+(define (@x@:hide_xtil)
   (set! (@@ (nyacc lang @x@ compile-tree-il) show-xtil) #f))
     
 ;; === xdict =====================
@@ -49,10 +49,10 @@
   `(
     ;;("format" . ,(xlib-ref '@x@:format))
     ;; 
-    ("show_sxml" . ,(xlib-ref 'tsh:show_sxml))
-    ("hide_sxml" . ,(xlib-ref 'tsh:hide_sxml))
-    ("show_xtil" . ,(xlib-ref 'tsh:show_xtil))
-    ("hide_xtil" . ,(xlib-ref 'tsh:hide_xtil))
+    ("show_sxml" . ,(xlib-ref '@x@:show_sxml))
+    ("hide_sxml" . ,(xlib-ref '@x@:hide_sxml))
+    ("show_xtil" . ,(xlib-ref '@x@:show_xtil))
+    ("hide_xtil" . ,(xlib-ref '@x@:hide_xtil))
     ))
 
 ;; --- last line ---
