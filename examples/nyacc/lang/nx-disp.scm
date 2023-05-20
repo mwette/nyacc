@@ -1,6 +1,6 @@
 ;;; nyacc/lang/nx-disp.scm - display routines
 
-;; Copyright (C) 2019 Matthew R. Wette
+;; Copyright (C) 2019,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -63,14 +63,14 @@
 ;; 3.459393e32 => 32
 
 ;; int->str:
-;;   when (memq #\- flags) left align
-;;   flags list of flags: #\0 #\- #\+
-;;   width - min wid or 0 for any
-;;   type - #\d #\x
 
-;; (parse-fmt ch port) => (type width prec flags) | #\%
+;; (parse-fmt ch port) => (conv width prec . flags) | #\%
+;;   conv : conversion specifier (e.g., #\d, #\x)
+;;   width: minimum width
+;;   prec : precision - ignored for ints
+;;   flags: #\0 #\- #\+
 ;; maybe change to (type width prec . flags)
-(define* (parse-fmt ch #:optional (port (current-input-port)))
+(define (parse-fmt ch port)
   (define (rd-ch) (read-char port))
   (define ch0 (char->integer #\0))
   (define (ch-add ch val) (+ (- (char->integer ch) ch0) (* 10 val)))
@@ -83,9 +83,12 @@
          ((#\%) (loop fl wd pc ty 1 (rd-ch)))
          (else #f)))
       ((1) ;; read flags
-       (case ch
-         ((#\- #\+ #\0 #\space) (loop (cons ch fl) wd pc ty st (rd-ch)))
-         (else (loop fl wd pc ty 2 ch))))
+       (cond
+        ((eof-object? ch) #f)
+        ;; (#\%)
+        ((memq ch '(#\- #\+ #\0 #\space))
+         (loop (cons ch fl) wd pc ty st (rd-ch)))
+        (else (loop fl wd pc ty 2 ch))))
       ((2) ;; read width
        (cond
         ((char-numeric? ch) (loop fl (ch-add ch 0) pc ty 21 (rd-ch)))
@@ -104,7 +107,7 @@
        (cond
         ((char-numeric? ch) (loop fl wd (ch-add ch pc) ty st (rd-ch)))
         (else (loop fl wd pc ty 4 ch))))
-      ((4) ;; read type
+      ((4) ;; read conversion char
        (case ch
          ((#\%) #\%)
          ((#\d #\i #\u) (loop fl wd pc #\d 5 ch))
@@ -114,13 +117,14 @@
          ;;((#\s)
          ;;((#\o)
          ))
-      ((5) (list ty wd pc fl)))))
+      ((5) (cons* ty wd pc fl)))))
 
 ;; exp for val = [1.0,10.0)x10^exp
 
 (define (exp-of-10 val)
   (if (eqv? val 0.0) 0
       (inexact->exact (floor (log10 (abs val))))))
+(export exp-of-10)
 
 (define (exp-of-16 val)
   (define (log16 x) (/ (log x) (log 16)))
@@ -150,39 +154,40 @@
     (lambda* (v #:optional upper)
       (vector-ref (if upper uc lc) v))))
 
-;; (int->str 23 #\d '(#\+) 4 0) => " +23"
-(define (int->str val type width prec flags)
-  (let* ((base (case type ((#\d) 10) ((#\x) 16) ((#\o) 8)
-                     (else (error "bad type"))))
+;; (int->str 23 #\d 4 0 #\+) => " +23"
+;; width can be #f; prec is ignored
+(define (int->str val conv width prec . flags)
+  (let* ((base (case conv ((#\d) 10) ((#\x) 16) ((#\o) 8)
+                     (else (error "bad conversion char"))))
          (left (memq #\- flags))
          (sign (cond ((negative? val) #\-)
                      ((memq #\+ flags) #\+)
                      (else #f)))
-         (val (abs val))
-         (exb (exp-of-base (* 1.0 val) base))
-         (valw (1+ (if sign (1+ exb) exb)))
-         (wid (cond ((not width) valw)
-                    ((zero? width) valw)
-                    ((> valw width) valw)
+         (aval (abs val))
+         (exb (exp-of-base (* 1.0 aval) base))
+         (raw (1+ (if sign (1+ exb) exb)))
+         (wid (cond ((not width) raw)
+                    ((zero? width) raw)
+                    ((> raw width) raw)
                     (else width)))
-         (npad (let ((n (if (> valw wid) 0 (- wid valw)))) (if left (- n) n)))
+         (npad (let ((n (if (> raw wid) 0 (- wid raw)))) (if left (- n) n)))
          (pad (cond ((zero? npad) #f) (left #\space)
                     ((memq #\0 flags) #\0) (else #\space)))
          (sign-first (and (positive? npad) (char=? pad #\0)))
-         (upper (char-upper-case? type)))
+         (upper (char-upper-case? conv)))
     (with-output-to-string
       (lambda ()
         (if (and sign sign-first) (write-char sign))
         (let loop ((n npad)) (when (> n 0) (write-char pad) (loop (1- n))))
         (if (and sign (not sign-first)) (write-char sign))
-        (let loop ((v val) (m (expt base exb)))
+        (let loop ((v aval) (m (expt base exb)))
           (when (positive? v)
-            (write-char (digit->char (quotient v m) type))
-            (loop (remainder v m) (quotient m base))))
+            (write-char (digit->char (quotient v m) conv))
+            (loop (remainder v m) (/ m base))))
         (let loop ((n npad))
           (when (< n 0) (write-char pad) (loop (1+ n))))))))
 
-(define-public (test-int->str)
+(define-public (test-istr)
   (define (doit fmt val)
     (sferr "~S ~S => ~S\n" fmt val (apply int->str val (parse-fmt-str fmt))))
   (doit "%d" 1)
@@ -204,52 +209,71 @@
     (lambda (v) (vector-ref dv (inexact->exact (floor v))))))
 
 (define (vnx v) (* 10 (- v (inexact->exact (floor v)))))
-  
+
 ;; (flt->fstr 3.456 %f '() 8 4) => "  3.4560"
 ;; maybe change to . flags)
-(define (flt->fstr val type width prec flags)
-  (let* ((base 10)
+(define (flt->fstr val conv width prec . flags)
+  (let* ((base 10) (defprec 6)
          (left (memq #\- flags))
          (sign (cond ((negative? val) #\-) ((memq #\+ flags) #\+) (else #f)))
-         (val (abs val))
-         (v:me (split-float val)) (val-m (car v:me)) (exb (cdr v:me))
-         (valw (+ (if sign 1 0)
-                  (if (positive? prec) (+ 1 prec) 0)
-                  (if (positive? exb) exb 0)))
-         (prec (if prec prec (max (- width valw) 0)))
-         (wid (cond ((zero? width) valw) ((> valw width) valw) (else width)))
-         (npad (let ((n (if (> valw width) 0 (- wid valw)))) (if left (- n) n)))
+         (aval (abs val))
+         (dsh (1+ (max 0 (exp-of-10 aval)))) ; decimal shift, digits left of .
+         (raw (+ (if sign 1 0)               ; width w/o constraint
+                 (cond ((not prec) (1+ defprec))
+                       ((positive? prec) (1+ prec))
+                       (else 0))
+                 (if (positive? dsh) dsh 1)))
+         (prec (cond (prec prec) (width (max (- width raw))) (else defprec)))
+         (wid (cond ((not width) raw) ((zero? width) raw)
+                    ((> raw width) raw) (else width)))
+         (npad (let ((n (if (> raw wid) 0 (- wid raw)))) (if left (- n) n)))
          (pad (cond ((zero? npad) #f) (left #\space)
                     ((memq #\0 flags) #\0) (else #\space)))
          (sign-first (and (positive? npad) (char=? pad #\0)))
-         (upper (char-upper-case? type))
+         (upper (char-upper-case? conv))
+         (ival (inexact->exact (floor aval)))
+         (fval (inexact->exact (floor (* (- aval ival) (expt 10 prec)))))
          )
+    ;;(sferr "npad=~S wid=~S raw=~S dsh=~S prec=~S\n" npad wid raw dsh prec)
+    ;;(sferr "ival=~S fval=~S\n" ival fval)
     (with-output-to-string
       (lambda ()
         (if (and sign sign-first) (write-char sign))
         (let loop ((n npad)) (when (> n 0) (write-char pad) (loop (1- n))))
         (if (and sign (not sign-first)) (write-char sign))
-        (if (negative? exb)
-            (write-char #\0)
-            (let loop ((v val-m) (m (expt base exb)))
-              (when (> v 1.0)
-                (write-char (digit->char (remainder v m) type))
-                )))
-        (let loop ((n npad)) (when (< n 0) (write-char pad) (loop (1+ n))))))
-    ;;(if (negative? wid valw) (make-string wid #\#))
-    #|
-    (let loop ((chl chl) (nl wid) (v val-m) (e (1+ exb)))
-      (cond
-       ((negative? e) (loop (cons #\0 chl) (1- nl) v (1+ e)))
-       ((= 1 e) (loop (cons* #\. (vch v) chl) (- nl 2) (vnx v) (1- e)))
-       ((positive? e) (loop (cons (vch v) chl) (1- nl) (vnx v) (1- e)))
-       ((positive? nl) (loop (cons (vch v) chl) (1- nl) (vnx v) e))
-       (else (reverse-list->string chl))))
-    |#
-    ))
+        (let loop ((v ival) (m (expt base (1- dsh))) (c dsh))
+          ;;(sferr "v=~S m=~S c=~S\n" v m c)
+          (cond
+           ((positive? c)
+            (write-char (digit->char (quotient v m)))
+            (loop (remainder v m) (/ m base) (1- c)))
+           ((zero? c)
+            (write-char #\.)
+            (loop fval (expt base (1- prec)) (1- c)))
+           ((positive? (+ 1 prec c))
+            (write-char (digit->char (quotient v m)))
+            (loop (remainder v m) (max 1 (/ m base)) (1- c)))))
+        (let loop ((n npad)) (when (< n 0) (write-char pad) (loop (1+ n))))))))
+
+
+(define-public (test-fstr)
+  (define (doit fmt val)
+    (sferr "\t~S\t~S\t=> ~S\n"
+           fmt val (apply flt->fstr val (parse-fmt-str fmt))))
+  (doit "%f" 123.45)
+  (doit "%7.1f" 123.45) 
+  (doit "%-9.6f" 12.3456789)
+  (doit "%-9.6f" -12.3456789)
+  (doit "%3.1f" 1.23) 
+  (doit "%3.1f" 0.123) 
+  (doit "%3.1f" 0.0123) 
+  (doit "%.1f" 1.23) 
+  (doit "%.1f" 0.123) 
+  (doit "%.1f" 0.0123) 
+  )
 
 ;; (flt->estr -12.34e-22 '() 12 5) => "-1.23400e-21"
-(define (flt->estr val type width prec flags)
+(define (flt->estr val conv width prec flags)
   (let* ((base 10)
          (left (memq #\- flags))
          (pad (if (memq #\0 flags) #\0 #\space))
@@ -283,26 +307,26 @@
 (define rls reverse-list->string)
 
 (define (nx-format fmt . args)
-  (with-input-from-string fmt
-    (lambda ()
-      (let loop ((stl '()) (chl '()) (ch (read-char)) (args args))
+  (call-with-input-string fmt
+    (lambda (port)
+      (let loop ((stl '()) (chl '()) (ch (read-char port)) (args args))
         ;;(sferr "ch=~S\n" ch)
         (cond
          ((eof-object? ch)
           (apply string-append (reverse (cons (rls chl) stl))))
          ((char=? ch #\%)
-          (let ((fmt (parse-fmt ch)))
+          (let ((fmt (parse-fmt ch port)))
             (cond
-             ((char? fmt) (loop stl (cons #\% chl) (read-char) args))
+             ((char? fmt) (loop stl (cons #\% chl) (read-char port) args))
              ((null? args) (error "not enough args"))
              (else (loop (cons* (apply-fmt fmt (car args)) (rls chl) stl)
-                         '() (read-char) (cdr args))))))
+                         '() (read-char port) (cdr args))))))
          (else
-          (loop stl (cons ch chl) (read-char) args)))))))
+          (loop stl (cons ch chl) (read-char port) args)))))))
 
 ;; === matrices and vectors ========
 
-;; (parse-fmt-str spec-str) => (flags width prec type) | #\%
+;; (parse-fmt-str spec-str) => (flags width prec conv) | #\%
 ;; spec-str "%-12.5e" ...
 (define (parse-fmt-str str)
   (let ((port (open-input-string str)))
@@ -314,9 +338,9 @@
     ((#\i) (apply int->str val fmt))
     ((#\f) (apply flt->fstr val fmt))
     ((#\e) (apply flt->estr val fmt))))
-  
+
 (define (mat-disp/strict array port format)
-  (let* ((type (array-type array))
+  (let* ((conv (array-type array))
          (dims (array-dimensions array))
          (dimz (map (lambda (i) (min i 8)) dims))
          (spec (parse-fmt-str format)))
@@ -338,7 +362,7 @@
     (mat-disp/strict array port format))))
 
 (define (vec-disp/strict array port format)
-  (let* ((type (array-type array))
+  (let* ((conv (array-type array))
          (dims (array-dimensions array))
          (dimz (map (lambda (i) (min i 8)) dims))
          (spec (parse-fmt-str format)))
@@ -361,14 +385,14 @@
 ;; === deprecated
 
 
-(define (disp/fmt val type flags width prec)
-  (case type
-    ((#\e) (flt->estr val type flags width prec))
-    ((#\f) (flt->fstr val type flags width prec))
-    ((#\d) (int->str val type flags width prec))
+(define (disp/fmt val conv flags width prec)
+  (case conv
+    ((#\e) (flt->estr val conv flags width prec))
+    ((#\f) (flt->fstr val conv flags width prec))
+    ((#\d) (int->str val conv flags width prec))
     ;;((#\s) 
     (else (error "fmat"))))
-  
+
 (define (numstr->string val)
   (if (string? val) val (number->string val)))
 (define (escape ch)
