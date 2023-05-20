@@ -27,11 +27,11 @@
 ;; Include the reduction actions that get called when a production
 ;; rule is reduced.  This is a separate file to it could be changed
 ;; by hand and place in lexical context with routines called.
-(include-from-path "nyacc/lang/calc/mach.d/calc-full-act.scm")
+(include-from-path "nyacc/lang/calc/mach.d/calc-file-act.scm")
 
 ;; Include the automaton tables.  These are used by the parser defined
 ;; in nyacc/parser.scm.
-(include-from-path "nyacc/lang/calc/mach.d/calc-full-tab.scm")
+(include-from-path "nyacc/lang/calc/mach.d/calc-file-tab.scm")
 
 ;; Generate a lexer.  Look in nyacc/lex.scm to see how this is formulated.
 ;; The object calc-mtab is defined in mach.d/calc-tab.scm.

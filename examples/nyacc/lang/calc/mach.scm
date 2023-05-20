@@ -17,7 +17,7 @@
 (define-module (nyacc lang calc mach)
   #:export (gen-calc-files
             calc-file-spec calc-file-mach 
-            calc-user-spec calc-user-mach)
+            calc-stmt-spec calc-stmt-mach)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse))
@@ -59,14 +59,14 @@
 ;; Build an automaton for expressions to be used as Guile language.
 ;; Guile wants to see one statement at a time, so replace 'prog' start
 ;; with 'stmt' start.
-(define calc-user-spec
+(define calc-stmt-spec
   (restart-spec calc-file-spec 'stmt))
 
 ;; For purpose of demo, do not hashify the interactive one.
 ;; But the machine must have compacted tables!
-(define calc-user-mach
+(define calc-stmt-mach
   (compact-machine
-    (make-lalr-machine calc-user-spec)))
+    (make-lalr-machine calc-stmt-spec)))
 
 ;; Procedure to generate actions and tables.
 (define (gen-calc-files)
@@ -75,9 +75,9 @@
   (write-lalr-tables 
    calc-file-mach "mach.d/calc-file-tab.scm" #:prefix "calc-file-")
   (write-lalr-actions 
-   calc-user-mach "mach.d/calc-user-act.scm" #:prefix "calc-user-")
+   calc-stmt-mach "mach.d/calc-stmt-act.scm" #:prefix "calc-stmt-")
   (write-lalr-tables 
-   calc-user-mach "mach.d/calc-user-tab.scm" #:prefix "calc-user-")
+   calc-stmt-mach "mach.d/calc-stmt-tab.scm" #:prefix "calc-stmt-")
   )
 
 ;; --- last line ---

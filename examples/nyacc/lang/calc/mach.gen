@@ -11,9 +11,9 @@ exec guile $0
     (lambda ()
       (pp-lalr-grammar calc-file-spec)
       (pp-lalr-machine calc-file-mach)))
-  (with-output-to-file ",user.txt"
+  (with-output-to-file ",stmt.txt"
     (lambda ()
-      (pp-lalr-grammar calc-user-spec)
-      (pp-lalr-machine calc-user-mach))))
+      (pp-lalr-grammar calc-stmt-spec)
+      (pp-lalr-machine calc-stmt-mach))))
 
 ;;; --- last line ---
