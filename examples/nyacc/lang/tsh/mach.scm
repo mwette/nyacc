@@ -33,7 +33,7 @@
 (define-module (nyacc lang tsh mach)
   #:export (gen-tsh-files
 	    tsh-file-spec tsh-file-mach 
-	    tsh-user-spec tsh-user-mach)
+	    tsh-stmt-spec tsh-stmt-mach)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
@@ -258,13 +258,13 @@
     (make-lalr-machine tsh-file-spec))
    #:keep 0 #:keepers '($code-comm $lone-comm "\n" 'no-ws)))
 
-(define tsh-user-spec
+(define tsh-stmt-spec
   (restart-spec tsh-file-spec 'item))
 
-(define tsh-user-mach
+(define tsh-stmt-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine tsh-user-spec))
+    (make-lalr-machine tsh-stmt-spec))
    #:keep 0 #:keepers '(no-ws)))
 
 ;;; =====================================
@@ -283,17 +283,17 @@
   (write-lalr-tables
    tsh-file-mach (xtra-dir "tsh-file-tab.scm.new") #:prefix "tsh-file-")
   (write-lalr-actions
-   tsh-user-mach (xtra-dir "tsh-user-act.scm.new") #:prefix "tsh-user-")
+   tsh-stmt-mach (xtra-dir "tsh-stmt-act.scm.new") #:prefix "tsh-stmt-")
   (write-lalr-tables
-   tsh-user-mach (xtra-dir "tsh-user-tab.scm.new") #:prefix "tsh-user-")
+   tsh-stmt-mach (xtra-dir "tsh-stmt-tab.scm.new") #:prefix "tsh-stmt-")
   (let ((a (move-if-changed (xtra-dir "tsh-file-act.scm.new")
 			    (xtra-dir "tsh-file-act.scm")))
 	(b (move-if-changed (xtra-dir "tsh-file-tab.scm.new")
 			    (xtra-dir "tsh-file-tab.scm")))
-	(c (move-if-changed (xtra-dir "tsh-user-act.scm.new")
-			    (xtra-dir "tsh-user-act.scm")))
-	(d (move-if-changed (xtra-dir "tsh-user-tab.scm.new")
-			    (xtra-dir "tsh-user-tab.scm"))))
+	(c (move-if-changed (xtra-dir "tsh-stmt-act.scm.new")
+			    (xtra-dir "tsh-stmt-act.scm")))
+	(d (move-if-changed (xtra-dir "tsh-stmt-tab.scm.new")
+			    (xtra-dir "tsh-stmt-tab.scm"))))
     (or a b c d)))
 
 ;; --- last line ---

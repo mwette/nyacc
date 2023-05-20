@@ -11,9 +11,9 @@ exec guile $0
     (lambda ()
       (pp-lalr-grammar tsh-file-spec)
       (pp-lalr-machine tsh-file-mach)))
-  (with-output-to-file ",user.txt"
+  (with-output-to-file ",stmt.txt"
     (lambda ()
-      (pp-lalr-grammar tsh-user-spec)
-      (pp-lalr-machine tsh-user-mach))))
+      (pp-lalr-grammar tsh-stmt-spec)
+      (pp-lalr-machine tsh-stmt-mach))))
 
 ;;; --- last line ---

@@ -187,18 +187,18 @@
       (lambda () (parse-tsh #:debug debug))
       (lambda () (set-current-input-port prev)))))
   
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-user-tab.scm")
-(include-from-path "nyacc/lang/tsh/mach.d/tsh-user-act.scm")
+(include-from-path "nyacc/lang/tsh/mach.d/tsh-stmt-tab.scm")
+(include-from-path "nyacc/lang/tsh/mach.d/tsh-stmt-act.scm")
 
 (define raw-ia-parser
-  (make-lalr-parser (acons 'act-v tsh-user-act-v tsh-user-tables)
+  (make-lalr-parser (acons 'act-v tsh-stmt-act-v tsh-stmt-tables)
                     #:skip-if-unexp '(no-ws) #:interactive #t))
 
 ;; @deffn {Procedure} read-tsh-stmt port env
 ;; Read a TCLish item.  Return a SXML tree;
 ;; @end deffn
 (define read-tsh-stmt
-  (let* ((make-tsh-lexer (make-tsh-lexer-generator tsh-user-mtab))
+  (let* ((make-tsh-lexer (make-tsh-lexer-generator tsh-stmt-mtab))
 	 (lexer (make-tsh-lexer)))
     (lambda (port env)
       (let ((prev (current-input-port)))
