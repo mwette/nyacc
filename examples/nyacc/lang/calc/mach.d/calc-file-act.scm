@@ -1,6 +1,6 @@
-;; mach.d/calc-full-act.scm
+;; calc-file-act.scm
 
-(define calc-full-act-v
+(define calc-file-act-v
   (vector
    ;; $start => prog
    (lambda ($1 . $rest) $1)

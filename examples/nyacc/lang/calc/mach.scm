@@ -15,12 +15,14 @@
 ;;; Code:
 
 (define-module (nyacc lang calc mach)
-  #:export (full-spec full-mach stmt-spec stmt-mach gen-calc-files)
+  #:export (gen-calc-files
+            calc-file-spec calc-file-mach 
+            calc-user-spec calc-user-mach)
   #:use-module (nyacc lalr)
   #:use-module (nyacc lex)
   #:use-module (nyacc parse))
 
-(define full-spec
+(define calc-file-spec
   (lalr-spec
    (prec< (left "+" "-") (left "*" "/"))
    (start prog)
@@ -49,33 +51,33 @@
 
 ;; Build an automaton for the full language (i.e., list of statements).
 ;; This is hashed, so tokens are represented by integers.
-(define full-mach
+(define calc-file-mach
   (compact-machine
    (hashify-machine
-    (make-lalr-machine full-spec))))
+    (make-lalr-machine calc-file-spec))))
 
 ;; Build an automaton for expressions to be used as Guile language.
 ;; Guile wants to see one statement at a time, so replace 'prog' start
 ;; with 'stmt' start.
-(define stmt-spec
-  (restart-spec full-spec 'stmt))
+(define calc-user-spec
+  (restart-spec calc-file-spec 'stmt))
 
 ;; For purpose of demo, do not hashify the interactive one.
 ;; But the machine must have compacted tables!
-(define stmt-mach
+(define calc-user-mach
   (compact-machine
-    (make-lalr-machine stmt-spec)))
+    (make-lalr-machine calc-user-spec)))
 
 ;; Procedure to generate actions and tables.
 (define (gen-calc-files)
   (write-lalr-actions 
-   full-mach "mach.d/calc-full-act.scm" #:prefix "calc-full-")
+   calc-file-mach "mach.d/calc-file-act.scm" #:prefix "calc-file-")
   (write-lalr-tables 
-   full-mach "mach.d/calc-full-tab.scm" #:prefix "calc-full-")
+   calc-file-mach "mach.d/calc-file-tab.scm" #:prefix "calc-file-")
   (write-lalr-actions 
-   stmt-mach "mach.d/calc-stmt-act.scm" #:prefix "calc-stmt-")
+   calc-user-mach "mach.d/calc-user-act.scm" #:prefix "calc-user-")
   (write-lalr-tables 
-   stmt-mach "mach.d/calc-stmt-tab.scm" #:prefix "calc-stmt-")
+   calc-user-mach "mach.d/calc-user-tab.scm" #:prefix "calc-user-")
   )
 
 ;; --- last line ---

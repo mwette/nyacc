@@ -1,6 +1,6 @@
-;; mach.d/calc-stmt-act.scm
+;; calc-user-act.scm
 
-(define calc-stmt-act-v
+(define calc-user-act-v
   (vector
    ;; $start => stmt
    (lambda ($1 . $rest) $1)
