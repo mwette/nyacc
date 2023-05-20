@@ -13,7 +13,7 @@ exec guile $0
       (pp-lalr-machine @x@-file-mach)))
   (with-output-to-file ",stmt.txt"
     (lambda ()
-      (pp-lalr-grammar @x@-user-spec)
-      (pp-lalr-machine @x@-user-mach))))
+      (pp-lalr-grammar @x@-stmt-spec)
+      (pp-lalr-machine @x@-stmt-mach))))
 
 ;;; --- last line ---
