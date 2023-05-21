@@ -17,59 +17,40 @@
 
 ;;; Notes:
 
-;; format syntax: %[flags][width][.precision][length]type
+;; format syntax: %[flags][width][.precision]conv
 ;; flags: #\- #\+ #\space #\0 #\#
 ;; width: min number of chars to output
 ;; precision: max number of chars to output
-;; length modifier: size of arg; not needed for scheme
-;; type: #\d #\x #\f #\e -- add #\o: just the (display obj)
+;; conv: #\d #\x #\f #\e -- add #\o: just the (display obj)
 
 ;; Architecture:
 ;; 1) parse format string to list of alternating
-;;    *) start-end index for string
-;;    *) specifiers redord
-
-#;(define-record-type <format-spec>
-  (make-format-spec flags width prec type)
-  format-spec?
-  (flags format-spec-flags)
-  (width format-spec-width)
-  (prec format-spec-prec)
-  (type format-spec-type))
-
-
-;; flt->fstr:
-;;   flags list of chars
-;;   type #\e #\f
-;;   NEEDS WORK: getting negative val-wid's
-
-;; (flt->fstr val type flags width prec) ->  "  1.234"
-;; (flt->estr val type flags width prec) ->  "  1.234e0"
-;; (int->str val type flags width prec) ->  "  1.234e0"
-;; (int->str 23 '(#\+) 4 0 #\d) => " +23"
+;;    *) string
+;;    *) val-formatter
 
 ;;; Code:
 
 (define-module (nyacc lang nx-disp)
-  #:export (mat-disp vec-disp parse-fmt parse-fmt-str fmt->str)
-  )
+  #:export (nx-format
+            nx-format1 nx-formatp
+            parse-format-string
+            ;;mat-disp vec-disp
+            ))
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
 (define (pperr x) (pretty-print x (current-error-port) #:per-line-prefix "  "))
 
-;; For a value tell me how many digits it will have, or equiv pow-10 exponent.
-;; 35 => 2
-;; 3.459393e32 => 32
+(define rls reverse-list->string)
 
-;; int->str:
-
-;; (parse-fmt ch port) => (conv width prec . flags) | #\%
+;;.@deffn {Scheme} parse-fmt ch port => (conv width prec . flags) | #\% | #f
+;; @example
 ;;   conv : conversion specifier (e.g., #\d, #\x)
 ;;   width: minimum width
 ;;   prec : precision - ignored for ints
 ;;   flags: #\0 #\- #\+
-;; maybe change to (type width prec . flags)
+;; @end example
+;; @end deffn
 (define (parse-fmt ch port)
   (define (rd-ch) (read-char port))
   (define ch0 (char->integer #\0))
@@ -110,31 +91,47 @@
       ((4) ;; read conversion char
        (case ch
          ((#\%) #\%)
-         ((#\d #\i #\u) (loop fl wd pc #\d 5 ch))
-         ((#\x #\X) (loop fl wd pc #\x 5 ch))
-         ((#\e #\E #\g #\G) (loop fl wd pc #\e 5 ch))
-         ((#\f #\F) (loop fl wd pc #\f 5 ch))
-         ;;((#\s)
-         ;;((#\o)
-         ))
-      ((5) (cons* ty wd pc fl)))))
+         ((#\d #\D #\i #\I #\u #\U) (cons* #\d wd pc fl))
+         ((#\e #\E #\g #\G #\f #\F #\s #\x #\X) (cons* ch wd pc fl))
+         ((#\o)  (cons* ch wd pc fl))
+         (else #f))))))
+
+;; @deffn {Scheme} parse-format-string fmt
+;; This will parse a printf-like format string into a list of alternating
+;; strings and formatters where a formatter is a list of
+;; conv, width, prec and flags.
+;; @end deffn
+(define (parse-format-string fmt) ;; => list of string n format lists)
+  (define (update res chl) (if (pair? chl) (cons (rls chl) res) res))
+  
+  (call-with-input-string fmt
+    (lambda (port)
+      (let loop ((res '()) (chl '()) (ch (read-char port)))
+        (cond
+         ((eof-object? ch) (reverse (update res chl)))
+         ((char=? #\% ch)
+          (let ((f (parse-fmt ch port)))
+            (cond
+             ((and (char? f) (char=? f #\%))
+              (loop res (cons ch chl) (read-char port)))
+             ((list? f)
+              (loop (cons f (update res chl)) '() (read-char port)))
+             (else #f))))
+         (else (loop res (cons ch chl) (read-char port))))))))
+
 
 ;; exp for val = [1.0,10.0)x10^exp
 
 (define (exp-of-10 val)
-  (if (eqv? val 0.0) 0
-      (inexact->exact (floor (log10 (abs val))))))
-(export exp-of-10)
+  (if (eqv? val 0.0) 0 (inexact->exact (floor (log10 (abs val))))))
 
 (define (exp-of-16 val)
   (define (log16 x) (/ (log x) (log 16)))
-  (if (eqv? val 0.0) 0
-      (inexact->exact (floor (log16 (abs val))))))
+  (if (eqv? val 0.0) 0 (inexact->exact (floor (log16 (abs val))))))
 
 (define (exp-of-8 val)
   (define (log8 x) (/ (log x) (log 8)))
-  (if (eqv? val 0.0) 0
-      (inexact->exact (floor (log8 (abs val))))))
+  (if (eqv? val 0.0) 0 (inexact->exact (floor (log8 (abs val))))))
 
 (define (exp-of-base val base)
   (case base
@@ -142,20 +139,13 @@
     ((16 #\x) (exp-of-16 val))
     ((8 #\o) (exp-of-8 val))))
 
-;; (int->numch 3) => #\3
-(define int->numch
-  (let ((cv (vector #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9
-                    #\A #\B #\C #\D #\E #\F)))
-    (lambda (iv) (vector-ref cv iv))))
-
 (define digit->char
   (let ((lc #(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\a #\b #\c #\d #\e #\f))
         (uc #(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\A #\B #\C #\D #\E #\F)))
     (lambda* (v #:optional upper)
       (vector-ref (if upper uc lc) v))))
 
-;; (int->str 23 #\d 4 0 #\+) => " +23"
-;; width can be #f; prec is ignored
+;; (int->str 23 #\d 4 #f #\+) => " +23"
 (define (int->str val conv width prec . flags)
   (let* ((base (case conv ((#\d) 10) ((#\x) 16) ((#\o) 8)
                      (else (error "bad conversion char"))))
@@ -186,29 +176,6 @@
             (loop (remainder v m) (/ m base))))
         (let loop ((n npad))
           (when (< n 0) (write-char pad) (loop (1+ n))))))))
-
-(define-public (test-istr)
-  (define (doit fmt val)
-    (sferr "~S ~S => ~S\n" fmt val (apply int->str val (parse-fmt-str fmt))))
-  (doit "%d" 1)
-  (doit "%-04x" 1)
-  )
-
-;; (split-float 2.3492e-23) => (2.3492 . -23)
-(define (split-float val)
-  (if (eqv? val 0.0)
-      (cons 0.0 0)
-      (let ((sign (if (negative? val) -1.0 +1.0))
-            (val (abs val))
-            (v_expt (exp-of-10 val)))
-        (cons (* sign val (expt 10 (- v_expt))) v_expt))))
-(export split-float)
-
-(define vch
-  (let ((dv #(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)))
-    (lambda (v) (vector-ref dv (inexact->exact (floor v))))))
-
-(define (vnx v) (* 10 (- v (inexact->exact (floor v)))))
 
 ;; (flt->fstr 3.456 %f '() 8 4) => "  3.4560"
 ;; maybe change to . flags)
@@ -255,88 +222,62 @@
             (loop (remainder v m) (max 1 (/ m base)) (1- c)))))
         (let loop ((n npad)) (when (< n 0) (write-char pad) (loop (1+ n))))))))
 
-
-(define-public (test-fstr)
-  (define (doit fmt val)
-    (sferr "\t~S\t~S\t=> ~S\n"
-           fmt val (apply flt->fstr val (parse-fmt-str fmt))))
-  (doit "%f" 123.45)
-  (doit "%7.1f" 123.45) 
-  (doit "%-9.6f" 12.3456789)
-  (doit "%-9.6f" -12.3456789)
-  (doit "%3.1f" 1.23) 
-  (doit "%3.1f" 0.123) 
-  (doit "%3.1f" 0.0123) 
-  (doit "%.1f" 1.23) 
-  (doit "%.1f" 0.123) 
-  (doit "%.1f" 0.0123) 
-  )
-
 (define (flt->estr val conv width prec . flags)
-  (let* ((val-pair (split-float val))
-         (m-val (car val-pair))
-         (e-val (cdr val-pair)))
-    (string-append
-     (apply flt->fstr m-val conv (and width (- width 4)) prec flags)
-     (if (char-upper-case? conv) "E" "e")
-     (int->str e-val #\d 3 #f #\0 #\+))))
-  
-(export int->str)
-(export flt->fstr)
-(export flt->estr)
+  (call-with-values
+      (lambda () ;; 2.34e-23 => 2.34 -23
+        (if (eqv? val 0.0)
+            (cons 0.0 0)
+            (let ((sign (if (negative? val) -1.0 +1.0))
+                  (val (abs val))
+                  (v_expt (exp-of-10 val)))
+              (values (* sign val (expt 10 (- v_expt))) v_expt))))
+    (lambda (m-val e-val)
+      (string-append
+       (apply flt->fstr m-val conv (and width (- width 4)) prec flags)
+       (if (char-upper-case? conv) "E" "e")
+       (int->str e-val #\d 3 #f #\0 #\+)))))
 
-(define (apply-fmt fmt val)
-  ;; fmt = (ty fl wd pc)
-  (case (car fmt) ;; ty
-    ((#\d) (unless (integer? val) (error "yuck")) (apply int->str val fmt))
-    ((#\x) (unless (integer? val) (error "yuck")) (apply int->str val fmt))
-    ((#\e) (unless (inexact? val) (error "yuck")) (apply flt->estr val fmt))
-    ((#\f) (unless (inexact? val) (error "yuck")) (apply flt->fstr val fmt))
-    ;;((#\g) (unless (inexact? val) (error "yuck")) (apply flt->gstr val fmt))
-    ))
+(define (apply-fmt port fmt val)
+  (let ((str (case (car fmt) ;; ty
+               ((#\d #\D #\x #\X) (apply int->str val fmt))
+               ((#\f #\F) (apply flt->fstr val fmt))
+               ((#\e #\E) (apply flt->estr val fmt))
+               ((#\g #\G) (if (or (> (abs val) 1.0e3) (< (abs val) 1.0e-3))
+                              (apply flt->estr val fmt)
+                              (apply flt->fstr val fmt)))
+               ((#\s #\S) val)
+               ((#\o) val))))
+    (display str port)
+    (string-length str)))
 
-;; === sprintf 
+(define (nx-formatp port fmt . vals)
+  (let* ((fmts (if (string? fmt) (parse-format-string fmt) fmt)))
+    (let loop ((n 0) (fmts fmts) (vals vals))
+      (cond
+       ((null? fmts) (if (pair? vals) (error "too many vals")) n)
+       ((string? (car fmts))
+        (display (car fmts) port)
+        (loop (+ n (string-length (car fmts))) (cdr fmts) vals))
+       ((null? vals) (error "too many fmts"))
+       (else
+        (let ((n (+ n (apply-fmt port (car fmts) (car vals)))))
+          (loop n  (cdr fmts) (cdr vals))))))))
 
-(define rls reverse-list->string)
+(define (nx-format fmt . vals)
+  (call-with-output-string
+    (lambda (port) (apply nx-formatp port fmt vals))))
 
-(define (nx-format fmt . args)
-  (call-with-input-string fmt
-    (lambda (port)
-      (let loop ((stl '()) (chl '()) (ch (read-char port)) (args args))
-        ;;(sferr "ch=~S\n" ch)
-        (cond
-         ((eof-object? ch)
-          (apply string-append (reverse (cons (rls chl) stl))))
-         ((char=? ch #\%)
-          (let ((fmt (parse-fmt ch port)))
-            (cond
-             ((char? fmt) (loop stl (cons #\% chl) (read-char port) args))
-             ((null? args) (error "not enough args"))
-             (else (loop (cons* (apply-fmt fmt (car args)) (rls chl) stl)
-                         '() (read-char port) (cdr args))))))
-         (else
-          (loop stl (cons ch chl) (read-char port) args)))))))
-
+(define (nx-format1 fmt . vals)
+  (apply nx-formatp (current-output-port) fmt vals))
+         
 ;; === matrices and vectors ========
 
-;; (parse-fmt-str spec-str) => (flags width prec conv) | #\%
-;; spec-str "%-12.5e" ...
-(define (parse-fmt-str str)
-  (let ((port (open-input-string str)))
-    (parse-fmt (read-char port) port)))
-(export parse-fmt-str)
-
-(define (flt->str val . fmt)
-  (case (car fmt)
-    ((#\i) (apply int->str val fmt))
-    ((#\f) (apply flt->fstr val fmt))
-    ((#\e) (apply flt->estr val fmt))))
-
+#|
 (define (mat-disp/strict array port format)
   (let* ((conv (array-type array))
          (dims (array-dimensions array))
          (dimz (map (lambda (i) (min i 8)) dims))
-         (spec (parse-fmt-str format)))
+         (spec (parse-conv-str format)))
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (do ((j 0 (1+ j))) ((= j (list-ref dimz 1)))
         (display " " port)
@@ -358,7 +299,7 @@
   (let* ((conv (array-type array))
          (dims (array-dimensions array))
          (dimz (map (lambda (i) (min i 8)) dims))
-         (spec (parse-fmt-str format)))
+         (spec (parse-conv-str format)))
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (display " " port)
       (display (apply flt->str (array-ref array i) spec) port)
@@ -374,9 +315,41 @@
     (vec-disp/strict array (current-output-port) format))
    (else
     (vec-disp/strict array port format))))
+|#
+;; === testing
+
+(define-public (parse-conv-str str) ;; test routine
+  (let ((port (open-input-string str))) (parse-fmt (read-char port) port)))
+
+(define-public (test-istr)
+  (define (doit fmt val)
+    (sferr "~S ~S => ~S\n" fmt val (apply int->str val (parse-conv-str fmt))))
+  (doit "%d" 1)
+  (doit "%-04x" 1)
+  )
+
+(define-public (test-fstr)
+  (define (doit fmt val)
+    (sferr "\t~S\t~S\t=> ~S\n"
+           fmt val (apply flt->fstr val (parse-conv-str fmt))))
+  (doit "%f" 123.45)
+  (doit "%7.1f" 123.45) 
+  (doit "%-9.6f" 12.3456789)
+  (doit "%-9.6f" -12.3456789)
+  (doit "%3.1f" 1.23) 
+  (doit "%3.1f" 0.123) 
+  (doit "%3.1f" 0.0123) 
+  (doit "%.1f" 1.23) 
+  (doit "%.1f" 0.123) 
+  (doit "%.1f" 0.0123) 
+  )
+
+(export int->str)
+(export flt->fstr)
+(export flt->estr)
+
 
 ;; === deprecated
-
 
 (define (disp/fmt val conv flags width prec)
   (case conv
