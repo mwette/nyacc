@@ -1,4 +1,4 @@
-;;; nyacc/lang/nx-disp.scm - display routines
+;;; nyacc/lang/nx-format.scm - display routines
 
 ;; Copyright (C) 2019,2023 Matthew Wette
 ;;
@@ -30,7 +30,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang nx-disp)
+(define-module (nyacc lang nx-format)
   #:export (nx-format
             nx-format1 nx-formatp
             parse-format-string
@@ -246,7 +246,7 @@
                               (apply flt->estr val fmt)
                               (apply flt->fstr val fmt)))
                ((#\s #\S) val)
-               ((#\o) val))))
+               ((#\o) (simple-format #f "~S" val)))))
     (display str port)
     (string-length str)))
 
