@@ -85,8 +85,10 @@ install-nx-languages: \
 
 UTDIR=nyacc/lang
 
-NYACC_NXUTIL_SRCS= $(UTDIR)/nx-util.scm $(UTDIR)/nx-lib.scm $(UTDIR)/nx-load.scm
-NYACC_NXUTIL_BINS= $(UTDIR)/nx-util.go $(UTDIR)/nx-lib.go $(UTDIR)/nx-load.go
+NYACC_NXUTIL_SRCS= $(UTDIR)/nx-util.scm $(UTDIR)/nx-lib.scm \
+	$(UTDIR)/nx-load.scm $(UTDIR)/nx-format.scm
+NYACC_NXUTIL_BINS= $(UTDIR)/nx-util.go $(UTDIR)/nx-lib.go \
+	$(UTDIR)/nx-load.go $(UTDIR)/nx-format.scm
 
 install-nx-utils:
 	@mkdir -p $(DESTDIR)$(SITE_SCM_DIR)
