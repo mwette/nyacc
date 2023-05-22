@@ -97,6 +97,8 @@
       ($$ `(proc ,$2 (arg-list (arg ,$3)) ,$5))))
 
     (exec-stmt
+     ;; "global"
+     ;; "nonlocal" or "upvar"
      ("set" ident unit-expr ($$ `(set ,$2 ,$3)))
      ("set" $deref/ix "(" expr-list ")" unit-expr
       ($$ `(set-indexed (deref (ident ,$2)) ,$4 ,$6)))

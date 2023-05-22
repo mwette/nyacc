@@ -26,6 +26,7 @@
   #:use-module (nyacc lang tsh parser)
   #:use-module (nyacc lang tsh compile-tree-il)
   #:use-module (nyacc lang nx-lib)
+  #:use-module (nyacc lang nx-format)
   #:use-module ((srfi srfi-1) #:select (split-at last))
   #:use-module (srfi srfi-111)          ; boxes
   #:use-module (system base compile)
@@ -83,8 +84,7 @@
    ((port val) (display val port) (newline))
    ))
 
-;;(define-public tsh:format sprintf)
-(display "lib TODO: sprintf: see nx-lib and nx-disp\n")
+(define-public tsh:format nx-format)
 
 (define-public tsh:last last)
 
@@ -101,19 +101,19 @@
   (if (null? indx) obj
       (cond
        ((hash-table? obj)
-        (unless (symbol? (car indx)) (tsh-error "expecting symbol"))
+        (unless (symbol? (car indx)) (nx-error "expecting symbol"))
         (let ((val (hashq-ref obj (car indx))))
-          (unless val (tsh-error "field does not exist: ~S" (car indx)))
+          (unless val (nx-error "field does not exist: ~S" (car indx)))
           (tsh:indexed-ref val (cdr indx))))
        ((array? obj)
         (let ((rk (array-rank obj))
               (nx (length indx)))
-          (unless (<= rk nx) (tsh-error "no shared-arrays (yet)"))
+          (unless (<= rk nx) (nx-error "no shared-arrays (yet)"))
           (call-with-values
               (lambda () (split-at indx rk))
             (lambda (indx rest)
               (tsh:indexed-ref (apply array-ref obj indx) rest)))))
-       (else (tsh-error "indexed-ref on non-array, non-struct")))))
+       (else (nx-error "indexed-ref on non-array, non-struct")))))
   
 (define-public (tsh:indexed-set! obj indx val)
   ;; complicated : from end get symbol or longest string of ints
@@ -124,13 +124,13 @@
         (cond
          ((array? obj) (apply array-set! obj val (reverse l2)))
          ((hash-table? obj) (hashq-set! obj (car l2) val))
-         (else (tsh-error "indexed-set! on non-array, non-struct")))))
+         (else (nx-error "indexed-set! on non-array, non-struct")))))
      ((integer? (car l3))
       (loop l1 (cons (car l3) l2) (cdr l3)))
      ((symbol? (car l3))
       (loop (cons (car l3) (append l2 l1)) '() (cdr l3)))
      (else
-      (tsh-error "expecting symbol or integer index, got: ~S" (car l3))))))
+      (nx-error "expecting symbol or integer index, got: ~S" (car l3))))))
   
 (define-public tsh:vtype
   (lambda (ary)

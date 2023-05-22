@@ -554,6 +554,8 @@
 ;; @deffn wrap-locals body kdict
 ;; Given @var{body}, a tree-il, executing in lexical env given by dict
 ;; @var{kdict} generate a tree-il lex form containing the locals.
+;; @*
+;; Problem here is that how do we pull in non-locals?
 ;; @end deffn
 (define (wrap-locals body kdict)
   (let loop ((nl '()) (ll '()) (vl '())

@@ -158,6 +158,11 @@
        (values (+SP `(incr/ix ,var ,ix (const 1))) '() dict))
       
       ((set (ident ,name) ,value)
+       ;; FIXME: if ident was identified as global or non-local then
+       ;; this should be that...
+       ;; frame entries are ("x" . '(lexical ...)) ("y" '(toplevel ...))
+       ;; wonder if we could add ("z" . (nonlocal ...)) that gets translated
+       ;; to a lexical
        (let* ((dict (nx-ensure-variable name dict))
               (nref (lookup name dict)))
 	 (values (+SP `(set ,nref ,value)) '() dict)))
@@ -197,6 +202,11 @@
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
     (define +SP (make-+SP tree))
+    (define pass-through '(toplevel
+                           lexical
+                           abort
+                           arg-list arg opt-arg rest-arg
+                           @@))
     
     (when #f
       ;;(sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
@@ -348,7 +358,7 @@
 
        ((format)
 	(let* ((tail (rtail kseed))
-	       (stmt `(call ,(xlib-ref 'sprintf) . ,tail)))
+	       (stmt `(call ,(xlib-ref 'tsh:format) . ,tail)))
 	  (values (cons (+SP stmt) seed) kdict)))
 
        ((expr-list)
@@ -407,9 +417,7 @@
         (values (+SP (cons (reverse kseed) seed)) kdict))
 
        (else
-	(unless (member (car tree)
-                        '(@@ toplevel lexical abort
-                                      arg-list arg opt-arg rest-arg))
+	(unless (member (car tree) pass-through)
 	  (sferr "MISSED: ~S\n" (car tree)))
 	(cond
 	 ((null? seed) (values (reverse kseed) kdict))
