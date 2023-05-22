@@ -304,14 +304,77 @@
 
 ;;(define (gen-exec-return-wrapper udecl)
 
-;;(define (cnvt-fctn name rdecl params)
+;; data-structures in C
+;; define:
+;;   (make-type_t args) => bs
+;;   (define type_t-desc ...)
+
+;; bs-ref bs
+(define ffi-defined '())
+(define (mtail->ffi-desc x) #f)
+
+(define (gen-decl-return udecl)
+  (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
+	 (udecl (udecl-rem-type-qual udecl1))
+	 (mdecl (udecl->mdecl udecl1)))
+    (mtail->ffi-desc (md-tail mdecl))))
+
+(define (cnvt-fctn name rtail params)
+  (let* ((varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
+	 (decl-return (gen-decl-return rdecl))
+	 (decl-params (gen-decl-params params))
+	 (exec-return (gen-exec-return-wrapper rdecl))
+	 (exec-params (gen-exec-params params))
+	 (sname (string->symbol name))
+	 (~name (string->symbol (string-append "~" name)))
+	 ;;(call `(,~name ,@(gen-exec-call-args exec-params)))
+	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
+			  (map cdr ~rest)))
+	 (call `((force ,~name) ,@(gen-exec-call-args exec-params))))
+    (cond
+     (varargs?
+      (sfscm ";; to be used with fh-cast\n")
+      (ppscm
+       `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
+	  (let ((,~name (fh-link-proc
+			 ,decl-return ,name
+			 (append (list ,@decl-params) (map car ~rest))
+			 (force ,(link-libs))))
+		,@(gen-exec-unwrappers exec-params))
+	    ,(if exec-return (list exec-return va-call) va-call)))))
+     (else ;; combined ~name and name defines
+      (ppscm
+       `(define ,sname
+	  (let ((,~name
+		 (delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
+				      (force ,(link-libs))))))
+	    (lambda ,(gen-exec-arg-names exec-params)
+	      (let ,(gen-exec-unwrappers exec-params)
+		,(if exec-return (list exec-return call) call))))))))
+    (sfscm "(export ~A)\n" name)))
+  
 ;;(define (cnvt-extern name ms-tail)
 ;;(define (node-not-typeof? crit)
 
 (define (cnvt-udecl udecl udict wrapped defined)
-  (let ((mdecl (udecl->mdecl udecl)))
+  
+  (let* ((mdecl (udecl->mdecl udecl))
+         (ident (car mdecl))
+         (mattr (md-attr mdecl))
+         (mtail (md-tail mdecl)))
+
+    (sferr "ffi-next(cnvt-udecl):\n")
     (pperr mdecl)
+    
+    (pmatch mtail
+      (`((function-returning ,param-list) . ,rtail)
+       (cnvt-fctn ident param-list rtail))
+      (_
+       (sferr "cnvt-decl: missed\n") (pperr mtail)))
+    
+    ;;(sferr "md-attr: ~S\n" (md-attr mdecl))
     (quit)
+    
     ))
 
 ;; === enums and #defined => lookup
