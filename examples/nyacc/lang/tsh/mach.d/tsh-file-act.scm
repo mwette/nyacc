@@ -39,7 +39,10 @@
      `(stmt-list ,@(cdr $1) ,@(cdr $2) ,@(cdr $3)))
    ;; proc-stmt-list => decl-stmt-list/term exec-stmt-list
    (lambda ($2 $1 . $rest)
-     `(stmt-list ,@(cdr $1) ,@(cdr $3)))
+     `(stmt-list ,@(cdr $1) ,@(cdr $2)))
+   ;; proc-stmt-list => fill-stmt-list/term exec-stmt-list
+   (lambda ($2 $1 . $rest)
+     `(stmt-list ,@(cdr $1) ,@(cdr $2)))
    ;; proc-stmt-list => exec-stmt-list
    (lambda ($1 . $rest) `(stmt-list ,@(cdr $1)))
    ;; proc-stmt-list => 
@@ -57,9 +60,8 @@
    (lambda ($1 . $rest) (tl->list $1))
    ;; fill-stmt-list/term-1 => fill-stmt term
    (lambda ($2 $1 . $rest) (make-tl `stmt-list $1))
-   ;; fill-stmt-list/term-1 => fill-stmt-list/term-1 '$lone-comm term
-   (lambda ($3 $2 $1 . $rest)
-     (tl-append $1 `(comment ,$2)))
+   ;; fill-stmt-list/term-1 => fill-stmt-list/term-1 lone-comm term
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; fill-stmt-list/term-1 => fill-stmt-list/term-1 term
    (lambda ($2 $1 . $rest) $1)
    ;; decl-stmt-list/term => decl-stmt-list/term-1
@@ -68,7 +70,7 @@
    (lambda ($2 $1 . $rest) (make-tl 'stmt-list $1))
    ;; decl-stmt-list/term-1 => decl-stmt-list/term-1 decl-stmt term
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
-   ;; decl-stmt-list/term-1 => decl-stmt-list/term-1 '$lone-comm term
+   ;; decl-stmt-list/term-1 => decl-stmt-list/term-1 lone-comm term
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
    ;; decl-stmt-list/term-1 => decl-stmt-list/term-1 term
    (lambda ($2 $1 . $rest) $1)
@@ -78,8 +80,10 @@
    (lambda ($1 . $rest) (make-tl 'stmt-list $1))
    ;; exec-stmt-list-1 => exec-stmt-list-1 term exec-stmt
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
-   ;; exec-stmt-list-1 => exec-stmt-list-1 term fill-stmt
-   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
+   ;; exec-stmt-list-1 => exec-stmt-list-1 term lone-comm
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; exec-stmt-list-1 => exec-stmt-list-1 term
+   (lambda ($2 $1 . $rest) $1)
    ;; decl-stmt => "proc" ident "{" arg-list "}" "{" proc-stmt-list "}"
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(proc ,$2 ,$4 ,$7))
@@ -325,6 +329,8 @@
    (lambda ($1 . $rest) `(keychar ,$1))
    ;; keyword => '$keyword
    (lambda ($1 . $rest) `(keyword ,$1))
+   ;; lone-comm => '$lone-comm
+   (lambda ($1 . $rest) `(comment ,$1))
    ;; term => ";"
    (lambda ($1 . $rest) $1)
    ;; term => "\n"

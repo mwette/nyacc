@@ -77,7 +77,8 @@
 	    make-and make-or make-thunk make-defonce
 	    make-switch make-loop make-do-while make-while make-for
 	    ;; deprecated
-	    nx-add-symbol))
+	    nx-add-symbol)
+  #:use-module ((srfi srfi-1) #:select (fold append-reverse)))
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
@@ -121,6 +122,7 @@
      ((assoc-ref dict '@F) #f)
      (else (loop (assoc-ref dict '@P))))))
 
+;; to add to scope (@P) or frame (@F) etc
 (define (nx-add-taglevel entry dict tag)
   (if (assq-ref dict tag)
       (cons entry dict)
@@ -142,16 +144,56 @@
 ;;    (nx-lookup "foo" dict)) => (toplevel foo)
 ;; @end example
 ;; @end deffn
+(define (str-and-sym str-or-sym)
+  (values
+   (if (string? str-or-sym) str-or-sym (symbol->string str-or-sym))
+   (if (symbol? str-or-sym) str-or-sym (string->symbol str-or-sym))))
+
 (define (nx-add-toplevel name dict)
-  (let* ((strname (if (string? name) name (symbol->string name)))
-         (symname (if (symbol? name) name (string->symbol name)))
-         (entry (cons strname `(toplevel ,symname))))
-    (nx-add-taglevel entry dict '@top)))
+  (call-with-values (lambda () (str-and-sym name))
+    (lambda (str sym)
+      (nx-add-taglevel (cons str `(toplevel ,sym)) dict '@top))))
+
 (define (nx-add-framelevel name dict)
-  (let* ((strname (if (string? name) name (symbol->string name)))
-         (symname (if (symbol? name) name (string->symbol name)))
-         (entry (cons strname `(lexical symname ,(genxsym name)))))
-    (nx-add-taglevel entry dict '@F)))
+  (call-with-values (lambda () (str-and-sym name))
+    (lambda (str sym)
+      (nx-add-taglevel (cons str `(lexical ,sym ,(genxsym str))) dict '@F))))
+
+(define (nx-insert-scopelevel dict names)
+  ;; why not add-tag-level?
+  (define (finish head tail)
+    (append-reverse
+     (fold
+      (lambda (name head)
+        (let ((ref (nx-lookup name tail)))
+          (unless ref (sferr "+++ warning: ~S not defined\n" name))
+          (cons (if ref ref `(toplevel ,(string->symbol name))) head)))
+      head names)
+     tail))
+  (let loop ((head '()) (tail dict))
+    (cond
+     ;;((null? tail) #f)                    ; should never happen
+     ((eq? (caar tail) '@P) (finish head tail))
+     ((eq? (caar tail) '@top) (finish head tail))
+     (else (loop (cons (car tail) head) (cdr tail))))))
+(export nx-insert-scopelevel)
+      
+;; @deffn nx-lookup name dict
+;; NEED TO DO THIS
+;; for nonlocals either push between
+;; @end deffn
+(define (nx-lookup name dict)
+  (define (maybe-cast value)
+    (if (eq? (car value) 'nonlocal) (cons 'lexical (cdr value)) value))
+  (cond
+   ((not dict) #f)
+   ((null? dict) #f)
+   ((assoc-ref dict name) => maybe-cast) ; => value
+   ((assoc-ref dict '@P) =>              ; parent level
+    (lambda (dict) (nx-lookup name dict)))
+   ((nx-lookup-in-env name (assoc-ref dict '@M)))
+   ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
+   (else #f)))
 
 ;; @deffn {Procedure} nx-lexical-symbol? name dict
 ;; This is a predicate to indicate if @var{name} is a lexical symbol.
@@ -194,20 +236,6 @@
       (nx-add-toplevel name dict)
       (nx-add-lexical name dict)))
 (define nx-add-symbol nx-add-variable)
-
-;; @deffn nx-lookup name dict
-;; NEED TO DO THIS
-;; @end deffn
-(define (nx-lookup name dict)
-    (cond
-   ((not dict) #f)
-   ((null? dict) #f)
-   ((assoc-ref dict name))              ; => value
-   ((assoc-ref dict '@P) =>             ; parent level
-    (lambda (dict) (nx-lookup name dict)))
-   ((nx-lookup-in-env name (assoc-ref dict '@M)))
-   ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
-   (else #f)))
 
 ;; @deffn {Procedure} nx-lookup-gensym name dict [label] => gensym
 ;; Lookup up nearest parent lexical and return associated gensym.
@@ -555,13 +583,15 @@
 ;; Given @var{body}, a tree-il, executing in lexical env given by dict
 ;; @var{kdict} generate a tree-il lex form containing the locals.
 ;; @*
-;; Problem here is that how do we pull in non-locals?
+;; Problem here is that how do we omit non-locals?
 ;; @end deffn
 (define (wrap-locals body kdict)
   (let loop ((nl '()) (ll '()) (vl '())
              (vs (let loop ((kd kdict))
 		   (if (eq? '@F (caar kd)) '()
-                       (cons (cdar kd) (loop (cdr kd)))))))
+                       (case (cadar kd)
+                         ((nonlocal toplevel) (loop (cdr kd)))
+                         (else (cons (cdar kd) (loop (cdr kd)))))))))
     (if (null? vs)
         `(let ,nl ,ll ,vl ,body)
 	(loop (cons (list-ref (car vs) 1) nl)

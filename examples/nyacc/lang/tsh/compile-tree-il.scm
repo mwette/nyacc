@@ -64,19 +64,7 @@
 	 (meta (if name (cons `(name . ,name) meta) meta)))
     `(lambda ,meta (lambda-case (,arity ,body)))))
 
-#|
-(define make-opcall (opcall-generator xlib-mod))
-
-(define (opcall-node op seed kseed kdict)
-  (values (cons (rev/repl 'call (xlib-ref op) kseed) seed) kdict))
-
 ;; for lt + rt, etc
-
-#;(define (make-+SP tree)
-  (lambda (obj)
-    (set-source-properties! obj (source-properties tree))
-    obj))
-|#
 
 ;; @deffn {Procedure} sxml->xtil exp env opts
 ;; Compile SXML tree to external Tree-IL representation.
@@ -86,9 +74,7 @@
 
   (define (fD tree seed dict) ;; => tree seed dict
     (define +SP (make-+SP tree))
-    (when #f
-      (sferr "fD: ~S\n" tree)
-      )
+
     (sx-match tree
 
       ;; optimizations
@@ -157,6 +143,18 @@
       ((incr/ix (ident ,var) ,ix)
        (values (+SP `(incr/ix ,var ,ix (const 1))) '() dict))
       
+      ((call (ident ,name) . ,args)
+       (let ((ref (lookup name dict)))
+	 (unless ref (nx-error "not defined: ~S" name))
+	 (values (+SP `(call ,ref . ,args)) '() dict)))
+
+      ((set-indexed (ident ,name) ,index ,value)
+       ;; FIXME: If name is not local then this will look up.
+       ;; Should be an error instead.
+       (let ((nref (lookup name dict)))
+	 (unless nref (nx-error "not defined: ~S" name))
+	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
+
       ((set (ident ,name) ,value)
        ;; FIXME: if ident was identified as global or non-local then
        ;; this should be that...
@@ -165,17 +163,11 @@
        ;; to a lexical
        (let* ((dict (nx-ensure-variable name dict))
               (nref (lookup name dict)))
+         ;;(sferr "dict:\n") (pperr dict)
 	 (values (+SP `(set ,nref ,value)) '() dict)))
 
-      ((set-indexed (ident ,name) ,index ,value)
-       (let ((nref (lookup name dict)))
-	 (unless nref (nx-error "not defined: ~S" name))
-	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
-
-      ((call (ident ,name) . ,args)
-       (let ((ref (lookup name dict)))
-	 (unless ref (nx-error "not defined: ~S" name))
-	 (values (+SP `(call ,ref . ,args)) '() dict)))
+      ((nonlocal . ,names)
+       (values '() '() (nx-insert-scopelevel dict names)))
 
       ((use . ,strpath)
        (let* ((sympath (map string->symbol strpath))
@@ -228,10 +220,15 @@
 
        ;; before leaving add a call to make sure all toplevels are defined
        ((*TOP*)
-	(let ((tail (rtail kseed)))
-	  (cond
-	   ((null? tail) (values '(void) kdict)) ; just comments
-	   (else (values (car kseed) kdict)))))
+        (values
+         (let loop ((form (if (null? (cdr kseed)) '(void) (car kseed)))
+                    (dict kdict))
+           (when (null? dict) (error "coding at TOP"))
+           (if (eq? '@top (caar dict))
+               form
+               (loop `(seq (define ,(caddar dict) ,nx-undefined-xtil) ,form)
+                     (cdr dict))))
+         kdict))
 
        ((script)
 	(values (cons (block (rtail kseed)) seed) (nx-pop-scope kdict)))
@@ -319,10 +316,8 @@
 	(let* ((value (car kseed))
 	       (nref (cadr kseed))
 	       (toplev? (eq? (car nref) 'toplevel))
-	       (val (if toplev?
-			`(define ,(cadr nref) ,value)
-			`(set! ,nref ,value))))
-	  (values (cons (+SP val) seed) kdict)))
+	       (form `(set! ,nref ,value)))
+	  (values (cons (+SP form) seed) kdict)))
 
        ((set-indexed)
 	(let* ((value (car kseed))

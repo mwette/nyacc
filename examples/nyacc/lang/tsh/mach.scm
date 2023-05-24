@@ -87,7 +87,9 @@
      (fill-stmt-list/term decl-stmt-list/term exec-stmt-list
                           ($$ `(stmt-list ,@(cdr $1) ,@(cdr $2) ,@(cdr $3))))
      (decl-stmt-list/term exec-stmt-list
-                          ($$ `(stmt-list ,@(cdr $1) ,@(cdr $3))))
+                          ($$ `(stmt-list ,@(cdr $1) ,@(cdr $2))))
+     (fill-stmt-list/term exec-stmt-list
+                          ($$ `(stmt-list ,@(cdr $1) ,@(cdr $2))))
      (exec-stmt-list ($$ `(stmt-list ,@(cdr $1))))
      ($empty ($$ `(stmt-list (empty-stmt)))))
 
@@ -103,7 +105,7 @@
      (fill-stmt-list/term-1 ($$ (tl->list $1))))
     (fill-stmt-list/term-1
      (fill-stmt term ($$ (make-tl `stmt-list $1)))
-     (fill-stmt-list/term-1 $lone-comm term ($$ (tl-append $1 `(comment ,$2))))
+     (fill-stmt-list/term-1 lone-comm term ($$ (tl-append $1 $2)))
      (fill-stmt-list/term-1 term))
      
     (decl-stmt-list/term
@@ -111,7 +113,7 @@
     (decl-stmt-list/term-1
      (decl-stmt term ($$ (make-tl 'stmt-list $1)))
      (decl-stmt-list/term-1 decl-stmt term ($$ (tl-append $1 $2)))
-     (decl-stmt-list/term-1 $lone-comm term ($$ (tl-append $1 $2)))
+     (decl-stmt-list/term-1 lone-comm term ($$ (tl-append $1 $2)))
      (decl-stmt-list/term-1 term))
      
     (exec-stmt-list
@@ -119,7 +121,8 @@
     (exec-stmt-list-1
      (exec-stmt ($$ (make-tl 'stmt-list $1)))
      (exec-stmt-list-1 term exec-stmt ($$ (tl-append $1 $3)))
-     (exec-stmt-list-1 term fill-stmt ($$ (tl-append $1 $2))))
+     (exec-stmt-list-1 term lone-comm ($$ (tl-append $1 $3)))
+     (exec-stmt-list-1 term))
      
     (decl-stmt
      ("proc" ident "{" arg-list "}" "{" proc-stmt-list "}"
@@ -299,6 +302,8 @@
     (symbol (ident))
     (keychar ($keychar ($$ `(keychar ,$1))))
     (keyword ($keyword ($$ `(keyword ,$1))))
+    (lone-comm ($lone-comm ($$ `(comment ,$1))))
+    ;;(code-comm ($code-comm ($$ `(comment ,$1))))
     (term (";") ("\n"))
     )))
 
