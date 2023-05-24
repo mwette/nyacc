@@ -48,7 +48,7 @@
 			  license-lgpl3+))
    ;;(expect 0)
 
-   ;;(reserve '$code-comm)
+   (reserve '$code-comm)
    (start top)
    (grammar
 
@@ -69,6 +69,67 @@
      ("source" string ($$ `(source ,$2)))
      ("use" path ($$ `(use ,@(cdr $2)))))
 
+    (stmt
+     (decl-stmt)
+     (exec-stmt)
+     (fill-stmt))
+
+    ;; stmt list uses term as statement separators
+    #|
+    (stmt-list
+     (stmt-list-1 ($$ (tl->list $1))))
+    (stmt-list-1
+     (stmt ($$ (make-tl 'stmt-list $1)))
+     (stmt-list-1 term stmt ($$ (tl-append $1 $3))))
+    |#
+
+    (proc-stmt-list
+     (fill-stmt-list/term decl-stmt-list/term exec-stmt-list
+                          ($$ `(stmt-list ,@(cdr $1) ,@(cdr $2) ,@(cdr $3))))
+     (decl-stmt-list/term exec-stmt-list
+                          ($$ `(stmt-list ,@(cdr $1) ,@(cdr $3))))
+     (exec-stmt-list ($$ `(stmt-list ,@(cdr $1))))
+     ($empty ($$ `(stmt-list (empty-stmt)))))
+
+    (block-stmt-list
+     (fill-stmt-list/term exec-stmt-list ($$ `(stmt-list ,@(cdr $1) ,@(cdr $2))))
+     (exec-stmt-list ($$ `(stmt-list ,@(cdr $1)))))
+    
+    (fill-stmt
+     ($empty ($$ `(empty-stmt)))
+     ($lone-comm ($$ `(comment ,$1))))
+     
+    (fill-stmt-list/term
+     (fill-stmt-list/term-1 ($$ (tl->list $1))))
+    (fill-stmt-list/term-1
+     (fill-stmt term ($$ (make-tl `stmt-list $1)))
+     (fill-stmt-list/term-1 $lone-comm term ($$ (tl-append $1 `(comment ,$2))))
+     (fill-stmt-list/term-1 term))
+     
+    (decl-stmt-list/term
+     (decl-stmt-list/term-1 ($$ (tl->list $1))))
+    (decl-stmt-list/term-1
+     (decl-stmt term ($$ (make-tl 'stmt-list $1)))
+     (decl-stmt-list/term-1 decl-stmt term ($$ (tl-append $1 $2)))
+     (decl-stmt-list/term-1 $lone-comm term ($$ (tl-append $1 $2)))
+     (decl-stmt-list/term-1 term))
+     
+    (exec-stmt-list
+     (exec-stmt-list-1 ($$ (tl->list $1))))
+    (exec-stmt-list-1
+     (exec-stmt ($$ (make-tl 'stmt-list $1)))
+     (exec-stmt-list-1 term exec-stmt ($$ (tl-append $1 $3)))
+     (exec-stmt-list-1 term fill-stmt ($$ (tl-append $1 $2))))
+     
+    (decl-stmt
+     ("proc" ident "{" arg-list "}" "{" proc-stmt-list "}"
+      ($$ `(proc ,$2 ,$4 ,$7)))
+     #;("proc" ident symbol "{" proc-stmt-list "}"
+      ($$ `(proc ,$2 (arg-list (arg ,$3)) ,$5)))
+     ("global" name-seq ($$ `(global ,@(cdr $2))))
+     ("nonlocal" name-seq ($$ `(nonlocal ,@(cdr $2))))
+     ("local" name-seq ($$ `(local ,@(cdr $2)))))
+
     (arg-list
      (arg-list-1 ($$ (tl->list $1))))
     (arg-list-1
@@ -77,40 +138,26 @@
      (arg-list-1 "{" ident unit-expr "}" ($$ (tl-append $1 `(opt-arg ,$3 ,$4))))
      (arg-list-1 "args" ($$ (tl-append $1 `(rest-arg (ident "args"))))))
 
-    ;; stmt list uses term as statement separators
-    (stmt-list
-     (stmt-list-1 ($$ (tl->list $1))))
-    (stmt-list-1
-     (stmt ($$ (make-tl 'stmt-list $1)))
-     ;;(stmt-list-1 term stmt ($$ (tl-append $1 $3))))
-     (stmt term stmt-list-1 ($$ (tl-insert $3 $1))))
-    
-    (stmt
-     (decl-stmt)
-     (exec-stmt)
-     ($empty ($$ `(empty-stmt)))
-     ($lone-comm ($$ `(comment ,$1))))
-     
-    (decl-stmt
-     ("proc" ident "{" arg-list "}" "{" stmt-list "}" ($$ `(proc ,$2 ,$4 ,$7)))
-     ("proc" ident symbol "{" stmt-list "}"
-      ($$ `(proc ,$2 (arg-list (arg ,$3)) ,$5))))
+    (name-seq ;; "foo" "bar" ...
+     (name-seq-1 ($$ (tl->list $1))))
+    (name-seq-1
+     ($ident ($$ (make-tl 'name-seq $1)))
+     (name-seq-1 $ident ($$ (tl-append $1 $2))))
 
     (exec-stmt
-     ;; "global"
-     ;; "nonlocal" or "upvar"
+     ;;("upvar" ident-list ($$ `(nonlocal ,@(cdr $2))))
      ("set" ident unit-expr ($$ `(set ,$2 ,$3)))
      ("set" $deref/ix "(" expr-list ")" unit-expr
       ($$ `(set-indexed (deref (ident ,$2)) ,$4 ,$6)))
      (ident expr-seq ($$ `(call ,$1 ,@(cdr $2))))
-     ("lambda" "{" arg-list "}" "{" stmt-list "}" ($$ `(lambda ,$3 ,$6)))
+     ("lambda" "{" arg-list "}" "{" proc-stmt-list "}" ($$ `(lambda ,$3 ,$6)))
      ("(" expr-list ")" ($$ $2))
-     ("{" stmt-list "}" ($$ $2))
+     ;;("{" stmt-list "}" ($$ $2))
      (if-stmt)
      ("switch" unit-expr "{" case-list "}" ($$ `(switch ,$2 ,@(cdr $4))))
-     ("while" unit-expr "{" stmt-list "}" ($$ `(while ,$2 ,$4)))
-     ("for" "{" stmt-list "}" "{" unit-expr "}" "{" stmt-list "}" 
-      "{" stmt-list "}" ($$ `(for ,$3 ,$6 ,$9 ,$12)))
+     ("while" unit-expr "{" block-stmt-list "}" ($$ `(while ,$2 ,$4)))
+     ("for" "{" block-stmt-list "}" "{" unit-expr "}" "{" block-stmt-list "}" 
+      "{" block-stmt-list "}" ($$ `(for ,$3 ,$6 ,$9 ,$12)))
      ;;("lambda "{" arg-list "}" "{" stmt-list "}" )
      ("format" expr-seq ($$ `(format . ,(cdr $2))))
      ("return" ($$ `(return)))
@@ -123,21 +170,21 @@
      )
 
     (if-stmt
-     ("if" unit-expr "{" stmt-list "}"
+     ("if" unit-expr "{" block-stmt-list "}"
       ($$ `(if ,$2 ,$4)))
-     ("if" unit-expr "{" stmt-list "}" "else" "{" stmt-list "}"
+     ("if" unit-expr "{" block-stmt-list "}" "else" "{" block-stmt-list "}"
       ($$ `(if ,$2 ,$4 (else ,$8))))
-     ("if" unit-expr "{" stmt-list "}" elseif-list
+     ("if" unit-expr "{" block-stmt-list "}" elseif-list
       ($$ `(if ,$2 ,$4 ,@(sx-tail $6))))
-     ("if" unit-expr "{" stmt-list "}" elseif-list "else" "{" stmt-list "}"
-      ($$ `(if ,$2 ,$4 ,@(sx-tail $6) (else ,$9)))))
+     ("if" unit-expr "{" block-stmt-list "}" elseif-list "else"
+      "{" block-stmt-list "}" ($$ `(if ,$2 ,$4 ,@(sx-tail $6) (else ,$9)))))
     (elseif-list
      (elseif-list-1 ($$ (tl->list $1))))
     (elseif-list-1
-     ("elseif" unit-expr "{" stmt-list "}" 
+     ("elseif" unit-expr "{" block-stmt-list "}" 
       ($$ (make-tl 'elseif-list `(elseif ,$2 ,$4))))
      (elseif-list-1
-      "elseif" unit-expr "{" stmt-list "}"
+      "elseif" unit-expr "{" block-stmt-list "}"
       ($$ (tl-append $1 'elseif-list `(elseif ,$2 ,$4)))))
 
     (case-list
@@ -150,7 +197,7 @@
      (case-list-1 term ($$ $1)))
     (case-expr
      (unit-expr unit-expr ($$ `(case ,$1 ,$2)))
-     (unit-expr "{" stmt-list "}" ($$ `(case ,$1 ,$3))))
+     (unit-expr "{" block-stmt-list "}" ($$ `(case ,$1 ,$3))))
     (default-case-expr
      ("default" unit-expr ($$ `(case (default) ,$2))))
     
@@ -252,7 +299,8 @@
     (symbol (ident))
     (keychar ($keychar ($$ `(keychar ,$1))))
     (keyword ($keyword ($$ `(keyword ,$1))))
-    (term (";") ("\n")))))
+    (term (";") ("\n"))
+    )))
 
 (define tsh-file-mach
   (compact-machine

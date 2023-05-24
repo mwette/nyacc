@@ -28,6 +28,67 @@
    (lambda ($2 $1 . $rest) `(source ,$2))
    ;; topl-decl => "use" path
    (lambda ($2 $1 . $rest) `(use ,@(cdr $2)))
+   ;; stmt => decl-stmt
+   (lambda ($1 . $rest) $1)
+   ;; stmt => exec-stmt
+   (lambda ($1 . $rest) $1)
+   ;; stmt => fill-stmt
+   (lambda ($1 . $rest) $1)
+   ;; proc-stmt-list => fill-stmt-list/term decl-stmt-list/term exec-stmt-list
+   (lambda ($3 $2 $1 . $rest)
+     `(stmt-list ,@(cdr $1) ,@(cdr $2) ,@(cdr $3)))
+   ;; proc-stmt-list => decl-stmt-list/term exec-stmt-list
+   (lambda ($2 $1 . $rest)
+     `(stmt-list ,@(cdr $1) ,@(cdr $3)))
+   ;; proc-stmt-list => exec-stmt-list
+   (lambda ($1 . $rest) `(stmt-list ,@(cdr $1)))
+   ;; proc-stmt-list => 
+   (lambda $rest `(stmt-list (empty-stmt)))
+   ;; block-stmt-list => fill-stmt-list/term exec-stmt-list
+   (lambda ($2 $1 . $rest)
+     `(stmt-list ,@(cdr $1) ,@(cdr $2)))
+   ;; block-stmt-list => exec-stmt-list
+   (lambda ($1 . $rest) `(stmt-list ,@(cdr $1)))
+   ;; fill-stmt => 
+   (lambda $rest `(empty-stmt))
+   ;; fill-stmt => '$lone-comm
+   (lambda ($1 . $rest) `(comment ,$1))
+   ;; fill-stmt-list/term => fill-stmt-list/term-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; fill-stmt-list/term-1 => fill-stmt term
+   (lambda ($2 $1 . $rest) (make-tl `stmt-list $1))
+   ;; fill-stmt-list/term-1 => fill-stmt-list/term-1 '$lone-comm term
+   (lambda ($3 $2 $1 . $rest)
+     (tl-append $1 `(comment ,$2)))
+   ;; fill-stmt-list/term-1 => fill-stmt-list/term-1 term
+   (lambda ($2 $1 . $rest) $1)
+   ;; decl-stmt-list/term => decl-stmt-list/term-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; decl-stmt-list/term-1 => decl-stmt term
+   (lambda ($2 $1 . $rest) (make-tl 'stmt-list $1))
+   ;; decl-stmt-list/term-1 => decl-stmt-list/term-1 decl-stmt term
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
+   ;; decl-stmt-list/term-1 => decl-stmt-list/term-1 '$lone-comm term
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
+   ;; decl-stmt-list/term-1 => decl-stmt-list/term-1 term
+   (lambda ($2 $1 . $rest) $1)
+   ;; exec-stmt-list => exec-stmt-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; exec-stmt-list-1 => exec-stmt
+   (lambda ($1 . $rest) (make-tl 'stmt-list $1))
+   ;; exec-stmt-list-1 => exec-stmt-list-1 term exec-stmt
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
+   ;; exec-stmt-list-1 => exec-stmt-list-1 term fill-stmt
+   (lambda ($3 $2 $1 . $rest) (tl-append $1 $2))
+   ;; decl-stmt => "proc" ident "{" arg-list "}" "{" proc-stmt-list "}"
+   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
+     `(proc ,$2 ,$4 ,$7))
+   ;; decl-stmt => "global" name-seq
+   (lambda ($2 $1 . $rest) `(global ,@(cdr $2)))
+   ;; decl-stmt => "nonlocal" name-seq
+   (lambda ($2 $1 . $rest) `(nonlocal ,@(cdr $2)))
+   ;; decl-stmt => "local" name-seq
+   (lambda ($2 $1 . $rest) `(local ,@(cdr $2)))
    ;; arg-list => arg-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; arg-list-1 => 
@@ -41,26 +102,12 @@
    ;; arg-list-1 => arg-list-1 "args"
    (lambda ($2 $1 . $rest)
      (tl-append $1 `(rest-arg (ident "args"))))
-   ;; stmt-list => stmt-list-1
+   ;; name-seq => name-seq-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; stmt-list-1 => stmt
-   (lambda ($1 . $rest) (make-tl 'stmt-list $1))
-   ;; stmt-list-1 => stmt term stmt-list-1
-   (lambda ($3 $2 $1 . $rest) (tl-insert $3 $1))
-   ;; stmt => decl-stmt
-   (lambda ($1 . $rest) $1)
-   ;; stmt => exec-stmt
-   (lambda ($1 . $rest) $1)
-   ;; stmt => 
-   (lambda $rest `(empty-stmt))
-   ;; stmt => '$lone-comm
-   (lambda ($1 . $rest) `(comment ,$1))
-   ;; decl-stmt => "proc" ident "{" arg-list "}" "{" stmt-list "}"
-   (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(proc ,$2 ,$4 ,$7))
-   ;; decl-stmt => "proc" ident symbol "{" stmt-list "}"
-   (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(proc ,$2 (arg-list (arg ,$3)) ,$5))
+   ;; name-seq-1 => '$ident
+   (lambda ($1 . $rest) (make-tl 'name-seq $1))
+   ;; name-seq-1 => name-seq-1 '$ident
+   (lambda ($2 $1 . $rest) (tl-append $1 $2))
    ;; exec-stmt => "set" ident unit-expr
    (lambda ($3 $2 $1 . $rest) `(set ,$2 ,$3))
    ;; exec-stmt => "set" '$deref/ix "(" expr-list ")" unit-expr
@@ -68,22 +115,20 @@
      `(set-indexed (deref (ident ,$2)) ,$4 ,$6))
    ;; exec-stmt => ident expr-seq
    (lambda ($2 $1 . $rest) `(call ,$1 ,@(cdr $2)))
-   ;; exec-stmt => "lambda" "{" arg-list "}" "{" stmt-list "}"
+   ;; exec-stmt => "lambda" "{" arg-list "}" "{" proc-stmt-list "}"
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(lambda ,$3 ,$6))
    ;; exec-stmt => "(" expr-list ")"
-   (lambda ($3 $2 $1 . $rest) $2)
-   ;; exec-stmt => "{" stmt-list "}"
    (lambda ($3 $2 $1 . $rest) $2)
    ;; exec-stmt => if-stmt
    (lambda ($1 . $rest) $1)
    ;; exec-stmt => "switch" unit-expr "{" case-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(switch ,$2 ,@(cdr $4)))
-   ;; exec-stmt => "while" unit-expr "{" stmt-list "}"
+   ;; exec-stmt => "while" unit-expr "{" block-stmt-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(while ,$2 ,$4))
-   ;; exec-stmt => "for" "{" stmt-list "}" "{" unit-expr "}" "{" stmt-list ...
+   ;; exec-stmt => "for" "{" block-stmt-list "}" "{" unit-expr "}" "{" bloc...
    (lambda ($13
             $12
             $11
@@ -111,23 +156,23 @@
    (lambda ($2 $1 . $rest) `(incr ,$2))
    ;; exec-stmt => "incr" ident unit-expr
    (lambda ($3 $2 $1 . $rest) `(incr ,$2 ,$3))
-   ;; if-stmt => "if" unit-expr "{" stmt-list "}"
+   ;; if-stmt => "if" unit-expr "{" block-stmt-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest) `(if ,$2 ,$4))
-   ;; if-stmt => "if" unit-expr "{" stmt-list "}" "else" "{" stmt-list "}"
+   ;; if-stmt => "if" unit-expr "{" block-stmt-list "}" "else" "{" block-st...
    (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,$4 (else ,$8)))
-   ;; if-stmt => "if" unit-expr "{" stmt-list "}" elseif-list
+   ;; if-stmt => "if" unit-expr "{" block-stmt-list "}" elseif-list
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,$4 ,@(sx-tail $6)))
-   ;; if-stmt => "if" unit-expr "{" stmt-list "}" elseif-list "else" "{" st...
+   ;; if-stmt => "if" unit-expr "{" block-stmt-list "}" elseif-list "else" ...
    (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(if ,$2 ,$4 ,@(sx-tail $6) (else ,$9)))
    ;; elseif-list => elseif-list-1
    (lambda ($1 . $rest) (tl->list $1))
-   ;; elseif-list-1 => "elseif" unit-expr "{" stmt-list "}"
+   ;; elseif-list-1 => "elseif" unit-expr "{" block-stmt-list "}"
    (lambda ($5 $4 $3 $2 $1 . $rest)
      (make-tl 'elseif-list `(elseif ,$2 ,$4)))
-   ;; elseif-list-1 => elseif-list-1 "elseif" unit-expr "{" stmt-list "}"
+   ;; elseif-list-1 => elseif-list-1 "elseif" unit-expr "{" block-stmt-list...
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
      (tl-append $1 'elseif-list `(elseif ,$2 ,$4)))
    ;; case-list => case-list-1
@@ -145,7 +190,7 @@
    (lambda ($2 $1 . $rest) $1)
    ;; case-expr => unit-expr unit-expr
    (lambda ($2 $1 . $rest) `(case ,$1 ,$2))
-   ;; case-expr => unit-expr "{" stmt-list "}"
+   ;; case-expr => unit-expr "{" block-stmt-list "}"
    (lambda ($4 $3 $2 $1 . $rest) `(case ,$1 ,$3))
    ;; default-case-expr => "default" unit-expr
    (lambda ($2 $1 . $rest) `(case (default) ,$2))
