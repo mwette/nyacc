@@ -59,7 +59,7 @@
             nx-lookup
 	    nx-lookup-in-frame
 	    nx-lookup-in-env nx-lookup
-	    nx-ensure-variable
+	    nx-ensure-variable nx-ensure-variable/scope
             nx-lookup-gensym
 	    
 	    rtail singleton?
@@ -183,14 +183,11 @@
 ;; for nonlocals either push between
 ;; @end deffn
 (define (nx-lookup name dict)
-  (define (maybe-cast value)
-    (if (eq? (car value) 'nonlocal) (cons 'lexical (cdr value)) value))
   (cond
    ((not dict) #f)
    ((null? dict) #f)
-   ((assoc-ref dict name) => maybe-cast) ; => value
-   ((assoc-ref dict '@P) =>              ; parent level
-    (lambda (dict) (nx-lookup name dict)))
+   ((assoc-ref dict name))
+   ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup name dict)))
    ((nx-lookup-in-env name (assoc-ref dict '@M)))
    ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
    (else #f)))
@@ -265,12 +262,20 @@
 	#f)))
 
 ;; @deffn nx-ensure-variable name dict => dict
+;; @xdeffn nx-ensure-variable/scope name dict => dict
 ;; Ensure deffn is in frame, starting from current scope dict,
 ;; or at toplevel if no frames are defined.
 ;; A modified dict may be returned, or a modified parent.
+;; The second form checks only the local scope.
 ;; @end deffn
 (define (nx-ensure-variable name dict)
   (if (nx-lookup name dict)
+      dict
+      (or (nx-add-framelevel name dict)
+	  (nx-add-toplevel name dict))))
+
+(define (nx-ensure-variable/scope name dict)
+  (if (assoc-ref name dict)
       dict
       (or (nx-add-framelevel name dict)
 	  (nx-add-toplevel name dict))))
