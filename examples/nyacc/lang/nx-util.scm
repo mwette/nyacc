@@ -57,8 +57,8 @@
 	    nx-add-lexicals nx-add-variable
 
             nx-lookup
-	    nx-lookup-in-frame
-	    nx-lookup-in-env nx-lookup
+	    nx-lookup-in-frame nx-lookup-in-scope
+	    nx-lookup-in-env
 	    nx-ensure-variable nx-ensure-variable/scope
             nx-lookup-gensym
 	    
@@ -178,20 +178,6 @@
      (else (loop (cons (car tail) head) (cdr tail))))))
 (export nx-insert-scopelevel)
       
-;; @deffn nx-lookup name dict
-;; NEED TO DO THIS
-;; for nonlocals either push between
-;; @end deffn
-(define (nx-lookup name dict)
-  (cond
-   ((not dict) #f)
-   ((null? dict) #f)
-   ((assoc-ref dict name))
-   ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup name dict)))
-   ((nx-lookup-in-env name (assoc-ref dict '@M)))
-   ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
-   (else #f)))
-
 ;; @deffn {Procedure} nx-lexical-symbol? name dict
 ;; This is a predicate to indicate if @var{name} is a lexical symbol.
 ;; @end deffn
@@ -234,24 +220,33 @@
       (nx-add-lexical name dict)))
 (define nx-add-symbol nx-add-variable)
 
-;; @deffn {Procedure} nx-lookup-gensym name dict [label] => gensym
-;; Lookup up nearest parent lexical and return associated gensym.
-;; @lisp
-;; (nx-lookup-gensym "foo" dict) => JS~1234
-;; (nx-lookup-gensym "foo" dict #:label "oloop") => JS~432
-;; @end lisp
+;; @deffn nx-lookup name dict
+;; NEED TO DO THIS
+;; for nonlocals either push between
 ;; @end deffn
-(define* (nx-lookup-gensym name dict #:key label)
-  (if label
-      (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
-	(if (not pdict) #f
-	    (if (and (assoc-ref pdict label)
-		     (assoc-ref "~exit" cdict))
-		(assoc-ref name cdict)
-		(iter pdict (assoc-ref pdict '@P)))))
-      (let* ((sym (nx-lookup name dict)))
-	(if (not sym) (error "nx-util: not found:" name))
-	(caddr sym))))
+(define (nx-lookup name dict)
+  (cond
+   ((not dict) #f)
+   ((null? dict) #f)
+   ((assoc-ref dict name))
+   ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup name dict)))
+   ((nx-lookup-in-env name (assoc-ref dict '@M)))
+   ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
+   (else #f)))
+
+;; @deffn nx-lookup-in-frame name dict
+;; @xdeffn nx-lookup-in-scope name dict
+;; @end deffn
+(define (nx-lookup-in-frame name dict)
+  (let loop ((dict dict))
+    (cond
+     ((null? dict) #f)
+     ((eq? '@F (caar dict)) #f)
+     ((equal? name (caar dict)) (cdar dict))
+     (else (loop (cdr dict))))))
+
+(define (nx-lookup-in-scope name dict)
+  (assoc-ref dict name))
 
 ;; @deffn {Procedure} nx-lookup-in-env name env
 ;; @end deffn
@@ -275,10 +270,29 @@
 	  (nx-add-toplevel name dict))))
 
 (define (nx-ensure-variable/scope name dict)
-  (if (assoc-ref dict name)
+  (if (lookup-in-scope name dict)
       dict
       (or (nx-add-framelevel name dict)
 	  (nx-add-toplevel name dict))))
+
+;; @deffn {Procedure} nx-lookup-gensym name dict [label] => gensym
+;; Lookup up nearest parent lexical and return associated gensym.
+;; @lisp
+;; (nx-lookup-gensym "foo" dict) => JS~1234
+;; (nx-lookup-gensym "foo" dict #:label "oloop") => JS~432
+;; @end lisp
+;; @end deffn
+(define* (nx-lookup-gensym name dict #:key label)
+  (if label
+      (let iter ((cdict dict) (pdict (assoc-ref dict '@P)))
+	(if (not pdict) #f
+	    (if (and (assoc-ref pdict label)
+		     (assoc-ref "~exit" cdict))
+		(assoc-ref name cdict)
+		(iter pdict (assoc-ref pdict '@P)))))
+      (let* ((sym (nx-lookup name dict)))
+	(if (not sym) (error "nx-util: not found:" name))
+	(caddr sym))))
 
 ;; @deffn {Procedure} rtail kseed
 ;; This is used often in the up-phase of converting sxml trees to
