@@ -60,6 +60,7 @@
 	    nx-lookup-in-frame nx-lookup-in-scope
 	    nx-lookup-in-env
 	    nx-ensure-variable nx-ensure-variable/scope
+            nx-insert-scopelevel
             nx-lookup-gensym
 	    
 	    rtail singleton?
@@ -86,6 +87,11 @@
 
 (define (genxsym name)
   (gensym (string-append (if (string? name) name (symbol->string name)) "-")))
+
+(define (str-and-sym str-or-sym)
+  (values
+   (if (string? str-or-sym) str-or-sym (symbol->string str-or-sym))
+   (if (symbol? str-or-sym) str-or-sym (string->symbol str-or-sym))))
 
 ;; @deffn {Procedure} x_y->x-y a_string => a-string
 ;; Convert a C-like name to a Scheme-like name.
@@ -133,6 +139,15 @@
 		   ((assq-ref d tag) (set-cdr! @P (cons entry d)) dict)
 		   (else (loop (assq '@P d)))))))))
 
+(define (nx-add-taglevel* dict tag . entries)
+  (define (finish head tail)
+    (append-reverse head (append-reverse entries tail)))
+  (let loop ((head '()) (tail dict))
+    (cond
+     ((eq? (caar tail) '@P) (finish head tail))
+     ((eq? (caar tail) '@top) (finish head tail))
+     (else (loop (cons (car tail) head) (cdr tail))))))
+
 ;; @deffn {Procedure} nx-add-toplevel name dict
 ;; @deffnx {Procedure} nx-add-framelevel name dict
 ;; Given a string @var{name} and dictionary @var{dict} return a new
@@ -144,11 +159,6 @@
 ;;    (nx-lookup "foo" dict)) => (toplevel foo)
 ;; @end example
 ;; @end deffn
-(define (str-and-sym str-or-sym)
-  (values
-   (if (string? str-or-sym) str-or-sym (symbol->string str-or-sym))
-   (if (symbol? str-or-sym) str-or-sym (string->symbol str-or-sym))))
-
 (define (nx-add-toplevel name dict)
   (call-with-values (lambda () (str-and-sym name))
     (lambda (str sym)
@@ -160,23 +170,13 @@
       (nx-add-taglevel (cons str `(lexical ,sym ,(genxsym str))) dict '@F))))
 
 (define (nx-insert-scopelevel dict names)
-  ;; why not add-tag-level?
-  (define (finish head tail)
-    (append-reverse
-     (fold
-      (lambda (name head)
-        (let ((ref (nx-lookup name tail)))
-          (unless ref (sferr "+++ warning: ~S not defined\n" name))
-          (acons name (if ref ref `(toplevel ,(string->symbol name))) head)))
-      head names)
-     tail))
-  (let loop ((head '()) (tail dict))
-    (cond
-     ;;((null? tail) #f)                    ; should never happen
-     ((eq? (caar tail) '@P) (finish head tail))
-     ((eq? (caar tail) '@top) (finish head tail))
-     (else (loop (cons (car tail) head) (cdr tail))))))
-(export nx-insert-scopelevel)
+  (apply nx-add-taglevel* dict '@P
+         (map (lambda (name)
+                (let* ((ref (nx-lookup name dict))
+                       (val (if ref ref `(toplevel ,(string->symbol name)))))
+                  (unless ref (sferr "warning: ~S not defined" name))
+                  (cons name val)))
+              names)))
       
 ;; @deffn {Procedure} nx-lexical-symbol? name dict
 ;; This is a predicate to indicate if @var{name} is a lexical symbol.
@@ -231,6 +231,7 @@
    ((assoc-ref dict name))
    ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup name dict)))
    ((nx-lookup-in-env name (assoc-ref dict '@M)))
+   ((begin (sferr "nx-lookup: \n") (pperr dict) #f))
    ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
    (else #f)))
 
@@ -270,7 +271,7 @@
 	  (nx-add-toplevel name dict))))
 
 (define (nx-ensure-variable/scope name dict)
-  (if (lookup-in-scope name dict)
+  (if (nx-lookup-in-scope name dict)
       dict
       (or (nx-add-framelevel name dict)
 	  (nx-add-toplevel name dict))))
