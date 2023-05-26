@@ -22,6 +22,7 @@
 ;;; Todo:
 
 ;; 1) clean up fD handling of set
+;; 2) find way to gen (define x 1) instead of (define x #unsp#) (set! x 1)
 
 ;;; Code:
 
@@ -156,14 +157,8 @@
 	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
       ((set (ident ,name) ,value)
-       ;; FIXME: if ident was identified as global or non-local then
-       ;; this should be that...
-       ;; frame entries are ("x" . '(lexical ...)) ("y" '(toplevel ...))
-       ;; wonder if we could add ("z" . (nonlocal ...)) that gets translated
-       ;; to a lexical
-       (let* ((dict (nx-ensure-variable name dict))
-              (nref (lookup name dict)))
-         ;;(sferr "dict:\n") (pperr dict)
+       (let* ((dict (nx-ensure-variable/scope name dict))
+              (nref (nx-lookup name dict)))
 	 (values (+SP `(set ,nref ,value)) '() dict)))
 
       ((nonlocal . ,names)
@@ -315,8 +310,8 @@
        ((set)
 	(let* ((value (car kseed))
 	       (nref (cadr kseed))
-	       (toplev? (eq? (car nref) 'toplevel))
 	       (form `(set! ,nref ,value)))
+          ;;(sferr "fU/set:\n") (pperr kseed)
 	  (values (cons (+SP form) seed) kdict)))
 
        ((set-indexed)
@@ -445,7 +440,10 @@
 	(call-with-values
 	    (lambda () (sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
-	    (when show-xtil (sferr "tree-il:\n") (pperr exp))
+	    (when show-xtil
+              (sferr "tree-il:\n") (pperr exp)
+              (force-output (current-error-port))
+              )
 	    (values (parse-tree-il exp) env cenv)))
 	(values (parse-tree-il '(void)) env cenv))))
 

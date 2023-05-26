@@ -167,7 +167,7 @@
       (lambda (name head)
         (let ((ref (nx-lookup name tail)))
           (unless ref (sferr "+++ warning: ~S not defined\n" name))
-          (cons (if ref ref `(toplevel ,(string->symbol name))) head)))
+          (acons name (if ref ref `(toplevel ,(string->symbol name))) head)))
       head names)
      tail))
   (let loop ((head '()) (tail dict))
@@ -275,7 +275,7 @@
 	  (nx-add-toplevel name dict))))
 
 (define (nx-ensure-variable/scope name dict)
-  (if (assoc-ref name dict)
+  (if (assoc-ref dict name)
       dict
       (or (nx-add-framelevel name dict)
 	  (nx-add-toplevel name dict))))
