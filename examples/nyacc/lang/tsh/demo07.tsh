@@ -1,9 +1,14 @@
-set a 10
+# 
+set x 10
 
-proc foo {x y} {
-    set a 100
-    proc bar {z} {
-        return ($a + $z)
-    }
-    return [bar ($x + $y)]
+proc foo {} { set x 100 }
+proc bar {} {
+   nonlocal x
+   set x 1000 
 }
+
+puts [format "starting, x = %d" $x]
+foo 
+puts [format "after foo, x = %d" $x]
+bar
+puts [format "after bar, x = %d" $x]

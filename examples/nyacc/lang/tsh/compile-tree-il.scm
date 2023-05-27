@@ -106,7 +106,7 @@
       
       ((switch . ,stmts)
        (values tree '()
-               (nx-add-lexicals "swx~val" "break" (nx-push-scope dict))))
+               (nx-add-lexicals "swx~val" (nx-push-scope dict))))
 
       ((for . ,stmts)
        (values tree '()
@@ -277,11 +277,13 @@
 	(values (cons (reverse kseed) seed) kdict))
 
        ((switch)
+        ;; no break
 	(let* ((val (lookup "swx~val" kdict))
 	       (sw (if (eq? (caar kseed) 'default)
 		       (make-switch val (cdr kseed) (car kseed))
 		       (make-switch val kseed '(void)))))
 	  (values (cons (+SP sw) seed) (nx-pop-scope kdict))))
+       
        ((case)
 	(let ((val (+SP (reverse kseed))))
 	  (values 
@@ -298,8 +300,6 @@
                (init (list-ref kseed 3))
                (form (make-for init test next body kdict)))
 	  (values (cons (+SP form) seed) (nx-pop-scope kdict))))
-       ;; continue
-       ;; break
 
        ((while)
 	(let* ((test `(primcall not (primcall zero? ,(list-ref kseed 1))))
@@ -307,6 +307,16 @@
 	       (form (make-while test body kdict)))
 	  (values (cons (+SP form) seed) (nx-pop-scope kdict))))
 
+       ((continue)
+        (values
+         (cons `(abort ,(nx-lookup "continue" kdict) () (const ())) seed)
+         kdict))
+
+       ((break)
+        (values
+         (cons `(abort ,(nx-lookup "break" kdict) '() (const ())) seed)
+         kdict))
+       
        ((set)
 	(let* ((value (car kseed))
 	       (nref (cadr kseed))
