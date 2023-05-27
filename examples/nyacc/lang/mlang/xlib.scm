@@ -23,6 +23,8 @@
 
 (define-module (nyacc lang mlang xlib)
   #:export (xdict)
+  #:use-module (nyacc lang nx-lib)
+  #:use-module (nyacc lang nx-format)
   #:use-module (srfi srfi-9)
   #:use-module (nyacc lang mlang parser)
   #:use-module (nyacc lang mlang compile-tree-il)
@@ -178,7 +180,7 @@
   (hashq-set! expr name value)
   (if #f #f))
 
-;; ===
+;; ====================================
 
 (define-public (ml:command name . args)
   (cond
@@ -209,10 +211,20 @@
     ;;(quit)
     (if #f #f)))
 
+(define-public (ml:disp val)
+  (unless (array? val) (nx-error "expecting vector or matrix"))
+  (case (array-rank val)
+    ((0) (display (nx-format "%12.5e" (array-ref val))))
+    ((1) (vec-disp val))
+    ((2) (mat-disp val))
+    (else (nx-error "expecing array of rank up to 2 only"))))
+
 ;; ===
 
 (define xdict
  `(("struct" . (@ (nyacc lang mlang xlib) ml:make-struct))
-   ("source" . (@ (nyacc lang mlang xlib) ml:source))))
+   ("source" . (@ (nyacc lang mlang xlib) ml:source))
+   ("disp" . (@ (nyacc lang mlang xlib) ml:disp))
+   ))
 
 ;; --- last line ---

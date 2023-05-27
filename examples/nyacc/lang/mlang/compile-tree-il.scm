@@ -27,6 +27,7 @@
 (define-module (nyacc lang mlang compile-tree-il)
   #:export (compile-tree-il show-mlang-sxml show-mlang-xtil)
   #:use-module (nyacc lang mlang xlib)
+  #:use-module (nyacc lang nx-lib)
   #:use-module (nyacc lang nx-util)
   #:use-module (nyacc lang sx-util)
   #:use-module ((sxml fold) #:select (foldts*-values))
