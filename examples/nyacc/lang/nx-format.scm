@@ -146,7 +146,7 @@
 
 ;; (int->str 23 #\d 4 #f #\+) => " +23"
 (define (int->str val conv width prec . flags)
-  (let* ((base (case conv ((#\d) 10) ((#\x) 16) ((#\o) 8)
+  (let* ((base (case conv ((#\d #\D) 10) ((#\x #\X) 16) ((#\o) 8)
                      (else (error "bad conversion char"))))
          (left (memq #\- flags))
          (sign (cond ((negative? val) #\-)
@@ -163,7 +163,7 @@
          (pad (cond ((zero? npad) #f) (left #\space)
                     ((memq #\0 flags) #\0) (else #\space)))
          (sign-first (and (positive? npad) (char=? pad #\0)))
-         (upper (char-upper-case? conv)))
+         (upper? (char-upper-case? conv)))
     (with-output-to-string
       (lambda ()
         (if (and sign sign-first) (write-char sign))
@@ -171,7 +171,7 @@
         (if (and sign (not sign-first)) (write-char sign))
         (let loop ((v aval) (m (expt base exb)))
           (when (<= 1 m)
-            (write-char (digit->char (quotient v m) conv))
+            (write-char (digit->char (quotient v m) upper?))
             (loop (remainder v m) (/ m base))))
         (let loop ((n npad))
           (when (< n 0) (write-char pad) (loop (1+ n))))))))
@@ -277,7 +277,7 @@
         (apply-fmt port spec (array-ref array i j)))
       (newline port))))
 
-(define* (mat-disp array #:optional (port #t) #:key (format "%12.5e"))
+(define* (mat-disp array #:optional (port #t) (format "%12.5e"))
   (cond
    ((eq? #f port)
     (let ((strp (open-output-string)))
@@ -298,7 +298,7 @@
       (apply-fmt port spec (array-ref array i))
       (newline port))))
 
-(define* (vec-disp array #:optional (port #t) #:key (format "%12.5e"))
+(define* (vec-disp array #:optional (port #t) (format "%12.5e"))
   (cond
    ((eq? #f port)
     (let ((strp (open-output-string)))
