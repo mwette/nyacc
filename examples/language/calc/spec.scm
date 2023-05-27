@@ -26,8 +26,8 @@
 (define-language calc
   #:title       "calc"
   #:reader      read-calc
-  #:compilers   `((tree-il . ,compile-tree-il))
-  ;;#:compilers   `((cps . ,compile-cps))
+  ;;#:compilers   `((tree-il . ,compile-tree-il))
+  #:compilers   `((cps . ,compile-cps))
   #:printer     write)
 
 ;; --- last line ---

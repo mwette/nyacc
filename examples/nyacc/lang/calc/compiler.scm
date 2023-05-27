@@ -1,6 +1,6 @@
 ;;; nyacc/lang/calc/compiler
 
-;; Copyright (C) 2015,2018,2019 Matthew R. Wette
+;; Copyright (C) 2015,2018,2019,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -154,12 +154,14 @@
      (with-cps cps
        ;; Here we create an identifier for symbol and #t, and then use
        ;; 'resolve to generate a boxed object for the top-level identifier.
+       ;; FIXME: this breaks for 3.0.  Compare {2.2,3.0}/tree-il/compile-cps.scm
        ($ (with-cps-constants ((sym sym) (t #t))
-              (build-term ($continue kx #f ($primcall 'resolve (sym t))))))))
+              (build-term ($continue kx #f ($primcall 'resolve #f (sym t))))))))
     (`(unbox ,box)                      ; where box is a top-level var
      (with-cps cps
        (letv bx)                        ; ident returns var object
-       (letk kc ($kargs ('bx) (bx) ($continue kx #f ($primcall 'box-ref (bx)))))
+       (letk kc ($kargs ('bx) (bx)
+                  ($continue kx #f ($primcall 'box-ref #f (bx)))))
        ($ (cnvt box kc))))              ; cnvt id to box and continue
     (((or 'add 'sub 'mul 'div) lt rt)
      ;; This is basically from tree-il/compile-cps.scm.

@@ -50,3 +50,34 @@ can see the parser and compiler at work.
 
 
 Enjoy!
+
+===============================================================================
+
+calc@(guile-user)> 1 + 2
+state 0, token "1"  => shift, goto 4
+state 4, token $default  => reduce 11
+state 0, token expr  => shift, goto 6
+state 6, token "+"  => shift, goto 10
+state 10, token "2"  => shift, goto 4
+state 4, token $default  => reduce 11
+state 10, token expr  => shift, goto 23
+state 23, token "\n"  => reduce 7
+state 0, token expr  => shift, goto 6
+state 6, token "\n"  => shift, goto 9
+state 9, token $default  => reduce 5
+SXML:
+  (expr-stmt (add (num "1") (num "2")))
+CPS:
+  (0 . #<cps (kfun () 0 1 9)>)
+  (1 . #<cps (ktail)>)
+  (2 . #<cps (kargs (arg) (3) (continue 1 (call 1 2 3)))>)
+  (3 . #<cps (kargs (arg) (2) (continue 2 (const 2)))>)
+  (4 . #<cps (kargs (arg) (1) (continue 3 (const 1)))>)
+  (5 . #<cps (kargs (bx) (5) (continue 4 (primcall box-ref #f 5)))>)
+  (6 . #<cps (kargs (t) (7) (continue 5 (primcall resolve #f 6 7)))>)
+  (7 . #<cps (kargs (sym) (6) (continue 6 (const #t)))>)
+  (8 . #<cps (kargs () () (continue 7 (const +)))>)
+  (9 . #<cps (kclause (() () #f () #f) 8)>)
+ice-9/boot-9.scm:1685:16: In procedure raise-exception:
+Unbound variable: resolve
+^ error due to 2.2,3.0 change in CPS.  See tree-il/compile-cps.scm

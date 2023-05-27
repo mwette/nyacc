@@ -35,20 +35,20 @@
 
 ;; Generate a lexer.  Look in nyacc/lex.scm to see how this is formulated.
 ;; The object calc-mtab is defined in mach.d/calc-tab.scm.
-(define gen-full-lexer
-  (make-lexer-generator calc-full-mtab #:space-chars " \t"))
+(define gen-file-lexer
+  (make-lexer-generator calc-file-mtab #:space-chars " \t"))
 
 ;; The raw parser is a procecure that parses (current-input-port)
 ;; given a lexical analyzer procedure.  See parse-calc below.
-(define raw-full-parser
-  (make-lalr-parser (acons 'act-v calc-full-act-v calc-full-tables)))
+(define raw-file-parser
+  (make-lalr-parser (acons 'act-v calc-file-act-v calc-file-tables)))
 
 ;; This is nominal procedure called by the user.  If called with
 ;; @code{#:debug #t} a trace of parser shifts and reductions will
 ;; be echoed to (current-error-port).
 (define* (parse-calc #:key debug)
   (catch 'nyacc-error
-    (lambda () (raw-full-parser (gen-full-lexer) #:debug debug))
+    (lambda () (raw-file-parser (gen-file-lexer) #:debug debug))
     (lambda (key fmt . args)
       (apply simple-format (current-error-port) fmt args))))
 
