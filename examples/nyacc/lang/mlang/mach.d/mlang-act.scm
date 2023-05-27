@@ -55,25 +55,27 @@
    (lambda ($1 . $rest) $1)
    ;; function-decl-line => "function" "[" ident-list "]" "=" ident "(" ide...
    (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$6 ,(tl->list $8) ,(tl->list $3)))
+     `(fctn-decl ,$6 ,$8 ,$3))
    ;; function-decl-line => "function" "[" ident-list "]" "=" ident "(" ")"...
    (lambda ($9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(fctn-decl ,$6 (ident-list) ,(tl->list $3)))
    ;; function-decl-line => "function" ident "=" ident "(" ident-list ")" term
    (lambda ($8 $7 $6 $5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$4 ,(tl->list $6) (ident-list ,$2)))
+     `(fctn-decl ,$4 ,$6 (ident-list ,$2)))
    ;; function-decl-line => "function" ident "=" ident "(" ")" term
    (lambda ($7 $6 $5 $4 $3 $2 $1 . $rest)
      `(fctn-decl ,$4 (ident-list) (ident-list ,$2)))
    ;; function-decl-line => "function" ident "(" ident-list ")" term
    (lambda ($6 $5 $4 $3 $2 $1 . $rest)
-     `(fctn-decl ,$2 ,(tl->list $4) (ident-list)))
+     `(fctn-decl ,$2 ,$4 (ident-list)))
    ;; function-decl-line => "function" ident "(" ")" term
    (lambda ($5 $4 $3 $2 $1 . $rest)
      `(fctn-decl ,$2 (ident-list) (ident-list)))
-   ;; ident-list => ident
+   ;; ident-list => ident-list-1
+   (lambda ($1 . $rest) (tl->list $1))
+   ;; ident-list-1 => ident
    (lambda ($1 . $rest) (make-tl 'ident-list $1))
-   ;; ident-list => ident-list "," ident
+   ;; ident-list-1 => ident-list-1 "," ident
    (lambda ($3 $2 $1 . $rest) (tl-append $1 $3))
    ;; stmt-list => statement
    (lambda ($1 . $rest)
@@ -141,15 +143,16 @@
      `(switch ,$2 ,@(cdr (tl->list $4))))
    ;; nontrivial-statement-1 => "return"
    (lambda ($1 . $rest) '(return))
-   ;; nontrivial-statement-1 => command arg-list
-   (lambda ($2 $1 . $rest)
-     `(command ,$1 ,@(cdr (tl->list $2))))
+   ;; nontrivial-statement-1 => command
+   (lambda ($1 . $rest) $1)
    ;; command => "clear"
-   (lambda ($1 . $rest) '(command "clear"))
-   ;; command => "global"
-   (lambda ($1 . $rest) '(command "global"))
-   ;; command => "load"
-   (lambda ($1 . $rest) '(command "load"))
+   (lambda ($1 . $rest) '(clear))
+   ;; command => "global" ident-list
+   (lambda ($2 $1 . $rest) `(global ,@(cdr $2)))
+   ;; command => "format" '$string
+   (lambda ($2 $1 . $rest) `(format ,$2))
+   ;; command => "load" '$string
+   (lambda ($2 $1 . $rest) `(load ,$2))
    ;; arg-list => ident
    (lambda ($1 . $rest)
      (make-tl 'arg-list (cons 'arg (cdr $1))))
@@ -316,8 +319,6 @@
    ;; term => nl
    (lambda ($1 . $rest) $1)
    ;; term => ";"
-   (lambda ($1 . $rest) $1)
-   ;; term => ","
    (lambda ($1 . $rest) $1)
    ;; lone-comment-list => lone-comment-list-1
    (lambda ($1 . $rest) (tl->list $1))

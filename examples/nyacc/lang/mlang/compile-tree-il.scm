@@ -331,8 +331,11 @@
           '() dict)))
       ((fctn-defn . ,rest) (nx-error "syntax error: function def"))
 
-      ((command (ident ,cname) . ,args)
-       (unless (string=? cname "global") (nx-error "bad command: ~S" cname))
+      ;;((global . ,names)
+      ;;((format ,fmtstr)
+      ;;((load ,filepath)
+      ;;((clear)
+      #;((command (ident ,name) . ,args)
        (values
         '() '()
         (fold

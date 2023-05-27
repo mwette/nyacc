@@ -1,6 +1,6 @@
 ;; lang/mlang/mach.scm
 
-;; Copyright (C) 2015-2018 Matthew R. Wette
+;; Copyright (C) 2015-2018,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
 
 ;; mlang parser
 ;; 1) does NOT support non-comma rows [ 1 2 ] => syntax error
+;; 2) no longer support comma as statement terminator
 
 ;; TODO:
 ;; 1) function handles: {foo = @bar;} where bar is a function
@@ -86,22 +87,24 @@
     (function-decl-line
      ;; fctn-decl name input-args output-args
      ("function" "[" ident-list "]" "=" ident "(" ident-list ")" term
-      ($$ `(fctn-decl ,$6 ,(tl->list $8) ,(tl->list $3))))
+      ($$ `(fctn-decl ,$6 ,$8 ,$3)))
      ("function" "[" ident-list "]" "=" ident "(" ")" term
       ($$ `(fctn-decl ,$6 (ident-list) ,(tl->list $3))))
      ("function" ident "=" ident "(" ident-list ")" term
-      ($$ `(fctn-decl ,$4 ,(tl->list $6) (ident-list ,$2))))
+      ($$ `(fctn-decl ,$4 ,$6 (ident-list ,$2))))
      ("function" ident "=" ident "(" ")" term
       ($$ `(fctn-decl ,$4 (ident-list) (ident-list ,$2))))
      ("function" ident "(" ident-list ")" term
-      ($$ `(fctn-decl ,$2 ,(tl->list $4) (ident-list))))
+      ($$ `(fctn-decl ,$2 ,$4 (ident-list))))
      ("function" ident "(" ")" term
       ($$ `(fctn-decl ,$2 (ident-list) (ident-list))))
       )
 
     (ident-list
+     (ident-list-1 ($$ (tl->list $1))))
+    (ident-list-1
      (ident ($$ (make-tl 'ident-list $1)))
-     (ident-list "," ident ($$ (tl-append $1 $3))))
+     (ident-list-1 "," ident ($$ (tl-append $1 $3))))
 
     (stmt-list
      (statement ($$ (if $1 (make-tl 'stmt-list $1) (make-tl 'stmt-list))))
@@ -150,12 +153,13 @@
       ($$ `(switch ,$2 ,@(cdr (tl->list $4)))))
      ("return"
       ($$ '(return)))
-     (command arg-list ($$ `(command ,$1 ,@(cdr (tl->list $2))))))
+     (command))
 
     (command
-     ("clear" ($$ '(command "clear")))
-     ("global" ($$ '(command "global")))
-     ("load" ($$ '(command "load"))))
+     ("clear" ($$ '(clear)))
+     ("global" ident-list ($$ `(global ,@(cdr $2))))
+     ("format" $string ($$ `(format ,$2)))
+     ("load" $string ($$ `(load ,$2))))
 
     ;; Only ident list type commands are allowed
     (arg-list
@@ -270,7 +274,8 @@
 
     (term-list (term) (term-list term))
 
-    (term (nl) (";") (","))
+    ;;(term (nl) (";") (","))
+    (term (nl) (";"))
 
     (lone-comment-list
      (lone-comment-list-1 ($$ (tl->list $1))))

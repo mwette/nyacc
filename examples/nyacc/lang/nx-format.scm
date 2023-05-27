@@ -33,7 +33,7 @@
 (define-module (nyacc lang nx-format)
   #:export (nx-format
             nx-format1 nx-formatp
-            parse-format-string
+            parse-format-string apply-fmt
             mat-disp vec-disp))
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))

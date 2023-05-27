@@ -1,6 +1,6 @@
 ;;; nyacc/lang/mlang/parser.scm - parsing 
 
-;; Copyright (C) 2016,2018 Matthew R. Wette
+;; Copyright (C) 2016,2018 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -252,8 +252,7 @@
    (acons 'act-v mlang-act-v mlang-tables)))
 
 (define* (parse-mlang #:key debug)
-  (catch
-   'nyacc-error
+  (catch 'nyacc-error
    (lambda ()
      (apply-mlang-statics
       (raw-parser (gen-mlang-lexer) #:debug debug)))

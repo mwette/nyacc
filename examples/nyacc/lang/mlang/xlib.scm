@@ -25,21 +25,21 @@
   #:export (xdict)
   #:use-module (nyacc lang nx-lib)
   #:use-module (nyacc lang nx-format)
-  #:use-module (srfi srfi-9)
   #:use-module (nyacc lang mlang parser)
   #:use-module (nyacc lang mlang compile-tree-il)
-  #:use-module (system base compile)
-  )
+  #:use-module (ice-9 match)
+  #:use-module (srfi srfi-9)            ; record
+  #:use-module (srfi srfi-111)          ; box
+  #:use-module (system base compile))
+
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
 (define (pperr exp)
   (pretty-print exp (current-error-port)))
 
-(define undefined (if #f #f))
-
 (define* (xassert cnd #:optional msg)
-  (unless cnd (error (or msg "assertion failed"))))
+  (unless cnd (nx-error (or msg "assertion failed"))))
 
 (define-record-type ml-range
   (make-ml-range start delta end)
@@ -105,7 +105,7 @@
   ;;(sferr "arg=~S\n" arg)
   (cond
    ((integer? arg) (vector-ref vec (1- arg)))
-   (else (error "mlang: expecing vector arg of integer, range or array"))))
+   (else (nx-error "mlang: expecing vector arg of integer, range or array"))))
 
 ;; ===
 
@@ -113,7 +113,7 @@
 (define-public (ml:narg . args)
   (let loop ((args args))
     (if (null? args) 0
-        (if (eq? (car args) undefined)
+        (if (eq? (car args) nx-undefined)
             (loop (cdr args))
             (1+ (loop (cdr args)))))))
 
@@ -128,11 +128,10 @@
 
 (define-public (ml:array-ref vec . args)
   ;; args can be positive integer, a range, or an array
-  (let ((arg (car args))
-        )
+  (let ((arg (car args)))
     (cond
      ((integer? arg) (array-ref vec (1- arg)))
-     (else (error "mlang: expecting array args of integer, range or array")))))
+     (else (nx-error "expecting array args of integer, range or array")))))
 
 (define-public (ml:array-set-row! ary ix row)
   (let loop ((jx 0) (elts row))
@@ -146,12 +145,12 @@
     (apply proc-or-array args))
    ((vector? proc-or-array)
     (unless (= 1 (length args))
-      (error "mlang: vector ref requires 1 int arg"))
+      (nx-error "mlang: vector ref requires 1 int arg"))
     (ml:vector-ref proc-or-array (car args)))
    ((array? proc-or-array)
     (apply ml:array-ref proc-or-array args))
    (else
-    (error "expecting function or array"))))
+    (nx-error "expecting function or array"))))
 
 (define-public (ml:assn-elt arry expl value)
   #f)
@@ -167,7 +166,7 @@
 ;; Get @code{expr.name}.  @var{name} is assumed to be a symbol.
 ;; @end deffn
 (define-public (ml:struct-ref expr name)
-  (unless (hash-table? expr) (error "expecting hash table"))
+  (unless (hash-table? expr) (nx-error "expecting hash table"))
   (hashq-ref expr name))
 
 ;; @deffn {Procedure} ml:struct-set! expr name value
@@ -176,21 +175,25 @@
 ;; symbol.
 ;; @end deffn
 (define-public (ml:struct-set! expr name value)
-  (unless (hash-table? expr) (error "expecting hash table"))
+  (unless (hash-table? expr) (nx-error "expecting hash table"))
   (hashq-set! expr name value)
   (if #f #f))
 
 ;; ====================================
 
+(define ml-flt-format (box "%12.5e"))
+
 (define-public (ml:command name . args)
-  (cond
-   ((string=? name "load")
-    (let* ((env (current-module))
-           (file (car args))
-           )
-      #f))
-   (else
-    (throw 'mlang-error "unknown command: ~S" name)))
+  (match (cons name args)
+    (`("load" ,file)
+     (unless (string? file) (nx-error "load expects a single string argument"))
+     #f)
+   (`("format" ,fmtstr)
+    (unless (string? fmtstr) (nx-error "format: expecting single string arg"))
+    (unless (parse-conv-str fmtstr) (nx-error "format: bad format"))
+    (set-box! ml-flt-format fmtstr))
+   (otherwise
+    (nx-error "unknown command: ~S" name)))
   (if #f #f))
 
 (define-public (ml:source file)
@@ -214,9 +217,9 @@
 (define-public (ml:disp val)
   (unless (array? val) (nx-error "expecting vector or matrix"))
   (case (array-rank val)
-    ((0) (display (nx-format "%12.5e" (array-ref val))))
-    ((1) (vec-disp val))
-    ((2) (mat-disp val))
+    ((0) (display (nx-format (unbox ml-flt-format) (array-ref val))))
+    ((1) (vec-disp val #t (unbox ml-flt-format)))
+    ((2) (mat-disp val #t (unbox ml-flt-format)))
     (else (nx-error "expecing array of rank up to 2 only"))))
 
 ;; ===

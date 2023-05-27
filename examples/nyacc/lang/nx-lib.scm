@@ -59,6 +59,7 @@
             nx-use-module
             nx-C-predicate
             nx-error
+            nx-undefined
             ;;
             make-nx-hash-table nx-hash-ref nx-hash-set!
             nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
@@ -147,7 +148,6 @@
   (raise-exception
    (make-exception-with-message
     (apply simple-format #f fmt args))))
-
 
 (define (nx-use-module path)
   (module-use! (current-module) (resolve-interface path)))
