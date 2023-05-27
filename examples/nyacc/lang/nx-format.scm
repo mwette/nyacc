@@ -171,7 +171,7 @@
         (let loop ((n npad)) (when (> n 0) (write-char pad) (loop (1- n))))
         (if (and sign (not sign-first)) (write-char sign))
         (let loop ((v aval) (m (expt base exb)))
-          (when (positive? v)
+          (when (<= 1 m)
             (write-char (digit->char (quotient v m) conv))
             (loop (remainder v m) (/ m base))))
         (let loop ((n npad))
@@ -197,19 +197,14 @@
          (pad (cond ((zero? npad) #f) (left #\space)
                     ((memq #\0 flags) #\0) (else #\space)))
          (sign-first (and (positive? npad) (char=? pad #\0)))
-         (upper (char-upper-case? conv)) ; NOT USED 
          (ival (inexact->exact (floor aval)))
-         (fval (inexact->exact (floor (* (- aval ival) (expt 10 prec)))))
-         )
-    ;;(sferr "npad=~S wid=~S raw=~S dsh=~S prec=~S\n" npad wid raw dsh prec)
-    ;;(sferr "ival=~S fval=~S\n" ival fval)
+         (fval (inexact->exact (floor (* (- aval ival) (expt 10 prec))))))
     (with-output-to-string
       (lambda ()
         (if (and sign sign-first) (write-char sign))
         (let loop ((n npad)) (when (> n 0) (write-char pad) (loop (1- n))))
         (if (and sign (not sign-first)) (write-char sign))
         (let loop ((v ival) (m (expt base (1- dsh))) (c dsh))
-          ;;(sferr "v=~S m=~S c=~S\n" v m c)
           (cond
            ((positive? c)
             (write-char (digit->char (quotient v m)))
@@ -318,17 +313,17 @@
 |#
 ;; === testing
 
-(define-public (parse-conv-str str) ;; test routine
+(define (parse-conv-str str) ;; test routine
   (let ((port (open-input-string str))) (parse-fmt (read-char port) port)))
 
-(define-public (test-istr)
+(define (test-istr)
   (define (doit fmt val)
     (sferr "~S ~S => ~S\n" fmt val (apply int->str val (parse-conv-str fmt))))
   (doit "%d" 1)
   (doit "%-04x" 1)
   )
 
-(define-public (test-fstr)
+(define (test-fstr)
   (define (doit fmt val)
     (sferr "\t~S\t~S\t=> ~S\n"
            fmt val (apply flt->fstr val (parse-conv-str fmt))))
@@ -344,9 +339,9 @@
   (doit "%.1f" 0.0123) 
   )
 
-(export int->str)
-(export flt->fstr)
-(export flt->estr)
+(export parse-conv-str)
+(export test-istr test-fstr)
+(export int->str flt->fstr flt->estr)
 
 
 ;; === deprecated
