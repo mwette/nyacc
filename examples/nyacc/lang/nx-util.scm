@@ -46,6 +46,16 @@
 ;;  Sometimes new symbols must be inserted into a "frame" a scope associated
 ;;  with a procedure, for example.   The symbols after '@F are the calling
 ;;  arguments or special arguments, so xxx
+;;
+;;  TODO: discuss @M for modules
+;;    ((@top . #t)
+;;     (@M . #<directory (guile-user) 7fdad962cc80>)
+;;     ("puts" @@ (nyacc lang tsh xlib) tsh:puts)
+;;     ("format" @@ (nyacc lang tsh xlib) tsh:format)
+;;     ("avec" @@ (nyacc lang tsh xlib) tsh:avec)
+;;     ("fvec" @@ (nyacc lang tsh xlib) tsh:fvec)
+;;     ("ivec" @@ (nyacc lang tsh xlib) tsh:ivec)
+;;     ("vlen" @@ (nyacc lang tsh xlib) tsh:vlen)
 ;; 
 ;;; Code:
 
@@ -177,7 +187,8 @@
                   (unless ref (sferr "warning: ~S not defined" name))
                   (cons name val)))
               names)))
-      
+
+
 ;; @deffn {Procedure} nx-lexical-symbol? name dict
 ;; This is a predicate to indicate if @var{name} is a lexical symbol.
 ;; @end deffn
@@ -221,7 +232,7 @@
 (define nx-add-symbol nx-add-variable)
 
 ;; @deffn nx-lookup name dict
-;; NEED TO DO THIS
+;; needs documentation @*
 ;; for nonlocals either push between
 ;; @end deffn
 (define (nx-lookup name dict)
@@ -231,7 +242,6 @@
    ((assoc-ref dict name))
    ((assoc-ref dict '@P) => (lambda (dict) (nx-lookup name dict)))
    ((nx-lookup-in-env name (assoc-ref dict '@M)))
-   ((begin (sferr "nx-lookup: \n") (pperr dict) #f))
    ((nx-lookup-in-env (x_y->x-y name) (assoc-ref dict '@M)))
    (else #f)))
 

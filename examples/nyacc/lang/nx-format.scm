@@ -34,8 +34,7 @@
   #:export (nx-format
             nx-format1 nx-formatp
             parse-format-string
-            ;;mat-disp vec-disp
-            ))
+            mat-disp vec-disp))
 
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
@@ -267,7 +266,6 @@
          
 ;; === matrices and vectors ========
 
-#|
 (define (mat-disp/strict array port format)
   (let* ((conv (array-type array))
          (dims (array-dimensions array))
@@ -276,7 +274,7 @@
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (do ((j 0 (1+ j))) ((= j (list-ref dimz 1)))
         (display " " port)
-        (display (apply flt->str (array-ref array i j) spec) port))
+        (apply-fmt port spec (array-ref array i j)))
       (newline port))))
 
 (define* (mat-disp array #:optional (port #t) #:key (format "%12.5e"))
@@ -297,7 +295,7 @@
          (spec (parse-conv-str format)))
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (display " " port)
-      (display (apply flt->str (array-ref array i) spec) port)
+      (apply-fmt port spec (array-ref array i))
       (newline port))))
 
 (define* (vec-disp array #:optional (port #t) #:key (format "%12.5e"))
@@ -310,7 +308,8 @@
     (vec-disp/strict array (current-output-port) format))
    (else
     (vec-disp/strict array port format))))
-|#
+
+
 ;; === testing
 
 (define (parse-conv-str str) ;; test routine
