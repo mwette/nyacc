@@ -1,6 +1,6 @@
 ;;; nyacc/lang/arch-info.scm - sizeof and alignof
 
-;; Copyright (C) 2020-2022 Matthew R. Wette
+;; Copyright (C) 2020-2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -20,25 +20,28 @@
 ;; ppc alpha mips ia64 i386 x86_64
 ;; avr i386 ppc x86_64
 
+;; todo: bv-help: bv-u32le-ref bv-u32be-ref bv-32-ref
 ;;; Code:
 
 (define-module (nyacc lang arch-info)
   #:export (lookup-arch
-            arch-info-host
             sizeof-basetype alignof-basetype
-            sizeof-map/native
-            alignof-map/native
-            *arch*
-            with-arch)
+            *arch* with-arch)
   #:use-module (srfi srfi-9))
 
 (define-record-type <arch-info>
-  (make-arch-info endianness sizeof-dict alignof-dict)
+  (make-arch-info name endianness ctype-map align-map)
   arch-info?
-  (endianness arch-endianness)
-  (ctype arch-ctype-map)                ; nyacc name => f32, u8, etc
-  (sizeof arch-sizeof-map)              ; f32, u8 => integer
-  (alignof arch-alignof-map))           ; f32, u8 => integer
+  (name arch-name)                      ; e.g., "x86_64"
+  (endianness arch-endianness)          ; 'little or 'big
+  (ctype-map arch-ctype-map)            ; nyacc name => f32, u8, etc
+  (align-map arch-align-map))           ; f32, u8 => integer
+
+(define sizeof-map
+  '((i8 . 1) (i16 . 2) (i32 . 4) (i64 . 8) (i128 . 16)
+    (u8 . 1) (u16 . 2) (u32 . 4) (u64 . 8) (u128 . 16)
+    (f16 . 2) (f32 . 4) (f64 . 8) (f128 . 16)))
+
 
 (define sizeof-map/avr
   '((* . 2)
@@ -177,173 +180,50 @@
     ("signed long long int" . i64) ("unsigned long long" . u64)
     ("unsigned long long int" . u64)))
 
-(define sizeof-map/x86_64
-  '((* . 8)
-    ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 8)
-    ("float" . 4) ("double" . 8)
-    ("unsigned short" . 2) ("unsigned" . 4) ("unsigned long" . 8)
-    ;;
-    ("size_t" . 8) ("ssize_t" . 8) ("ptrdiff_t" . 8)
-    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
-    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
-    ;;
-    ("signed char" . 1) ("unsigned char" . 1)
-    ("short int" . 2) ("signed short" . 2) ("signed short int" . 2)
-    ("signed" . 4) ("signed int" . 4)
-    ("long int" . 8) ("signed long" . 8) ("signed long int" . 8)
-    ("unsigned short int" . 2) ("unsigned int" . 4) ("unsigned long int" . 8)
-    ;;
-    ("_Bool" . 1)
-    ("intptr_t" . 8) ("uintptr_t" . 8)
-    ("wchar_t" . 4) ("char16_t" . 2) ("char32_t" . 4)
-    ;;
-    ("long double" . 16)
-    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
-    ("signed long long int" . 8) ("unsigned long long" . 8)
-    ("unsigned long long int" . 8)))
+(define arch/x86_64
+  (make-arch-info "x86_64" 'little ctype-map/x86_64 sizeof-map))
 
-(define alignof-map/x86_64 sizeof-map/x86_64)
-
-(use-modules (system foreign))
-
-(cond-expand
- (guile-2.2)
- (guile-2
-  (define intptr_t long)
-  (define uintptr_t unsigned-long)
-  ))
-
-(define sizeof-map/native-builtin
-  `((* . ,(sizeof '*))
-    ("char" . 1) ("short" . ,(sizeof short)) ("int" . ,(sizeof int))
-    ("long" . ,(sizeof long)) ("float" . ,(sizeof float))
-    ("double" . ,(sizeof double)) ("unsigned short" . ,(sizeof unsigned-short))
-    ("unsigned" . ,(sizeof unsigned-int))
-    ("unsigned long" . ,(sizeof unsigned-long))
-    ;;
-    ("size_t" . ,(sizeof size_t)) ("ssize_t" . ,(sizeof ssize_t))
-    ("ptrdiff_t" . ,(sizeof ptrdiff_t))
-    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
-    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
-    ;;
-    ("signed char" . 1) ("unsigned char" . 1)
-    ("short int" . ,(sizeof short)) ("signed short" . ,(sizeof short))
-    ("signed short int" . ,(sizeof short)) ("signed" . ,(sizeof int))
-    ("signed int" . ,(sizeof int)) ("long int" . ,(sizeof long))
-    ("signed long" . ,(sizeof long)) ("signed long int" . ,(sizeof long))
-    ("unsigned short int" . ,(sizeof short)) ("unsigned int" . ,(sizeof int))
-    ("unsigned long int" . ,(sizeof long))
-    ;;
-    ("_Bool" . 1)
-    ("intptr_t" . ,(sizeof intptr_t)) ("uintptr_t" . ,(sizeof uintptr_t))
-    ("wchar_t" . ,(sizeof int)) ("char16_t" . 2) ("char32_t" . 4)
-    ;;
-    ("long double" . 16)
-    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
-    ("signed long long int" . 8) ("unsigned long long" . 8)
-    ("unsigned long long int" . 8)))
-
-(define alignof-map/native-builtin
-  `((* . ,(alignof '*))
-    ("char" . 1) ("short" . ,(alignof short)) ("int" . ,(alignof int))
-    ("long" . ,(alignof long)) ("float" . ,(alignof float))
-    ("double" . ,(alignof double)) ("unsigned short" . ,(alignof unsigned-short))
-    ("unsigned" . ,(alignof unsigned-int))
-    ("unsigned long" . ,(alignof unsigned-long))
-    ;;
-    ("size_t" . ,(alignof size_t)) ("ssize_t" . ,(alignof ssize_t))
-    ("ptrdiff_t" . ,(alignof ptrdiff_t))
-    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
-    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
-    ;;
-    ("signed char" . 1) ("unsigned char" . 1)
-    ("short int" . ,(alignof short)) ("signed short" . ,(alignof short))
-    ("signed short int" . ,(alignof short)) ("signed" . ,(alignof int))
-    ("signed int" . ,(alignof int)) ("long int" . ,(alignof long))
-    ("signed long" . ,(alignof long)) ("signed long int" . ,(alignof long))
-    ("unsigned short int" . ,(alignof short)) ("unsigned int" . ,(alignof int))
-    ("unsigned long int" . ,(alignof long))
-    ;;
-    ("_Bool" . 1)
-    ("intptr_t" . ,(alignof intptr_t)) ("uintptr_t" . ,(alignof uintptr_t))
-    ("wchar_t" . ,(alignof int)) ("char16_t" . 2) ("char32_t" . 4)
-    ;;
-    ("long double" . 16)
-    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
-    ("signed long long int" . 8) ("unsigned long long" . 8)
-    ("unsigned long long int" . 8)))
-
-(define sizeof-map/native sizeof-map/native-builtin)
-(define alignof-map/native alignof-map/native-builtin)
-
-(define arch-sizeof-map
-  `(("native" . ,sizeof-map/native)
-    ("avr" . ,sizeof-map/avr)
-    ("i686" . ,sizeof-map/i686)
-    ("powerpc" . ,sizeof-map/powerpc)
-    ("ppc" . ,sizeof-map/powerpc)
-    ("riscv" . ,sizeof-map/riscv)
-    ("rv32" . ,sizeof-map/riscv)
-    ("x86_64" . ,sizeof-map/x86_64)))
-
-(define arch-alignof-map
-  `(("native" . ,alignof-map/native)
-    ("avr" . ,alignof-map/avr)
-    ("i686" . ,alignof-map/i686)
-    ("powerpc" . ,alignof-map/powerpc)
-    ("ppc" . ,alignof-map/powerpc)
-    ("riscv" . ,alignof-map/riscv)
-    ("rv32" . ,alignof-map/riscv)
-    ("x86_64" . ,alignof-map/x86_64)))
+(define arch-map
+  `(
+    ("x86_64" . ,arch/x86_64)))
 
 (define (lookup-arch name)
-  (let ((sizeof-dict (assoc-ref arch-sizeof-map name))
-        (alignof-dict (assoc-ref arch-alignof-map name)))
-    (and sizeof-dict alignof-dict (cons sizeof-dict alignof-dict))))
+  (assoc-ref arch-map name))
 
-(define arch-info-host
+(define host-arch
   (eval-when (expand eval compile)
     (and=> (string-split %host-type #\-) car)))
 
-(define sizeof-map/native-arch
-  (assoc-ref arch-sizeof-map arch-info-host))
-         
-(define alignof-map/native-arch
-  (assoc-ref arch-alignof-map arch-info-host))
-
-(define *arch* (make-parameter (cons sizeof-map/native alignof-map/native)))
+;; @deffn {Parameter} *arch*
+;; parameter set to global architecture record
+;; @end deffn
+(define *arch* (make-parameter (lookup-arch host-arch)))
 
 (define-syntax-rule (with-arch arch body ...)
   (parameterize ((*arch* (if (string? arch) (lookup-arch arch) arch)))
     body ...))
 
+
 ;; @deffn {Procedure} sizeof-basetype type
 ;; Return the size in bytes of the basetype @var{type}, a string, based on
-;; @var{*arch*}, a global parameter, which must be a pair.   If the car
-;; is a pair, it must be an a-list mapping string to integer for
-;; the size.  If the car is a procedure, the procedure must take @var{type}
-;; and return an integer.
+;; the global parameter @var{*arch*}.
+;; @example
+;; (sizeof-basetype "unsigned int") => 4
+;; @end example
 ;; @end deffn
-(define (sizeof-basetype type)
-  (let ((dict-or-proc (car (*arch*))))
-    (cond
-     ((pair? dict-or-proc) (assoc-ref dict-or-proc type))
-     ((procedure? dict-or-proc) (dict-or-proc type))
-     (else (throw 'nyacc-error "bad arch")))))
+(define (sizeof-basetype base-type-name)
+  (let ((arch (*arch*)))
+    (and=> (assoc-ref (arch-ctype-map arch) base-type-name)
+           (lambda (type) (assq-ref sizeof-map type)))))
 
 ;; @deffn {Procedure} alignof-basetype type
 ;; Return the alignment of the basetype @var{type}, a string, based on
-;; @var{*arch*}, a global parameter, whcih must be a pair.  If the cdr
-;; is a pair, it must be an a-list mapping strint to integer for
-;; the size.  If the car is a procedure, the procedure must take @var{type}
-;; and return an integer.
+;; the global parameter @var{*arch*}.
 ;; @end deffn
-(define (alignof-basetype type)
-  (let ((dict-or-proc (cdr (*arch*))))
-    (cond
-     ((pair? dict-or-proc) (assoc-ref dict-or-proc type))
-     ((procedure? dict-or-proc) (dict-or-proc type))
-     (else (throw 'nyacc-error "bad arch")))))
+(define (alignof-basetype base-type-name)
+  (let ((arch (*arch*)))
+    (and=> (assoc-ref (arch-ctype-map arch) base-type-name)
+           (lambda (type) (assq-ref (arch-align-map arch) type)))))
 
 ;; defs __SIZEOF_ + + __
 ;; FLOAT80 INT POINTER LONG LONG_DOUBLE SIZE_T WINT_T PTRDIFF_T FLOAT FLOAT128

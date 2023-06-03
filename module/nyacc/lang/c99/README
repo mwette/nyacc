@@ -59,6 +59,39 @@ The standard says:
 
 === Thinking about bytestructures: =============================================
 
+I am reworking bytestructures.  I'd like to preserve what Taylan has done
+but I want more crisp definition of what gets returned.  bs-ref '* gives int.
+I need to add desc-equal? (see issue #2 in scm-bs repo).  I also want to add
+support for multiple architectures.  There will be a parameter *arch* used.
+
+* manifest
+  cdata-ref => cdata always
+  cdata-set! many => undefined
+  cdata-val => think about this
+  cdata-type
+  cdata-unwrap val => (values bv ix ct)
+  ctype-type type => struct union ... f64 f32 i32 u32 ...
+  ctype-eqv? a b => #t|#f
+  ctype-size => int | #f (#f if size is dynamic, i.e., pointer/array deref)
+  ctype-alignment => int
+
+* extras?
+  ctype->gtype (guile type)
+    + bytevector maps, plus array => array, struct => record, but not union
+      cstring => string
+
+* (difficult) use cases:
+  1 copy string to/from buffer
+
+* layouts:
+  <cdata>: bv ix ct (bytevector offset ctype)
+  <ctype>: ?name setter getter ?unwrapper
+
+(cdata-ref obj . sels) ;; sels are selectors
+
+(ctype-sel ct ix sel) -> (values ct ix)
+
+
 * Currently bytestructure-ref is a macro, this is problematic for other
   languages implemented in guile
 * use (descriptor-index <desc> sym sym ...) => offset descriptor
@@ -72,12 +105,14 @@ The standard says:
     : can't automatically deref because '* => obj or '* vector of obj
   + cstrings? : thinking not mutable
   
-bs:struct keeps as meta a list of (name desc)
+does bs:struct currently keep as meta a list of (name desc)
 
 type => ($ <type> 'int bits signed?) | ($ <type> 'flt bits #t)
         | ??? ($ <type> 'ptr bits #f)
 
 ($ <desc> size align setter wrapper setter meta)
+
+(unwrap bs) => (bv ix desc)
 
 bs-getter:
     (bv, os, desc, ix) => (bv, os, desc)
@@ -96,4 +131,9 @@ fh-val -> copy
 (with-arch arch
   (bs:struct xxx))
 
+fh-type: desc bv ix
 
+need: type-equal? foo-desc (bs:struct 'abc 'def)
+
+function cast
+type cast 
