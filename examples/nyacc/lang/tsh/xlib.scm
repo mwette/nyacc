@@ -98,22 +98,22 @@
 (define-public tsh:vlen array-length)
 
 (define-public (tsh:indexed-ref obj indx)
-  (if (null? indx) obj
-      (cond
-       ((hash-table? obj)
-        (unless (symbol? (car indx)) (nx-error "expecting symbol"))
-        (let ((val (hashq-ref obj (car indx))))
-          (unless val (nx-error "field does not exist: ~S" (car indx)))
-          (tsh:indexed-ref val (cdr indx))))
-       ((array? obj)
-        (let ((rk (array-rank obj))
-              (nx (length indx)))
-          (unless (<= rk nx) (nx-error "no shared-arrays (yet)"))
-          (call-with-values
-              (lambda () (split-at indx rk))
-            (lambda (indx rest)
-              (tsh:indexed-ref (apply array-ref obj indx) rest)))))
-       (else (nx-error "indexed-ref on non-array, non-struct")))))
+  (cond
+   ((null? indx) obj)
+   ((hash-table? obj)
+    (unless (symbol? (car indx)) (nx-error "expecting symbol"))
+    (let ((val (hashq-ref obj (car indx))))
+      (unless val (nx-error "field does not exist: ~S" (car indx)))
+      (tsh:indexed-ref val (cdr indx))))
+   ((array? obj)
+    (let ((rk (array-rank obj))
+          (nx (length indx)))
+      (unless (<= rk nx) (nx-error "no shared-arrays (yet)"))
+      (call-with-values
+          (lambda () (split-at indx rk))
+        (lambda (indx rest)
+          (tsh:indexed-ref (apply array-ref obj indx) rest)))))
+   (else (nx-error "indexed-ref on non-array, non-struct"))))
   
 (define-public (tsh:indexed-set! obj indx val)
   ;; complicated : from end get symbol or longest string of ints
@@ -171,6 +171,7 @@
 (define xdict
   `(
     ("puts" . ,(xlib-ref 'tsh:puts))
+    #|
     ("format" . ,(xlib-ref 'tsh:format))
     ;;
     ("avec" . ,(xlib-ref 'tsh:avec))
@@ -190,6 +191,9 @@
     ("hide_sxml" . ,(xlib-ref 'tsh:hide_sxml))
     ("show_xtil" . ,(xlib-ref 'tsh:show_xtil))
     ("hide_xtil" . ,(xlib-ref 'tsh:hide_xtil))
+    |#
+    ("show_sxml" . ,(xlib-ref 'tsh:show_sxml))
+    ("show_xtil" . ,(xlib-ref 'tsh:show_xtil))
     ))
 
 ;; --- last line ---

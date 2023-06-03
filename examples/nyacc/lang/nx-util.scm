@@ -24,7 +24,7 @@
 ;;    Some scope levels can be frames.  If a variable is defined it should
 ;;    be placed in the current frame.  
 ;;    @code{@P} points to the parent scope
-;;    @code{@F} denotes a frame ????
+;;    @code{@F} denotes frame, where we need to make room for locals 
 ;;    If code to define a variable it should be put in the current frame.
 ;; 3) routines that return dict's should return '() if not found
 ;;    e.g. nx-parent dict => '()
@@ -34,10 +34,19 @@
 ;;    entries are of the form
 ;;      ("foo" . '(lexical foo foo-123))
 ;;    or
-;;      ("foo" . '(toplevel foo foo-123))
+;;      ("foo" . '(toplevel foo))
 ;;            
 ;;                   ((b . a~1) (@F . "foo") (a . b~1) (@P . ^))
 ;;  ((c . c~1) (@P . ^))
+;;
+;;
+;;                             (("a" . 1) ("b" . 2) ...
+;;  (("a" . 1) ("b" . 2) (@P . ^
+;;  =>                            
+;;  (("a" . 1) ("b" . 2) @P ("a" . 1) ("b" . 2) ...
+;;  => (list (cons '@P tail))
+;;                             (("a" . 1) ("b" . 2) ...
+;;  (("a" . 1) ("b" . 2) (@P . ^
 ;;
 ;;  used like this 
 ;;    [local] -> @F -> [return] -> @P -> [global]
@@ -69,8 +78,10 @@
             nx-lookup
 	    nx-lookup-in-frame nx-lookup-in-scope
 	    nx-lookup-in-env
-	    nx-ensure-variable nx-ensure-variable/scope
-            nx-insert-scopelevel
+	    nx-ensure-variable
+            nx-ensure-variable/scope
+            nx-ensure-variable/frame
+            nx-insert-nonlocals
             nx-lookup-gensym
 	    
 	    rtail singleton?
@@ -179,16 +190,6 @@
     (lambda (str sym)
       (nx-add-taglevel (cons str `(lexical ,sym ,(genxsym str))) dict '@F))))
 
-(define (nx-insert-scopelevel dict names)
-  (apply nx-add-taglevel* dict '@P
-         (map (lambda (name)
-                (let* ((ref (nx-lookup name dict))
-                       (val (if ref ref `(toplevel ,(string->symbol name)))))
-                  (unless ref (sferr "warning: ~S not defined" name))
-                  (cons name val)))
-              names)))
-
-
 ;; @deffn {Procedure} nx-lexical-symbol? name dict
 ;; This is a predicate to indicate if @var{name} is a lexical symbol.
 ;; @end deffn
@@ -247,13 +248,21 @@
 
 ;; @deffn nx-lookup-in-frame name dict
 ;; @xdeffn nx-lookup-in-scope name dict
+;; in frame, lookup to end of frame scope, so
+;; for dict = (... (@F . "def") ("xx" toplevel xx) (@P . (more)))
+;; (lookup-in-frame "xx" dict) => (toplevel "xx")
 ;; @end deffn
 (define (nx-lookup-in-frame name dict)
   (let loop ((dict dict))
     (cond
      ((null? dict) #f)
-     ((eq? '@F (caar dict)) #f)
-     ((equal? name (caar dict)) (cdar dict))
+     ((equal? name (caar dict))
+      (let ((ref (cdar dict)))
+        (and (eq? 'lexical (car ref)) ref)))
+     ((eq? '@P (caar dict))
+      (loop (cdar dict)))
+     ((eq? '@F (caar dict))
+      (assoc-ref (cdr dict) name))
      (else (loop (cdr dict))))))
 
 (define (nx-lookup-in-scope name dict)
@@ -285,6 +294,33 @@
       dict
       (or (nx-add-framelevel name dict)
 	  (nx-add-toplevel name dict))))
+
+(define (nx-ensure-variable/frame name dict)
+  (if (nx-lookup-in-frame name dict)
+      dict
+      (or (nx-add-framelevel name dict)
+	  (nx-add-toplevel name dict))))
+
+(define (nx-insert-nonlocals dict names)
+  (define (finish head tail)
+    (let ((entries
+           (map (lambda (name)
+                  (let* ((ref (nx-lookup name dict))
+                         (val (if ref ref `(toplevel ,(string->symbol name)))))
+                    (unless ref (sferr "warning: ~S not defined" name))
+                    (cons name val)))
+                names)))
+      (let loop ((head head) (tail (append-reverse entries tail)))
+        (cond
+         ((null? head) tail)
+         ((eq? '@P (car head)) (loop (cdr head) (list (cons '@P tail))))
+         (else (loop (cdr head) (cons (car head) tail)))))))
+  (let loop ((head '()) (tail dict))
+    (cond
+     ((eq? (caar tail) '@F) (finish (cons (car tail) head) (cdr tail)))
+     ((eq? (caar tail) '@P) (loop (cons (caar tail) head) (cdar tail)))
+     ((eq? (caar tail) '@top) (finish head tail))
+     (else (loop (cons (car tail) head) (cdr tail))))))
 
 ;; @deffn {Procedure} nx-lookup-gensym name dict [label] => gensym
 ;; Lookup up nearest parent lexical and return associated gensym.
@@ -403,7 +439,7 @@
 ;; @deffnx {Procedure} with-escape/expr tag-ref body
 ;; This is used to generate return and break where break is passed '(void).
 ;; @var{tag-ref} is of the form @code{(lexical name gensym)} and
-;; @var{expr} is an expression.
+;; @var{body} is an expression.
 ;; @end deffn
 (define (with-escape/handler tag-ref body hdlr)
   (let ((tag-name (cadr tag-ref))

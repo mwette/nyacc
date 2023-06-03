@@ -133,6 +133,7 @@
 		         (cons (cons* (car a) ref (cddr a)) l)))
                      '() args))
               (form `(lambda (arg-list . ,args) ,body)))
+         ;;(sferr "fD/lambda: dict, args:\n") (pperr dict) (pperr args)
 	 (values (+SP form) '() (acons '@F "*anon*" dict))))
 
       ((incr (ident ,var) ,val)
@@ -157,12 +158,13 @@
 	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
       ((set (ident ,name) ,value)
-       (let* ((dict (nx-ensure-variable/scope name dict))
+       (let* ((dict (nx-ensure-variable/frame name dict))
               (nref (nx-lookup name dict)))
+         ;;(sferr "fD/set: name=~S dict\n" name) (pperr dict)
 	 (values (+SP `(set ,nref ,value)) '() dict)))
 
       ((nonlocal . ,names)
-       (values '() '() (nx-insert-scopelevel dict names)))
+       (values '() '() (nx-insert-nonlocals dict names)))
 
       ((use . ,strpath)
        (let* ((sympath (map string->symbol strpath))
@@ -175,7 +177,7 @@
          (values '() (+SP stmt) dict)))
 
       ((script . ,stmts)
-       (values tree '() (nx-add-lexical "return" (nx-push-scope dict))))
+       (values tree '() (nx-add-lexical "sreturn" (nx-push-scope dict))))
 
       ((@@ ,module ,symbol)             ; don't process resolved references
        (values '() tree dict))
@@ -184,7 +186,6 @@
        (values '() tree dict))
 
       (,_
-       ;;(sferr "fD: default\n") (pperr tree) (sferr "\n")
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
@@ -226,7 +227,9 @@
          kdict))
 
        ((script)
-	(values (cons (block (rtail kseed)) seed) (nx-pop-scope kdict)))
+        (let* ((ptag (lookup "sreturn" kdict))
+               (form (with-escape/arg ptag (block (rtail kseed)))))
+	  (values (cons form seed) (nx-pop-scope kdict))))
 
        ((stmt-list)
         (let* ((stmtl (rtail kseed))
@@ -238,6 +241,7 @@
 	(values seed kdict))
 
        ((lambda)
+        ;;(sferr "fU/lambda: dict\n") (pperr kdict)
 	(let* ((tail (rtail kseed))
                (attr (and (pair? (car tail)) (eq? '@ (caar tail)) (car tail)))
 	       (argl (list-ref tail (if attr 1 0)))
