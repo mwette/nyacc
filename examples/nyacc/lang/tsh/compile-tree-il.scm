@@ -117,7 +117,6 @@
 		         (cons (cons* (car a) ref (cddr a)) l)))
                      '() args))
               (form `(lambda (arg-list . ,args) ,body)))
-         ;;(sferr "fD/lambda: dict, args:\n") (pperr dict) (pperr args)
 	 (values (+SP form) '() (acons '@F "*anon*" dict))))
 
       ((incr (ident ,var) ,val)
@@ -131,14 +130,14 @@
       
       ((call (ident ,name) . ,args)
        (let ((ref (nx-lookup name dict)))
-	 (unless ref (nx-error "not defined: ~S" name))
+	 (unless ref (nx-error "not defined: ~A" name))
 	 (values (+SP `(call ,ref . ,args)) '() dict)))
 
       ((set-indexed (ident ,name) ,index ,value)
        ;; FIXME: If name is not local then this will look up.
        ;; Should be an error instead.
        (let ((nref (nx-lookup name dict)))
-	 (unless nref (nx-error "not defined: ~S" name))
+	 (unless nref (nx-error "not defined: ~A" name))
 	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
       ((set (ident ,name) ,value)
@@ -173,28 +172,18 @@
        (values tree '() dict))))
 
   (define (fU tree seed dict kseed kdict) ;; => seed dict
-    (define +SP (make-+SP tree))
-    (define pass-through '(toplevel
-                           lexical
-                           abort
-                           arg-list arg opt-arg rest-arg
-                           @@))
-    
-    (when #f
-      ;;(sferr "fU: ~S\n" (if (pair? tree) (car tree) tree))
-      ;;(sferr "    kseed=~S\n    seed=~S\n" kseed seed)
-      (sferr "fU: ~S, tree, kseed, seed\n" (if (pair? tree) (car tree) tree))
-      (pperr tree) (pperr kseed) (pperr seed)
-      (sferr "\n")
-      ;;(pperr tree)
-      )
     ;; This routine rolls up processes leaves into the current branch.
     ;; We have to be careful about returning kdict vs dict.
     ;; Approach: always return kdict or (pop-scope kdict)
+    (define +SP (make-+SP tree))
+    (define pass-through '(@@ toplevel lexical abort
+                           arg-list arg opt-arg rest-arg))
+    
     (if
-     (null? tree) (if (null? kseed)
-		      (values seed kdict) 
-		      (values (cons kseed seed) kdict))
+     (null? tree)
+     (if (null? kseed)
+	 (values seed kdict) 
+	 (values (cons kseed seed) kdict))
      
      (case (car tree)
 
@@ -225,7 +214,6 @@
 	(values seed kdict))
 
        ((lambda)
-        ;;(sferr "fU/lambda: dict\n") (pperr kdict)
 	(let* ((tail (rtail kseed))
                (attr (and (pair? (car tail)) (eq? '@ (caar tail)) (car tail)))
 	       (argl (list-ref tail (if attr 1 0)))
@@ -386,7 +374,7 @@
        ((deref)
         (let* ((name (car kseed))
                (ref (nx-lookup name kdict)))
-	  (unless ref (nx-error "undefined variable: ~S" name))
+	  (unless ref (nx-error "undefined variable: ~A" name))
           (values (+SP (cons ref seed)) kdict)))
 
        ((deref-indexed)
