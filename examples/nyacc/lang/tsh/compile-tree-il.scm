@@ -36,36 +36,20 @@
   #:use-module ((srfi srfi-1) #:select (fold fold-right append-reverse))
   #:use-module (srfi srfi-88)           ; string->keyword
   #:use-module (language tree-il)
-  #:use-module (ice-9 match)
-  ;;#:use-module (system base compile)
-  )
+  #:use-module (ice-9 match))
+
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (define (pperr tree)
   (pretty-print tree (current-error-port) #:per-line-prefix "  "))
 
-(define xlib-mod '(nyacc lang tsh xlib))
-(define xlib-module (resolve-module xlib-mod))
-(define (xlib-ref name) `(@@ ,xlib-mod ,name))
-
-(define (lookup name dict)
-  (or (nx-lookup name dict)
-      (nx-lookup-in-env name xlib-module)))
+(define (xlib-ref name)
+  `(@@ (nyacc lang tsh xlib) ,name))
 
 (define (op-call op kseed)
   (rev/repl 'call (xlib-ref op) kseed))
 
-(define (op-call/prim op kseed)
-  (rev/repl 'primcall op kseed))
-
-(define (make-function name lang arity body)
-  (let* ((meta '())
-         (meta (if lang (cons `(language . ,lang) meta) meta))
-	 (meta (if name (cons `(name . ,name) meta) meta)))
-    `(lambda ,meta (lambda-case (,arity ,body)))))
-
-;; for lt + rt, etc
 
 ;; @deffn {Procedure} sxml->xtil exp env opts
 ;; Compile SXML tree to external Tree-IL representation.
@@ -129,7 +113,7 @@
                      dict args))
 	      (args (fold-right         ; ident -> lexical 
 		     (lambda (a l)
-                       (let ((ref (lookup (arg-name a) dict)))
+                       (let ((ref (nx-lookup (arg-name a) dict)))
 		         (cons (cons* (car a) ref (cddr a)) l)))
                      '() args))
               (form `(lambda (arg-list . ,args) ,body)))
@@ -146,14 +130,14 @@
        (values (+SP `(incr/ix ,var ,ix (const 1))) '() dict))
       
       ((call (ident ,name) . ,args)
-       (let ((ref (lookup name dict)))
+       (let ((ref (nx-lookup name dict)))
 	 (unless ref (nx-error "not defined: ~S" name))
 	 (values (+SP `(call ,ref . ,args)) '() dict)))
 
       ((set-indexed (ident ,name) ,index ,value)
        ;; FIXME: If name is not local then this will look up.
        ;; Should be an error instead.
-       (let ((nref (lookup name dict)))
+       (let ((nref (nx-lookup name dict)))
 	 (unless nref (nx-error "not defined: ~S" name))
 	 (values (+SP `(set-indexed ,nref ,index ,value)) '() dict)))
 
@@ -227,7 +211,7 @@
          kdict))
 
        ((script)
-        (let* ((ptag (lookup "sreturn" kdict))
+        (let* ((ptag (nx-lookup "sreturn" kdict))
                (form (with-escape/arg ptag (block (rtail kseed)))))
 	  (values (cons form seed) (nx-pop-scope kdict))))
 
@@ -246,7 +230,7 @@
                (attr (and (pair? (car tail)) (eq? '@ (caar tail)) (car tail)))
 	       (argl (list-ref tail (if attr 1 0)))
 	       (body (block (list-tail tail (if attr 2 1))))
-	       (ptag (lookup "return" kdict))
+	       (ptag (nx-lookup "return" kdict))
 	       (arity (make-arity argl))
                (body (wrap-locals body kdict))
 	       (body (with-escape/arg ptag body))
@@ -255,7 +239,7 @@
 	  (values (cons form seed) (nx-pop-scope kdict))))
 
        ((return)
-	(let ((ret `(abort ,(lookup "return" kdict)
+	(let ((ret `(abort ,(nx-lookup "return" kdict)
 			   (,(if (> (length kseed) 1) (car kseed) '(void)))
 			   (const ()))))
 	  (values (cons (+SP ret) seed) kdict)))
@@ -282,7 +266,7 @@
 
        ((switch)
         ;; no break
-	(let* ((val (lookup "swx~val" kdict))
+	(let* ((val (nx-lookup "swx~val" kdict))
 	       (sw (if (eq? (caar kseed) 'default)
 		       (make-switch val (cdr kseed) (car kseed))
 		       (make-switch val kseed '(void)))))
@@ -339,7 +323,7 @@
 	(values (cons (+SP `(call . ,(rtail kseed))) seed) kdict))
 
        ((eval)
-	(let ((body (with-escape/arg (lookup "return" kdict) (car kseed))))
+	(let ((body (with-escape/arg (nx-lookup "return" kdict) (car kseed))))
  	  (values (cons (+SP body) seed) (nx-pop-scope kdict))))
 
        ((empty-stmt)
@@ -349,15 +333,12 @@
 	(let* ((tail (rtail kseed))
 	       (name (car tail))
 	       (expr (cadr tail))
-	       (vref (lookup name kdict))
+	       (vref (nx-lookup name kdict))
 	       (stmt `(set! ,vref (primcall + ,vref ,expr))))
 	  (values (cons (+SP stmt) seed) kdict)))
 
        ((source)
-	(let ((stmt `(call (@@ (nyacc lang tsh xlib) tsh:source)
-			   ,(car kseed)
-			   ;;(call (toplevel current-module))
-			   )))
+	(let ((stmt `(call ,(xlib-ref 'tsh:source) ,(car kseed))))
 	  (values (cons (+SP stmt) seed) kdict)))
 
        ((format)
@@ -404,14 +385,14 @@
 
        ((deref)
         (let* ((name (car kseed))
-               (ref (lookup name kdict)))
+               (ref (nx-lookup name kdict)))
 	  (unless ref (nx-error "undefined variable: ~S" name))
           (values (+SP (cons ref seed)) kdict)))
 
        ((deref-indexed)
         (let* ((tail (rtail kseed))
                (name (car tail))
-               (ref (lookup name kdict))
+               (ref (nx-lookup name kdict))
                (args (cdr tail))
                (proc (xlib-ref 'tsh:indexed-ref)))
 	  (unless ref (nx-error "undefined variable: ~A" name))

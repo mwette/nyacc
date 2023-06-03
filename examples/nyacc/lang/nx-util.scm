@@ -97,7 +97,8 @@
 	    block vblock
 	    make-arity
 	    make-and make-or make-thunk make-defonce
-	    make-switch make-loop make-do-while make-while make-for
+	    make-function
+            make-switch make-loop make-do-while make-while make-for
 	    ;; deprecated
 	    nx-add-symbol)
   #:use-module ((srfi srfi-1) #:select (fold append-reverse)))
@@ -521,6 +522,15 @@
   (let iter ((xl expr-list))
     (if (null? xl) '(void)
         `(seq ,(car xl) ,(iter (cdr xl))))))
+
+;; @deffn {Scheme} make-function name lang arity body
+;; return a function in itil
+;; @end deffn
+(define (make-function name lang arity body)
+  (let* ((meta '())
+         (meta (if lang (cons `(language . ,lang) meta) meta))
+	 (meta (if name (cons `(name . ,name) meta) meta)))
+    `(lambda ,meta (lambda-case (,arity ,body)))))
 
 ;; @deffn {Procecure} make-switch swx-var kseed default
 ;; options: mem (membership), equ (equality)
