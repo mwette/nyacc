@@ -57,3 +57,43 @@ The standard says:
   qualified version of a compatible type; the order of type qualifiers within
   a list of specifiers or qualifiers does not affect the specified type."
 
+=== Thinking about bytestructures: =============================================
+
+* Currently bytestructure-ref is a macro, this is problematic for other
+  languages implemented in guile
+* use (descriptor-index <desc> sym sym ...) => offset descriptor
+   or (descriptor-index <desc> sym sym ...) => offset getter setter
+* and what does getter do? copy or share? 
+  + (bs-ref obj index) => /shared if object, or val if xxx
+  + (bs-val obj index) -> value
+  + (bs-set! obj index value) :
+      (bs-set! obj ix0 ix1 ... val) == (bs-set! (bs-ref obj ix0) ix1 ... value)
+  + but what about pointer? be the same and require de-ref via '*,
+    : can't automatically deref because '* => obj or '* vector of obj
+  + cstrings? : thinking not mutable
+  
+bs:struct keeps as meta a list of (name desc)
+
+type => ($ <type> 'int bits signed?) | ($ <type> 'flt bits #t)
+        | ??? ($ <type> 'ptr bits #f)
+
+($ <desc> size align setter wrapper setter meta)
+
+bs-getter:
+    (bv, os, desc, ix) => (bv, os, desc)
+bs-setter:
+    (bv, os, desc) ==[copy]==> 
+    value
+
+bs-val: (bv, os, desc) -> prim | (bv, os, desc)
+
+cdt:struct vs bs:struct
+
+fh-ref -> bs
+fh-set! bs
+fh-val -> copy
+
+(with-arch arch
+  (bs:struct xxx))
+
+

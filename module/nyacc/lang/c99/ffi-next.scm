@@ -357,14 +357,18 @@
 ;;(define (node-not-typeof? crit)
 
 (define (cnvt-udecl udecl udict wrapped defined)
-  
-  (let* ((mdecl (udecl->mdecl udecl))
+
+  ;; but typedefs needs to be included
+  ;; ("foo_t" (typedef-for (xxx)))
+  (let* (;;(xdecl (expand-typerefs udecl udict defined))
+         (mdecl (udecl->mdecl udecl))
          (ident (car mdecl))
          (mattr (md-attr mdecl))
          (mtail (md-tail mdecl)))
 
     (sferr "ffi-next(cnvt-udecl):\n")
     (pperr mdecl)
+    (quit)
     
     (pmatch mtail
       (`((function-returning ,param-list) . ,rtail)
@@ -376,6 +380,8 @@
     (quit)
     
     ))
+
+(display "ffi-next/TODO: add undef for c99; maybe FOO=! or !FOO vs FOO=1")
 
 ;; === enums and #defined => lookup
 
