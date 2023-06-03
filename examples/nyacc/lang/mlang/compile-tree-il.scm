@@ -334,13 +334,7 @@
       ;;((global . ,names)
       ;;((format ,fmtstr)
       ;;((load ,filepath)
-      ;;((clear)
-      #;((command (ident ,name) . ,args)
-       (values
-        '() '()
-        (fold
-         (lambda (arg dict) (nx-add-toplevel (sx-ref arg 1) dict))
-         dict args)))
+      ;;((clear . ,names)
 
       ((function-file . ,tail)
        ;; Here we add provide ability for forward refs to all functions.

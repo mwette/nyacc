@@ -156,7 +156,7 @@
      (command))
 
     (command
-     ("clear" ($$ '(clear)))
+     ("clear" ident-list ($$ '(clear)))
      ("global" ident-list ($$ `(global ,@(cdr $2))))
      ("format" $string ($$ `(format ,$2)))
      ("load" $string ($$ `(load ,$2))))

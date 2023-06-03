@@ -145,8 +145,8 @@
    (lambda ($1 . $rest) '(return))
    ;; nontrivial-statement-1 => command
    (lambda ($1 . $rest) $1)
-   ;; command => "clear"
-   (lambda ($1 . $rest) '(clear))
+   ;; command => "clear" ident-list
+   (lambda ($2 $1 . $rest) '(clear))
    ;; command => "global" ident-list
    (lambda ($2 $1 . $rest) `(global ,@(cdr $2)))
    ;; command => "format" '$string
