@@ -36,8 +36,9 @@
   (make-arch-info endianness sizeof-dict alignof-dict)
   arch-info?
   (endianness arch-endianness)
-  (sizeof-dict arch-sizeof-dict)
-  (alignof-dict arch-alignof-dict))
+  (ctype arch-ctype-map)                ; nyacc name => f32, u8, etc
+  (sizeof arch-sizeof-map)              ; f32, u8 => integer
+  (alignof arch-alignof-map))           ; f32, u8 => integer
 
 (define sizeof-map/avr
   '((* . 2)
@@ -67,7 +68,7 @@
 (define alignof-map/avr
   (map (lambda (pair) (cons (car pair) 1)) sizeof-map/avr))
 
-(define sizeof-map/i386
+(define sizeof-map/i686
   '((* . 4)
     ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 4)
     ("float" . 4) ("double" . 8)
@@ -92,10 +93,10 @@
     ("signed long long int" . 8) ("unsigned long long" . 8)
     ("unsigned long long int" . 8)))
 
-(define alignof-map/i386 sizeof-map/i386)
+(define alignof-map/i686 sizeof-map/i686)
 
-;; PPC  GUESS
-(define sizeof-map/ppc
+;; 32bit powerpc aka ppc, big endian
+(define sizeof-map/powerpc
   '((* . 4)
     ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 8)
     ("float" . 4) ("double" . 8)
@@ -120,10 +121,10 @@
     ("signed long long int" . 8) ("unsigned long long" . 8)
     ("unsigned long long int" . 8)))
 
-(define alignof-map/ppc sizeof-map/ppc)
+(define alignof-map/powerpc sizeof-map/powerpc)
 
-;; risc-v - GUESS
-(define sizeof-map/rv32
+;; riscv 32 bit little endian
+(define sizeof-map/riscv
   '((* . 4)
     ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 8)
     ("float" . 4) ("double" . 8)
@@ -148,7 +149,33 @@
     ("signed long long int" . 8) ("unsigned long long" . 8)
     ("unsigned long long int" . 8)))
 
-(define alignof-map/rv32 sizeof-map/rv32)
+(define alignof-map/riscv sizeof-map/riscv)
+
+(define ctype-map/x86_64
+  '((* . u64)
+    ("char" . i8) ("short" . i16) ("int" . i32) ("long" . i64)
+    ("float" . f32) ("double" . f64)
+    ("unsigned short" . u16) ("unsigned" . u32) ("unsigned long" . u64)
+    ;;
+    ("size_t" . u64) ("ssize_t" . u64) ("ptrdiff_t" . i64)
+    ("int8_t" . i8) ("uint8_t" . u8) ("int16_t" . i16) ("uint16_t" . u16) 
+    ("int32_t" . i32) ("uint32_t" . u32) ("int64_t" . i64) ("uint64_t" . u64)
+    ;;
+    ("signed char" . i8) ("unsigned char" . u8)
+    ("short int" . i16) ("signed short" . i16) ("signed short int" . i16)
+    ("signed" . i32) ("signed int" . i32)
+    ("long int" . i64) ("signed long" . i64) ("signed long int" . i32)
+    ("unsigned short int" . u8) ("unsigned int" . u32)
+    ("unsigned long int" . u32)
+    ;;
+    ("_Bool" . u8)
+    ("intptr_t" . i64) ("uintptr_t" . u64)
+    ("wchar_t" . u32) ("char16_t" . u16) ("char32_t" . u32)
+    ;;
+    ("long double" . f128)
+    ("long long" . i64) ("long long int" . i64) ("signed long long" . i64)
+    ("signed long long int" . i64) ("unsigned long long" . u64)
+    ("unsigned long long int" . u64)))
 
 (define sizeof-map/x86_64
   '((* . 8)
@@ -252,24 +279,27 @@
 (define arch-sizeof-map
   `(("native" . ,sizeof-map/native)
     ("avr" . ,sizeof-map/avr)
-    ("i386" . ,sizeof-map/i386)
-    ("ppc" . ,sizeof-map/ppc)
-    ("rv32" . ,sizeof-map/rv32)
+    ("i686" . ,sizeof-map/i686)
+    ("powerpc" . ,sizeof-map/powerpc)
+    ("ppc" . ,sizeof-map/powerpc)
+    ("riscv" . ,sizeof-map/riscv)
+    ("rv32" . ,sizeof-map/riscv)
     ("x86_64" . ,sizeof-map/x86_64)))
 
 (define arch-alignof-map
   `(("native" . ,alignof-map/native)
     ("avr" . ,alignof-map/avr)
-    ("i386" . ,alignof-map/i386)
-    ("ppc" . ,alignof-map/ppc)
-    ("rv32" . ,alignof-map/rv32)
+    ("i686" . ,alignof-map/i686)
+    ("powerpc" . ,alignof-map/powerpc)
+    ("ppc" . ,alignof-map/powerpc)
+    ("riscv" . ,alignof-map/riscv)
+    ("rv32" . ,alignof-map/riscv)
     ("x86_64" . ,alignof-map/x86_64)))
 
 (define (lookup-arch name)
   (let ((sizeof-dict (assoc-ref arch-sizeof-map name))
         (alignof-dict (assoc-ref arch-alignof-map name)))
     (and sizeof-dict alignof-dict (cons sizeof-dict alignof-dict))))
-
 
 (define arch-info-host
   (eval-when (expand eval compile)
