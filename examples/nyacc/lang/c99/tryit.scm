@@ -1,7 +1,7 @@
 ;; examples/nyacc/lang/c99/tryit.scm
 
 ;; Copyright (C) 2020-2022 Matthew R. Wette
-;; 
+;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
@@ -374,18 +374,24 @@
 (when #f
   (let* ((code
           (string-append
-           "typedef struct { int m; double b[N2]; } bar_t;\n"
-           "typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
-           "typedef struct { int r; double c[2]; } foo2_t;\n"
-           "typedef struct { int s; double d[5]; } foo3_t;\n"
-           "typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[N]; } foo_t;\n"
-           "foo_t f;\n"
+           "typedef struct { int p; int q; } foo_t;\n"
+           "typedef struct { int r; foo_t s; foo_t *t; } bar_t;\n"
+           "typedef struct { int u; bar_t v; bar_t *w; } baz_t;\n"
+           "baz_t f;\n"
            ))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
          (udecl (udict-ref udict "f"))
-         (t-exp `(typeof-expr (d-sel (ident "f1") (ident "f"))))
+         (t-exp `(d-sel (ident "p")
+                        (i-sel (ident "t")
+                               (d-sel (ident "v")
+                                      (ident "f")))))
+         (t-exp `(i-sel (ident "r")
+                        (d-sel (ident "w")
+                               (ident "f"))))
+         #;(t-exp `(d-sel (ident "u") (ident "f")))
          )
+    ;;(pp t-exp) (pp99 t-exp) (sf "\n")
     (pp (eval-typeof-expr t-exp udict))
     0))
 
