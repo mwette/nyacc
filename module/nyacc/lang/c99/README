@@ -80,16 +80,19 @@ support for multiple architectures.  There will be a parameter *arch* used.
     + bytevector maps, plus array => array, struct => record, but not union
       cstring => string
 
-* (difficult) use cases:
+* use cases:
   1 copy string to/from buffer
+  2 make struct w/ values (macro or lambda?)
 
+@@@ HERE @@@
 * layouts:
   <cdata>: bv ix ct (bytevector offset ctype)
-  <ctype>: ?name setter getter ?unwrapper
+  <ctype>: ?name ?setter ?getter ?unwrapper
 
 (cdata-ref obj . sels) ;; sels are selectors
 
 (ctype-sel ct ix sel) -> (values ct ix)
+(ctype-sel* ct ix . sels) -> 
 
 
 * Currently bytestructure-ref is a macro, this is problematic for other
