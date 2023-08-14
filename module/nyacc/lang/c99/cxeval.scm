@@ -70,7 +70,7 @@
                           #:chlit-reader read-c-chlit
                           #:num-reader read-c-num)))
 
-(define (parse-c99cx text)
+(define (parse-c99-cx text)
   (with-throw-handler
       'c99-error
     (lambda ()
@@ -389,6 +389,8 @@
               (declr (sx-ref udecl 2))
               (exp `(type-name ,specl ,declr)))
          exp))
+      ((p-expr ,expr)
+       (typeof-next expr))
       ((i-sel ,ident ,expr)
        (and expr (typeof-next `(d-sel ,ident (de-ref ,expr)))))
       ((d-sel (ident ,name) ,expr)
