@@ -539,4 +539,49 @@ typedef struct _GObjectClass {
     (pp99 tree)
     ))
 
+
+(define (parse-path text)
+  (with-input-from-string text
+    (lambda ()
+      (let loop ((terms '()) (ch (read-char)))
+        (cond
+         ((eof-object? ch) terms)
+         ((char=? #\*) #f)
+         )))))
+
+(use-modules (nyacc lang c99 cxeval))
+(when #f
+  (let* ((comp "fsw")
+         (path "*abc->def.ghi")
+         (expr (parse-c99-cx path))
+         (code "int x = *a->b.c;")
+         ;;(tree (parse-string code))
+         )
+    (pp expr)
+    #f))
+(when #t
+  (let* ((code
+          (string-append
+           "typedef struct { int p; int q; } foo_t;\n"
+           "typedef struct { int r; foo_t s; foo_t *t; } bar_t;\n"
+           "typedef struct { int u; bar_t v; bar_t *w; } baz_t;\n"
+           "baz_t f;\n"
+           ))
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         ;;
+         (comp "baz_t")
+         (path "w->s")
+         (code `(udecl (decl-spec-list (type-spec (typename ,comp)))
+                       (comp-declr (ident "_"))))
+         (udict (cons `("_" . ,code) udict))
+         (path (string-append "_." path))
+         (t-exp (parse-c99-cx path))
+         (type (eval-typeof-expr t-exp udict)) ;; (type-name ,specl ,declr)
+         )
+    ;;(pp tree)
+    ;;(pp t-exp)
+    (pp type)
+    0))
+
 ;; --- last line ---

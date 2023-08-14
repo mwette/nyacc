@@ -33,7 +33,7 @@
             )
   #:use-module (srfi srfi-9))
 
-(display "arch reified types should not be called ctypes\n")
+;;(display "arch reified types should not be called ctypes\n")
 ;; maybe mtype for machine type
 
 (define-record-type <arch-info>
@@ -64,7 +64,7 @@
     ("float" . f32le) ("double" . f32le)
     ("unsigned short" . u16le) ("unsigned" . u16le) ("unsigned long" . u32le)
     ;;
-    ("size_t" . u16le) ("ssize_t" . #fle) ("ptrdiff_t" . i16le)
+    ("size_t" . u16le) ("ssize_t" . #f) ("ptrdiff_t" . i16le)
     ("int8_t" . i8) ("uint8_t" . u8) ("int16_t" . i16le) ("uint16_t" . u16le)
     ("int32_t" . i32le) ("uint32_t" . iu32le)
     ("int64_t" . i64le) ("uint64_t" . u64le)
@@ -78,7 +78,7 @@
     ;;
     ("_Bool" . u8)
     ("intptr_t" . i16le) ("uintptr_t" . u16le)
-    ("wchar_t" . #fle) ("char16_t" . #fle) ("char32_t" . #fle)
+    ("wchar_t" . #f) ("char16_t" . #f) ("char32_t" . #f)
     ;;
     ("long double" . f32le)
     ("long long" . i64le) ("long long int" . i64le) ("signed long long" . i64le)
@@ -148,7 +148,7 @@
     ("signed long long int" . i64be) ("unsigned long long" . u64be)
     ("unsigned long long int" . u64be)))
 
-(define arch/i686
+(define arch/powerpc
   (make-arch-info "powerpc" 'big mtype-map/powerpc sizeof-map))
 
 
@@ -243,10 +243,7 @@
 ;; @deffn {Procedure} typeof-basetype base-type-name => 'f64
 ;; @end deffn
 (define (mtypeof-basetype base-type-name)
-  (assoc-ref (arch-mtype-map arch) base-type-name))
-
-(define (sizeof-mtype mtype)
-  (assq-ref sizeof-map mtype))
+  (assoc-ref (arch-mtype-map (*arch*)) base-type-name))
 
 (define (alignof-mtype mtype)
   (assq-ref (arch-align-map (*arch*)) mtype))
