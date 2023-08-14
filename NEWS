@@ -10,6 +10,12 @@ without any warranty.
 	* worked on nx-utilities and libraries
 	* working cdata to replace bytevectors, for variable architecture
 
+2023-08-14  V1.08.4
+	* c99/cxexprs.c: expose parse-c99-cx
+
+2023-08-14  V1.08.3
+	* skip
+
 2023-08-13  V1.08.2
  	* added cpp-defs and inc-dirs to ffi-help's C-decl->scm function
 	* c99/cpp.scm: allow newline before ( in CPP macro function expansion
