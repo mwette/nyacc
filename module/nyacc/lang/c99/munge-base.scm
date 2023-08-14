@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/munge-base.scm -
 
-;; Copyright (C) 2015-2018,2020 Matthew R. Wette
+;; Copyright (C) 2015-2018,2020,2023 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@
             reify-declr reify-decl
             def-namer
             split-udecl
-            declr-ident declr-name
+            declr-ident declr-name pointer-declr?
             clean-field-list clean-fields)
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)           ; let-values
@@ -375,7 +375,7 @@
       `(type-spec ,(if ident
                        (sx-list tag attr ident field-list)
                        (sx-list tag attr field-list)))))
-      
+
   (let* ((tspec (sx-find 'type-spec specl)))
 
     (sx-match (sx-ref tspec 1)
@@ -418,11 +418,11 @@
       ((struct-def (@ . ,attr) (ident ,name) (field-list . ,fields))
        (let ((tspec (expand-aggregate 'struct-def attr name fields)))
          (values (replace-type-spec specl tspec) declr)))
-                                  
+
       ((struct-def (@ . ,attr) (field-list . ,fields))
        (let ((tspec (expand-aggregate 'struct-def attr #f fields)))
          (values (replace-type-spec specl tspec) declr)))
-                                  
+
       ((union-def (@ . ,attr) (ident ,name) (field-list . ,fields))
        (let ((tspec (expand-aggregate 'union-def attr name fields)))
          (values (replace-type-spec specl tspec) declr)))
@@ -445,11 +445,11 @@
            (values specl declr)
            (let ((tspec '(type-spec (fixed-type "int"))))
              (values (replace-type-spec specl tspec) declr))))
-      
+
       ((enum-def ,rest)
        (let ((tspec '(type-spec (fixed-type "int"))))
          (values (replace-type-spec specl tspec) declr)))
-      
+
       (,_ (values specl declr)))))
 
 ;; @deffn {Procedure} expand-typerefs adecl udict [keep]
@@ -503,7 +503,7 @@
     (sx-match declr
       ((ident ,name) declr)
       ((bit-field . ,rest) declr)
-      
+
       ((init-declr ,declr1 . ,rest)
        (let ((xdeclr (fix-declr declr1)))
          (if (eq? xdeclr declr1) declr `(init-declr ,xdeclr . ,rest))))
@@ -515,7 +515,7 @@
          (if (eq? xdeclr declr1) declr `(param-declr ,xdeclr))))
       ((param-declr)
        declr)
-      
+
       ((scope ,declr1)
        (let ((xdeclr (fix-declr declr1)))
          (if (eq? xdeclr declr1) declr `(scope ,xdeclr))))
@@ -562,9 +562,9 @@
          (if (fold (lambda (l r seed) (and (eq? l r) seed)) #t xdeclrs declrs)
              declr
              `(comp-declr-list . ,xdeclrs))))
-      
+
       (,_ (throw 'c99-error "c99/munge: unknown declarator: " declr))))
-  
+
   (let*-values (((tag attr orig-specl orig-declr)
                  (split-udecl adecl))
                 ((repl-specl repl-declr)
@@ -623,7 +623,7 @@
                (,_ (reify-declr declr namer)))))
       (sx-list tag attr specl declr)))))
 
-           
+
 ;; === munged specification ============
 
 ;; TODO: what to do with initializers ???
@@ -636,7 +636,7 @@
       (,_ tspec))))
 
 (define* (m-unwrap-declr declr tail #:optional (namer def-namer))
-  
+
   (define (unwrap-pointer pointer tail)
     (sx-match pointer
       ((pointer (type-qual-list . ,type-qual) ,pointer)
@@ -646,7 +646,7 @@
       ((pointer) (cons '(pointer-to) tail))
       (,_ (sferr "unwrap-pointer failed on:\n") (pperr pointer)
           (throw 'c99-error "munge-base/unwrap-pointer"))))
-  
+
   (define (unwrap-declr declr tail)
     (sx-match declr
       ((init-declr ,item) (unwrap-declr item tail))
@@ -726,5 +726,5 @@
   (if (and (pair? (cdr mdecl)) (pair? (cadr mdecl)) (eq? '@ (caadr mdecl)))
       (cddr mdecl)
       (cdr mdecl)))
-  
+
 ;; --- last line ---

@@ -85,7 +85,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 08 1))
+  #:version (1 08 2))
 
 (define fh-cpp-defs
   (cond
@@ -2140,7 +2140,9 @@
 ;; @end example
 ;; @end deffn
 (define* (C-decl->scm code #:key expand)
-  (let ((tree (with-input-from-string code parse-c99)))
+  (let ((tree (with-input-from-string code
+                (lambda () (parse-c99 #:cpp-defs (get-sys-cpp-defs)
+                                      #:inc-dirs (get-sys-inc-dirs))))))
     (and tree
 	 (let* ((udict (c99-trans-unit->udict tree))
 		(udecl (cdr (last udict)))

@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/c99eval.scm - evaluate constant expressions
 
-;; Copyright (C) 2018-2022 Matthew R. Wette
+;; Copyright (C) 2018-2023 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -321,7 +321,6 @@
 ;; where tree has the form
 ;; @example
 ;; (offsetof (type-name ...) designator-expr)
-;; e.g, (offsetof (type-name 
 ;; @end example
 ;; @example
 ;;   offsetof(foo_t, designator)
@@ -351,22 +350,19 @@
 
 (define (find-field fields name)
   (let loop ((specl #f) (declrs '()) (fields fields))
-    ;;(pperr (and (pair? fields) (car fields)))
     (cond
      ((pair? declrs)
-      (sferr "checking ~S\n" (car declrs))
       (if (equal? (declr-name (car declrs)) name)
-          `(type-name ,specl (car declrs))
+          `(type-name ,specl ,(car declrs))
           (loop specl (cdr declrs) fields)))
      ((pair? fields)
-      ;;(sferr "field:\n") (pperr (car fields)) (quit)
       (sx-match (car fields)
-        ((comp-decl ,specl (comp-decl-list . ,declrs))
+        ((comp-decl ,specl (comp-declr-list . ,declrs))
          (loop specl declrs (cdr fields)))
         ((comp-decl ,specl ,declr)
          (loop specl (list declr) (cdr fields)))
         (,_ (sferr "missed in cxeval,find-fields") #f)))
-     (else #f))))
+     (else (sferr "find-field: missed:\n") (pperr (car fields)) #f))))
 
 (define (lookup-type-field udecl name)
   (sx-match udecl
@@ -374,41 +370,50 @@
      (let* ((field-list (clean-field-list field-list)))
        (find-field (sx-tail field-list) name)))
     ((type-name (decl-spec-list (type-spec (union-def ,field-list))) ,declr)
-     'xxx)
+     (let* ((field-list (clean-field-list field-list)))
+       (find-field (sx-tail field-list) name)))
     (,_ #f)))
 
-(define* (eval-typeof-expr expr #:optional (udict '()))
+(define* (eval-typeof-expr expr #:optional (udict '())) ;; => `(type-name ...
 
-  (define (typeof-expr expr)
-    (sferr "typeof-expr :\n") (pperr expr)
-    (sx-match expr
+  ;; a->b.c => a .b ->c ; a in udict, b in a, c in b
+  ;; what about vectors?  DO LATER
+  ;; a->b[1].c => a .b ->c ; a in udict, b in a, c in b
+  (define* (typeof-next next #:optional type-name)
+    ;; => (type-name specl declr)
+    ;; where type is an aggregate type (I think)
+    (sx-match next
       ((ident ,name)
        (let* ((udecl (assoc-ref udict name))
               (specl (sx-ref udecl 1))
-              (declr (sx-ref udecl 2)))
-         `(type-name ,specl ,declr)))
+              (declr (sx-ref udecl 2))
+              (exp `(type-name ,specl ,declr)))
+         exp))
+      ((i-sel ,ident ,expr)
+       (and expr (typeof-next `(d-sel ,ident (de-ref ,expr)))))
       ((d-sel (ident ,name) ,expr)
-       (let* ((udecl (typeof-expr expr)) ;; must be aggr
-              (xdecl (expand-typerefs udecl udict))
-              ;;(udecl (lookup-aggr-field flds name))
-              ;;(flds (sx-match xdecl
-              (fld (lookup-type-field xdecl name))
-              )
-         (sferr "eval-type-expr:\n") (pperr fld) (quit)
-         #f))
-      ((i-sel (ident ,name) ,expr)
-       (let* ((type (eval-typeof-expr expr udict)) ;; must be aggr
-              (flds (sx-find 'fields type))
-              )
-         #f))
-      (,_ #f)))
+       (let* ((tname (typeof-next expr))
+              (xdecl (and tname (expand-typerefs tname udict))))
+         ;; TODO: check xdecl's declr
+         (and xdecl (lookup-type-field xdecl name))))
+      ((de-ref ,expr)
+       (let ((tname (typeof-next expr)))
+         (and tname
+              (sx-match tname
+                ((,decl ,specl (,declr (ptr-declr (pointer) ,expr)))
+                 `(type-name ,specl (,declr ,expr)))
+                ((,decl ,specl (,declr (ptr-declr (pointer ,rest) ,expr)))
+                 `(type-name ,specl (,declr (ptr-declr ,rest) ,expr)))
+                (,_ #f)))))
+       ((array-ref ,indx ,expr)
+        (let ((tname (typeof-next expr)))
+          (and tname
+               (sx-match tname
+                 ((,decl ,specl (,declr (array-ref ,val ,expr)))
+                  `(type-name ,specl (,declr ,expr)))
+                 (,_  #f)))))))
 
-  (unless (eq? (sx-tag expr) 'typeof-expr)
-    (throw 'c99-error "eval-typeof-expr: bad arg: ~S" (list expr)))
-  (let ((res (typeof-expr (sx-ref expr 1))))
-    (sferr "res:\n") (pperr res)
-    res)
-  )
+  (typeof-next expr))
 (export eval-typeof-expr)
 
 ;; =============================================================================
@@ -417,7 +422,7 @@
 ;; Evaluate the constant expression or return #f (for unimplemented or
 ;; non-expressions). If @code{fail-proc} is provided it is called with
 ;; the tree that could not be parsed.  If provided, it should return
-;; @code{#f} or throw an exception. 
+;; @code{#f} or throw an exception.
 ;; @end deffn
 (define* (eval-c99-cx tree #:optional udict ddict #:key fail-proc)
 
@@ -431,10 +436,10 @@
        ((pair? repl) #f)
        ((string=? name repl) #f)
        (else repl))))
-  
+
   (define (uop op ex)
     (and op ex (op ex)))
-  
+
   (define (bop op lt rt)
     (and op lt rt (op lt rt)))
 
@@ -512,20 +517,20 @@
             ((fctn-call) #f)            ; assume not constant
             ((ref-to) #f)               ; assume address not useful
             ;;
-            ;; TODO 
+            ;; TODO
             ((comp-lit) (fail "cxeval: comp-lit not implemented"))
             ((comma-expr) (fail "cxeval: comma-expr not implemented"))
             ((i-sel) (fail "cxeval: i-sel not implemented"))
             ((d-sel) (fail "cxeval: d-sel not implemented"))
             ((array-ref) (fail "cxeval: array-ref not implemented"))
-            ;; 
+            ;;
             ((c99x-deprecated)
              (sferr "eval-c99-cx:") (pperr tree)
              (throw 'c99-error "eval-c99-cx: coding error"))
             (else (fail "cxeval: non-expression"))))))
 
     (eval-expr tree)))
- 
+
 ;; =============================================================================
 
 (define (gen-offsets mtail base udict)
@@ -598,7 +603,7 @@
     ((type-name ,spec-list)
      (find-offsets `(type-name ,spec-list (param-declr (ident "_"))) udict))
     (,_ #f)))
-  
+
 ;; for array, provides (dim dim dim . elt-size)
 (define (gen-sizes mtail udict)
 
@@ -648,7 +653,7 @@
     ((type-name ,spec-list)
      (find-sizes `(type-name ,spec-list (param-declr (ident "_"))) udict))
     (,_ #f)))
-  
+
 (define (gen-types mtail udict)
 
   (define (mkcdl specl declrs)
@@ -698,5 +703,5 @@
     ((type-name ,spec-list)
      (find-types `(type-name ,spec-list (param-declr (ident "_"))) udict keep))
     (,_ #f)))
-  
+
 ;; --- last line ---

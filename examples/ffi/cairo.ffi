@@ -20,7 +20,7 @@
   #:include '("cairo.h"
 	      ;;"cairo-ft.h"
 	      ;;"cairo-gobject.h"
-	      "cairo-pdf.h"
+	      ;;"cairo-pdf.h"
 	      ;;"cairo-ps.h"
 	      ;;"cairo-quartz.h"
 	      ;;"cairo-quartz-image.h"

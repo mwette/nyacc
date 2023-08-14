@@ -1,4 +1,4 @@
-Copyright (C) 2017-2022 Matthew Wette
+Copyright (C) 2017-2023 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
@@ -7,7 +7,16 @@ without any warranty.
 
 2023-XX-YY  V1.09.0
 	* merged tsh language from nxdev branch
-	* fixed pprint issue w/ cast
+	* worked on nx-utilities and libraries
+	* working cdata to replace bytevectors, for variable architecture
+
+2023-08-13  V1.08.2
+ 	* added cpp-defs and inc-dirs to ffi-help's C-decl->scm function
+	* c99/cpp.scm: allow newline before ( in CPP macro function expansion
+	* rewrote util.scm(remove-inc-trees)
+	* c99/pprint.scm(scmstr->c): escape string literals properly
+	* c99/pprint.scm: cast operator now correctly printed
+	* c99/cxexpr.scm: progress on eval-typeof-expr
 
 2022-12-31  V1.08.1
 	* fixed bug #63604: static keyword in array declaration
@@ -107,7 +116,7 @@ without any warranty.
 	* worked on ffi-helper per-decl usage (i.e. C-decl syntax)
 	* updated "make check" to provide overall sucess/fail message
 
-2021-05-30  V1.04.1 
+2021-05-30  V1.04.1
 	* c99/mach.scm: added _Float128 type, as absense was causing
 	  ffi-helper runs to crash on #include <math.h>
 	* system/ffi-help-rt.scm: change unwrap for compound type
@@ -118,12 +127,12 @@ without any warranty.
 	* above two updates closes bug #60697
  	* nyacc/lex.scm: add make-ident-keyword-reader
 
-2021-05-28  V1.04.0 
+2021-05-28  V1.04.0
 	* in nyacc/lex.scm, changed signature of lex-generator extra-reader
-	  to (ch loop) from (ch), so that user-supplied routine can loop 
+	  to (ch loop) from (ch), so that user-supplied routine can loop
 	* nyacc/lang/c99/ffi-help.scm: clean up and added support for unions
-	  and anonymous arrays in structs.  This needs testing.  Considering 
-	  bug #60410 closed.  Anonymous structs unions are being augmented 
+	  and anonymous arrays in structs.  This needs testing.  Considering
+	  bug #60410 closed.  Anonymous structs unions are being augmented
 	  with stubbed identifiers _1 ... _N (for now).
 	* Changed C99 emitted type-qual elements to use subelements instead
 	  of strings: (type-qual "restrict") -> (type-qual (restrict))
@@ -149,18 +158,18 @@ without any warranty.
 	* the change in 1.03.4 to use 'code vs 'decl breaks the ffi-helper
 	  so reversed
 	* c99, in decl mode, no longer passes cpp-defines to nyacc/parser
-	* ffi/glib.ffi may return 'bad c literal' because 
+	* ffi/glib.ffi may return 'bad c literal' because
 	  gobject/glib-types.h uses GLIB_DEPRECATED_FOR('G_TYPE_VARIANT')
 
 2021-01-02  V1.03.4
-	* c99/parser.scm: in decl mode, included files are parsed in 
+	* c99/parser.scm: in decl mode, included files are parsed in
 	  'code mode instead of 'decl mode.  This should not affect app's
 	  but deals with #if/#else where macro and function have different
 	  signatures: glib's #define g_abort() vs g_abort(void).
 	* c99/mach.scm: added missing case in enumerator:
 	    identifier attribute-specifiers "=" constant-expression
 	  used in glib/gspawn.h GSpawnError.
-	* c99/munge.scm: re-worked canize-enum-def-list to deal with 
+	* c99/munge.scm: re-worked canize-enum-def-list to deal with
 	  attributes
 	* c99/ffi-help.scm: added case for 'typedef foo_t *int;'
 	* c99/munge-base.scm: expand-typerefs, allow #f for declr, which
@@ -187,9 +196,9 @@ without any warranty.
 	* Handling of asm in the c99 parser (c99/mach.scm) was updated to
 	  clean up the output syntax trees.
 	* nyacc/lang/util.scm init input-stack to '() (was #f)
-	* TODO: make-lalr-parser will build parser for mach's with 
+	* TODO: make-lalr-parser will build parser for mach's with
 	  rrconf actions.
-	* ffi-helper generated scm files now use a promise to avoid 
+	* ffi-helper generated scm files now use a promise to avoid
 	  dynamic linking at compile time.
 	* added make-cstr-array to ffi-help-rt (thanks rekado!);
 	  updated uwrap~pointer to deal with bytevectors; previously
@@ -224,7 +233,7 @@ without any warranty.
 2020-04-08  V1.02.0
 	* The C99 AST, munger and ffi helper, were updated.
 	  updated C99 tree tags (e.g., array-of => ary-declr), and
-	  and narrowed use of abs-...-declr to lowest level. 
+	  and narrowed use of abs-...-declr to lowest level.
 	* udecl->mdecl was upated to use above updates: it's more robust,
  	  and it now generates (extern) tag for non-functions, to be
 	  used in a new implementation of the ffi helper (1.03?)
@@ -245,7 +254,7 @@ without any warranty.
 	* compile-ffi does not now produce .scm file on failure or ^C
 
 2020-03-13  V1.01.2
-	* fixed bug #57911, compile-ffi fails to parse function attributes 
+	* fixed bug #57911, compile-ffi fails to parse function attributes
 	  preceded by *; added production rule to pointer:
 	   ("*" attribute-specifiers ($$ '(pointer)))
 	* updated example tcl and mlang code
@@ -318,14 +327,14 @@ without any warranty.
 2019-05-30  V0.93.0 release
 	* reworked configure and Makefile.in files to detect doc
 	  install dirs;
-  
+
 	* this CPP feature now works: #define /* hello */ abc 123
 
 	* fixed issue in c99/eval-cpp-incl where #f was ending up in
 	  output if no include file found
 
 2019-04-02  V0.92.0 release
-	
+
 	* The distribution has been converted to using autoconf, but
 	  without automake, which brings in a lot of rubble, IMO.
 
@@ -382,4 +391,3 @@ without any warranty.
 	/sym parsers for unhashed and /num for hashed.
 	* updated interactive parsers, getting ready to and integrate file
 	and interactive parsers, and overhaul C99 parser setup
-
