@@ -38,7 +38,8 @@
             def-namer
             split-udecl
             declr-ident declr-name pointer-declr?
-            clean-field-list clean-fields)
+            clean-field-list clean-fields
+            splice-typename replace-aggr-ref)
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)           ; let-values
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
@@ -335,6 +336,24 @@
    ((eq? #t keepers) #t)
    (else #f)))
 
+(define (splice-typename specl declr name udict)
+  (let* ((decl (or (assoc-ref udict name) ; decl for typename
+                   (throw 'c99-error "typedef not found for: ~S" name)))
+         (tdef-specl (sx-ref decl 1))  ; specs for typename
+         (tdef-declr (sx-ref decl 2))) ; declr for typename
+    (values
+     (splice-type-spec specl tdef-specl)
+     (cond
+      ((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
+      (else (tdef-splice-declr declr tdef-declr))))))
+
+(define (replace-aggr-ref specl name key udict)
+  ;; turn ref "struct abc" into def "struct ref { ... }"
+  (let* ((udecl (assoc-ref udict key))
+         (repll (and udecl (sx-ref udecl 1))))
+    (unless udecl (throw 'c99-error "no struct/union defined for ~S" name))
+    (splice-type-spec specl repll)))
+
 (define (expand-specl-typerefs specl declr udict keep)
 
   ;; In the process of expanding typerefs it is crutial that routines which
@@ -344,24 +363,6 @@
 
   (define (re-expand specl declr) ;; applied after typename
     (expand-specl-typerefs specl declr udict keep))
-
-  (define (splice-typename specl declr name udict)
-    (let* ((decl (or (assoc-ref udict name) ; decl for typename
-                     (throw 'c99-error "typedef not found for: ~S" name)))
-           (tdef-specl (sx-ref decl 1))  ; specs for typename
-           (tdef-declr (sx-ref decl 2))) ; declr for typename
-      (values
-       (splice-type-spec specl tdef-specl)
-       (cond
-        ((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
-        (else (tdef-splice-declr declr tdef-declr))))))
-
-  (define (replace-aggr-ref specl name key)
-    ;; turn ref "struct abc" into def "struct ref { ... }"
-    (let* ((udecl (assoc-ref udict key))
-           (repll (and udecl (sx-ref udecl 1))))
-      (unless udecl (throw 'c99-error "no struct/union defined for ~S" name))
-      (splice-type-spec specl repll)))
 
   (define (expand-aggregate tag attr name fields)
     (let* ((fields (map (lambda (fld)
@@ -401,7 +402,7 @@
              (values specl declr)
              (values (replace-type-spec specl '(type-spec (void))) declr)))
         (else
-         (re-expand (replace-aggr-ref specl name (w/struct name)) declr))))
+         (re-expand (replace-aggr-ref specl name (w/struct name) udict) declr))))
 
       ((union-ref (ident ,name))
        (cond
@@ -412,7 +413,7 @@
              (values specl declr)
              (values (replace-type-spec specl '(type-spec (void))) declr)))
         (else
-         (re-expand (replace-aggr-ref specl name (w/union name)) declr))))
+         (re-expand (replace-aggr-ref specl name (w/union name) udict) declr))))
 
       ((struct-def (@ . ,attr) (ident ,name) (field-list . ,fields))
        (let ((tspec (expand-aggregate 'struct-def attr name fields)))
