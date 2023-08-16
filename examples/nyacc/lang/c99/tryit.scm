@@ -371,28 +371,27 @@
     (pp (find-offsets mtail udict))
     0))
 
-(when #f
+(when #t
   (let* ((code
           (string-append
            "typedef struct { int p; int q; } foo_t;\n"
            "typedef struct { int r; foo_t s; foo_t *t; } bar_t;\n"
-           "typedef struct { int u; bar_t v; bar_t *w; } baz_t;\n"
+           "typedef struct baz { int u; bar_t v; bar_t *w; } baz_t;\n"
            "baz_t f;\n"
+           ;;"struct baz f;\n"
            ))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
          (udecl (udict-ref udict "f"))
-         (t-exp `(d-sel (ident "p")
-                        (i-sel (ident "t")
-                               (d-sel (ident "v")
-                                      (ident "f")))))
-         (t-exp `(i-sel (ident "r")
-                        (d-sel (ident "w")
-                               (ident "f"))))
-         #;(t-exp `(d-sel (ident "u") (ident "f")))
+         ;;
+         (path "f.w->s")
+         (path "f.w->t")
+         (texp (parse-c99-cx path))
          )
+    ;;(pp texp)
+    ;;(pp udecl)
     ;;(pp t-exp) (pp99 t-exp) (sf "\n")
-    (pp (eval-typeof-expr t-exp udict))
+    (pp (eval-typeof-expr texp udict))
     0))
 
 (when #f
