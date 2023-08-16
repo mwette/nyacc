@@ -549,16 +549,30 @@ typedef struct _GObjectClass {
          ((char=? #\*) #f)
          )))))
 
+#|
 (use-modules (nyacc lang c99 cxeval))
-(when #f
-  (let* ((comp "fsw")
-         (path "*abc->def.ghi")
-         (expr (parse-c99-cx path))
-         (code "int x = *a->b.c;")
-         ;;(tree (parse-string code))
-         )
-    (pp expr)
-    #f))
+(define (ss fmt . args) (apply simple-format #f fmt args))
+(define (x-gen-offset t-exp)
+  (define (mkoff l) (ss "OFFSET(0,~A)" (string-join l ".")))
+  (let loop ((os '()) (cn '()) (tx t-exp))
+    (match tx
+      (`(ident ,n) (map mkoff (cons (cons n cn) os)))
+      (`(p-expr ,ex) (loop os cn ex))
+      (`(d-sel (ident ,n) ,ex) (loop os (cons n cn) ex))
+      (`(i-sel (ident ,n) ,ex) (loop (cons (cons n cn) os) '() ex)))))
+
+(define (gen-offset expr)
+  (let loop ((os '()) (cn '()) (tx expr))
+    (match tx
+      (`(ident ,n) (cons tx os)))
+      (`(d-sel (ident ,n) ,ex) (loop (cons n cn) ex))
+      ;;(`(de-ref ,expr) (cons
+      ;;
+      (`(p-expr ,ex) (loop os cn ex))
+      (`(i-sel ,id ,ex) (loop os ch `(d-sel ,id (de-ref ,ex))))
+      ))
+|#
+
 (when #t
   (let* ((code
           (string-append
@@ -578,9 +592,16 @@ typedef struct _GObjectClass {
          (path (string-append "_." path))
          (t-exp (parse-c99-cx path))
          (type (eval-typeof-expr t-exp udict)) ;; (type-name ,specl ,declr)
+         ;;
+         #|
+         |#
+         ;;(path "a.b->c.d")
+         ;;(t-exp (parse-c99-cx path))
          )
     ;;(pp tree)
+    ;;(pp path)
     ;;(pp t-exp)
+    ;;(pp (gen-offset t-exp))
     (pp type)
     0))
 
