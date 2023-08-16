@@ -150,30 +150,6 @@
     ;;
     (,_ #f)))
 
-;; @deffn {Procedure} pointer-pass-declr? declr => #t|#f
-;; This predicate determines if the declarator is implemented as a pointer.
-;; That is, it is an explicit pointer, an array (ERROR), or a function.
-;; @end deffn
-(define (pointer-pass-declr? declr)
-  (and
-   declr
-   (sx-match declr
-     ((init-declr ,declr) (pointer-declr? declr))
-     ((comp-declr ,declr) (pointer-declr? declr))
-     ((param-declr ,declr) (pointer-declr? declr))
-     ;;
-     ((ptr-declr ,pointer ,dir-declr) #t)
-     ((ary-declr . ,rest) #t)
-     ((ftn-declr . ,rest) #t)
-     ((abs-declr (pointer . ,r1) . ,r2) #t)
-     ;;
-     ((init-declr-list . ,declrs)
-      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-     ((comp-declr-list . ,declrs)
-      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-     ;;
-     (,_ #f))))
-
 ;; @deffn {Procedure} repl-typespec decl-spec-list repl-type-spec
 ;; In the decl-spec-list replace the type-specifier.
 ;; @end deffn
