@@ -131,24 +131,25 @@
 ;; in which case all elements need to be pointers.
 ;; @end deffn
 (define (pointer-declr? declr)
-  (sx-match declr
-    ((init-declr ,declr) (pointer-declr? declr))
-    ((comp-declr ,declr) (pointer-declr? declr))
-    ((param-declr ,declr) (pointer-declr? declr))
-    ;;
-    ((ptr-declr . ,rest) #t)
-    ((ary-declr . ,rest) #t)
-    ((ftn-declr . ,rest) #t)
-    ((abs-ptr-declr . ,rest) #t)
-    ((abs-ary-declr . ,rest) #t)
-    ((abs-ftn-declr . ,rest) #t)
-    ;;
-    ((init-declr-list . ,declrs)
-     (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-    ((comp-declr-list . ,declrs)
-     (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-    ;;
-    (,_ #f)))
+  (and declr
+       (sx-match declr
+         ((init-declr ,declr) (pointer-declr? declr))
+         ((comp-declr ,declr) (pointer-declr? declr))
+         ((param-declr ,declr) (pointer-declr? declr))
+         ;;
+         ((ptr-declr . ,rest) #t)
+         ((ary-declr . ,rest) #t)
+         ((ftn-declr . ,rest) #t)
+         ((abs-ptr-declr . ,rest) #t)
+         ((abs-ary-declr . ,rest) #t)
+         ((abs-ftn-declr . ,rest) #t)
+         ;;
+         ((init-declr-list . ,declrs)
+          (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+         ((comp-declr-list . ,declrs)
+          (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+         ;;
+         (,_ #f))))
 
 ;; @deffn {Procedure} repl-typespec decl-spec-list repl-type-spec
 ;; In the decl-spec-list replace the type-specifier.
@@ -236,14 +237,19 @@
 ;; bla[3] => *(bla[3])
 ;; @end example
 ;; @end deffn
+
+;; cases: dcl=xxx-declr id=ident, ptr=ptr-declr, apd=abs-ptr-declr
+;;   (dcl (id "foo_t"))  : (dcl (id "v"))  => (dcl (id "v"))
 (define (tdef-splice-declr orig-declr tdef-declr)
 
   (define (probe-declr declr)
     (sx-match declr
       ((ident ,name)
-       (sx-ref orig-declr 1))           ; returns #f if abstract <= NOT ANY MORE
+       (if orig-declr (sx-ref orig-declr 1) '(no-declr)))
+       ;;(and orig-declr (sx-ref orig-declr 1)))
       ((init-declr ,dcl)
-       `(init-declr ,(probe-declr dcl)))
+       (let ((dcl (probe-declr dcl)))
+         (and dcl `(init-declr ,dcl))))
       ((comp-declr ,dcl0)
        `(comp-declr ,(probe-declr dcl0)))
       ((param-declr ,dcl)
@@ -267,7 +273,15 @@
        `(scope ,(probe-declr dcl)))
       (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
-  (probe-declr (cons (sx-tag orig-declr) (sx-tail tdef-declr))))
+  (let* ((declr (probe-declr (sx-ref tdef-declr 1))))
+    (if orig-declr
+        (let ((tag (sx-tag orig-declr)))
+          (sx-list tag #f declr))
+        (sx-match declr
+          ((ptr-declr ,ptr (no-declr)) `(abs-ptr-declr ,ptr))
+          ((ary-declr (no-declr) . ,rest) `(abs-ary-declr . ,rest))
+          ((ftn-declr (no-declr) . ,rest) `(abs-ftn-declr . ,rest))
+          ((no-declr) #f)))))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
 ;; iterate tdef-splice-declr over a declr-init-list (or equiv)

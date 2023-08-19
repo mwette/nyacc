@@ -399,27 +399,32 @@
        `(type-name ,(replace-aggr-ref specl name form udict) ,declr)))
       (else adecl))))
 
-(define* (eval-typeof-expr expr #:optional (udict '())) ;; => `(type-name ...
+;; @deffn {Scheme} eval-typeof-expr expr udict => `(type-name specl declr)
+;; @var{expr} should be @code{(typeof-expr expr)} but is not.
+;; @end deffn
+(define (eval-typeof-expr expr udict)
   ;; a->b.c => a .b ->c ; a in udict, b in a, c in b
   ;; what about vectors?  DO LATER
   ;; a->b[1].c => a .b ->c ; a in udict, b in a, c in b
-  (define* (typeof-next next #:optional type-name) ;; => (type-name specl declr)
-    (sferr "next: ") (pperr next)
+  (define* (typeof-next next #:optional type-name)
     (sx-match next
       ((ident ,name)
        (let* ((udecl (assoc-ref udict name))
               (specl (sx-ref udecl 1))
               (declr (sx-ref udecl 2)))
          `(type-name ,specl ,declr)))
+      ((cast ,tname ,expr)
+       tname)
       ((p-expr ,expr)
        (typeof-next expr))
       ((i-sel ,ident ,expr)
        (and expr (typeof-next `(d-sel ,ident (de-ref ,expr)))))
       ((d-sel (ident ,name) ,expr)
        (let* ((tname (typeof-next expr))
-              (xdecl (and tname (expose-aggr tname udict))))
+              (xdecl (and tname (expose-aggr tname udict)))
+              (declr (sx-ref xdecl 2)))
          (and xdecl
-              (not (pointer-declr? (sx-ref xdecl 2)))
+              (not (pointer-declr? declr))
               (lookup-type-field xdecl name))))
       ((de-ref ,expr)
        (let ((tname (typeof-next expr)))
@@ -429,6 +434,8 @@
                  `(type-name ,specl (,declr ,expr)))
                 ((,decl ,specl (,declr (ptr-declr (pointer ,rest) ,expr)))
                  `(type-name ,specl (,declr (ptr-declr ,rest) ,expr)))
+                ((,decl ,specl (abs-ptr-declr (pointer)))
+                 `(type-name ,specl)) ; maybe FIXME
                 (,_ #f)))))
        ((array-ref ,indx ,expr)
         (let ((tname (typeof-next expr)))
