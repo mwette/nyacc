@@ -41,6 +41,10 @@
 (define (pperr sx) (pretty-print sx (cep) #:per-line-prefix "  "))
 (define (ppe99 sx) (pretty-print-c99 sx (cep) #:per-line-prefix "  "))
 
+(define (pp99s exp)
+  (call-with-output-string (lambda (port) (pretty-print-c99 exp port))))
+
+
 (define *cpp-defs* (get-gcc-cpp-defs))
 (define *inc-dirs* (get-gcc-inc-dirs))
 (define *inc-help* c99-def-help)
@@ -409,10 +413,7 @@
     (sf "t:\n") (pp udecl5) (pp xdecl5) (sf "\n")
     #f))
 
-(define (pp99s exp)
-  (call-with-output-string (lambda (port) (pretty-print-c99 exp port))))
-
-(define (gen-offsets comp path udict)
+(define (gen-offsets-1 comp path udict)
   ;; (i-sel "t" (d-sel "w" (p-x "_0"))) =>
   ;; (p-x "_0") (d-sel "w") (de-ref) (d-sel "t") =>
   ;; w/_0 (d-sel "t" (de-ref (p-x "_0"))) => _1
@@ -452,20 +453,56 @@
               (lambda () (phase3 tn (car pl)))
             (lambda (ex tn) (loop (cons ex xl) tn (cdr pl))))))))
 
+(define (gen-offsets-2 comp path udict)
+
+  (define (phase1 expr)
+    (sx-match expr
+      ((ident ,n) (list expr))
+      ((d-sel (ident ,n) ,ex) (cons `(d-sel ,n) (phase1 ex)))
+      ((de-ref ,ex) (cons '(de-ref) (phase1 ex)))
+      ((i-sel (ident ,n) ,ex) (cons `(i-sel ,n) (phase1 ex)))
+      ((p-expr ,ex) (phase1 ex))
+      (,_ (sferr "missed ~S\n" expr) #f)))
+
+  (define (phase2 xl)
+    (let loop ((pl '()) (el '()) (xl xl))
+      (match xl
+        (`((ident ,n)) (if (pair? el) (cons el pl) pl))
+        (`((i-sel ,n) . ,rest) (loop (cons (cons (car xl) el) pl) '() (cdr xl)))
+        (`((d-sel ,n) . ,rest) (loop pl (cons (car xl) el) (cdr xl))))))
+
+  (define (phase3 tn xl)
+    (let loop ((ex `(cast ,tn (fixed "0"))) (xl xl))
+      (match xl
+        ('() (values ex (eval-typeof-expr ex udict)))
+        (`((i-sel ,n) . ,rest) (loop `(i-sel (ident ,n) ,ex) (cdr xl)))
+        (`((d-sel ,n) . ,rest) (loop `(d-sel (ident ,n) ,ex) (cdr xl))))))
+
+  (let* ((expr (parse-c99-cx (string-append "_->" path)))
+         (res1 (phase1 expr))
+         (res2 (phase2 res1))
+         (comp-tn `(type-name (decl-spec-list (type-spec (typename ,comp)))
+                              (abs-ptr-declr (pointer)))))
+    (let loop ((xl '()) (tn comp-tn) (pl res2))
+      (if (null? pl)
+          (reverse xl)
+          (call-with-values
+              (lambda () (phase3 tn (car pl)))
+            (lambda (ex tn) (loop (cons ex xl) tn (cdr pl))))))))
+
+(define gen-offsets gen-offsets-2)
+
 (when #t
   (let* ((code
           (string-append
-           "typedef struct { int p; int q; } foo_t;\n"
-           "typedef struct { int r; foo_t s; foo_t *t; } bar_t;\n"
-           "typedef struct baz { int u; bar_t v; bar_t *w; } baz_t;\n"
-           "baz_t f;\n"
-           ;;"struct baz f;\n"
-           ))
+           "typedef struct foo { int p; int q; } foo_t;\n"
+           "typedef struct bar { int r; foo_t s; foo_t *t; } bar_t;\n"
+           "typedef struct baz { int u; bar_t v; bar_t *w; } baz_t;\n"))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
          ;;
-         (comp "baz_t") (path "w->s")
-         ;;
+         (comp "baz_t") (path "w->s.p")
+         ;;(comp "struct baz") (path "w->s.p") ;; no workie
          (offsets (gen-offsets comp path udict)))
     (sf "{")
     (for-each (lambda (osx) (sf " ~A," (pp99s `(ref-to ,osx)))) offsets)
