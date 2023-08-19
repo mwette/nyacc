@@ -413,11 +413,8 @@
     (sf "t:\n") (pp udecl5) (pp xdecl5) (sf "\n")
     #f))
 
+
 (define (gen-offsets-1 comp path udict)
-  ;; (i-sel "t" (d-sel "w" (p-x "_0"))) =>
-  ;; (p-x "_0") (d-sel "w") (de-ref) (d-sel "t") =>
-  ;; w/_0 (d-sel "t" (de-ref (p-x "_0"))) => _1
-  ;; w/_1 (d-sel "w" (de-ref (p-x "_1")))
 
   (define (phase1 expr)
     (sx-match expr
