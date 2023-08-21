@@ -362,15 +362,15 @@
          (loop specl declrs (cdr fields)))
         ((comp-decl ,specl ,declr)
          (loop specl (list declr) (cdr fields)))
-        (,_ (sferr "missed in cxeval,find-fields") #f)))
-     (else (sferr "find-field: missed:\n") (pperr (car fields)) #f))))
+        (,_ (sferr "missed in cxeval(find-field)") #f)))
+     (else (sferr "cxeval(find-field): missed:\n") (pperr (car fields)) #f))))
 
 (define (lookup-type-field udecl name)
   (sx-match udecl
-    ((type-name (decl-spec-list (type-spec (struct-def ,field-list))) ,declr)
+    ((type-name (decl-spec-list (type-spec (struct-def ,field-list))) . ,_)
      (let* ((field-list (clean-field-list field-list)))
        (find-field (sx-tail field-list) name)))
-    ((type-name (decl-spec-list (type-spec (union-def ,field-list))) ,declr)
+    ((type-name (decl-spec-list (type-spec (union-def ,field-list))) . ,_)
      (let* ((field-list (clean-field-list field-list)))
        (find-field (sx-tail field-list) name)))
     (,_ #f)))
@@ -393,10 +393,12 @@
       ((typename)
        (call-with-values
            (lambda () (splice-typename specl declr (sx-ref* tspec 1 1) udict))
-       (lambda (specl declr) `(type-name ,specl ,declr))))
+         (lambda (specl declr) (sx-list 'type-name #f specl declr))))
       ((struct-ref union-ref)
-       (let* ((name (sx-ref* tspec 1 1 1)) (form (cons (key tag) name)))
-       `(type-name ,(replace-aggr-ref specl name form udict) ,declr)))
+       (let* ((name (sx-ref* tspec 1 1 1))
+              (form (cons (key tag) name))
+              (specl (replace-aggr-ref specl name form udict)))
+         (sx-list 'type-name #f specl declr)))
       (else adecl))))
 
 ;; @deffn {Scheme} eval-typeof-expr expr udict => `(type-name specl declr)
@@ -406,7 +408,7 @@
   ;; a->b.c => a .b ->c ; a in udict, b in a, c in b
   ;; what about vectors?  DO LATER
   ;; a->b[1].c => a .b ->c ; a in udict, b in a, c in b
-  (define* (typeof-next next #:optional type-name)
+  (define (typeof-next next)
     (sx-match next
       ((ident ,name)
        (let* ((udecl (assoc-ref udict name))
@@ -421,10 +423,9 @@
        (and expr (typeof-next `(d-sel ,ident (de-ref ,expr)))))
       ((d-sel (ident ,name) ,expr)
        (let* ((tname (typeof-next expr))
-              (xdecl (and tname (expose-aggr tname udict)))
-              (declr (sx-ref xdecl 2)))
+              (xdecl (and tname (expose-aggr tname udict))))
          (and xdecl
-              (not (pointer-declr? declr))
+              (not (pointer-declr? (sx-ref xdecl 2)))
               (lookup-type-field xdecl name))))
       ((de-ref ,expr)
        (let ((tname (typeof-next expr)))

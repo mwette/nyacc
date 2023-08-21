@@ -1,7 +1,7 @@
 ;; nyacc/lang/c99/c99-06.test           -*- scheme -*-
 ;;
-;; Copyright (C) 2017,2019-2021 Matthew R. Wette
-;; 
+;; Copyright (C) 2017,2019-2021,2023 Matthew R. Wette
+;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
@@ -58,7 +58,7 @@
       (ppe99 tdecl)
       (sferr "vs\n  ~A\n" exp-code))
     (equal? tdecl xdecl)))
-      
+
 (define (test-expand-typerefs-2 src-code keep exp-code)
   (let* ((stree (parse-string src-code))
          (sdict (c99-trans-unit->udict stree))
@@ -93,7 +93,7 @@
                         "int bar(foo_t (*baz)(hmm_t y));")
         3 "int bar(int *(*baz)(double y[3]));\n")
        )))
-    
+
   (pass-if "expand-typerefs, set 2"
     (fold
      (lambda (spec status)
@@ -113,7 +113,7 @@
     (fold
      (lambda (spec status)
        (and status (apply test-expand-typerefs-2 spec)))
-     #t 
+     #t
      '(("typedef struct foo foo_t; foo_t *x;" ((pointer . "foo_t"))
         "foo_t *x;")
        ("typedef struct foo foo_t; foo_t *x;" ((pointer . (struct . "foo")))
@@ -153,6 +153,100 @@
         (lambda (key fmt . rest)
           (string=? (apply simple-format #f fmt rest)
                     "typedef not found for: \"foo_t\"")))))
+
+  (pass-if "misc expand-typeref cases"
+    (let* ((code
+            (string-append
+             "typedef struct { int l; int m; } foo_t;"
+             "foo_t p;"
+             "foo_t* q = (foo_t*)0;"
+             "int r(foo_t);"
+             "foo_t s = (foo_t)0;"
+             "int t(foo_t*);"
+             "\n"))
+           (tree (parse-string code))
+           (udict (c99-trans-unit->udict tree))
+           (udecl (assoc-ref udict "foo_t"))
+           (udecl1 (assoc-ref udict "p"))
+           (tdecl1 (expand-typerefs udecl1 udict))
+           (udecl2 (sx-ref* (assoc-ref udict "q") 2 2 1 1))
+           (tdecl2 (expand-typerefs udecl2 udict))
+           (udecl3 (sx-ref* (assoc-ref udict "r") 2 1 2 1))
+           (tdecl3 (expand-typerefs udecl3 udict))
+           (udecl4 (sx-ref* (assoc-ref udict "s") 2 2 1 1))
+           (tdecl4 (expand-typerefs udecl4 udict))
+           (udecl5 (assoc-ref udict "t"))
+           (tdecl5 (expand-typerefs udecl5 udict))
+           (xdecl1 '(udecl
+                     (decl-spec-list
+                      (type-spec
+                       (struct-def
+                        (field-list
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "l"))))
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "m"))))))))
+                     (init-declr (ident "p"))))
+           (xdecl2 '(type-name
+                     (decl-spec-list
+                      (type-spec
+                       (struct-def
+                        (field-list
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "l"))))
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "m"))))))))
+                     (abs-ptr-declr (pointer))))
+           (xdecl3 '(param-decl
+                     (decl-spec-list
+                      (type-spec
+                       (struct-def
+                        (field-list
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "l"))))
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "m"))))))))))
+           (xdecl4 '(type-name
+                     (decl-spec-list
+                      (type-spec
+                       (struct-def
+                        (field-list
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "l"))))
+                         (comp-decl
+                          (decl-spec-list (type-spec (fixed-type "int")))
+                          (comp-declr-list (comp-declr (ident "m"))))))))))
+           (xdecl5 '(udecl
+                     (decl-spec-list (type-spec (fixed-type "int")))
+                     (init-declr
+                      (ftn-declr
+                       (ident "t")
+                       (param-list
+                        (param-decl
+                         (decl-spec-list
+                          (type-spec
+                           (struct-def
+                            (field-list
+                             (comp-decl
+                              (decl-spec-list (type-spec (fixed-type "int")))
+                              (comp-declr-list (comp-declr (ident "l"))))
+                             (comp-decl
+                              (decl-spec-list (type-spec (fixed-type "int")))
+                              (comp-declr-list (comp-declr (ident "m"))))))))
+                         (param-declr (abs-ptr-declr (pointer))))))))))
+      (and
+       (equal? tdecl1 xdecl1)
+       (equal? tdecl2 xdecl2)
+       (equal? tdecl3 xdecl3)
+       (equal? tdecl4 xdecl4)
+        (equal? tdecl5 xdecl5))))
 
   (pass-if "udecl->mdecl/concrete"
     (fold

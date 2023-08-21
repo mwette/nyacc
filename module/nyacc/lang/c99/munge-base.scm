@@ -245,8 +245,7 @@
   (define (probe-declr declr)
     (sx-match declr
       ((ident ,name)
-       (if orig-declr (sx-ref orig-declr 1) '(no-declr)))
-       ;;(and orig-declr (sx-ref orig-declr 1)))
+       (and orig-declr (sx-ref orig-declr 1)))
       ((init-declr ,dcl)
        (let ((dcl (probe-declr dcl)))
          (and dcl `(init-declr ,dcl))))
@@ -273,15 +272,9 @@
        `(scope ,(probe-declr dcl)))
       (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
-  (let* ((declr (probe-declr (sx-ref tdef-declr 1))))
-    (if orig-declr
-        (let ((tag (sx-tag orig-declr)))
-          (sx-list tag #f declr))
-        (sx-match declr
-          ((ptr-declr ,ptr (no-declr)) `(abs-ptr-declr ,ptr))
-          ((ary-declr (no-declr) . ,rest) `(abs-ary-declr . ,rest))
-          ((ftn-declr (no-declr) . ,rest) `(abs-ftn-declr . ,rest))
-          ((no-declr) #f)))))
+  (let* ((declr (probe-declr (sx-ref tdef-declr 1)))
+         (tag (if orig-declr (sx-tag orig-declr) 'param-declr)))
+    (and declr (sx-list tag #f declr))))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
 ;; iterate tdef-splice-declr over a declr-init-list (or equiv)

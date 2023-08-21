@@ -375,82 +375,7 @@
     (pp (find-offsets mtail udict))
     0))
 
-(when #f
-  (let* ((code
-          (string-append
-           "typedef struct { int l; int m; } foo_t;"
-           "foo_t p;"
-           "foo_t* q = (foo_t*)0;"
-           "int r(foo_t);"
-           "foo_t s = (foo_t)0;"
-           "int t(foo_t*);"
-           "\n"))
-         (tree (parse-string code))
-         (udict (c99-trans-unit->udict tree))
-         (udecl (assoc-ref udict "foo_t"))
-
-         (udecl1 (assoc-ref udict "p"))
-         (xdecl1 (expand-typerefs udecl1 udict))
-
-         (udecl2 (sx-ref* (assoc-ref udict "q") 2 2 1 1))
-         (xdecl2 (expand-typerefs udecl2 udict))
-
-         (udecl3 (sx-ref* (assoc-ref udict "r") 2 1 2 1))
-         (xdecl3 (expand-typerefs udecl3 udict))
-
-         (udecl4 (sx-ref* (assoc-ref udict "s") 2 2 1 1))
-         (xdecl4 (expand-typerefs udecl4 udict))
-
-         ;;(udecl5 (sx-ref* (assoc-ref udict "t") 2 2 1 1))
-         (udecl5 (assoc-ref udict "t"))
-         (xdecl5 (expand-typerefs udecl5 udict))
-         )
-    (sf "0:\n") (pp udecl) (sf "\n")
-    (sf "p:\n") (pp udecl1) (pp xdecl1) (sf "\n")
-    (sf "q:\n") (pp udecl2) (pp xdecl2) (sf "\n")
-    (sf "r:\n") (pp udecl3) (pp xdecl3) (sf "\n")
-    (sf "s:\n") (pp udecl4) (pp xdecl4) (sf "\n")
-    (sf "t:\n") (pp udecl5) (pp xdecl5) (sf "\n")
-    #f))
-
-
-(define (gen-offsets-1 comp path udict)
-
-  (define (phase1 expr)
-    (sx-match expr
-      ((ident ,n) (list expr))
-      ((d-sel (ident ,n) ,ex) (cons `(d-sel ,n) (phase1 ex)))
-      ((de-ref ,ex) (cons '(de-ref) (phase1 ex)))
-      ((i-sel ,id ,ex) (phase1 `(d-sel ,id (de-ref ,ex))))
-      ((p-expr ,ex) (phase1 ex))
-      (,_ (sferr "missed ~S\n" expr) #f)))
-
-  (define (phase2 xl)
-    (let loop ((pl '()) (el '()) (xl xl))
-      (match xl
-        (`((ident ,n)) (if (pair? el) (cons el pl) pl))
-        (`((de-ref) . ,rest) (loop (cons el pl) '() (cdr xl)))
-        (_ (loop pl (cons (car xl) el) (cdr xl))))))
-
-  (define (phase3 tn xl)
-    (let loop ((ex `(de-ref (cast ,tn (fixed "0")))) (xl xl))
-      (match xl
-        ('() (values ex (eval-typeof-expr ex udict)))
-        (`((d-sel ,n) . ,rest) (loop `(d-sel (ident ,n) ,ex) (cdr xl))))))
-
-  (let* ((expr (parse-c99-cx (string-append "_->" path)))
-         (res1 (phase1 expr))
-         (res2 (phase2 res1))
-         (comp-tn `(type-name (decl-spec-list (type-spec (typename ,comp)))
-                              (abs-ptr-declr (pointer)))))
-    (let loop ((xl '()) (tn comp-tn) (pl res2))
-      (if (null? pl)
-          (reverse xl)
-          (call-with-values
-              (lambda () (phase3 tn (car pl)))
-            (lambda (ex tn) (loop (cons ex xl) tn (cdr pl))))))))
-
-(define (gen-offsets-2 comp path udict)
+(define (gen-offsets comp path udict)
 
   (define (phase1 expr)
     (sx-match expr
@@ -485,21 +410,22 @@
           (reverse xl)
           (call-with-values
               (lambda () (phase3 tn (car pl)))
-            (lambda (ex tn) (loop (cons ex xl) tn (cdr pl))))))))
+            (lambda (ex tn)
+              (and tn (loop (cons ex xl) tn (cdr pl)))))))))
 
-(define gen-offsets gen-offsets-2)
-
-(when #t
+(when #f
   (let* ((code
           (string-append
            "typedef struct foo { int p; int q; } foo_t;\n"
            "typedef struct bar { int r; foo_t s; foo_t *t; } bar_t;\n"
-           "typedef struct baz { int u; bar_t v; bar_t *w; } baz_t;\n"))
+           "typedef struct baz { int u; bar_t v; bar_t *w; } baz_t;\n"
+           ;;"typedef struct baz {int u; struct bar v; struct bar *w;} baz_t;\n"
+           ))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
          ;;
          (comp "baz_t") (path "w->s.p")
-         ;;(comp "struct baz") (path "w->s.p") ;; no workie
+         ;;(comp "baz_t") (path "w.s") ;; should be error
          (offsets (gen-offsets comp path udict)))
     (sf "{")
     (for-each (lambda (osx) (sf " ~A," (pp99s `(ref-to ,osx)))) offsets)
