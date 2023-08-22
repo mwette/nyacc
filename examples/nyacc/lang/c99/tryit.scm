@@ -400,6 +400,14 @@
         (`((i-sel ,n) . ,rest) (loop `(i-sel (ident ,n) ,ex) (cdr xl)))
         (`((d-sel ,n) . ,rest) (loop `(d-sel (ident ,n) ,ex) (cdr xl))))))
 
+  (define (clean-tn tn)
+    (let ((specl (sx-ref tn 1))
+          (declr (sx-ref tn 2)))
+      (sx-match declr
+        ((abs-ptr-declr . ,rest) tn)
+        ((,declr (ptr-declr (pointer) (ident ,_)))
+         (sx-list (sx-tag tn) #f specl `(abs-ptr-declr (pointer)))))))
+
   (let* ((expr (parse-c99-cx (string-append "_->" path)))
          (res1 (phase1 expr))
          (res2 (phase2 res1))
@@ -409,11 +417,10 @@
       (if (null? pl)
           (reverse xl)
           (call-with-values
-              (lambda () (phase3 tn (car pl)))
-            (lambda (ex tn)
-              (and tn (loop (cons ex xl) tn (cdr pl)))))))))
+              (lambda () (phase3 (clean-tn tn) (car pl)))
+            (lambda (ex tn) (and tn (loop (cons ex xl) tn (cdr pl)))))))))
 
-(when #f
+(when #t
   (let* ((code
           (string-append
            "typedef struct foo { int p; int q; } foo_t;\n"
@@ -428,7 +435,9 @@
          ;;(comp "baz_t") (path "w.s") ;; should be error
          (offsets (gen-offsets comp path udict)))
     (sf "{")
-    (for-each (lambda (osx) (sf " ~A," (pp99s `(ref-to ,osx)))) offsets)
+    (if offsets
+        (for-each (lambda (osx) (sf " ~A," (pp99s `(ref-to ,osx)))) offsets)
+        (sferr "bad form\n"))
     (sf " 0 }, \n")
     0))
 
