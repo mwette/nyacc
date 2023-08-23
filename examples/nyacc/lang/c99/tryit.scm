@@ -23,7 +23,7 @@
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (sxml fold))
-(use-modules (sxml xpath))
+(use-modules ((sxml xpath) #:hide (filter)))
 (use-modules ((srfi srfi-1) #:select (last fold-right)))
 (use-modules (srfi srfi-11))            ; let-values
 (use-modules (rnrs arithmetic bitwise))
@@ -373,72 +373,6 @@
     ;;(pp udict)
     (pp (sizeof-mtail mtail udict))
     (pp (find-offsets mtail udict))
-    0))
-
-(define (gen-offsets comp path udict)
-
-  (define (phase1 expr)
-    (sx-match expr
-      ((ident ,n) (list expr))
-      ((d-sel (ident ,n) ,ex) (cons `(d-sel ,n) (phase1 ex)))
-      ((de-ref ,ex) (cons '(de-ref) (phase1 ex)))
-      ((i-sel (ident ,n) ,ex) (cons `(i-sel ,n) (phase1 ex)))
-      ((p-expr ,ex) (phase1 ex))
-      (,_ (sferr "missed ~S\n" expr) #f)))
-
-  (define (phase2 xl)
-    (let loop ((pl '()) (el '()) (xl xl))
-      (match xl
-        (`((ident ,n)) (if (pair? el) (cons el pl) pl))
-        (`((i-sel ,n) . ,rest) (loop (cons (cons (car xl) el) pl) '() (cdr xl)))
-        (`((d-sel ,n) . ,rest) (loop pl (cons (car xl) el) (cdr xl))))))
-
-  (define (phase3 tn xl)
-    (let loop ((ex `(cast ,tn (fixed "0"))) (xl xl))
-      (match xl
-        ('() (values ex (eval-typeof-expr ex udict)))
-        (`((i-sel ,n) . ,rest) (loop `(i-sel (ident ,n) ,ex) (cdr xl)))
-        (`((d-sel ,n) . ,rest) (loop `(d-sel (ident ,n) ,ex) (cdr xl))))))
-
-  (define (clean-tn tn)
-    (let ((specl (sx-ref tn 1))
-          (declr (sx-ref tn 2)))
-      (sx-match declr
-        ((abs-ptr-declr . ,rest) tn)
-        ((,declr (ptr-declr (pointer) (ident ,_)))
-         (sx-list (sx-tag tn) #f specl `(abs-ptr-declr (pointer)))))))
-
-  (let* ((expr (parse-c99-cx (string-append "_->" path)))
-         (res1 (phase1 expr))
-         (res2 (phase2 res1))
-         (comp-tn `(type-name (decl-spec-list (type-spec (typename ,comp)))
-                              (abs-ptr-declr (pointer)))))
-    (let loop ((xl '()) (tn comp-tn) (pl res2))
-      (if (null? pl)
-          (reverse xl)
-          (call-with-values
-              (lambda () (phase3 (clean-tn tn) (car pl)))
-            (lambda (ex tn) (and tn (loop (cons ex xl) tn (cdr pl)))))))))
-
-(when #t
-  (let* ((code
-          (string-append
-           "typedef struct foo { int p; int q; } foo_t;\n"
-           "typedef struct bar { int r; foo_t s; foo_t *t; } bar_t;\n"
-           "typedef struct baz { int u; bar_t v; bar_t *w; } baz_t;\n"
-           ;;"typedef struct baz {int u; struct bar v; struct bar *w;} baz_t;\n"
-           ))
-         (tree (parse-string code))
-         (udict (c99-trans-unit->udict tree))
-         ;;
-         (comp "baz_t") (path "w->s.p")
-         ;;(comp "baz_t") (path "w.s") ;; should be error
-         (offsets (gen-offsets comp path udict)))
-    (sf "{")
-    (if offsets
-        (for-each (lambda (osx) (sf " ~A," (pp99s `(ref-to ,osx)))) offsets)
-        (sferr "bad form\n"))
-    (sf " 0 }, \n")
     0))
 
 (when #f
