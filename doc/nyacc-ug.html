@@ -185,7 +185,7 @@ the file <samp>env.sh</samp> in the top-level sub-directory <samp>examples</samp
 </li><li> The procedure <code>next</code> is used to generate a prompt to the user.
 </li><li> The syntax form <code>lalr-spec</code> is used to generate a language
 specification from the grammar and options provided in the form.
-</li><li> The <code>prec&lt;</code> directive indicates that 
+</li><li> The <code>prec&lt;</code> directive indicates that
 the tokens appearing in the sequence of associativity directives
 should be interpreted in increasing order of precedence.  The
 associativity statements <code>left</code> indicate that the tokens have left
@@ -199,7 +199,7 @@ grammar is the starting symbol for the grammar.
 <ul>
 <li> In the example above one left-hand side is associated with multiple
 right hand sides.  But this is not required.
-Multiple right-hand sides can be written for a single left-hand side.  
+Multiple right-hand sides can be written for a single left-hand side.
 </li><li> Non-terminals are indicated using symbols (e.g., <code>expr</code>).
 </li><li> Terminals are indicated using string literals (e.g.,<code>&quot;+&quot;</code>),
 character literals (e.g., <code>#\+</code>), quoted symbols
@@ -208,7 +208,7 @@ character literals (e.g., <code>#\+</code>), quoted symbols
 <code>$float</code>.   Note that tokens or terminals do not need to be
 declared as in Bison or in the Guile module <code>(system base lalr)</code>.
 </li><li> The reserved symbols <code>$fixed</code> and <code>$float</code> indicate
-unsigned integer and floating point number, respectively.  The 
+unsigned integer and floating point number, respectively.  The
 <small>NYACC</small> procedures for generating lexical analyzers will emit this token
 when the corresponding numbers are detected in the input.
 </li><li> Within the right-hand side of a production rule a <code>$$</code> form is
@@ -234,7 +234,7 @@ tokens, either symbols or integers, used by the parser.  The variable
 <code>raw-parser</code> takes one required argument, a lexical analyzer
 procecdure, and optional keyword arguments.
 </li><li> The next task is to create a generator for lexical analyzers.  This is
-performed as follows: 
+performed as follows:
 <div class="example">
 <pre class="example">(define gen-lexer (make-lexer-generator mtab))
 </pre></div>
@@ -245,7 +245,7 @@ purely function.  This could be fixed by using continuation passing
 style, but I digress.)  The procedure <code>make-lexer-generator</code> is
 imported from the module <code>(nyacc lex)</code>.  Optional arguments to
 <code>make-lexer-generator</code> allow the user to specify custom readers
-for identifiers, comments, numbers, etc.  See <a href="#lex">lex</a> 
+for identifiers, comments, numbers, etc.  See <a href="#lex">lex</a>
 </p></li><li> We bring the above items together to provide a usable procedure for
 an interactive calculator.
 <div class="example">
@@ -255,14 +255,14 @@ an interactive calculator.
 <p>The lexical analyzer reads code from <code>(current-input-port)</code>.  If
 we want to run this on a string we would need to use
 <code>with-input-from-string</code> or equivalent.
-See <a data-manual="guile" href="https://www.gnu.org/software/guile/manual/guile.html#Input-and-Output">(guile)Input and Output</a> 
+See <a data-manual="guile" href="https://www.gnu.org/software/guile/manual/guile.html#Input-and-Output">(guile)Input and Output</a>
 </p></li><li> And now we can run it:
 <div class="example">
 <pre class="example">$ guile calc.scm
 ...
 &gt; 1 + 1
 2
-&gt; 
+&gt;
 </pre></div>
 </li></ol>
 
@@ -278,7 +278,7 @@ $
 <h3 class="section">1.2 Generating a Language to Run in Guile</h3>
 
 <p>One of the many cool features of Guile is that it provides a backend
-infrastructure for evaluation of multiple frontend languages.   
+infrastructure for evaluation of multiple frontend languages.
 The files <samp>mach.scm</samp>, <samp>parser.scm</samp> and <samp>compiler.scm</samp> in the
 <samp>examples/nyacc/lang/calc</samp> directory and <samp>spec.scm</samp> in the
 <samp>examples/language/calc</samp> directory implement our calculator within this
@@ -292,13 +292,13 @@ scheme@(guile-user)&gt; ,L calc
 Happy hacking with calc!  To switch back, type `,L scheme'.
 calc@(guile-user)&gt; (2 + 2)/(1 + 1)
 2
-calc@(guile-user)&gt; 
+calc@(guile-user)&gt;
 </pre></div>
 <p>The evaluator uses SXML as the intermediate representation between the
 parser and compiler, which generates to Tree-IL.  See also the example
 in the directory <samp>examples/language/javascript</samp> and
 <samp>examples/nyacc/lang/javascript</samp> directories.  For details on the
-Guile backend see 
+Guile backend see
 </p>
 </div>
 <div class="section" id="Debugging-Output">
@@ -368,7 +368,7 @@ exported from the module <code>(nyacc lalr)</code>.  Other modules include
 <span id="Specification"></span>
 <p>The syntax for generating specifications is <code>lalr-spec</code>.  As
 mentioned in the  previous chapter, the syntax generates an
-association list, or <em>a-list</em>. 
+association list, or <em>a-list</em>.
 </p>
 <dl class="def">
 <dt id="index-lalr_002dspec"><span class="category">Syntax: </span><span><strong>lalr-spec</strong> <em>grammar =&gt; a-list</em><a href='#index-lalr_002dspec' class='copiable-anchor'> &para;</a></span></dt>
@@ -386,11 +386,11 @@ The returned a-list is normally used as an input for
 </p><dl compact="compact">
 <dt><span><code>notice</code></span></dt>
 <dd><p>This is used to push a comment string (e.g., copyright) into the
-resulting parser tables. 
+resulting parser tables.
 </p></dd>
 <dt><span><code>reserve</code></span></dt>
 <dd><p>This is a list of tokens which do not appear in the grammar but should
-be added to the match table. 
+be added to the match table.
 </p></dd>
 <dt><span><code>prec&lt;, prec&gt;</code></span></dt>
 <dd><p>These specifiers are used to specify precedence and associativity symbols.
@@ -470,8 +470,8 @@ increasing order.  An equivalent specification would be as follows:
 </pre></div>
 
 <p>The precedence specification can be used along with <code>$prec</code> in
-the grammer to resolve shift-reduce or reduce-reduce conflicts in a 
-grammar.  The classical case is the if-then-else construct in C, where 
+the grammer to resolve shift-reduce or reduce-reduce conflicts in a
+grammar.  The classical case is the if-then-else construct in C, where
 a conflict occurs on the input
 </p><div class="example">
 <pre class="example">if (expr1) if (expr2) bar(); else baz();
@@ -504,7 +504,7 @@ as follows:
 <p>It is important to note here that we use a quoted symbol <code>'then</code>
 rather than a string <code>&quot;then&quot;</code> as a dummy token.  If we would have
 used <code>&quot;then&quot;</code> as the dummy then the lex&rsquo;er would return the associated
-token when <code>&quot;then&quot;</code> appears in the input and the C declaration 
+token when <code>&quot;then&quot;</code> appears in the input and the C declaration
 </p><div class="example">
 <pre class="example">int then(int);
 </pre></div>
@@ -538,7 +538,7 @@ expressions, respectively.  The terminals can be Scheme strings,
 character constants or quoted symbols, but not numbers.  For example,
 the following is the production rule for a C99 additive expression:
 </p><div class="example">
-<pre class="example">(add-expr 
+<pre class="example">(add-expr
  (mul-expr)
  (add-expr &quot;+&quot; mul-expr ($$ `(add ,$1 ,$3)))
  (add-expr &quot;-&quot; mul-expr ($$ `(sub ,$1 ,$3))))
@@ -771,7 +771,7 @@ we are talking about include
 
 <p>For the hash table we use positive integers for terminals and negative
 integers for non-terminals.  To apply such a hash table we perform the
-following: 
+following:
 </p><ol>
 <li> From the spec&rsquo;s list of terminals (aka tokens), generate a list of
 terminal to integer pairs (and vice versa).
@@ -848,7 +848,7 @@ and the generator will provide an include file providing the list of
 terminals along with the associated &ldquo;hash codes&rdquo;.  In <small>NYACC</small> the
 terminals are detected in the grammar as non-identifiers: strings
 (e.g., <code>&quot;for&quot;</code>), symbols (e.g., <code>'$ident</code>) or characters
-(e.g., <code>#\+</code>).   The machine generation phase of the parser 
+(e.g., <code>#\+</code>).   The machine generation phase of the parser
 generates a match table which is an a-list of these objects along with
 the token code.  These codes are what the lexical analyzer should return.
 In the end we have
@@ -857,7 +857,7 @@ In the end we have
 (e.g., <code>&quot;for&quot;</code>).
 </li><li> The parser generator internalizes these to symbols or integers, and generates
 an a-list, the match table,  of (natural form, internal form).
-</li><li> The programmer provides the match table to the procedure that builds 
+</li><li> The programmer provides the match table to the procedure that builds
 a lexical analyzer generator (e.g., <code>make-lexer-generator</code>).
 </li><li> The lexical analyzer uses this table to associate strings in the input
 with entries in the match table.   In the case of keywords the keys will
@@ -878,7 +878,7 @@ hashified machines this is translated to the integer <code>1</code>.
 <h3 class="section">2.5 Constructing Lexical Analyzers</h3>
 <span id="lex"></span>
 <p>The <code>lex</code> module provides a set of procedures to build lexical
-analyzers.  The approach is to first build a set of <em>readers</em> for 
+analyzers.  The approach is to first build a set of <em>readers</em> for
 different types of tokens (e.g., numbers, identifiers, character
 sequences) and then process input characters (or code points) through
 the procedures.  The signature of most readers is the following:
@@ -1053,7 +1053,7 @@ For C, this reads <code>'c'</code> or <code>'\n'</code>.
 
 <dl class="def">
 <dt id="index-make_002dnum_002dreader"><span class="category">Procedure: </span><span><strong>make-num-reader</strong> <em>=&gt; (proc ch) =&gt; output</em><a href='#index-make_002dnum_002dreader' class='copiable-anchor'> &para;</a></span></dt>
-<dd><p>Generates a procedure to read C numbers where <var>output</var> is of the form 
+<dd><p>Generates a procedure to read C numbers where <var>output</var> is of the form
 <code>#f</code>, <code>($fixed . &quot;1&quot;)</code> or <code>($float . &quot;1.0&quot;)</code>
 This routine will clean up floats by adding &quot;0&quot; before or after dot.
 </p></dd></dl>
@@ -1081,7 +1081,7 @@ until (token . string) is returned or <code>#f</code> if no match is found.
 comm-table is list of cons for (start . end) comment.
 e.g. (&quot;&ndash;&quot; . &quot;\n&quot;) (&quot;/*&quot; . &quot;*/&quot;)
 test with &quot;/* hello **/&quot;
-If <code>eat-newline</code> is specified as true then for read comments 
+If <code>eat-newline</code> is specified as true then for read comments
 ending with a newline a newline swallowed with the comment.
 Note: assumes backslash is never part of the end
 </p></dd></dl>
@@ -1202,7 +1202,7 @@ following code:
 (define raw-parser (make-lalr-parser (acons 'act-v calc-act-v calc-tables)))
 </pre></div>
 <p>See the example code in <samp>examples/nyacc/lang/calc/parser.scm</samp> for
-more detail. 
+more detail.
 </p>
 </div>
 <div class="section" id="Hashing-and-Compacting-1">
@@ -1226,7 +1226,7 @@ analyzer.  To use integers instead, use the procedure
 <dt id="index-machine_002dcompacted_003f"><span class="category">Procedure: </span><span><strong>machine-compacted?</strong> <em>mach =&gt; #t|#f</em><a href='#index-machine_002dcompacted_003f' class='copiable-anchor'> &para;</a></span></dt>
 <dd><p>Indicate if the machine has been compacted.
 </p></dd></dl>
-     
+
 </div>
 <div class="section" id="Exporting-Parsers">
 <h3 class="section">2.9 Exporting Parsers</h3>
@@ -1271,7 +1271,7 @@ might get with bison using the &lsquo;-r&rsquo; flag.
     (pp-lalr-machine calc1-mach)))
 </pre></div>
 
-<p>The above code will generate something that looks like 
+<p>The above code will generate something that looks like
 </p><div class="example">
 <pre class="example">0 $start =&gt; prog
 1 prog =&gt; stmt-list
@@ -1376,7 +1376,7 @@ uniform form.  This format, based on SXML, may use more cons cells
 than other formats but upon use you will see that it is easy to
 produce code in the parser, and one can use all the processing tools
 that have been written for SXML (e.g., <code>(sxml match)</code> <code>(sxml
-fold)</code>. 
+fold)</code>.
 </p>
 <p>The syntax of SXML trees is simple:
 </p><div class="example">
@@ -1474,7 +1474,7 @@ Building a statement list for a program might go as follows:
 </pre></div>
 <p>The first element of the
 list will be the tag <code>'stmt-list</code>.  If attributes were added, the
-list of attributes will be the second element of the list.  
+list of attributes will be the second element of the list.
 </p></dd>
 </dl>
 
@@ -1716,14 +1716,14 @@ $ make install-srcs
 <h3 class="section">5.2 Reporting Bugs</h3>
 <p>Please report bugs by navigating with your browser to
 &lsquo;<code>https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
-the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively, 
+the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively,
 ask on the Guile user&rsquo;s mailing list <a href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
 </p>
 </div>
 <div class="section" id="The-Free-Documentation-License">
 <h3 class="section">5.3 The Free Documentation License</h3>
 <p>The Free Documentation License is included in the Guile Reference
-Manual.  It is included with the <small>NYACC</small> source as the file 
+Manual.  It is included with the <small>NYACC</small> source as the file
 <samp>COPYING.DOC</samp>.
 </p>
 <hr>
@@ -1767,7 +1767,7 @@ semantics, (3) operational semantics, (4) denotational semantics
 <dd><p>add a location stack to the parser/lexer
 </p></dd>
 <dt><span>26</span></dt>
-<dd><p>Fix lexical analyzer to return tval, sval pairs using <code>cons-source</code> 
+<dd><p>Fix lexical analyzer to return tval, sval pairs using <code>cons-source</code>
 instead of <code>cons</code>.  This will then allow support of location info.
 </p></dd>
 </dl>

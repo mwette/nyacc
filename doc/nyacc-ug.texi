@@ -27,7 +27,7 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @titlepage
 @title Not Yet Another Compiler-Compiler
 @subtitle A LALR(1) Parser Generator Implemented in Guile
-@subtitle User's manual for NYACC version 1.08.4
+@subtitle User's manual for NYACC version 1.08.5
 @author Matt Wette
 @end titlepage
 
@@ -117,7 +117,7 @@ The procedure @code{next} is used to generate a prompt to the user.
 The syntax form @code{lalr-spec} is used to generate a language
 specification from the grammar and options provided in the form.
 @item
-The @code{prec<} directive indicates that 
+The @code{prec<} directive indicates that
 the tokens appearing in the sequence of associativity directives
 should be interpreted in increasing order of precedence.  The
 associativity statements @code{left} indicate that the tokens have left
@@ -134,7 +134,7 @@ The @code{grammar} directive is used to specify the production rules.
 @item
 In the example above one left-hand side is associated with multiple
 right hand sides.  But this is not required.
-Multiple right-hand sides can be written for a single left-hand side.  
+Multiple right-hand sides can be written for a single left-hand side.
 @item
 Non-terminals are indicated using symbols (e.g., @code{expr}).
 @item
@@ -146,7 +146,7 @@ character literals (e.g., @code{#\+}), quoted symbols
 declared as in Bison or in the Guile module @code{(system base lalr)}.
 @item
 The reserved symbols @code{$fixed} and @code{$float} indicate
-unsigned integer and floating point number, respectively.  The 
+unsigned integer and floating point number, respectively.  The
 @nyacc{} procedures for generating lexical analyzers will emit this token
 when the corresponding numbers are detected in the input.
 @item
@@ -178,7 +178,7 @@ Next we generating a raw parser.  The generated procedure
 procecdure, and optional keyword arguments.
 @item
 The next task is to create a generator for lexical analyzers.  This is
-performed as follows: 
+performed as follows:
 @example
 (define gen-lexer (make-lexer-generator mtab))
 @end example
@@ -189,7 +189,7 @@ purely function.  This could be fixed by using continuation passing
 style, but I digress.)  The procedure @code{make-lexer-generator} is
 imported from the module @code{(nyacc lex)}.  Optional arguments to
 @code{make-lexer-generator} allow the user to specify custom readers
-for identifiers, comments, numbers, etc.  @xref{lex} 
+for identifiers, comments, numbers, etc.  @xref{lex}
 @item
 We bring the above items together to provide a usable procedure for
 an interactive calculator.
@@ -200,15 +200,15 @@ an interactive calculator.
 The lexical analyzer reads code from @code{(current-input-port)}.  If
 we want to run this on a string we would need to use
 @code{with-input-from-string} or equivalent.
-@xref{Input and Output,,,guile} 
-@item 
+@xref{Input and Output,,,guile}
+@item
 And now we can run it:
 @example
 $ guile calc.scm
 ...
 > 1 + 1
 2
-> 
+>
 @end example
 @end enumerate
 
@@ -222,7 +222,7 @@ $
 @section Generating a Language to Run in Guile
 
 One of the many cool features of Guile is that it provides a backend
-infrastructure for evaluation of multiple frontend languages.   
+infrastructure for evaluation of multiple frontend languages.
 The files @file{mach.scm}, @file{parser.scm} and @file{compiler.scm} in the
 @file{examples/nyacc/lang/calc} directory and @file{spec.scm} in the
 @file{examples/language/calc} directory implement our calculator within this
@@ -236,13 +236,13 @@ scheme@@(guile-user)> ,L calc
 Happy hacking with calc!  To switch back, type `,L scheme'.
 calc@@(guile-user)> (2 + 2)/(1 + 1)
 2
-calc@@(guile-user)> 
+calc@@(guile-user)>
 @end example
 The evaluator uses SXML as the intermediate representation between the
 parser and compiler, which generates to Tree-IL.  See also the example
 in the directory @file{examples/language/javascript} and
 @file{examples/nyacc/lang/javascript} directories.  For details on the
-Guile backend see 
+Guile backend see
 
 @section Debugging Output
 
@@ -291,7 +291,7 @@ This module provides utilities used by the other modules.
 
 The syntax for generating specifications is @code{lalr-spec}.  As
 mentioned in the  previous chapter, the syntax generates an
-association list, or @dfn{a-list}. 
+association list, or @dfn{a-list}.
 
 @deffn {Syntax} lalr-spec grammar => a-list
 This routine reads a grammar in a scheme-like syntax and returns an a-list.
@@ -308,10 +308,10 @@ The specifiers are
 @table @code
 @item notice
 This is used to push a comment string (e.g., copyright) into the
-resulting parser tables. 
+resulting parser tables.
 @item reserve
 This is a list of tokens which do not appear in the grammar but should
-be added to the match table. 
+be added to the match table.
 @item prec<, prec>
 These specifiers are used to specify precedence and associativity symbols.
 @item expect
@@ -387,8 +387,8 @@ increasing order.  An equivalent specification would be as follows:
 @end example
 
 The precedence specification can be used along with @code{$prec} in
-the grammer to resolve shift-reduce or reduce-reduce conflicts in a 
-grammar.  The classical case is the if-then-else construct in C, where 
+the grammer to resolve shift-reduce or reduce-reduce conflicts in a
+grammar.  The classical case is the if-then-else construct in C, where
 a conflict occurs on the input
 @example
 if (expr1) if (expr2) bar(); else baz();
@@ -425,7 +425,7 @@ as follows:
 It is important to note here that we use a quoted symbol @code{'then}
 rather than a string @code{"then"} as a dummy token.  If we would have
 used @code{"then"} as the dummy then the lex'er would return the associated
-token when @code{"then"} appears in the input and the C declaration 
+token when @code{"then"} appears in the input and the C declaration
 @example
 int then(int);
 @end example
@@ -462,7 +462,7 @@ expressions, respectively.  The terminals can be Scheme strings,
 character constants or quoted symbols, but not numbers.  For example,
 the following is the production rule for a C99 additive expression:
 @example
-(add-expr 
+(add-expr
  (mul-expr)
  (add-expr "+" mul-expr ($$ `(add ,$1 ,$3)))
  (add-expr "-" mul-expr ($$ `(sub ,$1 ,$3))))
@@ -678,7 +678,7 @@ we are talking about include
 
 For the hash table we use positive integers for terminals and negative
 integers for non-terminals.  To apply such a hash table we perform the
-following: 
+following:
 @enumerate
 @item
 From the spec's list of terminals (aka tokens), generate a list of
@@ -761,7 +761,7 @@ and the generator will provide an include file providing the list of
 terminals along with the associated ``hash codes''.  In @nyacc{} the
 terminals are detected in the grammar as non-identifiers: strings
 (e.g., @code{"for"}), symbols (e.g., @code{'$ident}) or characters
-(e.g., @code{#\+}).   The machine generation phase of the parser 
+(e.g., @code{#\+}).   The machine generation phase of the parser
 generates a match table which is an a-list of these objects along with
 the token code.  These codes are what the lexical analyzer should return.
 In the end we have
@@ -773,7 +773,7 @@ The user specifies the grammar with terminals in natural form
 The parser generator internalizes these to symbols or integers, and generates
 an a-list, the match table,  of (natural form, internal form).
 @item
-The programmer provides the match table to the procedure that builds 
+The programmer provides the match table to the procedure that builds
 a lexical analyzer generator (e.g., @code{make-lexer-generator}).
 @item
 The lexical analyzer uses this table to associate strings in the input
@@ -795,7 +795,7 @@ hashified machines this is translated to the integer @code{1}.
 @anchor{lex}
 
 The @code{lex} module provides a set of procedures to build lexical
-analyzers.  The approach is to first build a set of @dfn{readers} for 
+analyzers.  The approach is to first build a set of @dfn{readers} for
 different types of tokens (e.g., numbers, identifiers, character
 sequences) and then process input characters (or code points) through
 the procedures.  The signature of most readers is the following:
@@ -908,7 +908,7 @@ Generate a predicate, from a reader, that determines if a string qualifies
 as an identifier.
 @end deffn
 
-@deffn {Procedure} like-c-ident? ch 
+@deffn {Procedure} like-c-ident? ch
 Determine if a string qualifies as a C identifier.
 @end deffn
 
@@ -944,7 +944,7 @@ For C, this reads @code{'c'} or @code{'\n'}.
 @end deffn
 
 @deffn {Procedure} make-num-reader => (proc ch) => output
-Generates a procedure to read C numbers where @var{output} is of the form 
+Generates a procedure to read C numbers where @var{output} is of the form
 @code{#f}, @code{($fixed . "1")} or @code{($float . "1.0")}
 This routine will clean up floats by adding "0" before or after dot.
 @end deffn
@@ -968,7 +968,7 @@ until (token . string) is returned or @code{#f} if no match is found.
 comm-table is list of cons for (start . end) comment.
 e.g. ("--" . "\n") ("/*" . "*/")
 test with "/* hello **/"
-If @code{eat-newline} is specified as true then for read comments 
+If @code{eat-newline} is specified as true then for read comments
 ending with a newline a newline swallowed with the comment.
 Note: assumes backslash is never part of the end
 @end deffn
@@ -1087,7 +1087,7 @@ following code:
 @end example
 @noindent
 See the example code in @file{examples/nyacc/lang/calc/parser.scm} for
-more detail. 
+more detail.
 
 @section Hashing and Compacting
 @anchor{Hashing and Compacting}
@@ -1109,7 +1109,7 @@ analyzer.  To use integers instead, use the procedure
 @deffn {Procedure} machine-compacted? mach => #t|#f
 Indicate if the machine has been compacted.
 @end deffn
-     
+
 @section Exporting Parsers
 @nyacc{} provides routines for exporting @nyacc{} grammar
 specifications to other LALR parser generators.
@@ -1157,7 +1157,7 @@ might get with bison using the `-r' flag.
     (pp-lalr-machine calc1-mach)))
 @end example
 
-The above code will generate something that looks like 
+The above code will generate something that looks like
 @example
 0 $start => prog
 1 prog => stmt-list
@@ -1256,7 +1256,7 @@ uniform form.  This format, based on SXML, may use more cons cells
 than other formats but upon use you will see that it is easy to
 produce code in the parser, and one can use all the processing tools
 that have been written for SXML (e.g., @code{(sxml match)} @code{(sxml
-fold)}. 
+fold)}.
 
 The syntax of SXML trees is simple:
 @example
@@ -1355,7 +1355,7 @@ Convert the tagged-list @code{$1} to a list.  It will be of the form
 @noindent
 The first element of the
 list will be the tag @code{'stmt-list}.  If attributes were added, the
-list of attributes will be the second element of the list.  
+list of attributes will be the second element of the list.
 @end table
 
 The following procedures are provided by the module @code{(nyacc lang util)}:
@@ -1552,12 +1552,12 @@ $ make install-srcs
 @section Reporting Bugs
 Please report bugs by navigating with your browser to
 @indicateurl{https://savannah.nongnu.org/projects/nyacc} and select
-the ``Submit New'' item under the ``Bugs'' menu.  Alternatively, 
+the ``Submit New'' item under the ``Bugs'' menu.  Alternatively,
 ask on the Guile user's mailing list @email{guile-user@@gnu.org}.
 
 @section The Free Documentation License
 The Free Documentation License is included in the Guile Reference
-Manual.  It is included with the @nyacc{} source as the file 
+Manual.  It is included with the @nyacc{} source as the file
 @file{COPYING.DOC}.
 
 @node TODOs
@@ -1587,7 +1587,7 @@ add ($abort) and ($accept)
 @item 19
 add a location stack to the parser/lexer
 @item 26
-Fix lexical analyzer to return tval, sval pairs using @code{cons-source} 
+Fix lexical analyzer to return tval, sval pairs using @code{cons-source}
 instead of @code{cons}.  This will then allow support of location info.
 @end table
 

@@ -23,7 +23,7 @@
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 (use-modules (sxml fold))
-(use-modules (sxml xpath))
+(use-modules ((sxml xpath) #:hide (filter)))
 (use-modules ((srfi srfi-1) #:select (last fold-right)))
 (use-modules (srfi srfi-11))            ; let-values
 (use-modules (rnrs arithmetic bitwise))
@@ -40,6 +40,10 @@
 (define (sferr fmt . args) (apply simple-format (cep) fmt args))
 (define (pperr sx) (pretty-print sx (cep) #:per-line-prefix "  "))
 (define (ppe99 sx) (pretty-print-c99 sx (cep) #:per-line-prefix "  "))
+
+(define (pp99s exp)
+  (call-with-output-string (lambda (port) (pretty-print-c99 exp port))))
+
 
 (define *cpp-defs* (get-gcc-cpp-defs))
 (define *inc-dirs* (get-gcc-inc-dirs))
@@ -369,30 +373,6 @@
     ;;(pp udict)
     (pp (sizeof-mtail mtail udict))
     (pp (find-offsets mtail udict))
-    0))
-
-(when #f
-  (let* ((code
-          (string-append
-           "typedef struct { int p; int q; } foo_t;\n"
-           "typedef struct { int r; foo_t s; foo_t *t; } bar_t;\n"
-           "typedef struct { int u; bar_t v; bar_t *w; } baz_t;\n"
-           "baz_t f;\n"
-           ))
-         (tree (parse-string code))
-         (udict (c99-trans-unit->udict tree))
-         (udecl (udict-ref udict "f"))
-         (t-exp `(d-sel (ident "p")
-                        (i-sel (ident "t")
-                               (d-sel (ident "v")
-                                      (ident "f")))))
-         (t-exp `(i-sel (ident "r")
-                        (d-sel (ident "w")
-                               (ident "f"))))
-         #;(t-exp `(d-sel (ident "u") (ident "f")))
-         )
-    ;;(pp t-exp) (pp99 t-exp) (sf "\n")
-    (pp (eval-typeof-expr t-exp udict))
     0))
 
 (when #f

@@ -113,7 +113,7 @@
      ("_Alignof" "(" type-name ")" ($$ `(alignof-type ,$3)))
      ("__builtin_offsetof" "(" type-name "," constant-expression ")"
       ($$ `(offsetof-type ,$3 ,$5))))
-    
+
     (unary-operator ("&" ($$ 'ref-to)) ("*" ($$ 'de-ref))
 		    ("+" ($$ 'pos)) ("-" ($$ 'neg))
 		    ("~" ($$ 'bitwise-not)) ("!" ($$ 'not)))
@@ -144,7 +144,7 @@
      (relational-expression ">" shift-expression ($$ `(gt ,$1 ,$3)))
      (relational-expression "<=" shift-expression ($$ `(le ,$1 ,$3)))
      (relational-expression ">=" shift-expression ($$ `(ge ,$1 ,$3))))
-    
+
     (equality-expression		; S 6.5.9
      (relational-expression)
      (equality-expression "==" relational-expression ($$ `(eq ,$1 ,$3)))
@@ -177,7 +177,7 @@
      (logical-and-expression)
      (logical-or-expression "||" logical-and-expression
 			    ($$ `(or ,$1 ,$3))))
-    
+
     (conditional-expression
      (logical-or-expression)
      (logical-or-expression "?" expression ":" conditional-expression
@@ -400,7 +400,7 @@
      (specifier-qualifier-list
       struct-declarator-list ($$ `(comp-decl ,$1 ,(tl->list $2))))
      (specifier-qualifier-list ($$ `(comp-decl ,$1)))) ;; <= anonymous
-    
+
     (specifier-qualifier-list		; S 6.7.2.1
      (specifier-qualifier-list-1 ($$ (process-specs (tl->list $1)))))
     (specifier-qualifier-list-1
@@ -464,7 +464,7 @@
     (function-specifier
      ("inline" ($$ `(fctn-spec ,$1)))
      ("_Noreturn" ($$ `(fctn-spec ,$1))))
-    
+
     ;; Support for __attribute__(( ... )).  See the gcc documentation.
     ;; The documentation does not seem rigourous about defining where the
     ;; attribute specifier can appear.  This is my best attempt.  MW 2018
@@ -472,7 +472,7 @@
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Type-Attributes.html
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Variable-Attributes.html
     ;; https://gcc.gnu.org/onlinedocs/gcc-8.2.0/gcc/Function-Attributes.html
-    
+
     (attribute-specifiers
      (attribute-specifier ($prec 'reduce-on-attr))
      (attribute-specifiers attribute-specifier ($$ (append $1 (cdr $2)))))
@@ -608,7 +608,8 @@
      (declaration-specifiers
       abstract-declarator ($$ `(param-decl ,$1 (param-declr ,$2))))
      (declaration-specifiers
-      ($$ `(param-decl ,$1 (param-declr))))
+      ;;($$ `(param-decl ,$1 (param-declr))))
+      ($$ `(param-decl ,$1)))
      ;; adding attribute specifiers:
      (declaration-specifiers
       declarator attribute-specifiers ($$ `(param-decl ,$1 (param-declr ,$2)))))
@@ -727,7 +728,7 @@
      ("default" ":" statement ($$ `(default ,$3))))
 
     (compound-statement
-     ("{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}" 
+     ("{" ($$ (cpi-push)) block-item-list ($$ (cpi-pop)) "}"
       ($$ `(compd-stmt ,(tl->list $3))))
      ("{" "}"
       ($$ `(compd-stmt (block-item-list)))))
@@ -739,7 +740,7 @@
     (block-item
      (declaration)
      (statement))
-    
+
     (expression-statement
      (expression ";" ($$ `(expr-stmt ,$1)))
      (";" ($$ '(expr-stmt))))
@@ -852,7 +853,7 @@
       ($$ `(extern-block
 	    (extern-begin ,$2) ,@(sx-tail (tl->list $5) 1) (extern-end))))
      (";" ($$ `(decl (@ (extension "GNUC"))))))
-    
+
     (function-definition
      (declaration-specifiers
       declarator compound-statement

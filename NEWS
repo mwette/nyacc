@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2023-08-23  V1.08.5
+	* fixes on expand-typerefs, broken in V1.08.2-4
+
 2023-08-14  V1.08.4
 	* c99/cxexprs.c: expose parse-c99-cx
 
