@@ -1,4 +1,4 @@
-;; wayland-client.ffi			-*- Scheme -*-
+;; wayland-server.ffi			-*- Scheme -*-
 
 ;; Copyright (C) 2022 Matthew R. Wette
 ;;
@@ -15,13 +15,13 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-(define-ffi-module (ffi wayland-client)
-  #:pkg-config "wayland-client"
-  #:include '("wayland-client.h")
+(define-ffi-module (ffi wayland-server)
+  #:pkg-config "wayland-server"
+  #:include '("wayland-server.h")
   #:inc-filter (lambda (file-spec path-spec)
-                 (string-contains path-spec "wayland-client" 0))
+                 (string-contains path-spec "wayland-server" 0))
   #:use-ffi-module (ffi wayland-util))
 
-(define WLC ffi-wayland-client-symbol-val)
+(define WLS ffi-wayland-server-symbol-val)
 
 ;; --- last line ---

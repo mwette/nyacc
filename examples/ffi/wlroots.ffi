@@ -1,0 +1,149 @@
+;; wlroots.ffi				-*- Scheme -*-
+
+;; Copyright (C) 2023 Matthew R. Wette
+;; 
+;; Copying and distribution of this file, with or without modification,
+;; are permitted in any medium without royalty provided the copyright
+;; notice and this notice are preserved.  This file is offered as-is,
+;; without any warranty.
+
+(define-ffi-module (ffi wlroots)
+  #:pkg-config "wlroots"
+  #:cpp-defs '("WLR_USE_UNSTABLE")
+  #:include
+    '("wlr/backend.h"
+      "wlr/interfaces/wlr_input_device.h"
+      "wlr/interfaces/wlr_keyboard.h"
+      "wlr/interfaces/wlr_output.h"
+      "wlr/interfaces/wlr_pointer.h"
+      "wlr/interfaces/wlr_switch.h"
+      "wlr/interfaces/wlr_tablet_pad.h"
+      "wlr/interfaces/wlr_tablet_tool.h"
+      "wlr/interfaces/wlr_touch.h"
+      "wlr/render/allocator.h"
+      "wlr/render/dmabuf.h"
+      "wlr/render/drm_format_set.h"
+      "wlr/render/egl.h"
+      "wlr/render/gles2.h"
+      "wlr/render/interface.h"
+      "wlr/render/pixman.h"
+      "wlr/render/wlr_renderer.h"
+      "wlr/render/wlr_texture.h")
+  #:inc-filter (lambda (file-spec path-spec)
+                 (string-contains path-spec "wlr/" 0))
+  #:use-ffi-module (ffi wayland-server)
+  )
+
+
+;; --- last line ---
+#|
+/usr/include/wlr/:
+backend/
+backend.h
+config.h
+interfaces/
+render/
+types/
+util/
+version.h
+xcursor.h
+xwayland.h
+
+/usr/include/wlr/backend:
+drm.h
+headless.h
+interface.h
+libinput.h
+multi.h
+session.h
+wayland.h
+x11.h
+
+/usr/include/wlr/interfaces:
+wlr_input_device.h
+wlr_keyboard.h
+wlr_output.h
+wlr_pointer.h
+wlr_switch.h
+wlr_tablet_pad.h
+wlr_tablet_tool.h
+wlr_touch.h
+
+/usr/include/wlr/render:
+allocator.h
+dmabuf.h
+drm_format_set.h
+egl.h
+gles2.h
+interface.h
+pixman.h
+wlr_renderer.h
+wlr_texture.h
+
+/usr/include/wlr/types:
+wlr_box.h
+wlr_buffer.h
+wlr_compositor.h
+wlr_cursor.h
+wlr_data_control_v1.h
+wlr_data_device.h
+wlr_drm.h
+wlr_drm_lease_v1.h
+wlr_export_dmabuf_v1.h
+wlr_foreign_toplevel_management_v1.h
+wlr_fullscreen_shell_v1.h
+wlr_gamma_control_v1.h
+wlr_idle.h
+wlr_idle_inhibit_v1.h
+wlr_input_device.h
+wlr_input_inhibitor.h
+wlr_input_method_v2.h
+wlr_keyboard_group.h
+wlr_keyboard.h
+wlr_keyboard_shortcuts_inhibit_v1.h
+wlr_layer_shell_v1.h
+wlr_linux_dmabuf_v1.h
+wlr_matrix.h
+wlr_output_damage.h
+wlr_output.h
+wlr_output_layout.h
+wlr_output_management_v1.h
+wlr_output_power_management_v1.h
+wlr_pointer_constraints_v1.h
+wlr_pointer_gestures_v1.h
+wlr_pointer.h
+wlr_presentation_time.h
+wlr_primary_selection.h
+wlr_primary_selection_v1.h
+wlr_region.h
+wlr_relative_pointer_v1.h
+wlr_scene.h
+wlr_screencopy_v1.h
+wlr_seat.h
+wlr_server_decoration.h
+wlr_surface.h
+wlr_switch.h
+wlr_tablet_pad.h
+wlr_tablet_tool.h
+wlr_tablet_v2.h
+wlr_text_input_v3.h
+wlr_touch.h
+wlr_viewporter.h
+wlr_virtual_keyboard_v1.h
+wlr_virtual_pointer_v1.h
+wlr_xcursor_manager.h
+wlr_xdg_activation_v1.h
+wlr_xdg_decoration_v1.h
+wlr_xdg_foreign_registry.h
+wlr_xdg_foreign_v1.h
+wlr_xdg_foreign_v2.h
+wlr_xdg_output_v1.h
+wlr_xdg_shell.h
+
+/usr/include/wlr/util:
+addon.h
+box.h
+edges.h
+log.h
+region.h
+|#
