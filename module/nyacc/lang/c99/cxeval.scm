@@ -363,7 +363,7 @@
         ((comp-decl ,specl ,declr)
          (loop specl (list declr) (cdr fields)))
         (,_ (sferr "missed in cxeval(find-field)") #f)))
-     (else (sferr "cxeval(find-field): missed:\n") (pperr (car fields)) #f))))
+     (else (throw 'c99-error "field not found: ~A\n" (list name))))))
 
 (define (lookup-type-field udecl name)
   (sx-match udecl
