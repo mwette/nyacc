@@ -21,7 +21,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 FFI Helper User Guide
 Matt Wette
 October 2022
-With NYACC Version 1.08.5
+With NYACC Version 1.08.6
 @end format
 
 @ifnottex
