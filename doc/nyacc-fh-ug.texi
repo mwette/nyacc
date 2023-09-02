@@ -21,7 +21,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 FFI Helper User Guide
 Matt Wette
 October 2022
-With NYACC Version 1.08.4
+With NYACC Version 1.08.5
 @end format
 
 @ifnottex
@@ -52,7 +52,7 @@ wrote `ffi/cairo.scm'
 @noindent
 The FH does not generate C code.  The hooks to access functions in the
 Cairo library are provided in 100% Guile Scheme via @code{(system
-foreign)}.   
+foreign)}.
 
 To generate Guile Scheme for smaller C code units one can
 write a ffi-module with the @code{#:api-code} or import the
@@ -115,7 +115,7 @@ wrote `ffi/cairo.scm'
 @end example
 
 @noindent
-Though the file @file{cairo/cairo.ffi} is only three lines long, the file 
+Though the file @file{cairo/cairo.ffi} is only three lines long, the file
 @file{ffi/cairo.scm} will be over five thousand lines long.  It looks
 like the following:
 
@@ -220,7 +220,7 @@ guile> (load "cairo-demo.scm")
 @dots{}
 ;;; compiled /.../cairo.scm.go
 ;;; compiled /.../cairo-demo.scm.go
-guile> 
+guile>
 @end example
 
 @noindent
@@ -347,7 +347,7 @@ In order to generate a Guile procedure wrapper for a function, say
 The argument @code{int} is a variable name for the return type,
 the next argument is an expression for the function pointer and the
 third argument is an expression for the function argument list.
-To execute the function, which expects a C string, you use something like 
+To execute the function, which expects a C string, you use something like
 @example
 (define result-code (foo (string->pointer "hello")))
 @end example
@@ -378,7 +378,7 @@ like the following:
 (define foo-lib (dynamic-link "libfoo"))
 @end example
 @noindent
-Note that Guile takes care of dealing with the file extension (e.g., 
+Note that Guile takes care of dealing with the file extension (e.g.,
 @file{.so}).  Where Guile looks for libraries is system dependent,
 but usually it will find shared objects in the following
 @itemize
@@ -781,7 +781,7 @@ generates a Guile FFI pointer based type.
 We need to add bytestructure function (pointer) type.  Now C is a bit
 odd about function and function pointers.  They are treated as the
 same.  We will work functions as follows, where @code{f-bs} represents
-a pointer to a function bytestructure 
+a pointer to a function bytestructure
 @example
 (fh-object-ref f-bs) => #<pointer ...>
 (fh-object-ref f-bs '*) => #<procedure ...>
@@ -851,7 +851,7 @@ Note that forward references are swapped around.
 
 @subsubheading Forward Feferences
 
-Here we do it but store @code{GObject} 
+Here we do it but store @code{GObject}
 @example
 ;; typedef struct _GObject GObject;
 (define-public GObject-desc 'void)
@@ -866,7 +866,7 @@ Here we do it but store @code{GObject}
 (define-public GInitiallyUnowned-desc 'void)
 (define-public GInitiallyUnowned*-desc
   (bs:pointer (delay GInitiallyUnowned-desc)))
-(define-fh-pointer-type GInitiallyUnowned* GInitiallyUnowned*-desc 
+(define-fh-pointer-type GInitiallyUnowned* GInitiallyUnowned*-desc
                         GInitiallyUnowned*? make-GInitiallyUnowned*)
 (export GInitiallyUnowned* GInitiallyUnowned*? make-GInitiallyUnowned*)
 @end example
@@ -888,7 +888,7 @@ Here we do it but store @code{GObject}
 (export struct-_GObject struct-_GObject? make-struct-_GObject)
 (define-public struct-_GObject*-desc
   (bs:pointer struct-_GObject-desc))
-(define-fh-pointer-type struct-_GObject* struct-_GObject*-desc 
+(define-fh-pointer-type struct-_GObject* struct-_GObject*-desc
  struct-_GObject*? make-struct-_GObject*)
 (export struct-_GObject* struct-_GObject*? make-struct-_GObject*)
 (ref<->deref! struct-_GObject* make-struct-_GObject*
@@ -1158,7 +1158,7 @@ guile> ...
 
 @c ======================================
 
-@heading Tuning and Debugging 
+@heading Tuning and Debugging
 
 Since this is not all straightforward you will get errors.
 
@@ -1179,7 +1179,7 @@ The message is
 Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
 @end quotation
 The message comes from the garbage collector.  It means you've run out
-of memory.  I found that this actually came from a bug in the ff-compiler 
+of memory.  I found that this actually came from a bug in the ff-compiler
 which generated this code:
 @example
   (bs:struct
@@ -1221,7 +1221,7 @@ the @code{#:decl-filter} option:
 @end example
 @noindent
 Using the option reduced @file{glugl.scm} from 59,274 lines down to
-15,354 lines. 
+15,354 lines.
 
 As another example, if we wanted to just generate code for the gtk hello
 world demo we could write
@@ -1245,7 +1245,7 @@ own types or echo the typedefs from the package headers
 @example
 
 @end example
-                   
+
 @subheading Warning: Possibly Unbound Variable
 
 @smallexample
@@ -1279,7 +1279,7 @@ but not the pointer type.
 User is responsible for calling string->pointer and pointer->string.
 
 By definition: wrap is c->scm; unwrap is scm->c.
- 
+
 @code{define-ffi-module} options:
 @table @code
 @item #:decl-filter proc
@@ -1341,7 +1341,7 @@ Here we provide details of the run-time support module.
 
 @c ======================================
 
-@heading Work to Go 
+@heading Work to Go
 
 @table @asis
 @item 02
@@ -1394,7 +1394,7 @@ make install
 @subheading Reporting Bugs
 Please report bugs by navigating with your browser to
 @indicateurl{https://savannah.nongnu.org/projects/nyacc} and select
-the ``Submit New'' item under the ``Bugs'' menu.  Alternatively, 
+the ``Submit New'' item under the ``Bugs'' menu.  Alternatively,
 ask on the Guile user's mailing list @email{guile-user@@gnu.org}.
 
 @subheading Notes

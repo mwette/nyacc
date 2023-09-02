@@ -10,6 +10,9 @@ without any warranty.
 	* worked on nx-utilities and libraries
 	* working cdata to replace bytevectors, for variable architecture
 
+2023-08-23  V1.08.5
+	* fixes on expand-typerefs, broken in V1.08.2-4
+
 2023-08-14  V1.08.4
 	* c99/cxexprs.c: expose parse-c99-cx
 

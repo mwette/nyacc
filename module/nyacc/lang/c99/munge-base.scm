@@ -39,7 +39,8 @@
             def-namer
             split-udecl
             declr-ident declr-name pointer-declr?
-            clean-field-list clean-fields)
+            clean-field-list clean-fields
+            splice-typename replace-aggr-ref)
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)           ; let-values
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
@@ -131,48 +132,25 @@
 ;; in which case all elements need to be pointers.
 ;; @end deffn
 (define (pointer-declr? declr)
-  (sx-match declr
-    ((init-declr ,declr) (pointer-declr? declr))
-    ((comp-declr ,declr) (pointer-declr? declr))
-    ((param-declr ,declr) (pointer-declr? declr))
-    ;;
-    ((ptr-declr . ,rest) #t)
-    ((ary-declr . ,rest) #t)
-    ((ftn-declr . ,rest) #t)
-    ((abs-ptr-declr . ,rest) #t)
-    ((abs-ary-declr . ,rest) #t)
-    ((abs-ftn-declr . ,rest) #t)
-    ;;
-    ((init-declr-list . ,declrs)
-     (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-    ((comp-declr-list . ,declrs)
-     (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-    ;;
-    (,_ #f)))
-
-;; @deffn {Procedure} pointer-pass-declr? declr => #t|#f
-;; This predicate determines if the declarator is implemented as a pointer.
-;; That is, it is an explicit pointer, an array (ERROR), or a function.
-;; @end deffn
-(define (pointer-pass-declr? declr)
-  (and
-   declr
-   (sx-match declr
-     ((init-declr ,declr) (pointer-declr? declr))
-     ((comp-declr ,declr) (pointer-declr? declr))
-     ((param-declr ,declr) (pointer-declr? declr))
-     ;;
-     ((ptr-declr ,pointer ,dir-declr) #t)
-     ((ary-declr . ,rest) #t)
-     ((ftn-declr . ,rest) #t)
-     ((abs-declr (pointer . ,r1) . ,r2) #t)
-     ;;
-     ((init-declr-list . ,declrs)
-      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-     ((comp-declr-list . ,declrs)
-      (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
-     ;;
-     (,_ #f))))
+  (and declr
+       (sx-match declr
+         ((init-declr ,declr) (pointer-declr? declr))
+         ((comp-declr ,declr) (pointer-declr? declr))
+         ((param-declr ,declr) (pointer-declr? declr))
+         ;;
+         ((ptr-declr . ,rest) #t)
+         ((ary-declr . ,rest) #t)
+         ((ftn-declr . ,rest) #t)
+         ((abs-ptr-declr . ,rest) #t)
+         ((abs-ary-declr . ,rest) #t)
+         ((abs-ftn-declr . ,rest) #t)
+         ;;
+         ((init-declr-list . ,declrs)
+          (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+         ((comp-declr-list . ,declrs)
+          (fold (lambda (dcl seed) (and (pointer-declr? dcl) seed)) #t declrs))
+         ;;
+         (,_ #f))))
 
 ;; @deffn {Procedure} repl-typespec decl-spec-list repl-type-spec
 ;; In the decl-spec-list replace the type-specifier.
@@ -260,14 +238,18 @@
 ;; bla[3] => *(bla[3])
 ;; @end example
 ;; @end deffn
+
+;; cases: dcl=xxx-declr id=ident, ptr=ptr-declr, apd=abs-ptr-declr
+;;   (dcl (id "foo_t"))  : (dcl (id "v"))  => (dcl (id "v"))
 (define (tdef-splice-declr orig-declr tdef-declr)
 
   (define (probe-declr declr)
     (sx-match declr
       ((ident ,name)
-       (sx-ref orig-declr 1))           ; returns #f if abstract <= NOT ANY MORE
+       (and orig-declr (sx-ref orig-declr 1)))
       ((init-declr ,dcl)
-       `(init-declr ,(probe-declr dcl)))
+       (let ((dcl (probe-declr dcl)))
+         (and dcl `(init-declr ,dcl))))
       ((comp-declr ,dcl0)
        `(comp-declr ,(probe-declr dcl0)))
       ((param-declr ,dcl)
@@ -291,7 +273,9 @@
        `(scope ,(probe-declr dcl)))
       (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
-  (probe-declr (cons (sx-tag orig-declr) (sx-tail tdef-declr))))
+  (let* ((declr (probe-declr (sx-ref tdef-declr 1)))
+         (tag (if orig-declr (sx-tag orig-declr) 'param-declr)))
+    (and declr (sx-list tag #f declr))))
 
 ;; @deffn {Procedure} tdef-splice-declr-list orig-declr-list tdef-declr
 ;; iterate tdef-splice-declr over a declr-init-list (or equiv)
@@ -336,6 +320,24 @@
    ((eq? #t keepers) #t)
    (else #f)))
 
+(define (splice-typename specl declr name udict)
+  (let* ((decl (or (assoc-ref udict name) ; decl for typename
+                   (throw 'c99-error "typedef not found for: ~S" name)))
+         (tdef-specl (sx-ref decl 1))  ; specs for typename
+         (tdef-declr (sx-ref decl 2))) ; declr for typename
+    (values
+     (splice-type-spec specl tdef-specl)
+     (cond
+      ((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
+      (else (tdef-splice-declr declr tdef-declr))))))
+
+(define (replace-aggr-ref specl name key udict)
+  ;; turn ref "struct abc" into def "struct ref { ... }"
+  (let* ((udecl (assoc-ref udict key))
+         (repll (and udecl (sx-ref udecl 1))))
+    (unless udecl (throw 'c99-error "no struct/union defined for ~S" name))
+    (splice-type-spec specl repll)))
+
 (define (expand-specl-typerefs specl declr udict keep)
 
   ;; In the process of expanding typerefs it is crutial that routines which
@@ -345,24 +347,6 @@
 
   (define (re-expand specl declr) ;; applied after typename
     (expand-specl-typerefs specl declr udict keep))
-
-  (define (splice-typename specl declr name udict)
-    (let* ((decl (or (assoc-ref udict name) ; decl for typename
-                     (throw 'c99-error "typedef not found for: ~S" name)))
-           (tdef-specl (sx-ref decl 1))  ; specs for typename
-           (tdef-declr (sx-ref decl 2))) ; declr for typename
-      (values
-       (splice-type-spec specl tdef-specl)
-       (cond
-        ((declr-list? declr) (tdef-splice-declr-list declr tdef-declr))
-        (else (tdef-splice-declr declr tdef-declr))))))
-
-  (define (replace-aggr-ref specl name key)
-    ;; turn ref "struct abc" into def "struct ref { ... }"
-    (let* ((udecl (assoc-ref udict key))
-           (repll (and udecl (sx-ref udecl 1))))
-      (unless udecl (throw 'c99-error "no struct/union defined for ~S" name))
-      (splice-type-spec specl repll)))
 
   (define (expand-aggregate tag attr name fields)
     (let* ((fields (map (lambda (fld)
@@ -402,7 +386,7 @@
              (values specl declr)
              (values (replace-type-spec specl '(type-spec (void))) declr)))
         (else
-         (re-expand (replace-aggr-ref specl name (w/struct name)) declr))))
+         (re-expand (replace-aggr-ref specl name (w/struct name) udict) declr))))
 
       ((union-ref (ident ,name))
        (cond
@@ -413,7 +397,7 @@
              (values specl declr)
              (values (replace-type-spec specl '(type-spec (void))) declr)))
         (else
-         (re-expand (replace-aggr-ref specl name (w/union name)) declr))))
+         (re-expand (replace-aggr-ref specl name (w/union name) udict) declr))))
 
       ((struct-def (@ . ,attr) (ident ,name) (field-list . ,fields))
        (let ((tspec (expand-aggregate 'struct-def attr name fields)))

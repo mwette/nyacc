@@ -56,7 +56,7 @@ ul.no-bullet {list-style: none}
 <pre class="format">FFI Helper User Guide
 Matt Wette
 October 2022
-With NYACC Version 1.08.4
+With NYACC Version 1.08.5
 </pre></div>
 
 <div class="top" id="Top">
@@ -92,7 +92,7 @@ wrote `ffi/cairo.scm'
 </pre></div>
 <p>The FH does not generate C code.  The hooks to access functions in the
 Cairo library are provided in 100% Guile Scheme via <code>(system
-foreign)</code>.   
+foreign)</code>.
 </p>
 <p>To generate Guile Scheme for smaller C code units one can
 write a ffi-module with the <code>#:api-code</code> or import the
@@ -153,7 +153,7 @@ following contents:
 wrote `ffi/cairo.scm'
 </pre></div>
 
-<p>Though the file <samp>cairo/cairo.ffi</samp> is only three lines long, the file 
+<p>Though the file <samp>cairo/cairo.ffi</samp> is only three lines long, the file
 <samp>ffi/cairo.scm</samp> will be over five thousand lines long.  It looks
 like the following:
 </p>
@@ -256,7 +256,7 @@ and <code>load</code> the file.
 &hellip;
 ;;; compiled /.../cairo.scm.go
 ;;; compiled /.../cairo-demo.scm.go
-guile&gt; 
+guile&gt;
 </pre></div>
 
 <p>If we set up everything correctly we should have generared the target
@@ -381,7 +381,7 @@ Reference Manual.  For more info on libffi internals visit
 <p>The argument <code>int</code> is a variable name for the return type,
 the next argument is an expression for the function pointer and the
 third argument is an expression for the function argument list.
-To execute the function, which expects a C string, you use something like 
+To execute the function, which expects a C string, you use something like
 </p><div class="example">
 <pre class="example">(define result-code (foo (string-&gt;pointer &quot;hello&quot;)))
 </pre></div>
@@ -409,7 +409,7 @@ like the following:
 </p><div class="example">
 <pre class="example">(define foo-lib (dynamic-link &quot;libfoo&quot;))
 </pre></div>
-<p>Note that Guile takes care of dealing with the file extension (e.g., 
+<p>Note that Guile takes care of dealing with the file extension (e.g.,
 <samp>.so</samp>).  Where Guile looks for libraries is system dependent,
 but usually it will find shared objects in the following
 </p><ul>
@@ -744,7 +744,7 @@ guile&gt; ...
 <p>Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
 </p></blockquote>
 <p>The message comes from the garbage collector.  It means you&rsquo;ve run out
-of memory.  I found that this actually came from a bug in the ff-compiler 
+of memory.  I found that this actually came from a bug in the ff-compiler
 which generated this code:
 </p><div class="example">
 <pre class="example">  (bs:struct
@@ -783,7 +783,7 @@ the <code>#:decl-filter</code> option:
   #:decl-filter (lambda (n) (not (and (string? n) (string-prefix? &quot;PF&quot; n)))))
 </pre></div>
 <p>Using the option reduced <samp>glugl.scm</samp> from 59,274 lines down to
-15,354 lines. 
+15,354 lines.
 </p>
 <p>As another example, if we wanted to just generate code for the gtk hello
 world demo we could write
@@ -808,7 +808,7 @@ own types or echo the typedefs from the package headers
 <pre class="example">
 
 </pre></div>
-                   
+
 <span id="Warning_003a-Possibly-Unbound-Variable"></span><h4 class="subheading">Warning: Possibly Unbound Variable</h4>
 
 <div class="example">
@@ -843,7 +843,7 @@ but not the pointer type.
 <p>User is responsible for calling string-&gt;pointer and pointer-&gt;string.
 </p>
 <p>By definition: wrap is c-&gt;scm; unwrap is scm-&gt;c.
-</p> 
+</p>
 <p><code>define-ffi-module</code> options:
 </p><dl compact="compact">
 <dt><span><code>#:decl-filter proc</code></span></dt>
@@ -966,7 +966,7 @@ make install
 <span id="Reporting-Bugs"></span><h4 class="subheading">Reporting Bugs</h4>
 <p>Please report bugs by navigating with your browser to
 &lsquo;<code>https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
-the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively, 
+the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively,
 ask on the Guile user&rsquo;s mailing list <a href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
 </p>
 <span id="Notes"></span><h4 class="subheading">Notes</h4>

@@ -85,7 +85,7 @@
   #:use-module (ice-9 regex)
   #:use-module (ice-9 pretty-print)
   #:re-export (*nyacc-version*)
-  #:version (1 08 4))
+  #:version (1 08 5))
 
 (define fh-cpp-defs
   (cond
@@ -93,7 +93,7 @@
     (remove (lambda (s) (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
 	    (get-sys-cpp-defs)))
    (else (get-sys-cpp-defs))))
-    
+
 (define fh-inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
@@ -235,7 +235,7 @@
 (define (pkg-config-incs name)
   (fold-right
    (lambda (s l)
-     (cond 
+     (cond
       ((< (string-length s) 3) l)
       ((string=? "-I" (substring/shared s 0 2))
        (cons (substring/shared s 2) l))
@@ -246,7 +246,7 @@
 (define (pkg-config-defs name)
   (fold-right
    (lambda (s l)
-     (cond 
+     (cond
       ((< (string-length s) 3) l)
       ((string=? "-D" (substring/shared s 0 2))
        (cons (substring/shared s 2) l))
@@ -259,7 +259,7 @@
 (define (pkg-config-libs name)
   (fold-right
    (lambda (s l)
-     (cond 
+     (cond
       ((< (string-length s) 3) l)
       ((string=? "-lm" s) l) ;; workaround for ubuntu libm issue
       ((string=? "-l" (substring/shared s 0 2))
@@ -296,7 +296,7 @@
 (define (rename name)
   ((*renamer*) name))
 
-;; === output scheme module header 
+;; === output scheme module header
 
 (define (ffimod-header path module-opts)
   (let* ((attrs (opts->attrs module-opts '()))
@@ -374,8 +374,8 @@
     ("unsigned long long" . unsigned-long-long)
     ("intptr_t" . intptr_t) ("uintptr_t" . uintptr_t) ("size_t" . size_t)
     ("ssize_t" . ssize_t) ("ptrdiff_t" . ptrdiff_t)
-    ("int8_t" . int8) ("uint8_t" . uint8) 
-    ("int16_t" . int16) ("uint16_t" . uint16) 
+    ("int8_t" . int8) ("uint8_t" . uint8)
+    ("int16_t" . int16) ("uint16_t" . uint16)
     ("int32_t" . int32) ("uint32_t" . uint32)
     ("int64_t" . int64) ("uint64_t" . uint64)
     ("float _Complex" . complex64) ("double _Complex" . complex128)
@@ -418,7 +418,7 @@
        `(bs:struct (list ,@(cnvt-field-list field-list))))
       (((struct-ref (ident ,struct-name)))
        (string->symbol (string-append "struct-" struct-name "-desc")))
-      
+
       (((union-def (ident ,union-name) ,field-list))
        (mtail->bs-desc `((union-def ,field-list))))
       (((union-def ,field-list))
@@ -488,7 +488,7 @@
        `(bit-field ,(const-expr->number size) ,(mtail->bs-desc rest)))
 
       (((extern) . ,rest) (mtail->bs-desc rest))
-      
+
       (,otherwise
        (fherr "mtail->bs-desc missed:\n~A" (ppstr mdecl-tail))))))
 
@@ -758,7 +758,7 @@
 (define ffi-long-long #f)
 (define ffi-unsigned-long-long #f)
 
-;;(pperr fh-cpp-dict) 
+;;(pperr fh-cpp-dict)
 (case (and=> (assoc-ref fh-cpp-dict "__LONG_LONG_WIDTH__") string->number)
   ((64)
    (set! ffi-long-long 'ffi:int64)
@@ -791,7 +791,7 @@
      (set! ffi-intptr_t 'ffi:long)
      (set! ffi-uintptr_t 'ffi:unsigned-long))))
  (guile))
- 
+
 (define ffi-typemap
   ;; see system/foreign.scm
   `(("void" . ffi:void) ("float" . ffi:float) ("double" . ffi:double)
@@ -808,9 +808,9 @@
     ("size_t" . ffi:size_t)
     ;;
     ("ssize_t" . ffi:ssize_t) ("ptrdiff_t" . ffi:ptrdiff_t)
-    ("int8_t" . ffi:int8) ("uint8_t" . ffi:uint8) 
-    ("int16_t" . ffi:int16) ("uint16_t" . ffi:uint16) 
-    ("int32_t" . ffi:int32) ("uint32_t" . ffi:uint32) 
+    ("int8_t" . ffi:int8) ("uint8_t" . ffi:uint8)
+    ("int16_t" . ffi:int16) ("uint16_t" . ffi:uint16)
+    ("int32_t" . ffi:int32) ("uint32_t" . ffi:uint32)
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
     ;; hacks
     ("intptr_t" . ,ffi-intptr_t) ("uintptr_t" . ,ffi-uintptr_t)
@@ -886,7 +886,7 @@
 	 'ffi-void*))
     (((array-of) . ,rest)
      (mtail->ffi-desc `((array-of "0") . ,rest) in-compound))
-    
+
     (((struct-def (field-list . ,fields)))
      `(list ,@(map (lambda (fld)
 		     (let* ((udict (dictize-comp-decl fld))
@@ -898,7 +898,7 @@
 		   (clean-and-unitize-fields fields))))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
-    
+
     (((union-def (field-list . ,fields)))
      (mtail->ffi-desc
       (bounding-mtail-for-union-fields
@@ -906,7 +906,7 @@
       #t))
     (((union-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((union-def ,field-list))))
-    
+
     (,otherwise
      (fherr "mtail->ffi-desc missed:\n~A" (ppstr mdecl-tail)))))
 
@@ -994,7 +994,7 @@
 	((member name defined) `(fht-unwrap ,(string->symbol name)))
 	((member name wrapped) (string->symbol (string-append "unwrap-" name)))
 	(else #f)))
-      
+
       (((enum-def (ident ,name) ,rest))
        (cond
 	((member (w/enum name) wrapped)
@@ -1056,11 +1056,11 @@
 	 (if (and (pair? decl-params) (equal? (last decl-params) '...))
 	     (fherr/once "no varargs (yet)"))
 	 `(make-fctn-param-unwrapper ,decl-return (list ,@decl-params))))
-      
+
       (((pointer-to) . ,otherwise) 'unwrap~pointer)
 
       ;; TODO: int b[]
-      ;; make ffi-help-rt unwrap bytevector  
+      ;; make ffi-help-rt unwrap bytevector
       (((array-of ,size) . ,rest) 'unwrap~array)
       (((array-of) . ,rest) 'unwrap~array)
 
@@ -1102,7 +1102,7 @@
 	((member typename wrapped)
 	 (strings->symbol "wrap-" typename "*"))
 	(else #f)))
-      
+
       (((pointer-to) (struct-ref (ident ,struct-name) . ,rest))
        (cond
 	((member (w/struct struct-name) wrapped)
@@ -1281,12 +1281,12 @@
 (define (cnvt-udecl udecl udict wrapped defined)
   ;; This is a bit sloppy in that we have to know if the converters are
   ;; creating wrappers and/or (type) defines.
-  
+
   (define (ptr-decl specl)
     `(udecl ,specl (init-declr (ptr-declr (pointer) (ident "_")))))
   (define (non-ptr-decl specl)
     `(udecl ,specl (init-declr (ident "_"))))
-  
+
   ;; use fluids OR pass around
   (*wrapped* wrapped)
   (*defined* defined)
@@ -1317,7 +1317,7 @@
        (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
-      
+
       ;; typedef void proxy_t;
       ((udecl
 	(decl-spec-list
@@ -1331,7 +1331,7 @@
        (fhscm-def-pointer (sw/* typename))
        (values (cons* typename (w/* typename) wrapped)
 	       (cons* typename (w/* typename) defined)))
-      
+
       ;; typedef int foo_t;
       ((udecl
 	(decl-spec-list
@@ -1623,7 +1623,7 @@
        (values (cons typename wrapped) (cons typename defined)))
 
       ;; typedef int (*foo_t)(int x, ...);
-      ;; extern int git_reference_foreach(git_repository *repo, 
+      ;; extern int git_reference_foreach(git_repository *repo,
       ;;     git_reference_foreach_cb callback, void *payload);
       ((udecl
 	(decl-spec-list (stor-spec (typedef)) . ,rst)
@@ -1704,7 +1704,7 @@
 	    name-list)
 	   (values (cons (w/struct struct-name) wrapped)
 		   (cons (w/struct struct-name) defined))))
-	
+
 	((not (member (w/struct struct-name) defined))
 	 (sfscm ";; NOT defined earlier\n") ;; FIXME
 	 (cnvt-struct-def attr1 #f struct-name field-list)
@@ -1765,7 +1765,7 @@
 	(else
 	 (cnvt-enum-def #f enum-name enum-def-list)
 	 (values (cons (w/enum enum-name) wrapped) defined))))
-      
+
       ;; enum { ... };
       ((udecl
 	(decl-spec-list
@@ -1774,7 +1774,7 @@
        (values wrapped defined))
 
       ;; === function declarations =======
-      
+
       ;; function returning pointer value
       ((udecl ,specl
 	      (init-declr
@@ -2019,7 +2019,7 @@
 	  ((and ;; Process the declaration if all conditions met:
 	    (declf name)		  ; 1) user wants it
 	    (not (member name defined))	  ; 2) not already defined
-	    (not (if (pair? name)	  ; 3) not anonymous 
+	    (not (if (pair? name)	  ; 3) not anonymous
 		     (string=? "*anon*" (cdr name))
 		     (string=? "" name))))
 	   (let ((udecl (udict-ref udict name)))
@@ -2070,7 +2070,7 @@
 	   (lambda (opt seed)
 	     (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
 	   '() module-options))
-	 (ext-defd			
+	 (ext-defd
 	  (fold
 	   (lambda (upath seed)
 	     (unless (resolve-module upath)
@@ -2110,7 +2110,7 @@
 		       (if (eq? (car defs) bity) res
 			   (loop (cons (car defs) res) (cdr defs))))))
 	  (set! ffimod-defined defd))))
-    
+
     ;; output global constants (from enum and #define)
     (let* ((modd (c99-trans-unit->ddict tree #:inc-filter incf #:skip-fdefs #t))
 	   (modd (udict-enums->ddict udecls modd))
@@ -2147,7 +2147,7 @@
 	 (let* ((udict (c99-trans-unit->udict tree))
 		(udecl (cdr (last udict)))
 		(udecl (if expand (expand-typerefs udecl udict) udecl))
-		(str-decl (fh-cnvt-udecl udecl udict)) 
+		(str-decl (fh-cnvt-udecl udecl udict))
 		(scm-decl (with-input-from-string str-decl read))
 		(scm-value (sx-ref scm-decl 2)))
 	   scm-value))))
@@ -2192,7 +2192,7 @@
 ;; like above but then convert to Scheme expression
 (define* (fh-cnvt-cdecl name code #:key (prefix "fh"))
   (and=> (fh-cnvt-cdecl->str name code #:prefix prefix) fh-scm-str->scm-exp))
-			     
+
 ;; === repl compiler ================
 
 ;; @deffn {Procedure} load-include-file filename [#pkg-config pkg]
@@ -2314,10 +2314,10 @@
        #`(cons
 	  (cons key (quote val))
 	  (parse-module-options option ...)))
-      
+
       ((_ key val option ...)
        #'(syntax-error "compile-ffi: expecting keyword"))
-      
+
       ((_) #''()))))
 
 (define-syntax-rule (define-ffi-module path-list attr ...)
@@ -2336,7 +2336,7 @@
   (@@ (system base compile) call-with-output-file/atomic))
 
 ;; @deffn {Procedure} compile-ffi-file file [options]
-;; This procedure will 
+;; This procedure will
 ;; @end deffn
 (define* (compile-ffi-file filename #:optional (options '()))
   (parameterize ((*options* options) (*wrapped* '()) (*defined* '())

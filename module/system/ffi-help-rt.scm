@@ -50,7 +50,7 @@
 
             ;; commonly used libc functions
             fopen fclose
-            
+
             ;; deprecated
             fh-link-bstr ;; => fh-link-extern
             )
@@ -59,9 +59,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (1 08 4))
+  #:version (1 08 5))
 
-(define *ffi-help-version* "1.08.4")
+(define *ffi-help-version* "1.08.5")
 
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
@@ -381,7 +381,7 @@
 ;;                (bytestructure-unwrap <bytestructure> <index> ...)))
 ;;    (bytestructure-primitive-ref bytevector offset descriptor)))
 
-;;(define (reify-bytestructure-ref desc bv 
+;;(define (reify-bytestructure-ref desc bv
 
 #|
 (define-record-type <vector-metadata>
@@ -514,7 +514,7 @@
 ;; @deffn {Procedure} fh:function return-desc param-desc-list
 ;; @deffnx {Syntax} define-fh-function*-type name desc type? make
 ;; Generate a descriptor for a function pseudo-type, and then the associated
-;; function pointer type. 
+;; function pointer type.
 ;; @example
 ;; (define foo_t*-desc (bs:pointer (delay double (list double))))
 ;; @end example
@@ -734,7 +734,7 @@
 (define unwrap~array unwrap~pointer)
 
 ;; @deffn {Procedure} make-fctn-param-unwrapper ret-t args-t => lambda
-;; This procedure will convert an argument, 
+;; This procedure will convert an argument,
 ;; @end deffn
 (define (make-fctn-param-unwrapper ret-t args-t)
   (lambda (obj)
@@ -781,7 +781,7 @@
 (export char*->string)
 
 (define fh-void
-  (make-fht 'void 
+  (make-fht 'void
             (lambda (obj) 'void)
             (lambda (val) (make-struct/no-tail fh-void val))
             #f #f
@@ -919,7 +919,7 @@
      (else (loop (cdr dll))))))
 
 ;; @deffn {Procedure} fh-link-proc return name args dy-lib-list
-;; Generate Guile procedure from C library. 
+;; Generate Guile procedure from C library.
 ;; @end deffn
 (define* (fh-link-proc return name args dl-lib-list)
   ;; Given a list of links (output of @code{(dynamic-link @it{library})}
@@ -940,7 +940,7 @@
 
 #|
 ;; @deffn {Procedure} make-cstr-array str-list => bv
-;; For C functions that take an argument of the form @code{const char *names[]}, 
+;; For C functions that take an argument of the form @code{const char *names[]},
 ;; this routine will convert a scheme list of strings into an appropriate
 ;; bytevector which can be passed via @code{unwrap~pointer}.
 ;; @end deffn

@@ -769,8 +769,7 @@
    (lambda ($2 $1 . $rest)
      `(param-decl ,$1 (param-declr ,$2)))
    ;; parameter-declaration => declaration-specifiers
-   (lambda ($1 . $rest)
-     `(param-decl ,$1 (param-declr)))
+   (lambda ($1 . $rest) `(param-decl ,$1))
    ;; parameter-declaration => declaration-specifiers declarator attribute-...
    (lambda ($3 $2 $1 . $rest)
      `(param-decl ,$1 (param-declr ,$2)))
