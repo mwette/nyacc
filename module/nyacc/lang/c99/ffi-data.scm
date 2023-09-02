@@ -19,7 +19,6 @@
 
 ;;; Code:
 
-
 (define-module (nyacc lang c99 ffi-cdata)
   #:export (make-ctype)
   #:use-module (srfi srfi-9)
@@ -65,7 +64,8 @@
   (name ctype-name)                  ; symbolic type name
   (size ctype-size)
   (almt ctype-alignment)
-  (type-id ctype-id)            ; int rep of: f64, ..., struct, union,
+  (type-id ctype-id)            ; internal rep: f64le, ..., struct, union,
+  ;; add (arch ???)
   (meta ctype-meta))
 
 (define-record-type <cdata>

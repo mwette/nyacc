@@ -64,7 +64,7 @@
     (remove (lambda (s) (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
 	    (get-sys-cpp-defs)))
    (else (get-sys-cpp-defs))))
-    
+
 (define fh-inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
@@ -206,7 +206,7 @@
 (define (pkg-config-incs name)
   (fold-right
    (lambda (s l)
-     (cond 
+     (cond
       ((< (string-length s) 3) l)
       ((string=? "-I" (substring/shared s 0 2))
        (cons (substring/shared s 2) l))
@@ -217,7 +217,7 @@
 (define (pkg-config-defs name)
   (fold-right
    (lambda (s l)
-     (cond 
+     (cond
       ((< (string-length s) 3) l)
       ((string=? "-D" (substring/shared s 0 2))
        (cons (substring/shared s 2) l))
@@ -230,7 +230,7 @@
 (define (pkg-config-libs name)
   (fold-right
    (lambda (s l)
-     (cond 
+     (cond
       ((< (string-length s) 3) l)
       ((string=? "-lm" s) l) ;; workaround for ubuntu libm issue
       ((string=? "-l" (substring/shared s 0 2))
@@ -250,7 +250,7 @@
 (define (rename name)
   ((*renamer*) name))
 
-;; === output scheme module header 
+;; === output scheme module header
 
 ;; === type conversion ==============
 
@@ -269,8 +269,8 @@
     ("unsigned long long" . unsigned-long-long)
     ("intptr_t" . intptr_t) ("uintptr_t" . uintptr_t) ("size_t" . size_t)
     ("ssize_t" . ssize_t) ("ptrdiff_t" . ptrdiff_t)
-    ("int8_t" . int8) ("uint8_t" . uint8) 
-    ("int16_t" . int16) ("uint16_t" . uint16) 
+    ("int8_t" . int8) ("uint8_t" . uint8)
+    ("int16_t" . int16) ("uint16_t" . uint16)
     ("int32_t" . int32) ("uint32_t" . uint32)
     ("int64_t" . int64) ("uint64_t" . uint64)
     ("float _Complex" . complex64) ("double _Complex" . complex128)
@@ -352,7 +352,7 @@
 	      (let ,(gen-exec-unwrappers exec-params)
 		,(if exec-return (list exec-return call) call))))))))
     (sfscm "(export ~A)\n" name)))
-  
+
 ;;(define (cnvt-extern name ms-tail)
 ;;(define (node-not-typeof? crit)
 
@@ -360,8 +360,8 @@
 
   ;; but typedefs needs to be included
   ;; ("foo_t" (typedef-for (xxx)))
-  (let* (;;(xdecl (expand-typerefs udecl udict defined))
-         (mdecl (udecl->mdecl udecl))
+  (let* ((xdecl (expand-typerefs udecl udict defined))
+         (mdecl (udecl->mdecl xdecl))
          (ident (car mdecl))
          (mattr (md-attr mdecl))
          (mtail (md-tail mdecl)))
@@ -369,16 +369,16 @@
     (sferr "ffi-next(cnvt-udecl):\n")
     (pperr mdecl)
     (quit)
-    
+
     (pmatch mtail
       (`((function-returning ,param-list) . ,rtail)
        (cnvt-fctn ident param-list rtail))
       (_
        (sferr "cnvt-decl: missed\n") (pperr mtail)))
-    
+
     ;;(sferr "md-attr: ~S\n" (md-attr mdecl))
     (quit)
-    
+
     ))
 
 (display "ffi-next/TODO: add undef for c99; maybe FOO=! or !FOO vs FOO=1")
@@ -503,7 +503,7 @@
 	  ((and ;; Process the declaration if all conditions met:
 	    (declf name)		  ; 1) user wants it
 	    (not (member name defined))	  ; 2) not already defined
-	    (not (if (pair? name)	  ; 3) not anonymous 
+	    (not (if (pair? name)	  ; 3) not anonymous
 		     (string=? "*anon*" (cdr name))
 		     (string=? "" name))))
 	   (let ((udecl (udict-ref udict name)))
@@ -554,7 +554,7 @@
 	   (lambda (opt seed)
 	     (if (eq? (car opt) 'use-ffi-module) (cons (cdr opt) seed) seed))
 	   '() module-options))
-	 (ext-defd			
+	 (ext-defd
 	  (fold
 	   (lambda (upath seed)
 	     (unless (resolve-module upath)
@@ -594,7 +594,7 @@
 		       (if (eq? (car defs) bity) res
 			   (loop (cons (car defs) res) (cdr defs))))))
 	  (set! ffimod-defined defd))))
-    
+
     ;; output global constants (from enum and #define)
     (let* ((modd (c99-trans-unit->ddict tree #:inc-filter incf #:skip-fdefs #t))
 	   (modd (udict-enums->ddict udecls modd))
@@ -629,7 +629,7 @@
 	 (let* ((udict (c99-trans-unit->udict tree))
 		(udecl (cdr (last udict)))
 		(udecl (if expand (expand-typerefs udecl udict) udecl))
-		(str-decl (fh-cnvt-udecl udecl udict)) 
+		(str-decl (fh-cnvt-udecl udecl udict))
 		(scm-decl (with-input-from-string str-decl read))
 		(scm-value (sx-ref scm-decl 2)))
 	   scm-value))))
@@ -674,7 +674,7 @@
 ;; like above but then convert to Scheme expression
 (define* (fh-cnvt-cdecl name code #:key (prefix "fh"))
   (and=> (fh-cnvt-cdecl->str name code #:prefix prefix) fh-scm-str->scm-exp))
-			     
+
 ;; === repl compiler ================
 
 ;; @deffn {Procedure} load-include-file filename [#pkg-config pkg]
@@ -796,10 +796,10 @@
        #`(cons
 	  (cons key (quote val))
 	  (parse-module-options option ...)))
-      
+
       ((_ key val option ...)
        #'(syntax-error "compile-ffi: expecting keyword"))
-      
+
       ((_) #''()))))
 
 (define-syntax-rule (define-ffi-module path-list attr ...)
@@ -818,7 +818,7 @@
   (@@ (system base compile) call-with-output-file/atomic))
 
 ;; @deffn {Procedure} compile-ffi-file file [options]
-;; This procedure will 
+;; This procedure will
 ;; @end deffn
 (define* (compile-ffi-file filename #:optional (options '()))
   (parameterize ((*options* options) (*wrapped* '()) (*defined* '())
