@@ -125,7 +125,7 @@
 ;; @deffn {Procedure} find-incl-in-dirl file dirl [next] => path
 ;; Find path to include file expression, (i.e., @code{<foo.h>} or
 ;; @code{"foo.h"}.  If @code{"foo.h"} form look in current directory first.
-;; If @var{next} (default false) is true then remove current directory from 
+;; If @var{next} (default false) is true then remove current directory from
 ;; search path.
 ;; @*Refs:
 ;; @itemize
@@ -182,7 +182,7 @@
     (if args
 	`(define (name ,name) (args . ,args) (repl ,repl))
 	`(define (name ,name) (repl ,repl)))))
-	
+
 
 ;; @deffn {Procedure} cpp-include
 ;; Parse CPP include statement.
@@ -233,7 +233,7 @@
 		 (list 'warning (simple-format #f "unknown CPP: ~S" line)))))))
 	 ((read-c-num ch) => (lambda (num) `(line ,num ,(rd-rest))))
 	 (else '(null)))))))
-	    
+
 
 (include-from-path "nyacc/lang/c99/mach.d/cpp-tab.scm")
 (include-from-path "nyacc/lang/c99/mach.d/cpp-act.scm")
@@ -473,7 +473,7 @@
 	    (lambda (arg)
 	      (loop rr (acons '$echo (string-append iden arg) tkl)
 		    lv (read-char))))
-	   (else 
+	   (else
 	    (loop rr (acons '$ident iden tkl) lv (read-char)))))
 	 (else
 	  (let ((rval (expand-cpp-macro-ref iden defs '() used)))
@@ -524,7 +524,7 @@
 ;; @deffn {Procedure} px-cpp-ftn-repl argd repl => string
 ;; pre-expand CPP function where @var{argd} is an a-list of arg name
 ;; and replacement and repl is the defined replacement
-;; 
+;;
 ;; argd is alist of arguments and token lists
 ;; if end-tok == #f ignore levels
 ;; ident space fixed float chseq hash dhash arg
@@ -579,7 +579,7 @@
 	      (if (not aval) (cpp-err "expecting arg-val"))
 	      (loop stl chl (mk-string aval) (read-char))))))
      (else (loop stl (cons ch chl) nxt (read-char))))))
-  
+
 ;; @deffn {Procedure} cpp-expand-text text defs [used] => string
 ;; Expand the string @var{text} using the provided CPP @var{defs} a-list.
 ;; Identifiers in the list of strings @var{used} will not be expanded.
