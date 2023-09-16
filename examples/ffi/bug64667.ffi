@@ -1,0 +1,6 @@
+(define-ffi-module (bug64667)
+  #:api-code
+  (string-append
+    "typedef int int64_t;"
+    "typedef union { int64_t x; double y; } foo_t;"
+    "int bar(foo_t);"))
