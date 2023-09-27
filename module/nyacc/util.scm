@@ -1,6 +1,6 @@
 ;;; nyacc/util.scm
 
-;; Copyright (C) 2014-2017,2021 Matthew R. Wette
+;; Copyright (C) 2014-2017,2021,2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -30,13 +30,6 @@
             ugly-print
             tzort
             vector-map vector-for-each vector-any vector-fold))
-(cond-expand
-  (mes)
-  (guile-2)
-  (guile
-   (use-modules (ice-9 optargs))
-   (use-modules (nyacc compat18)))
-  (else))
 
 (define (fmtstr fmt . args)
   (apply simple-format #f fmt args))

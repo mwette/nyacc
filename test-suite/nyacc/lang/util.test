@@ -1,6 +1,6 @@
 ;;; nyacc/lang/util.test                -*- scheme -*-
 ;;; 
-;;; Copyright (C) 2015,2016 Matthew R. Wette
+;;; Copyright (C) 2015,2016,2023 Matthew Wette
 ;;; 
 ;;; Copying and distribution of this file, with or without modification,
 ;;; are permitted in any medium without royalty provided the copyright
@@ -13,11 +13,6 @@
 (define-module (util)
   #:use-module (nyacc lang util)
   #:use-module (test-suite lib))
-(cond-expand
-  (guile-2 #t)
-  (else
-   (use-modules (nyacc compat18))))
-;;(use-modules (ice-9 pretty-print)) (define pp pretty-print)
 
 (define ctr
   (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))

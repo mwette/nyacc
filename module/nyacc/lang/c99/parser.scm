@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; Copyright (C) 2015-2023 Matthew R. Wette
+;; Copyright (C) 2015-2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -25,15 +25,6 @@
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 util)
   #:re-export (c99-def-help c99-std-help))
-(cond-expand
-  (guile-3)
-  (guile-2)
-  (guile
-   (use-modules (srfi srfi-16))
-   (use-modules (ice-9 optargs))
-   (use-modules (ice-9 syncase))
-   (use-modules (nyacc compat18)))
-  (else))
 
 ;; === body ==========================
 
