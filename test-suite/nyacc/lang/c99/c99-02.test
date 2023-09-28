@@ -1,7 +1,7 @@
 ;; nyacc/lang/c99/c99-02.test           -*- scheme -*-
 ;;
-;; Copyright (C) 2016-2017 Matthew R. Wette
-;; 
+;; Copyright (C) 2016-2017,2023 Matthew R. Wette
+;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
@@ -15,10 +15,12 @@
 
 (define incs '("exam.d"))
 
-(define (parse-string str)
+(define* (parse-string str #:key cpp-defs)
   (with-input-from-string str
     (lambda ()
-      (parse-c99 #:inc-dirs incs #:mode 'code))))
+      (parse-c99 #:inc-dirs incs
+                 #:cpp-defs (or cpp-defs '())
+                 #:mode 'code))))
 
 (define (parse-file file)
   (with-input-from-file file

@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; Copyright (C) 2015-2022 Matthew R. Wette
+;; Copyright (C) 2015-2023 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -39,7 +39,7 @@
 
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
-(use-modules ((srfi srfi-1) #:select (fold-right append-reverse)))
+(use-modules ((srfi srfi-1) #:select (fold fold-right append-reverse)))
 (use-modules ((srfi srfi-9) #:select (define-record-type)))
 (use-modules (ice-9 pretty-print))	; for debugging
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -60,12 +60,16 @@
   (blev cpi-blev set-cpi-blev!)		; curr brace/block level
   )
 
-;;.@deffn Procedure split-cppdef defstr => (<name> . <repl>)| \
-;;     (<name>  <args> . <repl>)|#f
-;; Convert define string to a dict item.  Examples:
+;;.@deffn Procedure split-cppdef defstr => \
+;;  (<name> . <repl>) | (<name>  <args> . <repl>) | #f
+;; Convert define string to a dict item.  As a kludge, if a non-function
+;; macro is @code{"#f"}, then it's assigned @code{#f}, which serves as
+;; an undef.
+;; @* Examples:
 ;; @example
 ;; "ABC=123" => '("ABC" . "123")
 ;; "MAX(X,Y)=((X)>(Y)?(X):(Y))" => ("MAX" ("X" "Y") . "((X)>(Y)?(X):(Y))")
+;; "DEF=#f" => '("DEF" . #f)
 ;; @end example
 ;; @end deffn
 (define (split-cppdef defstr)
@@ -78,10 +82,11 @@
       (cons* (substring defstr 0 x2st)
 	     (string-split
 	      (string-delete #\space (substring defstr (1+ x2st) x2nd))
-	      #\,)
+              #\,)
 	     (substring defstr (1+ x3))))
      (else
-      (cons (substring defstr 0 x3) (substring defstr (1+ x3)))))))
+      (let ((repl (substring defstr (1+ x3))))
+        (cons (substring defstr 0 x3) (if (string=? repl "#f") #f repl)))))))
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers
@@ -103,14 +108,14 @@
 	  (loop tyns (cons (split-cppdef (car ents)) defs) (cdr ents)))
 	 (else (loop (cons (car ents) tyns) defs (cdr ents)))))))
 
-  (define (split-if-needed def)
-    (if (pair? def) def (split-cppdef def)))
+  (define (split-if-needed def tail)
+    (cons (if (pair? def) def (split-cppdef def)) tail))
 
   (let* ((cpi (make-cpi-1)))
-    (set-cpi-debug! cpi debug)		; print states debug 
+    (set-cpi-debug! cpi debug)		; print states debug
     (set-cpi-shinc! cpi shinc)		; print includes
-    (set-cpi-defs! cpi (map split-if-needed defines)) ; def's as pairs
-    (set-cpi-incs! cpi incdirs)		; list of include dir's
+    (set-cpi-defs! cpi (fold split-if-needed '() defines)) ; def's as pairs
+    (set-cpi-incs! cpi incdirs)         ; list of include dir's
     (set-cpi-ptl! cpi '())		; list of lists of typenames
     (set-cpi-ctl! cpi '())		; list of current typenames
     (set-cpi-blev! cpi 0)		; brace/block level
@@ -126,13 +131,13 @@
 		 (loop (cons ityns itynd) (cons idefs idefd) (cdr helpers)))))))
     ;; Assign builtins.
     (and=> (assoc-ref (cpi-itynd cpi) "__builtin")
-	   (lambda (tl) (set-cpi-ctl! cpi (append tl (cpi-ctl cpi)))))
+	   (lambda (tl) (set-cpi-ctl! cpi (append (cpi-ctl cpi) tl))))
     (and=> (assoc-ref (cpi-idefd cpi) "__builtin")
-	   (lambda (tl) (set-cpi-defs! cpi (append tl (cpi-defs cpi)))))
+	   (lambda (dl) (set-cpi-defs! cpi (append (cpi-defs cpi) dl))))
     cpi))
 
 (define *info* (make-parameter #f))
-	  
+
 (define cpi-inc-blev!
   (case-lambda
     ((info) (set-cpi-blev! info (1+ (cpi-blev info))))
@@ -148,7 +153,7 @@
 
 (define cpi-push
   (case-lambda
-    ((info) 
+    ((info)
      (set-cpi-ptl! info (cons (cpi-ctl info) (cpi-ptl info)))
      (set-cpi-ctl! info '())
      #t)
@@ -214,7 +219,7 @@
       (else
        (pp (car declr))
        (throw 'c99-error "parser.scm: find-new-typenames: ~S" declr))))
-       
+
   ;;(sf "\ndecl:\n") (pp decl)
 
   (let* ((spec (sx-ref decl 1))
@@ -343,7 +348,7 @@
 	   (cons (sx-ref stmt 1) seed)
 	   seed))
      '() stmts))
-  
+
   (let* ((ident-like? (make-ident-like-p read-c-ident))
 	 ;;
 	 (strtab (filter-mt string? match-table)) ; strings in grammar
@@ -370,7 +375,7 @@
 	(let ((info (*info*)))
 	  (raw-parser (lexer #:mode 'decl #:show-incs (cpi-shinc info))
 		      #:debug (cpi-debug info))))
-      
+
       (let ((bol #t)		 ; begin-of-line condition
 	    (suppress #f)	 ; parsing cpp expanded text (kludge?)
 	    (ppxs (list 'keep))	 ; CPP execution state stack
@@ -388,10 +393,10 @@
 		   (repl (car (assq-ref tail 'repl)))
 		   (cell (cons name (if args (cons args repl) repl))))
 	      (set-cpi-defs! info (cons cell (cpi-defs info)))))
-	  
+
 	  (define (rem-define name)
 	    (set-cpi-defs! info (acons name #f (cpi-defs info))))
-	  
+
 	  (define (apply-helper file)
 	    ;; file will include <> or "", need to strip
 	    (let* ((tyns (assoc-ref (cpi-itynd info) file))
@@ -451,7 +456,7 @@
 	  (define (code-endif stmt)
 	    (set! ppxs (cdr ppxs))
 	    stmt)
-	  
+
 	  (define* (eval-cpp-incl/here stmt #:optional next) ;; => stmt
 	    (let* ((spec (inc-stmt->file-spec stmt))
 		   (file (file-spec->file spec))
@@ -528,7 +533,7 @@
 		     (else
 		      (throw 'c99-error "eval-cpp-stmt/decl: ~S" stmt)))
 		   stmt))))
-	  
+
 	  (define (eval-cpp-stmt/file stmt) ;; => stmt
 	    ;;(sf "eval-cpp-stmt/file ~S\n" stmt)
 	    (case (car stmt)
@@ -704,7 +709,7 @@
    ;; These must also appear in #:keepers arg to hashify in mach.scm.
    #:skip-if-unexp '($lone-comm $code-comm $pragma cpp-stmt)))
 
-	      
+
 (define gen-c99-lexer
   (make-c99-lexer-generator c99-mtab c99-raw-parser))
 
@@ -782,7 +787,7 @@
 
 (define gen-c99x-lexer
   (make-c99-lexer-generator c99x-mtab c99x-raw-parser))
-  
+
 ;; @deffn {Procedure} parse-c99x string [typenames] [options]
 ;; where @var{string} is a string C expression, @var{typenames}
 ;; is a list of strings to be treated as typenames

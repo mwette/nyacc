@@ -29,7 +29,7 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (srfi srfi-37)
-  #:version (1 08 5))
+  #:version (1 09 0))
 (cond-expand
  (guile-3
   (define (compile-scm file)
@@ -40,7 +40,7 @@
     (compile-file file #:from 'scheme #:to 'bytecode
                   #:opts '()))))
 
-(define *ffi-help-version* "1.08.5")
+(define *ffi-help-version* "1.09.0")
 
 (define %summary
   "Compile a ffi-file to .scm and maybe .go.")
@@ -249,11 +249,10 @@ Report bugs to https://savannah.nongnu.org/projects/nyacc.\n"))
             (compile-ffi-file ffi-file options)
             (sfmt "... wrote `~A'\n" (fix-path scm-file)))
           (lambda (key fmt . args)
-            (throw 'ffi-help-error fmt args))))
+            (apply throw 'ffi-help-error fmt args))))
       (lambda (key fmt . args)
         (if (access? scm-file W_OK) (delete-file scm-file))
-        (apply fail fmt args)
-        (exit 1)))
+        (apply fail fmt args)))
     (unless (assq-ref options 'no-exec)
       (sfmt "compiling `~A' ...\n" (fix-path scm-file))
       (let ((go-file (compile-scm scm-file)))

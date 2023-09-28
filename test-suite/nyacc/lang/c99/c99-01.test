@@ -1,7 +1,7 @@
 ;; nyacc/lang/c99/c99-01.test           -*- scheme -*-
 ;;
-;; Copyright (C) 2017 Matthew R. Wette
-;; 
+;; Copyright (C) 2017,2023 Matthew R. Wette
+;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
 ;; notice and this notice are preserved.  This file is offered as-is,
@@ -22,15 +22,16 @@
     (lambda ()
       (parse-c99 #:inc-dirs incs #:mode 'code))))
 
-(define (parse-string str)
+(define* (parse-string str #:key cpp-defs)
   (with-input-from-string str
     (lambda ()
-      ;;(simple-format #t "\n~A\n" str)
-      (parse-c99 #:inc-dirs incs #:mode 'code))))
+      (parse-c99 #:inc-dirs incs
+                 #:cpp-defs (or cpp-defs '())
+                 #:mode 'code))))
 
 (define (parse-string-list . str-l)
   (parse-string (apply string-append str-l)))
-   
+
 (define ctr
   (let ((p (make-count-reporter))) (register-reporter (car p)) ((cadr p))))
 (register-reporter full-reporter)
@@ -61,7 +62,7 @@
             (op "=")
             (add (p-expr (ident "r")) (p-expr (fixed "1")))))
           (return (p-expr (ident "r")))))))))
-  
+
   (pass-if "skip space and #"
     (equal?
      (parse-file "exam.d/ex08.c")
@@ -139,7 +140,7 @@
          (block-item-list
           (decl (decl-spec-list (type-spec (fixed-type "int")))
                 (init-declr-list (init-declr (ident "x"))))))))))
-      
+
   (pass-if "spacing in tokenization"
     (let ((sx1 (parse-string "#define foo(X) # X\nchar *s = foo(abc def);\n"))
           (sx2 (parse-string "#define foo(X) # X\nchar *s = foo(abc  def);\n")))
@@ -216,7 +217,7 @@
       (decl (decl-spec-list
              (type-spec (float-type "double")))
             (init-declr-list (init-declr (ident "x")))))))
-    
+
   (pass-if "include w/ #defined arg "
     (pair? (parse-file "exam.d/ex15.c")))
 
@@ -295,7 +296,31 @@
                (ident "x")
                (initzer (p-expr (fixed "123")))))))))
 
-  )
+  ;; cpp undef
+  (pass-if "FOO=#f as #undef"
+    (let* ((code
+            (string-append
+             "#ifdef FOO\n"
+             "int ix;\n"
+             "#else\n"
+             "double xy;\n"
+             "#endif\n"))
+           (dtree (parse-string code #:cpp-defs '("FOO=1")))
+           (utree (parse-string code #:cpp-defs '("FOO=1" "FOO=#f"))))
+      (and
+       (equal?
+        dtree
+        '(trans-unit
+          (decl (decl-spec-list (type-spec (fixed-type "int")))
+                (init-declr-list (init-declr (ident "ix"))))))
+       (equal?
+        utree
+        '(trans-unit
+         (decl (decl-spec-list
+                (type-spec (float-type "double")))
+               (init-declr-list (init-declr (ident "xy")))))))))
+
+  #t)
 
 (exit (if (positive? (assq-ref ctr 'fail)) 1 0))
 ;; --- last line ---

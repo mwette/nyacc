@@ -5,10 +5,17 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-2023-XX-YY  V1.09.0
+2023-XX-YY  V1.10.0
 	* merged tsh language from nxdev branch
 	* worked on nx-utilities and libraries
 	* working cdata to replace bytevectors, for variable architecture
+
+2023-09-16  V1.09.0
+	* fixed error printing in compile-ffi.scm
+	* fix for bug #64667: ffi-help.scm(bounding-mtail-for-union-fields)
+
+2023-09-02  V1.08.6
+	* added C99 parser CPP behavior where "FOO=#f" results in #undef FOO
 
 2023-08-23  V1.08.5
 	* fixes on expand-typerefs, broken in V1.08.2-4
