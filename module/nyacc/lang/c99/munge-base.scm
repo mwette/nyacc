@@ -688,6 +688,9 @@
          (declr (or (sx-ref decl 2) `(ident ,(namer))))
          (mtail (and=> (sx-find 'type-spec specl) sx-tail))
          (m-declr (m-unwrap-declr declr mtail namer))
+         (tdef? (sx-match specl
+                  ((decl-spec-list (stor-spec (typedef)) . ,_) #t)
+                  (,_ #f)))
          ;;
          (init (sx-ref* decl 2 2 1))
          (comm (and=> (assq 'comment (sx-attr decl)) cadr))
@@ -698,8 +701,18 @@
                       (av (if comm (cons `(comment . ,comm) av) av))
                       (av (if xtrn (cons `(extern . #t) av) av))
                       (av (if init (cons `(initzer . ,init) av) av)))
-                 (and (pair? av) `(@ . ,av)))))
-    (if attr (cons* (car m-declr) attr (cdr m-declr)) m-declr)))
+                 (and (pair? av) `(@ . ,av))))
+         ;;
+         (head (car m-declr))
+         (tail (cdr m-declr))
+         (tail (if tdef? (cons '(typedef-for) tail) tail))
+         )
+
+    ;; tdef? => ("foo" (typedef-for) ...)
+    ;;(sferr "udecl->mdecl: tdef? => ~S\n" tdef?)
+    ;;(if attr (cons* (car m-declr) attr (cdr m-declr)) m-declr)
+    (if attr (cons* head attr tail) (cons head tail))
+    ))
 
 (define (md-attr mdecl)
   (if (and (pair? (cdr mdecl)) (pair? (cadr mdecl)) (eq? '@ (caadr mdecl)))
