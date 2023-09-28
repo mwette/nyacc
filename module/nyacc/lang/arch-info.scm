@@ -154,11 +154,11 @@
 
 #|
 ;; riscv 32 bit little endian
-(define sizeof-map/riscv
+(define sizeof-map/riscv32
   '((* . 4)
-    ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 8)
-    ("float" . 4) ("double" . 8)
-    ("unsigned short" . 2) ("unsigned" . 4) ("unsigned long" . 8)
+    ("char" . i8) ("short" . i16le) ("int" . i32le) ("long" . i32le)
+    ("float" . f32le) ("double" . f64le)
+    ("unsigned short" . u16le) ("unsigned" . u32le) ("unsigned long" . u32le)
     ;;
     ("size_t" . 8) ("ssize_t" . 8) ("ptrdiff_t" . 8)
     ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2)
@@ -174,14 +174,13 @@
     ("intptr_t" . 4) ("uintptr_t" . 4)
     ("wchar_t" . 4) ("char16_t" . 2) ("char32_t" . 4)
     ;;
-    ("long double" . 16le)
+    ("long double" . 16)
     ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
     ("signed long long int" . 8) ("unsigned long long" . 8)
     ("unsigned long long int" . 8)))
 
 (define alignof-map/riscv sizeof-map/riscv)
 |#
-
 
 (define mtype-map/x86_64
   '((* . u64le)

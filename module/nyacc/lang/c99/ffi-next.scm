@@ -367,6 +367,7 @@
          (mtail (md-tail mdecl)))
 
     (sferr "ffi-next(cnvt-udecl):\n")
+    (pperr udecl)
     (pperr mdecl)
     (quit)
 
@@ -381,7 +382,7 @@
 
     ))
 
-(display "ffi-next/TODO: add undef for c99; maybe FOO=! or !FOO vs FOO=1")
+(display "ffi-next/TODO: add undef for c99; maybe FOO=! or !FOO vs FOO=1\n")
 
 ;; === enums and #defined => lookup
 
