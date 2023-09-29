@@ -19,7 +19,7 @@
 ;; }
 
 ;; syntax cond {else}
-;;  {{cond {(expr) body ...} {(expr) body ...} ... {else 
+;;  {{cond {(expr) body ...} {(expr) body ...} ... {else
 ;;
 
 (define-module (nyacc lang tsh parser)
@@ -186,7 +186,7 @@
       (lambda () (set-current-input-port port))
       (lambda () (parse-tsh #:debug debug))
       (lambda () (set-current-input-port prev)))))
-  
+
 (include-from-path "nyacc/lang/tsh/mach.d/tsh-stmt-tab.scm")
 (include-from-path "nyacc/lang/tsh/mach.d/tsh-stmt-act.scm")
 
@@ -208,9 +208,11 @@
 	    (catch 'nyacc-error
 	      (lambda () (raw-ia-parser lexer #:debug #f))
 	      (lambda (key fmt . args)
-		(apply simple-format (current-error-port) fmt args)
-		(newline (current-error-port))
-		#f)))
+		;;(apply simple-format (current-error-port) fmt args)
+		;;(newline (current-error-port))
+                (simple-format (current-error-port)
+                               "parse failed on input ~S\n" (cadddr args))
+                (apply throw 'syntax-error (cdddr args)))))
 	  (lambda () (set-current-input-port prev)))))))
 
 ;; --- last line ---
