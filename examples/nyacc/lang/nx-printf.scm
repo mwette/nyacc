@@ -29,7 +29,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang nx-format)
+(define-module (nyacc lang nx-printf)
   #:export (nx-printf
             parse-format-string apply-fmt
             mat-disp vec-disp))
@@ -331,7 +331,7 @@
   (let* ((conv (array-type array))
          (dims (array-dimensions array))
          (dimz (map (lambda (i) (min i 8)) dims))
-         (spec (parse-conv-str format)))
+         (spec (parse-format-string format)))
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (do ((j 0 (1+ j))) ((= j (list-ref dimz 1)))
         (display " " port)
@@ -353,7 +353,7 @@
   (let* ((conv (array-type array))
          (dims (array-dimensions array))
          (dimz (map (lambda (i) (min i 8)) dims))
-         (spec (parse-conv-str format)))
+         (spec (parse-format-string format)))
     (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
       (display " " port)
       (apply-fmt port spec (array-ref array i))
@@ -370,38 +370,6 @@
    (else
     (vec-disp/strict array port format))))
 
-
-;; === testing
-
-(define (parse-conv-str str) ;; test routine
-  (let ((port (open-input-string str))) (parse-fmt (read-char port) port)))
-
-(define (test-istr)
-  (define (doit fmt val)
-    (sferr "~S ~S => ~S\n" fmt val (apply int->str val (parse-conv-str fmt))))
-  (doit "%d" 1)
-  (doit "%-04x" 1)
-  )
-
-(define (test-fstr)
-  (define (doit fmt val)
-    (sferr "\t~S\t~S\t=> ~S\n"
-           fmt val (apply flt->fstr val (parse-conv-str fmt))))
-  (doit "%f" 123.45)
-  (doit "%7.1f" 123.45)
-  (doit "%-9.6f" 12.3456789)
-  (doit "%-9.6f" -12.3456789)
-  (doit "%3.1f" 1.23)
-  (doit "%3.1f" 0.123)
-  (doit "%3.1f" 0.0123)
-  (doit "%.1f" 1.23)
-  (doit "%.1f" 0.123)
-  (doit "%.1f" 0.0123)
-  )
-
-(export parse-conv-str)
-(export test-istr test-fstr)
-(export int->str flt->fstr flt->estr)
 
 
 ;; === deprecated
