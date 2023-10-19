@@ -519,4 +519,24 @@ typedef struct _GObjectClass {
     (pp99 tree)
     ))
 
+(when #f
+  (let* ((file "/usr/lib/gcc/x86_64-linux-gnu/12/include/stddef.h")
+         (file "/usr/include/glib-2.0/glib/gmacros.h")
+         (file "/usr/include/glib-2.0/glib.h")
+         (ginc '("/usr/include/glib-2.0/"
+                 "/usr/lib/x86_64-linux-gnu/glib-2.0/include"))
+         (tree (parse-file
+                file
+                #:inc-dirs (append ginc (get-sys-inc-dirs))))
+         )
+    #f))
+
+(when #f ;; bug in 1.08
+  (let* ((make-cpi (@@ (nyacc lang c99 parser) make-cpi))
+         (cpi-defs (@@ (nyacc lang c99 parser) cpi-defs))
+         (defs '("YY=#f" "ZZ=(-1)"))
+         (info (make-cpi #f #f defs '(".") '())))
+    (pp (cpi-defs info))
+    #f))
+
 ;; --- last line ---
