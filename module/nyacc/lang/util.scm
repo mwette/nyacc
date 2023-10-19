@@ -290,7 +290,7 @@ See the file COPYING included with the this distribution.")
 
 ;; @deffn {Procedure} expand-tabs str [col]
 ;; Expand tabs where the string @var{str} starts in column @var{col}
-;; (default 0). 
+;; (default 0).
 ;; @end deffn
 (define* (expand-tabs str #:optional (col 0))
 
@@ -361,7 +361,7 @@ See the file COPYING included with the this distribution.")
        (set-column!
         (lambda (val)
           (set! column val)))
-       
+
        (sf
         (lambda (fmt . args)
           (let* ((str (apply simple-format #f fmt args))
@@ -405,12 +405,12 @@ See the file COPYING included with the this distribution.")
       ((maxcol 78)
        (column 0)
        (sf (lambda (fmt . args)
-             (let* ((fmt (if (and (positive? len)
+             (let* ((len (string-length fmt))
+                    (fmt (if (and (positive? len)
                                   (char=? #\newline (string-ref fmt (1- len))))
                              (string-append (substring fmt 0 (1- len)) " ")
                              fmt))
-                    (str (apply simple-format #f fmt args))
-                    (len (string-length str)))
+                    (str (apply simple-format #f fmt args)))
                (cond
                 ((zero? len) #t)        ; we reference str[0] next
                 ((and (equal? len 1) (char=? #\newline (string-ref str 0))) #t)
@@ -438,7 +438,7 @@ See the file COPYING included with the this distribution.")
        ((eqv? 'push arg0) #f)
        ((eqv? 'pop arg0) #f)
        (else (throw 'nyacc-error "pp-formatter/ugly: bad args"))))))
-  
+
 ;; @deffn {Procedure} move-if-changed src-file dst-file [sav-file]
 ;; Return @code{#t} if changed.
 ;; @end deffn
@@ -450,7 +450,7 @@ See the file COPYING included with the this distribution.")
           (system (simple-format #f "mv ~A ~A" dst-file sav-file)))
       (system (simple-format #f "mv ~A ~A" src-file dst-file))
       #t))
-    
+
   (cond
    ;; src-file does not exist
    ((not (access? src-file R_OK)) #f)
@@ -467,7 +467,7 @@ See the file COPYING included with the this distribution.")
    ;; both exist, update
    ((access? dst-file W_OK)
     (doit))
-   
+
    (else
     (simple-format (current-error-port) "move-if-changed: no write access\n")
     #f)))
