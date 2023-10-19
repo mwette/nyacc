@@ -89,7 +89,7 @@
 ;; Replaces get-string-all from (ice-9 textual-ports).
 (define (read-rest ch)
   (reverse-list->string
-   (let loop ((res '())(ch ch))
+   (let loop ((res '()) (ch ch))
      (if (eof-object? ch) res
          (loop (cons ch res) (read-char))))))
 
