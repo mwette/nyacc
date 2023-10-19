@@ -27,7 +27,7 @@ copy of the license is included with the distribution as @file{COPYING.DOC}.
 @titlepage
 @title Not Yet Another Compiler-Compiler
 @subtitle A LALR(1) Parser Generator Implemented in Guile
-@subtitle User's manual for NYACC version 1.09.0
+@subtitle User's manual for NYACC version 1.09.1
 @author Matt Wette
 @end titlepage
 
