@@ -59,9 +59,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (1 08 6))
+  #:version (1 08 7))
 
-(define *ffi-help-version* "1.08.6")
+(define *ffi-help-version* "1.08.7")
 
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
