@@ -64,20 +64,18 @@
 ;; @end example
 ;; @end deffn
 (define (split-cppdef defstr)
-  (let ((x2st (string-index defstr #\()) ; start of args
-	(x2nd (string-index defstr #\))) ; end of args
-	(x3 (string-index defstr #\=)))  ; start of replacement
-    (cond
-     ((not x3) (cons defstr ""))
-     ((and x2st x3)
-      (cons* (substring defstr 0 x2st)
-	     (string-split
-	      (string-delete #\space (substring defstr (1+ x2st) x2nd))
-              #\,)
-	     (substring defstr (1+ x3))))
-     (else
-      (let ((repl (substring defstr (1+ x3))))
-        (cons (substring defstr 0 x3) (if (string=? repl "#f") #f repl)))))))
+  (let* ((ex (string-index defstr #\=)) ; = checked before
+         (lhs (substring defstr 0 ex))
+         (rhs (substring defstr (1+ ex)))
+         (lx (string-index lhs #\())
+         (rx (string-index lhs #\)))
+         )
+    (cons
+     (if lx
+         (cons (substring lhs 0 lx)
+               (string-split (substring lhs (1+ lx) (1- rx)) #\,))
+         lhs)
+     (if (string=? "#f" rhs) #f rhs))))
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers

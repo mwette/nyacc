@@ -519,4 +519,12 @@ typedef struct _GObjectClass {
     (pp99 tree)
     ))
 
+(when #t
+  (let* ((make-cpi (@@ (nyacc lang c99 parser) make-cpi))
+         (defs '("FOO=1" "BAR(X)=(X+1)"))
+         (info (make-cpi #f #f defs '(".") '())))
+    (pp info)
+    #f))
+
+
 ;; --- last line ---
