@@ -293,37 +293,51 @@
 ;; (nx-printf #f "%7.1f" 123.45) => "  123.4"
 ;; (nx-printf #f "%-9.6f" 12.3456789) => "12.345678"
 ;; (nx-printf #f "%-9.6f" -12.3456789) => "-12.345678"
-;; (nx-printf #f "%.1f" 1.23) => "1.2"
+;; (nx-printf #f "x=%.1f" 1.23) => "x=1.2"
+;; (nx-printf #f '("x=" (#\f #f 1) "\n") 1.23) => 1.2
 ;; @end example
 ;; @end deffn
 (define (nx-printf port fmt . vals)
   "- Scheme: nx-printf port fmt . vals
      Like C's printf, where PORT can be a port, or '#t' for the current
      output port, or '#f' for a string.  Returns the formatted string if
-     PORT equal to '#f'.  Examples:
+     PORT equal to '#f'.  This is accomplished by first parsing FMT into
+     a list of formatting objects and strings (see
+     'parse-format-string') and then outputting the sequence: either a
+     string, or a format object applied to the next of VALS (see
+     'apply-fmt').  See, for example,
+     <https://www.gnu.org/software/coreutils/printf>.
+     Examples:
           (nx-printf #f \"0x%04x\" 23) => \"0x0017\"
           (nx-printf #f \"%f\" 123.45) => \"123.450000\"
           (nx-printf #f \"%7.1f\" 123.45) => \"  123.4\"
           (nx-printf #f \"%-9.6f\" 12.3456789) => \"12.345678\"
           (nx-printf #f \"%-9.6f\" -12.3456789) => \"-12.345678\"
-          (nx-printf #f \"%.1f\" 1.23) => \"1.2\""
+          (nx-printf #f \"x=%.1f\" 1.23) => \"x=1.2\"
+          (nx-printf #f '(\"x=\" (#\\f #f 1) \"\\n\") 1.23) => 1.2"
   (cond
    ((eq? port #f)
     (call-with-output-string (lambda (port) (apply nx-printf port fmt vals))))
    ((eq? port #t)
     (apply nx-printf (current-output-port) fmt vals))
-   (else
+   ((port? port)
     (let* ((fmts (if (string? fmt) (parse-format-string fmt) fmt)))
+      (unless fmts (error (simple-format #f "nx-printf: bad fmt str: ~S" fmts)))
       (let loop ((n 0) (fmts fmts) (vals vals))
         (cond
-         ((null? fmts) (if (pair? vals) (error "too many vals")) (if #f #f))
+         ((null? fmts)
+          (if (pair? vals) (error "nx-printf: more values than formatters"))
+          (if #f #f))
          ((string? (car fmts))
           (display (car fmts) port)
           (loop (+ n (string-length (car fmts))) (cdr fmts) vals))
-         ((null? vals) (error "too many fmts"))
+         ((null? vals)
+          (error "nx-printf: more formatters than values"))
          (else
           (let ((n (+ n (apply-fmt port (car fmts) (car vals)))))
-            (loop n  (cdr fmts) (cdr vals))))))))))
+            (loop n  (cdr fmts) (cdr vals))))))))
+   (else
+    (error (simple-format #f "nx-printf: bad port argument: ~S" port)))))
 
 ;; === matrices and vectors ========
 
