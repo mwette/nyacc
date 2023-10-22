@@ -3,11 +3,26 @@
 
 exec guile $0
 !#
+;;; nyacc/lang/nx-repl.scm - multi-language REPL
 
-;; replace this:
+;; Copyright (C) 2023 Matthew Wette
+;;
+;; This library is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU Lesser General Public
+;; License as published by the Free Software Foundation; either
+;; version 3 of the License, or (at your option) any later version.
+;;
+;; This library is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; Lesser General Public License for more details.
+;;
+;; You should have received a copy of the GNU Lesser General Public License
+;; along with this library; if not, see <http://www.gnu.org/licenses/>
 
-;; with ...y
+;;; Code:
 
+;; (define-module ...)
 
 (use-modules (ice-9 history))
 (use-modules (ice-9 readline))
@@ -61,23 +76,29 @@ exec guile $0
                   ;; restore original C handler.
                   (sigaction SIGINT #f))))))))
 
-(define (nx-repl)
+(define (install-locale)
+  (and (defined? 'setlocale)
+       (catch 'system-error
+         (lambda ()
+           (setlocale LC_ALL ""))
+         (lambda (key subr fmt args errno)
+           (format (current-error-port)
+                   "warning: failed to install locale: ~a~%"
+                   (strerror (car errno)))))))
+
+(define* (nx-repl
+          #:key
+          (use '((ice-9 session) (ice-9 regex) (ice-9 threads)))
+          (language (current-language))
+          )
   (let ((guile-user-module (resolve-module '(guile-user))))
     (set-current-module guile-user-module)
-    ;;(process-use-modules '((ice-9 session) (ice-9 regex) (ice-9 threads)))
+    (process-use-modules use)
 
     (call-with-sigint
      (lambda ()
-       (and (defined? 'setlocale)
-            (catch 'system-error
-              (lambda ()
-                (setlocale LC_ALL ""))
-              (lambda (key subr fmt args errno)
-                (format (current-error-port)
-                        "warning: failed to install locale: ~a~%"
-                        (strerror (car errno))))))
-
-       (let ((status (start-nx-repl (current-language))))
+       (install-locale)
+       (let ((status (start-nx-repl language)))
          (run-hook exit-hook)
          status)))))
 
