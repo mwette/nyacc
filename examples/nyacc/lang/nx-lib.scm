@@ -75,8 +75,8 @@
 (define nx-undefined (if #f #f))
 
 ;; @deffn {Procedure} nx-get-method obj name
-;; find a 
-;; @end deffn 
+;; find a
+;; @end deffn
 (define (nx-get-method obj name)
   #f)
 
@@ -144,10 +144,14 @@
     (_ sx)))
 (export add-src-prop-attr)
 
+#|
 (define (nx-error fmt . args)
   (raise-exception
    (make-exception-with-message
     (apply simple-format #f fmt args))))
+|#
+(define (nx-error fmt . args)
+  (throw 'error (apply simple-format #f fmt args)))
 
 (define (nx-use-module path)
   (module-use! (current-module) (resolve-interface path)))
@@ -237,7 +241,7 @@
   (if #f #f))
 
 ;; @deffn {Procedure} uninstall-inline-language-evaluator
-;; Clear the reader macro @code{#<}.  
+;; Clear the reader macro @code{#<}.
 ;; @end deffn
 (define (uninstall-inline-language-evaluator)
   "- Procedure: uninstall-inline-language-evaluator
