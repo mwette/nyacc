@@ -169,24 +169,29 @@
 
 (define ct:struct
   (case-lambda
-    ((fields) (ct:struct #f fields))
-    ((pack fields)
-     ;; size: running size; dflds : declared fields
-     (let loop ((iflds '()) (size 0) (alnmt 0) (dflds fields))
-       (cond
-        ((null? dflds)
-         (something))
-        (else
-         (let ((name (car flds))
-               (type (cadr flds))
-               (bits (and=> (pair? (cddr flds)) caddr))
-               (csize (ctype-size type))
-               (calnmt (ctype-alignment type)))
-           (let* ((oset (incr-size 0 calnmt size))
-                  (size (incr-size size calnmt csize)))
-             (loop (cons (make-field name type oset) cflds)
-                   (max alnmt calnmt) (cdr dflds)))))
-    ))
+   ((fields) (ct:struct #f fields))
+   ((pack fields)
+    ;; size: running size; dflds : declared fields
+    (let loop ((iflds '()) (size 0) (alnmt 0) (dflds fields))
+      (cond
+       ((null? dflds)
+        (something))
+       (else
+        (let ((name (car flds))
+              (type (cadr flds))
+              (bits (and=> (pair? (cddr flds)) caddr))
+              (csize (ctype-size type))
+              (calnmt (ctype-alignment type)))
+          (let* ((oset (incr-size 0 calnmt size))
+                 (size (incr-size size calnmt csize)))
+            (loop (cons (make-field name type oset) cflds)
+                  (max alnmt calnmt) (cdr dflds)))))
+       ))
+    )))
+
+
+(define (ct-sel ct ix fsel . rest) ; (ct ix (sel . rest)) => (ct ix rest)
+  #f)
 
 (define (test-01)
   (define ct1 (make-ctype "foo_t" (bs:struct '((x double) (y double)))))
