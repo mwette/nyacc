@@ -212,7 +212,8 @@
 		;;(newline (current-error-port))
                 (simple-format (current-error-port)
                                "parse failed on input ~S\n" (cadddr args))
-                (apply throw 'syntax-error (cdddr args)))))
+                ;;(apply throw 'syntax-error (cdddr args))
+                (if #f #f))))
 	  (lambda () (set-current-input-port prev)))))))
 
 ;; --- last line ---

@@ -26,7 +26,7 @@
   #:use-module (nyacc lang tsh parser)
   #:use-module (nyacc lang tsh compile-tree-il)
   #:use-module (nyacc lang nx-lib)
-  #:use-module (nyacc lang nx-format)
+  #:use-module (nyacc lang nx-printf)
   #:use-module ((srfi srfi-1) #:select (split-at last))
   #:use-module (srfi srfi-111)          ; boxes
   #:use-module (system base compile)
@@ -84,7 +84,8 @@
    ((port val) (display val port) (newline))
    ))
 
-(define-public tsh:format nx-format)
+(define-public (tsh:format fmt . args)
+  (apply nx-printf #f fmt args))
 
 (define-public tsh:last last)
 
@@ -114,7 +115,7 @@
         (lambda (indx rest)
           (tsh:indexed-ref (apply array-ref obj indx) rest)))))
    (else (nx-error "indexed-ref on non-array, non-struct"))))
-  
+
 (define-public (tsh:indexed-set! obj indx val)
   ;; complicated : from end get symbol or longest string of ints
   (let loop ((l1 '()) (l2 '()) (l3 indx))
@@ -131,7 +132,7 @@
       (loop (cons (car l3) (append l2 l1)) '() (cdr l3)))
      (else
       (nx-error "expecting symbol or integer index, got: ~S" (car l3))))))
-  
+
 (define-public tsh:vtype
   (lambda (ary)
     (case (array-type ary)
@@ -165,7 +166,7 @@
   (set! (@@ (nyacc lang tsh compile-tree-il) show-xtil) #t))
 (define (tsh:hide_xtil)
   (set! (@@ (nyacc lang tsh compile-tree-il) show-xtil) #f))
-    
+
 ;; === xdict
 
 (define xdict
@@ -186,7 +187,7 @@
     ("unbox" . ,(xlib-ref 'tsh:unbox))
     ("isbox" . ,(xlib-ref 'tsh:isbox))
     ("setbox" . ,(xlib-ref 'tsh:setbox))
-    ;; 
+    ;;
     ("show_sxml" . ,(xlib-ref 'tsh:show_sxml))
     ("hide_sxml" . ,(xlib-ref 'tsh:hide_sxml))
     ("show_xtil" . ,(xlib-ref 'tsh:show_xtil))

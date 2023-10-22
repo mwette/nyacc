@@ -54,7 +54,7 @@
 ;; @deffn {Procedure} sxml->xtil exp env opts
 ;; Compile SXML tree to external Tree-IL representation.
 ;; @end deffn
-			  
+
 (define-public (sxml->xtil exp env opts)
 
   (define (fD tree seed dict) ;; => tree seed dict
@@ -87,7 +87,7 @@
 
       ((eval . ,stmts)
        (values tree '() (nx-add-lexical "return" (nx-push-scope dict))))
-      
+
       ((switch . ,stmts)
        (values tree '()
                (nx-add-lexicals "swx~val" (nx-push-scope dict))))
@@ -95,11 +95,11 @@
       ((for . ,stmts)
        (values tree '()
                (nx-add-lexicals "continue" "break" (nx-push-scope dict))))
-      
+
       ((while . ,stmts)
        (values tree '()
                (nx-add-lexicals "continue" "break" (nx-push-scope dict))))
-      
+
       ((proc (ident ,name) ,args ,body)
        (let ((form `(set (ident ,name) (lambda (@ (name ,name)) ,args ,body))))
          (fD (+SP form) '() dict)))
@@ -111,7 +111,7 @@
               (dict (fold               ; add args to local scope
                      (lambda (a d) (nx-add-lexical (arg-name a) d))
                      dict args))
-	      (args (fold-right         ; ident -> lexical 
+	      (args (fold-right         ; ident -> lexical
 		     (lambda (a l)
                        (let ((ref (nx-lookup (arg-name a) dict)))
 		         (cons (cons* (car a) ref (cddr a)) l)))
@@ -127,7 +127,7 @@
        (values (+SP `(incr/ix ,var ,ix ,val)) '() dict))
       ((incr/ix (ident ,var) ,ix)
        (values (+SP `(incr/ix ,var ,ix (const 1))) '() dict))
-      
+
       ((call (ident ,name) . ,args)
        (let ((ref (nx-lookup name dict)))
 	 (unless ref (nx-error "not defined: ~A" name))
@@ -178,13 +178,13 @@
     (define +SP (make-+SP tree))
     (define pass-through '(@@ toplevel lexical abort
                            arg-list arg opt-arg rest-arg))
-    
+
     (if
      (null? tree)
      (if (null? kseed)
-	 (values seed kdict) 
+	 (values seed kdict)
 	 (values (cons kseed seed) kdict))
-     
+
      (case (car tree)
 
        ;; before leaving add a call to make sure all toplevels are defined
@@ -259,15 +259,15 @@
 		       (make-switch val (cdr kseed) (car kseed))
 		       (make-switch val kseed '(void)))))
 	  (values (cons (+SP sw) seed) (nx-pop-scope kdict))))
-       
+
        ((case)
 	(let ((val (+SP (reverse kseed))))
-	  (values 
+	  (values
 	   (if (and (pair? seed) (eq? (caar seed) 'default))
 	       (cons* (car seed) val (cdr seed)) ;; default first
 	       (cons val seed))
 	   kdict)))
-       
+
        ;; for allows continue and break
        ((for)
         (let* ((body (list-ref kseed 0))
@@ -292,7 +292,7 @@
         (values
          (cons `(abort ,(nx-lookup "break" kdict) '() (const ())) seed)
          kdict))
-       
+
        ((set)
 	(let* ((value (car kseed))
 	       (nref (cadr kseed))
@@ -330,6 +330,8 @@
 	  (values (cons (+SP stmt) seed) kdict)))
 
        ((format)
+        ;; This could be made more efficient for literal format strings
+        ;; using the parse-format-string procedure from nx-printf module.
 	(let* ((tail (rtail kseed))
 	       (stmt `(call ,(xlib-ref 'tsh:format) . ,tail)))
 	  (values (cons (+SP stmt) seed) kdict)))
@@ -358,7 +360,7 @@
        ((mod) (values (+SP (cons (op-call 'tsh:% kseed) seed)) kdict))
        ((add) (values (+SP (cons (op-call 'tsh:+ kseed) seed)) kdict))
        ((sub) (values (+SP (cons (op-call 'tsh:- kseed) seed)) kdict))
-       
+
        ;; lshift rshift rrshift
        ((lshift) (values (+SP (cons (op-call 'tsh:lshift kseed) seed)) kdict))
        ((rshift) (values (+SP (cons (op-call 'tsh:rshift kseed) seed)) kdict))
@@ -419,7 +421,7 @@
   ;; Need to make an interp.  All TCLish commands execute in an interp
   ;; so need (interp-lookup at turntime)
   (let ((cenv (if (module? env) (cons* `(@top . #t) `(@M . ,env) xdict) env)))
-    (if exp 
+    (if exp
 	(call-with-values
 	    (lambda () (sxml->xtil exp cenv opts))
 	  (lambda (exp cenv)
