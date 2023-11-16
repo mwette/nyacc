@@ -9,6 +9,15 @@
 
 ;;(add-to-load-path (getcwd))
 
+(use-modules (ice-9 pretty-print))
+(use-modules (ice-9 match))
+(use-modules ((srfi srfi-1) #:select (last fold-right)))
+(use-modules (srfi srfi-11))            ; let-values
+(use-modules (rnrs arithmetic bitwise))
+(use-modules ((system foreign) #:prefix ffi:))
+(use-modules (sxml fold))
+(use-modules ((sxml xpath) #:hide (filter)))
+
 (use-modules (nyacc lang c99 parser))
 (use-modules (nyacc lang c99 cxeval))
 (use-modules (nyacc lang c99 pprint))
@@ -22,14 +31,6 @@
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
-(use-modules (sxml fold))
-(use-modules ((sxml xpath) #:hide (filter)))
-(use-modules ((srfi srfi-1) #:select (last fold-right)))
-(use-modules (srfi srfi-11))            ; let-values
-(use-modules (rnrs arithmetic bitwise))
-(use-modules ((system foreign) #:prefix ffi:))
-(use-modules (ice-9 pretty-print))
-(use-modules (ice-9 match))
 
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
@@ -519,12 +520,165 @@ typedef struct _GObjectClass {
     (pp99 tree)
     ))
 
-(when #t
+(when #f
   (let* ((make-cpi (@@ (nyacc lang c99 parser) make-cpi))
          (defs '("FOO=1" "BAR(X)=(X+1)"))
          (info (make-cpi #f #f defs '(".") '())))
     (pp info)
     #f))
 
+(when #f
+  (let* ((code
+          (string-append
+           "#define X 1\n"
+           "int x1 = X;\n"
+           "#pragma push_macro(\"X\")\n"
+           "int x2 = X;\n"
+           "#undef X\n"
+           "int x3 = X;\n"
+           "#define X 2\n"
+           "int x4 = X;\n"
+           "#pragma pop_macro(\"X\")\n"
+           "int x5 = X;\n"
+           ))
+         (tree (parse-string code))
+         )
+    ;;(pp tree)
+    #f))
 
+#|
+(define (specl-type specl)
+    (sx-match (sx-find 'type-spec (sx-tail specl))
+      ((type-spec (fixed-type ,name))
+       name)
+      ;; May need case for ((type-spec (typename "foo_t"))
+      (,hmm (sf "missed ~S\n" hmm) (quit))
+      ))
+
+;; new: need alignof before sizeof
+(define (sizeof-mtail mtail udict) ;; => (values size align)
+
+  (define (exec/decl decl size base-align update)
+    (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
+          (declrs (or (and=> (sx-ref decl 2) sx-tail) '((ident "_")))))
+      (let loop ((size size) (base-align base-align) (declrs declrs))
+        (if (null? declrs)
+            (values size base-align)
+            (call-with-values
+                (lambda ()
+                  (sizeof-mtail
+                   (cdr (m-unwrap-declr (car declrs) mtail)) udict))
+              (lambda (elt-sz elt-al)
+                (loop (update elt-sz elt-al size)
+                      (max elt-al base-align) (cdr declrs))))))))
+
+  (match mtail
+    (`((pointer-to) . ,rest)
+     (values (sizeof-basetype '*) (alignof-basetype '*)))
+    (`((fixed-type ,name))
+     (values (sizeof-basetype name) (alignof-basetype name)))
+    (`((float-type ,name))
+     (values (sizeof-basetype name) (alignof-basetype name)))
+    (`((array-of ,dim) . ,rest)
+     (let ((mult (eval-c99-cx dim udict)))
+       (call-with-values
+           (lambda ()
+             (sizeof-mtail rest udict))
+         (lambda (size align)
+           (values (* mult size) align)))))
+    (`((struct-def (field-list . ,fields)))
+     (let loop ((size 0) (align 0) (flds fields))
+       (cond
+        ((null? flds) (values (incr-size 0 align size) align))
+        ((eq? 'comp-decl (sx-tag (car flds)))
+         (call-with-values
+             (lambda () (exec/decl (car flds) size align incr-size))
+           (lambda (size align)
+             (loop size align (cdr flds)))))
+        (else (loop size align (cdr flds))))))
+    (`((struct-def (ident ,name) (field-list . ,fields)))
+     (sizeof-mtail `((struct-def (field-list . ,fields))) udict))
+    (`((union-def (field-list . ,fields)))
+     (let loop ((size 0) (align 0) (flds fields))
+       (cond
+        ((null? flds) (values (incr-size 0 align size) align))
+        ((eq? 'comp-decl (sx-tag (car flds)))
+         (call-with-values
+             (lambda () (exec/decl (car flds) size align maxi-size))
+           (lambda (size align)
+             (loop size align (cdr flds)))))
+        (else (loop size align (cdr flds))))))
+    (`((union-def (ident ,name) (field-list . ,fields)))
+     (sizeof-mtail `((union-def (field-list . ,fields))) udict))
+    (`((enum-ref . ,rest))
+     (values (sizeof-basetype "int") (alignof-basetype "int")))
+    (`((enum-def . ,rest))
+     (values (sizeof-basetype "int") (alignof-basetype "int")))
+    (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
+       (throw 'c99-error "coding error"))))
+
+(define* (sizeof-specl/declr specl declr #:optional (udict '())) ;; => values
+  (let* ((udecl `(udecl ,specl ,declr))
+         (xdecl (expand-typerefs udecl udict))
+         (mdecl (udecl->mdecl xdecl)))
+    (sizeof-mtail (cdr mdecl) udict)))
+|#
+
+#|
+;; type for unnamed bitfield does not affect alignment
+(define (bitfield-aln flds)
+
+  #;(let loop ((bfal 0) (flds flds))
+    (if (null? flds) bfal
+        (sx-match (car flds)
+          ;;
+          )))
+
+  #f)
+
+(define (process-flds flds)
+  (define soi (sizeof-basetype "int"))
+  (let loop ((signed? #f) (size soi) (shift 0) (flds flds))
+    (if (null? flds) size
+        (sx-match (car flds)
+          ((comp-udecl
+            ,specl
+            (comp-declr (bit-field (ident ,name) (p-expr (fixed ,bsiz)))))
+           (let ((bsiz (string->number bsiz)))
+             (if (> (+ shift bsiz) soi)
+                 (loop (+ size soi) bsiz (cdr flds))
+                 (loop size (+ shift bsiz) (cdr flds)))))
+          (,_
+           (pp (car flds))
+           (loop #f 0 0 (cdr flds)))
+          ))))
+
+(when #t
+  (let* ((code
+          (string-append
+           "struct foo {\n"
+           "  int x;\n"
+           "  int y1: 1;\n"
+           "  int y2: 2;\n"
+           "  int y3: 3;\n"
+           "  int z;\n"
+           "} x;\n"
+           ))
+         (tree (parse-string code))
+         (flds (sx-tail (sx-ref* tree 1 1 1 1 2)))
+         (flds (fold unitize-decl '() flds))
+         ;;(flds (expand-typerefs flds '()))
+         )
+    ;;(pp tree)
+    ;;(pp decl)
+    ;;(pp flds)
+    (process-flds flds)
+    #f))
+|#
+
+;; eval-sizeof-mtail mmissed:
+;; ((bit-field (p-expr (fixed "16"))))
+;;  (fixed-type "unsigned int"))
+
+;; __builtin_offsetof(...)
 ;; --- last line ---
