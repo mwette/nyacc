@@ -1,6 +1,6 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 6.8, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.0.3, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!-- Copyright (C) 2017-2022 - Matthew R. Wette.
@@ -25,21 +25,12 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <link href="dir.html#Top" rel="prev" title="(dir)">
 <style type="text/css">
 <!--
-a.copiable-anchor {visibility: hidden; text-decoration: none; line-height: 0em}
-a.summary-letter {text-decoration: none}
-blockquote.indentedblock {margin-right: 0em}
-div.display {margin-left: 3.2em}
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
 div.example {margin-left: 3.2em}
-kbd {font-style: oblique}
-pre.display {font-family: inherit}
-pre.format {font-family: inherit}
-pre.menu-comment {font-family: serif}
-pre.menu-preformatted {font-family: serif}
-span.nolinebreak {white-space: nowrap}
-span.roman {font-family: initial; font-weight: normal}
-span.sansserif {font-family: sans-serif; font-weight: normal}
-span:hover a.copiable-anchor {visibility: visible}
-ul.no-bullet {list-style: none}
+pre.format-preformatted {font-family: inherit}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
 -->
 </style>
 
@@ -47,34 +38,33 @@ ul.no-bullet {list-style: none}
 </head>
 
 <body lang="en">
-<h1 class="settitle" align="center">FFI Helper&rsquo;s Guide</h1>
 
 
 
 
 <div class="format">
-<pre class="format">FFI Helper User Guide
+<pre class="format-preformatted">FFI Helper User Guide
 Matt Wette
 October 2022
-With NYACC Version 1.09.1
+With NYACC Version 1.09.2
 </pre></div>
 
-<div class="top" id="Top">
-<div class="header">
+<div class="top-level-extent" id="Top">
+<div class="nav-panel">
 <p>
 Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
 </div>
-<span id="NYACC-FFI-Helper-Guide"></span><h1 class="top">NYACC FFI Helper Guide</h1>
+<h1 class="top" id="NYACC-FFI-Helper-Guide">NYACC FFI Helper Guide</h1>
 <p>This is a user guide for the NYACC FFI Helper.
 </p>
 
 <hr>
-<span id="Introduction"></span><div class="header">
+<a class="node-id" id="Introduction"></a><div class="nav-panel">
 <p>
  &nbsp; </p>
 </div>
-<h4 class="node-heading">Introduction</h4>
-<span id="Introduction-1"></span><h3 class="heading">Introduction</h3>
+<h4 class="node">Introduction</h4>
+<h3 class="heading" id="Introduction-1">Introduction</h3>
 
 <p>The acronym FFI stands for &ldquo;Foreign Function Interface&rdquo;.  It refers
 to the Guile facility for binding functions and variables from C source
@@ -82,83 +72,83 @@ libraries into Guile programs.  This distribution provides utilities
 for generating a loadable Guile module from a set of C declarations
 and associated libraries.  The C declarations can, and conventionally
 do, come from naming a set of C include files.  The
-nominal method for use is to write a <em>ffi-module</em> specification
-in a file which includes a <code>define-ffi-module</code> declaration, and
-then use the command <code>guild compile-ffi</code> to produce an associated
+nominal method for use is to write a <em class="emph">ffi-module</em> specification
+in a file which includes a <code class="code">define-ffi-module</code> declaration, and
+then use the command <code class="code">guild compile-ffi</code> to produce an associated
 file of Guile Scheme code.
 </p><div class="example">
-<pre class="example">$ guild compile-ffi ffi/cairo.ffi
+<pre class="example-preformatted">$ guild compile-ffi ffi/cairo.ffi
 wrote `ffi/cairo.scm'
 </pre></div>
 <p>The FH does not generate C code.  The hooks to access functions in the
-Cairo library are provided in 100% Guile Scheme via <code>(system
+Cairo library are provided in 100% Guile Scheme via <code class="code">(system
 foreign)</code>.
 </p>
 <p>To generate Guile Scheme for smaller C code units one can
-write a ffi-module with the <code>#:api-code</code> or import the
-<code>ffi-help</code> module an use the functions <code>load-include-file</code>,
-<code>C-decl-&gt;scm</code> or <code>C-fun-decl-&gt;scm</code>.   The latter functions
+write a ffi-module with the <code class="code">#:api-code</code> or import the
+<code class="code">ffi-help</code> module an use the functions <code class="code">load-include-file</code>,
+<code class="code">C-decl-&gt;scm</code> or <code class="code">C-fun-decl-&gt;scm</code>.   The latter functions
 are not well tested, though.
 </p>
 <p>The compiler for the FFI Helper (FH) is based on the C parser and utilities
-which are included in the <a href="https://www.nongnu.org/nyacc"><small>NYACC</small></a>
-package.  Within the <small>NYACC</small> distribution, there are a number of
-example dot-ffi files in the directory <samp>examples/ffi</samp>.
+which are included in the <a class="uref" href="https://www.nongnu.org/nyacc"><small class="sc">NYACC</small></a>
+package.  Within the <small class="sc">NYACC</small> distribution, there are a number of
+example dot-ffi files in the directory <samp class="file">examples/ffi</samp>.
 </p>
 <p>Use of the FFI-helper module depends on the
-<em>scheme-bytestructure</em> package available from
-<a href="https://github.com/TaylanUB/scheme-bytestructures">https://github.com/TaylanUB/scheme-bytestructures</a>.  Releases
+<em class="emph">scheme-bytestructure</em> package available from
+<a class="uref" href="https://github.com/TaylanUB/scheme-bytestructures">https://github.com/TaylanUB/scheme-bytestructures</a>.  Releases
 are available at
-<a href="https://github.com/TaylanUB/scheme-bytestructures/releases">https://github.com/TaylanUB/scheme-bytestructures/releases</a>.
+<a class="uref" href="https://github.com/TaylanUB/scheme-bytestructures/releases">https://github.com/TaylanUB/scheme-bytestructures/releases</a>.
 </p>
 <p>At runtime, after the FFI Helper has been used to create Scheme code,
-the modules <code>(system ffi-help-rt)</code> and <code>(bytestructures
-guile)</code> are required.  No other code from the <small>NYACC</small> distribution
+the modules <code class="code">(system ffi-help-rt)</code> and <code class="code">(bytestructures
+guile)</code> are required.  No other code from the <small class="sc">NYACC</small> distribution
 is needed.  However, note that the process of creating the Scheme
 output depends on reading system headers, so the generated code may
 well contain operating system and machine dependencies.   If you copy
-code to a new machine, you should re-run <code>guild compile-ffi</code>.
+code to a new machine, you should re-run <code class="code">guild compile-ffi</code>.
 </p>
 <p>You are probably hoping to see an example, so let&rsquo;s try one.
 </p>
 <p>This is a small FH example to illustrate its use.  We will
-start with the <a href="cairographics.org">Cairo</a> package because that is
+start with the <a class="uref" href="cairographics.org">Cairo</a> package because that is
 the first one I started with in developing the FFI Helper.  Say you
 are an avid Guile user and want to be able to use Cairo in Guile.
 On most systems Cairo comes with the associated
-<em>pkg-config</em> support files; this demo depends on that support.
+<em class="emph">pkg-config</em> support files; this demo depends on that support.
 </p>
 <p>Warning: The FFI Helper package is under active development and there
 is some chance the following example will cease to work in the future.
 </p>
 <p>If you want to follow along and are working in the distribution
-tree, you should source the file <samp>env.sh</samp> in the <samp>examples</samp>
+tree, you should source the file <samp class="file">env.sh</samp> in the <samp class="file">examples</samp>
 directory.
 </p>
 <p>By practice, I like to put all FH generated modules under a directory
-called <samp>ffi/</samp>, so we will do that.  We start by generating, in
-the <samp>ffi</samp> directory, a file named <samp>cairo.ffi</samp> with the
+called <samp class="file">ffi/</samp>, so we will do that.  We start by generating, in
+the <samp class="file">ffi</samp> directory, a file named <samp class="file">cairo.ffi</samp> with the
 following contents:
 </p>
 <div class="example">
-<pre class="example">(define-ffi-module (ffi cairo)
+<pre class="example-preformatted">(define-ffi-module (ffi cairo)
   #:pkg-config &quot;cairo&quot;
   #:include '(&quot;cairo.h&quot; &quot;cairo-pdf.h&quot; &quot;cairo-svg.h&quot;))
 </pre></div>
 
-<p>To generate a Guile module you execute <code>guild</code> as follows:
+<p>To generate a Guile module you execute <code class="code">guild</code> as follows:
 </p>
 <div class="example">
-<pre class="example">$ guild compile-ffi ffi/cairo.ffi
+<pre class="example-preformatted">$ guild compile-ffi ffi/cairo.ffi
 wrote `ffi/cairo.scm'
 </pre></div>
 
-<p>Though the file <samp>cairo/cairo.ffi</samp> is only three lines long, the file
-<samp>ffi/cairo.scm</samp> will be over five thousand lines long.  It looks
+<p>Though the file <samp class="file">cairo/cairo.ffi</samp> is only three lines long, the file
+<samp class="file">ffi/cairo.scm</samp> will be over five thousand lines long.  It looks
 like the following:
 </p>
 <div class="example">
-<pre class="example">(define-module (ffi cairo)
+<pre class="example-preformatted">(define-module (ffi cairo)
   #:use-module (system ffi-help-rt)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (bytestructures guile))
@@ -190,7 +180,7 @@ like the following:
  cairo_matrix_t? make-cairo_matrix_t)
 (export cairo_matrix_t cairo_matrix_t? make-cairo_matrix_t)
 
-&hellip; <i>many, many more declarations</i> &hellip;
+&hellip; <i class="i">many, many more declarations</i> &hellip;
 
 ;; access to enum symbols and #define'd constants:
 (define ffi-cairo-symbol-val
@@ -201,7 +191,7 @@ like the following:
             (CAIRO_PDF_VERSION_1_5 . 1)
             (CAIRO_REGION_OVERLAP_IN . 0)
             (CAIRO_REGION_OVERLAP_OUT . 1)
-            &hellip; <i>more constants</i> &hellip;
+            &hellip; <i class="i">more constants</i> &hellip;
             (CAIRO_MIME_TYPE_JBIG2_GLOBAL_ID
               .
               &quot;application/x-cairo.jbig2-global-id&quot;))))
@@ -209,17 +199,17 @@ like the following:
 (export ffi-cairo-symbol-val)
 (export cairo-lookup)
 
-&hellip; <i>more</i> &hellip;
+&hellip; <i class="i">more</i> &hellip;
 
 </pre></div>
 
-<p>Note that from the <em>pkg-config</em> spec the FH compiler picks up the
-required libraries to bind in.  Also, <code>#define</code> based constants,
+<p>Note that from the <em class="emph">pkg-config</em> spec the FH compiler picks up the
+required libraries to bind in.  Also, <code class="code">#define</code> based constants,
 as well as those defined by enums, are provided in a lookup function
-<code>ffi-cairo-symbol-val</code>.  So, for example
+<code class="code">ffi-cairo-symbol-val</code>.  So, for example
 </p>
 <div class="example">
-<pre class="example">guile&gt; (use-modules (ffi cairo))
+<pre class="example-preformatted">guile&gt; (use-modules (ffi cairo))
 ;;; ffi/cairo.scm:6112:11: warning:
     possibly unbound variable `cairo_raster_source_acquire_func_t*'
 ;;; ffi/cairo.scm:6115:11: warning:
@@ -233,11 +223,11 @@ needs to be added to the ffi module.  But you see how the constants
 (but not CPP function macros) can be accessed.
 </p>
 <p>Let&rsquo;s try something more useful: a real program.  Create the following
-code in a file, say <code>cairo-demo.scm</code>, then fire up a Guile session
-and <code>load</code> the file.
+code in a file, say <code class="code">cairo-demo.scm</code>, then fire up a Guile session
+and <code class="code">load</code> the file.
 </p>
 <div class="example">
-<pre class="example">(use-modules (ffi cairo))
+<pre class="example-preformatted">(use-modules (ffi cairo))
 (define srf (cairo_image_surface_create 'CAIRO_FORMAT_ARGB32 200 200))
 (define cr (cairo_create srf))
 (cairo_move_to cr 10.0 10.0)
@@ -252,7 +242,7 @@ and <code>load</code> the file.
 </pre></div>
 
 <div class="example">
-<pre class="example">guile&gt; (load &quot;cairo-demo.scm&quot;)
+<pre class="example-preformatted">guile&gt; (load &quot;cairo-demo.scm&quot;)
 &hellip;
 ;;; compiled /.../cairo.scm.go
 ;;; compiled /.../cairo-demo.scm.go
@@ -260,18 +250,18 @@ guile&gt;
 </pre></div>
 
 <p>If we set up everything correctly we should have generared the target
-file <samp>cairo-demo.png</samp> which contains the image of a square.  A
+file <samp class="file">cairo-demo.png</samp> which contains the image of a square.  A
 few items in the above code are notable.  First, the call to
-<code>cairo_image_surface_create</code> accepted a symbolic form
-<code>'CAIRO_FORMAT_ARGB32</code> for the format argument.  It would have
-also accepted the associated constant <code>0</code>.  In addition,
-procedures declared in <code>(ffi cairo)</code> will accept Scheme strings
+<code class="code">cairo_image_surface_create</code> accepted a symbolic form
+<code class="code">'CAIRO_FORMAT_ARGB32</code> for the format argument.  It would have
+also accepted the associated constant <code class="code">0</code>.  In addition,
+procedures declared in <code class="code">(ffi cairo)</code> will accept Scheme strings
 where the C function wants &ldquo;pointer to string.&rdquo;
 </p>
 <p>Now try this in your Guile session:
 </p>
 <div class="example">
-<pre class="example">guile&gt; srf
+<pre class="example-preformatted">guile&gt; srf
 $4 = #&lt;cairo_surface_t* 0x7fda53e01880&gt;
 guile&gt; cr
 $5 = #&lt;cairo_t* 0x7fda54828800&gt;
@@ -283,7 +273,7 @@ The constants you see are the pointer values.  But it goes further.
 Let&rsquo;s generate a matrix type:
 </p>
 <div class="example">
-<pre class="example">guile&gt; (define m (make-cairo_matrix_t))
+<pre class="example-preformatted">guile&gt; (define m (make-cairo_matrix_t))
 guile&gt; m
 $6 = #&lt;cairo_matrix_t 0x10cc26c00&gt;
 guile&gt; (use-modules (system ffh-help-rt))
@@ -296,7 +286,7 @@ structure and pass the pointer address to the C function, FH provides
 a solution:
 </p>
 <div class="example">
-<pre class="example">guile&gt; (cairo_get_matrix cr (pointer-to m))
+<pre class="example-preformatted">guile&gt; (cairo_get_matrix cr (pointer-to m))
 guile&gt; (fh-object-ref m 'xx)
 $9 = 1.0
 </pre></div>
@@ -306,20 +296,20 @@ you must first import the proper modules and libraries.  This
 functionality is still under development.
 </p>
 <p>The following example shows how to convert to scheme code using
-the procedure <code>C-decl-&gt;scm</code>:
+the procedure <code class="code">C-decl-&gt;scm</code>:
 </p>
 <div class="example">
-<pre class="example">guile&gt; (use-modules (nyacc lang c99 ffi-help))
+<pre class="example-preformatted">guile&gt; (use-modules (nyacc lang c99 ffi-help))
 guile&gt; (define struct-foo-desc (C-decl-&gt;scm &quot;struct foo { int x; double y; };&quot;))
 guile&gt; ,pp struct-foo-desc
 $1 = (bs:struct (list `(x ,int) `(y ,double)))
 </pre></div>
 
-<p>If we import more modules we can use the syntax <code>C-decl</code> to
+<p>If we import more modules we can use the syntax <code class="code">C-decl</code> to
 complete definitions:
 </p>
 <div class="example">
-<pre class="example">guile&gt; (use-modules (system ffi-help-rt))
+<pre class="example-preformatted">guile&gt; (use-modules (system ffi-help-rt))
 guile&gt; (use-modules (bytestructures guile))
 guile&gt; (use-modules ((system foreign) #:prefix ffi:))
 guile&gt; (define ffi-libs '()) ;; hack for now
@@ -329,65 +319,65 @@ guile&gt; (my-sqrt 4.0)
 </pre></div>
 
 <p>Note that for functions like the above to work any dependent libraries
-must be loaded first, via <code>(dynamic-link)</code>.
+must be loaded first, via <code class="code">(dynamic-link)</code>.
 </p>
 <p>Note: currently the above defines a bytestructure, but not a FH type.
 We could define a FH type as follows:
 </p>
 <div class="example">
-<pre class="example">guile&gt; (define-fh-compound-type struct-foo
+<pre class="example-preformatted">guile&gt; (define-fh-compound-type struct-foo
         struct-foo-desc struct-foo? make-struct-foo)
 </pre></div>
 
 
 
-<span id="The-Guile-Foreign-Function-Interface"></span><h3 class="heading">The Guile Foreign Function Interface</h3>
+<h3 class="heading" id="The-Guile-Foreign-Function-Interface">The Guile Foreign Function Interface</h3>
 
 <p>Guile has an API, called the Foreign Function Interface, which allows
 one to avoid writing and compiling C wrapper code in order to access C
-coded libraries.  The API is based on <code>libffi</code> and is covered in
+coded libraries.  The API is based on <code class="code">libffi</code> and is covered in
 the Guile Reference Manual.  We review some important bits here.  For
 more insight you should read the relevant sections in the Guile
 Reference Manual.  For more info on libffi internals visit
-<a href="https://github.com/libffi/libffi">libffi</a>.
+<a class="uref" href="https://github.com/libffi/libffi">libffi</a>.
 </p>
 <p>The relevant procedures used by the FH are
-</p><dl compact="compact">
-<dt><span><code>dynamic-link</code></span></dt>
+</p><dl class="table">
+<dt><code class="code">dynamic-link</code></dt>
 <dd><p>links libraries into Guile session
 </p></dd>
-<dt><span><code>dynamic-func</code></span></dt>
+<dt><code class="code">dynamic-func</code></dt>
 <dd><p>generated Scheme-level pointer to a C function
 </p></dd>
-<dt><span><code>pointer-&gt;procedure</code></span></dt>
+<dt><code class="code">pointer-&gt;procedure</code></dt>
 <dd><p>geneates a Scheme lambda given C function signature
 </p></dd>
-<dt><span><code>dynamic-pointer</code></span></dt>
+<dt><code class="code">dynamic-pointer</code></dt>
 <dd><p>provides access to global C variables
 </p></dd>
 </dl>
-<p>Several of the above require import of the module <code>(system foreign)</code>.
+<p>Several of the above require import of the module <code class="code">(system foreign)</code>.
 </p>
 <p>In order to generate a Guile procedure wrapper for a function, say
-<code>int foo(char *str)</code>, in some foreign library, say
-<samp>libbar.so</samp>, you can use something like the following:
+<code class="code">int foo(char *str)</code>, in some foreign library, say
+<samp class="file">libbar.so</samp>, you can use something like the following:
 </p><div class="example">
-<pre class="example">(use-modules (system foreign))
+<pre class="example-preformatted">(use-modules (system foreign))
 (define foo (pointer-&gt;procedure
              int
              (dynamic-func &quot;foo&quot; (dynamic-link &quot;libbar&quot;))
              (list '*)))
 </pre></div>
-<p>The argument <code>int</code> is a variable name for the return type,
+<p>The argument <code class="code">int</code> is a variable name for the return type,
 the next argument is an expression for the function pointer and the
 third argument is an expression for the function argument list.
 To execute the function, which expects a C string, you use something like
 </p><div class="example">
-<pre class="example">(define result-code (foo (string-&gt;pointer &quot;hello&quot;)))
+<pre class="example-preformatted">(define result-code (foo (string-&gt;pointer &quot;hello&quot;)))
 </pre></div>
 <p>If you want to try a real example, this should work:
 </p><div class="example">
-<pre class="example">guile&gt; (use-modules (system foreign))
+<pre class="example-preformatted">guile&gt; (use-modules (system foreign))
 guile&gt; (define strlen
           (pointer-&gt;procedure
            int (dynamic-func &quot;strlen&quot; (dynamic-link)) (list '*)))
@@ -403,35 +393,35 @@ FH attempts to be even more forgiving, allowing one to pass symbols
 where C enums (i.e., integers) are expected.
 </p>
 <p>As mentioned, access to libraries not compiled into Guile is
-accomplished via <code>dynamic-link</code>.  To link the
-shared library <samp>libfoo.so</samp> into Guile one would write something
+accomplished via <code class="code">dynamic-link</code>.  To link the
+shared library <samp class="file">libfoo.so</samp> into Guile one would write something
 like the following:
 </p><div class="example">
-<pre class="example">(define foo-lib (dynamic-link &quot;libfoo&quot;))
+<pre class="example-preformatted">(define foo-lib (dynamic-link &quot;libfoo&quot;))
 </pre></div>
 <p>Note that Guile takes care of dealing with the file extension (e.g.,
-<samp>.so</samp>).  Where Guile looks for libraries is system dependent,
+<samp class="file">.so</samp>).  Where Guile looks for libraries is system dependent,
 but usually it will find shared objects in the following
-</p><ul>
-<li> <code>(assq-ref %guile-build-info 'libdir)</code>
-</li><li> <code>(assq-ref %guile-build-info 'extensiondir)</code>
-</li><li> <samp>/usr/lib</samp> on GNU/Linux and macOS
-</li><li> $DYLD_LIBRARY_PATH on GNU/Linux and macOS
-</li><li> directories listed in /etc/ld.so.conf on GNU/Linux
+</p><ul class="itemize mark-bullet">
+<li><code class="code">(assq-ref %guile-build-info 'libdir)</code>
+</li><li><code class="code">(assq-ref %guile-build-info 'extensiondir)</code>
+</li><li><samp class="file">/usr/lib</samp> on GNU/Linux and macOS
+</li><li>$DYLD_LIBRARY_PATH on GNU/Linux and macOS
+</li><li>directories listed in /etc/ld.so.conf on GNU/Linux
 </li></ul>
-<p>When used with no argument <code>dynamic-link</code> returns a handle for
-objects already linked with Guile.  The procedure <code>dynamic-link</code>
+<p>When used with no argument <code class="code">dynamic-link</code> returns a handle for
+objects already linked with Guile.  The procedure <code class="code">dynamic-link</code>
 returns a library handle for acquiring function and variable handles,
 or pointers, for objects (e.g., a pointer for a function) in the
 library.  Theoretically, once a library has been dynamically linked
-into Guile, the expression <code>(dynamic-link)</code> (with no argument)
+into Guile, the expression <code class="code">(dynamic-link)</code> (with no argument)
 should suffice to provide a handle to acquire object handles, but I
 have found this is not always the case.  The FH will try all
 library handles defined by a ffi module to acquire object pointers.
 </p>
 
 
-<span id="The-FFI-Helper-Design"></span><h3 class="heading">The FFI Helper Design</h3>
+<h3 class="heading" id="The-FFI-Helper-Design">The FFI Helper Design</h3>
 
 
 <p>In this section we hope to provide some insight into the FH works.
@@ -445,27 +435,27 @@ declarations, and external variables.
 </p>
 <p>In the C language typedefs define type aliases, so there is no harm in
 expanding typedefs which appear outside the specification.  For
-example, say the file <samp>foo.h</samp> includes a declaration for the
-typedef <code>foo_t</code> and the file <samp>bar.h</samp> includes a declaration
-for the typedef <code>bar_t</code>.  Furthermore, suppose <code>foo_t</code> is a
-struct that references <code>bar_t</code>.  Then the FH will preserve the
-typedef <code>foo_t</code> but expand <code>bar_t</code>.  That is, if the
+example, say the file <samp class="file">foo.h</samp> includes a declaration for the
+typedef <code class="code">foo_t</code> and the file <samp class="file">bar.h</samp> includes a declaration
+for the typedef <code class="code">bar_t</code>.  Furthermore, suppose <code class="code">foo_t</code> is a
+struct that references <code class="code">bar_t</code>.  Then the FH will preserve the
+typedef <code class="code">foo_t</code> but expand <code class="code">bar_t</code>.  That is, if the
 declarations are
 </p>
 <div class="example">
-<pre class="example">typedef int bar_t;   /* from bar.h */
+<pre class="example-preformatted">typedef int bar_t;   /* from bar.h */
 typedef struct { bar_t x; double y; } foo_t; /* from foo.h */
 </pre></div>
 
-<p>then the FH will treat <code>foo_t</code> as if it had been declared as
+<p>then the FH will treat <code class="code">foo_t</code> as if it had been declared as
 </p>
 <div class="example">
-<pre class="example">typedef struct { int x; double y; } foo_t; /* from foo.h */
+<pre class="example-preformatted">typedef struct { int x; double y; } foo_t; /* from foo.h */
 </pre></div>
 
 <p>When it comes to handling C types in Scheme the FH tries to leave base
 types (i.e., numeric types) alone and uses its own type system, based
-on Guiles <em>structs</em> and associated <em>vtables</em>, for structs,
+on Guiles <em class="emph">structs</em> and associated <em class="emph">vtables</em>, for structs,
 unions, function types and pointer types.  Enum types are handled
 specially as described below.  The FH type system associates with each
 type a number of procedures.  One of these is the printer procedure
@@ -474,35 +464,35 @@ which provided the association of type with output seen in the demo above.
 <p>One of the challenges in automating C-Scheme type conversion is that C
 code uses a lot of pointers.  So as the FH generates types for
 aggregates, it will automatically generate types for associated
-pointers.  For example, in the case above with <code>foo_t</code> the FH will
-generate an aggregate type named <code>foo_t</code> and a pointer type named
-<code>foo_t*</code>.  In addition the FH generates code to link these two
-together so that, given an object <code>f1</code> of type <code>foo_t</code>, the
-expression <code>(pointer-to f1)</code> will generate an object of type
-<code>foo_t*</code>.  This makes the task of generating an object value in
+pointers.  For example, in the case above with <code class="code">foo_t</code> the FH will
+generate an aggregate type named <code class="code">foo_t</code> and a pointer type named
+<code class="code">foo_t*</code>.  In addition the FH generates code to link these two
+together so that, given an object <code class="code">f1</code> of type <code class="code">foo_t</code>, the
+expression <code class="code">(pointer-to f1)</code> will generate an object of type
+<code class="code">foo_t*</code>.  This makes the task of generating an object value in
 Scheme, and then passing the pointer to that value as an argument to a
-FFI-generated procedure, easy.  The inverse operation <code>value-at</code>
+FFI-generated procedure, easy.  The inverse operation <code class="code">value-at</code>
 is also provided.  Note that sometimes the C code needs to work with
 pointer pointer types.  The FH does not produce double-pointers and in
 that case, the user must add code to the FH module defintion to
-support the required additional type (e.g., <code>foo_t**</code>).
+support the required additional type (e.g., <code class="code">foo_t**</code>).
 </p>
 <p>In addition, the FH type system provide unwrap and wrap procedures
 used internal to ffi-generated modules for function calls.  These
 convert FH types to and from objects of type expected by Guile&rsquo;s FFI
 interface.  For example, the unwrap procedure associated with the FH
-pointer type <code>foo_t*</code> will convert an <code>foo_t*</code> object to a
-Guile <code>pointer</code>.  Similarly, on return the wrap procedure are
+pointer type <code class="code">foo_t*</code> will convert an <code class="code">foo_t*</code> object to a
+Guile <code class="code">pointer</code>.  Similarly, on return the wrap procedure are
 applied to convert to FH types.  When the FH generates a type, for
-example <code>foo_t</code> it also generates an exported procedure
-<code>make-foo_t</code> that users can use to build an object of that type.
-The FH also generates a predicate <code>foo_t?</code> to determine if an
-object is of that type.  The <code>(system ffi-help-rt)</code> module
-provides a procedure <code>fh-object-ref</code> to convert an object of type
-<code>foo_t</code> to the underlying bytestructures representation.  For
+example <code class="code">foo_t</code> it also generates an exported procedure
+<code class="code">make-foo_t</code> that users can use to build an object of that type.
+The FH also generates a predicate <code class="code">foo_t?</code> to determine if an
+object is of that type.  The <code class="code">(system ffi-help-rt)</code> module
+provides a procedure <code class="code">fh-object-ref</code> to convert an object of type
+<code class="code">foo_t</code> to the underlying bytestructures representation.  For
 numeric and pointer types, this will generate a number and for
 aggregate types, a bytestructure.  Additional arguments to
-<code>fh-object-ref</code> for aggregates work as with the bytestructures
+<code class="code">fh-object-ref</code> for aggregates work as with the bytestructures
 package and enable selection of components of the aggregate.  Note
 that the underlying type for a bytestructure pointer is an integer.
 </p>
@@ -511,76 +501,77 @@ The FH does not generate types for C enums or C enum
 typedefs.  Instead, the FH defines unwrap and wrap procedures to
 convert Scheme values to and from integers, where the Scheme values
 can be integers or symbols.  For example, if, in C, the enum typedef
-<code>baz_t</code> has element <code>OPTION_A</code> with value 1, a procedure
-expecting an argument of type <code>baz_t</code> will accept the symbol
-<code>'OPTION_A</code> or the integer <code>1</code>.
+<code class="code">baz_t</code> has element <code class="code">OPTION_A</code> with value 1, a procedure
+expecting an argument of type <code class="code">baz_t</code> will accept the symbol
+<code class="code">'OPTION_A</code> or the integer <code class="code">1</code>.
 </p>
 <p>Where the FH generates types, the underlying representation is a
-<em>bytestructure descriptor</em>.  That is, the FH types are
+<em class="emph">bytestructure descriptor</em>.  That is, the FH types are
 essentially a layer on top of a bytestructure.  The layer provides
 identification seen at the Guile REPL, unwrap and wrap procedures
 which are used in function handling (not normally visible to the user)
 and procedures to convert types to and from pointier-types.
 </p>
-<p>For base types (e.g., <code>int</code>, <code>double</code>) the FH uses the
+<p>For base types (e.g., <code class="code">int</code>, <code class="code">double</code>) the FH uses the
 associated Scheme values or the associated bytestructures values.
 (I think this is all bytestructure values now.)
 </p>
 <p>The underlying representation of bytestructure values is
-<em>bytevectors</em>.  See the Guile Reference Manual for more
+<em class="emph">bytevectors</em>.  See the Guile Reference Manual for more
 information on this datatype.
 </p>
 <p>The following routines are user-level procedures provided by the
-runtime module <code>(system ffi-help-rt)</code>:
-</p><dl compact="compact">
-<dt><span><code>fh-type?</code></span></dt>
+runtime module <code class="code">(system ffi-help-rt)</code>:
+</p><dl class="table">
+<dt><code class="code">fh-type?</code></dt>
 <dd><p>a predicate to indicate whether an object is a FH type
 </p></dd>
-<dt><span><code>fh-object?</code></span></dt>
+<dt><code class="code">fh-object?</code></dt>
 <dd><p>a predicate to indicate whether an object is a FH object
 </p></dd>
-<dt><span><code>fh-object-val</code></span></dt>
+<dt><code class="code">fh-object-val</code></dt>
 <dd><p>the underlying bytestructure value
 </p></dd>
-<dt><span><code>fh-object-ref</code></span></dt>
-<dd><p>a procedure that works like <code>bytestructure-ref</code> on the underlying
+<dt><code class="code">fh-object-ref</code></dt>
+<dd><p>a procedure that works like <code class="code">bytestructure-ref</code> on the underlying
 object
 </p></dd>
-<dt><span><code>fh-object-set!</code></span></dt>
-<dd><p>a procedure that works like <code>bytestructure-set!</code> on the underlying
+<dt><code class="code">fh-object-set!</code></dt>
+<dd><p>a procedure that works like <code class="code">bytestructure-set!</code> on the underlying
 object
 </p></dd>
-<dt><span><code>pointer-to</code></span></dt>
+<dt><code class="code">pointer-to</code></dt>
 <dd><p>a procedure, given a FH object, or a bytestructure, that returns an
 associated pointer object (i.e., a pointer type whose object value is
 the address of the underlying argument); this may be a FH type or a
 bytestructure
 </p></dd>
-<dt><span><code>value-at</code></span></dt>
+<dt><code class="code">value-at</code></dt>
 <dd><p>a procedure to dereference an object
 </p></dd>
-<dt><span><code>fh-cast</code></span></dt>
+<dt><code class="code">fh-cast</code></dt>
 <dd><p>a procedure to cast arguments for varaidic C functions
 </p></dd>
-<dt><span><code>make-<i>type</i></code></span></dt>
+<dt><code class="code">make-<i class="i">type</i></code></dt>
 <dd><p>make base type, as listed below; also used to make bytestructure
-objects for base types (e.g., <code>(make-double)</code> for <code>double</code>)
+objects for base types (e.g., <code class="code">(make-double)</code> for <code class="code">double</code>)
 </p></dd>
 </dl>
 
 <p>Supported base types are
-</p><table>
-<tr><td width="25%">short</td><td width="25%">unsigned-short</td><td width="25%">int</td><td width="25%">unsigned</td></tr>
+</p><table class="multitable">
+<tbody><tr><td width="25%">short</td><td width="25%">unsigned-short</td><td width="25%">int</td><td width="25%">unsigned</td></tr>
 <tr><td width="25%">long</td><td width="25%">unsigned-long</td><td width="25%">float</td><td width="25%">double</td></tr>
 <tr><td width="25%">size_t</td><td width="25%">ssize_t</td><td width="25%">intptr_t</td><td width="25%">uintptr_t</td></tr>
 <tr><td width="25%">ptrdiff_t</td></tr>
 <tr><td width="25%">int8</td><td width="25%">uint8</td><td width="25%">int16</td><td width="25%">uint16</td></tr>
 <tr><td width="25%">int32</td><td width="25%">uint32</td><td width="25%">int64</td><td width="25%">uint64</td></tr>
+</tbody>
 </table>
 <p>These types are useful for cases where the corresponding types are
 passed by reference as return types.  For example
 </p><div class="example lisp">
-<pre class="lisp">(let ((name (make-char*)))
+<pre class="lisp-preformatted">(let ((name (make-char*)))
   (some_function (pointer-to name))
   (display &quot;name: &quot;) (display (char*-&gt;string name)) (newline))
 (let ((return-val (make-double)))
@@ -592,85 +583,85 @@ passed by reference as return types.  For example
 
 <p>You can pass a bytestructure struct value:
 </p><div class="example">
-<pre class="example">guile&gt; (make-ENTRY `((key 0) (data 0)))
+<pre class="example-preformatted">guile&gt; (make-ENTRY `((key 0) (data 0)))
 #&lt;ENTRY 0x18a10b0&gt;
 </pre></div>
 
-<p>TODO: should we support <code>(make-ENTRY 0 0)</code> ?
+<p>TODO: should we support <code class="code">(make-ENTRY 0 0)</code> ?
 </p>
 
 
-<span id="Creating-FFI-Modules-with-_0028nyacc-lang-c99-ffi_002dhelp_0029"></span><h3 class="heading">Creating FFI Modules with <code>(nyacc lang c99 ffi-help)</code></h3>
+<h3 class="heading" id="Creating-FFI-Modules-with-_0028nyacc-lang-c99-ffi_002dhelp_0029">Creating FFI Modules with <code class="code">(nyacc lang c99 ffi-help)</code></h3>
 
 <div class="example">
-<pre class="example">(define ffi-module <var>module-name</var> ...)
+<pre class="example-preformatted">(define ffi-module <var class="var">module-name</var> ...)
 </pre></div>
 
-<dl compact="compact">
-<dt><span><code>#:pkg-config</code></span></dt>
+<dl class="table">
+<dt><code class="code">#:pkg-config</code></dt>
 <dd><p>This option take a single string argument which provides the name used
-for the <em>pkg-config</em> program.  Try <code>man pkg-config</code>.
+for the <em class="emph">pkg-config</em> program.  Try <code class="code">man pkg-config</code>.
 </p></dd>
-<dt><span><code>#:include</code></span></dt>
+<dt><code class="code">#:include</code></dt>
 <dd><p>This form, with expression argument, indicates the list of include
 files to be processed at the top level.  Without use of the
-<code>#:inc-filter</code> form, only declarations in these files will be
+<code class="code">#:inc-filter</code> form, only declarations in these files will be
 output.  To constrain the set of declarations output use the
-<code>#:decl-filter</code> form.
+<code class="code">#:decl-filter</code> form.
 </p></dd>
-<dt><span><code>#:inc-filter</code></span></dt>
+<dt><code class="code">#:inc-filter</code></dt>
 <dd><p>This form, with predicate procedure argument taking the form
-<code>(proc file-spec path-spec)</code>, is used to indicate which includes
+<code class="code">(proc file-spec path-spec)</code>, is used to indicate which includes
 beyond the top-level should have processed declarations emitted in the
-output.  The <code>file-spec</code> argument is a string as parsed from
-<code>#include</code> statements in the C code, including brackets or double
-quotes (e.g., <code>&quot;&lt;stdio.h&gt;&quot;</code>, <code>&quot;\&quot;foo.h\&quot;&quot;</code>).  The
-<code>path-spec</code> is the full path to the file.
+output.  The <code class="code">file-spec</code> argument is a string as parsed from
+<code class="code">#include</code> statements in the C code, including brackets or double
+quotes (e.g., <code class="code">&quot;&lt;stdio.h&gt;&quot;</code>, <code class="code">&quot;\&quot;foo.h\&quot;&quot;</code>).  The
+<code class="code">path-spec</code> is the full path to the file.
 </p></dd>
-<dt><span><code>#:use-ffi-module</code></span></dt>
-<dd><p>This form, with literal module-type argument (e.g., <code>(ffi
+<dt><code class="code">#:use-ffi-module</code></dt>
+<dd><p>This form, with literal module-type argument (e.g., <code class="code">(ffi
 glib)</code>), indicates dependency on declarations from another processed
-ffi module.  For example, the ffi-module for <code>(ffi gobject)</code>
-includes the form <code>#:use-ffi-module (ffi glib)</code>.
+ffi module.  For example, the ffi-module for <code class="code">(ffi gobject)</code>
+includes the form <code class="code">#:use-ffi-module (ffi glib)</code>.
 </p></dd>
-<dt><span><code>#:decl-filter</code></span></dt>
+<dt><code class="code">#:decl-filter</code></dt>
 <dd><p>This form, with a predicate procedure argument, is used to restrict
 which declarations should be processed for output.  The single
 argument is either a string or a pair.  The string form is used for
 simple identifiers and the pair is used for struct, union and enum
-forms from the C code (e.g., <code>(struct . &quot;foo&quot;)</code>).
+forms from the C code (e.g., <code class="code">(struct . &quot;foo&quot;)</code>).
 </p></dd>
-<dt><span><code>#:library</code></span></dt>
+<dt><code class="code">#:library</code></dt>
 <dd><p>This form, with a list of strings, indicates which (shared object)
 libraries need to be loaded.  The formmat of each string in the list
-should be as provided to the <code>dynamic-link</code> form in Guile.
+should be as provided to the <code class="code">dynamic-link</code> form in Guile.
 </p></dd>
-<dt><span><code>#:renamer</code></span></dt>
+<dt><code class="code">#:renamer</code></dt>
 <dd><p>todo
 </p></dd>
-<dt><span><code>#:cpp-defs</code></span></dt>
+<dt><code class="code">#:cpp-defs</code></dt>
 <dd><p>This form, with a list of strings, provides extra C preprodessor
 definitions to be used in processing the header files.  The defines
-take the form <code>&quot;SYM=</code><var>val</var><code>&quot;</code>.
+take the form <code class="code">&quot;SYM=</code><var class="var">val</var><code class="code">&quot;</code>.
 </p></dd>
-<dt><span><code>#:inc-dirs</code></span></dt>
+<dt><code class="code">#:inc-dirs</code></dt>
 <dd><p>This form, with a list of strings, provides extra directories
 in which to search for include files.
 </p></dd>
-<dt><span><code>#:inc-help</code></span></dt>
+<dt><code class="code">#:inc-help</code></dt>
 <dd><p>todo
 </p></dd>
-<dt><span><code>#:api-code</code></span></dt>
+<dt><code class="code">#:api-code</code></dt>
 <dd><p>todo
 </p></dd>
-<dt><span><code>#:def-keepers</code></span></dt>
+<dt><code class="code">#:def-keepers</code></dt>
 <dd><p>This form, with a list of strings, provides extra (non-function) C
 preprocessor macro definitions that should be included in the output.
 </p></dd>
 </dl>
 
 <div class="example">
-<pre class="example">  #:library '(&quot;libcairo&quot; &quot;libmisc&quot;)
+<pre class="example-preformatted">  #:library '(&quot;libcairo&quot; &quot;libmisc&quot;)
   #:inc-dirs '(&quot;/opt/local/include/cairo&quot; &quot;/opt/local/include&quot;)
   #:renamer (string-renamer
 	     (lambda (n)
@@ -692,7 +683,7 @@ preprocessor macro definitions that should be included in the output.
 
 <p>Another decl-filter, useful for debugging.
 </p><div class="example">
-<pre class="example">  #:decl-filter (lambda (k)
+<pre class="example-preformatted">  #:decl-filter (lambda (k)
                   (cond
                    ((member k '(
                                 &quot;cairo_t&quot; &quot;cairo_status_t&quot;
@@ -703,22 +694,22 @@ preprocessor macro definitions that should be included in the output.
 </pre></div>
 
 
-<span id="Direct-Usage"></span><h3 class="heading">Direct Usage</h3>
+<h3 class="heading" id="Direct-Usage">Direct Usage</h3>
 
 <p>Work to go here:
 </p>
-<dl class="def">
-<dt id="index-load_002dinclude_002dfile"><span class="category">Procedure: </span><span><strong>load-include-file</strong> <em>filename [#pkg-config pkg]</em><a href='#index-load_002dinclude_002dfile' class='copiable-anchor'> &para;</a></span></dt>
+<dl class="first-deffn">
+<dt class="deffn" id="index-load_002dinclude_002dfile"><span class="category-def">Procedure: </span><span><strong class="def-name">load-include-file</strong> <var class="def-var-arguments">filename [#pkg-config pkg]</var><a class="copiable-link" href='#index-load_002dinclude_002dfile'> &para;</a></span></dt>
 <dd><p>This is the functionality that Ludo was asking for: to be at guile
 prompt and be able to issue
 </p><div class="example">
-<pre class="example">(use-modules (nyacc lang c99 ffi-help))
+<pre class="example-preformatted">(use-modules (nyacc lang c99 ffi-help))
 (load-include-file &quot;cairo.h&quot; #:pkg-config &quot;cairo&quot;)
 </pre></div>
 </dd></dl>
 
 <div class="example">
-<pre class="example">guile&gt; ,use (nyacc lang c99 ffi-help)
+<pre class="example-preformatted">guile&gt; ,use (nyacc lang c99 ffi-help)
 guile&gt; (load-include-file &quot;cairo.h&quot; #:pkg-config &quot;cairo&quot;)
 ;; wait a while
 guile&gt; ...
@@ -726,42 +717,42 @@ guile&gt; ...
 
 
 
-<span id="Tuning-and-Debugging"></span><h3 class="heading">Tuning and Debugging</h3>
+<h3 class="heading" id="Tuning-and-Debugging">Tuning and Debugging</h3>
 
 <p>Since this is not all straightforward you will get errors.
 </p>
 <p>Method
-</p><ol>
+</p><ol class="enumerate">
 <li> compile-ffi with flag to echo declarations
 </li><li> compile -O0 the resulting scm file
 </li><li> guile -c &rsquo;(use-modules (ffi mymod))&rsquo;
 </li></ol>
 
-<span id="MAX_005fHEAP_005fSECTS"></span><h4 class="subheading"><code>MAX_HEAP_SECTS</code></h4>
+<h4 class="subheading" id="MAX_005fHEAP_005fSECTS"><code class="code">MAX_HEAP_SECTS</code></h4>
 
 <p>The message is
-</p><blockquote>
+</p><blockquote class="quotation">
 <p>Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS
 </p></blockquote>
 <p>The message comes from the garbage collector.  It means you&rsquo;ve run out
 of memory.  I found that this actually came from a bug in the ff-compiler
 which generated this code:
 </p><div class="example">
-<pre class="example">  (bs:struct
+<pre class="example-preformatted">  (bs:struct
     (list ...
           `(compose_buffer ,(bs:vector #f unsigned-int))
 </pre></div>
 <p>The original C declaration was
 </p><div class="example">
-<pre class="example">struct _GtkIMContextSimple {
+<pre class="example-preformatted">struct _GtkIMContextSimple {
   ...
   guint compose_buffer[7 + 1];
   ...
 };
 </pre></div>
-<p>This bug, failure to evaluate <code>7+1</code> to an integer, was fixed.
+<p>This bug, failure to evaluate <code class="code">7+1</code> to an integer, was fixed.
 </p>
-<span id="Trimming-Things-Down"></span><h4 class="subheading">Trimming Things Down</h4>
+<h4 class="subheading" id="Trimming-Things-Down">Trimming Things Down</h4>
 
 <p>After using the FFI Helper to provide code for some packages you may
 notice that the quantity of code produced is large.  For example, to
@@ -769,26 +760,26 @@ generate a guile interface for gtk2+, along with glib, gobject, pango
 and gdk you will end up with over 100k lines of scm code.  This may
 seem bulky.  Instead it may be preferable to generate a small number
 of calls for gtk and work from there.  In order to achieve this you
-could use the <code>#:api-code</code> or <code>#:decl-filter</code> options.
+could use the <code class="code">#:api-code</code> or <code class="code">#:decl-filter</code> options.
 </p>
 <p>For example, in the expansion of the GLU/GL FFI module, called
-<samp>glugl.ffi</samp>, I found that a very large number of declarations
-starting with <code>PF</code> were being generated.  I removed these using
-the <code>#:decl-filter</code> option:
+<samp class="file">glugl.ffi</samp>, I found that a very large number of declarations
+starting with <code class="code">PF</code> were being generated.  I removed these using
+the <code class="code">#:decl-filter</code> option:
 </p><div class="example">
-<pre class="example">(define-ffi-module (ffi glugl)
+<pre class="example-preformatted">(define-ffi-module (ffi glugl)
   #:include '(&quot;GL/gl.h&quot; &quot;GL/glu.h&quot;)
   #:library '(&quot;libGLU&quot; &quot;libGL&quot;)
   #:inc-filter (lambda (spec path) (string-contains path &quot;GL/&quot; 0))
   #:decl-filter (lambda (n) (not (and (string? n) (string-prefix? &quot;PF&quot; n)))))
 </pre></div>
-<p>Using the option reduced <samp>glugl.scm</samp> from 59,274 lines down to
+<p>Using the option reduced <samp class="file">glugl.scm</samp> from 59,274 lines down to
 15,354 lines.
 </p>
 <p>As another example, if we wanted to just generate code for the gtk hello
 world demo we could write
 </p><div class="example">
-<pre class="example">(define-ffi-module (hack1)
+<pre class="example-preformatted">(define-ffi-module (hack1)
   #:pkg-config &quot;gtk+-2.0&quot;
   #:api-code &quot;
   #include &lt;gtk2.h&gt;
@@ -805,14 +796,14 @@ world demo we could write
 the pointer types will be expanded to native.  You could invent your
 own types or echo the typedefs from the package headers
 </p><div class="example">
-<pre class="example">
+<pre class="example-preformatted">
 
 </pre></div>
 
-<span id="Warning_003a-Possibly-Unbound-Variable"></span><h4 class="subheading">Warning: Possibly Unbound Variable</h4>
+<h4 class="subheading" id="Warning_003a-Possibly-Unbound-Variable">Warning: Possibly Unbound Variable</h4>
 
-<div class="example">
-<pre class="example">;;; ffi/gtk2+.scm:3564:5: warning:
+<div class="example smallexample">
+<pre class="example-preformatted">;;; ffi/gtk2+.scm:3564:5: warning:
     possibly unbound variable `GtkEnumValue*'
 ;;; ffi/gtk2+.scm:3581:5: warning:
     possibly unbound variable `GtkFlagValue*'
@@ -831,42 +822,42 @@ own types or echo the typedefs from the package headers
 </pre></div>
 
 <p>When I see this I check the scm file and see one of many things
-</p><dl compact="compact">
-<dt><span><code>(fht-unwrap GtkAllocation*)</code></span></dt>
-<dd><p>This usually means that <code>GtkAllocation</code> was somehow defined
+</p><dl class="table">
+<dt><code class="code">(fht-unwrap GtkAllocation*)</code></dt>
+<dd><p>This usually means that <code class="code">GtkAllocation</code> was somehow defined
 but not the pointer type.
 </p></dd>
 </dl>
 
-<span id="Other"></span><h4 class="subheading">Other</h4>
+<h4 class="subheading" id="Other">Other</h4>
 
 <p>User is responsible for calling string-&gt;pointer and pointer-&gt;string.
 </p>
 <p>By definition: wrap is c-&gt;scm; unwrap is scm-&gt;c.
 </p>
-<p><code>define-ffi-module</code> options:
-</p><dl compact="compact">
-<dt><span><code>#:decl-filter proc</code></span></dt>
-<dd><p>proc is a prodicate taking a key of the form <code>&quot;name&quot;</code>,
-<code>(struct . &quot;name&quot;)</code>, <code>(union . &quot;name&quot;)</code> or <code>(enum . &quot;name&quot;)</code>.
+<p><code class="code">define-ffi-module</code> options:
+</p><dl class="table">
+<dt><code class="code">#:decl-filter proc</code></dt>
+<dd><p>proc is a prodicate taking a key of the form <code class="code">&quot;name&quot;</code>,
+<code class="code">(struct . &quot;name&quot;)</code>, <code class="code">(union . &quot;name&quot;)</code> or <code class="code">(enum . &quot;name&quot;)</code>.
 </p></dd>
-<dt><span><code>#:inc-filter proc</code></span></dt>
-<dt><span><code>#:include expr</code></span></dt>
+<dt><code class="code">#:inc-filter proc</code></dt>
+<dt><code class="code">#:include expr</code></dt>
 <dd><p>expr is string or list or procecure that evaluates to string or list
 </p></dd>
-<dt><span><code>#:library expr</code></span></dt>
+<dt><code class="code">#:library expr</code></dt>
 <dd><p>expr is string or list or procecure that evaluates to string or list
 </p></dd>
-<dt><span><code>#:pkg-config string</code></span></dt>
-<dt><span><code>#:renamer proc</code></span></dt>
+<dt><code class="code">#:pkg-config string</code></dt>
+<dt><code class="code">#:renamer proc</code></dt>
 <dd><p>procdure
 </p></dd>
 </dl>
 
-<p>Here are the type of hacks I need to parse inside <samp>/usr/include</samp>
+<p>Here are the type of hacks I need to parse inside <samp class="file">/usr/include</samp>
 with NYACC&rsquo;s C99 parser.  There is no such thing as a working C standard.
 </p><div class="example">
-<pre class="example">(define cpp-defs
+<pre class="example-preformatted">(define cpp-defs
   (cond
    ((string-contains %host-type &quot;darwin&quot;)
     '(&quot;__GNUC__=6&quot;)
@@ -901,92 +892,92 @@ with NYACC&rsquo;s C99 parser.  There is no such thing as a working C standard.
 </pre></div>
 
 
-<span id="The-Run_002dtime-Module-_0028system-ffi_002dhelp_002drt_0029"></span><h3 class="heading">The Run-time Module <code>(system ffi-help-rt)</code></h3>
+<h3 class="heading" id="The-Run_002dtime-Module-_0028system-ffi_002dhelp_002drt_0029">The Run-time Module <code class="code">(system ffi-help-rt)</code></h3>
 
 <p>Here we provide details of the run-time support module.
 </p>
 
 
-<span id="Work-to-Go"></span><h3 class="heading">Work to Go</h3>
+<h3 class="heading" id="Work-to-Go">Work to Go</h3>
 
-<dl compact="compact">
-<dt><span>02</span></dt>
+<dl class="table">
+<dt>02</dt>
 <dd><p>if need foo_t pointer then I gen wrapper for foo_t* but add
 foo_t to *wrappers* so if I later run into need for foo_t may be prob
 </p></dd>
-<dt><span>03</span></dt>
+<dt>03</dt>
 <dd><p>allow user to specify #:renamer (lambda (n) &quot;make_goo&quot; =&gt; &quot;make-goo&quot;)
 </p></dd>
-<dt><span>04</span></dt>
+<dt>04</dt>
 <dd><p>Now the hard part if we want to reference other ffi-modules for types
 or other c-routines.  Say ffi-module foo defines foo_t
 now in ffi-module bar we want to reference, but redefine, foo_t
 </p><div class="example">
-<pre class="example">(define-ffi-module (cairo cairo) ...)
+<pre class="example-preformatted">(define-ffi-module (cairo cairo) ...)
 (define-ffi-module (cairo cairo-svg) #:use-ffi-module (cairo cairo)
 </pre></div>
 </dd>
-<dt><span>05</span></dt>
-<dd><p>Should setters for <code>bs:struct</code> enum fields check for symbolic
+<dt>05</dt>
+<dd><p>Should setters for <code class="code">bs:struct</code> enum fields check for symbolic
 arg?
 </p></dd>
-<dt><span>06</span></dt>
-<dd><p>Use guardians for <code>cairo_destroy</code> and
-<code>cairo_surface_destroy</code>?
+<dt>06</dt>
+<dd><p>Use guardians for <code class="code">cairo_destroy</code> and
+<code class="code">cairo_surface_destroy</code>?
 </p></dd>
-<dt><span>07</span></dt>
-<dd><p>What about vectors? If <code>foo(foo_t x[]</code>,
-</p><ol>
+<dt>07</dt>
+<dd><p>What about vectors? If <code class="code">foo(foo_t x[]</code>,
+</p><ol class="enumerate">
 <li> user must make vector of foo_t
 </li><li> ffi-module author should generate a make-foo_t-vector procedure
 </li></ol>
 </dd>
 </dl>
 
-<span id="Completed"></span><h4 class="subheading">Completed</h4>
-<dl compact="compact">
-<dt><span>01</span></dt>
+<h4 class="subheading" id="Completed">Completed</h4>
+<dl class="table">
+<dt>01</dt>
 <dd><div class="example">
-<pre class="example">enum-wrap 0 =&gt; 'CAIRO_STATUS_SUCCESS
+<pre class="example-preformatted">enum-wrap 0 =&gt; 'CAIRO_STATUS_SUCCESS
 enum-unwrap 'CAIRO_STATUS_SUCCESS =&gt; 0
 </pre></div>
 </dd>
 </dl>
 
 
-<span id="Administrative-Items"></span><h3 class="heading">Administrative Items</h3>
+<h3 class="heading" id="Administrative-Items">Administrative Items</h3>
 
-<span id="Installation"></span><h4 class="subheading">Installation</h4>
+<h4 class="subheading" id="Installation">Installation</h4>
 
 <div class="example">
-<pre class="example">./configure --prefix=xxx
+<pre class="example-preformatted">./configure --prefix=xxx
 make install
 </pre></div>
 
-<span id="Reporting-Bugs"></span><h4 class="subheading">Reporting Bugs</h4>
+<h4 class="subheading" id="Reporting-Bugs">Reporting Bugs</h4>
 <p>Please report bugs by navigating with your browser to
-&lsquo;<code>https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
+&lsquo;<code class="indicateurl">https://savannah.nongnu.org/projects/nyacc</code>&rsquo; and select
 the &ldquo;Submit New&rdquo; item under the &ldquo;Bugs&rdquo; menu.  Alternatively,
-ask on the Guile user&rsquo;s mailing list <a href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
+ask on the Guile user&rsquo;s mailing list <a class="email" href="mailto:guile-user@gnu.org">guile-user@gnu.org</a>.
 </p>
-<span id="Notes"></span><h4 class="subheading">Notes</h4>
+<h4 class="subheading" id="Notes">Notes</h4>
 
-<ol>
+<ol class="enumerate">
 <li> The following situation is a bit tricky for me.
 <div class="example">
-<pre class="example">typedef struct foo foo_t;
+<pre class="example-preformatted">typedef struct foo foo_t;
 typedef foo_t bar_t;
 struct foo { int a; };
 int baz(foo_t *x);
 </pre></div>
-<p>Right now, on the first declaration I assign <code>foo_t</code> the type
-<code>fh-void</code>.  The second declaration is handled as a type-alias.
+<p>Right now, on the first declaration I assign <code class="code">foo_t</code> the type
+<code class="code">fh-void</code>.  The second declaration is handled as a type-alias.
 When I get to the third declaration I define the
-<code>struct foo</code> compound type, then re-define the <code>foo_t</code> as
+<code class="code">struct foo</code> compound type, then re-define the <code class="code">foo_t</code> as
 a compound type, and it&rsquo;s pointer type (missed this first time).
 </p></li></ol>
 
-<span id="Copyright"></span><h4 class="subheading">Copyright</h4>
+<h4 class="subheading" id="Copyright">Copyright</h4>
 
 <p>Copyright (C) 2017-2019 &ndash; Matthew R. Wette.
 </p>
