@@ -473,6 +473,36 @@
 		  (append (if path (sx-attr-add stmt 'path path) stmt)
 			  (list tree)))))))
 
+          #|
+          (define (eval-pragma stmt)
+            (define wspace (list->char-set '(#\space #\tab)))
+            (define (skip-ws ch)
+              (cond
+               ((eof-object? ch) ch)
+               ((char-set-contains? wspace ch) (skip-ws (read-char)))
+               (else ch)))
+
+            (define (pop_macro key)
+              (let loop ((head '()) (tail (cpi-defs info)) (val #t))
+                (cond
+                 ((null? tail) (reverse head))
+                 ((equal? (caar tail) key)
+                  (if val
+                      (loop head (cdr tail) #f)
+                      (if (cdar tail)
+                          (set-cpi-defs! info (append-reverse head tail))
+                          (loop head (cdr tail) val))))
+                 (else (loop head (cdr tail) val)))))
+
+            (with-input-from-string (cadr stmt)
+              (lambda ()
+                (let ((key (read-c-ident (read-char))))
+                  (when key
+                    (case (string->symbol key)
+                      ((pop_macro) (pop_macro key))
+                      (else #f)))))))
+          |#
+
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
  	    ;;(sf "eval-cpp-stmt/code ~S\n" stmt)
 	    (case (car stmt)
@@ -490,6 +520,7 @@
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((warning) (report-error "warning: ~A" (cdr stmt)))
 		     ((pragma) stmt)
+		     ;;((pragma) (eval-pragma stmt) stmt)
 		     ((line) stmt)
 		     (else
 		      (throw 'c99-error "eval-cpp-stmt/code: ~S" stmt)))
