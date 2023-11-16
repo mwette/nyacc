@@ -588,6 +588,13 @@
           (sx-match (car flds)
             ((comp-decl ,specl (comp-declr-list . ,declrs))
              (loop siz aln offs (mkcdl specl declrs) (cdr flds)))
+            #|
+            ((comp-udecl ,specl (comp-declr (bit-field ,expr)))
+            ;; zero means next field
+             TODO)
+            ((comp-udecl ,specl (comp-declr (bit-field ,ident ,expr)))
+             TODO)
+            |#
             ((comp-udecl ,specl ,declr)
              (loop siz aln offs (list declr) (cdr flds)))
             (,_
