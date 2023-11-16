@@ -5,6 +5,10 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2023-11-16  V1.09.2
+	* configure should no longer use NONE as part of install path
+	* c99/stripdown-udecl works for decl's w/o declarator
+
 2023-10-18  V1.09.1
 	* remove use of compat18: guile-1.8 is not worth keeping up
 	* fix split-cppdefs issue: ABC=(-1) now works
