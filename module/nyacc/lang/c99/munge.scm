@@ -48,7 +48,7 @@
             c99-trans-unit->ddict udict-enums->ddict udict-add-enums
 
             ;; munging
-            stripdown-udecl
+            stripdown-udecl stripdown-specl stripdown-declr
             udecl-rem-type-qual specl-rem-type-qual
             udecl->mdecl/comm mdecl->udecl
 
@@ -57,7 +57,7 @@
             fixed-width-int-names
 
             typedef-decl?
-            
+
             unitize-decl unitize-comp-decl unitize-param-decl
             dictize-decl dictize-comp-decl dictize-param-decl
             decl-id
@@ -296,7 +296,7 @@
 ;; because they appear in files under @file{/usr/include}.
 ;; @end deffn
 (define* (dictize-decl decl #:optional (seed '()))
-  
+
   (define* (make-udecl type-tag attr guts #:optional typename)
     (if (and attr (pair? attr))
         `(udecl (decl-spec-list (type-spec ,(cons* type-tag `(@ ,@attr) guts))))
@@ -320,7 +320,7 @@
       ;; TODO: for typedefs add attr (typedef "name") to associated udecls
       (sx-match specl
 
-        ;; struct typedefs 
+        ;; struct typedefs
         ((decl-spec-list
           (@ . ,specl-attr)
           (stor-spec (typedef))
@@ -333,8 +333,8 @@
           (stor-spec (typedef))
           (type-spec (struct-def . ,rest2) . ,rest1))
          (iter-declrs tag decl-attr specl declrs seed))
-        
-        ;; union typedefs 
+
+        ;; union typedefs
         ((decl-spec-list
           (@ . ,specl-attr)
           (stor-spec (typedef))
@@ -358,12 +358,12 @@
         ((decl-spec-list
           (stor-spec (typedef))
           (type-spec (enum-def . ,rest2) . ,rest1))
-         (iter-declrs tag #f specl declrs 
+         (iter-declrs tag #f specl declrs
                       (acons `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
                              seed))
          (update `(enum . "*anon*") (make-udecl 'enum-def #f rest2)
                  tag decl-attr specl declrs seed))
-        
+
         ;; structs
         ((decl-spec-list
           (@ . ,specl-attr)
@@ -398,7 +398,7 @@
                  tag decl-attr specl declrs seed))
 
         (,_ (iter-declrs tag decl-attr specl declrs seed)))))
-   
+
    ((eqv? (sx-tag decl) 'comp-udecl) (acons (udecl-id decl) decl seed))
    ((eqv? (sx-tag decl) 'comp-decl) (dictize-comp-decl decl seed))
    ((eqv? (sx-tag decl) 'param-decl) (dictize-param-decl decl seed))
@@ -431,7 +431,7 @@
 ;; So globals could be in udict, udefs or anon-enum.
 ;; @example
 ;; What about anonymous enums?  And enums in general?
-;; Anonmous enum should be expaneded into 
+;; Anonmous enum should be expaneded into
 ;; @end example
 ;; @noindent
 ;; Notes:
@@ -467,7 +467,7 @@
   (c99-trans-unit->udict tree #:inc-filter #t))
 
 ;; @deffn {Procedure} udecl-id udecl => string
-;; generate the name 
+;; generate the name
 ;; @end deffn
 (define (udecl-id udecl)
   ;; must be udecl w/ name
@@ -642,7 +642,7 @@
 ;; This will perform the transformation
 ;; @example
 ;; (enum-def-list (enum-def (ident "FOO") ...))
-;; => 
+;; =>
 ;; (enum-def-list (enum-def (ident "FOO") (fixed "0") ...))
 ;; @end example
 ;; @noindent
@@ -757,11 +757,11 @@
      ((eqv? (sx-tag tree) 'stor-spec) seed)
      ((eqv? (sx-tag tree) 'type-qual) seed)
      (else (cons (reverse kseed) seed))))
-  
+
   (define (fH seed tree)
     (cons tree seed))
-  
-  (foldts* fD fU fH '() declr))
+
+  (and declr (foldts* fD fU fH '() declr)))
 
 ;; @deffn {Procedure} stripdown-udecl udecl => udecl
 ;; This routine removes forms from a declaration that are presumably not
@@ -834,7 +834,7 @@
       (((float-type ,name)) (make-udecl (car mdecl-tail) declr))
       (((typename ,name)) (make-udecl (car mdecl-tail) declr))
       (((void)) (make-udecl (car mdecl-tail) declr))
-      
+
       (((pointer-to) . ,rest)
        (doit `(ptr-declr (pointer) ,declr) rest))
       (((array-of ,size) . ,rest)
