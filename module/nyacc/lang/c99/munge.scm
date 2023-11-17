@@ -26,6 +26,7 @@
 ;; 5) dictize replaces old unitize, w/ unitize making more sense now
 ;;    a) unitize: (int (x y)) -> ((int x) (int y))
 ;;    b) dictize: (int (x y)) -> (("x" . (int x)) ("y" . (int y)))
+;; 6) In places where a name does not exist (e.g., bitfield) "" is the key.
 
 ;; Todo:
 ;; 2) I want a way to keep named enums in expand-typerefs.
@@ -407,8 +408,6 @@
 (define* (unitize-decl decl #:optional (seed '()))
   (fold-right
    (lambda (ud-entry seed)
-     ;;(sferr "ue: ~S\n" (car ud-entry)) (pperr (cdr ud-entry))
-     ;;(pperr ud-entry)
      (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
    seed (dictize-decl decl)))
 

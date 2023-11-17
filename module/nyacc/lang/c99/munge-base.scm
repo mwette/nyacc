@@ -22,7 +22,6 @@
 ;; 2) I want a way to keep named enums in expand-typerefs.
 ;;    Currently, they are expanded to int.
 ;; 3) Usual sequence is: expand-typerefs, stripdown-udecl, udecl->mdecl.
-;; 4) Unitize-decl is shallow.  It does not dive into structs and unitize.
 ;; 5) In expand-typerefs if need to expand `foo_t *x' then change to
 ;;    a) if struct use `struct foo *x;'
 ;;    b) if fixed/float use `int *x;' etc
@@ -67,7 +66,8 @@
     ((ptr-declr ,pointer ,dir-declr) (declr-ident dir-declr))
     ((ftn-declr ,dir-declr . ,rest) (declr-ident dir-declr))
     ((scope ,declr) (declr-ident declr))
-    ((bit-field ,ident . ,rest) ident)
+    ((bit-field ,ident ,size) ident)
+    ((bit-field ,size) `(ident ""))      ; ???
     (,_ (throw 'c99-error "c99/munge: unknown declarator: ~S" declr))))
 
 ;; @deffn {Procedure} declr-name declr => "name"
@@ -656,6 +656,7 @@
        (cons* (namer) `(function-returning ,param-list) tail))
       ((scope ,expr) (unwrap-declr expr tail))
       ((bit-field (ident ,name) ,size) (cons* name `(bit-field ,size) tail))
+      ((bit-field ,size) (cons* "" declr tail))
       (,_
        (sferr "munge-base/unwrap-declr missed:\n") (pperr declr)
        (throw 'c99-error "munge-base/unwrap-declr failed")
