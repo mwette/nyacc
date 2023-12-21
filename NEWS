@@ -7,7 +7,7 @@ without any warranty.
 
 202?-??-??  V1.09.3
 	* system/ffi-help-rt(fh-void?): check for struct, also for void*
-	  and void**
+	  and void**; fixed bug #65021
 
 2023-11-16  V1.09.2
 	* configure should no longer use NONE as part of install path
