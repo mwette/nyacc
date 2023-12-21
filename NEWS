@@ -5,6 +5,10 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+202?-??-??  V1.09.3
+	* system/ffi-help-rt(fh-void?): check for struct, also for void*
+	  and void**
+
 2023-11-16  V1.09.2
 	* configure should no longer use NONE as part of install path
 	* c99/stripdown-udecl works for decl's w/o declarator

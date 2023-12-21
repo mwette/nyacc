@@ -1,6 +1,6 @@
 ;;; system/ffi-help-rt.scm - NYACC's FFI help runtime
 
-;; Copyright (C) 2016-2019,2022 Matthew R. Wette
+;; Copyright (C) 2016-2019,2022-2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -787,7 +787,7 @@
             #f #f
             (lambda (obj port) (display "#<fh-void>" port))))
 (define fh-void?
-  (lambda (obj) (eq? (struct-vtable obj) fh-void)))
+  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) fh-void))))
 (define make-fh-void
   (case-lambda
     (() (make-struct/no-tail fh-void 'void))
@@ -817,7 +817,8 @@
               (display (number->string (struct-ref obj 0) 16) port)
               (display ">" port))))
 (define make-void* (fht-wrap void*))
-(define void*? (lambda (obj) (eq? (struct-vtable obj) void*)))
+(define void*?
+  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) void*))))
 (fh-ref<=>deref! void* make-void* fh-void make-fh-void)
 (export void* void*? make-void*)
 
@@ -836,7 +837,8 @@
               (display (number->string (struct-ref obj 0) 16) port)
               (display ">" port))))
 (define make-void** (fht-wrap void**))
-(define void**? (lambda (obj) (eq? (struct-vtable obj) void**)))
+(define void**?
+  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) void**))))
 (fh-ref<=>deref! void** make-void** void* make-void*)
 (export void** void**? make-void**)
 
