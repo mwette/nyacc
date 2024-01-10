@@ -110,10 +110,9 @@
       (let loop ((size size) (base-align base-align) (declrs declrs))
         (if (null? declrs)
             (values size base-align)
-            (call-with-values
+           (call-with-values
                 (lambda ()
-                  (sizeof-mtail
-                   (cdr (m-unwrap-declr (car declrs) mtail)) udict))
+                  (sizeof-mtail (cdr (m-unwrap-declr (car declrs) mtail)) udict))
               (lambda (elt-sz elt-al)
                 (loop (update elt-sz elt-al size)
                       (max elt-al base-align) (cdr declrs))))))))
@@ -128,10 +127,8 @@
     (`((array-of ,dim) . ,rest)
      (let ((mult (eval-c99-cx dim udict)))
        (call-with-values
-           (lambda ()
-             (sizeof-mtail rest udict))
-         (lambda (size align)
-           (values (* mult size) align)))))
+           (lambda () (sizeof-mtail rest udict))
+         (lambda (size align) (values (* mult size) align)))))
     (`((struct-def (field-list . ,fields)))
      (let loop ((size 0) (align 0) (flds fields))
        (cond
@@ -139,8 +136,7 @@
         ((eq? 'comp-decl (sx-tag (car flds)))
          (call-with-values
              (lambda () (exec/decl (car flds) size align incr-size))
-           (lambda (size align)
-             (loop size align (cdr flds)))))
+           (lambda (size align) (loop size align (cdr flds)))))
         (else (loop size align (cdr flds))))))
     (`((struct-def (ident ,name) (field-list . ,fields)))
      (sizeof-mtail `((struct-def (field-list . ,fields))) udict))
@@ -151,8 +147,7 @@
         ((eq? 'comp-decl (sx-tag (car flds)))
          (call-with-values
              (lambda () (exec/decl (car flds) size align maxi-size))
-           (lambda (size align)
-             (loop size align (cdr flds)))))
+           (lambda (size align) (loop size align (cdr flds)))))
         (else (loop size align (cdr flds))))))
     (`((union-def (ident ,name) (field-list . ,fields)))
      (sizeof-mtail `((union-def (field-list . ,fields))) udict))
@@ -160,9 +155,20 @@
      (values (sizeof-basetype "int") (alignof-basetype "int")))
     (`((enum-def . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int")))
+    (`((bit-field ,name ,expr) (fixed-type ,type))
+     (call-with-values
+         (lambda () (sizeof-mtail (cdr mtail) udict))
+       (lambda (size align)
+         #f))
+     (throw 'c99-error "bit-fields not yet done")
+     )
+    (`((bit-field ,expr) (fixed-type ,type))
+     (throw 'c99-error "bit-fields not yet done")
+     )
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
 
+;; => (values size align)
 (define* (sizeof-specl/declr specl declr #:optional (udict '()))
   (let* ((udecl `(udecl ,specl ,declr))
          (xdecl (expand-typerefs udecl udict))
@@ -176,29 +182,28 @@
     ((initzer) (trim-mtail (cdr mtail)))
     (else mtail)))
 
-;; @deffn {Procedure} size-and-align-of-type tree [udict]
-;; @deffx {Procedure} eval-sizeof-type tree [udict]
-;; @deffx {Procedure} eval-alignof-type tree [udict]
+;; @deffn {Procedure} size-and-align-of-type type-name [udict]
+;; @deffx {Procedure} eval-sizeof-type sizeof-form [udict]
+;; @deffx {Procedure} eval-alignof-type alignof-form [udict]
 ;; @example
 ;; (size-and-align-of-type '(sizeof-type (ident "foo_t"))) => (values 4 2)
 ;; (eval-sizeof-type '(sizeof-type (ident "foo_t"))) => 4
 ;; (eval-alignof-type '(alignof-type (ident "foo_t"))) => 2
 ;; @end example
 ;; @end deffn
-(define* (size-and-align-of-type tree #:optional (udict '()))
-  (let* ((type-name (sx-ref tree 1))
-         (specl (sx-ref type-name 1))
+(define* (size-and-align-of-type type-name #:optional (udict '()))
+  (let* ((specl (sx-ref type-name 1))
          (declr (or (sx-ref type-name 2) '(param-declr))))
     (sizeof-specl/declr specl declr udict)))
 
-(define* (eval-sizeof-type tree #:optional (udict '()))
+(define* (eval-sizeof-type form #:optional (udict '()))
   (call-with-values
-      (lambda () (size-and-align-of-type tree udict))
+      (lambda () (size-and-align-of-type (sx-ref form 1) udict))
     (lambda (size align) size)))
 
-(define* (eval-alignof-type tree #:optional (udict '()))
+(define* (eval-alignof-type form #:optional (udict '()))
   (call-with-values
-      (lambda () (size-and-align-of-type tree udict))
+      (lambda () (size-and-align-of-type (sx-ref form 1) udict))
     (lambda (size align) align)))
 
 ;; @deffn {Procedure} size-and-align-of-expr tree [udict]
@@ -417,6 +422,8 @@
          `(type-name ,specl ,declr)))
       ((cast ,tname ,expr)
        tname)
+      ((scope ,expr)
+       (typeof-next expr))
       ((p-expr ,expr)
        (typeof-next expr))
       ((i-sel ,ident ,expr)
