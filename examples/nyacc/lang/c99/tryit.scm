@@ -625,6 +625,15 @@ typedef struct _GObjectClass {
 |#
 
 #|
+|#
+;; bitfield offset size pos
+;; most C compilers:
+;; For many C compilers the type written for a named bit-field (int, short,
+;; or other integer type) imposes an alignment for the entire structure, as
+;; if the structure really did contain an ordinary field of that type.  In
+;; addition, the bit-field is placed within the structure so that it would
+;; fit within such a field, not crossing a boundary for it.
+
 ;; type for unnamed bitfield does not affect alignment
 (define (bitfield-aln flds)
 
@@ -636,9 +645,10 @@ typedef struct _GObjectClass {
 
   #f)
 
-(define (process-flds flds)
+#;(define (process-flds fields)
   (define soi (sizeof-basetype "int"))
-  (let loop ((signed? #f) (size soi) (shift 0) (flds flds))
+  (let loop ((offs base) (aln 0) (dsg #f)
+             (decls '()) (flds fields))
     (if (null? flds) size
         (sx-match (car flds)
           ((comp-udecl
@@ -646,35 +656,39 @@ typedef struct _GObjectClass {
             (comp-declr (bit-field (ident ,name) (p-expr (fixed ,bsiz)))))
            (let ((bsiz (string->number bsiz)))
              (if (> (+ shift bsiz) soi)
-                 (loop (+ size soi) bsiz (cdr flds))
-                 (loop size (+ shift bsiz) (cdr flds)))))
+                 (loop (+ offs soi) bsiz dsg decls (cdr flds))
+                 (loop offs (+ shift bsiz) dsg decls (cdr flds)))))
           (,_
            (pp (car flds))
-           (loop #f 0 0 (cdr flds)))
+           (loop offs aln dsg decls (cdr flds)))
           ))))
 
-(when #t
+
+(when #f
   (let* ((code
           (string-append
            "struct foo {\n"
-           "  int x;\n"
+           ;;"  int x;\n"
            "  int y1: 1;\n"
+           "  long : 0;\n"
            "  int y2: 2;\n"
-           "  int y3: 3;\n"
-           "  int z;\n"
+           ;;"  int y3: 3;\n"
+           ;;"  int z;\n"
            "} x;\n"
            ))
          (tree (parse-string code))
-         (flds (sx-tail (sx-ref* tree 1 1 1 1 2)))
-         (flds (fold unitize-decl '() flds))
-         ;;(flds (expand-typerefs flds '()))
+         (flds0 (sx-tail (sx-ref* tree 1 1 1 1 2)))
+         (flds1 (fold-right dictize-decl '() flds0))
+         (flds1 (fold-right unitize-decl '() flds0))
+         (flds (map udecl->mdecl flds1))
          )
     ;;(pp tree)
     ;;(pp decl)
-    ;;(pp flds)
-    (process-flds flds)
+    ;;(pp flds0)
+    ;;(pp flds1)
+    (pp flds)
+    ;;(process-flds flds)
     #f))
-|#
 
 ;; eval-sizeof-mtail mmissed:
 ;; ((bit-field (p-expr (fixed "16"))))
