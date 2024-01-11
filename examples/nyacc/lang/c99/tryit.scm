@@ -1,6 +1,6 @@
 ;; examples/nyacc/lang/c99/tryit.scm
 
-;; Copyright (C) 2020-2022 Matthew R. Wette
+;; Copyright (C) 2020-2024 Matthew Wette
 ;;
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -11,7 +11,7 @@
 
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 match))
-(use-modules ((srfi srfi-1) #:select (last fold-right)))
+(use-modules ((srfi srfi-1) #:select (last fold-right fold)))
 (use-modules (srfi srfi-11))            ; let-values
 (use-modules (rnrs arithmetic bitwise))
 (use-modules ((system foreign) #:prefix ffi:))
@@ -663,6 +663,9 @@ typedef struct _GObjectClass {
            (loop offs aln dsg decls (cdr flds)))
           ))))
 
+;; eval-sizeof-mtail mmissed:
+;; ((bit-field (p-expr (fixed "16"))))
+;;  (fixed-type "unsigned int"))
 
 (when #f
   (let* ((code
@@ -689,10 +692,6 @@ typedef struct _GObjectClass {
     (pp flds)
     ;;(process-flds flds)
     #f))
-
-;; eval-sizeof-mtail mmissed:
-;; ((bit-field (p-expr (fixed "16"))))
-;;  (fixed-type "unsigned int"))
 
 ;; __builtin_offsetof(...)
 ;; --- last line ---
