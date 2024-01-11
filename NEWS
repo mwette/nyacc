@@ -1,13 +1,15 @@
-Copyright (C) 2017-2023 Matthew Wette
+Copyright (C) 2017-2024 Matthew Wette
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
-202?-??-??  V1.09.3
+2024-01-11  V1.09.3
 	* system/ffi-help-rt(fh-void?): check for struct, also for void*
 	  and void**; fixed bug #65021
+	* fix c99-06.test for size-and-alignof-type
+	* cleanup of code in lang/c99
 
 2023-11-16  V1.09.2
 	* configure should no longer use NONE as part of install path
