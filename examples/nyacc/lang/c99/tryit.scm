@@ -547,84 +547,6 @@ typedef struct _GObjectClass {
     #f))
 
 #|
-(define (specl-type specl)
-    (sx-match (sx-find 'type-spec (sx-tail specl))
-      ((type-spec (fixed-type ,name))
-       name)
-      ;; May need case for ((type-spec (typename "foo_t"))
-      (,hmm (sf "missed ~S\n" hmm) (quit))
-      ))
-
-;; new: need alignof before sizeof
-(define (sizeof-mtail mtail udict) ;; => (values size align)
-
-  (define (exec/decl decl size base-align update)
-    (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
-          (declrs (or (and=> (sx-ref decl 2) sx-tail) '((ident "_")))))
-      (let loop ((size size) (base-align base-align) (declrs declrs))
-        (if (null? declrs)
-            (values size base-align)
-            (call-with-values
-                (lambda ()
-                  (sizeof-mtail
-                   (cdr (m-unwrap-declr (car declrs) mtail)) udict))
-              (lambda (elt-sz elt-al)
-                (loop (update elt-sz elt-al size)
-                      (max elt-al base-align) (cdr declrs))))))))
-
-  (match mtail
-    (`((pointer-to) . ,rest)
-     (values (sizeof-basetype '*) (alignof-basetype '*)))
-    (`((fixed-type ,name))
-     (values (sizeof-basetype name) (alignof-basetype name)))
-    (`((float-type ,name))
-     (values (sizeof-basetype name) (alignof-basetype name)))
-    (`((array-of ,dim) . ,rest)
-     (let ((mult (eval-c99-cx dim udict)))
-       (call-with-values
-           (lambda ()
-             (sizeof-mtail rest udict))
-         (lambda (size align)
-           (values (* mult size) align)))))
-    (`((struct-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (flds fields))
-       (cond
-        ((null? flds) (values (incr-size 0 align size) align))
-        ((eq? 'comp-decl (sx-tag (car flds)))
-         (call-with-values
-             (lambda () (exec/decl (car flds) size align incr-size))
-           (lambda (size align)
-             (loop size align (cdr flds)))))
-        (else (loop size align (cdr flds))))))
-    (`((struct-def (ident ,name) (field-list . ,fields)))
-     (sizeof-mtail `((struct-def (field-list . ,fields))) udict))
-    (`((union-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (flds fields))
-       (cond
-        ((null? flds) (values (incr-size 0 align size) align))
-        ((eq? 'comp-decl (sx-tag (car flds)))
-         (call-with-values
-             (lambda () (exec/decl (car flds) size align maxi-size))
-           (lambda (size align)
-             (loop size align (cdr flds)))))
-        (else (loop size align (cdr flds))))))
-    (`((union-def (ident ,name) (field-list . ,fields)))
-     (sizeof-mtail `((union-def (field-list . ,fields))) udict))
-    (`((enum-ref . ,rest))
-     (values (sizeof-basetype "int") (alignof-basetype "int")))
-    (`((enum-def . ,rest))
-     (values (sizeof-basetype "int") (alignof-basetype "int")))
-    (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
-       (throw 'c99-error "coding error"))))
-
-(define* (sizeof-specl/declr specl declr #:optional (udict '())) ;; => values
-  (let* ((udecl `(udecl ,specl ,declr))
-         (xdecl (expand-typerefs udecl udict))
-         (mdecl (udecl->mdecl xdecl)))
-    (sizeof-mtail (cdr mdecl) udict)))
-|#
-
-#|
 |#
 ;; bitfield offset size pos
 ;; most C compilers:
@@ -635,15 +557,66 @@ typedef struct _GObjectClass {
 ;; fit within such a field, not crossing a boundary for it.
 
 ;; type for unnamed bitfield does not affect alignment
-(define (bitfield-aln flds)
 
-  #;(let loop ((bfal 0) (flds flds))
-    (if (null? flds) bfal
-        (sx-match (car flds)
-          ;;
-          )))
+;; bitfield-props base-type byte-offset bit-offset bit-length
 
-  #f)
+;; named-bit 0.2 4 3.7   => 4 4.2
+;; a=4 rs3.7 => cap=4
+
+(define-syntax-rule (show1 l)
+  (sf "~A: s=~S a=~S rs=~S => rs=~S\n" (symbol->string (quote l))
+      (car l) (cadr l) (caddr l) (apply incr-size/bf l)))
+
+(define (old-incr-size s a rs)
+  (+ s (* a (quotient (+ rs (1- a)) a))))
+
+(define (incr-size s a rs)
+  (if (integer? rs)
+      (+ s (* a (quotient (+ rs (1- a)) a)))
+      (+ s (* a (quotient (+ rs (1- a)) a)))))
+
+(define (incr-size/bf s a rs)           ; bit-field
+  (let ((bs (* 8 s))
+        (ba (* 8 a))
+        (brs (* 8 rs)))
+    (sferr "bs=~S ba=~S brs=~S\n" bs ba brs)
+    (sferr "(quotient (+ brs bs) ba)=~S\n" (quotient (+ brs bs) ba))
+    (sferr "(quotient brs ba)=~S\n" (quotient brs ba))
+    (cond
+     ((zero? s)
+      (/ (* ba (quotient (+ brs (1- ba)) ba)) 8))
+     ((= (quotient (+ brs bs) ba) (quotient brs ba))
+      (/ (+ bs ba bs) 8))
+     (else
+      (/ (+ bs (* ba (quotient (+ brs (1- ba)) ba))) 8)))))
+
+(when #t
+  (let ((c01 '(1/8 1 0))
+        (c02 '(3/8 1 15/8))
+        (c03 '(0 1 15/8))
+        )
+    ;;(show1 c01)
+    ;;(show1 c02)
+    (show1 c03)
+    ))
+
+(define (maxi-size s a rs)
+  (max s rs))
+
+(define (exec/decl decl size base-align update)
+  (define udict '())
+  (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
+        (declrs (or (and=> (sx-ref decl 2) sx-tail) '((ident "_")))))
+    (let loop ((size size) (base-align base-align) (declrs declrs))
+      (if (null? declrs)
+          (values size base-align)
+          (call-with-values
+              (lambda ()
+                (sizeof-mtail
+                 (cdr (m-unwrap-declr (car declrs) mtail)) udict))
+            (lambda (elt-sz elt-al)
+              (loop (update elt-sz elt-al size)
+                    (max elt-al base-align) (cdr declrs))))))))
 
 #;(define (process-flds fields)
   (define soi (sizeof-basetype "int"))

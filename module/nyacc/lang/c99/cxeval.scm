@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/c99eval.scm - evaluate constant expressions
 
-;; Copyright (C) 2018-2024 Matthew R. Wette
+;; Copyright (C) 2018-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -92,11 +92,22 @@
 (define (cx-incr-size s a rs)
   (+ s (* a (quotient (+ rs (1- a)) a))))
 
+;; Update struct running-size (rs) given new bit-field size
+;; bs: bit count, a: alignment, rs: running size
+(define (cx-incr-bit-size bs a rs)
+  (error "not done")
+  (let ((ba (* 8 a)) (brs (* 8 rs)))
+    (cond
+     ((zero? bs) (/ (* ba (quotient (+ brs (1- ba)) ba)) 8))
+     ((= (quotient (+ brs bs) ba) (quotient brs ba)) (/ (+ bs ba bs) 8))
+     (else (/ (+ bs (* ba (quotient (+ brs (1- ba)) ba))) 8)))))
+
 ;; Update running union size (rs) given new item s and a.
 (define (cx-maxi-size s a rs)
   (max s rs))
 
 (define incr-size cx-incr-size)
+(define incr-bit-size cx-maxi-size)
 (define maxi-size cx-maxi-size)
 
 (define (mkcdl specl declrs)
@@ -104,18 +115,37 @@
 
 (define (sizeof-mtail mtail udict) ;; => (values size align)
 
-  (define (exec/decl decl size base-align update)
+  (define (bfud exp mtail size align pwbf) ; bit-field update
+    (call-with-values
+        (lambda () (sizeof-mtail mtail udict))
+      (lambda (elt-sz elt-al)
+        (let* ((sz (if pwbf size (incr-size 0 align size)))
+               (bz (eval-c99-cx exp udict))
+               (sz (incr-bit-size bz elt-al sz)))
+          (values sz (max elt-al align))))))
+
+  (define (exec/decl decl size base-align pwbf update)
+    ;; pwbf: prev was bit-field
     (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
           (declrs (or (and=> (sx-ref decl 2) sx-tail) '((ident "_")))))
-      (let loop ((size size) (base-align base-align) (declrs declrs))
-        (if (null? declrs)
-            (values size base-align)
-           (call-with-values
-                (lambda ()
-                  (sizeof-mtail (cdr (m-unwrap-declr (car declrs) mtail)) udict))
-              (lambda (elt-sz elt-al)
-                (loop (update elt-sz elt-al size)
-                      (max elt-al base-align) (cdr declrs))))))))
+      (let loop ((size size) (align base-align) (pwbf pwbf) (dlrs declrs))
+        (if (null? dlrs) (values size align pwbf)
+            (match (car dlrs)
+              (`(comp-declr (bit-field ,nam ,exp))
+               (call-with-values (lambda () (bfud exp size align pwbf mtail))
+                 (lambda (elt-sz elt-al) (loop elt-sz elt-al #t (cdr dlrs)))))
+              (`(comp-declr (bit-field ,exp))
+               (call-with-values (lambda () (bfud exp size align pwbf mtail))
+                 (lambda (elt-sz elt-al) (loop elt-sz elt-al #t (cdr dlrs)))))
+              (_
+               (call-with-values
+                   (lambda ()
+                     (let* ((mt (cdr (m-unwrap-declr (car dlrs) mtail))))
+                       (sizeof-mtail mt udict)))
+                 (lambda (elt-sz elt-al)
+                   (let ((sz (if pwbf (incr-size 0 align size) size)))
+                     (loop (update elt-sz elt-al sz) (max elt-al align)
+                           #f (cdr dlrs)))))))))))
 
   (match mtail
     (`((pointer-to) . ,rest)
@@ -130,41 +160,31 @@
            (lambda () (sizeof-mtail rest udict))
          (lambda (size align) (values (* mult size) align)))))
     (`((struct-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (flds fields))
-       (cond
-        ((null? flds) (values (incr-size 0 align size) align))
-        ((eq? 'comp-decl (sx-tag (car flds)))
-         (call-with-values
-             (lambda () (exec/decl (car flds) size align incr-size))
-           (lambda (size align) (loop size align (cdr flds)))))
-        (else (loop size align (cdr flds))))))
+     (let loop ((size 0) (align 0) (pwbf #f) (flds fields))
+       (match flds
+         ('() (values (incr-size 0 align size) align))
+         (`((comment ,text) . ,rest) (loop size align pwbf rest))
+         (`((comp-decl . ,_) . ,rest)
+          (call-with-values
+              (lambda () (exec/decl (car flds) size align pwbf incr-size))
+            (lambda (size align pwbf) (loop size align pwbf rest)))))))
     (`((struct-def (ident ,name) (field-list . ,fields)))
      (sizeof-mtail `((struct-def (field-list . ,fields))) udict))
     (`((union-def (field-list . ,fields)))
      (let loop ((size 0) (align 0) (flds fields))
-       (cond
-        ((null? flds) (values (incr-size 0 align size) align))
-        ((eq? 'comp-decl (sx-tag (car flds)))
-         (call-with-values
-             (lambda () (exec/decl (car flds) size align maxi-size))
-           (lambda (size align) (loop size align (cdr flds)))))
-        (else (loop size align (cdr flds))))))
+       (match flds
+         ('() (values (incr-size 0 align size) align))
+         (`((comment ,text) . ,rest) (loop size align rest))
+         (`((comp-decl . ,_) . ,rest)
+          (call-with-values
+              (lambda () (exec/decl (car flds) size align #f maxi-size))
+            (lambda (size align pwbf) (loop size align rest)))))))
     (`((union-def (ident ,name) (field-list . ,fields)))
      (sizeof-mtail `((union-def (field-list . ,fields))) udict))
     (`((enum-ref . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int")))
     (`((enum-def . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int")))
-    (`((bit-field ,name ,expr) (fixed-type ,type))
-     (call-with-values
-         (lambda () (sizeof-mtail (cdr mtail) udict))
-       (lambda (size align)
-         #f))
-     (throw 'c99-error "bit-fields not yet done")
-     )
-    (`((bit-field ,expr) (fixed-type ,type))
-     (throw 'c99-error "bit-fields not yet done")
-     )
     (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
 
