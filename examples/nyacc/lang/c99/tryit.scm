@@ -579,9 +579,6 @@ typedef struct _GObjectClass {
   (let ((bs (* 8 s))
         (ba (* 8 a))
         (brs (* 8 rs)))
-    (sferr "bs=~S ba=~S brs=~S\n" bs ba brs)
-    (sferr "(quotient (+ brs bs) ba)=~S\n" (quotient (+ brs bs) ba))
-    (sferr "(quotient brs ba)=~S\n" (quotient brs ba))
     (cond
      ((zero? s)
       (/ (* ba (quotient (+ brs (1- ba)) ba)) 8))
@@ -590,10 +587,11 @@ typedef struct _GObjectClass {
      (else
       (/ (+ bs (* ba (quotient (+ brs (1- ba)) ba))) 8)))))
 
-(when #t
+(when #f
   (let ((c01 '(1/8 1 0))
         (c02 '(3/8 1 15/8))
         (c03 '(0 1 15/8))
+        (c04 '(3/8 4 1))
         )
     ;;(show1 c01)
     ;;(show1 c02)
@@ -649,22 +647,29 @@ typedef struct _GObjectClass {
            "  long : 0;\n"
            "  int y2: 2;\n"
            ;;"  int y3: 3;\n"
-           ;;"  int z;\n"
+           "  int z;\n"
            "} x;\n"
            ))
-         (tree (parse-string code))
+         #|
          (flds0 (sx-tail (sx-ref* tree 1 1 1 1 2)))
          (flds1 (fold-right dictize-decl '() flds0))
          (flds1 (fold-right unitize-decl '() flds0))
          (flds (map udecl->mdecl flds1))
+         |#
          )
-    ;;(pp tree)
+    (pp tree)
     ;;(pp decl)
     ;;(pp flds0)
     ;;(pp flds1)
-    (pp flds)
+    ;;(pp flds)
     ;;(process-flds flds)
     #f))
+
+(when #f
+  (let* ((code "int foo(void);")
+         (tree (parse-string code)))
+    (pp tree)
+    #t))
 
 ;; __builtin_offsetof(...)
 ;; --- last line ---
