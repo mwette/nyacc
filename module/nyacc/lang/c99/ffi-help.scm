@@ -1175,13 +1175,16 @@
 	 (mdecl (udecl->mdecl udecl)))
     (mdecl->fh-wrapper mdecl)))
 
+(define void-params '((param-decl (decl-spec-list (type-spec (void))))))
+
 ;; @deffn {Procedure} cnvt-fctn name specl params
 ;; name is string
 ;; specl is decl-spec-list tree
 ;; params is list of param-decl trees (i.e., cdr of param-list tree)
 ;; @end deffn
 (define (cnvt-fctn name rdecl params)
-  (let* ((varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
+  (let* ((params (if (equal? params void-params) '() params))
+         (varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
 	 (decl-return (gen-decl-return rdecl))
 	 (decl-params (gen-decl-params params))
 	 (exec-return (gen-exec-return-wrapper rdecl))
