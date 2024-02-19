@@ -271,6 +271,8 @@
       ((not ,expr) (unary/l 'not "!" expr))
       ((sizeof-expr ,expr) (sf "sizeof(") (ppx expr) (sf ")"))
       ((sizeof-type ,type) (sf "sizeof(") (ppx type) (sf ")"))
+      ((offsetof-type ,type ,expr)
+       (sf "__builtin_offsetof(") (ppx type) (sf ", ") (ppx expr) (sf ")"))
 
       ((pragma ,text)
        (fmtr 'nlin)
