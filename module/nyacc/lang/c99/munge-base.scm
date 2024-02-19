@@ -40,7 +40,8 @@
             split-udecl
             declr-ident declr-name pointer-declr?
             clean-field-list clean-fields
-            splice-typename replace-aggr-ref)
+            splice-typename replace-aggr-ref
+            md-label md-attr md-tail)
   #:use-module (nyacc lang sx-util)
   #:use-module (srfi srfi-11)           ; let-values
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
@@ -713,6 +714,9 @@
     ;;(if attr (cons* (car m-declr) attr (cdr m-declr)) m-declr)
     (if attr (cons* head attr tail) (cons head tail))
     ))
+
+(define (md-label mdecl)
+  (car mdecl))
 
 (define (md-attr mdecl)
   (if (and (pair? (cdr mdecl)) (pair? (cadr mdecl)) (eq? '@ (caadr mdecl)))
