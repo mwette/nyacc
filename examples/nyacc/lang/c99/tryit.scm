@@ -9,6 +9,8 @@
 
 ;;(add-to-load-path (getcwd))
 
+(use-modules (ice-9 textual-ports))
+(use-modules (ice-9 popen))
 (use-modules (ice-9 pretty-print))
 (use-modules (ice-9 match))
 (use-modules ((srfi srfi-1) #:select (last fold-right fold)))
@@ -34,6 +36,7 @@
 
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
+(define (ff fmt . args) (apply simple-format #f fmt args))
 (define pp pretty-print)
 (define ppin (lambda (sx) (pretty-print sx #:per-line-prefix "  ")))
 (define pp99 (lambda (sx) (pretty-print-c99 sx #:per-line-prefix "  ")))
@@ -650,6 +653,7 @@ typedef struct _GObjectClass {
            "  int z;\n"
            "} x;\n"
            ))
+         (tree (parse-string code))
          #|
          (flds0 (sx-tail (sx-ref* tree 1 1 1 1 2)))
          (flds1 (fold-right dictize-decl '() flds0))
@@ -664,6 +668,150 @@ typedef struct _GObjectClass {
     ;;(pp flds)
     ;;(process-flds flds)
     #f))
+
+(eval-when (expand load eval)
+  (define (read-hereis-text reader-char port)
+    (define beg-sq '(#\" #\" #\"))
+    (define end-sq '(#\" #\" #\"))
+
+    (define (skip-seq seq ch)
+      (let loop ((bs seq) (ch ch))
+        (cond
+         ((null? bs) ch)
+         ((eof-object? ch) (error "bad hereis expression"))
+         ((char=? ch (car bs)) (loop (cdr bs) (read-char port)))
+         (else (error "hereis: coding error")))))
+
+    (define (skip-nl ch)
+      (if (char=? #\newline ch) (read-char port) ch))
+
+    ;;(assert (eq? reader-char (car beg-sq))
+    (let loop ((chl '()) (ex '()) (es end-sq)
+               (ch (skip-nl (skip-seq beg-sq reader-char))))
+      (cond
+       ((eof-object? ch) (error "bad hereis expression"))
+       ((char=? ch (car es))
+        (let ((es (cdr es)))
+          (if (null? es)
+              (reverse-list->string chl)
+              (loop chl (cons ch ex) es (read-char port)))))
+       ((pair? ex) (loop (append ex chl) '() end-sq ch))
+       (else (loop (cons ch chl) ex es (read-char port))))))
+
+  (read-hash-extend #\" read-hereis-text))
+
+(when #f
+  (let* ((code #"""
+const int x = 1;
+extern int y;
+int sx = x + 1;
+int sy = y + 1;
+""")
+         (tree (parse-string code))
+         (ex (sx-ref* tree 3 2 1 2 1))
+         (ey (sx-ref* tree 4 2 1 2 1))
+         )
+    ;;(pp tree)
+    (pp ex)
+    (pp ey)
+    (pp (eval-c99-cx ex))
+    #t))
+
+(when #f
+  (let* ((code #"""
+struct foo {
+  int v1;
+  char v2;
+  char v3;
+} bf12;
+int x = __builtin_offsetof(struct foo, v2);
+""")
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (expr (sx-ref* tree 2 2 1 2 1))
+         (res (eval-c99-cx expr udict))
+         )
+    (pp expr)
+    (sf "offsetof(struct foo, v2) = ~S\n" res)
+    #t))
+
+(define (rand-bitfields n)
+  (define types (list "short" "int" "long"))
+  (define sizes (map (lambda (st ft) (cons st (* 8 (ffi:sizeof ft))))
+                     types (list ffi:short ffi:int ffi:long)))
+
+  (define (rbfdecl st ix)
+    (let* ((bs (assoc-ref sizes st))
+           (nb (random (1+ bs)))
+           (vn (ff "v~S" ix)))
+      (cond
+       ((zero? (random 3)) (ff "  ~A ~A;\n" st vn))
+       ((= nb bs) (ff "  ~A ~A;\n" st vn))
+       ((zero? nb) (ff "  ~A :0;\n" st))
+       (else (ff "  ~A ~A: ~A;\n" st vn nb)))))
+
+  (let loop ((lines '()) (nn 1))
+    (if (> nn n)
+        (string-join (reverse lines) "")
+        (loop (cons (rbfdecl (list-ref types (random 3)) nn) lines) (1+ nn)))))
+
+(set! *random-state* (random-state-from-platform))
+
+(define (check-case n)
+  (let* ((code (string-append
+                "struct {\n"
+                (rand-bitfields n)
+                "} tt;\n"
+                "long x = sizeof(tt);\n"))
+         #;(code (ff "struct {\n~A} tt;\n long x = sizeof(tt);\n"
+                   (rand-bitfields n)))
+         (prog (string-append
+                "#include <stdio.h>\n"
+                code
+                "int main() { printf(\"%ld\", x); }\n"))
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (expr (sx-ref* tree 2 2 1 2 1))
+         (gcc-result
+          (begin
+            (with-output-to-file "ttx.c" (lambda () (display prog)))
+            (system "gcc ttx.c")
+            (string->number (get-string-all (open-input-pipe "./a.out")))))
+         (c99-result (eval-c99-cx expr udict))
+         )
+    (sf "gcc: ~S, c99: ~S\n" gcc-result c99-result)
+    (unless (equal? gcc-result c99-result)
+      (display code))
+    #t))
+
+(when #f
+  (check-case 10)
+  #f)
+
+(when #t
+  (let* ((code #"""
+struct {
+  short v1;
+  long v2: 23;
+  long v3: 12;
+  //short v4: 7;
+  //int v5;a
+  //long v6;
+  //long v7: 33;
+  //short v8: 6;
+  //int v9;
+  //short v10;
+} tt;
+""") ;; gcc 40   c99 48
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (name "tt")
+         (expr `(sizeof-expr (p-expr (ident ,name))))
+         (res (eval-c99-cx expr udict))
+         )
+    ;;(pp tree)
+    (sf "sizeof(~S) = ~S\n" name res)
+    #t))
 
 (when #f
   (let* ((code "int foo(void);")
