@@ -702,11 +702,11 @@ typedef struct _GObjectClass {
 
 (when #f
   (let* ((code #"""
-const int x = 1;
-extern int y;
-int sx = x + 1;
-int sy = y + 1;
-""")
+          const int x = 1;
+          extern int y;
+          int sx = x + 1;
+          int sy = y + 1;
+          """)
          (tree (parse-string code))
          (ex (sx-ref* tree 3 2 1 2 1))
          (ey (sx-ref* tree 4 2 1 2 1))
@@ -719,13 +719,13 @@ int sy = y + 1;
 
 (when #f
   (let* ((code #"""
-struct foo {
-  int v1;
-  char v2;
-  char v3;
-} bf12;
-int x = __builtin_offsetof(struct foo, v2);
-""")
+          struct foo {
+            int v1;
+            char v2;
+            char v3;
+          } bf12;
+          int x = __builtin_offsetof(struct foo, v2);
+          """)
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
          (expr (sx-ref* tree 2 2 1 2 1))
@@ -781,28 +781,29 @@ int x = __builtin_offsetof(struct foo, v2);
          )
     (sf "gcc: ~S, c99: ~S\n" gcc-result c99-result)
     (unless (equal? gcc-result c99-result)
-      (display code))
+      (display code)
+      (quit))
     #t))
 
 (when #f
-  (check-case 10)
+  (check-case 9)
   #f)
 
-(when #t
+(when #f
   (let* ((code #"""
-struct {
-  short v1;
-  long v2: 23;
-  long v3: 12;
-  //short v4: 7;
-  //int v5;a
-  //long v6;
-  //long v7: 33;
-  //short v8: 6;
-  //int v9;
-  //short v10;
-} tt;
-""") ;; gcc 40   c99 48
+          //gcc: 48, c99: 56
+          struct {
+            long v1: 34;
+            int v2;
+            long v3: 32;
+            //long v4: 47;
+            //long v5: 10;
+            //int v6;
+            //short v7: 2;
+            //int v8;
+            //long v9: 38;
+          } tt;
+          """)
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
          (name "tt")

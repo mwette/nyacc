@@ -97,19 +97,7 @@
 ;; bs: bit count, a: alignment, rs: running size
 (define (cx-incr-bit-size bs a rs)
   (let* ((a (* 8 a)) (rs (* 8 rs)) (ru (* a (quotient (+ rs (1- a)) a))))
-    ;;(sferr "bs=~S rs=~S ru= ~S => " bs rs ru)
-    (/
-     (cond
-      ((zero? bs)
-       ;;(sferr "0\n")
-       (/ ru 8))
-      ((> (+ rs bs) ru)
-       ;;(sferr ">\n")
-       (/ (+ bs ru) 8))
-      (else
-       ;;(sferr "?\n")
-       (/ (+ bs rs) 8)))
-     1)))
+    (/ (cond ((zero? bs) ru) ((> (+ rs bs) ru) (+ bs ru)) (else (+ bs rs))) 8)))
 
 ;; Update running union size (rs) given new item s and a.
 (define (cx-maxi-size s a rs)
@@ -125,15 +113,12 @@
 ;; @deffn {Procedure} sizeof-mtail mtail udict => (values size align)
 ;;
 ;; @end deffn
-
 (define* (sizeof-mtail mtail udict)
 
   (define (bfud exp mtail size align pwbf) ; bit-field update
     (call-with-values (lambda () (sizeof-mtail mtail udict))
       (lambda (elt-sz elt-al)
-        ;;(sferr "bfud: elt-sz=~S elt-al=~S size=~S\n" elt-sz elt-al size)
-        (let* (;;(size (if pwbf size (incr-bit-size 0 elt-al size)))
-               (bits (eval-c99-cx exp udict))
+        (let* ((bits (eval-c99-cx exp udict))
                (size (incr-bit-size bits elt-al size)))
           (values size (max elt-al align))))))
 
@@ -144,10 +129,6 @@
     (let loop ((offs 0) (align 0) (pwbf #f) (dlrs '()) (flds fields))
       (cond
        ((pair? dlrs)
-        #|
-        (let* ((d0 (car dlrs)) (t (sx-ref* d0 1 1 1)) (d (sx-ref* d0 2 1)))
-          (sferr "\noffs=~S align=~S at ~S ~S\n" offs align t (sx-tail d)))
-        |#
         (sx-match (car dlrs)
           ((comp-udecl ,specl ,declr)
            (sx-match declr
@@ -177,7 +158,6 @@
           (,_
            (loop offs align pwbf dlrs (cdr flds)))))
        (else
-        ;;(sferr "\n")
         (values (incr-bit-size 0 align offs) align)))))
 
   (match mtail
