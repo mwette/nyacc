@@ -96,14 +96,20 @@
 ;; Update struct running-size (rs) given new bit-field size
 ;; bs: bit count, a: alignment, rs: running size
 (define (cx-incr-bit-size bs a rs)
-  (let ((ba (* 8 a)) (brs (* 8 rs)))
-    (cond
-     ((zero? bs)
-      (/ (* ba (quotient (+ brs (1- ba)) ba)) 8))
-     ((= (quotient (+ brs bs) ba) (quotient brs ba))
-      (/ (+ bs brs) 8))
-     (else
-      (/ (+ bs (* ba (quotient (+ brs (1- ba)) ba))) 8)))))
+  (let* ((a (* 8 a)) (rs (* 8 rs)) (ru (* a (quotient (+ rs (1- a)) a))))
+    ;;(sferr "bs=~S rs=~S ru= ~S => " bs rs ru)
+    (/
+     (cond
+      ((zero? bs)
+       ;;(sferr "0\n")
+       (/ ru 8))
+      ((> (+ rs bs) ru)
+       ;;(sferr ">\n")
+       (/ (+ bs ru) 8))
+      (else
+       ;;(sferr "?\n")
+       (/ (+ bs rs) 8)))
+     1)))
 
 ;; Update running union size (rs) given new item s and a.
 (define (cx-maxi-size s a rs)
@@ -119,13 +125,16 @@
 ;; @deffn {Procedure} sizeof-mtail mtail udict => (values size align)
 ;;
 ;; @end deffn
+
 (define* (sizeof-mtail mtail udict)
 
   (define (bfud exp mtail size align pwbf) ; bit-field update
     (call-with-values (lambda () (sizeof-mtail mtail udict))
       (lambda (elt-sz elt-al)
-        (let* ((size (if pwbf size (incr-bit-size 0 elt-al size)))
-               (size (incr-bit-size (eval-c99-cx exp udict) elt-al size)))
+        ;;(sferr "bfud: elt-sz=~S elt-al=~S size=~S\n" elt-sz elt-al size)
+        (let* (;;(size (if pwbf size (incr-bit-size 0 elt-al size)))
+               (bits (eval-c99-cx exp udict))
+               (size (incr-bit-size bits elt-al size)))
           (values size (max elt-al align))))))
 
   (define (mkcdl specl declrs)          ; make comp-decl-list's
@@ -137,7 +146,7 @@
        ((pair? dlrs)
         #|
         (let* ((d0 (car dlrs)) (t (sx-ref* d0 1 1 1)) (d (sx-ref* d0 2 1)))
-          (sferr "offs=~S align=~S at ~S ~S\n" offs align t d))
+          (sferr "\noffs=~S align=~S at ~S ~S\n" offs align t (sx-tail d)))
         |#
         (sx-match (car dlrs)
           ((comp-udecl ,specl ,declr)
@@ -157,8 +166,8 @@
                 (call-with-values (lambda () (sizeof-mtail mtail udict))
                   (lambda (elt-sz elt-al)
                     (let ((offs (if pwbf (incr-bit-size 0 elt-al offs) offs)))
-                         (loop (update elt-sz elt-al offs) (max elt-al align)
-                               #f (cdr dlrs) flds))))))))))
+                      (loop (update elt-sz elt-al offs) (max elt-al align)
+                            #f (cdr dlrs) flds))))))))))
        ((pair? flds)
         (sx-match (car flds)
           ((comp-decl ,specl (comp-declr-list . ,declrs))
@@ -168,8 +177,8 @@
           (,_
            (loop offs align pwbf dlrs (cdr flds)))))
        (else
-        (let ((size (if pwbf (incr-bit-size 0 align offs) offs)))
-          (values (incr-bit-size 0 align offs) align))))))
+        ;;(sferr "\n")
+        (values (incr-bit-size 0 align offs) align)))))
 
   (match mtail
     (`((pointer-to) . ,rest)
