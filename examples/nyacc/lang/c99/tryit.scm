@@ -34,6 +34,7 @@
 (use-modules (nyacc lex))
 (use-modules (nyacc util))
 
+(set! *random-state* (random-state-from-platform))
 
 (define (sf fmt . args) (apply simple-format #t fmt args))
 (define (ff fmt . args) (apply simple-format #f fmt args))
@@ -104,8 +105,15 @@
   (define (fH seed node) (cons node seed))
   (foldts fD fU fH '() tree))
 
+;; source-properties
+(when #f
+  (let* ((tree (parse-file "test1.c"))
+         (node (and tree (sx-ref* tree 1))))
+    (pp node)
+    (sf "(source-properties node) => ~S\n" (source-properties node))))
+
 (when #f                               ; bug #60474
-  (let* ((code "const int x = 1;\n"))
+  (let* ((code "const int x = 1;\n")
          (tree (parse-string code #:mode 'code))
          (udict (c99-trans-unit->udict tree))
          (udecl (assoc-ref udict "x"))
@@ -199,55 +207,39 @@
 (when #f
   (let* ((code
           (string-append
-           ;;"enum { NN = sizeof(int), MM = sizeof(long) };\n"
            "typedef enum { N1 = 1, N2 = 2 } num_t;\n"
-           "typedef struct { int m; double b[N2]; } bar_t;\n"
-           ;;"typedef struct { int x; double z[3][4]; bar_t bar; } foo1_t;\n"
-           ;;"typedef struct { int r; double c[2]; } foo2_t;\n"
-           ;;"typedef struct { int s; double d[5]; } foo3_t;\n"
-           ;;"typedef struct { foo1_t f1; foo2_t *f2; foo3_t f3[N]; } foo_t;\n"
-           ))
+           "typedef struct { int m; double b[N2]; } bar_t;\n"))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
          (udict (udict-add-enums udict))
-         ;;(udecl (udict-ref udict "foo_t"))
          (udecl (udict-ref udict "bar_t"))
          (xdecl (expand-typerefs udecl udict))
          (mdecl (udecl->mdecl xdecl))
-         (mtail (cdr mdecl))
-         )
-    ;;(sf "~A\n" code)
-    ;;(pp udict)
+         (mtail (cdr mdecl)))
     (pp (sizeof-mtail mtail udict))
-    (pp (find-offsets mtail udict))
-    0))
+    (pp (find-offsets mtail udict))))
 
 (when #f
   (let* ((code
           (string-append
            "typedef struct { double d; char c; } foo_t[3];\n"
-           "int x = sizeof(foo_t);\n"
-           ))
+           "int x = sizeof(foo_t);\n"))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
-         ;;(udecl (udict-ref udict "x"))
          (foo-t '(type-name
                   (decl-spec-list (type-spec (typename "foo_t")))))
-         (sz-exp `(sizeof-type ,foo-t))
-         )
+         (sz-exp `(sizeof-type ,foo-t)))
     (sf "Expect (3 . 16), get:\n")
     (pp (find-offsets foo-t udict))
     (pp (find-sizes foo-t udict))
-    (sf "\ntotal size = ~A\n" (eval-sizeof-type sz-exp udict))
-    0))
+    (sf "\ntotal size = ~A\n" (eval-sizeof-type sz-exp udict))))
 
 (when #f
   (let* ((code "int foo = sizeof(\"$ABCDEF\")*2;")
          (tree (or (parse-string code) (error "parse failed")))
          (udict (c99-trans-unit->udict tree))
          (udecl (assoc-ref udict "foo"))
-         (expr (sx-ref* udecl 2 2 1))
-         )
+         (expr (sx-ref* udecl 2 2 1)))
     (sf "declaration::\n")
     (pp udecl)
     (sf "evaluate:\n")
@@ -257,49 +249,113 @@
   (let* ((code
           (string-append
            "typedef enum let { A = 1, B = 2 } let_t;\n"
-           "typedef struct { double x; let_t y; } foo_t;\n"
-           ;;"int res = sizeof(foo_t);\n"
-           ))
+           "typedef struct { double x; let_t y; } foo_t;\n"))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
-         (foo-t '(type-name
-                  (decl-spec-list (type-spec (typename "foo_t")))))
-         )
-    (pp (find-types foo-t udict '("let_t")))
-    0))
+         (foo-t '(type-name (decl-spec-list (type-spec (typename "foo_t"))))))
+    (pp (find-types foo-t udict '("let_t")))))
 
 ;; bug 57949
 (when #f
-  (let* ((code "
-typedef struct _GObjectClass {
-  void *construct_properties;
-  void *(*constructor)(unsigned long type, unsigned int n_construct_properties
-      , void *construct_properties); } GObjectClass;\n")
-         (code "struct foo { void bar(void); };\n")
+  (let* ((code "struct foo { void bar(void); };\n")
          (tree (parse-string code))
          (tree (remove-comments tree))
          (udict (c99-trans-unit->udict tree))
-         ;;(udecl (assoc-ref udict "GObjectClass"))
-         ;;(udecl (assoc-ref udict '(struct . "_GObjectClass")))
          (udecl (assoc-ref udict '(struct . "foo")))
          (fdecl (fh-cnvt-udecl udecl udict))
-         (sdecl (with-input-from-string fdecl read))
-         )
-    ;;(pp udecl)
-    (display fdecl)
-    ;;(pp sdecl)
-    0))
-
-;; source-properties
-(when #f
-  (let ((tree (parse-file "test1.c")) (node (and tree (sx-ref* tree 1))))
-    (pp node)
-    (sf "(source-properties node) => ~S\n" (source-properties node))))
+         (sdecl (with-input-from-string fdecl read)))
+    (display fdecl)))
 
 ;; bug #63604
 (when #f
   (let* ((code "int foo(const float color[static 4]);")
          (tree (parse-string code)))
     (pp tree)))
+
+;; =============================================================================
+
+(define (rand-bitfields n)
+  (define types (list "short" "int" "long"))
+  (define sizes (map (lambda (st ft) (cons st (* 8 (ffi:sizeof ft))))
+                     types (list ffi:short ffi:int ffi:long)))
+  (define (rbfdecl st ix)
+    (let* ((bs (assoc-ref sizes st))
+           (nb (random (1+ bs)))
+           (vn (ff "v~S" ix)))
+      (cond
+       ((zero? (random 3)) (ff "  ~A ~A;\n" st vn))
+       ((= nb bs) (ff "  ~A ~A;\n" st vn))
+       ((zero? nb) (ff "  ~A :0;\n" st))
+       (else (ff "  ~A ~A: ~A;\n" st vn nb)))))
+  (let loop ((lines '()) (nn 1))
+    (if (> nn n)
+        (string-join (reverse lines) "")
+        (loop (cons (rbfdecl (list-ref types (random 3)) nn) lines) (1+ nn)))))
+
+(define (check-case n)
+  (let* ((code (string-append "struct {\n" (rand-bitfields n) "} tt;\n"
+                              "long x = sizeof(tt);\n"))
+         (prog (string-append "#include <stdio.h>\n" code
+                              "int main() { printf(\"%ld\", x); }\n"))
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (expr (sx-ref* tree 2 2 1 2 1))
+         (gcc-result
+          (begin
+            (with-output-to-file "ttx.c" (lambda () (display prog)))
+            (system "gcc ttx.c")
+            (string->number (get-string-all (open-input-pipe "./a.out")))))
+         (c99-result (eval-c99-cx expr udict)))
+    (equal? gcc-result c99-result)))
+
+(when #f
+  (let loop ((n 10))
+    (cond
+     ((zero? n) #t)
+     ((check-case 9) (loop (1- n)))
+     (else #f))))
+
+(define (rand-fields n)
+  (define types (list "short" "int" "long" "double" "float"))
+  (define sizes (list ffi:short ffi:int ffi:long ffi:double ffi:float))
+  (define ntype (length types))
+  (define (rbfdecl sx ix)
+    (let* ((st (list-ref types sx)) (bs (list-ref sizes sx))
+           (nb (random (1+ bs))) (vn (ff "v~S" ix)))
+      (cond
+       ((or (> sx 2) (= ix n) (zero? (random 3))) (ff "  ~A ~A;\n" st vn))
+       ((= nb bs) (ff "  ~A ~A;\n" st vn))
+       ((zero? nb) (ff "  ~A :0;\n" st))
+       (else (ff "  ~A ~A: ~A;\n" st vn nb)))))
+  (let loop ((lines '()) (nn 1))
+    (if (> nn n)
+        (string-join (reverse lines) "")
+        (loop (cons (rbfdecl (random ntype) nn) lines) (1+ nn)))))
+
+(when #t
+  (let* ((code
+          (string-append
+           "struct foo {\n" (rand-fields 5) "};\n"
+           "long tsz = __builtin_offsetof(struct foo, v5);\n"
+           ))
+         (prog
+          (string-append
+           "#include <stdio.h>\n"
+           code
+           "int main() { printf(\"%ld\", tsz); }\n"))
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (exp-tos (sx-ref* tree 2 2 1 2 1))
+         (c99-result (eval-c99-cx exp-tos udict))
+         (gcc-result
+          (begin
+            (with-output-to-file "tt8c.c" (lambda () (display prog)))
+            (system "gcc tt8c.c")
+            (string->number (get-string-all (open-input-pipe "./a.out")))))
+         )
+    (sf "c99: ~S  gcc: ~S\n" c99-result gcc-result)
+    ;;(when (<= c99-result 8) (sf "~A\n" code))
+    (unless (equal? c99-result gcc-result) (pp code) (exit 1))
+    #t))
 
 ;; --- last line ---

@@ -302,7 +302,8 @@
               (let ((mtail (and=> (sx-find 'type-spec specl) sx-tail)))
                 (call-with-values (lambda () (bfud expr mtail offs align))
                   (lambda (offs align)
-                    (if (equal? name (car path)) offs
+                    (if (equal? name (car path))
+                        (throw 'c99-error "can't take offset of bitfield")
                         (loop offs align (cdr dlrs) flds))))))
              ((comp-declr (bit-field ,expr))
               (let ((mtail (and=> (sx-find 'type-spec specl) sx-tail)))
