@@ -23,7 +23,6 @@
 		     (string-contains path-spec "gdk-pixbuf/" 0)
 		     (string=? file-spec "<gdkconfig.h>")))
   #:use-ffi-module (ffi glib)
-  #:use-ffi-module (ffi gobject)
   #:use-ffi-module (ffi pango))
 
 (define-public GdkAtom*-desc (bs:pointer GdkAtom))

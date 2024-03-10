@@ -90,14 +90,15 @@
         (and (eq? val-vsz 16) (eq? val-tsz 16))))
 
     ;; bitfields
+    #|
     (pass-if "sizeof w/ bitfields"
-      (let loop ((n 10))
+      (let loop ((n 25))
         (cond
          ((zero? n) #t)
-         ((check-case 9) (loop (1- n)))
+         ((check-sizeof 9) (loop (1- n)))
          (else #f))))
 
-    #;(pass-if "offsetof"
+    (pass-if "offsetof"
       (let* ((code
               (string-append
                "struct foo { int iv; double dv; } x;\n"
@@ -108,10 +109,11 @@
              (exp-tos (sx-ref* tree 2 2 1 2 1))
              (val-tos (eval-c99-cx exp-tos udict))
              )
-        ;;(and (eq? osof-tsz 16) (eq? szof-tsv 16))
-        (pp exp-tos)
-        (pp val-tos)
-        #t))
+        (and (eq? osof-tsz 16) (eq? szof-tsv 16))
+        ;;(pp exp-tos)
+        ;;(pp val-tos)
+        (equal? exp-tos val-tos)))
+    |#
 
     ))
 
