@@ -30,7 +30,7 @@
 ;;; Code:
 
 (define-module (nyacc lang nx-printf)
-  #:export (nx-printf nx-sprintf parse-format-string apply-fmt)
+  #:export (nx-printf nx-sprintf parse-format-string apply-fmt))
 
 ;; @deffn {Scheme} parse-fmt ch port => (conv width prec . flags) | #\% | #f
 ;; Parse a formatting stream of characters from a formatting string.  On
