@@ -59,6 +59,7 @@
             ;;
             make-nx-hash-table nx-hash-ref nx-hash-set!
             nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
+            mat-disp vec-disp
             ;;
             install-inline-language-evaluator
             uninstall-inline-language-evaluator)
@@ -71,8 +72,8 @@
 (define nx-undefined (if #f #f))
 
 ;; @deffn {Procedure} nx-get-method obj name
-;; find a 
-;; @end deffn 
+;; find a
+;; @end deffn
 (define (nx-get-method obj name)
   #f)
 
@@ -141,6 +142,51 @@
               (else (error "sprintf: unknown % char")))))
          (else
           (loop stl (cons ch chl) (read-char) args)))))))
+
+;; === matrices and vectors ========
+
+(define (mat-disp/strict array port format)
+  (let* ((conv (array-type array))
+         (dims (array-dimensions array))
+         (dimz (map (lambda (i) (min i 8)) dims))
+         (spec (parse-format-string format)))
+    (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
+      (do ((j 0 (1+ j))) ((= j (list-ref dimz 1)))
+        (display " " port)
+        (apply-fmt port spec (array-ref array i j)))
+      (newline port))))
+
+(define* (mat-disp array #:optional (port #t) (format "%12.5e"))
+  (cond
+   ((eq? #f port)
+    (let ((strp (open-output-string)))
+      (mat-disp/strict array strp format)
+      (get-output-string strp)))
+   ((eq? #t port)
+    (mat-disp/strict array (current-output-port) format))
+   (else
+    (mat-disp/strict array port format))))
+
+(define (vec-disp/strict array port format)
+  (let* ((conv (array-type array))
+         (dims (array-dimensions array))
+         (dimz (map (lambda (i) (min i 8)) dims))
+         (spec (parse-format-string format)))
+    (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
+      (display " " port)
+      (apply-fmt port spec (array-ref array i))
+      (newline port))))
+
+(define* (vec-disp array #:optional (port #t) (format "%12.5e"))
+  (cond
+   ((eq? #f port)
+    (let ((strp (open-output-string)))
+      (vec-disp/strict array strp format)
+      (get-output-string strp)))
+   ((eq? #t port)
+    (vec-disp/strict array (current-output-port) format))
+   (else
+    (vec-disp/strict array port format))))
 
 ;;; === in-line reading =========================================================
 
@@ -227,7 +273,7 @@
   (if #f #f))
 
 ;; @deffn {Procedure} uninstall-inline-language-evaluator
-;; Clear the reader macro @code{#<}.  
+;; Clear the reader macro @code{#<}.
 ;; @end deffn
 (define (uninstall-inline-language-evaluator)
   "- Procedure: uninstall-inline-language-evaluator
