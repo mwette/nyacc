@@ -1,6 +1,6 @@
 ;;; nyacc/lang/nx-printf.scm - display routines
 
-;; Copyright (C) 2019,2023 Matthew Wette
+;; Copyright (C) 2019,2023-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -30,15 +30,7 @@
 ;;; Code:
 
 (define-module (nyacc lang nx-printf)
-  #:export (nx-printf
-            parse-format-string apply-fmt
-            mat-disp vec-disp))
-
-(define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
-(use-modules (ice-9 pretty-print))
-(define (pperr x) (pretty-print x (current-error-port) #:per-line-prefix "  "))
-
-(define rls reverse-list->string)
+  #:export (nx-printf nx-sprintf parse-format-string apply-fmt)
 
 ;; @deffn {Scheme} parse-fmt ch port => (conv width prec . flags) | #\% | #f
 ;; Parse a formatting stream of characters from a formatting string.  On
@@ -127,7 +119,8 @@
 ;; See @code{nx-printf}.
 ;; @end deffn
 (define (parse-format-string fmt) ;; => list of string n format lists)
-  (define (update res chl) (if (pair? chl) (cons (rls chl) res) res))
+  (define (update res chl)
+    (if (pair? chl) (cons (reverse-list->string chl) res) res))
 
   (call-with-input-string fmt
     (lambda (port)
@@ -279,47 +272,43 @@
 
 ;; @deffn {Scheme} nx-printf port fmt . vals
 ;; Like C's printf, where @var{port} can be a port, or @code{#t} for
-;; the current output port, or @code{#f} for a string.  Returns the
-;; formatted string if @var{port} equal to @code{#f}.  This is accomplished
-;; by first parsing @var{fmt} into a list of formatting objects and
-;; strings (see @code{parse-format-string}) and then outputting the
-;; sequence: either a string, or a format object applied to the next of
-;; @var{vals} (see @code{apply-fmt}).  See, for example,
+;; the current output port.  Returns the formatted string if @var{port}
+;; equal to @code{#f}.  This is accomplished by first parsing @var{fmt}
+;; into a list of formatting objects and strings (see
+;; @code{parse-format-string}) and then outputting the sequence: either
+;; a string, or a format object applied to the next of @var{vals}
+;; (see @code{apply-fmt}).  See, for example,
 ;; @url{https://www.gnu.org/software/coreutils/printf}.@*
 ;; Examples:
 ;; @example
-;; (nx-printf #f "0x%04x" 23) => "0x0017"
-;; (nx-printf #f "%f" 123.45) => "123.450000"
-;; (nx-printf #f "%7.1f" 123.45) => "  123.4"
-;; (nx-printf #f "%-9.6f" 12.3456789) => "12.345678"
-;; (nx-printf #f "%-9.6f" -12.3456789) => "-12.345678"
-;; (nx-printf #f "x=%.1f" 1.23) => "x=1.2"
-;; (nx-printf #f '("x=" (#\f #f 1) "\n") 1.23) => 1.2
+;; (nx-printf #t "0x%04x" 23) yields "0x0017"
+;; (nx-printf #t "%f" 123.45) yields "123.450000"
+;; (nx-printf #t "%7.1f" 123.45) yields "  123.4"
+;; (nx-printf #t "%-9.6f" 12.3456789) yields "12.345678"
+;; (nx-printf #t "%-9.6f" -12.3456789) yields "-12.345678"
+;; (nx-printf #t "x=%.1f" 1.23) yields "x=1.2"
+;; (nx-printf #t '("x=" (#\f #f 1) "\n") 1.23) yields "x=1.2"
 ;; @end example
 ;; @end deffn
 (define (nx-printf port fmt . vals)
   "- Scheme: nx-printf port fmt . vals
-     Like C's printf, where PORT can be a port, or '#t' for the current
-     output port, or '#f' for a string.  Returns the formatted string if
-     PORT equal to '#f'.  This is accomplished by first parsing FMT into
+     Like C’s printf, where PORT can be a port, or ‘#t’ for the current
+     output port, or ‘#f’ for a string.  Returns the formatted string if
+     PORT equal to ‘#f’.  This is accomplished by first parsing FMT into
      a list of formatting objects and strings (see
-     'parse-format-string') and then outputting the sequence: either a
+     ‘parse-format-string’) and then outputting the sequence: either a
      string, or a format object applied to the next of VALS (see
-     'apply-fmt').  See, for example,
+     ‘apply-fmt’).  See, for example,
      <https://www.gnu.org/software/coreutils/printf>.
      Examples:
-          (nx-printf #f \"0x%04x\" 23) => \"0x0017\"
-          (nx-printf #f \"%f\" 123.45) => \"123.450000\"
-          (nx-printf #f \"%7.1f\" 123.45) => \"  123.4\"
-          (nx-printf #f \"%-9.6f\" 12.3456789) => \"12.345678\"
-          (nx-printf #f \"%-9.6f\" -12.3456789) => \"-12.345678\"
-          (nx-printf #f \"x=%.1f\" 1.23) => \"x=1.2\"
-          (nx-printf #f '(\"x=\" (#\\f #f 1) \"\\n\") 1.23) => 1.2"
+          (nx-printf #t \"0x%04x\" 23) yields \"0x0017\"
+          (nx-printf #t \"%f\" 123.45) yields \"123.450000\"
+          (nx-printf #t \"%7.1f\" 123.45) yields \"  123.4\"
+          (nx-printf #t \"%-9.6f\" 12.3456789) yields \"12.345678\"
+          (nx-printf #t \"%-9.6f\" -12.3456789) yields \"-12.345678\"
+          (nx-printf #t \"x=%.1f\" 1.23) yields \"x=1.2\"
+          (nx-printf #t '(\"x=\" (#\\f #f 1) \"\\n\") 1.23) yields \"x=1.2\""
   (cond
-   ((eq? port #f)
-    (call-with-output-string (lambda (port) (apply nx-printf port fmt vals))))
-   ((eq? port #t)
-    (apply nx-printf (current-output-port) fmt vals))
    ((port? port)
     (let* ((fmts (if (string? fmt) (parse-format-string fmt) fmt)))
       (unless fmts (error (simple-format #f "nx-printf: bad fmt str: ~S" fmts)))
@@ -327,7 +316,7 @@
         (cond
          ((null? fmts)
           (if (pair? vals) (error "nx-printf: more values than formatters"))
-          (if #f #f))
+          n)
          ((string? (car fmts))
           (display (car fmts) port)
           (loop (+ n (string-length (car fmts))) (cdr fmts) vals))
@@ -336,92 +325,25 @@
          (else
           (let ((n (+ n (apply-fmt port (car fmts) (car vals)))))
             (loop n  (cdr fmts) (cdr vals))))))))
+   ((eq? port #t)
+    (apply nx-printf (current-output-port) fmt vals))
    (else
     (error (simple-format #f "nx-printf: bad port argument: ~S" port)))))
 
-;; === matrices and vectors ========
-
-(define (mat-disp/strict array port format)
-  (let* ((conv (array-type array))
-         (dims (array-dimensions array))
-         (dimz (map (lambda (i) (min i 8)) dims))
-         (spec (parse-format-string format)))
-    (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
-      (do ((j 0 (1+ j))) ((= j (list-ref dimz 1)))
-        (display " " port)
-        (apply-fmt port spec (array-ref array i j)))
-      (newline port))))
-
-(define* (mat-disp array #:optional (port #t) (format "%12.5e"))
-  (cond
-   ((eq? #f port)
-    (let ((strp (open-output-string)))
-      (mat-disp/strict array strp format)
-      (get-output-string strp)))
-   ((eq? #t port)
-    (mat-disp/strict array (current-output-port) format))
-   (else
-    (mat-disp/strict array port format))))
-
-(define (vec-disp/strict array port format)
-  (let* ((conv (array-type array))
-         (dims (array-dimensions array))
-         (dimz (map (lambda (i) (min i 8)) dims))
-         (spec (parse-format-string format)))
-    (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
-      (display " " port)
-      (apply-fmt port spec (array-ref array i))
-      (newline port))))
-
-(define* (vec-disp array #:optional (port #t) (format "%12.5e"))
-  (cond
-   ((eq? #f port)
-    (let ((strp (open-output-string)))
-      (vec-disp/strict array strp format)
-      (get-output-string strp)))
-   ((eq? #t port)
-    (vec-disp/strict array (current-output-port) format))
-   (else
-    (vec-disp/strict array port format))))
-
-
-
-;; === deprecated
-
-(define (disp/fmt val conv flags width prec)
-  (case conv
-    ((#\e) (flt->estr val conv flags width prec))
-    ((#\f) (flt->fstr val conv flags width prec))
-    ((#\d) (int->str val conv flags width prec))
-    ;;((#\s)
-    (else (error "fmat"))))
-
-(define (numstr->string val)
-  (if (string? val) val (number->string val)))
-(define (escape ch)
-  (case ch
-    ((#\\) #\\)
-    ((#\n) #\newline)
-    (else ch)))
-
-(define (nx-formatp port fmt . vals)
-  (let* ((fmts (if (string? fmt) (parse-format-string fmt) fmt)))
-    (let loop ((n 0) (fmts fmts) (vals vals))
-      (cond
-       ((null? fmts) (if (pair? vals) (error "too many vals")) n)
-       ((string? (car fmts))
-        (display (car fmts) port)
-        (loop (+ n (string-length (car fmts))) (cdr fmts) vals))
-       ((null? vals) (error "too many fmts"))
-       (else
-        (let ((n (+ n (apply-fmt port (car fmts) (car vals)))))
-          (loop n  (cdr fmts) (cdr vals))))))))
-
-(define (nx-format fmt . vals)
+;; @deffn {Scheme} nx-sprintf fmt . vals
+;; Like @code{nx-printf} but with output to a string.
+;; Examples:
+;; @example
+;; (nx-sprintf "0x%04x" 23) => "0x0017"
+;; (nx-sprintf "%7.1f" 123.45) => "  123.4"
+;; @end example
+;; @end deffn
+(define (nx-sprintf fmt . vals)
+  "- Scheme: nx-sprintf fmt . vals
+     Like ‘nx-printf’ but with output to a string.  Examples:
+          (nx-sprintf \"0x%04x\" 23) => \"0x0017\"
+          (nx-sprintf \"%7.1f\" 123.45) => \"  123.4\""
   (call-with-output-string
-    (lambda (port) (apply nx-formatp port fmt vals))))
-
-(define (nx-format1 fmt . vals)
-  (apply nx-formatp (current-output-port) fmt vals))
+    (lambda (port) (apply nx-printf port fmt vals))))
 
 ;; --- last line ---

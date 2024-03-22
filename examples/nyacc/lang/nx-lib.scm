@@ -1,6 +1,6 @@
 ;; nyacc/lang/nx-util.scm - run-time library
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -58,15 +58,16 @@
   #:export (nx-get-method
             nx-use-module
             nx-C-predicate
-            nx-error
             nx-undefined
             ;;
             make-nx-hash-table nx-hash-ref nx-hash-set!
             nx-hash-add-lang nx-hash-lang-ref nx-hash-lang-set! %nx-lang-key
+            mat-disp vec-disp
             ;;
             install-inline-language-evaluator
             uninstall-inline-language-evaluator)
-  #:use-module (ice-9 exceptions))
+  #:use-module (nyacc lang nx-printf))
+
 (define (sferr fmt . args) (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))
 (define (pperr exp)
@@ -144,19 +145,58 @@
     (_ sx)))
 (export add-src-prop-attr)
 
-#|
-(define (nx-error fmt . args)
-  (raise-exception
-   (make-exception-with-message
-    (apply simple-format #f fmt args))))
-|#
 (define (nx-error fmt . args)
   (throw 'error (apply simple-format #f fmt args)))
 
 (define (nx-use-module path)
   (module-use! (current-module) (resolve-interface path)))
 
-;;; === in-line reading ========================================================
+;; === matrices and vectors ========
+
+(define (mat-disp/strict array port format)
+  (let* ((conv (array-type array))
+         (dims (array-dimensions array))
+         (dimz (map (lambda (i) (min i 8)) dims))
+         (spec (parse-format-string format)))
+    (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
+      (do ((j 0 (1+ j))) ((= j (list-ref dimz 1)))
+        (display " " port)
+        (apply-fmt port spec (array-ref array i j)))
+      (newline port))))
+
+(define* (mat-disp array #:optional (port #t) (format "%12.5e"))
+  (cond
+   ((eq? #f port)
+    (let ((strp (open-output-string)))
+      (mat-disp/strict array strp format)
+      (get-output-string strp)))
+   ((eq? #t port)
+    (mat-disp/strict array (current-output-port) format))
+   (else
+    (mat-disp/strict array port format))))
+
+(define (vec-disp/strict array port format)
+  (let* ((conv (array-type array))
+         (dims (array-dimensions array))
+         (dimz (map (lambda (i) (min i 8)) dims))
+         (spec (parse-format-string format)))
+    (do ((i 0 (1+ i))) ((= i (list-ref dimz 0)))
+      (display " " port)
+      (apply-fmt port spec (array-ref array i))
+      (newline port))))
+
+(define* (vec-disp array #:optional (port #t) (format "%12.5e"))
+  (cond
+   ((eq? #f port)
+    (let ((strp (open-output-string)))
+      (vec-disp/strict array strp format)
+      (get-output-string strp)))
+   ((eq? #t port)
+    (vec-disp/strict array (current-output-port) format))
+   (else
+    (vec-disp/strict array port format))))
+
+;;; === in-line reading =========================================================
 
 (use-modules (system base language))
 (use-modules (system base compile))
