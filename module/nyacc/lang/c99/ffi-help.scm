@@ -1,6 +1,6 @@
 ;;; examples/nyacc/lang/c99/ffi-help.scm
 
-;; Copyright (C) 2016-2022 Matthew R. Wette
+;; Copyright (C) 2016-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -1533,11 +1533,12 @@
 	(else
 	 ;; 3) struct never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
-	 (sfscm "(define-fh-type-alias ~A fh-void)\n" typename)
+         ;;(sfscm "(define-fh-type-alias ~A fh-void)\n" typename)
+         (sfscm "(define-public ~S fh-void)\n" typename)
 	 (sfscm "(define-public ~A? fh-void?)\n" typename)
 	 (sfscm "(define-public make-~A make-fh-void)\n" typename)
-	 (sfscm "(define-public ~A*-desc (fh:pointer ~A-desc))\n"
-		typename typename)))
+         (sfscm "(define-public ~A*-desc (fh:pointer ~A-desc))\n"
+                typename typename)))
        (fhscm-def-pointer (sw/* typename))
        (values (cons* typename (w/* typename) wrapped)
 	       (cons* typename (w/* typename) defined)))
@@ -1684,6 +1685,8 @@
       ;; We retry with expansion of foo_t here.  Using fh-define-type-alias
       ;; was not working when we had "typedef struct foo foo_t;" But then
       ;; crashing on function types, so imported original type aliasing.
+      ;; Still not working.  The issue is that for some fh-type foo_t
+      ;; we don't know what class it is (e.g., composite, pointer, etc).
       ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef))
@@ -1694,16 +1697,18 @@
 	 (values wrapped defined))
 	((member name defined)
 	 (sfscm "(define-public ~A-desc ~A-desc)\n" typename name)
-	 (sfscm "(define-fh-type-alias ~A ~A)\n" typename name)
-	 (sfscm "(export ~A)\n" typename)
-	 (sfscm "(define-public ~A? ~A?)\n" typename name)
-	 (sfscm "(define-public make-~A make-~A)\n" typename name)
+         ;;(sfscm "(define-fh-type-alias ~A ~A)\n" typename name)
+         ;;(sfscm "(export ~A)\n" typename)
+         (sfscm "(define-public ~A ~A)\n" typename name)
+         (sfscm "(define-public ~A? ~A?)\n" typename name)
+         (sfscm "(define-public make-~A make-~A)\n" typename name)
 	 (when (member (w/* name) defined)
 	   (sfscm "(define-public ~A*-desc ~A*-desc)\n" typename name)
-	   (sfscm "(define-fh-type-alias ~A* ~A*)\n" typename name)
-	   (sfscm "(export ~A*)\n" typename)
-	   (sfscm "(define-public ~A*? ~A*?)\n" typename name)
-	   (sfscm "(define-public make-~A* make-~A*)\n" typename name))
+           ;;(sfscm "(define-fh-type-alias ~A* ~A*)\n" typename name)
+           ;;(sfscm "(export ~A*)\n" typename)
+           (sfscm "(define-public ~A* ~A*)\n" typename name)
+           (sfscm "(define-public ~A*? ~A*?)\n" typename name)
+           (sfscm "(define-public make-~A* make-~A*)\n" typename name))
 	 (values (cons typename wrapped) (cons typename defined)))
 	(else
 	 (let ((xdecl (expand-typerefs udecl (*udict*) defined)))

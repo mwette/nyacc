@@ -1,6 +1,6 @@
 ;;; system/ffi-help-rt.scm - NYACC's FFI help runtime
 
-;; Copyright (C) 2016-2019,2022-2023 Matthew Wette
+;; Copyright (C) 2016-2019,2022-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -323,7 +323,6 @@
               (fht-unwrap type)
               (fht-pointer-to type)
               (fht-value-at type)
-              ;;(fht-printer type)
               (make-printer (quote alias)))))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
@@ -886,7 +885,7 @@
 ;; @deffn {Procedure} make-symtab-function symbol-value-table prefix
 ;; generate a symbol table function
 ;; @example
-;; (define-public BUS (mkae-symtab-function ffi-dbus-symbol-tab))
+;; (define-public BUS (make-symtab-function ffi-dbus-symbol-tab))
 ;; @end example
 ;; Then use in code as this:
 ;; @example

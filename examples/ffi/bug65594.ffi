@@ -1,0 +1,13 @@
+;; bug65594.ffi				-*- Scheme -*-
+
+(define-ffi-module (ffi bug95594)
+  #:api-code "
+typedef struct _foo foo_t;
+
+struct _foo {
+  int x;
+  int y;
+};
+  ")
+
+;; --- last line ---
