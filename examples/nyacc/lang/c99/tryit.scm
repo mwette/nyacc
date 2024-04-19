@@ -332,11 +332,14 @@
         (string-join (reverse lines) "")
         (loop (cons (rbfdecl (random ntype) nn) lines) (1+ nn)))))
 
-(when #t
+(when #f
   (let* ((code
           (string-append
-           "struct foo {\n" (rand-fields 5) "};\n"
-           "long tsz = __builtin_offsetof(struct foo, v5);\n"
+           ;;"struct foo {\n" (rand-fields 5) "};\n"
+           ;;"long tsz = __builtin_offsetof(struct foo, v5);\n"
+           "struct foo {\n long v5[4][5]; };\n"
+           "long offs = __builtin_offsetof(struct foo, v5[1+1][3]);\n"
+           "long size = sizeof(struct foo);\n"
            ))
          (prog
           (string-append
@@ -345,17 +348,28 @@
            "int main() { printf(\"%ld\", tsz); }\n"))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
-         (exp-tos (sx-ref* tree 2 2 1 2 1))
-         (c99-result (eval-c99-cx exp-tos udict))
+         (offs-ex (sx-ref* tree 2 2 1 2 1))
+         (size-ex (sx-ref* tree 3 2 1 2 1))
+         ;;(c99-result (eval-c99-cx exp-foo udict))
+         ;;(size (eval-c99-cx
+         #|
          (gcc-result
           (begin
             (with-output-to-file "tt8c.c" (lambda () (display prog)))
             (system "gcc tt8c.c")
             (string->number (get-string-all (open-input-pipe "./a.out")))))
+         |#
          )
+    (pp offs-ex)
+    (pp size-ex)
+     (sf "gettin offs=~S size=~S\n"
+         (eval-c99-cx offs-ex udict)
+         (eval-c99-cx size-ex udict))
+    (sf "expect offs=104 size=160\n")
+    #|
     (sf "c99: ~S  gcc: ~S\n" c99-result gcc-result)
-    ;;(when (<= c99-result 8) (sf "~A\n" code))
     (unless (equal? c99-result gcc-result) (pp code) (exit 1))
+    |#
     #t))
 
 ;; --- last line ---
