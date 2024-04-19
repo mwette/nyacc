@@ -5,6 +5,12 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-04-19  V1.09.4
+ 	* added nx-printf.scm in examples/nyacc/lang
+	* fixed bug #65439 ffi-helper bad code for int foo(void);
+	* c99 sizeof and offsetof updated for bitfields, needs more testing
+	* fixed(?) bug #65594: ffi-helper type aliases not working
+
 2024-01-11  V1.09.3
 	* system/ffi-help-rt(fh-void?): check for struct, also for void*
 	  and void**; fixed bug #65021
