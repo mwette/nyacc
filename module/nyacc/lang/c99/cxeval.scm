@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/c99eval.scm - evaluate constant expressions
 
-;; Copyright (C) 2018-2023 Matthew R. Wette
+;; Copyright (C) 2018-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -31,6 +31,7 @@
             find-types
             sizeof-mtail
             cx-incr-size
+            cx-incr-bit-size
             cx-maxi-size)
   #:use-module (nyacc lalr)
   #:use-module (nyacc parse)
@@ -92,31 +93,72 @@
 (define (cx-incr-size s a rs)
   (+ s (* a (quotient (+ rs (1- a)) a))))
 
+;; Update struct running-size (rs) given new bit-field size
+;; bs: bit count, a: alignment, rs: running size
+(define (cx-incr-bit-size bs a rs)
+  (let* ((a (* 8 a)) (rs (* 8 rs)) (ru (* a (quotient (+ rs (1- a)) a))))
+    (/ (cond ((zero? bs) ru) ((> (+ rs bs) ru) (+ bs ru)) (else (+ bs rs))) 8)))
+
 ;; Update running union size (rs) given new item s and a.
 (define (cx-maxi-size s a rs)
   (max s rs))
 
 (define incr-size cx-incr-size)
+(define incr-bit-size cx-incr-bit-size)
 (define maxi-size cx-maxi-size)
 
-(define (mkcdl specl declrs)
-          (map (lambda (declr) `(comp-declr-list ,specl ,declr)) declrs))
+(define (make-comp-udecls specl declrs)
+  (map (lambda (declr) `(comp-udecl ,specl ,declr)) declrs))
 
-(define (sizeof-mtail mtail udict) ;; => (values size align)
+;; @deffn {Procedure} sizeof-mtail mtail udict => (values size align)
+;;
+;; @end deffn
+(define* (sizeof-mtail mtail udict)
 
-  (define (exec/decl decl size base-align update)
-    (let ((mtail (sx-tail (sx-find 'type-spec (sx-ref decl 1))))
-          (declrs (or (and=> (sx-ref decl 2) sx-tail) '((ident "_")))))
-      (let loop ((size size) (base-align base-align) (declrs declrs))
-        (if (null? declrs)
-            (values size base-align)
-            (call-with-values
-                (lambda ()
-                  (sizeof-mtail
-                   (cdr (m-unwrap-declr (car declrs) mtail)) udict))
-              (lambda (elt-sz elt-al)
-                (loop (update elt-sz elt-al size)
-                      (max elt-al base-align) (cdr declrs))))))))
+  (define (bfud exp mtail size align) ; bit-field update
+    (call-with-values (lambda () (sizeof-mtail mtail udict))
+      (lambda (elt-sz elt-al)
+        (let* ((bits (eval-c99-cx exp udict))
+               (size (incr-bit-size bits elt-al size)))
+          (values size (max elt-al align))))))
+
+  (define mkcdl make-comp-udecls)
+
+  (define (do-aggr fields update) ;; => offs align
+    (let loop ((offs 0) (align 0) (dlrs '()) (flds fields))
+      (cond
+       ((pair? dlrs)
+        (sx-match (car dlrs)
+          ((comp-udecl ,specl ,declr)
+           (sx-match declr
+             ((comp-declr (bit-field ,name ,expr))
+              (let ((mtail (and=> (sx-find 'type-spec specl) sx-tail)))
+                (call-with-values (lambda () (bfud expr mtail offs align))
+                  (lambda (offs align) (loop offs align (cdr dlrs) flds)))))
+             ((comp-declr (bit-field ,expr))
+              (let ((mtail (and=> (sx-find 'type-spec specl) sx-tail)))
+                (call-with-values (lambda () (bfud expr mtail offs align))
+                  (lambda (offs align) (loop offs align (cdr dlrs) flds)))))
+             (,otherwise
+              (let* ((mdecl (udecl->mdecl (car dlrs)))
+                     (name (car mdecl))
+                     (mtail (md-tail mdecl)))
+                (call-with-values (lambda () (sizeof-mtail mtail udict))
+                  (lambda (elt-sz elt-al)
+                    (let ((offs (quotient (+ (* 8 offs) 7) 8)))
+                      (loop (update elt-sz elt-al offs) (max elt-al align)
+                            (cdr dlrs) flds))))))))
+          (,otherwise (loop offs align (cdr dlrs) flds))))
+       ((pair? flds)
+        (sx-match (car flds)
+          ((comp-decl ,specl (comp-declr-list . ,declrs))
+           (loop offs align (mkcdl specl declrs) (cdr flds)))
+          ((comp-udecl ,specl ,declr)
+           (loop offs align (mkcdl specl (list declr)) (cdr flds)))
+          (,_
+           (loop offs align dlrs (cdr flds)))))
+       (else
+        (values (incr-bit-size 0 align offs) align)))))
 
   (match mtail
     (`((pointer-to) . ,rest)
@@ -127,42 +169,24 @@
      (values (sizeof-basetype name) (alignof-basetype name)))
     (`((array-of ,dim) . ,rest)
      (let ((mult (eval-c99-cx dim udict)))
-       (call-with-values
-           (lambda ()
-             (sizeof-mtail rest udict))
-         (lambda (size align)
-           (values (* mult size) align)))))
+       (call-with-values (lambda () (sizeof-mtail rest udict))
+         (lambda (size align) (values (* mult size) align)))))
     (`((struct-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (flds fields))
-       (cond
-        ((null? flds) (values (incr-size 0 align size) align))
-        ((eq? 'comp-decl (sx-tag (car flds)))
-         (call-with-values
-             (lambda () (exec/decl (car flds) size align incr-size))
-           (lambda (size align)
-             (loop size align (cdr flds)))))
-        (else (loop size align (cdr flds))))))
+     (do-aggr fields incr-size))
     (`((struct-def (ident ,name) (field-list . ,fields)))
      (sizeof-mtail `((struct-def (field-list . ,fields))) udict))
     (`((union-def (field-list . ,fields)))
-     (let loop ((size 0) (align 0) (flds fields))
-       (cond
-        ((null? flds) (values (incr-size 0 align size) align))
-        ((eq? 'comp-decl (sx-tag (car flds)))
-         (call-with-values
-             (lambda () (exec/decl (car flds) size align maxi-size))
-           (lambda (size align)
-             (loop size align (cdr flds)))))
-        (else (loop size align (cdr flds))))))
+     (do-aggr fields maxi-size))
     (`((union-def (ident ,name) (field-list . ,fields)))
      (sizeof-mtail `((union-def (field-list . ,fields))) udict))
     (`((enum-ref . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int")))
     (`((enum-def . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int")))
-    (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
+    (_ (sferr "c99/sizeof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
 
+;; => (values size align)
 (define* (sizeof-specl/declr specl declr #:optional (udict '()))
   (let* ((udecl `(udecl ,specl ,declr))
          (xdecl (expand-typerefs udecl udict))
@@ -176,29 +200,28 @@
     ((initzer) (trim-mtail (cdr mtail)))
     (else mtail)))
 
-;; @deffn {Procedure} size-and-align-of-type tree [udict]
-;; @deffx {Procedure} eval-sizeof-type tree [udict]
-;; @deffx {Procedure} eval-alignof-type tree [udict]
+;; @deffn {Procedure} size-and-align-of-type type-name [udict]
+;; @deffx {Procedure} eval-sizeof-type sizeof-form [udict]
+;; @deffx {Procedure} eval-alignof-type alignof-form [udict]
 ;; @example
 ;; (size-and-align-of-type '(sizeof-type (ident "foo_t"))) => (values 4 2)
 ;; (eval-sizeof-type '(sizeof-type (ident "foo_t"))) => 4
 ;; (eval-alignof-type '(alignof-type (ident "foo_t"))) => 2
 ;; @end example
 ;; @end deffn
-(define* (size-and-align-of-type tree #:optional (udict '()))
-  (let* ((type-name (sx-ref tree 1))
-         (specl (sx-ref type-name 1))
+(define* (size-and-align-of-type type-name #:optional (udict '()))
+  (let* ((specl (sx-ref type-name 1))
          (declr (or (sx-ref type-name 2) '(param-declr))))
     (sizeof-specl/declr specl declr udict)))
 
-(define* (eval-sizeof-type tree #:optional (udict '()))
+(define* (eval-sizeof-type form #:optional (udict '()))
   (call-with-values
-      (lambda () (size-and-align-of-type tree udict))
+      (lambda () (size-and-align-of-type (sx-ref form 1) udict))
     (lambda (size align) size)))
 
-(define* (eval-alignof-type tree #:optional (udict '()))
+(define* (eval-alignof-type form #:optional (udict '()))
   (call-with-values
-      (lambda () (size-and-align-of-type tree udict))
+      (lambda () (size-and-align-of-type (sx-ref form 1) udict))
     (lambda (size align) align)))
 
 ;; @deffn {Procedure} size-and-align-of-expr tree [udict]
@@ -253,72 +276,123 @@
 
 ;; =============================================================================
 
-;; @deffn {Procedure} offsetof-mtail mtail desig base udict => offset
+;; @deffn {Procedure} offsetof-mtail mtail base udict desig => offset
 ;; @end deffn
-(define (offsetof-mtail mtail desig base udict)
+(define (offsetof-mtail path mtail udict)
 
-  (define (do-aggr base fields update)
-    (unless (equal? 'ident (caar desig))
-      (throw 'c99-error "cxeval: desig ~S not for struct/union" (car desig)))
-    (let loop ((offs base) (aln 0) (dsg (cadar desig))
-               (decls '()) (flds fields))
+  (define (bfud exp mtail size align) ; bit-field update
+    (call-with-values (lambda () (offsetof-mtail path mtail udict))
+      (lambda (elt-sz elt-al)
+        (let* ((bits (eval-c99-cx exp udict))
+               (size (incr-bit-size bits elt-al size)))
+          (values size (max elt-al align))))))
+
+  (define mkcdl make-comp-udecls)
+
+  (define (do-aggr fields update) ;; => offs align
+    (let loop ((offs 0) (align 0) (dlrs '()) (flds fields))
       (cond
-       ((pair? decls)
-        (let* ((mdecl (udecl->mdecl (car decls)))
-               (name (car mdecl))
-               (mtail (md-tail mdecl)))
-          (call-with-values
-              (lambda () (sizeof-mtail mtail udict))
-            (lambda (elt-sz elt-al)
-              (cond
-               ((string=? name dsg)
-                (let* ((offs (update 0 elt-al offs)))
-                  (if (null? (cdr desig)) offs
-                      (offsetof-mtail mtail (cdr desig) offs udict))))
-               (else
-                (loop (update elt-sz elt-al offs) (max elt-al aln)
-                      dsg (cdr decls) flds)))))))
+       ((null? path)
+        offs)
+       ((pair? dlrs)
+        (sx-match (car dlrs)
+          ((comp-udecl ,specl ,declr)
+           (sx-match declr
+             ((comp-declr (bit-field ,name ,expr))
+              (let ((mtail (and=> (sx-find 'type-spec specl) sx-tail)))
+                (call-with-values (lambda () (bfud expr mtail offs align))
+                  (lambda (offs align)
+                    (if (equal? name (car path))
+                        (throw 'c99-error "can't take offset of bitfield")
+                        (loop offs align (cdr dlrs) flds))))))
+             ((comp-declr (bit-field ,expr))
+              (let ((mtail (and=> (sx-find 'type-spec specl) sx-tail)))
+                (call-with-values (lambda () (bfud expr mtail offs align))
+                  (lambda (offs align) (loop offs align (cdr dlrs) flds)))))
+             (,othersize
+              (let* ((mdecl (udecl->mdecl (car dlrs)))
+                     (name (car mdecl))
+                     (mtail (md-tail mdecl))
+                     (offs (quotient (+ (* 8 offs) 7) 8)))
+                (if (equal? name (car path))
+                    (call-with-values
+                        (lambda ()
+                          (sferr "got id ~S\n" (car path))
+                          (pperr mtail)
+                          (sizeof-mtail mtail udict))
+                      (lambda (elt-sz elt-al)
+                        (let ((offs (update 0 elt-al offs)))
+                          (if (null? (cdr path)) offs
+                              (+ offs
+                                 (offsetof-mtail (cdr path) mtail udict))))))
+                    (call-with-values
+                        (lambda () (sizeof-mtail mtail udict))
+                      (lambda (elt-sz elt-al)
+                        (let* ((offs (update elt-sz elt-al offs)))
+                          (loop offs (max elt-al align) (cdr dlrs) flds)))))))))
+          (,_ (loop offs align (cdr dlrs) flds))))
        ((pair? flds)
         (sx-match (car flds)
           ((comp-decl ,specl (comp-declr-list . ,declrs))
-           (loop offs aln dsg (mkcdl specl declrs) (cdr flds)))
+           (loop offs align (mkcdl specl declrs) (cdr flds)))
           ((comp-udecl ,specl ,declr)
-           (loop offs aln dsg (mkcdl specl (list declr)) (cdr flds)))
-          (,_ (loop offs aln dsg decls (cdr flds)))))
-       (else #f))))  ;; not found
+           (loop offs align (mkcdl specl (list declr)) (cdr flds)))
+          (,_
+           (loop offs align dlrs (cdr flds)))))
+       ((pair? path)
+        (sferr "offsetof: bad path")
+        #f))))
 
+  ;;(sferr "\noffsetof-mtail: ~S\n" path) (pperr mtail)
   (match mtail
+    (`((pointer-to) . ,rest) 0)
+    (`((fixed-type ,name)) 0)
+    (`((float-type ,name)) 0)
+    (`((enum-ref . ,rest)) 0)
+    (`((enum-def . ,rest)) 0)
     (`((array-of ,dim) . ,rest)
-     (unless (number? (cadar desig)) (throw 'c99-error "bad designator"))
-     (call-with-values
-         (lambda ()(sizeof-mtail rest udict))
-       (lambda (elt-sz elt-al)
-         (let* ((offs (incr-size 0 elt-al base)) ; adjust for alignment
-                (offs (+ offs (* (cadar desig) elt-sz))))
-           (offsetof-mtail rest (cdr desig) offs udict)))))
+     (begin (sferr "got ary ~S via match\n" (car path)) (pperr mtail))
+     (if (integer? (car path))
+         (call-with-values
+             (lambda ()
+               (sizeof-mtail rest udict))
+           (lambda (size align)
+             (if (null? (cdr path))
+                 (* (car path) size)
+                 (+ (* (car path) size)
+                    (offsetof-mtail (cdr path) rest udict)))))
+         (call-with-values
+             (lambda () (sizeof-mtail rest udict))
+           (lambda (size align)
+             (values (* (eval-c99-cx dim udict) size) align)))))
     (`((struct-def (field-list . ,fields)))
-     (do-aggr base fields incr-size))
+     (do-aggr fields incr-size))
     (`((struct-def (ident ,name) (field-list . ,fields)))
-     (do-aggr base fields incr-size))
+     (sizeof-mtail `((struct-def (field-list . ,fields))) udict))
     (`((union-def (field-list . ,fields)))
-     (do-aggr base fields maxi-size))
+     (do-aggr fields maxi-size))
     (`((union-def (ident ,name) (field-list . ,fields)))
-     (do-aggr base fields maxi-size))
-    (_ (sferr "c99/eval-sizeof-mtail: missed\n") (pperr mtail)
+     (sizeof-mtail `((union-def (field-list . ,fields))) udict))
+    (_ (sferr "c99/offsetof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
 
 (define* (unwrap-designator expr udict #:optional (seed '()))
   (sx-match expr
-    ((p-expr (ident ,name)) (cons `(ident ,name) seed))
-    ((d-sel (ident ,elt) ,expr)
-     (unwrap-designator expr udict (cons `(ident ,elt) seed)))
-    ((array-ref ,ix ,expr)
+    ((p-expr ,expr) (unwrap-designator expr udict seed))
+    ((ident ,name) (cons name seed))
+    ((d-sel (ident ,name) ,exp) (unwrap-designator exp udict (cons name seed)))
+    ((array-ref ,ix ,ex)
      (let ((ixval (eval-c99-cx ix udict)))
-       (unwrap-designator expr udict (cons `(ary-ref ,ixval) seed))))
-    (,_ (throw 'c99-error "cxeval: missed ~S\n" (list expr)))))
+       (unless ixval (throw 'c99-error "cxeval: can't convert index: ~S" ix))
+       (unwrap-designator ex udict (cons ixval seed))))
+    (,_ (throw 'c99-error "unwrap-designator: bad arg ~S\n" (list expr)))))
 (export unwrap-designator)
 
 ;; @deffn {Procedure} eval-offsetof tree [udict]
+;; NEEDS WORK.  This should return a list for indices
+;; foo.bar[ix1].baz[ix0].bla
+;; (a (b . ix0) (c . ix1) ...) => a + b*ix0 + c*ix1 + ...
+;; indices
 ;; where tree has the form
 ;; @example
 ;; (offsetof (type-name ...) designator-expr)
@@ -331,15 +405,16 @@
 ;; @end deffn
 (define* (eval-offsetof tree #:optional (udict '()))
   (sx-match tree
-    ((offsetof-type (type-name ,spec-list ,declr) ,expr)
-     (let* ((udecl `(udecl ,spec-list ,declr))
+    ((offsetof-type (type-name ,specl ,declr) ,expr)
+     (let* ((udecl `(udecl ,specl ,declr))
             (xdecl (expand-typerefs udecl udict))
             (mdecl (udecl->mdecl xdecl))
-            (desig (unwrap-designator expr udict)))
-       (offsetof-mtail (md-tail mdecl) desig 0 udict)))
-    ((offsetof-type (type-name ,spec-list) ,expr)
+            (path (unwrap-designator expr udict)))
+       (sferr "eval-offsetof: path=~S\n" path)
+       (offsetof-mtail path (cdr mdecl) udict)))
+    ((offsetof-type (type-name ,specl) ,expr)
      (eval-offsetof
-      `(offsetof-type (type-name ,spec-list (param-declr (ident "_"))) ,expr)
+      `(offsetof-type (type-name ,specl (param-declr (ident "_"))) ,expr)
       udict))
     (,_ #f)))
 
@@ -417,6 +492,8 @@
          `(type-name ,specl ,declr)))
       ((cast ,tname ,expr)
        tname)
+      ((scope ,expr)
+       (typeof-next expr))
       ((p-expr ,expr)
        (typeof-next expr))
       ((i-sel ,ident ,expr)
@@ -438,13 +515,13 @@
                 ((,decl ,specl (abs-ptr-declr (pointer)))
                  `(type-name ,specl)) ; maybe FIXME
                 (,_ #f)))))
-       ((array-ref ,indx ,expr)
-        (let ((tname (typeof-next expr)))
-          (and tname
-               (sx-match tname
-                 ((,decl ,specl (,declr (array-ref ,val ,expr)))
-                  `(type-name ,specl (,declr ,expr)))
-                 (,_  #f)))))))
+      ((array-ref ,indx ,expr)
+       (let ((tname (typeof-next expr)))
+         (and tname
+              (sx-match tname
+                ((,decl ,specl (,declr (array-ref ,val ,expr)))
+                 `(type-name ,specl (,declr ,expr)))
+                (,_  #f)))))))
 
   (typeof-next expr))
 
@@ -534,7 +611,7 @@
              (catch 'c99-error
                (lambda () (eval-alignof-type tree udict))
                (lambda (key fmt . args) (apply fail fmt args))))
-            ((offsetof)
+            ((offsetof-type offsetof)
              (catch 'c99-error
                (lambda () (eval-offsetof tree udict))
                (lambda (key fmt . args) (apply fail fmt args))))
@@ -564,12 +641,24 @@
     (eval-expr tree)))
 
 ;; =============================================================================
+;; rework offsets
+
+;; for a struct genererate dict of entries where each has
+;; 1) offset (zero indexed arrays)
+;; 2) list of sizes for each index
+;; 3) type-name sx
+;; ISSUE: for (3), what if array?  element type?
+
+
+;; =============================================================================
 
 (define (gen-offsets mtail base udict)
 
   (define (mt-al mtail)
     (call-with-values (lambda () (sizeof-mtail mtail udict))
       (lambda (sz al) al)))
+
+  (define mkcdl make-comp-udecls)
 
   (define (do-aggr flds update)
     (let* ((aln (mt-al mtail)) (base (incr-size 0 aln base)))
@@ -590,9 +679,11 @@
              (loop siz aln offs (mkcdl specl declrs) (cdr flds)))
             ((comp-udecl ,specl ,declr)
              (loop siz aln offs (list declr) (cdr flds)))
-            (,_
+            (,_ ;; comment
              (loop siz aln offs decls (cdr flds)))))
          (else (values (incr-size 0 aln siz) aln (reverse offs)))))))
+
+  (sferr "gen-offsets needs fix for bitfields\n")
 
   (match mtail
     (`((pointer-to) . ,rest)
@@ -632,8 +723,8 @@
        (call-with-values
            (lambda () (gen-offsets (md-tail mdecl) 0 udict))
          (lambda (size align offsets) offsets))))
-    ((type-name ,spec-list)
-     (find-offsets `(type-name ,spec-list (param-declr (ident "_"))) udict))
+    ((type-name ,specl)
+     (find-offsets `(type-name ,specl (param-declr (ident "_"))) udict))
     (,_ #f)))
 
 ;; for array, provides (dim dim dim . elt-size)
@@ -644,21 +735,21 @@
 
   (define (do-aggr flds)
     (let loop ((sizes '()) (decls '()) (flds flds))
-        (cond
-         ((pair? decls)
-          (let* ((mdecl (udecl->mdecl (car decls)))
-                 (name (car mdecl)) (mtail (md-tail mdecl)))
-            (loop (acons name (gen-sizes mtail udict) sizes)
-                  (cdr decls) flds)))
-         ((pair? flds)
-          (sx-match (car flds)
-            ((comp-decl ,specl (comp-declr-list . ,declrs))
-             (loop sizes (mkcdl specl declrs) (cdr flds)))
-            ((comp-udecl ,specl ,declr)
-             (loop sizes (list declr) (cdr flds)))
-            (,_
-             (loop sizes decls (cdr flds)))))
-         (else (reverse sizes)))))
+      (cond
+       ((pair? decls)
+        (let* ((mdecl (udecl->mdecl (car decls)))
+               (name (car mdecl)) (mtail (cdr mdecl)))
+          (loop (acons name (gen-sizes mtail udict) sizes)
+                (cdr decls) flds)))
+       ((pair? flds)
+        (sx-match (car flds)
+          ((comp-decl ,specl (comp-declr-list . ,declrs))
+           (loop sizes (mkcdl specl declrs) (cdr flds)))
+          ((comp-udecl ,specl ,declr)
+           (loop sizes (list declr) (cdr flds)))
+          (,_
+           (loop sizes decls (cdr flds)))))
+       (else (reverse sizes)))))
 
   (match mtail
     (`((pointer-to) . ,rest) (sizeof-basetype '*))
@@ -693,21 +784,21 @@
 
   (define (do-aggr flds)
     (let loop ((types '()) (decls '()) (flds flds))
-        (cond
-         ((pair? decls)
-          (let* ((mdecl (udecl->mdecl (car decls)))
-                 (name (car mdecl)) (mtail (md-tail mdecl)))
-            (loop (acons name (gen-types mtail udict) types)
-                  (cdr decls) flds)))
-         ((pair? flds)
-          (sx-match (car flds)
-            ((comp-decl ,specl (comp-declr-list . ,declrs))
-             (loop types (mkcdl specl declrs) (cdr flds)))
-            ((comp-udecl ,specl ,declr)
-             (loop types (list declr) (cdr flds)))
-            (,_
-             (loop types decls (cdr flds)))))
-         (else (reverse types)))))
+      (cond
+       ((pair? decls)
+        (let* ((mdecl (udecl->mdecl (car decls)))
+               (name (car mdecl)) (mtail (cdr mdecl)))
+          (loop (acons name (gen-types mtail udict) types)
+                (cdr decls) flds)))
+       ((pair? flds)
+        (sx-match (car flds)
+          ((comp-decl ,specl (comp-declr-list . ,declrs))
+           (loop types (mkcdl specl declrs) (cdr flds)))
+          ((comp-udecl ,specl ,declr)
+           (loop types (list declr) (cdr flds)))
+          (,_
+           (loop types decls (cdr flds)))))
+       (else (reverse types)))))
 
   (match mtail
     (`((typename ,name) . ,rest) name)

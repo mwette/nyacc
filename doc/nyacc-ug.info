@@ -1,22 +1,22 @@
-This is nyacc-ug.info, produced by makeinfo version 6.8 from
+This is nyacc-ug.info, produced by makeinfo version 7.0.3 from
 nyacc-ug.texi.
 
-Copyright (C) 2015-2019 - Matthew R. Wette.
+Copyright (C) 2015-2019 – Matthew R. Wette.
 
    Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
-copy of the license is included with the distribution as 'COPYING.DOC'.
+copy of the license is included with the distribution as ‘COPYING.DOC’.
 INFO-DIR-SECTION The Algorithmic Language Scheme
 START-INFO-DIR-ENTRY
-* NYACC User Guide: (nyacc).    The NYACC user's guide.
+* NYACC User Guide: (nyacc).    The NYACC user’s guide.
 END-INFO-DIR-ENTRY
 
 
 File: nyacc-ug.info,  Node: Top,  Next: Demonstration,  Prev: (dir),  Up: (dir)
 
-NYACC User's Guide
+NYACC User’s Guide
 ******************
 
 * Menu:
@@ -36,7 +36,7 @@ File: nyacc-ug.info,  Node: Demonstration,  Prev: Parsing,  Up: Top
 ***************
 
 A LALR(1) parser is a pushdown automata for parsing computer languages.
-LALR parser generators like NYACC have been around since the 1970's.  In
+LALR parser generators like NYACC have been around since the 1970’s.  In
 NYACC the automata, along with its auxiliary parameters (e.g., actions),
 is called a _machine_.  The grammar is called the _specification_.  The
 program that processes, driven by the machine, input tokens to generate
@@ -50,9 +50,9 @@ be found in the Bison manual (see *note References::).
 
 An easy way to introduce you to NYACC is to work through a simple
 example.  Consider the following.  A similar example is in the file
-'calc.scm' in the subdirectory 'examples/nyacc/lang/calc/' of the source
-distribution.  (To execute the file you need to source the file 'env.sh'
-in the top-level sub-directory 'examples'.)
+‘calc.scm’ in the subdirectory ‘examples/nyacc/lang/calc/’ of the source
+distribution.  (To execute the file you need to source the file ‘env.sh’
+in the top-level sub-directory ‘examples’.)
      (use-modules (nyacc lalr))
      (use-modules (nyacc lex))
      (use-modules (nyacc parse))
@@ -90,51 +90,51 @@ in the top-level sub-directory 'examples'.)
 
      (parse)
    Here is an explanation of the above code:
-  1. The relevent modules are imported using Guile's 'use-modules'
+  1. The relevent modules are imported using Guile’s ‘use-modules’
      syntax.
-  2. The procedure 'next' is used to generate a prompt to the user.
-  3. The syntax form 'lalr-spec' is used to generate a language
+  2. The procedure ‘next’ is used to generate a prompt to the user.
+  3. The syntax form ‘lalr-spec’ is used to generate a language
      specification from the grammar and options provided in the form.
-  4. The 'prec<' directive indicates that the tokens appearing in the
+  4. The ‘prec<’ directive indicates that the tokens appearing in the
      sequence of associativity directives should be interpreted in
      increasing order of precedence.  The associativity statements
-     'left' indicate that the tokens have left associativity.  So, in
-     this grammar '+', '-', '*', and '/' are left associative, '*' and
-     '/' have equal precedence, '+' and '-' have equal precedence, but
-     '*' and '/' have higher precedence than '+' and '-'.
-  5. The 'start' directive indicates which left-hand symbol in the
+     ‘left’ indicate that the tokens have left associativity.  So, in
+     this grammar ‘+’, ‘-’, ‘*’, and ‘/’ are left associative, ‘*’ and
+     ‘/’ have equal precedence, ‘+’ and ‘-’ have equal precedence, but
+     ‘*’ and ‘/’ have higher precedence than ‘+’ and ‘-’.
+  5. The ‘start’ directive indicates which left-hand symbol in the
      grammar is the starting symbol for the grammar.
-  6. The 'grammar' directive is used to specify the production rules.
-        * In the example above one left-hand side is associated with
+  6. The ‘grammar’ directive is used to specify the production rules.
+        • In the example above one left-hand side is associated with
           multiple right hand sides.  But this is not required.
           Multiple right-hand sides can be written for a single
           left-hand side.
-        * Non-terminals are indicated using symbols (e.g., 'expr').
-        * Terminals are indicated using string literals (e.g.,'"+"'),
-          character literals (e.g., '#\+'), quoted symbols (e.g., ''+')
-          or NYACCreserved symbols, which always begin with '$'.
-          Reserved symbols used in this example are '$fixed' and
-          '$float'.  Note that tokens or terminals do not need to be
-          declared as in Bison or in the Guile module '(system base
-          lalr)'.
-        * The reserved symbols '$fixed' and '$float' indicate unsigned
+        • Non-terminals are indicated using symbols (e.g., ‘expr’).
+        • Terminals are indicated using string literals (e.g.,‘"+"’),
+          character literals (e.g., ‘#\+’), quoted symbols (e.g., ‘'+’)
+          or NYACCreserved symbols, which always begin with ‘$’.
+          Reserved symbols used in this example are ‘$fixed’ and
+          ‘$float’.  Note that tokens or terminals do not need to be
+          declared as in Bison or in the Guile module ‘(system base
+          lalr)’.
+        • The reserved symbols ‘$fixed’ and ‘$float’ indicate unsigned
           integer and floating point number, respectively.  The NYACC
           procedures for generating lexical analyzers will emit this
           token when the corresponding numbers are detected in the
           input.
-        * Within the right-hand side of a production rule a '$$' form is
+        • Within the right-hand side of a production rule a ‘$$’ form is
           used to specify an action associated with the rule.
           Ordinarily, the action appears as the last element of a
           right-hand side, but mid-rule actions are possible.  Inside
-          the '$$' form, the variables '$1', '$2', etc.   refer to the
+          the ‘$$’ form, the variables ‘$1’, ‘$2’, etc.   refer to the
           symantic value of the corresponding item in the right hand
           side of the production rule.  See *note Actions:: for more
           details on how those actions are evaluated.
-        * The expression returned by 'lalr-spec' is an association list
+        • The expression returned by ‘lalr-spec’ is an association list
           (a-list); you can peek at the internals using typical Scheme
           procedures for a-lists.
-  7. The the automaton (aka machine) 'mach' is defined using the
-     procedure 'make-lalr-machine', which returns an association list.
+  7. The the automaton (aka machine) ‘mach’ is defined using the
+     procedure ‘make-lalr-machine’, which returns an association list.
      The procedure does the bulk of the work to produce what is needed
      to generate a LALR(1) parser.  Separate procedures can be called to
      further compact tables and hash the automaton.  *Note Hashing and
@@ -142,9 +142,9 @@ in the top-level sub-directory 'examples'.)
   8. One item needed is the _match-table_ this is the a-list that maps
      input character, sequences to be read by the lexical analyzer, to
      tokens, either symbols or integers, used by the parser.  The
-     variable 'mtab' is defined to be the machine's match-table.
+     variable ‘mtab’ is defined to be the machine’s match-table.
   9. Next we generating a raw parser.  The generated procedure
-     'raw-parser' takes one required argument, a lexical analyzer
+     ‘raw-parser’ takes one required argument, a lexical analyzer
      procecdure, and optional keyword arguments.
   10. The next task is to create a generator for lexical analyzers.
      This is performed as follows:
@@ -154,17 +154,17 @@ in the top-level sub-directory 'examples'.)
      internal state (e.g., line number, mode).  (Sorry, we now deviate
      from being purely function.  This could be fixed by using
      continuation passing style, but I digress.)  The procedure
-     'make-lexer-generator' is imported from the module '(nyacc lex)'.
-     Optional arguments to 'make-lexer-generator' allow the user to
+     ‘make-lexer-generator’ is imported from the module ‘(nyacc lex)’.
+     Optional arguments to ‘make-lexer-generator’ allow the user to
      specify custom readers for identifiers, comments, numbers, etc.
      *Note lex::
   11. We bring the above items together to provide a usable procedure
      for an interactive calculator.
           (next)
           (parse)
-     The lexical analyzer reads code from '(current-input-port)'.  If we
+     The lexical analyzer reads code from ‘(current-input-port)’.  If we
      want to run this on a string we would need to use
-     'with-input-from-string' or equivalent.  *Note (guile)Input and
+     ‘with-input-from-string’ or equivalent.  *Note (guile)Input and
      Output::
   12. And now we can run it:
           $ guile calc.scm
@@ -183,11 +183,11 @@ in the top-level sub-directory 'examples'.)
 
 One of the many cool features of Guile is that it provides a backend
 infrastructure for evaluation of multiple frontend languages.  The files
-'mach.scm', 'parser.scm' and 'compiler.scm' in the
-'examples/nyacc/lang/calc' directory and 'spec.scm' in the
-'examples/language/calc' directory implement our calculator within this
+‘mach.scm’, ‘parser.scm’ and ‘compiler.scm’ in the
+‘examples/nyacc/lang/calc’ directory and ‘spec.scm’ in the
+‘examples/language/calc’ directory implement our calculator within this
 Guile infrastructure.  You can run the calculator if you have sourced
-the 'env.sh' file as described above.
+the ‘env.sh’ file as described above.
      $ guile
      ...
      scheme@(guile-user)> ,L calc
@@ -198,15 +198,15 @@ the 'env.sh' file as described above.
      calc@(guile-user)>
    The evaluator uses SXML as the intermediate representation between
 the parser and compiler, which generates to Tree-IL. See also the
-example in the directory 'examples/language/javascript' and
-'examples/nyacc/lang/javascript' directories.  For details on the Guile
+example in the directory ‘examples/language/javascript’ and
+‘examples/nyacc/lang/javascript’ directories.  For details on the Guile
 backend see
 
 1.3 Debugging Output
 ====================
 
 The parser can provide debugging output with the appropriate keyword
-argument.  In 'calc1.scm' there is a modified version of 'calc1-eval'
+argument.  In ‘calc1.scm’ there is a modified version of ‘calc1-eval’
 which will print out debugging info:
      (define (calc1-eval str)
        (with-input-from-string str
@@ -233,58 +233,58 @@ File: nyacc-ug.info,  Node: Parsing,  Next: Translation,  Prev: Demonstration,  
 *********
 
 Most of the syntax and procecures for generating skelton parsers
-exported from the module '(nyacc lalr)'.  Other modules include
-'(nyacc lex)'
+exported from the module ‘(nyacc lalr)’.  Other modules include
+‘(nyacc lex)’
      This module provides procedures for generating lexical analyzers.
-'(nyacc util)'
+‘(nyacc util)’
      This module provides utilities used by the other modules.
 
 2.1 The Specification
 =====================
 
-The syntax for generating specifications is 'lalr-spec'.  As mentioned
+The syntax for generating specifications is ‘lalr-spec’.  As mentioned
 in the previous chapter, the syntax generates an association list, or
-"a-list".
+“a-list”.
 
  -- Syntax: lalr-spec grammar => a-list
      This routine reads a grammar in a scheme-like syntax and returns an
      a-list.  The returned a-list is normally used as an input for
-     'make-lalr-machine'.  The syntax is of the form
+     ‘make-lalr-machine’.  The syntax is of the form
           (lalr-spec (SPECIFIER ...) ...)
      The order of the specifiers does not matter, but typically the
-     'grammar' specifier occurs last.
+     ‘grammar’ specifier occurs last.
 
    The specifiers are
-'notice'
+‘notice’
      This is used to push a comment string (e.g., copyright) into the
      resulting parser tables.
-'reserve'
+‘reserve’
      This is a list of tokens which do not appear in the grammar but
      should be added to the match table.
-'prec<, prec>'
+‘prec<, prec>’
      These specifiers are used to specify precedence and associativity
      symbols.
-'expect'
+‘expect’
      This is the expected number of shift-reduce conflicts to occur.
-'start'
+‘start’
      This specifies the top-level starting non-terminal.
-'alt-start'
-     This specifies alternative start symbols used in 'restart-spec'.
+‘alt-start’
+     This specifies alternative start symbols used in ‘restart-spec’.
      Its use prevents warning messages.
-'grammar'
+‘grammar’
      the grammar see below
 
 The Notice
 ----------
 
-The 'notice' specifier allows one to provide a comment that will be
+The ‘notice’ specifier allows one to provide a comment that will be
 carried into generated output files (e.g., parse tables generated by
-'write-lalr-tables'.  For example, if the spec' looks like
+‘write-lalr-tables’.  For example, if the spec’ looks like
      (define spec
        (lalr-spec
         (notice "last edit: Mar 25, 2015")
         ...))
-and one generates parse tables from the machine with 'write-lalr-tables'
+and one generates parse tables from the machine with ‘write-lalr-tables’
 then the resulting file will look like
      ;; calctab.scm
 
@@ -297,14 +297,14 @@ then the resulting file will look like
    The notice is available using the expression
  -- Procedure: pp-lalr-notice spec [port]
      Print the notice to the port, if specified, or
-     '(current-output-port)'.
+     ‘(current-output-port)’.
 
 Reserving Tokens
 ----------------
 
-The 'notice' specifier allows one to provide a comment that will be
+The ‘notice’ specifier allows one to provide a comment that will be
 carried into generated output files (e.g., parse tables generated by
-'write-lalr-tables'.  In the javascript parser we have added reserved
+‘write-lalr-tables’.  In the javascript parser we have added reserved
 keywords:
         (reserve "abstract" "boolean" "byte" "char"
                  "class" "const" ...)
@@ -316,14 +316,14 @@ looks like:
 Precedence and Associativity
 ----------------------------
 
-Recall the following specifier from the 'calc1' example:
+Recall the following specifier from the ‘calc1’ example:
         (prec< (left "+" "-") (left "*" "/"))
-This declaration indicates presedence among the math operators.  The '<'
-in 'prec<' indicates that the precedence is in increasing order.  An
+This declaration indicates presedence among the math operators.  The ‘<’
+in ‘prec<’ indicates that the precedence is in increasing order.  An
 equivalent specification would be as follows:
         (prec> (left "*" "/") (left "+" "-"))
 
-   The precedence specification can be used along with '$prec' in the
+   The precedence specification can be used along with ‘$prec’ in the
 grammer to resolve shift-reduce or reduce-reduce conflicts in a grammar.
 The classical case is the if-then-else construct in C, where a conflict
 occurs on the input
@@ -347,10 +347,10 @@ follows:
           ("if" "(" expression ")" statement "else" statement
            ($$ `(if ,$3 ,$5 ,$7)))
            ...
-It is important to note here that we use a quoted symbol ''then' rather
-than a string '"then"' as a dummy token.  If we would have used '"then"'
-as the dummy then the lex'er would return the associated token when
-'"then"' appears in the input and the C declaration
+It is important to note here that we use a quoted symbol ‘'then’ rather
+than a string ‘"then"’ as a dummy token.  If we would have used ‘"then"’
+as the dummy then the lex’er would return the associated token when
+‘"then"’ appears in the input and the C declaration
      int then(int);
 would produce a syntax error.
 
@@ -359,7 +359,7 @@ Expected Conflicts
 
 There are default rules for handling shift-reduce conflicts.  If you can
 live with these it is possible to inhibit the error messages generated
-by using the 'expect' specifier, which takes as argument the expected
+by using the ‘expect’ specifier, which takes as argument the expected
 number of shift-reduce conflicts:
        (lalr-spec
         (expect 3)
@@ -370,11 +370,11 @@ Grammar
 
 The grammer is a list of production rules.  Each production rule take
 the form
-     ("lhs" ("rhs1" ...) ("rhs2" ...) ...)
-where "lhs" is the left hand side is a non-termianl represented as a
+     (“lhs” (“rhs1” ...) (“rhs2” ...) ...)
+where “lhs” is the left hand side is a non-termianl represented as a
 Scheme identifier.  Each right hand side is a list non-terminals,
 terminals, actions or proxies, represented by Scheme indentifiers,
-Scheme constants, '$$'-expressions or proxy expressions, respectively.
+Scheme constants, ‘$$’-expressions or proxy expressions, respectively.
 The terminals can be Scheme strings, character constants or quoted
 symbols, but not numbers.  For example, the following is the production
 rule for a C99 additive expression:
@@ -382,62 +382,62 @@ rule for a C99 additive expression:
       (mul-expr)
       (add-expr "+" mul-expr ($$ `(add ,$1 ,$3)))
       (add-expr "-" mul-expr ($$ `(sub ,$1 ,$3))))
-   Here 'add-expr' and 'mul-expr' are non-terminals and '"+"', '"-"' are
-terminals and '($$ `(add ,$1 ,$3))' and '($$ `(sub ,$1 ,$3))' are
-actions.  In the actions '$1' refers to the semantic value of the term
-'add-expr'.
+   Here ‘add-expr’ and ‘mul-expr’ are non-terminals and ‘"+"’, ‘"-"’ are
+terminals and ‘($$ `(add ,$1 ,$3))’ and ‘($$ `(sub ,$1 ,$3))’ are
+actions.  In the actions ‘$1’ refers to the semantic value of the term
+‘add-expr’.
 
-   Symbols starting with '$' are reserved.  The following symbols have
-special meaning: All symbols starting with '$' are reserved.  Unused
+   Symbols starting with ‘$’ are reserved.  The following symbols have
+special meaning: All symbols starting with ‘$’ are reserved.  Unused
 reserved symbols will likely not signal an error.  The following
 reserved symbols are in use:
-'$prec'
+‘$prec’
      This symbol is used in the right hand side of a production rule to
-     indicate precedence (e.g., '($prec 'foo)').
-'$error'
+     indicate precedence (e.g., ‘($prec 'foo)’).
+‘$error’
      This symbol is used in the right hand side of a production rule to
      indicate the rule is an error.  The associated parser will abort on
      this rule.
-'$empty'
+‘$empty’
      This symbol can be used in the right hand side of a production to
      indicate it has no terms.
-'$ident'
+‘$ident’
      This is emitted by the lexical analyzer to indicate an identifier.
-'$fixed'
+‘$fixed’
      This is emitted by the lexical analyzer to indicate an unsigned
      integer.
-'$float'
+‘$float’
      This is emitted by the lexical analyzer to indicate an unsigned
      floating point number.
-'$string'
+‘$string’
      This is emitted by the lexical analyzer to indicate a string.
-'$code-comm'
+‘$code-comm’
      This is emitted by the lexical analyzer to indicate a comment
      starting after code appearing on a line.
-'$lone-comm'
+‘$lone-comm’
      This is emitted by the lexical analyzer to indicate a comment
      starting on a line without preceeding code.
-'$$, $$-ref, $$/ref'
+‘$$, $$-ref, $$/ref’
      These define an action in the right-hand side of a production.
      They have the forms
           ($$ _body_)
           ($$-ref 'rule12)
           ($$/ref 'rule12 _body_)
      In an action, _body_ is a Scheme expression, which can refer to the
-     semantic values via the special variables '$1', '$2', ... See *note
-     Actions:: for more details on how _body_ is evaluated.  The 'ref'
+     semantic values via the special variables ‘$1’, ‘$2’, ... See *note
+     Actions:: for more details on how _body_ is evaluated.  The ‘ref’
      forms are used to provide references for future use to support
      other (non-Scheme) languages, where the parser will be equipped to
      execute reduce-actions by reference (e.g.  an associative array).
-'$1, $2, ...'
+‘$1, $2, ...’
      These appear as arguments to user-supplied actions and will appear
      in the _body_ shown above.  The variables reference the symantic
      values of right-hand-side symbols of a production rule.  Note that
      mid-rule actions count here so
            (lhs (l-expr ($$ (gen-op)) r-expr ($$ (list $2 $1 $3))))
-     generates a list from the return of '(gen-op)' followed by the
-     semantic value associated with 'l-expr' and then 'r-expr'.
-'$?, $*, $+'
+     generates a list from the return of ‘(gen-op)’ followed by the
+     semantic value associated with ‘l-expr’ and then ‘r-expr’.
+‘$?, $*, $+’
      These are (experimental) macros used for grammar specification.
           ($? foo bar baz) => ``foo bar baz'' occurs never or once
           ($* foo bar baz) => ``foo bar baz'' occurs zero or more times
@@ -447,40 +447,40 @@ reserved symbols are in use:
 
    In addition, the following reserved symbols may appear in output
 files:
-'$chlit'
+‘$chlit’
      This is emitted by the lexical analyzer to indicate a character
      literal.
-'$start'
+‘$start’
      This is used in the machine specification to indicate the
      production rule for starting the grammar.
-'$end'
+‘$end’
      This is emitted by the lexical analysis to indicate end of input
      and appears in the machine to catch the end of input.
-'$P1, $P2, ...'
-     Symbols of the form '$P1', '$P2',...  are as symbols for proxy
+‘$P1, $P2, ...’
+     Symbols of the form ‘$P1’, ‘$P2’,...  are as symbols for proxy
      productions (e.g., for mid-rule actions).  For example, the
      production rule
           (lhs (ex1 ($$ (gen-x)) ex2 ex3) ($$ (list $1 $2 $3 $4)))
      will result in the internal p-rules
           (lhs (ex1 $P1 ex2 ex3) ($$ (list $1 $2 $3 $4)))
           ($P1 ($empty ($$ (gen-x))))
-'$default'
+‘$default’
      This is used in the generated parser to indicate a default action.
 
 Acions
 ------
 
-A grammar rule's right-hand side can contain _actions_:
+A grammar rule’s right-hand side can contain _actions_:
        ($$ _body_)
    _body_ is a Scheme expression which can refer to the values matched
-by the rule's right-hand side via the variables ('$1', '$2', ...).  This
+by the rule’s right-hand side via the variables (‘$1’, ‘$2’, ...).  This
 expression is evaluates in the top-level environment of the module from
-which 'make-lalr-parser' is called, so it will "see" the bindings
+which ’make-lalr-parser’ is called, so it will “see” the bindings
 defined there.
 
    When actions appear within a production rule (known as mid-rule
 actions) they count as right-hand side items and thus the results of
-their evaluation is bound to the corresponding '$n' variable available
+their evaluation is bound to the corresponding ‘$n’ variable available
 for the end-of-rule action.
 
 Recovery from Syntax Errors
@@ -495,7 +495,7 @@ allows the user to trap an error.
        (exp "\n")
        ($error "\n"))
 If the current input token does not match the grammar, then the parser
-will skip input tokens until a '"\n"' is read.  The default behavior is
+will skip input tokens until a ‘"\n"’ is read.  The default behavior is
 to generate an error message: _"syntax error"_.  To provide a
 user-defined handler just add an action for the rule:
      (line
@@ -508,9 +508,9 @@ recovery action (_"syntax error"_) will be executed.
 2.2 Parsing a Sublanguage of a Specification
 ============================================
 
-Say you have a NYACC specification 'cspec' for the C language and you
+Say you have a NYACC specification ‘cspec’ for the C language and you
 want to generate a machine for parsing C expressions.  You can do this
-using 'restart-spec':
+using ‘restart-spec’:
      (define cxspec (restart-spec cspec 'expression))
      (define cxmach (make-lalr-machine cxspec))
 
@@ -518,25 +518,25 @@ using 'restart-spec':
 ==========================
 
  -- Procedure: make-lalr-machine spec => a-list
-     Given a specification generated by 'lalr-spec' this procecure
+     Given a specification generated by ‘lalr-spec’ this procecure
      generates an a-list which contains the data required to implement a
-     parser generated with, for example, 'make-lalr-parser'.
+     parser generated with, for example, ‘make-lalr-parser’.
 
    The generated a-list includes the following keys:
-'pat-v'
+‘pat-v’
      a vector of parse action procecures
-'ref-v'
+‘ref-v’
      a vector of parse action references (for supporting other
      languages)
-'len-v'
+‘len-v’
      a vector of p-rule lengths
-'rto-v'
-     a vector of lhs symbols ("reduce to" symbols)
-'lhs-v'
+‘rto-v’
+     a vector of lhs symbols (“reduce to” symbols)
+‘lhs-v’
      a vector of left hand side symbols
-'rhs-v'
+‘rhs-v’
      a vector of vectors of right hand side symbols
-'kis-v'
+‘kis-v’
      a vector of itemsets
 
 Using Hashed Tables
@@ -544,7 +544,7 @@ Using Hashed Tables
 
 The lexical analyzer returns tokens to the parser.  The parser executes
 state transitions based on these tokens.  When we build a lexical
-analyzer (via 'make-lexer') we provide a list of strings to detect along
+analyzer (via ‘make-lexer’) we provide a list of strings to detect along
 with associated tokens to return to the parser.  By default the tokens
 returned are symbols or characters.  But these could as well be
 integers.  Also, the parser uses symbols to represent non-terminals,
@@ -552,20 +552,20 @@ which are also used to trigger state transitions.  We could use integers
 instead of symbols and characters by mapping the tokens to integers.
 This makes the parser more efficient.  The tokens we are talking about
 include
-  1. the '$end' marker
-  2. identifiers (using the symbolic token '$ident'
-  3. non-negative integers (using the symbolic token '$fixed')
-  4. non-negative floats (using the symbolic token '$float')
-  5. '$accept'
-  6. '$default'
-  7. '$error'
+  1. the ‘$end’ marker
+  2. identifiers (using the symbolic token ‘$ident’
+  3. non-negative integers (using the symbolic token ‘$fixed’)
+  4. non-negative floats (using the symbolic token ‘$float’)
+  5. ‘$accept’
+  6. ‘$default’
+  7. ‘$error’
 
    For the hash table we use positive integers for terminals and
 negative integers for non-terminals.  To apply such a hash table we
 perform the following:
-  1. From the spec's list of terminals (aka tokens), generate a list of
+  1. From the spec’s list of terminals (aka tokens), generate a list of
      terminal to integer pairs (and vice versa).
-  2. From the spec's list of non-terminals generate a list of symbols to
+  2. From the spec’s list of non-terminals generate a list of symbols to
      integers and vice versa.
   3. Go through the parser-action table and convert symbols and
      characters to integers.
@@ -573,7 +573,7 @@ perform the following:
      replace symbols and characters with integers.
 
    Note that the parser is hardcoded to assume that the phony token for
-the default (reduce) action is ''$default' for unhashed machine or '1'
+the default (reduce) action is ‘'$default’ for unhashed machine or ‘1’
 for a hashed machine.
 
    The actions that the parser executes based on these are shift, reduce
@@ -584,7 +584,7 @@ state.  We can encode the parser transitions using integers.
   3. If zero, accept and return.
 
    The NYACC procedure to convert a machine to a hashed-machine is
-'hashify-machine'.
+‘hashify-machine’.
 
  -- Procedure: hashify-machine mach => mach
      Convert machine to use integers instead of symbols.  The match
@@ -607,8 +607,8 @@ Compacting Machine Tables
      A "filter" to compact the parse table.  For each state this will
      replace the most populus set of reductions of the same production
      rule with a default production.  However, reductions triggered by
-     user-specified keepers and the default keepers - ''$error',
-     ''$end', ''$lone-comm' and ''$lone-comm' are not counted.  The
+     user-specified keepers and the default keepers – ‘'$error’,
+     ‘'$end’, ‘'$lone-comm’ and ‘'$lone-comm’ are not counted.  The
      parser will want to treat errors and comments separately so that
      they can be trapped (e.g., unaccounted comments are skipped).
 
@@ -617,43 +617,43 @@ Compacting Machine Tables
 
 In some parser generators one declares terminals in the grammar file and
 the generator will provide an include file providing the list of
-terminals along with the associated "hash codes".  In NYACC the
+terminals along with the associated “hash codes”.  In NYACC the
 terminals are detected in the grammar as non-identifiers: strings (e.g.,
-'"for"'), symbols (e.g., ''$ident') or characters (e.g., '#\+').  The
+‘"for"’), symbols (e.g., ‘'$ident’) or characters (e.g., ‘#\+’).  The
 machine generation phase of the parser generates a match table which is
 an a-list of these objects along with the token code.  These codes are
 what the lexical analyzer should return.  In the end we have
-   * The user specifies the grammar with terminals in natural form
-     (e.g., '"for"').
-   * The parser generator internalizes these to symbols or integers, and
+   • The user specifies the grammar with terminals in natural form
+     (e.g., ‘"for"’).
+   • The parser generator internalizes these to symbols or integers, and
      generates an a-list, the match table, of (natural form, internal
      form).
-   * The programmer provides the match table to the procedure that
-     builds a lexical analyzer generator (e.g., 'make-lexer-generator').
-   * The lexical analyzer uses this table to associate strings in the
+   • The programmer provides the match table to the procedure that
+     builds a lexical analyzer generator (e.g., ‘make-lexer-generator’).
+   • The lexical analyzer uses this table to associate strings in the
      input with entries in the match table.  In the case of keywords the
-     keys will appear as strings (e.g., 'for'), whereas in the case of
+     keys will appear as strings (e.g., ‘for’), whereas in the case of
      special items, processed in the lexical analyzer by readers (e.g.,
-     'read-num'), the keys will be symbols (e.g., ''$float').
-   * The lexical analyzer returns pairs in the form (internal form,
+     ‘read-num’), the keys will be symbols (e.g., ‘'$float’).
+   • The lexical analyzer returns pairs in the form (internal form,
      natural form) to the parser.  Note the reflexive behavior of the
      lexical analyzer.  It was built with pairs of the form (natural
      form, internal form) and returns pairs of the form (internal form,
      natural form).
 
-   The symbol for the default transition is ''$default'.  For hashified
-machines this is translated to the integer '1'.
+   The symbol for the default transition is ‘'$default’.  For hashified
+machines this is translated to the integer ‘1’.
 
 2.5 Constructing Lexical Analyzers
 ==================================
 
-The 'lex' module provides a set of procedures to build lexical
-analyzers.  The approach is to first build a set of "readers" for
+The ‘lex’ module provides a set of procedures to build lexical
+analyzers.  The approach is to first build a set of “readers” for
 different types of tokens (e.g., numbers, identifiers, character
 sequences) and then process input characters (or code points) through
 the procedures.  The signature of most readers is the following:
      (reader ch) => #f | (_type_ . _value_)
-If the reader fails to read a token then '#f' is returned.  If the
+If the reader fails to read a token then ‘#f’ is returned.  If the
 reader reads more characters from input and fails, then it will push
 back characters.  So, the basic structure of a lexical analyzer is
      (lambda ()
@@ -681,40 +681,40 @@ comm-reader
 comm-skipper
      same as comm-reader
 chseq-reader
-     a reader for a sequence of characters (e.g., '+=')
+     a reader for a sequence of characters (e.g., ‘+=’)
    Note that some of our parsers (e.g., the C99 parser) is crafted to
 keep some comments in the output syntax tree.  So comments may be passed
-to the parser or skipped, hence the "skipper".
+to the parser or skipped, hence the “skipper”.
 
-   The Lex Module does not provide lexical analyzers (lex'ers), but
+   The Lex Module does not provide lexical analyzers (lex’ers), but
 lexical analyzer generator generators.  The rationale behind this is as
 follows.  A lexical analyzer may have state (e.g., beginning of line
 state for languages where newline is not whitespace).  In addition, our
 generator uses a default set of readers, but allows the caller to
-specify other readers.  Or, if the user prefers, lex'ers can be rolled
-from provided readers.  Now we introduce our lex'er generator generator:
+specify other readers.  Or, if the user prefers, lex’ers can be rolled
+from provided readers.  Now we introduce our lex’er generator generator:
 
  -- Procedure: make-lexer-generator match-table [options] => generator
-     Returns a lex'er generator from the match table and options.  The
+     Returns a lex’er generator from the match table and options.  The
      options are
-     '#:ident-reader reader'
+     ‘#:ident-reader reader’
           Use the provided reader for reading identifiers.  The default
           is a C language ident reader, generated from
                (make-ident-reader c:if c:ir)
-     '#:num-reader READER'
+     ‘#:num-reader READER’
           Use the provided number reader.
-     '#:string-reader READER'
+     ‘#:string-reader READER’
           Use the provided reader for string literals.
-     '#:chlit-reader READER'
+     ‘#:chlit-reader READER’
           Use the provide charater literal reader.  The default is for
-          C. So, for example the letter 'a' is represented as ''a''.
-     '#:comm-reader READER'
+          C. So, for example the letter ‘a’ is represented as ‘'a'’.
+     ‘#:comm-reader READER’
           Use the provided comment reader to pass comments to the
           parser.
-     '#:comm-skipper READER'
+     ‘#:comm-skipper READER’
           Use the provided comment reader, but throw the token away.
-          The default for this is '#f'.
-     'space-chars STRING'
+          The default for this is ‘#f’.
+     ‘space-chars STRING’
           not a reader but a string containing the whitespace characters
           (fix this)
           (define gen-lexer (make-lexer-generator #:ident-reader my-id-rdr))
@@ -726,14 +726,14 @@ from provided readers.  Now we introduce our lex'er generator generator:
      This routine will generate a reader to skip whitespace.
 
  -- Procedure: skip-c-space ch => #f|#t
-     If 'ch' is C whitespace, skip all spaces, then return '#t', else
-     return '#f'.
+     If ‘ch’ is C whitespace, skip all spaces, then return ‘#t’, else
+     return ‘#f’.
 
  -- Procedure: make-ident-reader cs-first cs-rest => ch -> #f|string
      For identifiers, given the char-set for first character and the
      char-set for following characters, return a return a reader for
      identifiers.  The reader takes a character as input and returns
-     '#f' or 'string'.  This will generate exception on '#<eof>'.
+     ‘#f’ or ‘string’.  This will generate exception on ‘#<eof>’.
 
  -- Procedure: read-c-ident ch => #f|string
      If ident pointer at following char, else (if #f) ch still
@@ -747,9 +747,9 @@ from provided readers.  Now we introduce our lex'er generator generator:
      Determine if a string qualifies as a C identifier.
 
  -- Procedure: make-string-reader delim
-     Generate a reader that uses 'delim' as delimiter for strings.
+     Generate a reader that uses ‘delim’ as delimiter for strings.
      TODO: need to handle matlab-type strings.  TODO: need to handle
-     multiple delim's (like python)
+     multiple delim’s (like python)
 
  -- Procedure: read-oct ch => "0123"|#f
      Read octal number.
@@ -758,48 +758,48 @@ from provided readers.  Now we introduce our lex'er generator generator:
      Read octal number.
 
  -- Procedure: read-c-string ch => ($string . "foo")
-     Read a C-code string.  Output to code is 'write' not 'display'.
-     Return #f if CH is not '"'.  This reader does not yet read
+     Read a C-code string.  Output to code is ‘write’ not ‘display’.
+     Return #f if CH is not ‘"’.  This reader does not yet read
      trigraphs.
 
  -- Procedure: make-chlit-reader
      Generate a reader for character literals.  NOT DONE. For C, this
-     reads ''c'' or ''\n''.
+     reads ‘'c'’ or ‘'\n'’.
 
  -- Procedure: read-c-chlit ch
           ... 'c' ... => (read-c-chlit #\') => '($ch-lit . #\c)
 
  -- Procedure: make-num-reader => (proc ch) => output
      Generates a procedure to read C numbers where OUTPUT is of the form
-     '#f', '($fixed . "1")' or '($float . "1.0")' This routine will
+     ‘#f’, ‘($fixed . "1")’ or ‘($float . "1.0")’ This routine will
      clean up floats by adding "0" before or after dot.
 
  -- Procedure: cnumstr->scm C99-str => scm-str
-     Convert C number-string (e.g, '0x123LL') to Scheme numbers-string
-     (e.g., '#x123').
+     Convert C number-string (e.g, ‘0x123LL’) to Scheme numbers-string
+     (e.g., ‘#x123’).
 
  -- Procedure: read-c-num ch => #f|string
      Reader for unsigned numbers as used in C (or close to it).
 
  -- Procedure: make-chseq-reader strtab
      Given alist of pairs (string, token) return a function that eats
-     chars until (token .  string) is returned or '#f' if no match is
+     chars until (token .  string) is returned or ‘#f’ if no match is
      found.
 
  -- Procedure: make-comm-reader comm-table [#:eat-newline #t] => \
-     ch bol -> ('$code-comm "..")|('$lone-comm "..")|#f comm-table is
-     list of cons for (start .  end) comment.  e.g.  ("-" .  "\n") ("/*"
-     .  "*/") test with "/* hello **/" If 'eat-newline' is specified as
+     ch bol -> (’$code-comm "..")|(’$lone-comm "..")|#f comm-table is
+     list of cons for (start .  end) comment.  e.g.  ("–" .  "\n") ("/*"
+     .  "*/") test with "/* hello **/" If ‘eat-newline’ is specified as
      true then for read comments ending with a newline a newline
      swallowed with the comment.  Note: assumes backslash is never part
      of the end
 
-Rolling Your Own Lex'er
+Rolling Your Own Lex’er
 .......................
 
 The following routines are provided for rolling your own lexical
 analyzer generator.  An example is provided in the file
-'examples/nyacc/lang/matlab'.
+‘examples/nyacc/lang/matlab’.
 
  -- Procedure: filter-mt p? al => al
      Filter match-table based on cars of al.
@@ -814,13 +814,13 @@ analyzer generator.  An example is provided in the file
      For test and debug, this procedure will evaluate a reader on a
      string.  A reader is a procedure that accepts a single character
      argument intended to match a specific character sequence.  A reader
-     will read more characters by evaluating 'read-char' until it
+     will read more characters by evaluating ‘read-char’ until it
      matches or fails.  If it fails, it will pushback all characters
-     read via 'read-char' and return '#f'.  If it succeeds the input
+     read via ‘read-char’ and return ‘#f’.  If it succeeds the input
      pointer will be at the position following the last matched
      character.
 
-2.6 The Parser-Lex'er Interface
+2.6 The Parser-Lex’er Interface
 ===============================
 
 Sometimes LALR(1) parsers must be equipped with methods to parse
@@ -828,25 +828,25 @@ non-context free grammars.  With respect to typenames, C is not context
 free.  Consider the following example.
      typedef int foo_t;
      foo_t x;
-The lexical analyzer must identify the first occurance of 'foo_t' as an
-identifier and the second occurance of 'foo_t' as a typename.  This can
+The lexical analyzer must identify the first occurance of ‘foo_t’ as an
+identifier and the second occurance of ‘foo_t’ as a typename.  This can
 be accomplished by keeping a list of typenames in the parent environment
 to the parser and lexical analyzer.  In the parser, when the first
-statement is parsed, an action could declare 'foo_t' to now be a
+statement is parsed, an action could declare ‘foo_t’ to now be a
 typename.  In the lexical analyzer, as tokens that look like identifers
 are parsed they are checked against the list of typenames and if a match
-is found, ''typename' is returned, otherwise '$ident' is returned.
+is found, ‘'typename’ is returned, otherwise ‘$ident’ is returned.
 
    Another example of this handshaking is used in the JavaScript parser.
 The language allows newline as a statement terminator, but it must be
-prevented in certain places, for example between '++' and an expression
+prevented in certain places, for example between ‘++’ and an expression
 in the post-increment operator.  We handle this using a mid-rule action
 to tell the lexer to skip newline if that is the next token.
        (LeftHandSideExpression ($$ (NSI)) "++" ($$ `(post-inc $1)))
-The procedure 'NSI' in the lex'er is as follows:
+The procedure ‘NSI’ in the lex’er is as follows:
      (define (NSI) ;; no semicolon insertion
        (fluid-set! *insert-semi* #f))
-and the newline reader in the lex'er acts as follows:
+and the newline reader in the lex’er acts as follows:
        ...
        ((eqv? ch #\newline)
         (if (fluid-ref *insert-semi*)
@@ -865,37 +865,37 @@ enough info to create a parser from the tables saved in the machine.
 NYACC procedures as follows:
      (write-lalr-actions calc-mach "calc-act.scm" #:prefix "calc-")
      (write-lalr-tables calc-mach "calc-tab.scm" #:prefix "calc-")
-   This saves the variable definition for 'calc-act-v' to the file
-'calc-act.scm' and variable definitions for the following to the file
-'calc-tab.scm':
-'calc-len-v'
-'calc-pat-v'
-'calc-rto-v'
-'calc-mtab'
-'calc-tables'
-   The variable 'calc-act-v' is a vector of procedures associated with
+   This saves the variable definition for ‘calc-act-v’ to the file
+‘calc-act.scm’ and variable definitions for the following to the file
+‘calc-tab.scm’:
+‘calc-len-v’
+‘calc-pat-v’
+‘calc-rto-v’
+‘calc-mtab’
+‘calc-tables’
+   The variable ‘calc-act-v’ is a vector of procedures associated with
 each of the production rules, to be executed as the associated
 production ruled is reduced in parsing.  The procedures can be modified
-without editing the grammar file and re-executing 'lalr-spec' and
-'make-lalr-machine'.
+without editing the grammar file and re-executing ‘lalr-spec’ and
+‘make-lalr-machine’.
 
    To create a parser from the generated tables, one can write the
 following code:
      (include "calc-tab.scm")
      (include "calc-act.scm")
      (define raw-parser (make-lalr-parser (acons 'act-v calc-act-v calc-tables)))
-See the example code in 'examples/nyacc/lang/calc/parser.scm' for more
+See the example code in ‘examples/nyacc/lang/calc/parser.scm’ for more
 detail.
 
 2.8 Hashing and Compacting
 ==========================
 
-The NYACC procedure 'compact-machine' will compact the parse tables
-generated by 'make-lalr-machine'.  That is, if multiple tokens generate
+The NYACC procedure ‘compact-machine’ will compact the parse tables
+generated by ‘make-lalr-machine’.  That is, if multiple tokens generate
 the same transition, then these will be combined into a single _default_
 transition.  Ordinarily NYACC will expect symbols to be emitted from the
 lexical analyzer.  To use integers instead, use the procedure
-'hashify-machine'.  One can, of course, use both procedures:
+‘hashify-machine’.  One can, of course, use both procedures:
      (define calc-mach
        (compact-machine
         (hashify-machine
@@ -911,19 +911,19 @@ NYACC provides routines for exporting NYACC grammar specifications to
 other LALR parser generators.
 
    The Bison exporter uses the following rules:
-   * Terminals expressed as strings which look like C identifiers are
-     converted to symbols of all capitals.  For example '"for"' is
-     converted to 'FOR'.
-   * Strings which are not like C identifiers and are of length 1 are
-     converted to characters.  For example, '"+"' is converted to ''+''.
-   * Characters are converted to C characters.  For example, '#\!' is
-     converted to ''!''.
-   * Multi-character strings that do not look like identifiers are
-     converted to symbols of the form 'ChSeq_i_j_k' where i, j and k are
-     decimal representations of the character code.  For example '"+="'
-     is converted to 'ChSeq_43_61'.
-   * Terminals expressed as symbols are converted as-is but '$' and '-'
-     are replaced with '_'.
+   • Terminals expressed as strings which look like C identifiers are
+     converted to symbols of all capitals.  For example ‘"for"’ is
+     converted to ‘FOR’.
+   • Strings which are not like C identifiers and are of length 1 are
+     converted to characters.  For example, ‘"+"’ is converted to ‘'+'’.
+   • Characters are converted to C characters.  For example, ‘#\!’ is
+     converted to ‘'!'’.
+   • Multi-character strings that do not look like identifiers are
+     converted to symbols of the form ‘ChSeq_i_j_k’ where i, j and k are
+     decimal representations of the character code.  For example ‘"+="’
+     is converted to ‘ChSeq_43_61’.
+   • Terminals expressed as symbols are converted as-is but ‘$’ and ‘-’
+     are replaced with ‘_’.
 
    This functionality has not been worked for a while so I suspect there
 is a chance it does not work anymore.
@@ -938,7 +938,7 @@ Human Readable Output
 
 You can generate text files which provide human-readable forms of the
 grammar specification and resulting automaton, akin to what you might
-get with bison using the '-r' flag.
+get with bison using the ‘-r’ flag.
      (with-output-to-file "calc.out"
        (lambda ()
          (pp-lalr-grammar calc1-mach)
@@ -1008,9 +1008,9 @@ Tracing Parsing at Run-Time
 ---------------------------
 
 The parsers generted by NYACC accept an optional keyword argument
-'#:debug'.  When '#t' is passed to this argument then the parser will
+‘#:debug’.  When ‘#t’ is passed to this argument then the parser will
 display shift and reduce actions as it executes.  The calculator demo
-under the examples directory has an option (in 'calc.scm') to do this.
+under the examples directory has an option (in ‘calc.scm’) to do this.
 Here is what the output looks like (with the displayed result edited
 out).
      > 1 + 2
@@ -1028,8 +1028,8 @@ out).
      state 7, token "\n"	=> reduce 2
      state 0, token stmt-list	=> shift, goto 8
      state 8, token "\n"	=> shift, goto 10
-   Currently, when parsers are hashed (using 'hashify-machine' the
-non-terminals (e.g., 'expr' above) are reported as integers.
+   Currently, when parsers are hashed (using ‘hashify-machine’ the
+non-terminals (e.g., ‘expr’ above) are reported as integers.
 
 
 File: nyacc-ug.info,  Node: Translation,  Next: Coding to the Compiler Tower,  Prev: Parsing,  Up: Top
@@ -1041,16 +1041,16 @@ In this chapter we present procedures for generating syntax trees in a
 uniform form.  This format, based on SXML, may use more cons cells than
 other formats but upon use you will see that it is easy to produce code
 in the parser, and one can use all the processing tools that have been
-written for SXML (e.g., '(sxml match)' '(sxml fold)'.
+written for SXML (e.g., ‘(sxml match)’ ‘(sxml fold)’.
 
    The syntax of SXML trees is simple:
      expr => (tag item ...) | (tag (@ attr ...) item ...)
      item => string | expr
      attr => (tag . string)
 where tag names cannot contain the characters
-     '(' ')' '"' ''' '`' ',' ';' '?'  '>' '<' '[' ']' '~' '=' '!'  '#'
-     '$' '%' '&' '*' '+' '/' '\' '@' '^' '|' '{' '}'
-and cannot begin with '-', '.' or a numeric digit.
+     ‘(’ ‘)’ ‘"’ ‘'’ ‘`’ ‘,’ ‘;’ ‘?’ ‘>’ ‘<’ ‘[’ ‘]’ ‘~’ ‘=’ ‘!’ ‘#’ ‘$’
+     ‘%’ ‘&’ ‘*’ ‘+’ ‘/’ ‘\’ ‘@’ ‘^’ ‘|’ ‘{’ ‘}’
+and cannot begin with ‘-’, ‘.’ or a numeric digit.
 
    For example our Javascript parser given the input
      function foo(x, y) {
@@ -1072,7 +1072,7 @@ will produce the following syntax tree:
              (EmptyStatement)))
          (EmptyStatement)))
 And by the way, put through our tree-il compiler, which uses
-'foldts*-values' from the module '(sxml fold)' we get
+‘foldts*-values’ from the module ‘(sxml fold)’ we get
      (begin
        (define foo
          (lambda ((name . foo))
@@ -1097,28 +1097,28 @@ And by the way, put through our tree-il compiler, which uses
 3.1 Tagged Lists
 ================
 
-Paring actions in NYACC can use tagged-lists from the module '(nyacc
-lang util)' to help build SXML trees efficiently.  Building a statement
+Paring actions in NYACC can use tagged-lists from the module ‘(nyacc
+lang util)’ to help build SXML trees efficiently.  Building a statement
 list for a program might go as follows:
        (program
         (stmt-list ($$ `(program ,(tl->list $1)))))
        (stmt-list
         (stmt ($$ (make-tl 'stmt-list $1)))
         (stmt-list stmt ($$ (tl-append $1 $2))))
-The sequence of calls to the 'tl-' routines goes as follows:
-'(make-tl 'stmt-list)'
-     Generate a tagged list with tag ''stmt-list'.
-'(tl-append $1 $2)'
-     Append item '$2' (not a list) to the tagged-list '$1'.
-'(tl->list $1)'
-     Convert the tagged-list '$1' to a list.  It will be of the form
+The sequence of calls to the ‘tl-’ routines goes as follows:
+‘(make-tl 'stmt-list)’
+     Generate a tagged list with tag ‘'stmt-list’.
+‘(tl-append $1 $2)’
+     Append item ‘$2’ (not a list) to the tagged-list ‘$1’.
+‘(tl->list $1)’
+     Convert the tagged-list ‘$1’ to a list.  It will be of the form
           '(stmt-list (_stmt_ ...) (_stmt_ ...) ...)
-     The first element of the list will be the tag ''stmt-list'.  If
+     The first element of the list will be the tag ‘'stmt-list’.  If
      attributes were added, the list of attributes will be the second
      element of the list.
 
-   The following procedures are provided by the module '(nyacc lang
-util)':
+   The following procedures are provided by the module ‘(nyacc lang
+util)’:
 
  -- Procedure: make-tl tag [item item ...]
      Create a tagged-list structure for tag TAG.  Any number of
@@ -1140,14 +1140,14 @@ util)':
      Extend with a list of items.
 
  -- Procedure: tl-extend! tl item-l
-     Extend with a list of items.  Uses 'set-cdr!'.
+     Extend with a list of items.  Uses ‘set-cdr!’.
 
  -- Procedure: tl+attr tl key val)
      Add an attribute to a tagged list.  Return the tl.
           (tl+attr tl 'type "int")
 
  -- Procedure: tl-merge tl tl1
-     Merge guts of phony-tl 'tl1' into 'tl'.
+     Merge guts of phony-tl ‘tl1’ into ‘tl’.
 
 3.2 Working with SXML Based Parse Trees
 =======================================
@@ -1159,9 +1159,9 @@ To work with the trees described in the last section use
      (sx-tail tree 2)
 
  -- Procedure: sx-ref sx ix => item
-     Reference the 'ix'-th element of the list, not counting the
+     Reference the ‘ix’-th element of the list, not counting the
      optional attributes item.  If the list is shorter than the index,
-     return '#f'.
+     return ‘#f’.
           (sx-ref '(abc "def") 1) => "def"
           (sx-ref '(abc (@ (foo "1")) "def") 1) => "def"
 
@@ -1187,7 +1187,7 @@ To work with the trees described in the last section use
           (sx-attr sx) => '((a . 1) (b . 2) ...)
 
  -- Procedure: sx-attr-ref sx key => val
-     Return an attribute value given the key, or '#f'.
+     Return an attribute value given the key, or ‘#f’.
 
  -- Procedure: sx-set-attr! sx key val
      Set attribute for sx.  If no attributes exist, if key does not
@@ -1203,7 +1203,7 @@ To work with the trees described in the last section use
  -- Procedure: sx-find tag sx => ((tag ...) (tag ...))
      Find the first matching element (in the first level).
 
-   This illustrates translation with 'foldts*-values' and 'sxml-match'.
+   This illustrates translation with ‘foldts*-values’ and ‘sxml-match’.
 
 
 File: nyacc-ug.info,  Node: Coding to the Compiler Tower,  Next: Administrative,  Prev: Translation,  Up: Top
@@ -1256,7 +1256,7 @@ File: nyacc-ug.info,  Node: Administrative,  Next: TODOs,  Prev: Coding to the C
 5.1 Installation
 ================
 
-Installation instructions are included in the top-level file 'INSTALL'
+Installation instructions are included in the top-level file ‘INSTALL’
 of the source distribution.  If you have an installed Guile then the
 basic steps are
      $ ./configure
@@ -1271,15 +1271,15 @@ If Guile is not installed it is possible to install source only:
 ==================
 
 Please report bugs by navigating with your browser to
-'https://savannah.nongnu.org/projects/nyacc' and select the "Submit New"
-item under the "Bugs" menu.  Alternatively, ask on the Guile user's
+‘https://savannah.nongnu.org/projects/nyacc’ and select the “Submit New”
+item under the “Bugs” menu.  Alternatively, ask on the Guile user’s
 mailing list <guile-user@gnu.org>.
 
 5.3 The Free Documentation License
 ==================================
 
 The Free Documentation License is included in the Guile Reference
-Manual.  It is included with the NYACC source as the file 'COPYING.DOC'.
+Manual.  It is included with the NYACC source as the file ‘COPYING.DOC’.
 
 
 File: nyacc-ug.info,  Node: TODOs,  Next: References,  Prev: Administrative,  Up: Top
@@ -1292,7 +1292,7 @@ Todo/Notes/Ideas:
      add error handling (lalr-spec will now return #f for fatal error)
 3
      support other target languages: (write-lalr-parser pgen "foo.py"
-     #:lang 'python)
+     #:lang ’python)
 6
      export functions to allow user to control the flow i.e., something
      like: (parse-1 state) => state
@@ -1309,8 +1309,8 @@ Todo/Notes/Ideas:
 19
      add a location stack to the parser/lexer
 26
-     Fix lexical analyzer to return tval, sval pairs using 'cons-source'
-     instead of 'cons'.  This will then allow support of location info.
+     Fix lexical analyzer to return tval, sval pairs using ‘cons-source’
+     instead of ‘cons’.  This will then allow support of location info.
 
 
 File: nyacc-ug.info,  Node: References,  Prev: TODOs,  Up: Top
@@ -1319,17 +1319,17 @@ File: nyacc-ug.info,  Node: References,  Prev: TODOs,  Up: Top
 ************
 
 [bison]
-     Donnely, C., and Stallman, R., "Bison: The Yacc Compatible Parser
-     Generator," <https://www.gnu.org/software/bison/manual>.
+     Donnely, C., and Stallman, R., “Bison: The Yacc Compatible Parser
+     Generator,” <https://www.gnu.org/software/bison/manual>.
 [DB]
-     Aho, A.V., Sethi, R., and Ullman, J. D., "Compilers: Principles,
-     Techniques and Tools," Addison-Wesley, 1985 (aka the Dragon Book)
+     Aho, A.V., Sethi, R., and Ullman, J. D., “Compilers: Principles,
+     Techniques and Tools,” Addison-Wesley, 1985 (aka the Dragon Book)
 [DP]
-     DeRemer, F., and Pennello, T., "Efficient Computation of LALR(1)
-     Look-Ahead Sets."  ACM Trans.  Prog.  Lang.  and Systems, Vol.  4,
+     DeRemer, F., and Pennello, T., “Efficient Computation of LALR(1)
+     Look-Ahead Sets.” ACM Trans.  Prog.  Lang.  and Systems, Vol.  4,
      No.  4., Oct.  1982, pp.  615-649.
 [RPC]
-     R. P. Corbett, "Static Semantics and Compiler Error Recovery,"
+     R. P. Corbett, “Static Semantics and Compiler Error Recovery,”
      Ph.D. Thesis, UC Berkeley, 1985.
 [VM]
      <https://www.gnu.org/software/guile/manual/html_node/Compiling-to-the-Virtual-Machine.html#Compiling-to-the-Virtual-Machine>
@@ -1337,29 +1337,29 @@ File: nyacc-ug.info,  Node: References,  Prev: TODOs,  Up: Top
 
 
 Tag Table:
-Node: Top622
-Node: Demonstration877
-Node: Parsing9839
-Ref: Specification10289
-Ref: Actions19322
-Ref: Recovery from Syntax Errors19988
-Ref: sublanguage20870
-Ref: Parser21191
-Ref: match table25034
-Ref: lex26807
-Ref: parser-lexer33915
-Ref: Parser Tables35485
-Ref: Hashing and Compacting36797
-Ref: Debugging38506
-Ref: Human Readable Output38617
-Node: Translation41654
-Ref: Tagged Lists44104
-Ref: SXML Parse Trees46050
-Node: Coding to the Compiler Tower47967
-Ref: Pretty Print49195
-Node: Administrative49391
-Node: TODOs50492
-Node: References51513
+Node: Top632
+Node: Demonstration889
+Node: Parsing10101
+Ref: Specification10563
+Ref: Actions19872
+Ref: Recovery from Syntax Errors20562
+Ref: sublanguage21448
+Ref: Parser21777
+Ref: match table25726
+Ref: lex27553
+Ref: parser-lexer34833
+Ref: Parser Tables36435
+Ref: Hashing and Compacting37795
+Ref: Debugging39574
+Ref: Human Readable Output39685
+Node: Translation42746
+Ref: Tagged Lists45330
+Ref: SXML Parse Trees47332
+Node: Coding to the Compiler Tower49269
+Ref: Pretty Print50497
+Node: Administrative50693
+Node: TODOs51816
+Node: References52847
 
 End Tag Table
 

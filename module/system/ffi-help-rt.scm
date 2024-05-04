@@ -1,6 +1,6 @@
 ;;; system/ffi-help-rt.scm - NYACC's FFI help runtime
 
-;; Copyright (C) 2016-2019,2022 Matthew R. Wette
+;; Copyright (C) 2016-2019,2022-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -59,9 +59,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
-  #:version (1 09 0))
+  #:version (1 09 4))
 
-(define *ffi-help-version* "1.09.0")
+(define *ffi-help-version* "1.09.4")
 
 (use-modules (ice-9 pretty-print))
 (define (sferr fmt . args)
@@ -323,7 +323,6 @@
               (fht-unwrap type)
               (fht-pointer-to type)
               (fht-value-at type)
-              ;;(fht-printer type)
               (make-printer (quote alias)))))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
@@ -787,7 +786,7 @@
             #f #f
             (lambda (obj port) (display "#<fh-void>" port))))
 (define fh-void?
-  (lambda (obj) (eq? (struct-vtable obj) fh-void)))
+  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) fh-void))))
 (define make-fh-void
   (case-lambda
     (() (make-struct/no-tail fh-void 'void))
@@ -817,7 +816,8 @@
               (display (number->string (struct-ref obj 0) 16) port)
               (display ">" port))))
 (define make-void* (fht-wrap void*))
-(define void*? (lambda (obj) (eq? (struct-vtable obj) void*)))
+(define void*?
+  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) void*))))
 (fh-ref<=>deref! void* make-void* fh-void make-fh-void)
 (export void* void*? make-void*)
 
@@ -836,7 +836,8 @@
               (display (number->string (struct-ref obj 0) 16) port)
               (display ">" port))))
 (define make-void** (fht-wrap void**))
-(define void**? (lambda (obj) (eq? (struct-vtable obj) void**)))
+(define void**?
+  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) void**))))
 (fh-ref<=>deref! void** make-void** void* make-void*)
 (export void** void**? make-void**)
 
@@ -884,7 +885,7 @@
 ;; @deffn {Procedure} make-symtab-function symbol-value-table prefix
 ;; generate a symbol table function
 ;; @example
-;; (define-public BUS (mkae-symtab-function ffi-dbus-symbol-tab))
+;; (define-public BUS (make-symtab-function ffi-dbus-symbol-tab))
 ;; @end example
 ;; Then use in code as this:
 ;; @example

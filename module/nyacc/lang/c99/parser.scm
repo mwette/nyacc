@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; Copyright (C) 2015-2023 Matthew R. Wette
+;; Copyright (C) 2015-2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -25,15 +25,6 @@
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 util)
   #:re-export (c99-def-help c99-std-help))
-(cond-expand
-  (guile-3)
-  (guile-2)
-  (guile
-   (use-modules (srfi srfi-16))
-   (use-modules (ice-9 optargs))
-   (use-modules (ice-9 syncase))
-   (use-modules (nyacc compat18)))
-  (else))
 
 ;; === body ==========================
 
@@ -73,20 +64,18 @@
 ;; @end example
 ;; @end deffn
 (define (split-cppdef defstr)
-  (let ((x2st (string-index defstr #\()) ; start of args
-	(x2nd (string-index defstr #\))) ; end of args
-	(x3 (string-index defstr #\=)))  ; start of replacement
-    (cond
-     ((not x3) (cons defstr ""))
-     ((and x2st x3)
-      (cons* (substring defstr 0 x2st)
-	     (string-split
-	      (string-delete #\space (substring defstr (1+ x2st) x2nd))
-              #\,)
-	     (substring defstr (1+ x3))))
-     (else
-      (let ((repl (substring defstr (1+ x3))))
-        (cons (substring defstr 0 x3) (if (string=? repl "#f") #f repl)))))))
+  (let* ((ex (string-index defstr #\=)) ; = checked before
+         (lhs (substring defstr 0 ex))
+         (rhs (substring defstr (1+ ex)))
+         (lx (string-index lhs #\())
+         (rx (string-index lhs #\)))
+         )
+    (cons
+     (if lx
+         (cons (substring lhs 0 lx)
+               (string-split (substring lhs (1+ lx) (1- rx)) #\,))
+         lhs)
+     (if (string=? "#f" rhs) #f rhs))))
 
 ;; @deffn Procedure make-cpi debug defines incdirs inchelp
 ;; I think there is a potential bug here in that the alist of cpp-defs/helpers
@@ -484,6 +473,36 @@
 		  (append (if path (sx-attr-add stmt 'path path) stmt)
 			  (list tree)))))))
 
+          #|
+          (define (eval-pragma stmt)
+            (define wspace (list->char-set '(#\space #\tab)))
+            (define (skip-ws ch)
+              (cond
+               ((eof-object? ch) ch)
+               ((char-set-contains? wspace ch) (skip-ws (read-char)))
+               (else ch)))
+
+            (define (pop_macro key)
+              (let loop ((head '()) (tail (cpi-defs info)) (val #t))
+                (cond
+                 ((null? tail) (reverse head))
+                 ((equal? (caar tail) key)
+                  (if val
+                      (loop head (cdr tail) #f)
+                      (if (cdar tail)
+                          (set-cpi-defs! info (append-reverse head tail))
+                          (loop head (cdr tail) val))))
+                 (else (loop head (cdr tail) val)))))
+
+            (with-input-from-string (cadr stmt)
+              (lambda ()
+                (let ((key (read-c-ident (read-char))))
+                  (when key
+                    (case (string->symbol key)
+                      ((pop_macro) (pop_macro key))
+                      (else #f)))))))
+          |#
+
 	  (define (eval-cpp-stmt/code stmt) ;; => stmt
  	    ;;(sf "eval-cpp-stmt/code ~S\n" stmt)
 	    (case (car stmt)
@@ -501,6 +520,7 @@
 		     ((error) (c99-err "error: #error ~A" (cadr stmt)))
 		     ((warning) (report-error "warning: ~A" (cdr stmt)))
 		     ((pragma) stmt)
+		     ;;((pragma) (eval-pragma stmt) stmt)
 		     ((line) stmt)
 		     (else
 		      (throw 'c99-error "eval-cpp-stmt/code: ~S" stmt)))

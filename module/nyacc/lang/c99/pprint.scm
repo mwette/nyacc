@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/pprint.scm - C pretty-printer
 
-;; Copyright (C) 2015-2018,2021-2022 Matthew R. Wette
+;; Copyright (C) 2015-2018,2021-2024 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -92,7 +92,7 @@
 (define (esc->ch ch)
   (case ch ((#\nul) #\0) ((#\bel) #\a) ((#\bs) #\b) ((#\ht) #\t)
         ((#\nl) #\n) ((#\vt) #\v) ((#\np) #\f) ((#\cr) #\r) (else ch)))
-   
+
 ;; @deffn {Procedure} scmstr->c str
 ;; to be documented
 ;; @end deffn
@@ -107,7 +107,7 @@
        ((char=? ch #\space) (cons #\space chl))
        (else (char->hex-list ch chl))))
     '() str)))
-    
+
 ;;(define protect-expr? (make-protect-expr op-prec op-assc))
 
 ;; @deffn {Procedure} pretty-print-c99 tree [port] [options]
@@ -160,19 +160,19 @@
     (fmtr 'nlin))
 
   (define protect-expr? (make-protect-expr op-prec op-assc))
-  
+
   (define (unary/l op rep rval)
     (sf rep)
     (if (protect-expr? 'rt op rval)
         (ppx/p rval)
         (ppx rval)))
-  
+
   (define (unary/r op rep lval)
     (if (protect-expr? 'lt op lval)
         (ppx/p lval)
         (ppx lval))
     (sf rep))
-  
+
   (define (binary op rep lval rval)
     (if (protect-expr? 'lt op lval)
         (ppx/p lval)
@@ -219,7 +219,7 @@
     (cond
      ((assq 'comment attr) => (lambda (comm) (sf " ") (ppx comm)))
      (else (sf "\n"))))
-  
+
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
 
   ;; TODO: comp-lit
@@ -252,9 +252,9 @@
          (for-each (lambda (l) (sf (scmstr->c l)) (sf "\n"))
                    (string-split (string-append "/*" text "*/") #\newline)))
         (else (sf (string-append "//" text "\n")))))
-      
+
       ((scope ,expr) (sf "(") (ppx expr) (sf ")"))
-      
+
       ((array-ref ,dim ,expr)
        (ppx expr) (sf "[") (ppx dim) (sf "]"))
 
@@ -271,6 +271,8 @@
       ((not ,expr) (unary/l 'not "!" expr))
       ((sizeof-expr ,expr) (sf "sizeof(") (ppx expr) (sf ")"))
       ((sizeof-type ,type) (sf "sizeof(") (ppx type) (sf ")"))
+      ((offsetof-type ,type ,expr)
+       (sf "__builtin_offsetof(") (ppx type) (sf ", ") (ppx expr) (sf ")"))
 
       ((pragma ,text)
        (fmtr 'nlin)
@@ -298,7 +300,7 @@
       ((ge ,lval ,rval) (binary 'ge " >= " lval rval))
       ((eq ,lval ,rval) (binary 'eq " == " lval rval))
       ((ne ,lval ,rval) (binary 'ne " != " lval rval))
-      
+
       ((bitwise-and ,lval ,rval) (binary 'bitwise-and " & " lval rval))
       ((bitwise-or ,lval ,rval) (binary 'bitwise-and " | " lval rval))
       ((bitwise-xor ,lval ,rval) (binary 'bitwise-xor " ^ " lval rval))
@@ -313,7 +315,7 @@
       ((post-inc ,expr) (unary/r 'post-inc "++" expr))
       ((post-dec ,expr) (unary/r 'post-dec "--" expr))
 
-      ;; TODO: check protection 
+      ;; TODO: check protection
       ((fctn-call ,expr ,arg-list)
        (if (protect-expr? 'rt 'fctn-call expr)
            (ppx/p expr)
@@ -328,7 +330,7 @@
           (ppx (car pair))
           (if (pair? (cdr pair)) (sf ", ")))
         expr-l))
-      
+
       ((assn-expr ,lval ,op ,rval)
        (binary (car op) (simple-format #f " ~A " (cadr op)) lval rval))
 
@@ -425,7 +427,7 @@
 
       ((struct-ref (ident ,name)) (sf "struct ~A" name))
       ((union-ref (ident ,name)) (sf "union ~A" name))
-      
+
       ((struct-def (@ . ,aattr) (ident ,name) (field-list . ,fields))
        (struct-union-def 'struct aattr name fields))
       ((struct-def (@ . ,aattr) (field-list . ,fields))
@@ -514,12 +516,12 @@
        (sf "[") (ppx arg1) (ppx arg2) (sf "]"))
       ((abs-ary-declr)
        (sf "[]"))
-      
+
       ((ftn-declr ,declr ,param-list)
        (protect-ptr declr) (sf "(") (ppx param-list) (sf ")"))
 
       ((type-name ,spec-qual-list ,abs-declr)
-       (ppx spec-qual-list) (ppx abs-declr))
+       (ppx spec-qual-list) (sf " ") (ppx abs-declr))
       ((type-name ,decl-spec-list)
        (ppx decl-spec-list))
 
@@ -529,7 +531,7 @@
       ;; declr-scope
       ((declr-scope ,abs-declr)
        (sf "(") (ppx abs-declr) (sf ")"))
-        
+
       ;; declr-array dir-abs-declr
       ;; declr-array dir-abs-declr assn-expr
       ;; declr-array dir-abs-declr type-qual-list
@@ -540,7 +542,7 @@
        (ppx dir-abs-declr) (sf "[") (ppx arg2) (sf "]"))
       ((declr-array ,dir-abs-declr ,arg2 ,arg3)
        (ppx dir-abs-declr) (sf "[") (ppx arg2) (sf " ") (ppx arg3) (sf "]"))
-        
+
       ;; declr-anon-array
       ;; declr-STAR
 
@@ -552,7 +554,7 @@
       ;; initializer
       ((initzer ,expr)
        (sf "= ") (ppx expr))
-      
+
       ;; initializer-list
       ((initzer-list . ,items)
        (sf "{") ;; or "{ "
@@ -578,11 +580,11 @@
        (pop-il) (sf "}\n"))
       ((compd-stmt-no-newline (block-item-list . ,items))
        (sf "{\n") (push-il) (for-each ppx items) (pop-il) (sf "} "))
-      
+
       ;; expression-statement
       ((expr-stmt) (sf ";\n")) ;; add comment?
       ((expr-stmt (@ . ,attr) ,expr) (ppx expr) (sf ";") (comm+nl attr))
-      
+
       ((expr) (sf ""))          ; for lone expr-stmt and return-stmt
 
       ;; selection-statement
@@ -626,14 +628,14 @@
        (sf "while (") (ppx expr) (sf ") ") (ppx stmt)
        )
 
-      ;; This does not meet the convention of "} while" on same line. 
+      ;; This does not meet the convention of "} while" on same line.
       ((do-while ,stmt ,expr)
        (sf "do ")
-       (if (eqv? 'compd-stmt (sx-tag stmt)) 
+       (if (eqv? 'compd-stmt (sx-tag stmt))
            (ppx `(compd-stmt-no-newline ,(sx-ref stmt 1)))
            (ppx stmt))
        (sf "while (") (ppx expr) (sf ");\n"))
-      
+
       ;; for
       ((for (decl . ,rest) ,test ,iter ,stmt)
        (sf "for (") (ppx `(decl-no-newline . ,rest))
@@ -689,7 +691,7 @@
        (pair-for-each
         (lambda (pair) (ppx (car pair)) (if (pair? (cdr pair)) (sf ", ")))
         elts))
-       
+
       ;; jump-statement
       ((goto ,where)
        (pop-il)                 ; unindent
@@ -730,10 +732,10 @@
 
       ((ptr-declr ,ptr ,dcl)
        (ppx ptr) (ppx dcl))
-      
+
       ((abs-ptr-declr ,ptr)
        (ppx ptr))
-       
+
       ((ftn-declr ,dcl ,params)
        (ppx dcl) (sf "(") (ppx params) (sf ")"))
 
@@ -752,7 +754,7 @@
        (ppx decl-spec-list) (sf " ") (ppx param-declr))
       ((param-decl ,decl-spec-list)
        (ppx decl-spec-list))
-      
+
       ((cpp-stmt . ,rest)
        (cpp-ppx (sx-ref tree 1)))
 

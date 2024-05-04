@@ -1,6 +1,6 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
-<!-- Created by GNU Texinfo 6.8, https://www.gnu.org/software/texinfo/ -->
+<!-- Created by GNU Texinfo 7.0.3, https://www.gnu.org/software/texinfo/ -->
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!-- Copyright (C) 2017,2019 - Matthew R. Wette.
@@ -25,21 +25,12 @@ copy of the license is included with the distribution as COPYING.DOC. -->
 <link href="dir.html#Top" rel="prev" title="(dir)">
 <style type="text/css">
 <!--
-a.copiable-anchor {visibility: hidden; text-decoration: none; line-height: 0em}
-a.summary-letter {text-decoration: none}
-blockquote.indentedblock {margin-right: 0em}
-div.display {margin-left: 3.2em}
+a.copiable-link {visibility: hidden; text-decoration: none; line-height: 0em}
 div.example {margin-left: 3.2em}
-kbd {font-style: oblique}
-pre.display {font-family: inherit}
-pre.format {font-family: inherit}
-pre.menu-comment {font-family: serif}
-pre.menu-preformatted {font-family: serif}
-span.nolinebreak {white-space: nowrap}
-span.roman {font-family: initial; font-weight: normal}
-span.sansserif {font-family: sans-serif; font-weight: normal}
-span:hover a.copiable-anchor {visibility: visible}
-ul.no-bullet {list-style: none}
+pre.format-preformatted {font-family: inherit}
+span:hover a.copiable-link {visibility: visible}
+strong.def-name {font-family: monospace; font-weight: bold; font-size: larger}
+ul.mark-bullet {list-style-type: disc}
 -->
 </style>
 
@@ -47,68 +38,67 @@ ul.no-bullet {list-style: none}
 </head>
 
 <body lang="en">
-<h1 class="settitle" align="center">C99 User&rsquo;s Guide</h1>
 
 
 
 
 <div class="format">
-<pre class="format">C99 Parser User Guide
+<pre class="format-preformatted">C99 Parser User Guide
 Matt Wette
 June 2019
-With NYACC Version 1.09.0
+With NYACC Version 1.09.4
 </pre></div>
 
-<div class="top" id="Top">
-<div class="header">
+<div class="top-level-extent" id="Top">
+<div class="nav-panel">
 <p>
 Next: <a href="#Introduction" accesskey="n" rel="next">Introduction</a>, Previous: <a href="dir.html#Top" accesskey="p" rel="prev">(dir)</a>, Up: <a href="dir.html#Top" accesskey="u" rel="up">(dir)</a> &nbsp; </p>
 </div>
-<span id="NYACC-C99-User-Guide"></span><h1 class="top">NYACC C99 User Guide</h1>
+<h1 class="top" id="NYACC-C99-User-Guide">NYACC C99 User Guide</h1>
 <p>This is a user guide for the NYACC C99 parser.
 </p>
 
 <hr>
-<span id="Introduction"></span><div class="header">
+<a class="node-id" id="Introduction"></a><div class="nav-panel">
 <p>
  &nbsp; </p>
 </div>
-<h4 class="node-heading">Introduction</h4>
-<span id="Introduction-1"></span><h3 class="heading">Introduction</h3>
+<h4 class="node">Introduction</h4>
+<h3 class="heading" id="Introduction-1">Introduction</h3>
 
 <p>This is a manual for the C99 parser provided with NYACC.  It is a
 LALR(1) based parser written in Scheme as implemented in Guile.  The
 grammar can be examined by looking at the source code in the file
-<samp>nyacc/lang/c99/mach.scm</samp>.  The parser has been used to generate
-object code (see <a href="https://www.gnu.org/software/mes/">https://www.gnu.org/software/mes/</a>) but it has
+<samp class="file">nyacc/lang/c99/mach.scm</samp>.  The parser has been used to generate
+object code (see <a class="url" href="https://www.gnu.org/software/mes/">https://www.gnu.org/software/mes/</a>) but it has
 options to make it useful for processing C code in other ways.  For
 example, the FFI Helper included with NYACC uses the parser to
 generate FFI (foreign function interface) code for many C libraries.
 It does this by parsing the associated C header files.
 </p>
-<dl class="def">
-<dt id="index-parse_002dc99"><span class="category">Procedure: </span><span><strong>parse-c99</strong> <em>[options]</em><a href='#index-parse_002dc99' class='copiable-anchor'> &para;</a></span></dt>
+<dl class="first-deffn">
+<dt class="deffn" id="index-parse_002dc99"><span class="category-def">Procedure: </span><span><strong class="def-name">parse-c99</strong> <var class="def-var-arguments">[options]</var><a class="copiable-link" href='#index-parse_002dc99'> &para;</a></span></dt>
 <dd><p>where options are
-</p><dl compact="compact">
-<dt><span><code>#:cpp-defs <i>defs-list</i></code></span></dt>
-<dd><p><i>defs-list</i> is a list of strings where each string is of the form
-<i>NAME</i> or <i>NAME=VALUE</i>.
+</p><dl class="table">
+<dt><code class="code">#:cpp-defs <i class="i">defs-list</i></code></dt>
+<dd><p><i class="i">defs-list</i> is a list of strings where each string is of the form
+<i class="i">NAME</i> or <i class="i">NAME=VALUE</i>.
 </p></dd>
-<dt><span><code>#:inc-dirs <i>dir-list</i></code></span></dt>
-<dd><p><i>dir-list</i> is a list of strings of paths to look for directories.
+<dt><code class="code">#:inc-dirs <i class="i">dir-list</i></code></dt>
+<dd><p><i class="i">dir-list</i> is a list of strings of paths to look for directories.
 </p></dd>
-<dt><span><code>#:inc-help <i>helpers</i></code></span></dt>
-<dd><p><i>helpers</i> is an a-list where keys are include files (e.g.,
-<code>&quot;stdint.h&quot;</code>) and the value is a list of type aliases or CPP define
-(e.g., <code>&quot;foo_t&quot; &quot;FOO_MAX=3&quot;</code>).  The default helper is <code>c99-def-help</code>
+<dt><code class="code">#:inc-help <i class="i">helpers</i></code></dt>
+<dd><p><i class="i">helpers</i> is an a-list where keys are include files (e.g.,
+<code class="code">&quot;stdint.h&quot;</code>) and the value is a list of type aliases or CPP define
+(e.g., <code class="code">&quot;foo_t&quot; &quot;FOO_MAX=3&quot;</code>).  The default helper is <code class="code">c99-def-help</code>
 (see below).
 </p></dd>
-<dt><span><code>#:mode <i>mode</i></code></span></dt>
-<dd><p><i>mode</i> is one literal <code>'code</code>, <code>'file</code>, or <code>'decl</code>.
-The default mode is <code>'code</code>.
+<dt><code class="code">#:mode <i class="i">mode</i></code></dt>
+<dd><p><i class="i">mode</i> is one literal <code class="code">'code</code>, <code class="code">'file</code>, or <code class="code">'decl</code>.
+The default mode is <code class="code">'code</code>.
 </p></dd>
-<dt><span><code>#:debug <i>bool</i></code></span></dt>
-<dd><p>If <i>bool</i> evaluates to true, print productions as they are reduced.
+<dt><code class="code">#:debug <i class="i">bool</i></code></dt>
+<dd><p>If <i class="i">bool</i> evaluates to true, print productions as they are reduced.
 </p></dd>
 </dl>
 <p>This will parse the content taken from the current input port until
@@ -116,42 +106,42 @@ end if input is reached.   A parse tree in the form of an SXML
 expression is returned.  See below for the syntax.
 This needs to be explained in some detail.
 tdd = typedef dict: ((&quot;&lt;time&gt;&quot; time_t) ... (&quot;&lt;unistd.h&gt;&quot; ...))
-Default mode is <code>'code</code>.
+Default mode is <code class="code">'code</code>.
 </p><div class="example">
-<pre class="example">(with-input-from-file &quot;abc.c&quot;
+<pre class="example-preformatted">(with-input-from-file &quot;abc.c&quot;
   (parse-c #:cpp-defs '(&quot;ABC=123&quot;))
            #:inc-dirs '((&quot;.&quot; &quot;./incs&quot; &quot;/usr/include&quot;))
            #:inc-help (append '(&quot;myinc.h&quot; &quot;foo_t&quot; &quot;bar_t&quot;) c99-std-help)
            #:mode 'file))
 </pre></div>
-<p>Note: for <code>file</code> mode user still needs to make sure CPP conditional
+<p>Note: for <code class="code">file</code> mode user still needs to make sure CPP conditional
 expressions can be fully evaluated, which may mean adding compiler generated
-defines (e.g., using <code>gen-cpp-defs</code>).
+defines (e.g., using <code class="code">gen-cpp-defs</code>).
 </p></dd></dl>
 
-<span id="Include-Helpers"></span><h4 class="subheading">Include Helpers</h4>
+<h4 class="subheading" id="Include-Helpers">Include Helpers</h4>
 
 <p>The C99 parsers can use &ldquo;include helpers&rdquo;.  This allows files to be
 parsed without reading full include files.  The user provides
-typenames (types defined using <code>typedef</code>) and defines.  The
+typenames (types defined using <code class="code">typedef</code>) and defines.  The
 syntax for the include-helper optional argument to the parsers is
 </p><div class="example">
-<pre class="example">(define my-inc-helper
+<pre class="example-preformatted">(define my-inc-helper
  '((&quot;foo.h&quot; &quot;foo_t&quot; &quot;ABC=123&quot; &quot;SUM(X,Y)=((X)+(Y))&quot;)
    (&quot;bar.h&quot; &quot;bar_t&quot; &quot;DEF=456&quot; &quot;MAX(X,Y)=((X)&gt;(Y)?(X):(Y))&quot;))
 </pre></div>
 
-<p>The special helper <code>&quot;__builtin&quot;</code> will be &ldquo;included&rdquo; automatically
+<p>The special helper <code class="code">&quot;__builtin&quot;</code> will be &ldquo;included&rdquo; automatically
 at the start of parsing.  This allows one to generate definitions for
-compiler builtins like <code>__builtin_va_list</code>.
+compiler builtins like <code class="code">__builtin_va_list</code>.
 </p><div class="example">
-<pre class="example">(define inc-helper
+<pre class="example-preformatted">(define inc-helper
  '((&quot;__builtin&quot; &quot;__builtin_va_list=void*&quot;)))
 </pre></div>
-<p>If no inc-helper is provided, the default is <code>c99-def-help</code>,
-which is defined (in the module <code>(nyacc lang c99 util)</code>) as
+<p>If no inc-helper is provided, the default is <code class="code">c99-def-help</code>,
+which is defined (in the module <code class="code">(nyacc lang c99 util)</code>) as
 </p><div class="example">
-<pre class="example">(define c99-def-help
+<pre class="example-preformatted">(define c99-def-help
   '((&quot;__builtin&quot;
      &quot;__builtin_va_list=void*&quot;
      &quot;__inline__=inline&quot; &quot;__inline=__inline__&quot;
@@ -164,33 +154,33 @@ which is defined (in the module <code>(nyacc lang c99 util)</code>) as
      &quot;asm=__asm__&quot; &quot;__asm=__asm__&quot;
      &quot;__attribute(X)=__attribute__(X)&quot;)))
 </pre></div>
-<p>The module <code>(nyacc lang c99 util)</code> also defines
-<code>c99-std-help</code>, which includes the above and typedefs and CPP
-defines for many standard includes (e.g., <samp>alloca.h</samp>,
-<samp>limits.h</samp>).  See the source <samp>nyacc/lang/c99/util.scm</samp> for
+<p>The module <code class="code">(nyacc lang c99 util)</code> also defines
+<code class="code">c99-std-help</code>, which includes the above and typedefs and CPP
+defines for many standard includes (e.g., <samp class="file">alloca.h</samp>,
+<samp class="file">limits.h</samp>).  See the source <samp class="file">nyacc/lang/c99/util.scm</samp> for
 more detail.
 </p>
-<span id="Misc-Items"></span><h4 class="subheading">Misc Items</h4>
+<h4 class="subheading" id="Misc-Items">Misc Items</h4>
 
-<p>The special symbol <code>C99_ANY</code> can be used for symbols which you
+<p>The special symbol <code class="code">C99_ANY</code> can be used for symbols which you
 don&rsquo;t want to define.  In the parser will handle this as XXX
 </p>
-<span id="Stuff"></span><h3 class="heading">Stuff</h3>
+<h3 class="heading" id="Stuff">Stuff</h3>
 
 <p>Note on CPP replacement text: IIRC, C99 will remove comments from CPP
 statements before processing.  I preserve this and remove inside the
 CPP parser.
 </p>
-<span id="The-Unit-Parser"></span><h3 class="heading">The Unit Parser</h3>
+<h3 class="heading" id="The-Unit-Parser">The Unit Parser</h3>
 
-<p>TALK ABOUT <code>fixed-width-int-names</code>
+<p>TALK ABOUT <code class="code">fixed-width-int-names</code>
 </p>
-<dl class="def">
-<dt id="index-parse_002dc99-1"><span class="category">Procedure: </span><span><strong>parse-c99</strong> <em>[#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:mode ('code|'file)] [#:debug bool]</em><a href='#index-parse_002dc99-1' class='copiable-anchor'> &para;</a></span></dt>
+<dl class="first-deffn">
+<dt class="deffn" id="index-parse_002dc99-1"><span class="category-def">Procedure: </span><span><strong class="def-name">parse-c99</strong> <var class="def-var-arguments">[#:cpp-defs def-a-list] [#:inc-dirs dir-list] [#:mode (&rsquo;code|&rsquo;file)] [#:debug bool]</var><a class="copiable-link" href='#index-parse_002dc99-1'> &para;</a></span></dt>
 <dd><p>This needs to be explained in some detail.
-Default mode is <code>'code</code>.
+Default mode is <code class="code">'code</code>.
 </p><div class="example">
-<pre class="example">(with-input-from-file &quot;abc.c&quot;
+<pre class="example-preformatted">(with-input-from-file &quot;abc.c&quot;
   (parse-c #:cpp-defs '(&quot;ABC=123&quot;))
            #:inc-dirs (append '(&quot;./incs&quot;) c99-std-dict)
            #:inc-help '((&quot;myinc.h&quot; &quot;foo_t&quot; &quot;bar_t&quot;))
@@ -198,21 +188,21 @@ Default mode is <code>'code</code>.
 </pre></div>
 </dd></dl>
 
-<span id="Modes"></span><h4 class="subheading">Modes</h4>
+<h4 class="subheading" id="Modes">Modes</h4>
 <p>There are several modes for parsing which affect the way the C
 preprocessor statements are handled, and how the parse tree is
 generated.  The following list explains the intent behind these
 parsing modes.  Later we mention some fine points.
-</p><ul>
-<li> <em>code</em> mode (the default)
+</p><ul class="itemize mark-bullet">
+<li><em class="emph">code</em> mode (the default)
 In this mode, the proprocess works like a normal C compiler.  The
 preprocessor statements are evaluated as they are read and macros in
 the code are expanded as they are read.
-</li><li> <em>decl</em> mode
+</li><li><em class="emph">decl</em> mode
 This mode is intended to be used for tools which want to
 extract the declarations and definitions which are explicit in a file,
 but allow access to declarations and definitions in included files.
-</li><li> <em>file</em> mode
+</li><li><em class="emph">file</em> mode
 is intended to be used for tools which want to
 transform C files somehow.  For example, one could parse a file and
 remove all comments.  This will keep the CPP structure at the top
@@ -225,45 +215,45 @@ if-then have to be resolved.
 </li></ul>
 
 <p>Options are as follows
-</p><dl compact="compact">
-<dt><span><code>#:cpp-defs</code></span></dt>
-<dd><p>This is a list of define strings (e.g., <code>'(&quot;ABC=123&quot;)</code>.
+</p><dl class="table">
+<dt><code class="code">#:cpp-defs</code></dt>
+<dd><p>This is a list of define strings (e.g., <code class="code">'(&quot;ABC=123&quot;)</code>.
 </p></dd>
-<dt><span><code>#:inc-dirs</code></span></dt>
+<dt><code class="code">#:inc-dirs</code></dt>
 <dd><p>This is an ordered list of directories to search for include files.
 </p></dd>
-<dt><span><code>#:inc-help</code></span></dt>
+<dt><code class="code">#:inc-help</code></dt>
 <dd><p>This is an a-list of include helpers, where keys are the include file
-or path (e.g., <code>sys/types.h</code>).
+or path (e.g., <code class="code">sys/types.h</code>).
 </p></dd>
-<dt><span><code>#:mode</code></span></dt>
-<dd><p>This is the mode: <code>'code</code>, <code>'decl</code> or <code>'file</code>.  The default is
-<code>'code</code>.
+<dt><code class="code">#:mode</code></dt>
+<dd><p>This is the mode: <code class="code">'code</code>, <code class="code">'decl</code> or <code class="code">'file</code>.  The default is
+<code class="code">'code</code>.
 </p></dd>
-<dt><span><code>#:xdef?</code></span></dt>
+<dt><code class="code">#:xdef?</code></dt>
 <dd><p>This is a predicate function to determine whether to expand a
 definition (used in file mode).  See below.
 </p></dd>
 </dl>
 
 <p>Note: The user needs to define
-<code>&quot;__has_include(X)=__has_include__(X)&quot;</code> to enable has-include;
-<code>&quot;__has_include=__has_include__&quot;</code> will not work.  (Should I
+<code class="code">&quot;__has_include(X)=__has_include__(X)&quot;</code> to enable has-include;
+<code class="code">&quot;__has_include=__has_include__&quot;</code> will not work.  (Should I
 worry that it does not?)
 </p>
-<dl class="def">
-<dt id="index-name"><span class="category">xdef?: </span><span><strong>name</strong> <em>mode =&gt; #t|#f</em><a href='#index-name' class='copiable-anchor'> &para;</a></span></dt>
-<dd><p>Given string <var>name</var> and <var>mode</var> indicate whether the parser
+<dl class="first-deffn">
+<dt class="deffn" id="index-name"><span class="category-def">xdef?: </span><span><strong class="def-name">name</strong> <var class="def-var-arguments">mode =&gt; #t|#f</var><a class="copiable-link" href='#index-name'> &para;</a></span></dt>
+<dd><p>Given string <var class="var">name</var> and <var class="var">mode</var> indicate whether the parser
 should expand using CPP defines.  The default is
-<code>(lambda(name mode) (eqv? mode 'code))</code>.
+<code class="code">(lambda(name mode) (eqv? mode 'code))</code>.
 </p></dd></dl>
 
-<span id="Expression-Parser"></span><h3 class="heading">Expression Parser</h3>
+<h3 class="heading" id="Expression-Parser">Expression Parser</h3>
 
 <p>To be documented.
 </p>
 
-<span id="Copying"></span><h3 class="heading">Copying</h3>
+<h3 class="heading" id="Copying">Copying</h3>
 
 <p>Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3 or
@@ -272,7 +262,7 @@ Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
 copy of the license is included with the distribution as COPYING.DOC.
 </p>
 <p>The Free Documentation License is included in the Guile Reference
-Manual.  It is included with the <small>NYACC</small> source as COPYING.DOC.
+Manual.  It is included with the <small class="sc">NYACC</small> source as COPYING.DOC.
 </p>
 </div>
 

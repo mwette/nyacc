@@ -1,6 +1,6 @@
 ;;; lang/c/cpp.scm - C preprocessor
 
-;; Copyright (C) 2015-2022 Matthew R. Wette
+;; Copyright (C) 2015-2023 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -38,14 +38,9 @@
   #:use-module (nyacc parse)
   #:use-module (nyacc lex)
   #:use-module (nyacc lang sx-util)
-  #:use-module ((nyacc lang util) #:select (report-error)))
-(cond-expand
-  (guile-2
-   (use-modules (rnrs arithmetic bitwise))
-   (use-modules (system base pmatch)))
-  (else
-   (use-modules (ice-9 optargs))
-   (use-modules (nyacc compat18))))
+  #:use-module ((nyacc lang util) #:select (report-error))
+  #:use-module (rnrs arithmetic bitwise)
+  #:use-module (system base pmatch))
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args))
 (use-modules (ice-9 pretty-print))

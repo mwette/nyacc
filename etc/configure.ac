@@ -7,7 +7,7 @@ dnl are permitted in any medium without royalty provided the copyright
 dnl notice and this notice are preserved.  This file is offered as-is,
 dnl without any warranty.
 
-AC_INIT([nyacc], [1.09.0], [], [], [https://savannah.nongnu.org/project/nyacc])
+AC_INIT([nyacc], [1.09.4], [], [], [https://savannah.nongnu.org/project/nyacc])
 AC_CONFIG_SRCDIR(module/nyacc/version.scm)
 AC_CONFIG_AUX_DIR([etc])
 AC_CONFIG_MACRO_DIR([etc])
@@ -31,16 +31,16 @@ GUILE_EFFECTIVE_VERSION=`$GUILE -c "(display (effective-version))"`
 guile_libdir=`$GUILE -c "(display (assq-ref %guile-build-info 'libdir))"`
 guile_prefix=`$GUILE -c "(display (assq-ref %guile-build-info 'prefix))"`
 
-if test "$guile_prefix" == "$prefix"; then
+if test "$prefix" != "NONE"; then
+  echo "prefix provided: use default paths for guile dirs"
+  GUILE_GLOBAL_SITE=$prefix/share/guile/site
+  GUILE_SITE_CCACHE=$prefix/lib/guile/$GUILE_EFFECTIVE_VERSION/site-ccache
+  GUILE_DATA=$prefix/share
+else
   echo "using paths for installed guile"
   GUILE_GLOBAL_SITE=`$GUILE -c '(display (%global-site-dir))'`
   GUILE_SITE_CCACHE=`$GUILE -c '(display (%site-ccache-dir))'`
   GUILE_DATA=`$GUILE -c "(display (assq-ref %guile-build-info 'datadir))"`
-else
-  echo "using default paths for guile"
-  GUILE_GLOBAL_SITE=$prefix/share/guile/site
-  GUILE_SITE_CCACHE=$prefix/lib/guile/$GUILE_EFFECTIVE_VERSION/site-ccache
-  GUILE_DATA=$prefix/share
 fi
 
 if test "_$target" != "_unspecified"; then
