@@ -1,6 +1,6 @@
 ;;; nyacc/lang/arch-info.scm - sizeof and alignof
 
-;; Copyright (C) 2020-2023 Matthew Wette
+;; Copyright (C) 2020-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -153,9 +153,9 @@
 
 
 #|
-;; riscv 32 bit little endian
+;; riscv 32 bit (little endian)
 (define sizeof-map/riscv32
-  '((* . 4)
+  '((* . i32le)
     ("char" . i8) ("short" . i16le) ("int" . i32le) ("long" . i32le)
     ("float" . f32le) ("double" . f64le)
     ("unsigned short" . u16le) ("unsigned" . u32le) ("unsigned long" . u32le)
@@ -179,7 +179,35 @@
     ("signed long long int" . 8) ("unsigned long long" . 8)
     ("unsigned long long int" . 8)))
 
-(define alignof-map/riscv sizeof-map/riscv)
+(define alignof-map/riscv32 sizeof-map/riscv32)
+
+;; RISC-V 64bit (little-endian)
+(define sizeof-map/riscv64
+  '((* . i64le)
+    ("char" . i8) ("short" . i16le) ("int" . i32le) ("long" . i64le)
+    ("float" . f32le) ("double" . f64le)
+    ("unsigned short" . u16le) ("unsigned" . u32le) ("unsigned long" . u64le)
+    ;;
+    ("size_t" . 8) ("ssize_t" . 8) ("ptrdiff_t" . 8)
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2)
+    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
+    ;;
+    ("signed char" . 1) ("unsigned char" . 1)
+    ("short int" . 2) ("signed short" . 2) ("signed short int" . 2)
+    ("signed" . 4) ("signed int" . 4)
+    ("long int" . 8) ("signed long" . 8) ("signed long int" . 8)
+    ("unsigned short int" . 2) ("unsigned int" . 4) ("unsigned long int" . 8)
+    ;;
+    ("_Bool" . 1)
+    ("intptr_t" . 4) ("uintptr_t" . 4)
+    ("wchar_t" . 4) ("char16_t" . 2) ("char32_t" . 4)
+    ;;
+    ("long double" . 16)
+    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
+    ("signed long long int" . 8) ("unsigned long long" . 8)
+    ("unsigned long long int" . 8)))
+
+(define alignof-map/riscv64 sizeof-map/riscv64)
 |#
 
 (define mtype-map/x86_64

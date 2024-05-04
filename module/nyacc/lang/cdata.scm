@@ -1,6 +1,6 @@
-;;; ffi/cdata.scm -
+;;; lang/cdata.scm -
 
-;; Copyright (C) 2023 Matthew Wette
+;; Copyright (C) 2023-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,7 @@
 
 ;;; Code:
 
-(define-module (nyacc lang c99 ffi-cdata)
+(define-module (nyacc lang cdata)
   #:export (make-ctype)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
@@ -59,14 +59,15 @@
 ;;(selector ctype-selector)          ; (ct ix (sel . rest)) => (ct ix rest)
 
 (define-record-type <ctype>
-  (%make-ctype name size almt getter setter selector meta)
+  (%make-ctype name size almt type-id)
   ctype?
   (name ctype-name)                  ; symbolic type name
   (size ctype-size)
   (almt ctype-alignment)
   (type-id ctype-id)            ; internal rep: f64le, ..., struct, union,
   ;; add (arch ???)
-  (meta ctype-meta))
+  ;;(meta ctype-meta)
+  )
 
 (define-record-type <cdata>
   (make-cdata ct bv ix)
@@ -141,13 +142,7 @@
 (ct:struct `((x ,double) (y ,f64)))
 
 
-(define-record-type <struct-meta>
-  (make-struct-meta packed? fields)
-  struct-meta?
-  (packed? struct-meta-packed?)
-  (fields struct-meta-fields))
-
-(define-record-type <field>
+(define-record-type <ct:field-info>
   (%make-field name type offset bitlength bitoffset)
   field?
   (name field-name)
@@ -156,8 +151,16 @@
   (bitlength field-bitlength)
   (bitoffset field-bitoffset))
 
+(define-record-type <ct:struct-info>
+  (make-struct-info packed? fields)
+  struct-info?
+  (packed? struct-info-packed?)
+  (fields struct-info-fields))
+
 (define* (make-field name type offset #:optional bitlength bitoffset)
   (%make-field name type offset bitlength bitoffset))
+
+;; separate bitfield
 
 ;; Update struct running-size (rs) given new item size (s) and align't (a).
 (define (incr-size s a rs)
@@ -191,10 +194,14 @@
 
 
 (define (ct-sel ct ix fsel . rest) ; (ct ix (sel . rest)) => (ct ix rest)
+  ;; int32: 1
+  ;; f64: 2
   #f)
 
+;;  (%make-ctype name size almt type-id)
 (define (test-01)
-  (define ct1 (make-ctype "foo_t" (bs:struct '((x double) (y double)))))
+  ;;(let ((ct:struct
+  (define ct1 (%make-ctype "foo_t" (ct:struct '((x double) (y double)))))
   #f)
 
 ;; --- last line ---
