@@ -1534,7 +1534,7 @@
 	 ;; 3) struct never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
          ;;(sfscm "(define-fh-type-alias ~A fh-void)\n" typename)
-         (sfscm "(define-public ~S fh-void)\n" typename)
+         (sfscm "(define-public ~A fh-void)\n" typename)
 	 (sfscm "(define-public ~A? fh-void?)\n" typename)
 	 (sfscm "(define-public make-~A make-fh-void)\n" typename)
          (sfscm "(define-public ~A*-desc (fh:pointer ~A-desc))\n"
