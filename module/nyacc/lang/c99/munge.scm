@@ -75,7 +75,6 @@
   #:re-export (expand-typerefs
                reify-declr reify-decl
                udecl->mdecl split-udecl
-               md-attr md-tail
                declr-ident declr-name
                clean-field-list clean-fields)
   #:use-module (nyacc lang c99 cxeval)
@@ -814,6 +813,11 @@
 
 ;; === munged specification ============
 
+(define* (udecl->mdecl/comm decl #:key (def-comm ""))
+  (let* ((comm (or (and=> (assq 'comment (sx-attr decl)) cadr) def-comm))
+         (spec (udecl->mdecl decl)))
+    (cons* (car spec) comm (cdr spec))))
+
 ;; @deffn {Procedure} mdecl->udecl mdecl xxx
 ;; needed for xxx
 ;; @end deffn
@@ -846,7 +850,7 @@
        (throw 'nyacc-error "munge/mdecl->udecl failed"))))
 
   (let ((name (car mdecl))
-        (rest (md-tail mdecl)))         ; TODO: add back comment
+        (rest (cdr mdecl)))
     (doit `(ident ,name) rest)))
 
 

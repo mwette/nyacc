@@ -1,6 +1,6 @@
 ;;; nyacc/lang/arch-info.scm - sizeof and alignof
 
-;; Copyright (C) 2020-2024 Matthew Wette
+;; Copyright (C) 2020-2022 Matthew R. Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -20,148 +20,89 @@
 ;; ppc alpha mips ia64 i386 x86_64
 ;; avr i386 ppc x86_64
 
-;; todo: bv-help: bv-u32le-ref bv-u32be-ref bv-32-ref
 ;;; Code:
 
 (define-module (nyacc lang arch-info)
   #:export (lookup-arch
+            arch-info-host
             sizeof-basetype alignof-basetype
-            *arch* with-arch native-arch
-
-            sizeof-mtype alignof-mtype
-            mtypeof-basetype            ; machine type
-            )
+            sizeof-map/native
+            alignof-map/native
+            *arch*
+            with-arch)
   #:use-module (srfi srfi-9))
 
-;;(display "arch reified types should not be called ctypes\n")
-;; maybe mtype for machine type
-
 (define-record-type <arch-info>
-  (make-arch-info name endianness mtype-map align-map)
+  (make-arch-info endianness sizeof-dict alignof-dict)
   arch-info?
-  (name arch-name)                      ; e.g., "x86_64"
-  (endianness arch-endianness)          ; 'little or 'big
-  (mtype-map arch-mtype-map)            ; nyacc name => f32, u8, etc
-  (align-map arch-align-map))           ; f32, u8 => integer
+  (endianness arch-endianness)
+  (sizeof-dict arch-sizeof-dict)
+  (alignof-dict arch-alignof-dict))
 
-(define sizeof-map
-  '((i8 . 1) (i16 . 2) (i32 . 4) (i64 . 8) (i128 . 16)
-    (u8 . 1) (u16 . 2) (u32 . 4) (u64 . 8) (u128 . 16)
-    (f16 . 2) (f32 . 4) (f64 . 8) (f128 . 16)
-    (i16le. 2) (i32le . 4) (i64le . 8) (i128le . 16)
-    (u16le . 2) (u32le . 4) (u64le . 8) (u128le . 16)
-    (f16le . 2) (f32le . 4) (f64le . 8) (f128le . 16)
-    (i16be . 2) (i32be . 4) (i64be . 8) (i128be . 16)
-    (u16be . 2) (u32be . 4) (u64be . 8) (u128be . 16)
-    (f16be . 2) (f32be . 4) (f64be . 8) (f128be . 16)))
-
-(define (sizeof-mtype mtype)
-  (assq-ref sizeof-map mtype))
-
-(define mtype-map/avr
-  '((* . u16le)
-    ("char" . i8) ("short" . i16le) ("int" . i16le) ("long" . i32le)
-    ("float" . f32le) ("double" . f32le)
-    ("unsigned short" . u16le) ("unsigned" . u16le) ("unsigned long" . u32le)
+(define sizeof-map/avr
+  '((* . 2)
+    ("char" . 1) ("short" . 2) ("int" . 2) ("long" . 4)
+    ("float" . 4) ("double" . 4)
+    ("unsigned short" . 2) ("unsigned" . 2) ("unsigned long" . 4)
     ;;
-    ("size_t" . u16le) ("ssize_t" . #f) ("ptrdiff_t" . i16le)
-    ("int8_t" . i8) ("uint8_t" . u8) ("int16_t" . i16le) ("uint16_t" . u16le)
-    ("int32_t" . i32le) ("uint32_t" . iu32le)
-    ("int64_t" . i64le) ("uint64_t" . u64le)
+    ("size_t" . 2) ("ssize_t" . #f) ("ptrdiff_t" . 2)
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
+    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
     ;;
-    ("signed char" . i8) ("unsigned char" . u8)
-    ("short int" . i16le) ("signed short" . i16le) ("signed short int" . i16le)
-    ("signed" . i16le) ("signed int" . i16le)
-    ("long int" . i32le) ("signed long" . i32le) ("signed long int" . i32le)
-    ("unsigned short int" . u8) ("unsigned int" . u16le)
-    ("unsigned long int" . u32le)
+    ("signed char" . 1) ("unsigned char" . 1)
+    ("short int" . 2) ("signed short" . 2) ("signed short int" . 2)
+    ("signed" . 4) ("signed int" . 4)
+    ("long int" . 8) ("signed long" . 8) ("signed long int" . 8)
+    ("unsigned short int" . 2) ("unsigned int" . 4) ("unsigned long int" . 8)
     ;;
-    ("_Bool" . u8)
-    ("intptr_t" . i16le) ("uintptr_t" . u16le)
+    ("_Bool" . 1)
+    ("intptr_t" . 2) ("uintptr_t" . 2)
     ("wchar_t" . #f) ("char16_t" . #f) ("char32_t" . #f)
     ;;
-    ("long double" . f32le)
-    ("long long" . i64le) ("long long int" . i64le) ("signed long long" . i64le)
-    ("signed long long int" . i64le) ("unsigned long long" . u64le)
-    ("unsigned long long int" . u64le)))
+    ("long double" . 4)
+    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
+    ("signed long long int" . 8) ("unsigned long long" . 8)
+    ("unsigned long long int" . 8)))
 
 (define alignof-map/avr
-  (map (lambda (pair) (cons (car pair) 1)) sizeof-map))
+  (map (lambda (pair) (cons (car pair) 1)) sizeof-map/avr))
 
-(define arch/avr
-  (make-arch-info "avr" 'little mtype-map/avr alignof-map/avr))
-
-
-(define mtype-map/i686
-  '((* . u32le)
-    ("char" . i8) ("short" . i16le) ("int" . i32le) ("long" . i32le)
-    ("float" . f32le) ("double" . f64le)
-    ("unsigned short" . u16le) ("unsigned" . u32le) ("unsigned long" . u32le)
+(define sizeof-map/i386
+  '((* . 4)
+    ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 4)
+    ("float" . 4) ("double" . 8)
+    ("unsigned short" . 2) ("unsigned" . 4) ("unsigned long" . 4)
     ;;
-    ("size_t" . i32le) ("ssize_t" . i32le) ("ptrdiff_t" . i32le)
-    ("int8_t" . i8) ("uint8_t" . u8) ("int16_t" . i16le) ("uint16_t" . u16le)
-    ("int32_t" . i32le) ("uint32_t" . u32le) ("int64_t" . i64le) ("uint64_t" . u64le)
+    ("size_t" . 4) ("ssize_t" . 4) ("ptrdiff_t" . 4)
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
+    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
     ;;
-    ("signed char" . i8) ("unsigned char" . u8)
-    ("short int" . i16le) ("signed short" . i16le) ("signed short int" . i16le)
-    ("signed" . 32le) ("signed int" . i32le)
-    ("long int" . i32le) ("signed long" . i32le) ("signed long int" . i32le)
-    ("unsigned short int" . u16le) ("unsigned int" . u32le)
-    ("unsigned long int" . u32le)
+    ("signed char" . 1) ("unsigned char" . 1)
+    ("short int" . 2) ("signed short" . 2) ("signed short int" . 2)
+    ("signed" . 4) ("signed int" . 4)
+    ("long int" . 4) ("signed long" . 4) ("signed long int" . 4)
+    ("unsigned short int" . 2) ("unsigned int" . 4) ("unsigned long int" . 4)
     ;;
-    ("_Bool" . u8)
-    ("intptr_t" . i32le) ("uintptr_t" . u32le)
-    ("wchar_t" . u32le) ("char16_t" . u16le) ("char32_t" . u32le)
+    ("_Bool" . 1)
+    ("intptr_t" . 4) ("uintptr_t" . 4)
+    ("wchar_t" . 4) ("char16_t" . 2) ("char32_t" . 4)
     ;;
-    ("long double" . f128)
-    ("long long" . i64le) ("long long int" . i64le) ("signed long long" . i64le)
-    ("signed long long int" . i64le) ("unsigned long long" . u64le)
-    ("unsigned long long int" . u64le)))
+    ("long double" . 16)
+    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
+    ("signed long long int" . 8) ("unsigned long long" . 8)
+    ("unsigned long long int" . 8)))
 
-(define arch/i686
-  (make-arch-info "i686" 'little mtype-map/i686 sizeof-map))
+(define alignof-map/i386 sizeof-map/i386)
 
-
-;; 32bit powerpc aka ppc, big endian
-(define mtype-map/powerpc
-  '((* . u32be)
-    ("char" . i8) ("short" . i16be) ("int" . i32be) ("long" . i64be)
-    ("float" . f32be) ("double" . f64be)
-    ("unsigned short" . u16be) ("unsigned" . u32be) ("unsigned long" . u64be)
-    ;;
-    ("size_t" . i64be) ("ssize_t" . i64be) ("ptrdiff_t" . i64be) ("int8_t" . i8)
-    ("uint8_t" . u8) ("int16_t" . i16be) ("uint16_t" . u16be) ("int32_t" . i32be)
-    ("uint32_t" . u32be) ("int64_t" . i64le) ("uint64_t" . u64le)
-    ;;
-    ("signed char" . i8) ("unsigned char" . u8) ("short int" . i16be)
-    ("signed short" . i16be) ("signed short int" . i16be) ("signed" . i32be)
-    ("signed int" . i32be) ("long int" . i64be) ("signed long" . i64be)
-    ("signed long int" . i64le) ("unsigned short int" . u16be)
-    ("unsigned int" . u32be) ("unsigned long int" . u64be)
-    ;;
-    ("_Bool" . u8)
-    ("intptr_t" . i32be) ("uintptr_t" . u32be)
-    ("wchar_t" . u32be) ("char16_t" . u16be) ("char32_t" . u32be)
-    ;;
-    ("long double" . f128be)
-    ("long long" . i64be) ("long long int" . i64be) ("signed long long" . i64be)
-    ("signed long long int" . i64be) ("unsigned long long" . u64be)
-    ("unsigned long long int" . u64be)))
-
-(define arch/powerpc
-  (make-arch-info "powerpc" 'big mtype-map/powerpc sizeof-map))
-
-
-#|
-;; riscv 32 bit (little endian)
-(define sizeof-map/riscv32
-  '((* . i32le)
-    ("char" . i8) ("short" . i16le) ("int" . i32le) ("long" . i32le)
-    ("float" . f32le) ("double" . f64le)
-    ("unsigned short" . u16le) ("unsigned" . u32le) ("unsigned long" . u32le)
+;; PPC  GUESS
+(define sizeof-map/ppc
+  '((* . 4)
+    ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 8)
+    ("float" . 4) ("double" . 8)
+    ("unsigned short" . 2) ("unsigned" . 4) ("unsigned long" . 8)
     ;;
     ("size_t" . 8) ("ssize_t" . 8) ("ptrdiff_t" . 8)
-    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2)
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
     ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
     ;;
     ("signed char" . 1) ("unsigned char" . 1)
@@ -179,17 +120,17 @@
     ("signed long long int" . 8) ("unsigned long long" . 8)
     ("unsigned long long int" . 8)))
 
-(define alignof-map/riscv32 sizeof-map/riscv32)
+(define alignof-map/ppc sizeof-map/ppc)
 
-;; RISC-V 64bit (little-endian)
-(define sizeof-map/riscv64
-  '((* . i64le)
-    ("char" . i8) ("short" . i16le) ("int" . i32le) ("long" . i64le)
-    ("float" . f32le) ("double" . f64le)
-    ("unsigned short" . u16le) ("unsigned" . u32le) ("unsigned long" . u64le)
+;; risc-v - GUESS
+(define sizeof-map/rv32
+  '((* . 4)
+    ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 8)
+    ("float" . 4) ("double" . 8)
+    ("unsigned short" . 2) ("unsigned" . 4) ("unsigned long" . 8)
     ;;
     ("size_t" . 8) ("ssize_t" . 8) ("ptrdiff_t" . 8)
-    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2)
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
     ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
     ;;
     ("signed char" . 1) ("unsigned char" . 1)
@@ -207,94 +148,172 @@
     ("signed long long int" . 8) ("unsigned long long" . 8)
     ("unsigned long long int" . 8)))
 
-(define alignof-map/riscv64 sizeof-map/riscv64)
-|#
+(define alignof-map/rv32 sizeof-map/rv32)
 
-(define mtype-map/x86_64
-  '((* . u64le)
-    ("char" . i8) ("short" . i16le) ("int" . i32le) ("long" . i64le)
-    ("float" . f32le) ("double" . f64le)
-    ("unsigned short" . u16le) ("unsigned" . u32le) ("unsigned long" . u64le)
+(define sizeof-map/x86_64
+  '((* . 8)
+    ("char" . 1) ("short" . 2) ("int" . 4) ("long" . 8)
+    ("float" . 4) ("double" . 8)
+    ("unsigned short" . 2) ("unsigned" . 4) ("unsigned long" . 8)
     ;;
-    ("size_t" . u64le) ("ssize_t" . u64le) ("ptrdiff_t" . i64le)
-    ("int8_t" . i8) ("uint8_t" . u8) ("int16_t" . i16le) ("uint16_t" . u16le)
-    ("int32_t" . i32le) ("uint32_t" . u32le) ("int64_t" . i64le) ("uint64_t" . u64le)
+    ("size_t" . 8) ("ssize_t" . 8) ("ptrdiff_t" . 8)
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
+    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
     ;;
-    ("signed char" . i8) ("unsigned char" . u8)
-    ("short int" . i16le) ("signed short" . i16le) ("signed short int" . i16le)
-    ("signed" . i32le) ("signed int" . i32le)
-    ("long int" . i64le) ("signed long" . i64le) ("signed long int" . i32le)
-    ("unsigned short int" . u8) ("unsigned int" . u32le)
-    ("unsigned long int" . u32le)
+    ("signed char" . 1) ("unsigned char" . 1)
+    ("short int" . 2) ("signed short" . 2) ("signed short int" . 2)
+    ("signed" . 4) ("signed int" . 4)
+    ("long int" . 8) ("signed long" . 8) ("signed long int" . 8)
+    ("unsigned short int" . 2) ("unsigned int" . 4) ("unsigned long int" . 8)
     ;;
-    ("_Bool" . u8)
-    ("intptr_t" . i64le) ("uintptr_t" . u64le)
-    ("wchar_t" . u32le) ("char16_t" . u16le) ("char32_t" . u32le)
+    ("_Bool" . 1)
+    ("intptr_t" . 8) ("uintptr_t" . 8)
+    ("wchar_t" . 4) ("char16_t" . 2) ("char32_t" . 4)
     ;;
-    ("long double" . f128)
-    ("long long" . i64le) ("long long int" . i64le) ("signed long long" . i64le)
-    ("signed long long int" . i64le) ("unsigned long long" . u64le)
-    ("unsigned long long int" . u64le)))
+    ("long double" . 16)
+    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
+    ("signed long long int" . 8) ("unsigned long long" . 8)
+    ("unsigned long long int" . 8)))
 
-(define arch/x86_64
-  (make-arch-info "x86_64" 'little mtype-map/x86_64 sizeof-map))
+(define alignof-map/x86_64 sizeof-map/x86_64)
 
+(use-modules (system foreign))
 
-(define arch-map
-  `(("avr" . ,arch/avr)
-    ("i686" . ,arch/i686)
-    ("powerpc" . ,arch/powerpc)
-    ("x86_64" . ,arch/x86_64)))
+(cond-expand
+ (guile-2.2)
+ (guile-2
+  (define intptr_t long)
+  (define uintptr_t unsigned-long)
+  ))
+
+(define sizeof-map/native-builtin
+  `((* . ,(sizeof '*))
+    ("char" . 1) ("short" . ,(sizeof short)) ("int" . ,(sizeof int))
+    ("long" . ,(sizeof long)) ("float" . ,(sizeof float))
+    ("double" . ,(sizeof double)) ("unsigned short" . ,(sizeof unsigned-short))
+    ("unsigned" . ,(sizeof unsigned-int))
+    ("unsigned long" . ,(sizeof unsigned-long))
+    ;;
+    ("size_t" . ,(sizeof size_t)) ("ssize_t" . ,(sizeof ssize_t))
+    ("ptrdiff_t" . ,(sizeof ptrdiff_t))
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
+    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
+    ;;
+    ("signed char" . 1) ("unsigned char" . 1)
+    ("short int" . ,(sizeof short)) ("signed short" . ,(sizeof short))
+    ("signed short int" . ,(sizeof short)) ("signed" . ,(sizeof int))
+    ("signed int" . ,(sizeof int)) ("long int" . ,(sizeof long))
+    ("signed long" . ,(sizeof long)) ("signed long int" . ,(sizeof long))
+    ("unsigned short int" . ,(sizeof short)) ("unsigned int" . ,(sizeof int))
+    ("unsigned long int" . ,(sizeof long))
+    ;;
+    ("_Bool" . 1)
+    ("intptr_t" . ,(sizeof intptr_t)) ("uintptr_t" . ,(sizeof uintptr_t))
+    ("wchar_t" . ,(sizeof int)) ("char16_t" . 2) ("char32_t" . 4)
+    ;;
+    ("long double" . 16)
+    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
+    ("signed long long int" . 8) ("unsigned long long" . 8)
+    ("unsigned long long int" . 8)))
+
+(define alignof-map/native-builtin
+  `((* . ,(alignof '*))
+    ("char" . 1) ("short" . ,(alignof short)) ("int" . ,(alignof int))
+    ("long" . ,(alignof long)) ("float" . ,(alignof float))
+    ("double" . ,(alignof double)) ("unsigned short" . ,(alignof unsigned-short))
+    ("unsigned" . ,(alignof unsigned-int))
+    ("unsigned long" . ,(alignof unsigned-long))
+    ;;
+    ("size_t" . ,(alignof size_t)) ("ssize_t" . ,(alignof ssize_t))
+    ("ptrdiff_t" . ,(alignof ptrdiff_t))
+    ("int8_t" . 1) ("uint8_t" . 1) ("int16_t" . 2) ("uint16_t" . 2) 
+    ("int32_t" . 4) ("uint32_t" . 4) ("int64_t" . 8) ("uint64_t" . 8)
+    ;;
+    ("signed char" . 1) ("unsigned char" . 1)
+    ("short int" . ,(alignof short)) ("signed short" . ,(alignof short))
+    ("signed short int" . ,(alignof short)) ("signed" . ,(alignof int))
+    ("signed int" . ,(alignof int)) ("long int" . ,(alignof long))
+    ("signed long" . ,(alignof long)) ("signed long int" . ,(alignof long))
+    ("unsigned short int" . ,(alignof short)) ("unsigned int" . ,(alignof int))
+    ("unsigned long int" . ,(alignof long))
+    ;;
+    ("_Bool" . 1)
+    ("intptr_t" . ,(alignof intptr_t)) ("uintptr_t" . ,(alignof uintptr_t))
+    ("wchar_t" . ,(alignof int)) ("char16_t" . 2) ("char32_t" . 4)
+    ;;
+    ("long double" . 16)
+    ("long long" . 8) ("long long int" . 8) ("signed long long" . 8)
+    ("signed long long int" . 8) ("unsigned long long" . 8)
+    ("unsigned long long int" . 8)))
+
+(define sizeof-map/native sizeof-map/native-builtin)
+(define alignof-map/native alignof-map/native-builtin)
+
+(define arch-sizeof-map
+  `(("native" . ,sizeof-map/native)
+    ("avr" . ,sizeof-map/avr)
+    ("i386" . ,sizeof-map/i386)
+    ("ppc" . ,sizeof-map/ppc)
+    ("rv32" . ,sizeof-map/rv32)
+    ("x86_64" . ,sizeof-map/x86_64)))
+
+(define arch-alignof-map
+  `(("native" . ,alignof-map/native)
+    ("avr" . ,alignof-map/avr)
+    ("i386" . ,alignof-map/i386)
+    ("ppc" . ,alignof-map/ppc)
+    ("rv32" . ,alignof-map/rv32)
+    ("x86_64" . ,alignof-map/x86_64)))
 
 (define (lookup-arch name)
-  (assoc-ref arch-map name))
+  (let ((sizeof-dict (assoc-ref arch-sizeof-map name))
+        (alignof-dict (assoc-ref arch-alignof-map name)))
+    (and sizeof-dict alignof-dict (cons sizeof-dict alignof-dict))))
 
-(define host-arch-name
+
+(define arch-info-host
   (eval-when (expand eval compile)
     (and=> (string-split %host-type #\-) car)))
 
-(define native-arch (lookup-arch host-arch-name))
+(define sizeof-map/native-arch
+  (assoc-ref arch-sizeof-map arch-info-host))
+         
+(define alignof-map/native-arch
+  (assoc-ref arch-alignof-map arch-info-host))
 
-;; @deffn {Parameter} *arch*
-;; parameter set to global architecture record
-;; NEW => if #f then native
-;; @end deffn
-;;(define *arch* (make-parameter native-arch))
-(define *arch* (make-parameter #f))
+(define *arch* (make-parameter (cons sizeof-map/native alignof-map/native)))
 
 (define-syntax-rule (with-arch arch body ...)
   (parameterize ((*arch* (if (string? arch) (lookup-arch arch) arch)))
     body ...))
 
-
-;; @deffn {Procedure} typeof-basetype base-type-name => 'f64
-;; @end deffn
-(define (mtypeof-basetype base-type-name)
-  (assoc-ref (arch-mtype-map (*arch*)) base-type-name))
-
-(define (alignof-mtype mtype)
-  (assq-ref (arch-align-map (*arch*)) mtype))
-
 ;; @deffn {Procedure} sizeof-basetype type
 ;; Return the size in bytes of the basetype @var{type}, a string, based on
-;; the global parameter @var{*arch*}.
-;; @example
-;; (sizeof-basetype "unsigned int") => 4
-;; @end example
+;; @var{*arch*}, a global parameter, which must be a pair.   If the car
+;; is a pair, it must be an a-list mapping string to integer for
+;; the size.  If the car is a procedure, the procedure must take @var{type}
+;; and return an integer.
 ;; @end deffn
-(define (sizeof-basetype base-type-name)
-  (let ((arch (*arch*)))
-    (and=> (assoc-ref (arch-mtype-map arch) base-type-name)
-           (lambda (type) (assq-ref sizeof-map type)))))
+(define (sizeof-basetype type)
+  (let ((dict-or-proc (car (*arch*))))
+    (cond
+     ((pair? dict-or-proc) (assoc-ref dict-or-proc type))
+     ((procedure? dict-or-proc) (dict-or-proc type))
+     (else (throw 'nyacc-error "bad arch")))))
 
 ;; @deffn {Procedure} alignof-basetype type
 ;; Return the alignment of the basetype @var{type}, a string, based on
-;; the global parameter @var{*arch*}.
+;; @var{*arch*}, a global parameter, whcih must be a pair.  If the cdr
+;; is a pair, it must be an a-list mapping strint to integer for
+;; the size.  If the car is a procedure, the procedure must take @var{type}
+;; and return an integer.
 ;; @end deffn
-(define (alignof-basetype base-type-name)
-  (let ((arch (*arch*)))
-    (and=> (assoc-ref (arch-mtype-map arch) base-type-name)
-           (lambda (type) (assq-ref (arch-align-map arch) type)))))
+(define (alignof-basetype type)
+  (let ((dict-or-proc (cdr (*arch*))))
+    (cond
+     ((pair? dict-or-proc) (assoc-ref dict-or-proc type))
+     ((procedure? dict-or-proc) (dict-or-proc type))
+     (else (throw 'nyacc-error "bad arch")))))
 
 ;; defs __SIZEOF_ + + __
 ;; FLOAT80 INT POINTER LONG LONG_DOUBLE SIZE_T WINT_T PTRDIFF_T FLOAT FLOAT128

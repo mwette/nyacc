@@ -191,7 +191,7 @@
   (let* ((udecl `(udecl ,specl ,declr))
          (xdecl (expand-typerefs udecl udict))
          (mdecl (udecl->mdecl xdecl)))
-    (sizeof-mtail (md-tail mdecl) udict)))
+    (sizeof-mtail (cdr mdecl) udict)))
 
 (define (trim-mtail mtail)
   (case (caar mtail)
@@ -250,7 +250,7 @@
               (xdecl (and udecl (expand-typerefs udecl udict)))
               (mdecl (and xdecl (udecl->mdecl xdecl))))
          (if (not mdecl) (throw 'c99-error "not found: ~S" name))
-         (trim-mtail (md-tail mdecl))))
+         (trim-mtail (cdr mdecl))))
       ((array-ref ,elt ,expr)
        (let ((mtail (gen-mtail expr)))
          (match mtail
@@ -666,7 +666,7 @@
         (cond
          ((pair? decls)
           (let* ((mdecl (udecl->mdecl (car decls)))
-                 (name (car mdecl)) (mtail (md-tail mdecl)))
+                 (name (car mdecl)) (mtail (cdr mdecl)))
             (call-with-values (lambda () (gen-offsets mtail (+ base siz) udict))
               (lambda (el-sz el-al el-os)
                 (let ((oval (if (pair? el-os) el-os
@@ -721,7 +721,7 @@
             (xdecl (expand-typerefs udecl udict))
             (mdecl (udecl->mdecl xdecl)))
        (call-with-values
-           (lambda () (gen-offsets (md-tail mdecl) 0 udict))
+           (lambda () (gen-offsets (cdr mdecl) 0 udict))
          (lambda (size align offsets) offsets))))
     ((type-name ,specl)
      (find-offsets `(type-name ,specl (param-declr (ident "_"))) udict))
@@ -772,7 +772,7 @@
      (let* ((udecl `(udecl ,spec-list ,declr))
             (xdecl (expand-typerefs udecl udict))
             (mdecl (udecl->mdecl xdecl)))
-       (gen-sizes (md-tail mdecl) udict)))
+       (gen-sizes (cdr mdecl) udict)))
     ((type-name ,spec-list)
      (find-sizes `(type-name ,spec-list (param-declr (ident "_"))) udict))
     (,_ #f)))
@@ -822,7 +822,7 @@
      (let* ((udecl `(udecl ,spec-list ,declr))
             (xdecl (expand-typerefs udecl udict keep))
             (mdecl (udecl->mdecl xdecl)))
-       (gen-types (md-tail mdecl) udict)))
+       (gen-types (cdr mdecl) udict)))
     ((type-name ,spec-list)
      (find-types `(type-name ,spec-list (param-declr (ident "_"))) udict keep))
     (,_ #f)))
