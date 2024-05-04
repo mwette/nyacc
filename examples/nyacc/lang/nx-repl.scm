@@ -53,8 +53,8 @@ exec guile $0
       ;;
       (run-repl* repl prompting-meta-read))))
 
-(define* (start-nx-repl #:optional (lang (current-language)) #:key debug)
-  (start-nx-repl* lang debug prompting-meta-read))
+(define* (start-nx-repl #:optional (language (current-language)) #:key debug)
+  (start-nx-repl* language debug prompting-meta-read))
 
 (define call-with-sigint
   (if (not (provided? 'posix))

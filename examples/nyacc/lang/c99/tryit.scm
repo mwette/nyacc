@@ -553,7 +553,7 @@ typedef struct _GObjectClass {
       ))
 |#
 
-(when #t
+(when #f
   (let* ((code
           (string-append
            "typedef struct { int p; int q; } foo_t;\n"
@@ -585,4 +585,13 @@ typedef struct _GObjectClass {
     (pp type)
     0))
 
+(when #t
+  (let* ((code "(foo_t*)->x.y.z)) x"
+         (tree (parse-c99x code))
+         )
+     (pp tree)
+     (newline)
+     (pp99 tree)
+     (newline)
+     ))
 ;; --- last line ---
