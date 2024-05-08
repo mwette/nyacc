@@ -34,7 +34,7 @@
  (guile-3
   (define (compile-scm file)
     (compile-file file #:from 'scheme #:to 'bytecode
-                  #:optimization-level 0 #:opts '())))
+                  #:optimization-level 1 #:opts '())))
  (guile-2
   (define (compile-scm file)
     (compile-file file #:from 'scheme #:to 'bytecode
