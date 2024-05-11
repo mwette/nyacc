@@ -205,6 +205,10 @@
 (define-syntax-rule (fh-object-ref obj arg ...)
   (bytestructure-ref (fh-object-val obj) arg ...))
 
+;; @deffn {Syntax} fh-object-set! obj arg ...
+;; If you are using @code{'*} you probably don't intend to.
+;; Look at @code{value-at}
+;; @end deffn
 (define-syntax-rule (fh-object-set! obj arg ...)
   (bytestructure-set! (fh-object-val obj) arg ...))
 
@@ -422,30 +426,39 @@
 (define make-pointer-metadata
   (@@ (bytestructures guile pointer) make-pointer-metadata))
 
+(define bytevector-address-ref
+  (case (ffi:sizeof '*)
+    ((1) bytevector-u8-ref)
+    ((2) bytevector-u16-native-ref)
+    ((4) bytevector-u32-native-ref)
+    ((8) bytevector-u64-native-ref)))
+
+(define bytevector-address-set!
+  (case (ffi:sizeof '*)
+    ((1) bytevector-u8-set!)
+    ((2) bytevector-u16-native-set!)
+    ((4) bytevector-u32-native-set!)
+    ((8) bytevector-u64-native-set!)))
+
+;; @deffn {Procedure} fh:pointer descriptor
+;; Define a descriptor for a pointer to descriptor (type).
+;; @enumerate
+;; @item if '* generate bytevector copy of object
+;; @item if integer, assume it's a vector
+;; @item if symbol generate new bytevector from pointer value
+;; @end enumerate
+;; @end deffn
 (define (fh:pointer %descriptor)
-  (define pointer-size (ffi:sizeof '*))
-  (define bytevector-address-ref
-    (case pointer-size
-      ((1) bytevector-u8-ref)
-      ((2) bytevector-u16-native-ref)
-      ((4) bytevector-u32-native-ref)
-      ((8) bytevector-u64-native-ref)))
-  (define bytevector-address-set!
-    (case pointer-size
-      ((1) bytevector-u8-set!)
-      ((2) bytevector-u16-native-set!)
-      ((4) bytevector-u32-native-set!)
-      ((8) bytevector-u64-native-set!)))
   (define (pointer-ref bytevector offset content-size)
     (let ((address (bytevector-address-ref bytevector offset)))
       (if (zero? address)
-          (fherr "fh:pointer: tried to dereference null-pointer")
+          (fherr "fh:pointer: attempt to dereference null-pointer")
           (ffi:pointer->bytevector (ffi:make-pointer address) content-size))))
   (define (pointer-idx-ref bytevector offset index content-size)
     (let* ((base-address (bytevector-address-ref bytevector offset))
            (address (+ base-address (* index content-size))))
       (if (zero? base-address)
-          (fherr "fh:pointer: tried to dereference null-pointer")
+          (fherr "fh:pointer: attempt to dereference null-pointer")
           (ffi:pointer->bytevector (ffi:make-pointer address) content-size))))
   (define (pointer-set! bytevector offset value)
     (cond
@@ -463,28 +476,32 @@
                                 (ffi:bytevector->pointer value))))
      ((bytestructure? value)
       (bytevector-address-set! bytevector offset
-                               (ffi:pointer-address
-                                (ffi:bytevector->pointer
-                                 (bytestructure-bytevector value)))))))
+                               (bytestructure-ref value)))
+     ((fh-object? value)
+      (pointer-set! bytevector offset (fh-object-ref value)))))
   (define (get-descriptor)
     (if (promise? %descriptor)
         (force %descriptor)
         %descriptor))
-  (define size pointer-size)
+  (define size (ffi:sizeof '*))
   (define alignment size)
   (define (unwrapper syntax? bytevector offset index)
     (define (syntax-list id . elements)
       (datum->syntax id (map syntax->datum elements)))
     (let ((descriptor (get-descriptor)))
       (when (eq? 'void descriptor)
-        (fherr "fh:pointer: tried to follow void pointer"))
+        (fherr "fh:pointer: attempt to follow void pointer"))
       (let* ((size (bytestructure-descriptor-size descriptor))
              (index-datum (if syntax? (syntax->datum index) index)))
         (cond
          ((eq? '* index-datum)
           (if syntax?
-              (values #`(pointer-ref #,bytevector #,offset #,size) 0 descriptor)
-              (values (pointer-ref bytevector offset size) 0 descriptor)))
+              (values #`(bytevector-copy
+                         (pointer-ref #,bytevector #,offset #,size))
+                      0 descriptor)
+              (values (bytevector-copy
+                       (pointer-ref bytevector offset size))
+                      0 descriptor)))
          ((integer? index-datum)
           (if syntax?
               (values #`(pointer-idx-ref #,bytevector #,offset ,index #,size)
@@ -528,29 +545,34 @@
         function-metadata-return-descriptor
         function-metadata-param-descriptor-list)
 
+(define (arg->ffi arg)
+  (cond
+   ((bytestructure? arg)
+    (bytestructure-descriptor->ffi-descriptor
+     (bytestructure-descriptor arg)))
+   ((and (pair? arg) (bytestructure-descriptor? (car arg)))
+    (bytestructure-descriptor->ffi-descriptor (car arg)))
+   ((pair? arg) (car arg))
+   (else (fherr "ffi-help-rt/arg->ffi: unknown arg type for ~S" arg))))
+
+(define (arg->val arg)
+  (cond
+   ((bytestructure? arg) (bytestructure-ref arg))
+   ((and (pair? arg) (bytestructure? (cdr arg)))
+    (bytestructure-ref (cdr arg)))
+   ((pair? arg) (cdr arg))
+   (else arg)))
+
+(define (arg-list->ffi-list param-list arg-list)
+  (let loop ((param-l param-list) (argl arg-list))
+    (cond
+     ((pair? param-l) (cons (car param-l) (loop (cdr param-l) (cdr argl))))
+     ((pair? argl) (cons (arg->ffi (car argl)) (loop param-l (cdr argl))))
+     (else '()))))
+
+;;(define (pointer->procedure/normal return-ffi pointer param-ffi-list)
+
 (define (pointer->procedure/varargs return-ffi pointer param-ffi-list)
-  (define (arg->ffi arg)
-    (cond
-     ((bytestructure? arg)
-      (bytestructure-descriptor->ffi-descriptor
-       (bytestructure-descriptor arg)))
-     ((and (pair? arg) (bytestructure-descriptor? (car arg)))
-      (bytestructure-descriptor->ffi-descriptor (car arg)))
-     ((pair? arg) (car arg))
-     (else (fherr "poniter->procedure/varargs: unknown arg type for ~S" arg))))
-  (define (arg->val arg)
-    (cond
-     ((bytestructure? arg) (bytestructure-ref arg))
-     ((and (pair? arg) (bytestructure? (cdr arg)))
-      (bytestructure-ref (cdr arg)))
-     ((pair? arg) (cdr arg))
-     (else arg)))
-  (define (arg-list->ffi-list param-list arg-list)
-    (let loop ((param-l param-list) (argl arg-list))
-      (cond
-       ((pair? param-l) (cons (car param-l) (loop (cdr param-l) (cdr argl))))
-       ((pair? argl) (cons (arg->ffi (car argl)) (loop param-l (cdr argl))))
-       (else '()))))
   (lambda args
     (let ((ffi-l (arg-list->ffi-list param-ffi-list args))
           (arg-l (map arg->val args)))
@@ -558,26 +580,29 @@
       (apply (ffi:pointer->procedure return-ffi pointer ffi-l) arg-l))))
 
 ;; @deffn {Procedure} fh:function return-desc param-desc-list
-;; @deffnx {Syntax} define-fh-function*-type name desc type? make
 ;; Generate a descriptor for a function pseudo-type, and then the associated
 ;; function pointer type.   If the last element of @var{param-desc-list} is
-;; @code{'...} the function is specified as variadic.
+;; @code{'...} the function is specified as variadic.@*
 ;; @example
-;; (define foo_t*-desc (bs:pointer (delay (fh:function double (list double)))))
+;;   (fh:function 'void (list ffi:double ffi:double))
+;; OR
+;;   (fh:function 'void (list ('x ffi:double) ('y ffi:double)))
 ;; @end example
 ;; @end deffn
 (define (fh:function %return-desc %param-desc-list)
   (define (get-return-ffi syntax?)
-    (when syntax?
-      (throw 'ffi-help-error "fh:function syntax not supported"))
-    %return-desc)
+    (when syntax? (throw 'ffi-help-error "fh:function has no macros"))
+    (bytestructure-descriptor->ffi-descriptor %return-desc))
   (define (get-param-ffi-list syntax?)
+    (when syntax? (throw 'ffi-help-error "fh:function has no macros"))
     (let loop ((params %param-desc-list))
       (cond
        ((null? params) '())
-       ((pair? (car params)) (cons (cadar params) (loop (cdr params))))
        ((eq? '... (car params)) '())
-       (else (cons (car params) (loop (cdr params)))))))
+       ((pair? (car params)) (loop (cons (cdar params) (cdr params))))
+       (else
+        (cons (bytestructure-descriptor->ffi-descriptor (car params))
+              (loop (cdr params)))))))
   (define size (ffi:sizeof '*))
   (define alignment size)
   (define attributes
@@ -586,22 +611,29 @@
             ((eq? '... (car param-l)) '(varargs))
             (else (loop (cdr param-l))))))
   (define (getter syntax? bytevector offset) ; assumes zero offset!
-    (when syntax?
-      (throw 'ffi-help-error "fh:function syntax not supported"))
-    (unless (zero? offset)
-      (throw 'ffi-help-error "fh:function getter called with non-zero offset"))
-    (if (memq 'varargs attributes)
-        (pointer->procedure/varargs
-         (get-return-ffi #f)
-         (ffi:bytevector->pointer bytevector)
-         (get-param-ffi-list #f))
-        (ffi:pointer->procedure
-         (get-return-ffi #f)
-         (ffi:bytevector->pointer bytevector)
-         (get-param-ffi-list #f))))
+    (when syntax? (throw 'ffi-help-error "fh:function has no macros"))
+    (define pointer->procedure
+      (if (memq 'varargs attributes)
+          pointer->procedure/varargs
+          ffi:pointer->procedure))
+    #;(pperr
+     `(pointer->procedure
+       ,(get-return-ffi #f)
+       (ffi:make-pointer (bytevector-address-ref bytevector offset))
+       ,(get-param-ffi-list #f)))
+    (pointer->procedure
+     (get-return-ffi #f)
+     (ffi:make-pointer (bytevector-address-ref bytevector offset))
+     (get-param-ffi-list #f)))
+  (define (setter syntax? bytevector offset value)
+    (bytevector-address-set!
+     bytevector offset
+     (ffi:pointer-address
+      (ffi:procedure->pointer
+       (get-return-ffi #f) value (get-param-ffi-list #f)))))
   (define meta
     (make-function-metadata %return-desc %param-desc-list attributes))
-  (make-bytestructure-descriptor size alignment #f getter #f meta))
+  (make-bytestructure-descriptor size alignment #f getter setter meta))
 
 ;; =============================================================================
 
