@@ -28,6 +28,12 @@
 ;; if selector then aggregate else base
 ;; if base then meta is basetype
 
+;; for obj's of type pointer:
+;;   (cdata-get obj '* ... : bv-copy
+;;   (cdata-get obj 1 ... : bv from obj-pointer value
+;;   (cdata-get obj 'fld ... : bv from obj-pointer value
+;;   (cdata-get obj) => <pointer>
+
 ;; change selector to operator: but not good as does not operate on index
 ;;   '* : deref
 ;;   '& : pointer-to
