@@ -59,6 +59,13 @@
 	    load-include-file
 	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl->str fh-scm-str->scm-exp
 	    string-member-proc string-renamer
+	    ;;
+	    C-decl->scm C-decl fh-llibs
+	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
+
+	    ;;ffi-symmap  		; <= debugging
+
+	    C-fun-decl->scm		; deprecated
 	    )
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
@@ -68,6 +75,8 @@
   #:use-module (nyacc lang c99 util)
   #:use-module (nyacc version)
   #:use-module (nyacc lang sx-util)
+  #:use-module ((nyacc lang util) #:select (cintstr->scm))
+  #:use-module ((nyacc lex) #:select (cnumstr->scm))
   #:use-module ((nyacc util) #:select (ugly-print))
   #:use-module (system foreign)
   #:use-module (sxml fold)
@@ -276,6 +285,9 @@
      ((string? val) (list val))
      (else (throw 'ffi-help-error "value does not resolve to list")))))
 
+(define (cintstr->num str)
+  (and=> (cintstr->scm str) string->number))
+
 (define (sw/* name) (string-append name "*"))
 (define (sw/*-desc name) (string-append name "*-desc"))
 (define (sw/& name) (string-append name "&"))
@@ -321,7 +333,7 @@
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
      (opts->mopts module-opts))
     ;;
-    (sfscm "  #:use-module (ffi ffi-help-rt)\n")
+    (sfscm "  #:use-module (system ffi-help-rt)\n")
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (bytestructures guile))\n")
     (sfscm "\n")
@@ -332,7 +344,7 @@
 	  (list ,@(map (lambda (l) `(dynamic-link ,l)) (reverse libraries))))))
     (sfscm "\n")
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))
-    ;; moved to (ffi ffi-help-rt)
+    ;; moved to (system ffi-help-rt)
     #;(ppscm
      '(cond-expand
        (guile-2.2)
@@ -453,13 +465,12 @@
 
       ;; bs does not support function pointers, but fh does now
       (((function-returning (param-list . ,params)) . ,tail)
-       ;;(sferr "\n--FUNCTION->bs-desc:\n")
-       `(fh:function ,(mtail->bs-desc tail)
+       `(fh:function ,(gen-bs-decl-return (mdecl->udecl (cons "_" tail)))
 		     (list ,@(gen-bs-decl-params params))))
       (((pointer-to) (function-returning (param-list . ,params)) . ,tail)
-       ;;(sferr "\np2FUNCTION->bs-desc:\n")
-       `(fh:function ,(mtail->bs-desc tail)
-		     (list ,@(gen-bs-decl-params params))))
+       `(fh:function ,(gen-bs-decl-return (mdecl->udecl (cons "_" tail)))
+                     (list ,@(gen-bs-decl-params params))))
+
       (((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
        ;;(sferr "\np2FUNCTION->bs-desc:\n")
        `(fh:pointer 'void))
@@ -636,8 +647,8 @@
       (if (null? decls) '()
 	  (let* ((name (caar decls))
 		 (udecl (cdar decls))
-		 ;; fix the following, look at cleanup-udecl
-		 (udecl (udecl-rem-type-qual udecl)) ;; remove "const" "extern"
+		 ;; remove "const" "extern"
+		 (udecl (udecl-rem-type-qual udecl))
 		 (spec (udecl->mdecl udecl))
 		 (tail (md-tail spec))
 		 (type (mtail->bs-desc tail)))
@@ -898,7 +909,7 @@
 			    (udecl (cdar udict))
 			    (udecl (udecl-rem-type-qual udecl))
 			    (mdecl (udecl->mdecl udecl)))
-		       (mtail->ffi-desc (md-tail mdecl) #t)))
+		       (mtail->ffi-desc (cdr mdecl) #t)))
 		   (clean-and-unitize-fields fields))))
     (((struct-def (ident ,name) ,field-list))
      (mtail->ffi-desc `((struct-def ,field-list))))
@@ -1055,7 +1066,7 @@
        (let* ((udecl (mdecl->udecl (cons "~ret" rest)))
 	      (udecl (expand-typerefs udecl (*udict*) ffi-defined))
 	      (mdecl (udecl->mdecl udecl))
-	      (decl-return (mtail->ffi-desc (md-tail mdecl)))
+	      (decl-return (gen-decl-return (mdecl->udecl (cons "_" rest))))
 	      (decl-params (gen-decl-params params)))
 	 (if (and (pair? decl-params) (equal? (last decl-params) '...))
 	     (fherr/once "no varargs (yet)"))
@@ -1175,7 +1186,6 @@
 	 (exec-params (gen-exec-params params))
 	 (sname (string->symbol name))
 	 (~name (string->symbol (string-append "~" name)))
-	 ;;(call `(,~name ,@(gen-exec-call-args exec-params)))
 	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
 			  (map cdr ~rest)))
 	 (call `((force ,~name) ,@(gen-exec-call-args exec-params))))
@@ -1518,7 +1528,7 @@
 	 ;; 3) struct never defined; only used as pointer
 	 (sfscm "(define-public ~A-desc 'void)\n" typename)
          ;;(sfscm "(define-fh-type-alias ~A fh-void)\n" typename)
-         (sfscm "(define-public ~S fh-void)\n" typename)
+         (sfscm "(define-public ~A fh-void)\n" typename)
 	 (sfscm "(define-public ~A? fh-void?)\n" typename)
 	 (sfscm "(define-public make-~A make-fh-void)\n" typename)
          (sfscm "(define-public ~A*-desc (fh:pointer ~A-desc))\n"
@@ -1826,7 +1836,7 @@
        (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mdecl (udecl->mdecl udecl)))
-	 (cnvt-extern (car mdecl) (md-tail mdecl)))
+	 (cnvt-extern (md-label mdecl) (md-tail mdecl)))
        (values wrapped defined))
 
       ;; non-pointer
@@ -1836,7 +1846,7 @@
        (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
 	      (udecl (udecl-rem-type-qual udecl))
 	      (mdecl (udecl->mdecl udecl)))
-	 (cnvt-extern (car mdecl) (md-tail mdecl))
+	 (cnvt-extern (md-label mdecl) (md-tail mdecl))
 	 (values wrapped defined)))
 
       ;; === special cases I need to fix =
@@ -2245,7 +2255,7 @@
       (*prefix* (symbol->string (gensym "fh-")))
       (*mport* scmport)
       (*udict* udict)
-      (sfscm "(use-modules (ffi ffi-help-rt))\n")
+      (sfscm "(use-modules (system ffi-help-rt))\n")
       (sfscm "(use-modules ((system foreign) #:prefix ffi:))\n")
       (sfscm "(use-modules (bytestructures guile))\n")
       (ppscm `(define ,(link-libs)

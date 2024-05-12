@@ -76,7 +76,8 @@
                reify-declr reify-decl
                udecl->mdecl split-udecl
                declr-ident declr-name
-               clean-field-list clean-fields)
+               clean-field-list clean-fields
+               md-label md-attr md-tail)
   #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (nyacc lang c99 pprint)

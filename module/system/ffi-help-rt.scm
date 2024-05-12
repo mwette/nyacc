@@ -254,11 +254,13 @@
 
 (define (make-bs*-printer type)
   (lambda (obj port)
-    (display "#<" port)
-    (display type port)
-    (display " 0x" port)
-    (display (number->string (bytestructure-ref (struct-ref obj 0)) 16) port)
-    (display ">" port)))
+    (let* ((val (bytestructure-ref (struct-ref obj 0)))
+           (val (if (ffi:pointer? val) (ffi:pointer-address val))))
+      (display "#<" port)
+      (display type port)
+      (display " 0x" port)
+      (display (number->string val 16) port)
+      (display ">" port))))
 
 (define (make-printer type)
   (lambda (obj port)
@@ -282,8 +284,7 @@
     (define type
       (make-fht (quote type)
                 unwrap~pointer
-                (lambda (val)
-                  (make (bytestructure desc (ffi:pointer-address val))))
+                (lambda (v) (make v))
                 #f #f
                 (make-bs*-printer (quote type))))
     (define (type? obj)
@@ -299,8 +300,8 @@
           ((number? val)
            (make-struct/no-tail type (bytestructure desc val)))
           ((ffi:pointer? val)
-           (make-struct/no-tail type (bytestructure desc
-                                                    (ffi:pointer-address val))))
+           (make-struct/no-tail
+            type (bytestructure desc (ffi:pointer-address val))))
           (else (make-struct/no-tail type val))))
         (() (make 0))))))
 
@@ -518,8 +519,8 @@
                  bytevector* 0 descriptor index))))))))
   (define (getter syntax? bytevector offset)
     (if syntax?
-        #`(bytevector-address-ref #,bytevector #,offset)
-        (bytevector-address-ref bytevector offset)))
+        #`(ffi:make-pointer (bytevector-address-ref #,bytevector #,offset))
+        (ffi:make-pointer (bytevector-address-ref bytevector offset))))
   (define (setter syntax? bytevector offset value)
     (if syntax?
         #`(pointer-set! #,bytevector #,offset #,value)
@@ -702,8 +703,31 @@
            (() (make-struct/no-tail type (bytestructure desc)))))
        (export type type? make)))))
 
-;; @deffn {Procedure} fh:cast type value
-;; @deffnx {Procedure} fh-cast type value
+;; @deffn {Syntax} fh-cast type value
+;; Cast to new type.  Typically used for pointers.
+;; Example: Given @code{bar} of type @code{Bar*}:
+;; @example
+;; (fh-cast Foo* bar) => <Foo* 0xabcd1234>
+;; @end example
+;; @end deffn
+(define-syntax fh-cast
+  (lambda (x)
+    "- Procedure: fh-cast type value
+     Cast to new type.  Typically used for pointers.  Example: Given
+     ‘bar’ of type ‘Bar*’:
+          (fh-cast Foo* bar) => <Foo* 0xabcd1234>"
+    (syntax-case x ()
+      ((_ type expr)
+       #`(#,(datum->syntax
+             x (string->symbol
+                (string-append
+                 "make-"
+                 (symbol->string (syntax->datum #'type)))))
+          (fh-object-ref expr))))))
+(export fh-cast)
+
+;; @deffn {Procedure} fh-arg type value
+;; Generate variadic argument for variadic procedure.
 ;; @example
 ;; (fh-cast foo_desc_t* 321)
 ;; (use-modules ((system foreign) #:prefix 'ffi:))
@@ -718,7 +742,7 @@
 ;; @end example
 ;; @end itemize
 ;; can we now do a vector->pointer
-(define (fh:cast type expr)
+(define (fh-arg type expr)
   (let* ((r-type                        ; resolved type
           (cond
            ((bytestructure-descriptor? type)
@@ -735,7 +759,6 @@
               expr)))
            (else expr))))
     (cons r-type r-expr)))
-(define fh-cast fh:cast)
 
 ;; --- unwrap / wrap procedures
 
@@ -756,7 +779,8 @@
   (cond
    ((ffi:pointer? obj) obj)
    ((string? obj) (ffi:string->pointer obj))
-   ((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
+   ;;((bytestructure? obj) (ffi:make-pointer (bytestructure-ref obj)))
+   ((bytestructure? obj) (bytestructure-ref obj))
    ((bytevector? obj) (ffi:bytevector->pointer obj))
    ((fh-object? obj) (unwrap~pointer (struct-ref obj 0)))
    ((exact-integer? obj) (ffi:make-pointer obj))
@@ -808,7 +832,8 @@
 (fh-ref<=>deref! char** make-char** char* make-char*)
 
 (define (char*->string obj)
-  (ffi:pointer->string (ffi:make-pointer (fh-object-ref obj))))
+  ;;(ffi:pointer->string (ffi:make-pointer (fh-object-ref obj))))
+  (ffi:pointer->string (fh-object-ref obj)))
 (export char*->string)
 
 (define fh-void
