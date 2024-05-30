@@ -1,4 +1,4 @@
-;;; nyacc/lang/mlang/parser.scm - parsing 
+;;; nyacc/lang/mlang/parser.scm - parsing
 
 ;; Copyright (C) 2016,2018 Matthew Wette
 ;;
@@ -102,7 +102,7 @@
 ;; @deffn {Procedure} make-mlang-lexer-generator match-table
 ;; This function, given the @var{match-table} from a lalr-generated
 ;; machine, generates a procedure that returns lexical analyzers for
-;; use in Octave parsers. 
+;; use in Octave parsers.
 ;; @end deffn
 (define-public (make-mlang-lexer-generator match-table)
   ;; There is some trickery here to assure that if the last line
@@ -151,7 +151,7 @@
               (let* ((lxm (loop (read-char)))
                      (port (current-input-port))
                      (file (port-filename port))
-                     (props `((filename ,file) (line ,line) (column ,0))))
+                     (props `((filename . ,file) (line . ,line) (column . ,0))))
                 (set-source-properties! lxm props)
                 lxm))
             (lambda () (loop (read-char))))))))
@@ -234,12 +234,12 @@
       ((matrix . ,rest)
        (check-matrix tree))
       (,_ tree)))
-  
+
   (define (fH tree) tree)
-  
+
   (cadr (foldt fU fH `(*TOP* ,tree))))
 
-;; === file parser 
+;; === file parser
 
 (include-from-path "nyacc/lang/mlang/mach.d/mlang-tab.scm")
 (include-from-path "nyacc/lang/mlang/mach.d/mlang-act.scm")

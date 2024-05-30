@@ -52,7 +52,7 @@
    ;; function-decl => function-decl-line lone-comment-list
    (lambda ($2 $1 . $rest) (append $1 (list $2)))
    ;; function-decl => function-decl-line
-   (lambda ($1 . $rest) $1)
+   (lambda ($1 . $rest) (append $1 `((comm-list))))
    ;; function-decl-line => "function" "[" ident-list "]" "=" ident "(" ide...
    (lambda ($10 $9 $8 $7 $6 $5 $4 $3 $2 $1 . $rest)
      `(fctn-decl ,$6 ,$8 ,$3))
@@ -320,6 +320,8 @@
    (lambda ($1 . $rest) $1)
    ;; term => ";"
    (lambda ($1 . $rest) $1)
+   ;; term => ";" nl
+   (lambda ($2 $1 . $rest) $1)
    ;; lone-comment-list => lone-comment-list-1
    (lambda ($1 . $rest) (tl->list $1))
    ;; lone-comment-list-1 => lone-comment nl

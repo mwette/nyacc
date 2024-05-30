@@ -24,7 +24,7 @@
   )
 
 ;; TODO;; this is C
-(define op-sym 
+(define op-sym
   (let ((ot '(("=" . eq) ("+=" . pl-eq) ("-=" . mi-eq) ("*=" . ti-eq)
               ("/=" . di-eq) ("%=" . mo-eq) ("<<=" . ls-eq) (">>=" . rs-eq)
               ("&=" . ba-eq) ("^=" . bx-eq) ("|=" bo-eq))))
@@ -67,21 +67,21 @@
   (define fmtr (make-pp-formatter))
   (define (push-il) (fmtr 'push))
   (define (pop-il) (fmtr 'pop))
-  
+
   (define sf (lambda args (apply fmtr args)))
-  
+
   (define (unary/l op rep rval)
     (sf rep)
     (if (protect-expr? 'rt op rval)
         (ppx/p rval)
         (ppx rval)))
-  
+
   (define (unary/r op rep lval)
     (sf rep)
     (if (protect-expr? 'lt op lval)
         (ppx/p lval)
         (ppx lval)))
-  
+
   (define (binary op rep lval rval)
     (if (protect-expr? 'lt op lval)
         (ppx/p lval)
@@ -101,7 +101,7 @@
         st))
 
   (define (ppx/p tree) (sf "(") (ppx tree) (sf ")"))
-  
+
   (define (ppx tree)
     (sx-match tree
 
@@ -112,14 +112,19 @@
        (for-each ppx items))
 
       ((fctn-defn (fctn-decl (ident ,name) ,iputs ,oputs ,coml) ,stmt-list)
-       (sf "function [")
-       (ppx oputs)
-       (sf "] = ~A(" name)
-       (ppx iputs) (sf ")\n")
-       (for-each ppx (sx-tail coml 1))
-       (push-il)
-       (ppx stmt-list)
-       (pop-il))
+       (let ((nout (length (sx-tail oputs))))
+         (sf "function ")
+         (if (> nout 2) (sf "["))
+         (ppx oputs)
+         (if (> nout 2) (sf "]"))
+         (if (positive? nout) (sf " = "))
+         (sf "~A(" name)
+         (ppx iputs) (sf ")\n")
+         (for-each ppx (sx-tail coml 1))
+         (push-il)
+         (ppx stmt-list)
+         (pop-il)
+         (sf "end;\n")))
 
       ((comm ,text)
        (sf "%~A\n" text))
@@ -136,6 +141,9 @@
 
       ((stmt-list . ,stmts)
        (for-each (lambda (stmt) (ppx stmt) (sf "\n")) stmts))
+
+      ((empty-stmt)
+       #t)
 
       ((call-stmt ,name . ,args)
        (ppx name) (sf "(")
@@ -200,7 +208,7 @@
         expr-list))
 
       ((xpose ,expr) (ppx expr) (sf "'"))
-      
+
       ((array-ref ,ident ,expr-list)
        (ppx ident) (sf "(") (ppx expr-list) (sf ")"))
 
@@ -213,7 +221,7 @@
            (else (ppx item) #t)))
         #f
         items))
-      
+
       ((pos ,expr) (unary/l 'pos "+" expr))
       ((neg ,expr) (unary/l 'neg "-" expr))
 
@@ -235,7 +243,7 @@
       ((fixed ,value) (sf "~A" value))
       ((float ,value) (sf "~A" value))
       ((string ,value) (sf "'~A'" (string->mlang value)))
-      
+
       (,_ (simple-format #t "\n*** NOT HANDLED: ~S\n" (car tree)))))
 
   (ppx tree))

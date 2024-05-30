@@ -49,7 +49,7 @@
                           license-lgpl3+))
    (start translation-unit)
    (grammar
-    
+
     (translation-unit
      (triv-stmt-list nontrivial-statement mlang-item-list
                      ($$ `(script ,@(sx-tail $1) ,$2 ,@(sx-tail $3))))
@@ -65,7 +65,7 @@
     (mlang-item-list-1
      ($empty ($$ (make-tl 'mitem-list)))
      (mlang-item-list-1 mlang-item ($$ (tl-append $1 $2))))
-    
+
     (mlang-item
      (function-defn)
      (statement))
@@ -77,12 +77,12 @@
       ($$ `(fctn-defn ,$1 ,(if $2 `(stmt-list ,$2) '(stmt-list)))))
      (function-decl the-end
       ($$ `(fctn-defn ,$1 (stmt-list)))))
-    
-    (the-end ("end" term)) 
+
+    (the-end ("end" term))
 
     (function-decl
      (function-decl-line lone-comment-list ($$ (append $1 (list $2))))
-     (function-decl-line ($$ $1)))
+     (function-decl-line ($$ (append $1 `((comm-list))))))
 
     (function-decl-line
      ;; fctn-decl name input-args output-args
@@ -188,7 +188,7 @@
     (string-list
      (string ($$ (make-tl 'string-list $1)))
      (string-list string ($$ (tl-append $1 $2))))
-     
+
     (expr-list
      (expr ($$ (make-tl 'expr-list $1)))
      (expr-list "," expr ($$ (tl-append $1 $3))))
@@ -252,7 +252,7 @@
      (postfix-expr "(" expr-list ")" ($$ `(aref-or-call ,$1 ,(tl->list $3))))
      (postfix-expr "(" ")" ($$ `(aref-or-call ,$1 (expr-list))))
      (postfix-expr "." ident ($$ `(sel ,$3 ,$1))))
-    
+
     (primary-expr
      (ident)
      (number)
@@ -275,7 +275,7 @@
     (term-list (term) (term-list term))
 
     ;;(term (nl) (";") (","))
-    (term (nl) (";"))
+    (term (nl) (";") (";" nl))
 
     (lone-comment-list
      (lone-comment-list-1 ($$ (tl->list $1))))
