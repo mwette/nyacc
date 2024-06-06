@@ -438,7 +438,7 @@
     (pp type)
     0))
 
-(when #t
+(when #f
   (let* ((code "(foo_t*)->x.y.z)) x"
          (tree (parse-c99x code))
          )
@@ -446,5 +446,6 @@
      (newline)
      (pp99 tree)
      (newline)
-     ))
+     )))
+
 ;; --- last line ---
