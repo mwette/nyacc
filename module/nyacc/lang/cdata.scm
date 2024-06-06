@@ -20,194 +20,191 @@
 ;;; Code:
 
 (define-module (nyacc lang cdata)
-  #:export (make-ctype)
+  #:export (make-ctype
+            cbase
+            )
+  #:use-module (rnrs bytevectors)
+  #:use-module ((srfi srfi-1) #:select (fold-right))
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
-  )
+  #:use-module (nyacc lang arch-info))
 
 ;; if selector then aggregate else base
 ;; if base then meta is basetype
 
-;; for obj's of type pointer:
-;;   (cdata-get obj '* ... : bv-copy
-;;   (cdata-get obj 1 ... : bv from obj-pointer value
-;;   (cdata-get obj 'fld ... : bv from obj-pointer value
-;;   (cdata-get obj) => <pointer>
+;; cdata bv ix ct
 
-;; change selector to operator: but not good as does not operate on index
-;;   '* : deref
-;;   '& : pointer-to
-;;   'label : xxx
+;;   (cdata-ref obj . tags) => <ref> == <cdata bv ix ct>
+;;   (cdata-val obj) => <val> | #f
+;;   (cdata-set! <ref> <val>)
+;;   (cdata-detag bv ix ct tag) => (values bv bv ct)
 
-;; 'array => 1
-;; 'struct => 'a
-;; 'union => 'a
-;; 'pointer => '*
-
-;; cdata-cref => (ct bv ix)
-;; cdata-ref => scm-val   | #f if not simple
-;; cdata-set! cdat scm-val . sels
-;; cdata-set! cdat cdat . sels
-
-;; macro
-;;   (define-foo
-;;     (with-type int32_t
-;;       (define-set! (bv ix
-;; =>
-;;   (define (cdata-ref cd) ... ((vector-ref refs (ct-id ct)) bv ix)
-
-;; (define-base-type '64
-;; archos riscv-linux
-
-;; removed from ctype
-;;(getter ctype-getter)              ; (bv ix) => scm-val
-;;(setter ctype-setter)              ; (bv ix scm-val) => nil
-;;(selector ctype-selector)          ; (ct ix (sel . rest)) => (ct ix rest)
+;; (make-Foo* val) => <cdata bv=0xdead ix=0 ct=0xbeef tn="Foo*">
 
 (define-record-type <ctype>
-  (%make-ctype name size almt type-id)
+  (%make-ctype size almt class info ptype)
   ctype?
-  (name ctype-name)                  ; symbolic type name
-  (size ctype-size)
-  (almt ctype-alignment)
-  (type-id ctype-id)            ; internal rep: f64le, ..., struct, union,
-  ;; add (arch ???)
-  ;;(meta ctype-meta)
-  )
+  (size ctype-size)                ; size in bytes
+  (almt ctype-alignment)           ; alignment in bytes
+  (class ctype-class)              ; type class (base aggr array bits)
+  (info ctype-info)                ; class-specific info
+  (ptype ctype-ptr-type set-ctype-ptr-type!)) ; pointer-to unless pointer
 
 (define-record-type <cdata>
-  (make-cdata ct bv ix)
+  (%make-cdata bv ix ct tn)
   cdata?
-  (ct cdata-ct)
-  (bv cdata-bv)
-  (ix cdata-ix))
+  (bv cdata-bv)                         ; bvec
+  (ix cdata-ix)                         ; index
+  (ct cdata-ct)                         ; type
+  (tn cdata-tn))                        ; optional (interned) type name
 
-(define native-getters
-  (vector
-   #f ;; void type
-   (lambda (ct bv ix) #f)
-   ))
-(define native-setters
-  (vector
-   #f ;; void type
-   (lambda (ct bv ix vl) #f)
-   ))
-(define native-selectors
-  (vector
-   #f ;; void type
-   #f
-   ))
+(define-record-type <cbitfield>
+  (%make-cbitfield offset width)
+  cbitfield?
+  (offset cbitfield-offset)
+  (width cbitfield-width))
 
-;; (pointer-to x 'a 'b ')
+(define-record-type <cfield>
+  (%make-cfield offset type)
+  cfield?
+  (offset cfield-offset)
+  (type cfield-type))
 
-(define double
-  (let ((str "double") (sym (string->symbol "double")))
-    (let ((mtype (mtypeof-basetype str))
-      (%make-ctype sym
-                   mtype
-                   (sizeof-mtype mtype)
-                   (alignof-mtype mtype)
-                   1
-                   #f
-                   'f64)))) ;; vs 'f64le 'f64be
+(define-record-type <cstruct>
+  (%make-cstruct fields)
+  cstruct?
+  (fields cstruct-fields))              ; alist name => field
 
-(define (ctype-sel ct ix se)
-  (let* ((tid (ct-type-id ct))
-         (selectors (hmmm))
-         (selector (vector-ref selectors tid)))
-    (selector ix se)))
+(define-record-type <cunion>
+  (%make-cunion fields)
+  cunion?
+  (fields cunion-fields))               ; alist name => type
 
-(define (ctype-sel* ct ix sl)
-  (if (null? sl)
-      (values ct ix)
-      (call-with-values
-          (lambda () (ctype-sel ct ix (car sl)))
-        (lambda (ct ix) (ctype-sel* ct ix (cdr sl))))))
+(define-record-type <carray>
+  (%make-carray length type)
+  carray?
+  (length carray-length)
+  (type carray-type))
 
-(define (cdata-cref ct bv ix sl)
-  (call-with-values
-      (lambda () (ctype-sel ct ix sl))
-    (lambda (ct ix)
-      (make-cdata ct bv ix))))
+(define-record-type <cpointer>
+  (%make-cpointer type)
+  cpointer?
+  (type cpointer-type))
 
-(define (cdata-ref ct bv ix sl)
-  (call-with-values
-      (lambda () (ctype-sel ct ix sl))
-    (lambda (ct ix)
-      (make-cdata ct bv ix))))
+(define make-ctype %make-ctype)
+#|
+(define (make-ctype size almt class info)
+  (let* ((ctype (%make-ctype size almt class info #f))
+         (ptype (and (not (eq? class 'pointer))
+                     (%make-ctype (sizeof-basetype "void*")
+                                  (alignof-basetype "void*")
+                                  'pointer (%make-cpointer ctype) #f))))
+    (set-ctype-ptr-type! ctype ptype)
+    ctype))
+|#
 
-(define-syntax-rule (make-basetype name)
-  (define (string->symbol name)
-    (make-ctype (string->symbol name) (ctypeof-basetype name)
-                (sizeof-basetype name) (alignof-basetype name))))
-(export make-basetype)
-;; f64
+(define* (make-cdata bv ix ct #:optional (tn ""))
+  (%make-cdata bv ix ct tn))
 
-(make-basetype "double")
+(define be (endianness big))
+(define le (endianness little))
 
-(ct:struct `((x ,double) (y ,f64)))
+(define (cdata-detag bv ix ct tag)
+  (let ((ti (ctype-info ct)))
+    (case (ctype-class ct)
+      ((struct)
+       (let ((fld (assq-ref (cstruct-fields ti) tag)))
+         (values bv (+ ix (cfield-offset fld)) (cfield-type fld))))
+      ((union)
+       (let ((ftype (assq-ref (cunion-fields ti) tag)))
+         (values bv ix ftype)))
+      ((array)
+       (unless (integer? tag) (error "bad array ref"))
+       (let ((type (carray-type ti)))
+         (values bv (+ ix (* tag (ctype-size type))) type)))
+      ((bitfield)
+       (error "tbd")))))
 
+(define (cdata-ref data . tags)
+  (let ((bv (cdata-bv data)))
+    (let loop ((ix (cdata-ix data)) (ct (cdata-ct data)) (tags tags))
+      (if (null? tags)
+          (make-cdata bv ix ct)
+          (call-with-values (lambda () (cdata-detag bv ix ct (car tags)))
+            (lambda (bv ix ct) (loop ix ct (cdr tags))))))))
 
-(define-record-type <ct:field-info>
-  (%make-field name type offset bitlength bitoffset)
-  field?
-  (name field-name)
-  (type field-name)
-  (offset field-offset)
-  (bitlength field-bitlength)
-  (bitoffset field-bitoffset))
+(define (cdata-val data)
+  (let ((bv (cdata-bv data))
+        (ix (cdata-ix data))
+        (ct (cdata-ct data)))
+    (case (ctype-class ct)
+      ((base)
+       (case (ctype-info ct)
+         ((u8) (bytevector-u8-ref bv ix))
+         ((s8) (bytevector-s8-ref bv ix))
+         ((u16le) (bytevector-u16-ref bv ix le))
+         ((s16le) (bytevector-s16-ref bv ix le))
+         ((u32le) (bytevector-u32-ref bv ix le))
+         ((s32le) (bytevector-s32-ref bv ix le))
+         ((u64le) (bytevector-u64-ref bv ix le))
+         ((s64le) (bytevector-s64-ref bv ix le))
+         ((f32le) (bytevector-ieee-single-ref bv ix le))
+         ((f64le) (bytevector-ieee-double-ref bv ix le))
+         ((u16be) (bytevector-u16-ref bv ix be))
+         ((s16be) (bytevector-s16-ref bv ix be))
+         ((u32be) (bytevector-u32-ref bv ix be))
+         ((s32be) (bytevector-s32-ref bv ix be))
+         ((u64be) (bytevector-u64-ref bv ix be))
+         ((s64be) (bytevector-s64-ref bv ix be))
+         ((f32be) (bytevector-ieee-single-ref bv ix be))
+         ((f64be) (bytevector-ieee-double-ref bv ix be))))
+      ((struct) #f)
+      ((union) #f)
+      ((bitfield) #f)
+      ((array) #f)
+      (else
+       (error "bad stuff")))))
 
-(define-record-type <ct:struct-info>
-  (make-struct-info packed? fields)
-  struct-info?
-  (packed? struct-info-packed?)
-  (fields struct-info-fields))
-
-(define* (make-field name type offset #:optional bitlength bitoffset)
-  (%make-field name type offset bitlength bitoffset))
-
-;; separate bitfield
-
-;; Update struct running-size (rs) given new item size (s) and align't (a).
-(define (incr-size s a rs)
-  (+ s (* a (quotient (+ rs (1- a)) a))))
-
-;; Update running union size (rs) given new item s and a.
-(define (maxi-size s a rs)
-  (max s rs))
-
-(define ct:struct
-  (case-lambda
-   ((fields) (ct:struct #f fields))
-   ((pack fields)
-    ;; size: running size; dflds : declared fields
-    (let loop ((iflds '()) (size 0) (alnmt 0) (dflds fields))
-      (cond
-       ((null? dflds)
-        (something))
-       (else
-        (let ((name (car flds))
-              (type (cadr flds))
-              (bits (and=> (pair? (cddr flds)) caddr))
-              (csize (ctype-size type))
-              (calnmt (ctype-alignment type)))
-          (let* ((oset (incr-size 0 calnmt size))
-                 (size (incr-size size calnmt csize)))
-            (loop (cons (make-field name type oset) cflds)
-                  (max alnmt calnmt) (cdr dflds)))))
-       ))
-    )))
-
-
-(define (ct-sel ct ix fsel . rest) ; (ct ix (sel . rest)) => (ct ix rest)
-  ;; int32: 1
-  ;; f64: 2
+(define (ctype-equal? a b)
   #f)
 
-;;  (%make-ctype name size almt type-id)
-(define (test-01)
-  ;;(let ((ct:struct
-  (define ct1 (%make-ctype "foo_t" (ct:struct '((x double) (y double)))))
-  #f)
 
+(define* (make-cstruct flds #:key packed?)
+  (let loop ((cfl '()) (sfl flds))
+    (if (null? sfl) (reverse cfl)
+        (let ()
+          (loop (cons (car sfl) cfl) (cdr sfl))))))
+
+
+(define (make-cbase name)
+  (let* ((name (if (string? name) (strname->symname name) name))
+         (size (sizeof-basetype name))
+         (align (alignof-basetype name))
+        )
+    (%make-ctype size align 'base name #f)))
+
+;; @deffn {Procedure} make-cbase-map arch
+;; where @var{arch} is string or @code{<arch>}
+;; @end deffn
+(define (make-cbase-map arch) ;; => ((double . (cbase "double")) ...)
+  (with-arch arch
+    (let* ((void (%make-ctype 0 0 'base 'void #f)))
+      (fold-right
+       (lambda (cname seed)
+         (let* ((name (strname->symname cname))
+                (type (make-cbase name))
+                (ptr-name (strname->symname (string-append cname "*")))
+                (ptr-type (%make-cpointer type)))
+           (cons* (cons name type) (cons ptr-name ptr-type) seed)))
+       (list (cons 'void void) (cons 'void* (%make-cpointer void)))
+       base-type-name-list))))
+(export make-cbase-map)
+
+(define (cbase symname)
+  (let ((arch (*arch*)))
+    (unless (arch-ctype-map arch)
+      (set-arch-ctype-map! arch (make-cbase-map arch)))
+    (assq-ref (arch-ctype-map arch) symname)))
+#|
+|#
 ;; --- last line ---
