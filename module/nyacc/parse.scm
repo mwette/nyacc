@@ -96,7 +96,7 @@
 		 (nval #f)		; non-terminal from prev reduction
 		 (lval #f))		; lexical value (from lex'er)
 	(cond
-	 ((and interactive nval 
+	 ((and interactive nval
 	       (eqv? (car nval) start)
 	       (zero? (car state)))     ; done
 	  (cdr nval))
@@ -193,7 +193,7 @@
 		    (set-source-properties! $$ pval))
 		(loop (list-tail state gl) (list-tail stack gl) tval lval)))
 	     ((positive? stx)		; shift
-	      (loop (cons stx state) (cons-source laval sval stack) 
+	      (loop (cons stx state) (cons-source laval sval stack)
 		    #f (if nval lval #f)))
 	     (else			; accept
 	      (car stack))))))))))
@@ -215,7 +215,7 @@
 ;; @noindent
 ;; The generated parser is reentrant.  Options are:
 ;; @table @code
-;; @item #:skip-if-unexp 
+;; @item #:skip-if-unexp
 ;; This is a list of tokens to skip if not expected.  It is used
 ;; to allow comments to be skipped.  The default is @code{'()}.
 ;; @item #:interactive
