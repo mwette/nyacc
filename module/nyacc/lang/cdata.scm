@@ -92,16 +92,6 @@
   (type cpointer-type))
 
 (define make-ctype %make-ctype)
-#|
-(define (make-ctype size almt class info)
-  (let* ((ctype (%make-ctype size almt class info #f))
-         (ptype (and (not (eq? class 'pointer))
-                     (%make-ctype (sizeof-basetype "void*")
-                                  (alignof-basetype "void*")
-                                  'pointer (%make-cpointer ctype) #f))))
-    (set-ctype-ptr-type! ctype ptype)
-    ctype))
-|#
 
 (define* (make-cdata bv ix ct #:optional (tn ""))
   (%make-cdata bv ix ct tn))
@@ -176,25 +166,26 @@
           (loop (cons (car sfl) cfl) (cdr sfl))))))
 
 
-(define (make-cbase name)
+(define (make-cbase name ptr-name)
   (let* ((name (if (string? name) (strname->symname name) name))
          (size (sizeof-basetype name))
-         (align (alignof-basetype name))
-        )
-    (%make-ctype size align 'base name #f)))
+         (align (alignof-basetype name)))
+    (%make-ctype size align 'base name ptr-name)))
 
 ;; @deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
 ;; @end deffn
 (define (make-cbase-map arch) ;; => ((double . (cbase "double")) ...)
   (with-arch arch
-    (let* ((void (%make-ctype 0 0 'base 'void #f)))
+    (let* ((void (%make-ctype 0 0 'base 'void #f))
+           (psize (sizeof-basetype "void*"))
+           (palgn (alignof-basetype "void*")))
       (fold-right
        (lambda (cname seed)
          (let* ((name (strname->symname cname))
-                (type (make-cbase name))
                 (ptr-name (strname->symname (string-append cname "*")))
-                (ptr-type (%make-cpointer type)))
+                (type (make-cbase name ptr-name))
+                (ptr-type (make-ctype (%make-cpointer type)))
            (cons* (cons name type) (cons ptr-name ptr-type) seed)))
        (list (cons 'void void) (cons 'void* (%make-cpointer void)))
        base-type-name-list))))
@@ -205,6 +196,18 @@
     (unless (arch-ctype-map arch)
       (set-arch-ctype-map! arch (make-cbase-map arch)))
     (assq-ref (arch-ctype-map arch) symname)))
+
+(define* (cstruct fields #:key packed?)
+  (let loop ((cfl '()) (size 0) (align 0) (sfl flds))
+    (if (null? sfl) (reverse cfl)
+        (let* ((name (caar sfl))
+               (type (caar sfl))
+               (tsize (ctype-size type))
+               (talign (ctype-align type))
+               (foo 0)
+               )
+          (loop (cons (car sfl) cfl) (cdr sfl))))))
+
 #|
 |#
 ;; --- last line ---
