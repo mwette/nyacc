@@ -424,6 +424,42 @@
   (make-bytestructure-descriptor size alignment unwrapper #f setter meta))
 |#
 
+(define-record-type <function-metadata>
+  (make-function-metadata return-descriptor param-descriptor-list attributes)
+  function-metadata?
+  (return-descriptor function-metadata-return-descriptor)
+  (param-descriptor-list function-metadata-param-descriptor-list)
+  (attributes function-metadata-attributes))
+(export function-metadata?
+        function-metadata-return-descriptor
+        function-metadata-param-descriptor-list)
+
+(define numeric-type-mapping
+  `((,int8 . ,ffi:int8)
+    (,uint8 . ,ffi:uint8)
+    (,int16 . ,ffi:int16)
+    (,uint16 . ,ffi:uint16)
+    (,int32 . ,ffi:int32)
+    (,uint32 . ,ffi:uint32)
+    (,int64 . ,ffi:int64)
+    (,uint64 . ,ffi:uint64)
+    (,float32 . ,ffi:float)
+    (,float64 . ,ffi:double)))
+
+(define (bs-desc->ffi-desc desc)
+  (let ((upper bytestructure-descriptor->ffi-descriptor)
+        (meta (lambda () (bytestructure-descriptor-metadata desc))))
+    (cond
+     ((eq? desc 'void) ffi:void)
+     ((assq-ref numeric-type-mapping desc))
+     ((pointer-metadata? (meta)) '*)
+     ((vector-metadata? (meta)) '*)
+     ((function-metadata? (meta)) '*)
+     ((struct-metadata? meta) (upper desc))
+     ;;((bitfield-metadata? meta) (upper desc))
+     (else
+      (sferr "bs-desc->ffi-desc missed ~s\n" desc)))))
+
 (define make-pointer-metadata
   (@@ (bytestructures guile pointer) make-pointer-metadata))
 
@@ -536,23 +572,13 @@
 ;; (define foo_t*-desc (bs:pointer (delay double (list double))))
 ;; @end example
 ;; @end deffn
-(define-record-type <function-metadata>
-  (make-function-metadata return-descriptor param-descriptor-list attributes)
-  function-metadata?
-  (return-descriptor function-metadata-return-descriptor)
-  (param-descriptor-list function-metadata-param-descriptor-list)
-  (attributes function-metadata-attributes))
-(export function-metadata?
-        function-metadata-return-descriptor
-        function-metadata-param-descriptor-list)
-
 (define (arg->ffi arg)
   (cond
    ((bytestructure? arg)
-    (bytestructure-descriptor->ffi-descriptor
+    (bs-desc->ffi-desc
      (bytestructure-descriptor arg)))
    ((and (pair? arg) (bytestructure-descriptor? (car arg)))
-    (bytestructure-descriptor->ffi-descriptor (car arg)))
+    (bs-desc->ffi-desc (car arg)))
    ((pair? arg) (car arg))
    (else (fherr "ffi-help-rt/arg->ffi: unknown arg type for ~S" arg))))
 
@@ -593,16 +619,17 @@
 (define (fh:function %return-desc %param-desc-list)
   (define (get-return-ffi syntax?)
     (when syntax? (throw 'ffi-help-error "fh:function has no macros"))
-    (bytestructure-descriptor->ffi-descriptor %return-desc))
+    (bs-desc->ffi-desc %return-desc))
   (define (get-param-ffi-list syntax?)
     (when syntax? (throw 'ffi-help-error "fh:function has no macros"))
     (let loop ((params %param-desc-list))
+      ;;(when (pair? params) (sferr "gpfl: ~s\n" (car params)))
       (cond
        ((null? params) '())
        ((eq? '... (car params)) '())
        ((pair? (car params)) (loop (cons (cdar params) (cdr params))))
        (else
-        (cons (bytestructure-descriptor->ffi-descriptor (car params))
+        (cons (bs-desc->ffi-desc (car params))
               (loop (cdr params)))))))
   (define size (ffi:sizeof '*))
   (define alignment size)
@@ -638,7 +665,7 @@
 
 ;; =============================================================================
 
-(define (bs-desc->ffi-desc bs-desc)
+#;(define (bs-desc->ffi-desc bs-desc)
   (cond
    ((bytestructure-descriptor? bs-desc)
     (bytestructure-descriptor->ffi-descriptor bs-desc))
@@ -746,7 +773,7 @@
   (let* ((r-type                        ; resolved type
           (cond
            ((bytestructure-descriptor? type)
-            (bytestructure-descriptor->ffi-descriptor type))
+            (bs-desc->ffi-desc type))
            (else type)))
          (r-expr                        ; resolved value
           (cond
