@@ -41,15 +41,19 @@
 
 ;; (make-Foo* val) => <cdata bv=0xdead ix=0 ct=0xbeef tn="Foo*">
 
+;; @deftp {Record} <ctype> size align class info [ptype]
+;; @end deftp
 (define-record-type <ctype>
-  (%make-ctype size almt class info ptype)
+  (%make-ctype size align class info ptype)
   ctype?
   (size ctype-size)                ; size in bytes
-  (almt ctype-alignment)           ; alignment in bytes
+  (align ctype-align)              ; alignment in bytes
   (class ctype-class)              ; type class (base aggr array bits)
   (info ctype-info)                ; class-specific info
-  (ptype ctype-ptr-type set-ctype-ptr-type!)) ; pointer-to unless pointer
+  (ptype ctype-ptr-type))          ; name of pointer-to
 
+;; @deftp {Record} <cdata> bv ix ct [tn]
+;; @end deftp
 (define-record-type <cdata>
   (%make-cdata bv ix ct tn)
   cdata?
@@ -58,34 +62,48 @@
   (ct cdata-ct)                         ; type
   (tn cdata-tn))                        ; optional (interned) type name
 
+;; @deftp {Record} <cbitfield> type mask sext shift
+;; @end deftp
 (define-record-type <cbitfield>
-  (%make-cbitfield offset width)
+  (%make-cbitfield type offset width sext)
   cbitfield?
-  (offset cbitfield-offset)
-  (width cbitfield-width))
+  (type cbitfield-type)
+  (offset cbitfield-offset)             ; offset
+  (width cbitfield-width)               ; width
+  (sext cbitfield-sext))                ; sign-extend?
 
+;; @deftp {Record} <cfield> type offset
+;; @end deftp
 (define-record-type <cfield>
-  (%make-cfield offset type)
+  (%make-cfield type offset)
   cfield?
-  (offset cfield-offset)
-  (type cfield-type))
+  (type cfield-type)
+  (offset cfield-offset))
 
+;; @deftp {Record} <cstruct> fields
+;; @end deftp
 (define-record-type <cstruct>
   (%make-cstruct fields)
   cstruct?
   (fields cstruct-fields))              ; alist name => field
 
+;; @deftp {Record} <cunion> fields
+;; @end deftp
 (define-record-type <cunion>
   (%make-cunion fields)
   cunion?
   (fields cunion-fields))               ; alist name => type
 
+;; @deftp {Record} <carray> type length
+;; @end deftp
 (define-record-type <carray>
-  (%make-carray length type)
+  (%make-carray type length)
   carray?
-  (length carray-length)
-  (type carray-type))
+  (type carray-type)
+  (length carray-length))
 
+;; @deftp {Record} <cpointer> type
+;; @end deftp
 (define-record-type <cpointer>
   (%make-cpointer type)
   cpointer?
@@ -172,6 +190,10 @@
          (align (alignof-basetype name)))
     (%make-ctype size align 'base name ptr-name)))
 
+(define (cpointer type)
+  (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
+               'pointer type #f))
+
 ;; @deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
 ;; @end deffn
@@ -185,7 +207,7 @@
          (let* ((name (strname->symname cname))
                 (ptr-name (strname->symname (string-append cname "*")))
                 (type (make-cbase name ptr-name))
-                (ptr-type (make-ctype (%make-cpointer type)))
+                (ptr-type (cpointer type)))
            (cons* (cons name type) (cons ptr-name ptr-type) seed)))
        (list (cons 'void void) (cons 'void* (%make-cpointer void)))
        base-type-name-list))))
@@ -197,17 +219,71 @@
       (set-arch-ctype-map! arch (make-cbase-map arch)))
     (assq-ref (arch-ctype-map arch) symname)))
 
+
+#|
+(define (bfud exp mtail size align) ; bit-field update
+  (call-with-values (lambda () (sizeof-mtail mtail udict))
+    (lambda (elt-sz elt-al)
+      (let* ((bits (eval-c99-cx exp udict))
+             (size (incr-bit-size bits elt-al size)))
+        (values size (max elt-al align))))))
+|#
+
+(define (cbitfield type width)
+  (%make-cbitfield type width #f #f))
+
+(define (incr-size s a rs)
+  (+ s (* a (quotient (+ rs (1- a)) a))))
+
+;; a is element alignment
+(define (incr-bit-size bs a rs)
+  (let* ((a (* 8 a))
+         (rs (* 8 rs))
+         (ru (* a (quotient (+ rs (1- a)) a))))
+    (/
+     (cond
+      ((zero? bs) ru)
+      ((> (+ rs bs) ru) (+ bs ru))
+      (else (+ bs rs)))
+     8)))
+(export incr-bit-size)
+
+(define (maxi-size s a rs)
+  (max s rs))
+
 (define* (cstruct fields #:key packed?)
-  (let loop ((cfl '()) (size 0) (align 0) (sfl flds))
+  (let loop ((cfl '()) (size 0) (align 0) (sfl fields))
     (if (null? sfl) (reverse cfl)
         (let* ((name (caar sfl))
                (type (caar sfl))
-               (tsize (ctype-size type))
-               (talign (ctype-align type))
-               (foo 0)
+               (size (ctype-size type))
+               (align (ctype-align type))
+               (class (ctype-class type))
+               (info (ctype-info type))
                )
-          (loop (cons (car sfl) cfl) (cdr sfl))))))
+          ;; 1) bitfield (name pos-int)
+          ;; 2) bitfield (#f pos-int)
+          ;; 3) bitfield (#f zero)
+          (if (eq? class 'bitfield)
+              ;; bitfield
+              (let ()
+                (if name
+                    (let* ((wid (cbitfield-width info))
+                           (off 0)
+                           )
+                      ;; int x: 3;
+                      #f)
+                    (let* ()
+                      ;; int : 1
+                      #f)))
+              ;; non-bitfield
+              (let ()
+                ;; int x;
+                #f))
+          (loop (cons (car sfl) cfl) size align (cdr sfl))))))
 
 #|
 |#
+
+;; logtest logbit? bit-extract
 ;; --- last line ---
