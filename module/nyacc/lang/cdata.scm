@@ -141,6 +141,12 @@
           (call-with-values (lambda () (cdata-detag bv ix ct (car tags)))
             (lambda (bv ix ct) (loop ix ct (cdr tags))))))))
 
+(define (cbase-signed? base-info)
+  (and
+   (member base-info '(s8 s16 s32 s64 s16 s32le s64le s16be s32be s64be))
+   #t))
+(export cbase-signed?)
+
 (define (cdata-val data)
   (let ((bv (cdata-bv data))
         (ix (cdata-ix data))
@@ -237,16 +243,12 @@
 
 ;; a is element alignment
 (define (incr-bit-size bs a rs)
-  (let* ((a (* 8 a))
-         (rs (* 8 rs))
-         (ru (* a (quotient (+ rs (1- a)) a))))
-    (/
-     (cond
-      ((zero? bs) ru)
-      ((> (+ rs bs) ru) (+ bs ru))
-      (else (+ bs rs)))
-     8)))
-(export incr-bit-size)
+  (let* ((a (* 8 a)) (rs (* 8 rs)) (ru (* a (quotient (+ rs (1- a)) a))))
+    (/ (cond ((zero? bs) ru) ((> (+ rs bs) ru) (+ bs ru)) (else (+ bs rs))) 8)))
+
+(define (bfld-offset w a s)
+  (let* ((a (* 8 a)) (s (* 8 s)) (u (* a (quotient (+ s (1- a)) a))))
+    (/ (cond ((> (+ s w) u) u) (else (- u a))) 8)))
 
 (define (maxi-size s a rs)
   (max s rs))
