@@ -439,13 +439,11 @@
     0))
 
 (when #f
-  (let* ((code "(foo_t*)->x.y.z)) x"
-         (tree (parse-c99x code))
-         )
-     (pp tree)
-     (newline)
-     (pp99 tree)
-     (newline)
-     )))
+  ;; bug 65849
+  (let* ((code (string-append
+                "#warning \"warn me!\"\n"
+                "#warning \"oops\"\n"))
+         (tree (parse-string code)))
+    #t))
 
 ;; --- last line ---
