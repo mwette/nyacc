@@ -9,27 +9,35 @@
 ;;(sferr "sizeof void* = ~s\n" (sizeof-basetype "void*"))
 ;;(sferr "(cbase 'double) => \n") (pperr (cbase 'double))
 
-#|
-(let ((t1 (cstruct
-(list `(x ,(cbase 'double))
-`(l ,(cbitfield (cbase 'short) 3))
-;;`(m ,(cbitfield (cbase 'short 0)))
-;;`(#f ,(cbitfield (cbase 'short 3)
-`(y ,(cbase 'int))))))
-  (pperr t1))
-|#
+(when #f
+  (let ((t1 (cstruct
+             (list `(x ,(cbase 'double))
+                   `(l ,(cbase 'char) 3)
+                   `(m ,(cbase 'short) 5)
+                   `(#f (cbase 'short) 0)
+                   `(n ,(cbase 'int) 4)
+                   `(p ,(cbase 'int))
+                   ))))
+    (pperr t1)))
+
+
+;; Round number of bits to next alignment size.
+(define (roundup-bits a s)
+  (* a (quotient (+ s (1- a)) a)))
+
+;; Given bitfield width and alignment, update running struct size, a rational
+(define (incr-bit-size w a s)
+  (let* ((a (* 8 a)) (s (* 8 s)) (ru (roundup-bits a s)))
+    (/ (cond ((zero? w) ru) ((> (+ s w) ru) (+ w ru)) (else (+ w s))) 8)))
+
+;; Given bitfield width and alignment, compute byte offset for this field.
+(define (bfld-offset w a s)
+  (let* ((a (* 8 a)) (s (* 8 s)) (u (roundup-bits a s)))
+    (/ (cond ((> (+ s w) u) u) (else (- u a))) 8)))
+
 
 (define (show-ibs bs a rs)
   (sferr "(incr-bit-size ~s ~s ~s) => ~s\n" bs a rs (incr-bit-size bs a rs)))
-
-(define (incr-bit-size bs a rs)
-  (let* ((a (* 8 a)) (rs (* 8 rs)) (ru (* a (quotient (+ rs (1- a)) a))))
-    (/ (cond ((zero? bs) ru) ((> (+ rs bs) ru) (+ bs ru)) (else (+ bs rs))) 8)))
-
-(define (bfld-offset w a s)
-  (let* ((a (* 8 a)) (s (* 8 s)) (u (* a (quotient (+ s (1- a)) a))))
-    (/ (cond ((> (+ s w) u) u) (else (- u a))) 8)))
-
 
 (define (sao t) (case t ((u8 s8) 1) ((u16 s16) 2) ((u32 s32) 4) ((u64 s64) 8)))
 
@@ -48,14 +56,6 @@
              (fa (sao ft))              ; alignment
              (sx (cbase-signed? ft))    ; sign-extend?
              (ns (incr-bit-size bw fa cs)) ; next size
-             ;;(so (incr-bit-size 0 fa cs)) ; ci offset in struct
-             (so (let* ((a (* 8 fa))
-                        (s (* 8 cs))
-                        (u (* a (quotient (+ s (1- a)) a))))
-                   (/
-                    (cond
-                     ((> (+ s bw) u) u)
-                     (else (- u a))) 8)))
              (so (bfld-offset bw fa cs))
              (bo (- (* 8 ns) (* 8 so) bw)) ; bit offset in ci
              )

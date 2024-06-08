@@ -75,17 +75,22 @@
 ;; @deftp {Record} <cfield> type offset
 ;; @end deftp
 (define-record-type <cfield>
-  (%make-cfield type offset)
+  (%make-cfield name type offset)
   cfield?
+  (name cfield-name)
   (type cfield-type)
   (offset cfield-offset))
 
 ;; @deftp {Record} <cstruct> fields
+;; This contains a list of fields with name, type and offset (in the struct)
+;; as well as a dictinoary to map name (including names in anonymous structs
+;; and unions) to fields.  Note that for anonymous structs and unions, ...
 ;; @end deftp
 (define-record-type <cstruct>
   (%make-cstruct fields)
   cstruct?
-  (fields cstruct-fields))              ; alist name => field
+  (fields cstruct-fields)              ; list of fields
+  (dict cstruct-dict))                 ; reified dict => (type . offset)
 
 ;; @deftp {Record} <cunion> fields
 ;; @end deftp
@@ -235,54 +240,67 @@
         (values size (max elt-al align))))))
 |#
 
+;; special case: to be confirmed
 (define (cbitfield type width)
-  (%make-cbitfield type width #f #f))
+  (cons type width))
 
-(define (incr-size s a rs)
-  (+ s (* a (quotient (+ rs (1- a)) a))))
+;; Given element size and alignment, update the running size.
+(define (incr-size es ea rs)
+  (+ es (* ea (quotient (+ rs (1- ea)) ea))))
 
-;; a is element alignment
-(define (incr-bit-size bs a rs)
-  (let* ((a (* 8 a)) (rs (* 8 rs)) (ru (* a (quotient (+ rs (1- a)) a))))
-    (/ (cond ((zero? bs) ru) ((> (+ rs bs) ru) (+ bs ru)) (else (+ bs rs))) 8)))
+;; Round number of bits to next alignment size.
+(define (roundup-bits a s)
+  (* a (quotient (+ s (1- a)) a)))
 
+;; Given bitfield width and alignment, update running struct size, a rational
+(define (incr-bit-size w a s)
+  (let* ((a (* 8 a)) (s (* 8 s)) (ru (roundup-bits a s)))
+    (/ (cond ((zero? w) ru) ((> (+ s w) ru) (+ w ru)) (else (+ w s))) 8)))
+
+;; Given bitfield width and alignment, compute byte offset for this field.
 (define (bfld-offset w a s)
-  (let* ((a (* 8 a)) (s (* 8 s)) (u (* a (quotient (+ s (1- a)) a))))
+  (let* ((a (* 8 a)) (s (* 8 s)) (u (roundup-bits a s)))
     (/ (cond ((> (+ s w) u) u) (else (- u a))) 8)))
 
 (define (maxi-size s a rs)
   (max s rs))
 
+
+;; cases
+;; bitfield
+;; 1) bitfield, no name, zero size => round-up, not transferred
+;; 2) bitfield, no name, positive size => padding, not transferred
+;; 3) bitfield, w/ name, positive size => transferred
+;; 4) non-bitfield, no name => transferred and reified
+;; 5) non-bitfield, w/ name => transferred
+;; cases 1&2 can be combined easily, I think
 (define* (cstruct fields #:key packed?)
-  (let loop ((cfl '()) (size 0) (align 0) (sfl fields))
+  (let loop ((cfl '()) (rnl '()) (ssz 0) (sal 0) (sfl fields))
+    ;; cfl: c field list; ral: reified a-list; ssz: struct size;
+    ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl) (reverse cfl)
-        (let* ((name (caar sfl))
-               (type (caar sfl))
-               (size (ctype-size type))
-               (align (ctype-align type))
-               (class (ctype-class type))
-               (info (ctype-info type))
-               )
-          ;; 1) bitfield (name pos-int)
-          ;; 2) bitfield (#f pos-int)
-          ;; 3) bitfield (#f zero)
-          (if (eq? class 'bitfield)
-              ;; bitfield
-              (let ()
-                (if name
-                    (let* ((wid (cbitfield-width info))
-                           (off 0)
-                           )
-                      ;; int x: 3;
-                      #f)
-                    (let* ()
-                      ;; int : 1
-                      #f)))
-              ;; non-bitfield
-              (let ()
-                ;; int x;
-                #f))
-          (loop (cons (car sfl) cfl) size align (cdr sfl))))))
+        (match (car sfl)
+          ((name type)
+           (let* ((esz (ctype-size type))
+                  (eal (ctype-align type))
+                  (ssz (incr-bit-size 0 eal ssz)))
+             (if name
+                 (let ((cf (%make-cfield name type ssz)))
+                   (loop (cons cf cfl) (acons name cf) (incr-size esa eal ssz)
+                         (max eal sal) (cdr sfl)))
+                 (let ()
+                   (loop)))))
+          ((name type width)            ; bitfield
+           (let ((esz (ctype-size type))
+                 (eal (ctype-align type))
+                 )
+             (if name
+                 (let ()
+                   (loop))
+                 (let ()
+                   (loop)))))
+          (otherwize
+           (error "yuck"))))))
 
 #|
 |#
