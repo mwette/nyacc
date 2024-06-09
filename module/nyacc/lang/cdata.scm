@@ -21,13 +21,19 @@
 
 (define-module (nyacc lang cdata)
   #:export (make-ctype
-            cbase
+            cbase cstruct
+            ctype? ctype-size ctype-align ctype-class ctype-info
             )
-  #:use-module (rnrs bytevectors)
+  #:use-module (ice-9 match)
   #:use-module ((srfi srfi-1) #:select (fold-right))
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
+  #:use-module (rnrs bytevectors)
   #:use-module (nyacc lang arch-info))
+
+(use-modules (ice-9 pretty-print))
+(define (pperr exp) (pretty-print exp (current-error-port)))
+(define (sferr fmt . args) (apply simple-format #t fmt args))
 
 ;; if selector then aggregate else base
 ;; if base then meta is basetype
@@ -42,6 +48,7 @@
 ;; (make-Foo* val) => <cdata bv=0xdead ix=0 ct=0xbeef tn="Foo*">
 
 ;; @deftp {Record} <ctype> size align class info [ptype]
+;; maybe @var{ptype} should only be for @code{cbase} class types
 ;; @end deftp
 (define-record-type <ctype>
   (%make-ctype size align class info ptype)
@@ -108,6 +115,7 @@
   (length carray-length))
 
 ;; @deftp {Record} <cpointer> type
+;; NOT USED (YET)
 ;; @end deftp
 (define-record-type <cpointer>
   (%make-cpointer type)
@@ -244,9 +252,9 @@
 (define (cbitfield type width)
   (cons type width))
 
-;; Given element size and alignment, update the running size.
-(define (incr-size es ea rs)
-  (+ es (* ea (quotient (+ rs (1- ea)) ea))))
+;; Given field size and alignment, update the running struct size.
+(define (incr-size fs fa ss)
+  (+ fs (* fa (quotient (+ ss (1- fa)) fa))))
 
 ;; Round number of bits to next alignment size.
 (define (roundup-bits a s)
@@ -258,47 +266,57 @@
     (/ (cond ((zero? w) ru) ((> (+ s w) ru) (+ w ru)) (else (+ w s))) 8)))
 
 ;; Given bitfield width and alignment, compute byte offset for this field.
-(define (bfld-offset w a s)
+(define (bf-offset w a s)
   (let* ((a (* 8 a)) (s (* 8 s)) (u (roundup-bits a s)))
     (/ (cond ((> (+ s w) u) u) (else (- u a))) 8)))
 
-(define (maxi-size s a rs)
-  (max s rs))
+(define (maxi-size fs fa ss)
+  (max fs ss))
 
 
 ;; cases
 ;; bitfield
-;; 1) bitfield, no name, zero size => round-up, not transferred
-;; 2) bitfield, no name, positive size => padding, not transferred
+;; 1) non-bitfield, no name => transferred and reified
+;; 2) non-bitfield, w/ name => transferred
 ;; 3) bitfield, w/ name, positive size => transferred
-;; 4) non-bitfield, no name => transferred and reified
-;; 5) non-bitfield, w/ name => transferred
-;; cases 1&2 can be combined easily, I think
+;; 4) bitfield, no name, zero size => round-up, not transferred
+;; 5) bitfield, no name, positive size => padding, not transferred
+;; cases 4&5 can be combined easily, I think
 (define* (cstruct fields #:key packed?)
-  (let loop ((cfl '()) (rnl '()) (ssz 0) (sal 0) (sfl fields))
+  (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     ;; cfl: c field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl) (reverse cfl)
         (match (car sfl)
           ((name type)
-           (let* ((esz (ctype-size type))
-                  (eal (ctype-align type))
-                  (ssz (incr-bit-size 0 eal ssz)))
+           (let* ((fsz (ctype-size type))
+                  (fal (ctype-align type))
+                  (ssz (incr-bit-size 0 fal ssz)))
              (if name
                  (let ((cf (%make-cfield name type ssz)))
-                   (loop (cons cf cfl) (acons name cf) (incr-size esa eal ssz)
-                         (max eal sal) (cdr sfl)))
+                   (loop (cons cf cfl) (acons name cf ral)
+                         (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))
                  (let ()
-                   (loop)))))
+                   (sferr "skipping anonymous struct/union case")
+                   (loop cfl ral ssz sal (cdr sfl))))))
           ((name type width)            ; bitfield
-           (let ((esz (ctype-size type))
-                 (eal (ctype-align type))
-                 )
+           ;; assume type is ctype, width is non-neg integer
+           (let* ((fsz (ctype-size type))
+                  (fal (ctype-align type))
+                  (sx? (cbase-signed? (ctype-info type)))
+                  (ssz (incr-bit-size width fal ssz))
+                  (cio (bf-offset width fal ssz))     ; ci offset in struct
+                  (bfo (- (* 8 ssz) width (* 8 cio))) ; bitfield offset in ci
+                  )
              (if name
+                 (let* ((bf (%make-cbitfield type bfo width sx?))
+                        (ty (%make-ctype fsz fal 'bitfield bf #f))
+                        (cf (%make-cfield name ty cio)))
+                   (loop (cons cf cfl) (acons name cf ral)
+                         ssz (max fal sal) (cdr sfl)))
                  (let ()
-                   (loop))
-                 (let ()
-                   (loop)))))
+                   (sferr "skipping padding bitfield")
+                   (loop cfl ral ssz sal (cdr sfl))))))
           (otherwize
            (error "yuck"))))))
 
