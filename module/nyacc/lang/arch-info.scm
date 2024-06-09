@@ -28,7 +28,8 @@
             mtypeof-basetype sizeof-mtype alignof-mtype
             arch-ctype-map set-arch-ctype-map!
             strname->symname symname->strname
-            base-type-name-list base-type-symbol-list)
+            base-type-name-list base-type-symbol-list
+            )
   #:declarative? #t
   #:use-module (srfi srfi-9))
 
@@ -70,7 +71,8 @@
 
 ;; does not include @code{"void*"}
 (define base-type-name-list
-  '("char" "short" "int" "long" "float" "double" "unsigned short" "unsigned"
+  '("void*"
+    "char" "short" "int" "long" "float" "double" "unsigned short" "unsigned"
     "unsigned long" "size_t" "ssize_t" "ptrdiff_t" "int8_t" "uint8_t"
     "int16_t" "uint16_t" "int32_t" "uint32_t" "int64_t" "uint64_t"
     "signed char" "unsigned char" "short int" "signed short" "signed short int"
@@ -81,15 +83,15 @@
     "unsigned long long" "unsigned long long int"))
 
 (define base-type-symbol-list
-  '(char short int long float double unsigned-short unsigned unsigned-long
-         size_t ssize_t ptrdiff_t int8_t uint8_t int16_t uint16_t int32_t
-         uint32_t int64_t uint64_t signed-char unsigned-char short-int
-         signed-short signed-short-int signed signed-int long-int signed-long
-         signed-long-int unsigned-short-int unsigned-int unsigned-long-int
-         _Bool intptr_t uintptr_t wchar_t char16_t char32_t long-double
-         long-long long-long-int signed-long-long signed-long-long-int
-         unsigned-long-long unsigned-long-long-int))
-
+  '(void*
+    char short int long float double unsigned-short unsigned unsigned-long
+    size_t ssize_t ptrdiff_t int8_t uint8_t int16_t uint16_t int32_t
+    uint32_t int64_t uint64_t signed-char unsigned-char short-int
+    signed-short signed-short-int signed signed-int long-int signed-long
+    signed-long-int unsigned-short-int unsigned-int unsigned-long-int
+    _Bool intptr_t uintptr_t wchar_t char16_t char32_t long-double
+    long-long long-long-int signed-long-long signed-long-long-int
+    unsigned-long-long unsigned-long-long-int))
 
 (define mtype-map/avr
   '((void* . u16le)

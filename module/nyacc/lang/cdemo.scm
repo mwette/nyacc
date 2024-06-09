@@ -9,18 +9,18 @@
 ;;(sferr "sizeof void* = ~s\n" (sizeof-basetype "void*"))
 ;;(sferr "(cbase 'double) => \n") (pperr (cbase 'double))
 
-(when #f
+(when #t
   (let ((t1 (cstruct
              (list `(x ,(cbase 'double))
                    `(l ,(cbase 'char) 3)
                    `(m ,(cbase 'short) 5)
-                   `(#f (cbase 'short) 0)
+                   ;;`(#f (cbase 'short) 0)
                    `(n ,(cbase 'int) 4)
                    `(p ,(cbase 'int))
                    ))))
     (pperr t1)))
 
-
+#|
 ;; Round number of bits to next alignment size.
 (define (roundup-bits a s)
   (* a (quotient (+ s (1- a)) a)))
@@ -54,7 +54,7 @@
              (bw (list-ref f 2))        ; width
              (fs (sao ft))              ; size
              (fa (sao ft))              ; alignment
-             (sx (cbase-signed? ft))    ; sign-extend?
+             (sx #f) ;;(cbase-signed? ft))    ; sign-extend?
              (ns (incr-bit-size bw fa cs)) ; next size
              (so (bfld-offset bw fa cs))
              (bo (- (* 8 ns) (* 8 so) bw)) ; bit offset in ci
@@ -64,3 +64,6 @@
         (sferr "  ns*8=~s  so*8=~s bw=~s\n" (* 8 ns) (* 8 so) bw)
         (sferr "  ci=~s  bo=~s  bw=~s  sx=~s\n" so bo bw sx)
         (loop ns (max fa ca) (cdr fl))))))
+
+(process flds)
+|#

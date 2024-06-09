@@ -25,7 +25,7 @@
             ctype? ctype-size ctype-align ctype-class ctype-info
             )
   #:use-module (ice-9 match)
-  #:use-module ((srfi srfi-1) #:select (fold-right))
+  #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (rnrs bytevectors)
@@ -51,13 +51,12 @@
 ;; maybe @var{ptype} should only be for @code{cbase} class types
 ;; @end deftp
 (define-record-type <ctype>
-  (%make-ctype size align class info ptype)
+  (%make-ctype size align class info)
   ctype?
   (size ctype-size)                ; size in bytes
   (align ctype-align)              ; alignment in bytes
   (class ctype-class)              ; type class (base aggr array bits)
-  (info ctype-info)                ; class-specific info
-  (ptype ctype-ptr-type))          ; name of pointer-to
+  (info ctype-info))                ; class-specific info
 
 ;; @deftp {Record} <cdata> bv ix ct [tn]
 ;; @end deftp
@@ -69,17 +68,17 @@
   (ct cdata-ct)                         ; type
   (tn cdata-tn))                        ; optional (interned) type name
 
-;; @deftp {Record} <cbitfield> type mask sext shift
+;; @deftp {Record} <cbitfield> type shift width sext
 ;; @end deftp
 (define-record-type <cbitfield>
-  (%make-cbitfield type offset width sext)
+  (%make-cbitfield type shift width sext)
   cbitfield?
   (type cbitfield-type)
-  (offset cbitfield-offset)             ; offset
-  (width cbitfield-width)               ; width
-  (sext cbitfield-sext))                ; sign-extend?
+  (shift cbitfield-shift)
+  (width cbitfield-width)
+  (sext cbitfield-sext))
 
-;; @deftp {Record} <cfield> type offset
+;; @deftp {Record} <cfield> name type offset
 ;; @end deftp
 (define-record-type <cfield>
   (%make-cfield name type offset)
@@ -88,6 +87,7 @@
   (type cfield-type)
   (offset cfield-offset))
 
+#|
 ;; @deftp {Record} <cstruct> fields
 ;; This contains a list of fields with name, type and offset (in the struct)
 ;; as well as a dictinoary to map name (including names in anonymous structs
@@ -96,15 +96,26 @@
 (define-record-type <cstruct>
   (%make-cstruct fields)
   cstruct?
-  (fields cstruct-fields)              ; list of fields
-  (dict cstruct-dict))                 ; reified dict => (type . offset)
+  (fields cstruct-fields)            ; list of fields
+  (dict cstruct-dict))               ; reified dict => (type . offset)
 
 ;; @deftp {Record} <cunion> fields
 ;; @end deftp
 (define-record-type <cunion>
   (%make-cunion fields)
   cunion?
-  (fields cunion-fields))               ; alist name => type
+  (fields cunion-fields)             ; alist name => type
+  (dict cunion-dict))                ; reified dict => (type . offset)
+|#
+
+;; @deftp {Record} <caggate> fields dict
+;; aggregate: struct or union
+;; @end deftp
+(define-record-type <caggate>
+  (%make-caggate fields dict)
+  caggate?
+  (fields caggate-fields)             ; alist name => type
+  (dict caggate-dict))                ; reified dict => (type . offset)
 
 ;; @deftp {Record} <carray> type length
 ;; @end deftp
@@ -122,6 +133,14 @@
   cpointer?
   (type cpointer-type))
 
+(set-record-type-printer! <ctype>
+  (lambda (type port)
+    (let ((sz (ctype-size type)) (al (ctype-align type))
+          (cl (ctype-class type)) (nf (ctype-info type)))
+      (if (eq? 'base cl)
+          (simple-format port "#<ctype ~a>" nf)
+          (simple-format port "#<ctype ~a>" cl)))))
+
 (define make-ctype %make-ctype)
 
 (define* (make-cdata bv ix ct #:optional (tn ""))
@@ -133,12 +152,9 @@
 (define (cdata-detag bv ix ct tag)
   (let ((ti (ctype-info ct)))
     (case (ctype-class ct)
-      ((struct)
-       (let ((fld (assq-ref (cstruct-fields ti) tag)))
+      ((struct union)
+       (let ((fld (assq-ref (caggate-dict ti) tag)))
          (values bv (+ ix (cfield-offset fld)) (cfield-type fld))))
-      ((union)
-       (let ((ftype (assq-ref (cunion-fields ti) tag)))
-         (values bv ix ftype)))
       ((array)
        (unless (integer? tag) (error "bad array ref"))
        (let ((type (carray-type ti)))
@@ -203,33 +219,22 @@
           (loop (cons (car sfl) cfl) (cdr sfl))))))
 
 
-(define (make-cbase name ptr-name)
-  (let* ((name (if (string? name) (strname->symname name) name))
+(define (make-cbase name)
+  (let* ((mtype (mtypeof-basetype name))
          (size (sizeof-basetype name))
          (align (alignof-basetype name)))
-    (%make-ctype size align 'base name ptr-name)))
+    (%make-ctype size align 'base mtype)))
 
 (define (cpointer type)
-  (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
-               'pointer type #f))
+  (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*) 'pointer type))
 
 ;; @deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
 ;; @end deffn
 (define (make-cbase-map arch) ;; => ((double . (cbase "double")) ...)
   (with-arch arch
-    (let* ((void (%make-ctype 0 0 'base 'void #f))
-           (psize (sizeof-basetype "void*"))
-           (palgn (alignof-basetype "void*")))
-      (fold-right
-       (lambda (cname seed)
-         (let* ((name (strname->symname cname))
-                (ptr-name (strname->symname (string-append cname "*")))
-                (type (make-cbase name ptr-name))
-                (ptr-type (cpointer type)))
-           (cons* (cons name type) (cons ptr-name ptr-type) seed)))
-       (list (cons 'void void) (cons 'void* (%make-cpointer void)))
-       base-type-name-list))))
+    (map (lambda (name) (cons name (make-cbase name)))
+         base-type-symbol-list)))
 (export make-cbase-map)
 
 (define (cbase symname)
@@ -274,54 +279,165 @@
   (max fs ss))
 
 
-;; cases
-;; bitfield
-;; 1) non-bitfield, no name => transferred and reified
-;; 2) non-bitfield, w/ name => transferred
-;; 3) bitfield, w/ name, positive size => transferred
-;; 4) bitfield, no name, zero size => round-up, not transferred
-;; 5) bitfield, no name, positive size => padding, not transferred
-;; cases 4&5 can be combined easily, I think
-(define* (cstruct fields #:key packed?)
+
+(define (add-fields fields offset dict)
+  (define (cfield/moved-offset field extra)
+    (%make-cfield (cfield-name field) (cfield-type field)
+                  (+ extra (cfield-offset field))))
+  (fold (lambda (field seed)
+          (acons (cfield-name field) (cfield/moved-offset field offset) seed))
+        dict fields))
+
+;; @deffn {Procedure} cstruct fields [packed] => ctype
+;; fields is a list with entries @code{(name type)}
+;; @end deffn
+(define* (cstruct fields #:optional packed?)
+  ;; cases
+  ;; bitfield
+  ;; 1) non-bitfield, no name => transferred and reified
+  ;; 2) non-bitfield, w/ name => transferred
+  ;; 3) bitfield, w/ name, positive size => transferred
+  ;; 4) bitfield, no name, zero size => round-up, not transferred
+  ;; 5) bitfield, no name, positive size => padding, not transferred
+  ;; cases 4&5 can be combined easily, I think
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     ;; cfl: c field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
-    (if (null? sfl) (reverse cfl)
+    (if (null? sfl)
+        (%make-ctype ssz sal 'struct (%make-caggate (reverse cfl) (reverse ral)))
         (match (car sfl)
-          ((name type)
+          ((name type)                  ; non-bitfield
            (let* ((fsz (ctype-size type))
                   (fal (ctype-align type))
-                  (ssz (incr-bit-size 0 fal ssz)))
+                  (ssz (quotient (+ (* 8 ssz) 7) 8))
+                  (ssz (incr-bit-size 0 fal ssz))
+                  (cf (%make-cfield name type ssz)))
+             ;;(assert (or name (memq (ctype-class type) '(struct union))))
              (if name
-                 (let ((cf (%make-cfield name type ssz)))
-                   (loop (cons cf cfl) (acons name cf ral)
-                         (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))
-                 (let ()
-                   (sferr "skipping anonymous struct/union case")
-                   (loop cfl ral ssz sal (cdr sfl))))))
+                 (loop (cons cf cfl) (acons name cf ral)
+                       (incr-size fsz fal ssz) (max fal sal) (cdr sfl))
+                 (loop (cons cf cfl)
+                       (add-fields (caggate-fields (ctype-info type)) ssz ral)
+                       (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))))
           ((name type width)            ; bitfield
-           ;; assume type is ctype, width is non-neg integer
            (let* ((fsz (ctype-size type))
                   (fal (ctype-align type))
                   (sx? (cbase-signed? (ctype-info type)))
                   (ssz (incr-bit-size width fal ssz))
-                  (cio (bf-offset width fal ssz))     ; ci offset in struct
-                  (bfo (- (* 8 ssz) width (* 8 cio))) ; bitfield offset in ci
-                  )
+                  (cio (bf-offset width fal ssz)) ; ci offset in struct
+                  (bfo (- (* 8 ssz) width (* 8 cio)))) ; bf offset in ci
              (if name
                  (let* ((bf (%make-cbitfield type bfo width sx?))
-                        (ty (%make-ctype fsz fal 'bitfield bf #f))
+                        (ty (%make-ctype fsz fal 'bitfield bf))
                         (cf (%make-cfield name ty cio)))
                    (loop (cons cf cfl) (acons name cf ral)
                          ssz (max fal sal) (cdr sfl)))
-                 (let ()
-                   (sferr "skipping padding bitfield")
-                   (loop cfl ral ssz sal (cdr sfl))))))
+                 (loop cfl ral ssz sal (cdr sfl)))))
           (otherwize
            (error "yuck"))))))
 
-#|
-|#
+(define* (pretty-print-caggate caggate #:optional port)
+  (let* ((port (or port (current-output-port)))
+         (fields (caggate-fields caggate))
+         (format (lambda (fmt . args) (apply simple-format port fmt args))))
+    (format "cstruct/union:\n")
+    (for-each
+     (lambda (field)
+       (format "  ~s ~s\n" (cfield-name field) (cfield-type field)))
+     (caggate-fields caggate))))
+(export pretty-print-caggate)
 
-;; logtest logbit? bit-extract
+
+;; --- ffi support -------------------------------------------------------------
+
+(use-modules ((system foreign) #:prefix ffi:))
+
+(define (mtype->ffi-type mtype)
+  (or
+   (assq-ref
+    `((s8 . ,ffi:int8) (s16 . ,ffi:int16) (s32 . ,ffi:int32) (s64 . ,ffi:int64)
+      (i128 . #f) (u8 . ,ffi:uint8) (u16 . ,ffi:uint16) (u32 . ,ffi:uint32)
+      (u64 . ,ffi:uint64) (u128 . #f) (f16 . #f) (f32 . ,ffi:float)
+      (f64 . ,ffi:double) (f128 . #f) (s8le . ,ffi:int8) (s16le . ,ffi:int16)
+      (s32le . ,ffi:int32) (s64le . ,ffi:int64) (i128le . #f) (u8le . ,ffi:uint8)
+      (u16le . ,ffi:uint16) (u32le . ,ffi:uint32) (u64le . ,ffi:uint64)
+      (u128le . #f) (f16le . #f) (f32le . ,ffi:float) (f64le . ,ffi:double)
+      (f128le . #f) (s8be . ,ffi:int8) (s16be . ,ffi:int16) (s32be . ,ffi:int32)
+      (s64be . ,ffi:int64) (i128be . #f) (u8be . ,ffi:uint8)
+      (u16be . ,ffi:uint16) (u32be . ,ffi:uint32) (u64be . ,ffi:uint64)
+      (u128be . #f) (f16be . #f) (f32be . ,ffi:float) (f64be . ,ffi:double)
+      (f128be . #f))
+    mtype)
+   (error "mtype->ffi-type: bad mtype")))
+
+(define (cstruct->ffi-struct struct)
+  ;; making this ok for bitfields will be a little involved
+  (map
+   (lambda (field)
+     (let* ((name (cfield-name field))
+            (type (cfield-type field))
+            (class (ctype-class type))
+            (info (ctype-info type)))
+       (case (ctype-class type)
+         ((base) (mtype->ffi-type info))
+         ((struct) (cstruct->ffi-struct info))
+         ((union) (cunion->ffi-struct info))
+         (else (error "not yet supported")))))
+   (caggate-fields (ctype-info struct))))
+
+(define (cunion->ffi-struct union)
+  (error "cunion not yet supported"))
+
+(export mtype->ffi-type cstruct->ffi-struct cunion->ffi-struct)
+
+;; --- c99 support -------------------------------------------------------------
+
+(use-modules (nyacc lang c99 pprint))
+
+(define (mtype->c-type mtype)
+  (or
+   (assq-ref
+    `((s8 . "int8_t") (s16 . "int16_t") (s32 . "int32_t") (s64 . "int64_t")
+      (i128 . "int128_t") (u8 . "uint8_t") (u16 . "uint16_t") (u32 . "uint32_t")
+      (u64 . "uint64_t") (u128 . "uint128_t") (f16 . "float16") (f32 . "float")
+      (f64 . "double") (f128 . "long double") (s8le . "int8_t")
+      (s16le . "int16_t") (s32le . "int32_t") (s64le . "int64_t")
+      (i128le . "int128_t") (u8le . "uint8_t") (u16le . "uint16_t")
+      (u32le . "uint32_t") (u64le . "uint64_t") (u128le . "uint128_t")
+      (f16le . "float16") (f32le . "float") (f64le . "double")
+      (f128le . "long double") (s8be . "int8_t") (s16be . "int16_t")
+      (s32be . "int32_t") (s64be . "int64_t") (i128be . #f) (u8be . "uint8_t")
+      (u16be . "uint16_t") (u32be . "uint32_t") (u64be . "uint64_t")
+      (u128be . "int128_t") (f16be . "float16") (f32be . "float")
+      (f64be . "double") (f128be . "long double"))
+    mtype)
+   (error "mtype->c-type: bad mtype")))
+
+(define (cstruct->c-struct struct)
+  `(struct-def
+    (field-list
+     ,@(map
+        (lambda (field)
+          (let* ((name (cfield-name field))
+                 (type (cfield-type field))
+                 (class (ctype-class type))
+                 (info (ctype-info type)))
+            (case (ctype-class type)
+              ((base)
+               (if name
+                   `(comp-decl
+                     (decl-spec-list
+                      (type-spec (typename ,(mtype->c-type info))))
+                     (comp-declr-list
+                      (comp-declr (ident ,(symbol->string name)))))
+                   `(comp-decl
+                     (decl-spec-list
+                      (type-spec (typename ,(mtype->c-type info)))))))
+              ((struct) #f)
+              ((union) #f)
+              (else (error "not yet supported")))))
+        (caggate-fields (ctype-info struct))))))
+
+(export mtype->c-type cstruct->c-struct)
+
 ;; --- last line ---
