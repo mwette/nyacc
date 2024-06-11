@@ -369,6 +369,24 @@
       (f128be . #f))
     mtype)
    (error "mtype->ffi-type: bad mtype")))
+(define (mtype->ffi-type-name mtype)
+  (or
+   (assq-ref
+    `((s8 . ffi:int8) (s16 . ffi:int16) (s32 . ffi:int32) (s64 . ffi:int64)
+      (i128 . #f) (u8 . ffi:uint8) (u16 . ffi:uint16) (u32 . ffi:uint32)
+      (u64 . ffi:uint64) (u128 . #f) (f16 . #f) (f32 . ffi:float)
+      (f64 . ffi:double) (f128 . #f) (s8le . ffi:int8) (s16le . ffi:int16)
+      (s32le . ffi:int32) (s64le . ffi:int64) (i128le . #f) (u8le . ffi:uint8)
+      (u16le . ffi:uint16) (u32le . ffi:uint32) (u64le . ffi:uint64)
+      (u128le . #f) (f16le . #f) (f32le . ffi:float) (f64le . ffi:double)
+      (f128le . #f) (s8be . ffi:int8) (s16be . ffi:int16) (s32be . ffi:int32)
+      (s64be . ffi:int64) (i128be . #f) (u8be . ffi:uint8)
+      (u16be . ffi:uint16) (u32be . ffi:uint32) (u64be . ffi:uint64)
+      (u128be . #f) (f16be . #f) (f32be . ffi:float) (f64be . ffi:double)
+      (f128be . #f))
+    mtype)
+   (error "mtype->ffi-type: bad mtype")))
+(export mtype->ffi-type-name)
 
 (define (cstruct->ffi-struct struct)
   ;; making this ok for bitfields will be a little involved

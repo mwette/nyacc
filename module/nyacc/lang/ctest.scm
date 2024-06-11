@@ -1,6 +1,7 @@
 ;; ctest.scm
 
 (use-modules (system foreign))
+(use-modules (nyacc lang arch-info))
 (use-modules (nyacc lang cdata))
 
 (use-modules (ice-9 pretty-print))
@@ -29,21 +30,61 @@
         (loop (cons (cons (vector-ref names n)
                           (vector-ref types (random n))) pairs) (1- n)))))
 
+
+;; ----- generate c99 code --------------
+
+(use-modules (nyacc lang c99 pprint))
+
+;; SCM test1(struct foo *foo, int a, uint3_t b)
+(define (gen-c99-test-code pairs case-num)
+  (define sn (string-append "test" (number->string case-num)))
+  (define (name pair) (symbol->string (car pair)))
+  (define (type pair) (symbol->string (cdr pair)))
+  (define (mk-param tspecv pdeclrv)
+    `(param-decl (decl-spec-list (type-spec ,tspecv)) (param-declr ,pdeclrv)))
+  (define (mk-sparam)
+    (mk-param `(struct-ref (ident ,sn)) `(ptr-declr (pointer) (ident "t"))))
+  (define (mk-fparam type name)
+    (let ((t (symbol->string type)) (n (symbol->string name)))
+      (case type
+        ((double float) (mk-param `(float-type ,t) `(ident ,n)))
+        (else (mk-param `(fixed-type ,t) `(ident ,n))))))
+  (define (assn fldname)
+    `(expr-stmt (assn-expr (i-sel (ident ,fldname) (p-expr (ident "t")))
+                           (op "=") (p-expr (ident ,fldname)))))
+  `(trans-unit
+    (decl
+     (decl-spec-list
+      (type-spec
+       (struct-def
+        (ident ,sn)
+        (field-list
+         ,@(map (lambda (pair)
+                  `(comp-decl
+                    (decl-spec-list (type-spec (fixed-type ,(type pair))))
+                    (comp-declr-list (comp-declr (ident ,(name pair))))))
+                pairs))))))
+    (fctn-defn
+     (decl-spec-list (type-spec (fixed-type "int")))
+     (ftn-declr
+      (ident ,sn)
+      (param-list
+       ,(mk-sparam)
+       ,@(map (lambda (pair) (mk-fparam (cdr pair) (car pair))) pairs)))
+     (compd-stmt
+      (block-item-list
+       ,@(map (lambda (pair) (assn (symbol->string (car pair)))) pairs)
+       (return (p-expr (fixed "0"))))))))
+
+
+;; ----- generate scm code --------------
+
 (define (make-struct-from-pairs pairs)
   (let loop ((fields '()) (pairs pairs))
     (if (null? pairs)
         (cstruct fields)
         (loop (cons (list (caar pairs) (cbase (cdar pairs))) fields)
               (cdr pairs)))))
-
-(use-modules (nyacc lang c99 pprint))
-
-(define pairs-1 (make-rand-pairs 3))
-(define struct-1 (make-struct-from-pairs pairs-1))
-(sf "pairs-1:\n") (pp pairs-1)
-;;(sf "caggte:\n") (pretty-print-caggate (ctype-info struct-1))
-;;(sf "ffi struct:\n") (pp (cstruct->ffi-struct struct-1))
-;;(sf "c struct\n") (pp (cstruct->c-struct struct-1))
 
 (define (rand-mtype-val mtype)
   (define (urand bits) (random (expt 2 bits)))
@@ -54,43 +95,44 @@
     ((u32 u32le u32be) (urand 32)) ((i32 i32le i32be) (srand 32))
     ((u64 u64le u64be) (urand 64)) ((i64 i64le i64be) (srand 64))
     ((f32 f32le f32be f64 f64le f64be)
-     (* (1- (* 2 (random 2)))
-        (* (random (expt 2 8)))
-        (expt (exact->inexact 2) (* (1- (* 2 (random 2))) (random 5)))))))
+     (* (1- (* 2 (random 2))) (* (random (expt 2 8)))
+        (expt (exact->inexact 2) (- (random 8) (random 8)))))))
 
-(define (gen-scm-test-ftn n struct)
-  ;; for each field, generate a random value
-  #f)
-
-;; SCM test1(struct foo *foo, int a, uint3_t b)
-(define (gen-c99-test-ftn n struct)
-  (define sn (string-append "test" (number->string n)))
-  (define (mk-param tspecv pdeclrv)
-    `(param-decl (decl-spec-list (type-spec ,tspecv)) (param-declr ,pdeclrv)))
-  (define (mk-sparam)
-    (mk-param `(struct-ref (ident ,sn)) `(ptr-declr (pointer) (ident ,sn))))
-  (define (mk-fparam type name)
-    (mk-param `(ident ,sn) `(ident ,sn)))
-  (define (assn fldname)
-    `(expr-stmt (assn-expr (i-sel (ident ,fldname) (p-expr (ident ,sn)))
-                           (op "=") (p-expr (ident ,fldname)))))
-  (let (
+(define (gen-scm-test-code pairs case-num)
+  (let ((name (string-append "test" (number->string case-num)))
         )
-    `(fctn-defn
-      (decl-spec-list (type-spec (fixed-type "long int")))
-      (ftn-declr
-       (ident ,sn)
-       (param-list
-        ,(mk-sparam)
-        ,(mk-fparam "uint32_t" "a")
-        ,(mk-fparam "uint16_t" "b")))
-      (compd-stmt
-       (block-item-list
-        ,(assn "a")
-        ,(assn "b"))))))
+  ;; for each field, generate a random value
+  `(define ,(string->symbol name)
+     (ffi:pointer->procedure
+      ffi:int (dynamic-func ,name "ctestc")
+      (cons '* ,@(map (lambda (pair)
+                        (mtype->ffi-type-name (mtypeof-basetype (cdr pair))))
+                      pairs))))))
 
-(sf "~s ~s\n" 'f32 (rand-mtype-val 'f32))
-(sf "~s ~s\n" 'i32 (rand-mtype-val 'i32))
-(sf "~s ~s\n" 'u16 (rand-mtype-val 'u16))
+;; ----- run it ---------------------------
+
+;;(sf "~s ~s\n" 'f32 (rand-mtype-val 'f32))
+;;(sf "~s ~s\n" 'i32 (rand-mtype-val 'i32))
+;;(sf "~s ~s\n" 'u16 (rand-mtype-val 'u16))
+
+(define pairs-1 (make-rand-pairs 3))
+(define struct-1 (make-struct-from-pairs pairs-1))
+;;(sf "caggte:\n") (pretty-print-caggate (ctype-info struct-1))
+;;(sf "ffi struct:\n") (pp (cstruct->ffi-struct struct-1))
+;;(sf "c struct\n") (pp (cstruct->c-struct struct-1))
+
+(sf "pairs-1:\n") (pp pairs-1)
+;;(pp (gen-c99-test-code pairs-1 1))
+;;(pretty-print-c99 (gen-c99-test-code pairs-1 1))
+(pp (gen-scm-test-code pairs-1 1))
+
+;; build:
+;; 1. -> random list of pairs
+;; 2. NOPE pairs -> ctype (setters, getters)
+;; 3. pairs -> cfctn
+;; 4. pairs -> pointer->procedure (pairs -> cbases -> ffi-struct)
+;; use:
+;; 1. pairs -> random call (setters
+;; 2. pairs -> check
 
 ;; --- last line ---
