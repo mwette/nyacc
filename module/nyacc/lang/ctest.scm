@@ -204,8 +204,9 @@
     ;;(pperr foo-cd)
     (sf "sptr: ~s\n" sptr)
     (sf "args: ~s\n" args)
-    foo-cd
-    (if #f #f)))
+    ;;(sf "sval.a: ~s\n" (cdata-val foo-cd 'a))
+    (if #f #f)
+    foo-cd))
 
-(test1)
+(define v (test1))
 ;; --- last line ---

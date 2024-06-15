@@ -238,7 +238,7 @@
       (call-with-values
           (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
         (lambda (ix ct)
-          (%make-cdata (cdata-bv bv) ix ct #f)))))
+          (%make-cdata (cdata-bv data) ix ct #f)))))
 
 (define (cdata-val data . tags)
   (call-with-values
