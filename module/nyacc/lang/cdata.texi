@@ -1,0 +1,75 @@
+@c cdata.texi
+
+
+
+@section Intro
+The @code{cdata} module, and it's partner @code{arch-info} provides a way
+to deal with data and types originating from C libraries.  It supports
+cross-hosting using a global @code{*arch*} parameter.
+Size and alignment is tracked for all types.
+Struct types track offsets; bitfields are supported.
+Underneath, type information boils down to signed and unsigned integers
+of specified size and floating point numbers of specified size.  This means
+we can check type equivalence.
+
+The procedures used to create C types are the following:
+@deffn {Procedure} cbase name
+Creates a C base type, given the symbolic @var{name} for that type
+(e.g., @code{unsigned-int}).  The symbol @code{void*} is used for pointers.
+@end deffn
+@deffn {Procedure} cstruct field-list [#:packed? pp]
+Creates a C struct with field list in the form @code{((name type) ...)}
+where @var{name} is a symbolic name (or @code{#f}) and @var{type} is a
+c-type.  Anonymous structs (and unions) are specified using @code{#f} for
+the field name.  For packed structures add @code{#:packed #t}.
+@end deffn
+@deffn {Procedure} cbitfield type size
+Creates a C bitfield type within a structure definition.
+@end deffn
+@deffn {Procedure} cunion field-list
+Creates a C union with field list in the same form as @code{cstruct},
+except bitfield types are not allowed.
+@end deffn
+@deffn {Procedure} cpointer type
+Create a pointer type referencing @var{type}.
+@end deffn
+@deffn {Procedure} carray TBD
+work to go
+@end deffn
+@deffn {Procedure} cfunction TBD
+work to go
+@end deffn
+;; @deffn {Procedure} cdata-ref data tag ...
+Return values @emph{bv},  @emph{ix},  @emph{ct} representing the process
+of accessing the given tags.  For example,
+@example
+(cdata-ref dat1 'a 'b 'c) -> (values bv ix ct)
+@end example
+@end deffn
+@deffn {Procedure} cdata-val cdata
+Return the Scheme value for cdata.  Since we provide no equivalent for
+structures in Scheme, cdata should have type class base, pointer, or array.
+To get the value of a struct field, you should use the following form:
+@example
+(cdata-val (cdata-ref struct-data 'a 'b 'c))
+@end example
+@end deffn
+@deffn {Procedure} cdata-set! data value
+@example
+(cdata-set! (cdata-ref struct-data 'a 'b 'c))
+@end example
+@end deffn
+
+Note the struct and union types will use the record @code{<caggate>}
+to log struct and union specific type information (e.g., the fields).
+
+@c cdata bv ix ct
+@c   (cdata-ref obj . tags) => <ref> == <cdata bv ix ct>
+@c   (cdata-val obj) => <val> | #f
+@c   (cdata-set! <ref> <val>)
+@c   (cdata-detag bv ix ct tag) => (values bv bv ct)
+@c follow-tags
+
+@c (make-Foo* val) => <cdata bv=0xdead ix=0 ct=0xbeef tn="Foo*">
+
+@c --- last line ---

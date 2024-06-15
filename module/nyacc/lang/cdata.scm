@@ -20,11 +20,16 @@
 ;;; Code:
 
 (define-module (nyacc lang cdata)
-  #:export (make-ctype
-            cbase cstruct
-            ctype? ctype-size ctype-align ctype-class ctype-info
-            make-cdata cdata-val cdata-ref cdata-set!)
+  #:export (cbase
+            cstruct cunion cpointer
+            cdata-val cdata-ref cdata-set!
+            make-ctype ctype? ctype-size ctype-align ctype-class ctype-info
+            make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
+            ;; debug
+            caggate-fields caggate-dict
+            )
   #:use-module (ice-9 match)
+  #:use-module (ice-9 format)
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
@@ -79,18 +84,6 @@
     ((f32be) (bytevector-ieee-single-set! bv ix value be))
     ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
-;; if selector then aggregate else base
-;; if base then meta is basetype
-
-;; cdata bv ix ct
-
-;;   (cdata-ref obj . tags) => <ref> == <cdata bv ix ct>
-;;   (cdata-val obj) => <val> | #f
-;;   (cdata-set! <ref> <val>)
-;;   (cdata-detag bv ix ct tag) => (values bv bv ct)
-
-;; (make-Foo* val) => <cdata bv=0xdead ix=0 ct=0xbeef tn="Foo*">
-
 ;; @deftp {Record} <ctype> size align class info [ptype]
 ;; maybe @var{ptype} should only be for @code{cbase} class types
 ;; @end deftp
@@ -121,27 +114,6 @@
   (type cfield-type)
   (offset cfield-offset))
 
-#|
-;; @deftp {Record} <cstruct> fields
-;; This contains a list of fields with name, type and offset (in the struct)
-;; as well as a dictinoary to map name (including names in anonymous structs
-;; and unions) to fields.  Note that for anonymous structs and unions, ...
-;; @end deftp
-(define-record-type <cstruct>
-  (%make-cstruct fields)
-  cstruct?
-  (fields cstruct-fields)            ; list of fields
-  (dict cstruct-dict))               ; reified dict => (type . offset)
-
-;; @deftp {Record} <cunion> fields
-;; @end deftp
-(define-record-type <cunion>
-  (%make-cunion fields)
-  cunion?
-  (fields cunion-fields)             ; alist name => type
-  (dict cunion-dict))                ; reified dict => (type . offset)
-|#
-
 ;; @deftp {Record} <caggate> fields dict
 ;; aggregate: struct or union
 ;; @end deftp
@@ -171,11 +143,9 @@
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
-    (let ((sz (ctype-size type)) (al (ctype-align type))
-          (cl (ctype-class type)) (nf (ctype-info type)))
-      (if (eq? 'base cl)
-          (simple-format port "#<ctype ~a>" nf)
-          (simple-format port "#<ctype ~a>" cl)))))
+    (let ((cl (ctype-class type)) (nf (ctype-info type))
+          (addr (ffi:pointer-address (ffi:scm->pointer type))))
+      (format port "#<ctype ~s 0x~x>" (if (eq? 'base cl) nf cl) addr))))
 
 (define make-ctype %make-ctype)
 

@@ -185,7 +185,7 @@
 
 (define (test1)
   (let* ((case-num 1)
-         (pairs '((a . int) (b . int) (c . unsigned-int) (c . double)
+         (pairs '((a . int) (b . int) (c . unsigned-int) (d . double)
                   (e . double)))
          (tname (string-append "test" (number->string case-num)))
          (names (map car pairs))
