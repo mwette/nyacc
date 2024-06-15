@@ -58,6 +58,29 @@
 (define *debug* (make-parameter #f))
 (define *xdef?* (lambda (name mode) (memq mode '(code decl))))
 
+(eval-when (expand load eval)
+  (define (read-hereis-text reader-char port)
+    (define start-sq '(#\" #\" #\"))
+    (define end-sq '(#\" #\" #\"))
+    (define (skip-seq seq ch)
+      (let loop ((bs seq) (ch ch))
+        (cond
+         ((null? bs) ch)
+         ((char=? ch (car bs)) (loop (cdr bs) (read-char port))))))
+    (let loop ((chl '()) (ex '()) (es end-sq)
+               (ch (let ((ch (skip-seq start-sq reader-char)))
+                     (if (char=? #\newline ch) (read-char port) ch))))
+      (cond
+       ((char=? ch (car es))
+        (let ((es (cdr es)))
+          (if (null? es)
+              (reverse-list->string chl)
+              (loop chl (cons ch ex) es (read-char port)))))
+       ((pair? ex) (loop (append ex chl) '() end-sq ch))
+       (else (loop (cons ch chl) ex es (read-char port))))))
+
+  (read-hash-extend #\" read-hereis-text))
+
 (define* (parse-file file #:key cpp-defs inc-dirs mode debug)
   (with-input-from-file file
     (lambda ()
@@ -445,5 +468,39 @@
                 "#warning \"oops\"\n"))
          (tree (parse-string code)))
     #t))
+
+(when #f
+  (let* ((code (string-append
+                 "#include <stdint.h>\n"
+                 "typedef struct {\n"
+                 "  uint32_t a;\n"
+                 "  uint16_t b;\n"
+                 "  double c;\n"
+                 "  uint16_t d;\n"
+                 "  int16_t e;\n"
+                 "} x;\n"))
+           (tree (parse-string code)))
+     (pretty-print tree)))
+
+(when #f
+  (let* ((code #"""
+struct test1 {
+  int a;
+  short b;
+  double c;
+};
+
+long int test1(struct foo *foo, int a, short b, double c) {
+  foo->a = a;
+  foo->b = b;
+  foo->c = c;
+  return 0;
+} """)
+         (tree (parse-string code))
+         (sdef (sx-ref tree 1))
+         (fdef (sx-ref tree 2))
+         )
+    (pretty-print tree)
+    #f))
 
 ;; --- last line ---

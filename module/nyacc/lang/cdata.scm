@@ -23,7 +23,7 @@
   #:export (make-ctype
             cbase cstruct
             ctype? ctype-size ctype-align ctype-class ctype-info
-            )
+            make-cdata cdata-val cdata-ref cdata-set!)
   #:use-module (ice-9 match)
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (srfi srfi-9)
@@ -34,6 +34,50 @@
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
 (define (sferr fmt . args) (apply simple-format #t fmt args))
+
+;; => arch-info
+(define (mtype-bv-ref mtype bv ix)
+  (case mtype
+    ((u8) (bytevector-u8-ref bv ix))
+    ((s8) (bytevector-s8-ref bv ix))
+    ((u16le) (bytevector-u16-ref bv ix le))
+    ((s16le) (bytevector-s16-ref bv ix le))
+    ((u32le) (bytevector-u32-ref bv ix le))
+    ((s32le) (bytevector-s32-ref bv ix le))
+    ((u64le) (bytevector-u64-ref bv ix le))
+    ((s64le) (bytevector-s64-ref bv ix le))
+    ((f32le) (bytevector-ieee-single-ref bv ix le))
+    ((f64le) (bytevector-ieee-double-ref bv ix le))
+    ((u16be) (bytevector-u16-ref bv ix be))
+    ((s16be) (bytevector-s16-ref bv ix be))
+    ((u32be) (bytevector-u32-ref bv ix be))
+    ((s32be) (bytevector-s32-ref bv ix be))
+    ((u64be) (bytevector-u64-ref bv ix be))
+    ((s64be) (bytevector-s64-ref bv ix be))
+    ((f32be) (bytevector-ieee-single-ref bv ix be))
+    ((f64be) (bytevector-ieee-double-ref bv ix be))))
+
+;; => arch-info
+(define (mtype-bv-set! mtype bv ix value)
+  (case mtype
+    ((u8) (bytevector-u8-set! bv ix value))
+    ((s8) (bytevector-s8-set! bv ix value))
+    ((u16le) (bytevector-u16-set! bv ix value le))
+    ((s16le) (bytevector-s16-set! bv ix value le))
+    ((u32le) (bytevector-u32-set! bv ix value le))
+    ((s32le) (bytevector-s32-set! bv ix value le))
+    ((u64le) (bytevector-u64-set! bv ix value le))
+    ((s64le) (bytevector-s64-set! bv ix value le))
+    ((f32le) (bytevector-ieee-single-set! bv ix value le))
+    ((f64le) (bytevector-ieee-double-set! bv ix value le))
+    ((u16be) (bytevector-u16-set! bv ix value be))
+    ((s16be) (bytevector-s16-set! bv ix value be))
+    ((u32be) (bytevector-u32-set! bv ix value be))
+    ((s32be) (bytevector-s32-set! bv ix value be))
+    ((u64be) (bytevector-u64-set! bv ix value be))
+    ((s64be) (bytevector-s64-set! bv ix value be))
+    ((f32be) (bytevector-ieee-single-set! bv ix value be))
+    ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
 ;; if selector then aggregate else base
 ;; if base then meta is basetype
@@ -57,16 +101,6 @@
   (align ctype-align)              ; alignment in bytes
   (class ctype-class)              ; type class (base aggr array bits)
   (info ctype-info))                ; class-specific info
-
-;; @deftp {Record} <cdata> bv ix ct [tn]
-;; @end deftp
-(define-record-type <cdata>
-  (%make-cdata bv ix ct tn)
-  cdata?
-  (bv cdata-bv)                         ; bvec
-  (ix cdata-ix)                         ; index
-  (ct cdata-ct)                         ; type
-  (tn cdata-tn))                        ; optional (interned) type name
 
 ;; @deftp {Record} <cbitfield> type shift width sext
 ;; @end deftp
@@ -126,12 +160,14 @@
   (length carray-length))
 
 ;; @deftp {Record} <cpointer> type
-;; NOT USED (YET)
+;; Once we get to this level, we shouldn't need @code{arch} anymore
+;; so we need to log the pointer type
 ;; @end deftp
 (define-record-type <cpointer>
-  (%make-cpointer type)
+  (%make-cpointer type mtype)
   cpointer?
-  (type cpointer-type))
+  (type cpointer-type)
+  (mtype cpointer-mtype))
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
@@ -143,32 +179,31 @@
 
 (define make-ctype %make-ctype)
 
-(define* (make-cdata bv ix ct #:optional (tn ""))
-  (%make-cdata bv ix ct tn))
+;; @deftp {Record} <cdata> bv ix ct [tn]
+;; @end deftp
+(define-record-type <cdata>
+  (%make-cdata bv ix ct tn)
+  cdata?
+  (bv cdata-bv)                         ; bvec
+  (ix cdata-ix)                         ; index
+  (ct cdata-ct)                         ; type
+  (tn cdata-tn))                        ; optional (interned) type name
+
+(set-record-type-printer! <cdata>
+  (lambda (data port)
+    (let* ((bv (cdata-bv data))
+           (ix (cdata-ix data))
+           (type (cdata-ct data))
+           (tn (cdata-tn data))
+           (cl (ctype-class type))
+           (nf (ctype-info type))
+           (addr (ffi:pointer-address (ffi:bytevector->pointer bv)))
+           )
+      (format port "#<cdata 0x~x" addr)
+      (format port " ~a>" cl))))
 
 (define be (endianness big))
 (define le (endianness little))
-
-(define (cdata-detag bv ix ct tag)
-  (let ((ti (ctype-info ct)))
-    (case (ctype-class ct)
-      ((struct union)
-       (let ((fld (assq-ref (caggate-dict ti) tag)))
-         (values bv (+ ix (cfield-offset fld)) (cfield-type fld))))
-      ((array)
-       (unless (integer? tag) (error "bad array ref"))
-       (let ((type (carray-type ti)))
-         (values bv (+ ix (* tag (ctype-size type))) type)))
-      ((bitfield)
-       (error "tbd")))))
-
-(define (cdata-ref data . tags)
-  (let ((bv (cdata-bv data)))
-    (let loop ((ix (cdata-ix data)) (ct (cdata-ct data)) (tags tags))
-      (if (null? tags)
-          (make-cdata bv ix ct)
-          (call-with-values (lambda () (cdata-detag bv ix ct (car tags)))
-            (lambda (bv ix ct) (loop ix ct (cdr tags))))))))
 
 (define (cbase-signed? base-info)
   (and
@@ -176,34 +211,60 @@
    #t))
 (export cbase-signed?)
 
-(define (cdata-val data)
-  (let ((bv (cdata-bv data))
-        (ix (cdata-ix data))
-        (ct (cdata-ct data)))
+
+(define (ctype-detag ix ct tag)
+  (let ((ti (ctype-info ct)))
     (case (ctype-class ct)
-      ((base)
-       (case (ctype-info ct)
-         ((u8) (bytevector-u8-ref bv ix))
-         ((s8) (bytevector-s8-ref bv ix))
-         ((u16le) (bytevector-u16-ref bv ix le))
-         ((s16le) (bytevector-s16-ref bv ix le))
-         ((u32le) (bytevector-u32-ref bv ix le))
-         ((s32le) (bytevector-s32-ref bv ix le))
-         ((u64le) (bytevector-u64-ref bv ix le))
-         ((s64le) (bytevector-s64-ref bv ix le))
-         ((f32le) (bytevector-ieee-single-ref bv ix le))
-         ((f64le) (bytevector-ieee-double-ref bv ix le))
-         ((u16be) (bytevector-u16-ref bv ix be))
-         ((s16be) (bytevector-s16-ref bv ix be))
-         ((u32be) (bytevector-u32-ref bv ix be))
-         ((s32be) (bytevector-s32-ref bv ix be))
-         ((u64be) (bytevector-u64-ref bv ix be))
-         ((s64be) (bytevector-s64-ref bv ix be))
-         ((f32be) (bytevector-ieee-single-ref bv ix be))
-         ((f64be) (bytevector-ieee-double-ref bv ix be))))
+      ((struct union)
+       (let ((fld (assq-ref (caggate-dict ti) tag)))
+         (values (+ ix (cfield-offset fld)) (cfield-type fld))))
+      ((array)
+       (unless (integer? tag) (error "bad array ref"))
+       (let ((type (carray-type ti)))
+         (values (+ ix (* tag (ctype-size type))) type)))
+      ((bitfield)
+       (error "tbd")))))
+
+(define (follow-tags ix ct tags)
+  (let loop ((ix ix) (ct ct) (tags tags))
+    (if (null? tags)
+        (values ix ct)
+        (call-with-values (lambda () (ctype-detag ix ct (car tags)))
+          (lambda (ix ct) (loop ix ct (cdr tags)))))))
+
+(define (cdata-ref data . tags)
+  (if (null? tags)
+      data
+      (call-with-values
+          (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
+        (lambda (ix ct)
+          (%make-cdata (cdata-bv bv) ix ct #f)))))
+
+(define (cdata-val data . tags)
+  (call-with-values
+      (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
+    (lambda (ix ct)
+      (let ((bv (cdata-bv data)))
+        (case (ctype-class ct)
+          ((base)
+           (mtype-bv-ref (ctype-info ct) bv ix))
+          ((pointer)
+           (ffi:make-pointer
+            (mtype-bv-ref (cpointer-mtype (ctype-info ct)) bv ix)))
+          ((bitfield) #f)
+          ((struct) #f)
+          ((union) #f)
+          ((array) #f)
+          (else (error "bad stuff")))))))
+
+(define (cdata-set! data value)
+  (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
+    (case (ctype-class ct)
+      ((base) (mtype-bv-set! (ctype-info ct) bv ix value))
+      ((pointer) (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
+      ((bitfield) #f)
       ((struct) #f)
       ((union) #f)
-      ((bitfield) #f)
       ((array) #f)
       (else
        (error "bad stuff")))))
@@ -211,27 +272,41 @@
 (define (ctype-equal? a b)
   #f)
 
-
+#|
 (define* (make-cstruct flds #:key packed?)
   (let loop ((cfl '()) (sfl flds))
     (if (null? sfl) (reverse cfl)
         (let ()
           (loop (cons (car sfl) cfl) (cdr sfl))))))
+|#
 
-
-(define (make-cbase name)
-  (let* ((mtype (mtypeof-basetype name))
-         (size (sizeof-basetype name))
-         (align (alignof-basetype name)))
-    (%make-ctype size align 'base mtype)))
+(define* (make-cdata type #:optional value #:key name)
+  (let ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))
+    (if value (cdata-set! data value))
+    data))
 
 (define (cpointer type)
-  (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*) 'pointer type))
+  (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
+               'pointer (%make-cpointer type (mtypeof-basetype 'void*))))
+
+;; This is more than a bent pipe.  It allocates storage.
+(define (pointer-to data)
+  (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
+         (pa (+ (ffi:pointer-address (ffi:bytevector->pointer bv)) ix))
+         )
+    (make-cdata (cpointer ct) pa)))
+
+(export pointer-to)
 
 ;; @deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
 ;; @end deffn
 (define (make-cbase-map arch) ;; => ((double . (cbase "double")) ...)
+  (define (make-cbase name)
+    (let* ((mtype (mtypeof-basetype name))
+           (size (sizeof-basetype name))
+           (align (alignof-basetype name)))
+      (%make-ctype size align 'base mtype)))
   (with-arch arch
     (map (lambda (name) (cons name (make-cbase name)))
          base-type-symbol-list)))
@@ -334,6 +409,7 @@
                          ssz (max fal sal) (cdr sfl)))
                  (loop cfl ral ssz sal (cdr sfl)))))
           (otherwize
+           (sferr "cstruct bad form: ~s" (car sfl))
            (error "yuck"))))))
 
 (define* (pretty-print-caggate caggate #:optional port)
