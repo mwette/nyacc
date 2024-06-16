@@ -27,6 +27,8 @@
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             ;; debug
             caggate-fields caggate-dict
+            cfield-offset cfield-type cfield-offset
+            cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-sext?
             )
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
@@ -95,15 +97,15 @@
   (class ctype-class)              ; type class (base aggr array bits)
   (info ctype-info))                ; class-specific info
 
-;; @deftp {Record} <cbitfield> type shift width sext
+;; @deftp {Record} <cbitfield> type shift width sext?
 ;; @end deftp
 (define-record-type <cbitfield>
-  (%make-cbitfield type shift width sext)
+  (%make-cbitfield mtype shift width sext?)
   cbitfield?
-  (type cbitfield-type)
+  (mtype cbitfield-mtype)
   (shift cbitfield-shift)
   (width cbitfield-width)
-  (sext cbitfield-sext))
+  (sext? cbitfield-sext?))
 
 ;; @deftp {Record} <cfield> name type offset
 ;; @end deftp
@@ -120,8 +122,8 @@
 (define-record-type <caggate>
   (%make-caggate fields dict)
   caggate?
-  (fields caggate-fields)             ; alist name => type
-  (dict caggate-dict))                ; reified dict => (type . offset)
+  (fields caggate-fields)             ; list of fields (change to vector)
+  (dict caggate-dict))                ; dict: name => field
 
 ;; @deftp {Record} <carray> type length
 ;; @end deftp
@@ -140,6 +142,9 @@
   cpointer?
   (type cpointer-type)
   (mtype cpointer-mtype))
+
+;; @deftp {Record} <cfunction> return-type param-types
+;; @end deftp
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
@@ -175,11 +180,11 @@
 (define be (endianness big))
 (define le (endianness little))
 
-(define (cbase-signed? base-info)
+(define (mtype-signed? mtype)
   (and
-   (member base-info '(s8 s16 s32 s64 s16 s32le s64le s16be s32be s64be))
+   (member mtype '(s8 s16 s32 s64 s16 s32le s64le s16be s32be s64be))
    #t))
-(export cbase-signed?)
+(export mtype-signed?)
 
 
 (define (ctype-detag ix ct tag)
@@ -210,6 +215,10 @@
         (lambda (ix ct)
           (%make-cdata (cdata-bv data) ix ct #f)))))
 
+(define (sign-bitfield v w)
+  (let ((smask (expt 2 (1- w))))
+    (if (logand v smask) (- (1+ (logand v (1- smask)))) v)))
+
 (define (cdata-val data . tags)
   (call-with-values
       (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
@@ -221,7 +230,13 @@
           ((pointer)
            (ffi:make-pointer
             (mtype-bv-ref (cpointer-mtype (ctype-info ct)) bv ix)))
-          ((bitfield) #f)
+          ((bitfield)
+           (let* ((bi (ctype-info ct))
+                  (mt (cbitfield-mtype bi)) (sh (cbitfield-shift bi))
+                  (wd (cbitfield-width bi)) (sx (cbitfield-sext? bi))
+                  (sm (expt 2 (1- wd))) ; sign-bit mask
+                  (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
+             (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
           ((struct) #f)
           ((union) #f)
           ((array) #f)
@@ -365,14 +380,16 @@
                        (add-fields (caggate-fields (ctype-info type)) ssz ral)
                        (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))))
           ((name type width)            ; bitfield
+           (unless (eq? (ctype-class type) 'base) (error "bad type"))
            (let* ((fsz (ctype-size type))
                   (fal (ctype-align type))
-                  (sx? (cbase-signed? (ctype-info type)))
+                  (mty (ctype-info type))
+                  (sx? (mtype-signed? mty))
                   (ssz (incr-bit-size width fal ssz))
                   (cio (bf-offset width fal ssz)) ; ci offset in struct
                   (bfo (- (* 8 ssz) width (* 8 cio)))) ; bf offset in ci
              (if name
-                 (let* ((bf (%make-cbitfield type bfo width sx?))
+                 (let* ((bf (%make-cbitfield mty bfo width sx?))
                         (ty (%make-ctype fsz fal 'bitfield bf))
                         (cf (%make-cfield name ty cio)))
                    (loop (cons cf cfl) (acons name cf ral)
