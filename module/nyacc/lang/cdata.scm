@@ -257,13 +257,6 @@
 (define (ctype-equal? a b)
   #f)
 
-#|
-(define* (make-cstruct flds #:key packed?)
-  (let loop ((cfl '()) (sfl flds))
-    (if (null? sfl) (reverse cfl)
-        (let ()
-          (loop (cons (car sfl) cfl) (cdr sfl))))))
-|#
 
 (define* (make-cdata type #:optional value #:key name)
   (let ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))
@@ -302,16 +295,6 @@
     (unless (arch-ctype-map arch)
       (set-arch-ctype-map! arch (make-cbase-map arch)))
     (assq-ref (arch-ctype-map arch) symname)))
-
-
-#|
-(define (bfud exp mtail size align) ; bit-field update
-  (call-with-values (lambda () (sizeof-mtail mtail udict))
-    (lambda (elt-sz elt-al)
-      (let* ((bits (eval-c99-cx exp udict))
-             (size (incr-bit-size bits elt-al size)))
-        (values size (max elt-al align))))))
-|#
 
 ;; special case: to be confirmed
 (define (cbitfield type width)
@@ -364,7 +347,8 @@
     ;; cfl: c field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl)
-        (%make-ctype ssz sal 'struct (%make-caggate (reverse cfl) (reverse ral)))
+        (%make-ctype (incr-size 0 sal ssz) sal 'struct
+                     (%make-caggate (reverse cfl) (reverse ral)))
         (match (car sfl)
           ((name type)                  ; non-bitfield
            (let* ((fsz (ctype-size type))
