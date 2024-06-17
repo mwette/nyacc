@@ -16,7 +16,8 @@
   (apply simple-format (current-output-port) fmt args))
 
 
-;;(define (compile code
+(define (tsym->str tsym)
+  (string-map (lambda (c) (if (char=? #\- c) #\space c)) (symbol->string tsym)))
 
 ;; void struct_init(foo_t* *s, int a, double b, ...)
 
@@ -24,82 +25,14 @@
 
 ;; make random struct with n fields
 (define names #(a a b c d e f g h i j k l m n o p q r))
-(define types #(int double unsigned-int short-int unsigned-short))
+(define types #(int unsigned-int short unsigned-short float double))
 
 (define nname (vector-length names))
 (define ntype (vector-length types))
-
-(define (make-rand-pairs n)
-  (let loop ((pairs '()) (n n))
-    (if (zero? n) pairs
-        (loop (cons (cons (vector-ref names n)
-                          (vector-ref types (random n))) pairs) (1- n)))))
-
-
-;; ----- generate c99 code --------------
-
-(use-modules (nyacc lang c99 pprint))
-
-;; SCM test1(struct foo *foo, int a, uint3_t b)
-(define (gen-c99-test-code kase seed)
-  (define (xmk-fparam type name)
-    (let () ;;(t (symbol->string type)) (n (symbol->string name)))
-      (case type
-        ;;((double float) (mk-param `(float-type ,t) `(ident ,n)))
-        (else #f)))) ;; (mk-param `(fixed-type ,t) `(ident ,n))))))
-  (define case-num (car kase))
-  (define pairs (cdr kase))
-  (define sn (string-append "test" (number->string case-num)))
-  (define (name pair) (symbol->string (car pair)))
-  (define (type pair) (symbol->string (cdr pair)))
-  (define (mk-param tspecv pdeclrv)
-    `(param-decl (decl-spec-list (type-spec ,tspecv)) (param-declr ,pdeclrv)))
-  (define (mk-sparam)
-    (mk-param `(struct-ref (ident ,sn)) `(ptr-declr (pointer) (ident "t"))))
-  (define (mk-fparam type name)
-    (let ((t (symbol->string type)) (n (symbol->string name)))
-      (case type
-        ((double float) (mk-param `(float-type ,t) `(ident ,n)))
-        (else (mk-param `(fixed-type ,t) `(ident ,n))))))
-  (define (assn fldname)
-    `(expr-stmt (assn-expr (i-sel (ident ,fldname) (p-expr (ident "t")))
-                           (op "=") (p-expr (ident ,fldname)))))
-  (cons*
-   `(decl
-     (decl-spec-list
-      (type-spec
-       (struct-def
-        (ident ,sn)
-        (field-list
-         ,@(map (lambda (pair)
-                  `(comp-decl
-                    (decl-spec-list (type-spec (fixed-type ,(type pair))))
-                    (comp-declr-list (comp-declr (ident ,(name pair))))))
-                pairs))))))
-   `(fctn-defn
-     (decl-spec-list (type-spec (fixed-type "int")))
-     (ftn-declr
-      (ident ,sn)
-      (param-list
-       ,(mk-sparam)
-       ,@(map (lambda (pair) (mk-fparam (cdr pair) (car pair))) pairs)))
-     (compd-stmt
-      (block-item-list
-       ,@(map (lambda (pair) (assn (symbol->string (car pair)))) pairs)
-       (return (p-expr (fixed "0"))))))
-   seed))
-
-;; ----- generate scm code --------------
-
-(define (make-struct-from-pairs pairs)
-  (let loop ((fields '()) (pairs pairs))
-    (if (null? pairs)
-        (cstruct fields)
-        (loop (cons (list (caar pairs) (cbase (cdar pairs))) fields)
-              (cdr pairs)))))
+(define nitype (- ntype 2))
 
 (define* (rand-mtype-val mtype #:optional width)
-  (define (urand bits) (random (expt 2 (or width bits))))
+  (define (urand bits) (1+ (random (1- (expt 2 (or width bits))))))
   (define (srand bits) (- (random (expt 2 (or width bits)))
                           (expt 2 (1- (or width bits)))))
   (case mtype
@@ -110,6 +43,58 @@
     ((f32 f32le f32be f64 f64le f64be)
      (* (1- (* 2 (random 2))) (* (random (expt 2 8)))
         (expt (exact->inexact 2) (- (random 8) (random 8)))))))
+
+(define (make-rand-fields n)
+  (define (rtype n) (vector-ref types (random n)))
+  (let loop ((flds '()) (pbf #f) (n n))
+    (if (zero? n) flds
+        (let* ((rndN (random 3))
+               (cbf (if pbf (positive? rndN) (zero? rndN)))
+               (name (vector-ref names n)))
+          (loop (cons (if cbf
+                          (list name (rtype nitype) (1+ (random 8)))
+                          (list name (rtype ntype)))
+                      flds)
+                cbf (1- n))))))
+
+;; ----- generate c99 code --------------
+
+(use-modules (nyacc lang c99 pprint))
+
+;; SCM test1(struct foo *foo, int a, uint3_t b)
+(define (gen-c99-test-code kase seed)
+  (define case-num (car kase))
+  (define fields (cdr kase))
+  (define sn (string-append "test" (number->string case-num)))
+  (define (mk-field fld)
+    (if (= 3 (length fld))
+        (format #f "  ~a ~a: ~a;\n" (tsym->str (cadr fld)) (car fld) (caddr fld))
+        (format #f "  ~a ~a;\n" (tsym->str (cadr fld)) (car fld))))
+  (define (mk-tparam fld)
+    (format #f ", ~a ~a" (tsym->str (list-ref fld 1)) (list-ref fld 0)))
+  (define (mk-setter fld)
+    (format #f "  t->~a = ~a;\n" (list-ref fld 0) (list-ref fld 0)))
+
+  (cons*
+   (string-append
+    "struct " sn " {\n"
+    (apply string-append (map mk-field fields))
+    "};\n\n")
+   (string-append
+    "unsigned long " sn "(struct " sn " *t"
+    (apply string-append (map mk-tparam fields)) ") {\n"
+    (apply string-append (map mk-setter fields))
+    "  return sizeof(*t);\n}\n\n\n")
+   seed))
+
+;; ----- generate scm code --------------
+
+(define (make-struct-from-pairs pairs)
+  (let loop ((fields '()) (pairs pairs))
+    (if (null? pairs)
+        (cstruct fields)
+        (loop (cons (list (caar pairs) (cbase (cdar pairs))) fields)
+              (cdr pairs)))))
 
 (define (gen-scm-test-code pairs case-num seed)
   (let ((name (string-append "test" (number->string case-num))))
@@ -125,28 +110,13 @@
 
 ;; ----- run it ---------------------------
 
-;;(sf "~s ~s\n" 'f32 (rand-mtype-val 'f32))
-;;(sf "~s ~s\n" 'i32 (rand-mtype-val 'i32))
-;;(sf "~s ~s\n" 'u16 (rand-mtype-val 'u16))
-
-;;(define pairs-1 (make-rand-pairs 3))
-;;(define struct-1 (make-struct-from-pairs pairs-1))
-;;(sf "caggte:\n") (pretty-print-caggate (ctype-info struct-1))
-;;(sf "ffi struct:\n") (pp (cstruct->ffi-struct struct-1))
-;;(sf "c struct\n") (pp (cstruct->c-struct struct-1))
-
-;;(sf "pairs-1:\n") (pp pairs-1)
-;;(pp (gen-c99-test-code pairs-1 1))
-;;(pretty-print-c99 (gen-c99-test-code pairs-1 1))
-;;(pp (gen-scm-test-code pairs-1 1))
-
 (define *nfld* 5)
 (define *ntst* 1)
 (use-modules (system foreign))
 (use-modules (system foreign-library))
 
 (define cases
-  (map (lambda (ix) (cons ix (make-rand-pairs *nfld*))) (iota 3)))
+  (map (lambda (ix) (cons ix (make-rand-fields *nfld*))) (iota 3)))
 
 (define (gen-code cases)
   (with-output-to-file "ztest.c"
@@ -155,28 +125,6 @@
        (cons 'trans-unit (fold gen-c99-test-code '() cases)))))
   (system "gcc -o ztest.so -shared -fPIC ztest.c")
   "ztest")
-
-#|
-(define (foo)
-  (call-with-values
-      (lambda ()
-        (let loop ((scmxl '()) (c99xl '()) (n *ntst*))
-          (if (zero? n)
-              (values scmxl c99xl)
-              (let ((pairs (make-rand-pairs *nfld*)))
-                (loop (gen-scm-test-code pairs n scmxl)
-                      (gen-c99-test-code pairs n c99xl)
-                      (1- n))))))
-    (lambda (scmxl c99xl)
-      (let* ((c99port (open-output-file "ztest.c")))
-        (pretty-print-c99 `(trans-unit . c99xl) c99port)
-        (close-port c99port)
-        (system "gcc -o ztest.so -shared -fPIC ztest.c")
-        (let loop ((n 1) (xl scmxl))
-          (let* ((fname (string-append "test" (number->string n)))
-                 (ftn (foreign-library-function "ztest" fname)))
-            #f))))))
-|#
 
 ;; build:
 ;; 1. -> random list of pairs
@@ -194,7 +142,7 @@
          (names (map car fields))
          (types (map cadr fields))
          (foo-ct (cstruct (map (lambda (name type) (list name (cbase type)))
-                             names types)))
+                               names types)))
          (foo-cd (make-cdata foo-ct))
          (f (pointer->procedure
              int (foreign-library-pointer "ztest" tname)
@@ -206,42 +154,44 @@
     (sf "test1 args: ~s\n" args)
     foo-cd))
 
-(define (test2)
-  (let* ((case-num 2)
-         (fields '((a int) (b int 3) (c unsigned-int 4) (d double)))
-         (tname (string-append "test" (number->string case-num)))
+(define (exec-test case-num fields)
+  (let* ((tname (string-append "test" (number->string case-num)))
          (names (map car fields))
          (types (map cadr fields))
-         (foo-ct (cstruct
-                  (map (lambda (fld)
-                         (match fld
-                           ((name type) (list name (cbase type)))
-                           ((name type width) (list name (cbase type) width))))
-                       fields)))
-         (foo-cd (make-cdata foo-ct))
-         (f (pointer->procedure
-             unsigned-long (foreign-library-pointer "ztest" tname)
-             (cons '* (map (lambda (t) (mtype->ffi-type (mtypeof-basetype t)))
-                           types))))
-         (sptr (cdata-val (pointer-to foo-cd)))
-         (args (map
-                (lambda (fld)
-                  (rand-mtype-val (mtypeof-basetype (cadr fld))
-                                  (and (pair? (cddr fld)) (caddr fld))))
-                fields))
-         (res (apply f sptr args))
-         (size (ctype-size foo-ct))
-         (bv (cdata-bv foo-cd))
+         (t-ct (cstruct
+                (map (lambda (fld)
+                       (match fld
+                         ((name type) (list name (cbase type)))
+                         ((name type width) (list name (cbase type) width))))
+                     fields)))
+         (t-cd (make-cdata t-ct))
+         (ftn (pointer->procedure
+               unsigned-long (foreign-library-pointer "ztest" tname)
+               (cons '* (map (lambda (t) (mtype->ffi-type (mtypeof-basetype t)))
+                             types))))
+         (sptr (cdata-val (pointer-to t-cd)))
+         (args (map (lambda (fld)
+                      (rand-mtype-val (mtypeof-basetype (cadr fld))
+                                      (and (pair? (cddr fld)) (caddr fld))))
+                    fields))
+         (res (apply ftn sptr args))
+         (size (ctype-size t-ct))
+         (bv (cdata-bv t-cd))
          )
-    (sf "test2 args: ~s\n" args)
-    (sf "test2 scm-size: ~s vs c99-size ~s\n" size res)
-    (sf "test2 b => ~s\n" (cdata-val (cdata-ref foo-cd 'b)))
-    (sf "test2 c => ~s\n" (cdata-val (cdata-ref foo-cd 'c)))
-    (sf "test2 d => ~s\n" (cdata-val (cdata-ref foo-cd 'd)))
-    (format #t "0b~b\n" (bytevector-s32-native-ref bv 4))
-    foo-cd))
+    (and
+     (eqv? (ctype-size t-ct) res)
+     (fold
+      (lambda (fld arg seed)
+        (and (eqv? (cdata-val (cdata-ref t-cd) 'b) arg) seed))
+      #t fields args))))
 
-;;(define d1 (test1))
-(define d2 (test2))
+;;(define d2 (exec-test 2 '((a int) (b int) (c unsigned-int) (d double))))
+;;(sf "~s\n" (make-rand-fields 4))
+;;(sf "~s\n" (make-rand-fields 5))
+;;(sf "~s\n" (make-rand-fields 6))
+;;(sf "~s\n" (make-rand-fields 7))
+;;(pp cases)
+
+(sf "~a" (gen-c99-test-code (car cases) '()))
 
 ;; --- last line ---
