@@ -349,7 +349,8 @@
         dict fields))
 
 ;; @deffn {Procedure} cstruct fields [packed] => ctype
-;; fields is a list with entries @code{(name type)}
+;; fields is a list with entries @code{(name type)} where @code{type} is
+;; a @code{<ctype>} object or a symbol for a base type.
 ;; @end deffn
 (define* (cstruct fields #:optional packed?)
   ;; cases
@@ -369,7 +370,8 @@
                      (%make-cstruct (reverse cfl) (reverse ral)))
         (match (car sfl)
           ((name type)                  ; non-bitfield
-           (let* ((fsz (ctype-size type))
+           (let* ((type (cond ((symbol? type) (cbase type)) (else type)))
+                  (fsz (ctype-size type))
                   (fal (ctype-align type))
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
                   (ssz (incr-bit-size 0 fal ssz))
@@ -383,7 +385,7 @@
                        (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))))
           ((name type width)            ; bitfield
            (unless (eq? (ctype-class type) 'base) (error "bad type"))
-           (let* ((was-ssz ssz)
+           (let* ((type (cond ((symbol? type) (cbase type)) (else type)))
                   (fsz (ctype-size type))
                   (fal (ctype-align type))
                   (mty (ctype-info type))

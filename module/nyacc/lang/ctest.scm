@@ -15,6 +15,10 @@
 (define (sf fmt . args)
   (apply simple-format (current-output-port) fmt args))
 
+(define (unload-foreign-library lib)
+  ((@@ (system foreign-library) dlclose)
+   ((@@ (system foreign-library) foreign-library-handle) lib)))
+
 
 (define (tsym->str tsym)
   (string-map (lambda (c) (if (char=? #\- c) #\space c)) (symbol->string tsym)))
@@ -106,18 +110,20 @@
 
 (define *nfld* 5)
 (define *ntst* 1)
+(define c99-basename "ztest")
 (use-modules (system foreign))
 (use-modules (system foreign-library))
 
 (define (gen-code cases)
-  (with-output-to-file "ztest.c"
+  (with-output-to-file (string-append c99-basename ".c")
     (lambda ()
       (for-each (lambda (code) (display code)) (map gen-c99-test-code cases))
       (display "#include <stdio.h>\n")
-      (display "int Main() { printf(\"%ld\\n\", sizeof(struct test0)); }\n\n")
+      (display "int Zmain() { printf(\"%ld\\n\", sizeof(struct test0)); }\n\n")
       ))
-  (system "gcc -o ztest.so -shared -fPIC ztest.c")
-  "ztest")
+  (system (simple-format #f "gcc -o ~a.so -shared -fPIC ~a.c"
+                         c99-basename c99-basename))
+  c99-basename)
 
 ;; build:
 ;; 1. -> random list of pairs
@@ -129,15 +135,17 @@
 ;; 2. pairs -> check
 
 (define (exec-test case-num fields)
+
   (define (field->rand-val fld)
     (rand-mtype-val (mtypeof-basetype (cadr fld))
                     (and (pair? (cddr fld)) (caddr fld))))
 
-  ;; TODO: use dlopen to load ztest.so, and dlclose() at completion
-  ;;       maybe use dynamic-wind for that
+  (define testlib #f)
 
   (dynamic-wind
-    (lambda () #t)
+
+    (lambda () (set! testlib (load-foreign-library c99-basename)) )
+
     (lambda ()
       (let* ((tname (string-append "test" (number->string case-num)))
              (names (map car fields))
@@ -152,7 +160,9 @@
              (t-cd (make-cdata t-ct))
              (bv (cdata-bv t-cd))
              (ftn (pointer->procedure
-                   unsigned-long (foreign-library-pointer "ztest" tname)
+                   ;;unsigned-long (foreign-library-pointer c99-basename tname)
+                   unsigned-long
+                   (foreign-library-pointer testlib tname)
                    (cons '* (map (lambda (t)
                                    (mtype->ffi-type (mtypeof-basetype t)))
                                  types))))
@@ -174,8 +184,9 @@
                      (and seed))
                    (eqv? res size) names types args))))
          #t (iota 3))))
-    (lambda ()
-      #t)))
+
+    (lambda () (unload-foreign-library testlib))))
+
 
 ;; executing do-test twice makes it always crash
 (define* (do-test #:optional (n 3))
