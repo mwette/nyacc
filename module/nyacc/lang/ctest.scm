@@ -133,40 +133,49 @@
     (rand-mtype-val (mtypeof-basetype (cadr fld))
                     (and (pair? (cddr fld)) (caddr fld))))
 
-  (let* ((tname (string-append "test" (number->string case-num)))
-         (names (map car fields))
-         (types (map cadr fields))
-         (t-ct (cstruct
-                (map (lambda (fld)
-                       (match fld
-                         ((name type) (list name (cbase type)))
-                         ((name type width) (list name (cbase type) width))))
-                     fields)))
-         (size (ctype-size t-ct))
-         (t-cd (make-cdata t-ct))
-         (bv (cdata-bv t-cd))
-         (ftn (pointer->procedure
-               unsigned-long (foreign-library-pointer "ztest" tname)
-               (cons '* (map (lambda (t) (mtype->ffi-type (mtypeof-basetype t)))
-                             types))))
-         (sptr (cdata-val (pointer-to t-cd))))
-    (fold
-     (lambda (n seed)
-       (and seed
-            (let* ((args (map field->rand-val fields))
-                   (res (apply ftn sptr args)))
-              (unless (eqv? res size)
-                (format #t "size mismatch: c99=~s vs scm=~s\n" res size)
-                (format #t "               ~s\n" fields)
-                (quit))
-              (fold
-               (lambda (name type value seed)
-                 (unless (eqv? (cdata-val (cdata-ref t-cd name)) value)
-                   (format #t "value mismatch: ~s ~s got ~s\n" name value
-                           (cdata-val (cdata-ref t-cd name))))
-                 (and seed))
-               (eqv? res size) names types args))))
-     #t (iota 3))))
+  ;; TODO: use dlopen to load ztest.so, and dlclose() at completion
+  ;;       maybe use dynamic-wind for that
+
+  (dynamic-wind
+    (lambda () #t)
+    (lambda ()
+      (let* ((tname (string-append "test" (number->string case-num)))
+             (names (map car fields))
+             (types (map cadr fields))
+             (t-ct (cstruct
+                    (map (lambda (fld)
+                           (match fld
+                             ((name type) (list name (cbase type)))
+                             ((name type width) (list name (cbase type) width))))
+                         fields)))
+             (size (ctype-size t-ct))
+             (t-cd (make-cdata t-ct))
+             (bv (cdata-bv t-cd))
+             (ftn (pointer->procedure
+                   unsigned-long (foreign-library-pointer "ztest" tname)
+                   (cons '* (map (lambda (t)
+                                   (mtype->ffi-type (mtypeof-basetype t)))
+                                 types))))
+             (sptr (cdata-val (pointer-to t-cd))))
+        (fold
+         (lambda (n seed)
+           (and seed
+                (let* ((args (map field->rand-val fields))
+                       (res (apply ftn sptr args)))
+                  (unless (eqv? res size)
+                    (format #t "size mismatch: c99=~s vs scm=~s\n" res size)
+                    (format #t "               ~s\n" fields)
+                    (quit))
+                  (fold
+                   (lambda (name type value seed)
+                     (unless (eqv? (cdata-val (cdata-ref t-cd name)) value)
+                       (format #t "value mismatch: ~s ~s got ~s\n" name value
+                               (cdata-val (cdata-ref t-cd name))))
+                     (and seed))
+                   (eqv? res size) names types args))))
+         #t (iota 3))))
+    (lambda ()
+      #t)))
 
 ;; executing do-test twice makes it always crash
 (define* (do-test #:optional (n 3))
@@ -180,7 +189,7 @@
 
 (define (show-cstruct ct)
   (let* ((nf (ctype-info ct))
-         (fl (caggate-fields nf)))
+         (fl (cstruct-fields nf)))
     (for-each
      (lambda (f)
        (let ((ct (cfield-type f)) (n (cfield-name f)) (o (cfield-offset f)))

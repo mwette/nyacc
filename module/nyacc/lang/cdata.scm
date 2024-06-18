@@ -26,7 +26,8 @@
             make-ctype ctype? ctype-size ctype-align ctype-class ctype-info
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             ;; debug
-            caggate-fields caggate-dict cstruct-fields cunion-fields
+            cstruct-fields cstruct-dict
+            cunion-fields cunion-dict
             cfield-name cfield-type cfield-offset
             cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-sext?
             )
@@ -116,18 +117,23 @@
   (type cfield-type)
   (offset cfield-offset))
 
-;; @deftp {Record} <caggate> fields dict
-;; aggregate: struct or union
+;; @deftp {Record} <cstruct> fields dict
+;; struct
 ;; @end deftp
-(define-record-type <caggate>
-  (%make-caggate fields dict)
-  caggate?
-  (fields caggate-fields)             ; list of fields (change to vector)
-  (dict caggate-dict))                ; dict: name => field
-(define cstruct? caggate?)
-(define cstruct-fields caggate-fields)
-(define cunion? caggate?)
-(define cunion-fields caggate-fields)
+(define-record-type <cstruct>
+  (%make-cstruct fields dict)
+  cstruct?
+  (fields cstruct-fields)             ; list of fields (change to vector)
+  (dict cstruct-dict))                ; dict: name => field
+
+;; @deftp {Record} <cunion> fields dict
+;; union
+;; @end deftp
+(define-record-type <cunion>
+  (%make-cunion fields dict)
+  cunion?
+  (fields cunion-fields)           ; list of fields (change to vector)
+  (dict cunion-dict))              ; dict: name => field
 
 ;; @deftp {Record} <carray> type length
 ;; XXX
@@ -194,8 +200,11 @@
 (define (ctype-detag ix ct tag)
   (let ((ti (ctype-info ct)))
     (case (ctype-class ct)
-      ((struct union)
-       (let ((fld (assq-ref (caggate-dict ti) tag)))
+      ((struct)
+       (let ((fld (assq-ref (cstruct-dict ti) tag)))
+         (values (+ ix (cfield-offset fld)) (cfield-type fld))))
+      ((union)
+       (let ((fld (assq-ref (cunion-dict ti) tag)))
          (values (+ ix (cfield-offset fld)) (cfield-type fld))))
       ((array)
        (unless (integer? tag) (error "bad array ref"))
@@ -357,7 +366,7 @@
     (if (null? sfl)
         ;; TODO: change field-list to vector
         (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
-                     (%make-caggate (reverse cfl) (reverse ral)))
+                     (%make-cstruct (reverse cfl) (reverse ral)))
         (match (car sfl)
           ((name type)                  ; non-bitfield
            (let* ((fsz (ctype-size type))
@@ -370,7 +379,7 @@
                  (loop (cons cf cfl) (acons name cf ral)
                        (incr-size fsz fal ssz) (max fal sal) (cdr sfl))
                  (loop (cons cf cfl)
-                       (add-fields (caggate-fields (ctype-info type)) ssz ral)
+                       (add-fields (cstruct-fields (ctype-info type)) ssz ral)
                        (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))))
           ((name type width)            ; bitfield
            (unless (eq? (ctype-class type) 'base) (error "bad type"))
@@ -380,10 +389,9 @@
                   (mty (ctype-info type))
                   (sx? (mtype-signed? mty))
                   ;; order is critical here:
-                  (cio (bf-offset width fal ssz)) ; ci offset in struct
-                  (ssz (incr-bit-size width fal ssz)) ;; moved
+                  (cio (bf-offset width fal ssz)) ; ci struct offset
+                  (ssz (incr-bit-size width fal ssz))  ; moved
                   (bfo (- (* 8 ssz) width (* 8 cio)))) ; offset wrt ci
-             ;;(sferr "mty=~s sx?=~s\n" mty sx?)
              (if name
                  (let* ((bf (%make-cbitfield mty bfo width sx?))
                         (ty (%make-ctype fsz fal 'bitfield bf))
@@ -395,16 +403,22 @@
            (sferr "cstruct bad form: ~s" (car sfl))
            (error "yuck"))))))
 
-(define* (pretty-print-caggate caggate #:optional port)
-  (let* ((port (or port (current-output-port)))
-         (fields (caggate-fields caggate))
-         (format (lambda (fmt . args) (apply simple-format port fmt args))))
-    (format "cstruct/union:\n")
-    (for-each
-     (lambda (field)
-       (format "  ~s ~s\n" (cfield-name field) (cfield-type field)))
-     (caggate-fields caggate))))
-(export pretty-print-caggate)
+
+
+(define* (pretty-print-ctype ctype #:optional (port (current-output-port)))
+  (define (fmt . args) (apply simple-format port fmt args))
+  (case (ctype-class ctype)
+    ((struct)
+     (let* ((struct (ctype-info ctype))
+            (fields (cstruct-fields struct)))
+       (fmt "cstruct/union:\n")
+       (for-each
+        (lambda (field)
+          (fmt "  ~s ~s\n" (cfield-name field) (cfield-type field)))
+        fields)))
+    (else
+     #f)))
+(export pretty-print-ctype)
 
 
 ;; --- ffi support -------------------------------------------------------------
@@ -460,7 +474,7 @@
          ((struct) (cstruct->ffi-struct info))
          ((union) (cunion->ffi-struct info))
          (else (error "not yet supported")))))
-   (caggate-fields (ctype-info struct))))
+   (cstruct-fields (ctype-info struct))))
 
 (define (cunion->ffi-struct union)
   (error "cunion not yet supported"))
@@ -513,7 +527,7 @@
               ((struct) #f)
               ((union) #f)
               (else (error "not yet supported")))))
-        (caggate-fields (ctype-info struct))))))
+        (cstruct-fields (ctype-info struct))))))
 
 (export mtype->c-type cstruct->c-struct)
 
