@@ -26,8 +26,8 @@
             make-ctype ctype? ctype-size ctype-align ctype-class ctype-info
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             ;; debug
-            caggate-fields caggate-dict
-            cfield-offset cfield-type cfield-offset
+            caggate-fields caggate-dict cstruct-fields cunion-fields
+            cfield-name cfield-type cfield-offset
             cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-sext?
             )
   #:use-module (ice-9 match)
@@ -124,8 +124,13 @@
   caggate?
   (fields caggate-fields)             ; list of fields (change to vector)
   (dict caggate-dict))                ; dict: name => field
+(define cstruct? caggate?)
+(define cstruct-fields caggate-fields)
+(define cunion? caggate?)
+(define cunion-fields caggate-fields)
 
 ;; @deftp {Record} <carray> type length
+;; XXX
 ;; @end deftp
 (define-record-type <carray>
   (%make-carray type length)
@@ -180,10 +185,9 @@
 (define be (endianness big))
 (define le (endianness little))
 
+;; move to arch-info?
 (define (mtype-signed? mtype)
-  (and
-   (member mtype '(s8 s16 s32 s64 s16 s32le s64le s16be s32be s64be))
-   #t))
+  (and (member mtype '(s8 s16 s32 s64 s16le s32le s64le s16be s32be s64be)) #t))
 (export mtype-signed?)
 
 
@@ -236,6 +240,10 @@
                   (wd (cbitfield-width bi)) (sx (cbitfield-sext? bi))
                   (sm (expt 2 (1- wd))) ; sign-bit mask
                   (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
+             ;;(sferr "bv wd=~s sm=~s v=~s\n" wd sm v)
+             ;;(format (current-error-port) "  v ~s\n" v)
+             ;;(format (current-error-port) "  v ~b\n" v)
+             ;;(sferr "  logbit=~s ~s\n" (1- wd) (logbit? (1- wd) v))
              (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
           ((struct) #f)
           ((union) #f)
@@ -344,10 +352,11 @@
   ;; 5) bitfield, no name, positive size => padding, not transferred
   ;; cases 4&5 can be combined easily, I think
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
-    ;; cfl: c field list; ral: reified a-list; ssz: struct size;
+    ;; cfl: C field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl)
-        (%make-ctype (incr-size 0 sal ssz) sal 'struct
+        ;; TODO: change field-list to vector
+        (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
                      (%make-caggate (reverse cfl) (reverse ral)))
         (match (car sfl)
           ((name type)                  ; non-bitfield
@@ -365,13 +374,16 @@
                        (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))))
           ((name type width)            ; bitfield
            (unless (eq? (ctype-class type) 'base) (error "bad type"))
-           (let* ((fsz (ctype-size type))
+           (let* ((was-ssz ssz)
+                  (fsz (ctype-size type))
                   (fal (ctype-align type))
                   (mty (ctype-info type))
                   (sx? (mtype-signed? mty))
-                  (ssz (incr-bit-size width fal ssz))
+                  ;; order is critical here:
                   (cio (bf-offset width fal ssz)) ; ci offset in struct
-                  (bfo (- (* 8 ssz) width (* 8 cio)))) ; bf offset in ci
+                  (ssz (incr-bit-size width fal ssz)) ;; moved
+                  (bfo (- (* 8 ssz) width (* 8 cio)))) ; offset wrt ci
+             ;;(sferr "mty=~s sx?=~s\n" mty sx?)
              (if name
                  (let* ((bf (%make-cbitfield mty bfo width sx?))
                         (ty (%make-ctype fsz fal 'bitfield bf))
