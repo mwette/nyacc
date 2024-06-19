@@ -60,8 +60,6 @@ To get the value of a struct field, you should use the following form:
 @end example
 @end deffn
 
-Note the struct and union types will use the record @code{<caggate>}
-to log struct and union specific type information (e.g., the fields).
 
 @c cdata bv ix ct
 @c   (cdata-ref obj . tags) => <ref> == <cdata bv ix ct>

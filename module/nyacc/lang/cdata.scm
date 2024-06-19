@@ -38,6 +38,7 @@
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (rnrs bytevectors)
+  #:use-module (system foreign)
   #:use-module (nyacc lang arch-info))
 
 (use-modules (ice-9 pretty-print))
@@ -161,7 +162,7 @@
 (set-record-type-printer! <ctype>
   (lambda (type port)
     (let ((cl (ctype-class type)) (nf (ctype-info type))
-          (addr (ffi:pointer-address (ffi:scm->pointer type))))
+          (addr (pointer-address (scm->pointer type))))
       (format port "#<ctype ~s 0x~x>" (if (eq? 'base cl) nf cl) addr))))
 
 (define make-ctype %make-ctype)
@@ -184,7 +185,7 @@
            (tn (cdata-tn data))
            (cl (ctype-class type))
            (nf (ctype-info type))
-           (addr (ffi:pointer-address (ffi:bytevector->pointer bv)))
+           (addr (pointer-address (bytevector->pointer bv)))
            )
       (format port "#<cdata 0x~x" addr)
       (format port " ~a>" cl))))
@@ -229,11 +230,7 @@
         (lambda (ix ct)
           (%make-cdata (cdata-bv data) ix ct #f)))))
 
-(define (sign-bitfield v w)
-  (let ((smask (expt 2 (1- w))))
-    (if (logand v smask) (- (1+ (logand v (1- smask)))) v)))
-
-;; routines w/ bv ix ct ?
+; routines w/ bv ix ct ?
 
 (define (cdata-val data . tags)
   (let ((bv (cdata-bv data)))
@@ -244,7 +241,7 @@
           ((base)
            (mtype-bv-ref (ctype-info ct) bv ix))
           ((pointer)
-           (ffi:make-pointer
+           (make-pointer
             (mtype-bv-ref (cpointer-mtype (ctype-info ct)) bv ix)))
           ((bitfield)
            (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
@@ -290,17 +287,33 @@
   (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
                'pointer (%make-cpointer type (mtypeof-basetype 'void*))))
 
-;; This is more than a bent pipe.  It allocates storage.
-(define (cdata-pointer-to data)
+;; @deffn {Procedure} cdata& data
+;; Generate a reference (i.e., cpointer) to the contents in the underlying
+;; bytevector.
+;; @end deffn
+(define (cdata& data)
   (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
-         (pa (+ (ffi:pointer-address (ffi:bytevector->pointer bv)) ix))
+         (pa (+ (pointer-address (bytevector->pointer bv)) ix))
          )
     (make-cdata (cpointer ct) pa)))
-(define cdata& cdata-pointer-to)
 
-(define (cdata-deref data)
-  #f)
-(define cdata* cdata-deref)
+;; @deffn {Procedure} cdata* data
+;; De-reference a pointer.  Returns a @emph{cdata} object representing the
+;; contents at the address in the underlying bytevector.
+;; @end deffn
+(define (cdata* data)
+  "- Procedure: cdata* data
+     De-reference a pointer.  Returns a _cdata_ object representing the
+     contents at the address in the underlying bytevector."
+  (unless (and (cdata? data) (eq? 'pointer (ctype-class (cdata-ct data))))
+    (error "cdata*: bad arg"))
+  (let* ((cptr (ctype-info (cdata-ct data)))
+         (type (cpointer-type cptr))
+         (mtype (cpointer-mtype cptr))
+         (addr (mtype-bv-ref mtype (cdata-bv data) (cdata-ix data)))
+         (bv (pointer->bytevector (make-pointer addr) (ctype-size type))))
+    ;; TODO: check for (cdata-tn data)
+    (%make-cdata bv 0 type #f)))
 
 ;; @deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
@@ -441,43 +454,41 @@
 
 ;; --- ffi support -------------------------------------------------------------
 
-(use-modules ((system foreign) #:prefix ffi:))
-
 (define (mtype->ffi-type mtype)
   (or
    (assq-ref
-    `((s8 . ,ffi:int8) (s16 . ,ffi:int16) (s32 . ,ffi:int32) (s64 . ,ffi:int64)
-      (i128 . #f) (u8 . ,ffi:uint8) (u16 . ,ffi:uint16) (u32 . ,ffi:uint32)
-      (u64 . ,ffi:uint64) (u128 . #f) (f16 . #f) (f32 . ,ffi:float)
-      (f64 . ,ffi:double) (f128 . #f) (s8le . ,ffi:int8) (s16le . ,ffi:int16)
-      (s32le . ,ffi:int32) (s64le . ,ffi:int64) (i128le . #f) (u8le . ,ffi:uint8)
-      (u16le . ,ffi:uint16) (u32le . ,ffi:uint32) (u64le . ,ffi:uint64)
-      (u128le . #f) (f16le . #f) (f32le . ,ffi:float) (f64le . ,ffi:double)
-      (f128le . #f) (s8be . ,ffi:int8) (s16be . ,ffi:int16) (s32be . ,ffi:int32)
-      (s64be . ,ffi:int64) (i128be . #f) (u8be . ,ffi:uint8)
-      (u16be . ,ffi:uint16) (u32be . ,ffi:uint32) (u64be . ,ffi:uint64)
-      (u128be . #f) (f16be . #f) (f32be . ,ffi:float) (f64be . ,ffi:double)
+    `((s8 . ,int8) (s16 . ,int16) (s32 . ,int32) (s64 . ,int64)
+      (i128 . #f) (u8 . ,uint8) (u16 . ,uint16) (u32 . ,uint32)
+      (u64 . ,uint64) (u128 . #f) (f16 . #f) (f32 . ,float)
+      (f64 . ,double) (f128 . #f) (s8le . ,int8) (s16le . ,int16)
+      (s32le . ,int32) (s64le . ,int64) (i128le . #f) (u8le . ,uint8)
+      (u16le . ,uint16) (u32le . ,uint32) (u64le . ,uint64)
+      (u128le . #f) (f16le . #f) (f32le . ,float) (f64le . ,double)
+      (f128le . #f) (s8be . ,int8) (s16be . ,int16) (s32be . ,int32)
+      (s64be . ,int64) (i128be . #f) (u8be . ,uint8)
+      (u16be . ,uint16) (u32be . ,uint32) (u64be . ,uint64)
+      (u128be . #f) (f16be . #f) (f32be . ,float) (f64be . ,double)
       (f128be . #f))
     mtype)
    (error "mtype->ffi-type: bad mtype")))
-(define (mtype->ffi-type-name mtype)
+#;(define (mtype->ffi-type-name mtype)
   (or
    (assq-ref
-    `((s8 . ffi:int8) (s16 . ffi:int16) (s32 . ffi:int32) (s64 . ffi:int64)
-      (i128 . #f) (u8 . ffi:uint8) (u16 . ffi:uint16) (u32 . ffi:uint32)
-      (u64 . ffi:uint64) (u128 . #f) (f16 . #f) (f32 . ffi:float)
-      (f64 . ffi:double) (f128 . #f) (s8le . ffi:int8) (s16le . ffi:int16)
-      (s32le . ffi:int32) (s64le . ffi:int64) (i128le . #f) (u8le . ffi:uint8)
-      (u16le . ffi:uint16) (u32le . ffi:uint32) (u64le . ffi:uint64)
-      (u128le . #f) (f16le . #f) (f32le . ffi:float) (f64le . ffi:double)
-      (f128le . #f) (s8be . ffi:int8) (s16be . ffi:int16) (s32be . ffi:int32)
-      (s64be . ffi:int64) (i128be . #f) (u8be . ffi:uint8)
-      (u16be . ffi:uint16) (u32be . ffi:uint32) (u64be . ffi:uint64)
-      (u128be . #f) (f16be . #f) (f32be . ffi:float) (f64be . ffi:double)
+    `((s8 . int8) (s16 . int16) (s32 . int32) (s64 . int64)
+      (i128 . #f) (u8 . uint8) (u16 . uint16) (u32 . uint32)
+      (u64 . uint64) (u128 . #f) (f16 . #f) (f32 . float)
+      (f64 . double) (f128 . #f) (s8le . int8) (s16le . int16)
+      (s32le . int32) (s64le . int64) (i128le . #f) (u8le . uint8)
+      (u16le . uint16) (u32le . uint32) (u64le . uint64)
+      (u128le . #f) (f16le . #f) (f32le . float) (f64le . double)
+      (f128le . #f) (s8be . int8) (s16be . int16) (s32be . int32)
+      (s64be . int64) (i128be . #f) (u8be . uint8)
+      (u16be . uint16) (u32be . uint32) (u64be . uint64)
+      (u128be . #f) (f16be . #f) (f32be . float) (f64be . double)
       (f128be . #f))
     mtype)
    (error "mtype->ffi-type: bad mtype")))
-(export mtype->ffi-type-name)
+;;(export mtype->ffi-type-name)
 
 (define (cstruct->ffi-struct struct)
   ;; making this ok for bitfields will be a little involved
@@ -501,8 +512,6 @@
 
 ;; --- c99 support -------------------------------------------------------------
 
-(use-modules (nyacc lang c99 pprint))
-
 (define (mtype->c-type mtype)
   (or
    (assq-ref
@@ -521,31 +530,6 @@
       (f64be . "double") (f128be . "long double"))
     mtype)
    (error "mtype->c-type: bad mtype")))
-
-(define (cstruct->c-struct struct)
-  `(struct-def
-    (field-list
-     ,@(map
-        (lambda (field)
-          (let* ((name (cfield-name field))
-                 (type (cfield-type field))
-                 (class (ctype-class type))
-                 (info (ctype-info type)))
-            (case (ctype-class type)
-              ((base)
-               (if name
-                   `(comp-decl
-                     (decl-spec-list
-                      (type-spec (typename ,(mtype->c-type info))))
-                     (comp-declr-list
-                      (comp-declr (ident ,(symbol->string name)))))
-                   `(comp-decl
-                     (decl-spec-list
-                      (type-spec (typename ,(mtype->c-type info)))))))
-              ((struct) #f)
-              ((union) #f)
-              (else (error "not yet supported")))))
-        (cstruct-fields (ctype-info struct))))))
 
 (export mtype->c-type cstruct->c-struct)
 

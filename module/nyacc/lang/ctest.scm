@@ -28,7 +28,7 @@
 (set! *random-state* (random-state-from-platform))
 
 ;; make random struct with n fields
-(define names #(a a b c d e f g h i j k l m n o p q r))
+(define names #(0 a b c d e f g h i j k l m n o p q r))
 (define types #(int unsigned-int short unsigned-short float double))
 
 (define nname (vector-length names))
@@ -61,11 +61,14 @@
                       flds)
                 cbf (1- n))))))
 
-;; ----- generate c99 code --------------
+;; ----- run it ---------------------------
 
-(use-modules (nyacc lang c99 pprint))
+(define *nfld* 5)
+(define *ntst* 1)
+(define c99-basename "ztest")
+(use-modules (system foreign))
+(use-modules (system foreign-library))
 
-;; SCM test1(struct foo *foo, int a, uint3_t b)
 (define (gen-c99-test-code kase)
   (define fields (cdr kase))
   (define sn (string-append "test" (number->string (car kase))))
@@ -93,14 +96,6 @@
    (apply string-append (map mk-getter fields))
    "  return sizeof(*t);\n}\n\n\n"))
 
-;; ----- run it ---------------------------
-
-(define *nfld* 5)
-(define *ntst* 1)
-(define c99-basename "ztest")
-(use-modules (system foreign))
-(use-modules (system foreign-library))
-
 (define (gen-code cases)
   (with-output-to-file (string-append c99-basename ".c")
     (lambda ()
@@ -112,27 +107,15 @@
                          c99-basename c99-basename))
   c99-basename)
 
-;; build:
-;; 1. -> random list of pairs
-;; 2. NOPE pairs -> ctype (setters, getters)
-;; 3. pairs -> cfctn
-;; 4. pairs -> pointer->procedure (pairs -> cbases -> ffi-struct)
-;; use:
-;; 1. pairs -> random call (setterswasher
-;; 2. pairs -> check
 
 (define (exec-test case-num fields)
-
   (define (field->rand-val fld)
     (rand-mtype-val (mtypeof-basetype (cadr fld))
                     (and (pair? (cddr fld)) (caddr fld))))
-
   (define (type->ffi t) (mtype->ffi-type (mtypeof-basetype t)))
-
   (define testlib #f)
 
   (dynamic-wind
-
     (lambda () (set! testlib (load-foreign-library c99-basename)) )
 
     (lambda ()
