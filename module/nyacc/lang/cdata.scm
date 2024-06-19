@@ -25,6 +25,7 @@
             cdata-val cdata-ref cdata-set!
             make-ctype ctype? ctype-size ctype-align ctype-class ctype-info
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
+            cdata-pointer-to cdata-deref cdata& cdata*
             ;; debug
             cstruct-fields cstruct-dict
             cunion-fields cunion-dict
@@ -290,13 +291,16 @@
                'pointer (%make-cpointer type (mtypeof-basetype 'void*))))
 
 ;; This is more than a bent pipe.  It allocates storage.
-(define (pointer-to data)
+(define (cdata-pointer-to data)
   (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
          (pa (+ (ffi:pointer-address (ffi:bytevector->pointer bv)) ix))
          )
     (make-cdata (cpointer ct) pa)))
+(define cdata& cdata-pointer-to)
 
-(export pointer-to)
+(define (cdata-deref data)
+  #f)
+(define cdata* cdata-deref)
 
 ;; @deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}

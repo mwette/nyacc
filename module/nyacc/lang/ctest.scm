@@ -73,38 +73,25 @@
     (if (= 3 (length fld))
         (format #f "  ~a ~a: ~a;\n" (tsym->str (cadr fld)) (car fld) (caddr fld))
         (format #f "  ~a ~a;\n" (tsym->str (cadr fld)) (car fld))))
-  (define (mk-tparam fld)
+  (define (mk-sparam fld)
     (format #f ", ~a ~a" (tsym->str (list-ref fld 1)) (list-ref fld 0)))
+  (define (mk-gparam fld)
+    (format #f ", ~a *~a" (tsym->str (list-ref fld 1)) (list-ref fld 0)))
   (define (mk-setter fld)
     (format #f "  t->~a = ~a;\n" (list-ref fld 0) (list-ref fld 0)))
+  (define (mk-getter fld)
+    (format #f "  *~a = t->~a;\n" (list-ref fld 0) (list-ref fld 0)))
   (string-append
    "struct " sn " {\n"
    (apply string-append (map mk-field fields)) "};\n\n"
-   "unsigned long " sn "(struct " sn " *t"
-   (apply string-append (map mk-tparam fields)) ") {\n"
+   "unsigned long " sn "_set(struct " sn " *t"
+   (apply string-append (map mk-sparam fields)) ") {\n"
    (apply string-append (map mk-setter fields))
+   "  return sizeof(*t);\n}\n\n"
+   "unsigned long " sn "_get(struct " sn " *t"
+   (apply string-append (map mk-gparam fields)) ") {\n"
+   (apply string-append (map mk-getter fields))
    "  return sizeof(*t);\n}\n\n\n"))
-
-;; ----- generate scm code --------------
-
-(define (make-struct-from-pairs pairs)
-  (let loop ((fields '()) (pairs pairs))
-    (if (null? pairs)
-        (cstruct fields)
-        (loop (cons (list (caar pairs) (cbase (cdar pairs))) fields)
-              (cdr pairs)))))
-
-(define (gen-scm-test-code fields case-num seed)
-  (let ((name (string-append "test" (number->string case-num))))
-    ;; for each field, generate a random value
-    (cons
-     `(define ,(string->symbol name)
-        (pointer->procedure
-         int (foreign-library-function "ztest" ,name)
-         (cons '* ,@(map (lambda (fld)
-                           (mtype->ffi-type-name (mtypeof-basetype (cdr fld))))
-                         fields))))
-     seed)))
 
 ;; ----- run it ---------------------------
 
@@ -140,6 +127,8 @@
     (rand-mtype-val (mtypeof-basetype (cadr fld))
                     (and (pair? (cddr fld)) (caddr fld))))
 
+  (define (type->ffi t) (mtype->ffi-type (mtypeof-basetype t)))
+
   (define testlib #f)
 
   (dynamic-wind
@@ -147,7 +136,8 @@
     (lambda () (set! testlib (load-foreign-library c99-basename)) )
 
     (lambda ()
-      (let* ((tname (string-append "test" (number->string case-num)))
+      (let* ((sname (string-append "test" (number->string case-num) "_set"))
+             (gname (string-append "test" (number->string case-num) "_get"))
              (names (map car fields))
              (types (map cadr fields))
              (t-ct (cstruct
@@ -159,19 +149,21 @@
              (size (ctype-size t-ct))
              (t-cd (make-cdata t-ct))
              (bv (cdata-bv t-cd))
-             (ftn (pointer->procedure
-                   ;;unsigned-long (foreign-library-pointer c99-basename tname)
-                   unsigned-long
-                   (foreign-library-pointer testlib tname)
-                   (cons '* (map (lambda (t)
-                                   (mtype->ffi-type (mtypeof-basetype t)))
-                                 types))))
-             (sptr (cdata-val (pointer-to t-cd))))
+             (set-ftn (pointer->procedure
+                       unsigned-long
+                       (foreign-library-pointer testlib sname)
+                       (cons '* (map (lambda (t) (type->ffi t)) types))))
+             (get-ftn (pointer->procedure
+                       unsigned-long
+                       (foreign-library-pointer testlib gname)
+                       (cons '* (map (lambda (t) '*) types))))
+             (sptr (cdata-val (cdata& t-cd)))
+             (refs (map (lambda (t) (cdata& (make-cdata (cbase t)))) types)))
         (fold
          (lambda (n seed)
            (and seed
-                (let* ((args (map field->rand-val fields))
-                       (res (apply ftn sptr args)))
+                (let* ((vals (map field->rand-val fields))
+                       (res (apply set-ftn sptr vals)))
                   (unless (eqv? res size)
                     (format #t "size mismatch: c99=~s vs scm=~s\n" res size)
                     (format #t "               ~s\n" fields)
@@ -182,7 +174,16 @@
                        (format #t "value mismatch: ~s ~s got ~s\n" name value
                                (cdata-val (cdata-ref t-cd name))))
                      (and seed))
-                   (eqv? res size) names types args))))
+                   (eqv? res size) names types vals))
+                (let* ((vals (map field->rand-val fields))
+                       ;;(res (apply get-ftn sptr refs))
+                       )
+                  ;; now to work on setter
+                  (for-each
+                   (lambda (name value)
+                     (cdata-set! (cdata-ref t-cd name) value))
+                   names vals)
+                  #t)))
          #t (iota 3))))
 
     (lambda () (unload-foreign-library testlib))))
@@ -223,7 +224,7 @@
                unsigned-long (foreign-library-pointer "ztest" tname)
                (cons '* (map (lambda (t) (mtype->ffi-type (mtypeof-basetype t)))
                              types))))
-         (sptr (cdata-val (pointer-to t-cd))))
+         (sptr (cdata-val (cdata& t-cd))))
     (apply ftn sptr values)
     (show-cstruct t-ct)
     (pp values)
