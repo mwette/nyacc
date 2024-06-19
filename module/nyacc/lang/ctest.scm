@@ -196,7 +196,6 @@
   (fold
    (lambda (kase seed) (and seed (exec-test (car kase) (cdr kase))))
    #t cases))
-;; TODO unload ztest
 
 (define (show-cstruct ct)
   (let* ((nf (ctype-info ct))
@@ -253,5 +252,14 @@
 ;;(show-cstruct xx)
 ;;(pp values)
 ;;(foo 0 fields values)
+
+(define ct1 (cstruct fields))
+(define cd1 (make-cdata ct1))
+(define bv1 (cdata-bv cd1))
+(for-each
+ (lambda (ix) (bytevector-u8-set! bv1 ix 255))
+ (iota (ctype-size ct1)))
+(cdata-set! (cdata-ref cd1 'b) 2)
+(cdata-set! (cdata-ref cd1 'c) 6)
 
 ;; --- last line ---

@@ -191,7 +191,7 @@
 (define be (endianness big))
 (define le (endianness little))
 
-;; move to arch-info?
+;; move to arch-info
 (define (mtype-signed? mtype)
   (and (member mtype '(s8 s16 s32 s64 s16le s32le s64le s16be s32be s64be)) #t))
 (export mtype-signed?)
@@ -232,11 +232,13 @@
   (let ((smask (expt 2 (1- w))))
     (if (logand v smask) (- (1+ (logand v (1- smask)))) v)))
 
+;; routines w/ bv ix ct ?
+
 (define (cdata-val data . tags)
-  (call-with-values
-      (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
-    (lambda (ix ct)
-      (let ((bv (cdata-bv data)))
+  (let ((bv (cdata-bv data)))
+    (call-with-values
+        (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
+      (lambda (ix ct)
         (case (ctype-class ct)
           ((base)
            (mtype-bv-ref (ctype-info ct) bv ix))
@@ -244,15 +246,10 @@
            (ffi:make-pointer
             (mtype-bv-ref (cpointer-mtype (ctype-info ct)) bv ix)))
           ((bitfield)
-           (let* ((bi (ctype-info ct))
-                  (mt (cbitfield-mtype bi)) (sh (cbitfield-shift bi))
-                  (wd (cbitfield-width bi)) (sx (cbitfield-sext? bi))
-                  (sm (expt 2 (1- wd))) ; sign-bit mask
+           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
+                  (sx (cbitfield-sext? bi)) (sm (expt 2 (1- wd)))
                   (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
-             ;;(sferr "bv wd=~s sm=~s v=~s\n" wd sm v)
-             ;;(format (current-error-port) "  v ~s\n" v)
-             ;;(format (current-error-port) "  v ~b\n" v)
-             ;;(sferr "  logbit=~s ~s\n" (1- wd) (logbit? (1- wd) v))
              (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
           ((struct) #f)
           ((union) #f)
@@ -262,9 +259,17 @@
 (define (cdata-set! data value)
   (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
     (case (ctype-class ct)
-      ((base) (mtype-bv-set! (ctype-info ct) bv ix value))
-      ((pointer) (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
-      ((bitfield) #f)
+      ((base)
+       (mtype-bv-set! (ctype-info ct) bv ix value))
+      ((pointer)
+       (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
+      ((bitfield)
+       (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+              (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
+              (sx (cbitfield-sext? bi)) (am (1- (expt 2 wd)))
+              (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
+              (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
+         (mtype-bv-set! mt bv ix (logior (logand mx dmi) (ash value sh)))))
       ((struct) #f)
       ((union) #f)
       ((array) #f)
@@ -370,7 +375,11 @@
                      (%make-cstruct (reverse cfl) (reverse ral)))
         (match (car sfl)
           ((name type)                  ; non-bitfield
-           (let* ((type (cond ((symbol? type) (cbase type)) (else type)))
+           (let* ((type (cond ((symbol? type)
+                               (cbase type))
+                              ((and (ctype? type) (eq? (ctype-class type) 'base))
+                               type)
+                              (else (error "bad type"))))
                   (fsz (ctype-size type))
                   (fal (ctype-align type))
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
@@ -384,8 +393,11 @@
                        (add-fields (cstruct-fields (ctype-info type)) ssz ral)
                        (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))))
           ((name type width)            ; bitfield
-           (unless (eq? (ctype-class type) 'base) (error "bad type"))
-           (let* ((type (cond ((symbol? type) (cbase type)) (else type)))
+           (let* ((type (cond ((symbol? type)
+                               (cbase type))
+                              ((and (ctype? type) (eq? (ctype-class type) 'base))
+                               type)
+                              (else (error "bad type"))))
                   (fsz (ctype-size type))
                   (fal (ctype-align type))
                   (mty (ctype-info type))
