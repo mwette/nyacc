@@ -21,7 +21,7 @@
 
 (define-module (nyacc lang cdata)
   #:export (cbase
-            cstruct cunion cpointer
+            cstruct cunion cpointer carray
             cdata-val cdata-ref cdata-set!
             make-ctype ctype? ctype-size ctype-align ctype-class ctype-info
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
@@ -156,8 +156,14 @@
   (type cpointer-type)
   (mtype cpointer-mtype))
 
-;; @deftp {Record} <cfunction> return-type param-types
+;; @deftp {Record} <cfunction> return-type param-types variadic?
 ;; @end deftp
+(define-record-type <cfunction>
+  (%make-cfunction ret-type arg-types va?)
+  cfunction?
+  (ret-type cfunction-ret-type)
+  (arg-types cfunction-arg-types)
+  (va? cfunction-va?))
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
@@ -199,6 +205,12 @@
 (export mtype-signed?)
 
 
+;; @deffn {Procedure} ctype-detag ix ct tag
+;; Follows @var{tag}.  For structs and unions, the tag is a symbolic
+;; field name.  For arrays and pointers, the tag is a non-negative integer.
+;; An integer tag applied to the pointer increments the pointer by the
+;; associated number of elements referenced.
+;; @end deffn
 (define (ctype-detag ix ct tag)
   (let ((ti (ctype-info ct)))
     (case (ctype-class ct)
@@ -212,8 +224,11 @@
        (unless (integer? tag) (error "bad array ref"))
        (let ((type (carray-type ti)))
          (values (+ ix (* tag (ctype-size type))) type)))
-      ((bitfield)
-       (error "tbd")))))
+      ((pointer)
+       (unless (integer? tag) (error "bad array ref"))
+       (let ((type (cpointer-type ti)))
+         (values (+ ix (* tag (ctype-size type))) ct)))
+      (else (error "bad tag" tag)))))
 
 (define (follow-tags ix ct tags)
   (let loop ((ix ix) (ct ct) (tags tags))
@@ -274,15 +289,32 @@
       (else
        (error "bad stuff")))))
 
-(define (ctype-equal? a b)
-  #f)
+(define (cinfo-equal? class a b)
+  (case class
+    ((base) (eq? a b))
+    ((struct)
+     (fold
+      (lambda (a b seed) (and #f))
+      #t (cstruct-fields a) (cstruct-fields b)))
+    (else (error "work to go"))))
 
+(define (ctype-equal? a b)
+  (cond
+   ((or (not (ctype? a)) (not (ctype? b))) #f)
+   ((not (eq? (ctype-class a) (ctype-class b))) #f)
+   ((not (eqv? (ctype-size a) (ctype-size b))) #f)
+   ((not (eqv? (ctype-align a) (ctype-align b))) #f)
+   (else (cinfo-equal? (ctype-class a) a b))))
 
 (define* (make-cdata type #:optional value #:key name)
   (let ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))
     (if value (cdata-set! data value))
     data))
 
+;; @deffn {Procedure} cpointer type
+;; Generate a C pointer type to @var{type}. To reference or de-reference
+;; cdata object see @code{cdata&} and @code{cdata*}.
+;; @end deffn
 (define (cpointer type)
   (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
                'pointer (%make-cpointer type (mtypeof-basetype 'void*))))
@@ -293,8 +325,7 @@
 ;; @end deffn
 (define (cdata& data)
   (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
-         (pa (+ (pointer-address (bytevector->pointer bv)) ix))
-         )
+         (pa (+ (pointer-address (bytevector->pointer bv)) ix)))
     (make-cdata (cpointer ct) pa)))
 
 ;; @deffn {Procedure} cdata* data
@@ -335,13 +366,13 @@
       (set-arch-ctype-map! arch (make-cbase-map arch)))
     (assq-ref (arch-ctype-map arch) symname)))
 
-;; special case: to be confirmed
-(define (cbitfield type width)
-  (cons type width))
-
-;; Given field size and alignment, update the running struct size.
+;; Update running struct size given field size and alignment.
 (define (incr-size fs fa ss)
   (+ fs (* fa (quotient (+ ss (1- fa)) fa))))
+
+;; Update running union size given field size and alignment.
+(define (maxi-size fs fa ss)
+  (max fs ss))
 
 ;; Round number of bits to next alignment size.
 (define (roundup-bits a s)
@@ -356,11 +387,6 @@
 (define (bf-offset w a s)
   (let* ((a (* 8 a)) (s (* 8 s)) (u (roundup-bits a s)))
     (/ (cond ((> (+ s w) u) u) (else (- u a))) 8)))
-
-(define (maxi-size fs fa ss)
-  (max fs ss))
-
-
 
 (define (add-fields fields offset dict)
   (define (cfield/moved-offset field extra)
@@ -387,7 +413,6 @@
     ;; cfl: C field list; ral: reified a-list; ssz: struct size;
     ;; sal:struct alignment; sfl: scheme fields
     (if (null? sfl)
-        ;; TODO: change field-list to vector
         (%make-ctype (incr-bit-size 0 sal ssz) sal 'struct
                      (%make-cstruct (reverse cfl) (reverse ral)))
         (match (car sfl)
@@ -402,13 +427,22 @@
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
                   (ssz (incr-bit-size 0 fal ssz))
                   (cf (%make-cfield name type ssz)))
-             ;;(assert (or name (memq (ctype-class type) '(struct union))))
-             (if name
+
+             #;(if name
                  (loop (cons cf cfl) (acons name cf ral)
                        (incr-size fsz fal ssz) (max fal sal) (cdr sfl))
                  (loop (cons cf cfl)
                        (add-fields (cstruct-fields (ctype-info type)) ssz ral)
-                       (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))))
+                       (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))
+
+             (loop (cons cf cfl)
+                   (if name
+                       (acons name cf ral)
+                       (add-fields (cstruct-fields (ctype-info type)) ssz ral))
+                   (incr-size fsz fal ssz) (max fal sal) (cdr sfl))
+
+             ))
+
           ((name type width)            ; bitfield
            (let* ((type (cond ((symbol? type)
                                (cbase type))
@@ -435,6 +469,45 @@
            (error "yuck"))))))
 
 
+;; @deffn {Procedure} cunion fields
+;; @end deffn
+(define (cunion fields)
+  (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
+    (if (null? sfl)
+        (%make-ctype (incr-bit-size 0 sal ssz) sal 'union
+                     (%make-cunion (reverse cfl) (reverse ral)))
+        (let* ((name (caar sfl))
+               (type (cadr sfl))
+               (type (cond ((symbol? type)
+                            (cbase type))
+                           ((and (ctype? type) (eq? (ctype-class type) 'base))
+                            type)
+                           (else (error "bad type"))))
+               (fsz (ctype-size type))
+               (fal (ctype-align type))
+               (ssz (maxi-size 0 fal ssz))
+               (cf (%make-cfield name type ssz)))
+          (loop (cons cf cfl)
+                (if name
+                    (acons name cf ral)
+                    (add-fields (cstruct-fields (ctype-info type)) ssz ral))
+                (incr-size fsz fal ssz) (max fal sal) (cdr sfl))))))
+
+
+;; @deffn {Procedure} carray type n
+;; n can be zero in which case ...
+;; @end deffn
+(define (carray type n)
+  (%make-ctype (* n (ctype-size type)) (ctype-align type)
+               'array (%make-carray type n)))
+
+;; @deffn {Procedure} cfunction ret-type arg-types [#:variadic? VA]
+;; n can be zero in which case ...
+;; @end deffn
+(define* (cfunction ret-type arg-types #:key variadic?)
+  (let ((type (cbase 'void*)))
+    (%make-ctype (ctype-size type) (ctype-align (type))
+                 'function (%make-cfunction ret-type arg-types variadic?))))
 
 (define* (pretty-print-ctype ctype #:optional (port (current-output-port)))
   (define (fmt . args) (apply simple-format port fmt args))
@@ -512,7 +585,7 @@
 
 ;; --- c99 support -------------------------------------------------------------
 
-(define (mtype->c-type mtype)
+(define (mtype->c-typename mtype)
   (or
    (assq-ref
     `((s8 . "int8_t") (s16 . "int16_t") (s32 . "int32_t") (s64 . "int64_t")
@@ -531,6 +604,6 @@
     mtype)
    (error "mtype->c-type: bad mtype")))
 
-(export mtype->c-type cstruct->c-struct)
+(export mtype->c-typename)
 
 ;; --- last line ---
