@@ -427,21 +427,11 @@
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
                   (ssz (incr-bit-size 0 fal ssz))
                   (cf (%make-cfield name type ssz)))
-
-             #;(if name
-                 (loop (cons cf cfl) (acons name cf ral)
-                       (incr-size fsz fal ssz) (max fal sal) (cdr sfl))
-                 (loop (cons cf cfl)
-                       (add-fields (cstruct-fields (ctype-info type)) ssz ral)
-                       (incr-size fsz fal ssz) (max fal sal) (cdr sfl)))
-
              (loop (cons cf cfl)
                    (if name
                        (acons name cf ral)
                        (add-fields (cstruct-fields (ctype-info type)) ssz ral))
-                   (incr-size fsz fal ssz) (max fal sal) (cdr sfl))
-
-             ))
+                   (incr-size fsz fal ssz) (max fal sal) (cdr sfl))))
 
           ((name type width)            ; bitfield
            (let* ((type (cond ((symbol? type)
