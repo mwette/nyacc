@@ -27,26 +27,11 @@
 
 (set! *random-state* (random-state-from-platform))
 
-;; make random struct with n fields
+;; to make random struct with n fields
 (define names #(0 a b c d e f g h i j k l m n o p q r))
 (define types #(int unsigned-int short unsigned-short float double))
-
-(define nname (vector-length names))
 (define ntype (vector-length types))
 (define nitype (- ntype 2))
-
-(define* (rand-mtype-val mtype #:optional width)
-  (define (urand bits) (1+ (random (1- (expt 2 (or width bits))))))
-  (define (srand bits) (- (random (expt 2 (or width bits)))
-                          (expt 2 (1- (or width bits)))))
-  (case mtype
-    ((u8) (urand 8)) ((i8) (srand 8))
-    ((u16 u16le u16be) (urand 16)) ((s16 s16le s16be) (srand 16))
-    ((u32 u32le u32be) (urand 32)) ((s32 s32le s32be) (srand 32))
-    ((u64 u64le u64be) (urand 64)) ((s64 s64le s64be) (srand 64))
-    ((f32 f32le f32be f64 f64le f64be)
-     (* (1- (* 2.0 (random 2))) (* (random (expt 2 8)))
-        (expt (exact->inexact 2) (- (random 8) (random 8)))))))
 
 (define (make-rand-fields n)
   (define (rtype n) (vector-ref types (random n)))
@@ -60,6 +45,23 @@
                           (list name (rtype ntype)))
                       flds)
                 cbf (1- n))))))
+
+;; @deffn {Procedure} rand-mtype-val mtype [width]
+;; make random value for base type (e.g., s16le), with optional restriction
+;; to bitfield width.
+;; @end deffn
+(define* (rand-mtype-val mtype #:optional width)
+  (define (urand bits) (1+ (random (1- (expt 2 (or width bits))))))
+  (define (srand bits) (- (random (expt 2 (or width bits)))
+                          (expt 2 (1- (or width bits)))))
+  (case mtype
+    ((u8) (urand 8)) ((i8) (srand 8))
+    ((u16 u16le u16be) (urand 16)) ((s16 s16le s16be) (srand 16))
+    ((u32 u32le u32be) (urand 32)) ((s32 s32le s32be) (srand 32))
+    ((u64 u64le u64be) (urand 64)) ((s64 s64le s64be) (srand 64))
+    ((f32 f32le f32be f64 f64le f64be)
+     (* (1- (* 2.0 (random 2))) (* (random (expt 2 8)))
+        (expt (exact->inexact 2) (- (random 8) (random 8)))))))
 
 ;; ----- run it ---------------------------
 
@@ -81,20 +83,20 @@
   (define (mk-gparam fld)
     (format #f ", ~a *~a" (tsym->str (list-ref fld 1)) (list-ref fld 0)))
   (define (mk-setter fld)
-    (format #f "  t->~a = ~a;\n" (list-ref fld 0) (list-ref fld 0)))
+    (format #f " t->~a = ~a;" (list-ref fld 0) (list-ref fld 0)))
   (define (mk-getter fld)
-    (format #f "  *~a = t->~a;\n" (list-ref fld 0) (list-ref fld 0)))
+    (format #f " *~a = t->~a;" (list-ref fld 0) (list-ref fld 0)))
   (string-append
    "struct " sn " {\n"
    (apply string-append (map mk-field fields)) "};\n\n"
    "unsigned long " sn "_set(struct " sn " *t"
    (apply string-append (map mk-sparam fields)) ") {\n"
    (apply string-append (map mk-setter fields))
-   "  return sizeof(*t);\n}\n\n"
+   "\n return sizeof(*t);\n}\n\n"
    "unsigned long " sn "_get(struct " sn " *t"
    (apply string-append (map mk-gparam fields)) ") {\n"
    (apply string-append (map mk-getter fields))
-   "  return sizeof(*t);\n}\n\n\n"))
+   "\n return sizeof(*t);\n}\n\n\n"))
 
 (define (gen-code cases)
   (with-output-to-file (string-append c99-basename ".c")
@@ -103,7 +105,7 @@
       (display "#include <stdio.h>\n")
       (display "int Zmain() { printf(\"%ld\\n\", sizeof(struct test0)); }\n\n")
       ))
-  (system (simple-format #f "gcc -o ~a.so -shared -fPIC ~a.c"
+  (system (simple-format #f "gcc -g -o ~a.so -shared -fPIC ~a.c"
                          c99-basename c99-basename))
   c99-basename)
 
@@ -140,8 +142,9 @@
                        unsigned-long
                        (foreign-library-pointer testlib gname)
                        (cons '* (map (lambda (t) '*) types))))
-             (sptr (cdata-val (cdata& t-cd)))
-             (refs (map (lambda (t) (cdata& (make-cdata (cbase t)))) types)))
+             (sptr (cdata-ref (cdata& t-cd)))
+             (vars (map (lambda (t) (make-cdata (cbase t))) types))
+             (refs (map (lambda (v) (bytevector->pointer (cdata-bv v))) vars)))
         (fold
          (lambda (n seed)
            (and seed
@@ -153,20 +156,23 @@
                     (quit))
                   (fold
                    (lambda (name type value seed)
-                     (unless (eqv? (cdata-val (cdata-ref t-cd name)) value)
-                       (format #t "value mismatch: ~s ~s got ~s\n" name value
-                               (cdata-val (cdata-ref t-cd name))))
-                     (and seed))
+                     (let ((myval (cdata-ref (cdata-sel t-cd name))))
+                       (unless (eqv? myval value)
+                         (format #t "miss: ~s ~s got ~s\n" name value myval))
+                       (and (eqv? myval value) seed)))
                    (eqv? res size) names types vals))
-                (let* ((vals (map field->rand-val fields))
-                       ;;(res (apply get-ftn sptr refs))
-                       )
-                  ;; now to work on setter
+                (let* ((vals (map field->rand-val fields)))
                   (for-each
-                   (lambda (name value)
-                     (cdata-set! (cdata-ref t-cd name) value))
+                   (lambda (name value) (cdata-set! (cdata-sel t-cd name) value))
                    names vals)
-                  #t)))
+                  (apply get-ftn sptr refs)
+                  (fold
+                   (lambda (name var value seed)
+                     (let* ((myval (cdata-ref var)))
+                       (unless (eqv? myval value)
+                         (format #t "miss: ~s ~s got ~s\n" name value myval))
+                       (and seed (eqv? myval value))))
+                   #t names vars vals))))
          #t (iota 3))))
 
     (lambda () (unload-foreign-library testlib))))
@@ -180,70 +186,5 @@
   (fold
    (lambda (kase seed) (and seed (exec-test (car kase) (cdr kase))))
    #t cases))
-
-(define (show-cstruct ct)
-  (let* ((nf (ctype-info ct))
-         (fl (cstruct-fields nf)))
-    (for-each
-     (lambda (f)
-       (let ((ct (cfield-type f)) (n (cfield-name f)) (o (cfield-offset f)))
-         (sf "~s ~s ~s\n" n o (ctype-info ct))))
-     fl)))
-
-(define (foo case-num fields values)
-  (let* ((tname (string-append "test" (number->string case-num)))
-         (names (map car fields))
-         (types (map cadr fields))
-         (t-ct (cstruct
-                (map (lambda (fld)
-                       (match fld
-                         ((name type) (list name (cbase type)))
-                         ((name type width) (list name (cbase type) width))))
-                     fields)))
-         (size (ctype-size t-ct))
-         (t-cd (make-cdata t-ct))
-         (bv (cdata-bv t-cd))
-         (ftn (pointer->procedure
-               unsigned-long (foreign-library-pointer "ztest" tname)
-               (cons '* (map (lambda (t) (mtype->ffi-type (mtypeof-basetype t)))
-                             types))))
-         (sptr (cdata-val (cdata& t-cd))))
-    (apply ftn sptr values)
-    (show-cstruct t-ct)
-    (pp values)
-    (sf "b\n")
-    (sf "  ~s\n" (cdata-val (cdata-ref t-cd 'b))))
-    #;(for-each
-     (lambda (n)
-       (sf "~s\n" n)
-     names)
-    ))
-
-(define xfields `((a ,(cbase 'unsigned-short))
-                  (b ,(cbase 'short) 5)
-                  (c ,(cbase 'short) 8)
-                  (d ,(cbase 'short) 5)
-                  (e ,(cbase 'unsigned-int) 6)))
-(define fields '((a unsigned-short)
-                 (b short 5)
-                 (c short 8)
-                 (d short 5)
-                 (e unsigned-int 6)))
-(define values '(1 -1 1 1 1))
-
-;;(define xx (cstruct fields))
-;;(sf "sizeof xx = ~s\n" (ctype-size xx))
-;;(show-cstruct xx)
-;;(pp values)
-;;(foo 0 fields values)
-
-(define ct1 (cstruct fields))
-(define cd1 (make-cdata ct1))
-(define bv1 (cdata-bv cd1))
-(for-each
- (lambda (ix) (bytevector-u8-set! bv1 ix 255))
- (iota (ctype-size ct1)))
-(cdata-set! (cdata-ref cd1 'b) 2)
-(cdata-set! (cdata-ref cd1 'c) 6)
 
 ;; --- last line ---

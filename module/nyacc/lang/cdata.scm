@@ -17,12 +17,27 @@
 
 ;;; Notes:
 
+;; new notation:
+
+;; reference set select
+;; (cdata-ref data tag ...) -> scheme-value | <cdata>
+;; (cdata-set! data val tag ...)
+;; (cdata-sel data tag ...) -> <cdata>
+;; (ctype-sel type tag ...) -> ix, <ctype>
+
+;; (%make-cdata bv ix ct na)
+;; (make-cdata ct [val])
+
+;; (cbase symb) and cstruct cunion carray cpointer cfunction
+
+;; (list->vector (map (lambda (ix) (cdata-ref data ix)) (iota 10)))
+
 ;;; Code:
 
 (define-module (nyacc lang cdata)
   #:export (cbase
             cstruct cunion cpointer carray
-            cdata-val cdata-ref cdata-set!
+            cdata-ref cdata-sel cdata-set!
             make-ctype ctype? ctype-size ctype-align ctype-class ctype-info
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             cdata-pointer-to cdata-deref cdata& cdata*
@@ -237,7 +252,7 @@
         (call-with-values (lambda () (ctype-detag ix ct (car tags)))
           (lambda (ix ct) (loop ix ct (cdr tags)))))))
 
-(define (cdata-ref data . tags)
+(define (cdata-sel data . tags)
   (if (null? tags)
       data
       (call-with-values
@@ -247,7 +262,7 @@
 
 ; routines w/ bv ix ct ?
 
-(define (cdata-val data . tags)
+(define (cdata-ref data . tags)
   (let ((bv (cdata-bv data)))
     (call-with-values
         (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
