@@ -158,7 +158,7 @@
                    (lambda (name type value seed)
                      (let ((myval (cdata-ref (cdata-sel t-cd name))))
                        (unless (eqv? myval value)
-                         (format #t "miss: ~s ~s got ~s\n" name value myval))
+                         (format #t "set-miss: ~s ~s got ~s\n" name value myval))
                        (and (eqv? myval value) seed)))
                    (eqv? res size) names types vals))
                 (let* ((vals (map field->rand-val fields)))
@@ -170,7 +170,7 @@
                    (lambda (name var value seed)
                      (let* ((myval (cdata-ref var)))
                        (unless (eqv? myval value)
-                         (format #t "miss: ~s ~s got ~s\n" name value myval))
+                         (format #t "get-miss: ~s ~s got ~s\n" name value myval))
                        (and seed (eqv? myval value))))
                    #t names vars vals))))
          #t (iota 3))))
@@ -186,5 +186,8 @@
   (fold
    (lambda (kase seed) (and seed (exec-test (car kase) (cdr kase))))
    #t cases))
+
+(define t1 (cstruct `((a ,(cbase 'int)) (b ,(cbase 'double)))))
+(define d1 (make-cdata t1))
 
 ;; --- last line ---

@@ -22,14 +22,18 @@
 ;; reference set select
 ;; (cdata-ref data tag ...) -> scheme-value | <cdata>
 ;; (cdata-set! data val tag ...)
-;; (cdata-sel data tag ...) -> <cdata>
-;; (ctype-sel type tag ...) -> ix, <ctype>
 
-;; (%make-cdata bv ix ct na)
+;; (cdata-sel data tag ...) -> <cdata>
+;; (ctype-sel type ix tags) -> ix, <ctype>
+
+;; (ctype-eqv? a b)
+
 ;; (make-cdata ct [val])
 
-;; (cbase symb) and cstruct cunion carray cpointer cfunction
+;; use existing bytevector
+;; (%make-cdata bv ix ct tn)
 
+;; (cbase symb) and cstruct cunion carray cpointer cfunction
 ;; (list->vector (map (lambda (ix) (cdata-ref data ix)) (iota 10)))
 
 ;;; Code:
@@ -37,7 +41,7 @@
 (define-module (nyacc lang cdata)
   #:export (cbase
             cstruct cunion cpointer carray
-            cdata-ref cdata-sel cdata-set!
+            cdata-ref cdata-set! cdata-sel ctype-sel
             make-ctype ctype? ctype-size ctype-align ctype-class ctype-info
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             cdata-pointer-to cdata-deref cdata& cdata*
@@ -189,6 +193,9 @@
 (define make-ctype %make-ctype)
 
 ;; @deftp {Record} <cdata> bv ix ct [tn]
+;; Record to hold C data.  Underneath it's a bytevector, index and type.
+;; There is an optional type-name symbol that can be used to indicate
+;; a source-language type (e.g., struct-Foo).
 ;; @end deftp
 (define-record-type <cdata>
   (%make-cdata bv ix ct tn)
@@ -245,8 +252,8 @@
          (values (+ ix (* tag (ctype-size type))) ct)))
       (else (error "bad tag" tag)))))
 
-(define (follow-tags ix ct tags)
-  (let loop ((ix ix) (ct ct) (tags tags))
+(define (ctype-sel type ix tags)
+  (let loop ((ix ix) (ct type) (tags tags))
     (if (null? tags)
         (values ix ct)
         (call-with-values (lambda () (ctype-detag ix ct (car tags)))
@@ -256,16 +263,14 @@
   (if (null? tags)
       data
       (call-with-values
-          (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
+          (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
         (lambda (ix ct)
           (%make-cdata (cdata-bv data) ix ct #f)))))
-
-; routines w/ bv ix ct ?
 
 (define (cdata-ref data . tags)
   (let ((bv (cdata-bv data)))
     (call-with-values
-        (lambda () (follow-tags (cdata-ix data) (cdata-ct data) tags))
+        (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
       (lambda (ix ct)
         (case (ctype-class ct)
           ((base)
@@ -279,9 +284,9 @@
                   (sx (cbitfield-sext? bi)) (sm (expt 2 (1- wd)))
                   (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
              (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
+          ((array) #f)
           ((struct) #f)
           ((union) #f)
-          ((array) #f)
           (else (error "bad stuff")))))))
 
 (define (cdata-set! data value)
@@ -361,9 +366,9 @@
     ;; TODO: check for (cdata-tn data)
     (%make-cdata bv 0 type #f)))
 
-;; @deffn {Procedure} make-cbase-map arch
+;;.@deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
-;; @end deffn
+;;.@end deffn
 (define (make-cbase-map arch) ;; => ((double . (cbase "double")) ...)
   (define (make-cbase name)
     (let* ((mtype (mtypeof-basetype name))
