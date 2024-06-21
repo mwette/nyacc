@@ -441,7 +441,7 @@
                                (cbase type))
                               ((and (ctype? type) (eq? (ctype-class type) 'base))
                                type)
-                              (else (error "bad type"))))
+                              (else (error "cstruct: bad type"))))
                   (fsz (ctype-size type))
                   (fal (ctype-align type))
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
@@ -475,7 +475,7 @@
                          ssz (max fal sal) (cdr sfl)))
                  (loop cfl ral ssz sal (cdr sfl)))))
           (otherwize
-           (sferr "cstruct bad form: ~s" (car sfl))
+           (sferr "cstruct: bad form: ~s" (car sfl))
            (error "yuck"))))))
 
 
@@ -484,15 +484,15 @@
 (define (cunion fields)
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     (if (null? sfl)
-        (%make-ctype (incr-bit-size 0 sal ssz) sal 'union
+        (%make-ctype (incr-size 0 sal ssz) sal 'union
                      (%make-cunion (reverse cfl) (reverse ral)))
         (let* ((name (caar sfl))
-               (type (cadr sfl))
+               (type (cadar sfl))
                (type (cond ((symbol? type)
                             (cbase type))
                            ((and (ctype? type) (eq? (ctype-class type) 'base))
                             type)
-                           (else (error "bad type"))))
+                           (else (error "cunion: bad type"))))
                (fsz (ctype-size type))
                (fal (ctype-align type))
                (ssz (maxi-size 0 fal ssz))
