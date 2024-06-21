@@ -187,7 +187,9 @@
    (lambda (kase seed) (and seed (exec-test (car kase) (cdr kase))))
    #t cases))
 
-(define t1 (cstruct `((a ,(cbase 'int)) (b ,(cbase 'double)))))
-(define d1 (make-cdata t1))
+(define tS1 (cstruct `((a ,(cbase 'int)) (b ,(cbase 'double)))))
+(define dS1 (make-cdata tS1))
+(define tU1 (cunion `((a ,(cbase 'int)) (b ,(cbase 'double)))))
+(define dU1 (make-cdata tU1))
 
 ;; --- last line ---

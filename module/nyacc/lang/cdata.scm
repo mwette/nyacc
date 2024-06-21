@@ -448,9 +448,13 @@
                   (ssz (incr-bit-size 0 fal ssz))
                   (cf (%make-cfield name type ssz)))
              (loop (cons cf cfl)
-                   (if name
-                       (acons name cf ral)
-                       (add-fields (cstruct-fields (ctype-info type)) ssz ral))
+                   (cond
+                    (name (acons name cf ral))
+                    ((eq? 'struct (ctype-class type))
+                     (add-fields (cstruct-fields (ctype-info type)) ssz ral))
+                    ((eq? 'union (ctype-class type))
+                     (add-fields (cunion-fields (ctype-info type)) ssz ral))
+                    (else (error "bad field")))
                    (incr-size fsz fal ssz) (max fal sal) (cdr sfl))))
 
           ((name type width)            ; bitfield
@@ -498,10 +502,14 @@
                (ssz (maxi-size 0 fal ssz))
                (cf (%make-cfield name type ssz)))
           (loop (cons cf cfl)
-                (if name
-                    (acons name cf ral)
-                    (add-fields (cstruct-fields (ctype-info type)) ssz ral))
-                (incr-size fsz fal ssz) (max fal sal) (cdr sfl))))))
+                (cond
+                 (name (acons name cf ral))
+                 ((eq? 'struct (ctype-class type))
+                  (add-fields (cstruct-fields (ctype-info type)) ssz ral))
+                 ((eq? 'union (ctype-class type))
+                  (add-fields (cunion-fields (ctype-info type)) ssz ral))
+                 (else (error "bad field")))
+                (maxi-size fsz fal ssz) (max fal sal) (cdr sfl))))))
 
 
 ;; @deffn {Procedure} carray type n
@@ -573,7 +581,7 @@
    (error "mtype->ffi-type: bad mtype")))
 ;;(export mtype->ffi-type-name)
 
-(define (cstruct->ffi-struct struct)
+(define (cstruct->ffi-type type)
   ;; making this ok for bitfields will be a little involved
   (map
    (lambda (field)
@@ -583,15 +591,18 @@
             (info (ctype-info type)))
        (case (ctype-class type)
          ((base) (mtype->ffi-type info))
-         ((struct) (cstruct->ffi-struct info))
-         ((union) (cunion->ffi-struct info))
+         ((struct) (cstruct->ffi-type info))
+         ((union) (cunion->ffi-type info))
+         ((pointer) '*)
          (else (error "not yet supported")))))
-   (cstruct-fields (ctype-info struct))))
+   (cstruct-fields (ctype-info type))))
 
-(define (cunion->ffi-struct union)
-  (error "cunion not yet supported"))
+(define (cunion->ffi-type type)
+  (make-list (/ (ctype-size type) (ctype-align type))
+             (case (ctype-align type)
+               ((1) int8) ((2) int16) ((4) int32) ((8) int64))))
 
-(export mtype->ffi-type cstruct->ffi-struct cunion->ffi-struct)
+(export mtype->ffi-type cstruct->ffi-type cunion->ffi-type)
 
 ;; --- c99 support -------------------------------------------------------------
 
