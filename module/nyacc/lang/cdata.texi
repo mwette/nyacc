@@ -1,46 +1,90 @@
 @c cdata.texi
 
+\input texinfo.tex
+@setfilename doc.info
+@settitle The C-data Module for Guile
+
+@clear no-skip
+
+@copying
+Copyright (C) 2024 -- Matt Wette
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included with the distribution as COPYING.DOC.
+@end copying
+
+@headings off
+@everyfooting @| @thispage @|
+
+@node Top
+@top Introduction
+@format
+Matt Wette
+June 2024
+@end format
 
 
-@section Intro
-The @code{cdata} module, and it's partner @code{arch-info} provides a way
-to work with data and associted types originating from C libraries.
-It supports foreign targets using a global @code{*arch*} parameter.
-Size and alignment is tracked for all types.  Struct bitfields are supported.
-Underneath, type information boils down to signed and unsigned
-integers, and floating point numbers of specified size: there is no
-type aliasing.  Support for C base types (e.g., @code{uintptr_t}) are
-handled by the @code{cbase} type object generator.
+@heading Introduction
 
-The module was designed to be simple to use.  One uses the procedures
+The @code{cdata} module, with its partner @code{arch-info}, provides a
+way to work with data and associted types originating from C
+libraries.  It supports non-native machine architectures using a
+global @code{*arch*} parameter.  Size and alignment is tracked for all
+types.  There are type classes for all C type classes: base, struct,
+union, array, pointer, and function.  Beyond size and alignment, base type
+objects carry a symbolic tag to determine the appropriate bytevector
+procedures: there is no type aliasing.  Support for C base types is
+handled by the @code{cbase} type object generator which converts them
+to underlying types.  For example, on a 64 bit little endian
+architecture, @code{cbase} would convert @code{uintptr_t} to a base
+class ctype with underlying type info symbol @code{u64le}.
+
+The module is hopefully easy to use.  One uses the procedures
 @code{cbase}, @code{cstruct}, @code{cunion}, @code{cpointer},
 @code{carray}, and @code{cfunction} to generate c-type objects, and
 then @code{make-cdata} to generate C data objects.  Access to
 component data is provided by the @code{cdata-ref} procedure and
-mutation is accomplished via the @code{cdata-set!} procedure.  Working
-with Guile's ffi interface should be easy.  One can use
-@code{ctype->ffi-type} conconvert to the FFI type specifiers required
-by @code{foreign-library-function}.
+mutation is accomplished via the @code{cdata-set!} procedure.  With
+respect to Guile's ffi interface, one can use
+@code{ctype->ffi} to convert to FFI type specifiers required
+for use of @code{foreign-library-function}.
 
 Example:
 @example
 (define t1 (cstruct '((tv_sec long) (tv_usec long))))
-(define d1 (make-cdata t1))
 (define gettod
   (foreign-library-function
    #f "gettimeofday"
    #:return-type (ctype->ffi (cbase 'int))
    #:arg-types (map ctype->ffi (list (cpointer t1) (cpointer 'void)))))
+
+(define d1 (make-cdata t1))
 (gettod (cdata-ref (cdata& d1)) %null-pointer)
 (format #t "time: ~s ~s\n" (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
 time: 1719062561 676365
 @end example
 
+
+@heading Handling Machine Architectures
+Needs love ...
+
+@example
+(define tx (with-arch 'riscv64
+             (cstruct '((a long) (b int)))))
+@end example
+
+
+@heading Constructing Types
 The procedures used to create C types are described in the following.
+Type construction is machine architecture (i.e., parameter
+@code{*arch*} dependent.
 
 @deffn {Procedure} cbase name
 Creates a C base type, given the symbolic @var{name} for that type
-(e.g., @code{unsigned-int}).  The symbol @code{void*} is used for pointers.
+(e.g., @code{unsigned-int}).
 @end deffn
 
 @deffn {Procedure} cstruct field-list [#:packed? pp]
@@ -50,10 +94,6 @@ c-type.  Anonymous structs (and unions) are specified using @code{#f} for
 the field name.  For packed structures add @code{#:packed #t}.
 @end deffn
 
-@deffn {Procedure} cbitfield type size
-Creates a C bitfield type within a structure definition.
-@end deffn
-
 @deffn {Procedure} cunion field-list
 Creates a C union with field list in the same form as @code{cstruct},
 except bitfield types are not allowed.
@@ -61,16 +101,51 @@ except bitfield types are not allowed.
 
 @deffn {Procedure} cpointer type
 Create a pointer type referencing @var{type}.
+A non-negative selector can be used with this type to generate an
+increment.  Say you have, in C, the variables @code{x} defined from
+@code{int *x;} which represents an array in memory.  Then the
+expression to reference the fourth element is @code{x[3]} or,
+equivalently, @code{*(x+3)}.  In Guile, this expression would be
+@code{(cdata* (cdata-ref x 3))}.
 @end deffn
 
-@deffn {Procedure} carray type size
-work to go
+@deffn {Procedure} carray type length
+Create an array of @var{type} with @var{length}.
+If @var{length} is zero, the array length is unbounded (so be careful).
 @end deffn
 
 @deffn {Procedure} cfunction ret-type arg-types
-work to go
+This is work to go.
 @end deffn
 
+@deftp {Record} cbitfield type width
+This type is only created internally in the @code{cstruct} procedure, but a
+@code{cdata-sel} operation can yeild a result of this type which,
+when provided as argument to @code{cdata-ref} or @code{cdata-set!},
+will do the right thing.
+@example
+(define st (cstruct '((a int) (b short 3))))
+(define sd (make-cdata st))
+(define sd.b (cdata-sel sd 'b)) ;; => #<cdata 0x12345678 bitfield>
+(cdata-set! sd.b 3)
+(cdata-ref sd.b) => 3
+@end example
+@end deftp
+
+As a special case to deal with void pointers, the expression
+@code{(cpointer 'void)} can be used.  Data object of this type
+would be converted to Guiles @code{pointer} type by the procedure
+@code{cdata->ffi}.  The expression @code{(cbase 'void*)} will generate
+the associated integer type used for pointers.
+
+@heading Working with Data
+
+These procedures can be used to manipulate data.  They are not
+dependent on the global @code{*arch*} parameter.
+
+@deffn {Procedure} make-cdata type [value]
+This procedure creates an object of type @code{<cdata>}.
+@end deffn
 
 @deffn {Procedure} cdata-ref data [tag ...]
 Return the Scheme value for cdata.  Since we provide no equivalent for
@@ -88,36 +163,47 @@ To get the value of a struct field, you should use the following form:
 @end deffn
 
 @deffn {Procedure} cdata-sel data tag ...
-Return values @emph{bv},  @emph{ix},  @emph{ct} representing the process
-of accessing the given tags.  For example,
+Return a new @code{cdata} object representing the associated selection.
+For example,
 @example
-(cdata-ref dat1 'a 'b 'c) -> (values bv ix ct)
+dat1 -> <cdata 0x12345678 struct>
+(cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>
 @end example
+TODO: do we need something to return @code{(values bv ix ct)}
 @end deffn
 
-@subsection {Guile FFI Support}
+@deffn {Procecure} cdata* data
+to be documented
+@end deffn
+
+@deffn {Procecure} cdata& data
+to be documented
+@end deffn
+
+
+@heading Other Procedures
+
+@deffn {Procedure} ctype-equal?
+to be documented
+This procedure is not dependent on @code{*arch*}.
+@end deffn
+
+
+@heading Guile FFI Support
 
 @deffn {Procedure} ctype->ffi-type type
 Convert a @emph{ctype} to the (integer) code for the associated FFI
 type.
 @end deffn
 
-@subsection {Notes}
+@heading References
+
 @enumerate
-@item In specifying fields lists for @code{cstruct} and @code{cunion}
-one may use a symbol instead of @code{(cbase @emph{symbol})}.  For
-example, @code{'(a double)} instead of @code{`(a ,(cbase 'double))}.
-@example
-@end example
+@item Guile Manual:
+@url{https://www.gnu.org/software/guile/manual}
+@item Scheme Bytestructures:
+@url{https://github.com/TaylanUB/scheme-bytestructures}
 @end enumerate
 
-@c cdata bv ix ct
-@c   (cdata-ref obj . tags) => <ref> == <cdata bv ix ct>
-@c   (cdata-val obj) => <val> | #f
-@c   (cdata-set! <ref> <val>)
-@c   (cdata-detag bv ix ct tag) => (values bv bv ct)
-@c follow-tags
-
-@c (make-Foo* val) => <cdata bv=0xdead ix=0 ct=0xbeef tn="Foo*">
-
+@bye
 @c --- last line ---

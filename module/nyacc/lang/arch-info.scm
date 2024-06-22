@@ -18,20 +18,24 @@
 ;;; Notes:
 
 ;; have: avr i686 ppc riscv32 riscv64 x86_64
+;; Can we remove non-le/be mtypes?
 
 ;;; Code:
 
 (define-module (nyacc lang arch-info)
   #:export (lookup-arch
-            sizeof-basetype alignof-basetype
             *arch* with-arch native-arch
+            sizeof-basetype alignof-basetype
             mtypeof-basetype sizeof-mtype alignof-mtype
             arch-ctype-map set-arch-ctype-map!
-            strname->symname symname->strname
             base-type-name-list base-type-symbol-list
+            strname->symname symname->strname
+            mtype-signed?
+            ;;mtype-bv-ref mtype-bv-set! <= requires (rnrs bytevectors)
             )
   #:declarative? #t
-  #:use-module (srfi srfi-9))
+  #:use-module (srfi srfi-9)
+  #:use-module (rnrs bytevectors))
 
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
@@ -69,7 +73,6 @@
 
 (define alignof-mtype-map/natural sizeof-mtype-map)
 
-;; does not include @code{"void*"}
 (define base-type-name-list
   '("void*"
     "char" "short" "int" "long" "float" "double" "unsigned short" "unsigned"
@@ -96,7 +99,9 @@
 (define *arch-map* (make-parameter '()))
 
 (define (add-to-arch-map name arch)
-  (*arch-map* (acons name arch (*arch-map*))))
+  (let ((symname (if (symbol? name) name (string->symbol name)))
+        (strname (if (string? name) name (symbol->string name))))
+    (*arch-map* (cons* (cons symname arch) (cons strname arch) (*arch-map*)))))
 
 (define (lookup-arch name)
   (assoc-ref (*arch-map*) name))
@@ -108,7 +113,10 @@
 (define *arch* (make-parameter #f))
 
 (define-syntax-rule (with-arch arch body ...)
-  (parameterize ((*arch* (if (string? arch) (lookup-arch arch) arch)))
+  (parameterize
+      ((*arch* (let ((arch (if (arch-info? arch) arch (lookup-arch arch))))
+                 (unless arch (error "with-arch: no such arch"))
+                 arch)))
     body ...))
 
 ;; @deffn {Procedure} typeof-basetype base-type-name => 'f64
@@ -152,8 +160,12 @@
     (and=> (assq-ref (arch-mtype-map arch) name)
            (lambda (type) (assq-ref (arch-align-map arch) type)))))
 
+;; move to arch-info
+(define (mtype-signed? mtype)
+  (and (member mtype '(s8 s16 s32 s64 s16le s32le s64le s16be s32be s64be)) #t))
 
-;; --- maps ---------------------------
+
+;; === maps ====================================================================
 
 (define mtype-map/avr
   '((void* . u16le)

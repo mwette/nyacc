@@ -190,4 +190,20 @@
 (define tU1 (cunion `((a ,(cbase 'int)) (b ,(cbase 'double)))))
 (define dU1 (make-cdata tU1))
 
+(define t1 (cstruct '((tv_sec long) (tv_usec long))))
+(define gettod-raw
+  (foreign-library-function
+   #f "gettimeofday"
+   #:return-type (ctype->ffi (cbase 'int))
+   #:arg-types (map ctype->ffi (list (cpointer t1) (cpointer 'void)))))
+
+;;(define ft (cfunction (cbase 'int) (list (cpointer t1) (cpointer 'void))))
+;;(define gettod-cd (make-cftn ft (ftn-ptr "gettimeofday" "library"))
+;;(cftn->return-type ft) -> ffi type
+;;(cftn->arg-types ft) == (map ctype->ffi (cfunction-arg-types xx))
+
+(define d1 (make-cdata t1))
+(gettod-raw (cdata-ref (cdata& d1)) %null-pointer)
+(format #t "time: ~s ~s\n" (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
+
 ;; --- last line ---

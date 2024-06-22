@@ -26,7 +26,7 @@
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (ctype-sel type ix tags) -> ix, <ctype>
 
-;; (ctype-eqv? a b)
+;; (ctype-equal? a b)
 
 ;; (make-cdata ct)
 ;; (make-cdata ct val)
@@ -44,7 +44,7 @@
 (define-module (nyacc lang cdata)
   #:export (cbase
             cstruct cunion cpointer carray
-            ctype? ctype-size ctype-align ctype-class ctype-info
+            ctype? ctype-size ctype-align ctype-class ctype-info ctype-equal?
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             cdata-ref cdata-set! cdata-sel ctype-sel cdata& cdata*
             ctype->ffi
@@ -173,12 +173,9 @@
     (let* ((bv (cdata-bv data))
            (ix (cdata-ix data))
            (type (cdata-ct data))
-           (tn (cdata-tn data))
            (cl (ctype-class type))
-           (nf (ctype-info type))
-           (addr (pointer-address (bytevector->pointer bv)))
-           )
-      (format port "#<cdata 0x~x" addr)
+           (bv-addr (pointer-address (bytevector->pointer bv))))
+      (format port "#<cdata 0x~x" (+ bv-addr ix))
       (format port " ~a>" cl))))
 
 (define be (endianness big))
@@ -315,9 +312,12 @@
   (case class
     ((base) (eq? a b))
     ((struct)
-     (fold
-      (lambda (a b seed) (and #f))
-      #t (cstruct-fields a) (cstruct-fields b)))
+     (fold (lambda (a b seed)
+             (and seed
+                  (eq? (cfield-name a) (cfield-name b))
+                  (ctype-equal? (cfield-type a) (cfield-type b))
+                  (eqv? (cfield-offset a) (cfield-offset b))))
+           #t (cstruct-fields a) (cstruct-fields b)))
     (else (error "work to go"))))
 
 (define (ctype-equal? a b)
@@ -326,7 +326,7 @@
    ((not (eq? (ctype-class a) (ctype-class b))) #f)
    ((not (eqv? (ctype-size a) (ctype-size b))) #f)
    ((not (eqv? (ctype-align a) (ctype-align b))) #f)
-   (else (cinfo-equal? (ctype-class a) a b))))
+   (else (cinfo-equal? (ctype-class a) (ctype-info a) (ctype-info b)))))
 
 (define* (make-cdata type #:optional value #:key name)
   (let ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))
@@ -601,6 +601,7 @@
                   (case (ctype-align type)
                     ((1) int8) ((2) int16) ((4) int32) ((8) int64))))
       ((pointer array) '*)
+      ((function) (error "ctype->ffi: functions are work to go"))
       (else (error "ctype->ffi: unsupported:" (ctype-class type))))))
 
 ;; --- c99 support -------------------------------------------------------------
