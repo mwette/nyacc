@@ -114,9 +114,9 @@
 
 (define-syntax-rule (with-arch arch body ...)
   (parameterize
-      ((*arch* (let ((arch (if (arch-info? arch) arch (lookup-arch arch))))
-                 (unless arch (error "with-arch: no such arch"))
-                 arch)))
+      ((*arch* (let ((march (if (arch-info? arch) arch (lookup-arch arch))))
+                 (unless march (error "with-arch: no such arch"))
+                 march)))
     body ...))
 
 ;; @deffn {Procedure} typeof-basetype base-type-name => 'f64
@@ -328,7 +328,7 @@
 (define arch/riscv64
   (make-arch-info "riscv64" 'big mtype-map/riscv64 alignof-mtype-map/natural #f))
 
-(add-to-arch-map "riscv64" arch/riscv32)
+(add-to-arch-map "riscv64" arch/riscv64)
 
 (define mtype-map/x86_64
   '((void* . u64le)
