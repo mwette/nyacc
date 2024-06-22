@@ -4,62 +4,112 @@
 
 @section Intro
 The @code{cdata} module, and it's partner @code{arch-info} provides a way
-to deal with data and types originating from C libraries.  It supports
-cross-hosting using a global @code{*arch*} parameter.
-Size and alignment is tracked for all types.
-Struct types track offsets; bitfields are supported.
-Underneath, type information boils down to signed and unsigned integers
-of specified size and floating point numbers of specified size.  This means
-we can check type equivalence.
+to work with data and associted types originating from C libraries.
+It supports foreign targets using a global @code{*arch*} parameter.
+Size and alignment is tracked for all types.  Struct bitfields are supported.
+Underneath, type information boils down to signed and unsigned
+integers, and floating point numbers of specified size: there is no
+type aliasing.  Support for C base types (e.g., @code{uintptr_t}) are
+handled by the @code{cbase} type object generator.
 
-The procedures used to create C types are the following:
+The module was designed to be simple to use.  One uses the procedures
+@code{cbase}, @code{cstruct}, @code{cunion}, @code{cpointer},
+@code{carray}, and @code{cfunction} to generate c-type objects, and
+then @code{make-cdata} to generate C data objects.  Access to
+component data is provided by the @code{cdata-ref} procedure and
+mutation is accomplished via the @code{cdata-set!} procedure.  Working
+with Guile's ffi interface should be easy.  One can use
+@code{ctype->ffi-type} conconvert to the FFI type specifiers required
+by @code{foreign-library-function}.
+
+Example:
+@example
+(define t1 (cstruct '((tv_sec long) (tv_usec long))))
+(define d1 (make-cdata t1))
+(define gettod
+  (foreign-library-function
+   #f "gettimeofday"
+   #:return-type (ctype->ffi (cbase 'int))
+   #:arg-types (map ctype->ffi (list (cpointer t1) (cpointer 'void)))))
+(gettod (cdata-ref (cdata& d1)) %null-pointer)
+(format #t "time: ~s ~s\n" (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
+time: 1719062561 676365
+@end example
+
+The procedures used to create C types are described in the following.
+
 @deffn {Procedure} cbase name
 Creates a C base type, given the symbolic @var{name} for that type
 (e.g., @code{unsigned-int}).  The symbol @code{void*} is used for pointers.
 @end deffn
+
 @deffn {Procedure} cstruct field-list [#:packed? pp]
 Creates a C struct with field list in the form @code{((name type) ...)}
 where @var{name} is a symbolic name (or @code{#f}) and @var{type} is a
 c-type.  Anonymous structs (and unions) are specified using @code{#f} for
 the field name.  For packed structures add @code{#:packed #t}.
 @end deffn
+
 @deffn {Procedure} cbitfield type size
 Creates a C bitfield type within a structure definition.
 @end deffn
+
 @deffn {Procedure} cunion field-list
 Creates a C union with field list in the same form as @code{cstruct},
 except bitfield types are not allowed.
 @end deffn
+
 @deffn {Procedure} cpointer type
 Create a pointer type referencing @var{type}.
 @end deffn
-@deffn {Procedure} carray TBD
+
+@deffn {Procedure} carray type size
 work to go
 @end deffn
-@deffn {Procedure} cfunction TBD
+
+@deffn {Procedure} cfunction ret-type arg-types
 work to go
 @end deffn
-;; @deffn {Procedure} cdata-ref data tag ...
+
+
+@deffn {Procedure} cdata-ref data [tag ...]
+Return the Scheme value for cdata.  Since we provide no equivalent for
+structures in Scheme, cdata should have type class base, pointer, or array.
+To get the value of a struct field, you should use the following form:
+@example
+(cdata-ref (cdata-ref struct-data 'a 'b 'c))
+@end example
+@end deffn
+
+@deffn {Procedure} cdata-set! data value [tag ...]
+@example
+(cdata-set! struct-data 1 'a 'b 'c))
+@end example
+@end deffn
+
+@deffn {Procedure} cdata-sel data tag ...
 Return values @emph{bv},  @emph{ix},  @emph{ct} representing the process
 of accessing the given tags.  For example,
 @example
 (cdata-ref dat1 'a 'b 'c) -> (values bv ix ct)
 @end example
 @end deffn
-@deffn {Procedure} cdata-val cdata
-Return the Scheme value for cdata.  Since we provide no equivalent for
-structures in Scheme, cdata should have type class base, pointer, or array.
-To get the value of a struct field, you should use the following form:
-@example
-(cdata-val (cdata-ref struct-data 'a 'b 'c))
-@end example
-@end deffn
-@deffn {Procedure} cdata-set! data value
-@example
-(cdata-set! (cdata-ref struct-data 'a 'b 'c))
-@end example
+
+@subsection {Guile FFI Support}
+
+@deffn {Procedure} ctype->ffi-type type
+Convert a @emph{ctype} to the (integer) code for the associated FFI
+type.
 @end deffn
 
+@subsection {Notes}
+@enumerate
+@item In specifying fields lists for @code{cstruct} and @code{cunion}
+one may use a symbol instead of @code{(cbase @emph{symbol})}.  For
+example, @code{'(a double)} instead of @code{`(a ,(cbase 'double))}.
+@example
+@end example
+@end enumerate
 
 @c cdata bv ix ct
 @c   (cdata-ref obj . tags) => <ref> == <cdata bv ix ct>

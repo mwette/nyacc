@@ -109,83 +109,81 @@
                          c99-basename c99-basename))
   c99-basename)
 
-
-(define (exec-test case-num fields)
+(define (exec-test case-num fields testlib)
   (define (field->rand-val fld)
     (rand-mtype-val (mtypeof-basetype (cadr fld))
                     (and (pair? (cddr fld)) (caddr fld))))
-  (define (type->ffi t) (mtype->ffi-type (mtypeof-basetype t)))
-  (define testlib #f)
+  (define (type->ffi t) (ctype->ffi (mtypeof-basetype t)))
 
-  (dynamic-wind
-    (lambda () (set! testlib (load-foreign-library c99-basename)) )
-
-    (lambda ()
-      (let* ((sname (string-append "test" (number->string case-num) "_set"))
-             (gname (string-append "test" (number->string case-num) "_get"))
-             (names (map car fields))
-             (types (map cadr fields))
-             (t-ct (cstruct
-                    (map (lambda (fld)
-                           (match fld
-                             ((name type) (list name (cbase type)))
-                             ((name type width) (list name (cbase type) width))))
-                         fields)))
-             (size (ctype-size t-ct))
-             (t-cd (make-cdata t-ct))
-             (bv (cdata-bv t-cd))
-             (set-ftn (pointer->procedure
-                       unsigned-long
-                       (foreign-library-pointer testlib sname)
-                       (cons '* (map (lambda (t) (type->ffi t)) types))))
-             (get-ftn (pointer->procedure
-                       unsigned-long
-                       (foreign-library-pointer testlib gname)
-                       (cons '* (map (lambda (t) '*) types))))
-             (sptr (cdata-ref (cdata& t-cd)))
-             (vars (map (lambda (t) (make-cdata (cbase t))) types))
-             (refs (map (lambda (v) (bytevector->pointer (cdata-bv v))) vars)))
-        (fold
-         (lambda (n seed)
-           (and seed
-                (let* ((vals (map field->rand-val fields))
-                       (res (apply set-ftn sptr vals)))
-                  (unless (eqv? res size)
-                    (format #t "size mismatch: c99=~s vs scm=~s\n" res size)
-                    (format #t "               ~s\n" fields)
-                    (quit))
-                  (fold
-                   (lambda (name type value seed)
-                     (let ((myval (cdata-ref (cdata-sel t-cd name))))
-                       (unless (eqv? myval value)
-                         (format #t "set-miss: ~s ~s got ~s\n" name value myval))
-                       (and (eqv? myval value) seed)))
-                   (eqv? res size) names types vals))
-                (let* ((vals (map field->rand-val fields)))
-                  (for-each
-                   (lambda (name value) (cdata-set! (cdata-sel t-cd name) value))
-                   names vals)
-                  (apply get-ftn sptr refs)
-                  (fold
-                   (lambda (name var value seed)
-                     (let* ((myval (cdata-ref var)))
-                       (unless (eqv? myval value)
-                         (format #t "get-miss: ~s ~s got ~s\n" name value myval))
-                       (and seed (eqv? myval value))))
-                   #t names vars vals))))
-         #t (iota 3))))
-
-    (lambda () (unload-foreign-library testlib))))
+  (let* ((sname (string-append "test" (number->string case-num) "_set"))
+         (gname (string-append "test" (number->string case-num) "_get"))
+         (names (map car fields))
+         (types (map cadr fields))
+         (t-ct (cstruct
+                (map (lambda (fld)
+                       (match fld
+                         ((name type) (list name (cbase type)))
+                         ((name type width) (list name (cbase type) width))))
+                     fields)))
+         (size (ctype-size t-ct))
+         (t-cd (make-cdata t-ct))
+         (bv (cdata-bv t-cd))
+         (set-ftn (pointer->procedure
+                   unsigned-long
+                   (foreign-library-pointer testlib sname)
+                   (cons '* (map (lambda (t) (ctype->ffi (cbase t))) types))))
+         (get-ftn (pointer->procedure
+                   unsigned-long
+                   (foreign-library-pointer testlib gname)
+                   (cons '* (map (lambda (t) '*) types))))
+         (sptr (cdata-ref (cdata& t-cd)))
+         (vars (map (lambda (t) (make-cdata (cbase t))) types))
+         (refs (map (lambda (v) (bytevector->pointer (cdata-bv v))) vars)))
+    (fold
+     (lambda (n seed)
+       (and seed
+            (let* ((vals (map field->rand-val fields))
+                   (res (apply set-ftn sptr vals)))
+              (unless (eqv? res size)
+                (format #t "size mismatch: c99=~s vs scm=~s\n" res size)
+                (format #t "               ~s\n" fields)
+                (quit))
+              (fold
+               (lambda (name type value seed)
+                 (let ((myval (cdata-ref (cdata-sel t-cd name))))
+                   (unless (eqv? myval value)
+                     (format #t "set-miss: ~s ~s got ~s\n" name value myval))
+                   (and (eqv? myval value) seed)))
+               (eqv? res size) names types vals))
+            (let* ((vals (map field->rand-val fields)))
+              (for-each
+               (lambda (name value) (cdata-set! (cdata-sel t-cd name) value))
+               names vals)
+              (apply get-ftn sptr refs)
+              (fold
+               (lambda (name var value seed)
+                 (let* ((myval (cdata-ref var)))
+                   (unless (eqv? myval value)
+                     (format #t "get-miss: ~s ~s got ~s\n" name value myval))
+                   (and seed (eqv? myval value))))
+               #t names vars vals))))
+     #t (iota 3))))
 
 
 ;; executing do-test twice makes it always crash
 (define* (do-test #:optional (n 3))
-  (define cases
-    (map (lambda (ix) (cons ix (make-rand-fields *nfld*))) (iota n)))
-  (define so-file (gen-code cases))
-  (fold
-   (lambda (kase seed) (and seed (exec-test (car kase) (cdr kase))))
-   #t cases))
+  (let* ((cases (map (lambda (ix)
+                       (cons ix (make-rand-fields *nfld*)))
+                     (iota n)))
+         (basename (gen-code cases))
+         (testlib #f))
+    (dynamic-wind
+      (lambda () (set! testlib (load-foreign-library basename)))
+      (lambda ()
+        (fold (lambda (kase seed)
+                (and seed (exec-test (car kase) (cdr kase) testlib)))
+              #t cases))
+      (lambda () (unload-foreign-library testlib)))))
 
 (define tS1 (cstruct `((a ,(cbase 'int)) (b ,(cbase 'double)))))
 (define dS1 (make-cdata tS1))

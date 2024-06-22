@@ -28,7 +28,10 @@
 
 ;; (ctype-eqv? a b)
 
-;; (make-cdata ct [val])
+;; (make-cdata ct)
+;; (make-cdata ct val)
+;; (make-cdata bv ix ct)
+;; (make-cdata bv ix ct val)
 
 ;; use existing bytevector
 ;; (%make-cdata bv ix ct tn)
@@ -41,16 +44,20 @@
 (define-module (nyacc lang cdata)
   #:export (cbase
             cstruct cunion cpointer carray
-            cdata-ref cdata-set! cdata-sel ctype-sel
-            make-ctype ctype? ctype-size ctype-align ctype-class ctype-info
+            ctype? ctype-size ctype-align ctype-class ctype-info
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
-            cdata-pointer-to cdata-deref cdata& cdata*
+            cdata-ref cdata-set! cdata-sel ctype-sel cdata& cdata*
+            ctype->ffi
+            ;;
+            mtype-bv-ref mtype-bv-set!
             ;; debug
             cstruct-fields cstruct-dict
             cunion-fields cunion-dict
             cfield-name cfield-type cfield-offset
             cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-sext?
-            )
+            cpointer-type cpointer-mtype
+            carray-type carray-length
+            cfunction-ret-type cfunction-arg-types)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
   #:use-module ((srfi srfi-1) #:select (fold))
@@ -63,50 +70,6 @@
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
 (define (sferr fmt . args) (apply simple-format #t fmt args))
-
-;; => arch-info
-(define (mtype-bv-ref mtype bv ix)
-  (case mtype
-    ((u8) (bytevector-u8-ref bv ix))
-    ((s8) (bytevector-s8-ref bv ix))
-    ((u16le) (bytevector-u16-ref bv ix le))
-    ((s16le) (bytevector-s16-ref bv ix le))
-    ((u32le) (bytevector-u32-ref bv ix le))
-    ((s32le) (bytevector-s32-ref bv ix le))
-    ((u64le) (bytevector-u64-ref bv ix le))
-    ((s64le) (bytevector-s64-ref bv ix le))
-    ((f32le) (bytevector-ieee-single-ref bv ix le))
-    ((f64le) (bytevector-ieee-double-ref bv ix le))
-    ((u16be) (bytevector-u16-ref bv ix be))
-    ((s16be) (bytevector-s16-ref bv ix be))
-    ((u32be) (bytevector-u32-ref bv ix be))
-    ((s32be) (bytevector-s32-ref bv ix be))
-    ((u64be) (bytevector-u64-ref bv ix be))
-    ((s64be) (bytevector-s64-ref bv ix be))
-    ((f32be) (bytevector-ieee-single-ref bv ix be))
-    ((f64be) (bytevector-ieee-double-ref bv ix be))))
-
-;; => arch-info
-(define (mtype-bv-set! mtype bv ix value)
-  (case mtype
-    ((u8) (bytevector-u8-set! bv ix value))
-    ((s8) (bytevector-s8-set! bv ix value))
-    ((u16le) (bytevector-u16-set! bv ix value le))
-    ((s16le) (bytevector-s16-set! bv ix value le))
-    ((u32le) (bytevector-u32-set! bv ix value le))
-    ((s32le) (bytevector-s32-set! bv ix value le))
-    ((u64le) (bytevector-u64-set! bv ix value le))
-    ((s64le) (bytevector-s64-set! bv ix value le))
-    ((f32le) (bytevector-ieee-single-set! bv ix value le))
-    ((f64le) (bytevector-ieee-double-set! bv ix value le))
-    ((u16be) (bytevector-u16-set! bv ix value be))
-    ((s16be) (bytevector-s16-set! bv ix value be))
-    ((u32be) (bytevector-u32-set! bv ix value be))
-    ((s32be) (bytevector-s32-set! bv ix value be))
-    ((u64be) (bytevector-u64-set! bv ix value be))
-    ((s64be) (bytevector-s64-set! bv ix value be))
-    ((f32be) (bytevector-ieee-single-set! bv ix value be))
-    ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
 ;; @deftp {Record} <ctype> size align class info [ptype]
 ;; maybe @var{ptype} should only be for @code{cbase} class types
@@ -221,10 +184,49 @@
 (define be (endianness big))
 (define le (endianness little))
 
-;; move to arch-info
-(define (mtype-signed? mtype)
-  (and (member mtype '(s8 s16 s32 s64 s16le s32le s64le s16be s32be s64be)) #t))
-(export mtype-signed?)
+;; => arch-info
+(define (mtype-bv-ref mtype bv ix)
+  (case mtype
+    ((u8) (bytevector-u8-ref bv ix))
+    ((s8) (bytevector-s8-ref bv ix))
+    ((u16le) (bytevector-u16-ref bv ix le))
+    ((s16le) (bytevector-s16-ref bv ix le))
+    ((u32le) (bytevector-u32-ref bv ix le))
+    ((s32le) (bytevector-s32-ref bv ix le))
+    ((u64le) (bytevector-u64-ref bv ix le))
+    ((s64le) (bytevector-s64-ref bv ix le))
+    ((f32le) (bytevector-ieee-single-ref bv ix le))
+    ((f64le) (bytevector-ieee-double-ref bv ix le))
+    ((u16be) (bytevector-u16-ref bv ix be))
+    ((s16be) (bytevector-s16-ref bv ix be))
+    ((u32be) (bytevector-u32-ref bv ix be))
+    ((s32be) (bytevector-s32-ref bv ix be))
+    ((u64be) (bytevector-u64-ref bv ix be))
+    ((s64be) (bytevector-s64-ref bv ix be))
+    ((f32be) (bytevector-ieee-single-ref bv ix be))
+    ((f64be) (bytevector-ieee-double-ref bv ix be))))
+
+;; => arch-info
+(define (mtype-bv-set! mtype bv ix value)
+  (case mtype
+    ((u8) (bytevector-u8-set! bv ix value))
+    ((s8) (bytevector-s8-set! bv ix value))
+    ((u16le) (bytevector-u16-set! bv ix value le))
+    ((s16le) (bytevector-s16-set! bv ix value le))
+    ((u32le) (bytevector-u32-set! bv ix value le))
+    ((s32le) (bytevector-s32-set! bv ix value le))
+    ((u64le) (bytevector-u64-set! bv ix value le))
+    ((s64le) (bytevector-s64-set! bv ix value le))
+    ((f32le) (bytevector-ieee-single-set! bv ix value le))
+    ((f64le) (bytevector-ieee-double-set! bv ix value le))
+    ((u16be) (bytevector-u16-set! bv ix value be))
+    ((s16be) (bytevector-s16-set! bv ix value be))
+    ((u32be) (bytevector-u32-set! bv ix value be))
+    ((s32be) (bytevector-s32-set! bv ix value be))
+    ((u64be) (bytevector-u64-set! bv ix value be))
+    ((s64be) (bytevector-s64-set! bv ix value be))
+    ((f32be) (bytevector-ieee-single-set! bv ix value be))
+    ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
 
 ;; @deffn {Procedure} ctype-detag ix ct tag
@@ -333,11 +335,17 @@
 
 ;; @deffn {Procedure} cpointer type
 ;; Generate a C pointer type to @var{type}. To reference or de-reference
-;; cdata object see @code{cdata&} and @code{cdata*}.
+;; cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
+;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
 ;; @end deffn
 (define (cpointer type)
-  (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
-               'pointer (%make-cpointer type (mtypeof-basetype 'void*))))
+  (let ((type (cond
+               ((ctype? type) type)
+               ((eq? 'void type) type)
+               ((symbol? type) (cbase type))
+               (else (error "cpointer: bad arg")))))
+    (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
+                 'pointer (%make-cpointer type (mtypeof-basetype 'void*)))))
 
 ;; @deffn {Procedure} cdata& data
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
@@ -365,6 +373,7 @@
          (bv (pointer->bytevector (make-pointer addr) (ctype-size type))))
     ;; TODO: check for (cdata-tn data)
     (%make-cdata bv 0 type #f)))
+
 
 ;;.@deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
@@ -545,7 +554,7 @@
 
 ;; --- ffi support -------------------------------------------------------------
 
-(define (mtype->ffi-type mtype)
+(define (mtype->ffi mtype)
   (or
    (assq-ref
     `((s8 . ,int8) (s16 . ,int16) (s32 . ,int32) (s64 . ,int64)
@@ -561,8 +570,9 @@
       (u128be . #f) (f16be . #f) (f32be . ,float) (f64be . ,double)
       (f128be . #f))
     mtype)
-   (error "mtype->ffi-type: bad mtype")))
-#;(define (mtype->ffi-type-name mtype)
+   (error "mtype->ffi: bad mtype")))
+#|
+(define (mtype->ffi-name mtype)
   (or
    (assq-ref
     `((s8 . int8) (s16 . int16) (s32 . int32) (s64 . int64)
@@ -578,35 +588,24 @@
       (u128be . #f) (f16be . #f) (f32be . float) (f64be . double)
       (f128be . #f))
     mtype)
-   (error "mtype->ffi-type: bad mtype")))
-;;(export mtype->ffi-type-name)
+   (error "mtype->ffi-name: bad mtype")))
+(export mtype->ffi-name)
+|#
 
-(define (cstruct->ffi-type type)
-  ;; making this ok for bitfields will be a little involved
-  (map
-   (lambda (field)
-     (let* ((name (cfield-name field))
-            (type (cfield-type field))
-            (class (ctype-class type))
-            (info (ctype-info type)))
-       (case (ctype-class type)
-         ((base) (mtype->ffi-type info))
-         ((struct) (cstruct->ffi-type info))
-         ((union) (cunion->ffi-type info))
-         ((pointer) '*)
-         (else (error "not yet supported")))))
-   (cstruct-fields (ctype-info type))))
-
-(define (cunion->ffi-type type)
-  (make-list (/ (ctype-size type) (ctype-align type))
-             (case (ctype-align type)
-               ((1) int8) ((2) int16) ((4) int32) ((8) int64))))
-
-(export mtype->ffi-type cstruct->ffi-type cunion->ffi-type)
+(define (ctype->ffi type)
+  (let ((info (ctype-info type)))
+    (case (ctype-class type)
+      ((base) (mtype->ffi info))
+      ((struct union)
+       (make-list (/ (ctype-size type) (ctype-align type))
+                  (case (ctype-align type)
+                    ((1) int8) ((2) int16) ((4) int32) ((8) int64))))
+      ((pointer array) '*)
+      (else (error "ctype->ffi: unsupported:" (ctype-class type))))))
 
 ;; --- c99 support -------------------------------------------------------------
 
-(define (mtype->c-typename mtype)
+(define (mtype->c-name mtype)
   (or
    (assq-ref
     `((s8 . "int8_t") (s16 . "int16_t") (s32 . "int32_t") (s64 . "int64_t")
@@ -623,8 +622,7 @@
       (u128be . "int128_t") (f16be . "float16") (f32be . "float")
       (f64be . "double") (f128be . "long double"))
     mtype)
-   (error "mtype->c-type: bad mtype")))
-
-(export mtype->c-typename)
+   (error "mtype->c-name: bad mtype")))
+(export mtype->c-name)
 
 ;; --- last line ---
