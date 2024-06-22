@@ -538,17 +538,20 @@
 
 (define* (pretty-print-ctype ctype #:optional (port (current-output-port)))
   (define (fmt . args) (apply simple-format port fmt args))
-  (case (ctype-class ctype)
-    ((struct)
-     (let* ((struct (ctype-info ctype))
-            (fields (cstruct-fields struct)))
-       (fmt "cstruct/union:\n")
-       (for-each
-        (lambda (field)
-          (fmt "  ~s ~s\n" (cfield-name field) (cfield-type field)))
-        fields)))
-    (else
-     #f)))
+  (define (cnvt type)
+    (case (ctype-class type)
+      ((base) (ctype-info type))
+      ((struct)
+       `(cstruct
+         ,(map
+           (lambda (fld)
+             (if (eq? 'bitfield (ctype-class (cfield-type fld)))
+                 (list (cfield-name fld) (cnvt (cfield-type fld))
+                       (cbitfield-width (ctype-info (cfield-type fld))))
+                 (list (cfield-name fld) (cnvt (cfield-type fld)))))
+           (cstruct-fields (ctype-info type)))))
+      (else (error "pretty-print-ctype: needs work"))))
+  (pretty-print (cnvt ctype) port))
 (export pretty-print-ctype)
 
 

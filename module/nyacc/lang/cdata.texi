@@ -20,7 +20,7 @@ copy of the license is included with the distribution as COPYING.DOC.
 @everyfooting @| @thispage @|
 
 @node Top
-@top Introduction
+@top @code{cdata}: a Guile Module for Working with C Data
 @format
 Matt Wette
 June 2024
@@ -30,7 +30,7 @@ June 2024
 @heading Introduction
 
 The @code{cdata} module, with its partner @code{arch-info}, provides a
-way to work with data and associted types originating from C
+way to work with data and associated types originating from C
 libraries.  It supports non-native machine architectures using a
 global @code{*arch*} parameter.  Size and alignment is tracked for all
 types.  There are type classes for all C type classes: base, struct,
@@ -72,15 +72,23 @@ time: 1719062561 676365
 Needs love ...
 
 @example
-(define tx (with-arch 'riscv64
-             (cstruct '((a long) (b int)))))
+> (define tx (with-arch "x86_64"
+               (cstruct '((a int) (b long)))))
+> (define tr (with-arch "riscv64"
+               (cstruct '((a int) (b long)))))
+> (ctype-equal? tx tr)
+$1 = #f
+> (pretty-print-ctype tx)
+(cstruct ((a s32le) (b s64le)))
+> (pretty-print-ctype tr)
+(cstruct ((a s32le) (b s32le)))
 @end example
 
 
 @heading Constructing Types
 The procedures used to create C types are described in the following.
-Type construction is machine architecture (i.e., parameter
-@code{*arch*} dependent.
+Execution of these procedures is dependent on the machine architecture
+parameter @code{*arch*}.
 
 @deffn {Procedure} cbase name
 Creates a C base type, given the symbolic @var{name} for that type
