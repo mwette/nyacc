@@ -973,7 +973,7 @@
                        (`((seq . ,def) (let . ,B-clz))
                         (block (cons `(let . ,B-clz) def)))
                        (`((let . ,A-clz)) `(let . ,A-clz))))
-               (vsym (lookup-gensym "swx~val" kdict))
+               (vsym (nx-lookup-gensym "swx~val" kdict))
                (body `(let (swx~val) (,vsym) (,expr) ,body))
                (body (with-escape (lookup "break" kdict) body)))
           (values (cons body seed) (pop-scope kdict))))
@@ -1034,7 +1034,7 @@
        ((TryStatement)
         (let* ((rseed (rtail kseed))
                (try-stmts (car rseed))
-               (ctag (lookup-gensym "catch" kdict))
+               (ctag (nx-lookup-gensym "catch" kdict))
                (catch (match (cdr rseed)
                         ((`(catch ,hdlr) . rest) hdlr)
                         (otherwise (make-handler '() '(void)))))
@@ -1053,7 +1053,7 @@
        ((Catch)
         (let* ((arg-name (cadr (cadr tree)))     ; arg name as string
                (a-sym (string->symbol arg-name)) ; as symbol
-               (a-gsym (lookup-gensym arg-name kdict)) ; its gensym
+               (a-gsym (nx-lookup-gensym arg-name kdict)) ; its gensym
                (jcatch `(lambda ()
                           (lambda-case (((k ,a-sym) #f #f #f ()
                                          (,(jsym) ,a-gsym)) ,(car kseed))))))
