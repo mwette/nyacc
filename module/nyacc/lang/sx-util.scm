@@ -58,6 +58,10 @@
 ;; element a symbol.
 ;; @end deffn
 (define (sxml-expr? sx)
+  "- Procedure: sx-expr? expr
+     This predicate checks if EXPR looks like a valid SXML form.  It is
+     not exhaustive: EXPR is checked to be a list with first element a
+     symbol."
   (and (pair? sx) (symbol? (car sx)) (list? sx)))
 
 ;; @deffn {Procedure} make-sx tag attr . elts
@@ -69,6 +73,12 @@
 ;; returned SXML form.
 ;; @end deffn
 (define (make-sx tag attr . elts)
+  "- Procedure: make-sx tag attr . elts
+     This will build an SXML expression from the symbolic tag, optional
+     attributes and elements.  The attributes ATTR can be of the from
+     ‘( (key \"val\") ...)’ or ‘((key \"val\") ...)’.  If elements in ELTS
+     are not pairs or strings they are ignored, so elmeents of ELTS of
+     the form ‘#f’ and ‘'()’ will not end up in the returned SXML form."
   (let ((tail (fold-right
                (lambda (elt sx)
                  (cond
@@ -86,6 +96,8 @@
 ;; Return the length, don't include attributes, but do include tag
 ;; @end deffn
 (define (sx-length sx)
+  "- Procedure: sx-length sx => <int>
+     Return the length, don’t include attributes, but do include tag"
   (let ((ln (length sx)))
     (cond
       ((zero? ln) 0)
@@ -98,6 +110,8 @@
 ;; Return the tag for a tree
 ;; @end deffn
 (define (sx-tag sx)
+  "- Procedure: sx-tag sx => tag
+     Return the tag for a tree"
   (if (pair? sx) (car sx) #f))
 
 ;; @deffn {Procedure} sx-ref sx ix => item
@@ -114,6 +128,15 @@
 ;; @end deffn
 (define (sx-ref sx ix)
   (define (list-xref l x) (if (> (length l) x) (list-ref l x) #f))
+  "- Procedure: sx-ref sx ix => item
+     Reference the ‘ix’-th element of the list, not counting the
+     optional attributes item.  If the list is shorter than the index,
+     return ‘#f’.  [note to author: The behavior to return ‘#f’ if no
+     elements is not consistent with ‘list-ref’.  Consider changing it.
+     Note also there is never a danger of an element being ‘#f’.]
+          (sx-ref '(abc 1) => #f
+          (sx-ref '(abc \"def\") 1) => \"def\"
+          (sx-ref '(abc ( (foo \"1\")) \"def\") 1) => \"def\""
   (cond
    ((zero? ix) (car sx))
    ((null? (cdr sx)) #f)
@@ -129,6 +152,9 @@
 ;; @end example
 ;; @end deffn
 (define (sx-ref* sx . args)
+  "- Procedure: sx-ref* sx ix1 ix2 ... => item
+     Equivalent to
+          (((sx-ref (sx-ref sx ix1) ix2) ...) ...)"
   (fold (lambda (ix sx) (and (pair? sx) (sx-ref sx ix))) sx args))
 
 ;; @deffn {Procedure} sx-tail sx [ix] => (list)
@@ -161,6 +187,14 @@
 ;; on the module @code{(sxml xpath)}.
 ;; @end deffn
 (define (sx-find tag-or-path sx)
+  "- Procedure: sx-find tag sx => (tag ...)
+ -- Procedure: sx-find path sx => (tag ...)
+     In the first form TAG is a symbolic tag in the first level.  Find
+     the first matching element (in the first level).  In the second
+     form, the argument PATH is a pair.  Apply sxpath and take it’s car,
+     if found, or return ‘#f’, like lxml’s ‘tree.find()’ method.
+     NOTE: the path version is currently disabled, to remove dependence
+     on the module ‘(sxml xpath)’."
   (cond
    ((symbol? tag-or-path)
     (find (lambda (node)
@@ -259,7 +293,7 @@
 ;; @deffnx {Procedure} sx-cons* tag attr exp ... tail => sexp
 ;; @deffnx {Procedure} sx-list tag attr exp ... => sexp
 ;; Build an SXML element by its parts.  If @var{ATTR} is @code{#f},
-;; @code{'()} or @code{(@)} it will not be included. 
+;; @code{'()} or @code{(@)} it will not be included.
 ;; @code{sx-cons*} and @code{sx-list} will remove any expressions @var{exp}
 ;; that are @code{#f} or @code{'()}.
 ;; @end deffn
@@ -330,7 +364,7 @@
 ;; sx-haz-attr? val
 ;;(define (sx-haz-attr? sx)
 ;;  (and (pair? (cdr sx)) (pair? (cadr sx)) (eqv? '@ (caadr sx)) #t))
-        
+
 ;; Given that a tag must be ... we define the syntax of SXML as follows:
 ;; SXML is a text format for XML using S-expressions, sexp's whose first
 ;; element is a symbol for a legal XML tag.  The syntax is:
@@ -420,7 +454,7 @@
                 (sxm-tail vt nl kt kf))
               kf))
     ))
- 
+
 ;; sxml-attr-tail va vt (@ (k v) ...) nl kt kf
 (define-syntax sxm-attr-tail
   (syntax-rules (unquote)
