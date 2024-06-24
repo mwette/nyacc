@@ -503,4 +503,18 @@ long int test1(struct foo *foo, int a, short b, double c) {
     (pretty-print tree)
     #f))
 
+(define (ff1 fmt . args)
+  (call-with-input-string (apply simple-format #f fmt args) read))
+
+(define (ff2 fmt . args)
+  (string->symbol (apply simple-format #f fmt args)))
+
+(when #t
+  (let* ()
+    (pp (list (ff1 "(define x ~A)" "foo") 1 2 3))
+    (pp `(define-public ,(ff2 "~A-desc" "foo")
+           (fh:pointer (fh:pointer ,(ff2 "~A-desc" "x")))))
+    #t))
+
+
 ;; --- last line ---

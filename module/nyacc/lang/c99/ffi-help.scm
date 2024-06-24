@@ -605,12 +605,11 @@
 	     (cons (expand-typerefs pair udict defined) seed))
 	   '() (clean-and-unitize-fields (cdr field-list))))))
 
-;; Convert field list for bytestructures
-;; field-list is (field-list . ,fields)
+;; @deffn {Procedure} cnvt-field-list field-list
+;; Convert field list for a struct or union bytestructure descriptor.
+;; The @var{field-list} takes the form @code{(field-list field ...)}
+;; @end deffn
 (define-public (cnvt-field-list field-list)
-
-  (define (x-acons-defn name type seed)
-    (cons (eval-string (sfstr "(quote `(~A ,~S))" name type)) seed))
 
   (define (acons-defn name type seed)
     (cons
@@ -658,9 +657,9 @@
 	     (else
 	      (acons-defn name type (loop (cdr decls))))))))))
 
-;; @deffn {Procedure} cnvt-aggr-def aggr-t typename aggr-name field-list
-;; Output an aggregate definition, where
-;; @var{attr-t} is a string of @code{"struct"} or @code{"union"},
+;; @deffn {Procedure} cnvt-aggr-def kind typename aggr-name field-list
+;; Output a Scheme aggregate bytestructure descriptor definition, where
+;; @var{kind} is a string of @code{"struct"} or @code{"union"},
 ;; @var{typename} is a string for the typename, or @code{#f},
 ;; @var{aggr-name} is a string for the struct or union name, or @code{#f},
 ;; and @var{field-list} is the field-list from the C syntax tree.
@@ -1851,30 +1850,12 @@
 
       ;; === special cases I need to fix =
 
-      ;; from glib-2.0/gio.h
-      ((udecl
-	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
-	(init-declr
-	 (ptr-declr (pointer (pointer))
-		    (ftn-declr (ptr-declr) (ident ,typename)) ,param-list)))
-       (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)
-       (fhscm-def-pointer typename)
-       (values (cons typename wrapped) (cons typename defined)))
-      ((udecl
-	(decl-spec-list (stor-spec (typedef)) (type-spec (typename ,name)))
-	(init-declr
-	 (ptr-declr (pointer (pointer))
-		    (ftn-declr (ptr-declr (pointer) (ident ,typename)))
-			       ,param-list)))
-       (sfscm "(define-public ~A-desc (fh:pointer 'void))\n" typename)
-       (fhscm-def-pointer typename)
-       (values (cons typename wrapped) (cons typename defined)))
-
-      ;; from zzip/zzip.h
+      ;; zzip/zzip.h: typedef char _zzip_const * _zzip_const zzip_strings_t;
+      ;; verified 22Jun24
       ((udecl
 	(decl-spec-list
 	 (stor-spec (typedef))
-	 (type-spec (fixed-type ,typename))) ;; char
+	 (type-spec (fixed-type ,typename)))
 	(init-declr
 	 (ptr-declr
 	  (pointer (type-qual-list . ,rest))
@@ -1883,32 +1864,13 @@
        (fhscm-def-pointer typename)
        (values (cons typename wrapped) (cons typename defined)))
 
-      ;; from hdf5.h
-      ((udecl
-	(decl-spec-list
-	 (stor-spec (typedef))
-	 (type-spec (fixed-type "unsigned char")))
-	(init-declr (ary-declr (ident ,typename) ,dim)))
-       (let* ((sz (eval-c99-cx dim (*udict*))))
-	(sfscm "(define-public ~A-desc (bs:vector ~A int8))\n" typename sz)
-	(fhscm-def-compound typename)
-	(values (cons typename wrapped) (cons typename defined))))
-
-      ;; from gtk+-3.0/gtk/gtk.h
-      ((udecl (decl-spec-list
-	       (stor-spec (typedef))
-	       (type-spec (fixed-type "char")))
-	      (init-declr
-	       (ptr-declr (pointer) (ident "GtkStock"))))
-       (sferr "missed gtk3 decl not expanded\n")
-       (values wrapped defined))
-
-      ;; from uuid.h
+      ;; from uuid.h, typedef unsigned char uuid_t[16];
+      ;; verified 22Jun24
       ((udecl (decl-spec-list
 	       (stor-spec (typedef))
 	       (type-spec (fixed-type "unsigned char")))
 	      (init-declr
-	       (array-of (ident ,typename) (p-expr (fixed ,len)))))
+	       (ary-declr (ident ,typename) (p-expr (fixed ,len)))))
        (sfscm "(define-public ~A-desc (bs:vector ~A uint8))\n" typename len)
        (fhscm-def-compound typename)
        (values (cons typename wrapped) (cons typename defined)))
@@ -1918,6 +1880,68 @@
       (,otherwise
        (fherr "ffi-help/cnvt-udecl missed:\n~A" (ppstr clean-udecl))
        (values wrapped defined)))))
+
+
+(define (new-cnvt-udecl udecl udict wrapped defined)
+  ;; This is a bit sloppy in that we have to know if the converters are
+  ;; creating wrappers and/or (type) defines.
+
+  (define (ptr-decl specl)
+    `(udecl ,specl (init-declr (ptr-declr (pointer) (ident "_")))))
+  (define (non-ptr-decl specl)
+    `(udecl ,specl (init-declr (ident "_"))))
+
+  (define (specl-props specl)
+    (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
+      (if (null? tl) (values ss tq ts)
+          (case (sx-tag (car tl))
+            ((stor-spec)
+             (loop (cons (sx-tag (sx-ref (car tl) 1)) ss) tq ts (cdr tl)))
+            ((type-qual)
+             (loop ss (cons (sx-tag (sx-ref (car tl) 1)) tq) ts (cdr tl)))
+            ((type-spec)
+             (loop ss tq (sx-ref (car tl) 1) (cdr tl)))))))
+
+  (define ftn-declr?
+    (let ((ff (node-closure (node-typeof? 'ftn-declr))))
+      (lambda (declr) (pair? (ff declr)))))
+
+  ;; use fluids OR pass around
+  (*wrapped* wrapped)
+  (*defined* defined)
+
+  (let*-values (((tag attr specl declr) (split-udecl udecl))
+                ((sspec tqual tspec) (specl-props specl)))
+
+    (cond
+     ((memq 'typedef sspec)
+      (let* ((specl (remove (lambda (f) (equal? f '(stor-spec (typedef))))
+                            specl))
+             (udecl (sx-list 'udecl #f specl declr))
+             (mdecl (udecl->mdecl udecl))
+             (mtail (md-tail mdecl)))
+        #t))
+
+     ((ftn-declr? declr)
+      #t)
+
+     ((sx-match tspec
+        ((struct-def . ,_) #f)
+        ((struct-ref . ,_) #f)
+        ((union-def . ,_) #f)
+        ((union-ref . ,_) #f)
+        ((enum . ,_) #f)
+        (,_ #f)) #t)
+
+     ((memq 'extern sspec)
+      ;; extern variable
+      #t)
+
+     ((memq 'const sspec)
+      #t)
+
+     (else
+      (error "yuck")))))
 
 
 ;; === enums and #defined => lookup
