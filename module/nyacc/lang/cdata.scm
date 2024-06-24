@@ -44,7 +44,7 @@
 (define-module (nyacc lang cdata)
   #:export (cbase
             cstruct cunion cpointer carray
-            ctype? ctype-size ctype-align ctype-class ctype-info ctype-equal?
+            ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             cdata-ref cdata-set! cdata-sel ctype-sel cdata& cdata*
             ctype->ffi
@@ -71,16 +71,16 @@
 (define (pperr exp) (pretty-print exp (current-error-port)))
 (define (sferr fmt . args) (apply simple-format #t fmt args))
 
-;; @deftp {Record} <ctype> size align class info [ptype]
-;; maybe @var{ptype} should only be for @code{cbase} class types
+;; @deftp {Record} <ctype> size align kind info [ptype]
+;; maybe @var{ptype} should only be for @code{cbase} kind types
 ;; @end deftp
 (define-record-type <ctype>
-  (%make-ctype size align class info)
+  (%make-ctype size align kind info)
   ctype?
   (size ctype-size)                ; size in bytes
   (align ctype-align)              ; alignment in bytes
-  (class ctype-class)              ; type class (base aggr array bits)
-  (info ctype-info))                ; class-specific info
+  (kind ctype-kind)                ; type kind (base aggr array bits)
+  (info ctype-info))               ; kind-specific info
 
 ;; @deftp {Record} <cbitfield> type shift width sext?
 ;; @end deftp
@@ -128,6 +128,12 @@
   (type carray-type)
   (length carray-length))
 
+(define-record-type <cenum>
+  (%make-cenum mtype symd vald)
+  (mtype carray-mtype)                  ; attributes
+  (symd carray-sym-dict)                ; name -> value
+  (vald carray-val-dict))               ; value-> name
+
 ;; @deftp {Record} <cpointer> type
 ;; Once we get to this level, we shouldn't need @code{arch} anymore
 ;; so we need to log the pointer type
@@ -149,7 +155,7 @@
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
-    (let ((cl (ctype-class type)) (nf (ctype-info type))
+    (let ((cl (ctype-kind type)) (nf (ctype-info type))
           (addr (pointer-address (scm->pointer type))))
       (format port "#<ctype ~s 0x~x>" (if (eq? 'base cl) nf cl) addr))))
 
@@ -173,13 +179,21 @@
     (let* ((bv (cdata-bv data))
            (ix (cdata-ix data))
            (type (cdata-ct data))
-           (cl (ctype-class type))
+           (cl (ctype-kind type))
            (bv-addr (pointer-address (bytevector->pointer bv))))
       (format port "#<cdata 0x~x" (+ bv-addr ix))
       (format port " ~a>" cl))))
 
-(define be (endianness big))
-(define le (endianness little))
+(define-inlineable (assert-ctype p v)
+  (unless (ctype? v)
+    (error (simple-format #f "~a: expected <ctype>, got ~s" v))))
+
+(define-inlineable (assert-cdata p v)
+  (unless (cdata? v)
+    (error (simple-format #f "~a: expected <cdata>, got ~s" v))))
+
+(define-syntax be (identifier-syntax (endianness big)))
+(define-syntax le (identifier-syntax (endianness little)))
 
 ;; => arch-info
 (define (mtype-bv-ref mtype bv ix)
@@ -233,8 +247,9 @@
 ;; associated number of elements referenced.
 ;; @end deffn
 (define (ctype-detag ix ct tag)
+  ;;(assert-type 'ctype-detag ct)
   (let ((ti (ctype-info ct)))
-    (case (ctype-class ct)
+    (case (ctype-kind ct)
       ((struct)
        (let ((fld (assq-ref (cstruct-dict ti) tag)))
          (values (+ ix (cfield-offset fld)) (cfield-type fld))))
@@ -252,6 +267,7 @@
       (else (error "bad tag" tag)))))
 
 (define (ctype-sel type ix tags)
+  (assert-ctype 'ctype-sel type)
   (let loop ((ix ix) (ct type) (tags tags))
     (if (null? tags)
         (values ix ct)
@@ -259,6 +275,7 @@
           (lambda (ix ct) (loop ix ct (cdr tags)))))))
 
 (define (cdata-sel data . tags)
+  (assert-cdata 'cdata-sel data)
   (if (null? tags)
       data
       (call-with-values
@@ -267,11 +284,12 @@
           (%make-cdata (cdata-bv data) ix ct #f)))))
 
 (define (cdata-ref data . tags)
+  (assert-cdata 'cdata-ref data)
   (let ((bv (cdata-bv data)))
     (call-with-values
         (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
       (lambda (ix ct)
-        (case (ctype-class ct)
+        (case (ctype-kind ct)
           ((base)
            (mtype-bv-ref (ctype-info ct) bv ix))
           ((pointer)
@@ -289,8 +307,9 @@
           (else (error "bad stuff")))))))
 
 (define (cdata-set! data value)
+  (assert-cdata 'cdata-set! data)
   (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
-    (case (ctype-class ct)
+    (case (ctype-kind ct)
       ((base)
        (mtype-bv-set! (ctype-info ct) bv ix value))
       ((pointer)
@@ -308,8 +327,8 @@
       (else
        (error "bad stuff")))))
 
-(define (cinfo-equal? class a b)
-  (case class
+(define (cinfo-equal? kind a b)
+  (case kind
     ((base) (eq? a b))
     ((struct)
      (fold (lambda (a b seed)
@@ -323,12 +342,13 @@
 (define (ctype-equal? a b)
   (cond
    ((or (not (ctype? a)) (not (ctype? b))) #f)
-   ((not (eq? (ctype-class a) (ctype-class b))) #f)
+   ((not (eq? (ctype-kind a) (ctype-kind b))) #f)
    ((not (eqv? (ctype-size a) (ctype-size b))) #f)
    ((not (eqv? (ctype-align a) (ctype-align b))) #f)
-   (else (cinfo-equal? (ctype-class a) (ctype-info a) (ctype-info b)))))
+   (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b)))))
 
 (define* (make-cdata type #:optional value #:key name)
+  (assert-ctype 'make-cdata type)
   (let ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))
     (if value (cdata-set! data value))
     data))
@@ -339,6 +359,7 @@
 ;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
 ;; @end deffn
 (define (cpointer type)
+  (assert-ctype 'cpointer type)
   (let ((type (cond
                ((ctype? type) type)
                ((eq? 'void type) type)
@@ -352,6 +373,7 @@
 ;; bytevector.
 ;; @end deffn
 (define (cdata& data)
+  (assert-cdata 'cdata& data)
   (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
          (pa (+ (pointer-address (bytevector->pointer bv)) ix)))
     (make-cdata (cpointer ct) pa)))
@@ -364,7 +386,8 @@
   "- Procedure: cdata* data
      De-reference a pointer.  Returns a _cdata_ object representing the
      contents at the address in the underlying bytevector."
-  (unless (and (cdata? data) (eq? 'pointer (ctype-class (cdata-ct data))))
+  (assert-cdata 'cdata* data)
+  (unless (and (cdata? data) (eq? 'pointer (ctype-kind (cdata-ct data))))
     (error "cdata*: bad arg"))
   (let* ((cptr (ctype-info (cdata-ct data)))
          (type (cpointer-type cptr))
@@ -448,7 +471,7 @@
           ((name type)                  ; non-bitfield
            (let* ((type (cond ((symbol? type)
                                (cbase type))
-                              ((and (ctype? type) (eq? (ctype-class type) 'base))
+                              ((and (ctype? type) (eq? (ctype-kind type) 'base))
                                type)
                               (else (error "cstruct: bad type"))))
                   (fsz (ctype-size type))
@@ -459,9 +482,9 @@
              (loop (cons cf cfl)
                    (cond
                     (name (acons name cf ral))
-                    ((eq? 'struct (ctype-class type))
+                    ((eq? 'struct (ctype-kind type))
                      (add-fields (cstruct-fields (ctype-info type)) ssz ral))
-                    ((eq? 'union (ctype-class type))
+                    ((eq? 'union (ctype-kind type))
                      (add-fields (cunion-fields (ctype-info type)) ssz ral))
                     (else (error "bad field")))
                    (incr-size fsz fal ssz) (max fal sal) (cdr sfl))))
@@ -469,7 +492,7 @@
           ((name type width)            ; bitfield
            (let* ((type (cond ((symbol? type)
                                (cbase type))
-                              ((and (ctype? type) (eq? (ctype-class type) 'base))
+                              ((and (ctype? type) (eq? (ctype-kind type) 'base))
                                type)
                               (else (error "bad type"))))
                   (fsz (ctype-size type))
@@ -503,7 +526,7 @@
                (type (cadar sfl))
                (type (cond ((symbol? type)
                             (cbase type))
-                           ((and (ctype? type) (eq? (ctype-class type) 'base))
+                           ((and (ctype? type) (eq? (ctype-kind type) 'base))
                             type)
                            (else (error "cunion: bad type"))))
                (fsz (ctype-size type))
@@ -513,9 +536,9 @@
           (loop (cons cf cfl)
                 (cond
                  (name (acons name cf ral))
-                 ((eq? 'struct (ctype-class type))
+                 ((eq? 'struct (ctype-kind type))
                   (add-fields (cstruct-fields (ctype-info type)) ssz ral))
-                 ((eq? 'union (ctype-class type))
+                 ((eq? 'union (ctype-kind type))
                   (add-fields (cunion-fields (ctype-info type)) ssz ral))
                  (else (error "bad field")))
                 (maxi-size fsz fal ssz) (max fal sal) (cdr sfl))))))
@@ -537,15 +560,16 @@
                  'function (%make-cfunction ret-type arg-types variadic?))))
 
 (define* (pretty-print-ctype ctype #:optional (port (current-output-port)))
+  (assert-ctype 'pretty-print-ctype data)
   (define (fmt . args) (apply simple-format port fmt args))
   (define (cnvt type)
-    (case (ctype-class type)
+    (case (ctype-kind type)
       ((base) (ctype-info type))
       ((struct)
        `(cstruct
          ,(map
            (lambda (fld)
-             (if (eq? 'bitfield (ctype-class (cfield-type fld)))
+             (if (eq? 'bitfield (ctype-kind (cfield-type fld)))
                  (list (cfield-name fld) (cnvt (cfield-type fld))
                        (cbitfield-width (ctype-info (cfield-type fld))))
                  (list (cfield-name fld) (cnvt (cfield-type fld)))))
@@ -560,44 +584,26 @@
 (define (mtype->ffi mtype)
   (or
    (assq-ref
-    `((s8 . ,int8) (s16 . ,int16) (s32 . ,int32) (s64 . ,int64)
-      (i128 . #f) (u8 . ,uint8) (u16 . ,uint16) (u32 . ,uint32)
-      (u64 . ,uint64) (u128 . #f) (f16 . #f) (f32 . ,float)
-      (f64 . ,double) (f128 . #f) (s8le . ,int8) (s16le . ,int16)
-      (s32le . ,int32) (s64le . ,int64) (i128le . #f) (u8le . ,uint8)
+    `((s8 . ,int8)  (u8 . ,uint8)
+      ;;(s16 . ,int16) (s32 . ,int32) (s64 . ,int64)
+      ;;(u16 . ,uint16) (u32 . ,uint32) (u64 . ,uint64)
+      ;;(f32 . ,float) (f64 . ,double)
+      ;;(s128 . #f) (u128 . #f) (f16 . #f) (f128 . #f)
+      (s16le . ,int16) (s32le . ,int32) (s64le . ,int64)
       (u16le . ,uint16) (u32le . ,uint32) (u64le . ,uint64)
-      (u128le . #f) (f16le . #f) (f32le . ,float) (f64le . ,double)
-      (f128le . #f) (s8be . ,int8) (s16be . ,int16) (s32be . ,int32)
-      (s64be . ,int64) (i128be . #f) (u8be . ,uint8)
+      (f32le . ,float) (f64le . ,double)
+      (s16be . ,int16) (s32be . ,int32) (s64be . ,int64)
       (u16be . ,uint16) (u32be . ,uint32) (u64be . ,uint64)
-      (u128be . #f) (f16be . #f) (f32be . ,float) (f64be . ,double)
-      (f128be . #f))
+      (f32be . ,float) (f64be . ,double)
+      (u128le . #f) (f16le . #f) (f128le . #f) (s128be . #f)
+      (i128le . #f) (u128be . #f) (f16be . #f) (f128be . #f))
     mtype)
    (error "mtype->ffi: bad mtype")))
-#|
-(define (mtype->ffi-name mtype)
-  (or
-   (assq-ref
-    `((s8 . int8) (s16 . int16) (s32 . int32) (s64 . int64)
-      (i128 . #f) (u8 . uint8) (u16 . uint16) (u32 . uint32)
-      (u64 . uint64) (u128 . #f) (f16 . #f) (f32 . float)
-      (f64 . double) (f128 . #f) (s8le . int8) (s16le . int16)
-      (s32le . int32) (s64le . int64) (i128le . #f) (u8le . uint8)
-      (u16le . uint16) (u32le . uint32) (u64le . uint64)
-      (u128le . #f) (f16le . #f) (f32le . float) (f64le . double)
-      (f128le . #f) (s8be . int8) (s16be . int16) (s32be . int32)
-      (s64be . int64) (i128be . #f) (u8be . uint8)
-      (u16be . uint16) (u32be . uint32) (u64be . uint64)
-      (u128be . #f) (f16be . #f) (f32be . float) (f64be . double)
-      (f128be . #f))
-    mtype)
-   (error "mtype->ffi-name: bad mtype")))
-(export mtype->ffi-name)
-|#
 
 (define (ctype->ffi type)
+  (assert-ctype 'ctype->ffi data)
   (let ((info (ctype-info type)))
-    (case (ctype-class type)
+    (case (ctype-kind type)
       ((base) (mtype->ffi info))
       ((struct union)
        (make-list (/ (ctype-size type) (ctype-align type))
@@ -605,7 +611,7 @@
                     ((1) int8) ((2) int16) ((4) int32) ((8) int64))))
       ((pointer array) '*)
       ((function) (error "ctype->ffi: functions are work to go"))
-      (else (error "ctype->ffi: unsupported:" (ctype-class type))))))
+      (else (error "ctype->ffi: unsupported:" (ctype-kind type))))))
 
 ;; --- c99 support -------------------------------------------------------------
 

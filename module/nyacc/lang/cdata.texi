@@ -33,14 +33,15 @@ The @code{cdata} module, with its partner @code{arch-info}, provides a
 way to work with data and associated types originating from C
 libraries.  It supports non-native machine architectures using a
 global @code{*arch*} parameter.  Size and alignment is tracked for all
-types.  There are type classes for all C type classes: base, struct,
-union, array, pointer, and function.  Beyond size and alignment, base type
-objects carry a symbolic tag to determine the appropriate bytevector
-procedures: there is no type aliasing.  Support for C base types is
-handled by the @code{cbase} type object generator which converts them
-to underlying types.  For example, on a 64 bit little endian
-architecture, @code{cbase} would convert @code{uintptr_t} to a base
-class ctype with underlying type info symbol @code{u64le}.
+types.  There are type kinds for all C type classes: base, struct,
+union, array, pointer, and function.  TODO: enums.  Beyond size and
+alignment, base
+type objects carry a symbolic tag to determine the appropriate
+bytevector procedures: there is no type aliasing.  Support for C base
+types is handled by the @code{cbase} type object generator which
+converts them to underlying types.  For example, on a 64 bit little
+endian architecture, @code{cbase} would convert @code{uintptr_t} to a
+base class ctype with underlying type info symbol @code{u64le}.
 
 The module is hopefully easy to use.  One uses the procedures
 @code{cbase}, @code{cstruct}, @code{cunion}, @code{cpointer},
@@ -72,16 +73,22 @@ time: 1719062561 676365
 Needs love ...
 
 @example
-> (define tx (with-arch "x86_64"
-               (cstruct '((a int) (b long)))))
-> (define tr (with-arch "riscv64"
-               (cstruct '((a int) (b long)))))
-> (ctype-equal? tx tr)
+> (define tx64 (with-arch "x86_64"
+                 (cstruct '((a int) (b long)))))
+> (define tr64 (with-arch "riscv64"
+                 (cstruct '((a int) (b long)))))
+> (define tr32 (with-arch "riscv32"
+                 (cstruct '((a int) (b long)))))
+> (ctype-equal? tx64 tr64)
+$1 = #t
+> (ctype-equal? tr64 tr32)
 $1 = #f
-> (pretty-print-ctype tx)
+> (pretty-print-ctype tx64)
 (cstruct ((a s32le) (b s64le)))
-> (pretty-print-ctype tr)
-(cstruct ((a s32le) (b s32le)))
+> (pretty-print-ctype tr64)
+(cstruct ((a s32le) (b s64le)))
+> (pretty-print-ctype tr32)
+(cstruct ((a s32le) (b s64le)))
 @end example
 
 
@@ -156,9 +163,10 @@ This procedure creates an object of type @code{<cdata>}.
 @end deffn
 
 @deffn {Procedure} cdata-ref data [tag ...]
-Return the Scheme value for cdata.  Since we provide no equivalent for
-structures in Scheme, cdata should have type class base, pointer, or array.
-To get the value of a struct field, you should use the following form:
+Return the Scheme (scalar) value for cdata.  It will not return
+structs, unions, or arrays.  We know of no Scheme equivalent to cover
+all C structs and unions.  Adding support for arrays is TBD.  If you
+want to get the value of a struct, you should use the following form:
 @example
 (cdata-ref (cdata-ref struct-data 'a 'b 'c))
 @end example
