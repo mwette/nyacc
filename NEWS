@@ -5,6 +5,9 @@ are permitted in any medium without royalty provided the copyright
 notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
+2024-XX-XX  V1.10.0
+	*
+
 2024-06-24  V1.09.5
 	* fixed bug 65849: crash on multiple #warning
 
