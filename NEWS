@@ -6,7 +6,7 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 
-2023-XX-YY  V1.10.0
+2023-XX-YY  V1.XX.0
 	* merged tsh language from nxdev branch
 	* worked on nx-utilities and libraries
 	* working cdata to replace bytevectors, for variable architecture
