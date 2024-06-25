@@ -57,7 +57,8 @@
             cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-sext?
             cpointer-type cpointer-mtype
             carray-type carray-length
-            cfunction-ret-type cfunction-arg-types)
+            cfunction-ret-type cfunction-arg-types
+            pretty-print-ctype)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
   #:use-module ((srfi srfi-1) #:select (fold))
@@ -130,9 +131,10 @@
 
 (define-record-type <cenum>
   (%make-cenum mtype symd vald)
-  (mtype carray-mtype)                  ; attributes
-  (symd carray-sym-dict)                ; name -> value
-  (vald carray-val-dict))               ; value-> name
+  cenum?
+  (mtype cenum-mtype)                   ; attributes
+  (symd cenum-sym-dict)                 ; name -> value
+  (vald cenum-val-dict))                ; value-> name
 
 ;; @deftp {Record} <cpointer> type
 ;; Once we get to this level, we shouldn't need @code{arch} anymore
@@ -184,13 +186,13 @@
       (format port "#<cdata 0x~x" (+ bv-addr ix))
       (format port " ~a>" cl))))
 
-(define-inlineable (assert-ctype p v)
+(define-inlinable (assert-ctype p v)
   (unless (ctype? v)
-    (error (simple-format #f "~a: expected <ctype>, got ~s" v))))
+    (error (simple-format #f "~a: expected <ctype>, got ~s" p v))))
 
-(define-inlineable (assert-cdata p v)
+(define-inlinable (assert-cdata p v)
   (unless (cdata? v)
-    (error (simple-format #f "~a: expected <cdata>, got ~s" v))))
+    (error (simple-format #f "~a: expected <cdata>, got ~s" p v))))
 
 (define-syntax be (identifier-syntax (endianness big)))
 (define-syntax le (identifier-syntax (endianness little)))
@@ -274,7 +276,20 @@
         (call-with-values (lambda () (ctype-detag ix ct (car tags)))
           (lambda (ix ct) (loop ix ct (cdr tags)))))))
 
+;; @deffn {Procedure} cdata-sel data tag ...
+;; Return a new @code{cdata} object representing the associated selection.
+;; For example,
+;; @example
+;; dat1 -> <cdata 0x12345678 struct>
+;; (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>
+;; @end example
+;; @end deffn
 (define (cdata-sel data . tags)
+  "- Procedure: cdata-sel data tag ...
+     Return a new ‘cdata’ object representing the associated selection.
+     For example,
+          dat1 -> <cdata 0x12345678 struct>
+          (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>"
   (assert-cdata 'cdata-sel data)
   (if (null? tags)
       data
@@ -283,7 +298,23 @@
         (lambda (ix ct)
           (%make-cdata (cdata-bv data) ix ct #f)))))
 
+;; @deffn {Procedure} cdata-ref data [tag ...]
+;; Return the Scheme (scalar) value for cdata.  It will not return
+;; structs, unions, or arrays.  We know of no Scheme equivalent to cover
+;; all C structs and unions.  Adding support for arrays is TBD.  If you
+;; want to get the value of a struct, you should use the following form:
+;; @example
+;; (cdata-ref (cdata-ref struct-data 'a 'b 'c))
+;; @end example
+;; @end deffn
 (define (cdata-ref data . tags)
+  "- Procedure: cdata-ref data [tag ...]
+     Return the Scheme (scalar) value for cdata.  It will not return
+     structs, unions, or arrays.  We know of no Scheme equivalent to
+     cover all C structs and unions.  Adding support for arrays is TBD.
+     If you want to get the value of a struct, you should use the
+     following form:
+          (cdata-ref (cdata-ref struct-data 'a 'b 'c))"
   (assert-cdata 'cdata-ref data)
   (let ((bv (cdata-bv data)))
     (call-with-values
@@ -306,26 +337,38 @@
           ((union) #f)
           (else (error "bad stuff")))))))
 
-(define (cdata-set! data value)
+;; @deffn {Procedure} cdata-set! data value [tag ...]
+;; Set slot in cdata @var{data} to @var{value} set selected @var{tag}.
+;; @example
+;; (cdata-set! my-struct-data 1 'a 'b 'c))
+;; @end example
+;; @end deffn
+(define (cdata-set! data value . tags)
+  "- Procedure: cdata-set! data value [tag ...]
+     Set slot in cdata DATA to VALUE set selected TAG.
+          (cdata-set! my-struct-data 1 'a 'b 'c))"
   (assert-cdata 'cdata-set! data)
   (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
-    (case (ctype-kind ct)
-      ((base)
-       (mtype-bv-set! (ctype-info ct) bv ix value))
-      ((pointer)
-       (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
-      ((bitfield)
-       (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
-              (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-              (sx (cbitfield-sext? bi)) (am (1- (expt 2 wd)))
-              (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
-              (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
-         (mtype-bv-set! mt bv ix (logior (logand mx dmi) (ash value sh)))))
-      ((struct) #f)
-      ((union) #f)
-      ((array) #f)
-      (else
-       (error "bad stuff")))))
+    (call-with-values
+        (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
+      (lambda (ix ct)
+        (case (ctype-kind ct)
+          ((base)
+           (mtype-bv-set! (ctype-info ct) bv ix value))
+          ((pointer)
+           (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
+          ((bitfield)
+           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
+                  (sx (cbitfield-sext? bi)) (am (1- (expt 2 wd)))
+                  (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
+                  (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
+             (mtype-bv-set! mt bv ix (logior (logand mx dmi) (ash value sh)))))
+          ((struct) #f)
+          ((union) #f)
+          ((array) #f)
+          (else
+           (error "bad stuff")))))))
 
 (define (cinfo-equal? kind a b)
   (case kind
@@ -359,7 +402,6 @@
 ;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
 ;; @end deffn
 (define (cpointer type)
-  (assert-ctype 'cpointer type)
   (let ((type (cond
                ((ctype? type) type)
                ((eq? 'void type) type)
@@ -532,7 +574,7 @@
                (fsz (ctype-size type))
                (fal (ctype-align type))
                (ssz (maxi-size 0 fal ssz))
-               (cf (%make-cfield name type ssz)))
+               (cf (%make-cfield name type 0)))
           (loop (cons cf cfl)
                 (cond
                  (name (acons name cf ral))
@@ -560,23 +602,33 @@
                  'function (%make-cfunction ret-type arg-types variadic?))))
 
 (define* (pretty-print-ctype ctype #:optional (port (current-output-port)))
-  (assert-ctype 'pretty-print-ctype data)
+  (assert-ctype 'pretty-print-ctype ctype)
   (define (fmt . args) (apply simple-format port fmt args))
   (define (cnvt type)
-    (case (ctype-kind type)
-      ((base) (ctype-info type))
-      ((struct)
-       `(cstruct
-         ,(map
-           (lambda (fld)
-             (if (eq? 'bitfield (ctype-kind (cfield-type fld)))
-                 (list (cfield-name fld) (cnvt (cfield-type fld))
-                       (cbitfield-width (ctype-info (cfield-type fld))))
-                 (list (cfield-name fld) (cnvt (cfield-type fld)))))
-           (cstruct-fields (ctype-info type)))))
-      (else (error "pretty-print-ctype: needs work"))))
+    (let ((info (ctype-info type)))
+      (case (ctype-kind type)
+        ((base)
+         info)
+        ((struct)
+         `(cstruct
+           ,(map
+             (lambda (fld)
+               (if (eq? 'bitfield (ctype-kind (cfield-type fld)))
+                   (list (cfield-name fld) (cnvt (cfield-type fld))
+                         (cbitfield-width (ctype-info (cfield-type fld))))
+                   (list (cfield-name fld) (cnvt (cfield-type fld)))))
+             (cstruct-fields info))))
+        ((union)
+         `(cunion
+           ,(map
+             (lambda (fld) (list (cfield-name fld) (cnvt (cfield-type fld))))
+             (cunion-fields info))))
+        ((pointer)
+         `(cpointer ,(cnvt (cpointer-type info))))
+        ((array)
+         `(carray ,(cnvt (carray-type info)) (carray-length info)))
+        (else (error "pretty-print-ctype: needs work")))))
   (pretty-print (cnvt ctype) port))
-(export pretty-print-ctype)
 
 
 ;; --- ffi support -------------------------------------------------------------
@@ -601,7 +653,7 @@
    (error "mtype->ffi: bad mtype")))
 
 (define (ctype->ffi type)
-  (assert-ctype 'ctype->ffi data)
+  (assert-ctype 'ctype->ffi type)
   (let ((info (ctype-info type)))
     (case (ctype-kind type)
       ((base) (mtype->ffi info))
