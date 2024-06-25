@@ -299,22 +299,23 @@
           (%make-cdata (cdata-bv data) ix ct #f)))))
 
 ;; @deffn {Procedure} cdata-ref data [tag ...]
-;; Return the Scheme (scalar) value for cdata.  It will not return
-;; structs, unions, or arrays.  We know of no Scheme equivalent to cover
-;; all C structs and unions.  Adding support for arrays is TBD.  If you
-;; want to get the value of a struct, you should use the following form:
+;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
+;; respect to the cdata object @var{data}.  This works for cdata kinds
+;; @emph{base}, @emph{pointer} and (in the future) @emph{function}.
+;; Attempting to obtain values for C-type kinds @emph{struct}, @emph{union},
+;; or @emph{array} will result in @code{#f}.
 ;; @example
-;; (cdata-ref (cdata-ref struct-data 'a 'b 'c))
+;; (cdata-ref my-struct-value 'a 'b 'c))
 ;; @end example
 ;; @end deffn
 (define (cdata-ref data . tags)
   "- Procedure: cdata-ref data [tag ...]
-     Return the Scheme (scalar) value for cdata.  It will not return
-     structs, unions, or arrays.  We know of no Scheme equivalent to
-     cover all C structs and unions.  Adding support for arrays is TBD.
-     If you want to get the value of a struct, you should use the
-     following form:
-          (cdata-ref (cdata-ref struct-data 'a 'b 'c))"
+     Return the Scheme (scalar) slot value for selected TAG ... with
+     respect to the cdata object DATA.  This works for cdata kinds
+     _base_, _pointer_ and (in the future) _function_.  Attempting to
+     obtain values for C-type kinds _struct_, _union_, or _array_ will
+     result in ‘#f’.
+          (cdata-ref my-struct-value 'a 'b 'c))"
   (assert-cdata 'cdata-ref data)
   (let ((bv (cdata-bv data)))
     (call-with-values
@@ -338,15 +339,17 @@
           (else (error "bad stuff")))))))
 
 ;; @deffn {Procedure} cdata-set! data value [tag ...]
-;; Set slot in cdata @var{data} to @var{value} set selected @var{tag}.
+;; Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
+;; @var{value}.  Example:
 ;; @example
-;; (cdata-set! my-struct-data 1 'a 'b 'c))
+;; (cdata-set! my-struct-data 42 'a 'b 'c))
 ;; @end example
 ;; @end deffn
 (define (cdata-set! data value . tags)
   "- Procedure: cdata-set! data value [tag ...]
-     Set slot in cdata DATA to VALUE set selected TAG.
-          (cdata-set! my-struct-data 1 'a 'b 'c))"
+     Set slot for selcted TAG ... with respect to cdata DATA to VALUE.
+     Example:
+          (cdata-set! my-struct-data 42 'a 'b 'c))"
   (assert-cdata 'cdata-set! data)
   (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
     (call-with-values
@@ -382,7 +385,23 @@
            #t (cstruct-fields a) (cstruct-fields b)))
     (else (error "work to go"))))
 
+;; @deffn {Procedure} ctype-equal? a b
+;; This predicate assesses equality of it's arguments.
+;; Two types are considered equal if they have the same size,
+;; alignment, kind, and eqivalent kind-specific properties.
+;; For base types, the symbolic mtype must be equal; this includes
+;; size, integer versus float, and signed versus unsigned.
+;; For struct and union kinds, the names and types of all fields
+;; must be equal.
+;; @end deffn
 (define (ctype-equal? a b)
+  "- Procedure: ctype-equal? a b
+     This predicate assesses equality of it’s arguments.  Two types are
+     considered equal if they have the same size, alignment, kind, and
+     eqivalent kind-specific properties.  For base types, the symbolic
+     mtype must be equal; this includes size, integer versus float, and
+     signed versus unsigned.  For struct and union kinds, the names and
+     types of all fields must be equal."
   (cond
    ((or (not (ctype? a)) (not (ctype? b))) #f)
    ((not (eq? (ctype-kind a) (ctype-kind b))) #f)
@@ -601,6 +620,10 @@
     (%make-ctype (ctype-size type) (ctype-align (type))
                  'function (%make-cfunction ret-type arg-types variadic?))))
 
+;; @deffn {Procedure} pretty-print-ctype type [port]
+;; Converts type to a literal tree and uses Guile's pretty-print function
+;; to display it.  The default port is the current output port.
+;; @end deffn
 (define* (pretty-print-ctype ctype #:optional (port (current-output-port)))
   (assert-ctype 'pretty-print-ctype ctype)
   (define (fmt . args) (apply simple-format port fmt args))
@@ -615,8 +638,10 @@
              (lambda (fld)
                (if (eq? 'bitfield (ctype-kind (cfield-type fld)))
                    (list (cfield-name fld) (cnvt (cfield-type fld))
-                         (cbitfield-width (ctype-info (cfield-type fld))))
-                   (list (cfield-name fld) (cnvt (cfield-type fld)))))
+                         (cbitfield-width (ctype-info (cfield-type fld)))
+                         #:offset (cfield-offset fld))
+                   (list (cfield-name fld) (cnvt (cfield-type fld))
+                         #:offset (cfield-offset fld))))
              (cstruct-fields info))))
         ((union)
          `(cunion
