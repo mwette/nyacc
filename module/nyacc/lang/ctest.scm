@@ -33,11 +33,11 @@
 (define ntype (vector-length types))
 (define nitype (- ntype 2))
 
-(define (make-rand-fields n)
+(define* (make-rand-fields n #:key w/bitfields)
   (define (rtype n) (vector-ref types (random n)))
   (let loop ((flds '()) (pbf #f) (n n))
     (if (zero? n) flds
-        (let* ((rndN (random 3))
+        (let* ((rndN 1 #;(if w/bitfields (random 3) 1))
                (cbf (if pbf (positive? rndN) (zero? rndN)))
                (name (vector-ref names n)))
           (loop (cons (if cbf
@@ -65,13 +65,16 @@
 
 ;; ----- run it ---------------------------
 
-(define *nfld* 5)
+(define *nfld* 3)
 (define *ntst* 1)
 (define c99-basename "ztest")
 (use-modules (system foreign))
 (use-modules (system foreign-library))
 
-(define (gen-c99-test-code kase)
+(define (gen-c99-test-code kind kase)
+  ;; kind is 'struct or 'union
+  (define kstr (if (symbol? kind) (symbol->string kind) kind))
+  (define ksym (if (string? kind) (string->symbol kind) kind))
   (define fields (cdr kase))
   (define sn (string-append "test" (number->string (car kase))))
   (define (mk-field fld)
@@ -82,44 +85,76 @@
     (format #f ", ~a ~a" (tsym->str (list-ref fld 1)) (list-ref fld 0)))
   (define (mk-gparam fld)
     (format #f ", ~a *~a" (tsym->str (list-ref fld 1)) (list-ref fld 0)))
-  (define (mk-setter fld)
-    (format #f " t->~a = ~a;" (list-ref fld 0) (list-ref fld 0)))
-  (define (mk-getter fld)
-    (format #f " *~a = t->~a;" (list-ref fld 0) (list-ref fld 0)))
+  (define (mk-setter ix fld)
+    (format #f "  if (n == ~a) t->~a = ~a;\n"
+            ix (list-ref fld 0) (list-ref fld 0)))
+  (define (mk-getter ix fld)
+    (format #f "  if (n == ~a) *~a = t->~a;\n"
+            ix (list-ref fld 0) (list-ref fld 0)))
   (string-append
-   "struct " sn " {\n"
+   kstr " " sn " {\n"
    (apply string-append (map mk-field fields)) "};\n\n"
-   "unsigned long " sn "_set(struct " sn " *t"
-   (apply string-append (map mk-sparam fields)) ") {\n"
-   (apply string-append (map mk-setter fields))
-   "\n return sizeof(*t);\n}\n\n"
-   "unsigned long " sn "_get(struct " sn " *t"
-   (apply string-append (map mk-gparam fields)) ") {\n"
-   (apply string-append (map mk-getter fields))
-   "\n return sizeof(*t);\n}\n\n\n"))
 
-(define (gen-code cases)
-  (with-output-to-file (string-append c99-basename ".c")
-    (lambda ()
-      (for-each (lambda (code) (display code)) (map gen-c99-test-code cases))
-      (display "#include <stdio.h>\n")
-      (display "int Zmain() { printf(\"%ld\\n\", sizeof(struct test0)); }\n\n")
-      ))
+   "unsigned long " sn "_siz(" kstr " " sn " *t) {\n"
+   "  //printf(\"\\tsizeof=>%lu\\n\", sizeof(*t));\n"
+   "  return sizeof(*t);\n}\n\n"
+
+   "void " sn "_set(" kstr " " sn " *t, int n"
+   (apply string-append (map mk-sparam fields)) ") {\n"
+   (apply string-append (map mk-setter (iota *nfld*) fields))
+   "}\n\n"
+
+   "void " sn "_get(" kstr " " sn " *t, int n"
+   (apply string-append (map mk-gparam fields)) ") {\n"
+   (apply string-append (map mk-getter (iota *nfld*) fields))
+   "}\n\n\n"))
+
+(define (gen-c99-test-code/struct k) (gen-c99-test-code 'struct k))
+(define (gen-c99-test-code/union k) (gen-c99-test-code 'union k))
+
+(define (gen-code/struct cases)
+  (system "rm -f ztest.c") (system "rm -f ztest.so")
+  (let ((port (open-output-file (string-append c99-basename ".c"))))
+    (display "#include <stdio.h>\n\n" port)
+    (for-each (lambda (code) (display code port))
+              (map gen-c99-test-code/struct cases))
+    (display
+     "int Zmain() { struct test0 *t; printf(\"%lu\\n\", sizeof(*t)); }\n\n"
+     port)
+    (close-port port))
   (system (simple-format #f "gcc -g -o ~a.so -shared -fPIC ~a.c"
                          c99-basename c99-basename))
   c99-basename)
 
-(define (exec-test case-num fields testlib)
+(define (gen-code/union cases)
+  (system "rm -f ztest.c") (system "rm -f ztest.so")
+  (with-output-to-file (string-append c99-basename ".c")
+    (lambda ()
+      (display "#include <stdio.h>\n\n")
+      (for-each (lambda (code) (display code))
+                (map gen-c99-test-code/union cases))
+      (display
+       "int Zmain() { union test0 *t; printf(\"%lu\\n\", sizeof(*t)); }\n\n")
+      (force-output)))
+  (gc)
+  (system (simple-format #f "gcc -g -o ~a.so -shared -fPIC ~a.c"
+                         c99-basename c99-basename))
+  c99-basename)
+
+(define (exec-test case-num fields testlib kind)
   (define (field->rand-val fld)
     (rand-mtype-val (mtypeof-basetype (cadr fld))
                     (and (pair? (cddr fld)) (caddr fld))))
   (define (type->ffi t) (ctype->ffi (mtypeof-basetype t)))
 
-  (let* ((sname (string-append "test" (number->string case-num) "_set"))
+  (define caggate (case kind ((struct) cstruct) ((union) cunion)))
+
+  (let* ((zname (string-append "test" (number->string case-num) "_siz"))
+         (sname (string-append "test" (number->string case-num) "_set"))
          (gname (string-append "test" (number->string case-num) "_get"))
          (names (map car fields))
          (types (map cadr fields))
-         (t-ct (cstruct
+         (t-ct (caggate
                 (map (lambda (fld)
                        (match fld
                          ((name type) (list name (cbase type)))
@@ -128,82 +163,122 @@
          (size (ctype-size t-ct))
          (t-cd (make-cdata t-ct))
          (bv (cdata-bv t-cd))
-         (set-ftn (pointer->procedure
-                   unsigned-long
-                   (foreign-library-pointer testlib sname)
-                   (cons '* (map (lambda (t) (ctype->ffi (cbase t))) types))))
-         (get-ftn (pointer->procedure
-                   unsigned-long
-                   (foreign-library-pointer testlib gname)
-                   (cons '* (map (lambda (t) '*) types))))
-         (sptr (cdata-ref (cdata& t-cd)))
+         ;;(sptr (cdata-ref (cdata& t-cd)))
+         (sptr (bytevector->pointer bv))
+         (siz-ftn
+          (pointer->procedure
+           unsigned-long (foreign-library-pointer testlib zname) (list '*)))
+         (set-ftn
+          (pointer->procedure
+           void (foreign-library-pointer testlib sname)
+           (cons* '* int (map (lambda (t) (ctype->ffi (cbase t)))types))))
+         (get-ftn
+          (pointer->procedure
+           void (foreign-library-pointer testlib gname)
+           (cons* '* int (map (lambda (t) '*) types))))
          (vars (map (lambda (t) (make-cdata (cbase t))) types))
-         (refs (map (lambda (v) (bytevector->pointer (cdata-bv v))) vars)))
+         (refs (map (lambda (v) (bytevector->pointer (cdata-bv v))) vars))
+         (appli (lambda (f p ix vl)
+                  (f p ix (list-ref vl 0) (list-ref vl 1) (list-ref vl 2))))
+          )
+    (sf "fields=~s\n" fields)
+    ;;(format #t "    p-a=~x\n" (pointer-address sptr))
+    ;;(sf "    ffi=~s\n" (map (lambda (t) (ctype->ffi (cbase t))) types))
+    #;(let* ((vals (map field->rand-val fields))
+           )
+      (pp sptr)
+      (pp vals)
+      (pp (ctype-size t-ct))
+      #f)
+    ;;#|
     (fold
      (lambda (n seed)
-       (and seed
-            (let* ((vals (map field->rand-val fields))
-                   (res (apply set-ftn sptr vals)))
-              (unless (eqv? res size)
-                (format #t "size mismatch: c99=~s vs scm=~s\n" res size)
-                (format #t "               ~s\n" fields)
-                (quit))
+       (let* ((vals (map field->rand-val fields)))
+         ;;(sf "   vals=~s\n" vals)
+         ;;(sf "   szof=~s\n" (ctype-size t-ct))
+         (and seed
+              (let ((res (siz-ftn sptr)))
+                (unless (eqv? size res)
+                  (format #t "\tmissed size: scm=~s vs c99=~s\n" size res)
+                  (format #t "\t             ~s\n" fields))
+                #t)
+              (eqv? size (siz-ftn sptr))
               (fold
-               (lambda (name type value seed)
-                 (let ((myval (cdata-ref (cdata-sel t-cd name))))
-                   (unless (eqv? myval value)
-                     (format #t "set-miss: ~s ~s got ~s\n" name value myval))
-                   (and (eqv? myval value) seed)))
-               (eqv? res size) names types vals))
-            (let* ((vals (map field->rand-val fields)))
-              (for-each
-               (lambda (name value) (cdata-set! (cdata-sel t-cd name) value))
-               names vals)
-              (apply get-ftn sptr refs)
+               (lambda (ix name type val seed)
+                 (apply set-ftn sptr ix vals)
+                 (unless (eqv? val (cdata-ref (cdata-sel t-cd name)))
+                   (format #t "\tmissed ref: ~s ~s\n" name val)
+                   (format #t "\t            ~s\n" fields)
+                   (format #t "\t            ~s\n" (cdata-ref t-cd name)))
+                 (and (eqv? val (cdata-ref (cdata-sel t-cd name))) seed))
+               #t (iota *nfld*) names types vals)
+              ;;#|
               (fold
-               (lambda (name var value seed)
-                 (let* ((myval (cdata-ref var)))
-                   (unless (eqv? myval value)
-                     (format #t "get-miss: ~s ~s got ~s\n" name value myval))
-                   (and seed (eqv? myval value))))
-               #t names vars vals))))
-     #t (iota 3))))
+               (lambda (ix name type var val seed)
+                 (cdata-set! (cdata-sel t-cd name) val)
+                 (apply get-ftn sptr ix refs)
+                 (unless (eqv? val (cdata-ref var))
+                   (format #t "\tmissed set: ~s ~s\n" name val)
+                   (format #t "\t               ~s\n" fields)
+                   #;(quit))
+                 (and (eqv? val (cdata-ref var)) seed))
+               #t (iota *nfld*) names types vars vals)
+              ;;|#
+              )))
+    #t (iota 3))
+    ;;|#
+    ))
 
 
 ;; executing do-test twice makes it always crash
-(define* (do-test #:optional (n 3))
+(define* (do-test/struct #:optional (n 3))
   (let* ((cases (map (lambda (ix)
-                       (cons ix (make-rand-fields *nfld*)))
+                       (cons ix (make-rand-fields *nfld* #:w/bitfields #t)))
                      (iota n)))
-         (basename (gen-code cases))
+         (basename (gen-code/struct cases))
          (testlib #f))
     (dynamic-wind
       (lambda () (set! testlib (load-foreign-library basename)))
       (lambda ()
         (fold (lambda (kase seed)
-                (and seed (exec-test (car kase) (cdr kase) testlib)))
+                (and seed (exec-test (car kase) (cdr kase) testlib 'struct)))
+              #t cases))
+      (lambda () (unload-foreign-library testlib)))))
+
+(define* (do-test/union #:optional (n 3))
+  (let* ((cases (map (lambda (ix)
+                       (cons ix (make-rand-fields *nfld* #:w/bitfields #f)))
+                     (iota n)))
+         (basename (gen-code/union cases))
+         (testlib #f))
+    (dynamic-wind
+      (lambda () (set! testlib (load-foreign-library basename)))
+      (lambda ()
+        (fold (lambda (kase seed)
+                (and seed (exec-test (car kase) (cdr kase) testlib 'union)))
               #t cases))
       (lambda () (unload-foreign-library testlib)))))
 
 (define tS1 (cstruct `((a ,(cbase 'int)) (b ,(cbase 'double)))))
 (define dS1 (make-cdata tS1))
-(define tU1 (cunion `((a ,(cbase 'int)) (b ,(cbase 'double)))))
+(define fU1
+  '((a short) (b float) (c unsigned-short) (d unsigned-short)
+    (e unsigned-short)))
+(define tU1 (cunion fU1))
 (define dU1 (make-cdata tU1))
+(define pU1 (cdata& dU1))
 
-(define t1 (cstruct '((tv_sec long) (tv_usec long))))
-(define gettod-raw
-  (foreign-library-function
-   #f "gettimeofday"
-   #:return-type (ctype->ffi (cbase 'int))
-   #:arg-types (map ctype->ffi (list (cpointer t1) (cpointer 'void)))))
+#;(define set-ftn
+  (let ((types (map cadr fU1)))
+    (pointer->procedure
+     unsigned-long
+     (foreign-library-pointer "ztest" "test0_set")
+     (cons '* (map (lambda (t) (ctype->ffi (cbase t))) types)))))
 
-;;(define ft (cfunction (cbase 'int) (list (cpointer t1) (cpointer 'void))))
-;;(define gettod-cd (make-cftn ft (ftn-ptr "gettimeofday" "library"))
-;;(cftn->return-type ft) -> ffi type
-;;(cftn->arg-types ft) == (map ctype->ffi (cfunction-arg-types xx))
+#|
+(define vals '(
+(define (do-call)
+(apply set-ftn pU1 (map cdata->ffi
+|#
 
-(define d1 (make-cdata t1))
-(gettod-raw (cdata-ref (cdata& d1)) %null-pointer)
-(format #t "time: ~s ~s\n" (cdata-ref d1 'tv_sec) (cdata-ref d1 'tv_usec))
-
-;; --- last line ---
+;; --- last line ---a
