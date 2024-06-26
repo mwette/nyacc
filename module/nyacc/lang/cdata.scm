@@ -61,7 +61,7 @@
             pretty-print-ctype)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
-  #:use-module ((srfi srfi-1) #:select (fold))
+  #:use-module ((srfi srfi-1) #:select (fold xcons))
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (rnrs bytevectors)
@@ -186,6 +186,7 @@
       (format port "#<cdata 0x~x" (+ bv-addr ix))
       (format port " ~a>" cl))))
 
+
 (define-inlinable (assert-ctype p v)
   (unless (ctype? v)
     (error (simple-format #f "~a: expected <ctype>, got ~s" p v))))
@@ -242,6 +243,7 @@
     ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
 
+
 ;; @deffn {Procedure} ctype-detag ix ct tag
 ;; Follows @var{tag}.  For structs and unions, the tag is a symbolic
 ;; field name.  For arrays and pointers, the tag is a non-negative integer.
@@ -275,103 +277,6 @@
         (values ix ct)
         (call-with-values (lambda () (ctype-detag ix ct (car tags)))
           (lambda (ix ct) (loop ix ct (cdr tags)))))))
-
-;; @deffn {Procedure} cdata-sel data tag ...
-;; Return a new @code{cdata} object representing the associated selection.
-;; For example,
-;; @example
-;; dat1 -> <cdata 0x12345678 struct>
-;; (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>
-;; @end example
-;; @end deffn
-(define (cdata-sel data . tags)
-  "- Procedure: cdata-sel data tag ...
-     Return a new ‘cdata’ object representing the associated selection.
-     For example,
-          dat1 -> <cdata 0x12345678 struct>
-          (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>"
-  (assert-cdata 'cdata-sel data)
-  (if (null? tags)
-      data
-      (call-with-values
-          (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
-        (lambda (ix ct)
-          (%make-cdata (cdata-bv data) ix ct #f)))))
-
-;; @deffn {Procedure} cdata-ref data [tag ...]
-;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
-;; respect to the cdata object @var{data}.  This works for cdata kinds
-;; @emph{base}, @emph{pointer} and (in the future) @emph{function}.
-;; Attempting to obtain values for C-type kinds @emph{struct}, @emph{union},
-;; or @emph{array} will result in @code{#f}.
-;; @example
-;; (cdata-ref my-struct-value 'a 'b 'c))
-;; @end example
-;; @end deffn
-(define (cdata-ref data . tags)
-  "- Procedure: cdata-ref data [tag ...]
-     Return the Scheme (scalar) slot value for selected TAG ... with
-     respect to the cdata object DATA.  This works for cdata kinds
-     _base_, _pointer_ and (in the future) _function_.  Attempting to
-     obtain values for C-type kinds _struct_, _union_, or _array_ will
-     result in ‘#f’.
-          (cdata-ref my-struct-value 'a 'b 'c))"
-  (assert-cdata 'cdata-ref data)
-  (let ((bv (cdata-bv data)))
-    (call-with-values
-        (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
-      (lambda (ix ct)
-        (case (ctype-kind ct)
-          ((base)
-           (mtype-bv-ref (ctype-info ct) bv ix))
-          ((pointer)
-           (make-pointer
-            (mtype-bv-ref (cpointer-mtype (ctype-info ct)) bv ix)))
-          ((bitfield)
-           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
-                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-                  (sx (cbitfield-sext? bi)) (sm (expt 2 (1- wd)))
-                  (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
-             (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
-          ((array) #f)
-          ((struct) #f)
-          ((union) #f)
-          (else (error "bad stuff")))))))
-
-;; @deffn {Procedure} cdata-set! data value [tag ...]
-;; Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
-;; @var{value}.  Example:
-;; @example
-;; (cdata-set! my-struct-data 42 'a 'b 'c))
-;; @end example
-;; @end deffn
-(define (cdata-set! data value . tags)
-  "- Procedure: cdata-set! data value [tag ...]
-     Set slot for selcted TAG ... with respect to cdata DATA to VALUE.
-     Example:
-          (cdata-set! my-struct-data 42 'a 'b 'c))"
-  (assert-cdata 'cdata-set! data)
-  (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
-    (call-with-values
-        (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
-      (lambda (ix ct)
-        (case (ctype-kind ct)
-          ((base)
-           (mtype-bv-set! (ctype-info ct) bv ix value))
-          ((pointer)
-           (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
-          ((bitfield)
-           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
-                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-                  (sx (cbitfield-sext? bi)) (am (1- (expt 2 wd)))
-                  (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
-                  (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
-             (mtype-bv-set! mt bv ix (logior (logand mx dmi) (ash value sh)))))
-          ((struct) #f)
-          ((union) #f)
-          ((array) #f)
-          (else
-           (error "bad stuff")))))))
 
 (define (cinfo-equal? kind a b)
   (case kind
@@ -409,12 +314,6 @@
    ((not (eqv? (ctype-align a) (ctype-align b))) #f)
    (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b)))))
 
-(define* (make-cdata type #:optional value #:key name)
-  (assert-ctype 'make-cdata type)
-  (let ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))
-    (if value (cdata-set! data value))
-    data))
-
 ;; @deffn {Procedure} cpointer type
 ;; Generate a C pointer type to @var{type}. To reference or de-reference
 ;; cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
@@ -428,36 +327,6 @@
                (else (error "cpointer: bad arg")))))
     (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
                  'pointer (%make-cpointer type (mtypeof-basetype 'void*)))))
-
-;; @deffn {Procedure} cdata& data
-;; Generate a reference (i.e., cpointer) to the contents in the underlying
-;; bytevector.
-;; @end deffn
-(define (cdata& data)
-  (assert-cdata 'cdata& data)
-  (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
-         (pa (+ (pointer-address (bytevector->pointer bv)) ix)))
-    (make-cdata (cpointer ct) pa)))
-
-;; @deffn {Procedure} cdata* data
-;; De-reference a pointer.  Returns a @emph{cdata} object representing the
-;; contents at the address in the underlying bytevector.
-;; @end deffn
-(define (cdata* data)
-  "- Procedure: cdata* data
-     De-reference a pointer.  Returns a _cdata_ object representing the
-     contents at the address in the underlying bytevector."
-  (assert-cdata 'cdata* data)
-  (unless (and (cdata? data) (eq? 'pointer (ctype-kind (cdata-ct data))))
-    (error "cdata*: bad arg"))
-  (let* ((cptr (ctype-info (cdata-ct data)))
-         (type (cpointer-type cptr))
-         (mtype (cpointer-mtype cptr))
-         (addr (mtype-bv-ref mtype (cdata-bv data) (cdata-ix data)))
-         (bv (pointer->bytevector (make-pointer addr) (ctype-size type))))
-    ;; TODO: check for (cdata-tn data)
-    (%make-cdata bv 0 type #f)))
-
 
 ;;.@deffn {Procedure} make-cbase-map arch
 ;; where @var{arch} is string or @code{<arch>}
@@ -606,11 +475,52 @@
 
 
 ;; @deffn {Procedure} carray type n
-;; n can be zero in which case ...
+;; Create an array of @var{type} with @var{length}.
+;; If @var{length} is zero, the array length is unbounded (so be careful).
 ;; @end deffn
 (define (carray type n)
+  "- Procedure: carray type n
+     Create an array of TYPE with LENGTH.  If LENGTH is zero, the array
+     length is unbounded (so be careful)."
   (%make-ctype (* n (ctype-size type)) (ctype-align type)
                'array (%make-carray type n)))
+
+
+;; @deffn {Procedure} cenum enum-list [#:short=#f]
+;; @var{enum-list} is a list of name or name-value pairs
+;; @example
+;; (cenum '((a 1) b (c 4))
+;; @end example
+;; If @var{short} is @code{#t} the size wil be smallest that can hold it.
+;; @end deffn
+(define* (cenum enum-list #:key short)
+  "- Procedure: cenum enum-list
+     ENUM-LIST is a list of name or name-value pairs
+          (cenum '((a 1) b (c 4))"
+  (define (short-mtype mn mx)
+    (if (< 0 mn)
+        (cond
+         ((and (<= -128 mn) (< mx 128)) 's8)
+         ((and (<= -32768 mn) (< mx 32768)) (mtypeof-basetype 'short))
+         ((and (<= -2147483648 mn) (< mx 2147483648)) (mtypeof-basetype 'int))
+         (else (mtypeof-basetype 'long)))
+        (cond
+         ((< mx 256) 'u8)
+         ((< mx 32768) (mtypeof-basetype 'unsigned-short))
+         ((< mx 2147483648) (mtypeof-basetype 'unsigned-int))
+         (else (mtypeof-basetype 'unsigned-long)))))
+  (let loop ((nvl '()) (nxt 0) (enl enum-list))
+    (if (null? enl)
+        (let* ((mx (car nvl)) (nvl (reverse nvl))
+               (mn (car nvl)) (vnl (map xcons nvl))
+               (mtype (if short (short-mtype mn mx) (mtypeof-basetype 'int))))
+          (%make-ctype (sizeof-mtype mtype) (alignof-mtype mtype)
+                       'enum (%make-cenum mtype nvl vnl)))
+        (match (car enl)
+          (`(,n ,v) (loop (acons n v nvl) (1+ v) (cdr enl)))
+          ((? symbol? n) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
+          (((? symbol? n)) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
+          (_ (error "cenum: bad enum def'n"))))))
 
 ;; @deffn {Procedure} cfunction ret-type arg-types [#:variadic? VA]
 ;; n can be zero in which case ...
@@ -654,6 +564,139 @@
          `(carray ,(cnvt (carray-type info)) (carray-length info)))
         (else (error "pretty-print-ctype: needs work")))))
   (pretty-print (cnvt ctype) port))
+
+
+(define* (make-cdata type #:optional value #:key name)
+  (assert-ctype 'make-cdata type)
+  (let ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))
+    (if value (cdata-set! data value))
+    data))
+
+;; @deffn {Procedure} cdata-sel data tag ...
+;; Return a new @code{cdata} object representing the associated selection.
+;; For example,
+;; @example
+;; dat1 -> <cdata 0x12345678 struct>
+;; (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>
+;; @end example
+;; @end deffn
+(define (cdata-sel data . tags)
+  "- Procedure: cdata-sel data tag ...
+     Return a new ‘cdata’ object representing the associated selection.
+     For example,
+          dat1 -> <cdata 0x12345678 struct>
+          (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>"
+  (assert-cdata 'cdata-sel data)
+  (if (null? tags)
+      data
+      (call-with-values
+          (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
+        (lambda (ix ct)
+          (%make-cdata (cdata-bv data) ix ct #f)))))
+
+;; @deffn {Procedure} cdata-ref data [tag ...]
+;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
+;; respect to the cdata object @var{data}.  This works for cdata kinds
+;; @emph{base}, @emph{pointer} and (in the future) @emph{function}.
+;; Attempting to obtain values for C-type kinds @emph{struct}, @emph{union},
+;; or @emph{array} will result in @code{#f}.
+;; @example
+;; (cdata-ref my-struct-value 'a 'b 'c))
+;; @end example
+;; @end deffn
+(define (cdata-ref data . tags)
+  "- Procedure: cdata-ref data [tag ...]
+     Return the Scheme (scalar) slot value for selected TAG ... with
+     respect to the cdata object DATA.  This works for cdata kinds
+     _base_, _pointer_ and (in the future) _function_.  Attempting to
+     obtain values for C-type kinds _struct_, _union_, or _array_ will
+     result in ‘#f’.
+          (cdata-ref my-struct-value 'a 'b 'c))"
+  (assert-cdata 'cdata-ref data)
+  (let ((bv (cdata-bv data)))
+    (call-with-values
+        (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
+      (lambda (ix ct)
+        (case (ctype-kind ct)
+          ((base)
+           (mtype-bv-ref (ctype-info ct) bv ix))
+          ((pointer)
+           (make-pointer
+            (mtype-bv-ref (cpointer-mtype (ctype-info ct)) bv ix)))
+          ((bitfield)
+           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
+                  (sx (cbitfield-sext? bi)) (sm (expt 2 (1- wd)))
+                  (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
+             (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
+          ((array) #f)
+          ((struct) #f)
+          ((union) #f)
+          (else (error "bad stuff")))))))
+
+;; @deffn {Procedure} cdata-set! data value [tag ...]
+;; Set slot for selcted @var{tag ...} with respect to cdata @var{data} to
+;; @var{value}.  Example:
+;; @example
+;; (cdata-set! my-struct-data 42 'a 'b 'c))
+;; @end example
+;; @end deffn
+(define (cdata-set! data value . tags)
+  "- Procedure: cdata-set! data value [tag ...]
+     Set slot for selcted TAG ... with respect to cdata DATA to VALUE.
+     Example:
+          (cdata-set! my-struct-data 42 'a 'b 'c))"
+  (assert-cdata 'cdata-set! data)
+  (let ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data)))
+    (call-with-values
+        (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
+      (lambda (ix ct)
+        (case (ctype-kind ct)
+          ((base)
+           (mtype-bv-set! (ctype-info ct) bv ix value))
+          ((pointer)
+           (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
+          ((bitfield)
+           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
+                  (sx (cbitfield-sext? bi)) (am (1- (expt 2 wd)))
+                  (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
+                  (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
+             (mtype-bv-set! mt bv ix (logior (logand mx dmi) (ash value sh)))))
+          ((struct) #f)
+          ((union) #f)
+          ((array) #f)
+          (else
+           (error "bad stuff")))))))
+
+;; @deffn {Procedure} cdata& data
+;; Generate a reference (i.e., cpointer) to the contents in the underlying
+;; bytevector.
+;; @end deffn
+(define (cdata& data)
+  (assert-cdata 'cdata& data)
+  (let* ((bv (cdata-bv data)) (ix (cdata-ix data)) (ct (cdata-ct data))
+         (pa (+ (pointer-address (bytevector->pointer bv)) ix)))
+    (make-cdata (cpointer ct) pa)))
+
+;; @deffn {Procedure} cdata* data
+;; De-reference a pointer.  Returns a @emph{cdata} object representing the
+;; contents at the address in the underlying bytevector.
+;; @end deffn
+(define (cdata* data)
+  "- Procedure: cdata* data
+     De-reference a pointer.  Returns a _cdata_ object representing the
+     contents at the address in the underlying bytevector."
+  (assert-cdata 'cdata* data)
+  (unless (and (cdata? data) (eq? 'pointer (ctype-kind (cdata-ct data))))
+    (error "cdata*: bad arg"))
+  (let* ((cptr (ctype-info (cdata-ct data)))
+         (type (cpointer-type cptr))
+         (mtype (cpointer-mtype cptr))
+         (addr (mtype-bv-ref mtype (cdata-bv data) (cdata-ix data)))
+         (bv (pointer->bytevector (make-pointer addr) (ctype-size type))))
+    ;; TODO: check for (cdata-tn data)
+    (%make-cdata bv 0 type #f)))
 
 
 ;; --- ffi support -------------------------------------------------------------
