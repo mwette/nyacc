@@ -185,7 +185,6 @@ For example,
 dat1 -> <cdata 0x12345678 struct>
 (cdata-ref dat1 'a 'b 'c) -> <cdata 0x12345700> f64le>
 @end example
-TODO: do we need something to return @code{(values bv ix ct)}
 @end deffn
 
 @deffn {Procecure} cdata* data
