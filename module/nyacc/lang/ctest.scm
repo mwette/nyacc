@@ -37,7 +37,7 @@
   (define (rtype n) (vector-ref types (random n)))
   (let loop ((flds '()) (pbf #f) (n n))
     (if (zero? n) flds
-        (let* ((rndN 1 #;(if w/bitfields (random 3) 1))
+        (let* ((rndN (if w/bitfields (random 3) 1))
                (cbf (if pbf (positive? rndN) (zero? rndN)))
                (name (vector-ref names n)))
           (loop (cons (if cbf
@@ -65,7 +65,7 @@
 
 ;; ----- run it ---------------------------
 
-(define *nfld* 3)
+(define *nfld* 5)
 (define *ntst* 1)
 (define c99-basename "ztest")
 (use-modules (system foreign))
@@ -94,16 +94,13 @@
   (string-append
    kstr " " sn " {\n"
    (apply string-append (map mk-field fields)) "};\n\n"
-
    "unsigned long " sn "_siz(" kstr " " sn " *t) {\n"
    "  //printf(\"\\tsizeof=>%lu\\n\", sizeof(*t));\n"
    "  return sizeof(*t);\n}\n\n"
-
    "void " sn "_set(" kstr " " sn " *t, int n"
    (apply string-append (map mk-sparam fields)) ") {\n"
    (apply string-append (map mk-setter (iota *nfld*) fields))
    "}\n\n"
-
    "void " sn "_get(" kstr " " sn " *t, int n"
    (apply string-append (map mk-gparam fields)) ") {\n"
    (apply string-append (map mk-getter (iota *nfld*) fields))
@@ -113,7 +110,7 @@
 (define (gen-c99-test-code/union k) (gen-c99-test-code 'union k))
 
 (define (gen-code/struct cases)
-  (system "rm -f ztest.c") (system "rm -f ztest.so")
+  (system "rm -f ztest.c ztest.so")
   (let ((port (open-output-file (string-append c99-basename ".c"))))
     (display "#include <stdio.h>\n\n" port)
     (for-each (lambda (code) (display code port))
@@ -127,7 +124,7 @@
   c99-basename)
 
 (define (gen-code/union cases)
-  (system "rm -f ztest.c") (system "rm -f ztest.so")
+  (system "rm -f ztest.c ztest.so")
   (with-output-to-file (string-append c99-basename ".c")
     (lambda ()
       (display "#include <stdio.h>\n\n")
@@ -136,7 +133,7 @@
       (display
        "int Zmain() { union test0 *t; printf(\"%lu\\n\", sizeof(*t)); }\n\n")
       (force-output)))
-  (gc)
+  ;;(gc)
   (system (simple-format #f "gcc -g -o ~a.so -shared -fPIC ~a.c"
                          c99-basename c99-basename))
   c99-basename)
@@ -162,9 +159,7 @@
                      fields)))
          (size (ctype-size t-ct))
          (t-cd (make-cdata t-ct))
-         (bv (cdata-bv t-cd))
-         ;;(sptr (cdata-ref (cdata& t-cd)))
-         (sptr (bytevector->pointer bv))
+         (sptr (bytevector->pointer (cdata-bv t-cd)))
          (siz-ftn
           (pointer->procedure
            unsigned-long (foreign-library-pointer testlib zname) (list '*)))
@@ -177,25 +172,13 @@
            void (foreign-library-pointer testlib gname)
            (cons* '* int (map (lambda (t) '*) types))))
          (vars (map (lambda (t) (make-cdata (cbase t))) types))
-         (refs (map (lambda (v) (bytevector->pointer (cdata-bv v))) vars))
-         (appli (lambda (f p ix vl)
-                  (f p ix (list-ref vl 0) (list-ref vl 1) (list-ref vl 2))))
-          )
-    (sf "fields=~s\n" fields)
-    ;;(format #t "    p-a=~x\n" (pointer-address sptr))
-    ;;(sf "    ffi=~s\n" (map (lambda (t) (ctype->ffi (cbase t))) types))
-    #;(let* ((vals (map field->rand-val fields))
-           )
-      (pp sptr)
-      (pp vals)
-      (pp (ctype-size t-ct))
-      #f)
-    ;;#|
+         (refs (map (lambda (v) (bytevector->pointer (cdata-bv v))) vars)))
+    ;;(sf "fields=~s\n" fields)
     (fold
      (lambda (n seed)
        (let* ((vals (map field->rand-val fields)))
-         ;;(sf "   vals=~s\n" vals)
-         ;;(sf "   szof=~s\n" (ctype-size t-ct))
+         ;;(format #t "   vals=~s\n" vals)
+         ;;(format #t "   szof=~s\n" (ctype-size t-ct))
          (and seed
               (let ((res (siz-ftn sptr)))
                 (unless (eqv? size res)
@@ -212,26 +195,20 @@
                    (format #t "\t            ~s\n" (cdata-ref t-cd name)))
                  (and (eqv? val (cdata-ref (cdata-sel t-cd name))) seed))
                #t (iota *nfld*) names types vals)
-              ;;#|
               (fold
                (lambda (ix name type var val seed)
                  (cdata-set! (cdata-sel t-cd name) val)
                  (apply get-ftn sptr ix refs)
                  (unless (eqv? val (cdata-ref var))
                    (format #t "\tmissed set: ~s ~s\n" name val)
-                   (format #t "\t               ~s\n" fields)
-                   #;(quit))
+                   (format #t "\t               ~s\n" fields))
                  (and (eqv? val (cdata-ref var)) seed))
-               #t (iota *nfld*) names types vars vals)
-              ;;|#
-              )))
-    #t (iota 3))
-    ;;|#
-    ))
+               #t (iota *nfld*) names types vars vals))))
+    #t (iota 3))))
 
 
 ;; executing do-test twice makes it always crash
-(define* (do-test/struct #:optional (n 3))
+(define* (do-test/struct #:optional (n 10))
   (let* ((cases (map (lambda (ix)
                        (cons ix (make-rand-fields *nfld* #:w/bitfields #t)))
                      (iota n)))
@@ -267,18 +244,5 @@
 (define tU1 (cunion fU1))
 (define dU1 (make-cdata tU1))
 (define pU1 (cdata& dU1))
-
-#;(define set-ftn
-  (let ((types (map cadr fU1)))
-    (pointer->procedure
-     unsigned-long
-     (foreign-library-pointer "ztest" "test0_set")
-     (cons '* (map (lambda (t) (ctype->ffi (cbase t))) types)))))
-
-#|
-(define vals '(
-(define (do-call)
-(apply set-ftn pU1 (map cdata->ffi
-|#
 
 ;; --- last line ---a
