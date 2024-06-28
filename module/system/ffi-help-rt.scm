@@ -32,6 +32,7 @@
             fh:pointer
             ffi-void*
             make-fht
+            fh-varg
 
             ;; called from output of the ffi-compiler
             define-fh-pointer-type
@@ -709,12 +710,12 @@
           (fh-object-ref expr))))))
 (export fh-cast)
 
-;; @deffn {Procedure} fh-arg type value
+;; @deffn {Procedure} fh-varg type value
 ;; Generate variadic argument for variadic procedure.
 ;; @example
 ;; (fh-cast foo_desc_t* 321)
 ;; (use-modules ((system foreign) #:prefix 'ffi:))
-;; (fh-cast ffi:short 321)
+;; (fh-varg ffi:short 321)
 ;; We might have a procedure that wants be passed as a pointer but
 ;; @end deffn
 ;; use cases
@@ -725,7 +726,7 @@
 ;; @end example
 ;; @end itemize
 ;; can we now do a vector->pointer
-(define (fh-arg type expr)
+(define (fh-varg type expr)
   (let* ((r-type                        ; resolved type
           (cond
            ((bytestructure-descriptor? type)
