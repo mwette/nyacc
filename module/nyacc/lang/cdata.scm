@@ -149,10 +149,11 @@
 ;; @deftp {Record} <cfunction> return-type param-types variadic?
 ;; @end deftp
 (define-record-type <cfunction>
-  (%make-cfunction ret-type arg-types va?)
+  (%make-cfunction ret-type arg-types arg-names va?)
   cfunction?
   (ret-type cfunction-ret-type)
   (arg-types cfunction-arg-types)
+  (arg-names cfunction-arg-names)
   (va? cfunction-va?))
 
 (set-record-type-printer! <ctype>
@@ -342,11 +343,15 @@
          base-type-symbol-list)))
 (export make-cbase-map)
 
-(define (cbase symname)
-  (let ((arch (*arch*)))
+(define (cbase name)
+  (let ((arch (*arch*))
+        (name (if (symbol? name) name
+                  (if (string? name) (strname->symname name)
+                      (error "cbase: bad arg")))))
+    (unless name (error "cbase: bad arg"))
     (unless (arch-ctype-map arch)
       (set-arch-ctype-map! arch (make-cbase-map arch)))
-    (assq-ref (arch-ctype-map arch) symname)))
+    (assq-ref (arch-ctype-map arch) name)))
 
 ;; Update running struct size given field size and alignment.
 (define (incr-size fs fa ss)
@@ -383,6 +388,9 @@
 ;; a @code{<ctype>} object or a symbol for a base type.
 ;; @end deffn
 (define* (cstruct fields #:optional packed?)
+  "- Procedure: cstruct fields [packed] => ctype
+     fields is a list with entries ‘(name type)’ where ‘type’ is a
+     ‘<ctype>’ object or a symbol for a base type."
   ;; cases
   ;; bitfield
   ;; 1) non-bitfield, no name => transferred and reified
@@ -446,8 +454,13 @@
 
 
 ;; @deffn {Procedure} cunion fields
+;; fields is a list with entries @code{(name type)} where @code{type} is
+;; a @code{<ctype>} object or a symbol for a base type.
 ;; @end deffn
 (define (cunion fields)
+  "- Procedure: cunion fields
+     fields is a list with entries ‘(name type)’ where ‘type’ is a
+     ‘<ctype>’ object or a symbol for a base type."
   (let loop ((cfl '()) (ral '()) (ssz 0) (sal 0) (sfl fields))
     (if (null? sfl)
         (%make-ctype (incr-size 0 sal ssz) sal 'union
@@ -523,18 +536,23 @@
           (_ (error "cenum: bad enum def'n"))))))
 
 ;; @deffn {Procedure} cfunction ret-type arg-types [#:variadic? VA]
-;; n can be zero in which case ...
+;; n can be zero in which case ...@*
+;; names ???
 ;; @end deffn
-(define* (cfunction ret-type arg-types #:key variadic?)
+(define* (cfunction ret-type arg-types #:key variadic? arg-names)
   (let ((type (cbase 'void*)))
-    (%make-ctype (ctype-size type) (ctype-align (type))
-                 'function (%make-cfunction ret-type arg-types variadic?))))
+    (%make-ctype (ctype-size type) (ctype-align (type)) 'function
+                 (%make-cfunction ret-type arg-types arg-names variadic?))))
 
 ;; @deffn {Procedure} pretty-print-ctype type [port]
 ;; Converts type to a literal tree and uses Guile's pretty-print function
 ;; to display it.  The default port is the current output port.
 ;; @end deffn
 (define* (pretty-print-ctype ctype #:optional (port (current-output-port)))
+  "- Procedure: pretty-print-ctype type [port]
+     Converts type to a literal tree and uses Guile’s pretty-print
+     function to display it.  The default port is the current output
+     port."
   (assert-ctype 'pretty-print-ctype ctype)
   (define (fmt . args) (apply simple-format port fmt args))
   (define (cnvt type)
@@ -732,6 +750,15 @@
       ((pointer array) '*)
       ((function) (error "ctype->ffi: functions are work to go"))
       (else (error "ctype->ffi: unsupported:" (ctype-kind type))))))
+
+(use-modules (system foreign-library))
+
+(define (foreign-library-pointer-search libs name)
+  (let loop ((libs libs))
+    (cond
+     ((null? libs) (error "not found"))
+     ((false-if-exception (foreign-library-pointer (car libs) name)))
+     (else (loop (cdr libs))))))
 
 ;; --- c99 support -------------------------------------------------------------
 
