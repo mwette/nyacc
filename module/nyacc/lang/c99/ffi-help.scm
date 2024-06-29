@@ -1294,7 +1294,7 @@
 ;; function typedef struct-ref/def union-ref/def enum variable
 ;; TODO: should I just remove "extern" altogether and assume
 ;; variables are extern anyhow?
-(define (cnvt-udecl udecl udict wrapped defined)
+(define (old-cnvt-udecl udecl udict wrapped defined)
   ;; This is a bit sloppy in that we have to know if the converters are
   ;; creating wrappers and/or (type) defines.
 
@@ -1815,12 +1815,6 @@
 
       ((udecl ,specl
 	      (init-declr
-	       (ftn-declr (ident ,name) (param-list . ,params))))
-       (cnvt-fctn name (non-ptr-decl specl) params)
-       (values wrapped defined))
-
-      ((udecl ,specl
-	      (init-declr
 	       (ftn-declr (ptr-declr (pointer . ,rest) (ident ,name))
 			  (param-list . ,params))))
        (cnvt-fctn name (ptr-decl specl) params)
@@ -1882,6 +1876,100 @@
        (values wrapped defined)))))
 
 
+;; =============================================================================
+
+(use-modules (ice-9 match))
+(use-modules (nyacc lang arch-info))
+(use-modules (nyacc lang cdata))
+
+(define (new-cnvt-simple-udecl udecl) ;; => mdecl
+  (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
+	 (udecl (udecl-rem-type-qual udecl1)))
+    (udecl->mdecl udecl1)))
+
+;; this could be to
+(define (new-expand-params params keepers) ;; udecl ... => mdecl ...
+  (let ((namer (make-arg-namer)))
+    (map (lambda (param)
+           (if (equal? param '(ellipsis)) '()
+	       (let* ((udecl (expand-typerefs param (*udict*) keepers))
+		      (udecl (udecl-rem-type-qual udecl)))
+                 (udecl->mdecl udecl #:namer namer))))
+         params)))
+
+(define (make-function-def/cdata name return params libs)
+  ;; return and params are cdata or base value or pointer
+  (let ((pnames (map string->symbol (map car params)))
+        (ptypes (map mtail->ffi-desc (map md-tail params))))
+    `(define ,(string->symbol name)
+       (let ((f (delay (procedure->pointer
+                        ,(mtail->ffi-desc return)
+                        (foreign-library-pointer/search ,libs ,name)
+                        (list ,@ptypes)))))
+         (lambda ,pnames
+           (let ((res ((force f) ,@(map (lambda (n) `(cdata->ffi ,n)) pnames))))
+             res))))))
+
+(define (new-cnvt-fctn name rdecl params)
+  (let* ((params (if (equal? params void-params) '() params))
+         (varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
+	 (decl-return (gen-decl-return rdecl))
+	 (decl-params (gen-decl-params params))
+	 (exec-return (gen-exec-return-wrapper rdecl))
+	 (exec-params (gen-exec-params params))
+	 (sname (string->symbol name))
+	 (~name (string->symbol (string-append "~" name)))
+	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
+			  (map cdr ~rest)))
+	 (call `((force ,~name) ,@(gen-exec-call-args exec-params))))
+    (if (and (pair? params) (equal? (last params) '(ellipsis)))
+        ;; varargs
+        `(define-public (,sname ,@(gen-exec-arg-names exec-params) . rest)
+	   (let ((,~name (fh-link-proc
+			  ,decl-return ,name
+			  (append (list ,@decl-params) (map car rest))
+			  (force ,(link-libs))))
+		 ,@(gen-exec-unwrappers exec-params))
+	     ,(if exec-return (list exec-return va-call) va-call)))
+        `(define-public ,sname
+	   (let ((,~name
+		  (delay (fh-link-proc ,decl-return ,name (list ,@decl-params)
+				       (force ,(link-libs))))))
+	     (lambda ,(gen-exec-arg-names exec-params)
+	       (let ,(gen-exec-unwrappers exec-params)
+		 ,(if exec-return (list exec-return call) call))))))))
+
+(define (mtail->ctype-decl mtail)
+  (match mtail
+    (`((fixed-type ,name))
+     `(cbase (quote ,(strname->symname (cadar mtail)))))
+    (`((float-type ,name))
+     `(cbase (quote ,(strname->symname (cadar mtail)))))
+    (`((array-of ,dim) . ,rest)
+     (let ((dim (eval-c99-cx dim (*udict*))))
+       `(carray ,(mtail->ctype-decl rest) ,dim)))
+    (`((pointer-to) . ,rest)
+     `(cpointer ,(mtail->ctype-decl rest)))
+    (`((function-returning ,param-list) . ,rest)
+     (let ((args (new-expand-params (sx-tail param-list) (*defined*))))
+       (pperr args)
+       `(cfunction ,(mtail->ctype-decl rest) ,args)))
+    (__ (error "bad mtail" mtail))))
+
+(define (specl-props specl)
+  (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
+    (if (null? tl) (values ss tq ts)
+        (case (sx-tag (car tl))
+          ((stor-spec)
+           (loop (cons (sx-tag (sx-ref (car tl) 1)) ss) tq ts (cdr tl)))
+          ((type-qual)
+           (loop ss (cons (sx-tag (sx-ref (car tl) 1)) tq) ts (cdr tl)))
+          ((type-spec)
+           (loop ss tq (sx-ref (car tl) 1) (cdr tl)))))))
+
+;; strategy:
+;;   types: convert -> pieces->mdecl, then -> custom
+;;   functions: ???  C is special?
 (define (new-cnvt-udecl udecl udict wrapped defined)
   ;; This is a bit sloppy in that we have to know if the converters are
   ;; creating wrappers and/or (type) defines.
@@ -1890,17 +1978,6 @@
     `(udecl ,specl (init-declr (ptr-declr (pointer) (ident "_")))))
   (define (non-ptr-decl specl)
     `(udecl ,specl (init-declr (ident "_"))))
-
-  (define (specl-props specl)
-    (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
-      (if (null? tl) (values ss tq ts)
-          (case (sx-tag (car tl))
-            ((stor-spec)
-             (loop (cons (sx-tag (sx-ref (car tl) 1)) ss) tq ts (cdr tl)))
-            ((type-qual)
-             (loop ss (cons (sx-tag (sx-ref (car tl) 1)) tq) ts (cdr tl)))
-            ((type-spec)
-             (loop ss tq (sx-ref (car tl) 1) (cdr tl)))))))
 
   (define ftn-declr?
     (let ((ff (node-closure (node-typeof? 'ftn-declr))))
@@ -1919,11 +1996,30 @@
                             specl))
              (udecl (sx-list 'udecl #f specl declr))
              (mdecl (udecl->mdecl udecl))
+             (name (string->symbol (md-label mdecl)))
              (mtail (md-tail mdecl)))
+        (sferr "mtail: ~s\n" mtail)
+        (case (caar mtail)
+          ((fixed-type float-type)
+           (pperr `(define ,name ,(mtail->ctype-decl mtail))))
+          ((array-of)
+           (pperr `(define ,name ,(mtail->ctype-decl mtail))))
+          ((pointer-to)
+           (pperr `(define ,name ,(mtail->ctype-decl mtail))))
+          ((function-returning)
+           (sferr "function typedef (not pointer-to)"))
+          (else (sferr "missed ~s\n" (caar mtail))))
+        (quit)
         #t))
 
      ((ftn-declr? declr)
-      #t)
+      (let* ((specl `(decl-spec-list (type-spec ,tspec)))
+             (mdecl (udecl->mdecl (sx-list udecl #f specl declr)))
+             (name (md-label mdecl))
+             (params (new-expand-params (sx-tail (cadadr mdecl)) (*defined*)))
+             (return (cdr (md-tail mdecl))))
+        (pperr (make-function-def/cdata name return params 'libs)))
+        (quit)))
 
      ((sx-match tspec
         ((struct-def . ,_) #f)
@@ -1943,6 +2039,7 @@
      (else
       (error "yuck")))))
 
+(define cnvt-udecl new-cnvt-udecl)
 
 ;; === enums and #defined => lookup
 
