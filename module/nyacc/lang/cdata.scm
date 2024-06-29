@@ -753,7 +753,7 @@
 
 (use-modules (system foreign-library))
 
-(define (foreign-library-pointer-search libs name)
+(define (foreign-library-pointer/search libs name)
   (let loop ((libs libs))
     (cond
      ((null? libs) (error "not found"))
