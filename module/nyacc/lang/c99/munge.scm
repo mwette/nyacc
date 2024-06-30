@@ -19,7 +19,7 @@
 
 ;; 1) mdecl == munged (unwrapped) declaration
 ;;    udecl : unitzied decl (not declr-list and one init-declr, etc
-;;    utent : (name . udecl) where name is string or pair (struct . "foo")
+;;    ddecl : (name . udecl) where name is string or pair (struct . "foo")
 ;; 2) Usual sequence is: expand-typerefs, stripdown-udecl, udecl->mdecl.
 ;; 3) unitize-decl is shallow.  It does not dive into structs and unitize.
 ;; 4) expand-typerefs is shallow?  It does not dive into structs and unitize.
@@ -266,6 +266,7 @@
    seed (dictize-param-decl decl)))
 
 ;; @deffn {Procedure} dictize-decl decl [seed] [#:expand-enums #f] => seed
+;; @deffnx {Procedure} unitize-decl decl [seed] [#:expand-enums #f] => seed
 ;; This is a fold iterator intended to be used by @code{c99-trans-unit->udict}.
 ;; It converts the multiple @code{init-declr} items in an @code{init-declr-list}
 ;; of a @code{decl} into an a-list of multiple pairs of name and @code{udecl}

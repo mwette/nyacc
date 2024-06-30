@@ -73,6 +73,7 @@
 
 ;; @deffn {Procedure} declr-name declr => "name"
 ;; This extracts the name from the return value of @code{declr-ident}.
+;; or @code{#f}
 ;; @end deffn
 (define (declr-name declr)
   (and=> (declr-ident declr) cadr))
