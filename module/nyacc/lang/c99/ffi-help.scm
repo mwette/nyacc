@@ -666,26 +666,26 @@
 ;; @var{aggr-name} is a string for the struct or union name, or @code{#f},
 ;; and @var{field-list} is the field-list from the C syntax tree.
 ;; @end deffn
-(define (cnvt-aggr-def aggr-t attr typename aggr-name field-list)
+(define (cnvt-aggr-def kind attr typename aggr-name field-list)
   (let* ((field-list (expand-field-list-typerefs field-list))
 	 (sflds (cnvt-field-list field-list))
-	 (aggr-s (symbol->string aggr-t))
-	 (aggrname (and aggr-name (string-append aggr-s "-" aggr-name)))
-	 (bs-aggr-t (string->symbol (string-append "bs:" aggr-s)))
+	 (kind-s (symbol->string kind))
+	 (aggrname (and aggr-name (string-append kind-s "-" aggr-name)))
+	 (bs-kind (string->symbol (string-append "bs:" kind-s)))
 	 (ty-desc (and typename (strings->symbol typename "-desc")))
 	 (ty*-desc (and typename (strings->symbol typename "*-desc")))
 	 (ag-desc (and aggrname (strings->symbol aggrname "-desc")))
 	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc")))
 	 (cattr (assoc-ref attr 'attributes)) ;; __attributes__
-	 (packed? (and=> cattr
-			 (lambda (l) (string-contains (car l) "__packed__" 0))))
-	 (aligned? (and=> cattr
-			 (lambda (l) (string-contains (car l) "__alignof__" 0))))
+	 (packed?
+          (and=> cattr (lambda (l) (string-contains (car l) "__packed__" 0))))
+	 (aligned?
+          (and=> cattr (lambda (l) (string-contains (car l) "__alignof__" 0))))
 	 (bs-spec (if packed?
-		      (list bs-aggr-t #t `(list ,@sflds))
-		      (list bs-aggr-t `(list ,@sflds)))))
+		      (list bs-kind #t `(list ,@sflds))
+		      (list bs-kind `(list ,@sflds)))))
     (if aligned? (sferr "ffi-help: not processing __aligned__ in ~S\n"
-			(or aggr-t typename)))
+			(or kind typename)))
     (cond
      ((and typename aggr-name)
       (ppscm `(define-public ,ty-desc ,bs-spec))
@@ -1301,7 +1301,7 @@
 ;; function typedef struct-ref/def union-ref/def enum variable
 ;; TODO: should I just remove "extern" altogether and assume
 ;; variables are extern anyhow?
-(define (cnvt-udecl udecl udict wrapped defined)
+(define (old-cnvt-udecl udecl udict wrapped defined)
   ;; This is a bit sloppy in that we have to know if the converters are
   ;; creating wrappers and/or (type) defines.
 
@@ -1924,6 +1924,97 @@
       (,otherwise
        (fherr "ffi-help/cnvt-udecl missed:\n~A" (ppstr clean-udecl))
        (values wrapped defined)))))
+
+
+(use-modules (ice-9 match))
+(define (new-cnvt-udecl udecl udict wrapped defined)
+
+  (define (specl-props specl)
+    (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
+      (if (null? tl) (values ss tq ts)
+          (case (sx-tag (car tl))
+            ((stor-spec)
+             (loop (cons (sx-tag (sx-ref (car tl) 1)) ss) tq ts (cdr tl)))
+            ((type-qual)
+             (loop ss (cons (sx-tag (sx-ref (car tl) 1)) tq) ts (cdr tl)))
+            ((type-spec)
+             (loop ss tq (sx-ref (car tl) 1) (cdr tl)))))))
+
+  (define (ptr-decl specl)
+    `(udecl ,specl (init-declr (ptr-declr (pointer) (ident "_")))))
+  (define (non-ptr-decl specl)
+    `(udecl ,specl (init-declr (ident "_"))))
+
+  (define ftn-declr?
+    (let ((ff (node-closure (node-typeof? 'ftn-declr))))
+      (lambda (declr) (pair? (ff declr)))))
+
+  ;; use fluids OR pass around
+  (*wrapped* wrapped)
+  (*defined* defined)
+
+  (let*-values (((tag attr specl declr) (split-udecl udecl))
+                ((sspec tqual tspec) (specl-props specl)))
+
+    (cond
+     ((memq 'typedef sspec)
+      (let* ((specl `(decl-spec-list (type-spec ,tspec)))
+             (udecl (sx-list 'udecl #f specl declr))
+             (mdecl (udecl->mdecl udecl))
+             (label (md-label mdecl))
+             (name (string->symbol label))
+             (desc (strings->symbol label "-desc"))
+             (pred (strings->symbol label "?"))
+             (make (strings->symbol "make-" label))
+             (mtail (md-tail mdecl)))
+        (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+        (case (caar mtail)
+          ((pointer-to)
+           (ppscm `(define-fh-pointer-type ,name ,desc ,pred ,make)))
+          ((array-of)
+           (ppscm `(define-fh-vector-type ,name ,desc ,pred ,make)))
+          ((struct-def struct-ref union-def union-ref)
+           (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make)))
+          ((enum-def)
+           (cnvt-enum-def name #f (cadar mtail)))
+          ((fixed-type float-type void) #f)
+          (else (sferr "missed: ~s\n" mtail)))
+        (values (cons label wrapped) (cons label defined))))
+
+     ((ftn-declr? declr)
+      (let* ((specl `(decl-spec-list (type-spec ,tspec)))
+             (mdecl (udecl->mdecl (sx-list udecl #f specl declr)))
+             (name (md-label mdecl))
+             (return (mdecl->udecl (cons "_" (cdr (md-tail mdecl)))))
+             (params (sx-tail (cadadr mdecl))))
+        (cnvt-fctn name return params)
+        (values wrapped defined)))
+
+     ((sx-match tspec
+        ((struct-def (ident ,name) ,field-list)
+         (cnvt-aggr-def 'struct attr #f name field-list)
+         (w/struct name))
+        ((union-def (ident ,name) ,field-list)
+         (cnvt-aggr-def 'union #f #f name field-list)
+         (w/union name))
+        ((enum-def (ident ,name) ,enum-def-list)
+         (cnvt-enum-def #f name enum-def-list)
+         (w/enum name))
+        (,__ #f)) =>
+      (lambda (key) (values (cons key wrapped) (cons key defined))))
+
+     ((memq 'extern sspec)
+      (sferr "work to go: extern vars\n")
+      (values wrapped defined))
+
+     ((memq 'const sspec)
+      (sferr "work to go: const vars\n")
+      (values wrapped defined))
+
+     (else
+      (error "yuck")))))
+
+(define cnvt-udecl new-cnvt-udecl)
 
 
 ;; === enums and #defined => lookup
