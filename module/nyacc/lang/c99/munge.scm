@@ -73,6 +73,7 @@
             tdef-splice-specl
             tdef-splice-declr)
   #:re-export (expand-typerefs
+               md-label md-attr md-tail
                reify-declr reify-decl
                udecl->mdecl split-udecl
                declr-ident declr-name
