@@ -6,7 +6,11 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2024-XX-XX  V1.10.0
-	*
+	* updated (system ffi-help-rt) a bit: definition of fh-cast
+	  changed; funtion pointers updated (to work), based
+        * (system ffi-help-rt): add/expose fh-varg for use with procedures
+          based on C variadic args: (printf "ans=%d" (fh-varg ffi:int 3))
+	* ffi-help.scm(cnvt-uecl): complete re-write, using udecl->mdecl
 
 2024-06-24  V1.09.5
 	* fixed bug 65849: crash on multiple #warning
