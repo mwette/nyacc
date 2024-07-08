@@ -67,6 +67,7 @@
   #:use-module (rnrs bytevectors)
   #:use-module (system foreign)
   #:use-module (nyacc lang arch-info))
+(export %cpointer-type)
 
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
@@ -136,15 +137,19 @@
   (symd cenum-sym-dict)                 ; name -> value
   (vald cenum-val-dict))                ; value-> name
 
-;; @deftp {Record} <cpointer> type
+;; @deftp {Record} <cpointer> type mtype
 ;; Once we get to this level, we shouldn't need @code{arch} anymore
 ;; so we need to log the pointer type
 ;; @end deftp
 (define-record-type <cpointer>
   (%make-cpointer type mtype)
   cpointer?
-  (type cpointer-type)
+  (type %cpointer-type)
   (mtype cpointer-mtype))
+
+(define (cpointer-type info)
+  (let ((type (%cpointer-type info)))
+    (if (promise? type) (force type) type)))
 
 ;; @deftp {Record} <cfunction> return-type param-types variadic?
 ;; @end deftp
@@ -319,13 +324,19 @@
 ;; Generate a C pointer type to @var{type}. To reference or de-reference
 ;; cdata object see @code{cdata&} and @code{cdata*}.  @var{type} can be
 ;; the symbol @code{void} or a symbolic name used as argument to @code{cbase}.
+;; @*note: Should we allow @ver{type} to be a promise?
+;; @example
+;; (define foo_t (cbase 'void))
+;; (cpointer (delay foo_t))
+;; @end example
 ;; @end deffn
 (define (cpointer type)
   (let ((type (cond
                ((ctype? type) type)
                ((eq? 'void type) type)
                ((symbol? type) (cbase type))
-               (else (error "cpointer: bad arg")))))
+               ((promise? type) type)
+               (else (error "cpointer: bad arg" type)))))
     (%make-ctype (sizeof-basetype 'void*) (alignof-basetype 'void*)
                  'pointer (%make-cpointer type (mtypeof-basetype 'void*)))))
 
@@ -407,11 +418,10 @@
                      (%make-cstruct (reverse cfl) (reverse ral)))
         (match (car sfl)
           ((name type)                  ; non-bitfield
-           (let* ((type (cond ((symbol? type)
-                               (cbase type))
-                              ((and (ctype? type) (eq? (ctype-kind type) 'base))
-                               type)
-                              (else (error "cstruct: bad type"))))
+           (let* ((type (cond ((symbol? type) (cbase type))
+                              ((ctype? type) type)
+                              ((promise? type) (force type))
+                              (else (error "cstruct: bad type" type))))
                   (fsz (ctype-size type))
                   (fal (ctype-align type))
                   (ssz (quotient (+ (* 8 ssz) 7) 8))
@@ -428,11 +438,9 @@
                    (incr-size fsz fal ssz) (max fal sal) (cdr sfl))))
 
           ((name type width)            ; bitfield
-           (let* ((type (cond ((symbol? type)
-                               (cbase type))
-                              ((and (ctype? type) (eq? (ctype-kind type) 'base))
-                               type)
-                              (else (error "bad type"))))
+           (let* ((type (cond ((symbol? type) (cbase type))
+                              ((ctype? type) type)
+                              (else (error "bad type:" type))))
                   (fsz (ctype-size type))
                   (fal (ctype-align type))
                   (mty (ctype-info type))
@@ -469,8 +477,8 @@
                (type (cadar sfl))
                (type (cond ((symbol? type)
                             (cbase type))
-                           ((and (ctype? type) (eq? (ctype-kind type) 'base))
-                            type)
+                           ((ctype? type) type)
+                           ((promise? type) (force type))
                            (else (error "cunion: bad type"))))
                (fsz (ctype-size type))
                (fal (ctype-align type))
@@ -544,49 +552,15 @@
     (%make-ctype (ctype-size type) (ctype-align (type)) 'function
                  (%make-cfunction ret-type arg-types arg-names variadic?))))
 
-;; @deffn {Procedure} pretty-print-ctype type [port]
-;; Converts type to a literal tree and uses Guile's pretty-print function
-;; to display it.  The default port is the current output port.
+;; @deffn {Procedure} make-cdata type [value] [#from-pointer pointer]
 ;; @end deffn
-(define* (pretty-print-ctype ctype #:optional (port (current-output-port)))
-  "- Procedure: pretty-print-ctype type [port]
-     Converts type to a literal tree and uses Guile’s pretty-print
-     function to display it.  The default port is the current output
-     port."
-  (assert-ctype 'pretty-print-ctype ctype)
-  (define (fmt . args) (apply simple-format port fmt args))
-  (define (cnvt type)
-    (let ((info (ctype-info type)))
-      (case (ctype-kind type)
-        ((base)
-         info)
-        ((struct)
-         `(cstruct
-           ,(map
-             (lambda (fld)
-               (if (eq? 'bitfield (ctype-kind (cfield-type fld)))
-                   (list (cfield-name fld) (cnvt (cfield-type fld))
-                         (cbitfield-width (ctype-info (cfield-type fld)))
-                         #:offset (cfield-offset fld))
-                   (list (cfield-name fld) (cnvt (cfield-type fld))
-                         #:offset (cfield-offset fld))))
-             (cstruct-fields info))))
-        ((union)
-         `(cunion
-           ,(map
-             (lambda (fld) (list (cfield-name fld) (cnvt (cfield-type fld))))
-             (cunion-fields info))))
-        ((pointer)
-         `(cpointer ,(cnvt (cpointer-type info))))
-        ((array)
-         `(carray ,(cnvt (carray-type info)) (carray-length info)))
-        (else (error "pretty-print-ctype: needs work")))))
-  (pretty-print (cnvt ctype) port))
-
-
-(define* (make-cdata type #:optional value #:key name)
+(define* (make-cdata type #:optional value #:key name from-pointer)
   (assert-ctype 'make-cdata type)
-  (let ((data (%make-cdata (make-bytevector (ctype-size type)) 0 type name)))
+  (let* ((size (ctype-size type))
+         (bv (if from-pointer
+                 (pointer->bytevector from-pointer size)
+                 (make-bytevector size)))
+         (data (%make-cdata bv 0 type name)))
     (if value (cdata-set! data value))
     data))
 
@@ -614,13 +588,18 @@
 
 ;; @deffn {Procedure} cdata-ref data [tag ...]
 ;; Return the Scheme (scalar) slot value for selected @var{tag ...} with
-;; respect to the cdata object @var{data}.  This works for cdata kinds
-;; @emph{base}, @emph{pointer} and (in the future) @emph{function}.
-;; Attempting to obtain values for C-type kinds @emph{struct}, @emph{union},
-;; or @emph{array} will result in @code{#f}.
+;; respect to the cdata object @var{data}.
 ;; @example
 ;; (cdata-ref my-struct-value 'a 'b 'c))
 ;; @end example
+;; This procedure works for cdata kinds @emph{base}, @emph{pointer} and (in
+;; the future) @emph{function}.  Attempting to obtain values for C-type kinds
+;; @emph{struct}, @emph{union}, @emph{array} will result in @code{#f}.
+;; If, in those cases, you would like a cdata then use this:
+;; @example
+;; (or (cdata-ref data tag ...) (cdata-sel data tag ...))
+;; @end example
+;; (Or should we just make this the default behavior?)
 ;; @end deffn
 (define (cdata-ref data . tags)
   "- Procedure: cdata-ref data [tag ...]
@@ -717,7 +696,49 @@
     (%make-cdata bv 0 type #f)))
 
 
-;; --- ffi support -------------------------------------------------------------
+;; @deffn {Procedure} pretty-print-ctype type [port]
+;; Converts type to a literal tree and uses Guile's pretty-print function
+;; to display it.  The default port is the current output port.
+;; @end deffn
+(define* (pretty-print-ctype type #:optional (port (current-output-port)))
+  "- Procedure: pretty-print-ctype type [port]
+     Converts type to a literal tree and uses Guile’s pretty-print
+     function to display it.  The default port is the current output
+     port."
+  (assert-ctype 'pretty-print-ctype type)
+  (define (fmt . args) (apply simple-format port fmt args))
+  (define (cnvt type)
+    (let ((info (ctype-info type)))
+      (case (ctype-kind type)
+        ((base)
+         info)
+        ((struct)
+         `(cstruct
+           ,(map
+             (lambda (fld)
+               (if (eq? 'bitfield (ctype-kind (cfield-type fld)))
+                   (list (cfield-name fld) (cnvt (cfield-type fld))
+                         (cbitfield-width (ctype-info (cfield-type fld)))
+                         #:offset (cfield-offset fld))
+                   (list (cfield-name fld) (cnvt (cfield-type fld))
+                         #:offset (cfield-offset fld))))
+             (cstruct-fields info))))
+        ((union)
+         `(cunion
+           ,(map
+             (lambda (fld) (list (cfield-name fld) (cnvt (cfield-type fld))))
+             (cunion-fields info))))
+        ((pointer)
+         (if (promise? (%cpointer-type info))
+             `(cpointer (delay ...))
+             `(cpointer ,(cnvt (cpointer-type info)))))
+        ((array)
+         `(carray ,(cnvt (carray-type info)) (carray-length info)))
+        (else (error "pretty-print-ctype: needs work")))))
+  (pretty-print (cnvt type) port))
+
+
+;; --- guile ffi api support ---------------------------------------------------
 
 (define (mtype->ffi mtype)
   (or
@@ -751,6 +772,7 @@
       ((function) (error "ctype->ffi: functions are work to go"))
       (else (error "ctype->ffi: unsupported:" (ctype-kind type))))))
 
+
 (use-modules (system foreign-library))
 
 (define (foreign-library-pointer/search libs name)
@@ -759,6 +781,57 @@
      ((null? libs) (error "not found"))
      ((false-if-exception (foreign-library-pointer (car libs) name)))
      (else (loop (cdr libs))))))
+
+;; --- libffi support ----------------------------------------------------------
+
+(use-modules (system foreign))
+
+(define ffi_type*
+  (cpointer
+   (delay (cstruct `((size size_t) (alignment unsigned-short)
+                     (type unsigned-short) (elements ,(cpointer ffi_type*)))))))
+(define ffi_type (cpointer-type (ctype-info ffi_type*)))
+
+(define ffi_cif
+  (cstruct
+   `(;;(abi ,ffi_abi)
+     (abi int)
+     (nargs unsigned)
+     (arg_types ,(cpointer ffi_type*))
+     (rtype ,ffi_type*)
+     (bytes unsigned)
+     (flags unsigned))))
+
+(define libffi (load-foreign-library "libffi"))
+
+(define (get-ft-prim mtype ptype)
+  (make-cdata ffi_type* #:from-pointer (foreign-library-pointer libffi ptype)))
+(export get-ft-prim)
+
+(define mtype->ffi-prim
+  (let ((ftmap `((u8 . ,(get-ft-prim 'uint8_t "ffi_type_uint8"))
+                 (s8 . ,(get-ft-prim 'int8_t "ffi_type_sint8"))
+                 (u16le . ,(get-ft-prim 'uint16_t "ffi_type_uint16"))
+                 (s16le . ,(get-ft-prim 'sint16_t "ffi_type_sint16"))
+                 (u32le . ,(get-ft-prim 'uint32_t "ffi_type_uint32"))
+                 (s32le . ,(get-ft-prim 'sint32_t "ffi_type_sint32"))
+                 (u64le . ,(get-ft-prim 'uint64_t "ffi_type_uint64"))
+                 (s64le . ,(get-ft-prim 'sint64_t "ffi_type_sint64"))
+                 (f32le . ,(get-ft-prim 'float "ffi_type_float"))
+                 (f64le . ,(get-ft-prim 'double "ffi_type_double"))
+                 )))
+    (lambda (mtype) (assq-ref ftmap mtype))))
+#|
+(define mtype->ffi-prim-shortcut
+  (let ((ftmap '((u8 . 5) (s8 . 6) (u16le . 7) (s16le . 8) (u32le . 9)
+                 (s32le . 10) (u64le . 11) (s64le . 12) (f32le . 2) (f64le . 3)
+                 (u16be . 7) (s16be . 8) (u32be . 9) (s32be . 10) (u64be . 11)
+                 (s64be . 12) (f32be . 2) (f64be . 3))))
+    (lambda (mtype) (assq-ref ftmap mtype))))
+|#
+
+(export ffi_type ffi_type* ffi_cif mtype->ffi-prim)
+
 
 ;; --- c99 support -------------------------------------------------------------
 
