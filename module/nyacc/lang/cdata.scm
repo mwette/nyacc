@@ -22,12 +22,9 @@
 ;; reference set select
 ;; (cdata-ref data tag ...) -> scheme-value | <cdata>
 ;; (cdata-set! data val tag ...)
-
 ;; (cdata-sel data tag ...) -> <cdata>
 ;; (ctype-sel type ix tags) -> ix, <ctype>
-
 ;; (ctype-equal? a b)
-
 ;; (make-cdata ct)
 ;; (make-cdata ct val)
 ;; (make-cdata bv ix ct)
@@ -46,7 +43,7 @@
             cstruct cunion cpointer carray
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
-            cdata-ref cdata-set! cdata-sel ctype-sel cdata& cdata*
+            cdata-ref cdata-set! cdata-sel ctype-sel cdata& cdata* cdata-cast
             ctype->ffi
             ;;
             mtype-bv-ref mtype-bv-set!
@@ -72,6 +69,7 @@
 (use-modules (ice-9 pretty-print))
 (define (pperr exp) (pretty-print exp (current-error-port)))
 (define (sferr fmt . args) (apply simple-format #t fmt args))
+(define (ppct ct) (pretty-print-ctype ct (current-error-port)))
 
 ;; @deftp {Record} <ctype> size align kind info [ptype]
 ;; maybe @var{ptype} should only be for @code{cbase} kind types
@@ -181,6 +179,7 @@
   (ix cdata-ix)                         ; index
   (ct cdata-ct)                         ; type
   (tn cdata-tn))                        ; optional (interned) type name
+(export %make-cdata) ;; needed?
 
 (set-record-type-printer! <cdata>
   (lambda (data port)
@@ -284,17 +283,6 @@
         (call-with-values (lambda () (ctype-detag ix ct (car tags)))
           (lambda (ix ct) (loop ix ct (cdr tags)))))))
 
-(define (cinfo-equal? kind a b)
-  (case kind
-    ((base) (eq? a b))
-    ((struct)
-     (fold (lambda (a b seed)
-             (and seed
-                  (eq? (cfield-name a) (cfield-name b))
-                  (ctype-equal? (cfield-type a) (cfield-type b))
-                  (eqv? (cfield-offset a) (cfield-offset b))))
-           #t (cstruct-fields a) (cstruct-fields b)))
-    (else (error "work to go"))))
 
 ;; @deffn {Procedure} ctype-equal? a b
 ;; This predicate assesses equality of it's arguments.
@@ -304,6 +292,7 @@
 ;; size, integer versus float, and signed versus unsigned.
 ;; For struct and union kinds, the names and types of all fields
 ;; must be equal.
+;; @*TODO: algorithm to prevent infinite search for recursive structs
 ;; @end deffn
 (define (ctype-equal? a b)
   "- Procedure: ctype-equal? a b
@@ -313,12 +302,36 @@
      mtype must be equal; this includes size, integer versus float, and
      signed versus unsigned.  For struct and union kinds, the names and
      types of all fields must be equal."
-  (cond
-   ((or (not (ctype? a)) (not (ctype? b))) #f)
-   ((not (eq? (ctype-kind a) (ctype-kind b))) #f)
-   ((not (eqv? (ctype-size a) (ctype-size b))) #f)
-   ((not (eqv? (ctype-align a) (ctype-align b))) #f)
-   (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b)))))
+  (letrec*
+      ((fields-equal?
+        (lambda (fl gl)
+          (fold (lambda (a b seed)
+                  (and seed
+                       (eq? (cfield-name a) (cfield-name b))
+                       (eqv? (cfield-offset a) (cfield-offset b))
+                       (ctype-equal? (cfield-type a) (cfield-type b))))
+                #t fl gl)))
+       (cinfo-equal?
+        (lambda (kind a b)
+          (case kind
+            ((base) (eq? a b))
+            ((struct) (fields-equal? (cstruct-fields a) (cstruct-fields b)))
+            ((union) (fields-equal? (cunion-fields a) (cunion-fields b)))
+            ((pointer)
+             (let* ((at (%cpointer-type a))
+                    (bt (%cpointer-type b)))
+               (cond
+                ((and (promise? at) (promise? bt)) (eq? (force at) (force bt)))
+                ((promise? at) (eq? (force at) bt))
+                ((promise? bt) (eq? at (force bt)))
+                ((eq? at bt)))))
+                (else #f)))))
+    (cond
+     ((or (not (ctype? a)) (not (ctype? b))) #f)
+     ((not (eq? (ctype-kind a) (ctype-kind b))) #f)
+     ((not (eqv? (ctype-size a) (ctype-size b))) #f)
+     ((not (eqv? (ctype-align a) (ctype-align b))) #f)
+     (else (cinfo-equal? (ctype-kind a) (ctype-info a) (ctype-info b))))))
 
 ;; @deffn {Procedure} cpointer type
 ;; Generate a C pointer type to @var{type}. To reference or de-reference
@@ -564,7 +577,7 @@
     (if value (cdata-set! data value))
     data))
 
-;; @deffn {Procedure} cdata-sel data tag ...
+;; @deffn {Procedure} cdata-sel data tag ... => cdata
 ;; Return a new @code{cdata} object representing the associated selection.
 ;; For example,
 ;; @example
@@ -637,6 +650,7 @@
 ;; @example
 ;; (cdata-set! my-struct-data 42 'a 'b 'c))
 ;; @end example
+;; If @var{value} is a @code{<cdata>} object copy that, if types match.
 ;; @end deffn
 (define (cdata-set! data value . tags)
   "- Procedure: cdata-set! data value [tag ...]
@@ -648,25 +662,31 @@
     (call-with-values
         (lambda () (ctype-sel (cdata-ct data) (cdata-ix data) tags))
       (lambda (ix ct)
-        (case (ctype-kind ct)
-          ((base)
-           (mtype-bv-set! (ctype-info ct) bv ix value))
-          ((pointer)
-           (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
-          ((bitfield)
-           (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
-                  (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-                  (sx (cbitfield-sext? bi)) (am (1- (expt 2 wd)))
-                  (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
-                  (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
-             (mtype-bv-set! mt bv ix (logior (logand mx dmi) (ash value sh)))))
-          ((struct) #f)
-          ((union) #f)
-          ((array) #f)
-          (else
-           (error "bad stuff")))))))
+        (if (cdata? value)
+            (let ((sz (ctype-size ct)))
+              (unless (ctype-equal? (cdata-ct value) ct)
+                (error "cdata-set!: bad arg"))
+              (bytevector-copy! (cdata-bv value) (cdata-ix value) bv ix sz))
+            (case (ctype-kind ct)
+              ((base)
+               (mtype-bv-set! (ctype-info ct) bv ix value))
+              ((pointer)
+               (mtype-bv-set! (cpointer-mtype (ctype-info ct)) bv ix value))
+              ((bitfield)
+               (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
+                      (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
+                      (sx (cbitfield-sext? bi)) (am (1- (expt 2 wd)))
+                      (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
+                      (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
+                 (mtype-bv-set! mt bv ix (logior (logand mx dmi)
+                                                 (ash value sh)))))
+              ((struct) #f)
+              ((union) #f)
+              ((array) #f)
+              (else
+               (error "cdata-set!: bad arg 2" value))))))))
 
-;; @deffn {Procedure} cdata& data
+;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
 ;; bytevector.
 ;; @end deffn
@@ -676,7 +696,7 @@
          (pa (+ (pointer-address (bytevector->pointer bv)) ix)))
     (make-cdata (cpointer ct) pa)))
 
-;; @deffn {Procedure} cdata* data
+;; @deffn {Procedure} cdata* data => cdata
 ;; De-reference a pointer.  Returns a @emph{cdata} object representing the
 ;; contents at the address in the underlying bytevector.
 ;; @end deffn
@@ -696,6 +716,40 @@
     (%make-cdata bv 0 type #f)))
 
 
+;; need to be able to cast array to pointer
+(define* (cdata-cast data type #:key skip-check)
+  ;;(assert-cdata 'cdata-cast data)
+  ;;(assert-ctype 'cdata-cast type)
+  (define (type-miss)
+    (error "cdata-cast: type-mismatch:" (list (cdata-ct data) type)))
+  (define (type-check ft tt)
+    (unless (or skip-check (ctype-equal? ft tt)) (type-miss)))
+  (let ((bv (cdata-bv data))
+        (ix (cdata-ix data))
+        (ct (cdata-ct data))
+        (tokind (ctype-kind type)))
+    (case (ctype-kind ct)
+      ((base)
+       (case tokind
+         ((base)
+          #f)
+         (else (type-miss))))
+      ((array)
+       (case tokind
+         ((pointer)
+          (let* ((array (ctype-info ct))
+                 (atype (carray-type array))
+                 (ptype (cpointer-type (ctype-info type)))
+                 )
+            ;;(sferr "array of ~s\n" atype)
+            ;;(sferr "point to ~s\n" ptype)
+            ;;(quit)
+            (type-check (carray-type (ctype-info ct))
+                        (cpointer-type (ctype-info type)))
+            (%make-cdata bv ix type #f)))
+         (else (type-miss))))
+      (else (type-miss)))))
+
 ;; @deffn {Procedure} pretty-print-ctype type [port]
 ;; Converts type to a literal tree and uses Guile's pretty-print function
 ;; to display it.  The default port is the current output port.
@@ -706,7 +760,6 @@
      function to display it.  The default port is the current output
      port."
   (assert-ctype 'pretty-print-ctype type)
-  (define (fmt . args) (apply simple-format port fmt args))
   (define (cnvt type)
     (let ((info (ctype-info type)))
       (case (ctype-kind type)
@@ -787,10 +840,15 @@
 (use-modules (system foreign))
 
 (define ffi_type*
-  (cpointer
-   (delay (cstruct `((size size_t) (alignment unsigned-short)
-                     (type unsigned-short) (elements ,(cpointer ffi_type*)))))))
-(define ffi_type (cpointer-type (ctype-info ffi_type*)))
+  (cpointer (delay (cstruct `((size size_t)
+                              (alignment unsigned-short)
+                              (type unsigned-short)
+                              (elements ,(cpointer ffi_type*)))))))
+
+(define ffi_type
+  (cpointer-type (ctype-info ffi_type*)))
+(define ffi_type**
+  (cpointer ffi_type*))
 
 (define ffi_cif
   (cstruct
@@ -821,16 +879,62 @@
                  (f64le . ,(get-ft-prim 'double "ffi_type_double"))
                  )))
     (lambda (mtype) (assq-ref ftmap mtype))))
-#|
-(define mtype->ffi-prim-shortcut
-  (let ((ftmap '((u8 . 5) (s8 . 6) (u16le . 7) (s16le . 8) (u32le . 9)
-                 (s32le . 10) (u64le . 11) (s64le . 12) (f32le . 2) (f64le . 3)
-                 (u16be . 7) (s16be . 8) (u32be . 9) (s32be . 10) (u64be . 11)
-                 (s64be . 12) (f32be . 2) (f64be . 3))))
-    (lambda (mtype) (assq-ref ftmap mtype))))
-|#
 
-(export ffi_type ffi_type* ffi_cif mtype->ffi-prim)
+(define ffi-type
+  (let ((ftmap '((void . 0) (int . 1)
+                 (f32le . 2) (f64le . 3) (f128le . 4)
+                 (u8 . 5) (s8 . 6) (u16le . 7) (s16le . 8)
+                 (u32le . 9) (s32le . 10) (u64le . 11) (s64le . 12)
+                 (struct . 13) (pointer . 14) (complex . 15))))
+    (lambda (mtype) (assq-ref ftmap mtype))))
+(export ffi-type)
+
+;; @deffn {Procedure} ctype->ffi_type ctype => cdata
+;; @*TODO: handle bitfields
+;; @end deffn
+(define (ctype->ffi_type ctype)
+  (assert-ctype 'ctype->ffi_type ctype)
+  (define (cnvt type)
+    (let ((info (ctype-info type))
+          (ffit (make-cdata ffi_type)))
+      (case (ctype-kind type)
+        ((base)
+         (cdata-set! ffit (ffi-type (ctype-info type)) 'type))
+        ((pointer)
+         (cdata-set! ffit (ffi-type 'pointer) 'type))
+        ((struct)
+         (let* ((flds (cstruct-fields info))
+                (nfld (length flds)) ; does not work for bitfields
+                (fld-pt (carray ffi_type* nfld))
+                (fld-pd (make-cdata fld-pt)))
+           (cdata-set! ffit (ffi-type 'struct) 'type)
+           (cdata-set! ffit (cdata-cast fld-pd ffi_type**) 'elements)
+           (for-each
+            (lambda (ix fld)
+              (let ((ftype (cfield-type fld)))
+                (if (eq? 'bitfield (ctype-kind ftype))
+                    (error "uh uh ahhh: bitfield"))
+                (cdata-set! fld-pd (cnvt (cfield-type fld)) ix)))
+            (iota nfld) flds)))
+        ((union array) ; just fill
+         (let* ((align (ctype-align type))
+                (asize (/ (ctype-size type) align))
+                (fld-pt (carray ffi_type* asize))
+                (fld-pd (make-cdata fld-pt))
+                (etype (mtype->ffi-prim (case align
+                                          ((1) 'u8) ((2) 'u16le) ((3) 'u32le)
+                                          ((4) 'u32le) ((8) 'u64le)))))
+           (cdata-set! ffit (ffi-type 'struct) 'type)
+           (for-each (lambda (ix) (cdata-set! fld-pd etype ix)) (iota asize))))
+        (else (error "ctype->ffi_type: missed something")))
+      (cdata& ffit)))
+  (case (ctype-kind ctype)
+    ((array) (let ((ffit (make-cdata ffi_type)))
+               (cdata-set! ffit (ffi-type 'pointer) 'type)))
+    (else (cnvt ctype))))
+
+(export ffi_cif ctype->ffi_type)
+(export ffi_type ffi_type* ffi_type** mtype->ffi-prim)
 
 
 ;; --- c99 support -------------------------------------------------------------
