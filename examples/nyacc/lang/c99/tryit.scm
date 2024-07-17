@@ -375,7 +375,7 @@
 (when #f
   ;; bug 65849
   (let* ((code (string-append
-                "#warning \"warn me!\"\n" 
+                "#warning \"warn me!\"\n"
                 "#warning \"oops\"\n"))
          (tree (parse-string code)))
     #t))
