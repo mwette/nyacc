@@ -599,6 +599,8 @@
 
 ;; === exports =======================
 
+(define-syntax-rule (fix expr) (false-if-exception expr))
+
 ;; @deffn {Procedure} eval-cpp-cond-text text [defs] => string
 ;; Evaluate CPP condition expression (text).
 ;; Undefined identifiers are replaced with @code{0}.
@@ -637,19 +639,19 @@
       (let* ((used (cons ident used))
 	     (repl (cpp-expand-text rval defs used)))
 	(if (ident-like? repl)
-	    (or (expand-cpp-macro-ref repl defs sl used) repl)
+	    (or (fix (expand-cpp-macro-ref repl defs sl used)) repl)
 	    repl)))
      ((pair? rval)
       ;; GNU CPP manual: "A function-like macro is only expanded if its name
       ;; appears with a pair of parentheses after it.  If you just write the
       ;; name, it is left alone."
-      (and=> (collect-args (car rval) defs used)
+      (and=> (fix (collect-args (car rval) defs used))
 	     (lambda (argd)
 	       (let* ((used (cons ident used))
 		      (prep (px-cpp-ftn argd (cdr rval)))
 		      (repl (cpp-expand-text prep defs used)))
 		 (if (ident-like? repl)
-		     (or (expand-cpp-macro-ref repl defs sl used) repl)
+		     (or (fix (expand-cpp-macro-ref repl defs sl used)) repl)
 		     repl)))))
      ((c99-std-val ident sl) => identity)
      ;;((string=? ident "_Pragma") (finish-pragma))
@@ -678,6 +680,6 @@
 ;; @end deffn
 (define (expand-cpp-name name defs sl)
   (with-input-from-string ""
-    (lambda () (expand-cpp-macro-ref name defs sl))))
+    (lambda () (fix (expand-cpp-macro-ref name defs sl)))))
 
 ;;; --- last line ---
