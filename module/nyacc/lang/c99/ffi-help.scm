@@ -1227,49 +1227,6 @@
   (let ((pred (node-typeof? crit)))
     (lambda (node) (not (pred node)))))
 
-;; assume unit-declarator
-;; See also stripdown-specl and stripdown-declr in @file{munge.scm}.
-;; and make this more efficient
-(export cleanup-udecl)
-(define cleanup-udecl
-  (let* ((ftn-sel (node-closure (node-typeof? 'ftn-declr)))
-	 (fctn? (lambda (n) (pair? (ftn-sel n))))
-	 (cruft (node-self (node-not-typeof? 'type-qual))))
-    (lambda (specl declr)
-      (let* ((specl (remove (lambda (node)
-			      (or (equal? node '(stor-spec (auto)))
-				  (equal? node '(stor-spec (register)))
-				  (equal? node '(stor-spec (static)))
-				  (equal? node '(type-qual (const)))
-				  (equal? node '(type-qual (volatile)))
-				  (equal? node '(type-qual (restrict)))))
-			    specl))
-
-	     (specl (if (fctn? declr)
-			(remove (lambda (node)
-				  (equal? node '(stor-spec (extern)))) specl)
-			specl))
-	     ;; remove cruft like attributes and asms and initizers)
-	     (declr (and declr (sx-list (sx-tag declr) #f (sx-ref declr 1)))))
-	(values specl declr)))))
-
-;; @deffn {Procecure} back-ref-extend! decl typename
-;; @deffnx {Procecure} back-ref-getall decl typename
-;; The first procecure adds a backward reference for a struct from typedef
-;; forward reference.  The second procedure returns the list of references.
-;; This is sort of a hack but don't want to carry a list of forward
-;; references just yet.
-;; @end deffn
-(define (back-ref-extend! decl typename)
-  (let ((aval (sx-attr-ref decl 'typedef)))
-    (sx-attr-set! decl 'typedef
-		  (if aval (string-append aval "," typename) typename))))
-(define (back-ref-getall decl)
-  (let ((aval (sx-attr-ref decl 'typedef)))
-    (if aval (string-split aval #\,) '())))
-
-;;^-- instead have user run (ref<=>deref! ...
-
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
 ;; Return updated (string based) keep-list, which will be modified if the
