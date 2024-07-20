@@ -150,11 +150,6 @@
 		    #:per-line-prefix ";; "))
 (define (nlscm) (newline (*mport*)))
 
-(define (sfout fmt . args)
-  (apply simple-format #t fmt args))
-(define (ppout tree)
-  (pretty-print tree #:per-line-prefix "    "))
-(define (nlout) (newline))
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args)
   (force-output (current-error-port)))
@@ -1222,10 +1217,6 @@
 	  (case-lambda
 	    (() (bytestructure-ref (force x-var)))
 	    ((var) (bytestructure-set! (force x-var) var))))))))
-
-(define (node-not-typeof? crit)
-  (let ((pred (node-typeof? crit)))
-    (lambda (node) (not (pred node)))))
 
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
