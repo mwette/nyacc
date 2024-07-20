@@ -1,6 +1,6 @@
 ;; nyacc/lang/ffi-help/dbus-03.scm - peer-to-peer over the session bus
 
-;; Copyright (C) 2018,2020 Matthew R. Wette
+;; Copyright (C) 2018,2020,2024 Matthew Wette
 
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -28,7 +28,7 @@
 
 (add-to-load-path (getcwd))
 
-(use-modules (dbus00))
+(use-modules (system dbus))
 (use-modules (ffi dbus))
 (use-modules (system ffi-help-rt))
 (use-modules ((system foreign) #:prefix ffi:))
@@ -62,7 +62,7 @@
     (dbus_message_iter_append_basic &iter (DBUS 'TYPE_STRING) &role)
     (dbus_connection_send conn sig (pointer-to serial))
     serial))
-    
+
 (define (send-pong conn rem role)
   (let ((&role (pointer-to (make-char* role)))
         (loc (make-char* (dbus_bus_get_unique_name conn)))
@@ -106,6 +106,12 @@
   (sf "    iface  = ~S\n" (p2s (dbus_message_get_interface msg)))
   (sf "    member = ~S\n" (p2s (dbus_message_get_member msg))))
 
+(define (ensure-pointer maybe-ptr)
+  (if (ffi:pointer? maybe-ptr) maybe-ptr (ffi:make-pointer maybe-ptr)))
+
+(define (ensure-address maybe-ptr)
+  (if (ffi:pointer? maybe-ptr) (ffi:pointer-address maybe-ptr) maybe-ptr))
+
 ;; worker listens for ping, sends pong
 (define (run-peer role)
   (let ((error (make-DBusError)))
@@ -116,7 +122,7 @@
     (let loop ((clk 0))
       (dbus_connection_read_write conn 0)
       (let ((msg (dbus_connection_pop_message conn)))
-        (unless (zero? (fh-object-ref msg))
+        (unless (zero? (ensure-address (fh-object-ref msg)))
           (show msg)
           (cond
 
@@ -124,8 +130,7 @@
             (dbus_set_error_from_message (pointer-to error) msg)
             (sf "error: ~S\n"
                 (ffi:pointer->string
-                 (ffi:make-pointer
-                  (fh-object-ref error 'message))))
+                 (ensure-pointer (fh-object-ref error 'message))))
             #f)
 
            ((and (!0 (dbus_message_has_member msg "Ping"))
