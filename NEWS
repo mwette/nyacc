@@ -7,10 +7,21 @@ without any warranty.
 
 2024-XX-XX  V1.10.0
 	* updated (system ffi-help-rt) a bit: definition of fh-cast
-	  changed; funtion pointers updated (to work), based
+	  changed; funtion pointers updated (to work)
         * (system ffi-help-rt): add/expose fh-varg for use with procedures
           based on C variadic args: (printf "ans=%d" (fh-varg ffi:int 3))
 	* ffi-help.scm(cnvt-uecl): complete re-write, using udecl->mdecl
+          You may notice that some fh-object-ref now returns guile pointer
+          where it returned the address before.  To maintain compatibility 
+          try using something like
+            (define (ensure-pointer maybe-ptr)
+              (if (ffi:pointer? maybe-ptr)
+                  maybe-ptr 
+                  (ffi:make-pointer maybe-ptr)))
+            (define (ensure-address maybe-ptr)
+              (if (ffi:pointer? maybe-ptr) 
+                  (ffi:pointer-address maybe-ptr) 
+                  maybe-ptr))
 
 2024-06-24  V1.09.5
 	* fixed bug 65849: crash on multiple #warning
