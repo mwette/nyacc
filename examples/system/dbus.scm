@@ -107,7 +107,7 @@
 ;; @end deffn
 (define (dbus-error error)
   (and (!0 (dbus_error_is_set (pointer-to error)))
-       (ffi:pointer->string (fh-object-ref error 'message))))
+       (ffi:pointer->string (ensure-pointer (fh-object-ref error 'message)))))
 
 (define (get-bval &iter key)
   (let* ((bval (make-DBusBasicValue)))
