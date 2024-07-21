@@ -409,6 +409,8 @@
 
       ((bit-field ,ident ,expr)
        (ppx ident) (sf " : ") (ppx expr))
+      ((bit-field ,expr)
+       (sf ": ") (ppx expr))
 
       ;;((type-spec ,arg)
       ((type-spec (@ . ,aattr) ,arg)
