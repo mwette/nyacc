@@ -531,7 +531,6 @@
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
     (sfscm "  #:use-module (system foreign-library)\n")
     (sfscm "  #:use-module (system ffi-help-rt))\n\n")
-    ;;
     (ppscm `(use-modules ,Tmodules))
     (sfscm "\n")
     (ppscm
@@ -1219,7 +1218,7 @@
         (match mtail
 
           (`((array-of ,dim) . ,rest)
-           (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+           (ppscm `(define-public ,desc ,(mtail->target mtail)))
            (ppscm `(define-fh-vector-type ,name ,desc ,pred ,make))
            (ppscm `(export ,name ,pred ,make))
            (ppscm `(define-public ,desc* (fh:pointer ,desc)))
@@ -1237,7 +1236,7 @@
            (values (cons label wrapped) (cons label defined)))
 
           (`((pointer-to) . ,rest)
-           (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+           (ppscm `(define-public ,desc ,(mtail->target mtail)))
            (ppscm `(define-fh-pointer-type ,name ,desc ,pred ,make))
            (ppscm `(export ,name ,pred ,make))
            (case (caar rest)
@@ -1258,7 +1257,7 @@
           (__
            (sx-match (car mtail)
              ((struct-def (ident ,aggr-name) ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
               (ppscm `(export ,name ,pred ,make))
               (ppscm `(define-public ,desc* (fh:pointer ,desc)))
@@ -1267,7 +1266,7 @@
               (values (cons label wrapped) (cons label defined)))
 
              ((struct-def ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
               (ppscm `(export ,name ,pred ,make))
               (ppscm `(define-public ,desc* (fh:pointer ,desc)))
@@ -1276,7 +1275,7 @@
               (values (cons label wrapped) (cons label defined)))
 
              ((union-def (ident ,aggr-name) ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
               (ppscm `(export ,name ,pred ,make))
               (ppscm `(define-public ,desc* (fh:pointer ,desc)))
@@ -1285,7 +1284,7 @@
               (values (cons label wrapped) (cons label defined)))
 
              ((union-def ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
               (ppscm `(export ,name ,pred ,make))
               (ppscm `(define-public ,desc* (fh:pointer ,desc)))
@@ -1297,7 +1296,7 @@
               (cond
                ((member (w/struct aggr-name) defined)
                 ;; defined previously
-                (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+                (ppscm `(define-public ,desc ,(mtail->target mtail)))
 	        (ppscm `(define-public ,desc*
                           ,(sfsym "struct-~A*-desc" aggr-name)))
                 (fhscm-def-compound label))
@@ -1318,7 +1317,7 @@
               (cond
                ((member (w/union aggr-name) defined)
                 ;; defined previously
-                (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+                (ppscm `(define-public ,desc ,(mtail->target mtail)))
 	        (ppscm `(define-public ,desc*
                           ,(sfsym "union-~A*-desc" aggr-name)))
                 (fhscm-def-compound label))
@@ -1336,16 +1335,16 @@
                       (cons* label (w/* label) defined)))
 
              (((fixed-type float-type) ,basename)
-              (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (values wrapped defined))
 
              ((enum-def ,enum-def-list)
-              (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (cnvt-enum-def name #f enum-def-list)
               (values (cons label wrapped) defined))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
-              (ppscm `(define-public ,desc ,(mtail->bs-desc mtail)))
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (cnvt-enum-def name #f enum-def-list)
               (values (cons label wrapped) defined))
 
