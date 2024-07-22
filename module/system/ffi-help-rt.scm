@@ -25,6 +25,7 @@
             fh-object? fh-object-val
             fh-object-ref fh-object-set! fh-object-addr
             pointer-to value-at NULL !0
+            fherr
 
             ;; maybe used outside of modules?
             fh:cast fh-cast bs-addr
@@ -78,7 +79,8 @@
  (guile))
 
 (define (fherr fmt . args)
-  (apply throw 'ffi-help-error fmt args))
+  ;;(apply throw 'ffi-help-error fmt args))
+  (throw 'ffi-help-error (apply simple-format #f fmt args)))
 
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:

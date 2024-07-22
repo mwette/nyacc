@@ -42,9 +42,9 @@
 
 ;; This is the c function.
 (define-public ~gtk_widget_destroy
-  (fh-find-symbol-addr "gtk_widget_destroy" (force ffi-gtk2-llibs)))
+  (foreign-pointer-search "gtk_widget_destroy"))
 
 (define-public ~gtk_main_quit
-  (fh-find-symbol-addr "gtk_main_quit" (force ffi-gtk2-llibs)))
+  (foreign-pointer-search "gtk_main_quit"))
 
 ;; --- last line ---

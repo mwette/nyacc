@@ -68,6 +68,9 @@
             udict->typedef-names
             inc-keeper?
 
+            clean-and-unitize-fields
+            clean-and-dictize-fields
+
             ;; debugging
             stripdown-1
             tdef-splice-specl
@@ -854,5 +857,10 @@
         (rest (cdr mdecl)))
     (doit `(ident ,name) rest)))
 
+(define (clean-and-unitize-fields fields)
+  (fold-right unitize-decl '() (clean-fields fields)))
+
+(define (clean-and-dictize-fields fields)
+  (fold-right dictize-decl '() (clean-fields fields)))
 
 ;; --- last line ---
