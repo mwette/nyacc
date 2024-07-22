@@ -6,35 +6,38 @@ notice and this notice are preserved.  This file is offered as-is,
 without any warranty.
 
 2024-XX-XX  V1.10.0
-	* updated (system ffi-help-rt) a bit: definition of fh-cast
-	  changed; funtion pointers updated (to work)
-        * (system ffi-help-rt): add/expose fh-varg for use with procedures
-          based on C variadic args: (printf "ans=%d" (fh-varg ffi:int 3))
+	* updated (system ffi-help-rt):i
+	  + depends on guile-3.0.9+ (system foreign-library)
+	  + definition of fh-cast changed
+	  + funtion pointers updated (to work)
+	  + add/expose fh-varg for use with procedures based on C va-args:
+	      (printf "ans=%d" (fh-varg ffi:int 3))
 	* ffi-help.scm(cnvt-uecl): complete re-write, using udecl->mdecl
-          You may notice that some fh-object-ref now returns guile pointer
-          where it returned the address before.  To maintain compatibility 
-          try using something like
-            (define (ensure-pointer maybe-ptr)
-              (if (ffi:pointer? maybe-ptr)
-                  maybe-ptr 
-                  (ffi:make-pointer maybe-ptr)))
-            (define (ensure-address maybe-ptr)
-              (if (ffi:pointer? maybe-ptr) 
-                  (ffi:pointer-address maybe-ptr) 
-                  maybe-ptr))
+	  You may notice that some fh-object-ref now returns guile pointer
+	  where it returned the address before.  To maintain compatibility 
+	  try using something like
+	    (define (ensure-pointer maybe-ptr)
+	      (if (ffi:pointer? maybe-ptr)
+	          maybe-ptr 
+	          (ffi:make-pointer maybe-ptr)))
+	    (define (ensure-address maybe-ptr)
+	      (if (ffi:pointer? maybe-ptr) 
+	          (ffi:pointer-address maybe-ptr) 
+	          maybe-ptr))
+	* ffi-help.scm: major updates to pave the way for coming cdata
 
 2024-06-24  V1.09.5
 	* fixed bug 65849: crash on multiple #warning
-
+        
 2024-04-19  V1.09.4
- 	* added nx-printf.scm in examples/nyacc/lang
+	* added nx-printf.scm in examples/nyacc/lang
 	* fixed bug #65439 ffi-helper bad code for int foo(void);
 	* c99 sizeof and offsetof updated for bitfields, needs more testing
 	* fixed(?) bug #65594: ffi-helper type aliases not working
 
 2024-01-11  V1.09.3
 	* system/ffi-help-rt(fh-void?): check for struct, also for void*
-	  and void**; fixed bug #65021
+  	and void**; fixed bug #65021
 	* fix c99-06.test for size-and-alignof-type
 	* cleanup of code in lang/c99
 
