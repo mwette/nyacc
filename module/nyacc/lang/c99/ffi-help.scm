@@ -108,6 +108,12 @@
 	    (get-sys-cpp-defs)))
    (else (get-sys-cpp-defs))))
 
+(define fh-cpp-dict
+  (map (lambda (ent)
+	 (let ((elts (string-split ent #\=)))
+	   (cons (car elts) (if (null? (cdr elts)) "" (cadr elts)))))
+       fh-cpp-defs))
+
 (define fh-inc-dirs
   (append
    `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
@@ -413,11 +419,11 @@
 
       (`((function-returning (param-list . ,params)) . ,tail)
        `(fh:function ,(mtail->bs-desc tail)
-		     (list ,@(gen-bs-decl-params params))))
+		     (list ,@(gen-tgt-decl-params params))))
       (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
        `(fh:pointer
          (fh:function ,(mtail->bs-desc tail)
-		      (list ,@(gen-bs-decl-params params)))))
+		      (list ,@(gen-tgt-decl-params params)))))
       (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
        `(fh:pointer 'void))
 
@@ -544,40 +550,6 @@
 
 ;; === fh type generation ======================================================
 
-(define (fhscm-export-def name)
-  (let* ((name (rename name))
-	 (st-name (if (string? name) name (symbol->string name)))
-	 (sy-name (if (string? name) (string->symbol name) name))
-	 (pred (string->symbol (string-append st-name "?")))
-	 (make (string->symbol (string-append "make-" st-name))))
-    (upscm `(export ,sy-name ,pred ,make))))
-
-(define (fhscm-def-compound name)
-  (let* ((name (rename name))
-	 (st-name (if (string? name) name (symbol->string name)))
-	 (sy-name (if (string? name) (string->symbol name) name))
-	 (desc (string->symbol (string-append st-name "-desc")))
-	 (pred (string->symbol (string-append st-name "?")))
-	 (make (string->symbol (string-append "make-" st-name))))
-    (upscm `(define-fh-compound-type ,sy-name ,desc ,pred ,make))
-    (fhscm-export-def name)))
-
-(define (fhscm-def-pointer name)
-  (let* ((name (rename name))
-	 (st-name (if (string? name) name (symbol->string name)))
-	 (sy-name (if (string? name) (string->symbol name) name))
-	 (desc (string->symbol (string-append st-name "-desc")))
-	 (pred (string->symbol (string-append st-name "?")))
-	 (make (string->symbol (string-append "make-" st-name))))
-    (upscm `(define-fh-pointer-type ,sy-name ,desc ,pred ,make))
-    (fhscm-export-def name)))
-
-(define (fhscm-def-pointer/delay name)
-  (let ((name (rename name)))
-    (sfscm "(define-fh-pointer-type ~A* ~A*-desc\n" name)
-    (sfscm "  ~A*? make-~A*)\n" name name)
-    (fhscm-export-def name)))
-
 (define (fhscm-ref-deref typename)
   (let* ((typename (rename typename))
 	 (type* (strings->symbol typename "*"))
@@ -586,11 +558,49 @@
 	 (make (strings->symbol "make-" typename)))
     (ppscm `(fh-ref<=>deref! ,type* ,make* ,type ,make))))
 
+(define (fhscm-gen-def kind name)
+  (let* ((name (rename name))
+	 (strname (if (string? name) name (symbol->string name)))
+	 (symname (if (string? name) (string->symbol name) name))
+         (desc (strings->symbol strname "-desc"))
+	 (pred (strings->symbol strname "?"))
+	 (make (strings->symbol "make-" strname)))
+    (upscm (list kind symname desc pred make))
+    (upscm `(export ,symname ,pred ,make))))
+
+(define (fhscm-def-pointer name)
+  (fhscm-gen-def 'define-fh-pointer-type name))
+
+(define (fhscm-def-compound name)
+  (fhscm-gen-def 'define-fh-compound-type name))
+
+(define (fhscm-def-vector name)
+  (fhscm-gen-def 'define-fh-vector-type name))
+
+(define* (cnvt-param/fh-decl udecl #:optional namer)
+  (mtail->target
+   (md-tail (udecl->mdecl
+             (udecl-rem-type-qual
+              (expand-typerefs udecl (*udict*) ffi-defined))
+             #:namer namer))))
+
+(define (gen-tgt-decl-return udecl)
+  (cnvt-param/fh-decl udecl))
+
+(define (gen-tgt-decl-params params)
+  (let ((namer (make-arg-namer)))
+    (reverse
+     (fold (lambda (param seed)
+	     (if (equal? param '(ellipsis))
+                 '()
+                 (cons (cnvt-param/fh-decl param namer) seed)))
+           '() params))))
+
 (define (fhscm-def-function* name return params)
   (let* ((st-name (if (string? name) name (symbol->string name)))
 	 (sy-name (if (string? name) (string->symbol name) name))
-	 (wrap (string->symbol (string-append "fh-wrap-" st-name)))
-	 (unwrap (string->symbol (string-append "unwrap-" st-name)))
+	 (wrap (strings->symbol "fh-wrap-" st-name))
+	 (unwrap (strings->symbol "unwrap-" st-name))
 	 (params (if (equal? params '('void)) '() params)))
     (sfscm "(define-public ~A-desc\n" name)
     (ppscm `(fh:pointer (delay (fh:function ,return (list ,@params))))
@@ -600,15 +610,7 @@
 	      ,(string->symbol (string-append name "-desc"))
 	      ,(string->symbol (string-append name "?"))
 	      ,(string->symbol (string-append "make-" name))))
-    (fhscm-export-def name)))
-
-(define* (fhscm-def-fixed name)
-  (sfscm "(define unwrap-~A unwrap~~fixed)\n" name)
-  (sfscm "(define wrap-~A identity)\n" name))
-
-(define* (fhscm-def-float name)
-  (sfscm "(define unwrap-~A unwrap~~float)\n" name)
-  (sfscm "(define wrap-~A identity)\n" name))
+    (ppscm '(export ,wrap ,unwrap))))
 
 ;; --- structs and unions
 
@@ -686,7 +688,7 @@
               (cond
                ((symbol? n)
                 (or (assq-ref ,(sfsym "~A-enum-nvl" name) n)
-                    (throw 'ffi-help-error "bad arg: ~~A" n)))
+                    (fherr "bad arg: ~~A" n)))
                ((integer? n) n)
                (else (error "bad arg")))))
     (ppscm `(define-public (,(sfsym "wrap-~A" name) v)
@@ -715,18 +717,11 @@
      (enum-name
       (fhscm-def-enum (string-append "enum-" enum-name) name-val-l)))))
 
-;; === function declarations : signatures for pointer->procedure
 
-(define fh-cpp-dict
-  (map (lambda (ent)
-	 (let ((elts (string-split ent #\=)))
-	   (cons (car elts) (if (null? (cdr elts)) "" (cadr elts)))))
-       fh-cpp-defs))
+;; === function definitions ====================================================
 
 (define ffi-long-long #f)
 (define ffi-unsigned-long-long #f)
-
-;;(pperr fh-cpp-dict)
 (case (and=> (assoc-ref fh-cpp-dict "__LONG_LONG_WIDTH__") string->number)
   ((64)
    (set! ffi-long-long 'ffi:int64)
@@ -738,27 +733,6 @@
    (sferr "ffi-help: warning: unknown ffi type: long-long")
    (set! ffi-long-long 'ffi:long)
    (set! ffi-unsigned-long-long 'ffi:unsigned-long)))
-
-(define ffi-intptr_t #f)
-(define ffi-uintptr_t #f)
-
-(cond-expand
- ((or guile-3 guile-2.2)
-  (set! ffi-intptr_t 'ffi:intptr_t)
-  (set! ffi-uintptr_t 'ffi:uintptr_t))
- (guile-2
-  (case (and=> (assoc-ref fh-cpp-dict "__INTPTR_WIDTH__") string->number)
-    ((64)
-     (set! ffi-intptr_t 'ffi:int64_t)
-     (set! ffi-uintptr_t 'ffi:uint64_t))
-    ((32)
-     (set! ffi-intptr_t 'ffi:int32_t)
-     (set! ffi-uintptr_t 'ffi:uint32_t))
-    (else
-     (sferr "ffi-help: warning: unknown ffi type: intptr_t\n")
-     (set! ffi-intptr_t 'ffi:long)
-     (set! ffi-uintptr_t 'ffi:unsigned-long))))
- (guile))
 
 (define ffi-typemap
   ;; see system/foreign.scm
@@ -782,7 +756,7 @@
     ("int32_t" . ffi:int32) ("uint32_t" . ffi:uint32)
     ("int64_t" . ffi:int64) ("uint64_t" . ffi:uint64)
     ;; hacks
-    ("intptr_t" . ,ffi-intptr_t) ("uintptr_t" . ,ffi-uintptr_t)
+    ("intptr_t" . ffi:intptr_t) ("uintptr_t" . ffi:uintptr_t)
     ("char" . ffi:int8) ("signed char" . ffi:int8) ("unsigned char" . ffi:uint8)
     ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
     ("long long" . ,ffi-long-long) ("long long int" . ,ffi-long-long)
@@ -804,83 +778,70 @@
     (ffi:int32 . ,int32) (ffi:uint32 . ,uint32) (ffi:int64 . ,int64)
     (ffi:uint64 . ,uint64) (ffi-void* . *)))
 
-;; assumes fields are unitized
-;; this does not do the job right because needs to include double
-;; if that is used
-(define (bounding-mtail-for-union-fields fields)
-  (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
-    (if (null? flds) btail
-	(let* ((udecl (car flds))
-               (xdecl (expand-typerefs (car flds) (*udict*)))
-               (mtail (cdr (udecl->mdecl xdecl))))
-	  (call-with-values (lambda () (sizeof-mtail mtail (*udict*)))
-	    (lambda (sz al)
-	      (if (> sz mxsz)
-		  (loop mtail sz (max al mxal) (cdr flds))
-		  (loop btail mxsz (max al mxal) (cdr flds)))))))))
-
-(export mtail->ffi-desc)
-(define* (mtail->ffi-desc mdecl-tail #:optional in-compound)
+(define* (mtail->ffi-decl mdecl-tail)
 
   (define (eval-dim dim) ;; may want to catch errors
     (eval-c99-cx dim (*udict*) (*ddict*)))
 
+  (define (cnvt mtail)
+    (match mdecl-tail
+      (`((pointer-to) . ,rest) 'ffi-void*)
+      (`((fixed-type ,name))
+       (or (assoc-ref ffi-typemap name)
+	   (fherr/once "no FFI type for ~A" name)))
+      (`((float-type ,name))
+       (or (assoc-ref ffi-typemap name)
+	   (fherr/once "no FFI type for ~S" name)))
+      (`((typename ,name) . ,rest)
+       (or (assoc-ref ffi-typemap name)
+	   (fherr "no FFI type for ~S" name)))
+      (`((void)) 'ffi:void)
+      (`((enum-def . ,rest2) . ,rest1) 'ffi:int)
+      (`((enum-ref . ,rest2) . ,rest1) 'ffi:int)
+
+      (`((array-of ,dim) . ,rest)
+       `(make-list ,(eval-dim dim) ,(cnvt rest)))
+      (`((array-of) . ,rest)
+       (cnvt `((array-of "0") . ,rest)))
+
+      (`((struct-def (field-list . ,fields)))
+       `(list ,@(map (lambda (fld)
+                       (let* ((udict (dictize-comp-decl fld))
+	                      (name (caar udict))
+	                      (udecl (cdar udict))
+	                      (udecl (udecl-rem-type-qual udecl))
+	                      (mdecl (udecl->mdecl udecl)))
+                         (cnvt (cdr mdecl))))
+	             (clean-and-unitize-fields fields))))
+      (`((struct-def (ident ,name) ,field-list))
+       (cnvt `((struct-def ,field-list))))
+
+      (`((union-def (field-list . ,fields)))
+       (cnvt
+        (bounding-mtail-for-union-fields
+         (clean-and-unitize-fields fields))))
+      (`((union-def (ident ,name) ,field-list))
+       (cnvt `((union-def ,field-list))))
+
+      (otherwise
+       (fherr "mtail->ffi-decl missed:\n~A" (ppstr mdecl-tail)))))
+
   (match mdecl-tail
-    (`((pointer-to) . ,rest) 'ffi-void*)
-    (`((fixed-type ,name))
-     (or (assoc-ref ffi-typemap name)
-	 (fherr/once "no FFI type for ~A" name)))
-    (`((float-type ,name))
-     (or (assoc-ref ffi-typemap name)
-	 (fherr/once "no FFI type for ~S" name)))
-    (`((typename ,name) . ,rest)
-     (or (assoc-ref ffi-typemap name)
-	 (fherr "no FFI type for ~S" name)))
-    (`((void)) 'ffi:void)
-    (`((enum-def . ,rest2) . ,rest1) 'ffi:int)
-    (`((enum-ref . ,rest2) . ,rest1) 'ffi:int)
+    (`((array-of ,dim) . ,rest) 'ffi-void*)
+    (__ (cnvt mdecl-tail))))
+;;(export mtail->ffi-decl)
 
-    (`((array-of ,dim) . ,rest)
-     (if in-compound
-	 (let ((dim (eval-dim dim)))
-	   `(make-list ,dim ,(mtail->ffi-desc rest)))
-	 'ffi-void*))
-    (`((array-of) . ,rest)
-     (mtail->ffi-desc `((array-of "0") . ,rest) in-compound))
-
-    (`((struct-def (field-list . ,fields)))
-     `(list ,@(map (lambda (fld)
-		     (let* ((udict (dictize-comp-decl fld))
-			    (name (caar udict))
-			    (udecl (cdar udict))
-			    (udecl (udecl-rem-type-qual udecl))
-			    (mdecl (udecl->mdecl udecl)))
-		       (mtail->ffi-desc (cdr mdecl) #t)))
-		   (clean-and-unitize-fields fields))))
-    (`((struct-def (ident ,name) ,field-list))
-     (mtail->ffi-desc `((struct-def ,field-list))))
-
-    (`((union-def (field-list . ,fields)))
-     (mtail->ffi-desc
-      (bounding-mtail-for-union-fields
-       (clean-and-unitize-fields fields))
-      #t))
-    (`((union-def (ident ,name) ,field-list))
-     (mtail->ffi-desc `((union-def ,field-list))))
-
-    (otherwise
-     (fherr "mtail->ffi-desc missed:\n~A" (ppstr mdecl-tail)))))
-
-;; Return a mdecl for the return type.  The variable is called @code{NAME}.
+;; still called by mdecl->fh-unwrap
 (define (gen-decl-return udecl)
   (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
 	 (udecl (udecl-rem-type-qual udecl1))
-	 (mdecl (udecl->mdecl udecl1)))
-    (mtail->ffi-desc (md-tail mdecl))))
+	 (mdecl (udecl->mdecl udecl1))) ;; !!
+    (mtail->ffi-decl (md-tail mdecl))))
 
+;; still called by mdecl->fh-unwrap
 (define (gen-decl-params params)
   ;; Note that expand-typerefs will not eliminate enums or struct-refs :
-  ;; mtail->ffi-desc needs to convert enum to int or void*
+  ;; mtail->ffi-decl needs to convert enum to int or void*
   (let ((namer (make-arg-namer)))
     (reverse
      (fold
@@ -893,28 +854,7 @@
 	  (let* ((udecl1 (expand-typerefs param (*udict*) ffi-defined))
 		 (udecl1 (udecl-rem-type-qual udecl1))
 		 (mdecl (udecl->mdecl udecl1 #:namer namer)))
-	    (cons (mtail->ffi-desc (cdr mdecl)) seed)))))
-      '() params))))
-
-(define (gen-bs-decl-return udecl)
-  (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
-	 (udecl (udecl-rem-type-qual udecl1))
-	 (mdecl (udecl->mdecl udecl1)))
-    (mtail->target (md-tail mdecl))))
-
-(define (gen-bs-decl-params params)
-  ;; Note that expand-typerefs will not eliminate enums or struct-refs :
-  ;; mtail->ffi-desc needs to convert enum to int or void*
-  (let ((namer (make-arg-namer)))
-    (reverse
-     (fold
-      (lambda (param seed)
-	(if (equal? param '(ellipsis))
-	    '()
-	    (let* ((udecl1 (expand-typerefs param (*udict*) ffi-defined))
-		   (udecl1 (udecl-rem-type-qual udecl1))
-		   (mdecl (udecl->mdecl udecl1 #:namer namer)))
-	      (cons (mtail->target (md-tail mdecl)) seed))))
+	    (cons (mtail->ffi-decl (cdr mdecl)) seed)))))
       '() params))))
 
 ;; given list of udecl params generate list of name-unwrap pairs
@@ -932,13 +872,13 @@
 		 (param (expand-typerefs param (*udict*) (*wrapped*)))
 		 (param (udecl-rem-type-qual param))
 		 (mdecl (udecl->mdecl param #:namer namer)))
-	    (acons (car mdecl) (mdecl->fh-unwrapper mdecl) seed)))))
+	    (acons (car mdecl) (mdecl->fh-unwrap mdecl) seed)))))
       '() params))))
 
-;; === function calls : unwrap args, call, wrap return
 
 ;; given mdecl for an exec argument give the unwrapper
-(define (mdecl->fh-unwrapper mdecl)
+;; arrays and compounds must be converted to pointers
+(define (mdecl->fh-unwrap mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
 
     ;; git_reference_foreach_name_cb not preserved
@@ -1012,7 +952,7 @@
        (let* ((udecl (mdecl->udecl (cons "~ret" rest)))
 	      (udecl (expand-typerefs udecl (*udict*) ffi-defined))
 	      (mdecl (udecl->mdecl udecl))
-	      (decl-return (mtail->ffi-desc (cdr mdecl)))
+	      (decl-return (mtail->ffi-decl (cdr mdecl)))
 	      (decl-params (gen-decl-params params)))
 	 (if (and (pair? decl-params) (equal? (last decl-params) '...))
 	     (fherr/once "no varargs (yet)"))
@@ -1024,10 +964,9 @@
       (`((array-of) . ,rest) 'unwrap~array)
 
       (otherwise
-       (fherr "mdecl->fh-unwrapper missed:\n~A" (ppstr (cadr mdecl)))))))
+       (fherr "mdecl->fh-unwrap missed:\n~A" (ppstr (cadr mdecl)))))))
 
-
-(define (mdecl->fh-wrapper mdecl)
+(define (mdecl->fh-wrap mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
     (match (cdr mdecl)
       (`((fixed-type ,name)) (if (assoc-ref ffi-typemap name) #f
@@ -1077,8 +1016,31 @@
       (`((pointer-to) . ,otherwise) #f)
 
       (otherwise
-       (fherr "mdecl->fh-wrapper missed:\n~A" (ppstr (cadr mdecl)))))))
+       (fherr "mdecl->fh-wrap missed:\n~A" (ppstr (cadr mdecl)))))))
 
+
+;; assumes fields are unitized
+;; this does not do the job right because needs to include double
+;; if that is used
+(define (bounding-mtail-for-union-fields fields)
+  (let loop ((btail #f) (mxsz 0) (mxal 0) (flds fields))
+    (if (null? flds) btail
+	(let* ((udecl (car flds))
+               (xdecl (expand-typerefs (car flds) (*udict*)))
+               (mtail (cdr (udecl->mdecl xdecl))))
+	  (call-with-values (lambda () (sizeof-mtail mtail (*udict*)))
+	    (lambda (sz al)
+	      (if (> sz mxsz)
+		  (loop mtail sz (max al mxal) (cdr flds))
+		  (loop btail mxsz (max al mxal) (cdr flds)))))))))
+
+;; =====================
+
+(define* (udecl->ffi-decl udecl #:optional (namer "_"))
+  (let* ((udecl (expand-typerefs udecl (*udict*) ffi-defined))
+	 (udecl (udecl-rem-type-qual udecl))
+	 (mdecl (udecl->mdecl udecl #:namer namer)))
+    (mtail->ffi-decl (md-tail mdecl))))
 
 ;; given list of name-unwrap pairs generate function arg names
 (define (gen-exec-arg-names params)
@@ -1112,9 +1074,16 @@
   (let* ((udecl (expand-typerefs udecl (*udict*) (*wrapped*)))
 	 (udecl (udecl-rem-type-qual udecl))
 	 (mdecl (udecl->mdecl udecl)))
-    (mdecl->fh-wrapper mdecl)))
+    (mdecl->fh-wrap mdecl)))
 
-(define void-params '((param-decl (decl-spec-list (type-spec (void))))))
+
+(define* (cnvt-param/ffi-decl udecl #:optional namer)
+  (mtail->target
+   (md-tail (udecl->mdecl
+             (udecl-rem-type-qual
+              (expand-typerefs udecl (*udict*) ffi-defined))
+             #:namer namer))))
+
 
 ;; @deffn {Procedure} cnvt-fctn name specl params
 ;; name is string
@@ -1122,6 +1091,58 @@
 ;; params is list of param-decl trees (i.e., cdr of param-list tree)
 ;; @end deffn
 (define (cnvt-fctn name rdecl params)
+  (define void-params '((param-decl (decl-spec-list (type-spec (void))))))
+  (define (remove-ellipsis pl)
+    (let loop ((pl params))
+      (cond ((null? pl) '())
+            ((eq? (car pl) '(ellipsis)) '())
+            (else (cons (car pl) (loop (cdr pl)))))))
+  (let* ((params (if (equal? params void-params) '() params))
+         (varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
+         (params (if varargs? (remove-ellipsis params) params))
+         ;;
+	 (decl-return (udecl->ffi-decl rdecl))
+	 (decl-params (map udecl->ffi-decl params))
+         ;;
+	 (exec-return (gen-exec-return-wrapper rdecl))
+	 (exec-params (gen-exec-params params))
+	 (sname (string->symbol name))
+	 (~name (string->symbol (string-append "~" name)))
+	 ;;(call `(,~name ,@(gen-exec-call-args exec-params)))
+	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
+			  (map cdr ~rest)))
+	 (call `((force ,~name) ,@(gen-exec-call-args exec-params))))
+    (cond
+     (varargs?
+      (sfscm ";; to be used with fh-arg\n")
+      (ppscm
+       `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
+	  (let ((,~name (ffi:pointer->procedure
+			 ,decl-return
+                         (foreign-pointer-search ,name)
+			 (append (list ,@decl-params) (map car ~rest))))
+		,@(gen-exec-unwrappers exec-params))
+	    ,(if exec-return (list exec-return va-call) va-call)))))
+     (else
+      (ppscm
+       `(define ,sname
+	  (let ((,~name
+		 (delay (ffi:pointer->procedure
+                         ,decl-return
+                         (foreign-pointer-search ,name)
+                         (list ,@decl-params)))))
+	    (lambda ,(gen-exec-arg-names exec-params)
+	      (let ,(gen-exec-unwrappers exec-params)
+		,(if exec-return (list exec-return call) call))))))))
+    (sfscm "(export ~A)\n" name)))
+
+;; @deffn {Procedure} cnvt-fctn name specl params
+;; name is string
+;; specl is decl-spec-list tree
+;; params is list of param-decl trees (i.e., cdr of param-list tree)
+;; @end deffn
+#|
+(define (X-cnvt-fctn name rdecl params)
   (let* ((params (if (equal? params void-params) '() params))
          (varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
 	 (decl-return (gen-decl-return rdecl))
@@ -1157,6 +1178,10 @@
 	      (let ,(gen-exec-unwrappers exec-params)
 		,(if exec-return (list exec-return call) call))))))))
     (sfscm "(export ~A)\n" name)))
+|#
+
+
+;; === the main conversion driver ==============================================
 
 ;; @deffn {Procedure} cnvt-udecl udecl udict wrapped defined)
 ;; Given udecl produce a ffi-spec.
@@ -1230,8 +1255,8 @@
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            ;; maybe redo this
            (let* ((ret-decl (mdecl->udecl (cons "_" rest)))
-                  (decl-return (gen-bs-decl-return ret-decl))
-	          (decl-params (gen-bs-decl-params params)))
+                  (decl-return (gen-tgt-decl-return ret-decl))
+	          (decl-params (gen-tgt-decl-params params)))
              (fhscm-def-function* label decl-return decl-params))
            (values (cons label wrapped) (cons label defined)))
 
@@ -1245,13 +1270,13 @@
 
           (`((function-returning (param-list . ,params)) . ,rest)
            (let* ((ret-decl (mdecl->udecl (cons "_" rest)))
-                  (decl-return (gen-bs-decl-return ret-decl))
-	          (decl-params (gen-bs-decl-params params)))
+                  (decl-return (gen-tgt-decl-return ret-decl))
+	          (decl-params (gen-tgt-decl-params params)))
              (ppscm `(define-public ,desc
                        (fh:function ,decl-return (list ,@decl-params))))
              (ppscm `(define-public ,desc* (fh:pointer ,desc)))
              (ppscm `(define-fh-function*-type ,name* ,desc* ,pred* ,make*))
-             (fhscm-export-def label))
+             (ppscm `(export ,desc ,pred ,make)))
            (values (cons label wrapped) (cons label defined)))
 
           (__
@@ -1367,15 +1392,15 @@
 	       ((member typename def-defined)
 	        (values wrapped defined))
 	       ((member typename defined)
-	        (sfscm "(define-public ~A-desc ~A-desc)\n" name typename)
-                (sfscm "(define-public ~A ~A)\n" name typename)
-                (sfscm "(define-public ~A? ~A?)\n" name typename)
-                (sfscm "(define-public make-~A make-~A)\n" name typename)
+	        (ppscm `(define-public ,desc ,(sfsym "~A-desc" typename)))
+                (ppscm `(define-fh-type-alias ,desc ,(sfsym "~A" typename)))
+                (ppscm `(define-public ,pred ,(sfsym "~A?" typename)))
+                (ppscm `(define-public ,make ,(sfsym "make-~A" typename)))
 	        (when (member (w/* typename) defined)
-	          (sfscm "(define-public ~A*-desc ~A*-desc)\n" name typename)
-                  (sfscm "(define-public ~A* ~A*)\n" name typename)
-                  (sfscm "(define-public ~A*? ~A*?)\n" name typename)
-                  (sfscm "(define-public make-~A* make-~A*)\n" name typename))
+	          (ppscm `(define-public ,desc* ,(sfsym "~A*-desc" typename)))
+                  (ppscm `(define-fh-type-alias ,desc ,(sfsym "~A*" typename)))
+                  (ppscm `(define-public ,pred* ,(sfsym "~A*?" typename)))
+                  (ppscm `(define-public ,make* ,(sfsym "make-~A*" typename))))
 	        (values (cons label wrapped) (cons label defined)))
 	       (else
 	        (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
