@@ -371,7 +371,6 @@
     (syntax-case x ()
       ((_ port fmt arg ...)
        #`(nx-sprintf
-          port
           #,(let ((val (syntax->datum #'fmt)))
               (if (string? val)
                   #`(quote #,(datum->syntax x (parse-format-string val)))
