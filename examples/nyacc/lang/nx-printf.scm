@@ -369,7 +369,7 @@
 (define-syntax sprintf
   (lambda (x)
     (syntax-case x ()
-      ((_ port fmt arg ...)
+      ((_ fmt arg ...)
        #`(nx-sprintf
           #,(let ((val (syntax->datum #'fmt)))
               (if (string? val)
