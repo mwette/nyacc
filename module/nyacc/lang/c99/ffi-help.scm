@@ -499,7 +499,7 @@
 
 (define Tmodules
   (case target
-    ((bs) '((bytestructures guile)))
+    ((bs) '((bytestructures guile) (system ffi-help-rt)))
     (else (error "bad target" target))))
 
 (define mtail->target
@@ -535,9 +535,8 @@
      (lambda (pair) (sfscm "  ~S " (car pair)) (ppscm (cdr pair)))
      (opts->mopts module-opts))
     (sfscm "  #:use-module ((system foreign) #:prefix ffi:)\n")
-    (sfscm "  #:use-module (system foreign-library)\n")
-    (sfscm "  #:use-module (system ffi-help-rt))\n\n")
-    (ppscm `(use-modules ,Tmodules))
+    (sfscm "  #:use-module (system foreign-library))\n")
+    (ppscm `(use-modules ,@Tmodules))
     (sfscm "\n")
     (ppscm
      `(define (foreign-pointer-search name)
@@ -610,7 +609,7 @@
 	      ,(string->symbol (string-append name "-desc"))
 	      ,(string->symbol (string-append name "?"))
 	      ,(string->symbol (string-append "make-" name))))
-    (ppscm '(export ,wrap ,unwrap))))
+    (ppscm `(export ,wrap ,unwrap))))
 
 ;; --- structs and unions
 
@@ -872,13 +871,39 @@
 		 (param (expand-typerefs param (*udict*) (*wrapped*)))
 		 (param (udecl-rem-type-qual param))
 		 (mdecl (udecl->mdecl param #:namer namer)))
-	    (acons (car mdecl) (mdecl->fh-unwrap mdecl) seed)))))
+	    (acons (car mdecl) (mdecl->fh-unwrapper mdecl) seed)))))
       '() params))))
 
 
 ;; given mdecl for an exec argument give the unwrapper
 ;; arrays and compounds must be converted to pointers
-(define (mdecl->fh-unwrap mdecl)
+(define (mdecl->fh-unwrapper mdecl)
+  (let ((wrapped (*wrapped*)) (defined (*defined*)))
+    (match (car (md-tail mdecl))
+      (`(fixed-type ,name) 'unwrap~number)
+      (`(float-type ,name) 'unwrap~number)
+      (`(void) #f)
+      (`(typename ,name)
+       (cond
+	((member name def-defined) 'unwrap~number)
+	((member name defined) `fh-object-ref)
+	((member name wrapped) (strings->symbol "unwrap-" name))
+	(else #f)))
+      (`(enum-def (ident ,name) ,_)
+       (cond
+	((member (w/enum name) wrapped) (strings->symbol "unwrap-enum-" name))
+	(else 'unwrap-enum)))
+      (`(enum-ref (ident ,name))
+       (cond
+	((member (w/enum name) wrapped) (strings->symbol "unwrap-enum-" name))
+	(else 'unwrap-enum)))
+      (`(struct-ref (ident ,name)) 'fh-object-addr)
+      (`(union-ref (ident ,name)) 'fh-object-addr)
+      (`(pointer-to) 'unwrap~pointer)
+      (`(array-of ,size) 'unwrap~array)
+      (`(array-of) 'unwrap~array)
+      (otherwise (fherr "mdecl->fh-unwrapper missed:\n~A" (ppstr (cadr mdecl)))))))
+(define (Xmdecl->fh-unwrapper mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
 
     ;; git_reference_foreach_name_cb not preserved
@@ -964,9 +989,49 @@
       (`((array-of) . ,rest) 'unwrap~array)
 
       (otherwise
-       (fherr "mdecl->fh-unwrap missed:\n~A" (ppstr (cadr mdecl)))))))
+       (fherr "mdecl->fh-unwrapper missed:\n~A" (ppstr (cadr mdecl)))))))
 
-(define (mdecl->fh-wrap mdecl)
+(define (mdecl->fh-wrapper mdecl)
+  (let ((wrapped (*wrapped*)) (defined (*defined*)))
+    (match (cdr mdecl)
+      (`((fixed-type ,name)) #f)
+      (`((float-type ,name)) #f)
+      (`((void)) #f)
+      (`((typename ,name))
+       (cond
+        ((member name def-defined) #f)
+	((member name defined) (strings->symbol "make-" name))
+	((member name wrapped) (strings->symbol "wrap-" name))
+	(else #f)))
+      (`((enum-def (ident ,name) ,rest))
+       (cond
+        ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-"))
+	(else 'wrap-enum)))
+      (`((enum-ref (ident ,name)))
+       (cond
+        ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-"))
+	(else 'wrap-enum)))
+      (`((pointer-to) (typename ,tname))
+       (cond
+        ((member tname ffi-defined) #f)
+	((member (sw/* tname) defined) (strings->symbol "make-" tname "*"))
+	((member (sw/* tname) wrapped) (strings->symbol "wrap-" tname "*"))
+	(else #f)))
+      (`((pointer-to) (struct-ref (ident ,aggr-name) . ,rest))
+       (cond
+        ((member (w/struct aggr-name) wrapped)
+         (strings->symbol "make-" (sw/struct* aggr-name)))
+	(else #f)))
+      (`((pointer-to) (union-ref (ident ,aggr-name) . ,rest))
+       (cond
+	((member (w/union aggr-name) wrapped)
+         (strings->symbol "make-" (sw/union* aggr-name)))
+	(else #f)))
+      (`((pointer-to) . ,otherwise) #f)
+      (otherwise
+       (fherr "mdecl->fh-wrapper missed:\n~A" (ppstr (cadr mdecl)))))))
+
+(define (X-mdecl->fh-wrapper mdecl)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
     (match (cdr mdecl)
       (`((fixed-type ,name)) (if (assoc-ref ffi-typemap name) #f
@@ -1016,7 +1081,7 @@
       (`((pointer-to) . ,otherwise) #f)
 
       (otherwise
-       (fherr "mdecl->fh-wrap missed:\n~A" (ppstr (cadr mdecl)))))))
+       (fherr "mdecl->fh-wrapper missed:\n~A" (ppstr (cadr mdecl)))))))
 
 
 ;; assumes fields are unitized
@@ -1074,7 +1139,7 @@
   (let* ((udecl (expand-typerefs udecl (*udict*) (*wrapped*)))
 	 (udecl (udecl-rem-type-qual udecl))
 	 (mdecl (udecl->mdecl udecl)))
-    (mdecl->fh-wrap mdecl)))
+    (mdecl->fh-wrapper mdecl)))
 
 
 (define* (cnvt-param/ffi-decl udecl #:optional namer)
@@ -1836,15 +1901,14 @@
       (*prefix* (symbol->string (gensym "fh-")))
       (*mport* scmport)
       (*udict* udict)
-      (ppscm '(use-modules (system ffi-help-rt)))
       (ppscm '(use-modules ((system foreign) #:prefix ffi:)))
       (ppscm '(use-modules (system foreign-library)))
-      (ppscm `(use-modules ,Tmodules))
+      (ppscm `(use-modules ,@Tmodules))
       (ppscm
        `(define (foreign-pointer-search name)
           (let loop ((libs (list #f ,@(pkg-config-libs pkg-config))))
             (cond
-             ((null? libs) (fherr "no library for ~s" name))
+             ((null? libs) (fherr "not found: ~s" name))
              ((false-if-exception (foreign-library-pointer (car libs) name)))
              (else (loop (cdr libs)))))))
       (process-decls decls udict '() def-defined)
