@@ -1,6 +1,6 @@
 ;;; scripts/compile-ffi.scm --- NYACC's command-line FFI compiler
 
-;; Copyright (C) 2017-2021 Matthew R. Wette
+;; Copyright (C) 2017-2021,2024 Matthew Wette
 ;;
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -30,15 +30,11 @@
   #:use-module ((srfi srfi-1) #:select (fold fold-right))
   #:use-module (srfi srfi-37)
   #:version (1 09 4))
-(cond-expand
- (guile-3
-  (define (compile-scm file)
-    (compile-file file #:from 'scheme #:to 'bytecode
-                  #:optimization-level 0 #:opts '())))
- (guile-2
-  (define (compile-scm file)
-    (compile-file file #:from 'scheme #:to 'bytecode
-                  #:opts '()))))
+
+(define (compile-scm file)
+  (compile-file file
+                #:from 'scheme #:to 'bytecode
+                #:optimization-level 0 #:opts '()))
 
 (define *ffi-help-version* "1.09.4")
 
