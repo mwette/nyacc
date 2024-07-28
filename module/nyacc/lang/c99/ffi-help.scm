@@ -80,7 +80,8 @@
   #:use-module (system base language)
   #:use-module (system foreign)
   #:use-module ((system base compile) #:select (compile-file))
-  #:use-module ((srfi srfi-1) #:select (fold fold-right remove last))
+  #:use-module ((srfi srfi-1)
+                #:select (fold fold-right remove last append-reverse))
   #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-37)
   #:use-module (sxml fold)
@@ -621,6 +622,7 @@
            (else (loop (cdr libs)))))))
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
 
+
 ;; === fh type generation ======================================================
 
 (define (fhscm-ref-deref typename)
@@ -904,202 +906,120 @@
       (otherwise
        (fherr "mtail->fh-wrapper missed:\n~A" (ppstr mtail))))))
 
-(define* (udecl->ffi-decl udecl)
+(define* (udecl->ffi-decl udecl #:optional keepers)
   (mtail->ffi-decl
    (md-tail (udecl->mdecl
              (udecl-rem-type-qual
-              (expand-typerefs udecl (*udict*) ffi-defined))))))
+              (expand-typerefs udecl (*udict*) (or keepers ffi-defined)))))))
 
-(define* (udecl->fh-unwrapper udecl)
+(define* (udecl->fh-unwrapper udecl #:optional (keepers '()))
   (mtail->fh-unwrapper
    (md-tail (udecl->mdecl
              (udecl-rem-type-qual
-              (expand-typerefs udecl (*udict*) ffi-defined))))))
+              (expand-typerefs udecl (*udict*) keepers))))))
 
-(define* (udecl->fh-wrapper udecl)
+(define* (udecl->fh-wrapper udecl #:optional (keepers '()))
   (mtail->fh-wrapper
    (md-tail (udecl->mdecl
              (udecl-rem-type-qual
-              (expand-typerefs udecl (*udict*) ffi-defined))))))
+              (expand-typerefs udecl (*udict*) keepers))))))
 
 
 ;; === function types =========================================================
 
-;; given list of name-unwrap pairs generate function arg names
-(define (gen-exec-arg-names params)
-  (map (lambda (s) (string->symbol (car s))) params))
-
-;; This generates the list of arguments to the actual call.
-(define (gen-exec-call-args params)
-  (reverse
-   (fold
-    (lambda (name-unwrap seed)
-      (let ((name (car name-unwrap))
-	    (unwrap (cdr name-unwrap)))
-	(cons (string->symbol (if unwrap (string-append "~" name) name)) seed)))
-    '()
-    params)))
-
-#;(define* (udecl->target udecl #:optional (namer "_"))
-  (mtail->target
-   (md-tail (udecl->mdecl
-             (udecl-rem-type-qual
-              (expand-typerefs udecl (*udict*) ffi-defined))
-             #:namer namer))))
-
-;; still called by mdecl->fh-unwrap
-(define (gen-decl-return udecl)
-  (let* ((udecl1 (expand-typerefs udecl (*udict*) ffi-defined))
-	 (udecl (udecl-rem-type-qual udecl1))
-	 (mdecl (udecl->mdecl udecl1))) ;; !!
-    (mtail->ffi-decl (md-tail mdecl))))
-
-;; still called by mdecl->fh-unwrap
-(define (gen-decl-params params)
-  ;; Note that expand-typerefs will not eliminate enums or struct-refs :
-  ;; mtail->ffi-decl needs to convert enum to int or void*
-  (let ((namer (make-arg-namer)))
-    (reverse
-     (fold
-      (lambda (param seed)
-	(cond
-	 ((equal? param '(ellipsis)) seed)
-	 ((equal? param '(param-decl (decl-spec-list (type-spec (void)))
-				     (param-declr))) seed)
-	 (else
-	  (let* ((udecl1 (expand-typerefs param (*udict*) ffi-defined))
-		 (udecl1 (udecl-rem-type-qual udecl1))
-		 (mdecl (udecl->mdecl udecl1 #:namer namer)))
-	    (cons (mtail->ffi-decl (cdr mdecl)) seed)))))
-      '() params))))
-
-(define (gen-exec-return-wrapper udecl)
-  (let* ((udecl (expand-typerefs udecl (*udict*) (*wrapped*)))
-	 (udecl (udecl-rem-type-qual udecl))
-	 (mdecl (udecl->mdecl udecl)))
-    (mtail->fh-wrapper (md-tail mdecl))))
-
+(define (process-params return params)
+  (define void-param '(param-decl (decl-spec-list (type-spec (void)))))
+  (define keepers (append-reverse (*wrapped*) (*defined*)))
+  (let* ((params (let loop ((rl '()) (pl params))
+                   (cond
+                    ((null? pl) (reverse rl))
+                    ((equal? '(ellipsis) (car pl)) (reverse rl))
+                    ((equal? void-param (car pl)) '())
+                    (else (loop (cons (reify-udecl (car pl)) rl) (cdr pl))))))
+	 (decl-return (udecl->ffi-decl return))
+	 (decl-params (map udecl->ffi-decl params))
+	 (exec-return (udecl->fh-wrapper return keepers))
+	 (exec-params (map (lambda (p) (udecl->fh-unwrapper p keepers)) params))
+         (param-names (map string->symbol
+                           (map (lambda (u) (declr-name (sx-ref u 2))) params))))
+    (values decl-return decl-params exec-return exec-params param-names)))
 
 (define (fhscm-def-function* name return params)
-  (let* ((st-name (if (string? name) name (symbol->string name)))
-	 (sy-name (if (string? name) (string->symbol name) name))
-	 (wrap (strings->symbol "fh-wrap-" st-name))
-	 (unwrap (strings->symbol "unwrap-" st-name))
-	 (params (if (equal? params '('void)) '() params)))
-    (sfscm "(define-public ~A-desc\n" name)
-    (ppscm `(fh:pointer (delay (fh:function ,return (list ,@params))))
-	   #:per-line-prefix "  ")
-    (sfscm "  )\n")
-    (ppscm `(define-fh-function*-type ,sy-name
-	      ,(string->symbol (string-append name "-desc"))
-	      ,(string->symbol (string-append name "?"))
-	      ,(string->symbol (string-append "make-" name))))
-    (ppscm `(export ,wrap ,unwrap))))
-
-
-;; @deffn {Procedure} cnvt-fctn name specl params
-;; name is string
-;; specl is decl-spec-list tree
-;; params is list of param-decl trees (i.e., cdr of param-list tree)
-;; @end deffn
-(define (cnvt-fctn name rdecl params)
-  (define void-params '((param-decl (decl-spec-list (type-spec (void))))))
-  (define (remove-ellipsis pl)
-    (let loop ((pl params))
-      (cond ((null? pl) '())
-            ((eq? (car pl) '(ellipsis)) '())
-            (else (cons (car pl) (loop (cdr pl)))))))
-  (let* ((params (if (equal? params void-params) '() params))
-         (varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
-         (params (if varargs? (remove-ellipsis params) params))
-         (params (map reify-udecl params))
-         ;;
-	 (decl-return (udecl->ffi-decl rdecl))
-	 (decl-params (map udecl->ffi-decl params))
-	 (exec-return (udecl->fh-wrapper rdecl))
-	 (exec-params (map udecl->fh-unwrapper params))
-         (param-names (map (lambda (u) (declr-name (sx-ref u 2))) params))
-         ;;
-	 (sname (string->symbol name))
-	 (~name (string->symbol (string-append "~" name)))
-	 ;;(call `(,~name ,@(gen-exec-call-args exec-params)))
-	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
-			  (map cdr ~rest)))
-	 (call `((force ,~name) ,@exec-params)))
-    (when (> (length params) 2)
-      (sferr "params:\n") (pperr params)
-      (sferr "exec-params:\n") (pperr exec-params)
-      ;;(sferr "param-names: ~s\n" param-names)
-      (quit))
-    (cond
-     (varargs?
-      (sfscm ";; to be used with fh-arg\n")
-      (sfscm ";; NEED TO FIX IN ffi-help.scm \n")
-      #;(ppscm
-       `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
-	  (let ((,~name (ffi:pointer->procedure
-			 ,decl-return
-                         (foreign-pointer-search ,name)
-			 (append (list ,@decl-params) (map car ~rest))))
-		,@(gen-exec-unwrappers exec-params))
-	    ,(if exec-return (list exec-return va-call) va-call)))))
-     (else
-      (ppscm
-       `(define ,sname
-	  (let ((,~name
-		 (delay (ffi:pointer->procedure
-                         ,decl-return
-                         (foreign-pointer-search ,name)
-                         (list ,@decl-params)))))
-	    (lambda ,param-names
-	      (let ,(map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
-                         param-names exec-params)
-		,(if exec-return (list exec-return call) call))))))))
-    (sfscm "(export ~A)\n" name)))
+  (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
+  (call-with-values (lambda () (process-params return params))
+    (lambda (decl-return decl-params exec-return exec-params param-names)
+      (let* ((sname (string->symbol name))
+             (wrap (strings->symbol "wrap-" name))
+             (unwrap (strings->symbol "unwrap-" name))
+             (call `(~fptr ,@param-names))
+             (va-call `(~fptr ,@param-names)))
+        (cond
+         (varargs?
+          (sfscm ";; to be used with fh-varg\n")
+          (ppscm
+           `(define (,wrap ~fptr)
+	      (lambda (,@param-names . ~rest)
+	        (let ((~f (ffi:pointer->procedure
+                           ,decl-return ~fptr
+                           (append ,@decl-params (map car ~rest))))
+	              ,@(map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
+                             param-names exec-params))
+		  ,(if exec-return (list exec-return va-call) va-call))))))
+         (else
+          (ppscm
+           `(define (,wrap ~fptr)
+	      (let ((~f (ffi:pointer->procedure
+                         ,decl-return ~fptr (list ,@decl-params))))
+	        (lambda ,param-names
+	          (let ,(map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
+                             param-names exec-params)
+		    ,(if exec-return (list exec-return call) call))))))))
+        (ppscm
+         `(define (,unwrap ~proc)
+	    (ffi:procedure->pointer
+             ,decl-return ~proc (list ,@decl-params))))
+        (ppscm `(export ,wrap ,unwrap))))))
 
 ;; @deffn {Procedure} cnvt-fctn name specl params
 ;; name is string
 ;; specl is decl-spec-list tree
 ;; params is list of param-decl trees (i.e., cdr of param-list tree)
 ;; @end deffn
-#|
-(define (X-cnvt-fctn name rdecl params)
-  (let* ((params (if (equal? params void-params) '() params))
-         (varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
-	 (decl-return (gen-decl-return rdecl))
-	 (decl-params (gen-decl-params params))
-	 (exec-return (gen-exec-return-wrapper rdecl))
-	 (exec-params (gen-exec-params params))
-	 (sname (string->symbol name))
-	 (~name (string->symbol (string-append "~" name)))
-	 ;;(call `(,~name ,@(gen-exec-call-args exec-params)))
-	 (va-call `(apply ,~name ,@(gen-exec-call-args exec-params)
-			  (map cdr ~rest)))
-	 (call `((force ,~name) ,@(gen-exec-call-args exec-params))))
-    (cond
-     (varargs?
-      (sfscm ";; to be used with fh-arg\n")
-      (ppscm
-       `(define (,sname ,@(gen-exec-arg-names exec-params) . ~rest)
-	  (let ((,~name (ffi:pointer->procedure
-			 ,decl-return
-                         (foreign-pointer-search ,name)
-			 (append (list ,@decl-params) (map car ~rest))))
-		,@(gen-exec-unwrappers exec-params))
-	    ,(if exec-return (list exec-return va-call) va-call)))))
-     (else
-      (ppscm
-       `(define ,sname
-	  (let ((,~name
-		 (delay (ffi:pointer->procedure
-                         ,decl-return
-                         (foreign-pointer-search ,name)
-                         (list ,@decl-params)))))
-	    (lambda ,(gen-exec-arg-names exec-params)
-	      (let ,(gen-exec-unwrappers exec-params)
-		,(if exec-return (list exec-return call) call))))))))
-    (sfscm "(export ~A)\n" name)))
-|#
+(define (cnvt-fctn name return params)
+  (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
+  (call-with-values (lambda () (process-params return params))
+    (lambda (decl-return decl-params exec-return exec-params param-names)
+      (let* ((sname (string->symbol name))
+	     (~name (strings->symbol "~" name))
+	     (call `((force ,~name) ,@param-names))
+	     (va-call `(apply ,~name ,param-names (map cdr ~rest))))
+        (cond
+         (varargs?
+          (sfscm ";; to be used with fh-varg\n")
+          (ppscm
+           `(define (,sname ,@param-names . ~rest)
+              (define ,~name
+                (ffi:pointer->procedure
+                 ,decl-return
+                 (foreign-pointer-search ,name)
+                 (cons* ,@decl-params (map car ~rest))))
+              (let (,@(map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
+                           param-names exec-params)
+                    (~rest (map cdr ~rest)))
+	        ,(if exec-return (list exec-return va-call) va-call)))))
+         (else
+          (ppscm
+           `(define ,sname
+	      (let ((,~name
+		     (delay (ffi:pointer->procedure
+                             ,decl-return
+                             (foreign-pointer-search ,name)
+                             (list ,@decl-params)))))
+	        (lambda ,param-names
+	          (let ,(map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
+                             param-names exec-params)
+		    ,(if exec-return (list exec-return call) call))))))))
+        (sfscm "(export ~A)\n" name)))))
 
 
 ;; === the main conversion driver ==============================================
@@ -1171,15 +1091,12 @@
            (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
            (ppscm `(export ,name* ,pred* ,make*))
            (ppscm `(fh-ref<=>deref! ,name* ,make* ,name ,make))
-           (values (cons label wrapped) (cons label defined)))
+           (values wrapped (cons label defined)))
 
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
-           ;; maybe redo this
-           (let* ((ret-decl (mdecl->udecl (cons "_" rest)))
-                  (decl-return (gen-tgt-decl-return ret-decl))
-	          (decl-params (gen-tgt-decl-params params)))
-             (fhscm-def-function* label decl-return decl-params))
-           (values (cons label wrapped) (cons label defined)))
+           (let ((return (mdecl->udecl (cons "_" rest))))
+             (fhscm-def-function* label return params))
+           (values (cons label wrapped) defined))
 
           (`((pointer-to) . ,rest)
            (ppscm `(define-public ,desc ,(mtail->target mtail)))
@@ -1187,18 +1104,12 @@
            (ppscm `(export ,name ,pred ,make))
            (case (caar rest)
              ((fixed-type float-type) (values wrapped defined))
-             (else (values (cons label wrapped) (cons label defined)))))
+             (else (values wrapped (cons label defined)))))
 
           (`((function-returning (param-list . ,params)) . ,rest)
-           (let* ((ret-decl (mdecl->udecl (cons "_" rest)))
-                  (decl-return (gen-tgt-decl-return ret-decl))
-	          (decl-params (gen-tgt-decl-params params)))
-             (ppscm `(define-public ,desc
-                       (fh:function ,decl-return (list ,@decl-params))))
-             (ppscm `(define-public ,desc* (fh:pointer ,desc)))
-             (ppscm `(define-fh-function*-type ,name* ,desc* ,pred* ,make*))
-             (ppscm `(export ,desc ,pred ,make)))
-           (values (cons label wrapped) (cons label defined)))
+           (let* ((return (mdecl->udecl (cons "_" rest))))
+             (fhscm-def-function* (sw/* label) return params))
+           (values (cons (w/* label) wrapped) defined))
 
           (__
            (sx-match (car mtail)
@@ -1209,7 +1120,7 @@
               (ppscm `(define-public ,desc* (fh:pointer ,desc)))
               (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
               (ppscm `(export ,name* ,pred* ,make*))
-              (values (cons label wrapped) (cons label defined)))
+              (values wrapped (cons label defined)))
 
              ((struct-def ,field-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
@@ -1218,7 +1129,7 @@
               (ppscm `(define-public ,desc* (fh:pointer ,desc)))
               (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
               (ppscm `(export ,name* ,pred* ,make*))
-              (values (cons label wrapped) (cons label defined)))
+              (values wrapped (cons label defined)))
 
              ((union-def (ident ,aggr-name) ,field-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
@@ -1227,7 +1138,7 @@
               (ppscm `(define-public ,desc* (fh:pointer ,desc)))
               (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
               (ppscm `(export ,name* ,pred* ,make*))
-              (values (cons label wrapped) (cons label defined)))
+              (values wrapped (cons label defined)))
 
              ((union-def ,field-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
@@ -1236,7 +1147,7 @@
               (ppscm `(define-public ,desc* (fh:pointer ,desc)))
               (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
               (ppscm `(export ,name* ,pred* ,make*))
-              (values (cons label wrapped) (cons label defined)))
+              (values wrapped (cons label defined)))
 
              ((struct-ref (ident ,aggr-name))
               (cond
@@ -1256,8 +1167,7 @@
                 (ppscm `(define-public ,desc 'void))
                 (ppscm `(define-public ,desc* (fh:pointer ,desc)))))
               (fhscm-def-pointer (sw/* label))
-              (values (cons* label (w/* label) wrapped)
-                      (cons* label (w/* label) defined)))
+              (values wrapped (cons* label (w/* label) defined)))
 
              ((union-ref (ident ,aggr-name))
               (cond
@@ -1277,8 +1187,7 @@
                 (ppscm `(define-public ,desc 'void))
                 (ppscm `(define-public ,desc* (fh:pointer ,desc)))))
               (fhscm-def-pointer (sw/* label))
-              (values (cons* label (w/* label) wrapped)
-                      (cons* label (w/* label) defined)))
+              (values wrapped (cons* label (w/* label) defined)))
 
              (((fixed-type float-type) ,basename)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
@@ -1287,19 +1196,19 @@
              ((enum-def ,enum-def-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (cnvt-enum-def name #f enum-def-list)
-              (values (cons label wrapped) defined))
+              (values (cons (w/enum label) wrapped) defined))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
-              (cnvt-enum-def name #f enum-def-list)
-              (values (cons label wrapped) defined))
+              (cnvt-enum-def name enum-name enum-def-list)
+              (values (cons* label (w/enum enum-name) wrapped) defined))
 
              ((enum-ref (ident ,enum-name))
               (ppscm `(define-public ,(sfscm "wrap-~A" name)
                         ,(sfscm "wrap-enum-~A" enum-name)))
               (ppscm `(define-public ,(sfscm "unwrap-~A" name)
                         ,(sfscm "unwrap-enum-~A" enum-name)))
-              (values (cons label wrapped) defined))
+              (values (cons (w/enum enum-name) wrapped) defined))
 
              ((void)
               (ppscm `(define-public ,desc 'void))
@@ -1326,7 +1235,6 @@
 	       (else
 	        (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
 	          (cnvt-udecl xdecl udict wrapped defined)))))
-
              (,__
               (sferr "cnvt-udecl missed typedef:\n") (pperr mdecl)
               (values wrapped defined)))))))
@@ -1391,7 +1299,7 @@
 	   (values (cons (w/enum enum-name) wrapped) defined))))
 
         ((enum-def ,enum-def-list)
-         (values wrapped defined))
+	 (values wrapped defined))
 
         (,__ (values #f #f))) (lambda (a b) a) => values)
 
