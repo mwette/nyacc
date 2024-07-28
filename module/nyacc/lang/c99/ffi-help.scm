@@ -492,11 +492,8 @@
       (`((pointer-to) (float-type ,fx-name))
        `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
 
-      (`((function-returning (param-list . ,params)) . ,tail)
-       `(fh:function ,(mtail->bs-desc tail)
-		     (list ,@(gen-tgt-decl-params params))))
       (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
-       `(fh:pointer
+       `(fh:function
          (fh:function ,(mtail->bs-desc tail)
 		      (list ,@(gen-tgt-decl-params params)))))
       (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
@@ -944,7 +941,44 @@
                            (map (lambda (u) (declr-name (sx-ref u 2))) params))))
     (values decl-return decl-params exec-return exec-params param-names)))
 
+;; @deffn {Procedure} function*-wraps return params
+;; Return a wrapper and unwrapper procedure for a function pointer with
+;; return mtail @var{return} and udecl params @var{params}
+;; @end deffn
+(define (function*-wraps return params)
+  (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
+  (call-with-values (lambda () (process-params return params))
+    (lambda (decl-return decl-params exec-return exec-params param-names)
+      (let* ((call `(~fptr ,@param-names)) (va-call `(~fptr ,@param-names)))
+        (values
+         (if varargs?
+             `(lambda (~fptr)
+	        (lambda (,@param-names . ~rest)
+	          (let ((~f (ffi:pointer->procedure
+                             ,decl-return ~fptr
+                             (append ,@decl-params (map car ~rest))))
+	                ,@(map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
+                               param-names exec-params))
+		    ,(if exec-return (list exec-return va-call) va-call))))
+             `(lambda (~fptr)
+	        (let ((~f (ffi:pointer->procedure
+                           ,decl-return ~fptr (list ,@decl-params))))
+	          (lambda ,param-names
+	            (let ,(map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
+                               param-names exec-params)
+		      ,(if exec-return (list exec-return call) call))))))
+         `(lambda (~proc)
+	    (ffi:procedure->pointer
+             ,decl-return ~proc (list ,@decl-params))))))))
+
 (define (fhscm-def-function* name return params)
+  (call-with-values (lambda () (function*-wraps return params))
+    (lambda (wrapper unwrapper)
+      (ppscm `(define-public ,(strings->symbol "wrap-" name) ,wrapper))
+      (ppscm `(define-public ,(strings->symbol "unwrap-" name) ,wrapper)))))
+
+
+(define (Xfhscm-def-function* name return params)
   (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
   (call-with-values (lambda () (process-params return params))
     (lambda (decl-return decl-params exec-return exec-params param-names)
@@ -1113,41 +1147,47 @@
 
           (__
            (sx-match (car mtail)
-             ((struct-def (ident ,aggr-name) ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
-              (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
-              (ppscm `(export ,name ,pred ,make))
-              (ppscm `(define-public ,desc* (fh:pointer ,desc)))
-              (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
-              (ppscm `(export ,name* ,pred* ,make*))
-              (values wrapped (cons label defined)))
+             ((struct-def (@ . ,attr) (ident ,aggr-name) ,field-list)
+              (cnvt-struct-def attr label aggr-name field-list)
+              ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
+              ;;(ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
+              ;;(ppscm `(export ,name ,pred ,make))
+              ;;(ppscm `(define-public ,desc* (fh:pointer ,desc)))
+              ;;(ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
+              ;;(ppscm `(export ,name* ,pred* ,make*))
+              (values wrapped (cons* label (w/* label) (w/struct aggr-name)
+                                     (w/struct* aggr-name) defined)))
 
              ((struct-def ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
-              (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
-              (ppscm `(export ,name ,pred ,make))
-              (ppscm `(define-public ,desc* (fh:pointer ,desc)))
-              (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
-              (ppscm `(export ,name* ,pred* ,make*))
-              (values wrapped (cons label defined)))
+              (cnvt-struct-def attr label #f field-list)
+              ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
+              ;;(ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
+              ;;(ppscm `(export ,name ,pred ,make))
+              ;;(ppscm `(define-public ,desc* (fh:pointer ,desc)))
+              ;;(ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
+              ;;(ppscm `(export ,name* ,pred* ,make*))
+              (values wrapped (cons* label (w/* label) defined)))
 
              ((union-def (ident ,aggr-name) ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
-              (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
-              (ppscm `(export ,name ,pred ,make))
-              (ppscm `(define-public ,desc* (fh:pointer ,desc)))
-              (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
-              (ppscm `(export ,name* ,pred* ,make*))
-              (values wrapped (cons label defined)))
+              (cnvt-union-def attr label aggr-name field-list)
+              ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
+              ;;(ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
+              ;;(ppscm `(export ,name ,pred ,make))
+              ;;(ppscm `(define-public ,desc* (fh:pointer ,desc)))
+              ;;(ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
+              ;;(ppscm `(export ,name* ,pred* ,make*))
+              (values wrapped (cons* label (w/* label) (w/union aggr-name)
+                                     (w/union* aggr-name) defined)))
 
              ((union-def ,field-list)
-              (ppscm `(define-public ,desc ,(mtail->target mtail)))
-              (ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
-              (ppscm `(export ,name ,pred ,make))
-              (ppscm `(define-public ,desc* (fh:pointer ,desc)))
-              (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
-              (ppscm `(export ,name* ,pred* ,make*))
-              (values wrapped (cons label defined)))
+              (cnvt-union-def attr label #f field-list)
+              ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
+              ;;(ppscm `(define-fh-compound-type ,name ,desc ,pred ,make))
+              ;;(ppscm `(export ,name ,pred ,make))
+              ;;(ppscm `(define-public ,desc* (fh:pointer ,desc)))
+              ;;(ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
+              ;;(ppscm `(export ,name* ,pred* ,make*))
+              (values wrapped (cons* label (w/* label) defined)))
 
              ((struct-ref (ident ,aggr-name))
               (cond
