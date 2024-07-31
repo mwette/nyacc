@@ -21,13 +21,12 @@
   #:export (*ffi-help-version*
 
             ;; user level routines
-            fh-type?
-            fh-object? fh-object-ref fh-object-set!
+            fh-type? fh-object? fherr
+            fh-object-ref fh-object-set! fh-object-sel
+            fh-object* fh-object&
             pointer-to value-at fh-cast fh-varg
 
             NULL !0
-            fh-object-pointer
-            fh-object-addr fh-object-val fherr
 
             ;; maybe used outside of modules?
             ;;bs-addr
@@ -72,8 +71,45 @@
 (define (pperr exp)
   (pretty-print exp (current-error-port) #:per-line-prefix "  "))
 
+
+;; ----------------------------------------------------------------------------
+
 (define (fherr fmt . args)
   (throw 'ffi-help-error (apply simple-format #f fmt args)))
+
+;; The FFI helper uses a base type based on Guile structs and vtables.
+;; The base vtable uses these (lambda (obj) ...) fields:
+;; 0 unwrap     : convert helper-type object to ffi argument
+;; 1 wrap       : convert ffi object to helper-type object
+;; 2 pointer-to : (pointer-to <foo_t-obj>) => <foo_t*-obj>
+;; 3 value-at   : (value-at <foo_t*-obj>) => <foo_t-obj>
+;; The C-based (child) types will add a slot for the object value.
+(define ffi-helper-type
+  (make-vtable
+   (string-append standard-vtable-fields "pwpwpwpw")
+   (lambda (v p) (display "#<ffi-helper-type>" p))))
+
+;; @deffn {Procedure} fh-object? obj
+;; This predicate tests for FH objects, i.e., FFI defined types.
+;; @example
+;; (define-fh-pointer-type foo_t* foo_t*-desc)
+;; (define val (make-foo_t*))
+;; (fh-object? val) => #t
+;; @end example
+;; @end deffn
+(define (fh-object? obj)
+  (and
+   (struct? obj)
+   (struct-vtable? obj)
+   (eq? (struct-vtable obj) ffi-helper-type)))
+
+;; @deffn {Procedure} fh-object-val obj
+;; Return the bytestructure object associate with the FH object.
+;; If @var{object} is a bytestructure, return that.
+;; @deffn
+(define (fh-object-val obj)
+  (unless (fh-object? obj) (fherr "fh-object-val: got ~s" obj))
+  (struct-ref obj 0))
 
 
 ;; --- bytestructure support --------------------------------------------------
@@ -83,16 +119,6 @@
 
 ;; some adopted from https://github.com/TaylanUB covered by GPL3+ and
 ;; Copyright (C) 2015 Taylan Ulrich BayirliKammer <taylanbayirli@gmail.com>
-
-(define-record-type <function-metadata>
-  (make-function-metadata return-descriptor param-descriptor-list attributes)
-  function-metadata?
-  (return-descriptor function-metadata-return-descriptor)
-  (param-descriptor-list function-metadata-param-descriptor-list)
-  (attributes function-metadata-attributes))
-(export function-metadata?
-        function-metadata-return-descriptor
-        function-metadata-param-descriptor-list)
 
 (define numeric-type-mapping
   `((,int8 . ,ffi:int8)
@@ -105,21 +131,6 @@
     (,uint64 . ,ffi:uint64)
     (,float32 . ,ffi:float)
     (,float64 . ,ffi:double)))
-
-(define (bs-desc->ffi-desc desc)
-  (let ((upper bytestructure-descriptor->ffi-descriptor)
-        (meta (lambda () (bytestructure-descriptor-metadata desc))))
-    (cond
-     ((eq? desc 'void) ffi:void)
-     ((assq-ref numeric-type-mapping desc))
-     ((pointer-metadata? (meta)) '*)
-     ((vector-metadata? (meta)) '*)
-     ((function-metadata? (meta)) '*)
-     ((struct-metadata? meta) (upper desc))
-     ;;((bitfield-metadata? meta) (upper desc))
-     (else
-      (sferr "bs-desc->ffi-desc missed ~s\n" desc)))))
-
 
 (define make-pointer-metadata
   (@@ (bytestructures guile pointer) make-pointer-metadata))
@@ -224,141 +235,32 @@
         (pointer-set! bytevector offset value)))
   (define meta (make-pointer-metadata %descriptor))
   (make-bytestructure-descriptor size alignment unwrapper getter setter meta))
+(export fh:pointer)
 
+(define-record-type <function*-metadata>
+  (make-function*-metadata wrapper unwrapper)
+  function*-metadata?
+  (wrapper function*-metadata-wrapper)
+  (unwrapper function*-metadata-unwrapper))
+(export function*-metadata?
+        function*-metadata-wrapper
+        function*-metadata-unwrapper)
 
-(define (arg->ffi arg)
-  (cond
-   ((bytestructure? arg)
-    (bs-desc->ffi-desc
-     (bytestructure-descriptor arg)))
-   ((and (pair? arg) (bytestructure-descriptor? (car arg)))
-    (bs-desc->ffi-desc (car arg)))
-   ((pair? arg) (car arg))
-   (else (fherr "ffi-help-rt/arg->ffi: unknown arg type for ~S" arg))))
-
-(define (arg->val arg)
-  (cond
-   ((bytestructure? arg) (bytestructure-ref arg))
-   ((and (pair? arg) (bytestructure? (cdr arg)))
-    (bytestructure-ref (cdr arg)))
-   ((pair? arg) (cdr arg))
-   (else arg)))
-
-(define (arg-list->ffi-list param-list arg-list)
-  (let loop ((param-l param-list) (argl arg-list))
-    (cond
-     ((pair? param-l) (cons (car param-l) (loop (cdr param-l) (cdr argl))))
-     ((pair? argl) (cons (arg->ffi (car argl)) (loop param-l (cdr argl))))
-     (else '()))))
-
-(define (pointer->procedure/varargs return-ffi pointer param-ffi-list)
-  (lambda args
-    (let ((ffi-l (arg-list->ffi-list param-ffi-list args))
-          (arg-l (map arg->val args)))
-      (apply (ffi:pointer->procedure return-ffi pointer ffi-l) arg-l))))
-
-
-;; @deffn {Procedure} fh:function return-desc param-desc-list
-;; Generate a descriptor for a function pseudo-type, and then the associated
-;; function pointer type.   If the last element of @var{param-desc-list} is
-;; @code{'...} the function is specified as variadic.@*
-;; @example
-;;   (fh:function 'void (list ffi:double ffi:double))
-;; OR
-;;   (fh:function 'void (list ('x ffi:double) ('y ffi:double)))
-;; @end example
-;; @end deffn
-(define (fh:function %return-desc %param-desc-list)
-  (define (get-return-ffi syntax?)
-    (when syntax? (throw 'ffi-help-error "fh:function has no macros"))
-    (bs-desc->ffi-desc %return-desc))
-  (define (get-param-ffi-list syntax?)
-    (when syntax? (throw 'ffi-help-error "fh:function has no macros"))
-    (let loop ((params %param-desc-list))
-      ;;(when (pair? params) (sferr "gpfl: ~s\n" (car params)))
-      (cond
-       ((null? params) '())
-       ((eq? '... (car params)) '())
-       ((pair? (car params)) (loop (cons (cdar params) (cdr params))))
-       (else
-        (cons (bs-desc->ffi-desc (car params))
-              (loop (cdr params)))))))
+(define (fh:function* wrapper unwrapper) ;; TBD documentation?
   (define size (ffi:sizeof '*))
   (define alignment size)
-  (define attributes
-    (let loop ((param-l %param-desc-list))
-      (cond ((null? param-l) '())
-            ((eq? '... (car param-l)) '(varargs))
-            (else (loop (cdr param-l))))))
-  (define (getter syntax? bytevector offset) ; assumes zero offset!
-    (when syntax? (throw 'ffi-help-error "fh:function has no macros"))
-    (define pointer->procedure
-      (if (memq 'varargs attributes)
-          pointer->procedure/varargs
-          ffi:pointer->procedure))
-    (pointer->procedure
-     (get-return-ffi #f)
-     (ffi:make-pointer (bytevector-address-ref bytevector offset))
-     (get-param-ffi-list #f)))
+  (define (getter syntax? bytevector offset)
+    (when syntax? (throw 'ffi-help-error "fh:function* has no macros"))
+    (wrapper (ffi:make-pointer (bytevector-address-ref bytevector offset))))
   (define (setter syntax? bytevector offset value)
-    (bytevector-address-set!
-     bytevector offset
-     (ffi:pointer-address
-      (ffi:procedure->pointer
-       (get-return-ffi #f) value (get-param-ffi-list #f)))))
-  (define meta
-    (make-function-metadata %return-desc %param-desc-list attributes))
+    (when syntax? (throw 'ffi-help-error "fh:function* has no macros"))
+    (unwrapper value))
+  (define meta (make-function*-metadata wrapper unwrapper))
   (make-bytestructure-descriptor size alignment #f getter setter meta))
-
-;; given a fh:function return pair: (return-type . arg-list)
-(define (fh-function*-signature desc)
-  (let* ((meta (bytestructure-descriptor-metadata desc))
-         (desc (pointer-metadata-content-descriptor meta))
-         (desc (if (promise? desc) (force desc) desc))
-         (meta (bytestructure-descriptor-metadata desc))
-         (bs-rt (function-metadata-return-descriptor meta))
-         (ffi-rt (bs-desc->ffi-desc bs-rt))
-         (bs-al (function-metadata-param-descriptor-list meta))
-         (ffi-bs-al (map bs-desc->ffi-desc bs-al)))
-    (cons ffi-rt ffi-bs-al)))
-(define fs-function*-signature fh-function*-signature)
-
-(export fh:function fh:pointer)
+(export fh:function*)
 
 
 ;; ---- hookups ----------------------------------------------------------------
-
-(eval-when (expand load eval)
-  (define (gen-id tmpl-id . args)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
-    (datum->syntax
-     tmpl-id
-     (string->symbol
-      (apply string-append
-             (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args))))))
-
-;; @deffn {Procedure} fh-object-val obj
-;; Return the bytestructure object associate with the FH object.
-;; If @var{object} is a bytestructure, return that.
-;; @deffn
-(define (fh-object-val obj)
-  (unless (fh-object? obj) (fherr "fh-object-val: got ~s" obj))
-  (struct-ref obj 0))
-
-;; @deffn {Syntax} fh-object-addr obj arg ...)
-;; @end deffn
-(define-syntax-rule (fh-object-addr obj arg ...)
-  (call-with-values
-      (lambda () (bytestructure-unwrap (fh-object-val obj) arg ...))
-    (lambda (bv offs desc)
-      (+ (ffi:pointer-address (ffi:bytevector->pointer bv)) offs))))
-
-;; @deffn {Syntax} fh-object-pointer obj arg ...)
-;; xxx
-;; @end deffn
-(define-syntax-rule (fh-object-pointer obj arg ...)
-  (ffi:make-pointer (fh-object-addr obj arg ...)))
 
 ;; @deffn {Syntax} fh-object-ref obj arg ...
 ;; Get equivalent Guile object, if applicable, @code{#f} otherwise.
@@ -374,6 +276,42 @@
 (define-syntax-rule (fh-object-set! obj arg ...)
   (bytestructure-set! (fh-object-val obj) arg ...))
 
+;; @deffn {Syntax} fh-object-sel obj arg ...)
+;; xxx
+;; @end deffn
+(define-syntax-rule (fh-object-sel obj arg ...)
+  (call-with-values
+      (lambda () (bytetructure-unwrap* (fh-object-val obj) arg ...))
+    (lambda (bvec oset desc)
+      (make-bytestructure bvec oset desc))))
+
+;; @deffn {Syntax} fh-object-addr obj arg ...)
+;; return the underlying address of the data
+;; @end deffn
+(define-syntax-rule (fh-object-addr obj arg ...)
+  (call-with-values
+      (lambda () (bytestructure-unwrap (fh-object-val obj) arg ...))
+    (lambda (bv offs desc)
+      (+ (ffi:pointer-address (ffi:bytevector->pointer bv)) offs))))
+
+;; @deffn {Syntax} fh-object* obj arg ...)
+;; like fh-object-addr but convert to a pointer
+;; @end deffn
+(define-syntax-rule (fh-object-pointer obj arg ...)
+  (ffi:make-pointer (fh-object-addr obj arg ...)))
+
+;; @deffn {Syntax} fh-object* obj arg ...)
+;; dereference a pointer
+;; @end deffn
+(define-syntax-rule (fh-object* obj)
+  (fh-object-sel obj '*))
+
+;; @deffn {Syntax} fh-object& obj)
+;; dereference a pointer
+;; @end deffn
+(define-syntax-rule (fh-object& obj)
+  (error "fh-object& not implemented")
+
 ;; @deffn {Procedure} make-fh-object desc arg ...
 ;; @end deffn
 (define-syntax make-fh-object-val
@@ -388,43 +326,6 @@
 
 ;; ----------------------------------------------------------------------------
 
-;; The FFI helper uses a base type based on Guile structs and vtables.
-;; The base vtable uses these (lambda (obj) ...) fields:
-;; 0 unwrap     : convert helper-type object to ffi argument
-;; 1 wrap       : convert ffi object to helper-type object
-;; 2 pointer-to : (pointer-to <foo_t-obj>) => <foo_t*-obj>
-;; 3 value-at   : (value-at <foo_t*-obj>) => <foo_t-obj>
-;; The C-based (child) types will add a slot for the object value.
-(define ffi-helper-type
-  (make-vtable
-   (string-append standard-vtable-fields "pwpwpwpw")
-   (lambda (v p)
-     (display "#<ffi-helper-type>" p))))
-(define unwrap-ix 0)
-(define wrap-ix 1)
-(define pointer-to-ix 2)
-(define value-at-ix 3)
-
-;; @deffn {Syntax} make-fh-type name unwrap wrap pointer-to value-at printer
-;; We call make-struct here but we are actually making a vtable
-;; We should check with struct-vtable?
-;; name as symbol
-(define* (make-fht name unwrap wrap pointer-to value-at printer)
-  (let* ((ty (make-struct/no-tail
-              ffi-helper-type
-              (make-struct-layout "pw") ;; 1 slot for value
-              printer
-              (or unwrap (lambda (obj) (fherr "no unwrapper")))
-              (or wrap (lambda (obj) (fherr "no wrapper")))
-              (or pointer-to (lambda (obj) (ffi:bytevector->pointer
-                                            (bytestructure-bytevector
-                                             (fh-object-val obj)))))
-              (or value-at (lambda (obj) (bytestructure-ref
-                                          (fh-object-val obj) '*)))))
-         (vt (struct-vtable ty)))
-    (set-struct-vtable-name! vt name)
-    ty))
-
 ;; @deffn {Procedure} fh-type? type
 ;; This predicate tests for FH types.
 ;; @end deffn
@@ -432,6 +333,11 @@
   (and (struct? type)
        (struct-vtable? type)
        (eq? (struct-vtable type) ffi-helper-type)))
+
+(define unwrap-ix 0)
+(define wrap-ix 1)
+(define pointer-to-ix 2)
+(define value-at-ix 3)
 
 ;; fh-type accessors
 (define (fht-unwrap type)
@@ -451,6 +357,31 @@
 (define (fh-wrap type val)
   ((fht-wrap type) val))
 
+;; @deffn {Syntax} make-fh-type name unwrap wrap pointer-to value-at printer
+;; We call make-struct here but we are actually making a vtable
+;; We should check with struct-vtable?
+;; name as symbol
+(define* (make-fht name unwrap wrap pointer-to value-at printer)
+  (let* ((ty (make-struct/no-tail
+              ffi-helper-type
+              (make-struct-layout "pw") ;; 1 slot for value
+              printer
+              (or unwrap (lambda (obj) (fherr "no unwrapper")))
+              (or wrap (lambda (obj) (fherr "no wrapper")))
+              (or pointer-to fh-object&)
+              (or value-at fh-object*)
+              #|
+              (or pointer-to (lambda (obj) (ffi:bytevector->pointer
+                                            (bytestructure-bytevector
+                                             (fh-object-val obj)))))
+              (or value-at (lambda (obj) (bytestructure-ref
+                                          (fh-object-val obj) '*)))
+              |#
+              ))
+         (vt (struct-vtable ty)))
+    (set-struct-vtable-name! vt name)
+    ty))
+
 ;; @deffn {Syntax} fh-ref<=>deref! p-type p-make type make
 ;; This procedure will ``connect'' the two types so that the procedures
 ;; @code{pointer-to} and @code{value-at} work.
@@ -458,32 +389,18 @@
 (define (fh-ref<=>deref! p-type p-make type make)
   (if p-make
       (struct-set! type (+ vtable-offset-user 2) ; pointer-to
-                   (lambda (obj) (p-make (fh-object-addr obj)))))
+                   (lambda (obj) (fh-object& obj))))
   (if make
       (struct-set! p-type (+ vtable-offset-user 3) ; value-at
-                   (lambda (obj) (fh-object-ref obj '*)))))
+                   (lambda (obj) (fh-object* obj)))))
 
 ;; Right now this returns a ffi pointer.
-;; TODO: add field option so we can do (pointer-to xstr 'vec)
-(define (pointer-to obj)
-  (cond
-   ((fh-object? obj)
-    ((fht-pointer-to (struct-vtable obj)) obj))
-   ((bytestructure? obj)
-    (ffi:bytevector->pointer (bytestructure-bytevector obj)))
-   ((bytevector? obj)
-    (ffi:bytevector->pointer obj))
-   (else
-    (fherr "pointer-to: unknown arg type for ~S" obj))))
+;; TODO: add field option so we can do (pointer-to xstr 'vec) ??
+(define-syntax (pointer-to obj)
+  (fh-object-ref (fh-object& obj)))
 
 (define (value-at obj)
-  (cond
-   ((fh-object? obj)
-    ((fht-value-at (struct-vtable obj)) obj))
-   ((bytestructure? obj)
-    (bytestructure-ref obj '*))
-   (else
-    (fherr "value-at: unknwn arg type for ~S" obj))))
+  (fh-object-ref (fh-object* obj)))
 
 (define NULL ffi:%null-pointer)
 (define (!0 v) (not (zero? v)))
@@ -491,19 +408,6 @@
 ;;(define TRUE 1)
 
 ;; === objects ============
-
-;; @deffn {Procedure} fh-object? obj
-;; This predicate tests for FH objects, i.e., FFI defined types.
-;; @example
-;; (define-fh-pointer-type foo_t* foo_t*-desc)
-;; (define val (make-foo_t*))
-;; (fh-object? val) => #t
-;; @end example
-;; @end deffn
-(define (fh-object? obj)
-  (and
-   (struct? obj)
-   (fh-type? (struct-vtable obj))))
 
 ;; @deffn {Procedure} fh-object-type obj
 ;; return the object type
@@ -526,7 +430,7 @@
     (display "#<" port)
     (display type port)
     (display " 0x" port)
-    (display (number->string (fh-object-addr (pointer-to obj)) 16) port)
+    (display (number->string (fh-object-addr obj) 16) port)
     (display ">" port)))
 
 ;; @deffn {Syntax} define-fh-type-alias alias type
@@ -699,7 +603,8 @@
 ;; @end itemize
 ;; can we now do a vector->pointer
 (define (fh-varg type expr)
-  (let* ((r-type                        ; resolved type
+  (cons type expr)
+   #;(let* ((r-type                        ; resolved type
           (cond
            ((bytestructure-descriptor? type)
             (bs-desc->ffi-desc type))
@@ -754,9 +659,6 @@
 (define (unwrap~function* obj)
   (cond
    (else (fherr "unwrap~function*: bad arg: ~s" obj))))
-
-;; (define unwrap-type cdata-ref)
-;; vs fhobj-ref fhobj-sel fhobj-set!
 
 #|
 ;; now support for the base types
@@ -919,6 +821,14 @@
 
 (define-syntax define-base-pointer-type
   (lambda (x)
+    (define (gen-id tmpl-id . args)
+      (define (stx->str stx)
+        (symbol->string (syntax->datum stx)))
+      (datum->syntax
+       tmpl-id
+       (string->symbol
+        (apply string-append
+               (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args)))))
     (syntax-case x ()
       ((_ desc)
        (with-syntax ((desc* (gen-id #'desc #'desc "*-desc"))
