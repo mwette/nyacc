@@ -35,15 +35,11 @@
 (define-fh-pointer-type gdouble* gdouble*-desc gdouble*? make-gdouble*)
 (export gdouble* gdouble*? make-gdouble*)
 
+#|
 (define-public GDestroyNotify*-desc (bs:pointer GDestroyNotify-desc))
 (define-fh-pointer-type GDestroyNotify* GDestroyNotify*-desc
   GDestroyNtify*? make-GDestroyNotify*)
 (export GDestroyNotify* GDestroyNotify*? make-GDestroyNotify*)
+|#
 
-#;(set! ffi-glib-types
-      (cons* '(pointer . "gpointer")
-	     '(pointer . "gdouble")
-	     '(pointer . "GDestroyNotify")
-	     ffi-glib-types))
-		
 ;; --- last line ---
