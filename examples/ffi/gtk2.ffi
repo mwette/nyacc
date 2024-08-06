@@ -1,6 +1,6 @@
 ;; gtk2.ffi				-*- Scheme -*-
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -38,11 +38,11 @@
       (lambda (widget event arg)
         (let ((widget (unwrap~pointer widget))
               (event (unwrap~pointer event))
-              (arg (unwrap~pointer arg))
-        (~proc ev)
+              (arg (unwrap~pointer arg)))
+          (~proc widget event arg))))))
 (define-public unwrap-GCallback
   (lambda (~proc)
-    (ffi:procedure->pointer ffi:void ~proc (list))))
+    (ffi:procedure->pointer ffi:void ~proc (list '* '* '*))))
 #|
 (define-public GtkEventCallback-desc
   (fh:function*

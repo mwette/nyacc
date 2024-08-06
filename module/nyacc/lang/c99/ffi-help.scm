@@ -138,8 +138,8 @@
 (define *mport* (make-parameter #t))	   ; output module port
 (define *udict* (make-parameter '()))	   ; udecl dict
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
-(define *wrapped* (make-parameter '()))	; wrappers for foo_t and foo_t*
-(define *defined* (make-parameter '()))	; type defined
+(define *defined* (make-parameter '()))    ; defined by define-fh-...
+(define *wrapped* (make-parameter '()))    ; wrapped or defined
 
 (define *errmsgs* (make-parameter '()))	; list of warnings
 
@@ -358,7 +358,7 @@
     "intptr_t" "uintptr_t" "size_t" "ssize_t" "ptrdiff_t" "int8_t"
     "uint8_t" "int16_t" "uint16_t" "int32_t" "uint32_t" "int64_t"
     "uint64_t" "float _Complex" "double _Complex" "char" "signed char"
-    "unsigned char" "wchar_t" "char16_t" "char32_t" "_Bool"))
+    "unsigned char" "wchar_t" "char16_t" "char32_t" "_Bool" "bool"))
 
 
 (define ffi-long-long #f)
@@ -405,7 +405,7 @@
     ("signed long long int" . ,ffi-long-long)
     ("unsigned long long" . ,ffi-unsigned-long-long)
     ("unsigned long long int" . ,ffi-unsigned-long-long)
-    ("_Bool" . ffi:int8)))
+    ("_Bool" . ffi:int8) ("bool" . ffi:int8)))
 
 (define ffi-defined (map car ffi-typemap))
 
@@ -459,31 +459,7 @@
     ;; hacks:
     ("char" . int8) ("signed char" . int8) ("unsigned char" . uint8)
     ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
-    ("_Bool" . int8)))
-(define bs:bs-typemap
-  '(("void" . 'void) ("float" . bs:float) ("double" . bs:double)
-    ("short" . bs:short) ("short int" . bs:short) ("signed short" . bs:short)
-    ("signed short int" . bs:short) ("int" . bs:int) ("signed" . bs:int)
-    ("signed int" . bs:int) ("long" . bs:long) ("long int" . bs:long)
-    ("signed long" . bs:long) ("signed long int" . bs:long)
-    ("long long" . bs:long) ("long long int" . bs:long-long)
-    ("signed long long" . bs:long-long) ("signed long long int" . bs:long)
-    ("unsigned short int" . bs:unsigned-short)
-    ("unsigned short" . bs:unsigned-short) ("unsigned int" . bs:unsigned-int)
-    ("unsigned" . bs:unsigned-int) ("unsigned long int" . bs:unsigned-long)
-    ("unsigned long" . bs:unsigned-long)
-    ("unsigned long long int" . bs:unsigned-long-long)
-    ("unsigned long long" . bs:unsigned-long-long)
-    ("intptr_t" . bs:intptr_t) ("uintptr_t" . bs:uintptr_t)
-    ("size_t" . bs:size_t) ("ssize_t" . bs:ssize_t) ("ptrdiff_t" . bs:ptrdiff_t)
-    ("int8_t" . bs:int8) ("uint8_t" . bs:uint8) ("int16_t" . bs:int16)
-    ("uint16_t" . bs:uint16) ("int32_t" . bs:int32) ("uint32_t" . bs:uint32)
-    ("int64_t" . bs:int64) ("uint64_t" . bs:uint64)
-    ("float _Complex" . bs:complex64) ("double _Complex" . bs:complex128)
-    ;; hacks:
-    ("char" . bs:int8) ("signed char" . bs:int8) ("unsigned char" . bs:uint8)
-    ("wchar_t" . bs:int) ("char16_t" . bs:int16) ("char32_t" . bs:int32)
-    ("_Bool" . bs:int8)))
+    ("_Bool" . int8) ("bool" . int8)))
 
 ;; convert #f names to manufactured names : a hack
 (define (maybe-fix-bs-field-list fields)
@@ -1033,11 +1009,11 @@
       (otherwise
        (fherr "mtail->fh-wrapper missed:\n~A" (ppstr mtail))))))
 
-(define* (udecl->ffi-decl udecl #:optional keepers)
+(define* (udecl->ffi-decl udecl #:optional (keepers ffi-defined))
   (mtail->ffi-decl
    (md-tail (udecl->mdecl
              (udecl-rem-type-qual
-              (expand-typerefs udecl (*udict*) (or keepers ffi-defined)))))))
+              (expand-typerefs udecl (*udict*) keepers))))))
 
 (define* (udecl->fh-unwrapper udecl #:optional (keepers '()))
   (mtail->fh-unwrapper
@@ -1049,14 +1025,14 @@
   (mtail->fh-wrapper
    (md-tail (udecl->mdecl
              (udecl-rem-type-qual
-              (expand-typerefs udecl (*udict*) keepers))))))
+              (expand-typerefs udecl (*udict*) (*wrapped*)))))))
 
 
 ;; === function types =========================================================
 
 (define (process-params return params)
   (define void-param '(param-decl (decl-spec-list (type-spec (void)))))
-  (define keepers (append-reverse (*wrapped*) (*defined*)))
+  (define keepers (*wrapped*))
   (let* ((params (let loop ((rl '()) (pl params))
                    (cond
                     ((null? pl) (reverse rl))
@@ -1107,8 +1083,12 @@
 (define (fhscm-def-function* name return params)
   (call-with-values (lambda () (function*-wraps return params))
     (lambda (wrapper unwrapper)
-      (ppscm `(define-public ,(strings->symbol "wrap-" name) ,wrapper))
-      (ppscm `(define-public ,(strings->symbol "unwrap-" name) ,unwrapper)))))
+      (let ((wrap (strings->symbol "wrap-" name))
+            (unwrap (strings->symbol "unwrap-" name)))
+        (ppscm `(define-public ,wrap ,wrapper))
+        (ppscm `(define-public ,unwrap ,unwrapper))
+        ))))
+
 
 (define (cnvt-fctn name return params)
   ;; can't use function*-wraps just because of the delay :(
@@ -1206,12 +1186,38 @@
            (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
            (ppscm `(export ,name* ,pred* ,make*))
            (ppscm `(fh-ref<=>deref! ,name* ,make* ,name ,make))
-           (values wrapped (cons label defined)))
+           (values (cons label wrapped) (cons label defined)))
+
+          (`((function-returning (param-list . ,params)) . ,rest)
+           (let ((return (mdecl->udecl (cons "_" rest))))
+             (call-with-values (lambda () (function*-wraps return params))
+               (lambda (wrapper unwrapper)
+                 (let ((wrap (strings->symbol "wrap-" label "*"))
+                       (unwrap (strings->symbol "unwrap-" label "*")))
+                   (ppscm `(define-public ,wrap ,wrapper))
+                   (ppscm `(define-public ,unwrap ,unwrapper))
+                   (ppscm `(define-public ,desc* (fh:function* ,wrap ,unwrap)))
+                   (ppscm
+                    `(define-fh-function*-type ,name* ,wrap ,pred* ,unwrap))
+                   (ppscm `(define ,make* ,wrap))
+                   (ppscm `(export ,name* ,pred* ,make*))
+                   ))))
+           (values (cons (w/* label) wrapped) (cons (w/* label) defined)))
 
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "_" rest))))
-             (fhscm-def-function* label return params))
-           (values (cons label wrapped) defined))
+             (call-with-values (lambda () (function*-wraps return params))
+               (lambda (wrapper unwrapper)
+                 (let ((wrap (strings->symbol "wrap-" label))
+                       (unwrap (strings->symbol "unwrap-" label)))
+                   (ppscm `(define-public ,wrap ,wrapper))
+                   (ppscm `(define-public ,unwrap ,unwrapper))
+                   (ppscm `(define-public ,desc (fh:function* ,wrap ,unwrap)))
+                   (ppscm `(define-fh-function*-type ,name ,wrap ,pred ,unwrap))
+                   (ppscm `(define ,make ,wrap))
+                   (ppscm `(export ,name ,pred ,make))
+                   ))))
+           (values (cons label wrapped) (cons label defined)))
 
           (`((pointer-to) . ,rest)
            (ppscm `(define-public ,desc ,(mtail->target mtail)))
@@ -1219,12 +1225,7 @@
            (ppscm `(export ,name ,pred ,make))
            (case (caar rest)
              ((fixed-type float-type) (values wrapped defined))
-             (else (values wrapped (cons label defined)))))
-
-          (`((function-returning (param-list . ,params)) . ,rest)
-           (let* ((return (mdecl->udecl (cons "_" rest))))
-             (fhscm-def-function* (sw/* label) return params))
-           (values (cons (w/* label) wrapped) defined))
+             (else (values (cons label wrapped) (cons label defined)))))
 
           (__
            (sx-match (car mtail)
@@ -1239,20 +1240,24 @@
               ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
               ;;(ppscm `(define-public ,desc* (fh:pointer ,desc)))
               (cnvt-struct-def attr label #f field-list)
-              (values wrapped (cons* label (w/* label) defined)))
+              (values  (cons* label (w/* label) defined)
+                       (cons* label (w/* label) defined)))
 
              ((union-def (ident ,aggr-name) ,field-list)
               ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
               ;;(ppscm `(define-public ,desc* (fh:pointer ,desc)))
               (cnvt-union-def attr label aggr-name field-list)
-              (values wrapped (cons* label (w/* label) (w/union aggr-name)
-                                     (w/union* aggr-name) defined)))
+              (values (cons* label (w/* label) (w/union aggr-name)
+                             (w/union* aggr-name) wrapped)
+                      (cons* label (w/* label) (w/union aggr-name)
+                             (w/union* aggr-name) defined)))
 
              ((union-def ,field-list)
               ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
               ;;(ppscm `(define-public ,desc* (fh:pointer ,desc)))
               (cnvt-union-def attr label #f field-list)
-              (values wrapped (cons* label (w/* label) defined)))
+              (values (cons* label (w/* label) wrapped)
+                      (cons* label (w/* label) defined)))
 
              ((struct-ref (ident ,aggr-name))
               (cond
@@ -1272,7 +1277,8 @@
                 (ppscm `(define-public ,desc 'void))
                 (ppscm `(define-public ,desc* (fh:pointer ,desc)))))
               (fhscm-def-pointer (sw/* label))
-              (values wrapped (cons* label (w/* label) defined)))
+              (values (cons* label (w/* label) wrapped)
+                      (cons* label (w/* label) defined)))
 
              ((union-ref (ident ,aggr-name))
               (cond
@@ -1292,7 +1298,8 @@
                 (ppscm `(define-public ,desc 'void))
                 (ppscm `(define-public ,desc* (fh:pointer ,desc)))))
               (fhscm-def-pointer (sw/* label))
-              (values wrapped (cons* label (w/* label) defined)))
+              (values (cons* label (w/* label) wrapped)
+                      (cons* label (w/* label) defined)))
 
              (((fixed-type float-type) ,basename)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
@@ -1331,18 +1338,20 @@
                       (adesc (strings->symbol typename "-desc")))
 	          (ppscm `(define-public ,desc ,adesc))
                   (ppscm `(define-fh-type-alias ,name ,aka))
-                  (ppscm `(export ,aka))
-	          (when (member (w/* typename) defined)
-                    (let* ((aka* (strings->symbol typename "*"))
-                           (adesc* (strings->symbol typename "*-desc"))
-                           (amake (strings->symbol "make-" typename))
-                           (amake* (strings->symbol "make-" typename "*")))
-	              (ppscm `(define-public ,desc* ,adesc*))
-                      (ppscm `(define-fh-type-alias ,name* ,aka*))
-                      (ppscm `(fh-ref<=>deref! ,aka* ,amake* ,aka ,make))
-                      (ppscm `(export ,aka*))))
-                  ;; FIXME: missing (w/* label)
-	          (values wrapped (cons label defined))))
+                  (ppscm `(export ,name))
+	          (if (member (w/* typename) defined)
+                      (let* ((name* (strings->symbol label "*"))
+                             (aka* (strings->symbol typename "*"))
+                             (adesc* (strings->symbol typename "*-desc"))
+                             (amake (strings->symbol "make-" typename))
+                             (amake* (strings->symbol "make-" typename "*")))
+	                (ppscm `(define-public ,desc* ,adesc*))
+                        (ppscm `(define-fh-type-alias ,name* ,aka*))
+                        (ppscm `(fh-ref<=>deref! ,name* ,make* ,name ,make))
+                        (ppscm `(export ,name*))
+	                (values (cons* label (w/* label) wrapped)
+                                (cons* label (w/* label) defined)))
+	              (values (cons label wrapped) (cons label defined)))))
 	       (else
 	        (let ((xdecl (expand-typerefs udecl (*udict*) defined)))
 	          (cnvt-udecl xdecl udict wrapped defined)))))
@@ -1366,25 +1375,21 @@
           ((bkref-getall attr) =>
            (lambda (name-list)
 	     (cnvt-aggr-def 'struct aggr-attr #f aggr-name field-list)
-	     (for-each
-	      (lambda (name)
+             (fold-values
+	      (lambda (name wrapped defined)
                 (let ((adesc (strings->symbol "struct-" aggr-name "-desc"))
-                      (desc (strings->symbol name "-desc"))
-                      (pred (strings->symbol name "?"))
-                      (make (strings->symbol "make-" name))
-                      (syname (string->symbol name)))
+                      (desc (strings->symbol name "-desc")))
 	          (ppscm `(set! ,desc ,adesc))
 	          (fhscm-def-compound name)
-	          (fhscm-ref-deref name)
-                  (ppscm `(define-fh-compound-type ,syname ,desc ,pred ,make))
-                  (ppscm `(export ,syname ,pred ,make))))
-	      name-list)
-	     (values (cons (w/struct aggr-name) wrapped)
-		     (cons (w/struct aggr-name) defined))))
+	          (fhscm-ref-deref name))
+                (values (cons name wrapped) (cons name defined)))
+	      name-list
+              (cons (w/struct aggr-name) wrapped)
+              (cons (w/struct aggr-name) defined))))
 	  ((not (member (w/struct aggr-name) defined))
 	   (cnvt-aggr-def 'struct aggr-attr #f aggr-name field-list)
 	   (values (cons (w/struct aggr-name) wrapped)
-		   (cons (w/struct aggr-name) defined)))
+                   (cons (w/struct aggr-name) defined)))
 	  (else
 	   (values wrapped defined))))
 
@@ -1393,8 +1398,8 @@
           ((bkref-getall attr) =>
            (lambda (name-list)
 	     (cnvt-aggr-def 'union aggr-attr #f aggr-name field-list)
-	     (for-each
-	      (lambda (name)
+	     (fold-values
+	      (lambda (name wrapped defined)
                 (let ((adesc (strings->symbol "union-" aggr-name "-desc"))
                       (desc (strings->symbol name "-desc"))
                       (pred (strings->symbol name "?"))
@@ -1404,14 +1409,15 @@
 	          (fhscm-def-compound name)
 	          (fhscm-ref-deref name)
                   (ppscm `(define-fh-compound-type ,syname ,desc ,pred ,make))
-                  (ppscm `(export ,syname ,pred ,make))))
-	      name-list)
-	     (values (cons (w/union aggr-name) wrapped)
-		     (cons (w/union aggr-name) defined))))
+                  (ppscm `(export ,syname ,pred ,make)))
+                (values (cons name wrapped) (cons name defined)))
+	      name-list
+              (cons (w/union aggr-name) wrapped)
+              (cons (w/union aggr-name) defined))))
 	  ((not (member (w/union aggr-name) defined))
 	   (cnvt-aggr-def 'union aggr-attr #f aggr-name field-list)
 	   (values (cons (w/union aggr-name) wrapped)
-		   (cons (w/union aggr-name) defined)))
+                   (cons (w/union aggr-name) defined)))
 	  (else
 	   (values wrapped defined))))
 

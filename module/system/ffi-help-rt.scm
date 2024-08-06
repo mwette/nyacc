@@ -23,13 +23,13 @@
   #:export (*ffi-help-version*
 
             ;; user level routines
-            fh-type? fh-object? fherr
+            fh-type? fherr
             pointer-to value-at fh-cast fh-varg
 
-            fh-object-ref fh-object-set! fh-object-sel
-
-            fhval-ref fhval-set! fhval-sel
-            fhval* fhval&
+            fh-object? fh-object-ref fh-object-set! fh-object-sel
+            fh-object-type fh-object-val
+            fhval-ref fhval-set! fhval-sel fhval* fhval& make-fhval
+            fhval-addr fhval-pointer
 
             NULL !0
 
@@ -78,17 +78,6 @@
 
 (define (fherr fmt . args)
   (throw 'ffi-help-error (apply simple-format #f fmt args)))
-
-(eval-when (expand load eval)
-  (define (gen-id tid . args)
-    (define (arg->str arg)
-      (cond
-       ((string? arg) arg)
-       ((symbol? arg) (symbol->string arg))
-       (else (symbol->string (syntax->datum arg)))
-       ))
-    (datum->syntax
-     tid (string->symbol (apply string-append (map arg->str args))))))
 
 ;; --- bytestructure support --------------------------------------------------
 
@@ -152,8 +141,9 @@
      ((bytestructure? value)
       (bytevector-address-set! bytevector offset
                                (bytestructure-ref value)))
-     ((fh-object? value)
-      (pointer-set! bytevector offset (fh-object-ref value)))))
+     #;((fh-object? value)
+      (pointer-set! bytevector offset (fh-object-ref value)))
+     ))
   (define (get-descriptor)
     (if (promise? %descriptor)
         (force %descriptor)
@@ -260,7 +250,14 @@
 ;; Get equivalent Guile object, if applicable, @code{#f} otherwise.
 ;; @end deffn
 (define-syntax-rule (fhval-ref val arg ...)
-  (bytestructure-ref val arg ...))
+  (call-with-values
+      (lambda () (bytestructure-unwrap val arg ...))
+    (lambda (bvec oset desc)
+      (let ((value ((bytestructure-descriptor-getter desc) #f bvec oset))
+            (meta (bytestructure-descriptor-metadata desc)))
+        (cond
+         ((pointer-metadata? meta) (ffi:make-pointer value))
+         (else value))))))
 
 ;; @deffn {Syntax} fhval-set! obj arg ...
 ;; Set the object value from a Scheme object.
@@ -292,7 +289,7 @@
 ;; like fhval-addr but convert to a pointer
 ;; @end deffn
 (define-syntax-rule (fhval-pointer val)
-  (ffi:make-pointer (fhval-addr obj)))
+  (ffi:make-pointer (fhval-addr val)))
 
 ;; @deffn {Syntax} fhval* obj
 ;; dereference a pointer
@@ -341,6 +338,13 @@
    (string-append standard-vtable-fields "pwpwpwpw")
    (lambda (v p) (display "#<ffi-helper-type>" p))))
 
+;; @deffn {Procedure} fh-type? type
+;; This predicate tests for FH types.
+;; @end deffn
+(define (fh-type? type)
+  (and (struct-vtable? type)
+       (eq? (struct-vtable type) ffi-helper-type)))
+
 ;; @deffn {Procedure} fh-object? obj
 ;; This predicate tests for FH objects, i.e., FFI defined types.
 ;; @example
@@ -350,35 +354,28 @@
 ;; @end example
 ;; @end deffn
 (define (fh-object? obj)
-  (and
-   (struct? obj)
-   (struct-vtable? obj)
-   (eq? (struct-vtable obj) ffi-helper-type)))
+  (and (struct? obj)
+       (fh-type? (struct-vtable obj))))
 
 ;; @deffn {Procedure} fh-object-val obj
 ;; Return the object value slot for the FH object.
 ;; @deffn
 (define (fh-object-val obj)
   (unless (fh-object? obj) (fherr "fh-object-val: got ~s" obj))
+  (unless (fh-object? obj) (fherr "fh-object-val: bad arg"))
   (struct-ref obj 0))
 
 (define-syntax-rule (fh-object-ref obj arg ...)
   (begin
-    (unless (fh-object? obj) (fherr "fh-object-ref: got ~s" obj))
+    ;;(unless (fh-object? obj) (fherr "fh-object-ref: got ~s" obj))
+    (unless (fh-object? obj) (fherr "fh-object-ref: bad arg"))
     (fhval-ref (struct-ref obj 0) arg ...)))
 
 (define-syntax-rule (fh-object-set! obj val arg ...)
   (begin
-    (unless (fh-object? obj) (fherr "fh-object-set!: got ~s" obj))
+    ;;(unless (fh-object? obj) (fherr "fh-object-set!: got ~s" obj))
+    (unless (fh-object? obj) (fherr "fh-object-set!: bad arg"))
     (fhval-set! (struct-ref obj 0) val arg ...)))
-
-;; @deffn {Procedure} fh-type? type
-;; This predicate tests for FH types.
-;; @end deffn
-(define (fh-type? type)
-  (and (struct? type)
-       (struct-vtable? type)
-       (eq? (struct-vtable type) ffi-helper-type)))
 
 (define unwrap-ix 0)
 (define wrap-ix 1)
@@ -447,30 +444,82 @@
 ;;(define FALSE 0)
 ;;(define TRUE 1)
 
+
+;; === unwrappers
+
+;; unwrap~number
+;; unwrap~pointer
+;; unwrap~array
+;; unwrap~compound
+;; unwrap~function
+
+;; wrap/unwrap enums !!!
+
+(define (unwrap~number arg)
+  (cond
+   ((number? arg) arg)
+   ((fh-object? arg) (fh-object-ref arg))
+   ((fhval? arg) (fhval-ref arg))
+   (else (fherr "unwrap~number: bad arg: ~s" arg))))
+
+(define (unwrap~pointer arg)
+  (cond
+   ((ffi:pointer? arg) arg)
+   ((string? arg) (ffi:string->pointer arg))
+   ((fh-object? arg) (fh-object-ref arg))
+   ((fhval? arg) (fhval-ref arg))
+   (else (fherr "unwrap~pointer: bad arg: ~s" arg))))
+
+(define (unwrap~array arg)
+  (cond
+   ((array? arg) (ffi:scm->pointer arg))
+   ((fh-object? arg) (fh-object-ref (pointer-to arg)))
+   ((fhval? arg) (fhval-ref (fhval& arg)))
+   (else (fherr "unwrap~array: bad arg: ~s" arg))))
+
+(define (unwrap~function* obj)
+  (cond
+   (else (fherr "unwrap~function*: bad arg: ~s" obj))))
+
+
 ;; === objects ============
+
+(eval-when (expand load eval)
+  (define (gen-id tid . args)
+    (define (arg->str arg)
+      (cond
+       ((string? arg) arg)
+       ((symbol? arg) (symbol->string arg))
+       (else (symbol->string (syntax->datum arg)))))
+    (let ((strid (apply string-append (map arg->str args))))
+      (datum->syntax tid (string->symbol strid)))))
 
 ;; @deffn {Procedure} fh-object-type obj
 ;; return the object type
 ;; @end deffn
 (define (fh-object-type obj)
-  (or (fh-object? obj) (fherr "fh-object-type: expecting fh-object arg"))
+  (unless (fh-object? obj) (fherr "fh-object-type: expecting fh-object arg"))
   (struct-vtable obj))
 
 (define (make-printer type)
   (lambda (obj port)
+    (unless (fh-object? obj) (fherr "fh printer: expecting ~s, got ~s" type obj))
     (display "#<" port)
     (display type port)
     (display " 0x" port)
     (display (number->string (fhval-addr (fh-object-val obj)) 16) port)
     (display ">" port)))
+(export make-printer)
 
 ;; show what it points to
 (define (make-pointer-printer type)
   (lambda (obj port)
+    (unless (fh-object? obj) (fherr "fh printer: expecting ~s, got ~s" type obj))
     (display "#<" port)
     (display type port)
     (display " 0x" port)
-    (display (number->string (fhval-addr (fh-object-val obj)) 16) port)
+    (display (number->string
+              (ffi:pointer-address (fhval-ref (fh-object-val obj))) 16) port)
     (display ">" port)))
 
 ;; @deffn {Syntax} define-fh-pointer-type name desc type? make
@@ -629,18 +678,19 @@
                      (desc* (gen-id #'type #'type "*-desc"))
                      (type*? (gen-id #'type #'type "*?"))
                      (make* (gen-id #'type "make-" #'type "*")))
-         #`(begin
+         #'(begin
              (define desc (fhval-base-type (quote type)))
              (define ltype
                (make-fht (quote type)
                          (lambda (obj) (fhval-ref (fh-object-val obj)))
                          (lambda (arg) (make arg))
-                         (lambda (obj) (make* (fhval-ref (fhval& obj))))
+                         (lambda (obj)
+                           (make* (fhval-pointer (fh-object-val obj))))
                          #f
                          (make-printer (quote type))))
              (define (type? obj)
                (and (fh-object? obj) (eq? (struct-vtable obj) ltype)))
-             (define make
+             (define-public make
                (case-lambda
                  ((arg) (make-struct/no-tail ltype (make-fhval desc arg)))
                  (() (make-struct/no-tail ltype (make-fhval desc)))))
@@ -650,20 +700,15 @@
                          (lambda (obj) (unwrap~pointer obj))
                          (lambda (val) (make* val))
                          #f
-                         (lambda (obj) (make (fhval-ref (fh-object-val obj))))
+                         (lambda (obj) (make (fhval* (fh-object-val obj))))
                          (make-pointer-printer (quote type*))))
              (define (type*? obj)
                (and (fh-object? obj) (eq? (struct-vtable obj) type*)))
              (define make*
                (case-lambda
-                 ((arg)
-                  (cond
-                   ((ffi:pointer? arg)
-                    (make-struct/no-tail type* (make-fhval desc* arg)))
-                   ((number? arg) (make (ffi:make-pointer arg)))
-                   (else (fherr "make-object: bad arg: ~s" arg))))
-                 (() (make ffi:%null-pointer))))
-             (export type? make type*? make*)))))))
+                 ((arg) (make-struct/no-tail type* (make-fhval desc* arg)))
+                 (() (make* ffi:%null-pointer))))
+             (export desc type? make desc* type*? make*)))))))
 
 (define-base-type short) (define-base-type unsigned-short)
 (define-base-type int) (define-base-type unsigned-int)
@@ -680,146 +725,20 @@
 (define-base-type size_t) (define-base-type ssize_t)
 (define-base-type ptrdiff_t)
 (define-base-type char) (define-base-type unsigned-char)
-(define-base-type bool)
-#|
-|#
+(define-base-type _Bool) (define-base-type bool)
 
+(define-base-type void*)
 
-;; --- unwrap / wrap procedures
-
-;; unwrap~number
-;; unwrap~pointer
-;; unwrap~array
-;; unwrap~compound
-;; unwrap~function
-
-;; wrap/unwrap enums !!!
-
-(define (unwrap~number arg)
-  (cond
-   ((number? arg) arg)
-   ((fh-object? arg) (fh-object-ref arg))
-   ((fhval? arg) (fhval-ref arg))
-   (else (fherr "unwrap~number: bad arg: ~s" arg))))
-
-(define (unwrap~pointer arg)
-  (cond
-   ((ffi:pointer? arg) arg)
-   ((string? arg) (ffi:string->pointer arg))
-   ((fh-object? arg) (fh-object-ref arg))
-   ((fhval? arg) (fhval-ref arg))
-   (else (fherr "unwrap~pointer: bad arg: ~s" arg))))
-
-(define (unwrap~array arg)
-  (cond
-   ((array? arg) (ffi:scm->pointer arg))
-   ((fh-object? arg) (fh-object-ref (pointer-to arg)))
-   ((fhval? arg) (fhval-ref (fhval& arg)))
-   (else (fherr "unwrap~array: bad arg: ~s" arg))))
-
-(define (unwrap~function* obj)
-  (cond
-   (else (fherr "unwrap~function*: bad arg: ~s" obj))))
-
+(define char**-desc (fhval-pointer-type char*-desc))
+(define-fh-pointer-type char** char**-desc char**? make-char**)
+(fh-ref<=>deref! char** make-char** char* make-char*)
+(export char**? make-char**)
 
 ;; --- types ---------------------------
 
-(define char*-desc (bs:pointer 'void))
-(define char**-desc (bs:pointer char*-desc))
-(define void-desc 'void)
-(define void*-desc (bs:pointer 'void))
-(define void**-desc (bs:pointer (bs:pointer 'void)))
-
-;; All other FFI types are variables which as bound to constant expressions.
-;; Here we bind '* to a variable to avoid special cases in the code generator.
-
-(define ffi-void* '*)
-
-(define char*
-  (make-fht 'char*
-            (lambda (obj) (ffi:pointer->string (fhval-ref (fh-object-val obj))))
-            (lambda (val) (make-char* val))
-            #f #f
-            (make-printer 'char*)))
-(define make-char*
-  (case-lambda
-    ((arg)
-     (cond
-      ((string? arg) (make-fhval char*-desc (ffi:string->pointer arg)))
-      ((ffi:pointer? arg) (make-fhval char*-desc arg))
-      (else (fherr "make-char*: bad arg: ~s" arg))))
-    (() (make-fhval char*-desc))))
-(define char*? (lambda (obj) (eq? (struct-vtable obj) char*)))
-(export char*? make-char*)
-
-(define-fh-pointer-type char** char**-desc char**? make-char**)
-(export char**? make-char**)
-
-(fh-ref<=>deref! char** make-char** char* make-char*)
 
 (define-public (char*->string obj)
   (ffi:pointer->string (fh-object-ref obj)))
-
-(define fh-void
-  (make-fht 'void
-            (lambda (obj) void-desc)
-            (lambda (val) (fherr "fh-void: attempt to make void"))
-            #f #f
-            (lambda (obj port) (display "#<fh-void>" port))))
-(define fh-void?
-  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) fh-void))))
-(define make-fh-void
-  (case-lambda
-    (() (make-struct/no-tail fh-void 'void))
-    ((arg) (make-struct/no-tail fh-void arg))))
-;;(export fh-void? make-fh-void)
-
-(define void*
-  (make-fht 'void*
-            unwrap~pointer
-            (case-lambda
-              ((val)
-               (cond
-                ((string? val)
-                 (make-struct/no-tail
-                  void* (bytestructure
-                         void*-desc (ffi:pointer-address
-                                     (ffi:string->pointer val)))))
-                ((bytestructure? val)
-                 (make-struct/no-tail void* val))
-                (else
-                 (make-struct/no-tail void* (bytestructure void*-desc val)))))
-              (() (make-struct/no-tail void* (bytestructure void*-desc))))
-            #f #f
-            (lambda (obj port)
-              (display "#<void* 0x" port)
-              (display (number->string (struct-ref obj 0) 16) port)
-              (display ">" port))))
-(define make-void* (fht-wrap void*))
-(define void*?
-  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) void*))))
-(fh-ref<=>deref! void* make-void* fh-void make-fh-void)
-(export void*? make-void*)
-
-(define void**
-  (make-fht 'void**
-            unwrap~pointer
-            (case-lambda
-              ((val)
-               (make-struct/no-tail void** (bytestructure void**-desc val)))
-              (()
-               (make-struct/no-tail void** (bytestructure void**-desc))))
-            #f #f
-            (lambda (obj port)
-              (display "#<void** 0x" port)
-              (display (number->string (struct-ref obj 0) 16) port)
-              (display ">" port))))
-(define make-void** (fht-wrap void**))
-(define void**?
-  (lambda (obj) (and (struct? obj) (eq? (struct-vtable obj) void**))))
-(fh-ref<=>deref! void** make-void** void* make-void*)
-(export void**? make-void**)
-
 
 ;; --- other items --------------------
 
