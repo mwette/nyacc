@@ -80,15 +80,15 @@
   (throw 'ffi-help-error (apply simple-format #f fmt args)))
 
 (eval-when (expand load eval)
-  (define (gen-id tmpl-id . args)
-    (define (stx->str stx)
-      (symbol->string (syntax->datum stx)))
+  (define (gen-id tid . args)
+    (define (arg->str arg)
+      (cond
+       ((string? arg) arg)
+       ((symbol? arg) (symbol->string arg))
+       (else (symbol->string (syntax->datum arg)))
+       ))
     (datum->syntax
-     tmpl-id
-     (string->symbol
-      (apply
-       string-append
-       (map (lambda (ss) (if (string? ss) ss (stx->str ss))) args))))))
+     tid (string->symbol (apply string-append (map arg->str args))))))
 
 ;; --- bytestructure support --------------------------------------------------
 
@@ -228,6 +228,30 @@
 
 ;; ---- hookups ----------------------------------------------------------------
 
+(define bs-base-type-map
+  `((void* . *) (char . ,int8) (unsigned-char . ,uint8)
+    (int8_t . ,int8) (uint8_t . ,uint8) (int16_t . ,int16) (uint16_t . ,uint16)
+    (int32_t . ,int32) (uint32_t . ,uint32) (int64_t . ,int64)
+    (uint64_t . ,uint64) (float . ,float32) (double . ,float64)
+    (short . ,short) (unsigned-short . ,unsigned-short)
+    (int . ,int) (unsigned-int . ,unsigned-int)
+    (long . ,long) (unsigned-long . ,unsigned-long)
+    (long-long . ,long-long) (unsigned-long-long . ,unsigned-long-long)
+    (intptr_t . ,intptr_t) (uintptr_t . ,uintptr_t)
+    (size_t . ,size_t) (ssize_t . ,ssize_t) (ptrdiff_t . ,ptrdiff_t)
+    ;;
+    (_Bool . ,int8) (bool . ,int8) (signed-char . ,int8) (long-double . #f)
+    (wchar_t . ,int32) (char16_t . ,int16) (char32_t . ,int32)))
+
+(define-syntax-rule (fhval-base-type ctype)
+  (or (assq-ref bs-base-type-map ctype)
+      #;(assq-ref bs-base-type-map (assq-ref base-type-alias-map ctype))))
+(export fhval-base-type)
+
+(define-syntax-rule (fhval-pointer-type desc)
+  (bs:pointer desc))
+(export fhval-pointer-type)
+
 
 (define-syntax-rule (fhval? val)
   (bytestructure? val))
@@ -294,31 +318,16 @@
     ((_ desc) (bytestructure desc))))
 
 
-;; (define (make-base-fhval name)
-
-(define-syntax make-maker
-  (syntax-rules ()
-    ((_ desc make-base-obj)
-     (define-public make-base-obj
-       (let ()
-         (case-lambda
-           ((arg) (bytestructure desc arg))
-           (() (bytestructure desc))))))))
-
-(make-maker short make-short) (make-maker unsigned-short make-unsigned-short)
-(make-maker int make-int) (make-maker unsigned-int make-unsigned-int)
-(make-maker long make-long) (make-maker unsigned-long make-unsigned-long)
-(make-maker intptr_t make-intptr_t) (make-maker uintptr_t make-uintptr_t)
-(make-maker size_t make-size_t) (make-maker ssize_t make-ssize_t)
-(make-maker ptrdiff_t make-ptrdiff_t)
-(make-maker float make-float) (make-maker double make-double)
-(make-maker int8 make-int8) (make-maker uint8 make-uint8)
-(make-maker int16 make-int16) (make-maker uint16 make-uint16)
-(make-maker int32 make-int32) (make-maker uint32 make-uint32)
-(make-maker int64 make-int64) (make-maker uint64 make-uint64)
-
-
 ;; ----------------------------------------------------------------------------
+
+#;(define base-type-alias-map
+  '((signed-short . short) (short-int . short) (signed-short-int . short)
+    (unsigned-short-int . unsigned-short) (signed . int) (signed-int . int)
+    (unsigned . unsigned-int) (long-int . long) (signed-long . long)
+    (signed-long-int . long) (unsigned-long-int . unsigned-long)
+    (long-long-int . long-long) (signed-long-long . long-long)
+    (signed-long-long-int . long-long)
+    (unsigned-long-long-int . unsigned-long-long)))
 
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:
@@ -464,30 +473,6 @@
     (display (number->string (fhval-addr (fh-object-val obj)) 16) port)
     (display ">" port)))
 
-;; @deffn {Syntax} define-fh-type-alias alias type
-;; set up type alias.  Caller needs to match type? and make.
-;; @end deffn
-(define-syntax define-fh-type-alias
-  (lambda (x)
-    (syntax-case x ()
-      ((_ alias type)
-       (with-syntax ((desc (gen-id x #'alias "-desc"))
-                     (pred (gen-id x #'alias "?"))
-                     (make (gen-id x "make-" #'alias)))
-         #`(begin
-             (define alias
-               (make-fht (quote alias)
-                         (fht-unwrap type)
-                         make
-                         #f #f
-                         (make-printer (quote alias))))
-             (define pred (and (fh-object? obj) (eq? (struct-vtable obj) alias)))
-             (define make
-               (case-lambda
-                 ((arg) (make-struct/no-tail alias (make-fhval desc arg)))
-                 (() (make-struct/no-tail alias (make-fhval desc)))))
-             (export pred make)))))))
-
 ;; @deffn {Syntax} define-fh-pointer-type name desc type? make
 ;; @example
 ;; (define foo_t*-desc (bs:pointer foo_t-desc))
@@ -499,7 +484,7 @@
   (begin
     (define type
       (make-fht (quote type)
-                unwrap~pointer
+                (lambda (obj) (unwrap~pointer obj))
                 (lambda (val) (make val))
                 #f #f
                 (make-pointer-printer (quote type))))
@@ -507,14 +492,14 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make
       (case-lambda
-        ((val)
+        ((arg)
          (cond
-          ((number? val)
-           (make-struct/no-tail type (make-fhval desc val)))
-          ((ffi:pointer? val)
-           (make-struct/no-tail type (make-fhval desc val)))
-          (else (make-struct/no-tail type val))))
-        (() (make 0))))))
+          ((ffi:pointer? arg)
+           (make-struct/no-tail type (make-fhval desc arg)))
+          ((number? arg)
+           (make (ffi:make-pointer arg)))
+          (else (fherr "make-object: bad arg: ~s" arg))))
+        (() (make ffi:%null-pointer))))))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
 ;; Generates an FH aggregate type based on the underlying type.
@@ -549,25 +534,45 @@
         ((arg) (make-struct/no-tail type (make-fhval desc arg)))
         (() (make-struct/no-tail type (make-fhval desc)))))))
 
-;; @deffn {Syntax} define-fh-function*-type type desc type? make
+;; @deffn {Syntax} define-fh-type-alias alias type
+;; set up type alias.  Caller needs to match type? and make.
+;; This is one of the places we use generated id's.
+;; The following are generated: @emph{alias} @code{make-}@emph{alias}
+;;  @emph{alias}@code{?}.
+;; @end deffn
+(define-syntax define-fh-type-alias
+  (lambda (x)
+    (syntax-case x ()
+      ((_ alias type)
+       (let ((desc (gen-id x #'alias "-desc"))
+             (pred (gen-id x #'alias "?"))
+             (make (gen-id x "make-" #'alias)))
+         #`(begin
+             (define (#,pred obj)
+               (and (fh-object? obj) (eq? (struct-vtable obj) alias)))
+             (define #,make
+               (case-lambda
+                 ((arg) (make-struct/no-tail alias (make-fhval #,desc arg)))
+                 (() (make-struct/no-tail alias (make-fhval #,desc)))))
+             (define alias
+               (make-fht (quote alias)
+                         (fht-unwrap type)
+                         (lambda (arg) (#,make arg))
+                         #f #f
+                         (make-printer (quote alias))))
+             #;(export alias pred make)))))))
+
+;; @deffn {Syntax} define-fh-function*-type type unwrapper type? wrapper
 ;; document this
 ;; @end deffn
-(define-syntax define-fh-function*-type
-  (syntax-rules ()
-    ((_ type desc type? make)
-     (begin
-       (define type
-         (make-fht (quote type)
-                (lambda (obj) (fhval-ref (fh-object-val obj)))
-                (lambda (obj) (make obj))
-                #f #f
+(define-syntax-rule (define-fh-function*-type type unwrapper type? wrapper)
+  (begin
+    (define type
+      (make-fht (quote type) unwrapper wrapper #f #f
                 (make-printer (quote type))))
-       (define (type? obj)
-         (and (fh-object? obj) (eq? (struct-vtable obj) type)))
-       (define make
-         (case-lambda
-           ((arg) (make-struct/no-tail type (make-fhval desc arg)))
-           (() (make-struct/no-tail type (make-fhval desc)))))))))
+    (define (type? obj)
+      (and (fh-object? obj) (eq? (struct-vtable obj) type)))
+    (define make wrapper)))
 
 ;; @deffn {Syntax} fh-cast type value
 ;; Cast to new type.  Always a pointer, unless I missed something.
@@ -605,6 +610,80 @@
 ;; can we now do a vector->pointer
 (define (fh-varg type expr)
   (cons type expr))
+
+
+;; @deffn {Syntax} define-fh-base-type type
+;; This generates a local-only type but exports the predicate and generator.
+;; So,  @emph{type}@code{?} @code{make-}@emph{type} and
+;; and  @emph{type}@code{*?} @code{make-}@emph{type}@code{*} are exported.
+;; @end deffn
+(define-syntax define-base-type
+  (lambda (x)
+    (syntax-case x ()
+      ((_ type)
+       (with-syntax ((ltype (gen-id #'type "~" #'type))
+                     (desc (gen-id #'type #'type "-desc"))
+                     (type? (gen-id #'type #'type "?"))
+                     (make (gen-id #'type "make-" #'type))
+                     (type* (gen-id #'type #'type "*"))
+                     (desc* (gen-id #'type #'type "*-desc"))
+                     (type*? (gen-id #'type #'type "*?"))
+                     (make* (gen-id #'type "make-" #'type "*")))
+         #`(begin
+             (define desc (fhval-base-type (quote type)))
+             (define ltype
+               (make-fht (quote type)
+                         (lambda (obj) (fhval-ref (fh-object-val obj)))
+                         (lambda (arg) (make arg))
+                         (lambda (obj) (make* (fhval-ref (fhval& obj))))
+                         #f
+                         (make-printer (quote type))))
+             (define (type? obj)
+               (and (fh-object? obj) (eq? (struct-vtable obj) ltype)))
+             (define make
+               (case-lambda
+                 ((arg) (make-struct/no-tail ltype (make-fhval desc arg)))
+                 (() (make-struct/no-tail ltype (make-fhval desc)))))
+             (define desc* (fhval-pointer-type desc))
+             (define type*
+               (make-fht (quote type*)
+                         (lambda (obj) (unwrap~pointer obj))
+                         (lambda (val) (make* val))
+                         #f
+                         (lambda (obj) (make (fhval-ref (fh-object-val obj))))
+                         (make-pointer-printer (quote type*))))
+             (define (type*? obj)
+               (and (fh-object? obj) (eq? (struct-vtable obj) type*)))
+             (define make*
+               (case-lambda
+                 ((arg)
+                  (cond
+                   ((ffi:pointer? arg)
+                    (make-struct/no-tail type* (make-fhval desc* arg)))
+                   ((number? arg) (make (ffi:make-pointer arg)))
+                   (else (fherr "make-object: bad arg: ~s" arg))))
+                 (() (make ffi:%null-pointer))))
+             (export type? make type*? make*)))))))
+
+(define-base-type short) (define-base-type unsigned-short)
+(define-base-type int) (define-base-type unsigned-int)
+(define-base-type long) (define-base-type unsigned-long)
+(define-base-type long-long) (define-base-type unsigned-long-long)
+(define-base-type float) (define-base-type double)
+
+(define-base-type int8_t) (define-base-type uint8_t)
+(define-base-type int16_t) (define-base-type uint16_t)
+(define-base-type int32_t) (define-base-type uint32_t)
+(define-base-type int64_t) (define-base-type uint64_t)
+
+(define-base-type intptr_t) (define-base-type uintptr_t)
+(define-base-type size_t) (define-base-type ssize_t)
+(define-base-type ptrdiff_t)
+(define-base-type char) (define-base-type unsigned-char)
+(define-base-type bool)
+#|
+|#
+
 
 ;; --- unwrap / wrap procedures
 
@@ -741,24 +820,6 @@
 (fh-ref<=>deref! void** make-void** void* make-void*)
 (export void**? make-void**)
 
-
-(define-syntax define-base-pointer-type
-  (lambda (x)
-    (syntax-case x ()
-      ((_ desc)
-       (with-syntax ((desc* (gen-id #'desc #'desc "*-desc"))
-                     (type* (gen-id #'desc #'desc "*"))
-                     (type*? (gen-id #'desc #'desc "*?"))
-                     (make* (gen-id #'desc "make-" #'desc "*")))
-         #'(begin
-             (define desc* (bs:pointer desc))
-             (define-fh-pointer-type type* desc* type*? make*)
-             (export type* desc* type*? make-type*)))))))
-
-(define-base-pointer-type short) (define-base-pointer-type unsigned-short)
-(define-base-pointer-type int) (define-base-pointer-type unsigned-int)
-(define-base-pointer-type long) (define-base-pointer-type unsigned-long)
-(define-base-pointer-type float) (define-base-pointer-type double)
 
 ;; --- other items --------------------
 
