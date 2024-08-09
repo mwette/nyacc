@@ -1,4 +1,4 @@
-;;; lang/cdata.scm -
+;;; system/foreign/cdata.scm -
 
 ;; Copyright (C) 2023-2024 Matthew Wette
 ;;
@@ -36,9 +36,14 @@
 ;; (cbase symb) and cstruct cunion carray cpointer cfunction
 ;; (list->vector (map (lambda (ix) (cdata-ref data ix)) (iota 10)))
 
+;; ffi:
+;; (cdata-cast cdata type) -> cdata
+;; (cdata-arg type value)
+;; (cpointer->procedure ret-arg args [va-args])
+
 ;;; Code:
 
-(define-module (nyacc lang cdata)
+(define-module (system foreign cdata)
   #:export (cbase
             cstruct cunion cpointer carray
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
@@ -63,7 +68,7 @@
   #:use-module (srfi srfi-9 gnu)
   #:use-module (rnrs bytevectors)
   #:use-module (system foreign)
-  #:use-module (nyacc lang arch-info))
+  #:use-module (system foreign arch-info))
 (export %cpointer-type)
 
 (use-modules (ice-9 pretty-print))
@@ -128,10 +133,13 @@
   (type carray-type)
   (length carray-length))
 
+;; @deftp {Record} <cenum> mtype symd vald
+;; enum
+;; @end deftp
 (define-record-type <cenum>
   (%make-cenum mtype symd vald)
   cenum?
-  (mtype cenum-mtype)                   ; attributes
+  (mtype cenum-mtype)                   ; underlying basic C type
   (symd cenum-sym-dict)                 ; name -> value
   (vald cenum-val-dict))                ; value-> name
 
@@ -149,15 +157,15 @@
   (let ((type (%cpointer-type info)))
     (if (promise? type) (force type) type)))
 
-;; @deftp {Record} <cfunction> return-type param-types variadic?
+;; @deftp {Record} <cfunction> unwrapper wrapper
+;; The @var{unwrapper} argument is a procedure to convert from pointer to
+;; lambda.  The @var{wrapper} takes lambda and generates a pointer.
 ;; @end deftp
 (define-record-type <cfunction>
-  (%make-cfunction ret-type arg-types arg-names va?)
+  (%make-cfunction unwrapper wrapper)
   cfunction?
-  (ret-type cfunction-ret-type)
-  (arg-types cfunction-arg-types)
-  (arg-names cfunction-arg-names)
-  (va? cfunction-va?))
+  (unwrapper cfunction-unwrapper)
+  (wrapper cfunction-wrapper))
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
@@ -367,15 +375,23 @@
          base-type-symbol-list)))
 (export make-cbase-map)
 
+(define cbase-symbols
+  '(s8 u8 s16 s32 s64 i128 u16 u32 u64 u128 f16 f32 f64 f128
+    s16le s32le s64le i128le u16le u32le u64le u128le
+    f16le f32le f64le f128le s16be s32be s64be i128be
+    u16be u32be u64be u128be f16be f32be f64be f128be))
+
 (define (cbase name)
   (let ((arch (*arch*))
         (name (if (symbol? name) name
                   (if (string? name) (strname->symname name)
                       (error "cbase: bad arg")))))
-    (unless name (error "cbase: bad arg"))
-    (unless (arch-ctype-map arch)
-      (set-arch-ctype-map! arch (make-cbase-map arch)))
-    (assq-ref (arch-ctype-map arch) name)))
+    (unless (arch-cbase-map arch)
+      (set-arch-cbase-map! arch (make-cbase-map arch)))
+    (or (assq-ref (arch-cbase-map arch) name) ; make it idempotent
+        (and (memq name cbase-symbols) name)
+        (error "not found"))))
+(display "cdata: check use of arch-cbase-map in here\n")
 
 ;; Update running struct size given field size and alignment.
 (define (incr-size fs fa ss)
@@ -565,7 +581,13 @@
     (%make-ctype (ctype-size type) (ctype-align (type)) 'function
                  (%make-cfunction ret-type arg-types arg-names variadic?))))
 
-;; @deffn {Procedure} make-cdata type [value] [#from-pointer pointer]
+;; @deffn {Procedure} make-cdata type [value] [options]
+;; @table @code
+;; @item #:name
+;; name to attach to data object (typically a typename)
+;; @item #:from-pointer
+;; generate from address of data
+;; @end table
 ;; @end deffn
 (define* (make-cdata type #:optional value #:key name from-pointer)
   (assert-ctype 'make-cdata type)
@@ -639,6 +661,8 @@
                   (sx (cbitfield-sext? bi)) (sm (expt 2 (1- wd)))
                   (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
              (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
+          ((enum) @@@)
+          ((function) @@@)
           ((array) #f)
           ((struct) #f)
           ((union) #f)
@@ -770,7 +794,8 @@
            ,(map
              (lambda (fld)
                (if (eq? 'bitfield (ctype-kind (cfield-type fld)))
-                   (list (cfield-name fld) (cnvt (cfield-type fld))
+                   (list (cfield-name fld)
+                         (cbitfield-mtype (ctype-info (cfield-type fld)))
                          (cbitfield-width (ctype-info (cfield-type fld)))
                          #:offset (cfield-offset fld))
                    (list (cfield-name fld) (cnvt (cfield-type fld))
@@ -787,7 +812,7 @@
              `(cpointer ,(cnvt (cpointer-type info)))))
         ((array)
          `(carray ,(cnvt (carray-type info)) (carray-length info)))
-        (else (error "pretty-print-ctype: needs work")))))
+        (else (error "pretty-print-ctype: needs work" (ctype-kind type))))))
   (pretty-print (cnvt type) port))
 
 
@@ -834,108 +859,6 @@
      ((null? libs) (error "not found"))
      ((false-if-exception (foreign-library-pointer (car libs) name)))
      (else (loop (cdr libs))))))
-
-;; --- libffi support ----------------------------------------------------------
-
-(use-modules (system foreign))
-
-(define ffi_type*
-  (cpointer (delay (cstruct `((size size_t)
-                              (alignment unsigned-short)
-                              (type unsigned-short)
-                              (elements ,(cpointer ffi_type*)))))))
-
-(define ffi_type
-  (cpointer-type (ctype-info ffi_type*)))
-(define ffi_type**
-  (cpointer ffi_type*))
-
-(define ffi_cif
-  (cstruct
-   `(;;(abi ,ffi_abi)
-     (abi int)
-     (nargs unsigned)
-     (arg_types ,(cpointer ffi_type*))
-     (rtype ,ffi_type*)
-     (bytes unsigned)
-     (flags unsigned))))
-
-(define libffi (load-foreign-library "libffi"))
-
-(define (get-ft-prim mtype ptype)
-  (make-cdata ffi_type* #:from-pointer (foreign-library-pointer libffi ptype)))
-(export get-ft-prim)
-
-(define mtype->ffi-prim
-  (let ((ftmap `((u8 . ,(get-ft-prim 'uint8_t "ffi_type_uint8"))
-                 (s8 . ,(get-ft-prim 'int8_t "ffi_type_sint8"))
-                 (u16le . ,(get-ft-prim 'uint16_t "ffi_type_uint16"))
-                 (s16le . ,(get-ft-prim 'sint16_t "ffi_type_sint16"))
-                 (u32le . ,(get-ft-prim 'uint32_t "ffi_type_uint32"))
-                 (s32le . ,(get-ft-prim 'sint32_t "ffi_type_sint32"))
-                 (u64le . ,(get-ft-prim 'uint64_t "ffi_type_uint64"))
-                 (s64le . ,(get-ft-prim 'sint64_t "ffi_type_sint64"))
-                 (f32le . ,(get-ft-prim 'float "ffi_type_float"))
-                 (f64le . ,(get-ft-prim 'double "ffi_type_double"))
-                 )))
-    (lambda (mtype) (assq-ref ftmap mtype))))
-
-(define ffi-type
-  (let ((ftmap '((void . 0) (int . 1)
-                 (f32le . 2) (f64le . 3) (f128le . 4)
-                 (u8 . 5) (s8 . 6) (u16le . 7) (s16le . 8)
-                 (u32le . 9) (s32le . 10) (u64le . 11) (s64le . 12)
-                 (struct . 13) (pointer . 14) (complex . 15))))
-    (lambda (mtype) (assq-ref ftmap mtype))))
-(export ffi-type)
-
-;; @deffn {Procedure} ctype->ffi_type ctype => cdata
-;; @*TODO: handle bitfields
-;; @end deffn
-(define (ctype->ffi_type ctype)
-  (assert-ctype 'ctype->ffi_type ctype)
-  (define (cnvt type)
-    (let ((info (ctype-info type))
-          (ffit (make-cdata ffi_type)))
-      (case (ctype-kind type)
-        ((base)
-         (cdata-set! ffit (ffi-type (ctype-info type)) 'type))
-        ((pointer)
-         (cdata-set! ffit (ffi-type 'pointer) 'type))
-        ((struct)
-         (let* ((flds (cstruct-fields info))
-                (nfld (length flds)) ; does not work for bitfields
-                (fld-pt (carray ffi_type* nfld))
-                (fld-pd (make-cdata fld-pt)))
-           (cdata-set! ffit (ffi-type 'struct) 'type)
-           (cdata-set! ffit (cdata-cast fld-pd ffi_type**) 'elements)
-           (for-each
-            (lambda (ix fld)
-              (let ((ftype (cfield-type fld)))
-                (if (eq? 'bitfield (ctype-kind ftype))
-                    (error "uh uh ahhh: bitfield"))
-                (cdata-set! fld-pd (cnvt (cfield-type fld)) ix)))
-            (iota nfld) flds)))
-        ((union array) ; just fill
-         (let* ((align (ctype-align type))
-                (asize (/ (ctype-size type) align))
-                (fld-pt (carray ffi_type* asize))
-                (fld-pd (make-cdata fld-pt))
-                (etype (mtype->ffi-prim (case align
-                                          ((1) 'u8) ((2) 'u16le) ((3) 'u32le)
-                                          ((4) 'u32le) ((8) 'u64le)))))
-           (cdata-set! ffit (ffi-type 'struct) 'type)
-           (for-each (lambda (ix) (cdata-set! fld-pd etype ix)) (iota asize))))
-        (else (error "ctype->ffi_type: missed something")))
-      (cdata& ffit)))
-  (case (ctype-kind ctype)
-    ((array) (let ((ffit (make-cdata ffi_type)))
-               (cdata-set! ffit (ffi-type 'pointer) 'type)))
-    (else (cnvt ctype))))
-
-(export ffi_cif ctype->ffi_type)
-(export ffi_type ffi_type* ffi_type** mtype->ffi-prim)
-
 
 ;; --- c99 support -------------------------------------------------------------
 

@@ -28,7 +28,7 @@
 (use-modules (nyacc lang c99 cpp))
 (use-modules (nyacc lang c99 util))
 (use-modules (nyacc lang c99 ffi-help))
-(use-modules (nyacc lang arch-info))
+(use-modules (system foreign arch-info))
 (use-modules (nyacc lang sx-util))
 (use-modules (nyacc lang util))
 (use-modules (nyacc lex))
@@ -166,7 +166,7 @@
     (pp tree)
     (pp udict)))
 
-;; with-arch from (nyacc lang arch-info)
+;; with-arch from (system foreign arch-info)
 (when #f
   (let* ((code
           (string-append
@@ -484,21 +484,13 @@
 
 (when #f
   (let* ((code #"""
-struct test1 {
-  int a;
-  short b;
-  double c;
-};
-
-long int test1(struct foo *foo, int a, short b, double c) {
-  foo->a = a;
-  foo->b = b;
-  foo->c = c;
-  return 0;
-} """)
+int foo1(int);
+int (foo2)(int);
+int (*foo3)(int);
+""")
          (tree (parse-string code))
-         (sdef (sx-ref tree 1))
-         (fdef (sx-ref tree 2))
+         ;;(sdef (sx-ref tree 1))
+         ;;(fdef (sx-ref tree 2))
          )
     (pretty-print tree)
     #f))
@@ -509,12 +501,22 @@ long int test1(struct foo *foo, int a, short b, double c) {
 (define (ff2 fmt . args)
   (string->symbol (apply simple-format #f fmt args)))
 
-(when #t
+(when #f
   (let* ()
     (pp (list (ff1 "(define x ~A)" "foo") 1 2 3))
     (pp `(define-public ,(ff2 "~A-desc" "foo")
            (fh:pointer (fh:pointer ,(ff2 "~A-desc" "x")))))
     #t))
+
+(when #t
+  (let* ((code "typedef struct { int x; double d; } foo_t;")
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (udecl (car (unitize-decl (assoc-ref udict "foo_t"))))
+         (fields (sx-tail (sx-ref* udecl 1 2 1)))
+         )
+    (pp fields)
+    #f))
 
 
 ;; --- last line ---

@@ -39,12 +39,12 @@
   #:use-module (nyacc util)
   #:use-module ((nyacc lang util) #:select (make-tl tl-append tl->list))
   #:use-module (nyacc lang sx-util)
-  #:use-module (nyacc lang arch-info)
   #:use-module (nyacc lang c99 cpp)
   #:use-module (nyacc lang c99 parser)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (rnrs arithmetic bitwise)
   #:use-module (system foreign)
+  #:use-module (system foreign arch-info)
   #:use-module (ice-9 match))
 
 (use-modules (ice-9 pretty-print))

@@ -6,8 +6,8 @@
 (use-modules (rnrs bytevectors))
 (use-modules (system foreign))
 (use-modules (system foreign-library))
-(use-modules (nyacc lang arch-info))
-(use-modules (nyacc lang cdata))
+(use-modules (system foreign arch-info))
+(use-modules (system foreign lang cdata))
 
 (use-modules (ice-9 pretty-print))
 (define (pp exp)
