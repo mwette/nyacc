@@ -21,9 +21,7 @@
 
 (define-module (system ffi-help-rt)
   #:export (*ffi-help-version*
-
-            ;; user level routines
-            fh-type? fherr
+            make-fht fh-type? fherr
             pointer-to value-at fh-cast fh-varg
 
             fh-object? fh-object-ref fh-object-set! fh-object-sel
@@ -32,11 +30,7 @@
             fhval-addr fhval-pointer
 
             NULL !0
-
-            ;; maybe used outside of modules?
-            ;;bs-addr
             ffi-void*
-            make-fht
 
             unwrap~number unwrap~pointer unwrap~array unwrap~function*
 
@@ -52,17 +46,15 @@
             ;;fh-find-symbol-addr
             fht-wrap fht-unwrap fh-wrap fh-unwrap
 
-            ;;unwrap~fixed unwrap~float
-            ;; fh-link-proc fh-link-extern
-
             ;; commonly used libc functions
             fopen fclose
 
             ;; deprecated ???
+            ;; unwrap~fixed unwrap~float
+            ;; fh-link-proc fh-link-extern
             fh-link-bstr ;; => fh-link-extern
             ref<->deref!
-            make-fctn-param-unwrapper
-            )
+            make-fctn-param-unwrapper)
   #:use-module (rnrs bytevectors)
   #:use-module ((system foreign) #:prefix ffi:)
   #:use-module (srfi srfi-9)
@@ -112,7 +104,8 @@
 ;; @item if symbol generate new bytevector from pointer value
 ;; @end enumerate
 ;; @end deffn
-(define (fh:pointer %descriptor)
+(define fh:pointer bs:pointer)
+(define (my-fh:pointer %descriptor)
   (define (pointer-ref bytevector offset content-size)
     (let ((address (bytevector-address-ref bytevector offset)))
       (if (zero? address)
@@ -361,21 +354,21 @@
 ;; Return the object value slot for the FH object.
 ;; @deffn
 (define (fh-object-val obj)
-  (unless (fh-object? obj) (fherr "fh-object-val: got ~s" obj))
+  ;;(unless (fh-object? obj) (fherr "fh-object-val: got ~s" obj))
   (unless (fh-object? obj) (fherr "fh-object-val: bad arg"))
   (struct-ref obj 0))
 
 (define-syntax-rule (fh-object-ref obj arg ...)
-  (begin
-    ;;(unless (fh-object? obj) (fherr "fh-object-ref: got ~s" obj))
-    (unless (fh-object? obj) (fherr "fh-object-ref: bad arg"))
-    (fhval-ref (struct-ref obj 0) arg ...)))
+  (cond
+   ((fh-object? obj) (fhval-ref (struct-ref obj 0) arg ...))
+   ((fhval? obj) (fhval-ref obj arg ...))
+   (else (fh-object? obj) (fherr "fh-object-ref: bad obj arg"))))
 
 (define-syntax-rule (fh-object-set! obj val arg ...)
-  (begin
-    ;;(unless (fh-object? obj) (fherr "fh-object-set!: got ~s" obj))
-    (unless (fh-object? obj) (fherr "fh-object-set!: bad arg"))
-    (fhval-set! (struct-ref obj 0) val arg ...)))
+  (cond
+   ((fh-object? obj) (fhval-set! (struct-ref obj 0) val arg ...))
+   ((fhval? obj) (fhval-set! obj val arg ...))
+   (else (fh-object? obj) (fherr "fh-object-ref: bad obj arg"))))
 
 (define unwrap-ix 0)
 (define wrap-ix 1)
@@ -460,7 +453,7 @@
    ((number? arg) arg)
    ((fh-object? arg) (fh-object-ref arg))
    ((fhval? arg) (fhval-ref arg))
-   (else (fherr "unwrap~number: bad arg: ~s" arg))))
+   (else (fherr "unwrap~~number: bad arg: ~s" arg))))
 
 (define (unwrap~pointer arg)
   (cond
@@ -468,18 +461,18 @@
    ((string? arg) (ffi:string->pointer arg))
    ((fh-object? arg) (fh-object-ref arg))
    ((fhval? arg) (fhval-ref arg))
-   (else (fherr "unwrap~pointer: bad arg: ~s" arg))))
+   (else (fherr "unwrap~~pointer: bad arg: ~s" arg))))
 
 (define (unwrap~array arg)
   (cond
    ((array? arg) (ffi:scm->pointer arg))
    ((fh-object? arg) (fh-object-ref (pointer-to arg)))
    ((fhval? arg) (fhval-ref (fhval& arg)))
-   (else (fherr "unwrap~array: bad arg: ~s" arg))))
+   (else (fherr "unwrap~~array: bad arg: ~s" arg))))
 
 (define (unwrap~function* obj)
   (cond
-   (else (fherr "unwrap~function*: bad arg: ~s" obj))))
+   (else (fherr "unwrap~~function*: bad arg: ~s" obj))))
 
 
 ;; === objects ============
@@ -734,13 +727,38 @@
 (fh-ref<=>deref! char** make-char** char* make-char*)
 (export char**? make-char**)
 
-;; --- types ---------------------------
 
+;; --- random stuff --------------------
+
+(define ffi-void* '*)
 
 (define-public (char*->string obj)
   (ffi:pointer->string (fh-object-ref obj)))
 
-;; --- other items --------------------
+#|
+;; @deffn {Procedure} make-argv str-list => bv
+;; For C functions that take an argument of the form @code{const char *names[]},
+;; this routine will convert a scheme list of strings into an appropriate
+;; bytevector which can be passed via @code{unwrap~pointer}.
+;; @end deffn
+(define-public (make-argv str-list)
+  "- Procedure: make-argv str-list => bv
+     For C functions that take an argument of the form 'const char
+     *names[]', this routine will convert a scheme list of strings into
+     an appropriate bytevector which can be passed via 'unwrap~pointer'."
+  (let* ((n (length string-list))
+         (addresses (map (compose pointer-address
+                                  string->pointer)
+                         string-list))
+             (bv (make-bytevector (* n (sizeof '*))))
+             (bv-set! (case (sizeof '*)
+                            ((4) bytevector-u32-native-set!)
+                            ((8) bytevector-u64-native-set!))))
+    (for-each (lambda (address index)
+                (bv-set! bv (* (sizeof '*) index) address))
+              addresses (iota n))
+    bv))
+|#
 
 ;; @deffn {Procedure} make-symtab-function symbol-value-table prefix
 ;; generate a symbol table function
@@ -779,50 +797,6 @@
         (lambda args #f)))
      (else (loop (cdr dll))))))
 
-;; @deffn {Procedure} fh-link-proc return name args dy-lib-list
-;; Generate Guile procedure from C library.
-;; @end deffn
-(define* (fh-link-proc return name args dl-lib-list)
-  ;; Given a list of links (output of @code{(dynamic-link @it{library})}
-  ;; try to get the dynamic-func for the provided function.  Usually
-  ;; the first dynamic link is @code{(dynamic-link)} and that should work.
-  ;; But on some systems we need to find the actual library :(, apparently.
-  (let ((dfunc (fh-find-symbol-addr name dl-lib-list)))
-    (and dfunc (ffi:pointer->procedure return dfunc args))))
-
-;; @deffn {Procedure} fh-link-extern name desc db-lib-list => bs
-;; Generate a bytestructure from the bytes in the library at the var addr.
-;; @end deffn
-(define* (fh-link-extern name desc dl-lib-list)
-  (let* ((addr (fh-find-symbol-addr name dl-lib-list))
-         (size (bytestructure-descriptor-size desc)))
-    (make-bytestructure (ffi:pointer->bytevector addr size) 0 desc)))
-
-
-#|
-;; @deffn {Procedure} make-argv str-list => bv
-;; For C functions that take an argument of the form @code{const char *names[]},
-;; this routine will convert a scheme list of strings into an appropriate
-;; bytevector which can be passed via @code{unwrap~pointer}.
-;; @end deffn
-(define-public (make-argv str-list)
-  "- Procedure: make-argv str-list => bv
-     For C functions that take an argument of the form 'const char
-     *names[]', this routine will convert a scheme list of strings into
-     an appropriate bytevector which can be passed via 'unwrap~pointer'."
-  (let* ((n (length string-list))
-         (addresses (map (compose pointer-address
-                                  string->pointer)
-                         string-list))
-             (bv (make-bytevector (* n (sizeof '*))))
-             (bv-set! (case (sizeof '*)
-                            ((4) bytevector-u32-native-set!)
-                            ((8) bytevector-u64-native-set!))))
-    (for-each (lambda (address index)
-                (bv-set! bv (* (sizeof '*) index) address))
-              addresses (iota n))
-    bv))
-|#
 
 ;; === common c functions called
 
@@ -844,5 +818,26 @@
                  ffi:int (dynamic-func "fclose" (dynamic-link)) (list '*))))
     (lambda (file)
       (~fclose file))))
+
+#|
+;; @deffn {Procedure} fh-link-proc return name args dy-lib-list
+;; Generate Guile procedure from C library.
+;; @end deffn
+(define* (fh-link-proc return name args dl-lib-list)
+  ;; Given a list of links (output of @code{(dynamic-link @it{library})}
+  ;; try to get the dynamic-func for the provided function.  Usually
+  ;; the first dynamic link is @code{(dynamic-link)} and that should work.
+  ;; But on some systems we need to find the actual library :(, apparently.
+  (let ((dfunc (fh-find-symbol-addr name dl-lib-list)))
+    (and dfunc (ffi:pointer->procedure return dfunc args))))
+
+;; @deffn {Procedure} fh-link-extern name desc db-lib-list => bs
+;; Generate a bytestructure from the bytes in the library at the var addr.
+;; @end deffn
+(define* (fh-link-extern name desc dl-lib-list)
+  (let* ((addr (fh-find-symbol-addr name dl-lib-list))
+         (size (bytestructure-descriptor-size desc)))
+    (make-bytestructure (ffi:pointer->bytevector addr size) 0 desc)))
+|#
 
 ;; --- last line ---

@@ -203,6 +203,14 @@
 (define (strings->symbol . string-list)
   (string->symbol (apply string-append string-list)))
 
+(define (noblanks str)
+  (string-map (lambda (c) (if (char=? #\space c) #\- c)) str))
+
+;; "unsigned int" => unsigned-int
+(define (strname->symname strname)
+  (string->symbol (string-map (lambda (c) (if (char=? #\space c) #\- c))
+                              strname)))
+
 ;; '(abc def) => "abc-def"
 (define (m-path->name path)
   (string-join (map symbol->string path) "-"))
@@ -434,10 +442,22 @@
 		  (loop mtail sz (max al mxal) (cdr flds))
 		  (loop btail mxsz (max al mxal) (cdr flds)))))))))
 
+(define cfix-dict
+  '(("signed char" . "char") ("signed short" . "short") ("short int" . "short")
+    ("signed short int" . "short") ("unsigned short int" . "unsigned short")
+    ("signed" . "int") ("signed int" . "int") ("unsigned" . "unsigned int")
+    ("long int" . "long") ("signed long" . "long") ("signed long int" . "long")
+    ("unsigned long int" . "unsigned long") ("long long int" . "long long")
+    ("signed long long" . "long long") ("signed long long int" . "long long")
+    ("unsigned long long int" . "unsigned long long")))
+
+(define (cfix name)
+  (or (assoc-ref cfix-dict name) name))
+
 ;; === bytestructure support ==================================================
 
 (define bs-typemap
-  '(("void" . 'void) ("float" . float) ("double" . double)
+  '(("void" . void) ("float" . float) ("double" . double)
     ("short" . short) ("short int" . short) ("signed short" . short)
     ("signed short int" . short) ("int" . int) ("signed" . int)
     ("signed int" . int) ("long" . long) ("long int" . long)
@@ -471,16 +491,15 @@
 ;; just the type, so parent has to build the name-value pairs for
 ;; struct members
 ;;(define (mtail->bs-desc mdecl-tail)
-(define-public (mtail->bs-desc mdecl-tail)
-  (let ((defined (*defined*)) ;; (udict (*udict*)))
-        (mtail mdecl-tail))
-    (match mdecl-tail
+(define-public (mtail->bs-desc mtail)
+  (let ((defined (*defined*)))
+    (match mtail
       ;; typename use renamers, ... ???
       (`((pointer-to) (typename ,name))
        (let ((name (rename name)))
 	 (if (member (w/* name) defined)
 	     (strings->symbol name "*-desc")
-             `(fh:pointer ,(mtail->bs-desc (cdr mdecl-tail))))))
+             `(fh:pointer ,(mtail->bs-desc (cdr mtail))))))
 
       (`((pointer-to) (void))
        `(fh:pointer 'void))
@@ -527,7 +546,7 @@
       (`((extern) . ,rest) (mtail->bs-desc rest))
 
       (__
-       (sx-match (car mdecl-tail)
+       (sx-match (car mtail)
          ((typename ,name)
           (let ((name (rename name)))
 	    (cond
@@ -542,11 +561,16 @@
          ((void) ''void)
          ((fixed-type "char") 'int)
          ((fixed-type "unsigned char") 'unsigned-int)
-         ((fixed-type ,fx-name) (assoc-ref bs-typemap fx-name))
-         ((float-type ,fl-name) (assoc-ref bs-typemap fl-name))
-         ((enum-def (ident ,ident) ,rest) 'int)
-         ((enum-def ,elts) 'int)
-         ((enum-ref ,name) 'int)
+         ;;((fixed-type ,fx-name) (assoc-ref bs-typemap fx-name))
+         ;;((float-type ,fl-name) (assoc-ref bs-typemap fl-name))
+         ((fixed-type ,name) `(fhval-base-type ',(strname->symname (cfix name))))
+         ((float-type ,name) `(fhval-base-type ',(strname->symname (cfix name))))
+         ;;((enum-def (ident ,ident) ,rest) 'int)
+         ;;((enum-def ,elts) 'int)
+         ;;((enum-ref ,name) 'int)
+         ((enum-def (ident ,ident) ,rest) '(fhval-base-type 'int))
+         ((enum-def ,elts) '(fhval-base-type 'int))
+         ((enum-ref ,name) '(fhval-base-type 'int))
 
          ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
           (mtail->bs-desc `((struct-def (@ . ,attr) ,field-list))))
@@ -564,7 +588,7 @@
           (string->symbol (string-append "union-" union-name "-desc")))
 
          (,otherwise
-          (fherr "mtail->bs-desc missed:\n~A" (ppstr mdecl-tail))))))))
+          (fherr "mtail->bs-desc missed:\n~A" (ppstr mtail))))))))
 (define-public (bs:mtail->bs-desc mdecl-tail)
   (let ((defined (*defined*)) ;; (udict (*udict*)))
         (mtail mdecl-tail))
@@ -735,6 +759,10 @@
            ((null? libs) (fherr "no library for ~s" name))
            ((false-if-exception (foreign-library-pointer (car libs) name)))
            (else (loop (cdr libs)))))))
+    (ppscm `(define-public
+              ,(strings->symbol (symbol->string (last path))
+                                "-foreign-pointer-search")
+              foreign-pointer-search))
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
 
 
@@ -972,8 +1000,8 @@
 (define (mtail->fh-wrapper mtail)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
     (match mtail
-      (`((fixed-type ,name)) #f)
-      (`((float-type ,name)) #f)
+      (`((fixed-type ,name)) (strings->symbol "make-" (noblanks (cfix name))))
+      (`((float-type ,name)) (strings->symbol "make-" (noblanks (cfix name))))
       (`((void)) #f)
       (`((typename ,name))
        (cond
@@ -983,11 +1011,11 @@
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
        (cond
-        ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-"))
+        ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name))
 	(else 'wrap-enum)))
       (`((enum-ref (ident ,name)))
        (cond
-        ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-"))
+        ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name))
 	(else 'wrap-enum)))
       (`((pointer-to) (typename ,tname))
        (cond
@@ -1308,7 +1336,7 @@
              ((enum-def ,enum-def-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
               (cnvt-enum-def name #f enum-def-list)
-              (values (cons (w/enum label) wrapped) defined))
+              (values (cons label wrapped) defined))
 
              ((enum-def (ident ,enum-name) ,enum-def-list)
               (ppscm `(define-public ,desc ,(mtail->target mtail)))
@@ -1437,27 +1465,21 @@
      ((memq 'extern sspec)
       (let* ((udecl (expand-typerefs udecl (*udict*) (*defined*)))
              (mdecl (udecl->mdecl udecl))
-             (mtail `((pointer-to) . ,(md-tail mdecl)))
              (label (md-label mdecl))
              (name (string->symbol label))
-             (desc* (mtail->target mtail))
+             (mtail (cdr (md-tail mdecl))) ; remove (extern)
+             (mtail* `((pointer-to) . ,mtail))
+             (desc* (mtail->target mtail*))
              (name* (strings->symbol label "*"))
-             (name? (strings->symbol label "*?"))
-             (make* (strings->symbol "make-" label "*"))
-             )
-        (sfscm ";; EXTERN\n")
-        (ppscm `(define-fh-pointer-type ,name* ,desc* ,name? ,make*))
-        ;; for test/debug
-        (ppscm
-         `(define-public ,(strings->symbol label "-ptr-obj")
-	    (delay (,make* (foreign-pointer-search ,label)))))
+             (pred* (strings->symbol label "*?"))
+             (make* (strings->symbol "make-" label "*")))
+        (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
         (ppscm
          `(define-public ,name
-	    ;;(let* ((ptr-obj (delay (,make* (foreign-pointer-search ,label)))))
-	    (let* ((ptr-obj ,(strings->symbol label "-ptr-obj")))
+	    (let* ((ptr-obj (delay (,make* (foreign-pointer-search ,label)))))
 	      (case-lambda
 	        (() (fh-object-ref (value-at (force ptr-obj))))
-	        ((val) (fh-object-set! (force ptr-obj) '* val))))))
+	        ((arg) (fh-object-set! (value-at (force ptr-obj)) arg))))))
         )
       (values wrapped defined))
 

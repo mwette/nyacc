@@ -34,7 +34,7 @@
 (define (compile-scm file)
   (compile-file file
                 #:from 'scheme #:to 'bytecode
-                #:optimization-level 0 #:opts '()))
+                #:optimization-level 1 #:opts '()))
 
 (define *ffi-help-version* "1.09.4")
 
