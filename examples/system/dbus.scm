@@ -1,6 +1,6 @@
 ;;; system/dbus.scm - dbus module, on top of (ffi dbus)
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -70,16 +70,17 @@
   #:use-module ((srfi srfi-1) #:select (fold))
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
-  #:use-module (srfi srfi-43)
-
-  ;; dbus00
-  ;;#:use-module ((ice-9 iconv) #:select (string->bytevector))
-  ;;#:use-module (rnrs bytevectors)
-)
+  #:use-module (srfi srfi-43))
 
 (use-modules (ice-9 format))
 (define (ff fmt . args) (apply format #t fmt args))
 (define (sf fmt . args) (apply simple-format #t fmt args))
+
+(define (ensure-pointer maybe-ptr)
+  (if (ffi:pointer? maybe-ptr) maybe-ptr (ffi:make-pointer maybe-ptr)))
+
+(define (ensure-address maybe-ptr)
+  (if (ffi:pointer? maybe-ptr) (ffi:pointer-address maybe-ptr) maybe-ptr))
 
 ;; ====================================
 
@@ -106,8 +107,8 @@
 ;; @end deffn
 (define (dbus-error error)
   (and (!0 (dbus_error_is_set (pointer-to error)))
-       (ffi:pointer->string (ffi:make-pointer (fh-object-ref error 'message)))))
-  
+       (ffi:pointer->string (ensure-pointer (fh-object-ref error 'message)))))
+
 (define (get-bval &iter key)
   (let* ((bval (make-DBusBasicValue)))
     (dbus_message_iter_get_basic &iter (pointer-to bval))
@@ -126,8 +127,8 @@
     ((120) (get-bval &iter 'i64))                   ; x - int64
     ((116) (get-bval &iter 'u32))                   ; t - uint64
     ((100) (get-bval &iter 'dbl))                   ; d - double
-    ((115 111 103)                                  ; s, o, g 
-     (ffi:pointer->string (ffi:make-pointer (get-bval &iter 'str))))
+    ((115 111 103)                                  ; s, o, g
+     (ffi:pointer->string (ensure-pointer (get-bval &iter 'str))))
     ((104) (get-bval &iter 'fd))        ; h - unix fd
     ((97)                               ; a - array
      (let* ((sub-iter (make-DBusMessageIter))
@@ -220,7 +221,7 @@
       (format port " 0x~x" evt-addr)
       (format port " @~s"(bus-ev-time evt))
       (display ">" port))))
-                          
+
 (define-record-type bus-sched
   (make-sched todo free lock)
   sched?
@@ -490,7 +491,7 @@
          (event (dbus-data-ev ddent)))
 
     (dbus_watch_set_data watch (ffi:scm->pointer ddent) dbus-data-free)
-    
+
     ;; Set up the indended set of epoll events.
     (if (!0 (dbus_watch_get_enabled watch))
         (fh-object-set! event 'events
@@ -500,12 +501,12 @@
     ;; If this is the use of this fd, then initialize the ev and add to epoll.
     (if (dbus-data-watchless? ddent)
         (epoll_ctl muxfd (EPOLL '_CTL_ADD) addfd (pointer-to event)))
-    
+
     ;; Set watches based on flags.
     (let* ((wv (dbus-data-wv ddent)) (wx (find-wv-slot wv)))
       (if (negative? wx) (error "max exceeded")
           (vector-set! wv wx watch)))
-    
+
     TRUE))
 
 ;; @deffn {Procedure} remove-watch watch data
@@ -593,14 +594,14 @@
     (while (eq? 'DBUS_DISPATCH_DATA_REMAINS
                 (dbus_connection_get_dispatch_status connection))
       (dbus_connection_dispatch connection)))
-  
+
   (define (handle-watch watch flags)
     (let ((flags (logand flags (dbus_watch_get_flags watch))))
       ;; This loop-sleeps while out of memory.
       (while (equal? FALSE (dbus_watch_handle watch flags))
         (sf "SLEEP 1\n")
         (sleep 1))))
-  
+
   (let* ((muxfd (epoll_create 1))
          (muxpt (ffi:make-pointer muxfd))
          (wpipe (pipe)) (wiport (car wpipe)) (woport (cdr wpipe))

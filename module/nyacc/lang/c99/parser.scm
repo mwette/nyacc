@@ -1,6 +1,6 @@
 ;;; nyacc/lang/c99/parser.scm - C parser execution
 
-;; Copyright (C) 2015-2023 Matthew Wette
+;; Copyright (C) 2015-2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -64,12 +64,11 @@
 ;; @end example
 ;; @end deffn
 (define (split-cppdef defstr)
-  (let* ((ex (string-index defstr #\=)) ; = checked before
-         (lhs (substring defstr 0 ex))
-         (rhs (substring defstr (1+ ex)))
+  (let* ((ex (string-index defstr #\=))
+         (lhs (if ex (substring defstr 0 ex) defstr))
+         (rhs (if ex (substring defstr (1+ ex)) ""))
          (lx (string-index lhs #\())
-         (rx (string-index lhs #\)))
-         )
+         (rx (string-index lhs #\))))
     (cons
      (if lx
          (cons (substring lhs 0 lx)

@@ -33,7 +33,7 @@
 (define-module (nyacc lang c99 munge-base)
   #:export (expand-typerefs
             udecl->mdecl m-unwrap-declr
-            reify-declr reify-decl
+            reify-declr reify-udecl
             def-namer
             split-udecl
             declr-ident declr-name pointer-declr?
@@ -589,24 +589,25 @@
 
   (probe-declr declr))
 
-;; @deffn {Procedure} reify-decl decl [#:namer proc]
+;; @deffn {Procedure} reify-udecl udecl [#:namer proc]
 ;; This procedure turns an abstract declaration into a concrete one,
 ;; using the optional namer, a procedure that generates a string name.
 ;; The default namer is "_", but this may not work in contexts where
 ;; multiple distinct names are required.
 ;; @end deffn
-(define* (reify-decl udecl #:optional (namer def-namer))
+(define* (reify-udecl udecl #:optional (namer def-namer))
   (call-with-values
       (lambda () (split-udecl udecl))
     (lambda (tag attr specl declr)
       (let ((declr
-             (sx-match declr
-               ((init-declr-list . ,declrs)
-                (sx-list
-                 (sx-tag declr) (sx-attr declr)
-                 (map (lambda (d) (reify-declr d namer)) (sx-tail declr))))
-               (,_ (reify-declr declr namer)))))
-      (sx-list tag attr specl declr)))))
+             (if declr
+                 (reify-declr declr namer)
+                 (case tag
+                   ((udecl) `(init-declr ,(namer)))
+                   ((comp-udecl) `(comp-declr (ident ,(namer))))
+                   ((param-decl) `(param-declr (ident ,(namer))))
+                   (else `(comp-declr (ident ,(namer))))))))
+            (sx-list tag attr specl declr)))))
 
 
 ;; === munged specification ============

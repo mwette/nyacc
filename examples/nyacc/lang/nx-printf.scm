@@ -30,7 +30,7 @@
 ;;; Code:
 
 (define-module (nyacc lang nx-printf)
-  #:export (nx-printf nx-sprintf parse-format-string apply-fmt))
+  #:export (nx-printf nx-sprintf parse-format-string apply-fmt printf sprintf))
 
 ;; @deffn {Scheme} parse-fmt ch port => (conv width prec . flags) | #\% | #f
 ;; Parse a formatting stream of characters from a formatting string.  On
@@ -345,5 +345,36 @@
           (nx-sprintf \"%7.1f\" 123.45) => \"  123.4\""
   (call-with-output-string
     (lambda (port) (apply nx-printf port fmt vals))))
+
+;; @deffn {Syntax} printf fmt . vals
+;; This syntax behaves like nx-printf but if fmt is a string literal it
+;; is compiled to a list of formatting objects.
+;; @end deffn
+(define-syntax printf
+  (lambda (x)
+    (syntax-case x ()
+      ((_ port fmt arg ...)
+       #`(nx-printf
+          port
+          #,(let ((val (syntax->datum #'fmt)))
+              (if (string? val)
+                  #`(quote #,(datum->syntax x (parse-format-string val)))
+                  #'fmt))
+          arg ...)))))
+
+;; @deffn {Syntax} printf fmt . vals
+;; This syntax behaves like nx-sprintf but if fmt is a string literal it
+;; is compiled to a list of formatting objects.
+;; @end deffn
+(define-syntax sprintf
+  (lambda (x)
+    (syntax-case x ()
+      ((_ fmt arg ...)
+       #`(nx-sprintf
+          #,(let ((val (syntax->datum #'fmt)))
+              (if (string? val)
+                  #`(quote #,(datum->syntax x (parse-format-string val)))
+                  #'fmt))
+          arg ...)))))
 
 ;; --- last line ---

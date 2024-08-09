@@ -1,6 +1,6 @@
 ;; yaml.scm - yaml
 
-;; Copyright (C) 2020 Matthew R. Wette
+;; Copyright (C) 2020,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -36,6 +36,12 @@
 (define-syntax-rule (fh-ref obj ...)
   (fh-object-ref obj ...))
 
+(define (ensure-pointer maybe-ptr)
+  (if (ffi:pointer? maybe-ptr) maybe-ptr (ffi:make-pointer maybe-ptr)))
+
+(define (ensure-address maybe-ptr)
+  (if (ffi:pointer? maybe-ptr) (ffi:pointer-address maybe-ptr) maybe-ptr))
+
 ;; works w/ bytestructures
 ;; tag-property created via (make-object-property) used to track tags
 (define* (cnvt-tree root stack #:optional tag-property)
@@ -55,15 +61,15 @@
     (let* ((style (wrap-yaml_scalar_style_t
                    (bs-ref node 'data 'scalar 'style)))
            (raw (bytestructure-ref node 'data 'scalar 'value))
-           (val (ffi:pointer->string (ffi:make-pointer raw))))
+           (val (ffi:pointer->string (ensure-pointer raw))))
       val))
 
   (define (cnvt-sequence-node node)
     (let* ((style (wrap-yaml_sequence_style_t
                    (bs-ref node 'data 'sequence 'style)))
-           (start (bs-ref node 'data 'sequence 'items 'start))
-           (end (bs-ref node 'data 'sequence 'items 'end))
-           (top (bs-ref node 'data 'sequence 'items 'top))
+           (start (ensure-address (bs-ref node 'data 'sequence 'items 'start)))
+           (end (ensure-address (bs-ref node 'data 'sequence 'items 'end)))
+           (top (ensure-address (bs-ref node 'data 'sequence 'items 'top)))
            (item-size (bytestructure-descriptor-size yaml_node_item_t-desc)))
       (let loop ((sequence '()) (addr (- top item-size)))
         (if (>= addr start)
@@ -76,9 +82,9 @@
   (define (cnvt-mapping-node node)
     (let* ((style (wrap-yaml_mapping_style_t
                    (bs-ref node 'data 'mapping 'style)))
-           (start (bs-ref node 'data 'mapping 'pairs 'start))
-           (end (bs-ref node 'data 'mapping 'pairs 'end))
-           (top (bs-ref node 'data 'mapping 'pairs 'top))
+           (start (ensure-address (bs-ref node 'data 'mapping 'pairs 'start)))
+           (end (ensure-address (bs-ref node 'data 'mapping 'pairs 'end)))
+           (top (ensure-address (bs-ref node 'data 'mapping 'pairs 'top)))
            (pair-size (bytestructure-descriptor-size yaml_node_pair_t-desc)))
       (let loop ((mapping '()) (addr (- top pair-size)))
         (if (>= addr start)
@@ -99,7 +105,7 @@
          ((YAML_SEQUENCE_NODE) (cnvt-sequence-node node))
          ((YAML_MAPPING_NODE) (cnvt-mapping-node node))
          (else (error "missed type" type)))
-       (ffi:pointer->string (ffi:make-pointer (bs-ref node 'tag))))))
+       (ffi:pointer->string (bs-ref node 'tag)))))
 
   (cnvt-node root))
 
@@ -113,7 +119,7 @@
     (yaml_parser_initialize &parser)
     (yaml_parser_set_input_file &parser file)
     (yaml_parser_load &parser &document)
-    
+
     (let* ((start (fh-object-ref document 'nodes 'start))
            (stack (bytestructure yaml_node_t*-desc start))
            (root (fh-object-val (yaml_document_get_root_node &document)))

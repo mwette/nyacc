@@ -68,27 +68,31 @@
             udict->typedef-names
             inc-keeper?
 
+            clean-and-unitize-fields
+            clean-and-dictize-fields
+            cleanup-udecl
+
             ;; debugging
             stripdown-1
             tdef-splice-specl
             tdef-splice-declr)
   #:re-export (expand-typerefs
-               reify-declr reify-decl
+               md-label md-attr md-tail
+               reify-declr reify-udecl
                udecl->mdecl split-udecl
                declr-ident declr-name
                clean-field-list clean-fields)
+  #:use-module (ice-9 match)
+  #:use-module ((srfi srfi-1) #:select (fold fold-right remove))
+  #:use-module (srfi srfi-11)           ; let-values
+  #:use-module ((sxml fold) #:select (foldts foldts*))
+  #:use-module ((sxml xpath) #:hide (filter))
   #:use-module (nyacc lang c99 cxeval)
   #:use-module (nyacc lang c99 munge-base)
   #:use-module (nyacc lang c99 pprint)
   #:use-module (nyacc lang c99 util)
   #:use-module (nyacc lang util)
   #:use-module (nyacc lang sx-util)
-  #:use-module ((sxml fold) #:select (foldts foldts*))
-  #:use-module (sxml match)
-  #:use-module (srfi srfi-11)           ; let-values
-  #:use-module (srfi srfi-2)
-  #:use-module ((srfi srfi-1) #:select (fold fold-right remove))
-  #:use-module (system base pmatch)
   ;; debugging:
   #:use-module (system vm trace)
   #:use-module (ice-9 pretty-print))
@@ -828,30 +832,59 @@
     `(udecl (decl-spec-list (type-spec ,types)) (init-declr ,declr)))
 
   (define (doit declr mdecl-tail)
-    (pmatch mdecl-tail
-      (((fixed-type ,name)) (make-udecl (car mdecl-tail) declr))
-      (((float-type ,name)) (make-udecl (car mdecl-tail) declr))
-      (((typename ,name)) (make-udecl (car mdecl-tail) declr))
-      (((void)) (make-udecl (car mdecl-tail) declr))
-
-      (((pointer-to) . ,rest)
-       (doit `(ptr-declr (pointer) ,declr) rest))
-      (((array-of ,size) . ,rest)
-       (doit `(ary-declr ,declr ,size) rest))
-
-      (((struct-ref (ident ,name))) (make-udecl (car mdecl-tail) declr))
-      (((union-ref (ident ,name))) (make-udecl (car mdecl-tail) declr))
-     (((struct-def (ident ,name))) (make-udecl (car mdecl-tail) declr))
-      (((union-def (ident ,name))) (make-udecl (car mdecl-tail) declr))
-
-      (,_
-       (sferr "munge/mdecl->udecl missed:\n")
-       (pperr mdecl-tail)
-       (throw 'nyacc-error "munge/mdecl->udecl failed"))))
+    (match mdecl-tail
+      (`((fixed-type ,name)) (make-udecl (car mdecl-tail) declr))
+      (`((float-type ,name)) (make-udecl (car mdecl-tail) declr))
+      (`((typename ,name)) (make-udecl (car mdecl-tail) declr))
+      (`((void)) (make-udecl (car mdecl-tail) declr))
+      (`((pointer-to) . ,rest) (doit `(ptr-declr (pointer) ,declr) rest))
+      (`((array-of ,size) . ,rest) (doit `(ary-declr ,declr ,size) rest))
+      (`((struct-ref (ident ,name))) (make-udecl (car mdecl-tail) declr))
+      (`((union-ref (ident ,name))) (make-udecl (car mdecl-tail) declr))
+      (`((struct-def (ident ,name))) (make-udecl (car mdecl-tail) declr))
+      (`((union-def (ident ,name))) (make-udecl (car mdecl-tail) declr))
+      (__ (sferr "munge/mdecl->udecl missed:\n")
+          (pperr mdecl-tail)
+          (throw 'nyacc-error "munge/mdecl->udecl failed"))))
 
   (let ((name (car mdecl))
         (rest (cdr mdecl)))
     (doit `(ident ,name) rest)))
 
+(define (clean-and-unitize-fields fields)
+  (fold-right unitize-decl '() (clean-fields fields)))
+
+(define (clean-and-dictize-fields fields)
+  (fold-right dictize-decl '() (clean-fields fields)))
+
+(define (specl-props specl)
+  (let loop ((ss '()) (tq '()) (ts #f) (tl (sx-tail specl)))
+    (if (null? tl) (values ss tq ts)
+        (case (sx-tag (car tl))
+          ((stor-spec)
+           (loop (cons (sx-tag (sx-ref (car tl) 1)) ss) tq ts (cdr tl)))
+          ((type-qual)
+           (loop ss (cons (sx-tag (sx-ref (car tl) 1)) tq) ts (cdr tl)))
+          ((type-spec)
+           (loop ss tq (sx-ref (car tl) 1) (cdr tl)))))))
+
+(define ftn-declr?
+  (let ((ff (node-closure
+             (node-join (select-kids (node-typeof? 'ftn-declr))
+                        (select-kids (node-typeof? 'ident))))))
+    (lambda (declr) (pair? (ff (list '*TOP* declr))))))
+
+(define (cleanup-udecl udecl)
+  (let*-values (((tag attr specl declr) (split-udecl udecl))
+                ((sspec tqual tspec) (specl-props specl)))
+    (cond
+     ((memq 'typedef sspec)
+      (sx-list tag attr `(decl-spec-list (stor-spec (typedef)) ,tspec) declr))
+     ((ftn-declr? declr)
+      (sx-list tag attr `(decl-spec-list ,tspec) declr))
+     ((memq 'extern sspec)
+      (sx-list tag attr `(decl-spec-list (stor-spec (extern)) ,tspec) declr))
+     (else
+      (sx-list tag attr `(decl-spec-list ,tspec) declr)))))
 
 ;; --- last line ---
