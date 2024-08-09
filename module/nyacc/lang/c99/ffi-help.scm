@@ -589,100 +589,6 @@
 
          (,otherwise
           (fherr "mtail->bs-desc missed:\n~A" (ppstr mtail))))))))
-(define-public (bs:mtail->bs-desc mdecl-tail)
-  (let ((defined (*defined*)) ;; (udict (*udict*)))
-        (mtail mdecl-tail))
-    (match mdecl-tail
-      ;; typename use renamers, ... ???
-      (`((pointer-to) (typename ,name))
-       (let ((name (rename name)))
-	 (if (member (w/* name) defined)
-	     (strings->symbol name "*-desc")
-             `(fh:pointer ,(mtail->bs-desc (cdr mdecl-tail))))))
-
-      (`((pointer-to) (void))
-       `(fh:pointer 'void))
-
-      (`((pointer-to) (fixed-type "char"))
-       `(fh:pointer bs:int8))
-      (`((pointer-to) (fixed-type ,fx-name))
-       `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
-      (`((pointer-to) (float-type ,fx-name))
-       `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
-
-      (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
-       (call-with-values
-           (lambda () (let ((return (mdecl->udecl (cons "_" tail))))
-                        (function*-wraps return params)))
-         (lambda (wrapper unwrapper)
-           `(fh:function* ,wrapper ,unwrapper))))
-      (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
-       `(fh:pointer 'void))
-
-      (`((pointer-to) (struct-ref . ,rest))
-       (let () ;; TODO: check for struct-def ???
-	 `(fh:pointer 'void)))
-
-      ;; should use this more
-      (`((pointer-to) . ,rest)
-       `(fh:pointer ,(mtail->bs-desc rest)))
-
-      ;; In C99 array parameters are interpreted as pointers.
-      (`((array-of ,n) (fixed-type ,name))
-       (let ((ns (const-expr->number n)))
-	 (cond
-	  ((string=? name "char") `(bs:vector ,ns bs:int8))
-	  ((string=? name "unsigned char") `(bs:vector ,ns bs:uint8))
-	  (else `(bs:vector ,ns ,(mtail->bs-desc `((fixed-type ,name))))))))
-      (`((array-of ,n) . ,rest)
-       `(bs:vector ,(const-expr->number n) ,(mtail->bs-desc rest)))
-      (`((array-of) . ,rest)
-       `(bs:vector 0 ,(mtail->bs-desc rest)))
-
-      (`((bit-field ,size) . ,rest)
-       `(bit-field ,(const-expr->number size) ,(mtail->bs-desc rest)))
-
-      (`((extern) . ,rest) (mtail->bs-desc rest))
-
-      (__
-       (sx-match (car mdecl-tail)
-         ((typename ,name)
-          (let ((name (rename name)))
-	    (cond
-             ((assoc-ref bs-typemap name))
-             ((member name defined) (strings->symbol name "-desc"))
-             (else (let* ((udecl `(udecl (decl-spec-list (type-spec . ,mtail))
-                                         (init-declr (ident "_"))))
-                          (xdecl (expand-typerefs udecl (*udict*) defined))
-                          (mdecl (udecl->mdecl xdecl)))
-                     (mtail->bs-desc (md-tail mdecl)))))))
-
-         ((void) ''void)
-         ((fixed-type "char") 'bs:int)
-         ((fixed-type "unsigned char") 'bs:unsigned-int)
-         ((fixed-type ,fx-name) (assoc-ref bs-typemap fx-name))
-         ((float-type ,fl-name) (assoc-ref bs-typemap fl-name))
-         ((enum-def (ident ,ident) ,rest) 'bs:int)
-         ((enum-def ,elts) 'bs:int)
-         ((enum-ref ,name) 'bs:int)
-
-         ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
-          (mtail->bs-desc `((struct-def (@ . ,attr) ,field-list))))
-         ((struct-def (@ . ,attr) (field-list . ,fields))
-          (let ((fields (cnvt-fields fields mtail->bs-desc)))
-            `(bs:struct ,(packed? attr) (list ,@fields))))
-         ((struct-ref (ident ,struct-name))
-          (string->symbol (string-append "struct-" struct-name "-desc")))
-
-         ((union-def (ident ,union-name) ,field-list)
-          (mtail->bs-desc `((union-def ,field-list))))
-         ((union-def (field-list . ,fields))
-          (list 'bs:union `(list ,@(cnvt-fields fields mtail->bs-desc))))
-         ((union-ref (ident ,union-name))
-          (string->symbol (string-append "union-" union-name "-desc")))
-
-         (,otherwise
-          (fherr "mtail->bs-desc missed:\n~A" (ppstr mdecl-tail))))))))
 
 
 ;; === hookup ==================================================================
@@ -759,10 +665,6 @@
            ((null? libs) (fherr "no library for ~s" name))
            ((false-if-exception (foreign-library-pointer (car libs) name)))
            (else (loop (cdr libs)))))))
-    (ppscm `(define-public
-              ,(strings->symbol (symbol->string (last path))
-                                "-foreign-pointer-search")
-              foreign-pointer-search))
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
 
 
@@ -1393,6 +1295,16 @@
              (name (md-label mdecl))
              (return (mdecl->udecl (cons "_" (cdr (md-tail mdecl)))))
              (params (cdadar (md-tail mdecl))))
+        (when (string=? name "gtk_window_new")
+          (sferr "~s:\n" name)
+          (sferr "  wrapped?\n" (member '(pointer . "GtkWidget") (*wrapped*)))
+          (pperr return)
+	  (pperr (udecl->ffi-decl return))
+          (call-with-values (lambda () (process-params return params))
+            (lambda (decl-return decl-params exec-return exec-params param-names)
+              (pperr exec-return)
+              ))
+          )
         (cnvt-fctn name return params)
         (values wrapped defined)))
 
@@ -1476,11 +1388,11 @@
         (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
         (ppscm
          `(define-public ,name
-	    (let* ((ptr-obj (delay (,make* (foreign-pointer-search ,label)))))
+	    (let* ((obj
+                    (delay (value-at (,make* (foreign-pointer-search ,label))))))
 	      (case-lambda
-	        (() (fh-object-ref (value-at (force ptr-obj))))
-	        ((arg) (fh-object-set! (value-at (force ptr-obj)) arg))))))
-        )
+	        (() (fh-object-ref (force obj)))
+	        ((arg) (fh-object-set! (force obj) arg)))))))
       (values wrapped defined))
 
      ((memq 'const sspec)

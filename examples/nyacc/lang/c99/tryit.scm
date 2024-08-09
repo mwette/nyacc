@@ -112,30 +112,6 @@
     (pp node)
     (sf "(source-properties node) => ~S\n" (source-properties node))))
 
-(when #f                               ; bug #60474
-  (let* ((code "const int x = 1;\n")
-         (tree (parse-string code #:mode 'code))
-         (udict (c99-trans-unit->udict tree))
-         (udecl (assoc-ref udict "x"))
-         (specl (sx-ref udecl 1))
-         (declr (sx-ref udecl 2)))
-    (pp udecl)
-    (call-with-values (lambda () (cleanup-udecl specl declr))
-      (lambda (specl declr) (pp `(udecl ,specl ,declr))))))
-
-;; bug #60474
-(when #f
-  (let* ((code "const int x = 1;\n")
-         (tree (parse-string code #:mode 'code))
-         (udict (c99-trans-unit->udict tree))
-         (udecl (assoc-ref udict "x"))
-         (specl (sx-ref udecl 1))
-         (declr (sx-ref udecl 2)))
-    (pp udecl)
-    (call-with-values (lambda () (cleanup-udecl specl declr))
-      (lambda (specl declr)
-        (pp `(udecl ,specl ,declr))))))
-
 (when #f
   (let* ((code "typedef int foo_t; foo_t foo[] = { 1, 2, 3, 4 };" )
          (tree (parse-string code #:mode 'decl))
@@ -379,5 +355,26 @@
                 "#warning \"oops\"\n"))
          (tree (parse-string code)))
     #t))
+
+(when #f
+  (let* ((code "int foo(int x, float, double *);")
+         (tree (parse-string code))
+         (params (sx-tail (sx-ref* tree 1 2 1 1 2)))
+         )
+    (for-each
+     (lambda (p) (pp (reify-udecl p)))
+      params)))
+
+(when #f
+  (let* ((code "typedef enum foo { FOO = 1 } foo_t;\nfoo_t x;\n")
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (udecl (sx-ref* tree 2))
+         (xdecl (expand-typerefs udecl udict '((enum . "foo"))))
+         )
+    ;;(pp udict)
+    ;;(pp udecl)
+    (pp xdecl)
+    ))
 
 ;; --- last line ---
