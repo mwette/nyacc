@@ -381,30 +381,6 @@
          ((char=? #\*) #f)
          )))))
 
-#|
-(use-modules (nyacc lang c99 cxeval))
-(define (ss fmt . args) (apply simple-format #f fmt args))
-(define (x-gen-offset t-exp)
-  (define (mkoff l) (ss "OFFSET(0,~A)" (string-join l ".")))
-  (let loop ((os '()) (cn '()) (tx t-exp))
-    (match tx
-      (`(ident ,n) (map mkoff (cons (cons n cn) os)))
-      (`(p-expr ,ex) (loop os cn ex))
-      (`(d-sel (ident ,n) ,ex) (loop os (cons n cn) ex))
-      (`(i-sel (ident ,n) ,ex) (loop (cons (cons n cn) os) '() ex)))))
-
-(define (gen-offset expr)
-  (let loop ((os '()) (cn '()) (tx expr))
-    (match tx
-      (`(ident ,n) (cons tx os)))
-      (`(d-sel (ident ,n) ,ex) (loop (cons n cn) ex))
-      ;;(`(de-ref ,expr) (cons
-      ;;
-      (`(p-expr ,ex) (loop os cn ex))
-      (`(i-sel ,id ,ex) (loop os ch `(d-sel ,id (de-ref ,ex))))
-      ))
-|#
-
 (when #f
   (let* ((code
           (string-append
@@ -484,16 +460,6 @@ int (*foo3)(int);
            (fh:pointer (fh:pointer ,(ff2 "~A-desc" "x")))))
     #t))
 
-(when #t
-  (let* ((code "typedef struct { int x; double d; } foo_t;")
-         (tree (parse-string code))
-         (udict (c99-trans-unit->udict tree))
-         (udecl (car (unitize-decl (assoc-ref udict "foo_t"))))
-         (fields (sx-tail (sx-ref* udecl 1 2 1)))
-         )
-    (pp fields)
-    #f))
-
 (when #f
   (let* ((code "typedef enum foo { FOO = 1 } foo_t;\nfoo_t x;\n")
          (tree (parse-string code))
@@ -505,5 +471,31 @@ int (*foo3)(int);
     ;;(pp udecl)
     (pp xdecl)
     ))
+
+
+(use-modules (system foreign cdata))
+(define (ct-eval/native ct-decl)
+  (eval ct-decl (current-module)))
+(define (ct-eval ct-decl arch)
+  (eval `(with-arch ,arch ,ct-decl) (current-module)))
+
+(when #t
+  (let* ((code "typedef struct { int x; double d; } foo_t;")
+         (tree (parse-string code))
+         (udict (c99-trans-unit->udict tree))
+         (udecl (car (unitize-decl (assoc-ref udict "foo_t"))))
+         (mdecl (udecl->mdecl udecl))
+         (mtail (md-tail mdecl))
+         (fields (sx-tail (sx-ref* udecl 1 2 1)))
+         (ct-decl (mtail->ctype mtail))
+         (ct/x86_64 (ct-eval ct-decl "x86_64"))
+         (ct/sparc (ct-eval ct-decl "sparc"))
+         )
+    ;;(pp fields)
+    (pp mtail)
+    (pp ct-decl)
+    (pp ct/x86_64)
+    (pp ct/sparc)
+    #f))
 
 ;; --- last line ---

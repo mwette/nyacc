@@ -140,6 +140,7 @@
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
 (define *defined* (make-parameter '()))    ; defined by define-fh-...
 (define *wrapped* (make-parameter '()))    ; wrapped or defined
+(define *ttag* (make-parameter "-desc"))
 
 (define *errmsgs* (make-parameter '()))	; list of warnings
 
@@ -590,6 +591,91 @@
          (,otherwise
           (fherr "mtail->bs-desc missed:\n~A" (ppstr mtail))))))))
 
+
+;; === cdata support ===========================================================
+
+(use-modules (system foreign arch-info))
+(use-modules (system foreign cdata))
+
+(define (mtail->ctype mtail)
+  (let ((defined (*defined*)) (ttag (*ttag*)))
+    (match mtail
+      (`((pointer-to) (typename ,name))
+       (let ((name (rename name)))
+	 (if (member (w/* name) defined)
+	     (strings->symbol name ttag)
+             `(cpointer ,(mtail->ctype (cdr mtail))))))
+      (`((pointer-to) (void))
+       `(cbase 'void*))
+      (`((pointer-to) (fixed-type "char"))
+       `(cpointer (cbase 'char)))
+      (`((pointer-to) (fixed-type ,name))
+       `(cpointer (cbase ,(string->symbol (cfix name)))))
+      (`((pointer-to) (float-type ,name))
+       `(cpointer (cbase ,name)))
+      (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
+       (call-with-values
+           (lambda () (let ((return (mdecl->udecl (cons "_" tail))))
+                        (function*-wraps return params)))
+         (lambda (wrapper unwrapper)
+           `(cfunction ,wrapper ,unwrapper))))
+      (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
+       `(cpointer (cbase 'void*)))
+      (`((pointer-to) (struct-ref (ident ,name)))
+       (if (member (w/struct name) defined)
+           `(cpointer ,(strings->symbol "struct-" name ttag))
+	   `(cpointer 'void)))
+      (`((pointer-to) . ,rest)
+       `(cpointer ,(mtail->ctype rest)))
+      #;(`((array-of ,n) (fixed-type ,name))
+       (let ((ns (const-expr->number n)))
+	 (cond
+	  ((string=? name "char") `(carray ,ns (cbase int8_t)))
+	  ((string=? name "unsigned char") `(carray ,ns (cbase uint8_t)))
+	  (else `(carray ,ns ,(mtail->ctype `((fixed-type ,name))))))))
+      (`((array-of ,n) . ,rest)
+       `(carray ,(const-expr->number n) ,(mtail->ctype rest)))
+      (`((array-of) . ,rest)
+       `(carray 0 ,(mtail->ctype rest)))
+      (`((bit-field ,size) . ,rest)
+       `(cbitfield ,(const-expr->number size) ,(mtail->bs-desc rest)))
+      (`((extern) . ,rest) (mtail->ctype rest))
+      (__
+       (sx-match (car mtail)
+         ((typename ,name)
+          (let ((name (rename name)))
+	    (cond
+             ((member name base-type-name-list)
+              `(cbase ',(strname->symname name)))
+             ((member name defined) (strings->symbol name ttag))
+             (else (let* ((udecl `(udecl (decl-spec-list (type-spec . ,mtail))
+                                         (init-declr (ident "_"))))
+                          (xdecl (expand-typerefs udecl (*udict*) defined))
+                          (mdecl (udecl->mdecl xdecl)))
+                     (mtail->ctype (md-tail mdecl)))))))
+         ((void) (error "not done: void->ctype") ''void)
+         ((fixed-type ,name) `(cbase ',(strname->symname name)))
+         ((float-type ,name) `(cbase ',(strname->symname name)))
+         ((enum-def (ident ,ident) ,rest) `(cenum 'TBD))
+         ((enum-def ,elts) (cenum 'TBD))
+         ((enum-ref ,name) (strings->symbol "enum-" name ttag))
+         ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
+          (mtail->ctype `((struct-def (@ . ,attr) ,field-list))))
+         ((struct-def (@ . ,attr) (field-list . ,fields))
+          (let ((fields (cnvt-fields fields mtail->ctype)))
+            (if (packed? attr)
+                `(cstruct (list ,@fields) #:packed? #t)
+                `(cstruct (list ,@fields)))))
+         ((struct-ref (ident ,struct-name))
+          (string->symbol (string-append "struct-" struct-name ttag)))
+         ((union-def (ident ,name) ,field-list)
+          (mtail->ctype `((union-def ,field-list))))
+         ((union-def (field-list . ,fields))
+          `(cunion `(list ,@(cnvt-fields fields mtail->ctype))))
+         ((union-ref (ident ,name))
+          (strings->symbol "union-" name ttag))
+         (,otherwise (fherr "mtail->ctype missed:\n~A" (ppstr mtail))))))))
+(export mtail->ctype)
 
 ;; === hookup ==================================================================
 

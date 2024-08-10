@@ -17,6 +17,7 @@
 
 ;;; Notes:
 
+
 ;; new notation:
 
 ;; reference set select
@@ -398,7 +399,7 @@
     (or (assq-ref (arch-cbase-map arch) name) ; make it idempotent
         (and (memq name cbase-symbols) name)
         (error "not found"))))
-(display "cdata: check use of arch-cbase-map in here\n")
+(display "From cdata.scm: Check use of arch-cbase-map in here.\n")
 
 ;; Update running struct size given field size and alignment.
 (define (incr-size fs fa ss)
