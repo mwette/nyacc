@@ -417,15 +417,13 @@
          (values (replace-type-spec specl tspec) declr)))
 
       ((enum-ref (ident ,name))
-       ;;(if (member (w/enum name) keep)
        (if (keeper? '(enum) name keep)
            (values specl declr)
            (let ((tspec '(type-spec (fixed-type "int"))))
              (values (replace-type-spec specl tspec) declr))))
 
+      #|
       ((enum-def (ident ,name) ,rest)
-       ;; replacing with int could be an error : should gen warning
-       ;;(if (member (w/enum name) keep)
        (if (keeper? '(enum) name keep)
            (values specl declr)
            (let ((tspec '(type-spec (fixed-type "int"))))
@@ -434,6 +432,12 @@
       ((enum-def ,rest)
        (let ((tspec '(type-spec (fixed-type "int"))))
          (values (replace-type-spec specl tspec) declr)))
+      |#
+      ((enum-def (ident ,name) ,rest)
+       (values specl declr))
+
+      ((enum-def ,rest)
+       (values specl declr))
 
       (,_ (values specl declr)))))
 
