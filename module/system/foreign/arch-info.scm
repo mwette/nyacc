@@ -26,6 +26,7 @@
   #:export (lookup-arch
             *arch* with-arch native-arch
             arch-cbase-map set-arch-cbase-map!
+            mtype-size mtype-alignment mtype-endianness
             sizeof-basetype alignof-basetype
             mtypeof-basetype sizeof-mtype alignof-mtype
             base-type-name-list base-type-symbol-list
@@ -71,6 +72,16 @@
     (s16be . 2) (s32be . 4) (s64be . 8) (i128be . 16)
     (u16be . 2) (u32be . 4) (u64be . 8) (u128be . 16)
     (f16be . 2) (f32be . 4) (f64be . 8) (f128be . 16)))
+
+(define endianness-mtype-map
+  (let ((le 'little) (be 'big))
+    `((s8 . any) (u8 . any)
+      (s16le . ,le) (s32le . ,le) (s64le . ,le) (i128le . .le)
+      (u16le . ,le) (u32le . ,le) (u64le . ,le) (u128le . ,le)
+      (f16le . ,le) (f32le . ,le) (f64le . ,le) (f128le . ,le)
+      (s16be . ,be) (s32be . ,be) (s64be . ,be) (i128be . ,be)
+      (u16be . ,be) (u32be . ,be) (u64be . ,be) (u128be . ,be)
+      (f16be . ,be) (f32be . ,be) (f64be . ,be) (f128be . ,be))))
 
 (define alignof-mtype-map/natural sizeof-mtype-map)
 
@@ -131,12 +142,20 @@
                     (else (error "mtype-of-basetype: bad argument")))))
     (assoc-ref (arch-mtype-map (*arch*)) name)))
 
-(define (sizeof-mtype mtype)
+(define (mtype-size mtype)
   (assq-ref sizeof-mtype-map mtype))
 
-(define (alignof-mtype mtype)
-  ;;(sferr "alignof-mtype: arch=~s\n" (*arch*))
+(define (mtype-alignment mtype)
   (assq-ref (arch-align-map (*arch*)) mtype))
+
+(define (mtype-endianness mtype)
+  (assq-ref endianness-mtype-map mtype))
+
+(define sizeof-mtype mtype-size)
+
+(define alignof-mtype mtype-alignment)
+
+
 
 ;; @deffn {Procedure} sizeof-basetype name
 ;; @var{name} can be string (e.g., @code{"short int"}) or
