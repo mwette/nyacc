@@ -33,7 +33,7 @@
 ;; use existing bytevector
 ;; (%make-cdata bv ix ct tn)
 
-;; (cbase symb) and cstruct cunion carray cpointer cfunction
+;; (cbase symb) and cstruct cunion carray cpointer cfunction*
 ;; (list->vector (map (lambda (ix) (cdata-ref data ix)) (iota 10)))
 
 ;; ffi:
@@ -45,7 +45,7 @@
 
 (define-module (system foreign cdata)
   #:export (cbase
-            cstruct cunion cpointer carray
+            cstruct cunion cpointer carray cenum cfunction*
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
             cdata-ref cdata-set! cdata-sel ctype-sel cdata& cdata* cdata-cast
@@ -56,10 +56,10 @@
             cstruct-fields cstruct-dict
             cunion-fields cunion-dict
             cfield-name cfield-type cfield-offset
-            cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-sext?
+            cbitfield-mtype cbitfield-shift cbitfield-width cbitfield-signed?
             cpointer-type cpointer-mtype
             carray-type carray-length
-            cfunction-ret-type cfunction-arg-types
+            cfunction*-ret-type cfunction*-arg-types cfunction*-mtype
             pretty-print-ctype)
   #:use-module (ice-9 match)
   #:use-module (ice-9 format)
@@ -87,15 +87,16 @@
   (kind ctype-kind)                ; type kind (base aggr array bits)
   (info ctype-info))               ; kind-specific info
 
-;; @deftp {Record} <cbitfield> type shift width sext?
+;; @deftp {Record} <cbitfield> type shift width signed?
+;; signed? is true if type is signed, means we need to sign-extend
 ;; @end deftp
 (define-record-type <cbitfield>
-  (%make-cbitfield mtype shift width sext?)
+  (%make-cbitfield mtype shift width signed?)
   cbitfield?
   (mtype cbitfield-mtype)
   (shift cbitfield-shift)
   (width cbitfield-width)
-  (sext? cbitfield-sext?))
+  (signed? cbitfield-signed?))
 
 ;; @deftp {Record} <cfield> name type offset
 ;; @end deftp
@@ -134,14 +135,18 @@
   (length carray-length))
 
 ;; @deftp {Record} <cenum> mtype symd vald
-;; enum
+;; @table @var
+;; @item symd
+;; value to symbol dict
+;; @item vald
+;; symbol to value
 ;; @end deftp
 (define-record-type <cenum>
   (%make-cenum mtype symd vald)
   cenum?
   (mtype cenum-mtype)                   ; underlying basic C type
-  (symd cenum-sym-dict)                 ; name -> value
-  (vald cenum-val-dict))                ; value-> name
+  (symd cenum-symd)                     ; value -> name
+  (vald cenum-vald))                    ; name -> value
 
 ;; @deftp {Record} <cpointer> type mtype
 ;; Once we get to this level, we shouldn't need @code{arch} anymore
@@ -157,15 +162,17 @@
   (let ((type (%cpointer-type info)))
     (if (promise? type) (force type) type)))
 
-;; @deftp {Record} <cfunction> unwrapper wrapper
+;; @deftp {Record} <cfunction*> mtype unwrapper wrapper
 ;; The @var{unwrapper} argument is a procedure to convert from pointer to
 ;; lambda.  The @var{wrapper} takes lambda and generates a pointer.
+;; @var{mtype} is the underlying pointer type.
 ;; @end deftp
 (define-record-type <cfunction>
-  (%make-cfunction unwrapper wrapper)
-  cfunction?
-  (unwrapper cfunction-unwrapper)
-  (wrapper cfunction-wrapper))
+  (%make-cfunction* mtype unwrapper wrapper)
+  cfunction*?
+  (mtype cfunction*-mtype)
+  (unwrapper cfunction*-unwrapper)
+  (wrapper cfunction*-wrapper))
 
 (set-record-type-printer! <ctype>
   (lambda (type port)
@@ -544,9 +551,10 @@
 ;; If @var{short} is @code{#t} the size wil be smallest that can hold it.
 ;; @end deffn
 (define* (cenum enum-list #:key short)
-  "- Procedure: cenum enum-list
+  "- Procedure: cenum enum-list [#:short=#f]
      ENUM-LIST is a list of name or name-value pairs
-          (cenum '((a 1) b (c 4))"
+          (cenum '((a 1) b (c 4))
+     If SHORT is ‘#t’ the size wil be smallest that can hold it."
   (define (short-mtype mn mx)
     (if (< 0 mn)
         (cond
@@ -565,21 +573,24 @@
                (mn (car nvl)) (vnl (map xcons nvl))
                (mtype (if short (short-mtype mn mx) (mtypeof-basetype 'int))))
           (%make-ctype (sizeof-mtype mtype) (alignof-mtype mtype)
-                       'enum (%make-cenum mtype nvl vnl)))
+                       'enum (%make-cenum mtype vnl nvl)))
         (match (car enl)
           (`(,n ,v) (loop (acons n v nvl) (1+ v) (cdr enl)))
           ((? symbol? n) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
           (((? symbol? n)) (loop (acons n nxt nvl) (1+ nxt) (cdr enl)))
           (_ (error "cenum: bad enum def'n"))))))
 
-;; @deffn {Procedure} cfunction ret-type arg-types [#:variadic? VA]
-;; n can be zero in which case ...@*
-;; names ???
+;; @deffn {Procedure} cfunction* unwrapper wrapper [#:variadic?=#f]
+;; Generate a C function pointer type.  You must pass the @var{wrapper}
+;; and @var{unwrapper} procedures that convert a pointer to a procedure,
+;; and procedure to pointer, respectively.  Pass @code{#t} for
+;; @var{#:variadic} if the function uses variadic arguments.  For this
+;; case, (to be documented).
 ;; @end deffn
-(define* (cfunction ret-type arg-types #:key variadic? arg-names)
-  (let ((type (cbase 'void*)))
+(define* (cfunction* unwrapper wrapper #:key variadic? arg-names)
+  (let* ((type (cbase 'void*)) (mtype (ctype-info type)))
     (%make-ctype (ctype-size type) (ctype-align (type)) 'function
-                 (%make-cfunction ret-type arg-types arg-names variadic?))))
+                 (%make-cfunction* mtype unwrapper wrapper))))
 
 ;; @deffn {Procedure} make-cdata type [value] [options]
 ;; @table @code
@@ -658,11 +669,19 @@
           ((bitfield)
            (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
                   (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-                  (sx (cbitfield-sext? bi)) (sm (expt 2 (1- wd)))
+                  (sx (cbitfield-signed? bi)) (sm (expt 2 (1- wd)))
                   (v (bit-extract (mtype-bv-ref mt bv ix) sh (+ sh wd))))
              (if (and sx (logbit? (1- wd) v)) (- (logand v (1- sm)) sm) v)))
-          ((enum) @@@)
-          ((function) @@@)
+          ((enum)
+           (let* ((info (ctype-info ct))
+                  (mtype (cenum-mtype info))
+                  (vnl (cenum-symd info)))
+             (assq-ref vnl (mtype-bv-ref mtype bv ix))))
+          ((function*)
+           (let* ((info (ctype-info ct))
+                  (mtype (cfunction*-mtype info))
+                  (ptr (make-pointer (mtype-bv-ref mtype bv ix))))
+             ((cfunction*-unwrapper info) ptr)))
           ((array) #f)
           ((struct) #f)
           ((union) #f)
@@ -699,16 +718,29 @@
               ((bitfield)
                (let* ((bi (ctype-info ct)) (mt (cbitfield-mtype bi))
                       (sh (cbitfield-shift bi)) (wd (cbitfield-width bi))
-                      (sx (cbitfield-sext? bi)) (am (1- (expt 2 wd)))
+                      (sx (cbitfield-signed? bi)) (am (1- (expt 2 wd)))
                       (dmi (lognot (ash am sh))) (mv (mtype-bv-ref mt bv ix))
                       (mx (bit-extract mv 0 (1- (* 8 (ctype-size ct))))))
                  (mtype-bv-set! mt bv ix (logior (logand mx dmi)
                                                  (ash value sh)))))
-              ((struct) #f)
-              ((union) #f)
-              ((array) #f)
-              (else
-               (error "cdata-set!: bad arg 2" value))))))))
+              ((enum)
+               (let* ((info (ctype-info ct)) (mtype (cenum-mtype info)))
+                 (cond
+                  ((integer? value)
+                   (mtype-bv-set! mtype bv ix value))
+                  ((symbol? value)
+                   (mtype-bv-set! mtype bv ix
+                                  (assq-ref (cenum-vald info) value)))
+                  (else
+                   (error "cdata-set! bad value arg: ~s" value)))))
+              ((function*)
+               (let* ((mtype (cfunction*-mtype (ctype-info ct)))
+                      (ptr ((cfunction*-wrapper (ctype-info ct)) value)))
+                 (mtype-bv-set! mtype bv ix ptr)))
+              ((struct) (error "cdata-set!: can't set! struct value"))
+              ((union) (error "cdata-set!: can't set! union value"))
+              ((array) (error "cdata-set!: can't set! array value"))
+              (else (error "cdata-set!: bad arg 2" value))))))))
 
 ;; @deffn {Procedure} cdata& data => cdata
 ;; Generate a reference (i.e., cpointer) to the contents in the underlying
