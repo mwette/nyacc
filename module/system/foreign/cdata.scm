@@ -409,7 +409,7 @@
 (define (maxi-size fs fa ss)
   (max fs ss))
 
-;; Round number of bits to next alignment size.
+;; Round number of bits to next alignment size.z
 (define (roundup-bits a s)
   (* a (quotient (+ s (1- a)) a)))
 
@@ -540,6 +540,7 @@
   "- Procedure: carray type n
      Create an array of TYPE with LENGTH.  If LENGTH is zero, the array
      length is unbounded (so be careful)."
+  (assert-ctype 'carray type)
   (%make-ctype (* n (ctype-size type)) (ctype-align type)
                'array (%make-carray type n)))
 
