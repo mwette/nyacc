@@ -409,11 +409,17 @@
    ((eqv? (sx-tag decl) 'param-decl) (dictize-param-decl decl seed))
    (else seed)))
 
-(define* (unitize-decl decl #:optional (seed '()))
-  (fold-right
-   (lambda (ud-entry seed)
-     (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
-   seed (dictize-decl decl)))
+;; @deffn {Procedure} unitize-decl decl [seed]
+;; usually used to remove the declr-list
+;; @end deffn
+(define* (unitize-decl decl #:optional seed)
+  (if seed
+      (fold-right
+       (lambda (ud-entry seed)
+         ;; skip added defs
+         (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
+       seed (dictize-decl decl))
+      (car (dictize-decl decl))))
 
 ;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:inc-filter f]
 ;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]
