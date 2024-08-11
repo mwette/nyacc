@@ -419,7 +419,7 @@
          ;; skip added defs
          (if (pair? (car ud-entry)) seed (cons (cdr ud-entry) seed)))
        seed (dictize-decl decl))
-      (car (dictize-decl decl))))
+      (cdar (dictize-decl decl))))
 
 ;; @deffn {Procedure} c99-trans-unit->udict tree [seed] [#:inc-filter f]
 ;; @deffnx {Procedure} c99-trans-unit->udict/deep tree [seed]
@@ -845,10 +845,11 @@
       (`((void)) (make-udecl (car mdecl-tail) declr))
       (`((pointer-to) . ,rest) (doit `(ptr-declr (pointer) ,declr) rest))
       (`((array-of ,size) . ,rest) (doit `(ary-declr ,declr ,size) rest))
-      (`((struct-ref (ident ,name))) (make-udecl (car mdecl-tail) declr))
-      (`((union-ref (ident ,name))) (make-udecl (car mdecl-tail) declr))
-      (`((struct-def (ident ,name))) (make-udecl (car mdecl-tail) declr))
-      (`((union-def (ident ,name))) (make-udecl (car mdecl-tail) declr))
+      (`((struct-ref ,id)) (make-udecl (car mdecl-tail) declr))
+      (`((union-ref ,id)) (make-udecl (car mdecl-tail) declr))
+      (`((struct-def . ,rest)) (make-udecl (car mdecl-tail) declr))
+      (`((union-def . ,rest)) (make-udecl (car mdecl-tail) declr))
+      (`((enum-def . ,rest))  (make-udecl (car mdecl-tail) declr))
       (__ (sferr "munge/mdecl->udecl missed:\n")
           (pperr mdecl-tail)
           (throw 'nyacc-error "munge/mdecl->udecl failed"))))
