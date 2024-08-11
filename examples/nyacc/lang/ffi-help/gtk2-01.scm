@@ -16,7 +16,7 @@
 ;; You should have received a copy of the GNU Lesser General Public License
 ;; along with this library; if not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (ffi ffi-help-rt))
+(use-modules (system ffi-help-rt))
 (use-modules (bytestructures guile))
 
 (use-modules (ffi glib))                ; ffi:31 scm:31889
@@ -36,12 +36,15 @@
    (lambda (widget data)
      (display "Hello world!\n"))))
 (define hello
+  (make-GtkCallback
    (lambda (widget data)
-     (display "Hello world!\n")))
+     (display "Hello world!\n"))))
 
-(define (delete-event widget event data)
-  (display "delete event occurred\n")
-  1)
+(define delete-event
+  (make-GtkCallback
+   (lambda (delete-event widget event data)
+     (display "delete event occurred\n")
+     1)))
 
 (define (main)
   (define window #f)
@@ -51,12 +54,10 @@
   (gtk_init (pointer-to argc) NULL)
 
   (set! window (gtk_window_new 'GTK_WINDOW_TOPLEVEL))
-  (sferr "error: window is not window\n")
-  (sferr "window: ~s\n" window) (quit)
-  ;;(g_signal_connect window "delete-event" delete-event NULL)
-  #|
+  (g_signal_connect window "delete-event" delete-event NULL)
   (g_signal_connect window "destroy" ~gtk_main_quit NULL)
   (gtk_container_set_border_width window 10)
+  #|
 
   (set! button (gtk_button_new_with_label "Hello World"))
   (g_signal_connect button "clicked" (fh-cast GCallback hello) NULL)

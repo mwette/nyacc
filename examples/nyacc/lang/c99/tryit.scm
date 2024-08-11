@@ -487,21 +487,35 @@ int (*foo3)(int);
            "  int tt;\n"
            "  double val;\n"
            "} elt_t;"
-           "typedef struct {\n"
+           "typedef enum {\n"
+           "  A = 0,\n"
+           "  B,\n"
+           "  C = 3,\n"
+           "} elt_type_t;\n"
+           "typedef struct xyz {\n"
            "  int x; double d;\n"
            "  elt_t data[3];\n"
+           ;;"  elt_type_t vv;\n"
            "} foo_t;"
            ))
          (tree (parse-string code))
          (udict (c99-trans-unit->udict tree))
-         (udecl (car (unitize-decl (assoc-ref udict "foo_t"))))
+         ;;(udecl (assoc-ref udict "elt_type_t"))
+         (udecl (assoc-ref udict "foo_t"))
          (xdecl (expand-typerefs udecl udict))
          (mdecl (udecl->mdecl xdecl))
          (mtail (md-tail mdecl))
-         (ct-decl (mtail->ctype mtail)))
+         (ct-decl (mtail->ctype mtail))
+         )
+    ;;(pp udict)
+    ;;(pp udecl)
+    ;;(pp xdecl)
+    ;;(pp mdecl)
+    ;;(pp mtail)
+    ;;(pp (mdecl->udecl mdecl))
     (pp ct-decl)
     ;;(pp (eval ct-decl (current-module)))
-    (marshall-ctype ct-decl "x86_64" "sparc" #:per-line-prefix "  ")
+    ;;(marshall-ctype-X ct-decl "x86_64" "sparc" #:per-line-prefix "  ")
     #f))
 
 ;; --- last line ---
