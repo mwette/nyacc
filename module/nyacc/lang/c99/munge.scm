@@ -849,7 +849,7 @@
       (`((union-ref ,id)) (make-udecl (car mdecl-tail) declr))
       (`((struct-def . ,rest)) (make-udecl (car mdecl-tail) declr))
       (`((union-def . ,rest)) (make-udecl (car mdecl-tail) declr))
-      (`((enum-def .rest))  (make-udecl (car mdecl-tail) declr))
+      (`((enum-def . ,rest))  (make-udecl (car mdecl-tail) declr))
       (__ (sferr "munge/mdecl->udecl missed:\n")
           (pperr mdecl-tail)
           (throw 'nyacc-error "munge/mdecl->udecl failed"))))
