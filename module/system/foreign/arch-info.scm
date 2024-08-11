@@ -30,7 +30,7 @@
             sizeof-basetype alignof-basetype
             mtypeof-basetype sizeof-mtype alignof-mtype
             base-type-name-list base-type-symbol-list
-            strname->symname symname->strname
+            c-strname->symname c-symname->strname
             mtype-signed?
             ;;mtype-bv-ref mtype-bv-set! <= requires (rnrs bytevectors)
             )
@@ -42,12 +42,16 @@
 (define (pperr exp) (pretty-print exp (current-error-port)))
 (define (sferr fmt . args) (apply simple-format #t fmt args))
 
-(define (strname->symname strname)
+(define (c-strname->symname strname)
   (string->symbol (string-map (lambda (c) (if (char=? #\space c) #\- c))
                               strname)))
-(define (symname->strname symname)
+
+(define (c-symname->strname symname)
   (string-map (lambda (c) (if (char=? #\space c) #\- c))
               (symbol->string symname)))
+
+(define-public symname->strname c-symname->strname)
+(define-public strname->symname c-strname->symname)
 
 ;;(display "arch reified types should not be called ctypes\n")
 ;; maybe mtype for machine type
@@ -57,7 +61,7 @@
   arch-info?
   (name arch-name)                      ; e.g., "x86_64"
   (endianness arch-endianness)          ; 'little or 'big
-  (mtype-map arch-mtype-map)            ; nyacc name => f32, u8, etc
+  (mtype-map arch-mtype-map)            ; c-ish name => f32l3, u8, ...
   (align-map arch-align-map)            ; f32, u8 => alignment
   (cbase-map arch-cbase-map set-arch-cbase-map!))
 
@@ -167,7 +171,7 @@
 ;; @end example
 ;; @end deffn
 (define (sizeof-basetype name)
-  (let ((name (if (string? name) (strname->symname name) name))
+  (let ((name (if (string? name) (c-strname->symname name) name))
         (arch (*arch*)))
     (and=> (assq-ref (arch-mtype-map arch) name)
            sizeof-mtype)))
