@@ -162,7 +162,7 @@
 
   (match mtail
     (`((pointer-to) . ,rest)
-     (values (sizeof-basetype '*) (alignof-basetype '*)))
+     (values (sizeof-basetype 'void*) (alignof-basetype 'void*)))
     (`((fixed-type ,name))
      (values (sizeof-basetype name) (alignof-basetype name)))
     (`((float-type ,name))
@@ -181,7 +181,7 @@
      (sizeof-mtail `((union-def (field-list . ,fields))) udict))
     (`((enum-ref . ,rest))
      (values (sizeof-basetype "int") (alignof-basetype "int")))
-    (`((enum-def . ,rest))
+    (`((enum-def . ,rest)) ;; FIXME: need to check for packed
      (values (sizeof-basetype "int") (alignof-basetype "int")))
     (_ (sferr "c99/sizeof-mtail: missed\n") (pperr mtail)
        (throw 'c99-error "coding error"))))
@@ -687,7 +687,7 @@
 
   (match mtail
     (`((pointer-to) . ,rest)
-     (let ((sz (sizeof-basetype '*)) (al (alignof-basetype '*)))
+     (let ((sz (sizeof-basetype 'void*)) (al (alignof-basetype 'void*)))
        (values sz al (incr-size 0 al base))))
     (`((fixed-type ,name))
      (let ((sz (sizeof-basetype name)) (al (alignof-basetype name)))
@@ -752,7 +752,7 @@
        (else (reverse sizes)))))
 
   (match mtail
-    (`((pointer-to) . ,rest) (sizeof-basetype '*))
+    (`((pointer-to) . ,rest) (sizeof-basetype 'void*))
     (`((fixed-type ,name)) (sizeof-basetype name))
     (`((float-type ,name)) (sizeof-basetype name))
     (`((array-of ,dim) . ,rest)
