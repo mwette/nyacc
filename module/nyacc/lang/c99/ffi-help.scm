@@ -496,7 +496,7 @@
       (`((pointer-to) (typename ,name))
        (let ((name (rename name)))
 	 (if (member (w/* name) defined)
-	     (strings->symbol name "*" (*ttag*))
+	     (strings->symbol name "*" ttag)
              `(fh:pointer ,(mtail->bs-desc (cdr mtail))))))
 
       (`((pointer-to) (void))
@@ -966,19 +966,20 @@
       (`(enum-def (ident ,name) ,_)
        (cond
 	((member (w/enum name) wrapped) (strings->symbol "unwrap-enum-" name))
-	(else 'unwrap-enum)))
-      (`(enum-def ,_) `unwrap~enum)
+	(else 'unwrap~enum)))
+      (`(enum-def ,_) 'unwrap~enum)
       (`(enum-ref (ident ,name))
        (cond
 	((member (w/enum name) wrapped) (strings->symbol "unwrap-enum-" name))
-	(else 'unwrap-enum)))
+	(else 'unwrap~enum)))
       (`(struct-ref (ident ,name)) 'fh-object-pointer)
       (`(union-ref (ident ,name)) 'fh-object-pointer)
       (`(pointer-to) 'unwrap~pointer)
       (`(array-of ,size) 'unwrap~array)
       (`(array-of) 'unwrap~array)
       ;; not expected
-      (`(struct-def (ident ,name)) 'fh-object-pointer)
+      (`(struct-def . ,_) 'fh-object-pointer)
+      (`(union-def . ,_) 'fh-object-pointer)
       (otherwise
        (fherr "mtail->fh-unwrapper: missed:\n~A" (ppstr mtail))))))
 
@@ -995,10 +996,8 @@
 	((member name wrapped) (strings->symbol "wrap-" name))
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
-       (cond
-        ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name))
-	(else 'wrap-enum)))
-      (`((enum-def ,rest)) #f)
+       (and (member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name)))
+      (`((enum-def ,_)) #f)
       (`((enum-ref (ident ,name)))
        (cond
         ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name))
@@ -1522,7 +1521,7 @@
     ;;
     (nlscm)
     (ppscm
-     `(define (unwrap-enum obj)
+     `(define (unwrap~enum obj)
 	(cond
 	 ((number? obj) obj)
 	 ((symbol? obj) (,sv-name obj))
