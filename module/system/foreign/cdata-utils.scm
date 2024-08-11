@@ -18,7 +18,7 @@
 ;;; Code:
 
 (define-module (system foreign cdata-utils)
-  #:export (marshall-ctype)
+  #:export (marshall-ctype-X)
 
   #:use-module (system foreign arch-info)
   #:use-module (system foreign cdata))
@@ -27,10 +27,10 @@
 ;; to be documented
 ;; @end deffn
 (define* (marshall-ctype ct-decl src dst
-                        #:optional
-                        (port (current-output-port))
-                        #:key
-                        (per-line-prefix ""))
+                         #:optional
+                         (port (current-output-port))
+                         #:key
+                         (per-line-prefix ""))
   (define (sf fmt . args)
     (apply simple-format port (string-append per-line-prefix fmt) args))
   (define (copy n dix six)
@@ -83,5 +83,6 @@
   (let ((dct (eval `(with-arch ,dst ,ct-decl) (current-module)))
         (sct (eval `(with-arch ,src ,ct-decl) (current-module))))
     (cnvt dct 0 sct 0)))
+(define marshall-ctype-X marshall-ctype)
 
 ;; --- last line ---
