@@ -57,13 +57,12 @@
 ;; maybe mtype for machine type
 
 (define-record-type <arch-info>
-  (make-arch-info name endianness mtype-map align-map cbase-map)
+  (make-arch-info name endianness mtype-map align-map)
   arch-info?
   (name arch-name)                      ; e.g., "x86_64"
   (endianness arch-endianness)          ; 'little or 'big
   (mtype-map arch-mtype-map)            ; c-ish name => f32l3, u8, ...
-  (align-map arch-align-map)            ; f32, u8 => alignment
-  (cbase-map arch-cbase-map set-arch-cbase-map!))
+  (align-map arch-align-map))            ; f32, u8 => alignment
 
 (define sizeof-mtype-map
   '((s8 . 1) (u8 . 1)
@@ -226,7 +225,7 @@
   (map (lambda (pair) (cons (car pair) 1)) sizeof-mtype-map))
 
 (define arch/avr
-  (make-arch-info 'avr 'little mtype-map/avr alignof-mtype-map/avr #f))
+  (make-arch-info 'avr 'little mtype-map/avr alignof-mtype-map/avr))
 
 (add-to-arch-map "avr" arch/avr)
 
@@ -259,7 +258,7 @@
     (unsigned-long-long-int . u64le)))
 
 (define arch/i686
-  (make-arch-info 'i686 'little mtype-map/i686 alignof-mtype-map/natural #f))
+  (make-arch-info 'i686 'little mtype-map/i686 alignof-mtype-map/natural))
 
 (add-to-arch-map "i686" arch/i686)
 
@@ -291,7 +290,7 @@
     (unsigned-long-long-int . u64be)))
 
 (define arch/powerpc
-  (make-arch-info 'powerpc 'big mtype-map/powerpc alignof-mtype-map/natural #f))
+  (make-arch-info 'powerpc 'big mtype-map/powerpc alignof-mtype-map/natural))
 
 (add-to-arch-map "powerpc" arch/powerpc)
 
@@ -324,8 +323,7 @@
     (unsigned-long-long-int . u64le)))
 
 (define arch/riscv32
-  (make-arch-info 'riscv32 'little mtype-map/riscv32 alignof-mtype-map/natural
-                  #f))
+  (make-arch-info 'riscv32 'little mtype-map/riscv32 alignof-mtype-map/natural))
 
 (add-to-arch-map "riscv32" arch/riscv32)
 
@@ -359,8 +357,7 @@
     (unsigned-long-long-int . u64le)))
 
 (define arch/riscv64
-  (make-arch-info "riscv64" 'little mtype-map/riscv64 alignof-mtype-map/natural
-                  #f))
+  (make-arch-info "riscv64" 'little mtype-map/riscv64 alignof-mtype-map/natural))
 
 (add-to-arch-map "riscv64" arch/riscv64)
 
@@ -392,7 +389,7 @@
     (unsigned-long-long-int . u64be)))
 
 (define arch/sparc
-  (make-arch-info 'sparc 'big mtype-map/sparc alignof-mtype-map/natural #f))
+  (make-arch-info 'sparc 'big mtype-map/sparc alignof-mtype-map/natural))
 
 (add-to-arch-map "sparc" arch/sparc)
 
@@ -424,7 +421,7 @@
     (unsigned-long-long-int . u64le)))
 
 (define arch/x86_64
-  (make-arch-info "x86_64" 'little mtype-map/x86_64 sizeof-mtype-map #f))
+  (make-arch-info "x86_64" 'little mtype-map/x86_64 sizeof-mtype-map))
 
 (add-to-arch-map "x86_64" arch/x86_64)
 

@@ -17,9 +17,6 @@
 
 ;;; Notes:
 
-
-;; new notation:
-
 ;; reference set select
 ;; (cdata-ref data tag ...) -> scheme-value | <cdata>
 ;; (cdata-set! data val tag ...)
@@ -182,6 +179,19 @@
       (format port "#<ctype ~s 0x~x>" (if (eq? 'base cl) nf cl) addr))))
 
 (define make-ctype %make-ctype)
+
+;; @deftp {Record} <cbase-info> arch ctyped
+;; This record keeps, for each arch, map of symbolic type names to
+;; @code{<ctype>}.
+;; @end deftp
+(define-record-type <cbase-info>
+  (%make-cbase-info arch ctyped)
+  cbase-info?
+  (arch cbase-info-arch)
+  (ctyped cbase-info-ctyped))
+
+;; map of arch (from @code{(*arch*)}) -> cbase-info
+(define *cbase-map* (make-parameter '()))
 
 ;; @deftp {Record} <cdata> bv ix ct [tn]
 ;; Record to hold C data.  Underneath it's a bytevector, index and type.
@@ -390,16 +400,17 @@
     u16be u32be u64be u128be f16be f32be f64be f128be))
 
 (define (cbase name)
-  (let ((arch (*arch*))
-        (name (if (symbol? name) name
-                  (if (string? name) (strname->symname name)
-                      (error "cbase: bad arg")))))
-    (unless (arch-cbase-map arch)
-      (set-arch-cbase-map! arch (make-cbase-map arch)))
-    (or (assq-ref (arch-cbase-map arch) name) ; make it idempotent
+  (let* ((arch (*arch*))
+         (name (cond ((symbol? name) name)
+                     ((string? name) (strname->symname name))
+                     (else (error "cbase: bad arg"))))
+         (cmap (or (assoc-ref (*cbase-map*) arch)
+                   (let ((cmap (make-cbase-map arch)))
+                     (*cbase-map* (acons arch cmap (*cbase-map*)))
+                     cmap))))
+    (or (assq-ref cmap name)
         (and (memq name cbase-symbols) name)
-        (error "not found"))))
-(display "From cdata.scm: Check use of arch-cbase-map in here.\n")
+        (error "cbase: not found: " name))))
 
 ;; Update running struct size given field size and alignment.
 (define (incr-size fs fa ss)
