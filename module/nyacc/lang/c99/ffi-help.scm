@@ -741,6 +741,11 @@
            ((null? libs) (fherr "no library for ~s" name))
            ((false-if-exception (foreign-library-pointer (car libs) name)))
            (else (loop (cdr libs)))))))
+    (sfscm "\n")
+    (ppscm
+     `(define (unwrap~enum arg)
+        (or (assq-ref ,(strings->symbol (m-path->name path) "-symbol-tab") arg)
+            arg)))
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
 
 
@@ -963,6 +968,7 @@
        (cond
 	((member (w/enum name) wrapped) (strings->symbol "unwrap-enum-" name))
 	(else 'unwrap-enum)))
+      (`(enum-def ,_) `unwrap~enum)
       (`(enum-ref (ident ,name))
        (cond
 	((member (w/enum name) wrapped) (strings->symbol "unwrap-enum-" name))
@@ -972,6 +978,8 @@
       (`(pointer-to) 'unwrap~pointer)
       (`(array-of ,size) 'unwrap~array)
       (`(array-of) 'unwrap~array)
+      ;; not expected
+      (`(struct-def (ident ,name)) 'fh-object-pointer)
       (otherwise
        (fherr "mtail->fh-unwrapper: missed:\n~A" (ppstr mtail))))))
 
