@@ -359,7 +359,6 @@
 ;; Should be processed with canize-enum-def-list first
 (define (enum-def-list->alist enum-def-list)
   (map (lambda (defn)
-         (pperr defn)
          (sx-match defn
            ((enum-defn (ident ,name) (fixed ,value))
             (list (string->symbol name) (string->number value)))))
@@ -490,16 +489,6 @@
     ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
     ("_Bool" . int8) ("bool" . int8)))
 
-;; convert #f names to manufactured names : a hack
-(define (maybe-fix-bs-field-list fields)
-  (define mkname (let ((ix 0)) (lambda () (set! ix (1+ ix)) (sfsym "_~a" ix))))
-  (if (not (eq? 1 (*bs-version*)))
-      fields
-      (map (lambda (fld) (if (car fld) fld (cons (mkname) (cdr fld)))) fields)))
-
-;; just the type, so parent has to build the name-value pairs for
-;; struct members
-;;(define (mtail->bs-desc mdecl-tail)
 (define-public (mtail->bs-desc mtail)
   (let ((defined (*defined*)) (ttag (*ttag*)))
     (match mtail
@@ -570,13 +559,8 @@
          ((void) ''void)
          ((fixed-type "char") 'int)
          ((fixed-type "unsigned char") 'unsigned-int)
-         ;;((fixed-type ,fx-name) (assoc-ref bs-typemap fx-name))
-         ;;((float-type ,fl-name) (assoc-ref bs-typemap fl-name))
          ((fixed-type ,name) `(fhval-base-type ',(strname->symname (cfix name))))
          ((float-type ,name) `(fhval-base-type ',(strname->symname (cfix name))))
-         ;;((enum-def (ident ,ident) ,rest) 'int)
-         ;;((enum-def ,elts) 'int)
-         ;;((enum-ref ,name) 'int)
          ((enum-def (ident ,ident) ,rest) '(fhval-base-type 'int))
          ((enum-def ,elts) '(fhval-base-type 'int))
          ((enum-ref ,name) '(fhval-base-type 'int))
@@ -604,8 +588,6 @@
 
 (use-modules (system foreign arch-info))
 (use-modules (system foreign cdata))
-
-
 
 (define (mtail->ctype mtail)
   (let ((defined (*defined*)) (ttag (*ttag*)))
@@ -664,8 +646,7 @@
           (mtail->ctype `(enum-def (@ . ,attr) ,rest)))
          ((enum-def (@ . ,attr) ,edl)
           (let ((def-list (canize-enum-def-list edl (*udict*) (*ddict*))))
-            `(cenum ',(enum-def-list->alist def-list)
-                   ,(and (assq-ref attr 'packed) #t))))
+            `(cenum ',(enum-def-list->alist def-list) ,(packed? attr))))
          ((enum-ref ,name) (strings->symbol "enum-" name ttag))
          ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
           (mtail->ctype `((struct-def (@ . ,attr) ,field-list))))
@@ -1010,6 +991,7 @@
        (cond
         ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name))
 	(else 'wrap-enum)))
+      (`((enum-def ,rest)) #f)
       (`((enum-ref (ident ,name)))
        (cond
         ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name))
