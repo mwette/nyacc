@@ -545,15 +545,15 @@
                'array (%make-carray type n)))
 
 
-;; @deffn {Procedure} cenum enum-list [#:short=#f]
+;; @deffn {Procedure} cenum enum-list [packed]
 ;; @var{enum-list} is a list of name or name-value pairs
 ;; @example
 ;; (cenum '((a 1) b (c 4))
 ;; @end example
-;; If @var{short} is @code{#t} the size wil be smallest that can hold it.
+;; If @var{packed} is @code{#t} the size wil be smallest that can hold it.
 ;; @end deffn
-(define* (cenum enum-list #:key short)
-  "- Procedure: cenum enum-list [#:short=#f]
+(define* (cenum enum-list basetype)
+  "- Procedure: cenum enum-list [basetype]
      ENUM-LIST is a list of name or name-value pairs
           (cenum '((a 1) b (c 4))
      If SHORT is ‘#t’ the size wil be smallest that can hold it."
@@ -561,18 +561,19 @@
     (if (< 0 mn)
         (cond
          ((and (<= -128 mn) (< mx 128)) 's8)
-         ((and (<= -32768 mn) (< mx 32768)) (mtypeof-basetype 'short))
-         ((and (<= -2147483648 mn) (< mx 2147483648)) (mtypeof-basetype 'int))
-         (else (mtypeof-basetype 'long)))
+         ((and (<= -32768 mn) (< mx 32768)) (mtypeof-basetype 'int16_t))
+         ((and (<= -2147483648 mn) (< mx 2147483648))
+          (mtypeof-basetype 'int32_t))
+         (else (mtypeof-basetype 'int)))
         (cond
          ((< mx 256) 'u8)
-         ((< mx 32768) (mtypeof-basetype 'unsigned-short))
-         ((< mx 2147483648) (mtypeof-basetype 'unsigned-int))
-         (else (mtypeof-basetype 'unsigned-long)))))
+         ((< mx 32768) (mtypeof-basetype 'uint16_t))
+         ((< mx 2147483648) (mtypeof-basetype 'uint32_t))
+         (else (mtypeof-basetype 'int)))))
   (let loop ((nvl '()) (nxt 0) (enl enum-list))
     (if (null? enl)
-        (let* ((mx (car nvl)) (nvl (reverse nvl))
-               (mn (car nvl)) (vnl (map xcons nvl))
+        (let* ((mx (cdar nvl)) (nvl (reverse nvl)) (mn (cdar nvl))
+               (vnl (map (lambda (p) (cons (cdr p) (car p))) nvl))
                (mtype (if short (short-mtype mn mx) (mtypeof-basetype 'int))))
           (%make-ctype (sizeof-mtype mtype) (alignof-mtype mtype)
                        'enum (%make-cenum mtype vnl nvl)))

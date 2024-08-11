@@ -308,7 +308,7 @@
   (and=> (cintstr->scm str) string->number))
 
 (define (sw/* name) (string-append name "*"))
-g292(define (sw/& name) (string-append name "&"))
+(define (sw/& name) (string-append name "&"))
 (define (sw/struct name) (string-append "struct-" name))
 (define (sw/union name) (string-append "union-" name))
 (define (sw/struct* name) (string-append "struct-" name "*"))
@@ -355,6 +355,15 @@ g292(define (sw/& name) (string-append name "&"))
          `(,qq (,(and=> name string->symbol) (,uq ,(caddr type)) ,(cadr type)))
          `(,qq (,(and=> name string->symbol) (,uq ,type))))))
    (clean-and-dictize-fields fields)))
+
+;; Should be processed with canize-enum-def-list first
+(define (enum-def-list->alist enum-def-list)
+  (map (lambda (defn)
+         (pperr defn)
+         (sx-match defn
+           ((enum-defn (ident ,name) (fixed ,value))
+            (list (string->symbol name) (string->number value)))))
+       (sx-tail enum-def-list)))
 
 (define def-defined
   '("void" "float" "double" "short" "short int" "signed short"
@@ -596,6 +605,8 @@ g292(define (sw/& name) (string-append name "&"))
 (use-modules (system foreign arch-info))
 (use-modules (system foreign cdata))
 
+
+
 (define (mtail->ctype mtail)
   (let ((defined (*defined*)) (ttag (*ttag*)))
     (match mtail
@@ -649,13 +660,18 @@ g292(define (sw/& name) (string-append name "&"))
          ((void) (error "mtail->ctype: arg not expected: void") #f)
          ((fixed-type ,name) `(cbase ',(strname->symname name)))
          ((float-type ,name) `(cbase ',(strname->symname name)))
-         ((enum-def (ident ,ident) ,rest) `(cenum 'TBD))
-         ((enum-def ,elts) (cenum 'TBD))
+         ((enum-def (@ . ,attr) (ident ,ident) ,rest)
+          (mtail->ctype `(enum-def (@ . ,attr) ,rest)))
+         ((enum-def (@ . ,attr) ,edl)
+          (let ((def-list (canize-enum-def-list edl (*udict*) (*ddict*))))
+            `(cenum ',(enum-def-list->alist def-list)
+                   ,(and (assq-ref attr 'packed) #t))))
          ((enum-ref ,name) (strings->symbol "enum-" name ttag))
          ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
           (mtail->ctype `((struct-def (@ . ,attr) ,field-list))))
          ((struct-def (@ . ,attr) (field-list . ,fields))
           (let ((fields (cnvt-fields fields mtail->ctype)))
+            (pperr fields)
             (if (packed? attr)
                 `(cstruct (list ,@fields) #:packed? #t)
                 `(cstruct (list ,@fields)))))
