@@ -29,9 +29,9 @@
 ;; support in Guile.
 
 ;; @table code
-;; @item mdecl->fh-wrapper
+;; @item mtail->fh-wrapper
 ;; generates code to apply wrapper to objects returned from foreign call
-;; @item mdecl->fh-unwrapper
+;; @item mtail->fh-unwrapper
 ;; generated code to apply un-wrapper to arguments for foreign call
 ;; @end table
 
@@ -652,7 +652,6 @@
           (mtail->ctype `((struct-def (@ . ,attr) ,field-list))))
          ((struct-def (@ . ,attr) (field-list . ,fields))
           (let ((fields (cnvt-fields fields mtail->ctype)))
-            (pperr fields)
             (if (packed? attr)
                 `(cstruct (list ,@fields) #:packed? #t)
                 `(cstruct (list ,@fields)))))
@@ -1007,8 +1006,8 @@
       (`((pointer-to) (typename ,tname))
        (cond
         ((member tname ffi-defined) #f)
-	((member (sw/* tname) defined) (strings->symbol "make-" tname "*"))
-	((member (sw/* tname) wrapped) (strings->symbol "wrap-" tname "*"))
+	((member (w/* tname) defined) (strings->symbol "make-" tname "*"))
+	((member (w/* tname) wrapped) (strings->symbol "wrap-" tname "*"))
 	(else #f)))
       (`((pointer-to) (struct-ref (ident ,aggr-name) . ,rest))
        (cond
@@ -1380,16 +1379,6 @@
              (name (md-label mdecl))
              (return (mdecl->udecl (cons "_" (cdr (md-tail mdecl)))))
              (params (cdadar (md-tail mdecl))))
-        (when (string=? name "gtk_window_new")
-          (sferr "~s:\n" name)
-          (sferr "  wrapped?\n" (member '(pointer . "GtkWidget") (*wrapped*)))
-          (pperr return)
-	  (pperr (udecl->ffi-decl return))
-          (call-with-values (lambda () (process-params return params))
-            (lambda (decl-return decl-params exec-return exec-params param-names)
-              (pperr exec-return)
-              ))
-          )
         (cnvt-fctn name return params)
         (values wrapped defined)))
 
