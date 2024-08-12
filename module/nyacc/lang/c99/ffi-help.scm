@@ -29,9 +29,9 @@
 ;; support in Guile.
 
 ;; @table code
-;; @item mdecl->fh-wrapper
+;; @item mtail->fh-wrapper
 ;; generates code to apply wrapper to objects returned from foreign call
-;; @item mdecl->fh-unwrapper
+;; @item mtail->fh-unwrapper
 ;; generated code to apply un-wrapper to arguments for foreign call
 ;; @end table
 
@@ -140,6 +140,7 @@
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
 (define *defined* (make-parameter '()))    ; defined by define-fh-...
 (define *wrapped* (make-parameter '()))    ; wrapped or defined
+(define *ttag* (make-parameter "-desc"))
 
 (define *errmsgs* (make-parameter '()))	; list of warnings
 
@@ -207,7 +208,7 @@
   (string-map (lambda (c) (if (char=? #\space c) #\- c)) str))
 
 ;; "unsigned int" => unsigned-int
-(define (strname->symname strname)
+(define (cstrnam->symnam strname)
   (string->symbol (string-map (lambda (c) (if (char=? #\space c) #\- c))
                               strname)))
 
@@ -307,7 +308,6 @@
   (and=> (cintstr->scm str) string->number))
 
 (define (sw/* name) (string-append name "*"))
-(define (sw/*-desc name) (string-append name "*-desc"))
 (define (sw/& name) (string-append name "&"))
 (define (sw/struct name) (string-append "struct-" name))
 (define (sw/union name) (string-append "union-" name))
@@ -356,6 +356,14 @@
          `(,qq (,(and=> name string->symbol) (,uq ,type))))))
    (clean-and-dictize-fields fields)))
 
+;; Should be processed with canize-enum-def-list first
+(define (enum-def-list->alist enum-def-list)
+  (map (lambda (defn)
+         (sx-match defn
+           ((enum-defn (ident ,name) (fixed ,value))
+            (list (string->symbol name) (string->number value)))))
+       (sx-tail enum-def-list)))
+
 (define def-defined
   '("void" "float" "double" "short" "short int" "signed short"
     "signed short int" "int" "signed" "signed int" "long" "long int"
@@ -386,7 +394,8 @@
 (define ffi-typemap
   ;; see system/foreign.scm
   `(("void" . ffi:void) ("float" . ffi:float) ("double" . ffi:double)
-    ("complex float" . ffi:complex-float) ("complex double" . ffi:complex-double)
+    ("complex float" . ffi:complex-float)
+    ("complex double" . ffi:complex-double)
     ;;
     ("short" . ffi:short) ("short int" . ffi:short) ("signed short" . ffi:short)
     ("signed short int" . ffi:short) ("int" . ffi:int) ("signed" . ffi:int)
@@ -454,6 +463,7 @@
 (define (cfix name)
   (or (assoc-ref cfix-dict name) name))
 
+
 ;; === bytestructure support ==================================================
 
 (define bs-typemap
@@ -481,53 +491,39 @@
     ("wchar_t" . int) ("char16_t" . int16) ("char32_t" . int32)
     ("_Bool" . int8) ("bool" . int8)))
 
-;; convert #f names to manufactured names : a hack
-(define (maybe-fix-bs-field-list fields)
-  (define mkname (let ((ix 0)) (lambda () (set! ix (1+ ix)) (sfsym "_~a" ix))))
-  (if (not (eq? 1 (*bs-version*)))
-      fields
-      (map (lambda (fld) (if (car fld) fld (cons (mkname) (cdr fld)))) fields)))
-
-;; just the type, so parent has to build the name-value pairs for
-;; struct members
-;;(define (mtail->bs-desc mdecl-tail)
 (define-public (mtail->bs-desc mtail)
-  (let ((defined (*defined*)))
+  (let ((defined (*defined*)) (ttag (*ttag*)))
     (match mtail
       ;; typename use renamers, ... ???
       (`((pointer-to) (typename ,name))
        (let ((name (rename name)))
 	 (if (member (w/* name) defined)
-	     (strings->symbol name "*-desc")
+	     (strings->symbol name "*" ttag)
              `(fh:pointer ,(mtail->bs-desc (cdr mtail))))))
-
       (`((pointer-to) (void))
        `(fh:pointer 'void))
-
       (`((pointer-to) (fixed-type "char"))
        `(fh:pointer int8))
       (`((pointer-to) (fixed-type ,fx-name))
        `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
       (`((pointer-to) (float-type ,fx-name))
        `(fh:pointer ,(assoc-ref bs-typemap fx-name)))
-
       (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
        (call-with-values
-           (lambda () (let ((return (mdecl->udecl (cons "_" tail))))
-                        (function*-wraps return params)))
-         (lambda (wrapper unwrapper)
-           `(fh:function* ,wrapper ,unwrapper))))
+           (lambda () (function*-wraps (mdecl->udecl (cons "_" tail)) params))
+         (lambda (wrapper unwrapper) `(fh:function* ,wrapper ,unwrapper))))
       (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
        `(fh:pointer 'void))
-
-      (`((pointer-to) (struct-ref . ,rest))
-       (let () ;; TODO: check for struct-def ???
-	 `(fh:pointer 'void)))
-
-      ;; should use this more
+      (`((pointer-to) (struct-ref (ident ,name) ,__))
+       (if (member (w/struct name) (*defined*))
+	   `(fh:pointer ,(strings->symbol "struct-" name (*ttag*)))
+	   `(fh:pointer 'void)))
+      (`((pointer-to) (union-ref (ident ,name) ,__))
+       (if (member (w/union name) (*defined*))
+	   `(fh:pointer ,(strings->symbol "union-" name (*ttag*)))
+	   `(fh:pointer 'void)))
       (`((pointer-to) . ,rest)
        `(fh:pointer ,(mtail->bs-desc rest)))
-
       ;; In C99 array parameters are interpreted as pointers.
       (`((array-of ,n) (fixed-type ,name))
        (let ((ns (const-expr->number n)))
@@ -539,54 +535,42 @@
        `(bs:vector ,(const-expr->number n) ,(mtail->bs-desc rest)))
       (`((array-of) . ,rest)
        `(bs:vector 0 ,(mtail->bs-desc rest)))
-
       (`((bit-field ,size) . ,rest)
        `(bit-field ,(const-expr->number size) ,(mtail->bs-desc rest)))
-
       (`((extern) . ,rest) (mtail->bs-desc rest))
-
       (__
        (sx-match (car mtail)
          ((typename ,name)
           (let ((name (rename name)))
 	    (cond
              ((assoc-ref bs-typemap name))
-             ((member name defined) (strings->symbol name "-desc"))
+             ((member name defined) (strings->symbol name ttag))
              (else (let* ((udecl `(udecl (decl-spec-list (type-spec . ,mtail))
                                          (init-declr (ident "_"))))
                           (xdecl (expand-typerefs udecl (*udict*) defined))
                           (mdecl (udecl->mdecl xdecl)))
                      (mtail->bs-desc (md-tail mdecl)))))))
-
          ((void) ''void)
          ((fixed-type "char") 'int)
          ((fixed-type "unsigned char") 'unsigned-int)
-         ;;((fixed-type ,fx-name) (assoc-ref bs-typemap fx-name))
-         ;;((float-type ,fl-name) (assoc-ref bs-typemap fl-name))
-         ((fixed-type ,name) `(fhval-base-type ',(strname->symname (cfix name))))
-         ((float-type ,name) `(fhval-base-type ',(strname->symname (cfix name))))
-         ;;((enum-def (ident ,ident) ,rest) 'int)
-         ;;((enum-def ,elts) 'int)
-         ;;((enum-ref ,name) 'int)
+         ((fixed-type ,name) `(fhval-base-type ',(cstrnam->symnam (cfix name))))
+         ((float-type ,name) `(fhval-base-type ',(cstrnam->symnam (cfix name))))
          ((enum-def (ident ,ident) ,rest) '(fhval-base-type 'int))
          ((enum-def ,elts) '(fhval-base-type 'int))
          ((enum-ref ,name) '(fhval-base-type 'int))
-
          ((struct-def (@ . ,attr) (ident ,struct-name) ,field-list)
           (mtail->bs-desc `((struct-def (@ . ,attr) ,field-list))))
          ((struct-def (@ . ,attr) (field-list . ,fields))
           (let ((fields (cnvt-fields fields mtail->bs-desc)))
             `(bs:struct ,(packed? attr) (list ,@fields))))
          ((struct-ref (ident ,struct-name))
-          (string->symbol (string-append "struct-" struct-name "-desc")))
-
+          (string->symbol (string-append "struct-" struct-name ttag)))
          ((union-def (ident ,union-name) ,field-list)
           (mtail->bs-desc `((union-def ,field-list))))
          ((union-def (field-list . ,fields))
           (list 'bs:union `(list ,@(cnvt-fields fields mtail->bs-desc))))
          ((union-ref (ident ,union-name))
-          (string->symbol (string-append "union-" union-name "-desc")))
-
+          (string->symbol (string-append "union-" union-name ttag)))
          (,otherwise
           (fherr "mtail->bs-desc missed:\n~A" (ppstr mtail))))))))
 
@@ -597,18 +581,7 @@
 
 (define Tmodules
   (case target
-    #;((bs) '(((bytestructures guile)
-             #:renamer (lambda (sy)
-                         (let ((st (symbol->string sy)))
-                           (if (string-prefix? "bs:" st) sy
-                               (string->symbol (string-append "bs:" st))))))
-            (system ffi-help-rt)))
     ((bs) '((bytestructures guile) (system ffi-help-rt)))
-    (else (error "bad target" target))))
-
-(define mtail->target
-  (case target
-    ((bs) mtail->bs-desc)
     (else (error "bad target" target))))
 
 (define Tpointer
@@ -616,21 +589,10 @@
     ((bs) 'bs:pointer)
     (else (error "bad target" target))))
 
-#|
-(define (target-size obj) `(bs:bytestructure-size obj))
-(define (target-align obj) `(bs:bytestructure-alignment obj))
-(define (target-ref obj) `(bs:bytestructure-ref ,obj))
-(define (target-set! obj val) `(bs:bytestructure-set! ,obj ,val))
-(define (make-target-val bv) `(bs:make-bytestructure ,bv))
-(define (target* obj) `(bs:bytevector-ref ,obj '*)) ;; ??
-(define (target-size obj) `(bs:bytestructure-size obj))
-|#
-
-(define (target-align obj) `(bytestructure-alignment obj))
-(define (target-ref obj) `(bytestructure-ref ,obj))
-(define (target-set! obj val) `(bytestructure-set! ,obj ,val))
-(define (make-target-val bv) `(make-bytestructure ,bv))
-(define (target* obj) `(bytevector-ref ,obj '*))
+(define mtail->target
+  (case target
+    ((bs) mtail->bs-desc)
+    (else (error "bad target" target))))
 
 
 ;; === output scheme module header =============================================
@@ -665,6 +627,11 @@
            ((null? libs) (fherr "no library for ~s" name))
            ((false-if-exception (foreign-library-pointer (car libs) name)))
            (else (loop (cdr libs)))))))
+    (sfscm "\n")
+    (ppscm
+     `(define (unwrap~enum arg)
+        (or (assq-ref ,(strings->symbol (m-path->name path) "-symbol-tab") arg)
+            arg)))
     (if (*echo-decls*) (sfscm "(define echo-decls #t)\n\n"))))
 
 
@@ -682,7 +649,7 @@
   (let* ((name (rename name))
 	 (strname (if (string? name) name (symbol->string name)))
 	 (symname (if (string? name) (string->symbol name) name))
-         (desc (strings->symbol strname "-desc"))
+         (desc (strings->symbol strname (*ttag*)))
 	 (pred (strings->symbol strname "?"))
 	 (make (strings->symbol "make-" strname)))
     (upscm (list kind symname desc pred make))
@@ -732,10 +699,10 @@
 	 (kind-s (symbol->string kind))
 	 (aggrname (and aggr-name (string-append kind-s "-" aggr-name)))
 	 (bs-kind (string->symbol (string-append "bs:" kind-s)))
-	 (ty-desc (and typename (strings->symbol typename "-desc")))
-	 (ty*-desc (and typename (strings->symbol typename "*-desc")))
-	 (ag-desc (and aggrname (strings->symbol aggrname "-desc")))
-	 (ag*-desc (and aggrname (strings->symbol aggrname "*-desc")))
+	 (ty-desc (and typename (strings->symbol typename (*ttag*))))
+	 (ty*-desc (and typename (strings->symbol typename "*" (*ttag*))))
+	 (ag-desc (and aggrname (strings->symbol aggrname (*ttag*))))
+	 (ag*-desc (and aggrname (strings->symbol aggrname "*" (*ttag*))))
 	 (cattr (assoc-ref attr 'attributes)) ;; __attributes__
 	 (bs-spec (if (packed? attr)
 		      (list bs-kind #t `(list ,@sflds))
@@ -886,16 +853,20 @@
       (`(enum-def (ident ,name) ,_)
        (cond
 	((member (w/enum name) wrapped) (strings->symbol "unwrap-enum-" name))
-	(else 'unwrap-enum)))
+	(else 'unwrap~enum)))
+      (`(enum-def ,_) 'unwrap~enum)
       (`(enum-ref (ident ,name))
        (cond
 	((member (w/enum name) wrapped) (strings->symbol "unwrap-enum-" name))
-	(else 'unwrap-enum)))
+	(else 'unwrap~enum)))
       (`(struct-ref (ident ,name)) 'fh-object-pointer)
       (`(union-ref (ident ,name)) 'fh-object-pointer)
       (`(pointer-to) 'unwrap~pointer)
       (`(array-of ,size) 'unwrap~array)
       (`(array-of) 'unwrap~array)
+      ;; not expected
+      (`(struct-def . ,_) 'fh-object-pointer)
+      (`(union-def . ,_) 'fh-object-pointer)
       (otherwise
        (fherr "mtail->fh-unwrapper: missed:\n~A" (ppstr mtail))))))
 
@@ -912,9 +883,8 @@
 	((member name wrapped) (strings->symbol "wrap-" name))
 	(else #f)))
       (`((enum-def (ident ,name) ,rest))
-       (cond
-        ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name))
-	(else 'wrap-enum)))
+       (and (member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name)))
+      (`((enum-def ,_)) #f)
       (`((enum-ref (ident ,name)))
        (cond
         ((member (w/enum name) wrapped) (strings->symbol "wrap-enum-" name))
@@ -922,8 +892,8 @@
       (`((pointer-to) (typename ,tname))
        (cond
         ((member tname ffi-defined) #f)
-	((member (sw/* tname) defined) (strings->symbol "make-" tname "*"))
-	((member (sw/* tname) wrapped) (strings->symbol "wrap-" tname "*"))
+	((member (w/* tname) defined) (strings->symbol "make-" tname "*"))
+	((member (w/* tname) wrapped) (strings->symbol "wrap-" tname "*"))
 	(else #f)))
       (`((pointer-to) (struct-ref (ident ,aggr-name) . ,rest))
        (cond
@@ -1097,11 +1067,11 @@
              (mdecl (udecl->mdecl (sx-list 'udecl #f specl declr)))
              (label (md-label mdecl))
              (name (string->symbol label))
-             (desc (strings->symbol label "-desc"))
+             (desc (strings->symbol label (*ttag*)))
              (pred (strings->symbol label "?"))
              (make (strings->symbol "make-" label))
              (name* (strings->symbol label "*"))
-             (desc* (strings->symbol label "*-desc"))
+             (desc* (strings->symbol label "*" (*ttag*)))
              (pred* (strings->symbol label "?"))
              (make* (strings->symbol "make-" label "*"))
              (mtail (md-tail mdecl)))
@@ -1265,14 +1235,14 @@
 	        (values wrapped defined))
 	       ((member typename defined)
                 (let ((aka (string->symbol typename))
-                      (adesc (strings->symbol typename "-desc")))
+                      (adesc (strings->symbol typename (*ttag*))))
 	          (ppscm `(define-public ,desc ,adesc))
                   (ppscm `(define-fh-type-alias ,name ,aka))
                   (ppscm `(export ,name))
 	          (if (member (w/* typename) defined)
                       (let* ((name* (strings->symbol label "*"))
                              (aka* (strings->symbol typename "*"))
-                             (adesc* (strings->symbol typename "*-desc"))
+                             (adesc* (strings->symbol typename "*" (*ttag*)))
                              (amake (strings->symbol "make-" typename))
                              (amake* (strings->symbol "make-" typename "*")))
 	                (ppscm `(define-public ,desc* ,adesc*))
@@ -1295,16 +1265,6 @@
              (name (md-label mdecl))
              (return (mdecl->udecl (cons "_" (cdr (md-tail mdecl)))))
              (params (cdadar (md-tail mdecl))))
-        (when (string=? name "gtk_window_new")
-          (sferr "~s:\n" name)
-          (sferr "  wrapped?\n" (member '(pointer . "GtkWidget") (*wrapped*)))
-          (pperr return)
-	  (pperr (udecl->ffi-decl return))
-          (call-with-values (lambda () (process-params return params))
-            (lambda (decl-return decl-params exec-return exec-params param-names)
-              (pperr exec-return)
-              ))
-          )
         (cnvt-fctn name return params)
         (values wrapped defined)))
 
@@ -1317,8 +1277,8 @@
 	     (cnvt-aggr-def 'struct aggr-attr #f aggr-name field-list)
              (fold-values
 	      (lambda (name wrapped defined)
-                (let ((adesc (strings->symbol "struct-" aggr-name "-desc"))
-                      (desc (strings->symbol name "-desc")))
+                (let ((adesc (strings->symbol "struct-" aggr-name (*ttag*)))
+                      (desc (strings->symbol name (*ttag*))))
 	          (ppscm `(set! ,desc ,adesc))
 	          (fhscm-def-compound name)
 	          (fhscm-ref-deref name))
@@ -1340,8 +1300,8 @@
 	     (cnvt-aggr-def 'union aggr-attr #f aggr-name field-list)
 	     (fold-values
 	      (lambda (name wrapped defined)
-                (let ((adesc (strings->symbol "union-" aggr-name "-desc"))
-                      (desc (strings->symbol name "-desc"))
+                (let ((adesc (strings->symbol "union-" aggr-name (*ttag*)))
+                      (desc (strings->symbol name (*ttag*)))
                       (pred (strings->symbol name "?"))
                       (make (strings->symbol "make-" name))
                       (syname (string->symbol name)))
@@ -1448,7 +1408,7 @@
     ;;
     (nlscm)
     (ppscm
-     `(define (unwrap-enum obj)
+     `(define (unwrap~enum obj)
 	(cond
 	 ((number? obj) obj)
 	 ((symbol? obj) (,sv-name obj))
