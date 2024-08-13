@@ -847,7 +847,7 @@
       (`(typename ,name)
        (cond
 	((member name def-defined) 'unwrap~number)
-	((member name defined) `fh-object-ref)
+	((member name defined) `(fh-unwrap ,name))
 	((member name wrapped) (strings->symbol "unwrap-" name))
 	(else #f)))
       (`(enum-def (ident ,name) ,_)
