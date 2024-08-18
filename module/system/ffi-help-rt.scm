@@ -40,6 +40,7 @@
             define-fh-compound-type
             define-fh-vector-type
             define-fh-function*-type
+            define-fh-function-type
             fh-ref<=>deref!
             make-symtab-function
 
@@ -79,112 +80,12 @@
 ;; some adopted from https://github.com/TaylanUB covered by GPL3+ and
 ;; Copyright (C) 2015 Taylan Ulrich BayirliKammer <taylanbayirli@gmail.com>
 
-(define make-pointer-metadata
-  (@@ (bytestructures guile pointer) make-pointer-metadata))
-
 (define bytevector-address-ref
   (case (ffi:sizeof '*)
     ((1) bytevector-u8-ref)
     ((2) bytevector-u16-native-ref)
     ((4) bytevector-u32-native-ref)
     ((8) bytevector-u64-native-ref)))
-
-(define bytevector-address-set!
-  (case (ffi:sizeof '*)
-    ((1) bytevector-u8-set!)
-    ((2) bytevector-u16-native-set!)
-    ((4) bytevector-u32-native-set!)
-    ((8) bytevector-u64-native-set!)))
-
-;; @deffn {Procedure} fh:pointer descriptor
-;; Define a descriptor for a pointer to descriptor (type).
-;; @enumerate
-;; @item if '* generate bytevector copy of object
-;; @item if integer, assume it's a vector
-;; @item if symbol generate new bytevector from pointer value
-;; @end enumerate
-;; @end deffn
-(define fh:pointer bs:pointer)
-(define (my-fh:pointer %descriptor)
-  (define (pointer-ref bytevector offset content-size)
-    (let ((address (bytevector-address-ref bytevector offset)))
-      (if (zero? address)
-          (fherr "fh:pointer: attempt to dereference null-pointer")
-          (ffi:pointer->bytevector (ffi:make-pointer address) content-size))))
-  (define (pointer-idx-ref bytevector offset index content-size)
-    (let* ((base-address (bytevector-address-ref bytevector offset))
-           (address (+ base-address (* index content-size))))
-      (if (zero? base-address)
-          (fherr "fh:pointer: attempt to dereference null-pointer")
-          (ffi:pointer->bytevector (ffi:make-pointer address) content-size))))
-  (define (pointer-set! bytevector offset value)
-    (cond
-     ((exact-integer? value)
-      (bytevector-address-set! bytevector offset value))
-     ((ffi:pointer? value)
-      (bytevector-address-set! bytevector offset (ffi:pointer-address value)))
-     ((string? value)
-      (bytevector-address-set! bytevector offset
-                               (ffi:pointer-address
-                                (ffi:string->pointer value))))
-     ((bytevector? value)
-      (bytevector-address-set! bytevector offset
-                               (ffi:pointer-address
-                                (ffi:bytevector->pointer value))))
-     ((bytestructure? value)
-      (bytevector-address-set! bytevector offset
-                               (bytestructure-ref value)))
-     #;((fh-object? value)
-      (pointer-set! bytevector offset (fh-object-ref value)))
-     ))
-  (define (get-descriptor)
-    (if (promise? %descriptor)
-        (force %descriptor)
-        %descriptor))
-  (define size (ffi:sizeof '*))
-  (define alignment size)
-  (define (unwrapper syntax? bytevector offset index)
-    (define (syntax-list id . elements)
-      (datum->syntax id (map syntax->datum elements)))
-    (let ((descriptor (get-descriptor)))
-      (when (eq? 'void descriptor)
-        (fherr "fh:pointer: attempt to follow void pointer"))
-      (let* ((size (bytestructure-descriptor-size descriptor))
-             (index-datum (if syntax? (syntax->datum index) index)))
-        (cond
-         ((eq? '* index-datum)
-          (if syntax?
-              (values #`(bytevector-copy
-                         (pointer-ref #,bytevector #,offset #,size))
-                      0 descriptor)
-              (values (bytevector-copy
-                       (pointer-ref bytevector offset size))
-                      0 descriptor)))
-         ((integer? index-datum)
-          (if syntax?
-              (values #`(pointer-idx-ref #,bytevector #,offset ,index #,size)
-                      0 descriptor)
-              (values (pointer-idx-ref bytevector offset index-datum size)
-                      0 descriptor)))
-         (else
-          (if syntax?
-              (let ((bytevector* #`(pointer-ref #,bytevector #,offset #,size)))
-                (bytestructure-unwrap/syntax
-                 bytevector* 0 descriptor (syntax-list index index)))
-              (let ((bytevector* (pointer-ref bytevector offset size)))
-                (bytestructure-unwrap*
-                 bytevector* 0 descriptor index))))))))
-  (define (getter syntax? bytevector offset)
-    (if syntax?
-        #`(ffi:make-pointer (bytevector-address-ref #,bytevector #,offset))
-        (ffi:make-pointer (bytevector-address-ref bytevector offset))))
-  (define (setter syntax? bytevector offset value)
-    (if syntax?
-        #`(pointer-set! #,bytevector #,offset #,value)
-        (pointer-set! bytevector offset value)))
-  (define meta (make-pointer-metadata %descriptor))
-  (make-bytestructure-descriptor size alignment unwrapper getter setter meta))
-(export fh:pointer)
 
 (define-record-type <function*-metadata>
   (make-function*-metadata wrapper unwrapper)
@@ -195,6 +96,17 @@
         function*-metadata-wrapper
         function*-metadata-unwrapper)
 
+;; @deffn {Procedure} fh:function* wrapper unwrapper
+;; NEED to deal with object, pointer, lambda's
+;; NEED TO DEFINE WRAPPER and UNWRAPPER
+;; unwrap: object -> pointer
+;; wrap: lambda -> pointer
+;; make: lambda -> object
+;; CONCLUSION
+;; (fhval* object-val) -> lambda
+;; (fhval& lambda) -> function*-val
+;; (make-GCallback (lambda ...) => xx
+;; @end deffn
 (define (fh:function* wrapper unwrapper) ;; TBD documentation?
   (define size (ffi:sizeof '*))
   (define alignment size)
@@ -208,8 +120,45 @@
   (make-bytestructure-descriptor size alignment #f getter setter meta))
 (export fh:function*)
 
+(define-record-type <function-metadata>
+  (make-function-metadata proc->ptr ptr->proc)
+  function-metadata?
+  (proc->ptr function-metadata-proc->ptr)
+  (ptr->proc function-metadata-ptr->proc))
+(export function-metadata?
+        function-metadata-proc->ptr
+        function-metadata-ptr->proc)
+
+;; @deffn {Procedure} fh:function proc->ptr ptr->proc
+;; This is a pseudo-object.  It needs to have size for bogus allocation.
+;; @end deffn
+(define (fh:function proc->ptr ptr->proc)
+  (define size (ffi:sizeof '*))
+  (define alignment size)
+  (define (getter syntax? bytevector offset)
+    (when syntax? (throw 'ffi-help-error "fh:function* has no macros"))
+    (fherr "fh:function ref outsize of fhval-ref, I think"))
+  (define (setter syntax? bytevector offset)
+    (when syntax? (throw 'ffi-help-error "fh:function* has no macros"))
+    (fherr "fh:function set! outsize of fhval-set!, I think"))
+  (define meta (make-function-metadata proc->ptr ptr->proc))
+  (make-bytestructure-descriptor size alignment #f getter setter meta))
+(export fh:function)
+
 
 ;; ---- hookups ----------------------------------------------------------------
+
+;; fhval-base-type
+;; fhval-pointer-type
+;; fhval?
+;; fhval-ref
+;; fhval-set!
+;; fhval-sel
+;; fhval-addr
+;; fhval-pointer
+;; fhval*
+;; fhval&
+;; make-fhval
 
 (define bs-base-type-map
   `((void* . *) (char . ,int8) (unsigned-char . ,uint8)
@@ -290,6 +239,18 @@
 (define-syntax-rule (fhval* val)
   (fhval-sel val '*))
 
+(define-syntax-rule (NEWfhval* val)
+  (let* ((desc (bytestructure-descriptor val))
+         (meta (bytestructure-descriptor-metadata desc)))
+    (cond
+     ((function-metadata? meta)
+      (let* ((bv (bytestructure-bytevector val))
+             (bv* (ffi:bytevector->pointer bv)))
+        ((function-metadata-ptr->proc meta) bv*)))
+     (else
+      (fhval-sel val)))))
+
+
 ;; @deffn {Syntax} fhval& obj
 ;; dereference a pointer
 ;; @end deffn
@@ -297,6 +258,7 @@
   (error "fhval& not implemented"))
 
 ;; @deffn {Procedure} make-fhval desc [arg] [#:name name])
+;; FIXME
 ;; @end deffn
 (define-syntax make-fhval
   (syntax-rules ()
@@ -304,6 +266,22 @@
      (cond
       ((bytestructure? arg) arg)
       ((ffi:pointer? arg) (bytestructure desc (ffi:pointer-address arg)))
+      ((procedure? arg)
+       (let* ((meta (bytestructure-descriptor-metadata desc))
+              (proc->ptr (cond
+                          ((function-metadata? meta)
+                           (function-metadata-proc->ptr meta))
+                          ((and (pointer-metadata? meta)
+                                (function-metadata?
+                                 (bytestructure-descriptor-metadata
+                                  (pointer-metadata-content-descriptor meta))))
+                           (function-metadata-proc->ptr
+                            (bytestructure-descriptor-metadata
+                             (pointer-metadata-content-descriptor meta))))
+                          (else (error "yuckus"))))
+              (ptr (proc->ptr arg))
+              (bvec (ffi:pointer->bytevector ptr (ffi:sizeof '*))))
+         (make-bytestructure bvec 0 desc)))
       (else (bytestructure desc arg))))
     ((_ desc) (bytestructure desc))))
 
@@ -515,6 +493,7 @@
               (ffi:pointer-address (fhval-ref (fh-object-val obj))) 16) port)
     (display ">" port)))
 
+
 ;; @deffn {Syntax} define-fh-pointer-type name desc type? make
 ;; @example
 ;; (define foo_t*-desc (bs:pointer foo_t-desc))
@@ -534,13 +513,7 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define make
       (case-lambda
-        ((arg)
-         (cond
-          ((ffi:pointer? arg)
-           (make-struct/no-tail type (make-fhval desc arg)))
-          ((number? arg)
-           (make (ffi:make-pointer arg)))
-          (else (fherr "make-object: bad arg: ~s" arg))))
+        ((arg) (make-struct/no-tail type (make-fhval desc arg)))
         (() (make ffi:%null-pointer))))))
 
 ;; @deffn {Syntax} define-fh-compound-type type desc type? make
@@ -604,17 +577,21 @@
                          (make-printer (quote alias))))
              #;(export alias pred make)))))))
 
-;; @deffn {Syntax} define-fh-function*-type type unwrapper type? wrapper
-;; document this
+;; @deffn {Syntax} define-fh-function-type type desc pred make
+;; machine code for a function, but we only keep one word
+;; bytevector->pointer will give us the address
 ;; @end deffn
-(define-syntax-rule (define-fh-function*-type type unwrapper type? wrapper)
+(define-syntax-rule (define-fh-function-type type desc pred make)
   (begin
     (define type
-      (make-fht (quote type) unwrapper wrapper #f #f
+      (make-fht (quote type)
+                (lambda (obj) (error "not expected"))
+                (lambda (arg) (make-struct/no-tail type (make-fhval desc arg)))
+                #f #f
                 (make-printer (quote type))))
     (define (type? obj)
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
-    (define make wrapper)))
+    (define (make arg) (make-struct/no-tail type (make-fhval desc arg)))))
 
 ;; @deffn {Syntax} fh-cast type value
 ;; Cast to new type.  Always a pointer, unless I missed something.
@@ -633,6 +610,7 @@
       ((_ type expr)
        #`(#,(gen-id x "make-" #'type) (fh-object-ref expr))))))
 (export fh-cast)
+
 
 ;; @deffn {Procedure} fh-varg type value
 ;; Generate variadic argument for variadic procedure.
@@ -727,7 +705,6 @@
 (fh-ref<=>deref! char** make-char** char* make-char*)
 (export char**? make-char**)
 
-
 ;; --- random stuff --------------------
 
 (define ffi-void* '*)
@@ -818,6 +795,7 @@
                  ffi:int (dynamic-func "fclose" (dynamic-link)) (list '*))))
     (lambda (file)
       (~fclose file))))
+
 
 #|
 ;; @deffn {Procedure} fh-link-proc return name args dy-lib-list

@@ -511,9 +511,10 @@
       (`((pointer-to) (function-returning (param-list . ,params)) . ,tail)
        (call-with-values
            (lambda () (function*-wraps (mdecl->udecl (cons "_" tail)) params))
-         (lambda (wrapper unwrapper) `(fh:function* ,wrapper ,unwrapper))))
+         (lambda (ptr->proc proc->ptr)
+           `(bs:pointer (fh:function ,ptr->proc ,proc->ptr)))))
       (`((pointer-to) (pointer-to) (function-returning . ,rest) . ,rest)
-       `(bs:pointer 'void))
+       `(bs:pointer 'void)) ;; FIXME: I can probably do this now
       (`((pointer-to) (struct-ref (ident ,name)))
        (if (member (w/struct name) (*defined*))
 	   `(bs:pointer ,(strings->symbol "struct-" name (*ttag*)))
@@ -847,7 +848,7 @@
       (`(typename ,name)
        (cond
 	((member name def-defined) 'unwrap~number)
-	((member name defined) `(fh-unwrap ,name))
+	((member name defined) `(fht-unwrap ,(string->symbol name)))
 	((member name wrapped) (strings->symbol "unwrap-" name))
 	(else #f)))
       (`(enum-def (ident ,name) ,_)
@@ -944,59 +945,60 @@
 	 (exec-return (udecl->fh-wrapper return keepers))
 	 (exec-params (map (lambda (p) (udecl->fh-unwrapper p keepers)) params))
          (param-names (map string->symbol
-                           (map (lambda (u) (declr-name (sx-ref u 2))) params))))
+                           (map (lambda (u) (declr-name (sx-ref u 2)))
+                                params))))
     (values decl-return decl-params exec-return exec-params param-names)))
 
-;; @deffn {Procedure} function*-wraps return params
-;; Return a wrapper and unwrapper procedure for a function pointer with
-;; return mtail @var{return} and udecl params @var{params}.
-;; Here a wrapper maps a pointer to a procedure and an unwrapper maps
-;; a procedure to a pointer.
+;; @deffn {Procedure} function*-wraps return params => values
+;; Based on return udecl @var{return} and udecl params @var{params},
+;; generate two procedures:
+;; @enumerate
+;; @item generate procedure from pointer
+;; @item generate pointer from procedure
+;; @end enumerate
 ;; @end deffn
 (define (function*-wraps return params)
   (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
   (call-with-values (lambda () (process-params return params))
     (lambda (decl-return decl-params exec-return exec-params param-names)
-      (let* ((unwrapp (map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
-                           param-names exec-params))
+      (let* ((unwrapp (map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n))) ;fold?
+                           param-names exec-params)) ;; unwrapped params
              (call `(~proc ,@param-names))
 	     (va-call `(apply ~proc ,param-names (map cdr ~rest))))
         (values
+         `(lambda (~proc)               ; procedure->pointer
+	    (ffi:procedure->pointer
+             ,decl-return ~proc (list ,@decl-params)))
          (if varargs?
-             `(lambda (~fptr)
+             `(lambda (~ptr)            ; pointer->procedure (varargs)
 	        (lambda (,@param-names . ~rest)
 	          (let ((~proc (ffi:pointer->procedure
                                 ,decl-return ~fptr
                                 (append ,@decl-params (map car ~rest)))
 	                       ,@unwrapp))
 		    ,(if exec-return (list exec-return va-call) va-call))))
-             `(lambda (~fptr)
+             `(lambda (~fptr)           ; pointer->procedure
 	        (let ((~proc (ffi:pointer->procedure
                               ,decl-return ~fptr (list ,@decl-params))))
 	          (lambda ,param-names
 	            (let ,unwrapp
-		      ,(if exec-return (list exec-return call) call))))))
-         `(lambda (~proc)
-	    (ffi:procedure->pointer
-             ,decl-return ~proc (list ,@decl-params))))))))
+		      ,(if exec-return (list exec-return call) call)))))))))))
 
+#|
 (define (fhscm-def-function* name return params)
   (call-with-values (lambda () (function*-wraps return params))
-    (lambda (wrapper unwrapper)
-      (let ((wrap (strings->symbol "wrap-" name))
-            (unwrap (strings->symbol "unwrap-" name)))
-        (ppscm `(define-public ,wrap ,wrapper))
-        (ppscm `(define-public ,unwrap ,unwrapper))
-        ))))
-
+    (lambda (ptr->proc proc->ptr)
+      (ppscm `(define-public ,(strings->symbol "wrap-" name) ,ptr->proc))
+      (ppscm `(define-public ,(strings->symbol "unwrap-" name) ,proc->ptr)))))
+|#
 
 (define (cnvt-fctn name return params)
   ;; can't use function*-wraps just because of the delay :(
   (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
   (call-with-values (lambda () (process-params return params))
     (lambda (decl-return decl-params exec-return exec-params param-names)
-      (let* ((unwrapp (map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
-                           param-names exec-params))
+      (let* ((uw-params (map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
+                             param-names exec-params))
              (call `((force ~proc) ,@param-names))
 	     (va-call `(apply (force ~proc) ,@param-names (map cdr ~rest))))
         (ppscm
@@ -1006,14 +1008,14 @@
 	            (let ((~proc (ffi:pointer->procedure
                                   ,decl-return (foreign-pointer-search ,name)
                                   (append ,@decl-params (map car ~rest))))
-	                  ,@unwrapp)
+	                  ,@uw-params)
 		      ,(if exec-return (list exec-return va-call) va-call)))
 	         `(let ((~proc
                          (delay (ffi:pointer->procedure
                                  ,decl-return (foreign-pointer-search ,name)
                                  (list ,@decl-params)))))
                   (lambda ,param-names
-	            (let ,unwrapp
+	            (let ,uw-params
 		      ,(if exec-return (list exec-return call) call)))))))))))
 
 
@@ -1091,31 +1093,33 @@
           (`((function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "_" rest))))
              (call-with-values (lambda () (function*-wraps return params))
-               (lambda (wrapper unwrapper)
-                 (let ((wrap (strings->symbol "wrap-" label "*"))
-                       (unwrap (strings->symbol "unwrap-" label "*")))
-                   (ppscm `(define-public ,wrap ,wrapper))
-                   (ppscm `(define-public ,unwrap ,unwrapper))
-                   (ppscm `(define-public ,desc* (fh:function* ,wrap ,unwrap)))
-                   (ppscm
-                    `(define-fh-function*-type ,name* ,wrap ,pred* ,unwrap))
-                   (ppscm `(define ,make* ,wrap))
-                   (ppscm `(export ,name* ,pred* ,make*))
-                   ))))
-           (values (cons (w/* label) wrapped) (cons (w/* label) defined)))
+               (lambda (ptr->proc proc->ptr)
+                 (ppscm `(define-public ,desc
+                           (fh:function ,ptr->proc ,proc->ptr)))
+                 (ppscm `(define-fh-function-type ,name ,desc ,pred ,make))
+                 (ppscm `(define-public ,desc* (bs:pointer ,desc)))
+                 (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
+                 (ppscm `(export ,name* ,pred* ,make*))
+                 ;; FIXME: fh-ref<=>deref! ???
+                 )))
+           (values (cons* label (w/* label) wrapped)
+                   (cons* label (w/* label) defined)))
 
           (`((pointer-to) (function-returning (param-list . ,params)) . ,rest)
            (let ((return (mdecl->udecl (cons "_" rest))))
              (call-with-values (lambda () (function*-wraps return params))
-               (lambda (wrapper unwrapper)
-                 (let ((wrap (strings->symbol "wrap-" label))
-                       (unwrap (strings->symbol "unwrap-" label)))
-                   (ppscm `(define-public ,wrap ,wrapper))
-                   (ppscm `(define-public ,unwrap ,unwrapper))
-                   (ppscm `(define-public ,desc (fh:function* ,wrap ,unwrap)))
-                   (ppscm `(define-fh-function*-type ,name ,wrap ,pred ,unwrap))
-                   (ppscm `(define ,make ,wrap))
+               (let ((*desc (strings->symbol "*" label (*ttag*)))
+                     (*name (strings->symbol "*" label))
+                     (*pred (strings->symbol "*" label "?"))
+                     (*make (strings->symbol "make-*" label)))
+                 (lambda (ptr->proc proc->ptr)
+                   (ppscm `(define-public ,*desc
+                             (fh:function ,ptr->proc ,proc->ptr)))
+                   (ppscm `(define-fh-function-type ,*name ,*desc ,*pred ,*make))
+                   (ppscm `(define-public ,desc (bs:pointer ,*desc)))
+                   (ppscm `(define-fh-pointer-type ,name ,desc ,pred ,make))
                    (ppscm `(export ,name ,pred ,make))
+                   (ppscm `(fh-ref<=>deref! ,name ,make ,*name ,*make))
                    ))))
            (values (cons label wrapped) (cons label defined)))
 
@@ -1123,8 +1127,9 @@
            (ppscm `(define-public ,desc ,(mtail->target mtail)))
            (ppscm `(define-fh-pointer-type ,name ,desc ,pred ,make))
            (ppscm `(export ,name ,pred ,make))
+           ;; FIXME: fh-ref<=>deref! ???
            (case (caar rest)
-             ((fixed-type float-type) (values wrapped defined))
+             ((fixed-type float-type) (values wrapped defined)) ;; ???
              (else (values (cons label wrapped) (cons label defined)))))
 
           (__
