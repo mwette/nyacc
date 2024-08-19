@@ -1,6 +1,6 @@
 ;; cairo.ffi				-*- Scheme -*-
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@
   )
 
 (define-public cairo_raster_source_acquire_func_t*-desc
-  (fh:pointer  cairo_raster_source_acquire_func_t-desc))
+  (bs:pointer  cairo_raster_source_acquire_func_t-desc))
 (define-fh-pointer-type cairo_raster_source_acquire_func_t*
   cairo_raster_source_acquire_func_t*-desc
   cairo_raster_source_acquire_func_t*?
@@ -52,7 +52,7 @@
 	      make-cairo_raster_source_acquire_func_t)
 
 (define-public cairo_raster_source_release_func_t*-desc
-  (fh:pointer  cairo_raster_source_release_func_t-desc))
+  (bs:pointer  cairo_raster_source_release_func_t-desc))
 (define-fh-pointer-type cairo_raster_source_release_func_t*
   cairo_raster_source_release_func_t*-desc
   cairo_raster_source_release_func_t*?

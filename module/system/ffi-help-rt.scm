@@ -28,6 +28,7 @@
             fh-object-type fh-object-val
             fhval-ref fhval-set! fhval-sel fhval* fhval& make-fhval
             fhval-addr fhval-pointer
+            fhval-base-type
 
             NULL !0
             ffi-void*

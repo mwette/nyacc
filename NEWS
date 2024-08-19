@@ -24,6 +24,7 @@ without any warranty.
 	      (if (ffi:pointer? maybe-ptr) 
 	          (ffi:pointer-address maybe-ptr) 
 	          maybe-ptr))
+	* ffi-help.scm: now depends on scheme bytestructures V2
 	* ffi-help.scm: major updates to pave the way for coming cdata
 
 2024-06-24  V1.09.5
