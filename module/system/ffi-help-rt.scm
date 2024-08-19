@@ -72,6 +72,7 @@
 (define (fherr fmt . args)
   (throw 'ffi-help-error (apply simple-format #f fmt args)))
 
+
 ;; --- bytestructure support --------------------------------------------------
 
 (use-modules (bytestructures guile))
@@ -168,29 +169,39 @@
 ;; make-fhval
 
 (define bs-base-type-map
-  `((void* . *) (char . ,int8) (unsigned-char . ,uint8)
-    (int8_t . ,int8) (uint8_t . ,uint8) (int16_t . ,int16) (uint16_t . ,uint16)
+  `((void* . *) (char . ,int8) (unsigned-char . ,uint8) (int8_t . ,int8)
+    (uint8_t . ,uint8) (int16_t . ,int16) (uint16_t . ,uint16)
     (int32_t . ,int32) (uint32_t . ,uint32) (int64_t . ,int64)
     (uint64_t . ,uint64) (float . ,float32) (double . ,float64)
-    (short . ,short) (unsigned-short . ,unsigned-short)
-    (int . ,int) (unsigned-int . ,unsigned-int)
-    (long . ,long) (unsigned-long . ,unsigned-long)
-    (long-long . ,long-long) (unsigned-long-long . ,unsigned-long-long)
-    (intptr_t . ,intptr_t) (uintptr_t . ,uintptr_t)
-    (size_t . ,size_t) (ssize_t . ,ssize_t) (ptrdiff_t . ,ptrdiff_t)
-    ;;
-    (_Bool . ,int8) (bool . ,int8) (signed-char . ,int8) (long-double . #f)
-    (wchar_t . ,int32) (char16_t . ,int16) (char32_t . ,int32)))
+    (short . ,short) (unsigned-short . ,unsigned-short) (int . ,int)
+    (unsigned-int . ,unsigned-int) (long . ,long)
+    (unsigned-long . ,unsigned-long) (long-long . ,long-long)
+    (unsigned-long-long . ,unsigned-long-long) (intptr_t . ,intptr_t)
+    (uintptr_t . ,uintptr_t) (size_t . ,size_t) (ssize_t . ,ssize_t)
+    (ptrdiff_t . ,ptrdiff_t) (_Bool . ,int8) (bool . ,int8)
+    (signed-char . ,int8) (long-double . #f) (wchar_t . ,int32)
+    (char16_t . ,int16) (char32_t . ,int32)))
+
+(define base-type-alias-map
+  '((signed-short . short) (short-int . short) (signed-short-int . short)
+    (unsigned-short-int . unsigned-short) (signed . int) (signed-int . int)
+    (unsigned . unsigned-int) (long-int . long) (signed-long . long)
+    (signed-long-int . long) (unsigned-long-int . unsigned-long)
+    (long-long-int . long-long) (signed-long-long . long-long)
+    (signed-long-long-int . long-long)
+    (unsigned-long-long-int . unsigned-long-long)))
 
 (define-syntax-rule (fhval-base-type ctype)
+  (assq-ref bs-base-type-map ctype))
+
+(define-syntax-rule (ALTfhval-base-type ctype)
   (or (assq-ref bs-base-type-map ctype)
-      #;(assq-ref bs-base-type-map (assq-ref base-type-alias-map ctype))))
-(export fhval-base-type)
+      (assq-ref bs-base-type-map (assq-ref base-type-alias-map ctype))))
+
 
 (define-syntax-rule (fhval-pointer-type desc)
   (bs:pointer desc))
 (export fhval-pointer-type)
-
 
 (define-syntax-rule (fhval? val)
   (bytestructure? val))
@@ -301,14 +312,6 @@
 
 ;; ----------------------------------------------------------------------------
 
-#;(define base-type-alias-map
-  '((signed-short . short) (short-int . short) (signed-short-int . short)
-    (unsigned-short-int . unsigned-short) (signed . int) (signed-int . int)
-    (unsigned . unsigned-int) (long-int . long) (signed-long . long)
-    (signed-long-int . long) (unsigned-long-int . unsigned-long)
-    (long-long-int . long-long) (signed-long-long . long-long)
-    (signed-long-long-int . long-long)
-    (unsigned-long-long-int . unsigned-long-long)))
 
 ;; The FFI helper uses a base type based on Guile structs and vtables.
 ;; The base vtable uses these (lambda (obj) ...) fields:
@@ -609,45 +612,6 @@
       (and (fh-object? obj) (eq? (struct-vtable obj) type)))
     (define (make arg) (make-struct/no-tail type (make-fhval desc arg)))))
 
-;; @deffn {Syntax} fh-cast type value
-;; Cast to new type.  Always a pointer, unless I missed something.
-;; Example: Given @code{bar} of type @code{Bar*}:
-;; @example
-;; (fh-cast Foo* bar) => <Foo* 0xabcd1234>
-;; @end example
-;; @end deffn
-(define-syntax fh-cast
-  (lambda (x)
-    "- Syntax: fh-cast type value
-     Cast to new type.  Always a pointer, unless I missed something.
-     Example: Given ‘bar’ of type ‘Bar*’:
-          (fh-cast Foo* bar) => <Foo* 0xabcd1234>"
-    (syntax-case x ()
-      ((_ type expr)
-       #`(#,(gen-id x "make-" #'type) (fh-object-ref expr))))))
-(export fh-cast)
-
-
-;; @deffn {Procedure} fh-varg type value
-;; Generate variadic argument for variadic procedure.
-;; @example
-;; (fh-cast foo_desc_t* 321)
-;; (use-modules ((system foreign) #:prefix 'ffi:))
-;; (fh-varg ffi:short 321)
-;; We might have a procedure that wants be passed as a pointer but
-;; @end deffn
-;; use cases
-;; @itemize
-;; @item
-;; @example
-;; (lambda (x y) #f) => (procedure->pointer void (list '* '*))
-;; @end example
-;; @end itemize
-;; can we now do a vector->pointer
-(define (fh-varg type expr)
-  (cons type expr))
-
-
 ;; @deffn {Syntax} define-fh-base-type type
 ;; This generates a local-only type but exports the predicate and generator.
 ;; So,  @emph{type}@code{?} @code{make-}@emph{type} and
@@ -720,6 +684,45 @@
 (define-fh-pointer-type char** char**-desc char**? make-char**)
 (fh-ref<=>deref! char** make-char** char* make-char*)
 (export char**? make-char**)
+
+
+;; @deffn {Syntax} fh-cast type value
+;; Cast to new type.  Always a pointer, unless I missed something.
+;; Example: Given @code{bar} of type @code{Bar*}:
+;; @example
+;; (fh-cast Foo* bar) => <Foo* 0xabcd1234>
+;; @end example
+;; @end deffn
+(define-syntax fh-cast
+  (lambda (x)
+    "- Syntax: fh-cast type value
+     Cast to new type.  Always a pointer, unless I missed something.
+     Example: Given ‘bar’ of type ‘Bar*’:
+          (fh-cast Foo* bar) => <Foo* 0xabcd1234>"
+    (syntax-case x ()
+      ((_ type expr)
+       #`(#,(gen-id x "make-" #'type) (fh-object-ref expr))))))
+(export fh-cast)
+
+;; @deffn {Procedure} fh-varg type value
+;; Generate variadic argument for variadic procedure.
+;; @example
+;; (fh-cast foo_desc_t* 321)
+;; (use-modules ((system foreign) #:prefix 'ffi:))
+;; (fh-varg ffi:short 321)
+;; We might have a procedure that wants be passed as a pointer but
+;; @end deffn
+;; use cases
+;; @itemize
+;; @item
+;; @example
+;; (lambda (x y) #f) => (procedure->pointer void (list '* '*))
+;; @end example
+;; @end itemize
+;; can we now do a vector->pointer
+(define (fh-varg type expr)
+  (cons type expr))
+
 
 ;; --- random stuff --------------------
 
