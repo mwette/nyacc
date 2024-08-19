@@ -31,17 +31,16 @@
 
 ;; This will generate a FFI code wrapper around the lambda.  Then below
 ;; we use (fh-cast GCallback hello) to match the argument signature.
-#;(define hello
+(define hello
   (make-GtkCallback
    (lambda (widget data)
      (display "Hello world!\n"))))
-(define hello
-   (lambda (widget data)
-     (display "Hello world!\n")))
 
-(define (delete-event widget event data)
-  (display "delete event occurred\n")
-  1)
+(define delete-event
+  (make-GtkEventCallback
+   (lambda (widget event data)
+     (display "delete event occurred\n")
+     1)))
 
 (define (main)
   (define window #f)
@@ -51,25 +50,19 @@
   (gtk_init (pointer-to argc) NULL)
 
   (set! window (gtk_window_new 'GTK_WINDOW_TOPLEVEL))
-  (sferr "error: window is not window\n")
-  (sferr "window: ~s\n" window) (quit)
-  ;;(g_signal_connect window "delete-event" delete-event NULL)
-  #|
+  (g_signal_connect window "delete-event" (fh-cast GCallback delete-event) NULL)
   (g_signal_connect window "destroy" ~gtk_main_quit NULL)
   (gtk_container_set_border_width window 10)
 
   (set! button (gtk_button_new_with_label "Hello World"))
   (g_signal_connect button "clicked" (fh-cast GCallback hello) NULL)
-  (g_signal_connect button "clicked" hello NULL)
-  (g_signal_connect_swapped button "clicked" ~gtk_widget_destroy window)
+  ;;(g_signal_connect_swapped button "clicked" ~gtk_widget_destroy window)
   (gtk_container_add window button)
 
-  ;;(gtk_widget_show button)
-  ;;(gtk_widget_show window)
+  (gtk_widget_show button)
+  (gtk_widget_show window)
 
-  (gtk_main)
-  |#
-  )
+  (gtk_main))
 
 (main)
 

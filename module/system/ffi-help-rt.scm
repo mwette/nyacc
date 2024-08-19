@@ -87,6 +87,13 @@
     ((4) bytevector-u32-native-ref)
     ((8) bytevector-u64-native-ref)))
 
+(define bytevector-address-set!
+  (case (ffi:sizeof '*)
+    ((1) bytevector-u8-set!)
+    ((2) bytevector-u16-native-set!)
+    ((4) bytevector-u32-native-set!)
+    ((8) bytevector-u64-native-set!)))
+
 (define-record-type <function*-metadata>
   (make-function*-metadata wrapper unwrapper)
   function*-metadata?
@@ -278,9 +285,15 @@
                            (function-metadata-proc->ptr
                             (bytestructure-descriptor-metadata
                              (pointer-metadata-content-descriptor meta))))
-                          (else (error "yuckus"))))
+                          (else (fherr "make-fhval: bad arg"))))
               (ptr (proc->ptr arg))
-              (bvec (ffi:pointer->bytevector ptr (ffi:sizeof '*))))
+              (bvec (cond
+                     ((function-metadata? meta)
+                      (ffi:pointer->bytevector ptr (ffi:sizeof '*)))
+                     ((pointer-metadata? meta)
+                      (let ((bv (make-bytevector (ffi:sizeof '*))))
+                        (bytevector-address-set! bv 0 (ffi:pointer-address ptr))
+                        bv)))))
          (make-bytestructure bvec 0 desc)))
       (else (bytestructure desc arg))))
     ((_ desc) (bytestructure desc))))
@@ -534,6 +547,9 @@
         ((arg) (make-struct/no-tail type (make-fhval desc arg)))
         (() (make-struct/no-tail type (make-fhval desc)))))))
 
+;; @deffn {Syntax} define-fh-vector-type type desc type? make
+;; to be documented
+;; @end deffn
 (define-syntax-rule (define-fh-vector-type type elt-desc type? make)
   (begin
     (define type

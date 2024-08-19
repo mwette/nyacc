@@ -30,27 +30,29 @@
 
 (define-public gtk-symval ffi-gtk2-symbol-val)
 
-;; OK, some gtk programs use (lambda (widget event arg) ...) and Gtk etc does
-;; not provide it so I hack it here:
-(define-public wrap-GtkEventCallback
-  (lambda (~fptr)
-    (let ((~proc (ffi:pointer->procedure ffi:void ~fptr (list '* '* '*))))
-      (lambda (widget event arg)
-        (let ((widget (unwrap~pointer widget))
-              (event (unwrap~pointer event))
-              (arg (unwrap~pointer arg)))
-          (~proc widget event arg))))))
-(define-public unwrap-GCallback
-  (lambda (~proc)
-    (ffi:procedure->pointer ffi:void ~proc (list '* '* '*))))
-#|
-(define-public GtkEventCallback-desc
-  (fh:function*
-    'void (list (bs:pointer 'void) (bs:pointer 'void) (bs:pointer 'void)))))
-(define-fh-function*-type GtkEventCallback
-  GtkEventCallback-desc  GtkEventCallback? make-GtkEventCallback)
+;; like typedef void (*GtkEventCallback)(GtkWidget *, GtkEvent *, gpointer);
+(define-public *GtkEventCallback-desc
+  (fh:function
+    (lambda (~proc)
+      (ffi:procedure->pointer
+        ffi:void ~proc (list ffi-void* ffi-void* ffi-void*)))
+    (lambda (~fptr)
+      (let ((~proc (ffi:pointer->procedure
+                     ffi:void ~fptr (list ffi-void* ffi-void* ffi-void*))))
+        (lambda (widget event data)
+          (let ((widget (unwrap~pointer widget))
+                (event (unwrap~pointer event))
+                (data ((fht-unwrap gpointer) data)))
+            (~proc widget event data)))))))
+(define-fh-function-type
+  *GtkEventCallback *GtkEventCallback-desc
+  *GtkEventCallback? make-*GtkEventCallback)
+(define-public GtkEventCallback-desc (bs:pointer *GtkEventCallback-desc))
+(define-fh-pointer-type
+  GtkEventCallback GtkEventCallback-desc GtkEventCallback? make-GtkEventCallback)
 (export GtkEventCallback GtkEventCallback? make-GtkEventCallback)
-|#
+(fh-ref<=>deref! GtkEventCallback make-GtkEventCallback
+                 *GtkEventCallback make-*GtkEventCallback)
 
 ;; This is the c function.
 (define-public ~gtk_widget_destroy
