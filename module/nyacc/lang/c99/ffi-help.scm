@@ -874,8 +874,10 @@
 (define (mtail->fh-wrapper mtail)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
     (match mtail
-      (`((fixed-type ,name)) (strings->symbol "make-" (noblanks (cfix name))))
-      (`((float-type ,name)) (strings->symbol "make-" (noblanks (cfix name))))
+      ;;(`((fixed-type ,name)) (strings->symbol "make-" (noblanks (cfix name))))
+      ;;(`((float-type ,name)) (strings->symbol "make-" (noblanks (cfix name))))
+      (`((fixed-type ,name)) #f)
+      (`((float-type ,name)) #f)
       (`((void)) #f)
       (`((typename ,name))
        (cond
