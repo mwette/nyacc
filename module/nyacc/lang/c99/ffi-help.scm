@@ -750,7 +750,7 @@
               (cond
                ((symbol? n)
                 (or (assq-ref ,(sfsym "~A-enum-nvl" name) n)
-                    (fherr "bad arg: ~~A" n)))
+                    (fherr "bad arg: ~A" n)))
                ((integer? n) n)
                (else (error "bad arg")))))
     (ppscm `(define-public (,(sfsym "wrap-~A" name) v)
