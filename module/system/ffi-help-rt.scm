@@ -562,7 +562,7 @@
 ;; @deffn {Syntax} define-fh-vector-type type desc type? make
 ;; to be documented
 ;; @end deffn
-(define-syntax-rule (define-fh-vector-type type elt-desc type? make)
+(define-syntax-rule (define-fh-vector-type type desc type? make)
   (begin
     (define type
       (make-fht (quote type)
