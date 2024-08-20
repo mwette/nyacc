@@ -273,8 +273,15 @@
 ;; @deffn {Syntax} fhval& obj
 ;; dereference a pointer
 ;; @end deffn
-(define-syntax-rule (fhval& obj)
-  (error "fhval& not implemented"))
+(define-syntax-rule (fhval& val)
+  (let* ((desc (bytestructure-descriptor val))
+         (meta (bytestructure-descriptor-metadata desc))
+         (desc* (bs:pointer desc))
+         (bvec (bytestructure-bytevector val))
+         (bptr (ffi:bytevector->pointer bvec))
+         (bv* (make-bytevector (ffi:sizeof '*))))
+    (bytevector-address-set! bv* 0 (ffi:pointer-address bptr))
+    (make-bytestructure bv* 0 desc*)))
 
 ;; @deffn {Procedure} make-fhval desc [arg] [#:name name])
 ;; FIXME
@@ -399,8 +406,9 @@
               printer
               (or unwrap (lambda (obj) (fherr "no unwrapper")))
               (or wrap (lambda (obj) (fherr "no wrapper")))
-              (or pointer-to (lambda (obj) (fhval& (fh-object-val obj))))
-              (or value-at (lambda (obj) (fhval* (fh-object-val obj))))))
+              pointer-to ;; (lambda (obj) (fhval& (fh-object-val obj)))
+              value-at ;; (lambda (obj) (fhval* (fh-object-val obj)))
+              ))
          (vt (struct-vtable ty)))
     (set-struct-vtable-name! vt name)
     ty))
@@ -412,10 +420,10 @@
 (define (fh-ref<=>deref! p-type p-make type make)
   (if p-make
       (struct-set! type (+ vtable-offset-user 2) ; pointer-to
-                   (lambda (obj) (fhval& (fh-object-val obj)))))
+                   (lambda (obj) (p-make (fhval& (fh-object-val obj))))))
   (if make
       (struct-set! p-type (+ vtable-offset-user 3) ; value-at
-                   (lambda (obj) (fhval* (fh-object-val obj))))))
+                   (lambda (obj) (make (fhval* (fh-object-val obj)))))))
 
 ;; Right now this returns a ffi pointer.
 ;; TODO: add field option so we can do (pointer-to xstr 'vec) ??
