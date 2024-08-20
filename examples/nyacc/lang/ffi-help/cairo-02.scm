@@ -1,6 +1,6 @@
 ;; cairo-02.scm - try key
 
-;; Copyright (C) 2017 Matthew R. Wette
+;; Copyright (C) 2017,2024 Matthew Wette
 
 ;; Copying and distribution of this file, with or without modification,
 ;; are permitted in any medium without royalty provided the copyright
@@ -25,13 +25,17 @@
 
 (define k1 (make-cairo_user_data_key_t)) ; make a key
 (define v1 '((abc . 123) (def . 456)))   ; make some data
-(define (d1 data)                        ; callback
-  (simple-format #t "d1 called with ~S\n" (pointer->scm data)))
-         
+(define d1                               ; callback
+  (make-cairo_destroy_func_t
+   (lambda (data)
+     (simple-format #t "d1 called with ~S\n" (pointer->scm data)))))
+
 (cairo_set_user_data cr (pointer-to k1) (scm->pointer v1) d1)
 
 (cairo_surface_write_to_png srf "cairo-02.png")
 (cairo_destroy cr)
 (cairo_surface_destroy srf)
+#|
+|#
 
 ;; --- last line ---
