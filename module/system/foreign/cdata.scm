@@ -17,16 +17,22 @@
 
 ;;; Notes:
 
-;; reference set select
-;; (cdata-ref data tag ...) -> scheme-value | <cdata>
-;; (cdata-set! data val tag ...)
+;; (cdata-ref data tag ...) -> scheme-value | #f
+;; (cdata-set! data val tag ...) -> undefined
 ;; (cdata-sel data tag ...) -> <cdata>
-;; (ctype-sel type ix tags) -> ix, <ctype>
+;; (ctype-sel type ix tags) -> (values ix ct)
 ;; (ctype-equal? a b)
 ;; (make-cdata ct)
 ;; (make-cdata ct val)
+
+;; working this:
 ;; (make-cdata bv ix ct)
 ;; (make-cdata bv ix ct val)
+;; (make-named-cdata "foo" ct)
+;; (make-named-cdata "foo" ct val)
+;; (make-named-cdata "foo" ct val "foo")
+;; (make-cdata ct #:from-pointer ptr)
+;; (make-cdata* ct #:from-pointer pointer #:offset 0)
 
 ;; use existing bytevector
 ;; (%make-cdata bv ix ct tn)
@@ -46,6 +52,7 @@
             cstruct cunion cpointer carray cenum cfunction*
             ctype? ctype-size ctype-align ctype-kind ctype-info ctype-equal?
             make-cdata cdata? cdata-bv cdata-ix cdata-ct cdata-tn
+            make-cdata*
             cdata-ref cdata-set! cdata-sel ctype-sel cdata& cdata* cdata-cast
             ctype->ffi
             ;;
@@ -193,6 +200,12 @@
 ;; map of arch (from @code{(*arch*)}) -> cbase-info
 (define *cbase-map* (make-parameter '()))
 
+(display "cdata: need something like global address decoder in (\n")
+;;(define *cdata-adm* (make-parameter '()))
+;; native => identity
+;; or base-address
+;; (with-address-offset #x10000 ....
+
 ;; @deftp {Record} <cdata> bv ix ct [tn]
 ;; Record to hold C data.  Underneath it's a bytevector, index and type.
 ;; There is an optional type-name symbol that can be used to indicate
@@ -274,7 +287,6 @@
     ((f64be) (bytevector-ieee-double-set! bv ix value be))))
 
 
-
 ;; @deffn {Procedure} ctype-detag ix ct tag
 ;; Follows @var{tag}.  For structs and unions, the tag is a symbolic
 ;; field name.  For arrays and pointers, the tag is a non-negative integer.
@@ -295,10 +307,12 @@
        (unless (integer? tag) (error "bad array ref"))
        (let ((type (carray-type ti)))
          (values (+ ix (* tag (ctype-size type))) type)))
-      ((pointer)
-       (unless (integer? tag) (error "bad array ref"))
-       (let ((type (cpointer-type ti)))
-         (values (+ ix (* tag (ctype-size type))) ct)))
+      ((pointer) ;; FIXME this is all messed up, esp for non-native targets
+       (let ((eltsz (ctype-size (cpointer-type ti))))
+         (cond
+          ((eq? tag '*) (values (+ ix eltsz) ct))
+          ((integer? tag) (values (+ ix (* tag eltsz)) ct))
+          (else (error "bad array ref")))))
       (else (error "bad tag" tag)))))
 
 (define (ctype-sel type ix tags)
@@ -606,23 +620,44 @@
     (%make-ctype (ctype-size type) (ctype-align (type)) 'function
                  (%make-cfunction* mtype unwrapper wrapper))))
 
-;; @deffn {Procedure} make-cdata type [value] [options]
-;; @table @code
-;; @item #:name
-;; name to attach to data object (typically a typename)
-;; @item #:from-pointer
-;; generate from address of data
-;; @end table
+;; @deffn {Procedure} make-cdata type [value [name]]
+;; Generate a @emph{cdata} object of type @var{type} with optional
+;; @var{value} and @var{name}.  To specify name but no value use
+;; something like
+;; @example
+;; (make-cdata mytype #f "foo")
+;; @end example
 ;; @end deffn
-(define* (make-cdata type #:optional value #:key name from-pointer)
+(define* (make-cdata type #:optional value name)
   (assert-ctype 'make-cdata type)
-  (let* ((size (ctype-size type))
-         (bv (if from-pointer
-                 (pointer->bytevector from-pointer size)
-                 (make-bytevector size)))
-         (data (%make-cdata bv 0 type name)))
-    (if value (cdata-set! data value))
-    data))
+  (case (ctype-kind type)
+    ((array)
+     (let* ((ca (ctype-info type)) (ln (carray-length ca)))
+       (cond
+        ((zero? ln)
+         (unless (integer? value) (error "make-cdata: zero sized array type"))
+         (let* ((et (carray-type ca)) (sz (ctype-size et))
+                (bv (make-bytevector (* ln sz))))
+           (%make-cdata bv 0 (carray et ln) name)))
+        (else
+         (when value (error "can't initialize arrays yet"))
+         (%make-cdata (make-bytevector (ctype-size type)) name)))))
+    (else
+     (let* ((size (ctype-size type))
+            (bvec (make-bytevector size))
+            (data (%make-cdata bvec 0 type name)))
+       (if value (cdata-set! data value))
+       data))))
+
+;; @deffn {Procedure} make-cdata-from-pointer type pointer [name]
+;; @end deffn
+(define* (make-cdata-from-pointer type pointer #:optional name)
+   (assert-ctype 'make-cdata/ type)
+   (let* ((size (ctype-size type))
+          (bvec (pointer->bytevector from-pointer size))
+          (data (%make-cdata bvec 0 type name)))
+     (if value (cdata-set! data value))
+     data))
 
 ;; @deffn {Procedure} cdata-sel data tag ... => cdata
 ;; Return a new @code{cdata} object representing the associated selection.
@@ -780,10 +815,19 @@
   (let* ((cptr (ctype-info (cdata-ct data)))
          (type (cpointer-type cptr))
          (mtype (cpointer-mtype cptr))
+         (kind (ctype-kind type))
+         (bvec (cdata-bv data))
+         (indx (cdata-ix data))
+         ;;
          (addr (mtype-bv-ref mtype (cdata-bv data) (cdata-ix data)))
-         (bv (pointer->bytevector (make-pointer addr) (ctype-size type))))
-    ;; TODO: check for (cdata-tn data)
-    (%make-cdata bv 0 type #f)))
+         (pntr (make-pointer addr)))
+    (case kind
+      ((function) #f)
+      (else
+       (%make-cdata
+        (pointer->bytevector pntr (ctype-size type))
+        0 type #f)))))
+;; TODO: check for (cdata-tn data)
 
 
 ;; need to be able to cast array to pointer
