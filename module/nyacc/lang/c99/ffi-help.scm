@@ -984,14 +984,6 @@
 	            (let ,unwrapp
 		      ,(if exec-return (list exec-return call) call)))))))))))
 
-#|
-(define (fhscm-def-function* name return params)
-  (call-with-values (lambda () (function*-wraps return params))
-    (lambda (ptr->proc proc->ptr)
-      (ppscm `(define-public ,(strings->symbol "wrap-" name) ,ptr->proc))
-      (ppscm `(define-public ,(strings->symbol "unwrap-" name) ,proc->ptr)))))
-|#
-
 (define (cnvt-fctn name return params)
   ;; can't use function*-wraps just because of the delay :(
   (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
@@ -1138,14 +1130,16 @@
               ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
               ;;(ppscm `(define-public ,desc* (bs:pointer ,desc)))
               (cnvt-struct-def attr label aggr-name field-list)
-              (values wrapped (cons* label (w/* label) (w/struct aggr-name)
-                                     (w/struct* aggr-name) defined)))
+              (values (cons* label (w/* label) (w/struct aggr-name)
+                             (w/struct* aggr-name) wrapped)
+                      (cons* label (w/* label) (w/struct aggr-name)
+                             (w/struct* aggr-name) defined)))
 
              ((struct-def ,field-list)
               ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
               ;;(ppscm `(define-public ,desc* (bs:pointer ,desc)))
               (cnvt-struct-def attr label #f field-list)
-              (values  (cons* label (w/* label) defined)
+              (values  (cons* label (w/* label) wrapped)
                        (cons* label (w/* label) defined)))
 
              ((union-def (ident ,aggr-name) ,field-list)
