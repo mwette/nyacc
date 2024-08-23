@@ -82,7 +82,7 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1)
                 #:select (fold fold-right remove last append-reverse))
-  #:use-module (srfi srfi-11)
+  #:use-module (srfi srfi-71) ;; was srfi-11
   #:use-module (srfi srfi-37)
   #:use-module (sxml fold)
   #:use-module (sxml match)
@@ -839,6 +839,20 @@
     (`((array-of ,dim) . ,rest) 'ffi-void*)
     (__ (cnvt mtail))))
 
+(define (maybe-function-pointer name)
+  (let* ((udecl (expand-typerefs
+                 `(udecl (decl-spec-list (type-spec (typename ,name)))
+                         (init-declr (ident "_"))) (*udict*) '()))
+         (mdecl (udecl->mdecl udecl)))
+    (match (md-tail mdecl)
+      (`((pointer-to) (function-returning ,params) . ,rest)
+       `(lambda (arg)
+          (let ((arg (if (procedure? arg)
+                         (,(strings->symbol "make-" name) arg)
+                         arg)))
+            ((fht-unwrap ,(string->symbol name)) arg))))
+      (__ `(fht-unwrap ,(string->symbol name))))))
+
 (define (mtail->fh-unwrapper mtail)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
     (match (car mtail)
@@ -848,7 +862,9 @@
       (`(typename ,name)
        (cond
 	((member name def-defined) 'unwrap~number)
-	((member name defined) `(fht-unwrap ,(string->symbol name)))
+	((member name defined)
+         ;;`(fht-unwrap ,(string->symbol name))
+         (maybe-function-pointer name))
 	((member name wrapped) (strings->symbol "unwrap-" name))
 	(else #f)))
       (`(enum-def (ident ,name) ,_)
@@ -933,23 +949,28 @@
 
 ;; === function types =========================================================
 
-(define (process-params return params)
+(define (setup-function return params)
   (define void-param '(param-decl (decl-spec-list (type-spec (void)))))
-  (define keepers (*wrapped*))
   (let* ((params (let loop ((rl '()) (pl params))
                    (cond
                     ((null? pl) (reverse rl))
                     ((equal? '(ellipsis) (car pl)) (reverse rl))
                     ((equal? void-param (car pl)) '())
                     (else (loop (cons (reify-udecl (car pl)) rl) (cdr pl))))))
-	 (decl-return (udecl->ffi-decl return))
-	 (decl-params (map udecl->ffi-decl params))
-	 (exec-return (udecl->fh-wrapper return keepers))
-	 (exec-params (map (lambda (p) (udecl->fh-unwrapper p keepers)) params))
-         (param-names (map string->symbol
-                           (map (lambda (u) (declr-name (sx-ref u 2)))
-                                params))))
-    (values decl-return decl-params exec-return exec-params param-names)))
+         (names (map string->symbol
+                     (map (lambda (u) (declr-name (sx-ref u 2))) params))))
+    (values params names)))
+
+(define (function-decls return params)
+  (values (udecl->ffi-decl return) (map udecl->ffi-decl params)))
+
+(define (function-execs return params)
+  (values (udecl->fh-wrapper return (*wrapped*))
+          (map (lambda (p) (udecl->fh-unwrapper p (*wrapped*))) params)))
+
+(define (function-callbacks return params)
+  (values (udecl->fh-unwrapper return (*wrapped*))
+          (map (lambda (p) (udecl->fh-wrapper p (*wrapped*))) params)))
 
 ;; @deffn {Procedure} function*-wraps return params => values
 ;; Based on return udecl @var{return} and udecl params @var{params},
@@ -961,56 +982,66 @@
 ;; @end deffn
 (define (function*-wraps return params)
   (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
-  (call-with-values (lambda () (process-params return params))
-    (lambda (decl-return decl-params exec-return exec-params param-names)
-      (let* ((unwrapp (map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n))) ;fold?
-                           param-names exec-params)) ;; unwrapped params
-             (call `(~proc ,@param-names))
-	     (va-call `(apply ~proc ,param-names (map cdr ~rest))))
-        (values
-         `(lambda (~proc)               ; procedure->pointer
-	    (ffi:procedure->pointer
-             ,decl-return ~proc (list ,@decl-params)))
-         (if varargs?
-             `(lambda (~ptr)            ; pointer->procedure (varargs)
-	        (lambda (,@param-names . ~rest)
-	          (let ((~proc (ffi:pointer->procedure
-                                ,decl-return ~fptr
-                                (append ,@decl-params (map car ~rest)))
-	                       ,@unwrapp))
-		    ,(if exec-return (list exec-return va-call) va-call))))
-             `(lambda (~fptr)           ; pointer->procedure
-	        (let ((~proc (ffi:pointer->procedure
-                              ,decl-return ~fptr (list ,@decl-params))))
-	          (lambda ,param-names
-	            (let ,unwrapp
-		      ,(if exec-return (list exec-return call) call)))))))))))
+  (let* ((params names (setup-function return params))
+         (decl-ret decl-par (function-decls return params))
+         (exec-ret exec-par (function-execs return params))
+         (cbak-ret cbak-par (function-callbacks return params))
+         (urap-par (fold-right (lambda (n u s) (if u (cons `(,n (,u ,n)) s) s))
+                               '() names exec-par))
+         (wrap-par (fold-right (lambda (n u s) (if u (cons `(,n (,u ,n)) s) s))
+                               '() names cbak-par))
+         (call `(~proc ,@names))
+         (va-call `(apply ~proc ,names (map cdr ~rest))))
+    (values
+     ;; procedure->pointer
+     `(lambda (~proc)
+        (ffi:procedure->pointer
+         ,decl-ret
+         (lambda ,names (let ,wrap-par ,(if cbak-ret (list cbak-ret call) call)))
+         (list ,@decl-par)))
+     (if varargs?
+         ;; pointer->procedure (varargs)
+         `(lambda (~fptr)
+	    (lambda (,@names . ~rest)
+	      (let ((~proc (ffi:pointer->procedure
+                            ,decl-ret ~fptr
+                            (append ,@decl-par (map car ~rest)))
+	                   ,@urap-par))
+		,(if exec-ret (list exec-ret va-call) va-call))))
+         ;; pointer->procedure
+         `(lambda (~fptr)
+	    (let ((~proc (ffi:pointer->procedure
+                          ,decl-ret ~fptr (list ,@decl-par))))
+	      (lambda ,names
+	        (let ,urap-par
+		  ,(if exec-ret (list exec-ret call) call)))))))))
+
 
 (define (cnvt-fctn name return params)
   ;; can't use function*-wraps just because of the delay :(
   (define varargs? (and (pair? params) (equal? (last params) '(ellipsis))))
-  (call-with-values (lambda () (process-params return params))
-    (lambda (decl-return decl-params exec-return exec-params param-names)
-      (let* ((uw-params (map (lambda (n u) (if u `(,n (,u ,n)) `(,n ,n)))
-                             param-names exec-params))
-             (call `((force ~proc) ,@param-names))
-	     (va-call `(apply (force ~proc) ,@param-names (map cdr ~rest))))
-        (ppscm
-         `(define-public ,(string->symbol name)
-            ,(if varargs?
-                 `(lambda (,@param-names . ~rest)
-	            (let ((~proc (ffi:pointer->procedure
-                                  ,decl-return (foreign-pointer-search ,name)
-                                  (append ,@decl-params (map car ~rest))))
-	                  ,@uw-params)
-		      ,(if exec-return (list exec-return va-call) va-call)))
-	         `(let ((~proc
-                         (delay (ffi:pointer->procedure
-                                 ,decl-return (foreign-pointer-search ,name)
-                                 (list ,@decl-params)))))
-                  (lambda ,param-names
-	            (let ,uw-params
-		      ,(if exec-return (list exec-return call) call)))))))))))
+  (let* ((params names (setup-function return params))
+         (decl-ret decl-par (function-decls return params))
+         (exec-ret exec-par (function-execs return params))
+         (urap-par (fold-right (lambda (n u s) (if u (cons `(,n (,u ,n)) s) s))
+                               '() names exec-par))
+         (call `((force ~proc) ,@names))
+	 (va-call `(apply (force ~proc) ,@names (map cdr ~rest))))
+    (ppscm
+     `(define-public ,(string->symbol name)
+        ,(if varargs?
+             `(lambda (,@names . ~rest)
+	        (let ((~proc (ffi:pointer->procedure
+                              ,decl-ret (foreign-pointer-search ,name)
+                              (append ,@decl-par (map car ~rest))))
+	              ,@urap-par)
+		  ,(if exec-ret (list exec-ret va-call) va-call)))
+	     `(let ((~proc
+                     (delay (ffi:pointer->procedure
+                             ,decl-ret (foreign-pointer-search ,name)
+                             (list ,@decl-par)))))
+                (lambda ,names
+	          (let ,urap-par ,(if exec-ret (list exec-ret call) call)))))))))
 
 
 ;; === the main conversion driver ==============================================
@@ -1053,8 +1084,8 @@
   (*wrapped* wrapped)
   (*defined* defined)
 
-  (let*-values (((tag attr specl declr) (split-udecl udecl))
-                ((sspec tqual tspec) (specl-props specl)))
+  (let* ((tag attr specl declr (split-udecl udecl))
+         (sspec tqual tspec (specl-props specl)))
 
     (cond
 

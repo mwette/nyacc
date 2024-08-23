@@ -1,7 +1,7 @@
 ;; dbus-01.scm - dbus
 ;; see http://www.matthew.ath.cx/misc/dbus
 
-;; Copyright (C) 2018 Matthew R. Wette
+;; Copyright (C) 2018,2024 Matthew Wette
 ;;
 ;; This library is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU Lesser General Public
@@ -29,7 +29,7 @@
 (define (check-error error)
   (let ((err (dbus-error error)))
     (if err (sf "~A\n" err))))
-  
+
 ;; ====================================
 
 (define error (make-DBusError))
@@ -48,14 +48,15 @@
 (define pending (make-DBusPendingCall*))
 (or (dbus_connection_send_with_reply conn msg (pointer-to pending) -1)
     (error "*** send_with_reply FAILED\n"))
-(if (zero? (fh-object-ref pending)) (display "*** pending NULL\n"))
-
+(if (equal? (fh-object-ref pending) ffi:%null-pointer)
+    (display "*** pending NULL\n"))
 (dbus_connection_flush conn)
 (dbus_message_unref msg)
 (dbus_pending_call_block pending)
 
 (set! msg (dbus_pending_call_steal_reply pending))
-(if (zero? (fh-object-ref msg)) (error "*** reply message NULL\n"))
+(if (equal? (fh-object-ref msg) ffi:%null-pointer)
+    (error "*** reply message NULL\n"))
 (sf "msg reply: ~S, serial: ~S, type: ~A\n" msg (dbus_message_get_serial msg)
     (let ((msg-type (dbus_message_get_type msg)))
       (cond
