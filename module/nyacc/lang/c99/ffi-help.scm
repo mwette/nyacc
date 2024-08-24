@@ -82,8 +82,8 @@
   #:use-module ((system base compile) #:select (compile-file))
   #:use-module ((srfi srfi-1)
                 #:select (fold fold-right remove last append-reverse))
-  #:use-module (srfi srfi-71) ;; was srfi-11
   #:use-module (srfi srfi-37)
+  #:use-module (srfi srfi-71)
   #:use-module (sxml fold)
   #:use-module (sxml match)
   #:use-module ((sxml xpath)
@@ -862,9 +862,7 @@
       (`(typename ,name)
        (cond
 	((member name def-defined) 'unwrap~number)
-	((member name defined)
-         ;;`(fht-unwrap ,(string->symbol name))
-         (maybe-function-pointer name))
+	((member name defined) (maybe-function-pointer name))
 	((member name wrapped) (strings->symbol "unwrap-" name))
 	(else #f)))
       (`(enum-def (ident ,name) ,_)
@@ -890,8 +888,6 @@
 (define (mtail->fh-wrapper mtail)
   (let ((wrapped (*wrapped*)) (defined (*defined*)))
     (match mtail
-      ;;(`((fixed-type ,name)) (strings->symbol "make-" (noblanks (cfix name))))
-      ;;(`((float-type ,name)) (strings->symbol "make-" (noblanks (cfix name))))
       (`((fixed-type ,name)) #f)
       (`((float-type ,name)) #f)
       (`((void)) #f)
@@ -925,8 +921,7 @@
          (strings->symbol "make-" (sw/union* aggr-name)))
 	(else #f)))
       (`((pointer-to) . ,otherwise) #f)
-      (`((array-of) . ,rest) ;; cross fingers
-       (mtail->fh-wrapper `((pointer-to) . ,rest)))
+      (`((array-of) . ,rest) (mtail->fh-wrapper `((pointer-to) . ,rest)))
       (otherwise
        (fherr "mtail->fh-wrapper missed:\n~A" (ppstr mtail))))))
 
