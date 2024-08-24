@@ -925,6 +925,8 @@
          (strings->symbol "make-" (sw/union* aggr-name)))
 	(else #f)))
       (`((pointer-to) . ,otherwise) #f)
+      (`((array-of) . ,rest) ;; cross fingers
+       (mtail->fh-wrapper `((pointer-to) . ,rest)))
       (otherwise
        (fherr "mtail->fh-wrapper missed:\n~A" (ppstr mtail))))))
 
