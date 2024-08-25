@@ -209,19 +209,18 @@
 
 ;; @deffn {Syntax} fhval-ref obj tag ...
 ;; Get equivalent Guile object, if applicable, @code{#f} otherwise.
+;; For pointers, return the Guile pointer not the address.
 ;; @end deffn
 (define-syntax-rule (fhval-ref val tag ...)
   (call-with-values
       (lambda () (bytestructure-unwrap val tag ...))
     (lambda (bvec oset desc)
-      (and=>
-       (bytestructure-descriptor-getter desc)
-       (lambda (getter)
-         (let ((value (getter #f bvec oset))
-               (meta (bytestructure-descriptor-metadata desc)))
-           (cond
-            ((pointer-metadata? meta) (ffi:make-pointer value))
-            (else value))))))))
+      (let ((getter (bytestructure-descriptor-getter desc)))
+        (cond
+         ((not getter) (make-bytestructure bvec oset desc))
+         ((pointer-metadata? (bytestructure-descriptor-metadata desc))
+          (ffi:make-pointer (getter #f bvec oset)))
+         (else (getter #f bvec oset)))))))
 
 ;; @deffn {Syntax} fhval-set! val arg tag ...
 ;; Set the object value from a Scheme object.
@@ -229,18 +228,11 @@
 ;; look at @code{value-at}.
 ;; @end deffn
 (define-syntax-rule (fhval-set! val tag ... arg)
-  (call-with-values
-      (lambda () (bytestructure-unwrap val tag ...))
-    (lambda (bvec oset desc)
-      (and=>
-       (bytestructure-descriptor-setter desc)
-       (lambda (setter)
-         (let ((meta (bytestructure-descriptor-metadata desc)))
-           (cond
-            ((pointer-metadata? meta)
-             (setter #f bvec oset (ffi:pointer-address arg)))
-            (else (setter #f bvec oset arg)))))))))
-;; (define-syntax-rule (fhval-set! val arg ...) (bytestructure-set! val arg ...))
+  (cond
+   ((ffi:pointer? arg)
+    (bytestructure-set! val tag ... (ffi:pointer-address arg)))
+   (else
+    (bytestructure-set! val tag ... arg))))
 
 ;; @deffn {Syntax} fhval-sel val tag ...)
 ;; Select the underlying value at the end of the @var{tag ...} selector.
@@ -301,7 +293,6 @@
 ;; FIXME
 ;; @end deffn
 (define-syntax make-fhval
-  ;; CHECKME?
   (syntax-rules ()
     ((_ desc arg)
      (let ((meta (bytestructure-descriptor-metadata desc)))
@@ -390,19 +381,19 @@
 ;; This returns a Guile object if appropriate, otherwise the underlying
 ;; type-system value.  Not great, so maybe cdata approach will be better.
 ;; @end deffn
-;; CHECKME
 (define-syntax-rule (fh-object-ref obj tag ...)
   (cond
-   ((fh-object? obj) (or (fhval-ref (struct-ref obj 0) tag ...)
-                         #;(fhval-sel (struct-ref obj 0) tag ...)))
-   ((fhval? obj) (or (fhval-ref obj tag ...)
-                     #;(fhval-sel obj tag ...)))
+   ((fh-object? obj) (fhval-ref (struct-ref obj 0) tag ...))
+   ((fhval? obj) (fhval-ref obj tag ...))
    (else (fherr "fh-object-ref: bad obj arg"))))
 
-(define-syntax-rule (fh-object-set! obj val tag ...)
+;; @deffn {Syntax} fh-object-set! obj arg ...
+;; I'm sad that I did it this way.  Oh well.
+;; @end deffn
+(define-syntax-rule (fh-object-set! obj tag ... val)
   (cond
-   ((fh-object? obj) (fhval-set! (struct-ref obj 0) val tag ...))
-   ((fhval? obj) (fhval-set! obj val tag ...))
+   ((fh-object? obj) (fhval-set! (struct-ref obj 0) tag ... val))
+   ((fhval? obj) (fhval-set! obj tag ... val))
    (else (fherr "fh-object-set!: bad obj arg"))))
 
 (define-syntax-rule (fh-object-sel obj tag ...)
@@ -446,12 +437,8 @@
               printer
               (or unwrap (lambda (obj) (fherr "no unwrapper")))
               (or wrap (lambda (obj) (fherr "no wrapper")))
-              ;; CHECKME
-              ;;(or pointer-to (lambda (obj) (fherr "~a has no pointer-to" name)))
-              ;;(or value-at (lambda (obj) (fherr "~a has no value-at" name)))
               (or pointer-to (lambda (obj) (fhval& (struct-ref obj 0))))
-              (or value-at (lambda (obj) (fhval* (struct-ref obj 0))))
-              ))
+              (or value-at (lambda (obj) (fhval* (struct-ref obj 0))))))
          (vt (struct-vtable ty)))
     (set-struct-vtable-name! vt name)
     ty))
@@ -626,7 +613,7 @@
 ;; set up type alias.  Caller needs to match type? and make.
 ;; This is one of the places we use generated id's.
 ;; The following are generated: @emph{alias} @code{make-}@emph{alias}
-;;  @emph{alias}@code{?}.
+;; @emph{alias}@code{?}.
 ;; @end deffn
 (define-syntax define-fh-type-alias
   (lambda (x)
@@ -648,7 +635,7 @@
                          (lambda (arg) (#,make arg))
                          #f #f
                          (make-printer (quote alias))))
-             #;(export alias pred make)))))))
+             (export #,pred #,make)))))))
 
 ;; @deffn {Syntax} define-fh-function-type type desc pred make
 ;; machine code for a function, but we only keep one word
