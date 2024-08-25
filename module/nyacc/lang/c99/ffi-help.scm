@@ -64,7 +64,7 @@
 	    fh-cnvt-udecl fh-cnvt-cdecl fh-cnvt-cdecl->str fh-scm-str->scm-exp
 	    string-member-proc string-renamer
 	    ;;
-	    C-decl->scm C-decl fh-llibs
+	    C-decl->scm C-decl
 	    ;;pkg-config-incs pkg-config-defs pkg-config-libs
 
 	    ;;ffi-symmap  		; <= debugging
@@ -102,31 +102,7 @@
   #:re-export (*nyacc-version*)
   #:version (1 09 4))
 
-(define fh-cpp-defs
-  (cond
-   ((string-contains %host-type "darwin")
-    (remove (lambda (s) (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
-	    (get-sys-cpp-defs)))
-   (else (get-sys-cpp-defs))))
-
-(define fh-cpp-dict
-  (map (lambda (ent)
-	 (let ((elts (string-split ent #\=)))
-	   (cons (car elts) (if (null? (cdr elts)) "" (cadr elts)))))
-       fh-cpp-defs))
-
-(define fh-inc-dirs
-  (append
-   `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
-   (get-sys-inc-dirs)))
-
-(define fh-inc-help c99-def-help)
-
-;; DEBUGGING
-(set! fh-inc-dirs (cons "." fh-inc-dirs))
-
 ;; maybe change to a record-type
-(define *bs-version* (make-parameter 2)) ; scheme bytestructures version
 (define *options* (make-parameter '()))
 (define *debug-parse* (make-parameter #f)) ; parse debug mode
 (define *show-incs* (make-parameter #f))   ; show include directories
@@ -135,7 +111,6 @@
 (define *prefix* (make-parameter "")) ; name prefix (e.g., prefix-syms)
 (define *renamer* (make-parameter identity)) ; renamer from ffi-module
 
-(define *mport* (make-parameter #t))	   ; output module port
 (define *udict* (make-parameter '()))	   ; udecl dict
 (define *ddict* (make-parameter '()))	   ; cpp-def based dict
 (define *defined* (make-parameter '()))    ; defined by define-fh-...
@@ -144,23 +119,8 @@
 
 (define *errmsgs* (make-parameter '()))	; list of warnings
 
-(define dev/null
-  (let ((port #f))
-    (lambda ()
-      (unless port (set! port (open-output-file "/dev/null")))
-      port)))
 
-(define (sfscm fmt . args)
-  (apply simple-format (*mport*) fmt args))
-(define* (ppscm tree #:key (per-line-prefix ""))
-  (pretty-print tree (*mport*) #:per-line-prefix per-line-prefix))
-(define* (upscm tree #:key (per-line-prefix ""))
-  (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
-(define (c99scm tree)
-  (pretty-print-c99 tree
-		    (*mport*)
-		    #:per-line-prefix ";; "))
-(define (nlscm) (newline (*mport*)))
+;; === utilities
 
 (define (sferr fmt . args)
   (apply simple-format (current-error-port) fmt args)
@@ -179,8 +139,6 @@
      (else
       (*errmsgs* (cons fmt errmsgs))
       (apply throw 'ffi-help-error fmt args)))))
-
-;; === utilities
 
 (define (sfstr fmt . args)
   (apply simple-format #f fmt args))
@@ -219,9 +177,6 @@
 ;; '(abc def) => "abc/def"
 (define (m-path->f-path path)
   (string-join (map symbol->string path) "/"))
-
-(define (link-libs)
-  (string->symbol (string-append (*prefix*) "-llibs")))
 
 ;; @deffn {Procedure} opts->attrs module-opts script-opts
 ;; The values in @var{script-opts} override @var{module-opts}.  That is,
@@ -333,8 +288,8 @@
       (apply throw 'ffi-help-error fmt args))))
 
 (define (packed? aggr-attr)
-  (and (assoc-ref aggr-attr 'attributes)
-       (lambda (l) (string-contains (car l) "__packed__" 0))
+  (and (and=> (assoc-ref aggr-attr 'attributes)
+              (lambda (l) (string-contains (car l) "__packed__" 0)))
        #t))
 
 ;; @deffn {Procedure} cnvt-fields fields expand-tail
@@ -352,8 +307,8 @@
 	    (mdecl (udecl->mdecl (udecl-rem-type-qual udecl)))
 	    (type (expand-tail (md-tail mdecl))))
        (if (and (pair? type) (eq? 'bit-field (car type)))
-         `(,qq (,(and=> name string->symbol) (,uq ,(caddr type)) ,(cadr type)))
-         `(,qq (,(and=> name string->symbol) (,uq ,type))))))
+           `(,qq (,(and=> name string->symbol) (,uq ,(caddr type)) ,(cadr type)))
+           `(,qq (,(and=> name string->symbol) (,uq ,type))))))
    (clean-and-dictize-fields fields)))
 
 ;; Should be processed with canize-enum-def-list first
@@ -376,20 +331,8 @@
     "uint64_t" "float _Complex" "double _Complex" "char" "signed char"
     "unsigned char" "wchar_t" "char16_t" "char32_t" "_Bool" "bool"))
 
-
-(define ffi-long-long #f)
-(define ffi-unsigned-long-long #f)
-(case (and=> (assoc-ref fh-cpp-dict "__LONG_LONG_WIDTH__") string->number)
-  ((64)
-   (set! ffi-long-long 'ffi:int64)
-   (set! ffi-unsigned-long-long 'ffi:uint64))
-  ((32)
-   (set! ffi-long-long 'ffi:int32)
-   (set! ffi-unsigned-long-long 'ffi:uint32))
-  (else
-   (sferr "ffi-help: warning: unknown ffi type: long-long")
-   (set! ffi-long-long 'ffi:long)
-   (set! ffi-unsigned-long-long 'ffi:unsigned-long)))
+(define ffi-long-long #f)               ; defined below from cpp-defs
+(define ffi-unsigned-long-long #f)      ; defined below from cpp-defs
 
 (define ffi-typemap
   ;; see system/foreign.scm
@@ -678,7 +621,21 @@
     (else (error "bad target" target))))
 
 
-;; === output scheme module header =============================================
+;; === output ffi-module header ================================================
+
+(define *mport* (make-parameter #t))	   ; output module port
+
+(define (sfscm fmt . args)
+  (apply simple-format (*mport*) fmt args))
+(define* (ppscm tree #:key (per-line-prefix ""))
+  (pretty-print tree (*mport*) #:per-line-prefix per-line-prefix))
+(define* (upscm tree #:key (per-line-prefix ""))
+  (ugly-print tree (*mport*) #:per-line-prefix per-line-prefix))
+(define (c99scm tree)
+  (pretty-print-c99 tree
+		    (*mport*)
+		    #:per-line-prefix ";; "))
+(define (nlscm) (newline (*mport*)))
 
 (define (ffimod-header path module-opts)
   (let* ((attrs (opts->attrs module-opts '()))
@@ -776,50 +733,31 @@
 ;; @var{aggr-name} is a string for the struct or union name, or @code{#f},
 ;; and @var{field-list} is the field-list from the C syntax tree.
 ;; @end deffn
-(define (cnvt-aggr-def kind attr typename aggr-name field-list)
-  (let* ((field-list (expand-field-list-typerefs field-list))
-	 (sflds (cnvt-fields (sx-tail field-list) mtail->target))
-	 (kind-s (symbol->string kind))
-	 (aggrname (and aggr-name (string-append kind-s "-" aggr-name)))
-	 (bs-kind (string->symbol (string-append "bs:" kind-s)))
-	 (ty-desc (and typename (strings->symbol typename (*ttag*))))
-	 (ty*-desc (and typename (strings->symbol typename "*" (*ttag*))))
-	 (ag-desc (and aggrname (strings->symbol aggrname (*ttag*))))
-	 (ag*-desc (and aggrname (strings->symbol aggrname "*" (*ttag*))))
-	 (cattr (assoc-ref attr 'attributes)) ;; __attributes__
-	 (bs-spec (if (packed? attr)
-		      (list bs-kind #t `(list ,@sflds))
-		      (list bs-kind `(list ,@sflds)))))
+(define (cnvt-aggr-def kind typename aggr-name)
+  (let* ((kind-s (symbol->string kind))
+	 (aggrname (and aggr-name (string-append kind-s "-" aggr-name))))
     (cond
      ((and typename aggr-name)
-      (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
-      (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
       (fhscm-ref-deref typename)
-      (ppscm `(define-public ,ag-desc ,ty-desc))
       (fhscm-def-compound aggrname)
-      (ppscm `(define-public ,ag*-desc ,ty*-desc))
       (fhscm-def-pointer (sw/* aggrname))
       (fhscm-ref-deref aggrname))
      (typename
-      (ppscm `(define-public ,ty-desc ,bs-spec))
       (fhscm-def-compound typename)
-      (ppscm `(define-public ,ty*-desc (bs:pointer ,ty-desc)))
       (fhscm-def-pointer (sw/* typename))
       (fhscm-ref-deref typename))
      (aggr-name
-      (ppscm `(define-public ,ag-desc ,bs-spec))
       (fhscm-def-compound aggrname)
-      (ppscm `(define-public ,ag*-desc (bs:pointer ,ag-desc)))
       (fhscm-def-pointer (sw/* aggrname))
       (fhscm-ref-deref aggrname)))))
 
-(define (cnvt-struct-def attr typename struct-name field-list)
-  (cnvt-aggr-def 'struct attr typename struct-name field-list))
+(define (cnvt-struct-def typename struct-name)
+  (cnvt-aggr-def 'struct typename struct-name))
 
-(define (cnvt-union-def attr typename union-name field-list)
-  (cnvt-aggr-def 'union attr typename union-name field-list))
+(define (cnvt-union-def typename union-name)
+  (cnvt-aggr-def 'union typename union-name))
 
 
 (define (fhscm-def-enum name name-val-list)
@@ -1186,10 +1124,10 @@
 
           (`((array-of ,dim) . ,rest)
            (ppscm `(define-public ,desc ,(mtail->target mtail)))
-           (ppscm `(define-fh-vector-type ,name ,desc ,pred ,make))
-           (ppscm `(export ,name ,pred ,make))
            (ppscm `(define-public ,desc* (bs:pointer ,desc)))
+           (ppscm `(define-fh-vector-type ,name ,desc ,pred ,make))
            (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
+           (ppscm `(export ,name ,pred ,make))
            (ppscm `(export ,name* ,pred* ,make*))
            (ppscm `(fh-ref<=>deref! ,name* ,make* ,name ,make))
            (values (cons label wrapped) (cons label defined)))
@@ -1200,12 +1138,11 @@
                (lambda (ptr->proc proc->ptr)
                  (ppscm `(define-public ,desc
                            (fh:function ,ptr->proc ,proc->ptr)))
-                 (ppscm `(define-fh-function-type ,name ,desc ,pred ,make))
                  (ppscm `(define-public ,desc* (bs:pointer ,desc)))
+                 (ppscm `(define-fh-function-type ,name ,desc ,pred ,make))
                  (ppscm `(define-fh-pointer-type ,name* ,desc* ,pred* ,make*))
                  (ppscm `(export ,name* ,pred* ,make*))
-                 ;; FIXME: fh-ref<=>deref! ???
-                 )))
+                 (ppscm `(fh-ref<=>deref! ,name ,make ,name* ,make*)))))
            (values (cons* label (w/* label) wrapped)
                    (cons* label (w/* label) defined)))
 
@@ -1219,67 +1156,72 @@
                  (lambda (ptr->proc proc->ptr)
                    (ppscm `(define-public ,*desc
                              (fh:function ,ptr->proc ,proc->ptr)))
-                   (ppscm `(define-fh-function-type ,*name ,*desc ,*pred ,*make))
                    (ppscm `(define-public ,desc (bs:pointer ,*desc)))
+                   (ppscm `(define-fh-function-type ,*name ,*desc ,*pred ,*make))
                    (ppscm `(define-fh-pointer-type ,name ,desc ,pred ,make))
                    (ppscm `(export ,name ,pred ,make))
-                   (ppscm `(fh-ref<=>deref! ,name ,make ,*name ,*make))
-                   ))))
+                   (ppscm `(fh-ref<=>deref! ,name ,make ,*name ,*make))))))
            (values (cons label wrapped) (cons label defined)))
 
           (`((pointer-to) . ,rest)
            (ppscm `(define-public ,desc ,(mtail->target mtail)))
            (ppscm `(define-fh-pointer-type ,name ,desc ,pred ,make))
            (ppscm `(export ,name ,pred ,make))
-           ;; FIXME: fh-ref<=>deref! ???
+           ;; fh-ref<=>deref! ???
            (case (caar rest)
-             ((fixed-type float-type) (values wrapped defined)) ;; ???
+             ((fixed-type float-type) (values wrapped defined))
              (else (values (cons label wrapped) (cons label defined)))))
 
           (__
            (sx-match (car mtail)
-             ((struct-def (@ . ,attr) (ident ,aggr-name) ,field-list)
-              ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
-              ;;(ppscm `(define-public ,desc* (bs:pointer ,desc)))
-              (cnvt-struct-def attr label aggr-name field-list)
-              (values (cons* label (w/* label) (w/struct aggr-name)
-                             (w/struct* aggr-name) wrapped)
-                      (cons* label (w/* label) (w/struct aggr-name)
-                             (w/struct* aggr-name) defined)))
+             ((struct-def (@ . ,attr) (ident ,agname) ,field-list)
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc* (bs:pointer ,desc)))
+              (ppscm `(define-public ,(strings->symbol "struct-" agname)
+                        ,desc))
+              (ppscm `(define-public ,(strings->symbol "struct-" agname "*")
+                        ,desc*))
+              (cnvt-struct-def label agname)
+              (values (cons* label (w/* label) (w/struct agname)
+                             (w/struct* agname) wrapped)
+                      (cons* label (w/* label) (w/struct agname)
+                             (w/struct* agname) defined)))
 
              ((struct-def ,field-list)
-              ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
-              ;;(ppscm `(define-public ,desc* (bs:pointer ,desc)))
-              (cnvt-struct-def attr label #f field-list)
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc* (bs:pointer ,desc)))
+              (cnvt-struct-def label #f)
               (values  (cons* label (w/* label) wrapped)
                        (cons* label (w/* label) defined)))
 
-             ((union-def (ident ,aggr-name) ,field-list)
-              ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
-              ;;(ppscm `(define-public ,desc* (bs:pointer ,desc)))
-              (cnvt-union-def attr label aggr-name field-list)
-              (values (cons* label (w/* label) (w/union aggr-name)
-                             (w/union* aggr-name) wrapped)
-                      (cons* label (w/* label) (w/union aggr-name)
-                             (w/union* aggr-name) defined)))
+             ((union-def (ident ,agname) ,field-list)
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc* (bs:pointer ,desc)))
+              (ppscm `(define-public ,(strings->symbol "union-" agname (*ttag*))
+                        ,desc))
+              (ppscm `(define-public ,(strings->symbol "union-" agname "*")
+                        ,desc*))
+              (cnvt-union-def label agname)
+              (values (cons* label (w/* label) (w/union agname)
+                             (w/union* agname) wrapped)
+                      (cons* label (w/* label) (w/union agname)
+                             (w/union* agname) defined)))
 
              ((union-def ,field-list)
-              ;;(ppscm `(define-public ,desc ,(mtail->target mtail)))
-              ;;(ppscm `(define-public ,desc* (bs:pointer ,desc)))
-              (cnvt-union-def attr label #f field-list)
+              (ppscm `(define-public ,desc ,(mtail->target mtail)))
+              (ppscm `(define-public ,desc* (bs:pointer ,desc)))
+              (cnvt-union-def label #f)
               (values (cons* label (w/* label) wrapped)
                       (cons* label (w/* label) defined)))
 
-             ((struct-ref (ident ,aggr-name))
+             ((struct-ref (ident ,agname))
               (cond
-               ((member (w/struct aggr-name) defined)
-                ;; defined previously
+               ((member (w/struct agname) defined) ;; defined previously
                 (ppscm `(define-public ,desc ,(mtail->target mtail)))
-	        (ppscm `(define-public ,desc*
-                          ,(sfsym "struct-~A*-desc" aggr-name)))
+	        (ppscm `(define-public ,desc* ,(sfsym "struct-~A*-desc" agname)))
                 (fhscm-def-compound label))
-               ((udict-struct-ref udict aggr-name)
-                => ;; defined later
+               ((udict-struct-ref udict agname) ;; defined later
+                =>
                 (lambda (decl)
                   (bkref-extend! decl label)
                   (ppscm `(define-public ,desc 'void))
@@ -1291,16 +1233,14 @@
               (values (cons* label (w/* label) wrapped)
                       (cons* label (w/* label) defined)))
 
-             ((union-ref (ident ,aggr-name))
+             ((union-ref (ident ,agname))
               (cond
-               ((member (w/union aggr-name) defined)
-                ;; defined previously
+               ((member (w/union agname) defined) ;; defined previously
                 (ppscm `(define-public ,desc ,(mtail->target mtail)))
-	        (ppscm `(define-public ,desc*
-                          ,(sfsym "union-~A*-desc" aggr-name)))
+	        (ppscm `(define-public ,desc* ,(sfsym "union-~A*-desc" agname)))
                 (fhscm-def-compound label))
-               ((udict-union-ref udict aggr-name)
-                => ;; defined later
+               ((udict-union-ref udict agname) ;; defined later
+                =>
                 (lambda (decl)
                   (bkref-extend! decl label)
                   (ppscm `(define-public ,desc 'void))
@@ -1381,54 +1321,62 @@
 
      ((sx-match tspec
 
-        ((struct-def (@ . ,aggr-attr) (ident ,aggr-name) ,field-list)
+        ((struct-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
          (cond
           ((bkref-getall attr) =>
            (lambda (name-list)
-	     (cnvt-aggr-def 'struct aggr-attr #f aggr-name field-list)
-             (fold-values
-	      (lambda (name wrapped defined)
-                (let ((adesc (strings->symbol "struct-" aggr-name (*ttag*)))
-                      (desc (strings->symbol name (*ttag*))))
-	          (ppscm `(set! ,desc ,adesc))
-	          (fhscm-def-compound name)
-	          (fhscm-ref-deref name))
-                (values (cons name wrapped) (cons name defined)))
-	      name-list
-              (cons (w/struct aggr-name) wrapped)
-              (cons (w/struct aggr-name) defined))))
-	  ((not (member (w/struct aggr-name) defined))
-	   (cnvt-aggr-def 'struct aggr-attr #f aggr-name field-list)
-	   (values (cons (w/struct aggr-name) wrapped)
-                   (cons (w/struct aggr-name) defined)))
+             (let* ((adesc (strings->symbol "struct-" agname (*ttag*)))
+                    (adesc* (strings->symbol "struct-" agname "*" (*ttag*)))
+                    (field-list (expand-field-list-typerefs field-list))
+                    (sflds (cnvt-fields (sx-tail field-list) mtail->target))
+                    (agdef `(bs:struct ,(packed? aggr-attr) (list ,@sflds))))
+               (ppscm `(define-public ,adesc ,agdef))
+               (ppscm `(define-public ,adesc* (bs:pointer ,adesc)))
+               (cnvt-aggr-def 'struct #f agname)
+               (fold-values
+	        (lambda (name wrapped defined)
+                  (let ((desc (strings->symbol name (*ttag*))))
+	            (ppscm `(set! ,desc ,adesc))
+	            (fhscm-def-compound name)
+	            (fhscm-ref-deref name))
+                  (values (cons name wrapped) (cons name defined)))
+	        name-list
+                (cons (w/struct agname) wrapped)
+                (cons (w/struct agname) defined)))))
+	  ((not (member (w/struct agname) defined))
+	   (cnvt-aggr-def 'struct #f agname)
+	   (values (cons (w/struct agname) wrapped)
+                   (cons (w/struct agname) defined)))
 	  (else
 	   (values wrapped defined))))
 
-        ((union-def (@ . ,aggr-attr) (ident ,aggr-name) ,field-list)
+        ((union-def (@ . ,aggr-attr) (ident ,agname) ,field-list)
          (cond
           ((bkref-getall attr) =>
            (lambda (name-list)
-	     (cnvt-aggr-def 'union aggr-attr #f aggr-name field-list)
-	     (fold-values
-	      (lambda (name wrapped defined)
-                (let ((adesc (strings->symbol "union-" aggr-name (*ttag*)))
-                      (desc (strings->symbol name (*ttag*)))
-                      (pred (strings->symbol name "?"))
-                      (make (strings->symbol "make-" name))
-                      (syname (string->symbol name)))
-	          (ppscm `(set! ,desc ,adesc))
-	          (fhscm-def-compound name)
-	          (fhscm-ref-deref name)
-                  (ppscm `(define-fh-compound-type ,syname ,desc ,pred ,make))
-                  (ppscm `(export ,syname ,pred ,make)))
-                (values (cons name wrapped) (cons name defined)))
-	      name-list
-              (cons (w/union aggr-name) wrapped)
-              (cons (w/union aggr-name) defined))))
-	  ((not (member (w/union aggr-name) defined))
-	   (cnvt-aggr-def 'union aggr-attr #f aggr-name field-list)
-	   (values (cons (w/union aggr-name) wrapped)
-                   (cons (w/union aggr-name) defined)))
+             (let* ((adesc (strings->symbol "union-" agname (*ttag*)))
+                    (adesc* (strings->symbol "union-" agname "*" (*ttag*)))
+                    (field-list (expand-field-list-typerefs field-list))
+                    (sflds (cnvt-fields (sx-tail field-list) mtail->target))
+                    (agdef `(bs:union (list ,@sflds))))
+               (ppscm `(define-public ,adesc ,agdef))
+               (ppscm `(define-public ,adesc* (bs:pointer ,adesc)))
+	       (cnvt-aggr-def 'union #f agname)
+	       (fold-values
+	        (lambda (name wrapped defined)
+                  (let ((desc (strings->symbol name (*ttag*)))
+                        (syname (string->symbol name)))
+	            (ppscm `(set! ,desc ,adesc))
+	            (fhscm-def-compound name)
+	            (fhscm-ref-deref name))
+                  (values (cons name wrapped) (cons name defined)))
+	        name-list
+                (cons (w/union agname) wrapped)
+                (cons (w/union agname) defined)))))
+	  ((not (member (w/union agname) defined))
+	   (cnvt-aggr-def 'union #f agname)
+	   (values (cons (w/union agname) wrapped)
+                   (cons (w/union agname) defined)))
 	  (else
 	   (values wrapped defined))))
 
@@ -1479,6 +1427,8 @@
 
 ;; === enums and #defined => lookup
 
+(define dev/null (%make-void-port "w"))
+
 ;; given keeper-def names and cpp defs (c-defs) expand the keeper
 ;; replacemnts down to constants (strings, integers, etc)
 (define (gen-lookup-proc mod-def-names udict ddict ext-mods)
@@ -1486,7 +1436,7 @@
   (define typerefs (udict->typedef-names udict))
 
   (define (eval-code-string code)
-    (let* ((tree (with-error-to-port (dev/null)
+    (let* ((tree (with-error-to-port dev/null
 		   (lambda () (parse-c99x code typerefs))))
 	   (value (and tree (eval-c99-cx tree udict ddict))))
       value))
@@ -1528,6 +1478,41 @@
 
 
 ;; === Parsing the C header(s)
+
+(define fh-cpp-defs
+  (cond
+   ((string-contains %host-type "darwin")
+    (remove (lambda (s) (string-contains s "_ENVIRONMENT_MAC_OS_X_VERSION"))
+	    (get-sys-cpp-defs)))
+   (else (get-sys-cpp-defs))))
+
+(define fh-cpp-dict
+  (map (lambda (ent)
+	 (let ((elts (string-split ent #\=)))
+	   (cons (car elts) (if (null? (cdr elts)) "" (cadr elts)))))
+       fh-cpp-defs))
+
+(define fh-inc-dirs
+  (append
+   `(,(assq-ref %guile-build-info 'includedir) "/usr/include")
+   (get-sys-inc-dirs)))
+
+(define fh-inc-help c99-def-help)
+
+(case (and=> (assoc-ref fh-cpp-dict "__LONG_LONG_WIDTH__") string->number)
+  ((64)
+   (set! ffi-long-long 'ffi:int64)
+   (set! ffi-unsigned-long-long 'ffi:uint64))
+  ((32)
+   (set! ffi-long-long 'ffi:int32)
+   (set! ffi-unsigned-long-long 'ffi:uint32))
+  (else
+   (sferr "ffi-help: warning: unknown ffi type: long-long")
+   (set! ffi-long-long 'ffi:long)
+   (set! ffi-unsigned-long-long 'ffi:unsigned-long)))
+
+;; DEBUGGING
+(set! fh-inc-dirs (cons "." fh-inc-dirs))
 
 ;; @deffn parse-code code [attrs]
 ;; Parse @var{code}, a Scheme string, using cpp-defs and inc-dirs from
@@ -1706,8 +1691,6 @@
 
 
 ;; === test compiler ================
-
-(define fh-llibs (delay '()))
 
 ;; @deffn {Procedure} C-decl->scm code-string => sexp
 ;; Generate a symbolic expression that evals to a Guile procedure.
