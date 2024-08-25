@@ -40,7 +40,6 @@
             define-fh-type-alias
             define-fh-compound-type
             define-fh-vector-type
-            define-fh-function*-type
             define-fh-function-type
             fh-ref<=>deref!
             make-symtab-function
@@ -95,39 +94,6 @@
     ((2) bytevector-u16-native-set!)
     ((4) bytevector-u32-native-set!)
     ((8) bytevector-u64-native-set!)))
-
-(define-record-type <function*-metadata>
-  (make-function*-metadata wrapper unwrapper)
-  function*-metadata?
-  (wrapper function*-metadata-wrapper)
-  (unwrapper function*-metadata-unwrapper))
-(export function*-metadata?
-        function*-metadata-wrapper
-        function*-metadata-unwrapper)
-
-;; @deffn {Procedure} fh:function* wrapper unwrapper
-;; NEED to deal with object, pointer, lambda's
-;; NEED TO DEFINE WRAPPER and UNWRAPPER
-;; unwrap: object -> pointer
-;; wrap: lambda -> pointer
-;; make: lambda -> object
-;; CONCLUSION
-;; (fhval* object-val) -> lambda
-;; (fhval& lambda) -> function*-val
-;; (make-GCallback (lambda ...) => xx
-;; @end deffn
-(define (fh:function* wrapper unwrapper) ;; TBD documentation?
-  (define size (ffi:sizeof '*))
-  (define alignment size)
-  (define (getter syntax? bytevector offset)
-    (when syntax? (throw 'ffi-help-error "fh:function* has no macros"))
-    (wrapper (ffi:make-pointer (bytevector-address-ref bytevector offset))))
-  (define (setter syntax? bytevector offset value)
-    (when syntax? (throw 'ffi-help-error "fh:function* has no macros"))
-    (unwrapper value))
-  (define meta (make-function*-metadata wrapper unwrapper))
-  (make-bytestructure-descriptor size alignment #f getter setter meta))
-(export fh:function*)
 
 (define-record-type <function-metadata>
   (make-function-metadata proc->ptr ptr->proc)
