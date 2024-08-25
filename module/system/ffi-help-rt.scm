@@ -207,38 +207,52 @@
 (define-syntax-rule (fhval? val)
   (bytestructure? val))
 
-;; @deffn {Syntax} fhval-ref obj arg ...
+;; @deffn {Syntax} fhval-ref obj tag ...
 ;; Get equivalent Guile object, if applicable, @code{#f} otherwise.
 ;; @end deffn
-(define-syntax-rule (fhval-ref val arg ...)
+(define-syntax-rule (fhval-ref val tag ...)
   (call-with-values
-      (lambda () (bytestructure-unwrap val arg ...))
+      (lambda () (bytestructure-unwrap val tag ...))
     (lambda (bvec oset desc)
-      (let ((value ((bytestructure-descriptor-getter desc) #f bvec oset))
-            (meta (bytestructure-descriptor-metadata desc)))
-        (cond
-         ((pointer-metadata? meta) (ffi:make-pointer value))
-         (else value))))))
+      (and=>
+       (bytestructure-descriptor-getter desc)
+       (lambda (getter)
+         (let ((value (getter #f bvec oset))
+               (meta (bytestructure-descriptor-metadata desc)))
+           (cond
+            ((pointer-metadata? meta) (ffi:make-pointer value))
+            (else value))))))))
 
-;; @deffn {Syntax} fhval-set! obj arg ...
+;; @deffn {Syntax} fhval-set! val arg tag ...
 ;; Set the object value from a Scheme object.
 ;; If you are using @code{'*} you probably don't intend to:
 ;; look at @code{value-at}.
 ;; @end deffn
-(define-syntax-rule (fhval-set! val arg ...)
-  (bytestructure-set! val arg ...))
-
-;; @deffn {Syntax} fhval-sel obj arg ...)
-;; xxx
-;; @end deffn
-(define-syntax-rule (fhval-sel val arg ...)
+(define-syntax-rule (fhval-set! val tag ... arg)
   (call-with-values
-      (lambda () (bytestructure-unwrap val arg ...))
+      (lambda () (bytestructure-unwrap val tag ...))
+    (lambda (bvec oset desc)
+      (and=>
+       (bytestructure-descriptor-setter desc)
+       (lambda (setter)
+         (let ((meta (bytestructure-descriptor-metadata desc)))
+           (cond
+            ((pointer-metadata? meta)
+             (setter #f bvec oset (ffi:pointer-address arg)))
+            (else (setter #f bvec oset arg)))))))))
+;; (define-syntax-rule (fhval-set! val arg ...) (bytestructure-set! val arg ...))
+
+;; @deffn {Syntax} fhval-sel val tag ...)
+;; Select the underlying value at the end of the @var{tag ...} selector.
+;; @end deffn
+(define-syntax-rule (fhval-sel val tag ...)
+  (call-with-values
+      (lambda () (bytestructure-unwrap val tag ...))
     (lambda (bvec oset desc)
       (make-bytestructure bvec oset desc))))
 
 ;; @deffn {Syntax} fhval-addr val)
-;; return the underlying address of the data
+;; Return the underlying numeric address of the data.
 ;; @end deffn
 (define-syntax-rule (fhval-addr val)
   (call-with-values
@@ -287,35 +301,48 @@
 ;; FIXME
 ;; @end deffn
 (define-syntax make-fhval
+  ;; CHECKME?
   (syntax-rules ()
     ((_ desc arg)
-     (cond
-      ((bytestructure? arg) arg)
-      ((ffi:pointer? arg) (bytestructure desc (ffi:pointer-address arg)))
-      ((procedure? arg)
-       (let* ((meta (bytestructure-descriptor-metadata desc))
-              (proc->ptr (cond
-                          ((function-metadata? meta)
-                           (function-metadata-proc->ptr meta))
-                          ((and (pointer-metadata? meta)
-                                (function-metadata?
-                                 (bytestructure-descriptor-metadata
-                                  (pointer-metadata-content-descriptor meta))))
-                           (function-metadata-proc->ptr
-                            (bytestructure-descriptor-metadata
-                             (pointer-metadata-content-descriptor meta))))
-                          (else (fherr "make-fhval: bad arg"))))
-              (ptr (proc->ptr arg))
-              (bvec (cond
-                     ((function-metadata? meta)
-                      (ffi:pointer->bytevector ptr (ffi:sizeof '*)))
-                     ((pointer-metadata? meta)
-                      (let ((bv (make-bytevector (ffi:sizeof '*))))
-                        (bytevector-address-set! bv 0 (ffi:pointer-address ptr))
-                        bv)))))
-         (make-bytestructure bvec 0 desc)))
-      (else (bytestructure desc arg))))
-    ((_ desc) (bytestructure desc))))
+     (let ((meta (bytestructure-descriptor-metadata desc)))
+       (cond
+        ((bytestructure? arg) arg)
+        ((ffi:pointer? arg) (bytestructure desc (ffi:pointer-address arg)))
+        ((vector-metadata? meta)
+         (let* ((ln (vector-metadata-length meta)))
+           (cond
+            ((and (zero? ln) (integer? arg) (positive? arg))
+             (let* ((eltt (vector-metadata-element-descriptor meta))
+                    (eltd (bs:vector arg eltt))
+                    (elts (bytestructure-descriptor-size eltt))
+                    (bvec (make-bytevector (* elts arg))))
+               (make-bytestructure bvec 0 eltd)))
+            (arg (fherr "make-fhval: can't do vector args")))))
+        ((procedure? arg)
+         (let* ((proc->ptr
+                 (cond
+                  ((function-metadata? meta)
+                   (function-metadata-proc->ptr meta))
+                  ((and (pointer-metadata? meta)
+                        (function-metadata?
+                         (bytestructure-descriptor-metadata
+                          (pointer-metadata-content-descriptor meta))))
+                   (function-metadata-proc->ptr
+                    (bytestructure-descriptor-metadata
+                     (pointer-metadata-content-descriptor meta))))
+                  (else (fherr "make-fhval: bad arg"))))
+                (ptr (proc->ptr arg))
+                (bvec
+                 (cond
+                  ((function-metadata? meta)
+                   (ffi:pointer->bytevector ptr (ffi:sizeof '*)))
+                  ((pointer-metadata? meta)
+                   (let ((bv (make-bytevector (ffi:sizeof '*))))
+                     (bytevector-address-set! bv 0 (ffi:pointer-address ptr))
+                     bv)))))
+           (make-bytestructure bvec 0 desc)))
+        (else (bytestructure desc arg)))))
+     ((_ desc) (bytestructure desc))))
 
 
 ;; ----------------------------------------------------------------------------
@@ -356,21 +383,33 @@
 ;; Return the object value slot for the FH object.
 ;; @deffn
 (define (fh-object-val obj)
-  ;;(unless (fh-object? obj) (fherr "fh-object-val: got ~s" obj))
   (unless (fh-object? obj) (fherr "fh-object-val: bad arg"))
   (struct-ref obj 0))
 
-(define-syntax-rule (fh-object-ref obj arg ...)
+;; @deffn {Syntax} fh-object-ref obj arg ...
+;; This returns a Guile object if appropriate, otherwise the underlying
+;; type-system value.  Not great, so maybe cdata approach will be better.
+;; @end deffn
+;; CHECKME
+(define-syntax-rule (fh-object-ref obj tag ...)
   (cond
-   ((fh-object? obj) (fhval-ref (struct-ref obj 0) arg ...))
-   ((fhval? obj) (fhval-ref obj arg ...))
-   (else (fh-object? obj) (fherr "fh-object-ref: bad obj arg"))))
+   ((fh-object? obj) (or (fhval-ref (struct-ref obj 0) tag ...)
+                         #;(fhval-sel (struct-ref obj 0) tag ...)))
+   ((fhval? obj) (or (fhval-ref obj tag ...)
+                     #;(fhval-sel obj tag ...)))
+   (else (fherr "fh-object-ref: bad obj arg"))))
 
-(define-syntax-rule (fh-object-set! obj val arg ...)
+(define-syntax-rule (fh-object-set! obj val tag ...)
   (cond
-   ((fh-object? obj) (fhval-set! (struct-ref obj 0) val arg ...))
-   ((fhval? obj) (fhval-set! obj val arg ...))
-   (else (fh-object? obj) (fherr "fh-object-ref: bad obj arg"))))
+   ((fh-object? obj) (fhval-set! (struct-ref obj 0) val tag ...))
+   ((fhval? obj) (fhval-set! obj val tag ...))
+   (else (fherr "fh-object-set!: bad obj arg"))))
+
+(define-syntax-rule (fh-object-sel obj tag ...)
+  (cond
+   ((fh-object? obj) (fhval-sel (struct-ref obj 0) tag ...))
+   ((fhval? obj) (fhval-sel obj tag ...))
+   (else (fherr "fh-object-sel: bad argument"))))
 
 (define unwrap-ix 0)
 (define wrap-ix 1)
@@ -388,6 +427,7 @@
   (struct-ref type (+ vtable-offset-user value-at-ix)))
 (define (fht-printer type)
   (struct-ref type vtable-index-printer))
+(export fht-pointer-to)
 
 ;; execute the type method on the object
 (define (fh-unwrap type obj)
@@ -395,7 +435,7 @@
 (define (fh-wrap type val)
   ((fht-wrap type) val))
 
-;; @deffn {Syntax} make-fh-type name unwrap wrap pointer-to value-at printer
+;; @deffn {Syntax} make-fht name unwrap wrap pointer-to value-at printer
 ;; We call make-struct here but we are actually making a vtable
 ;; We should check with struct-vtable?
 ;; name as symbol
@@ -406,8 +446,11 @@
               printer
               (or unwrap (lambda (obj) (fherr "no unwrapper")))
               (or wrap (lambda (obj) (fherr "no wrapper")))
-              pointer-to ;; (lambda (obj) (fhval& (fh-object-val obj)))
-              value-at ;; (lambda (obj) (fhval* (fh-object-val obj)))
+              ;; CHECKME
+              ;;(or pointer-to (lambda (obj) (fherr "~a has no pointer-to" name)))
+              ;;(or value-at (lambda (obj) (fherr "~a has no value-at" name)))
+              (or pointer-to (lambda (obj) (fhval& (struct-ref obj 0))))
+              (or value-at (lambda (obj) (fhval* (struct-ref obj 0))))
               ))
          (vt (struct-vtable ty)))
     (set-struct-vtable-name! vt name)
@@ -503,7 +546,7 @@
     (display "#<" port)
     (display type port)
     (display " 0x" port)
-    (display (number->string (fhval-addr (fh-object-val obj)) 16) port)
+    (display (number->string (fhval-addr (struct-ref obj 0)) 16) port)
     (display ">" port)))
 (export make-printer)
 
@@ -515,7 +558,7 @@
     (display type port)
     (display " 0x" port)
     (display (number->string
-              (ffi:pointer-address (fhval-ref (fh-object-val obj))) 16) port)
+              (ffi:pointer-address (fhval-ref (struct-ref obj 0))) 16) port)
     (display ">" port)))
 
 
@@ -548,6 +591,7 @@
   (begin
     (define type
       (make-fht (quote type)
+                ;; CHECKME - think this may be it - nope
                 (lambda (obj) (fhval-ref (fh-object-val obj)))
                 (lambda (val) (make val))
                 #f #f
@@ -560,14 +604,15 @@
         (() (make-struct/no-tail type (make-fhval desc)))))))
 
 ;; @deffn {Syntax} define-fh-vector-type type desc type? make
-;; to be documented
+;; The @var{desc} argument is NOT for the element type.   The integer
+;; number of elements is determine when a @code{make-type} is used???
 ;; @end deffn
 (define-syntax-rule (define-fh-vector-type type desc type? make)
   (begin
     (define type
       (make-fht (quote type)
                 (lambda (obj) (fhval-ref (fh-object-val obj)))
-                (lambda (obj) (make obj))
+                (lambda (arg) (make arg))
                 #f #f
                 (make-printer (quote type))))
     (define (type? obj)
