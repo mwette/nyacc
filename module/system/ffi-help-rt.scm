@@ -578,7 +578,6 @@
   (begin
     (define type
       (make-fht (quote type)
-                ;; CHECKME - think this may be it - nope
                 (lambda (obj) (fhval-ref (fh-object-val obj)))
                 (lambda (val) (make val))
                 #f #f
